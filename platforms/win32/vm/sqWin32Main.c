@@ -136,7 +136,7 @@ static WCHAR vmLogDirW[MAX_PATH];
 TCHAR *logName = TEXT("");             /* full path and name to log file */
 
 #ifdef VISTA_SECURITY 
-BOOL fLowRights = 0;  /* started as low integiry process, 
+BOOL fLowRights = 0;  /* started as low integiry process,
 			need to use alternate untrustedUserDirectory */
 #endif /* VISTA_SECURITY */
 
@@ -175,6 +175,7 @@ static LPTOP_LEVEL_EXCEPTION_FILTER TopLevelFilter = NULL;
 static LONG CALLBACK
 squeakExceptionHandler(LPEXCEPTION_POINTERS exp)
 {
+extern sqInt primitiveFailForFFIExceptionat(usqLong exceptionCode, usqInt pc);
   DWORD result;
 
   /* #1: Try to handle exception in the regular (memory access)
@@ -186,9 +187,9 @@ squeakExceptionHandler(LPEXCEPTION_POINTERS exp)
 #endif
 
   /* #2: If that didn't work, try to handle any FP problems */
-  if(result != EXCEPTION_CONTINUE_EXECUTION) {
+  if (result != EXCEPTION_CONTINUE_EXECUTION) {
     DWORD code = exp->ExceptionRecord->ExceptionCode;
-    if((code >= EXCEPTION_FLT_DENORMAL_OPERAND) && (code <= EXCEPTION_FLT_UNDERFLOW)) {
+    if ((code >= EXCEPTION_FLT_DENORMAL_OPERAND) && (code <= EXCEPTION_FLT_UNDERFLOW)) {
       /* turn on the default masking of exceptions in the FPU and proceed */
       _controlfp(FPU_DEFAULT, _MCW_EM | _MCW_RC | _MCW_PC | _MCW_IC);
       result = EXCEPTION_CONTINUE_EXECUTION;
@@ -197,18 +198,21 @@ squeakExceptionHandler(LPEXCEPTION_POINTERS exp)
 
   /* #3: If that didn't work either try passing it on to the old
      top-level filter */
-  if(result != EXCEPTION_CONTINUE_EXECUTION) {
-    if(TopLevelFilter) {
+  if (result != EXCEPTION_CONTINUE_EXECUTION) {
+    if (TopLevelFilter) {
       result = TopLevelFilter(exp);
     }
   }
+  if (result != EXCEPTION_CONTINUE_EXECUTION) {
+	  /* #4: Allow the VM to fail an FFI call in which an exception occurred. */
+	  primitiveFailForFFIExceptionat(exp->ExceptionRecord->ExceptionCode,
+									 exp->ContextRecord->CONTEXT_PC);
 #ifdef NDEBUG
-  /* #4: If that didn't work either give up and print a crash debug information */
-  if(result != EXCEPTION_CONTINUE_EXECUTION) {
+	/* #5: If that didn't work either give up and print a crash debug information */
     printCrashDebugInformation(exp);
     result = EXCEPTION_EXECUTE_HANDLER;
-  }
 #endif
+  }
   return result;
 }
 
@@ -250,9 +254,9 @@ static int
 OutputLogMessage(char *string)
 { FILE *fp;
 
-  if(!*logName) return 1;
+  if (!*logName) return 1;
   fp = fopen_for_append(logName);
-  if(!fp) return 1;
+  if (!fp) return 1;
   fprintf(fp, "%s", string);
   fflush(fp);
   fclose(fp);
@@ -264,7 +268,7 @@ OutputConsoleString(char *string)
 { 
   int pos;
 
-  if(fDynamicConsole && !fShowConsole) {
+  if (fDynamicConsole && !fShowConsole) {
     /* show console window */
     ShowWindow(consoleWindow, SW_SHOW);
     fShowConsole = TRUE;
@@ -314,7 +318,7 @@ printf(const char *fmt, ...)
   if (!fIsConsole) {
 	wvsprintf(consoleBuffer, fmt, al);
 	OutputLogMessage(consoleBuffer);
-	if(IsWindow(stWindow)) /* not running as service? */
+	if (IsWindow(stWindow)) /* not running as service? */
 	  OutputConsoleString(consoleBuffer);
   }
   result = vfprintf(stdout, fmt, al);
@@ -328,11 +332,11 @@ fprintf(FILE *fp, const char *fmt, ...)
   int result;
 
   va_start(al, fmt);
-  if(!fIsConsole && (fp == stdout || fp == stderr))
+  if (!fIsConsole && (fp == stdout || fp == stderr))
     {
       wvsprintf(consoleBuffer, fmt, al);
       OutputLogMessage(consoleBuffer);
-      if(IsWindow(stWindow)) /* not running as service? */
+      if (IsWindow(stWindow)) /* not running as service? */
         OutputConsoleString(consoleBuffer);
     }
   result = vfprintf(fp, fmt, al);
@@ -354,18 +358,18 @@ static messageHook nextMessageHook = NULL;
 
 int ServiceMessageHook(void * hwnd, unsigned int message, unsigned int wParam, long lParam)
 {
-  if(fRunService && fWindows95 && message == WM_BROADCAST_SERVICE && hwnd == stWindow)
+  if (fRunService && fWindows95 && message == WM_BROADCAST_SERVICE && hwnd == stWindow)
     {
       /* broadcast notification - install the running Win95 service in the system tray */
       SetSystemTrayIcon(1);
       return 1;
     }
-   if(message == WM_USERCHANGED)
+   if (message == WM_USERCHANGED)
       {
         SetSystemTrayIcon(1);
         return 1;
       }
-  if(nextMessageHook)
+  if (nextMessageHook)
     return(*nextMessageHook)(hwnd, message,wParam, lParam);
   else
     return 0;
@@ -386,12 +390,12 @@ void SetSystemTrayIcon(BOOL on)
            Win95 has _serious_ problems with the module counter and
            may just unload the shell32.dll even if it is referenced
            by other processes */
-  if(!hShell) hShell = LoadLibrary(TEXT("shell32.dll"));
-  if(!hShell) return; /* should not happen */
+  if (!hShell) hShell = LoadLibrary(TEXT("shell32.dll"));
+  if (!hShell) return; /* should not happen */
   /* On WinNT 3.* the following will just return NULL */
   ShellNotifyIcon = (FARPROC)GetProcAddress(hShell, "Shell_NotifyIconA");
 
-  if(!ShellNotifyIcon) return;  /* ok, we don't have it */
+  if (!ShellNotifyIcon) return;  /* ok, we don't have it */
   nid.cbSize = sizeof(nid);
   nid.hWnd   = stWindow;
   nid.uID    = (usqIntptr_t)hInstance;
@@ -399,7 +403,7 @@ void SetSystemTrayIcon(BOOL on)
   nid.uCallbackMessage = WM_USER+42;
   nid.hIcon  = LoadIcon(hInstance, MAKEINTRESOURCE(1));
   strcpy(nid.szTip, VM_NAME "!");
-  if(on)
+  if (on)
     (*ShellNotifyIcon)(NIM_ADD, &nid);
   else
     (*ShellNotifyIcon)(NIM_DELETE, &nid);
@@ -415,20 +419,20 @@ void SetupService95()
   static HMODULE hKernel32 = NULL;
 
   /* Inform Windows95 that we're running as a service process */
-  if(!fRunService || !fWindows95) return;
+  if (!fRunService || !fWindows95) return;
   hKernel32 = LoadLibrary(TEXT("kernel32.dll"));
-  if(!hKernel32)
+  if (!hKernel32)
     {
       printLastError(TEXT("Unable to load kernel32.dll"));
       return;
     }
   (FARPROC) RegisterServiceProcess = GetProcAddress(hKernel32, "RegisterServiceProcess");
-  if(!RegisterServiceProcess)
+  if (!RegisterServiceProcess)
     {
       printLastError(TEXT("Unable to find RegisterServiceProcess"));
       return;
     }
-  if( !(*RegisterServiceProcess)(GetCurrentProcessId(), RSP_SIMPLE_SERVICE ) )
+  if ( !(*RegisterServiceProcess)(GetCurrentProcessId(), RSP_SIMPLE_SERVICE ) )
     printLastError(TEXT("RegisterServiceProcess failed"));
 #endif /* NO_SERVICE */
 }
@@ -439,7 +443,7 @@ void SetupService95()
 
 char *GetVMOption(int id)
 {
-  if(id < numOptionsVM)
+  if (id < numOptionsVM)
     return vmOptions[id];
   else
     return NULL;
@@ -447,7 +451,7 @@ char *GetVMOption(int id)
 
 char *GetImageOption(int id)
 {
-  if(id < numOptionsImage)
+  if (id < numOptionsImage)
     return imageOptions[id];
   else
     return NULL;
@@ -458,7 +462,7 @@ char *ioGetLogDirectory(void) {
 }
 
 sqInt ioSetLogDirectoryOfSize(void* lblIndex, sqInt sz) {
-  if(sz >= MAX_PATH) return 0;
+  if (sz >= MAX_PATH) return 0;
   strncpy(vmLogDirA, lblIndex, sz);
   vmLogDirA[sz] = 0;
   MultiByteToWideChar(CP_UTF8, 0, vmLogDirA, -1, vmLogDirW, MAX_PATH);
@@ -541,7 +545,7 @@ void gatherSystemInfo(void) {
       GetProcAddress(hUser, "EnumDisplayDevicesA");
     ZeroMemory(&gDev, sizeof(gDev));
     gDev.cb = sizeof(gDev);
-    if(pEnumDisplayDevices) pEnumDisplayDevices(NULL, 0, &gDev, 0);
+    if (pEnumDisplayDevices) pEnumDisplayDevices(NULL, 0, &gDev, 0);
   }
 
   { /* Figure out make and model from OEMINFO.ini */
@@ -552,13 +556,13 @@ void gatherSystemInfo(void) {
     GetSystemDirectory(iniName, 256);
     strcat(iniName,"\\OEMINFO.INI");
 
-    GetPrivateProfileString("General", "Manufacturer", "Unknown", 
+    GetPrivateProfileString("General", "Manufacturer", "Unknown",
 			    manufacturer, 256, iniName);
 
-    GetPrivateProfileString("General", "Model", "Unknown", 
+    GetPrivateProfileString("General", "Model", "Unknown",
 			    model, 256, iniName);
 
-    sprintf(tmpString, 
+    sprintf(tmpString,
 	    "Hardware information: \n"
 	    "\tManufacturer: %s\n"
 	    "\tModel: %s\n"
@@ -593,25 +597,25 @@ void gatherSystemInfo(void) {
     keyName[strlen(keyName)-1] = 48+proc; /* 0, 1, 2 etc. */
 
     ok = RegOpenKey(HKEY_LOCAL_MACHINE, keyName, &hk);
-    if(ok == 0) {
+    if (!ok) {
       char nameString[256];
       char identifier[256];
       DWORD mhz;
 
       dwSize = 256;
-      ok = RegQueryValueEx(hk, "ProcessorNameString", NULL, NULL, 
+      ok = RegQueryValueEx(hk, "ProcessorNameString", NULL, NULL,
 			   (LPBYTE)nameString, &dwSize);
-      if(ok != 0) strcpy(nameString, "???");
+      if (ok) strcpy(nameString, "???");
 
       dwSize = 256;
-      ok = RegQueryValueEx(hk, "Identifier", NULL, NULL, 
+      ok = RegQueryValueEx(hk, "Identifier", NULL, NULL,
 			   (LPBYTE)identifier, &dwSize);
-      if(ok != 0) strcpy(identifier, "???");
+      if (ok) strcpy(identifier, "???");
 
       dwSize = sizeof(DWORD);
-      ok = RegQueryValueEx(hk, "~MHz", NULL, NULL, 
+      ok = RegQueryValueEx(hk, "~MHz", NULL, NULL,
 			   (LPBYTE)&mhz, &dwSize);
-      if(ok != 0) mhz = -1;
+      if (ok) mhz = -1;
       sprintf(tmp,
 	      "\nProcessor %d: %s\n"
 	      "\tIdentifier: %s\n"
@@ -628,21 +632,21 @@ void gatherSystemInfo(void) {
     char company[256];
     char product[256];
 
-    if(osInfo.dwPlatformId == VER_PLATFORM_WIN32_NT) {
+    if (osInfo.dwPlatformId == VER_PLATFORM_WIN32_NT) {
       strcpy(keyName, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion");
     } else {
       strcpy(keyName, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion");
     }
     ok = RegOpenKey(HKEY_LOCAL_MACHINE, keyName, &hk);
-    if(ok == 0) {
+    if (!ok) {
       dwSize = 256;
-      if(RegQueryValueEx(hk, "RegisteredOwner", NULL, NULL, 
+      if (RegQueryValueEx(hk, "RegisteredOwner", NULL, NULL,
 			  (LPBYTE)owner, &dwSize)) strcpy(owner, "???");
       dwSize = 256;
-      if(RegQueryValueEx(hk, "RegisteredOrganization", NULL, NULL, 
+      if (RegQueryValueEx(hk, "RegisteredOrganization", NULL, NULL,
 			  (LPBYTE)company, &dwSize)) strcpy(company, "???");
       dwSize = 256;
-      if(RegQueryValueEx(hk, "ProductName", NULL, NULL, 
+      if (RegQueryValueEx(hk, "ProductName", NULL, NULL,
 			  (LPBYTE)product, &dwSize)) strcpy(product, "???");
       RegCloseKey(hk);
     }
@@ -655,7 +659,7 @@ void gatherSystemInfo(void) {
 	    "\tSP minor version: %d\n"
 	    "\tSuite mask: %x\n"
 	    "\tProduct type: %x\n",
-	    product, 
+	    product,
 	    osInfo.dwBuildNumber, osInfo.szCSDVersion,
 	    owner, company,
 	    osInfo.wServicePackMajor, osInfo.wServicePackMinor,
@@ -676,16 +680,16 @@ void gatherSystemInfo(void) {
 
   /* Find the driver key in the registry */
   keyName[0] = 0;
-  ok = RegOpenKey(HKEY_LOCAL_MACHINE, 
-		  "HARDWARE\\DEVICEMAP\\VIDEO", 
+  ok = RegOpenKey(HKEY_LOCAL_MACHINE,
+		  "HARDWARE\\DEVICEMAP\\VIDEO",
 		  &hk);
-  if(ok == 0) {
+  if (!ok) {
     dwSize = 256;
-    RegQueryValueEx(hk,"\\Device\\Video0", NULL, NULL, 
+    RegQueryValueEx(hk,"\\Device\\Video0", NULL, NULL,
 		    (LPBYTE)keyName, &dwSize);
     RegCloseKey(hk);
   }
-  if(*keyName) {
+  if (*keyName) {
     /* Got the key name; open it and get the info out of there */
     char *tmp = tmpString + strlen(tmpString);
     char deviceDesc[256];
@@ -701,50 +705,50 @@ void gatherSystemInfo(void) {
        with \Registry\Machine\ which doesn't work with RegOpenKey below.
        I have no idea why but for now I'll just truncate that part if
        we recognize it... */
-    if(_strnicmp(keyName, "\\registry\\machine\\", 18) == 0) {
+    if (_strnicmp(keyName, "\\registry\\machine\\", 18) == 0) {
       memcpy(keyName, keyName+18, strlen(keyName)-17);
     }
 
     ok = RegOpenKey(HKEY_LOCAL_MACHINE, keyName, &hk);
-    if(ok != 0) MessageBox(0, keyName, "Cannot open:", MB_OK);
-    if(ok == 0) {
+    if (ok) MessageBox(0, keyName, "Cannot open:", MB_OK);
+    if (!ok) {
       dwSize = 256;
-      ok = RegQueryValueEx(hk,"Device Description", NULL, NULL, 
+      ok = RegQueryValueEx(hk,"Device Description", NULL, NULL,
 		      (LPBYTE)deviceDesc, &dwSize);
-      if(ok != 0) strcpy(deviceDesc, "???");
+      if (ok) strcpy(deviceDesc, "???");
 
       dwSize = 256*sizeof(WCHAR);
-      ok = RegQueryValueEx(hk,"HardwareInformation.AdapterString", NULL, NULL, 
+      ok = RegQueryValueEx(hk,"HardwareInformation.AdapterString", NULL, NULL,
 		      (LPBYTE)buffer, &dwSize);
-      if(ok == 0) {
-	WideCharToMultiByte(CP_UTF8,0,buffer,-1,adapterString,256,NULL,NULL);
+      if (!ok) {
+		WideCharToMultiByte(CP_UTF8,0,buffer,-1,adapterString,256,NULL,NULL);
       } else strcpy(adapterString, "???");
 
       dwSize = 256*sizeof(WCHAR);
-      ok = RegQueryValueEx(hk,"HardwareInformation.BiosString", NULL, NULL, 
+      ok = RegQueryValueEx(hk,"HardwareInformation.BiosString", NULL, NULL,
 		      (LPBYTE)buffer, &dwSize);
-      if(ok == 0) {
-	WideCharToMultiByte(CP_UTF8,0,buffer,-1,biosString,256,NULL,NULL);
+      if (!ok) {
+		WideCharToMultiByte(CP_UTF8,0,buffer,-1,biosString,256,NULL,NULL);
       } else strcpy(biosString, "???");
 
       dwSize = 256*sizeof(WCHAR);
-      ok = RegQueryValueEx(hk,"HardwareInformation.ChipType", NULL, NULL, 
+      ok = RegQueryValueEx(hk,"HardwareInformation.ChipType", NULL, NULL,
 		      (LPBYTE)buffer, &dwSize);
-      if(ok == 0) {
-	WideCharToMultiByte(CP_UTF8,0,buffer,-1,chipType,256,NULL,NULL);
+      if (!ok) {
+		WideCharToMultiByte(CP_UTF8,0,buffer,-1,chipType,256,NULL,NULL);
       } else strcpy(chipType, "???");
 
       dwSize = 256*sizeof(WCHAR);
-      ok = RegQueryValueEx(hk,"HardwareInformation.DacType", NULL, NULL, 
+      ok = RegQueryValueEx(hk,"HardwareInformation.DacType", NULL, NULL,
 		      (LPBYTE)buffer, &dwSize);
-      if(ok == 0) {
-	WideCharToMultiByte(CP_UTF8,0,buffer,-1,dacType,256,NULL,NULL);
+      if (!ok) {
+		WideCharToMultiByte(CP_UTF8,0,buffer,-1,dacType,256,NULL,NULL);
       } else strcpy(dacType, "???");
 
       dwSize = sizeof(DWORD);
-      ok = RegQueryValueEx(hk,"HardwareInformation.MemorySize", NULL, NULL, 
+      ok = RegQueryValueEx(hk,"HardwareInformation.MemorySize", NULL, NULL,
 		      (LPBYTE)&memSize, &dwSize);
-      if(ok != 0) memSize = -1;
+      if (ok) memSize = -1;
 
       sprintf(tmp,
 	      "\nDevice: %s\n"
@@ -761,55 +765,55 @@ void gatherSystemInfo(void) {
 	      memSize);
 
       /* Now process the installed drivers */
-      ok = RegQueryValueEx(hk,"InstalledDisplayDrivers", 
+      ok = RegQueryValueEx(hk,"InstalledDisplayDrivers",
 			   NULL, NULL, NULL, &dwSize);
-      if(ok == 0) {
-	drivers = malloc(dwSize);
-	ok = RegQueryValueEx(hk,"InstalledDisplayDrivers",
-			     NULL, NULL, (LPBYTE)drivers, &dwSize);
+      if (!ok) {
+		drivers = malloc(dwSize);
+		ok = RegQueryValueEx(hk,"InstalledDisplayDrivers",
+					 NULL, NULL, (LPBYTE)drivers, &dwSize);
       }
-      if(ok == 0) {
-	strcat(tmpString,"\nDriver Versions:");
-	/* InstalledDrivers is REG_MULTI_SZ (extra terminating zero) */
-	for(drv = drivers; drv[0]; drv +=strlen(drv)) {
-	  DWORD verSize, hh;
-	  UINT vLen;
-	  LPVOID verInfo = NULL, vInfo;
+      if (!ok) {
+		strcat(tmpString,"\nDriver Versions:");
+		/* InstalledDrivers is REG_MULTI_SZ (extra terminating zero) */
+		for(drv = drivers; drv[0]; drv +=strlen(drv)) {
+		  DWORD verSize, hh;
+		  UINT vLen;
+		  LPVOID verInfo = NULL, vInfo;
 
-	  /* Concat driver name */
-	  strcat(tmpString,"\n\t"); 
-	  strcat(tmpString, drv);
-	  strcat(tmpString,": ");
+		  /* Concat driver name */
+		  strcat(tmpString,"\n\t"); 
+		  strcat(tmpString, drv);
+		  strcat(tmpString,": ");
 
-	  verSize = GetFileVersionInfoSize(drv, &hh);
-	  if(!verSize) goto done;
+		  verSize = GetFileVersionInfoSize(drv, &hh);
+		  if (!verSize) goto done;
 
-	  verInfo = malloc(verSize);
-	  if(!GetFileVersionInfo(drv, 0, verSize, verInfo)) goto done;
+		  verInfo = malloc(verSize);
+		  if (!GetFileVersionInfo(drv, 0, verSize, verInfo)) goto done;
 
-	  /* Try Unicode first */
-	  if(VerQueryValue(verInfo,"\\StringFileInfo\\040904B0\\FileVersion", 
-			   &vInfo, &vLen)) {
-	    strcat(tmpString, vInfo);
-	    goto done;
-	  }
+		  /* Try Unicode first */
+		  if (VerQueryValue(verInfo,"\\StringFileInfo\\040904B0\\FileVersion",
+				   &vInfo, &vLen)) {
+			strcat(tmpString, vInfo);
+			goto done;
+		  }
 
-	  /* Try US/English next */
-	  if(VerQueryValue(verInfo,"\\StringFileInfo\\040904E4\\FileVersion", 
-			   &vInfo, &vLen)) {
-	    strcat(tmpString, vInfo);
-	    goto done;
-	  }
+		  /* Try US/English next */
+		  if (VerQueryValue(verInfo,"\\StringFileInfo\\040904E4\\FileVersion",
+				   &vInfo, &vLen)) {
+			strcat(tmpString, vInfo);
+			goto done;
+		  }
 
-	  strcat(tmpString, "???");
+		  strcat(tmpString, "???");
 
-	done:
-	  if(verInfo) {
-	    free(verInfo);
-	    verInfo = NULL;
-	  }
-	}
-	strcat(tmpString,"\n");
+		done:
+		  if (verInfo) {
+			free(verInfo);
+			verInfo = NULL;
+		  }
+		}
+		strcat(tmpString,"\n");
       }
       RegCloseKey(hk);
     }
@@ -1223,29 +1227,15 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
 
 
   TRY {
-#if defined(_M_IX86) || defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__)
   if (inVMThread)
-	ifValidWriteBackStackPointersSaveTo((void *)exp->ContextRecord->Ebp,
-										(void *)exp->ContextRecord->Esp,
+	ifValidWriteBackStackPointersSaveTo((void *)exp->ContextRecord->CONTEXT_FP,
+										(void *)exp->ContextRecord->CONTEXT_SP,
 										0,
 										0);
-  callstack[0] = (void *)exp->ContextRecord->Eip;
-  nframes = backtrace_from_fp((void*)exp->ContextRecord->Ebp,
+  callstack[0] = (void *)exp->ContextRecord->CONTEXT_PC;
+  nframes = backtrace_from_fp((void*)exp->ContextRecord->CONTEXT_FP,
 							callstack+1,
 							MAXFRAMES-1);
-#elif defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
-  if (inVMThread)
-	ifValidWriteBackStackPointersSaveTo((void *)exp->ContextRecord->Rbp,
-										(void *)exp->ContextRecord->Rsp,
-										0,
-										0);
-  callstack[0] = (void *)exp->ContextRecord->Rip;
-  nframes = backtrace_from_fp((void*)exp->ContextRecord->Rbp,
-							callstack+1,
-							MAXFRAMES-1);
-#else
-#error "unknown architecture, cannot dump stack"
-#endif
   symbolic_backtrace(++nframes, callstack, symbolic_pcs);
   wsprintf(crashInfo,
 	   TEXT("Sorry but the VM has crashed.\n\n")
@@ -1929,6 +1919,14 @@ parseVMArgument(int argc, char *argv[])
 	else if (!strcmp(argv[0], VMOPTION("warnpid"))) {
 		extern sqInt warnpid;
 		warnpid = getpid();
+		return 1; }
+	else if (!strcmp(argv[0], VMOPTION("failonffiexception"))) {
+		extern sqInt ffiExceptionResponse;
+		ffiExceptionResponse = 1;
+		return 1; }
+	else if (!strcmp(argv[0], VMOPTION("nofailonffiexception"))) {
+		extern sqInt ffiExceptionResponse;
+		ffiExceptionResponse = -1;
 		return 1; }
 #endif /* STACKVM */
 #if COGVM

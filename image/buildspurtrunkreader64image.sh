@@ -2,8 +2,8 @@
 set -e
 . ./envvars.sh
 
-test -f spurreader.image || ./buildspurtrunkreaderimage.sh
-test -f SpurVMMaker.image && ./updatevmmakerimage.sh || buildspurtrunkvmmakerimage.sh
+test -f spurreader.image || . ./buildspurtrunkreaderimage.sh
+test -f SpurVMMaker.image && . ./updatevmmakerimage.sh || buildspurtrunkvmmakerimage.sh
 
 . ./getGoodSpurVM.sh
 

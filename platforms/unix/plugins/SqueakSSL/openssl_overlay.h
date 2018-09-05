@@ -108,7 +108,7 @@
 #define sqo_X509_check_ip_asc NULL_FUNC
 #define sqo_X509_check_host NULL_FUNC
 #endif
-    
+
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
 #define sqo_SSL_CTX_set_options SSL_CTX_set_options
 #define sqo_BIO_test_flags BIO_test_flags
@@ -121,7 +121,7 @@
 #define sqo_OPENSSL_sk_pop_free OPENSSL_sk_pop_free
 #define sqo_TLS_method TLS_method
 
-#define sqo_ASN1_STRING_get0_data ASN1_STRING_get0_data 
+#define sqo_ASN1_STRING_get0_data ASN1_STRING_get0_data
 #define sqo_ASN1_STRING_data NULL_FUNC
 
 #define sqo_sk_new_null NULL_FUNC
@@ -137,8 +137,7 @@
 
 #elif OPENSSL_VERSION_NUMBER < 0x10100000L
 
-
-#define sqo_SSL_CTX_set_options NULL_FUNC
+// do not #define sqo_SSL_CTX_set_options, is already
 #define sqo_BIO_test_flags NULL_FUNC
 #define sqo_OPENSSL_init_ssl NULL_FUNC
 #define sqo_OPENSSL_sk_new_null NULL_FUNC
@@ -188,28 +187,6 @@
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 #  define OPENSSL_STACK _STACK
-#  define sqo_OPENSSL_sk_num sqo_sk_num
-#  define sqo_OPENSSL_sk_value sqo_sk_value
-#  define sqo_OPENSSL_sk_set sqo_sk_set
-#  define sqo_OPENSSL_sk_new sqo_sk_new
-#  define sqo_OPENSSL_sk_new_null sqo_sk_new_null
-#  define sqo_OPENSSL_sk_free sqo_sk_free
-#  define sqo_OPENSSL_sk_pop_free sqo_sk_pop_free
-#  define sqo_OPENSSL_sk_deep_copy sqo_sk_deep_copy
-#  define sqo_OPENSSL_sk_insert sqo_sk_insert
-#  define sqo_OPENSSL_sk_delete sqo_sk_delete
-#  define sqo_OPENSSL_sk_delete_ptr sqo_sk_delete_ptr
-#  define sqo_OPENSSL_sk_find sqo_sk_find
-#  define sqo_OPENSSL_sk_find_ex sqo_sk_find_ex
-#  define sqo_OPENSSL_sk_push sqo_sk_push
-#  define sqo_OPENSSL_sk_unshift sqo_sk_unshift
-#  define sqo_OPENSSL_sk_shift sqo_sk_shift
-#  define sqo_OPENSSL_sk_pop sqo_sk_pop
-#  define sqo_OPENSSL_sk_zero sqo_sk_zero
-#  define sqo_OPENSSL_sk_set_cmp_func sqo_sk_set_cmp_func
-#  define sqo_OPENSSL_sk_dup sqo_sk_dup
-#  define sqo_OPENSSL_sk_sort sqo_sk_sort
-#  define sqo_OPENSSL_sk_is_sorted sqo_sk_is_sorted
 #  define sk_GENERAL_NAME_freefunc void(*)(void*)
 #  define OPENSSL_INIT_SETTINGS struct ossl_init_settings_st
 OPENSSL_INIT_SETTINGS;
@@ -376,9 +353,9 @@ OPENSSL_INIT_SETTINGS;
 
 #if !defined(SQO_DL_FLAGS)
 #  if !defined(__OpenBSD__)
-#    define SQO_DL_FLAGS RTLD_NOW | RTLD_GLOBAL | RTLD_NODELETE
+#    define SQO_DL_FLAGS (RTLD_NOW | RTLD_GLOBAL | RTLD_NODELETE)
 #  else
-#    define SQO_DL_FLAGS RTLD_NOW | RTLD_GLOBAL
+#    define SQO_DL_FLAGS (RTLD_NOW | RTLD_GLOBAL)
 #  endif
 #endif /* !defined(SQO_DL_FLAGS) */
 
@@ -422,7 +399,7 @@ void SQO_DESTRUCTOR fini(void)
 
 /*
  * It may be the case that the libs we try to load are not exactly named as we like
- * So we 
+ * So we
  *  * enumerate all plausible library paths
  *  * enumerate all libs there matching our name
  * * and report back the _names_ (NOT the full paths, we want dlopen to
@@ -458,7 +435,7 @@ static bool _sqo_insert_dynamic_lib_dir(char* dir)
     }
     return found;
 }
-    
+
 
 
 static int _sqo_find_lib_dirs(struct dl_phdr_info *info, size_t size, void *data)
@@ -502,7 +479,7 @@ static size_t _sqo_lib_paths(size_t const n, char (*libs[n]))
         DEBUG_PRINT("Library path %zu at %s\n", num_libs, L);        \
         if (libs != NULL) libs[num_libs] = strdup(L);                \
         num_libs++;                                                     \
-    } while (0)                            
+    } while (0)
     /*
      *  Add all paths on the LD_LIBRARY_PATH
      */
@@ -513,7 +490,7 @@ static size_t _sqo_lib_paths(size_t const n, char (*libs[n]))
             for (char* in_llp = ld_library_path; *in_llp != '\0'; in_llp++) {
                 if (*in_llp == ':' || *in_llp == ';') {
                     num_libs++;
-                }                
+                }
             }
         } else {
             char* current = NULL, *tofree, *path;
@@ -548,7 +525,7 @@ static size_t _sqo_lib_paths(size_t const n, char (*libs[n]))
     _SQO_ADD_LIB("/usr/lib64");
     _SQO_ADD_LIB("/usr/local/lib64");
 #endif
-   
+
     return num_libs;
 
 #undef _SQO_ADD_LIB
@@ -573,7 +550,7 @@ static int _sqo_strverscmp(const char* a, const char* b)
         while (*left && *right &&
                !isdigit(*left) && !isdigit(*right) && *left == *right) {
             left++;
-            right++;           
+            right++;
         }
         if (!isdigit(*left) && !isdigit(*right)) {
             break;
@@ -584,7 +561,7 @@ static int _sqo_strverscmp(const char* a, const char* b)
             return lnum - rnum;
         }
     }
-    return *left - *right;    
+    return *left - *right;
 }
 #endif  /* defined(__linux__) */
 
@@ -615,19 +592,19 @@ void* _sqo_dlopen_any(const char* name, int mode)
          dir_idx < num_dirs && libname_count < _SQO_MAX_LIBNAMES;
          dir_idx++
     ) {
-  	char* possible_files  = NULL;
+        char* possible_files  = NULL;
         int written = asprintf(&possible_files, "%s/%s.*", dirs[dir_idx], name);
         if (written <= 0) {
             continue;
         }
-        glob_t g = {0};     
+        glob_t g = {0};
         if (0 == glob(possible_files, GLOB_NOSORT, NULL, &g)) {
             if (g.gl_pathc > 0) {
                 for (size_t i = 0; i < g.gl_pathc; i++) {
                     char* fullfile = basename(g.gl_pathv[i]);
                     if (strnlen(fullfile, PATH_MAX) > name_len) {
                         libnames[libname_count] = strndup(fullfile, PATH_MAX);
-                        libname_count++;                       
+                        libname_count++;
                     }
                 }
             }
@@ -652,7 +629,8 @@ void* _sqo_dlopen_any(const char* name, int mode)
  *      Zeroth, if name is NULL, go straight to dlopen.
  *      First, try the version most closely matching our compiletime version.
  *      Second, try the non-versioned bare name.
- *      Third, enumerate all plausible paths and try the names found in numeric order.
+ *      Third, enumerate all plausible paths and try the names found
+ *             in numeric order.
  */
 void* _sqo_dlopen(const char* name, int mode)
 {
@@ -682,7 +660,7 @@ void* _sqo_dlopen(const char* name, int mode)
     return _sqo_dlopen_any(name, mode);
 }
 
-     
+
   /*
  * Macro that lookups a symbol in a library and does immediately
  * return the address when found.
@@ -705,7 +683,7 @@ void* _sqo_dlopen(const char* name, int mode)
 #define SQO_FIND_SYM(sym, name, where, dlname)                          \
     do {                                                                \
         if (!dlhandle_ ## where) {                                      \
-            DEBUG_PRINT("Loading %s\n", dlname);                        \
+            DEBUG_PRINT("Loading %s\n",(dlname)?(dlname):"self");       \
             dlhandle_ ## where = _sqo_dlopen(dlname, SQO_DL_FLAGS);     \
         }                                                               \
         if (dlhandle_ ## where) {                                       \
@@ -743,8 +721,8 @@ static inline void* _sqo_find(const char* name)
  *
  *
  */
-#define SQO_DECL___(ret, name, ...) ret (*sqo_ ## name)(__VA_ARGS__);
-#define SQO_DECL_IF(ret, name, ...) ret (*sqo_ ## name)(__VA_ARGS__);
+#define SQO_DECL___(ret, name, ...) ret (*sqo_ ## name)(__VA_ARGS__) = NULL;
+#define SQO_DECL_IF(ret, name, ...) ret (*sqo_ ## name)(__VA_ARGS__) = NULL;
 #define SQO_DECL_NO(ret, name, ...) /**/
 
 /* THIS LINE IS VITAL */
@@ -782,7 +760,7 @@ static ossl_inline int sqo_BIO_should_retry(BIO* b){
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 
 #define sqo_SSL_CTX_set_options(ctx,op) sqo_SSL_CTX_ctrl((ctx),SSL_CTRL_OPTIONS,(op),NULL)
-   
+
 #define sqo_SKM_sk_num(type, st) sqo_sk_num(CHECKED_STACK_OF(type, st))
 #define sqo_SKM_sk_value(type, st,i) ((type *)sqo_sk_value(CHECKED_STACK_OF(type, st), i))
 #define sqo_SKM_sk_free(type, st) sqo_sk_free(CHECKED_STACK_OF(type, st))
@@ -845,7 +823,7 @@ static ossl_inline void
 #define sqo_SSL_ERROR_WANT_X509_LOOKUP 4
 #endif
 
-    
+
 /*
  * Function that makes sure that all sqo_ prefixed OpenSSL names are
  * actually available.
@@ -873,7 +851,7 @@ bool loadLibrary(void)
   if (!(sqo_ ## name = (ret (*)(__VA_ARGS__)) _sqo_find(#name)))      \
     return false;
 #define SQO_DECL_IF(ret, name, ...)                             \
-  sqo_ ## name =(ret (*)(__VA_ARGS__)) _sqo_find(#name);
+  sqo_ ## name = (ret (*)(__VA_ARGS__)) _sqo_find(#name);
 #define SQO_DECL_NO(ret, name, ...) /**/
 
   /* THIS LINE IS VITAL */
@@ -887,7 +865,7 @@ bool loadLibrary(void)
 #if !defined(SQSSL_OPENSSL_LINKED) && !defined(__MACH__)
   _sqo_dynamic_lib_dirs_reset();
 #endif
-      
+
 #endif  /* defined(SQSSL_OPENSSL_LINKED) */
 
 
@@ -906,6 +884,8 @@ bool loadLibrary(void)
 }
 
 #undef SQO_DECLARATIONS
+
+
 /* !defined(SQ_OPENSSL_OVERLAY_H) */
 #endif
 /* EOF */

@@ -1,37 +1,15 @@
+# Instead build, copy dependency from mingw distribution
+
 ifndef THIRDPARTYDIR
 	include ../common/Makefile.lib.extra
 endif
 include ../../third-party/pixman.spec
 
-# plugin definitions
-PIXMANURL:=$(pixman_spec_download_url)
+MINGWLIBDIR:=/usr/x86_64-w64-mingw32/sys-root/mingw/bin
 PIXMANLIBNAME:=$(pixman_spec_product_name_windows)
-PIXMANDIR:=$(THIRDPARTYDIR)/$(pixman_spec_unpack_dir_name)
-PIXMANARCHIVE:=$(THIRDPARTYCACHEDIR)/$(pixman_spec_archive_name)
 PIXMANLIB:=$(THIRDPARTYINSTALLDIR)/$(PIXMANLIBNAME)
 
-# ensure third-party library is built and recognised by plugins
-INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
-EXTRALIBS:=$(EXTRALIBS) $(PIXMANLIB)
-PLUGINREQS:=$(THIRDPARTYLIBS)
-
-$(PIXMANARCHIVE): 
-	$(WGET) -O $(PIXMANARCHIVE) $(PIXMANURL) 
-
-$(THIRDPARTYLIBDIR)/$(PIXMANLIBNAME): $(PIXMANARCHIVE)
-	tar x -f $(PIXMANARCHIVE) -C $(THIRDPARTYDIR)
-	cd $(PIXMANDIR) \
-		&& bash ./configure \
-			--prefix='$(THIRDPARTYOUTDIR)' \
-			--host=x86_64-w64-mingw32 \
-			PKG_CONFIG="$(PKG_CONFIG)" \
-			PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" \
-			CFLAGS='$(THIRDPARTY_CFLAGS)' \
-			LDFLAGS='$(THIRDPARTY_LDFLAGS)' \
-		&& make \
-		&& make install
-
-$(PIXMANLIB): pkgconfig libpng $(THIRDPARTYLIBDIR)/$(PIXMANLIBNAME)
-	cp -f $(THIRDPARTYLIBDIR)/$(PIXMANLIBNAME) $(THIRDPARTYINSTALLDIR)
+$(PIXMANLIB): pkgconfig libpng $(MINGWLIBDIR)/$(PIXMANLIBNAME) 
+	cp -f $(MINGWLIBDIR)/$(PIXMANLIBNAME) $(THIRDPARTYINSTALLDIR)
 	
 pixman: $(PIXMANLIB)

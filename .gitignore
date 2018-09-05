@@ -91,24 +91,26 @@ platforms/unix/config/autom4te.cache/
 # /image/
 /image/*.sum
 /image/*.tgz
+/image/*.st
 /image/coglinux*
 /image/cogwin
 /image/Cog.app
 /image/cogspurlinux*
+/image/crash.dmp
 /image/sqlinux*
 /image/sqwin*
 /image/cogspurwin
 /image/CogSpur.app
+/image/github-cache/
+/image/package-cache
+/image/pharo-local/
+/image/prefs
+/image/special-dirs
 /image/Squeak*.app
 /image/[sS]queak*.dmg
 /image/Squeak-*-All-in-One.*
-/image/SqueakDebug.log
-/image/Squeak3D.log
 /image/__MACOSX
-/image/crash.dmp
-/image/package-cache
-/image/prefs
-/image/special-dirs
+/image/*.log
 /image/*.zip
 /image/.*history
 

@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 set -e
-
 set +v
 
 . ./envvars.sh
 
 if [ "$1" = -vm -a -n "$2" -a -x "`which "$2"`" ]; then
 	VM="$2"
+	shift;shift
 else
 	echo checking for latest 64-bit VM on bintray...
 	LATESTRELEASE=`curl -s -L "https://bintray.com/opensmalltalk/notifications" | grep 'has released version' | head -1 | sed 's/^.*[0-9]">\([0-9][0-9]*\).*$/\1/'`
@@ -27,11 +27,12 @@ else
 				exit
 			fi
 			curl -L "$URL" -o "$LATESTVM"
-			open $LATESTVM
-			while [ ! -d "/Volumes/$VOLUME/Squeak.app" ]; do sleep 1; done
-			rm -rf $VM
-			cp -Rp "/Volumes/$VOLUME/Squeak.app" $VM
-			eject "/Volumes/$VOLUME"
+			if open $LATESTVM; then
+				while [ ! -d "/Volumes/$VOLUME/Squeak.app" ]; do sleep 1; done
+				rm -rf $VM
+				cp -Rp "/Volumes/$VOLUME/Squeak.app" $VM
+				eject "/Volumes/$VOLUME"
+			fi
 		fi
 		VM=$VM/Contents/MacOS/Squeak;;
 	Linux) # This needs to be split by $CPU to work on RPi also

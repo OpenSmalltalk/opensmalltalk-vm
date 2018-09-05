@@ -70,6 +70,8 @@ Building out of the box
 - Install
   either cygwin 64bits version from www.cygwin.com.
   either mingw 64bits version and msys from www.mingw.com.
+Note that the .appveyor.yml file may be used as example to automate installation of these tools.
+.appveyor.yml calls scripts/installCygwin.bat that you can use to build your own cygwin.
 
 Then cd to the build directory of your choice, e.g.
 	build.win64x64/squeak.stack.spur/

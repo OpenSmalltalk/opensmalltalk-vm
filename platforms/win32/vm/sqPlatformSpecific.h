@@ -158,3 +158,18 @@ extern const unsigned long tltiIndex;
 # undef VM_LABEL
 # define VM_LABEL(foo) ((void)0)
 #endif
+
+/* Define the fields in a struct _CONTEXT as returned by GetThreadContext that
+ * represent the program counter and frame pointer on the current architecture.
+ */
+#if defined(_M_IX86) || defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__)
+#	define CONTEXT_PC Eip
+#	define CONTEXT_FP Ebp
+#	define CONTEXT_SP Esp
+#elif defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
+#	define CONTEXT_PC Rip
+#	define CONTEXT_FP Rbp
+#	define CONTEXT_SP Rsp
+#else
+# error "unknown architecture, program counter field undefined"
+#endif

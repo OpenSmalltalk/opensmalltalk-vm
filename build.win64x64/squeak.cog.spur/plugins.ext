@@ -1,7 +1,7 @@
 # Copied, perhaps edited, from ../../src/examplePlugins.ext
 EXTERNAL_PLUGINS = \
+FileAttributesPlugin \
 SqueakFFIPrims \
 SqueakSSL \
 UUIDPlugin \
 Win32OSProcessPlugin
-

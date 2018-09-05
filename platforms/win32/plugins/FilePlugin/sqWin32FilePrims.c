@@ -298,17 +298,33 @@ sqFileStdioHandlesIntoFile_WithHandle_IsWritable(SQFile * file, HANDLE handle, i
 
 /*
  * Fill-in files with handles for stdin, stdout and seterr as available and
- * answer a bit-mask of the availability, 1 corresponding to stdin, 2 to stdout
- * and 4 to stderr, with 0 on error or unavailablity.
+ * answer a bit-mask of the availability:
+ *
+ * <0 - Error.  The value will be returned to the image using primitiveFailForOSError().
+ * 0  - no stdio available
+ * 1  - stdin available
+ * 2  - stdout available
+ * 4  - stderr available
  */
 sqInt
 sqFileStdioHandlesInto(SQFile files[3])
 {
-	sqFileStdioHandlesIntoFile_WithHandle_IsWritable(&files[0], GetStdHandle(STD_INPUT_HANDLE), false);
-	sqFileStdioHandlesIntoFile_WithHandle_IsWritable(&files[1], GetStdHandle(STD_OUTPUT_HANDLE), true);
-	sqFileStdioHandlesIntoFile_WithHandle_IsWritable(&files[2], GetStdHandle(STD_ERROR_HANDLE), true);
+HANDLE	handle;
+int	status = 0;
 
-	return 7;
+	handle = GetStdHandle(STD_INPUT_HANDLE);
+	if (handle != 0) {
+		sqFileStdioHandlesIntoFile_WithHandle_IsWritable(&files[0], handle, false);
+		status += 1; }
+	handle = GetStdHandle(STD_OUTPUT_HANDLE);
+	if (handle != 0) {
+		sqFileStdioHandlesIntoFile_WithHandle_IsWritable(&files[1], handle, true);
+		status += 2; }
+	handle = GetStdHandle(STD_ERROR_HANDLE);
+	if (handle != 0) {
+		sqFileStdioHandlesIntoFile_WithHandle_IsWritable(&files[2], handle, true);
+		status += 4; }
+	return status;
 }
 
 

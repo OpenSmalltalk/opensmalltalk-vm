@@ -46,12 +46,13 @@ such third-party acknowledgments.
 #import "sq.h"
 #import "sqSqueakMainApp.h"
 #import <limits.h>
+#import "include_ucontext.h"
 #import "sqPlatformSpecific.h"
 
 #if STACKVM || COGVM
-#import "sqSCCSVersion.h"
+# import "sqSCCSVersion.h"
 #else
-#import "sqMacV2Memory.h"
+# import "sqMacV2Memory.h"
 #endif
 
 #if !defined(NOEXECINFO)
@@ -334,6 +335,8 @@ sigsegv(int sig, siginfo_t *info, void *uap)
 							: "Unknown signal"));
 
 	if (!inFault) {
+		extern sqInt primitiveFailForFFIExceptionat(usqLong exceptionCode, usqInt pc);
+		primitiveFailForFFIExceptionat(sig, ((ucontext_t *)uap)->_PC_IN_UCONTEXT);
 		inFault = 1;
 		getCrashDumpFilenameInto(crashdump);
 		ctime_r(&now,ctimebuf);

@@ -359,6 +359,7 @@ typedef struct VirtualMachine {
 #if VM_PROXY_MINOR > 13 /* OS Errors available in primitives; easy return forms (see above) */
   sqInt  (*primitiveFailForOSError)(sqLong osErrorCode);
   sqInt  (*methodReturnReceiver)(void);
+  sqInt  (*primitiveFailForFFIExceptionat)(usqLong exceptionCode, usqInt pc);
 #endif
 } VirtualMachine;
 

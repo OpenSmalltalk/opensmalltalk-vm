@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-source ./.travis_helpers.sh
+source ./scripts/ci/travis_helpers.sh
 
 if [[ "${APPVEYOR}" ]]; then
     TRAVIS_BUILD_DIR="$(pwd)"
