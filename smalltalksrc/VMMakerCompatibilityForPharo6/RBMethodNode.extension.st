@@ -45,6 +45,15 @@ RBMethodNode >> printSchematicTempsFor: blockNode in: blockScope on: stream [
 	stream position > vectorStartPos ifTrue: [stream nextPut: $)]
 ]
 
+{ #category : #'*VMMakerCompatibilityForPharo6-C translation' }
+RBMethodNode >> quickMethodReturnLiteral [
+	| node |
+	node := body statements last value.
+	^node isVariable
+		ifTrue: [node name]
+		ifFalse: [node value]
+]
+
 { #category : #'*VMMakerCompatibilityForPharo6-results' }
 RBMethodNode >> schematicTempNamesString [
 	scope ifNil: [self generateIR].
