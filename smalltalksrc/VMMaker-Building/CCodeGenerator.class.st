@@ -3735,13 +3735,13 @@ CCodeGenerator >> isBuiltinSelector: sel [
 
 { #category : #'C code generator' }
 CCodeGenerator >> isCLiteral: anObject [
-	(anObject isKindOf: Integer) ifTrue: [^true].
-	(anObject isKindOf: String) ifTrue: [^true].
-	(anObject isKindOf: Float) ifTrue: [^true].
+	anObject isInteger ifTrue: [^true].
+	anObject isString ifTrue: [^true].
+	anObject isFloat ifTrue: [^true].
 	anObject == nil ifTrue: [^true].
 	anObject == true ifTrue: [^true].			"ikp"
 	anObject == false ifTrue: [^true].			"ikp"
-	(anObject isKindOf: Character) ifTrue:[^true]. "ar"
+	anObject isCharacter ifTrue:[^true]. "ar"
 	^false
 ]
 
