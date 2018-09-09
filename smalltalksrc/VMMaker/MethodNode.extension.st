@@ -13,3 +13,8 @@ MethodNode >> asTranslationMethodOfClass: aClass [
 		properties: properties
 		comment: comment
 ]
+
+{ #category : #'*VMMaker-C translation' }
+MethodNode >> quickMethodReturnLiteral [
+	^self block statements last expr key
+]
