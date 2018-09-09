@@ -771,7 +771,7 @@ VMClass >> deny: aBooleanOrBlock [
 VMClass >> doOrDefer: aBlock [
 	<doNotGenerate>
 	"Either evaluate aBlock immediately if in the uiProcess or defer aBlock as a UI message"
-	Processor activeProcess == Project uiProcess
+	Processor activeProcess == self uiProcess
 		ifTrue: [aBlock value]
 		ifFalse: [WorldState addDeferredUIMessage: aBlock]
 ]
@@ -908,6 +908,14 @@ VMClass >> isInterpreterProxy [
 	<doNotGenerate>
 	"Return false since I am a real Interpreter simulation"
 	^false
+]
+
+{ #category : #'hack compatibility' }
+VMClass >> localNameFor: aString [
+	<doNotGenerate>
+	^(Smalltalk classNamed: #FileSystem)
+		ifNotNil: [:fs| (fs disk pathFromString: aString) basename]
+		ifNil: [FileDirectory default localNameFor: aString]
 ]
 
 { #category : #'memory access' }
@@ -1301,6 +1309,14 @@ VMClass >> strlen: aCString [
 	len := len + 1] repeat
 ]
 
+{ #category : #'hack compatibility' }
+VMClass >> uiProcess [
+	<doNotGenerate>
+	^(Smalltalk classNamed: #Project)
+		ifNotNil: [:project| Project uiProcess] "Squeak"
+		ifNil: [UIManager default uiProcess] "Pharo"
+]
+
 { #category : #'memory access' }
 VMClass >> uint16AtPointer: pointer [
 	"This gets implemented by Macros in C, where its types will also be checked.
@@ -1382,4 +1398,18 @@ VMClass >> unalignedAccessError [
 VMClass >> unreachable [
 	<inline: true>
 	self error: 'UNREACHABLE'
+]
+
+{ #category : #'hack compatibility' }
+VMClass >> vmPath [
+	<doNotGenerate>
+	^(Smalltalk classNamed: #VirtualMachine)
+		ifNotNil: [:project| Smalltalk vm path] "Squeak"
+		ifNil: [Smalltalk vmPath] "Pharo"
+]
+
+{ #category : #'hack compatibility' }
+VMClass >> vmPathSize [
+	<doNotGenerate>
+	^self vmPath size
 ]

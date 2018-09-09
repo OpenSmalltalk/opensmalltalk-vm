@@ -923,7 +923,7 @@ InterpreterSimulator >> openAsMorph [
 	"Open a morphic view on this simulation."
 	| window localImageName |
 	localImageName := imageName
-							ifNotNil: [FileDirectory default localNameFor: imageName]
+							ifNotNil: [self localNameFor: imageName]
 							ifNil: [' synthetic image'].
 	window := (SystemWindow labelled: 'Simulation of ' , localImageName) model: self.
 
@@ -1759,17 +1759,12 @@ InterpreterSimulator >> validateOopsIn: object [
 { #category : #'file primitives' }
 InterpreterSimulator >> vmPathGet: stringBase Length: stringSize [
 	| pathName stringOop |
-	pathName := Smalltalk vmPath.
+	pathName := self vmPath.
 	stringOop := stringBase - self baseHeaderSize. "Due to C call in Interp"
 	1 to: stringSize do:
 		[:i | self storeByte: i-1 ofObject: stringOop
 			withValue: (pathName at: i) asciiValue].
 
-]
-
-{ #category : #'file primitives' }
-InterpreterSimulator >> vmPathSize [
-	^ Smalltalk vmPath size
 ]
 
 { #category : #'debug support' }

@@ -397,13 +397,16 @@ TSendNode >> printOn: aStream level: level [
 	| possiblyParenthesize |
 	possiblyParenthesize :=
 		[:node :newLevel|
-		(node isSend
-		 and: [node selector precedence >= 3]) ifTrue:
-			[aStream nextPut: $(].
-		node printOn: aStream level: newLevel.
-		(node isSend
-		 and: [node selector precedence >= 3]) ifTrue:
-			[aStream nextPut: $)]].
+		node
+			ifNil: [aStream print: node]
+			ifNotNil: 
+				[(node isSend
+				  and: [node selector precedence >= 3]) ifTrue:
+					[aStream nextPut: $(].
+				node printOn: aStream level: newLevel.
+				(node isSend
+				 and: [node selector precedence >= 3]) ifTrue:
+					[aStream nextPut: $)]]].
 
 	possiblyParenthesize value: receiver value: level.
 	arguments size = 0 ifTrue:
