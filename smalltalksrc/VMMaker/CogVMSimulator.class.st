@@ -1368,7 +1368,7 @@ CogVMSimulator >> imageNamePut: p Length: sz [
 		[window setLabel: (window label
 							copyReplaceFrom: (window label lastIndexOf: Character space) + 1
 							to: window label size
-							with: (FileDirectory localNameFor: imageName))]
+							with: (self localNameFor: imageName))]
 ]
 
 { #category : #'file primitives' }
@@ -2535,7 +2535,7 @@ CogVMSimulator >> openAsMorph [
 	"Open a morphic view on this simulation."
 	| localImageName borderWidth window |
 	localImageName := imageName
-							ifNotNil: [FileDirectory default localNameFor: imageName]
+							ifNotNil: [self localNameFor: imageName]
 							ifNil: [' synthetic image'].
 	window := (SystemWindow labelled: 'Simulation of ', localImageName) model: self.
 	window paneColor: self windowColorToUse.
@@ -2571,7 +2571,7 @@ CogVMSimulator >> openAsMorphNoTranscript [
 	"Open a morphic view on this simulation."
 	| localImageName borderWidth window |
 	localImageName := imageName
-							ifNotNil: [FileDirectory default localNameFor: imageName]
+							ifNotNil: [self localNameFor: imageName]
 							ifNil: [' synthetic image'].
 	window := (SystemWindow labelled: 'Simulation of ', localImageName) model: self.
 	window paneColor: self windowColorToUse.
@@ -4029,17 +4029,12 @@ CogVMSimulator >> vmOwnerLockAddress [
 { #category : #'file primitives' }
 CogVMSimulator >> vmPathGet: stringBase Length: stringSize [
 	| pathName stringOop |
-	pathName := Smalltalk vmPath.
+	pathName := self vmPath.
 	stringOop := stringBase - objectMemory baseHeaderSize. "Due to C call in Interp"
 	1 to: stringSize do:
 		[:i | objectMemory storeByte: i-1 ofObject: stringOop
 			withValue: (pathName at: i) asciiValue].
 
-]
-
-{ #category : #'file primitives' }
-CogVMSimulator >> vmPathSize [
-	^ Smalltalk vmPath size
 ]
 
 { #category : #'multi-threading simulation switch' }
