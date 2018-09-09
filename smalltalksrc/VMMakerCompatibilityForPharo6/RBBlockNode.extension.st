@@ -13,7 +13,7 @@ RBBlockNode >> asTranslatorNodeIn: aTMethod [
 			ifTrue:  [statementList addAll: newS statements]
 			ifFalse: [statementList add: newS]].
 	^TStmtListNode new
-		setArguments: (arguments asArray collect: [:arg | arg key])
+		setArguments: (arguments asArray collect: [:arg | arg name])
 		statements: statementList;
 		comment: self missingCommentNeededForCTranslation
 ]
