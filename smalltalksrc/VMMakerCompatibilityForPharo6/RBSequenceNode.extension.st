@@ -13,7 +13,7 @@ RBSequenceNode >> asTranslatorNodeIn: aTMethod [
 			ifTrue:  [statementList addAll: newS statements]
 			ifFalse: [statementList add: newS]].
 	^TStmtListNode new
-		setArguments: (parent arguments asArray collect: [:arg | arg key])
+		setArguments: (parent arguments asArray collect: [:arg | arg name])
 		statements: statementList;
 		comment: self missingCommentNeededForCTranslation
 ]

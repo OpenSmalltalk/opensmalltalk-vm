@@ -4,10 +4,10 @@ Extension { #name : #RBReturnNode }
 RBReturnNode >> asTranslatorNodeIn: aTMethod [
 	"Answer a TParseNode subclass equivalent of a return."
 	| exprTranslation lastExpr |
-	exprTranslation := expr asTranslatorNodeIn: aTMethod.
-	(expr isMessage
-	 and: [expr receiver isVariableNode
-	 and: [expr receiver key = 'super'
+	exprTranslation := value asTranslatorNodeIn: aTMethod.
+	(value isMessage
+	 and: [value receiver isVariable
+	 and: [value receiver name = 'super'
 	 and: [exprTranslation isStmtList]]]) ifTrue:
 		["super expansions containing returns are fine, and (as of 6/25/2012 19:27) the last
 		  return is elided from the expansion by TMethod>>superExpansionNodeFor:args:. 
@@ -21,11 +21,11 @@ RBReturnNode >> asTranslatorNodeIn: aTMethod [
 				put:
 					(TReturnNode new 
 						setExpression: lastExpr;
-						comment: comment;
+						comment: self missingCommentNeededForCTranslation;
 						yourself)].
 		 ^exprTranslation].
 	^TReturnNode new 
 		setExpression: exprTranslation;
-		comment: comment;
+		comment: self missingCommentNeededForCTranslation;
 		yourself
 ]
