@@ -19628,7 +19628,7 @@ StackInterpreter >> returnAs: returnTypeOop ThroughCallback: vmCallbackContext C
 	<var: #thePage type: #'StackPage *'>
 	self assert: primFailCode = 0.
 	self assert: (objectMemory isIntegerObject: returnTypeOop).
-	self assert: (objectMemory isImmediate: vmCallbackContext) not.
+	self assert: (objectMemory isImmediate: vmCallbackContext asInteger) not.
 	self assert: ((objectMemory addressCouldBeObj: callbackMethodContext)
 				and: [objectMemory isContext: callbackMethodContext]).
 	self assert: (debugCallbackPath := 0) = 0.

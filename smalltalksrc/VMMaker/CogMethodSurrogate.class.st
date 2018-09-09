@@ -30,8 +30,9 @@ CogMethodSurrogate class >> defaultObjectMemoryClass [
 ]
 
 { #category : #arithmetic }
-CogMethodSurrogate >> + aCogMethodOrAddress [
-	^address + aCogMethodOrAddress asInteger
+CogMethodSurrogate >> + anInteger [
+	"N.B. Mimic C semantics so that aCogMethod + 1 is a pointer to the byte past the CogMethod header."
+	^address + (anInteger * self class alignedByteSize)
 ]
 
 { #category : #comparing }

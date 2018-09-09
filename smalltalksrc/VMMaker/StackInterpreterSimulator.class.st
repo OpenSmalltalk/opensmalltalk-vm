@@ -787,7 +787,7 @@ StackInterpreterSimulator >> imageNamePut: p Length: sz [
 		[window setLabel: (window label
 							copyReplaceFrom: (window label lastIndexOf: Character space) + 1
 							to: window label size
-							with: (FileDirectory localNameFor: imageName))]
+							with: (self localNameFor: imageName))]
 ]
 
 { #category : #'file primitives' }
@@ -1558,7 +1558,7 @@ StackInterpreterSimulator >> openAsMorph [
 	"Open a morphic view on this simulation."
 	| localImageName borderWidth window |
 	localImageName := imageName
-							ifNotNil: [FileDirectory default localNameFor: imageName]
+							ifNotNil: [self localNameFor: imageName]
 							ifNil: [' synthetic image'].
 	window := (SystemWindow labelled: 'Simulation of ', localImageName) model: self.
 	window paneColor: self windowColorToUse.
@@ -1594,7 +1594,7 @@ StackInterpreterSimulator >> openAsMorphNoTranscript [
 	"Open a morphic view on this simulation."
 	| localImageName borderWidth window |
 	localImageName := imageName
-							ifNotNil: [FileDirectory default localNameFor: imageName]
+							ifNotNil: [self localNameFor: imageName]
 							ifNil: [' synthetic image'].
 	window := (SystemWindow labelled: 'Simulation of ', localImageName) model: self.
 	window paneColor: self windowColorToUse.
@@ -1626,7 +1626,7 @@ StackInterpreterSimulator >> openAsSimulatorMorph [
 	| localImageName borderWidth window |
 	localImageName := imageName
 							ifNil: [' synthetic image']
-							ifNotNil: [FileDirectory default localNameFor: imageName].
+							ifNotNil: [self localNameFor: imageName].
 
 	transcript := TranscriptStream on: (String new: 10000).
 
@@ -2841,17 +2841,12 @@ StackInterpreterSimulator >> veryDeepCopyWith: deepCopier [
 { #category : #'file primitives' }
 StackInterpreterSimulator >> vmPathGet: stringBase Length: stringSize [
 	| pathName stringOop |
-	pathName := Smalltalk vmPath.
+	pathName := self vmPath.
 	stringOop := stringBase - objectMemory baseHeaderSize. "Due to C call in Interp"
 	1 to: stringSize do:
 		[:i | objectMemory storeByte: i-1 ofObject: stringOop
 			withValue: (pathName at: i) asciiValue].
 
-]
-
-{ #category : #'file primitives' }
-StackInterpreterSimulator >> vmPathSize [
-	^ Smalltalk vmPath size
 ]
 
 { #category : #'debug support' }

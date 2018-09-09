@@ -1111,6 +1111,42 @@ NewObjectMemory >> fetchInteger: fieldIndex ofObject: objectPointer [
 	^coInterpreter fetchInteger: fieldIndex ofObject: objectPointer
 ]
 
+{ #category : #finalization }
+NewObjectMemory >> finalizeReference: oop [ 
+	"During sweep phase we have encountered a weak reference. Check if its object
+	 has gone away (or is about to) and if so, signal a semaphore.  Do *not* inline
+	 this in sweepPhase - it is quite an unlikely case to run into a weak reference.
+	 Override to ask the coInterpreter to signal finalization."
+	| weakOop oopGone chunk numFields firstField lastField |
+	<inline: false>
+	<var: #oop type: #usqInt>
+	<var: #weakOop type: #usqInt>
+	numFields := self nonWeakFieldsOf: oop. "so nonWeakFieldsOf: may be inlined"
+	firstField := self baseHeaderSize + (numFields << self shiftForWord).
+	lastField := self lastPointerOf: oop.
+	firstField to: lastField by: self wordSize do:
+		[:i|
+		weakOop := self longAt: oop + i.
+		"ar 1/18/2005: Added oop < youngStart test to make sure we're not testing
+		objects in non-GCable region. This could lead to a forward reference in
+		old space with the oop pointed to not being marked and thus treated as free."
+		(weakOop = nilObj or: [(self isIntegerObject: weakOop) or:[weakOop < youngStart]]) ifFalse:
+			["Check if the object is being collected. 
+			If the weak reference points  
+			* backward: check if the weakOops chunk is free
+			* forward: check if the weakOoop has been marked by GC"
+			weakOop < oop
+				ifTrue: [chunk := self chunkFromOop: weakOop.
+						oopGone := ((self longAt: chunk) bitAnd: TypeMask) = HeaderTypeFree]
+				ifFalse: [oopGone := (self isMarked: weakOop) not].
+			oopGone ifTrue: "Store nil in the pointer and signal the  interpreter"
+				[self longAt: oop + i put: nilObj.
+				 self 
+					cppIf: PharoVM 
+					ifTrue: [numFields >= 2 ifTrue: [self weakFinalizerCheck: oop]].
+				coInterpreter signalFinalization: oop]]]
+]
+
 { #category : #'debug support' }
 NewObjectMemory >> findString: aCString [
 	"Print the oops of all string-like things that have the same characters as aCString"
@@ -1286,7 +1322,7 @@ NewObjectMemory >> fullGC [
 		[self warning: 'aborting fullGC because fullGCLock > 0'.
 		 ^self].
 	self runLeakCheckerFor: GCModeFull.
-	self preGCAction: GCModeFull.
+	coInterpreter preGCAction: GCModeFull.
 	needGCFlag := false.
 	gcStartUsecs := self ioUTCMicrosecondsNow.
 	statSweepCount := statMarkCount := statMkFwdCount := statCompMoveCount := 0.
@@ -1302,11 +1338,11 @@ NewObjectMemory >> fullGC [
 	statFullGCs := statFullGCs + 1.
 	statGCEndUsecs := self ioUTCMicrosecondsNow.
 	statFullGCUsecs := statFullGCUsecs + (statGCEndUsecs - gcStartUsecs).
-	self capturePendingFinalizationSignals.
+	coInterpreter capturePendingFinalizationSignals.
 
 	youngStart := freeStart.  "reset the young object boundary"
 	self attemptToShrink.
-	self postGCAction: GCModeFull.
+	coInterpreter postGCAction: GCModeFull.
 	self runLeakCheckerFor: GCModeFull
 ]
 
@@ -1557,7 +1593,7 @@ NewObjectMemory >> incrementalGC [
 	statGCEndUsecs := self ioUTCMicrosecondsNow.
 	statIGCDeltaUsecs := statGCEndUsecs - gcStartUsecs.
 	statIncrGCUsecs := statIncrGCUsecs + statIGCDeltaUsecs.
-	self capturePendingFinalizationSignals.
+	coInterpreter capturePendingFinalizationSignals.
 	
 	statRootTableCount  := rootTableCount.
 	statSurvivorCount := survivorCount.
@@ -1646,7 +1682,7 @@ NewObjectMemory >> initializeMemoryFirstFree: firstFree [
 	 forwarding block space at the cost of slower compactions but we cannot
 	 safely sacrifice interpreter allocation headroom."
 	fwdBlockBytes := totalObjectCount bitAnd: WordMask - self wordSize + 1.
-	totalReserve := fwdBlockBytes + self interpreterAllocationReserveBytes.
+	totalReserve := fwdBlockBytes + coInterpreter interpreterAllocationReserveBytes.
 	(self oop: memoryLimit - totalReserve isLessThan: firstFree + self baseHeaderSize) ifTrue:
 		["reserve enough space for a minimal free block of BaseHeaderSize bytes.
 		  We are apparently in an emergency situation here because we have no space
@@ -1656,7 +1692,7 @@ NewObjectMemory >> initializeMemoryFirstFree: firstFree [
 
 	"set endOfMemory reserveStart and freeStart"
 	self setEndOfMemory: memoryLimit - fwdBlockBytes.
-	reserveStart := endOfMemory - self interpreterAllocationReserveBytes.
+	reserveStart := endOfMemory - coInterpreter interpreterAllocationReserveBytes.
 	freeStart := firstFree. "bytes available for oops"
 	scavengeThreshold := freeStart + edenBytes min: reserveStart.
 	self maybeFillWithAllocationCheckFillerFrom: freeStart to: scavengeThreshold.
@@ -2198,7 +2234,7 @@ NewObjectMemory >> markPhase: fullGCFlag [
 	<inline: false>
 	"trace the interpreter's objects, including the active stacks
 	 and special objects array"
-	self markAndTraceInterpreterOops: fullGCFlag.
+	coInterpreter markAndTraceInterpreterOops: fullGCFlag.
 	statSpecialMarkCount := statMarkCount.
 	"trace the roots"
 	1 to: rootTableCount do:
@@ -2212,10 +2248,10 @@ NewObjectMemory >> markPhase: fullGCFlag [
 			[self markAndTrace: oop]].
 	statMarkCountPriorToStackPageFreeing := statMarkCount.
 	"Only safe to free stack pages after all roots have been traced."
-	self markAndTraceAndMaybeFreeStackPages: fullGCFlag.
+	coInterpreter markAndTraceAndMaybeFreeStackPages: fullGCFlag.
 	"Only safe to free any machine code methods after all
 	 stack pages have been traced."
-	self markAndTraceOrFreeMachineCode: fullGCFlag.
+	coInterpreter markAndTraceOrFreeMachineCode: fullGCFlag.
 	statSpecialMarkCount := statSpecialMarkCount + (statMarkCount - statMarkCountPriorToStackPageFreeing)
 ]
 
@@ -3214,7 +3250,7 @@ In case of either success or failure, the headers must be restored.  In the even
 	thus leaving our segment unmarked in their shadow."
 	savedYoungStart := youngStart.
 	youngStart := self startOfMemory.  "process all of memory"
-	self markAndTraceInterpreterOops: false.	"and special objects array"
+	coInterpreter markAndTraceInterpreterOops: false.	"and special objects array"
 	youngStart := savedYoungStart.
 	
 	"Finally unmark the rootArray and all root objects."
