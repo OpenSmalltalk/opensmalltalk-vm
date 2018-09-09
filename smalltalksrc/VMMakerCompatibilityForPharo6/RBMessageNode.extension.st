@@ -15,8 +15,8 @@ RBMessageNode >> asTranslatorNodeIn: aTMethod [
 	(rcvrOrNil notNil
 	and: [rcvrOrNil isVariable
 	and: [rcvrOrNil name = 'super']]) ifTrue:
-		[^aTMethod superExpansionNodeFor: selector key args: arguments].
-	sel := selector isSymbol ifTrue: [selector] ifFalse: [selector key].
+		[^aTMethod superExpansionNodeFor: selector args: arguments].
+	sel := selector. "historical; can be simply selector"
 	sel == #halt ifTrue: [^rcvrOrNil].
 	(sel == #cCode:inSmalltalk: "extracting here rather than in translation allows inlining in the block."
 	  or: [sel == #cCode:]) ifTrue:
@@ -29,9 +29,7 @@ RBMessageNode >> asTranslatorNodeIn: aTMethod [
 		 and: [arguments first value isString
 		 and: [arguments first value isEmpty]]) ifTrue:
 			[^arguments first asTranslatorNodeIn: aTMethod]].
-	args := arguments
-				select: [:arg| arg notNil]
-				thenCollect: [:arg| arg asTranslatorNodeIn: aTMethod].
+	args := arguments collect: [:arg| arg asTranslatorNodeIn: aTMethod].
 false ifTrue:
 	[(sel = #to:by:do: and: [arguments size = 7 and: [(arguments at: 7) notNil]]) ifTrue:
 		["Restore limit expr that got moved by transformToDo:"
