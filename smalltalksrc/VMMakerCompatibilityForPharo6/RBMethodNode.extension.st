@@ -5,7 +5,7 @@ RBMethodNode >> asTranslationMethodOfClass: aTMethodClass [
  	"Answer a TMethod (or subclass) derived from the receiver."
 	^aTMethodClass new
 		setSelector: selector
-		definingClass: scope instanceScope outerScope class
+		definingClass: scope instanceScope outerScope getClass
 		args: arguments
 		locals: ((self allDefinedVariables copyWithoutAll: arguments) collect: [:string| string -> string])
 		block: body
