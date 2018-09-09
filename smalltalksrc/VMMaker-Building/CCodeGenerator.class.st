@@ -417,7 +417,7 @@ CCodeGenerator >> addMethodFor: aClass selector: selector [
 		[:pragma| | literal | "Method should be just foo ^const"
 		self assert: (method numArgs = 0 and: [method numLiterals = 3 or: [method isQuick]]).
 		literal := method isQuick
-					ifTrue: [method decompile block statements last expr key]
+					ifTrue: [method decompile quickMethodReturnLiteral]
 					ifFalse: [method literalAt: 1].
 		self addMacro: '() ', (method isReturnField
 								ifTrue: [literal]
@@ -4385,7 +4385,7 @@ CCodeGenerator >> nonStructClassesForTranslationClasses: classes [
 				 or: [(nonStructClasses includes: class)
 				 or: [classes includes: class]]) ifFalse:
 					[nonStructClasses addLast: class]]]].
-	^ChangeSet superclassOrder: nonStructClasses
+	^self superclassOrder: nonStructClasses
 ]
 
 { #category : #utilities }
@@ -5278,7 +5278,7 @@ CCodeGenerator >> structClassesForTranslationClasses: classes [
 			 and: [(vmClass isNil or: [vmClass isAcceptableAncilliaryClass: class])
 			 and: [(theStructClasses includes: class) not]]) ifTrue:
 				[theStructClasses addLast: class]]].
-	^ChangeSet superclassOrder: theStructClasses
+	^self superclassOrder: theStructClasses
 ]
 
 { #category : #'C code generator' }
@@ -5291,6 +5291,16 @@ CCodeGenerator >> structTargetKindForVariableName: varName [ "<String>"
 	^(self typeOfVariable: varName) ifNotNil:
 		[:declaration|
 		 self structTargetKindForDeclaration: declaration]
+]
+
+{ #category : #utilities }
+CCodeGenerator >> superclassOrder: classes [
+	^[ChangeSet superclassOrder: classes] "Squeak"
+		on: MessageNotUnderstood
+		do: [ :ex|
+			ex message selector == #superclassOrder: ifFalse:
+				[ex pass].
+			Class superclassOrder: classes] "Pharo"
 ]
 
 { #category : #accessing }
