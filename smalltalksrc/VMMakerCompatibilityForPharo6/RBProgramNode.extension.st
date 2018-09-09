@@ -12,6 +12,11 @@ RBProgramNode >> isBlockNode [
 ]
 
 { #category : #'*VMMakerCompatibilityForPharo6-testing' }
+RBProgramNode >> isConstantNumber [  "Overridden in RBLiteralValueNode"
+	^false
+]
+
+{ #category : #'*VMMakerCompatibilityForPharo6-testing' }
 RBProgramNode >> isNodeNil [
 	^false
 ]

@@ -7,3 +7,8 @@ RBVariableNode >> asTranslatorNodeIn: aTMethod [
 	name = 'false' ifTrue: [^ TConstantNode new setValue: false].
 	^ TVariableNode new setName: name
 ]
+
+{ #category : #'*VMMakerCompatibilityForPharo6-accessing' }
+RBVariableNode >> key [
+	^name
+]

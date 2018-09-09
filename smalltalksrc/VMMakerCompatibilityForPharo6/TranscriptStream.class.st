@@ -164,6 +164,17 @@ TranscriptStream >> closeAllViews [
 
 ]
 
+{ #category : #'Tools compatibility' }
+TranscriptStream >> codePaneMenu: aMenu shifted: shifted [
+	"Note that unless we override perform:orSendTo:, PluggableTextController will respond to all menu items"
+
+	| donorMenu |
+	donorMenu := shifted
+						ifTrue: [SmalltalkEditor shiftedYellowButtonMenu]
+						ifFalse: [SmalltalkEditor yellowButtonMenu].
+	^aMenu addAllFrom: donorMenu
+]
+
 { #category : #accessing }
 TranscriptStream >> contents [
 	"Override to update lastChar."
