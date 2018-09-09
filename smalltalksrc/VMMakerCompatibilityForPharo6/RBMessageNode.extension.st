@@ -26,13 +26,14 @@ RBMessageNode >> asTranslatorNodeIn: aTMethod [
 				ifTrue: [block statements first]
 				ifFalse: [block]].
 		 (arguments first isLiteralNode
-		 and: [arguments first key isString
-		 and: [arguments first key isEmpty]]) ifTrue:
+		 and: [arguments first value isString
+		 and: [arguments first value isEmpty]]) ifTrue:
 			[^arguments first asTranslatorNodeIn: aTMethod]].
 	args := arguments
 				select: [:arg| arg notNil]
 				thenCollect: [:arg| arg asTranslatorNodeIn: aTMethod].
-	(sel = #to:by:do: and: [arguments size = 7 and: [(arguments at: 7) notNil]]) ifTrue:
+false ifTrue:
+	[(sel = #to:by:do: and: [arguments size = 7 and: [(arguments at: 7) notNil]]) ifTrue:
 		["Restore limit expr that got moved by transformToDo:"
 		 args := {(arguments at: 7) value asTranslatorNodeIn: aTMethod. 
 				  args second.
@@ -77,7 +78,7 @@ RBMessageNode >> asTranslatorNodeIn: aTMethod [
 									setSelector: #==
 									receiver: (receiver receiver variable asTranslatorNodeIn: aTMethod)
 									arguments: {receiver arguments first asTranslatorNodeIn: aTMethod})
-						arguments: args }].
+						arguments: args }]].
 	((CCodeGenerator isVarargsSelector: sel)
 	 and: [args last isCollection
 	 and: [args last isSequenceable]]) ifTrue:

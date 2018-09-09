@@ -4,5 +4,5 @@ Extension { #name : #RBLiteralNode }
 RBLiteralNode >> asTranslatorNodeIn: aTMethod [
 	"Answer a TParseNode subclass equivalent of me"
 
-	^TConstantNode new setValue: key
+	^TConstantNode new setValue: self value
 ]
