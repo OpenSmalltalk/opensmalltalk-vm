@@ -32,6 +32,55 @@ FilePluginSimulator >> createDirectory: aString [
 	
 ]
 
+{ #category : #simulation }
+FilePluginSimulator >> dir_EntryLookup: pathString _: pathStringLength _: entryNameString _: entryNameStringLength _: name _: nameLength _: creationDate _: modificationDate _: isDirectory _: sizeIfFile _: posixPermissions _: isSymlink [
+	"sqInt dir_EntryLookup(char *pathString, sqInt pathStringLength, char *nameString, sqInt nameStringLength,
+		/* outputs: */		char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
+  						      sqInt *isDirectory, squeakFileOffsetType *sizeIfFile, sqInt *posixPermissions, sqInt *isSymlink)"
+	| result pathName entryName |
+	pathName := ((0 to: pathStringLength - 1) collect: [:i| (pathString at: i) asCharacter]) as: ByteString.
+	entryName := ((0 to: entryNameStringLength - 1) collect: [:i| (entryNameString at: i) asCharacter]) as: ByteString.
+	result := self primLookupEntryIn: pathName name: entryName.
+	result ifNil: [^DirNoMoreEntries].
+	result isInteger ifTrue:
+		[result > 1 ifTrue:
+			[interpreterProxy primitiveFailFor: result].
+		 ^DirBadPath].
+	name replaceFrom: 1 to: result first size with: result first startingAt: 1.
+	nameLength at: 0 put: result first size.
+	creationDate at: 0 put: (result at: 2).
+	modificationDate at: 0 put: (result at: 3).
+	isDirectory at: 0 put: (result at: 4).
+	sizeIfFile at: 0 put: (result at: 5).
+	posixPermissions at: 0 put: (result at: 6 ifAbsent: [(result at: 4) ifTrue: [8r755] ifFalse: [8r644]]).
+	isSymlink at: 0 put: (result at: 7 ifAbsent: [false]).
+	^DirEntryFound
+]
+
+{ #category : #simulation }
+FilePluginSimulator >> dir_Lookup: pathString _: pathStringLength _: index _: name _: nameLength _: creationDate _: modificationDate _: isDirectory _: sizeIfFile _: posixPermissions _: isSymlink [
+	"sqInt dir_Lookup(	char *pathString, sqInt pathStringLength, sqInt index,
+		/* outputs: */	char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
+		   				sqInt *isDirectory, squeakFileOffsetType *sizeIfFile, sqInt * posixPermissions, sqInt *isSymlink)"
+	| result pathName |
+	pathName := ((0 to: pathStringLength - 1) collect: [:i| (pathString at: i) asCharacter]) as: ByteString.
+	result := self primLookupEntryIn: pathName index: index.
+	result ifNil: [^DirNoMoreEntries].
+	result isInteger ifTrue:
+		[result > 1 ifTrue:
+			[interpreterProxy primitiveFailFor: result].
+		 ^DirBadPath].
+	name replaceFrom: 1 to: result first size with: result first startingAt: 1.
+	nameLength at: 0 put: result first size.
+	creationDate at: 0 put: (result at: 2).
+	modificationDate at: 0 put: (result at: 3).
+	isDirectory at: 0 put: (result at: 4).
+	sizeIfFile at: 0 put: (result at: 5).
+	posixPermissions at: 0 put: (result at: 6 ifAbsent: [(result at: 4) ifTrue: [8r755] ifFalse: [8r644]]).
+	isSymlink at: 0 put: (result at: 7 ifAbsent: [false]).
+	^DirEntryFound
+]
+
 { #category : #'file primitives' }
 FilePluginSimulator >> fileOpenName: nameIndex size: nameSize write: writeFlag secure: secureFlag [
 	"Open the named file, possibly checking security. Answer the file oop."
@@ -153,13 +202,43 @@ FilePluginSimulator >> ioCanSetFileType: fileNameIndex OfSize: fileNameSize [
 ]
 
 { #category : #simulation }
-FilePluginSimulator >> primitiveDirectoryEntry [
-	^interpreterProxy interpreter primitiveDirectoryEntry
+FilePluginSimulator >> primLookupEntryIn: fullPath index: index [
+	"Look up the index-th entry of the directory with the given fully-qualified path (i.e., starting from the root of the file hierarchy) and return an array containing:
+
+	<name> <creationTime> <modificationTime> <dirFlag> <fileSize>
+
+	The empty string enumerates the top-level files or drives. (For example, on Unix, the empty path enumerates the contents of '/'. On Macs and PCs, it enumerates the mounted volumes/drives.)
+
+	The creation and modification times are in seconds since the start of the Smalltalk time epoch. DirFlag is true if the entry is a directory. FileSize the file size in bytes or zero for directories. The primitive returns nil when index is past the end of the directory. It fails if the given path is bad."
+
+ 	<primitive: 'primitiveDirectoryLookup' module: 'FilePlugin' error: ec>
+	^ec isInteger
+		ifTrue: [ec]
+		ifFalse:
+			[Smalltalk primitiveErrorTable
+				indexOf: ec
+				ifAbsent: [Smalltalk primitiveErrorTable size + 1]]
 ]
 
 { #category : #simulation }
-FilePluginSimulator >> primitiveDirectoryLookup [
-	^interpreterProxy interpreter primitiveDirectoryLookup
+FilePluginSimulator >> primLookupEntryIn: fullPath name: fName [
+	"Look up <fName> (a simple file name) in the directory identified by <fullPath>
+ 	 and return an array containing:
+
+	<fName> <creationTime> <modificationTime> <dirFlag> <fileSize>
+
+	On Unix, the empty path denotes '/'. 
+      On Macs and PCs, it is the container of the system volumes.)
+
+	The creation and modification times are in seconds since the start of the Smalltalk time epoch. DirFlag is true if the entry is a directory. FileSize the file size in bytes or zero for directories. The primitive returns nil when index is past the end of the directory. It fails if the given path is bad."
+
+ 	<primitive: 'primitiveDirectoryEntry' module: 'FilePlugin' error: ec>
+	^ec isInteger
+		ifTrue: [ec]
+		ifFalse:
+			[Smalltalk primitiveErrorTable
+				indexOf: ec
+				ifAbsent: [Smalltalk primitiveErrorTable size + 1]]
 ]
 
 { #category : #simulation }

@@ -2699,11 +2699,16 @@ TMethod >> statementsFor: sourceText varName: varName [
 	"Details: Various variables are declared as locals to avoid Undeclared warnings from the parser."
 
 	| s |
-	s := WriteStream on: ''.
-	s nextPutAll: 'temp'; cr; cr; tab.
+	s := WriteStream on: String new.
+	s nextPutAll: 'temp'; cr; crtab.
 	self printTempsAndVar: varName on: s.
 	s nextPutAll: sourceText.
-	^ ((Compiler new parse: s contents in: Object notifying: nil)
+	^ (([Smalltalk compiler parse: s contents] "Pharo"
+			on: MessageNotUnderstood
+			do: [:ex|
+				ex message selector == #compiler ifFalse:
+					[ex pass].
+				Compiler new parse: s contents in: Object notifying: nil]) "Squeak"
 			asTranslationMethodOfClass: self class)
 				removeFinalSelfReturnIn: nil;
 				statements
