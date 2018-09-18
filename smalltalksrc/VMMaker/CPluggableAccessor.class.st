@@ -38,6 +38,15 @@ CPluggableAccessor >> objectSize: n [
 	objectSize := n
 ]
 
+{ #category : #printing }
+CPluggableAccessor >> printOn: aStream [
+	super printOn: aStream.
+	(object isNil and: [readBlock notNil or: [writeBlock notNil]]) ifTrue:
+		[[aStream nextPutAll: ' in '; print: (readBlock home tempAt: 2) home]
+			on: Error
+			do: [:ex| ]]
+]
+
 { #category : #accessing }
 CPluggableAccessor >> size [
 	^objectSize ifNil: [super size]

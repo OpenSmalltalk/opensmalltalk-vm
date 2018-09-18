@@ -863,31 +863,6 @@ InterpreterSimulator >> longPrint: oop [
 	]
 ]
 
-{ #category : #'file primitives' }
-InterpreterSimulator >> makeDirEntryName: entryName size: entryNameSize
-	createDate: createDate modDate: modifiedDate
-		isDir: dirFlag fileSize: fileSize [
-
-	^(pluginList
-		detect: [:assoc| assoc key = 'FilePlugin']
-		ifNone: [self error: 'this message should not be sent unless the FilePlugin has been loaded']) value
-			makeDirEntryName: entryName size: entryNameSize
-				createDate: createDate modDate: modifiedDate
-					isDir: dirFlag fileSize: fileSize
-]
-
-{ #category : #'file primitives' }
-InterpreterSimulator >> makeDirEntryName: entryName size: entryNameSize createDate: createDate modDate: modifiedDate isDir: dirFlag fileSize: posixPermissions posixPermissions: fileSize isSymlink: symlinkFlag [
-
-	^(pluginList
-		detect: [:assoc| assoc key = 'FilePlugin']
-		ifNone: [self error: 'this message should not be sent unless the FilePlugin has been loaded']) value
-			makeDirEntryName: entryName size: entryNameSize
-				createDate: createDate modDate: modifiedDate
-					isDir: dirFlag fileSize: fileSize
-						posixPermissions: fileSize isSymlink: symlinkFlag
-]
-
 { #category : #'debug support' }
 InterpreterSimulator >> nameOfClass: classOop [
 	(self sizeBitsOf: classOop) = (Metaclass instSize +1*self wordSize) ifTrue:
@@ -1046,73 +1021,6 @@ InterpreterSimulator >> primitiveBeDisplay [
 InterpreterSimulator >> primitiveBeep [
 
 	Beeper beep.
-]
-
-{ #category : #'file primitives' }
-InterpreterSimulator >> primitiveDirectoryEntry [
-	| name pathName array result |
-	name := self stringOf: self stackTop.
-	pathName := self stringOf: (self stackValue: 1).
-	
-	successFlag ifFalse:
-		[^self primitiveFail].
-
-	array := FileDirectory default primLookupEntryIn: pathName name: name.
-	array == nil ifTrue:
-		[self pop: 3 thenPush: nilObj.
-		^array].
-	array == #badDirectoryPath ifTrue:
-		[self halt.
-		^self primitiveFail].
-
-	PharoVM 
-		ifTrue: [
-			result := self makeDirEntryName: (array at: 1) size: (array at: 1) size 
-				createDate: (array at: 2) modDate: (array at: 3)
-				isDir: (array at: 4) fileSize: (array at: 5)
-				posixPermissions: (array at: 6) isSymlink: (array at: 7) ]
-		ifFalse: [ 
-			result := self makeDirEntryName: (array at: 1) size: (array at: 1) size
-				createDate: (array at: 2) modDate: (array at: 3)
-				isDir: (array at: 4)  fileSize: (array at: 5) ].
-	self pop: 3.
-	self push: result
-]
-
-{ #category : #'file primitives' }
-InterpreterSimulator >> primitiveDirectoryLookup [
-	| index pathName array result |
-	index := self stackIntegerValue: 0.
-	pathName := (self stringOf: (self stackValue: 1)).
-	
-	successFlag ifFalse: [
-		^self primitiveFail.
-	].
-
-	array := FileDirectory default primLookupEntryIn: pathName index: index.
-
-	array == nil ifTrue: [
-		self pop: 3.
-		self push: nilObj.
-		^array.
-	].
-	array == #badDirectoryPath ifTrue: [self halt.
-		^self primitiveFail.
-	].
-
-	PharoVM
-		ifTrue: [
-			result := self makeDirEntryName: (array at: 1) size: (array at: 1) size
-				createDate: (array at: 2) modDate: (array at: 3)
-				isDir: (array at: 4) fileSize: (array at: 5)
-				posixPermissions: (array at: 6) isSymlink: (array at: 7) ]
-		ifFalse: [ 
-			result := self makeDirEntryName: (array at: 1) size: (array at: 1) size
-				createDate: (array at: 2) modDate: (array at: 3)
-				isDir: (array at: 4)  fileSize: (array at: 5) ].
-	self pop: 3.
-	self push: result.
-
 ]
 
 { #category : #'other primitives' }

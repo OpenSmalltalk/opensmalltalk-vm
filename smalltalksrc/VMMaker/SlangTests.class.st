@@ -30,3 +30,12 @@ SlangTests >> testSimpleMethod [
 					'numExtB' '+=' '1;' 'return' 'self;' '}')
 		equals: (code findTokens: Character separators) asArray 
 ]
+
+{ #category : #tests }
+SlangTests >> testStatementsHaveNoArguments [
+	"The inliner expects the body of a TMethod to have no arguments."
+
+	| tMethod |
+	tMethod := InterpreterStackPages>>#pageIndexFor: asTranslationMethodOfClass: TMethod.
+	self assert: (tMethod parseTree args isNil or: [tMethod parseTree args isEmpty])
+]

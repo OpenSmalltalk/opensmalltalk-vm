@@ -153,14 +153,6 @@ CObjectAccessor >> printOn: aStream [
 		print: object.
 ]
 
-{ #category : #printing }
-CObjectAccessor >> printOnStream: aStream [
-	super printOnStream: aStream.
-	aStream
-		print:' on: ';
-		write: object.
-]
-
 { #category : #private }
 CObjectAccessor >> setObject: anObject [
 	object := anObject.
