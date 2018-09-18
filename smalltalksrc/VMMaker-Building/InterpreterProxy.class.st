@@ -525,7 +525,8 @@ InterpreterProxy >> ioMicroMSecs [
 { #category : #testing }
 InterpreterProxy >> is: oop KindOf: aString [
 	"InterpreterProxy new is: 42 KindOf: 'Number'"
-	<var: #aString type:'char *'>
+	<var: #aString type: 'char *'>
+	<returnTypeC: #sqInt>
 	(Smalltalk at: aString asSymbol ifAbsent:[nil])
 		ifNil:[false]
 		ifNotNil: [:theClass| oop isKindOf: theClass]
