@@ -185,15 +185,9 @@ sqInt dir_Delimitor(void)
   return '\\';
 }
 
-#ifdef PharoVM
 sqInt dir_Lookup(char *pathString, sqInt pathLength, sqInt index,
 /* outputs: */ char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
                sqInt *isDirectory, squeakFileOffsetType *sizeIfFile, sqInt *posixPermissions, sqInt *isSymlink)
-#else
-sqInt dir_Lookup(char *pathString, sqInt pathLength, sqInt index,
-/* outputs: */ char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
-               sqInt *isDirectory, squeakFileOffsetType *sizeIfFile)
-#endif
 {
   /* Lookup the index-th entry of the directory with the given path, starting
      at the root of the file system. Set the name, name length, creation date,
@@ -222,10 +216,8 @@ sqInt dir_Lookup(char *pathString, sqInt pathLength, sqInt index,
   *modificationDate = 0;
   *isDirectory      = false;
   *sizeIfFile       = 0;
-#ifdef PharoVM
   *posixPermissions = 0;
   *isSymlink        = 0;
-#endif
 
   /* check for a dir cache hit (but NEVER on the top level) */
   if(pathLength > 0 && 
@@ -265,9 +257,7 @@ sqInt dir_Lookup(char *pathString, sqInt pathLength, sqInt index,
           *modificationDate = 0;
           *isDirectory      = true;
           *sizeIfFile       = 0;
-#ifdef PharoVM
 	  *posixPermissions |= DEFAULT_DRIVE_PERMISSIONS;
-#endif
           return ENTRY_FOUND;
         }
     return NO_MORE_ENTRIES;
@@ -343,9 +333,7 @@ sqInt dir_Lookup(char *pathString, sqInt pathLength, sqInt index,
   FileTimeToSystemTime(&fileTime, &sysTime);
   *modificationDate = convertToSqueakTime(sysTime);
 
-#ifdef PharoVM
   read_permissions(posixPermissions, findData.cFileName, sz, findData.dwFileAttributes); 
-#endif
 
   if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
     *isDirectory= true;
@@ -358,15 +346,9 @@ sqInt dir_Lookup(char *pathString, sqInt pathLength, sqInt index,
   return ENTRY_FOUND;
 }
 
-#ifdef PharoVM
 sqInt dir_EntryLookup(char *pathString, sqInt pathLength, char* nameString, sqInt nameStringLength,
 /* outputs: */ char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
                     sqInt *isDirectory, squeakFileOffsetType *sizeIfFile, sqInt *posixPermissions, sqInt *isSymlink)
-#else
-sqInt dir_EntryLookup(char *pathString, sqInt pathLength, char* nameString, sqInt nameStringLength,
-/* outputs: */ char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
-	       sqInt *isDirectory, squeakFileOffsetType *sizeIfFile)
-#endif
 {
   /* Lookup a given file in a given named directory.
      Set the name, name length, creation date,
@@ -384,10 +366,8 @@ sqInt dir_EntryLookup(char *pathString, sqInt pathLength, char* nameString, sqIn
   sqInt sz, fsz;
   char *fullPath;
   sqInt fullPathLength;
-#ifdef PharoVM
   HANDLE findHandle;
   sqInt i;
-#endif
 
   /* default return values */
   *name             = 0;
@@ -396,10 +376,8 @@ sqInt dir_EntryLookup(char *pathString, sqInt pathLength, char* nameString, sqIn
   *modificationDate = 0;
   *isDirectory      = false;
   *sizeIfFile       = 0;
-#ifdef PharoVM
   *posixPermissions = 0;
   *isSymlink        = 0;
-#endif
 
 
 #if !defined(_WIN32_WCE)
@@ -423,9 +401,7 @@ sqInt dir_EntryLookup(char *pathString, sqInt pathLength, char* nameString, sqIn
       *modificationDate = 0;
       *isDirectory      = true;
       *sizeIfFile       = 0;
-#ifdef PharoVM
       *posixPermissions |= DEFAULT_DRIVE_PERMISSIONS;
-#endif
       return ENTRY_FOUND;
     }
     return NO_MORE_ENTRIES;
@@ -479,9 +455,7 @@ sqInt dir_EntryLookup(char *pathString, sqInt pathLength, char* nameString, sqIn
     *sizeIfFile = ofs.offset;
   }
 
-#ifdef PharoVM
   read_permissions(posixPermissions, win32Path, wcslen(win32Path), winAttrs.dwFileAttributes);
-#endif
   return ENTRY_FOUND;
 }
 
