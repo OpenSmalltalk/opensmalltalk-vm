@@ -462,7 +462,9 @@ Cogit class >> attemptToComputeTempNamesFor: aCompiledMethod [
 					ifEmpty: [#()]
 					ifNotEmpty:
 						[aCompiledMethod embeddedBlockClosures
-							with: (schematicTemps piecesCutWhere: [:a :b| b = $[]) allButFirst
+							with: (schematicTemps first = $[
+									ifTrue: [schematicTemps piecesCutWhere: [:a :b| b = $[]]
+									ifFalse: [(schematicTemps piecesCutWhere: [:a :b| b = $[]) allButFirst])
 							collect: [:c :s| c startpc -> (self decomposeSchematicTemps: (s copyWithoutAll: '[]'))]]))]
 ]
 

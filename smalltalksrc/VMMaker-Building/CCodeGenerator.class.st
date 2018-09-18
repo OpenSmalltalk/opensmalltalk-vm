@@ -665,8 +665,16 @@ CCodeGenerator >> cCodeForMethod: selector [
 { #category : #'C code generator' }
 CCodeGenerator >> cFunctionNameFor: aSelector [
 	"Create a C function name from the given selector by finding
-	 a specific translation, or if none, simply omitting colons."
-	^selectorTranslations at: aSelector ifAbsent: [aSelector copyWithout: $:]
+	 a specific translation, or if none, simply omitting colons, and
+	 any trailing underscores (this supports a varargs convention)."
+	^selectorTranslations
+		at: aSelector
+		ifAbsent:
+			[| cSelector |
+			 cSelector := aSelector copyWithout: $:.
+			 [cSelector last = $_] whileTrue:
+				[cSelector := cSelector allButLast].
+			 cSelector]
 ]
 
 { #category : #'C code generator' }
