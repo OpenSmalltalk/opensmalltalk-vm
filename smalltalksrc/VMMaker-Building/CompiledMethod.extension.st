@@ -9,7 +9,7 @@ CompiledMethod >> abstractDetailedSymbolic [
 CompiledMethod >> asTranslationMethodOfClass: aTMethodClass [
  	"Answer a TMethod (or subclass) derived from the receiver."
 	^((CompiledMethod includesSelector: #ast)
-			ifTrue: [self ast] "Pharo Opal Bytecode Compiler"
+			ifTrue: [self parseTree] "Pharo Opal Bytecode Compiler"
 			ifFalse: [self methodNode]) "Squeak Smalltalk-80 Bytecode Compiler"
 		asTranslationMethodOfClass: aTMethodClass
 ]

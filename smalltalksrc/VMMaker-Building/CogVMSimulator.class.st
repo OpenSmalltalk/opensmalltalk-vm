@@ -2272,31 +2272,6 @@ CogVMSimulator >> makeBaseFrameFor: aContext [ "<Integer>"
 	^super makeBaseFrameFor: aContext
 ]
 
-{ #category : #'file primitives' }
-CogVMSimulator >> makeDirEntryName: entryName size: entryNameSize
-	createDate: createDate modDate: modifiedDate
-		isDir: dirFlag fileSize: fileSize [
-
-	^(pluginList
-		detect: [:assoc| assoc key = 'FilePlugin']
-		ifNone: [self error: 'this message should not be sent unless the FilePlugin has been loaded']) value
-			makeDirEntryName: entryName size: entryNameSize
-				createDate: createDate modDate: modifiedDate
-					isDir: dirFlag fileSize: fileSize
-]
-
-{ #category : #'as yet unclassified' }
-CogVMSimulator >> makeDirEntryName: entryName size: entryNameSize createDate: createDate modDate: modifiedDate isDir: dirFlag fileSize: fileSize posixPermissions: posixPermissions isSymlink: symlinkFlag [
-
-	^(pluginList
-		detect: [:assoc| assoc key = 'FilePlugin']
-		ifNone: [self error: 'this message should not be sent unless the FilePlugin has been loaded']) value
-			makeDirEntryName: entryName size: entryNameSize
-				createDate: createDate modDate: modifiedDate
-					isDir: dirFlag fileSize: fileSize
-						posixPermissions: fileSize isSymlink: symlinkFlag
-]
-
 { #category : #'cog jit support' }
 CogVMSimulator >> mapFunctionToAddress: aSymbolOrIndexOrBlock [
 	"Hackery to deal with the plugin primitive simulation hoops.
@@ -2863,67 +2838,6 @@ CogVMSimulator >> primitiveContextAtPut [
 						WithSP: (self frameOfMarriedContext: aContext) - 48]
 			ifFalse: [self printContext: aContext]]."
 	^super primitiveContextAtPut
-]
-
-{ #category : #'file primitives' }
-CogVMSimulator >> primitiveDirectoryEntry [
-	| name pathName arrayNilOrSymbol result |
-	name := self stringOf: self stackTop.
-	pathName := self stringOf: (self stackValue: 1).
-	
-	self successful ifFalse:
-		[^self primitiveFail].
-
-	arrayNilOrSymbol := FileDirectory default primLookupEntryIn: pathName name: name.
-	arrayNilOrSymbol ifNil:
-		[self pop: 3 thenPush: objectMemory nilObject.
-		 ^self].
-	arrayNilOrSymbol isArray ifFalse:
-		["arrayNilOrSymbol ~~ #primFailed ifTrue:
-			[self halt]. "
-		self transcript show: name, ' NOT FOUND'.
-		 ^self primitiveFail].
-
-	result := PharoVM 
-		ifTrue:
-			[self makeDirEntryName: (arrayNilOrSymbol at: 1) size: (arrayNilOrSymbol at: 1) size
-				createDate: (arrayNilOrSymbol at: 2) modDate: (arrayNilOrSymbol at: 3)
-				isDir: (arrayNilOrSymbol at: 4) fileSize: (arrayNilOrSymbol at: 5)
-				posixPermissions: (arrayNilOrSymbol at: 6 ifAbsent: [8r644]) isSymlink: (arrayNilOrSymbol at: 7 ifAbsent: [false])]
-		ifFalse:
-			[self makeDirEntryName: (arrayNilOrSymbol at: 1) size: (arrayNilOrSymbol at: 1) size
-				createDate: (arrayNilOrSymbol at: 2) modDate: (arrayNilOrSymbol at: 3)
-				isDir: (arrayNilOrSymbol at: 4) fileSize: (arrayNilOrSymbol at: 5) ].
-	self pop: 3 thenPush: result
-]
-
-{ #category : #'file primitives' }
-CogVMSimulator >> primitiveDirectoryLookup [
-	| index pathName array result |
-	index := self stackIntegerValue: 0.
-	pathName := self stringOf: (self stackValue: 1).
-	
-	self successful ifFalse:
-		[^self primitiveFail].
-
-	array := FileDirectory default primLookupEntryIn: pathName index: index.
-
-	array ifNil:
-		[self pop: 3 thenPush: objectMemory nilObject.
-		 ^array].
-	array == #badDirectoryPath ifTrue:
-		[^self "halt" primitiveFail].
-
-	result := PharoVM
-		ifTrue: [self makeDirEntryName: (array at: 1) size: (array at: 1) size
-				createDate: (array at: 2) modDate: (array at: 3)
-				isDir: (array at: 4) fileSize: (array at: 5)
-				posixPermissions: (array at: 6 ifAbsent: 8r664) isSymlink: (array at: 7 ifAbsent: [false]) ]
-		ifFalse: [self makeDirEntryName: (array at: 1) size: (array at: 1) size
-				createDate: (array at: 2) modDate: (array at: 3)
-				isDir: (array at: 4) fileSize: (array at: 5)].
-			
-	self pop: 3 thenPush: result
 ]
 
 { #category : #'debugging traps' }
