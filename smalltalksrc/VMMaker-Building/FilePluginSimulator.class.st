@@ -257,14 +257,15 @@ FilePluginSimulator >> sqFile: file Read: count Into: byteArrayIndexArg At: star
 	[[startIndex to: startIndex + count - 1 do:
 		[ :i |
 		file atEnd ifTrue:
-			[(file isKindOf: FakeStdinStream) ifTrue: [file atEnd: false].
+			[file isFakeStdinStream ifTrue: [file atEnd: false].
 			 ^i - startIndex].
 		interpreterProxy
 			byteAt: byteArrayIndex + i
-			put: (file next ifNil: [(file isKindOf: FakeStdinStream) ifTrue: [^0]] ifNotNil: [:c| c asInteger])]]
+			put: (file next ifNil: [file isFakeStdinStream ifTrue: [^0]] ifNotNil: [:c| c asInteger])]]
 			on: Error
 			do: [:ex|
-				(file isKindOf: TranscriptStream) ifFalse: [ex pass].
+				(file isStream and: [file isTranscriptStream]) ifFalse:
+					[ex pass].
 				^0]]
 		ensure: [self recordStateOf: file].
 	^count

@@ -4,3 +4,8 @@ Extension { #name : #Stream }
 Stream >> isFakeStdinStream [
 	^false
 ]
+
+{ #category : #'*VMMaker-JITSimulation-testing' }
+Stream >> isTranscriptStream [
+	^false
+]
