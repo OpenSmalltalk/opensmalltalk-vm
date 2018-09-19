@@ -44,6 +44,11 @@ FakeStdinStream >> close [
 	atEnd := true
 ]
 
+{ #category : #testing }
+FakeStdinStream >> isFakeStdinStream [
+	^true
+]
+
 { #category : #accessing }
 FakeStdinStream >> next [
 	"Answer the next object in the Stream represented by the receiver.
@@ -63,13 +68,20 @@ FakeStdinStream >> next [
 					 sem signal].
 				 sem wait]
 			ifFalse: "simulate line-oriented input"
-				[inputLine := FillInTheBlankMorph
-								request: 'Input please!'
-								initialAnswer: ''
-								centerAt: ActiveHand cursorPoint
-								inWorld: ActiveWorld
-								onCancelReturn: nil 
-								acceptOnCR: true.
+				[inputLine := ((Smalltalk classNamed: #FillInTheBlankMorph)
+								ifNotNil: "Squeak"
+									[:fITBM|
+									 fITBM
+										request: 'Input please!'
+										initialAnswer: ''
+										centerAt: ActiveHand cursorPoint
+										inWorld: ActiveWorld
+										onCancelReturn: nil
+										acceptOnCR: true]
+								ifNil: "Pharo; onCancelReturn: nil is the default here"
+									[UIManager default 
+										request: 'Input please!' 
+										initialAnswer: '']).
 				inputLine ifNil: [self atEnd: true. ^nil]].
 		 collection size <= inputLine size ifTrue:
 			[collection := collection species new: inputLine size + 1].
