@@ -360,7 +360,7 @@ SmartSyntaxPluginTMethod >> recordDeclarationsIn: aCCodeGen [
 			 pragma keyword = #var:as: ifTrue:
 				[| theClass |
 				 theClass := Smalltalk at: pragma arguments last name asSymbol ifAbsent: [nil].
-				 (theClass isKindOf: Behavior) ifFalse:
+				 theClass isBehavior ifFalse:
 					[^self error: 'declarator must be a Behavior'].
 				 self checkedDeclarationAt: pragma arguments first value asString 
 					put: (theClass ccgDeclareCForVar: pragma arguments first asString)
@@ -390,7 +390,7 @@ SmartSyntaxPluginTMethod >> recordDeclarationsIn: aCCodeGen [
 				[| theClass |
 				 isDeclaration := true.
 				 theClass := Smalltalk  at: stmt args last name asSymbol ifAbsent: [nil].
-				 (theClass isKindOf: Behavior) ifFalse:
+				 theClass isBehavior ifFalse:
 					[^self error: 'declarator must be a Behavior'].
 				 self declarationAt: stmt args first value asString 
 					put: (theClass ccgDeclareCForVar: stmt args first value asString)].
