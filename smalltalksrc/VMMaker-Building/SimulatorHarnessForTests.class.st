@@ -34,7 +34,7 @@ SimulatorHarnessForTests >> findSymbol: aString [
 		 and: [(om numBytesOf: obj) = size
 		 and: ["(om fetchByte: 0 ofObject: obj) asCharacter == $C ifTrue:
 				[simulator printOopShort: obj; halt]."
-			(om str: aString n: obj + om baseHeaderSize cmp: size) = 0]]) ifTrue:
+			(om strncmp: aString _: obj + om baseHeaderSize _: size) = 0]]) ifTrue:
 			[^obj]].
 	^nil
 ]

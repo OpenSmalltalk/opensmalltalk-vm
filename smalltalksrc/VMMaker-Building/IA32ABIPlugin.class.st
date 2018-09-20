@@ -186,7 +186,7 @@ IA32ABIPlugin >> primAlienReplace [
 		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
 
 	count := stop - start + 1.
-	self mem: dest asVoidPointer mo: src asVoidPointer ve: count.
+	self memmove: dest asVoidPointer _: src asVoidPointer _: count.
 
 	interpreterProxy pop: interpreterProxy methodArgumentCount
 ]
@@ -361,7 +361,7 @@ IA32ABIPlugin >> primDoubleAt [
 	(startAddr := self startOfData: rcvr) = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	addr := startAddr + byteOffset.
-	self mem: (self addressOf: floatValue) cp: addr y: (self sizeof: floatValue).
+	self memcpy: (self addressOf: floatValue) _: addr _: (self sizeof: floatValue).
 	interpreterProxy pop: 2.
 	^interpreterProxy pushFloat: floatValue
 ]
@@ -390,7 +390,7 @@ IA32ABIPlugin >> primDoubleAtPut [
 	(startAddr := self startOfData: rcvr) = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	addr := startAddr + byteOffset.
-	self mem: addr cp: (self addressOf: floatValue) y: (self sizeof: floatValue).
+	self memcpy: addr _: (self addressOf: floatValue) _: (self sizeof: floatValue).
 	interpreterProxy methodReturnValue: valueOop
 ]
 
@@ -419,7 +419,7 @@ IA32ABIPlugin >> primFloatAt [
 	(startAddr := self startOfData: rcvr) = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	addr := startAddr + byteOffset.
-	self mem: (self addressOf: floatValue) cp: addr y: (self sizeof: floatValue).
+	self memcpy: (self addressOf: floatValue) _: addr _: (self sizeof: floatValue).
 	interpreterProxy pop: 2.
 	^interpreterProxy pushFloat: floatValue
 ]
@@ -448,7 +448,7 @@ IA32ABIPlugin >> primFloatAtPut [
 	(startAddr := self startOfData: rcvr) = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	addr := startAddr + byteOffset.
-	self mem: addr cp: (self addressOf: floatValue) y: (self sizeof: floatValue).
+	self memcpy: addr _: (self addressOf: floatValue) _: (self sizeof: floatValue).
 	interpreterProxy methodReturnValue: valueOop
 ]
 
@@ -625,9 +625,9 @@ IA32ABIPlugin >> primReturnFromContextThrough [
 	vmCallbackReturnValue := self cCoerceSimple: (self startOfData: (interpreterProxy stackValue: mac))
 									to: #'VMCallbackReturnValue *'.
 	self cCode: "C needs a typedef for structs to be assigned, but that implies a struct class for just one assignment."
-		[self mem: (self addressOf: vmCallbackContext rvs)
-			cp: (self addressOf: vmCallbackReturnValue crvrvs)
-			y: (self sizeof: vmCallbackContext rvs)]
+		[self memcpy: (self addressOf: vmCallbackContext rvs)
+			_: (self addressOf: vmCallbackReturnValue crvrvs)
+			_: (self sizeof: vmCallbackContext rvs)]
 		inSmalltalk: [vmCallbackContext rvs: vmCallbackReturnValue crvrvs].
 	(interpreterProxy
 		returnAs: (interpreterProxy integerObjectOf: vmCallbackReturnValue type + 1)

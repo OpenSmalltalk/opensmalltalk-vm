@@ -93,7 +93,7 @@ VMProfileMacSupportPlugin >> primitiveExecutableModulesAndOffsets [
 			 ^interpreterProxy primitiveFail].
 		interpreterProxy storePointer: i * 4 ofObject: interpreterProxy topRemappableOop withValue: valueObj.
 		nameObjData := interpreterProxy arrayValueOf: valueObj.
-		self mem: nameObjData cp: name y: (self strlen: name).
+		self memcpy: nameObjData _: name _: (self strlen: name).
 
 		valueObj := interpreterProxy signedMachineIntegerFor: slide.
 		interpreterProxy failed ifTrue:

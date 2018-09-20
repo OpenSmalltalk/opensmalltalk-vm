@@ -613,15 +613,15 @@ InterpreterPlugin >> sizeof: objectSymbolOrClass [
 ]
 
 { #category : #'simulation support' }
-InterpreterPlugin >> st: aString rn: bString cpy: n [
-	<doNotGenerate>
-	^interpreterProxy st: aString rn: bString cpy: n
-]
-
-{ #category : #'simulation support' }
 InterpreterPlugin >> strlen: aCString [
 	<doNotGenerate>
 	^interpreterProxy strlen: aCString
+]
+
+{ #category : #'simulation support' }
+InterpreterPlugin >> strncpy: aString _: bString _: n [
+	<doNotGenerate>
+	^interpreterProxy strncpy: aString _: bString _: n
 ]
 
 { #category : #simulation }

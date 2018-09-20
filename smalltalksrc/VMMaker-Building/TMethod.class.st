@@ -2703,7 +2703,11 @@ TMethod >> statementsFor: sourceText varName: varName [
 	s nextPutAll: 'temp'; cr; crtab.
 	self printTempsAndVar: varName on: s.
 	s nextPutAll: sourceText.
-	^ (([Smalltalk compiler parse: s contents] "Pharo"
+	^ (([ | compiler |
+		compiler := Smalltalk compiler class: Object.
+	   (compiler parse: s contents)
+			compilationContext: compiler compilationContext;
+			yourself] "Pharo"
 			on: MessageNotUnderstood
 			do: [:ex|
 				ex message selector == #compiler ifFalse:
@@ -2712,7 +2716,6 @@ TMethod >> statementsFor: sourceText varName: varName [
 			asTranslationMethodOfClass: self class)
 				removeFinalSelfReturnIn: nil;
 				statements
-
 ]
 
 { #category : #inlining }

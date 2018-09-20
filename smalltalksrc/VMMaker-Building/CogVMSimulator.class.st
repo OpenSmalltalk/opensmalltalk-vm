@@ -1757,8 +1757,8 @@ CogVMSimulator >> ioLoadFunction: functionString From: pluginString [
 				(pluginString isEmpty ifTrue:['vm'] ifFalse:[pluginString]).
 	(breakSelector notNil
 	 and: [pluginString size = breakSelector size
-	 and: [(self str: pluginString n: breakSelector cmp: pluginString size) = 0
-		or: [(self str: functionString n: breakSelector cmp: functionString size) = 0]]]) ifTrue:
+	 and: [(self strncmp: pluginString _: breakSelector _: pluginString size) = 0
+		or: [(self strncmp: functionString _: breakSelector _: functionString size) = 0]]]) ifTrue:
 		[self halt: functionString].
 	plugin := pluginList 
 				detect:[:any| any key = pluginString asString]
@@ -1800,8 +1800,8 @@ CogVMSimulator >> ioLoadFunction: functionString From: pluginString AccessorDept
 				(pluginString isEmpty ifTrue:['vm'] ifFalse:[pluginString]).
 	(breakSelector notNil
 	 and: [pluginString size = breakSelector size
-	 and: [(self str: pluginString n: breakSelector cmp: pluginString size) = 0
-		or: [(self str: functionString n: breakSelector cmp: functionString size) = 0]]]) ifTrue:
+	 and: [(self strncmp: pluginString _: breakSelector _: pluginString size) = 0
+		or: [(self strncmp: functionString _: breakSelector _: functionString size) = 0]]]) ifTrue:
 		[self halt: functionString].
 	plugin := pluginList 
 				detect: [:any| any key = pluginString asString]
@@ -2075,7 +2075,7 @@ CogVMSimulator >> loadInitialContext [
 { #category : #'plugin support' }
 CogVMSimulator >> loadNewPlugin: pluginString [
 	(breakSelector notNil
-	 and: [(self str: pluginString n: breakSelector cmp: pluginString size) = 0]) ifTrue:
+	 and: [(self strncmp: pluginString _: breakSelector _: pluginString size) = 0]) ifTrue:
 		[self halt: pluginString].
 	^(self tryLoadNewPlugin: pluginString pluginEntries: mappedPluginEntries) ifNotNil:
 		[:entry|
@@ -3864,9 +3864,9 @@ CogVMSimulator >> utilitiesMenu: aMenuMorph [
 					[:m|
 					(s ifNil: [m selector = objectMemory nilObject]
 					 ifNotNil: [(objectMemory numBytesOf: m selector) = s size
-							and: [(self str: s
-									n: (m selector + objectMemory baseHeaderSize)
-									cmp: (objectMemory numBytesOf: m selector)) = 0]]) ifTrue:
+							and: [(self strncmp: s
+											_: (m selector + objectMemory baseHeaderSize)
+											_: (objectMemory numBytesOf: m selector)) = 0]]) ifTrue:
 						[cogit printCogMethod: m]]]];
 		add: 'print cog methods with method...' action:
 			[(self promptHex: 'method') ifNotNil: [:methodOop| cogMethodZone printCogMethodsWithMethod: methodOop]];

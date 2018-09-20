@@ -164,7 +164,7 @@ ThreadedIA32FFIPlugin >> ffiPushStructure: pointer ofSize: structSize typeSpec: 
 	roundedSize := structSize + 3 bitClear: 3.
 	calloutState currentArg + roundedSize > calloutState limit ifTrue:
 		[^FFIErrorCallFrameTooBig].
-	self mem: calloutState currentArg cp: pointer y: structSize.
+	self memcpy: calloutState currentArg _: pointer _: structSize.
 	calloutState currentArg: calloutState currentArg + roundedSize.
 	^0
 ]
@@ -241,11 +241,11 @@ ThreadedIA32FFIPlugin >> ffiReturnStruct: longLongRet ofType: ffiRetType in: cal
 		in: [oop := interpreterProxy 
 					instantiateClass: interpreterProxy classByteArray 
 					indexableSize: calloutState structReturnSize].
-	self mem: (interpreterProxy firstIndexableField: oop)
-		cp: ((self returnStructInRegisters: calloutState structReturnSize)
+	self memcpy: (interpreterProxy firstIndexableField: oop)
+		_: ((self returnStructInRegisters: calloutState structReturnSize)
 				ifTrue: [(self addressOf: longLongRet) asVoidPointer]
 				ifFalse: [calloutState limit])
-		 y: calloutState structReturnSize.
+		 _: calloutState structReturnSize.
 	interpreterProxy storePointer: 0 ofObject: retOop withValue: oop.
 	^retOop
 ]

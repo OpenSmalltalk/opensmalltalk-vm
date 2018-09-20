@@ -33,7 +33,7 @@ TStmtListNode >> addReadBeforeAssignedIn: variables to: readBeforeAssigned assig
 					["First deal with implicit assignments..."
 					node isValueExpansion ifTrue:
 						[assigned addAll: node receiver args].
-					(#(mem:cp:y: mem:mo:ve:) includes: node selector) ifTrue:
+					(#(#'memcpy:_:_:' #'memmove:_:_:') includes: node selector) ifTrue:
 						[assigned add: (node args first detect: [:subnode| subnode isVariable]) name].
 					(#(to:do: to:by:do:) includes: node selector) ifTrue:
 						[assigned addAll: (node args at: node selector numArgs) args.
