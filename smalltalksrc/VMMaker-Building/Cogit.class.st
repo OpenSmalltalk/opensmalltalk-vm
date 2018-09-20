@@ -4738,9 +4738,9 @@ Cogit >> cogMNUPICSelector: selector receiver: rcvr methodOperand: methodOperand
 
 	"memcpy the prototype across to our allocated space; because anything else would be silly"
 	objectMemory
-		mem: (self cCoerceSimple: startAddress to: #'CogMethod *')
-		cp: (self cCoerceSimple: cPICPrototype to: #'CogMethod *')
-		y: closedPICSize.
+		memcpy: (self cCoerceSimple: startAddress to: #'CogMethod *')
+		_: (self cCoerceSimple: cPICPrototype to: #'CogMethod *')
+		_: closedPICSize.
 	
 	self configureMNUCPIC: (self cCoerceSimple: startAddress to: #'CogMethod *')
 		methodOperand: methodOperand
@@ -4909,9 +4909,9 @@ Cogit >> cogPICSelector: selector numArgs: numArgs Case0Method: case0CogMethod C
 
 	"memcpy the prototype across to our allocated space; because anything else would be silly"
 	objectMemory
-		mem: (self cCoerceSimple: startAddress to: #'CogMethod *')
-		cp: (self cCoerceSimple: cPICPrototype to: #'CogMethod *')
-		y: closedPICSize.
+		memcpy: (self cCoerceSimple: startAddress to: #'CogMethod *')
+		_: (self cCoerceSimple: cPICPrototype to: #'CogMethod *')
+		_: closedPICSize.
 	
 	self configureCPIC: (self cCoerceSimple: startAddress to: #'CogMethod *')
 		Case0: case0CogMethod

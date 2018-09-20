@@ -652,7 +652,7 @@ VMClass >> asString: aStringOrStringIndex [
 	aStringOrStringIndex isString ifTrue:
 		[^aStringOrStringIndex].
 	sz := self strlen: aStringOrStringIndex.
-	^self st: (ByteString new: sz) rn: aStringOrStringIndex cpy: sz
+	^self strncpy: (ByteString new: sz) _: aStringOrStringIndex _: sz
 ]
 
 { #category : #'C library simulation' }
@@ -660,7 +660,7 @@ VMClass >> asString: stringIndex size: stringSize [
 	"stringIndex is an address in the heap.  Create a String of the requested length
 	form the bytes in the heap starting at stringIndex."
 	<doNotGenerate>
-	^self st: (ByteString new: stringSize) rn: stringIndex cpy: stringSize
+	^self strncpy: (ByteString new: stringSize) _: stringIndex _: stringSize
 ]
 
 { #category : #'debug support' }
@@ -968,14 +968,14 @@ VMClass >> malloc: size [
 ]
 
 { #category : #'C library simulation' }
-VMClass >> mem: dString cp: sString y: bytes [
+VMClass >> memcpy: dString _: sString _: bytes [
 	<doNotGenerate>
 	"implementation of memcpy(3). N.B. If ranges overlap, must use memmove."
 	(dString isString or: [sString isString]) ifFalse:
 		[| destAddress sourceAddress |
 		 dString class == ByteArray ifTrue:
 			[ByteString adoptInstance: dString.
-			 ^[self mem: dString cp: sString y: bytes] ensure:
+			 ^[self memcpy: dString _: sString _: bytes] ensure:
 				[ByteArray adoptInstance: dString]].
 		 destAddress := dString asInteger.
 		 sourceAddress := sString asInteger.
@@ -1000,7 +1000,7 @@ VMClass >> mem: dString cp: sString y: bytes [
 ]
 
 { #category : #'C library simulation' }
-VMClass >> mem: destAddress mo: sourceAddress ve: bytes [
+VMClass >> memmove: destAddress _: sourceAddress _: bytes [
 	<doNotGenerate>
 	| dst src  |
 	dst := destAddress asInteger.
@@ -1217,8 +1217,76 @@ VMClass >> sqLowLevelMFence [
 	"A no-op in the simulator"
 ]
 
+{ #category : #'memory access' }
+VMClass >> storeFloatAtPointer: pointer from: aFloat [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and aFloat is a 64-bit double precision float."
+	<doNotGenerate>
+
+	^self storeFloatAt: pointer from: aFloat
+]
+
+{ #category : #'memory access' }
+VMClass >> storeSingleFloatAtPointer: pointer from: aFloat [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and aFloat is a 32-bit single precision float."
+	<doNotGenerate>
+
+	^self storeSingleFloatAt: pointer from: aFloat
+]
+
 { #category : #'C library simulation' }
-VMClass >> st: aString rn: bString cpy: n [
+VMClass >> strcat: aString _: bString [
+	<doNotGenerate>
+	"implementation of strcat(3)"
+	^(self asString: aString), (self asString: bString)
+]
+
+{ #category : #'C library extensions' }
+VMClass >> stretch: s1 cat: s2 [
+	<var: 's1' type: #'char *'>
+	<var: 's2' type: #'char *'>
+	| ns |
+	<var: 'ns' type: #'char *'>
+	^self
+		cCode:
+			[ns := self malloc: (self strlen: s1) + (self strlen: s2) + 2.
+			 self strcpy: ns _: s1.
+			 self strcat: ns  _: s2]
+		inSmalltalk: [self strcat: s1  _: s2]
+]
+
+{ #category : #'C library simulation' }
+VMClass >> strlen: aCString [
+	"Simulate strlen(3)"
+	<doNotGenerate>
+	| len |
+	aCString isString ifTrue:
+		[^aCString size].
+	len := 0.
+	[(self byteAt: aCString + len) = 0 ifTrue: [^len].
+	len := len + 1] repeat
+]
+
+{ #category : #'C library simulation' }
+VMClass >> strncmp: aString _: bString _: n [
+	<doNotGenerate>
+	"implementation of strncmp(3)"
+	bString isString ifTrue:
+		[1 to: n do:
+			[:i|
+			 (aString at: i) asCharacter ~= (bString at: i) ifTrue:
+				[^i]].
+		 ^0].
+	1 to: n do:
+		[:i| | v |
+		v := (aString at: i) asInteger - (self byteAt: bString + i - 1).
+		v ~= 0 ifTrue: [^v]].
+	^0
+]
+
+{ #category : #'C library simulation' }
+VMClass >> strncpy: aString _: bString _: n [
 	<doNotGenerate>
 	"implementation of strncpy(3)"
 	aString isString
@@ -1239,74 +1307,6 @@ VMClass >> st: aString rn: bString cpy: n [
 				self byteAt: aString + i - 1 put: v.
 				v = 0 ifTrue: [^aString]]].
 	^aString
-]
-
-{ #category : #'memory access' }
-VMClass >> storeFloatAtPointer: pointer from: aFloat [
-	"This gets implemented by Macros in C, where its types will also be checked.
-	 pointer is a raw address, and aFloat is a 64-bit double precision float."
-	<doNotGenerate>
-
-	^self storeFloatAt: pointer from: aFloat
-]
-
-{ #category : #'memory access' }
-VMClass >> storeSingleFloatAtPointer: pointer from: aFloat [
-	"This gets implemented by Macros in C, where its types will also be checked.
-	 pointer is a raw address, and aFloat is a 32-bit single precision float."
-	<doNotGenerate>
-
-	^self storeSingleFloatAt: pointer from: aFloat
-]
-
-{ #category : #'C library simulation' }
-VMClass >> str: aString cat: bString [
-	<doNotGenerate>
-	"implementation of strcat(3)"
-	^(self asString: aString), (self asString: bString)
-]
-
-{ #category : #'C library simulation' }
-VMClass >> str: aString n: bString cmp: n [
-	<doNotGenerate>
-	"implementation of strncmp(3)"
-	bString isString ifTrue:
-		[1 to: n do:
-			[:i|
-			 (aString at: i) asCharacter ~= (bString at: i) ifTrue:
-				[^i]].
-		 ^0].
-	1 to: n do:
-		[:i| | v |
-		v := (aString at: i) asInteger - (self byteAt: bString + i - 1).
-		v ~= 0 ifTrue: [^v]].
-	^0
-]
-
-{ #category : #'C library extensions' }
-VMClass >> stretch: s1 cat: s2 [
-	<var: 's1' type: #'char *'>
-	<var: 's2' type: #'char *'>
-	| ns |
-	<var: 'ns' type: #'char *'>
-	^self
-		cCode:
-			[ns := self malloc: (self strlen: s1) + (self strlen: s2) + 2.
-			self str: ns cpy: s1.
-			self str: ns cat: s2]
-		inSmalltalk: [self str: s1 cat: s2]
-]
-
-{ #category : #'C library simulation' }
-VMClass >> strlen: aCString [
-	"Simulate strlen(3)"
-	<doNotGenerate>
-	| len |
-	aCString isString ifTrue:
-		[^aCString size].
-	len := 0.
-	[(self byteAt: aCString + len) = 0 ifTrue: [^len].
-	len := len + 1] repeat
 ]
 
 { #category : #'hack compatibility' }

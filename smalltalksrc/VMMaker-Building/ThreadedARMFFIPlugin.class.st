@@ -284,9 +284,9 @@ ThreadedARMFFIPlugin >> ffiPushStructure: pointer ofSize: structSize typeSpec: a
 					["all in registers"
 					 stackPartSize := 0.
 					 self 
-						mem: (self cCoerceSimple: (self addressOf: (calloutState integerRegisters at: calloutState integerRegisterIndex)) to: 'void *') 
-						cp: pointer 
-						y: structSize.
+						memcpy: (self cCoerceSimple: (self addressOf: (calloutState integerRegisters at: calloutState integerRegisterIndex)) to: 'void *') 
+						_: pointer 
+						_: structSize.
 					 calloutState integerRegisterIndex: calloutState integerRegisterIndex + (structSize + 3 bitShift: -2) ]
 				ifFalse:
 					["If no previous co-processor candidate arg has already been pushed on the stack, then split the struct between registers and stack.
@@ -295,9 +295,9 @@ ThreadedARMFFIPlugin >> ffiPushStructure: pointer ofSize: structSize typeSpec: a
 						ifTrue: 
 					 		[stackPartSize := structSize - availableRegisterSpace.
 					 		self 
-								mem: (self cCoerceSimple: (self addressOf: (calloutState integerRegisters at: calloutState integerRegisterIndex)) to: 'void *') 
-								cp: pointer 
-								y: availableRegisterSpace]
+								memcpy: (self cCoerceSimple: (self addressOf: (calloutState integerRegisters at: calloutState integerRegisterIndex)) to: 'void *') 
+								_: pointer 
+								_: availableRegisterSpace]
 						ifFalse:
 							[availableRegisterSpace := 0].
 					calloutState integerRegisterIndex: NumIntRegArgs]].
@@ -307,7 +307,7 @@ ThreadedARMFFIPlugin >> ffiPushStructure: pointer ofSize: structSize typeSpec: a
 			[roundedSize := stackPartSize + 3 bitClear: 3.
 			 calloutState currentArg + roundedSize > calloutState limit ifTrue:
 				 [^FFIErrorCallFrameTooBig].
-			 self mem: calloutState currentArg cp: (self addressOf: ((self cCoerceSimple: pointer to: 'char *') at: availableRegisterSpace)) y: stackPartSize.
+			 self memcpy: calloutState currentArg _: (self addressOf: ((self cCoerceSimple: pointer to: 'char *') at: availableRegisterSpace)) _: stackPartSize.
 			 calloutState currentArg: calloutState currentArg + roundedSize].
 	^0
 ]
@@ -415,11 +415,11 @@ ThreadedARMFFIPlugin >> ffiReturnStruct: longLongRet ofType: ffiRetType in: call
 		in: [oop := interpreterProxy 
 					instantiateClass: interpreterProxy classByteArray 
 					indexableSize: calloutState structReturnSize].
-	self mem: (interpreterProxy firstIndexableField: oop)
-		cp: ((self returnStructInRegisters: calloutState structReturnSize)
+	self memcpy: (interpreterProxy firstIndexableField: oop)
+		_: ((self returnStructInRegisters: calloutState structReturnSize)
 				ifTrue: [self addressOf: longLongRet]
 				ifFalse: [calloutState limit])
-		 y: calloutState structReturnSize.
+		 _: calloutState structReturnSize.
 	interpreterProxy storePointer: 0 ofObject: retOop withValue: oop.
 	^retOop
 ]

@@ -1216,9 +1216,9 @@ CoInterpreter >> callbackEnter: callbackID [
 	"Save the previous CStackPointers and interpreter entry jmp_buf."
 	currentCStackPointer := cogit getCStackPointer.
 	currentCFramePointer := cogit getCFramePointer.
-	self mem: savedReenterInterpreter asVoidPointer
-		cp: reenterInterpreter
-		y: (self sizeof: #'jmp_buf').
+	self memcpy: savedReenterInterpreter asVoidPointer
+		_: reenterInterpreter
+		_: (self sizeof: #'jmp_buf').
 	cogit assertCStackWellAligned.
 	(self setjmp: (jmpBuf at: jmpDepth)) = 0 ifTrue: "Fill in callbackID"
 		[callbackID at: 0 put: jmpDepth.
@@ -1228,9 +1228,9 @@ CoInterpreter >> callbackEnter: callbackID [
 	"Restore the previous CStackPointers and interpreter entry jmp_buf."
 	cogit setCStackPointer: currentCStackPointer.
 	cogit setCFramePointer: currentCFramePointer.
-	self mem: reenterInterpreter
-		cp: (self cCoerceSimple: savedReenterInterpreter to: #'void *')
-		y: (self sizeof: #'jmp_buf').
+	self memcpy: reenterInterpreter
+		_: (self cCoerceSimple: savedReenterInterpreter to: #'void *')
+		_: (self sizeof: #'jmp_buf').
 
 	"Transfer back to the previous process so that caller can push result"
 	self putToSleep: self activeProcess yieldingIf: preemptionYields.
@@ -7003,9 +7003,9 @@ CoInterpreter >> restoreCStackStateForCallbackContext: vmCallbackContext [
 	cogit
 		setCStackPointer: vmCallbackContext savedCStackPointer;
 		setCFramePointer: vmCallbackContext savedCFramePointer.
-	self mem: reenterInterpreter
-		cp: vmCallbackContext savedReenterInterpreter asVoidPointer
-		y: (self sizeof: #'jmp_buf')
+	self memcpy: reenterInterpreter
+		_: vmCallbackContext savedReenterInterpreter asVoidPointer
+		_: (self sizeof: #'jmp_buf')
 ]
 
 { #category : #'process primitive support' }

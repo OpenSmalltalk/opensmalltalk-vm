@@ -4135,18 +4135,18 @@ StackInterpreter >> callbackEnter: callbackID [
 	self forceInterruptCheck.
 
 	"Save the previous interpreter entry jmp_buf."
-	self mem: savedReenterInterpreter asVoidPointer
-		cp: reenterInterpreter
-		y: (self sizeof: #'jmp_buf').
+	self memcpy: savedReenterInterpreter asVoidPointer
+		_: reenterInterpreter
+		_: (self sizeof: #'jmp_buf').
 	(self setjmp: (jmpBuf at: jmpDepth)) = 0 ifTrue: "Fill in callbackID"
 		[callbackID at: 0 put: jmpDepth.
 		 self enterSmalltalkExecutive.
 		 self assert: false "NOTREACHED"].
 
 	"Restore the previous interpreter entry jmp_buf."
-	self mem: reenterInterpreter
-		cp: (self cCoerceSimple: savedReenterInterpreter to: #'void *')
-		y: (self sizeof: #'jmp_buf').
+	self memcpy: reenterInterpreter
+		_: (self cCoerceSimple: savedReenterInterpreter to: #'void *')
+		_: (self sizeof: #'jmp_buf').
 
 	"Transfer back to the previous process so that caller can push result"
 	self putToSleep: self activeProcess yieldingIf: preemptionYields.
@@ -8532,7 +8532,7 @@ StackInterpreter >> initializeExtraClassInstVarIndices [
 		oop := objectMemory fetchPointer: i - 1 ofObject: classArrayObj.
 		((objectMemory isBytes: oop)
 		and: [(objectMemory lengthOf: oop) = 5
-		and: [(objectMemory str: 'Array' n: (objectMemory firstFixedField: oop) cmp: 5) = 0]]) ifTrue:
+		and: [(objectMemory strncmp: 'Array' _: (objectMemory firstFixedField: oop) _: 5) = 0]]) ifTrue:
 			[classNameIndex := i - 1]]
 ]
 
@@ -15534,7 +15534,7 @@ StackInterpreter >> lowcode_mem: destAddress cp: sourceAddress y: bytes [
 	<var: #bytes type: #'sqInt'>
 	
 	"Using memmove instead of memcpy to avoid crashing GCC in Windows."
-	self mem: destAddress mo: sourceAddress ve: bytes
+	self memmove: destAddress _: sourceAddress _: bytes
 ]
 
 { #category : #'frame access' }
@@ -18407,11 +18407,11 @@ StackInterpreter >> printOopShortInner: oop [
 	nameLen = 0 ifTrue: [^self print: 'a ??'].
 	name := self nameOfClass: classOop.
 	nameLen = 10 ifTrue:
-		[(self str: name n: 'ByteString' cmp: 10) = 0 "strncmp is weird" ifTrue:
+		[(self strncmp: name _: 'ByteString' _: 10) = 0 "strncmp is weird" ifTrue:
 			[^self printChar: $'; printStringOf: oop; printChar: $'].
-		 (self str: name n: 'ByteSymbol' cmp: 10) = 0 "strncmp is weird" ifTrue:
+		 (self strncmp: name _: 'ByteSymbol' _: 10) = 0 "strncmp is weird" ifTrue:
 			[self printChar: $#; printStringOf: oop. ^self]].
-	(nameLen = 9 and: [(self str: name n: 'Character' cmp: 9) = 0]) ifTrue:
+	(nameLen = 9 and: [(self strncmp: name _: 'Character' _: 9) = 0]) ifTrue:
 		[^self printChar: $$; printChar: (objectMemory integerValueOf: (objectMemory fetchPointer: 0 ofObject: oop))].
 	self print: 'a(n) '.
 	self
@@ -19531,9 +19531,9 @@ StackInterpreter >> respondToUnknownBytecode [
 { #category : #'callback support' }
 StackInterpreter >> restoreCStackStateForCallbackContext: vmCallbackContext [
 	<var: #vmCallbackContext type: #'VMCallbackContext *'>
-	self mem: reenterInterpreter
-		cp: vmCallbackContext savedReenterInterpreter asVoidPointer
-		y: (self sizeof: #'jmp_buf')
+	self memcpy: reenterInterpreter
+		_: vmCallbackContext savedReenterInterpreter asVoidPointer
+		_: (self sizeof: #'jmp_buf')
 ]
 
 { #category : #'stack pages' }
@@ -19892,9 +19892,9 @@ StackInterpreter >> saneMethodClassAssociationIn: methodObj numLiterals: numLite
 { #category : #'callback support' }
 StackInterpreter >> saveCStackStateForCallbackContext: vmCallbackContext [
 	<var: #vmCallbackContext type: #'VMCallbackContext *'>
-	self mem: vmCallbackContext savedReenterInterpreter asVoidPointer
-		cp: reenterInterpreter
-		y: (self sizeof: #'jmp_buf')
+	self memcpy: vmCallbackContext savedReenterInterpreter asVoidPointer
+		_: reenterInterpreter
+		_: (self sizeof: #'jmp_buf')
 ]
 
 { #category : #'process primitive support' }

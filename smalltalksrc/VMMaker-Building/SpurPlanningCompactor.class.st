@@ -366,7 +366,7 @@ SpurPlanningCompactor >> copyAndUnmarkObject: o to: toFinger bytes: bytes firstF
 	start := manager startOfObject: o given: numSlots.
 	"memmove must be used since the ranges may overlap."
 	manager
-		mem: toFinger asVoidPointer mo: start asVoidPointer ve: bytes;
+		memmove: toFinger asVoidPointer _: start asVoidPointer _: bytes;
 		storePointerUnchecked: 0 ofObject: destObj withValue: firstField
 ]
 

@@ -750,7 +750,7 @@ Spur64BitMemoryManager >> isSmallFloatValue: aFloat [
 	<var: #aFloat type: #double>
 	| exponent rawFloat |
 	self
-		cCode: [self mem: (self addressOf: rawFloat) cp: (self addressOf: aFloat) y: (self sizeof: rawFloat)]
+		cCode: [self memcpy: (self addressOf: rawFloat) _: (self addressOf: aFloat) _: (self sizeof: rawFloat)]
 		inSmalltalk: [rawFloat := (aFloat at: 1) << 32 + (aFloat at: 2)].
 	exponent := rawFloat >> self smallFloatMantissaBits bitAnd: 16r7FF.
 	^exponent > self smallFloatExponentOffset
@@ -864,7 +864,7 @@ Spur64BitMemoryManager >> maxSmallInteger [
 ]
 
 { #category : #'simulation only' }
-Spur64BitMemoryManager >> mem: destAddress mo: sourceAddress ve: bytes [
+Spur64BitMemoryManager >> memmove: destAddress _: sourceAddress _: bytes [
 	<doNotGenerate>
 	| dst src  |
 	dst := destAddress asInteger.
@@ -1299,7 +1299,7 @@ Spur64BitMemoryManager >> smallFloatObjectOf: aFloat [
 	<var: #rot type: #usqLong>
 	self assert: (self isSmallFloatValue: aFloat).
 	self
-		cCode: [self mem: (self addressOf: rawFloat) cp: (self addressOf: aFloat) y: (self sizeof: rawFloat)]
+		cCode: [self memcpy: (self addressOf: rawFloat) _: (self addressOf: aFloat) _: (self sizeof: rawFloat)]
 		inSmalltalk: [rawFloat := (aFloat at: 1) << 32 + (aFloat at: 2)].
 	rot := self rotateLeft: rawFloat.
 	rot > 1 ifTrue: "a.k.a. ~= +/-0.0"
@@ -1337,7 +1337,7 @@ Spur64BitMemoryManager >> smallFloatValueOf: oop [
 	<var: #bits type: #usqLong>
 	bits := self smallFloatBitsOf: oop.
 	self cCode:
-			[self mem: (self addressOf: value) cp: (self addressOf: bits) y: (self sizeof: value).
+			[self memcpy: (self addressOf: value) _: (self addressOf: bits) _: (self sizeof: value).
 			^value]
 		inSmalltalk:
 			[^(Float new: 2)

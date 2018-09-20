@@ -885,9 +885,9 @@ CoInterpreterMT >> ownVM: threadIndexAndFlags [
 	newMethod := vmThread newMethodOrNull.
 	argumentCount := vmThread argumentCount.
 	self cCode:
-			[self mem: reenterInterpreter
-				cp: vmThread reenterInterpreter
-				y: (self sizeof: #'jmp_buf')]
+			[self memcpy: reenterInterpreter
+				_: vmThread reenterInterpreter
+				_: (self sizeof: #'jmp_buf')]
 		inSmalltalk:
 			[reenterInterpreter := vmThread reenterInterpreter].
 	vmThread newMethodOrNull: nil.
@@ -1034,9 +1034,9 @@ CoInterpreterMT >> preemptDisowningThread [
 		argumentCount: argumentCount;
 		inMachineCode: instructionPointer asUnsignedInteger <= objectMemory startOfMemory.
 	self cCode:
-			[self mem: preemptedThread reenterInterpreter
-				cp: reenterInterpreter
-				y: (self sizeof: #'jmp_buf')]
+			[self memcpy: preemptedThread reenterInterpreter
+				_: reenterInterpreter
+				_: (self sizeof: #'jmp_buf')]
 		inSmalltalk:
 			[preemptedThread reenterInterpreter: reenterInterpreter]
 ]
@@ -1113,9 +1113,9 @@ CoInterpreterMT >> primitiveRelinquishProcessor [
 		[currentCStackPointer := cogit getCStackPointer.
 		 currentCFramePointer := cogit getCFramePointer.
 		 self cCode:
-			[self mem: savedReenterInterpreter asVoidPointer
-				cp: reenterInterpreter
-				y: (self sizeof: #'jmp_buf')].
+			[self memcpy: savedReenterInterpreter asVoidPointer
+				_: reenterInterpreter
+				_: (self sizeof: #'jmp_buf')].
 		 threadIndexAndFlags := self disownVM: DisownVMForProcessorRelinquish.
 		 self assert: relinquishing.
 		 self ioRelinquishProcessorForMicroseconds: (objectMemory integerValueOf: microSecs).
@@ -1220,9 +1220,9 @@ CoInterpreterMT >> returnToSchedulingLoopAndReleaseVMOrWakeThread: vmThread sour
 			 self assert: (range includes: cogit getCFramePointer)].
 	"We must use a copy of reenterInterpreter since we're giving up the VM to another vmThread."
 	self cCode:
-			[self mem: savedReenterInterpreter asVoidPointer
-				cp: reenterInterpreter
-				y: (self sizeof: #'jmp_buf')]
+			[self memcpy: savedReenterInterpreter asVoidPointer
+				_: reenterInterpreter
+				_: (self sizeof: #'jmp_buf')]
 		inSmalltalk:
 			[savedReenterInterpreter := reenterInterpreter].
 	self recordThreadSwitchTo: (vmThread ifNotNil: [vmThread index] ifNil: [0]) source: source.

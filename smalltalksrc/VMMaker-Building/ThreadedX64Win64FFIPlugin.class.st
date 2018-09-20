@@ -134,7 +134,7 @@ ThreadedX64Win64FFIPlugin >> ffiPushStructure: pointer ofSize: structSize typeSp
 	(structSize <= WordSize
 	 and: [(structSize bitAnd: structSize - 1) = 0 "a.k.a. structSize isPowerOfTwo"]) ifTrue:
 		[| arg |
-		self mem: (self addressOf: arg) cp: pointer y: structSize.
+		self memcpy: (self addressOf: arg) _: pointer _: structSize.
 		^self ffiPushUnsignedLongLong: arg in: calloutState].
 
 	"For now just push the pointer; we should copy the struct to the outgoing stack frame!!"
@@ -156,11 +156,11 @@ ThreadedX64Win64FFIPlugin >> ffiReturnStruct: intRet ofType: ffiRetType in: call
 		in: [oop := interpreterProxy 
 					instantiateClass: interpreterProxy classByteArray 
 					indexableSize: calloutState structReturnSize].
-	self mem: (interpreterProxy firstIndexableField: oop)
-		cp: ((self returnStructInRegisters: calloutState structReturnSize)
+	self memcpy: (interpreterProxy firstIndexableField: oop)
+		_: ((self returnStructInRegisters: calloutState structReturnSize)
 				ifTrue: [self addressOf: intRet]
 				ifFalse: [calloutState limit])
-		 y: calloutState structReturnSize.
+		 _: calloutState structReturnSize.
 	interpreterProxy storePointer: 0 ofObject: retOop withValue: oop.
 	^retOop
 ]

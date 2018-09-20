@@ -3998,7 +3998,7 @@ SpurMemoryManager >> copyObj: objOop toAddr: segAddr stopAt: endSeg savedFirstFi
 	bodySize := self bytesInObject: objOop.
 	(self oop: segAddr + bodySize isGreaterThanOrEqualTo: endSeg) ifTrue:
 		[^PrimErrWritePastObject halt].
-	self mem: segAddr asVoidPointer cp: (self startOfObject: objOop) asVoidPointer y: bodySize.
+	self memcpy: segAddr asVoidPointer _: (self startOfObject: objOop) asVoidPointer _: bodySize.
 	copy := self objectStartingAt: segAddr.
 
 	"Clear remembered, mark bits of all headers copied into the segment (except classes)"
@@ -4390,9 +4390,9 @@ SpurMemoryManager >> ensureHasOverflowHeader: arrayArg forwardIfCloned: forwardI
 		format: (self formatOf: arrayArg)
 		classIndex: (self classIndexOf: arrayArg)) ifNotNil:
 			[:clonedArray|
-			 self mem: clonedArray + self baseHeaderSize
-				 cp: arrayArg + self baseHeaderSize
-				 y: (self numSlotsOf: arrayArg) * self bytesPerOop.
+			 self memcpy: clonedArray + self baseHeaderSize
+				 _: arrayArg + self baseHeaderSize
+				 _: (self numSlotsOf: arrayArg) * self bytesPerOop.
 			 (self isRemembered: arrayArg) ifTrue:
 				[scavenger remember:  clonedArray].
 			 forwardIfCloned ifTrue:
@@ -4762,7 +4762,7 @@ SpurMemoryManager >> findString: aCString [
 		[:obj|
 		 ((self isBytesNonImm: obj)
 		  and: [(self lengthOf: obj) = cssz
-		  and: [(self str: aCString n: (self pointerForOop: obj + self baseHeaderSize) cmp: cssz) = 0]]) ifTrue:
+		  and: [(self strncmp: aCString _: (self pointerForOop: obj + self baseHeaderSize) _: cssz) = 0]]) ifTrue:
 			[coInterpreter printHex: obj; space; printOopShort: obj; cr]]
 ]
 
@@ -4777,7 +4777,7 @@ SpurMemoryManager >> findStringBeginningWith: aCString [
 		[:obj|
 		 ((self isBytesNonImm: obj)
 		  and: [(self lengthOf: obj) >= cssz
-		  and: [(self str: aCString n: (self pointerForOop: obj + self baseHeaderSize) cmp: cssz) = 0]]) ifTrue:
+		  and: [(self strncmp: aCString _: (self pointerForOop: obj + self baseHeaderSize) _: cssz) = 0]]) ifTrue:
 				[coInterpreter printHex: obj; space; printNum: (self lengthOf: obj); space; printOopShort: obj; cr]]
 ]
 
@@ -8444,12 +8444,12 @@ SpurMemoryManager >> maybeSplObj: index [
 ]
 
 { #category : #simulation }
-SpurMemoryManager >> mem: destAddress cp: sourceAddress y: bytes [
+SpurMemoryManager >> memcpy: destAddress _: sourceAddress _: bytes [
 	"For SpurGenerationScavenger>>copyToFutureSpace:bytes:. N.B. If ranges overlap, must use memmove."
 	<doNotGenerate>
 	self deny: ((destAddress <= sourceAddress and: [destAddress asInteger + bytes > sourceAddress])
 				or: [sourceAddress <= destAddress and: [sourceAddress asInteger + bytes > destAddress]]).
-	^self mem: destAddress mo: sourceAddress ve: bytes
+	^self memmove: destAddress _: sourceAddress _: bytes
 ]
 
 { #category : #accessing }
@@ -11949,9 +11949,9 @@ SpurMemoryManager >> stringForCString: aCString [
 					format: (self byteFormatForNumBytes: len)
 					classIndex: ClassByteStringCompactIndex.
 	newString ifNotNil:
-		[self st: (self cCoerceSimple: newString + self baseHeaderSize to: #'char *')
-			rn: aCString
-			cpy: len]. "(char *)strncpy()"
+		[self strncpy: (self cCoerceSimple: newString + self baseHeaderSize to: #'char *')
+			_: aCString
+			_: len]. "(char *)strncpy()"
 	^newString
 ]
 

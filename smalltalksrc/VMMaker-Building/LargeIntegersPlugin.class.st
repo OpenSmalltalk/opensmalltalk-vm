@@ -1478,9 +1478,9 @@ LargeIntegersPlugin >> primGetModuleName [
 		receiver: #Oop.
 	strLen := self strlen: self getModuleName.
 	strOop := interpreterProxy instantiateClass: interpreterProxy classString indexableSize: strLen.
-	self st: (interpreterProxy firstIndexableField: strOop)
-		rn: self getModuleName
-		cpy: strLen.
+	self strncpy: (interpreterProxy firstIndexableField: strOop)
+		_: self getModuleName
+		_: strLen.
 	^strOop
 ]
 
