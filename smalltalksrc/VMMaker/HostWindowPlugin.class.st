@@ -67,7 +67,7 @@ HostWindowPlugin >> primitiveHostWindowIcon: id path: pathString [
 	self primitive: 'primitiveHostWindowIcon'
 		parameters: #(SmallInteger ByteArray).
 	pathLength := interpreterProxy slotSizeOf: pathString cPtrAsOop.
-	res := self cCode: 'ioSetIconOfWindow(id, pathString, pathLength)'.
+	res := self ioSetIconOfWindow: id _: pathString _: pathLength.
 	res = 0 ifTrue: [^ self ].
 	res = -1 ifTrue: [^ interpreterProxy primitiveFailFor: PrimErrBadArgument ].
 	"As the GetLastError function can return 0, but it is still an error, 1 is added to all the GetLastError error codes."
@@ -151,13 +151,12 @@ HostWindowPlugin >> primitiveHostWindowSizeSet: windowIndex x: x y: y [
 { #category : #'system primitives' }
 HostWindowPlugin >> primitiveHostWindowTitle: id string: titleString [
 	"Set the title bar label of the window. Fail if the windowIndex is invalid or the platform routine returns -1 to indicate failure"
-	| res titleLength |
+	| titleLength |
 	self primitive: 'primitiveHostWindowTitle'
 		parameters: #(SmallInteger String).
 	titleLength := interpreterProxy slotSizeOf: titleString cPtrAsOop.
-	res := self cCode: 'ioSetTitleOfWindow(id, titleString, titleLength)'.
-	res = -1
-		ifTrue: [interpreterProxy primitiveFail]
+	(self ioSetTitleOfWindow: id _: titleString _: titleLength) = -1 ifTrue:
+		[interpreterProxy primitiveFail]
 ]
 
 { #category : #'system primitives' }
@@ -236,16 +235,14 @@ left: left right: right top: top bottom: bottom [
 (Interpreter>primitiveShowDisplayRect) which takes the window index, bitmap
 details and the rectangle bounds. Fail if the windowIndex is invalid or the
 platform routine returns false to indicate failure"
-	|ok|
 	self primitive: 'primitiveShowHostWindowRect'
 		parameters: #(SmallInteger WordArray SmallInteger SmallInteger SmallInteger
 SmallInteger SmallInteger SmallInteger SmallInteger).
 
 	"Tell the vm to copy pixel's from dispBits to the screen - this is just
 ioShowDisplay with the extra parameter of the windowIndex integer"
-	ok := self cCode: 'ioShowDisplayOnWindow(dispBits, w, h, d, left, right, top,
-bottom, windowIndex)'.
-	ok ifFalse:[interpreterProxy primitiveFail]
+	(self ioShowDisplayOnWindow: dispBits _: w _: h _: d _: left _: right _: top _: bottom _: windowIndex) ifFalse:
+		[interpreterProxy primitiveFail]
 ]
 
 { #category : #'system primitives' }

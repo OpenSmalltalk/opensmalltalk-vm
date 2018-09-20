@@ -1098,7 +1098,7 @@ FFIPlugin >> primitiveFFIDoubleAt [
 	interpreterProxy failed ifTrue:[^0].
 	addr := self ffiAddressOf: rcvr startingAt: byteOffset size: 8.
 	interpreterProxy failed ifTrue:[^0].
-	self mem: (self addressOf: floatValue) cp: addr y: (self sizeof: floatValue).
+	self memcpy: (self addressOf: floatValue) _: addr _: (self sizeof: floatValue).
 	interpreterProxy pop: 2.
 	^interpreterProxy pushFloat: floatValue
 
@@ -1120,7 +1120,7 @@ FFIPlugin >> primitiveFFIDoubleAtPut [
 	interpreterProxy failed ifTrue:[^0].
 	addr := self ffiAddressOf: rcvr startingAt: byteOffset size: 8.
 	interpreterProxy failed ifTrue:[^0].
-	self mem: addr cp: (self addressOf: floatValue) y: (self sizeof: floatValue).
+	self memcpy: addr _: (self addressOf: floatValue) _: (self sizeof: floatValue).
 	interpreterProxy pop: 3.
 	^interpreterProxy push: floatOop
 ]
@@ -1137,7 +1137,7 @@ FFIPlugin >> primitiveFFIFloatAt [
 	interpreterProxy failed ifTrue:[^0].
 	addr := self ffiAddressOf: rcvr startingAt: byteOffset size: 4.
 	interpreterProxy failed ifTrue:[^0].
-	self mem: (self addressOf: floatValue) cp: addr y: (self sizeof: floatValue).
+	self memcpy: (self addressOf: floatValue) _: addr _: (self sizeof: floatValue).
 	interpreterProxy pop: 2.
 	^interpreterProxy pushFloat: floatValue
 ]
@@ -1158,7 +1158,7 @@ FFIPlugin >> primitiveFFIFloatAtPut [
 	interpreterProxy failed ifTrue:[^0].
 	addr := self ffiAddressOf: rcvr startingAt: byteOffset size: 4.
 	interpreterProxy failed ifTrue:[^0].
-	self mem: addr cp: (self addressOf: floatValue) y: (self sizeof: floatValue).
+	self memcpy: addr _: (self addressOf: floatValue) _: (self sizeof: floatValue).
 	interpreterProxy pop: 3.
 	^interpreterProxy push: floatOop
 ]

@@ -1047,8 +1047,8 @@ StackInterpreterSimulator >> ioLoadFunction: functionString From: pluginString [
 				(pluginString isEmpty ifTrue:['vm'] ifFalse:[pluginString]).
 	(breakSelector notNil
 	 and: [pluginString size = breakSelector size
-	 and: [(self str: pluginString n: breakSelector cmp: pluginString size) = 0
-		or: [(self str: functionString n: breakSelector cmp: functionString size) = 0]]]) ifTrue:
+	 and: [(self strncmp: pluginString _: breakSelector _: pluginString size) = 0
+		or: [(self strncmp: functionString _: breakSelector _: functionString size) = 0]]]) ifTrue:
 		[self halt: functionString].
 	plugin := pluginList 
 				detect:[:any| any key = pluginString asString]
@@ -1081,8 +1081,8 @@ StackInterpreterSimulator >> ioLoadFunction: functionString From: pluginString A
 				(pluginString isEmpty ifTrue:['vm'] ifFalse:[pluginString]).
 	(breakSelector notNil
 	 and: [pluginString size = breakSelector size
-	 and: [(self str: pluginString n: breakSelector cmp: pluginString size) = 0
-		or: [(self str: functionString n: breakSelector cmp: functionString size) = 0]]]) ifTrue:
+	 and: [(self strncmp: pluginString _: breakSelector _: pluginString size) = 0
+		or: [(self strncmp: functionString _: breakSelector _: functionString size) = 0]]]) ifTrue:
 		[self halt: functionString].
 	plugin := pluginList 
 				detect: [:any| any key = pluginString asString]
@@ -1288,7 +1288,7 @@ StackInterpreterSimulator >> literal: offset [
 { #category : #'plugin support' }
 StackInterpreterSimulator >> loadNewPlugin: pluginString [
 	breakSelector ifNotNil:
-		[(self str: pluginString n: breakSelector cmp: pluginString size) = 0 ifTrue:
+		[(self strncmp: pluginString _: breakSelector _: pluginString size) = 0 ifTrue:
 			[self halt: pluginString]].
 	^(self tryLoadNewPlugin: pluginString pluginEntries: mappedPluginEntries) ifNotNil:
 		[:entry|

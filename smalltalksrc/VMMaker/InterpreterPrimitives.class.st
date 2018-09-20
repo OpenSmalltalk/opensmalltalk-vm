@@ -152,7 +152,7 @@ InterpreterPrimitives >> cStringOrNullFor: oop [
 	cString ifNil:
 		[self primitiveFailFor: PrimErrNoCMemory.
 		 ^0].
-	self mem: cString cp: (objectMemory firstIndexableField: oop) y: len.
+	self memcpy: cString _: (objectMemory firstIndexableField: oop) _: len.
 	cString at: (self cCode: [len] inSmalltalk: [len + 1]) put: 0.
 	^cString
 ]
@@ -1615,9 +1615,9 @@ InterpreterPrimitives >> primitiveCopyObject [
 			((objectMemory formatOf: rcvr) = (objectMemory formatOf: arg)
 			  and: [length = (objectMemory numBytesOf: arg)]) ifFalse:
 				[^self primitiveFailFor: PrimErrBadArgument].
-			 self mem: (rcvr + objectMemory baseHeaderSize) asVoidPointer
-				cp: (arg + objectMemory baseHeaderSize) asVoidPointer
-				y: length]
+			 self memcpy: (rcvr + objectMemory baseHeaderSize) asVoidPointer
+				_: (arg + objectMemory baseHeaderSize) asVoidPointer
+				_: length]
 		ifFalse:
 			[(self isAppropriateForCopyObject: rcvr) ifFalse:
 				[^self primitiveFailFor: PrimErrBadReceiver].

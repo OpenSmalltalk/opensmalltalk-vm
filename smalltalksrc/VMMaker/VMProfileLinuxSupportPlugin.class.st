@@ -51,7 +51,7 @@ VMProfileLinuxSupportPlugin >> primitiveDLSymInLibrary [
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	sz := interpreterProxy byteSizeOf: nameObj.
 	libName := self malloc: sz+1.
-	self st: libName rn: (interpreterProxy firstIndexableField: nameObj) cpy: sz.
+	self strncpy: libName _: (interpreterProxy firstIndexableField: nameObj) _: sz.
 	libName at: sz put: 0.
 	nameObj := interpreterProxy stackValue: 1.
 	(interpreterProxy isBytes: nameObj) ifFalse:
@@ -59,7 +59,7 @@ VMProfileLinuxSupportPlugin >> primitiveDLSymInLibrary [
 		 ^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	sz := interpreterProxy byteSizeOf: nameObj.
 	symName := self malloc: sz+1.
-	self st: symName rn: (interpreterProxy firstIndexableField: nameObj) cpy: sz.
+	self strncpy: symName _: (interpreterProxy firstIndexableField: nameObj) _: sz.
 	symName at: sz put: 0.
 	lib := self dl: libName open: (#'RTLD_LAZY' bitOr: #'RTLD_NODELETE').
 	lib ifNil:
@@ -128,9 +128,9 @@ VMProfileLinuxSupportPlugin >> reap: info module: size names: ignored [
 	moduleNameObj = 0 ifTrue:
 		[primErr := PrimErrNoMemory.
 		 ^1]. "stop iteration"
-	self st: (interpreterProxy arrayValueOf: moduleNameObj)
-		rn: elfModuleName
-		cpy: len. "(char *)strncpy()"
+	self strncpy: (interpreterProxy arrayValueOf: moduleNameObj)
+		_: elfModuleName
+		_: len. "(char *)strncpy()"
 	interpreterProxy
 		storePointer: numModules
 		ofObject: interpreterProxy topRemappableOop
@@ -161,9 +161,9 @@ VMProfileLinuxSupportPlugin >> reap: info module: size symlinks: ignored [
 	moduleNameObj = 0 ifTrue:
 		[primErr := PrimErrNoMemory.
 		 ^1]. "stop iteration"
-	self st: (interpreterProxy arrayValueOf: moduleNameObj)
-		rn: elfModuleName
-		cpy: len. "(char *)strncpy()"
+	self strncpy: (interpreterProxy arrayValueOf: moduleNameObj)
+		_: elfModuleName
+		_: len. "(char *)strncpy()"
 	interpreterProxy
 		storePointer: numModules
 		ofObject: interpreterProxy topRemappableOop
@@ -178,9 +178,9 @@ VMProfileLinuxSupportPlugin >> reap: info module: size symlinks: ignored [
 			 moduleNameObj = 0 ifTrue:
 				[primErr := PrimErrNoMemory.
 				 ^1]. "stop iteration"
-			 self st: (interpreterProxy arrayValueOf: moduleNameObj)
-				rn: symLinkBuf
-				cpy: len. "(char *)strncpy()"
+			 self strncpy: (interpreterProxy arrayValueOf: moduleNameObj)
+				_: symLinkBuf
+				_: len. "(char *)strncpy()"
 			 interpreterProxy
 				storePointer: numModules + 1
 				ofObject: interpreterProxy topRemappableOop

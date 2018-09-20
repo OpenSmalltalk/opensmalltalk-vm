@@ -187,7 +187,7 @@ SocketPluginSimulator >> sqResolverNameLookupResult [
 SocketPluginSimulator >> sqResolverStartName: aCArray Lookup: size [
 	"For now don't simulate the implicit semaphore."
 	| hostName |
-	hostName := self st: (String new: size) rn: aCArray cpy: size.
+	hostName := self strncpy: (String new: size) _: aCArray _: size.
 	addressForName := NetNameResolver addressForName: hostName timeout: 30.
 	resolverSemaphoreIndex ifNotNil:
 		[resolverStatus := ResolverReady.

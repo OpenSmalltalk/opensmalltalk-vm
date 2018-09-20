@@ -1140,7 +1140,7 @@ ThreadedFFIPlugin >> ffiPushString: pointer OfLength: length in: calloutState [
 	copy := self malloc: length + 1.
 	copy isNil ifTrue:
 		[^PrimErrNoCMemory negated].
-	self mem: copy cp: pointer y: length.
+	self memcpy: copy _: pointer _: length.
 	copy at: length put: 0.
 	calloutState stringArgs at: calloutState stringArgIndex put: copy.
 	calloutState stringArgIndex: calloutState stringArgIndex + 1.
@@ -1621,7 +1621,7 @@ ThreadedFFIPlugin >> primitiveFFIDoubleAt [
 	interpreterProxy failed ifTrue:[^0].
 	addr := self ffiAddressOf: rcvr startingAt: byteOffset size: 8.
 	addr = 0 ifTrue: [^interpreterProxy primitiveFail].
-	self mem: (self addressOf: floatValue) cp: addr y: (self sizeof: floatValue).
+	self memcpy: (self addressOf: floatValue) _: addr _: (self sizeof: floatValue).
 	interpreterProxy pop: 2.
 	^interpreterProxy pushFloat: floatValue
 
@@ -1643,7 +1643,7 @@ ThreadedFFIPlugin >> primitiveFFIDoubleAtPut [
 	interpreterProxy failed ifTrue:[^0].
 	addr := self ffiAddressOf: rcvr startingAt: byteOffset size: 8.
 	addr = 0 ifTrue: [^interpreterProxy primitiveFail].
-	self mem: addr cp: (self addressOf: floatValue) y: (self sizeof: floatValue).
+	self memcpy: addr _: (self addressOf: floatValue) _: (self sizeof: floatValue).
 	^interpreterProxy pop: 3 thenPush: floatOop
 ]
 
@@ -1659,7 +1659,7 @@ ThreadedFFIPlugin >> primitiveFFIFloatAt [
 	interpreterProxy failed ifTrue:[^0].
 	addr := self ffiAddressOf: rcvr startingAt: byteOffset size: 4.
 	addr = 0 ifTrue: [^interpreterProxy primitiveFail].
-	self mem: (self addressOf: floatValue) cp: addr y: (self sizeof: floatValue).
+	self memcpy: (self addressOf: floatValue) _: addr _: (self sizeof: floatValue).
 	interpreterProxy pop: 2.
 	^interpreterProxy pushFloat: floatValue
 ]
@@ -1680,7 +1680,7 @@ ThreadedFFIPlugin >> primitiveFFIFloatAtPut [
 	interpreterProxy failed ifTrue:[^0].
 	addr := self ffiAddressOf: rcvr startingAt: byteOffset size: 4.
 	addr = 0 ifTrue: [^interpreterProxy primitiveFail].
-	self mem: addr cp: (self addressOf: floatValue) y: (self sizeof: floatValue).
+	self memcpy: addr _: (self addressOf: floatValue) _: (self sizeof: floatValue).
 	^interpreterProxy pop: 3 thenPush: floatOop
 ]
 

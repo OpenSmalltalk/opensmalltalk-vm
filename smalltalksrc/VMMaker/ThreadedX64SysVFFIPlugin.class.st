@@ -177,7 +177,7 @@ ThreadedX64SysVFFIPlugin >> ffiPushStructure: pointer ofSize: structSize typeSpe
 	roundedSize := structSize + 7 bitClear: 7.
 	calloutState currentArg + roundedSize > calloutState limit ifTrue:
 		 [^FFIErrorCallFrameTooBig].
-	self mem: calloutState currentArg cp: (self cCoerceSimple: pointer to: 'char *') y: structSize.
+	self memcpy: calloutState currentArg _: (self cCoerceSimple: pointer to: 'char *') _: structSize.
 	calloutState currentArg: calloutState currentArg + roundedSize.
 	^0
 ]
@@ -196,11 +196,11 @@ ThreadedX64SysVFFIPlugin >> ffiReturnStruct: sixteenByteRet ofType: ffiRetType i
 		in: [oop := interpreterProxy 
 					instantiateClass: interpreterProxy classByteArray 
 					indexableSize: calloutState structReturnSize].
-	self mem: (interpreterProxy firstIndexableField: oop)
-		cp: ((self returnStructInRegisters: calloutState structReturnSize)
+	self memcpy: (interpreterProxy firstIndexableField: oop)
+		_: ((self returnStructInRegisters: calloutState structReturnSize)
 				ifTrue: [(self addressOf: sixteenByteRet) asVoidPointer]
 				ifFalse: [calloutState limit])
-		 y: calloutState structReturnSize.
+		 _: calloutState structReturnSize.
 	interpreterProxy storePointer: 0 ofObject: retOop withValue: oop.
 	^retOop
 ]

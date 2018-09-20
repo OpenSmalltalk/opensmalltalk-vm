@@ -308,7 +308,7 @@ RegisterAllocatingCogit >> copySimStack [
 RegisterAllocatingCogit >> copySimStackToFixup: fixup [
 	<var: #fixup type: #'BytecodeFixup *'>
 	<inline: true>
-	self cCode: [self mem: fixup mergeSimStack cp: simStack y: simStackPtr + 1 * (self sizeof: CogSimStackEntry)]
+	self cCode: [self memcpy: fixup mergeSimStack _: simStack _: simStackPtr + 1 * (self sizeof: CogSimStackEntry)]
 		inSmalltalk: [0 to: simStackPtr do:
 						[:i|
 						fixup mergeSimStack at: i put: (simStack at: i) copy]]
@@ -322,7 +322,7 @@ RegisterAllocatingCogit >> copySimStackToScratch: spillBase [
 	scratchBytecodePC = bytecodePC ifTrue:
 		[^self].
 	scratchBytecodePC := bytecodePC.
-	self cCode: [self mem: scratchSimStack cp: simStack y: self simStackSlots * (self sizeof: CogSimStackEntry)]
+	self cCode: [self memcpy: scratchSimStack _: simStack _: self simStackSlots * (self sizeof: CogSimStackEntry)]
 		inSmalltalk: [0 to: simStackPtr do:
 						[:i|
 						scratchSimStack at: i put: (simStack at: i) copy]].
@@ -1845,7 +1845,7 @@ RegisterAllocatingCogit >> restoreSimStackAtMergePoint: fixup [
 { #category : #'bytecode generator support' }
 RegisterAllocatingCogit >> restoreSimStackFromScratch [
 	<inline: true>
-	self cCode: [self mem: simStack cp: scratchSimStack y: self simStackSlots * (self sizeof: CogSimStackEntry)]
+	self cCode: [self memcpy: simStack _: scratchSimStack _: self simStackSlots * (self sizeof: CogSimStackEntry)]
 		inSmalltalk: [0 to: simStackPtr do:
 						[:i|
 						simStack at: i put: (scratchSimStack at: i) copy]].
@@ -1868,7 +1868,7 @@ RegisterAllocatingCogit >> setMergeSimStackOf: fixup [
 				(self simStackAt: i) liveRegister ~= (self addressOf: (fixup mergeSimStack at: i)) liveRegister ifTrue:
 					[(self simStackAt: i) liveRegister: NoReg]]].
 	fixup simStackPtr: simStackPtr.
-	self cCode: [self mem: fixup mergeSimStack cp: simStack y: self simStackSlots * (self sizeof: CogSimStackEntry)]
+	self cCode: [self memcpy: fixup mergeSimStack _: simStack _: self simStackSlots * (self sizeof: CogSimStackEntry)]
 		inSmalltalk: [fixup mergeSimStack: self copySimStack]
 ]
 
