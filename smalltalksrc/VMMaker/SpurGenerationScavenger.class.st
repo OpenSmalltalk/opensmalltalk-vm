@@ -342,7 +342,7 @@ SpurGenerationScavenger >> copyToFutureSpace: survivor bytes: bytesInObject [
 	startOfSurvivor := manager startOfObject: survivor.
 	newStart := futureSurvivorStart.
 	futureSurvivorStart := futureSurvivorStart + bytesInObject.
-	manager mem: newStart asVoidPointer cp: startOfSurvivor asVoidPointer y: bytesInObject.
+	manager memcpy: newStart asVoidPointer _: startOfSurvivor asVoidPointer _: bytesInObject.
 	tenureCriterion = TenureToShrinkRT ifTrue:
 		[manager rtRefCountOf: newStart + (survivor - startOfSurvivor) put: 0].
 	^newStart + (survivor - startOfSurvivor)
@@ -367,7 +367,7 @@ SpurGenerationScavenger >> copyToOldSpace: survivor bytes: bytesInObject format:
 		 newStart ifNil:
 			[self error: 'out of memory']].
 	"manager checkFreeSpace."
-	manager mem: newStart asVoidPointer cp: startOfSurvivor asVoidPointer y: bytesInObject.
+	manager memcpy: newStart asVoidPointer _: startOfSurvivor asVoidPointer _: bytesInObject.
 	newOop := newStart + (survivor - startOfSurvivor).
 	tenureCriterion >= (TenureToShrinkRT min: MarkOnTenure) ifTrue:
 		[tenureCriterion = TenureToShrinkRT ifTrue:

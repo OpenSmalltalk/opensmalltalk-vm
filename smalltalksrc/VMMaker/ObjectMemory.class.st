@@ -5655,9 +5655,9 @@ ObjectMemory >> stringForCString: aCString [
 	len := self strlen: aCString.
 	newString := self instantiateClass: (self splObj: ClassByteString) indexableSize: len.
 	newString ifNotNil:
-		[self st: (self cCoerceSimple: newString + self baseHeaderSize to: #'char *')
-			rn: aCString
-			cpy: len]. "(char *)strncpy()"
+		[self strncpy: (self cCoerceSimple: newString + self baseHeaderSize to: #'char *')
+			_: aCString
+			_: len]. "(char *)strncpy()"
 	^newString
 ]
 

@@ -72,7 +72,7 @@ MIDIPlugin >> primitiveMIDIGetPortName: portNum [
 	sz := self sqMIDIGet: portNum Port: portName Name: 255.
 	nameObj := interpreterProxy instantiateClass: interpreterProxy classString indexableSize: sz.
 	interpreterProxy failed ifTrue: [^nil].
-	self mem: (nameObj asValue: String) cp: portName y: sz.
+	self memcpy: (nameObj asValue: String) _: portName _: sz.
 	^nameObj
 ]
 

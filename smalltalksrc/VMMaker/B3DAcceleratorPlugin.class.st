@@ -154,30 +154,30 @@ B3DAcceleratorPlugin >> primitiveAllocateTexture [
 
 { #category : #'primitives-renderer' }
 B3DAcceleratorPlugin >> primitiveClearDepthBuffer [
-	| result handle |
+	| handle |
 	<export: true>
-	interpreterProxy methodArgumentCount = 1
-		ifFalse:[^interpreterProxy primitiveFail].
+	interpreterProxy methodArgumentCount = 1 ifFalse:
+		[^interpreterProxy primitiveFail].
 	handle := interpreterProxy stackIntegerValue: 0.
-	interpreterProxy failed ifTrue:[^nil].
-	result := self cCode:'b3dxClearDepthBuffer(handle)'.
-	result ifFalse:[^interpreterProxy primitiveFail].
-	^interpreterProxy pop: 1. "pop args; return rcvr"
+	interpreterProxy failed ifFalse:
+		[(self b3dxClearDepthBuffer: handle)
+			ifTrue: [interpreterProxy pop: 1] "pop args; return rcvr"
+			ifFalse:[interpreterProxy primitiveFail]]
 ]
 
 { #category : #'primitives-renderer' }
 B3DAcceleratorPlugin >> primitiveClearViewport [
-	| result handle pv rgba |
+	| handle pv rgba |
 	<export: true>
-	interpreterProxy methodArgumentCount = 3
-		ifFalse:[^interpreterProxy primitiveFail].
+	interpreterProxy methodArgumentCount = 3 ifFalse:
+		[^interpreterProxy primitiveFail].
 	pv := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0).
 	rgba := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 1).
 	handle := interpreterProxy stackIntegerValue: 2.
 	interpreterProxy failed ifTrue:[^nil].
-	result := self cCode:'b3dxClearViewport(handle, rgba, pv)'.
-	result ifFalse:[^interpreterProxy primitiveFail].
-	^interpreterProxy pop: 3. "pop args; return rcvr"
+	(self b3dxClearViewport: handle _: rgba _: pv)
+		ifTrue: [interpreterProxy pop: 3] "pop args; return rcvr"
+		ifFalse:[interpreterProxy primitiveFail]
 ]
 
 { #category : #'primitives-textures' }
@@ -205,37 +205,35 @@ B3DAcceleratorPlugin >> primitiveCreateRenderer [
 	"NOTE: This primitive is obsolete but should be supported for older images"
 	| h w y x result allowHardware allowSoftware |
 	<export: true>
-	interpreterProxy methodArgumentCount = 6
-		ifFalse:[^interpreterProxy primitiveFail].
+	interpreterProxy methodArgumentCount = 6 ifFalse:
+		[^interpreterProxy primitiveFail].
 	h := interpreterProxy stackIntegerValue: 0.
 	w := interpreterProxy stackIntegerValue: 1.
 	y := interpreterProxy stackIntegerValue: 2.
 	x := interpreterProxy stackIntegerValue: 3.
 	allowHardware := interpreterProxy booleanValueOf: (interpreterProxy stackValue: 4).
 	allowSoftware := interpreterProxy booleanValueOf: (interpreterProxy stackValue: 5).
-	interpreterProxy failed ifTrue:[^nil].
-	result := self cCode:'b3dxCreateRenderer(allowSoftware, allowHardware, x, y, w, h)'.
-	result < 0 ifTrue:[^interpreterProxy primitiveFail].
-	interpreterProxy pop: 7.
-	^interpreterProxy pushInteger: result.
+	interpreterProxy failed ifFalse:
+		[(self b3dxCreateRenderer: allowSoftware _: allowHardware _: x _: y _: w _: h) >= 0
+			ifTrue: [interpreterProxy methodReturnInteger: result]
+			ifFalse: [interpreterProxy primitiveFail]]
 ]
 
 { #category : #'primitives-renderer' }
 B3DAcceleratorPlugin >> primitiveCreateRendererFlags [
 	| flags h w y x result  |
 	<export: true>
-	interpreterProxy methodArgumentCount = 5
-		ifFalse:[^interpreterProxy primitiveFail].
+	interpreterProxy methodArgumentCount = 5 ifFalse:
+		[^interpreterProxy primitiveFail].
 	h := interpreterProxy stackIntegerValue: 0.
 	w := interpreterProxy stackIntegerValue: 1.
 	y := interpreterProxy stackIntegerValue: 2.
 	x := interpreterProxy stackIntegerValue: 3.
 	flags := interpreterProxy stackIntegerValue: 4.
-	interpreterProxy failed ifTrue:[^nil].
-	result := self cCode:'b3dxCreateRendererFlags(x, y, w, h, flags)'.
-	result < 0 ifTrue:[^interpreterProxy primitiveFail].
-	interpreterProxy pop: 6.
-	^interpreterProxy pushInteger: result.
+	interpreterProxy failed ifFalse:
+		[(self b3dxCreateRendererFlags: x _: y _: w _: h _: flags) >= 0
+			ifTrue: [interpreterProxy methodReturnInteger: result]
+			ifFalse: [interpreterProxy primitiveFail]]
 ]
 
 { #category : #'primitives-renderer' }
@@ -439,14 +437,12 @@ B3DAcceleratorPlugin >> primitiveFlushRenderer [
 B3DAcceleratorPlugin >> primitiveGetIntProperty [
 	| handle prop result |
 	<export: true>
-	<inline: false>
-	interpreterProxy methodArgumentCount = 2
-		ifFalse:[^interpreterProxy primitiveFail].
+	interpreterProxy methodArgumentCount = 2 ifFalse:
+		[^interpreterProxy primitiveFail].
 	prop := interpreterProxy stackIntegerValue: 0.
 	handle := interpreterProxy stackIntegerValue: 1.
-	result := self cCode:'b3dxGetIntProperty(handle, prop)'.
-	interpreterProxy pop: 3. "args+rcvr"
-	^interpreterProxy pushInteger: result
+	result := self b3dxGetIntProperty: handle _: prop.
+	interpreterProxy methodReturnInteger: result
 ]
 
 { #category : #'primitives-renderer' }
@@ -585,55 +581,54 @@ B3DAcceleratorPlugin >> primitiveRendererVersion [
 B3DAcceleratorPlugin >> primitiveSetBufferRect [
 	"Primitive. Set the buffer rectangle (e.g., the pixel area on screen) to use for this renderer.
 	The viewport is positioned within the buffer rectangle."
-	| h w y x result handle |
+	| h w y x handle |
 	<export: true>
-	interpreterProxy methodArgumentCount = 5
-		ifFalse:[^interpreterProxy primitiveFail].
+	interpreterProxy methodArgumentCount = 5 ifFalse:
+		[^interpreterProxy primitiveFail].
 	h := interpreterProxy stackIntegerValue: 0.
 	w := interpreterProxy stackIntegerValue: 1.
 	y := interpreterProxy stackIntegerValue: 2.
 	x := interpreterProxy stackIntegerValue: 3.
 	handle := interpreterProxy stackIntegerValue: 4.
-	interpreterProxy failed ifTrue:[^nil].
-	result := self cCode:'b3dxSetBufferRect(handle, x, y, w, h)'.
-	result ifFalse:[^interpreterProxy primitiveFail].
-	^interpreterProxy pop: 5. "pop args; return rcvr"
+	interpreterProxy failed ifFalse:
+		[(self b3dxSetBufferRect: handle _: x _: y _: w _: h)
+			ifTrue: [interpreterProxy pop: 5] "pop args; return rcvr"
+			ifFalse:[interpreterProxy primitiveFail]]
 ]
 
 { #category : #'primitives-renderer' }
 B3DAcceleratorPlugin >> primitiveSetFog [
-	| result handle rgba density fogType stop start |
+	| handle rgba density fogType stop start |
 	<export: true>
-	<var: #density type:'double'>
-	<var: #start type: 'double'>
-	<var: #stop type: 'double'>
-	interpreterProxy methodArgumentCount = 6
-		ifFalse:[^interpreterProxy primitiveFail].
+	<var: #density type: #double>
+	<var: #start type: #double>
+	<var: #stop type: #double>
+	interpreterProxy methodArgumentCount = 6 ifFalse:
+		[^interpreterProxy primitiveFail].
 	rgba := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0).
 	stop := interpreterProxy floatValueOf: (interpreterProxy stackValue: 1).
 	start := interpreterProxy floatValueOf: (interpreterProxy stackValue: 2).
 	density := interpreterProxy floatValueOf: (interpreterProxy stackValue: 3).
 	fogType := interpreterProxy stackIntegerValue: 4.
 	handle := interpreterProxy stackIntegerValue: 5.
-	interpreterProxy failed ifTrue:[^nil].
-	result := self cCode:'b3dxSetFog(handle, fogType, density, start, stop, rgba)'.
-	result ifFalse:[^interpreterProxy primitiveFail].
-	^interpreterProxy pop: 6. "pop args; return rcvr"
+	interpreterProxy failed ifFalse:
+		[(self b3dxSetFog: handle _: fogType _: density _: start _: stop _: rgba)
+			ifTrue: [interpreterProxy pop: 6] "pop args; return rcvr"
+			ifFalse:[interpreterProxy primitiveFail]]
 ]
 
 { #category : #'primitives-renderer' }
 B3DAcceleratorPlugin >> primitiveSetIntProperty [
-	| handle prop result value |
+	| handle prop value |
 	<export: true>
-	<inline: false>
-	interpreterProxy methodArgumentCount = 3
-		ifFalse:[^interpreterProxy primitiveFail].
+	interpreterProxy methodArgumentCount = 3 ifFalse:
+		[^interpreterProxy primitiveFail].
 	value := interpreterProxy stackIntegerValue: 0.
 	prop := interpreterProxy stackIntegerValue: 1.
 	handle := interpreterProxy stackIntegerValue: 2.
-	result := self cCode:'b3dxSetIntProperty(handle, prop, value)'.
-	result ifFalse:[^interpreterProxy primitiveFail].
-	^interpreterProxy pop: 3. "args; return rcvr"
+	(self b3dxSetIntProperty: handle _: prop _: value)
+		ifTrue: [interpreterProxy pop: 3] "args; return rcvr"
+		ifFalse: [interpreterProxy primitiveFail]
 
 ]
 
@@ -684,49 +679,45 @@ B3DAcceleratorPlugin >> primitiveSetTransform [
 	"Transform an entire vertex buffer using the supplied modelview and projection matrix."
 	| projectionMatrix modelViewMatrix handle |
 	<export: true>
-	<inline: false>
-	<var: #projectionMatrix declareC:'float *projectionMatrix'>
-	<var: #modelViewMatrix declareC:'float *modelViewMatrix'>
+	<var: #projectionMatrix type: #'float *'>
+	<var: #modelViewMatrix type: #'float *'>
 
-	interpreterProxy methodArgumentCount = 3
-		ifFalse:[^interpreterProxy primitiveFail].
-
+	interpreterProxy methodArgumentCount = 3 ifFalse:
+		[^interpreterProxy primitiveFail].
 	projectionMatrix := self stackMatrix: 0.
 	modelViewMatrix := self stackMatrix: 1.
 	handle := interpreterProxy stackIntegerValue: 2.
-	interpreterProxy failed ifTrue:[^nil].
-	self cCode: 'b3dxSetTransform(handle, modelViewMatrix, projectionMatrix)'.
-	^interpreterProxy pop: 3. "Leave rcvr on stack"
+	interpreterProxy failed ifFalse:
+		[self b3dxSetTransform: handle _: modelViewMatrix _: projectionMatrix.
+		 interpreterProxy pop: 3] "Leave rcvr on stack"
 ]
 
 { #category : #'primitives-renderer' }
 B3DAcceleratorPlugin >> primitiveSetVerboseLevel [
 	| result level |
 	<export: true>
-	<inline: false>
-	interpreterProxy methodArgumentCount = 1
-		ifFalse:[^interpreterProxy primitiveFail].
+	interpreterProxy methodArgumentCount = 1 ifFalse:
+		[^interpreterProxy primitiveFail].
 	level := interpreterProxy stackIntegerValue: 0.
-	result := self cCode:'b3dxSetVerboseLevel(level)'.
-	interpreterProxy pop: 2. "args+rcvr"
-	^interpreterProxy pushInteger: result
+	result := self b3dxSetVerboseLevel: level.
+	interpreterProxy methodReturnInteger: result
 ]
 
 { #category : #'primitives-renderer' }
 B3DAcceleratorPlugin >> primitiveSetViewport [
-	| h w y x result handle |
+	| h w y x handle |
 	<export: true>
-	interpreterProxy methodArgumentCount = 5
-		ifFalse:[^interpreterProxy primitiveFail].
+	interpreterProxy methodArgumentCount = 5 ifFalse:
+		[^interpreterProxy primitiveFail].
 	h := interpreterProxy stackIntegerValue: 0.
 	w := interpreterProxy stackIntegerValue: 1.
 	y := interpreterProxy stackIntegerValue: 2.
 	x := interpreterProxy stackIntegerValue: 3.
 	handle := interpreterProxy stackIntegerValue: 4.
-	interpreterProxy failed ifTrue:[^nil].
-	result := self cCode:'b3dxSetViewport(handle, x, y, w, h)'.
-	result ifFalse:[^interpreterProxy primitiveFail].
-	^interpreterProxy pop: 5. "pop args; return rcvr"
+	interpreterProxy failed ifFalse:
+		[(self b3dxSetViewport: handle _: x _: y _: w _: h)
+			ifTrue: [interpreterProxy pop: 5] "pop args; return rcvr"
+			ifFalse:[interpreterProxy primitiveFail]]
 ]
 
 { #category : #'primitives-renderer' }

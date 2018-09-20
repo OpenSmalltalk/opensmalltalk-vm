@@ -91,7 +91,7 @@ SpurSelectiveCompactor >> compactSegment: segInfo freeStart: initialFreeStart [
 				["Copy the object in segmentToFill and replace it by a forwarder."
 				 self assert: (manager isPinned: currentEntity) not. 
 				 bytesToCopy := manager bytesInObject: currentEntity.
-				 manager mem: fillStart asVoidPointer cp: (manager startOfObject: currentEntity) asVoidPointer y: bytesToCopy.
+				 manager memcpy: fillStart asVoidPointer _: (manager startOfObject: currentEntity) asVoidPointer _: bytesToCopy.
 				 copy := manager objectStartingAt: fillStart.
 				 (manager isRemembered: copy) ifTrue: 
 					["copy has the remembered bit set, but is not in the remembered table."

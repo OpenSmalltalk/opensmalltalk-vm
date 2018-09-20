@@ -961,9 +961,9 @@ FilePlugin >> primitiveFileStdioHandles [
 			 interpreterProxy storePointer: index ofObject: interpreterProxy topRemappableOop withValue: result.
 			 self
 				cCode:
-					[self mem: (interpreterProxy firstIndexableField: result)
-						cp: (self addressOf: (fileRecords at: index))
-						y: self fileRecordSize]
+					[self memcpy: (interpreterProxy firstIndexableField: result)
+						_: (self addressOf: (fileRecords at: index))
+						_: self fileRecordSize]
 				inSmalltalk:
 					[(interpreterProxy firstIndexableField: result)
 						unitSize: interpreterProxy wordSize;
