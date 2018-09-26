@@ -10,16 +10,15 @@ RBMessageNode >> asTranslatorNodeIn: aTMethod [
 
 	 Expand super nodes in place. Elide sends of halt so that halts can be
 	 sprinkled through the simulator but will be eliminated from the generated C."
-	| rcvrOrNil sel args ifNotNilBlock |
+	| rcvrOrNil args ifNotNilBlock |
 	rcvrOrNil := receiver ifNotNil: [receiver asTranslatorNodeIn: aTMethod].
 	(rcvrOrNil notNil
 	and: [rcvrOrNil isVariable
 	and: [rcvrOrNil name = 'super']]) ifTrue:
 		[^aTMethod superExpansionNodeFor: selector args: arguments].
-	sel := selector. "historical; can be simply selector"
-	sel == #halt ifTrue: [^rcvrOrNil].
-	(sel == #cCode:inSmalltalk: "extracting here rather than in translation allows inlining in the block."
-	  or: [sel == #cCode:]) ifTrue:
+	selector == #halt ifTrue: [^rcvrOrNil].
+	(selector == #cCode:inSmalltalk: "extracting here rather than in translation allows inlining in the block."
+	  or: [selector == #cCode:]) ifTrue:
 		[arguments first isBlockNode ifTrue:
 			[| block |
 			 ^(block := arguments first asTranslatorNodeIn: aTMethod) statements size = 1
@@ -30,59 +29,20 @@ RBMessageNode >> asTranslatorNodeIn: aTMethod [
 		 and: [arguments first value isEmpty]]) ifTrue:
 			[^arguments first asTranslatorNodeIn: aTMethod]].
 	args := arguments collect: [:arg| arg asTranslatorNodeIn: aTMethod].
-false ifTrue:
-	[(sel = #to:by:do: and: [arguments size = 7 and: [(arguments at: 7) notNil]]) ifTrue:
-		["Restore limit expr that got moved by transformToDo:"
-		 args := {(arguments at: 7) value asTranslatorNodeIn: aTMethod. 
-				  args second.
-				  args third. "add the limit var as a hidden extra argument; we may need it later"
-				  TVariableNode new setName: arguments first key}].
-	(sel == #ifTrue:ifFalse: and: [arguments first isNodeNil]) ifTrue:
-		[sel := #ifFalse:. args := {args last}].
-	(sel == #ifTrue:ifFalse: and: [arguments last isNodeNil]) ifTrue:
-		[sel := #ifTrue:. args := {args first}].
-	(sel == #ifFalse:ifTrue: and: [arguments first isNodeNil]) ifTrue:
-		[sel := #ifTrue:. args := {args last}].
-	(sel == #ifFalse:ifTrue: and: [arguments last isNodeNil]) ifTrue:
-		[sel := #ifTrue:. args := {args first}].
-	((sel == #ifFalse: or: [sel == #or:])
-	 and: [arguments size = 2 and: [(arguments at: 2) notNil]]) ifTrue:
-		["Restore argument block that got moved by transformOr: or transformIfFalse:"
-		 args := {(arguments at: 2) asTranslatorNodeIn: aTMethod}].
-	(args size > sel numArgs and: [sel ~~ #to:by:do:]) ifTrue: "to:by:do: has iLimiT hidden in last arg"
-		["prune the extra blocks left by ifTrue:, ifFalse:, and: & or:"
-		 self assert: args size - sel numArgs = 1.
-		 self assert: (args last isStmtList
-					  and: [args last statements size = 1
-					  and: [(args last statements first isVariable
-							or: [args last statements first isConstant])
-					  and: [#('nil' true false) includes: args last statements first nameOrValue]]]).
-		 args := args first: sel numArgs].
-	"For the benefit of later passes, e.g. value: inlining,
-	 transform e ifNotNil: [:v| ...] into  v := e. v ifNotNil: [...],
-	 which in fact means transforming (v := e) ifTrue: [:v|...] into v := e. v ifTrue: [...]."
-	((sel == #ifTrue: or: [sel == #ifFalse: or: [sel == #ifTrue:ifFalse: or: [sel == #ifFalse:ifTrue:]]])
-	 and: [receiver notNil
-	 and: [receiver isAssignmentEqualsEqualsNil
-	 and: [(ifNotNilBlock := args detect: [:arg| arg isStmtList and: [arg args size = 1]] ifNone: []) notNil]]]) ifTrue:
-		[ifNotNilBlock setArguments: #().
-		 ^TStmtListNode new
-			setArguments: #()
-			statements:
-				{	receiver receiver asTranslatorNodeIn: aTMethod.
-					TSendNode new
-						setSelector: sel
-						receiver: (TSendNode new
-									setSelector: #==
-									receiver: (receiver receiver variable asTranslatorNodeIn: aTMethod)
-									arguments: {receiver arguments first asTranslatorNodeIn: aTMethod})
-						arguments: args }]].
-	((CCodeGenerator isVarargsSelector: sel)
+	(selector == #ifTrue:ifFalse: and: [arguments first statements isEmpty]) ifTrue:
+		[selector := #ifFalse:. args := {args last}].
+	(selector == #ifTrue:ifFalse: and: [arguments last statements isEmpty]) ifTrue:
+		[selector := #ifTrue:. args := {args first}].
+	(selector == #ifFalse:ifTrue: and: [arguments first statements isEmpty]) ifTrue:
+		[selector := #ifTrue:. args := {args last}].
+	(selector == #ifFalse:ifTrue: and: [arguments last statements isEmpty]) ifTrue:
+		[selector := #ifTrue:. args := {args first}].
+	((CCodeGenerator isVarargsSelector: selector)
 	 and: [args last isCollection
 	 and: [args last isSequenceable]]) ifTrue:
 		[args := args allButLast, args last].
 	^TSendNode new
-		setSelector: sel
+		setSelector: selector
 		receiver: rcvrOrNil
 		arguments: args
 ]
