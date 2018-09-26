@@ -8,6 +8,11 @@ RBVariableNode >> asTranslatorNodeIn: aTMethod [
 	^ TVariableNode new setName: name
 ]
 
+{ #category : #'*VMMakerCompatibilityForPharo6-testing' }
+RBVariableNode >> isVariableNode [
+	^true
+]
+
 { #category : #'*VMMakerCompatibilityForPharo6-accessing' }
 RBVariableNode >> key [
 	^name

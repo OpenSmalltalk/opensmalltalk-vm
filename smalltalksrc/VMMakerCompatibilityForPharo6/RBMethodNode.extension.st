@@ -3,18 +3,28 @@ Extension { #name : #RBMethodNode }
 { #category : #'*VMMakerCompatibilityForPharo6-C translation' }
 RBMethodNode >> asTranslationMethodOfClass: aTMethodClass [
  	"Answer a TMethod (or subclass) derived from the receiver."
+	| additionalMethodState |
+	additionalMethodState := AdditionalMethodState forMethod: nil selector: selector.
+	pragmas ifNotNil:
+		[pragmas do:
+			[:pragmaNode|
+			additionalMethodState := additionalMethodState copyWith: pragmaNode asPragma]].
 	^aTMethodClass new
 		setSelector: selector
-		definingClass: scope instanceScope outerScope getClass
+		definingClass: compilationContext getClass
 		args: arguments
 		locals: ((self allDefinedVariables copyWithoutAll: arguments) collect: [:string| string -> string])
-		block: body
+		block: (body lastIsReturn
+					ifTrue: [body]
+					ifFalse: [body shallowCopy
+									addSelfReturn;
+									yourself])
 		primitive: ((pragmas ifNotNil:
 							[pragmas detect: [:pragmaNode| pragmaNode selector beginsWith: #primitve:] ifNone: []])
 						ifNil: [0]
 						ifNotNil: [:pragmaNode| pragmaNode arguments first value])
-		properties: (properties ifNil: [AdditionalMethodState new])
-		comment: self missingCommentNeededForCTranslation
+		properties: additionalMethodState
+		comment: self commentOrNil
 ]
 
 { #category : #'*VMMakerCompatibilityForPharo6-results' }

@@ -21,7 +21,7 @@ RBAssignmentNode >> asTranslatorNodeIn: aTMethod [
 		[^TAssignmentNode new
 			setVariable: varNode
 			expression: valueNode;
-			comment: self missingCommentNeededForCTranslation].
+			comment: self commentOrNil].
 	 "This is a super expansion.  We are in trouble if any statement other than the last is a return."
 	(self anyReturns: valueNode statements allButLast) ifTrue:
 		[self error: 'haven''t implemented pushing down assignments into other than the last return'].
@@ -32,6 +32,6 @@ RBAssignmentNode >> asTranslatorNodeIn: aTMethod [
 					{ TAssignmentNode new
 						setVariable: varNode
 						expression: valueNode statements last;
-						comment: self missingCommentNeededForCTranslation };
+						comment: self commentOrNil };
 		yourself
 ]
