@@ -21,11 +21,11 @@ RBReturnNode >> asTranslatorNodeIn: aTMethod [
 				put:
 					(TReturnNode new 
 						setExpression: lastExpr;
-						comment: self missingCommentNeededForCTranslation;
+						comment: self commentOrNil;
 						yourself)].
 		 ^exprTranslation].
 	^TReturnNode new 
 		setExpression: exprTranslation;
-		comment: self missingCommentNeededForCTranslation;
+		comment: self commentOrNil;
 		yourself
 ]

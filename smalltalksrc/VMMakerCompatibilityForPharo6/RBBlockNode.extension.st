@@ -15,7 +15,7 @@ RBBlockNode >> asTranslatorNodeIn: aTMethod [
 	^TStmtListNode new
 		setArguments: (arguments asArray collect: [:arg | arg name])
 		statements: statementList;
-		comment: self missingCommentNeededForCTranslation
+		comment: self commentOrNil
 ]
 
 { #category : #'*VMMakerCompatibilityForPharo6-testing' }

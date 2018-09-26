@@ -6,6 +6,11 @@ RBProgramNode >> asTranslatorNodeIn: aTMethod [
 	self subclassResponsibility
 ]
 
+{ #category : #'*VMMakerCompatibilityForPharo6-C translation' }
+RBProgramNode >> commentOrNil [
+	^self propertyAt: #comments ifAbsent: []
+]
+
 { #category : #'*VMMakerCompatibilityForPharo6-testing' }
 RBProgramNode >> isBlockNode [
 	^false
@@ -18,6 +23,11 @@ RBProgramNode >> isConstantNumber [  "Overridden in RBLiteralValueNode"
 
 { #category : #'*VMMakerCompatibilityForPharo6-testing' }
 RBProgramNode >> isNodeNil [
+	^false
+]
+
+{ #category : #'*VMMakerCompatibilityForPharo6-testing' }
+RBProgramNode >> isVariableNode [
 	^false
 ]
 
