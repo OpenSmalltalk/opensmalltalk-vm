@@ -22,5 +22,5 @@ RBCascadeNode >> asTranslatorNodeIn: aTMethod [
 					receiverNode := varNode].
 				messages do:
 					[ :msg | s nextPut: ((msg asTranslatorNodeIn: aTMethod) receiver: receiverNode)]]);
-		comment: self missingCommentNeededForCTranslation
+		comment: self commentOrNil
 ]
