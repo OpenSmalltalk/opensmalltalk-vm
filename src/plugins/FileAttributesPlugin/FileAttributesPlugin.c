@@ -31,11 +31,6 @@ static char __buildInfo[] = "FileAttributesPlugin * FileAttributesPlugin.oscog-A
 #else
 #define HAVE_CHMOD 1
 #define HAVE_CHOWN 1
-# include "sqUnixCharConv.h"
-#endif
-#include <sys/stat.h>
-#if !defined(HAVE_LSTAT) && !defined(_WIN32) && !defined(_WIN64)
-# define HAVE_LSTAT 1
 #endif
 #include <unistd.h>
 /* AKG 2018 - FileAttributesPlugin.c translated from class FileAttributesPlugin */
@@ -57,6 +52,9 @@ static char __buildInfo[] = "FileAttributesPlugin * FileAttributesPlugin.oscog-A
 #endif
 
 #include "faSupport.h"
+#if !defined(HAVE_LSTAT) && !defined(_WIN32) && !defined(_WIN64)
+# define HAVE_LSTAT 1
+#endif
 #include "sqMemoryAccess.h"
 
 
@@ -66,30 +64,17 @@ static char __buildInfo[] = "FileAttributesPlugin * FileAttributesPlugin.oscog-A
 
 
 /*** Function Prototypes ***/
-static sqInt accessAttributesForFilenameintostartingAt(char *cPathName, sqInt attributeArray, sqInt offset);
 static sqInt addressObjectFor(void *aMachineAddress);
-static sqInt byteArrayFromCStringto(const char *aCString, sqInt *byteArrayOop);
+EXPORT(sqInt) byteArrayFromCStringto(const char *aCString, sqInt *byteArrayOop);
 static sqInt canOpenDirectoryStreamForlength(char *aPathCString, sqInt length);
 static sqInt canStatFilePathlength(char *aPathCString, sqInt length);
 #if _WIN32
 static sqLong convertWinToSqueakTime(SYSTEMTIME st);
 #endif /* _WIN32 */
-static sqLong faConvertUnixToLongSqueakTime(time_t unixTime);
-#if _WIN32
-static sqInt fileCreationTimeForlengthto(char *pathString, sqInt pathLength, sqLong *creationDate);
-#endif /* _WIN32 */
-#if _WIN32
-static sqInt fileLastAccessTimeForlengthto(char *pathString, sqInt pathLength, sqLong *creationDate);
-#endif /* _WIN32 */
-#if _WIN32
-static sqInt fileLastWriteTimeForlengthto(char *pathString, sqInt pathLength, sqLong *creationDate);
-#endif /* _WIN32 */
-static int fileToAttributeArraymaskarray(char *cPathName, sqInt attributeMask, sqInt *attributeArray);
+static int fileToAttributeArraymaskarray(fapath *faPath, sqInt attributeMask, sqInt *attributeArray);
 EXPORT(const char*) getModuleName(void);
 EXPORT(sqInt) initialiseModule(void);
-static sqInt isSymlinkboolean(char *cPathName, sqInt *resultOop);
 static int pathOoptoBuffermaxLen(sqInt pathNameOop, char *cPathName, sqInt maxLen);
-static sqInt platformPathToOop(char *cPathString);
 static void * pointerFrom(sqInt directoryPointerBytes);
 static sqInt posixFileTimesFromto(struct stat *statBufPointer, sqInt attributeArray);
 EXPORT(sqInt) primitiveChangeMode(void);
@@ -102,21 +87,20 @@ EXPORT(sqInt) primitiveFileMasks(void);
 EXPORT(sqInt) primitiveLogicalDrives(void);
 EXPORT(sqInt) primitiveOpendir(void);
 EXPORT(sqInt) primitivePathMax(void);
+EXPORT(sqInt) primitivePlatToStPath(void);
 EXPORT(sqInt) primitiveReaddir(void);
 EXPORT(sqInt) primitiveRewinddir(void);
+EXPORT(sqInt) primitiveStToPlatPath(void);
 EXPORT(sqInt) primitiveSymlinkChangeOwner(void);
 EXPORT(sqInt) primitiveVersionString(void);
-static sqInt processDirectory(osdir *dirStream);
+static sqInt processDirectory(fapath *faPath);
 static sqInt putLStatForintoBuffertargetName(char *cPathName, struct stat *statBufPointer, sqInt *fileNameOop);
 static sqInt putStatForintoBuffertargetName(char *cPathName, struct stat *statBufPointer, sqInt *fileNameOop);
 static sqInt readLinkintomaxLength(char *cPathName, char *cLinkPtr, size_t maxLength);
 EXPORT(sqInt) setInterpreter(struct VirtualMachine*anInterpreter);
 static sqInt squeakPathtoPlatformmaxLen(sqInt pathOop, char *cPathString, sqInt maxLength);
-static sqInt statArrayFortoArrayfromfileName(char *cPathName, sqInt attributeArray, struct stat *statBufPointer, sqInt fileNameOop);
+static sqInt statArrayFortoArrayfromfileName(fapath *faPath, sqInt attributeArray, struct stat *statBufPointer, sqInt fileNameOop);
 static sqInt stringFromCString(const char *aCString);
-#if _WIN32
-static sqInt winFileAttributesForlengthto(char *pathString, sqInt pathLength, WIN32_FILE_ATTRIBUTE_DATA *winAttrs);
-#endif /* _WIN32 */
 #if _WIN32
 static sqInt winFileCreationTimeForto(WIN32_FILE_ATTRIBUTE_DATA *winAttrs, sqLong *creationDate);
 #endif /* _WIN32 */
@@ -127,7 +111,7 @@ static sqInt winFileLastAccessTimeForto(WIN32_FILE_ATTRIBUTE_DATA *winAttrs, sqL
 static sqInt winFileLastWriteTimeForto(WIN32_FILE_ATTRIBUTE_DATA *winAttrs, sqLong *writeDate);
 #endif /* _WIN32 */
 #if _WIN32
-static sqInt winFileTimesForto(char *cPathName, sqInt attributeArray);
+static sqInt winFileTimesForto(fapath *faPath, sqInt attributeArray);
 #endif /* _WIN32 */
 
 
@@ -140,7 +124,6 @@ static sqInt (*classArray)(void);
 static sqInt (*classByteArray)(void);
 static sqInt (*classString)(void);
 static sqInt (*failed)(void);
-static sqInt (*falseObject)(void);
 static sqInt (*instantiateClassindexableSize)(sqInt classPointer, sqInt size);
 static sqInt (*integerObjectOf)(sqInt value);
 static void * (*ioLoadFunctionFrom)(char *functionName, char *moduleName);
@@ -163,14 +146,12 @@ static sqInt (*stackIntegerValue)(sqInt offset);
 static sqInt (*stackObjectValue)(sqInt offset);
 static sqInt (*stackValue)(sqInt offset);
 static sqInt (*storePointerofObjectwithValue)(sqInt index, sqInt oop, sqInt valuePointer);
-static sqInt (*trueObject)(void);
 #else /* !defined(SQUEAK_BUILTIN_PLUGIN) */
 extern void * arrayValueOf(sqInt oop);
 extern sqInt classArray(void);
 extern sqInt classByteArray(void);
 extern sqInt classString(void);
 extern sqInt failed(void);
-extern sqInt falseObject(void);
 extern sqInt instantiateClassindexableSize(sqInt classPointer, sqInt size);
 extern sqInt integerObjectOf(sqInt value);
 extern void * ioLoadFunctionFrom(char *functionName, char *moduleName);
@@ -193,7 +174,6 @@ extern sqInt stackIntegerValue(sqInt offset);
 extern sqInt stackObjectValue(sqInt offset);
 extern sqInt stackValue(sqInt offset);
 extern sqInt storePointerofObjectwithValue(sqInt index, sqInt oop, sqInt valuePointer);
-extern sqInt trueObject(void);
 extern
 #endif
 struct VirtualMachine* interpreterProxy;
@@ -207,39 +187,6 @@ static const char *moduleName =
 static void * sCLPfn;
 static void * sCOFfn;
 
-
-
-/*	Call access() for each access type (R, W, X) on the c string cPathName,
-	storing the results in the st array attributeArray.
- */
-
-	/* FileAttributesPlugin>>#accessAttributesForFilename:into:startingAt: */
-static sqInt
-accessAttributesForFilenameintostartingAt(char *cPathName, sqInt attributeArray, sqInt offset)
-{
-    sqInt boolean;
-    sqInt index;
-
-	index = offset;
-	if ((access(cPathName, R_OK)) == 0) {
-		boolean = trueObject();
-	}
-	else {
-		boolean = falseObject();
-	}
-	storePointerofObjectwithValue(index, attributeArray, boolean);
-	index += 1;
-	boolean = ((access(cPathName, W_OK)) == 0
-		? trueObject()
-		: falseObject());
-	storePointerofObjectwithValue(index, attributeArray, boolean);
-	index += 1;
-	boolean = ((access(cPathName, X_OK)) == 0
-		? trueObject()
-		: falseObject());
-	storePointerofObjectwithValue(index, attributeArray, boolean);
-	return 0;
-}
 
 
 /*	Answer an ExternalAddress object which represents aMachineAddress */
@@ -272,7 +219,7 @@ addressObjectFor(void *aMachineAddress)
 	Caution: This may invoke the garbage collector. */
 
 	/* FileAttributesPlugin>>#byteArrayFromCString:to: */
-static sqInt
+EXPORT(sqInt)
 byteArrayFromCStringto(const char *aCString, sqInt *byteArrayOop)
 {
     unsigned char *byteArrayPtr;
@@ -282,7 +229,7 @@ byteArrayFromCStringto(const char *aCString, sqInt *byteArrayOop)
 
 	/* We never return strings longer than PATH_MAX */
 	len = strlen(aCString);
-	if (len > PATH_MAX) {
+	if (len >= FA_PATH_MAX) {
 		return -1 /* stringTooLong */;
 	}
 	newByteArray = instantiateClassindexableSize(classByteArray(), len);
@@ -383,144 +330,24 @@ convertWinToSqueakTime(SYSTEMTIME st)
 #endif /* _WIN32 */
 
 
-/*	Convert the supplied Unix (UTC) time to Squeak time.
-	
-	Squeak time has an epoch of 1901 and uses local time
-	i.e. timezone + daylight savings
-	
-	Answer an sqLong which is guaranteed to be 64 bits on all platforms.
- */
-
-	/* FileAttributesPlugin>>#faConvertUnixToLongSqueakTime: */
-static sqLong
-faConvertUnixToLongSqueakTime(time_t unixTime)
-{
-    sqLong squeakTime;
-
-	
-#  if defined(_WIN32)
-	squeakTime = 0;
-#  else /* defined(_WIN32) */
-	squeakTime = unixTime;
-	
-#  if defined(HAVE_TM_GMTOFF)
-	squeakTime += localtime(&unixTime)->tm_gmtoff;
-#  else /* defined(HAVE_TM_GMTOFF) */
-	
-#  if defined(HAVE_TIMEZONE)
-	squeakTime += (daylight*60*60) - timezone;
-#  else /* defined(HAVE_TIMEZONE) */
-	
-#error: cannot determine timezone correction
-#  endif /* defined(HAVE_TIMEZONE) */
-#  endif /* defined(HAVE_TM_GMTOFF) */
-	squeakTime += (52*365UL + 17*366UL) * 24*60*60UL;
-#  endif /* defined(_WIN32) */
-	return squeakTime;
-}
-
-
-/*	Get the creationDate for the supplied file. */
-
-	/* FileAttributesPlugin>>#fileCreationTimeFor:length:to: */
-#if _WIN32
-static sqInt
-fileCreationTimeForlengthto(char *pathString, sqInt pathLength, sqLong *creationDate)
-{
-    sqInt status;
-    WIN32_FILE_ATTRIBUTE_DATA winAttrs;
-
-
-	/* Get the file attributes */
-	status = winFileAttributesForlengthto(pathString, pathLength, (&winAttrs));
-	if (!(status == 0)) {
-		return status;
-	}
-	status = winFileCreationTimeForto((&winAttrs), creationDate);
-	if (!(status == 0)) {
-		return status;
-	}
-	return 0;
-}
-#endif /* _WIN32 */
-
-
-/*	Get the creationDate for the supplied file. */
-
-	/* FileAttributesPlugin>>#fileLastAccessTimeFor:length:to: */
-#if _WIN32
-static sqInt
-fileLastAccessTimeForlengthto(char *pathString, sqInt pathLength, sqLong *creationDate)
-{
-    sqInt status;
-    WIN32_FILE_ATTRIBUTE_DATA winAttrs;
-
-
-	/* Get the file attributes */
-	status = winFileAttributesForlengthto(pathString, pathLength, (&winAttrs));
-	if (!(status == 0)) {
-		return status;
-	}
-	status = winFileLastAccessTimeForto((&winAttrs), creationDate);
-	if (!(status == 0)) {
-		return status;
-	}
-	return 0;
-}
-#endif /* _WIN32 */
-
-
-/*	Get the creationDate for the supplied file. */
-
-	/* FileAttributesPlugin>>#fileLastWriteTimeFor:length:to: */
-#if _WIN32
-static sqInt
-fileLastWriteTimeForlengthto(char *pathString, sqInt pathLength, sqLong *creationDate)
-{
-    sqInt status;
-    WIN32_FILE_ATTRIBUTE_DATA winAttrs;
-
-
-	/* Get the file attributes */
-	status = winFileAttributesForlengthto(pathString, pathLength, (&winAttrs));
-	if (!(status == 0)) {
-		return status;
-	}
-	status = winFileLastWriteTimeForto((&winAttrs), creationDate);
-	if (!(status == 0)) {
-		return status;
-	}
-	return 0;
-}
-#endif /* _WIN32 */
-
-
 /*	Answer a file attribute array from pathNameOop. */
 
 	/* FileAttributesPlugin>>#fileToAttributeArray:mask:array: */
 static int
-fileToAttributeArraymaskarray(char *cPathName, sqInt attributeMask, sqInt *attributeArray)
+fileToAttributeArraymaskarray(fapath *faPath, sqInt attributeMask, sqInt *attributeArray)
 {
     sqInt accessArray;
     sqLong attributeDate;
-    sqInt boolean;
-    char cLinkName[PATH_MAX];
     sqInt combinedArray;
     sqInt fileNameOop;
     int getAccess;
     int getStats;
-    sqInt index;
-    sqInt len;
     sqInt sizeIfFile;
     sqInt statArray;
     struct stat statBuf;
     struct stat *statBufPointer;
-    struct stat *statBufPointer1;
-    struct stat *statBufPointer2;
     sqInt status;
     sqInt status1;
-    sqInt status2;
-    sqInt status3;
     int useLstat;
 
 
@@ -542,91 +369,50 @@ fileToAttributeArraymaskarray(char *cPathName, sqInt attributeMask, sqInt *attri
 		if (!(statArray)) {
 			return primitiveFailFor(PrimErrNoMemory);
 		}
-		if (useLstat) {
-			/* begin putLStatFor:intoBuffer:targetName: */
-			statBufPointer2 = ((struct stat *) ((&statBuf)));
-			
-#      if HAVE_LSTAT == 1
-			status3 = lstat(cPathName, statBufPointer2);
-			if (status3 != 0) {
-				/* begin cantStatPath */
-				status = -3;
-				goto l5;
-			}
-			if ((S_ISLNK((statBufPointer2->st_mode))) == 0) {
-				((&fileNameOop))[0] = (nilObject());
-			}
-			else {
-				len = readLinkintomaxLength(cPathName, cLinkName, PATH_MAX);
-				if (len < 0) {
-					status = len;
-					goto l5;
-				}
-				status3 = byteArrayFromCStringto(cLinkName, (&fileNameOop));
-			}
-#      else /* HAVE_LSTAT == 1 */
-
-			/* #HAVE_LSTAT = 1 */
-			/* begin invalidRequest */
-			status3 = -11;
-#      endif /* HAVE_LSTAT == 1 */
-			status = status3;
-	l5:	/* end putLStatFor:intoBuffer:targetName: */;
-		}
-		else {
-			/* begin putStatFor:intoBuffer:targetName: */
-			statBufPointer = ((struct stat *) ((&statBuf)));
-			status1 = stat(cPathName, statBufPointer);
-			if (status1 != 0) {
-				/* begin cantStatPath */
-				status = -3;
-				goto l1;
-			}
-			((&fileNameOop))[0] = (nilObject());
-			status = 0;
-	l1:	/* end putStatFor:intoBuffer:targetName: */;
-		}
+		status = (useLstat
+			? faLinkStat(faPath, (&statBuf), (&fileNameOop))
+			: faStat(faPath, (&statBuf), (&fileNameOop)));
 		if (status != 0) {
 			return status;
 		}
 		/* begin statArrayFor:toArray:from:fileName: */
-		statBufPointer1 = ((struct stat *) ((&statBuf)));
-		sizeIfFile = ((S_ISDIR((statBufPointer1->st_mode))) == 0
-			? (statBufPointer1->st_size)
+		statBufPointer = ((struct stat *) ((&statBuf)));
+		sizeIfFile = ((S_ISDIR((statBufPointer->st_mode))) == 0
+			? (statBufPointer->st_size)
 			: 0);
 		storePointerofObjectwithValue(0, statArray, fileNameOop);
 		storePointerofObjectwithValue(1, statArray, (BytesPerWord == 8
-			? positive64BitIntegerFor((statBufPointer1->st_mode))
-			: positive32BitIntegerFor((statBufPointer1->st_mode))));
-		storePointerofObjectwithValue(2, statArray, positive64BitIntegerFor((statBufPointer1->st_ino)));
-		storePointerofObjectwithValue(3, statArray, positive64BitIntegerFor((statBufPointer1->st_dev)));
-		storePointerofObjectwithValue(4, statArray, positive64BitIntegerFor((statBufPointer1->st_nlink)));
+			? positive64BitIntegerFor((statBufPointer->st_mode))
+			: positive32BitIntegerFor((statBufPointer->st_mode))));
+		storePointerofObjectwithValue(2, statArray, positive64BitIntegerFor((statBufPointer->st_ino)));
+		storePointerofObjectwithValue(3, statArray, positive64BitIntegerFor((statBufPointer->st_dev)));
+		storePointerofObjectwithValue(4, statArray, positive64BitIntegerFor((statBufPointer->st_nlink)));
 		storePointerofObjectwithValue(5, statArray, (BytesPerWord == 8
-			? positive64BitIntegerFor((statBufPointer1->st_uid))
-			: positive32BitIntegerFor((statBufPointer1->st_uid))));
+			? positive64BitIntegerFor((statBufPointer->st_uid))
+			: positive32BitIntegerFor((statBufPointer->st_uid))));
 		storePointerofObjectwithValue(6, statArray, (BytesPerWord == 8
-			? positive64BitIntegerFor((statBufPointer1->st_gid))
-			: positive32BitIntegerFor((statBufPointer1->st_gid))));
+			? positive64BitIntegerFor((statBufPointer->st_gid))
+			: positive32BitIntegerFor((statBufPointer->st_gid))));
 		storePointerofObjectwithValue(7, statArray, positive64BitIntegerFor(sizeIfFile));
 		
 #    if defined(_WIN32)
-		status2 = winFileTimesForto(cPathName, statArray);
+		status1 = winFileTimesForto(faPath, statArray);
 #    else /* defined(_WIN32) */
 		/* begin posixFileTimesFrom:to: */
 		
 #    if defined(_WIN32)
 #    else /* defined(_WIN32) */
-		attributeDate = faConvertUnixToLongSqueakTime((statBufPointer1->st_atime));
+		attributeDate = faConvertUnixToLongSqueakTime((statBufPointer->st_atime));
 		storePointerofObjectwithValue(8, statArray, signed64BitIntegerFor(attributeDate));
-		attributeDate = faConvertUnixToLongSqueakTime((statBufPointer1->st_mtime));
+		attributeDate = faConvertUnixToLongSqueakTime((statBufPointer->st_mtime));
 		storePointerofObjectwithValue(9, statArray, signed64BitIntegerFor(attributeDate));
-		attributeDate = faConvertUnixToLongSqueakTime((statBufPointer1->st_ctime));
+		attributeDate = faConvertUnixToLongSqueakTime((statBufPointer->st_ctime));
 		storePointerofObjectwithValue(10, statArray, signed64BitIntegerFor(attributeDate));
 		storePointerofObjectwithValue(11, statArray, nilObject());
 #    endif /* defined(_WIN32) */
-		status2 = 0;
+		status1 = 0;
 #    endif /* defined(_WIN32) */
-		status = status2;
+		status = status1;
 		if (status != 0) {
 			return status;
 		}
@@ -637,25 +423,7 @@ fileToAttributeArraymaskarray(char *cPathName, sqInt attributeMask, sqInt *attri
 		if (!(accessArray)) {
 			return primitiveFailFor(PrimErrNoMemory);
 		}
-		/* begin accessAttributesForFilename:into:startingAt: */
-		index = 0;
-		if ((access(cPathName, R_OK)) == 0) {
-			boolean = trueObject();
-		}
-		else {
-			boolean = falseObject();
-		}
-		storePointerofObjectwithValue(index, accessArray, boolean);
-		index += 1;
-		boolean = ((access(cPathName, W_OK)) == 0
-			? trueObject()
-			: falseObject());
-		storePointerofObjectwithValue(index, accessArray, boolean);
-		index += 1;
-		boolean = ((access(cPathName, X_OK)) == 0
-			? trueObject()
-			: falseObject());
-		storePointerofObjectwithValue(index, accessArray, boolean);
+		faAccessAttributes(faPath, accessArray, 0);
 		attributeArray[0] = accessArray;
 	}
 	if (getStats
@@ -694,35 +462,6 @@ initialiseModule(void)
 }
 
 
-/*	Set resultOop to a boolean indicating whether cPathName is a symbolic
-	link. Answer status (0 = success) */
-
-	/* FileAttributesPlugin>>#isSymlink:boolean: */
-static sqInt
-isSymlinkboolean(char *cPathName, sqInt *resultOop)
-{
-    struct stat statBuf;
-    sqInt status;
-
-	
-#  if HAVE_LSTAT == 1
-	status = lstat(cPathName, (&statBuf));
-	if (status != 0) {
-		/* begin cantStatPath */
-		return -3;
-	}
-	if ((S_ISLNK((statBuf.st_mode))) == 0) {
-		resultOop[0] = (falseObject());
-	}
-	else {
-		resultOop[0] = (trueObject());
-	}
-	return 0;
-#  endif /* HAVE_LSTAT == 1 */
-	return -13 /* unsupportedOperation */;
-}
-
-
 /*	Copy the supplied path name string object to the supplied c string buffer */
 
 	/* FileAttributesPlugin>>#pathOop:toBuffer:maxLen: */
@@ -744,42 +483,6 @@ pathOoptoBuffermaxLen(sqInt pathNameOop, char *cPathName, sqInt maxLen)
 	memcpy(cPathName, sPtr, len);
 	cPathName[len] = 0;
 	return 0;
-}
-
-
-/*	Convert the supplied cPathString to a ByteArray.
-	cPathString is encoded using the host OS conventions, e.g. decomposed UTF8
-	on MacOS.
- */
-
-	/* FileAttributesPlugin>>#platformPathToOop: */
-static sqInt
-platformPathToOop(char *cPathString)
-{
-    sqInt pathOop;
-    sqInt status;
-    char uxName[PATH_MAX+1];
-    sqInt val;
-
-	val = 0;
-	if ((strlen(cPathString)) > (PATH_MAX+1)) {
-		return primitiveFailForOSError(-1 /* stringTooLong */);
-	}
-	pathOop = 0;
-	
-#  if _WIN32
-	status = byteArrayFromCStringto(cPathString, (&pathOop));
-#  else /* _WIN32 */
-	status = ux2sqPath(cPathString, strlen(cPathString), uxName, PATH_MAX, 1);
-	if (status == 0) {
-		return primitiveFailForOSError(-6 /* invalidArguments */);
-	}
-	status = byteArrayFromCStringto(uxName, (&pathOop));
-#  endif /* _WIN32 */
-	if (status != 0) {
-		return primitiveFailForOSError(status);
-	}
-	return pathOop;
 }
 
 
@@ -847,12 +550,12 @@ primitiveChangeMode(void)
 	 || (!(isBytes(fileNameOop)))) {
 		return primitiveFailFor(PrimErrBadArgument);
 	}
+	
+#  if HAVE_CHMOD
 	squeakPathtoPlatformmaxLen(fileNameOop, cString, PATH_MAX);
 	if (failed()) {
 		return primitiveFailForOSError(primitiveFailureCode());
 	}
-	
-#  if HAVE_CHMOD
 	status = chmod(cString, newMode);
 	if (status != 0) {
 		return primitiveFailForOSError(errno);
@@ -882,12 +585,12 @@ primitiveChangeOwner(void)
 	 || (!(isBytes(fileNameOop)))) {
 		return primitiveFailFor(PrimErrBadArgument);
 	}
+	
+#  if HAVE_CHOWN
 	squeakPathtoPlatformmaxLen(fileNameOop, cString, PATH_MAX);
 	if (failed()) {
 		return primitiveFailForOSError(primitiveFailureCode());
 	}
-	
-#  if HAVE_CHOWN
 	status = chown(cString, ownerId, groupId);
 	if (status != 0) {
 		return primitiveFailForOSError(errno);
@@ -909,21 +612,19 @@ EXPORT(sqInt)
 primitiveClosedir(void)
 {
     sqInt dirPointerOop;
-    osdir *dirStream;
+    void * faPath;
     sqInt result;
 
 	dirPointerOop = stackValue(0);
-	dirStream = pointerFrom(dirPointerOop);
-	if (!(dirStream)) {
+	faPath = pointerFrom(dirPointerOop);
+	if (!(faPath)) {
 		return primitiveFailFor(PrimErrBadArgument);
 	}
-	fprintf(stderr, "Closedir: %p\n", (void *)dirStream);
-	fflush(stderr);
-	result = faCloseDirectory(dirStream);
+	result = faCloseDirectory(faPath);
 	if (!(result == 0)) {
 		return primitiveFailForOSError(result);
 	}
-	free(dirStream);
+	free(faPath);
 	popthenPush(2, dirPointerOop);
 	return 0;
 }
@@ -945,32 +646,11 @@ primitiveClosedir(void)
 EXPORT(sqInt)
 primitiveFileAttribute(void)
 {
-    sqLong attributeDate;
     sqInt attributeNumber;
-    char cPathName[PATH_MAX+1];
+    fapath *faPath;
     sqInt fileName;
-    sqInt fileNameOop;
-    sqInt mode;
     sqInt resultOop;
-    sqInt *resultOop1;
-    sqInt sizeIfFile;
-    struct stat statBuf;
-    struct stat statBuf1;
-    struct stat *statBufPointer;
-    sqInt status;
-    sqInt status1;
-    sqInt status2;
-    sqInt val;
-    usqIntptr_t value;
-    usqIntptr_t value1;
-    usqIntptr_t value2;
 
-	attributeDate = 0;
-	fileNameOop = 0;
-	mode = 0;
-	val = 0;
-	fprintf(stderr, "primitiveFileAttribute\n");
-	fflush(stderr);
 	fileName = stackObjectValue(1);
 	attributeNumber = stackIntegerValue(0);
 	if ((failed())
@@ -978,192 +658,24 @@ primitiveFileAttribute(void)
 	 || (!(isBytes(fileName))))) {
 		return primitiveFailFor(PrimErrBadArgument);
 	}
-	squeakPathtoPlatformmaxLen(fileName, cPathName, PATH_MAX);
+	faPath = (fapath *) calloc(1, sizeof(fapath));
+	if (faPath == null) {
+		return primitiveFailForOSError(-10 /* cantAllocateMemory */);
+	}
+	faSetStPathOop(faPath, fileName);
 	if (failed()) {
 		return primitiveFailureCode();
 	}
-	resultOop = 0;
-	fprintf(stderr, "File fileAttribute: '%s' number: %ld.\n", 
-			cPathName, attributeNumber);
-	fflush(stderr);
-	if (attributeNumber < 12) {
-
-		/* Get requested stat entry */
-		/* begin putStatFor:intoBuffer:targetName: */
-		statBufPointer = ((struct stat *) ((&statBuf)));
-		status2 = stat(cPathName, statBufPointer);
-		if (status2 != 0) {
-			/* begin cantStatPath */
-			status = -3;
-			goto l9;
-		}
-		((&fileNameOop))[0] = (nilObject());
-		status = 0;
-	l9:	/* end putStatFor:intoBuffer:targetName: */;
-		if (status != 0) {
-			fprintf(stderr, "stat() failed: %ld\n", status);
-			fflush(stderr);
-			return primitiveFailForOSError(status);
-		}
-		if (attributeNumber == 1) {
-			resultOop = fileNameOop;
-		}
-		if (attributeNumber == 2) {
-			/* begin positiveMachineIntegerFor: */
-			value = (statBuf.st_mode);
-			resultOop = (BytesPerWord == 8
-				? positive64BitIntegerFor(value)
-				: positive32BitIntegerFor(value));
-		}
-		if (attributeNumber == 3) {
-			resultOop = positive64BitIntegerFor((statBuf.st_ino));
-		}
-		if (attributeNumber == 4) {
-			resultOop = positive64BitIntegerFor((statBuf.st_dev));
-		}
-		if (attributeNumber == 5) {
-			resultOop = positive64BitIntegerFor((statBuf.st_nlink));
-		}
-		if (attributeNumber == 6) {
-			/* begin positiveMachineIntegerFor: */
-			value1 = (statBuf.st_uid);
-			resultOop = (BytesPerWord == 8
-				? positive64BitIntegerFor(value1)
-				: positive32BitIntegerFor(value1));
-		}
-		if (attributeNumber == 7) {
-			/* begin positiveMachineIntegerFor: */
-			value2 = (statBuf.st_gid);
-			resultOop = (BytesPerWord == 8
-				? positive64BitIntegerFor(value2)
-				: positive32BitIntegerFor(value2));
-		}
-		if (attributeNumber == 8) {
-			sizeIfFile = ((S_ISDIR((statBuf.st_mode))) == 0
-				? (statBuf.st_size)
-				: 0);
-			/* begin positiveMachineIntegerFor: */
-			resultOop = (BytesPerWord == 8
-				? positive64BitIntegerFor(sizeIfFile)
-				: positive32BitIntegerFor(sizeIfFile));
-		}
-		if (attributeNumber == 9) {
-
-			/* Access Time */
-			
-#      if defined(_WIN32)
-			status = fileLastAccessTimeForlengthto(cPathName, strlen(cPathName), (&attributeDate));
-			if (status != 0) {
-				return primitiveFailForOSError(status);
-			}
-			resultOop = signed64BitIntegerFor(attributeDate);
-#      else /* defined(_WIN32) */
-			attributeDate = faConvertUnixToLongSqueakTime((statBuf.st_atime));
-			resultOop = signed64BitIntegerFor(attributeDate);
-#      endif /* defined(_WIN32) */
-		}
-		if (attributeNumber == 10) {
-
-			/* Modified Time */
-			
-#      if defined(_WIN32)
-			status = fileLastWriteTimeForlengthto(cPathName, strlen(cPathName), (&attributeDate));
-			if (status != 0) {
-				return primitiveFailForOSError(status);
-			}
-			resultOop = signed64BitIntegerFor(attributeDate);
-#      else /* defined(_WIN32) */
-			attributeDate = faConvertUnixToLongSqueakTime((statBuf.st_mtime));
-			resultOop = signed64BitIntegerFor(attributeDate);
-#      endif /* defined(_WIN32) */
-		}
-		if (attributeNumber == 11) {
-
-			/* Change Time */
-			
-#      if defined(_WIN32)
-			resultOop = nilObject();
-#      else /* defined(_WIN32) */
-			attributeDate = faConvertUnixToLongSqueakTime((statBuf.st_ctime));
-			resultOop = signed64BitIntegerFor(attributeDate);
-#      endif /* defined(_WIN32) */
-		}
-	}
-	else {
-		if (attributeNumber == 12) {
-
-			/* Creation Time */
-			
-#      if defined(_WIN32)
-			status = fileCreationTimeForlengthto(cPathName, strlen(cPathName), (&attributeDate));
-			if (status != 0) {
-				return primitiveFailForOSError(status);
-			}
-			resultOop = signed64BitIntegerFor(attributeDate);
-#      else /* defined(_WIN32) */
-			resultOop = nilObject();
-#      endif /* defined(_WIN32) */
-		}
-		else {
-			if (attributeNumber < 16) {
-
-				/* Get requested access entry */
-				if (attributeNumber == 13) {
-					/* begin fileReadableFlag */
-					mode = R_OK;
-				}
-				if (attributeNumber == 14) {
-					/* begin fileWriteableFlag */
-					mode = W_OK;
-				}
-				if (attributeNumber == 15) {
-					/* begin fileExecutableFlag */
-					mode = X_OK;
-				}
-				resultOop = ((access(cPathName, mode)) == 0
-					? trueObject()
-					: falseObject());
-			}
-			else {
-
-				/* attributeNumber = 16, #isSymlink */
-				/* begin isSymlink:boolean: */
-				resultOop1 = ((sqInt *) ((&resultOop)));
-				
-#        if HAVE_LSTAT == 1
-				status1 = lstat(cPathName, (&statBuf1));
-				if (status1 != 0) {
-					/* begin cantStatPath */
-					status = -3;
-					goto l8;
-				}
-				if ((S_ISLNK((statBuf1.st_mode))) == 0) {
-					resultOop1[0] = (falseObject());
-				}
-				else {
-					resultOop1[0] = (trueObject());
-				}
-				status = 0;
-				goto l8;
-#        endif /* HAVE_LSTAT == 1 */
-				status = -13 /* unsupportedOperation */;
-	l8:	/* end isSymlink:boolean: */;
-				if (status != 0) {
-					return primitiveFailForOSError(status);
-				}
-			}
-		}
+	resultOop = faFileAttribute(faPath, attributeNumber);
+	if (failed()) {
+		return primitiveFailureCode();
 	}
 	if (resultOop == 0) {
 
 		/* It shouldn't be possible to get here */
-		fprintf(stderr, "unexpected error\n");
-		fflush(stderr);
 		primitiveFailForOSError(-14 /* unexpectedError */);
 	}
 	else {
-		fprintf(stderr, "primitiveFileAttribute normal return\n");
-		fflush(stderr);
 		popthenPush(3, resultOop);
 	}
 	return 0;
@@ -1185,35 +697,32 @@ primitiveFileAttributes(void)
 {
     sqInt attributeArray;
     sqInt attributeMask;
-    char cPathName[PATH_MAX+1];
+    fapath *faPath;
     sqInt fileName;
     int status;
     sqInt val;
 
 	attributeArray = 0;
 	val = 0;
-	fprintf(stderr, "primitiveFileAttributes\n");
-	fflush(stderr);
 	fileName = stackObjectValue(1);
 	attributeMask = stackIntegerValue(0);
 	if ((failed())
 	 || (!(isBytes(fileName)))) {
 		return primitiveFailFor(PrimErrBadArgument);
 	}
-	squeakPathtoPlatformmaxLen(fileName, cPathName, PATH_MAX);
+	faPath = (fapath *) calloc(1, sizeof(fapath));
+	if (faPath == null) {
+		return primitiveFailForOSError(-10 /* cantAllocateMemory */);
+	}
+	faSetStPathOop(faPath, fileName);
 	if (failed()) {
 		return primitiveFailureCode();
 	}
-	fprintf(stderr, "File fileAttributes: '%s' mask: %ld.\n", 
-			cPathName, attributeMask);
-	fflush(stderr);
-	status = fileToAttributeArraymaskarray(cPathName, attributeMask, (&attributeArray));
+	status = fileToAttributeArraymaskarray(faPath, attributeMask, (&attributeArray));
 	if (status != 0) {
 		primitiveFailForOSError(status);
 	}
 	else {
-		fprintf(stderr, "primitiveFileAttributes normal return\n");
-		fflush(stderr);
 		popthenPush(3, attributeArray);
 	}
 	return 0;
@@ -1226,25 +735,22 @@ primitiveFileAttributes(void)
 EXPORT(sqInt)
 primitiveFileExists(void)
 {
-    sqInt accessFlag;
-    char cString[PATH_MAX+1];
+    fapath *faPath;
     sqInt fileNameOop;
 
 	fileNameOop = stackObjectValue(0);
 	if (!(isBytes(fileNameOop))) {
 		return primitiveFailFor(PrimErrBadArgument);
 	}
-	squeakPathtoPlatformmaxLen(fileNameOop, cString, PATH_MAX);
+	faPath = (fapath *) calloc(1, sizeof(fapath));
+	if (faPath == null) {
+		return primitiveFailForOSError(-10 /* cantAllocateMemory */);
+	}
+	faSetStPathOop(faPath, fileNameOop);
 	if (failed()) {
 		return primitiveFailureCode();
 	}
-	fprintf(stderr, "File exists: '%s'.\n", cString);
-	fflush(stderr);
-	accessFlag = access(cString, F_OK);
-	popthenPush(2, (accessFlag == 0
-		? trueObject()
-		: falseObject()));
-	return 0;
+	return methodReturnValue(faExists(faPath));
 }
 
 
@@ -1318,11 +824,9 @@ primitiveLogicalDrives(void)
 EXPORT(sqInt)
 primitiveOpendir(void)
 {
-    char cPathName[PATH_MAX+1];
-    osdir *dir;
     sqInt dirName;
     sqInt dirOop;
-    sqInt len;
+    fapath *faPath;
     sqInt resultOop;
     sqInt status;
 
@@ -1330,47 +834,38 @@ primitiveOpendir(void)
 	if (!(isBytes(dirName))) {
 		return primitiveFailFor(PrimErrBadArgument);
 	}
-	squeakPathtoPlatformmaxLen(dirName, cPathName, PATH_MAX);
-	if (failed()) {
-		return primitiveFailureCode();
-	}
-	len = strlen(cPathName);
-	fprintf(stderr, "File primOpendir: '%s'.\n", cPathName);
-	fflush(stderr);
-	if (len > (PATH_MAX - 2)) {
-		return primitiveFailForOSError(-1 /* stringTooLong */);
-	}
-	if (!(canOpenDirectoryStreamForlength(cPathName, len))) {
-		return primitiveFailForOSError(-9 /* cantOpenDir */);
-	}
-	dir = (osdir *) malloc(sizeof(osdir));
-	fprintf(stderr, "malloc(%d) -> %p\n", sizeof(osdir), (void *)dir);
-	if (dir == null) {
+	faPath = (fapath *) calloc(1, sizeof(fapath));
+	if (faPath == null) {
 		return primitiveFailForOSError(-10 /* cantAllocateMemory */);
 	}
-	memcpy((dir->path), cPathName, len);
-	if (dir->path[len-1] != PATH_SEPARATOR)
-		dir->path[len++] = PATH_SEPARATOR;
-	dir->path_file = dir->path + len;
-	dir->max_file_len = PATH_MAX-len;
-	dir->path_file[0] = '\0';
-	dir->path_len = len;
-	status = faOpenDirectory(dir);
+	faSetStDirOop(faPath, dirName);
+	if (!(canOpenDirectoryStreamForlength(faGetStPath(faPath), faGetStPathLen(faPath)))) {
+		free(faPath);
+		return primitiveFailForOSError(-9 /* cantOpenDir */);
+	}
+	status = faOpenDirectory(faPath);
 	if (status == 1 /* noMoreData */) {
 		return popthenPush(2, nilObject());
 	}
 	if (status < 0) {
-		free(dir);
+		free(faPath);
 		return primitiveFailForOSError(status);
 	}
-	resultOop = processDirectory(dir);
+	resultOop = processDirectory(faPath);
 	if (failed()) {
-		free(dir);
+		free(faPath);
 		return primitiveFailureCode();
 	}
-	fprintf(stderr, "Opendir: %p\n", (void *)dir);
-	fflush(stderr);
-	dirOop = addressObjectFor(dir);
+	
+#if SPURVM
+	dirOop = addressObjectFor(faPath);
+
+#else /* SPURVM */
+	pushRemappableOop(resultOop);
+	dirOop = addressObjectFor(faPath);
+	resultOop = popRemappableOop()
+#endif /* SPURVM */
+;
 	return (storePointerofObjectwithValue(2, resultOop, dirOop),
 		popthenPush(2, resultOop));
 }
@@ -1382,7 +877,43 @@ primitiveOpendir(void)
 EXPORT(sqInt)
 primitivePathMax(void)
 {
-	return popthenPush(1, integerObjectOf(PATH_MAX));
+	return popthenPush(1, integerObjectOf(FA_PATH_MAX));
+}
+
+
+/*	Convert the supplied file name (platform encoded) to the St UTF8 encoded
+	byte array
+ */
+
+	/* FileAttributesPlugin>>#primitivePlatToStPath */
+EXPORT(sqInt)
+primitivePlatToStPath(void)
+{
+    unsigned char *byteArrayPtr;
+    fapath *faPath;
+    sqInt fileName;
+    sqInt resultOop;
+
+	fileName = stackObjectValue(0);
+	if ((failed())
+	 || (!(isBytes(fileName)))) {
+		return primitiveFailFor(PrimErrBadArgument);
+	}
+	faPath = (fapath *) calloc(1, sizeof(fapath));
+	if (faPath == null) {
+		return primitiveFailForOSError(-10 /* cantAllocateMemory */);
+	}
+	faSetPlatPathOop(faPath, fileName);
+	if (failed()) {
+		return primitiveFailureCode();
+	}
+	resultOop = instantiateClassindexableSize(classByteArray(), faGetStPathLen(faPath));
+	if (!(resultOop)) {
+		return primitiveFailFor(PrimErrNoMemory);
+	}
+	byteArrayPtr = arrayValueOf(resultOop);
+	memcpy(byteArrayPtr, faGetStPath(faPath), faGetStPathLen(faPath));
+	return methodReturnValue(resultOop);
 }
 
 
@@ -1396,25 +927,23 @@ EXPORT(sqInt)
 primitiveReaddir(void)
 {
     sqInt dirPointerOop;
-    osdir *dirStream;
+    fapath *faPath;
     sqInt resultArray;
     sqInt status;
 
 	dirPointerOop = stackValue(0);
-	dirStream = pointerFrom(dirPointerOop);
-	if (!(dirStream)) {
+	faPath = pointerFrom(dirPointerOop);
+	if (!(faPath)) {
 		return primitiveFailFor(PrimErrBadArgument);
 	}
-	fprintf(stderr, "Readdir 0x%p\n", (void *)dirStream);
-	fflush(stderr);
-	status = faReadDirectory(dirStream);
+	status = faReadDirectory(faPath);
 	if (status == 1 /* noMoreData */) {
 		return popthenPush(2, nilObject());
 	}
 	if (status < 0) {
 		return primitiveFailForOSError(status);
 	}
-	resultArray = processDirectory(dirStream);
+	resultArray = processDirectory(faPath);
 	if (failed()) {
 		return primitiveFailureCode();
 	}
@@ -1430,14 +959,50 @@ EXPORT(sqInt)
 primitiveRewinddir(void)
 {
     sqInt dirPointerOop;
-    osdir *dirStream;
+    fapath *faPath;
 
 	dirPointerOop = stackValue(0);
-	dirStream = pointerFrom(dirPointerOop);
-	if (!(dirStream)) {
+	faPath = pointerFrom(dirPointerOop);
+	if (!(faPath)) {
 		return primitiveFailFor(PrimErrBadArgument);
 	}
 	return primitiveFailForOSError(-14 /* unexpectedError */);
+}
+
+
+/*	Convert the supplied file name (UTF8 encoded) to the platform encoded byte
+	array 
+ */
+
+	/* FileAttributesPlugin>>#primitiveStToPlatPath */
+EXPORT(sqInt)
+primitiveStToPlatPath(void)
+{
+    unsigned char *byteArrayPtr;
+    fapath *faPath;
+    sqInt fileName;
+    sqInt resultOop;
+
+	fileName = stackObjectValue(0);
+	if ((failed())
+	 || (!(isBytes(fileName)))) {
+		return primitiveFailFor(PrimErrBadArgument);
+	}
+	faPath = (fapath *) calloc(1, sizeof(fapath));
+	if (faPath == null) {
+		return primitiveFailForOSError(-10 /* cantAllocateMemory */);
+	}
+	faSetStPathOop(faPath, fileName);
+	if (failed()) {
+		return primitiveFailureCode();
+	}
+	resultOop = instantiateClassindexableSize(classByteArray(), faGetPlatPathByteCount(faPath));
+	if (!(resultOop)) {
+		return primitiveFailFor(PrimErrNoMemory);
+	}
+	byteArrayPtr = arrayValueOf(resultOop);
+	memcpy(byteArrayPtr, faGetPlatPath(faPath), faGetPlatPathByteCount(faPath));
+	return methodReturnValue(resultOop);
 }
 
 
@@ -1482,29 +1047,30 @@ primitiveSymlinkChangeOwner(void)
 EXPORT(sqInt)
 primitiveVersionString(void)
 {
-	popthenPush(1, stringFromCString("1.4.0d04"));
+	popthenPush(1, stringFromCString("1.4.0d08"));
 	return 0;
 }
 
 	/* FileAttributesPlugin>>#processDirectory: */
 static sqInt
-processDirectory(osdir *dirStream)
+processDirectory(fapath *faPath)
 {
     sqInt attributeArray;
     sqInt entryName;
     sqInt resultArray;
-    int status;
+    sqInt status;
     sqInt val;
 
 	attributeArray = 0;
+	entryName = 0;
 	val = 0;
-	entryName = platformPathToOop((dirStream->path_file));
-	if (failed()) {
-		return 0;
+	status = byteArrayFromCStringto(faGetStFile(faPath), (&entryName));
+	if (status != 0) {
+		return primitiveFailForOSError(status);
 	}
 
 	/* If the stat() fails, still return the filename, just no attributes */
-	status = fileToAttributeArraymaskarray((dirStream->path), 1, (&attributeArray));
+	status = fileToAttributeArraymaskarray(faPath, 1, (&attributeArray));
 	if (status != 0) {
 		attributeArray = nilObject();
 	}
@@ -1635,7 +1201,6 @@ setInterpreter(struct VirtualMachine*anInterpreter)
 		classByteArray = interpreterProxy->classByteArray;
 		classString = interpreterProxy->classString;
 		failed = interpreterProxy->failed;
-		falseObject = interpreterProxy->falseObject;
 		instantiateClassindexableSize = interpreterProxy->instantiateClassindexableSize;
 		integerObjectOf = interpreterProxy->integerObjectOf;
 		ioLoadFunctionFrom = interpreterProxy->ioLoadFunctionFrom;
@@ -1658,7 +1223,6 @@ setInterpreter(struct VirtualMachine*anInterpreter)
 		stackObjectValue = interpreterProxy->stackObjectValue;
 		stackValue = interpreterProxy->stackValue;
 		storePointerofObjectwithValue = interpreterProxy->storePointerofObjectwithValue;
-		trueObject = interpreterProxy->trueObject;
 #endif /* !defined(SQUEAK_BUILTIN_PLUGIN) */
 	}
 	return ok;
@@ -1679,9 +1243,9 @@ static sqInt
 squeakPathtoPlatformmaxLen(sqInt pathOop, char *cPathString, sqInt maxLength)
 {
     int status;
-    char uxName[PATH_MAX+1];
+    char uxName[FA_PATH_MAX];
 
-	if (maxLength > (PATH_MAX+1)) {
+	if (maxLength >= (FA_PATH_MAX)) {
 		return primitiveFailForOSError(-6 /* invalidArguments */);
 	}
 	
@@ -1708,7 +1272,7 @@ squeakPathtoPlatformmaxLen(sqInt pathOop, char *cPathString, sqInt maxLength)
 
 	/* FileAttributesPlugin>>#statArrayFor:toArray:from:fileName: */
 static sqInt
-statArrayFortoArrayfromfileName(char *cPathName, sqInt attributeArray, struct stat *statBufPointer, sqInt fileNameOop)
+statArrayFortoArrayfromfileName(fapath *faPath, sqInt attributeArray, struct stat *statBufPointer, sqInt fileNameOop)
 {
     sqLong attributeDate;
     sqInt sizeIfFile;
@@ -1733,7 +1297,7 @@ statArrayFortoArrayfromfileName(char *cPathName, sqInt attributeArray, struct st
 	storePointerofObjectwithValue(7, attributeArray, positive64BitIntegerFor(sizeIfFile));
 	
 #  if defined(_WIN32)
-	status = winFileTimesForto(cPathName, attributeArray);
+	status = winFileTimesForto(faPath, attributeArray);
 #  else /* defined(_WIN32) */
 	/* begin posixFileTimesFrom:to: */
 	
@@ -1771,26 +1335,6 @@ stringFromCString(const char *aCString)
 	strncpy(arrayValueOf(newString), aCString, len);
 	return newString;
 }
-
-
-/*	Populate the supplied Win32 file attribute structure */
-
-	/* FileAttributesPlugin>>#winFileAttributesFor:length:to: */
-#if _WIN32
-static sqInt
-winFileAttributesForlengthto(char *pathString, sqInt pathLength, WIN32_FILE_ATTRIBUTE_DATA *winAttrs)
-{
-    WCHAR *win32Path;
-
-	win32Path = 0;
-	ALLOC_WIN32_PATH(win32Path, pathString, pathLength);
-	if ((GetFileAttributesExW(win32Path, GetFileExInfoStandard, winAttrs)) == 0) {
-		/* begin getAttributesFailed */
-		return -4;
-	}
-	return 0;
-}
-#endif /* _WIN32 */
 
 
 /*	Set the file creation time from the supplied attributes. */
@@ -1867,20 +1411,19 @@ winFileLastWriteTimeForto(WIN32_FILE_ATTRIBUTE_DATA *winAttrs, sqLong *writeDate
 	/* FileAttributesPlugin>>#winFileTimesFor:to: */
 #if _WIN32
 static sqInt
-winFileTimesForto(char *cPathName, sqInt attributeArray)
+winFileTimesForto(fapath *faPath, sqInt attributeArray)
 {
     sqLong attributeDate;
     sqInt status;
-    sqInt val;
     WIN32_FILE_ATTRIBUTE_DATA winAttrs;
 
 
 	/* Get the file attributes */
 	attributeDate = 0;
-	val = 0;
-	status = winFileAttributesForlengthto(cPathName, strlen(cPathName), (&winAttrs));
-	if (!(status == 0)) {
-		return status;
+	status = GetFileAttributesExW(faGetPlatPath2(faPath), GetFileExInfoStandard, &winAttrs);
+	if (status == 0) {
+		/* begin getAttributesFailed */
+		return -4;
 	}
 	status = winFileLastAccessTimeForto((&winAttrs), (&attributeDate));
 	if (!(status == 0)) {
@@ -1907,20 +1450,23 @@ winFileTimesForto(char *cPathName, sqInt attributeArray)
 
 static char _m[] = "FileAttributesPlugin";
 void* FileAttributesPlugin_exports[][3] = {
+	{(void*)_m, "byteArrayFromCStringto", (void*)byteArrayFromCStringto},
 	{(void*)_m, "getModuleName", (void*)getModuleName},
 	{(void*)_m, "initialiseModule", (void*)initialiseModule},
 	{(void*)_m, "primitiveChangeMode\000\001", (void*)primitiveChangeMode},
 	{(void*)_m, "primitiveChangeOwner\000\001", (void*)primitiveChangeOwner},
 	{(void*)_m, "primitiveClosedir\000\001", (void*)primitiveClosedir},
-	{(void*)_m, "primitiveFileAttribute\000\001", (void*)primitiveFileAttribute},
+	{(void*)_m, "primitiveFileAttribute\000\000", (void*)primitiveFileAttribute},
 	{(void*)_m, "primitiveFileAttributes\000\001", (void*)primitiveFileAttributes},
-	{(void*)_m, "primitiveFileExists\000\001", (void*)primitiveFileExists},
+	{(void*)_m, "primitiveFileExists\000\000", (void*)primitiveFileExists},
 	{(void*)_m, "primitiveFileMasks\000\377", (void*)primitiveFileMasks},
 	{(void*)_m, "primitiveLogicalDrives\000\377", (void*)primitiveLogicalDrives},
-	{(void*)_m, "primitiveOpendir\000\001", (void*)primitiveOpendir},
+	{(void*)_m, "primitiveOpendir\000\000", (void*)primitiveOpendir},
 	{(void*)_m, "primitivePathMax\000\377", (void*)primitivePathMax},
+	{(void*)_m, "primitivePlatToStPath\000\000", (void*)primitivePlatToStPath},
 	{(void*)_m, "primitiveReaddir\000\002", (void*)primitiveReaddir},
 	{(void*)_m, "primitiveRewinddir\000\001", (void*)primitiveRewinddir},
+	{(void*)_m, "primitiveStToPlatPath\000\000", (void*)primitiveStToPlatPath},
 	{(void*)_m, "primitiveSymlinkChangeOwner\000\001", (void*)primitiveSymlinkChangeOwner},
 	{(void*)_m, "primitiveVersionString\000\377", (void*)primitiveVersionString},
 	{(void*)_m, "setInterpreter", (void*)setInterpreter},
@@ -1932,12 +1478,14 @@ void* FileAttributesPlugin_exports[][3] = {
 signed char primitiveChangeModeAccessorDepth = 1;
 signed char primitiveChangeOwnerAccessorDepth = 1;
 signed char primitiveClosedirAccessorDepth = 1;
-signed char primitiveFileAttributeAccessorDepth = 1;
+signed char primitiveFileAttributeAccessorDepth = 0;
 signed char primitiveFileAttributesAccessorDepth = 1;
-signed char primitiveFileExistsAccessorDepth = 1;
-signed char primitiveOpendirAccessorDepth = 1;
+signed char primitiveFileExistsAccessorDepth = 0;
+signed char primitiveOpendirAccessorDepth = 0;
+signed char primitivePlatToStPathAccessorDepth = 0;
 signed char primitiveReaddirAccessorDepth = 2;
 signed char primitiveRewinddirAccessorDepth = 1;
+signed char primitiveStToPlatPathAccessorDepth = 0;
 signed char primitiveSymlinkChangeOwnerAccessorDepth = 1;
 
 #endif /* ifdef SQ_BUILTIN_PLUGIN */
