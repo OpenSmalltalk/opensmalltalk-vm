@@ -76,7 +76,7 @@ EXPORT(const char*) getModuleName(void);
 EXPORT(sqInt) initialiseModule(void);
 static int pathOoptoBuffermaxLen(sqInt pathNameOop, char *cPathName, sqInt maxLen);
 static void * pointerFrom(sqInt directoryPointerBytes);
-static sqInt posixFileTimesFromto(struct stat *statBufPointer, sqInt attributeArray);
+static sqInt posixFileTimesFromto(faStatStruct *statBufPointer, sqInt attributeArray);
 EXPORT(sqInt) primitiveChangeMode(void);
 EXPORT(sqInt) primitiveChangeOwner(void);
 EXPORT(sqInt) primitiveClosedir(void);
@@ -94,12 +94,10 @@ EXPORT(sqInt) primitiveStToPlatPath(void);
 EXPORT(sqInt) primitiveSymlinkChangeOwner(void);
 EXPORT(sqInt) primitiveVersionString(void);
 static sqInt processDirectory(fapath *faPath);
-static sqInt putLStatForintoBuffertargetName(char *cPathName, struct stat *statBufPointer, sqInt *fileNameOop);
-static sqInt putStatForintoBuffertargetName(char *cPathName, struct stat *statBufPointer, sqInt *fileNameOop);
 static sqInt readLinkintomaxLength(char *cPathName, char *cLinkPtr, size_t maxLength);
 EXPORT(sqInt) setInterpreter(struct VirtualMachine*anInterpreter);
 static sqInt squeakPathtoPlatformmaxLen(sqInt pathOop, char *cPathString, sqInt maxLength);
-static sqInt statArrayFortoArrayfromfileName(fapath *faPath, sqInt attributeArray, struct stat *statBufPointer, sqInt fileNameOop);
+static sqInt statArrayFortoArrayfromfileName(fapath *faPath, sqInt attributeArray, faStatStruct *statBufPointer, sqInt fileNameOop);
 static sqInt stringFromCString(const char *aCString);
 #if _WIN32
 static sqInt winFileCreationTimeForto(WIN32_FILE_ATTRIBUTE_DATA *winAttrs, sqLong *creationDate);
@@ -344,8 +342,8 @@ fileToAttributeArraymaskarray(fapath *faPath, sqInt attributeMask, sqInt *attrib
     int getStats;
     sqInt sizeIfFile;
     sqInt statArray;
-    struct stat statBuf;
-    struct stat *statBufPointer;
+    faStatStruct statBuf;
+    faStatStruct *statBufPointer;
     sqInt status;
     sqInt status1;
     int useLstat;
@@ -376,7 +374,7 @@ fileToAttributeArraymaskarray(fapath *faPath, sqInt attributeMask, sqInt *attrib
 			return status;
 		}
 		/* begin statArrayFor:toArray:from:fileName: */
-		statBufPointer = ((struct stat *) ((&statBuf)));
+		statBufPointer = ((faStatStruct *) ((&statBuf)));
 		sizeIfFile = ((S_ISDIR((statBufPointer->st_mode))) == 0
 			? (statBufPointer->st_size)
 			: 0);
@@ -514,7 +512,7 @@ pointerFrom(sqInt directoryPointerBytes)
 
 	/* FileAttributesPlugin>>#posixFileTimesFrom:to: */
 static sqInt
-posixFileTimesFromto(struct stat *statBufPointer, sqInt attributeArray)
+posixFileTimesFromto(faStatStruct *statBufPointer, sqInt attributeArray)
 {
     sqLong attributeDate;
 
@@ -1095,62 +1093,6 @@ processDirectory(fapath *faPath)
 }
 
 
-/*	Call stat() on cPathName, storing the results in
-	the buffer at statBufPointer. */
-
-	/* FileAttributesPlugin>>#putLStatFor:intoBuffer:targetName: */
-static sqInt
-putLStatForintoBuffertargetName(char *cPathName, struct stat *statBufPointer, sqInt *fileNameOop)
-{
-    char cLinkName[PATH_MAX];
-    sqInt len;
-    sqInt status;
-
-	
-#  if HAVE_LSTAT == 1
-	status = lstat(cPathName, statBufPointer);
-	if (status != 0) {
-		/* begin cantStatPath */
-		return -3;
-	}
-	if ((S_ISLNK((statBufPointer->st_mode))) == 0) {
-		fileNameOop[0] = (nilObject());
-	}
-	else {
-		len = readLinkintomaxLength(cPathName, cLinkName, PATH_MAX);
-		if (len < 0) {
-			return len;
-		}
-		status = byteArrayFromCStringto(cLinkName, fileNameOop);
-	}
-#  else /* HAVE_LSTAT == 1 */
-
-	/* #HAVE_LSTAT = 1 */
-	/* begin invalidRequest */
-	status = -11;
-#  endif /* HAVE_LSTAT == 1 */
-	return status;
-}
-
-
-/*	Call stat() on cPathName, storing the results in
-	the buffer at statBufPointer. */
-
-	/* FileAttributesPlugin>>#putStatFor:intoBuffer:targetName: */
-static sqInt
-putStatForintoBuffertargetName(char *cPathName, struct stat *statBufPointer, sqInt *fileNameOop)
-{
-    sqInt status;
-
-	status = stat(cPathName, statBufPointer);
-	if (status != 0) {
-		/* begin cantStatPath */
-		return -3;
-	}
-	fileNameOop[0] = (nilObject());
-	return 0;
-}
-
 
 /*	Get the target filename of the supplied symbolic link. */
 
@@ -1272,7 +1214,7 @@ squeakPathtoPlatformmaxLen(sqInt pathOop, char *cPathString, sqInt maxLength)
 
 	/* FileAttributesPlugin>>#statArrayFor:toArray:from:fileName: */
 static sqInt
-statArrayFortoArrayfromfileName(fapath *faPath, sqInt attributeArray, struct stat *statBufPointer, sqInt fileNameOop)
+statArrayFortoArrayfromfileName(fapath *faPath, sqInt attributeArray, faStatStruct *statBufPointer, sqInt fileNameOop)
 {
     sqLong attributeDate;
     sqInt sizeIfFile;
