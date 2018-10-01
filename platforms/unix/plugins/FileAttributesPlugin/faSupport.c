@@ -9,8 +9,7 @@
 #include <assert.h>
 
 #include "sq.h"
-#include "faSupport.h"
-#include "faPlugin.h"
+#include "faCommon.h"
 
 extern struct VirtualMachine * interpreterProxy;
 
@@ -222,7 +221,7 @@ char	uxName[FA_PATH_MAX];
 	status = ux2sqPath(pathName, len, uxName, FA_PATH_MAX, 1);
 	if (!status)
 		return interpreterProxy->primitiveFailForOSError(FA_INVALID_ARGUMENTS);
-	status = byteArrayFromCStringto(uxName, &pathOop);
+	status = faCharToByteArray(uxName, &pathOop);
 	if (status)
 		return interpreterProxy->primitiveFailForOSError(status);
 	return pathOop;

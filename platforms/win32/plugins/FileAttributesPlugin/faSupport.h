@@ -1,9 +1,6 @@
 #include <windows.h>
 #include <sys/stat.h>
 
-/* REQUIRED: c file must have included standard squeak definitions */
-#include "faConstants.h"
-
 /* Maximum path length allowed on this platform */
 #define	FA_PATH_MAX	4096
 #define PATH_SEPARATOR	'\\'

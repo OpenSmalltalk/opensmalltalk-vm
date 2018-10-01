@@ -1,15 +1,11 @@
 #include <dirent.h>
 #include <sys/stat.h>
 
-# include "sqUnixCharConv.h"
-
-/* REQUIRED: c file must have included standard squeak definitions */
-#include "faConstants.h"
-
-
 /* Maximum path length allowed on this platform */
 #define	FA_PATH_MAX	PATH_MAX
 #define PATH_SEPARATOR	'/'
+
+#include "sqUnixCharConv.h"
 
 typedef struct stat	faStatStruct;
 
@@ -50,9 +46,7 @@ typedef struct fapathstruct {
 	} fapath;
 
 sqInt faSetStDir(fapath *aFaPath, char *pathName, int len);
-sqInt faSetStDirOop(fapath *aFaPath, sqInt pathNameOop);
 sqInt faSetStPath(fapath *aFaPath, char *pathName, int len);
-sqInt faSetStPathOop(fapath *aFaPath, sqInt pathNameOop);
 sqInt faSetStFile(fapath *aFaPath, char *pathName);
 sqInt faSetPlatPath(fapath *aFaPath, char *pathName);
 sqInt faSetPlatPathOop(fapath *aFaPath, sqInt pathNameOop);

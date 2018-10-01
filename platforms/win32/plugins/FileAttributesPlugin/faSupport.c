@@ -9,8 +9,7 @@
 #include <assert.h>
 
 #include "sq.h"
-#include "faSupport.h"
-#include "faPlugin.h"
+#include "faCommon.h"
 
 extern struct VirtualMachine * interpreterProxy;
 
@@ -354,7 +353,7 @@ char	stName[FA_PATH_MAX];
 	if (!len)
 		return interpreterProxy->primitiveFailForOSError(FA_STRING_TOO_LONG);
 
-	status = byteArrayFromCStringto(stName, &pathOop);
+	status = faCharToByteArray(stName, &pathOop);
 	if (status)
 		return interpreterProxy->primitiveFailForOSError(status);
 	return pathOop;

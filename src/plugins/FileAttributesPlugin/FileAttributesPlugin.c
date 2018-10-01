@@ -32,6 +32,10 @@ static char __buildInfo[] = "FileAttributesPlugin * FileAttributesPlugin.oscog-A
 #define HAVE_CHMOD 1
 #define HAVE_CHOWN 1
 #endif
+#include <sys/stat.h>
+#if !defined(HAVE_LSTAT) && !defined(_WIN32) && !defined(_WIN64)
+# define HAVE_LSTAT 1
+#endif
 #include <unistd.h>
 /* AKG 2018 - FileAttributesPlugin.c translated from class FileAttributesPlugin */
 
@@ -51,10 +55,7 @@ static char __buildInfo[] = "FileAttributesPlugin * FileAttributesPlugin.oscog-A
 # define EXPORT(returnType) static returnType
 #endif
 
-#include "faSupport.h"
-#if !defined(HAVE_LSTAT) && !defined(_WIN32) && !defined(_WIN64)
-# define HAVE_LSTAT 1
-#endif
+#include "faCommon.h"
 #include "sqMemoryAccess.h"
 
 
@@ -65,7 +66,6 @@ static char __buildInfo[] = "FileAttributesPlugin * FileAttributesPlugin.oscog-A
 
 /*** Function Prototypes ***/
 static sqInt addressObjectFor(void *aMachineAddress);
-EXPORT(sqInt) byteArrayFromCStringto(const char *aCString, sqInt *byteArrayOop);
 static sqInt canOpenDirectoryStreamForlength(char *aPathCString, sqInt length);
 static sqInt canStatFilePathlength(char *aPathCString, sqInt length);
 #if _WIN32
@@ -94,6 +94,8 @@ EXPORT(sqInt) primitiveStToPlatPath(void);
 EXPORT(sqInt) primitiveSymlinkChangeOwner(void);
 EXPORT(sqInt) primitiveVersionString(void);
 static sqInt processDirectory(fapath *faPath);
+static sqInt putLStatForintoBuffertargetName(char *cPathName, faStatStruct *statBufPointer, sqInt *fileNameOop);
+static sqInt putStatForintoBuffertargetName(char *cPathName, faStatStruct *statBufPointer, sqInt *fileNameOop);
 static sqInt readLinkintomaxLength(char *cPathName, char *cLinkPtr, size_t maxLength);
 EXPORT(sqInt) setInterpreter(struct VirtualMachine*anInterpreter);
 static sqInt squeakPathtoPlatformmaxLen(sqInt pathOop, char *cPathString, sqInt maxLength);
@@ -213,34 +215,6 @@ addressObjectFor(void *aMachineAddress)
 }
 
 
-/*	Answer a new ByteArray copied from a null-terminated C string.
-	Caution: This may invoke the garbage collector. */
-
-	/* FileAttributesPlugin>>#byteArrayFromCString:to: */
-EXPORT(sqInt)
-byteArrayFromCStringto(const char *aCString, sqInt *byteArrayOop)
-{
-    unsigned char *byteArrayPtr;
-    sqInt len;
-    sqInt newByteArray;
-
-
-	/* We never return strings longer than PATH_MAX */
-	len = strlen(aCString);
-	if (len >= FA_PATH_MAX) {
-		return -1 /* stringTooLong */;
-	}
-	newByteArray = instantiateClassindexableSize(classByteArray(), len);
-	if (!(newByteArray)) {
-		return primitiveFailFor(PrimErrNoMemory);
-	}
-	byteArrayPtr = arrayValueOf(newByteArray);
-	memcpy(byteArrayPtr, aCString, len);
-	byteArrayOop[0] = newByteArray;
-	return 0;
-}
-
-
 /*	Answer non-zero if security permits the directory to be listed. */
 /*	FIXME: This function has not been tested. -dtl */
 /*	If the security plugin can be loaded, use it to check . 
@@ -335,17 +309,13 @@ static int
 fileToAttributeArraymaskarray(fapath *faPath, sqInt attributeMask, sqInt *attributeArray)
 {
     sqInt accessArray;
-    sqLong attributeDate;
     sqInt combinedArray;
     sqInt fileNameOop;
     int getAccess;
     int getStats;
-    sqInt sizeIfFile;
     sqInt statArray;
     faStatStruct statBuf;
-    faStatStruct *statBufPointer;
     sqInt status;
-    sqInt status1;
     int useLstat;
 
 
@@ -373,44 +343,7 @@ fileToAttributeArraymaskarray(fapath *faPath, sqInt attributeMask, sqInt *attrib
 		if (status != 0) {
 			return status;
 		}
-		/* begin statArrayFor:toArray:from:fileName: */
-		statBufPointer = ((faStatStruct *) ((&statBuf)));
-		sizeIfFile = ((S_ISDIR((statBufPointer->st_mode))) == 0
-			? (statBufPointer->st_size)
-			: 0);
-		storePointerofObjectwithValue(0, statArray, fileNameOop);
-		storePointerofObjectwithValue(1, statArray, (BytesPerWord == 8
-			? positive64BitIntegerFor((statBufPointer->st_mode))
-			: positive32BitIntegerFor((statBufPointer->st_mode))));
-		storePointerofObjectwithValue(2, statArray, positive64BitIntegerFor((statBufPointer->st_ino)));
-		storePointerofObjectwithValue(3, statArray, positive64BitIntegerFor((statBufPointer->st_dev)));
-		storePointerofObjectwithValue(4, statArray, positive64BitIntegerFor((statBufPointer->st_nlink)));
-		storePointerofObjectwithValue(5, statArray, (BytesPerWord == 8
-			? positive64BitIntegerFor((statBufPointer->st_uid))
-			: positive32BitIntegerFor((statBufPointer->st_uid))));
-		storePointerofObjectwithValue(6, statArray, (BytesPerWord == 8
-			? positive64BitIntegerFor((statBufPointer->st_gid))
-			: positive32BitIntegerFor((statBufPointer->st_gid))));
-		storePointerofObjectwithValue(7, statArray, positive64BitIntegerFor(sizeIfFile));
-		
-#    if defined(_WIN32)
-		status1 = winFileTimesForto(faPath, statArray);
-#    else /* defined(_WIN32) */
-		/* begin posixFileTimesFrom:to: */
-		
-#    if defined(_WIN32)
-#    else /* defined(_WIN32) */
-		attributeDate = faConvertUnixToLongSqueakTime((statBufPointer->st_atime));
-		storePointerofObjectwithValue(8, statArray, signed64BitIntegerFor(attributeDate));
-		attributeDate = faConvertUnixToLongSqueakTime((statBufPointer->st_mtime));
-		storePointerofObjectwithValue(9, statArray, signed64BitIntegerFor(attributeDate));
-		attributeDate = faConvertUnixToLongSqueakTime((statBufPointer->st_ctime));
-		storePointerofObjectwithValue(10, statArray, signed64BitIntegerFor(attributeDate));
-		storePointerofObjectwithValue(11, statArray, nilObject());
-#    endif /* defined(_WIN32) */
-		status1 = 0;
-#    endif /* defined(_WIN32) */
-		status = status1;
+		status = statArrayFortoArrayfromfileName(faPath, statArray, (&statBuf), fileNameOop);
 		if (status != 0) {
 			return status;
 		}
@@ -519,11 +452,11 @@ posixFileTimesFromto(faStatStruct *statBufPointer, sqInt attributeArray)
 	
 #  if defined(_WIN32)
 #  else /* defined(_WIN32) */
-	attributeDate = faConvertUnixToLongSqueakTime((statBufPointer->st_atime));
+	attributeDate = faConvertUnixToLongSqueakTime(statBufPointer->st_atime);
 	storePointerofObjectwithValue(8, attributeArray, signed64BitIntegerFor(attributeDate));
-	attributeDate = faConvertUnixToLongSqueakTime((statBufPointer->st_mtime));
+	attributeDate = faConvertUnixToLongSqueakTime(statBufPointer->st_mtime);
 	storePointerofObjectwithValue(9, attributeArray, signed64BitIntegerFor(attributeDate));
-	attributeDate = faConvertUnixToLongSqueakTime((statBufPointer->st_ctime));
+	attributeDate = faConvertUnixToLongSqueakTime(statBufPointer->st_ctime);
 	storePointerofObjectwithValue(10, attributeArray, signed64BitIntegerFor(attributeDate));
 	storePointerofObjectwithValue(11, attributeArray, nilObject());
 #  endif /* defined(_WIN32) */
@@ -1045,7 +978,7 @@ primitiveSymlinkChangeOwner(void)
 EXPORT(sqInt)
 primitiveVersionString(void)
 {
-	popthenPush(1, stringFromCString("1.4.0d08"));
+	popthenPush(1, stringFromCString("1.4.0d10"));
 	return 0;
 }
 
@@ -1062,7 +995,7 @@ processDirectory(fapath *faPath)
 	attributeArray = 0;
 	entryName = 0;
 	val = 0;
-	status = byteArrayFromCStringto(faGetStFile(faPath), (&entryName));
+	status = faCharToByteArray(faGetStFile(faPath), (&entryName));
 	if (status != 0) {
 		return primitiveFailForOSError(status);
 	}
@@ -1092,6 +1025,62 @@ processDirectory(fapath *faPath)
 	return resultArray;
 }
 
+
+/*	Call stat() on cPathName, storing the results in
+	the buffer at statBufPointer. */
+
+	/* FileAttributesPlugin>>#putLStatFor:intoBuffer:targetName: */
+static sqInt
+putLStatForintoBuffertargetName(char *cPathName, faStatStruct *statBufPointer, sqInt *fileNameOop)
+{
+    char cLinkName[PATH_MAX];
+    sqInt len;
+    sqInt status;
+
+	
+#  if HAVE_LSTAT == 1
+	status = lstat(cPathName, statBufPointer);
+	if (status != 0) {
+		/* begin cantStatPath */
+		return -3;
+	}
+	if ((S_ISLNK(statBufPointer->st_mode)) == 0) {
+		fileNameOop[0] = (nilObject());
+	}
+	else {
+		len = readLinkintomaxLength(cPathName, cLinkName, PATH_MAX);
+		if (len < 0) {
+			return len;
+		}
+		status = faCharToByteArray(cLinkName, fileNameOop);
+	}
+#  else /* HAVE_LSTAT == 1 */
+
+	/* #HAVE_LSTAT = 1 */
+	/* begin invalidRequest */
+	status = -11;
+#  endif /* HAVE_LSTAT == 1 */
+	return status;
+}
+
+
+/*	Call stat() on cPathName, storing the results in
+	the buffer at statBufPointer. */
+
+	/* FileAttributesPlugin>>#putStatFor:intoBuffer:targetName: */
+static sqInt
+putStatForintoBuffertargetName(char *cPathName, faStatStruct *statBufPointer, sqInt *fileNameOop)
+{
+    sqInt status;
+
+	status = stat(cPathName, statBufPointer);
+	if (status != 0) {
+		/* begin cantStatPath */
+		return -3;
+	}
+	fileNameOop[0] = (nilObject());
+	return 0;
+}
 
 
 /*	Get the target filename of the supplied symbolic link. */
@@ -1216,44 +1205,25 @@ squeakPathtoPlatformmaxLen(sqInt pathOop, char *cPathString, sqInt maxLength)
 static sqInt
 statArrayFortoArrayfromfileName(fapath *faPath, sqInt attributeArray, faStatStruct *statBufPointer, sqInt fileNameOop)
 {
-    sqLong attributeDate;
     sqInt sizeIfFile;
     sqInt status;
 
-	sizeIfFile = ((S_ISDIR((statBufPointer->st_mode))) == 0
-		? (statBufPointer->st_size)
+	sizeIfFile = ((S_ISDIR(statBufPointer->st_mode)) == 0
+		? statBufPointer->st_size
 		: 0);
 	storePointerofObjectwithValue(0, attributeArray, fileNameOop);
-	storePointerofObjectwithValue(1, attributeArray, (BytesPerWord == 8
-		? positive64BitIntegerFor((statBufPointer->st_mode))
-		: positive32BitIntegerFor((statBufPointer->st_mode))));
-	storePointerofObjectwithValue(2, attributeArray, positive64BitIntegerFor((statBufPointer->st_ino)));
-	storePointerofObjectwithValue(3, attributeArray, positive64BitIntegerFor((statBufPointer->st_dev)));
-	storePointerofObjectwithValue(4, attributeArray, positive64BitIntegerFor((statBufPointer->st_nlink)));
-	storePointerofObjectwithValue(5, attributeArray, (BytesPerWord == 8
-		? positive64BitIntegerFor((statBufPointer->st_uid))
-		: positive32BitIntegerFor((statBufPointer->st_uid))));
-	storePointerofObjectwithValue(6, attributeArray, (BytesPerWord == 8
-		? positive64BitIntegerFor((statBufPointer->st_gid))
-		: positive32BitIntegerFor((statBufPointer->st_gid))));
+	storePointerofObjectwithValue(1, attributeArray, positive64BitIntegerFor(statBufPointer->st_mode));
+	storePointerofObjectwithValue(2, attributeArray, positive64BitIntegerFor(statBufPointer->st_ino));
+	storePointerofObjectwithValue(3, attributeArray, positive64BitIntegerFor(statBufPointer->st_dev));
+	storePointerofObjectwithValue(4, attributeArray, positive64BitIntegerFor(statBufPointer->st_nlink));
+	storePointerofObjectwithValue(5, attributeArray, positive64BitIntegerFor(statBufPointer->st_uid));
+	storePointerofObjectwithValue(6, attributeArray, positive64BitIntegerFor(statBufPointer->st_gid));
 	storePointerofObjectwithValue(7, attributeArray, positive64BitIntegerFor(sizeIfFile));
 	
 #  if defined(_WIN32)
 	status = winFileTimesForto(faPath, attributeArray);
 #  else /* defined(_WIN32) */
-	/* begin posixFileTimesFrom:to: */
-	
-#  if defined(_WIN32)
-#  else /* defined(_WIN32) */
-	attributeDate = faConvertUnixToLongSqueakTime((statBufPointer->st_atime));
-	storePointerofObjectwithValue(8, attributeArray, signed64BitIntegerFor(attributeDate));
-	attributeDate = faConvertUnixToLongSqueakTime((statBufPointer->st_mtime));
-	storePointerofObjectwithValue(9, attributeArray, signed64BitIntegerFor(attributeDate));
-	attributeDate = faConvertUnixToLongSqueakTime((statBufPointer->st_ctime));
-	storePointerofObjectwithValue(10, attributeArray, signed64BitIntegerFor(attributeDate));
-	storePointerofObjectwithValue(11, attributeArray, nilObject());
-#  endif /* defined(_WIN32) */
-	status = 0;
+	status = posixFileTimesFromto(statBufPointer, attributeArray);
 #  endif /* defined(_WIN32) */
 	return status;
 }
@@ -1392,7 +1362,6 @@ winFileTimesForto(fapath *faPath, sqInt attributeArray)
 
 static char _m[] = "FileAttributesPlugin";
 void* FileAttributesPlugin_exports[][3] = {
-	{(void*)_m, "byteArrayFromCStringto", (void*)byteArrayFromCStringto},
 	{(void*)_m, "getModuleName", (void*)getModuleName},
 	{(void*)_m, "initialiseModule", (void*)initialiseModule},
 	{(void*)_m, "primitiveChangeMode\000\001", (void*)primitiveChangeMode},
