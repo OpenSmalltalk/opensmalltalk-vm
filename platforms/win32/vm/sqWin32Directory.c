@@ -16,10 +16,8 @@
 
 #include "sq.h"
 #include "../plugins/FilePlugin/sqWin32File.h"
-#ifdef PharoVM
 # include <sys/types.h>
 # include <sys/stat.h>
-#endif
 
 extern struct VirtualMachine *interpreterProxy;
 
