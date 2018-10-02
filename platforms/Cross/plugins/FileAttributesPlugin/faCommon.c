@@ -1,7 +1,7 @@
 /*
  * faCommon.c
  *
- * Provides a number of platform independent functions.
+ * Provides a number of platform independent functions for FileAttributesPlugin.
  */
 
 #include "sq.h"

@@ -4,7 +4,7 @@
  * File Attributes constants
  *
  * Note that these must be kept in sync with their definition in 
- * FileAttributesPlugin errors protocol.
+ * FileAttributesPlugin errors / status protocol.
  *
  */
 #define FA_SUCCESS			  0

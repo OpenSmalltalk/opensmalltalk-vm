@@ -1,3 +1,6 @@
+/*
+ * faSupport.h - Unix macro and type definitions for FileAttributesPlugin
+ */
 #include <dirent.h>
 #include <sys/stat.h>
 
@@ -7,29 +10,37 @@
 
 #include "sqUnixCharConv.h"
 
+/*
+ * Set the structure used by stat().
+ */
 typedef struct stat	faStatStruct;
 
 
 /*
- * typedef fapath
+ * fapath
  *
- * This holds the current state for retrieving all the children of a 
- * directory.
+ * fapath is used to pass path names between smalltalk and the primitives.
+ * The structure holds the path name in Smalltalk format (precomposed UTF8)
+ * and the platform format (Wide Strings for Windows).
+ * Set and Get functions are used to ensure that the two formats are always 
+ * kept in sync.
  *
+ * State information for iterating over directories is also held by fapath.
  * The directory (path) being enumerated and the current file name are stored
  * in a single string (path) to simplify stat()ing the file.
  *
- * path_len	- length of the name of the path being enumerated.
- * path		- The directory name being enumerated, with precomposed UTF8
- * 		  encoding.
- * platformDir	- platform specific data for directory enumeration.
- * uxpath	- The directory name being enumerated in platform specific encoding
- * 		  Linux: precomposed UTF8
- * 		  OSX: HFS decomposed UTF8
- * uxpath_file	- points to the file name of the current entry.
- * 		  This is set to the byte after the directory name
- * 		  and is used to stat() each file.
+ * path		- The path name in precomposed UTF8 encoding (Smalltalk encoding).
+ * path_len	- length of path.
+ * path_file	- When iterating over a directory, this points to the 
+ * 		  character after the trailing path separator.
+ * 		  The current file will be stored here and is used to 
+ * 		  stat() each file.
  * max_file_len	- The space remaining after the path for the file name.
+ *
+ * uxpath, uxpath_len, uxpath_file and uxmax_file_len are the Unix 
+ * encoded equivalents:
+ * - UTF8 for Linux
+ * - HFS specific decomposed UTF8 for OSX
  */
 typedef struct fapathstruct {
 	char	path[FA_PATH_MAX];

@@ -1,3 +1,6 @@
+/*
+ * faSupport.h - Windows macro and type definitions for FileAttributesPlugin
+ */
 #include <windows.h>
 #include <sys/stat.h>
 
@@ -5,25 +8,40 @@
 #define	FA_PATH_MAX	4096
 #define PATH_SEPARATOR	'\\'
 
+/*
+ * Set the structure used by stat().
+ */
 typedef struct _stat	faStatStruct;
 
 
 /*
- * typedef osdir
+ * fapath
  *
- * This holds the current state for retrieving all the children of a 
- * directory.
+ * fapath is used to pass path names between smalltalk and the primitives.
+ * The structure holds the path name in Smalltalk format (precomposed UTF8)
+ * and the platform format (Wide Strings for Windows).
+ * Set and Get functions are used to ensure that the two formats are always 
+ * kept in sync.
  *
+ * State information for iterating over directories is also held by fapath.
  * The directory (path) being enumerated and the current file name are stored
  * in a single string (path) to simplify stat()ing the file.
  *
- * platformDir	- platform specific data for directory enumeration.
- * path_len	- length of the name of the path being enumerated.
- * path_file	- points to the file name of the current entry.
- * 		  This is set to the byte after the directory name
- * 		  and is used to stat() each file.
+ * path		- The path name in precomposed UTF8 encoding (Smalltalk encoding).
+ * path_len	- length of path.
+ * path_file	- When iterating over a directory, this points to the 
+ * 		  character after the trailing path separator.
+ * 		  The current file will be stored here and is used to 
+ * 		  stat() each file.
  * max_file_len	- The space remaining after the path for the file name.
- * path		- The directory name being enumerated, with UTF8 encoding.
+ *
+ * winpath, winpath_len, winpath_file and winmax_file_len are the Windows 
+ * wide string encoded equivalents.
+ *
+ * Some windows functions require the path name be prepended with "\\?\" to
+ * support long file names, while others support long file names without the
+ * leading characters. winpath includes the "\\?\" prefix, while winpath2 
+ * excludes it.
  */
 typedef struct fapathstruct {
 	char	path[FA_PATH_MAX];

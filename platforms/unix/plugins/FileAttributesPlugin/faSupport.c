@@ -1,7 +1,6 @@
 /*
  * faSupport.c - Unix support routines for the FileAttributesPlugin
  *
- * Author: akgrant@gmail.com
  */
 #include <errno.h>
 #include <sys/types.h>
