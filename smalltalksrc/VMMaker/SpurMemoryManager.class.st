@@ -4449,7 +4449,13 @@ SpurMemoryManager >> ensureRoomOnObjStackAt: objStackRootIndex [
 				[freeOrNewPage := self allocateSlotsInOldSpace: ObjStackPageSlots
 										format: self wordIndexableFormat
 										classIndex: self wordSizeClassIndexPun.
-				 freeOrNewPage ifNil: [self error: 'no memory to allocate or extend obj stack'].
+				 freeOrNewPage ifNil: 
+					["Allocate a new segment an retry. This is very uncommon. But it happened to me (Clement)."
+					 self growOldSpaceByAtLeast: ObjStackPageSlots.
+					 freeOrNewPage := self allocateSlotsInOldSpace: ObjStackPageSlots
+										format: self wordIndexableFormat
+										classIndex: self wordSizeClassIndexPun.
+					freeOrNewPage ifNil: [self error: 'no memory to allocate or extend obj stack']].
 				 self storePointer: ObjStackFreex ofObjStack: freeOrNewPage withValue: 0.
 				 marking ifTrue: [self setIsMarkedOf: freeOrNewPage to: true]].
 		 self storePointer: ObjStackMyx ofObjStack: freeOrNewPage withValue: objStackRootIndex;
