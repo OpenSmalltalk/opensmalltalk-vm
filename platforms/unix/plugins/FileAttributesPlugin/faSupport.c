@@ -476,8 +476,6 @@ char	targetFile[FA_PATH_MAX];
  */
 sqInt faExists(fapath *aFaPath)
 {
-int		status;
-
 	if (access(faGetPlatPath(aFaPath), F_OK))
 		return interpreterProxy->falseObject();
 	else
