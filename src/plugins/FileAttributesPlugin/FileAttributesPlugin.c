@@ -997,7 +997,7 @@ primitiveSymlinkChangeOwner(void)
 EXPORT(sqInt)
 primitiveVersionString(void)
 {
-	popthenPush(1, stringFromCString("2.0.0d04"));
+	popthenPush(1, stringFromCString("2.0.1"));
 	return 0;
 }
 
