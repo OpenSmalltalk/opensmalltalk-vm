@@ -74,6 +74,7 @@ sqLong faConvertUnixToLongSqueakTime(time_t unixTime);
 sqInt faOpenDirectory(fapath *aFaPath);
 sqInt faReadDirectory(fapath *aFaPath);
 sqInt faCloseDirectory(fapath *aFaPath);
+sqInt faRewindDirectory(fapath *aFaPath);
 sqInt faFileAttribute(fapath *aFaPath, sqInt attributeNumber);
 sqInt faStat(fapath *aFaPath, faStatStruct *statBuf, sqInt *fileNameOop);
 sqInt faLinkStat(fapath *aFaPath, faStatStruct *statBuf, sqInt *fileNameOop);

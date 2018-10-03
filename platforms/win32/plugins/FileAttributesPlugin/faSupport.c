@@ -222,6 +222,24 @@ int		len;
 }
 
 
+
+/*
+ * faClearFile
+ *
+ * Remove the file off the current path, i.e. terminate the string
+ * where the directory name ends.
+ *
+ * aFaPath must have been initialised with faSetStDir prior to calling
+ * this function.
+ */
+void faClearFile(fapath *aFaPath)
+{
+	aFaPath->path[aFaPath->path_len] = 0;
+	aFaPath->winpath[aFaPath->winpath_len] = 0;
+}
+
+
+
 /*
  * faDbgDump
  *
@@ -433,6 +451,31 @@ sqInt	status;
 	else
 		return FA_UNABLE_TO_CLOSE_DIR;
 }
+
+
+
+/*
+ * faRewindDirectory
+ *
+ * Rewind the supplied directory.
+ */
+
+sqInt faRewindDirectory(fapath *aFaPath)
+{
+sqInt	status;
+
+	/* 
+	 * Windows doesn't directly support rewind.
+	 * Close and re-open the directory
+	 */
+	status = faCloseDirectory(aFaPath);
+	if (!status) return status;
+	/* Remove any existing file from the path */
+	faClearFile(aFaPath);
+	status = faOpenDirectory(aFaPath);
+	return status;
+}
+
 
 
 /*
