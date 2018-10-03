@@ -314,7 +314,7 @@ sqInt	status;
 /*
  * faRewindDirectory
  *
- * Rewind the supplied directory.
+ * Rewind the supplied directory and answer the first entry.
  */
 
 sqInt faRewindDirectory(fapath *aFaPath)
@@ -323,7 +323,7 @@ sqInt faRewindDirectory(fapath *aFaPath)
 	if (aFaPath->platformDir == NULL)
 		return FA_CORRUPT_VALUE;
 	rewinddir(aFaPath->platformDir);
-	return FA_SUCCESS;
+	return faReadDirectory(aFaPath);
 }
 
 

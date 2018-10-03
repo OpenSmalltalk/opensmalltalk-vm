@@ -457,7 +457,7 @@ sqInt	status;
 /*
  * faRewindDirectory
  *
- * Rewind the supplied directory.
+ * Rewind the supplied directory and answer the first entry.
  */
 
 sqInt faRewindDirectory(fapath *aFaPath)
@@ -469,11 +469,10 @@ sqInt	status;
 	 * Close and re-open the directory
 	 */
 	status = faCloseDirectory(aFaPath);
-	if (!status) return status;
+	if (status) return status;
 	/* Remove any existing file from the path */
 	faClearFile(aFaPath);
-	status = faOpenDirectory(aFaPath);
-	return status;
+	return faOpenDirectory(aFaPath);
 }
 
 

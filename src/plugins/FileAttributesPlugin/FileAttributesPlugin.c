@@ -127,7 +127,6 @@ static sqInt (*integerObjectOf)(sqInt value);
 static void * (*ioLoadFunctionFrom)(char *functionName, char *moduleName);
 static sqInt (*isKindOf)(sqInt oop, char *aString);
 static sqInt (*isBytes)(sqInt oop);
-static sqInt (*methodReturnReceiver)(void);
 static sqInt (*methodReturnValue)(sqInt oop);
 static sqInt (*nilObject)(void);
 static sqInt (*popthenPush)(sqInt nItems, sqInt oop);
@@ -156,7 +155,6 @@ extern sqInt integerObjectOf(sqInt value);
 extern void * ioLoadFunctionFrom(char *functionName, char *moduleName);
 extern sqInt isKindOf(sqInt oop, char *aString);
 extern sqInt isBytes(sqInt oop);
-extern sqInt methodReturnReceiver(void);
 extern sqInt methodReturnValue(sqInt oop);
 extern sqInt nilObject(void);
 extern sqInt popthenPush(sqInt nItems, sqInt oop);
@@ -899,14 +897,23 @@ primitiveRewinddir(void)
 {
     sqInt dirPointerOop;
     fapath *faPath;
+    sqInt resultOop;
+    sqInt status;
 
 	dirPointerOop = stackValue(0);
 	faPath = pointerFrom(dirPointerOop);
 	if (!(faPath)) {
 		return primitiveFailFor(PrimErrBadArgument);
 	}
-	faRewindDirectory(faPath);
-	return methodReturnReceiver();
+	status = faRewindDirectory(faPath);
+	if (status < 0) {
+		return primitiveFailForOSError(status);
+	}
+	resultOop = processDirectory(faPath);
+	if (failed()) {
+		return primitiveFailureCode();
+	}
+	return methodReturnValue(resultOop);
 }
 
 
@@ -991,9 +998,16 @@ primitiveSymlinkChangeOwner(void)
 EXPORT(sqInt)
 primitiveVersionString(void)
 {
-	popthenPush(1, stringFromCString("2.0.0d03"));
+	popthenPush(1, stringFromCString("2.0.0d04"));
 	return 0;
 }
+
+
+/*	The supplied faPath contains the full path to the current entry while
+	iterating over a directory.
+	Convert the file name to an object, get the attributes and answer the
+	resulting array.
+ */
 
 	/* FileAttributesPlugin>>#processDirectory: */
 static sqInt
@@ -1093,7 +1107,6 @@ setInterpreter(struct VirtualMachine*anInterpreter)
 		ioLoadFunctionFrom = interpreterProxy->ioLoadFunctionFrom;
 		isKindOf = interpreterProxy->isKindOf;
 		isBytes = interpreterProxy->isBytes;
-		methodReturnReceiver = interpreterProxy->methodReturnReceiver;
 		methodReturnValue = interpreterProxy->methodReturnValue;
 		nilObject = interpreterProxy->nilObject;
 		popthenPush = interpreterProxy->popthenPush;
@@ -1333,7 +1346,7 @@ void* FileAttributesPlugin_exports[][3] = {
 	{(void*)_m, "primitivePathMax\000\377", (void*)primitivePathMax},
 	{(void*)_m, "primitivePlatToStPath\000\000", (void*)primitivePlatToStPath},
 	{(void*)_m, "primitiveReaddir\000\002", (void*)primitiveReaddir},
-	{(void*)_m, "primitiveRewinddir\000\001", (void*)primitiveRewinddir},
+	{(void*)_m, "primitiveRewinddir\000\002", (void*)primitiveRewinddir},
 	{(void*)_m, "primitiveStToPlatPath\000\000", (void*)primitiveStToPlatPath},
 	{(void*)_m, "primitiveSymlinkChangeOwner\000\000", (void*)primitiveSymlinkChangeOwner},
 	{(void*)_m, "primitiveVersionString\000\377", (void*)primitiveVersionString},
@@ -1352,7 +1365,7 @@ signed char primitiveFileExistsAccessorDepth = 0;
 signed char primitiveOpendirAccessorDepth = 0;
 signed char primitivePlatToStPathAccessorDepth = 0;
 signed char primitiveReaddirAccessorDepth = 2;
-signed char primitiveRewinddirAccessorDepth = 1;
+signed char primitiveRewinddirAccessorDepth = 2;
 signed char primitiveStToPlatPathAccessorDepth = 0;
 signed char primitiveSymlinkChangeOwnerAccessorDepth = 0;
 
