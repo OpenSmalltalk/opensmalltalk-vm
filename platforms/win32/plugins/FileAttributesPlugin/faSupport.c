@@ -29,19 +29,20 @@ sqInt	status;
 
 	/* Convert to platform specific form 
  		Include the \\?\ prefix to allow long path names */
-	aFaPath->winpath[0] = L'\\';
-	aFaPath->winpath[1] = L'\\';
-	aFaPath->winpath[2] = L'?';
-	aFaPath->winpath[3] = L'\\';
+	aFaPath->winpathLPP[0] = L'\\';
+	aFaPath->winpathLPP[1] = L'\\';
+	aFaPath->winpathLPP[2] = L'?';
+	aFaPath->winpathLPP[3] = L'\\';
+	aFaPath->winpath = aFaPath->winpathLPP + 4;
 	status = MultiByteToWideChar(CP_UTF8, 0, 
 				aFaPath->path, -1, 
-				aFaPath->winpath+4, FA_PATH_MAX);
+				aFaPath->winpath, FA_PATH_MAX);
 	if (!status)
 		return interpreterProxy->primitiveFailForOSError(FA_STRING_TOO_LONG);
 	/* Set aFaPath->uxpath_file and max_file_len to the buffer after the directory */
-	aFaPath->winpath2 = aFaPath->winpath+4;
-	aFaPath->winpath_len = wcslen(aFaPath->winpath);
-	aFaPath->winpath_file = aFaPath->winpath + aFaPath->winpath_len;
+	aFaPath->winpathLPP_len = wcslen(aFaPath->winpathLPP);
+	aFaPath->winpath_len = aFaPath->winpathLPP_len - 4;
+	aFaPath->winpath_file = aFaPath->winpathLPP + aFaPath->winpathLPP_len;
 	aFaPath->winmax_file_len = FA_PATH_MAX - aFaPath->winpath_len;
 
 	return 0;
@@ -64,18 +65,19 @@ sqInt	status;
 
 	/* Convert to platform specific form 
  		Include the \\?\ prefix to allow long path names */
-	aFaPath->winpath[0] = L'\\';
-	aFaPath->winpath[1] = L'\\';
-	aFaPath->winpath[2] = L'?';
-	aFaPath->winpath[3] = L'\\';
+	aFaPath->winpathLPP[0] = L'\\';
+	aFaPath->winpathLPP[1] = L'\\';
+	aFaPath->winpathLPP[2] = L'?';
+	aFaPath->winpathLPP[3] = L'\\';
+	aFaPath->winpath = aFaPath->winpathLPP + 4;
 	status = MultiByteToWideChar(CP_UTF8, 0, 
 				aFaPath->path, -1, 
-				aFaPath->winpath+4, FA_PATH_MAX);
+				aFaPath->winpath, FA_PATH_MAX);
 	if (!status)
 		return interpreterProxy->primitiveFailForOSError(FA_STRING_TOO_LONG);
 	/* Set aFaPath->uxpath_file and max_file_len to the buffer after the directory */
-	aFaPath->winpath2 = aFaPath->winpath+4;
-	aFaPath->winpath_len = wcslen(aFaPath->winpath);
+	aFaPath->winpathLPP_len = wcslen(aFaPath->winpathLPP);
+	aFaPath->winpath_len = aFaPath->winpathLPP_len - 4;
 	aFaPath->winpath_file = 0;
 	aFaPath->winmax_file_len = 0;
 
@@ -108,26 +110,30 @@ sqInt	status;
 
 
 
+/*
+ * faSetPlatPath
+ *
+ * The supplied pathName must not include the Long Path Prefix (\\?\).
+ */
 sqInt faSetPlatPath(fapath *aFaPath, WCHAR *pathName)
 {
 int		len;
 
-	/* Set the platform encoded path */
 	len = wcslen(pathName);
 	if (len >= FA_PATH_MAX)
 		return interpreterProxy->primitiveFailForOSError(FA_STRING_TOO_LONG);
+	/* Set the platform encoded path */
+	aFaPath->winpathLPP[0] = L'\\';
+	aFaPath->winpathLPP[1] = L'\\';
+	aFaPath->winpathLPP[2] = L'?';
+	aFaPath->winpathLPP[3] = L'\\';
+	aFaPath->winpath = aFaPath->winpathLPP + 4;
 	wcscpy(aFaPath->winpath, pathName);
 	aFaPath->winpath[len] = 0;
 	aFaPath->winpath_len = len;
 	aFaPath->winpath_file = 0;
 	aFaPath->winmax_file_len = 0;
-	if (aFaPath->winpath[0] == L'\\' &&
-		aFaPath->winpath[1] == L'\\' &&
-		aFaPath->winpath[2] == L'?' &&
-		aFaPath->winpath[3] == L'\\')
-			aFaPath->winpath2 = aFaPath->winpath + 4;
-	else
-			aFaPath->winpath2 = aFaPath->winpath;
+	aFaPath->winpathLPP_len = aFaPath->winpath_len + 4;
 
 	/* Convert to St specific form */
 	len = WideCharToMultiByte(CP_UTF8, 
@@ -161,18 +167,18 @@ int	len;
 	len = byteCount / sizeof(WCHAR);
 	if (len >= FA_PATH_MAX)
 		return interpreterProxy->primitiveFailForOSError(FA_STRING_TOO_LONG);
+
+	aFaPath->winpathLPP[0] = L'\\';
+	aFaPath->winpathLPP[1] = L'\\';
+	aFaPath->winpathLPP[2] = L'?';
+	aFaPath->winpathLPP[3] = L'\\';
+	aFaPath->winpath = aFaPath->winpathLPP + 4;
 	memcpy(aFaPath->winpath, bytePtr, byteCount);
 	aFaPath->winpath[len] = 0;
 	aFaPath->winpath_len = len;
+	aFaPath->winpathLPP_len = len + 4;
 	aFaPath->winpath_file = 0;
 	aFaPath->winmax_file_len = 0;
-	if (aFaPath->winpath[0] == L'\\' &&
-		aFaPath->winpath[1] == L'\\' &&
-		aFaPath->winpath[2] == L'?' &&
-		aFaPath->winpath[3] == L'\\')
-			aFaPath->winpath2 = aFaPath->winpath + 4;
-	else
-			aFaPath->winpath2 = aFaPath->winpath;
 
 	/* Convert to St specific form */
 	len = WideCharToMultiByte(CP_UTF8, 
@@ -260,8 +266,8 @@ int	i;
 	}
 	printf("\n");
 	printf("PlatPathLen:	%d\n", aFaPath->winpath_len);
-	printf("Path: 0x%p, Path2: 0x%p, File: 0x%p\n",
-		(void *)aFaPath->winpath, (void *)aFaPath->winpath2, (void *)aFaPath->winpath_file);
+	printf("PathLPP: 0x%p, Path: 0x%p, File: 0x%p\n",
+		(void *)aFaPath->winpathLPP, (void *)aFaPath->winpath, (void *)aFaPath->winpath_file);
 	printf("Max File Len:	%d\n", aFaPath->winmax_file_len);
 	printf("\n\n\n");
 	fflush(stdout);
@@ -402,7 +408,7 @@ DWORD	ffError;
 	status = faSetStFile(aFaPath, "*");
 	if (status) return status;
  
-	aFaPath->directoryHandle = FindFirstFileW(faGetPlatPath(aFaPath), &aFaPath->findData);
+	aFaPath->directoryHandle = FindFirstFileW(faGetPlatPathLPP(aFaPath), &aFaPath->findData);
 	if (aFaPath->directoryHandle == INVALID_HANDLE_VALUE) {
 		ffError = GetLastError();
 		if (ffError == ERROR_NO_MORE_FILES)
@@ -502,7 +508,7 @@ WIN32_FILE_ATTRIBUTE_DATA winAttrs;
 
 	if (attributeNumber <= 8) {
 		/* Requested attribute comes from stat() entry */
-		status = _wstat(faGetPlatPath2(aFaPath), &statBuf);
+		status = _wstat(faGetPlatPath(aFaPath), &statBuf);
 		if (status)
 			return interpreterProxy->primitiveFailForOSError(FA_CANT_STAT_PATH);
 
@@ -545,7 +551,7 @@ WIN32_FILE_ATTRIBUTE_DATA winAttrs;
 		}
 
 	} else if (attributeNumber <= 12) {
-		status = GetFileAttributesExW(faGetPlatPath2(aFaPath), 
+		status = GetFileAttributesExW(faGetPlatPath(aFaPath), 
 					GetFileExInfoStandard, &winAttrs);
 		if (!status) 
 			return interpreterProxy->primitiveFailForOSError(FA_CANT_STAT_PATH);
@@ -595,13 +601,13 @@ WIN32_FILE_ATTRIBUTE_DATA winAttrs;
 				mode = X_OK;
 				break;
 		}
-		if (_waccess(faGetPlatPath2(aFaPath), mode) == 0)
+		if (_waccess(faGetPlatPath(aFaPath), mode) == 0)
 			resultOop = interpreterProxy->trueObject();
 		else
 			resultOop = interpreterProxy->falseObject();
 	} else if (attributeNumber == 16) {
 		/* isSymlink */
-		status = GetFileAttributesExW(faGetPlatPath2(aFaPath), 
+		status = GetFileAttributesExW(faGetPlatPath(aFaPath), 
 					GetFileExInfoStandard, &winAttrs);
 		if (!status) 
 			return interpreterProxy->primitiveFailForOSError(FA_CANT_STAT_PATH);
@@ -627,7 +633,7 @@ sqInt faStat(fapath *aFaPath, faStatStruct *statBuf, sqInt *fileNameOop)
 {
 int		status;
 
-	status = _wstat(faGetPlatPath2(aFaPath), statBuf);
+	status = _wstat(faGetPlatPath(aFaPath), statBuf);
 	if (status) return FA_CANT_STAT_PATH;
 	fileNameOop[0] = interpreterProxy->nilObject();
 	return 0;
@@ -658,7 +664,7 @@ sqInt faExists(fapath *aFaPath)
 {
 int		status;
 
-	if (_waccess(faGetPlatPath2(aFaPath), F_OK))
+	if (_waccess(faGetPlatPath(aFaPath), F_OK))
 		return interpreterProxy->falseObject();
 	else
 		return interpreterProxy->trueObject();
@@ -684,13 +690,13 @@ sqInt	accessOop;
 	trueOop = interpreterProxy->trueObject();
 	falseOop = interpreterProxy->falseObject();
 
-	accessOop = _waccess(faGetPlatPath2(aFaPath), R_OK) ? falseOop : trueOop;
+	accessOop = _waccess(faGetPlatPath(aFaPath), R_OK) ? falseOop : trueOop;
 	interpreterProxy->storePointerofObjectwithValue(index++, attributeArray, accessOop);
 
-	accessOop = _waccess(faGetPlatPath2(aFaPath), W_OK) ? falseOop : trueOop;
+	accessOop = _waccess(faGetPlatPath(aFaPath), W_OK) ? falseOop : trueOop;
 	interpreterProxy->storePointerofObjectwithValue(index++, attributeArray, accessOop);
 
-	accessOop = _waccess(faGetPlatPath2(aFaPath), X_OK) ? falseOop : trueOop;
+	accessOop = _waccess(faGetPlatPath(aFaPath), X_OK) ? falseOop : trueOop;
 	interpreterProxy->storePointerofObjectwithValue(index++, attributeArray, accessOop);
 
 	return 0;

@@ -96,7 +96,6 @@ EXPORT(sqInt) primitiveVersionString(void);
 static sqInt processDirectory(fapath *faPath);
 static sqInt readLinkintomaxLength(char *cPathName, char *cLinkPtr, size_t maxLength);
 EXPORT(sqInt) setInterpreter(struct VirtualMachine*anInterpreter);
-static sqInt squeakPathtoPlatformmaxLen(sqInt pathOop, char *cPathString, sqInt maxLength);
 static sqInt statArrayFortoArrayfromfileName(fapath *faPath, sqInt attributeArray, faStatStruct *statBufPointer, sqInt fileNameOop);
 static sqInt stringFromCString(const char *aCString);
 #if _WIN32
@@ -1130,45 +1129,6 @@ setInterpreter(struct VirtualMachine*anInterpreter)
 }
 
 
-/*	Convert the supplied path string oop to a unix c path string.
-	Parameter checking is done in the main primitive, so pathOop is assumed to
-	be valid.
-	pathOop is supplied as a precomposed UTF8 string.
-	cPathString must be encoded using the host OS conventions, e.g. decomposed
-	UTF8 on MacOS.
-	Signal primitive failure on error.
- */
-
-	/* FileAttributesPlugin>>#squeakPath:toPlatform:maxLen: */
-static sqInt
-squeakPathtoPlatformmaxLen(sqInt pathOop, char *cPathString, sqInt maxLength)
-{
-    int status;
-    char uxName[FA_PATH_MAX];
-
-	if (maxLength >= (FA_PATH_MAX)) {
-		return primitiveFailForOSError(-6 /* invalidArguments */);
-	}
-	
-#  if _WIN32
-	status = pathOoptoBuffermaxLen(pathOop, cPathString, maxLength);
-	if (status != 0) {
-		return primitiveFailForOSError(status);
-	}
-#  else /* _WIN32 */
-	status = pathOoptoBuffermaxLen(pathOop, uxName, PATH_MAX);
-	if (status != 0) {
-		return primitiveFailForOSError(status);
-	}
-	status = sq2uxPath(uxName, strlen(uxName), cPathString, maxLength, 1);
-	if (status == 0) {
-		return primitiveFailForOSError(-6 /* invalidArguments */);
-	}
-#  endif /* _WIN32 */
-	return 0;
-}
-
-
 /*	Answer a file entry array from the supplied statBufPointer */
 
 	/* FileAttributesPlugin>>#statArrayFor:toArray:from:fileName: */
@@ -1302,7 +1262,7 @@ winFileTimesForto(fapath *faPath, sqInt attributeArray)
 
 	/* Get the file attributes */
 	attributeDate = 0;
-	status = GetFileAttributesExW(faGetPlatPath2(faPath), GetFileExInfoStandard, &winAttrs);
+	status = GetFileAttributesExW(faGetPlatPath(faPath), GetFileExInfoStandard, &winAttrs);
 	if (status == 0) {
 		/* begin getAttributesFailed */
 		return -4;
