@@ -5025,6 +5025,31 @@ SpurMemoryManager >> flushNewSpaceInstancesOf: aClass [
 	self assert: (self existInstancesInNewSpaceOf: aClass) not
 ]
 
+{ #category : #'selective compaction' }
+SpurMemoryManager >> followClassTable [
+	"In addition to postBecomeScanClassTable:, I follow hiddenRootObj and its pages"
+	(self isForwarded: hiddenRootsObj) ifTrue: [hiddenRootsObj := self followForwarded: hiddenRootsObj].
+	0 to: numClassTablePages - 1 do:
+		[:i| | page |
+		page := self followField: i ofObject: hiddenRootsObj.
+		0 to: (self numSlotsOf: page) - 1 do:
+			[:j| | classOrNil |
+			classOrNil := self fetchPointer: j ofObject: page.
+			classOrNil ~= nilObj ifTrue:
+				[(self isForwarded: classOrNil) ifTrue:
+					[classOrNil := self followForwarded: classOrNil.
+					 self storePointer: j ofObject: page withValue: classOrNil].
+				 (self rawHashBitsOf: classOrNil) = 0 ifTrue:
+					[self storePointerUnchecked: j ofObject: page withValue: nilObj.
+					 "If the removed class is before the classTableIndex, set the
+					  classTableIndex to point to the empty slot so as to reuse it asap."
+					 (i << self classTableMajorIndexShift + j) < classTableIndex ifTrue:
+						[classTableIndex := i << self classTableMajorIndexShift + j]]]]].
+	"classTableIndex must never index the first page, which is reserved for classes known to the VM."
+	self assert: classTableIndex >= (1 << self classTableMajorIndexShift).
+	self assert: self validClassTableRootPages.
+]
+
 { #category : #forwarding }
 SpurMemoryManager >> followField: fieldIndex ofObject: anObject [
 	"Make sure the oop at fieldIndex in anObject is not forwarded (follow the
@@ -5154,6 +5179,20 @@ SpurMemoryManager >> followOopField: fieldIndex ofObject: anObject [
 	(self isOopForwarded: oop) ifTrue:
 		[oop := self fixFollowedField: fieldIndex ofObject: anObject withInitialValue: oop].
 	^oop
+]
+
+{ #category : #'selective compaction' }
+SpurMemoryManager >> followProcessList [
+	"Eagerly patch all process related forwarders, except suspended contexts which are lazily patched in wakeHighestPriority"
+	| scheduler processLists processList proc |
+	scheduler := self followField: ValueIndex ofObject: (self splObj: SchedulerAssociation).
+	self followField: ActiveProcessIndex ofObject: scheduler.
+	processLists := self followField: ProcessListsIndex ofObject: scheduler.
+	0 to: (self numSlotsOf: processLists) - 1 do: [:i |
+		processList := self followField: i ofObject: processLists.
+		self followField: LastLinkIndex ofObject: processList.
+		proc := self followField: FirstLinkIndex ofObject: processList.
+		[proc = nilObj] whileFalse: [proc := self followField: NextLinkIndex ofObject: proc]].
 ]
 
 { #category : #'become implementation' }

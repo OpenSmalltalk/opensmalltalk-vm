@@ -560,7 +560,7 @@ CoInterpreterPrimitives >> primitiveResume [
 	 is higher than the current process, preempt the current process."
 	| proc inInterpreter |
 	proc := self stackTop.  "rcvr"
-	(objectMemory isContext: (objectMemory fetchPointer: SuspendedContextIndex ofObject: proc)) ifFalse:
+	(objectMemory isContext: (objectMemory followField: SuspendedContextIndex ofObject: proc)) ifFalse:
 		[^self primitiveFail].
 	"We're about to switch process, either to an interpreted frame or a
 	 machine code frame. To know whether to return or enter machine code
