@@ -263,10 +263,12 @@ sqInt faOpenDirectory(fapath *aFaPath)
 
 sqInt faReadDirectory(fapath *aFaPath)
 {
-sqInt			haveEntry;
+sqInt		haveEntry;
 struct dirent	*entry;
-sqInt			status;
+sqInt		status;
 
+	if (aFaPath->platformDir == NULL)
+		return FA_CORRUPT_VALUE;
 	haveEntry = 0;
 	errno = 0;
 	do {
@@ -296,13 +298,32 @@ sqInt			status;
 
 sqInt faCloseDirectory(fapath *aFaPath)
 {
-	sqInt	status;
+sqInt	status;
 
+	if (aFaPath->platformDir == NULL)
+		return FA_CORRUPT_VALUE;
 	status = closedir(aFaPath->platformDir);
 	if (status) return FA_UNABLE_TO_CLOSE_DIR;
 	aFaPath->platformDir = 0;
 
 	return FA_SUCCESS;
+}
+
+
+
+/*
+ * faRewindDirectory
+ *
+ * Rewind the supplied directory and answer the first entry.
+ */
+
+sqInt faRewindDirectory(fapath *aFaPath)
+{
+
+	if (aFaPath->platformDir == NULL)
+		return FA_CORRUPT_VALUE;
+	rewinddir(aFaPath->platformDir);
+	return faReadDirectory(aFaPath);
 }
 
 

@@ -5,7 +5,7 @@
 #include <sys/stat.h>
 
 /* Maximum path length allowed on this platform */
-#define	FA_PATH_MAX	4096
+#define	FA_PATH_MAX	32768
 #define PATH_SEPARATOR	'\\'
 
 /*
@@ -50,11 +50,11 @@ typedef struct fapathstruct {
 	sqInt	max_file_len;
 
 	/* Add 4 bytes to winpath for the \\?\ prefix */
-	WCHAR	winpath[FA_PATH_MAX+4];
-	sqInt	winpath_len; /* Number of characters, including the prefix */
+	WCHAR	winpathLPP[FA_PATH_MAX+4];
+	sqInt	winpathLPP_len; /* Number of characters, including the prefix */
 	WCHAR	*winpath_file;
-	WCHAR	*winpath2;
-	sqInt	winpath2_len; /* Number of characters, not bytes */
+	WCHAR	*winpath;
+	sqInt	winpath_len; /* Number of characters, not bytes */
 	sqInt	winmax_file_len;
 
 	HANDLE			directoryHandle;
@@ -72,8 +72,8 @@ sqInt faSetPlatFile(fapath *aFaPath, WCHAR *pathName);
 #define	faGetStFile(aFaPath)		aFaPath->path_file
 #define	faGetPlatPath(aFaPath)		aFaPath->winpath
 #define faGetPlatPathByteCount(aFaPath)	(aFaPath->winpath_len * sizeof(WCHAR))
-#define	faGetPlatPath2(aFaPath)		aFaPath->winpath2
-#define faGetPlatPath2ByteCount(aFaPath)	(aFaPath->winpath2_len * sizeof(WCHAR))
+#define	faGetPlatPathLPP(aFaPath)		aFaPath->winpathLPP
+#define faGetPlatPathLPPByteCount(aFaPath)	(aFaPath->winpathLPP_len * sizeof(WCHAR))
 #define	faGetPlatFile(aFaPath)		aFaPath->winpath_file
 
 sqInt faSetStDirOop(fapath *aFaPath, sqInt pathNameOop);
@@ -82,6 +82,7 @@ sqInt faSetStPathOop(fapath *aFaPath, sqInt pathNameOop);
 sqInt faOpenDirectory(fapath *aFaPath);
 sqInt faReadDirectory(fapath *aFaPath);
 sqInt faCloseDirectory(fapath *aFaPath);
+sqInt faRewindDirectory(fapath *aFaPath);
 sqInt faFileAttribute(fapath *aFaPath, sqInt attributeNumber);
 sqInt faStat(fapath *aFaPath, faStatStruct *statBuf, sqInt *fileNameOop);
 sqInt faLinkStat(fapath *aFaPath, faStatStruct *statBuf, sqInt *fileNameOop);
