@@ -1,6 +1,9 @@
 # Copied, perhaps edited, from ../../src/examplePlugins.ext
 EXTERNAL_PLUGINS = \
 B3DAcceleratorPlugin \
+BochsIA32Plugin \
+BochsX64Plugin \
+GdbARMPlugin \
 FileAttributesPlugin \
 SqueakFFIPrims \
 SqueakSSL \
