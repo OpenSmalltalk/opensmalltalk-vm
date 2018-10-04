@@ -4,7 +4,7 @@ Class {
 	#classVars : [
 		'Talking'
 	],
-	#category : #'VMMaker-SpurMemoryManagerSimulation'
+	#category : 'VMMaker-SpurMemoryManagerSimulation'
 }
 
 { #category : #initialization }

@@ -618,7 +618,8 @@ Class {
 		'statScavengeGCUsecs',
 		'statScavenges',
 		'statShrinkMemory',
-		'statAllocatedBytes'
+		'statAllocatedBytes',
+		'statMaxAllocSegmentTime'
 	],
 	#classVars : [
 		'BitsPerByte',
@@ -649,7 +650,7 @@ Class {
 		'VMSpurObjectRepresentationConstants',
 		'VMSqueakClassIndices'
 	],
-	#category : #'VMMaker-SpurMemoryManager'
+	#category : 'VMMaker-SpurMemoryManager'
 }
 
 { #category : #translation }
@@ -5606,7 +5607,7 @@ SpurMemoryManager >> growHeadroom: aValue [
 SpurMemoryManager >> growOldSpaceByAtLeast: minAmmount [
 	"Attempt to grow memory by at least minAmmount.
 	 Answer the size of the new segment, or nil if the attempt failed."
-	| ammount headroom total |
+	| ammount headroom total start interval |
 	<var: #segInfo type: #'SpurSegmentInfo *'>
 	"statGrowMemory counts attempts, not successes."
 	statGrowMemory := statGrowMemory + 1."we need to include overhead for a new object header plus the segment bridge."
@@ -5627,6 +5628,7 @@ SpurMemoryManager >> growOldSpaceByAtLeast: minAmmount [
 				[^nil].
 			 ammount := headroom]].
 		 
+	start := coInterpreter ioUTCMicrosecondsNow.
 	^(segmentManager addSegmentOfSize: ammount) ifNotNil:
 		[:segInfo|
 		 self assimilateNewSegment: segInfo.
@@ -5637,6 +5639,8 @@ SpurMemoryManager >> growOldSpaceByAtLeast: minAmmount [
 					= (segInfo segLimit - self bridgeSize).
 		 self checkFreeSpace: GCModeFreeSpace.
 		 segmentManager checkSegments.
+		 interval := coInterpreter ioUTCMicrosecondsNow - start.
+		 interval > statMaxAllocSegmentTime ifTrue: [statMaxAllocSegmentTime := interval].
 		 segInfo segSize]
 ]
 
@@ -6131,6 +6135,7 @@ SpurMemoryManager >> initialize [
 	needGCFlag := signalLowSpace := marking := false.
 	becomeEffectsFlags := gcPhaseInProgress := 0.
 	statScavenges := statIncrGCs := statFullGCs := 0.
+	statMaxAllocSegmentTime := 0.
 	statMarkUsecs := statSweepUsecs := statScavengeGCUsecs := statIncrGCUsecs := statFullGCUsecs := statCompactionUsecs := statGCEndUsecs := gcSweepEndUsecs := 0.
 	statSGCDeltaUsecs := statIGCDeltaUsecs := statFGCDeltaUsecs := 0.
 	statGrowMemory := statShrinkMemory := statRootTableCount := statAllocatedBytes := 0.
@@ -11570,6 +11575,16 @@ SpurMemoryManager >> statMarkCount [
 { #category : #accessing }
 SpurMemoryManager >> statMarkUsecs [
 	^statMarkUsecs
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> statMaxAllocSegmentTime [
+	^statMaxAllocSegmentTime
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> statMaxAllocSegmentTime: aValue [
+	statMaxAllocSegmentTime := aValue
 ]
 
 { #category : #accessing }
