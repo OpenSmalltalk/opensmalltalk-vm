@@ -286,10 +286,16 @@ SpurSelectiveCompactor >> postCompactionAction [
 	"For now we don't optimize and just follow everything everywhere on stack and in caches, let's see in the profiler if we need to optimize with those cases. My guess is that this is < 100 microSecond"
 	manager followSpecialObjectsOop.
 	allFlags := BecamePointerObjectFlag + BecameActiveClassFlag bitOr: BecameCompiledMethodFlag.
-	"should be gcMode Become - gcMode flag is cleared after postBecomeAction"
+	"Note: there is not the OldBecameNewFlag"
+	"gcMode flag is cleared after postBecomeAction, reset it."
 	manager coInterpreter postBecomeAction: allFlags.
-	manager postBecomeScanClassTable: allFlags.
 	manager coInterpreter setGCMode: GCModeFull.
+	
+	"Special to selective, crazy objects can be forwarded..."
+	"manager postBecomeScanClassTable: allFlags. => Done in followClassTable"
+	manager followClassTable.
+	manager followProcessList.
+	manager followForwardedObjStacks.
 	
 	"Not sure the following are needed...
 	coInterpreter mapInterpreterOops.

@@ -640,7 +640,7 @@ SpurSegmentManager >> removeSegment: emptySeg [
 	totalHeapSizeIncludingBridges := totalHeapSizeIncludingBridges - emptySeg segSize.
 	manager sqDeallocateMemorySegmentAt: emptySeg segStart asVoidPointer OfSize: emptySeg segSize.
 
-	i to: numSegments - 1 do:
+	i to: numSegments - 2 do:
 		[:j| segments at: j put: (segments at: j + 1)].
 	self cCode: [] inSmalltalk: [segments at: numSegments - 1 put: SpurSegmentInfo new].
 	numSegments := numSegments - 1.
