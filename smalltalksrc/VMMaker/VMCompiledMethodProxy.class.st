@@ -8,7 +8,7 @@ Class {
 		'size',
 		'numLiterals'
 	],
-	#category : 'VMMaker-Support'
+	#category : #'VMMaker-Support'
 }
 
 { #category : #accessing }

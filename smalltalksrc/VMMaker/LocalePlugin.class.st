@@ -19,7 +19,7 @@ primMeasurement - return boolean for imperial or metric
 Class {
 	#name : #LocalePlugin,
 	#superclass : #SmartSyntaxInterpreterPlugin,
-	#category : 'VMMaker-Plugins'
+	#category : #'VMMaker-Plugins'
 }
 
 { #category : #translation }

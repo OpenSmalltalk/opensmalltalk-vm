@@ -1,7 +1,7 @@
 Class {
 	#name : #SistaCogitClone,
 	#superclass : #SistaRegisterAllocatingCogit,
-	#category : 'VMMaker-JIT'
+	#category : #'VMMaker-JIT'
 }
 
 { #category : #translation }

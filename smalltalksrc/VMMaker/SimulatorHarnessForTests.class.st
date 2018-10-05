@@ -4,7 +4,7 @@ Class {
 	#instVars : [
 		'simulator'
 	],
-	#category : 'VMMaker-Tests'
+	#category : #'VMMaker-Tests'
 }
 
 { #category : #utilities }

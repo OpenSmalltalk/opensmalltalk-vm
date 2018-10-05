@@ -1,7 +1,7 @@
 Class {
 	#name : #Spur32BitMemoryManager,
 	#superclass : #SpurMemoryManager,
-	#category : 'VMMaker-SpurMemoryManager'
+	#category : #'VMMaker-SpurMemoryManager'
 }
 
 { #category : #'class initialization' }
@@ -159,12 +159,6 @@ Spur32BitMemoryManager >> byteSwapped: w [
 	<api>
 	<returnTypeC: #sqInt>
 	^w byteSwap32
-]
-
-{ #category : #'free space' }
-Spur32BitMemoryManager >> bytesBigEnoughForPrevPointer: chunkBytes [
-	"Allocation unit, the minimum size, is enough for 2 pointers"
-	^ true
 ]
 
 { #category : #'object enumeration' }
@@ -676,6 +670,12 @@ Spur32BitMemoryManager >> isIntegerValue: intValue [
 	^self
 		cCode: [(intValue asUnsignedInteger bitXor: (intValue asUnsignedInteger << 1)) asInteger >= 0]
 		inSmalltalk: [intValue >= self minSmallInteger and: [intValue <= self maxSmallInteger]]
+]
+
+{ #category : #'free space' }
+Spur32BitMemoryManager >> isLilliputianSize: chunkBytes [
+	"Allocation unit, the minimum size, is enough for 2 pointers"
+	^ false
 ]
 
 { #category : #'header access' }
