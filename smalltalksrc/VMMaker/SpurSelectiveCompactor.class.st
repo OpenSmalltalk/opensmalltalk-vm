@@ -8,20 +8,26 @@ The compaction is effectively partial, compacting only the most critical segment
 Now this works well when biasForGC is true, but when performing a snapshot, the compactor is just total crap (we need to figure out a solution).
 
 segmentToFill <SegInfo> the segment that will be filled through the copying algorithm
+lastLilliputianChunk <Oop to FreeChunk> This is used as a performance trick for lilliputian free chunks. See below.
 
 Segment abuse:
 The swizzle field of segInfo is abused by using the low 8 bits for occupation and the 9th bit as isBeingCompacted bit.
+
+Performance trick for lilliputian chunks:
+Specific free chunks (called lilliputian, see isLilliputianSize:) are managed using a single linked list instead of a double linked list since there's not enough room in the free chunk for the back pointer. During the sweep phase this is not a problem since we're rebuilding the free chunk structure, but during selective compaction we're detaching free chunks from the free chunk structure and that can be horribly slow (10 seconds sometimes at 20Gb heap due to many iteration over the single linked list). To work around this problem, the sweep phase use lastLilliputianChunk variable to sort the lilliputian free chunk single linked list in ascending address order (See interceptAddFreeChunkWithBytes:at:). During the selective compation phase, the same variable is re-used to iterate at most once over the single linked list while detaching lilliputian chunks (See incrementalUnlinkSmallChunk:).
+""
 "
 Class {
 	#name : #SpurSelectiveCompactor,
 	#superclass : #SpurSweeper,
 	#instVars : [
-		'segmentToFill'
+		'segmentToFill',
+		'lastLilliputianChunk'
 	],
 	#classVars : [
 		'MaxOccupationForCompaction'
 	],
-	#category : 'VMMaker-SpurMemoryManager'
+	#category : #'VMMaker-SpurMemoryManager'
 }
 
 { #category : #translation }
@@ -69,6 +75,7 @@ SpurSelectiveCompactor >> compact [
 	self resetFreeLists.
 	self freePastSegmentsAndSetSegmentToFill.
 	self globalSweepAndSegmentOccupationAnalysis.
+	self assert: self sortedLilliputianChunks.
 	manager updateSweepEndUsecs.
 	self selectiveCompaction.
 	
@@ -85,7 +92,9 @@ SpurSelectiveCompactor >> compactSegment: segInfo freeStart: initialFreeStart [
 		[(manager isFreeObject: currentEntity)
 			ifTrue: 
 				["To avoid confusing too much Spur (especially the leak/free checks), we mark the free chunk as a word object."
-				 manager detachFreeObject: currentEntity.
+				 (manager isLilliputianSize: (manager bytesInObject: currentEntity)) 
+					ifTrue: [self incrementalUnlinkLilliputianChunk: currentEntity] "Performance hack for single linked list"
+					ifFalse: [manager detachFreeObject: currentEntity].
 				 manager set: currentEntity classIndexTo: manager wordSizeClassIndexPun formatTo: manager wordIndexableFormat]
 			ifFalse: 
 				["Copy the object in segmentToFill and replace it by a forwarder."
@@ -114,6 +123,9 @@ SpurSelectiveCompactor >> compactSegmentsToCompact [
 	
 	 "Removes initial free chunk in segment to fill... (Segment is entirely free)"
 	manager detachFreeObject: (manager objectStartingAt: fillStart).
+	
+	"Set-up hack to iterate at most one over size 1 free chunks single linked list."
+	lastLilliputianChunk := 0.
 	
 	 "Compact each segment to compact..."
 	0 to: manager numSegments - 1 do:
@@ -228,6 +240,7 @@ SpurSelectiveCompactor >> globalSweepAndSegmentOccupationAnalysis [
 	<inline: #never> "profiling"
 	"Iterate over old space, free unmarked objects, annotate each segment with each occupation"
 	| currentEntity nextBridge segmentIndex currentUsed currentUnused |
+	lastLilliputianChunk := 0. "performance hack for single linked list"
 	currentEntity := manager firstObject.
 	nextBridge := manager segmentManager bridgeAt: 0.
 	segmentIndex := currentUnused := currentUsed := 0.
@@ -254,9 +267,55 @@ SpurSelectiveCompactor >> globalSweepAndSegmentOccupationAnalysis [
 		setOccupationAtIndex: segmentIndex
 		used: currentUsed 
 		unused: currentUnused.
+	"we set the nextFreeChunk of last chunk at the end of the loop to avoid to set it at each iteration"
+	lastLilliputianChunk ~= 0 ifTrue:
+	 	[manager setNextFreeChunkOf: lastLilliputianChunk withValue: 0 isLilliputianSize: true].
 		
 	manager checkFreeSpace: GCModeFull.
 	manager unmarkSurvivingObjectsForCompact.
+]
+
+{ #category : #compaction }
+SpurSelectiveCompactor >> incrementalLilliputianSmallChunk: freeChunk [
+	"This is duplicate form #unlinkSmallChunk:index: for performance hack (single iteration of single linked list)"
+	<inline: #never> "for profiling"
+	| node next |
+	self assert: (manager bytesInObject: freeChunk) = (manager baseHeaderSize + manager allocationUnit).
+	self assert: manager lilliputianChunkIndex = ((manager bytesInObject: freeChunk) / manager allocationUnit).
+	lastLilliputianChunk = 0 ifTrue: "first incremental unlink"
+		[(freeChunk = manager firstLilliputianChunk) 
+			ifTrue: [^manager unlinkFreeChunk: freeChunk atIndex: manager lilliputianChunkIndex isLilliputianSize: true]
+			ifFalse: [lastLilliputianChunk := manager firstLilliputianChunk]].
+	 node := manager fetchPointer: manager freeChunkNextIndex ofFreeChunk: lastLilliputianChunk.
+	 [node ~= 0] whileTrue:
+		[self assert: node = (manager startOfObject: node).
+		 manager assertValidFreeObject: node.
+		 next := manager fetchPointer: manager freeChunkNextIndex ofFreeChunk: node.
+		 node = freeChunk ifTrue:
+			[^manager setNextFreeChunkOf: lastLilliputianChunk withValue: next isLilliputianSize: true].
+		 lastLilliputianChunk := node.
+		 node := next].
+	 self error: 'freeChunk not found in lilliputian chunk free list'
+
+	
+
+]
+
+{ #category : #'sweep phase' }
+SpurSelectiveCompactor >> interceptAddFreeChunkWithBytes: bytes at: start [
+	<inline: true>
+	| freeChunk |
+	(manager isLilliputianSize: bytes) ifTrue: "build size 1 free chunk in ascending addresses order"
+		[lastLilliputianChunk = 0
+			ifTrue: [^lastLilliputianChunk := manager addFreeChunkWithBytes: bytes at: start]
+			ifFalse: 
+				[manager increaseFreeOldSpaceBy: bytes.
+				 freeChunk := manager initFreeChunkWithBytes: bytes at: start.
+				 manager setNextFreeChunkOf: lastLilliputianChunk withValue: freeChunk isLilliputianSize: true.
+				 "we set the nextFreeChunk of last chunk at the end of the loop to avoid to set it at each iteration"
+				 ^lastLilliputianChunk := freeChunk]].
+	^manager addFreeChunkWithBytes: bytes at: start
+
 ]
 
 { #category : #'segment access' }
@@ -353,6 +412,19 @@ SpurSelectiveCompactor >> sizeClaimedIn: segment [
 	| ratio |
 	ratio := ((self occupationOf: segment) + 1) asFloat / 16rFFFF.
 	^(ratio * (segment segSize - manager bridgeSize)) asInteger 
+]
+
+{ #category : #'sweep phase' }
+SpurSelectiveCompactor >> sortedLilliputianChunks [
+	|current next|
+	current := manager firstLilliputianChunk.
+	current = 0 ifTrue: [^true]. "no node"
+	[next := manager fetchPointer: manager freeChunkNextIndex ofFreeChunk: current.
+	 next = 0] whileFalse:
+		[(manager oop: current isLessThan: next) ifFalse: [^false].
+		 current := next].
+	^ true
+
 ]
 
 { #category : #'segment access' }

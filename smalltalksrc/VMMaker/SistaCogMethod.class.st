@@ -14,7 +14,7 @@ Class {
 	#instVars : [
 		'counters'
 	],
-	#category : 'VMMaker-JIT'
+	#category : #'VMMaker-JIT'
 }
 
 { #category : #'class initialization' }

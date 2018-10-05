@@ -1,7 +1,7 @@
 Class {
 	#name : #Spur64BitMemoryManager,
 	#superclass : #SpurMemoryManager,
-	#category : 'VMMaker-SpurMemoryManager'
+	#category : #'VMMaker-SpurMemoryManager'
 }
 
 { #category : #'class initialization' }
@@ -172,12 +172,6 @@ Spur64BitMemoryManager >> byteSwapped: w [
 	<api>
 	<returnTypeC: #sqInt>
 	^w byteSwap64
-]
-
-{ #category : #'free space' }
-Spur64BitMemoryManager >> bytesBigEnoughForPrevPointer: chunkBytes [
-	"To have a prev pointer, which follows the next pointer, we need at least two slots."
-	^chunkBytes > (self baseHeaderSize + self allocationUnit)
 ]
 
 { #category : #'object enumeration' }
@@ -723,6 +717,13 @@ Spur64BitMemoryManager >> isIntegerValue: intValue [
 	^self
 		cCode: [(intValue >> 60 + 1 bitAnd: 16rF) <= 1] "N.B. (16rFFFFFFFFFFFFFFFF >> 60) + 1 = 16"
 		inSmalltalk: [intValue >= self minSmallInteger and: [intValue <= self maxSmallInteger]]
+]
+
+{ #category : #'free space' }
+Spur64BitMemoryManager >> isLilliputianSize: chunkBytes [
+	"To have a prev pointer, which follows the next pointer, we need at least two slots."
+	self assert: chunkBytes >= (self baseHeaderSize + self allocationUnit).
+	^chunkBytes = (self baseHeaderSize + self allocationUnit)
 ]
 
 { #category : #'header access' }

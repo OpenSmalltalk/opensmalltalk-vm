@@ -650,7 +650,7 @@ Class {
 		'VMSpurObjectRepresentationConstants',
 		'VMSqueakClassIndices'
 	],
-	#category : 'VMMaker-SpurMemoryManager'
+	#category : #'VMMaker-SpurMemoryManager'
 }
 
 { #category : #translation }
@@ -1289,7 +1289,7 @@ SpurMemoryManager >> addToFreeList: freeChunk bytes: chunkBytes [
 	index := chunkBytes / self allocationUnit.
 	index < self numFreeLists ifTrue:
 		[self setNextFreeChunkOf: freeChunk withValue: (freeLists at: index) chunkBytes: chunkBytes.
-		(self bytesBigEnoughForPrevPointer: chunkBytes) ifTrue:
+		(self isLilliputianSize: chunkBytes) ifFalse:
 			[self storePointer: self freeChunkPrevIndex ofFreeChunk: freeChunk withValue: 0].
 		 freeLists at: index put: freeChunk.
 		 freeListsMask := freeListsMask bitOr: 1 << index.
@@ -1324,8 +1324,8 @@ SpurMemoryManager >> addToFreeTree: freeChunk bytes: chunkBytes [
 		 self assert: ((self oop: freeChunk + chunkBytes - self baseHeaderSize isLessThanOrEqualTo: child)
 						or: [self oop: freeChunk isGreaterThanOrEqualTo: child + childBytes - self baseHeaderSize]).
 		 childBytes = chunkBytes ifTrue: "size match; add to list at node."
-			[self setNextFreeChunkOf: freeChunk withValue: (self fetchPointer: self freeChunkNextIndex ofFreeChunk: child) bytesBigEnoughForPrevPointer: true. 
-			 self setNextFreeChunkOf: child withValue: freeChunk bytesBigEnoughForPrevPointer: true.
+			[self setNextFreeChunkOf: freeChunk withValue: (self fetchPointer: self freeChunkNextIndex ofFreeChunk: child) isLilliputianSize: false. 
+			 self setNextFreeChunkOf: child withValue: freeChunk isLilliputianSize: false.
 			 ^child].
 		 "walk down the tree"
 		 parent := child.
@@ -1891,7 +1891,7 @@ SpurMemoryManager >> allocateLargestFreeChunk [
 		 self 
 			setNextFreeChunkOf: freeChunk 
 			withValue: (self fetchPointer: self freeChunkNextIndex ofFreeChunk: next) 
-			bytesBigEnoughForPrevPointer: true.
+			isLilliputianSize: false.
 		 ^next].
 	self unlinkSolitaryFreeTreeNode: freeChunk.
 	^freeChunk
@@ -1996,7 +1996,7 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes [
 				[(chunk := freeLists at: index) ~= 0 ifTrue:
 					[self assert: chunk = (self startOfObject: chunk).
 					 self assertValidFreeObject: chunk.
-					 self unlinkFreeChunk: chunk atIndex: index bytesBigEnoughForPrevPointer: true.
+					 self unlinkFreeChunk: chunk atIndex: index isLilliputianSize: false.
 					 self assert: (self bytesInObject: chunk) = (index * self allocationUnit).
 					 self freeChunkWithBytes: index * self allocationUnit - chunkBytes
 						at: (self startOfObject: chunk) + chunkBytes.
@@ -2013,7 +2013,7 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes [
 				[(chunk := freeLists at: index) ~= 0 ifTrue:
 					[self assert: chunk = (self startOfObject: chunk).
 					 self assertValidFreeObject: chunk.
-					 self unlinkFreeChunk: chunk atIndex: index bytesBigEnoughForPrevPointer: true.
+					 self unlinkFreeChunk: chunk atIndex: index isLilliputianSize: false.
 					 self assert: (self bytesInObject: chunk) = (index * self allocationUnit).
 					 self freeChunkWithBytes: index * self allocationUnit - chunkBytes
 						at: (self startOfObject: chunk) + chunkBytes.
@@ -2040,7 +2040,7 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes [
 					 self 
 						setNextFreeChunkOf: child 
 						withValue: (self fetchPointer: self freeChunkNextIndex ofFreeChunk: chunk) 
-						bytesBigEnoughForPrevPointer: true.
+						isLilliputianSize: false.
 					 ^self startOfObject: chunk].
 				 nodeBytes := childBytes.
 				 parent := child.
@@ -2071,7 +2071,7 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes [
 		self 
 			setNextFreeChunkOf: parent 
 			withValue: (self fetchPointer: self freeChunkNextIndex ofFreeChunk: chunk) 
-			bytesBigEnoughForPrevPointer: true.
+			isLilliputianSize: false.
 		 chunkBytes ~= nodeBytes ifTrue:
 			[self freeChunkWithBytes: nodeBytes - chunkBytes
 					at: (self startOfObject: chunk) + chunkBytes].
@@ -2132,8 +2132,8 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes suchThat: acceptan
 							 next := self fetchPointer: self freeChunkNextIndex ofFreeChunk: node.
 							 (acceptanceBlock value: node) ifTrue:
 								[prev = 0
-									ifTrue: [self unlinkFreeChunk: node atIndex: index bytesBigEnoughForPrevPointer: true.]
-									ifFalse: [self setNextFreeChunkOf: prev withValue: next bytesBigEnoughForPrevPointer: true.]. 
+									ifTrue: [self unlinkFreeChunk: node atIndex: index isLilliputianSize: false.]
+									ifFalse: [self setNextFreeChunkOf: prev withValue: next isLilliputianSize: false.]. 
 								 self freeChunkWithBytes: index * self allocationUnit - chunkBytes
 									at: (self startOfObject: node) + chunkBytes.
 								 ^node].
@@ -2157,8 +2157,8 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes suchThat: acceptan
 							 next := self fetchPointer: self freeChunkNextIndex ofFreeChunk: node.
 							 (acceptanceBlock value: node) ifTrue:
 								[prev = 0
-									ifTrue: [self unlinkFreeChunk: node atIndex: index bytesBigEnoughForPrevPointer: true.]
-									ifFalse: [self setNextFreeChunkOf: prev withValue: next bytesBigEnoughForPrevPointer: true.]. 
+									ifTrue: [self unlinkFreeChunk: node atIndex: index isLilliputianSize: false.]
+									ifFalse: [self setNextFreeChunkOf: prev withValue: next isLilliputianSize: false.]. 
 								 self freeChunkWithBytes: index * self allocationUnit - chunkBytes
 									at: (self startOfObject: node) + chunkBytes.
 								 ^node].
@@ -2187,7 +2187,7 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes suchThat: acceptan
 					 self 
 						setNextFreeChunkOf: prev 
 						withValue: (self fetchPointer: self freeChunkNextIndex ofFreeChunk: node) 
-						bytesBigEnoughForPrevPointer: true.
+						isLilliputianSize: false.
 					 ^self startOfObject: node]].
 			 (acceptanceBlock value: child) ifTrue:
 				[next := self fetchPointer: self freeChunkNextIndex ofFreeChunk: child.
@@ -2233,7 +2233,7 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes suchThat: acceptan
 			 self 
 				setNextFreeChunkOf: acceptedNode 
 				withValue: (self fetchPointer: self freeChunkNextIndex ofFreeChunk: acceptedChunk) 
-				bytesBigEnoughForPrevPointer: true.
+				isLilliputianSize: false.
 			self freeChunkWithBytes: (self bytesInObject: acceptedChunk) - chunkBytes
 					at: (self startOfObject: acceptedChunk) + chunkBytes.
 			^self startOfObject: acceptedChunk].
@@ -2400,7 +2400,7 @@ SpurMemoryManager >> assertFreeChunkPrevHeadZero [
 	min to: self numFreeLists - 1 do:
 		[:i| 
 		 	(freeLists at: i) ~= 0 ifTrue:
-				[self assert: (self bytesBigEnoughForPrevPointer: (freeLists at: i)).
+				[self deny: (self isLilliputianSize: (freeLists at: i)).
 				 self assert: (self fetchPointer: self freeChunkPrevIndex ofFreeChunk: (freeLists at: i)) = 0]].
 	"Large chunks"
 	self freeTreeNodesDo: [:freeNode |
@@ -2416,7 +2416,7 @@ SpurMemoryManager >> assertInnerValidFreeObject: objOop [
 	self assert: (self oop: (self addressAfter: objOop) isLessThanOrEqualTo: endOfMemory).
 	chunk := self fetchPointer: self freeChunkNextIndex ofFreeChunk: objOop.
 	self assert: (chunk = 0 or: [self isFreeOop: chunk]).
-	(self bytesBigEnoughForPrevPointer: (self bytesInObject: objOop)) ifTrue:
+	(self isLilliputianSize: (self bytesInObject: objOop)) ifFalse:
 		["double linkedlist assertions"
 		 chunk := self fetchPointer: self freeChunkNextIndex ofFreeChunk: objOop.
 		 chunk = 0 ifFalse: 
@@ -2731,14 +2731,6 @@ SpurMemoryManager >> byteSwapped: w [
 	self subclassResponsibility
 ]
 
-{ #category : #'free space' }
-SpurMemoryManager >> bytesBigEnoughForPrevPointer: chunkBytes [
-	"Answer if chunkBytes (which includes an object header) has room enough for both
-	 a next free chunk and a previous free chunk pointer.  This is always true in 32-bits,
-	 but in 64-bits requires at least 24 bytes."
-	self subclassResponsibility
-]
-
 { #category : #'object enumeration' }
 SpurMemoryManager >> bytesInObject: objOop [
 	"Answer the total number of bytes in an object including header and possible overflow size header."
@@ -2956,7 +2948,7 @@ SpurMemoryManager >> checkHeapFreeSpaceIntegrity [
 					[coInterpreter print: 'leak in free chunk '; printHex: obj; print: ' @ 0 = '; printHex: fieldOop; print: ' is unmapped'; cr.
 					 self eek.
 					 ok := false].
-				(self bytesBigEnoughForPrevPointer: (self bytesInObject: obj)) ifTrue:
+				(self isLilliputianSize: (self bytesInObject: obj)) ifFalse:
 					[fieldOop := self fetchPointer: self freeChunkPrevIndex ofFreeChunk: obj.
 					 (fieldOop ~= 0
 					 and: [(heapMap heapMapAtWord: (self pointerForOop: fieldOop)) = 0]) ifTrue:
@@ -3074,7 +3066,7 @@ SpurMemoryManager >> checkHeapIntegrity: excludeUnmarkedObjs classIndicesShouldB
 					[coInterpreter print: 'leak in free chunk '; printHex: obj; print: ' @ 0 = '; printHex: fieldOop; print: ' is mapped'; cr.
 					 self eek.
 					 ok := false].
-				(self bytesBigEnoughForPrevPointer: (self bytesInObject: obj)) ifTrue:
+				(self isLilliputianSize: (self bytesInObject: obj)) ifFalse:
 					[fieldOop := self fetchPointer: self freeChunkPrevIndex ofFreeChunk: obj.
 					 (fieldOop ~= 0
 					 and: [(heapMap heapMapAtWord: (self pointerForOop: fieldOop)) = 0]) ifTrue:
@@ -4140,8 +4132,6 @@ SpurMemoryManager >> dequeueMourner [
 
 { #category : #'free space' }
 SpurMemoryManager >> detachFreeObject: freeChunk [
-	"This is a rare operation, so its efficiency isn't critical.
-	 Having a valid prev link for tree nodes would help."
 	<inline: true>
 	| chunkBytes |
 	chunkBytes := self bytesInObject: freeChunk.
@@ -4871,6 +4861,11 @@ SpurMemoryManager >> firstIndexableField: objOop [
 		[^self pointerForOop: objOop + self baseHeaderSize].
 	"otherwise not indexable"
 	^0
+]
+
+{ #category : #'free space' }
+SpurMemoryManager >> firstLilliputianChunk [
+	^freeLists at: self lilliputianChunkIndex
 ]
 
 { #category : #'header formats' }
@@ -6048,6 +6043,12 @@ SpurMemoryManager >> inactiveOrFailedToDeferScan: anEphemeron [
 	^(self pushOnUnscannedEphemeronsStack: anEphemeron) not
 ]
 
+{ #category : #'free space' }
+SpurMemoryManager >> increaseFreeOldSpaceBy: bytes [ 
+	totalFreeOldSpace := totalFreeOldSpace + bytes
+
+]
+
 { #category : #'gc - global' }
 SpurMemoryManager >> incrementalGC [
 	self shouldNotImplement
@@ -7011,6 +7012,14 @@ SpurMemoryManager >> isLargePositiveIntegerObject: oop [
 	^coInterpreter isLargePositiveIntegerObject: oop
 ]
 
+{ #category : #'free space' }
+SpurMemoryManager >> isLilliputianSize: chunkBytes [
+	"Answer if chunkBytes (which includes an object header) is too small to hold both
+	 a next free chunk and a previous free chunk pointer. This is always false in 32-bits, 
+	but in 64 bits small chunk of size 2 are lilliputian."
+	self subclassResponsibility
+]
+
 { #category : #'object testing' }
 SpurMemoryManager >> isLong64s: oop [
 	"Answer if the argument contains only indexable 64-bit double words (no oops). See comment in formatOf:"
@@ -7661,6 +7670,13 @@ SpurMemoryManager >> lengthOfMaybeImmediate: oop [
 	<inline: false>
 	(self isImmediate: oop) ifTrue: [^0].
 	^self lengthOf: oop
+]
+
+{ #category : #'free space' }
+SpurMemoryManager >> lilliputianChunkIndex [
+	"See isLilliputianSize:"
+	^(self baseHeaderSize + self allocationUnit) // self allocationUnit
+
 ]
 
 { #category : #'method access' }
@@ -9916,7 +9932,7 @@ SpurMemoryManager >> printFreeChunk: freeChunk printAsTreeNode: printAsTreeNode 
 		print: ' bytes '; printNum: numBytes;
 		print: ' next '; printHexPtrnp: (self fetchPointer: self freeChunkNextIndex
 											ofFreeChunk: freeChunk).
-	(self bytesBigEnoughForPrevPointer: numBytes) ifTrue: 
+	(self isLilliputianSize: numBytes) ifFalse: 
 		[coInterpreter
 			print: ' prev '; printHexPtrnp: (self fetchPointer: self freeChunkPrevIndex
 											ofFreeChunk: freeChunk).].
@@ -11073,27 +11089,27 @@ SpurMemoryManager >> setMaxOldSpaceSize: limit [
 ]
 
 { #category : #'free space' }
-SpurMemoryManager >> setNextFreeChunkOf: freeChunk withValue: nextFreeChunk bytesBigEnoughForPrevPointer: bytesBigEnoughForPrevPointer [ 
-	<inline: true> "Inlining is quite important since bytesBigEnoughForPrevPointer is often true"
+SpurMemoryManager >> setNextFreeChunkOf: freeChunk withValue: nextFreeChunk chunkBytes: chunkBytes [
 	self 
-		storePointer: self freeChunkNextIndex 
-		ofFreeChunk: freeChunk 
-		withValue: nextFreeChunk.
-	(nextFreeChunk ~= 0 and: [bytesBigEnoughForPrevPointer]) ifTrue:
-		[self 
-			storePointer: self freeChunkPrevIndex 
-			ofFreeChunk: nextFreeChunk 
-			withValue: freeChunk]
+		setNextFreeChunkOf: freeChunk 
+		withValue: nextFreeChunk 
+		isLilliputianSize: (self isLilliputianSize: chunkBytes) 
 	
 	
 ]
 
 { #category : #'free space' }
-SpurMemoryManager >> setNextFreeChunkOf: freeChunk withValue: nextFreeChunk chunkBytes: chunkBytes [
+SpurMemoryManager >> setNextFreeChunkOf: freeChunk withValue: nextFreeChunk isLilliputianSize: lilliputian [ 
+	<inline: true> "Inlining is quite important since isLilliputianSize: is often true/false"
 	self 
-		setNextFreeChunkOf: freeChunk 
-		withValue: nextFreeChunk 
-		bytesBigEnoughForPrevPointer: (self bytesBigEnoughForPrevPointer: chunkBytes) 
+		storePointer: self freeChunkNextIndex 
+		ofFreeChunk: freeChunk 
+		withValue: nextFreeChunk.
+	(nextFreeChunk ~= 0 and: [lilliputian not]) ifTrue:
+		[self 
+			storePointer: self freeChunkPrevIndex 
+			ofFreeChunk: nextFreeChunk 
+			withValue: freeChunk]
 	
 	
 ]
@@ -12076,7 +12092,7 @@ SpurMemoryManager >> swizzleFieldsOfFreeChunk: chunk [
 	false ifTrue: "The prevPointer is not guaranteed to be valid in older images.
 				 updateListStartingAt: via updateFreeLists does restore the prev pointer
 				 in all small free lists, so simply avoid swizzling it now."
-		[(self bytesBigEnoughForPrevPointer: chunkBytes) ifTrue:
+		[(self isLilliputianSize: chunkBytes) ifFalse:
 			[field := self fetchPointer: self freeChunkPrevIndex ofFreeChunk: chunk.
 			 field ~= 0 ifTrue:
 				[self storePointerNoAssert: self freeChunkPrevIndex
@@ -12406,33 +12422,33 @@ SpurMemoryManager >> uniqueIndex: classIndex allInstancesInto: start limit: limi
 ]
 
 { #category : #'free space' }
-SpurMemoryManager >> unlinkFreeChunk: chunk atIndex: index bytesBigEnoughForPrevPointer: bytesBigEnoughForPrevPointer [ 
+SpurMemoryManager >> unlinkFreeChunk: chunk atIndex: index chunkBytes: chunkBytes [
+	^self 
+		unlinkFreeChunk: chunk 
+		atIndex: index 
+		isLilliputianSize: (self isLilliputianSize: chunkBytes) 
+]
+
+{ #category : #'free space' }
+SpurMemoryManager >> unlinkFreeChunk: chunk atIndex: index isLilliputianSize: lilliputian [ 
 	"Unlink and answer a small chunk from one of the fixed size freeLists"
-	<inline: true> "inlining is important because bytesBigEnoughForPrevPointer is often true"
+	<inline: true> "inlining is important because isLilliputianSize: is often true"
 	|next|
 	self assert: ((self bytesInObject: chunk) = (index * self allocationUnit)
 				and: [index > 1 "a.k.a. (self bytesInObject: chunk) > self allocationUnit"
 				and: [(self startOfObject: chunk) = chunk]]).
 			
 	"For some reason the assertion is not compiled correctly"
-	self cCode: '' inSmalltalk: [self assert: (self bytesBigEnoughForPrevPointer:(self bytesInObject: chunk)) = bytesBigEnoughForPrevPointer].
+	self cCode: '' inSmalltalk: [self assert: (self isLilliputianSize: (self bytesInObject: chunk)) = lilliputian].
 	
 	freeLists
 		at: index 
 		put: (next := self
 				fetchPointer: self freeChunkNextIndex
 				ofFreeChunk: chunk).
-	(bytesBigEnoughForPrevPointer and: [next ~= 0]) ifTrue:
+	(lilliputian not and: [next ~= 0]) ifTrue:
 		[self storePointer: self freeChunkPrevIndex ofFreeChunk: next withValue: 0].
 	^chunk
-]
-
-{ #category : #'free space' }
-SpurMemoryManager >> unlinkFreeChunk: chunk atIndex: index chunkBytes: chunkBytes [
-	^self 
-		unlinkFreeChunk: chunk 
-		atIndex: index 
-		bytesBigEnoughForPrevPointer: (self bytesBigEnoughForPrevPointer: chunkBytes) 
 ]
 
 { #category : #'free space' }
@@ -12442,8 +12458,8 @@ SpurMemoryManager >> unlinkFreeChunk: freeChunk chunkBytes: chunkBytes [
 	index := chunkBytes / self allocationUnit.
 	
 	"Pathological 64 bits case - size 1 - single linked list"
-	(self bytesBigEnoughForPrevPointer: chunkBytes) ifFalse:
-		[^self unlinkSmallChunk: freeChunk index: index].
+	(self isLilliputianSize: chunkBytes) ifTrue:
+		[^self unlinkLilliputianChunk: freeChunk index: index].
 	
 	prev := self fetchPointer: self freeChunkPrevIndex ofFreeChunk: freeChunk.
 	"Has prev element: update double linked list"
@@ -12457,7 +12473,7 @@ SpurMemoryManager >> unlinkFreeChunk: freeChunk chunkBytes: chunkBytes [
 	"Is the beginning of a list"
 	"Small chunk"
 	(index < self numFreeLists and: [1 << index <= freeListsMask]) ifTrue: 
-		[self unlinkFreeChunk: freeChunk atIndex: index bytesBigEnoughForPrevPointer: true.
+		[self unlinkFreeChunk: freeChunk atIndex: index isLilliputianSize: false.
 		 ^freeChunk].
 	"Large chunk"
 	 next := self fetchPointer: self freeChunkNextIndex ofFreeChunk: freeChunk.
@@ -12474,7 +12490,7 @@ SpurMemoryManager >> unlinkFreeChunk: freeChunk chunkBytes: chunkBytes [
 ]
 
 { #category : #'free space' }
-SpurMemoryManager >> unlinkSmallChunk: freeChunk index: index [
+SpurMemoryManager >> unlinkLilliputianChunk: freeChunk index: index [
 	| node prev next |
 	<inline: #never> "for profiling"
 	 node := freeLists at: index.
@@ -12485,12 +12501,12 @@ SpurMemoryManager >> unlinkSmallChunk: freeChunk index: index [
 		 next := self fetchPointer: self freeChunkNextIndex ofFreeChunk: node.
 		 node = freeChunk ifTrue:
 			[prev = 0
-				ifTrue: [self unlinkFreeChunk: freeChunk atIndex: index bytesBigEnoughForPrevPointer: false]
-				ifFalse: [self setNextFreeChunkOf: prev withValue: next bytesBigEnoughForPrevPointer: false].
+				ifTrue: [self unlinkFreeChunk: freeChunk atIndex: index isLilliputianSize: true]
+				ifFalse: [self setNextFreeChunkOf: prev withValue: next isLilliputianSize: true].
 			 ^freeChunk].
 		 prev := node.
 		 node := next].
-	 self error: 'freeChunk not found in free list of size 1'
+	 self error: 'freeChunk not found in lilliputian chunk free list'
 	
 	
 
@@ -12633,7 +12649,7 @@ SpurMemoryManager >> updateFullGCStats [
 SpurMemoryManager >> updateListStartingAt: freeNode [ 
 	|prev obj|
 	freeNode = 0 ifTrue: [^self].
-	self assert: (self bytesBigEnoughForPrevPointer: (self bytesInObject: freeNode)).
+	self deny: (self isLilliputianSize: (self bytesInObject: freeNode)).
 	prev := freeNode.
 	self storePointer: self freeChunkPrevIndex ofFreeChunk: prev withValue: 0.
 	[obj := self fetchPointer: self freeChunkNextIndex ofFreeChunk: prev.
