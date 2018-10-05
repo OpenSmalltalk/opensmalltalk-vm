@@ -528,7 +528,7 @@ double ioScreenScaleFactor(void) {
 
 int ioScreenSize(void) {
 	/* return the screen size as two positive 16-bit integers packed into a 32-bit integer */
-	int w = 10, h = 10;
+	int w = 976, h = 665;
 
 	if (stWindow != nil) {
 		w = stWindow->portRect.right - stWindow->portRect.left;
