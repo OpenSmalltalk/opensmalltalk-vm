@@ -307,7 +307,8 @@ void SetUpPixmap(void) {
 	SetColorEntry(16,  2048,  2048,  2048);	/*  1/32 gray */
 	SetColorEntry(17,  4096,  4096,  4096);	/*  2/32 gray */
 	SetColorEntry(18,  6144,  6144,  6144);	/*  3/32 gray */
-	SetColorEntry(19, 10240, 10240, 10240);	/*  5/32 gray */
+	SetColorEntry(19, 
+		      0, 10240, 10240);	/*  5/32 gray */
 	SetColorEntry(20, 12288, 12288, 12288);	/*  6/32 gray */
 	SetColorEntry(21, 14336, 14336, 14336);	/*  7/32 gray */
 	SetColorEntry(22, 18432, 18432, 18432);	/*  9/32 gray */
@@ -528,7 +529,7 @@ double ioScreenScaleFactor(void) {
 
 int ioScreenSize(void) {
 	/* return the screen size as two positive 16-bit integers packed into a 32-bit integer */
-	int w = 976, h = 665;
+	int w = 1024, h = 768;
 
 	if (stWindow != nil) {
 		w = stWindow->portRect.right - stWindow->portRect.left;
