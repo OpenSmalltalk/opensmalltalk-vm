@@ -14,8 +14,7 @@ Segment abuse:
 The swizzle field of segInfo is abused by using the low 8 bits for occupation and the 9th bit as isBeingCompacted bit.
 
 Performance trick for lilliputian chunks:
-Specific free chunks (called lilliputian, see isLilliputianSize:) are managed using a single linked list instead of a double linked list since there's not enough room in the free chunk for the back pointer. During the sweep phase this is not a problem since we're rebuilding the free chunk structure, but during selective compaction we're detaching free chunks from the free chunk structure and that can be horribly slow (10 seconds sometimes at 20Gb heap due to many iteration over the single linked list). To work around this problem, the sweep phase use lastLilliputianChunk variable to sort the lilliputian free chunk single linked list in ascending address order (See interceptAddFreeChunkWithBytes:at:). During the selective compation phase, the same variable is re-used to iterate at most once over the single linked list while detaching lilliputian chunks (See incrementalUnlinkSmallChunk:).
-""
+Specific free chunks (called lilliputian, see isLilliputianSize:) are managed using a single linked list instead of a double linked list since there's not enough room in the free chunk for the back pointer. During the sweep phase this is not a problem since we're rebuilding the free chunk structure, but during selective compaction we're detaching free chunks from the free chunk structure and that can be horribly slow (10 seconds sometimes at 20Gb heap due to many iteration over the single linked list). To work around this problem, the sweep phase use lastLilliputianChunk variable to sort the lilliputian free chunk single linked list in ascending address order (See interceptAddFreeChunkWithBytes:at:). During the selective compation phase, the same variable is re-used to iterate at most once over the single linked list while detaching lilliputian chunks (See incrementalUnlinkSmallChunk:). In addition, each segment is annotated during the sweep phase with the last lilliputian chunk it holds. Hence, during the compaction phase, the linked list is iterated but the iteration can jump to the last chunk of the previous segment to compact.
 "
 Class {
 	#name : #SpurSelectiveCompactor,
@@ -82,12 +81,14 @@ SpurSelectiveCompactor >> compact [
 ]
 
 { #category : #compaction }
-SpurSelectiveCompactor >> compactSegment: segInfo freeStart: initialFreeStart [
+SpurSelectiveCompactor >> compactSegment: segInfo freeStart: initialFreeStart segIndex: segIndex [
 	<var: 'segInfo' type: #'SpurSegmentInfo *'>
 	| currentEntity fillStart bytesToCopy bridge copy |
 	fillStart := initialFreeStart.
 	bridge := manager segmentManager bridgeFor: segInfo.
 	currentEntity := manager objectStartingAt: segInfo segStart.
+	self deny: segIndex = 0. "Cannot compact seg 0"
+	lastLilliputianChunk := self lastLilliputianChunkAtIndex: segIndex - 1.
 	[self oop: currentEntity isLessThan: bridge] whileTrue:
 		[(manager isFreeObject: currentEntity)
 			ifTrue: 
@@ -124,15 +125,12 @@ SpurSelectiveCompactor >> compactSegmentsToCompact [
 	 "Removes initial free chunk in segment to fill... (Segment is entirely free)"
 	manager detachFreeObject: (manager objectStartingAt: fillStart).
 	
-	"Set-up hack to iterate at most one over size 1 free chunks single linked list."
-	lastLilliputianChunk := 0.
-	
 	 "Compact each segment to compact..."
 	0 to: manager numSegments - 1 do:
 		[:i| 
 		 segInfo := self addressOf: (manager segmentManager segments at: i).
 		(self isSegmentBeingCompacted: segInfo)
-			ifTrue: [fillStart := self compactSegment: segInfo freeStart: fillStart ]].
+			ifTrue: [fillStart := self compactSegment: segInfo freeStart: fillStart segIndex: i]].
 		
 	 "Final free chunk in segment to fill..."
 	 manager 
@@ -244,6 +242,7 @@ SpurSelectiveCompactor >> globalSweepAndSegmentOccupationAnalysis [
 	currentEntity := manager firstObject.
 	nextBridge := manager segmentManager bridgeAt: 0.
 	segmentIndex := currentUnused := currentUsed := 0.
+	self setLastLilliputianChunkAtindex: 0 to: 0.
 	[self oop: currentEntity isLessThan: manager endOfMemory] whileTrue:
 		[currentEntity = nextBridge "End of segment, set occupation"
 			ifTrue: 
@@ -251,6 +250,7 @@ SpurSelectiveCompactor >> globalSweepAndSegmentOccupationAnalysis [
 					setOccupationAtIndex: segmentIndex
 					used: currentUsed 
 					unused: currentUnused.
+				  self setLastLilliputianChunkAtindex: segmentIndex to: lastLilliputianChunk.
 				  currentUnused := currentUsed := 0.
 				  segmentIndex := segmentIndex + 1.
 				  nextBridge := manager segmentManager bridgeAt: segmentIndex]
@@ -263,10 +263,12 @@ SpurSelectiveCompactor >> globalSweepAndSegmentOccupationAnalysis [
 						[self unmark: currentEntity.
 						 currentUsed := currentUsed + (manager bytesInObject: currentEntity)]].
 		 currentEntity := manager objectAfter: currentEntity limit: manager endOfMemory].
-	self "set last segment occupation"	
+	"set last segment details"	
+	self 
 		setOccupationAtIndex: segmentIndex
 		used: currentUsed 
 		unused: currentUnused.
+	self setLastLilliputianChunkAtindex: segmentIndex to: lastLilliputianChunk.
 	"we set the nextFreeChunk of last chunk at the end of the loop to avoid to set it at each iteration"
 	lastLilliputianChunk ~= 0 ifTrue:
 	 	[manager setNextFreeChunkOf: lastLilliputianChunk withValue: 0 isLilliputianSize: true].
@@ -323,6 +325,13 @@ SpurSelectiveCompactor >> isSegmentBeingCompacted: segInfo [
 	<var: 'segInfo' type: #'SpurSegmentInfo *'>
 	"Swizzle is abused bit 16 isBeingCompacted bits 0-15 occupation"
 	^ segInfo swizzle anyMask: 1 << 16
+]
+
+{ #category : #'segment access' }
+SpurSelectiveCompactor >> lastLilliputianChunkAtIndex: segIndex [
+	<inline: true>
+	"Abuse lastFreeObject field, can be used during compaction only, used for different purpose during snapshot"
+	^(self addressOf: (manager segmentManager segments at: 0)) lastFreeObject
 ]
 
 { #category : #'segment access' }
@@ -387,6 +396,13 @@ SpurSelectiveCompactor >> selectiveCompaction [
 			[self assert: segmentToFill ~~ nil.
 		 	 self compactSegmentsToCompact].
 	manager checkFreeSpace: GCModeFull.
+]
+
+{ #category : #'segment access' }
+SpurSelectiveCompactor >> setLastLilliputianChunkAtindex: segIndex to: chunk [ 
+	<inline: true>
+	"Abuse lastFreeObject field, can be used during compaction only, used for different purpose during snapshot"
+	(self addressOf: (manager segmentManager segments at: 0)) lastFreeObject: chunk
 ]
 
 { #category : #'segment access' }
