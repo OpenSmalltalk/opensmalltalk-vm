@@ -86,14 +86,6 @@ SpurSelectiveCompactorSimulator >> compact [
 ]
 
 { #category : #compaction }
-SpurSelectiveCompactorSimulator >> compactSegment: segInfo freeStart: initialFreeStart [
-	| res |
-	res := super compactSegment: segInfo freeStart: initialFreeStart.
-	self checkOnlyForwardersOrWordNonImm: segInfo.
-	^ res
-]
-
-{ #category : #compaction }
 SpurSelectiveCompactorSimulator >> compactSegmentsToCompact [
 	self talk: 'filling segment ' , (manager segmentManager indexOfSegment: segmentToFill).
 	super compactSegmentsToCompact.
