@@ -9,7 +9,7 @@ If needed, that can be optimized then.
 Class {
 	#name : #SerialPlugin,
 	#superclass : #SmartSyntaxInterpreterPlugin,
-	#category : #'VMMaker-Plugins'
+	#category : 'VMMaker-Plugins'
 }
 
 { #category : #translation }

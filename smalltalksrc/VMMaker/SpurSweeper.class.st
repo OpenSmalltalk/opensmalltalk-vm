@@ -7,7 +7,7 @@ SpurSweeper is a reference implementation if one wants to evaluate GC performanc
 Class {
 	#name : #SpurSweeper,
 	#superclass : #SpurCompactor,
-	#category : #'VMMaker-SpurMemoryManager'
+	#category : 'VMMaker-SpurMemoryManager'
 }
 
 { #category : #api }

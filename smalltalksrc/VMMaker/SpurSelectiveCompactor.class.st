@@ -26,7 +26,7 @@ Class {
 	#classVars : [
 		'MaxOccupationForCompaction'
 	],
-	#category : #'VMMaker-SpurMemoryManager'
+	#category : 'VMMaker-SpurMemoryManager'
 }
 
 { #category : #translation }
@@ -174,7 +174,8 @@ SpurSelectiveCompactor >> findAndSetSegmentToFill [
 		 segInfo := self addressOf: (manager segmentManager segments at: i).
 		 firstEntity := manager objectStartingAt: segInfo segStart.
 		 ((manager isFreeObject: firstEntity) and: [(manager objectAfter: firstEntity limit: manager endOfMemory) = (manager segmentManager bridgeFor: segInfo)])
-			ifTrue: [segmentToFill := segInfo. ^0]].
+			ifTrue: [segmentToFill := segInfo. ^i]].
+	^-1
 	
 ]
 
@@ -206,12 +207,15 @@ SpurSelectiveCompactor >> findNextSegmentToCompact [
 SpurSelectiveCompactor >> findOrAllocateSegmentToFill [
 	"There was no compacted segments from past GC that we can directly re-use.
 	 We need either to find an empty segment or allocate a new one."
+	| segIndex |
 	self findAndSetSegmentToFill.
 	segmentToFill ifNotNil: [^0].
 	"No empty segment. We need to allocate a new one"
 	self allocateSegmentToFill.
 	"We don't know which segment it is that we've just allocated... So we look for it... This is a bit dumb."
-	self findAndSetSegmentToFill.
+	segIndex := self findAndSetSegmentToFill.
+	"Lilliputian performance hack management... Last lilliputian of new segment is same as prev because no lilliputian in new segment"
+	self setLastLilliputianChunkAtindex: segIndex to: (self lastLilliputianChunkAtIndex: segIndex - 1).
 	self assert: segmentToFill ~~ nil.
 	
 ]
