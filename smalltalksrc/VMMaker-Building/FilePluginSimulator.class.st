@@ -24,12 +24,14 @@ FilePluginSimulator >> close [  "close any files that ST may have opened"
 ]
 
 { #category : #simulation }
-FilePluginSimulator >> createDirectory: aString [
-	^[FileDirectory default primCreateDirectory: aString.
+FilePluginSimulator >> dir_Create: dirNameIndex _: dirNameSize [
+	^[FileDirectory default
+		primCreateDirectory: (interpreterProxy interpreter
+								asString: dirNameIndex
+								size: dirNameSize).
 	   true]
 		on: Error
 		do: [:ex| false]
-	
 ]
 
 { #category : #simulation }
