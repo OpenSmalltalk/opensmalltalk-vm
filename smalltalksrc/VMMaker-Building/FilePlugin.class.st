@@ -346,9 +346,8 @@ FilePlugin >> primitiveConnectToFileDescriptor [
 
 { #category : #'directory primitives' }
 FilePlugin >> primitiveDirectoryCreate [
-
 	| dirName dirNameIndex dirNameSize okToCreate |
-	<var: #dirNameIndex type: 'char *'>
+	<var: #dirNameIndex type: #'char *'>
 	<export: true>
 
 	dirName := interpreterProxy stackValue: 0.
@@ -363,9 +362,7 @@ FilePlugin >> primitiveDirectoryCreate [
 							inSmalltalk: [true].
 		 okToCreate ifFalse:
 			[^interpreterProxy primitiveFail]].
-	(self
-		cCode: 'dir_Create(dirNameIndex, dirNameSize)'
-		inSmalltalk: [self createDirectory: (interpreterProxy asString: dirNameIndex size: dirNameSize)]) ifFalse:
+	(self dir_Create: dirNameIndex _: dirNameSize) ifFalse:
 		[^interpreterProxy primitiveFail].
 	interpreterProxy pop: 1
 ]
