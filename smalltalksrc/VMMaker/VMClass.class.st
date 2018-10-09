@@ -642,7 +642,7 @@ VMClass >> asAddress: address put: aBlock [
 		atPutBlock: [:obj :idx :val| aBlock value: val]
 ]
 
-{ #category : #'C library simulation' }
+{ #category : #'C library extensions' }
 VMClass >> asString: aStringOrStringIndex [
 	"aStringOrStringIndex is either a string or an address in the heap.
 	 Create a String of the requested length form the bytes in the
@@ -655,7 +655,7 @@ VMClass >> asString: aStringOrStringIndex [
 	^self strncpy: (ByteString new: sz) _: aStringOrStringIndex _: sz
 ]
 
-{ #category : #'C library simulation' }
+{ #category : #'C library extensions' }
 VMClass >> asString: stringIndex size: stringSize [
 	"stringIndex is an address in the heap.  Create a String of the requested length
 	form the bytes in the heap starting at stringIndex."

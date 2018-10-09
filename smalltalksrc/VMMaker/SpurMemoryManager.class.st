@@ -5022,8 +5022,9 @@ SpurMemoryManager >> flushNewSpaceInstancesOf: aClass [
 
 { #category : #'selective compaction' }
 SpurMemoryManager >> followClassTable [
-	"In addition to postBecomeScanClassTable:, I follow hiddenRootObj and its pages"
-	(self isForwarded: hiddenRootsObj) ifTrue: [hiddenRootsObj := self followForwarded: hiddenRootsObj].
+	"In addition to postBecomeScanClassTable:, I follow the pages in the class table.
+	 Because hiddenRootsObj follows nil, false, true and the freeLists, it can never be forwarded."
+	self deny: (self isForwarded: hiddenRootsObj).
 	0 to: numClassTablePages - 1 do:
 		[:i| | page |
 		page := self followField: i ofObject: hiddenRootsObj.
@@ -5042,7 +5043,7 @@ SpurMemoryManager >> followClassTable [
 						[classTableIndex := i << self classTableMajorIndexShift + j]]]]].
 	"classTableIndex must never index the first page, which is reserved for classes known to the VM."
 	self assert: classTableIndex >= (1 << self classTableMajorIndexShift).
-	self assert: self validClassTableRootPages.
+	self assert: self validClassTableRootPages
 ]
 
 { #category : #forwarding }
