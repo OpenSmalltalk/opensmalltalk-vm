@@ -1,7 +1,7 @@
 Class {
 	#name : #SpurTrunkImageTestResource,
 	#superclass : #SpurImageTestResource,
-	#category : 'VMMaker-Tests'
+	#category : #'VMMaker-Tests'
 }
 
 { #category : #accessing }

@@ -4,7 +4,7 @@ Class {
 	#instVars : [
 		'ceDereferenceSelectorIndex'
 	],
-	#category : 'VMMaker-JIT'
+	#category : #'VMMaker-JIT'
 }
 
 { #category : #'accessing class hierarchy' }
@@ -523,15 +523,6 @@ CogObjectRepresentationFor64BitSpur >> genGetSizeOf: sourceReg into: destReg for
 	  jumpIsBytes jumpHasFixedFields jumpIsShorts jumpIs32BitLongs jumpIsContext  |
 	<inline: true>
 	"c.f. StackInterpreter>>stSizeOf: SpurMemoryManager>>lengthOf:format: fixedFieldsOf:format:length:"
-	<var: #jumpIsBytes type: #'AbstractInstruction *'>
-	<var: #jumpIsShorts type: #'AbstractInstruction *'>
-	<var: #jumpIsContext type: #'AbstractInstruction *'>
-	<var: #jumpArrayDone type: #'AbstractInstruction *'>
-	<var: #jumpIs32BitLongs type: #'AbstractInstruction *'>
-	<var: #jumpNotIndexable type: #'AbstractInstruction *'>
-	<var: #jumpHasFixedFields type: #'AbstractInstruction *'>
-	<var: #jump32BitLongsDone type: #'AbstractInstruction *'>
-	<var: #jump64BitLongsDone type: #'AbstractInstruction *'>
 
 	"formatReg := self formatOf: sourceReg"
 	self genGetFormatOf: sourceReg

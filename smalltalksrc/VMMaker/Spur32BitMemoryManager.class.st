@@ -1,7 +1,7 @@
 Class {
 	#name : #Spur32BitMemoryManager,
 	#superclass : #SpurMemoryManager,
-	#category : 'VMMaker-SpurMemoryManager'
+	#category : #'VMMaker-SpurMemoryManager'
 }
 
 { #category : #'class initialization' }
@@ -205,79 +205,61 @@ Spur32BitMemoryManager >> changeClassOf: rcvr to: argClass [
 	 or if the argument is a fixed class and the receiver's size differs from the size
 	 that an instance of the argument should have."
 	<inline: false>
-	| classFormat fixedFields instFormat normalizedInstFormat newFormat classIndex |
+	| classFormat fixedFields instFormat newFormat classIndex instSlots instBytes |
 	(self isObjImmutable: rcvr) ifTrue:
 		[^PrimErrNoModification].
 	classFormat := self formatOfClass: argClass.
 	fixedFields := self fixedFieldsOfClassFormat: classFormat.
 	classFormat := self instSpecOfClassFormat: classFormat.
 	instFormat := self formatOf: rcvr.
-	normalizedInstFormat := self classFormatForInstanceFormat: instFormat.
 
 	"Fail for inability to access classIndex before making contexts snapshot-safe."
 	(classIndex := self ensureBehaviorHash: argClass) < 0 ifTrue:
 		[^classIndex negated].
 
-	(normalizedInstFormat > self lastPointerFormat
-	 and: [normalizedInstFormat = classFormat])
-		ifTrue: [newFormat := instFormat]
+	"Now check the instance for compatibility and compute odd bits if necessary."
+	classFormat <= self lastPointerFormat
+		ifTrue:
+			[instFormat > self lastPointerFormat ifTrue:
+				[^PrimErrInappropriate].
+			 ((instSlots := self numSlotsOf: rcvr) < fixedFields
+			  or: [instSlots > fixedFields and: [self isFixedSizePointerFormat: classFormat]]) ifTrue:
+				[^PrimErrBadReceiver].
+			 (instFormat = self indexablePointersFormat
+			  and: [self isContextNonImm: rcvr]) ifTrue:
+				[coInterpreter makeContextSnapshotSafe: rcvr].
+			 newFormat := classFormat]
 		ifFalse:
-			[normalizedInstFormat <= self lastPointerFormat
-				ifTrue:
-					[classFormat > self lastPointerFormat ifTrue:
-						[^PrimErrInappropriate].
-					 (self numSlotsOf: rcvr) < fixedFields ifTrue:
-						[^PrimErrBadReceiver].
-					 (instFormat = self indexablePointersFormat
-					  and: [self isContextNonImm: rcvr]) ifTrue:
-						[coInterpreter makeContextSnapshotSafe: rcvr].
-					 newFormat := classFormat]
-				ifFalse:
-					[| instBytes |
-					instBytes := self numBytesOf: rcvr.
-					normalizedInstFormat caseOf: {
-						[self sixtyFourBitIndexableFormat] ->
-							[(classFormat < self sixtyFourBitIndexableFormat
-							  or: [classFormat >= self firstCompiledMethodFormat]) ifTrue:
-								[^PrimErrInappropriate].
-							 newFormat := classFormat].
-						[self firstLongFormat] ->
-							[(classFormat < self sixtyFourBitIndexableFormat
-							  or: [classFormat >= self firstCompiledMethodFormat]) ifTrue:
-								[^PrimErrInappropriate].
-							 (classFormat = self sixtyFourBitIndexableFormat and: [instBytes anyMask: 1]) ifTrue:
-								[^PrimErrBadReceiver].
-							 newFormat := classFormat].
-						[self firstShortFormat] ->
-							[(classFormat < self sixtyFourBitIndexableFormat
-							  or: [classFormat >= self firstCompiledMethodFormat]) ifTrue:
-								[^PrimErrInappropriate].
-							 classFormat caseOf: {
-								[self sixtyFourBitIndexableFormat]
-									-> [(instBytes anyMask: 3) ifTrue: [^PrimErrBadReceiver].
-										newFormat := classFormat].
-								[self firstLongFormat] 		
-									-> [(instBytes anyMask: 1) ifTrue: [^PrimErrBadReceiver].
-										newFormat := classFormat].
-								[self firstByteFormat] 		
-									-> [newFormat := classFormat + (4 - instBytes bitAnd: 3)] }].
-						[self firstByteFormat] ->
-							[(classFormat < self sixtyFourBitIndexableFormat
-							  or: [classFormat >= self firstCompiledMethodFormat]) ifTrue:
-								[^PrimErrInappropriate].
-							 classFormat caseOf: {
-								[self sixtyFourBitIndexableFormat]
-									-> [(instBytes anyMask: 7) ifTrue: [^PrimErrBadReceiver]].
-								[self firstLongFormat] 		
-									-> [(instBytes anyMask: 3) ifTrue: [^PrimErrBadReceiver]].
-								[self firstShortFormat] 		
-									-> [(instBytes anyMask: 1) ifTrue: [^PrimErrBadReceiver]] }.
-							 newFormat := classFormat].
-						[self firstCompiledMethodFormat] ->
-							[classFormat ~= self firstCompiledMethodFormat ifTrue:
-								[^PrimErrInappropriate].
-							 newFormat := instFormat] }]].
+			["Fail if the class's format is somehow invalid."
+			 classFormat ~= (self classFormatForInstanceFormat: classFormat) ifTrue:
+				[^PrimErrBadArgument].
+
+			 instBytes := self numBytesOf: rcvr.
+			 classFormat
+				caseOf: {
+				[self sixtyFourBitIndexableFormat]
+					-> [(instBytes anyMask: 7) ifTrue: [^PrimErrBadReceiver].
+						newFormat := classFormat].
+				[self firstLongFormat] 		
+					-> [(instBytes anyMask: 3) ifTrue: [^PrimErrBadReceiver].
+						newFormat := classFormat].
+				[self firstShortFormat] 		
+					-> [(instBytes anyMask: 1) ifTrue: [^PrimErrBadReceiver].
+						newFormat := classFormat + (2 - (instBytes >> 1) bitAnd: 1)].
+				[self firstByteFormat]
+					-> [newFormat := classFormat + (4 - instBytes bitAnd: 3)].
+				[self firstCompiledMethodFormat]
+					-> [classFormat ~= self firstCompiledMethodFormat ifTrue:
+							[^PrimErrInappropriate].
+						newFormat := instFormat] }
+				otherwise: "bits instances cannot be adopted by pointer-like classes..."
+					[^PrimErrInappropriate]].
+
 	self set: rcvr classIndexTo: classIndex formatTo: newFormat.
+
+	self assert: (self numBytesOf: rcvr) = (classFormat <= self lastPointerFormat
+											ifTrue: [instSlots * self bytesPerOop]
+											ifFalse: [instBytes]).
 	"ok"
 	^0
 ]
