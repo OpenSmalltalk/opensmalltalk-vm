@@ -1,7 +1,7 @@
 Class {
 	#name : #MemoryTests,
 	#superclass : #TestCase,
-	#category : 'VMMaker-Tests'
+	#category : #'VMMaker-Tests'
 }
 
 { #category : #debugger }

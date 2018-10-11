@@ -4,7 +4,7 @@ This subclass is for the IA32/x86 ABI.
 Class {
 	#name : #ThreadedIA32FFIPlugin,
 	#superclass : #ThreadedFFIPlugin,
-	#category : 'VMMaker-Plugins-FFI'
+	#category : #'VMMaker-Plugins-FFI'
 }
 
 { #category : #translation }

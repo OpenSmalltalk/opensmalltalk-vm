@@ -94,7 +94,7 @@ Class {
 		'VMSqueakClassIndices',
 		'VMStackFrameOffsets'
 	],
-	#category : 'VMMaker-Interpreter'
+	#category : #'VMMaker-Interpreter'
 }
 
 { #category : #'C translation' }
@@ -689,10 +689,19 @@ InterpreterPrimitives >> primitiveAdoptInstance [
 
 	err := objectMemory changeClassOf: arg to: rcvr.
 	err = 0
-		ifTrue: ["Flush at cache because rcvr's class has changed."
-				self flushAtCache.
-				self pop: self methodArgumentCount]
-		ifFalse: [self primitiveFailFor: err].
+		ifTrue:
+			["Flush at cache because rcvr's class has changed."
+			 self flushAtCache.
+			 self pop: self methodArgumentCount]
+		ifFalse:
+			["changeClassOf:to: answers errors as if rcvr (the class) is an argument..."
+			 err = PrimErrBadReceiver
+				ifTrue:
+					[err := PrimErrBadArgument]
+				ifFalse:
+					[err = PrimErrBadArgument ifTrue:
+						[err := PrimErrBadReceiver]].
+			 self primitiveFailFor: err].
 	^nil
 ]
 

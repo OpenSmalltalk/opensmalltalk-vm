@@ -57,7 +57,7 @@ Class {
 		'assertVEPAES',
 		'primTraceLog'
 	],
-	#category : 'VMMaker-InterpreterSimulation'
+	#category : #'VMMaker-InterpreterSimulation'
 }
 
 { #category : #'class initialization' }
@@ -708,7 +708,7 @@ StackInterpreterSimulator >> functionPointerFor: primIndex inClass: lookupClass 
 
 { #category : #'debugging traps' }
 StackInterpreterSimulator >> getErrorObjectFromPrimFailCode [
-	(primFailCode > 1 and: [(#(primitiveNew primitiveFetchNextMourner) includes: primitiveFunctionPointer) not]) ifTrue: [self halt].
+	(primFailCode > 1 and: [(#(primitiveNew primitiveFetchNextMourner primitiveAdoptInstance) includes: primitiveFunctionPointer) not]) ifTrue: [self halt].
 	^super getErrorObjectFromPrimFailCode
 ]
 

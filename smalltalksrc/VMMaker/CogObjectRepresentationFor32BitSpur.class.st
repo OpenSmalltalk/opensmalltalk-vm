@@ -7,7 +7,7 @@ Class {
 		'cePositive32BitValueOfTrampoline',
 		'cePositive32BitIntegerTrampoline'
 	],
-	#category : 'VMMaker-JIT'
+	#category : #'VMMaker-JIT'
 }
 
 { #category : #'accessing class hierarchy' }
@@ -279,17 +279,10 @@ CogObjectRepresentationFor32BitSpur >> genGetSizeOf: sourceReg into: destReg for
 	 fixed fields in formatReg.  Used by primitiveSize, primitiveAt, and primitiveAtPut"
 	<returnTypeC: #'AbstractInstruction *'>
 	| jumpNotIndexable
-	  jumpBytesDone jumpShortsDone jumpArrayDone jump32BitLongsDone
-	  jumpIsBytes jumpHasFixedFields jumpIsShorts jumpIsContext  |
+	  jumpBytesDone jumpShortsDone jumpArrayDone jump32BitLongsDone jump64BitLongsDone
+	  jumpIsBytes jumpHasFixedFields jumpIsShorts jumpIs64BitLongs jumpIsContext  |
 	<inline: true>
 	"c.f. StackInterpreter>>stSizeOf: SpurMemoryManager>>lengthOf:format: fixedFieldsOf:format:length:"
-	<var: #jumpIsBytes type: #'AbstractInstruction *'>
-	<var: #jumpIsShorts type: #'AbstractInstruction *'>
-	<var: #jumpIsContext type: #'AbstractInstruction *'>
-	<var: #jumpArrayDone type: #'AbstractInstruction *'>
-	<var: #jumpNotIndexable type: #'AbstractInstruction *'>
-	<var: #jumpHasFixedFields type: #'AbstractInstruction *'>
-	<var: #jump32BitLongsDone type: #'AbstractInstruction *'>
 
 	"formatReg := self formatOf: sourceReg"
 	self genGetFormatOf: sourceReg
@@ -324,6 +317,8 @@ CogObjectRepresentationFor32BitSpur >> genGetSizeOf: sourceReg into: destReg for
 	jumpIsShorts := cogit JumpGreaterOrEqual: 0.
 					cogit CmpCq: objectMemory firstLongFormat R: formatReg.
 	jump32BitLongsDone := cogit JumpGreaterOrEqual: 0.
+					cogit CmpCq: objectMemory sixtyFourBitIndexableFormat R: formatReg.
+	jumpIs64BitLongs := cogit JumpZero: 0.
 	"For now ignore 64-bit indexability."
 	jumpNotIndexable jmpTarget: cogit Label.
 	jumpNotIndexable := cogit Jump: 0.
@@ -339,6 +334,10 @@ CogObjectRepresentationFor32BitSpur >> genGetSizeOf: sourceReg into: destReg for
 		cogit AndCq: 1 R: formatReg.
 		cogit SubR: formatReg R: destReg.
 	jumpShortsDone := cogit Jump: 0.
+
+	jumpIs64BitLongs jmpTarget:
+		(cogit LogicalShiftRightCq: 1 R: destReg).
+	jump64BitLongsDone := cogit Jump: 0.
 
 	"formatReg contains fmt, now up for grabs.
 	 destReg contains numSlots, precious.
@@ -358,10 +357,11 @@ CogObjectRepresentationFor32BitSpur >> genGetSizeOf: sourceReg into: destReg for
 		SubR: formatReg R: destReg.
 
 	jumpArrayDone jmpTarget:
+	(jump64BitLongsDone jmpTarget:
 	(jump32BitLongsDone jmpTarget:
 	(jumpShortsDone jmpTarget:
 	(jumpBytesDone jmpTarget:
-		cogit Label))).
+		cogit Label)))).
 	aBinaryBlock value: jumpNotIndexable value: jumpIsContext
 ]
 
