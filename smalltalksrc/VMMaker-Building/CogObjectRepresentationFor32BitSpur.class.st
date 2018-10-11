@@ -856,7 +856,7 @@ CogObjectRepresentationFor32BitSpur >> genPrimitiveAtSigned: signedVersion [
 	  jumpIsBytes jumpIsShorts jumpIsWords jumpIsMethod
 	  jumpWordTooBig jumpIsArray jumpHasFixedFields jumpIsContext
 	  jumpBytesOutOfBounds jumpShortsOutOfBounds jumpWordsOutOfBounds
-	  jumpMethodOutOfBounds jumpArrayOutOfBounds jumpFixedFieldsOutOfBounds |
+	  jumpArrayOutOfBounds jumpFixedFieldsOutOfBounds |
 	"c.f. StackInterpreter>>stSizeOf: SpurMemoryManager>>lengthOf:format: fixedFieldsOf:format:length:"
 
 	nSlotsOrBytesReg := ClassReg.
@@ -984,19 +984,17 @@ CogObjectRepresentationFor32BitSpur >> genPrimitiveAtSigned: signedVersion [
 	self getLiteralCountOf: ReceiverResultReg plusOne: true inBytes: true into: nSlotsOrBytesReg scratch: TempReg.
 	cogit CmpR: Arg1Reg R: nSlotsOrBytesReg.
 	cogit JumpBelow: methodInBounds.
-	jumpMethodOutOfBounds := cogit Jump: 0.
 
 	jumpWordTooBig jmpTarget:
 	(jumpFixedFieldsOutOfBounds jmpTarget:
 	(jumpArrayOutOfBounds jmpTarget:
 	(jumpBytesOutOfBounds jmpTarget:
-	(jumpMethodOutOfBounds jmpTarget:
 	(jumpShortsOutOfBounds jmpTarget:
 	(jumpWordsOutOfBounds jmpTarget:
 	(jumpNotIndexable jmpTarget:
 	(jumpIsContext jmpTarget:
 	(jumpBadIndex jmpTarget:
-	(jumpImmediate jmpTarget: cogit Label)))))))))).
+	(jumpImmediate jmpTarget: cogit Label))))))))).
 
 	^0 "Can't be complete because of contexts."
 ]
