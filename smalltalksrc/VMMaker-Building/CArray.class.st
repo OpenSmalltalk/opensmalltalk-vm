@@ -57,7 +57,9 @@ CArray >> asCArrayAccessor [
 
 { #category : #converting }
 CArray >> asDoubleFloatAccessor [
-	^CFloatArray adoptInstance: (self shallowCopy unitSize: 8)
+	| accessor |
+	CFloatArray adoptInstance: (accessor := self shallowCopy unitSize: 8).
+	^accessor
 ]
 
 { #category : #converting }
@@ -68,7 +70,9 @@ CArray >> asInteger [
 
 { #category : #converting }
 CArray >> asSingleFloatAccessor [
-	^CFloatArray adoptInstance: (self shallowCopy unitSize: 4)
+	| accessor |
+	CFloatArray adoptInstance: (accessor := self shallowCopy unitSize: 4).
+	^accessor
 ]
 
 { #category : #accessing }

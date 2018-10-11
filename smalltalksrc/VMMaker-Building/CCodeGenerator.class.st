@@ -672,8 +672,9 @@ CCodeGenerator >> cFunctionNameFor: aSelector [
 		ifAbsent:
 			[| cSelector |
 			 cSelector := aSelector copyWithout: $:.
-			 [cSelector last = $_] whileTrue:
-				[cSelector := cSelector allButLast].
+			 aSelector last = $: ifTrue:
+				[[cSelector last = $_] whileTrue:
+					[cSelector := cSelector allButLast]].
 			 cSelector]
 ]
 
