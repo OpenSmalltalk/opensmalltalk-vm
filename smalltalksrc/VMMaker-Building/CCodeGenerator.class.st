@@ -2150,8 +2150,9 @@ CCodeGenerator >> generateIfFalseAsArgument: msgNode on: aStream indent: level [
 			aStream crtab: level + 1; nextPutAll: ': 0)']
 		ifNotNil:
 			[:const|
-			const ifFalse:
-				[msgNode args first emitCCodeAsArgumentOn: aStream level: level generator: self]]
+			const
+				ifFalse: [msgNode args first emitCCodeAsArgumentOn: aStream level: level generator: self]
+				ifTrue: [aStream nextPutAll: (self cLiteralFor: nil)]]
 ]
 
 { #category : #'C translation' }
@@ -2292,6 +2293,8 @@ CCodeGenerator >> generateIfNotNilAsArgument: msgNode on: aStream indent: level 
 			 aStream crtab: level + 1; nextPut: $?; space.
 			 msgNode args first emitCCodeAsArgumentOn: aStream level: level + 2 generator: self.
 			 aStream crtab: level + 1; nextPutAll: ': 0)']
+		ifTrue:
+			[aStream nextPutAll: (self cLiteralFor: nil)]
 ]
 
 { #category : #'C translation' }
@@ -2359,8 +2362,9 @@ CCodeGenerator >> generateIfTrueAsArgument: msgNode on: aStream indent: level [
 			 aStream crtab: level + 1; nextPutAll: ': 0)']
 		ifNotNil:
 			[:const|
-			const ifTrue:
-				[msgNode args first emitCCodeAsArgumentOn: aStream level: level generator: self]]
+			const
+				ifTrue: [msgNode args first emitCCodeAsArgumentOn: aStream level: level generator: self]
+				ifFalse: [aStream nextPutAll: (self cLiteralFor: nil)]]
 ]
 
 { #category : #'C translation' }
@@ -2399,8 +2403,10 @@ CCodeGenerator >> generateIfTrueIfFalseAsArgument: msgNode on: aStream indent: l
 				 aStream nextPut: $)]]
 		ifNotNil:
 			[:const|
-			(const ifTrue: [msgNode args first] ifFalse: [msgNode args last])
-				emitCCodeAsArgumentOn: aStream level: level generator: self]
+			(const
+				ifTrue: [msgNode args first]
+				ifFalse: [msgNode args last])
+					emitCCodeAsArgumentOn: aStream level: level generator: self]
 ]
 
 { #category : #'C translation' }

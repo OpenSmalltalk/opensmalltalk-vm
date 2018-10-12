@@ -313,10 +313,12 @@ StackInterpreterPrimitives >> primitiveAllVMParameters: paramsArraySize [
 		withValue: (objectMemory integerObjectOf: (self cCode: 'VM_PROXY_MINOR' inSmalltalk: [self class vmProxyMinorVersion])).	
 	objectMemory storePointerUnchecked: 71	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory statMarkUsecs + 500 // 1000).
 	objectMemory storePointerUnchecked: 72	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory statSweepUsecs + 500 // 1000).
-	objectMemory storePointerUnchecked: 73	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory statMaxAllocSegmentTime + 500 // 1000).
+	objectMemory hasSpurMemoryManagerAPI ifTrue:
+		[objectMemory
+			storePointerUnchecked: 73	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory statMaxAllocSegmentTime + 500 // 1000)].
+
 	objectMemory beRootIfOld: result.
-	self pop: 1 thenPush: result.
-	^nil
+	self methodReturnValue: result
 ]
 
 { #category : #'object access primitives' }
@@ -928,100 +930,96 @@ StackInterpreterPrimitives >> primitiveFullGC [
 
 { #category : #'system control primitives' }
 StackInterpreterPrimitives >> primitiveGetVMParameter: arg [ 
-	"See primitiveVMParameter method comment"
-	| result |
-	result := objectMemory nilObject.
-	arg = 1		ifTrue: [result := self positiveMachineIntegerFor: objectMemory oldSpaceSize].
-	arg = 2		ifTrue: [result := objectMemory integerObjectOf: objectMemory newSpaceSize].
-	arg = 3		ifTrue: [result := self positiveMachineIntegerFor: objectMemory totalMemorySize].
-	arg = 4		ifTrue: [result := objectMemory nilObject "was allocationCount"].
-	arg = 5		ifTrue: [result := objectMemory nilObject "was allocationsBetweenGCs"].
-	arg = 6		ifTrue: [result := objectMemory integerObjectOf: objectMemory tenuringThreshold].
-	arg = 7		ifTrue: [result := objectMemory integerObjectOf: objectMemory statFullGCs].
-	arg = 8		ifTrue: [result := objectMemory integerObjectOf: objectMemory statFullGCUsecs + 500 // 1000].
-	arg = 9		ifTrue: [result := objectMemory integerObjectOf: (objectMemory hasSpurMemoryManagerAPI
-																	ifTrue: [objectMemory statScavenges]
-																	ifFalse: [objectMemory statIncrGCs])].
-	arg = 10	ifTrue: [result := objectMemory integerObjectOf: (objectMemory hasSpurMemoryManagerAPI
-																	ifTrue: [objectMemory statScavengeGCUsecs]
-																	ifFalse: [objectMemory statIncrGCUsecs]) + 500 // 1000].
-	arg = 11	ifTrue: [result := objectMemory integerObjectOf: objectMemory statTenures].
-	(arg between: 12 and: 15) ifTrue: [result := ConstZero]. "Was JITTER VM info"
-	arg = 16	ifTrue: [result := self positive64BitIntegerFor: statIdleUsecs].
-	arg = 17	ifTrue: [result := (SistaVM and: [self isCog])
-									ifTrue: [objectMemory floatObjectOf: self getCogCodeZoneThreshold]
-									ifFalse: [ConstZero]].
-	arg = 18	ifTrue: [result := objectMemory hasSpurMemoryManagerAPI
-									ifTrue: [objectMemory integerObjectOf: objectMemory statCompactionUsecs + 500 // 1000]
-									ifFalse: [ConstZero]].
-	arg = 19	ifTrue: [result := objectMemory hasSpurMemoryManagerAPI
-									ifTrue: [objectMemory integerObjectOf: objectMemory scavengeThresholdAsExtent]
-									ifFalse: [ConstZero]].
-	arg = 20	ifTrue: [result := objectMemory positive64BitIntegerFor: self ioUTCStartMicroseconds].
-	arg = 21	ifTrue: [result := objectMemory integerObjectOf: objectMemory rootTableCount].
-	arg = 22	ifTrue: [result := objectMemory integerObjectOf: objectMemory statRootTableOverflows].
-	arg = 23	ifTrue: [result := objectMemory integerObjectOf: extraVMMemory].
-	arg = 24	ifTrue: [result := objectMemory integerObjectOf: objectMemory shrinkThreshold].
-	arg = 25	ifTrue: [result := objectMemory integerObjectOf: objectMemory growHeadroom].
-	arg = 26	ifTrue: [result := objectMemory integerObjectOf: self ioHeartbeatMilliseconds].
-	arg = 27	ifTrue: [result := objectMemory integerObjectOf: objectMemory statMarkCount].
-	arg = 28	ifTrue: [result := objectMemory integerObjectOf: objectMemory statSweepCount].
-	arg = 29	ifTrue: [result := objectMemory integerObjectOf: objectMemory statMkFwdCount].
-	arg = 30	ifTrue: [result := objectMemory integerObjectOf: objectMemory statCompMoveCount].
-	arg = 31	ifTrue: [result := objectMemory integerObjectOf: objectMemory statGrowMemory].
-	arg = 32	ifTrue: [result := objectMemory integerObjectOf: objectMemory statShrinkMemory].
-	arg = 33	ifTrue: [result := objectMemory integerObjectOf: objectMemory statRootTableCount].
-	arg = 34	ifTrue: [result := objectMemory hasSpurMemoryManagerAPI "was statAllocationCount"
-									ifTrue: [objectMemory positive64BitIntegerFor: objectMemory currentAllocatedBytes]
-									ifFalse: [objectMemory nilObject]].
-	arg = 35	ifTrue: [result := objectMemory integerObjectOf: objectMemory statSurvivorCount].
-	arg = 36	ifTrue: [result := objectMemory integerObjectOf: (self microsecondsToMilliseconds: objectMemory statGCEndUsecs)].
-	arg = 37	ifTrue: [result := objectMemory integerObjectOf: objectMemory statSpecialMarkCount].
-	arg = 38	ifTrue: [result := objectMemory integerObjectOf: objectMemory statIGCDeltaUsecs + 500 // 1000].
-	arg = 39	ifTrue: [result := objectMemory integerObjectOf: statPendingFinalizationSignals].
-	arg = 40	ifTrue: [result := objectMemory integerObjectOf: objectMemory wordSize].
-	arg = 41	ifTrue: [result := objectMemory integerObjectOf: self imageFormatVersion].
-	arg = 42	ifTrue: [result := objectMemory integerObjectOf: numStackPages].
-	arg = 43	ifTrue: [result := objectMemory integerObjectOf: desiredNumStackPages].
-	arg = 44	ifTrue: [result := objectMemory integerObjectOf: objectMemory edenBytes].
-	arg = 45	ifTrue: [result := objectMemory integerObjectOf: desiredEdenBytes].
-	arg = 46	ifTrue: [result := self getCogCodeSize].
-	arg = 47	ifTrue: [result := self getDesiredCogCodeSize].
-	arg = 48	ifTrue: [result := self getCogVMFlags].
-	arg = 49	ifTrue: [result := objectMemory integerObjectOf: self ioGetMaxExtSemTableSize].
-	arg = 52	ifTrue: [result := objectMemory integerObjectOf: objectMemory rootTableCapacity].
-	(arg = 53
-	 and: [objectMemory hasSpurMemoryManagerAPI]) ifTrue:
-		[result := objectMemory integerObjectOf: objectMemory numSegments].
-	(arg = 54
-	 and: [objectMemory hasSpurMemoryManagerAPI]) ifTrue:
-		[result := objectMemory integerObjectOf: objectMemory freeSize].
-	(arg = 55
-	 and: [objectMemory hasSpurMemoryManagerAPI]) ifTrue:
-		[result := objectMemory floatObjectOf: objectMemory getHeapGrowthToSizeGCRatio].
-	arg = 56	ifTrue: [result := self positive64BitIntegerFor: statProcessSwitch].
-	arg = 57	ifTrue: [result := self positive64BitIntegerFor: statIOProcessEvents].
-	arg = 58	ifTrue: [result := self positive64BitIntegerFor: statForceInterruptCheck].
-	arg = 59	ifTrue: [result := self positive64BitIntegerFor: statCheckForEvents].
-	arg = 60	ifTrue: [result := self positive64BitIntegerFor: statStackOverflow].
-	arg = 61	ifTrue: [result := self positive64BitIntegerFor: statStackPageDivorce].
-	arg = 62	ifTrue: [result := self getCodeCompactionCount].
-	arg = 63	ifTrue: [result := self getCodeCompactionMSecs].
-	arg = 64	ifTrue: [result := self getCogMethodCount].
-	arg = 65	ifTrue: [result := self getCogVMFeatureFlags].
-	arg = 66	ifTrue: [result := objectMemory integerObjectOf: self stackPageByteSize].
-	(arg = 67
-	 and: [objectMemory hasSpurMemoryManagerAPI]) ifTrue:
-		[result := objectMemory integerObjectOf: objectMemory maxOldSpaceSize].
-	arg = 68 ifTrue: [result := objectMemory floatObjectOf: stackPages statAverageLivePagesWhenMapping].
-	arg = 69 ifTrue: [result := objectMemory integerObjectOf: stackPages statMaxPageCountWhenMapping].
-	arg = 70 ifTrue: [result := self integerObjectOf: (self cCode: 'VM_PROXY_MAJOR' inSmalltalk: [self class vmProxyMajorVersion])].
-	arg = 71 ifTrue: [result := self integerObjectOf: (self cCode: 'VM_PROXY_MINOR' inSmalltalk: [self class vmProxyMinorVersion])].
-	arg = 72 ifTrue: [result := objectMemory integerObjectOf: objectMemory statMarkUsecs + 500 // 1000].
-	arg = 73 ifTrue: [result := objectMemory integerObjectOf: objectMemory statSweepUsecs + 500 // 1000].
-	arg = 74 ifTrue: [result := objectMemory integerObjectOf: objectMemory statMaxAllocSegmentTime + 500 // 1000].
-	self pop: 2 thenPush: result.
-	^nil
+	"See primitiveVMParameter method comment.
+	 N.B. written as a returning case to avoid branch limits in the V3 bytecode set."
+	arg caseOf: {
+			[1]  ->	[^self positiveMachineIntegerFor: objectMemory oldSpaceSize].
+			[2]  ->	[^objectMemory integerObjectOf: objectMemory newSpaceSize].
+			[3]  ->	[^self positiveMachineIntegerFor: objectMemory totalMemorySize].
+			[6]  ->	[^objectMemory integerObjectOf: objectMemory tenuringThreshold].
+			[7]  ->	[^objectMemory integerObjectOf: objectMemory statFullGCs].
+			[8]  ->	[^objectMemory integerObjectOf: objectMemory statFullGCUsecs + 500 // 1000].
+			[9]  ->	[^objectMemory integerObjectOf: (objectMemory hasSpurMemoryManagerAPI
+														ifTrue: [objectMemory statScavenges]
+														ifFalse: [objectMemory statIncrGCs])].
+			[10] ->	[^objectMemory integerObjectOf: (objectMemory hasSpurMemoryManagerAPI
+														ifTrue: [objectMemory statScavengeGCUsecs]
+														ifFalse: [objectMemory statIncrGCUsecs]) + 500 // 1000].
+			[11] ->	[^objectMemory integerObjectOf: objectMemory statTenures].
+			[12] ->	[^ConstZero]. "Was JITTER VM info"
+			[13] ->	[^ConstZero]. "Was JITTER VM info"
+			[14] ->	[^ConstZero]. "Was JITTER VM info"
+			[15] ->	[^ConstZero]. "Was JITTER VM info"
+			[16] ->	[^self positive64BitIntegerFor: statIdleUsecs].
+			[17] ->	[^(SistaVM and: [self isCog])
+						ifTrue: [objectMemory floatObjectOf: self getCogCodeZoneThreshold]
+						ifFalse: [ConstZero]].
+			[18] ->	[^objectMemory hasSpurMemoryManagerAPI
+						ifTrue: [objectMemory integerObjectOf: objectMemory statCompactionUsecs + 500 // 1000]
+						ifFalse: [ConstZero]].
+			[19] ->	[^objectMemory hasSpurMemoryManagerAPI
+						ifTrue: [objectMemory integerObjectOf: objectMemory scavengeThresholdAsExtent]
+						ifFalse: [ConstZero]].
+			[20] ->	[^objectMemory positive64BitIntegerFor: self ioUTCStartMicroseconds].
+			[21] ->	[^objectMemory integerObjectOf: objectMemory rootTableCount].
+			[22] ->	[^objectMemory integerObjectOf: objectMemory statRootTableOverflows].
+			[23] ->	[^objectMemory integerObjectOf: extraVMMemory].
+			[24] ->	[^objectMemory integerObjectOf: objectMemory shrinkThreshold].
+			[25] ->	[^objectMemory integerObjectOf: objectMemory growHeadroom].
+			[26] ->	[^objectMemory integerObjectOf: self ioHeartbeatMilliseconds].
+			[27] ->	[^objectMemory integerObjectOf: objectMemory statMarkCount].
+			[28] ->	[^objectMemory integerObjectOf: objectMemory statSweepCount].
+			[29] ->	[^objectMemory integerObjectOf: objectMemory statMkFwdCount].
+			[30] ->	[^objectMemory integerObjectOf: objectMemory statCompMoveCount].
+			[31] ->	[^objectMemory integerObjectOf: objectMemory statGrowMemory].
+			[32] ->	[^objectMemory integerObjectOf: objectMemory statShrinkMemory].
+			[33] ->	[^objectMemory integerObjectOf: objectMemory statRootTableCount].
+			[34] ->	[^objectMemory hasSpurMemoryManagerAPI ifTrue:"was statAllocationCount"
+						[objectMemory positive64BitIntegerFor: objectMemory currentAllocatedBytes]].
+			[35] ->	[^objectMemory integerObjectOf: objectMemory statSurvivorCount].
+			[36] ->	[^objectMemory integerObjectOf: (self microsecondsToMilliseconds: objectMemory statGCEndUsecs)].
+			[37] ->	[^objectMemory integerObjectOf: objectMemory statSpecialMarkCount].
+			[38] ->	[^objectMemory integerObjectOf: objectMemory statIGCDeltaUsecs + 500 // 1000].
+			[39] ->	[^objectMemory integerObjectOf: statPendingFinalizationSignals].
+			[40] ->	[^objectMemory integerObjectOf: objectMemory wordSize].
+			[41] ->	[^objectMemory integerObjectOf: self imageFormatVersion].
+			[42] ->	[^objectMemory integerObjectOf: numStackPages].
+			[43] ->	[^objectMemory integerObjectOf: desiredNumStackPages].
+			[44] ->	[^objectMemory integerObjectOf: objectMemory edenBytes].
+			[45] ->	[^objectMemory integerObjectOf: desiredEdenBytes].
+			[46] ->	[^self getCogCodeSize].
+			[47] ->	[^self getDesiredCogCodeSize].
+			[48] ->	[^self getCogVMFlags].
+			[49] ->	[^objectMemory integerObjectOf: self ioGetMaxExtSemTableSize].
+			[52] ->	[^objectMemory integerObjectOf: objectMemory rootTableCapacity].
+			[53] ->	[^objectMemory hasSpurMemoryManagerAPI ifTrue:
+						[objectMemory integerObjectOf: objectMemory numSegments]].
+			[54] ->	[^objectMemory hasSpurMemoryManagerAPI ifTrue:
+						[objectMemory integerObjectOf: objectMemory freeSize]].
+			[55] ->	[^objectMemory hasSpurMemoryManagerAPI ifTrue:
+						[objectMemory floatObjectOf: objectMemory getHeapGrowthToSizeGCRatio]].
+			[56] ->	[^self positive64BitIntegerFor: statProcessSwitch].
+			[57] ->	[^self positive64BitIntegerFor: statIOProcessEvents].
+			[58] ->	[^self positive64BitIntegerFor: statForceInterruptCheck].
+			[59] ->	[^self positive64BitIntegerFor: statCheckForEvents].
+			[60] ->	[^self positive64BitIntegerFor: statStackOverflow].
+			[61] ->	[^self positive64BitIntegerFor: statStackPageDivorce].
+			[62] ->	[^self getCodeCompactionCount].
+			[63] ->	[^self getCodeCompactionMSecs].
+			[64] ->	[^self getCogMethodCount].
+			[65] ->	[^self getCogVMFeatureFlags].
+			[66] ->	[^objectMemory integerObjectOf: self stackPageByteSize].
+			[67] ->	[^objectMemory hasSpurMemoryManagerAPI ifTrue:
+						[objectMemory integerObjectOf: objectMemory maxOldSpaceSize]].
+			[68] ->	[^objectMemory floatObjectOf: stackPages statAverageLivePagesWhenMapping].
+			[69] ->	[^objectMemory integerObjectOf: stackPages statMaxPageCountWhenMapping].
+			[70] ->	[^self integerObjectOf: (self cCode: 'VM_PROXY_MAJOR' inSmalltalk: [self class vmProxyMajorVersion])].
+			[71] ->	[^self integerObjectOf: (self cCode: 'VM_PROXY_MINOR' inSmalltalk: [self class vmProxyMinorVersion])].
+			[72] ->	[^objectMemory integerObjectOf: objectMemory statMarkUsecs + 500 // 1000].
+			[73] ->	[^objectMemory integerObjectOf: objectMemory statSweepUsecs + 500 // 1000].
+			[74] ->	[^objectMemory hasSpurMemoryManagerAPI ifTrue:
+						[objectMemory integerObjectOf: objectMemory statMaxAllocSegmentTime + 500 // 1000]] }
+		otherwise: [^nil]
 ]
 
 { #category : #'memory space primitives' }
@@ -1278,113 +1276,106 @@ StackInterpreterPrimitives >> primitiveSetGCSemaphore [
 ]
 
 { #category : #'system control primitives' }
-StackInterpreterPrimitives >> primitiveSetVMParameter: index arg: arg [
+StackInterpreterPrimitives >> primitiveSetVMParameter: index arg: argOop [
 	"See primitiveVMParameter method comment"
-	| result |
+	| arg result |
+
+	"argOop read & checks; in most cases this is an integer parameter.  In some it is either an integer or a Float"
+	(index = 17 or: [index = 55 or: [index = 68]])
+		ifTrue:
+			[((objectMemory isFloatInstance: argOop)
+			  or: [objectMemory isIntegerObject: argOop]) ifFalse:
+				[^self primitiveFailFor: PrimErrBadArgument]]
+		ifFalse:
+			[(objectMemory isIntegerObject: argOop) ifFalse:
+				[^self primitiveFailFor: PrimErrBadArgument].
+			 arg := objectMemory integerValueOf: argOop].
+
 	"assume failure, then set success for handled indices"
 	self primitiveFailFor: PrimErrBadArgument.
-	objectMemory hasSpurMemoryManagerAPI ifFalse:
-		[index = 5 ifTrue: "Was:
-						result := allocationsBetweenGCs.
-						allocationsBetweenGCs := arg."
-			"Ignore for now, because old images won't start up otherwise.
-			 See 44 & 45 for eden size setting."
-			[result := objectMemory nilObject.
-			self initPrimCall]].
-	index = 6 ifTrue:
-		[result := objectMemory integerObjectOf: objectMemory tenuringThreshold.
-		 primFailCode := objectMemory tenuringThreshold: arg].
-	index = 11	ifTrue:
-		[result := objectMemory integerObjectOf: objectMemory statTenures.
-		 arg >= 0 ifTrue:
-			[objectMemory statTenures: arg.
-			 self initPrimCall]].
-	(SistaVM and: [self isCog and: [index = 17]]) ifTrue:
-		[result := objectMemory floatObjectOf: self getCogCodeZoneThreshold.
-		 primFailCode := self setCogCodeZoneThreshold: (self noInlineLoadFloatOrIntFrom: arg)].
-	index = 23 ifTrue:
-		[result := objectMemory integerObjectOf: extraVMMemory.
-		extraVMMemory := arg.
-		self initPrimCall].
-	index = 24 ifTrue:
-		[result := objectMemory integerObjectOf: objectMemory shrinkThreshold.
-		arg > 0 ifTrue:
-			[objectMemory shrinkThreshold: arg.
-			self initPrimCall]].
-	index = 25 ifTrue:
-		[result := objectMemory integerObjectOf: objectMemory growHeadroom.
-		arg > 0 ifTrue:
-			[objectMemory growHeadroom: arg.
-			self initPrimCall]].
-	index = 26 ifTrue:
-		[arg >= 0 ifTrue: "0 turns off the heartbeat"
-			[result := objectMemory integerObjectOf: self ioHeartbeatMilliseconds.
-			self ioSetHeartbeatMilliseconds: arg.
-			self initPrimCall]].
-	(index = 34 and: [objectMemory hasSpurMemoryManagerAPI]) ifTrue:"was statAllocationCount; now statAllocatedBytes"
-		[arg >= 0 ifTrue:
-			[result := objectMemory positive64BitIntegerFor: objectMemory currentAllocatedBytes.
-			objectMemory setCurrentAllocatedBytesTo: arg.
-			self initPrimCall]].
-	index = 43 ifTrue:
-		[(arg >= 0 and: [arg <= 65535]) ifTrue:
-			[result := objectMemory integerObjectOf: desiredNumStackPages.
-			desiredNumStackPages := arg.
-			self initPrimCall]].
-	index = 45 ifTrue:
-		[(arg >= 0) ifTrue:
-			[result := objectMemory integerObjectOf: desiredEdenBytes.
-			desiredEdenBytes := arg.
-			self initPrimCall]].
-	(index = 47 and: [self isCog]) ifTrue:
-		[(arg >= 0 and: [arg <= self maxCogCodeSize]) ifTrue:
-			[result := objectMemory integerObjectOf: self getDesiredCogCodeSize.
-			self setDesiredCogCodeSize: arg.
-			self initPrimCall]].
-	index = 48 ifTrue:
-		[(arg >= 0) ifTrue:
-			[result := objectMemory integerObjectOf: self getCogVMFlags.
-			self initPrimCall. "i.e. setCogVMFlags: can fail"
-			self setCogVMFlags: arg]].
-	index = 49 ifTrue:
-		[(arg >= 0 and: [arg <= 65535]) ifTrue:
-			[result := objectMemory integerObjectOf: self ioGetMaxExtSemTableSize.
-			self initPrimCall. "i.e. ioSetMaxExtSemTableSize: is allowed to fail"
-			self setMaxExtSemSizeTo: arg]].
+	index caseOf: {
+		[5] ->	[objectMemory hasSpurMemoryManagerAPI ifFalse:
+					["Was:
+							result := allocationsBetweenGCs.
+							allocationsBetweenGCs := arg."
+						"Ignore for now, because old images won't start up otherwise.
+						 See 45 for eden size setting."
+					 result := objectMemory nilObject.
+					 self initPrimCall]].
+		[6] ->	[result := objectMemory integerObjectOf: objectMemory tenuringThreshold.
+				 primFailCode := objectMemory tenuringThreshold: arg].
+		[11] ->	[arg >= 0 ifTrue:
+					[result := objectMemory integerObjectOf: objectMemory statTenures.
+					 objectMemory statTenures: arg.
+					 self initPrimCall]].
+		[17] ->	[(SistaVM and: [self isCog]) ifTrue:
+					[result := objectMemory floatObjectOf: self getCogCodeZoneThreshold.
+					 primFailCode := self setCogCodeZoneThreshold: (self noInlineLoadFloatOrIntFrom: argOop)]].
+		[23] ->	[result := objectMemory integerObjectOf: extraVMMemory.
+				 extraVMMemory := arg.
+				 self initPrimCall].
+		[24] ->	[arg > 0 ifTrue:
+					[result := objectMemory integerObjectOf: objectMemory shrinkThreshold.
+					 objectMemory shrinkThreshold: arg.
+					 self initPrimCall]].
+		[25] ->	[arg > 0 ifTrue:
+					[result := objectMemory integerObjectOf: objectMemory growHeadroom.
+					 objectMemory growHeadroom: arg.
+					 self initPrimCall]].
+		[26] ->	[arg >= 0 ifTrue: "0 turns off the heartbeat"
+					[result := objectMemory integerObjectOf: self ioHeartbeatMilliseconds.
+					 self ioSetHeartbeatMilliseconds: arg.
+					 self initPrimCall]].
+		[34] ->	[(objectMemory hasSpurMemoryManagerAPI "was statAllocationCount; now statAllocatedBytes"
+				  and: [arg >= 0]) ifTrue:
+					[result := objectMemory positive64BitIntegerFor: objectMemory currentAllocatedBytes.
+					 objectMemory setCurrentAllocatedBytesTo: arg.
+					 self initPrimCall]].
+		[43] ->	[(arg between: 0 and: 65535) ifTrue:
+					[result := objectMemory integerObjectOf: desiredNumStackPages.
+					 desiredNumStackPages := arg.
+					 self initPrimCall]].
+		[45] ->	[arg >= 0 ifTrue:
+					[result := objectMemory integerObjectOf: desiredEdenBytes.
+					 desiredEdenBytes := arg.
+					 self initPrimCall]].
+		[47] ->	[(self isCog
+				  and: [arg between: 0 and: self maxCogCodeSize]) ifTrue:
+					[result := objectMemory integerObjectOf: self getDesiredCogCodeSize.
+					 self setDesiredCogCodeSize: arg.
+					 self initPrimCall]].
+		[48] ->	[arg >= 0 ifTrue:
+					[result := objectMemory integerObjectOf: self getCogVMFlags.
+					 self initPrimCall. "i.e. setCogVMFlags: can fail"
+					 self setCogVMFlags: arg]].
+		[49] ->	[(arg between: 0 and: 65535) ifTrue:
+					[result := objectMemory integerObjectOf: self ioGetMaxExtSemTableSize.
+					 self initPrimCall. "i.e. ioSetMaxExtSemTableSize: is allowed to fail"
+					 self setMaxExtSemSizeTo: arg]].
+		[55] ->	[objectMemory hasSpurMemoryManagerAPI ifTrue:
+					[result := objectMemory floatObjectOf: objectMemory getHeapGrowthToSizeGCRatio.
+					 primFailCode := objectMemory setHeapGrowthToSizeGCRatio: (self noInlineLoadFloatOrIntFrom: argOop)]].
+		[67] ->	[(arg >= 0
+				  and: [objectMemory hasSpurMemoryManagerAPI]) ifTrue:
+					[result := objectMemory integerObjectOf: objectMemory maxOldSpaceSize.
+					 primFailCode := objectMemory setMaxOldSpaceSize: arg]].
+		[68] ->	[result := objectMemory floatObjectOf: stackPages statAverageLivePagesWhenMapping.
+				 self initPrimCall. "i.e. statAverageLivePagesWhenMapping: is allowed to fail"
+				 stackPages statAverageLivePagesWhenMapping: (self noInlineLoadFloatOrIntFrom: argOop)].
+		[69] ->	[arg >= 0 ifTrue:
+					[result := objectMemory integerObjectOf: stackPages statMaxPageCountWhenMapping.
+					 stackPages statMaxPageCountWhenMapping: arg.
+					 self initPrimCall]].
+		[74] ->	[(arg >= 0
+				  and: [objectMemory hasSpurMemoryManagerAPI]) ifTrue:
+					[result := objectMemory integerObjectOf: objectMemory statMaxAllocSegmentTime + 500 // 1000.
+					 stackPages statMaxAllocSegmentTime: arg. "usually 0"
+					 self initPrimCall]] }
+		otherwise: [].
 
-	(index = 55
-	 and: [objectMemory hasSpurMemoryManagerAPI]) ifTrue:
-		[result := objectMemory floatObjectOf: objectMemory getHeapGrowthToSizeGCRatio.
-		 primFailCode := objectMemory setHeapGrowthToSizeGCRatio: (self noInlineLoadFloatOrIntFrom: arg)].
-
-	(index = 67
-	 and: [arg >= 0
-	 and: [objectMemory hasSpurMemoryManagerAPI]]) ifTrue:
-		[result := objectMemory integerObjectOf: objectMemory maxOldSpaceSize.
-		 primFailCode := objectMemory setMaxOldSpaceSize: arg].
-
-	index = 68 ifTrue:
-		[result := objectMemory floatObjectOf: stackPages statAverageLivePagesWhenMapping.
-		 self initPrimCall. "i.e. statAverageLivePagesWhenMapping: is allowed to fail"
-		 stackPages statAverageLivePagesWhenMapping: (self noInlineLoadFloatOrIntFrom: arg)].
-
-	(index = 69
-	 and: [arg >= 0]) ifTrue:
-		[result := objectMemory integerObjectOf: stackPages statMaxPageCountWhenMapping.
-		 stackPages statMaxPageCountWhenMapping: arg.
-		 self initPrimCall].
-	
-	(index = 74
-	 and: [arg >= 0]) ifTrue:
-		[result := objectMemory integerObjectOf: objectMemory statMaxAllocSegmentTime + 500 // 1000.
-		 stackPages statMaxAllocSegmentTime: arg. "usually 0"
-		 self initPrimCall].
-
-	self successful ifTrue:
-		[self pop: 3 thenPush: result.  "return old value"
-		^nil].
-
-	self primitiveFailFor: PrimErrInappropriate  "attempting to write a read-only or non-existent parameter"
+	self successful
+		ifTrue: [self methodReturnValue: result]  "return old value"
+		ifFalse: [self primitiveFailFor: PrimErrInappropriate] "attempting to write a read-only or non-existent parameter"
 ]
 
 { #category : #'system control primitives' }
@@ -1866,38 +1857,28 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		71	the vmProxyMinorVersion (the interpreterProxy VM_MINOR_VERSION)
 		72 total milliseconds in full GCs Mark phase since startup (read-only)
 		73 total milliseconds in full GCs Sweep phase since startup (read-only, can be 0 depending on compactors)
-		74 Maximum pause time due to segment allocation
+		74 maximum pause time due to segment allocation
 		
 	Note: Thanks to Ian Piumarta for this primitive."
 
-	| paramsArraySize arg index |
+	| paramsArraySize index |
 	paramsArraySize := 74.
 	argumentCount = 0 ifTrue: [^self primitiveAllVMParameters: paramsArraySize].
 	argumentCount > 2 ifTrue: [^self primitiveFailFor: PrimErrBadNumArgs].
 	
 	"index read & checks"
-	index := argumentCount = 1 ifTrue: [self stackTop] ifFalse: [self stackValue: 1].
+	index := self stackValue: (argumentCount = 1 ifTrue: [0] ifFalse: [1]).
 	(objectMemory isIntegerObject: index) ifFalse: [^self primitiveFailFor: PrimErrBadArgument].
 	index := objectMemory integerValueOf: index.
 	(index < 1 or: [index > paramsArraySize]) ifTrue: [^self primitiveFailFor: PrimErrBadIndex].
 	
-	argumentCount = 1 ifTrue:	 "read VM parameter"
-		[^self primitiveGetVMParameter: index].
-
-	"2nd arg read & checks"
-	arg := self stackTop.
-	(index = 17 or: [index = 55 or: [index = 68]])
-		ifTrue:
-			[((objectMemory isFloatInstance: arg)
-			  or: [objectMemory isIntegerObject: arg]) ifFalse:
-				[^self primitiveFailFor: PrimErrBadArgument]]
-		ifFalse:
-			[(objectMemory isIntegerObject: arg) ifFalse:
-				[^self primitiveFailFor: PrimErrBadArgument].
-			 arg := objectMemory integerValueOf: arg].
+	argumentCount = 1 ifTrue:	 "read VM parameter; written this way to avoid branch limits in V3 bytecode set"
+		[| result |
+		 result := self primitiveGetVMParameter: index.
+		 ^self methodReturnValue: (result ifNil: [objectMemory nilObject])].
 
 	"write a VM parameter"
-	^self primitiveSetVMParameter: index arg: arg
+	self primitiveSetVMParameter: index arg: self stackTop
 ]
 
 { #category : #'system control primitives' }
