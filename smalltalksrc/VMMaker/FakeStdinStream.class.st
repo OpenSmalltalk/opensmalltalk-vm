@@ -92,9 +92,6 @@ FakeStdinStream >> next [
 		 simulator isThreadedVM ifTrue:
 			[simulator ownVM: threadIndex]].
 	next := collection at: (position := position + 1).
-	"This is set temporarily to allow (FilePluginSimulator>>#sqFile:Read:Into:At:
-	 to brwak out of its loop.  sqFile:Read:Into:At: resets it on the way out."
-	atEnd := position >= readLimit.
 	^next
 	
 
