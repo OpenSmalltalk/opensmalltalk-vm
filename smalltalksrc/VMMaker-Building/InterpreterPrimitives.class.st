@@ -2378,7 +2378,7 @@ InterpreterPrimitives >> primitiveGetenv [
 		[self successful ifTrue:
 			[^self primitiveFailFor: PrimErrBadArgument].
 		 ^self primitiveFailFor: primFailCode].
-	var := self getenv: (self cCode: [key] inSmalltalk: [key allButLast]).
+	var := (self getenv: (self cCode: [key] inSmalltalk: [key allButLast])) ifNil: [0].
 	self free: key.
 	var ~= 0 ifTrue:
 		[result := objectMemory stringForCString: var.

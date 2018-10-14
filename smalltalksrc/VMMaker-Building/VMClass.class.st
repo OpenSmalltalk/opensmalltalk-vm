@@ -1263,6 +1263,12 @@ VMClass >> strlen: aCString [
 	| len |
 	aCString isString ifTrue:
 		[^aCString size].
+	aCString class == ByteArray ifTrue: [
+		"ByteArrays may be 0 terminated or the correct length (in the simulator)"
+		len := 0.
+		[(len = aCString size or: [(aCString at: len+1) = 0]) ifTrue: [^len].
+		len := len + 1] repeat].
+	"Must be an address"
 	len := 0.
 	[(self byteAt: aCString + len) = 0 ifTrue: [^len].
 	len := len + 1] repeat
@@ -1289,23 +1295,29 @@ VMClass >> strncmp: aString _: bString _: n [
 VMClass >> strncpy: aString _: bString _: n [
 	<doNotGenerate>
 	"implementation of strncpy(3)"
-	aString isString
-		ifTrue:
-			[1 to: n do:
-				[:i| | v |
-				v := bString isString
-						ifTrue: [bString at: i]
-						ifFalse: [Character value: (self byteAt: bString + i - 1)].
-				aString at: i put: v.
-				v asInteger = 0 ifTrue: [^aString]]]
-		ifFalse:
-			[1 to: n do:
-				[:i| | v |
-				v := bString isString
-						ifTrue: [(bString at: i) asInteger]
-						ifFalse: [self byteAt: bString + i - 1].
-				self byteAt: aString + i - 1 put: v.
-				v = 0 ifTrue: [^aString]]].
+
+	| getBlock setBlock count |
+
+	count := n.
+	aString isString ifTrue: [setBlock := [ :idx :ch | aString at: idx put: ch asCharacter]].
+	aString class == ByteArray ifTrue: 
+			[setBlock := [ :idx :ch | aString at: idx put: ch]].
+	aString isInteger ifTrue: [setBlock := [ :idx :ch | self byteAt: aString + idx - 1 put: ch]].
+	bString isString ifTrue: [
+		getBlock := [ :idx | (bString at: idx) asInteger ].
+		count := count min: bString size].
+	bString class == ByteArray ifTrue: [
+		getBlock := [ :idx | bString at: idx].
+		count := count min: bString size].
+	bString isInteger ifTrue: [getBlock := [ :idx | self byteAt: bString + idx - 1]].
+	bString class == CArray ifTrue:
+			[getBlock := [ :idx | bString at: idx - 1]].
+	self assert: getBlock ~= nil.
+	self assert: setBlock ~= nil.
+	1 to: count do: [ :i | | v |
+		v := getBlock value: i.
+		setBlock value: i value: v.
+		v = 0 ifTrue: [^aString] ].
 	^aString
 ]
 
