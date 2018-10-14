@@ -253,14 +253,15 @@ FilePluginSimulator >> recordStateOf: file [
 ]
 
 { #category : #simulation }
-FilePluginSimulator >> sqFile: file Read: count Into: byteArrayIndexArg At: startIndex [
-	| byteArrayIndex |
+FilePluginSimulator >> sqFile: file Read: countArg Into: byteArrayIndexArg At: startIndex [
+	| byteArrayIndex count |
+	count := file isFakeStdinStream
+		ifTrue: [1]
+		ifFalse: [countArg].
 	byteArrayIndex := byteArrayIndexArg asInteger. "Coerces CArray et al correctly"
 	[[startIndex to: startIndex + count - 1 do:
 		[ :i |
-		file atEnd ifTrue:
-			[file isFakeStdinStream ifTrue: [file atEnd: false].
-			 ^i - startIndex].
+		file atEnd ifTrue: [^i - startIndex].
 		interpreterProxy
 			byteAt: byteArrayIndex + i
 			put: (file next ifNil: [file isFakeStdinStream ifTrue: [^0]] ifNotNil: [:c| c asInteger])]]
