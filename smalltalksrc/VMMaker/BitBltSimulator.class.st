@@ -97,32 +97,23 @@ BitBltSimulator >> cppIf: conditionBlockOrSymbolValue ifTrue: trueExpressionOrBl
 
 { #category : #'debug support' }
 BitBltSimulator >> dstLongAt: dstIndex [
-
-	interpreterProxy isInterpreterProxy
-		ifTrue:[^dstIndex long32At: 0].
-	((dstIndex anyMask: 3) or:[dstIndex + 4 < destBits or:[
-		dstIndex > (destBits + (destPitch * destHeight))]])
-			ifTrue:[self error:'Out of bounds'].
-	^self long32At: dstIndex
+	interpreterProxy isInterpreterProxy ifTrue:
+		[^dstIndex long32At: 0].
+	^super dstLongAt: dstIndex
 ]
 
 { #category : #'debug support' }
 BitBltSimulator >> dstLongAt: dstIndex put: value [
-
-	interpreterProxy isInterpreterProxy
-		ifTrue:[^dstIndex long32At: 0 put: value].
-	((dstIndex anyMask: 3) or:[dstIndex < destBits or:[
-		dstIndex >= (destBits + (destPitch * destHeight))]])
-			ifTrue:[self error:'Out of bounds'].
-	^self long32At: dstIndex put: value
+	interpreterProxy isInterpreterProxy ifTrue:
+		[^dstIndex long32At: 0 put: value].
+	^super dstLongAt: dstIndex put: value
 ]
 
 { #category : #'memory access' }
 BitBltSimulator >> halftoneAt: idx [
-
-	^self
-		cCode: [(halftoneBase + (idx \\ halftoneHeight * 4)) long32At: 0]
-		inSmalltalk: [super halftoneAt: idx]
+	interpreterProxy isInterpreterProxy ifTrue:
+		[^(halftoneBase + (idx \\ halftoneHeight * 4)) long32At: 0].
+	^super halftoneAt: idx
 ]
 
 { #category : #'memory access' }
@@ -223,11 +214,7 @@ BitBltSimulator >> primitivePixelValueAt [
 
 { #category : #'debug support' }
 BitBltSimulator >> srcLongAt: srcIndex [
-
-	interpreterProxy isInterpreterProxy
-		ifTrue:[^srcIndex long32At: 0].
-	((srcIndex anyMask: 3) or:[srcIndex + 4 < sourceBits or:[
-		srcIndex > (sourceBits + (sourcePitch * sourceHeight))]])
-			ifTrue:[self error:'Out of bounds'].
-	^self long32At: srcIndex
+	interpreterProxy isInterpreterProxy ifTrue:
+		[^srcIndex long32At: 0].
+	^super srcLongAt: srcIndex
 ]
