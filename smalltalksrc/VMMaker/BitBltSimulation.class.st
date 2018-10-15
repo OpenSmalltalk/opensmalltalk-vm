@@ -132,7 +132,9 @@ Class {
 		'ungammaLookupTable',
 		'gammaLookupTable',
 		'numGCsOnInvocation',
-		'bitBltIsReceiver'
+		'bitBltIsReceiver',
+		'endOfDestination',
+		'endOfSource'
 	],
 	#classVars : [
 		'AllOnes',
@@ -251,7 +253,10 @@ BitBltSimulation class >> declareCVarsIn: aCCodeGenerator [
 	
 	#(sourcePitch sourceWidth sourceHeight sourceDepth sourceMSB sx sy
 		destPitch destWidth destHeight destDepth destMSB dx dy bbW bbH)
-		do: [:ivar | aCCodeGenerator var: ivar type: #int]
+		do: [:ivar | aCCodeGenerator var: ivar type: #int].
+
+	#('sourceIndex' 'destIndex' 'endOfDestination' 'endOfSource') do:
+		[:ivar| aCCodeGenerator var: ivar type: #usqInt]
 ]
 
 { #category : #initialization }
@@ -1917,23 +1922,26 @@ BitBltSimulation >> drawLoopX: xDelta Y: yDelta [
 
 { #category : #'memory access' }
 BitBltSimulation >> dstLongAt: idx [
-
+	<inline: #always>
+	self assert: idx asUnsignedInteger < endOfDestination.
 	^self long32At: idx
 ]
 
 { #category : #'memory access' }
 BitBltSimulation >> dstLongAt: idx put: value [
-
+	<inline: #always>
+	"We omit the assert here since dstLongAt:put: is always preceded by a dstLongAt: which does have an assert.
+	self assert: idx asUnsignedInteger < endOfDestination."
 	^self long32At: idx put: value
 ]
 
 { #category : #'memory access' }
 BitBltSimulation >> dstLongAt: idx put: srcValue mask: dstMask [
 	"Store the given value back into destination form, using dstMask
-	to mask out the bits to be modified. This is an essiantial
-	read-modify-write operation on the destination form."
+	 to mask out the bits to be modified. This is an essential
+	 read-modify-write operation on the destination form."
+	<inline: #always>
 	| dstValue |
-	<inline: true>
 	dstValue := self dstLongAt: idx.
 	dstValue := dstValue bitAnd: dstMask.
 	dstValue := dstValue bitOr: srcValue.
@@ -2021,7 +2029,7 @@ BitBltSimulation >> fixAlpha: sourceWord with: destinationWord [
 { #category : #'memory access' }
 BitBltSimulation >> halftoneAt: idx [
 	"Return a value from the halftone pattern."
-
+	<inline: #always>
 	^self long32At: halftoneBase + (idx \\ halftoneHeight * 4)
 ]
 
@@ -2038,15 +2046,15 @@ BitBltSimulation >> ignoreSourceOrHalftone: formPointer [
 
 { #category : #'memory access' }
 BitBltSimulation >> incDestIndex: offset [
-	<inline: true>
-	^ destIndex := destIndex + offset
+	<inline: #always>
+	^destIndex := destIndex + offset
 
 ]
 
 { #category : #'memory access' }
 BitBltSimulation >> incSrcIndex: offset [
-	<inline: true>
-	^ sourceIndex := sourceIndex + offset
+	<inline: #always>
+	^sourceIndex := sourceIndex + offset
 
 ]
 
@@ -2149,19 +2157,18 @@ BitBltSimulation >> loadBitBltDestForm [
 	(destWidth >= 0 and: [destHeight >= 0]) ifFalse:
 		[^false].
 	destDepth := interpreterProxy fetchInteger: FormDepthIndex ofObject: destForm.
-	destMSB := destDepth > 0.
-	destDepth < 0 ifTrue:
+	(destMSB := destDepth > 0) ifFalse:
 		[destDepth := 0 - destDepth].
 	"Ignore an integer bits handle for Display in which case 
 	the appropriate values will be obtained by calling ioLockSurfaceBits()."
 	(interpreterProxy isIntegerObject: destBits)
 		ifTrue: "Query for actual surface dimensions"
 			[querySurfaceFn = 0 ifTrue: [self loadSurfacePlugin ifFalse: [^false]].
-			 (self query: (interpreterProxy integerValueOf: destBits)
-				Sur: (self addressOf: destWidth)
-				fa: (self addressOf: destHeight)
-				ce: (self addressOf: destDepth)
-				Fn: (self addressOf: destMSB)) ifFalse:
+			 (self querySurfaceFn: (interpreterProxy integerValueOf: destBits)
+								_: (self addressOf: destWidth put: [:v| destWidth := v])
+								_: (self addressOf: destHeight put: [:v| destHeight := v])
+								_: (self addressOf: destDepth put: [:v| destDepth := v])
+								_: (self addressOf: destMSB put: [:v| destMSB := v])) ifFalse:
 					[interpreterProxy primitiveFailFor: PrimErrCallbackError.
 					 ^false].
 			destPPW := 32 // destDepth.
@@ -2263,19 +2270,18 @@ BitBltSimulation >> loadBitBltSourceForm [
 	(sourceWidth >= 0 and: [sourceHeight >= 0]) ifFalse:
 		[^false].
 	sourceDepth := interpreterProxy fetchInteger: FormDepthIndex ofObject: sourceForm.
-	sourceMSB := sourceDepth > 0.
-	sourceDepth < 0 ifTrue:
+	(sourceMSB := sourceDepth > 0) ifFalse:
 		[sourceDepth := 0 - sourceDepth].
 	"Ignore an integer bits handle for Display in which case
 	 the appropriate values will be obtained by calling ioLockSurfaceBits()."
 	(interpreterProxy isIntegerObject: sourceBits)
 		ifTrue: "Query for actual surface dimensions"
 			[querySurfaceFn = 0 ifTrue: [self loadSurfacePlugin ifFalse:[^false]].
-			 (self query: (interpreterProxy integerValueOf: sourceBits)
-				Sur: (self addressOf: sourceWidth)
-				fa: (self addressOf: sourceHeight)
-				ce: (self addressOf: sourceDepth)
-				Fn: (self addressOf: sourceMSB)) ifFalse:
+			 (self querySurfaceFn: (interpreterProxy integerValueOf: sourceBits)
+								_: (self addressOf: sourceWidth put: [:v| sourceWidth := v])
+								_: (self addressOf: sourceHeight put: [:v| sourceHeight := v])
+								_: (self addressOf: sourceDepth put: [:v| sourceDepth := v])
+								_: (self addressOf: sourceMSB put: [:v| sourceMSB := v])) ifFalse:
 					[interpreterProxy primitiveFailFor: PrimErrCallbackError.
 					 ^false].
 			sourcePPW := 32 // sourceDepth.
@@ -2400,7 +2406,7 @@ BitBltSimulation >> loadWarpBltFrom: bbObj [
 ]
 
 { #category : #'surface support' }
-BitBltSimulation >> lock: sourceHandle Su: pitchPtr rf: x ac: y eF: w n: h [
+BitBltSimulation >> lockSurfaceFn: sourceHandle _: pitchPtr _: x _: y _: w _: h [
 	"Simulate the lockSurfaceFn function call as a failure to load the surface."
 	<doNotGenerate>
 	^0
@@ -2456,21 +2462,21 @@ BitBltSimulation >> lockSurfaces [
 				so that there is only one area transmitted"
 				[isWarping
 					ifFalse: "When warping we always need the entire surface for the source"
-						[sourceBits := self lock: sourceHandle
-											Su: (self addressOf: sourcePitch)
-											rf: 0
-											ac: 0
-											eF: sourceWidth
-											n: sourceHeight]
+						[sourceBits := self lockSurfaceFn: sourceHandle
+														_: (self addressOf: sourcePitch)
+														_: 0
+														_: 0
+														_: sourceWidth
+														_: sourceHeight]
 					ifTrue: "Otherwise use overlapping area"
 						[l := sx min: dx. r := (sx max: dx) + bbW.
-						t := sy min: dy. b := (sy max: dy) + bbH.
-						sourceBits := self lock: sourceHandle
-											Su: (self addressOf: sourcePitch)
-											rf: l
-											ac: t
-											eF: r - l
-											n: b - t].
+						 t := sy min: dy. b := (sy max: dy) + bbH.
+						 sourceBits := self lockSurfaceFn: sourceHandle
+														_: (self addressOf: sourcePitch)
+														_: l
+														_: t
+														_: r - l
+														_: b - t].
 				destBits := sourceBits.
 				destPitch := sourcePitch.
 				hasSurfaceLock := true.
@@ -2482,14 +2488,15 @@ BitBltSimulation >> lockSurfaces [
 					[self unlockSurfaces.
 					 interpreterProxy primitiveFailFor: PrimErrCallbackError.
 					 ^false].
+				endOfDestination := endOfSource := sourceBits + (sourcePitch * sourceHeight).
 				^true]].
 		"Fall through - if not equal it'll be handled below"
-		destBits := self lock: destHandle
-						Su: (self addressOf: destPitch)
-						rf: dx
-						ac: dy
-						eF: bbW
-						n: bbH.
+		destBits := self lockSurfaceFn: destHandle
+									_: (self addressOf: destPitch)
+									_: dx
+									_: dy
+									_: bbW
+									_: bbH.
 		hasSurfaceLock := true.
 		numGCsOnInvocation ~= interpreterProxy statNumGCs ifTrue:
 			[self unlockSurfaces.
@@ -2505,19 +2512,19 @@ BitBltSimulation >> lockSurfaces [
 		"Warping requiring the entire surface"
 		isWarping
 			ifTrue:
-				[sourceBits := self lock: sourceHandle
-												Su: (self addressOf: sourcePitch)
-												rf: 0
-												ac: 0
-												eF: sourceWidth
-												n: sourceHeight]
+				[sourceBits := self lockSurfaceFn: sourceHandle
+												_: (self addressOf: sourcePitch)
+												_: 0
+												_: 0
+												_: sourceWidth
+												_: sourceHeight]
 			ifFalse:
-				[sourceBits := self lock: sourceHandle
-									Su: (self addressOf: sourcePitch)
-									rf: sx
-									ac: sy
-									eF: bbW
-									n: bbH].
+				[sourceBits := self lockSurfaceFn: sourceHandle
+												_: (self addressOf: sourcePitch)
+												_: sx
+												_: sy
+												_: bbW
+												_: bbH].
 		hasSurfaceLock := true.
 		numGCsOnInvocation ~= interpreterProxy statNumGCs ifTrue:
 			[self unlockSurfaces.
@@ -2525,6 +2532,8 @@ BitBltSimulation >> lockSurfaces [
 			 ^false].
 		sourceBits = 0 ifTrue:
 			[interpreterProxy primitiveFailFor: PrimErrCallbackError]].
+	endOfSource := sourceBits + (sourcePitch * sourceHeight).
+	endOfDestination := destBits + (destPitch * destHeight).
 	^destBits ~= 0 and: [sourceBits ~= 0 or: [noSource]]
 ]
 
@@ -3151,7 +3160,7 @@ BitBltSimulation >> primitiveWarpBits [
 ]
 
 { #category : #'surface support' }
-BitBltSimulation >> query: handle Sur: widthPtr fa: heightPtr ce: depthPtr Fn: endianPtr [
+BitBltSimulation >> querySurfaceFn: handle _: widthPtr _: heightPtr _: depthPtr _: endianPtr [
 	"Query the dimension of an OS surface.
 	This method is provided so that in case the inst vars of the
 	source form are broken, *actual* values of the OS surface
@@ -3882,7 +3891,8 @@ BitBltSimulation >> sourceWord: sourceWord with: destinationWord [
 
 { #category : #'memory access' }
 BitBltSimulation >> srcLongAt: idx [
-
+	<inline: #always>
+	self assert: idx asUnsignedInteger < endOfSource.
 	^self long32At: idx
 ]
 
@@ -3933,12 +3943,14 @@ BitBltSimulation >> tallyIntoMap: sourceWord with: destinationWord [
 { #category : #'memory access' }
 BitBltSimulation >> tallyMapAt: idx [
 	"Return the word at position idx from the colorMap"
+	<inline: #always>
 	^cmLookupTable at: (idx bitAnd: cmMask)
 ]
 
 { #category : #'memory access' }
 BitBltSimulation >> tallyMapAt: idx put: value [
 	"Store the word at position idx in the colorMap"
+	<inline: #always>
 	^cmLookupTable at: (idx bitAnd: cmMask) put: value
 ]
 
@@ -4003,13 +4015,6 @@ BitBltSimulation >> tryCopyingBitsQuickly [
 ]
 
 { #category : #'surface support' }
-BitBltSimulation >> unlock: handle Sur: x fa: y ce: w Fn: h [
-	"Simulate the unlockSurfaceFn function call."
-	<doNotGenerate>
-	^self
-]
-
-{ #category : #'surface support' }
 BitBltSimulation >> unlockSurfaces [
 	"Unlock the bits of any OS surfaces."
 	"See the comment in lockSurfaces. Similar rules apply. That is, the area provided in ioUnlockSurface
@@ -4025,11 +4030,11 @@ BitBltSimulation >> unlockSurfaces [
 	destLocked := false.
 	destHandle := interpreterProxy fetchPointer: FormBitsIndex ofObject: destForm.
 	(interpreterProxy isIntegerObject: destHandle) ifTrue: "The destBits are always assumed to be dirty"
-		[self unlock: (interpreterProxy integerValueOf: destHandle)
-			Sur: affectedL
-			fa: affectedT
-			ce: affectedR - affectedL
-			Fn: affectedB - affectedT.
+		[self unlockSurfaceFn: (interpreterProxy integerValueOf: destHandle)
+							_: affectedL
+							_: affectedT
+							_: affectedR - affectedL
+							_: affectedB - affectedT.
 		 destBits := destPitch := 0.
 		 destLocked := true].
 	noSource ifFalse:
