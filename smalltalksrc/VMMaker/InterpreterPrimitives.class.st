@@ -94,7 +94,7 @@ Class {
 		'VMSqueakClassIndices',
 		'VMStackFrameOffsets'
 	],
-	#category : #'VMMaker-Interpreter'
+	#category : 'VMMaker-Interpreter'
 }
 
 { #category : #'C translation' }
@@ -232,11 +232,10 @@ InterpreterPrimitives >> floatExponentBits [
 { #category : #'simulation support' }
 InterpreterPrimitives >> getenv: aByteStringOrByteArray [
 	<doNotGenerate>
-	<primitive: 'primitiveGetenv' module: '' error: ec>
-	ec == #'bad argument' ifTrue:
-		[aByteStringOrByteArray isString ifFalse:
-			[^self getenv: aByteStringOrByteArray asString]].
-	self primitiveFail
+	"The primitiveGetenv: primitive answers nil for undefined variables.
+	 The primitiveGetenv implementation is written to expect getenv: to
+	 answer 0, not nil,  for undefined variables.  Map nil to 0 for simulation."
+	^(self primitiveGetenv: aByteStringOrByteArray) ifNil: [0]
 ]
 
 { #category : #'primitive support' }
@@ -2378,7 +2377,7 @@ InterpreterPrimitives >> primitiveGetenv [
 		[self successful ifTrue:
 			[^self primitiveFailFor: PrimErrBadArgument].
 		 ^self primitiveFailFor: primFailCode].
-	var := (self getenv: (self cCode: [key] inSmalltalk: [key allButLast])) ifNil: [0].
+	var := self getenv: (self cCode: [key] inSmalltalk: [key allButLast]).
 	self free: key.
 	var ~= 0 ifTrue:
 		[result := objectMemory stringForCString: var.
@@ -2386,6 +2385,16 @@ InterpreterPrimitives >> primitiveGetenv [
 			[^self primitiveFailFor: PrimErrNoMemory]].
 	self assert: primFailCode = 0.
 	self pop: 2 thenPush: (var = 0 ifTrue: [objectMemory nilObject] ifFalse: [result])
+]
+
+{ #category : #'simulation support' }
+InterpreterPrimitives >> primitiveGetenv: aByteStringOrByteArray [
+	<doNotGenerate>
+	<primitive: 'primitiveGetenv' module: '' error: ec>
+	ec == #'bad argument' ifTrue:
+		[aByteStringOrByteArray isString ifFalse:
+			[^self getenv: aByteStringOrByteArray asString]].
+	self primitiveFail
 ]
 
 { #category : #'arithmetic integer primitives' }

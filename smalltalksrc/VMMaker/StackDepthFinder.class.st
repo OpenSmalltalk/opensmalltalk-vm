@@ -7,7 +7,7 @@ Class {
 		'encoderClass',
 		'deadCode'
 	],
-	#category : #'VMMaker-Support'
+	#category : 'VMMaker-Support'
 }
 
 { #category : #'instruction decoding' }

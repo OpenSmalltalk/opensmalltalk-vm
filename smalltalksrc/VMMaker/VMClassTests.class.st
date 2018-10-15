@@ -5,7 +5,7 @@ Class {
 		'testString',
 		'vmclass'
 	],
-	#category : #'VMMaker-Tests'
+	#category : 'VMMaker-Tests'
 }
 
 { #category : #'initialize-release' }
