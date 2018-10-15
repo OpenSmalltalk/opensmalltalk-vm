@@ -59,7 +59,7 @@ Class {
 		'CogRTLOpcodes',
 		'VMStackFrameOffsets'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #'simulation only' }
