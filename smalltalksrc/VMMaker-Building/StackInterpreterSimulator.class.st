@@ -196,7 +196,8 @@ StackInterpreterSimulator >> browserPluginReturnIfNeeded [
 
 { #category : #'memory access' }
 StackInterpreterSimulator >> byteAt: byteAddress [
-	self deprecated.
+	"This is really only for the C library simulations memcpy:_:_: et al in VMClass.
+	 Use objectMemory byteAt: directly where possible."
 	^objectMemory byteAt: byteAddress
 ]
 
@@ -909,8 +910,8 @@ StackInterpreterSimulator >> internalFindNewMethodOrdinary [
 
 	sendCount := sendCount + 1.
 
-	printSends ifTrue:
-		[self cr; print: byteCount; space; printStringOf: messageSelector].
+"	printSends ifTrue:
+		[self print: byteCount; space; printStringOf: messageSelector; cr]."
 "
 	(sendCount > 1000 and: [sendCount\\10 = 0]) ifTrue:
 		[Transcript print: sendCount; space.
@@ -1628,8 +1629,7 @@ StackInterpreterSimulator >> openOn: fileName extraMemory: extraBytes [
 	  hdrNumStackPages hdrEdenBytes hdrMaxExtSemTabSize allocationReserve |
 	"open image file and read the header"
 
-	f := FileStream readOnlyFileNamed: fileName.
-	f ifNil: [^self error: 'no image found'].
+	(f := self openImageFileNamed: fileName) ifNil: [^self].
 
 	"Set the image name and the first argument; there are
 	 no arguments during simulation unless set explicitly."

@@ -258,6 +258,8 @@ CogVMSimulator >> browserPluginReturnIfNeeded [
 
 { #category : #'memory access' }
 CogVMSimulator >> byteAt: byteAddress [
+	"This is really only for the C library simulations memcpy:_:_: et al in VMClass.
+	 Use objectMemory byteAt: directly where possible."
 	^objectMemory byteAt: byteAddress
 ]
 
@@ -2581,8 +2583,7 @@ CogVMSimulator >> openOn: fileName extraMemory: extraBytes [
 	  hdrCogCodeSize stackZoneSize methodCacheSize primTraceLogSize allocationReserve |
 	"open image file and read the header"
 
-	f := FileStream readOnlyFileNamed: fileName.
-	f ifNil: [^self error: 'no image found'].
+	(f := self openImageFileNamed: fileName) ifNil: [^self].
 
 	"Set the image name and the first argument; there are
 	 no arguments during simulation unless set explicitly."
