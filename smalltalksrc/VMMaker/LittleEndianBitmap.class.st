@@ -2,7 +2,7 @@ Class {
 	#name : #LittleEndianBitmap,
 	#superclass : #Bitmap,
 	#type : #words,
-	#category : 'VMMaker-JITSimulation'
+	#category : #'VMMaker-JITSimulation'
 }
 
 { #category : #converting }
