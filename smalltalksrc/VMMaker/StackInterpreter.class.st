@@ -17015,6 +17015,21 @@ StackInterpreter >> okayInterpreterObjects [
 	self okayStackZone.
 ]
 
+{ #category : #'simulation support' }
+StackInterpreter >> openImageFileNamed: fileName [
+	"Attempt to open fileName or fileName, '.image'"
+	<doNotGenerate>
+	| f |
+	f := [FileStream readOnlyFileNamed: fileName]
+			on: FileDoesNotExistException
+			do: [:ex|
+				 ((fileName endsWith: '.image') not
+				  and: [FileDirectory default fileExists: fileName, '.image']) ifFalse:
+					[ex pass].
+				 FileStream readOnlyFileNamed: fileName, '.image'].
+	^f ifNil: [self error: 'no image found'. nil].
+]
+
 { #category : #simulation }
 StackInterpreter >> openOn: fileName [
 	"(StackInterpreterSimulator new openOn: 'clonex.image') openAsMorph; run"
