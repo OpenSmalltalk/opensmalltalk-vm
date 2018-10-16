@@ -16,7 +16,7 @@ Class {
 	#classInstVars : [
 		'timeStamp'
 	],
-	#category : 'VMMaker-Support'
+	#category : #'VMMaker-Support'
 }
 
 { #category : #translation }
@@ -1299,21 +1299,22 @@ VMClass >> strncpy: aString _: bString _: n [
 	| getBlock setBlock count |
 
 	count := n.
-	aString isString ifTrue: [setBlock := [ :idx :ch | aString at: idx put: ch asCharacter]].
-	aString class == ByteArray ifTrue: 
-			[setBlock := [ :idx :ch | aString at: idx put: ch]].
-	aString isInteger ifTrue: [setBlock := [ :idx :ch | self byteAt: aString + idx - 1 put: ch]].
+	aString isString ifTrue: 
+		[setBlock := [ :idx :ch | aString at: idx put: ch asCharacter]]
+	ifFalse: [aString class == ByteArray ifTrue: 
+			[setBlock := [ :idx :ch | aString at: idx put: ch]]
+	ifFalse: [aString isInteger ifTrue: 
+		[setBlock := [ :idx :ch | self byteAt: aString + idx - 1 put: ch]]]].
 	bString isString ifTrue: [
 		getBlock := [ :idx | (bString at: idx) asInteger ].
-		count := count min: bString size].
-	bString class == ByteArray ifTrue: [
+		count := count min: bString size]
+	ifFalse: [bString class == ByteArray ifTrue: [
 		getBlock := [ :idx | bString at: idx].
-		count := count min: bString size].
-	bString isInteger ifTrue: [getBlock := [ :idx | self byteAt: bString + idx - 1]].
-	bString class == CArray ifTrue:
-			[getBlock := [ :idx | bString at: idx - 1]].
-	self assert: getBlock ~= nil.
-	self assert: setBlock ~= nil.
+		count := count min: bString size]
+	ifFalse: [bString isInteger ifTrue: 
+		[getBlock := [ :idx | self byteAt: bString + idx - 1]]
+	ifFalse: [bString class == CArray ifTrue:
+			[getBlock := [ :idx | bString at: idx - 1]]]]].
 	1 to: count do: [ :i | | v |
 		v := getBlock value: i.
 		setBlock value: i value: v.

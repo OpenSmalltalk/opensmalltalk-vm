@@ -53,7 +53,7 @@ Class {
 		'platformNameMorph',
 		'generatedPathMorph'
 	],
-	#category : 'VMMaker-Building'
+	#category : #'VMMaker-Building'
 }
 
 { #category : #'instance creation' }
