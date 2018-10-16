@@ -299,6 +299,13 @@ ThreadedFFIPlugin >> cleanupCalloutState: calloutState [
 		[self free: (calloutState stringArgs at: (calloutState stringArgIndex: calloutState stringArgIndex - 1))]
 ]
 
+{ #category : #simulation }
+ThreadedFFIPlugin >> destroyManualSurface: surfaceID [
+	<doNotGenerate>
+	"Temporarily hack the simulation.  Soon enough we could defer top the actual SurfacePlugin to simulate surfaces properly."
+	^1
+]
+
 { #category : #'primitive support' }
 ThreadedFFIPlugin >> disownFlagsFor: calloutState [
 	<var: #calloutState type: #'CalloutState *'>
@@ -1574,18 +1581,15 @@ ThreadedFFIPlugin >> primitiveCreateManualSurface [
 
 { #category : #'primitives - surfaces' }
 ThreadedFFIPlugin >> primitiveDestroyManualSurface [
-	"arguments: name(type, stack offset)
-		surfaceID(Integer, 0)"
-	| surfaceID result |
+	| surfaceID |
 	<export: true>
-	
-	interpreterProxy methodArgumentCount == 1 ifFalse: [^interpreterProxy primitiveFail].
+	interpreterProxy methodArgumentCount = 1 ifFalse:
+		[^interpreterProxy primitiveFail].
 	surfaceID := interpreterProxy stackIntegerValue: 0.
-	interpreterProxy failed ifTrue: [^nil].
-	result := self destroyManualSurface: surfaceID.
-	result = 0 ifTrue: [^interpreterProxy primitiveFail].
-	^interpreterProxy pop: 1
-	
+	interpreterProxy failed ifFalse:
+		[(self destroyManualSurface: surfaceID) = 0
+			ifTrue: [interpreterProxy primitiveFail]
+			ifFalse: [interpreterProxy pop: 1]]
 ]
 
 { #category : #primitives }

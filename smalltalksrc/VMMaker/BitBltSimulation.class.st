@@ -1293,42 +1293,44 @@ BitBltSimulation >> copyBitsFrom: startX to: stopX at: yValue [
 BitBltSimulation >> copyBitsLockedAndClipped [
 	"Perform the actual copyBits operation.
 	Assume: Surfaces have been locked and clipping was performed."
-	| done |
 	<inline: false>
 	
 	self copyBitsRule41Test.	
-	(interpreterProxy failed not)
-		ifFalse: [^ interpreterProxy primitiveFail].
+	interpreterProxy failed ifTrue:
+		[^interpreterProxy primitiveFail].
 
  	"Try a shortcut for stuff that should be run as quickly as possible"
-	done := self tryCopyingBitsQuickly.
-	done ifTrue:[^nil].
+	self tryCopyingBitsQuickly ifTrue:
+		[^nil].
 
-	(combinationRule = 30) | (combinationRule = 31) ifTrue:
+	(combinationRule between: 30 and: 31) ifTrue:
 		["Check and fetch source alpha parameter for alpha blend"
-		interpreterProxy methodArgumentCount = 1
-			ifTrue: [sourceAlpha := interpreterProxy stackIntegerValue: 0.
-					(interpreterProxy failed not and: [(sourceAlpha >= 0) & (sourceAlpha <= 255)])
-						ifFalse: [^ interpreterProxy primitiveFail]]
-			ifFalse: [^ interpreterProxy primitiveFail]].
+		 interpreterProxy methodArgumentCount = 1 ifFalse:
+			[^interpreterProxy primitiveFail].
+		 sourceAlpha := interpreterProxy stackIntegerValue: 0.
+		 (interpreterProxy failed
+		  or: [sourceAlpha < 0
+		  or: [sourceAlpha > 255]]) ifTrue:
+			[^interpreterProxy primitiveFail]].
 
 	bitCount := 0.
 	"Choose and perform the actual copy loop."
 	self performCopyLoop.
 
-	(combinationRule = 22) | (combinationRule = 32) ifTrue:
-		["zero width and height; return the count"
-		affectedL := affectedR := affectedT := affectedB := 0]. 
-	hDir > 0
-		ifTrue: [affectedL := dx.
-				affectedR := dx + bbW]
-		ifFalse: [affectedL := dx - bbW + 1.
-				affectedR := dx + 1].
-	vDir > 0
-		ifTrue: [affectedT := dy.
-				affectedB := dy + bbH]
-		ifFalse: [affectedT := dy - bbH + 1.
-				affectedB := dy + 1]
+	(combinationRule between: 30 and: 31)
+		ifTrue:"zero width and height; just return the count"
+			[affectedL := affectedR := affectedT := affectedB := 0]
+		ifFalse:
+			[hDir > 0
+				ifTrue: [affectedL := dx.
+						affectedR := dx + bbW]
+				ifFalse: [affectedL := dx - bbW + 1.
+						affectedR := dx + 1].
+			 vDir > 0
+				ifTrue: [affectedT := dy.
+						affectedB := dy + bbH]
+				ifFalse: [affectedT := dy - bbH + 1.
+						affectedB := dy + 1]]
 ]
 
 { #category : #setup }
@@ -1567,38 +1569,39 @@ BitBltSimulation >> copyLoopNoSource [
 	mergeFnwith := self cCoerce: (opTable at: combinationRule+1) to: 'unsigned int (*)(unsigned int, unsigned int)'.
 	mergeFnwith.  "null ref for compiler"
 
+	noHalftone ifTrue:
+		[halftoneWord := AllOnes].
 	1 to: bbH do: "here is the vertical loop"
 		[ :i |
-		noHalftone
-			ifTrue: [halftoneWord := AllOnes]
-			ifFalse: [halftoneWord := self halftoneAt: dy+i-1].
+		noHalftone ifFalse:
+			[halftoneWord := self halftoneAt: dy+i-1].
 
 	"Note: the horizontal loop has been expanded into three parts for speed:"
 
-			"This first section requires masking of the destination store..."
-			destMask := mask1.
-			destWord := self dstLongAt: destIndex.
-			mergeWord := self mergeFn: halftoneWord
-							with: destWord.
-			destWord := (destMask bitAnd: mergeWord) bitOr: 
-							(destWord bitAnd: destMask bitInvert32).
-			self dstLongAt: destIndex put: destWord.
-			self incDestIndex: 4.
+		"This first section requires masking of the destination store..."
+		destMask := mask1.
+		destWord := self dstLongAt: destIndex.
+		mergeWord := self mergeFn: halftoneWord
+						with: destWord.
+		destWord := (destMask bitAnd: mergeWord) bitOr: 
+						(destWord bitAnd: destMask bitInvert32).
+		self dstLongAt: destIndex put: destWord.
+		self incDestIndex: 4.
 
-		"This central horizontal loop requires no store masking"
-			destMask := AllOnes.
-			combinationRule = 3 ifTrue: ["Special inner loop for STORE"
-				destWord := halftoneWord.
+	"This central horizontal loop requires no store masking"
+		destMask := AllOnes.
+		combinationRule = 3
+			ifTrue: "Special inner loop for STORE"
+				[destWord := halftoneWord.
 				2 to: nWords-1 do:[ :word |
 					self dstLongAt: destIndex put: destWord.
-					self incDestIndex: 4].
-			] ifFalse:[ "Normal inner loop does merge"
-				2 to: nWords-1 do:[ :word | "Normal inner loop does merge"
+					self incDestIndex: 4]]
+			ifFalse: "Normal inner loop does merge"
+				[2 to: nWords-1 do:[ :word | "Normal inner loop does merge"
 					destWord := self dstLongAt: destIndex.
 					mergeWord := self mergeFn: halftoneWord with: destWord.
 					self dstLongAt: destIndex put: mergeWord.
-					self incDestIndex: 4].
-			].
+					self incDestIndex: 4]].
 
 		"This last section, if used, requires masking of the destination store..."
 		nWords > 1 ifTrue:
@@ -1610,7 +1613,7 @@ BitBltSimulation >> copyLoopNoSource [
 			self dstLongAt: destIndex put: destWord.
 			self incDestIndex: 4].
 
-	self incDestIndex: destDelta]
+		self incDestIndex: destDelta]
 ]
 
 { #category : #'inner loop' }
@@ -1670,13 +1673,12 @@ BitBltSimulation >> copyLoopPixMap [
 		dstShift := 32 - destDepth - dstShift.
 		dstShiftInc := 0 - dstShiftInc.
 		dstShiftLeft := 32 - destDepth].
-
+	noHalftone ifTrue:
+		[halftoneWord := AllOnes].
 	1 to: bbH do: "here is the vertical loop"
 		[ :i |
-		"*** is it possible at all that noHalftone == false? ***"
-		noHalftone
-			ifTrue:[halftoneWord := AllOnes]
-			ifFalse: [halftoneWord := self halftoneAt: dy+i-1].
+		noHalftone ifFalse:
+			[halftoneWord := self halftoneAt: dy+i-1].
 		"setup first load"
 		srcBitShift := srcShift.
 		dstBitShift := dstShift.
@@ -2463,7 +2465,7 @@ BitBltSimulation >> lockSurfaces [
 				[isWarping
 					ifFalse: "When warping we always need the entire surface for the source"
 						[sourceBits := self lockSurfaceFn: sourceHandle
-														_: (self addressOf: sourcePitch)
+														_: (self addressOf: sourcePitch put: [:v| sourcePitch := v])
 														_: 0
 														_: 0
 														_: sourceWidth
@@ -2472,7 +2474,7 @@ BitBltSimulation >> lockSurfaces [
 						[l := sx min: dx. r := (sx max: dx) + bbW.
 						 t := sy min: dy. b := (sy max: dy) + bbH.
 						 sourceBits := self lockSurfaceFn: sourceHandle
-														_: (self addressOf: sourcePitch)
+														_: (self addressOf: sourcePitch put: [:v| sourcePitch := v])
 														_: l
 														_: t
 														_: r - l
@@ -2492,7 +2494,7 @@ BitBltSimulation >> lockSurfaces [
 				^true]].
 		"Fall through - if not equal it'll be handled below"
 		destBits := self lockSurfaceFn: destHandle
-									_: (self addressOf: destPitch)
+									_: (self addressOf: destPitch put: [:v| destPitch := v])
 									_: dx
 									_: dy
 									_: bbW
@@ -2513,14 +2515,14 @@ BitBltSimulation >> lockSurfaces [
 		isWarping
 			ifTrue:
 				[sourceBits := self lockSurfaceFn: sourceHandle
-												_: (self addressOf: sourcePitch)
+												_: (self addressOf: sourcePitch put: [:v| sourcePitch := v])
 												_: 0
 												_: 0
 												_: sourceWidth
 												_: sourceHeight]
 			ifFalse:
 				[sourceBits := self lockSurfaceFn: sourceHandle
-												_: (self addressOf: sourcePitch)
+												_: (self addressOf: sourcePitch put: [:v| sourcePitch := v])
 												_: sx
 												_: sy
 												_: bbW
@@ -2532,7 +2534,7 @@ BitBltSimulation >> lockSurfaces [
 			 ^false].
 		sourceBits = 0 ifTrue:
 			[interpreterProxy primitiveFailFor: PrimErrCallbackError]].
-	endOfSource := sourceBits + (sourcePitch * sourceHeight).
+	endOfSource := (noSource or: [sourceBits = 0]) ifTrue: [0] ifFalse: [sourceBits + (sourcePitch * sourceHeight)].
 	endOfDestination := destBits + (destPitch * destHeight).
 	^destBits ~= 0 and: [sourceBits ~= 0 or: [noSource]]
 ]
@@ -2784,20 +2786,18 @@ BitBltSimulation >> performCopyLoop [
 	perform the appropriate inner loop function."
 	<inline: true> "Should be inlined into caller for speed"
 	self destMaskAndPointerInit.
-	noSource ifTrue: ["Simple fill loop"
-		self copyLoopNoSource.
-	] ifFalse: ["Loop using source and dest"
-		self checkSourceOverlap.
-		(sourceDepth ~= destDepth or: [(cmFlags ~= 0) or:[sourceMSB ~= destMSB]]) ifTrue: [
-			"If we must convert between pixel depths or use
-			color lookups or swap pixels use the general version"
-			self copyLoopPixMap.
-		] ifFalse: [
-			"Otherwise we simple copy pixels and can use a faster version"
-			self sourceSkewAndPointerInit.
-			self copyLoop.
-		]
-	].
+	noSource
+		ifTrue: "Simple fill loop"
+			[self copyLoopNoSource]
+		ifFalse: "Loop using source and dest"
+			[self checkSourceOverlap.
+			 (sourceDepth ~= destDepth or: [cmFlags ~= 0 or: [sourceMSB ~= destMSB]])
+				ifTrue: "If we must convert between pixel depths or use
+						color lookups or swap pixels use the general version"
+					[self copyLoopPixMap]
+				ifFalse: "Otherwise we simply copy pixels and can use a faster version"
+					[self sourceSkewAndPointerInit.
+					 self copyLoop]]
 ]
 
 { #category : #'combination rules' }
@@ -2809,7 +2809,6 @@ BitBltSimulation >> pickSourcePixels: nPixels flags: mapperFlags srcMask: srcMas
 	<returnTypeC: 'unsigned int'>
 	<var: #sourceWord type: #'unsigned int'>
 	<var: #destWord type: #'unsigned int'>
-	sourceWord := self srcLongAt: sourceIndex.
 	destWord := 0.
 	srcShift := srcBitShift. "Hint: Keep in register"
 	dstShift := dstBitShift. "Hint: Keep in register"
@@ -2817,27 +2816,29 @@ BitBltSimulation >> pickSourcePixels: nPixels flags: mapperFlags srcMask: srcMas
 	(mapperFlags = (ColorMapPresent bitOr: ColorMapIndexedPart)) ifTrue:[
 		"a little optimization for (pretty crucial) blits using indexed lookups only"
 		[	"grab, colormap and mix in pixel"
+			sourceWord := self srcLongAt: sourceIndex.
 			sourcePix := sourceWord >> srcShift bitAnd: srcMask.
 			destPix := cmLookupTable at: (sourcePix bitAnd: cmMask).
 			destWord := destWord bitOr: (destPix bitAnd: dstMask) << dstShift.
 			"adjust dest pix index"
 			dstShift := dstShift + dstShiftInc.
 			"adjust source pix index"
-			((srcShift := srcShift + srcShiftInc) bitAnd: 16rFFFFFFE0) = 0 ifFalse:[
-				sourceMSB ifTrue:[srcShift := srcShift + 32] ifFalse:[srcShift := srcShift - 32].
-				sourceWord := self srcLongAt: (self incSrcIndex: 4)].
+			((srcShift := srcShift + srcShiftInc) bitAnd: 16rFFFFFFE0) = 0 ifFalse:
+				[srcShift := sourceMSB ifTrue: [srcShift + 32] ifFalse: [srcShift - 32].
+				 self incSrcIndex: 4].
 		(nPix := nPix - 1) = 0] whileFalse.
 	] ifFalse:[
 		[	"grab, colormap and mix in pixel"
+			sourceWord := self srcLongAt: sourceIndex.
 			sourcePix := sourceWord >> srcShift bitAnd: srcMask.
 			destPix := self mapPixel: sourcePix flags: mapperFlags.
 			destWord := destWord bitOr: (destPix bitAnd: dstMask) << dstShift.
 			"adjust dest pix index"
 			dstShift := dstShift + dstShiftInc.
 			"adjust source pix index"
-			((srcShift := srcShift + srcShiftInc) bitAnd: 16rFFFFFFE0) = 0 ifFalse:[
-				sourceMSB ifTrue:[srcShift := srcShift + 32] ifFalse:[srcShift := srcShift - 32].
-				sourceWord := self srcLongAt: (self incSrcIndex: 4)].
+			((srcShift := srcShift + srcShiftInc) bitAnd: 16rFFFFFFE0) = 0 ifFalse:
+				[srcShift := sourceMSB ifTrue: [srcShift + 32] ifFalse: [srcShift - 32].
+				 self incSrcIndex: 4].
 		(nPix := nPix - 1) = 0] whileFalse.
 	].
 	srcBitShift := srcShift. "Store back"
@@ -3001,15 +3002,15 @@ BitBltSimulation >> primitiveCopyBits [
 	| rcvr |
 	<export: true>
 	rcvr := interpreterProxy stackValue: interpreterProxy methodArgumentCount.
-	(self loadBitBltFrom: rcvr)  ifFalse:[^interpreterProxy primitiveFail].
+	(self loadBitBltFrom: rcvr) ifFalse:
+		[^interpreterProxy primitiveFail].
 	self copyBits.
-	interpreterProxy failed ifTrue:[^nil].
+	interpreterProxy failed ifTrue: [^nil].
 	self showDisplayBits.
-	interpreterProxy failed ifTrue:[^nil].
-	interpreterProxy pop: interpreterProxy methodArgumentCount.
-	(combinationRule = 22) | (combinationRule = 32) ifTrue:[
-		interpreterProxy pop: 1.
-		^ interpreterProxy pushInteger: bitCount].
+	interpreterProxy failed ifTrue: [^nil].
+	(combinationRule = 22 or: [combinationRule = 32])
+		ifTrue: [interpreterProxy methodReturnInteger: bitCount]
+		ifFalse: [interpreterProxy methodReturnReceiver]
 ]
 
 { #category : #primitives }
@@ -3052,27 +3053,33 @@ BitBltSimulation >> primitiveDisplayString [
 				and:[cmFlags ~= 0 
 					 or:[sourceMSB ~= destMSB 
 					 or:[sourceDepth ~= destDepth]]]]]]. "no point using slower version"
+	quickBlt ifTrue:
+		[endOfSource := sourceBits + (sourcePitch * sourceHeight).
+		 endOfDestination := destBits + (destPitch * destHeight)].
 	left := destX.
 	sourcePtr := interpreterProxy firstIndexableField: sourceString.
-	startIndex to: stopIndex do:[:charIndex|
+	startIndex to: stopIndex do:
+		[:charIndex|
 		ascii := interpreterProxy byteAtPointer: sourcePtr + charIndex - 1.
 		glyphIndex := interpreterProxy fetchInteger: ascii ofObject: glyphMap.
-		(glyphIndex < 0 or:[glyphIndex > maxGlyph]) 
-			ifTrue:[^interpreterProxy primitiveFail].
+		(glyphIndex < 0 or:[glyphIndex > maxGlyph])  ifTrue:
+			[^interpreterProxy primitiveFail].
 		sourceX := interpreterProxy fetchInteger: glyphIndex ofObject: xTable.
 		width := (interpreterProxy fetchInteger: glyphIndex+1 ofObject: xTable) - sourceX.
 		interpreterProxy failed ifTrue:[^nil].
 		self clipRange.	"Must clip here"
-		(bbW > 0 and:[bbH > 0]) ifTrue: [
-			quickBlt ifTrue:[
-				self destMaskAndPointerInit.
-				self copyLoopPixMap.
-				"both, hDir and vDir are known to be > 0"
-				affectedL := dx.
-				affectedR := dx + bbW.
-				affectedT := dy.
-				affectedB := dy + bbH.
-			] ifFalse:[self copyBits]].
+		(bbW > 0 and: [bbH > 0]) ifTrue:
+			[quickBlt
+				ifTrue:
+					[self destMaskAndPointerInit.
+					 self copyLoopPixMap.
+					 "both, hDir and vDir are known to be > 0"
+					 affectedL := dx.
+					 affectedR := dx + bbW.
+					 affectedT := dy.
+					 affectedB := dy + bbH]
+				ifFalse:
+					[self copyBits]]. "but this means we're doing lockSurfaces/unlockSurfaces *for each character* :-( eem 10/16/2018 15:42"
 		interpreterProxy failed ifTrue:[^nil].
 		destX := destX + width + kernDelta.
 	 ].
@@ -3156,7 +3163,7 @@ BitBltSimulation >> primitiveWarpBits [
 	interpreterProxy failed ifTrue:[^nil].
 	self showDisplayBits.
 	interpreterProxy failed ifTrue:[^nil].
-	interpreterProxy pop: interpreterProxy methodArgumentCount.
+	interpreterProxy methodReturnReceiver
 ]
 
 { #category : #'surface support' }
@@ -3863,22 +3870,17 @@ BitBltSimulation >> sourceSkewAndPointerInit [
 		preload := (sxLowBits - dWid + 1) < 0].
 
 	"calculate right-shift skew from source to dest"
-	sourceMSB
-		ifTrue:[skew := (sxLowBits - dxLowBits) * destDepth] 
-		ifFalse:[skew := (dxLowBits - sxLowBits) * destDepth].  " -32..32 "
+	skew := destDepth * (sourceMSB ifTrue: [sxLowBits - dxLowBits] ifFalse: [dxLowBits - sxLowBits]).  " -32..32 "
 	preload ifTrue: 
-		[skew < 0
-			ifTrue: [skew := skew+32]
-			ifFalse: [skew := skew-32]].
+		[skew := skew < 0 ifTrue: [skew + 32] ifFalse: [skew - 32]].
 
 	"Calc byte addr and delta from longWord info"
-	sourceIndex := sourceBits + (sy * sourcePitch) + ((sx // (32//sourceDepth)) *4).
+	sourceIndex := sourceBits + (sy * sourcePitch) + ((sx // (32 // sourceDepth)) * 4).
 	"calculate increments from end of 1 line to start of next"
 	sourceDelta := (sourcePitch * vDir) - (4 * (nWords * hDir)).
 
-	preload ifTrue:
-		["Compensate for extra source word fetched"
-		sourceDelta := sourceDelta - (4*hDir)].
+	preload ifTrue: "Compensate for extra source word fetched"
+		[sourceDelta := sourceDelta - (4 * hDir)]
 ]
 
 { #category : #'combination rules' }
@@ -4124,19 +4126,20 @@ BitBltSimulation >> warpLoop [
 
 	interpreterProxy failed ifTrue: [^ false].  "ie if non-integers above"
 	interpreterProxy methodArgumentCount = 2
-		ifTrue: [smoothingCount := interpreterProxy stackIntegerValue: 1.
-				sourceMapOop := interpreterProxy stackValue: 0.
-				sourceMapOop = interpreterProxy nilObject
-				ifTrue: [sourceDepth < 16 ifTrue:
-					["color map is required to smooth non-RGB dest"
-					^ interpreterProxy primitiveFail]]
-				ifFalse: [(interpreterProxy slotSizeOf: sourceMapOop)
-							< (1 << sourceDepth) ifTrue:
-					["sourceMap must be long enough for sourceDepth"
-					^ interpreterProxy primitiveFail].
+		ifTrue:
+			[smoothingCount := interpreterProxy stackIntegerValue: 1.
+			 sourceMapOop := interpreterProxy stackValue: 0.
+			 sourceMapOop = interpreterProxy nilObject
+				ifTrue:
+					[sourceDepth < 16 ifTrue: "color map is required to smooth non-RGB dest"
+						[^interpreterProxy primitiveFail]]
+				ifFalse:
+					[(interpreterProxy slotSizeOf: sourceMapOop) < (1 << sourceDepth) ifTrue: "sourceMap must be long enough for sourceDepth"
+						[^interpreterProxy primitiveFail].
 					sourceMapOop := self oopForPointer: (interpreterProxy firstIndexableField: sourceMapOop)]]
-		ifFalse: [smoothingCount := 1.
-				sourceMapOop := interpreterProxy nilObject].
+		ifFalse:
+			[smoothingCount := 1.
+			 sourceMapOop := interpreterProxy nilObject].
 	nSteps := width-1.  nSteps <= 0 ifTrue: [nSteps := 1].
 	startBits := destPPW - (dx bitAnd: destPPW-1).
 	endBits := ((dx + bbW - 1) bitAnd: destPPW-1) + 1.
@@ -4152,13 +4155,10 @@ BitBltSimulation >> warpLoop [
 	"Setup values for faster pixel fetching."
 	self warpLoopSetup.
 	"Setup color mapping if not provided"
-	(smoothingCount > 1 and:[(cmFlags bitAnd: ColorMapNewStyle) = 0]) ifTrue:[
-		cmLookupTable == nil ifTrue:[
-			destDepth = 16 ifTrue:[self setupColorMasksFrom: 8 to: 5].
-		] ifFalse:[
-			self setupColorMasksFrom: 8 to: cmBitsPerColor.
-		].
-	].
+	(smoothingCount > 1 and:[(cmFlags bitAnd: ColorMapNewStyle) = 0]) ifTrue:
+		[cmLookupTable
+			ifNil: [destDepth = 16 ifTrue: [self setupColorMasksFrom: 8 to: 5]]
+			ifNotNil: [self setupColorMasksFrom: 8 to: cmBitsPerColor]].
 	mapperFlags := cmFlags bitAnd: ColorMapNewStyle bitInvert32.
 
 	destMSB
@@ -4166,6 +4166,8 @@ BitBltSimulation >> warpLoop [
 				dstShiftLeft := 32 - destDepth]
 		ifFalse:[	dstShiftInc := destDepth.
 				dstShiftLeft := 0].
+	noHalftone ifTrue:
+		[halftoneWord := AllOnes].
 	1 to: bbH do:
 		[ :i | "here is the vertical loop..."
 		xDelta := self deltaFrom: pAx to: pBx nSteps: nSteps.
@@ -4183,9 +4185,8 @@ BitBltSimulation >> warpLoop [
 			sy := sy + (clipX - destX * yDelta).
 		].
 
-		noHalftone
-			ifTrue: [halftoneWord := AllOnes]
-			ifFalse: [halftoneWord := self halftoneAt: dy+i-1].
+		noHalftone ifFalse:
+			[halftoneWord := self halftoneAt: dy + i - 1].
 		destMask := mask1.
 		nPix := startBits.
 		"Here is the inner loop..."
