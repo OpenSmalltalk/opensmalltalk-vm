@@ -148,7 +148,7 @@ CogAbstractInstruction class >> initializeSpecificOpcodes: opcodeSymbolSequence 
 	pool := initializeMethod methodClass classPool.
 	LastRTLCode ifNil:
 		[CogRTLOpcodes initialize].
-	classVariablesDefinedInMethod := (initializeMethod literals select: [:l| l isVariableBinding and: [pool includesKey: l key]]) collect:
+	classVariablesDefinedInMethod := (initializeMethod allLiterals select: [:l| l isVariableBinding and: [pool includesKey: l key]]) collect:
 											[:ea| ea key].
 	"Undeclare any class var not defined in opcodeSymbolSequence or by the method."
 	(pool keys reject: [:k| (opcodeSymbolSequence includes: k) or: [classVariablesDefinedInMethod includes: k]]) do:
