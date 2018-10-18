@@ -243,7 +243,7 @@ JPEGReadWriter2Plugin >> primJPEGReadHeader: aJPEGDecompressStruct fromByteArray
 	 and: [self isValidErrorMessageStruct: aJPEGErrorMgr2Struct]) ifFalse:
 		[^interpreterProxy primitiveFail].
 	
-	sourceSize := interpreterProxy byteSizeOf: source.
+	sourceSize := interpreterProxy byteSizeOf: source cPtrAsOop.
 	sourceSize > 0 ifTrue:
 		[self primJPEGReadHeader: aJPEGDecompressStruct
 			fromByteArray: source
