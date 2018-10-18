@@ -3550,6 +3550,8 @@ static const char *
 nameForKeyboardEvent(XEvent *evt) { return nameForKeycode(evt->xkey.keycode); }
 #endif /* DEBUG_EVENTS */
 
+static int mouseWheel2Squeak[4] = {30, 31, 28, 29};
+
 static void handleEvent(XEvent *evt)
 {
 #if DEBUG_EVENTS
@@ -3680,9 +3682,9 @@ static void handleEvent(XEvent *evt)
 	  buttonState |= x2sqButton(evt->xbutton.button);
 	  recordMouseEvent();
 	  break;
-	case 4: case 5:	/* mouse wheel */
+	case 4: case 5:	case 6: case 7: /* mouse wheel */
 	  {
-	    int keyCode= evt->xbutton.button + 26;	/* up/down */
+	    int keyCode= mouseWheel2Squeak[evt->xbutton.button - 4];
 	    int modifiers= modifierState ^ CtrlKeyBit;
 	    recordKeyboardEvent(keyCode, EventKeyDown, modifiers, keyCode);
 	    recordKeyboardEvent(keyCode, EventKeyChar, modifiers, keyCode);
@@ -3703,7 +3705,7 @@ static void handleEvent(XEvent *evt)
 	  buttonState &= ~x2sqButton(evt->xbutton.button);
 	  recordMouseEvent();
 	  break;
-	case 4: case 5:	/* mouse wheel */
+	case 4: case 5:	case 6: case 7: /* mouse wheel */
 	  break;
 	default:
 	  ioBeep();
