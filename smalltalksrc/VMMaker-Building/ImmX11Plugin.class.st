@@ -15,14 +15,6 @@ ImmX11Plugin class >> declareHeaderFilesIn: cg [
 		'extern int setCompositionFocus(int);'.
 ]
 
-{ #category : #'initialize-release' }
-ImmX11Plugin >> initialiseModule [
-
-	<export: true>
-	^ true
-
-]
-
 { #category : #primitives }
 ImmX11Plugin >> primGetEncoding [
 
@@ -358,12 +350,4 @@ ImmX11Plugin >> primSetXWinEncToLocale [
 			ret := interpreterProxy trueObject
 		].
 	^ ret
-]
-
-{ #category : #'initialize-release' }
-ImmX11Plugin >> shutdownModule [
-
-	<export: true>
-	^ true
-
 ]

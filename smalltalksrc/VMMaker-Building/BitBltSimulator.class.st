@@ -1,9 +1,32 @@
 "
-Provide bitblt support for the vm simulator
+Provide bitblt support for the vm simulator.
+
+Instance Variables
+	copyBitsBreakCount:	<Integer|nil>
+	copyBitsCount:			<Integer|nil>
+	destinationHashes:		<OrderedCollection|nil>
+
+copyBitsBreakCount
+	- if set, and destinationHashes is non-nil, copyBits will halt at this count
+
+copyBitsCount
+	- if destinationHashes is non-nil this counts copyBits invocations
+
+destinationHashes
+	- if an empty OrderedCollection then this will collect the hash of the destination bitmap after each copyBits operation.
+	  if a non-empty OrderedCollection, then the hash of the destination bitmap will be compared to the corresponding hash
+	  in destinationHashes after each copyBits operation, halting if there is a mismatch.
+	  if nil, then nothing is done.  In this way one can track down regressions by collecting hashes in the unregressed version
+	  and comparing against results in the regressed version.
 "
 Class {
 	#name : #BitBltSimulator,
 	#superclass : #BitBltSimulation,
+	#instVars : [
+		'destinationHashes',
+		'copyBitsCount',
+		'copyBitsBreakCount'
+	],
 	#classInstVars : [
 		'opTable',
 		'maskTable',
@@ -84,15 +107,80 @@ BitBltSimulator class >> warpBitShiftTable [
 	^ warpBitShiftTable
 ]
 
+{ #category : #'debug support' }
+BitBltSimulator >> copyBits [
+	(destinationHashes notNil and: [copyBitsCount + 1 = copyBitsBreakCount]) ifTrue:
+		[self halt: 'reached copyBitsBreakCount ', copyBitsBreakCount printString].
+	super copyBits.
+	(interpreterProxy failed
+	 or: [destinationHashes isNil]) ifFalse:
+		[copyBitsCount ifNil: [copyBitsCount := 0].
+		 (copyBitsCount := copyBitsCount + 1) <= destinationHashes size
+			ifTrue:
+				[(destinationHashes at: copyBitsCount) ~= self destinationHash ifTrue:
+					[self halt: 'destination different']]
+			ifFalse:
+				[destinationHashes addLast: self destinationHash]]
+]
+
+{ #category : #'debug support' }
+BitBltSimulator >> copyBitsBreakCount [
+
+	^ copyBitsBreakCount
+]
+
+{ #category : #'debug support' }
+BitBltSimulator >> copyBitsBreakCount: anObject [
+
+	copyBitsBreakCount := anObject
+]
+
+{ #category : #'debug support' }
+BitBltSimulator >> copyBitsCount [
+
+	^ copyBitsCount
+]
+
+{ #category : #'debug support' }
+BitBltSimulator >> copyBitsCount: anObject [
+
+	copyBitsCount := anObject
+]
+
 { #category : #'translation support' }
 BitBltSimulator >> cppIf: conditionBlockOrSymbolValue ifTrue: trueExpressionOrBlock ifFalse: falseExpressionOrBlockOrNil [
 	"The simulator does not have fast blt defines"
-	^ conditionBlockOrSymbolValue = #'ENABLE_FAST_BLT'
+	^ conditionBlockOrSymbolValue == #'ENABLE_FAST_BLT'
 		ifTrue: falseExpressionOrBlockOrNil
 		ifFalse: [super
 					cppIf: conditionBlockOrSymbolValue
 					ifTrue: trueExpressionOrBlock
 					ifFalse: falseExpressionOrBlockOrNil]
+]
+
+{ #category : #'debug support' }
+BitBltSimulator >> destinationHash [
+	| mem bits |
+	mem := interpreterProxy memory.
+	bits := mem copyFrom: destBits // mem bytesPerElement + 1 to: endOfDestination // mem bytesPerElement.
+	ByteArray adoptInstance: bits.
+	"This must be (and is) true; but the copyFrom:to: short cut is 100x faster than the byteAt: version"
+	"self assert: (((destBits to: endOfDestination - 1) collect: [:i| interpreterProxy byteAt: i]) as: ByteArray) = bits"
+	^bits hash
+]
+
+{ #category : #'debug support' }
+BitBltSimulator >> destinationHashes [
+
+	^ destinationHashes
+]
+
+{ #category : #'debug support' }
+BitBltSimulator >> destinationHashes: anObject [
+
+	destinationHashes := anObject.
+	copyBitsCount ifNil: [copyBitsCount := 0].
+	copyBitsBreakCount ifNil: [copyBitsBreakCount := -1]
 ]
 
 { #category : #'debug support' }
@@ -207,9 +295,15 @@ BitBltSimulator >> primitiveCopyBits [
 		[self halt. interpreterProxy coInterpreter initPrimCall]
 ]
 
-{ #category : #simulation }
+{ #category : #primitives }
 BitBltSimulator >> primitivePixelValueAt [
-	self primitivePixelValueAtX: (interpreterProxy stackValue: 1) y: (interpreterProxy stackValue: 0)
+	"This is a hack to mimic the SmartSyntaxPlugin support for primitive:parameters:receiver:
+	 which is hacked here at BitBltSimulator>>primitive:parameters:receiver:"
+	| xVal yVal |
+	xVal := interpreterProxy stackIntegerValue: 1.
+	yVal := interpreterProxy stackIntegerValue: 0.
+	interpreterProxy failed ifFalse:
+		[self primitivePixelValueAtX: xVal y: yVal]
 ]
 
 { #category : #'debug support' }

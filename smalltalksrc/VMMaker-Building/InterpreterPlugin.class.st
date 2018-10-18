@@ -449,7 +449,7 @@ InterpreterPlugin >> getModuleName [
 
 { #category : #debugging }
 InterpreterPlugin >> halt [
-	self cCode: '' inSmalltalk: [nil halt].
+	self cCode: '' inSmalltalk: [^super halt "avoid the ^0 below"].
 	^0
 ]
 

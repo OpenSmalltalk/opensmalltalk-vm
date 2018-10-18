@@ -49,6 +49,19 @@ CArray >> adaptToNumber: rcvr andSend: selector [
 ]
 
 { #category : #converting }
+CArray >> asByteArray [
+	"Answer a ByteArray containing the receivers contents"
+	| size bytes base |
+	size := interpreter byteSizeOf: self cPtrAsOop.
+	bytes := ByteArray new: size.
+	base := arrayBaseAddress + ptrOffset - 1.
+	1 to: size do:
+		[:index|
+		bytes at: index put: (interpreter byteAt: base + index)].
+	^bytes
+]
+
+{ #category : #converting }
 CArray >> asCArrayAccessor [
 
 	^ (CArrayAccessor on: self)
@@ -166,6 +179,17 @@ CArray >> interpreter: interpreterSimulator address: arrayAddress unitSize: numB
 	arrayBaseAddress := arrayAddress.
 	self unitSize: numBytes.
 	ptrOffset := 0
+]
+
+{ #category : #accessing }
+CArray >> overwriteContentsWith: aByteArray [
+	| base size |
+	self assert: (interpreter isWordsOrBytes: self cPtrAsOop).
+	size := (interpreter byteSizeOf: self cPtrAsOop) min: aByteArray size.
+	base := arrayBaseAddress + ptrOffset - 1.
+	1 to: size do:
+		[:index|
+		interpreter byteAt: base + index put: (aByteArray at: index)]
 ]
 
 { #category : #private }

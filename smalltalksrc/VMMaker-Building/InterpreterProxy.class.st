@@ -88,9 +88,9 @@ InterpreterProxy >> byteAtPointer: accessor [
 { #category : #'object access' }
 InterpreterProxy >> byteSizeOf: oop [
 	"Return the size of the receiver in bytes"
-	^oop class isBytes
-		ifTrue:[(self slotSizeOf: oop)]
-		ifFalse:[(self slotSizeOf: oop) * 4]
+	^oop class isBits
+		ifTrue: [oop basicSize * oop class elementSize]
+		ifFalse: [(self slotSizeOf: oop) * Smalltalk wordSize]
 ]
 
 { #category : #other }
