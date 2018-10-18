@@ -61,7 +61,7 @@ Mpeg3Plugin >> initialiseModule [
 	<export: true>
 	maximumNumberOfFilesToWatch := 1024.
 	1 to: maximumNumberOfFilesToWatch do: [:i | mpegFiles at: i put: 0].
-	^self cCode: 'true' inSmalltalk:[true]
+	^true
 ]
 
 { #category : #support }
@@ -788,5 +788,5 @@ Mpeg3Plugin >> shutdownModule [
 		[:i | ((mpegFiles at: i) ~= 0) ifTrue:
 			[self cCode: 'mpeg3_close(mpegFiles[i])'.
 			mpegFiles at: i put: 0]].
-	^self cCode:  'true' inSmalltalk:[true]
+	^true
 ]

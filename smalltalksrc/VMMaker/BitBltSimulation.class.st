@@ -1391,23 +1391,18 @@ BitBltSimulation >> copyLoop [
 	mergeFnwith := self cCoerce: (opTable at: combinationRule+1) to: 'unsigned int (*)(unsigned int, unsigned int)'.
 	mergeFnwith.  "null ref for compiler"
 
+	self deny: (preload and: [skew = 0]).
+	self assert: (skew between: -31 and: 31).
+
 	hInc := hDir * 4.  "Byte delta"
-	"degenerate skew fixed for Sparc. 10/20/96 ikp"
-	skew = -32
-		ifTrue: [skew := unskew := skewMask := 0]
+	skew < 0
+		ifTrue: [unskew := skew + 32. skewMask := AllOnes << (0 - skew).
+				self cCode: [] inSmalltalk: [skewMask := skewMask bitAnd: 16rFFFFFFFF]]
 		ifFalse:
-			[skew < 0
-				ifTrue:
-					[unskew := skew+32.
-					skewMask := AllOnes << (0-skew)]
-				ifFalse:
-					[skew = 0
-						ifTrue:
-							[unskew := 0.
-							skewMask := AllOnes]
-						ifFalse:
-							[unskew := skew-32.
-							skewMask := AllOnes >> skew]]].
+			[skew = 0
+				ifTrue: [unskew := 0. skewMask := AllOnes]
+				ifFalse: [unskew := skew - 32. skewMask := AllOnes >> skew]].
+
 	notSkewMask := skewMask bitInvert32.
 	noHalftone
 		ifTrue: [halftoneWord := AllOnes.  halftoneHeight := 0]
@@ -1449,21 +1444,22 @@ BitBltSimulation >> copyLoop [
 				destMask := AllOnes.
 				(skew = 0 and: [halftoneWord = AllOnes])
 					ifTrue: "Very special inner loop for STORE mode with no skew -- just move words"
-						[hDir = -1
-							ifTrue: "Woeful patch: revert to older code for hDir = -1"
-								[2 to: nWords-1 do: 
-									[ :word |
-									thisWord := self srcLongAt: sourceIndex.
-									self incSrcIndex: hInc.
-									self dstLongAt: destIndex put: thisWord.
-									self incDestIndex: hInc]]
-							ifFalse:
+						[(preload and: [hDir = 1])
+							ifTrue:
 								[2 to: nWords-1 do: 
 									[ :word |  "Note loop starts with prevWord loaded (due to preload)"
 									self dstLongAt: destIndex put: prevWord.
 									self incDestIndex: hInc.
 									prevWord := self srcLongAt: sourceIndex.
-									self incSrcIndex: hInc]]]
+									self incSrcIndex: hInc]]
+							ifFalse:
+								[2 to: nWords-1 do: 
+									[ :word |
+									thisWord := self srcLongAt: sourceIndex.
+									self incSrcIndex: hInc.
+									self dstLongAt: destIndex put: thisWord.
+									self incDestIndex: hInc].
+								 prevWord := thisWord]]
 						ifFalse:
 							[2 to: nWords-1 do: 
 								[ :word |
@@ -1793,27 +1789,31 @@ BitBltSimulation >> destMaskAndPointerInit [
 	pixPerM1 := destPPW - 1.  "A mask, assuming power of two"
 	"how many pixels in first word"
 	startBits := destPPW - (dx bitAnd: pixPerM1).
-	destMSB
-		ifTrue:[ mask1 := AllOnes >> (32 - (startBits*destDepth))] 
-		ifFalse:[ mask1 := AllOnes << (32 - (startBits*destDepth))].
 	"how many pixels in last word"
-	endBits := ((dx + bbW - 1) bitAnd: pixPerM1) + 1.
-	destMSB 
-		ifTrue:[mask2 := AllOnes << (32 - (endBits*destDepth))] 
-		ifFalse:[mask2 := AllOnes >> (32 - (endBits*destDepth))].
+	endBits := (dx + bbW - 1 bitAnd: pixPerM1) + 1.
+	destMSB
+		ifTrue:
+			[mask1 := AllOnes >> (32 - (startBits * destDepth)).
+			 mask2 := AllOnes << (32 - (endBits * destDepth))] 
+		ifFalse:
+			[mask1 := AllOnes << (32 - (startBits * destDepth)).
+			 mask2 := AllOnes >> (32 - (endBits * destDepth))].
+	self cCode: [] inSmalltalk:
+		[mask1 := mask1 bitAnd: 16rFFFFFFFF.
+		 mask2 := mask2 bitAnd: 16rFFFFFFFF].
+
 	"determine number of words stored per line; merge masks if only 1"
 	bbW < startBits
 		ifTrue: [mask1 := mask1 bitAnd: mask2.
 				mask2 := 0.
 				nWords := 1]
-		ifFalse: [nWords := (bbW - startBits) + pixPerM1 // destPPW + 1].
+		ifFalse: [nWords := bbW - startBits + pixPerM1 // destPPW + 1].
 	hDir := vDir := 1. "defaults for no overlap with source"
 
 	"calculate byte addr and delta, based on first word of data"
 	"Note pitch is bytes and nWords is longs, not bytes"
-	destIndex := destBits + (dy * destPitch) + ((dx // destPPW) *4).
-	destDelta := destPitch * vDir - (4 * (nWords * hDir)).  "byte addr delta"
-
+	destIndex := destBits + (dy * destPitch) + ((dx // destPPW) * 4).
+	destDelta := destPitch * vDir - (4 * (nWords * hDir)) "byte addr delta"
 ]
 
 { #category : #'combination rules' }
@@ -3015,10 +3015,9 @@ BitBltSimulation >> primitiveCopyBits [
 
 { #category : #primitives }
 BitBltSimulation >> primitiveDisplayString [
-
-	| kernDelta xTable glyphMap stopIndex startIndex sourceString bbObj maxGlyph ascii glyphIndex sourcePtr left quickBlt |
 	<export: true>
-	<var: #sourcePtr type: 'char *'>
+	| kernDelta xTable glyphMap stopIndex startIndex sourceString bbObj maxGlyph ascii glyphIndex sourcePtr left quickBlt |
+	<var: #sourcePtr type: #'char *'>
 	interpreterProxy methodArgumentCount = 6 ifFalse:
 		[^interpreterProxy primitiveFail].
 	kernDelta := interpreterProxy stackIntegerValue: 0.
@@ -3053,20 +3052,25 @@ BitBltSimulation >> primitiveDisplayString [
 				and:[cmFlags ~= 0 
 					 or:[sourceMSB ~= destMSB 
 					 or:[sourceDepth ~= destDepth]]]]]]. "no point using slower version"
-	quickBlt ifTrue:
-		[endOfSource := sourceBits + (sourcePitch * sourceHeight).
-		 endOfDestination := destBits + (destPitch * destHeight)].
+	quickBlt
+		ifTrue:
+			[endOfSource := sourceBits + (sourcePitch * sourceHeight).
+			 endOfDestination := destBits + (destPitch * destHeight)]
+		ifFalse:
+			[self lockSurfaces ifFalse:
+				[^interpreterProxy primitiveFail]].
 	left := destX.
 	sourcePtr := interpreterProxy firstIndexableField: sourceString.
 	startIndex to: stopIndex do:
 		[:charIndex|
 		ascii := interpreterProxy byteAtPointer: sourcePtr + charIndex - 1.
 		glyphIndex := interpreterProxy fetchInteger: ascii ofObject: glyphMap.
-		(glyphIndex < 0 or:[glyphIndex > maxGlyph])  ifTrue:
+		(glyphIndex < 0 or: [glyphIndex > maxGlyph])  ifTrue:
 			[^interpreterProxy primitiveFail].
 		sourceX := interpreterProxy fetchInteger: glyphIndex ofObject: xTable.
-		width := (interpreterProxy fetchInteger: glyphIndex+1 ofObject: xTable) - sourceX.
-		interpreterProxy failed ifTrue:[^nil].
+		width := (interpreterProxy fetchInteger: glyphIndex + 1 ofObject: xTable) - sourceX.
+		interpreterProxy failed ifTrue:
+			[^nil].
 		self clipRange.	"Must clip here"
 		(bbW > 0 and: [bbH > 0]) ifTrue:
 			[quickBlt
@@ -3079,11 +3083,13 @@ BitBltSimulation >> primitiveDisplayString [
 					 affectedT := dy.
 					 affectedB := dy + bbH]
 				ifFalse:
-					[self copyBits]]. "but this means we're doing lockSurfaces/unlockSurfaces *for each character* :-( eem 10/16/2018 15:42"
-		interpreterProxy failed ifTrue:[^nil].
-		destX := destX + width + kernDelta.
-	 ].
+					[self copyBitsLockedAndClipped]].
+		interpreterProxy failed ifTrue:
+			[^nil].
+		destX := destX + width + kernDelta].
 	affectedL := left.
+	quickBlt ifFalse:
+		[self unlockSurfaces].
 	self showDisplayBits.
 	"store destX back"	
 	interpreterProxy storeInteger: BBDestXIndex ofObject: bbObj withValue: destX.
@@ -3854,20 +3860,21 @@ BitBltSimulation >> showDisplayBits [
 BitBltSimulation >> sourceSkewAndPointerInit [
 	"This is only used when source and dest are same depth,
 	ie, when the barrel-shift copy loop is used."
-	| dWid sxLowBits dxLowBits pixPerM1 |
+	| sxLowBits dxLowBits pixPerM1 startBits m1 |
 	<inline: true>
+	<var: 'm1' type: #'unsigned int'>
+	self assert: (destPPW = sourcePPW and: [destMSB = sourceMSB and: [destDepth = sourceDepth]]).
 	pixPerM1 := destPPW - 1.  "A mask, assuming power of two"
 	sxLowBits := sx bitAnd: pixPerM1.
 	dxLowBits := dx bitAnd: pixPerM1.
-	"check if need to preload buffer
-	(i.e., two words of source needed for first word of destination)"
-	hDir > 0 ifTrue:
-		["n Bits stored in 1st word of dest"
-		dWid := bbW min: destPPW - dxLowBits.
-		preload := (sxLowBits + dWid) > pixPerM1]
-	ifFalse:
-		[dWid := bbW min: dxLowBits + 1.
-		preload := (sxLowBits - dWid + 1) < 0].
+	"how many pixels in first word"
+	startBits := hDir > 0
+					ifTrue: [sourcePPW - (sx bitAnd: pixPerM1)]
+					ifFalse: [(sx + bbW - 1 bitAnd: pixPerM1) + 1].
+	m1 := destMSB
+			ifTrue: [AllOnes >> (32 - (startBits * destDepth))] 
+			ifFalse: [AllOnes << (32 - (startBits * destDepth))].
+	preload := (m1 bitAnd: mask1) ~= mask1. "i.e. there are some missing bits"
 
 	"calculate right-shift skew from source to dest"
 	skew := destDepth * (sourceMSB ifTrue: [sxLowBits - dxLowBits] ifFalse: [dxLowBits - sxLowBits]).  " -32..32 "
@@ -3880,7 +3887,10 @@ BitBltSimulation >> sourceSkewAndPointerInit [
 	sourceDelta := (sourcePitch * vDir) - (4 * (nWords * hDir)).
 
 	preload ifTrue: "Compensate for extra source word fetched"
-		[sourceDelta := sourceDelta - (4 * hDir)]
+		[sourceDelta := sourceDelta - (4 * hDir)].
+
+	self deny: (preload and: [skew = 0]).
+	self assert: (skew between: -31 and: 31)
 ]
 
 { #category : #'combination rules' }
@@ -4045,13 +4055,9 @@ BitBltSimulation >> unlockSurfaces [
 		 (interpreterProxy isIntegerObject: sourceHandle) ifTrue:
 			["Only unlock sourceHandle if different from destHandle"
 			 (destLocked and: [sourceHandle = destHandle]) ifFalse:
-				[self unlock: (interpreterProxy integerValueOf: sourceHandle) Sur: 0 fa: 0 ce: 0 Fn: 0].
+				[self unlockSurfaceFn: (interpreterProxy integerValueOf: sourceHandle) _: 0 _: 0 _: 0 _: 0].
 			sourceBits := sourcePitch := 0]].
-	hasSurfaceLock := false.
-	self cCode: [] inSmalltalk:
-		[interpreterProxy displayObject = destForm ifTrue:
-			[interpreterProxy getDeferDisplayUpdates ifFalse:
-				[interpreterProxy fullDisplayUpdate]]]
+	hasSurfaceLock := false
 ]
 
 { #category : #setup }
