@@ -137,19 +137,19 @@ JPEGReadWriter2Plugin >> evaluateIfFailed: aBlock [
 { #category : #'plugin support' }
 JPEGReadWriter2Plugin >> isValidCompressionStruct: aByteArray [
 	<inline: #always>
-	^(interpreterProxy byteSizeOf: (self cCode: [aByteArray] inSmalltalk: [aByteArray cPtrAsOop])) >= self compressStructSize
+	^(interpreterProxy byteSizeOf: aByteArray cPtrAsOop) >= self compressStructSize
 ]
 
 { #category : #'plugin support' }
 JPEGReadWriter2Plugin >> isValidDecompressionStruct: aByteArray [
 	<inline: #always>
-	^(interpreterProxy byteSizeOf: (self cCode: [aByteArray] inSmalltalk: [aByteArray cPtrAsOop])) >= self decompressStructSize
+	^(interpreterProxy byteSizeOf: aByteArray cPtrAsOop) >= self decompressStructSize
 ]
 
 { #category : #'plugin support' }
 JPEGReadWriter2Plugin >> isValidErrorMessageStruct: aByteArray [
 	<inline: #always>
-	^(interpreterProxy byteSizeOf: (self cCode: [aByteArray] inSmalltalk: [aByteArray cPtrAsOop])) >= self errorMgr2StructSize
+	^(interpreterProxy byteSizeOf: aByteArray cPtrAsOop) >= self errorMgr2StructSize
 ]
 
 { #category : #primitives }
