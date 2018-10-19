@@ -89,7 +89,7 @@ FilePluginSimulator >> fileOpenName: nameIndex size: nameSize write: writeFlag s
 	| path f index |
 	openFiles size >= maxOpenFiles ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrLimitExceeded].
-	path := interpreterProxy asString: nameIndex size: nameSize.
+	path := (interpreterProxy asByteArray: nameIndex size: nameSize) utf8Decoded.
 	f := writeFlag
 			ifTrue: [FileStream fileNamed: path]
 			ifFalse:
@@ -108,7 +108,7 @@ FilePluginSimulator >> fileOpenNewName: nameIndex size: nameSize secure: secureF
 	| path f index |
 	openFiles size >= maxOpenFiles ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrLimitExceeded].
-	path := interpreterProxy interpreter asString: nameIndex size: nameSize.
+	path := (interpreterProxy interpreter asByteArray: nameIndex size: nameSize) utf8Decoded.
 	"the #defaultAction for FileExistsException creates a dialog,
 	so it is caught and resignaled as a generic Error"
 	[f := FileStream newFileNamed: nameIndex]
