@@ -9808,6 +9808,13 @@ SpurMemoryManager >> primitiveFailForFFIException: errorCode at: pc [
 ]
 
 { #category : #'simulation only' }
+SpurMemoryManager >> primitiveFailForOSError: reasonCode [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter primitiveFailForOSError: reasonCode
+]
+
+{ #category : #'simulation only' }
 SpurMemoryManager >> primitiveFailureCode [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	<doNotGenerate>
