@@ -1317,8 +1317,10 @@ VMClass >> strncpy: aString _: bString _: n [
 			[getBlock := [ :idx | bString at: idx - 1]]]]].
 	1 to: count do: [ :i | | v |
 		v := getBlock value: i.
-		setBlock value: i value: v.
-		v = 0 ifTrue: [^aString] ].
+		setBlock value: i value: v].
+	"SVr4, 4.3BSD, C89, C99 require the remainder of the buffer be filled with nulls"
+	count+1 to: n do: [ :i |
+		setBlock value: i value: 0].
 	^aString
 ]
 

@@ -60,5 +60,11 @@ VMClassTests >> testStrncpy [
 	vmclass strncpy: byteArrayA _: testString _: byteArrayA size.
 	self assert: byteArrayA equals: (testString, (String new: 3)) asByteArray.
 
+	"SVr4, 4.3BSD, C89, C99 require the destination space after the string be null filled"
+	byteArrayA := ByteArray new: testString size + 3.
+	byteArrayA atAllPut: 255.
+	vmclass strncpy: byteArrayA _: testString _: byteArrayA size.
+	self assert: byteArrayA equals: (testString, (String new: 3)) asByteArray.
+
 
 ]
