@@ -643,6 +643,14 @@ VMClass >> asAddress: address put: aBlock [
 ]
 
 { #category : #'C library extensions' }
+VMClass >> asByteArray: baIndex size: baSize [
+	"baIndex is an address in the heap.  Create a ByteArray of the requested length
+	form the bytes in the heap starting at baIndex."
+	<doNotGenerate>
+	^self strncpy: (ByteArray new: baSize) _: baIndex _: baSize
+]
+
+{ #category : #'C library extensions' }
 VMClass >> asString: aStringOrStringIndex [
 	"aStringOrStringIndex is either a string or an address in the heap.
 	 Create a String of the requested length form the bytes in the
