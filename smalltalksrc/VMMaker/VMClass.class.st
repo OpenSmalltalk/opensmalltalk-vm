@@ -16,7 +16,7 @@ Class {
 	#classInstVars : [
 		'timeStamp'
 	],
-	#category : 'VMMaker-Support'
+	#category : #'VMMaker-Support'
 }
 
 { #category : #translation }
@@ -972,17 +972,15 @@ VMClass >> majorVersion [
 { #category : #'C library simulation' }
 VMClass >> malloc: size [
 	<doNotGenerate>
-	^ ByteArray new: size
+	^CArrayAccessor on: (ByteArray new: size)
 ]
 
 { #category : #'C library simulation' }
 VMClass >> memcpy: dString _: sString _: bytes [
 	<doNotGenerate>
 	"implementation of memcpy(3). N.B. If ranges overlap, must use memmove."
-	(dString isString or: [sString isString]) ifFalse:
+	(dString isCollection or: [sString isCollection]) ifFalse:
 		[| destAddress sourceAddress |
-		 dString class == ByteArray ifTrue:
-			[self memcpy: dString _: sString _: bytes].
 		 destAddress := dString asInteger.
 		 sourceAddress := sString asInteger.
 		 self deny: ((destAddress <= sourceAddress and: [destAddress + bytes > sourceAddress])
