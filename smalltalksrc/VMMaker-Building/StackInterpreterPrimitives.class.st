@@ -538,10 +538,7 @@ StackInterpreterPrimitives >> primitiveDoNamedPrimitiveWithArgs [
 	moduleName = objectMemory nilObject
 		ifTrue: [moduleLength := 0]
 		ifFalse: [self success: (objectMemory isBytes: moduleName).
-				moduleLength := objectMemory lengthOf: moduleName.
-				self cCode: '' inSmalltalk:
-					[ (#('FloatArrayPlugin' 'Matrix2x3Plugin') includes: (self stringOf: moduleName)) "??"
-						ifTrue: [moduleLength := 0  "Cause all of these to fail.  Why?? eem 12/7/2017 09:37"]]].
+				moduleLength := objectMemory lengthOf: moduleName].
 	functionName := objectMemory fetchPointer: 1 ofObject: spec.
 	self success: (objectMemory isBytes: functionName).
 	functionLength := objectMemory lengthOf: functionName.
