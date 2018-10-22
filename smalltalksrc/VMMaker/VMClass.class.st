@@ -982,28 +982,26 @@ VMClass >> memcpy: dString _: sString _: bytes [
 	(dString isString or: [sString isString]) ifFalse:
 		[| destAddress sourceAddress |
 		 dString class == ByteArray ifTrue:
-			[ByteString adoptInstance: dString.
-			 ^[self memcpy: dString _: sString _: bytes] ensure:
-				[ByteArray adoptInstance: dString]].
+			[self memcpy: dString _: sString _: bytes].
 		 destAddress := dString asInteger.
 		 sourceAddress := sString asInteger.
 		 self deny: ((destAddress <= sourceAddress and: [destAddress + bytes > sourceAddress])
 					or: [sourceAddress <= destAddress and: [sourceAddress + bytes > destAddress]])].
-	dString isString
+	dString isInteger
 		ifTrue:
 			[1 to: bytes do:
 				[:i| | v |
 				v := sString isString
-						ifTrue: [sString at: i]
-						ifFalse: [Character value: (self byteAt: sString + i - 1)].
-				dString at: i put: v]]
+						ifTrue: [sString basicAt: i]
+						ifFalse: [self byteAt: sString + i - 1].
+				self byteAt: dString + i - 1 put: v]]
 		ifFalse:
 			[1 to: bytes do:
 				[:i| | v |
 				v := sString isString
-						ifTrue: [(sString at: i) asInteger]
+						ifTrue: [sString basicAt: i]
 						ifFalse: [self byteAt: sString + i - 1].
-				self byteAt: dString + i - 1 put: v]].
+				dString basicAt: i put: v]].
 	^dString
 ]
 
@@ -1286,50 +1284,61 @@ VMClass >> strlen: aCString [
 VMClass >> strncmp: aString _: bString _: n [
 	<doNotGenerate>
 	"implementation of strncmp(3)"
-	bString isString ifTrue:
-		[1 to: n do:
-			[:i|
-			 (aString at: i) asCharacter ~= (bString at: i) ifTrue:
-				[^i]].
-		 ^0].
-	1 to: n do:
-		[:i| | v |
-		v := (aString at: i) asInteger - (self byteAt: bString + i - 1).
-		v ~= 0 ifTrue: [^v]].
+	bString isString
+		ifTrue:
+			[1 to: n do:
+				[:i| | v |
+				 v := (aString basicAt: i) - (bString basicAt: i).
+				 v ~= 0 ifTrue: [^v]]]
+		ifFalse:
+			[1 to: n do:
+				[:i| | v |
+				 v := (aString basicAt: i) - (self byteAt: bString + i - 1).
+				 v ~= 0 ifTrue: [^v]]].
 	^0
 ]
 
 { #category : #'C library simulation' }
-VMClass >> strncpy: aString _: bString _: n [
+VMClass >> strncpy: dest _: src _: n [
 	<doNotGenerate>
-	"implementation of strncpy(3)"
-
+	"implementation of strncpy(3).
+	 See e.g. https://manpages.debian.org/stretch/manpages-dev/strncpy.3.en.html
+	 The C version always takes an address; the simulation allows a String, ByteArray,
+	 CArray or address within the simulation object memory (Positive Integer)"
 	| getBlock setBlock count |
-
 	count := n.
-	aString isString ifTrue: 
-		[setBlock := [ :idx :ch | aString at: idx put: ch asCharacter]]
-	ifFalse: [aString class == ByteArray ifTrue: 
-			[setBlock := [ :idx :ch | aString at: idx put: ch]]
-	ifFalse: [aString isInteger ifTrue: 
-		[setBlock := [ :idx :ch | self byteAt: aString + idx - 1 put: ch]]]].
-	bString isString ifTrue: [
-		getBlock := [ :idx | (bString at: idx) asInteger ].
-		count := count min: bString size]
-	ifFalse: [bString class == ByteArray ifTrue: [
-		getBlock := [ :idx | bString at: idx].
-		count := count min: bString size]
-	ifFalse: [bString isInteger ifTrue: 
-		[getBlock := [ :idx | self byteAt: bString + idx - 1]]
-	ifFalse: [bString class == CArray ifTrue:
-			[getBlock := [ :idx | bString at: idx - 1]]]]].
-	1 to: count do: [ :i | | v |
-		v := getBlock value: i.
-		setBlock value: i value: v].
+	"Determine the source and destination access blocks based on the parameter type"
+	getBlock := src isCollection
+					ifTrue:
+						[count := count min: src size.
+						 src isString
+							ifTrue: [[ :idx | src basicAt: idx]] "basicAt: answers integers"
+							ifFalse:
+								[src class == ByteArray ifTrue:
+									[[ :idx | src at: idx]]]]
+					ifFalse:
+						[src isInteger
+							ifTrue: [[ :idx | self byteAt: src + idx - 1]]
+							ifFalse:
+								[src class == CArray ifTrue:
+									[[ :idx | src at: idx - 1]]]].
+	getBlock ifNil: [self error: 'unhandled type of source string'].
+	setBlock := dest isCollection
+					ifTrue:
+						[dest isString
+							ifTrue: [[ :idx | dest basicAt: idx put: (getBlock value: idx)]] "basicAt:put: stores integers"
+							ifFalse:
+								[dest class == ByteArray ifTrue:
+									[[ :idx | dest at: idx put: (getBlock value: idx)]]]]
+					ifFalse:
+						[dest isInteger ifTrue: 
+							[[ :idx | self byteAt: dest + idx - 1 put: (getBlock value: idx)]]].
+	setBlock ifNil: [self error: 'unhandled type of destination string'].
+	1 to: count do: setBlock.
 	"SVr4, 4.3BSD, C89, C99 require the remainder of the buffer be filled with nulls"
-	count+1 to: n do: [ :i |
-		setBlock value: i value: 0].
-	^aString
+	getBlock := [:idx| 0].
+	count + 1 to: n do: setBlock.
+	^dest
 ]
 
 { #category : #'hack compatibility' }
