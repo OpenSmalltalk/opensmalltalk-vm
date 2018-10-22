@@ -8,7 +8,7 @@ Class {
 		'simArray',
 		'simOffset'
 	],
-	#category : #'VMMaker-InterpreterSimulation'
+	#category : 'VMMaker-InterpreterSimulation'
 }
 
 { #category : #'pointer arithmetic' }

@@ -4,7 +4,7 @@ I am a place to hang various pieces of translation support.
 Class {
 	#name : #CogClass,
 	#superclass : #VMClass,
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #'system primitives' }

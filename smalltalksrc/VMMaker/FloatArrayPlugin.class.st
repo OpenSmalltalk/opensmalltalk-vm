@@ -4,7 +4,7 @@ FloatArrayPlugin provides fast access to FloatArrays for batch processing of flo
 Class {
 	#name : #FloatArrayPlugin,
 	#superclass : #InterpreterPlugin,
-	#category : #'VMMaker-Plugins'
+	#category : 'VMMaker-Plugins'
 }
 
 { #category : #'translation to C' }
@@ -105,7 +105,7 @@ FloatArrayPlugin >> primitiveDivFloatArray [
 	argPtr := self cCoerce: (interpreterProxy firstIndexableField: arg) to: #'float *'.
 	"Check if any of the argument's values is zero"
 	0 to: length - 1 do:
-		[:i| (argPtr + i) = 0.0 ifTrue: "i.e. check for both 0.0 and -0.0"
+		[:i| (argPtr at: i) = (self cCoerce: 0.0 to: #float) ifTrue: "i.e. check for both 0.0 and -0.0"
 			[^interpreterProxy primitiveFail]].
 	0 to: length - 1 do:
 		[:i| rcvrPtr at: i put: (self cCoerce: (rcvrPtr at: i) to: #double) / (self cCoerce: (argPtr at: i) to: #double)].

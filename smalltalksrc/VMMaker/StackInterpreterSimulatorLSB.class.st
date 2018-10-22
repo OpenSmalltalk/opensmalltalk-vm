@@ -8,7 +8,7 @@ Note that the image must have been saved at least once on the local architecture
 Class {
 	#name : #StackInterpreterSimulatorLSB,
 	#superclass : #StackInterpreterSimulator,
-	#category : #'VMMaker-InterpreterSimulation'
+	#category : 'VMMaker-InterpreterSimulation'
 }
 
 { #category : #'memory access' }

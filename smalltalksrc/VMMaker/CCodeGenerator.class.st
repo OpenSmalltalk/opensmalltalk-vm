@@ -46,7 +46,7 @@ Class {
 	#pools : [
 		'VMBasicConstants'
 	],
-	#category : #'VMMaker-Translation to C'
+	#category : 'VMMaker-Translation to C'
 }
 
 { #category : #'class initialization' }
@@ -1951,13 +1951,20 @@ CCodeGenerator >> generateBytesPerWord: msgNode on: aStream indent: level [
 CCodeGenerator >> generateCCoercion: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
+	| cExpr cType literal |
+	cExpr := msgNode args first.
+	cType := msgNode args last value.
+	(cType = #float
+	 and: [cExpr isConstant
+	 and: [cExpr value isFloat
+	 and: [(literal := self cLiteralFor: cExpr value) allSatisfy: [:c| c == $. or: [c isDigit]]]]]) ifTrue:
+		[aStream nextPutAll: literal; nextPut: $f.
+		 ^self].
 	aStream nextPutAll: '(('.
-	aStream nextPutAll: msgNode args last value.
+	aStream nextPutAll: cType.
 	aStream nextPutAll: ') '.
-	self emitCExpression: msgNode args first on: aStream.
+	self emitCExpression: cExpr on: aStream.
 	aStream nextPut: $)
-
-
 ]
 
 { #category : #accessing }
