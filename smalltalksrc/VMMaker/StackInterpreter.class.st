@@ -21863,16 +21863,6 @@ StackInterpreter >> tryLoadNewPlugin: pluginString pluginEntries: pluginEntries 
 	<doNotGenerate>
 	| plugin realPluginClass plugins simulatorClasses |
 	self transcript cr; show: 'Looking for module ', pluginString.
-	"Defeat loading of the FloatArrayPlugin & Matrix2x3Plugin since complications with 32-bit
-	 float support prevent simulation.  If you feel up to tackling this start by implementing
-		cCoerce: value to: cType
-			^cType = 'float'
-				ifTrue: [value asIEEE32BitWord]
-				ifFalse: [value]
-	 in FloatArrayPlugin & Matrix2x3Plugin and then address the issues in the BalloonEnginePlugin.
-	 See http://forum.world.st/Simulating-the-BalloonEnginePlugin-FloatArrayPlugin-amp-Matrix2x3Plugin-primitives-td4734673.html"
-	(#('FloatArrayPlugin' 'Matrix2x3Plugin') includes: pluginString) ifTrue:
-		[self transcript show: ' ... defeated'. ^nil].
 	pluginString isEmpty
 		ifTrue:
 			[plugin := self]

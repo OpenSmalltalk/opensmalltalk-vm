@@ -181,6 +181,11 @@ CArray >> interpreter: interpreterSimulator address: arrayAddress unitSize: numB
 	ptrOffset := 0
 ]
 
+{ #category : #testing }
+CArray >> isCArray [
+	^true
+]
+
 { #category : #accessing }
 CArray >> overwriteContentsWith: aByteArray [
 	| base size |
