@@ -2394,7 +2394,7 @@ BalloonEngineBase >> primitiveInitializeBuffer [
 	| wbOop size |
 	(interpreterProxy methodArgumentCount = 1
 	 and: [(interpreterProxy isWords: (wbOop := interpreterProxy stackValue: 0)) 
-	 and: [(size := interpreterProxy slotSizeOf: wbOop) < GWMinimalSize]]) ifTrue:
+	 and: [(size := interpreterProxy slotSizeOf: wbOop) >= GWMinimalSize]]) ifFalse:
 		[^interpreterProxy primitiveFail].
 	self workBufferPut: wbOop.
 	objBuffer := workBuffer + GWHeaderSize.
