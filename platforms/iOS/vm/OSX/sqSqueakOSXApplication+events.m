@@ -70,10 +70,28 @@ static int buttonState=0;
 - (void) pumpRunLoopEventSendAndSignal:(BOOL)signal {
     NSEvent *event;
     
+#ifdef PharoVM
+    while ((event = [gDelegateApp.window nextEventMatchingMask:NSEventMaskAny
+                                       untilDate:nil
+                                          inMode:NSEventTrackingRunLoopMode
+                                         dequeue:NO])) {
+        if (event.window == 0 || event.window == gDelegateApp.window) {
+          event = [gDelegateApp.window nextEventMatchingMask:NSEventMaskAny
+                                                 untilDate:nil
+                                                    inMode:NSEventTrackingRunLoopMode
+                                                   dequeue:YES];
+        }
+        else{
+          // STOP THE LOOP
+          // We have an event that does not correspond to our window
+          break;
+        }
+#else
     while ((event = [NSApp nextEventMatchingMask:NSEventMaskAny
                                        untilDate:nil
                                           inMode:NSEventTrackingRunLoopMode
                                          dequeue:YES])) {
+#endif
         [NSApp sendEvent: event];
         if (signal) {
             interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
