@@ -5,15 +5,30 @@ Class {
 	#name : #BalloonArray,
 	#superclass : #CArray,
 	#instVars : [
-		'simArray'
+		'simArray',
+		'simOffset'
 	],
 	#category : #'VMMaker-InterpreterSimulation'
 }
 
+{ #category : #'pointer arithmetic' }
+BalloonArray >> += increment [
+
+	super += increment.
+	simOffset := simOffset + (increment / unitSize)
+]
+
+{ #category : #'pointer arithmetic' }
+BalloonArray >> -= increment [
+
+	super -= increment.
+	simOffset := simOffset - (increment / unitSize)
+]
+
 { #category : #'memory access' }
 BalloonArray >> at: index [
 	| value |
-	value := simArray at: index+1.
+	value := simArray at: index + simOffset.
 	"Debug only..."
 	value ifNil:
 		[self error: 'attempt to read an uninitialized field'.
@@ -27,7 +42,7 @@ BalloonArray >> at: index [
 BalloonArray >> at: index put: value [
 
 	super at: index put: (self bitsOf: value).
-	^ simArray at: index + 1 put: value.
+	^ simArray at: index + simOffset put: value.
 	
 ]
 
@@ -82,6 +97,18 @@ BalloonArray >> intAt: index put: value [
 
 { #category : #'memory access' }
 BalloonArray >> setSimArray: anArray [
-
-	simArray := anArray
+	simArray := anArray.
+	"Now sync the contents of the simArray with the actual work buffer.
+	 The issue here is that whether an element is an in teger or a float depends
+	 on how the BalloonArrayPlugin accesses the workBuffer; hence we look at
+	 the existing values in simArray to find that interpretation."
+	simOffset ifNil:
+		[simOffset := 1].
+	0 to: anArray size - 1 do:
+		[:i| 
+		 anArray
+			at: i + simOffset
+			put: ((anArray at: i + simOffset) isFloat
+					ifTrue: [(Float fromIEEE32Bit: (super at: i))]
+					ifFalse: [super at: i])]
 ]
