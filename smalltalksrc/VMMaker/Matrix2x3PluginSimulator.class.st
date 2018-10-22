@@ -1,7 +1,7 @@
 Class {
 	#name : #Matrix2x3PluginSimulator,
 	#superclass : #Matrix2x3Plugin,
-	#category : #'VMMaker-Plugins'
+	#category : 'VMMaker-Plugins'
 }
 
 { #category : #primitives }

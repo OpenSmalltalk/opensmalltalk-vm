@@ -7,7 +7,7 @@ Class {
 		'm23ArgX',
 		'm23ArgY'
 	],
-	#category : #'VMMaker-Plugins'
+	#category : 'VMMaker-Plugins'
 }
 
 { #category : #'class initialization' }
@@ -334,11 +334,14 @@ Matrix2x3Plugin >> roundAndStoreResultPoint: nItemsToPop [
 	Fail if we cannot represent the result as SmallInteger"
 	m23ResultX := m23ResultX + 0.5.
 	m23ResultY := m23ResultY + 0.5.
-	(self okayIntValue: m23ResultX) ifFalse:[^interpreterProxy primitiveFail].
-	(self okayIntValue: m23ResultY) ifFalse:[^interpreterProxy primitiveFail].
-	interpreterProxy pop: nItemsToPop thenPush:
-		(interpreterProxy makePointwithxValue: m23ResultX asInteger
-							yValue: m23ResultY asInteger)
+	((self okayIntValue: m23ResultX)
+	 and: [self okayIntValue: m23ResultY]) ifFalse:
+		[^interpreterProxy primitiveFail].
+	interpreterProxy
+		pop: nItemsToPop
+		thenPush: (interpreterProxy
+					makePointwithxValue: m23ResultX asInteger
+					yValue: m23ResultY asInteger)
 ]
 
 { #category : #private }
