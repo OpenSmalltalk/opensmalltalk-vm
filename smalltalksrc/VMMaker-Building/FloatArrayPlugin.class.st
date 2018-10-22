@@ -53,10 +53,8 @@ FloatArrayPlugin >> primitiveAddScalar [
 
 { #category : #'access primitives' }
 FloatArrayPlugin >> primitiveAt [
-
-	| index rcvr floatValue floatPtr |
 	<export: true>
-	<var: #floatValue type: #double>
+	| index rcvr floatPtr |
 	<var: #floatPtr type: #'float *'>
 	index := interpreterProxy stackIntegerValue: 0.
 	rcvr := interpreterProxy stackValue: 1.
@@ -64,10 +62,8 @@ FloatArrayPlugin >> primitiveAt [
 	 and: [(interpreterProxy isWords: rcvr)
 	 and: [index > 0 and: [index <= (interpreterProxy slotSizeOf: rcvr)]]]) ifFalse:
 		[^interpreterProxy primitiveFail].
-	floatPtr := interpreterProxy firstIndexableField: rcvr.
-	floatValue := (floatPtr at: index-1) asFloat.
-	interpreterProxy pop: 2.
-	interpreterProxy pushFloat: floatValue
+	floatPtr := self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: #'float *'.
+	interpreterProxy methodReturnFloat: (floatPtr at: index - 1)
 ]
 
 { #category : #'access primitives' }
@@ -78,25 +74,25 @@ FloatArrayPlugin >> primitiveAtPut [
 	<var: #floatValue type: #double>
 	<var: #floatPtr type: #'float *'>
 	value := interpreterProxy stackValue: 0.
-	(interpreterProxy isIntegerObject: value)
-		ifTrue:[floatValue := (interpreterProxy integerValueOf: value) asFloat]
-		ifFalse:[floatValue := interpreterProxy floatValueOf: value].
+	floatValue := (interpreterProxy isIntegerObject: value)
+					ifTrue: [(interpreterProxy integerValueOf: value) asFloat]
+					ifFalse: [interpreterProxy floatValueOf: value].
 	index := interpreterProxy stackIntegerValue: 1.
 	rcvr := interpreterProxy stackValue: 2.
 	(interpreterProxy failed not
 	 and: [(interpreterProxy isWords: rcvr)
 	 and: [index > 0 and: [index <= (interpreterProxy slotSizeOf: rcvr)]]]) ifFalse:
 		[^interpreterProxy primitiveFail].
-	floatPtr := interpreterProxy firstIndexableField: rcvr.
-	floatPtr at: index-1 put: (self cCoerce: floatValue to:#float).
+	floatPtr := self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: #'float *'.
+	floatPtr at: index-1 put: (self cCoerce: floatValue to: #float).
 	interpreterProxy pop: 3 thenPush: value
 ]
 
 { #category : #'arithmetic primitives' }
 FloatArrayPlugin >> primitiveDivFloatArray [
-	"Primitive. Add the receiver and the argument, both FloatArrays and store the result into the receiver."
-	| rcvr arg rcvrPtr argPtr length |
+	"Primitive. Divide each element in the receiver by the corresponding element in the argument, both FloatArrays, and store the result into the receiver."
 	<export: true>
+	| rcvr arg rcvrPtr argPtr length |
 	<var: #rcvrPtr type: #'float *'>
 	<var: #argPtr type: #'float *'>
 	arg := interpreterProxy stackValue: 0.
@@ -108,17 +104,17 @@ FloatArrayPlugin >> primitiveDivFloatArray [
 	rcvrPtr := self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: #'float *'.
 	argPtr := self cCoerce: (interpreterProxy firstIndexableField: arg) to: #'float *'.
 	"Check if any of the argument's values is zero"
-	0 to: length-1 do:[:i|
-		(interpreterProxy intAtPointer:(self cCoerce: (argPtr + i) to: #'char*')) = 0 ifTrue:[^interpreterProxy primitiveFail]].
-	0 to: length-1 do:[:i|
-		rcvrPtr at: i put: (self cCoerce: (rcvrPtr at: i) to: #double) / (self cCoerce: (argPtr at: i) to: #double).
-	].
-	interpreterProxy pop: 1. "Leave rcvr on stack"
+	0 to: length - 1 do:
+		[:i| (argPtr + i) = 0.0 ifTrue: "i.e. check for both 0.0 and -0.0"
+			[^interpreterProxy primitiveFail]].
+	0 to: length - 1 do:
+		[:i| rcvrPtr at: i put: (self cCoerce: (rcvrPtr at: i) to: #double) / (self cCoerce: (argPtr at: i) to: #double)].
+	interpreterProxy pop: 1 "Leave rcvr on stack"
 ]
 
 { #category : #'arithmetic primitives' }
 FloatArrayPlugin >> primitiveDivScalar [
-	"Primitive. Add the argument, a scalar value to the receiver, a FloatArray"
+	"Primitive. Divide each element in the receiver by the argument, a scalar, and store the result into the receiver, a FloatArray"
 	| rcvr rcvrPtr value inverse length |
 	<export: true>
 	<var: #inverse type:'double '>
@@ -135,15 +131,15 @@ FloatArrayPlugin >> primitiveDivScalar [
 	0 to: length-1 do:[:i|
 		rcvrPtr at: i put: (self cCoerce: (rcvrPtr at: i) to: #double) * inverse.
 	].
-	interpreterProxy pop: 1. "Leave rcvr on stack"
+	interpreterProxy pop: 1 "Leave rcvr on stack"
 ]
 
 { #category : #'arithmetic primitives' }
 FloatArrayPlugin >> primitiveDotProduct [
 	"Primitive. Compute the dot product of the receiver and the argument.
 	The dot product is defined as the sum of the products of the individual elements."
-	| rcvr arg rcvrPtr argPtr length result |
 	<export: true>
+	| rcvr arg rcvrPtr argPtr length result |
 	<var: #result type: #double>
 	<var: #rcvrPtr type: #'float *'>
 	<var: #argPtr type: #'float *'>
@@ -157,10 +153,9 @@ FloatArrayPlugin >> primitiveDotProduct [
 	argPtr := self cCoerce: (interpreterProxy firstIndexableField: arg) to: #'float *'.
 	result := 0.0.
 	0 to: length-1 do:[:i|
-		result := result + ((self cCoerce: (rcvrPtr at: i) to: 'double') * (self cCoerce: (argPtr at: i) to: 'double')).
+		result := result + ((self cCoerce: (rcvrPtr at: i) to: #double) * (self cCoerce: (argPtr at: i) to: #double)).
 	].
-	interpreterProxy pop: 2. "Pop args + rcvr"
-	interpreterProxy pushFloat: result. "Return result"
+	interpreterProxy methodReturnFloat: result. "Return result"
 ]
 
 { #category : #'access primitives' }
@@ -201,8 +196,7 @@ FloatArrayPlugin >> primitiveHashArray [
 	0 to: length-1 do:[:i|
 		result := result + (rcvrPtr at: i).
 	].
-	interpreterProxy pop: 1.
-	^interpreterProxy pushInteger: (result bitAnd: 16r1FFFFFFF)
+	interpreterProxy methodReturnInteger: (result bitAnd: 16r1FFFFFFF)
 ]
 
 { #category : #'arithmetic primitives' }
@@ -227,9 +221,9 @@ FloatArrayPlugin >> primitiveLength [
 
 { #category : #'arithmetic primitives' }
 FloatArrayPlugin >> primitiveMulFloatArray [
-	"Primitive. Add the receiver and the argument, both FloatArrays and store the result into the receiver."
-	| rcvr arg rcvrPtr argPtr length |
+	"Primitive. Multiply the receiver and the argument, both FloatArrays and store the result into the receiver."
 	<export: true>
+	| rcvr arg rcvrPtr argPtr length |
 	<var: #rcvrPtr type: #'float *'>
 	<var: #argPtr type: #'float *'>
 	arg := interpreterProxy stackValue: 0.
@@ -243,14 +237,14 @@ FloatArrayPlugin >> primitiveMulFloatArray [
 	0 to: length-1 do:[:i|
 		rcvrPtr at: i put: (self cCoerce: (rcvrPtr at: i) to: #double) * (self cCoerce: (argPtr at: i) to: #double).
 	].
-	interpreterProxy pop: 1. "Leave rcvr on stack"
+	interpreterProxy pop: 1 "Leave rcvr on stack"
 ]
 
 { #category : #'arithmetic primitives' }
 FloatArrayPlugin >> primitiveMulScalar [
-	"Primitive. Add the argument, a scalar value to the receiver, a FloatArray"
-	| rcvr rcvrPtr value length |
 	<export: true>
+	"Primitive. Multiply elements in the receiver, a FloatArray, by argument, a scalar value, and store the result into the receiver."
+	| rcvr rcvrPtr value length |
 	<var: #value type: #double>
 	<var: #rcvrPtr type:#'float *'>
 	value := interpreterProxy stackFloatValue: 0.
@@ -263,7 +257,7 @@ FloatArrayPlugin >> primitiveMulScalar [
 	0 to: length-1 do:[:i|
 		rcvrPtr at: i put: (self cCoerce: (rcvrPtr at: i) to: #double) * value.
 	].
-	interpreterProxy pop: 1. "Leave rcvr on stack"
+	interpreterProxy pop: 1 "Leave rcvr on stack"
 ]
 
 { #category : #'arithmetic primitives' }
@@ -293,9 +287,9 @@ FloatArrayPlugin >> primitiveNormalize [
 
 { #category : #'arithmetic primitives' }
 FloatArrayPlugin >> primitiveSubFloatArray [
-	"Primitive. Add the receiver and the argument, both FloatArrays and store the result into the receiver."
-	| rcvr arg rcvrPtr argPtr length |
+	"Primitive. Subtract each element in the argument from each element in the receiver, both FloatArrays and store the result into the receiver."
 	<export: true>
+	| rcvr arg rcvrPtr argPtr length |
 	<var: #rcvrPtr type: #'float *'>
 	<var: #argPtr type: #'float *'>
 	arg := interpreterProxy stackValue: 0.
@@ -309,14 +303,14 @@ FloatArrayPlugin >> primitiveSubFloatArray [
 	0 to: length-1 do:[:i|
 		rcvrPtr at: i put: (self cCoerce: (rcvrPtr at: i) to: #double) - (self cCoerce: (argPtr at: i) to: #double).
 	].
-	interpreterProxy pop: 1. "Leave rcvr on stack"
+	interpreterProxy pop: 1 "Leave rcvr on stack"
 ]
 
 { #category : #'arithmetic primitives' }
 FloatArrayPlugin >> primitiveSubScalar [
-	"Primitive. Add the argument, a scalar value to the receiver, a FloatArray"
-	| rcvr rcvrPtr value length |
+	"Primitive. Subtract the argument, a scalar value from  each element in the receiver, a FloatArray"
 	<export: true>
+	| rcvr rcvrPtr value length |
 	<var: #value type: #double>
 	<var: #rcvrPtr type:#'float *'>
 	value := interpreterProxy stackFloatValue: 0.
@@ -329,14 +323,14 @@ FloatArrayPlugin >> primitiveSubScalar [
 	0 to: length-1 do:[:i|
 		rcvrPtr at: i put: (self cCoerce: (rcvrPtr at: i) to: #double) - value.
 	].
-	interpreterProxy pop: 1. "Leave rcvr on stack"
+	interpreterProxy pop: 1 "Leave rcvr on stack"
 ]
 
 { #category : #'arithmetic primitives' }
 FloatArrayPlugin >> primitiveSum [
-	"Primitive. Find the sum of each float in the receiver, a FloatArray, and stash the result into the argument Float."
-	| rcvr rcvrPtr length sum |
+	"Primitive. Answer the sum of each float in the receiver, a FloatArray."
 	<export: true>
+	| rcvr rcvrPtr length sum |
 	<var: #sum type: #double>
 	<var: #rcvrPtr type: #'float *'>
 	rcvr := interpreterProxy stackValue: 0.

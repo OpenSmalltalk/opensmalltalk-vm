@@ -93,6 +93,11 @@ Object >> debugCode: aBlock [
 	false ifTrue: [aBlock value]
 ]
 
+{ #category : #'*VMMaker-testing' }
+Object >> isCArray [
+	^false
+]
+
 { #category : #'*VMMaker-translation support' }
 Object >> isCObjectAccessor [
 
