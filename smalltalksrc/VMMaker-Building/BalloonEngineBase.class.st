@@ -2390,17 +2390,12 @@ BalloonEngineBase >> primitiveGetTimes [
 
 { #category : #'primitives-other' }
 BalloonEngineBase >> primitiveInitializeBuffer [
-	| wbOop size |
 	<export: true>
-	<inline: false>
-	interpreterProxy methodArgumentCount = 1
-		ifFalse:[^interpreterProxy primitiveFail].
-	wbOop := interpreterProxy stackObjectValue: 0.
-	interpreterProxy failed ifTrue:[^nil].
-	(interpreterProxy isWords: wbOop) 
-		ifFalse:[^interpreterProxy primitiveFail].
-	(size := interpreterProxy slotSizeOf: wbOop) < GWMinimalSize
-		ifTrue:[^interpreterProxy primitiveFail].
+	| wbOop size |
+	(interpreterProxy methodArgumentCount = 1
+	 and: [(interpreterProxy isWords: (wbOop := interpreterProxy stackValue: 0)) 
+	 and: [(size := interpreterProxy slotSizeOf: wbOop) < GWMinimalSize]]) ifTrue:
+		[^interpreterProxy primitiveFail].
 	self workBufferPut: wbOop.
 	objBuffer := workBuffer + GWHeaderSize.
 	self magicNumberPut: GWMagicNumber.
@@ -2426,8 +2421,7 @@ BalloonEngineBase >> primitiveInitializeBuffer [
 	self resetGraphicsEngineStats.
 	self initEdgeTransform.
 	self initColorTransform.
-	interpreterProxy pop: 2.
-	interpreterProxy push: wbOop.
+	interpreterProxy pop: 2 thenPush: wbOop
 ]
 
 { #category : #'primitives-incremental' }
