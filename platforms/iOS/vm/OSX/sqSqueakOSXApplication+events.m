@@ -69,30 +69,21 @@ static int buttonState=0;
 
 - (void) pumpRunLoopEventSendAndSignal:(BOOL)signal {
     NSEvent *event;
-    
-#ifdef PharoVM
-    while ((event = [gDelegateApp.window nextEventMatchingMask:NSEventMaskAny
+    while (event = [NSApp nextEventMatchingMask:NSEventMaskAny
                                        untilDate:nil
                                           inMode:NSEventTrackingRunLoopMode
-                                         dequeue:NO])) {
-        if (event.window == 0 || event.window == gDelegateApp.window) {
-          event = [gDelegateApp.window nextEventMatchingMask:NSEventMaskAny
-                                                 untilDate:nil
-                                                    inMode:NSEventTrackingRunLoopMode
-                                                   dequeue:YES];
-        }
-        else{
-          // STOP THE LOOP
-          // We have an event that does not correspond to our window
+                                         dequeue:NO]) {
+        // If the event is not a system event or an event of *this* window, stop consuming events
+        // In case of multi window applications, it is the responsibility of the other windowing systems to consume their own events
+        // This is a cooperative event handling mechanism for simplicity
+        // Single window systems will be not affected by it
+        if (!(event.window == 0 || event.window == gDelegateApp.window)){
           break;
         }
-#else
-    while ((event = [NSApp nextEventMatchingMask:NSEventMaskAny
-                                       untilDate:nil
-                                          inMode:NSEventTrackingRunLoopMode
-                                         dequeue:YES])) {
-#endif
-        [NSApp sendEvent: event];
+        [NSApp sendEvent: [NSApp nextEventMatchingMask:NSEventMaskAny
+                                 untilDate:nil
+                                 inMode:NSEventTrackingRunLoopMode
+                                 dequeue:YES]];
         if (signal) {
             interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
         }
