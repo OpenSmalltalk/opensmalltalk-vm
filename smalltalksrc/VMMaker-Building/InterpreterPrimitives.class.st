@@ -153,7 +153,7 @@ InterpreterPrimitives >> cStringOrNullFor: oop [
 		[self primitiveFailFor: PrimErrNoCMemory.
 		 ^0].
 	self memcpy: cString _: (objectMemory firstIndexableField: oop) _: len.
-	cString at: (self cCode: [len] inSmalltalk: [len + 1]) put: 0.
+	cString at: len put: 0.
 	^cString
 ]
 
