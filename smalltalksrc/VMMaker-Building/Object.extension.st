@@ -116,6 +116,13 @@ Object >> isTParseNode [
 	^false
 ]
 
+{ #category : #'*VMMaker-testing' }
+Object >> isVMSimulationAddress [
+	"Answer a boolean indicating whether the receiver is a kind of address in the VM simulation"
+
+	^false
+]
+
 { #category : #'*VMMaker-message handling' }
 Object >> perform: aSymbol with: firstObject with: secondObject with: thirdObject with: fourthObject with: fifthObject [
 	"Send the selector, aSymbol, to the receiver with the given arguments.
