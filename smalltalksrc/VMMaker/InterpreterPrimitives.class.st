@@ -235,7 +235,9 @@ InterpreterPrimitives >> getenv: aByteStringOrByteArray [
 	"The primitiveGetenv: primitive answers nil for undefined variables.
 	 The primitiveGetenv implementation is written to expect getenv: to
 	 answer 0, not nil,  for undefined variables.  Map nil to 0 for simulation."
-	^(self primitiveGetenv: aByteStringOrByteArray) ifNil: [0]
+
+	"aByteStringOrByteArray is probably null terminated, convert to non-null-terminated"
+	^(self primitiveGetenv: (self asString: aByteStringOrByteArray)) ifNil: [0]
 ]
 
 { #category : #'primitive support' }
@@ -2377,7 +2379,7 @@ InterpreterPrimitives >> primitiveGetenv [
 		[self successful ifTrue:
 			[^self primitiveFailFor: PrimErrBadArgument].
 		 ^self primitiveFailFor: primFailCode].
-	var := self getenv: (self cCode: [key] inSmalltalk: [key allButLast]).
+	var := self getenv: key.
 	self free: key.
 	var ~= 0 ifTrue:
 		[result := objectMemory stringForCString: var.

@@ -8510,15 +8510,6 @@ SpurMemoryManager >> maybeSplObj: index [
 		[self fetchPointer: index ofObject: specialObjectsOop]
 ]
 
-{ #category : #simulation }
-SpurMemoryManager >> memcpy: destAddress _: sourceAddress _: bytes [
-	"For SpurGenerationScavenger>>copyToFutureSpace:bytes:. N.B. If ranges overlap, must use memmove."
-	<doNotGenerate>
-	self deny: ((destAddress <= sourceAddress and: [destAddress asInteger + bytes > sourceAddress])
-				or: [sourceAddress <= destAddress and: [sourceAddress asInteger + bytes > destAddress]]).
-	^self memmove: destAddress _: sourceAddress _: bytes
-]
-
 { #category : #accessing }
 SpurMemoryManager >> memory [
 	<cmacro: '() GIV(memory)'>
