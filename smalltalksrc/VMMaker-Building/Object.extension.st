@@ -95,6 +95,8 @@ Object >> debugCode: aBlock [
 
 { #category : #'*VMMaker-testing' }
 Object >> isCArray [
+	"Answer a boolean indicating whether the receiver responds to the CArray interface"
+
 	^false
 ]
 

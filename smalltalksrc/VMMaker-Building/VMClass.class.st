@@ -643,6 +643,19 @@ VMClass >> asAddress: address put: aBlock [
 ]
 
 { #category : #'C library extensions' }
+VMClass >> asByteArray: aStringOrStringIndex [
+	"aStringOrStringIndex is either a string or an address in the heap.
+	 Create a ByteArray of the requested length form the bytes in the
+	 heap starting at stringIndex."
+	<doNotGenerate>
+	| sz |
+	aStringOrStringIndex isString ifTrue:
+		[^aStringOrStringIndex asByteArray].
+	sz := self strlen: aStringOrStringIndex.
+	^self strncpy: (ByteArray new: sz) _: aStringOrStringIndex _: sz
+]
+
+{ #category : #'C library extensions' }
 VMClass >> asByteArray: baIndex size: baSize [
 	"baIndex is an address in the heap.  Create a ByteArray of the requested length
 	form the bytes in the heap starting at baIndex."
@@ -976,31 +989,47 @@ VMClass >> malloc: size [
 ]
 
 { #category : #'C library simulation' }
-VMClass >> memcpy: dString _: sString _: bytes [
+VMClass >> memcpy: dest _: src _: bytes [
 	<doNotGenerate>
 	"implementation of memcpy(3). N.B. If ranges overlap, must use memmove."
-	(dString isCollection or: [sString isCollection]) ifFalse:
-		[| destAddress sourceAddress |
-		 destAddress := dString asInteger.
-		 sourceAddress := sString asInteger.
-		 self deny: ((destAddress <= sourceAddress and: [destAddress + bytes > sourceAddress])
-					or: [sourceAddress <= destAddress and: [sourceAddress + bytes > destAddress]])].
-	dString isInteger
-		ifTrue:
-			[1 to: bytes do:
-				[:i| | v |
-				v := sString isString
-						ifTrue: [sString basicAt: i]
-						ifFalse: [self byteAt: sString + i - 1].
-				self byteAt: dString + i - 1 put: v]]
+	| getBlock setBlock |
+
+	(src isInteger and: [dest isInteger]) ifTrue:
+		[ self deny: ((dest <= src and: [dest + bytes > src])
+					or: [src <= dest and: [src + bytes > dest]])].
+
+	"Determine the source and destination access blocks based on the parameter type"
+	getBlock := src isCollection ifTrue: 
+		[src isString ifTrue: 
+			"basicAt: answers integers"
+			[[ :idx | src basicAt: idx]]
+		ifFalse: 
+			[src class == ByteArray ifTrue: 
+				[[ :idx | src at: idx]]]]
+	ifFalse: 
+		[src isInteger ifTrue: 
+			[[ :idx | self byteAt: src + idx - 1]]
+		ifFalse: 
+			[src isCArray ifTrue:
+				[[ :idx | src at: idx - 1]]]].
+	getBlock ifNil: [self error: 'unhandled type of source string'].
+	setBlock := dest isCollection ifTrue: 
+		[dest isString ifTrue:
+			"basicAt:put: stores integers"
+			[[ :idx | dest basicAt: idx put: (getBlock value: idx)]] 
+		ifFalse: 
+			[dest class == ByteArray ifTrue: 
+				[[ :idx | dest at: idx put: (getBlock value: idx)]]]]
+	ifFalse: 
+		[dest isInteger ifTrue:
+			[[ :idx | self byteAt: dest + idx - 1 put: (getBlock value: idx)]]
 		ifFalse:
-			[1 to: bytes do:
-				[:i| | v |
-				v := sString isString
-						ifTrue: [sString basicAt: i]
-						ifFalse: [self byteAt: sString + i - 1].
-				dString basicAt: i put: v]].
-	^dString
+			[dest isCArray ifTrue:
+				[[ :idx | dest at: idx - 1 put: (getBlock value: idx)]]]].
+	setBlock ifNil: [self error: 'unhandled type of destination string'].
+	1 to: bytes do: setBlock.
+
+	^dest
 ]
 
 { #category : #'C library simulation' }
@@ -1265,13 +1294,21 @@ VMClass >> strlen: aCString [
 	"Simulate strlen(3)"
 	<doNotGenerate>
 	| len |
-	aCString isString ifTrue:
-		[^aCString size].
-	aCString class == ByteArray ifTrue: [
-		"ByteArrays may be 0 terminated or the correct length (in the simulator)"
+
+	aCString isCArray ifTrue:
+		["CArrays may be 0 terminated or the correct length (in the simulator)"
 		len := 0.
-		[(len = aCString size or: [(aCString at: len+1) = 0]) ifTrue: [^len].
-		len := len + 1] repeat].
+		[(len = aCString size or: [(aCString at: len) = 0]) ifTrue: [^len].
+		len := len + 1] repeat]
+	ifFalse:
+		[aCString isString ifTrue: 
+			[^aCString size]
+		ifFalse:
+			[aCString class == ByteArray ifTrue: [
+				"ByteArrays may be 0 terminated or the correct length (in the simulator)"
+				len := 0.
+				[(len = aCString size or: [(aCString at: len+1) = 0]) ifTrue: [^len].
+				len := len + 1] repeat]]].
 	"Must be an address"
 	len := 0.
 	[(self byteAt: aCString + len) = 0 ifTrue: [^len].
@@ -1318,7 +1355,7 @@ VMClass >> strncpy: dest _: src _: n [
 						[src isInteger
 							ifTrue: [[ :idx | self byteAt: src + idx - 1]]
 							ifFalse:
-								[src class == CArray ifTrue:
+								[src isCArray ifTrue:
 									[[ :idx | src at: idx - 1]]]].
 	getBlock ifNil: [self error: 'unhandled type of source string'].
 	setBlock := dest isCollection

@@ -320,7 +320,8 @@ FilePluginSimulator >> sqFileClose: file [
 { #category : #simulation }
 FilePluginSimulator >> sqFileDeleteName: nameIndex Size: nameSize [
 	| path |
-	path := interpreterProxy asString: nameIndex size: nameSize.
+
+	path := (interpreterProxy asString: nameIndex size: nameSize) asByteArray utf8Decoded.
 	(StandardFileStream isAFileNamed: path) ifFalse:
 		[^interpreterProxy primitiveFail].
 	[FileDirectory deleteFilePath: path]

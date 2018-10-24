@@ -183,6 +183,8 @@ CArray >> interpreter: interpreterSimulator address: arrayAddress unitSize: numB
 
 { #category : #testing }
 CArray >> isCArray [
+	"Answer a boolean indicating whether the receiver responds to the CArray interface"
+
 	^true
 ]
 
