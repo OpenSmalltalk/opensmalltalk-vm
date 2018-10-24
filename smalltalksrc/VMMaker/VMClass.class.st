@@ -992,44 +992,50 @@ VMClass >> malloc: size [
 VMClass >> memcpy: dest _: src _: bytes [
 	<doNotGenerate>
 	"implementation of memcpy(3). N.B. If ranges overlap, must use memmove."
-	| getBlock setBlock |
+	| getBlock setBlock source destination |
 
-	(src isInteger and: [dest isInteger]) ifTrue:
-		[ self deny: ((dest <= src and: [dest + bytes > src])
-					or: [src <= dest and: [src + bytes > dest]])].
+	source := src isVMSimulationAddress
+		ifTrue: [src asInteger]
+		ifFalse: [src].
+	destination := dest isVMSimulationAddress
+		ifTrue: [dest asInteger]
+		ifFalse: [dest].
+	(source isInteger and: [destination isInteger]) ifTrue:
+		[ self deny: ((destination <= source and: [destination + bytes > source])
+					or: [source <= destination and: [source + bytes > destination]])].
 
 	"Determine the source and destination access blocks based on the parameter type"
-	getBlock := src isCollection ifTrue: 
-		[src isString ifTrue: 
+	getBlock := source isCollection ifTrue: 
+		[source isString ifTrue: 
 			"basicAt: answers integers"
-			[[ :idx | src basicAt: idx]]
+			[[ :idx | source basicAt: idx]]
 		ifFalse: 
-			[src class == ByteArray ifTrue: 
-				[[ :idx | src at: idx]]]]
+			[source class == ByteArray ifTrue: 
+				[[ :idx | source at: idx]]]]
 	ifFalse: 
-		[src isInteger ifTrue: 
-			[[ :idx | self byteAt: src + idx - 1]]
+		[source isInteger ifTrue: 
+			[[ :idx | self byteAt: source + idx - 1]]
 		ifFalse: 
-			[src isCArray ifTrue:
-				[[ :idx | src at: idx - 1]]]].
+			[source isCArray ifTrue:
+				[[ :idx | source at: idx - 1]]]].
 	getBlock ifNil: [self error: 'unhandled type of source string'].
-	setBlock := dest isCollection ifTrue: 
-		[dest isString ifTrue:
+	setBlock := destination isCollection ifTrue: 
+		[destination isString ifTrue:
 			"basicAt:put: stores integers"
-			[[ :idx | dest basicAt: idx put: (getBlock value: idx)]] 
+			[[ :idx | destination basicAt: idx put: (getBlock value: idx)]] 
 		ifFalse: 
-			[dest class == ByteArray ifTrue: 
-				[[ :idx | dest at: idx put: (getBlock value: idx)]]]]
+			[destination class == ByteArray ifTrue: 
+				[[ :idx | destination at: idx put: (getBlock value: idx)]]]]
 	ifFalse: 
-		[dest isInteger ifTrue:
-			[[ :idx | self byteAt: dest + idx - 1 put: (getBlock value: idx)]]
+		[destination isInteger ifTrue:
+			[[ :idx | self byteAt: destination + idx - 1 put: (getBlock value: idx)]]
 		ifFalse:
-			[dest isCArray ifTrue:
-				[[ :idx | dest at: idx - 1 put: (getBlock value: idx)]]]].
+			[destination isCArray ifTrue:
+				[[ :idx | destination at: idx - 1 put: (getBlock value: idx)]]]].
 	setBlock ifNil: [self error: 'unhandled type of destination string'].
 	1 to: bytes do: setBlock.
 
-	^dest
+	^destination
 ]
 
 { #category : #'C library simulation' }

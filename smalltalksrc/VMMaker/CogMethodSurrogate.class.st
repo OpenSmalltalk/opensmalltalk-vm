@@ -172,6 +172,13 @@ CogMethodSurrogate >> cpicHasMNUCase: anObject [
 	^self cpicHasMNUCaseOrCMIsFullBlock: anObject
 ]
 
+{ #category : #testing }
+CogMethodSurrogate >> isVMSimulationAddress [
+	"Answer a boolean indicating whether the receiver is a kind of address in the VM simulation"
+
+	^true
+]
+
 { #category : #comparing }
 CogMethodSurrogate >> isZero [
 	^address = 0
