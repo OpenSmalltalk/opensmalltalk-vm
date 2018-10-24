@@ -29,9 +29,25 @@ LocalePlugin class >> hasHeaderFile [
 ]
 
 { #category : #translation }
+LocalePlugin class >> moduleName [
+
+	^ 'LocalePlugin'
+]
+
+{ #category : #translation }
 LocalePlugin class >> requiresPlatformFiles [
 	"this plugin requires platform specific files in order to work"
 	^true
+]
+
+{ #category : #translation }
+LocalePlugin class >> shouldBeTranslated [
+	^true
+]
+
+{ #category : #simulation }
+LocalePlugin class >> simulatorClass [
+	^LocalePluginSimulator
 ]
 
 { #category : #initialize }
