@@ -475,6 +475,23 @@ InterpreterPlugin >> majorVersion [
 	^1
 ]
 
+{ #category : #'simulation support' }
+InterpreterPlugin >> memcpy: dest _: src _: bytes [
+	<doNotGenerate>
+	"implementation of memcpy(3). N.B. If ranges overlap, must use memmove."
+
+	^interpreterProxy memcpy: dest _: src _: bytes
+
+]
+
+{ #category : #'simulation support' }
+InterpreterPlugin >> memmove: destAddress _: sourceAddress _: bytes [
+	<doNotGenerate>
+	"implementation of memcpy(3). N.B. If ranges overlap, must use memmove."
+
+	^interpreterProxy memmove: destAddress _: sourceAddress _: bytes
+]
+
 { #category : #simulation }
 InterpreterPlugin >> methodAndTypesOrNilForTranslatedPrimitiveSelector: selector [
 	<doNotGenerate>

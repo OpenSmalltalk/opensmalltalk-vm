@@ -120,6 +120,13 @@ CObjectAccessor >> getObject [
 	^object
 ]
 
+{ #category : #testing }
+CObjectAccessor >> isCArray [
+	"Answer a boolean indicating whether the receiver responds to the CArray interface"
+
+	^true
+]
+
 { #category : #accessing }
 CObjectAccessor >> isCObjectAccessor [
 
