@@ -107,6 +107,12 @@ NewObjectMemorySimulator >> fullGC [
 	^super fullGC
 ]
 
+{ #category : #'interpreter access' }
+NewObjectMemorySimulator >> getStackPointer [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter getStackPointer
+]
+
 { #category : #'memory access' }
 NewObjectMemorySimulator >> halfWordHighInLong32: long32 [
 	^self subclassResponsibility

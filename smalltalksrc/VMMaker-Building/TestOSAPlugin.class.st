@@ -7,7 +7,7 @@ Class {
 	#category : #'VMMaker-Plugins'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #translation }
 TestOSAPlugin class >> declareCVarsIn: cg [
 	cg addHeaderFile: '<Carbon/Carbon.h>'.
 
@@ -17,6 +17,12 @@ TestOSAPlugin class >> declareCVarsIn: cg [
 TestOSAPlugin class >> requiresPlatformFiles [
 	"this plugin requires platform specific files in order to work"
 	^true
+]
+
+{ #category : #simulation }
+TestOSAPlugin class >> simulatorClass [
+	"As yet this can't be simulated because a DescType parameter can't be handled."
+	^nil
 ]
 
 { #category : #'AppleEvents prims' }

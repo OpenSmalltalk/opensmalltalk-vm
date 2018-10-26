@@ -1758,10 +1758,11 @@ CogVMSimulator >> ioLoadFunction: functionString From: pluginString [
 		show: '(', byteCount printString, ') Looking for ', functionString, ' in ',
 				(pluginString isEmpty ifTrue:['vm'] ifFalse:[pluginString]).
 	(breakSelector notNil
-	 and: [pluginString size = breakSelector size
-	 and: [(self strncmp: pluginString _: breakSelector _: pluginString size) = 0
-		or: [(self strncmp: functionString _: breakSelector _: functionString size) = 0]]]) ifTrue:
-		[self halt: functionString].
+	 and: [(pluginString size = breakSelector size
+			and: [(self strncmp: pluginString _: breakSelector _: pluginString size) = 0])
+		or: [functionString size = breakSelector size
+			and: [(self strncmp: functionString _: breakSelector _: functionString size) = 0]]]) ifTrue:
+		[self halt: pluginString, '>>', functionString].
 	plugin := pluginList 
 				detect:[:any| any key = pluginString asString]
 				ifNone:
@@ -1783,8 +1784,7 @@ CogVMSimulator >> ioLoadFunction: functionString From: pluginString [
 									with: plugin
 									with: fnSymbol
 									with: [plugin perform: fnSymbol. self]).
-	"Transcript show: ' ... okay'."
-	transcript cr.
+	transcript show: ' ... okay'.
 	^ mappedPluginEntries size
 ]
 
@@ -1801,10 +1801,11 @@ CogVMSimulator >> ioLoadFunction: functionString From: pluginString AccessorDept
 		show: '(', byteCount printString, ') Looking for ', functionString, ' in ',
 				(pluginString isEmpty ifTrue:['vm'] ifFalse:[pluginString]).
 	(breakSelector notNil
-	 and: [pluginString size = breakSelector size
-	 and: [(self strncmp: pluginString _: breakSelector _: pluginString size) = 0
-		or: [(self strncmp: functionString _: breakSelector _: functionString size) = 0]]]) ifTrue:
-		[self halt: functionString].
+	 and: [(pluginString size = breakSelector size
+			and: [(self strncmp: pluginString _: breakSelector _: pluginString size) = 0])
+		or: [functionString size = breakSelector size
+			and: [(self strncmp: functionString _: breakSelector _: functionString size) = 0]]]) ifTrue:
+		[self halt: pluginString, '>>', functionString].
 	plugin := pluginList 
 				detect: [:any| any key = pluginString asString]
 				ifNone:
@@ -1818,11 +1819,10 @@ CogVMSimulator >> ioLoadFunction: functionString From: pluginString AccessorDept
 		[:pluginAndName :index|
 		 ((pluginAndName at: 1) == plugin 
 		  and:[(pluginAndName at: 2) == fnSymbol]) ifTrue:
-			[firstTime ifTrue: [transcript show: ' ... okay'; cr].
+			[firstTime ifTrue: [transcript show: ' ... okay'].
 			 accessorDepthPtr at: 0 put: (pluginAndName at: 4).
 			 ^index]].
 	firstTime ifTrue: [transcript cr; show: 'Failed ... primitive not in plugin'].
-	transcript cr.
 	^0
 ]
 

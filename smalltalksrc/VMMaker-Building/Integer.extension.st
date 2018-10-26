@@ -12,6 +12,18 @@ Integer >> addBreakpoint: address [
 ]
 
 { #category : #'*VMMaker-interpreter simulator' }
+Integer >> asC_int [
+	^self >= 0
+		ifTrue: [self bitAnd: 16rFFFFFFFF]
+		ifFalse: [(self bitAnd: 16rFFFFFFFF) - 16r100000000]
+]
+
+{ #category : #'*VMMaker-interpreter simulator' }
+Integer >> asC_unsigned_int [
+	^self bitAnd: 16rFFFFFFFF
+]
+
+{ #category : #'*VMMaker-interpreter simulator' }
 Integer >> asCharPtr [
 	^(Notification new tag: #getInterpreter; signal)
 		ifNotNil: [:interpreter|
@@ -149,9 +161,9 @@ Integer >> coerceTo: cTypeString sim: interpreter [
 		[#'signed char *'] -> [1].
 		[#'unsigned short *'] -> [2].
 		[#'unsigned long long *'] -> [8].
-		[#'oop *'] -> [interpreter bytesPerOop].
+		[#'oop *'] -> [interpreter objectMemory bytesPerOop].
 		}
-		otherwise: [interpreter wordSize].
+		otherwise: [interpreter objectMemory wordSize].
 		^CArray basicNew
 			interpreter: interpreter address: self unitSize: unitSize;
 			yourself].
