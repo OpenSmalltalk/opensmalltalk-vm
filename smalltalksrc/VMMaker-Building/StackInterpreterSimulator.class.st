@@ -709,7 +709,7 @@ StackInterpreterSimulator >> functionPointerFor: primIndex inClass: lookupClass 
 
 { #category : #'debugging traps' }
 StackInterpreterSimulator >> getErrorObjectFromPrimFailCode [
-	(primFailCode > 1 and: [(#(primitiveNew primitiveFetchNextMourner primitiveAdoptInstance) includes: primitiveFunctionPointer) not]) ifTrue: [self halt].
+	(primFailCode > 1 and: [(#(primitiveNew primitiveNewWithArg primitiveFetchNextMourner primitiveAdoptInstance) includes: primitiveFunctionPointer) not]) ifTrue: [self halt].
 	^super getErrorObjectFromPrimFailCode
 ]
 
@@ -1040,31 +1040,33 @@ StackInterpreterSimulator >> ioInitHeartbeat [
 { #category : #'plugin support' }
 StackInterpreterSimulator >> ioLoadFunction: functionString From: pluginString [
 	"Load and return the requested function from a module"
-	| plugin fnSymbol |
+	| firstTime plugin fnSymbol |
+	firstTime := false.
 	fnSymbol := functionString asSymbol.
 	transcript
 		cr;
 		show: '(', byteCount printString, ') Looking for ', functionString, ' in ',
 				(pluginString isEmpty ifTrue:['vm'] ifFalse:[pluginString]).
 	(breakSelector notNil
-	 and: [pluginString size = breakSelector size
-	 and: [(self strncmp: pluginString _: breakSelector _: pluginString size) = 0
-		or: [(self strncmp: functionString _: breakSelector _: functionString size) = 0]]]) ifTrue:
-		[self halt: functionString].
+	 and: [(pluginString size = breakSelector size
+			and: [(self strncmp: pluginString _: breakSelector _: pluginString size) = 0])
+		or: [functionString size = breakSelector size
+			and: [(self strncmp: functionString _: breakSelector _: functionString size) = 0]]]) ifTrue:
+		[self halt: pluginString, '>>', functionString].
 	plugin := pluginList 
 				detect:[:any| any key = pluginString asString]
-				ifNone:[self loadNewPlugin: pluginString].
-	plugin ifNil:[
-		"Transcript cr; show:'Failed ... no plugin found'." ^ 0].
+				ifNone:[firstTime := true.
+						self loadNewPlugin: pluginString].
+	plugin ifNil:[transcript show: 'Failed ... no plugin found'. ^ 0].
 	plugin := plugin value.
 	mappedPluginEntries doWithIndex:[:pluginAndName :index|
 		((pluginAndName at: 1) == plugin 
-			and:[(pluginAndName at: 2) == fnSymbol]) ifTrue:[
-				"Transcript show:' ... okay'." ^ index]].
-	(plugin respondsTo: fnSymbol) ifFalse:[
-		"Transcript cr; show:'Failed ... primitive not in plugin'." ^ 0].
+			and:[(pluginAndName at: 2) == fnSymbol]) ifTrue:
+				[firstTime ifTrue: [transcript show:' ... okay'. ^ index]]].
+	(plugin respondsTo: fnSymbol) ifFalse:
+		[transcript show:'Failed ... primitive not in plugin'. ^ 0].
 	mappedPluginEntries := mappedPluginEntries copyWith: (Array with: plugin with: fnSymbol).
-	"Transcript show:' ... okay'."
+	transcript show: ' ... okay'.
 	^ mappedPluginEntries size
 ]
 
@@ -1081,28 +1083,28 @@ StackInterpreterSimulator >> ioLoadFunction: functionString From: pluginString A
 		show: '(', byteCount printString, ') Looking for ', functionString, ' in ',
 				(pluginString isEmpty ifTrue:['vm'] ifFalse:[pluginString]).
 	(breakSelector notNil
-	 and: [pluginString size = breakSelector size
-	 and: [(self strncmp: pluginString _: breakSelector _: pluginString size) = 0
-		or: [(self strncmp: functionString _: breakSelector _: functionString size) = 0]]]) ifTrue:
-		[self halt: functionString].
+	 and: [(pluginString size = breakSelector size
+			and: [(self strncmp: pluginString _: breakSelector _: pluginString size) = 0])
+		or: [functionString size = breakSelector size
+			and: [(self strncmp: functionString _: breakSelector _: functionString size) = 0]]]) ifTrue:
+		[self halt: pluginString, '>>', functionString].
 	plugin := pluginList 
 				detect: [:any| any key = pluginString asString]
 				ifNone:
 					[firstTime := true.
 					 self loadNewPlugin: pluginString].
 	plugin ifNil:
-		[firstTime ifTrue: [transcript cr; show: 'Failed ... primitive not in plugin'].
+		[firstTime ifTrue: [transcript show: 'Failed ... primitive not in plugin'].
 		 ^0].
 	plugin := plugin value.
 	mappedPluginEntries doWithIndex:
 		[:pluginAndName :index|
 		 ((pluginAndName at: 1) == plugin 
 		  and:[(pluginAndName at: 2) == fnSymbol]) ifTrue:
-			[firstTime ifTrue: [transcript show: ' ... okay'; cr].
+			[firstTime ifTrue: [transcript show: ' ... okay'].
 			 accessorDepthPtr at: 0 put: (pluginAndName at: 4).
 			 ^index]].
-	firstTime ifTrue: [transcript cr; show: 'Failed ... primitive not in plugin'].
-	transcript cr.
+	firstTime ifTrue: [transcript show: 'Failed ... primitive not in plugin'].
 	^0
 ]
 

@@ -205,6 +205,22 @@ BalloonEngineSimulation >> edgeTransform [
 			with:[:obj :index :value| obj floatAt: index put: value])
 ]
 
+{ #category : #'simulation support' }
+BalloonEngineSimulation >> ensureUpToDateOverrideFor: aSelector [
+	"Ensure that an override that uses 32-bit integer arithmetic exists for aSelector"
+	| source |
+	source := self transformedSourceFor: self class superclass >> aSelector.
+	(self class sourceCodeAt: aSelector ifAbsent: ['']) ~= source ifTrue:
+		[self class compile: source classified: 'generated overrides']
+]
+
+{ #category : #'simulation support' }
+BalloonEngineSimulation >> ensureUpToDateOverrides [
+	"Ensure that all methods that require int and unsigned int arithmetic are overridden."
+	self selectorsForIntMethods do:
+		[:selector| self ensureUpToDateOverrideFor: selector]
+]
+
 { #category : #initialize }
 BalloonEngineSimulation >> initialiseModule [
 	super initialiseModule.
@@ -214,7 +230,8 @@ BalloonEngineSimulation >> initialiseModule [
 { #category : #initialize }
 BalloonEngineSimulation >> initialize [
 	doProfileStats := false.
-	bbPluginName := 'BitBltPlugin'
+	bbPluginName := 'BitBltPlugin'.
+	self ensureUpToDateOverrides
 ]
 
 { #category : #simulation }
@@ -271,6 +288,18 @@ BalloonEngineSimulation >> makeUnsignedFrom: integer [
 	integer < 0 
 		ifTrue:[^(0 - integer - 1) bitInvert32]
 		ifFalse:[^integer]
+]
+
+{ #category : #'accessing objects' }
+BalloonEngineSimulation >> obj: object at: index [
+	"Override to correctly map objBuffer access, which has type int *"
+	^(objBuffer at: object + index) signedIntFromLong
+]
+
+{ #category : #'accessing objects' }
+BalloonEngineSimulation >> obj: object at: index put: value [
+	"Override to correctly map objBuffer access, which has type int *"
+	objBuffer at: object + index put: value signedIntToLong
 ]
 
 { #category : #initialize }
@@ -378,6 +407,28 @@ BalloonEngineSimulation >> rShiftTable [
 	^CArrayAccessor on: #(0 5 4 0 3 0 0 0 2 0 0 0 0 0 0 0 1).
 ]
 
+{ #category : #'simulation support' }
+BalloonEngineSimulation >> selectorsForIntMethods [
+	"Ensure that all methods that require int and unsigned int arithmetic are overridden."
+	| selectors cg |
+	selectors := OrderedCollection new.
+	cg := CCodeGenerator new.
+	^(BalloonEnginePlugin organization listAtCategoryNamed: 'beziers-simple') select:
+		[:selector|
+		(BalloonEnginePlugin >> selector) pragmas anySatisfy:
+			[:p| | type |
+			 p keyword == #var:type: ifTrue:
+				[type := p arguments last].
+			 p keyword == #var:declareC: ifTrue:
+				[type := cg
+							extractTypeFor: p arguments first
+							fromDeclaration: p arguments last].
+			 type notNil
+			 and: [type last = $* ifTrue:
+					[type := cg baseTypeForPointerType: type].
+				#(int #'unsigned int') includes: (cg baseTypeForType: type)]]]
+]
+
 { #category : #simulation }
 BalloonEngineSimulation >> shortRunLengthAt: index from: runArray [
 	"Load the short value from the given index in intArray"
@@ -403,12 +454,119 @@ BalloonEngineSimulation >> smallSqrtTable [
 	^CArrayAccessor on:#(0 1 1 2 2 2 2 3 3 3 3 3 3 4 4 4 4 4 4 4 4 5 5 5 5 5 5 5 5 5 5 6 )
 ]
 
+{ #category : #'generated overrides' }
+BalloonEngineSimulation >> stepToFirstBezierIn: bezier at: yValue [
+	"Initialize the bezier at yValue.
+	TODO: Check if reducing maxSteps from 2*deltaY to deltaY 
+		brings a *significant* performance improvement.
+		In theory this should make for double step performance
+		but will cost in quality. Might be that the AA stuff will
+		compensate for this - but I'm not really sure."
+
+	<inline: false>
+	<var: #updateData type: 'int *'>
+	| updateData deltaY maxSteps scaledStepSize squaredStepSize startX startY viaX viaY endX endY fwX1 fwX2 fwY1 fwY2 fwDx fwDDx fwDy fwDDy |
+	((self isWide: bezier) not and: [ yValue >= (self bezierEndYOf: bezier) ])
+		ifTrue: [ ^ self edgeNumLinesOf: bezier put: 0 ].	"Do a quick check if there is anything at all to do"	"Now really initialize bezier"
+	startX := self edgeXValueOf: bezier.
+	startY := self edgeYValueOf: bezier.
+	viaX := self bezierViaXOf: bezier.
+	viaY := self bezierViaYOf: bezier.
+	endX := self bezierEndXOf: bezier.
+	endY := self bezierEndYOf: bezier.
+	deltaY := endY - startY.	"Initialize integer forward differencing"
+	fwX1 := (viaX - startX) * 2.
+	fwX2 := startX + endX - (viaX * 2).
+	fwY1 := (viaY - startY) * 2.
+	fwY2 := startY + endY - (viaY * 2).
+	maxSteps := deltaY * 2.
+	maxSteps < 2
+		ifTrue: [ maxSteps := 2 ].
+	scaledStepSize := 16r1000000 // maxSteps.
+	squaredStepSize := self absoluteSquared8Dot24: scaledStepSize.
+	fwDx := fwX1 * scaledStepSize.
+	fwDDx := fwX2 * squaredStepSize * 2.
+	fwDx := fwDx + (fwDDx // 2).
+	fwDy := fwY1 * scaledStepSize.
+	fwDDy := fwY2 * squaredStepSize * 2.
+	fwDy := fwDy + (fwDDy // 2).	"Store the values"
+	self edgeNumLinesOf: bezier put: deltaY.
+	updateData := self bezierUpdateDataOf: bezier.
+	updateData at: GBUpdateX put: (startX * 256) asC_int.
+	updateData at: GBUpdateY put: (startY * 256) asC_int.
+	updateData at: GBUpdateDX put: fwDx asC_int.
+	updateData at: GBUpdateDY put: fwDy asC_int.
+	updateData at: GBUpdateDDX put: fwDDx asC_int.
+	updateData at: GBUpdateDDY put: fwDDy asC_int.	"And step to the first scan line"
+	(startY := self edgeYValueOf: bezier) = yValue
+		ifFalse: [ 
+			self stepToNextBezierIn: bezier at: yValue.	"Adjust number of lines remaining"
+			self edgeNumLinesOf: bezier put: deltaY - (yValue - startY) ]
+]
+
+{ #category : #'generated overrides' }
+BalloonEngineSimulation >> stepToNextBezierForward: updateData at: yValue [
+	"Incrementally step to the next scan line in the given bezier update data.
+	Note: This method has been written so that inlining works, e.g.,
+		not declaring updateData as 'int*' but casting it on every use."
+
+	<var: #updateData type: 'int *'>
+	<inline: true>
+	| minY lastX lastY fwDx fwDy |
+	lastX := updateData at: GBUpdateX.
+	lastY := updateData at: GBUpdateY.
+	fwDx := updateData at: GBUpdateDX.
+	fwDy := updateData at: GBUpdateDY.
+	minY := yValue * 256.	"Step as long as we haven't yet reached minY and also
+	as long as fwDy is greater than zero thus stepping down.
+	Note: The test for fwDy should not be necessary in theory
+		but is a good insurance in practice."
+	[ minY > lastY and: [ fwDy >= 0 ] ]
+		whileTrue: [ 
+			lastX := lastX + (fwDx + 16r8000 signedBitShift: -16).
+			lastY := lastY + (fwDy + 16r8000 signedBitShift: -16).
+			fwDx := fwDx + (updateData at: GBUpdateDDX).
+			fwDy := fwDy + (updateData at: GBUpdateDDY) ].
+	updateData at: GBUpdateX put: lastX asC_int.
+	updateData at: GBUpdateY put: lastY asC_int.
+	updateData at: GBUpdateDX put: fwDx asC_int.
+	updateData at: GBUpdateDY put: fwDy asC_int.
+	^ lastX signedBitShift: -8
+]
+
 { #category : #simulation }
 BalloonEngineSimulation >> stopBecauseOf: stopReason [
 	"Don't stop because of need to flush."
 	stopReason = GErrorNeedFlush ifFalse:[
 		^super stopBecauseOf: stopReason.
 	].
+]
+
+{ #category : #'simulation support' }
+BalloonEngineSimulation >> transformedSourceFor: m [
+	"Transform all references to #int variables in the source code of m into var asC_int
+	 and all references to #'unsigned int' variables into var asC_unsigned_int"
+	| tm rules cgen |
+	tm := m asTranslationMethodOfClass: TMethod.
+	tm recordDeclarationsIn: (cgen := CCodeGenerator new).
+	rules := RBParseTreeRewriter new.
+	#(#'int *' #'unsigned int *')
+		with: #(asC_int asC_unsigned_int)
+		do: [:type :coercionMessage|
+			(tm declarations keys select: [:v| (tm typeFor: v in: cgen) = type]) do:
+				[:var| "make this use ``@expr and editSource breaks"
+				rules replace: var, ' at: `@index put: `@expr' with: var, ' at: `@index put: `@expr ', coercionMessage]].
+	#(#'int' #'unsigned int')
+		with: #(asC_int asC_unsigned_int)
+		do: [:type :coercionMessage|
+			(tm declarations keys select: [:v| (tm typeFor: v in: cgen) = type]) do:
+				[:var|
+				rules
+					replace: var, ' := `@args' with: var, ' := `@args ', coercionMessage;
+					replace: var with: var, ' ', coercionMessage]].
+	(rules executeTree: (m methodClass parseTreeFor: m selector)) ifTrue:
+		[^rules tree newSource].
+	self error: 'parse tree rewrite failed'
 ]
 
 { #category : #simulation }

@@ -52,7 +52,7 @@ InternetConfigPlugin >> primitiveGetStringKeyedBy: aKey [
 	<var: #ptr type: 'char *'>
 	self primitive: 'primitiveGetStringKeyedBy'
 		parameters: #(String).
-	
+	self cCode: '' inSmalltalk: [aString := ByteString new: 1025].
 	keyLength := interpreterProxy byteSizeOf: aKey cPtrAsOop.
 	size := self sqInternetConfigurationGetStringKeyedBy: aKey keySize: keyLength into: aString.
 	oop := interpreterProxy instantiateClass: interpreterProxy classString indexableSize: size.
@@ -67,4 +67,13 @@ InternetConfigPlugin >> primitiveGetStringKeyedBy: aKey [
 InternetConfigPlugin >> shutdownModule [
 	<export: true>
 	^self cCode: 'sqInternetConfigurationShutdown()' inSmalltalk:[true]
+]
+
+{ #category : #simulation }
+InternetConfigPlugin >> sqInternetConfigurationGetStringKeyedBy: keyCArray keySize: keySize into: aString [
+	<doNotGenerate>
+	| result |
+	result := InternetConfiguration primitiveGetStringKeyedBy: (self asString: keyCArray size: keySize).
+	self strncpy: aString _: result _: (aString size min: result size).
+	^result size
 ]

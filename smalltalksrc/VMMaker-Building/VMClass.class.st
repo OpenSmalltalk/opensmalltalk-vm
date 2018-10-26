@@ -1302,10 +1302,9 @@ VMClass >> strlen: aCString [
 	| len |
 
 	aCString isCArray ifTrue:
-		["CArrays may be 0 terminated or the correct length (in the simulator)"
-		len := 0.
-		[(len = aCString size or: [(aCString at: len) = 0]) ifTrue: [^len].
-		len := len + 1] repeat]
+		[len := 0.
+		 [(aCString at: len) = 0 ifTrue: [^len].
+		 len := len + 1] repeat]
 	ifFalse:
 		[aCString isString ifTrue: 
 			[^aCString size]

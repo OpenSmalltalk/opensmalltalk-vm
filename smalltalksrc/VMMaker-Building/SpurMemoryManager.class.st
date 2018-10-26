@@ -5575,6 +5575,13 @@ SpurMemoryManager >> getHeapGrowthToSizeGCRatio [
 ]
 
 { #category : #'simulation only' }
+SpurMemoryManager >> getStackPointer [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter getStackPointer
+]
+
+{ #category : #'simulation only' }
 SpurMemoryManager >> getThisSessionID [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	<doNotGenerate>
@@ -8510,6 +8517,42 @@ SpurMemoryManager >> maybeSplObj: index [
 		[self fetchPointer: index ofObject: specialObjectsOop]
 ]
 
+{ #category : #simulation }
+SpurMemoryManager >> memcpy: destAddress _: sourceAddress _: bytes [
+	"For SpurGenerationScavenger>>copyToFutureSpace:bytes:. N.B. If ranges overlap, must use memmove."
+	<doNotGenerate>
+	self deny: ((destAddress <= sourceAddress and: [destAddress asInteger + bytes > sourceAddress])
+				or: [sourceAddress <= destAddress and: [sourceAddress asInteger + bytes > destAddress]]).
+	^self memmove: destAddress _: sourceAddress _: bytes
+]
+
+{ #category : #simulation }
+SpurMemoryManager >> memmove: destAddress _: sourceAddress _: bytes [
+	"Emulate the c library memmove function"
+	<doNotGenerate>
+	| dst src  |
+	dst := destAddress asInteger.
+	src := sourceAddress asInteger.
+	self assert: bytes \\ 8 + (dst \\ 8) + (src \\ 8) = 0.
+	memory bytesPerElement = 8
+		ifTrue:
+			[destAddress > sourceAddress
+				ifTrue:
+					[bytes - 8 to: 0 by: -8 do:
+						[:i| self long64At: dst + i put: (self long64At: src + i)]]
+				ifFalse:
+					[0 to: bytes - 8 by: 8 do:
+						[:i| self long64At: dst + i put: (self long64At: src + i)]]]
+		ifFalse:
+			[destAddress > sourceAddress
+				ifTrue:
+					[bytes - 4 to: 0 by: -4 do:
+						[:i| self long32At: dst + i put: (self long32At: src + i)]]
+				ifFalse:
+					[0 to: bytes - 4 by: 4 do:
+						[:i| self long32At: dst + i put: (self long32At: src + i)]]]
+]
+
 { #category : #accessing }
 SpurMemoryManager >> memory [
 	<cmacro: '() GIV(memory)'>
@@ -9308,6 +9351,12 @@ SpurMemoryManager >> objectBytesForSlots: numSlots [
 	 number of slots, including header and possible overflow size header."
 	<returnTypeC: #usqInt>
 	self subclassResponsibility
+]
+
+{ #category : #simulation }
+SpurMemoryManager >> objectMemory [
+	<doNotGenerate>
+	^self
 ]
 
 { #category : #'object enumeration' }

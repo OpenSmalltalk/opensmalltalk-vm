@@ -138,7 +138,8 @@ CArray >> coerceTo: cTypeString sim: interpreterSimulator [
 		['unsigned char *']	-> [self shallowCopy unitSize: 1; yourself].
 		['unsigned']		-> [self ptrAddress].
 		['sqInt']				-> [self ptrAddress].
-		['usqInt']			-> [self ptrAddress] }
+		['usqInt']			-> [self ptrAddress].
+		['sqIntptr_t']		-> [self shallowCopy unitSize: interpreter bytesPerOop; yourself] }
 ]
 
 { #category : #converting }

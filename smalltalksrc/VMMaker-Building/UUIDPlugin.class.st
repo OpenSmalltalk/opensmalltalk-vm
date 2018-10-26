@@ -23,11 +23,6 @@ UUIDPlugin class >> requiresPlatformFiles [
 	^true
 ]
 
-{ #category : #simulation }
-UUIDPlugin class >> simulatorClass [
-	^SmartSyntaxPluginSimulator
-]
-
 { #category : #initialize }
 UUIDPlugin >> initialiseModule [
 	<export: true>

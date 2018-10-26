@@ -182,7 +182,7 @@ VMMaker class >> forPlatform: platformName [
 	^(self activeVMMakerClassFor: platformName) new initialize setPlatName: platformName
 ]
 
-{ #category : #utilities }
+{ #category : #'file utilities' }
 VMMaker class >> forceNewFileNamed: aFilename [
 	"Always output files in unix lf format.
 		A single format is friendlier to e.g. external version control systems.
@@ -191,6 +191,13 @@ VMMaker class >> forceNewFileNamed: aFilename [
 	^(MultiByteFileStream forceNewFileNamed: aFilename)
 		lineEndConvention: #lf;
 		yourself
+]
+
+{ #category : #'file utilities' }
+VMMaker class >> fullNameForPath: aPathString [
+	^(Smalltalk classNamed: #FileReference)
+		ifNotNil: [:cfs| aPathString asFileReference asAbsolute fullName]
+		ifNil: [FileDirectory default pathFromURI: aPathString]
 ]
 
 { #category : #utilities }
@@ -499,8 +506,8 @@ VMMaker class >> generateNewspeakSpurCog64VM [
 		with: #(	ObjectMemory Spur64BitCoMemoryManager
 				MULTIPLEBYTECODESETS true
 				NewspeakVM true)
-		to: (FileDirectory default pathFromURI: self sourceTree, '/nsspur64src')
-		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
+		to: self sourceTree, '/nsspur64src'
+		platformDir: self sourceTree, '/platforms'
 		including:#()
 
 ]
@@ -514,8 +521,8 @@ VMMaker class >> generateNewspeakSpurCogVM [
 		with: #(	ObjectMemory Spur32BitCoMemoryManager
 				MULTIPLEBYTECODESETS true
 				NewspeakVM true)
-		to: (FileDirectory default pathFromURI: self sourceTree, '/nsspursrc')
-		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
+		to: self sourceTree, '/nsspursrc'
+		platformDir: self sourceTree, '/platforms'
 		including:#()
 
 ]
@@ -529,8 +536,8 @@ VMMaker class >> generateNewspeakSpurStack64VM [
 				MULTIPLEBYTECODESETS true
 				NewspeakVM true
 				FailImbalancedPrimitives false)
-		to: (FileDirectory default pathFromURI: self sourceTree, '/nsspurstack64src')
-		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
+		to: self sourceTree, '/nsspurstack64src'
+		platformDir: self sourceTree, '/platforms'
 		including: #()
 ]
 
@@ -543,8 +550,8 @@ VMMaker class >> generateNewspeakSpurStackVM [
 				MULTIPLEBYTECODESETS true
 				NewspeakVM true
 				FailImbalancedPrimitives false)
-		to: (FileDirectory default pathFromURI: self sourceTree, '/nsspurstacksrc')
-		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
+		to: self sourceTree, '/nsspurstacksrc'
+		platformDir: self sourceTree, '/platforms'
 		including: #()
 ]
 
@@ -578,8 +585,8 @@ VMMaker class >> generateSqueakCogVMWithInterpreterClass: interpreterClass optio
 		generate: interpreterClass
 		and: StackToRegisterMappingCogit
 		with: optionsArray
-		to: (FileDirectory default pathFromURI: self sourceTree, '/src')
-		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
+		to: self sourceTree, '/src'
+		platformDir: self sourceTree, '/platforms'
 		including:#()
 ]
 
@@ -593,8 +600,8 @@ VMMaker class >> generateSqueakSpurCog64MTVM [
 				ObjectMemory Spur64BitCoMemoryManager
 				MULTIPLEBYTECODESETS true
 				bytecodeTableInitializer initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid)
-		to: (FileDirectory default pathFromURI: self sourceTree, '/spur64src')
-		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
+		to: self sourceTree, '/spur64src'
+		platformDir: self sourceTree, '/platforms'
 		including:#()
 ]
 
@@ -607,8 +614,8 @@ VMMaker class >> generateSqueakSpurCog64VM [
 		with: #(ObjectMemory Spur64BitCoMemoryManager
 				MULTIPLEBYTECODESETS true
 				bytecodeTableInitializer initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid)
-		to: (FileDirectory default pathFromURI: self sourceTree, '/spur64src')
-		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
+		to: self sourceTree, '/spur64src'
+		platformDir: self sourceTree, '/platforms'
 		including:#()
 ]
 
@@ -622,8 +629,8 @@ VMMaker class >> generateSqueakSpurCogMTVM [
 				ObjectMemory Spur32BitCoMemoryManager
 				MULTIPLEBYTECODESETS true
 				bytecodeTableInitializer initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid)
-		to: (FileDirectory default pathFromURI: self sourceTree, '/spursrc')
-		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
+		to: self sourceTree, '/spursrc'
+		platformDir: self sourceTree, '/platforms'
 		including:#()
 ]
 
@@ -636,8 +643,8 @@ VMMaker class >> generateSqueakSpurCogSista64VM [
 				ObjectMemory Spur64BitCoMemoryManager
 				MULTIPLEBYTECODESETS true
 				bytecodeTableInitializer initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid)
-		to: (FileDirectory default pathFromURI: self sourceTree, '/spursista64src')
-		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
+		to: self sourceTree, '/spursista64src'
+		platformDir: self sourceTree, '/platforms'
 		including:#()
 ]
 
@@ -651,8 +658,8 @@ VMMaker class >> generateSqueakSpurCogSistaVM [
 				ObjectMemory Spur32BitCoMemoryManager
 				MULTIPLEBYTECODESETS true
 				bytecodeTableInitializer initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid)
-		to: (FileDirectory default pathFromURI: self sourceTree, '/spursistasrc')
-		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
+		to: self sourceTree, '/spursistasrc'
+		platformDir: self sourceTree, '/platforms'
 		including:#()
 ]
 
@@ -665,8 +672,8 @@ VMMaker class >> generateSqueakSpurCogVM [
 		with: #(ObjectMemory Spur32BitCoMemoryManager
 				MULTIPLEBYTECODESETS true
 				bytecodeTableInitializer initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid)
-		to: (FileDirectory default pathFromURI: self sourceTree, '/spursrc')
-		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
+		to: self sourceTree, '/spursrc'
+		platformDir: self sourceTree, '/platforms'
 		including:#()
 ]
 
@@ -678,11 +685,11 @@ VMMaker class >> generateSqueakSpurLowcodeCog64VM [
 		and: StackToRegisterMappingCogit
 		with: #(ObjectMemory Spur64BitCoMemoryManager
 				SistaVM true
-        			LowcodeVM true
+				LowcodeVM true
 				MULTIPLEBYTECODESETS true
 				bytecodeTableInitializer initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid)
-		to: (FileDirectory default pathFromURI: self sourceTree, '/spurlowcode64src')
-		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
+		to: self sourceTree, '/spurlowcode64src'
+		platformDir: self sourceTree, '/platforms'
 		including:#()
 ]
 
@@ -694,11 +701,11 @@ VMMaker class >> generateSqueakSpurLowcodeCogVM [
 		and: StackToRegisterMappingCogit
 		with: #(ObjectMemory Spur32BitCoMemoryManager
 				SistaVM true
-        			LowcodeVM true
+				LowcodeVM true
 				MULTIPLEBYTECODESETS true
 				bytecodeTableInitializer initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid)
-		to: (FileDirectory default pathFromURI: self sourceTree, '/spurlowcodesrc')
-		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
+		to: self sourceTree, '/spurlowcodesrc'
+		platformDir: self sourceTree, '/platforms'
 		including:#()
 ]
 
@@ -709,12 +716,12 @@ VMMaker class >> generateSqueakSpurLowcodeStack64VM [
 		generate: StackInterpreter
 		with: #(ObjectMemory Spur64BitMemoryManager
 				SistaVM true
-        			LowcodeVM true
+				LowcodeVM true
 				FailImbalancedPrimitives false
 				MULTIPLEBYTECODESETS true
 				bytecodeTableInitializer initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid)
-		to: (FileDirectory default pathFromURI: self sourceTree, '/spurlowcodestack64src')
-		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
+		to: self sourceTree, '/spurlowcodestack64src'
+		platformDir: self sourceTree, '/platforms'
 		including: #()
 ]
 
@@ -725,12 +732,12 @@ VMMaker class >> generateSqueakSpurLowcodeStackVM [
 		generate: StackInterpreter
 		with: #(ObjectMemory Spur32BitMemoryManager
 				SistaVM true
-        			LowcodeVM true
+				LowcodeVM true
 				FailImbalancedPrimitives false
 				MULTIPLEBYTECODESETS true
 				bytecodeTableInitializer initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid)
-		to: (FileDirectory default pathFromURI: self sourceTree, '/spurlowcodestacksrc')
-		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
+		to: self sourceTree, '/spurlowcodestacksrc'
+		platformDir: self sourceTree, '/platforms'
 		including: #()
 ]
 
@@ -741,8 +748,8 @@ VMMaker class >> generateSqueakSpurRegisterCogVM [
 		generate: CoInterpreter
 		and: RegisterAllocatingCogit
 		with: #(ObjectMemory Spur32BitCoMemoryManager)
-		to: (FileDirectory default pathFromURI: self sourceTree, '/spurregsrc')
-		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
+		to: self sourceTree, '/spurregsrc'
+		platformDir: self sourceTree, '/platforms'
 		including:#()
 ]
 
@@ -755,8 +762,8 @@ VMMaker class >> generateSqueakSpurStack64VM [
 				FailImbalancedPrimitives false
 				MULTIPLEBYTECODESETS true
 				bytecodeTableInitializer initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid)
-		to: (FileDirectory default pathFromURI: self sourceTree, '/spurstack64src')
-		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
+		to: self sourceTree, '/spurstack64src'
+		platformDir: self sourceTree, '/platforms'
 		including: #()
 ]
 
@@ -769,8 +776,8 @@ VMMaker class >> generateSqueakSpurStackVM [
 				FailImbalancedPrimitives false
 				MULTIPLEBYTECODESETS true
 				bytecodeTableInitializer initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid)
-		to: (FileDirectory default pathFromURI: self sourceTree, '/spurstacksrc')
-		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
+		to: self sourceTree, '/spurstacksrc'
+		platformDir: self sourceTree, '/platforms'
 		including: #()
 ]
 
@@ -780,17 +787,17 @@ VMMaker class >> generateSqueakStackVM [
 	^VMMaker
 		generate: StackInterpreter
 		with: #(FailImbalancedPrimitives false)
-		to: (FileDirectory default pathFromURI: self sourceTree, '/stacksrc')
-		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
+		to: self sourceTree, '/stacksrc'
+		platformDir: self sourceTree, '/platforms'
 		including: #()
 ]
 
 { #category : #configurations }
 VMMaker class >> generateVMPlugins [
 	^VMMaker
-		generatePluginsTo: (FileDirectory default pathFromURI: self sourceTree, '/src')
+		generatePluginsTo: self sourceTree, '/src'
 		options: #()
-		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
+		platformDir: self sourceTree, '/platforms'
 		including:#(	ADPCMCodecPlugin AsynchFilePlugin
 					BalloonEnginePlugin B3DAcceleratorPlugin B3DEnginePlugin BMPReadWriterPlugin BitBltSimulation
 					BochsIA32Plugin BochsX64Plugin
@@ -858,34 +865,19 @@ VMMaker class >> isActiveVMMakerClassFor: platformName [
 	^ platformName , '*' match: self name
 ]
 
-{ #category : #accessing }
-VMMaker class >> machinesDirName [
-	^DirNames at: #machineType ifAbsent:[SmalltalkImage current platformName]
-]
-
-{ #category : #utilities }
+{ #category : #'instance creation' }
 VMMaker class >> makerFor: interpreterClass and: cogitClassOrNil with: optionsPairsArrayArg to: srcDirName platformDir: platDirName [
-	"Initialize a VMMaker to generate the VM to the given target directory. Include plugins in pluginList.
-	Example:
-		(VMMaker
-			generate: NewspeakInterpreter
-			to: (FileDirectory default pathFromURI: 'cogvm/newspeaksrc')
-			platformDir: (FileDirectory default pathFromURI: 'cogvm/platforms')
-			including:#(	AsynchFilePlugin FloatArrayPlugin RePlugin B2DPlugin FloatMathPlugin SecurityPlugin
-						BMPReadWriterPlugin IA32ABI SocketPlugin BitBltPlugin JPEGReadWriter2Plugin SurfacePlugin
-						DSAPrims JPEGReaderPlugin UUIDPlugin DropPlugin LargeIntegers UnixOSProcessPlugin
-						FileCopyPlugin Matrix2x3Plugin Win32OSProcessPlugin FilePlugin MiscPrimitivePlugin ZipPlugin))"
-	| maker optionsPairsArray |
-	maker := self forPlatform: 'Cross'.
-	maker sourceDirectoryName: srcDirName.
-	maker platformRootDirectoryName: platDirName.
-	maker interpreterClass: interpreterClass.
+	"Initialize a VMMaker to generate the VM to the given target directory."
+	| optionsPairsArray |
 	optionsPairsArray := (cogitClassOrNil isNil or: [optionsPairsArrayArg includes: #Cogit])
 							ifTrue: [optionsPairsArrayArg]
 							ifFalse: [optionsPairsArrayArg, { #Cogit. cogitClassOrNil name }].
-	maker options: optionsPairsArray.
-	^maker
-
+	^(self forPlatform: 'Cross')
+		sourceDirectoryName: (self fullNameForPath: srcDirName);
+		platformRootDirectoryName: (self fullNameForPath: platDirName);
+		options: optionsPairsArray;
+		interpreterClass: interpreterClass;
+		yourself
 ]
 
 { #category : #utilities }
@@ -932,7 +924,7 @@ VMMaker class >> makerFor: interpreterClass and: cogitClassOrNil with: optionsPa
 
 ]
 
-{ #category : #utilities }
+{ #category : #'file utilities' }
 VMMaker class >> oldFileNamed: aFilename [
 	"Always output files in unix lf format.
 		A single format is friendlier to e.g. external version control systems.
@@ -953,7 +945,7 @@ VMMaker class >> pluginsDirName [
 	^DirNames at: #pluginsDir
 ]
 
-{ #category : #accessing }
+{ #category : #'file utilities' }
 VMMaker class >> rootDirectory [
 	^FileDirectory default directoryNamed: self sourceTree
 ]
@@ -1596,7 +1588,7 @@ VMMaker >> initialize [
 	forBrowser := false.
 	internalPlugins := SortedCollection new.
 	externalPlugins := SortedCollection new.
-	platformName := self class machinesDirName.
+	platformName := 'Cross'.
 	is64BitVM := false.
 	interpreterClassName := StackInterpreterPrimitives name.
 	optionsDictionary := Dictionary newFromPairs: {#BytesPerWord. 4}.
