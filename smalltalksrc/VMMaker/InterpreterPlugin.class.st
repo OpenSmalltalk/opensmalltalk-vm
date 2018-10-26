@@ -210,12 +210,6 @@ InterpreterPlugin class >> moduleNameAndVersion [
 	^ self moduleName
 ]
 
-{ #category : #simulation }
-InterpreterPlugin class >> newFor: anUnsimulatedInterpreterPluginClass [
-	"Overridden by SmartSyntaxPluginSimulator to wrap a specific plugin class."
-	^self new
-]
-
 { #category : #translation }
 InterpreterPlugin class >> pluginClassesUpToRoot [
 	"Answer the classes to include for translation of aPluginClass, superclasses first, and the root (VMClass in general, possibly Object)  last."
@@ -287,6 +281,20 @@ InterpreterPlugin class >> simulatorClass [
 	"For running from Smalltalk - answer a class that can be used to simulate the receiver, or nil if you want the primitives in this module to always fail, causing simulation to fall through to the Smalltalk code.  By default every non-TestInterpreterPlugin can simulate itself."
 
 	^ self
+]
+
+{ #category : #simulation }
+InterpreterPlugin class >> simulatorForInterpreterInterface: objectMemoryOrInterpreterProxy [
+	"Answer an uninitialized (in the sense that the plugin has been sent initialize, but not initialiseModule)
+	 simulator for the receiver, or nil, if the receiver answers nil to simulatorClass.  Overridden by
+	 SmartSyntaxPluginSimulator to answer an instance of SmartSyntaxPluginSimulator wrapped around
+	 an uniniialized simulator for the receiver."
+
+	^self simulatorClass ifNotNil:
+		[:simClass|
+		 simClass new
+			setInterpreter: objectMemoryOrInterpreterProxy;
+			yourself]
 ]
 
 { #category : #translation }
@@ -397,6 +405,22 @@ InterpreterPlugin >> doesNotUnderstand: aMessage [
 					nextPutAll: method selector;
 					cr;
 					flush]]
+]
+
+{ #category : #simulation }
+InterpreterPlugin >> evaluateIfFailed: aBlock [
+	"Evaluate aBlock, catching primtiive failure, and failing if so.
+	 Answer if evaluating aBlock caused primitive failure."
+	<doNotGenerate>
+	aBlock
+		on: Error
+		do: [:ex|
+			((ex signalerContext selector beginsWith: #primitiveFailed) "e.g. could be error: sent from primitiveFailed:"
+			 or: [ex signalerContext sender selector beginsWith: #primitiveFailed]) ifFalse:
+				[ex pass].
+			interpreterProxy primitiveFail.
+			^true].
+	^false
 ]
 
 { #category : #'simulation support' }

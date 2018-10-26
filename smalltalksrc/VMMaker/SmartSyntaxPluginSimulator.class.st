@@ -12,17 +12,6 @@ Class {
 }
 
 { #category : #simulation }
-SmartSyntaxPluginSimulator class >> newFor: anUnsimulatedInterpreterPluginClass [
-	| simulatorClass |
-	simulatorClass := anUnsimulatedInterpreterPluginClass subclasses
-						detect: [:sc| sc name endsWith: 'Simulator']
-						ifNone: [anUnsimulatedInterpreterPluginClass].
-	^self new
-		actualPlugin: simulatorClass new signatureClass: anUnsimulatedInterpreterPluginClass;
-		yourself
-]
-
-{ #category : #simulation }
 SmartSyntaxPluginSimulator class >> shouldBeTranslated [
 	^false
 ]
@@ -55,7 +44,7 @@ SmartSyntaxPluginSimulator >> ccgLoad: codeGen expr: exprBlock asCharPtrFrom: st
 
 { #category : #simulation }
 SmartSyntaxPluginSimulator >> ccgLoad: codeGen expr: exprBlock asFloatValueFrom: stackIndex [
-	self shouldBeImplemented
+	^[:oop| interpreterProxy floatValueOf: oop]
 ]
 
 { #category : #simulation }
@@ -119,7 +108,10 @@ SmartSyntaxPluginSimulator >> ccgLoad: codeGen expr: exprBlock asUnsignedPtrFrom
 
 { #category : #simulation }
 SmartSyntaxPluginSimulator >> ccgLoad: codeGen expr: exprBlock asUnsignedValueFrom: stackIndex [
-	self shouldBeImplemented
+	^[:oop|
+	  interpreterProxy bytesPerOop = 4
+		ifTrue: [interpreterProxy positive32BitValueOf: oop]
+		ifFalse: [interpreterProxy positive64BitValueOf: oop]]
 ]
 
 { #category : #simulation }
@@ -138,6 +130,9 @@ SmartSyntaxPluginSimulator >> ccgValBlock: aString [
 								 oop]].
 		['isWordsOrBytes']	-> [	[:oop|
 								 interpreterProxy success: (interpreterProxy isWordsOrBytes: oop).
+								 oop]].
+		['isIndexable']	-> [	[:oop|
+								 interpreterProxy success: (interpreterProxy isIndexable: oop).
 								 oop]] }
 ]
 
@@ -193,11 +188,13 @@ SmartSyntaxPluginSimulator >> computeSignatureMap [
 
 { #category : #'message forwarding' }
 SmartSyntaxPluginSimulator >> doesNotUnderstand: aMessage [
-	| signature selector parameters result |
+	| signature selector parameters result sp |
 	signature := signatureMap
 					at: aMessage selector
 					ifAbsent: [^super doesNotUnderstand: aMessage].
 	self log: [interpreterProxy coInterpreter printExternalHeadFrame; print: aMessage selector; cr].
+	"record the stack pointer to avoid cutting back the stack twice in plugins that mix smart syntax and traditional style."
+	sp := interpreterProxy getStackPointer.
 	selector := signature first.
 	parameters := signature second.
 	signature third "receiver block" value: (interpreterProxy stackValue: parameters size).
@@ -219,13 +216,22 @@ SmartSyntaxPluginSimulator >> doesNotUnderstand: aMessage [
 		 ^nil].
 	result == actualPlugin ifTrue:
 		[self log: '^self'.
-		 interpreterProxy pop: interpreterProxy methodArgumentCount.
+		 "For methods in BitBltSimulator that do their own marshalling, don't double pop"
+		 sp = interpreterProxy getStackPointer ifTrue:
+			[interpreterProxy pop: interpreterProxy methodArgumentCount].
 		 ^nil].
 	self log: [interpreterProxy coInterpreter print: '^'; shortPrintOop: result; flush].
-	interpreterProxy
-		pop: interpreterProxy methodArgumentCount + 1
-		thenPush: result.
+	"For methods in BitBltSimulator that do their own marshalling, don't double pop"
+	sp = interpreterProxy getStackPointer ifTrue:
+		[interpreterProxy
+			pop: interpreterProxy methodArgumentCount + 1
+			thenPush: result].
 	^nil "SmartSyntaxPluginPrimitives return null"
+]
+
+{ #category : #accessing }
+SmartSyntaxPluginSimulator >> forMap [
+	^forMap
 ]
 
 { #category : #simulation }

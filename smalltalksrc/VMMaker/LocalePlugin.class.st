@@ -29,25 +29,9 @@ LocalePlugin class >> hasHeaderFile [
 ]
 
 { #category : #translation }
-LocalePlugin class >> moduleName [
-
-	^ 'LocalePlugin'
-]
-
-{ #category : #translation }
 LocalePlugin class >> requiresPlatformFiles [
 	"this plugin requires platform specific files in order to work"
 	^true
-]
-
-{ #category : #translation }
-LocalePlugin class >> shouldBeTranslated [
-	^true
-]
-
-{ #category : #simulation }
-LocalePlugin class >> simulatorClass [
-	^LocalePluginSimulator
 ]
 
 { #category : #initialize }
@@ -201,4 +185,16 @@ LocalePlugin >> primitiveVMOffsetToUTC [
 	self primitive:'primitiveVMOffsetToUTC'.
 	^self sqLocGetVMOffsetToUTC asSmallIntegerObj
 
+]
+
+{ #category : #'simulation support' }
+LocalePlugin >> sqLocGetTimezoneOffset [
+	<doNotGenerate>
+	^(DateAndTime localTimeZone offset asSeconds / 60) rounded
+]
+
+{ #category : #'simulation support' }
+LocalePlugin >> sqLocInitialize [
+	<doNotGenerate>
+	^true
 ]

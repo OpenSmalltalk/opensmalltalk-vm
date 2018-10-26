@@ -69,6 +69,40 @@ StackInterpreterSimulatorTests >> testHackBits [
 ]
 
 { #category : #tests }
+StackInterpreterSimulatorTests >> testPluginSimulators [
+	"Test that every plugin under InterpreterPlugin that shouldBeTranslated can also instantiate a simulator.
+	 Test that every SmartSyntaxInterpreterPlugin is simulated via a SmartSyntaxPluginSimulator."
+
+	| simulatablePlugins objectMemory vm |
+	vm := StackInterpreterSimulator newWithOptions: #(ObjectMemory Spur32BitMemoryManager).
+	objectMemory := vm objectMemory.
+
+
+	simulatablePlugins := InterpreterPlugin allSubclasses select:
+								[:pc| pc shouldBeTranslated and: [pc simulatorClass notNil]].
+	simulatablePlugins do:
+		[:pc|
+		self shouldnt: [self assert: (pc simulatorForInterpreterInterface: objectMemory) notNil]
+			raise: Error].
+	
+	simulatablePlugins := SmartSyntaxInterpreterPlugin allSubclasses select:
+								[:pc| pc shouldBeTranslated and: [pc simulatorClass notNil]].
+	simulatablePlugins do:
+		[:pc|
+		self shouldnt:
+				[| simulator |
+				 simulator := pc simulatorForInterpreterInterface: objectMemory.
+				 self assert: simulator class == SmartSyntaxPluginSimulator.
+				 pc simulatorClass ifNotNil:
+					[:simulatorClass|
+					 simulatorClass == SmartSyntaxPluginSimulator
+						ifTrue: [self assert: (simulator actualPlugin isKindOf: pc)]
+						ifFalse: [self assert: simulator actualPlugin class == simulatorClass]]]
+			raise: Error]
+	
+]
+
+{ #category : #tests }
 StackInterpreterSimulatorTests >> testSimulatorCanReloadImage [
 	self shouldnt:
 			[(StackInterpreterSimulator newWithOptions: #(ObjectMemory Spur32BitMemoryManager))

@@ -89,11 +89,6 @@ JPEGReadWriter2Plugin class >> requiresPlatformFiles [
 	^true
 ]
 
-{ #category : #simulation }
-JPEGReadWriter2Plugin class >> simulatorClass [
-	^SmartSyntaxPluginSimulator
-]
-
 { #category : #'plugin support' }
 JPEGReadWriter2Plugin >> compressStructSize [
 	<inline: #always>
@@ -116,22 +111,6 @@ JPEGReadWriter2Plugin >> errorMgr2StructSize [
 	^self
 		cCode: [self sizeof: #'struct error_mgr2']
 		inSmalltalk: [JPEGReadWriter2 new primJPEGErrorMgr2StructSize]
-]
-
-{ #category : #simulation }
-JPEGReadWriter2Plugin >> evaluateIfFailed: aBlock [
-	"Evaluate aBlock, catching primtiive failure, and failing if so.
-	 Answer if evaluating aBlock caused primitive failure."
-	<doNotGenerate>
-	aBlock
-		on: Error
-		do: [:ex|
-			((ex signalerContext selector beginsWith: #primitiveFailed) "e.g. could be error: sent from primitiveFailed:"
-			 or: [ex signalerContext sender selector beginsWith: #primitiveFailed]) ifFalse:
-				[ex pass].
-			interpreterProxy primitiveFail.
-			^true].
-	^false
 ]
 
 { #category : #'plugin support' }
