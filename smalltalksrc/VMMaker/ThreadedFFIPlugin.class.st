@@ -10,7 +10,8 @@ Class {
 	#instVars : [
 		'ffiLogEnabled',
 		'externalFunctionInstSize',
-		'ffiLastError'
+		'ffiLastError',
+		'allocationMap'
 	],
 	#classVars : [
 		'DefaultMaxStackSize',
@@ -39,7 +40,8 @@ ThreadedFFIPlugin class >> calloutStateClass [
 { #category : #translation }
 ThreadedFFIPlugin class >> declareCVarsIn: cg [
 	super declareCVarsIn: cg.
-	cg removeConstant: #COGMTVM "this should be defined at compile time"
+	cg removeConstant: #COGMTVM. "this should be defined at compile time"
+	cg removeVariable: #allocationMap "this is simulation only"
 ]
 
 { #category : #translation }
@@ -408,7 +410,17 @@ ThreadedFFIPlugin >> ffiAlloc: bytes [
 	"Default to malloc/free.  If a platform needs a different allocator define
 	 something in the preamble and redefine this to take account of that."
 	<cmacro: '(bytes) (usqInt)malloc(bytes)'>
-	^ByteArray new: bytes
+	"Simulate external allocation.  This would be straight-forward were it not for simulating a
+	 32-bit system above a 64-bit system, where the result of an allocation won't fit in a 32-bit
+	 pointer.  So in this case maintain a map from external allocations to fake addresses."
+	| externalAllocation key |
+	(self evaluateIfFailed: [externalAllocation := ExternalAddress allocate: bytes]) ifTrue: [^0].
+	(self sizeof: #sqIntptr_t) >= Smalltalk wordSize ifTrue:
+		[^externalAllocation asInteger].
+	allocationMap ifNil:
+		[allocationMap := Dictionary new].
+	allocationMap at: (key := allocationMap size * (4 * 1024 * 1024) + 16r8E000000) put: externalAllocation asInteger.
+	^key
 ]
 
 { #category : #'callout support' }

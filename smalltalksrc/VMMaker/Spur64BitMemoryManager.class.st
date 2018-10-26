@@ -842,23 +842,6 @@ Spur64BitMemoryManager >> maxSmallInteger [
 	^16rFFFFFFFFFFFFFFF
 ]
 
-{ #category : #'simulation only' }
-Spur64BitMemoryManager >> memmove: destAddress _: sourceAddress _: bytes [
-	<doNotGenerate>
-	| dst src  |
-	dst := destAddress asInteger.
-	src := sourceAddress asInteger.
-	"Emulate the c library memmove function"
-	self assert: bytes \\ 4 = 0.
-	destAddress > sourceAddress
-		ifTrue:
-			[bytes - 4 to: 0 by: -4 do:
-				[:i| self long32At: dst + i put: (self long32At: src + i)]]
-		ifFalse:
-			[0 to: bytes - 4 by: 4 do:
-				[:i| self long32At: dst + i put: (self long32At: src + i)]]
-]
-
 { #category : #simulation }
 Spur64BitMemoryManager >> memoryClass [
 	"Answer the class to use for the memory inst var in simulation.

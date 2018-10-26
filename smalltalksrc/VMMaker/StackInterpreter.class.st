@@ -4330,7 +4330,7 @@ StackInterpreter >> checkForAndFollowForwardedPrimitiveState [
 									ifTrue: [self primitiveAccessorDepthForExternalPrimitiveMethod: newMethod]
 									ifFalse: [primitiveAccessorDepthTable at: primIndex]].
 	self assert: (self saneFunctionPointerForFailureOfPrimIndex: primIndex).
-	self assert: (accessorDepth between: -1 and: 4).
+	self assert: (accessorDepth between: -1 and: 5).
 	accessorDepth >= 0 ifTrue:
 		[0 to: argumentCount do:
 			[:index| | oop |
@@ -8035,7 +8035,7 @@ StackInterpreter >> getStackPointer [
 	"For Alien FFI"
 	<api>
 	<returnTypeC: #'sqInt *'>
-	^self cCoerce: stackPointer to: #'sqInt *'
+	^self cCoerceSimple: stackPointer to: #'sqInt *'
 ]
 
 { #category : #'plugin support' }
@@ -8846,7 +8846,7 @@ StackInterpreter >> internalActivateNewMethod [
 		 primFailCode ~= 0 ifTrue:
 			[self reapAndResetErrorCodeTo: localSP header: methodHeader]].
 
-	self assert: (self frameNumArgs: localFP) == argumentCount.
+	self assert: (self frameNumArgs: localFP) = argumentCount.
 	self assert: (self frameIsBlockActivation: localFP) not.
 	self assert: (self frameHasContext: localFP) not.
 
@@ -21857,26 +21857,23 @@ StackInterpreter >> trinaryInlinePrimitive: primIndex [
 StackInterpreter >> tryLoadNewPlugin: pluginString pluginEntries: pluginEntries [
 	"Load the plugin and if on Spur, populate pluginEntries with the prmitives in the plugin."
 	<doNotGenerate>
-	| plugin realPluginClass plugins simulatorClasses |
+	| plugin realPluginClass plugins |
 	self transcript cr; show: 'Looking for module ', pluginString.
 	pluginString isEmpty
 		ifTrue:
 			[plugin := self]
 		ifFalse:
-			[plugins := InterpreterPlugin allSubclasses select: [:psc| psc moduleName asString = pluginString asString].
-			simulatorClasses := (plugins
-									select: [:psc| psc simulatorClass notNil]
-									thenCollect: [:psc| psc simulatorClass]) asSet.
-			simulatorClasses isEmpty ifTrue: [self transcript show: ' ... not found'. ^nil].
-			simulatorClasses size > 1 ifTrue: [^self error: 'This won''t work...'].
-			(plugins copyWithoutAll: simulatorClasses) notEmpty ifTrue:
-				[plugins := plugins copyWithoutAll: simulatorClasses].
-			plugins size > 1 ifTrue:
-				[self transcript show: '...multiple plugin classes; choosing ', plugins last name].
-			realPluginClass := plugins last. "hopefully lowest in the hierarchy..."
-			plugin := simulatorClasses anyOne newFor: realPluginClass.
-			plugin setInterpreter: objectMemory. "Ignore return value from setInterpreter"
-			(plugin respondsTo: #initialiseModule) ifTrue:
+			[plugins := InterpreterPlugin allSubclasses select:
+							[:psc|
+							 psc moduleName asString = pluginString asString
+							 and: [psc shouldBeTranslated]].
+			 plugins isEmpty ifTrue: [self transcript show: ' ... not found'. ^nil].
+			 plugins size > 1 ifTrue: [^self error: 'This won''t work...'].
+			 "plugins size > 1 ifTrue:
+				[self transcript show: '...multiple plugin classes; choosing ', plugins last name]."
+			 realPluginClass := plugins anyOne. "hopefully lowest in the hierarchy..."
+			 plugin := realPluginClass simulatorForInterpreterInterface: objectMemory.
+			 (plugin respondsTo: #initialiseModule) ifTrue:
 				[plugin initialiseModule ifFalse:
 					[self transcript show: ' ... initialiser failed'. ^nil]]]. "module initialiser failed"
 	self transcript show: ' ... loaded'.

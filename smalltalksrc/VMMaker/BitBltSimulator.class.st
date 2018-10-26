@@ -280,8 +280,34 @@ BitBltSimulator >> mergeFn: arg1 with: arg2 [
 
 { #category : #simulation }
 BitBltSimulator >> primitive: primitiveName parameters: parameterTypesArray receiver: rcvrType [
+	"This exists just to check the set of methods that use smart syntax for which
+	 marshallers have been written.  If a case cannot be found you'll have to write
+	 a marshaller for the case in question that follows the approach taken in the
+	 marshallers below."
+	simulator forMap ifTrue:
+		[Notification new
+			tag: {#forMap. primitiveName. parameterTypesArray. rcvrType};
+			signal].
 	primitiveName caseOf: {
-		['primitivePixelValueAt'] -> [^self] }
+		['primitivePixelValueAt']		-> [^self].
+		['primitiveCompareColors']	-> [^self] }
+]
+
+{ #category : #primitives }
+BitBltSimulator >> primitiveCompareColors [
+	"This is a hack to mimic the SmartSyntaxPlugin support for primitive:parameters:receiver:
+	 which is hacked here at BitBltSimulator>>primitive:parameters:receiver:"
+	"rcvr := self
+				primitive: 'primitiveCompareColors'
+				parameters: #(#Unsigned #Unsigned #SmallInteger )
+				receiver: #Oop."
+	| unsignedBlock colorA colorB testID |
+	unsignedBlock := simulator ccgLoad: nil expr: nil asUnsignedValueFrom: nil.
+	colorA := unsignedBlock value: (interpreterProxy stackValue: 2).
+	colorB := unsignedBlock value: (interpreterProxy stackValue: 1).
+	testID := interpreterProxy stackIntegerValue: 0.
+	interpreterProxy failed ifFalse:
+		[self primitiveCompareColorA: colorA to: colorB test: testID]
 ]
 
 { #category : #primitives }

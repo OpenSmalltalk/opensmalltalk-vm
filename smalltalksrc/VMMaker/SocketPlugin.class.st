@@ -41,11 +41,6 @@ SocketPlugin class >> requiresPlatformFiles [
 	^true
 ]
 
-{ #category : #simulation }
-SocketPlugin class >> simulatorClass [
-	^SmartSyntaxPluginSimulator
-]
-
 { #category : #'initialize-release' }
 SocketPlugin >> initialiseModule [
 	<export: true>

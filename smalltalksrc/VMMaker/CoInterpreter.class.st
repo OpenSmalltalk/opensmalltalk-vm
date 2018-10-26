@@ -4411,7 +4411,7 @@ CoInterpreter >> internalActivateNewMethod [
 		 primFailCode ~= 0 ifTrue:
 			[self reapAndResetErrorCodeTo: localSP header: methodHeader]].
 
-	self assert: (self frameNumArgs: localFP) == argumentCount.
+	self assert: (self frameNumArgs: localFP) = argumentCount.
 	self assert: (self frameIsBlockActivation: localFP) not.
 	self assert: (self frameHasContext: localFP) not.
 
