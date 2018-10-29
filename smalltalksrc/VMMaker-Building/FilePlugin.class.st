@@ -65,16 +65,6 @@ FilePlugin class >> simulatorClass [
 	^FilePluginSimulator
 ]
 
-{ #category : #'directory primitives' }
-FilePlugin >> asciiDirectoryDelimiter [
-	^ self
-		cCode: 'dir_Delimitor()'
-		inSmalltalk:
-			[(Smalltalk classNamed: #FileSystem)
-				ifNotNil: [:fileSystem| fileSystem disk delimiter asciiValue]
-				ifNil: [FileDirectory pathNameDelimiter asciiValue]]
-]
-
 { #category : #private }
 FilePlugin >> connectToFd: fd write: writeFlag [
 	"Connect to the supplied file descriptor. Answer the file oop.
@@ -102,6 +92,14 @@ FilePlugin >> connectToFile: cfile write: writeFlag [
 	interpreterProxy failed ifFalse:
 		[self sqConnect: file To: cfile File: writeFlag].
 	^fileOop
+]
+
+{ #category : #'directory primitives' }
+FilePlugin >> dir_Delimitor [
+	<doNotGenerate>
+	^(Smalltalk classNamed: #FileSystem)
+		ifNotNil: [:fileSystem| fileSystem disk delimiter asInteger]
+		ifNil: [FileDirectory pathNameDelimiter asInteger]
 ]
 
 { #category : #'file primitives' }
@@ -185,7 +183,7 @@ FilePlugin >> initialiseModule [
 	sCOFfn := interpreterProxy ioLoadFunction: 'secCanOpenFileOfSizeWritable' From: 'SecurityPlugin'.
 	sCRFfn := interpreterProxy ioLoadFunction: 'secCanRenameFileOfSize' From: 'SecurityPlugin'.
 	sHFAfn := interpreterProxy ioLoadFunction: 'secHasFileAccess' From: 'SecurityPlugin'.
-	^self cCode: [self sqFileInit] inSmalltalk: [true]
+	^self sqFileInit
 ]
 
 { #category : #'directory primitives' }
@@ -394,16 +392,16 @@ FilePlugin >> primitiveDirectoryDelete [
 
 { #category : #'directory primitives' }
 FilePlugin >> primitiveDirectoryDelimitor [
-	| ascii |
 	<export: true>
-	ascii := self asciiDirectoryDelimiter.
 	interpreterProxy minorVersion >= 13
 		ifTrue:
 			[interpreterProxy
 				pop: 1
-				thenPush: (interpreterProxy characterObjectOf: ascii)]
+				thenPush: (interpreterProxy characterObjectOf: self dir_Delimitor)]
 		ifFalse:
-			[(ascii >= 0 and: [ascii <= 255])
+			[| ascii |
+			 ascii := self asciiDirectoryDelimiter.
+			 (ascii >= 0 and: [ascii <= 255])
 				ifTrue:
 					[interpreterProxy
 						pop: 1

@@ -1046,7 +1046,7 @@ StackInterpreterSimulator >> ioLoadFunction: functionString From: pluginString [
 	transcript
 		cr;
 		show: '(', byteCount printString, ') Looking for ', functionString, ' in ',
-				(pluginString isEmpty ifTrue:['vm'] ifFalse:[pluginString]).
+				(pluginString isEmpty ifTrue: ['vm'] ifFalse: [pluginString]).
 	(breakSelector notNil
 	 and: [(pluginString size = breakSelector size
 			and: [(self strncmp: pluginString _: breakSelector _: pluginString size) = 0])
@@ -1054,20 +1054,25 @@ StackInterpreterSimulator >> ioLoadFunction: functionString From: pluginString [
 			and: [(self strncmp: functionString _: breakSelector _: functionString size) = 0]]]) ifTrue:
 		[self halt: pluginString, '>>', functionString].
 	plugin := pluginList 
-				detect:[:any| any key = pluginString asString]
-				ifNone:[firstTime := true.
-						self loadNewPlugin: pluginString].
-	plugin ifNil:[transcript show: 'Failed ... no plugin found'. ^ 0].
+				detect: [:any| any key = pluginString asString]
+				ifNone:
+					[firstTime := true.
+					 self loadNewPlugin: pluginString].
+	plugin ifNil:
+		[firstTime ifTrue: [transcript cr; show: '... FAILED; no plugin found'].
+		 ^0].
 	plugin := plugin value.
-	mappedPluginEntries doWithIndex:[:pluginAndName :index|
+	mappedPluginEntries withIndexDo:
+		[:pluginAndName :index|
 		((pluginAndName at: 1) == plugin 
-			and:[(pluginAndName at: 2) == fnSymbol]) ifTrue:
-				[firstTime ifTrue: [transcript show:' ... okay'. ^ index]]].
+		and:[(pluginAndName at: 2) == fnSymbol]) ifTrue:
+			[^index]].
 	(plugin respondsTo: fnSymbol) ifFalse:
-		[transcript show:'Failed ... primitive not in plugin'. ^ 0].
-	mappedPluginEntries := mappedPluginEntries copyWith: (Array with: plugin with: fnSymbol).
+		[firstTime ifTrue: [transcript cr; show: '... FAILED; primitive not in plugin'].
+		 ^0].
+	mappedPluginEntries addLast: { plugin. fnSymbol }.
 	transcript show: ' ... okay'.
-	^ mappedPluginEntries size
+	^mappedPluginEntries size
 ]
 
 { #category : #'plugin support' }
@@ -1081,7 +1086,7 @@ StackInterpreterSimulator >> ioLoadFunction: functionString From: pluginString A
 	transcript
 		cr;
 		show: '(', byteCount printString, ') Looking for ', functionString, ' in ',
-				(pluginString isEmpty ifTrue:['vm'] ifFalse:[pluginString]).
+				(pluginString isEmpty ifTrue: ['vm'] ifFalse: [pluginString]).
 	(breakSelector notNil
 	 and: [(pluginString size = breakSelector size
 			and: [(self strncmp: pluginString _: breakSelector _: pluginString size) = 0])
@@ -1094,17 +1099,17 @@ StackInterpreterSimulator >> ioLoadFunction: functionString From: pluginString A
 					[firstTime := true.
 					 self loadNewPlugin: pluginString].
 	plugin ifNil:
-		[firstTime ifTrue: [transcript show: 'Failed ... primitive not in plugin'].
+		[firstTime ifTrue: [transcript show: '... FAILED; no plugin found'].
 		 ^0].
 	plugin := plugin value.
-	mappedPluginEntries doWithIndex:
+	mappedPluginEntries withIndexDo:
 		[:pluginAndName :index|
 		 ((pluginAndName at: 1) == plugin 
 		  and:[(pluginAndName at: 2) == fnSymbol]) ifTrue:
 			[firstTime ifTrue: [transcript show: ' ... okay'].
 			 accessorDepthPtr at: 0 put: (pluginAndName at: 4).
 			 ^index]].
-	firstTime ifTrue: [transcript show: 'Failed ... primitive not in plugin'].
+	firstTime ifTrue: [transcript show: '... FAILED; primitive not in plugin'].
 	^0
 ]
 
