@@ -127,9 +127,7 @@ B3DAcceleratorPlugin >> loadClientState: handle vertices: vertices colors: color
 		txPtr := interpreterProxy firstIndexableField: texCoords].
 	vertexPtr := interpreterProxy firstIndexableField: vertices.
 	interpreterProxy failed ifFalse:
-		[ok := self
-				cCode:'b3dLoadClientState(handle, vertexPtr, 3, colorPtr, 4, normalPtr, 3, txPtr, sz)'
-				inSmalltalk: [vertexPtr. colorPtr. normalPtr. txPtr. sz touch].
+		[ok := self b3dLoadClientState: handle _: vertexPtr _: 3 _: colorPtr _: 4 _: normalPtr _: 3 _: txPtr _: sz.
 		 ok ifFalse: [interpreterProxy primitiveFail]].
 	^nil "keep compiler quiet"
 
@@ -146,7 +144,7 @@ B3DAcceleratorPlugin >> primitiveAllocateTexture [
 	d := interpreterProxy stackIntegerValue: 2.
 	renderer := interpreterProxy stackIntegerValue: 3.
 	interpreterProxy failed ifTrue:[^nil].
-	result := self cCode:'b3dxAllocateTexture(renderer, w, h, d)' inSmalltalk:[-1].
+	result := self b3dxAllocateTexture: renderer _: w _: h _: d.
 	result = -1 ifTrue:[^interpreterProxy primitiveFail].
 	interpreterProxy pop: 5. "args+rcvr"
 	^interpreterProxy pushInteger: result.
@@ -194,7 +192,7 @@ B3DAcceleratorPlugin >> primitiveCompositeTexture [
 	texHandle := interpreterProxy stackIntegerValue: 5.
 	rendererHandle := interpreterProxy stackIntegerValue: 6.
 	interpreterProxy failed ifTrue:[^nil].
-	result := self cCode:'b3dxCompositeTexture(rendererHandle, texHandle, x, y, w, h, translucent)' inSmalltalk:[false].
+	result := self b3dxCompositeTexture: rendererHandle _: texHandle _: x _: y _: w _: h _: translucent.
 	result ifFalse:[^interpreterProxy primitiveFail].
 	^interpreterProxy pop: 7. "args"
 
@@ -244,7 +242,7 @@ B3DAcceleratorPlugin >> primitiveDestroyRenderer [
 		ifFalse:[^interpreterProxy primitiveFail].
 	handle := interpreterProxy stackIntegerValue: 0.
 	interpreterProxy failed ifTrue:[^nil].
-	result := self cCode:'b3dxDestroyRenderer(handle)' inSmalltalk:[false].
+	result := self b3dxDestroyRenderer: handle.
 	result ifFalse:[^interpreterProxy primitiveFail].
 	^interpreterProxy pop: 1. "pop arg; return rcvr"
 ]
@@ -258,7 +256,7 @@ B3DAcceleratorPlugin >> primitiveDestroyTexture [
 	handle := interpreterProxy stackIntegerValue: 0.
 	renderer := interpreterProxy stackIntegerValue: 1.
 	interpreterProxy failed ifTrue:[^nil].
-	result := self cCode:'b3dxDestroyTexture(renderer, handle)' inSmalltalk:[false].
+	result := self b3dxDestroyTexture: renderer _: handle.
 	result ifFalse:[^interpreterProxy primitiveFail].
 	^interpreterProxy pop: 2. "pop arg; return rcvr"
 ]
@@ -293,8 +291,7 @@ B3DAcceleratorPlugin >> primitiveDrawArrays [
 		(minIdx < 0 or:[minIdx > maxIdx or:[maxIdx > vtxSize]]) ifTrue:
 			[interpreterProxy primitiveFail]].
 	interpreterProxy failed ifFalse:
-		[ok := self cCode: 'b3dDrawArrays(handle, mode, minIdx, maxIdx)' 
-					inSmalltalk:[mode. false].
+		[ok := self b3dDrawArrays: handle _: mode _: minIdx _: maxIdx.
 		 ok ifTrue:
 			[interpreterProxy pop: interpreterProxy methodArgumentCount]].
 	^nil "keep compiler quiet"
@@ -335,8 +332,7 @@ B3DAcceleratorPlugin >> primitiveDrawElements [
 		self checkBoundsRange: vertices faces: facePtr count: faceSize].
 
 	interpreterProxy failed ifFalse:
-		[ok := self cCode: 'b3dDrawElements(handle, mode, faceSize, facePtr)'
-					inSmalltalk:[mode. facePtr. false].
+		[ok := self b3dDrawElements: handle _: mode _: faceSize _: facePtr.
 		 ok ifTrue:
 			[interpreterProxy pop: interpreterProxy methodArgumentCount]].
 	^nil "keep compiler quiet"
@@ -383,8 +379,7 @@ B3DAcceleratorPlugin >> primitiveDrawRangeElements [
 			[interpreterProxy primitiveFail]].
 
 	interpreterProxy failed ifFalse:
-		[ok := self cCode: 'b3dDrawRangeElements(handle, mode, minIdx, maxIdx, faceSize,  facePtr)'
-					inSmalltalk:[mode. facePtr. false].
+		[ok := self b3dDrawRangeElements: handle _: mode _: minIdx _: maxIdx _: faceSize _: facePtr.
 		ok ifTrue:
 			[interpreterProxy pop: interpreterProxy methodArgumentCount]].
 	^nil "keep compiler quiet"
@@ -415,7 +410,7 @@ B3DAcceleratorPlugin >> primitiveFinishRenderer [
 		ifFalse:[^interpreterProxy primitiveFail].
 	handle := interpreterProxy stackIntegerValue: 0.
 	interpreterProxy failed ifTrue:[^nil].
-	result := self cCode:'b3dxFinishRenderer(handle)' inSmalltalk:[false].
+	result := self b3dxFinishRenderer: handle.
 	result ifFalse:[^interpreterProxy primitiveFail].
 	^interpreterProxy pop: 1. "pop arg; return rcvr"
 ]
@@ -428,7 +423,7 @@ B3DAcceleratorPlugin >> primitiveFlushRenderer [
 		ifFalse:[^interpreterProxy primitiveFail].
 	handle := interpreterProxy stackIntegerValue: 0.
 	interpreterProxy failed ifTrue:[^nil].
-	result := self cCode:'b3dxFlushRenderer(handle)' inSmalltalk:[false].
+	result := self b3dxFlushRenderer: handle.
 	result ifFalse:[^interpreterProxy primitiveFail].
 	^interpreterProxy pop: 1. "pop arg; return rcvr"
 ]
@@ -457,7 +452,7 @@ B3DAcceleratorPlugin >> primitiveGetRendererColorMasks [
 	interpreterProxy failed ifTrue:[^nil].
 	((interpreterProxy isArray: array)
 	and: [(interpreterProxy slotSizeOf: array) = 4
-	and: [self cCode:'b3dxGetRendererColorMasks(handle, masks)' inSmalltalk:[false]]])
+	and: [self b3dxGetRendererColorMasks: handle _: masks]])
 		ifFalse:[^interpreterProxy primitiveFail].
 	interpreterProxy pushRemappableOop: array.
 	0 to: 3 do: [:i|
@@ -477,7 +472,7 @@ B3DAcceleratorPlugin >> primitiveGetRendererSurfaceDepth [
 		ifFalse:[^interpreterProxy primitiveFail].
 	handle := interpreterProxy stackIntegerValue: 0.
 	interpreterProxy failed ifTrue:[^nil].
-	result := self cCode:'b3dxGetRendererSurfaceDepth(handle)' inSmalltalk:[-1].
+	result := self b3dxGetRendererSurfaceDepth: handle.
 	result < 0 ifTrue:[^interpreterProxy primitiveFail].
 	interpreterProxy pop: 2. "args+rcvr"
 	^interpreterProxy pushInteger: result
@@ -491,7 +486,7 @@ B3DAcceleratorPlugin >> primitiveGetRendererSurfaceHandle [
 		ifFalse:[^interpreterProxy primitiveFail].
 	handle := interpreterProxy stackIntegerValue: 0.
 	interpreterProxy failed ifTrue:[^nil].
-	result := self cCode:'b3dxGetRendererSurfaceHandle(handle)' inSmalltalk:[-1].
+	result := self b3dxGetRendererSurfaceHandle: handle.
 	result < 0 ifTrue:[^interpreterProxy primitiveFail].
 	interpreterProxy pop: 2. "args+rcvr"
 	^interpreterProxy pushInteger: result
@@ -505,7 +500,7 @@ B3DAcceleratorPlugin >> primitiveGetRendererSurfaceHeight [
 		ifFalse:[^interpreterProxy primitiveFail].
 	handle := interpreterProxy stackIntegerValue: 0.
 	interpreterProxy failed ifTrue:[^nil].
-	result := self cCode:'b3dxGetRendererSurfaceHeight(handle)' inSmalltalk:[-1].
+	result := self b3dxGetRendererSurfaceHeight: handle.
 	result < 0 ifTrue:[^interpreterProxy primitiveFail].
 	interpreterProxy pop: 2. "args+rcvr"
 	^interpreterProxy pushInteger: result
@@ -519,7 +514,7 @@ B3DAcceleratorPlugin >> primitiveGetRendererSurfaceWidth [
 		ifFalse:[^interpreterProxy primitiveFail].
 	handle := interpreterProxy stackIntegerValue: 0.
 	interpreterProxy failed ifTrue:[^nil].
-	result := self cCode:'b3dxGetRendererSurfaceWidth(handle)' inSmalltalk:[-1].
+	result := self b3dxGetRendererSurfaceWidth: handle.
 	result < 0 ifTrue:[^interpreterProxy primitiveFail].
 	interpreterProxy pop: 2. "args+rcvr"
 	^interpreterProxy pushInteger: result
@@ -533,7 +528,7 @@ B3DAcceleratorPlugin >> primitiveIsOverlayRenderer [
 		ifFalse:[^interpreterProxy primitiveFail].
 	handle := interpreterProxy stackIntegerValue: 0.
 	interpreterProxy failed ifTrue:[^nil].
-	result := self cCode:'b3dxIsOverlayRenderer(handle)' inSmalltalk:[false].
+	result := self b3dxIsOverlayRenderer: handle.
 	interpreterProxy pop: 2. "args+rcvr"
 	^interpreterProxy pushBool: result.
 ]
@@ -563,7 +558,7 @@ B3DAcceleratorPlugin >> primitiveRenderVertexBuffer [
 			or:[interpreterProxy failed]]]])
 				ifTrue:[^interpreterProxy primitiveFail].
 
-	result := self cCode:'b3dxRenderVertexBuffer(handle, primType, flags, texHandle, vtxArray, vtxCount, idxArray, idxCount)' inSmalltalk:[false].
+	result := self b3dxRenderVertexBuffer: handle _: primType _: flags _: texHandle _: vtxArray _: vtxCount _: idxArray _: idxCount.
 	result ifFalse:[^interpreterProxy primitiveFail].
 	^interpreterProxy pop: 8. "pop args; return rcvr"
 ]
@@ -636,8 +631,7 @@ B3DAcceleratorPlugin >> primitiveSetIntProperty [
 B3DAcceleratorPlugin >> primitiveSetLights [
 	| lightArray lightCount light handle |
 	<export: true>
-	<inline: false>
-	<var: #light type: 'void*'>
+	<var: #light type: #'void *'>
 
 	interpreterProxy methodArgumentCount = 2
 		ifFalse:[^interpreterProxy primitiveFail].
@@ -647,13 +641,13 @@ B3DAcceleratorPlugin >> primitiveSetLights [
 	interpreterProxy failed ifTrue:[^nil].
 	(self b3dxDisableLights: handle)
 		ifFalse:[^interpreterProxy primitiveFail].
-	lightArray == nil ifTrue:[^nil].
+	lightArray ifNil: [^nil].
 	lightCount := interpreterProxy slotSizeOf: lightArray.
 	"For each enabled light source"
 	0 to: lightCount-1 do:[:i|
 		light := self fetchLightSource: i ofObject: lightArray.
-		(self cCode:'b3dxLoadLight(handle, i, light)' inSmalltalk:[false])
-			ifFalse:[^interpreterProxy primitiveFail].
+		(self b3dxLoadLight: handle _: i _: light) ifFalse:
+			[^interpreterProxy primitiveFail].
 	].
 	^interpreterProxy pop: 2. "args; return rcvr"
 ]
@@ -669,7 +663,7 @@ B3DAcceleratorPlugin >> primitiveSetMaterial [
 		ifFalse:[^interpreterProxy primitiveFail].
 	material := self stackMaterialValue: 0.
 	handle := interpreterProxy stackIntegerValue: 1.
-	(self cCode:'b3dxLoadMaterial(handle, material)' inSmalltalk:[false])
+	(self b3dxLoadMaterial: handle _: material)
 		ifFalse:[^interpreterProxy primitiveFail].
 	^interpreterProxy pop: 2. "args; return rcvr"
 ]
@@ -728,7 +722,7 @@ B3DAcceleratorPlugin >> primitiveSwapRendererBuffers [
 		ifFalse:[^interpreterProxy primitiveFail].
 	handle := interpreterProxy stackIntegerValue: 0.
 	interpreterProxy failed ifTrue:[^nil].
-	result := self cCode:'b3dxSwapRendererBuffers(handle)' inSmalltalk:[false].
+	result := self b3dxSwapRendererBuffers: handle.
 	result ifFalse:[^interpreterProxy primitiveFail].
 	^interpreterProxy pop: 1. "pop arg; return rcvr"
 ]
@@ -742,7 +736,7 @@ B3DAcceleratorPlugin >> primitiveTextureByteSex [
 	handle := interpreterProxy stackIntegerValue: 0.
 	renderer := interpreterProxy stackIntegerValue: 1.
 	interpreterProxy failed ifTrue:[^nil].
-	result := self cCode:'b3dxTextureByteSex(renderer, handle)' inSmalltalk:[-1].
+	result := self b3dxTextureByteSex: renderer _: handle.
 	result < 0 ifTrue:[^interpreterProxy primitiveFail].
 	interpreterProxy pop: 3.
 	^interpreterProxy pushBool: result.
@@ -757,7 +751,7 @@ B3DAcceleratorPlugin >> primitiveTextureDepth [
 	handle := interpreterProxy stackIntegerValue: 0.
 	renderer := interpreterProxy stackIntegerValue: 1.
 	interpreterProxy failed ifTrue:[^nil].
-	result := self cCode:'b3dxActualTextureDepth(renderer, handle)' inSmalltalk:[-1].
+	result := self b3dxActualTextureDepth: renderer _: handle.
 	result < 0 ifTrue:[^interpreterProxy primitiveFail].
 	interpreterProxy pop: 3.
 	^interpreterProxy pushInteger: result.
@@ -776,7 +770,7 @@ B3DAcceleratorPlugin >> primitiveTextureGetColorMasks [
 	interpreterProxy failed ifTrue:[^nil].
 	((interpreterProxy isArray: array)
 	 and: [(interpreterProxy slotSizeOf: array) = 4
-	 and: [self cCode:'b3dxTextureColorMasks(renderer, handle, masks)' inSmalltalk:[false]]])
+	 and: [self b3dxTextureColorMasks: renderer _: handle _: masks]])
 		ifFalse:[^interpreterProxy primitiveFail].
 	interpreterProxy pushRemappableOop: array.
 	0 to: 3 do: [:i|
@@ -797,7 +791,7 @@ B3DAcceleratorPlugin >> primitiveTextureSurfaceHandle [
 	handle := interpreterProxy stackIntegerValue: 0.
 	renderer := interpreterProxy stackIntegerValue: 1.
 	interpreterProxy failed ifTrue:[^nil].
-	result := self cCode:'b3dxTextureSurfaceHandle(renderer, handle)' inSmalltalk:[-1].
+	result := self b3dxTextureSurfaceHandle: renderer _: handle.
 	result < 0 ifTrue:[^interpreterProxy primitiveFail].
 	interpreterProxy pop: 3.
 	^interpreterProxy pushInteger: result
@@ -826,7 +820,7 @@ B3DAcceleratorPlugin >> primitiveTextureUpload [
 	handle := interpreterProxy stackIntegerValue: 1.
 	renderer := interpreterProxy stackIntegerValue: 2.
 	interpreterProxy failed ifTrue:[^nil].
-	result := self cCode:'b3dxUploadTexture(renderer, handle, w, h, d, bitsPtr)' inSmalltalk:[false].
+	result := self b3dxUploadTexture: renderer _: handle _: w _: h _: d _: bitsPtr.
 	result ifFalse:[^interpreterProxy primitiveFail].
 	^interpreterProxy pop: 3. "args; return rcvr"
 ]
@@ -842,11 +836,10 @@ B3DAcceleratorPlugin >> stackLightArrayValue: stackIndex [
 	"Load an Array of B3DPrimitiveLights from the given stack index"
 	| oop array arraySize |
 	<inline: false>
-	array := interpreterProxy stackObjectValue: stackIndex.
-	array = nil ifTrue:[^nil]. "really??"
+	array := interpreterProxy stackValue: stackIndex.
 	array = interpreterProxy nilObject ifTrue:[^nil].
-	(interpreterProxy isArray: array)
-		ifFalse:[^interpreterProxy primitiveFail].
+	(interpreterProxy isArray: array) ifFalse:
+		[^interpreterProxy primitiveFail].
 	arraySize := interpreterProxy slotSizeOf: array.
 	0 to: arraySize-1 do:[:i|
 		oop := interpreterProxy fetchPointer: i ofObject: array.
