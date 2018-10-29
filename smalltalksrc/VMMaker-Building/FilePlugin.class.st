@@ -400,7 +400,7 @@ FilePlugin >> primitiveDirectoryDelimitor [
 				thenPush: (interpreterProxy characterObjectOf: self dir_Delimitor)]
 		ifFalse:
 			[| ascii |
-			 ascii := self asciiDirectoryDelimiter.
+			 ascii := self dir_Delimitor.
 			 (ascii >= 0 and: [ascii <= 255])
 				ifTrue:
 					[interpreterProxy
