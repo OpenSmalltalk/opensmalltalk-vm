@@ -121,11 +121,12 @@ MiscPrimitivePluginTest >> testCompareWithCollated [
 { #category : #testing }
 MiscPrimitivePluginTest >> testCompressToByteArray [
 
-	| bitmap byteArray |
+	| bitmap byteArray n |
 	bitmap := Bitmap with: 16rFFFFFFFF.
-	byteArray := ByteArray new:  4.
-	self compress: bitmap toByteArray: byteArray.
-	self should: byteArray = #[1 5 255 0]
+	byteArray := ByteArray new:  12. "Primitive makes an estimate; hence output must have at least 11 bytes"
+	n := self compress: bitmap toByteArray: byteArray.
+	self assert: n = 3.
+	self assert: #[1 5 255] equals: (byteArray copyFrom: 1 to: n)
 ]
 
 { #category : #testing }
@@ -146,12 +147,12 @@ MiscPrimitivePluginTest >> testConvert8bitSignedFromTo16Bit [
 MiscPrimitivePluginTest >> testDecompressFromByteArrayAt [
 
 	| bitmap byteArray s size |
-	byteArray := #(1 5 255  0) asByteArray.
+	byteArray := #[1 5 255].
 	s := ReadStream on: byteArray.
 	size := Bitmap decodeIntFrom: s.
 	bitmap := Bitmap new: size.
 	self decompress: bitmap fromByteArray: byteArray at: s position + 1.
-	self should: bitmap = ((Bitmap new: 1) at: 1 put: 4294967295; yourself)
+	self assert: (Bitmap with: 16rFFFFFFFF) equals: bitmap
 ]
 
 { #category : #testing }
