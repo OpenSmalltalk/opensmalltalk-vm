@@ -143,18 +143,6 @@ FilePluginSimulator >> fileValueOf: objectPointer [
 	^file
 ]
 
-{ #category : #'initialize-release' }
-FilePluginSimulator >> initialiseModule [
-	"See FilePluginSimulator>>sqFileStdioHandlesInto:"
-	(openFiles := Dictionary new)
-		at: 0 put: (FakeStdinStream for: interpreterProxy interpreter); "stdin"
-		at: 1 put: interpreterProxy interpreter transcript; "stdout"
-		at: 2 put: interpreterProxy interpreter transcript. "stderr"
-	states := IdentityDictionary new.
-	maxOpenFiles := VMClass initializationOptions at: #MaxFileDescriptors ifAbsent: [1024].
-	^super initialiseModule
-]
-
 { #category : #'file security' }
 FilePluginSimulator >> ioCanCreatePath: dirNameIndex OfSize: dirNameSize [
 	"Return true if we're allowed to create a directory with the given name"
@@ -337,6 +325,18 @@ FilePluginSimulator >> sqFileFlush: file [
 { #category : #simulation }
 FilePluginSimulator >> sqFileGetPosition: file [
 	^file position
+]
+
+{ #category : #'initialize-release' }
+FilePluginSimulator >> sqFileInit [
+	"See FilePluginSimulator>>sqFileStdioHandlesInto:"
+	(openFiles := Dictionary new)
+		at: 0 put: (FakeStdinStream for: interpreterProxy interpreter); "stdin"
+		at: 1 put: interpreterProxy interpreter transcript; "stdout"
+		at: 2 put: interpreterProxy interpreter transcript. "stderr"
+	states := IdentityDictionary new.
+	maxOpenFiles := VMClass initializationOptions at: #MaxFileDescriptors ifAbsent: [1024].
+	^true
 ]
 
 { #category : #simulation }
