@@ -21873,6 +21873,7 @@ StackInterpreter >> tryLoadNewPlugin: pluginString pluginEntries: pluginEntries 
 				[self transcript show: '...multiple plugin classes; choosing ', plugins last name]."
 			 realPluginClass := plugins anyOne. "hopefully lowest in the hierarchy..."
 			 plugin := realPluginClass simulatorForInterpreterInterface: objectMemory.
+			 plugin ifNil: [self transcript show: ' ... no simulator class; cannot simulate'. ^nil].
 			 (plugin respondsTo: #initialiseModule) ifTrue:
 				[plugin initialiseModule ifFalse:
 					[self transcript show: ' ... initialiser failed'. ^nil]]]. "module initialiser failed"

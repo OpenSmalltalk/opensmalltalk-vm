@@ -1756,7 +1756,7 @@ CogVMSimulator >> ioLoadFunction: functionString From: pluginString [
 	transcript
 		cr;
 		show: '(', byteCount printString, ') Looking for ', functionString, ' in ',
-				(pluginString isEmpty ifTrue:['vm'] ifFalse:[pluginString]).
+				(pluginString isEmpty ifTrue: ['vm'] ifFalse: [pluginString]).
 	(breakSelector notNil
 	 and: [(pluginString size = breakSelector size
 			and: [(self strncmp: pluginString _: breakSelector _: pluginString size) = 0])
@@ -1764,28 +1764,25 @@ CogVMSimulator >> ioLoadFunction: functionString From: pluginString [
 			and: [(self strncmp: functionString _: breakSelector _: functionString size) = 0]]]) ifTrue:
 		[self halt: pluginString, '>>', functionString].
 	plugin := pluginList 
-				detect:[:any| any key = pluginString asString]
+				detect: [:any| any key = pluginString asString]
 				ifNone:
 					[firstTime := true.
-					self loadNewPlugin: pluginString].
+					 self loadNewPlugin: pluginString].
 	plugin ifNil:
-		[firstTime ifTrue: [transcript cr; show: 'Failed ... primitive not in plugin'].
+		[firstTime ifTrue: [transcript cr; show: '... FAILED; no plugin found'].
 		 ^0].
 	plugin := plugin value.
-	mappedPluginEntries doWithIndex:
+	mappedPluginEntries withIndexDo:
 		[:pluginAndName :index|
 		((pluginAndName at: 1) == plugin 
 		and:[(pluginAndName at: 2) == fnSymbol]) ifTrue:
 			[^index]].
 	(plugin respondsTo: fnSymbol) ifFalse:
-		[firstTime ifTrue: [transcript cr; show: 'Failed ... primitive not in plugin'].
+		[firstTime ifTrue: [transcript cr; show: '... FAILED; primitive not in plugin'].
 		 ^0].
-	mappedPluginEntries addLast: (Array
-									with: plugin
-									with: fnSymbol
-									with: [plugin perform: fnSymbol. self]).
+	mappedPluginEntries addLast: { plugin. fnSymbol. [plugin perform: fnSymbol. self]}.
 	transcript show: ' ... okay'.
-	^ mappedPluginEntries size
+	^mappedPluginEntries size
 ]
 
 { #category : #'plugin support' }
@@ -1799,7 +1796,7 @@ CogVMSimulator >> ioLoadFunction: functionString From: pluginString AccessorDept
 	transcript
 		cr;
 		show: '(', byteCount printString, ') Looking for ', functionString, ' in ',
-				(pluginString isEmpty ifTrue:['vm'] ifFalse:[pluginString]).
+				(pluginString isEmpty ifTrue: ['vm'] ifFalse: [pluginString]).
 	(breakSelector notNil
 	 and: [(pluginString size = breakSelector size
 			and: [(self strncmp: pluginString _: breakSelector _: pluginString size) = 0])
@@ -1812,17 +1809,17 @@ CogVMSimulator >> ioLoadFunction: functionString From: pluginString AccessorDept
 					[firstTime := true.
 					 self loadNewPlugin: pluginString].
 	plugin ifNil:
-		[firstTime ifTrue: [transcript cr; show: 'Failed ... primitive not in plugin'].
+		[firstTime ifTrue: [transcript cr; show: '... FAILED; primitive not in plugin'].
 		 ^0].
 	plugin := plugin value.
-	mappedPluginEntries doWithIndex:
+	mappedPluginEntries withIndexDo:
 		[:pluginAndName :index|
 		 ((pluginAndName at: 1) == plugin 
 		  and:[(pluginAndName at: 2) == fnSymbol]) ifTrue:
 			[firstTime ifTrue: [transcript show: ' ... okay'].
 			 accessorDepthPtr at: 0 put: (pluginAndName at: 4).
 			 ^index]].
-	firstTime ifTrue: [transcript cr; show: 'Failed ... primitive not in plugin'].
+	firstTime ifTrue: [transcript cr; show: '... FAILED; primitive not in plugin'].
 	^0
 ]
 

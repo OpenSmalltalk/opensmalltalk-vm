@@ -4,6 +4,12 @@ Class {
 	#category : #'VMMaker-Plugins'
 }
 
+{ #category : #simulation }
+ClipboardExtendedPlugin class >> simulatorClass [
+	"This should be easy to simulate, but I'm short of time.  Feel free to have a go, following e.g. the pattern in JPEGReadWriter2Plugin."
+	^nil
+]
+
 { #category : #io }
 ClipboardExtendedPlugin >> ioAddClipboardData: clipboard data: data dataFormat: aFormat [
 	| clipboardAddress formatLength dataLength |
