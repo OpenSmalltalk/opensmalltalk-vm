@@ -282,6 +282,11 @@ allocateExecutablePage(long *size)
 #else
 	long pagesize = getpagesize();
 
+	/* This is equivalent to valloc(pagesize) but at least on some versions of
+	 * SELinux valloc fails to yield an wexecutable page, whereas this mmap
+	 * call works everywhere we've tested so far.  See
+	 * http://lists.squeakfoundation.org/pipermail/vm-dev/2018-October/029102.html
+	 */
 	if (!(mem = mmap(0, pagesize, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANON | MAP_PRIVATE, -1, 0)))
 		return 0;
 
