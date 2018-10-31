@@ -606,7 +606,7 @@ CCodeGenerator >> baseTypeForPointerType: aCType [
 { #category : #utilities }
 CCodeGenerator >> baseTypeForType: aCType [
 	"Reduce various declarations to the most basic type we can determine."
-	| type fpIndex closeidx openidx index |
+	| type fpIndex closeidx openidx |
 	type := aCType.
 	((openidx := type indexOfSubCollection: 'const ') > 0
 	and: [openidx = 1 or: [(type at: openidx) isSeparator]]) ifTrue:
@@ -628,15 +628,9 @@ CCodeGenerator >> baseTypeForType: aCType [
 	[(openidx := type indexOf: $[ startingAt: openidx + 1) > 0
 	 and: [(closeidx := type indexOf: $] startingAt: openidx + 1) > 0]] whileTrue:
 		[type := type copyReplaceFrom: openidx to: closeidx with: '*'].
-	type := type withBlanksTrimmed.
-	index := type size.
-	"Ensure there is a space between the type and any trailing *'s"
-	[(type at: index) == $*] whileTrue:
-		[index := index - 1].
-	(index < type size
-	 and: [(type at: index) ~~ Character space]) ifTrue:
-		[type := (type copyFrom: 1 to: index), ' ', (type copyFrom: index + 1 to: type size)].
-	^type
+
+	"map foo* to foo *"
+	^self conventionalTypeForType: type
 ]
 
 { #category : #accessing }
@@ -1035,6 +1029,22 @@ CCodeGenerator >> const: constName declareC: declarationString [
 		put: (TDefineNode new
 				setName: constName
 				value: declarationString)
+]
+
+{ #category : #utilities }
+CCodeGenerator >> conventionalTypeForType: aCTypeString [
+	"The pointer type convention in this version of VMMaker is to have a space between the base type and any *'s.
+	 C type comparisons are simple string comparisons; therefore the convention matters.
+	 Ensure there is a space between the base type and any trailing *'s. Trim whitespace."
+	| type index |
+	type := aCTypeString withBlanksTrimmed.
+	index := type size.
+	[(type at: index) == $*] whileTrue:
+		[index := index - 1].
+	(index < type size
+	 and: [(type at: index) ~~ Character space]) ifTrue:
+		[type := (type copyFrom: 1 to: index), ' ', (type copyFrom: index + 1 to: type size)].
+	^type
 ]
 
 { #category : #accessing }
@@ -5030,8 +5040,8 @@ CCodeGenerator >> returnTypeForSend: sendNode in: aTMethod ifNil: typeIfNil [
 				[#asVoidPointer]		->	[#'void *'].
 				[#signedIntToLong]		->	[#usqInt]. "c.f. generateSignedIntToLong:on:indent:"
 				[#signedIntToShort]	->	[#usqInt]. "c.f. generateSignedIntToShort:on:indent:"
-				[#cCoerce:to:]			->	[sendNode args last value].
-				[#cCoerceSimple:to:]	->	[sendNode args last value].
+				[#cCoerce:to:]			->	[self conventionalTypeForType: sendNode args last value].
+				[#cCoerceSimple:to:]	->	[self conventionalTypeForType: sendNode args last value].
 				[#sizeof:]				->	[#'usqIntptr_t']. "Technically it's a size_t but it matches on target architectures so far..."
 				[#ifTrue:ifFalse:]		->	[self typeForConditional: sendNode in: aTMethod].
 				[#ifFalse:ifTrue:]		->	[self typeForConditional: sendNode in: aTMethod].

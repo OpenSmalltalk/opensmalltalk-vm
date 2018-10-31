@@ -40,6 +40,188 @@ B3DAcceleratorPlugin class >> testLoadPlugin [
 	self primitiveFailed
 ]
 
+{ #category : #simulation }
+B3DAcceleratorPlugin >> b3dDrawArrays: handle _: mode _: minIdx _: maxIdx [
+	"int b3dDrawArrays(int handle, int mode, int minIdx, int maxIdx)"
+	<doNotGenerate>
+	^false
+]
+
+{ #category : #simulation }
+B3DAcceleratorPlugin >> b3dDrawElements: handle _: mode _: faceSize _: facePtr [
+	"int b3dDrawElements(int handle, int mode, int nFaces, unsigned int *facePtr)"
+	<doNotGenerate>
+	^false
+]
+
+{ #category : #simulation }
+B3DAcceleratorPlugin >> b3dDrawRangeElements: handle _: mode _: minIdx _: maxIdx _: faceSize _: facePtr [
+	"int b3dDrawRangeElements(int handle, int mode, int minIdx, int maxIdx, int nFaces, unsigned int *facePtr)"
+	<doNotGenerate>
+	^false
+]
+
+{ #category : #simulation }
+B3DAcceleratorPlugin >> b3dLoadClientState: handle _: vtxData _: vtxSize _: colorData _: colorSize _: normalData _: normalSize _: txData _: txSize [
+	"int b3dLoadClientState(int handle, float *vtxData, int vtxSize, float *colorData, int colorSize, float *normalData, int normalSize, float *txData, int txSize)"
+	<doNotGenerate>
+	^false
+]
+
+{ #category : #simulation }
+B3DAcceleratorPlugin >> b3dxActualTextureDepth: renderer _: handle [
+	"int b3dxActualTextureDepth(int renderer, int handle)"
+	<doNotGenerate>
+	^-1
+]
+
+{ #category : #simulation }
+B3DAcceleratorPlugin >> b3dxAllocateTexture: renderer _: w _: h _: d [
+	"int b3dxAllocateTexture(int renderer, int w, int h, int d)"
+	<doNotGenerate>
+	^-1
+]
+
+{ #category : #simulation }
+B3DAcceleratorPlugin >> b3dxCompositeTexture: rendererHandle _: texHandle _: x _: y _: w _: h _: translucent [
+	"int b3dxCompositeTexture(int renderer, int handle, int x, int y, int w, int h, int translucent)"
+	<doNotGenerate>
+	^false
+]
+
+{ #category : #simulation }
+B3DAcceleratorPlugin >> b3dxDestroyRenderer: handle [
+	"int b3dxDestroyRenderer(int handle)"
+	<doNotGenerate>
+	^false
+]
+
+{ #category : #simulation }
+B3DAcceleratorPlugin >> b3dxDestroyTexture: renderer _: handle [
+	"int b3dxDestroyTexture(int renderer, int handle)"
+	<doNotGenerate>
+	^false
+]
+
+{ #category : #simulation }
+B3DAcceleratorPlugin >> b3dxDisableLights: handle [
+	"int b3dxDisableLights(int handle)"
+	<doNotGenerate>
+	^false
+]
+
+{ #category : #simulation }
+B3DAcceleratorPlugin >> b3dxFinishRenderer: handle [
+	"int b3dxFinishRenderer(int handle)"
+	<doNotGenerate>
+	^false
+]
+
+{ #category : #simulation }
+B3DAcceleratorPlugin >> b3dxFlushRenderer: handle [
+	"int b3dxFlushRenderer(int handle)"
+	<doNotGenerate>
+	^false
+]
+
+{ #category : #simulation }
+B3DAcceleratorPlugin >> b3dxGetRendererColorMasks: handle _: masks [
+	"int b3dxGetRendererColorMasks(int handle, int *masks)"
+	<doNotGenerate>
+	^false
+]
+
+{ #category : #simulation }
+B3DAcceleratorPlugin >> b3dxGetRendererSurfaceDepth: handle [
+	"int b3dxGetRendererSurfaceDepth(int handle)"
+	<doNotGenerate>
+	^-1
+]
+
+{ #category : #simulation }
+B3DAcceleratorPlugin >> b3dxGetRendererSurfaceHandle: handle [
+	"int b3dxGetRendererSurfaceHandle(int handle)"
+	<doNotGenerate>
+	^-1
+]
+
+{ #category : #simulation }
+B3DAcceleratorPlugin >> b3dxGetRendererSurfaceHeight: handle [
+	"int b3dxGetRendererSurfaceHeight(int handle)"
+	<doNotGenerate>
+	^-1
+]
+
+{ #category : #simulation }
+B3DAcceleratorPlugin >> b3dxGetRendererSurfaceWidth: handle [
+	"int b3dxGetRendererSurfaceWidth(int handle)"
+	<doNotGenerate>
+	^-1
+]
+
+{ #category : #simulation }
+B3DAcceleratorPlugin >> b3dxIsOverlayRenderer: handle [
+	"int b3dxIsOverlayRenderer(int handle)"
+	<doNotGenerate>
+	^false
+]
+
+{ #category : #simulation }
+B3DAcceleratorPlugin >> b3dxLoadLight: handle _: i _: light [
+	"int b3dxLoadLight(int handle, int index, B3DPrimitiveLight *light)"
+	<doNotGenerate>
+	^false
+]
+
+{ #category : #simulation }
+B3DAcceleratorPlugin >> b3dxLoadMaterial: handle _: material [
+	"int b3dxLoadMaterial(int handle, B3DPrimitiveMaterial *material)"
+	<doNotGenerate>
+	^false
+]
+
+{ #category : #simulation }
+B3DAcceleratorPlugin >> b3dxRenderVertexBuffer: handle _: primType _: flags _: texHandle _: vtxArray _: vtxCount _: idxArray _: idxCount [
+	"int b3dxRenderVertexBuffer(int handle, int primType, int flags, int texHandle, float *vtxArray, int vtxSize, int *idxArray, int idxSize)"
+	<doNotGenerate>
+	^false
+]
+
+{ #category : #simulation }
+B3DAcceleratorPlugin >> b3dxSwapRendererBuffers: handle [
+	"int b3dxSwapRendererBuffers(int handle)"
+	<doNotGenerate>
+	^false
+]
+
+{ #category : #simulation }
+B3DAcceleratorPlugin >> b3dxTextureByteSex: renderer _: handle [
+	"int b3dxTextureByteSex(int renderer, int handle)"
+	<doNotGenerate>
+	^-1
+]
+
+{ #category : #simulation }
+B3DAcceleratorPlugin >> b3dxTextureColorMasks: renderer _: handle _: masks [
+	"int b3dxTextureColorMasks(int renderer, int handle, int masks[4])"
+	<doNotGenerate>
+	^false
+]
+
+{ #category : #simulation }
+B3DAcceleratorPlugin >> b3dxTextureSurfaceHandle: renderer _: handle [
+	"int b3dxTextureSurfaceHandle(int renderer, int handle)"
+	<doNotGenerate>
+	^-1
+]
+
+{ #category : #simulation }
+B3DAcceleratorPlugin >> b3dxUploadTexture: renderer _: handle _: w _: h _: d _: bitsPtr [
+	"int b3dxUploadTexture(int renderer, int handle, int w, int h, int d, void* bits)"
+	<doNotGenerate>
+	^false
+]
+
 { #category : #'primitives-qwaq' }
 B3DAcceleratorPlugin >> checkBoundsRange: vertices faces: facePtr count: faceCount [
 	"Verify the bounds condition on the entire faces array"

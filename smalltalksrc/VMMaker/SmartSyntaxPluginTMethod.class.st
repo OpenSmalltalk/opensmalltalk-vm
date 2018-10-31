@@ -345,19 +345,19 @@ SmartSyntaxPluginTMethod >> recordDeclarationsIn: aCCodeGen [
 	properties pragmas notEmpty ifTrue:
 		[properties pragmas do:
 			[:pragma|
-			pragma keyword = #var:declareC: ifTrue:
+			pragma keyword == #var:declareC: ifTrue:
 				[self checkedDeclarationAt: pragma arguments first asString
 					put: pragma arguments last
 					in: aCCodeGen].
-			pragma keyword = #var:type: ifTrue:
+			pragma keyword == #var:type: ifTrue:
 				[| varName varType |
 				varName := pragma arguments first asString.
-				varType := pragma arguments last.
-				varType last = $* ifFalse: [varType := varType, ' '].
+				varType := aCCodeGen conventionalTypeForType: pragma arguments last.
+				varType last == $* ifFalse: [varType := varType, ' '].
 				self checkedDeclarationAt: varName
 					put: varType, varName
 					in: aCCodeGen].
-			 pragma keyword = #var:as: ifTrue:
+			 pragma keyword == #var:as: ifTrue:
 				[| theClass |
 				 theClass := Smalltalk at: pragma arguments last name asSymbol ifAbsent: [nil].
 				 theClass isBehavior ifFalse:
@@ -365,7 +365,7 @@ SmartSyntaxPluginTMethod >> recordDeclarationsIn: aCCodeGen [
 				 self checkedDeclarationAt: pragma arguments first value asString 
 					put: (theClass ccgDeclareCForVar: pragma arguments first asString)
 					in: aCCodeGen].
-			pragma keyword = #returnTypeC: ifTrue:
+			pragma keyword == #returnTypeC: ifTrue:
 				[self returnType: pragma arguments last].
 			pragma keyword = #doNotGenerate: ifTrue:
 				[locals removeKey: pragma arguments last]].
@@ -375,18 +375,17 @@ SmartSyntaxPluginTMethod >> recordDeclarationsIn: aCCodeGen [
 		[:stmt | | isDeclaration |
 		 isDeclaration := false.
 		 stmt isSend ifTrue: 
-			[stmt selector = #var:declareC: ifTrue:
+			[stmt selector == #var:declareC: ifTrue:
 				[isDeclaration := true.
 				self declarationAt: stmt args first value asString put: stmt args last value].
-			stmt selector = #var:type: ifTrue: [
-				| varName varType |
+			stmt selector = #var:type: ifTrue:
+				[| varName varType |
 				isDeclaration := true.
 				varName := stmt args first value asString.
-				varType := stmt args last value.
-				varType last = $* ifFalse: [varType := varType, ' '].
-				self declarationAt: varName put: varType, varName.
-			].
-			 stmt selector = #var:as: ifTrue:
+				varType := aCCodeGen conventionalTypeForType: stmt args last value.
+				varType last == $* ifFalse: [varType := varType, ' '].
+				self declarationAt: varName put: varType, varName].
+			 stmt selector == #var:as: ifTrue:
 				[| theClass |
 				 isDeclaration := true.
 				 theClass := Smalltalk  at: stmt args last name asSymbol ifAbsent: [nil].
@@ -394,7 +393,7 @@ SmartSyntaxPluginTMethod >> recordDeclarationsIn: aCCodeGen [
 					[^self error: 'declarator must be a Behavior'].
 				 self declarationAt: stmt args first value asString 
 					put: (theClass ccgDeclareCForVar: stmt args first value asString)].
-			 stmt selector = #returnTypeC: ifTrue: 
+			 stmt selector == #returnTypeC: ifTrue: 
 				[isDeclaration := true.
 				 returnType := stmt args last value]].
 		 isDeclaration ifFalse: [newStatements add: stmt]].
@@ -448,7 +447,7 @@ SmartSyntaxPluginTMethod >> setSelector: sel definingClass: class args: argList 
 	self extractSharedCase.
 	isPrimitive := false.  "set to true only if you find a primtive direction."
 	suppressingFailureGuards := self extractSuppressFailureGuardDirective.
-	self recordDeclarationsIn: nil.
+	self recordDeclarationsIn: CCodeGenerator basicNew. "Just for conventionalTypeForType:"
 	self extractPrimitiveDirectives.
 
 ]
