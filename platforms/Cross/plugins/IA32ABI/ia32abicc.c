@@ -292,14 +292,11 @@ allocateExecutablePage(long *size)
 #else
 	long pagesize = getpagesize();
 
-	if (!(mem = valloc(pagesize)))
+	if (!(mem = mmap(0, pagesize, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANON | MAP_PRIVATE, -1, 0)))
 		return 0;
 
+	// MAP_ANON should zero out the allocated page, but explicitly doing it shouldn't hurt
 	memset(mem, 0, pagesize);
-	if (mprotect(mem, pagesize, PROT_READ | PROT_WRITE | PROT_EXEC) < 0) {
-		free(mem);
-		return 0;
-	}
 	*size = pagesize;
 #endif
 	return mem;
