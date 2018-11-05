@@ -64,7 +64,7 @@ ThreadedIA32FFIPlugin >> ffiCalloutTo: procAddr SpecOnStack: specOnStack in: cal
 ThreadedIA32FFIPlugin >> ffiPushDoubleFloat: value in: calloutState [
 	<var: #value type: #double>
 	<var: #calloutState type: #'CalloutState *'>
-	<inline: true>
+	<inline: #always>
 	calloutState currentArg + 8 > calloutState limit ifTrue:
 		[^FFIErrorCallFrameTooBig].
 	interpreterProxy storeFloatAtPointer: calloutState currentArg from: value.
@@ -146,7 +146,7 @@ ThreadedIA32FFIPlugin >> ffiPushSignedShort: value in: calloutState [
 ThreadedIA32FFIPlugin >> ffiPushSingleFloat: value in: calloutState [
 	<var: #value type: #float>
 	<var: #calloutState type: #'CalloutState *'>
-	<inline: true>
+	<inline: #always>
 	calloutState currentArg + 4 > calloutState limit ifTrue:
 		[^FFIErrorCallFrameTooBig].
 	interpreterProxy storeSingleFloatAtPointer: calloutState currentArg from: value.
