@@ -153,7 +153,9 @@ ThreadedFFIPlugin class >> moduleName [
 
 { #category : #translation }
 ThreadedFFIPlugin class >> preambleCCode [
-	"For a source of builtin defines grep for builtin_define in a gcc release config directory."
+	"For a source of builtin defines grep for builtin_define in a gcc release config directory.
+	 See See platforms/Cross/vm/sqCogStackAlignment.h for per-platform definitions for
+	 STACK_ALIGN_BYTES MUST_ALIGN_STACK et al."
 	^'
 #include "sqAssert.h" /* for assert */
 #define ThreadedFFIPlugin 1 /* to filter-out unwanted declarations from sqFFI.h */
@@ -220,8 +222,9 @@ ThreadedFFIPlugin class >> preambleCCode [
 #endif
 
 /* This alignment stuff is a hack for integerAt:put:size:signed:/primitiveFFIIntegerAt[Put].
- * The assumption right now is that all processors suppoprt unaligned access.  That only
- * holds true for x86, x86-64 & ARMv6 & later.  But this keeps us going until we can addresws it properly.
+ * The assumption right now is that all processors support unaligned access.  That only
+ * holds true for x86, x86-64 & ARMv6 & later.  But this keeps us going until we can address
+ * it properly.
  */
 #define unalignedShortAt(a) shortAt(a)
 #define unalignedShortAtput(a,v) shortAtput(a,v)
@@ -284,9 +287,9 @@ ThreadedFFIPlugin >> atomicTypeOf: typeSpec [
 
 { #category : #marshalling }
 ThreadedFFIPlugin >> cStackAlignment [
-	"Many ABIs mandate a particular stack alignment greater than the natural word size.
-	 If so, this macro will answer that alignment.  If not, this macro will answer 0.  See
-	 class-side preambleCCode."
+	"Many ABIs mandate a particular stack alignment greater than the natural word
+	 size. If so, this macro will answer that alignment.  If not, this macro will answer 0.
+	 See platforms/Cross/vm/sqCogStackAlignment.h and class-side preambleCCode."
 	<cmacro: '() STACK_ALIGN_BYTES'>
 	^0
 ]
@@ -1485,7 +1488,8 @@ ThreadedFFIPlugin >> msg: s [
 { #category : #marshalling }
 ThreadedFFIPlugin >> mustAlignStack [
 	"Many ABIs mandate a particular stack alignment greater than the natural word size.
-	 If so, this macro will answer true.  See class-side preambleCCode."
+	 If so, this macro will answer true.  See platforms/Cross/vm/sqCogStackAlignment.h
+	 and class-side preambleCCode."
 	<cmacro: '() MUST_ALIGN_STACK'>
 	^false
 ]
