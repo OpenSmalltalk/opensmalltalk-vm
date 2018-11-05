@@ -51,7 +51,7 @@ ThreadedX64FFIPlugin class >> numRegArgs [
 ThreadedX64FFIPlugin >> ffiPushDoubleFloat: value in: calloutState [
 	<var: #value type: #double>
 	<var: #calloutState type: #'CalloutState *'>
-	<inline: true>
+	<inline: #always>
 
 	calloutState floatRegisterIndex < NumFloatRegArgs
 		ifTrue:
@@ -167,7 +167,7 @@ ThreadedX64FFIPlugin >> ffiPushSignedShort: value in: calloutState [
 ThreadedX64FFIPlugin >> ffiPushSingleFloat: value in: calloutState [
 	<var: #value type: #float>
 	<var: #calloutState type: #'CalloutState *'>
-	<inline: true>
+	<inline: #always>
 
 	calloutState floatRegisterIndex < NumFloatRegArgs
 		ifTrue:
@@ -176,7 +176,10 @@ ThreadedX64FFIPlugin >> ffiPushSingleFloat: value in: calloutState [
 		ifFalse:
 			[calloutState currentArg + WordSize > calloutState limit ifTrue:
 				[^FFIErrorCallFrameTooBig].
-			 interpreterProxy storeFloatAtPointer: calloutState currentArg from: value.
+			 "Float passed in least significant word, but good to zero the high bits for clarity."
+			 interpreterProxy
+				long64AtPointer: calloutState currentArg put: 0;
+				storeSingleFloatAtPointer: calloutState currentArg from: value.
 			 calloutState currentArg: calloutState currentArg + WordSize].
 	^0
 ]

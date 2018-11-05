@@ -120,7 +120,7 @@ ThreadedARMFFIPlugin >> ffiCalloutTo: procAddr SpecOnStack: specOnStack in: call
 ThreadedARMFFIPlugin >> ffiPushDoubleFloat: value in: calloutState [
 	<var: #value type: #double>
 	<var: #calloutState type: #'CalloutState *'>
-	<inline: true>
+	<inline: #always>
 
 	calloutState floatRegisterIndex < (NumFloatRegArgs - 1)
 		ifTrue:
@@ -249,7 +249,7 @@ ThreadedARMFFIPlugin >> ffiPushSignedShort: value in: calloutState [
 ThreadedARMFFIPlugin >> ffiPushSingleFloat: value in: calloutState [
 	<var: #value type: #float>
 	<var: #calloutState type: #'CalloutState *'>
-	<inline: true>
+	<inline: #always>
 	calloutState floatRegisterIndex < NumFloatRegArgs
 		ifTrue: 
 			[calloutState backfillFloatRegisterIndex > 0
