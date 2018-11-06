@@ -3,6 +3,7 @@ EXTERNAL_PLUGINS = \
 BochsIA32Plugin \
 BochsX64Plugin \
 FileAttributesPlugin \
+Squeak3D \
 SqueakFFIPrims \
 SqueakSSL \
 UUIDPlugin \

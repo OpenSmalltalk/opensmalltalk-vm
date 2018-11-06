@@ -5,6 +5,7 @@ BochsIA32Plugin \
 BochsX64Plugin \
 GdbARMPlugin \
 FileAttributesPlugin \
+Squeak3D \
 SqueakFFIPrims \
 SqueakSSL \
 LocalePlugin \
