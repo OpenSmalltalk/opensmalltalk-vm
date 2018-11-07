@@ -282,6 +282,9 @@ static int buttonState=0;
 	evt.charCode = keyCode;
 	evt.utf32Code = 0;
 	evt.reserved1 = 0;
+	/* Set every meta bit to distinguish the fake event from a real right/left
+	 * arrow.
+	 */
     evt.modifiers = (CtrlKeyBit | OptionKeyBit | CommandKeyBit | ShiftKeyBit);
 	evt.windowIndex = windowIndex;
 	[self pushEventToQueue:(sqInputEvent *) &evt];

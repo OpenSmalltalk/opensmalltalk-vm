@@ -3684,8 +3684,11 @@ static void handleEvent(XEvent *evt)
 	  break;
 	case 4: case 5:	case 6: case 7: /* mouse wheel */
 	  {
-	    int keyCode= mouseWheel2Squeak[evt->xbutton.button - 4];
-	    int modifiers= modifierState ^ CtrlKeyBit;
+	    int keyCode = mouseWheel2Squeak[evt->xbutton.button - 4];
+		/* Set every meta bit to distinguish the fake event from a real
+		 * right/left arrow.
+		 */
+		int modifiers = modifierState | CtrlKeyBit | OptionKeyBit | CommandKeyBit | ShiftKeyBit);
 	    recordKeyboardEvent(keyCode, EventKeyDown, modifiers, keyCode);
 	    recordKeyboardEvent(keyCode, EventKeyChar, modifiers, keyCode);
 	    recordKeyboardEvent(keyCode, EventKeyUp,   modifiers, keyCode);
