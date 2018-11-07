@@ -3682,17 +3682,18 @@ static void handleEvent(XEvent *evt)
 	  buttonState |= x2sqButton(evt->xbutton.button);
 	  recordMouseEvent();
 	  break;
-	case 4: case 5:	case 6: case 7: /* mouse wheel */
-	  {
-	    int keyCode = mouseWheel2Squeak[evt->xbutton.button - 4];
-		/* Set every meta bit to distinguish the fake event from a real
-		 * right/left arrow.
-		 */
-		int modifiers = modifierState | CtrlKeyBit | OptionKeyBit | CommandKeyBit | ShiftKeyBit);
-	    recordKeyboardEvent(keyCode, EventKeyDown, modifiers, keyCode);
-	    recordKeyboardEvent(keyCode, EventKeyChar, modifiers, keyCode);
-	    recordKeyboardEvent(keyCode, EventKeyUp,   modifiers, keyCode);
-	  }
+#define MOUSE_WHEEL_INCREMENT 120
+	case 4: /* mouse wheel up */
+	  recordMouseWheelEvent(0, 120);
+	  break;
+	case 5: /* mouse wheel down */
+	  recordMouseWheelEvent(0, -120);
+	  break;
+	case 6: /* mouse wheel right */
+	  recordMouseWheelEvent(-120, 0);
+	  break;
+	case 7: /* mouse wheel left */
+	  recordMouseWheelEvent(120, 0);
 	  break;
 	default:
 	  ioBeep();

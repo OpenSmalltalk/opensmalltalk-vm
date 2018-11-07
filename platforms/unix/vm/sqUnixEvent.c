@@ -116,6 +116,10 @@ static sqInputEvent *allocateInputEvent(int eventType)
   (sqMouseEvent *)allocateInputEvent(EventTypeMouse) \
 )
 
+#define allocateMouseWheelEvent() ( \
+  (sqMouseEvent *)allocateInputEvent(EventTypeMouseWheel) \
+)
+
 #define allocateKeyboardEvent() ( \
   (sqKeyboardEvent *)allocateInputEvent(EventTypeKeyboard) \
 )
@@ -166,6 +170,14 @@ static void signalInputEvent(void)
     signalSemaphoreWithIndex(inputEventSemaIndex);
 }
 
+static void recordMouseWheelEvent(int dx, int dy) {
+  sqMouseEvent *evt = allocateMouseWheelEvent();
+  evt->x = dx;
+  evt->y = dy;
+  // VM reads fifth (4th 0-based) field for event's modifiers
+  evt->buttons = (getButtonState() >> 3);
+  signalInputEvent();
+}
 
 static void recordMouseEvent(void)
 {
