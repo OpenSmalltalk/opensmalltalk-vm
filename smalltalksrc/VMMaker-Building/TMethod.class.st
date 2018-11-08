@@ -1464,9 +1464,16 @@ TMethod >> inlineReturningConditional: aSendNode in: aCodeGen [
 	method := (aCodeGen methodNamed: aSendNode receiver selector) copy.
 	replacementTree := method inlineFunctionCall: aSendNode receiver in: aCodeGen.
 	map := Dictionary new.
-	(replacementTree statements last isReturn
-	 and: [replacementTree statements last expression value = returnIfTrue not]) ifTrue:
-		[lastNode := replacementTree statements last].
+	"The last node is either a return or a boolean constant."
+	lastNode := replacementTree statements last.
+	replacementTree statements last isReturn
+		ifTrue:
+			[replacementTree statements last expression value == returnIfTrue ifTrue:
+				[lastNode := nil "i.e. take the fall-through path and /don't/ return"]]
+		ifFalse:
+			[self assert: (lastNode isConstant and: [#(true false) includes: lastNode value]).
+			 lastNode value == returnIfTrue ifTrue: "i.e. /do/ return"
+				[map at: lastNode put: returnNode]].
 	replacementTree nodesDo:
 		[:node| | expr |
 		 node isReturn ifTrue:
