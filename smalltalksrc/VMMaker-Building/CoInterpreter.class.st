@@ -3993,11 +3993,13 @@ CoInterpreter >> getCogVMFlags [
 	 Bit 1: if set, methods that are interpreted will have the flag bit set in their header
 	 Bit 2: if set, implies preempting a process does not put it to the back of its run queue
 	 Bit 3: specific to CoInterpreterMT
-	 Bit 4: if set, implies the new finalization scheme where WeakArrays are queued"
+	 Bit 4: if set, implies the new finalization scheme where WeakArrays are queued
+	 Bit 5: if set, implies wheel events will be delivered as such and not mapped to arrow key events"
 	^objectMemory integerObjectOf: (flagInterpretedMethods ifTrue: [2] ifFalse: [0])
 									+ (preemptionYields ifTrue: [0] ifFalse: [4])
 									+ (newFinalization ifTrue: [16] ifFalse: [0])
-									+ (imageHeaderFlags >> 2 bitClear: 2 + 4 + 16)
+									+ (sendWheelEvents ifTrue: [32] ifFalse: [0])
+									+ (imageHeaderFlags >> 2 bitClear: 2 + 4 + 16 + 32)
 ]
 
 { #category : #'interpreter shell' }
@@ -4038,7 +4040,8 @@ CoInterpreter >> getImageHeaderFlags [
 	+ (flagInterpretedMethods ifTrue: [8] ifFalse: [0])
 	+ (preemptionYields ifTrue: [0] ifFalse: [16r10])
 	+ (newFinalization ifTrue: [16r40] ifFalse: [0])
-	+ (imageHeaderFlags bitClear: 16r5B) "these are any flags we do not recognize"
+	+ (sendWheelEvents ifTrue: [16r80] ifFalse: [0])
+	+ (imageHeaderFlags bitClear: 16rDB) "these are any flags we do not recognize"
 ]
 
 { #category : #'message sending' }
@@ -7240,12 +7243,16 @@ CoInterpreter >> setCogVMFlags: flags [
 	 Bit 1: if set, methods that are interpreted will have the flag bit set in their header
 	 Bit 2: if set, implies preempting a process does not put it to the back of its run queue
 	 Bit 3: if set, implies a threaded VM will not dosown the VM if owned by the GUI thread
-	 Bit 4: if set, implies the new finalization scheme where WeakArrays are queued"
-	flags asUnsignedInteger > 31 ifTrue:
+	 Bit 4: if set, implies the new finalization scheme where WeakArrays are queued
+	 Bit 5: if set, implies wheel events will be delivered as such and not mapped to arrow key events"
+	flags asUnsignedInteger > 63 ifTrue:
 		[^self primitiveFailFor: PrimErrUnsupported].
-	flagInterpretedMethods := (flags bitAnd: 2) ~= 0.
-	preemptionYields := (flags bitAnd: 4) = 0.
-	newFinalization := (flags bitAnd: 16) ~= 0
+	"processHasThreadId := flags anyMask: 1. specific to CoInterpreterMT"
+	flagInterpretedMethods := flags anyMask: 2.
+	preemptionYields := flags noMask: 4.
+	"noThreadingOfGUIThread := flags anyMask: 8.. specific to CoInterpreterMT"
+	newFinalization := flags anyMask: 16.
+	sendWheelEvents := flags anyMask: 32
 ]
 
 { #category : #'internal interpreter access' }
@@ -7272,10 +7279,13 @@ CoInterpreter >> setImageHeaderFlagsFrom: headerFlags [
 	"Set the flags that are contained in the 7th long of the image header."
 	imageHeaderFlags := headerFlags. "so as to preserve unrecognised flags."
 	fullScreenFlag := headerFlags bitAnd: 1.
-	imageFloatsBigEndian := (headerFlags bitAnd: 2) = 0 ifTrue: [1] ifFalse: [0].
-	flagInterpretedMethods := (headerFlags bitAnd: 8) ~= 0.
-	preemptionYields := (headerFlags bitAnd: 16) = 0.
-	newFinalization := (headerFlags bitAnd: 64) ~= 0.
+	imageFloatsBigEndian := (headerFlags noMask: 2) ifTrue: [1] ifFalse: [0].
+	"processHasThreadId := headerFlags anyMask: 4. specific to CoInterpreterMT"
+	flagInterpretedMethods := headerFlags anyMask: 8.
+	preemptionYields := headerFlags noMask: 16.
+	"noThreadingOfGUIThread := headerFlags anyMask: 32. specific to CoInterpreterMT"
+	newFinalization := headerFlags anyMask: 64.
+	sendWheelEvents := headerFlags anyMask: 128
 ]
 
 { #category : #'internal interpreter access' }
