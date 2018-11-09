@@ -1783,7 +1783,7 @@ StackInterpreter class >> mustBeGlobal: var [
 
 	^(super mustBeGlobal: var)
 	   or: [(self objectMemoryClass mustBeGlobal: var)
-	   or: [(#('interpreterProxy' 'interpreterVersion' 'inIOProcessEvents'
+	   or: [(#('interpreterProxy' 'interpreterVersion' 'inIOProcessEvents' 'sendWheelEvents'
 			'deferDisplayUpdates' 'extraVMMemory'
 			'showSurfaceFn' 'displayBits' 'displayWidth' 'displayHeight' 'displayDepth'
 			'desiredNumStackPages' 'desiredEdenBytes'
