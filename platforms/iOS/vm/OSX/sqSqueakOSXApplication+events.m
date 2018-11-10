@@ -15,10 +15,10 @@
  copies of the Software, and to permit persons to whom the
  Software is furnished to do so, subject to the following
  conditions:
- 
+
  The above copyright notice and this permission notice shall be
  included in all copies or substantial portions of the Software.
- 
+
  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -27,7 +27,7 @@
  WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  OTHER DEALINGS IN THE SOFTWARE.
- 
+
  The end-user documentation included with the redistribution, if any, must include the following acknowledgment: 
  "This product includes software developed by Corporate Smalltalk Consulting Ltd (http://www.smalltalkconsulting.com) 
  and its contributors", in the same place and form as other third-party acknowledgments. 
@@ -75,10 +75,10 @@ static int buttonState=0;
 - (void) pumpRunLoopEventSendAndSignal:(BOOL)signal {
        NSEvent *event;
        NSMutableArray *alienEventQueue = [[NSMutableArray alloc] init];
-       while (event = [NSApp nextEventMatchingMask:NSEventMaskAny
+       while ((event = [NSApp nextEventMatchingMask:NSEventMaskAny
                              untilDate:nil
                              inMode:NSEventTrackingRunLoopMode
-                             dequeue:YES]) {
+                             dequeue:YES])) {
          // If the event is not a system event or an event of *this* window, queue the event
          // Otherwise treat the event normally and send it to the app
          if (event.window && event.window != gDelegateApp.window){
@@ -94,7 +94,7 @@ static int buttonState=0;
      // Put back in the queue all events that did not belong to this window
      // They will be managed by other windowing systems
      // (or by a subsequent invocation to this function)
-     while (event = [alienEventQueue firstObject]){
+     while ((event = [alienEventQueue firstObject])) {
        [NSApp postEvent: event atStart: NO];
        [alienEventQueue removeObject: event];
      }
@@ -111,16 +111,16 @@ static int buttonState=0;
 	 using the runloop, but if you just run the runloop on the main thread,
 	 events won't get processed. You have to explicitly run this in order
 	 to get them to be processed.
-	 
+
 	 Note that using the default runloop mode with this is generally a bad
 	 idea. By running in the default mode you allow *everything* else to
 	 run, which means that some other code might decide that *it* wants an
 	 inner event loop as well. If you then want to quit before that other
 	 code has finished, tough cookies. Much better to control things more
 	 tightly by using a different runloop mode.
-	 
+
 	 */
-	
+
 }
 
 - (void ) processAsOldEventOrComplexEvent: (id) event placeIn: (sqInputEvent *) evt {
@@ -144,7 +144,7 @@ static int buttonState=0;
 	NSInteger	i;
 	NSRange picker;
 	NSUInteger totaLength;
-	
+
 	evt.type = EventTypeKeyboard;
 	evt.timeStamp =  ioMSecs();
 	picker.location = 0;
@@ -152,10 +152,9 @@ static int buttonState=0;
 	totaLength = [unicodeString length];
 
 	for (i=0;i < totaLength;i++) {
-		
-		
+
 		unicode = [unicodeString characterAtIndex: i];
-		
+
 		if (mainView.lastSeenKeyBoardStrokeDetails) {
 			evt.modifiers = [self translateCocoaModifiersToSqueakModifiers: mainView.lastSeenKeyBoardStrokeDetails.modifierFlags];
 			evt.charCode = mainView.lastSeenKeyBoardStrokeDetails.keyCode;
@@ -170,25 +169,25 @@ static int buttonState=0;
 				unicode = unicode - 32;
 			}
 		}
-		
+
 		NSString *lookupString = AUTORELEASEOBJ([[NSString alloc] initWithCharacters: &unicode length: 1]);
 		[lookupString getBytes: &macRomanCharacter maxLength: 1 usedLength: NULL encoding: NSMacOSRomanStringEncoding
 					   options: 0 range: picker remainingRange: NULL];
-		
+
 		evt.pressCode = EventKeyDown;
 		unsigned short keyCodeRemembered = evt.charCode;
 		evt.utf32Code = 0;
 		evt.reserved1 = 0;
 		evt.windowIndex =   mainView.windowLogic.windowIndex;
 		[self pushEventToQueue: (sqInputEvent *)&evt];
-		
+
 		evt.charCode =	macRomanCharacter;
 		evt.pressCode = EventKeyChar;
 		evt.modifiers = evt.modifiers;		
 		evt.utf32Code = unicode;
-		
+
 		[self pushEventToQueue: (sqInputEvent *) &evt];
-		
+
 		if (i > 1 || !mainView.lastSeenKeyBoardStrokeDetails) {
 			evt.pressCode = EventKeyUp;
 			evt.charCode = keyCodeRemembered;
@@ -196,7 +195,7 @@ static int buttonState=0;
 			[self pushEventToQueue: (sqInputEvent *) &evt];
 		}
 	}
-	
+
 	interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
 
 }
@@ -238,12 +237,12 @@ static int buttonState=0;
 
 	evt.type = EventTypeMouse;
 	evt.timeStamp = ioMSecs();
-	
+
 	NSPoint local_point = [aView convertPoint: [theEvent locationInWindow] fromView:nil];
-	
+
 	evt.x =  lrintf((float)local_point.x);
 	evt.y =  lrintf((float)local_point.y);
-	
+
 	int buttonAndModifiers = [self mapMouseAndModifierStateToSqueakBits: theEvent];
 	evt.buttons = buttonAndModifiers & 0x07;
 	evt.modifiers = buttonAndModifiers >> 3;
@@ -253,26 +252,45 @@ static int buttonState=0;
 	evt.reserved1 = 0;
 #endif 
 	evt.windowIndex =  aView.windowLogic.windowIndex;
-	
+
 	[self pushEventToQueue:(sqInputEvent *) &evt];
     //NSLog(@"mouse hit x %i y %i buttons %i mods %i",evt.x,evt.y,evt.buttons,evt.modifiers);
 	interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
 }
-						   
+
 - (void) recordWheelEvent:(NSEvent *) theEvent fromView: (NSView <sqSqueakOSXView> *) aView{
-		
+
 	[self recordMouseEvent: theEvent fromView: aView];
 	CGFloat x = [theEvent deltaX];
 	CGFloat y = [theEvent deltaY];
 
-	if (x != 0.0f) {
-		[self fakeMouseWheelKeyboardEventsKeyCode: (x < 0 ? 124 : 123) ascii: (x < 0 ? 29 : 28) windowIndex:   aView.windowLogic.windowIndex];
+	if (sendWheelEvents) {
+		sqMouseEvent evt;
+		memset(&evt,0,sizeof(evt));
+
+		evt.type = EventTypeMouseWheel;
+		evt.timeStamp = ioMSecs();
+
+		evt.x =  x * 32;
+		evt.y =  y * 32;
+
+		//printf("x:%f y:%f ex:%ld ey:%ld\n", x, y, evt.x, evt.y);
+
+		int buttonAndModifiers = [self mapMouseAndModifierStateToSqueakBits: theEvent];
+		evt.buttons = buttonAndModifiers >> 3;
+		evt.windowIndex =  aView.windowLogic.windowIndex;
+		[self pushEventToQueue:(sqInputEvent *) &evt];
 	}
-	if (y != 0.0f) {
-		[self fakeMouseWheelKeyboardEventsKeyCode: (y < 0 ? 125 : 126) ascii: (y < 0 ? 31 : 30) windowIndex:  aView.windowLogic.windowIndex];
+	else {
+		if (x != 0.0f) {
+			[self fakeMouseWheelKeyboardEventsKeyCode: (x < 0 ? 124 : 123) ascii: (x < 0 ? 29 : 28) windowIndex:   aView.windowLogic.windowIndex];
+		}
+		if (y != 0.0f) {
+			[self fakeMouseWheelKeyboardEventsKeyCode: (y < 0 ? 125 : 126) ascii: (y < 0 ? 31 : 30) windowIndex:  aView.windowLogic.windowIndex];
+		}
 	}
 }
-		  
+
 - (void) fakeMouseWheelKeyboardEventsKeyCode: (int) keyCode ascii: (int) ascii windowIndex: (int) windowIndex {
 	sqKeyboardEvent evt;
 
@@ -293,12 +311,12 @@ static int buttonState=0;
 	evt.charCode = ascii;
 	evt.utf32Code = ascii;
 	[self pushEventToQueue:(sqInputEvent *) &evt];
-	
+
 	evt.pressCode = EventKeyUp;
 	evt.charCode =	keyCode;
 	evt.utf32Code = 0;
 	[self pushEventToQueue:(sqInputEvent *) &evt];
-	
+
 }
 
 /*
@@ -349,10 +367,10 @@ static int buttonState=0;
 	 right button secondary, 
 	 but left-handed users can reverse these settings as a matter of preference. 
 	 The middle button on a three-button mouse is always the tertiary button. '
-	 
+
 	 But mapping assumes 1,2,3  red, yellow, blue
 	 */
-	
+
     sqModifier modifier = kSqModifierNone;
     sqButton mappedButton = kSqNoButton;
 	sqButton mouseButton = kSqNoButton;
@@ -410,9 +428,9 @@ static int buttonState=0;
 - (void) recordDragEvent:(int)dragType numberOfFiles:(int)numFiles where:(NSPoint)point windowIndex:(sqInt)windowIndex view:(NSView *)aView
 {
 	sqDragDropFilesEvent evt;
-	
+
     NSPoint local_point = [aView convertPoint:point fromView:nil];
-    
+
 	evt.type= EventTypeDragDropFiles;
 	evt.timeStamp= ioMSecs();
 	evt.dragType= dragType;
@@ -422,13 +440,13 @@ static int buttonState=0;
 	evt.numFiles= numFiles;
 	evt.windowIndex =  windowIndex;
 	[self pushEventToQueue: (sqInputEvent *) &evt];
-	
+
 	interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
 }
 
 - (void) recordWindowEvent: (int) windowType window: (NSWIndow *) window {
 	sqWindowEvent evt;
-	
+
 	evt.type= EventTypeWindow;
 	evt.timeStamp=  ioMSecs();
 	evt.action= windowType;
@@ -438,7 +456,7 @@ static int buttonState=0;
 	evt.value4 =  0;
 	evt.windowIndex = windowIndexFromHandle((__bridge wHandleType)window);
 	[self pushEventToQueue: (sqInputEvent *) &evt];
-	
+
 	interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
 }
 

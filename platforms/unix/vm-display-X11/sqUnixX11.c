@@ -3550,9 +3550,15 @@ static const char *
 nameForKeyboardEvent(XEvent *evt) { return nameForKeycode(evt->xkey.keycode); }
 #endif /* DEBUG_EVENTS */
 
+extern sqInt sendWheelEvents; /* If true deliver EventTypeMouseWheel else kybd */
+/* if sendWheelEvents is false this maps wheel events to arrow keys */
 static int mouseWheel2Squeak[4] = {30, 31, 28, 29};
+/* if sendWheelEvents is true this determines how much x & y are incremented */
+static int mouseWheelXDelta[4] = {0, 0, -120, 120};
+static int mouseWheelYDelta[4] = {-120, 120, 0, 0};
 
-static void handleEvent(XEvent *evt)
+static void
+handleEvent(XEvent *evt)
 {
 #if DEBUG_EVENTS
   switch (evt->type)
@@ -3676,28 +3682,27 @@ static void handleEvent(XEvent *evt)
 
     case ButtonPress:
       noteEventState(evt->xbutton);
-      switch (evt->xbutton.button)
-	{
-	case 1: case 2: case 3:
-	  buttonState |= x2sqButton(evt->xbutton.button);
-	  recordMouseEvent();
-	  break;
-	case 4: case 5:	case 6: case 7: /* mouse wheel */
-	  {
-	    int keyCode = mouseWheel2Squeak[evt->xbutton.button - 4];
-		/* Set every meta bit to distinguish the fake event from a real
-		 * right/left arrow.
-		 */
-		int modifiers = modifierState | CtrlKeyBit | OptionKeyBit | CommandKeyBit | ShiftKeyBit);
-	    recordKeyboardEvent(keyCode, EventKeyDown, modifiers, keyCode);
-	    recordKeyboardEvent(keyCode, EventKeyChar, modifiers, keyCode);
-	    recordKeyboardEvent(keyCode, EventKeyUp,   modifiers, keyCode);
+      if (evt->xbutton.button <= 3) { /* mouse button */
+		buttonState |= x2sqButton(evt->xbutton.button);
+		recordMouseEvent();
 	  }
-	  break;
-	default:
-	  ioBeep();
-	  break;
-	}
+	  else if (evt->xbutton.button <= 7) { /* mouse wheel */
+		if (sendWheelEvents)
+			recordMouseWheelEvent(mouseWheelXDelta[evt->xbutton.button - 3],
+								  mouseWheelYDelta[evt->xbutton.button - 3]);
+		else {
+		  int keyCode = mouseWheel2Squeak[evt->xbutton.button - 4];
+		  /* Set every meta bit to distinguish the fake event from a real
+		   * right/left arrow.
+		   */
+		  int modifiers = modifierState | (CtrlKeyBit|OptionKeyBit|CommandKeyBit|ShiftKeyBit);
+		  recordKeyboardEvent(keyCode, EventKeyDown, modifiers, keyCode);
+		  recordKeyboardEvent(keyCode, EventKeyChar, modifiers, keyCode);
+		  recordKeyboardEvent(keyCode, EventKeyUp,   modifiers, keyCode);
+		}
+	  }
+	  else
+		  ioBeep();
       break;
 
     case ButtonRelease:
