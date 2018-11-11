@@ -12,9 +12,6 @@ LDCXX := clang++ # For linking c++ bundles
 
 include ../common/Makefile.flags
 
-METAL_CC := xcrun -sdk macosx metal -std=osx-metal1.1
-METAL_LD := xcrun -sdk macosx metallib
-
 DEPFLAGS = -MT $@ -MMD -MP -MF deps/$(*F).Td
 ALLFLAGS = $(DEPFLAGS) $(WARNINGS) $(CFLAGS)
 POSTCOMPILE = sed '/^$$/d' <deps/$(*F).Td | sed '/^.*:$$/d' | sed 's/^build[^/]*/$$(BUILD)/' > deps/$(*F).d; rm deps/$(*F).Td; touch -r $< deps/$(*F).d
@@ -32,13 +29,17 @@ $(OBJDIR)/%.o: %.cpp deps/%.d $(MAKEFILE)
 	$(POSTCOMPILE)
 
 $(OBJDIR)/%.air: %.metal $(MAKEFILE)
-	$(METAL_CC) $(INCLUDES) -c $< -o $@
+	xcrun -sdk macosx metal -std=osx-metal1.1 $(INCLUDES) -o $@ $<
 
 $(OBJDIR)/%.metallib: $(OBJDIR)/%.air $(MAKEFILE)
-	$(METAL_LD) -o $@ $<
+	if test "`head -c 4 $<`" != "MTLB"; then \
+		xcrun -sdk macosx metallib -o $@ $<; \
+	else \
+		cp $< $@; \
+	fi
 
 deps/%.d: ;
 
-.PRECIOUS: deps/%.d
+.PRECIOUS: deps/%.d $(OBJDIR)/%.air $(OBJDIR)/%.metallib
 
 -include $(patsubst %,deps/%.d,$(notdir $(basename $(VMSRC) $(LIBSRC))))
