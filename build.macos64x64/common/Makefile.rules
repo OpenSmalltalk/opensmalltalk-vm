@@ -12,7 +12,7 @@ LDCXX := clang++ # For linking c++ bundles
 
 include ../common/Makefile.flags
 
-METAL_CC := xcrun -sdk $(SDK) metal -std=macos-metal1.1
+METAL_CC := xcrun -sdk $(SDK) metal -std=osx-metal1.1
 METAL_LD := xcrun -sdk $(SDK) metallib
 
 DEPFLAGS = -MT $@ -MMD -MP -MF deps/$(*F).Td
