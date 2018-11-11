@@ -83,6 +83,8 @@ OSXICONS:=$(OSXDIR)/$(VM).icns $(wildcard $(OSXDIR)/$(SYSTEM)*.icns)
 VMICONS:=$(addprefix $(APP)/Contents/Resources/,$(notdir $(OSXICONS)))
 VMMENUNIB:=$(APP)/Contents/Resources/English.lproj/MainMenu.nib
 VMLOCALIZATION:=$(APP)/Contents/Resources/English.lproj/Localizable.strings
+OSXMETAL_SHADERS:=$(wildcard $(OSXDIR)/*.metal)
+VMMETAL_SHADERS:=$(addprefix $(APP)/Contents/Resources/,$(notdir $(OSXMETAL_SHADERS:.metal=.metallib)))
 SOURCES:=
 ifneq ($(SOURCEFILE),)
 SOURCES:=./$(SOURCEFILE)
@@ -94,7 +96,7 @@ $(APP)/Contents/Resources/$(APPSOURCE): $(SOURCESDIR)/$(APPSOURCE)
 endif
 
 $(APP):	cleanbundles $(THIRDPARTYPREREQS) $(VMEXE) $(VMBUNDLES) $(VMPLUGINDYLIBS) \
-		$(VMPLIST) $(VMLOCALIZATION) $(VMMENUNIB) $(VMICONS) \
+		$(VMPLIST) $(VMLOCALIZATION) $(VMMENUNIB) $(VMICONS) $(VMMETAL_SHADERS) \
  		$(SOURCES) $(THIRDPARTYLIBS) $(APPPOST) signapp touchapp
 
 # Bundles with missing prerequisites won't be built. But we need to force the
@@ -111,6 +113,10 @@ $(VMEXE): $(OBJDIR)/$(VM)
 	@mkdir -p $(APP)/Contents/MacOS
 	cp -p $(OBJDIR)/$(VM) $(APP)/Contents/MacOS
 
+$(APP)/Contents/Resources/%.metallib: $(OBJDIR)/%.metallib
+	@mkdir -p $(APP)/Contents/Resources
+	cp $< $(APP)/Contents/Resources
+	
 $(APP)/Contents/Resources/%.bundle: $(BLDDIR)/vm/%.bundle
 	@mkdir -p $(APP)/Contents/Resources
 	@if [ -f $(basename $<).ignore ]; then \

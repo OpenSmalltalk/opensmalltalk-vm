@@ -7,9 +7,13 @@
 # /usr/bin/clang, a.k.a. /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang
 CC := clang
 LD := clang
+
 LDCXX := clang++ # For linking c++ bundles
 
 include ../common/Makefile.flags
+
+METAL_CC := xcrun -sdk $(SDK) metal
+METAL_LD := xcrun -sdk $(SDK) metallib
 
 DEPFLAGS = -MT $@ -MMD -MP -MF deps/$(*F).Td
 ALLFLAGS = $(DEPFLAGS) $(WARNINGS) $(CFLAGS)
@@ -26,6 +30,12 @@ $(OBJDIR)/%.o: %.m deps/%.d $(MAKEFILE)
 $(OBJDIR)/%.o: %.cpp deps/%.d $(MAKEFILE)
 	$(CC) -x c++ $(ALLFLAGS) $(INCLUDES) -c $< -o $@
 	$(POSTCOMPILE)
+
+$(OBJDIR)/%.air: %.metal $(MAKEFILE)
+	$(METAL_CC) $(INCLUDES) -c $< -o $@
+
+$(OBJDIR)/%.metallib: $(OBJDIR)/%.air $(MAKEFILE)
+	$(METAL_LD) $< -o $@
 
 deps/%.d: ;
 

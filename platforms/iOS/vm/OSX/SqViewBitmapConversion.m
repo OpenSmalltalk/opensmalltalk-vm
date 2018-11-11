@@ -31,7 +31,10 @@
 #import "SqViewBitmapConversion.h"
 
 
-#ifndef USE_CORE_GRAPHICS
+#if defined(USE_METAL)
+#  import "sqSqueakOSXMetalView.h"
+#  define ContentViewClass sqSqueakOSXMetalView
+#elif !defined(USE_CORE_GRAPHICS)
 #  import "sqSqueakOSXOpenGLView.h"
 #  define ContentViewClass sqSqueakOSXOpenGLView
 #else
