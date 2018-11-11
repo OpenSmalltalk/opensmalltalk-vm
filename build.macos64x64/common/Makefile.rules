@@ -28,16 +28,6 @@ $(OBJDIR)/%.o: %.cpp deps/%.d $(MAKEFILE)
 	$(CC) -x c++ $(ALLFLAGS) $(INCLUDES) -c $< -o $@
 	$(POSTCOMPILE)
 
-$(OBJDIR)/%.air: %.metal $(MAKEFILE)
-	xcrun -sdk macosx metal -std=osx-metal1.1 $(INCLUDES) -o $@ $<
-
-$(OBJDIR)/%.metallib: $(OBJDIR)/%.air $(MAKEFILE)
-	if test "`head -c 4 $<`" != "MTLB"; then \
-		xcrun -sdk macosx metallib -o $@ $<; \
-	else \
-		cp $< $@; \
-	fi
-
 deps/%.d: ;
 
 .PRECIOUS: deps/%.d $(OBJDIR)/%.air $(OBJDIR)/%.metallib

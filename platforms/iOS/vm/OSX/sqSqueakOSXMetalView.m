@@ -46,6 +46,8 @@
 #import "sq.h"
 #import "sqVirtualMachine.h"
 
+#include "SqueakMainShaders.metal.inc"
+
 extern SqueakOSXAppDelegate *gDelegateApp;
 extern struct	VirtualMachine* interpreterProxy;
 
@@ -196,10 +198,12 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 }
 
 - (void) buildPipelines {
-	// Load the shader library.
-	NSError *libraryError = NULL;
-	NSString *libraryFile = [[NSBundle mainBundle] pathForResource: @"SqueakMainShaders" ofType: @"metallib"];
-	id<MTLLibrary> shaderLibrary = [self.device newLibraryWithFile: libraryFile error: &libraryError];
+	NSError *libraryError;
+	dispatch_data_t metalLibraryData = dispatch_data_create(SqueakMainShaders_metallib, SqueakMainShaders_metallib_len, dispatch_get_global_queue(0, 0), ^{});
+	id<MTLLibrary> shaderLibrary = [self.device newLibraryWithData: metalLibraryData error: &libraryError];
+#if !__has_feature(objc_arc)
+	dispatch_release(metalLibraryData);
+#endif
 	if(!shaderLibrary)
 	{
 		NSLog(@"Shader library error: %@", libraryError.localizedDescription);
@@ -210,7 +214,10 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	id<MTLFunction> vertexShader = [shaderLibrary newFunctionWithName: @"screenQuadFlipVertexShader"];
 	id<MTLFunction> fragmentShader = [shaderLibrary newFunctionWithName: @"screenQuadFragmentShader"];
 	if(!vertexShader || !fragmentShader)
+	{
+		RELEASEOBJ(shaderLibrary);
 		return;
+	}
 
 	// Create the screen quad pipeline.
 	MTLRenderPipelineDescriptor *pipelineDescriptor = [MTLRenderPipelineDescriptor new];
@@ -221,6 +228,9 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	
 	NSError *pipelineError = NULL;
 	screenQuadPipelineState = [self.device newRenderPipelineStateWithDescriptor: pipelineDescriptor error: &pipelineError];
+	RELEASEOBJ(shaderLibrary);
+	RELEASEOBJ(vertexShader);
+	RELEASEOBJ(fragmentShader);
 	if(!screenQuadPipelineState)
 	{
 		NSLog(@"Pipeline state creation error: %@", pipelineError.localizedDescription);
