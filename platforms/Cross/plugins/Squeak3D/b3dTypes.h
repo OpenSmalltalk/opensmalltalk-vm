@@ -70,21 +70,16 @@
 /************************ PrimitiveColor definition ************************/
 typedef unsigned char B3DPrimitiveColor[4];
 
-/* An ugly hack but I can't find the global defs in CodeWarrior on the Mac */
-#ifndef LSB_FIRST
-	#define MSB_FIRST
-#endif
-
-#ifndef MSB_FIRST
-	#define RED_INDEX 0
-	#define GREEN_INDEX 1
-	#define BLUE_INDEX 2
-	#define ALPHA_INDEX 3
+#if VMBIGENDIAN
+# define ALPHA_INDEX 0
+# define BLUE_INDEX 1
+# define GREEN_INDEX 2
+# define RED_INDEX 3
 #else
-	#define ALPHA_INDEX 0
-	#define BLUE_INDEX 1
-	#define GREEN_INDEX 2
-	#define RED_INDEX 3
+# define RED_INDEX 0
+# define GREEN_INDEX 1
+# define BLUE_INDEX 2
+# define ALPHA_INDEX 3
 #endif
 
 /************************ PrimitiveVertex definition ************************/
