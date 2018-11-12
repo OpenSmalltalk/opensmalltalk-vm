@@ -318,7 +318,6 @@ typedef struct B3DPrimitiveObject {
 
 	int nSortedFaces;
 	int nInvalidFaces;
-	
 
 	int start;
 	int nFaces;
