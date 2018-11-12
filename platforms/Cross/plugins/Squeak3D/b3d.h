@@ -25,6 +25,7 @@
 
 /* primary include file */
 
+#include "sqMemoryAccess.h" /* for sqInt */
 #include "sqAssert.h"
 #include "b3dTypes.h"
 

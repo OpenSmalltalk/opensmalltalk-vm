@@ -299,7 +299,7 @@ typedef struct B3DPrimitiveViewport {
 typedef struct B3DPrimitiveObject {
 	int magic;
 	void *This;
-	int __oop__; /* actual ST oop */
+	sqInt __oop__; /* actual ST oop */
 	struct B3DPrimitiveObject *next;
 	struct B3DPrimitiveObject *prev;
 
