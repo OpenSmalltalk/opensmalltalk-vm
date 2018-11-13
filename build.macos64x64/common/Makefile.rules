@@ -7,7 +7,6 @@
 # /usr/bin/clang, a.k.a. /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang
 CC := clang
 LD := clang
-
 LDCXX := clang++ # For linking c++ bundles
 
 include ../common/Makefile.flags
