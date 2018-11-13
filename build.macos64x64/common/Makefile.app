@@ -110,7 +110,7 @@ endif
 $(VMEXE): $(OBJDIR)/$(VM)
 	@mkdir -p $(APP)/Contents/MacOS
 	cp -p $(OBJDIR)/$(VM) $(APP)/Contents/MacOS
-	
+
 $(APP)/Contents/Resources/%.bundle: $(BLDDIR)/vm/%.bundle
 	@mkdir -p $(APP)/Contents/Resources
 	@if [ -f $(basename $<).ignore ]; then \
