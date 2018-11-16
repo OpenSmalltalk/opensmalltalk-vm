@@ -2,6 +2,7 @@
 EXTERNAL_PLUGINS = \
 FileAttributesPlugin \
 LocalePlugin \
+Squeak3D \
 SqueakFFIPrims \
 SqueakSSL \
 UnicodePlugin \

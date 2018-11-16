@@ -1,4 +1,8 @@
 | manifest load |
+
+"Disable underscore as assignment, allowing underscores in method names."
+Scanner allowUnderscoreAsAssignment: false.
+
 manifest := #(	('http://source.squeak.org/FFI'					1	('FFI-Pools' 'FFI-Kernel'))
 				('http://source.squeak.org/VMMaker'				6	('Balloon-Engine-Pools' 'BytecodeSets.spur' 'VMMaker.oscog' 'Cog' 'CogTools' 'ImageFormat'))
 				('http://ss3.gemstone.com/ss/MethodMassage'		3	('MethodMassage' 'MethodMassageCompatibility'))
