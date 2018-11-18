@@ -11,12 +11,14 @@
 
 @interface sqB3DMetalRenderBuffer : NSObject {
     int width, height;
+    int flags;
     id<MTLTexture> colorBuffer;
     id<MTLTexture> depthStencilBuffer;
 }
 
 @property (nonatomic, assign) int width;
 @property (nonatomic, assign) int height;
+@property (nonatomic, assign) int flags;
 @property (nonatomic, strong) id<MTLTexture> colorBuffer;
 @property (nonatomic, strong) id<MTLTexture> depthStencilBuffer;
 
@@ -30,12 +32,27 @@
     id<MTLDevice> device;
     int windowSurfaceLayerHandle;
     
+    // Surface
     int surfaceX, surfaceY;
     int surfaceWidth, surfaceHeight;
     int surfaceFlags;
     
+    // Render buffers
     sqB3DMetalRenderBuffer *renderBuffers[2];
     int currentRenderBufferIndex;
+
+    // Viewport
+    MTLViewport viewport;    
+    
+    // Rendering commands
+    id<MTLCommandQueue> commandQueue;
+    id<MTLCommandBuffer> activeCommandBuffer;
+    id<MTLRenderCommandEncoder> activeRenderEncoder;
+
+    // Render buffer clearing.
+    BOOL shouldClearDepthStencil;
+    BOOL shouldClearColorBuffer;
+    MTLClearColor currentClearColor;
 }
 
 @property (nonatomic, strong) id<MTLDevice> device;

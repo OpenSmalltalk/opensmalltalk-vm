@@ -20,6 +20,8 @@
 #import "B3DMetalShaders.metal.inc"
 
 extern id<MTLDevice> getMainWindowMetalDevice(void);
+extern id<MTLCommandQueue> getMainWindowMetalCommandQueue(void);
+
 extern unsigned int createMetalTextureLayerHandle(void);
 extern void destroyMetalTextureLayerHandle(unsigned int handle);
 extern void setMetalTextureLayerContent(unsigned int handle, id<MTLTexture> texture, int x, int y, int w, int h);
@@ -123,25 +125,68 @@ int b3dMetalShutdown(void) {
 
 @implementation sqB3DMetalRenderBuffer
 
-@synthesize width, height, colorBuffer, depthStencilBuffer;
+@synthesize width, height, flags, colorBuffer, depthStencilBuffer;
 
 + (sqB3DMetalRenderBuffer*) createFor: (id<MTLDevice>)device width: (int)width height: (int) height flags: (int)flags {
-    MTLTextureDescriptor *colorBufferDescriptor = [MTLTextureDescriptor
-        texture2DDescriptorWithPixelFormat: MTLPixelFormatRGBA8Unorm
-        width: width height: height mipmapped: NO];
+    id<MTLTexture> colorBuffer;
+    id<MTLTexture> depthStencilBuffer;
+    
+    // Create the color buffer
+    {
+        MTLTextureDescriptor *colorBufferDescriptor = [MTLTextureDescriptor
+            texture2DDescriptorWithPixelFormat: MTLPixelFormatRGBA8Unorm
+            width: width height: height mipmapped: NO];
 
-    id<MTLTexture> colorBuffer = [device newTextureWithDescriptor: colorBufferDescriptor];
-    RELEASEOBJ(colorBufferDescriptor);
-    if(!colorBuffer)
-        return nil;
+        colorBuffer = [device newTextureWithDescriptor: colorBufferDescriptor];
+        RELEASEOBJ(colorBufferDescriptor);
+        if(!colorBuffer)
+            return nil;        
+    }
+
+    // Create the depth stencil buffer
+    {
+        MTLPixelFormat depthStencilFormat = MTLPixelFormatDepth32Float;
+        if(flags & B3D_STENCIL_BUFFER)
+            depthStencilFormat = MTLPixelFormatDepth32Float_Stencil8;
         
+        MTLTextureDescriptor *depthStencilBufferDescriptor = [MTLTextureDescriptor
+            texture2DDescriptorWithPixelFormat: depthStencilFormat
+            width: width height: height mipmapped: NO];
+        depthStencilBufferDescriptor.storageMode = MTLStorageModePrivate;
+
+        depthStencilBuffer = [device newTextureWithDescriptor: depthStencilBufferDescriptor];
+        RELEASEOBJ(depthStencilBufferDescriptor);
+        if(!depthStencilBuffer)
+            return nil;        
+    }
+
     sqB3DMetalRenderBuffer *result = [sqB3DMetalRenderBuffer new];
     result.width = width;
     result.height = height;
+    result.flags = flags;
     result.colorBuffer = colorBuffer;
+    result.depthStencilBuffer = depthStencilBuffer;
     return result;
 }
 
+- (MTLRenderPassDescriptor*) createRenderPassDescriptor {
+    MTLRenderPassDescriptor *descriptor = [MTLRenderPassDescriptor renderPassDescriptor];
+    descriptor.colorAttachments[0].texture = colorBuffer;
+    descriptor.colorAttachments[0].loadAction = MTLLoadActionLoad;
+    descriptor.colorAttachments[0].storeAction = MTLStoreActionStore;
+
+    descriptor.depthAttachment.texture = depthStencilBuffer;
+    descriptor.depthAttachment.loadAction = MTLLoadActionLoad;
+    descriptor.depthAttachment.storeAction = MTLStoreActionStore;
+    
+    if(flags & B3D_STENCIL_BUFFER) {
+        descriptor.stencilAttachment.texture = depthStencilBuffer;
+        descriptor.stencilAttachment.loadAction = MTLLoadActionLoad;
+        descriptor.stencilAttachment.storeAction = MTLStoreActionStore;
+    }
+    
+    return descriptor;
+}
 @end
 
 @implementation sqB3DMetalRenderer
@@ -167,7 +212,14 @@ int b3dMetalShutdown(void) {
         destroyMetalTextureLayerHandle(windowSurfaceLayerHandle);
         return NO;
     }
-            
+    
+    // Set the full framebuffer as the default viewport.
+    viewport = (MTLViewport){0, 0, w, h};
+    
+    if(device == getMainWindowMetalDevice())
+        commandQueue = getMainWindowMetalCommandQueue();
+    if(!commandQueue)
+        commandQueue = [device newCommandQueue];
     return YES;
 }
 
@@ -176,17 +228,35 @@ int b3dMetalShutdown(void) {
 }
 
 - (BOOL) viewportX: (int)x y: (int)y width: (int)width height: (int)height {
-    UNIMPLEMENTED();
+    viewport = (MTLViewport){x, y, width, height};
+    if(activeRenderEncoder) {
+        [activeRenderEncoder setViewport: viewport];
+    }
     return YES;
 }
 
 - (BOOL) clearDepthBuffer {
-    UNIMPLEMENTED();
+    if(activeRenderEncoder)
+        [self flushRenderPass];
+        
+    shouldClearDepthStencil = YES;
     return YES;
 }
 
 - (BOOL) clearViewportWithRGBA: (unsigned int) rgba {
-    UNIMPLEMENTED();
+    if(activeRenderEncoder)
+        [self flushRenderPass];
+
+    shouldClearColorBuffer = YES;
+    currentClearColor.red   = ((rgba >> 16) & 255) / 255.0f;
+    currentClearColor.green = ((rgba >>  8) & 255) / 255.0f;
+    currentClearColor.blue  = (rgba & 255) / 255.0f;
+    currentClearColor.alpha = (rgba >> 24) / 255.0f;
+
+    currentClearColor.red = 0.0;
+    currentClearColor.green = 0.0;
+    currentClearColor.blue =  1.0;
+    currentClearColor.alpha = 0.0;
     return YES;
 }
 
@@ -217,22 +287,83 @@ int b3dMetalShutdown(void) {
     return YES;        
 }
 
+- (BOOL) hasPendingRenderPassCommands {
+    return shouldClearDepthStencil || shouldClearDepthStencil;
+}
+
+- (void) ensureCommandBuffer {
+    if(activeCommandBuffer)
+        return;
+        
+    activeCommandBuffer = [commandQueue commandBuffer];
+}
+
+- (void) ensureRenderPass {
+    if(activeRenderEncoder)
+        return;
+    
+    [self ensureCommandBuffer];
+    MTLRenderPassDescriptor *renderPassDescriptor = [renderBuffers[currentRenderBufferIndex] createRenderPassDescriptor];
+    
+    // Do we need to clear the depth stencil buffer?
+    if(shouldClearDepthStencil) {
+        renderPassDescriptor.depthAttachment.loadAction = MTLLoadActionClear;
+        if(surfaceFlags & B3D_STENCIL_BUFFER) {
+            renderPassDescriptor.stencilAttachment.loadAction = MTLLoadActionClear;            
+        }
+    }
+
+    // Do we need to clear the color buffer?
+    if(shouldClearColorBuffer) {
+        renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionClear;
+        renderPassDescriptor.colorAttachments[0].clearColor = currentClearColor;
+    }
+    
+    activeRenderEncoder = [activeCommandBuffer renderCommandEncoderWithDescriptor: renderPassDescriptor];
+    
+    // There is no need to clear these buffers anymore.
+    shouldClearDepthStencil = NO;
+    shouldClearColorBuffer = NO;
+}
+
+- (void) flushRenderPass {
+    if(!activeCommandBuffer && [self hasPendingRenderPassCommands]) {
+        [self ensureRenderPass];        
+    }
+
+    if(activeRenderEncoder) {
+        [activeRenderEncoder endEncoding];
+        RELEASEOBJ(activeCommandBuffer);
+        activeRenderEncoder = nil;
+    }
+}
 - (BOOL) flush {
-    UNIMPLEMENTED();
+    if(!activeCommandBuffer && [self hasPendingRenderPassCommands]) {
+        [self ensureRenderPass];        
+    }
+        
+    if(activeCommandBuffer)
+    {
+        [self flushRenderPass];
+        
+        [activeCommandBuffer commit];
+        RELEASEOBJ(activeCommandBuffer);
+        activeCommandBuffer = nil;
+    }
     return YES;
 }
 
 - (BOOL) finish {
-    UNIMPLEMENTED();
+    [self flush];
+    // TODO: Wait for the GPU to finish.
     return YES;
 }
 
 - (BOOL) swapBuffers {
-    // TODO: Improve the performance of this synchronization by using better primitives.
-    [self finish];
+    [self flush];
     
-    currentRenderBufferIndex = (currentRenderBufferIndex + 1) % 2;
     setMetalTextureLayerContent(windowSurfaceLayerHandle, renderBuffers[currentRenderBufferIndex].colorBuffer, surfaceX, surfaceY, surfaceWidth, surfaceHeight);
+    currentRenderBufferIndex = (currentRenderBufferIndex + 1) % 2;
     return YES;
 }
 @end

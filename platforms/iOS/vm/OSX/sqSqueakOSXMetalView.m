@@ -90,11 +90,12 @@ static NSString *stringWithCharacter(unichar character) {
 @property (nonatomic,assign) NSRect lastFrameSize;
 @property (nonatomic,assign) BOOL fullScreenInProgress;
 @property (nonatomic,assign) void* fullScreendispBitsIndex;
+@property (nonatomic,strong) id<MTLCommandQueue> graphicsCommandQueue;
 @end
 
 @implementation sqSqueakOSXMetalView
 @synthesize squeakTrackingRectForCursor,lastSeenKeyBoardStrokeDetails,
-lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,lastFrameSize,fullScreenInProgress,fullScreendispBitsIndex;
+lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,lastFrameSize,fullScreenInProgress,fullScreendispBitsIndex,graphicsCommandQueue;
 
 #pragma mark Initialization / Release
 
@@ -852,6 +853,12 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 id<MTLDevice>
 getMainWindowMetalDevice(void) {
 	return mainMetalView ? mainMetalView.device : nil;
+}
+
+
+id<MTLCommandQueue>
+getMainWindowMetalCommandQueue(void) {
+	return mainMetalView ? mainMetalView.graphicsCommandQueue : nil;	
 }
 
 unsigned int
