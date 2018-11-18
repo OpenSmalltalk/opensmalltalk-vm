@@ -27,3 +27,35 @@
  */
  
 #include "sqMetalStructures.h"
+
+struct VertexInput {
+    float3 position [[attribute(0)]];
+    float4 color [[attribute(1)]];
+	float3 normal [[attribute(2)]];
+	float2 texcoord [[attribute(3)]];
+};
+
+struct SolidFragmentData
+{
+    float4 clipSpacePosition [[position]];
+    float4 color;
+};
+
+vertex SolidFragmentData solidVertexShader(VertexInput in [[stage_in]],
+        constant const B3DMetalLightingState &lightingState [[buffer(0)]],
+        constant const B3DMetalMaterialState &materialState [[buffer(1)]],
+        constant const B3DMetalTransformationState &transformationState [[buffer(2)]]
+        )
+{
+    SolidFragmentData out;
+    float4 viewPosition4 = transformationState.modelViewMatrix * float4(in.position, 1.0);
+
+    out.clipSpacePosition = transformationState.projectionMatrix * viewPosition4;
+    out.color = lightingState.lights[0].ambient*materialState.material.ambient + in.color.bgra; // argb -> rgba
+    return out;
+}
+
+fragment float4 solidFragmentShader(SolidFragmentData in [[stage_in]])
+{
+    return in.color;
+}

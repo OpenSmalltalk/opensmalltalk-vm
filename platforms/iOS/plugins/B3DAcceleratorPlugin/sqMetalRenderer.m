@@ -187,6 +187,17 @@ int b3dMetalShutdown(void) {
     
     return descriptor;
 }
+
+- (void) setupPipelineDescriptor: (MTLRenderPipelineDescriptor*) pipelineDescriptor {
+    pipelineDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatRGBA8Unorm;
+    if(flags & B3D_STENCIL_BUFFER) {
+        pipelineDescriptor.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float_Stencil8;
+        pipelineDescriptor.stencilAttachmentPixelFormat = MTLPixelFormatDepth32Float_Stencil8;
+    } else {
+        pipelineDescriptor.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
+    }
+}
+
 @end
 
 @implementation sqB3DMetalRenderer
@@ -214,21 +225,86 @@ int b3dMetalShutdown(void) {
     }
     
     // Set the full framebuffer as the default viewport.
-    viewport = (MTLViewport){0, 0, w, h};
+    viewport = (MTLViewport){0, 0, w, h, 0.0, 1.0};
     
     if(device == getMainWindowMetalDevice())
         commandQueue = getMainWindowMetalCommandQueue();
     if(!commandQueue)
         commandQueue = [device newCommandQueue];
+        
+    transformationState.modelViewMatrix = matrix_identity_float4x4;
+    transformationState.projectionMatrix = matrix_identity_float4x4;
+    
+    [self createPipelines];
+    
     return YES;
+}
+
+- (void) createPipelines {
+    solidColorPipeline = [self buildPipelineWithVertexFunction: @"solidVertexShader" fragmentFunction: @"solidFragmentShader"];
 }
 
 - (void) destroy {
     destroyMetalTextureLayerHandle(windowSurfaceLayerHandle);
 }
 
+- (MTLVertexDescriptor*) createVertxDescriptor {
+    MTLVertexDescriptor* descriptor = [MTLVertexDescriptor vertexDescriptor];
+    
+    descriptor.attributes[0].format = MTLVertexFormatFloat4;
+    descriptor.attributes[0].offset = offsetof(B3DPrimitiveVertex, position);
+    descriptor.attributes[0].bufferIndex = 3;
+
+    descriptor.attributes[1].format = MTLVertexFormatUChar4Normalized;
+    descriptor.attributes[1].offset = offsetof(B3DPrimitiveVertex, pixelValue32);
+    descriptor.attributes[1].bufferIndex = 3;
+
+    descriptor.attributes[2].format = MTLVertexFormatFloat3;
+    descriptor.attributes[2].offset = offsetof(B3DPrimitiveVertex, normal);
+    descriptor.attributes[2].bufferIndex = 3;
+
+    descriptor.attributes[3].format = MTLVertexFormatFloat2;
+    descriptor.attributes[3].offset = offsetof(B3DPrimitiveVertex, texCoord);
+    descriptor.attributes[3].bufferIndex = 3;
+    
+    descriptor.layouts[3].stride = sizeof(B3DPrimitiveVertex);
+    return descriptor;
+}
+- (id<MTLRenderPipelineState>) buildPipelineWithVertexFunction: (NSString*)vertexFunctionName fragmentFunction: (NSString*)fragmentFunctionName {
+    id<MTLLibrary> shaderLibrary = b3dMetalModuleSingleton.shaderLibrary;
+    
+	// Retrieve the shaders from the shader libary.
+	id<MTLFunction> vertexShader = [shaderLibrary newFunctionWithName: vertexFunctionName];
+	id<MTLFunction> fragmentShader = [shaderLibrary newFunctionWithName: fragmentFunctionName];
+	if(!vertexShader || !fragmentShader)
+	{
+		RELEASEOBJ(shaderLibrary);
+		return nil;
+	}
+
+	// Create the screen quad pipeline.
+	MTLRenderPipelineDescriptor *pipelineDescriptor = [MTLRenderPipelineDescriptor new];
+	pipelineDescriptor.vertexFunction = vertexShader;
+	pipelineDescriptor.fragmentFunction = fragmentShader;
+    pipelineDescriptor.vertexDescriptor = [self createVertxDescriptor];
+    [renderBuffers[0] setupPipelineDescriptor: pipelineDescriptor];
+	
+	NSError *pipelineError = NULL;
+	id<MTLRenderPipelineState> pipeline = [self.device newRenderPipelineStateWithDescriptor: pipelineDescriptor error: &pipelineError];
+	RELEASEOBJ(shaderLibrary);
+	RELEASEOBJ(vertexShader);
+	RELEASEOBJ(fragmentShader);
+	if(!pipeline)
+	{
+		NSLog(@"Pipeline state creation error: %@", pipelineError.localizedDescription);
+		return nil;
+	}
+	
+	return pipeline;
+}
+
 - (BOOL) viewportX: (int)x y: (int)y width: (int)width height: (int)height {
-    viewport = (MTLViewport){x, y, width, height};
+    viewport = (MTLViewport){x, y, width, height, 0.0, 1.0};
     if(activeRenderEncoder) {
         [activeRenderEncoder setViewport: viewport];
     }
@@ -252,38 +328,214 @@ int b3dMetalShutdown(void) {
     currentClearColor.green = ((rgba >>  8) & 255) / 255.0f;
     currentClearColor.blue  = (rgba & 255) / 255.0f;
     currentClearColor.alpha = (rgba >> 24) / 255.0f;
-
-    currentClearColor.red = 0.0;
-    currentClearColor.green = 0.0;
-    currentClearColor.blue =  1.0;
-    currentClearColor.alpha = 0.0;
     return YES;
 }
 
 - (BOOL) setModelView: (float*) newModelView projection: (float*)newProjection {
-    UNIMPLEMENTED();
+    if(newModelView) {
+        memcpy(&transformationState.modelViewMatrix, newModelView, 4*4*4);
+        transformationState.modelViewMatrix = matrix_transpose(transformationState.modelViewMatrix);
+    } else {
+        transformationState.modelViewMatrix = matrix_identity_float4x4;
+    }
+    
+    if(newProjection) {        
+        memcpy(&transformationState.projectionMatrix, newProjection, 4*4*4);
+        transformationState.projectionMatrix = matrix_transpose(transformationState.projectionMatrix);
+    } else {
+        transformationState.projectionMatrix = matrix_identity_float4x4;
+    }
+    
+    transformationState.projectionMatrix = matrix_multiply(
+        matrix_from_rows(
+            vector4(1.0f, 0.0f, 0.0f, 0.0f),
+            vector4(0.0f, -1.0f, 0.0f, 0.0f),
+            vector4(0.0f, 0.0f, 0.5f, 0.5f),
+            vector4(0.0f, 0.0f, 0.0f, 1.0f)),
+            transformationState.projectionMatrix);
+    hasValidTransformationState = NO;
     return YES;
 }
 
 - (BOOL) disableLights {
-    UNIMPLEMENTED();
+    lightingState.enabledLightMask = 0;
+    hasValidLightingState = NO;
     return YES;
 }
 
 - (BOOL) loadMaterial: (B3DPrimitiveMaterial*) material {
-    UNIMPLEMENTED();
+    if(!material) {
+        materialState.lightingEnabled = 0;
+    } else {
+        materialState.lightingEnabled = 1;
+        memcpy(&materialState.material, material, sizeof(B3DMetalPrimitiveMaterial));
+    }
+    
+    hasValidMaterialState = NO;
     return YES;
 }
 
-- (BOOL) loadLight: (B3DPrimitiveLight*) light index: (int)index {    
-    UNIMPLEMENTED();
+- (BOOL) loadLight: (B3DPrimitiveLight*) light index: (int)index {
+    if(index < 0 || index >= MAX_NUMBER_OF_LIGHTS)
+        return NO;
+        
+    if(light) {
+        // Enable the light and copy its data.
+        lightingState.enabledLightMask |= (1<<index);
+        memcpy(&lightingState.lights[index], light, sizeof(B3DMetalPrimitiveLight));       
+    } else {
+        // Disable the light
+        lightingState.enabledLightMask &= ~(1<<index);
+    }
+    
+    hasValidLightingState = NO;
     return YES;
+}
+
+- (void) validateLightingState {
+    if(hasValidLightingState)
+        return;
+        
+    [activeRenderEncoder setVertexBytes: &lightingState length: sizeof(lightingState) atIndex: 0];
+    hasValidLightingState = YES;
+}
+
+- (void) validateMaterialState {
+    if(hasValidMaterialState)
+        return;
+        
+    [activeRenderEncoder setVertexBytes: &materialState length: sizeof(materialState) atIndex: 1];
+    hasValidMaterialState = YES;
+}
+
+- (void) validateTransformationState {
+    if(hasValidTransformationState)
+        return;
+        
+    [activeRenderEncoder setVertexBytes: &transformationState length: sizeof(transformationState) atIndex: 2];
+    hasValidTransformationState = YES;
+}
+
+- (void) validateRenderState {
+    [self validateLightingState];
+    [self validateMaterialState];
+    [self validateTransformationState];
+}
+
+- (void) setupPointRenderingFlags: (int)flags texHandle: (int) textureHandle {
+    [activeRenderEncoder setRenderPipelineState: solidColorPipeline];
+    [self validateRenderState];
+}
+
+- (void) setupLineRenderingFlags: (int)flags texHandle: (int) textureHandle {
+    [activeRenderEncoder setRenderPipelineState: solidColorPipeline];
+    [self validateRenderState];
+}
+
+- (void) setupTriangleRenderingFlags: (int)flags texHandle: (int) textureHandle {
+    [activeRenderEncoder setRenderPipelineState: solidColorPipeline];
+    [self validateRenderState];
 }
 
 - (BOOL) renderPrimitive: (int)primType flags: (int)flags texHandle: (int)textureHandle
     vertexArray: (float*)vertexArray vertexCount: (int) vertexCount
     indexArray: (int*)indexArray indexCount: (int)indexCount {
-    UNIMPLEMENTED();
+
+    // We need to be in a render pass.
+    [self ensureRenderPass];
+    
+    // Upload the vertices
+    size_t vertexBufferSize = vertexCount*sizeof(B3DPrimitiveVertex);
+    [activeRenderEncoder setVertexBytes: vertexArray length: vertexBufferSize atIndex: 3];
+        
+    switch(primType) {
+    case B3D_PRIMITIVE_TYPE_POINTS:
+        [self setupPointRenderingFlags: flags texHandle: textureHandle];
+        [activeRenderEncoder drawPrimitives: MTLPrimitiveTypePoint vertexStart: 0 vertexCount: vertexCount];
+        break;
+    case B3D_PRIMITIVE_TYPE_LINES:
+        [self setupLineRenderingFlags: flags texHandle: textureHandle];
+        [activeRenderEncoder drawPrimitives: MTLPrimitiveTypeLine vertexStart: 0 vertexCount: vertexCount];
+        break;
+    case B3D_PRIMITIVE_TYPE_INDEXED_LINES:
+        [self setupLineRenderingFlags: flags texHandle: textureHandle];
+        {
+            id<MTLBuffer> indexBuffer = [device newBufferWithBytes: indexArray length: indexCount*4 options: MTLResourceStorageModePrivate];
+            [activeRenderEncoder drawIndexedPrimitives: MTLPrimitiveTypeLine indexCount: indexCount indexType: MTLIndexTypeUInt32 indexBuffer: indexBuffer indexBufferOffset: 0];
+            RELEASEOBJ(indexBuffer);
+        }
+        break;
+    case B3D_PRIMITIVE_TYPE_INDEXED_TRIANGLES:
+        [self setupTriangleRenderingFlags: flags texHandle: textureHandle];
+        {
+            id<MTLBuffer> indexBuffer = [device newBufferWithBytes: indexArray length: indexCount*4 options: MTLResourceStorageModePrivate];
+            [activeRenderEncoder drawIndexedPrimitives: MTLPrimitiveTypeTriangle indexCount: indexCount indexType: MTLIndexTypeUInt32 indexBuffer: indexBuffer indexBufferOffset: 0];
+            RELEASEOBJ(indexBuffer);
+        }
+        break;
+
+    // These other primitives require emulation
+    case B3D_PRIMITIVE_TYPE_POLYGON:
+        [self setupTriangleRenderingFlags: flags texHandle: textureHandle];
+        {
+            if(vertexCount < 3)
+                return YES;
+            
+            // Allocate a temporary index buffer.    
+            unsigned int triangleCount = vertexCount - 2;
+            unsigned int renderIndexCount = triangleCount*3;    
+            id<MTLBuffer> indexBuffer = [device newBufferWithLength: renderIndexCount*4 options: MTLResourceStorageModeManaged];
+            
+            // Set the triangle fan indices.
+            unsigned int *destIndices = (unsigned int *)indexBuffer.contents;
+            for(unsigned int i = 2; i < vertexCount; ++i) {
+                destIndices[0] = 0;
+                destIndices[1] = i - 1;
+                destIndices[2] = i;
+                destIndices += 3;
+            }
+            
+            [activeRenderEncoder drawIndexedPrimitives: MTLPrimitiveTypeTriangle indexCount: renderIndexCount indexType: MTLIndexTypeUInt32 indexBuffer: indexBuffer indexBufferOffset: 0];
+            RELEASEOBJ(indexBuffer);
+        }        
+        break;
+    case B3D_PRIMITIVE_TYPE_INDEXED_QUADS:
+        [self setupTriangleRenderingFlags: flags texHandle: textureHandle];
+        {
+            unsigned int quadCount = indexCount/4;
+            if(vertexCount == 0)
+                return YES;
+            
+            // Allocate a temporary index buffer.  
+            unsigned int triangleCount = quadCount*2;
+            unsigned int renderIndexCount = triangleCount*3;    
+            id<MTLBuffer> indexBuffer = [device newBufferWithLength: renderIndexCount*4 options: MTLResourceStorageModeManaged];
+            
+            // Expand the quad indices.
+            unsigned int *sourceIndices = (unsigned int *)indexArray;
+            unsigned int *destIndices = (unsigned int *)indexBuffer.contents;
+            for(unsigned int i = 0; i < quadCount; ++i) {
+                destIndices[0] = sourceIndices[0];
+                destIndices[1] = sourceIndices[1];
+                destIndices[2] = sourceIndices[2];
+
+                destIndices[0] = sourceIndices[1];
+                destIndices[1] = sourceIndices[2];
+                destIndices[2] = sourceIndices[3];
+
+                destIndices += 6;
+            }
+            
+            [activeRenderEncoder drawIndexedPrimitives: MTLPrimitiveTypeTriangle indexCount: renderIndexCount indexType: MTLIndexTypeUInt32 indexBuffer: indexBuffer indexBufferOffset: 0];
+            RELEASEOBJ(indexBuffer);
+        }
+        break;
+        
+    default:
+        // Ignored.
+        break;
+    }
+
     return YES;        
 }
 
@@ -324,6 +576,11 @@ int b3dMetalShutdown(void) {
     // There is no need to clear these buffers anymore.
     shouldClearDepthStencil = NO;
     shouldClearColorBuffer = NO;
+    
+    // Invalidate all of the render states.
+    hasValidTransformationState = NO;
+    hasValidMaterialState = NO;
+    hasValidLightingState = NO;
 }
 
 - (void) flushRenderPass {
@@ -355,7 +612,11 @@ int b3dMetalShutdown(void) {
 
 - (BOOL) finish {
     [self flush];
-    // TODO: Wait for the GPU to finish.
+
+    // Commit an empty command buffer, and wait for it.
+    id<MTLCommandBuffer> waitBuffer = [commandQueue commandBuffer];
+    [waitBuffer commit];
+    [waitBuffer waitUntilCompleted];
     return YES;
 }
 
@@ -420,7 +681,6 @@ b3dMetalTextureByteSex(int renderer, int handle) {
 /* return handle or <0 if error */
 int
 b3dMetalTextureSurfaceHandle(int renderer, int handle) {
-    UNIMPLEMENTED();
     return -1;
 }
 

@@ -53,6 +53,19 @@
     BOOL shouldClearDepthStencil;
     BOOL shouldClearColorBuffer;
     MTLClearColor currentClearColor;
+    
+    B3DMetalLightingState lightingState;
+    BOOL hasValidLightingState;
+    
+    B3DMetalMaterialState materialState;
+    BOOL hasValidMaterialState;
+
+    B3DMetalTransformationState transformationState;
+    BOOL hasValidTransformationState;
+    
+    // Some pipeline states.
+    id<MTLRenderPipelineState> solidColorPipeline;
+
 }
 
 @property (nonatomic, strong) id<MTLDevice> device;
