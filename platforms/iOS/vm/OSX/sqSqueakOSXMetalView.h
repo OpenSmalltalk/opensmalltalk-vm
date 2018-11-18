@@ -34,7 +34,7 @@
  */
 //
 
-#ifndef NO_METAL
+#ifdef USE_METAL
 #import <Cocoa/Cocoa.h>
 #include <ApplicationServices/ApplicationServices.h>
 #import "keyBoardStrokeDetails.h"
@@ -81,6 +81,7 @@
 	int displayTextureHeight;
 	
 	id<MTLRenderPipelineState> screenQuadPipelineState;
+	id<MTLRenderPipelineState> layerScreenQuadPipelineState;
 	id<MTLBuffer> screenQuadVertexBuffer;
 }
 
@@ -90,4 +91,4 @@
 
 @end
 
-#endif //NO_METAL
+#endif //USE_METAL
