@@ -77,11 +77,47 @@ EXPORT(int) ffiTestInts(int c1, int c2, int c3, int c4) {
 	return c1+c2;
 }
 
+EXPORT(int) ffiTest4IntSum(int c1, int c2, int c3, int c4) {
+	return c1+c2+c3+c4;
+}
+
 EXPORT(int) ffiTestInts8(int c1, int c2, int c3, int c4, int c5, int c6, int c7, int c8) {
-	printf("4 ints came in as\ni1 = %d (%x)\ni2 = %d (%x)\ni3 = %d (%x)\ni4 = %d (%x)\ni5 = %d (%x)\ni6 = %d (%x)\ni7 = %d (%x)\ni8 = %d (%x)\n", c1, c1, c2, c2, c3, c3, c4, c4, c5, c5, c6, c6, c7, c7, c8, c8);
+	printf("8 ints came in as\ni1 = %d (%x)\ni2 = %d (%x)\ni3 = %d (%x)\ni4 = %d (%x)\ni5 = %d (%x)\ni6 = %d (%x)\ni7 = %d (%x)\ni8 = %d (%x)\n", c1, c1, c2, c2, c3, c3, c4, c4, c5, c5, c6, c6, c7, c7, c8, c8);
 	return 42;
 }
 
+EXPORT(int) ffiTest8IntSum(int c1, int c2, int c3, int c4, int c5, int c6, int c7, int c8) {
+	printf("8 ints came in as\ni1 = %d (%x)\ni2 = %d (%x)\ni3 = %d (%x)\ni4 = %d (%x)\ni5 = %d (%x)\ni6 = %d (%x)\ni7 = %d (%x)\ni8 = %d (%x)\n", c1, c1, c2, c2, c3, c3, c4, c4, c5, c5, c6, c6, c7, c7, c8, c8);
+	return c1 + c2 + c3 + c4 + c5 + c6 + c7 + c8;
+}
+
+EXPORT(long) ffiTest4LongSum(long c1, long c2, long c3, long c4) {
+	return c1+c2+c3+c4;
+}
+
+EXPORT(long) ffiTestLongs8(long c1, long c2, long c3, long c4, long c5, long c6, long c7, long c8) {
+	printf("8 longs came in as\ni1 = %ld (%lx)\ni2 = %ld (%lx)\ni3 = %ld (%lx)\ni4 = %ld (%lx)\ni5 = %ld (%lx)\ni6 = %ld (%lx)\ni7 = %ld (%lx)\ni8 = %ld (%lx)\n", c1, c1, c2, c2, c3, c3, c4, c4, c5, c5, c6, c6, c7, c7, c8, c8);
+	return 42;
+}
+
+EXPORT(long) ffiTest8longSum(long c1, long c2, long c3, long c4, long c5, long c6, long c7, long c8) {
+	printf("8 longs came in as\ni1 = %ld (%lx)\ni2 = %ld (%lx)\ni3 = %ld (%lx)\ni4 = %ld (%lx)\ni5 = %ld (%lx)\ni6 = %ld (%lx)\ni7 = %ld (%lx)\ni8 = %ld (%lx)\n", c1, c1, c2, c2, c3, c3, c4, c4, c5, c5, c6, c6, c7, c7, c8, c8);
+	return c1 + c2 + c3 + c4 + c5 + c6 + c7 + c8;
+}
+
+EXPORT(long long) ffiTest4LongLongSum(long long c1, long long c2, long long c3, long long c4) {
+	return c1+c2+c3+c4;
+}
+
+EXPORT(long long) ffiTestLongLongs8(long long c1, long long c2, long long c3, long long c4, long long c5, long long c6, long long c7, long long c8) {
+	printf("8 long longs came in as\ni1 = %lld (%llx)\ni2 = %lld (%llx)\ni3 = %lld (%llx)\ni4 = %lld (%llx)\ni5 = %lld (%llx)\ni6 = %lld (%llx)\ni7 = %lld (%llx)\ni8 = %lld (%llx)\n", c1, c1, c2, c2, c3, c3, c4, c4, c5, c5, c6, c6, c7, c7, c8, c8);
+	return 42;
+}
+
+EXPORT(long long) ffiTest8LongLongSum(long long c1, long long c2, long long c3, long long c4, long long c5, long long c6, long long c7, long long c8) {
+	printf("8 long longs came in as\ni1 = %lld (%llx)\ni2 = %lld (%llx)\ni3 = %lld (%llx)\ni4 = %lld (%llx)\ni5 = %lld (%llx)\ni6 = %lld (%llx)\ni7 = %lld (%llx)\ni8 = %lld (%llx)\n", c1, c1, c2, c2, c3, c3, c4, c4, c5, c5, c6, c6, c7, c7, c8, c8);
+	return c1 + c2 + c3 + c4 + c5 + c6 + c7 + c8;
+}
 
 /* test passing and returning floats */
 EXPORT(float) ffiTestFloats(float f1, float f2) {
@@ -118,6 +154,13 @@ EXPORT(double) ffiTestMixedFloatsAndDouble(float f1, double d1, float f2, float 
 {
   printf("The four floats are %f %f %f %f\n", f1, d1, f2, f3);   
   return f1 + d1 + f2 + f3;
+}
+
+EXPORT(double) ffiTestMixedDoublesAndLongs(double d1, long l1, double d2, long l2, double d3, long l3, double d4, long l4, double d5, long l5, double d6, long l6, double d7, long l7, double d8, long l8, double d9, long l9, double dA, long lA)
+{
+  printf("the arguments came in as %f %ld %f %ld %f %ld %f %ld %f %ld %f %ld %f %ld %f %ld %f %ld %f %ld\n",
+		d1, l1, d2, l2, d3, l3, d4, l4, d5, l5, d6, l6, d7, l7, d8, l8, d9, l9, dA, lA);
+  return d1 + l1 + d2 + l2 + d3 + l3 + d4 + l4 + d5 + l5 + d6 + l6 + d7 + l7 + d8 + l8 + d9 + l9 + dA + lA;
 }
 
 /* test passing and returning doubles */

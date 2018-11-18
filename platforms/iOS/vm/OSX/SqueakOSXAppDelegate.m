@@ -41,11 +41,9 @@
 #import "sqSqueakOSXScreenAndWindow.h"
 #import "sqMacHostWindow.h"
 #import "sqSqueakOSXInfoPlistInterface.h"
-#if defined(i386) || defined(__i386) || defined(__i386__)
-#else
+//Crashlytics code commented out; usefuil to those that use it...
 //#import <Fabric/Fabric.h>
 //#import <Crashlytics/Crashlytics.h>
-#endif
 
 #ifndef USE_CORE_GRAPHICS
 #  import "sqSqueakOSXOpenGLView.h"
@@ -71,13 +69,11 @@ SqueakOSXAppDelegate *gDelegateApp;
 }
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
-   
-#if defined(i386) || defined(__i386) || defined(__i386__)
-#else
+
+	//Crashlytics code commented out; usefuil to those that use it...
     //   [Crashlytics startWithAPIKey:@"add501476623fc20212a60334cd537d16dfd566f"];
     //[Fabric with:@[[Crashlytics class]]];
-#endif
-	
+
     @autoreleasepool {
 		gDelegateApp = self;	
 		self.squeakApplication = [self makeApplicationInstance];
