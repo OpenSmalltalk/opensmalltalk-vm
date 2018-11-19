@@ -65,7 +65,7 @@
     
     // Some pipeline states.
     id<MTLRenderPipelineState> solidColorPipeline;
-
+    id<MTLDepthStencilState> defaultDepthStencilState;
 }
 
 @property (nonatomic, strong) id<MTLDevice> device;

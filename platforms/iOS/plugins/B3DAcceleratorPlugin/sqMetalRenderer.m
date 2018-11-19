@@ -19,6 +19,8 @@
 #import "sqMetalRenderer.h"
 #import "B3DMetalShaders.metal.inc"
 
+#define MAIN_VERTEX_BUFFER_INDEX 4
+
 extern id<MTLDevice> getMainWindowMetalDevice(void);
 extern id<MTLCommandQueue> getMainWindowMetalCommandQueue(void);
 
@@ -29,6 +31,18 @@ extern void setMetalTextureLayerContent(unsigned int handle, id<MTLTexture> text
 #define UNIMPLEMENTED() printf("Unimplemented: %s\n", __func__)
 
 static sqB3DMetalModule *b3dMetalModuleSingleton = nil;
+
+/*static b3d_float2_t convert_float2(const float v[2]) {
+    return (vector_float2){v[0], v[1]};
+}
+*/
+static b3d_float3_t convert_float3(const float v[3]) {
+    return (vector_float3){v[0], v[1], v[2]};
+}
+
+static b3d_float4_t convert_float4(const float v[4]) {
+    return (vector_float4){v[0], v[1], v[2], v[3]};
+}
 
 @implementation sqB3DMetalModule
 @synthesize device, shaderLibrary;
@@ -208,6 +222,7 @@ int b3dMetalShutdown(void) {
     // Store the surface dimensions.
     surfaceX = x; surfaceY = y;
     surfaceWidth = w; surfaceHeight = h;
+    surfaceFlags = flags;
     
     // Create the texture layer handle.
     windowSurfaceLayerHandle = createMetalTextureLayerHandle();
@@ -215,10 +230,7 @@ int b3dMetalShutdown(void) {
         return NO;
         
     // Create the render buffers.
-    renderBuffers[0] = [sqB3DMetalRenderBuffer createFor: device width: w height: h flags: flags];
-    renderBuffers[1] = [sqB3DMetalRenderBuffer createFor: device width: w height: h flags: flags];
-    currentRenderBufferIndex = 0;
-    if(!renderBuffers[0] || !renderBuffers[1])
+    if(![self createRenderBuffersWithWidth: w height: h])
     {
         destroyMetalTextureLayerHandle(windowSurfaceLayerHandle);
         return NO;
@@ -232,10 +244,41 @@ int b3dMetalShutdown(void) {
     if(!commandQueue)
         commandQueue = [device newCommandQueue];
         
+    lightingState.ambientLighting = (vector_float4){0.0, 0.0, 0.0, 1.0};
     transformationState.modelViewMatrix = matrix_identity_float4x4;
+    transformationState.normalMatrix = matrix_identity_float3x3;
     transformationState.projectionMatrix = matrix_identity_float4x4;
     
     [self createPipelines];
+    [self createDepthStencilStates];
+    
+    return YES;
+}
+
+- (BOOL) createRenderBuffersWithWidth: (int)width height: (int)height {
+    sqB3DMetalRenderBuffer *backBuffer = [sqB3DMetalRenderBuffer createFor: device width: width height: height flags: surfaceFlags];
+    sqB3DMetalRenderBuffer *frontBuffer = [sqB3DMetalRenderBuffer createFor: device width: width height: height flags: surfaceFlags];
+    if(!backBuffer || !frontBuffer) {
+        return NO;
+    }
+    
+    // Use the new render buffers.
+    renderBuffers[0] = backBuffer;
+    renderBuffers[1] = frontBuffer;
+    currentRenderBufferIndex = 0;
+    return YES;
+}
+
+- (BOOL) setSurfaceX: (int)x y: (int)y width: (int)width height: (int)height {
+    // Do we need to resize the framebuffers?
+    if(surfaceWidth != width || surfaceHeight != height) {
+        if(![self createRenderBuffersWithWidth: width height: height])
+            return NO;
+    }
+
+    // Store the new surface positions.
+    surfaceX = x; surfaceY = y;
+    surfaceWidth = width; surfaceHeight = height;
     
     return YES;
 }
@@ -244,6 +287,14 @@ int b3dMetalShutdown(void) {
     solidColorPipeline = [self buildPipelineWithVertexFunction: @"solidVertexShader" fragmentFunction: @"solidFragmentShader"];
 }
 
+- (void) createDepthStencilStates {
+    MTLDepthStencilDescriptor *descriptor = [MTLDepthStencilDescriptor new];
+    descriptor.depthCompareFunction = MTLCompareFunctionLessEqual;
+    descriptor.depthWriteEnabled = YES;
+    
+    defaultDepthStencilState = [device newDepthStencilStateWithDescriptor: descriptor];
+    RELEASEOBJ(descriptor);
+}
 - (void) destroy {
     destroyMetalTextureLayerHandle(windowSurfaceLayerHandle);
 }
@@ -253,21 +304,21 @@ int b3dMetalShutdown(void) {
     
     descriptor.attributes[0].format = MTLVertexFormatFloat4;
     descriptor.attributes[0].offset = offsetof(B3DPrimitiveVertex, position);
-    descriptor.attributes[0].bufferIndex = 3;
+    descriptor.attributes[0].bufferIndex = MAIN_VERTEX_BUFFER_INDEX;
 
     descriptor.attributes[1].format = MTLVertexFormatUChar4Normalized;
     descriptor.attributes[1].offset = offsetof(B3DPrimitiveVertex, pixelValue32);
-    descriptor.attributes[1].bufferIndex = 3;
+    descriptor.attributes[1].bufferIndex = MAIN_VERTEX_BUFFER_INDEX;
 
     descriptor.attributes[2].format = MTLVertexFormatFloat3;
     descriptor.attributes[2].offset = offsetof(B3DPrimitiveVertex, normal);
-    descriptor.attributes[2].bufferIndex = 3;
+    descriptor.attributes[2].bufferIndex = MAIN_VERTEX_BUFFER_INDEX;
 
     descriptor.attributes[3].format = MTLVertexFormatFloat2;
     descriptor.attributes[3].offset = offsetof(B3DPrimitiveVertex, texCoord);
-    descriptor.attributes[3].bufferIndex = 3;
+    descriptor.attributes[3].bufferIndex = MAIN_VERTEX_BUFFER_INDEX;
     
-    descriptor.layouts[3].stride = sizeof(B3DPrimitiveVertex);
+    descriptor.layouts[MAIN_VERTEX_BUFFER_INDEX].stride = sizeof(B3DPrimitiveVertex);
     return descriptor;
 }
 - (id<MTLRenderPipelineState>) buildPipelineWithVertexFunction: (NSString*)vertexFunctionName fragmentFunction: (NSString*)fragmentFunctionName {
@@ -304,7 +355,9 @@ int b3dMetalShutdown(void) {
 }
 
 - (BOOL) viewportX: (int)x y: (int)y width: (int)width height: (int)height {
-    viewport = (MTLViewport){x, y, width, height, 0.0, 1.0};
+    int actualX = x - surfaceX;
+    int actualY = surfaceHeight - (y - surfaceY + height);
+    viewport = (MTLViewport){actualX, actualY, width, height, 0.0, 1.0};
     if(activeRenderEncoder) {
         [activeRenderEncoder setViewport: viewport];
     }
@@ -335,8 +388,13 @@ int b3dMetalShutdown(void) {
     if(newModelView) {
         memcpy(&transformationState.modelViewMatrix, newModelView, 4*4*4);
         transformationState.modelViewMatrix = matrix_transpose(transformationState.modelViewMatrix);
+        transformationState.normalMatrix = matrix_transpose(matrix_invert(matrix_from_columns(
+            transformationState.modelViewMatrix.columns[0].xyz,
+            transformationState.modelViewMatrix.columns[1].xyz,
+            transformationState.modelViewMatrix.columns[2].xyz)));
     } else {
         transformationState.modelViewMatrix = matrix_identity_float4x4;
+        transformationState.normalMatrix = matrix_identity_float3x3;
     }
     
     if(newProjection) {        
@@ -368,7 +426,12 @@ int b3dMetalShutdown(void) {
         materialState.lightingEnabled = 0;
     } else {
         materialState.lightingEnabled = 1;
-        memcpy(&materialState.material, material, sizeof(B3DMetalPrimitiveMaterial));
+        B3DMetalMaterial *dest = &materialState.material;
+        dest->ambient = convert_float4(material->ambient);
+        dest->diffuse = convert_float4(material->diffuse);
+        dest->specular = convert_float4(material->specular);
+        dest->emission = convert_float4(material->emission);
+        dest->shininess = material->shininess;
     }
     
     hasValidMaterialState = NO;
@@ -382,7 +445,50 @@ int b3dMetalShutdown(void) {
     if(light) {
         // Enable the light and copy its data.
         lightingState.enabledLightMask |= (1<<index);
-        memcpy(&lightingState.lights[index], light, sizeof(B3DMetalPrimitiveLight));       
+        
+        B3DMetalLight *dest = &lightingState.lights[index];
+        if(light->flags & B3D_LIGHT_AMBIENT) {
+            dest->ambient = convert_float4(light->ambient);
+        } else {
+            dest->ambient = (vector_float4){0.0, 0.0, 0.0, 1.0};
+        }
+        
+        if(light->flags & B3D_LIGHT_DIFFUSE) {
+            dest->diffuse = convert_float4(light->diffuse);
+        } else {
+            dest->diffuse = (vector_float4){0.0, 0.0, 0.0, 1.0};
+        }
+        
+        if(light->flags & B3D_LIGHT_SPECULAR) {
+            dest->specular = convert_float4(light->specular);
+        } else {
+            dest->specular = (vector_float4){0.0, 0.0, 0.0, 1.0};
+        }
+        
+        if(light->flags & B3D_LIGHT_POSITIONAL) {
+            dest->position = (vector_float4){light->position[0], light->position[1], light->position[2], 1.0};
+        } else if(light->flags & B3D_LIGHT_DIRECTIONAL) {
+            dest->position = (vector_float4){light->direction[0], light->direction[1], light->direction[2], 0.0};            
+        }
+        if(light->flags & B3D_LIGHT_ATTENUATED) {
+            dest->attenuation = convert_float3(light->attenuation);
+        } else {
+            dest->attenuation = (vector_float3){1.0, 0.0, 0.0};
+        }
+        
+        if(light->flags & B3D_LIGHT_HAS_SPOT) {
+            dest->spotDirection = convert_float3(light->direction);
+            dest->spotExponent = light->spotExponent;
+            dest->spotMinCos = light->spotMinCos;
+            dest->spotMaxCos = light->spotMaxCos;
+            dest->spotDeltaCos = light->spotDeltaCos;
+    		//printf("spot exp %f mincos %f maxcos %f dcos %f\n", dest->spotExponent, dest->spotMinCos, dest->spotMaxCos, dest->spotDeltaCos);
+    	} else {
+            dest->spotExponent = 0.0f;
+            dest->spotMinCos = -1.0f;
+            dest->spotMaxCos = -1.0f;
+            dest->spotDeltaCos = 0.0f;
+    	}
     } else {
         // Disable the light
         lightingState.enabledLightMask &= ~(1<<index);
@@ -444,9 +550,28 @@ int b3dMetalShutdown(void) {
     // We need to be in a render pass.
     [self ensureRenderPass];
     
+    /*B3DPrimitiveVertex *vtxPointer = (B3DPrimitiveVertex *)vertexArray;
+    for(unsigned int i=0;i<vertexCount;i++) {
+      unsigned int argb = vtxPointer[i].pixelValue32;
+      unsigned int rgba = (argb << 8) | (argb >> 24);
+      vtxPointer[i].pixelValue32 = rgba;
+    }*/
+    
+    // HACK: Force the presence of normals.
+    flags |= B3D_VB_HAS_NORMALS;
+    // printf("renderPrimitive %d flags: %08x\n", primType, flags);
+    
+    // Set the model state.
+    B3DMetalModelState modelState;
+    memset(&modelState, 0, sizeof(modelState));
+    modelState.vertexBufferFlags = flags;
+    
+    // Upload the model state.
+    [activeRenderEncoder setVertexBytes: &modelState length: sizeof(modelState) atIndex: 3];
+    
     // Upload the vertices
     size_t vertexBufferSize = vertexCount*sizeof(B3DPrimitiveVertex);
-    [activeRenderEncoder setVertexBytes: vertexArray length: vertexBufferSize atIndex: 3];
+    [activeRenderEncoder setVertexBytes: vertexArray length: vertexBufferSize atIndex: MAIN_VERTEX_BUFFER_INDEX];
         
     switch(primType) {
     case B3D_PRIMITIVE_TYPE_POINTS:
@@ -581,6 +706,14 @@ int b3dMetalShutdown(void) {
     hasValidTransformationState = NO;
     hasValidMaterialState = NO;
     hasValidLightingState = NO;
+    
+    // Setup the initial render pass state.
+    [self setupInitialRenderPassState];
+}
+
+- (void) setupInitialRenderPassState {
+    [activeRenderEncoder setViewport: viewport];
+    [activeRenderEncoder setDepthStencilState: defaultDepthStencilState];
 }
 
 - (void) flushRenderPass {
@@ -719,8 +852,11 @@ b3dMetalIsOverlayRenderer(int handle) {
  /* return true on success, false on error */
 int
 b3dMetalSetBufferRect(int handle, int x, int y, int w, int h) {
-    UNIMPLEMENTED();
-    return 0;
+    sqB3DMetalRenderer* renderer = [sqB3DMetalModule getRendererFromHandle: handle];
+    if(!renderer)
+        return 0;
+        
+    return [renderer setSurfaceX: x y: y width: w height: h];
 }
 
 /* return handle or <0 if error */
