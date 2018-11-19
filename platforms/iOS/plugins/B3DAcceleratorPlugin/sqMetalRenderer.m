@@ -549,14 +549,7 @@ int b3dMetalShutdown(void) {
 
     // We need to be in a render pass.
     [self ensureRenderPass];
-    
-    /*B3DPrimitiveVertex *vtxPointer = (B3DPrimitiveVertex *)vertexArray;
-    for(unsigned int i=0;i<vertexCount;i++) {
-      unsigned int argb = vtxPointer[i].pixelValue32;
-      unsigned int rgba = (argb << 8) | (argb >> 24);
-      vtxPointer[i].pixelValue32 = rgba;
-    }*/
-    
+        
     // HACK: Force the presence of normals.
     flags |= B3D_VB_HAS_NORMALS;
     // printf("renderPrimitive %d flags: %08x\n", primType, flags);
@@ -586,7 +579,7 @@ int b3dMetalShutdown(void) {
         [self setupLineRenderingFlags: flags texHandle: textureHandle];
         {
             id<MTLBuffer> indexBuffer = [device newBufferWithBytes: indexArray length: indexCount*4 options: MTLResourceStorageModePrivate];
-            [activeRenderEncoder drawIndexedPrimitives: MTLPrimitiveTypeLine indexCount: indexCount indexType: MTLIndexTypeUInt32 indexBuffer: indexBuffer indexBufferOffset: 0];
+            [activeRenderEncoder drawIndexedPrimitives: MTLPrimitiveTypeLine indexCount: indexCount indexType: MTLIndexTypeUInt32 indexBuffer: indexBuffer indexBufferOffset: 0 instanceCount: 1 baseVertex: -1 baseInstance: 0];
             RELEASEOBJ(indexBuffer);
         }
         break;
@@ -594,7 +587,7 @@ int b3dMetalShutdown(void) {
         [self setupTriangleRenderingFlags: flags texHandle: textureHandle];
         {
             id<MTLBuffer> indexBuffer = [device newBufferWithBytes: indexArray length: indexCount*4 options: MTLResourceStorageModePrivate];
-            [activeRenderEncoder drawIndexedPrimitives: MTLPrimitiveTypeTriangle indexCount: indexCount indexType: MTLIndexTypeUInt32 indexBuffer: indexBuffer indexBufferOffset: 0];
+            [activeRenderEncoder drawIndexedPrimitives: MTLPrimitiveTypeTriangle indexCount: indexCount indexType: MTLIndexTypeUInt32 indexBuffer: indexBuffer indexBufferOffset: 0 instanceCount: 1 baseVertex: -1 baseInstance: 0];
             RELEASEOBJ(indexBuffer);
         }
         break;
@@ -640,13 +633,13 @@ int b3dMetalShutdown(void) {
             unsigned int *sourceIndices = (unsigned int *)indexArray;
             unsigned int *destIndices = (unsigned int *)indexBuffer.contents;
             for(unsigned int i = 0; i < quadCount; ++i) {
-                destIndices[0] = sourceIndices[0];
-                destIndices[1] = sourceIndices[1];
-                destIndices[2] = sourceIndices[2];
+                destIndices[0] = sourceIndices[0] - 1;
+                destIndices[1] = sourceIndices[1] - 1;
+                destIndices[2] = sourceIndices[2] - 1;
 
-                destIndices[0] = sourceIndices[1];
-                destIndices[1] = sourceIndices[2];
-                destIndices[2] = sourceIndices[3];
+                destIndices[0] = sourceIndices[1] - 1;
+                destIndices[1] = sourceIndices[2] - 1;
+                destIndices[2] = sourceIndices[3] - 1;
 
                 destIndices += 6;
             }
