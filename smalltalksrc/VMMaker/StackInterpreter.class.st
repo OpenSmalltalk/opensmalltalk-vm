@@ -5116,22 +5116,25 @@ StackInterpreter >> commonReturn [
 	(self iframeIsBlockActivation: localFP) ifFalse:
 		[^self commonCallerReturn].
 
+	"Update the current page's headFrame pointers to enable the search for unwind protects below
+	 to identify widowed contexts correctly."
+	self writeBackHeadFramePointers.
+	self externalizeIPandSP.
+
 	"Since this is a block activation the closure is on the stack above any args and the frame."
 	closure := self pushedReceiverOrClosureOfFrame: localFP.
-
-	home := nil.
-	"Walk the closure's lexical chain to find the context or frame to return from (home)."
+	home := nil. "avoid compiler warning"
+	"Walk the closure's lexical chain to find the context or frame to return from (home).
+	 If home is missing (Sista closures) then throw cannotReturn rather than crash."
 	[closure ~= objectMemory nilObject] whileTrue:
 		[home := objectMemory followField: ClosureOuterContextIndex ofObject: closure.
+		 (self isContext: home) ifFalse:
+			[^self internalCannotReturn: localReturnValue].
 		 closure := objectMemory followField: ClosureIndex ofObject: home].
 	"home is to be returned from provided there is no unwind-protect activation between
 	 this frame and home's sender.  Search for an unwind.  findUnwindThroughContext:
 	 will answer either the context for an unwind-protect activation or nilObj if the sender
-	 cannot be found or 0 if no unwind is found but the sender is.  We must update the
-	 current page's headFrame pointers to enable the search to identify widowed contexts
-	 correctly."
-	self writeBackHeadFramePointers.
-	self externalizeIPandSP.
+	 cannot be found or 0 if no unwind is found but the sender is."
 	unwindContextOrNilOrZero := self findUnwindThroughContext: home.
 	unwindContextOrNilOrZero = objectMemory nilObject ifTrue:
 		["error: can't find home on chain; cannot return"

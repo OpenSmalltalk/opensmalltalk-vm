@@ -8521,6 +8521,8 @@ SpurMemoryManager >> maybeSplObj: index [
 SpurMemoryManager >> memcpy: destAddress _: sourceAddress _: bytes [
 	"For SpurGenerationScavenger>>copyToFutureSpace:bytes:. N.B. If ranges overlap, must use memmove."
 	<doNotGenerate>
+	sourceAddress isCollection ifTrue:
+		[^super memcpy: destAddress _: sourceAddress _: bytes].
 	self deny: ((destAddress <= sourceAddress and: [destAddress asInteger + bytes > sourceAddress])
 				or: [sourceAddress <= destAddress and: [sourceAddress asInteger + bytes > destAddress]]).
 	^self memmove: destAddress _: sourceAddress _: bytes
