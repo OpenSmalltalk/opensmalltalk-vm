@@ -91,13 +91,13 @@ void MyProviderReleaseData (
 	sqInt w, h;
 	
 #if BUILD_FOR_OSX
-		NSRect screenSize = [gDelegateApp.mainView bounds];
+	NSRect screenSize = [gDelegateApp.mainView bounds];
 #else
-		CGRect screenSize = [gDelegateApp.mainView bounds];
+	CGRect screenSize = [gDelegateApp.mainView bounds];
 #endif
 		
-		w = (sqInt) screenSize.size.width;
-		h = (sqInt) screenSize.size.height;
+	w = (sqInt) screenSize.size.width;
+	h = (sqInt) screenSize.size.height;
 
 	return (w << 16) | (h & 0xFFFF);  /* w is high 16 bits; h is low 16 bits */
 	

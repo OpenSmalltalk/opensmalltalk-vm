@@ -235,6 +235,7 @@ sqInt success(sqInt);
 
 extern VM_EXPORT void *displayBits;
 extern VM_EXPORT int displayWidth, displayHeight, displayDepth;
+extern VM_EXPORT sqInt sendWheelEvents;
 
 sqInt ioBeep(void);
 sqInt ioExit(void);
@@ -403,7 +404,7 @@ sqInt ioProcessEvents(void);
 #define EventTypeMenu		4
 #define EventTypeWindow		5
 #define EventTypeComplex	6 /* For iPhone apps */
-#define EventTypeMouseWheel	7 /* defunct; platforms map to EventTypeKeyboard */
+#define EventTypeMouseWheel	7 /* optional; see sendWheelEvents & vm param 48 */
 #define EventTypePlugin		8 /* Terf: events from ActiveX Controls */
 
 

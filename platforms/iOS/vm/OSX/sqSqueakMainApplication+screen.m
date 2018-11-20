@@ -52,11 +52,13 @@ extern BOOL gSqueakHeadless;
 	sqInt w, h;
 	sqInt browserGetWindowSize(void);
 	void makeMainWindow(void);
+	extern sqInt getSavedWindowSize(void); //This is VM Callback
 	sqInt getCurrentIndexInUse(void);
 	extern BOOL gSqueakExplicitWindowOpenNeeded;	
+	sqInt savedSize = getSavedWindowSize();
 	
 	if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) 
-		return ((16 << 16) | 16);
+		return savedSize ? savedSize : ((64 << 16) | 64);
 	
 	if (browserActiveAndDrawingContextOkAndNOTInFullScreenMode())
 		return browserGetWindowSize();

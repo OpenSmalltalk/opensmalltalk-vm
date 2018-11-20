@@ -90,23 +90,11 @@ sqInt dir_Lookup2(char *pathString, sqInt pathStringLength, sqInt index,
                   /* outputs */
                   char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
                   sqInt *isDirectory, squeakFileOffsetType *sizeIfFile, sqInt *posixPermissions, sqInt *isSymlink);
-#if !defined(PharoVM)
-# define PharoVM 0
-#endif
 
-#if PharoVM
 sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
                  /* outputs: */
                  char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
                  sqInt *isDirectory, squeakFileOffsetType *sizeIfFile, sqInt *posixPermissionsVar, sqInt *isSymlinkVar)
-#else
-sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
-                 /* outputs: */
-                 char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
-                 sqInt *isDirectory, squeakFileOffsetType *sizeIfFile)
-#define posixPermissionsVar nil
-#define isSymlinkVar nil
-#endif
 {
     @autoreleasepool {
         sqInt status = dir_Lookup2(pathString, pathStringLength, index, name, nameLength, creationDate, modificationDate, isDirectory, sizeIfFile,posixPermissionsVar,isSymlinkVar);
@@ -147,17 +135,10 @@ sqInt dir_Lookup2(char *pathString, sqInt pathStringLength, sqInt index,
 	return status;
 }
 
-#if PharoVM
 sqInt dir_EntryLookup(char *pathString, sqInt pathStringLength, char* nameString, sqInt nameStringLength,
                       /* outputs: */
                       char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
                       sqInt *isDirectory, squeakFileOffsetType *sizeIfFile, sqInt *posixPermissionsVar, sqInt *isSymlinkVar)
-#else
-sqInt dir_EntryLookup(char *pathString, sqInt pathStringLength, char* nameString, sqInt nameStringLength,
-                      /* outputs: */
-                      char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
-                      sqInt *isDirectory, squeakFileOffsetType *sizeIfFile)
-#endif
 {
 
 	/*Implementation notes
@@ -168,16 +149,16 @@ sqInt dir_EntryLookup(char *pathString, sqInt pathStringLength, char* nameString
 	[gDelegateApp.squeakApplication.fileDirectoryLogic
 				  dir_EntryLookup: pathString 
 						   length: pathStringLength 
-							returnName: nameString
-					  returnNameLength: nameStringLength	
+					   returnName: nameString
+				 returnNameLength: nameStringLength
 							 name: name
 						   length: nameLength 
 					 creationDate: creationDate 
 				 modificationDate: modificationDate
 					  isDirectory: isDirectory
 					   sizeIfFile: sizeIfFile
-				 posixPermissions: (PharoVM ? posixPermissionsVar : nil)
-						isSymlink:  (PharoVM ? isSymlinkVar : nil)];
+				 posixPermissions: posixPermissionsVar
+						isSymlink: isSymlinkVar];
 	return status;
     }
 }

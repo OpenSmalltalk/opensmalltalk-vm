@@ -14,11 +14,31 @@
 *****************************************************************************/
 #include <stdio.h>  /* printf() */
 #include <stdlib.h> /* exit()   */
-#include <assert.h> /* assert() */
+#if 0
+# include <assert.h> /* assert() */
+#endif
 #include "b3d.h"
+#include "b3dAlloc.h"
 
 #ifndef NULL
-#define NULL ((void*)0)
+# define NULL ((void*)0)
+#endif
+
+#if !defined(SQUEAK_BUILTIN_PLUGIN) && !defined(NDEBUG)
+/* A warning for sqAssert.h.  Ideally we would use the one in the interpreter.
+ * This is written crappily because we don't yet have warning exported properly
+ * to dlls on Windows.  Do we export warning via __declspec or not?
+ */
+void
+warning(char *s) { /* Print an error message but don't necessarily exit. */
+# if 0
+	if (erroronwarn) error(s);
+	if (warnpid)
+		printf("\n%s pid %ld\n", s, (long)warnpid);
+	else
+# endif
+		printf("\n%s\n", s);
+}
 #endif
 
 #ifdef B3D_PROFILE
@@ -132,8 +152,8 @@ B3DPrimitiveFace *b3dInitializeFace(B3DPrimitiveVertex *v0,
 		/* Now that we know the face is valid, do the actual allocation */
 		b3dAllocFace(faceAlloc, face);
 
-		if(b3dDebug)
-			if(!face) b3dAbort("Face allocation failed");
+		if(!face)
+			return NULL;
 
 		face->v0 = v0;
 		face->v1 = v1;
@@ -455,9 +475,8 @@ B3DPrimitiveEdge *b3dAddLowerEdgeFromFace(B3DPrimitiveFace *face, B3DPrimitiveEd
 		if(!nLines) return NULL; /* Edge is horizontal */
 		b3dAllocEdge(edgeAlloc, minorEdge);
 
-		if(b3dDebug)
-			if(!minorEdge)
-				b3dAbort("Edge allocation failed");
+		if(!minorEdge)
+			return NULL;
 
 		minorEdge->v0 = v1;
 		minorEdge->v1 = v2;

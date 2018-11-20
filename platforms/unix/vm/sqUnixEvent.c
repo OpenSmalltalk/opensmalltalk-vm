@@ -120,6 +120,10 @@ static sqInputEvent *allocateInputEvent(int eventType)
   (sqKeyboardEvent *)allocateInputEvent(EventTypeKeyboard) \
 )
 
+#define allocateMouseWheelEvent() ( \
+  (sqKeyboardEvent *)allocateInputEvent(EventTypeMouseWheel) \
+)
+
 #define allocateDragEvent() ( \
   (sqDragDropFilesEvent *)allocateInputEvent(EventTypeDragDropFiles) \
 )
@@ -182,6 +186,21 @@ static void recordMouseEvent(void)
   printf("EVENT (recordMouseEvent): time: %d  mouse (%d,%d)", evt->timeStamp, mousePosition.x, mousePosition.y);
   printModifiers(state >> 3);
   printButtons(state & 7);
+  printf("\n");
+#endif
+}
+
+static void recordMouseWheelEvent(int dx, int dy)
+{
+  sqMouseEvent *evt= allocateMouseWheelEvent();
+  evt->x= dx;
+  evt->y= dy;
+  // VM reads fifth (4th 0-based) field for event's modifiers
+  evt->buttons= (getButtonState() >> 3);
+  signalInputEvent();
+#if DEBUG_MOUSE_EVENTS
+  printf("EVENT (recordMouseWheelEvent): time: %d  mouse dx %d dy %d", evt->timeStamp, dx, dy);
+  printButtons(evt->buttons);
   printf("\n");
 #endif
 }

@@ -268,7 +268,10 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
   /* RvL 1999-04-19 00:23
      MOUSE WHEELING START */
   if( WM_MOUSEWHEEL == message || g_WM_MOUSEWHEEL == message ) {
-    /* Record mouse wheel msgs as CTRL-Up/Down */
+    /* Record mouse wheel msgs as CTRL-Up/Down.
+     * N.B. On iOS & X11 we also handle horizonal mouse wheel events.
+     * Should the same happen here?
+     */
     short zDelta = (short) HIWORD(wParam);
     if(inputSemaphoreIndex) {
       sqKeyboardEvent *evt = (sqKeyboardEvent*) sqNextEventPut();
@@ -276,7 +279,11 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
       evt->timeStamp = lastMessage->time;
       evt->charCode = (zDelta > 0) ? 30 : 31;
       evt->pressCode = EventKeyChar;
+      /* N.B. on iOS & X11 all meta bits are set to distinguish mouse wheel
+       * events from real arrow key events.  Should the same happen here?
+       */
       evt->modifiers = CtrlKeyBit;
+      /* It would be good if this were set in the SqueakVM also, no? */
 #ifdef PharoVM
      evt->utf32Code = evt->charCode;
 #else
@@ -883,7 +890,7 @@ sqInt ioIsWindowObscured(void) {
 
   /* Check whether any windows in front of this window overlap */
   hwnd = stWindow;
-  while(hwnd = GetNextWindow(hwnd, GW_HWNDPREV)) {
+  while ((hwnd = GetNextWindow(hwnd, GW_HWNDPREV))) {
 
     if(!IsWindowVisible(hwnd)) continue; /* skip invisible windows */
 
@@ -2580,7 +2587,7 @@ sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
 
   if(lines == 0) {
     printLastError(TEXT("SetDIBitsToDevice failed"));
-    warnPrintf(TEXT("width=%") TEXT(PRIdSQINT) TEXT(",height=%") TEXT(PRIdSQINT) TEXT(",bits=%") TEXT(PRIXSQINT) TEXT(",dc=%") TEXT(PRIXSQINT) TEXT("\n"),
+    warnPrintf(TEXT("width=%" PRIdSQINT ",height=%" PRIdSQINT ",bits=%" PRIXSQINT ",dc=%" PRIXSQPTR "\n"),
 	       width, height, dispBits,(usqIntptr_t)dc);
   }
   /* reverse the image bits if necessary */
