@@ -79,6 +79,7 @@ add_vm_plugin_sources(IA32ABI INTERNAL ${IA32ABI_Sources})
 
 # Basic internal plugins
 add_vm_plugin_auto(FilePlugin INTERNAL)
+add_vm_plugin_auto(FileAttributesPlugin INTERNAL)
 add_vm_plugin_auto(LargeIntegers INTERNAL)
 add_vm_plugin_auto(LocalePlugin INTERNAL)
 add_vm_plugin_auto(MiscPrimitivePlugin INTERNAL)
@@ -99,7 +100,6 @@ add_vm_plugin_auto(Matrix2x3Plugin INTERNAL)
 
 # Basic external plugins
 add_vm_plugin_auto(SurfacePlugin EXTERNAL)
-add_vm_plugin_auto(FileAttributesPlugin EXTERNAL)
 
 # Drop plugin
 add_vm_plugin_sources(DropPlugin INTERNAL
