@@ -93,7 +93,6 @@ sqInt dir_Create(char *pathString, sqInt pathStringLength)
   /* Create a new directory with the given path. By default, this
      directory is created relative to the cwd. */
   char name[MAXPATHLEN+1];
-  int i;
   if (pathStringLength >= MAXPATHLEN)
     return false;
   if (!sq2uxPath(pathString, pathStringLength, name, MAXPATHLEN, 1))
@@ -106,7 +105,6 @@ sqInt dir_Delete(char *pathString, sqInt pathStringLength)
 {
   /* Delete the existing directory with the given path. */
   char name[MAXPATHLEN+1];
-  int i;
   if (pathStringLength >= MAXPATHLEN)
     return false;
   if (!sq2uxPath(pathString, pathStringLength, name, MAXPATHLEN, 1))
@@ -177,7 +175,7 @@ sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
   *posixPermissions = 0;
   *isSymlink        = false;
 
-  if ((pathStringLength == 0))
+  if (pathStringLength == 0)
     strcpy(unixPath, ".");
   else if (!sq2uxPath(pathString, pathStringLength, unixPath, MAXPATHLEN, 1))
     return BAD_PATH;
@@ -277,7 +275,7 @@ sqInt dir_EntryLookup(char *pathString, sqInt pathStringLength, char* nameString
   *posixPermissions = 0;
   *isSymlink        = false;
 
-  if ((pathStringLength == 0))
+  if (pathStringLength == 0)
     strcpy(unixPath, ".");
   else if (!sq2uxPath(pathString, pathStringLength, unixPath, MAXPATHLEN, 1))
     return BAD_PATH;
