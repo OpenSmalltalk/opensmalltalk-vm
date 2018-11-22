@@ -99,6 +99,7 @@ add_vm_plugin_auto(Matrix2x3Plugin INTERNAL)
 
 # Basic external plugins
 add_vm_plugin_auto(SurfacePlugin EXTERNAL)
+add_vm_plugin_auto(FileAttributesPlugin EXTERNAL)
 
 # Drop plugin
 add_vm_plugin_sources(DropPlugin INTERNAL
