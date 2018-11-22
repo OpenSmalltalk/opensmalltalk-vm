@@ -1,0 +1,31 @@
+Class {
+	#name : #CogCompilationConstants,
+	#superclass : #SharedPool,
+	#classVars : [
+		'BadRegisterSet',
+		'CogCompilerClass',
+		'InFullBlock',
+		'InVanillaBlock',
+		'NumSendTrampolines',
+		'SSBaseOffset',
+		'SSConstant',
+		'SSConstantFloat32',
+		'SSConstantFloat64',
+		'SSConstantInt32',
+		'SSConstantInt64',
+		'SSConstantNativePointer',
+		'SSIllegal',
+		'SSNativeRegister',
+		'SSRegister',
+		'SSRegisterDoubleFloat',
+		'SSRegisterPair',
+		'SSRegisterSingleFloat',
+		'SSSpill',
+		'SSSpillFloat32',
+		'SSSpillFloat64',
+		'SSSpillInt64',
+		'SSSpillNative',
+		'UnimplementedOperation'
+	],
+	#category : #'VMMaker-JIT'
+}
