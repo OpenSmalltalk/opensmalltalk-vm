@@ -802,7 +802,6 @@ sqFileWriteFromAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startInd
 
 	char *src;
 	size_t bytesWritten;
-	squeakFileOffsetType position;
 	FILE *file;
 
 	if (!(sqFileValid(f) && f->writable))
