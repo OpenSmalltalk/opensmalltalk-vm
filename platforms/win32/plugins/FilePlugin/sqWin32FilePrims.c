@@ -353,7 +353,11 @@ size_t sqFileReadIntoAt(SQFile *f, size_t count, char* byteArrayIndex, size_t st
 
   if (!sqFileValid(f))
     FAIL();
-  ReadFile(FILE_HANDLE(f), (LPVOID) (byteArrayIndex+startIndex), count,
+  if (f->isStdioStream)
+    ReadConsole(FILE_HANDLE(f), (LPVOID) (byteArrayIndex+startIndex), count,
+                &dwReallyRead, NULL);
+  else
+    ReadFile(FILE_HANDLE(f), (LPVOID) (byteArrayIndex+startIndex), count,
              &dwReallyRead, NULL);
   return dwReallyRead;
 }
@@ -442,7 +446,10 @@ size_t sqFileWriteFromAt(SQFile *f, size_t count, char* byteArrayIndex, size_t s
   if (!(sqFileValid(f) && f->writable))
     FAIL();
 
-  WriteFile(FILE_HANDLE(f), (LPVOID) (byteArrayIndex + startIndex), count, &dwReallyWritten, NULL);
+  if (f->isStdioStream)
+    WriteConsole(FILE_HANDLE(f), (LPVOID) (byteArrayIndex + startIndex), count, &dwReallyWritten, NULL);
+  else
+    WriteFile(FILE_HANDLE(f), (LPVOID) (byteArrayIndex + startIndex), count, &dwReallyWritten, NULL);
   
   if (dwReallyWritten != count)
     FAIL();
