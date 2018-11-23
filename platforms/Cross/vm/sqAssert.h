@@ -19,9 +19,8 @@ extern void warningat(char *,int);
 void error(char *s);
 #pragma auto_inline(on)
 
-extern void sqError(char *errorMessage);
-
 #ifndef error
+extern void sqError(char *errorMessage);
 #define error sqError
 #endif
 
