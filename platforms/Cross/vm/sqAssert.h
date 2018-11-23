@@ -19,11 +19,6 @@ extern void warningat(char *,int);
 void error(char *s);
 #pragma auto_inline(on)
 
-#ifndef error
-extern void sqError(char *errorMessage);
-#define error sqError
-#endif
-
 #undef assert
 # define __stringify(foo) #foo
 # define __stringifyNum(n) __stringify(n)
