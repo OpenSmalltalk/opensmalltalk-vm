@@ -10,7 +10,7 @@ i*86) ;; # we're good
 fi ;;
 esac
 # Spur VM with VM profiler and threaded heartbeat
-INSTALLDIR=phcogspurlinuxht
+INSTALLDIR=ph32mincogspurlinuxht
 
 
 if [ $# -ge 1 ]; then
@@ -42,8 +42,10 @@ CFLAGS="-I../../../.thirdparty-cache/linux/i386/include -I../../.thirdparty-cach
 		../../.. 
 make
 
-productDir=`find ../../../products/$INSTALLDIR -name "5.0*"`
-productDir=`(cd $productDir;pwd)`
+productDir=../../../products/$INSTALLDIR
+rm -rf "$productDir"
+mkdir "$productDir"
+productDir=`(cd "$productDir";pwd)`
 for lib in ${THIRDPARTYLIBS}; do
 	../../third-party/mvm ${lib} install $productDir
 done
