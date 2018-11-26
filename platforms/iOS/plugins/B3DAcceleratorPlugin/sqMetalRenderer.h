@@ -8,6 +8,7 @@
 #include "sqMetalStructures.h"
  
 #define MAX_NUMBER_OF_RENDERERS 16
+#define MAX_NUMBER_OF_TEXTURES 2048
 
 @interface sqB3DMetalRenderBuffer : NSObject {
     int width, height;
@@ -26,7 +27,22 @@
 @end
 
 /**
-  * B3D Metal renderer
+ * B3D Metal texture handle implementation.
+ */
+@interface sqB3DMetalTexture : NSObject {
+    int width, height, depth;
+    id<MTLTexture> handle;
+}
+
+@property (nonatomic, assign) int width;
+@property (nonatomic, assign) int height;
+@property (nonatomic, assign) int depth;
+@property (nonatomic, strong) id<MTLTexture> handle;
+
+@end
+
+/**
+ * B3D Metal renderer
  */
 @interface sqB3DMetalRenderer : NSObject {
     id<MTLDevice> device;
@@ -40,6 +56,9 @@
     // Render buffers
     sqB3DMetalRenderBuffer *renderBuffers[2];
     int currentRenderBufferIndex;
+    
+    // Textures
+    sqB3DMetalTexture *textures[MAX_NUMBER_OF_TEXTURES];
 
     // Viewport
     MTLViewport viewport;    
@@ -65,6 +84,7 @@
     
     // Some pipeline states.
     id<MTLRenderPipelineState> solidColorPipeline;
+    id<MTLRenderPipelineState> texturedPipeline;
     id<MTLDepthStencilState> defaultDepthStencilState;
 }
 

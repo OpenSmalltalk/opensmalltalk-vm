@@ -41,15 +41,32 @@ struct SolidFragmentData
     float4 color;
 };
 
+struct TexturedFragmentData
+{
+    float4 clipSpacePosition [[position]];
+    float4 color;
+    float2 texcoord;
+};
+
 B3DMetalMaterial combineMaterialAndVertex(constant const B3DMetalMaterial &globalMaterial, float4 vertexColor, int vertexFlags)
 {
     B3DMetalMaterial material;
+    // Emission color
+    material.emission = globalMaterial.emission;
+    if ((vertexFlags & B3D_VB_METAL_TRACK_EMISSION) != 0)
+        material.emission += vertexColor;
+
     material.ambient = ((vertexFlags & B3D_VB_METAL_TRACK_AMBIENT) != 0) ? vertexColor : globalMaterial.ambient;
 	material.diffuse = ((vertexFlags & B3D_VB_METAL_TRACK_DIFFUSE) != 0) ? vertexColor : globalMaterial.diffuse;
 	material.specular = ((vertexFlags & B3D_VB_METAL_TRACK_SPECULAR) != 0) ? vertexColor : globalMaterial.specular;
-	material.emission = ((vertexFlags & B3D_VB_METAL_TRACK_EMISSION) != 0) ? vertexColor : globalMaterial.emission;
 	material.shininess = globalMaterial.shininess;
+
     return material;
+}
+
+float inverseLengthOf(float3 v)
+{
+    return 1.0 / length(v);
 }
 
 float4 computeLightContribution(constant const B3DMetalLight &light,
@@ -59,58 +76,75 @@ float4 computeLightContribution(constant const B3DMetalLight &light,
     float3 V,
     float3 P)
 {
-    // Always start with the ambient contribution.
-    float4 lightedColor = light.ambient*material.ambient;
-
     // Compute the light vector.
     auto lightVector = light.position.xyz - P*light.position.w;
-    
-    auto L = normalize(lightVector);
-    
-    // Compute the diffuse factor
-    auto NdotL = dot(N, L);
-    if(NdotL >= 0.0)
+    auto L = lightVector;
+    float lightDistance = 1.0;
+    if(light.position.w != 0.0)
     {
-        // Compute the spot light effect.
-        float spotAttenuation = 1.0f;
-        if(light.spotMaxCos > -1.0)
+        L = normalize(lightVector);
+        lightDistance = length(lightVector);
+    }
+
+    // Compute the spot light effect.
+    float spotAttenuation = 1.0f;
+    if(light.spotMaxCos > -1.0)
+    {
+        float spotCos = dot(L, light.spotDirection);    
+        if(spotCos < light.spotMinCos)
         {
-            float spotCos = dot(L, light.spotDirection);    
-            if(spotCos < light.spotMaxCos)
-                return lightedColor;
-                
-            spotAttenuation = smoothstep(light.spotMaxCos, light.spotMinCos, spotCos)*pow(spotCos, light.spotExponent);
+            spotAttenuation = 0.0;
         }
+        else
+        {
+            spotAttenuation = pow(smoothstep(light.spotMaxCos, light.spotMinCos, spotCos), light.spotExponent);
+        }
+    }
+    
+    // Compute the attenuation.
+    float attenuation = spotAttenuation / (dot(float3(1.0, lightDistance, lightDistance*lightDistance), light.attenuation));
+
+    // Always start with the ambient contribution.
+    float4 lightedColor = 0.0;
+    if(attenuation > 0.001)
+    {
+        // Add the ambient contribution.
+        lightedColor += light.ambient*material.ambient*attenuation;
+
+        // Compute the diffuse factor
+        auto NdotL = dot(N, L);
         
-        // Compute the attenuation.
-        float lightDistance = length(lightVector);
-        float attenuation = spotAttenuation / (dot(float3(1.0, lightDistance, lightDistance*lightDistance), light.attenuation));
+        // Negate the cosine for one sided lights, if required.
+        if((modelState.vertexBufferFlags & B3D_VB_METAL_TWO_SIDED) == 0 && NdotL < 0)
+            NdotL = -NdotL;
         
-        // Add the diffuse lighting contribution.
-        lightedColor += material.diffuse*light.diffuse*attenuation*NdotL;
-        
-        // Compute and add the specular contribution.
+        if(NdotL > 0.0)
+        {        
+            // Add the diffuse lighting contribution.
+            lightedColor += material.diffuse*light.diffuse*attenuation*NdotL;    
+        }
+    }
+    
+    // Compute and add the specular contribution.
+    if(material.shininess > 0.0)
+    {
         auto H = normalize(L + V);
+        
         auto NdotH = max(0.0, dot(N, H));
-        if(NdotH > 0.0)
-            lightedColor += material.specular*light.specular*pow(NdotH, material.shininess)*attenuation;
+        auto specularFactor = pow(NdotH, material.shininess);
+        lightedColor += material.specular*light.specular*specularFactor;
     }
     
     return lightedColor;
 }
 
-float4 computeLighting(constant const B3DMetalLightingState &lightingState,
+float4 computeB3DLighting(constant const B3DMetalLightingState &lightingState,
     constant const B3DMetalModelState &modelState,
     B3DMetalMaterial material,
     float3 N,
     float3 P)
 {
-    auto V = (modelState.vertexBufferFlags & B3D_VB_METAL_LOCAL_VIEWER) ? float3(0.0, 0.0, 1.0) : normalize(-P);
-    if((modelState.vertexBufferFlags & B3D_VB_METAL_TWO_SIDED) != 0 && dot(N, V) < 0)
-    {
-        // Flip the normal of back faces.
-        N = -N;        
-    }
+    auto V = ((modelState.vertexBufferFlags & B3D_VB_METAL_LOCAL_VIEWER) != 0) ? normalize(-P) : float3(0.0, 0.0, -1.0);
 
     float4 lightedColor = lightingState.ambientLighting*material.ambient + material.emission;
     if(lightingState.enabledLightMask != 0)
@@ -130,7 +164,8 @@ float4 computeLighting(constant const B3DMetalLightingState &lightingState,
     return lightedColor;
 }
 
-vertex SolidFragmentData solidVertexShader(VertexInput in [[stage_in]],
+// Solid color shaders
+vertex SolidFragmentData solidB3DVertexShader(VertexInput in [[stage_in]],
         constant const B3DMetalLightingState &lightingState [[buffer(0)]],
         constant const B3DMetalMaterialState &materialState [[buffer(1)]],
         constant const B3DMetalTransformationState &transformationState [[buffer(2)]],
@@ -140,12 +175,12 @@ vertex SolidFragmentData solidVertexShader(VertexInput in [[stage_in]],
     SolidFragmentData out;
     float4 viewPosition4 = transformationState.modelViewMatrix * float4(in.position, 1.0);
 
-    float4 inVertexColor = (modelState.vertexBufferFlags & B3D_VB_METAL_TRACK_ALL) != 0 ? in.color.bgar : float4(1.0, 1.0, 1.0, 1.0);
+    float4 inVertexColor = (modelState.vertexBufferFlags & B3D_VB_METAL_TRACK_ALL) != 0 ? in.color.bgra : float4(1.0, 1.0, 1.0, 1.0);
     if(materialState.lightingEnabled) {
-        float3 inVertexNormal = (modelState.vertexBufferFlags & B3D_VB_METAL_HAS_NORMALS) != 0 ? in.normal : float3(0.0, 0.0, 1.0);
-        float3 normal = normalize(transformationState.normalMatrix * inVertexNormal);
+        float3 inVertexNormal = (modelState.vertexBufferFlags & B3D_VB_METAL_HAS_NORMALS) != 0 ? transformationState.normalMatrix * in.normal : in.normal;
+        float3 normal = normalize(inVertexNormal);
         auto vertexMaterial = combineMaterialAndVertex(materialState.material, inVertexColor, modelState.vertexBufferFlags);
-        out.color = computeLighting(lightingState, modelState, vertexMaterial, normal, viewPosition4.xyz);
+        out.color = computeB3DLighting(lightingState, modelState, vertexMaterial, normal, viewPosition4.xyz);
     } else {
         out.color = inVertexColor;
     }
@@ -154,7 +189,40 @@ vertex SolidFragmentData solidVertexShader(VertexInput in [[stage_in]],
     return out;
 }
 
-fragment float4 solidFragmentShader(SolidFragmentData in [[stage_in]])
+fragment float4 solidB3DFragmentShader(SolidFragmentData in [[stage_in]])
 {
     return in.color;
+}
+
+// Textured shaders
+vertex TexturedFragmentData texturedB3DVertexShader(VertexInput in [[stage_in]],
+        constant const B3DMetalLightingState &lightingState [[buffer(0)]],
+        constant const B3DMetalMaterialState &materialState [[buffer(1)]],
+        constant const B3DMetalTransformationState &transformationState [[buffer(2)]],
+        constant const B3DMetalModelState &modelState [[buffer(3)]]
+        )
+{
+    TexturedFragmentData out;
+    float4 viewPosition4 = transformationState.modelViewMatrix * float4(in.position, 1.0);
+
+    float4 inVertexColor = (modelState.vertexBufferFlags & B3D_VB_METAL_TRACK_ALL) != 0 ? in.color.bgra : float4(1.0, 1.0, 1.0, 1.0);
+    if(materialState.lightingEnabled) {
+        float3 inVertexNormal = (modelState.vertexBufferFlags & B3D_VB_METAL_HAS_NORMALS) != 0 ? transformationState.normalMatrix * in.normal : in.normal;
+        float3 normal = normalize(inVertexNormal);
+        auto vertexMaterial = combineMaterialAndVertex(materialState.material, inVertexColor, modelState.vertexBufferFlags);
+        out.color = computeB3DLighting(lightingState, modelState, vertexMaterial, normal, viewPosition4.xyz);
+    } else {
+        out.color = inVertexColor;
+    }
+    
+    out.texcoord = in.texcoord;
+    out.clipSpacePosition = transformationState.projectionMatrix * viewPosition4;
+    return out;
+}
+
+fragment float4 texturedB3DFragmentShader(TexturedFragmentData in [[stage_in]], texture2d<float> colorTexture [[texture(0)]])
+{
+    constexpr sampler textureSampler(mag_filter::linear, min_filter::linear);
+    
+    return in.color*colorTexture.sample(textureSampler, in.texcoord);
 }

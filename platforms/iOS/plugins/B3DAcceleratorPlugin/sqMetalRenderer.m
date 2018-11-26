@@ -214,6 +214,10 @@ int b3dMetalShutdown(void) {
 
 @end
 
+@implementation sqB3DMetalTexture
+@synthesize width, height, depth, handle;
+@end
+
 @implementation sqB3DMetalRenderer
 
 @synthesize device, surfaceX, surfaceY, surfaceWidth, surfaceHeight;
@@ -284,7 +288,8 @@ int b3dMetalShutdown(void) {
 }
 
 - (void) createPipelines {
-    solidColorPipeline = [self buildPipelineWithVertexFunction: @"solidVertexShader" fragmentFunction: @"solidFragmentShader"];
+    solidColorPipeline = [self buildPipelineWithVertexFunction: @"solidB3DVertexShader" fragmentFunction: @"solidB3DFragmentShader"];
+    texturedPipeline = [self buildPipelineWithVertexFunction: @"texturedB3DVertexShader" fragmentFunction: @"texturedB3DFragmentShader"];
 }
 
 - (void) createDepthStencilStates {
@@ -352,6 +357,101 @@ int b3dMetalShutdown(void) {
 	}
 	
 	return pipeline;
+}
+
+- (int) allocateTextureWithWidth: (int)width height: (int)height depth: (int)depth {
+    // Find a free texture slot.
+    int textureHandle;
+    for(textureHandle = 0; textureHandle < MAX_NUMBER_OF_TEXTURES; ++textureHandle) {
+        if(!textures[textureHandle])
+            break;
+    }
+    
+    if(textureHandle >= MAX_NUMBER_OF_TEXTURES)
+        return -1;
+        
+    // Allocate the texture metadata.
+    sqB3DMetalTexture *textureMetadata = [sqB3DMetalTexture new];
+    if(!textureMetadata) return -1;
+    
+    // Create the metal texture descriptor.
+    MTLTextureDescriptor *descriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat: MTLPixelFormatRGBA8Unorm width: width height: height mipmapped: NO];
+    if(!descriptor) {
+        RELEASEOBJ(textureMetadata);
+        return -1;
+    }
+    
+    // Create the metal texture handle.
+    id<MTLTexture> metalTexture = [device newTextureWithDescriptor: descriptor];
+    RELEASEOBJ(descriptor);
+    if(!metalTexture) {
+        RELEASEOBJ(textureMetadata);
+        return -1;
+    }
+    
+    // Store the texture metadata.
+    textureMetadata.width = width;
+    textureMetadata.height = height;
+    textureMetadata.depth = 32;
+    textureMetadata.handle = metalTexture;
+    textures[textureHandle] = textureMetadata;
+        
+    return textureHandle;
+}
+
+- (int) destroyTexture: (int)textureHandle {
+    if(textureHandle < 0 || textureHandle >= MAX_NUMBER_OF_TEXTURES || !textures[textureHandle])
+        return 0;
+    
+    RELEASEOBJ(textures[textureHandle]);
+    textures[textureHandle] = nil;
+    return 1;
+}
+
+- (int) getActualTextureDepth: (int)textureHandle {
+    if(textureHandle < 0 || textureHandle >= MAX_NUMBER_OF_TEXTURES || !textures[textureHandle])
+        return -1;
+        
+    return textures[textureHandle].depth;
+}
+
+- (int) getTexture: (int)textureHandle colorMasksInto: (int*) masks {
+    if(textureHandle < 0 || textureHandle >= MAX_NUMBER_OF_TEXTURES || !textures[textureHandle])
+        return 0;
+        
+#ifdef LSB_FIRST
+    masks[3] = 0xFF000000;
+    masks[2] = 0x00FF0000;
+    masks[1] = 0x0000FF00;
+    masks[0] = 0x000000FF;
+#else
+    masks[0] = 0xFF000000;
+    masks[1] = 0x00FF0000;
+    masks[2] = 0x0000FF00;
+    masks[3] = 0x000000FF;
+#endif
+    return 1;
+}
+
+- (int) uploadTexture: (int)textureHandle width: (int)width height: (int)height depth: (int)depth bits: (void*)bits {
+    if(textureHandle < 0 || textureHandle >= MAX_NUMBER_OF_TEXTURES || !textures[textureHandle])
+        return 0;
+    
+    sqB3DMetalTexture *texture = textures[textureHandle];
+    if(texture.width != width || texture.height != height || texture.depth != depth)
+        return 0;
+
+    unsigned int pitch = width*depth/8;
+    [texture.handle replaceRegion: (MTLRegion){{0, 0, 0}, {width, height, 1}}
+          mipmapLevel: 0
+            withBytes: bits
+          bytesPerRow: pitch];
+    return 1;
+}
+
+- (int) compositeTexture: (int)textureHandle x: (int)x y: (int)y w: (int)w h: (int)h translucent: (int) translucent {
+    UNIMPLEMENTED();
+    return 1;
 }
 
 - (BOOL) viewportX: (int)x y: (int)y width: (int)width height: (int)height {
@@ -529,17 +629,32 @@ int b3dMetalShutdown(void) {
 }
 
 - (void) setupPointRenderingFlags: (int)flags texHandle: (int) textureHandle {
-    [activeRenderEncoder setRenderPipelineState: solidColorPipeline];
+    if(0 <= textureHandle && textureHandle < MAX_NUMBER_OF_TEXTURES && textures[textureHandle]) {
+        [activeRenderEncoder setRenderPipelineState: texturedPipeline];
+        [activeRenderEncoder setFragmentTexture: textures[textureHandle].handle atIndex: 0];        
+    } else {
+        [activeRenderEncoder setRenderPipelineState: solidColorPipeline];        
+    }
     [self validateRenderState];
 }
 
 - (void) setupLineRenderingFlags: (int)flags texHandle: (int) textureHandle {
-    [activeRenderEncoder setRenderPipelineState: solidColorPipeline];
+    if(0 <= textureHandle && textureHandle < MAX_NUMBER_OF_TEXTURES && textures[textureHandle]) {
+        [activeRenderEncoder setRenderPipelineState: texturedPipeline];
+        [activeRenderEncoder setFragmentTexture: textures[textureHandle].handle atIndex: 0];        
+    } else {
+        [activeRenderEncoder setRenderPipelineState: solidColorPipeline];        
+    }
     [self validateRenderState];
 }
 
 - (void) setupTriangleRenderingFlags: (int)flags texHandle: (int) textureHandle {
-    [activeRenderEncoder setRenderPipelineState: solidColorPipeline];
+    if(0 <= textureHandle && textureHandle < MAX_NUMBER_OF_TEXTURES && textures[textureHandle]) {
+        [activeRenderEncoder setRenderPipelineState: texturedPipeline];
+        [activeRenderEncoder setFragmentTexture: textures[textureHandle].handle atIndex: 0];        
+    } else {
+        [activeRenderEncoder setRenderPipelineState: solidColorPipeline];        
+    }
     [self validateRenderState];
 }
 
@@ -549,10 +664,6 @@ int b3dMetalShutdown(void) {
 
     // We need to be in a render pass.
     [self ensureRenderPass];
-        
-    // HACK: Force the presence of normals.
-    flags |= B3D_VB_HAS_NORMALS;
-    // printf("renderPrimitive %d flags: %08x\n", primType, flags);
     
     // Set the model state.
     B3DMetalModelState modelState;
@@ -758,45 +869,55 @@ int b3dMetalShutdown(void) {
 
 /* return handle or -1 on error */
 int
-b3dMetalAllocateTexture(int renderer, int w, int h, int d) {
-    UNIMPLEMENTED();
-    return 0;
+b3dMetalAllocateTexture(int rendererHandle, int w, int h, int d) {
+    sqB3DMetalRenderer* renderer = [sqB3DMetalModule getRendererFromHandle: rendererHandle];
+    if(!renderer) return -1;
+
+    return [renderer allocateTextureWithWidth: w height: h depth: d];
 }
 
 /* return true on success, false on error */
 int
-b3dMetalDestroyTexture(int renderer, int handle) {
-    UNIMPLEMENTED();
-    return 0;
+b3dMetalDestroyTexture(int rendererHandle, int handle) {
+    sqB3DMetalRenderer* renderer = [sqB3DMetalModule getRendererFromHandle: rendererHandle];
+    if(!renderer) return 0;
+
+    return [renderer destroyTexture: handle];
 }
 
 /* return depth or <0 on error */
 int
-b3dMetalActualTextureDepth(int renderer, int handle) {
-    UNIMPLEMENTED();
-    return 0;
+b3dMetalActualTextureDepth(int rendererHandle, int handle) {
+    sqB3DMetalRenderer* renderer = [sqB3DMetalModule getRendererFromHandle: rendererHandle];
+    if(!renderer) return -1;
+
+    return [renderer getActualTextureDepth: handle];
 }
 
 /* return true on success, false on error */
 int
-b3dMetalTextureColorMasks(int renderer, int handle, int masks[4]) {
-    UNIMPLEMENTED();
-    return 1;
+b3dMetalTextureColorMasks(int rendererHandle, int handle, int masks[4]) {
+    sqB3DMetalRenderer* renderer = [sqB3DMetalModule getRendererFromHandle: rendererHandle];
+    if(!renderer) return 0;
+
+    return [renderer getTexture: handle colorMasksInto: masks];
 }
 
 /* return true on success, false on error */
 int
-b3dMetalUploadTexture(int renderer, int handle, int w, int h, int d, void* bits) {
-    UNIMPLEMENTED();
-    return 1;
+b3dMetalUploadTexture(int rendererHandle, int handle, int w, int h, int d, void* bits) {
+    sqB3DMetalRenderer* renderer = [sqB3DMetalModule getRendererFromHandle: rendererHandle];
+    if(!renderer) return 0;
+
+    return [renderer uploadTexture: handle width: w height: h depth: d bits: bits];
 }
 
 /* return > 0 for MSB, = 0 for LSB, < 0 for error */
 int
-b3dMetalTextureByteSex(int renderer, int handle) {
-    UNIMPLEMENTED();
-    //struct glRenderer *renderer = glRendererFromHandle(rendererHandle);
-	//if(!renderer) return -1;
+b3dMetalTextureByteSex(int rendererHandle, int handle) {
+    sqB3DMetalRenderer* renderer = [sqB3DMetalModule getRendererFromHandle: rendererHandle];
+    if(!renderer) return -1;
+
 #ifdef LSB_FIRST
 	return 0;
 #else
@@ -812,9 +933,11 @@ b3dMetalTextureSurfaceHandle(int renderer, int handle) {
 
 /* return true on success; else false */
 int
-b3dMetalCompositeTexture(int renderer, int handle, int x, int y, int w, int h, int translucent) {
-    UNIMPLEMENTED();
-    return 0;
+b3dMetalCompositeTexture(int rendererHandle, int handle, int x, int y, int w, int h, int translucent) {
+    sqB3DMetalRenderer* renderer = [sqB3DMetalModule getRendererFromHandle: rendererHandle];
+    if(!renderer) return 0;
+
+    return [renderer compositeTexture: handle x: x y: y w: w h: h translucent: translucent];
 }
 
 /* Renderer primitives */
@@ -879,7 +1002,6 @@ b3dMetalGetRendererSurfaceDepth(int handle) {
 /* return true on success, false on error */
 int
 b3dMetalGetRendererColorMasks(int handle, int *masks)  {
-    UNIMPLEMENTED();
     return 0;
 }
 
