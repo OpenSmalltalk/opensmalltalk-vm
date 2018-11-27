@@ -49,13 +49,6 @@ SpurSelectiveCompactor class >> simulatorClass [
 	^ SpurSelectiveCompactor"Simulator"
 ]
 
-{ #category : #'segment to fill' }
-SpurSelectiveCompactor >> allocateSegmentToFill [
-	| res |
-	res := manager growOldSpaceByAtLeast: manager growHeadroom.
-	res ifNil: [self error: 'not enough memory for selective compaction'].
-]
-
 { #category : #compaction }
 SpurSelectiveCompactor >> assertNoSegmentBeingCompacted [
 	"Assertion only - no segment is being claimed at this point"
@@ -144,7 +137,9 @@ SpurSelectiveCompactor >> compactSegmentsToCompact [
 { #category : #compaction }
 SpurSelectiveCompactor >> computeSegmentsToCompact [
 	"Compute segments to compact: least occupied.
-	 Answers true if at least 1 segment is being compacted."
+	 Answers true if compaction should be done 
+	 (at least 1 segment is being compacted and
+	 there is a segment to compact into)."
 	| canStillClaim aboutToClaim aboutToClaimSegment atLeastOneSegmentToCompact |
 	<var: 'aboutToClaimSegment' type: #'SpurSegmentInfo *'>
 	atLeastOneSegmentToCompact := false.
@@ -153,7 +148,9 @@ SpurSelectiveCompactor >> computeSegmentsToCompact [
 	 If no segment were compacted last GC, and that there is 
 	 at least one segment to compact, allocate a new one."
 	aboutToClaimSegment ifNil: [^false].
-	segmentToFill ifNil: [self findOrAllocateSegmentToFill].
+	segmentToFill ifNil:
+		[self findOrAllocateSegmentToFill.
+		 segmentToFill ifNil: ["Abort compaction"^false]].
 	canStillClaim := segmentToFill segSize - manager bridgeSize.
 	[aboutToClaimSegment ifNil: [^atLeastOneSegmentToCompact].
 	 aboutToClaim := self sizeClaimedIn: aboutToClaimSegment.
@@ -211,12 +208,13 @@ SpurSelectiveCompactor >> findOrAllocateSegmentToFill [
 	self findAndSetSegmentToFill.
 	segmentToFill ifNotNil: [^0].
 	"No empty segment. We need to allocate a new one"
-	self allocateSegmentToFill.
+	(manager growOldSpaceByAtLeast: manager growHeadroom) ifNil: ["failed to allocate"^0].
 	"We don't know which segment it is that we've just allocated... So we look for it... This is a bit dumb."
 	segIndex := self findAndSetSegmentToFill.
 	"Lilliputian performance hack management... Last lilliputian of new segment is same as prev because no lilliputian in new segment"
 	self setLastLilliputianChunkAtindex: segIndex to: (self lastLilliputianChunkAtIndex: segIndex - 1).
 	self assert: segmentToFill ~~ nil.
+	
 	
 ]
 
@@ -389,16 +387,17 @@ SpurSelectiveCompactor >> postSwizzleAction [
 { #category : #compaction }
 SpurSelectiveCompactor >> selectiveCompaction [
 	"Figures out which segments to compact and compact them into segmentToFill"
-	| atLeastOneSegmentToCompact |
+	| shouldCompact |
 	<inline: #never> "profiling"
 	self assertNoSegmentBeingCompacted.
-	atLeastOneSegmentToCompact := self computeSegmentsToCompact.
+	"Should compact only if there is at least 1 segment to compact 
+	 and there is a segment to compact into"
+	shouldCompact := self computeSegmentsToCompact.
 	"If no compaction we don't pay forwarding cost (stack scan, cache scan, etc.)
 	 and we don't allocate segmentToFill if none available."
-	atLeastOneSegmentToCompact 
-		ifTrue:
-			[self assert: segmentToFill ~~ nil.
-		 	 self compactSegmentsToCompact].
+	shouldCompact ifTrue:
+		[self assert: segmentToFill ~~ nil.
+		 self compactSegmentsToCompact].
 	manager checkFreeSpace: GCModeFull.
 ]
 

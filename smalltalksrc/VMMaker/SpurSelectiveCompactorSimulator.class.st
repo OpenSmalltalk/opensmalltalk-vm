@@ -13,12 +13,6 @@ SpurSelectiveCompactorSimulator class >> initialize [
 	Talking := true.
 ]
 
-{ #category : #freeing }
-SpurSelectiveCompactorSimulator >> allocateSegmentToFill [
-	self talk: 'Allocation of new segment to fill (none available)'.
-	super allocateSegmentToFill
-]
-
 { #category : #debugging }
 SpurSelectiveCompactorSimulator >> checkOnlyForwardersOrWordNonImm: segInfo [
 	"Also check this is iterable until bridge 
