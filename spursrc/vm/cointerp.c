@@ -56134,7 +56134,7 @@ scavengingGCTenuringIf(sqInt tenuringCriterion)
     sqInt i;
     sqInt probe;
 
-	assert(GIV(remapBufferCount) == 0);
+    assert(GIV(remapBufferCount) == 0);
 	if (!(asserta(((((eden()).limit)) - GIV(freeStart)) > (interpreterAllocationReserveBytes())))) {
 		/* begin tab */
 		putchar('	');

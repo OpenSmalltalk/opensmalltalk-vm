@@ -136,7 +136,7 @@ VM_EXPORT sqInt traceStores;
 
 
 /*** Macros ***/
-#define blockAlignment(self) 8
+#define blockAlignment() 8
 #define breakOnImplicitReceiver() (traceFlags & 64)
 #define ceBaseFrameReturnPC() ceBaseFrameReturnTrampoline
 #define ceCannotResumePC() ((usqInt)ceCannotResumeTrampoline)

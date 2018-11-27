@@ -1938,7 +1938,7 @@ static usqInt youngReferrers;
 		blockStarts = (numBlocks) ? alloca(sizeof(BlockStart) * (numBlocks)) : 0; \
 } while (0)
 #define backEnd() backEnd
-#define blockAlignment(self) 8
+#define blockAlignment() 8
 #define blockStartAt(index) (&blockStarts[index])
 #define breakOnImplicitReceiver() (traceFlags & 64)
 #define ceBaseFrameReturnPC() ceBaseFrameReturnTrampoline
