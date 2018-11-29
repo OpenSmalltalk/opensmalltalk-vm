@@ -5128,7 +5128,7 @@ StackInterpreter >> commonReturn [
 	 If home is missing (Sista closures) then throw cannotReturn rather than crash."
 	[closure ~= objectMemory nilObject] whileTrue:
 		[home := objectMemory followField: ClosureOuterContextIndex ofObject: closure.
-		 (self isContext: home) ifFalse:
+		 (objectMemory isContext: home) ifFalse:
 			[^self internalCannotReturn: localReturnValue].
 		 closure := objectMemory followField: ClosureIndex ofObject: home].
 	"home is to be returned from provided there is no unwind-protect activation between

@@ -1818,7 +1818,7 @@ CoInterpreter >> ceNonLocalReturn: returnValue [
 	"Walk the closure's lexical chain to find the context or frame to return from (home)."
 	[closure ~= objectMemory nilObject] whileTrue:
 		[home := objectMemory followField: ClosureOuterContextIndex ofObject: closure.
-		 (self isContext: home) ifFalse:
+		 (objectMemory isContext: home) ifFalse:
 			["error: can't find home on chain; cannot return"
 			 ourContext := self ensureFrameIsMarried: framePointer SP: stackPointer.
 			 ^self externalCannotReturn: returnValue from: ourContext].
