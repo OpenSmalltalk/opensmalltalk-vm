@@ -15588,7 +15588,10 @@ StackInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 		[:i|
 		stackPages
 			longAt: (pointer := pointer - objectMemory wordSize)
-			put: (objectMemory fetchPointer: ReceiverIndex + i ofObject: aContext)].
+			put: (objectMemory fetchPointer: ReceiverIndex + i ofObject: aContext).
+		"nil the slot in the context so that it doesn't inadvertently hang onto some collectable object.
+		 Thanks to Ryan Macnak for identifying this bug"
+		objectMemory storePointerUnchecked: ReceiverIndex + i ofObject: aContext withValue: objectMemory nilObject].
 	"saved caller ip is sender context in base frame"
 	stackPages
 		longAt: (pointer := pointer - objectMemory wordSize)
