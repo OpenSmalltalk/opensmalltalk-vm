@@ -5,17 +5,17 @@
  * The plugin is misnamed.  It should be the AlienPlugin, but its history
  * dictates otherwise.
  */
-#if i386|i486|i586|i686|__i386__|__i486__|__i586__|__i686__
+#if defined(_M_I386) || defined(_X86_) || defined(i386) || defined(i486) || defined(i586) || defined(i686) || defined(__i386__) || defined(__386__) || defined(X86) || defined(I386)
 # include "ia32abicc.c"
 #elif powerpc|ppc
 # include "ppc32abicc.c"
-#elif x86_64|x64|__x86_64|__x86_64__|_M_AMD64|_M_X64
+#elif defined(x86_64) || defined(__amd64) || defined(__x86_64) || defined(__amd64__) || defined(__x86_64__) || defined(_M_AMD64) || defined(_M_X64)
 # if _WIN64
 #	include "x64win64abicc.c"
 # else
 #	include "x64sysvabicc.c"
 # endif
-#elif __ARM_ARCH__|__arm__|__arm32__|ARM32
+#elif defined(__ARM_ARCH__) || defined(__arm__) || defined(__arm32__) || defined(ARM32) || defined(_M_ARM)
 # include "arm32abicc.c"
 #else
 #error "Unsupported architecture"

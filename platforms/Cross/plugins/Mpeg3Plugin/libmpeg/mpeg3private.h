@@ -26,6 +26,9 @@ void memoryFree(void *stuff);
 /* disallow INLINE since those functions cannot be linked */
 #undef INLINE
 #define INLINE
+
+#undef NOPTHREADS
+#define NOPTHREADS 1
 #endif
 
 /* use pthreads? */

@@ -63,11 +63,25 @@ if(NOT VM_MSVC)
 endif()
 
 # Add a build x86_32 version on x86_64 systems.
+set(IS_64_BITS_BUILD_MACHINE False)
+set(IS_X86_ARCH_MACHINE False)
 if("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "x86_64" OR "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "AMD64")
+	set(IS_64_BITS_BUILD_MACHINE True)
+	# Do not build a 64 bit when invoking cmake with a 32 bits visual studio generator.
+	if("${CMAKE_GENERATOR}" MATCHES "Visual Studio")
+		if(NOT CMAKE_CL_64)
+			set(IS_64_BITS_BUILD_MACHINE False)
+		endif()
+	endif()
+elseif("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "i.86")
+	set(IS_X86_BUILD_MACHINE True)
+endif()
+
+if(IS_64_BITS_BUILD_MACHINE)
 	option(BUILD_I386_VERSION "Build x86 32 bits version" OFF)
     set(SQUEAK_PLATFORM_X86_64 True)
-elseif("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "i.86")
-    set(SQUEAK_PLATFORM_X86_32 True)
+else(IS_X86_BUILD_MACHINE)
+	set(SQUEAK_PLATFORM_X86_32 True)
 endif()
 
 if(SQUEAK_PLATFORM_X86_64)
@@ -338,7 +352,7 @@ else()
 endif()
 
 # Compile the interpreter with less aggresive optimization options.
-if(NOT ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug"))
+if(NOT ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug") AND NOT MSVC)
 	set_source_files_properties(${InterpreterSource} PROPERTIES COMPILE_FLAGS -O1)
 endif()
 
@@ -476,6 +490,7 @@ elseif(WIN32)
     	platforms/minheadless/windows/sqWin32Common.c
     	platforms/minheadless/windows/sqWin32Directory.c
     	platforms/minheadless/windows/sqWin32Heartbeat.c
+    	platforms/minheadless/windows/sqWin32Stubs.c
     	platforms/minheadless/windows/sqWin32Threads.c
     	platforms/minheadless/windows/sqWin32Time.c
 		${VM_PLATFORM_SOURCES}
@@ -538,7 +553,7 @@ if(NOT ONLY_CONFIG_H)
     #endif()
 
     if("${VM_CORE_LIBRARY_TYPE}" STREQUAL "STATIC")
-    	add_definitions(-DBUILD_SQUEAK_STATIC)
+    	add_definitions(-DBUILD_OSVM_STATIC)
     endif()
 
     add_library(${VM_LIBRARY_NAME} ${VM_CORE_LIBRARY_TYPE} ${VM_SOURCES} ${VM_INTERNAL_PLUGIN_SOURCES})

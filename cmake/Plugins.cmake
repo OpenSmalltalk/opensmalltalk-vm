@@ -14,7 +14,10 @@ macro(add_vm_plugin NAME TYPE)
     set(VM_PLUGIN_${NAME}_TYPE ${TYPE})
     option(BUILD_PLUGIN_${NAME} "Build plugin ${NAME}" ON)
     if(BUILD_PLUGIN_${NAME})
-        if("${TYPE}" STREQUAL "INTERNAL")
+        # External plugins are not yet properly implemented on Windows.
+        if(("${TYPE}" STREQUAL "INTERNAL") OR WIN32)
+            set(VM_PLUGIN_${NAME}_TYPE INTERNAL) # HACK for win32
+
             set(VM_INTERNAL_PLUGINS_INC_SOURCES "${VM_INTERNAL_PLUGINS_INC_SOURCES}\nINTERNAL_PLUGIN(${NAME})")
             set(VM_INTERNAL_PLUGIN_SOURCES ${VM_PLUGIN_${NAME}_SOURCES} ${VM_INTERNAL_PLUGIN_SOURCES})
             source_group("Internal Plugins\\${NAME}" FILES ${VM_PLUGIN_${NAME}_SOURCES})
@@ -79,7 +82,9 @@ add_vm_plugin_sources(IA32ABI INTERNAL ${IA32ABI_Sources})
 
 # Basic internal plugins
 add_vm_plugin_auto(FilePlugin INTERNAL)
-add_vm_plugin_auto(FileAttributesPlugin INTERNAL)
+if(NOT MSVC) # Not compiling with MSVC yet
+    add_vm_plugin_auto(FileAttributesPlugin INTERNAL)
+endif()
 add_vm_plugin_auto(LargeIntegers INTERNAL)
 add_vm_plugin_auto(LocalePlugin INTERNAL)
 add_vm_plugin_auto(MiscPrimitivePlugin INTERNAL)

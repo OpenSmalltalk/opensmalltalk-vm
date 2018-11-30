@@ -8,7 +8,7 @@
 /* null if compiled on other than x86, to get around gnu make bugs or
  * misunderstandings on our part.
  */
-#if i386|i486|i586|i686|__i386__|__i486__|__i586__|__i686__
+#if defined(_M_I386) || defined(_X86_) || defined(i386) || defined(i486) || defined(i586) || defined(i686) || defined(__i386__) || defined(__386__) || defined(X86) || defined(I386)
 
 #if defined(_MSC_VER) || defined(__MINGW32__)
 # include "windows.h" /* for GetSystemInfo & VirtualAlloc */
@@ -46,7 +46,7 @@ void *getbaz() { return baz; }
 
 #ifdef SQUEAK_BUILTIN_PLUGIN
 extern
-#endif 
+#endif
 struct VirtualMachine* interpreterProxy;
 
 #ifdef _MSC_VER
