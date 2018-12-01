@@ -76,9 +76,6 @@ sqInt faSetPlatFile(fapath *aFaPath, WCHAR *pathName);
 #define faGetPlatPathLPPByteCount(aFaPath)	(aFaPath->winpathLPP_len * sizeof(WCHAR))
 #define	faGetPlatFile(aFaPath)		aFaPath->winpath_file
 
-sqInt faSetStDirOop(fapath *aFaPath, sqInt pathNameOop);
-sqInt faSetStPathOop(fapath *aFaPath, sqInt pathNameOop);
-
 sqInt faOpenDirectory(fapath *aFaPath);
 sqInt faReadDirectory(fapath *aFaPath);
 sqInt faCloseDirectory(fapath *aFaPath);
