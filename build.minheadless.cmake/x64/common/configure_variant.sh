@@ -13,6 +13,7 @@ if [ "$OS_NAME" = "Msys" ]; then
 fi
 
 if [ "$OS_NAME" = "Cygwin" ]; then
+    CMAKE_EXTRA_ARGS="-DCMAKE_TOOLCHAIN_FILE=../../common/Toolchain-mingw32-cygwin.cmake"
     export CC="x86_64-w64-mingw32-gcc"
     export CXX="x86_64-w64-mingw32-g++"
 fi

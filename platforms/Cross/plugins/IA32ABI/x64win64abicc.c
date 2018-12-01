@@ -8,7 +8,7 @@
 /* null if compiled on other than x64, to get around gnu make bugs or
  * misunderstandings on our part.
  */
-#if x86_64|x64|__x86_64|__x86_64__|_M_AMD64|_M_X64
+#if defined(x86_64) || defined(__amd64) || defined(__x86_64) || defined(__amd64__) || defined(__x86_64__) || defined(_M_AMD64) || defined(_M_X64)
 
 #if defined(_MSC_VER) || defined(__MINGW32__)
 # include "windows.h" /* for GetSystemInfo & VirtualAlloc */
@@ -35,7 +35,7 @@
 
 #ifdef SQUEAK_BUILTIN_PLUGIN
 extern
-#endif 
+#endif
 struct VirtualMachine* interpreterProxy;
 
 #if __GNUC__
@@ -79,7 +79,7 @@ typedef union {
 } int64_or_double;
 
 /*
- * Call a foreign function that answers an integral result in %rax 
+ * Call a foreign function that answers an integral result in %rax
  * according to x64-ish ABI rules.
  */
 sqInt callIA32IntegralReturn(SIGNATURE) {
@@ -205,7 +205,7 @@ thunkEntry(long long rcx, long long rdx,
 	intargs[1] = rdx;
 	intargs[2] = r8;
 	intargs[3] = r9;
-	
+
 extern void saveFloatRegsWin64(long long xmm0,long long xmm1,long long xmm2, long long xmm3,double *fpargs); /* fake passing long long args */
     saveFloatRegsWin64(rcx,rdx,r8,r9,fpargs); /* the callee expects double parameters that it will retrieve thru registers */
 

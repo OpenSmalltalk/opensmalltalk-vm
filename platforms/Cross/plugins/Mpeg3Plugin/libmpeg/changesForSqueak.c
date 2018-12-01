@@ -94,9 +94,12 @@ void memoryFree(void *stuff) {
 #endif
 
 #ifdef NEEDSTRFUNCS
+#ifndef _MSC_VER
 void perror(const char * string) {
 
 }
+#endif
+
 int			strncasecmp(const char *str1, const char *str2, size_t nchars);
 int			strcasecmp (const char *str1, const char *str2);
 
