@@ -1,7 +1,6 @@
-ifeq ($(VM),Pharo)
-EXTRALIBS:=-undefined dynamic_lookup
+#EXTRALIBS:=-undefined dynamic_lookup
+SRCDIRS:=../../platforms/unix/plugins/SerialPlugin
 INCDIRS:=../../platforms/Cross/plugins/SerialPlugin
-LIBSRC:=sqMacSerialPort.c
-endif 
+LIBSRC:=SerialPlugin.c sqUnixSerial.c
 
 include ../common/Makefile.plugin
