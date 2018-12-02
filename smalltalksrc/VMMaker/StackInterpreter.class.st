@@ -5128,7 +5128,7 @@ StackInterpreter >> commonReturn [
 	 If home is missing (Sista closures) then throw cannotReturn rather than crash."
 	[closure ~= objectMemory nilObject] whileTrue:
 		[home := objectMemory followField: ClosureOuterContextIndex ofObject: closure.
-		 (self isContext: home) ifFalse:
+		 (objectMemory isContext: home) ifFalse:
 			[^self internalCannotReturn: localReturnValue].
 		 closure := objectMemory followField: ClosureIndex ofObject: home].
 	"home is to be returned from provided there is no unwind-protect activation between
@@ -15588,7 +15588,10 @@ StackInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 		[:i|
 		stackPages
 			longAt: (pointer := pointer - objectMemory wordSize)
-			put: (objectMemory fetchPointer: ReceiverIndex + i ofObject: aContext)].
+			put: (objectMemory fetchPointer: ReceiverIndex + i ofObject: aContext).
+		"nil the slot in the context so that it doesn't inadvertently hang onto some collectable object.
+		 Thanks to Ryan Macnak for identifying this bug"
+		objectMemory storePointerUnchecked: ReceiverIndex + i ofObject: aContext withValue: objectMemory nilObject].
 	"saved caller ip is sender context in base frame"
 	stackPages
 		longAt: (pointer := pointer - objectMemory wordSize)
