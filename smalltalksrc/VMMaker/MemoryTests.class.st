@@ -9,19 +9,13 @@ MemoryTests class >> defaultIntegerBaseInDebugger [
 	^16
 ]
 
-{ #category : #'test support' }
-MemoryTests >> deepStack: n [
-	"Not tail recursive."
-	^0 = n ifTrue: [0] ifFalse: [n + (self deepStack: n - 1) + n]
-]
-
-{ #category : #tests }
+{ #category : #testing }
 MemoryTests >> expectedFailures [
 	"As yet we don't support Spur on any big endian platforms, let alone 64-bit ones."
 	^#(testBitmap64BitLongs)
 ]
 
-{ #category : #tests }
+{ #category : #testing }
 MemoryTests >> testBitmap32BitLongs [
 	"Test that Bitmap provides big-endian access for 32-bit accessors"
 	| memory |
@@ -62,7 +56,7 @@ MemoryTests >> testBitmap32BitLongs [
 		self should: [memory unsignedLongAt: 1 put: 1 << shift] raise: Error]
 ]
 
-{ #category : #tests }
+{ #category : #testing }
 MemoryTests >> testBitmap64BitLongs [
 	"Test that Bitmap provides big-endian access for 64-bit accessors"
 	| memory |
@@ -107,65 +101,40 @@ MemoryTests >> testBitmap64BitLongs [
 		self should: [memory unsignedLong64At: 1 put: 1 << shift] raise: Error]
 ]
 
-{ #category : #tests }
+{ #category : #testing }
 MemoryTests >> testByteArray16BitShorts [
 	"Test that ByteArray provides little-endian access for 16-bit accessors"
 	self testLittleEndianShortAccessFor: ByteArray
 ]
 
-{ #category : #tests }
+{ #category : #testing }
 MemoryTests >> testByteArray32BitLongs [
 	"Test that ByteArray provides big-endian access for 32-bit accessors"
 	self testLittleEndian32BitLongAccessFor: ByteArray
 ]
 
-{ #category : #tests }
+{ #category : #testing }
 MemoryTests >> testByteArray64BitLongs [
 	"Test that ByteArray provides big-endian access for 64-bit accessors"
 	self testLittleEndian64BitLongAccessFor: ByteArray
 ]
 
-{ #category : #tests }
+{ #category : #testing }
 MemoryTests >> testDoubleWordArray16BitShorts [
 	"Test that DoubleWordArray provides little-endian access for 16-bit accessors"
 	self testLittleEndianShortAccessFor: DoubleWordArray
 ]
 
-{ #category : #tests }
+{ #category : #testing }
 MemoryTests >> testDoubleWordArray32BitLongs [
 	"Test that DoubleWordArray provides little-endian access for 32-bit accessors"
 	self testLittleEndian32BitLongAccessFor: DoubleWordArray
 ]
 
-{ #category : #tests }
+{ #category : #testing }
 MemoryTests >> testDoubleWordArray64BitLongs [
 	"Test that DoubleWordArray provides little-endian access for 64-bit accessors"
 	self testLittleEndian64BitLongAccessFor: DoubleWordArray
-]
-
-{ #category : #tests }
-MemoryTests >> testFrameActivationLeak [
-	"This test tests if a remarried context hides a reference to an object... Thanks to Ryan Macnak for the test."
-	| array object |
-	array := WeakArray new: 1.
-	object := Object new.
-
-	array at: 1 put: object.
-	self assert: (array at: 1) == object.
-
-	Smalltalk garbageCollect.
-
-	self assert: (array at: 1) == object.
-	
-	"Trigger stack overflow, causing this frame to be flushed to an activation. When control returns here, a new frame will be created for the activation."
-	self assert: (self deepStack: 4096) = 16781312.
-
-	"Clears the temporary in the frame."
-	object := nil.
-	Smalltalk garbageCollect.
-
-	"Check the activation is not retaining a copy of our cleared temporary."
-	self assert: (array at: 1) == nil.
 ]
 
 { #category : #'test support' }
@@ -320,19 +289,19 @@ MemoryTests >> testLittleEndian64BitLongAccessFor: aClass [
 			[:i| self assert: 0 equals: (memory byteAt: i)]]
 ]
 
-{ #category : #tests }
+{ #category : #testing }
 MemoryTests >> testLittleEndianBitmap16BitShorts [
 	"Test that LittleEndianBitmap provides little-endian access for 16-bit accessors"
 	self testLittleEndianShortAccessFor: LittleEndianBitmap
 ]
 
-{ #category : #tests }
+{ #category : #testing }
 MemoryTests >> testLittleEndianBitmap32BitLongs [
 	"Test that LittleEndianBitmap provides little-endian access for 32-bit accessors"
 	self testLittleEndian32BitLongAccessFor: LittleEndianBitmap
 ]
 
-{ #category : #tests }
+{ #category : #testing }
 MemoryTests >> testLittleEndianBitmap64BitLongs [
 	"Test that LittleEndianBitmap provides little-endian access for 64-bit accessors"
 	self testLittleEndian64BitLongAccessFor: LittleEndianBitmap
@@ -359,7 +328,7 @@ MemoryTests >> testLittleEndianShortAccessFor: aClass [
 
 ]
 
-{ #category : #tests }
+{ #category : #testing }
 MemoryTests >> testSignedOutOfRangeAccess [
 	{ByteArray. Bitmap. LittleEndianBitmap. DoubleWordArray} do:
 		[:class| | bytesPerElement memory |
@@ -380,7 +349,7 @@ MemoryTests >> testSignedOutOfRangeAccess [
 			self assert: 0 equals: (memory at: i)]]
 ]
 
-{ #category : #tests }
+{ #category : #testing }
 MemoryTests >> testUnsignedOutOfRangeAccess [
 	{ByteArray. Bitmap. LittleEndianBitmap. DoubleWordArray} do:
 		[:class| | bytesPerElement memory |

@@ -39,6 +39,14 @@ SerialPlugin >> primitiveSerialPortClose: portNum [
 ]
 
 { #category : #primitives }
+SerialPlugin >> primitiveSerialPortCloseByName: portName [
+
+	self primitive: 'primitiveSerialPortCloseByName'
+		parameters: #(String).
+	self serialPortCloseByName: portName
+]
+
+{ #category : #primitives }
 SerialPlugin >> primitiveSerialPortOpen: portNum baudRate: baudRate stopBitsType: stopBitsType parityType: parityType dataBits: dataBits inFlowControlType: inFlowControl outFlowControlType: outFlowControl xOnByte: xOnChar xOffByte: xOffChar [
 
 	self primitive: 'primitiveSerialPortOpen'

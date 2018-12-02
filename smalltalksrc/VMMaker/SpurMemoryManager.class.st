@@ -8425,7 +8425,7 @@ SpurMemoryManager >> markWeaklingsAndMarkAndFireEphemerons [
 	numTracedWeaklings := 0.
 	[coInterpreter markAndTraceUntracedReachableStackPages.
 	 coInterpreter markAndTraceMachineCodeOfMarkedMethods.
-	 "Make sure all reached weaklings have their strong slots traced before firing ephemerons..."
+	 "Make sure all reached weaklings have their string slots traced before firing ephemerons..."
 	 [numTracedWeaklings := self markAndTraceWeaklingsFrom: numTracedWeaklings.
 	  (self sizeOfObjStack: weaklingStack) > numTracedWeaklings] whileTrue.
 	 self noUnscannedEphemerons ifTrue:
