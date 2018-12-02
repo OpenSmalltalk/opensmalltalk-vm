@@ -77,6 +77,10 @@ EXPORT (int) serialPortClose(int portNum) {
 #pragma unused(portNum)
     return false;
 }
+EXPORT (int) serialPortCloseByName(const char *portName) {
+#pragma unused(portName)
+    return false;
+}
 
 EXPORT (int) serialPortOpen(
   int portNum, int baudRate, int stopBitsType, int parityType, int dataBits,
