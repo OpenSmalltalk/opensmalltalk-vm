@@ -15,6 +15,10 @@
 #include <errno.h>
 
 /*** Module variables ***/
+extern struct VirtualMachine *interpreterProxy;
+#if !defined(SQUEAK_BUILTIN_PLUGIN)
+# define success(bool) interpreterProxy->success(bool)
+#endif
 
 #define PORT_NAME_SIZE 64
 
