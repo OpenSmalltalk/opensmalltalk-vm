@@ -952,7 +952,7 @@ int d3dGetRendererSurfaceDepth(int handle) {
   return desc->ddpfPixelFormat.dwRGBBitCount;
 }
 
-int d3dGetRendererColorMasks(int handle, int *masks) {
+int d3dGetRendererColorMasks(int handle, unsigned int *masks) {
   DDSURFACEDESC2 *desc = d3dGetRendererDesc(handle);
   if(!desc) return 0;
 

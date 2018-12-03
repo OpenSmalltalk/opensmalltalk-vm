@@ -142,7 +142,7 @@ int glGetRendererSurfaceHandle(int handle) {
   return -1; /* e.g., fail */
 }
 
-int glGetRendererColorMasks(int handle, int *masks) {
+int glGetRendererColorMasks(int handle, unsigned int *masks) {
   /* If a surface is provided, this is the place to fill
      in the color masks for the surface. Since we don't
      provide any, we just bail out.
