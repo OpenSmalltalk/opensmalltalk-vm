@@ -1356,6 +1356,22 @@ static void getMousePosition(void)
 }
 
 
+/* John Brandt notes on 2018/11/28 that in x2sqKeyPlain below, when the Ctrl
+ * and/or Shift key is pressed we are taking the true branch, but when the key
+ * is released we are taking the false branch:
+  return nConv == 0 && (modifierState & (CommandKeyBit+CtrlKeyBit+OptionKeyBit))
+            ? charCode
+            : recode(charCode);
+ * but that recode (here) does not know how to convert the shift/ctrl keycodes
+ * so it uses the "?" character (code 63). Since we released the key,
+ * modifierState is being reset and we take the false branch. modifierState is
+ * being reset in x2sqKeyPlain by:
+   if (!nConv && (charCode= translateCode(*symbolic, &modifierState, xevt)) < 0)
+      return -1;
+ *
+ * The underlying issue here is the lack of a key event on pressing the shift
+ * key; a feature that GT depends upon.
+ */
 int recode(int charCode)
 {
   if (charCode >= 128)
@@ -4711,6 +4727,13 @@ translateCode(KeySym symbolic, int *modp, XKeyEvent *evt)
 		return withMetaSet(249,OptionKeyBit,0,modp,evt);
 	case XK_Meta_R:
 		return withMetaSet(248,OptionKeyBit,0,modp,evt);
+	/* John Brandt notes on 2018/11/28:
+	 * This doesn't match the above; here OptionKeyBit is used for the notmeta
+	 * parameter but in the preceding cases we use the bit other than the
+	 * OptionKeyBit.  Which is right?
+	 * The underlying issue here is the lack of a key event on pressing the
+	 * shift key; a feature that GT depends upon.
+	 */
 	case XK_Alt_L:
 		return withMetaSet(247,OptionKeyBit+CommandKeyBit,OptionKeyBit,modp,evt);
 	case XK_Alt_R:
