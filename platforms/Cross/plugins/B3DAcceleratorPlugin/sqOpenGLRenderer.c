@@ -248,7 +248,7 @@ int glActualTextureDepth(int rendererHandle, int handle) /* return depth or <0 o
 	return 32;
 }
 
-int glTextureColorMasks(int rendererHandle, int handle, int masks[4])  /* return true on success, false on error */
+int glTextureColorMasks(int rendererHandle, int handle, unsigned int masks[4])  /* return true on success, false on error */
 {
 	struct glRenderer *renderer = glRendererFromHandle(rendererHandle);
 	if(!renderer) return 0;
