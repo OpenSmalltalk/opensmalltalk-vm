@@ -11,9 +11,9 @@
 *   NOTES: 
 *  Feb 22nd, 2002, JMM enable 16 ports for serial, versus four, which was capped at 2?
 ****************************************************************************/
+
 #include "sq.h"
 #include "SerialPlugin.h"
-#include <Carbon/Carbon.h>
 
 extern struct VirtualMachine *interpreterProxy;
 
@@ -44,8 +44,7 @@ int serialPortShutdown() {
 EXPORT (int) serialPortCount(void) {
   /* Return the number of serial ports available on this machine */
     return false;
-
- }
+}
 
 int serialPortIsOpen(int portNum) {
 	if ((portNum < 0) || (portNum >= MAX_PORTS)) return false;
