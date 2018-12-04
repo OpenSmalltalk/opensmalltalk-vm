@@ -38,6 +38,9 @@ extern
 #endif
 struct VirtualMachine* interpreterProxy;
 
+#ifdef _MSC_VER
+# define alloca _alloca
+#endif
 #if __GNUC__
 # define setsp(sp) __asm__ volatile ("movq %0,%%rsp" : : "m"(sp))
 # define getsp() ({ void *sp; __asm__ volatile ("movq %%rsp,%0" : "=r"(sp) : ); sp;})
