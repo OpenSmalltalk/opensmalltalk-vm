@@ -17,10 +17,10 @@ BEGIN
         BLOCK "040904E4"    // Lang=US English, CharSet=Windows Multilin
         BEGIN
             VALUE "CompanyName", "Pharo.org\0"
-            VALUE "FileDescription", "Pharo Cog Spur Virtual Machine\0"
+            VALUE "FileDescription", "Pharo Stack Spur Virtual Machine\0"
             VALUE "FileVersion", FILEVERSIONSTRING
             VALUE "LegalCopyright", "Copyright \251 https://github.com/opensmalltalk 1996-2016\0"
-            VALUE "ProductName", "Pharo Cog Spur\0"
+            VALUE "ProductName", "Pharo Stack Spur\0"
             VALUE "ProductVersion", "5.0\0"
         END
     END
