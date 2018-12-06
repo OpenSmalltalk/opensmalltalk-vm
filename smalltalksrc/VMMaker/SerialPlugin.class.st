@@ -24,6 +24,19 @@ SerialPlugin class >> requiresPlatformFiles [
 	^true
 ]
 
+{ #category : #'private-support' }
+SerialPlugin >> copyPortNameToCString: portName [
+	<returnTypeC: #'char *'>
+	| port portNameSize |
+	<inline: #always>
+	<var: 'port' type: #'char *'>
+	portNameSize := interpreterProxy slotSizeOf: (portName asOop: String).
+	port := self alloca: portNameSize + 1 _: (self sizeof: #char).
+	self memcpy: port _: portName _: portNameSize.
+	port at: portNameSize put: 0.
+	^port
+]
+
 { #category : #'initialize-release' }
 SerialPlugin >> initialiseModule [
 	<export: true>
@@ -40,117 +53,84 @@ SerialPlugin >> primitiveSerialPortClose: portNum [
 
 { #category : #primitives }
 SerialPlugin >> primitiveSerialPortCloseByName: portName [
-
+	| port |
 	self primitive: 'primitiveSerialPortCloseByName'
 		parameters: #(String).
-	self serialPortCloseByName: portName
+	port := self copyPortNameToCString: portName.
+	self serialPortCloseByName: port
 ]
 
 { #category : #primitives }
 SerialPlugin >> primitiveSerialPortOpen: portNum baudRate: baudRate stopBitsType: stopBitsType parityType: parityType dataBits: dataBits inFlowControlType: inFlowControl outFlowControlType: outFlowControl xOnByte: xOnChar xOffByte: xOffChar [
 
 	self primitive: 'primitiveSerialPortOpen'
-		parameters: #(SmallInteger SmallInteger SmallInteger SmallInteger SmallInteger SmallInteger SmallInteger SmallInteger SmallInteger ).
+		parameters: #(SmallInteger SmallInteger SmallInteger SmallInteger SmallInteger SmallInteger SmallInteger SmallInteger SmallInteger).
 
-	self cCode: 'serialPortOpen(
-			portNum, baudRate, stopBitsType, parityType, dataBits,
-			inFlowControl, outFlowControl, xOnChar, xOffChar)'
+	self serialPortOpen: portNum _: baudRate _: stopBitsType _: parityType _: dataBits
+					_: inFlowControl _: outFlowControl _: xOnChar _: xOffChar
 ]
 
 { #category : #primitives }
 SerialPlugin >> primitiveSerialPortOpenByName: portName baudRate: baudRate stopBitsType: stopBitsType parityType: parityType dataBits: dataBits inFlowControlType: inFlowControl outFlowControlType: outFlowControl xOnByte: xOnChar xOffByte: xOffChar [
-	<var: #port type: 'char *'>
 
-	| port portNameSize |
-	
+	| port |
 	self primitive: 'primitiveSerialPortOpenByName'
-		parameters: #(String SmallInteger SmallInteger SmallInteger SmallInteger SmallInteger SmallInteger SmallInteger SmallInteger ).
+		parameters: #(String SmallInteger SmallInteger SmallInteger SmallInteger SmallInteger SmallInteger SmallInteger SmallInteger).
 
-	portNameSize := interpreterProxy slotSizeOf: (portName asOop: String).
-	port := self cCode: 'calloc(portNameSize+1, sizeof(char))'.
-	self cCode: 'memcpy(port, portName, portNameSize)'.
-	
-	self cCode: 'serialPortOpenByName(
-			port, baudRate, stopBitsType, parityType, dataBits,
-			inFlowControl, outFlowControl, xOnChar, xOffChar)'.
-	
-	self free: port.
+	port := self copyPortNameToCString: portName.
+	self serialPortOpenByName: port _: baudRate _: stopBitsType _: parityType _: dataBits
+							_: inFlowControl _: outFlowControl _: xOnChar _: xOffChar
 ]
 
 { #category : #primitives }
 SerialPlugin >> primitiveSerialPortRead: portNum into: array startingAt: startIndex count: count [ 
-	| bytesRead arrayPtr |
+	| bytesRead |
 	self primitive: 'primitiveSerialPortRead'
-		parameters: #(SmallInteger ByteArray SmallInteger SmallInteger ).
+		parameters: #(SmallInteger ByteArray SmallInteger SmallInteger).
 
-	interpreterProxy success: (startIndex >= 1 and: [startIndex + count - 1 <= (interpreterProxy byteSizeOf: array cPtrAsOop)]).
-	"adjust for zero-origin indexing"
-	arrayPtr := array asInteger + startIndex - 1.
-	bytesRead := self cCode: 'serialPortReadInto( portNum, count, arrayPtr)'.
-	^ bytesRead asSmallIntegerObj
+	(startIndex >= 1 and: [startIndex + count - 1 <= (interpreterProxy byteSizeOf: array cPtrAsOop)]) ifTrue:
+		[bytesRead := self serialPortReadInto: portNum _: count _: array + startIndex - 1.
+		 ^bytesRead asSmallIntegerObj].
+	interpreterProxy success: false
 ]
 
 { #category : #primitives }
-SerialPlugin >> primitiveSerialPortReadByName: portName into: array startingAt: startIndex count: count [ 
-	<var: #port type: 'char *'>
-
-	| port portNameSize bytesRead arrayPtr |
-
+SerialPlugin >> primitiveSerialPortReadByName: portName into: array startingAt: startIndex count: count [
+	| port bytesRead |
+	<var: #port type: #'char *'>
 	self primitive: 'primitiveSerialPortReadByName'
-		parameters: #(String  ByteArray SmallInteger SmallInteger ).
+		parameters: #(String  ByteArray SmallInteger SmallInteger).
 
-	interpreterProxy success: (startIndex >= 1 and: [startIndex + count - 1 <= (interpreterProxy byteSizeOf: array cPtrAsOop)]).
-	"adjust for zero-origin indexing"
-
-	portNameSize := interpreterProxy slotSizeOf: (portName asOop: String).
-	port := self cCode: 'calloc(portNameSize+1, sizeof(char))'.
-	self cCode: 'memcpy(port, portName, portNameSize)'.
-
-	arrayPtr := array + startIndex - 1.
-	bytesRead := self cCode: 'serialPortReadIntoByName( port, count, arrayPtr)'.
-	
-	self free: port.
-	
-	^ bytesRead asSmallIntegerObj
+	(startIndex >= 1 and: [startIndex + count - 1 <= (interpreterProxy byteSizeOf: array cPtrAsOop)]) ifTrue:
+		[port := self copyPortNameToCString: portName.
+		 bytesRead := self serialPortReadIntoByName: port _: count _: array + startIndex - 1.
+		 ^bytesRead asSmallIntegerObj].
+	interpreterProxy success: false
 ]
 
 { #category : #primitives }
 SerialPlugin >> primitiveSerialPortWrite: portNum from: array startingAt: startIndex count: count [ 
-	| bytesWritten arrayPtr |
+	| bytesWritten |
 	self primitive: 'primitiveSerialPortWrite'
-		parameters: #(SmallInteger ByteArray SmallInteger SmallInteger ).
+		parameters: #(SmallInteger ByteArray SmallInteger SmallInteger).
 
-	interpreterProxy success: (startIndex >= 1 and: [startIndex + count - 1 <= (interpreterProxy byteSizeOf: array cPtrAsOop)]).
-	interpreterProxy failed
-		ifFalse: [arrayPtr := array + startIndex - 1.
-			bytesWritten := self
-						serialPort: portNum
-						Write: count
-						From: arrayPtr].
-	^ bytesWritten asSmallIntegerObj
+	(startIndex >= 1 and: [startIndex + count - 1 <= (interpreterProxy byteSizeOf: array cPtrAsOop)]) ifTrue:
+		[bytesWritten := self serialPort: portNum Write: count From: array + startIndex - 1.
+		 ^bytesWritten asSmallIntegerObj].
+	interpreterProxy success: false
 ]
 
 { #category : #primitives }
 SerialPlugin >> primitiveSerialPortWriteByName: portName from: array startingAt: startIndex count: count [ 
-	<var: #port type: 'char *'>
-
-	| bytesWritten arrayPtr portNameSize port |
-	
+	| bytesWritten port |
 	self primitive: 'primitiveSerialPortWriteByName'
-		parameters: #(String ByteArray SmallInteger SmallInteger ).
+		parameters: #(String ByteArray SmallInteger SmallInteger).
 
-	portNameSize := interpreterProxy slotSizeOf: (portName asOop: String).
-	port := self cCode: 'calloc(portNameSize+1, sizeof(char))'.
-	self cCode: 'memcpy(port, portName, portNameSize)'.
-
-	interpreterProxy success: (startIndex >= 1 and: [startIndex + count - 1 <= (interpreterProxy byteSizeOf: array cPtrAsOop)]).
-	interpreterProxy failed
-		ifFalse: [arrayPtr := array + startIndex - 1.
-			bytesWritten := self cCode: 'serialPortWriteFromByName(port, count, arrayPtr)' ].
-	
-	self free: port.
-
-	^ bytesWritten asSmallIntegerObj
+	(startIndex >= 1 and: [startIndex + count - 1 <= (interpreterProxy byteSizeOf: array cPtrAsOop)]) ifTrue:
+		[port := self copyPortNameToCString: portName.
+		 bytesWritten := self serialPortWriteFromByName: port _: count _: array + startIndex - 1.
+		 ^bytesWritten asSmallIntegerObj].
+	interpreterProxy success: false
 ]
 
 { #category : #'initialize-release' }
