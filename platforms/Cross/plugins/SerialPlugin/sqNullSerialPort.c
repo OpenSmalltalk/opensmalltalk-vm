@@ -14,6 +14,7 @@
 
 #include "sq.h"
 #include "SerialPlugin.h"
+#define NO_ERROR 0
 
 extern struct VirtualMachine *interpreterProxy;
 
@@ -133,7 +134,7 @@ EXPORT (int) serialPortWriteFrom(int portNum, int count, void *bufferPtr) {
 	}
 
 	osErr = FSWrite(outRefNum[portNum], &byteCount, (char *) bufferPtr);
-	if (osErr != noErr) {
+	if (osErr != NO_ERROR) {
 		return interpreterProxy->success(false);
 	}
 	return byteCount;
