@@ -31,7 +31,7 @@ SerialPlugin >> copyPortNameToCString: portName [
 	<inline: #always>
 	<var: 'port' type: #'char *'>
 	portNameSize := interpreterProxy slotSizeOf: (portName asOop: String).
-	port := self alloca: portNameSize + 1 _: (self sizeof: #char).
+	port := self alloca: portNameSize + 1.
 	self memcpy: port _: portName _: portNameSize.
 	port at: portNameSize put: 0.
 	^port
