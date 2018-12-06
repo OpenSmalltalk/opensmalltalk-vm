@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 # debug Spur VM with VM profiler and itimer heartbeat
-INSTALLDIR=debug/cogspur64linux
+INSTALLDIR=debug/phcogspur64linux
 OPT="-g3 -O0 -fwrapv -DDEBUGVM=1 -DPharoVM"
 
 if [ $# -ge 1 ]; then

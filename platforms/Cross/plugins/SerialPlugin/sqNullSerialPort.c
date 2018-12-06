@@ -125,18 +125,9 @@ EXPORT (int) serialPortWriteFrom(int portNum, int count, void *bufferPtr) {
    synchronous: it doesn't return until the data has been sent. However, other
    implementations may return before transmission is complete. */
 
-	long int byteCount = count;
-	int osErr;
+#pragma unused(portNum,count,bufferPtr)
 
-	if (!serialPortIsOpen(portNum)) {
-		return interpreterProxy->success(false);
-	}
-
-	osErr = FSWrite(outRefNum[portNum], &byteCount, (char *) bufferPtr);
-	if (osErr != noErr) {
-		return interpreterProxy->success(false);
-	}
-	return byteCount;
+	return interpreterProxy->success(false);
 }
 
 EXPORT (int) serialPortWriteFromByName(const char *portName, int count, void *bufferPtr) {
