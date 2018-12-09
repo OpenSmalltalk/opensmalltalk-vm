@@ -33,6 +33,7 @@
 #import <Cocoa/Cocoa.h>
 typedef NSPasteboard * CLIPBOARDTYPE;
 #else
+#import <UIKit/UIKit.h>
 typedef UIPasteboard * CLIPBOARDTYPE;
 #endif
 

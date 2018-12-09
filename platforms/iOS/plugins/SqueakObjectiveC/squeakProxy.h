@@ -75,7 +75,7 @@ extern struct VirtualMachine* interpreterProxy;
 {
 	sqInt sem;
 	Protocol* __unsafe_unretained protocol;
-	NSInvocation* __weak invocation;
+	NSInvocation* __unsafe_unretained invocation;
 	NSConditionLock* lockForSqueak;
 	NSMutableDictionary *sigs;
 	id	target;
@@ -89,9 +89,9 @@ extern struct VirtualMachine* interpreterProxy;
 
 @property (nonatomic,assign) sqInt sem;
 @property (nonatomic,unsafe_unretained) Protocol* protocol;
-@property (weak, nonatomic) NSInvocation* invocation;
-@property (nonatomic) NSConditionLock* lockForSqueak;
-@property (nonatomic) NSMutableDictionary *sigs;
+@property (nonatomic,unsafe_unretained) NSInvocation* invocation;
+@property (nonatomic,strong) NSConditionLock* lockForSqueak;
+@property (nonatomic,strong) NSMutableDictionary *sigs;
 @property (nonatomic,strong) id target;
 @property (nonatomic,assign) sqInt callbackid;
 @end

@@ -29,7 +29,6 @@
  */
 
 #include "sqMacExtendedClipboard.h"
-#import <Cocoa/Cocoa.h>
 
 extern struct VirtualMachine* interpreterProxy;
 

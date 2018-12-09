@@ -34,6 +34,13 @@
 #include <sys/time.h>
 #include "sqaio.h"
 
+#if TARGET_OS_IS_IPHONE
+#include <MobileCoreServices/MobileCoreServices.h>
+#include <mach/mach.h>
+#include <mach/mach_time.h>
+#include <unistd.h>
+#endif
+
 #define SecondsFrom1901To1970      2177452800LL
 #define MicrosecondsFrom1901To1970 2177452800000000LL
 
@@ -176,6 +183,19 @@ ioHighResClock(void)
     __asm__ __volatile__ ("rdtsc" : "=A"(value));
 #elif defined(__arm__) && (defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7A__))
 	/* tpr - do nothing for now; needs input from eliot to decide further */
+#elif TARGET_OS_IS_IPHONE
+    
+    const int64_t kOneMillion = 1000 * 1000;
+    static mach_timebase_info_data_t s_timebase_info;
+    
+    if (s_timebase_info.denom == 0) {
+        (void) mach_timebase_info(&s_timebase_info);
+    }
+    
+    // mach_absolute_time() returns billionth of seconds,
+    // so divide by one million to get milliseconds
+    value =  (sqLong)((mach_absolute_time() * s_timebase_info.numer) / (kOneMillion * s_timebase_info.denom));
+    
 #else
 # error "no high res clock defined"
 #endif
@@ -246,7 +266,7 @@ ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
     }
     else {
         realTimeToWait = nextWakeupUsecs - utcNow;
-		if (realTimeToWait > microSeconds)
+		if (realTimeToWait < microSeconds)
 			realTimeToWait = microSeconds;
 	}
 

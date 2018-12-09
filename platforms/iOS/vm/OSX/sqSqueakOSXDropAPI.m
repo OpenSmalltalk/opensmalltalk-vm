@@ -53,7 +53,7 @@ sqInt dropShutdown(void) {
 
 char* dropRequestFileName(sqInt dropIndex) {
 	/* return name of file or NULL if error */
-	NSView <sqSqueakOSXView> *view = [((sqSqueakOSXScreenAndWindow*)((__bridge NSWindow *)windowHandleFromIndex(1)).delegate) getMainViewOnWindow];
+	NSView <sqSqueakOSXView> *view = [((sqSqueakOSXScreenAndWindow*)(windowHandleFromIndex(1)).delegate) getMainViewOnWindow];
 	NSString *fileNameString = [view dragFileNameStringAtIndex: dropIndex];
 	return (char *) [fileNameString UTF8String];
 }

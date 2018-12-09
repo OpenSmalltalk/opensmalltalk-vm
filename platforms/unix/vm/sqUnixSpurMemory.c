@@ -81,6 +81,10 @@ int mmapErrno = 0;
 #	define MAP_ANON MAP_ANONYMOUS
 # endif
 
+# if !defined(sqMemoryBase)
+char *sqMemoryBase = 0;
+#endif
+
 static int min(int x, int y) { return (x < y) ? x : y; }
 static int max(int x, int y) { return (x > y) ? x : y; }
 

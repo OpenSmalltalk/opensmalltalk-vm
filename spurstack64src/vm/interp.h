@@ -40,3 +40,4 @@
 
 #define STACKVM 1
 #define SPURVM 1
+#define PharoVM 1

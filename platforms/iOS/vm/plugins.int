@@ -1,0 +1,2 @@
+# Automatically generated makefile include for internal plugins
+INTERNAL_PLUGINS = ADPCMCodecPlugin AsynchFilePlugin BMPReadWriterPlugin B2DPlugin BitBltPlugin CroquetPlugin DSAPrims DropPlugin FFTPlugin FilePlugin FloatArrayPlugin GeniePlugin JPEGReadWriter2Plugin JPEGReaderPlugin JoystickTabletPlugin Klatt LargeIntegers LocalePlugin Matrix2x3Plugin MiscPrimitivePlugin RePlugin SecurityPlugin SerialPlugin SocketPlugin SoundCodecPrims SoundGenerationPlugin SoundPlugin StarSqueakPlugin SurfacePlugin

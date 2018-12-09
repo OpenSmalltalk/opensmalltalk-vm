@@ -48,7 +48,7 @@ static	sqWindowEvent evt;
 @implementation SqueakUIController
 
 - (void)viewDidLoad {
-    [super viewDidLoad]
+    [super viewDidLoad];
     // jdr - extra bluetooth keyboard support
     for (SInt32 k=97; k<=123; k++) {
         char ch[] = {k, 0};

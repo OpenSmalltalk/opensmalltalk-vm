@@ -195,8 +195,12 @@ const GLfloat spriteTexcoords[] = {
 
 -(void)drawRect:(CGRect)rect {
 	//	NSLog(@" drawRect %f %f %f %f",rect.origin.x,rect.origin.y,rect.size.width,rect.size.height);
-    if (displayBits)
-		[self loadTexturesFrom: displayBits subRectangle: rect];
+	sqInt formObj = interpreterProxy->displayObject();
+	sqInt formPtrOop = interpreterProxy->fetchPointerofObject(0, formObj);	
+	void* dispBitsIndex = interpreterProxy->firstIndexableField(formPtrOop);
+    if ( dispBitsIndex ) {
+		[self loadTexturesFrom:dispBitsIndex subRectangle: rect];
+	}
 }
 
 @end

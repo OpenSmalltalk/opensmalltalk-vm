@@ -2,7 +2,7 @@
 	ThreadedFFIPlugin VMMaker.oscog-eem.2213 uuid: 91a750c2-5478-49d7-9c19-26ddc976ddb1
  */
 
-#if defined(__ARM_ARCH__) || defined(__arm__) || defined(__arm32__) || defined(ARM32)
+#if defined(__ARM_ARCH__) || defined(__arm__) || defined(__arm32__) || defined(ARM32) || TARGET_OS_IS_IPHONE
 
 # define ARM32FFIPlugin_exports SqueakFFIPrims_exports
 # include "ARM32FFIPlugin.c"

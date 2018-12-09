@@ -41,11 +41,9 @@ Some of this code was funded via a grant from the European Smalltalk User Group 
 #import "sq.h"
 #import "sqSqueakMainApplication+events.h"
 #import "sqSqueakIPhoneApplication+events.h"
-#import "sqDummyaio.h"
 #import "sqMacHostWindow.h"
 #import "SqueakNoOGLIPhoneAppDelegate.h"
 #import "Queue.h"
-#define MillisecondClockMask 536870911
 
 extern SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 extern struct	VirtualMachine* interpreterProxy;

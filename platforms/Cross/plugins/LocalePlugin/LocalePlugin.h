@@ -75,7 +75,7 @@ sqInt	sqLocLongDateFormatSize(void);
 void	sqLocGetLongDateFormatInto(char * str);
 
 /* return the size in chars of the short date format string */
-sqInt	sqLocShortDateFormatSize();
+sqInt	sqLocShortDateFormatSize(void);
 /*Write the string describing the short date formatting into string ptr.
  * Format is made up of
  * 		d day, m month, y year,

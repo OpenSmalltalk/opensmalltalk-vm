@@ -38,6 +38,7 @@
  */
 
 //
+#import "sqSCCSVersion.h"
 
 #import <Foundation/Foundation.h>
 

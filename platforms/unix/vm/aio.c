@@ -240,13 +240,8 @@ aioPoll(long microSeconds)
 	 * cpu
 	 */
 
-#ifdef TARGET_OS_IS_IPHONE
-	if (maxFd == 0)
-		return 0;
-#else
 	if ((maxFd == 0) && (microSeconds == 0))
 		return 0;
-#endif
 
 	rd = rdMask;
 	wr = wrMask;
@@ -303,13 +298,16 @@ aioPoll(long microSeconds)
 long 
 aioSleepForUsecs(long microSeconds)
 {
-#if defined(HAVE_NANOSLEEP)
+#if defined(HAVE_NANOSLEEP) && 0
 	if (microSeconds < (1000000 / 60)) {	/* < 1 timeslice? */
 		if (!aioPoll(0)) {
 			struct timespec rqtp = {0, microSeconds * 1000};
-			struct timespec rmtp;
+            struct timespec rmtp = {0, 0};
 
-			nanosleep(&rqtp, &rmtp);
+			int result = nanosleep(&rqtp, &rmtp);
+            if (result == -1) {
+                fprintf(stderr,"hello");
+            }
 			addIdleUsecs((rqtp.tv_nsec - rmtp.tv_nsec) / 1000);
 			microSeconds = 0;	/* poll but don't block */
 		}

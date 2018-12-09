@@ -1,0 +1,19 @@
+//
+// Prefix header for all source files of the 'SqueakNoOGLIPhone' target in the 'SqueakNoOGLIPhone' project
+//
+
+#ifdef __OBJC__
+#import <Foundation/Foundation.h>
+#import <UIKit/UIKit.h>
+#endif
+#if __has_feature(objc_arc)
+#define RELEASEOBJ(x) x
+#define RETAINOBJ(x) x
+#define AUTORELEASEOBJ(x) x
+#define SUPERDEALLOC
+#else
+#define RELEASEOBJ(x) [x release]
+#define RETAINOBJ(x) [x retain]
+#define AUTORELEASEOBJ(x) [x autorelease]
+#define SUPERDEALLOC [super dealloc];
+#endif

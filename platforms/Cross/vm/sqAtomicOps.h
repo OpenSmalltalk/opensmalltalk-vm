@@ -98,7 +98,7 @@ static inline uint64_t
 AtomicGet(uint64_t *target)
 {
 	while (true) {
-		int64 value = *target;
+		uint64_t value = *target;
 		if (OSAtomicCompareAndSwap64Barrier(value, value, target))
 			return value;
 	}
@@ -202,7 +202,7 @@ AtomicGet(__int64 *target)
 #	define get64(variable) AtomicGet(&((__int64)variable))
 #	define set64(variable,value) AtomicSet(&((__int64)variable), (__int64)value)
 
-# else /* TARGET_OS_IS_IPHONE elif x86 variants etc */
+# else /*  elif x86 variants etc */
 
 #if defined(__arm__) && (defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7A__))
 /* tpr - this is code intended for the Raspberry Pi Raspbian OS 
@@ -240,7 +240,7 @@ AtomicGet(__int64 *target)
 #undef ATOMICADD16
 
 #if TARGET_OS_IS_IPHONE
-# define sqAtomicAddConst(var,n) (assert(sizeof(var) == 4), OSAtomicAdd32(n,&(var))
+#	define sqAtomicAddConst(var,n) __sync_fetch_and_add((sqInt *)&(var), n)
 
 #elif defined(__GNUC__) || defined(__clang__)
 /* N.B. I know you want to use the intrinsics; they're pretty; they're official;
@@ -302,13 +302,7 @@ AtomicGet(__int64 *target)
  * was made.
  */
 
-#if TARGET_OS_IS_IPHONE
-# define sqCompareAndSwap(var,old,new) \
-	(sizeof(var) == 8 \
-		? OSAtomicCompareAndSwap64(old, new, &var) \
-		: OSAtomicCompareAndSwap32(old, new, &var))
-
-#elif defined(__GNUC__) || defined(__clang__)
+#if defined(__GNUC__) || defined(__clang__)
 # if GCC_HAS_BUILTIN_SYNC || defined(__clang__)
 #	define sqCompareAndSwap(var,old,new) \
 	__sync_bool_compare_and_swap(&(var), old, new)

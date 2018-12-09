@@ -13,7 +13,8 @@
 #include <sys/syslimits.h>
 
 
-int ioFormPrint(int bitsAddr, int width, int height, int depth, double hScale, double vScale, int landscapeFlag) {
+sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth,
+                  double hScale, double vScale, sqInt landscapeFlag) {
 	/* experimental: print a form with the given bitmap, width, height, and depth at
 	   the given horizontal and vertical scales in the given orientation
            However John Mcintosh has introduced a printjob class and plugin to replace this primitive */
@@ -21,7 +22,10 @@ int ioFormPrint(int bitsAddr, int width, int height, int depth, double hScale, d
 	return true;
 }
 
-void *ioFindExternalFunctionIn(char *lookupName, void *moduleHandle) {return 0;}
+//void *ioFindExternalFunctionIn(char *lookupName, void *moduleHandle) {return 0;}
+void *
+ioFindExternalFunctionInAccessorDepthInto(char *lookupName, void *moduleHandle,
+                                          sqInt *accessorDepthPtr) {return null;}
 void *ioLoadModule(char *pluginName) {return 0;}
 sqInt ioFreeModule(void *moduleHandle){return 0;}
 
@@ -42,10 +46,10 @@ sqInt ioSetDisplayMode( sqInt width, sqInt height, sqInt depth, sqInt fullscreen
 //    return false;
 //}
 
-int clearProfile(void){return 0;}														
-int dumpProfile(void){return 0;}														
-int startProfiling(void){return 0;}													
-int stopProfiling(void)	{return 0;}			
+sqInt clearProfile(void){return 0;}
+sqInt dumpProfile(void){return 0;}
+sqInt startProfiling(void){return 0;}
+sqInt stopProfiling(void)	{return 0;}
 
 int plugInNotifyUser(char *msg);
 int plugInNotifyUser(char *msg) { return 0; }

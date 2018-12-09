@@ -29,3 +29,4 @@ sqInt ioCanRenameImage(void);
 sqInt ioCanSetFileTypeOfSize(char* pathString, sqInt pathStringLength);
 sqInt ioDisableFileAccess(void);
 sqInt ioHasFileAccess(void);
+sqInt ioHasEnvironmentAccess(void);

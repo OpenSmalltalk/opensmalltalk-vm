@@ -1,0 +1,28 @@
+{
+  "DVTSourceControlWorkspaceBlueprintPrimaryRemoteRepositoryKey" : "337D183913980A0270D902112AB5D96C0E4E82B2",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyRepositoryLocationsKey" : {
+
+  },
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyStatesKey" : {
+    "337D183913980A0270D902112AB5D96C0E4E82B2" : 9223372036854775807
+  },
+  "DVTSourceControlWorkspaceBlueprintIdentifierKey" : "A659ECDC-D65A-44D0-BDB6-06ED122D945E",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyPathsKey" : {
+    "337D183913980A0270D902112AB5D96C0E4E82B2" : "..\/..\/..\/..\/Users\/johnmci\/Documents\/SqueakOnGitHub"
+  },
+  "DVTSourceControlWorkspaceBlueprintNameKey" : "SqueakPureObjc",
+  "DVTSourceControlWorkspaceBlueprintVersion" : 204,
+  "DVTSourceControlWorkspaceBlueprintRelativePathToProjectKey" : "platforms\/iOS\/vm\/SqueakPureObjc.xcodeproj",
+  "DVTSourceControlWorkspaceBlueprintRemoteRepositoriesKey" : [
+    {
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryURLKey" : "https:\/\/github.com\/LabWare\/opensmalltalk-vm",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositorySystemKey" : "com.apple.dt.Xcode.sourcecontrol.Git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryIdentifierKey" : "337D183913980A0270D902112AB5D96C0E4E82B2"
+    },
+    {
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryURLKey" : "https:\/\/github.com\/OpenSmalltalk\/vm.git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositorySystemKey" : "com.apple.dt.Xcode.sourcecontrol.Git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryIdentifierKey" : "337D183913980A0270D902112AB5D96C0E4E82B2"
+    }
+  ]
+}

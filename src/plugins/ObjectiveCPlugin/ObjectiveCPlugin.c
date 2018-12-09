@@ -12,6 +12,7 @@ static char __buildInfo[] = "ObjectiveCPlugin ObjectiveC-Plugin-John M McIntosh.
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <dlfcn.h>
 
 /* Default EXPORT macro that does nothing (see comment in sq.h): */
 #define EXPORT(returnType) returnType
@@ -100,6 +101,7 @@ static sqInt stringFromCString(const char *aCString);
 static void * (*arrayValueOf)(sqInt oop);
 static sqInt (*booleanValueOf)(sqInt obj);
 static sqInt (*byteSizeOf)(sqInt oop);
+static sqInt (*characterObjectOf)(sqInt characterCode);
 static sqInt (*callbackLeave)(sqInt cbID);
 static sqInt (*classByteArray)(void);
 static sqInt (*classCharacter)(void);
@@ -130,6 +132,11 @@ static sqInt (*trueObject)(void);
 extern void * arrayValueOf(sqInt oop);
 extern sqInt booleanValueOf(sqInt obj);
 extern sqInt byteSizeOf(sqInt oop);
+#if VM_PROXY_MAJOR > 1 || (VM_PROXY_MAJOR == 1 && VM_PROXY_MINOR >= 13)
+extern sqInt characterObjectOf(sqInt characterCode);
+#else
+# define characterObjectOf(characterCode) 0
+#endif
 extern sqInt callbackLeave(sqInt cbID);
 extern sqInt classByteArray(void);
 extern sqInt classCharacter(void);
@@ -244,7 +251,7 @@ if (failed()) {
 		return null;
 	}
 	strlcpy(entryPointName, aEntryPointName, entryPointNameLength + 1);
-	fn = dlsym(-2, entryPointName);
+	fn = dlsym(RTLD_DEFAULT, entryPointName);
 	if (failed()) {
 		return null;
 	}
@@ -901,16 +908,9 @@ primitiveNSInvocationGetCType(void)
 	if (failed()) {
 		return null;
 	}
-	newCharacterOop = instantiateClassindexableSize(classCharacter(), 1);
-	targetOopData = 0;
-	if (signedBoolean) {
-targetOopData = *(char*) buffer;
-		storeIntegerofObjectwithValue(0, newCharacterOop, ((sqInt) targetOopData));
-	}
-	else {
-targetOopData = *(char*) buffer;
-		storeIntegerofObjectwithValue(0, newCharacterOop, ((usqInt) targetOopData));
-	}
+	//newCharacterOop = instantiateClassindexableSize(classCharacter(), 1);
+    newCharacterOop = characterObjectOf((usqInt)(*(char*) buffer));
+
 	if (failed()) {
 		return null;
 	}
@@ -1334,8 +1334,11 @@ primitiveNSInvocationSetCType(void)
 	if (failed()) {
 		return null;
 	}
-	aValue = fetchIntegerofObject(0, newCharacterOop);
-	aUnsignedValue = fetchIntegerofObject(0, newCharacterOop);
+    extern usqInt
+    characterValueOf(sqInt oop);
+    
+	aValue = characterValueOf(newCharacterOop);
+	aUnsignedValue = aValue;
 	if (signedBoolean) {
 buffer = malloc(sizeof(char));
 					*(char*) buffer = (char) aValue;
@@ -2070,8 +2073,12 @@ primitivePerformSelector(void)
 	}
 	returnValue = null;
 	    NS_DURING;
+    extern void printCallStack(void);
+    //printf("************* \n");
+    //printCallStack();
+
 	returnValue = [classOrInstanceObject performSelector: selectorObject];
-	    NS_HANDLER 
+	    NS_HANDLER
 		returnValue = nil;
 	    NS_ENDHANDLER;
 	if (failed()) {

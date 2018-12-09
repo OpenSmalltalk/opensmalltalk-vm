@@ -65,7 +65,6 @@ SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 }
 
 - (BOOL)application: (UIApplication *)application didFinishLaunchingWithOptions: (NSDictionary*) launchOptions {
-#error JMM notes not tested after integration yet 2015 May 7th
 	gDelegateApp = self;	
 	mainView = null;
 	scrollView = null;
@@ -74,11 +73,15 @@ SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 	squeakApplication = [self makeApplicationInstance];
 	screenAndWindow =  [[sqiPhoneScreenAndWindow alloc] init];
 	[self.squeakApplication setupEventQueue];
+    self.viewController = [SqueakUIController new];
+    [window setRootViewController:self.viewController];
+    
     if ([self.info useWorkerThread] || [self.info useWebViewAsUI]) {
         [self workerThreadStart];
     } else {
         [self singleThreadStart];
     }
+    return true;
 }
 
 - (void)loadUrl:(NSString *)aString {
@@ -93,7 +96,13 @@ SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 - (id) createPossibleWindow {
 	if (gDelegateApp.mainView == nil) {
 		@autoreleasepool {
-            [gDelegateApp makeMainWindowOnMainThread];
+             if ([NSThread isMainThread]) {
+                [gDelegateApp makeMainWindowOnMainThread];
+            } else {
+                dispatch_sync(dispatch_get_main_queue(), ^{
+                    [gDelegateApp makeMainWindowOnMainThread];
+                });
+            }
 		}	
 	}
 	return self.window;
@@ -144,9 +153,6 @@ SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 	// The application frame includes the status area if needbe. 
 
 	CGRect mainScreenSize = [[UIScreen mainScreen] applicationFrame];
-	    
-    self.viewController = [SqueakUIController new];
-    [window setRootViewController:self.viewController];
         
 	BOOL useScrollingView = [self.info useScrollingView];
 	if (useScrollingView) {
@@ -203,7 +209,7 @@ SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 }
 
 - (void)prepareWebView {
-    self.webView = [[[UIWebView alloc] initWithFrame: [window bounds]] autorelease];
+    self.webView = AUTORELEASEOBJ([[UIWebView alloc] initWithFrame: [window bounds]]);
     [self.webView setAutoresizingMask:
         UIViewAutoresizingFlexibleBottomMargin
         | UIViewAutoresizingFlexibleHeight

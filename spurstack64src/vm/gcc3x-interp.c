@@ -1595,6 +1595,7 @@ _iss sqInt shadowCallStackPointer;
 _iss sqInt statCoalesces;
 _iss usqLong statFGCDeltaUsecs;
 _iss usqLong statIncrGCUsecs;
+_iss void **jumpTable[512];
 #undef _iss
 #if SQ_USE_GLOBAL_STRUCT
  } fum;
@@ -2296,7 +2297,7 @@ sqInt suppressHeartbeatFlag;
 #define weakArrayFormat() 4
 #define numSegments() GIV(numSegments)
 #define alternateHeaderNumLiteralsMask() 0x7FFF
-#define checkAllocFiller() GIV(checkAllocFiller)
+#define checkAllocFiller() checkAllocFiller
 #define dispatchFunctionPointer(aFunctionPointer) (aFunctionPointer)()
 #define flush() fflush(stdout)
 #define printFloat(f) printf("%g", f)
@@ -2346,7 +2347,8 @@ interpret(void)
 	if(!asserta((sizeof(jumpTable)/sizeof(jumpTable[0])) >= 512))
 		error("bytecode jumpTable too small");
 #endif
-
+    memcpy(GIV(jumpTable),jumpTable,sizeof(void *)*512);
+    
 	if (GIV(stackLimit) == 0) {
 		/* begin initStackPagesAndInterpret */
 		stackPageBytes = stackPageByteSize();
@@ -58214,6 +58216,9 @@ objectArg(sqInt index)
  */
 
 	/* StackInterpreter>>#ownVM: */
+sqInt
+amInVMThread();
+
 sqInt
 ownVM(sqInt threadIndexAndFlags)
 {   DECL_MAYBE_SQ_GLOBAL_STRUCT

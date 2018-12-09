@@ -60,12 +60,12 @@ such third-party acknowledgments.
 #endif
 
 
-#ifdef BUILD_FOR_OSX
+
 /*** Variables -- globals for access from pluggable primitives ***/
 EXPORT(int)		argCnt= 0;
 EXPORT(char**)	argVec= 0;
 EXPORT(char**)	envVec= 0;
-#endif
+
 
 extern sqSqueakAppDelegate *gDelegateApp;
 
@@ -262,6 +262,7 @@ printRegisterState(ucontext_t *uap)
 			regs->__rip);
 	return (void *)(regs->__rip);
 # elif defined(__arm__) || defined(__arm32__)
+#ifdef BUILD_FOR_OSX
 	_STRUCT_ARM_THREAD_STATE *regs = &uap->uc_mcontext->ss;
 	printf(	"\t r0 0x%08x r1 0x%08x r2 0x%08x r3 0x%08x\n"
 	        "\t r4 0x%08x r5 0x%08x r6 0x%08x r7 0x%08x\n"
@@ -273,6 +274,19 @@ printRegisterState(ucontext_t *uap)
 	        regs->r[8],regs->r[9],regs->r[10],regs->r[11],
 	        regs->r[12], regs->sp, regs->lr, regs->pc, regs->cpsr);
 	return (void *)(regs->pc);
+#else
+	_STRUCT_ARM_THREAD_STATE *regs = &uap->uc_mcontext->__ss;
+	printf(	"\t r0 0x%08x r1 0x%08x r2 0x%08x r3 0x%08x\n"
+	        "\t r4 0x%08x r5 0x%08x r6 0x%08x r7 0x%08x\n"
+	        "\t r8 0x%08x r9 0x%08x r10 0x%08x fp 0x%08x\n"
+	        "\t ip 0x%08x sp 0x%08x lr 0x%08x pc 0x%08x\n"
+			"\tcpsr 0x%08x\n",
+	        regs->__r[0],regs->__r[1],regs->__r[2],regs->__r[3],
+	        regs->__r[4],regs->__r[5],regs->__r[6],regs->__r[7],
+	        regs->__r[8],regs->__r[9],regs->__r[10],regs->__r[11],
+	        regs->__r[12], regs->__sp, regs->__lr, regs->__pc, regs->__cpsr);
+	return (void *)(regs->__pc);
+#endif
 #else
 	printf("don't know how to derive register state from a ucontext_t on this platform\n");
 	return 0;

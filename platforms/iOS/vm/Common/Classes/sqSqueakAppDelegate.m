@@ -65,7 +65,7 @@ such third-party acknowledgments.
 	width  = ((unsigned) getSavedWindowSize()) >> 16;
 	height = getSavedWindowSize() & 0xFFFF;
 	windowBlock = AddWindowBlock();
-	windowBlock->handle =   (__bridge void*) createdWindow;
+	windowBlock->handle =   (__bridge wHandleType)((__bridge void*) createdWindow);
 	windowBlock->context = nil;
 	windowBlock->updateArea = CGRectZero;
 	width  = (usqInt) ioScreenSize() >> 16;

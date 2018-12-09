@@ -43,12 +43,14 @@
 #import "sqSqueakNullScreenAndWindow.h"
 #import "sqaio.h"
 
+#ifdef BUILD_FOR_OSX
 # import <OpenGL/gl.h>
 #if __MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
 # import <OpenGL/OpenGL.h>
 #else
 # import <OpenGL/Opengl.h>
 #endif
+#endif 
 
 extern sqSqueakAppDelegate *gDelegateApp;
 extern struct	VirtualMachine* interpreterProxy;
@@ -96,15 +98,17 @@ sqInt ioProcessEvents(void) {
 
 	// We need to restore the opengl context to whatever the image was
 	// already using. This is required by SDL2 in Pharo.
-	NSOpenGLContext *oldContext = [NSOpenGLContext currentContext];
-
+#ifdef BUILD_FOR_OSX
+    NSOpenGLContext *oldContext = [NSOpenGLContext currentContext];
+#endif
 	// We need to run the vmIOProcessEvents even if we are using SDL2,
 	// otherwise we end with some double free errors in an autorelease pool.
 	vmIOProcessEvents();
     if(ioProcessEventsHandler && ioProcessEventsHandler != vmIOProcessEvents)
         ioProcessEventsHandler();
 
-	NSOpenGLContext *newContext = [NSOpenGLContext currentContext];
+#ifdef BUILD_FOR_OSX
+    NSOpenGLContext *newContext = [NSOpenGLContext currentContext];
 	if(oldContext != newContext) {
 		if (oldContext != nil) {
 			[oldContext makeCurrentContext];
@@ -112,6 +116,7 @@ sqInt ioProcessEvents(void) {
 			[NSOpenGLContext clearCurrentContext];
 		}
 	}
+#endif
 
     return 0;
 }

@@ -126,6 +126,13 @@ int plugInNotifyUser(char *msg);
 	#define browserPluginReturnIfNeeded() if (plugInTimeToReturn()) {ReturnFromInterpret();}
 
 sqInt ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt extentY, sqInt offsetX, sqInt offsetY);
+void sqPasteboardClear( void* inPasteboard );
+sqInt sqPasteboardGetItemCount ( void* inPasteboard );
+sqInt sqPasteboardCopyItemFlavorsitemNumber (  void* inPasteboard, sqInt formatNumber );
+void * sqCreateClipboard( void );
+void sqPasteboardPutItemFlavordatalengthformatTypeformatLength ( void* inPasteboard, char* inData, sqInt dataLength, char* format, sqInt formatLength);
+sqInt sqPasteboardCopyItemFlavorDataformatformatLength ( void* inPasteboard, char* format, sqInt formatLength);
+
 
 #if COGVM
 extern void sqMakeMemoryExecutableFromTo(unsigned long, unsigned long);

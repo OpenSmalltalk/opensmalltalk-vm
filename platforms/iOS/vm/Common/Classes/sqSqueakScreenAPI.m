@@ -53,7 +53,7 @@ extern SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 
 sqSqueakNullScreenAndWindow *getMainWindowDelegate() {
 #ifdef BUILD_FOR_OSX
-	return ((__bridge NSWindow *) windowHandleFromIndex(1)).delegate;
+	return (windowHandleFromIndex(1)).delegate;
 #else
 	return [gDelegateApp screenAndWindow];
 #endif
@@ -67,8 +67,8 @@ double ioScreenScaleFactor(void) {
 
 sqInt ioScreenSize(void) {
 	//API Documented
-		 
-	return [getMainWindowDelegate() ioScreenSize];
+         
+    return [getMainWindowDelegate() ioScreenSize];
 }
 
 sqInt ioScreenDepth(void) {

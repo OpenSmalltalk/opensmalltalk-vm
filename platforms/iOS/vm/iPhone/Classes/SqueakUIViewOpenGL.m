@@ -63,11 +63,12 @@ const GLfloat spriteTexcoords[] = {
 	clippyIsEmpty = YES;
 	syncNeeded = NO;
 
-    [self setContentScaleFactor: [[UIScreen mainScreen] scale]];
+    [self setContentScaleFactor: [[UIScreen mainScreen] nativeScale]];
 
 	// Get the layer
 	CAEAGLLayer *eaglLayer = (CAEAGLLayer *)self.layer;
 	eaglLayer.opaque = YES;
+    eaglLayer.contentsScale = [[UIScreen mainScreen] scale];
 	eaglLayer.drawableProperties = @{kEAGLDrawablePropertyRetainedBacking: @NO,
 									kEAGLDrawablePropertyColorFormat: kEAGLColorFormatRGBA8};
 
@@ -180,7 +181,7 @@ const GLfloat spriteTexcoords[] = {
 						 (GLsizei)subRect.size.width, 1, GL_BGRA, GL_UNSIGNED_BYTE, row );glCheckError();
 	 }
 
-    glViewport( 0, 0, self.bounds.size.width, self.bounds.size.height);glCheckError();	
+    glViewport( 0, 0, backingWidth, backingHeight);glCheckError();
 	glMatrixMode(GL_PROJECTION);glCheckError();
 	glLoadIdentity();glCheckError();
     glMatrixMode(GL_MODELVIEW);glCheckError();

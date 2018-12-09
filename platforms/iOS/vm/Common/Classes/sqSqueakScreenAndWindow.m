@@ -46,7 +46,7 @@ Some of this code was funded via a grant from the European Smalltalk User Group 
 extern SqueakOSXAppDelegate *gDelegateApp;
 #else
 #import "SqueakNoOGLIPhoneAppDelegate.h"
-SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
+extern SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 #endif
 
 void MyProviderReleaseData (

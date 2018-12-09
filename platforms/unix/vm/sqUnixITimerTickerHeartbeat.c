@@ -26,6 +26,11 @@
 #include <sys/types.h>
 #include <sys/time.h>
 
+#include <MobileCoreServices/MobileCoreServices.h>
+#include <mach/mach.h>
+#include <mach/mach_time.h>
+#include <unistd.h>
+
 #define SecondsFrom1901To1970      2177452800LL
 #define MicrosecondsFrom1901To1970 2177452800000000LL
 
@@ -170,7 +175,18 @@ ioHighResClock(void)
 #elif defined(__arm__) && (defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7A__))
 	/* tpr - do nothing for now; needs input from eliot to decide further */
 #else
-# error "no high res clock defined"
+
+    const int64_t kOneMillion = 1000 * 1000;
+    static mach_timebase_info_data_t s_timebase_info;
+    
+    if (s_timebase_info.denom == 0) {
+        (void) mach_timebase_info(&s_timebase_info);
+    }
+    
+    // mach_absolute_time() returns billionth of seconds,
+    // so divide by one million to get milliseconds
+    value =  (sqLong)((mach_absolute_time() * s_timebase_info.numer) / (kOneMillion * s_timebase_info.denom));
+    
 #endif
   return value;
 }
@@ -221,8 +237,7 @@ ioUTCSecondsNow(void) { return currentUTCMicroseconds() / MicrosecondsPerSecond;
  * On Unix use dpy->ioRelinquishProcessorForMicroseconds
  */
 #if macintoshSqueak
-sqInt
-ioRelinquishProcessorForMicroseconds(int microSeconds)
+sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 {
     long	realTimeToWait;
 	extern usqLong getNextWakeupUsecs();
@@ -242,7 +257,7 @@ ioRelinquishProcessorForMicroseconds(int microSeconds)
 		if (realTimeToWait > microSeconds)
 			realTimeToWait = microSeconds;
 	}
-
+extern long aioSleepForUsecs(long microSeconds);
 	aioSleepForUsecs(realTimeToWait);
 
 	return 0;
@@ -277,6 +292,7 @@ heartbeat()
 	 * the high-priority thread unless there are high-priority tickees as
 	 * indicated by numAsyncTickees > 0.
 	 */
+    extern int numAsyncTickees;
 	if (numAsyncTickees > 0) {
 		void prodHighPriorityThread(void);
 		prodHighPriorityThread();

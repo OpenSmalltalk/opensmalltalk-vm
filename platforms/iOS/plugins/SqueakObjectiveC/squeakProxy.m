@@ -42,7 +42,7 @@
  such third-party acknowledgments.
  */
 //
-
+//#import "SqueakNoOGLIPhoneAppDelegate.h"
 #import "squeakProxy.h"
 #include <dlfcn.h>
 
@@ -58,6 +58,8 @@
 
 - (instancetype) initWithSemaphore: (sqInt) squeakSem protocolNSString: (NSString *) nameString target: aTarget
 {
+    self = [super init];
+    
 	sem = squeakSem;
 	if (nameString)
 		protocol = objc_getProtocol([nameString UTF8String]);
@@ -65,14 +67,13 @@
 		protocol = nil;
 	
 	if (aTarget) {
-		[self setTarget: aTarget];
+        self.target = aTarget;
 	} else {
-		NSObject *dummy = [[NSObject alloc] init];
-		[self setTarget: dummy];
+		self.target = AUTORELEASEOBJ([[NSObject alloc] init]);
 	}
 	
-	self.lockForSqueak = [[NSConditionLock alloc] initWithCondition: 0];
-	self.sigs = [[NSMutableDictionary alloc] initWithCapacity: 10];
+	self.lockForSqueak = AUTORELEASEOBJ([[NSConditionLock alloc] initWithCondition: 0]);
+    self.sigs = [NSMutableDictionary dictionaryWithCapacity: 10];
 	isCarbonVM = NO;
 	callbackid = 0;
 	
@@ -83,38 +84,45 @@
 - (void) forwardInvocation: (NSInvocation*) anInvocation
 {
 	NSDate *timeout;
-	//	NSLog(@"forwardInvocation: %@", anInvocation);
-	//	NSLog(@"currentThread: %@", [NSThread currentThread]);
+	//NSLog(@"currentThread: %@", [NSThread currentThread]);
 	SEL selector = [anInvocation selector];
 	NSString *selectorString = NSStringFromSelector(selector);
-	if (!sigs[selectorString]) {
+    //NSLog(@"forwardInvocation: %@ for %@", anInvocation,selectorString);
+	if (sigs[selectorString] ==  nil) {
+        //NSLog(@"sig found");
 		[anInvocation invokeWithTarget: target];
 		return;
 	}
 	
-	if([lockForSqueak lockWhenCondition: 0 beforeDate: (timeout = AUTORELEASEOBJ([[NSDate alloc] initWithTimeIntervalSinceNow: 3.0]))])
+	if([lockForSqueak lockWhenCondition: 0 beforeDate: (timeout = [NSDate dateWithTimeIntervalSinceNow: 3.0])])
 	{ 
 		// NSLog(@"inside lock 0");
 		[lockForSqueak unlockWithCondition: 1];
-		invocation = RETAINOBJ(anInvocation);
+		self.invocation = anInvocation;
 		
-		// NSLog(@"signalling squeak");
+		//NSLog(@"signalling squeak");
+        //SqueakNoOGLIPhoneAppDelegate * del = (SqueakNoOGLIPhoneAppDelegate *) UIApplication.sharedApplication.delegate;
+        //[self performSelector: @selector(signalSemaphore) onThread:del.squeakThread withObject: nil waitUntilDone: NO];
 		interpreterProxy->signalSemaphoreWithIndex(sem);
-		
+        
 		if (isCarbonVM)
 			interpreterProxy->callbackEnter(&callbackid);
 		
-		if([lockForSqueak lockWhenCondition: 2 beforeDate: (timeout = AUTORELEASEOBJ([[NSDate alloc] initWithTimeIntervalSinceNow: 5.0]))] )
+		if([lockForSqueak lockWhenCondition: 2 beforeDate: (timeout = [NSDate dateWithTimeIntervalSinceNow: 5.0])])
 		{
 			// NSLog(@"inside lock 2");
-			invocation = nil;
+			self.invocation = nil;
 			[lockForSqueak unlockWithCondition: 0];
 		}
 		else
 		{
 			// NSLog(@"failed lock 2");
-			invocation = nil;
+			self.invocation = nil;
 			[lockForSqueak unlockWithCondition: 0];
+//            SqueakNoOGLIPhoneAppDelegate * del = (SqueakNoOGLIPhoneAppDelegate *) UIApplication.sharedApplication.delegate;
+            
+//            [del.splashView setHidden: YES];
+//           [del.keypadController.view setHidden: YES];
 		}
 		//NSLog(@"returning");
 	}
@@ -138,7 +146,7 @@
 	
 	NSString *selectorString = NSStringFromSelector (selector);
 	
-	if (sigAsString = sigs[selectorString]) {
+	if ((sigAsString = sigs[selectorString])) {
 		
 		if (protocol) {
 			struct objc_method_description methodDescription;
@@ -152,7 +160,7 @@
 				return foo;
 			}
 		}
-		NSMethodSignature *foo = [NSMethodSignature signatureWithObjCTypes: [sigAsString cStringUsingEncoding: NSASCIIStringEncoding]];
+		NSMethodSignature *foo = [NSMethodSignature signatureWithObjCTypes: [sigAsString cStringUsingEncoding: NSISOLatin1StringEncoding]];
 		return foo;
 	}
 	

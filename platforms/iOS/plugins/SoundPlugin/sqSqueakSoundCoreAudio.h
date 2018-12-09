@@ -59,10 +59,12 @@ static const int kNumberOfBuffers=4;
 	AudioStreamBasicDescription *outputFormat;
 	AudioQueueBufferRef *outputBuffers;
 	Queue				*soundOutQueue;
+#ifdef BUILD_FOR_OSX
 	int					 numDevices;
 	unsigned int		*deviceIDs; // a.k.a. AudioDeviceID *
 	char			   **deviceNames;
 	char				*deviceTypes; // per device flags, has input, has output
+#endif
 }
 - (sqInt)	soundInit;
 - (sqInt)	soundShutdown;
@@ -79,6 +81,7 @@ static const int kNumberOfBuffers=4;
 - (sqInt)	snd_StopRecording;
 - (double)	snd_GetRecordingSampleRate;
 
+#ifdef BUILD_FOR_OSX
 // Terf SqSoundVersion 1.2 improvements
 - (sqInt)	snd_SetRecordBufferFrameCount: (sqInt) frameCount;
 - (int)		snd_GetRecordLevel;
@@ -94,6 +97,7 @@ static const int kNumberOfBuffers=4;
 // Terf SqSoundVersion 1.3 improvements
 - (sqInt)	snd_SupportsAEC;
 - (sqInt)	snd_EnableAEC: (sqInt) flag;
+#endif 
 
 @property (nonatomic) AudioQueueRef	outputAudioQueue;
 @property (nonatomic) AudioQueueRef	inputAudioQueue;

@@ -37,3 +37,4 @@ StarSqueakPlugin \
 SurfacePlugin \
 UUIDPlugin \
 VMProfileMacSupportPlugin \
+ObjectiveCPlugin \

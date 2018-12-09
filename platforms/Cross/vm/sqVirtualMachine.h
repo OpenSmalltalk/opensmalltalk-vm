@@ -50,7 +50,7 @@
 typedef struct _VMCallbackContext *vmccp;
 #endif
 
-typedef sqInt (*CompilerHook)();
+typedef sqInt (*CompilerHook)(void);
 
 struct VirtualMachine* sqGetInterpreterProxy(void);
 
@@ -286,7 +286,7 @@ typedef struct VirtualMachine {
 #if VM_PROXY_MINOR > 8
 	/* See interp.h and above for standard error codes. */
 	sqInt  (*primitiveFailFor)(sqInt code);
-	void (*(*setInterruptCheckChain)(void (*aFunction)(void)))();
+    void (*(*setInterruptCheckChain)(void (*aFunction)(void)))(void);
 	sqInt  (*classAlien)(void);
 	sqInt  (*classUnsafeAlien)(void);
 	sqInt  (*sendInvokeCallbackStackRegistersJmpbuf)(sqInt thunkPtrAsInt, sqInt stackPtrAsInt, sqInt regsPtrAsInt, sqInt jmpBufPtrAsInt);

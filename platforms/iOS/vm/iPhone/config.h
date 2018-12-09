@@ -139,6 +139,10 @@
 #define	SIZEOF_VOID_P 8
 #endif
 
+#ifdef __arm64__
+#define	SIZEOF_VOID_P 8
+#endif
+
 /* structures */
 
 #define	HAVE_TM_GMTOFF 1

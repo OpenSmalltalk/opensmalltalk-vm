@@ -35,7 +35,9 @@
  such third-party acknowledgments.
  */
 
+#ifdef BUILD_FOR_OSX
 #import <CoreAudio/CoreAudio.h>
+#endif
 
 //typedef struct _device { AudioDeviceID id; } DeviceID;
 
@@ -113,7 +115,7 @@ MyAudioQueueInputCallback ( void                  *inUserData,
 	interpreterProxy->signalSemaphoreWithIndex(myInstance.semaIndexForInput);	
 }
 
-
+#ifdef BUILD_FOR_OSX
 /* Rebuild the device list every time the status changes.  Avoid hazards
  * with asynchronous access by using a simple request/acknowledge pair,
  * rebuilding whenever they don't match.
@@ -129,6 +131,7 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
     ++rebuildRequest;
     return noErr;
 }
+#endif
 
 @implementation soundAtom
 @synthesize	data; 
@@ -184,10 +187,12 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 	self.inputBuffers = calloc((unsigned) kNumberOfBuffers,sizeof(AudioQueueBufferRef));
 	soundOutQueue = [[Queue alloc] init];
 	soundInQueue = [[Queue alloc] init];
+#ifdef BUILD_FOR_OSX
 	numDevices = 0;
 	deviceIDs = nil;
 	deviceNames = nil;
 	deviceTypes = nil;
+#endif
 	return 1;
 }
 
@@ -425,7 +430,7 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 	}
 
 }
-
+#ifdef BUILD_FOR_OSX
 // Terf SqSoundVersion 1.2 improvements
 // snd_SetRecordBufferFrameCount unused in SoundPlugin
 - (sqInt)	snd_SetRecordBufferFrameCount: (sqInt) frameCount { return -1; }
@@ -769,5 +774,6 @@ getVolumeOf(AudioDeviceID deviceID, char which)
 - (sqInt) snd_SupportsAEC { return 0; }
 
 - (sqInt) snd_EnableAEC: (sqInt) flag { return -1; }
+#endif
 
 @end
