@@ -5,9 +5,9 @@ Class {
 	#name : #FloatMathPluginTests,
 	#superclass : #TestCase,
 	#instVars : [
-		'random'
+		'seed'
 	],
-	#category : #'VMMaker-Plugins'
+	#category : #'VMMaker-Tests'
 }
 
 { #category : #math }
@@ -125,14 +125,14 @@ FloatMathPluginTests >> makeTestData: fileName using: aBlock seed: seed rounds: 
 		out binary. 
 		out nextNumber: 4 put: rounds.
 		out nextNumber: 4 put: seed.
-		random := Random seed: seed.
+		self seed: seed.
 		float := Float basicNew: 2.
 		'Creating test data for: ', fileName 
 			displayProgressAt: Sensor cursorPoint 
 			from: 1 to: rounds during:[:bar|
 				1 to: rounds do:[:i|
 					i \\ 10000 = 0 ifTrue:[bar value: i].
-					[1 to: 8 do:[:j| bytes at: j put: (random nextInt: 256)-1].
+					[1 to: 8 do:[:j| bytes at: j put: (self nextInt: 256)-1].
 					float basicAt: 1 put: (bytes unsignedLongAt: 1 bigEndian: true).
 					float basicAt: 2 put: (bytes unsignedLongAt: 5 bigEndian: true).
 					float isNaN] whileTrue.
@@ -278,6 +278,24 @@ FloatMathPluginTests >> md5Transform: in hash: hash [
 	^hash
 ]
 
+{ #category : #rand }
+FloatMathPluginTests >> nextInt: anInteger [
+	"Answer a random integer in the interval [1, anInteger]."
+
+	| a m q r lo hi aLoRHi |
+	a := 16r000041A7 asFloat.    " magic constant =      16807 "
+	m := 16r7FFFFFFF asFloat.    " magic constant = 2147483647 "
+	q := (m quo: a) asFloat.
+	r  := (m \\ a) asFloat.
+	hi := (seed quo: q) asFloat.
+	lo := seed - (hi * q).  " = seed rem: q"  
+	aLoRHi := (a * lo) - (r * hi).
+	seed := (aLoRHi > 0.0)
+		ifTrue:  [aLoRHi]
+		ifFalse: [aLoRHi + m].
+	^ (seed / m * anInteger) truncated + 1
+]
+
 { #category : #md5 }
 FloatMathPluginTests >> rotate: value by: amount [
 	"Rotate value left by amount"
@@ -295,7 +313,7 @@ FloatMathPluginTests >> runTest: aBlock [
 	out := WriteStream on: ByteArray new.
 	float := Float basicNew: 2.
 	1 to: 10000 do:[:i|
-		[1 to: 8 do:[:j| bytes at: j put: (random nextInt: 256)-1].
+		[1 to: 8 do:[:j| bytes at: j put: (self nextInt: 256)-1].
 		float basicAt: 1 put: (bytes unsignedLongAt: 1 bigEndian: true).
 		float basicAt: 2 put: (bytes unsignedLongAt: 5 bigEndian: true).
 		float isNaN] whileTrue.
@@ -309,9 +327,14 @@ FloatMathPluginTests >> runTest: aBlock [
 	^self md5HashMessage: out contents.
 ]
 
+{ #category : #rand }
+FloatMathPluginTests >> seed: anInteger [
+	seed := anInteger
+]
+
 { #category : #running }
 FloatMathPluginTests >> setUp [
-	random := Random seed: 253213.
+	self seed: 253213.
 ]
 
 { #category : #math }
@@ -577,7 +600,7 @@ FloatMathPluginTests >> testTanH [
 { #category : #tests }
 FloatMathPluginTests >> testTimesTwoPower [
 	| hash |
-	hash := self runTest:[:f| self timesTwoPower: f with: (random nextInt: 200) - 100].
+	hash := self runTest:[:f| self timesTwoPower: f with: (self nextInt: 200) - 100].
 	self assert: hash = 278837335583284459890979576373223649870.
 ]
 
@@ -600,7 +623,7 @@ FloatMathPluginTests >> verifyTestData: fileName using: aBlock [
 		in binary.
 		rounds := in nextNumber: 4.
 		seed := in nextNumber: 4.
-		random := Random seed: seed.
+		self seed: seed.
 		float := Float basicNew: 2.
 		expected := Float basicNew: 2.
 		'Verifying test data from: ', fileName 
@@ -608,7 +631,7 @@ FloatMathPluginTests >> verifyTestData: fileName using: aBlock [
 			from: 1 to: rounds during:[:bar|
 				1 to: rounds do:[:i|
 					i \\ 10000 = 0 ifTrue:[bar value: i].
-					[1 to: 8 do:[:j| bytes at: j put: (random nextInt: 256)-1].
+					[1 to: 8 do:[:j| bytes at: j put: (self nextInt: 256)-1].
 					float basicAt: 1 put: (bytes unsignedLongAt: 1 bigEndian: true).
 					float basicAt: 2 put: (bytes unsignedLongAt: 5 bigEndian: true).
 					float isNaN] whileTrue.
