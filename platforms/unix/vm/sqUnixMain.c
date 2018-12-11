@@ -945,9 +945,6 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 # elif defined(__arm__) || defined(__arm32__) || defined(ARM32)
 			void *fp = (void *)(uap ? uap->uc_mcontext.arm_fp: 0);
 			void *sp = (void *)(uap ? uap->uc_mcontext.arm_sp: 0);
-# elif __linux__ && (defined(__arm64__))
- 	printf("@@FIXME@@: derive register state from a ucontext_t on aarch64 \n");
-	return 0;
 # else
 #	error need to implement extracting pc from a ucontext_t on this system
 # endif
@@ -1021,6 +1018,9 @@ printRegisterState(ucontext_t *uap)
 			regs[REG_R12], regs[REG_R13], regs[REG_R14], regs[REG_R15],
 			regs[REG_RIP]);
 	return regs[REG_RIP];
+# elif __linux__ && (defined(__arm64__))
+ 	printf("@@FIXME@@: derive register state from a ucontext_t on aarch64 \n");
+	return 0;
 # elif __linux__ && (defined(__arm__) || defined(__arm32__) || defined(ARM32))
 	struct sigcontext *regs = &uap->uc_mcontext;
 	printf(	"\t r0 0x%08x r1 0x%08x r2 0x%08x r3 0x%08x\n"
