@@ -1,3 +1,4 @@
+/* vim: set ts=8 : */
 /* sqUnixX11.c -- support for display via the X Window System.
  * 
  *   Copyright (C) 1996-2008 by Ian Piumarta and other authors/contributors
