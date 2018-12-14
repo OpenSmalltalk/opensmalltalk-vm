@@ -76,13 +76,40 @@ sqInt faSetPlatFile(fapath *aFaPath, WCHAR *pathName);
 #define faGetPlatPathLPPByteCount(aFaPath)	(aFaPath->winpathLPP_len * sizeof(WCHAR))
 #define	faGetPlatFile(aFaPath)		aFaPath->winpath_file
 
+/*
+ * faGetPlatPathCPP
+ *
+ * Get the platform path encoding, taking in to account whether the MS
+ * Long Path Prefix (\\?\) should be used.
+ *
+ * The current heuristic is to use the LPP if the path length > MAX_PATH-12.
+ *
+ * Additional information that could be used is lpMaximumComponentLength from
+ * GetVolumneInformation().
+ *
+ * MAX_PATH-12 is used as when creating directories space for an 8.3 file name
+ * must be available (within MAX_PATH).
+ *
+ * For additional confusion, see:
+ * http://msdn.microsoft.com/en-us/library/windows/desktop/aa365247%28v=vs.85%29.aspx#maxpath
+ *
+ * If the LPP should always be prepended, use faGetPlatPathLPP().
+ * If the LPP should never be prepended, use faGetPlatPath().
+ *
+ * Note that testing is difficult as getting it wrong doesn't guarantee that 
+ * a call will fail, e.g. it might work with C:\a\b\c.txt, but fail with
+ * C:\a\b\..\d\c.txt
+ */
+#define faGetPlatPathCPP(aFaPath)	((aFaPath->winpath_len <= (MAX_PATH-12)) ? aFaPath->winpath : aFaPath->winpathLPP)
+
+
+
 sqInt faOpenDirectory(fapath *aFaPath);
 sqInt faReadDirectory(fapath *aFaPath);
 sqInt faCloseDirectory(fapath *aFaPath);
 sqInt faRewindDirectory(fapath *aFaPath);
 sqInt faFileAttribute(fapath *aFaPath, sqInt attributeNumber);
-sqInt faStat(fapath *aFaPath, faStatStruct *statBuf, sqInt *fileNameOop);
-sqInt faLinkStat(fapath *aFaPath, faStatStruct *statBuf, sqInt *fileNameOop);
+sqInt faFileStatAttributes(fapath *aFaPath, int lStat, sqInt attributeArray);
 sqInt faExists(fapath *aFaPath);
 sqInt faAccessAttributes(fapath *aFaPath, sqInt attributeArray, sqInt offset);
 
