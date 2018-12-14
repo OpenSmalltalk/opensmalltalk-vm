@@ -1018,6 +1018,9 @@ printRegisterState(ucontext_t *uap)
 			regs[REG_R12], regs[REG_R13], regs[REG_R14], regs[REG_R15],
 			regs[REG_RIP]);
 	return regs[REG_RIP];
+# elif __linux__ && (defined(__arm64__))
+ 	printf("@@FIXME@@: derive register state from a ucontext_t on aarch64 \n");
+	return 0;
 # elif __linux__ && (defined(__arm__) || defined(__arm32__) || defined(ARM32))
 	struct sigcontext *regs = &uap->uc_mcontext;
 	printf(	"\t r0 0x%08x r1 0x%08x r2 0x%08x r3 0x%08x\n"

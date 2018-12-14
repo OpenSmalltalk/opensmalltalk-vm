@@ -48,11 +48,27 @@
 
 # define fopen_for_append(filename) fopen(filename,"a+t")
 
-/* default fpu control word:
-   _RC_NEAR: round to nearest
-   _PC_53 :  double precision arithmetic (instead of extended)
-   _EM_XXX: silent operations (no signals please)
+/* default fpu control word and mask: 
+   _MCW_RC: Rounding control
+       _RC_NEAR: round to nearest
+   _MCW_PC: Precision control
+       _PC_53:  double precision arithmetic (instead of extended)
+   _MCW_EM: Interupt exception mask
+       _EM_XXX: silent operations (no signals please)
+   https://docs.microsoft.com/en-us/previous-versions/e9b52ceh%28v%3dvs.140%29
 */
+
+#if !defined(_MCW_PC) 
+// x64 does not support _MCW_PC
+// The x64 CPU hardware default is 64-bit precision mode (80-bit long double); 
+// Microsoft expects software to set 53-bit mode before any user mode x87 instructions 
+// are reached. Microsoft made a change in responsibility for initializing precision mode 
+// in the X64 OS. The X64 OS sets 53-bit mode prior to starting your .exe, where the 32-bit OS 
+// expected the program to make that initialization.
+# define _MCW_PC 0
+#endif
+
+#define FPU_MASK (_MCW_EM | _MCW_RC | _MCW_PC)
 #define FPU_DEFAULT (_RC_NEAR + _PC_53 + _EM_INVALID + _EM_ZERODIVIDE + _EM_OVERFLOW + _EM_UNDERFLOW + _EM_INEXACT + _EM_DENORMAL)
 
 #define MAXFRAMES 64
@@ -116,7 +132,7 @@ void
 ioInitPlatformSpecific(void)
 {
     /* Setup the FPU */
-    _controlfp(FPU_DEFAULT, _MCW_EM | _MCW_RC | _MCW_PC | _MCW_IC);
+    _controlfp(FPU_DEFAULT, FPU_MASK);
 
     /* Create the wake up event. */
     vmWakeUpEvent = CreateEvent(NULL, 1, 0, NULL);
@@ -363,8 +379,9 @@ static LONG CALLBACK squeakExceptionHandler(LPEXCEPTION_POINTERS exp)
         DWORD code = exp->ExceptionRecord->ExceptionCode;
         if((code >= EXCEPTION_FLT_DENORMAL_OPERAND) && (code <= EXCEPTION_FLT_UNDERFLOW))
         {
-              /* turn on the default masking of exceptions in the FPU and proceed */
-              _controlfp(FPU_DEFAULT, _MCW_EM | _MCW_RC | _MCW_PC | _MCW_IC);
+              /* in case FFI callout to foreign code changed FP mode              */
+              /* restore our default masking of exceptions in the FPU and proceed */
+              _controlfp(FPU_DEFAULT, FPU_MASK);
               result = EXCEPTION_CONTINUE_EXECUTION;
         }
     }
@@ -799,3 +816,4 @@ void *os_exports[][3] =
 {
     { 0, 0, 0 }
 };
+

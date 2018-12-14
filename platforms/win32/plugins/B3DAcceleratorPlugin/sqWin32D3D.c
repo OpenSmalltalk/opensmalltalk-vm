@@ -952,7 +952,7 @@ int d3dGetRendererSurfaceDepth(int handle) {
   return desc->ddpfPixelFormat.dwRGBBitCount;
 }
 
-int d3dGetRendererColorMasks(int handle, int *masks) {
+int d3dGetRendererColorMasks(int handle, unsigned int *masks) {
   DDSURFACEDESC2 *desc = d3dGetRendererDesc(handle);
   if(!desc) return 0;
 
@@ -1219,7 +1219,7 @@ int d3dActualTextureDepth(int rendererHandle, int handle) /* return depth or <0 
   return desc.ddpfPixelFormat.dwRGBBitCount;
 }
 
-int d3dTextureColorMasks(int rendererHandle, int handle, int masks[4])  /* return true on success, false on error */
+int d3dTextureColorMasks(int rendererHandle, int handle, unsigned int masks[4])  /* return true on success, false on error */
 {
   LPDIRECTDRAWSURFACE7 lpdsTexture;
   DDSURFACEDESC2 desc;

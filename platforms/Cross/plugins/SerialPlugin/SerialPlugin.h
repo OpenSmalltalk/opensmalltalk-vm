@@ -6,6 +6,7 @@ int serialPortShutdown(void);
 
 #pragma export on
 int serialPortClose(int portNum);
+int serialPortCloseByName(const char *portName);
 int serialPortCount(void);
 int serialPortOpen(int portNum, int baudRate, int stopBitsType, int parityType, int dataBits,
 		   int inFlowCtrl, int outFlowCtrl, int xOnChar, int xOffChar);

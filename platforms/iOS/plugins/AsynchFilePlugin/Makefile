@@ -1,5 +1,5 @@
-SRCDIRS:=../../platforms/unix/plugins/AsynchFilePlugin
-INCDIRS:=../../platforms/Cross/plugins/AsynchFilePlugin \
-         ../../platforms/unix/vm
+SRCDIRS:=$(PLATDIR)/unix/plugins/AsynchFilePlugin
+INCDIRS:=$(PLATDIR)/Cross/plugins/AsynchFilePlugin \
+         $(PLATDIR)/unix/vm
 
 include ../common/Makefile.plugin

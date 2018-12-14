@@ -11,9 +11,9 @@
 *   NOTES: 
 *  Feb 22nd, 2002, JMM enable 16 ports for serial, versus four, which was capped at 2?
 ****************************************************************************/
+
 #include "sq.h"
 #include "SerialPlugin.h"
-#include <Carbon/Carbon.h>
 
 extern struct VirtualMachine *interpreterProxy;
 
@@ -44,8 +44,7 @@ int serialPortShutdown() {
 EXPORT (int) serialPortCount(void) {
   /* Return the number of serial ports available on this machine */
     return false;
-
- }
+}
 
 int serialPortIsOpen(int portNum) {
 	if ((portNum < 0) || (portNum >= MAX_PORTS)) return false;
@@ -75,6 +74,10 @@ int setHandshakeOptions(
 
 EXPORT (int) serialPortClose(int portNum) {
 #pragma unused(portNum)
+    return false;
+}
+EXPORT (int) serialPortCloseByName(const char *portName) {
+#pragma unused(portName)
     return false;
 }
 
@@ -122,18 +125,9 @@ EXPORT (int) serialPortWriteFrom(int portNum, int count, void *bufferPtr) {
    synchronous: it doesn't return until the data has been sent. However, other
    implementations may return before transmission is complete. */
 
-	long int byteCount = count;
-	int osErr;
+#pragma unused(portNum,count,bufferPtr)
 
-	if (!serialPortIsOpen(portNum)) {
-		return interpreterProxy->success(false);
-	}
-
-	osErr = FSWrite(outRefNum[portNum], &byteCount, (char *) bufferPtr);
-	if (osErr != noErr) {
-		return interpreterProxy->success(false);
-	}
-	return byteCount;
+	return interpreterProxy->success(false);
 }
 
 EXPORT (int) serialPortWriteFromByName(const char *portName, int count, void *bufferPtr) {

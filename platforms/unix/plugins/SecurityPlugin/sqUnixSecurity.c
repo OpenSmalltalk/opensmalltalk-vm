@@ -1,4 +1,4 @@
-/* sqUnixSecurity.c -- directory operations for Unix
+/* sqUnixSecurity.c -- directory operations for Unix/MacOS
  * 
  * Author: Bert Freudenberg (heavily based on Andreas Raab's sqWin32Security.c)
  * 
@@ -25,7 +25,7 @@ static char* fromSqueak(char* string, int len)
 {
   static char buf[MAXPATHLEN];
   strncpy(buf, string, len);
-  buf[len]= '\0';
+  buf[len] = '\0';
   return buf;
 }
 
@@ -36,29 +36,31 @@ sqInt ioDisableEnvironmentAccess(void) { return allowEnvironmentAccess = 0; }
 sqInt ioHasEnvironmentAccess(void) { return allowEnvironmentAccess; }
 
 /* file security ***********************************************************/
-static sqInt allowFileAccess= 1;  /* full access to files */
+static sqInt allowFileAccess = 1;  /* full access to files */
 
 
-static int isAccessiblePathName(char *pathName)
+static int
+isAccessiblePathName(char *pathName)
 {
    char realPathName[MAXPATHLEN];
    int  realPathLen;
-                                                   
+
    realpath(pathName, realPathName);
-   realPathLen= strlen(realPathName);
+   realPathLen = strlen(realPathName);
 
    return (realPathLen >= untrustedUserDirectoryLen
 	   && 0 == strncmp(realPathName, untrustedUserDirectory, untrustedUserDirectoryLen));
 }
 
 
-static int isAccessibleFileName(char *fileName)
+static int
+isAccessibleFileName(char *fileName)
 {
   char pathName[MAXPATHLEN];
-  int pathLen= strrchr(fileName, '/') - fileName;
+  int pathLen = strrchr(fileName, '/') - fileName;
 
   strncpy(pathName, fileName, pathLen);
-  pathName[pathLen]= '\0';
+  pathName[pathLen] = '\0';
 
   return isAccessiblePathName(pathName);
 }
@@ -67,21 +69,24 @@ static int isAccessibleFileName(char *fileName)
 /* directory access */
 
 
-sqInt ioCanCreatePathOfSize(char* pathString, sqInt pathStringLength)
+sqInt
+ioCanCreatePathOfSize(char* pathString, sqInt pathStringLength)
 {
   if (allowFileAccess) return 1;
   return isAccessiblePathName(fromSqueak(pathString, pathStringLength));
 }
 
 
-sqInt ioCanListPathOfSize(char* pathString, sqInt pathStringLength)
+sqInt
+ioCanListPathOfSize(char* pathString, sqInt pathStringLength)
 {
   if (allowFileAccess) return 1;
   return isAccessiblePathName(fromSqueak(pathString, pathStringLength));
 }
 
 
-sqInt ioCanDeletePathOfSize(char* pathString, sqInt pathStringLength)
+sqInt
+ioCanDeletePathOfSize(char* pathString, sqInt pathStringLength)
 {
   if (allowFileAccess) return 1;
   return isAccessiblePathName(fromSqueak(pathString, pathStringLength));
@@ -91,39 +96,45 @@ sqInt ioCanDeletePathOfSize(char* pathString, sqInt pathStringLength)
 /* file access */
 
 
-sqInt ioCanOpenFileOfSizeWritable(char* pathString, sqInt pathStringLength, sqInt writeFlag)
+sqInt
+ioCanOpenFileOfSizeWritable(char* pathString, sqInt pathStringLength, sqInt writeFlag)
 {
   if (allowFileAccess) return 1;
   return isAccessibleFileName(fromSqueak(pathString, pathStringLength));
 }
 
 
-sqInt ioCanOpenAsyncFileOfSizeWritable(char* pathString, sqInt pathStringLength, sqInt writeFlag)
+sqInt
+ioCanOpenAsyncFileOfSizeWritable(char* pathString, sqInt pathStringLength, sqInt writeFlag)
 {
   return ioCanOpenFileOfSizeWritable(pathString, pathStringLength, writeFlag);
 }
 
 
-sqInt ioCanDeleteFileOfSize(char* pathString, sqInt pathStringLength)
+sqInt
+ioCanDeleteFileOfSize(char* pathString, sqInt pathStringLength)
 {
   if (allowFileAccess) return 1;
   return isAccessibleFileName(fromSqueak(pathString, pathStringLength));
 }
 
-sqInt ioCanRenameFileOfSize(char* pathString, sqInt pathStringLength)
+sqInt
+ioCanRenameFileOfSize(char* pathString, sqInt pathStringLength)
 {
   if (allowFileAccess) return 1;
   return isAccessibleFileName(fromSqueak(pathString, pathStringLength));
 }
 
 
-sqInt ioCanGetFileTypeOfSize(char* pathString, sqInt pathStringLength)
+sqInt
+ioCanGetFileTypeOfSize(char* pathString, sqInt pathStringLength)
 {
   return 1; /* we don't have file types */
 }
 
 
-sqInt ioCanSetFileTypeOfSize(char* pathString, sqInt pathStringLength)
+sqInt
+ioCanSetFileTypeOfSize(char* pathString, sqInt pathStringLength)
 {
   return 1; /* we don't have file types */
 }
@@ -131,78 +142,97 @@ sqInt ioCanSetFileTypeOfSize(char* pathString, sqInt pathStringLength)
 
 /* disabling/querying */
 
-
-sqInt ioDisableFileAccess(void) { return allowFileAccess = 0; }
-sqInt ioHasFileAccess(void) { return allowFileAccess; }
+sqInt
+ioDisableFileAccess(void) { return allowFileAccess = 0; }
+sqInt
+ioHasFileAccess(void) { return allowFileAccess; }
 
 
 /* image security **********************************************************/
-static sqInt allowImageWrite= 1;  /* allow writing the image */
+static sqInt allowImageWrite = 1;  /* allow writing the image */
 
-sqInt ioCanRenameImage(void)
+sqInt
+ioCanRenameImage(void)
 {
   return allowImageWrite; /* only when we're allowed to save the image */
 }
 
-sqInt ioCanWriteImage(void) { return allowImageWrite; }
-sqInt ioDisableImageWrite(void) { return allowImageWrite= 0; }
+sqInt
+ioCanWriteImage(void) { return allowImageWrite; }
+sqInt
+ioDisableImageWrite(void) { return allowImageWrite = 0; }
 
 
 /* socket security - for now it's all or nothing ***************************/
-static sqInt allowSocketAccess= 1; /* allow access to sockets */
+static sqInt allowSocketAccess = 1; /* allow access to sockets */
 
-sqInt ioCanCreateSocketOfType(sqInt netType, sqInt socketType)
+sqInt
+ioCanCreateSocketOfType(sqInt netType, sqInt socketType)
 {
   return allowSocketAccess;
 }
-sqInt ioCanConnectToPort(sqInt addr, sqInt port) { return allowSocketAccess; }
-sqInt ioCanListenOnPort(sqInt s, sqInt port) { return allowSocketAccess; }
-sqInt ioDisableSocketAccess() { return allowSocketAccess = 0; }
-sqInt ioHasSocketAccess() { return allowSocketAccess; }
+sqInt
+ioCanConnectToPort(sqInt addr, sqInt port) { return allowSocketAccess; }
+sqInt
+ioCanListenOnPort(sqInt s, sqInt port) { return allowSocketAccess; }
+sqInt
+ioDisableSocketAccess(void) { return allowSocketAccess = 0; }
+sqInt
+ioHasSocketAccess(void) { return allowSocketAccess; }
 
 
 /* SecurityPlugin primitive support ****************************************/
 
-char *ioGetSecureUserDirectory(void)
+char *
+ioGetSecureUserDirectory(void)
 {
-  if (secureUserDirectory[0] == '\0')
-    return (char *)success(false);
+  if (secureUserDirectory[0] == '\0') {
+    success(false);
+	return 0;
+  }
   return secureUserDirectory;
 }
 
 
-char *ioGetUntrustedUserDirectory(void)
+char *
+ioGetUntrustedUserDirectory(void)
 {
   return untrustedUserDirectory;
 }
 
 
-/* note: following is called from VM directly, not from plugin */
-sqInt ioInitSecurity(void)
+/* note: the following is called from the VM directly, not from the plugin */
+sqInt
+ioInitSecurity(void)
 {
-  int imagePathLen= strrchr(imageName, '/') - imageName;
-  char *squeakUserDirectory= 0;
+  char *squeakUserDirectory;
+  char *slash = strrchr(imageName, '/');
+  int imagePathLen = slash ? slash - imageName : 0;
 
-  /* establish the secure user directory */
-  strncpy(secureUserDirectory, imageName, imagePathLen);
+  /* establish the secure user directory, always relative to the image file */
+  if (imagePathLen)
+    strncpy(secureUserDirectory, imageName, imagePathLen);
+  else {
+    getwd(secureUserDirectory);
+	imagePathLen = strlen(secureUserDirectory);
+  }
+
   strcpy(secureUserDirectory + imagePathLen, "/secure");
 
-  /* establish untrusted user directory */
-  squeakUserDirectory= getenv("SQUEAK_USERDIR");
-  if (0 == squeakUserDirectory)
-    {
-      strncpy(untrustedUserDirectory, imageName, imagePathLen);
+  /* establish the untrusted user directory; optional or relative to image */
+  squeakUserDirectory = getenv("SQUEAK_USERDIR");
+  if (!squeakUserDirectory) {
+      strncpy(untrustedUserDirectory, secureUserDirectory, imagePathLen);
       strcpy(untrustedUserDirectory + imagePathLen, "/My Squeak");
-    }
-  else
-    {
-      int lastChar= strlen(squeakUserDirectory);
+  }
+  else {
+      int lastChar = strlen(squeakUserDirectory);
       /*  path is not allowed to end with "/" */
       if ('/' == squeakUserDirectory[lastChar - 1])
-	squeakUserDirectory[lastChar - 1]= '\0';
+        squeakUserDirectory[lastChar - 1] = '\0';
       strcpy(untrustedUserDirectory, squeakUserDirectory);
-    }
-  untrustedUserDirectoryLen= strlen(untrustedUserDirectory);
+  }
+  untrustedUserDirectoryLen = strlen(untrustedUserDirectory);
 
   return 1;
 }
