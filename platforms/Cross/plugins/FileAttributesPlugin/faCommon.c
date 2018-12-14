@@ -8,7 +8,7 @@
 #include "faCommon.h"
 
 extern struct VirtualMachine * interpreterProxy;
-int	thisSession = 0;
+int	vmSessionId = 0;
 
 
 /*
@@ -20,9 +20,9 @@ int	thisSession = 0;
  */
 sqInt faInitialiseModule()
 {
-	if (thisSession == 0)
+	if (vmSessionId == 0)
 		return interpreterProxy->falseObject();
-	thisSession = interpreterProxy->getThisSessionID();
+	vmSessionId = interpreterProxy->getThisSessionID();
 	return interpreterProxy->trueObject();
 }
 
@@ -35,7 +35,7 @@ sqInt faInitialiseModule()
  */
 sqInt faInitSessionId(int *sessionId)
 {
-	*sessionId = thisSession;
+	*sessionId = vmSessionId;
 	return FA_SUCCESS;
 }
 
@@ -50,7 +50,7 @@ sqInt faInitSessionId(int *sessionId)
  */
 sqInt faValidateSessionId(int sessionId)
 {
-	return sessionId == thisSession;
+	return sessionId == vmSessionId;
 }
 
 
