@@ -2062,6 +2062,17 @@ static int x2sqKeyPlain(XKeyEvent *xevt, KeySym *symbolic)
       return -1;	/* unknown key */
   if ((charCode == 127) && mapDelBs)
     charCode= 8;
+  if (charCode >= 1 && charCode <= 26) {
+    /* check for Ctrl-letter that gets translated into charCode 1-26 instead of letters a-z */
+    KeySym keysym = *symbolic;
+    if (keysym >= XK_a && keysym <= XK_z)
+      return (int)'a' + (keysym - XK_a);
+    if (keysym >= XK_A && keysym <= XK_Z)
+      return (int)'A' + (keysym - XK_A);
+  }
+  if (charCode >= 246 /* XK_Alt_R */ && charCode <= 255 /* XK_Shift_L */) /* hard coded values from translateCode */
+    /* The shift, ctrl, alt keys shouldn't be translated by the recode below */
+    return charCode;
   return nConv == 0 && (modifierState & (CommandKeyBit+CtrlKeyBit+OptionKeyBit))
 			? charCode
 			: recode(charCode);
@@ -4792,7 +4803,7 @@ static sqInt display_ioFormPrint(sqInt bitsIndex, sqInt width, sqInt height, sqI
   copyFn copy= ((depth > 0) && (depth <= 32)) ? copyFns[depth] : 0;
   if (!copy)
     {
-      fprintf(stderr, "ioFormPrint: depth %d not supported\n", depth);
+      fprintf(stderr, "ioFormPrint: depth %ld not supported\n", depth);
       return false;
     }
 
@@ -4834,7 +4845,7 @@ static sqInt display_ioFormPrint(sqInt bitsIndex, sqInt width, sqInt height, sqI
     }
 
   /* print the PPM magic number */
-  fprintf(ppm, "P3\n%d %d 255\n", width, height);
+  fprintf(ppm, "P3\n%ld %ld 255\n", width, height);
 
   /* write the pixmap */
   {
@@ -5485,7 +5496,7 @@ static sqInt display_ioShowDisplay(sqInt dispBitsIndex, sqInt width, sqInt heigh
   if (!(depth == 1 || depth == 2 || depth == 4
 	|| depth == 8 || depth == 16 || depth == 32))
     {
-      fprintf(stderr, "depth %d is not supported\n", depth);
+      fprintf(stderr, "depth %ld is not supported\n", depth);
       exit(1);
       return 0;
     }
@@ -5818,7 +5829,7 @@ static sqInt display_ioHasDisplayDepth(sqInt i)
 
 static sqInt display_ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenFlag)
 {
-  fprintf(stderr, "ioSetDisplayMode(%d, %d, %d, %d)\n",
+  fprintf(stderr, "ioSetDisplayMode(%ld, %ld, %ld, %ld)\n",
 	  width, height, depth, fullscreenFlag);
   setSavedWindowSize((width << 16) + (height & 0xFFFF));
   setFullScreenFlag(fullScreen);
@@ -6925,6 +6936,7 @@ closelog(void)
 static int
 myPrint3Dlog(char *fmt, ...)
 {	va_list args;
+	int n;
 
 	if (!logfile) {
 		char *slash;
@@ -6949,10 +6961,11 @@ myPrint3Dlog(char *fmt, ...)
 		atexit(closelog);
 	}
 	va_start(args,fmt);
-	vfprintf(logfile, fmt, args);
+	n = vfprintf(logfile, fmt, args);
 	va_end(args);
 	if (forceFlush) /* from sqOpenGLRenderer.h */
 		fflush(logfile);
+	return n;
 }
 
 # include <GL/gl.h>
@@ -7261,7 +7274,7 @@ static long display_hostWindowSetTitle(long windowIndex, char *newTitle, long si
   XChangeProperty(stDisplay, stParent,
 		  XInternAtom(stDisplay, "_NET_WM_NAME", False),
 		  XInternAtom(stDisplay, "UTF8_STRING",  False),
-		  8, PropModeReplace, newTitle, sizeOfTitle);
+		  8, PropModeReplace, (unsigned char *)newTitle, sizeOfTitle);
 
   return 0;
 }
@@ -7279,7 +7292,7 @@ static long display_ioSizeOfNativeWindow(void *windowHandle)
    * width.
    */
   real_border_width= attrs.border_width ? attrs.border_width : attrs.x;
-  return (attrs.width + 2 * real_border_width << 16)
+  return ((attrs.width + 2 * real_border_width) << 16)
     | (attrs.height + attrs.y + real_border_width);
 }
 
@@ -7295,7 +7308,7 @@ static long display_ioPositionOfNativeWindow(void *windowHandle)
 				&rootx, &rooty, &neglected_child))
     return -1;
 
-  return (rootx - attrs.x << 16) | (rooty - attrs.y);
+  return ((rootx - attrs.x) << 16) | (rooty - attrs.y);
 }
 
 #endif /* (SqDisplayVersionMajor >= 1 && SqDisplayVersionMinor >= 2) */
