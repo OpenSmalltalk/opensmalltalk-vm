@@ -988,14 +988,14 @@ static void *
 printRegisterState(ucontext_t *uap)
 {
 #if __linux__ && __i386__
-	gregset_t *regs = &uap->uc_mcontext.gregs;
+	greg_t *regs = (greg_t *)&uap->uc_mcontext.gregs;
 	printf(	"\teax 0x%08x ebx 0x%08x ecx 0x%08x edx 0x%08x\n"
 			"\tedi 0x%08x esi 0x%08x ebp 0x%08x esp 0x%08x\n"
 			"\teip 0x%08x\n",
 			regs[REG_EAX], regs[REG_EBX], regs[REG_ECX], regs[REG_EDX],
 			regs[REG_EDI], regs[REG_EDI], regs[REG_EBP], regs[REG_ESP],
 			regs[REG_EIP]);
-	return regs[REG_EIP];
+	return (void *)regs[REG_EIP];
 #elif __FreeBSD__ && __i386__
 	struct mcontext *regs = &uap->uc_mcontext;
 	printf(	"\teax 0x%08x ebx 0x%08x ecx 0x%08x edx 0x%08x\n"
@@ -1006,18 +1006,18 @@ printRegisterState(ucontext_t *uap)
 			regs->mc_eip);
 	return regs->mc_eip;
 #elif __linux__ && __x86_64__
-	gregset_t *regs = &uap->uc_mcontext.gregs;
-	printf(	"\trax 0x%08x rbx 0x%08x rcx 0x%08x rdx 0x%08x\n"
-			"\trdi 0x%08x rsi 0x%08x rbp 0x%08x rsp 0x%08x\n"
-			"\tr8  0x%08x r9  0x%08x r10 0x%08x r11 0x%08x\n"
-			"\tr12 0x%08x r13 0x%08x r14 0x%08x r15 0x%08x\n"
-			"\trip 0x%08x\n",
+	greg_t *regs = (greg_t *)&uap->uc_mcontext.gregs;
+	printf(	"\trax 0x%08lx rbx 0x%08lx rcx 0x%08lx rdx 0x%08lx\n"
+			"\trdi 0x%08lx rsi 0x%08lx rbp 0x%08lx rsp 0x%08lx\n"
+			"\tr8  0x%08lx r9  0x%08lx r10 0x%08lx r11 0x%08lx\n"
+			"\tr12 0x%08lx r13 0x%08lx r14 0x%08lx r15 0x%08lx\n"
+			"\trip 0x%08lx\n",
 			regs[REG_RAX], regs[REG_RBX], regs[REG_RCX], regs[REG_RDX],
 			regs[REG_RDI], regs[REG_RDI], regs[REG_RBP], regs[REG_RSP],
 			regs[REG_R8 ], regs[REG_R9 ], regs[REG_R10], regs[REG_R11],
 			regs[REG_R12], regs[REG_R13], regs[REG_R14], regs[REG_R15],
 			regs[REG_RIP]);
-	return regs[REG_RIP];
+	return (void *)regs[REG_RIP];
 # elif __linux__ && (defined(__arm64__))
  	printf("@@FIXME@@: derive register state from a ucontext_t on aarch64 \n");
 	return 0;

@@ -84,6 +84,10 @@ closelog(void)
 # endif
 #endif
 
+#if defined(SQUEAK_BUILTIN_PLUGIN)
+extern char *getImageName(void);
+#endif
+
 int
 print3Dlog(char *fmt, ...)
 {	va_list args;
