@@ -76,8 +76,7 @@ sqInt faReadDirectory(fapath *aFaPath);
 sqInt faCloseDirectory(fapath *aFaPath);
 sqInt faRewindDirectory(fapath *aFaPath);
 sqInt faFileAttribute(fapath *aFaPath, sqInt attributeNumber);
-sqInt faStat(fapath *aFaPath, faStatStruct *statBuf, sqInt *fileNameOop);
-sqInt faLinkStat(fapath *aFaPath, faStatStruct *statBuf, sqInt *fileNameOop);
+sqInt faFileStatAttributes(fapath *aFaPath, int lStat, sqInt attributeArray);
 sqInt faExists(fapath *aFaPath);
 sqInt faAccessAttributes(fapath *aFaPath, sqInt attributeArray, sqInt offset);
 

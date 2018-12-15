@@ -344,15 +344,16 @@ sqInt faFileAttribute(fapath *aFaPath, sqInt attributeNumber)
 {
 faStatStruct	statBuf;
 int		status;
-sqInt	resultOop = 0;
+sqInt		resultOop = 0;
 int		mode;
 
 
 	if (attributeNumber <= 12) {
 		/* Requested attribute comes from stat() entry */
 		status = stat(faGetPlatPath(aFaPath), &statBuf);
-		if (status)
-			return interpreterProxy->primitiveFailForOSError(FA_CANT_STAT_PATH);
+		if (status) {
+			interpreterProxy->primitiveFailForOSError(FA_CANT_STAT_PATH);
+			return 0; }
 
 		switch (attributeNumber) {
 
@@ -431,8 +432,9 @@ int		mode;
 	} else if (attributeNumber == 16) {
 		/* isSymlink */
 		status = lstat(faGetPlatPath(aFaPath), &statBuf);
-		if (status)
-			return interpreterProxy->primitiveFailForOSError(FA_CANT_STAT_PATH);
+		if (status) {
+			interpreterProxy->primitiveFailForOSError(FA_CANT_STAT_PATH);
+			 return 0; }
 		if (S_ISLNK(statBuf.st_mode))
 			resultOop = interpreterProxy->trueObject();
 		else
@@ -445,48 +447,99 @@ int		mode;
 
 
 /*
- * faStat
+ * faFileStatAttributes
  *
- * Populate the supplied stat buffer.
+ * Populate the supplied array with the file attributes.
  *
- * fileNameOop only applies to symbolic links, answer nil.
+ * On error answer the status.
+ *
  */
-sqInt faStat(fapath *aFaPath, faStatStruct *statBuf, sqInt *fileNameOop)
+sqInt faFileStatAttributes(fapath *aFaPath, int lStat, sqInt attributeArray)
 {
+faStatStruct	statBuf;
 int		status;
+int		mode;
+sqInt		targetOop;
+char		targetFile[FA_PATH_MAX];
 
-	status = stat(faGetPlatPath(aFaPath), statBuf);
-	if (status) return FA_CANT_STAT_PATH;
-	fileNameOop[0] = interpreterProxy->nilObject();
-	return 0;
+
+	targetOop = interpreterProxy->nilObject();
+	if (lStat) {
+		status = lstat(faGetPlatPath(aFaPath), &statBuf);
+		if (status)
+			return FA_CANT_STAT_PATH;
+		if (S_ISLNK(statBuf.st_mode)) {
+			/* This is a symbolic link, provide the target filename */
+			status = readlink(faGetPlatPath(aFaPath), targetFile, FA_PATH_MAX);
+			if (status >= 0)
+				targetOop = pathNameToOop(targetFile); } }
+	else {
+		status = stat(faGetPlatPath(aFaPath), &statBuf);
+		if (status)
+			return FA_CANT_STAT_PATH; }
+
+	interpreterProxy->storePointerofObjectwithValue(
+		0, attributeArray,
+		targetOop);
+
+	interpreterProxy->storePointerofObjectwithValue(
+		1, attributeArray,
+		interpreterProxy->positive32BitIntegerFor(statBuf.st_mode));
+
+	interpreterProxy->storePointerofObjectwithValue(
+		2, attributeArray,
+		interpreterProxy->positive64BitIntegerFor(statBuf.st_ino));
+
+	interpreterProxy->storePointerofObjectwithValue(
+		3, attributeArray,
+		interpreterProxy->positive64BitIntegerFor(statBuf.st_dev));
+
+	interpreterProxy->storePointerofObjectwithValue(
+		4, attributeArray,
+		interpreterProxy->positive32BitIntegerFor(statBuf.st_nlink));
+
+	interpreterProxy->storePointerofObjectwithValue(
+		5, attributeArray,
+		interpreterProxy->positive32BitIntegerFor(statBuf.st_uid));
+
+	interpreterProxy->storePointerofObjectwithValue(
+		6, attributeArray,
+		interpreterProxy->positive32BitIntegerFor(statBuf.st_gid));
+
+	interpreterProxy->storePointerofObjectwithValue(
+		7, attributeArray,
+		(S_ISDIR(statBuf.st_mode) == 0) ?
+			interpreterProxy->positive64BitIntegerFor(statBuf.st_size) :
+			interpreterProxy->positive32BitIntegerFor(0));
+
+	interpreterProxy->storePointerofObjectwithValue(
+		8, attributeArray,
+		interpreterProxy->signed64BitIntegerFor(
+			faConvertUnixToLongSqueakTime(statBuf.st_atime)));
+
+	interpreterProxy->storePointerofObjectwithValue(
+		9, attributeArray,
+		interpreterProxy->signed64BitIntegerFor(
+			faConvertUnixToLongSqueakTime(statBuf.st_mtime)));
+
+	interpreterProxy->storePointerofObjectwithValue(
+		10, attributeArray,
+		interpreterProxy->signed64BitIntegerFor(
+			faConvertUnixToLongSqueakTime(statBuf.st_ctime)));
+
+	interpreterProxy->storePointerofObjectwithValue(
+		11, attributeArray,
+		interpreterProxy->nilObject());
+
+	/* Windows file attribute flags - not supported on Unix */
+	interpreterProxy->storePointerofObjectwithValue(
+		12, attributeArray,
+		interpreterProxy->nilObject());
+
+	return FA_SUCCESS;
 }
 
 
-
-/*
- * faLinkStat
- *
- * Populate the supplied stat buffer with symbolic link information
- */
-sqInt faLinkStat(fapath *aFaPath, faStatStruct *statBuf, sqInt *fileNameOop)
-{
-int	status;
-char	targetFile[FA_PATH_MAX];
-
-	status = lstat(faGetPlatPath(aFaPath), statBuf);
-	if (status) return FA_CANT_STAT_PATH;
-	if (S_ISLNK(statBuf->st_mode)) {
-		/* This is a symbolic link, provide the target filename */
-		status = readlink(faGetPlatPath(aFaPath), targetFile, FA_PATH_MAX);
-		if (status < 0) return FA_CANT_READ_LINK;
-		*fileNameOop = pathNameToOop(targetFile);
-		if (interpreterProxy->failed())
-			return interpreterProxy->primitiveFailureCode();
-	} else {
-		fileNameOop[0] = interpreterProxy->nilObject();
-	}
-	return 0;
-}
 
 
 /*
