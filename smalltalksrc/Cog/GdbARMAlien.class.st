@@ -1,5 +1,5 @@
 "
-I am a wrapper around the ARMulator CPU instance and emulator routines and I give access to disassembling using libopcodes. My C-part must be compiled with -DMODET, because otherwise my offesets are wrong by one field.
+I am a wrapper around the ARMulator CPU instance and emulator routines and I give access to disassembling using libopcodes. My C-part must be compiled with -DMODET, because otherwise my offsets are wrong by one field.
 "
 Class {
 	#name : #GdbARMAlien,
