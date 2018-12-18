@@ -92,25 +92,30 @@ SmartSyntaxPluginTMethod >> fixUpReturnOneStmt: stmt on: sStream [
 	stmt isReturn ifFalse: [^sStream nextPut: stmt].
 	expr := stmt expression.
 	(expr isSend
-	 and: [self resultSendAlwaysFails: expr]) ifTrue: 
+	 and: [self resultSendAlwaysFails: expr]) ifTrue:
 		["failure returns"
 		 sStream nextPut: expr; nextPut: self nullReturnExpr.
 		 ^nil].
-	(expr isVariable and: ['nil' = expr name]) ifTrue: 
+	(expr isVariable and: ['nil' = expr name]) ifTrue:
 		["^ nil -- this is never right unless automatically generated"
 		 sStream nextPut: stmt.
 		 ^nil].
-	(expr isVariable and: ['self' = expr name]) ifTrue: 
+	(expr isVariable and: ['self' = expr name]) ifTrue:
 		["^ self"
 		 fullArgs isEmpty ifFalse:
 			[sStream nextPut: (self statementGuardedWithSuccess: (self popExpr: fullArgs size))].
 		 sStream nextPut: self nullReturnExpr.
 		 ^nil].
 	(expr isVariable or: [expr isConstant]) ifTrue:
-		["^ variable or ^ constant or ^ expr without guardchecking"
-		 fullArgs isEmpty ifFalse:
-			[sStream nextPut: (self statementGuardedWithSuccess: (self pop: fullArgs size + 1 thenReturnExpr: expr))].
-		 sStream nextPut: self nullReturnExpr.
+		["^ variable or ^ constant without guardchecking"
+		sStream
+			nextPut: (sStream isEmpty "No statements to cause failure, therefore no need for failure guard."
+						ifTrue:
+							[self pop: fullArgs size + 1 thenReturnExpr: expr]
+						ifFalse:
+							[self statementGuardedWithSuccess:
+								(self pop: fullArgs size + 1 thenReturnExpr: expr)]);
+			nextPut: self nullReturnExpr.
 		 ^nil].
 	"^ expr with necessary guard checking"
 	"p := sStream position."
