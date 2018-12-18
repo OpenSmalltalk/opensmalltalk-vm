@@ -1813,6 +1813,13 @@ NewObjectMemory >> is: oop KindOfClass: aClass [
 	^coInterpreter is: oop KindOfClass: aClass
 ]
 
+{ #category : #'simulation only' }
+NewObjectMemory >> isBooleanObject: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter isBooleanObject: oop
+]
+
 { #category : #'internal interpreter access' }
 NewObjectMemory >> isContextHeader: aHeader [
 	<inline: true>
@@ -1860,6 +1867,13 @@ NewObjectMemory >> isPlatformFloatOrderVersion: imageVersion [
 	"Answer if floats are stored in the platform's float order for the given imageVersion.
 	 Prior to this version they were always in big-endian (e.g. PowerPC) format."
 	^imageVersion >= 6505
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> isPositiveMachineIntegerObject: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter isPositiveMachineIntegerObject: oop
 ]
 
 { #category : #'memory access' }

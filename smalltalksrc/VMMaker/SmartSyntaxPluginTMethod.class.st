@@ -8,11 +8,13 @@ Class {
 	#superclass : #TMethod,
 	#instVars : [
 		'isPrimitive',
-		'suppressingFailureGuards',
 		'fullSelector',
 		'fullArgs',
 		'parmSpecs',
 		'rcvrSpec'
+	],
+	#classVars : [
+		'Them'
 	],
 	#category : #'VMMaker-SmartSyntaxPlugins'
 }
@@ -85,57 +87,55 @@ or an assignment of that expression to a local, and manipulate the state and par
 ]
 
 { #category : #transforming }
-SmartSyntaxPluginTMethod >> extractSuppressFailureGuardDirective [
-	"Scan the top-level statements for a pragma directive of the form:
-
-		self suppressFailureGuards: <boolean>
-
-	 and remove the directive from the method body. Answer the argument
-	 of the directive or false if there is no #supressFailureGuards: directive."
-
-	^self
-		extractDirective: #suppressFailureGuards:
-		valueBlock: [:sendNode| sendNode args first name = 'true']
-		default: false
-]
-
-{ #category : #transforming }
 SmartSyntaxPluginTMethod >> fixUpReturnOneStmt: stmt on: sStream [
-
+	| expr exprRetStmts "p t" |
 	stmt isReturn ifFalse: [^sStream nextPut: stmt].
-	(stmt expression isSend
-	 and: [#('primitiveFail' 'primitiveFailFor:') includes: stmt expression selector]) ifTrue: 
-		["failure return"
-		 sStream nextPut: stmt expression.
-		 sStream nextPut: self nullReturnExpr.
+	expr := stmt expression.
+	(expr isSend
+	 and: [self resultSendAlwaysFails: expr]) ifTrue: 
+		["failure returns"
+		 sStream nextPut: expr; nextPut: self nullReturnExpr.
 		 ^nil].
-	(stmt expression isVariable and: ['nil' = stmt expression name]) ifTrue: 
+	(expr isVariable and: ['nil' = expr name]) ifTrue: 
 		["^ nil -- this is never right unless automatically generated"
 		 sStream nextPut: stmt.
 		 ^nil].
-	(stmt expression isVariable and: ['self' = stmt expression name]) ifTrue: 
+	(expr isVariable and: ['self' = expr name]) ifTrue: 
 		["^ self"
-		 self generateFailureGuardOn: sStream.
-		 fullArgs isEmpty ifFalse:[ sStream nextPut: (self popExpr: fullArgs size)].
+		 fullArgs isEmpty ifFalse:
+			[sStream nextPut: (self statementGuardedWithSuccess: (self popExpr: fullArgs size))].
 		 sStream nextPut: self nullReturnExpr.
 		 ^nil].
-	(stmt expression isVariable | stmt expression isConstant | suppressingFailureGuards) ifTrue:
+	(expr isVariable or: [expr isConstant]) ifTrue:
 		["^ variable or ^ constant or ^ expr without guardchecking"
-		 self generateFailureGuardOn: sStream.
-		 sStream nextPut: (self pop: fullArgs size + 1 thenReturnExpr: stmt expression).
+		 fullArgs isEmpty ifFalse:
+			[sStream nextPut: (self statementGuardedWithSuccess: (self pop: fullArgs size + 1 thenReturnExpr: expr))].
 		 sStream nextPut: self nullReturnExpr.
 		 ^nil].
 	"^ expr with necessary guard checking"
-	sStream isEmpty ifFalse: [self generateFailureGuardOn: sStream].
-	(self resultExpressionAlwaysFails: stmt expression)
-		ifTrue:
-			[sStream nextPut: stmt expression]
-		ifFalse:
-			[sStream nextPut: (self assign: (self oopVariable: '_return_value') expression: stmt expression).
-			 (self resultExpressionCanFail: stmt expression) ifTrue:
-				[self generateFailureGuardOn: sStream].
-			 sStream nextPut: (self pop: fullArgs size + 1 thenReturnExpr: (self oopVariable: '_return_value'))].
-	sStream nextPut: self nullReturnExpr
+	"p := sStream position."
+	exprRetStmts := Array streamContents:
+		[:ersStream|
+		 (self resultExpressionCanFail: expr)
+			ifTrue:
+				["t := 1."
+				ersStream
+					nextPut: (self assign: (self oopVariable: '_return_value') expression: expr);
+					nextPut: (self statementGuardedWithSuccess: (self pop: fullArgs size + 1
+																		thenReturnExpr: (self oopVariable: '_return_value')))]
+			ifFalse:
+				["t := 2."
+				 ersStream nextPut: (self pop: fullArgs size + 1 thenReturnExpr: expr)]].
+		sStream isEmpty "No statements to cause failure, therefore no need for an initial failure guard."
+			ifTrue: [sStream nextPutAll: exprRetStmts]
+			ifFalse:
+				["t := t + 2."
+				 sStream nextPut: (self statementGuardedWithSuccess: exprRetStmts)].
+	sStream nextPut: self nullReturnExpr.
+	"Them := Dictionary new"
+	"(Them at: t ifAbsentPut: [Dictionary new])
+		at: self selector
+		put: (sStream originalContents copyFrom: p + 1 to: sStream position)"
 ]
 
 { #category : #transforming }
@@ -162,13 +162,6 @@ SmartSyntaxPluginTMethod >> fromContext: aContext primitive: aString parameters:
 		receiver: aClass
 ]
 
-{ #category : #private }
-SmartSyntaxPluginTMethod >> generateFailureGuardOn: sStream [
-	suppressingFailureGuards ifTrue: [^nil].
-	sStream nextPutAll: self checkSuccessExpr
-
-]
-
 { #category : #'specifying primitives' }
 SmartSyntaxPluginTMethod >> handlePrimitiveDirective: aStmt on: sStream [
 
@@ -186,14 +179,15 @@ SmartSyntaxPluginTMethod >> handlePrimitiveDirective: aStmt on: sStream [
 		 sStream nextPutAll: (self
 			statementsFor:
 				(rcvrSpec
-					ccg:		SmartSyntaxPluginCodeGenerator new
+					ccg:	SmartSyntaxPluginCodeGenerator new
 					prolog:  [:expr | aStmt variable name, ' := ', expr]
 					expr: 	aStmt variable name
-					index: 	(fullArgs size))
+					index: 	fullArgs size)
 			varName: '')].
 
 	"only add the failure guard if there are args or it is an assignment"
-	(fullArgs isEmpty not or:[aStmt isAssignment]) ifTrue:[self generateFailureGuardOn: sStream].
+	(fullArgs isEmpty not or: [aStmt isAssignment]) ifTrue:
+		[sStream nextPutAll: self checkSuccessExpr].
 	^true.
 
 ]
@@ -221,21 +215,51 @@ SmartSyntaxPluginTMethod >> isPrimitiveDirectiveSend: stmt [
 
 { #category : #'specifying primitives' }
 SmartSyntaxPluginTMethod >> namedPrimitiveProlog [
-
-	| cg |
-	cg := SmartSyntaxPluginCodeGenerator new.
-	^Array streamContents: [:sStream |
-		1 to: fullArgs size do:
-			[:i |
-			 sStream nextPutAll: 
-				(self 
-					statementsFor: 
-						((parmSpecs at: i) 
-							ccg: 	cg
-							prolog:  [:expr | (fullArgs at: i), ' := ', expr]
-							expr: (fullArgs at: i)
-							index: (fullArgs size - i))
-					varName: '')]]
+	"Generate the code for a primitive:parameters:... send.  This is in two parts.
+	 The first is validation; the second is coercing assignment."
+	| statements validator validations assigner |
+	fullArgs isEmpty ifTrue:
+		[^#()].
+	validator := SmartSyntaxPluginValidationCodeGenerator new.
+	statements := OrderedCollection new.
+	validations := fullArgs withIndexCollect:
+					[:arg :i|
+					(parmSpecs at: i) 
+							ccg: 	validator
+							prolog:  nil
+							expr: arg
+							index: (fullArgs size - i)].
+	validations := validations reject: [:validation| validation isNil].
+	validations isEmpty ifFalse:
+		[statements addAllLast: (self statementsFor:
+									(String streamContents:
+										[:s|
+										s nextPut: $(.
+										validations
+											do: [:validation| s nextPut: $(; nextPutAll: validation; nextPut: $)]
+											separatedBy: [s crtab; nextPutAll: 'and: ['].
+										s next: validations size - 1 put: $].
+										s	nextPutAll: ') ifFalse:';
+											crtab: 2;
+											nextPutAll: '[interpreterProxy primitiveFailFor: PrimErrBadArgument.';
+											crtab: 2;
+											nextPutAll: '^nil';
+											crtab: 2;
+											nextPut: $]])
+									varName: '')].
+	assigner := SmartSyntaxPluginAssignmentCodeGenerator new.
+	fullArgs withIndexDo:
+		[:arg :i|
+		statements addAllLast:
+			(self 
+				statementsFor: 
+					((parmSpecs at: i) 
+						ccg: 	assigner
+						prolog:  nil
+						expr: arg
+						index: (fullArgs size - i))
+				varName: '')].
+	^statements
 ]
 
 { #category : #private }
@@ -257,10 +281,7 @@ SmartSyntaxPluginTMethod >> pop: anInteger thenReturnExpr: anExpression [
 	^TSendNode new
 		setSelector: #pop:thenPush:
 		receiver: (TVariableNode new setName: 'interpreterProxy')
-		arguments: (Array 
-			with: (TConstantNode new 
-				setValue: anInteger)
-			with: anExpression)
+		arguments: {TConstantNode new setValue: anInteger. anExpression}
 ]
 
 { #category : #private }
@@ -308,17 +329,15 @@ SmartSyntaxPluginTMethod >> primitiveDirectiveWasHandled: stmt on: sStream [
 { #category : #private }
 SmartSyntaxPluginTMethod >> printTempsAndVar: varName on: aStream [ 
 	"add the required temps and the varname to the stream"
-	aStream nextPutAll: '| '.
-	(#('rcvr' 'stackPointer' 'interpreterProxy') reject: [:each | locals includes: each])
-		do: [:each | aStream nextPutAll: each;
-			 space].
-	(locals reject: [:each | each first = $_])
-		do: [:each | aStream nextPutAll: each;
-			 space].
+	aStream nextPut: $|; space.
+	(#('rcvr' 'stackPointer' 'interpreterProxy') reject: [:each | locals includes: each]) do:
+		[:each | aStream nextPutAll: each;  space].
+	(locals reject: [:each | each first = $_]) do:
+		[:each | aStream nextPutAll: each;  space].
 "don't add varName twice. Probably a deeper reason for this, but WTH. TPR"
-	(locals includes: varName) ifFalse:[aStream nextPutAll: varName].
-	aStream nextPutAll: '|';
-	 cr
+	(locals includes: varName) ifFalse:
+		[aStream nextPutAll: varName; space].
+	aStream nextPut: $|; cr
 ]
 
 { #category : #accessing }
@@ -414,16 +433,17 @@ SmartSyntaxPluginTMethod >> replaceSizeMessages [
 ]
 
 { #category : #private }
-SmartSyntaxPluginTMethod >> resultExpressionAlwaysFails: aTSendNode [
-	^aTSendNode selector == #success:
-	 and: [aTSendNode args first isConstant
-	 and: [aTSendNode args first value == false]]
+SmartSyntaxPluginTMethod >> resultExpressionCanFail: aTSendNode [
+	"Neither asSmallIntegerObj nor asBooleanObj can fail."
+	^(#(asSmallIntegerObj asBooleanObj nilObject trueObject falseObject) includes: aTSendNode selector) not
 ]
 
 { #category : #private }
-SmartSyntaxPluginTMethod >> resultExpressionCanFail: aTSendNode [
-	"Neither asSmallIntegerObj nor asBooleanObj can fail."
-	^(#(asSmallIntegerObj asBooleanObj) includes: aTSendNode selector) not
+SmartSyntaxPluginTMethod >> resultSendAlwaysFails: aTSendNode [
+	^(#(primitiveFail primitiveFailFor:) includes: aTSendNode selector)
+		or: [aTSendNode selector == #success:
+			 and: [aTSendNode args first isConstant
+			 and: [aTSendNode args first value == false]]]
 ]
 
 { #category : #initialization }
@@ -446,7 +466,6 @@ SmartSyntaxPluginTMethod >> setSelector: sel definingClass: class args: argList 
 	static := self extractStaticDirective.
 	self extractSharedCase.
 	isPrimitive := false.  "set to true only if you find a primtive direction."
-	suppressingFailureGuards := self extractSuppressFailureGuardDirective.
 	self recordDeclarationsIn: CCodeGenerator basicNew. "Just for conventionalTypeForType:"
 	self extractPrimitiveDirectives.
 
@@ -456,6 +475,24 @@ SmartSyntaxPluginTMethod >> setSelector: sel definingClass: class args: argList 
 SmartSyntaxPluginTMethod >> smalltalkSelector [
 	"Answer the selector of the original Smalltalk method, not any mangled one."
 	^fullSelector ifNil: [selector]
+]
+
+{ #category : #private }
+SmartSyntaxPluginTMethod >> statementGuardedWithSuccess: aTParseNodeOrSequenceThereof [
+	"Answer a TSendNode for interpreterProxy failed ifFalse: [aTParseNodeOrSequenceThereof]"
+	^TSendNode new
+		setSelector: #ifFalse:
+		receiver: (TSendNode new
+					setSelector: #failed
+					receiver: (TVariableNode new setName: 'interpreterProxy')
+					arguments: #())
+		arguments: {(aTParseNodeOrSequenceThereof isTParseNode and: [aTParseNodeOrSequenceThereof isStmtList])
+						ifTrue: [aTParseNodeOrSequenceThereof]
+						ifFalse: [TStmtListNode new
+									setArguments: #()
+									statements: (aTParseNodeOrSequenceThereof isCollection
+													ifTrue: [aTParseNodeOrSequenceThereof]
+													ifFalse: [{aTParseNodeOrSequenceThereof}])]}
 ]
 
 { #category : #'primitive compilation' }

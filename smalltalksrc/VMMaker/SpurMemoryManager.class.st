@@ -6629,6 +6629,13 @@ SpurMemoryManager >> isArrayNonImm: oop [
 	^ (self formatOf: oop) = self arrayFormat
 ]
 
+{ #category : #'simulation only' }
+SpurMemoryManager >> isBooleanObject: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter isBooleanObject: oop
+]
+
 { #category : #'object testing' }
 SpurMemoryManager >> isBytes: oop [
 	"Answer true if the argument contains indexable bytes. See comment in formatOf:"
@@ -7183,6 +7190,13 @@ SpurMemoryManager >> isPointersFormat: format [
 SpurMemoryManager >> isPointersNonImm: objOop [
 	"Answer if the argument has only fields that can hold oops. See comment in formatOf:"
 	^(self formatOf: objOop) <= self lastPointerFormat
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> isPositiveMachineIntegerObject: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter isPositiveMachineIntegerObject: oop
 ]
 
 { #category : #'header formats' }

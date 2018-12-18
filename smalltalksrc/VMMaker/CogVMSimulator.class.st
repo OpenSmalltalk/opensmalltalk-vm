@@ -2844,7 +2844,7 @@ CogVMSimulator >> primitiveDoPrimitiveWithArgs [
 	primIndex := objectMemory integerValueOf: (self stackValue: 1).
 	NewspeakVM ifFalse:
 		[transcript nextPutAll: 'DO PRIMITIVE: '; print: (self functionPointerFor: primIndex inClass: nil); cr; flush].
-	primIndex = 76 ifTrue:
+	(#(76 "primitiveStoreStackp" 188 189 "eval method") includes: primIndex) ifTrue:
 		[self halt].
 	^super primitiveDoPrimitiveWithArgs
 ]

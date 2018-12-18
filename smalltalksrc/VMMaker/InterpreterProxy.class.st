@@ -555,6 +555,12 @@ InterpreterProxy >> isArray: oop [
 ]
 
 { #category : #testing }
+InterpreterProxy >> isBooleanObject: oop [
+	<option: #(atLeastVMProxyMajor:minor: 1 15)>
+	^oop == true or: [oop == false]
+]
+
+{ #category : #testing }
 InterpreterProxy >> isBytes: oop [
 	^oop class isBytes
 ]
@@ -656,6 +662,12 @@ InterpreterProxy >> isPinned: anObject [
 { #category : #testing }
 InterpreterProxy >> isPointers: oop [
 	^oop class isPointers
+]
+
+{ #category : #testing }
+InterpreterProxy >> isPositiveMachineIntegerObject: oop [
+	<option: #(atLeastVMProxyMajor:minor: 1 15)>
+	^oop isInteger and: [oop >= 0 and: [oop digitLength <= Smalltalk wordSize]]
 ]
 
 { #category : #testing }
@@ -953,6 +965,7 @@ InterpreterProxy >> primitiveFailFor: reasonCode [
 InterpreterProxy >> primitiveFailForFFIException: exceptionCode at: pc [
 	<var: 'exceptionCode' type: #usqLong>
 	<var: 'pc' type: #usqInt>
+	<option: #(atLeastVMProxyMajor:minor: 1 14)>
 	"Set PrimErrFFIException primitive failure and associated exceptionCode (a.k.a. 
 	 osErrorCode) and exceptionPC."
 	<primitive: 255>
@@ -964,6 +977,7 @@ InterpreterProxy >> primitiveFailForFFIException: exceptionCode at: pc [
 { #category : #other }
 InterpreterProxy >> primitiveFailForOSError: osError [
 	<var: 'osError' type: #sqLong>
+	<option: #(atLeastVMProxyMajor:minor: 1 14)>
 	"Set PrimErrOSError primitive failure and associated osErrorCode.
 	 Primitive 255 is called to indicate that we are currently simulating a primitive that should fail and the VM should handle that case appropriately (if supported by the VM)."
 	<primitive: 255>
@@ -1195,6 +1209,7 @@ InterpreterProxy >> stackValue: offset [
 
 { #category : #other }
 InterpreterProxy >> statNumGCs [
+	<option: #(atLeastVMProxyMajor:minor: 1 14)>
 	^(Smalltalk vmParameterAt: 7 "statFullGCs") + (Smalltalk vmParameterAt: 9 "statScavenges/statIncrGCs")
 ]
 
@@ -1213,6 +1228,7 @@ InterpreterProxy >> storePointer: index ofObject: oop withValue: valuePointer [
 { #category : #testing }
 InterpreterProxy >> stringForCString: aCString [
 	"Answer a ByteString object containing the bytes (possibly UTF-8?) in the null-terminated C string aCString."
+	<option: #(atLeastVMProxyMajor:minor: 1 14)>
 	<returnTypeC: #sqInt>
 	<var: #aCString type: #'char *'>
 	self notYetImplemented

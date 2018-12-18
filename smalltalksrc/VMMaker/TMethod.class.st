@@ -2704,19 +2704,19 @@ TMethod >> statementsFor: sourceText varName: varName [
 	s nextPutAll: 'temp'; cr; crtab.
 	self printTempsAndVar: varName on: s.
 	s nextPutAll: sourceText.
-	^ (([ | compiler |
-		compiler := Smalltalk compiler class: Object.
-	   (compiler parse: s contents)
+	^(([ | compiler |
+		compiler := Smalltalk compiler class: VMBasicConstants. "for primitive error codes"
+		(compiler parse: s contents)
 			compilationContext: compiler compilationContext;
 			yourself] "Pharo"
-			on: MessageNotUnderstood
-			do: [:ex|
-				ex message selector == #compiler ifFalse:
-					[ex pass].
-				Compiler new parse: s contents in: Object notifying: nil]) "Squeak"
-			asTranslationMethodOfClass: self class)
-				removeFinalSelfReturnIn: nil;
-				statements
+		on: MessageNotUnderstood
+		do: [:ex|
+			ex message selector == #compiler ifFalse:
+				[ex pass].
+			Compiler new parse: s contents in: VMBasicConstants notifying: nil]) "Squeak"
+		asTranslationMethodOfClass: self class)
+			removeFinalSelfReturnIn: nil;
+			statements
 ]
 
 { #category : #inlining }

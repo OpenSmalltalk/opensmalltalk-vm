@@ -19,6 +19,12 @@ TestOSAPlugin class >> requiresPlatformFiles [
 	^true
 ]
 
+{ #category : #translation }
+TestOSAPlugin class >> shouldBeTranslated [
+	"As yet this can't be translated because a DescType parameter can't be handled."
+	^false
+]
+
 { #category : #simulation }
 TestOSAPlugin class >> simulatorClass [
 	"As yet this can't be simulated because a DescType parameter can't be handled."

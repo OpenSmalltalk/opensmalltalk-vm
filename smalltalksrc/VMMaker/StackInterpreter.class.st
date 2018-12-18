@@ -9506,6 +9506,11 @@ StackInterpreter >> isBaseFrame: theFP [
 	^(stackPages longAt: theFP + FoxSavedFP) = 0
 ]
 
+{ #category : #'plugin primitive support' }
+StackInterpreter >> isBooleanObject: oop [
+	^oop = objectMemory trueObject or: [oop = objectMemory falseObject]
+]
+
 { #category : #'internal interpreter access' }
 StackInterpreter >> isCog [
 	^false

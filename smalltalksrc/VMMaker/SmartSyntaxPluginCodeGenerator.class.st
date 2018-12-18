@@ -10,6 +10,18 @@ Class {
 	#category : #'VMMaker-SmartSyntaxPlugins'
 }
 
+{ #category : #utilities }
+SmartSyntaxPluginCodeGenerator >> anyMethodNamed: selector [
+	"Answer any method in the code base (including api methods) with the given selector.
+	 Override to find smart syntax methods that get  entered in the dictionary under the
+	 name specified in the primitive:parameters: send."
+
+	^(super anyMethodNamed: selector) ifNil:
+		[methods
+			detect: [:m| m smalltalkSelector == selector]
+			ifNone: []]
+]
+
 { #category : #coercing }
 SmartSyntaxPluginCodeGenerator >> ccgLoad: aBlock expr: aString asBooleanValueFrom: anInteger [
 	"Answer codestring for boolean coercion (with validating side-effect) of object, as described in comment to ccgLoad:expr:asRawOopFrom:"
@@ -182,39 +194,6 @@ SmartSyntaxPluginCodeGenerator >> ccgLoad: aBlock expr: aString asMemberOfLargeP
 ]
 
 { #category : #coercing }
-SmartSyntaxPluginCodeGenerator >> ccgLoad: aBlock expr: exprString asNamedPtr: recordString from: anInteger [
-	"Answer codestring for integer pointer to first indexable field of object (without validating side-effect), as described in comment to ccgLoad:expr:asRawOopFrom:"
-
-	^aBlock value: (String streamContents: [:aStream | aStream
-		nextPutAll: 'self cCoerce: (interpreterProxy firstIndexableField:';
-		crtab: 4;
-		nextPutAll: '(interpreterProxy stackValue:';
-		nextPutAll: anInteger asString;
-		nextPutAll:	'))';
-		crtab: 3;
-		nextPutAll: 'to: ''';
-		nextPutAll: recordString;
-		nextPutAll: ' *'''])
-]
-
-{ #category : #coercing }
-SmartSyntaxPluginCodeGenerator >> ccgLoad: aBlock expr: exprString asNamedPtr: recordString from: anInteger andThen: valBlock [
-	"Answer codestring for integer pointer to first indexable field of object (without validating side-effect), as described in comment to ccgLoad:expr:asRawOopFrom:"
-
-	^(valBlock value: anInteger), '.',
-	 (aBlock value: (String streamContents: [:aStream | aStream
-		nextPutAll: 'self cCoerce: (interpreterProxy firstIndexableField:';
-		crtab: 4;
-		nextPutAll: '(interpreterProxy stackValue:';
-		nextPutAll: anInteger asString;
-		nextPutAll:	'))';
-		crtab: 3;
-		nextPutAll: 'to: ''';
-		nextPutAll: recordString;
-		nextPutAll: ' *''']))
-]
-
-{ #category : #coercing }
 SmartSyntaxPluginCodeGenerator >> ccgLoad: aBlock expr: aString asNonIntegerValueFrom: anInteger [
 	"Answer codestring for oop (with validating side effect), as described in comment to ccgLoad:expr:asRawOopFrom:"
 
@@ -258,11 +237,9 @@ SmartSyntaxPluginCodeGenerator >> ccgLoad: aBlock expr: aString asOopPtrFrom: an
 
 { #category : #coercing }
 SmartSyntaxPluginCodeGenerator >> ccgLoad: aBlock expr: aString asRawOopFrom: anInteger [
-	"Answer a string for a Slang expression that will load an oop (without validation) from stack index anInteger.  Apply aBlock, a BlockContext instance that when passed an expression, will return a string assigning the expression to the desired identifier, to the string before answering.  aString is a Slang expression that refers to the stack value, once it has been loaded."
+	"Answer a string for a Slang expression that will load an oop (without validation) from stack index anInteger.  Apply aBlock that when passed an expression, will answer a string assigning the expression to the desired identifier, to the string before answering.  aString is a Slang expression that refers to the stack value, once it has been loaded."
 
-	^aBlock value: (String streamContents: [:aStream | aStream
-		nextPutAll: 'interpreterProxy stackValue: ';
-		nextPutAll: anInteger asString])
+	^aBlock value: 'interpreterProxy stackValue: ', anInteger printString
 ]
 
 { #category : #coercing }

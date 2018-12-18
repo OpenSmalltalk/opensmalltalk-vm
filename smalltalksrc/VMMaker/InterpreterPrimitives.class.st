@@ -352,6 +352,24 @@ InterpreterPrimitives >> isPointerAlien: oop [
 ]
 
 { #category : #'primitive support' }
+InterpreterPrimitives >> isPositiveMachineIntegerObject: oop [
+	"Answer if oop is a value of an integer in address range, i.e up to the size of a machine word.
+	The object may be either a positive SmallInteger or a LargePositiveInteger of size <= word size."
+	| ok |
+	(objectMemory isIntegerObject: oop) ifTrue:
+		[^(objectMemory integerValueOf: oop) >= 0].
+
+	(objectMemory isNonIntegerImmediate: oop) ifTrue:
+		[^false].
+
+	ok := objectMemory
+			isClassOfNonImm: oop
+			equalTo: (objectMemory splObj: ClassLargePositiveInteger)
+			compactClassIndex: ClassLargePositiveIntegerCompactIndex.
+	^ok and: [(objectMemory numBytesOfBytes: oop) <= (self sizeof: #'usqIntptr_t')]
+]
+
+{ #category : #'primitive support' }
 InterpreterPrimitives >> isSignedInteger: integer inRangeForBits: nBits [
 	"Answer if integer will fit within a variable of nBits, where nBits is 8, 16, 32 or 64.
 	 Signed shift right by nBits - 1 to map in-range values to either 0 or -1.
