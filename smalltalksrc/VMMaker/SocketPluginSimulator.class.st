@@ -29,6 +29,11 @@ SocketPluginSimulator class >> initialize [
 	ResolverError := 3.			"resolver idle, last request failed"
 ]
 
+{ #category : #translation }
+SocketPluginSimulator class >> shouldBeTranslated [
+	^false
+]
+
 { #category : #'initialize-release' }
 SocketPluginSimulator >> close [  "close any sockets that ST may have opened"
 	openSocketHandles do: [:h | self closeAndDestroy: h].
