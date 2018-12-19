@@ -2104,7 +2104,8 @@ StackInterpreter class >> vmProxyMajorVersion [
 StackInterpreter class >> vmProxyMinorVersion [
 	"Define the  VM_PROXY_MINOR version for this VM as used to
 	 define the api in platforms/Cross/vm/sqVirtualMachine.[ch]"
-	^14 "primitiveFailForOSError: added"
+	"14 primitiveFailForOSError: methodReturnReceiver: primitiveFailForFFIException:at: added"
+	^15 "isBooleanObject isPositiveMachineIntegerObject added"
 ]
 
 { #category : #translation }

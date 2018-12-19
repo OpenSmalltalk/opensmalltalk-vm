@@ -31,7 +31,7 @@ Oop class >> ccg: cg prolog: aBlock expr: aString index: anInteger [
 { #category : #'plugin generation' }
 Oop class >> ccgCanConvertFrom: anObject [
 
-	^(anObject isKindOf: SmallInteger) not
+	^anObject class isImmediateClass not
 ]
 
 { #category : #'plugin generation' }
