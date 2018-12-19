@@ -361,6 +361,11 @@ typedef struct VirtualMachine {
   sqInt  (*methodReturnReceiver)(void);
   sqInt  (*primitiveFailForFFIExceptionat)(usqLong exceptionCode, usqInt pc);
 #endif
+
+#if VM_PROXY_MINOR > 14 /* SmartSyntaxPlugin validation rewrite support */
+  sqInt  (*isBooleanObject)(sqInt oop);
+  sqInt  (*isPositiveMachineIntegerObject)(sqInt);
+#endif
 } VirtualMachine;
 
 #endif /* _SqueakVM_H */

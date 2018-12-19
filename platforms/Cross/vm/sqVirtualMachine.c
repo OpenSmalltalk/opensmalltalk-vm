@@ -535,6 +535,10 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->primitiveFailForFFIExceptionat = primitiveFailForFFIExceptionat;
 #endif
 
+#if VM_PROXY_MINOR > 14 /* SmartSyntaxPlugin validation rewrite support */
+	VM->isBooleanObject = isBooleanObject ;
+	VM->isPositiveMachineIntegerObject = isPositiveMachineIntegerObject;
+#endif
 	return VM;
 }
 
