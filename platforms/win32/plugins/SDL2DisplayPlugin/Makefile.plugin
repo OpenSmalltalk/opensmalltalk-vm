@@ -1,0 +1,6 @@
+# this plugin is "pharo exclusive" (at least for the moment). So we do not have a different set of 
+# rules for one platform or another.
+include ../common/Makefile.plugin
+
+INCLUDES+= -I$(THIRDPARTYOUTDIR)/include -I$(THIRDPARTYOUTDIR)/include/SDL2
+EXTRALIBS= -L$(THIRDPARTYOUTDIR)/bin -lSDL2

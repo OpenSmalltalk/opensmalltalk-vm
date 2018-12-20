@@ -1,0 +1,43 @@
+Wimpslot -min 400K  -max 700k
+Set Squeak$Dir <Obey$Dir>
+
+|  Make sure the MillisecondTimer & HALTimer module are loaded
+RMEnsure HALTimer 0.05 RMLoad <Squeak$Dir>.modules.HALTimer
+RMEnsure HALTimer 0.05 Error You need HALTimer 0.05 or later
+RMEnsure MillisecondTimer 1.00 RMLoad <Squeak$Dir>.modules.MillisecondTimer
+RMEnsure MillisecondTimer 1.00 Error You need MillisecondTimer 1.00 or later
+|  Sound support modules
+RMEnsure StreamManager 0.03 RMLoad System:Modules.StreamMan
+RMEnsure StreamManager 0.03 Error You need StreamManager 0.03 or later
+RMEnsure SharedSoundBuffer 0.07 RMLoad System:Modules.SSBuffer
+RMEnsure SharedSoundBuffer 0.07 You need SharedSoundBuffer 0.07 or later
+
+| syntax:
+| {appname} [-vmoption [-vmoption]] imagefilepath [startupfile/URL] [imageoption [imageoption]]
+| vmoptions -
+| -version
+|      Display the version info in a dialogue box
+| -help
+|      Open the help file
+| -memory:<number>[m|k]
+|      Specify amount of free space to attempt to allocate for Squeak's object
+|      memory.  More will be claimed for the display sprite that is used.
+|      15m == 15 MB, for example.
+|     I recommend a setting of around double the image file size
+| -useDA
+|      force use of DynamicArea memory even if you are on RISC OS 5 and
+|      Aemulor is not running.
+| -windowlabel:<string>
+|      Specify the label for the window, default is the pathname %*0 below
+| -taskname:<string>
+|      Specify a task name that will appear on the iconbar and in the Task
+|      Manager. This allows you to deploy an application written in squeak
+|      with your own icon(s) and task name. The sprite for the iconbar is
+|      named 'iconbar'.
+| -swapmeta
+|      Swap the left and right ctrl key meanings; see the !help file.
+| startupfile/URL - path for a Smalltalk file or a URL that will yield one
+| imageoption - any words following will be available to the image via
+| Smalltalk getSystemAttribute: -{1000, 1}
+/<Squeak$Dir>.!Boot
+/<Squeak$Dir>.!RunImage -memory:60m  %*0

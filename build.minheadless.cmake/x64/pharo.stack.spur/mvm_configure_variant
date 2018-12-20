@@ -1,0 +1,4 @@
+#!/bin/sh
+. ../common/configure_variant.sh
+    
+cmake ../../../.. -G "$GENERATOR_NAME" -DCMAKE_BUILD_TYPE="$VARIANT_NAME" $CMAKE_EXTRA_ARGS -DPHARO_BRANDING=On -DSPUR_OBJECT_MODEL=On -DCOG_JIT=Off

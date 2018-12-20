@@ -1,0 +1,51 @@
+ifndef THIRDPARTYDIR
+	include Makefile.lib.extra
+endif
+include ../../third-party/libssh2.spec
+
+# plugin definitions
+LIBSSH2URL:=$(libssh2_spec_download_url)
+LIBSSH2LIBNAME:=$(libssh2_spec_product_name_linux)
+LIBSSH2DIR:=$(THIRDPARTYDIR)/$(libssh2_spec_unpack_dir_name)
+LIBSSH2ARCHIVE:=$(THIRDPARTYCACHEDIR)/$(libssh2_spec_archive_name)
+LIBSSH2LIB:=$(THIRDPARTYINSTALLDIR)/$(LIBSSH2LIBNAME)
+LIBSSH2SYMLINKS:=$(libssh2_spec_symlinks_linux)
+
+# ensure third-party library is built and recognised by plugins
+INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
+EXTRALIBS:=$(EXTRALIBS) $(LIBSSH2LIB)
+PLUGINREQS:=$(THIRDPARTYLIBS)
+
+$(LIBSSH2ARCHIVE): 
+	curl -o $(LIBSSH2ARCHIVE) -L $(LIBSSH2URL) 
+
+$(THIRDPARTYLIBDIR)/$(LIBSSH2LIBNAME): $(LIBSSH2ARCHIVE)
+	tar x -f $(LIBSSH2ARCHIVE) -C $(THIRDPARTYDIR)
+	cd $(LIBSSH2DIR) \
+		&& ./configure \
+			--prefix='$(THIRDPARTYOUTDIR)' \
+			--with-openssl \
+			--with-libssl-prefix=$(THIRDPARTYLIBDIR) \
+			CFLAGS='-m32 -L$(THIRDPARTYLIBDIR)' \
+			LDFLAGS='-m32 -L$(THIRDPARTYLIBDIR)' \
+		&& make \
+		&& make install
+
+$(LIBSSH2LIB): $(THIRDPARTYLIBDIR)/$(LIBSSH2LIBNAME) 
+	
+libssh2: $(LIBSSH2LIB)
+
+install: 
+	cp -f $(THIRDPARTYLIBDIR)/$(LIBSSH2LIBNAME) $(THIRDPARTYINSTALLDIR)
+	@echo "Installing links"
+	@for each in $(THIRDPARTYLIBDIR)/$(LIBSSH2SYMLINKS); do \
+		if [ -L $$each ]; then \
+			cp -d $$each $(THIRDPARTYINSTALLDIR); \
+		fi \
+	done
+	@echo "DONE"
+
+all: $(THIRDPARTYOUTDIR) $(THIRDPARTYINSTALLDIR) $(THIRDPARTYCACHEDIR) libssh2
+
+clean: 
+	rm -Rf $(LIBSSH2DIR)

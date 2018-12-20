@@ -1,0 +1,39 @@
+To build the GdbARMPlugin on linux (currently only supported on linux & 32-bit
+Mac OS X) make sure you have binutils and libiberty installed.  e.g.
+
+CentOS configuration for binutils and libiberty
+yum install buinutils-devel
+yum install compat-gcc-34
+
+Ubuntu configuration for binutils and libiberty
+sudo apt-get install binutils-dev libiberty-dev
+
+The gdb-7.10 here is a subtly modified version of, um, gdb-7.10.
+
+Then
+
+cd gdb-7.10/zib # i.e. processors/ARM/gdb-7.10/zlib
+./configure
+make COG=1
+
+cd gdb-7.10/bfd # i.e. processors/ARM/gdb-7.10/bfd
+./configure --target=arm-linux --with-system-zlib=no
+make COG=1
+
+cd gdb-7.10/libiberty # i.e. processors/ARM/gdb-7.10/libiberty
+./configure --target=arm-linux
+make COG=1
+
+cd gdb-7.10/opcodes # i.e. processors/ARM/gdb-7.10/opcodes
+./configure --target=arm-linux
+make COG=1
+
+cd ../sim/common # i.e. processors/ARM/gdb-7.10/sim/common
+./configure --target=arm-linux
+
+cd ../arm # i.e. processors/ARM/gdb-7.10/sim/arm
+./configure --target=arm-linux
+make COG=1
+
+That should produce processors/ARM/gdb-7.10/sim/arm/libsim.a
+With that built you can configure and build VMs that will build the ARM plugin.

@@ -1,0 +1,28 @@
+# This is an example internal plugin list.
+# Edit plugins.int in vm build dir to specify internal plugins to be built and
+# linked into the vm.
+INTERNAL_PLUGINS = \
+AsynchFilePlugin \
+BMPReadWriterPlugin \
+B2DPlugin \
+BitBltPlugin \
+DSAPrims \
+DropPlugin \
+FileCopyPlugin \
+FilePlugin \
+FloatArrayPlugin \
+FloatMathPlugin \
+ZipPlugin \
+JPEGReadWriter2Plugin \
+JPEGReaderPlugin \
+LargeIntegers \
+Matrix2x3Plugin \
+MiscPrimitivePlugin \
+IA32ABI \
+RePlugin \
+SecurityPlugin \
+SocketPlugin \
+SurfacePlugin \
+UUIDPlugin \
+UnixOSProcessPlugin \
+VMProfileMacSupportPlugin

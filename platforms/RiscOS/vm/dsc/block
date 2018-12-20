@@ -1,0 +1,24 @@
+# manual entries for functions imported from the oslib - TPR
+xosargs_ensurew
+xosargs_set_extw
+xosargs_read_extw
+xosgbpb_read_atw
+xosgbpb_write_atw
+xosgbpb_dir_entries_system_info
+xosfile_create_dir
+xosfile_set_type
+xosfile_delete
+xosfile_read_stamped_no_path
+xosfind_openupw
+xosfind_openoutw
+xosfind_openinw
+xosfind_closew
+xosfscontrol_canonicalise_path
+xosfscontrol_copy
+xosfscontrol_rename
+xcdfs_get_number_of_drives
+xramfs_drives
+xscsifs_drives
+xadfs_drives
+xterritory_read_current_time_zone
+uri_dispatch

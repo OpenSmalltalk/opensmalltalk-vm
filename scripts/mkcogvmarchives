@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+set -e
+# Create the Cog VM archives in products.  Output a check of version numbers
+# etc to products/MCVALOG
+IFS="	
+"
+cd `dirname $0`/../products
+SQB=squeak.cog.v3
+REV=
+TAG=
+EXES=
+
+if [ $# = 0 ]; then
+CL=1
+CM=1
+CW=1
+
+else
+
+CL=
+CM=
+CW=
+	while [ -n "$1" ]; do
+		case $1 in
+		-l)	CL=1;;
+		-m)	CM=1;;
+		-w)	CW=1;;
+		-r) shift;REV="$1";;
+		-t) shift;TAG="$1";;
+		-?|-h)  echo usage: $0 [-l -m -w -r REV -t TAG]
+				exit 0
+		esac
+		shift
+	done
+fi
+test -n "$REV" || REV=`grep 'GitRawRevisionString.*Rev:' ../platforms/Cross/vm/sqSCCSVersion.h \
+	| sed 's/^.*Rev: \([0-9][0-9]*\).* $";/\1/'`
+test -n "$TAG" || TAG=`date +%y.%U.`$REV
+echo REV=$REV TAG=$TAG
+
+if [ -n "$CL" ]; then
+	for d in . assert debug; do
+		(cd $d
+		for archive in coglinux coglinuxht cogmtlinuxht; do
+			rm -rf $archive-$TAG.tgz
+			echo $archive '=>' $archive-$TAG.tgz
+			COPYFILE_DISABLE=1 tar czf $archive-$TAG.tgz $archive
+			EXES="$EXES	$archive/lib/squeak/[0-9.-]*/squeak"
+		done)
+	done
+fi
+if [ -n "$CM" ]; then
+	set -- CocoaFast.app CocoaFastMT.app
+	for app in Cog.app CogMT.app; do
+		test -d $app || mkdir $app
+		if [ -d ../build.macos32x86/$SQB/$1 ]; then
+			rm -rf $app/* $app-$TAG.tgz
+			echo build.macos32x86/$SQB/$1 '=>' $app '=>' $app-$TAG.tgz
+			(cd ../build.macos32x86/$SQB/$1 >/dev/null;tar cf - *) \
+			| (cd $app;tar xf -)
+			tar czf $app-$TAG.tgz $app
+			EXES="$EXES	$app/Contents/MacOS/Squeak"
+		else
+			echo build.macos32x86/$SQB/$1 is missing
+		fi
+		shift
+	done
+fi
+if [ -n "$CW" ]; then
+	set -- build/vm buildmt/vm
+	for dir in cogwin cogmtwin; do
+		test -d $dir || mkdir $dir
+		if [ -d ../build.win32x86/$SQB/$1 ]; then
+			rm -rf $dir/* $dir-$TAG.zip
+			echo build.win32x86/$SQB/$1 '=>' $dir '=>' $dir-$TAG.zip
+			(cd ../build.win32x86/$SQB/$1 >/dev/null; \
+			 tar cf - Squeak.exe Squeak.map Squeak.exe.manifest \
+				SqueakConsole.exe SqueakConsole.map SqueakConsole.exe.manifest \
+				*.dll) \
+			| (cd $dir;tar xf -)
+			zip -qr $dir-$TAG.zip $dir
+			EXES="$EXES	$dir/Squeak.exe	$dir/SqueakConsole.exe"
+		else
+			echo build.win32x86/$SQB/$1 is missing
+		fi
+		shift
+	done
+fi
+for vm in $EXES
+do
+	echo
+	echo checking $vm version
+#	strings - $vm | egrep '\$Rev: |Interp.*VMMaker|Cogit.*VMMaker| built on ' | grep -v 'Unix built on "__DATE__ " "__TIME__" Compiler: "__VERSION__' | sed 's/ uuid:.*//'
+	strings - $vm | egrep '\$Rev: |Interp.*VMMaker|Cogit.*VMMaker| built on ' | sed 's/ uuid:.*//'
+	echo checking $vm for asserts
+	strings - $vm | grep "assert[^0-9]*[0-9][0-9][0-9]"
+done 2>&1 | tee MCVALOG

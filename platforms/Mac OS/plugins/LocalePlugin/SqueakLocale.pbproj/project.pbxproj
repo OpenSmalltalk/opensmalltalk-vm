@@ -1,0 +1,438 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 39;
+	objects = {
+		66A53B2001DAF78500A80109 = {
+			children = (
+				66A53B2101DAF78500A80109,
+			);
+			isa = PBXVariantGroup;
+			name = InfoPlist.strings;
+			path = "";
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		66A53B2101DAF78500A80109 = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = text.plist.strings;
+			name = English;
+			path = resources/English.lproj/InfoPlist.strings;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		66B8BC570381F53800A8011A = {
+			children = (
+				94AF35040846F9AB00FA5ACB,
+				94AF35000846F98600FA5ACB,
+				66B8BC580381F61C00A8011A,
+				66B8BC5A0381F63A00A8011A,
+				66B8BC5C0381F66500A8011A,
+				66B8BC5E0381F69100A8011A,
+			);
+			isa = PBXGroup;
+			name = platforms;
+			path = ../Squeak3.8.0/platforms;
+			refType = 2;
+			sourceTree = SOURCE_ROOT;
+		};
+		66B8BC580381F61C00A8011A = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			name = sqConfig.h;
+			path = "Mac OS/vm/sqConfig.h";
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		66B8BC5A0381F63A00A8011A = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			name = sqPlatformSpecific.h;
+			path = "/Users/johnmci/Documents/Squeak3.8.0/platforms/Mac OS/vm/sqPlatformSpecific.h";
+			refType = 0;
+			sourceTree = "<absolute>";
+		};
+		66B8BC5C0381F66500A8011A = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			name = sq.h;
+			path = Cross/vm/sq.h;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		66B8BC5E0381F69100A8011A = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			name = sqVirtualMachine.h;
+			path = /Users/johnmci/Documents/Squeak3.8.0/platforms/Cross/vm/sqVirtualMachine.h;
+			refType = 0;
+			sourceTree = "<absolute>";
+		};
+		66C6C8E501DB1EC300A80109 = {
+			isa = PBXFileReference;
+			lastKnownFileType = image.icns;
+			path = SqueakPlugin.icns;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		66DF6BFD01D7DCEA00A80119 = {
+			buildSettings = {
+			};
+			buildStyles = (
+				66DF6C4301D7DCEA00A80119,
+				66DF6C4401D7DCEA00A80119,
+			);
+			hasScannedForEncodings = 1;
+			isa = PBXProject;
+			mainGroup = 66DF6BFE01D7DCEA00A80119;
+			productRefGroup = 66DF6C4501D7DEEE00A80119;
+			projectDirPath = "";
+			targets = (
+				94AF34E00846F91100FA5ACB,
+			);
+		};
+		66DF6BFE01D7DCEA00A80119 = {
+			children = (
+				66B8BC570381F53800A8011A,
+				66DF6BFF01D7DCEA00A80119,
+				66DF6C3901D7DCEA00A80119,
+				66DF6C8201D7DF7E00A80119,
+				66DF6C4501D7DEEE00A80119,
+				94AF34F10846F91100FA5ACB,
+			);
+			isa = PBXGroup;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		66DF6BFF01D7DCEA00A80119 = {
+			children = (
+				94ABA8920858C40D00079BE1,
+				94ABA8900858C3F900079BE1,
+				94ABA8870858C2CB00079BE1,
+				94ABA89A0858C5FA00079BE1,
+				94ABA89B0858C5FA00079BE1,
+			);
+			isa = PBXGroup;
+			name = Sources;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		66DF6C3901D7DCEA00A80119 = {
+			children = (
+				66A53B2001DAF78500A80109,
+				66C6C8E501DB1EC300A80109,
+			);
+			isa = PBXGroup;
+			name = resources;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		66DF6C4301D7DCEA00A80119 = {
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				OPTIMIZATION_CFLAGS = "-O0";
+				ZERO_LINK = NO;
+			};
+			isa = PBXBuildStyle;
+			name = Development;
+		};
+		66DF6C4401D7DCEA00A80119 = {
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				OPTIMIZATION_CFLAGS = "-O3 -mcpu=750 -funroll-loops ";
+				OTHER_CFLAGS = "-DTARGET_OS_MAC -DNOPTHREADS";
+				ZERO_LINK = NO;
+			};
+			isa = PBXBuildStyle;
+			name = Deployment;
+		};
+		66DF6C4501D7DEEE00A80119 = {
+			children = (
+				94AF34F20846F91100FA5ACB,
+			);
+			isa = PBXGroup;
+			name = Products;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		66DF6C8201D7DF7E00A80119 = {
+			isa = PBXFileReference;
+			lastKnownFileType = wrapper.framework;
+			name = Carbon.framework;
+			path = /System/Library/Frameworks/Carbon.framework;
+			refType = 0;
+			sourceTree = "<absolute>";
+		};
+//660
+//661
+//662
+//663
+//664
+//940
+//941
+//942
+//943
+//944
+		94ABA8870858C2CB00079BE1 = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.c;
+			path = LocalePlugin.c;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		94ABA8880858C2CB00079BE1 = {
+			fileRef = 94ABA8870858C2CB00079BE1;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		94ABA8900858C3F900079BE1 = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			name = LocalePlugin.h;
+			path = ../Squeak3.8.0/platforms/Cross/plugins/LocalePlugin/LocalePlugin.h;
+			refType = 2;
+			sourceTree = SOURCE_ROOT;
+		};
+		94ABA8910858C3F900079BE1 = {
+			fileRef = 94ABA8900858C3F900079BE1;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		94ABA8920858C40D00079BE1 = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			name = sqMemoryAccess.h;
+			path = ../Squeak3.8.0/platforms/Cross/vm/sqMemoryAccess.h;
+			refType = 2;
+			sourceTree = SOURCE_ROOT;
+		};
+		94ABA8930858C40D00079BE1 = {
+			fileRef = 94ABA8920858C40D00079BE1;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		94ABA89A0858C5FA00079BE1 = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			path = sqMacLocaleCarbon.h;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		94ABA89B0858C5FA00079BE1 = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.c;
+			path = sqMacLocaleCarbon.c;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		94ABA89C0858C5FA00079BE1 = {
+			fileRef = 94ABA89A0858C5FA00079BE1;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		94ABA89D0858C5FA00079BE1 = {
+			fileRef = 94ABA89B0858C5FA00079BE1;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		94AF34E00846F91100FA5ACB = {
+			buildPhases = (
+				94AF34E10846F91100FA5ACB,
+				94AF34E70846F91100FA5ACB,
+				94AF34EA0846F91100FA5ACB,
+				94AF34EE0846F91100FA5ACB,
+				94AF34F00846F91100FA5ACB,
+			);
+			buildRules = (
+				94AF34F70846F94F00FA5ACB,
+			);
+			buildSettings = {
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_OPTIMIZATION_LEVEL = 3;
+				HEADER_SEARCH_PATHS = /Developer/Headers/FlatCarbon;
+				INFOPLIST_FILE = "Info-SqueakLocalePlugin__Upgraded_.plist";
+				OTHER_LDFLAGS = "";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = LocalePlugin;
+				SECTORDER_FLAGS = "";
+				WARNING_CFLAGS = "-Wmost -Wno-four-char-constants -Wno-unknown-pragmas";
+				WRAPPER_EXTENSION = bundle;
+			};
+			dependencies = (
+			);
+			isa = PBXNativeTarget;
+			name = "SqueakLocalePlugin (Upgraded)";
+			productInstallPath = "$(USER_LIBRARY_DIR)/Bundles";
+			productName = "mpeg3PluginBundle Debug";
+			productReference = 94AF34F20846F91100FA5ACB;
+			productType = "com.apple.product-type.bundle";
+		};
+		94AF34E10846F91100FA5ACB = {
+			buildActionMask = 2147483647;
+			files = (
+				94AF34E20846F91100FA5ACB,
+				94AF34E30846F91100FA5ACB,
+				94AF34E40846F91100FA5ACB,
+				94AF34E50846F91100FA5ACB,
+				94AF35010846F98600FA5ACB,
+				94AF35050846F9AB00FA5ACB,
+				94ABA8910858C3F900079BE1,
+				94ABA8930858C40D00079BE1,
+				94ABA89C0858C5FA00079BE1,
+			);
+			isa = PBXHeadersBuildPhase;
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		94AF34E20846F91100FA5ACB = {
+			fileRef = 66B8BC580381F61C00A8011A;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		94AF34E30846F91100FA5ACB = {
+			fileRef = 66B8BC5A0381F63A00A8011A;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		94AF34E40846F91100FA5ACB = {
+			fileRef = 66B8BC5C0381F66500A8011A;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		94AF34E50846F91100FA5ACB = {
+			fileRef = 66B8BC5E0381F69100A8011A;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		94AF34E70846F91100FA5ACB = {
+			buildActionMask = 2147483647;
+			files = (
+				94AF34E80846F91100FA5ACB,
+				94AF34E90846F91100FA5ACB,
+			);
+			isa = PBXResourcesBuildPhase;
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		94AF34E80846F91100FA5ACB = {
+			fileRef = 66C6C8E501DB1EC300A80109;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		94AF34E90846F91100FA5ACB = {
+			fileRef = 66A53B2001DAF78500A80109;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		94AF34EA0846F91100FA5ACB = {
+			buildActionMask = 2147483647;
+			files = (
+				94ABA8880858C2CB00079BE1,
+				94ABA89D0858C5FA00079BE1,
+			);
+			isa = PBXSourcesBuildPhase;
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		94AF34EE0846F91100FA5ACB = {
+			buildActionMask = 2147483647;
+			files = (
+				94AF34EF0846F91100FA5ACB,
+			);
+			isa = PBXFrameworksBuildPhase;
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		94AF34EF0846F91100FA5ACB = {
+			fileRef = 66DF6C8201D7DF7E00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		94AF34F00846F91100FA5ACB = {
+			buildActionMask = 2147483647;
+			files = (
+			);
+			isa = PBXRezBuildPhase;
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		94AF34F10846F91100FA5ACB = {
+			isa = PBXFileReference;
+			lastKnownFileType = text.xml;
+			path = "Info-SqueakLocalePlugin__Upgraded_.plist";
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		94AF34F20846F91100FA5ACB = {
+			explicitFileType = wrapper.cfbundle;
+			includeInIndex = 0;
+			isa = PBXFileReference;
+			path = LocalePlugin.bundle;
+			refType = 3;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		94AF34F70846F94F00FA5ACB = {
+			compilerSpec = com.apple.compilers.gcc.3_3;
+			fileType = sourcecode.c;
+			isEditable = 1;
+			isa = PBXBuildRule;
+			outputFiles = (
+			);
+		};
+		94AF35000846F98600FA5ACB = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			name = config.h;
+			path = "Mac OS/vm/config.h";
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		94AF35010846F98600FA5ACB = {
+			fileRef = 94AF35000846F98600FA5ACB;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		94AF35040846F9AB00FA5ACB = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			name = interp.h;
+			path = ../Squeak3.8.0/src/vm/interp.h;
+			refType = 2;
+			sourceTree = SOURCE_ROOT;
+		};
+		94AF35050846F9AB00FA5ACB = {
+			fileRef = 94AF35040846F9AB00FA5ACB;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+	};
+	rootObject = 66DF6BFD01D7DCEA00A80119;
+}

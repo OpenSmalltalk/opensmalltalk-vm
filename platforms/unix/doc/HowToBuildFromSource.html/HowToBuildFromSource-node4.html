@@ -1,0 +1,224 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+
+<!--Converted with LaTeX2HTML 2002-2-1 (1.70)
+original version by:  Nikos Drakos, CBLU, University of Leeds
+* revised and updated by:  Marcus Hennecke, Ross Moore, Herb Swan
+* with significant contributions from:
+  Jens Lippmann, Marek Rouchal, Martin Wilck and others -->
+<HTML>
+<HEAD>
+<TITLE>2 Generating your own VM and plugin sources</TITLE>
+<META NAME="description" CONTENT="2 Generating your own VM and plugin sources">
+<META NAME="keywords" CONTENT="HowToBuildFromSource">
+<META NAME="resource-type" CONTENT="document">
+<META NAME="distribution" CONTENT="global">
+
+<META NAME="Generator" CONTENT="LaTeX2HTML v2002-2-1">
+<META HTTP-EQUIV="Content-Style-Type" CONTENT="text/css">
+
+<LINK REL="STYLESHEET" HREF="HowToBuildFromSource.css">
+
+<LINK REL="next" HREF="HowToBuildFromSource-node5.html">
+<LINK REL="previous" HREF="HowToBuildFromSource-node3.html">
+<LINK REL="up" HREF="HowToBuildFromSource.html">
+<LINK REL="next" HREF="HowToBuildFromSource-node5.html">
+</HEAD>
+
+<BODY >
+
+<DIV CLASS="navigation"><!--Navigation Panel-->
+<A NAME="tex2html96"
+  HREF="HowToBuildFromSource-node5.html">
+<IMG WIDTH="37" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="next" SRC="next.png"></A> 
+<A NAME="tex2html90"
+  HREF="HowToBuildFromSource.html">
+<IMG WIDTH="26" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="up" SRC="up.png"></A> 
+<A NAME="tex2html84"
+  HREF="HowToBuildFromSource-node3.html">
+<IMG WIDTH="63" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="previous" SRC="prev.png"></A> 
+<A NAME="tex2html92"
+  HREF="HowToBuildFromSource-node1.html">
+<IMG WIDTH="65" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="contents" SRC="contents.png"></A> 
+<A NAME="tex2html94"
+  HREF="HowToBuildFromSource-node6.html">
+<IMG WIDTH="43" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="index" SRC="index.png"></A> 
+<BR>
+<B> Next:</B> <A NAME="tex2html97"
+  HREF="HowToBuildFromSource-node5.html">3 Adding your own</A>
+<B> Up:</B> <A NAME="tex2html91"
+  HREF="HowToBuildFromSource.html">Building Unix Squeak (</A>
+<B> Previous:</B> <A NAME="tex2html85"
+  HREF="HowToBuildFromSource-node3.html">1 The hard way:</A>
+ &nbsp; <B>  <A NAME="tex2html93"
+  HREF="HowToBuildFromSource-node1.html">Contents</A></B> 
+ &nbsp; <B>  <A NAME="tex2html95"
+  HREF="HowToBuildFromSource-node6.html">Index</A></B> 
+<BR>
+<BR></DIV>
+<!--End of Navigation Panel-->
+<!--Table of Child-Links-->
+<A NAME="CHILD_LINKS"><STRONG>Subsections</STRONG></A>
+
+<UL CLASS="ChildLinks">
+<LI><A NAME="tex2html98"
+  HREF="HowToBuildFromSource-node4.html#SECTION00041000000000000000"><SPAN CLASS="arabic">2</SPAN>.<SPAN CLASS="arabic">1</SPAN> How <TT>configure</TT> finds the <TT>src</TT> directory</A>
+</UL>
+<!--End of Table of Child-Links-->
+<HR>
+
+<H1><A NAME="SECTION00040000000000000000">
+<SPAN CLASS="arabic">2</SPAN> Generating your own VM and plugin sources</A>
+</H1>
+
+<P>
+Generating your own VM/plugin sources might be necessary for various reasons:
+
+<UL>
+<LI>you want to change the mix of internal vs. external plugins
+</LI>
+<LI>you want to remove some plugins from the VM that you will never use
+</LI>
+<LI>you've pulled in some updates that modify the Interpreter or plugins
+</LI>
+<LI>you've filed-in (or written) a whole new plugin
+</LI>
+<LI>etc...
+</LI>
+</UL>
+
+<P>
+Version 3.2 (and later) of Unix Squeak use
+<A NAME="tex2html2"
+  HREF="http://minnow.cc.gatech.edu/squeak/2105">VMMaker</A><A NAME="132"></A>
+to generate the core interpreter and plugin sources.
+
+<P>
+Start Squeak in the top-level directory (the one containing the
+<TT>platforms</TT> directory); for example:
+<SPAN ID="hue566">
+
+<DIV CLASS="alltt" ALIGN="LEFT">
+<TT>
+ 
+<FONT COLOR="#0000ff">
+<BR>&nbsp;&nbsp;$ ls
+<BR>&nbsp;&nbsp;src platforms ...
+<BR>&nbsp;&nbsp;$ squeak MyCoolPlugin.image
+<BR></FONT></TT>
+</DIV>
+</SPAN>
+<P>
+Open a VMMakerTool and modify the setup to your liking.
+
+<P>
+<BLOCKQUOTE>
+<FONT COLOR="#ff0000"> Note: The VMMaker configuration used to build the distributions of Unix
+Squeak is available in
+<TT>platforms/unix/config/VMMaker.config</TT>.<A NAME="140"></A>
+</FONT></BLOCKQUOTE>
+<P>
+Then click on the relevant ``<SPAN  CLASS="textsf">generate ...</SPAN>'' button.  You can now
+`<TT>configure; make; make install</TT>' in your <TT>blddir</TT> (as
+described above).
+
+<P>
+<BLOCKQUOTE>
+<FONT COLOR="#ff0000"> Note: You only need to run
+<TT>configure</TT><A NAME="567"></A>
+<SPAN  CLASS="textbf"><SPAN ID="txt149">once</SPAN></SPAN> for a given
+<TT>blddir</TT> (on the same host).
+If you modify the choice of plugins
+(or change whether they're internal/external)
+then you can update the build environment by running the
+<TT>config.status</TT><A NAME="569"></A>
+script in the <TT>bldddir</TT>, like this:
+<SPAN ID="hue570">
+
+<DIV CLASS="alltt" ALIGN="LEFT">
+<TT>
+ &nbsp;&nbsp;$ squeak MyCoolPlugin.image
+<BR>&nbsp;&nbsp;... generate new sources ...
+<BR>&nbsp;&nbsp;$ cd blddir
+<BR>&nbsp;&nbsp;$ ./config.status
+<BR>&nbsp;&nbsp;$ make
+<BR></TT>
+</DIV>
+</SPAN>This is <SPAN  CLASS="textit">much</SPAN> faster than running <TT>configure</TT> all over again.
+(In fact, <TT>make</TT> should detect any changes to the plugin configuration
+and re-run <TT>config.status</TT> for you automatically.)
+</FONT></BLOCKQUOTE>
+<P>
+<BLOCKQUOTE>
+<FONT COLOR="#ff0000"> Note: `<TT>configure</TT>' doesn't actually create any files.  The last thing it
+does is run `<TT>config.status</TT>' to create the configured <SPAN  CLASS="textit">file</SPAN>s
+in <TT>blddir</TT> from the corresponding <SPAN  CLASS="textit">file.in</SPAN>s in the
+<TT>unix/config</TT> directory.  So in the remainder of this document the
+phrase `during configuration' means <SPAN  CLASS="textit">either</SPAN> when running
+`<TT>configure</TT>' for the first time <SPAN  CLASS="textit">or</SPAN> running
+`<TT>config.status</TT>' to update an already <TT>configure</TT>d build
+environment.
+</FONT></BLOCKQUOTE>
+<P>
+
+<H2><A NAME="SECTION00041000000000000000">
+<SPAN CLASS="arabic">2</SPAN>.<SPAN CLASS="arabic">1</SPAN> How <TT>configure</TT> finds the <TT>src</TT> directory</A>
+</H2>
+
+<P>
+Starting with version 3.7 <TT>configure</TT> looks in two places for the
+<TT>src</TT> directory, in the following order, and uses the first one
+that it finds:
+
+<P>
+
+<UL>
+<LI>the top-level directory (the one containing the <TT>platforms</TT>
+directory);
+</LI>
+<LI>the <TT>platforms/unix</TT> directory.
+</LI>
+</UL>
+
+<P>
+In other words, if you want to use your own generated
+sources without deleting the built-in generated sources, generating
+them into a <TT>src</TT> directory next to <TT>platforms</TT> (and then
+re-running <TT>configure</TT>) will do what you want.
+
+<P>
+
+<DIV CLASS="navigation"><HR>
+<!--Navigation Panel-->
+<A NAME="tex2html96"
+  HREF="HowToBuildFromSource-node5.html">
+<IMG WIDTH="37" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="next" SRC="next.png"></A> 
+<A NAME="tex2html90"
+  HREF="HowToBuildFromSource.html">
+<IMG WIDTH="26" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="up" SRC="up.png"></A> 
+<A NAME="tex2html84"
+  HREF="HowToBuildFromSource-node3.html">
+<IMG WIDTH="63" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="previous" SRC="prev.png"></A> 
+<A NAME="tex2html92"
+  HREF="HowToBuildFromSource-node1.html">
+<IMG WIDTH="65" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="contents" SRC="contents.png"></A> 
+<A NAME="tex2html94"
+  HREF="HowToBuildFromSource-node6.html">
+<IMG WIDTH="43" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="index" SRC="index.png"></A> 
+<BR>
+<B> Next:</B> <A NAME="tex2html97"
+  HREF="HowToBuildFromSource-node5.html">3 Adding your own</A>
+<B> Up:</B> <A NAME="tex2html91"
+  HREF="HowToBuildFromSource.html">Building Unix Squeak (</A>
+<B> Previous:</B> <A NAME="tex2html85"
+  HREF="HowToBuildFromSource-node3.html">1 The hard way:</A>
+ &nbsp; <B>  <A NAME="tex2html93"
+  HREF="HowToBuildFromSource-node1.html">Contents</A></B> 
+ &nbsp; <B>  <A NAME="tex2html95"
+  HREF="HowToBuildFromSource-node6.html">Index</A></B> </DIV>
+<!--End of Navigation Panel-->
+<ADDRESS>
+
+2005-03-17
+</ADDRESS>
+</BODY>
+</HTML>

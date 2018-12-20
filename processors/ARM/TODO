@@ -1,0 +1,194 @@
+Files modified for Cog:
+
+opcodes/libtool	   -- added file?
+
+README		   -- added notes on the cut-down distribution
+
+sim/arm/armemu.c
+		   -- notes that file has been modified
+***************
+*** 592,606 ****
+  	  NORMALCYCLE;
+  	  break;
+  	}
+-     // END OF SWITCH stmt, where the above breaks go 
+-     
+-  // TPR - save the pc to help in CogVM sim error handling, IFF the instr is not an abort SWI
+-     if ( instr != (0xEF000000 | SWI_CogPrefetch)) {
+- 		state->temp = pc;
+- 	}
+  
+!     if (state->EventSet)
+! 		ARMul_EnvokeEvent (state);
+  #if 0 /* Enable this for a helpful bit of debugging when tracing is needed.  */
+        fprintf (stderr, "pc: %x, instr: %x\n", pc & ~1, instr);
+        if (instr == 0)
+--- 576,584 ----
+  	  NORMALCYCLE;
+  	  break;
+  	}
+  
+!       if (state->EventSet)
+! 	ARMul_EnvokeEvent (state);
+  #if 0 /* Enable this for a helpful bit of debugging when tracing is needed.  */
+        fprintf (stderr, "pc: %x, instr: %x\n", pc & ~1, instr);
+        if (instr == 0)
+
+
+sim/arm/armos.c
+***************
+*** 453,471 ****
+  
+    switch (number)
+      {
+-     case SWI_CogPrefetch:
+- 	// TPR - This is the SWI number which is returned by our memory interface 
+- 	// if there is an instruction fetch for an illegal address.
+- 	// this #define stolen from GdbARMPlugin.h and ought to be done better
+- #	define InstructionPrefetchError 5
+- 		state->Emulate = STOP;
+- 		state->EndCondition = InstructionPrefetchError;
+- 			
+- 		// during execution, the pc points the next fetch address, which is 8 byte after the current instruction.
+- 			gdb_log_printf(NULL, "Illegal Instruction fetch address (%#p).", state->Reg[15]-8);
+- 	    return TRUE; // escape immediately
+- 		break;
+- 
+      case SWI_Read:
+        if (swi_mask & SWI_MASK_DEMON)
+  	SWIread (state, state->Reg[0], state->Reg[1], state->Reg[2]);
+--- 453,458 ----
+
+sim/arm/armos.h
+***************
+*** 25,34 ****
+  
+  /* SWI numbers.  */
+  
+- /* Add prefetch error for Cog usage of this simulator, hacked up though it may be 
+-    It isn't a real SWI but (ab)uses the mechanism to do it's eeeeeevil work */
+- #define SWI_CogPrefetch            0x42 /* because why wouldn't we? */
+- 
+  #define SWI_WriteC                 0x0
+  #define SWI_Write0                 0x2
+  #define SWI_ReadC                  0x4
+--- 25,30 ----
+
+
+sim/arm/armulmem.c	added file?
+
+sim/arm/gentmap		added file?
+
+sim/arm/libtool		added file?
+
+sim/arm/Makefile.in
+***************
+*** 21,29 ****
+  
+  COPRO=@COPRO@
+  
+- # tim@rowledge.org - exchange armvirt.o for armulmem.o for Cog support
+  SIM_OBJS = armemu26.o armemu32.o arminit.o armos.o armsupp.o \
+! 	armulmem.o bag.o thumbemu.o wrapper.o sim-load.o $(COPRO) 
+  
+  ## COMMON_POST_CONFIG_FRAG
+  
+--- 21,28 ----
+  
+  COPRO=@COPRO@
+  
+  SIM_OBJS = armemu26.o armemu32.o arminit.o armos.o armsupp.o \
+! 	armvirt.o bag.o thumbemu.o wrapper.o sim-load.o $(COPRO) 
+  
+  ## COMMON_POST_CONFIG_FRAG
+
+sim/arm/stamp-h		added file?
+sim/arm/stamp-tvals	added file?
+sim/arm/targ-map.c	added file?
+sim/arm/targ-vals.h	added file?
+
+sim/arm/thumbemu.c
+***************
+*** 102,114 ****
+    tdstate valid = t_decoded;	/* default assumes a valid instruction */
+    ARMword next_instr;
+  
+- // tpr - catch our special SWI and effectively skip over thumb nonsense
+-   if (tinstr == 0xEF200000) {
+-       // that's us - hate using magic numbers but that's life
+-       *ainstr = tinstr;
+-       return valid;
+-   }
+- 
+    if (state->bigendSig)
+      {
+        next_instr = tinstr & 0xFFFF;
+--- 102,107 ----
+
+sim/arm/version.c	added file?
+
+sim/common/Make-common.in
+***************
+*** 272,279 ****
+  callback_h = $(srcroot)/include/gdb/callback.h
+  remote_sim_h = $(srcroot)/include/gdb/remote-sim.h
+  
+! all: $(SIM_EXTRA_ALL) libsim.a 
+! # reomved by  tpr for squeak gdbarmplugin stuff run$(EXEEXT) .gdbinit
+  
+  libsim.a: $(LIB_OBJS)
+  	rm -f libsim.a
+--- 272,278 ----
+  callback_h = $(srcroot)/include/gdb/callback.h
+  remote_sim_h = $(srcroot)/include/gdb/remote-sim.h
+  
+! all: $(SIM_EXTRA_ALL) libsim.a run$(EXEEXT) .gdbinit
+  
+  libsim.a: $(LIB_OBJS)
+  	rm -f libsim.a
+***************
+*** 301,310 ****
+  	$(SHELL) $(srcroot)/move-if-change tmp-tmap.c targ-map.c
+  	touch stamp-tvals
+  
+! #version.c: Makefile 
+  	rm -f version.c-tmp version.c
+  	echo '#include "version.h"' >> version.c-tmp
+! 	echo 'const char version[] = "'"7.6"'";' >> version.c-tmp
+  	mv version.c-tmp version.c
+  
+  
+--- 300,309 ----
+  	$(SHELL) $(srcroot)/move-if-change tmp-tmap.c targ-map.c
+  	touch stamp-tvals
+  
+! version.c: Makefile ../../gdb/version.in
+  	rm -f version.c-tmp version.c
+  	echo '#include "version.h"' >> version.c-tmp
+! 	echo 'const char version[] = "'"`sed q ${srcdir}/../../gdb/version.in`"'";' >> version.c-tmp
+  	mv version.c-tmp version.c
+  
+  
+***************
+*** 436,445 ****
+  	$(SIM_EXTRA_DEPS) \
+  	hw-config.h \
+  	targ-map.c \
+! 	targ-vals.h 
+! #	\
+! #	version.c
+! # removed by tpr for Squeak gdbarmplugin stuff
+  
+  # Ensure that generated files are created early.  Use order-only
+  # dependencies if available.  They require GNU make 3.80 or newer,
+--- 435,442 ----
+  	$(SIM_EXTRA_DEPS) \
+  	hw-config.h \
+  	targ-map.c \
+! 	targ-vals.h \
+! 	version.c
+  
+  # Ensure that generated files are created early.  Use order-only
+  # dependencies if available.  They require GNU make 3.80 or newer,
+
+

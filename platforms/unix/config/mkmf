@@ -1,0 +1,202 @@
+#!/bin/sh
+
+# mkmf -- configure subdirectory Makefiles			-*- sh -*-
+# 
+#   Copyright (C) 1996-2004 by Ian Piumarta and other authors/contributors
+#                              listed elsewhere in this file.
+#   All rights reserved.
+#   
+#   This file is part of Unix Squeak.
+# 
+#   Permission is hereby granted, free of charge, to any person obtaining a copy
+#   of this software and associated documentation files (the "Software"), to deal
+#   in the Software without restriction, including without limitation the rights
+#   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#   copies of the Software, and to permit persons to whom the Software is
+#   furnished to do so, subject to the following conditions:
+# 
+#   The above copyright notice and this permission notice shall be included in
+#   all copies or substantial portions of the Software.
+# 
+#   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+#   SOFTWARE.
+# 
+# Author: ian.piumarta@inria.fr
+# 
+# Last edited: Thu Jan 21 14:10:49 PST 2010 by eliot (add support for .cpp)
+
+. ./config.sh
+
+findFiles() {
+  suffix=$1
+  shift
+  while test $# -gt 0; do
+    echo $1/*${suffix}
+    shift
+  done
+}
+
+findDirs() {
+  prefix=$1
+  shift
+  dirs=""
+  while test $# -gt 0; do
+    dirs="${dirs} ${prefix}`dirname $1`"
+    shift
+  done
+  echo ${dirs} | tr ' ' '\012' | sort | uniq | tr '\012' ' '
+}
+
+plibs=""
+
+mkmf() {
+  default=$1
+  name=$2
+  shift 2
+  dirs="$*"
+  makefile_in=""
+  makefile_inc=""
+  makefile_plg=Makefile.plg.in
+  make_targets="${name}/make.targets"
+  objs="${name}/.objs"
+  excluded="${name}/.excluded"
+  targets=""
+  includes=""
+  srcs=""
+  hdrs=""
+  echo "creating ${name}/Makefile"
+  test -d ${name} || mkdir ${name}
+  echo "" > ${make_targets}
+  echo "" > ${excluded}
+  # collect source and header files
+  for x in ${dirs}; do
+    d=${x}/${name}
+    if test -d ${d}; then
+      dd=${d}
+      if test -f ${d}/mkmf.subdirs; then
+        subdirs="`cat ${d}/mkmf.subdirs | tr '\012' ' '`"
+        for sd in ${subdirs}; do dd="${dd} ${topdir}/${sd}"; done
+      fi
+      srcs="${srcs} `findFiles .c ${dd}`"
+      srcs="${srcs} `findFiles .cc ${dd}`"
+      srcs="${srcs} `findFiles .cpp ${dd}`"
+      srcs="${srcs} `findFiles .S ${dd}`"
+      srcs="${srcs} `findFiles .s ${dd}`"
+      srcs="${srcs} `findFiles .m ${dd}`"
+      hdrs="${hdrs} `findFiles .h ${dd}`"
+      # override Makefile.in
+      if test -f "${d}/Makefile.in"; then
+        makefile_in="${d}/Makefile.in"
+      fi
+      # include Makefile.inc
+      if test -f "${d}/Makefile.inc"; then
+        makefile_inc="${makefile_inc} ${d}/Makefile.inc"
+      fi
+      test -f "${d}/Targets.exclude" && cat "${d}/Targets.exclude" >>${excluded}
+    fi
+  done
+  srcs="`echo ${srcs} | tr ' ' '\012' | fgrep -v '*'`"
+  hdrs="`echo ${hdrs} | tr ' ' '\012' | fgrep -v '*'`"
+  # create targets and rules
+  if test "${srcs}" != ""; then
+    # objs is used to make the list of targets unique so that a platform can
+    # override a file in Cross/plugins/Foo.
+    # e.g qWebcam.cpp in both platforms/{Cross,unix}/plugins/QWebcamPlugin
+    # excluded is used to exclude unneeded targets (specify a targets.exclude
+    # in the platform plugin dir)
+    echo "" > ${objs}
+    for c in ${srcs}; do
+      o=`basename ${c} | sed 's,\.cp*,$o,;s,\.[msS],$o,'`
+      grep -qs "^$o$" ${excluded} || grep -qs "^$o$" ${objs} || targets="${targets} ${o}"
+      echo "$o" >>${objs}
+      echo												>> ${make_targets}
+      echo "${o} : ${c}"								>> ${make_targets}
+      case ${c} in
+        *.cpp|*.cc)	echo '	$(COMPILE.cpp) '"${o} ${c}"	>> ${make_targets}
+					makefile_plg=Makefile.cpp-plg.in;;
+        *.s|*.S)	echo '	$(AS) '"${o} ${c}"	        >> ${make_targets};;
+        *)		echo '	$(COMPILE) '"${o} ${c}"			>> ${make_targets}
+      esac
+    done
+    rm -f ${objs} ${excluded}
+  fi
+  # create includes
+  if test "${hdrs}" != ""; then
+    includes="${includes} `findDirs -I ${hdrs}`"
+  fi
+  # default Makefile.in if no override
+  if test ! -f "${makefile_in}"; then
+    makefile_in=${cfgdir}/${makefile_plg}
+  fi
+  # include Makefile.inc(s)
+  if test "${makefile_inc}" != ""; then
+    cp ${makefile_in} makefile.in
+    makefile_in="makefile.in"
+    for inc in ${makefile_inc}; do
+      sed "/\[make_inc\]/r ${inc}" < ${makefile_in} > makefile.out
+      mv makefile.out makefile.in
+    done
+  fi
+  # substitutions
+  if test -f "${name}.sub"; then
+    sed -f ${name}.sub < ${makefile_in} > makefile.sub
+    makefile_in="makefile.sub"
+  fi
+if [ "$cogit" = "no" ]; then
+  sed "s/\[COBJS_OR_IOBJS\]/\$(IOBJS)/" <${makefile_in}
+else
+  sed "s/\[COBJS_OR_IOBJS\]/\$(COBJS)/" <${makefile_in}
+fi | sed "s%\[make_inc\]%%g
+s%\[target\]%${name}"'$a'"%g
+s%\[targets\]%${targets}%g
+s%\[includes\]%${includes}%g
+/\[make_cfg\]/r ${blddir}/make.cfg
+s%\[make_cfg\]%%g
+/\[make_prg\]/r ${bldir}/make.prg
+s%\[make_prg\]%%g
+/\[make_plg\]/r ${blddir}/make.${default}
+s%\[make_plg\]%%g
+s%\[plibs\]%${plibs}%g
+/\[make_targets\]/r ${make_targets}
+s%\[make_targets\]%%g" > ${name}/Makefile
+  /bin/rm -f ${make_targets} makefile.in makefile.sub
+}
+
+if test "${int_modules}" != ""; then
+  for p in ${int_modules}; do
+    mkmf int ${p} ${vmi_dirs}
+  done
+fi
+
+if test "${ext_modules}" != ""; then
+  for p in ${ext_modules}; do
+    if test -f ${p}.lib; then
+      plibs="`cat ${p}.lib`"
+    else
+      plibs=""
+    fi
+    mkmf ext ${p} ${vmi_dirs}
+  done
+fi
+
+if test "${int_plugins}" != ""; then
+  for p in ${int_plugins}; do
+    mkmf int ${p} ${int_dirs}
+  done
+fi
+
+if test "${ext_plugins}" != ""; then
+  for p in ${ext_plugins}; do
+    if test -f ${p}.lib; then
+      plibs="`cat ${p}.lib`"
+    else
+      plibs=""
+    fi
+    mkmf ext ${p} ${ext_dirs}
+  done
+fi

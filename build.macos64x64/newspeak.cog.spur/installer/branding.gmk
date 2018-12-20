@@ -1,0 +1,39 @@
+# Version should follow the Windows convention (0-255.0-255.0-65535)
+# For the prototype, use YY.MM.DDNN (NN should come from the image
+# name, e.g., nsboot-20YY-MM-DD.NN.image)
+# For Cog would like to use YY.MMDD.SVN where SVN is the Subversion checkin
+# id taken from platforms/Cross/vm/sqSCCSVersion.h.  But that doesn't fit
+# the 0-255 field.  So use YY.WW.SVN where WW is the week number.
+SVNREV  := $(shell grep '$$Rev: ' ../../../platforms/Cross/vm/sqSCCSVersion.h | sed 's/.*$$Rev: \([0-9][0-9]*\).*/\1/' )
+VERSION := $(shell date +%y.%U.$(SVNREV))
+
+# Base name of the executable (.exe is appended on Windows)
+ifndef VM_BASE_NAME
+VM_BASE_NAME := nsvm
+endif
+
+# Product name as compiled into the executable and installers
+ifndef PRODUCT_NAME
+PRODUCT_NAME := Newspeak Spur 64-bit Virtual Machine
+endif
+
+# Used for Desktop/menubar shortcuts
+ifndef VM_LOCALIZED_NAME
+VM_LOCALIZED_NAME := $(PRODUCT_NAME)
+endif
+
+ifndef MANUFACTURER
+MANUFACTURER := Cadence Design Systems, Inc.
+endif
+
+ifndef PROJECT_REVERSE_DOMAIN
+PROJECT_REVERSE_DOMAIN := org.newspeakplatform
+endif
+
+ifndef INSTALLER_BACKGROUND
+INSTALLER_BACKGROUND := InstallerBackground
+endif
+
+ifndef INSTALLER_ICON
+INSTALLER_ICON := VolumeIcon
+endif

@@ -1,0 +1,41 @@
+</$objtype/mkfile
+
+INTERP_DIR=src
+CROSS_DIR=../Cross
+OUT=interp
+
+VM_DIR=$INTERP_DIR/vm
+PLUGIN_DIR=$INTERP_DIR/plugins
+CROSS_PLUGIN_DIR=$CROSS_DIR/plugins
+CROSS_VM_DIR=$CROSS_DIR/vm
+
+INCLUDES=-I$CROSS_PLUGIN_DIR/FilePlugin -I$CROSS_PLUGIN_DIR/SocketPlugin -I$CROSS_VM_DIR -Ivm -I$VM_DIR -I.
+CFLAGS=-+ -p $INCLUDES -DSQUEAK_BUILTIN_PLUGIN
+
+INTERP_NAMES=interp
+PLUGIN_NAMES=BitBltPlugin/BitBltPlugin B2DPlugin/B2DPlugin FilePlugin/FilePlugin SocketPlugin/SocketPlugin
+PLATFORM_NAMES=sqPlan9ExternalPrims sqPlan9clip osExports sqPlan9io sqPlan9prof \
+			   sqPlan9main p9display
+PLATFORM_PLUGIN_NAMES=FilePlugin/sqPlan9file SocketPlugin/sqPlan9socket
+CROSS_NAMES=sqNamedPrims sqVirtualMachine
+CROSS_PLUGIN_NAMES=FilePlugin/sqFilePluginBasicPrims
+
+NAMES=${INTERP_NAMES:%=$VM_DIR/%} \
+	  ${PLUGIN_NAMES:%=$PLUGIN_DIR/%} \
+	  ${PLATFORM_NAMES:%=vm/%} \
+	  ${PLATFORM_PLUGIN_NAMES:%=plugins/%} \
+	  ${CROSS_NAMES:%=$CROSS_VM_DIR/%} \
+	  ${CROSS_PLUGIN_NAMES:%=$CROSS_PLUGIN_DIR/%}
+
+OBJS=${NAMES:%=%.$O}
+
+all:V: $OUT
+
+clean:
+	rm -f $OBJS $OUT
+
+$OUT: $OBJS
+	$LD $LDFLAGS -o $target $prereq
+
+%.$O: %.c
+	$CC -c $CFLAGS -o $target $stem.c

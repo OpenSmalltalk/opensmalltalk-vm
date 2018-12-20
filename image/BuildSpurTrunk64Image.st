@@ -1,0 +1,2 @@
+Spur32to64BitBootstrap new bootstrapImage: 'trunk50'.
+Smalltalk snapshot: false andQuit: true

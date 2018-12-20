@@ -1,0 +1,158 @@
+/* This directory contains the PseudoTTYPlugin, a means for Squeak to
+ * fork an interactive program that believes itself to be running on a
+ * login terminal when, in fact, Squeak is providing it with data for
+ * its stdin and recovering the output it writes to its stdout/stderr.
+ * 
+ * The Squeak plugin source code is in `PseudoTTYPlugin.st'.
+ * The Squeak class needed to use the plugin is in `PseudoTTY.st'.
+ *
+ * The plugin has been built and tested on the following architecures:
+ * 
+ *	GNU/Linux (libc2.3)
+ *	NetBSD 1.5ZC
+ *	Solaris 2.8
+ * 
+ * The remainder of this file is a C program designed to ease the
+ * process of porting this plugin to unsupported architectures.
+ * 
+ * ----------------------------------------------------------------
+ * 
+ * This program forks a child process to run /bin/stty and then
+ * collects and prints its output.  If the child is not connected to a
+ * login terminal then stty will complain (printing something like
+ * "stdin: not a tty") and you have a problem somewhere in "opentty.h"
+ * which you must FIND AND FIX before the plugin will work.  OTOH, if
+ * it prints a bunch (about ten lines) of tty mode information then
+ * all is well and the plugin should work just fine.
+ * 
+ * (Do I really need to mention that you have to rename this file to
+ * "pty.c" or somesuch before trying to compile it? ;)
+ */
+
+/* For the plugin the HAVE_* macros are set in config.h by acinclude.m4.
+ * In this test file you need to set them manually for your architecture.
+ * If you invent new HAVE_* macros then you'll need to modify acinclude.m4
+ * and regenerate configure (run `make' in ../../config) before building
+ * the VM.
+ * 
+ * If it is available then we use openpty() in preference to Unix98 ptys:
+ * 
+ *   HAVE_OPENPTY	-- defined if you have openpty() and login_tty()
+ *   HAVE_UTIL_H	-- defined if you have /usr/include/util.h
+ *   HAVE_PTY_H		-- defined if you have /usr/include/pty.h
+ * 
+ * If you don't have openpty() then we fake it from /dev/ptmx:
+ * 
+ *   HAVE_UNIX98_PTY	-- defined if you have /dev/ptmx and grantpt() et al.
+ *   HAVE_STROPTS_H	-- defined if you have /usr/include/stropts.h
+ * 
+ * We assume you have /usr/include/utmp.h; if you don't then you need to
+ * buy a real computer before trying to compile this plugin.
+ * 
+ * Suggested compile command is shown with each architecture.
+ * If you have to add new libraries then you'll need to modify acinclude.m4
+ * and regenerate configure (run `make' in ../../config) before building the
+ * VM.
+ */
+#if defined(__NetBSD__)		/* cc -o pty pty.c -lutil */
+# define HAVE_OPENPTY
+# define HAVE_UTIL_H
+#elif defined(__OpenBSD__)	/* cc -o pty pty.c -lutil */
+# define HAVE_OPENPTY
+# define HAVE_UTIL_H
+#elif defined(__linux__)	/* cc -o pty pty.c -lutil */
+# define HAVE_UNIX98_PTY
+# define HAVE_OPENPTY
+# define HAVE_PTY_H
+#elif defined(__sun__)		/* cc -o pty pty.c */
+# define HAVE_UNIX98_PTY
+# define HAVE_STROPTS_H
+#else
+# error: defines for your architecture go here
+#endif
+
+/* Absolutely everybody has these. */
+
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <signal.h>
+#include <errno.h>
+#include <stdio.h>
+
+/* This gets the obscure (interesting ;) stuff. */
+
+#include "openpty.h"
+
+/* Here we go! ... */
+
+static char  *prog=	"/bin/stty";
+static char  *argv[]=	{ "stty", "-a", 0 };
+extern char **environ;
+
+static int ptm= -1, pts= -1;
+
+
+static void sigchld(int signum)
+{
+  close(pts);	/* force i/o error or EOF on ptm */
+}
+
+
+int main()
+{
+  char  tty[32];
+  pid_t pid= 0;
+  if (openpty(&ptm, &pts, tty, 0, 0) == -1)
+    {
+      perror("openpty");
+      exit(1);
+    }
+  printf("using %s (ptm %d pts %d)\n", tty, ptm, pts);
+  signal(SIGCHLD, sigchld);
+  pid= fork();
+  switch (pid)
+    {
+    case -1:
+      perror("fork");
+      exit(1);
+      break;
+
+    case 0:	/* child */
+      close(ptm);
+      if (login_tty(pts) == -1)
+	{
+	  perror("login_tty");
+	  exit(1);
+	}
+      execve(prog, argv, environ);
+      perror(argv[0]);
+      exit(1);
+      break;
+
+    default:	/* parent */
+      {
+	char buf[128];
+	int  n, status;
+	printf("---------------- from child:\n");
+	while (((n= read(ptm, buf, sizeof(buf) - 1)) > 0)
+	       || ((n == -1) && (errno == EINTR)))
+	  if (n > 0)
+	    {
+	      buf[n]= '\0';
+	      printf("%s", buf);
+	    }
+	printf("----------------\n");
+	if (n < 0)
+	  perror("read");
+	else
+	  printf("EOF\n");
+	close(ptm);
+	pid= wait(&status);
+	printf("child exited with status %d\n", status);
+      }
+      break;
+    }
+  return 0;
+}

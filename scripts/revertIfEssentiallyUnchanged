@@ -1,0 +1,23 @@
+#!/bin/sh
+# Revert the argument if its changes comprise only the generation metadata
+# such as date generated, VMMaker version etc.
+
+TEST=
+if [ "$1" = "-t" ]; then
+	TEST=-t
+	shift
+fi
+while [ -n "$1" -a  -d "$1" ]; do
+	$0 $TEST `git status --porcelain -- "$1" | grep "^\s*M" | sed 's/^\s*M *//'`
+	shift
+done
+case `git status --porcelain -- "$1"` in
+*M*)	;;
+*)	exit 0
+esac
+RESULT="`git diff -- "$1" | grep '^[+-]' | egrep -v ' VMMaker[-.][a-z][a-z-]*\.[0-9][0-9]* uuid:| Cog[-.][a-z][a-z]*\.[0-9][0-9]* uuid:| Qwaq-Plugins[-.][a-z][a-z]*\.[0-9][0-9]* uuid:| VMMaker[-.][a-z][a-z-]*\.[0-9][0-9]* \([ie]\)| Cog[-.][a-z][a-z-]*\.[0-9][0-9]* \([ie]\)| Qwaq-Plugins[-.][a-z][a-z]*\.[0-9][0-9]* \([ie]\)| VMConstruction-Plugins-OSProcessPlugin[a-z.-][a-z.-]*\.[0-9][0-9]* | Sound[-.][a-z][a-z]*\.[0-9][0-9]* uuid:|^\-\-\-|^\+\+\+|^[+-]$'`"
+if [ -z "$TEST" ]; then
+	test -z "$RESULT" && (echo reverting "$1"; git checkout -- "$1")
+else
+	echo RESULT=$RESULT
+fi

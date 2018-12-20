@@ -1,0 +1,32 @@
+Building Unix Squeak
+--------------------
+
+Full documentation can be found in:
+
+   platforms/unix/doc/HowToBuildFromSource.{txt,html,ps,pdf}
+
+For the impatient:
+
+1. Change to the 'platforms/unix' directory (if you aren't already
+   there) and type 'make' to build the VM and plugins:
+
+        cd platforms/unix
+        make
+
+2. Install the VM, plugins, man pages and documentation (as root,
+   note the 'sudo' command to gain superuser privileges):
+
+	sudo make install
+
+3. If you haven't used Squeak before, read the manual:
+
+	man squeak
+
+4. Enjoy!
+
+Note: The latest documentation and releases are available from:
+
+   http://squeakvm.org/
+
+----
+Last edited: 2006-04-10 12:55:06 by piumarta on emilia.local

@@ -1,0 +1,1 @@
+"Change the update stream to trunk, update, then build as per 4.5"[MCMcmUpdater	defaultUpdateURL: 'http://source.squeak.org/trunk';	updateFromServer] valueSupplyingAnswer: true."don't use fileIn; it causes an error when the saved image is started"Compiler evaluate: (FileStream oldFileNamed: 'BuildSqueak45VMMakerImage.st') contentsOfEntireFile

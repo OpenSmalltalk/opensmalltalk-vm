@@ -1,0 +1,10 @@
+#!/bin/sh -e
+
+VERSION=1.2.1
+
+rm -r /tmp/libmpeg3-$VERSION
+mkdir -p /tmp/libmpeg3-$VERSION
+make clean
+cp -rd * /tmp/libmpeg3-$VERSION
+cd /tmp
+tar zcf libmpeg3-$VERSION.tar.gz libmpeg3-$VERSION

@@ -1,0 +1,111 @@
+This VM should work with any 3.3 or earlier image.
+
+The major changes since 3.1-pre2 are as follows:
+
+- Lots of changes based on patches applied to the SF tree.
+  (See the ChangeLog file in the source distribution for a
+  comprehensive list of these changes and the authors of
+  the SF patches, where relevant.)
+
+- The VM version number (3.2-1) is now decoupled from the image
+  version (3.3alpha-4857) used produced the generated files, as
+  seems to be the case with Mac and Win32 VMs.  For bug reporting
+  purposes, `squeak -version' reports both these version numbers.
+
+- Build process completely rewritten to accommodate VMMaker.  (Lots
+  of documentation in the source distrib under platforms/unix/doc.
+  Plugin developers who want their code to run on Unix absolutely
+  must read this stuff.)
+
+- New option: `-plugins <path>' (env: SQUEAK_PLUGINS='<path>') appends
+  <path> to the list of places the VM seaches for plugins.  Each
+  occurrence of `%n' in <path> is replaced by the name of the plugin
+  being loaded.
+
+  To run a newly-compiled VM without first installing it, use:
+	.../blddir/squeak -plugins .../blddir/%n/.libs
+
+- Modifier keys are handled more intelligently.  The default is the
+  "traditional" Unix behaviour: mod1 is mapped to Command, Ctrl+mod1
+  is mapped to Option, and other modifiers are ignored.  (This is
+  usually what GNU/Linux systems with PC hardware [mod1=Alt] want.)
+
+- For the rest of us, two new options: `-cmdmod <n>' and `-optmod <n>'
+  (env: SQUEAK_CMDMOD=n and SQUEAK_OPTMOD=n).  If one or both of these
+  are set then the X11 modifier `mod<n>' is mapped to Squeak's Command
+  and/or Option, respectively.
+
+  For example, to map a Sun keyboard so that the physical locations of
+  the modifier keys ("Alt" = mod1 and "<>" [meta] = mod4) correspond
+  precisely to their homologues on an Apple keyboard ("Option" and
+  "Command") use:
+
+	-cmdmod 4 -optmod 1
+
+  (or set `export SQUEAK_CMDMOD=4; export SQUEAK_OPTMOD=1' in your
+  .profile to make the change permanent).  (Note that setting a modifier
+  for just one of these keys will entirely disable the other.)
+
+- New option: `-swapbtn' (env: SQUEAK_SWAPBTN=1) reverses the "yellow" and
+  "blue" buttons which might be useful for people having two-button mice
+  (or who have 3-button mice and no respect for historical precedents).
+
+- Various manual page updates (mainly for new/missing options).
+
+- New Netscape plugin code from Bert Freudenberg.  (Not tested because
+  my Netscape's dynamic loading is broken.)
+
+- OSS sound rewritten from scratch.  (Full-duplex is supported but the
+  image contains bugs which might prevent it from ever being attempted.)
+
+  Both input and output have been tested extensively on Linux 2.4.18 with
+  ALSA 0.9rc1 drivers (www.alsa-project.org) and the the OSS compatibility
+  modules (snd-pcm-oss/mixer) that come with them.  (This is the only
+  [non-commercial] OSS implementation I've found that respects the
+  published OSS API sufficiently to permit any kind of serious development
+  work.)
+
+  With the new implementation, playing and recording should only comsume
+  a fraction of 1% of the CPU.  Your kilometrage may vary depending on
+  the (quite possibly lamentable) state of your OSS drivers.
+
+- New option: `-nomixer' (env: SQUEAK_NOMIXER=1).  For people who prefer
+  that Squeak not arbitrarily set the input gain to 50% every time
+  recording is started, this turns off the mixer primitives.  With this
+  option your external mixer program retains control of the settings
+  (as it should).
+
+- Changes to gnuification should make this thing 5-10% faster on Intel.
+
+- Major overhaul of socket code should prevent lockups.  (There are
+  still outstanding issues but they concern very obscure situations.)
+
+- Lots and lots of smallish changes to the X11 code.  Plus some biggish
+  ones: responsiveness should be better and occasional crashes (or
+  freezes) observed when resizing the window should no longer occur.
+  (`-xshm -xasync' not yet extensively tested with the new code.)
+
+- Copy/Paste problems encountered between Squeak and some applications
+  (probably mainly KDE and anything that uses Qt or gtk) are fixed.
+
+- The default image name is now `squeak.image' (for compatibility with
+  other platforms).
+
+- Default heap size increased to 48MB to cope with recent images.
+
+Still to do:
+
+- mmap()-based memory allocator (when I have time to think about
+  portability).
+
+- Revisit the socket code to make a few minor tweaks for the obscure
+  cases and to pull connection reset detection forward into the
+  getSockState primitive (cf the Mac implementation).
+
+- Add sources and support for building the VM as a Netscape plugin.
+
+- Arrange for -USE_MMX in MpegPlugin on 386.
+
+Don't Panic!
+
+- Just send me mail if something is broken: ian.piumarta@inria.fr

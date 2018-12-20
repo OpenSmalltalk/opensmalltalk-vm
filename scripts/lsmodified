@@ -1,0 +1,2 @@
+#!/bin/sh
+fgrep -l '* VMMaker' *src*/vm/*

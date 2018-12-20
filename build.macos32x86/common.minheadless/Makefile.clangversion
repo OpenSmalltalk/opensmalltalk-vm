@@ -1,0 +1,26 @@
+#############################################################################
+# Determine clang version and set CLANG_7_3_OR_ABOVE & CLANG_7_2_OR_BELOW as so
+#
+
+XCODETOOLCHAINS := /Applications/Xcode.app/Contents/Developer/Toolchains
+XCODETOOLCHAIN := $(XCODETOOLCHAINS)/XcodeDefault.xctoolchain
+
+# /usr/bin/clang, a.k.a. $(XCODETOOLCHAIN)/usr/bin/clang
+CC := clang
+# convoluted, but clang -version writes to /dev/tty, /not/ stdout :-(
+CLVERSION:= $(shell ls $(XCODETOOLCHAIN)/usr/lib/clang)
+CLVERMAJ := $(shell echo $(CLVERSION) | cut -f1 -d.)
+CLVERMIN := $(shell echo $(CLVERSION) | cut -f2 -d.)
+
+# One glaring deficiency of GNU Make is the absence of arithmetic support
+ifneq ($(filter 0 1 2 3 4 5 6,$(CLVERMAJ)),)
+	 CLANG_7_2_OR_BELOW:=true
+else ifeq ($(CLVERMAJ), 7)
+	ifneq ($(filter 0 1 2,$(CLVERMIN)),)
+		 CLANG_7_2_OR_BELOW:=true
+	else
+		CLANG_7_3_OR_ABOVE:=true
+	endif
+else
+	CLANG_7_3_OR_ABOVE:=true
+endif

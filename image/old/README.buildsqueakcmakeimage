@@ -1,0 +1,47 @@
+buildsqueakcmakeimage.sh is a newbie friendly script that downloads and configures either a Cog VMMaker image or a StandardVMMaker image that is completely configured  for the end user to get productive quickly.
+While the image is set up for CMake, the existing GNU build infrastructure is maintained.
+
+If by chance you have not already done so, 
+
+svn co http://www.squeakvm.org/svn/squeak/branches/Cog will download the source tree containing this file; it exists as Cog/image/README.buildsqueakcmakimage
+
+Requirements to run the script are:
+
+svn
+wget
+zip
+rsync
+
+
+From withing the COG/image directory run buildsqueakcmakeimage.sh (buildsqueakcmakeimage.sh -h  for usage)
+
+For Cog installation, the script then 
+ downloads the appropriate squeak platform and creates CogVMMaker.image/changes and StandardVMMaker.image/changes for the Cog and Standard Interpreter respectively
+ installs the necessary Smalltalk classes on both images.
+ rsyncs the parent Cog directory as a sub-tree of the Squeak installation for use by CogVMMaker.image  to an appropriate subdirectory for the version of Squeak. 
+ The rsynced copy of the Cog svn source  is then populated with a parallel cmake_xyzbuild tree where the cmake build artifacts are installed (without breaking the existing gnu build stuff)
+
+
+To view/run your cog build system change directory to Cog/image/cogVMMaker/Squeak---.app/ and run squeakCogVMMaker.sh
+The source and build directories are in Cog/image/cogVMMaker/Squeak---.app/Contents/Resources/oscogvm/
+The cmake specific build directories are created by the script and are prefaces with 'cmake_'. This was done to avoid cluttering the existing GNU build system.
+After generating your build, change directory to your build directory (example: cd oscogvm/cmake_stackbuild/unixbuild/bld/) and invoke build.sh to launch cmake.
+
+After compilation, output files are stored in oscogvm/results
+
+
+
+
+When the Standard Interpreter, no special build tree is created. The system is just set up for use as-is described at http://wiki.squeak.org/squeak/6177
+to view/run your standard build system cd to Cog/image/standardVMMaker/
+
+
+
+
+
+
+
+
+
+
+

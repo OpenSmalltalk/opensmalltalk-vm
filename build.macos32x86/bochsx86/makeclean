@@ -1,0 +1,7 @@
+#!/bin/sh
+for t in *; do
+	case $t in
+	conf.COG*|makeclean|makeem)	;;
+	*)							rm -rf $t
+	esac
+done

@@ -1,0 +1,9 @@
+Assuming you know how to update these files and want to run make to make a new
+configure, a word to the wise.  Do _not_ run make on eg. Mac OS X.  It will not
+produce a valid configure.  Instead things will appear to work until libtool is
+invoked.  libtool will go into an infinite recursion.  Instead, run make on
+e.g. linux.  make configure did work on e.g. Mac OS X 10.4 but at least on 10.6
+it fails.
+
+Eliot Miranda
+Jan 2010

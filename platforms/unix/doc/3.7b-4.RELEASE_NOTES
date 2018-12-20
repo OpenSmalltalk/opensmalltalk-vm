@@ -1,0 +1,22 @@
+Changes since 3.6 "final":
+
+VM:
+
+  sqGnu.h asm() statemtnts fixed for gcc-3.1 compatibility.
+
+  Less noise from dlopen() and friends when probing for plugins.
+
+  Problems preventing more than one external plugin from loading in
+  Mac OS X fixed.
+
+VM drivers:
+
+  Preliminary drag-and-drop support added to the X11 display driver.
+
+  vm-sound-NAS driver explicitly depends on libaudio.
+
+  New option '-glxdebug <n>' sets OpenGL debug message level for X11 display.
+
+Plugins:
+
+  Additional checks for external data in SocketPlugin.

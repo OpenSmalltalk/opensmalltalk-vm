@@ -1,0 +1,17 @@
+# Makefile.in for FT2Plugin on Unix
+#
+
+[make_cfg]
+[make_plg]
+
+TARGET= FT2Plugin$a
+OBJS= FT2Plugin$o 
+XINCLUDES= [includes] -I/usr/include/freetype2
+
+$(TARGET) : $(OBJS) Makefile
+	$(LINK) $(TARGET) $(OBJS) -lfreetype 
+	$(RANLIB) $(TARGET)
+
+[make_targets]
+
+.force :

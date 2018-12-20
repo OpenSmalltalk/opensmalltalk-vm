@@ -1,0 +1,23 @@
+Post-release patch required to make Freetype-2.9.1 build on Windows...
+   https://savannah.nongnu.org/bugs/?func=detailitem&item_id=54846
+   http://git.savannah.gnu.org/cgit/freetype/freetype2.git/commit/?id=660afb5
+Remove this file next time Freetype is upgraded.
+
+diff -ur freetype-2.9.1/CMakeLists.txt freetype-2.9.1.fixed/CMakeLists.txt
+--- freetype-2.9.1/CMakeLists.txt	2018-05-01 18:45:45.000000000 +0800
++++ freetype-2.9.1.fixed/CMakeLists.txt	2018-12-14 18:13:46.624962900 +0800
+@@ -229,9 +229,12 @@
+   endif ()
+   string(REPLACE "/undef " "#undef "
+     FTCONFIG_H "${FTCONFIG_H}")
+-  file(WRITE "${PROJECT_BINARY_DIR}/include/freetype/config/ftconfig.h"
+-    "${FTCONFIG_H}")
++else()
++  file(READ "${PROJECT_SOURCE_DIR}/include/freetype/config/ftconfig.h"
++    FTCONFIG_H)
+ endif ()
++file(WRITE "${PROJECT_BINARY_DIR}/include/freetype/config/ftconfig.h"
++  "${FTCONFIG_H}")
+ 
+ 
+ # Create the options file

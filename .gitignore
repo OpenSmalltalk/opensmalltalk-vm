@@ -1,0 +1,264 @@
+# global
+*.image
+*.changes
+*.sources
+*.swp
+
+# /
+/ChangeHistory
+/MVALOG
+/README.*
+/*.app
+/*.dmg
+/*.msi
+/*.tgz
+/*.zip
+/cog*linux*
+/cog*win*
+/nsvm*linux*
+/nsvm*win*
+/.thirdparty-cache*
+
+platforms/unix/config/autom4te.cache/
+
+# Don't track build directories 
+/build*/**/*
+# except do track these files
+!branding.gmk
+!branding-sed-rules.gmk
+!conf.COG
+!conf.COG.dbg
+!Croquet.def.in
+!Croquet.exe.manifest
+!Croquet.ico
+!Croquet.rc
+!GreenCogSqueak.ico
+!HowToBuild
+!makeall
+!makeallclean
+!makealldirty
+!makeclean
+!makeem
+!Makefile
+!Makefile.plugin
+!Makefile.rules
+!Makefile.tools
+!makeproduct
+!makeproductclean
+!mkNamedPrims.sh
+!mvm
+!NotYetImplemented
+!plugins.ext
+!plugins.int
+!Squeak.def.in
+!Squeak.exe.manifest
+!squeak.ico
+!Squeak.rc
+!editnewspeakinstall.sh
+!/build.linux32ARMv6/asasm
+
+# Ignore special Cadence-only build directories
+/build*/glue*
+
+# Track installer directories
+!installer
+# but ignore these files (derived from `grep installer .gitignore.orig`)
+/build*/**/installer/*.app
+/build*/**/installer/*.applescript
+/build*/**/installer/*.dmg
+/build*/**/installer/Binary
+/build*/**/installer/Control.idt.orig
+/build*/**/installer/Icon
+/build*/**/installer/files.???
+/build*/**/installer/nsvm.*
+/build*/**/installer/*.idt
+/build*/**/installer/*.msi
+/build*/**/installer/*.rtf
+
+# Track xcode directories
+!xcode
+# but ignore these files (derived from `grep xcode .gitignore.orig`)
+/build.macos32x86/xcode/*/Template.xcodeproj/*.mode1v3
+/build.macos32x86/xcode/*/Template.xcodeproj/*.pbxuser
+
+# Not sure what to do with nsvm files/directories. Track to be conservative.
+!nsvm*
+
+
+# /history/
+/history/README.*
+
+# /image/
+/image/*.sum
+/image/*.tgz
+/image/*.st
+/image/coglinux*
+/image/cogwin
+/image/Cog.app
+/image/cogspurlinux*
+/image/crash.dmp
+/image/sqlinux*
+/image/sqwin*
+/image/cogspurwin
+/image/CogSpur.app
+/image/github-cache/
+/image/package-cache
+/image/pharo-local/
+/image/prefs
+/image/special-dirs
+/image/Squeak*.app
+/image/[sS]queak*.dmg
+/image/Squeak-*-All-in-One.*
+/image/__MACOSX
+/image/*.log
+/image/*.zip
+/image/.*history
+
+# /sources/
+/sources/*.sources
+/sources/*.gz
+
+# /platforms/Cross/
+
+# /platforms/win32/
+
+# /processors/ARM/exploration/
+/processors/ARM/exploration/*.st
+/processors/ARM/exploration/print*
+
+# /processors/IA32/bochs/
+/processors/IA32/bochs/Makefile
+
+# /processors/IA32/bochs/bios/
+/processors/IA32/bochs/bios/*.a
+/processors/IA32/bochs/bios/Makefile
+
+# /processors/IA32/bochs/bx_debug/
+/processors/IA32/bochs/bx_debug/*.a
+/processors/IA32/bochs/bx_debug/Makefile
+
+# /processors/IA32/bochs/cpu/
+/processors/IA32/bochs/cpu/*.a
+/processors/IA32/bochs/cpu/Makefile
+
+# /processors/IA32/bochs/disasm/
+/processors/IA32/bochs/disasm/*.a
+/processors/IA32/bochs/disasm/Makefile
+
+# /processors/IA32/bochs/exploration/
+/processors/IA32/bochs/exploration/*.st
+/processors/IA32/bochs/exploration/print*
+
+# /processors/IA32/bochs/explorationx64/
+/processors/IA32/bochs/explorationx64/*.st
+/processors/IA32/bochs/explorationx64/print*
+
+# /processors/IA32/bochs/fpu/
+/processors/IA32/bochs/fpu/*.a
+/processors/IA32/bochs/fpu/Makefile
+
+# /processors/IA32/bochs/gui/
+/processors/IA32/bochs/gui/*.a
+/processors/IA32/bochs/gui/Makefile
+
+# /processors/IA32/bochs/instrument/stubs/
+/processors/IA32/bochs/instrument/stubs/*.a
+/processors/IA32/bochs/instrument/stubs/Makefile
+
+# /processors/IA32/bochs/iodev/
+/processors/IA32/bochs/iodev/*.a
+/processors/IA32/bochs/iodev/Makefile
+
+# /processors/IA32/bochs/memory/
+/processors/IA32/bochs/memory/*.a
+/processors/IA32/bochs/memory/Makefile
+
+# /processors/IA32/bochs/misc/
+/processors/IA32/bochs/misc/*.a
+/processors/IA32/bochs/misc/Makefile
+
+# /processors/IA32/linuxbochs/
+/processors/IA32/linuxbochs/Makefile
+/processors/IA32/linuxbochs/bxversion.h
+/processors/IA32/linuxbochs/bxversion.rc
+/processors/IA32/linuxbochs/config.h
+/processors/IA32/linuxbochs/config.log
+/processors/IA32/linuxbochs/config.status
+/processors/IA32/linuxbochs/ltdlconf.h
+/processors/IA32/linuxbochs/bios
+/processors/IA32/linuxbochs/build
+/processors/IA32/linuxbochs/bx_debug
+/processors/IA32/linuxbochs/cpu
+/processors/IA32/linuxbochs/disasm
+/processors/IA32/linuxbochs/doc
+/processors/IA32/linuxbochs/exploration
+/processors/IA32/linuxbochs/fpu
+/processors/IA32/linuxbochs/gui
+/processors/IA32/linuxbochs/host
+/processors/IA32/linuxbochs/instrument
+/processors/IA32/linuxbochs/iodev
+/processors/IA32/linuxbochs/libtool
+/processors/IA32/linuxbochs/memory
+/processors/IA32/linuxbochs/misc
+
+# /processors/IA32/macbochs/
+/processors/IA32/macbochs/Makefile
+/processors/IA32/macbochs/bxversion.h
+/processors/IA32/macbochs/bxversion.rc
+/processors/IA32/macbochs/config.h
+/processors/IA32/macbochs/config.log
+/processors/IA32/macbochs/config.status
+/processors/IA32/macbochs/ltdlconf.h
+/processors/IA32/macbochs/bios
+/processors/IA32/macbochs/build
+/processors/IA32/macbochs/bx_debug
+/processors/IA32/macbochs/cpu
+/processors/IA32/macbochs/disasm
+/processors/IA32/macbochs/doc
+/processors/IA32/macbochs/fpu
+/processors/IA32/macbochs/gui
+/processors/IA32/macbochs/host
+/processors/IA32/macbochs/instrument
+/processors/IA32/macbochs/iodev
+/processors/IA32/macbochs/libtool
+/processors/IA32/macbochs/memory
+/processors/IA32/macbochs/misc
+
+# /processors/IA32/winbochs/
+/processors/IA32/winbochs/Makefile
+/processors/IA32/winbochs/bxversion.h
+/processors/IA32/winbochs/bxversion.rc
+/processors/IA32/winbochs/config.h
+/processors/IA32/winbochs/config.log
+/processors/IA32/winbochs/config.status
+/processors/IA32/winbochs/ltdlconf.h
+/processors/IA32/winbochs/bios
+/processors/IA32/winbochs/build
+/processors/IA32/winbochs/bx_debug
+/processors/IA32/winbochs/cpu
+/processors/IA32/winbochs/disasm
+/processors/IA32/winbochs/doc
+/processors/IA32/winbochs/fpu
+/processors/IA32/winbochs/gui
+/processors/IA32/winbochs/host
+/processors/IA32/winbochs/instrument
+/processors/IA32/winbochs/iodev
+/processors/IA32/winbochs/libtool
+/processors/IA32/winbochs/memory
+/processors/IA32/winbochs/misc
+
+# /processors/IA32/winbochs/exploration/
+/processors/IA32/winbochs/exploration/*.exe
+/processors/IA32/winbochs/exploration/*.st
+/processors/IA32/winbochs/exploration/*.txt
+
+# /products/
+/products/*
+
+# /products/assert/
+/products/assert/*
+
+# /products/debug/
+/products/debug/*
+*.cer
+*.p12

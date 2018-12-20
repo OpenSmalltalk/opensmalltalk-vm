@@ -1,0 +1,25 @@
+#!/bin/sh
+
+includes="`echo ../vm*/acinclude.m4 ../plugins/*/acinclude.m4`";
+
+if test "${includes}" != ""; then
+  for i in ${includes}; do
+    echo "	+ $i" >&2
+    p=`echo $i | sed 's,../,,;s,plugins/,,;s,/acinclude.m4,,'`
+    cat <<EOF
+plugin="${p}"
+plibs=""
+rm -f ${p}.sub ${p}.lib
+EOF
+    cat $i
+    cat <<\EOF
+if test "${plibs}"; then
+  llibs="${LIBS}"
+  for l in ${plibs}; do
+  llibs="${llibs} -l${l}"
+  done
+  echo ${llibs} > ${plugin}.lib
+fi
+EOF
+  done
+fi

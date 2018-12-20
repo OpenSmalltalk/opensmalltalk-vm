@@ -1,0 +1,127 @@
+#!/bin/bash
+#
+# Facilitate checking out the VM code for a given date (typically retrieved from VM --version output)
+#
+set -e
+usage="$(basename "$0") [-dewh] -- Checkout the commit with the matching timestamp
+
+-d = Display the hash only, don't check out.
+-h = Display this help text and exit.
+
+Three forms are supported:
+
+1. By date:
+
+$(basename "$0") DATE
+
+E.g.:
+
+$(basename "$0") \"Tue May 30 19:41:27 2017 -0700\"
+
+Note that this is doing a simple string match, so the date must be in the same
+format as git log.
+
+
+2. By executable:
+
+$(basename "$0") -e PHARO_EXE
+
+E.g.:
+
+$(basename "$0") -e /path/to/pharo
+
+Run the supplied executable with the --version option and look for the date
+string.
+
+
+3. By URL
+
+$(basename "$0") -w PHARO_URL
+
+E.g.:
+
+$(basename "$0") -w get.pharo.org
+
+This will execute \"curl PHARO_URL | bash\" in /tmp/checkoutVMbyDate/, run the
+downloaded exe and find the date string.
+"
+
+displayonly=0
+pharoexe=""
+datestring="$1"
+while getopts 'hewd' option; do
+  case "$option" in
+    h) echo "$usage"
+       exit
+       ;;
+    d) displayonly=1
+       ;;
+    e) echo "Extracting date from $2"
+       pharoexe="$2"
+       ;;
+    w) echo "Downloading from $2"
+       pharourl="$2"
+       ;;
+  esac
+done
+
+# If a url has been supplied, download and extract the archive and find
+# the exe for the next stage
+if [ -n "$pharourl" ]
+then
+    tmpdir="/tmp/$(basename "$0")"
+    if [ -d "$tmpdir" ]
+    then
+        echo "Tmp dir already exists: $tmpdir"
+        exit 1
+    fi
+    mkdir "$tmpdir"
+    pushd "$tmpdir" > /dev/null
+    curl -s "$pharourl" | bash > /dev/null 2>&1
+    pharoexe=$(find "$tmpdir" -regextype egrep -type f -regex ".*(pharo|squeak)" -executable | head -n 1)
+    if [ -z "$pharoexe" ]
+    then
+        echo "Failed to find pharo exe"
+        exit 1
+    fi
+    popd > /dev/null
+fi
+
+
+# If an exe has been supplied, either on the command line or indirectly
+# through a URL, get the version info and extract the commit date
+if [ -n "$pharoexe" ]
+then
+    vs1=$($pharoexe --version | grep "$ Date: " | cut -d '$' -f 2 | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+    datestring=${vs1:6}
+fi
+
+
+# If a URL was specified, clean up the temp directory
+if [ -n "$pharourl" ]
+then
+    chmod -R +w "$tmpdir"
+    rm -r "$tmpdir"
+fi
+
+
+echo "Searching for date: ($datestring)"
+commitline=$(git log --format="%H %ad %cd" | grep "$datestring")
+if [ -z "$commitline" ]
+then
+    echo "Supplied date string didn't match any commit message"
+    exit 1
+fi
+lcount=$(echo "$commitline" | wc -l)
+if [ "$lcount" -gt 1 ]
+then
+    echo "Supplied date string matches $lcount lines, expected a single line"
+    exit 1
+fi
+commithash=$(echo "$commitline" | cut -d ' ' -f 1)
+if [ "$displayonly" -eq 1 ]
+then
+    echo "Commit hash: $commithash"
+else
+    git checkout "$commithash"
+fi

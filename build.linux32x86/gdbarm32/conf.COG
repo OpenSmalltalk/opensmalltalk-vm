@@ -1,0 +1,19 @@
+#!/bin/sh -e
+CFLAGS="-g -O2 -m32"
+mkdir -p zlib bfd libiberty opcodes sim/common sim/arm
+for d in zlib; do
+	(cd $d; ../../../processors/ARM/gdb-7.10/$d/configure COG=1 CFLAGS="$CFLAGS")
+done
+for d in bfd; do
+	(cd $d; ../../../processors/ARM/gdb-7.10/$d/configure COG=1 CFLAGS="$CFLAGS"\
+			 --target=arm-linux --with-system-zlib=no)
+done
+for d in libiberty opcodes; do
+	(cd $d; ../../../processors/ARM/gdb-7.10/$d/configure COG=1 CFLAGS="$CFLAGS"\
+			 --target=arm-linux)
+done
+for d in sim/common sim/arm; do
+	(cd $d;
+	 ../../../../processors/ARM/gdb-7.10/$d/configure COG=1 CFLAGS="$CFLAGS"\
+			 --target=arm-linux)
+done

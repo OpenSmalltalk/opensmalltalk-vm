@@ -1,0 +1,7 @@
+Registry	Root	Key	Name	Value	Component_
+s72	i2	l255	L255	L0	s72
+Registry	Registry
+FileType	0	.image		Newspeak.VirtualMachine.1	AdvertisedShortcut
+ProgId	0	Newspeak.VirtualMachine.1		Newspeak Image	AdvertisedShortcut
+CurVer	0	Newspeak.VirtualMachine.1\CurVer		Newspeak.VirtualMachine.1	AdvertisedShortcut
+OpenCommand	0	Newspeak.VirtualMachine.1\shell\open\command		#%"[#@@VM_EXECUTABLE@@]" "%1"	AdvertisedShortcut

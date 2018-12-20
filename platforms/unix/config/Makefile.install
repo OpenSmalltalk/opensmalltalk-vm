@@ -1,0 +1,115 @@
+# Makefile.install for Unix Squeak using VMMaker		-*- makefile -*-
+# 
+# Author: ian.piumarta@inria.fr
+# 
+# Last edited: 2005-03-22 13:05:47 by piumarta on squeak.hpl.hp.com
+
+DOCFILES	= COPYING COPYRIGHT LICENSE \
+		  README.Contributing README.Keyboard README.Sound
+
+ICONS		= $(topdir)/platforms/unix/vm-display-Quartz/Resources/SqueakVM.icns
+
+install : install-squeak install-plugins install-doc $(install_nps)
+
+uninstall : uninstall-squeak uninstall-plugins uninstall-doc $(uninstall_nps)
+
+# squeak
+
+install-squeak : $(squeak) $(squeaksh) $(binsqueaksh) getversion
+	$(MKINSTALLDIRS) $(ROOT)$(plgdir)
+	$(MKINSTALLDIRS) $(ROOT)$(bindir)
+	$(INSTALL_PROG) $(squeak) $(ROOT)$(plgdir)
+	$(INSTALL_SCRIPT) $(squeaksh) $(ROOT)$(exec_prefix)/$(squeak)
+	$(INSTALL_SCRIPT) $(binsqueaksh) $(ROOT)$(bindir)/$(squeak)
+	if test -n "$(VM_APP_ICONS)"; then \
+	  $(INSTALL_DATA) $(ICONS) $(ROOT)$(VM_APP_ICONS); \
+	fi
+
+uninstall-squeak : getversion .force
+	if test -n "$(VM_APP_ICONS)"; then \
+	  $(UNINSTALL) $(ROOT)$(VM_APP_ICONS); \
+	fi
+	@$(UNINSTALL) $(ROOT)$(plgdir) $(squeak)
+	@$(UNINSTALL) $(ROOT)$(bindir) $(squeak)
+
+# plugins
+
+install-plugins : plugins getversion
+	$(MKINSTALLDIRS) $(ROOT)$(plgdir)
+	@list='$(PLUGINS_LA)'; for p in $$list; do \
+	  if test -f */$$p; then \
+	    echo "$(LIBTOOL) --mode=install $(INSTALL_PROG) $$p $(ROOT)$(plgdir)/$$p"; \
+	    $(LIBTOOL) --mode=install $(INSTALL_PROG) */$$p $(ROOT)$(plgdir)/$$p; \
+	  else :; fi; \
+	done
+	-rm $(ROOT)$(plgdir)/*.la
+
+uninstall-plugins : getversion .force
+	@list='$(PLUGINS_LA)'; for p in $$list; do \
+	  filename=$(ROOT)/$(plgdir)/`basename $$p .la`;\
+	  if test -f $$filename; then \
+	    echo "$(LIBTOOL) --mode=uninstall rm -f $$filename"; \
+	    $(LIBTOOL) --mode=uninstall rm -f $$filename; \
+	  else
+	    echo "$$filename does not exist"; fi; \
+	done
+	@$(UNINSTALL) $(ROOT)$(plgdir)
+
+# doc
+
+install-doc : squeak.1
+	$(MKINSTALLDIRS) $(ROOT)$(docdir)
+	@list='$(DOCFILES)'; for f in $$list; do \
+	  echo $(INSTALL_DATA) $(topdir)/platforms/unix/doc/$$f $(ROOT)$(docdir); \
+	  $(INSTALL_DATA) $(topdir)/platforms/unix/doc/$$f $(ROOT)$(docdir); \
+	done
+	gzip -f9 $(ROOT)$(docdir)/*
+	$(MKINSTALLDIRS) $(ROOT)$(mandir)/man1
+	$(INSTALL_DATA) squeak.1 $(ROOT)$(mandir)/man1
+	rm -f $(ROOT)$(mandir)/man1/inisqueak.1 $(ROOT)$(mandir)/man1/inisqueak.1.gz
+	if test -f $(ROOT)$(mandir)/man1/squeak.1; then $(LN) $(ROOT)$(mandir)/man1/squeak.1 $(ROOT)$(mandir)/man1/inisqueak.1; fi
+	if test -f $(ROOT)$(mandir)/man1/squeak.1.gz; then $(LN) $(ROOT)$(mandir)/man1/squeak.1.gz $(ROOT)$(mandir)/man1/inisqueak.1.gz; fi
+
+uninstall-doc :
+	@list='$(DOCFILES)'; for f in $$list; do \
+	  rm -fv $(ROOT)$(docdir)/$$f.gz; \
+	done
+	@$(UNINSTALL) $(ROOT)$(docdir) $(DOCFILES)
+	@$(UNINSTALL) $(ROOT)$(mandir)/man1 squeak.1 inisqueak.1
+
+# image
+
+install-image : inisqueak $(topdir)/Squeak$(SQ_VERSION).image.gz $(topdir)/Squeak$(SQ_VERSION).changes.gz
+	$(MKINSTALLDIRS) $(ROOT)$(imgdir)
+	$(INSTALL_PROG) inisqueak $(ROOT)$(imgdir)
+	$(INSTALL_DATA) $(topdir)/Squeak$(SQ_VERSION).image.gz $(ROOT)$(imgdir)
+	$(INSTALL_DATA) $(topdir)/Squeak$(SQ_VERSION).changes.gz $(ROOT)$(imgdir)
+	$(LN_S) Squeak$(SQ_VERSION).image.gz $(ROOT)$(imgdir)/squeak.image.gz
+	$(LN_S) Squeak$(SQ_VERSION).changes.gz $(ROOT)$(imgdir)/squeak.changes.gz
+	$(MKINSTALLDIRS) $(ROOT)$(bindir)
+	( path=`$(cfgdir)/relpath $(bindir) $(imgdir)`; \
+	  cd $(ROOT)$(bindir); \
+	  rm -f inisqueak; \
+	  $(LN_S) $$path/inisqueak .; )
+
+uninstall-image : getversion
+	@$(UNINSTALL) $(ROOT)$(plgdir) Squeak$(SQ_VERSION).image.gz
+	@$(UNINSTALL) $(ROOT)$(plgdir) Squeak$(SQ_VERSION).changes.gz
+	@$(UNINSTALL) $(ROOT)$(plgdir) inisqueak
+
+# sources
+
+install-sources :
+	$(MKINSTALLDIRS) $(ROOT)$(imgdir)
+	$(INSTALL_DATA) $(topdir)/SqueakV$(SQ_MAJOR).sources $(ROOT)$(imgdir)
+
+uninstall-sources :
+	@$(UNINSTALL) $(ROOT)$(imgdir) SqueakV$(SQ_MAJOR).sources
+
+# npsqueak
+
+install-npsqueak : npsqueak getversion .force
+	$(SHELL) -ec 'cd nps; $(MAKE) install ROOT=$(ROOT) VM_VERSION=$(VM_VERSION) plgdir=$(plgdir) bindir=$(bindir) imgdir=$(imgdir)'
+
+uninstall-npsqueak : npsqueak getversion .force
+	$(SHELL) -ec 'cd nps; $(MAKE) uninstall ROOT=$(ROOT) VM_VERSION=$(VM_VERSION) plgdir=$(plgdir) bindir=$(bindir) imgdir=$(imgdir)'

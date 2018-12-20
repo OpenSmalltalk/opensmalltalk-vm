@@ -1,0 +1,108 @@
+# Makefile for core VM				-*- makefile -*-
+# 
+#   Copyright (C) 1996-2004 by Ian Piumarta and other authors/contributors
+#                              listed elsewhere in this file.
+#   All rights reserved.
+#   
+#   This file is part of Unix Squeak.
+# 
+#      You are NOT ALLOWED to distribute modified versions of this file
+#      under its original name.  If you modify this file then you MUST
+#      rename it before making your modifications available publicly.
+# 
+#   This file is distributed in the hope that it will be useful, but WITHOUT
+#   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+#   FITNESS FOR A PARTICULAR PURPOSE.
+#   
+#   You may use and/or distribute this file ONLY as part of Squeak, under
+#   the terms of the Squeak License as described in `LICENSE' in the base of
+#   this distribution, subject to the following additional restrictions:
+# 
+#   1. The origin of this software must not be misrepresented; you must not
+#      claim that you wrote the original software.  If you use this software
+#      in a product, an acknowledgment to the original author(s) (and any
+#      other contributors mentioned herein) in the product documentation
+#      would be appreciated but is not required.
+# 
+#   2. You must not distribute (or make publicly available by any
+#      means) a modified copy of this file unless you first rename it.
+# 
+#   3. This notice must not be removed or altered in any source distribution.
+# 
+#   Using (or modifying this file for use) in any context other than Squeak
+#   changes these copyright conditions.  Read the file `COPYING' in the
+#   directory `platforms/unix/doc' before proceeding with any such use.
+# 
+# Author: ian.piumarta@inria.fr
+# 
+# Last edited: 2003-08-22 22:54:19 by piumarta on emilia.inria.fr
+
+[make_cfg]
+[make_plg]
+
+TARGET		= vm$a
+COBJS		= $(INTERP)$o cogit$o sqNamedPrims$o sqVirtualMachine$o sqHeapMap$o\
+			sqExternalSemaphores$o sqTicker$o aio$o debug$o osExports$o \
+			sqUnixExternalPrims$o sqUnixMemory$o sqUnixSpurMemory$o \
+			sqUnixCharConv$o sqUnixMain$o \
+			sqUnixVMProfile$o sqUnixHeartbeat$o sqUnixThreads$o
+
+IOBJS		= $(INTERP)$o sqNamedPrims$o sqVirtualMachine$o sqHeapMap$o\
+			sqExternalSemaphores$o sqTicker$o aio$o debug$o osExports$o \
+			sqUnixExternalPrims$o sqUnixMemory$o sqUnixSpurMemory$o \
+			sqUnixCharConv$o sqUnixMain$o \
+			sqUnixVMProfile$o sqUnixHeartbeat$o sqUnixThreads$o
+
+OBJS		= [COBJS_OR_IOBJS] # see mkmf
+
+XINCLUDES	= [includes] \
+		  -I$(topdir)/platforms/Cross/plugins/FilePlugin \
+		  -I$(topdir)/platforms/unix/plugins/B3DAcceleratorPlugin \
+		  $(X_INCLUDES)
+
+$(TARGET) : $(OBJS) Makefile
+	$(LINK) $(TARGET) $(OBJS)
+	$(RANLIB) $(TARGET)
+
+$(blddir)/sqNamedPrims.h:	$(vmmcfg)/plugins.int
+	$(topdir)/mkNamedPrims.sh $(vmmcfg)/plugins.int >$(blddir)/sqNamedPrims.h
+
+# rebuild sqNamedPrims.o if sqNamedPrims.h changes
+
+sqNamedPrims$o : $(blddir)/sqNamedPrims.h
+
+# cogit.c merely includes specific a specific cogitPROCESSOR.c
+# e.g. cogitARMv5.c cogitIA32.c cogitMIPSEL.c cogitX64.c
+cogit$o : $(srcdir)/vm/cogit.c $(wildcard $(srcdir)/vm/cogit[A-Z]*.c)
+
+# sqUnixHeartbeat.c includes sqSCCSVersion.h
+sqUnixHeartbeat$o : $(topdir)/platforms/Cross/vm/sqSCCSVersion.h
+
+# rebuild sqExtPrims sqUnixMain if config.h changes
+
+sqUnixExternalPrims$o sqUnixMain$o : ../config.h $(topdir)/platforms/unix/vm/dlfcn-dyld.c
+
+sqUnixMemory$o : $(topdir)/platforms/unix/vm/sqUnixSpurMemory.c
+
+[make_targets]
+
+# Ensure the heartbeat is compiled with less aggressive optimization.  At
+# least with gcc 4.1.2 compiling with -O2 results in an apparently flakey VM;
+# so flakey the Squeak4.2-10856-beta.image image won't even start-up.
+#sqUnixHeartbeat$o : $(topdir)/platforms/unix/vm/sqUnixHeartbeat.c
+#	$(COMPILE) sqUnixHeartbeat$o -O1 -fno-omit-frame-pointer -mno-rtd -mno-accumulate-outgoing-args $(topdir)/platforms/unix/vm/sqUnixHeartbeat.c
+
+# Ensure the cointerpreter is compiled with less aggressive optimization.  At
+# least with gcc 4.1.2 compiling with -O2 results in an apparently flakey VM.
+#gcc3x-cointerp$o : $(srcdir)/vm/gcc3x-cointerp.c
+#	$(COMPILE) gcc3x-cointerp$o -O1 -fno-omit-frame-pointer -momit-leaf-frame-pointer -mno-rtd -mno-accumulate-outgoing-args $(srcdir)/vm/gcc3x-cointerp.c
+
+# Ensure the cogit is compiled with less aggressive optimization.  The cogit
+# contains a function that does two alloca's which is miscompiled by a number of
+# optimizing compilers (at least gcc 4.0.x 4.1.x & Intel icc 10.1) under the
+# -fomit-frame-pointer regime.  Also on gcc 4.1 linux -O2 causes an abort on
+# shutdown even though the VM starts correctly.  You have been warned :)
+#cogit$o : $(srcdir)/vm/cogit.c
+#	$(COMPILE) cogit$o -O1 -fno-omit-frame-pointer -momit-leaf-frame-pointer -mno-rtd -mno-accumulate-outgoing-args $(srcdir)/vm/cogit.c
+
+.force :

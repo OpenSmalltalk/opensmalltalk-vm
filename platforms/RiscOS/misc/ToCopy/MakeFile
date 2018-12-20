@@ -1,0 +1,1178 @@
+# Project:   squeak vm 4.4
+# Make the pluginised VM for v4.4
+# Add check for Squeak3D dir to optionally compile the Squeak3D plugin
+# Ditto for HostWindow and LocalePlugin
+
+# Rules
+.SUFFIXES:	.o .c
+.c.o:;	cc $(ccflags) -o $@ $*.c
+
+# Toolflags:
+CCflags = -c -fa -Wabpdnv -ec -depend !Depend -IC:,OSLib:,C:^.rink,$(PVM),$(CVM),$(SVM) -throwback  -DACORN -D__LITTLE_ENDIAN -Otime
+# extra ccflags for debugging go here because rink doesnt deal with debug
+# segment. remember to use ccvmflags with all core vm files
+#CCVMflags = $(ccflags) -g
+CCVMflags = $(ccflags)
+# likewise, linkflags with -debug...
+Linkflags = -aif -c++ -o $@
+#Linkflags = -aif -c++ -debug -o $@
+ObjAsmflags = -throwback -NoCache -depend !Depend
+LibFileflags = -c -o $@
+Squeezeflags = -o $@
+extractsymflags = -o
+Sqk=@.!Squeak
+SokLib=OSLib:^.TCPIPLibs
+SqPlugins=$(Sqk).plugins
+PLAT=@.^.platforms
+PVM=$(PLAT).RiscOS.vm
+CVM=$(PLAT).Cross.vm
+SVM=@.vm
+PPlug=$(PLAT).RiscOS.plugins
+CPlug=$(PLAT).Cross.plugins
+SPlug=@.plugins
+PlHdr=$(CVM).h.sqVirtualMachine $(PVM).h.sqConfig $(PVM).h.sqPlatformSpecific
+VMHdr=$(CVM).h.sq $(PlHdr)
+SQ3DTestFile= $(SPlug).Squeak3D.dsc.Squeak3D
+HWTestFile= $(SPlug).HostWindowPlugin.dsc.HostWindowPlugin
+LocaleTestFile= $(Plug).LocalePlugin.dsc.LocalePlugin
+
+pluginList= ADPCMCodecPlugin B2DPlugin BitBltPlugin BMPReadWriterPlugin DSAPrims FFTPlugin FilePlugin FileCopyPlugin FloatArrayPlugin  GeniePlugin JPEGReaderPlugin JPEGReadWriter2Plugin LargeIntegers Matrix2x3Plugin MiscPrimitivePlugin ScratchPlugin  SecurityPlugin  SoundCodecPrims SoundGenerationPlugin SoundPlugin StarSqueakPlugin  SurfacePlugin ZipPlugin
+
+notYetList=SocketPlugin  RePlugin  FloatMathPlugin
+# Final targets:
+all: plugins vm
+
+ifeq ( $(wildcard $(SQ3DTestFile)), $(SQ3DTestFile)
+pluginList += Squeak3D
+endif
+ifeq ( $(wildcard $(HWTestFile)), $(HWTestFile)
+pluginList += HostWindowPlugin
+endif
+ifeq ( $(wildcard $(LocaleTestFile)), $(LocaleTestFile)
+pluginList += LocalePlugin
+endif
+
+vm:	$(Sqk).!Runimage vmobjdir
+	@
+
+clean:
+	$(MAKEFILEDIR).each @ -type d -name o -exec wipe %0.* ~C ";"
+
+# User-editable dependencies:
+
+vmobjdir:
+        @ifthere $(Sqk) then else CDir $(Sqk)
+        @ifthere @.vm.o then else CDir @.vm.o
+        @ifthere @.vm.o.sqRPCVersion then delete @.vm.o.sqRPCVersion
+
+pluginDir:
+	@ifthere $(SqPlugins) then else CDir $(SqPlugins)
+	@ifthere @.o then else CDir @.o
+
+plugins: $(pluginList) pluginDir
+	@
+
+$(Sqk).!Runimage:	@.vm.o.sqRPCMain @.vm.o.interp @.vm.o.sqArgument \
+        @.vm.o.sqNamedPrims @.vm.o.sqRPCClipboard @.vm.o.sqRPCVersion \
+        @.vm.o.sqRPCEvents @.vm.o.sqRPCExternalPrims @.vm.o.sqRPCFormPrint \
+        @.vm.o.sqRPCWindows @.vm.o.sqVirtualMachine @.vm.o.osExports \
+        @.vm.o.fperrors OSLib:o.OSLib32 C:o.stubs @.vm.o.ptrblock C:^.rink.o.rink_rtsys
+        link $(linkflags)  @.vm.o.sqRPCMain @.vm.o.interp @.vm.o.sqArgument \
+        @.vm.o.sqNamedPrims @.vm.o.sqRPCClipboard @.vm.o.sqRPCVersion \
+        @.vm.o.sqRPCEvents @.vm.o.sqRPCExternalPrims @.vm.o.sqRPCFormPrint \
+        @.vm.o.sqRPCWindows @.vm.o.sqVirtualMachine @.vm.o.osExports \
+        @.vm.o.fperrors OSLib:o.OSLib32 C:o.stubs @.vm.o.ptrblock C:^.rink.o.rink_rtsys
+
+# extract the link info for rink to use
+# relies upon the partially populated !squeak directory having been copied to
+# the working directory
+
+@.vm.o.ptrblock:   $(Sqk).ptrblkmap
+        rinkptr $(rinkptrflags) $(Sqk).ptrblkmap  @.vm.o.ptrblock
+
+$(Sqk).ptrblkmap:    C:o.stubs @.vm.o.sqRPCMain @.vm.o.sqRPCWindows \
+			 @.vm.o.sqRPCEvents $(PVM).dsc.block
+        copy $(PVM).dsc.block $* f~c
+        extractsym -e $* C:o.stubs,*
+        extractsym -e $* @.vm.o.sqRPCMain
+        extractsym -e $* @.vm.o.sqRPCWindows
+        extractsym -e $* @.vm.o.sqRPCEvents
+
+###########
+# ADPCMCodecPlugin make rule.
+# Very simple, only the one source file
+###########
+ADPCMCodecPlugin:	$(SqPlugins).ADPCMCodecPlugin
+	@echo done $*
+
+$(SqPlugins).ADPCMCodecPlugin:	$(SPlug).ADPCMCodecPlugin.o.ADPCMCodecPlugin \
+		$(SPlug).ADPCMCodecPlugin.dsc.ADPCMCodecPlugin \
+		$(Sqk).ptrblkmap
+	rink -o $(SqPlugins).ADPCMCodecPlugin \
+		-h $(SPlug).ADPCMCodecPlugin.dsc.ADPCMCodecPlugin \
+		-m $(Sqk).ptrblkmap \
+		-a $(SPlug).ADPCMCodecPlugin.o.ADPCMCodecPlugin
+
+$(SPlug).ADPCMCodecPlugin.o.ADPCMCodecPlugin: $(SPlug).ADPCMCodecPlugin.c.ADPCMCodecPlugin $(PlHdr)
+	cc $(ccflags) -o $@ $*.c
+
+
+###########
+# B2D Plugin
+# Very simple, only the one source file
+###########
+B2DPlugin:	$(SqPlugins).B2DPlugin
+	@echo done $*
+
+$(SqPlugins).B2DPlugin:	$(SPlug).B2DPlugin.o.B2DPlugin \
+		$(SPlug).B2DPlugin.dsc.B2DPlugin \
+		$(Sqk).ptrblkmap
+	rink -o $(SqPlugins).B2DPlugin \
+		-h $(SPlug).B2DPlugin.dsc.B2DPlugin \
+		-m $(Sqk).ptrblkmap \
+		-a $(SPlug).B2DPlugin.o.B2DPlugin
+
+$(SPlug).B2DPlugin.o.B2DPlugin: $(SPlug).B2DPlugin.c.B2DPlugin $(PlHdr)
+	cc $(ccflags) -o $@ $*.c
+
+
+###########
+# BitBlt Plugin make rule.
+# Very simple, only the one source file
+###########
+BitBltPlugin:	$(SqPlugins).BitBltPlugin
+	@echo done $*
+
+$(SqPlugins).BitBltPlugin:	$(SPlug).BitBltPlugin.o.BitBltPlugin \
+		$(SPlug).BitBltPlugin.dsc.BitBltPlugin \
+		$(Sqk).ptrblkmap
+	rink -o $(SqPlugins).BitBltPlugin \
+		-h $(SPlug).BitBltPlugin.dsc.BitBltPlugin \
+		-m $(Sqk).ptrblkmap \
+		-a $(SPlug).BitBltPlugin.o.BitBltPlugin
+
+$(SPlug).BitBltPlugin.o.BitBltPlugin: $(SPlug).BitBltPlugin.c.BitBltPlugin $(PlHdr)
+	cc $(ccflags) -o $@ $*.c
+
+###########
+# BMPReadWriter Plugin make rule.
+# Very simple, only the one source file
+###########
+BMPReadWriterPlugin:	$(SqPlugins).BMPReadWriterPlugin
+	@echo done $*
+
+$(SqPlugins).BMPReadWriterPlugin:	$(SPlug).BMPReadWriterPlugin.o.BMPReadWriterPlugin \
+		$(SPlug).BMPReadWriterPlugin.dsc.BMPReadWriterPlugin \
+		$(Sqk).ptrblkmap
+	rink -o $(SqPlugins).BMPReadWriterPlugin \
+		-h $(SPlug).BMPReadWriterPlugin.dsc.BMPReadWriterPlugin \
+		-m $(Sqk).ptrblkmap \
+		-a $(SPlug).BMPReadWriterPlugin.o.BMPReadWriterPlugin
+
+$(SPlug).BMPReadWriterPlugin.o.BMPReadWriterPlugin: $(SPlug).BMPReadWriterPlugin.c.BMPReadWriterPlugin $(PlHdr)
+	cc $(ccflags) -o $@ $*.c
+
+
+###########
+# DSA Plugin make rule.
+# Very simple, only the one source file
+###########
+DSAPrims:	$(SqPlugins).DSAPrims
+	@echo done $*
+
+$(SqPlugins).DSAPrims:	$(SPlug).DSAPrims.o.DSAPrims \
+		$(SPlug).DSAPrims.dsc.DSAPrims \
+		$(Sqk).ptrblkmap
+	rink -o $(SqPlugins).DSAPrims \
+		-h $(SPlug).DSAPrims.dsc.DSAPrims \
+		-m $(Sqk).ptrblkmap \
+		-a $(SPlug).DSAPrims.o.DSAPrims
+
+$(SPlug).DSAPrims.o.DSAPrims: $(SPlug).DSAPrims.c.DSAPrims $(PlHdr)
+	cc $(ccflags) -o $@ $*.c
+
+
+
+###########
+# FFT Plugin make rule.
+# Very simple, only the one source file
+###########
+FFTPlugin:	$(SqPlugins).FFTPlugin
+	@echo done $*
+
+$(SqPlugins).FFTPlugin:	$(SPlug).FFTPlugin.o.FFTPlugin \
+		$(SPlug).FFTPlugin.dsc.FFTPlugin \
+		$(Sqk).ptrblkmap
+	rink -o $(SqPlugins).FFTPlugin \
+		-h $(SPlug).FFTPlugin.dsc.FFTPlugin \
+		-m $(Sqk).ptrblkmap \
+		-a $(SPlug).FFTPlugin.o.FFTPlugin
+
+$(SPlug).FFTPlugin.o.FFTPlugin: $(SPlug).FFTPlugin.c.FFTPlugin $(PlHdr)
+	cc $(ccflags) -o $@ $*.c
+
+
+
+###########
+# File Plugin make rule.
+# More complex - involves files from several sources
+# FilePlugin.c is generated
+# FilePlugin.h is in Cross
+# sqFilePluginBasicPrims.c is in Cross - except we have a local copy or Risc OS
+# to handle filetypes a bit better
+# sqRPCDirectory.c is in RiscOS
+###########
+FilePlugin:	$(SqPlugins).FilePlugin
+	@echo done $*
+
+$(SqPlugins).FilePlugin:	$(SPlug).FilePlugin.o.FilePlugin \
+		$(SPlug).FilePlugin.o.sqRPCDirectory \
+		$(SPlug).FilePlugin.o.sqFilePluginBasicPrims \
+		$(SPlug).FilePlugin.dsc.FilePlugin \
+		$(Sqk).ptrblkmap
+	rink -o $(SqPlugins).FilePlugin \
+		-h $(SPlug).FilePlugin.dsc.FilePlugin \
+		-m $(Sqk).ptrblkmap \
+		-a $(SPlug).FilePlugin.o.FilePlugin \
+			$(SPlug).FilePlugin.o.sqRPCDirectory \
+			$(SPlug).FilePlugin.o.sqFilePluginBasicPrims
+
+$(SPlug).FilePlugin.o.FilePlugin: $(SPlug).FilePlugin.c.FilePlugin $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FilePlugin -o $@ $(SPlug).FilePlugin.c.FilePlugin
+$(SPlug).FilePlugin.o.sqRPCDirectory: $(PPlug).FilePlugin.c.sqRPCDirectory $(PlHdr)
+	cc $(ccflags) -o $@ $(PPlug).FilePlugin.c.sqRPCDirectory
+$(SPlug).FilePlugin.o.sqFilePluginBasicPrims: $(PPlug).FilePlugin.c.sqFilePluginBasicPrims $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FilePlugin -o $@ $(PPlug).FilePlugin.c.sqFilePluginBasicPrims
+
+
+
+
+###########
+# FileCopy Plugin make rule.
+# More complex - involves files from several sources
+# FileCopyPlugin.c is generated
+# FileCopyPlugin.h is in Cross
+# sqRPCFileCopy.c is in RiscOS
+###########
+FileCopyPlugin:	$(SqPlugins).FileCopyPlugin
+	@echo done $*
+
+$(SqPlugins).FileCopyPlugin:	$(SPlug).FileCopyPlugin.o.FileCopyPlugin \
+		$(SPlug).FileCopyPlugin.o.sqRPCFileCopy \
+		$(SPlug).FileCopyPlugin.dsc.FileCopyPlugin \
+		$(Sqk).ptrblkmap
+	rink -o $(SqPlugins).FileCopyPlugin \
+		-h $(SPlug).FileCopyPlugin.dsc.FileCopyPlugin \
+		-m $(Sqk).ptrblkmap \
+		-a $(SPlug).FileCopyPlugin.o.FileCopyPlugin \
+			$(SPlug).FileCopyPlugin.o.sqRPCFileCopy
+
+$(SPlug).FileCopyPlugin.o.FileCopyPlugin: $(SPlug).FileCopyPlugin.c.FileCopyPlugin $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FileCopyPlugin -o $@ $*.c
+$(SPlug).FileCopyPlugin.o.sqRPCFileCopy: $(PPlug).FileCopyPlugin.c.sqRPCFileCopy
+	cc $(ccflags) -o $@ $(PPlug).FileCopyPlugin.c.sqRPCFileCopy
+
+
+###########
+# FloatArray Plugin make rule.
+# Very simple, only the one source file
+###########
+FloatArrayPlugin:	$(SqPlugins).FloatArrayPlugin
+	@echo done $*
+
+$(SqPlugins).FloatArrayPlugin:	$(SPlug).FloatArrayPlugin.o.FloatArrayPlugin\
+		$(SPlug).FloatArrayPlugin.dsc.FloatArrayPlugin \
+		$(Sqk).ptrblkmap
+	rink -o $(SqPlugins).FloatArrayPlugin \
+		-h $(SPlug).FloatArrayPlugin.dsc.FloatArrayPlugin \
+		-m $(Sqk).ptrblkmap \
+		-a $(SPlug).FloatArrayPlugin.o.FloatArrayPlugin
+
+$(SPlug).FloatArrayPlugin.o.FloatArrayPlugin: $(SPlug).FloatArrayPlugin.c.FloatArrayPlugin $(PlHdr)
+	cc $(ccflags) -o $@ $*.c
+
+
+###########
+# FloatMath Plugin make rule.
+# More complex - involves files from several sources
+# FloatMathPlugin.c is generated
+# FloatMathPlugin.h is in Cross
+# many files in Cross; all .h files 49 files in .c
+###########
+FloatMathPlugin:	$(SqPlugins).FloatMathPlugin
+	@echo done $*
+
+$(SqPlugins).FloatMathPlugin:	$(SPlug).FloatMathPlugin.lib \
+		$(SPlug).FloatMathPlugin.dsc.FloatMathPlugin \
+		$(Sqk).ptrblkmap
+	rink -o $(SqPlugins).FloatMathPlugin \
+		-h $(SPlug).FloatMathPlugin.dsc.FloatMathPlugin \
+		-m $(Sqk).ptrblkmap \
+		-a $(SPlug).FloatMathPlugin.o.FloatMathPlugin \
+		$(SPlug).FloatMathPlugin.lib
+
+# make a library because this is too many files t ofeed in one go to rink
+$(SPlug).FloatMathPlugin.lib:	$(SPlug).FloatMathPlugin.o.FloatMathPlugin \
+		$(SPlug).FloatMathPlugin.o.acos \
+		$(SPlug).FloatMathPlugin.o.acosh \
+		$(SPlug).FloatMathPlugin.o.asin \
+		$(SPlug).FloatMathPlugin.o.asinh \
+		$(SPlug).FloatMathPlugin.o.atan \
+		$(SPlug).FloatMathPlugin.o.atan2 \
+		$(SPlug).FloatMathPlugin.o.atanh \
+		$(SPlug).FloatMathPlugin.o.copysign \
+		$(SPlug).FloatMathPlugin.o.cos \
+		$(SPlug).FloatMathPlugin.o.cosh \
+		$(SPlug).FloatMathPlugin.o.exp \
+		$(SPlug).FloatMathPlugin.o.expm1 \
+		$(SPlug).FloatMathPlugin.o.finite \
+		$(SPlug).FloatMathPlugin.o.fmod \
+		$(SPlug).FloatMathPlugin.o.hypot \
+		$(SPlug).FloatMathPlugin.o.isnan \
+		$(SPlug).FloatMathPlugin.o.k_cos \
+		$(SPlug).FloatMathPlugin.o.k_rem_pio2 \
+		$(SPlug).FloatMathPlugin.o.k_sin \
+		$(SPlug).FloatMathPlugin.o.k_tan \
+		$(SPlug).FloatMathPlugin.o.ldexp \
+		$(SPlug).FloatMathPlugin.o.log \
+		$(SPlug).FloatMathPlugin.o.log10 \
+		$(SPlug).FloatMathPlugin.o.log1p \
+		$(SPlug).FloatMathPlugin.o.modf \
+		$(SPlug).FloatMathPlugin.o.pow \
+		$(SPlug).FloatMathPlugin.o.rem_pio2 \
+		$(SPlug).FloatMathPlugin.o.rint \
+		$(SPlug).FloatMathPlugin.o.scalb \
+		$(SPlug).FloatMathPlugin.o.scalbn \
+		$(SPlug).FloatMathPlugin.o.sin \
+		$(SPlug).FloatMathPlugin.o.sinh \
+		$(SPlug).FloatMathPlugin.o.sqrt \
+		$(SPlug).FloatMathPlugin.o.tan \
+		$(SPlug).FloatMathPlugin.o.tanh
+	LibFile -c $* $(SPlug).FloatMathPlugin.o.*
+
+
+$(SPlug).FloatMathPlugin.o.FloatMathPlugin: $(SPlug).FloatMathPlugin.c.FloatMathPlugin $(PlHdr)
+	cc $(ccflags) -DNO_ISNAN -I$(CPlug).FloatMathPlugin -o $@ $(SPlug).FloatMathPlugin.c.FloatMathPlugin
+
+$(SPlug).FloatMathPlugin.acos.o: $(CPlug).FloatMathPlugin.acos.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.acos.c
+
+$(SPlug).FloatMathPlugin.acosh.o: $(CPlug).FloatMathPlugin.acosh.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.acosh.c
+
+$(SPlug).FloatMathPlugin.asin.o: $(CPlug).FloatMathPlugin.asin.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.asin.c
+
+$(SPlug).FloatMathPlugin.asinh.o: $(CPlug).FloatMathPlugin.asinh.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.asinh.c
+
+$(SPlug).FloatMathPlugin.atan.o: $(CPlug).FloatMathPlugin.atan.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.atan.c
+
+$(SPlug).FloatMathPlugin.atan2.o: $(CPlug).FloatMathPlugin.atan2.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.atan2.c
+
+$(SPlug).FloatMathPlugin.atanh.o: $(CPlug).FloatMathPlugin.atanh.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.atanh.c
+
+$(SPlug).FloatMathPlugin.copysign.o: $(CPlug).FloatMathPlugin.copysign.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.copysign.c
+
+$(SPlug).FloatMathPlugin.cos.o: $(CPlug).FloatMathPlugin.cos.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.cos.c
+
+$(SPlug).FloatMathPlugin.cosh.o: $(CPlug).FloatMathPlugin.cosh.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.cosh.c
+
+$(SPlug).FloatMathPlugin.exp.o: $(CPlug).FloatMathPlugin.exp.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.exp.c
+
+$(SPlug).FloatMathPlugin.expm1.o: $(CPlug).FloatMathPlugin.expm1.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.expm1.c
+
+$(SPlug).FloatMathPlugin.finite.o: $(CPlug).FloatMathPlugin.finite.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.finite.c
+
+$(SPlug).FloatMathPlugin.fmod.o: $(CPlug).FloatMathPlugin.fmod.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.fmod.c
+
+$(SPlug).FloatMathPlugin.hypot.o: $(CPlug).FloatMathPlugin.hypot.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.hypot.c
+
+$(SPlug).FloatMathPlugin.isnan.o: $(CPlug).FloatMathPlugin.isnan.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.isnan.c
+
+$(SPlug).FloatMathPlugin.k_cos.o: $(CPlug).FloatMathPlugin.k_cos.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.k_cos.c
+
+$(SPlug).FloatMathPlugin.k_rem_pio2.o: $(CPlug).FloatMathPlugin.k_rem_pio2.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.k_rem_pio2.c
+
+$(SPlug).FloatMathPlugin.k_sin.o: $(CPlug).FloatMathPlugin.k_sin.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.k_sin.c
+
+$(SPlug).FloatMathPlugin.k_tan.o: $(CPlug).FloatMathPlugin.k_tan.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.k_tan.c
+
+$(SPlug).FloatMathPlugin.ldexp.o: $(CPlug).FloatMathPlugin.ldexp.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.ldexp.c
+
+$(SPlug).FloatMathPlugin.log.o: $(CPlug).FloatMathPlugin.log.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.log.c
+
+$(SPlug).FloatMathPlugin.log10.o: $(CPlug).FloatMathPlugin.log10.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.log10.c
+
+$(SPlug).FloatMathPlugin.log1p.o: $(CPlug).FloatMathPlugin.log1p.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.log1p.c
+
+$(SPlug).FloatMathPlugin.modf.o: $(CPlug).FloatMathPlugin.modf.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.modf.c
+
+$(SPlug).FloatMathPlugin.pow.o: $(CPlug).FloatMathPlugin.pow.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.pow.c
+
+$(SPlug).FloatMathPlugin.rem_pio2.o: $(CPlug).FloatMathPlugin.rem_pio2.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.rem_pio2.c
+
+$(SPlug).FloatMathPlugin.rint.o: $(CPlug).FloatMathPlugin.rint.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.rint.c
+
+$(SPlug).FloatMathPlugin.scalb.o: $(CPlug).FloatMathPlugin.scalb.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.scalb.c
+
+$(SPlug).FloatMathPlugin.scalbn.o: $(CPlug).FloatMathPlugin.scalbn.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.scalbn.c
+
+$(SPlug).FloatMathPlugin.sin.o: $(CPlug).FloatMathPlugin.sin.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.sin.c
+
+$(SPlug).FloatMathPlugin.sinh.o: $(CPlug).FloatMathPlugin.sinh.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.sinh.c
+
+$(SPlug).FloatMathPlugin.sqrt.o: $(CPlug).FloatMathPlugin.sqrt.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.sqrt.c
+
+$(SPlug).FloatMathPlugin.tan.o: $(CPlug).FloatMathPlugin.tan.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.tan.c
+
+$(SPlug).FloatMathPlugin.tanh.o: $(CPlug).FloatMathPlugin.tanh.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FloatMathPlugin -o $@ $(CPlug).FloatMathPlugin.tanh.c
+
+
+###########
+# Genie Plugin make rule.
+# Very simple, only the one source file
+###########
+GeniePlugin:	$(SqPlugins).GeniePlugin
+	@echo done $*
+
+$(SqPlugins).GeniePlugin:	$(SPlug).GeniePlugin.o.GeniePlugin \
+		$(SPlug).GeniePlugin.dsc.GeniePlugin \
+		$(Sqk).ptrblkmap
+	rink -o $(SqPlugins).GeniePlugin \
+		-h $(SPlug).GeniePlugin.dsc.GeniePlugin \
+		-m $(Sqk).ptrblkmap \
+		-a $(SPlug).GeniePlugin.o.GeniePlugin
+
+$(SPlug).GeniePlugin.o.GeniePlugin: $(SPlug).GeniePlugin.c.GeniePlugin $(PlHdr)
+	cc $(ccflags) -o $@ $*.c
+
+
+###########
+# HostWindow Plugin make rule.
+# Very simple, only the one source file
+###########
+HostWindowPlugin:	$(SqPlugins).HostWindowPlugin
+	@echo done $*
+
+$(SqPlugins).HostWindowPlugin:	$(SPlug).HostWindowPlugin.o.HostWindowPlugin \
+		$(SPlug).HostWindowPlugin.dsc.HostWindowPlugin \
+		$(Sqk).ptrblkmap
+	rink -o $(SqPlugins).HostWindowPlugin \
+		-h $(SPlug).HostWindowPlugin.dsc.HostWindowPlugin \
+		-m $(Sqk).ptrblkmap \
+		-a $(SPlug).HostWindowPlugin.o.HostWindowPlugin
+
+$(SPlug).HostWindowPlugin.o.HostWindowPlugin: $(SPlug).HostWindowPlugin.c.HostWindowPlugin $(PlHdr)
+	cc $(ccflags) -I$(CPlug).HostWindowPlugin -o $@ $*.c
+
+
+
+###########
+# JPEGReader Plugin make rule.
+# Very simple, only the one source file
+###########
+JPEGReaderPlugin:	$(SqPlugins).JPEGReaderPlugin
+	@echo done $*
+
+$(SqPlugins).JPEGReaderPlugin:	$(SPlug).JPEGReaderPlugin.o.JPEGReaderPlugin \
+		$(SPlug).JPEGReaderPlugin.dsc.JPEGReaderPlugin \
+		$(Sqk).ptrblkmap
+	rink -o $(SqPlugins).JPEGReaderPlugin \
+		-h $(SPlug).JPEGReaderPlugin.dsc.JPEGReaderPlugin \
+		-m $(Sqk).ptrblkmap \
+		-a $(SPlug).JPEGReaderPlugin.o.JPEGReaderPlugin
+
+$(SPlug).JPEGReaderPlugin.o.JPEGReaderPlugin: $(SPlug).JPEGReaderPlugin.c.JPEGReaderPlugin $(PlHdr)
+	cc $(ccflags) -o $@ $*.c
+
+
+
+###########
+# JPEGReadWriter2 Plugin make rule.
+# More complex - involves files from several sources
+# JPEGReadWriter2Plugin.c is generated
+# JPEGReadWriter2Plugin.h is in Cross
+# many files in Cross; all .h files 49 files in .c
+###########
+JPEGReadWriter2Plugin:	$(SqPlugins).JPEGReadWriter2Plugin
+	@echo done $*
+
+$(SqPlugins).JPEGReadWriter2Plugin:	$(SPlug).JPEGReadWriter2Plugin.lib \
+		$(SPlug).JPEGReadWriter2Plugin.dsc.JPEGReadWriter2Plugin \
+		$(Sqk).ptrblkmap
+	rink -o $(SqPlugins).JPEGReadWriter2Plugin \
+		-h $(SPlug).JPEGReadWriter2Plugin.dsc.JPEGReadWriter2Plugin \
+		-m $(Sqk).ptrblkmap \
+		-a $(SPlug).JPEGReadWriter2Plugin.o.JPEGReadWriter2Plugin \
+		$(SPlug).JPEGReadWriter2Plugin.lib
+
+# make a library because this is too many files t ofeed in one go to rink
+$(SPlug).JPEGReadWriter2Plugin.lib:	$(SPlug).JPEGReadWriter2Plugin.o.JPEGReadWriter2Plugin \
+		$(SPlug).JPEGReadWriter2Plugin.o.Error \
+		$(SPlug).JPEGReadWriter2Plugin.o.jcapimin \
+		$(SPlug).JPEGReadWriter2Plugin.o.jcapistd \
+		$(SPlug).JPEGReadWriter2Plugin.o.jccoefct \
+		$(SPlug).JPEGReadWriter2Plugin.o.jccolor  \
+		$(SPlug).JPEGReadWriter2Plugin.o.jcdctmgr \
+		$(SPlug).JPEGReadWriter2Plugin.o.jchuff   \
+		$(SPlug).JPEGReadWriter2Plugin.o.jcinit   \
+		$(SPlug).JPEGReadWriter2Plugin.o.jcmainct \
+		$(SPlug).JPEGReadWriter2Plugin.o.jcmarker \
+		$(SPlug).JPEGReadWriter2Plugin.o.jcmaster \
+		$(SPlug).JPEGReadWriter2Plugin.o.jcomapi  \
+		$(SPlug).JPEGReadWriter2Plugin.o.jcparam  \
+		$(SPlug).JPEGReadWriter2Plugin.o.jcphuff  \
+		$(SPlug).JPEGReadWriter2Plugin.o.jcprepct \
+		$(SPlug).JPEGReadWriter2Plugin.o.jcsample \
+		$(SPlug).JPEGReadWriter2Plugin.o.jctrans  \
+		$(SPlug).JPEGReadWriter2Plugin.o.jdapimin \
+		$(SPlug).JPEGReadWriter2Plugin.o.jdapistd \
+		$(SPlug).JPEGReadWriter2Plugin.o.jdatadst \
+		$(SPlug).JPEGReadWriter2Plugin.o.jdatasrc \
+		$(SPlug).JPEGReadWriter2Plugin.o.jdcoefct \
+		$(SPlug).JPEGReadWriter2Plugin.o.jdcolor  \
+		$(SPlug).JPEGReadWriter2Plugin.o.jddctmgr \
+		$(SPlug).JPEGReadWriter2Plugin.o.jdhuff   \
+		$(SPlug).JPEGReadWriter2Plugin.o.jdinput  \
+		$(SPlug).JPEGReadWriter2Plugin.o.jdmainct \
+		$(SPlug).JPEGReadWriter2Plugin.o.jdmarker \
+		$(SPlug).JPEGReadWriter2Plugin.o.jdmaster \
+		$(SPlug).JPEGReadWriter2Plugin.o.jdmerge  \
+		$(SPlug).JPEGReadWriter2Plugin.o.jdphuff  \
+		$(SPlug).JPEGReadWriter2Plugin.o.jdpostct \
+		$(SPlug).JPEGReadWriter2Plugin.o.jdsample \
+		$(SPlug).JPEGReadWriter2Plugin.o.jdtrans  \
+		$(SPlug).JPEGReadWriter2Plugin.o.jerror   \
+		$(SPlug).JPEGReadWriter2Plugin.o.jfdctflt \
+		$(SPlug).JPEGReadWriter2Plugin.o.jfdctfst \
+		$(SPlug).JPEGReadWriter2Plugin.o.jfdctint \
+		$(SPlug).JPEGReadWriter2Plugin.o.jidctflt \
+		$(SPlug).JPEGReadWriter2Plugin.o.jidctfst \
+		$(SPlug).JPEGReadWriter2Plugin.o.jidctint \
+		$(SPlug).JPEGReadWriter2Plugin.o.jidctred \
+		$(SPlug).JPEGReadWriter2Plugin.o.jmemdatadst \
+		$(SPlug).JPEGReadWriter2Plugin.o.jmemdatasrc \
+		$(SPlug).JPEGReadWriter2Plugin.o.jmemmgr  \
+		$(SPlug).JPEGReadWriter2Plugin.o.jmemnobs \
+		$(SPlug).JPEGReadWriter2Plugin.o.jquant1  \
+		$(SPlug).JPEGReadWriter2Plugin.o.jquant2  \
+		$(SPlug).JPEGReadWriter2Plugin.jutils.o
+	LibFile -c $* $(SPlug).JPEGReadWriter2Plugin.o.*
+
+
+$(SPlug).JPEGReadWriter2Plugin.o.JPEGReadWriter2Plugin: $(SPlug).JPEGReadWriter2Plugin.c.JPEGReadWriter2Plugin $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(SPlug).JPEGReadWriter2Plugin.c.JPEGReadWriter2Plugin
+
+$(SPlug).JPEGReadWriter2Plugin.jutils.o: $(CPlug).JPEGReadWriter2Plugin.jutils.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jutils.c
+
+$(SPlug).JPEGReadWriter2Plugin.jquant2.o: $(CPlug).JPEGReadWriter2Plugin.jquant2.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jquant2.c
+
+$(SPlug).JPEGReadWriter2Plugin.jquant1.o: $(CPlug).JPEGReadWriter2Plugin.jquant1.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jquant1.c
+
+$(SPlug).JPEGReadWriter2Plugin.jmemnobs.o: $(CPlug).JPEGReadWriter2Plugin.jmemnobs.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jmemnobs.c
+
+$(SPlug).JPEGReadWriter2Plugin.jmemmgr.o: $(CPlug).JPEGReadWriter2Plugin.jmemmgr.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jmemmgr.c
+
+$(SPlug).JPEGReadWriter2Plugin.jmemdatasrc.o: $(CPlug).JPEGReadWriter2Plugin.jmemdatasrc.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jmemdatasrc.c
+
+$(SPlug).JPEGReadWriter2Plugin.jmemdatadst.o: $(CPlug).JPEGReadWriter2Plugin.jmemdatadst.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jmemdatadst.c
+
+$(SPlug).JPEGReadWriter2Plugin.jidctred.o: $(CPlug).JPEGReadWriter2Plugin.jidctred.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jidctred.c
+
+$(SPlug).JPEGReadWriter2Plugin.jidctint.o: $(CPlug).JPEGReadWriter2Plugin.jidctint.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jidctint.c
+
+$(SPlug).JPEGReadWriter2Plugin.jidctfst.o: $(CPlug).JPEGReadWriter2Plugin.jidctfst.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jidctfst.c
+
+$(SPlug).JPEGReadWriter2Plugin.jidctflt.o: $(CPlug).JPEGReadWriter2Plugin.jidctflt.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jidctflt.c
+
+$(SPlug).JPEGReadWriter2Plugin.jfdctint.o: $(CPlug).JPEGReadWriter2Plugin.jfdctint.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jfdctint.c
+
+$(SPlug).JPEGReadWriter2Plugin.jfdctfst.o: $(CPlug).JPEGReadWriter2Plugin.jfdctfst.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jfdctfst.c
+
+$(SPlug).JPEGReadWriter2Plugin.jfdctflt.o: $(CPlug).JPEGReadWriter2Plugin.jfdctflt.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jfdctflt.c
+
+$(SPlug).JPEGReadWriter2Plugin.jerror.o: $(CPlug).JPEGReadWriter2Plugin.jerror.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jerror.c
+
+$(SPlug).JPEGReadWriter2Plugin.jdtrans.o: $(CPlug).JPEGReadWriter2Plugin.jdtrans.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jdtrans.c
+
+$(SPlug).JPEGReadWriter2Plugin.jdsample.o: $(CPlug).JPEGReadWriter2Plugin.jdsample.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jdsample.c
+
+$(SPlug).JPEGReadWriter2Plugin.jdpostct.o: $(CPlug).JPEGReadWriter2Plugin.jdpostct.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jdpostct.c
+
+$(SPlug).JPEGReadWriter2Plugin.jdphuff.o: $(CPlug).JPEGReadWriter2Plugin.jdphuff.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jdphuff.c
+
+$(SPlug).JPEGReadWriter2Plugin.jdmerge.o: $(CPlug).JPEGReadWriter2Plugin.jdmerge.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jdmerge.c
+
+$(SPlug).JPEGReadWriter2Plugin.jdmaster.o: $(CPlug).JPEGReadWriter2Plugin.jdmaster.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jdmaster.c
+
+$(SPlug).JPEGReadWriter2Plugin.jdmarker.o: $(CPlug).JPEGReadWriter2Plugin.jdmarker.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jdmarker.c
+
+$(SPlug).JPEGReadWriter2Plugin.jdmainct.o: $(CPlug).JPEGReadWriter2Plugin.jdmainct.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jdmainct.c
+
+$(SPlug).JPEGReadWriter2Plugin.jdinput.o: $(CPlug).JPEGReadWriter2Plugin.jdinput.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jdinput.c
+
+$(SPlug).JPEGReadWriter2Plugin.jddctmgr.o: $(CPlug).JPEGReadWriter2Plugin.jddctmgr.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jddctmgr.c
+
+
+$(SPlug).JPEGReadWriter2Plugin.jdhuff.o: $(CPlug).JPEGReadWriter2Plugin.jdhuff.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jdhuff.c
+
+$(SPlug).JPEGReadWriter2Plugin.jdcolor.o: $(CPlug).JPEGReadWriter2Plugin.jdcolor.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jdcolor.c
+
+$(SPlug).JPEGReadWriter2Plugin.jdcoefct.o: $(CPlug).JPEGReadWriter2Plugin.jdcoefct.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jdcoefct.c
+
+$(SPlug).JPEGReadWriter2Plugin.jdatasrc.o: $(CPlug).JPEGReadWriter2Plugin.jdatasrc.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jdatasrc.c
+
+$(SPlug).JPEGReadWriter2Plugin.jdatadst.o: $(CPlug).JPEGReadWriter2Plugin.jdatadst.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jdatadst.c
+
+$(SPlug).JPEGReadWriter2Plugin.jdapistd.o: $(CPlug).JPEGReadWriter2Plugin.jdapistd.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jdapistd.c
+
+$(SPlug).JPEGReadWriter2Plugin.jdapimin.o: $(CPlug).JPEGReadWriter2Plugin.jdapimin.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jdapimin.c
+
+$(SPlug).JPEGReadWriter2Plugin.jctrans.o: $(CPlug).JPEGReadWriter2Plugin.jctrans.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jctrans.c
+
+$(SPlug).JPEGReadWriter2Plugin.jcsample.o: $(CPlug).JPEGReadWriter2Plugin.jcsample.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jcsample.c
+
+$(SPlug).JPEGReadWriter2Plugin.jcprepct.o: $(CPlug).JPEGReadWriter2Plugin.jcprepct.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jcprepct.c
+
+$(SPlug).JPEGReadWriter2Plugin.jcphuff.o: $(CPlug).JPEGReadWriter2Plugin.jcphuff.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jcphuff.c
+
+$(SPlug).JPEGReadWriter2Plugin.jcparam.o: $(CPlug).JPEGReadWriter2Plugin.jcparam.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jcparam.c
+
+$(SPlug).JPEGReadWriter2Plugin.jcomapi.o: $(CPlug).JPEGReadWriter2Plugin.jcomapi.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jcomapi.c
+
+$(SPlug).JPEGReadWriter2Plugin.jcmaster.o: $(CPlug).JPEGReadWriter2Plugin.jcmaster.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jcmaster.c
+
+$(SPlug).JPEGReadWriter2Plugin.jcmarker.o: $(CPlug).JPEGReadWriter2Plugin.jcmarker.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jcmarker.c
+
+$(SPlug).JPEGReadWriter2Plugin.jcmainct.o: $(CPlug).JPEGReadWriter2Plugin.jcmainct.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jcmainct.c
+
+$(SPlug).JPEGReadWriter2Plugin.jcinit.o: $(CPlug).JPEGReadWriter2Plugin.jcinit.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jcinit.c
+
+$(SPlug).JPEGReadWriter2Plugin.jchuff.o: $(CPlug).JPEGReadWriter2Plugin.jchuff.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jchuff.c
+
+$(SPlug).JPEGReadWriter2Plugin.jcdctmgr.o: $(CPlug).JPEGReadWriter2Plugin.jcdctmgr.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jcdctmgr.c
+
+$(SPlug).JPEGReadWriter2Plugin.jccolor.o: $(CPlug).JPEGReadWriter2Plugin.jccolor.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jccolor.c
+
+$(SPlug).JPEGReadWriter2Plugin.jccoefct.o: $(CPlug).JPEGReadWriter2Plugin.jccoefct.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jccoefct.c
+
+$(SPlug).JPEGReadWriter2Plugin.jcapistd.o: $(CPlug).JPEGReadWriter2Plugin.jcapistd.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jcapistd.c
+
+$(SPlug).JPEGReadWriter2Plugin.jcapimin.o: $(CPlug).JPEGReadWriter2Plugin.jcapimin.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.jcapimin.c
+
+$(SPlug).JPEGReadWriter2Plugin.Error.o: $(CPlug).JPEGReadWriter2Plugin.Error.c $(PlHdr)
+	cc $(ccflags) -I$(CPlug).JPEGReadWriter2Plugin -o $@ $(CPlug).JPEGReadWriter2Plugin.Error.c
+
+
+
+###########
+# LargeIntegers Plugin make rule.
+# Very simple, only the one source file
+###########
+LargeIntegers:	$(SqPlugins).LargeIntegers
+	@echo done $*
+
+$(SqPlugins).LargeIntegers:	$(SPlug).LargeIntegers.o.LargeIntegers \
+		$(SPlug).LargeIntegers.dsc.LargeIntegers \
+		$(Sqk).ptrblkmap
+	rink -o $(SqPlugins).LargeIntegers \
+		-h $(SPlug).LargeIntegers.dsc.LargeIntegers \
+		-m $(Sqk).ptrblkmap \
+		-a $(SPlug).LargeIntegers.o.LargeIntegers
+
+$(SPlug).LargeIntegers.o.LargeIntegers: $(SPlug).LargeIntegers.c.LargeIntegers $(PlHdr)
+	cc $(ccflags) -o $@ $*.c
+
+
+
+###########
+# Locale Plugin make rule.
+# More complex - involves files from several sources
+# LocalePlugin.c is generated
+# LocalePlugin.h is in Cross
+# sqRPCLocale.c is in RiscOS
+###########
+LocalePlugin:	$(SqPlugins).LocalePlugin
+	@echo done $*
+
+$(SqPlugins).LocalePlugin:	$(SPlug).LocalePlugin.o.LocalePlugin \
+		$(SPlug).LocalePlugin.o.sqRPCLocale  \
+		$(SPlug).LocalePlugin.dsc.LocalePlugin \
+		$(Sqk).ptrblkmap
+	rink -o $(SqPlugins).LocalePlugin \
+		-h $(SPlug).LocalePlugin.dsc.LocalePlugin \
+		-m $(Sqk).ptrblkmap \
+		-a $(SPlug).LocalePlugin.o.LocalePlugin \
+			$(SPlug).LocalePlugin.o.sqRPCLocale
+
+$(SPlug).LocalePlugin.o.LocalePlugin: $(SPlug).LocalePlugin.c.LocalePlugin $(PlHdr)
+	cc $(ccflags) -I$(CPlug).LocalePlugin -o $@ $*.c
+$(SPlug).LocalePlugin.o.sqRPCLocale: $(PPlug).LocalePlugin.c.sqRPCLocale  $(PlHdr)
+	cc $(ccflags) -I$(CPlug).LocalePlugin -o $@ $(PPlug).LocalePlugin.c.sqRPCLocale
+
+###########
+# Matrix2x3 Plugin make rule.
+# Very simple, only the one source file
+###########
+Matrix2x3Plugin:	$(SqPlugins).Matrix2x3Plugin
+	@echo done $*
+
+$(SqPlugins).Matrix2x3Plugin:	$(SPlug).Matrix2x3Plugin.o.Matrix2x3Plugin \
+		$(SPlug).Matrix2x3Plugin.dsc.Matrix2x3Plugin \
+		$(Sqk).ptrblkmap
+	rink -o $(SqPlugins).Matrix2x3Plugin \
+		-h $(SPlug).Matrix2x3Plugin.dsc.Matrix2x3Plugin \
+		-m $(Sqk).ptrblkmap \
+		-a $(SPlug).Matrix2x3Plugin.o.Matrix2x3Plugin
+
+$(SPlug).Matrix2x3Plugin.o.Matrix2x3Plugin: $(SPlug).Matrix2x3Plugin.c.Matrix2x3Plugin $(PlHdr)
+	cc $(ccflags) -o $@ $*.c
+
+###########
+# MiscPrimitive Plugin make rule.
+# Very simple, only the one source file
+###########
+MiscPrimitivePlugin:	$(SqPlugins).MiscPrimitivePlugin
+	@echo done $*
+
+$(SqPlugins).MiscPrimitivePlugin:	$(SPlug).MiscPrimitivePlugin.o.MiscPrimitivePlugin \
+		$(SPlug).MiscPrimitivePlugin.dsc.MiscPrimitivePlugin \
+		$(Sqk).ptrblkmap
+	rink -o $(SqPlugins).MiscPrimitivePlugin \
+		-h $(SPlug).MiscPrimitivePlugin.dsc.MiscPrimitivePlugin \
+		-m $(Sqk).ptrblkmap \
+		-a $(SPlug).MiscPrimitivePlugin.o.MiscPrimitivePlugin
+
+$(SPlug).MiscPrimitivePlugin.o.MiscPrimitivePlugin: $(SPlug).MiscPrimitivePlugin.c.MiscPrimitivePlugin $(PlHdr)
+	cc $(ccflags) -o $@ $*.c
+
+###########
+# Regular expressions Plugin make rule.
+# More complex - involves files from several sources
+# rePlugin.c is generated
+# internal & pcre.h are in Cross
+# chartables, get, pcre & study.c are in Cross
+###########
+RePlugin:	$(SqPlugins).RePlugin
+	@echo done $*
+
+$(SqPlugins).RePlugin:	$(SPlug).RePlugin.o.RePlugin \
+		$(SPlug).RePlugin.o.chartables \
+		$(SPlug).RePlugin.o.get \
+		$(SPlug).RePlugin.o.pcre \
+		$(SPlug).RePlugin.o.study \
+		$(SPlug).RePlugin.dsc.RePlugin \
+		$(Sqk).ptrblkmap
+	rink -o $(SqPlugins).RePlugin \
+		-h $(SPlug).RePlugin.dsc.RePlugin \
+		-m $(Sqk).ptrblkmap \
+		-a $(SPlug).RePlugin.o.RePlugin \
+			$(SPlug).RePlugin.o.chartables \
+			$(SPlug).RePlugin.o.get \
+			$(SPlug).RePlugin.o.pcre \
+			$(SPlug).RePlugin.o.study
+
+$(SPlug).RePlugin.o.RePlugin: $(SPlug).RePlugin.c.RePlugin $(PlHdr)
+	cc $(ccflags) -I$(CPlug).RePlugin -o $@ $(SPlug).RePlugin.c.RePlugin
+
+$(SPlug).RePlugin.o.chartables: $(CPlug).RePlugin.c.chartables
+	cc $(ccflags) -o $@ $(CPlug).RePlugin.c.chartables
+
+$(SPlug).RePlugin.o.get: $(CPlug).RePlugin.c.get
+	cc $(ccflags) -o $@ $(CPlug).RePlugin.c.get
+
+$(SPlug).RePlugin.o.pcre: $(CPlug).RePlugin.c.pcre
+	cc $(ccflags) -o $@ $(CPlug).RePlugin.c.pcre
+
+$(SPlug).RePlugin.o.study: $(CPlug).RePlugin.c.study
+	cc $(ccflags) -o $@ $(CPlug).RePlugin.c.study
+
+
+###########
+# Scratch Plugin make rule.
+# More complex - involves files from several sources
+# ScratchPlugin.c is generated
+# ScratchPlugin.h is in Cross
+# sqRPCScratch.c is in RiscOS
+###########
+ScratchPlugin:	$(SqPlugins).ScratchPlugin
+	@echo done $*
+
+$(SqPlugins).ScratchPlugin:	$(SPlug).ScratchPlugin.o.ScratchPlugin \
+		$(SPlug).ScratchPlugin.o.sqRPCScratchOps  \
+		$(SPlug).ScratchPlugin.dsc.ScratchPlugin \
+		$(Sqk).ptrblkmap
+	rink -o $(SqPlugins).ScratchPlugin \
+		-h $(SPlug).ScratchPlugin.dsc.ScratchPlugin \
+		-m $(Sqk).ptrblkmap \
+		-a $(SPlug).ScratchPlugin.o.ScratchPlugin \
+			$(SPlug).ScratchPlugin.o.sqRPCScratchOps
+
+$(SPlug).ScratchPlugin.o.ScratchPlugin: $(SPlug).ScratchPlugin.c.ScratchPlugin $(PlHdr)
+	cc $(ccflags) -I$(CPlug).ScratchPlugin -o $@ $*.c
+$(SPlug).ScratchPlugin.o.sqRPCScratchOps: $(PPlug).ScratchPlugin.c.sqRPCScratchOps  $(PlHdr)
+	cc $(ccflags) -I$(CPlug).ScratchPlugin -o $@ $(PPlug).ScratchPlugin.c.sqRPCScratchOps
+
+###########
+# Security Plugin make rule.
+# More complex - involves files from several sources
+# SecurityPlugin.c is generated
+# SecurityPlugin.h is in Cross
+# sqRPCSecurity.c is in RiscOS
+###########
+SecurityPlugin:	$(SqPlugins).SecurityPlugin
+	@echo done $*
+
+$(SqPlugins).SecurityPlugin:	$(SPlug).SecurityPlugin.o.SecurityPlugin \
+		$(SPlug).SecurityPlugin.o.sqRPCSecurity  \
+		$(SPlug).SecurityPlugin.dsc.SecurityPlugin \
+		$(Sqk).ptrblkmap
+	rink -o $(SqPlugins).SecurityPlugin \
+		-h $(SPlug).SecurityPlugin.dsc.SecurityPlugin \
+		-m $(Sqk).ptrblkmap \
+		-a $(SPlug).SecurityPlugin.o.SecurityPlugin \
+			$(SPlug).SecurityPlugin.o.sqRPCSecurity
+
+$(SPlug).SecurityPlugin.o.SecurityPlugin: $(SPlug).SecurityPlugin.c.SecurityPlugin $(PlHdr)
+	cc $(ccflags) -I$(CPlug).SecurityPlugin -o $@ $*.c
+$(SPlug).SecurityPlugin.o.sqRPCSecurity: $(PPlug).SecurityPlugin.c.sqRPCSecurity  $(PlHdr)
+	cc $(ccflags) -I$(CPlug).SecurityPlugin -o $@ $(PPlug).SecurityPlugin.c.sqRPCSecurity
+
+
+
+###########
+# Socket Plugin make rule.
+# Quite complex - involves files from several places
+# SocketPlugin.c is generated
+# SocketPlugin.h is in Cross
+# sqRPCNetPlugin.c is in RiscOS
+# and the socket includes are needed as well
+###########
+SocketPlugin:	$(SqPlugins).SocketPlugin
+	@echo done $*
+
+$(SqPlugins).SocketPlugin:	$(SPlug).SocketPlugin.o.SocketPlugin \
+		$(SPlug).SocketPlugin.o.sqRPCNetPlugin \
+		$(SPlug).SocketPlugin.dsc.SocketPlugin \
+		$(Sqk).ptrblkmap
+	rink -o $(SqPlugins).SocketPlugin \
+		-h $(SPlug).SocketPlugin.dsc.SocketPlugin \
+		-m $(Sqk).ptrblkmap \
+		-a $(SPlug).SocketPlugin.o.SocketPlugin \
+			$(SPlug).SocketPlugin.o.sqRPCNetPlugin \
+			$(SokLib).o.unixlib \
+			$(SokLib).o.socklib5 $(SokLib).o.inetlib  \
+
+#####$(SokLib)inetlib $(SokLib)socklibzm $(SokLib)unixlibzm
+######$(SokLib)inetlibzm $(SokLib)socklib $(SokLib)unixlib
+
+$(SPlug).SocketPlugin.o.SocketPlugin: $(SPlug).SocketPlugin.c.SocketPlugin $(PlHdr)
+	cc $(ccflags) -I$(PPlug).SocketPlugin,$(CPlug).SocketPlugin  -o $@ $(SPlug).SocketPlugin.c.SocketPlugin
+
+$(SPlug).SocketPlugin.o.sqRPCNetPlugin: $(PPlug).SocketPlugin.c.sqRPCNetPlugin $(PlHdr)
+	cc $(ccflags) -I$(PPlug).SocketPlugin,$(CPlug).SocketPlugin,$(Soklib) -o $@ $(PPlug).SocketPlugin.c.sqRPCNetPlugin
+
+###########
+# SoundCodec Plugin make rule. Bizarrely called SoundCodecPrims in use.
+# More complex - involves files from several sources
+# SoundCodecPrims.c is generated
+# SoundCodecPrims.h is in Cross
+# sqSoundCodecPluginBasicPrims.c is in Cross
+###########
+SoundCodecPrims:	$(SqPlugins).SoundCodecPrims
+	@echo done $*
+
+$(SqPlugins).SoundCodecPrims:	$(SPlug).SoundCodecPrims.o.SoundCodecPrims \
+                $(SPlug).SoundCodecPrims.o.sqSoundCodecPluginBasicPrims \
+		$(SPlug).SoundCodecPrims.dsc.SoundCodecPrims \
+		$(Sqk).ptrblkmap
+	rink -o $(SqPlugins).SoundCodecPrims \
+		-h $(SPlug).SoundCodecPrims.dsc.SoundCodecPrims \
+		-m $(Sqk).ptrblkmap \
+		-a $(SPlug).SoundCodecPrims.o.SoundCodecPrims \
+		       $(SPlug).SoundCodecPrims.o.sqSoundCodecPluginBasicPrims
+
+$(SPlug).SoundCodecPrims.o.SoundCodecPrims: $(SPlug).SoundCodecPrims.c.SoundCodecPrims $(PlHdr)
+	cc $(ccflags) -I$(CPlug).SoundCodecPrims -o $@ $*.c
+$(SPlug).SoundCodecPrims.o.sqSoundCodecPluginBasicPrims: $(CPlug).SoundCodecPrims.c.sqSoundCodecPluginBasicPrims  $(PlHdr)
+	cc $(ccflags) -I$(CPlug).sqSoundCodecPluginBasicPrims -o $@ $(CPlug).SoundCodecPrims.c.sqSoundCodecPluginBasicPrims
+
+###########
+# SoundGeneration Plugin make rule.
+# Very simple, only the one source file
+###########
+SoundGenerationPlugin:	$(SqPlugins).SoundGenerationPlugin
+	@echo done $*
+
+$(SqPlugins).SoundGenerationPlugin:	$(SPlug).SoundGenerationPlugin.o.SoundGenerationPlugin \
+		$(SPlug).SoundGenerationPlugin.dsc.SoundGenerationPlugin \
+		$(Sqk).ptrblkmap
+	rink -o $(SqPlugins).SoundGenerationPlugin \
+		-h $(SPlug).SoundGenerationPlugin.dsc.SoundGenerationPlugin \
+		-m $(Sqk).ptrblkmap \
+		-a $(SPlug).SoundGenerationPlugin.o.SoundGenerationPlugin
+
+$(SPlug).SoundGenerationPlugin.o.SoundGenerationPlugin: $(SPlug).SoundGenerationPlugin.c.SoundGenerationPlugin $(PlHdr)
+	cc $(ccflags) -I$(CPlug).SoundGenerationPlugin -o $@ $*.c
+
+
+
+###########
+# Sound Plugin make rule.
+# More complex - involves files from several sources
+# SoundPlugin.c is generated
+# SoundPlugin.h is in Cross
+# sqRPCSound.c is in RiscOS
+
+###########
+SoundPlugin:	$(SqPlugins).SoundPlugin
+	@echo done $*
+
+$(SqPlugins).SoundPlugin:	$(SPlug).SoundPlugin.o.SoundPlugin \
+		$(SPlug).SoundPlugin.o.sqRPCSound  \
+		$(SPlug).SoundPlugin.dsc.SoundPlugin \
+		$(Sqk).ptrblkmap
+	rink -o $(SqPlugins).SoundPlugin \
+		-h $(SPlug).SoundPlugin.dsc.SoundPlugin \
+		-m $(Sqk).ptrblkmap \
+		-a $(SPlug).SoundPlugin.o.SoundPlugin \
+			$(SPlug).SoundPlugin.o.sqRPCSound
+
+$(SPlug).SoundPlugin.o.SoundPlugin: $(SPlug).SoundPlugin.c.SoundPlugin $(PlHdr)
+	cc $(ccflags) -I$(CPlug).SoundPlugin -o $@ $*.c
+$(SPlug).SoundPlugin.o.sqRPCSound: $(PPlug).SoundPlugin.c.sqRPCSound  $(PlHdr)
+	cc $(ccflags) -I$(CPlug).SoundPlugin -o $@ $(PPlug).SoundPlugin.c.sqRPCSound
+
+
+###########
+# Squeak3D Plugin
+# More complex - involves files from several sources
+# Squeak3D.c is generated
+# various files in Cross
+###########
+Squeak3D:	$(SqPlugins).Squeak3D
+	@echo done $*
+
+$(SqPlugins).Squeak3D:	$(SPlug).Squeak3D.o.Squeak3D \
+       $(SPlug).Squeak3D.o.b3dalloc \
+       $(SPlug).Squeak3D.o.b3ddraw \
+       $(SPlug).Squeak3D.o.b3dinit \
+       $(SPlug).Squeak3D.o.b3dmain \
+       $(SPlug).Squeak3D.o.b3dremap \
+       $(SPlug).Squeak3D.dsc.Squeak3D \
+       $(Sqk).ptrblkmap
+	rink -o $(SqPlugins).Squeak3D \
+		-h $(SPlug).Squeak3D.dsc.Squeak3D \
+		-m $(Sqk).ptrblkmap \
+		-a $(SPlug).Squeak3D.o.b3dalloc \
+			$(SPlug).Squeak3D.o.b3ddraw \
+			$(SPlug).Squeak3D.o.b3dinit \
+			$(SPlug).Squeak3D.o.b3dmain \
+			$(SPlug).Squeak3D.o.b3dremap \
+			$(SPlug).Squeak3D.o.Squeak3D
+
+$(SPlug).Squeak3D.o.Squeak3D: $(SPlug).Squeak3D.c.Squeak3D $(PlHdr)
+	cc $(ccflags) -I$(CPlug).Squeak3D -o $@ $*.c
+$(SPlug).Squeak3D.o.b3dalloc: $(CPlug).Squeak3D.c.b3dalloc
+	cc $(ccflags) -I$(CPlug).Squeak3D -o $@ $(CPlug).Squeak3D.c.b3dalloc
+$(SPlug).Squeak3D.o.b3ddraw: $(CPlug).Squeak3D.c.b3ddraw
+	cc $(ccflags) -I$(CPlug).Squeak3D -o $@ $(CPlug).Squeak3D.c.b3ddraw
+$(SPlug).Squeak3D.o.b3dinit: $(CPlug).Squeak3D.c.b3dinit
+	cc $(ccflags) -I$(CPlug).Squeak3D -o $@ $(CPlug).Squeak3D.c.b3dinit
+$(SPlug).Squeak3D.o.b3dmain: $(CPlug).Squeak3D.c.b3dmain
+	cc $(ccflags) -I$(CPlug).Squeak3D -o $@ $(CPlug).Squeak3D.c.b3dmain
+$(SPlug).Squeak3D.o.b3dremap: $(CPlug).Squeak3D.c.b3dremap
+	cc $(ccflags) -I$(CPlug).Squeak3D -o $@ $(CPlug).Squeak3D.c.b3dremap
+
+###########
+# StarSqueak Plugin make rule.
+# Very simple, only the one source file
+###########
+StarSqueakPlugin:	$(SqPlugins).StarSqueakPlugin
+	@echo done $*
+
+$(SqPlugins).StarSqueakPlugin:	$(SPlug).StarSqueakPlugin.o.StarSqueakPlugin \
+		$(SPlug).StarSqueakPlugin.dsc.StarSqueakPlugin \
+		$(Sqk).ptrblkmap
+	rink -o $(SqPlugins).StarSqueakPlugin \
+	-h $(SPlug).StarSqueakPlugin.dsc.StarSqueakPlugin \
+	-m $(Sqk).ptrblkmap \
+	-a $(SPlug).StarSqueakPlugin.o.StarSqueakPlugin
+
+$(SPlug).StarSqueakPlugin.o.StarSqueakPlugin: $(SPlug).StarSqueakPlugin.c.StarSqueakPlugin $(PlHdr)
+	cc $(ccflags) -o $@ $*.c
+
+###########
+# Surface Plugin
+# An odd one
+# SurfacePlugin.c & .h are BOTH on Cross
+# only the .dsc file is generated
+###########
+SurfacePlugin:	$(SqPlugins).SurfacePlugin
+	@echo done $*
+
+$(SqPlugins).SurfacePlugin:	$(SPlug).SurfacePlugin.o.SurfacePlugin \
+		$(SPlug).SurfacePlugin.dsc.SurfacePlugin \
+		$(Sqk).ptrblkmap
+	rink -o $(SqPlugins).SurfacePlugin \
+		-h $(SPlug).SurfacePlugin.dsc.SurfacePlugin \
+		-m $(Sqk).ptrblkmap \
+		-a $(SPlug).SurfacePlugin.o.SurfacePlugin
+
+$(SPlug).SurfacePlugin.o.SurfacePlugin: $(CPlug).SurfacePlugin.c.SurfacePlugin $(PlHdr)
+	cc $(ccflags) -I$(CPlug).SurfacePlugin -o $@ $(CPlug).SurfacePlugin.c.SurfacePlugin
+
+
+###########
+# Zip Plugin
+# Very simple, only the one source file
+###########
+ZipPlugin:	$(SqPlugins).ZipPlugin
+	@echo done $*
+
+$(SqPlugins).ZipPlugin:	$(SPlug).ZipPlugin.o.ZipPlugin \
+		$(SPlug).ZipPlugin.dsc.ZipPlugin \
+		$(Sqk).ptrblkmap
+	rink -o $(SqPlugins).ZipPlugin \
+		-h $(SPlug).ZipPlugin.dsc.ZipPlugin \
+		-m $(Sqk).ptrblkmap \
+		-a $(SPlug).ZipPlugin.o.ZipPlugin
+
+$(SPlug).ZipPlugin.o.ZipPlugin: $(SPlug).ZipPlugin.c.ZipPlugin  $(PlHdr)
+	cc $(ccflags) -o $@ $*.c
+
+
+# Static dependencies:
+# platform specific code
+@.vm.o.osExports:    $(PVM).c.osExports
+  cc $(ccvmflags) -o $@ $(PVM).c.osExports
+
+@.vm.o.sqArgument:    $(PVM).c.sqArgument $(PVM).h.sqArguments $(VMHdr)
+  cc $(ccvmflags) -o $@ $(PVM).c.sqArgument
+
+@.vm.o.sqRPCClipboard:    $(PVM).c.sqRPCClipboard $(VMHdr)
+  cc $(ccvmflags) -o $@ $(PVM).c.sqRPCClipboard
+
+@.vm.o.sqRPCEvents:    $(PVM).c.sqRPCEvents $(VMHdr)
+  cc $(ccvmflags) -o $@ $(PVM).c.sqRPCEvents
+
+@.vm.o.sqRPCExternalPrims:    $(PVM).c.sqRPCExternalPrims $(VMHdr)
+  cc $(ccvmflags) -o $@ $(PVM).c.sqRPCExternalPrims
+
+@.vm.o.sqRPCFormPrint:    $(PVM).c.sqRPCFormPrint $(VMHdr)
+  cc $(ccvmflags) -o $@ $(PVM).c.sqRPCFormPrint
+
+@.vm.o.sqRPCSyscall:    $(PVM).c.sqRPCSyscall $(VMHdr)
+  cc $(ccvmflags) -o $@ $(PVM).c.sqRPCSysCall
+
+# sqRPCVersion depends on all the obj files (except its own)
+# so that it will always be recompiled if any other file is
+@.vm.o.sqRPCVersion:    $(PVM).c.sqRPCVersion @.vm.o.interp @.vm.o.sqArgument \
+        @.vm.o.sqNamedPrims @.vm.o.sqRPCClipboard \
+        @.vm.o.sqRPCEvents @.vm.o.sqRPCExternalPrims @.vm.o.sqRPCFormPrint \
+        @.vm.o.sqRPCWindows @.vm.o.sqVirtualMachine @.vm.o.osExports \
+        @.vm.o.fperrors OSLib:o.OSLib32 C:o.stubs @.vm.o.ptrblock C:^.rink.o.rink_rtsys $(VMHdr)
+  cc $(ccvmflags) -o $@ $(PVM).c.sqRPCVersion
+
+@.vm.o.sqRPCMain:    $(PVM).c.sqRPCMain $(VMHdr)
+  cc $(ccvmflags) -o $@ $(PVM).c.sqRPCMain
+
+@.vm.o.sqRPCWindows:    $(PVM).c.sqRPCWindows $(VMHdr)
+  cc $(ccvmflags) -o $@ $(PVM).c.sqRPCWindows
+
+@.vm.o.fperrors:    $(PVM).s.fperrors
+        objasm $(objasmflags) -from $(PVM).s.fperrors -to @.vm.o.fperrors
+
+# cross platform code
+@.vm.o.sqNamedPrims:    $(CVM).c.sqNamedPrims $(VMHdr)
+  cc $(ccvmflags) -o $@ $(CVM).c.sqNamedPrims
+
+@.vm.o.sqVirtualMachine:    $(CVM).c.sqVirtualMachine $(VMHdr)
+  cc $(ccvmflags) -o $@ $(CVM).c.sqVirtualMachine
+
+@.vm.o.interp:    $(SVM).c.interp $(VMHdr)
+  cc $(ccvmflags) -o $@ $(SVM).c.interp
+
+
+
+# Dynamic dependencies:

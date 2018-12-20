@@ -1,0 +1,148 @@
+#  Copyright 2008 Cadence Design Systems, Inc.
+#  
+#  Licensed under the Apache License, Version 2.0 (the ''License''); you may not use this file except in compliance with the License.  You may obtain a copy of the License at  http://www.apache.org/licenses/LICENSE-2.0
+#
+# This is the result of stakhanovite effort from Peter von der Ahe.  Thanks!
+
+# components such as MsiFiler.exe et al available from
+# Windows SDK Components for Windows Installer Developers
+# http://msdn.microsoft.com/en-us/library/aa370834(v=vs.85).aspx
+
+WIN_SDK_VER := v7.0
+
+WIN_SDK := /cygdrive/c/Program\ Files/Microsoft\ SDKs/Windows/$(WIN_SDK_VER)/
+MSIVAL2_DIR := /cygdrive/c/Program\ Files/MsiVal2/
+
+MSI_NAME := $(INSTALLER_BASE_NAME)-$(VERSION).msi
+.DEFAULT_GOAL := $(MSI_NAME)
+all: $(MSI_NAME)
+
+# See http://msdn.microsoft.com/en-us/library/aa372834(v=VS.85).aspx
+MSIDB := $(WIN_SDK)Bin/MsiDb.Exe
+UUIDGEN := $(WIN_SDK)Bin/Uuidgen.Exe
+MSIFILER := $(WIN_SDK)Bin/MsiFiler.Exe
+MSIINFO := $(WIN_SDK)Bin/MsiInfo.Exe
+MSIVAL2 := $(MSIVAL2_DIR)msival2.exe
+CUB := $(MSIVAL2_DIR)/XPlogo.cub
+UISAMPLE_MSI := $(WIN_SDK)Bin/msitools/Templates/MSI/UISample.Msi
+PRODUCT_VERSION := $(VERSION)
+
+dosname = $(shell touch "$(TMP)/$(1)"; basename "$$(cygpath -s -m "$(TMP)/$(1)")")
+
+SHORT_BRAND_DIR := $(call dosname,$(BRAND_DIR))
+
+include branding-sed-rules.gmk
+include documentation.gmk
+FRESH_GUID = $(shell $(UUIDGEN) /c)
+FRESH_GUID_RULE1 = -e 's/@@FRESH_GUID1@@/$(FRESH_GUID)/g;'
+FRESH_GUID_RULE2 = -e 's/@@FRESH_GUID2@@/$(FRESH_GUID)/g;'
+FRESH_GUID_RULE3 = -e 's/@@FRESH_GUID3@@/$(FRESH_GUID)/g;'
+FRESH_GUID_RULE = $(FRESH_GUID_RULE1) $(FRESH_GUID_RULE2) $(FRESH_GUID_RULE3)
+
+REGULAR_IDTS := Feature.idt
+REGULAR_IDTS += Icon.idt
+REGULAR_IDTS += Media.idt
+REGULAR_IDTS += Property.idt
+REGULAR_IDTS += Registry.idt
+REGULAR_IDTS += Shortcut.idt
+REGULAR_IDTS += Upgrade.idt
+
+ifeq ($(strip $(SOURCES)),yes)
+SOURCES_IDTS += Directory.idt
+SOURCES_IDTS += Component.idt
+SOURCES_IDTS += FeatureComponents.idt
+File.idt : File-with-sources.idt.in
+files.ddf : files-with-sources.ddf.in
+files.cab: files.ddf $(VM_EXECUTABLE) $(VM_EXECUTABLE_MAP) $(VM_EXECUTABLE_MANIFEST) $(SOURCEFILENAME1)
+else
+REGULAR_IDTS += Directory.idt
+REGULAR_IDTS += Component.idt
+REGULAR_IDTS += FeatureComponents.idt
+File.idt : File.idt.in
+files.ddf : files.ddf.in $(DOCUMENTATION_FILES) $(DOCUMENTATION_INDEX)
+files.cab : files.ddf $(VM_EXECUTABLE) $(VM_EXECUTABLE_MAP) $(VM_EXECUTABLE_MANIFEST)
+endif
+
+IDTS := File.idt $(REGULAR_IDTS) $(SOURCES_IDTS)
+
+$(REGULAR_IDTS) : %.idt : %.idt.in Makefile
+	$(SED) $(SED_RULES) $(FRESH_GUID_RULE) < $< > $@
+
+$(SOURCES_IDTS) : %.idt : %-with-sources.idt.in Makefile
+	$(SED) $(SED_RULES) $(FRESH_GUID_RULE) < $< > $@
+
+SED_FILTER_CONTROL := -e 's/1\(\t\t[[]DialogBitmap]\)/1048577\1/g;'
+# 0x00800003 = 8388611.
+# 0x00800000 is the User Account Control (UAC) elevation icon (shield
+# icon) (a Windows Vista only feature).  We are verifying against
+# XPlogo, not Vista so we get a warning unless we clear that bit:
+SED_FILTER_CONTROL += -e 's/\(PushButton\t[0-9]*\t[0-9]*\t[0-9]*\t[0-9]*\t\)8388611\t/\13\t/g;'
+GREP_FILTER_CONTROL := -E $$'^LicenseAgreementDlg\tAgreementText\tScrollableText.*'
+
+%.msi: TMP_MSI = $(@:.msi=.tmp.msi)
+
+%.ibd: %
+	$(CP) -p $< $@
+
+MSPWD := $(shell cygpath -wa .)
+
+$(MSI_NAME): $(UISAMPLE_MSI) $(IDTS) Icon/$(notdir $(VM_ICON)).exe.ibd files.cab $(INSTALLER_BACKGROUND).bmp copyright.rtf $(MSIVAL2)
+	@touch $@
+	rm -f $@
+	$(CP) "$<" $(TMP_MSI)
+	$(MSIDB) -e -d "$(shell cygpath -wa $(TMP_MSI))" -f "$(MSPWD)" Binary Control
+	$(CP) -p $(filter %$(INSTALLER_BACKGROUND).bmp,$^) Binary/dlgbmp.ibd
+	mv Control.idt Control.idt.orig
+	$(SED) $(SED_FILTER_CONTROL) Control.idt.orig | grep -v $(GREP_FILTER_CONTROL) > Control.idt
+	printf 'LicenseAgreementDlg\tAgreementText\t' >> Control.idt
+	printf 'ScrollableText\t20\t60\t330\t120\t7\t\t' >> Control.idt
+	cat copyright.rtf >> Control.idt
+	printf '\tButtons\t\n' >> Control.idt
+	$(MSIDB) -i -d "$(shell cygpath -wa $(TMP_MSI))" $(patsubst %,-a %,$(filter %.cab,$^)) -f "$(shell cygpath -wa .)" $(filter %.idt,$^) Binary.idt Control.idt
+	$(MSIFILER) -nologo -d $(TMP_MSI) -h
+	$(MSIFILER) -nologo -d $(TMP_MSI) -h -s "$(MSPWD)\\"
+ifdef DOCUMENTATION_DIR
+	$(MSIFILER) -nologo -d $(TMP_MSI) -h -s "$(shell cygpath -wa $(DOCUMENTATION_DIR))\\"
+endif
+	$(MSIINFO) "$(shell cygpath -wa $(TMP_MSI))" -T "Installation Database" -J "$(PRODUCT_NAME) $(PRODUCT_VERSION)" -A "$(MANUFACTURER)" -K "Installer, MSI, Database" -O "This installer database contains the logic and data required to install $(PRODUCT_NAME)." -P ";1033" -V "{$(FRESH_GUID)}" -G 200 -W 0 -N "GNU Make" -U 0 -nologo
+	$(MSIVAL2) "$(shell cygpath -wa $(TMP_MSI))" "$(shell cygpath -wa $(CUB))" -f
+	chmod a+rx $(TMP_MSI)
+	mv $(TMP_MSI) $@
+	test -d ../../../products && mv $@ ../../../products
+
+Icon/$(notdir $(VM_ICON)).exe: icon.o nopMain.o
+	mkdir -p $(dir $@)
+	gcc -mwindows $^ -o $@
+	strip $@
+
+files.ddf:
+	$(SED) $(SED_RULES) $(FRESH_GUID_RULE) < $< > $@.tmp
+	@echo $(DOCUMENTATION_INDEX) $(DOCUMENTATION_FILES) | xargs -n 1 >> $@.tmp
+	mv $@.tmp $@
+
+File.idt: Makefile
+File.idt:
+	$(SED) $(SED_RULES) $(FRESH_GUID_RULE) < $< > $@.tmp
+	echo $(foreach docfile,$(strip $(DOCUMENTATION_FILES)), '$(notdir $(docfile))' '$(call dosname,$(notdir $(docfile)))' '$(notdir $(docfile))') | xargs -r -n 3 printf '%s\tDocumentation\t%s|%s\t0\t\t\t16896\t1\n' >> $@.tmp
+	mv $@.tmp $@
+
+files.cab:
+	makecab /D SourcesDir='$(shell cygpath -wa .)' /f $<
+	@echo
+
+SED_RTF_RULES := -e 's/$$/\\par /g;'
+SED_RTF_RULES += -e "s/([cC])/\\\\'a9/g;"
+
+copyright.rtf: NewspeakLicence.txt
+	printf '%s' '{\rtf1\ansi\deff0{\fonttbl{\f0\fnil\fcharset0 Courier New;}}' > $@
+	printf '%s' '\viewkind4\uc1\pard\lang1033\f0\fs20 ' >> $@
+	$(SED) $(SED_RTF_RULES) $< | tr -d \\r\\n >> $@
+	printf '}' >>$@
+
+$(MSIVAL2): $(WIN_SDK)Bin/MsiVal2.Msi
+	msiexec /passive /i "$(shell cygpath -wa '$<')"
+
+installer: $(MSI_NAME)
+
+clean::
+	-rm -rf $(IDTS) Icon Binary Binary.idt *.msi "$(BRAND_DIR)" files.ddf files.cab setup.inf nopMain.o Control.idt.orig Control.idt copyright.rtf icon.o

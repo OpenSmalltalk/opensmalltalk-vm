@@ -1,0 +1,54 @@
+Name: Squeak
+Version: [version]
+Release: [release]
+Requires: 
+Summary: A portable implementation of the Smalltalk programming system.
+Vendor: Squeak.org
+Source: [source]
+Copyright: Squeak Software License
+Group: Development/Languages
+BuildRoot: /var/tmp/%{name}-root
+
+%description
+
+Squeak is a full-featured implementation of the Smalltalk programming
+language and environment based on (and largely compatible with) the original
+Smalltalk-80 system.  Squeak has very powerful 2- and 3-D graphics, sound,
+video, MIDI, animation and other multimedia capabilities -- and one of the
+most impressive development environments ever created.  It also includes a
+customisable framework for creating dynamic HTTP servers and interactively
+extensible Web sites.  The entire Squeak system is open source software,
+distributed freely with a liberal license.  See <http://Squeak.org> for
+further information.
+
+This package contains the binaries, libraries and data files needed to run
+version [version] of Squeak.
+
+%prep
+%setup -q
+%build
+
+mkdir bld-rpm
+cd bld-rpm
+../platforms/unix/config/configure --prefix=/usr
+make
+
+%install
+
+rm -rf $RPM_BUILD_ROOT
+cd bld-rpm
+make install-bin install-image install-sources ROOT=$RPM_BUILD_ROOT
+cd ..
+# 
+# package file lists
+# 
+find $RPM_BUILD_ROOT \( -type f -o -type l \) -print |
+  sed "s,$RPM_BUILD_ROOT,,;s,^//,/," > sq-files
+
+%clean
+
+echo "rm -rf $RPM_BUILD_ROOT"
+echo "rm -rf bld-rpm"
+
+%files -f sq-files
+%files -f ffi-files ffi

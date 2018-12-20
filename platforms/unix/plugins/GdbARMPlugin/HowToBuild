@@ -1,0 +1,90 @@
+Building the GdbARMPlugin
+------------------------------
+
+Ignore this section if not using the standard Cog source tree:
+Build the normal VM on your Platform. Consult Cog/{cygwinbuild|unixbuild|macbuild}/HowToBuild 
+for additional information.
+When generating sources, update to the latest 
+versions of Cog and VMMaker.oscog.
+You might want/need to change VMMaker 
+class>generateSqueakCogVM to point to the right 
+directories and remove FT2Plugin from the plugin-
+list (even if skipped, generates a messageNotUnderstood). 
+You can also change VMMaker>plugins:do: removing 
+the return in the false block, in order to skip 
+when a plugin is not found, instead of aborting 
+the generation process.
+:Ignopre preceding section if not using the standard Cog source tree.
+
+Building on Linux
+------------------------------
+(so far tried on CentOS 6.5 32-bit, Ubuntu 12.04 LTS 32bit)
+
+cd to the gdbarm32 buld directory under the relevant linux platform build
+directory, e.g. build.linux32x86/gdbarm32.
+
+run conf.COG
+
+run makeem
+
+Building on Windows
+------------------------------
+(so far tried with Windows 7 64bit unsing mingw/MSYS 32bit)
+
+Besides the normal build environment, you need the package gettext.
+Also, downgrade your mingwrt package to 3.20 (not 3.20-2) by unpacking
+the respective -dev tarball into your mingw-folder.
+
+When compiling the Squeak VM you need a version 3 gcc/g++. 
+For configuration of gdb, you need a version 4 gcc (you don't need 
+to switch g++). For switching between compilers in mingw, 
+you may use 
+	mingw-get install/remove gcc/gcc-v3/g++/gcc-v3-g++.
+
+Compile gdb/bfd and gdb/opcodes with a gcc 4.*.
+	cd <gdb>/bfd
+	./configure --enable-targets=arm-linux
+	make
+	cd <gdb>/opcodes
+	./configure --enable-targets=arm-linux
+	make
+Then switch to gcc-v3.
+	cd <gdb>/bfd
+	make clean && make
+	cd <gdb>/opcodes
+	make clean && make
+	
+For libsim.a, the gcc version is not important.
+	cd sim/common
+	./configure
+	cd ../arm
+	./configure && make libsim.a
+
+Change Makefile.win32 to point to your gdb folder.
+Then copy the plugin files to your svn-checkout, 
+for example changing <plugin>/Makefile and running it.
+Change <cog>/cygwinbuild/plugins.ext to include GdbARMPlugin.
+Change to gcc 3, then build the VM (again).
+
+Download the gdb sources (http://ftp.gnu.org/gnu/gdb) and 
+unpack them. Change Makefile and Makefile.unix, setting 
+GDBBUILDFOLDER to the correct place.
+
+Compile libopcodes.a:
+	cd GDBBUILDFOLDER
+	./configure --enable-targets=arm-linux
+Making gdb takes quite some time. It may fail, as long as 
+it generates <gdb>/bfd/bfd.h and <gdb>/opcodes/libopcodes.a.
+	make
+Compile libsim.a
+	cd sim/common
+	./configure
+	cd ../arm
+	./configure
+	make
+Ensure libsim.a exists in <gdb>/sim/arm.
+
+Make the plugin which just copies the plugin-files 
+to the appropriate directories. Then change 
+Cog/unixbuild/bld/plugins.ext to include GdbARMPlugin.
+Build the VM (again).

@@ -1,0 +1,23 @@
+#!/bin/sh
+# Script to edit an Info.plist based on a reference CoreVM.plist where lines
+# marked with <!--version--> contain unedited version numbers.  Necessary
+# because xcode strips out comments when building an Info.plist.
+# e.g. ../scripts/versionInfoPlist ../platforms CoreVM.plist Fast.app/Contents/Info.plist
+#
+IFS="	
+"
+TERMINAL=dumb
+#TERMINAL=glasstty
+if [ $# != 3 ]; then
+	echo usage: $0 platformDir referencePlist toBeEditedPlist 1>&2
+	exit 1
+fi
+trap 'exit 2' HUP INT PIPE TERM 0
+REV=`grep 'GitRawRevisionString.*Rev:' "$1/Cross/vm/sqSCCSVersion.h" \
+	| sed 's/^.*Rev: \([0-9][0-9]*\).* $";/\1/'`
+for p in `grep -e --version-- "$2" \
+		| sed 's/^[	 ]*\(.*\)<!--version-->/\1/' \
+		| sed 's./.\\\\/.g'` # double up for ex command below
+do
+	ex -T $TERMINAL -u NONE "+g/$p/s/0\([< ]\)/$REV\1/" +w +q "$3"
+done

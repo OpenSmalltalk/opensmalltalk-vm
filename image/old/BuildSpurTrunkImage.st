@@ -1,0 +1,1 @@
+| pwd |Utilities authorInitialsPerSe isEmpty ifTrue:	[Utilities setAuthorInitials: 'autoboot'].pwd := FileDirectory default fullName.SpurBootstrap bootstrapSqueakImage: pwd, '/', 'trunk46forspur'.SpurBootstrapMonticelloPackagePatcher new	from: 'temp-v3-repository' to: 'temp-spur-repository';	patch.Smalltalk snapshot: false andQuit: true

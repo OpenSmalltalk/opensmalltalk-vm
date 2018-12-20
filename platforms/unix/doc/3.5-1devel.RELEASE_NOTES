@@ -1,0 +1,39 @@
+Major departures from 3.4:
+
+- MacOSX is now fully supported (Quartz window, audio input/output,
+  drag&drop, etc.).  X11 is also supported (if installed on the host
+  machine).
+
+- Display and sound support code has been moved out of the main
+  executable into runtime modules.  The choice of display method
+  (Quartz, X11, no display at all) and sound (MacOSX CoreAudio, OSS,
+  NAS, Sun, no sound at all) can be changed via command-line options
+  when staring the VM.
+
+- A new option `-nodisplay' has been added.  It differs from
+  `-headless' in that the former disables display entirely (making the
+  memory footprint of the VM smaller) while the latter loads the
+  display code but does not open the Window (but allowing the
+  possibility of retroactively opening the window at a some later
+  time).
+
+- A new option `-nosound' has been added and does for sound what
+  `-nodisplay' does for the display.
+
+- Memory allocation for the heap is now dynamic, based on mmap().  The
+  heap will grow and shrink as the image's memory requirements change
+  over time.  This can be disabled by giving the option `-memory
+  <N>[nk]' which tells the VM to use a fixed-size heap.  A new option
+  `-mmap <N>[mk]' is provided to limit the size to which mmap() will
+  dynamically grow the heap (the default is 1Gbyte or 75% of your
+  available virtual memory, whichever is smaller).  If both options
+  are given then `-memory' has precedence (disabling the mmap()-based
+  memory allocator).
+
+- The configure option `--with-audio=...' has been removed.  configure
+  will arrange to build as many sound modules for which it can find
+  the required headers/libraries.
+
+- configure will also build as many window system support modules for
+  which it can find headers/libraries.  The options `--without-x' and
+  `--without-quartz' are available to explicitly disable one or both.

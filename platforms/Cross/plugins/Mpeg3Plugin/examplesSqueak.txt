@@ -1,0 +1,128 @@
+"Find a file"
+
+MPEGFile isFileValidMPEG: 'randomalien.mpg'.
+
+"Explore the file"
+
+| foo | 
+foo _ MPEGFile openFile: 'randomalien.mpg'.
+foo hasVideo.
+foo hasAudio.
+foo endOfVideo: 0.
+foo endOfAudio: 0.
+foo audioChannels: 0.
+foo audioSamples: 0.
+foo audioGetSample: 0.
+foo audioSampleRate: 0.
+foo videoFrameRate: 0.
+foo videoGetFrame: 0.
+foo audioGetSample: 0.
+foo getTimeCode.
+foo videoPreviousFrame: 0.
+foo videoSetCPUs: 1.
+foo videoSetFrame: 44 stream: 0.
+foo setMMX: true.  
+foo audioSetSample: 44 stream: 0.
+foo totalAudioStreams.
+foo totalVideoStreams.
+foo videoFrames: 0.
+foo videoFrameHeight: 0.
+foo videoFrameWidth: 0.
+foo seekPercentage: 0.5.
+foo getPercentage.
+foo videoSetCPUs: 1.
+foo setMMX: true. 
+foo closeFile.
+
+-----------------------------------
+"Simply get the video start at 700 and run 50 frames then debug"
+"Better code is in the player, don't use this code, but it's an example"
+
+| foo x y counter fum | 
+
+foo _ MPEGFile openFile: 'randomalien.mpg'.
+stream _ 0.
+counter _ 0.
+y _ foo videoFrameHeight: stream.
+x _ foo videoFrameWidth: stream.
+fum _ Form extent: x@y depth: 32.
+frames _ foo videoFrames: stream.
+foo videoSetFrame: 700 stream: stream.
+[foo endOfVideo: stream] whileFalse: 
+	[foo videoReadNextFrameInto: fum bits 
+		width: fum width height: fum height stream: stream.
+		fum displayOn: Display.
+	(counter _ counter + 1) == 50 ifTrue: [self halt]].
+foo closeFile.
+
+-----------------------------------
+"Play the audio"
+"There is more than one way to do this"
+"This is my first technically correct try"
+"DO not use this code, better code is in the player"
+
+| foo buffer sound soundOther | 
+
+foo _ MPEGFile openFile: 'randomalien.mpg'.
+channels _ foo audioChannels: 0.
+sampleRate _ foo audioSampleRate: 0.
+totalSamples _ foo audioSamples: 0.
+buffer _ ByteArray new: 1024*1024*1.
+SoundPlayer startPlayerProcessBufferSize:  8192 rate: sampleRate stereo: true.
+
+result _ foo audioReadBuffer: buffer stream: 0 channel: 0 samples: 1024*1024//2.
+sound _ SampledSound samples: 
+			(SampledSound convertBytesTo16BitSamples: buffer mostSignificantByteFirst: true)
+		 samplingRate: sampleRate.
+
+result _ foo audioReReadBuffer: buffer stream: 0 channel: 1 samples: 1024*1024//2.
+soundOther _ SampledSound samples: 
+			(SampledSound convertBytesTo16BitSamples: buffer mostSignificantByteFirst: true)
+		 samplingRate: sampleRate.
+
+sound _ MixedSound new
+			add: sound pan: 0;
+			add: soundOther pan: 1.0.
+sound play
+
+-----------------------------------
+"Ok make it simple for Audio"
+
+| foo |
+form _ Form extent: 320@240 depth: 16.
+foo _ MPEGPlayer playFile: 'randomAlien.mpg' onForm: form.
+foo playAudioStreamWaitTilDone: 0.
+
+-----------------------------------
+"Ok make it simple for Video"
+| foo |
+form _ Form extent: 320@240 depth: 32.
+foo _ MPEGPlayer playFile: 'randomAlien.mpg' onForm: form.
+foo playVideoStreamWaitTilDone: 0.
+
+-----------------------------------
+"Play the video in the background"
+| foo |
+form _ Form extent: 320@240 depth: 16.
+foo _ MPEGPlayer playFile: 'randomAlien.mpg' onForm: form.
+foo playVideoStream: 0.
+foo inspect.
+
+-----------------------------------
+"Play both in the background"
+| foo |
+form _ Form extent: 320@240 depth: 16.
+foo _ MPEGPlayer playFile: 'randomAlien.mpg' onForm: form.
+foo playStream: 0.
+foo inspect.
+
+-------------------------
+" In Morphic do " 
+| foo |
+form _ Form extent: 320@240 depth: 32.
+morph _ SketchMorph withForm: form.
+morph openInWorld.
+foo _ MPEGPlayer playFile: 'randomAlien.mpg' onMorph: morph.
+foo morph: morph.
+foo playStream: 0.
+foo inspect.

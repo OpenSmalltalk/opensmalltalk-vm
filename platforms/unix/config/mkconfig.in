@@ -1,0 +1,47 @@
+#!/bin/sh
+
+int_modules="@int_modules@"
+ext_modules="@ext_modules@"
+int_plugins="@int_plugins@ `grep -v '^#'  @vmmcfg@/plugins.int | sed 's/INTERNAL_PLUGINS = //' | tr -d '\\\\\\012';echo`"
+ext_plugins="@ext_plugins@ `grep -v '^#'  @vmmcfg@/plugins.ext | sed 's/EXTERNAL_PLUGINS = //' | tr -d '\\\\\\012';echo`"
+
+if test -f plugins.exc; then
+  nlsp='tr \012\015 \040\040'
+  spnl='tr \040\040 \012\012'
+  int_modules="`echo ${int_modules} | $spnl | fgrep -v -f plugins.exc | $nlsp`"
+  ext_modules="`echo ${ext_modules} | $spnl | fgrep -v -f plugins.exc | $nlsp`"
+  int_plugins="`echo ${int_plugins} | $spnl | fgrep -v -f plugins.exc | $nlsp`"
+  ext_plugins="`echo ${ext_plugins} | $spnl | fgrep -v -f plugins.exc | $nlsp`"
+  exc_plugins="`cat plugins.exc | $nlsp`"
+else
+  exc_plugins=""
+fi
+
+platforms="@topdir@/platforms"
+
+vmi_conf="${platforms}/unix"
+plg_conf="${vmi_conf}/plugins"
+
+vmi_dirs="@vmmdir@	${platforms}/Cross			${vmi_conf}"
+int_dirs="@vmpdir@	${platforms}/Cross/plugins	${plg_conf}"
+ext_dirs="@vmpdir@	${platforms}/Cross/plugins	${plg_conf}"
+
+cat > config.sh <<EOF
+cogit="@cogit@"
+srcdir="@vmmdir@"
+blddir="@blddir@"
+topdir="@topdir@"
+cfgdir="@cfgdir@"
+
+int_modules="${int_modules}"
+ext_modules="${ext_modules}"
+int_plugins="${int_plugins}"
+ext_plugins="${ext_plugins}"
+exc_plugins="${exc_plugins}"
+
+vmi_dirs="${vmi_dirs}"
+int_dirs="${int_dirs}"
+ext_dirs="${ext_dirs}"
+EOF
+
+chmod +x config.sh

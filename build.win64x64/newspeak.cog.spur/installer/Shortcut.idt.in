@@ -1,0 +1,4 @@
+Shortcut	Directory_	Name	Component_	Target	Arguments	Description	Hotkey	Icon_	IconIndex	ShowCmd	WkDir	DisplayResourceDLL	DisplayResourceId	DescriptionResourceDLL	DescriptionResourceId
+s72	s72	l128	s72	s72	S255	L255	I2	S72	I2	I2	S72	S100	I4	S100	I4
+Shortcut	Shortcut
+scAdvertisedShortcut	ProgramMenuFolder	@@VM_EXECUTABLE@@|@@VM_LOCALIZED_NAME@@	AdvertisedShortcut	Typical				@@VM_ICON@@.exe							

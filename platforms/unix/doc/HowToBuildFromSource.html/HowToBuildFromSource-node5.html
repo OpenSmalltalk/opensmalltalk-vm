@@ -1,0 +1,803 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+
+<!--Converted with LaTeX2HTML 2002-2-1 (1.70)
+original version by:  Nikos Drakos, CBLU, University of Leeds
+* revised and updated by:  Marcus Hennecke, Ross Moore, Herb Swan
+* with significant contributions from:
+  Jens Lippmann, Marek Rouchal, Martin Wilck and others -->
+<HTML>
+<HEAD>
+<TITLE>3 Adding your own plugins</TITLE>
+<META NAME="description" CONTENT="3 Adding your own plugins">
+<META NAME="keywords" CONTENT="HowToBuildFromSource">
+<META NAME="resource-type" CONTENT="document">
+<META NAME="distribution" CONTENT="global">
+
+<META NAME="Generator" CONTENT="LaTeX2HTML v2002-2-1">
+<META HTTP-EQUIV="Content-Style-Type" CONTENT="text/css">
+
+<LINK REL="STYLESHEET" HREF="HowToBuildFromSource.css">
+
+<LINK REL="next" HREF="HowToBuildFromSource-node6.html">
+<LINK REL="previous" HREF="HowToBuildFromSource-node4.html">
+<LINK REL="up" HREF="HowToBuildFromSource.html">
+<LINK REL="next" HREF="HowToBuildFromSource-node6.html">
+</HEAD>
+
+<BODY >
+
+<DIV CLASS="navigation"><!--Navigation Panel-->
+<A NAME="tex2html111"
+  HREF="HowToBuildFromSource-node6.html">
+<IMG WIDTH="37" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="next" SRC="next.png"></A> 
+<A NAME="tex2html105"
+  HREF="HowToBuildFromSource.html">
+<IMG WIDTH="26" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="up" SRC="up.png"></A> 
+<A NAME="tex2html99"
+  HREF="HowToBuildFromSource-node4.html">
+<IMG WIDTH="63" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="previous" SRC="prev.png"></A> 
+<A NAME="tex2html107"
+  HREF="HowToBuildFromSource-node1.html">
+<IMG WIDTH="65" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="contents" SRC="contents.png"></A> 
+<A NAME="tex2html109"
+  HREF="HowToBuildFromSource-node6.html">
+<IMG WIDTH="43" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="index" SRC="index.png"></A> 
+<BR>
+<B> Next:</B> <A NAME="tex2html112"
+  HREF="HowToBuildFromSource-node6.html">Index</A>
+<B> Up:</B> <A NAME="tex2html106"
+  HREF="HowToBuildFromSource.html">Building Unix Squeak (</A>
+<B> Previous:</B> <A NAME="tex2html100"
+  HREF="HowToBuildFromSource-node4.html">2 Generating your own</A>
+ &nbsp; <B>  <A NAME="tex2html108"
+  HREF="HowToBuildFromSource-node1.html">Contents</A></B> 
+ &nbsp; <B>  <A NAME="tex2html110"
+  HREF="HowToBuildFromSource-node6.html">Index</A></B> 
+<BR>
+<BR></DIV>
+<!--End of Navigation Panel-->
+<!--Table of Child-Links-->
+<A NAME="CHILD_LINKS"><STRONG>Subsections</STRONG></A>
+
+<UL CLASS="ChildLinks">
+<LI><A NAME="tex2html113"
+  HREF="HowToBuildFromSource-node5.html#SECTION00051000000000000000"><SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">1</SPAN> Plugin-specific configuration</A>
+<UL>
+<LI><A NAME="tex2html114"
+  HREF="HowToBuildFromSource-node5.html#SECTION00051100000000000000"><SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">1</SPAN>.<SPAN CLASS="arabic">1</SPAN> <TT>AC_PLUGIN_CHECK_LIB(<SPAN  CLASS="textit">lib</SPAN>,<SPAN  CLASS="textit">func</SPAN>)</TT></A>
+<LI><A NAME="tex2html115"
+  HREF="HowToBuildFromSource-node5.html#SECTION00051200000000000000"><SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">1</SPAN>.<SPAN CLASS="arabic">2</SPAN> <TT>AC_PLUGIN_DEFINE_UNQUOTED(<SPAN  CLASS="textit">keyword</SPAN>,<SPAN  CLASS="textit">text</SPAN>)</TT></A>
+<LI><A NAME="tex2html116"
+  HREF="HowToBuildFromSource-node5.html#SECTION00051300000000000000"><SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">1</SPAN>.<SPAN CLASS="arabic">3</SPAN> Plugin-specific variables</A>
+</UL>
+<BR>
+<LI><A NAME="tex2html117"
+  HREF="HowToBuildFromSource-node5.html#SECTION00052000000000000000"><SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">2</SPAN> Plugin-specific <TT>Makefile</TT> declarations and rules</A>
+<UL>
+<LI><A NAME="tex2html118"
+  HREF="HowToBuildFromSource-node5.html#SECTION00052100000000000000"><SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">2</SPAN>.<SPAN CLASS="arabic">1</SPAN> The anatomy of a plugin's <TT>Makefile</TT></A>
+<LI><A NAME="tex2html119"
+  HREF="HowToBuildFromSource-node5.html#SECTION00052200000000000000"><SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">2</SPAN>.<SPAN CLASS="arabic">2</SPAN> A note about <TT>$(COMPILE)</TT> and <TT>$(LINK)</TT> commands</A>
+<LI><A NAME="tex2html120"
+  HREF="HowToBuildFromSource-node5.html#SECTION00052300000000000000"><SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">2</SPAN>.<SPAN CLASS="arabic">3</SPAN> Specifying additional source directories</A>
+<LI><A NAME="tex2html121"
+  HREF="HowToBuildFromSource-node5.html#SECTION00052400000000000000"><SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">2</SPAN>.<SPAN CLASS="arabic">4</SPAN> Including additional material in the default <TT>Makefile</TT></A>
+<LI><A NAME="tex2html122"
+  HREF="HowToBuildFromSource-node5.html#SECTION00052500000000000000"><SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">2</SPAN>.<SPAN CLASS="arabic">5</SPAN> Replacing the default <TT>Makefile</TT> entirely</A>
+</UL>
+<BR>
+<LI><A NAME="tex2html123"
+  HREF="HowToBuildFromSource-node5.html#SECTION00053000000000000000"><SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">3</SPAN> Examples taken from existing plugins</A>
+<UL>
+<LI><A NAME="tex2html124"
+  HREF="HowToBuildFromSource-node5.html#SECTION00053100000000000000"><SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">1</SPAN> Configuration</A>
+<LI><A NAME="tex2html125"
+  HREF="HowToBuildFromSource-node5.html#SECTION00053200000000000000"><SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">2</SPAN> Customising the <TT>Makefile</TT></A>
+</UL>
+<BR>
+<LI><A NAME="tex2html126"
+  HREF="HowToBuildFromSource-node5.html#SECTION00054000000000000000"><SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">4</SPAN> Coping with VMMaker quirks</A>
+<LI><A NAME="tex2html127"
+  HREF="HowToBuildFromSource-node5.html#SECTION00055000000000000000"><SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">5</SPAN> If all else fails</A>
+</UL>
+<!--End of Table of Child-Links-->
+<HR>
+
+<H1><A NAME="SECTION00050000000000000000">
+<SPAN CLASS="arabic">3</SPAN> Adding your own plugins</A>
+</H1>
+
+<P>
+<BLOCKQUOTE>
+<FONT COLOR="#ff0000"> Note: This section is intended primarily for plugin developers.
+</FONT></BLOCKQUOTE>
+<P>
+If your plugin<A NAME="189"></A>
+ requires no platform-specific tweaks then there's
+nothing for you to do.  <TT>configure</TT> (and <TT>config.status</TT>)
+will provide a default <TT>Makefile</TT> for it that should work.  If your
+plugin requires only platform-independent tweaks (and/or additional
+hand-written code) then these go in <TT>platforms/Cross/plugins</TT>, and
+there's nothing for you to do (in Unixland).
+
+<P>
+On the other hand, if you require special <TT>configure</TT> tests or
+additional declarations/rules in your plugin's <TT>Makefile</TT> then you
+need to specify them explicitly.
+
+<P>
+<BLOCKQUOTE>
+<FONT COLOR="#ff0000"> Note: Unix Squeak subscribes to the following philopsophy:
+</FONT></BLOCKQUOTE>
+<P>
+<BLOCKQUOTE><FONT COLOR="#ff0000"><SPAN  CLASS="textit">Absolutely everything that is specific<A NAME="197"></A>
+ to Unix (sources,
+headers, <TT>configure</TT> and <TT>Makefile</TT> extensions, etc.) lives
+under <TT>platforms/unix</TT>.</SPAN>
+</FONT></BLOCKQUOTE>
+<P>
+<BLOCKQUOTE><FONT COLOR="#ff0000">In other words: there is not (nor aught there be) <SPAN  CLASS="textit">any</SPAN>
+Unix-related information under the <TT>platforms/Cross</TT>
+directory.  (Unix Squeak is entirely encapsulated
+under <TT>platforms/unix</TT> and is utterly immune to
+``random junk'' elsewhere in the <TT>platforms</TT> tree.)
+</FONT></BLOCKQUOTE>
+<P>
+First you must create a new directory<A NAME="206"></A>
+under <TT>platforms/unix/plugins</TT> named after your plugin.  This directory
+will hold the files describing the additional configuration checks
+and/or <TT>Makefile</TT> contents.  For example, if your plugin is
+called ``MyCoolPlugin'' then
+<SPAN ID="hue574">
+
+<DIV CLASS="alltt" ALIGN="LEFT">
+<TT>
+ 
+<FONT COLOR="#0000ff">
+<BR>&nbsp;&nbsp;$ mkdir platforms/unix/plugins/MyCoolPlugin
+<BR></FONT></TT>
+</DIV>
+</SPAN>
+<P>
+would be the thing to do.  (The following sections will refer to this
+directory as <TT>platdep</TT> since the full path is quite a mouthful of
+typing for my lazy fingers.)
+
+<P>
+
+<H2><A NAME="SECTION00051000000000000000">
+<SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">1</SPAN> Plugin-specific configuration</A>
+</H2>
+
+<P>
+Your plugin can ask <TT>configure</TT><A NAME="216"></A>
+to run additional tests (and to
+set additional variables in its output files) simply by including a
+file called <TT>acinclude.m4</TT><A NAME="575"></A>
+in it's <TT>platdep</TT> directory.
+
+<P>
+<BLOCKQUOTE>
+<FONT COLOR="#ff0000"> Note: The <TT>configure</TT><A NAME="576"></A>
+script is `compiled' from several other files.  If
+you create a `<TT>platdep./acinclude.m4</TT>' file then you <SPAN  CLASS="textit">must</SPAN>
+`recompile'<A NAME="577"></A>
+<TT>configure</TT>.  You can do this by `<TT>cd</TT>'ing to
+<TT>unix/config</TT> and running `<TT>make</TT>', or (if you have GNU
+<TT>make</TT>) from the <TT>blddir</TT> like this:
+<SPAN ID="hue579">
+
+<DIV CLASS="alltt" ALIGN="LEFT">
+<TT>
+ 
+<FONT COLOR="#ff0000">
+<BR>&nbsp;&nbsp;$ make -C ../platforms/unix/config
+<BR></FONT></TT>
+</DIV>
+</SPAN>
+</FONT></BLOCKQUOTE>
+<P>
+In addition to the usual <TT>autoconf</TT> macros, the following
+macros<A NAME="580"></A>
+are available specifically for Squeak plugins to use:
+
+<P>
+
+<H3><A NAME="SECTION00051100000000000000">
+<SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">1</SPAN>.<SPAN CLASS="arabic">1</SPAN> <TT>AC_PLUGIN_CHECK_LIB(<SPAN  CLASS="textit">lib</SPAN>,<SPAN  CLASS="textit">func</SPAN>)</TT></A>
+</H3>
+<A NAME="582"></A>
+
+<P>
+This is similar to the <TT>autoconf</TT> `<TT>AC_CHECK_LIB</TT>' macro.
+
+<P>
+<SPAN  CLASS="textit">func</SPAN> is the name of a function required by the plugin, defined
+in the external (system) library <SPAN  CLASS="textit">lib</SPAN>.  The macro checks that
+the library is available (via `<TT>-l<SPAN  CLASS="textit">lib</SPAN></TT>') and then adds it
+to the list of libraries required by the plugin (see the explanation
+of <TT>[plibs]</TT> in Section&nbsp;<A HREF="#sec:plibs">3.2.1</A> for a description of
+how library dependencies for plugins are handled).
+
+<P>
+If <SPAN  CLASS="textit">func</SPAN> cannot be found in <SPAN  CLASS="textit">lib</SPAN> then the plugin will be
+disabled and a message to that effect printed during configuration.
+(The VM can still be built, <SPAN  CLASS="textit">without</SPAN> rerunning VMMaker or
+reconfiguring, and the plugin will simply be ommitted from it.)
+
+<P>
+
+<H3><A NAME="SECTION00051200000000000000">
+<SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">1</SPAN>.<SPAN CLASS="arabic">2</SPAN> <TT>AC_PLUGIN_DEFINE_UNQUOTED(<SPAN  CLASS="textit">keyword</SPAN>,<SPAN  CLASS="textit">text</SPAN>)</TT></A>
+</H3>
+
+<P>
+This<A NAME="585"></A>
+is similar to the <TT>autoconf</TT> `<TT>AC_DEFINE_UNQUOTED</TT>' macro.
+
+<P>
+<SPAN  CLASS="textit">keyword</SPAN> is a <TT>Makefile</TT> keyword (usually of the form
+`[<SPAN  CLASS="textit">name</SPAN>]') and <SPAN  CLASS="textit">text</SPAN> is arbitrary text to be
+associated with it.  Calling this macro causes <TT>mkmf</TT> to
+substitute <SPAN  CLASS="textit">text</SPAN> for all occurrences of <SPAN  CLASS="textit">keyword</SPAN> in the
+<TT>Makefile</TT> generated for the plugin.
+
+<P>
+
+<H3><A NAME="SECTION00051300000000000000">
+<SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">1</SPAN>.<SPAN CLASS="arabic">3</SPAN> Plugin-specific variables</A>
+</H3>
+
+<P>
+The following variables are also set during the execution of a
+plugin-specific <TT>acinclude.m4</TT>:
+
+<P>
+<DL COMPACT>
+<DT></DT>
+<DD><TT>${plugin}</TT> is the name of the plugin;
+</DD>
+<DT></DT>
+<DD><TT>${topdir}</TT> is the path to the top-level directory (containing
+  <TT>platforms</TT>);
+</DD>
+<DT></DT>
+<DD><TT>${vmmdir}</TT> is the path to the VMMaker `<TT>src</TT>' directory.
+</DD>
+</DL>
+
+<P>
+
+<H2><A NAME="SECTION00052000000000000000">
+<SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">2</SPAN> Plugin-specific <TT>Makefile</TT> declarations and rules</A>
+</H2>
+
+<P>
+Three<A NAME="587"></A>
+mechanisms are avilable for this:
+
+<OL>
+<LI>scanning additional dirrectories for sources and headers;
+</LI>
+<LI>including a few additional lines into the default <TT>Makefile</TT>;
+  and 
+</LI>
+<LI>replacing entirely the default <TT>Makefile</TT> with a
+  hand-written one.
+</LI>
+</OL>
+(The last option isn't as scary as it might sound: read on...)
+
+<P>
+
+<H3><A NAME="SECTION00052100000000000000">
+<SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">2</SPAN>.<SPAN CLASS="arabic">1</SPAN> The anatomy of a plugin's <TT>Makefile</TT></A>
+</H3>
+
+<P>
+Before proceeding, let's take a minute to understand how Unix Squeak
+compiles and links files in its default <TT>Makefile</TT> for plugins.
+The default
+<TT>Makefile</TT><A NAME="589"></A><A NAME="590"></A>
+looks like this:
+
+<P>
+<BLOCKQUOTE>
+<BLOCKQUOTE>
+<SPAN ID="hue593">
+
+<DIV CLASS="alltt" ALIGN="LEFT">
+<TT>
+ # default Makefile for Unix Squeak plugins
+<BR>
+<BR>[make_cfg]
+<BR>[make_plg]
+<BR>
+<BR>
+XINCLUDES &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= [includes]
+<BR>
+OBJS &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= [targets]
+<BR>
+TARGET &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= [target]
+<BR>
+PLIBS &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= [plibs]
+<BR>
+<BR>[make_inc]
+<BR>
+<BR>$(TARGET) : $(OBJS) Makefile
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$(LINK) $(TARGET) $(OBJS) $(PLIBS)
+<BR>
+<BR>[make_targets]
+<BR>
+<BR>.force :
+<BR></TT>
+</DIV>
+</SPAN>
+</BLOCKQUOTE>
+</BLOCKQUOTE>
+
+<P>
+<BLOCKQUOTE>
+<FONT COLOR="#ff0000"> Note: The keywords<A NAME="594"></A>
+appearing between `<TT>[</TT> square brackets <TT>]</TT>'
+are substituted during configuration by a preprocessor called
+`<TT>mkmf</TT>'<A NAME="595"></A>
+according to the kind of plugin (internal/external) being built.
+</FONT></BLOCKQUOTE>
+<P>
+<TT><SPAN  CLASS="textbf">[make_cfg]</SPAN></TT><A NAME="597"></A>
+<A NAME="598"></A>
+is the configured variable section.  It
+contains the platform-specific information gleaned by <TT>configure</TT>
+while it was figuring out which compiler you have, what flags your
+linker needs, where to install stuff, and so on.
+
+<P>
+<TT><SPAN  CLASS="textbf">[make_plg]</SPAN></TT><A NAME="600"></A>
+<A NAME="601"></A>
+contains a handful of definitions which
+depend on whether the plugin is being compiled as internal or
+external:
+<BLOCKQUOTE>
+<TABLE CELLPADDING=3>
+<TR><TD ALIGN="LEFT"><TT></TD><TD ALIGN="LEFT">o       </TT></TD>
+<TD ALIGN="LEFT">&nbsp;&nbsp;&nbsp;</TD><TD ALIGN="LEFT">the extension for object files</TD>
+</TR>
+<TR><TD ALIGN="LEFT"><TT></TD><TD ALIGN="LEFT">a       </TT></TD>
+<TD ALIGN="LEFT">&nbsp;&nbsp;&nbsp;</TD><TD ALIGN="LEFT">the extension for plugins</TD>
+</TR>
+<TR><TD ALIGN="LEFT"><TT></TD><TD ALIGN="LEFT">COMPILE </TT></TD>
+<TD ALIGN="LEFT">&nbsp;&nbsp;&nbsp;</TD><TD ALIGN="LEFT">the command to compile a source file into an object file</TD>
+</TR>
+<TR><TD ALIGN="LEFT"><TT></TD><TD ALIGN="LEFT">LINK    </TT></TD>
+<TD ALIGN="LEFT">&nbsp;&nbsp;&nbsp;</TD><TD ALIGN="LEFT">the command to link one or more object files into a plugin</TD>
+</TR>
+</TABLE>
+</BLOCKQUOTE>
+
+<P>
+For internal plugins: <TT>$o</TT> is `<TT>.o</TT>' and <TT>$a</TT> is
+`<TT>.a</TT>'.  <TT>$(COMPILE)</TT> is the C compiler
+(`<TT>$(CC)&nbsp;...&nbsp;-o</TT>', so the first thing after the command
+<SPAN  CLASS="textit">must</SPAN> be the output filename) and <TT>$(LINK)</TT> is archiver
+(`<TT>ar -rc</TT>', again requiring the output file to follow
+immediately).  Note that internal plugins are built as `<TT>ar</TT>'
+archives before being linked into the final binary.
+
+<P>
+For external plugins: <TT>$o</TT> is `<TT>.lo</TT>', <TT>$a</TT> is
+`<TT>.la</TT>', and <TT>$(COMPILE)</TT> and <TT>$(LINK)</TT> are
+invocations of `<TT>libtool</TT>' to create position-independent objects and
+shared libraries (with a `<TT>-o</TT>' appearing right at the end, so the
+first thing after the command <SPAN  CLASS="textit">must</SPAN> be the output filename).
+
+<P>
+<TT><SPAN  CLASS="textbf">[includes]</SPAN></TT><A NAME="604"></A>
+<A NAME="605"></A>
+is a list of&nbsp;`<TT>-I<SPAN  CLASS="textit">dir</SPAN></TT>'
+compiler flags, one for each of the
+directories<A NAME="607"></A>
+<SPAN ID="hue608">
+
+<DIV CLASS="alltt" ALIGN="LEFT">
+<TT>
+ &nbsp;&nbsp;src/plugins/<SPAN &nbsp;CLASS="textit">name</SPAN>
+<BR>&nbsp;&nbsp;src/vm/intplugins/<SPAN &nbsp;CLASS="textit">name</SPAN>
+<BR>&nbsp;&nbsp;platforms/Cross/plugins/<SPAN &nbsp;CLASS="textit">name</SPAN>
+<BR>&nbsp;&nbsp;platforms/unix/plugins/<SPAN &nbsp;CLASS="textit">name</SPAN>
+<BR></TT>
+</DIV>
+</SPAN>in which at least one header file is present.
+
+<P>
+<TT><SPAN  CLASS="textbf">[targets]</SPAN></TT><A NAME="610"></A>
+<A NAME="611"></A>
+is a list of object files
+corresponding to the source (<TT>.c</TT>) files found in
+the directories:<A NAME="612"></A>
+<SPAN ID="hue613">
+
+<DIV CLASS="alltt" ALIGN="LEFT">
+<TT>
+ &nbsp;&nbsp;src/plugins/<SPAN &nbsp;CLASS="textit">name</SPAN>/*.c
+<BR>&nbsp;&nbsp;src/vm/intplugins/<SPAN &nbsp;CLASS="textit">name</SPAN>/*.c
+<BR>&nbsp;&nbsp;platforms/Cross/plugins/<SPAN &nbsp;CLASS="textit">name</SPAN>/*.c
+<BR>&nbsp;&nbsp;platforms/unix/plugins/<SPAN &nbsp;CLASS="textit">name</SPAN>/*.c
+<BR></TT>
+</DIV>
+</SPAN>where each source file has been stripped of the directory name and had the
+`<TT>.c</TT>' converted into `<TT>$o</TT>'.
+
+<P>
+<TT><SPAN  CLASS="textbf">[target]</SPAN></TT><A NAME="615"></A>
+<A NAME="616"></A>
+is the name of the plugin, including the
+<TT>$a</TT> extension.
+
+<P>
+<TT><SPAN  CLASS="textbf">[plibs]</SPAN></TT><A NAME="618"></A>
+<A NAME="619"></A>
+<A NAME="sec:plibs"></A>is a list of zero or more libraries on which the plugin depends (as
+detected using the macro <TT>AC_PLUGIN_CHECK_LIB</TT> in the
+plugin-specific <TT>acinclude.m4</TT>).  If the plugin
+is being built internally then this list is empty and the required libraries
+are included in the final link command.  If the plugin is being built
+externally then the plugin itself (a shared object) is linked against
+these libraries (via <TT>[plist]</TT>) rather than with the main VM binary.
+
+<P>
+(This is to ensure that a missing shared object needed by an external plugin
+will only affect the operation of that plugin and not prevent the rest
+of the VM from running, which would be the case if the entire VM were
+linked against it.)
+
+<P>
+<TT><SPAN  CLASS="textbf">[make_inc]</SPAN></TT><A NAME="621"></A>
+<A NAME="622"></A>
+is the contents of the
+<TT>Makefile.inc</TT> file in your plugin's <TT>platdep</TT> directory (or
+empty if this file doesn't exist).
+
+<P>
+<TT><SPAN  CLASS="textbf">[make_targets]</SPAN></TT><A NAME="624"></A>
+<A NAME="625"></A>
+is a list of rules<A NAME="626"></A>
+for building the files listed in <TT>[targets]</TT>.
+Each rule<A NAME="388"></A>
+looks like this:
+
+<P>
+
+<DIV CLASS="alltt" ALIGN="LEFT">
+<TT>
+ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;name$o : <SPAN &nbsp;CLASS="textit">original/source/dir/</SPAN>name.c
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$(COMPILE) name$o <SPAN &nbsp;CLASS="textit">original/source/dir/</SPAN>name.c
+<BR></TT>
+</DIV>
+
+<P>
+
+<H3><A NAME="SECTION00052200000000000000">
+<SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">2</SPAN>.<SPAN CLASS="arabic">2</SPAN> A note about <TT>$(COMPILE)</TT> and <TT>$(LINK)</TT> commands</A>
+</H3>
+
+<P>
+You should <SPAN  CLASS="textit">never</SPAN> pass additional flags to these
+commands<A NAME="628"></A><A NAME="629"></A><A NAME="630"></A>
+explicitly.  This is because you cannot know how they are defined.
+(Their definitions depend on whether the plugin is being built
+internally or externally&nbsp;-- and might even change radically in future
+releases of Unix Squeak.)
+
+<P>
+Instead you should pass additional compiler/linker
+flags<A NAME="631"></A>
+to these commands by setting the following variables in `<TT>Makefile.inc</TT>' or
+`<TT>Makefile.in</TT>':
+<BLOCKQUOTE>
+<A NAME="632"></A>
+<A NAME="633"></A>
+<A NAME="634"></A>
+<A NAME="635"></A>
+<TABLE CELLPADDING=3>
+<TR><TD ALIGN="LEFT"><TT></TD><TD ALIGN="LEFT">XCPPFLAGS	</TT></TD>
+<TD ALIGN="LEFT">&nbsp;&nbsp;&nbsp;</TD><TD ALIGN="LEFT">`<TT>-I</TT>' flags for <TT>cpp</TT></TD>
+</TR>
+<TR><TD ALIGN="LEFT"><TT></TD><TD ALIGN="LEFT">XDEFS		</TT></TD>
+<TD ALIGN="LEFT">&nbsp;&nbsp;&nbsp;</TD><TD ALIGN="LEFT">`<TT>-D</TT>' flags for <TT>cpp</TT></TD>
+</TR>
+<TR><TD ALIGN="LEFT"><TT></TD><TD ALIGN="LEFT">XCFLAGS		</TT></TD>
+<TD ALIGN="LEFT">&nbsp;&nbsp;&nbsp;</TD><TD ALIGN="LEFT">anything to be passed to the compiler</TD>
+</TR>
+<TR><TD ALIGN="LEFT"><TT></TD><TD ALIGN="LEFT">XLDFLAGS	</TT></TD>
+<TD ALIGN="LEFT">&nbsp;&nbsp;&nbsp;</TD><TD ALIGN="LEFT">anything to be passed to the linker</TD>
+</TR>
+</TABLE>
+</BLOCKQUOTE>
+<BLOCKQUOTE>
+<FONT COLOR="#ff0000"> Note: `<TT>mkmf</TT>' already uses `<TT>XINCLUDES</TT>'<A NAME="637"></A>
+<A NAME="638"></A>
+to pass the list of
+directories containing plugin header files to <TT>cpp</TT>.  You can
+redefine it if you like, but make sure that `<TT>[includes]</TT>'
+appears in its definition (or in the definition of `<TT>XCPPFLAGS</TT>').
+</FONT></BLOCKQUOTE>
+<P>
+
+<H3><A NAME="SECTION00052300000000000000">
+<SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">2</SPAN>.<SPAN CLASS="arabic">3</SPAN> Specifying additional source directories</A>
+</H3>
+
+<P>
+<TT>mkmf</TT><A NAME="639"></A>
+looks for a file in your plugin's
+<TT>platdep</TT> directory called
+`<TT>mkmf.subdirs</TT>'.<A NAME="640"></A>
+If this file exists then it should contain a list of directory names relative to
+the top-level directory (the one containing the <TT>src</TT> and
+<TT>platform</TT> directories).  These
+directories<A NAME="434"></A>
+will be added to the list of locations searched for
+`<TT>.c</TT>' and `<TT>.h</TT>' files while
+constructing the substitutions for `<TT>[includes]</TT>',
+`<TT>[targets]</TT>' and `<TT>[make_targets]</TT>'.
+
+<P>
+
+<H3><A NAME="SECTION00052400000000000000">
+<SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">2</SPAN>.<SPAN CLASS="arabic">4</SPAN> Including additional material in the default <TT>Makefile</TT></A>
+</H3>
+
+<P>
+If the file <TT>platdep/Makefile.inc</TT><A NAME="642"></A>
+exists then <TT>mkmf</TT> will
+substitute its contents into the <TT>Makefile</TT> in place of the
+<TT>[make_inc]</TT> keyword.
+
+<P>
+<BLOCKQUOTE>
+<FONT COLOR="#ff0000"> Note: <TT>Makefile.inc</TT><A NAME="643"></A>
+is read into the <TT>Makefile</TT> under
+construction <SPAN  CLASS="textit">before</SPAN> <TT>mkmf</TT> performs substitutions on the
+`<TT>[keyword]</TT>'s.  In other words, your <TT>Makefile.inc</TT> can
+use the above keywords to include relevant declarations and rules
+without worrying about whether the plugin is internal or external.
+</FONT></BLOCKQUOTE>
+<P>
+
+<H3><A NAME="SECTION00052500000000000000">
+<SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">2</SPAN>.<SPAN CLASS="arabic">5</SPAN> Replacing the default <TT>Makefile</TT> entirely</A>
+</H3>
+
+<P>
+If neither of the above are sufficient then you can create a complete
+<TT>Makefile</TT><A NAME="645"></A>
+template called <TT>platdep/Makefile.in</TT>.<A NAME="646"></A>
+<TT>mkmf</TT> will use this template instead of the default <TT>Makefile</TT> template
+shown earlier, and will perform keyword substitutions on it as
+described above to create the final <TT>Makefile</TT>.  (In other words,
+simply copying the default template shown earlier will result in a
+<TT>Makefile</TT> identical to the one that <TT>mkmf</TT> would have
+produced by default.
+
+<P>
+
+<H2><A NAME="SECTION00053000000000000000">
+<SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">3</SPAN> Examples taken from existing plugins</A>
+</H2>
+
+<P>
+By way of example we'll look at how two existing plugins specialise
+their configuration and <TT>Makefile</TT>s.
+
+<P>
+
+<H3><A NAME="SECTION00053100000000000000">
+<SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">1</SPAN> Configuration</A>
+</H3>
+
+<P>
+The <TT>B3DAcceleratorPlugin</TT> requires OpenGL in order to compile.
+The file <TT>unix/plugins/B3DAcceleratorPlugin/acinclude.m4</TT><A NAME="647"></A>
+contains a single call to an <TT>autoconf</TT>-style macro:
+
+<P>
+
+<DIV CLASS="alltt" ALIGN="LEFT">
+<TT>
+ &nbsp;&nbsp;&nbsp;&nbsp;AC_PLUGIN_SEARCH_LIBS(glIsEnabled, GL)
+<BR></TT>
+</DIV>
+
+<P>
+This works similarly to the <TT>autoconf</TT> `<TT>AC_SEARCH_LIBS</TT>'
+macro: If a library <TT>libGL.{a,so}</TT> (OpenGL) exists and exports
+the function <TT>glIsEnabled()</TT> then `<TT>-lGL</TT>' is added to the
+final VM link command.  Otherwise the plugin is disabled (and a
+message warning of the fact is printed).
+
+<P>
+<BLOCKQUOTE>
+<FONT COLOR="#ff0000"> Note: There's a bug here.  This should also check for `<TT>GL_VERSION_1_1</TT>' in headers.
+</FONT></BLOCKQUOTE>
+<P>
+
+<H3><A NAME="SECTION00053200000000000000">
+<SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">2</SPAN> Customising the <TT>Makefile</TT></A>
+</H3>
+
+<P>
+The <TT>Mpeg3Plugin</TT> requires a (modified) <TT>libmpeg</TT> to be
+compiled along with it.  The sources for this library are in (several)
+subdirectories of <TT>Cross/Meg3Plugin</TT> and they require additional
+<TT>cpp</TT> definitions in order to compile correctly.
+
+<P>
+To cope with the additional directories,
+<TT>unix/plugins/Mpeg3Plugin/mkmf.subdirs</TT><A NAME="649"></A>
+simply lists them:
+
+<P>
+
+<DIV CLASS="alltt" ALIGN="LEFT">
+<TT>
+ &nbsp;&nbsp;platforms/Cross/plugins/Mpeg3Plugin/libmpeg
+<BR>&nbsp;&nbsp;platforms/Cross/plugins/Mpeg3Plugin/libmpeg/audio
+<BR>&nbsp;&nbsp;platforms/Cross/plugins/Mpeg3Plugin/libmpeg/video
+<BR></TT>
+</DIV>
+
+<P>
+To cope with the additional <TT>cpp</TT> definitions, we could have
+written a tiny <TT>Makefile.inc</TT><A NAME="650"></A>
+containing:
+
+<P>
+
+<DIV CLASS="alltt" ALIGN="LEFT">
+<TT>
+ &nbsp;&nbsp;&nbsp;&nbsp;XDEFS &nbsp;&nbsp;= -DNOPTHREADS
+<BR></TT>
+</DIV>
+
+<P>
+Unfortunately the additional source directories contain various
+utility and test programs (which <SPAN  CLASS="textit">must not</SPAN> be built) so we
+cannot rely on <TT>mkmf</TT> generating the correct <TT>[targets]</TT> list.
+
+<P>
+Instead we just copy the default <TT>Makefile</TT> ``template'' (shown
+above) as <TT>Mpeg3Plugin/Makefile.in</TT>
+and insert the required list of targets (and <TT>cpp</TT>
+definition) manually.  The end result<A NAME="651"></A>
+looks like this:
+<BLOCKQUOTE>
+<BLOCKQUOTE>
+<SPAN ID="hue655">
+
+<DIV CLASS="alltt" ALIGN="LEFT">
+<TT>
+ # Makefile.in for Mpeg3Plugin in Unix Squeak
+<BR>
+<BR>[make_cfg]
+<BR>[make_plg]
+<BR>
+<BR>
+TARGET &nbsp;= Mpeg3Plugin$a
+<BR>
+<BR>
+PLUGIN &nbsp;= Mpeg3Plugin$o
+<BR>
+VIDEO &nbsp;&nbsp;= getpicture$o headers$o idct$o macroblocks$o <SPAN &nbsp;CLASS="textit">etc...</SPAN>
+<BR>
+AUDIO &nbsp;&nbsp;= dct$o header$o layer1$o layer2$o layer3$o <SPAN &nbsp;CLASS="textit">etc...</SPAN>
+<BR>
+LIBMPEG = bitstream$o changesForSqueak$o libmpeg3$o <SPAN &nbsp;CLASS="textit">etc...</SPAN>
+<BR>
+<BR>
+OBJS &nbsp;&nbsp;&nbsp;= $(PLUGIN) $(VIDEO) $(AUDIO) $(LIBMPEG)
+<BR>
+<BR>
+XINCLUDES &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= [includes]
+<BR>
+XDEFS &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= -DNOPTHREADS
+<BR>
+<BR>$(TARGET) : $(OBJS) Makefile
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$(LINK) $(TARGET) $(OBJS)
+<BR>
+<BR>[make_targets]
+<BR>
+<BR>.force :
+<BR></TT>
+</DIV>
+</SPAN>
+</BLOCKQUOTE>
+</BLOCKQUOTE>
+
+<P>
+<BLOCKQUOTE>
+<FONT COLOR="#ff0000"> Note: The default `<TT>[make_targets]</TT>' will contain additional rules for the
+objects that we're trying to avoid building (because it's built from
+an exhaustive list of `<TT>.c</TT>' files in the source directories).  This
+does no harm since the offending rules can never be triggered (their
+targets are not listed in `<TT>OBJS</TT>').
+</FONT></BLOCKQUOTE>
+<P>
+
+<H2><A NAME="SECTION00054000000000000000">
+<SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">4</SPAN> Coping with VMMaker quirks</A>
+</H2>
+
+<P>
+VMMaker<A NAME="521"></A>
+will refuse to compile a plugin if it thinks the plugin
+requires platform support.  This is ``all-or-nothing'': if platform
+support is required on <SPAN  CLASS="textit">one</SPAN> platform then it is required on
+<SPAN  CLASS="textit">all</SPAN> platforms (even if the plugin compiles quite happily
+without platform support in Unix).
+
+<P>
+The easiest way to add ``null'' platform support is to place an empty
+`<TT>Makefile.inc</TT>' in the plugin's <TT>platdep</TT> directory.  (To see
+this in action, look in <TT>unix/plugins/JPEGReadWriter2Plugin</TT>.)
+
+<P>
+
+<H2><A NAME="SECTION00055000000000000000">
+<SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">5</SPAN> If all else fails</A>
+</H2>
+
+<P>
+(Where<A NAME="528"></A>
+``all else failing'' is defined as: ``after trying for 20
+minutes and still getting nowhere''.)
+
+<P>
+If you're writing a plugin that needs platform support (beyond dumb
+inclusion of a few additional `<TT>.c</TT>' files) and this document has
+been of no help at all (or if you understood it but you're still
+suffering from ``all else failing'') then send me
+<A NAME="tex2html3"
+  HREF="mailto:ian.piumarta@squeakland.org">mail</A>
+and I'll be
+happy to help you with the various platdep files.
+
+<P>
+
+<P>
+
+<DIV CLASS="navigation"><HR>
+<!--Navigation Panel-->
+<A NAME="tex2html111"
+  HREF="HowToBuildFromSource-node6.html">
+<IMG WIDTH="37" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="next" SRC="next.png"></A> 
+<A NAME="tex2html105"
+  HREF="HowToBuildFromSource.html">
+<IMG WIDTH="26" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="up" SRC="up.png"></A> 
+<A NAME="tex2html99"
+  HREF="HowToBuildFromSource-node4.html">
+<IMG WIDTH="63" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="previous" SRC="prev.png"></A> 
+<A NAME="tex2html107"
+  HREF="HowToBuildFromSource-node1.html">
+<IMG WIDTH="65" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="contents" SRC="contents.png"></A> 
+<A NAME="tex2html109"
+  HREF="HowToBuildFromSource-node6.html">
+<IMG WIDTH="43" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="index" SRC="index.png"></A> 
+<BR>
+<B> Next:</B> <A NAME="tex2html112"
+  HREF="HowToBuildFromSource-node6.html">Index</A>
+<B> Up:</B> <A NAME="tex2html106"
+  HREF="HowToBuildFromSource.html">Building Unix Squeak (</A>
+<B> Previous:</B> <A NAME="tex2html100"
+  HREF="HowToBuildFromSource-node4.html">2 Generating your own</A>
+ &nbsp; <B>  <A NAME="tex2html108"
+  HREF="HowToBuildFromSource-node1.html">Contents</A></B> 
+ &nbsp; <B>  <A NAME="tex2html110"
+  HREF="HowToBuildFromSource-node6.html">Index</A></B> </DIV>
+<!--End of Navigation Panel-->
+<ADDRESS>
+
+2005-03-17
+</ADDRESS>
+</BODY>
+</HTML>

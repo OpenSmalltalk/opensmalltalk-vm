@@ -1,0 +1,26 @@
+VM_DMG := $(VM_LOCALIZED_NAME_ESC)-$(VERSION).dmg
+
+$(VM_DMG): $(VM_BUNDLE) $(INSTALLER_BACKGROUND).png LayoutDiskImage.applescript $(INSTALLER_ICON).icns
+	-hdiutil eject '/Volumes/$(PRODUCT_NAME)'
+	-rm -f "$@.sparseimage" "$@"
+	hdiutil create -size 100m -type SPARSE -volname $(VM_LOCALIZED_NAME_ESC) -fs 'Journaled HFS+' "$@.sparseimage"
+	hdiutil attach "$@.sparseimage"
+	mkdir -p '/Volumes/$(PRODUCT_NAME)/.background'
+	cp -p '$(INSTALLER_BACKGROUND).png' '/Volumes/$(PRODUCT_NAME)/.background'
+	ln -s /Applications '/Volumes/$(PRODUCT_NAME)/.'
+	ditto $(VM_BUNDLE) '/Volumes/$(PRODUCT_NAME)/$(VM_LOCALIZED_NAME).app'
+	bless --folder '/Volumes/$(PRODUCT_NAME)' --openfolder '/Volumes/$(PRODUCT_NAME)'
+	cp '$(INSTALLER_ICON).icns' '/Volumes/$(PRODUCT_NAME)/.VolumeIcon.icns'
+	/Applications/Xcode.app/Contents/Developer/Tools/SetFile -a C '/Volumes/$(PRODUCT_NAME)'
+	osascript LayoutDiskImage.applescript
+	while test -e '/Volumes/$(PRODUCT_NAME)' ; do echo Waiting for Finder to eject '/Volumes/$(PRODUCT_NAME)'; sleep 2; done
+	hdiutil convert "$@.sparseimage" -format UDBZ -o $(VM_DMG)
+	-rm -f "$@.sparseimage"
+
+.DEFAULT_GOAL := $(VM_DMG)
+
+LayoutDiskImage.applescript: LayoutDiskImage.applescript.in branding.gmk branding-sed-rules.gmk Makefile
+	sed $(SED_RULES) < $< > $@
+
+clean::
+	-rm -rf *.dmg *.sparseimage LayoutDiskImage.applescript *.app

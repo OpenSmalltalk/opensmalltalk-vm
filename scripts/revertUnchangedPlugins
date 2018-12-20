@@ -1,0 +1,17 @@
+#!/bin/sh
+# Revert any and all plugins whose changes comprise only the generation metadata
+# such as date generated, VMMaker version etc.
+
+#IFS=<tab><nl>
+IFS='	
+'
+if [ $# = 0 ]; then
+	set -- src/plugins
+fi
+for pd in $@; do
+	for d in $pd/[A-Z]*; do
+		test -d "$d" || continue
+		find "$d" -name .git -prune -o \( -type f -a -name '*.[ch]' \) -exec \
+			scripts/revertIfEssentiallyUnchanged {} \;
+	done
+done

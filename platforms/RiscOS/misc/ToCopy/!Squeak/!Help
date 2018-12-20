@@ -1,0 +1,98 @@
+Help for Squeak
+===============
+
+What is this?
+-------------
+This is the RISC OS port of Squeak 3.9, a public domain Smalltalk system.
+Updates, patches etc are available from:
+	http://www.rowledge.org/tim/squeak
+as and when I can make time to produce then. The main website for the Squeak project is:
+	http://www.squeak.org
+and I suggest you take a look there.
+
+Information herein
+------------------
++What is Smalltalk
++Online Information
++Printed Information
++Oddities and Known Problems with this release
++The legal bit
++Finally
+
+What is Smalltalk?
+------------------
+Smalltalk is the original object oriented programming language and environment from which most OSs have learnt about windowing, pixel displays, menus and so on. You will need to read about Smalltalk to make best use of it, since it is likely to be quite unfamiliar to you at first.
+
+Be warned, the user interface is not quite like RISC OS; in particular:-
+a) the right hand mouse button is NOT used as 'adjust', but to operate on the window currently active; thus serving many of the functions of the window icons under RISC OS.
+b) the menus make the choice when you _release_ the menu button over an item. So, press the menu button and hold it down whilst you make your choice.
+c) as you will quickly notice, the Squeak windows can exist only within the single big RiscOS window. This may change later.
+
+Online Information
+------------------
+For those with web access, there is plenty of information available about Squeak and all the other variants of Smalltalk. See
+	http://www.squeak.org/
+the Squeak.Org main site for updates, releases, goodies etc and perhaps most important, the squeak mailing list. You may get yourself onto the list by visiting the 'Squeak Mailing Lists' page on the main website.
+
+Printed Information
+-------------------
+In print there are a number of good sources, some of which you might find on the shelves in better bookstores:-
+  The original Smalltalk books by the PARC staff that invented it
+      Smalltalk 80 The Language, Adele Goldberg & David Robson
+            Addison-Wesley 1989 ISBN 0-201-13688-0
+      Smalltalk 80 The Interactive Programming Environment, Adele Goldberg
+            Addison Wesley 1984 ISBN 0-201-11372-4
+      Smalltalk 80 Bits of History, Words of Advice , Glenn Krasner
+            Addison Wesley 1984 ISBN 0-201-11669-3
+  By other writers
+      Inside Smalltalk Volume I, Wilf Lalonde & John Pugh
+            Prentice Hall 1991 ISBN 0-13-468414-1
+      Inside Smalltalk Volume II, Wilf Lalonde & John Pugh
+            Prentice Hall 1991 ISBN 0-13-465964-3
+      Object-Oriented Graphics, P. Wisskirchen
+            Springer-Verlag 1990 ISBN 3-540-52859-8
+      Practical Smalltalk: Using Smalltalk/V, Dan Shafer and Dean A. Ritz.
+            Springer-Verlag ISBN 0-387-97394-X
+      Rapid Prototyping for Object Oriented Systems, Mark Mullen
+            Addison Wesley 1990 ISBN 0-201-55024-5
+      Designing Object-Oriented Software,
+            Rebecca Wirfs-Brock, Brian Wilkerson, and Lauren Wiener
+            Prentice-Hall 1990 ISBN 0-13-629825-7
+   Squeak specific
+      Squeak, Open Personal Computing for Multimedia, Mark Guzdial & Kim Rose,
+            editors, 2001, Prentice-Hall
+      Squeak: Object-oriented design with Multimedia Applications, Mark
+            Guzdial, 2001, Prentice-Hall
+
+Oddities and Known problems with this release
+=============================================
+
+File naming is a problem. Squeak is ported to many machines and far too many people make bad assumptions about the permissable form of file names. RISC OS is the only popular OS to have problems with long filenames (in pre-RISC OS 4 systems), '.' used for filename extensions etc. This shouldn't be a problem in an object oriented system, since we should be able to catch bad behaviour and correct the file names, but there are many places currently in the system where something like  'fred the great.text' is used as a filename.
+To get around this problem, I have made Squeak accept Unix style filenames, ie use a '/' as the directory separator and '.' for filename extensions. This is a minor inconvenience in that you have to remember the change from normal RISC OS practice, but we are all getting used to URLs anyway, so it should not be too painful. It does at least save most of the filename troubles with Squeak code.
+
+At various times Squeak expects to be able to open a file for read/write and read-only at the same time. RISC OS doesn't support this and so I have had to implement a way to fake it. So far this seems reliable but let me know of problems.
+
+No iconbar menu yet. However, you can bring the Squeak window to the front by clicking on the Squeak iconbar icon.
+
+Hotkeys don't work quite like in RISC OS. Again, since Squeak was first created on a Mac, it is rather biased towards the Mac keyboard layout and shortcuts. Mac's have both a 'cmd' key and a 'ctl' key (and the 'option' key of course but won't worry about that for now) and RPCs have 'ctl' and 'alt' keys. Sadly, we can't map one to the other in a simple way since there are no keypress events generated for most alt-keys. So to get around this I have separated out the left and right ctl keys.  The LEFT one is used for 'ctl' (think controL) and the RIGHT for 'cmd' (think commanD => dexter => right). There are still some confusions beyond this in that there are shift-cmd hotkeys available in Squeak, but the ctl key can be used to access them as well.
+New for 3.7 is a commandline option to swap these two in case you find it more convenient. Add the flag '-swapMeta' to the final line of the !Run file.
+
+There is a help window that describes the available hotkeys (use the screen menu, choose 'help...' then 'command key help') that should give you some assistance in understanding things. The ctl-<, ctl-= and cmd-shift-+ actions don't work because RiscOS doesn't generate keypress event for those keys.
+
+Sound is not hooked up yet. Serial ports neither. Nor MIDI. Bummer. Volunteer to help fix this!
+
+Window resizing - as in the RISC OS window holding all the Squeak windows - is a little non-standard. To resize the window, hold down a ctrl key and press the SELECT mouse button in the bottom right corner (within 15 pixels) and drag to the new size. It will take a moment for the display to catch up with the change so don't worry.
+
+Quitting Squeak. Normally one uses the main World Menu and chooses 'quit', 'save and quit' or whatever. If you have a problem and the system is not responding you can also close the Squeak window the normal way and 'accept' in the resulting confirmation dialogue.
+
+The legal bit
+=============
+The license under which Squeak is provided - the MIT License, with some portions covered by the Apache License version 2.0 - can be found in full on http://www.squeak.org
+
+Finally
+-------
+Have fun, join the mailing list, let us know how you do.
+
+tim
+
+email: tim@rowledge.org

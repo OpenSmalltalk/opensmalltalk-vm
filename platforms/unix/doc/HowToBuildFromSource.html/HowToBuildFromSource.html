@@ -1,0 +1,132 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+
+<!--Converted with LaTeX2HTML 2002-2-1 (1.70)
+original version by:  Nikos Drakos, CBLU, University of Leeds
+* revised and updated by:  Marcus Hennecke, Ross Moore, Herb Swan
+* with significant contributions from:
+  Jens Lippmann, Marek Rouchal, Martin Wilck and others -->
+<HTML>
+<HEAD>
+<TITLE>Building Unix Squeak ( 3.2) from source</TITLE>
+<META NAME="description" CONTENT="Building Unix Squeak ( 3.2) from source">
+<META NAME="keywords" CONTENT="HowToBuildFromSource">
+<META NAME="resource-type" CONTENT="document">
+<META NAME="distribution" CONTENT="global">
+
+<META NAME="Generator" CONTENT="LaTeX2HTML v2002-2-1">
+<META HTTP-EQUIV="Content-Style-Type" CONTENT="text/css">
+
+<LINK REL="STYLESHEET" HREF="HowToBuildFromSource.css">
+
+<LINK REL="next" HREF="HowToBuildFromSource-node1.html">
+</HEAD>
+
+<BODY >
+
+<DIV CLASS="navigation"><!--Navigation Panel-->
+<A NAME="tex2html8"
+  HREF="HowToBuildFromSource-node1.html">
+<IMG WIDTH="37" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="next" SRC="next.png"></A> 
+<IMG WIDTH="26" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="up" SRC="up_g.png"> 
+<IMG WIDTH="63" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="previous" SRC="prev_g.png"> 
+<A NAME="tex2html4"
+  HREF="HowToBuildFromSource-node1.html">
+<IMG WIDTH="65" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="contents" SRC="contents.png"></A> 
+<A NAME="tex2html6"
+  HREF="HowToBuildFromSource-node6.html">
+<IMG WIDTH="43" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="index" SRC="index.png"></A> 
+<BR>
+<B> Next:</B> <A NAME="tex2html9"
+  HREF="HowToBuildFromSource-node1.html">Contents</A>
+ &nbsp; <B>  <A NAME="tex2html5"
+  HREF="HowToBuildFromSource-node1.html">Contents</A></B> 
+ &nbsp; <B>  <A NAME="tex2html7"
+  HREF="HowToBuildFromSource-node6.html">Index</A></B> 
+<BR>
+<BR></DIV>
+<!--End of Navigation Panel-->
+
+
+<H1 ALIGN="CENTER">Building Unix Squeak (&gt;= 3.2) from source</H1>
+<DIV CLASS="author_info">
+
+<P ALIGN="CENTER"><STRONG>Ian Piumarta</STRONG></P>
+<P ALIGN="CENTER"><I><A NAME="tex2html1"
+  HREF="mailto:ian.piumarta@squeakland.org"><TT>&lt;ian.piumarta@squeakland.org&gt;</TT></A></I></P>
+<P ALIGN="CENTER"><STRONG><SMALL CLASS="SMALL">Last edited: 2005-03-17 12:43:23 by piumarta on squeak.hpl.hp.com
+
+<BR>
+Translated to .ps/.pdf/.html/.txt: March 17, 2005</SMALL></STRONG></P>
+</DIV>
+<BR><HR>
+<!--Table of Child-Links-->
+<A NAME="CHILD_LINKS"></A>
+
+<UL CLASS="ChildLinks">
+<LI><A NAME="tex2html10"
+  HREF="HowToBuildFromSource-node1.html">Contents</A>
+<LI><A NAME="tex2html11"
+  HREF="HowToBuildFromSource-node2.html"><SPAN CLASS="arabic">0</SPAN> The easy way</A>
+<LI><A NAME="tex2html12"
+  HREF="HowToBuildFromSource-node3.html"><SPAN CLASS="arabic">1</SPAN> The hard way: configure, build, install</A>
+<LI><A NAME="tex2html13"
+  HREF="HowToBuildFromSource-node4.html"><SPAN CLASS="arabic">2</SPAN> Generating your own VM and plugin sources</A>
+<UL>
+<LI><A NAME="tex2html14"
+  HREF="HowToBuildFromSource-node4.html#SECTION00041000000000000000"><SPAN CLASS="arabic">2</SPAN>.<SPAN CLASS="arabic">1</SPAN> How <TT>configure</TT> finds the <TT>src</TT> directory</A>
+</UL>
+<BR>
+<LI><A NAME="tex2html15"
+  HREF="HowToBuildFromSource-node5.html"><SPAN CLASS="arabic">3</SPAN> Adding your own plugins</A>
+<UL>
+<LI><A NAME="tex2html16"
+  HREF="HowToBuildFromSource-node5.html#SECTION00051000000000000000"><SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">1</SPAN> Plugin-specific configuration</A>
+<UL>
+<LI><A NAME="tex2html17"
+  HREF="HowToBuildFromSource-node5.html#SECTION00051100000000000000"><SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">1</SPAN>.<SPAN CLASS="arabic">1</SPAN> <TT>AC_PLUGIN_CHECK_LIB(<SPAN  CLASS="textit">lib</SPAN>,<SPAN  CLASS="textit">func</SPAN>)</TT></A>
+<LI><A NAME="tex2html18"
+  HREF="HowToBuildFromSource-node5.html#SECTION00051200000000000000"><SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">1</SPAN>.<SPAN CLASS="arabic">2</SPAN> <TT>AC_PLUGIN_DEFINE_UNQUOTED(<SPAN  CLASS="textit">keyword</SPAN>,<SPAN  CLASS="textit">text</SPAN>)</TT></A>
+<LI><A NAME="tex2html19"
+  HREF="HowToBuildFromSource-node5.html#SECTION00051300000000000000"><SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">1</SPAN>.<SPAN CLASS="arabic">3</SPAN> Plugin-specific variables</A>
+</UL>
+<LI><A NAME="tex2html20"
+  HREF="HowToBuildFromSource-node5.html#SECTION00052000000000000000"><SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">2</SPAN> Plugin-specific <TT>Makefile</TT> declarations and rules</A>
+<UL>
+<LI><A NAME="tex2html21"
+  HREF="HowToBuildFromSource-node5.html#SECTION00052100000000000000"><SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">2</SPAN>.<SPAN CLASS="arabic">1</SPAN> The anatomy of a plugin's <TT>Makefile</TT></A>
+<LI><A NAME="tex2html22"
+  HREF="HowToBuildFromSource-node5.html#SECTION00052200000000000000"><SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">2</SPAN>.<SPAN CLASS="arabic">2</SPAN> A note about <TT>$(COMPILE)</TT> and <TT>$(LINK)</TT> commands</A>
+<LI><A NAME="tex2html23"
+  HREF="HowToBuildFromSource-node5.html#SECTION00052300000000000000"><SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">2</SPAN>.<SPAN CLASS="arabic">3</SPAN> Specifying additional source directories</A>
+<LI><A NAME="tex2html24"
+  HREF="HowToBuildFromSource-node5.html#SECTION00052400000000000000"><SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">2</SPAN>.<SPAN CLASS="arabic">4</SPAN> Including additional material in the default <TT>Makefile</TT></A>
+<LI><A NAME="tex2html25"
+  HREF="HowToBuildFromSource-node5.html#SECTION00052500000000000000"><SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">2</SPAN>.<SPAN CLASS="arabic">5</SPAN> Replacing the default <TT>Makefile</TT> entirely</A>
+</UL>
+<LI><A NAME="tex2html26"
+  HREF="HowToBuildFromSource-node5.html#SECTION00053000000000000000"><SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">3</SPAN> Examples taken from existing plugins</A>
+<UL>
+<LI><A NAME="tex2html27"
+  HREF="HowToBuildFromSource-node5.html#SECTION00053100000000000000"><SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">1</SPAN> Configuration</A>
+<LI><A NAME="tex2html28"
+  HREF="HowToBuildFromSource-node5.html#SECTION00053200000000000000"><SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">2</SPAN> Customising the <TT>Makefile</TT></A>
+</UL>
+<LI><A NAME="tex2html29"
+  HREF="HowToBuildFromSource-node5.html#SECTION00054000000000000000"><SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">4</SPAN> Coping with VMMaker quirks</A>
+<LI><A NAME="tex2html30"
+  HREF="HowToBuildFromSource-node5.html#SECTION00055000000000000000"><SPAN CLASS="arabic">3</SPAN>.<SPAN CLASS="arabic">5</SPAN> If all else fails</A>
+</UL>
+<BR>
+<LI><A NAME="tex2html31"
+  HREF="HowToBuildFromSource-node6.html">Index</A>
+<LI><A NAME="tex2html32"
+  HREF="HowToBuildFromSource-node7.html">About this document ...</A>
+</UL>
+<!--End of Table of Child-Links-->
+<BR><HR>
+<ADDRESS>
+
+2005-03-17
+</ADDRESS>
+</BODY>
+</HTML>

@@ -1,0 +1,22 @@
+# Makefile for custom window support				-*- makefile -*-
+# 
+# Last edited: 2005-04-06 05:20:50 by piumarta on pauillac.hpl.hp.com
+
+[make_cfg]
+[make_plg]
+
+TARGET		= vm-display-custom$a
+OBJS		= sqUnixCustomWindow$o
+
+XINCLUDES	= [includes] \
+		  -I$(topdir)/platforms/Cross/plugins/FilePlugin \
+		  -I$(topdir)/platforms/Cross/plugins/B3DAcceleratorPlugin \
+		  -I$(topdir)/platforms/unix/plugins/B3DAcceleratorPlugin
+
+$(TARGET) : $(OBJS) Makefile
+	$(LINK) $(TARGET) $(OBJS) ## put additional libraries here
+	$(RANLIB) $(TARGET)
+
+[make_targets]
+
+.force :

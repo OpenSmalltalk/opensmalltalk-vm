@@ -1,0 +1,12 @@
+This directory contains scripts that can buld various VMMaker and Spur images.
+As of early 2015 the default VMMaker build script is
+	buildspurtrunkvmmakerimage.sh
+and it builds a Spur VMMaker image, called SpurVMMaker.image.
+The buildspurtrunkreader.sh script builds a Spur image containing a simple REPL
+that is convenient for testing in the simulator, called spurreader.image.
+
+The standard Cog VMMaker image is built loading the latest VMMaker.oscog and Cog
+packages, plus support packages, into an updated Squeak Spur trunk image.
+Once you start-up the image various workspaces contain useful expressions to
+run the simulator, test slang output and so on.  The "do..." menu off the main
+screen menu also contains expressions to generate VM sources.

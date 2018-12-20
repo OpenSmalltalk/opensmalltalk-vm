@@ -1,0 +1,24 @@
+//
+// Prefix header for all Objective-C files in the iOS platform.  The main function is to
+// provide macros that hide the distinction between the ARC and old manual RC regime.
+// See https://developer.apple.com/library/content/releasenotes/
+//					ObjectiveC/RN-TransitioningToARC/Introduction/Introduction.html
+//
+
+#ifdef __OBJC__
+# import <Cocoa/Cocoa.h>
+#endif
+
+#if __has_feature(objc_arc)
+# define RELEASEOBJ(o) o
+# define RETAINOBJ(o) o
+# define AUTORELEASEOBJ(o) o
+# define SUPERDEALLOC
+# define DEALLOCOBJ(o) o
+#else
+# define RELEASEOBJ(o) [o release]
+# define RETAINOBJ(o) [o retain]
+# define AUTORELEASEOBJ(o) [o autorelease]
+# define SUPERDEALLOC [super dealloc];
+# define DEALLOCOBJ(o) [o dealloc]
+#endif

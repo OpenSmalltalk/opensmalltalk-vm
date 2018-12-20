@@ -1,0 +1,29 @@
+##############################################################################
+# Generic Makefile for Mac OS X Newspeak or Glue Cocoa VM
+#
+
+# The caller should set VMSRCDIR to point to the relevant VM source
+# e.g. VMSRCDIR:= ../../nsspursrc/vm
+
+VM:=NewspeakVirtualMachine
+SYSTEM:=Newspeak
+APPSOURCE?=SqueakV50.sources
+SOURCEFILE?=SqueakV50.sources
+
+APPPOST:=renameExe renameIcon
+
+# Now include the Makefile proper, which is common to all Mac OS builds.
+#
+include ../common/Makefile.app
+
+# Rename NewspeakVirtualMachine to the problematic Newspeak Virtual Machine
+
+renameExe: $(APP)/Contents/MacOS/NewspeakVirtualMachine
+	mv $(APP)/Contents/MacOS/NewspeakVirtualMachine \
+		"$(APP)/Contents/MacOS/Newspeak Virtual Machine"
+
+# Likewise, rename NewspeakVirtualMachine.icns
+
+renameIcon: $(APP)/Contents/Resources/NewspeakVirtualMachine.icns
+	mv $(APP)/Contents/Resources/NewspeakVirtualMachine.icns \
+		"$(APP)/Contents/Resources/Newspeak Virtual Machine.icns"

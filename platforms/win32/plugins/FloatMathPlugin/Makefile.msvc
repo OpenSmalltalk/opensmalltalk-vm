@@ -1,0 +1,5 @@
+include ../../Makefile.plugin
+
+# MSVC v6 (as does gcc 2.95.x) screws up the FloatMathPlugin under optimization
+# SO disable optmization
+OFLAGS= /Od
