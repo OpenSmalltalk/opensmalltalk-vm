@@ -15,7 +15,9 @@ Builds are tested automatically on each commit on Travis and Appveyor, for
 Windows 32, Mac OS X 32 and 64, and on Linux 32, 64, and ARM. Squeak, Pharo, and
 Newspeak VMs are built with and without JIT, with and without Spur, and with and
 without Sista, as available per platform. All build artifacts are uploaded to
-Bintray.
+Bintray.  If you wish to commit *without* triggering a build, for example if you
+were to only edit this documentation, then if you add **[ci skip]** somewhere in
+your commit message, Travis and Appveyor will *not* build that commit.
 
 ### Important notice for Developers:
 We rely on source file substitutions in the src tree, specifically,
