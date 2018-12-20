@@ -29,7 +29,7 @@ BaselineOfVMMaker >> baseline: spec [
 			spec
 				package: #'VMMakerCompatibilityForPharo6';
 				package: #'Balloon-Engine-Pools';
-				package: #'BytecodeSets';
+				package: #'BytecodeSets-NewsqueakV4';
 				package: #'VMMaker';
 				package: #'Cog';
 				package: #'CogTools';
