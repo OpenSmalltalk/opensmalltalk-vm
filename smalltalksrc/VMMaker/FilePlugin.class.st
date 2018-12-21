@@ -887,10 +887,10 @@ FilePlugin >> primitiveFileRename [
 	oldNameSize := interpreterProxy byteSizeOf: oldNamePointer.
 	"If the security plugin can be loaded, use it to check for rename permission.
 	If not, assume it's ok"
-	sCRFfn ~= 0
-		ifTrue: [okToRename := self cCode: ' ((sqInt (*)(char *, sqInt))sCRFfn)(oldNameIndex, oldNameSize)'.
-			okToRename
-				ifFalse: [^interpreterProxy primitiveFail]].
+	sCRFfn ~= 0 ifTrue: 
+		[okToRename := self cCode: ' ((sqInt (*)(char *, sqInt))sCRFfn)(oldNameIndex, oldNameSize)'
+			inSmalltalk: [true].
+		okToRename ifFalse: [^interpreterProxy primitiveFail]].
 	self
 		sqFileRenameOld: oldNameIndex Size: oldNameSize
 		New: newNameIndex Size: newNameSize.
