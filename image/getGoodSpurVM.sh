@@ -52,7 +52,14 @@ else
 				exit
 			fi
 			curl -L "$URL" -o "$LATESTVM"
-			tar xzf "$LATESTVM"
+			# bug in bintray: on a 404 error,
+			# it will return a 200 with garbage data
+			if [[ $(file "$LATESTVM" | grep 'gzip compressed data') ]]; then 
+			  tar xzf "$LATESTVM"
+			else
+			  echo No gzip data at "$URL"
+			  exit 1
+			fi
 			mv sqcogspurlinuxht $VM
 			rm -f "$LATESTVM"
 		fi
