@@ -58,7 +58,7 @@ else
 			  tar xzf "$LATESTVM"
 			else
 			  echo No gzip data at "$URL"
-			  exit
+			  exit 1
 			fi
 			mv sqcogspur64linuxht $VM
 			rm -f "$LATESTVM"
