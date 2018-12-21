@@ -9,7 +9,7 @@ if [ "$1" = -vm -a -n "$2" -a -x "`which "$2"`" ]; then
 	shift;shift
 else
 	echo checking for latest 64-bit VM on bintray...
-	LATESTRELEASE=`curl -s -L "https://bintray.com/opensmalltalk/notifications" | grep 'has released version' | head -1 | sed 's/^.*[0-9]">\([0-9][0-9]*\).*$/\1/'`
+	LATESTRELEASE=`curl -s -L "https://bintray.com/opensmalltalk/notifications" | grep 'has released version' | sort -r | head -1 | sed 's/^.*[0-9]">\([0-9][0-9]*\).*$/\1/'`
 	if [ -z "$LATESTRELEASE" ]; then
 		echo "cannot find latest release on https://bintray.com/opensmalltalk/notifications" 1>&2
 		echo "If you've built your own VM you can substitute that using the -vm myvm argument to this script." 1>&2
