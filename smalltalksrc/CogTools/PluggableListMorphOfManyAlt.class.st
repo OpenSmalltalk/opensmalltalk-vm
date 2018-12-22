@@ -5,9 +5,6 @@ Class {
 	#name : #PluggableListMorphOfManyAlt,
 	#superclass : #PluggableListMorph,
 	#instVars : [
-		'dragOnOrOff',
-		'getSelectionListSelector',
-		'setSelectionListSelector',
 		'currentRow'
 	],
 	#category : #'CogTools-VMProfiler'
