@@ -18,11 +18,12 @@ ThreadedARMFFIPlugin class >> calloutStateClass [
 
 { #category : #translation }
 ThreadedARMFFIPlugin class >> identifyingPredefinedMacros [
-	^#('__ARM_ARCH__' '__arm__' '__arm32__' 'ARM32')
+	^#('__ARM_ARCH__' " '__arm__' " '__arm32__' 'ARM32')
 ]
 
 { #category : #'class initialization' }
 ThreadedARMFFIPlugin class >> initialize [
+	super initialize.
 	NumIntRegArgs := 4.
 	NumFloatRegArgs := 16
 ]
@@ -152,10 +153,10 @@ ThreadedARMFFIPlugin >> ffiPushPointer: pointer in: calloutState [
 			[calloutState integerRegisters at: calloutState integerRegisterIndex put: pointer asInteger.
 			 calloutState integerRegisterIndex: calloutState integerRegisterIndex + 1]
 		ifFalse:
-			[calloutState currentArg + 4 > calloutState limit ifTrue:
+			[calloutState currentArg + self wordSize > calloutState limit ifTrue:
 				[^FFIErrorCallFrameTooBig].
 			 interpreterProxy longAt: calloutState currentArg put: pointer.
-			 calloutState currentArg: calloutState currentArg + 4].
+			 calloutState currentArg: calloutState currentArg + self wordSize].
 	^0
 ]
 
@@ -168,10 +169,10 @@ ThreadedARMFFIPlugin >> ffiPushSignedByte: value in: calloutState [
 			[calloutState integerRegisters at: calloutState integerRegisterIndex put: (self cCoerceSimple: value to: #'signed char').
 			 calloutState integerRegisterIndex: calloutState integerRegisterIndex + 1]
 		ifFalse:
-			[calloutState currentArg + 4 > calloutState limit ifTrue:
+			[calloutState currentArg + self wordSize > calloutState limit ifTrue:
 				[^FFIErrorCallFrameTooBig].
 			 interpreterProxy longAt: calloutState currentArg put: (self cCoerceSimple: value to: #'signed char').
-			 calloutState currentArg: calloutState currentArg + 4].
+			 calloutState currentArg: calloutState currentArg + self wordSize].
 	^0
 ]
 
@@ -184,10 +185,10 @@ ThreadedARMFFIPlugin >> ffiPushSignedChar: value in: calloutState [
 			[calloutState integerRegisters at: calloutState integerRegisterIndex put: (self cCoerceSimple: value to: #'signed char').
 			 calloutState integerRegisterIndex: calloutState integerRegisterIndex + 1]
 		ifFalse:
-			[calloutState currentArg + 4 > calloutState limit ifTrue:
+			[calloutState currentArg + self wordSize > calloutState limit ifTrue:
 				[^FFIErrorCallFrameTooBig].
 			 interpreterProxy longAt: calloutState currentArg put: (self cCoerceSimple: value to: #'signed char').
-			 calloutState currentArg: calloutState currentArg + 4].
+			 calloutState currentArg: calloutState currentArg + self wordSize].
 	^0
 ]
 
@@ -200,10 +201,10 @@ ThreadedARMFFIPlugin >> ffiPushSignedInt: value in: calloutState [
 			[calloutState integerRegisters at: calloutState integerRegisterIndex put: value.
 			 calloutState integerRegisterIndex: calloutState integerRegisterIndex + 1]
 		ifFalse:
-			[calloutState currentArg + 4 > calloutState limit ifTrue:
+			[calloutState currentArg + self wordSize > calloutState limit ifTrue:
 				[^FFIErrorCallFrameTooBig].
 			 interpreterProxy longAt: calloutState currentArg put: value.
-			 calloutState currentArg: calloutState currentArg + 4].
+			 calloutState currentArg: calloutState currentArg + self wordSize].
 	^0
 
 ]
@@ -224,7 +225,7 @@ ThreadedARMFFIPlugin >> ffiPushSignedLongLong: value in: calloutState [
 			 calloutState integerRegisterIndex: NumIntRegArgs.
 			 interpreterProxy
 				longAt: calloutState currentArg put: (self cCoerceSimple: value to: #usqInt);
-				longAt: calloutState currentArg + 4 put: (self cCoerceSimple: value >> 32 to: #usqInt).
+				longAt: calloutState currentArg + self wordSize put: (self cCoerceSimple: value >> 32 to: #usqInt).
 			 calloutState currentArg: calloutState currentArg + 8].
 	^0
 ]
@@ -238,10 +239,10 @@ ThreadedARMFFIPlugin >> ffiPushSignedShort: value in: calloutState [
 			[calloutState integerRegisters at: calloutState integerRegisterIndex put: (self cCoerceSimple: value to: #'signed short').
 			 calloutState integerRegisterIndex: calloutState integerRegisterIndex + 1]
 		ifFalse:
-			[calloutState currentArg + 4 > calloutState limit ifTrue:
+			[calloutState currentArg + self wordSize > calloutState limit ifTrue:
 				[^FFIErrorCallFrameTooBig].
 			 interpreterProxy longAt: calloutState currentArg put: (self cCoerceSimple: value to: #'signed short').
-			 calloutState currentArg: calloutState currentArg + 4].
+			 calloutState currentArg: calloutState currentArg + self wordSize].
 	^0
 ]
 
@@ -260,10 +261,10 @@ ThreadedARMFFIPlugin >> ffiPushSingleFloat: value in: calloutState [
 					[calloutState floatRegisters at: calloutState floatRegisterIndex  put: value.
 					 calloutState floatRegisterIndex: calloutState floatRegisterIndex + 1]]
 		ifFalse:
-			[calloutState currentArg + 4 > calloutState limit ifTrue:
+			[calloutState currentArg + self wordSize > calloutState limit ifTrue:
 				[^FFIErrorCallFrameTooBig].
 			 interpreterProxy storeSingleFloatAtPointer: calloutState currentArg from: value.
-			 calloutState currentArg: calloutState currentArg + 4].
+			 calloutState currentArg: calloutState currentArg + self wordSize].
 	^0
 ]
 
@@ -321,10 +322,10 @@ ThreadedARMFFIPlugin >> ffiPushUnsignedByte: value in: calloutState [
 			[calloutState integerRegisters at: calloutState integerRegisterIndex put: (self cCoerceSimple: value to: #'unsigned char').
 			 calloutState integerRegisterIndex: calloutState integerRegisterIndex + 1]
 		ifFalse:
-			[calloutState currentArg + 4 > calloutState limit ifTrue:
+			[calloutState currentArg + self wordSize > calloutState limit ifTrue:
 				[^FFIErrorCallFrameTooBig].
 			 interpreterProxy longAt: calloutState currentArg put: (self cCoerceSimple: value to: #'unsigned char').
-			 calloutState currentArg: calloutState currentArg + 4].
+			 calloutState currentArg: calloutState currentArg + self wordSize].
 	^0
 
 ]
@@ -338,10 +339,10 @@ ThreadedARMFFIPlugin >> ffiPushUnsignedChar: value in: calloutState [
 			[calloutState integerRegisters at: calloutState integerRegisterIndex put: (self cCoerceSimple: value to: #'unsigned char').
 			 calloutState integerRegisterIndex: calloutState integerRegisterIndex + 1]
 		ifFalse:
-			[calloutState currentArg + 4 > calloutState limit ifTrue:
+			[calloutState currentArg + self wordSize > calloutState limit ifTrue:
 				[^FFIErrorCallFrameTooBig].
 			 interpreterProxy longAt: calloutState currentArg put: (self cCoerceSimple: value to: #'unsigned char').
-			 calloutState currentArg: calloutState currentArg + 4].
+			 calloutState currentArg: calloutState currentArg + self wordSize].
 	^0
 ]
 
@@ -354,10 +355,10 @@ ThreadedARMFFIPlugin >> ffiPushUnsignedInt: value in: calloutState [
 			[calloutState integerRegisters at: calloutState integerRegisterIndex put: value.
 			 calloutState integerRegisterIndex: calloutState integerRegisterIndex + 1]
 		ifFalse:
-			[calloutState currentArg + 4 > calloutState limit ifTrue:
+			[calloutState currentArg + self wordSize > calloutState limit ifTrue:
 				[^FFIErrorCallFrameTooBig].
 			 interpreterProxy longAt: calloutState currentArg put: value.
-			 calloutState currentArg: calloutState currentArg + 4].
+			 calloutState currentArg: calloutState currentArg + self wordSize].
 	^0
 
 
@@ -379,7 +380,7 @@ ThreadedARMFFIPlugin >> ffiPushUnsignedLongLong: value in: calloutState [
 			 calloutState integerRegisterIndex: NumIntRegArgs.
 			 interpreterProxy
 				longAt: calloutState currentArg put: (self cCoerceSimple: value to: #usqInt);
-				longAt: calloutState currentArg + 4 put: (self cCoerceSimple: value >> 32 to: #usqInt).
+				longAt: calloutState currentArg + self wordSize put: (self cCoerceSimple: value >> 32 to: #usqInt).
 			 calloutState currentArg: calloutState currentArg + 8].
 	^0
 
@@ -394,10 +395,10 @@ ThreadedARMFFIPlugin >> ffiPushUnsignedShort: value in: calloutState [
 			[calloutState integerRegisters at: calloutState integerRegisterIndex put: (self cCoerceSimple: value to: #'unsigned short').
 			 calloutState integerRegisterIndex: calloutState integerRegisterIndex + 1]
 		ifFalse:
-			[calloutState currentArg + 4 > calloutState limit ifTrue:
+			[calloutState currentArg + self wordSize > calloutState limit ifTrue:
 				[^FFIErrorCallFrameTooBig].
 			 interpreterProxy longAt: calloutState currentArg put: (self cCoerceSimple: value to: #'unsigned short').
-			 calloutState currentArg: calloutState currentArg + 4].
+			 calloutState currentArg: calloutState currentArg + self wordSize].
 	^0
 ]
 
@@ -427,5 +428,11 @@ ThreadedARMFFIPlugin >> ffiReturnStruct: longLongRet ofType: ffiRetType in: call
 { #category : #marshalling }
 ThreadedARMFFIPlugin >> returnStructInRegisters: returnStructSize [
 	"Answer if a struct result of a given size is returned in memory or not."
-	^returnStructSize <= 4
+	^returnStructSize <= self wordSize
+]
+
+{ #category : #'simulation support' }
+ThreadedARMFFIPlugin >> wordSize [
+
+	^ 4  "arm32"
 ]
