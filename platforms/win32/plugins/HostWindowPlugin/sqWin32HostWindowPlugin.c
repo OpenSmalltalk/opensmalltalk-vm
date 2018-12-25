@@ -423,7 +423,7 @@ sqInt ioSetIconOfWindow(sqInt windowIndex, char * iconPath, sqInt sizeOfPath) {
 	HICON hIcon = (HICON)LoadImage(NULL, iconPath, IMAGE_ICON, 0, 0, LR_LOADFROMFILE);
 	if (hIcon == 0)
 		return -2;
-	SendMessage(hwnd, WM_SETICON, ICON_BIG, (LONG)hIcon); 
+	SendMessage(hwnd, WM_SETICON, ICON_BIG, (LONG_PTR)hIcon); 
 	return 0;
 }
 
