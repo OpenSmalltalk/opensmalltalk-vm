@@ -65,6 +65,11 @@ sqLong ioHighResClock(void) {
 						: "=a" (value)
 						: 
 						: "rdx");
+#elif defined(_MSC_VER)
+  LARGE_INTEGER aux;
+  aux.QuadPart = 0;
+  QueryPerformanceCounter(&aux);
+  value = aux.QuadPart;
 #else
 # error "no high res clock defined"
 #endif
