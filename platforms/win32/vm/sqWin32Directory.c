@@ -19,6 +19,17 @@
 # include <sys/types.h>
 # include <sys/stat.h>
 
+/**
+ * Posix permissions are not defined in Windows, except when using
+ * Mingw or Cygwin. Since these constants are just standard, we define
+ * them for our purpose of emulating permissions.
+ */
+#ifndef S_IRUSR
+#define S_IRUSR 0400
+#define S_IWUSR 0200
+#define S_IXUSR 0100
+#endif
+
 extern struct VirtualMachine *interpreterProxy;
 
 #define FAIL() { return interpreterProxy->primitiveFail(); }
