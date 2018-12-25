@@ -173,7 +173,7 @@ static sqInt sqSetupCert(sqSSL *ssl, char *certName, int server) {
 	char  bFriendlyName[MAX_NAME_SIZE];
 
 	if(certName) {
-		hStore = CertOpenSystemStore(0, L"MY");
+		hStore = CertOpenSystemStore(0, TEXT("MY"));
 		if(!hStore) {
 			if(ssl->loglevel) printf("sqSetupCert: CertOpenSystemStore failed\n");
 			return 0;
@@ -923,7 +923,7 @@ static sqInt sqAddPfxCertToStore(char *pfxData, sqInt pfxLen, char *passData, sq
 	if(!pfxStore) return 0;
 
 	/* And copy the certificates to MY store */
-	myStore = CertOpenSystemStore(0, L"MY");
+	myStore = CertOpenSystemStore(0, TEXT("MY"));
 	pContext = NULL;
 	while(pContext = CertEnumCertificatesInStore(pfxStore, pContext)) {
 		CertAddCertificateContextToStore(myStore, pContext, CERT_STORE_ADD_REPLACE_EXISTING, NULL);
