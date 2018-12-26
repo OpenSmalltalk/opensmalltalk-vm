@@ -102,7 +102,7 @@ static void sqPrintSBD(char *title, SecBufferDesc sbd) {
 	printf("%s\n", title);
 	for(i=0; i<sbd.cBuffers; i++) {
 		SecBuffer *buf = sbd.pBuffers + i;
-		printf("\tbuf[%d]: %d (%d bytes) ptr=%x\n", i,buf->BufferType, buf->cbBuffer, (int)buf->pvBuffer);
+		printf("\tbuf[%d]: %d (%d bytes) ptr=%"PRIxSQPTR"\n", i,buf->BufferType, buf->cbBuffer, (sqIntptr_t)buf->pvBuffer);
 	}
 }
 
@@ -505,7 +505,7 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 		if (!ssl->dataBuf) return SQSSL_OUT_OF_MEMORY;
 	}
 	if(ssl->loglevel) 
-		printf("sqConnectSSL: input token %d bytes\n", srcLen);
+		printf("sqConnectSSL: input token %" PRIdSQINT " bytes\n", srcLen);
 	memcpy(ssl->dataBuf + ssl->dataLen, srcBuf, srcLen);
 	ssl->dataLen += srcLen;
 
@@ -737,7 +737,7 @@ sqInt sqEncryptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 
 	if(ssl == NULL || ssl->state != SQSSL_CONNECTED) return SQSSL_INVALID_STATE;
 
-	if(ssl->loglevel) printf("sqEncryptSSL: Encrypting %d bytes\n", srcLen);
+	if(ssl->loglevel) printf("sqEncryptSSL: Encrypting %" PRIdSQINT " bytes\n", srcLen);
 
 	if(srcLen > (int)ssl->sslSizes.cbMaximumMessage) 
 		return SQSSL_INPUT_TOO_LARGE;
@@ -810,7 +810,7 @@ sqInt sqDecryptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 		ssl->dataBuf = realloc(ssl->dataBuf, ssl->dataMax);
 		if(!ssl->dataBuf) return SQSSL_OUT_OF_MEMORY;
 	}
-	if(ssl->loglevel) printf("sqDecryptSSL: Input data %d bytes\n", srcLen);
+	if(ssl->loglevel) printf("sqDecryptSSL: Input data %" PRIdSQINT " bytes\n", srcLen);
 	memcpy(ssl->dataBuf + ssl->dataLen, srcBuf, srcLen);
 	ssl->dataLen += srcLen;
 
@@ -847,7 +847,7 @@ sqInt sqDecryptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 		int buftype = ssl->inbuf[i].BufferType;
 		int count = ssl->inbuf[i].cbBuffer;
 		char *buffer = ssl->inbuf[i].pvBuffer;
-		if(ssl->loglevel) printf("buf[%d]: %d (%d bytes) ptr=%x\n", i,buftype, count, (int)buffer);
+		if(ssl->loglevel) printf("buf[%d]: %d (%d bytes) ptr=%"PRIxSQPTR"\n", i,buftype, count, (sqIntptr_t)buffer);
 		if(buftype == SECBUFFER_DATA) {
 			if(count > dstLen) return SQSSL_BUFFER_TOO_SMALL;
 			memcpy(dstBuf, buffer, count);
@@ -1014,7 +1014,7 @@ sqInt sqSetIntPropertySSL(sqInt handle, sqInt propID, sqInt propValue) {
 	switch(propID) {
 		case SQSSL_PROP_LOGLEVEL: ssl->loglevel = propValue; break;
 		default:
-			if(ssl->loglevel) printf("sqSetIntPropertySSL: Unknown property ID %d\n", propID);
+			if(ssl->loglevel) printf("sqSetIntPropertySSL: Unknown property ID %" PRIdSQINT "\n", propID);
 			return 0;
 	}
 	return 1;
