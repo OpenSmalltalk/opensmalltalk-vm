@@ -18144,14 +18144,14 @@ StackInterpreter >> printHexnp: n [
 	<api>
 	<var: #n type: #usqInt>
 	"Print n in hex,  in the form '0x1234', unpadded"
-	self print: '0x%lx' f: n
+	^'0x%lx' printf: n
 ]
 
 { #category : #'debug printing' }
 StackInterpreter >> printHexnpnp: n [
 	<var: #n type: #usqInt>
 	"Print n in hex, in the form '1234', unpadded"
-	self print: '%lx' f: n
+	^'%lx' printf: n
 ]
 
 { #category : #'debug printing' }
