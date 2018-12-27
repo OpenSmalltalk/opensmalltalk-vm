@@ -3246,7 +3246,7 @@ void ShowSplashScreen(void) {
   if(!hSplashDIB) {
     /* ignore the common case but print failures for the others */
     if(GetLastError() != ERROR_FILE_NOT_FOUND)
-      printLastError("LoadImage failed");
+      printLastError(TEXT("LoadImage failed"));
     return;
   }
   GetObject(hSplashDIB, sizeof(bm), &bm);

@@ -352,19 +352,19 @@ void pluginGetURLRequest(int id, void* urlIndex, int urlSize,
   SetLastError(0);
   ok = WriteFile(hBrowserPipe, &urlSize, 4, &dwWritten, NULL);
   if(!ok || dwWritten != 4)
-    printLastError("Failed to write url size");
+    printLastError(TEXT("Failed to write url size"));
   if(urlSize > 0) {
     ok = WriteFile(hBrowserPipe, urlIndex, urlSize, &dwWritten, NULL);
     if(!ok || dwWritten != urlSize)
-      printLastError("Failed to write url request");
+      printLastError(TEXT("Failed to write url request"));
   }
   ok = WriteFile(hBrowserPipe, &targetSize, 4, &dwWritten, NULL);
   if(!ok || dwWritten != 4)
-    printLastError("Failed to write target size");
+    printLastError(TEXT("Failed to write target size"));
   if(targetSize > 0) {
     ok = WriteFile(hBrowserPipe, targetIndex, targetSize, &dwWritten, NULL);
     if(!ok || dwWritten != targetSize)
-      printLastError("Failed to write url request");
+      printLastError(TEXT("Failed to write url request"));
   }
 }
 
@@ -386,29 +386,29 @@ void pluginPostURLRequest(int id, void* urlIndex, int urlSize,
   SetLastError(0);
   ok = WriteFile(hBrowserPipe, &urlSize, 4, &dwWritten, NULL);
   if(!ok || dwWritten != 4)
-    printLastError("Failed to write url size");
+    printLastError(TEXT("Failed to write url size"));
   if(urlSize > 0) {
     ok = WriteFile(hBrowserPipe, urlIndex, urlSize, &dwWritten, NULL);
     if(!ok || dwWritten != urlSize)
-      printLastError("Failed to write url request");
+      printLastError(TEXT("Failed to write url request"));
   }
 
   ok = WriteFile(hBrowserPipe, &targetSize, 4, &dwWritten, NULL);
   if(!ok || dwWritten != 4)
-    printLastError("Failed to write url size");
+    printLastError(TEXT("Failed to write url size"));
   if(targetSize > 0) {
     ok = WriteFile(hBrowserPipe, targetIndex, targetSize, &dwWritten, NULL);
     if(!ok || dwWritten != targetSize)
-      printLastError("Failed to write target request");
+      printLastError(TEXT("Failed to write target request"));
   }
 
   ok = WriteFile(hBrowserPipe, &postDataSize, 4, &dwWritten, NULL);
   if(!ok || dwWritten != 4)
-    printLastError("Failed to write post data size");
+    printLastError(TEXT("Failed to write post data size"));
   if(postDataSize > 0) {
     ok = WriteFile(hBrowserPipe, postDataIndex, postDataSize, &dwWritten, NULL);
     if(!ok || dwWritten != postDataSize)
-      printLastError("Failed to write data request");
+      printLastError(TEXT("Failed to write data request"));
   }
 }
 
@@ -428,7 +428,7 @@ void pluginSetBrowserPipe(MSG *msg)
   if(hBrowserPipe) CloseHandle(hBrowserPipe);
   hBrowserPipe = (HANDLE) msg->lParam;
   if(!CreatePipe(&hClientReadEnd, &hClientWriteEnd, NULL, 4096))
-    printLastError("CreatePipe failed");
+    printLastError(TEXT("CreatePipe failed"));
   
   /* And pass our the write end back to the plugin */
   PostMessage(browserWindow, g_WM_CLIENT_PIPE, (WPARAM) GetCurrentProcess(), (LPARAM) hClientWriteEnd);

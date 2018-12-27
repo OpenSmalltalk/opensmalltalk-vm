@@ -197,7 +197,7 @@ ioNewOSSemaphore(sqOSSemaphore *sem)
 							LONG_MAX, /* sky's the limit */
 							0 /* don't need no stinkin' name */);
 	if (!*sem)
-		printLastError("ioNewOSSemaphore CreateSemaphore");
+		printLastError(TEXT("ioNewOSSemaphore CreateSemaphore"));
 	return *sem ? 0 : GetLastError();
 }
 
