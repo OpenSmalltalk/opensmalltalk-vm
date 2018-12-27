@@ -2587,7 +2587,7 @@ sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
 
   if(lines == 0) {
     printLastError(TEXT("SetDIBitsToDevice failed"));
-    warnPrintf(TEXT("width=%" PRIdSQINT ",height=%" PRIdSQINT ",bits=%" PRIXSQINT ",dc=%" PRIXSQPTR "\n"),
+    warnPrintf(TEXT("width=%") TEXT(PRIdSQINT) TEXT(",height=%") TEXT(PRIdSQINT) TEXT(",bits=%") TEXT(PRIXSQINT) TEXT(",dc=%") TEXT(PRIXSQPTR) TEXT("\n"),
 	       width, height, dispBits,(usqIntptr_t)dc);
   }
   /* reverse the image bits if necessary */
