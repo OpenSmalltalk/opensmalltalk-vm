@@ -3308,6 +3308,7 @@ void HideSplashScreen(void) {
 /****************************************************************************/
 
 # define VMOPTION(arg) "-"arg
+# define TVMOPTION(arg) TEXT("-") TEXT(arg)
 
 /* print usage with different output levels */
 int printUsage(int level)
@@ -3320,43 +3321,43 @@ int printUsage(int level)
       abortMessage(TEXT("%s\n"),
                    TEXT("Usage: ") TEXT(VM_NAME) TEXT(" [vmOptions] imageFile [imageOptions]\n\n")
                    TEXT("vmOptions:")
-                   TEXT("\n\t") TEXT(VMOPTION("service:")) TEXT(" ServiceName \t(install VM as NT service)")
-                   TEXT("\n\t") TEXT(VMOPTION("headless")) TEXT(" \t\t(force VM to run headless)")
-                   TEXT("\n\t") TEXT(VMOPTION("timephases")) TEXT(" \t\t(print start load and run times)")
-                   TEXT("\n\t") TEXT(VMOPTION("log:")) TEXT(" LogFile \t\t(use LogFile for VM messages)")
-                   TEXT("\n\t") TEXT(VMOPTION("memory:")) TEXT(" megaByte \t(set memory to megaByte MB)")
+                   TEXT("\n\t") TVMOPTION("service:") TEXT(" ServiceName \t(install VM as NT service)")
+                   TEXT("\n\t") TVMOPTION("headless") TEXT(" \t\t(force VM to run headless)")
+                   TEXT("\n\t") TVMOPTION("timephases") TEXT(" \t\t(print start load and run times)")
+                   TEXT("\n\t") TVMOPTION("log:") TEXT(" LogFile \t\t(use LogFile for VM messages)")
+                   TEXT("\n\t") TVMOPTION("memory:") TEXT(" megaByte \t(set memory to megaByte MB)")
 #if STACKVM || NewspeakVM
-                   TEXT("\n\t") TEXT(VMOPTION("breaksel:")) TEXT(" string \t(call warning on send of sel for debug)")
+                   TEXT("\n\t") TVMOPTION("breaksel:") TEXT(" string \t(call warning on send of sel for debug)")
 #endif /* STACKVM || NewspeakVM */
 #if STACKVM
-                   TEXT("\n\t") TEXT(VMOPTION("breakmnu:")) TEXT(" string \t(call warning on MNU of sel for debug)")
-                   TEXT("\n\t") TEXT(VMOPTION("leakcheck:")) TEXT(" n \t\t(leak check on GC (1=full,2=incr,3=both))")
-                   TEXT("\n\t") TEXT(VMOPTION("eden:")) TEXT(" bytes \t\t(set eden memory size to bytes)")
-                   TEXT("\n\t") TEXT(VMOPTION("stackpages:")) TEXT(" n \t\t(use n stack pages)")
-                   TEXT("\n\t") TEXT(VMOPTION("numextsems:")) TEXT(" n \t\t(allow up to n external semaphores)")
-                   TEXT("\n\t") TEXT(VMOPTION("checkpluginwrites")) TEXT(" \t(check for writes past end of object in plugins")
-                   TEXT("\n\t") TEXT(VMOPTION("noheartbeat")) TEXT(" \t\t(no heartbeat for debug)")
+                   TEXT("\n\t") TVMOPTION("breakmnu:") TEXT(" string \t(call warning on MNU of sel for debug)")
+                   TEXT("\n\t") TVMOPTION("leakcheck:") TEXT(" n \t\t(leak check on GC (1=full,2=incr,3=both))")
+                   TEXT("\n\t") TVMOPTION("eden:") TEXT(" bytes \t\t(set eden memory size to bytes)")
+                   TEXT("\n\t") TVMOPTION("stackpages:") TEXT(" n \t\t(use n stack pages)")
+                   TEXT("\n\t") TVMOPTION("numextsems:") TEXT(" n \t\t(allow up to n external semaphores)")
+                   TEXT("\n\t") TVMOPTION("checkpluginwrites") TEXT(" \t(check for writes past end of object in plugins")
+                   TEXT("\n\t") TVMOPTION("noheartbeat") TEXT(" \t\t(no heartbeat for debug)")
 #endif /* STACKVM */
 #if STACKVM || NewspeakVM
 # if COGVM
-                   TEXT("\n\t") TEXT(VMOPTION("trace")) TEXT("[=num]\t\tenable tracing (optionally to a specific value)")
+                   TEXT("\n\t") TVMOPTION("trace") TEXT("[=num]\t\tenable tracing (optionally to a specific value)")
 # else
-                   TEXT("\n\t") TEXT(VMOPTION("sendtrace")) TEXT(" \t\t(trace sends to stdout for debug)")
+                   TEXT("\n\t") TVMOPTION("sendtrace") TEXT(" \t\t(trace sends to stdout for debug)")
 # endif
-                   TEXT("\n\t") TEXT(VMOPTION("warnpid")) TEXT("   \t\t(print pid in warnings)")
-                   TEXT("\n\t") TEXT(VMOPTION("[no]failonffiexception")) TEXT("   \t\t([never]always catch exceptions in FFI calls)")
+                   TEXT("\n\t") TVMOPTION("warnpid") TEXT("   \t\t(print pid in warnings)")
+                   TEXT("\n\t") TVMOPTION("[no]failonffiexception") TEXT("   \t\t([never]always catch exceptions in FFI calls)")
 #endif
 #if COGVM
-                   TEXT("\n\t") TEXT(VMOPTION("codesize:")) TEXT(" bytes \t(set machine-code memory size to bytes)")
-                   TEXT("\n\t") TEXT(VMOPTION("cogmaxlits:")) TEXT(" n \t\t(set max number of literals for methods to be compiled to machine code)")
-                   TEXT("\n\t") TEXT(VMOPTION("cogminjumps:")) TEXT(" n \t(set min number of backward jumps for interpreted methods to be considered for compilation to machine code)")
-                   TEXT("\n\t") TEXT(VMOPTION("tracestores")) TEXT(" \t\t(assert-check stores for debug)")
-                   TEXT("\n\t") TEXT(VMOPTION("reportheadroom")) TEXT(" \t(report unused stack headroom on exit)")
-                   TEXT("\n\t") TEXT(VMOPTION("dpcso:")) TEXT(" bytes \t\t(stack offset for prim calls for debug)")
+                   TEXT("\n\t") TVMOPTION("codesize:") TEXT(" bytes \t(set machine-code memory size to bytes)")
+                   TEXT("\n\t") TVMOPTION("cogmaxlits:") TEXT(" n \t\t(set max number of literals for methods to be compiled to machine code)")
+                   TEXT("\n\t") TVMOPTION("cogminjumps:") TEXT(" n \t(set min number of backward jumps for interpreted methods to be considered for compilation to machine code)")
+                   TEXT("\n\t") TVMOPTION("tracestores") TEXT(" \t\t(assert-check stores for debug)")
+                   TEXT("\n\t") TVMOPTION("reportheadroom") TEXT(" \t(report unused stack headroom on exit)")
+                   TEXT("\n\t") TVMOPTION("dpcso:") TEXT(" bytes \t\t(stack offset for prim calls for debug)")
 #endif /* COGVM */
 #if SPURVM
-                   TEXT("\n\t") TEXT(VMOPTION("maxoldspace:")) TEXT(" bytes \t(set max size of old space memory to bytes)")
-                   TEXT("\n\t") TEXT(VMOPTION("logscavenge")) TEXT(" \t\t(log scavenging to scavenge.log)")
+                   TEXT("\n\t") TVMOPTION("maxoldspace:") TEXT(" bytes \t(set max size of old space memory to bytes)")
+                   TEXT("\n\t") TVMOPTION("logscavenge") TEXT(" \t\t(log scavenging to scavenge.log)")
 #endif
                    TEXT("\n") TEXT("Options begin with single -, but -- prefix is silently accepted")
                    TEXT("\n") TEXT("Options with arguments -opt:n are also accepted with separators -opt n")
