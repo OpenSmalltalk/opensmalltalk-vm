@@ -10911,7 +10911,7 @@ Cogit >> printMethodHeader: cogMethod on: aStream [
 
 { #category : #printing }
 Cogit >> printNum: n [
-	<cmacro: '(n) printf("%" PRIdSQINT, (sqInt) (n)'>
+	<cmacro: '(n) printf("%" PRIdSQINT, (sqInt) (n))'>
 	coInterpreter transcript printNum: n
 ]
 
