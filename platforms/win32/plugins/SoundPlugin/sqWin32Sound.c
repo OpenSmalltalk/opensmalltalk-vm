@@ -408,7 +408,7 @@ snd_StartRecording(sqInt samplesPerSec, sqInt stereo, sqInt semaIndex) {
   recSemaphore = semaIndex;
   hRecThread = CreateThread(NULL, 0, recCallback, NULL, 0, &threadID);
   if(hRecThread == 0) {
-    printLastError("snd_StartRec: CreateThread failed");
+    printLastError(TEXT("snd_StartRec: CreateThread failed"));
     snd_StopRecording();
     return 0;
   }

@@ -342,7 +342,7 @@ void pluginGetURLRequest(int id, void* urlIndex, int urlSize,
   DWORD dwWritten;
   
   if(!hBrowserPipe) {
-    warnPrintf("Cannot submit URL request -- there is no connection to a browser\n");
+    warnPrintf(TEXT("Cannot submit URL request -- there is no connection to a browser\n"));
     return;
   }
 
@@ -376,7 +376,7 @@ void pluginPostURLRequest(int id, void* urlIndex, int urlSize,
   DWORD dwWritten;
 
   if(!hBrowserPipe) {
-    warnPrintf("Cannot submit URL post request -- there is no connection to a browser\n");
+    warnPrintf(TEXT("Cannot submit URL post request -- there is no connection to a browser\n"));
     return;
   }
 
