@@ -1201,7 +1201,7 @@ SimpleStackBasedCogit >> compileGetErrorCode [
 SimpleStackBasedCogit >> compileInterpreterPrimitive [
 	<inline: true>
 	| primitiveRoutine |
-	<var: #primitiveRoutine declareC: 'void (*primitiveRoutine)()'>
+	<var: #primitiveRoutine declareC: 'void (*primitiveRoutine)(void)'>
 	primitiveRoutine := coInterpreter
 							functionPointerForCompiledMethod: methodObj
 							primitiveIndex: primitiveIndex.
@@ -2648,7 +2648,7 @@ SimpleStackBasedCogit >> genPrimitiveClosureValue [
 	<var: #jumpFail4 type: #'AbstractInstruction *'>
 	<var: #jumpFailNArgs type: #'AbstractInstruction *'>
 	<var: #jumpBCMethod type: #'AbstractInstruction *'>
-	<var: #primitiveRoutine declareC: 'void (*primitiveRoutine)()'>
+	<var: #primitiveRoutine declareC: 'void (*primitiveRoutine)(void)'>
 	objectRepresentation genLoadSlot: ClosureNumArgsIndex sourceReg: ReceiverResultReg destReg: TempReg.
 	self CmpCq: (objectMemory integerObjectOf: methodOrBlockNumArgs) R: TempReg.
 	jumpFailNArgs := self JumpNonZero: 0.
@@ -2705,7 +2705,7 @@ SimpleStackBasedCogit >> genPrimitiveFullClosureValue [
 	<var: #jumpFail4 type: #'AbstractInstruction *'>
 	<var: #jumpFailNArgs type: #'AbstractInstruction *'>
 	<var: #jumpBCMethod type: #'AbstractInstruction *'>
-	<var: #primitiveRoutine declareC: 'void (*primitiveRoutine)()'>
+	<var: #primitiveRoutine declareC: 'void (*primitiveRoutine)(void)'>
 	objectRepresentation genLoadSlot: ClosureNumArgsIndex sourceReg: ReceiverResultReg destReg: TempReg.
 	self CmpCq: (objectMemory integerObjectOf: methodOrBlockNumArgs) R: TempReg.
 	jumpFailNArgs := self JumpNonZero: 0.

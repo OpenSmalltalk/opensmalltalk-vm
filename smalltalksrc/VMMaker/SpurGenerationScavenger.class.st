@@ -1506,6 +1506,6 @@ SpurGenerationScavenger >> writeScavengeLog [
 				scavengeLogRecord eSurvivorBytes.
 				scavengeLogRecord eRememberedSetSize.
 				scavengeLogRecord eStatTenures - scavengeLogRecord sStatTenures.
-				manager statSGCDeltaUsecs asUnsignedLong }.
+				manager statSGCDeltaUsecs}.
 	scavengeLog fflush
 ]
