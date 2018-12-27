@@ -261,14 +261,14 @@ get_modules(void)
 {
 	DWORD moduleCount2, i;
 	HANDLE me = GetCurrentProcess();
-	HANDLE hPsApi = LoadLibrary("psapi.dll");
+	HANDLE hPsApi = LoadLibraryA("psapi.dll");
 	HMODULE *modules;
 
 	EnumProcessModules = (void*)GetProcAddress(hPsApi, "EnumProcessModules");
 	GetModuleInformation=(void*)GetProcAddress(hPsApi, "GetModuleInformation");
 
 	if (!EnumProcessModules(me, (HMODULE *)&modules, sizeof(modules), &moduleCount)) {
-		printLastError("EnumProcessModules 1");
+		printLastError(TEXT("EnumProcessModules 1"));
 		return;
 	}
 	modules = malloc(moduleCount);
@@ -280,14 +280,14 @@ get_modules(void)
 	all_exports = calloc(moduleCount / sizeof(HMODULE) + EXTRAMODULES,
 						 sizeof(dll_exports));
 	if (!modules || !all_exports) {
-		printLastError("get_modules out of memory");
+		printLastError(TEXT("get_modules out of memory"));
 		if (modules)
 			free(modules);
 		return;
 	}
 
 	if (!EnumProcessModules(me, modules, moduleCount, &moduleCount2)) {
-		printLastError("EnumProcessModules 2");
+		printLastError(TEXT("EnumProcessModules 2"));
 		free(modules);
 		return;
 	}
@@ -295,10 +295,10 @@ get_modules(void)
 
 	for (i = 0; i < moduleCount; i++) {
 		all_exports[i].module = modules[i];
-		if (!GetModuleFileName(modules[i], all_exports[i].name, MAX_PATH))
-			printLastError("GetModuleFileName");
+		if (!GetModuleFileNameA(modules[i], all_exports[i].name, MAX_PATH))
+			printLastError(TEXT("GetModuleFileName"));
 		if (!GetModuleInformation(me, modules[i], &all_exports[i].info, sizeof(MODULEINFO)))
-			printLastError("GetModuleInformation");
+			printLastError(TEXT("GetModuleInformation"));
 		all_exports[i].find_symbol = find_in_dll;
 	}
 	free(modules);
@@ -447,19 +447,19 @@ compute_exe_symbols(dll_exports *exports)
 	strcpy(strrchr(filename,'.')+1,"map");
 
 	if (!(f = fopen(filename,"r"))) {
-		printLastError("fopen");
+		printLastError(TEXT("fopen"));
 		return;
 	}
 	fseek(f,0,SEEK_END);
 	len = ftell(f);
 	fseek(f,0,SEEK_SET);
 	if (!(contents = malloc(len))) {
-		printLastError("malloc");
+		printLastError(TEXT("malloc"));
 		fclose(f);
 		return;
 	}
 	if (fread(contents, sizeof(char), len, f) != len) {
-		printLastError("fread");
+		printLastError(TEXT("fread"));
 		fclose(f);
 		return;
 	}
@@ -476,7 +476,7 @@ compute_exe_symbols(dll_exports *exports)
 
 	if (!(exports->functions	= calloc(nlines,sizeof(ulong)))
 	 || !(exports->u.funcNames	= calloc(nlines,sizeof(char *)))) {
-		printLastError("malloc");
+		printLastError(TEXT("malloc"));
 		fclose(f);
 		return;
 	}
@@ -559,7 +559,7 @@ compute_dll_symbols(dll_exports *exports)
     functions =	(ulong *)(dllbase + pExportDir->AddressOfFunctions);
 
     if (!(exports->sorted_ordinals = calloc(pExportDir->NumberOfNames, sizeof(int)))) {
-		printLastError("compute_dll_symbols calloc");
+		printLastError(TEXT("compute_dll_symbols calloc"));
 		return;
 	}
 	exports->functions = functions;
