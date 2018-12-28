@@ -62,7 +62,7 @@ char imageName[MAX_PATH+1];		  /* full path and name to image */
 TCHAR imagePath[MAX_PATH+1];	  /* full path to image */
 TCHAR vmPath[MAX_PATH+1];		    /* full path to interpreter's directory */
 TCHAR vmName[MAX_PATH+1];		    /* name of the interpreter's executable */
-TCHAR windowTitle[MAX_PATH];        /* what should we display in the title? */
+char windowTitle[MAX_PATH];        /* what should we display in the title? */
 TCHAR squeakIniName[MAX_PATH+1];    /* full path and name to ini file */
 TCHAR windowClassName[MAX_PATH+1];        /* Window class name */
 

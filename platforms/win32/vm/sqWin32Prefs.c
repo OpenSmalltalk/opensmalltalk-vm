@@ -207,8 +207,17 @@ void LoadPreferences()
   }
 
   /* get window title from ini file */
+#ifdef UNICODE
+  {
+    TCHAR windowTitleT[MAX_PATH];
+    GetPrivateProfileString(U_GLOBAL, TEXT("WindowTitle"),
+      TEXT(""), windowTitleT, MAX_PATH, squeakIniName);
+    WideCharToMultiByte(CP_UTF8, 0, windowTitleT, -1, windowTitle, MAX_PATH, NULL, NULL);
+  }
+#else
   GetPrivateProfileString(U_GLOBAL, TEXT("WindowTitle"), 
 			 TEXT(""), windowTitle, MAX_PATH, squeakIniName);
+#endif
 
   /* get the window class name from the ini file */
   GetPrivateProfileString(U_GLOBAL, TEXT("WindowClassName"), 
