@@ -3008,59 +3008,6 @@ void SetupFilesAndPath(){
 
 #else /* defined(_WIN32_WCE) */
 
-void
-LongFileNameFromPossiblyShortName(TCHAR *nameBuffer)
-{ TCHAR oldDir[MAX_PATH+1];
-  TCHAR testName[13];
-  TCHAR nameBuf[MAX_PATH+1];
-  TCHAR *shortName;
-  WIN32_FIND_DATA findData;
-  HANDLE findHandle;
-
-  GetCurrentDirectory(MAX_PATH,oldDir);
-  shortName = lstrrchr(nameBuffer,U_BACKSLASH[0]);
-  if(!shortName) shortName = lstrrchr(nameBuffer,U_SLASH[0]);
-  if(!shortName) return;
-  /* if the file name is longer than 8.3
-     this can't be a short name */
-  *(shortName++) = 0;
-  if(lstrlen(shortName) > 12)
-    goto notFound;
-
-  /* back up the old and change to the given directory,
-     this makes searching easier */
-  lstrcpy(nameBuf, nameBuffer);
-  lstrcat(nameBuf,TEXT("\\"));
-  SetCurrentDirectory(nameBuf);
-
-  /* now search the directory */
-  findHandle = FindFirstFile(TEXT("*.*"),&findData);
-  if(findHandle == INVALID_HANDLE_VALUE) goto notFound; /* nothing found */
-  do {
-    if(lstrcmp(findData.cFileName,TEXT("..")) && lstrcmp(findData.cFileName,TEXT(".")))
-      lstrcpy(testName,findData.cAlternateFileName);
-    else
-      *testName = 0;
-    if(lstrcmp(testName,shortName) == 0) /* gotcha! */
-      {
-        FindClose(findHandle);
-        /* recurse down */
-        lstrcpy(nameBuf, findData.cFileName);
-        goto recurseDown;
-      }
-  } while(FindNextFile(findHandle,&findData) != 0);
-  /* nothing appropriate found */
-  FindClose(findHandle);
-notFound:
-  lstrcpy(nameBuf, shortName);
-recurseDown:
-  /* recurse down */
-  LongFileNameFromPossiblyShortName(nameBuffer);
-  lstrcat(nameBuffer,TEXT("\\"));
-  lstrcat(nameBuffer,nameBuf);
-  SetCurrentDirectory(oldDir);
-}
-
 void SetupFilesAndPath() {
   char *tmp;
   WCHAR tmpName[MAX_PATH];
