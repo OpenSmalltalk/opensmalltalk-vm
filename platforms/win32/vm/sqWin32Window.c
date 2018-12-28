@@ -3221,21 +3221,21 @@ static LRESULT CALLBACK SplashWndProcA(HWND hwnd,
 
 void ShowSplashScreen(void) {
   WNDCLASS wc;
-  char splashFile[1024];
-  char splashTitle[1024];
+  TCHAR splashFile[1024];
+  TCHAR splashTitle[1024];
   BITMAP bm;
   RECT wa, rSplash;
 
   /* Look if we have a splash file somewhere */
-  GetPrivateProfileString("Global", "SplashScreen", "Splash.bmp", 
+  GetPrivateProfileString(TEXT("Global"), TEXT("SplashScreen"), TEXT("Splash.bmp"), 
 			  splashFile, 1024, squeakIniName);
 
   /* Also get the title for the splash window */
-  GetPrivateProfileString("Global", "SplashTitle", VM_NAME"!",
+  GetPrivateProfileString(TEXT("Global"), TEXT("SplashTitle"), TEXT(VM_NAME) TEXT("!"),
 			  splashTitle, 1024, squeakIniName);
 
   /* Look for the mimimum splash time to use */
-  splashTime = GetPrivateProfileInt("Global", "SplashTime", 
+  splashTime = GetPrivateProfileInt(TEXT("Global"), TEXT("SplashTime"), 
 				    1000, squeakIniName);
 
   if(!splashFile[0]) return; /* no splash file */
