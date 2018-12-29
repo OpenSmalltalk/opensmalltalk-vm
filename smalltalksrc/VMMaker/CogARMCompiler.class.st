@@ -429,13 +429,6 @@ CogARMCompiler >> cResultRegister [
 	^R0
 ]
 
-{ #category : #'inline cacheing' }
-CogARMCompiler >> callFullTargetFromReturnAddress: callSiteReturnAddress [
-	"Answer the address that the call immediately preceding callSiteReturnAddress will jump to."
-	"this is also used by #jumpLongTargetBeforeFollowingAddress: and so we check for both call and jump related instructions; later on we can use simpler tests once it feels safe to assume we get here always with a call/jump in the proper place"
-	^self subclassResponsibility
-]
-
 { #category : #accessing }
 CogARMCompiler >> callInstructionByteSize [
 	"ARM calls and jumps span +/- 32 mb, more than enough for intra-zone calls and jumps."

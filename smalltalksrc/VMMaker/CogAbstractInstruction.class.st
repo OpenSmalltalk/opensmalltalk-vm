@@ -1593,11 +1593,14 @@ CogAbstractInstruction >> symbolicOn: aStream [
 
 { #category : #'memory access' }
 CogAbstractInstruction >> unalignedLongAt: byteAddress [
+	"Some processors need this, but word-oriented RISCs don't. Hence doNotGenerate."
+	<doNotGenerate>
 	^self subclassResponsibility
 ]
 
 { #category : #'memory access' }
 CogAbstractInstruction >> unalignedLongAt: byteAddress put: aWord [
+	"Some processors need this, but word-oriented RISCs don't. Hence doNotGenerate."
 	^self subclassResponsibility
 ]
 
