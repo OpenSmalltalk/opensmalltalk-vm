@@ -130,7 +130,7 @@ TCHAR consoleBuffer[4096];
 char stderrName[MAX_PATH+1];
 char stdoutName[MAX_PATH+1];
 
-static  char vmLogDirA[MAX_PATH];
+static  char vmLogDirA[MAX_PATH_UTF8];
 static WCHAR vmLogDirW[MAX_PATH];
 
 TCHAR *logName = TEXT("");             /* full path and name to log file */
@@ -462,7 +462,7 @@ char *ioGetLogDirectory(void) {
 }
 
 sqInt ioSetLogDirectoryOfSize(void* lblIndex, sqInt sz) {
-  if (sz >= MAX_PATH) return 0;
+  if (sz >= MAX_PATH_UTF8) return 0;
   strncpy(vmLogDirA, lblIndex, sz);
   vmLogDirA[sz] = 0;
   MultiByteToWideChar(CP_UTF8, 0, vmLogDirA, -1, vmLogDirW, MAX_PATH);
@@ -1405,7 +1405,7 @@ sqImageFile findEmbeddedImage(void) {
 	int start;
 	int length;
 
-	f = sqImageFileOpen(vmName, "rb");
+	f = sqImageFileOpen(vmNameA, "rb");
 	if(!f) {
 		MessageBox(0,"Error opening VM",VM_NAME,MB_OK);
 		return 0;
@@ -1441,6 +1441,7 @@ sqImageFile findEmbeddedImage(void) {
 	/* Gotcha! */
 	sqImageFileSeek(f, sqImageFilePosition(f) - 4);
 	strcpy(imageName, name);
+	MultiByteToWideChar(CP_UTF8,0,imageName,-1,imageNameW,MAX_PATH,NULL,NULL);
 	imageSize = endMarker - sqImageFilePosition(f);
 	return f;
 }
@@ -1577,7 +1578,7 @@ sqMain(int argc, char *argv[])
   }
 
   SetupFilesAndPath();
-  ioSetLogDirectoryOfSize(vmPath, strlen(vmPath));
+  ioSetLogDirectoryOfSize(vmPathA, strlen(vmPathA));
 
   /* release resources on exit */
   atexit(Cleanup);
@@ -1620,7 +1621,7 @@ sqMain(int argc, char *argv[])
 
 
   if(!imageFile) {
-    imageSize = SqueakImageLength(toUnicode(imageName));
+    imageSize = SqueakImageLength(imageNameW);
     if(imageSize == 0) printUsage(2);
   }
 
@@ -1650,13 +1651,13 @@ sqMain(int argc, char *argv[])
 
 #if !NewspeakVM
     /* set the CWD to the image location */
-    if(*imageName) {
-      char path[MAX_PATH+1], *ptr;
-      strcpy(path,imageName);
-      ptr = strrchr(path, '\\');
+    if(*imageNameW) {
+      WCHAR path[MAX_PATH+1], *ptr;
+      wcsncpy(path,imageNameW,MAX_PATH);
+      ptr = wcsrchr(path, '\\');
       if(ptr) {
-	*ptr = 0;
-	SetCurrentDirectory(path);
+        *ptr = 0;
+        SetCurrentDirectoryW(path);
       }
     }
 #endif /* !NewspeakVM */
@@ -1723,9 +1724,8 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 
   /* fetch us the name of the executable */
   {
-    WCHAR vmNameW[MAX_PATH];
     GetModuleFileNameW(hInst, vmNameW, MAX_PATH);
-    WideCharToMultiByte(CP_UTF8, 0, vmNameW, -1, vmName, MAX_PATH, NULL, NULL);
+    WideCharToMultiByte(CP_UTF8, 0, vmNameW, -1, vmNameA, MAX_PATH_UTF8, NULL, NULL);
   }
 	/* parse the command line into the unix-style argc, argv, converting to
 	 * UTF-8 on the way. */
@@ -2086,7 +2086,7 @@ SubsystemType()
     IMAGE_OPTIONAL_HEADER image_optional_header;
 
     /* Open the reference file. */ 
-    hImage = CreateFile(vmName,
+    hImage = CreateFileW(vmNameW,
                         GENERIC_READ,
                         FILE_SHARE_READ,
                         NULL,
@@ -2150,7 +2150,8 @@ parseGenericArgs(int argc, char *argv[])
 
 	if (*imageName == 0) { /* only try to use image name if none is provided */
 		if (*argv[0] && IsImage(argv[0])) {
-			strcpy(imageName, argv[0]);
+			strncpy(imageName, argv[0],MAX_PATH_UTF8);
+			MultiByteToWideChar(CP_UTF8, 0, imageName, -1, imageNameW, MAX_PATH);
 			/* if provided, the image is a vm argument. */
 			vmOptions[numOptionsVM++] = argv[0];
 		}

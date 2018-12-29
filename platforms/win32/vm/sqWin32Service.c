@@ -413,12 +413,12 @@ void sqServiceInstall(void)
       return;
     }
   /* Add the image name to the subkey. */
-  ok = RegSetValueEx(hk,        /* subkey handle         */
-      TEXT("Image"),            /* value name            */
-      0,                        /* must be zero          */
-      REG_EXPAND_SZ,            /* value type            */
-      (LPBYTE) imageName,       /* address of value data */
-      strlen(imageName) + 1);   /* length of value data  */
+  ok = RegSetValueExW(hk,                     /* subkey handle         */
+      L"Image",                               /* value name            */
+      0,                                      /* must be zero          */
+      REG_EXPAND_SZ,                          /* value type            */
+      (LPBYTE) imageNameW,                    /* address of value data */
+      (wcslen(imageNameW)+1)*sizeof(WCHAR));  /* length of value data  */
   if(ok != ERROR_SUCCESS)
     {
       printLastError(TEXT("RegSetValueEX failed"));
@@ -517,14 +517,15 @@ DWORD WINAPI sqThreadMain(DWORD ignored)
       TerminateThread(GetCurrentThread(), 0);
     }
   /* Read the image name from the subkey. */
-  dwSize = MAX_PATH;
-  ok = RegQueryValueEx(hk,TEXT("Image"),NULL, &dwType, (LPBYTE) imageName, &dwSize);
+  dwSize = MAX_PATH*sizeof(WCHAR);
+  ok = RegQueryValueExW(hk,L"Image",NULL, &dwType, (LPBYTE) imageNameW, &dwSize);
   if(ok != ERROR_SUCCESS || dwType != REG_EXPAND_SZ)
     {
       sqStopService(TEXT("Failed to read the image name from registry"));
       TerminateThread(GetCurrentThread(), 0);
     }
-  imageName[dwSize] = 0;
+  imageNameW[(dwSize+1)/2] = 0;
+  WideCharToMultiByte(CP_UTF8, 0, imageNameW, -1, imageName, MAX_PATH_UTF8, NULL, NULL);
   /* Read the log file name from the subkey. */
   dwSize = MAX_PATH;
   ok = RegQueryValueEx(hk,TEXT("Log"),NULL, &dwType, (LPBYTE) &tmpString, &dwSize);

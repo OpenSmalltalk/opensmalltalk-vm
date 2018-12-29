@@ -194,15 +194,17 @@ void LoadPreferences()
 
   /* get image file name from ini file */
   size = GetPrivateProfileString(U_GLOBAL, TEXT("ImageFile"), 
-			 TEXT(""), imageName, MAX_PATH, squeakIniName);
+			 TEXT(""), imageNameT, MAX_PATH, squeakIniName);
   if(size > 0) {
     if( !(imageName[0] == '\\' && imageName[1] == '\\') && !(imageName[1] == ':' && imageName[2] == '\\')) {
       /* make the path relative to VM directory */
-      lstrcpy(imageName, vmName);
-      (lstrrchr(imageName,U_BACKSLASH[0]))[1] = 0;
-      size = lstrlen(imageName);
+      strcpy(imageName , vmNameA);
+	  wcscpy(imageNameW, vmNameW);
+      (strrchr(imageName ,'\\'           ))[1] = 0;
+	  (wcsrchr(imageNameW, W_BACKSLASH[0]))[1] = 0;
+      size = lstrlen(imageNameT);
       size = GetPrivateProfileString(U_GLOBAL, TEXT("ImageFile"), 
-			 TEXT(""), imageName + size, MAX_PATH - size, squeakIniName);
+			 TEXT(""), imageNameT + size, MAX_PATH - size, squeakIniName);
 	}
   }
 

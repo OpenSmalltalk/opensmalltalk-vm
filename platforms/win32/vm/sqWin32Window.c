@@ -56,21 +56,30 @@ extern sqInt deferDisplayUpdates;
 
 
 /*** Variables -- image and path names ***/
-#define IMAGE_NAME_SIZE MAX_PATH
+#define IMAGE_NAME_SIZE MAX_PATH_UTF8 
 
-char imageName[MAX_PATH+1];		  /* full path and name to image */
-TCHAR imagePath[MAX_PATH+1];	  /* full path to image */
-TCHAR vmPath[MAX_PATH+1];		    /* full path to interpreter's directory */
-TCHAR vmName[MAX_PATH+1];		    /* name of the interpreter's executable */
-char windowTitle[MAX_PATH];        /* what should we display in the title? */
-TCHAR squeakIniName[MAX_PATH+1];    /* full path and name to ini file */
-TCHAR windowClassName[MAX_PATH+1];        /* Window class name */
+/* IMPLEMENTATION NOTE:
+- both UTF8 and UTF16 versions are maintained in parallel
+- UTF8 version is for interaction with image
+- UTF16 version is for interaction with WIN32 API
+whichever code modifies one version is responsible for updating the other
+*/
+char  imageName [MAX_PATH_UTF8 + 1]; /* full path and name to image */
+WCHAR imageNameW[MAX_PATH      + 1]; /* full path and name to image */
+char  imagePathA[MAX_PATH_UTF8 + 1]; /* full path to image */
+WCHAR imagePathW[MAX_PATH      + 1]; /* full path to image */
+char  vmPathA[MAX_PATH_UTF8 + 1];    /* full path to interpreter's directory */
+WCHAR vmPathW[MAX_PATH      + 1];    /* full path to interpreter's directory */
+char  vmNameA[MAX_PATH_UTF8 + 1];    /* name of the interpreter's executable UTF8 */
+WCHAR vmNameW[MAX_PATH      + 1];    /* name of the interpreter's executable UTF16 */
+char windowTitle[MAX_PATH];          /* what should we display in the title? */
+TCHAR squeakIniName[MAX_PATH+1];     /* full path and name to ini file */
+TCHAR windowClassName[MAX_PATH+1];   /* Window class name */
 
 const TCHAR U_ON[]  = TEXT("1");
 const TCHAR U_OFF[] = TEXT("0");
 const TCHAR U_GLOBAL[] = TEXT("Global");
-const TCHAR U_SLASH[] = TEXT("/");
-const TCHAR U_BACKSLASH[] = TEXT("\\");
+const WCHAR W_BACKSLASH[] = L"\\";
 
 /*** Variables -- Event Recording ***/
 int inputSemaphoreIndex = 0;/* if non-zero the event semaphore index */
@@ -195,7 +204,7 @@ extern int sqAskSecurityYesNoQuestion(const char *question)
 
 extern const char *sqGetCurrentImagePath(void)
 {
-    return imagePath;
+    return imagePathA;
 }
 
 /****************************************************************************/
@@ -2753,7 +2762,7 @@ sqInt clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex) {
 
 sqInt vmPathSize(void)
 {
-  return lstrlen(vmPath);
+  return strlen(vmPathA);
 }
 
 sqInt vmPathGetLength(sqInt sqVMPathIndex, sqInt length)
@@ -2761,12 +2770,12 @@ sqInt vmPathGetLength(sqInt sqVMPathIndex, sqInt length)
   char *stVMPath= (char *)sqVMPathIndex;
   int count, i;
 
-  count= lstrlen(vmPath);
+  count= strlen(vmPathA);
   count= (length < count) ? length : count;
 
   /* copy the file name into the Squeak string */
   for (i= 0; i < count; i++)
-    stVMPath[i]= (char) vmPath[i]; /* will remove leading zeros from unicode */
+    stVMPath[i]= vmPathA[i];
 
   return count;
 }
@@ -2799,7 +2808,7 @@ sqInt imageNameGetLength(sqInt sqImageNameIndex, sqInt length)
 sqInt imageNamePutLength(sqInt sqImageNameIndex, sqInt length)
 {
   char *sqImageName= (char *)sqImageNameIndex;
-  char tmpImageName[MAX_PATH+1];
+  char tmpImageName[IMAGE_NAME_SIZE +1];
   char *tmp;
   int count, i;
 
@@ -2831,6 +2840,7 @@ sqInt imageNamePutLength(sqInt sqImageNameIndex, sqInt length)
           strcat(imageName,tmpImageName);
         }
     }
+  MultiByteToWideChar(CP_UTF8, 0, imageName, -1, imageNameW, MAX_PATH);
   SetWindowTitle();
   return 1;
 }
@@ -2856,7 +2866,7 @@ char * GetAttributeString(sqInt id) {
 	   could be reported this way as well.
 	*/
   /* id == 0 : return the full name of the VM */
-  if(id == 0) return fromUnicode(vmName);
+  if(id == 0) return vmNameA;
   /* 0 < id <= 1000 : return options of the image (e.g. given *after* the image name) */
   if(id > 0 && id <= 1000)
     return GetImageOption(id-1);
@@ -3001,34 +3011,45 @@ int isLocalFileName(TCHAR *fileName)
 
 void SetupFilesAndPath(){ 
   char *tmp;
-  lstrcpy(imagePath, imageName);
-  tmp = lstrrchr(imagePath,'\\');
+  WCHAR *wtmp;
+  strcpy(imagePathA, imageNameA);
+  wcscpy(imagePathW, imageNameW);
+  tmp = strrchr(imagePathA,'\\');
   if(tmp) tmp[1] = 0;
+  wtmp = wcsrchr(imagePathW, '\\');
+  if (wtmp) wtmp[1] = 0;
 }
 
 #else /* defined(_WIN32_WCE) */
 
 void SetupFilesAndPath() {
   char *tmp;
-  WCHAR tmpName[MAX_PATH];
-  WCHAR imageNameW[MAX_PATH];
+  WCHAR *wtmp;
+  WCHAR tmpName[MAX_PATH+1];
 
   /* get the full path for the image */
-  MultiByteToWideChar(CP_UTF8, 0, imageName, -1, tmpName, MAX_PATH);
+  MultiByteToWideChar(CP_UTF8, 0, imageName , -1, tmpName, MAX_PATH);
   GetFullPathNameW(tmpName, MAX_PATH, imageNameW, NULL);
 
   /* and copy back to a UTF-8 string */
-  WideCharToMultiByte(CP_UTF8, 0, imageNameW,-1,imageName,MAX_PATH,NULL,NULL);
+  WideCharToMultiByte(CP_UTF8, 0, imageNameW,-1,imageName ,MAX_PATH_UTF8,NULL,NULL);
 
   /* get the VM directory */
-  lstrcpy(vmPath, vmName);
-  tmp = lstrrchr(vmPath,U_BACKSLASH[0]);
+  strcpy(vmPathA, vmNameA);
+  wcscpy(vmPathW, vmNameW);
+  tmp  = strrchr(vmPathA, '\\');
+  wtmp = wcsrchr(vmPathW, W_BACKSLASH[0]);
   if(tmp) *tmp = 0;
-  lstrcat(vmPath,U_BACKSLASH);
+  if (wtmp) *wtmp = 0;
+  strcat(vmPathA,"\\");
+  wcscat(vmPathW, W_BACKSLASH);
 
-  lstrcpy(imagePath, imageName);
-  tmp = lstrrchr(imagePath,U_BACKSLASH[0]);
+  strcpy(imagePathA, imageName );
+  wcscpy(imagePathW, imageNameW);
+  tmp  = strrchr(imagePathA,'\\');
+  wtmp = wcsrchr(imagePathW, W_BACKSLASH[0]);
   if(tmp) tmp[1] = 0;
+  if (wtmp) wtmp[1] = 0;
 }
 
 #endif /* !defined(_WIN32_WCE) */
@@ -3056,20 +3077,13 @@ DWORD SqueakImageLengthFromHandle(HANDLE hFile) {
   return 0;
 }
 
-DWORD SqueakImageLength(TCHAR *fileName) {
+DWORD SqueakImageLength(WCHAR *fileName) {
   DWORD dwSize;
   HANDLE hFile;
 
   /* open image file */
-#ifdef UNICODE
   hFile = CreateFileW(fileName, GENERIC_READ, FILE_SHARE_READ,
 		      NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-#else
-  WCHAR wideName[MAX_PATH];
-  MultiByteToWideChar(CP_UTF8, 0, fileName, -1, wideName, MAX_PATH);
-  hFile = CreateFileW(wideName, GENERIC_READ, FILE_SHARE_READ,
-		      NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-#endif
   if (hFile == INVALID_HANDLE_VALUE) return 0;
   dwSize = SqueakImageLengthFromHandle(hFile);
   CloseHandle(hFile);
@@ -3094,8 +3108,9 @@ int findImageFile(void) {
   nextFound = FindNextFileW(findHandle,&findData);
   FindClose(findHandle);
   if(nextFound) return 0; /* more than one entry */
-  WideCharToMultiByte(CP_UTF8, 0, findData.cFileName, -1, 
-		      imageName, MAX_PATH, NULL, NULL);
+  wcsncpy(imageNameW,findData.cFileName,MAX_PATH);
+  WideCharToMultiByte(CP_UTF8, 0, imageNameW, -1,
+		      imageName, MAX_PATH_UTF8, NULL, NULL);
   return 1;
 }
 
@@ -3121,7 +3136,8 @@ int openImageFile(void) {
   ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
   ofn.lpstrDefExt = L"image";
   if (!GetOpenFileNameW(&ofn)) return 0;
-  WideCharToMultiByte(CP_UTF8, 0, path, -1, 
+  wcsncpy(imageNameW,path,  MAX_PATH);
+  WideCharToMultiByte(CP_UTF8, 0, imageNameW, -1, 
 		      imageName, MAX_PATH, NULL, NULL);
   return 1;
 }
@@ -3317,7 +3333,7 @@ int printUsage(int level)
         TEXT("There are several ways to open an image file. You can:\n")
         TEXT("  1. Double-click on the desired image file.\n")
         TEXT("  2. Drop the image file onto the application.\n")
-        TEXT("Aborting...\n"), toUnicode(imageName));
+        TEXT("Aborting...\n"), imageNameT);
   }
   return -1;
 }
