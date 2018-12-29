@@ -207,8 +207,20 @@ void LoadPreferences()
   }
 
   /* get window title from ini file */
+#ifdef UNICODE
+  {
+    TCHAR windowTitleT[MAX_PATH];
+    GetPrivateProfileString(U_GLOBAL, TEXT("WindowTitle"),
+      TEXT(""), windowTitleT, MAX_PATH, squeakIniName);
+	if (WideCharToMultiByte(CP_UTF8, 0, windowTitleT, -1, windowTitle, MAX_PATH, NULL, NULL) == 0) {
+		printLastError(TEXT("Failed to convert WindowTitle preference to UTF-8"));
+		windowTitle[0] = 0;
+	};
+  }
+#else
   GetPrivateProfileString(U_GLOBAL, TEXT("WindowTitle"), 
 			 TEXT(""), windowTitle, MAX_PATH, squeakIniName);
+#endif
 
   /* get the window class name from the ini file */
   GetPrivateProfileString(U_GLOBAL, TEXT("WindowClassName"), 

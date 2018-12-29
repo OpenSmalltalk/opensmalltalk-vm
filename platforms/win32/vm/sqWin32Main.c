@@ -540,7 +540,7 @@ void gatherSystemInfo(void) {
 
 
   {
-    HANDLE hUser = LoadLibrary( "user32.dll" );
+    HANDLE hUser = LoadLibraryA( "user32.dll" );
     pfnEnumDisplayDevices pEnumDisplayDevices = (pfnEnumDisplayDevices)
       GetProcAddress(hUser, "EnumDisplayDevicesA");
     ZeroMemory(&gDev, sizeof(gDev));

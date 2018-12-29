@@ -263,7 +263,7 @@ extern char imageName[];		/* full path and name to image */
 extern TCHAR imagePath[];		/* full path to image */
 extern TCHAR vmPath[];		    /* full path to interpreter's directory */
 extern TCHAR vmName[];		    /* name of the interpreter's executable */
-extern TCHAR windowTitle[];             /* window title string */
+extern char windowTitle[];             /* window title string */
 extern char vmBuildString[];            /* the vm build string */
 extern TCHAR windowClassName[];    /* class name for the window */
 

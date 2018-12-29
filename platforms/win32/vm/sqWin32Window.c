@@ -62,7 +62,7 @@ char imageName[MAX_PATH+1];		  /* full path and name to image */
 TCHAR imagePath[MAX_PATH+1];	  /* full path to image */
 TCHAR vmPath[MAX_PATH+1];		    /* full path to interpreter's directory */
 TCHAR vmName[MAX_PATH+1];		    /* name of the interpreter's executable */
-TCHAR windowTitle[MAX_PATH];        /* what should we display in the title? */
+char windowTitle[MAX_PATH];        /* what should we display in the title? */
 TCHAR squeakIniName[MAX_PATH+1];    /* full path and name to ini file */
 TCHAR windowClassName[MAX_PATH+1];        /* Window class name */
 
@@ -2587,7 +2587,7 @@ sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
 
   if(lines == 0) {
     printLastError(TEXT("SetDIBitsToDevice failed"));
-    warnPrintf(TEXT("width=%" PRIdSQINT ",height=%" PRIdSQINT ",bits=%" PRIXSQINT ",dc=%" PRIXSQPTR "\n"),
+    warnPrintf(TEXT("width=%") TEXT(PRIdSQINT) TEXT(",height=%") TEXT(PRIdSQINT) TEXT(",bits=%") TEXT(PRIXSQINT) TEXT(",dc=%") TEXT(PRIXSQPTR) TEXT("\n"),
 	       width, height, dispBits,(usqIntptr_t)dc);
   }
   /* reverse the image bits if necessary */
@@ -3008,59 +3008,6 @@ void SetupFilesAndPath(){
 
 #else /* defined(_WIN32_WCE) */
 
-void
-LongFileNameFromPossiblyShortName(TCHAR *nameBuffer)
-{ TCHAR oldDir[MAX_PATH+1];
-  TCHAR testName[13];
-  TCHAR nameBuf[MAX_PATH+1];
-  TCHAR *shortName;
-  WIN32_FIND_DATA findData;
-  HANDLE findHandle;
-
-  GetCurrentDirectory(MAX_PATH,oldDir);
-  shortName = lstrrchr(nameBuffer,U_BACKSLASH[0]);
-  if(!shortName) shortName = lstrrchr(nameBuffer,U_SLASH[0]);
-  if(!shortName) return;
-  /* if the file name is longer than 8.3
-     this can't be a short name */
-  *(shortName++) = 0;
-  if(lstrlen(shortName) > 12)
-    goto notFound;
-
-  /* back up the old and change to the given directory,
-     this makes searching easier */
-  lstrcpy(nameBuf, nameBuffer);
-  lstrcat(nameBuf,TEXT("\\"));
-  SetCurrentDirectory(nameBuf);
-
-  /* now search the directory */
-  findHandle = FindFirstFile(TEXT("*.*"),&findData);
-  if(findHandle == INVALID_HANDLE_VALUE) goto notFound; /* nothing found */
-  do {
-    if(lstrcmp(findData.cFileName,TEXT("..")) && lstrcmp(findData.cFileName,TEXT(".")))
-      lstrcpy(testName,findData.cAlternateFileName);
-    else
-      *testName = 0;
-    if(lstrcmp(testName,shortName) == 0) /* gotcha! */
-      {
-        FindClose(findHandle);
-        /* recurse down */
-        lstrcpy(nameBuf, findData.cFileName);
-        goto recurseDown;
-      }
-  } while(FindNextFile(findHandle,&findData) != 0);
-  /* nothing appropriate found */
-  FindClose(findHandle);
-notFound:
-  lstrcpy(nameBuf, shortName);
-recurseDown:
-  /* recurse down */
-  LongFileNameFromPossiblyShortName(nameBuffer);
-  lstrcat(nameBuffer,TEXT("\\"));
-  lstrcat(nameBuffer,nameBuf);
-  SetCurrentDirectory(oldDir);
-}
-
 void SetupFilesAndPath() {
   char *tmp;
   WCHAR tmpName[MAX_PATH];
@@ -3221,21 +3168,21 @@ static LRESULT CALLBACK SplashWndProcA(HWND hwnd,
 
 void ShowSplashScreen(void) {
   WNDCLASS wc;
-  char splashFile[1024];
-  char splashTitle[1024];
+  TCHAR splashFile[1024];
+  TCHAR splashTitle[1024];
   BITMAP bm;
   RECT wa, rSplash;
 
   /* Look if we have a splash file somewhere */
-  GetPrivateProfileString("Global", "SplashScreen", "Splash.bmp", 
+  GetPrivateProfileString(TEXT("Global"), TEXT("SplashScreen"), TEXT("Splash.bmp"), 
 			  splashFile, 1024, squeakIniName);
 
   /* Also get the title for the splash window */
-  GetPrivateProfileString("Global", "SplashTitle", VM_NAME"!",
+  GetPrivateProfileString(TEXT("Global"), TEXT("SplashTitle"), TEXT(VM_NAME) TEXT("!"),
 			  splashTitle, 1024, squeakIniName);
 
   /* Look for the mimimum splash time to use */
-  splashTime = GetPrivateProfileInt("Global", "SplashTime", 
+  splashTime = GetPrivateProfileInt(TEXT("Global"), TEXT("SplashTime"), 
 				    1000, squeakIniName);
 
   if(!splashFile[0]) return; /* no splash file */
@@ -3246,7 +3193,7 @@ void ShowSplashScreen(void) {
   if(!hSplashDIB) {
     /* ignore the common case but print failures for the others */
     if(GetLastError() != ERROR_FILE_NOT_FOUND)
-      printLastError("LoadImage failed");
+      printLastError(TEXT("LoadImage failed"));
     return;
   }
   GetObject(hSplashDIB, sizeof(bm), &bm);
@@ -3308,6 +3255,7 @@ void HideSplashScreen(void) {
 /****************************************************************************/
 
 # define VMOPTION(arg) "-"arg
+# define TVMOPTION(arg) TEXT("-") TEXT(arg)
 
 /* print usage with different output levels */
 int printUsage(int level)
@@ -3320,43 +3268,43 @@ int printUsage(int level)
       abortMessage(TEXT("%s\n"),
                    TEXT("Usage: ") TEXT(VM_NAME) TEXT(" [vmOptions] imageFile [imageOptions]\n\n")
                    TEXT("vmOptions:")
-                   TEXT("\n\t") TEXT(VMOPTION("service:")) TEXT(" ServiceName \t(install VM as NT service)")
-                   TEXT("\n\t") TEXT(VMOPTION("headless")) TEXT(" \t\t(force VM to run headless)")
-                   TEXT("\n\t") TEXT(VMOPTION("timephases")) TEXT(" \t\t(print start load and run times)")
-                   TEXT("\n\t") TEXT(VMOPTION("log:")) TEXT(" LogFile \t\t(use LogFile for VM messages)")
-                   TEXT("\n\t") TEXT(VMOPTION("memory:")) TEXT(" megaByte \t(set memory to megaByte MB)")
+                   TEXT("\n\t") TVMOPTION("service:") TEXT(" ServiceName \t(install VM as NT service)")
+                   TEXT("\n\t") TVMOPTION("headless") TEXT(" \t\t(force VM to run headless)")
+                   TEXT("\n\t") TVMOPTION("timephases") TEXT(" \t\t(print start load and run times)")
+                   TEXT("\n\t") TVMOPTION("log:") TEXT(" LogFile \t\t(use LogFile for VM messages)")
+                   TEXT("\n\t") TVMOPTION("memory:") TEXT(" megaByte \t(set memory to megaByte MB)")
 #if STACKVM || NewspeakVM
-                   TEXT("\n\t") TEXT(VMOPTION("breaksel:")) TEXT(" string \t(call warning on send of sel for debug)")
+                   TEXT("\n\t") TVMOPTION("breaksel:") TEXT(" string \t(call warning on send of sel for debug)")
 #endif /* STACKVM || NewspeakVM */
 #if STACKVM
-                   TEXT("\n\t") TEXT(VMOPTION("breakmnu:")) TEXT(" string \t(call warning on MNU of sel for debug)")
-                   TEXT("\n\t") TEXT(VMOPTION("leakcheck:")) TEXT(" n \t\t(leak check on GC (1=full,2=incr,3=both))")
-                   TEXT("\n\t") TEXT(VMOPTION("eden:")) TEXT(" bytes \t\t(set eden memory size to bytes)")
-                   TEXT("\n\t") TEXT(VMOPTION("stackpages:")) TEXT(" n \t\t(use n stack pages)")
-                   TEXT("\n\t") TEXT(VMOPTION("numextsems:")) TEXT(" n \t\t(allow up to n external semaphores)")
-                   TEXT("\n\t") TEXT(VMOPTION("checkpluginwrites")) TEXT(" \t(check for writes past end of object in plugins")
-                   TEXT("\n\t") TEXT(VMOPTION("noheartbeat")) TEXT(" \t\t(no heartbeat for debug)")
+                   TEXT("\n\t") TVMOPTION("breakmnu:") TEXT(" string \t(call warning on MNU of sel for debug)")
+                   TEXT("\n\t") TVMOPTION("leakcheck:") TEXT(" n \t\t(leak check on GC (1=full,2=incr,3=both))")
+                   TEXT("\n\t") TVMOPTION("eden:") TEXT(" bytes \t\t(set eden memory size to bytes)")
+                   TEXT("\n\t") TVMOPTION("stackpages:") TEXT(" n \t\t(use n stack pages)")
+                   TEXT("\n\t") TVMOPTION("numextsems:") TEXT(" n \t\t(allow up to n external semaphores)")
+                   TEXT("\n\t") TVMOPTION("checkpluginwrites") TEXT(" \t(check for writes past end of object in plugins")
+                   TEXT("\n\t") TVMOPTION("noheartbeat") TEXT(" \t\t(no heartbeat for debug)")
 #endif /* STACKVM */
 #if STACKVM || NewspeakVM
 # if COGVM
-                   TEXT("\n\t") TEXT(VMOPTION("trace")) TEXT("[=num]\t\tenable tracing (optionally to a specific value)")
+                   TEXT("\n\t") TVMOPTION("trace") TEXT("[=num]\t\tenable tracing (optionally to a specific value)")
 # else
-                   TEXT("\n\t") TEXT(VMOPTION("sendtrace")) TEXT(" \t\t(trace sends to stdout for debug)")
+                   TEXT("\n\t") TVMOPTION("sendtrace") TEXT(" \t\t(trace sends to stdout for debug)")
 # endif
-                   TEXT("\n\t") TEXT(VMOPTION("warnpid")) TEXT("   \t\t(print pid in warnings)")
-                   TEXT("\n\t") TEXT(VMOPTION("[no]failonffiexception")) TEXT("   \t\t([never]always catch exceptions in FFI calls)")
+                   TEXT("\n\t") TVMOPTION("warnpid") TEXT("   \t\t(print pid in warnings)")
+                   TEXT("\n\t") TVMOPTION("[no]failonffiexception") TEXT("   \t\t([never]always catch exceptions in FFI calls)")
 #endif
 #if COGVM
-                   TEXT("\n\t") TEXT(VMOPTION("codesize:")) TEXT(" bytes \t(set machine-code memory size to bytes)")
-                   TEXT("\n\t") TEXT(VMOPTION("cogmaxlits:")) TEXT(" n \t\t(set max number of literals for methods to be compiled to machine code)")
-                   TEXT("\n\t") TEXT(VMOPTION("cogminjumps:")) TEXT(" n \t(set min number of backward jumps for interpreted methods to be considered for compilation to machine code)")
-                   TEXT("\n\t") TEXT(VMOPTION("tracestores")) TEXT(" \t\t(assert-check stores for debug)")
-                   TEXT("\n\t") TEXT(VMOPTION("reportheadroom")) TEXT(" \t(report unused stack headroom on exit)")
-                   TEXT("\n\t") TEXT(VMOPTION("dpcso:")) TEXT(" bytes \t\t(stack offset for prim calls for debug)")
+                   TEXT("\n\t") TVMOPTION("codesize:") TEXT(" bytes \t(set machine-code memory size to bytes)")
+                   TEXT("\n\t") TVMOPTION("cogmaxlits:") TEXT(" n \t\t(set max number of literals for methods to be compiled to machine code)")
+                   TEXT("\n\t") TVMOPTION("cogminjumps:") TEXT(" n \t(set min number of backward jumps for interpreted methods to be considered for compilation to machine code)")
+                   TEXT("\n\t") TVMOPTION("tracestores") TEXT(" \t\t(assert-check stores for debug)")
+                   TEXT("\n\t") TVMOPTION("reportheadroom") TEXT(" \t(report unused stack headroom on exit)")
+                   TEXT("\n\t") TVMOPTION("dpcso:") TEXT(" bytes \t\t(stack offset for prim calls for debug)")
 #endif /* COGVM */
 #if SPURVM
-                   TEXT("\n\t") TEXT(VMOPTION("maxoldspace:")) TEXT(" bytes \t(set max size of old space memory to bytes)")
-                   TEXT("\n\t") TEXT(VMOPTION("logscavenge")) TEXT(" \t\t(log scavenging to scavenge.log)")
+                   TEXT("\n\t") TVMOPTION("maxoldspace:") TEXT(" bytes \t(set max size of old space memory to bytes)")
+                   TEXT("\n\t") TVMOPTION("logscavenge") TEXT(" \t\t(log scavenging to scavenge.log)")
 #endif
                    TEXT("\n") TEXT("Options begin with single -, but -- prefix is silently accepted")
                    TEXT("\n") TEXT("Options with arguments -opt:n are also accepted with separators -opt n")

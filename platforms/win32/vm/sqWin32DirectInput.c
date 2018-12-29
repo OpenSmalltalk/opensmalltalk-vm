@@ -23,7 +23,11 @@
 #ifndef NO_DIRECTINPUT
 
 #ifndef DIRECTINPUT_VERSION
-#define DIRECTINPUT_VERSION 0x700 /* restrict to DX7 */
+#ifdef _MSC_VER
+#define DIRECTINPUT_VERSION 0x800 /* DX8 */
+#else
+#define DIRECTINPUT_VERSION 0x700 /* use DX7 via mingw/cygwin */
+#endif
 #endif 
 
 #include <windows.h>

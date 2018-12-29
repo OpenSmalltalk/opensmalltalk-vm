@@ -40,6 +40,12 @@
 #include <limits.h>
 #include <stdio.h>
 
+#ifdef _MSC_VER
+#ifndef S_ISFIFO
+#define S_ISFIFO(x) 0
+#endif
+#endif
+
 #include "sqMemoryAccess.h"
 #include "FilePlugin.h" /* must be included after sq.h */
 

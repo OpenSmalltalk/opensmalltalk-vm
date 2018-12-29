@@ -306,7 +306,7 @@ sqInt ioShowDisplayOnWindow(unsigned char* dispBits, sqInt width,
 
   if(lines == 0) {
     printLastError(TEXT("SetDIBitsToDevice failed"));
-    warnPrintf(TEXT("width=%" PRIdSQINT ",height=%" PRIdSQINT ",bits=%" PRIXSQPTR ",dc=%" PRIXSQPTR "\n"),
+    warnPrintf(TEXT("width=%") TEXT(PRIdSQINT) TEXT(",height=%") TEXT(PRIdSQINT) TEXT(",bits=%") TEXT(PRIXSQPTR) TEXT(",dc=%") TEXT(PRIXSQPTR) TEXT("\n"),
 	       width, height, (usqIntptr_t)dispBits, (usqIntptr_t)dc);
   }
   /* reverse the image bits if necessary */
@@ -423,7 +423,7 @@ sqInt ioSetIconOfWindow(sqInt windowIndex, char * iconPath, sqInt sizeOfPath) {
 	HICON hIcon = (HICON)LoadImage(NULL, iconPath, IMAGE_ICON, 0, 0, LR_LOADFROMFILE);
 	if (hIcon == 0)
 		return -2;
-	SendMessage(hwnd, WM_SETICON, ICON_BIG, (LONG)hIcon); 
+	SendMessage(hwnd, WM_SETICON, ICON_BIG, (LONG_PTR)hIcon); 
 	return 0;
 }
 

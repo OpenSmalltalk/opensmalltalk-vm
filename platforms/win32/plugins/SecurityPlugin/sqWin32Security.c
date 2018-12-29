@@ -108,30 +108,43 @@ static int isAccessiblePathName(WCHAR *pathName, int writeFlag) {
   return 0;
 }
 
+static int isAccessibleUTF8PathName(char *pathName, int pathLen , int writeFlag) {
+	DWORD success;
+	WCHAR widePath[MAX_PATH];
+	widePath[MAX_PATH - 1] = 0;
+	success = MultiByteToWideChar(CP_UTF8, 0, pathName, pathLen, widePath, MAX_PATH-1);
+	if (! success) return 0; /* if conversion fails, then it's not accessible */
+	return isAccessiblePathName(widePath, writeFlag);
+}
+
 static int isAccessibleFileName(WCHAR *fileName, int writeFlag) {
   return isAccessiblePathName(fileName, writeFlag);
+}
+
+static int isAccessibleUTF8FileName(char *fileName, int fileLen, int writeFlag) {
+	return isAccessibleUTF8PathName(fileName, fileLen , writeFlag);
 }
 
 /* directory access */
 int ioCanCreatePathOfSize(char* pathString, int pathStringLength) {
   if(allowFileAccess) return 1;
-  return isAccessiblePathName(fromSqueak(pathString, pathStringLength), 1);
+  return isAccessibleUTF8PathName(pathString, pathStringLength, 1);
 }
 
 int ioCanListPathOfSize(char* pathString, int pathStringLength) {
   if(allowFileAccess) return 1;
-  return isAccessiblePathName(fromSqueak(pathString, pathStringLength), 0);
+  return isAccessibleUTF8PathName(pathString, pathStringLength, 0);
 }
 
 int ioCanDeletePathOfSize(char* pathString, int pathStringLength) {
   if(allowFileAccess) return 1;
-  return isAccessiblePathName(fromSqueak(pathString, pathStringLength), 1);
+  return isAccessibleUTF8PathName(pathString, pathStringLength, 1);
 }
 
 /* file access */
 int ioCanOpenFileOfSizeWritable(char* pathString, int pathStringLength, int writeFlag) {
   if(allowFileAccess) return 1;
-  return isAccessibleFileName(fromSqueak(pathString, pathStringLength), writeFlag);
+  return isAccessibleUTF8FileName(pathString, pathStringLength, writeFlag);
 }
 
 int ioCanOpenAsyncFileOfSizeWritable(char* pathString, int pathStringLength, int writeFlag) {
@@ -139,12 +152,12 @@ int ioCanOpenAsyncFileOfSizeWritable(char* pathString, int pathStringLength, int
 }
 int ioCanDeleteFileOfSize(char* pathString, int pathStringLength) {
   if(allowFileAccess) return 1;
-  return isAccessibleFileName(fromSqueak(pathString, pathStringLength), 1);
+  return isAccessibleUTF8FileName(pathString, pathStringLength, 1);
 }
 
 int ioCanRenameFileOfSize(char* pathString, int pathStringLength) {
   if(allowFileAccess) return 1;
-  return isAccessibleFileName(fromSqueak(pathString, pathStringLength), 1);
+  return isAccessibleUTF8FileName(pathString, pathStringLength, 1);
 }
 
 
