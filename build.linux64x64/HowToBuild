@@ -83,16 +83,17 @@ source). See "Installing support libraries" below.  If the configure step fails
 when "checking for C compiler default output file name", you have yet to install
 all the necessary support packages (e.g. libuuid).
 Then cd to the build directory of your choice, e.g.
-	build.linux32x86/squeak.cog.spur/build
+	build.linux64x64/squeak.cog.spur/build
 Then execute
 	./mvm
-answering "y" to perform a clean build or "n" to rebuild without recionfiguring.
+	
+answering "y" to perform a clean build or "n" to rebuild without reconfiguring.
 Again, if the configure step fails when "checking for C compiler default output
 file name", you have yet to install all the necessary support (e.g. lubuuid).
 
-The subdirectories confrm to the production/assert/debug x itimer vs threaded
+The subdirectories conform to the production/assert/debug x itimer vs threaded
 heartbeat x single vs multi-threaded parts of the matrix described above.  For
-example, build.linux32x86/squeak.cog.v3 includes
+example, build.linux64x64/squeak.cog.v3 includes
 
 	build
 	build.itimerheartbeat
@@ -123,7 +124,7 @@ the supplied plugins directory (which defaults to ../src/plugins), and which
 are to be linked into the VM (plugins.int) or compiled as external shared
 objects to be dynamically linked at run-time (plugins.ext).
 
-Finally, at the build.linux32x86 level the makeall script will run all the
+Finally, at the build.linux64x64 level the makeall script will run all the
 makeallclean scripts it can find.
 
 
@@ -133,11 +134,11 @@ If you want to get the Cog VM simulator working you'll need to build one or more
 of the processor simulator plugins, each of which has support libraries that
 must be built:
 	Processor   Plugin           Support Library
-	x86         BochsIA32Plugin  build.linux32x86/bochsx86
-	x86_64/x64  BochsX64Plugin   build.linux32x86/bochsx64
-	ARMv5       GdbARMPlugin     build.linux32x86/gdbarm32
+	x86         BochsIA32Plugin  build.linux64x64/bochsx86
+	x86_64/x64  BochsX64Plugin   build.linux64x64/bochsx64
+	ARMv5       GdbARMPlugin     build.linux64x64/gdbarm32
 cd to the relevant directories; run conf.COG and then the build script, e.g.
-  $ cd build.linux32x86/bochsx86
+  $ cd build.linux64x64/bochsx86
   $ ./conf.COG
   $ ./makeem
 
@@ -240,15 +241,17 @@ Different linux distributions have different mechanisms for loading packages.
 Here are some examples:
 
 CentOS
-	sudo yum install cairo-devel
-	sudo yum install pango-devel
-	sudo yum install libuuid-devel
-	sudo yum install libX11-devel
-	sudo yum install mesa-libGL mesa-libGL-devel 
+	sudo yum install -y cairo-devel
+	sudo yum install -y pango-devel
+	sudo yum install -y libuuid-devel
+	sudo yum install -y libX11-devel
+	sudo yum install -y mesa-libGL-devel 
+	sudo yum install -y openssl-devel
+	sudo yum install -y cmake
+	sudo yum install -y gcc-c++
 N.B. if you get failures due to version conflicts try
 	sudo yum update
 and then retry.
-
 
 Ubuntu
 	sudo apt-get install uuid-dev libcairo2-dev libpango1.0-dev libgl1-mesa-dev libgl1-mesa-glx

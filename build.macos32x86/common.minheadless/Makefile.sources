@@ -1,0 +1,24 @@
+#############################################################################
+# Generic Makefile for downloading sources
+
+SOURCESDIR:=../../sources
+
+$(SOURCESDIR):
+	mkdir -p $(SOURCESDIR)
+
+%.sources: $(SOURCESDIR) $(SOURCESDIR)/%.sources
+	test -f $@ || ln $(SOURCESDIR)/$(notdir $@) $@
+
+$(SOURCESDIR)/PharoV50.sources: 
+	curl http://files.pharo.org/get-files/50/sources.zip -o $@.zip
+	(cd $(SOURCESDIR); unzip $(@F).zip)
+	chmod 444 $@
+	-rm $@.zip
+
+$(SOURCESDIR)/SqueakV50.sources \
+$(SOURCESDIR)/SqueakV46.sources \
+$(SOURCESDIR)/SqueakV41.sources: 
+	curl http://ftp.squeak.org/sources_files/$(@F).gz -o $@.gz
+	(cd $(SOURCESDIR); gunzip $(@F).gz)
+	chmod 444 $@
+	-rm $@.zip

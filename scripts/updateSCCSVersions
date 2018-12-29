@@ -1,7 +1,8 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
 # checkin script for Git that serves to cause
 # platforms/Cross/vm/sqSCCSVersion.h to be checked-in so that its version
 # info reflects that of the current check-in.
+set -e
 
 is_run_as_hook() {
     test -n "$GIT_DIR"

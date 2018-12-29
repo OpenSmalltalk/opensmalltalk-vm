@@ -72,7 +72,7 @@ soundInit(void) {
 
 sqInt
 soundShutdown(void) {
-  DPRINTF(("soundShutDown\n"));
+  DPRINTF((TEXT("soundShutDown\n")));
   snd_StopPlaying();
   snd_StopRecording();
   CloseHandle(hPlayEvent);
@@ -84,7 +84,7 @@ sqInt
 snd_StopPlaying(void) {
   playTerminate = 0;
   if(lpdPlayBuffer) {
-    DPRINTF(("Shutting down DSound\n"));
+    DPRINTF((TEXT("Shutting down DSound\n")));
     IDirectSoundBuffer_Stop(lpdPlayBuffer);
     IDirectSoundBuffer_Release(lpdPlayBuffer);
     lpdPlayBuffer = NULL;
@@ -115,7 +115,7 @@ playCallback( LPVOID ignored ) {
     if(WaitForSingleObject(hPlayEvent, INFINITE) == WAIT_OBJECT_0) {
       if(playTerminate) {
 	hPlayThread = NULL;
-	DPRINTF(("playCallback shutdown\n"));
+	DPRINTF((TEXT("playCallback shutdown\n")));
 	snd_StopPlaying();
 	return 0; /* done playing */
       }
@@ -170,7 +170,7 @@ snd_PlaySamplesFromAtLength(sqInt frameCount, void* srcBufPtr,
   if(bytesWritten < playBufferSize)
     return 0;
 
-  DPRINTF(("[%d", frameCount));
+  DPRINTF((TEXT("[%d"), frameCount));
 
   hRes = IDirectSoundBuffer_Lock(lpdPlayBuffer, 
 				 playBufferSize * playBufferIndex,
@@ -179,7 +179,7 @@ snd_PlaySamplesFromAtLength(sqInt frameCount, void* srcBufPtr,
 				 NULL, NULL, 
 				 0);
   if(FAILED(hRes)) {
-    DPRINTF(("snd_Play: IDirectSoundBuffer_Lock failed (errCode: %x)\n", hRes));
+    DPRINTF((TEXT("snd_Play: IDirectSoundBuffer_Lock failed (errCode: %x)\n"), hRes));
     return 0;
   }
   /* mix in stuff */
@@ -188,13 +188,13 @@ snd_PlaySamplesFromAtLength(sqInt frameCount, void* srcBufPtr,
     short *shortSrc = (short*)(((char*)srcBufPtr)+startIndex);
     short *shortDst = (short*)dstPtr;
     dstLen /=2;
-    DPRINTF(("|%d", dstLen));
+    DPRINTF((TEXT("|%d"), dstLen));
     for(i=0;i<dstLen;i++) {
       *shortDst++ = *(shortSrc++);
     }
   }
   IDirectSoundBuffer_Unlock(lpdPlayBuffer, dstPtr, dstLen, NULL, 0);
-  DPRINTF(("]"));
+  DPRINTF((TEXT("]")));
   playBufferAvailable = 0;
   return bytesWritten / waveOutFormat.nBlockAlign;
 }
@@ -220,7 +220,7 @@ snd_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sqInt semaIndex)
      (samplesPerSec != waveOutFormat.nSamplesPerSec) || 
      ((stereo == 0) != (waveOutFormat.nChannels == 1))) {
     /* format change */
-    DPRINTF(("DXSound format change (%d, %d, %s)\n", frameCount, samplesPerSec, (stereo ? "stereo" : "mono")));
+    DPRINTF((TEXT("DXSound format change (%d, %d, %s)\n"), frameCount, samplesPerSec, (stereo ? "stereo" : "mono")));
     snd_StopPlaying();
   }
 
@@ -228,27 +228,27 @@ snd_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sqInt semaIndex)
     /* keep playing */
     playTerminate = 0;
     playSemaphore = semaIndex; /* might have changed */
-    DPRINTF(("Continuing DSound\n"));
+    DPRINTF((TEXT("Continuing DSound\n")));
     return 1;
   }
 
-  DPRINTF(("Starting DSound\n"));
+  DPRINTF((TEXT("Starting DSound\n")));
   if(!lpdSound) {
     /* Initialize DirectSound */
-    DPRINTF(("# Creating lpdSound\n"));
+    DPRINTF((TEXT("# Creating lpdSound\n")));
     hRes = CoCreateInstance(&CLSID_DirectSound,
 			    NULL, 
 			    CLSCTX_INPROC_SERVER,
 			    &IID_IDirectSound,
 			    (void**)&lpdSound);
     if(FAILED(hRes)) {
-      DPRINTF(("sndStart: CoCreateInstance() failed (errCode: %x)\n", hRes));
+      DPRINTF((TEXT("sndStart: CoCreateInstance() failed (errCode: %x)\n"), hRes));
       return 0;
     }
-    DPRINTF(("# Initializing lpdSound\n"));
+    DPRINTF((TEXT("# Initializing lpdSound\n")));
     hRes = IDirectSound_Initialize(lpdSound, NULL);
     if(FAILED(hRes)) {
-      DPRINTF(("sndStart: IDirectSound_Initialize() failed (errCode: %x)\n", hRes));
+      DPRINTF((TEXT("sndStart: IDirectSound_Initialize() failed (errCode: %x)\n"), hRes));
       IDirectSound_Release(lpdSound);
       lpdSound = NULL;
       return 0;
@@ -256,17 +256,17 @@ snd_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sqInt semaIndex)
     /* set the cooperative level (DSSCL_PRIORITY is recommended) */
     hRes = IDirectSound_SetCooperativeLevel(lpdSound, stWindow, DSSCL_PRIORITY);
     if(FAILED(hRes)) {
-      DPRINTF(("sndStart: IDirectSound_SetCooperativeLevel failed (errCode: %x)\n", hRes));
+      DPRINTF((TEXT("sndStart: IDirectSound_SetCooperativeLevel failed (errCode: %x)\n"), hRes));
       /* for now don't fail because of lack in cooperation */
     }
     /* grab the primary sound buffer for handling format changes */
     ZeroMemory(&dsbd, sizeof(dsbd));
     dsbd.dwSize = sizeof(dsbd);
     dsbd.dwFlags = DSBCAPS_PRIMARYBUFFER;
-    DPRINTF(("# Creating primary buffer\n"));
+    DPRINTF((TEXT("# Creating primary buffer\n")));
     hRes = IDirectSound_CreateSoundBuffer(lpdSound, &dsbd, &lpdPrimaryBuffer, NULL);
     if(FAILED(hRes)) {
-      DPRINTF(("sndStart: Failed to create primary buffer (errCode: %x)\n", hRes));
+      DPRINTF((TEXT("sndStart: Failed to create primary buffer (errCode: %x)\n"), hRes));
       snd_StopPlaying();
       return 0;
     }
@@ -276,10 +276,10 @@ snd_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sqInt semaIndex)
 
   if(!hPlayThread) {
     /* create the playback notification thread */
-    DPRINTF(("# Creating playback thread\n"));
+    DPRINTF((TEXT("# Creating playback thread\n")));
     hPlayThread = CreateThread(NULL, 0, playCallback, NULL, 0, &threadID);
     if(hPlayThread == 0) {
-      printLastError("sndStart: CreateThread failed");
+      printLastError(TEXT("sndStart: CreateThread failed"));
       snd_StopPlaying();
       return 0;
     }
@@ -315,14 +315,14 @@ snd_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sqInt semaIndex)
   if(lpdPrimaryBuffer) {
     hRes = IDirectSoundBuffer_SetFormat(lpdPrimaryBuffer, &waveOutFormat);
     if(FAILED(hRes)) {
-      DPRINTF(("sndStart: Failed to set primary buffer format (errCode: %x)\n", hRes));
+      DPRINTF((TEXT("sndStart: Failed to set primary buffer format (errCode: %x)\n"), hRes));
     }
   }
 
-  DPRINTF(("# Creating play buffer\n"));
+  DPRINTF((TEXT("# Creating play buffer\n")));
   hRes = IDirectSound_CreateSoundBuffer(lpdSound, &dsbd, &lpdPlayBuffer, NULL);
   if(FAILED(hRes)) {
-    DPRINTF(("sndStart: IDirectSound_CreateSoundBuffer() failed (errCode: %x)\n", hRes));
+    DPRINTF((TEXT("sndStart: IDirectSound_CreateSoundBuffer() failed (errCode: %x)\n"), hRes));
     snd_StopPlaying();
     /* and try again */
     return 0;
@@ -333,7 +333,7 @@ snd_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sqInt semaIndex)
 					   &IID_IDirectSoundNotify, 
 					   (void**)&lpdNotify );
   if(FAILED(hRes)) {
-    DPRINTF(("sndStart: QueryInterface(IDirectSoundNotify) failed (errCode: %x)\n"));
+    DPRINTF((TEXT("sndStart: QueryInterface(IDirectSoundNotify) failed (errCode: %x)\n")));
     snd_StopPlaying();
     return 0;
   }
@@ -341,19 +341,19 @@ snd_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sqInt semaIndex)
   posNotify[1].dwOffset = 2 * playBufferSize - 1;
   posNotify[0].hEventNotify = hPlayEvent;
   posNotify[1].hEventNotify = hPlayEvent;
-  DPRINTF(("# Setting notifications\n"));
+  DPRINTF((TEXT("# Setting notifications\n")));
   hRes = IDirectSoundNotify_SetNotificationPositions(lpdNotify, 2, posNotify);
   IDirectSoundNotify_Release(lpdNotify);
   if(FAILED(hRes)) {
-    DPRINTF(("sndStart: IDirectSoundNotify_SetNotificationPositions() failed (errCode: %x)\n", hRes));
+    DPRINTF((TEXT("sndStart: IDirectSoundNotify_SetNotificationPositions() failed (errCode: %x)\n"), hRes));
     snd_StopPlaying();
     return 0;
   }
 
-  DPRINTF(("# Starting to play buffer\n"));
+  DPRINTF((TEXT("# Starting to play buffer\n")));
   hRes = IDirectSoundBuffer_Play(lpdPlayBuffer, 0, 0, DSBPLAY_LOOPING);
   if(FAILED(hRes)) {
-    DPRINTF(("sndStart: IDirectSoundBuffer_Play() failed (errCode: %x)\n", hRes));
+    DPRINTF((TEXT("sndStart: IDirectSoundBuffer_Play() failed (errCode: %x)\n"), hRes));
     snd_StopPlaying();
     return 0;
   }
@@ -393,12 +393,12 @@ snd_StartRecording(sqInt samplesPerSec, sqInt stereo, sqInt semaIndex) {
 			    &IID_IDirectSoundCapture,
 			    (void**)&lpdCapture);
     if(FAILED(hRes)) {
-      DPRINTF(("snd_StartRec: CoCreateInstance() failed (errCode: %x)\n", hRes));
+      DPRINTF((TEXT("snd_StartRec: CoCreateInstance() failed (errCode: %x)\n"), hRes));
       return 0;
     }
     hRes = IDirectSoundCapture_Initialize(lpdCapture, NULL);
     if(FAILED(hRes)) {
-      DPRINTF(("snd_StartRec: IDirectSoundCapture_Initialize() failed (errCode: %x)\n", hRes));
+      DPRINTF((TEXT("snd_StartRec: IDirectSoundCapture_Initialize() failed (errCode: %x)\n"), hRes));
       lpdCapture = NULL;
       return 0;
     }
@@ -408,7 +408,7 @@ snd_StartRecording(sqInt samplesPerSec, sqInt stereo, sqInt semaIndex) {
   recSemaphore = semaIndex;
   hRecThread = CreateThread(NULL, 0, recCallback, NULL, 0, &threadID);
   if(hRecThread == 0) {
-    printLastError("snd_StartRec: CreateThread failed");
+    printLastError(TEXT("snd_StartRec: CreateThread failed"));
     snd_StopRecording();
     return 0;
   }
@@ -436,14 +436,14 @@ snd_StartRecording(sqInt samplesPerSec, sqInt stereo, sqInt semaIndex) {
   dscb.lpwfxFormat = &waveInFormat;
   hRes = IDirectSoundCapture_CreateCaptureBuffer(lpdCapture, &dscb, &lpdRecBuffer, NULL);
   if(FAILED(hRes)) {
-    DPRINTF(("snd_StartRec: IDirectSoundCapture_CreateCaptureBuffer() failed (errCode: %x)\n", hRes));
+    DPRINTF((TEXT("snd_StartRec: IDirectSoundCapture_CreateCaptureBuffer() failed (errCode: %x)\n"), hRes));
     return 0;
   }
   hRes = IDirectSoundCaptureBuffer_QueryInterface(lpdRecBuffer,
 						  &IID_IDirectSoundNotify, 
 						  (void**)&lpdNotify );
   if(FAILED(hRes)) {
-    DPRINTF(("snd_StartRec: QueryInterface(IDirectSoundNotify) failed (errCode: %x)\n"));
+    DPRINTF((TEXT("snd_StartRec: QueryInterface(IDirectSoundNotify) failed (errCode: %x)\n")));
     snd_StopRecording();
     return 0;
   }
@@ -454,13 +454,13 @@ snd_StartRecording(sqInt samplesPerSec, sqInt stereo, sqInt semaIndex) {
   hRes = IDirectSoundNotify_SetNotificationPositions(lpdNotify, 2, posNotify);
   IDirectSoundNotify_Release(lpdNotify);
   if(FAILED(hRes)) {
-    DPRINTF(("snd_StartRec: IDirectSoundNotify_SetNotificationPositions() failed (errCode: %x)\n", hRes));
+    DPRINTF((TEXT("snd_StartRec: IDirectSoundNotify_SetNotificationPositions() failed (errCode: %x)\n"), hRes));
     snd_StopRecording();
     return 0;
   }
   hRes = IDirectSoundCaptureBuffer_Start(lpdRecBuffer, DSCBSTART_LOOPING);
   if(FAILED(hRes)) {
-    DPRINTF(("snd_StartRec: IDirectSoundCaptureBuffer_Start() failed (errCode: %x)\n", hRes));
+    DPRINTF((TEXT("snd_StartRec: IDirectSoundCaptureBuffer_Start() failed (errCode: %x)\n"), hRes));
     snd_StopRecording();
     return 0;
   }
@@ -530,7 +530,7 @@ snd_RecordSamplesIntoAtLength(void* buf, sqInt startSliceIndex,
 					NULL, NULL,
 					0);
   if(FAILED(hRes)) {
-    DPRINTF(("snd_Rec: IDirectSoundCaptureBuffer_Lock() failed (errCode: %x)\n", hRes));
+    DPRINTF((TEXT("snd_Rec: IDirectSoundCaptureBuffer_Lock() failed (errCode: %x)\n"), hRes));
     return 0;
   }
 
@@ -544,7 +544,7 @@ snd_RecordSamplesIntoAtLength(void* buf, sqInt startSliceIndex,
 					  srcPtr, srcLen,
 					  NULL, 0);
   if(FAILED(hRes)) {
-    DPRINTF(("snd_Rec: IDirectSoundCaptureBuffer_Unlock() failed (errCode: %x)\n", hRes));
+    DPRINTF((TEXT("snd_Rec: IDirectSoundCaptureBuffer_Unlock() failed (errCode: %x)\n"), hRes));
   }
 
   return bytesCopied / bytesPerSlice;

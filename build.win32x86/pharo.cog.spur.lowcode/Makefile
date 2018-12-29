@@ -12,8 +12,10 @@ VMSRCDIR:=../../spurlowcodesrc/vm
 # ALLOCA_LIES_SO_USE_GETSP=0 Some compilers return the stack address+4 on alloca function, 
 # then FFI module needs to adjust that. It is NOT the case of mingw.
 # For more information see this thread: http://forum.world.st/There-are-something-fishy-with-FFI-plugin-td4584226.html
-#COGDEFS:= -DPharoVM=1 -DIMMUTABILITY=1 -DSTACK_ALIGN_BYTES=16 -DALLOCA_LIES_SO_USE_GETSP=0
-COGDEFS:= -DPharoVM=1 -DIMMUTABILITY=1
+#COGDEFS:= -DPharoVM=1 -DSTACK_ALIGN_BYTES=16 -DALLOCA_LIES_SO_USE_GETSP=0
+COGDEFS:= -DPharoVM=1
+
+COMPILER_TO_USE:=clang
 
 THIRDPARTYLIBS:=pkgconfig openssl libssh2 libgit2 libsdl2 zlib libpng freetype2 pixman cairo libgcc
 	

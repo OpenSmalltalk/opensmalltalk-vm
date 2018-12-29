@@ -1,3 +1,4 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 test -f config.h || ./conf.COG
 exec ../../processors/IA32/bochs/makeem

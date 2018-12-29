@@ -85,11 +85,12 @@ Then cd to the build directory of your choice, e.g.
 	build.linux32x86/squeak.cog.spur/build
 Then execute
 	./mvm
-answering "y" to perform a clean build or "n" to rebuild without recionfiguring.
+	
+answering "y" to perform a clean build or "n" to rebuild without reconfiguring.
 Again, if the configure step fails when "checking for C compiler default output
 file name", you have yet to install all the necessary support (e.g. lubuuid).
 
-The subdirectories confrm to the production/assert/debug x itimer vs threaded
+The subdirectories conform to the production/assert/debug x itimer vs threaded
 heartbeat x single vs multi-threaded parts of the matrix described above.  For
 example, build.linux32x86/squeak.cog.v3 includes
 
@@ -234,6 +235,12 @@ sudo yum install pango-devel
 sudo yum install libuuid-devel
 sudo yum install libX11-devel
 sudo yum install mesa-libGL mesa-libGL-devel 
+sudo yum install openssl-devel
+sudo yum install cmake
+sudo yum install gcc-c++
+N.B. if you get failures due to version conflicts try
+	sudo yum update
+and then retry.
 
 Ubuntu
 sudo apt-get install libcairo2-dev   

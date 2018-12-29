@@ -1,7 +1,9 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 # Edit the installed directory tree to rename squeak to pharo and install source
-INSTALLDIR="$1"
+OSVMROOTDIR=$(cd ../../..; pwd)
 
+INSTALLDIR="$1"
 shift
 cd $INSTALLDIR
 
@@ -11,8 +13,10 @@ if [ "$1" = -source ]; then
 else
 	SourceFile="PharoV50"
 fi
-SOURCE=../../sources/$SourceFile.sources
-test -f $SOURCE || SOURCE=../../../sources/$SourceFile.sources
+mkdir -p "$OSVMROOTDIR/sources"
+SOURCE=$OSVMROOTDIR/sources/$SourceFile.sources
+test -f $SOURCE || wget -O $SOURCE http://files.pharo.org/sources/$SourceFile
+
 if [ -f squeak ]; then
 	mv squeak pharo
 	sed -i 's/squeak/pharo/g' pharo

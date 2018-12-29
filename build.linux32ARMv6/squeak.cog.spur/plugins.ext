@@ -1,6 +1,8 @@
 # Copied, perhaps edited, from ../../src/examplePlugins.ext
 EXTERNAL_PLUGINS = \
 B3DAcceleratorPlugin \
+FileAttributesPlugin \
+Squeak3D \
 SqueakFFIPrims \
 SqueakSSL \
 LocalePlugin \
@@ -10,6 +12,6 @@ UUIDPlugin \
 WeDoPlugin \
 ImmX11Plugin \
 XDisplayControlPlugin \
-#Squeak3D \
 #BochsIA32Plugin \
+#BochsX64Plugin \
 #GdbARMPlugin

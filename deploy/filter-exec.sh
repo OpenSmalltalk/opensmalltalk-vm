@@ -1,3 +1,4 @@
+#!/bin/bash
 # Deployment filter (compatible with Travis and AppVeyor)
 #
 # execute script if: 

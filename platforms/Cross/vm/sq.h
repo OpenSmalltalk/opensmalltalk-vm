@@ -13,13 +13,15 @@
 #ifndef _SQ_H
 #define _SQ_H
 
+#include "sqConfig.h"
+
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <limits.h>
 
-#include "sqConfig.h"
 #include "sqMemoryAccess.h"
 #include "sqVirtualMachine.h"
 
@@ -54,6 +56,7 @@
 */
 #define EXPORT(returnType) returnType
 #define VM_EXPORT
+#define VM_FUNCTION_EXPORT(returnType) returnType
 
 /* Image save/restore macros. */
 
@@ -67,6 +70,7 @@
 #define sqImageFilePosition(f)               		   ftell(f)
 #define sqImageFileRead(ptr, sz, count, f)   		   fread(ptr, sz, count, f)
 #define sqImageFileSeek(f, pos)              		   fseek(f, pos, SEEK_SET)
+#define sqImageFileSeekEnd(f, pos)              	   fseek(f, pos, SEEK_END)
 #define sqImageFileWrite(ptr, sz, count, f)  		   fwrite(ptr, sz, count, f)
 #define sqImageFileStartLocation(fileRef, fileName, size)  0
 
@@ -210,9 +214,13 @@ sqInt sqGetFilenameFromString(char * aCharBuffer, char * aFilenameString, sqInt 
 /* Interpreter entry points. */
 
 /* Disable Intel compiler inlining of error which is used for breakpoints */
-#pragma auto_inline(off)
-void error(char *s);
-#pragma auto_inline(on)
+#ifdef __INTEL_COMPILER 
+#   pragma auto_inline(off)
+#endif
+extern void error(char *s);
+#ifdef __INTEL_COMPILER 
+#   pragma auto_inline(on)
+#endif
 sqInt checkedByteAt(sqInt byteAddress);
 sqInt checkedByteAtput(sqInt byteAddress, sqInt byte);
 sqInt checkedLongAt(sqInt byteAddress);
@@ -227,6 +235,7 @@ sqInt success(sqInt);
 
 extern VM_EXPORT void *displayBits;
 extern VM_EXPORT int displayWidth, displayHeight, displayDepth;
+extern VM_EXPORT sqInt sendWheelEvents;
 
 sqInt ioBeep(void);
 sqInt ioExit(void);
@@ -395,7 +404,7 @@ sqInt ioProcessEvents(void);
 #define EventTypeMenu		4
 #define EventTypeWindow		5
 #define EventTypeComplex	6 /* For iPhone apps */
-#define EventTypeMouseWheel	7 /* defunct; platforms map to EventTypeKeyboard */
+#define EventTypeMouseWheel	7 /* optional; see sendWheelEvents & vm param 48 */
 #define EventTypePlugin		8 /* Terf: events from ActiveX Controls */
 
 

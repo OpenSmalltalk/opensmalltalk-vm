@@ -8,7 +8,7 @@
 /* null if compiled on other than x86, to get around gnu make bugs or
  * misunderstandings on our part.
  */
-#if i386|i486|i586|i686
+#if defined(_M_I386) || defined(_X86_) || defined(i386) || defined(i486) || defined(i586) || defined(i686) || defined(__i386__) || defined(__386__) || defined(X86) || defined(I386)
 
 #if defined(_MSC_VER) || defined(__MINGW32__)
 # include "windows.h" /* for GetSystemInfo & VirtualAlloc */
@@ -46,15 +46,15 @@ void *getbaz() { return baz; }
 
 #ifdef SQUEAK_BUILTIN_PLUGIN
 extern
-#endif 
+#endif
 struct VirtualMachine* interpreterProxy;
 
 #ifdef _MSC_VER
 # define alloca _alloca
 #endif
 #if __GNUC__
-# define setsp(sp) asm volatile ("movl %0,%%esp" : : "m"(sp))
-# define getsp() ({ void *sp; asm volatile ("movl %%esp,%0" : "=r"(sp) : ); sp;})
+# define setsp(sp) __asm__ volatile ("movl %0,%%esp" : : "m"(sp))
+# define getsp() ({ void *sp; __asm__ volatile ("movl %%esp,%0" : "=r"(sp) : ); sp;})
 #endif
 #if __APPLE__ && __MACH__ && __i386__
 # define STACK_ALIGN_BYTES 16
@@ -183,7 +183,7 @@ thunkEntry(void *thunkp, sqIntptr_t *stackp)
 # if _MSC_VER
 		_asm sub esp, dword ptr offset;
 # elif __GNUC__
-		asm("sub %0,%%esp" : : "m"(offset));
+		__asm__ ("sub %0,%%esp" : : "m"(offset));
 # else
 #  error need to subtract offset from esp
 # endif
@@ -223,7 +223,7 @@ thunkEntry(void *thunkp, sqIntptr_t *stackp)
 #if _MSC_VER
 				_asm mov edx, dword ptr vhigh;
 #elif __GNUC__
-				asm("mov %0,%%edx" : : "m"(vhigh));
+				__asm__ ("mov %0,%%edx" : : "m"(vhigh));
 #else
 # error need to load edx with vmcc.rvs.valleint64.high on this compiler
 #endif
@@ -235,7 +235,7 @@ thunkEntry(void *thunkp, sqIntptr_t *stackp)
 #if _MSC_VER
 				_asm fld qword ptr valflt64;
 #elif __GNUC__
-				asm("fldl %0" : : "m"(valflt64));
+				__asm__ ("fldl %0" : : "m"(valflt64));
 #else
 # error need to load %f0 with vmcc.rvs.valflt64 on this compiler
 #endif
@@ -292,14 +292,16 @@ allocateExecutablePage(long *size)
 #else
 	long pagesize = getpagesize();
 
-	if (!(mem = valloc(pagesize)))
+	/* This is equivalent to valloc(pagesize) but at least on some versions of
+	 * SELinux valloc fails to yield an wexecutable page, whereas this mmap
+	 * call works everywhere we've tested so far.  See
+	 * http://lists.squeakfoundation.org/pipermail/vm-dev/2018-October/029102.html
+	 */
+	if (!(mem = mmap(0, pagesize, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANON | MAP_PRIVATE, -1, 0)))
 		return 0;
 
+	// MAP_ANON should zero out the allocated page, but explicitly doing it shouldn't hurt
 	memset(mem, 0, pagesize);
-	if (mprotect(mem, pagesize, PROT_READ | PROT_WRITE | PROT_EXEC) < 0) {
-		free(mem);
-		return 0;
-	}
 	*size = pagesize;
 #endif
 	return mem;

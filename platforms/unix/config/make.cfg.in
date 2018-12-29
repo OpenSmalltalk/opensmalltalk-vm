@@ -51,6 +51,7 @@ exec_prefix=	@exec_prefix@
 
 bindir=		@bindir@
 libdir=		@libdir@
+datarootdir=	@datarootdir@
 datadir=	@datadir@
 mandir=		@mandir@
 imgdir=		@imgdir@
@@ -93,10 +94,6 @@ X_CFLAGS=	@X_CFLAGS@
 X_INCLUDES=	@X_INCLUDES@
 X_LIBS=		@X_LIBS@
 
-LIB_UUID=	@LIB_UUID@
-
-PYLIBPATH=	@PYLIBPATH@
-PYINCLUDES=	@PYINCLUDES@
 
 INTERP=		@INTERP@
 

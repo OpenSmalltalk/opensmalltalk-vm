@@ -81,7 +81,7 @@ EXPORT(int) primitivePluginBrowserReady(void)
 {
   if(!fBrowserMode) {
     /* fast failure is better when not in browser */
-    DPRINTF(("fBrowserMode == 0\n"));
+    DPRINTF((TEXT("fBrowserMode == 0\n")));
     return primitiveFail();
   }
   pop(1);
@@ -342,7 +342,7 @@ void pluginGetURLRequest(int id, void* urlIndex, int urlSize,
   DWORD dwWritten;
   
   if(!hBrowserPipe) {
-    warnPrintf("Cannot submit URL request -- there is no connection to a browser\n");
+    warnPrintf(TEXT("Cannot submit URL request -- there is no connection to a browser\n"));
     return;
   }
 
@@ -352,19 +352,19 @@ void pluginGetURLRequest(int id, void* urlIndex, int urlSize,
   SetLastError(0);
   ok = WriteFile(hBrowserPipe, &urlSize, 4, &dwWritten, NULL);
   if(!ok || dwWritten != 4)
-    printLastError("Failed to write url size");
+    printLastError(TEXT("Failed to write url size"));
   if(urlSize > 0) {
     ok = WriteFile(hBrowserPipe, urlIndex, urlSize, &dwWritten, NULL);
     if(!ok || dwWritten != urlSize)
-      printLastError("Failed to write url request");
+      printLastError(TEXT("Failed to write url request"));
   }
   ok = WriteFile(hBrowserPipe, &targetSize, 4, &dwWritten, NULL);
   if(!ok || dwWritten != 4)
-    printLastError("Failed to write target size");
+    printLastError(TEXT("Failed to write target size"));
   if(targetSize > 0) {
     ok = WriteFile(hBrowserPipe, targetIndex, targetSize, &dwWritten, NULL);
     if(!ok || dwWritten != targetSize)
-      printLastError("Failed to write url request");
+      printLastError(TEXT("Failed to write url request"));
   }
 }
 
@@ -376,7 +376,7 @@ void pluginPostURLRequest(int id, void* urlIndex, int urlSize,
   DWORD dwWritten;
 
   if(!hBrowserPipe) {
-    warnPrintf("Cannot submit URL post request -- there is no connection to a browser\n");
+    warnPrintf(TEXT("Cannot submit URL post request -- there is no connection to a browser\n"));
     return;
   }
 
@@ -386,29 +386,29 @@ void pluginPostURLRequest(int id, void* urlIndex, int urlSize,
   SetLastError(0);
   ok = WriteFile(hBrowserPipe, &urlSize, 4, &dwWritten, NULL);
   if(!ok || dwWritten != 4)
-    printLastError("Failed to write url size");
+    printLastError(TEXT("Failed to write url size"));
   if(urlSize > 0) {
     ok = WriteFile(hBrowserPipe, urlIndex, urlSize, &dwWritten, NULL);
     if(!ok || dwWritten != urlSize)
-      printLastError("Failed to write url request");
+      printLastError(TEXT("Failed to write url request"));
   }
 
   ok = WriteFile(hBrowserPipe, &targetSize, 4, &dwWritten, NULL);
   if(!ok || dwWritten != 4)
-    printLastError("Failed to write url size");
+    printLastError(TEXT("Failed to write url size"));
   if(targetSize > 0) {
     ok = WriteFile(hBrowserPipe, targetIndex, targetSize, &dwWritten, NULL);
     if(!ok || dwWritten != targetSize)
-      printLastError("Failed to write target request");
+      printLastError(TEXT("Failed to write target request"));
   }
 
   ok = WriteFile(hBrowserPipe, &postDataSize, 4, &dwWritten, NULL);
   if(!ok || dwWritten != 4)
-    printLastError("Failed to write post data size");
+    printLastError(TEXT("Failed to write post data size"));
   if(postDataSize > 0) {
     ok = WriteFile(hBrowserPipe, postDataIndex, postDataSize, &dwWritten, NULL);
     if(!ok || dwWritten != postDataSize)
-      printLastError("Failed to write data request");
+      printLastError(TEXT("Failed to write data request"));
   }
 }
 
@@ -424,11 +424,11 @@ void pluginPostURLRequest(int id, void* urlIndex, int urlSize,
 */
 void pluginSetBrowserPipe(MSG *msg)
 {
-  DPRINTF(("New browser pipe: %x\n",msg->lParam));
+  DPRINTF((TEXT("New browser pipe: %x\n"),msg->lParam));
   if(hBrowserPipe) CloseHandle(hBrowserPipe);
   hBrowserPipe = (HANDLE) msg->lParam;
   if(!CreatePipe(&hClientReadEnd, &hClientWriteEnd, NULL, 4096))
-    printLastError("CreatePipe failed");
+    printLastError(TEXT("CreatePipe failed"));
   
   /* And pass our the write end back to the plugin */
   PostMessage(browserWindow, g_WM_CLIENT_PIPE, (WPARAM) GetCurrentProcess(), (LPARAM) hClientWriteEnd);
@@ -469,15 +469,15 @@ void pluginInit(void)
 */
 void pluginHandleEvent(MSG *msg)
 {
-  DPRINTF(("Checking for plugin message (%x)\n",msg->message));
-  DPRINTF(("\tg_WM_QUIT_SESSION: %x\n",g_WM_QUIT_SESSION));
-  DPRINTF(("\tg_WM_BWND_SIZE: %x\n",g_WM_BWND_SIZE));
-  DPRINTF(("\tg_WM_REQUEST_DATA: %x\n",g_WM_REQUEST_DATA));
-  DPRINTF(("\tg_WM_POST_DATA: %x\n",g_WM_POST_DATA));
-  DPRINTF(("\tg_WM_RECEIVE_DATA: %x\n",g_WM_RECEIVE_DATA));
-  DPRINTF(("\tg_WM_INVALIDATE: %x\n",g_WM_INVALIDATE));
-  DPRINTF(("\tg_WM_BROWSER_PIPE: %x\n",g_WM_BROWSER_PIPE));
-  DPRINTF(("\tg_WM_CLIENT_PIPE: %x\n",g_WM_CLIENT_PIPE));
+  DPRINTF((TEXT("Checking for plugin message (%x)\n"),msg->message));
+  DPRINTF((TEXT("\tg_WM_QUIT_SESSION: %x\n"),g_WM_QUIT_SESSION));
+  DPRINTF((TEXT("\tg_WM_BWND_SIZE: %x\n"),g_WM_BWND_SIZE));
+  DPRINTF((TEXT("\tg_WM_REQUEST_DATA: %x\n"),g_WM_REQUEST_DATA));
+  DPRINTF((TEXT("\tg_WM_POST_DATA: %x\n"),g_WM_POST_DATA));
+  DPRINTF((TEXT("\tg_WM_RECEIVE_DATA: %x\n"),g_WM_RECEIVE_DATA));
+  DPRINTF((TEXT("\tg_WM_INVALIDATE: %x\n"),g_WM_INVALIDATE));
+  DPRINTF((TEXT("\tg_WM_BROWSER_PIPE: %x\n"),g_WM_BROWSER_PIPE));
+  DPRINTF((TEXT("\tg_WM_CLIENT_PIPE: %x\n"),g_WM_CLIENT_PIPE));
 
   /* Messages posted from a different process */
   if(msg->message == g_WM_QUIT_SESSION) exit(0);

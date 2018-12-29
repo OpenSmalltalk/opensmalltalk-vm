@@ -36,15 +36,17 @@
 #undef sqImageFilePosition
 #undef sqImageFileRead
 #undef sqImageFileSeek
+#undef sqImageFileSeekEnd
 #undef sqImageFileWrite
 
 #define sqImageFile usqIntptr_t
 sqInt sqImageFileClose(sqImageFile h);
-sqImageFile sqImageFileOpen(char *fileName, char *mode);
+sqImageFile sqImageFileOpen(const char *fileName, const char *mode);
 squeakFileOffsetType sqImageFilePosition(sqImageFile h);
 size_t sqImageFileRead(void *ptr, size_t sz, size_t count, sqImageFile h);
 squeakFileOffsetType sqImageFileSeek(sqImageFile h, squeakFileOffsetType pos);
-size_t sqImageFileWrite(void *ptr, size_t sz, size_t count, sqImageFile h);
+squeakFileOffsetType sqImageFileSeekEnd(sqImageFile h, squeakFileOffsetType pos);
+size_t sqImageFileWrite(const void *ptr, size_t sz, size_t count, sqImageFile h);
 #else /* when no WIN32_FILE_SUPPORT, add necessary stub for using regular Cross/plugins/FilePlugin functions */
 #include <stdlib.h>
 #include <io.h> /* _get_osfhandle */
@@ -154,5 +156,20 @@ extern const unsigned long tltiIndex;
 #endif
 #if !defined(VM_LABEL) || COGVM
 # undef VM_LABEL
-# define VM_LABEL(foo) 0
+# define VM_LABEL(foo) ((void)0)
+#endif
+
+/* Define the fields in a struct _CONTEXT as returned by GetThreadContext that
+ * represent the program counter and frame pointer on the current architecture.
+ */
+#if defined(_M_IX86) || defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__)
+#	define CONTEXT_PC Eip
+#	define CONTEXT_FP Ebp
+#	define CONTEXT_SP Esp
+#elif defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
+#	define CONTEXT_PC Rip
+#	define CONTEXT_FP Rbp
+#	define CONTEXT_SP Rsp
+#else
+# error "unknown architecture, program counter field undefined"
 #endif

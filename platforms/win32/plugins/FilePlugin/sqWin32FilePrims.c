@@ -23,6 +23,7 @@
 *        (Max Leske)
 *
 *****************************************************************************/
+
 #include <windows.h>
 #include <malloc.h>
 #include "sq.h"
@@ -53,7 +54,6 @@ extern struct VirtualMachine *interpreterProxy;
     typedef struct {
 	  int			 sessionID;	(* ikp: must be first *)
 	  void			*file;
-	  squeakFileOffsetType	 fileSize;	(* 64-bits we hope. *)
 	  char			 writable;
 	  char			 lastOp; (* 0 = uncommitted, 1 = read, 2 = write *)
 	  char			 lastChar;
@@ -250,41 +250,96 @@ sqInt sqFileOpenNew(SQFile *f, char* fileNameIndex, sqInt fileNameSize, sqInt* e
   return 1;
 }
 
+sqInt
+sqConnectToFileDescriptor(SQFile *sqFile, int fd, sqInt writeFlag)
+{
+	/*
+	 * Open the file with the supplied file descriptor in binary mode.
+	 *
+	 * writeFlag determines whether the file is read-only or writable
+	 * and must be compatible with the existing access.
+	 * sqFile is populated with the file information.
+	 * Smalltalk is reponsible for handling character encoding and 
+	 * line ends.
+	 */
+	HANDLE file = _fdopen(fd, writeFlag ? "wb" : "rb");
+	if (!file)
+		return interpreterProxy->success(false);
+	return sqConnectToFile(sqFile, file, writeFlag);
+}
+
+sqInt
+sqConnectToFile(SQFile *sqFile, void *file, sqInt writeFlag)
+{
+	/*
+	 * Populate the supplied SQFile structure with the supplied FILE.
+	 *
+	 * writeFlag indicates whether the file is read-only or writable
+	 * and must be compatible with the existing access.
+	 */
+	sqFile->file = (HANDLE)file;
+	AddHandleToTable(win32Files, file);
+	/* setSize(sqFile, 0); */
+	sqFile->sessionID = thisSession;
+	sqFile->lastOp = 0; /* Unused on Win32 */
+	sqFile->writable = writeFlag;
+	return 1;
+}
+
+void
+sqFileStdioHandlesIntoFile_WithHandle_IsWritable(SQFile * file, HANDLE handle, int isWritable) {
+	file->sessionID = thisSession;
+	file->file = handle;
+	file->writable = isWritable;
+	file->lastOp = 0; /* unused on win32 */
+	file->isStdioStream = isFileHandleATTY(handle);
+	AddHandleToTable(win32Files, handle);
+}
+
 /*
  * Fill-in files with handles for stdin, stdout and seterr as available and
- * answer a bit-mask of the availability, 1 corresponding to stdin, 2 to stdout
- * and 4 to stderr, with 0 on error or unavailablity.
+ * answer a bit-mask of the availability:
+ *
+ * <0 - Error.  The value will be returned to the image using primitiveFailForOSError().
+ * 0  - no stdio available
+ * 1  - stdin available
+ * 2  - stdout available
+ * 4  - stderr available
  */
 sqInt
 sqFileStdioHandlesInto(SQFile files[3])
 {
-	DWORD mode;
+HANDLE	handle;
+int	status = 0;
 
-	files[0].sessionID = thisSession;
-	files[0].file = GetStdHandle(STD_INPUT_HANDLE);
-	files[0].fileSize = 0;
-	files[0].writable = false;
-	files[0].lastOp = 0; /* unused on win32 */
-	files[0].isStdioStream = GetConsoleMode(files[0].file, &mode) != 0;
-	AddHandleToTable(win32Files, files[0].file);
+	handle = GetStdHandle(STD_INPUT_HANDLE);
+	if (handle != 0) {
+		sqFileStdioHandlesIntoFile_WithHandle_IsWritable(&files[0], handle, false);
+		status += 1; }
+	handle = GetStdHandle(STD_OUTPUT_HANDLE);
+	if (handle != 0) {
+		sqFileStdioHandlesIntoFile_WithHandle_IsWritable(&files[1], handle, true);
+		status += 2; }
+	handle = GetStdHandle(STD_ERROR_HANDLE);
+	if (handle != 0) {
+		sqFileStdioHandlesIntoFile_WithHandle_IsWritable(&files[2], handle, true);
+		status += 4; }
+	return status;
+}
 
-	files[1].sessionID = thisSession;
-	files[1].file = GetStdHandle(STD_OUTPUT_HANDLE);
-	files[1].fileSize = 0;
-	files[1].writable = true;
-	files[1].lastOp = 0; /* unused on win32 */
-	files[1].isStdioStream = GetConsoleMode(files[1].file, &mode) != 0;
-	AddHandleToTable(win32Files, files[1].file);
 
-	files[2].sessionID = thisSession;
-	files[2].file = GetStdHandle(STD_ERROR_HANDLE);
-	files[2].fileSize = 0;
-	files[2].writable = true;
-	files[2].lastOp = 0; /* unused on win32 */
-	files[2].isStdioStream = GetConsoleMode(files[2].file, &mode) != 0;
-	AddHandleToTable(win32Files, files[2].file);
-
-	return 7;
+/*
+* Allow to test if the standard input/output files are from a console or not
+* Return values:
+* -1 - Error
+* 0 - no console (windows only)
+* 1 - normal terminal (unix terminal / windows console)
+* 2 - pipe
+* 3 - file
+* 4 - cygwin terminal (windows only)
+*/
+sqInt  sqFileDescriptorType(int fdNum) {
+	return fileHandleType(_get_osfhandle(fdNum));
 }
 
 size_t sqFileReadIntoAt(SQFile *f, size_t count, char* byteArrayIndex, size_t startIndex) {
@@ -410,7 +465,7 @@ sqInt sqImageFileClose(sqImageFile h)
   return CloseHandle((HANDLE)(h-1));
 }
 
-sqImageFile sqImageFileOpen(char *fileName, char *mode)
+sqImageFile sqImageFileOpen(const char *fileName, const char *mode)
 { char *modePtr;
   int writeFlag = 0;
   WCHAR *win32Path = NULL;
@@ -478,7 +533,15 @@ squeakFileOffsetType sqImageFileSeek(sqImageFile h, squeakFileOffsetType pos)
   return ofs.offset;
 }
 
-size_t sqImageFileWrite(void *ptr, size_t sz, size_t count, sqImageFile h)
+squeakFileOffsetType sqImageFileSeekEnd(sqImageFile h, squeakFileOffsetType pos)
+{
+    win32FileOffset ofs;
+    ofs.offset = pos;
+    ofs.dwLow = SetFilePointer((HANDLE)(h - 1), ofs.dwLow, &ofs.dwHigh, FILE_END);
+    return ofs.offset;
+}
+
+size_t sqImageFileWrite(const void *ptr, size_t sz, size_t count, sqImageFile h)
 {
   DWORD dwReallyWritten;
   WriteFile((HANDLE)(h-1), (LPVOID) ptr, count*sz, &dwReallyWritten, NULL);

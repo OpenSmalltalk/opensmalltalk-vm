@@ -2,6 +2,8 @@
 # N.B. SqueakSSL is not ready for prime time.  Compiles but does not link fully.
 # See platforms/win32/plugins/SqueakSSL/Makefile
 EXTERNAL_PLUGINS = \
+FileAttributesPlugin \
+Squeak3D \
 SqueakFFIPrims \
 UUIDPlugin \
 Win32OSProcessPlugin

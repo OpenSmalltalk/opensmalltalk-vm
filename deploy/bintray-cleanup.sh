@@ -4,7 +4,7 @@ set -e
 # Remove old versions from bintray, leaving only the last version per month
 if [[ "${TRAVIS_OS_NAME}" == "linux" ]] && [[ "${ARCH}" == "linux64x64" ]] && [[ "${FLAVOR}" == "squeak.cog.spur" ]]; then
     ruby -rdate -rnet/http -rjson -e "lastver=DateTime.now;
-        user='timfel';
+        user='osvm';
         pass='${BINTRAYAPIKEY}';
         url='https://api.bintray.com/packages/opensmalltalk/vm/cog';
         uri=URI(url);

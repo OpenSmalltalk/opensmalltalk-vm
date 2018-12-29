@@ -2,6 +2,10 @@ language: c
 
 sudo: required
 
+addons:
+    apt:
+      update: true
+
 cache:
   directories:
   - armchroot
@@ -16,36 +20,52 @@ aliases:
     os: osx
     osx_image: xcode7.3
 
-jobs:
-  include:
-  - stage: "Linux builds"
-    env: ARCH="linux64x64" FLAVOR="newspeak.cog.spur"
-  - env: ARCH="linux64x64" FLAVOR="squeak.cog.spur"
-  - env: ARCH="linux64x64" FLAVOR="pharo.cog.spur" HEARTBEAT="threaded"
-  - env: ARCH="linux64x64" FLAVOR="pharo.cog.spur" HEARTBEAT="itimer"
-  - env: ARCH="linux32x86" FLAVOR="newspeak.cog.spur"
-  - env: ARCH="linux32x86" FLAVOR="squeak.cog.spur"
-  - env: ARCH="linux32x86" FLAVOR="squeak.cog.v3"
-  - env: ARCH="linux32x86" FLAVOR="squeak.sista.spur"
-  - env: ARCH="linux32x86" FLAVOR="pharo.cog.spur" HEARTBEAT="threaded"
-  - env: ARCH="linux32x86" FLAVOR="pharo.cog.spur" HEARTBEAT="itimer"
+notifications:
+  email:
+    - vm-dev@lists.squeakfoundation.org
 
-  - stage: "Mac builds"
-    env: ARCH="macos64x64" FLAVOR="newspeak.cog.spur"
+jobs:
+  fast_finish: true
+  include:
+  - stage: "Main Squeak and Pharo builds"
+    env: ARCH="linux32x86" FLAVOR="squeak.cog.spur"
+  - env: ARCH="macos32x86" FLAVOR="squeak.cog.spur"
     <<: *mac-build
+  - env: ARCH="linux64x64" FLAVOR="squeak.cog.spur"
+  - env: ARCH="macos64x64" FLAVOR="squeak.cog.spur"
+    <<: *mac-build
+  - env: ARCH="linux32x86" FLAVOR="pharo.cog.spur" HEARTBEAT="threaded"
+  - env: ARCH="macos32x86" FLAVOR="pharo.cog.spur"
+    <<: *mac-build
+  - env: ARCH="linux64x64" FLAVOR="pharo.cog.spur" HEARTBEAT="threaded"
   - env: ARCH="macos64x64" FLAVOR="pharo.cog.spur"
     <<: *mac-build
-  - env: ARCH="macos64x64" FLAVOR="pharo.cog.spur.lowcode"
+
+  - stage: "Other Linux builds"
+    env: ARCH="linux64x64" FLAVOR="newspeak.cog.spur"
+  - env: ARCH="linux64x64" FLAVOR="pharo.cog.spur" HEARTBEAT="itimer"
+  # - env: ARCH="linux64x64" FLAVOR="pharo.sista.spur" HEARTBEAT="threaded"
+  - env: ARCH="linux32x86" FLAVOR="newspeak.cog.spur"
+  - env: ARCH="linux32x86" FLAVOR="squeak.cog.v3"
+  - env: ARCH="linux32x86" FLAVOR="squeak.sista.spur"
+  - env: ARCH="linux32x86" FLAVOR="pharo.cog.spur" HEARTBEAT="itimer"
+  - env: ARCH="linux32x86" FLAVOR="pharo.sista.spur" HEARTBEAT="threaded"
+    compiler: clang
+  - env: ARCH="linux32x86" FLAVOR="pharo.sista.spur" HEARTBEAT="itimer" 
+    compiler: clang
+
+  - stage: "Other Mac builds"
+    env: ARCH="macos64x64" FLAVOR="newspeak.cog.spur"
     <<: *mac-build
-  - env: ARCH="macos64x64" FLAVOR="squeak.cog.spur"
+  # - env: ARCH="macos64x64" FLAVOR="pharo.sista.spur"
+  #   <<: *mac-build
+  - env: ARCH="macos64x64" FLAVOR="pharo.cog.spur.lowcode"
     <<: *mac-build
   - env: ARCH="macos32x86" FLAVOR="newspeak.cog.spur"
     <<: *mac-build
-  - env: ARCH="macos32x86" FLAVOR="pharo.cog.spur"
+  - env: ARCH="macos32x86" FLAVOR="pharo.sista.spur"
     <<: *mac-build
   - env: ARCH="macos32x86" FLAVOR="pharo.cog.spur.lowcode"
-    <<: *mac-build
-  - env: ARCH="macos32x86" FLAVOR="squeak.cog.spur"
     <<: *mac-build
   - env: ARCH="macos32x86" FLAVOR="squeak.cog.v3"
     <<: *mac-build
@@ -102,12 +122,17 @@ jobs:
       bash -c "
     dist: trusty
     group: edge
+  allow_failures:
+  - env: FLAVOR="squeak.sista.spur"
+  - env: FLAVOR="pharo.sista.spur"
+  - env: FLAVOR="squeak.cog.spur.lowcode"
+  - env: FLAVOR="pharo.cog.spur.lowcode"
 
-install: ./.travis_install.sh
+install: ./scripts/ci/travis_install.sh
 
-before_script: $CHROOT ./.travis_build.sh
+before_script: $CHROOT ./scripts/ci/travis_build.sh
 
-script: ./.travis_test.sh
+script: ./scripts/ci/travis_test.sh
 
 after_success: (cd deploy && ./filter-exec.sh pack-vm.sh)
 
@@ -119,7 +144,7 @@ deploy:
       repo: OpenSmalltalk/opensmalltalk-vm
       branch: Cog
   - provider: script # Deploy to files.pharo.org
-    script: (cd deploy/pharo && ./deploy.sh)
+    script: (cd deploy/pharo && ./filter-exec.sh ./deploy.sh)
     skip_cleanup: true
     on:
       repo: OpenSmalltalk/opensmalltalk-vm

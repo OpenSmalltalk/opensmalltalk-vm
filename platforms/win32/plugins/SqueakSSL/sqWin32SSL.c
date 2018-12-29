@@ -20,8 +20,37 @@
 
 #define SECURITY_WIN32
 #include <security.h>
+#include <schnlsp.h>
 #include <schannel.h>
 #include <wincrypt.h>
+
+/* Constants that mingw might have forgotten.
+   For reference see https://msdn.microsoft.com/en-us/library/aa379810.aspx
+ */
+#if !defined(SP_PROT_TLS1_SERVER)
+#define SP_PROT_TLS1_SERVER             0x00000040
+#endif
+#if !defined(SP_PROT_TLS1_CLIENT)
+#define SP_PROT_TLS1_CLIENT             0x00000080
+#endif
+#if !defined(SP_PROT_TLS1_0_SERVER)
+#define SP_PROT_TLS1_0_SERVER           SP_PROT_TLS1_SERVER
+#endif
+#if !defined(SP_PROT_TLS1_0_CLIENT)
+#define SP_PROT_TLS1_0_CLIENT           SP_PROT_TLS1_CLIENT
+#endif
+#if !defined(SP_PROT_TLS1_1_SERVER)
+#define SP_PROT_TLS1_1_SERVER           0x00000100
+#endif
+#if !defined(SP_PROT_TLS1_1_CLIENT)
+#define SP_PROT_TLS1_1_CLIENT           0x00000200
+#endif
+#if !defined(SP_PROT_TLS1_2_SERVER)
+#define SP_PROT_TLS1_2_SERVER           0x00000400
+#endif
+#if !defined(SP_PROT_TLS1_2_CLIENT)
+#define SP_PROT_TLS1_2_CLIENT           0x00000800
+#endif
 
 typedef struct sqSSL {
 	int state;
@@ -73,7 +102,7 @@ static void sqPrintSBD(char *title, SecBufferDesc sbd) {
 	printf("%s\n", title);
 	for(i=0; i<sbd.cBuffers; i++) {
 		SecBuffer *buf = sbd.pBuffers + i;
-		printf("\tbuf[%d]: %d (%d bytes) ptr=%x\n", i,buf->BufferType, buf->cbBuffer, (int)buf->pvBuffer);
+		printf("\tbuf[%d]: %d (%d bytes) ptr=%"PRIxSQPTR"\n", i,buf->BufferType, buf->cbBuffer, (sqIntptr_t)buf->pvBuffer);
 	}
 }
 
@@ -144,7 +173,7 @@ static sqInt sqSetupCert(sqSSL *ssl, char *certName, int server) {
 	char  bFriendlyName[MAX_NAME_SIZE];
 
 	if(certName) {
-		hStore = CertOpenSystemStore(0, L"MY");
+		hStore = CertOpenSystemStore(0, TEXT("MY"));
 		if(!hStore) {
 			if(ssl->loglevel) printf("sqSetupCert: CertOpenSystemStore failed\n");
 			return 0;
@@ -182,7 +211,9 @@ static sqInt sqSetupCert(sqSSL *ssl, char *certName, int server) {
 
 	sc_cred.dwVersion = SCHANNEL_CRED_VERSION;
 	sc_cred.dwFlags = SCH_CRED_NO_DEFAULT_CREDS | SCH_CRED_MANUAL_CRED_VALIDATION;
-	sc_cred.grbitEnabledProtocols = server ? SP_PROT_TLS1_SERVER | SP_PROT_SSL3_SERVER : 0;
+#define SQSSL_WIN_SERVER_PROTOS SP_PROT_TLS1_0_SERVER | SP_PROT_TLS1_1_SERVER | SP_PROT_TLS1_2_SERVER
+#define SQSSL_WIN_CLIENT_PROTOS SP_PROT_TLS1_0_CLIENT | SP_PROT_TLS1_1_CLIENT | SP_PROT_TLS1_2_CLIENT
+	sc_cred.grbitEnabledProtocols = server ? SQSSL_WIN_SERVER_PROTOS : SQSSL_WIN_CLIENT_PROTOS;
 	sc_cred.dwMinimumCipherStrength = 0;
 	sc_cred.dwMaximumCipherStrength = 0;
 
@@ -474,7 +505,7 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 		if (!ssl->dataBuf) return SQSSL_OUT_OF_MEMORY;
 	}
 	if(ssl->loglevel) 
-		printf("sqConnectSSL: input token %d bytes\n", srcLen);
+		printf("sqConnectSSL: input token %" PRIdSQINT " bytes\n", srcLen);
 	memcpy(ssl->dataBuf + ssl->dataLen, srcBuf, srcLen);
 	ssl->dataLen += srcLen;
 
@@ -706,7 +737,7 @@ sqInt sqEncryptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 
 	if(ssl == NULL || ssl->state != SQSSL_CONNECTED) return SQSSL_INVALID_STATE;
 
-	if(ssl->loglevel) printf("sqEncryptSSL: Encrypting %d bytes\n", srcLen);
+	if(ssl->loglevel) printf("sqEncryptSSL: Encrypting %" PRIdSQINT " bytes\n", srcLen);
 
 	if(srcLen > (int)ssl->sslSizes.cbMaximumMessage) 
 		return SQSSL_INPUT_TOO_LARGE;
@@ -779,7 +810,7 @@ sqInt sqDecryptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 		ssl->dataBuf = realloc(ssl->dataBuf, ssl->dataMax);
 		if(!ssl->dataBuf) return SQSSL_OUT_OF_MEMORY;
 	}
-	if(ssl->loglevel) printf("sqDecryptSSL: Input data %d bytes\n", srcLen);
+	if(ssl->loglevel) printf("sqDecryptSSL: Input data %" PRIdSQINT " bytes\n", srcLen);
 	memcpy(ssl->dataBuf + ssl->dataLen, srcBuf, srcLen);
 	ssl->dataLen += srcLen;
 
@@ -816,7 +847,7 @@ sqInt sqDecryptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 		int buftype = ssl->inbuf[i].BufferType;
 		int count = ssl->inbuf[i].cbBuffer;
 		char *buffer = ssl->inbuf[i].pvBuffer;
-		if(ssl->loglevel) printf("buf[%d]: %d (%d bytes) ptr=%x\n", i,buftype, count, (int)buffer);
+		if(ssl->loglevel) printf("buf[%d]: %d (%d bytes) ptr=%"PRIxSQPTR"\n", i,buftype, count, (sqIntptr_t)buffer);
 		if(buftype == SECBUFFER_DATA) {
 			if(count > dstLen) return SQSSL_BUFFER_TOO_SMALL;
 			memcpy(dstBuf, buffer, count);
@@ -892,7 +923,7 @@ static sqInt sqAddPfxCertToStore(char *pfxData, sqInt pfxLen, char *passData, sq
 	if(!pfxStore) return 0;
 
 	/* And copy the certificates to MY store */
-	myStore = CertOpenSystemStore(0, L"MY");
+	myStore = CertOpenSystemStore(0, TEXT("MY"));
 	pContext = NULL;
 	while(pContext = CertEnumCertificatesInStore(pfxStore, pContext)) {
 		CertAddCertificateContextToStore(myStore, pContext, CERT_STORE_ADD_REPLACE_EXISTING, NULL);
@@ -983,7 +1014,7 @@ sqInt sqSetIntPropertySSL(sqInt handle, sqInt propID, sqInt propValue) {
 	switch(propID) {
 		case SQSSL_PROP_LOGLEVEL: ssl->loglevel = propValue; break;
 		default:
-			if(ssl->loglevel) printf("sqSetIntPropertySSL: Unknown property ID %d\n", propID);
+			if(ssl->loglevel) printf("sqSetIntPropertySSL: Unknown property ID %" PRIdSQINT "\n", propID);
 			return 0;
 	}
 	return 1;

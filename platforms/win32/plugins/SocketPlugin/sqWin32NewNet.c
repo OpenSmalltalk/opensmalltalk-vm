@@ -24,7 +24,6 @@
 #include <ws2tcpip.h>
 #include <winsock2.h>
 #include <windows.h>
-#include <wspiapi.h>
 
 #include "sq.h"
 #include "SocketPlugin.h"
@@ -870,7 +869,7 @@ void sqSocketConnectToPort(SocketPtr s, sqInt addr, sqInt port)
   ADDRESS(s)->sin_addr.s_addr = htonl(addr);
 
   if(TCPSocketType != s->socketType) { /* UDP/RAW */
-    if(!pss->sockState & SOCK_BOUND_UDP) {
+    if(!(pss->sockState & SOCK_BOUND_UDP)) {
       /* The socket is locally unbound and we
 	 must 'magically' assign a local port so
 	 that client code can also read from the socket */
@@ -2514,7 +2513,7 @@ void sqSocketConnectToAddressSize(SocketPtr s, char *addr, sqInt addrSize)
       FAIL();
 
   if(UDPSocketType == s->socketType) { /* UDP */
-    if(!pss->sockState & SOCK_BOUND_UDP) {
+    if(!(pss->sockState & SOCK_BOUND_UDP)) {
       /* The socket is locally unbound and we
 	 must 'magically' assign a local port so
 	 that client code can also read from the socket */

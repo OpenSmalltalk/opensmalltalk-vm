@@ -180,7 +180,7 @@ typedef struct VirtualMachine {
 	/* InterpreterProxy methodsFor: 'compiler' */
 
 	CompilerHook *(*compilerHookVector)(void);
-	sqInt          (*setCompilerInitialized)(sqInt initFlag);
+	sqInt         (*setCompilerInitialized)(sqInt initFlag);
 # endif
 
 #if VM_PROXY_MINOR > 1
@@ -297,10 +297,18 @@ typedef struct VirtualMachine {
 #endif
 
 #if VM_PROXY_MINOR > 9
-  sqInt  (*methodArg)  (sqInt index);
+# if VM_PROXY_MINOR > 13 /* OS Errors available in primitives; easy return forms */
+  sqInt  (*methodReturnBool)(sqInt);
+  sqInt  (*methodReturnFloat)(double);
+  sqInt  (*methodReturnInteger)(sqInt);
+  sqInt  (*methodReturnString)(char *);
+#	define returnSelf() methodReturnValue(0)
+# else
+  sqInt  (*methodArg)  (sqInt index); /* These ended up never being used. */
   sqInt  (*objectArg)  (sqInt index);
   sqInt  (*integerArg) (sqInt index);
   double (*floatArg)   (sqInt index);
+# endif
   sqInt  (*methodReturnValue) (sqInt oop);
   sqInt  (*topRemappableOop)  (void);
 #endif
@@ -348,8 +356,15 @@ typedef struct VirtualMachine {
   sqInt (*unpinObject)(sqInt objOop);
 #endif
 
-#if VM_PROXY_MINOR > 13 /* OS Errors available in primitives */
+#if VM_PROXY_MINOR > 13 /* OS Errors available in primitives; easy return forms (see above) */
   sqInt  (*primitiveFailForOSError)(sqLong osErrorCode);
+  sqInt  (*methodReturnReceiver)(void);
+  sqInt  (*primitiveFailForFFIExceptionat)(usqLong exceptionCode, usqInt pc);
+#endif
+
+#if VM_PROXY_MINOR > 14 /* SmartSyntaxPlugin validation rewrite support */
+  sqInt  (*isBooleanObject)(sqInt oop);
+  sqInt  (*isPositiveMachineIntegerObject)(sqInt);
 #endif
 } VirtualMachine;
 

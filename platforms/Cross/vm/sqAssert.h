@@ -32,6 +32,42 @@ void error(char *s);
 # define eassert(expr) 0 /* hack disabling of asserts.  Better in makefile? */
 # define PRODUCTION 1
 #elif 1
+#if defined(_MSC_VER)
+static inline int warningIf(int condition, char *message)
+{
+    if (condition)
+    {
+        warning(message);
+        return 0;
+    }
+    else
+    {
+        return 1;
+    }
+}
+
+static inline int warningIfAt(int condition, char *message, int line)
+{
+    if (condition)
+    {
+        warningat(message, line);
+        return 0;
+    }
+    else
+    {
+        return 1;
+    }
+}
+
+# define assert(expr)  warningIf(!(expr), #expr " " __stringifyNum(__LINE__))
+# define asserta(expr) warningIf(!(expr), #expr " " __stringifyNum(__LINE__))
+# define assertf(msg)  (warning(#msg " " __stringifyNum(__LINE__)),0)
+# define assertl(expr,line)  warningIfAt(!(expr), #expr, line)
+# define assertal(expr,line)  warningIfAt(!(expr), #expr, line)
+# define assertfl(msg,line)  (warningat(#msg,line),0)
+extern char expensiveAsserts;
+# define eassert(expr)  warningIf(!expensiveAsserts && !(expr), #expr " " __stringifyNum(__LINE__))
+#else
 # define assert(expr)  ((expr)||(warning(#expr " " __stringifyNum(__LINE__)),0))
 # define asserta(expr) ((expr)||(warning(#expr " " __stringifyNum(__LINE__)),0))
 # define assertf(msg)  (warning(#msg " " __stringifyNum(__LINE__)),0)
@@ -41,5 +77,6 @@ void error(char *s);
 extern char expensiveAsserts;
 # define eassert(expr)  (!expensiveAsserts||(expr) \
 						 ||(warning(#expr " " __stringifyNum(__LINE__)),0))
+#endif
 # define PRODUCTION 0
 #endif

@@ -543,7 +543,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 
 -(void)drawRect:(NSRect)rect flush:(BOOL)flush
 {
-    if (self.fullScreenInProgress) {
+    if (self.fullScreenInProgress && openglInitialized) {
         if (self.fullScreendispBitsIndex == displayBits) {
             [self clearScreen];
             //NSLog(@"drawRect but fullScreenInProgress %f %f %f %f",rect.origin.x,rect.origin.y,rect.size.width,rect.size.height);

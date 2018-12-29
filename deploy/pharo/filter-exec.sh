@@ -1,8 +1,9 @@
+#!/bin/bash
 # Deployment filter for Pharo (compatible with Travis and AppVeyor)
 # (deploy/filter-exec.sh adapted for Pharo)
 #
 # execute script if:
-#   - FLAVOR includes 'pharo'
+#   - FLAVOR is 'pharo.cog.spur'
 #   - REPOSITORY=OpenSmalltalk/opensmalltalk-vm
 #   - Build is not triggered by a pull request
 #   - BRANCH=Cog or TAG_NAME is not empty
@@ -12,7 +13,8 @@ readonly PR_SHA="${TRAVIS_PULL_REQUEST_SHA:-${APPVEYOR_PULL_REQUEST_HEAD_COMMIT}
 readonly BRANCH_NAME="${TRAVIS_BRANCH:-${APPVEYOR_REPO_BRANCH}}"
 readonly TAG_NAME="${TRAVIS_TAG:-${APPVEYOR_REPO_TAG_NAME}}"
 
-if [[ "$FLAVOR" != *pharo* ]]; then
+if ! ([[ "${FLAVOR}" = "pharo.cog.spur" ]] || [[ "${FLAVOR}" = "pharo.sista.spur" ]]); then
+  echo "Trying to deploy flavour: ${FLAVOR}. Skipping."
   exit 
 fi
 

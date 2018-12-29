@@ -1,6 +1,7 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 # debug PharoVM with VM profiler and threaded heartbeat
-INSTALLDIR=debug/cogspur64linuxht
+INSTALLDIR=debug/phcogspur64linuxht
 OPT="-g3 -O0 -fwrapv -DDEBUGVM=1 -DPharoVM"
 
 if [ $# -ge 1 ]; then
@@ -19,11 +20,9 @@ test -f config.h || ../../../platforms/unix/config/configure \
 		--without-npsqueak \
 		--with-vmversion=5.0 \
 		--with-src=spur64src \
-	CC="gcc -m64" \
-	CXX="g++ -m64" \
-	CFLAGS="$OPT -msse2 -D_GNU_SOURCE -DCOGMTVM=0" \
-	LIBS="-lpthread -luuid -Wl,-rpath,'\$\$ORIGIN' " \
-	LDFLAGS=-Wl,-z,now
+	TARGET_ARCH="-m64" \
+	CFLAGS="$OPT -msse2 -DCOGMTVM=0" \
+	LDFLAGS="-Wl,-rpath,'\$\$ORIGIN' "
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../products/$INSTALLDIR
 # prefer make install prefix=`readlink -f \`pwd\`/../../../products/$INSTALLDIR`

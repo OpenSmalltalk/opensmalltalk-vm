@@ -52,23 +52,18 @@
 #include <sys/param.h>
 #include <sys/utsname.h>
 #include <sys/stat.h>
-#ifndef __OpenBSD__
-# include <sys/ucontext.h>
-#endif
+#include "include_ucontext.h"
 #include <unistd.h>
 #include <errno.h>
 #include <signal.h>
 #include <fcntl.h>
-#if !defined(NOEXECINFO)
+#if !defined(NOEXECINFO) && defined(HAVE_EXECINFO_H)
 # include <execinfo.h>
 # define BACKTRACE_DEPTH 64
 #endif
-#if __OpenBSD__
-# include <sys/signal.h>
+#if __sun__
+# include <limits.h>
 #endif
-# if __sun__
-  # include <limits.h>
-# endif
 
 #if defined(__alpha__) && defined(__osf__)
 # include <sys/sysinfo.h>
@@ -225,6 +220,7 @@ long ioMicroMSecs(void)
 }
 
 time_t convertToSqueakTime(time_t unixTime);
+sqLong convertToLongSqueakTime(time_t unixTime);
 
 /* returns the local wall clock time */
 sqInt ioSeconds(void)
@@ -261,6 +257,20 @@ usqLong
 ioUTCMicrosecondsNow() { return currentUTCMicroseconds(); }
 #endif /* STACKVM */
 
+
+
+/*
+ * Convert the supplied Unix (UTC) time to Squeak time.
+ *
+ * WARNING: On 32 bit platforms time_t is only 32 bits long.
+ * Since Squeak has an Epoch of 1901 while Unix uses 1970 the
+ * result is that overflow always occurs for times beyond about 1967.
+ * The expected result ends up in the image because the value is treated
+ * as an unsigned integer when converting to an oop.
+ * convertToSqueakTime should be deprecated in favour of
+ * convertToLongSqueakTime.
+ *
+ */
 time_t convertToSqueakTime(time_t unixTime)
 {
 #ifdef HAVE_TM_GMTOFF
@@ -275,6 +285,35 @@ time_t convertToSqueakTime(time_t unixTime)
   /* Squeak epoch is Jan 1, 1901.  Unix epoch is Jan 1, 1970: 17 leap years
      and 52 non-leap years later than Squeak. */
   return unixTime + ((52*365UL + 17*366UL) * 24*60*60UL);
+}
+
+
+/*
+ * Convert the supplied Unix (UTC) time to Squeak time.
+ *
+ * Squeak time has an epoch of 1901 and uses local time
+ * i.e. timezone + daylight savings
+ *
+ * Answer an sqLong which is guaranteed to be 64 bits on all platforms.
+ */
+sqLong convertToLongSqueakTime(time_t unixTime)
+{
+sqLong result;
+
+  result = unixTime;
+#ifdef HAVE_TM_GMTOFF
+  result += localtime(&unixTime)->tm_gmtoff;
+#else
+# ifdef HAVE_TIMEZONE
+  result += ((daylight) * 60*60) - timezone;
+# else
+#  error: cannot determine timezone correction
+# endif
+#endif
+  /* Squeak epoch is Jan 1, 1901.  Unix epoch is Jan 1, 1970: 17 leap years
+     and 52 non-leap years later than Squeak. */
+  result += ((52*365UL + 17*366UL) * 24*60*60UL);
+  return result;
 }
 
 
@@ -478,13 +517,13 @@ GetAttributeString(sqInt id)
 	return VM_BUILD_STRING;
 #if STACKVM
       case 1007: { /* interpreter build info */
-	extern char *__interpBuildInfo;
-	return __interpBuildInfo;
+		extern char *__interpBuildInfo;
+		return __interpBuildInfo;
       }
 # if COGVM
       case 1008: { /* cogit build info */
-	extern char *__cogitBuildInfo;
-	return __cogitBuildInfo;
+		extern char *__cogitBuildInfo;
+		return __cogitBuildInfo;
       }
 # endif
 #endif
@@ -837,7 +876,7 @@ static void *printRegisterState(ucontext_t *uap);
 static void
 reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 {
-#if !defined(NOEXECINFO)
+#if !defined(NOEXECINFO) && defined(HAVE_EXECINFO_H)
 	void *addrs[BACKTRACE_DEPTH];
 	void *pc;
 	int depth;
@@ -859,7 +898,7 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 		return;
 #endif
 
-#if !defined(NOEXECINFO)
+#if !defined(NOEXECINFO) && defined(HAVE_EXECINFO_H)
 	printf("C stack backtrace & registers:\n");
 	if (uap) {
 		addrs[0] = printRegisterState(uap);
@@ -895,14 +934,14 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 			void *fp = (void *)(uap ? uap->uc_mcontext.mc_rbp: 0);
 			void *sp = (void *)(uap ? uap->uc_mcontext.mc_rsp: 0);
 # elif __OpenBSD__ && __i386__
-                        void *fp = (void *)(uap ? uap->sc_ebp: 0);
-                        void *sp = (void *)(uap ? uap->sc_esp: 0);
+			void *fp = (void *)(uap ? uap->sc_ebp: 0);
+			void *sp = (void *)(uap ? uap->sc_esp: 0);
 # elif __OpenBSD__ && __amd64__
 			void *fp = (void *)(uap ? uap->sc_rbp: 0);
 			void *sp = (void *)(uap ? uap->sc_rsp: 0);
 # elif __sun__ && __i386__
-      void *fp = (void *)(uap ? uap->uc_mcontext.gregs[REG_FP]: 0);
-      void *sp = (void *)(uap ? uap->uc_mcontext.gregs[REG_SP]: 0);
+			void *fp = (void *)(uap ? uap->uc_mcontext.gregs[REG_FP]: 0);
+			void *sp = (void *)(uap ? uap->uc_mcontext.gregs[REG_SP]: 0);
 # elif defined(__arm__) || defined(__arm32__) || defined(ARM32)
 			void *fp = (void *)(uap ? uap->uc_mcontext.arm_fp: 0);
 			void *sp = (void *)(uap ? uap->uc_mcontext.arm_sp: 0);
@@ -949,14 +988,14 @@ static void *
 printRegisterState(ucontext_t *uap)
 {
 #if __linux__ && __i386__
-	gregset_t *regs = &uap->uc_mcontext.gregs;
+	greg_t *regs = (greg_t *)&uap->uc_mcontext.gregs;
 	printf(	"\teax 0x%08x ebx 0x%08x ecx 0x%08x edx 0x%08x\n"
 			"\tedi 0x%08x esi 0x%08x ebp 0x%08x esp 0x%08x\n"
 			"\teip 0x%08x\n",
 			regs[REG_EAX], regs[REG_EBX], regs[REG_ECX], regs[REG_EDX],
 			regs[REG_EDI], regs[REG_EDI], regs[REG_EBP], regs[REG_ESP],
 			regs[REG_EIP]);
-	return regs[REG_EIP];
+	return (void *)regs[REG_EIP];
 #elif __FreeBSD__ && __i386__
 	struct mcontext *regs = &uap->uc_mcontext;
 	printf(	"\teax 0x%08x ebx 0x%08x ecx 0x%08x edx 0x%08x\n"
@@ -967,18 +1006,21 @@ printRegisterState(ucontext_t *uap)
 			regs->mc_eip);
 	return regs->mc_eip;
 #elif __linux__ && __x86_64__
-	gregset_t *regs = &uap->uc_mcontext.gregs;
-	printf(	"\trax 0x%08x rbx 0x%08x rcx 0x%08x rdx 0x%08x\n"
-			"\trdi 0x%08x rsi 0x%08x rbp 0x%08x rsp 0x%08x\n"
-			"\tr8  0x%08x r9  0x%08x r10 0x%08x r11 0x%08x\n"
-			"\tr12 0x%08x r13 0x%08x r14 0x%08x r15 0x%08x\n"
-			"\trip 0x%08x\n",
+	greg_t *regs = (greg_t *)&uap->uc_mcontext.gregs;
+	printf(	"\trax 0x%08lx rbx 0x%08lx rcx 0x%08lx rdx 0x%08lx\n"
+			"\trdi 0x%08lx rsi 0x%08lx rbp 0x%08lx rsp 0x%08lx\n"
+			"\tr8  0x%08lx r9  0x%08lx r10 0x%08lx r11 0x%08lx\n"
+			"\tr12 0x%08lx r13 0x%08lx r14 0x%08lx r15 0x%08lx\n"
+			"\trip 0x%08lx\n",
 			regs[REG_RAX], regs[REG_RBX], regs[REG_RCX], regs[REG_RDX],
 			regs[REG_RDI], regs[REG_RDI], regs[REG_RBP], regs[REG_RSP],
 			regs[REG_R8 ], regs[REG_R9 ], regs[REG_R10], regs[REG_R11],
 			regs[REG_R12], regs[REG_R13], regs[REG_R14], regs[REG_R15],
 			regs[REG_RIP]);
-	return regs[REG_RIP];
+	return (void *)regs[REG_RIP];
+# elif __linux__ && (defined(__arm64__))
+ 	printf("@@FIXME@@: derive register state from a ucontext_t on aarch64 \n");
+	return 0;
 # elif __linux__ && (defined(__arm__) || defined(__arm32__) || defined(ARM32))
 	struct sigcontext *regs = &uap->uc_mcontext;
 	printf(	"\t r0 0x%08x r1 0x%08x r2 0x%08x r3 0x%08x\n"
@@ -1033,13 +1075,12 @@ getCrashDumpFilenameInto(char *buf)
 }
 
 static void
-sigusr1(int sig, siginfo_t *info, void *uap)
+sigusr1(int sig, siginfo_t *info, ucontext_t *uap)
 {
 	int saved_errno = errno;
 	time_t now = time(NULL);
 	char ctimebuf[32];
 	char crashdump[MAXPATHLEN+1];
-	unsigned long pc;
 
 	if (!ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
 		pthread_kill(getVMOSThread(),sig);
@@ -1060,7 +1101,7 @@ sigusr1(int sig, siginfo_t *info, void *uap)
 static int inFault = 0;
 
 static void
-sigsegv(int sig, siginfo_t *info, void *uap)
+sigsegv(int sig, siginfo_t *info, ucontext_t *uap)
 {
 	time_t now = time(NULL);
 	char ctimebuf[32];
@@ -1074,6 +1115,8 @@ sigsegv(int sig, siginfo_t *info, void *uap)
 							: "Unknown signal"));
 
 	if (!inFault) {
+		extern sqInt primitiveFailForFFIExceptionat(usqLong exceptionCode, usqInt pc);
+		primitiveFailForFFIExceptionat(sig, uap->_PC_IN_UCONTEXT);
 		inFault = 1;
 		getCrashDumpFilenameInto(crashdump);
 		ctime_r(&now,ctimebuf);
@@ -1545,6 +1588,14 @@ static int vm_parseArgument(int argc, char **argv)
     extern sqInt pollpip;
     pollpip = atoi(argv[1]);	 
     return 2; }
+  else if (!strcmp(argv[0], VMOPTION("failonffiexception"))) {
+		extern sqInt ffiExceptionResponse;
+		ffiExceptionResponse = 1;
+		return 1; }
+  else if (!strcmp(argv[0], VMOPTION("nofailonffiexception"))) {
+		extern sqInt ffiExceptionResponse;
+		ffiExceptionResponse = -1;
+		return 1; }
 #endif /* STACKVM */
 #if COGVM
   else if (argc > 1 && !strcmp(argv[0], VMOPTION("codesize"))) { 

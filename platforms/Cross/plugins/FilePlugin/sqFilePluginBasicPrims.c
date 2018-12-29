@@ -9,6 +9,8 @@
 *   RCSID:   $Id$
 *
 *   NOTES: See change log below.
+*   	2018-03-25 AKG sqFileAtEnd() Use feof() for all files
+*   	2018-03-01 AKG Add sqFileFdOpen & sqFileFileOpen
 *	2005-03-26 IKP fix unaligned accesses to file[Size] members
 * 	2004-06-10 IKP 64-bit cleanliness
 * 	1/28/02    Tim remove non-ansi stuff
@@ -27,17 +29,22 @@
 * and thus bypasses this file
 */
 
-#include <errno.h>
 #include "sq.h"
+
+#include <errno.h>
 
 #ifndef NO_STD_FILE_SUPPORT
 
 #include <sys/stat.h>
-#include <sys/types.h>
-
 #include <fcntl.h>
 #include <limits.h>
 #include <stdio.h>
+
+#ifdef _MSC_VER
+#ifndef S_ISFIFO
+#define S_ISFIFO(x) 0
+#endif
+#endif
 
 #include "sqMemoryAccess.h"
 #include "FilePlugin.h" /* must be included after sq.h */
@@ -65,7 +72,6 @@
 	typedef struct {
 		int		sessionID;
 		File	*file;
-		squeakFileOffsetType		fileSize;  //JMM Nov 8th 2001 64bits we hope
 		char	writable;
 		char	lastOp;  		// 0 = uncommitted, 1 = read, 2 = write //
 		char	lastChar;		// one character peek for stdin //
@@ -107,26 +113,20 @@ static void setFile(SQFile *f, FILE *file)
   void *out= (void *)&f->file;
   memcpy(out, in, sizeof(FILE *));
 }
-static squeakFileOffsetType getSize(SQFile *f)
-{
-  squeakFileOffsetType size;
-  void *in= (void *)&f->fileSize;
-  void *out= (void *)&size;
-  memcpy(out, in, sizeof(squeakFileOffsetType));
-  return size;
-}
-static void setSize(SQFile *f, squeakFileOffsetType size)
-{
-  void *in= (void *)&size;
-  void *out= (void *)&f->fileSize;
-  memcpy(out, in, sizeof(squeakFileOffsetType));
-}
 #else /* OBJECTS_32BIT_ALIGNED */
 # define getFile(f) ((FILE *)((f)->file))
 # define setFile(f,fileptr) ((f)->file = (fileptr))
-# define getSize(f) ((f)->fileSize)
-# define setSize(f,size) ((f)->fileSize = (size))
 #endif /* OBJECTS_32BIT_ALIGNED */
+
+static squeakFileOffsetType getSize(SQFile *f)
+{
+  FILE *file = getFile(f);
+  squeakFileOffsetType currentPosition = ftell(file);
+  fseek(file, 0, SEEK_END);
+  squeakFileOffsetType size = ftell(file);
+  fseek(file, currentPosition, SEEK_SET);
+  return size;
+}
 
 #if 0
 # define pentry(func) do { int fn = fileno(getFile(f)); if (f->isStdioStream) printf("\n"#func "(%s) %lld %d\n", fn == 0 ? "in" : fn == 1 ? "out" : "err", (long long)ftell(getFile(f)), f->lastChar); } while (0)
@@ -138,16 +138,52 @@ static void setSize(SQFile *f, squeakFileOffsetType size)
 # define pfail() 0
 #endif
 
-sqInt
-sqFileAtEnd(SQFile *f) {
-	/* Return true if the file's read/write head is at the end of the file. */
+sqInt sqFileAtEnd(SQFile *f) {
+	/* Return true if the file's read/write head is at the end of the file.
+	 *
+	 * libc's end of file function, feof(), returns a flag that is set by
+	 * attempting to read past the end of the file.  I.e if the last
+	 * character in the file has been read, but not one more, feof() will
+	 * return false.
+	 *
+	 * Smalltalk's #atEnd should return true as soon as the last character
+	 * has been read.
+	 *
+	 * We can keep the expected behaviour of #atEnd for streams other than
+	 * terminals by peeking for the next character in the file using
+	 * ungetc() & fgetc(), which will set the eof-file-flag if required,
+	 * but not advance the stream.
+	 *
+	 * Terminals / consoles use feof() only, which means that #atEnd
+	 * doesn't answer true until after the end-of-file character (Ctrl-D)
+	 * has been read.
+	 */
+	sqInt status; int   fd; FILE  *fp;
 
 	if (!sqFileValid(f))
 		return interpreterProxy->success(false);
 	pentry(sqFileAtEnd);
-	if (f->isStdioStream)
-		return pexit(feof(getFile(f)));
-	return ftell(getFile(f)) >= getSize(f);
+	fp = getFile(f);
+	fd = fileno(fp);
+	/* Can't peek write-only streams */
+	if (fd == 1 || fd == 2)
+		status = false;
+	else if (f->isStdioStream)
+		/* We can't block waiting for interactive input */
+		status = feof(fp);
+	else if (!feof(fp)) {
+		status = ungetc(fgetc(fp), fp) == EOF && feof(fp);
+		/* Normally we should check if a file error has occurred.
+		 * But error checking isn't occurring anywhere else,
+		 * causing hard-to-trace failures here.
+		 * Revert to previous behaviour of ignoring errors.
+		if (ferror(fp))
+			interpreterProxy->primitiveFail();
+		 */
+		}
+	else
+		status = true;
+	return pexit(status);
 }
 
 sqInt
@@ -163,7 +199,6 @@ sqFileClose(SQFile *f) {
 	setFile(f, NULL);
 	f->sessionID = 0;
 	f->writable = false;
-	setSize(f, 0);
 	f->lastOp = UNCOMMITTED;
 
 	/*
@@ -369,11 +404,6 @@ sqFileOpen(SQFile *f, char *sqFileName, sqInt sqFileNameSize, sqInt writeFlag) {
 			f->sessionID = thisSession;
 			setFile(f, file);
 
-			/* compute and cache file size */
-			fseek(file, 0, SEEK_END);
-			setSize(f, ftell(file));
-			fseek(file, 0, SEEK_SET);
-
 			f->writable = writeFlag ? true : false;
 			f->lastOp = UNCOMMITTED;
 			return 1;
@@ -386,7 +416,6 @@ sqFileOpen(SQFile *f, char *sqFileName, sqInt sqFileNameSize, sqInt writeFlag) {
 	}
 
 	f->sessionID = 0;
-	setSize(f, 0);
 	f->writable = false;
 	return interpreterProxy->success(false);
 }
@@ -455,7 +484,6 @@ sqFileOpenNew(SQFile *f, char *sqFileName, sqInt sqFileNameSize, sqInt *exists) 
 		if (file != NULL) {
 			f->sessionID = thisSession;
 			setFile(f, file);
-			setSize(f, 0);
 			f->writable = true;
 			f->lastOp = UNCOMMITTED;
 			return 1;
@@ -470,15 +498,53 @@ sqFileOpenNew(SQFile *f, char *sqFileName, sqInt sqFileNameSize, sqInt *exists) 
 	}
 
 	f->sessionID = 0;
-	setSize(f, 0);
 	f->writable = false;
 	return interpreterProxy->success(false);
 }
 
+sqInt
+sqConnectToFileDescriptor(SQFile *sqFile, int fd, sqInt writeFlag)
+{
+	/*
+	 * Open the file with the supplied file descriptor in binary mode.
+	 *
+	 * writeFlag determines whether the file is read-only or writable
+	 * and must be compatible with the existing access.
+	 * sqFile is populated with the file information.
+	 * Smalltalk is reponsible for handling character encoding and 
+	 * line ends.
+	 */
+	FILE *file = openFileDescriptor(fd, writeFlag ? "wb" : "rb");
+	if (!file)
+		return interpreterProxy->success(false);
+	return sqConnectToFile(sqFile, (void *)file, writeFlag);
+}
+
+sqInt
+sqConnectToFile(SQFile *sqFile, void *file, sqInt writeFlag)
+{
+	/*
+	 * Populate the supplied SQFile structure with the supplied FILE.
+	 *
+	 * writeFlag indicates whether the file is read-only or writable
+	 * and must be compatible with the existing access.
+	 */
+	setFile(sqFile, file);
+	sqFile->sessionID = thisSession;
+	sqFile->lastOp = UNCOMMITTED;
+	sqFile->writable = writeFlag;
+	return 1;
+}
+
 /*
- * Fill-in files with 3 handles for stdin, stdout and stderr as available and
- * answer a bit-mask of the availability, 1 corresponding to stdin, 2 to stdout
- * and 4 to stderr, with 0 on error or unavailablity.
+ * Fill-in files with handles for stdin, stdout and seterr as available and
+ * answer a bit-mask of the availability:
+ *
+ * <0 - Error.  The value will be returned to the image using primitiveFailForOSError().
+ * 0  - no stdio available
+ * 1  - stdin available
+ * 2  - stdout available
+ * 4  - stderr available
  */
 sqInt
 sqFileStdioHandlesInto(SQFile files[])
@@ -493,7 +559,6 @@ sqFileStdioHandlesInto(SQFile files[])
 #endif
 	files[0].sessionID = thisSession;
 	files[0].file = stdin;
-	files[0].fileSize = 0;
 	files[0].writable = false;
 	files[0].lastOp = READ_OP;
 	files[0].isStdioStream = isatty(fileno(stdin));
@@ -501,7 +566,6 @@ sqFileStdioHandlesInto(SQFile files[])
 
 	files[1].sessionID = thisSession;
 	files[1].file = stdout;
-	files[1].fileSize = 0;
 	files[1].writable = true;
 	files[1].isStdioStream = true;
 	files[1].lastChar = EOF;
@@ -509,7 +573,6 @@ sqFileStdioHandlesInto(SQFile files[])
 
 	files[2].sessionID = thisSession;
 	files[2].file = stderr;
-	files[2].fileSize = 0;
 	files[2].writable = true;
 	files[2].isStdioStream = true;
 	files[2].lastChar = EOF;
@@ -517,6 +580,34 @@ sqFileStdioHandlesInto(SQFile files[])
 
 	return 7;
 }
+
+
+/*
+* Allow to test if the standard input/output files are from a console or not
+* Return values:
+* -1 - Error
+* 0 - no console (windows only)
+* 1 - normal terminal (unix terminal / windows console)
+* 2 - pipe
+* 3 - file
+* 4 - cygwin terminal (windows only)
+*/
+sqInt sqFileDescriptorType(int fdNum) {
+        int status;
+        struct stat statBuf;
+
+        /* Is this a terminal? */
+        if (isatty(fdNum)) return 1;
+
+        /* Is this a pipe? */
+        status = fstat(fdNum, &statBuf);
+        if (status) return -1;
+        if (S_ISFIFO(statBuf.st_mode)) return 2;
+
+        /* Must be a normal file */
+        return 3;
+}
+
 
 size_t
 sqFileReadIntoAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startIndex) {
@@ -557,6 +648,7 @@ sqFileReadIntoAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startInde
 				return 0;
 			dst = bufferOop + BaseHeaderSize + startIndex;
 		}
+		myThreadIndex = interpreterProxy->disownVM(0);
 # else
 		if (interpreterProxy->isInMemory((sqInt)f)
 		 && interpreterProxy->isYoung((sqInt)f)
@@ -565,8 +657,8 @@ sqFileReadIntoAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startInde
 			interpreterProxy->primitiveFailFor(PrimErrObjectMayMove);
 			return 0;
 		}
-# endif
 		myThreadIndex = interpreterProxy->disownVM(DisownVMLockOutFullGC);
+# endif
 #endif /* COGMTVM */
 		/* Line buffering in fread can't be relied upon, at least on Mac OS X
 		 * and mingw win32.  So do it the hard way.
@@ -693,9 +785,9 @@ sqInt
 sqFileTruncate(SQFile *f, squeakFileOffsetType offset) {
 	if (!sqFileValid(f))
 		return interpreterProxy->success(false);
+	fflush(getFile(f));
  	if (sqFTruncate(getFile(f), offset))
 		return interpreterProxy->success(false);
-	setSize(f, ftell(getFile(f)));
 	return 1;
 }
 
@@ -716,7 +808,6 @@ sqFileWriteFromAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startInd
 
 	char *src;
 	size_t bytesWritten;
-	squeakFileOffsetType position;
 	FILE *file;
 
 	if (!(sqFileValid(f) && f->writable))
@@ -726,11 +817,6 @@ sqFileWriteFromAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startInd
 	if (f->lastOp == READ_OP) fseek(file, 0, SEEK_CUR);  /* seek between reading and writing */
 	src = byteArrayIndex + startIndex;
 	bytesWritten = fwrite(src, 1, count, file);
-
-	position = ftell(file);
-	if (position > getSize(f)) {
-		setSize(f, position);  /* update file size */
-	}
 
 	if (bytesWritten != count) {
 		interpreterProxy->success(false);

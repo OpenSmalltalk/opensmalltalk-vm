@@ -71,7 +71,8 @@ Building out of the box
 - Install cygwin from www.cygwin.com.
 Make sure you install the MinGW support, which is in the list of packages called
 "mingw64-i686-gcc-core,mingw64-i686-gcc-g++,mingw64-i686-headers,mingw64-i686-runtime".
-Note that the .appveyor.yml file may be used as example to automate installation of these tools
+Note that the .appveyor.yml file may be used as example to automate installation of these tools.
+.appveyor.yml calls scripts/installCygwin.bat that you can use to build your own cygwin.
 
 Alternatively, an installation of mingw32 and msys may work, but has not been tested.
 
@@ -79,12 +80,16 @@ Then cd to the build directory of your choice, e.g.
 	build.win32x86/squeak.cog.spur/
 Then execute
 	./mvm
+	
 This builds debug, assert and production versions of the VM in builddbg/vm,
 buildast/vm and build/vm.  If the configuration includes multi-threaded builds
 it will also create VMs in buildmtdbg/vm, buildmtast/vm and buildmt/vm.  The
 system builds two VMs in each build/vm directory, e.g. Squeak.exe and
 SqueakConsole.exe.  The latter is to be used with console applications that wish
 to access standard i/o.
+
+In order to only build the production vm, you can launch the command:
+	./mvm -f
 
 For building with clang instead of gcc, it is possible to pass options to make via mvm after --:
 	./mvm -f -- CC=i686-w64-mingw32-clang

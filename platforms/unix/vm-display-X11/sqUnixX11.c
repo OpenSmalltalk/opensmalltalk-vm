@@ -1,3 +1,4 @@
+/* vim: set ts=8 : */
 /* sqUnixX11.c -- support for display via the X Window System.
  * 
  *   Copyright (C) 1996-2008 by Ian Piumarta and other authors/contributors
@@ -1356,6 +1357,22 @@ static void getMousePosition(void)
 }
 
 
+/* John Brandt notes on 2018/11/28 that in x2sqKeyPlain below, when the Ctrl
+ * and/or Shift key is pressed we are taking the true branch, but when the key
+ * is released we are taking the false branch:
+  return nConv == 0 && (modifierState & (CommandKeyBit+CtrlKeyBit+OptionKeyBit))
+            ? charCode
+            : recode(charCode);
+ * but that recode (here) does not know how to convert the shift/ctrl keycodes
+ * so it uses the "?" character (code 63). Since we released the key,
+ * modifierState is being reset and we take the false branch. modifierState is
+ * being reset in x2sqKeyPlain by:
+   if (!nConv && (charCode= translateCode(*symbolic, &modifierState, xevt)) < 0)
+      return -1;
+ *
+ * The underlying issue here is the lack of a key event on pressing the shift
+ * key; a feature that GT depends upon.
+ */
 int recode(int charCode)
 {
   if (charCode >= 128)
@@ -2045,6 +2062,17 @@ static int x2sqKeyPlain(XKeyEvent *xevt, KeySym *symbolic)
       return -1;	/* unknown key */
   if ((charCode == 127) && mapDelBs)
     charCode= 8;
+  if (charCode >= 1 && charCode <= 26) {
+    /* check for Ctrl-letter that gets translated into charCode 1-26 instead of letters a-z */
+    KeySym keysym = *symbolic;
+    if (keysym >= XK_a && keysym <= XK_z)
+      return (int)'a' + (keysym - XK_a);
+    if (keysym >= XK_A && keysym <= XK_Z)
+      return (int)'A' + (keysym - XK_A);
+  }
+  if (charCode >= 246 /* XK_Alt_R */ && charCode <= 255 /* XK_Shift_L */) /* hard coded values from translateCode */
+    /* The shift, ctrl, alt keys shouldn't be translated by the recode below */
+    return charCode;
   return nConv == 0 && (modifierState & (CommandKeyBit+CtrlKeyBit+OptionKeyBit))
 			? charCode
 			: recode(charCode);
@@ -3550,7 +3578,15 @@ static const char *
 nameForKeyboardEvent(XEvent *evt) { return nameForKeycode(evt->xkey.keycode); }
 #endif /* DEBUG_EVENTS */
 
-static void handleEvent(XEvent *evt)
+extern sqInt sendWheelEvents; /* If true deliver EventTypeMouseWheel else kybd */
+/* if sendWheelEvents is false this maps wheel events to arrow keys */
+static int mouseWheel2Squeak[4] = {30, 31, 28, 29};
+/* if sendWheelEvents is true this determines how much x & y are incremented */
+static int mouseWheelXDelta[4] = {0, 0, -120, 120};
+static int mouseWheelYDelta[4] = {-120, 120, 0, 0};
+
+static void
+handleEvent(XEvent *evt)
 {
 #if DEBUG_EVENTS
   switch (evt->type)
@@ -3674,25 +3710,27 @@ static void handleEvent(XEvent *evt)
 
     case ButtonPress:
       noteEventState(evt->xbutton);
-      switch (evt->xbutton.button)
-	{
-	case 1: case 2: case 3:
-	  buttonState |= x2sqButton(evt->xbutton.button);
-	  recordMouseEvent();
-	  break;
-	case 4: case 5:	/* mouse wheel */
-	  {
-	    int keyCode= evt->xbutton.button + 26;	/* up/down */
-	    int modifiers= modifierState ^ CtrlKeyBit;
-	    recordKeyboardEvent(keyCode, EventKeyDown, modifiers, keyCode);
-	    recordKeyboardEvent(keyCode, EventKeyChar, modifiers, keyCode);
-	    recordKeyboardEvent(keyCode, EventKeyUp,   modifiers, keyCode);
+      if (evt->xbutton.button <= 3) { /* mouse button */
+		buttonState |= x2sqButton(evt->xbutton.button);
+		recordMouseEvent();
 	  }
-	  break;
-	default:
-	  ioBeep();
-	  break;
-	}
+	  else if (evt->xbutton.button <= 7) { /* mouse wheel */
+		if (sendWheelEvents)
+			recordMouseWheelEvent(mouseWheelXDelta[evt->xbutton.button - 3],
+								  mouseWheelYDelta[evt->xbutton.button - 3]);
+		else {
+		  int keyCode = mouseWheel2Squeak[evt->xbutton.button - 4];
+		  /* Set every meta bit to distinguish the fake event from a real
+		   * right/left arrow.
+		   */
+		  int modifiers = modifierState | (CtrlKeyBit|OptionKeyBit|CommandKeyBit|ShiftKeyBit);
+		  recordKeyboardEvent(keyCode, EventKeyDown, modifiers, keyCode);
+		  recordKeyboardEvent(keyCode, EventKeyChar, modifiers, keyCode);
+		  recordKeyboardEvent(keyCode, EventKeyUp,   modifiers, keyCode);
+		}
+	  }
+	  else
+		  ioBeep();
       break;
 
     case ButtonRelease:
@@ -3703,7 +3741,7 @@ static void handleEvent(XEvent *evt)
 	  buttonState &= ~x2sqButton(evt->xbutton.button);
 	  recordMouseEvent();
 	  break;
-	case 4: case 5:	/* mouse wheel */
+	case 4: case 5:	case 6: case 7: /* mouse wheel */
 	  break;
 	default:
 	  ioBeep();
@@ -4701,6 +4739,13 @@ translateCode(KeySym symbolic, int *modp, XKeyEvent *evt)
 		return withMetaSet(249,OptionKeyBit,0,modp,evt);
 	case XK_Meta_R:
 		return withMetaSet(248,OptionKeyBit,0,modp,evt);
+	/* John Brandt notes on 2018/11/28:
+	 * This doesn't match the above; here OptionKeyBit is used for the notmeta
+	 * parameter but in the preceding cases we use the bit other than the
+	 * OptionKeyBit.  Which is right?
+	 * The underlying issue here is the lack of a key event on pressing the
+	 * shift key; a feature that GT depends upon.
+	 */
 	case XK_Alt_L:
 		return withMetaSet(247,OptionKeyBit+CommandKeyBit,OptionKeyBit,modp,evt);
 	case XK_Alt_R:
@@ -4758,7 +4803,7 @@ static sqInt display_ioFormPrint(sqInt bitsIndex, sqInt width, sqInt height, sqI
   copyFn copy= ((depth > 0) && (depth <= 32)) ? copyFns[depth] : 0;
   if (!copy)
     {
-      fprintf(stderr, "ioFormPrint: depth %d not supported\n", depth);
+      fprintf(stderr, "ioFormPrint: depth %ld not supported\n", depth);
       return false;
     }
 
@@ -4800,7 +4845,7 @@ static sqInt display_ioFormPrint(sqInt bitsIndex, sqInt width, sqInt height, sqI
     }
 
   /* print the PPM magic number */
-  fprintf(ppm, "P3\n%d %d 255\n", width, height);
+  fprintf(ppm, "P3\n%ld %ld 255\n", width, height);
 
   /* write the pixmap */
   {
@@ -5451,7 +5496,7 @@ static sqInt display_ioShowDisplay(sqInt dispBitsIndex, sqInt width, sqInt heigh
   if (!(depth == 1 || depth == 2 || depth == 4
 	|| depth == 8 || depth == 16 || depth == 32))
     {
-      fprintf(stderr, "depth %d is not supported\n", depth);
+      fprintf(stderr, "depth %ld is not supported\n", depth);
       exit(1);
       return 0;
     }
@@ -5784,7 +5829,7 @@ static sqInt display_ioHasDisplayDepth(sqInt i)
 
 static sqInt display_ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenFlag)
 {
-  fprintf(stderr, "ioSetDisplayMode(%d, %d, %d, %d)\n",
+  fprintf(stderr, "ioSetDisplayMode(%ld, %ld, %ld, %ld)\n",
 	  width, height, depth, fullscreenFlag);
   setSavedWindowSize((width << 16) + (height & 0xFFFF));
   setFullScreenFlag(fullScreen);
@@ -6891,6 +6936,7 @@ closelog(void)
 static int
 myPrint3Dlog(char *fmt, ...)
 {	va_list args;
+	int n;
 
 	if (!logfile) {
 		char *slash;
@@ -6915,10 +6961,11 @@ myPrint3Dlog(char *fmt, ...)
 		atexit(closelog);
 	}
 	va_start(args,fmt);
-	vfprintf(logfile, fmt, args);
+	n = vfprintf(logfile, fmt, args);
 	va_end(args);
 	if (forceFlush) /* from sqOpenGLRenderer.h */
 		fflush(logfile);
+	return n;
 }
 
 # include <GL/gl.h>
@@ -7227,7 +7274,7 @@ static long display_hostWindowSetTitle(long windowIndex, char *newTitle, long si
   XChangeProperty(stDisplay, stParent,
 		  XInternAtom(stDisplay, "_NET_WM_NAME", False),
 		  XInternAtom(stDisplay, "UTF8_STRING",  False),
-		  8, PropModeReplace, newTitle, sizeOfTitle);
+		  8, PropModeReplace, (unsigned char *)newTitle, sizeOfTitle);
 
   return 0;
 }
@@ -7245,7 +7292,7 @@ static long display_ioSizeOfNativeWindow(void *windowHandle)
    * width.
    */
   real_border_width= attrs.border_width ? attrs.border_width : attrs.x;
-  return (attrs.width + 2 * real_border_width << 16)
+  return ((attrs.width + 2 * real_border_width) << 16)
     | (attrs.height + attrs.y + real_border_width);
 }
 
@@ -7261,7 +7308,7 @@ static long display_ioPositionOfNativeWindow(void *windowHandle)
 				&rootx, &rooty, &neglected_child))
     return -1;
 
-  return (rootx - attrs.x << 16) | (rooty - attrs.y);
+  return ((rootx - attrs.x) << 16) | (rooty - attrs.y);
 }
 
 #endif /* (SqDisplayVersionMajor >= 1 && SqDisplayVersionMinor >= 2) */

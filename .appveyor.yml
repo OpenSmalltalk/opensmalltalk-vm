@@ -1,91 +1,92 @@
 environment:
-  CYG_MIRROR: http://cygwin.mirror.constant.com
-  BINTRAYAPIKEY:
-    secure: uknPzww818XWJiLecwur9p1MfrkACOyx9d3iNrw/TuD89EoPSc8zLqKdPZjWdcQd
   matrix:
-    - FLAVOR: squeak.sista.spur
-      ARCH: win32x86
-      CYG_ROOT: C:\cygwin
-      CYG_SETUP: setup-x86.exe
-      MINGW_ARCH: i686
     - FLAVOR: squeak.cog.spur
       ARCH: win32x86
       CYG_ROOT: C:\cygwin
-      CYG_SETUP: setup-x86.exe
+      MINGW_ARCH: i686
+    - FLAVOR: squeak.cog.spur
+      ARCH: win64x64
+      CYG_ROOT: C:\cygwin64
+      MINGW_ARCH: x86_64
+    - FLAVOR: pharo.cog.spur
+      ARCH: win32x86
+      CYG_ROOT: C:\cygwin
+      MINGW_ARCH: i686
+    - FLAVOR: pharo.cog.spur
+      ARCH: win64x64
+      CYG_ROOT: C:\cygwin64
+      MINGW_ARCH: x86_64
+    - FLAVOR: squeak.sista.spur
+      ARCH: win32x86
+      CYG_ROOT: C:\cygwin
       MINGW_ARCH: i686
     - FLAVOR: squeak.cog.spur.lowcode
       ARCH: win32x86
       CYG_ROOT: C:\cygwin
-      CYG_SETUP: setup-x86.exe
       MINGW_ARCH: i686
     - FLAVOR: squeak.cog.v3
       ARCH: win32x86
       CYG_ROOT: C:\cygwin
-      CYG_SETUP: setup-x86.exe
       MINGW_ARCH: i686
     - FLAVOR: squeak.stack.spur
       ARCH: win32x86
       CYG_ROOT: C:\cygwin
-      CYG_SETUP: setup-x86.exe
       MINGW_ARCH: i686
     - FLAVOR: squeak.stack.v3
       ARCH: win32x86
       CYG_ROOT: C:\cygwin
-      CYG_SETUP: setup-x86.exe
       MINGW_ARCH: i686
-    - FLAVOR: pharo.cog.spur
+    - FLAVOR: pharo.sista.spur
       ARCH: win32x86
       CYG_ROOT: C:\cygwin
-      CYG_SETUP: setup-x86.exe
       MINGW_ARCH: i686
     - FLAVOR: pharo.cog.spur.lowcode
       ARCH: win32x86
       CYG_ROOT: C:\cygwin
-      CYG_SETUP: setup-x86.exe
       MINGW_ARCH: i686
     - FLAVOR: newspeak.cog.spur
       ARCH: win32x86
       CYG_ROOT: C:\cygwin
-      CYG_SETUP: setup-x86.exe
       MINGW_ARCH: i686
     - FLAVOR: newspeak.stack.spur
       ARCH: win32x86
       CYG_ROOT: C:\cygwin
-      CYG_SETUP: setup-x86.exe
       MINGW_ARCH: i686
-    - FLAVOR: squeak.cog.spur
-      ARCH: win64x64
-      CYG_ROOT: C:\cygwin64
-      CYG_SETUP: setup-x86_64.exe
-      MINGW_ARCH: x86_64
-    - FLAVOR: pharo.cog.spur
-      ARCH: win64x64
-      CYG_ROOT: C:\cygwin64
-      CYG_SETUP: setup-x86_64.exe
-      MINGW_ARCH: x86_64
+    # - FLAVOR: pharo.sista.spur
+    #   ARCH: win64x64
+    #   CYG_ROOT: C:\cygwin64
+    #   MINGW_ARCH: x86_64
     - FLAVOR: newspeak.cog.spur
       ARCH: win64x64
       CYG_ROOT: C:\cygwin64
-      CYG_SETUP: setup-x86_64.exe
       MINGW_ARCH: x86_64
     - FLAVOR: squeak.stack.spur
       ARCH: win64x64
       CYG_ROOT: C:\cygwin64
-      CYG_SETUP: setup-x86_64.exe
       MINGW_ARCH: x86_64
     - FLAVOR: pharo.stack.spur
       ARCH: win64x64
       CYG_ROOT: C:\cygwin64
-      CYG_SETUP: setup-x86_64.exe
       MINGW_ARCH: x86_64
     - FLAVOR: newspeak.stack.spur
       ARCH: win64x64
       CYG_ROOT: C:\cygwin64
-      CYG_SETUP: setup-x86_64.exe
       MINGW_ARCH: x86_64
 
+
 matrix:
-  fast_finish: false
+  fast_finish: true
+  allow_failures:
+    - FLAVOR: squeak.sista.spur
+    - FLAVOR: pharo.sista.spur
+    - FLAVOR: squeak.cog.spur.lowcode
+    - FLAVOR: pharo.cog.spur.lowcode
+
+notifications:
+  - provider: Email
+    to:
+      - vm-dev@lists.squeakfoundation.org
+    on_build_success: false
 
 platform:
   - x86
@@ -96,9 +97,9 @@ cache:
   - .thirdparty-cache
 
 install:
-  - ps: 'Start-FileDownload "http://cygwin.com/setup-x86.exe" -FileName "setup-x86.exe"'
-  - ps: 'Start-FileDownload "http://cygwin.com/setup-x86_64.exe" -FileName "setup-x86_64.exe"'
-  - '%CYG_SETUP% -dgnqNO -R "%CYG_ROOT%" -s "%CYG_MIRROR%" -l "%CYG_ROOT%\var\cache\setup" -P mingw64-%MINGW_ARCH%-gcc-core,mingw64-%MINGW_ARCH%-gcc-g++,mingw64-%MINGW_ARCH%-headers,mingw64-%MINGW_ARCH%-runtime,zip,mingw64-%MINGW_ARCH%-clang,mingw64-%MINGW_ARCH%-openssl,libiconv-devel,libglib2.0-devel,perl,mingw64-%MINGW_ARCH%-zlib,make,cmake,wget,mingw64-%MINGW_ARCH%-win-iconv'
+  - 'curl -fsSL --retry 4 -m 600 -o "setup-x86.exe" "http://cygwin.com/setup-x86.exe" '
+  - 'curl -fsSL --retry 4 -m 600 -o "setup-x86_64.exe" "http://cygwin.com/setup-x86_64.exe" '
+  - 'call scripts/installCygwin.bat %MINGW_ARCH% "%CYG_ROOT%"'
 
 # Cygwin build script
 #
@@ -108,7 +109,7 @@ install:
 # build which causes failures as certain functions attempt to redirect
 # default file handles. Ensure a dummy file descriptor is opened with 'exec'.
 build_script:
-  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; exec ./.travis_build.sh"'
+  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; exec ./scripts/ci/travis_build.sh"'
 
 # Using `after_build` instead of `before_deploy` and `deploy_script`.
 #  `before_deploy` is only invoked if the deployment provider is triggered.

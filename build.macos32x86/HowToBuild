@@ -12,6 +12,7 @@ Contents:
 	- The Structure of the Makefiles
 	- Building the VM Simulator Support Libraries
 	- Using Different Compilers
+	- Compilers To Avoid
 	- Installing third-party libraries
 	- Debugging with lldb
 
@@ -96,6 +97,7 @@ to fix this.
 2. cd to the VM configuration of your choice and run the mvm script, e.g.
 	cd buiild.macos32x86/squeak.cog.spur
 	./mvm -A
+
 This will build CocoaFast.app, CocoaDebug.app and CocoaAssert.app applications
 (or maybe Squeak.app, SqueakAssert.app, SqueakDebug.app, Pharo.app,
  PharoAssert.app, PharoDebug.app, etc) containing the three VM configurations.
@@ -103,6 +105,9 @@ If the configuration includes the multi-threaded VM you can use mvm -S to make
 the single-threaded VMs, mvm -T to make the multi-threadeds in FastMT.app et al,
 and mvm -A to make them all.  mvm -d will make the Debug.app VM, etc.  mvm -?
 provides the gory details.
+
+In order to only build the production vm, you can launch the command:
+	./mvm -f
 
 Each build directory contains three files
 	plugins.int
@@ -169,26 +174,37 @@ SDKs and Problems
 -----------------
 The makefiles will use the oldest available SDK that is installed that is new
 enough to build the system.  The 32-bit build requires at least the 10.9 SDK.
-To obtain SDKs it is best to web search for "obtaining older sdks for Xcode",
-and follow the instructions you find.
+Under Zcode 9, getversion fails to compile using 10.9 and one must use at least
+the 10.10 SDK.
+SDKs are installed in
+	/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/
+To obtain SDKs one way is to web search for "obtaining older sdks for Xcode",
+and follow the instructions you find.  But a more convenient place, at time of
+writing, is
+	git clone https://github.com/phracker/MacOSX-SDKs.git
 
-On Sierra people have reported that the support libraries for the SSLPlugin
-(libssl.dylib and libcrypto.dylib) are missing.  The symptom is an error
-message such as this in the output (and the LOG file produced) of the make:
+If some library is missing, as indicated by an error message in the console,
+(and the LOG file produced), say for example foobar:
 
-ld: library not found for -lssl
-clang: error: linker command failed with exit code 1 (use -v to see invocation)
-make[1]: *** [build/vm/SqueakSSL.bundle/Contents/MacOS/SqueakSSL] Error 1
+    ld: library not found for -lfoobar
+    clang: error: linker command failed with exit code 1 (use -v to see invocation)
+    make[1]: *** [build/vm/SqueakFoobar.bundle/Contents/MacOS/SqueakFoobar] Error 1
 
-These libraries should be in the /usr/lib directory for the SDK being used.  Use
+Then you might search if some libfoobar.dylib is present in the system
+(for example in places like /usr/lib or /usr/local/lib).
+If so, copy them or link them to the SDK directory.
 
-make print-sdks
+You can locate the SDK that you are using with:
 
-to print the SDK, which might be e.g. /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.9.sdk.
-Libraries would then be found in /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.9.sdk/usr/lib.
-If they, or any other Apple support libraries, are missing, locate them (they
-may be in /usr/lib) and copy or link them into the SDK /usr/lib and retry the
-build.
+    make print-sdks
+
+If it answers e.g.
+
+    /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.9.sdk
+    
+then libfoobar.dylib should then be copied/linked in
+
+    /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.9.sdk/usr/lib
 
 
 Signing Problems
@@ -230,6 +246,13 @@ For example, to install gcc 5.2 see
 best pointer I've found.
 
 
+Compilers To Avoid
+------------------
+Xcode 9.3.1 produces a broken VM on 64 bits.  We suggest that you avoid
+Xcode v9.3.x. 9.3.x ships with Apple LLVM version 9.1.0 (clang-902.0.39.1).
+See e.g. https://gist.github.com/yamaya/2924292
+
+
 Installing third-party libraries
 --------------------------------
 The Pharo VM depends on a number of third-party libraries.  cmake is needed to
@@ -250,5 +273,6 @@ e.g. if in the image directory you might do
 The VM includes many functions intended for VM debugging.  See e.g. functions
 beginning with print in the main VM source (e.g. spursrc/vm/gcc3x-cointerp.c).
 
+
 Eliot Miranda
-August 2017
+April 2018

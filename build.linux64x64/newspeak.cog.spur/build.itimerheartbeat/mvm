@@ -1,8 +1,9 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 # Spur VM with VM profiler and itimer heartbeat
 INSTALLDIR=nscogspur64linux
 # Some gcc versions create a broken VM using -O2
-case `gcc -v 2>&1 | grep version | sed 's/gcc version *//'` in
+case $(c99 -dumpversion) in
 3.4.*)	OPT="-g -O1 -fwrapv -DNDEBUG -DDEBUGVM=0";;
 *)		OPT="-g -O2 -DNDEBUG -DDEBUGVM=0";;
 esac
@@ -26,11 +27,8 @@ test -f config.h || ../../../platforms/unix/config/configure \
 		--with-vmversion=5.0 \
 		--with-src=nsspur64src \
 		--without-vm-display-fbdev --without-npsqueak \
-	CC="gcc -m64" \
-	CXX="g++ -m64" \
-	CFLAGS="$OPT -msse2 -D_GNU_SOURCE -DITIMER_HEARTBEAT=1" \
-	LIBS="-lpthread -luuid" \
-	LDFLAGS=-Wl,-z,now
+	TARGET_ARCH="-m64" \
+	CFLAGS="$OPT -msse2 -DITIMER_HEARTBEAT=1"
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../products/$INSTALLDIR
 make install-squeak install-plugins prefix=`(cd ../../../;pwd)`/products/$INSTALLDIR 2>&1 | tee LOG

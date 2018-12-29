@@ -1,7 +1,12 @@
 #! /bin/bash
 set -e 
 
-baseDir="/homez.141/pharoorgde/files/vm"
+if [[ "${FLAVOR}" = "pharo.sista.spur" ]]; then
+	baseDir="/homez.141/pharoorgde/files/vm/sista"
+else
+	baseDir="/homez.141/pharoorgde/files/vm"
+fi
+
 case "${ARCH}" in
 	macos32x86)
 		destDir="$baseDir/pharo-spur32/mac" 

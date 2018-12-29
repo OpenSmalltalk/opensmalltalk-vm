@@ -12,6 +12,13 @@ readonly PRODUCTS_DIR="${BUILD_DIR}/products"
 readonly PHARO_PRODUCTS_DIR="${BUILD_DIR}/productsPharo"
 mkdir "${PHARO_PRODUCTS_DIR}" || true # ensure directory exists
 
+# Adding sista- prefix to sista VMs
+if [[ "${FLAVOR}" = "pharo.sista.spur" ]]; then
+	SISTA_PREFIX="sista-"
+else
+	SISTA_PREFIX=""
+fi
+
 # revision date
 BUILD_DATE="`grep -m1 "SvnRawRevisionString" ${BUILD_DIR}/platforms/Cross/vm/sqSCCSVersion.h | sed 's/[^0-9.]*\([0-9.]*\).*/\1/'`"
 if [ -z "${BUILD_DATE}" ]; then 
@@ -43,7 +50,7 @@ do_pack_vm() {
 		exit 1
 	fi
 		
-	filename="pharo-${os}-${productArch}${suffix}-${BUILD_DATE}-${BUILD_ID}.zip"
+	filename="${SISTA_PREFIX}pharo-${os}-${productArch}${suffix}-${BUILD_DATE}-${BUILD_ID}.zip"
 	pushd "${productDir}"
 	zip -y -r "${PHARO_PRODUCTS_DIR}/${filename}" ${pattern}
 	popd
@@ -60,7 +67,7 @@ do_copy_dmg() {
 		exit 1
 	fi
 		
-	filename="pharo-mac-${productArch}-${BUILD_DATE}-${BUILD_ID}.dmg"
+	filename="${SISTA_PREFIX}pharo-mac-${productArch}-${BUILD_DATE}-${BUILD_ID}.dmg"
 	cp "${PRODUCTS_DIR}/"*.dmg "${PHARO_PRODUCTS_DIR}/${filename}"
 }
 

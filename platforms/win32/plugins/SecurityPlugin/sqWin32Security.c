@@ -8,6 +8,7 @@
 #include <windows.h>
 #include <shlobj.h> /* CSIDL_XXX */
 #include "sq.h"
+#include "sqWin32.h"
 
 #ifndef HKEY_SQUEAK_ROOT
 /* the default place in the registry to look for */
@@ -16,19 +17,26 @@
 
 static HRESULT (__stdcall *shGetFolderPath)(HWND, int, HANDLE, DWORD, WCHAR*);
 
-static TCHAR untrustedUserDirectory[MAX_PATH];
+static WCHAR untrustedUserDirectory[MAX_PATH];
 static int untrustedUserDirectoryLen;
-static TCHAR secureUserDirectory[MAX_PATH];
+static WCHAR secureUserDirectory[MAX_PATH];
 static int secureUserDirectoryLen;
-static TCHAR resourceDirectory[MAX_PATH];
+static WCHAR resourceDirectory[MAX_PATH];
 static int resourceDirectoryLen;
 
+static char untrustedUserDirectoryUTF8[MAX_PATH];
+static char secureUserDirectoryUTF8[MAX_PATH];
+static char resourceDirectoryUTF8[MAX_PATH];
+
 /* imported from sqWin32Prefs.c */
-extern TCHAR squeakIniName[MAX_PATH];
+extern WCHAR squeakIniName[MAX_PATH];
 
 /* imported from sqWin32Main.c */
 extern BOOL fLowRights;  /* started as low integrity process, 
                         need to use alternate untrustedUserDirectory */
+
+extern int sqAskSecurityYesNoQuestion(const char *question);
+extern const char *sqGetCurrentImagePath(void);
 
 /***************************************************************************/
 /***************************************************************************/
@@ -46,13 +54,14 @@ sqInt ioHasEnvironmentAccess(void) { return allowEnvironmentAccess; }
 /***************************************************************************/
 /* file security */
 static int allowFileAccess = 1;  /* full access to files */
-static const TCHAR U_DOT[] = TEXT(".");
+static const WCHAR SEC_U_DOT[] = L".";
+static const WCHAR SEC_U_BACKSLASH[] = L"\\";
 
-static int testDotDot(TCHAR *pathName, int index) {
+static int testDotDot(WCHAR *pathName, int index) {
   while(pathName[index]) {
-    if(pathName[index] == U_DOT[0]) {
-      if(pathName[index-1] == U_DOT[0]) {
-        if (pathName[index-2] == U_BACKSLASH[0]) {
+    if(pathName[index] == SEC_U_DOT[0]) {
+      if(pathName[index-1] == SEC_U_DOT[0]) {
+        if (pathName[index-2] == SEC_U_BACKSLASH[0]) {
           return 0; /* Gotcha! */
         }
       }
@@ -62,9 +71,9 @@ static int testDotDot(TCHAR *pathName, int index) {
   return 1;
 }
 
-static int lstrncmp(TCHAR *s1, TCHAR *s2, int len) {
-  int s1Len = lstrlen(s1);
-  int s2Len = lstrlen(s2);
+static int lstrncmpW(WCHAR *s1, WCHAR *s2, int len) {
+  int s1Len = lstrlenW(s1);
+  int s2Len = lstrlenW(s2);
   int max = min(s1Len, min(s2Len, len));
   int i;
   for (i = 0; i < max; i++) {
@@ -77,12 +86,12 @@ static int lstrncmp(TCHAR *s1, TCHAR *s2, int len) {
   return 0;
 }
 
-static int isAccessiblePathName(TCHAR *pathName, int writeFlag) {
-  int pathLen = lstrlen(pathName);
+static int isAccessiblePathName(WCHAR *pathName, int writeFlag) {
+  int pathLen = lstrlenW(pathName);
   if (pathLen > (MAX_PATH - 1)) return 0;
 
   if (pathLen >= untrustedUserDirectoryLen
-      && 0 == lstrncmp(pathName, untrustedUserDirectory, untrustedUserDirectoryLen)) {
+      && 0 == lstrncmpW(pathName, untrustedUserDirectory, untrustedUserDirectoryLen)) {
     if (pathLen > untrustedUserDirectoryLen + 2)
       return testDotDot(pathName, untrustedUserDirectoryLen+2);
     return 1;
@@ -91,7 +100,7 @@ static int isAccessiblePathName(TCHAR *pathName, int writeFlag) {
     return 0;
 
   if (pathLen >= resourceDirectoryLen
-      &&  0 == lstrncmp(pathName, resourceDirectory, resourceDirectoryLen)) {
+      &&  0 == lstrncmpW(pathName, resourceDirectory, resourceDirectoryLen)) {
     if (pathLen > resourceDirectoryLen + 2)
       return testDotDot(pathName, resourceDirectoryLen+2);
     return 1;
@@ -99,30 +108,43 @@ static int isAccessiblePathName(TCHAR *pathName, int writeFlag) {
   return 0;
 }
 
-static int isAccessibleFileName(TCHAR *fileName, int writeFlag) {
+static int isAccessibleUTF8PathName(char *pathName, int pathLen , int writeFlag) {
+	DWORD success;
+	WCHAR widePath[MAX_PATH];
+	widePath[MAX_PATH - 1] = 0;
+	success = MultiByteToWideChar(CP_UTF8, 0, pathName, pathLen, widePath, MAX_PATH-1);
+	if (! success) return 0; /* if conversion fails, then it's not accessible */
+	return isAccessiblePathName(widePath, writeFlag);
+}
+
+static int isAccessibleFileName(WCHAR *fileName, int writeFlag) {
   return isAccessiblePathName(fileName, writeFlag);
+}
+
+static int isAccessibleUTF8FileName(char *fileName, int fileLen, int writeFlag) {
+	return isAccessibleUTF8PathName(fileName, fileLen , writeFlag);
 }
 
 /* directory access */
 int ioCanCreatePathOfSize(char* pathString, int pathStringLength) {
   if(allowFileAccess) return 1;
-  return isAccessiblePathName(fromSqueak(pathString, pathStringLength), 1);
+  return isAccessibleUTF8PathName(pathString, pathStringLength, 1);
 }
 
 int ioCanListPathOfSize(char* pathString, int pathStringLength) {
   if(allowFileAccess) return 1;
-  return isAccessiblePathName(fromSqueak(pathString, pathStringLength), 0);
+  return isAccessibleUTF8PathName(pathString, pathStringLength, 0);
 }
 
 int ioCanDeletePathOfSize(char* pathString, int pathStringLength) {
   if(allowFileAccess) return 1;
-  return isAccessiblePathName(fromSqueak(pathString, pathStringLength), 1);
+  return isAccessibleUTF8PathName(pathString, pathStringLength, 1);
 }
 
 /* file access */
 int ioCanOpenFileOfSizeWritable(char* pathString, int pathStringLength, int writeFlag) {
   if(allowFileAccess) return 1;
-  return isAccessibleFileName(fromSqueak(pathString, pathStringLength), writeFlag);
+  return isAccessibleUTF8FileName(pathString, pathStringLength, writeFlag);
 }
 
 int ioCanOpenAsyncFileOfSizeWritable(char* pathString, int pathStringLength, int writeFlag) {
@@ -130,12 +152,12 @@ int ioCanOpenAsyncFileOfSizeWritable(char* pathString, int pathStringLength, int
 }
 int ioCanDeleteFileOfSize(char* pathString, int pathStringLength) {
   if(allowFileAccess) return 1;
-  return isAccessibleFileName(fromSqueak(pathString, pathStringLength), 1);
+  return isAccessibleUTF8FileName(pathString, pathStringLength, 1);
 }
 
 int ioCanRenameFileOfSize(char* pathString, int pathStringLength) {
   if(allowFileAccess) return 1;
-  return isAccessibleFileName(fromSqueak(pathString, pathStringLength), 1);
+  return isAccessibleUTF8FileName(pathString, pathStringLength, 1);
 }
 
 
@@ -188,134 +210,141 @@ int ioHasSocketAccess() { return allowSocketAccess; }
 /* SecurityPlugin primitive support */
 
 char *ioGetSecureUserDirectory(void) {
-  return secureUserDirectory;
+  return secureUserDirectoryUTF8;
 }
 
 char *ioGetUntrustedUserDirectory(void) {
-  return untrustedUserDirectory;
+  return untrustedUserDirectoryUTF8;
 }
 
 /* helper function to expand %MYDOCUMENTSFOLDER% */
 
-int expandMyDocuments(char *pathname, char *replacement, char *result)
+int expandMyDocuments(WCHAR *pathname, WCHAR *replacement, WCHAR *result)
 {
-  TCHAR search4[MAX_PATH+1];
-  TCHAR *start;
+/*  WCHAR search4[MAX_PATH+1];
+  WCHAR *start;
 
-  lstrcpy(search4, TEXT("%MYDOCUMENTS%"));
+  lstrcpyW(search4, L"%MYDOCUMENTS%");
 
-  if(!(start = strstr(pathname, search4))) return 0;
+  if(!(start = wstrstr(pathname, search4))) return 0;
 
-  strncpy(result, pathname, start-pathname); 
+  wstrncpy(result, pathname, start-pathname); 
   result[start-pathname] = '\0';
-  sprintf(result+(start-pathname),"%s%s", replacement, start+strlen(search4));
-  
-  return strlen(result);
+  sprintf(result+(start-pathname),"%s%s", replacement, start+lstrlenW(search4));
+*/
+  /* TODO: Implement this properly. */
+  return 0;
 }
 
+static void expandVariableInDirectory(WCHAR *directory, WCHAR *wDir, WCHAR *wTmp)
+{
+    /* Expand environment variables. */
+    lstrcpyW(wDir, directory);
+    ExpandEnvironmentStringsW(wDir, wTmp, MAX_PATH - 1);
 
+    /* Expand relative paths to absolute paths */
+    GetFullPathNameW(wTmp, MAX_PATH, wDir, NULL);
+    lstrcpyW(directory, wDir);
+}
 
 /* note: following is called from VM directly, not from plugin */
 sqInt ioInitSecurity(void) {
   DWORD dwType, dwSize, ok;
-  TCHAR tmp[MAX_PATH+1];
+  WCHAR tmp[MAX_PATH+1];
   WCHAR wTmp[MAX_PATH+1];
   WCHAR wDir[MAX_PATH+1];
-  TCHAR myDocumentsFolder[MAX_PATH+1];  
+  WCHAR myDocumentsFolder[MAX_PATH+1];  
   HKEY hk;
   int dirLen;
 
   /* establish the secure user directory */
-  lstrcpy(secureUserDirectory, imagePath);
-  dirLen = lstrlen(secureUserDirectory);
+  sqUTF8ToUTF16Copy(secureUserDirectory, sizeof(secureUserDirectory)/sizeof(secureUserDirectory[0]), sqGetCurrentImagePath());
+  dirLen = lstrlenW(secureUserDirectory);
   dwSize = MAX_PATH-dirLen;
-  GetUserName(secureUserDirectory+dirLen, &dwSize);
+  GetUserNameW(secureUserDirectory+dirLen, &dwSize);
 
   /* establish untrusted user directory */
-  lstrcpy(untrustedUserDirectory, TEXT("C:\\My Squeak\\%USERNAME%"));
+  lstrcpyW(untrustedUserDirectory, L"C:\\My Squeak\\%USERNAME%");
 
   /* establish untrusted user directory */
-  lstrcpy(resourceDirectory, imagePath);
-  if (resourceDirectory[lstrlen(resourceDirectory)-1] == '\\') {
-    resourceDirectory[lstrlen(resourceDirectory)-1] = 0;
+  sqUTF8ToUTF16Copy(resourceDirectory, sizeof(resourceDirectory) / sizeof(resourceDirectory[0]), sqGetCurrentImagePath());
+  if (resourceDirectory[lstrlenW(resourceDirectory)-1] == '\\') {
+    resourceDirectory[lstrlenW(resourceDirectory)-1] = 0;
   }
 
   /* Look up shGetFolderPathW */
-  shGetFolderPath = (void*)GetProcAddress(LoadLibrary("SHFolder.dll"), 
+  shGetFolderPath = (void*)GetProcAddress(LoadLibraryA("SHFolder.dll"), 
                                           "SHGetFolderPathW");
 
   if(shGetFolderPath) {
     /* If we have shGetFolderPath use My Documents/My Squeak */
-    WCHAR widepath[MAX_PATH];
     int sz;
     /*shGetfolderPath does not return utf8*/
-    if(shGetFolderPath(NULL, CSIDL_PERSONAL, NULL, 0, widepath) == S_OK) {
-       WideCharToMultiByte(CP_ACP,0,widepath,-1,untrustedUserDirectory,
-                          MAX_PATH,NULL,NULL); 
-      sz = strlen(untrustedUserDirectory);
+    if(shGetFolderPath(NULL, CSIDL_PERSONAL, NULL, 0, untrustedUserDirectory) == S_OK) {
+      sz = lstrlenW(untrustedUserDirectory);
       if(untrustedUserDirectory[sz-1] != '\\') 
-        strcat(untrustedUserDirectory, "\\");
-           lstrcpy(myDocumentsFolder,untrustedUserDirectory);
-      strcat(untrustedUserDirectory, "My Squeak");
+        lstrcatW(untrustedUserDirectory, L"\\");
+      lstrcpyW(myDocumentsFolder,untrustedUserDirectory);
+      lstrcatW(untrustedUserDirectory, L"My Squeak");
     }
   }
 
 
   /* Query Squeak.ini for network installations */
-  GetPrivateProfileString(TEXT("Security"), TEXT("SecureDirectory"),
+  GetPrivateProfileStringW(L"Security", L"SecureDirectory",
                           secureUserDirectory, secureUserDirectory,
                           MAX_PATH, squeakIniName);
   if(fLowRights) {/* use alternate untrustedUserDirectory */
-      GetPrivateProfileString(TEXT("Security"), TEXT("UserDirectoryLow"),
+      GetPrivateProfileStringW(L"Security", L"UserDirectoryLow",
                           untrustedUserDirectory, untrustedUserDirectory,
                           MAX_PATH, squeakIniName);
   } else {
-      GetPrivateProfileString(TEXT("Security"), TEXT("UserDirectory"),
+      GetPrivateProfileStringW(L"Security", L"UserDirectory",
                           untrustedUserDirectory, untrustedUserDirectory,
                           MAX_PATH, squeakIniName);
   }
 
-  GetPrivateProfileString(TEXT("Security"), TEXT("ResourceDirectory"),
+  GetPrivateProfileStringW(L"Security", L"ResourceDirectory",
                           resourceDirectory, resourceDirectory,
                           MAX_PATH, squeakIniName);
 
   /* Attempt to read local user settings from registry */
-  ok = RegOpenKey(HKEY_CURRENT_USER, HKEY_SQUEAK_ROOT, &hk);
+  ok = RegOpenKeyA(HKEY_CURRENT_USER, HKEY_SQUEAK_ROOT, &hk);
 
   /* Read the secure directory from the subkey. */
   dwSize = MAX_PATH;
-  ok = RegQueryValueEx(hk,"SecureDirectory",NULL, &dwType, 
+  ok = RegQueryValueExW(hk, L"SecureDirectory",NULL, &dwType, 
                        (LPBYTE) tmp, &dwSize);
   if(ok == ERROR_SUCCESS) {
     if(tmp[dwSize-2] != '\\') {
       tmp[dwSize-1] = '\\';
       tmp[dwSize] = 0;
     }
-    strcpy(secureUserDirectory, tmp);
+    lstrcpyW(secureUserDirectory, tmp);
   }
 
   /* Read the user directory from the subkey. */
   dwSize = MAX_PATH;
-  ok = RegQueryValueEx(hk,"UserDirectory",NULL, &dwType, 
+  ok = RegQueryValueExW(hk, L"UserDirectory",NULL, &dwType, 
                        (LPBYTE) tmp, &dwSize);
   if(ok == ERROR_SUCCESS) {
     if(tmp[dwSize-2] != '\\') {
       tmp[dwSize-1] = '\\';
       tmp[dwSize] = 0;
     }
-    strcpy(untrustedUserDirectory, tmp);
+    lstrcpyW(untrustedUserDirectory, tmp);
   }
 
   /* Read the resource directory from the subkey. */
   dwSize = MAX_PATH;
-  ok = RegQueryValueEx(hk,"ResourceDirectory",NULL, &dwType, 
+  ok = RegQueryValueExW(hk, L"ResourceDirectory",NULL, &dwType, 
                        (LPBYTE) tmp, &dwSize);
   if(ok == ERROR_SUCCESS) {
     if(tmp[dwSize-2] != '\\') {
       tmp[dwSize-1] = '\\';
       tmp[dwSize] = 0;
     }
-    strcpy(resourceDirectory, tmp);
+    lstrcpyW(resourceDirectory, tmp);
   }
 
   RegCloseKey(hk);
@@ -323,41 +352,30 @@ sqInt ioInitSecurity(void) {
   if(shGetFolderPath) {  
     dwSize = expandMyDocuments(untrustedUserDirectory, myDocumentsFolder, tmp);
     if(dwSize > 0 && dwSize < MAX_PATH)
-      strcpy(untrustedUserDirectory, tmp);
+      lstrcpyW(untrustedUserDirectory, tmp);
 
     dwSize = expandMyDocuments(secureUserDirectory, myDocumentsFolder, tmp);
     if(dwSize > 0 && dwSize < MAX_PATH)
-      strcpy(secureUserDirectory, tmp);
+      lstrcpyW(secureUserDirectory, tmp);
 
     dwSize = expandMyDocuments(resourceDirectory, myDocumentsFolder, tmp);
     if(dwSize > 0 && dwSize < MAX_PATH)
-      strcpy(resourceDirectory, tmp);
+      lstrcpyW(resourceDirectory, tmp);
   }
 
-  /* Expand any environment variables in user directory. */
-  MultiByteToWideChar(CP_ACP, 0, untrustedUserDirectory, -1, wDir, MAX_PATH);
-  ExpandEnvironmentStringsW(wDir, wTmp, MAX_PATH-1);
-  /* Expand relative paths to absolute paths */
-  GetFullPathNameW(wTmp, MAX_PATH, wDir, NULL);
-  WideCharToMultiByte(CP_UTF8,0,wDir,-1,untrustedUserDirectory,MAX_PATH,NULL,NULL);
+  /* Expand the directories. */
+  expandVariableInDirectory(untrustedUserDirectory, wDir, wTmp);
+  expandVariableInDirectory(secureUserDirectory, wDir, wTmp);
+  expandVariableInDirectory(resourceDirectory, wDir, wTmp);
 
-  /* same for the secure directory*/
-  MultiByteToWideChar(CP_ACP, 0, secureUserDirectory, -1, wDir, MAX_PATH);
-  ExpandEnvironmentStringsW(wDir, wTmp, MAX_PATH-1);
-  /* Expand relative paths to absolute paths */
-  GetFullPathNameW(wTmp, MAX_PATH, wDir, NULL);
-  WideCharToMultiByte(CP_UTF8,0,wDir,-1,secureUserDirectory,MAX_PATH,NULL,NULL);
+  secureUserDirectoryLen = lstrlenW(secureUserDirectory);
+  untrustedUserDirectoryLen = lstrlenW(untrustedUserDirectory);
+  resourceDirectoryLen = lstrlenW(resourceDirectory);
 
-  /* and for the resource directory*/
-  MultiByteToWideChar(CP_ACP, 0, resourceDirectory, -1, wDir, MAX_PATH);
-  ExpandEnvironmentStringsW(wDir, wTmp, MAX_PATH-1);
-  /* Expand relative paths to absolute paths */
-  GetFullPathNameW(wTmp, MAX_PATH, wDir, NULL);
-  WideCharToMultiByte(CP_UTF8,0,wDir,-1,resourceDirectory,MAX_PATH,NULL,NULL);
-
-  secureUserDirectoryLen = lstrlen(secureUserDirectory);
-  untrustedUserDirectoryLen = lstrlen(untrustedUserDirectory);
-  resourceDirectoryLen = lstrlen(resourceDirectory);
+  /* Keep a UTF-8 copy*/
+  sqUTF16ToUTF8Copy(untrustedUserDirectoryUTF8, sizeof(untrustedUserDirectoryUTF8), untrustedUserDirectory);
+  sqUTF16ToUTF8Copy(secureUserDirectoryUTF8, sizeof(secureUserDirectoryUTF8), secureUserDirectory);
+  sqUTF16ToUTF8Copy(resourceDirectoryUTF8, sizeof(resourceDirectoryUTF8), resourceDirectory);
 
   return 1;
 }
@@ -370,11 +388,11 @@ sqInt ioInitSecurity(void) {
 int _ioSetImageWrite(int enable) {
   if(enable == allowImageWrite) return 1;
   if(!allowImageWrite) {
-    if(MessageBox(stWindow, TEXT("WARNING: Re-enabling the ability to write the image is a serious security hazard. Do you want to continue?"), TEXT("Squeak Security Alert"), MB_YESNO | MB_ICONSTOP) != IDYES)
+    if(!sqAskSecurityYesNoQuestion("WARNING: Re-enabling the ability to write the image is a serious security hazard. Do you want to continue?"))
       return 0;
-    if(MessageBox(stWindow, TEXT("WARNING: Untrusted code could WIPE OUT your entire hard disk, STEAL your credit card information and send your PERSONAL documents to the entire world. Do you really want to continue?"), TEXT("Squeak Security Alert"), MB_YESNO | MB_ICONSTOP) != IDYES)
+    if(!sqAskSecurityYesNoQuestion("WARNING: Untrusted code could WIPE OUT your entire hard disk, STEAL your credit card information and send your PERSONAL documents to the entire world. Do you really want to continue?"))
       return 0;
-    if(MessageBox(stWindow, TEXT("WARNING: This is your last chance. If you proceed you will have to deal with the implications on your own. WE ARE REJECTING EVERY RESPONSIBILITY IF YOU CLICK ON YES. Do you want to continue?"), TEXT("Squeak Security Alert"), MB_YESNO | MB_ICONSTOP) != IDYES)
+    if(!sqAskSecurityYesNoQuestion("WARNING: This is your last chance. If you proceed you will have to deal with the implications on your own. WE ARE REJECTING EVERY RESPONSIBILITY IF YOU CLICK ON YES. Do you want to continue?"))
       return 0;
   }
   allowImageWrite = enable;
@@ -384,11 +402,11 @@ int _ioSetImageWrite(int enable) {
 int _ioSetFileAccess(int enable) {
   if(enable == allowFileAccess) return 1;
   if(!allowFileAccess) {
-    if(MessageBox(stWindow, TEXT("WARNING: Re-enabling the ability to access arbitrary files is a serious security hazard. Do you want to continue?"), TEXT("Squeak Security Alert"), MB_YESNO | MB_ICONSTOP) != IDYES)
+    if (!sqAskSecurityYesNoQuestion("WARNING: Re-enabling the ability to write the image is a serious security hazard. Do you want to continue?"))
       return 0;
-    if(MessageBox(stWindow, TEXT("WARNING: Untrusted code could WIPE OUT your entire hard disk, STEAL your credit card information and send your PERSONAL documents to the entire world. Do you really want to continue?"), TEXT("Squeak Security Alert"), MB_YESNO | MB_ICONSTOP) != IDYES)
+    if (!sqAskSecurityYesNoQuestion("WARNING: Untrusted code could WIPE OUT your entire hard disk, STEAL your credit card information and send your PERSONAL documents to the entire world. Do you really want to continue?"))
       return 0;
-    if(MessageBox(stWindow, TEXT("WARNING: This is your last chance. If you proceed you will have to deal with the implications on your own. WE ARE REJECTING EVERY RESPONSIBILITY IF YOU CLICK ON YES. Do you want to continue?"), TEXT("Squeak Security Alert"), MB_YESNO | MB_ICONSTOP) != IDYES)
+    if (!sqAskSecurityYesNoQuestion("WARNING: This is your last chance. If you proceed you will have to deal with the implications on your own. WE ARE REJECTING EVERY RESPONSIBILITY IF YOU CLICK ON YES. Do you want to continue?"))
       return 0;
   }
   allowFileAccess = enable;
@@ -398,11 +416,11 @@ int _ioSetFileAccess(int enable) {
 int _ioSetSocketAccess(int enable) {
   if(enable == allowSocketAccess) return 1;
   if(!allowSocketAccess) {
-    if(MessageBox(stWindow, TEXT("WARNING: Re-enabling the ability to use sockets is a serious security hazard. Do you want to continue?"), TEXT("Squeak Security Alert"), MB_YESNO | MB_ICONSTOP) != IDYES)
+    if (!sqAskSecurityYesNoQuestion("WARNING: Re-enabling the ability to write the image is a serious security hazard. Do you want to continue?"))
       return 0;
-    if(MessageBox(stWindow, TEXT("WARNING: Untrusted code could WIPE OUT your entire hard disk, STEAL your credit card information and send your PERSONAL documents to the entire world. Do you really want to continue?"), TEXT("Squeak Security Alert"), MB_YESNO | MB_ICONSTOP) != IDYES)
+    if (!sqAskSecurityYesNoQuestion("WARNING: Untrusted code could WIPE OUT your entire hard disk, STEAL your credit card information and send your PERSONAL documents to the entire world. Do you really want to continue?"))
       return 0;
-    if(MessageBox(stWindow, TEXT("WARNING: This is your last chance. If you proceed you will have to deal with the implications on your own. WE ARE REJECTING EVERY RESPONSIBILITY IF YOU CLICK ON YES. Do you want to continue?"), TEXT("Squeak Security Alert"), MB_YESNO | MB_ICONSTOP) != IDYES)
+    if (!sqAskSecurityYesNoQuestion("WARNING: This is your last chance. If you proceed you will have to deal with the implications on your own. WE ARE REJECTING EVERY RESPONSIBILITY IF YOU CLICK ON YES. Do you want to continue?"))
       return 0;
   }
   allowSocketAccess = enable;

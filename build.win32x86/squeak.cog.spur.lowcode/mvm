@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 A=;D=;F=
 if [ $# = 0 ]; then
 	A=1;D=1;F=1

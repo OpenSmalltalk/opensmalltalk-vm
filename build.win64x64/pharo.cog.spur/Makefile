@@ -7,7 +7,7 @@ VM:=Pharo
 VM_NAME:=Pharo Virtual Machine
 
 VMSRCDIR:=../../spur64src/vm
-COGDEFS:= -DPharoVM=1 -DIMMUTABILITY=1
+COGDEFS:= -DPharoVM=1
 
 THIRDPARTYLIBS:=pkgconfig openssl libssh2 libgit2 libsdl2 zlib libpng freetype2 pixman cairo libgcc
 	

@@ -65,7 +65,7 @@ version.c : $(SQLIBS)
 
 
 getversion : ${cfgdir}/getversion.c ${topdir}/platforms/Cross/vm/sqSCCSVersion.h
-	$(CC) -o getversion $(CFLAGS) $(INCLUDES) ${cfgdir}/getversion.c
+	$(LINK) getversion $(INCLUDES) ${cfgdir}/getversion.c
 
 plugins : config.sh $(PLUGINS_LA)
 

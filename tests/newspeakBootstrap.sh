@@ -6,7 +6,7 @@ readonly REV_NSBOOT="41f3615f4d79cb0e0d1e7aecc865fedca21e8a15"
 readonly GH_BASE="https://github.com/newspeaklanguage"
 readonly TMP_DIR=$(mktemp -d 2>/dev/null || mktemp -d -t 'newspeak')
 
-source ./.travis_helpers.sh
+source ./scripts/ci/travis_helpers.sh
 
 case "$(uname -s)" in
   "Linux")

@@ -19,4 +19,4 @@ if [[ "${APPVEYOR}" ]]; then
 fi
 
 $CMDSHELL gem install dpl
-$CMDSHELL dpl --provider=bintray --user=timfel --key=$BINTRAYAPIKEY --file=bintray.json
+$CMDSHELL dpl --provider=bintray --user=osvm --key=$BINTRAYAPIKEY --file=bintray.json --skip_cleanup=true

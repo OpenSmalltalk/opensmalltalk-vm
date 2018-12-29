@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 
 BASE=trunk6
 BASE64=trunk6-64

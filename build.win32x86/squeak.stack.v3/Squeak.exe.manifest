@@ -6,7 +6,7 @@
 <assemblyIdentity
 	version="1.0.0.0"
 	processorArchitecture="*"
-	name="www.mirandabanda.org.Cog.Squeak"
+	name="www.opensmalltalk.org.Cog.Squeak"
 	type="win32"
 />
 <description>Squeak Smalltalk Virtual Machine</description>

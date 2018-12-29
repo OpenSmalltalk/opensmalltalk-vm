@@ -41,7 +41,7 @@ pushd "${PRODUCTS_DIR}"
 if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
   counter=0
   for dir in */; do
-    if [[ "${dir}" == *"ht/" ]]; then
+    if [[ "${ARCH}" == *"ARM"* || "${dir}" == *"ht/" ]]; then
       name="${IDENTIFIER}"
     else
       name="${IDENTIFIER_ITIMER}"

@@ -184,12 +184,13 @@ typedef struct B3DPrimitiveLight {
 /* module initialization support */
 int b3dxInitialize(void); /* return true on success, false on error */
 int b3dxShutdown(void); /* return true on success, false on error */
+int b3dLoadClientState(int, float *, int, float *, int, float *, int, float *, int);
 
 /* Texture support primitives */
 int b3dxAllocateTexture(int renderer, int w, int h, int d); /* return handle or -1 on error */
 int b3dxDestroyTexture(int renderer, int handle); /* return true on success, false on error */
 int b3dxActualTextureDepth(int renderer, int handle); /* return depth or <0 on error */
-int b3dxTextureColorMasks(int renderer, int handle, int masks[4]);  /* return true on success, false on error */
+int b3dxTextureColorMasks(int renderer, int handle, unsigned int masks[4]);  /* return true on success, false on error */
 int b3dxUploadTexture(int renderer, int handle, int w, int h, int d, void* bits); /* return true on success, false on error */
 int b3dxTextureByteSex(int renderer, int handle); /* return > 0 for MSB, = 0 for LSB, < 0 for error */
 int b3dxTextureSurfaceHandle(int renderer, int handle); /* return handle or <0 if error */
@@ -204,7 +205,7 @@ int b3dxGetRendererSurfaceHandle(int handle); /* return handle or <0 if error */
 int b3dxGetRendererSurfaceWidth(int handle); /* return width or <0 if error */
 int b3dxGetRendererSurfaceHeight(int handle); /* return height or <0 if error */
 int b3dxGetRendererSurfaceDepth(int handle); /* return depth or <0 if error */
-int b3dxGetRendererColorMasks(int handle, int *masks); /* return true on success, false on error */
+int b3dxGetRendererColorMasks(int handle, unsigned int *masks); /* return true on success, false on error */
 
 int b3dxSetViewport(int handle, int x, int y, int w, int h); /* return true on success, false on error */
 int b3dxClearDepthBuffer(int handle); /* return true on success, false on error */

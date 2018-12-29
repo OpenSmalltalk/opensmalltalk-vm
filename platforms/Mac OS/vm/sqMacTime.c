@@ -150,6 +150,19 @@ unsigned volatile long long
 ioUTCMicrosecondsNow() { return currentUTCMicroseconds(); }
 #endif /* STACKVM */
 
+
+/*
+ * Convert the supplied Unix (UTC) time to Squeak time.
+ *
+ * WARNING: On 32 bit platforms time_t is only 32 bits long.
+ * Since Squeak has an Epoch of 1901 while Unix uses 1970 the
+ * result is that overflow always occurs for times beyond about 1967.
+ * The expected result ends up in the image because the value is treated
+ * as an unsigned integer when converting to an oop.
+ * convertToSqueakTime should be deprecated in favour of
+ * convertToLongSqueakTime.
+ *
+ */
 time_t convertToSqueakTime(time_t unixTime)
 {
 #ifdef HAVE_TM_GMTOFF
@@ -165,3 +178,33 @@ time_t convertToSqueakTime(time_t unixTime)
      and 52 non-leap years later than Squeak. */
   return unixTime + ((52*365UL + 17*366UL) * 24*60*60UL);
 }
+
+
+/*
+ * Convert the supplied Unix (UTC) time to Squeak time.
+ *
+ * Squeak time has an epoch of 1901 and uses local time
+ * i.e. timezone + daylight savings
+ *
+ * Answer an sqLong which is guaranteed to be 64 bits on all platforms.
+ */
+sqLong convertToLongSqueakTime(time_t unixTime)
+{
+sqLong result;
+
+  result = unixTime;
+#ifdef HAVE_TM_GMTOFF
+  result += localtime(&unixTime)->tm_gmtoff;
+#else
+# ifdef HAVE_TIMEZONE
+  result += ((daylight) * 60*60) - timezone;
+# else
+#  error: cannot determine timezone correction
+# endif
+#endif
+  /* Squeak epoch is Jan 1, 1901.  Unix epoch is Jan 1, 1970: 17 leap years
+     and 52 non-leap years later than Squeak. */
+  result += ((52*365UL + 17*366UL) * 24*60*60UL);
+  return result;
+}
+

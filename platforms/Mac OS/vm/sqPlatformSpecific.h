@@ -213,6 +213,6 @@ extern const pthread_key_t tltiIndex;
 
 #if !defined(VM_LABEL) || COGVM
 # undef VM_LABEL
-# define VM_LABEL(foo) 0
+# define VM_LABEL(foo) ((void)0)
 #endif
 #endif /* macintoshSqueak */

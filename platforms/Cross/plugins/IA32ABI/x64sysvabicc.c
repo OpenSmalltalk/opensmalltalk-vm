@@ -60,8 +60,8 @@ extern
 struct VirtualMachine* interpreterProxy;
 
 #if __GNUC__
-# define setsp(sp) asm volatile ("movq %0,%%rsp" : : "m"(sp))
-# define getsp() ({ void *sp; asm volatile ("movq %%rsp,%0" : "=r"(sp) : ); sp;})
+# define setsp(sp) __asm__ volatile ("movq %0,%%rsp" : : "m"(sp))
+# define getsp() ({ void *sp; __asm__ volatile ("movq %%rsp,%0" : "=r"(sp) : ); sp;})
 #endif
 #define STACK_ALIGN_BYTES 32 /* 32 if a 256-bit argument is passed; 16 otherwise */
 
@@ -225,7 +225,7 @@ thunkEntry(long a0, long a1, long a2, long a3, long a4, long a5,
 #if _MSC_VER
 				_asm mov qword ptr valflt64, xmm0;
 #elif __GNUC__
-				asm("movq %0, %%xmm0" : : "m"(valflt64));
+				__asm__("movq %0, %%xmm0" : : "m"(valflt64));
 #else
 # error need to load %xmm0 with vmcc.rvs.valflt64 on this compiler
 #endif
@@ -282,14 +282,16 @@ allocateExecutablePage(long *size)
 #else
 	long pagesize = getpagesize();
 
-	if (!(mem = valloc(pagesize)))
+	/* This is equivalent to valloc(pagesize) but at least on some versions of
+	 * SELinux valloc fails to yield an wexecutable page, whereas this mmap
+	 * call works everywhere we've tested so far.  See
+	 * http://lists.squeakfoundation.org/pipermail/vm-dev/2018-October/029102.html
+	 */
+	if (!(mem = mmap(0, pagesize, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANON | MAP_PRIVATE, -1, 0)))
 		return 0;
 
+	// MAP_ANON should zero out the allocated page, but explicitly doing it shouldn't hurt
 	memset(mem, 0, pagesize);
-	if (mprotect(mem, pagesize, PROT_READ | PROT_WRITE | PROT_EXEC) < 0) {
-		free(mem);
-		return 0;
-	}
 	*size = pagesize;
 #endif
 	return mem;

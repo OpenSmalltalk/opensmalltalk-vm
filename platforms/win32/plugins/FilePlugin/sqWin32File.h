@@ -28,6 +28,7 @@
     name cannot exceed MAX_PATH minus 12).
 **/
 
+#include <malloc.h>
 
 #define ALLOC_WIN32_PATH(out_path, in_name, in_size) { \
   int sz = MultiByteToWideChar(CP_UTF8, 0, in_name, in_size, NULL, 0); \
