@@ -159,8 +159,17 @@ void SetSystemTrayIcon(BOOL on);
    _RC_NEAR: round to nearest
    _PC_53 :  double precision arithmetic (instead of extended)
    _EM_XXX: silent operations (no signals please)
+   NOTE:  precision control and infinity control are not defined on ARM or X64 (SSE oblige), only X86
 */
+# if defined(_M_IX86) || defined(X86) || defined(_M_I386) || defined(_X86_) \
+  || defined(i386) || defined(i486) || defined(i586) || defined(i686) \
+  || defined(__i386__) || defined(__386__) || defined(I386)
 #define FPU_DEFAULT (_RC_NEAR + _PC_53 + _EM_INVALID + _EM_ZERODIVIDE + _EM_OVERFLOW + _EM_UNDERFLOW + _EM_INEXACT + _EM_DENORMAL)
+#define FPU_MASK    (_MCW_EM | _MCW_RC | _MCW_PC | _MCW_IC)
+#else
+#define FPU_DEFAULT (_RC_NEAR + _EM_INVALID + _EM_ZERODIVIDE + _EM_OVERFLOW + _EM_UNDERFLOW + _EM_INEXACT + _EM_DENORMAL)
+#define FPU_MASK    (_MCW_EM | _MCW_RC)
+#endif
 
 /****************************************************************************/
 /*                     Exception handling                                   */
@@ -191,7 +200,7 @@ extern sqInt primitiveFailForFFIExceptionat(usqLong exceptionCode, usqInt pc);
     DWORD code = exp->ExceptionRecord->ExceptionCode;
     if ((code >= EXCEPTION_FLT_DENORMAL_OPERAND) && (code <= EXCEPTION_FLT_UNDERFLOW)) {
       /* turn on the default masking of exceptions in the FPU and proceed */
-      _controlfp(FPU_DEFAULT, _MCW_EM | _MCW_RC | _MCW_PC | _MCW_IC);
+      _controlfp(FPU_DEFAULT, FPU_MASK);
       result = EXCEPTION_CONTINUE_EXECUTION;
     }
   }
@@ -1491,7 +1500,7 @@ sqMain(int argc, char *argv[])
   int virtualMemory;
 
   /* set default fpu control word */
-  _controlfp(FPU_DEFAULT, _MCW_EM | _MCW_RC | _MCW_PC | _MCW_IC);
+  _controlfp(FPU_DEFAULT, FPU_MASK);
 
   LoadPreferences();
 
