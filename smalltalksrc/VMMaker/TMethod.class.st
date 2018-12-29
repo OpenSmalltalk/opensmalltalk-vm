@@ -92,10 +92,10 @@ TMethod >> addTypesFor: node to: typeSet in: aCodeGen [
 	expr isVariable ifTrue:
 		[(aCodeGen typeOfVariable: expr name)
 			ifNotNil: [:type| typeSet add: type]
-			ifNil: [typeSet add: (expr name = 'self'
+			ifNil: [(typeSet add: (expr name = 'self'
 										ifTrue: [#void]
-										ifFalse: [#sqInt]).
-				^true]].
+										ifFalse: [#sqInt])) == #sqInt ifTrue:
+					[^true]]].
 	expr isConstant ifTrue:
 		[(expr value isInteger and: [expr value >= 0]) "cannot determine if signed or unsigned yet..."
 			ifTrue: [typeSet add: expr value]
