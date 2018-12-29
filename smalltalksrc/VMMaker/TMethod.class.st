@@ -68,8 +68,8 @@ TMethod >> addTypeForSelf [
 { #category : #'type inference' }
 TMethod >> addTypesFor: node to: typeSet in: aCodeGen [
 	"Add the value types for the node to typeSet.
-	 Answer if any type was derived from an as-yet-untyped method, which allows us to abort
-	 inferReturnTypeFromReturnsIn: if the return type depends on a yet-to-be-typed method."
+	 Answer if any type was derived from an as-yet-untyped method or variable, which allows us to abort
+	 inferReturnTypeFromReturnsIn: if the return type depends on a yet-to-be-typed method or variable."
 	| expr |
 	expr := node.
 	[expr isAssignment or: [expr isStmtList]] whileTrue:
@@ -88,13 +88,14 @@ TMethod >> addTypesFor: node to: typeSet in: aCodeGen [
 			ifNotNil:
 				[:type |
 				typeSet add: type.
-				^false].].
+				^false]].
 	expr isVariable ifTrue:
 		[(aCodeGen typeOfVariable: expr name)
 			ifNotNil: [:type| typeSet add: type]
 			ifNil: [typeSet add: (expr name = 'self'
 										ifTrue: [#void]
-										ifFalse: [#sqInt])]].
+										ifFalse: [#sqInt]).
+				^true]].
 	expr isConstant ifTrue:
 		[(expr value isInteger and: [expr value >= 0]) "cannot determine if signed or unsigned yet..."
 			ifTrue: [typeSet add: expr value]
