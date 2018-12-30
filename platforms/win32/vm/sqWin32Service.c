@@ -338,7 +338,7 @@ sqInstallService95(LPTSTR serviceName)
 /* sqStartService95: start the named service on a Windows 95 system */
 int
 sqStartService95(LPTSTR serviceName)
-{ TCHAR tmpString[1024];
+{ TCHAR tmpString[1025];
   STARTUPINFO sInfo;
   PROCESS_INFORMATION pInfo;
   DWORD dwSize, dwType;
@@ -499,7 +499,7 @@ int sqServiceMain(void)
 DWORD WINAPI sqThreadMain(DWORD ignored)
 { DWORD dwSize, dwType, ok;
   HKEY hk;
-  static TCHAR tmpString[256];
+  static TCHAR tmpString[MAX_PATH+1];
   static TCHAR lbuf[50];
   char *cmd;
 
