@@ -1508,9 +1508,9 @@ sqMain(int argc, char *argv[])
   if(fRunSingleApp) {
     HWND win = GetTopWindow(0);
     while (win != NULL) {
-      char buf[MAX_PATH];
-      GetClassName(win, buf, 80);
-      if(strcmp(windowClassName, buf) == 0) break;
+      TCHAR buf[MAX_PATH];
+      GetClassName(win, buf, MAX_PATH);
+      if(_tcscmp(windowClassName, buf) == 0) break;
       win = GetNextWindow(win, GW_HWNDNEXT);
     }
 
