@@ -30,6 +30,7 @@
 
 #ifdef WIN32_FILE_SUPPORT
 
+#define NO_STD_FILE_SUPPORT /* STD_FILE or WIN32_FILE are mutually exclusive options */
 #undef sqImageFile
 #undef sqImageFileClose
 #undef sqImageFileOpen
