@@ -101,7 +101,7 @@ TCHAR *printCommandLine(int printFor95)
     }
   /* add image name */
   lstrcat(buffer, TEXT("\""));
-  lstrcat(buffer, toUnicode(imageName));
+  lstrcat(buffer, imageNameT);
   lstrcat(buffer, TEXT("\"\0"));
 
   return buffer;
