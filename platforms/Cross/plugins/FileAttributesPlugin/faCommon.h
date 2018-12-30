@@ -8,16 +8,18 @@
 #include "faSupport.h"
 
 /*
- * fapathptr
+ * FAPathPtr
  *
- * fapathptr is used to pass a pointer to the faPath between the VM and image.
+ * FAPathPtr is used to pass a pointer to the faPath between the VM and image.
  * It holds the current VM session ID to prevent stale pointers being used 
  * across VM restarts.
+ *
+ * The definition here has to be kept in sync with the VMMaker version.
  */
 typedef struct fapathptrstruct {
 	int	sessionId;
 	fapath	*faPath;
-	} fapathptr;
+	} FAPathPtr;
 
 
 sqInt faInitialiseModule();
