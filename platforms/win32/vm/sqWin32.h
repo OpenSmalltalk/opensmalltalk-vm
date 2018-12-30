@@ -179,7 +179,6 @@ void SetupKeymap();
 void SetupWindows();
 void SetupPixmaps();
 void SetupPrinter();
-void SetupPreferences();
 void SetupMIDI();
 
 /********************************************************/
