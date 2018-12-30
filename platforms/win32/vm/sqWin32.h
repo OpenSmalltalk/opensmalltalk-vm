@@ -358,27 +358,6 @@ extern BOOL fBufferMouse;    /* Should we buffer mouse input? */
 
 
 /******************************************************/
-/* String conversions between Unicode / Ansi / Squeak */
-/******************************************************/
-/* Note: fromSqueak() and fromSqueak2() are inline conversions
-         but operate on two different buffers. The maximum length
-         of strings that can be converted is MAX_PATH */
-TCHAR*  fromSqueak(const char *sqPtr, int sqLen);   /* Inline Squeak -> C */
-TCHAR*  fromSqueak2(const char *sqPtr, int sqLen);  /* 2nd inline conversion */
-/* Note: toUnicode() and fromUnicode() are inline conversions
-         with for at most MAX_PATH sized strings. If the VM
-         is not compiled with UNICODE defined they just return
-         the input strings. Also, toUnicode operates on the
-         same buffer as fromSqueak() */
-TCHAR*  toUnicode(const char *ptr);                 /* Inline Ansi -> Unicode */
-char*   fromUnicode(const TCHAR *ptr);              /* Inline Unicode -> Ansi */
-/* Note: toUnicodeNew and fromUnicodeNew malloc() new strings.
-         It is up to the caller to free these! */
-TCHAR*  toUnicodeNew(const char *ptr);                 /* Inline Ansi -> Unicode */
-char*   fromUnicodeNew(const TCHAR *ptr);              /* Inline Unicode -> Ansi */
-TCHAR *lstrrchr(TCHAR *source, TCHAR c);
-
-/******************************************************/
 /* Output stuff                                       */
 /******************************************************/
 #ifndef sqMessageBox
