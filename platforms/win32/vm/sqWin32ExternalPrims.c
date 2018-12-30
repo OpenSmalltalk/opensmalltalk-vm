@@ -41,7 +41,10 @@ void *ioLoadModule(char *pluginName)
 	TCHAR *name;
 
 #ifdef UNICODE
-	name = toUnicode(pluginName);
+	int len = MultiByteToWideChar(CP_UTF8, 0, pluginName, -1, NULL, 0);
+	if (len <= 0) return 0; /* invalid UTF8 ? */
+	name = alloca(len);
+	if (MultiByteToWideChar(CP_UTF8, 0, pluginName, -1, name, len) == 0) return 0;
 #else
 	name = pluginName;
 #endif
