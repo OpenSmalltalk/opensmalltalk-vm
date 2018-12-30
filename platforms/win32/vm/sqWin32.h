@@ -143,16 +143,6 @@
 
 #endif /* (_WIN32_WCE) */
 
-/* THE FOLLOWING IS WRONG (& HENCE I'VE IF 0'ed IT OUT.  WE CAN'T MERELY DEFINE
- * WIN32 BECAUSE WE MAY BE ON WIN64. eem 2017/05/16
- */
-#if 0
-/* due to weird include orders, make sure WIN32 is defined */
-# if !defined(WIN32)
-#  define WIN32 1
-# endif
-#endif
-
 /* Experimental */
 #ifdef MINIMAL
   /* The hardcoded defs:
