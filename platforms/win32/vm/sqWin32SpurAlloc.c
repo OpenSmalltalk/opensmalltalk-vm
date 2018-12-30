@@ -29,8 +29,8 @@ LONG CALLBACK sqExceptionFilter(LPEXCEPTION_POINTERS exp)
   return EXCEPTION_WRONG_ACCESS;
 }
 
-static DWORD  pageMask;     /* bit mask for the start of a memory page */
-static DWORD  pageSize;     /* size of a memory page */
+static sqIntptr_t  pageMask;     /* bit mask for the start of a memory page */
+static sqIntptr_t  pageSize;     /* size of a memory page */
 static char  *minAppAddr;	/* SYSTEM_INFO lpMinimumApplicationAddress */
 static char  *maxAppAddr;	/* SYSTEM_INFO lpMaximumApplicationAddress */
 
