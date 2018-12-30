@@ -212,19 +212,26 @@ HANDLE DibFromBitmap (
 }
 
 BOOL WriteDIB (
-    LPSTR szFile,
+    LPCSTR szFile,
     HANDLE hdib)
 {
     BITMAPFILEHEADER    hdr;
     LPBITMAPINFOHEADER  lpbi;
-    HFILE               fh;
-    OFSTRUCT            of;
+    HANDLE              fh;
+	DWORD               nbwritten;
 
     if (!hdib)
         return FALSE;
 
-    fh = OpenFile(szFile, &of, (UINT)OF_CREATE|OF_READWRITE);
-    if (fh == -1)
+	fh = CreateFileA(szFile,
+		(GENERIC_READ | GENERIC_WRITE) ,
+		FILE_SHARE_READ ,
+		NULL, /* No security descriptor */
+		OPEN_ALWAYS ,
+		FILE_ATTRIBUTE_NORMAL,
+		NULL /* No template */);
+
+    if (fh == INVALID_HANDLE_VALUE)
         return FALSE;
 
     lpbi = (VOID FAR *)GlobalLock (hdib);
@@ -240,16 +247,16 @@ BOOL WriteDIB (
     /* Write the file header */
 
     /* write bfType*/
-    _lwrite(fh, (LPSTR)&hdr.bfType, (UINT)sizeof (WORD));
+    WriteFile(fh, (LPSTR)&hdr.bfType, (UINT)sizeof (WORD),&nbwritten,NULL);
     /* now pass over extra word, and only write next 3 DWORDS!*/
-    _lwrite(fh, (LPSTR)&hdr.bfSize, sizeof(DWORD) * 3);
+	WriteFile(fh, (LPSTR)&hdr.bfSize, sizeof(DWORD) * 3, &nbwritten, NULL);
 
     /* this struct already DWORD aligned!*/
     /* Write the DIB header and the bits */
-    _lwrite (fh, (LPSTR)lpbi, GlobalSize (hdib));
+	WriteFile(fh, (LPSTR)lpbi, GlobalSize (hdib), &nbwritten, NULL);
 
     GlobalUnlock (hdib);
-    _lclose(fh);
+    CloseHandle(fh);
     return TRUE;
 }
 
