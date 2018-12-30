@@ -1424,7 +1424,7 @@ sqImageFile findEmbeddedImage(void) {
 	sqImageFileSeek(f, endMarker);
     sqImageFileRead(&magic, 1, 4, f);
 	sqImageFileRead(&start, 1, 4, f);
-	sqMessageBox(MB_OK, "Magic number", "Expected:\t%x\nFound:\t\t%x", SQ_IMAGE_MAGIC, magic);
+	sqMessageBox(MB_OK, TEXT("Magic number", "Expected:\t%x\nFound:\t\t%x"), SQ_IMAGE_MAGIC, magic);
 	/* Magic number must be okay and start must be within executable boundaries */
 	if(magic != SQ_IMAGE_MAGIC || start < 0 || start >= endMarker) {
 		/* nope */
@@ -1434,7 +1434,7 @@ sqImageFile findEmbeddedImage(void) {
 	/* Might have an embedded image; seek back and double check */
 	sqImageFileSeek(f,start);
 	sqImageFileRead(&magic, 1, 4, f);
-	sqMessageBox(MB_OK, "Magic number", "Expected:\t%x\nFound:\t\t%x", SQ_IMAGE_MAGIC, magic);
+	sqMessageBox(MB_OK, TEXT("Magic number", "Expected:\t%x\nFound:\t\t%x"), SQ_IMAGE_MAGIC, magic);
 	if(magic != SQ_IMAGE_MAGIC) {
 		/* nope */
 		sqImageFileClose(f);

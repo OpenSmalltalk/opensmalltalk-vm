@@ -117,19 +117,17 @@ TCHAR *lstrrchr(TCHAR *source, TCHAR c)
 /*   printf() format string and arguments                                   */
 /****************************************************************************/
 #ifndef sqMessageBox
-int __cdecl sqMessageBox(DWORD dwFlags, const TCHAR *titleString, const char* fmt, ...)
-{ TCHAR *ptr, *buf;
-	va_list args;
+int __cdecl sqMessageBox(DWORD dwFlags, const TCHAR *titleString, const TCHAR* fmt, ...)
+{ TCHAR *buf;
+  va_list args;
   DWORD result;
 
-  ptr = toUnicodeNew(fmt);
   buf = (TCHAR*) calloc(sizeof(TCHAR), 4096);
-	va_start(args, fmt);
-	wvsprintf(buf, ptr, args);
-	va_end(args);
+  va_start(args, fmt);
+  _vsntprintf(buf, 4096, fmt, args);
+  va_end(args);
 
-	result = MessageBox(stWindow,buf,titleString,dwFlags|MB_SETFOREGROUND);
-  free(ptr);
+  result = MessageBox(stWindow,buf,titleString,dwFlags|MB_SETFOREGROUND);
   free(buf);
   return result;
 }

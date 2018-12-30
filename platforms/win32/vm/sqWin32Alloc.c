@@ -76,7 +76,7 @@ void *sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
   } while(!pageBase);
   if(!pageBase) {
     sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Error:"),
-		 "Unable to allocate memory (%d bytes requested)",
+		 TEXT("Unable to allocate memory (%d bytes requested)"),
 		 maxReserved);
     return pageBase;
   }
@@ -84,7 +84,7 @@ void *sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
   commit = nowReserved;
   if(!VirtualAlloc(pageBase, commit, MEM_COMMIT, PAGE_READWRITE)) {
     sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Error:"),
-		 "Unable to commit memory (%d bytes requested)",
+		 TEXT("Unable to commit memory (%d bytes requested)"),
 		 commit);
     return NULL;
   }

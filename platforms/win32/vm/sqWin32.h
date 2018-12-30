@@ -382,7 +382,7 @@ TCHAR *lstrrchr(TCHAR *source, TCHAR c);
 /* Output stuff                                       */
 /******************************************************/
 #ifndef sqMessageBox
-int __cdecl sqMessageBox(DWORD dwFlags, const TCHAR *titleString, const char* fmt, ...);
+int __cdecl sqMessageBox(DWORD dwFlags, const TCHAR *titleString, const TCHAR* fmt, ...);
 #endif
 
 #ifndef warnPrintf
