@@ -1102,7 +1102,7 @@ extern char *__cogitBuildInfo;
     fprintf(f,"\n%s", gdInfoString);
 
     /* print VM version information */
-    fprintf(f,"\nVM Version: %s\n", VM_VERSION_TEXT);
+    fprintf(f,"\nVM Version: %s\n", VM_VERSION_VERBOSE);
 #if STACKVM
     fprintf(f,"Interpreter Build: %s\n", __interpBuildInfo);
 # if COGVM
