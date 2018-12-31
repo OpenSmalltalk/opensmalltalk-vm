@@ -128,8 +128,8 @@ BOOL fIsConsole = 0;
 TCHAR consoleBuffer[4096];
 
 /* stderr and stdout names */
-char stderrName[MAX_PATH+1];
-char stdoutName[MAX_PATH+1];
+WCHAR stderrName[MAX_PATH+1];
+WCHAR stdoutName[MAX_PATH+1];
 
 static  char vmLogDirA[MAX_PATH_UTF8];
 static WCHAR vmLogDirW[MAX_PATH];
@@ -1026,22 +1026,22 @@ versionInfo(void)
 /*                      Error handling                                      */
 /****************************************************************************/
 void SetupStderr()
-{ TCHAR tmpName[MAX_PATH+1];
+{ WCHAR tmpName[MAX_PATH+1];
 
   *stderrName = *stdoutName = 0;
   /* re-open stdout && stderr */
-  GetTempPath(MAX_PATH,tmpName);
+  GetTempPathW(MAX_PATH,tmpName);
   if(GetStdHandle(STD_ERROR_HANDLE) == INVALID_HANDLE_VALUE)
     {
-      GetTempFileName(tmpName,TEXT("sq"),0,stderrName);
-      freopen(stderrName,"w+t",stderr);
+      GetTempFileNameW(tmpName,L"sq",0,stderrName);
+      _wfreopen(stderrName,L"w+t",stderr);
     }
   else *stderrName = 0;
 
   if(GetStdHandle(STD_OUTPUT_HANDLE) == INVALID_HANDLE_VALUE)
     {
-      GetTempFileName(tmpName,TEXT("sq"),0,stdoutName);
-      freopen(stdoutName,"w+t",stdout);
+      GetTempFileNameW(tmpName,L"sq",0,stdoutName);
+      _wfreopen(stdoutName,L"w+t",stdout);
     }
   else *stdoutName = 0;
 }
@@ -1414,12 +1414,12 @@ void __cdecl Cleanup(void)
   if(*stderrName)
     {
       fclose(stderr);
-      remove(stderrName);
+      _wremove(stderrName);
     }
   if(*stdoutName)
     {
       fclose(stdout);
-      remove(stdoutName);
+      _wremove(stdoutName);
     }
   OleUninitialize();
 }
