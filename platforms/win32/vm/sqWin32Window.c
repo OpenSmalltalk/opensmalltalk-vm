@@ -107,7 +107,6 @@ BITMAPINFO *bmi4;	         /*	4 bit depth bitmap info */
 BITMAPINFO *bmi8;	         /*	8 bit depth bitmap info */
 BITMAPINFO *bmi16;	       /*	16 bit depth bitmap info */
 BITMAPINFO *bmi32;	       /*	32 bit depth bitmap info */
-BOOL fWindows95;           /* Are we running on Win95 or NT? */
 BOOL fHasFocus = 0;        /* if Squeak has the input focus */
 
 /* Preference values */
@@ -919,7 +918,7 @@ void SetupWindows()
   updateRgn = CreateRectRgn(0,0,1,1);
 
   /* No windows at all when running as NT service */
-  if(fRunService && !fWindows95) return;
+  if(fRunService) return;
 
   wc.style = CS_OWNDC; /* don't waste resources ;-) */
   wc.lpfnWndProc = (WNDPROC)MainWndProcA;
@@ -1628,7 +1627,7 @@ sqInt ioProcessEvents(void)
 	int result;
 	extern sqInt inIOProcessEvents;
 
-	if (fRunService && !fWindows95) return 1;
+	if (fRunService) return 1;
 
 #if NewspeakVM
 	/* inIOProcessEvents controls ioProcessEvents.  If negative then
@@ -1713,7 +1712,7 @@ ioDrainEventQueue(void)
 { static MSG msg;
   POINT mousePt;
 
-  if(fRunService && !fWindows95) return 1;
+  if(fRunService) return 1;
 
   /* WinCE doesn't retrieve WM_PAINTs from the queue with PeekMessage,
      so we won't get anything painted unless we use GetMessage() if there

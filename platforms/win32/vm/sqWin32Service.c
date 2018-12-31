@@ -265,109 +265,6 @@ sqInstallService(LPCTSTR serviceName, LPCTSTR serviceExe)
   return schService != NULL;
 }
 
-/****************************************************************************
- Service Install/deinstall functions for Windows 95
- ****************************************************************************/
-
-/* sqInstallService95: install the named service on a Windows 95 system */
-int
-sqInstallService95(LPTSTR serviceName)
-{ TCHAR tmpString[1024];
-  DWORD dwSize, dwType;
-  HKEY hk;
-  int ok;
-
-  /* Add a broadcast  for user startup */
-  ok = RegOpenKey(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"), &hk);
-  failOn(ok != ERROR_SUCCESS, TEXT("RegOpenKey failed"));
-  dwSize = 1024;
-  ok = RegQueryValueEx(hk, TEXT("SqueakBroadcastNotification"),NULL, &dwType, (LPBYTE) &tmpString, &dwSize);
-  /* ERROR_SUCCESS indicates that we have already an entry */
-  if(ok != ERROR_SUCCESS)
-    /* ERROR_FILE_NOT_FOUND indicates no entry */
-    if(ok != ERROR_FILE_NOT_FOUND)
-      failOn(1 ,TEXT("RegQueryValueEx failed"));
-
-  /* set the new service entry */
-  GetModuleFileName(hInstance, tmpString, 1024);
-  lstrcat(tmpString,TEXT(" -broadcast95"));
-  ok = RegSetValueEx(hk,        /* subkey handle         */
-      TEXT("SqueakBroadcastNotification"), /* value name       */
-      0,                        /* must be zero          */
-      REG_SZ,                   /* value type            */
-      (LPBYTE) &tmpString,      /* address of value data */
-      lstrlen(tmpString));      /* length of value data  */
-  failOn(ok != ERROR_SUCCESS, TEXT("RegSetValueEx failed"));
-  RegCloseKey(hk);
-
-  ok = RegOpenKey(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunServices"), &hk);
-  if(ok != ERROR_SUCCESS) {
-    /* ERROR_FILE_NOT_FOUND indicates no entry */
-    if(ok != ERROR_FILE_NOT_FOUND)
-      failOn(1, TEXT("RegOpenKey failed"));
-    ok = RegCreateKey(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunServices"), &hk);
-    failOn(ok != ERROR_SUCCESS, TEXT("RegCreateKey failed"));
-  } else { /* check for any existing service */
-    dwSize = 1024;
-    ok = RegQueryValueEx(hk,serviceName,NULL, &dwType, (LPBYTE) &tmpString, &dwSize);
-    /* ERROR_SUCCESS indicates that we have already an entry */
-    if(ok == ERROR_SUCCESS) { 
-      /* The service already exists - ask the user to remove it */
-      if(MessageBox(0,TEXT("A service of this name already exists. Try to remove it?"),
-                    serviceName, MB_YESNOCANCEL) != IDYES)
-        return 0; /* Just return, in any other case we just overwrite the entry */
-    } else { /* ERROR_FILE_NOT_FOUND indicates no entry */
-      if(ok != ERROR_FILE_NOT_FOUND)
-        failOn(1 , TEXT("RegQueryValueEx failed"));
-	}
-  }
-  /* set the new service entry */
-  lstrcpy(tmpString, printCommandLine(1));
-  ok = RegSetValueEx(hk,        /* subkey handle         */
-      serviceName,              /* value name            */
-      0,                        /* must be zero          */
-      REG_SZ,                   /* value type            */
-      (LPBYTE) &tmpString,      /* address of value data */
-      lstrlen(tmpString));       /* length of value data  */
-  failOn(ok != ERROR_SUCCESS, TEXT("RegSetValueEx failed"));
-  RegCloseKey(hk);
-
-  return 1;
-}
-
-/* sqStartService95: start the named service on a Windows 95 system */
-int
-sqStartService95(LPTSTR serviceName)
-{ TCHAR tmpString[1025];
-  STARTUPINFO sInfo;
-  PROCESS_INFORMATION pInfo;
-  DWORD dwSize, dwType;
-  HKEY hk;
-  int ok;
-
-  ok = RegOpenKey(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunServices"), &hk);
-  failOn(ok != ERROR_SUCCESS, TEXT("RegOpenKey failed"));
-  /* get the name of the program to run */
-  dwSize = 1024;
-  ok = RegQueryValueEx(hk,serviceName,NULL, &dwType, (LPBYTE) &tmpString, &dwSize);
-  failOn(ok != ERROR_SUCCESS, TEXT("RegQueryValueEx failed"));
-  RegCloseKey(hk);
-  tmpString[dwSize] = 0;
-  /* and start up */
-  ZeroMemory(&sInfo, sizeof(sInfo));
-  ok = CreateProcess(NULL, /* no image name */
-                tmpString, /* but full command line */
-                NULL, /* no process security attributes */
-                NULL, /* no thread security attributes */
-                FALSE, /* don't inherit handles */
-                0, /* no special flags */
-                NULL, /* no separate environment */
-                NULL, /* no startup dir */
-                &sInfo, /* startup info */
-                &pInfo); /* process info */
-  failOn(ok == 0, TEXT("CreateProcess failed"));
-  return 1;
-}
 
 /****************************************************************************
  Main service install function
@@ -379,24 +276,6 @@ void sqServiceInstall(void)
   TCHAR tmp[1024];
   DWORD ok;
 
-  if( fWindows95 )
-    { /* Running on Win95 */
-      if(!sqInstallService95(serviceName))
-        {
-          warnPrintf(TEXT("The service was NOT installed."));
-          return;
-        }
-      if(MessageBox(0,TEXT("Service installation successful.\n")
-                      TEXT("Do you wish to start the service right now?"),
-                      serviceName,MB_YESNOCANCEL) == IDYES)
-        {
-          if(!sqStartService95(serviceName))
-            warnPrintf(TEXT("The service was NOT started.\n")
-                       TEXT("You have to restart your system first."));
-        }
-      /* success */
-      exit(0);
-    }
   /* get the VM name */
   GetModuleFileName(hInstance,tmp, 255);
   if(!sqInstallService(serviceName, tmp))

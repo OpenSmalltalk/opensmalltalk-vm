@@ -368,12 +368,6 @@ static messageHook nextMessageHook = NULL;
 
 int ServiceMessageHook(void * hwnd, unsigned int message, unsigned int wParam, long lParam)
 {
-  if (fRunService && fWindows95 && message == WM_BROADCAST_SERVICE && hwnd == stWindow)
-    {
-      /* broadcast notification - install the running Win95 service in the system tray */
-      SetSystemTrayIcon(1);
-      return 1;
-    }
    if (message == WM_USERCHANGED)
       {
         SetSystemTrayIcon(1);
@@ -419,33 +413,6 @@ void SetSystemTrayIcon(BOOL on)
     (*ShellNotifyIcon)(NIM_DELETE, &nid);
 }
 
-void SetupService95()
-{
-#ifndef NO_SERVICE
-#ifndef RSP_SIMPLE_SERVICE
-#define RSP_SIMPLE_SERVICE 1
-#endif
-  BOOL (WINAPI *RegisterServiceProcess)(DWORD,DWORD);
-  static HMODULE hKernel32 = NULL;
-
-  /* Inform Windows95 that we're running as a service process */
-  if (!fRunService || !fWindows95) return;
-  hKernel32 = LoadLibrary(TEXT("kernel32.dll"));
-  if (!hKernel32)
-    {
-      printLastError(TEXT("Unable to load kernel32.dll"));
-      return;
-    }
-  (FARPROC) RegisterServiceProcess = GetProcAddress(hKernel32, "RegisterServiceProcess");
-  if (!RegisterServiceProcess)
-    {
-      printLastError(TEXT("Unable to find RegisterServiceProcess"));
-      return;
-    }
-  if ( !(*RegisterServiceProcess)(GetCurrentProcessId(), RSP_SIMPLE_SERVICE ) )
-    printLastError(TEXT("RegisterServiceProcess failed"));
-#endif /* NO_SERVICE */
-}
 
 /****************************************************************************/
 /*                      System Attributes                                   */
@@ -1406,7 +1373,7 @@ void __cdecl Cleanup(void)
   ioReleaseTime();
   /* tricky ... we have no systray icon when running
      headfull or when running as service on NT */
-  if(fHeadlessImage && (!fRunService || fWindows95))
+  if(fHeadlessImage && (!fRunService))
     SetSystemTrayIcon(0);
   if(palette) DeleteObject(palette);
   PROFILE_SHOW(ticksForReversal);
@@ -1582,11 +1549,6 @@ sqMain(int argc, char *argv[])
   fRunService = 0;
 #endif
 
-  /* look for a few things easy to handle */
-  if(fWindows95 && fBroadcastService95) {
-    PostMessage(HWND_BROADCAST, WM_BROADCAST_SERVICE, 0, 0);
-    return 0;
-  }
 
   /* set time zone accordingly */
   _tzset();
@@ -1602,10 +1564,7 @@ sqMain(int argc, char *argv[])
     svcStart = time(NULL);
     OutputLogMessage("\n\n");
     OutputLogMessage(ctime(&svcStart));
-    if(fWindows95) /* don't have a service name */
-      OutputLogMessage("The service");
-    else
-      OutputLogMessage(serviceName);
+    OutputLogMessage(serviceName);
     OutputLogMessage(" started with the following command line\n");
     OutputLogMessage(initialCmdLine);
     OutputLogMessage("\n");
@@ -1632,7 +1591,6 @@ sqMain(int argc, char *argv[])
   SetupKeymap();
   SetupWindows();
   SetupPixmaps();
-  SetupService95();
   { extern void ioInitTime(void);
 	extern void ioInitThreads(void);
 	ioInitTime();
@@ -1701,7 +1659,7 @@ sqMain(int argc, char *argv[])
 
     /* if headless running is requested, try to to create an icon
        in the Win95/NT system tray */
-    if(fHeadlessImage && (!fRunService || fWindows95))
+    if(fHeadlessImage && (!fRunService))
       SetSystemTrayIcon(1);
     
     /* read the image file */
@@ -1749,9 +1707,6 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 
   /* a few things which need to be done first */
   gatherSystemInfo();
-
-  /* check if we're running NT or 95 */
-  fWindows95 = (GetVersion() & 0x80000000) != 0;
 
   /* fetch us a copy of the command line */
   initialCmdLine = _strdup(lpCmdLine);
@@ -1808,20 +1763,13 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
      if somebody out there knows how to find out when we're starting
      as a service - LET ME KNOW!
   */
-  if(!fWindows95)                      /* 1) running NT */
-    if(!*lpCmdLine)                  /* 2) No command line */
-      if(sqServiceMain())          /* try starting the service */
-	return 0;                /* service was run - exit */
+  if(!*lpCmdLine)          /* No command line */
+    if(sqServiceMain())    /* try starting the service */
+      return 0;            /* service was run - exit */
 
 #endif
 
   SQ_LAUNCH_DROP = RegisterWindowMessage(TEXT("SQUEAK_LAUNCH_DROP"));
-
-  /* Special startup stuff for windows 95 */
-  if(fWindows95) {
-    /* The message we use for notifying services of user logon */
-    WM_BROADCAST_SERVICE = RegisterWindowMessage(msgBroadcastService);
-  }
 
   /* start the non-service version */
   sqMain(clargc, clargv);
@@ -2046,10 +1994,6 @@ parseVMArgument(int argc, char *argv[])
 		browserWindow = (HWND)atoll(argv[0]+strlen(VMOPTION("browserWindow:")));
 #endif
 		return 1; }
-
-	/* service support on 95 */
-	else if (!strcmp(argv[0], VMOPTION("service95"))) { fRunService = true; return 1; }
-	else if (!strcmp(argv[0], VMOPTION("broadcast95"))) { fBroadcastService95 = true; return 1; }
 
 	return 0;	/* option not recognised */
 }

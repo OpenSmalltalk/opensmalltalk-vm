@@ -104,7 +104,7 @@
 /* Definition for Intel Processors */
 #if defined(_M_IX86) || defined(i386)
 # define WIN32_NAME "Win32"
-# define WIN32_OS_NAME (fWindows95 ? "95" : "NT")
+# define WIN32_OS_NAME "NT"
 # define WIN32_PROCESSOR_NAME "IX86"
 
 # if defined(X86)
@@ -307,7 +307,6 @@ extern BITMAPINFO *bmi4;	     /*	4 bit depth bitmap info */
 extern BITMAPINFO *bmi8;	     /*	8 bit depth bitmap info */
 extern BITMAPINFO *bmi16;	     /*	16 bit depth bitmap info */
 extern BITMAPINFO *bmi32;	     /*	32 bit depth bitmap info */
-extern BOOL fWindows95;          /* Are we running on Win95 or NT? */
 extern BOOL fIsConsole;          /* Are we running as a console app? */
 
 /* Startup options */
