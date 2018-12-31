@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <tchar.h>
 #include <fcntl.h> /* _O_BINARY */
 #include <float.h>
 #include <ole2.h>
@@ -301,7 +302,7 @@ OutputConsoleString(char *string)
 }
 
 // recommend using DPRINTF ifdef'ing to DPRINTF for debug output
-int __cdecl DPRINTF(const char *fmt, ...)
+int __cdecl DPRINTF(const TCHAR *fmt, ...)
 { va_list al;
 
   va_start(al, fmt);
@@ -309,7 +310,7 @@ int __cdecl DPRINTF(const char *fmt, ...)
 	wvsprintf(consoleBuffer, fmt, al);
 	OutputDebugString(consoleBuffer);
   }
-  vfprintf(stdout, fmt, al);
+  _vftprintf(stdout, fmt, al);
   va_end(al);
   return 1;
 }
