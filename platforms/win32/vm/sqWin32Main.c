@@ -559,18 +559,21 @@ void gatherSystemInfo(void) {
   }
 
   { /* Figure out make and model from OEMINFO.ini */
-    char iniName[256];
-    char manufacturer[256];
-    char model[256];
+    WCHAR iniName[MAX_PATH];
+	WCHAR bufferW[MAX_PATH];
+    char manufacturer[MAX_PATH_UTF8];
+    char model[MAX_PATH_UTF8];
 
-    GetSystemDirectory(iniName, 256);
-    strcat(iniName,"\\OEMINFO.INI");
+    GetSystemDirectoryW(iniName, MAX_PATH);
+    wcsncat(iniName,L"\\OEMINFO.INI",MAX_PATH);
 
-    GetPrivateProfileString("General", "Manufacturer", "Unknown",
-			    manufacturer, 256, iniName);
+    GetPrivateProfileStringW(L"General", L"Manufacturer", L"Unknown",
+			    bufferW, MAX_PATH, iniName);
+	if (WideCharToMultiByte(CP_UTF8, 0, bufferW, -1, manufacturer, MAX_PATH_UTF8, NULL, NULL) == 0) strcpy(manufacturer, "???");
 
-    GetPrivateProfileString("General", "Model", "Unknown",
-			    model, 256, iniName);
+    GetPrivateProfileStringW(L"General", L"Model", L"Unknown",
+			    bufferW, MAX_PATH, iniName);
+	if (WideCharToMultiByte(CP_UTF8, 0, bufferW, -1, model, MAX_PATH_UTF8, NULL, NULL) == 0) strcpy(model, "???");
 
     sprintf(tmpString,
 	    "Hardware information: \n"
