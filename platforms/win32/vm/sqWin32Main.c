@@ -681,12 +681,24 @@ void gatherSystemInfo(void) {
     osInfoString = _strdup(tmpString);
   }
 
-  sprintf(tmpString,
-	  "Display Information: \n"
-	  "\tGraphics adapter name: %s\n"
-	  "\tPrimary monitor resolution: %d x %d\n",
+#ifdef UNICODE
+  {
+	  char buf[128*3];
+	  if(WideCharToMultiByte(CP_UTF8,0,gDev.DeviceString,-1,buf,sizeof(buf),NULL,NULL)) snprintf(tmpString, sizeof(tmpString),
+		  "Display Information: \n"
+		  "\tGraphics adapter name: %s\n"
+		  "\tPrimary monitor resolution: %d x %d\n",
+		  buf,
+		  screenX, screenY);
+  }
+#else
+  snprintf(tmpString, sizeof(tmpString),
+	  TEXT("Display Information: \n")
+      TEXT("\tGraphics adapter name: %s\n")
+      TEXT("\tPrimary monitor resolution: %d x %d\n"),
 	  gDev.DeviceString,
 	  screenX, screenY);
+#endif
 
   /* Find the driver key in the registry */
   keyName[0] = 0;
