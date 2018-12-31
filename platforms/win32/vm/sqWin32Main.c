@@ -519,6 +519,18 @@ char *hwInfoString = "";
 char *gdInfoString = "";
 char *win32VersionName = "";
 
+void RegLookupUTF8String(HKEY hk, WCHAR *name, char *utf8, size_t utf8_len)
+{
+  WCHAR bufferW[MAX_PATH];
+  DWORD dwSize = MAX_PATH * sizeof(WCHAR);
+  LSTATUS ok = RegQueryValueExW(hk, name, NULL, NULL,(LPBYTE)bufferW, &dwSize);
+  if (ok != ERROR_SUCCESS) strncpy(utf8, "???",utf8_len);
+  else {
+    int len = WideCharToMultiByte(CP_UTF8, 0, bufferW, -1, utf8, utf8_len, NULL, NULL);
+    if (len <= 0) strncpy(utf8, "???", utf8_len);
+  }
+}
+
 void gatherSystemInfo(void) {
   OSVERSIONINFOEX osInfo;
   MEMORYSTATUS memStat;
@@ -527,7 +539,7 @@ void gatherSystemInfo(void) {
   int proc, screenX, screenY;
   char tmpString[2048];
 
-  char keyName[256];
+  WCHAR keyName[256];
   DWORD ok, dwSize;
   HKEY hk;
 
@@ -606,30 +618,23 @@ void gatherSystemInfo(void) {
 
     char *tmp = tmpString + strlen(tmpString);
 
-    strcpy(keyName, "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0");
-    keyName[strlen(keyName)-1] = 48+proc; /* 0, 1, 2 etc. */
+    wcscpy(keyName, L"HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0");
+    keyName[wcslen(keyName)-1] = 48+proc; /* 0, 1, 2 etc. */
 
-    ok = RegOpenKey(HKEY_LOCAL_MACHINE, keyName, &hk);
+    ok = RegOpenKeyW(HKEY_LOCAL_MACHINE, keyName, &hk);
     if (!ok) {
-      char nameString[256];
-      char identifier[256];
+      char nameString[MAX_PATH_UTF8];
+      char identifier[MAX_PATH_UTF8];
       DWORD mhz;
 
-      dwSize = 256;
-      ok = RegQueryValueEx(hk, "ProcessorNameString", NULL, NULL,
-			   (LPBYTE)nameString, &dwSize);
-      if (ok) strcpy(nameString, "???");
-
-      dwSize = 256;
-      ok = RegQueryValueEx(hk, "Identifier", NULL, NULL,
-			   (LPBYTE)identifier, &dwSize);
-      if (ok) strcpy(identifier, "???");
+	  RegLookupUTF8String(hk, L"ProcessorNameString", nameString, MAX_PATH_UTF8);
+	  RegLookupUTF8String(hk, L"Identifier", identifier, MAX_PATH_UTF8);
 
       dwSize = sizeof(DWORD);
-      ok = RegQueryValueEx(hk, "~MHz", NULL, NULL,
+      ok = RegQueryValueExW(hk, L"~MHz", NULL, NULL,
 			   (LPBYTE)&mhz, &dwSize);
       if (ok) mhz = -1;
-      sprintf(tmp,
+	  snprintf(tmp, sizeof(tmpString)-strlen(tmpString),
 	      "\nProcessor %d: %s\n"
 	      "\tIdentifier: %s\n"
 	      "\t~MHZ: %lu\n",
@@ -641,30 +646,50 @@ void gatherSystemInfo(void) {
   hwInfoString = _strdup(tmpString);
 
   {
-    char owner[256];
-    char company[256];
-    char product[256];
+    char owner[MAX_PATH_UTF8];
+    char company[MAX_PATH_UTF8];
+    char product[MAX_PATH_UTF8];
 
     if (osInfo.dwPlatformId == VER_PLATFORM_WIN32_NT) {
-      strcpy(keyName, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion");
+      wcscpy(keyName, L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion");
     } else {
-      strcpy(keyName, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion");
+      wcscpy(keyName, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion");
     }
-    ok = RegOpenKey(HKEY_LOCAL_MACHINE, keyName, &hk);
+    ok = RegOpenKeyW(HKEY_LOCAL_MACHINE, keyName, &hk);
     if (!ok) {
-      dwSize = 256;
-      if (RegQueryValueEx(hk, "RegisteredOwner", NULL, NULL,
-			  (LPBYTE)owner, &dwSize)) strcpy(owner, "???");
-      dwSize = 256;
-      if (RegQueryValueEx(hk, "RegisteredOrganization", NULL, NULL,
-			  (LPBYTE)company, &dwSize)) strcpy(company, "???");
-      dwSize = 256;
-      if (RegQueryValueEx(hk, "ProductName", NULL, NULL,
-			  (LPBYTE)product, &dwSize)) strcpy(product, "???");
-      RegCloseKey(hk);
-    }
+      RegLookupUTF8String(hk, L"RegisteredOwner", owner, MAX_PATH_UTF8);
+      RegLookupUTF8String(hk, L"RegisteredOrganization", company, MAX_PATH_UTF8);
+      RegLookupUTF8String(hk, L"ProductName", product, MAX_PATH_UTF8);
+    } else {
+      strcpy(owner, "???");
+      strcpy(company, "???");
+      strcpy(product, "???");
+	}
 
-    sprintf(tmpString,
+#if defined(_MSC_VER) && _MSC_VER < 1300
+# define wSuiteMask wReserved[0]
+# define wProductType wReserved[1] & 0xFF
+#endif
+#ifdef UNICODE
+	{
+		char buf[128 * 3];
+		if(WideCharToMultiByte(CP_UTF8,0, osInfo.szCSDVersion,-1,buf,sizeof(buf),NULL,NULL))
+		  snprintf(tmpString, sizeof(tmpString),
+            "Operating System: %s (Build %lu %s)\n"
+            "\tRegistered Owner: %s\n"
+            "\tRegistered Company: %s\n"
+            "\tSP major version: %d\n"
+            "\tSP minor version: %d\n"
+            "\tSuite mask: %x\n"
+            "\tProduct type: %x\n",
+            product,
+            osInfo.dwBuildNumber, buf,
+            owner, company,
+            osInfo.wServicePackMajor, osInfo.wServicePackMinor,
+            osInfo.wSuiteMask, osInfo.wProductType);
+	}
+#else
+    snprintf(tmpString,sizeof(tmpString),
 	    "Operating System: %s (Build %lu %s)\n"
 	    "\tRegistered Owner: %s\n"
 	    "\tRegistered Company: %s\n"
@@ -676,11 +701,8 @@ void gatherSystemInfo(void) {
 	    osInfo.dwBuildNumber, osInfo.szCSDVersion,
 	    owner, company,
 	    osInfo.wServicePackMajor, osInfo.wServicePackMinor,
-#if defined(_MSC_VER) && _MSC_VER < 1300
-# define wSuiteMask wReserved[0]
-# define wProductType wReserved[1] & 0xFF
-#endif
 	    osInfo.wSuiteMask, osInfo.wProductType);
+#endif
     osInfoString = _strdup(tmpString);
   }
 
@@ -705,24 +727,24 @@ void gatherSystemInfo(void) {
 
   /* Find the driver key in the registry */
   keyName[0] = 0;
-  ok = RegOpenKey(HKEY_LOCAL_MACHINE,
-		  "HARDWARE\\DEVICEMAP\\VIDEO",
+  ok = RegOpenKeyW(HKEY_LOCAL_MACHINE,
+		  L"HARDWARE\\DEVICEMAP\\VIDEO",
 		  &hk);
   if (!ok) {
-    dwSize = 256;
-    RegQueryValueEx(hk,"\\Device\\Video0", NULL, NULL,
+    dwSize = 256*sizeof(WCHAR);
+    RegQueryValueExW(hk,L"\\Device\\Video0", NULL, NULL,
 		    (LPBYTE)keyName, &dwSize);
     RegCloseKey(hk);
   }
   if (*keyName) {
     /* Got the key name; open it and get the info out of there */
     char *tmp = tmpString + strlen(tmpString);
-    char deviceDesc[256];
-    char adapterString[256];
-    char biosString[256];
-    char chipType[256];
-    char dacType[256];
-    char *drivers, *drv;
+    char deviceDesc[MAX_PATH_UTF8];
+    char adapterString[MAX_PATH_UTF8];
+    char biosString[MAX_PATH_UTF8];
+    char chipType[MAX_PATH_UTF8];
+    char dacType[MAX_PATH_UTF8];
+    WCHAR *drivers, *drv;
     WCHAR buffer[256];
     DWORD memSize;
 
@@ -730,48 +752,20 @@ void gatherSystemInfo(void) {
        with \Registry\Machine\ which doesn't work with RegOpenKey below.
        I have no idea why but for now I'll just truncate that part if
        we recognize it... */
-    if (_strnicmp(keyName, "\\registry\\machine\\", 18) == 0) {
-      memcpy(keyName, keyName+18, strlen(keyName)-17);
+    if (_wcsnicmp(keyName, L"\\registry\\machine\\", 18) == 0) {
+      memmove(keyName, keyName+18*sizeof(WCHAR), (wcslen(keyName)-17)*sizeof(WCHAR));
     }
 
-    ok = RegOpenKey(HKEY_LOCAL_MACHINE, keyName, &hk);
-    if (ok) MessageBox(0, keyName, "Cannot open:", MB_OK);
+    ok = RegOpenKeyW(HKEY_LOCAL_MACHINE, keyName, &hk);
+    if (ok) MessageBoxW(0, keyName, L"Cannot open:", MB_OK);
     if (!ok) {
-      dwSize = 256;
-      ok = RegQueryValueEx(hk,"Device Description", NULL, NULL,
-		      (LPBYTE)deviceDesc, &dwSize);
-      if (ok) strcpy(deviceDesc, "???");
-
-      dwSize = 256*sizeof(WCHAR);
-      ok = RegQueryValueEx(hk,"HardwareInformation.AdapterString", NULL, NULL,
-		      (LPBYTE)buffer, &dwSize);
-      if (!ok) {
-		WideCharToMultiByte(CP_UTF8,0,buffer,-1,adapterString,256,NULL,NULL);
-      } else strcpy(adapterString, "???");
-
-      dwSize = 256*sizeof(WCHAR);
-      ok = RegQueryValueEx(hk,"HardwareInformation.BiosString", NULL, NULL,
-		      (LPBYTE)buffer, &dwSize);
-      if (!ok) {
-		WideCharToMultiByte(CP_UTF8,0,buffer,-1,biosString,256,NULL,NULL);
-      } else strcpy(biosString, "???");
-
-      dwSize = 256*sizeof(WCHAR);
-      ok = RegQueryValueEx(hk,"HardwareInformation.ChipType", NULL, NULL,
-		      (LPBYTE)buffer, &dwSize);
-      if (!ok) {
-		WideCharToMultiByte(CP_UTF8,0,buffer,-1,chipType,256,NULL,NULL);
-      } else strcpy(chipType, "???");
-
-      dwSize = 256*sizeof(WCHAR);
-      ok = RegQueryValueEx(hk,"HardwareInformation.DacType", NULL, NULL,
-		      (LPBYTE)buffer, &dwSize);
-      if (!ok) {
-		WideCharToMultiByte(CP_UTF8,0,buffer,-1,dacType,256,NULL,NULL);
-      } else strcpy(dacType, "???");
-
+	  RegLookupUTF8String(hk, L"Device Description", deviceDesc, MAX_PATH_UTF8);
+	  RegLookupUTF8String(hk, L"HardwareInformation.AdapterString", adapterString, MAX_PATH_UTF8);
+	  RegLookupUTF8String(hk, L"HardwareInformation.BiosString", biosString, MAX_PATH_UTF8);
+	  RegLookupUTF8String(hk, L"HardwareInformation.ChipType", chipType, MAX_PATH_UTF8);
+      RegLookupUTF8String(hk, L"HardwareInformation.DacType", dacType, MAX_PATH_UTF8);
       dwSize = sizeof(DWORD);
-      ok = RegQueryValueEx(hk,"HardwareInformation.MemorySize", NULL, NULL,
+      ok = RegQueryValueExW(hk,L"HardwareInformation.MemorySize", NULL, NULL,
 		      (LPBYTE)&memSize, &dwSize);
       if (ok) memSize = -1;
 
@@ -790,47 +784,62 @@ void gatherSystemInfo(void) {
 	      memSize);
 
       /* Now process the installed drivers */
-      ok = RegQueryValueEx(hk,"InstalledDisplayDrivers",
+      ok = RegQueryValueExW(hk,L"InstalledDisplayDrivers",
 			   NULL, NULL, NULL, &dwSize);
       if (!ok) {
 		drivers = malloc(dwSize);
-		ok = RegQueryValueEx(hk,"InstalledDisplayDrivers",
+		ok = RegQueryValueExW(hk,L"InstalledDisplayDrivers",
 					 NULL, NULL, (LPBYTE)drivers, &dwSize);
       }
       if (!ok) {
-		strcat(tmpString,"\nDriver Versions:");
+		strncat(tmpString,"\nDriver Versions:",sizeof(tmpString));
 		/* InstalledDrivers is REG_MULTI_SZ (extra terminating zero) */
-		for(drv = drivers; drv[0]; drv +=strlen(drv)) {
+		for(drv = drivers; drv[0]; drv +=wcslen(drv)) {
 		  DWORD verSize, hh;
 		  UINT vLen;
 		  LPVOID verInfo = NULL, vInfo;
+		  char drvA[MAX_PATH_UTF8];
 
 		  /* Concat driver name */
-		  strcat(tmpString,"\n\t"); 
-		  strcat(tmpString, drv);
-		  strcat(tmpString,": ");
+		  if (WideCharToMultiByte(CP_UTF8,0,drv,-1,drvA,MAX_PATH_UTF8,NULL,NULL)>0) {
+            strncat(tmpString, "\n\t", sizeof(tmpString));
+            strncat(tmpString, drvA  , sizeof(tmpString));
+            strncat(tmpString, ": "  , sizeof(tmpString));
+		  }
 
-		  verSize = GetFileVersionInfoSize(drv, &hh);
+		  verSize = GetFileVersionInfoSizeW(drv, &hh);
 		  if (!verSize) goto done;
 
 		  verInfo = malloc(verSize);
-		  if (!GetFileVersionInfo(drv, 0, verSize, verInfo)) goto done;
+		  if (!GetFileVersionInfoW(drv, 0, verSize, verInfo)) goto done;
 
 		  /* Try Unicode first */
-		  if (VerQueryValue(verInfo,"\\StringFileInfo\\040904B0\\FileVersion",
+		  if (VerQueryValueW(verInfo,L"\\StringFileInfo\\040904B0\\FileVersion",
 				   &vInfo, &vLen)) {
-			strcat(tmpString, vInfo);
-			goto done;
+            int utf8_len = WideCharToMultiByte(CP_UTF8, 0, vInfo, -1, NULL, 0, NULL, NULL);
+			char *utf8 = (char *)malloc(utf8_len);
+			if(utf8) {
+              WideCharToMultiByte(CP_UTF8, 0, vInfo, -1, utf8, utf8_len, NULL, NULL);
+              strncat(tmpString, utf8,sizeof(tmpString));
+              free(utf8);
+              goto done;
+            }
 		  }
 
 		  /* Try US/English next */
-		  if (VerQueryValue(verInfo,"\\StringFileInfo\\040904E4\\FileVersion",
+		  if (VerQueryValueW(verInfo,L"\\StringFileInfo\\040904E4\\FileVersion",
 				   &vInfo, &vLen)) {
-			strcat(tmpString, vInfo);
-			goto done;
+            int utf8_len = WideCharToMultiByte(CP_UTF8, 0, vInfo, -1, NULL, 0, NULL, NULL);
+            char *utf8 = (char *)malloc(utf8_len);
+            if (utf8) {
+              WideCharToMultiByte(CP_UTF8, 0, vInfo, -1, utf8, utf8_len, NULL, NULL);
+              strncat(tmpString, utf8, sizeof(tmpString));
+              free(utf8);
+              goto done;
+            }
 		  }
 
-		  strcat(tmpString, "???");
+		  strncat(tmpString, "???", sizeof(tmpString));
 
 		done:
 		  if (verInfo) {
@@ -838,7 +847,7 @@ void gatherSystemInfo(void) {
 			verInfo = NULL;
 		  }
 		}
-		strcat(tmpString,"\n");
+		strncat(tmpString,"\n",sizeof(tmpString));
       }
       RegCloseKey(hk);
     }
