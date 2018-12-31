@@ -134,7 +134,7 @@ WCHAR stdoutName[MAX_PATH+1];
 static  char vmLogDirA[MAX_PATH_UTF8];
 static WCHAR vmLogDirW[MAX_PATH];
 
-TCHAR *logName = TEXT("");             /* full path and name to log file */
+WCHAR *logName = L"";             /* full path and name to log file */
 
 #ifdef VISTA_SECURITY 
 BOOL fLowRights = 0;  /* started as low integiry process,
@@ -142,9 +142,8 @@ BOOL fLowRights = 0;  /* started as low integiry process,
 #endif /* VISTA_SECURITY */
 
 /* Service stuff */
-TCHAR  serviceName[MAX_PATH+1];   /* The name of the NT service */
-TCHAR *installServiceName = NULL; /* the name under which the service is to install */
-BOOL  fBroadcastService95 = 0;   /* Do we need a broadcast when a user has logged on? */
+WCHAR  serviceName[MAX_PATH+1];   /* The name of the NT service */
+WCHAR *installServiceName = NULL; /* the name under which the service is to install */
 UINT  WM_BROADCAST_SERVICE = 0;  /* The broadcast message we send */
 TCHAR *msgBroadcastService = TEXT("SQUEAK_SERVICE_BROADCAST_MESSAGE"); /* The name of the broadcast message */
 
@@ -244,17 +243,17 @@ void UninstallExceptionHandler(void)
 #if __MINGW32__
 # include <io.h>
 static FILE *
-fopen_for_append(char *filename)
+fopen_for_append(WCHAR *filename)
 {
-	FILE *f = !access(filename, F_OK) /* access is bass ackwards */
-		? fopen(filename,"r+")
-		: fopen(filename,"w+");
+	FILE *f = !_waccess(filename, F_OK) /* access is bass ackwards */
+		? _wfopen(filename,L"r+")
+		: _wfopen(filename,L"w+");
 	if (f)
 		fseek(f,0,SEEK_END);
 	return f;
 }
 #else
-# define fopen_for_append(filename) fopen(filename,"a+t")
+# define fopen_for_append(filename) _wfopen(filename,L"a+t")
 #endif
 
 /****************************************************************************/
@@ -272,6 +271,19 @@ OutputLogMessage(char *string)
   fclose(fp);
   return 1;
 }
+
+static int
+OutputLogMessageW(WCHAR *string)
+{
+  int len = WideCharToMultiByte(CP_UTF8, 0, string, -1, NULL, 0, NULL, NULL);
+  char *utf8 = malloc(len);
+  if (!utf8) return 1;
+  WideCharToMultiByte(CP_UTF8, 0, string, -1, utf8, len, NULL, NULL);
+  OutputLogMessage(utf8);
+  free(utf8);
+  return 1;
+}
+
 
 static int
 OutputConsoleString(char *string)
@@ -1156,7 +1168,7 @@ error(char *msg) {
   SetCurrentDirectoryW(vmLogDirW);
 #endif
   /* print the above information */
-  f = fopen_for_append("crash.dmp");
+  f = fopen_for_append(L"crash.dmp");
   if(f){  
     time_t crashTime = time(NULL);
     fprintf(f,"---------------------------------------------------------------------\n");
@@ -1263,7 +1275,7 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
   SetCurrentDirectoryW(vmLogDirW);
 #endif
   /* print the above information */
-  f = fopen_for_append("crash.dmp");
+  f = fopen_for_append(L"crash.dmp");
   if(f){  
     time_t crashTime = time(NULL);
     fprintf(f,"---------------------------------------------------------------------\n");
@@ -1564,7 +1576,7 @@ sqMain(int argc, char *argv[])
     svcStart = time(NULL);
     OutputLogMessage("\n\n");
     OutputLogMessage(ctime(&svcStart));
-    OutputLogMessage(serviceName);
+    OutputLogMessageW(serviceName);
     OutputLogMessage(" started with the following command line\n");
     OutputLogMessage(initialCmdLine);
     OutputLogMessage("\n");
@@ -1579,7 +1591,7 @@ sqMain(int argc, char *argv[])
 #ifndef NO_SERVICE
   /* if service installing is requested, do so */
   if(installServiceName && *installServiceName) {
-    strcpy(serviceName, installServiceName);
+    wcscpy(serviceName, installServiceName);
     sqServiceInstall();
     /* When installing was successful we won't come
        to this point. Otherwise ... */
@@ -1818,19 +1830,27 @@ parseVMArgument(int argc, char *argv[])
 
 	/* parameters */
 	else if (argc > 1 && !strcmp(argv[0], VMOPTION("service"))) {
-		installServiceName = argv[1];
+		int len = MultiByteToWideChar(CP_UTF8, 0, argv[1], -1, installServiceName, 0);
+		installServiceName = malloc(len * sizeof(WCHAR)); /* note: we will never free installServiceName - it's a global for lifetime of the VM */
+		MultiByteToWideChar(CP_UTF8, 0, argv[1], -1, installServiceName, len);
 		return 2;
 	}
 	else if (!strncmp(argv[0], VMOPTION("service:"), strlen(VMOPTION("service:")))) {
-		installServiceName = argv[0] + strlen(VMOPTION("service:"));
+		int len = MultiByteToWideChar(CP_UTF8, 0, argv[0] + strlen(VMOPTION("log:")), -1, installServiceName, 0);
+		logName = malloc(len * sizeof(WCHAR));
+		MultiByteToWideChar(CP_UTF8, 0, argv[0] + strlen(VMOPTION("log:")), -1, installServiceName, len);
 		return 1;
 	}
 	else if (argc > 1 && !strcmp(argv[0], VMOPTION("log"))) {
-		logName = argv[1];
+		int len=MultiByteToWideChar(CP_UTF8, 0, argv[1], -1, logName, 0);
+		logName = malloc(len * sizeof(WCHAR)); /* note: we will never free logName - it's a global for lifetime of the VM */
+		MultiByteToWideChar(CP_UTF8, 0, argv[1], -1, logName, len);
 		return 2;
 	}
 	else if (!strncmp(argv[0], VMOPTION("log:"), strlen(VMOPTION("log:")))) {
-		logName = argv[0] + strlen(VMOPTION("log:"));
+		int len = MultiByteToWideChar(CP_UTF8, 0, argv[0] + strlen(VMOPTION("log:")), -1, logName, 0);
+		logName = malloc(len * sizeof(WCHAR));
+		MultiByteToWideChar(CP_UTF8, 0, argv[0] + strlen(VMOPTION("log:")), -1, logName, len);
 		return 1;
 	}
 	else if (argc > 1 && !strcmp(argv[0], VMOPTION("memory"))) {
