@@ -12,11 +12,11 @@ static char *buf = 0;
 #define LOOKUPBUFSIZ 1000
 
 static void
-lookup(HKEY hk, TCHAR *key, char lkupbuf[LOOKUPBUFSIZ]) {
-  DWORD dwLength = LOOKUPBUFSIZ - 2;
+lookup(HKEY hk, char *key, char lkupbuf[LOOKUPBUFSIZ]) {
+  DWORD dwLength = LOOKUPBUFSIZ - 1;
   lkupbuf[0] = 0;
-  (void)RegQueryValueEx(hk, key, NULL, NULL, (BYTE *)lkupbuf, &dwLength);
-  lkupbuf[dwLength+1] = lkupbuf[dwLength] = 0; /* account for WCHAR terminating NULL */
+  (void)RegQueryValueExA(hk, key, NULL, NULL, (BYTE *)lkupbuf, &dwLength);
+  lkupbuf[dwLength] = 0;
 }
 
 /* Print base registry info. Return true if DNS info was provided. */
@@ -27,9 +27,9 @@ printBaseInfo(char *hkeyName) {
   int result = 0;
   char value[LOOKUPBUFSIZ];
 
-  ret = RegOpenKeyEx(HKEY_LOCAL_MACHINE, hkeyName, 0, KEY_READ, &hkey);
+  ret = RegOpenKeyExA(HKEY_LOCAL_MACHINE, hkeyName, 0, KEY_READ, &hkey);
   if(ret != ERROR_SUCCESS) {
-    printf("RegOpenKeyEx failed\n");
+    printf("RegOpenKeyExA failed\n");
     return vm->primitiveFail();
   }
 
@@ -89,9 +89,9 @@ printAdapterInfo(char *hkeyName) {
   int result = 0;
   char value[LOOKUPBUFSIZ];
 
-  ret = RegOpenKeyEx(HKEY_LOCAL_MACHINE, hkeyName, 0, KEY_READ, &hkey);
+  ret = RegOpenKeyExA(HKEY_LOCAL_MACHINE, hkeyName, 0, KEY_READ, &hkey);
   if(ret != ERROR_SUCCESS) {
-    printf("RegOpenKeyEx failed\n");
+    printf("RegOpenKeyExA failed\n");
     return vm->primitiveFail();
   }
 
@@ -166,11 +166,11 @@ EXPORT(int) primitiveDnsInfo(void) {
     goto done;
 
   /* Enumerate the available interfaces */
-  ret = RegOpenKeyEx(HKEY_LOCAL_MACHINE, BASE_KEY, 0, KEY_READ, &hkey);
+  ret = RegOpenKeyExA(HKEY_LOCAL_MACHINE, BASE_KEY, 0, KEY_READ, &hkey);
   for(index=0;;index++) {
     char keyName[1024];
     dwLength = sizeof(adapter);
-    ret = RegEnumKeyEx(hkey, index, adapter, &dwLength, NULL, NULL, NULL, NULL);
+    ret = RegEnumKeyExA(hkey, index, adapter, &dwLength, NULL, NULL, NULL, NULL);
     if(ret != ERROR_SUCCESS) break;
     strcpy(keyName, BASE_KEY);
     strcat(keyName, "\\");
