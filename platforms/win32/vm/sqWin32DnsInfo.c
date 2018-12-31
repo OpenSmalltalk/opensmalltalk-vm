@@ -12,11 +12,11 @@ static char *buf = 0;
 #define LOOKUPBUFSIZ 1000
 
 static void
-lookup(HKEY hk, char *key, char lkupbuf[LOOKUPBUFSIZ]) {
-  DWORD dwLength = LOOKUPBUFSIZ - 1;
+lookup(HKEY hk, TCHAR *key, char lkupbuf[LOOKUPBUFSIZ]) {
+  DWORD dwLength = LOOKUPBUFSIZ - 2;
   lkupbuf[0] = 0;
   (void)RegQueryValueEx(hk, key, NULL, NULL, (BYTE *)lkupbuf, &dwLength);
-  if (lkupbuf[dwLength]) lkupbuf[dwLength] = 0;
+  lkupbuf[dwLength+1] = lkupbuf[dwLength] = 0; /* account for WCHAR terminating NULL */
 }
 
 /* Print base registry info. Return true if DNS info was provided. */
