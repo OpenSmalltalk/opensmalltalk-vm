@@ -412,7 +412,7 @@ void SetSystemTrayIcon(BOOL on)
   nid.uFlags = NIF_MESSAGE | NIF_TIP | NIF_ICON;
   nid.uCallbackMessage = WM_USER+42;
   nid.hIcon  = LoadIcon(hInstance, MAKEINTRESOURCE(1));
-  strcpy(nid.szTip, VM_NAME "!");
+  _tcscpy(nid.szTip, TEXT(VM_NAME) TEXT("!"));
   if (on)
     (*ShellNotifyIcon)(NIM_ADD, &nid);
   else
