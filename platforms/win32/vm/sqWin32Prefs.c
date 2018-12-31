@@ -227,7 +227,7 @@ void LoadPreferences()
   /* get the window class name from the ini file */
   GetPrivateProfileString(U_GLOBAL, TEXT("WindowClassName"), 
 #if NewspeakVM
-				TEXT(VM_NAME"WindowClass"),
+				TEXT(VM_NAME) TEXT("WindowClass"),
 #else
 				TEXT("SqueakWindowClass"),
 #endif
