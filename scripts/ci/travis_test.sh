@@ -1,8 +1,10 @@
 #!/bin/bash
 set -e
 
-# Don't run tests on ARM (ARM builds already take a long time)
-[[ "${ARCH}" == *"ARM"* ]] && exit 0
+if [[ "${TESTIMAGE}" = "skip" ]]; then
+  echo "Skipping SUnit testing!"
+  exit 0
+fi
 
 case "${FLAVOR}" in
   "squeak"*|"pharo"*)
