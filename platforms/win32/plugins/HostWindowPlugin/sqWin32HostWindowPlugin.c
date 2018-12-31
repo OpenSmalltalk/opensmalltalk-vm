@@ -415,12 +415,14 @@ sqInt ioSetTitleOfWindow(sqInt windowIndex, char * newTitle, sqInt sizeOfTitle) 
  * int size of new logo path. If one of the function is failing, the logo is not set.
  */
 sqInt ioSetIconOfWindow(sqInt windowIndex, char * iconPath, sqInt sizeOfPath) {
+	WCHAR iconPathW[MAX_PATH + 1];
 	HWND hwnd = (windowIndex == 1 ? stWindow : ((HWND)windowIndex));
 	if (!IsWindow(hwnd)) return 0;
+	if(MultiByteToWideChar(CP_UTF8, 0, iconPath, sizeOfPath, iconPathW, MAX_PATH) ==0) return -1; /* invalide UTF8 ? */
 	//Check if file exists and have read rights
-	if (access(iconPath, 4) == -1) { return -1; }; 
+	if (_waccess(iconPath, 4) == -1) { return -1; }; 
 	//Load the image into an icon
-	HICON hIcon = (HICON)LoadImage(NULL, iconPath, IMAGE_ICON, 0, 0, LR_LOADFROMFILE);
+	HICON hIcon = (HICON)LoadImageW(NULL, iconPathW, IMAGE_ICON, 0, 0, LR_LOADFROMFILE);
 	if (hIcon == 0)
 		return -2;
 	SendMessage(hwnd, WM_SETICON, ICON_BIG, (LONG_PTR)hIcon); 
