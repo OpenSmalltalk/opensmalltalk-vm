@@ -72,7 +72,7 @@ char  vmPathA[MAX_PATH_UTF8 + 1];    /* full path to interpreter's directory */
 WCHAR vmPathW[MAX_PATH      + 1];    /* full path to interpreter's directory */
 char  vmNameA[MAX_PATH_UTF8 + 1];    /* name of the interpreter's executable UTF8 */
 WCHAR vmNameW[MAX_PATH      + 1];    /* name of the interpreter's executable UTF16 */
-char windowTitle[MAX_PATH];          /* what should we display in the title? */
+char windowTitle[MAX_PATH+1];        /* what should we display in the title? */
 TCHAR squeakIniName[MAX_PATH+1];     /* full path and name to ini file */
 TCHAR windowClassName[MAX_PATH+1];   /* Window class name */
 

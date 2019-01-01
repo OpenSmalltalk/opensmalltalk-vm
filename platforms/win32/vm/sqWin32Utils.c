@@ -26,7 +26,7 @@ int __cdecl sqMessageBox(DWORD dwFlags, const TCHAR *titleString, const TCHAR* f
 
   buf = (TCHAR*) calloc(sizeof(TCHAR), 4096);
   va_start(args, fmt);
-  _vsntprintf(buf, 4096, fmt, args);
+  _vsntprintf(buf, 4096-1, fmt, args);
   va_end(args);
 
   result = MessageBox(stWindow,buf,titleString,dwFlags|MB_SETFOREGROUND);
