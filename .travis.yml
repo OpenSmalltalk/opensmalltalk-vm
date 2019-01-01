@@ -11,10 +11,6 @@ cache:
   - armchroot
   - .thirdparty-cache
 
-notifications:
-  slack:
-    secure: gyekIJqPdx7SxqpugvtpY5mZSg54oFkFJ+DKBPILtjyI/sDhcSwT9GwY/zoHoYkoHrPLepDxyPgkAC8JCcTiAcxOazq5zlVva6SoQRjlDnC64oCYvOj/2giuYkXLXnwvj8mIINEgXzEvLdalpHwazsY0fzKNFM1mdrkPolmf2CvaNbKCGkiagsjrxJHEEB4tLcUP4ArqVE6wb+20HXoMKlHccgCFvN67bYJrTXDnuhEgKMooQRFv0yVoimckdRn1amvIgljavPwv2yHX+V1roneyi90e4ri9AT2sROeRprGnaib9Z8p+/mgWIUnTLL7pjbNHhtvZptsj3xjanWy1Bt/4MMewTWN4REE/KKxLp79CQvGNR+Ki7mF2UpgYUtxHYpFNIGNF9VomwnfWAuYdGDAYAGY3S1W12RPo37CC7RP/lPM96L6ypW41FoQKlnhzm+StJV+mlI5C1jQBU2WKoVhaKXJpraX2mUJXyN8ilYDo7PrJe0SRLH6J2WwPM5Z/RdscBDEGAR4RhZnn++1IE7e1gZPJB4NZH/3wLBwDhz8S4kB/GB32/rz3ZaftCf2+XjAZXzF3SroUCZ/MWZPGrwchEkU/3z1Tm8FTbELxZk1rSYpdLwVnXYooo5vggqjgAZvmlTerJuufl5lOkXT44PynZAvE+I+MrD04DpKuH0w=
-
 aliases:
   - &mac-build
     os: osx
@@ -27,76 +23,6 @@ notifications:
 jobs:
   fast_finish: true
   include:
-  - stage: "Main Squeak and Pharo builds"
-    env: ARCH="linux32x86" FLAVOR="squeak.cog.spur"
-  - env: ARCH="macos32x86" FLAVOR="squeak.cog.spur"
-    <<: *mac-build
-  - env: ARCH="linux64x64" FLAVOR="squeak.cog.spur"
-  - env: ARCH="macos64x64" FLAVOR="squeak.cog.spur"
-    <<: *mac-build
-  - env: ARCH="linux32x86" FLAVOR="pharo.cog.spur" HEARTBEAT="threaded"
-  - env: ARCH="macos32x86" FLAVOR="pharo.cog.spur"
-    <<: *mac-build
-  - env: ARCH="linux64x64" FLAVOR="pharo.cog.spur" HEARTBEAT="threaded"
-  - env: ARCH="macos64x64" FLAVOR="pharo.cog.spur"
-    <<: *mac-build
-
-  - stage: "Other Linux builds"
-    env: ARCH="linux64x64" FLAVOR="newspeak.cog.spur"
-  - env: ARCH="linux64x64" FLAVOR="pharo.cog.spur" HEARTBEAT="itimer"
-  # - env: ARCH="linux64x64" FLAVOR="pharo.sista.spur" HEARTBEAT="threaded"
-  - env: ARCH="linux32x86" FLAVOR="newspeak.cog.spur"
-  - env: ARCH="linux32x86" FLAVOR="squeak.cog.v3"
-  - env: ARCH="linux32x86" FLAVOR="squeak.sista.spur"
-  - env: ARCH="linux32x86" FLAVOR="pharo.cog.spur" HEARTBEAT="itimer"
-  - env: ARCH="linux32x86" FLAVOR="pharo.sista.spur" HEARTBEAT="threaded"
-    compiler: clang
-  - env: ARCH="linux32x86" FLAVOR="pharo.sista.spur" HEARTBEAT="itimer" 
-    compiler: clang
-
-  - stage: "Other Mac builds"
-    env: ARCH="macos64x64" FLAVOR="newspeak.cog.spur"
-    <<: *mac-build
-  # - env: ARCH="macos64x64" FLAVOR="pharo.sista.spur"
-  #   <<: *mac-build
-  - env: ARCH="macos64x64" FLAVOR="pharo.cog.spur.lowcode"
-    <<: *mac-build
-  - env: ARCH="macos32x86" FLAVOR="newspeak.cog.spur"
-    <<: *mac-build
-  - env: ARCH="macos32x86" FLAVOR="pharo.sista.spur"
-    <<: *mac-build
-  - env: ARCH="macos32x86" FLAVOR="pharo.cog.spur.lowcode"
-    <<: *mac-build
-  - env: ARCH="macos32x86" FLAVOR="squeak.cog.v3"
-    <<: *mac-build
-  - env: ARCH="macos32x86" FLAVOR="squeak.sista.spur"
-    <<: *mac-build
-
-  - stage: "Stack builds"
-    env: ARCH="linux64x64" FLAVOR="newspeak.stack.spur"
-  - env: ARCH="linux64x64" FLAVOR="squeak.stack.spur"
-  - env: ARCH="linux32x86" FLAVOR="newspeak.stack.spur"
-  - env: ARCH="linux32x86" FLAVOR="squeak.stack.spur"
-  - env: ARCH="linux32x86" FLAVOR="squeak.stack.v3"
-  - env: ARCH="macos64x64" FLAVOR="pharo.stack.spur"
-    <<: *mac-build
-  - env: ARCH="macos64x64" FLAVOR="pharo.stack.spur.lowcode"
-    <<: *mac-build
-  - env: ARCH="macos64x64" FLAVOR="squeak.stack.spur"
-    <<: *mac-build
-  - env: ARCH="macos32x86" FLAVOR="newspeak.stack.spur"
-    <<: *mac-build
-  - env: ARCH="macos64x64" FLAVOR="newspeak.stack.spur"
-    <<: *mac-build
-  - env: ARCH="macos32x86" FLAVOR="pharo.stack.spur"
-    <<: *mac-build
-  - env: ARCH="macos32x86" FLAVOR="pharo.stack.spur.lowcode"
-    <<: *mac-build
-  - env: ARCH="macos32x86" FLAVOR="squeak.stack.spur"
-    <<: *mac-build
-  - env: ARCH="macos32x86" FLAVOR="squeak.stack.v3"
-    <<: *mac-build
-
   - stage: "linux32ARMv6 builds"
     env: ARCH="linux32ARMv6" FLAVOR="newspeak.cog.spur" CHROOT="schroot -p -c rpi
       -- bash -c "
