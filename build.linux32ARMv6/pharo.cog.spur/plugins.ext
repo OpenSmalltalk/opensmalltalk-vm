@@ -11,5 +11,6 @@ EventsHandlerPlugin \
 SqueakSSL \
 AioPlugin \
 FileAttributesPlugin \
+SqueakFFIPrims \
 #SDL2DisplayPlugin \
 
