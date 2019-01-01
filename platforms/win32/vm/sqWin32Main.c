@@ -771,7 +771,7 @@ void gatherSystemInfo(void) {
 					 NULL, NULL, (LPBYTE)drivers, &dwSize);
       }
       if (!ok) {
-		strncat(tmpString,"\nDriver Versions:",sizeof(tmpString));
+		strncat(tmpString,"\nDriver Versions:",sizeof(tmpString) - 1 - strlen(tmpString));
 		/* InstalledDrivers is REG_MULTI_SZ (extra terminating zero) */
 		for(drv = drivers; drv[0]; drv +=wcslen(drv)) {
 		  DWORD verSize, hh;
@@ -781,9 +781,9 @@ void gatherSystemInfo(void) {
 
 		  /* Concat driver name */
 		  if (WideCharToMultiByte(CP_UTF8,0,drv,-1,drvA,MAX_PATH_UTF8,NULL,NULL)>0) {
-            strncat(tmpString, "\n\t", sizeof(tmpString));
-            strncat(tmpString, drvA  , sizeof(tmpString));
-            strncat(tmpString, ": "  , sizeof(tmpString));
+            strncat(tmpString, "\n\t", sizeof(tmpString) - 1 - strlen(tmpString));
+            strncat(tmpString, drvA  , sizeof(tmpString) - 1 - strlen(tmpString));
+            strncat(tmpString, ": "  , sizeof(tmpString) - 1 - strlen(tmpString));
 		  }
 
 		  verSize = GetFileVersionInfoSizeW(drv, &hh);
@@ -799,7 +799,7 @@ void gatherSystemInfo(void) {
 			char *utf8 = (char *)malloc(utf8_len);
 			if(utf8) {
               WideCharToMultiByte(CP_UTF8, 0, vInfo, -1, utf8, utf8_len, NULL, NULL);
-              strncat(tmpString, utf8,sizeof(tmpString));
+              strncat(tmpString, utf8,sizeof(tmpString) - 1 - strlen(tmpString));
               free(utf8);
               goto done;
             }
@@ -812,13 +812,13 @@ void gatherSystemInfo(void) {
             char *utf8 = (char *)malloc(utf8_len);
             if (utf8) {
               WideCharToMultiByte(CP_UTF8, 0, vInfo, -1, utf8, utf8_len, NULL, NULL);
-              strncat(tmpString, utf8, sizeof(tmpString));
+              strncat(tmpString, utf8, sizeof(tmpString) - 1 - strlen(tmpString));
               free(utf8);
               goto done;
             }
 		  }
 
-		  strncat(tmpString, "???", sizeof(tmpString));
+		  strncat(tmpString, "???", sizeof(tmpString) - 1 - strlen(tmpString));
 
 		done:
 		  if (verInfo) {
@@ -826,7 +826,7 @@ void gatherSystemInfo(void) {
 			verInfo = NULL;
 		  }
 		}
-		strncat(tmpString,"\n",sizeof(tmpString));
+		strncat(tmpString,"\n",sizeof(tmpString) - 1 - strlen(tmpString));
       }
       RegCloseKey(hk);
     }
