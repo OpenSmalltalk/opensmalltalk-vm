@@ -1134,34 +1134,47 @@ static int inError = 0;
 void
 error(char *msg) {
   FILE *f;
-  TCHAR crashInfo[1024];
+  WCHAR crashInfo[1024];
   void *callstack[MAXFRAMES];
   symbolic_pc symbolic_pcs[MAXFRAMES];
   int nframes;
   int inVMThread = ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread());
+  int len;
+  WCHAR *msgW;
 
   if (inError)
 	exit(-2);
 
   inError = 1;
-	nframes = backtrace(callstack, MAXFRAMES);
-	symbolic_backtrace(++nframes, callstack, symbolic_pcs);
-
-    wsprintf(crashInfo,
-	   TEXT("Sorry but the VM has crashed.\n\n")
-	   TEXT("Reason: %s\n\n")
-	   TEXT("Current byte code: %d\n")
-	   TEXT("Primitive index: %d\n\n")
-	   TEXT("This information will be stored in the file\n")
-	   TEXT("%s\\%s\n")
-	   TEXT("with a complete stack dump"),
-	   msg,
-	   getCurrentBytecode(),
-	   methodPrimitiveIndex(),
-	   vmLogDirA,
-	   TEXT("crash.dmp"));
+  nframes = backtrace(callstack, MAXFRAMES);
+  symbolic_backtrace(++nframes, callstack, symbolic_pcs);
+  
+  len = MultiByteToWideChar(CP_UTF8, 0, msg, -1, NULL, 0);
+  if (len > 0) {
+    msgW = alloca(len * sizeof(WCHAR));
+    MultiByteToWideChar(CP_UTF8, 0, msg, -1, msgW, len);
+  }
+  else {
+    msgW = alloca(4 * sizeof(WCHAR));
+    wcscpy(msgW, L"???");
+  }
+#define __UNICODE_TEXT(x) L##x
+#define _UNICODE_TEXT(x) __UNICODE_TEXT(x)
+  _snwprintf(crashInfo,1024,
+      L"Sorry but the VM has crashed.\n\n"
+      L"Reason: %s\n\n"
+      L"Current byte code: %d\n"
+      L"Primitive index: %" _UNICODE_TEXT(PRIdSQINT) L"\n\n"
+      L"This information will be stored in the file\n"
+      L"%s\\%s\n"
+      L"with a complete stack dump",
+      msgW,
+      getCurrentBytecode(),
+      methodPrimitiveIndex(),
+      vmLogDirW,
+      L"crash.dmp");
   if(!fHeadlessImage)
-    MessageBox(stWindow,crashInfo,TEXT("Fatal VM error"),
+    MessageBoxW(stWindow,crashInfo,L"Fatal VM error",
                  MB_OK | MB_APPLMODAL | MB_ICONSTOP);
 
 #if !NewspeakVM
@@ -1223,7 +1236,7 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
   void *callstack[MAXFRAMES];
   symbolic_pc symbolic_pcs[MAXFRAMES];
   int nframes, inVMThread;
-  TCHAR crashInfo[1024];
+  WCHAR crashInfo[1024];
   FILE *f;
   int byteCode = -2;
 
@@ -1250,25 +1263,29 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
 							callstack+1,
 							MAXFRAMES-1);
   symbolic_backtrace(++nframes, callstack, symbolic_pcs);
-  wsprintf(crashInfo,
-	   TEXT("Sorry but the VM has crashed.\n\n")
-	   TEXT("Exception code: %08X\n")
-	   TEXT("Exception address: %08X\n")
-	   TEXT("Current byte code: %d\n")
-	   TEXT("Primitive index: %d\n\n")
-	   TEXT("Crashed in %s thread\n\n")
-	   TEXT("This information will be stored in the file\n")
-	   TEXT("%s\\%s\n")
-	   TEXT("with a complete stack dump"),
+  _snwprintf(crashInfo,1024,
+	   L"Sorry but the VM has crashed.\n\n"
+	   L"Exception code:    %08x\n"
+#ifdef _WIN64
+	   L"Exception address: %016" _UNICODE_TEXT(PRIxSQPTR) L"\n"
+#else
+	   L"Exception address: %08" _UNICODE_TEXT(PRIxSQPTR) L"\n"
+#endif
+	   L"Current byte code: %d\n"
+	   L"Primitive index:   %" _UNICODE_TEXT(PRIdSQINT) L"\n\n"
+	   L"Crashed in %s thread\n\n"
+	   L"This information will be stored in the file\n"
+	   L"%s\\%s\n"
+	   L"with a complete stack dump",
 	   exp->ExceptionRecord->ExceptionCode,
-	   exp->ExceptionRecord->ExceptionAddress,
+	   (sqIntptr_t) (exp->ExceptionRecord->ExceptionAddress),
 	   byteCode,
 	   methodPrimitiveIndex(),
-	   inVMThread ? "the VM" : "some other",
-	   vmLogDirA,
-	   TEXT("crash.dmp"));
+	   inVMThread ? L"the VM" : L"some other",
+	   vmLogDirW,
+	   L"crash.dmp");
   if(!fHeadlessImage)
-    MessageBox(stWindow,crashInfo,TEXT("Fatal VM error"),
+    MessageBoxW(stWindow,crashInfo,L"Fatal VM error",
                  MB_OK | MB_APPLMODAL | MB_ICONSTOP);
 
 #if !NewspeakVM
