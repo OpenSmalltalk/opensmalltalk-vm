@@ -57,35 +57,35 @@ char *printCommandLine()
 
   if(dwMemorySize) /* need -memory: mb */
     {
-      wcsncat(buffer,L"-memory: ",1024);
-	  wcsncat(buffer, _ltow(dwMemorySize, lbuf, 10),1024);
-	  wcsncat(buffer,L" ",1024);
+      wcsncat(buffer,L"-memory: ",1024 - 1 - wcslen(buffer));
+	  wcsncat(buffer, _ltow(dwMemorySize, lbuf, 10),1024 - 1 - wcslen(buffer));
+	  wcsncat(buffer,L" ",1024 - 1 - wcslen(buffer));
     }
 #if STACKVM
  { extern sqInt desiredNumStackPages;
    extern sqInt desiredEdenBytes;
    if (desiredEdenBytes) {
-      wcsncat(buffer,L"-eden: ",1024);
-	  wcsncat(buffer, _ltow(desiredEdenBytes, lbuf, 10),1024);
-	  wcsncat(buffer,L" ",1024);
+      wcsncat(buffer,L"-eden: ",1024 - 1 - wcslen(buffer));
+	  wcsncat(buffer, _ltow(desiredEdenBytes, lbuf, 10),1024 - 1 - wcslen(buffer));
+	  wcsncat(buffer,L" ",1024 - 1 - wcslen(buffer));
    }
    if (desiredNumStackPages) {
-      wcsncat(buffer,L"-stackpages: ",1024);
-	  wcsncat(buffer, _ltow(desiredNumStackPages, lbuf, 10),1024);
-	  wcsncat(buffer,L" ",1024);
+      wcsncat(buffer,L"-stackpages: ",1024 - 1 - wcslen(buffer));
+	  wcsncat(buffer, _ltow(desiredNumStackPages, lbuf, 10),1024 - 1 - wcslen(buffer));
+	  wcsncat(buffer,L" ",1024 - 1 - wcslen(buffer));
    }
  }
 #endif /* STACKVM */
   if(*logName) /* need -log: "logName" */
     {
-	  wcsncat(buffer, L"-log: \"",1024);
-      wcsncat(buffer, logName,1024);
-	  wcsncat(buffer, L"\" ",1024);
+	  wcsncat(buffer, L"-log: \"",1024 - 1 - wcslen(buffer));
+      wcsncat(buffer, logName,1024 - 1 - wcslen(buffer));
+	  wcsncat(buffer, L"\" ",1024 - 1 - wcslen(buffer));
     }
   /* add image name */
-  wcsncat(buffer, L"\"",1024);
-  wcsncat(buffer, imageNameW,1024);
-  wcsncat(buffer, L"\"\0",1024);
+  wcsncat(buffer, L"\"",1024 - 1 - wcslen(buffer));
+  wcsncat(buffer, imageNameW,1024 - 1 - wcslen(buffer));
+  wcsncat(buffer, L"\"\0",1024 - 1 - wcslen(buffer));
 
   WideCharToMultiByte(CP_UTF8, 0, buffer, -1, utf8, 1024 * 3, NULL, NULL);
   return utf8;

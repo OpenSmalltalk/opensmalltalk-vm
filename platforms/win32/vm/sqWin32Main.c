@@ -556,7 +556,7 @@ void gatherSystemInfo(void) {
     char model[MAX_PATH_UTF8];
 
     GetSystemDirectoryW(iniName, MAX_PATH);
-    wcsncat(iniName,L"\\OEMINFO.INI",MAX_PATH);
+    wcsncat(iniName,L"\\OEMINFO.INI",MAX_PATH-1-wcslen(iniName));
 
     GetPrivateProfileStringW(L"General", L"Manufacturer", L"Unknown",
 			    bufferW, MAX_PATH, iniName);
