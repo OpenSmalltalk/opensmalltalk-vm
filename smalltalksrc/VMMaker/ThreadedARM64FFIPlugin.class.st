@@ -12,7 +12,7 @@ Class {
 
 { #category : #translation }
 ThreadedARM64FFIPlugin class >> identifyingPredefinedMacros [
-	^#('__ARM_ARCH_V8__' '__aarch64__' '__arm64__' 'ARM64')
+	^#('__ARM_ARCH_ISA_A64' '__aarch64__' '__arm64__' 'ARM64')
 ]
 
 { #category : #'class initialization' }
