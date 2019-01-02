@@ -17,16 +17,16 @@
 
 static HRESULT (__stdcall *shGetFolderPath)(HWND, int, HANDLE, DWORD, WCHAR*);
 
-static WCHAR untrustedUserDirectory[MAX_PATH];
+static WCHAR untrustedUserDirectory[MAX_PATH+1];
 static int untrustedUserDirectoryLen;
-static WCHAR secureUserDirectory[MAX_PATH];
+static WCHAR secureUserDirectory[MAX_PATH+1];
 static int secureUserDirectoryLen;
-static WCHAR resourceDirectory[MAX_PATH];
+static WCHAR resourceDirectory[MAX_PATH+1];
 static int resourceDirectoryLen;
 
-static char untrustedUserDirectoryUTF8[MAX_PATH];
-static char secureUserDirectoryUTF8[MAX_PATH];
-static char resourceDirectoryUTF8[MAX_PATH];
+static char untrustedUserDirectoryUTF8[MAX_PATH_UTF8+1];
+static char secureUserDirectoryUTF8[MAX_PATH_UTF8+1];
+static char resourceDirectoryUTF8[MAX_PATH_UTF8+1];
 
 /* imported from sqWin32Main.c */
 extern BOOL fLowRights;  /* started as low integrity process, 
@@ -355,9 +355,9 @@ sqInt ioInitSecurity(void) {
   resourceDirectoryLen = wcslen(resourceDirectory);
 
   /* Keep a UTF-8 copy*/
-  sqUTF16ToUTF8Copy(untrustedUserDirectoryUTF8, sizeof(untrustedUserDirectoryUTF8), untrustedUserDirectory);
-  sqUTF16ToUTF8Copy(secureUserDirectoryUTF8, sizeof(secureUserDirectoryUTF8), secureUserDirectory);
-  sqUTF16ToUTF8Copy(resourceDirectoryUTF8, sizeof(resourceDirectoryUTF8), resourceDirectory);
+  WideCharToMultiByte(CP_UTF8, 0, untrustedUserDirectory, -1, untrustedUserDirectoryUTF8, MAX_PATH_UTF8, NULL, NULL);
+  WideCharToMultiByte(CP_UTF8, 0, secureUserDirectory   , -1, secureUserDirectoryUTF8   , MAX_PATH_UTF8, NULL, NULL);
+  WideCharToMultiByte(CP_UTF8, 0, resourceDirectory     , -1, resourceDirectoryUTF8     , MAX_PATH_UTF8, NULL, NULL);
 
   return 1;
 }
