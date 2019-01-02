@@ -309,37 +309,37 @@ sqInt ioInitSecurity(void) {
   ok = RegOpenKeyA(HKEY_CURRENT_USER, HKEY_SQUEAK_ROOT, &hk);
 
   /* Read the secure directory from the subkey. */
-  dwSize = MAX_PATH;
+  dwSize = MAX_PATH*sizeof(WCHAR);
   ok = RegQueryValueExW(hk, L"SecureDirectory",NULL, &dwType, 
                        (LPBYTE) tmp, &dwSize);
   if(ok == ERROR_SUCCESS) {
-    if(tmp[dwSize-2] != '\\') {
-      tmp[dwSize-1] = '\\';
-      tmp[dwSize] = 0;
+    if(tmp[dwSize/2-2] != '\\') {
+      tmp[dwSize/2-1] = '\\';
+      tmp[dwSize/2] = 0;
     }
     lstrcpyW(secureUserDirectory, tmp);
   }
 
   /* Read the user directory from the subkey. */
-  dwSize = MAX_PATH;
+  dwSize = MAX_PATH*sizeof(WCHAR);
   ok = RegQueryValueExW(hk, L"UserDirectory",NULL, &dwType, 
                        (LPBYTE) tmp, &dwSize);
   if(ok == ERROR_SUCCESS) {
-    if(tmp[dwSize-2] != '\\') {
-      tmp[dwSize-1] = '\\';
-      tmp[dwSize] = 0;
+    if(tmp[dwSize/2-2] != '\\') {
+      tmp[dwSize/2-1] = '\\';
+      tmp[dwSize/2] = 0;
     }
     lstrcpyW(untrustedUserDirectory, tmp);
   }
 
   /* Read the resource directory from the subkey. */
-  dwSize = MAX_PATH;
+  dwSize = MAX_PATH*sizeof(WCHAR);
   ok = RegQueryValueExW(hk, L"ResourceDirectory",NULL, &dwType, 
                        (LPBYTE) tmp, &dwSize);
   if(ok == ERROR_SUCCESS) {
-    if(tmp[dwSize-2] != '\\') {
-      tmp[dwSize-1] = '\\';
-      tmp[dwSize] = 0;
+    if(tmp[dwSize/2-2] != '\\') {
+      tmp[dwSize/2-1] = '\\';
+      tmp[dwSize/2] = 0;
     }
     lstrcpyW(resourceDirectory, tmp);
   }
