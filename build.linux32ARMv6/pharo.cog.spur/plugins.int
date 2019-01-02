@@ -1,13 +1,14 @@
-# Copied, perhaps edited, from ../src/examplePlugins.int
+# Copied, perhaps edited, from ../../src/examplePlugins.int
 INTERNAL_PLUGINS = \
 ADPCMCodecPlugin \
+AioPlugin \
 AsynchFilePlugin \
 B2DPlugin \
 BitBltPlugin \
 BMPReadWriterPlugin \
-JPEGReaderPlugin \
-JPEGReadWriter2Plugin \
-CroquetPlugin \
+CameraPlugin \
+#CroquetPlugin \
+HostWindowPlugin \
 ZipPlugin \
 DropPlugin \
 DSAPrims \
@@ -15,14 +16,20 @@ FFTPlugin \
 FileCopyPlugin \
 FilePlugin \
 FloatArrayPlugin \
-FloatMathPlugin \
+#FloatMathPlugin \
+HostWindowPlugin \
 IA32ABI \
-JoystickTabletPlugin \
+#JoystickTabletPlugin \
+JPEGReaderPlugin \
+JPEGReadWriter2Plugin \
+Klatt \
 LargeIntegers \
 Matrix2x3Plugin \
 MIDIPlugin \
 MiscPrimitivePlugin \
 Mpeg3Plugin \
+RePlugin \
+ScratchPlugin \
 SecurityPlugin \
 SerialPlugin \
 SocketPlugin \
@@ -30,8 +37,5 @@ SoundCodecPrims \
 SoundGenerationPlugin \
 SoundPlugin \
 StarSqueakPlugin \
-LocalePlugin \
-UnixOSProcessPlugin \
-VMProfileLinuxSupportPlugin \
-#Klatt \
-
+SurfacePlugin \
+VMProfileLinuxSupportPlugin
