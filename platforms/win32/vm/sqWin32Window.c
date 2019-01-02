@@ -2963,7 +2963,7 @@ int sqLaunchDrop(void) {
      Work around it for now. */
   static LPWSTR* (WINAPI *sqCommandLineToArgvW)(LPCWSTR,int*) = NULL;
   if(!sqCommandLineToArgvW) {
-    HANDLE hShell32 = LoadLibrary("shell32.dll");
+    HANDLE hShell32 = LoadLibraryA("shell32.dll");
     sqCommandLineToArgvW=(void*)GetProcAddress(hShell32, "CommandLineToArgvW");
     if(!sqCommandLineToArgvW) return 0;
   }
