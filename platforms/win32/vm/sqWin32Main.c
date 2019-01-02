@@ -732,7 +732,7 @@ void gatherSystemInfo(void) {
        I have no idea why but for now I'll just truncate that part if
        we recognize it... */
     if (_wcsnicmp(keyName, L"\\registry\\machine\\", 18) == 0) {
-      memmove(keyName, keyName+18*sizeof(WCHAR), (wcslen(keyName)-17)*sizeof(WCHAR));
+      memmove(keyName, keyName+18, (wcslen(keyName)+1-18)*sizeof(WCHAR)); /* +1 for terminating NULL */
     }
 
     ok = RegOpenKeyW(HKEY_LOCAL_MACHINE, keyName, &hk);
