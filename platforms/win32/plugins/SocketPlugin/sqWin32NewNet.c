@@ -2179,7 +2179,7 @@ void sqResolverGetAddressInfoHostSizeServiceSizeFlagsFamilyTypeProtocol(char *ho
 
   if (gaiError)
     {
-      fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(gaiError));
+      fwprintf(stderr, L"getaddrinfo: %s\n", gai_strerrorW(gaiError));
       addrList= 0;	/* succeed with zero results for impossible constraints */
     }
 
@@ -2349,7 +2349,7 @@ void sqResolverGetNameInfoSizeFlags(char *addr, sqInt addrSize, sqInt flags)
 
   if (gaiError)
     {
-      fprintf(stderr, "getnameinfo: %s\n", gai_strerror(gaiError));
+      fwprintf(stderr, L"getnameinfo: %s\n", gai_strerrorW(gaiError));
       lastError= gaiError;
       goto fail;
     }

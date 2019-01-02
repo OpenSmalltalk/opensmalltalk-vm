@@ -104,7 +104,7 @@
 /* Definition for Intel Processors */
 #if defined(_M_IX86) || defined(i386)
 # define WIN32_NAME "Win32"
-# define WIN32_OS_NAME (fWindows95 ? "95" : "NT")
+# define WIN32_OS_NAME "NT"
 # define WIN32_PROCESSOR_NAME "IX86"
 
 # if defined(X86)
@@ -143,16 +143,6 @@
 
 #endif /* (_WIN32_WCE) */
 
-/* THE FOLLOWING IS WRONG (& HENCE I'VE IF 0'ed IT OUT.  WE CAN'T MERELY DEFINE
- * WIN32 BECAUSE WE MAY BE ON WIN64. eem 2017/05/16
- */
-#if 0
-/* due to weird include orders, make sure WIN32 is defined */
-# if !defined(WIN32)
-#  define WIN32 1
-# endif
-#endif
-
 /* Experimental */
 #ifdef MINIMAL
   /* The hardcoded defs:
@@ -189,7 +179,6 @@ void SetupKeymap();
 void SetupWindows();
 void SetupPixmaps();
 void SetupPrinter();
-void SetupPreferences();
 void SetupMIDI();
 
 /********************************************************/
@@ -259,21 +248,46 @@ int reverse_image_words(unsigned int *dst, unsigned int *src,int depth, int widt
 /********************************************************/
 /* Declarations we may need by other modules            */
 /********************************************************/
-extern char imageName[];		/* full path and name to image */
-extern TCHAR imagePath[];		/* full path to image */
-extern TCHAR vmPath[];		    /* full path to interpreter's directory */
-extern TCHAR vmName[];		    /* name of the interpreter's executable */
-extern char windowTitle[];             /* window title string */
-extern char vmBuildString[];            /* the vm build string */
-extern TCHAR windowClassName[];    /* class name for the window */
+
+/* Note: a character can require up to 4 bytes in UTF8 encoding
+   But the expansion from UTF16 -> UTF8 is never more than 3 bytes for 1 short
+   U+ 0000-U+  007F - 1byte in utf8, 1 short in utf16.
+   U+ 0080-U+  07FF - 2byte in utf8, 1 short in utf16.
+   U+ 0800-U+  FFFF - 3byte in utf8, 1 short in utf16.
+   U+10000-U+10FFFF - 4byte in utf8, 2 short in utf16.
+*/
+#define MAX_PATH_UTF8 (MAX_PATH*3)
+
+extern char  imageName [];       /* full path and name to image - UTF8 */
+extern WCHAR imageNameW[];       /* full path and name to image - UTF16 */
+extern char  imagePathA[];       /* full path to image - UTF8 */
+extern WCHAR imagePathW[];       /* full path to image - UTF16 */
+extern char  vmPathA[];          /* full path to interpreter's directory - UTF8 */
+extern WCHAR vmPathW[];          /* full path to interpreter's directory - UTF16 */
+extern char  vmNameA[];          /* name of the interpreter's executable - UTF8 */
+extern WCHAR vmNameW[];          /* name of the interpreter's executable - UTF16 */
+extern char windowTitle[];       /* window title string - UTF8 */
+extern char vmBuildString[];     /* the vm build string */
+extern TCHAR windowClassName[];  /* class name for the window */
+
+#ifdef UNICODE
+#define imageNameT imageNameW /* define the generic TCHAR* version */
+#define imagePath  imagePathW
+#define vmName vmNameW
+#define vmPath vmPathW
+#else
+#define imageNameT imageName
+#define imagePath  imagePathA
+#define vmName vmNameA
+#define vmPath vmPathA
+#endif
 
 extern UINT SQ_LAUNCH_DROP;
 
 extern const TCHAR U_ON[];
 extern const TCHAR U_OFF[];
 extern const TCHAR U_GLOBAL[];
-extern const TCHAR U_SLASH[];
-extern const TCHAR U_BACKSLASH[];
+extern const WCHAR W_BACKSLASH[];
 
 #ifndef NO_PREFERENCES
 extern HMENU vmPrefsMenu;         /* preferences menu */
@@ -293,7 +307,6 @@ extern BITMAPINFO *bmi4;	     /*	4 bit depth bitmap info */
 extern BITMAPINFO *bmi8;	     /*	8 bit depth bitmap info */
 extern BITMAPINFO *bmi16;	     /*	16 bit depth bitmap info */
 extern BITMAPINFO *bmi32;	     /*	32 bit depth bitmap info */
-extern BOOL fWindows95;          /* Are we running on Win95 or NT? */
 extern BOOL fIsConsole;          /* Are we running as a console app? */
 
 /* Startup options */
@@ -333,31 +346,10 @@ extern BOOL fBufferMouse;    /* Should we buffer mouse input? */
 
 
 /******************************************************/
-/* String conversions between Unicode / Ansi / Squeak */
-/******************************************************/
-/* Note: fromSqueak() and fromSqueak2() are inline conversions
-         but operate on two different buffers. The maximum length
-         of strings that can be converted is MAX_PATH */
-TCHAR*  fromSqueak(const char *sqPtr, int sqLen);   /* Inline Squeak -> C */
-TCHAR*  fromSqueak2(const char *sqPtr, int sqLen);  /* 2nd inline conversion */
-/* Note: toUnicode() and fromUnicode() are inline conversions
-         with for at most MAX_PATH sized strings. If the VM
-         is not compiled with UNICODE defined they just return
-         the input strings. Also, toUnicode operates on the
-         same buffer as fromSqueak() */
-TCHAR*  toUnicode(const char *ptr);                 /* Inline Ansi -> Unicode */
-char*   fromUnicode(const TCHAR *ptr);              /* Inline Unicode -> Ansi */
-/* Note: toUnicodeNew and fromUnicodeNew malloc() new strings.
-         It is up to the caller to free these! */
-TCHAR*  toUnicodeNew(const char *ptr);                 /* Inline Ansi -> Unicode */
-char*   fromUnicodeNew(const TCHAR *ptr);              /* Inline Unicode -> Ansi */
-TCHAR *lstrrchr(TCHAR *source, TCHAR c);
-
-/******************************************************/
 /* Output stuff                                       */
 /******************************************************/
 #ifndef sqMessageBox
-int __cdecl sqMessageBox(DWORD dwFlags, const TCHAR *titleString, const char* fmt, ...);
+int __cdecl sqMessageBox(DWORD dwFlags, const TCHAR *titleString, const TCHAR* fmt, ...);
 #endif
 
 #ifndef warnPrintf
@@ -380,7 +372,7 @@ void vprintLastError(TCHAR *fmt, ...);
 /******************************************************/
 /* Misc functions                                     */
 /******************************************************/
-DWORD SqueakImageLength(TCHAR *fileName);
+DWORD SqueakImageLength(WCHAR *fileName);
 int isLocalFileName(TCHAR *fileName);
 
 #ifndef NO_PLUGIN_SUPPORT

@@ -194,15 +194,17 @@ void LoadPreferences()
 
   /* get image file name from ini file */
   size = GetPrivateProfileString(U_GLOBAL, TEXT("ImageFile"), 
-			 TEXT(""), imageName, MAX_PATH, squeakIniName);
+			 TEXT(""), imageNameT, MAX_PATH, squeakIniName);
   if(size > 0) {
     if( !(imageName[0] == '\\' && imageName[1] == '\\') && !(imageName[1] == ':' && imageName[2] == '\\')) {
       /* make the path relative to VM directory */
-      lstrcpy(imageName, vmName);
-      (lstrrchr(imageName,U_BACKSLASH[0]))[1] = 0;
-      size = lstrlen(imageName);
+      strcpy(imageName , vmNameA);
+	  wcscpy(imageNameW, vmNameW);
+      (strrchr(imageName ,'\\'           ))[1] = 0;
+	  (wcsrchr(imageNameW, W_BACKSLASH[0]))[1] = 0;
+      size = lstrlen(imageNameT);
       size = GetPrivateProfileString(U_GLOBAL, TEXT("ImageFile"), 
-			 TEXT(""), imageName + size, MAX_PATH - size, squeakIniName);
+			 TEXT(""), imageNameT + size, MAX_PATH - size, squeakIniName);
 	}
   }
 
@@ -225,7 +227,7 @@ void LoadPreferences()
   /* get the window class name from the ini file */
   GetPrivateProfileString(U_GLOBAL, TEXT("WindowClassName"), 
 #if NewspeakVM
-				TEXT(VM_NAME"WindowClass"),
+				TEXT(VM_NAME) TEXT("WindowClass"),
 #else
 				TEXT("SqueakWindowClass"),
 #endif
@@ -431,8 +433,8 @@ void TrackPrefsMenu(void) {
 void HandlePrefsMenu(int cmd) {
   switch(cmd) {
   case ID_ABOUT: 
-    MessageBox(stWindow,VM_VERSION_TEXT,
-	       TEXT("About ") TEXT(VM_NAME) TEXT(" on Win32"), MB_OK);
+    MessageBoxA(stWindow,VM_VERSION_VERBOSE,
+	       "About " VM_NAME " on Win32", MB_OK);
     break;
   case ID_DEFERUPDATES:
     fDeferredUpdate = !fDeferredUpdate;

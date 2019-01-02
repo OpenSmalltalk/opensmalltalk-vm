@@ -517,7 +517,7 @@ size_t sqImageFileRead(void *ptr, size_t sz, size_t count, sqImageFile h)
   ReadFile((HANDLE)(h-1), (LPVOID) ptr, count*sz, &dwReallyRead, NULL);
   while(dwReallyRead != (DWORD)(count*sz)) {
     DWORD err = GetLastError();
-    if(sqMessageBox(MB_ABORTRETRYIGNORE, TEXT("Squeak Warning"),"Image file read problem (%d out of %d bytes read)", dwReallyRead, count*sz)
+    if(sqMessageBox(MB_ABORTRETRYIGNORE, TEXT("Squeak Warning"),TEXT("Image file read problem (%d out of %d bytes read)"), dwReallyRead, count*sz)
        == IDABORT) return (dwReallyRead / sz);
     sqImageFileSeek(h, position);
     ReadFile((HANDLE)(h-1), (LPVOID) ptr, count*sz, &dwReallyRead, NULL);

@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <tchar.h>
 #include <fcntl.h> /* _O_BINARY */
 #include <float.h>
 #include <ole2.h>
@@ -127,13 +128,13 @@ BOOL fIsConsole = 0;
 TCHAR consoleBuffer[4096];
 
 /* stderr and stdout names */
-char stderrName[MAX_PATH+1];
-char stdoutName[MAX_PATH+1];
+WCHAR stderrName[MAX_PATH+1];
+WCHAR stdoutName[MAX_PATH+1];
 
-static  char vmLogDirA[MAX_PATH];
+static  char vmLogDirA[MAX_PATH_UTF8];
 static WCHAR vmLogDirW[MAX_PATH];
 
-TCHAR *logName = TEXT("");             /* full path and name to log file */
+WCHAR *logName = L"";             /* full path and name to log file */
 
 #ifdef VISTA_SECURITY 
 BOOL fLowRights = 0;  /* started as low integiry process,
@@ -141,9 +142,8 @@ BOOL fLowRights = 0;  /* started as low integiry process,
 #endif /* VISTA_SECURITY */
 
 /* Service stuff */
-TCHAR  serviceName[MAX_PATH+1];   /* The name of the NT service */
-TCHAR *installServiceName = NULL; /* the name under which the service is to install */
-BOOL  fBroadcastService95 = 0;   /* Do we need a broadcast when a user has logged on? */
+WCHAR  serviceName[MAX_PATH+1];   /* The name of the NT service */
+WCHAR *installServiceName = NULL; /* the name under which the service is to install */
 UINT  WM_BROADCAST_SERVICE = 0;  /* The broadcast message we send */
 TCHAR *msgBroadcastService = TEXT("SQUEAK_SERVICE_BROADCAST_MESSAGE"); /* The name of the broadcast message */
 
@@ -159,8 +159,17 @@ void SetSystemTrayIcon(BOOL on);
    _RC_NEAR: round to nearest
    _PC_53 :  double precision arithmetic (instead of extended)
    _EM_XXX: silent operations (no signals please)
+   NOTE:  precision control and infinity control are not defined on ARM or X64 (SSE oblige), only X86
 */
+# if defined(_M_IX86) || defined(X86) || defined(_M_I386) || defined(_X86_) \
+  || defined(i386) || defined(i486) || defined(i586) || defined(i686) \
+  || defined(__i386__) || defined(__386__) || defined(I386)
 #define FPU_DEFAULT (_RC_NEAR + _PC_53 + _EM_INVALID + _EM_ZERODIVIDE + _EM_OVERFLOW + _EM_UNDERFLOW + _EM_INEXACT + _EM_DENORMAL)
+#define FPU_MASK    (_MCW_EM | _MCW_RC | _MCW_PC | _MCW_IC)
+#else
+#define FPU_DEFAULT (_RC_NEAR + _EM_INVALID + _EM_ZERODIVIDE + _EM_OVERFLOW + _EM_UNDERFLOW + _EM_INEXACT + _EM_DENORMAL)
+#define FPU_MASK    (_MCW_EM | _MCW_RC)
+#endif
 
 /****************************************************************************/
 /*                     Exception handling                                   */
@@ -191,7 +200,7 @@ extern sqInt primitiveFailForFFIExceptionat(usqLong exceptionCode, usqInt pc);
     DWORD code = exp->ExceptionRecord->ExceptionCode;
     if ((code >= EXCEPTION_FLT_DENORMAL_OPERAND) && (code <= EXCEPTION_FLT_UNDERFLOW)) {
       /* turn on the default masking of exceptions in the FPU and proceed */
-      _controlfp(FPU_DEFAULT, _MCW_EM | _MCW_RC | _MCW_PC | _MCW_IC);
+      _controlfp(FPU_DEFAULT, FPU_MASK);
       result = EXCEPTION_CONTINUE_EXECUTION;
     }
   }
@@ -234,17 +243,17 @@ void UninstallExceptionHandler(void)
 #if __MINGW32__
 # include <io.h>
 static FILE *
-fopen_for_append(char *filename)
+fopen_for_append(WCHAR *filename)
 {
-	FILE *f = !access(filename, F_OK) /* access is bass ackwards */
-		? fopen(filename,"r+")
-		: fopen(filename,"w+");
+	FILE *f = !_waccess(filename, F_OK) /* access is bass ackwards */
+		? _wfopen(filename,L"r+")
+		: _wfopen(filename,L"w+");
 	if (f)
 		fseek(f,0,SEEK_END);
 	return f;
 }
 #else
-# define fopen_for_append(filename) fopen(filename,"a+t")
+# define fopen_for_append(filename) _wfopen(filename,L"a+t")
 #endif
 
 /****************************************************************************/
@@ -262,6 +271,19 @@ OutputLogMessage(char *string)
   fclose(fp);
   return 1;
 }
+
+static int
+OutputLogMessageW(WCHAR *string)
+{
+  int len = WideCharToMultiByte(CP_UTF8, 0, string, -1, NULL, 0, NULL, NULL);
+  char *utf8 = malloc(len);
+  if (!utf8) return 1;
+  WideCharToMultiByte(CP_UTF8, 0, string, -1, utf8, len, NULL, NULL);
+  OutputLogMessage(utf8);
+  free(utf8);
+  return 1;
+}
+
 
 static int
 OutputConsoleString(char *string)
@@ -292,7 +314,7 @@ OutputConsoleString(char *string)
 }
 
 // recommend using DPRINTF ifdef'ing to DPRINTF for debug output
-int __cdecl DPRINTF(const char *fmt, ...)
+int __cdecl DPRINTF(const TCHAR *fmt, ...)
 { va_list al;
 
   va_start(al, fmt);
@@ -300,7 +322,7 @@ int __cdecl DPRINTF(const char *fmt, ...)
 	wvsprintf(consoleBuffer, fmt, al);
 	OutputDebugString(consoleBuffer);
   }
-  vfprintf(stdout, fmt, al);
+  _vftprintf(stdout, fmt, al);
   va_end(al);
   return 1;
 }
@@ -358,12 +380,6 @@ static messageHook nextMessageHook = NULL;
 
 int ServiceMessageHook(void * hwnd, unsigned int message, unsigned int wParam, long lParam)
 {
-  if (fRunService && fWindows95 && message == WM_BROADCAST_SERVICE && hwnd == stWindow)
-    {
-      /* broadcast notification - install the running Win95 service in the system tray */
-      SetSystemTrayIcon(1);
-      return 1;
-    }
    if (message == WM_USERCHANGED)
       {
         SetSystemTrayIcon(1);
@@ -402,40 +418,13 @@ void SetSystemTrayIcon(BOOL on)
   nid.uFlags = NIF_MESSAGE | NIF_TIP | NIF_ICON;
   nid.uCallbackMessage = WM_USER+42;
   nid.hIcon  = LoadIcon(hInstance, MAKEINTRESOURCE(1));
-  strcpy(nid.szTip, VM_NAME "!");
+  _tcscpy(nid.szTip, TEXT(VM_NAME) TEXT("!"));
   if (on)
     (*ShellNotifyIcon)(NIM_ADD, &nid);
   else
     (*ShellNotifyIcon)(NIM_DELETE, &nid);
 }
 
-void SetupService95()
-{
-#ifndef NO_SERVICE
-#ifndef RSP_SIMPLE_SERVICE
-#define RSP_SIMPLE_SERVICE 1
-#endif
-  BOOL (WINAPI *RegisterServiceProcess)(DWORD,DWORD);
-  static HMODULE hKernel32 = NULL;
-
-  /* Inform Windows95 that we're running as a service process */
-  if (!fRunService || !fWindows95) return;
-  hKernel32 = LoadLibrary(TEXT("kernel32.dll"));
-  if (!hKernel32)
-    {
-      printLastError(TEXT("Unable to load kernel32.dll"));
-      return;
-    }
-  (FARPROC) RegisterServiceProcess = GetProcAddress(hKernel32, "RegisterServiceProcess");
-  if (!RegisterServiceProcess)
-    {
-      printLastError(TEXT("Unable to find RegisterServiceProcess"));
-      return;
-    }
-  if ( !(*RegisterServiceProcess)(GetCurrentProcessId(), RSP_SIMPLE_SERVICE ) )
-    printLastError(TEXT("RegisterServiceProcess failed"));
-#endif /* NO_SERVICE */
-}
 
 /****************************************************************************/
 /*                      System Attributes                                   */
@@ -462,7 +451,7 @@ char *ioGetLogDirectory(void) {
 }
 
 sqInt ioSetLogDirectoryOfSize(void* lblIndex, sqInt sz) {
-  if (sz >= MAX_PATH) return 0;
+  if (sz >= MAX_PATH_UTF8) return 0;
   strncpy(vmLogDirA, lblIndex, sz);
   vmLogDirA[sz] = 0;
   MultiByteToWideChar(CP_UTF8, 0, vmLogDirA, -1, vmLogDirW, MAX_PATH);
@@ -509,6 +498,18 @@ char *hwInfoString = "";
 char *gdInfoString = "";
 char *win32VersionName = "";
 
+void RegLookupUTF8String(HKEY hk, WCHAR *name, char *utf8, size_t utf8_len)
+{
+  WCHAR bufferW[MAX_PATH];
+  DWORD dwSize = MAX_PATH * sizeof(WCHAR);
+  LSTATUS ok = RegQueryValueExW(hk, name, NULL, NULL,(LPBYTE)bufferW, &dwSize);
+  if (ok != ERROR_SUCCESS) strncpy(utf8, "???",utf8_len);
+  else {
+    int len = WideCharToMultiByte(CP_UTF8, 0, bufferW, -1, utf8, utf8_len, NULL, NULL);
+    if (len <= 0) strncpy(utf8, "???", utf8_len);
+  }
+}
+
 void gatherSystemInfo(void) {
   OSVERSIONINFOEX osInfo;
   MEMORYSTATUS memStat;
@@ -517,7 +518,7 @@ void gatherSystemInfo(void) {
   int proc, screenX, screenY;
   char tmpString[2048];
 
-  char keyName[256];
+  WCHAR keyName[256];
   DWORD ok, dwSize;
   HKEY hk;
 
@@ -549,18 +550,21 @@ void gatherSystemInfo(void) {
   }
 
   { /* Figure out make and model from OEMINFO.ini */
-    char iniName[256];
-    char manufacturer[256];
-    char model[256];
+    WCHAR iniName[MAX_PATH];
+	WCHAR bufferW[MAX_PATH];
+    char manufacturer[MAX_PATH_UTF8];
+    char model[MAX_PATH_UTF8];
 
-    GetSystemDirectory(iniName, 256);
-    strcat(iniName,"\\OEMINFO.INI");
+    GetSystemDirectoryW(iniName, MAX_PATH);
+    wcsncat(iniName,L"\\OEMINFO.INI",MAX_PATH-1-wcslen(iniName));
 
-    GetPrivateProfileString("General", "Manufacturer", "Unknown",
-			    manufacturer, 256, iniName);
+    GetPrivateProfileStringW(L"General", L"Manufacturer", L"Unknown",
+			    bufferW, MAX_PATH, iniName);
+	if (WideCharToMultiByte(CP_UTF8, 0, bufferW, -1, manufacturer, MAX_PATH_UTF8, NULL, NULL) == 0) strcpy(manufacturer, "???");
 
-    GetPrivateProfileString("General", "Model", "Unknown",
-			    model, 256, iniName);
+    GetPrivateProfileStringW(L"General", L"Model", L"Unknown",
+			    bufferW, MAX_PATH, iniName);
+	if (WideCharToMultiByte(CP_UTF8, 0, bufferW, -1, model, MAX_PATH_UTF8, NULL, NULL) == 0) strcpy(model, "???");
 
     sprintf(tmpString,
 	    "Hardware information: \n"
@@ -593,30 +597,23 @@ void gatherSystemInfo(void) {
 
     char *tmp = tmpString + strlen(tmpString);
 
-    strcpy(keyName, "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0");
-    keyName[strlen(keyName)-1] = 48+proc; /* 0, 1, 2 etc. */
+    wcscpy(keyName, L"HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0");
+    keyName[wcslen(keyName)-1] = 48+proc; /* 0, 1, 2 etc. */
 
-    ok = RegOpenKey(HKEY_LOCAL_MACHINE, keyName, &hk);
+    ok = RegOpenKeyW(HKEY_LOCAL_MACHINE, keyName, &hk);
     if (!ok) {
-      char nameString[256];
-      char identifier[256];
+      char nameString[MAX_PATH_UTF8];
+      char identifier[MAX_PATH_UTF8];
       DWORD mhz;
 
-      dwSize = 256;
-      ok = RegQueryValueEx(hk, "ProcessorNameString", NULL, NULL,
-			   (LPBYTE)nameString, &dwSize);
-      if (ok) strcpy(nameString, "???");
-
-      dwSize = 256;
-      ok = RegQueryValueEx(hk, "Identifier", NULL, NULL,
-			   (LPBYTE)identifier, &dwSize);
-      if (ok) strcpy(identifier, "???");
+	  RegLookupUTF8String(hk, L"ProcessorNameString", nameString, MAX_PATH_UTF8);
+	  RegLookupUTF8String(hk, L"Identifier", identifier, MAX_PATH_UTF8);
 
       dwSize = sizeof(DWORD);
-      ok = RegQueryValueEx(hk, "~MHz", NULL, NULL,
+      ok = RegQueryValueExW(hk, L"~MHz", NULL, NULL,
 			   (LPBYTE)&mhz, &dwSize);
       if (ok) mhz = -1;
-      sprintf(tmp,
+	  snprintf(tmp, sizeof(tmpString)-strlen(tmpString),
 	      "\nProcessor %d: %s\n"
 	      "\tIdentifier: %s\n"
 	      "\t~MHZ: %lu\n",
@@ -628,30 +625,50 @@ void gatherSystemInfo(void) {
   hwInfoString = _strdup(tmpString);
 
   {
-    char owner[256];
-    char company[256];
-    char product[256];
+    char owner[MAX_PATH_UTF8];
+    char company[MAX_PATH_UTF8];
+    char product[MAX_PATH_UTF8];
 
     if (osInfo.dwPlatformId == VER_PLATFORM_WIN32_NT) {
-      strcpy(keyName, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion");
+      wcscpy(keyName, L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion");
     } else {
-      strcpy(keyName, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion");
+      wcscpy(keyName, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion");
     }
-    ok = RegOpenKey(HKEY_LOCAL_MACHINE, keyName, &hk);
+    ok = RegOpenKeyW(HKEY_LOCAL_MACHINE, keyName, &hk);
     if (!ok) {
-      dwSize = 256;
-      if (RegQueryValueEx(hk, "RegisteredOwner", NULL, NULL,
-			  (LPBYTE)owner, &dwSize)) strcpy(owner, "???");
-      dwSize = 256;
-      if (RegQueryValueEx(hk, "RegisteredOrganization", NULL, NULL,
-			  (LPBYTE)company, &dwSize)) strcpy(company, "???");
-      dwSize = 256;
-      if (RegQueryValueEx(hk, "ProductName", NULL, NULL,
-			  (LPBYTE)product, &dwSize)) strcpy(product, "???");
-      RegCloseKey(hk);
-    }
+      RegLookupUTF8String(hk, L"RegisteredOwner", owner, MAX_PATH_UTF8);
+      RegLookupUTF8String(hk, L"RegisteredOrganization", company, MAX_PATH_UTF8);
+      RegLookupUTF8String(hk, L"ProductName", product, MAX_PATH_UTF8);
+    } else {
+      strcpy(owner, "???");
+      strcpy(company, "???");
+      strcpy(product, "???");
+	}
 
-    sprintf(tmpString,
+#if defined(_MSC_VER) && _MSC_VER < 1300
+# define wSuiteMask wReserved[0]
+# define wProductType wReserved[1] & 0xFF
+#endif
+#ifdef UNICODE
+	{
+		char buf[128 * 3];
+		if(WideCharToMultiByte(CP_UTF8,0, osInfo.szCSDVersion,-1,buf,sizeof(buf),NULL,NULL))
+		  snprintf(tmpString, sizeof(tmpString),
+            "Operating System: %s (Build %lu %s)\n"
+            "\tRegistered Owner: %s\n"
+            "\tRegistered Company: %s\n"
+            "\tSP major version: %d\n"
+            "\tSP minor version: %d\n"
+            "\tSuite mask: %x\n"
+            "\tProduct type: %x\n",
+            product,
+            osInfo.dwBuildNumber, buf,
+            owner, company,
+            osInfo.wServicePackMajor, osInfo.wServicePackMinor,
+            osInfo.wSuiteMask, osInfo.wProductType);
+	}
+#else
+    snprintf(tmpString,sizeof(tmpString),
 	    "Operating System: %s (Build %lu %s)\n"
 	    "\tRegistered Owner: %s\n"
 	    "\tRegistered Company: %s\n"
@@ -663,41 +680,50 @@ void gatherSystemInfo(void) {
 	    osInfo.dwBuildNumber, osInfo.szCSDVersion,
 	    owner, company,
 	    osInfo.wServicePackMajor, osInfo.wServicePackMinor,
-#if defined(_MSC_VER) && _MSC_VER < 1300
-# define wSuiteMask wReserved[0]
-# define wProductType wReserved[1] & 0xFF
-#endif
 	    osInfo.wSuiteMask, osInfo.wProductType);
+#endif
     osInfoString = _strdup(tmpString);
   }
 
-  sprintf(tmpString,
-	  "Display Information: \n"
-	  "\tGraphics adapter name: %s\n"
-	  "\tPrimary monitor resolution: %d x %d\n",
+#ifdef UNICODE
+  {
+	  char buf[128*3];
+	  if(WideCharToMultiByte(CP_UTF8,0,gDev.DeviceString,-1,buf,sizeof(buf),NULL,NULL)) snprintf(tmpString, sizeof(tmpString),
+		  "Display Information: \n"
+		  "\tGraphics adapter name: %s\n"
+		  "\tPrimary monitor resolution: %d x %d\n",
+		  buf,
+		  screenX, screenY);
+  }
+#else
+  snprintf(tmpString, sizeof(tmpString),
+	  TEXT("Display Information: \n")
+      TEXT("\tGraphics adapter name: %s\n")
+      TEXT("\tPrimary monitor resolution: %d x %d\n"),
 	  gDev.DeviceString,
 	  screenX, screenY);
+#endif
 
   /* Find the driver key in the registry */
   keyName[0] = 0;
-  ok = RegOpenKey(HKEY_LOCAL_MACHINE,
-		  "HARDWARE\\DEVICEMAP\\VIDEO",
+  ok = RegOpenKeyW(HKEY_LOCAL_MACHINE,
+		  L"HARDWARE\\DEVICEMAP\\VIDEO",
 		  &hk);
   if (!ok) {
-    dwSize = 256;
-    RegQueryValueEx(hk,"\\Device\\Video0", NULL, NULL,
+    dwSize = 256*sizeof(WCHAR);
+    RegQueryValueExW(hk,L"\\Device\\Video0", NULL, NULL,
 		    (LPBYTE)keyName, &dwSize);
     RegCloseKey(hk);
   }
   if (*keyName) {
     /* Got the key name; open it and get the info out of there */
     char *tmp = tmpString + strlen(tmpString);
-    char deviceDesc[256];
-    char adapterString[256];
-    char biosString[256];
-    char chipType[256];
-    char dacType[256];
-    char *drivers, *drv;
+    char deviceDesc[MAX_PATH_UTF8];
+    char adapterString[MAX_PATH_UTF8];
+    char biosString[MAX_PATH_UTF8];
+    char chipType[MAX_PATH_UTF8];
+    char dacType[MAX_PATH_UTF8];
+    WCHAR *drivers, *drv;
     WCHAR buffer[256];
     DWORD memSize;
 
@@ -705,48 +731,20 @@ void gatherSystemInfo(void) {
        with \Registry\Machine\ which doesn't work with RegOpenKey below.
        I have no idea why but for now I'll just truncate that part if
        we recognize it... */
-    if (_strnicmp(keyName, "\\registry\\machine\\", 18) == 0) {
-      memcpy(keyName, keyName+18, strlen(keyName)-17);
+    if (_wcsnicmp(keyName, L"\\registry\\machine\\", 18) == 0) {
+      memmove(keyName, keyName+18, (wcslen(keyName)+1-18)*sizeof(WCHAR)); /* +1 for terminating NULL */
     }
 
-    ok = RegOpenKey(HKEY_LOCAL_MACHINE, keyName, &hk);
-    if (ok) MessageBox(0, keyName, "Cannot open:", MB_OK);
+    ok = RegOpenKeyW(HKEY_LOCAL_MACHINE, keyName, &hk);
+    if (ok) MessageBoxW(0, keyName, L"Cannot open:", MB_OK);
     if (!ok) {
-      dwSize = 256;
-      ok = RegQueryValueEx(hk,"Device Description", NULL, NULL,
-		      (LPBYTE)deviceDesc, &dwSize);
-      if (ok) strcpy(deviceDesc, "???");
-
-      dwSize = 256*sizeof(WCHAR);
-      ok = RegQueryValueEx(hk,"HardwareInformation.AdapterString", NULL, NULL,
-		      (LPBYTE)buffer, &dwSize);
-      if (!ok) {
-		WideCharToMultiByte(CP_UTF8,0,buffer,-1,adapterString,256,NULL,NULL);
-      } else strcpy(adapterString, "???");
-
-      dwSize = 256*sizeof(WCHAR);
-      ok = RegQueryValueEx(hk,"HardwareInformation.BiosString", NULL, NULL,
-		      (LPBYTE)buffer, &dwSize);
-      if (!ok) {
-		WideCharToMultiByte(CP_UTF8,0,buffer,-1,biosString,256,NULL,NULL);
-      } else strcpy(biosString, "???");
-
-      dwSize = 256*sizeof(WCHAR);
-      ok = RegQueryValueEx(hk,"HardwareInformation.ChipType", NULL, NULL,
-		      (LPBYTE)buffer, &dwSize);
-      if (!ok) {
-		WideCharToMultiByte(CP_UTF8,0,buffer,-1,chipType,256,NULL,NULL);
-      } else strcpy(chipType, "???");
-
-      dwSize = 256*sizeof(WCHAR);
-      ok = RegQueryValueEx(hk,"HardwareInformation.DacType", NULL, NULL,
-		      (LPBYTE)buffer, &dwSize);
-      if (!ok) {
-		WideCharToMultiByte(CP_UTF8,0,buffer,-1,dacType,256,NULL,NULL);
-      } else strcpy(dacType, "???");
-
+	  RegLookupUTF8String(hk, L"Device Description", deviceDesc, MAX_PATH_UTF8);
+	  RegLookupUTF8String(hk, L"HardwareInformation.AdapterString", adapterString, MAX_PATH_UTF8);
+	  RegLookupUTF8String(hk, L"HardwareInformation.BiosString", biosString, MAX_PATH_UTF8);
+	  RegLookupUTF8String(hk, L"HardwareInformation.ChipType", chipType, MAX_PATH_UTF8);
+      RegLookupUTF8String(hk, L"HardwareInformation.DacType", dacType, MAX_PATH_UTF8);
       dwSize = sizeof(DWORD);
-      ok = RegQueryValueEx(hk,"HardwareInformation.MemorySize", NULL, NULL,
+      ok = RegQueryValueExW(hk,L"HardwareInformation.MemorySize", NULL, NULL,
 		      (LPBYTE)&memSize, &dwSize);
       if (ok) memSize = -1;
 
@@ -765,47 +763,62 @@ void gatherSystemInfo(void) {
 	      memSize);
 
       /* Now process the installed drivers */
-      ok = RegQueryValueEx(hk,"InstalledDisplayDrivers",
+      ok = RegQueryValueExW(hk,L"InstalledDisplayDrivers",
 			   NULL, NULL, NULL, &dwSize);
       if (!ok) {
 		drivers = malloc(dwSize);
-		ok = RegQueryValueEx(hk,"InstalledDisplayDrivers",
+		ok = RegQueryValueExW(hk,L"InstalledDisplayDrivers",
 					 NULL, NULL, (LPBYTE)drivers, &dwSize);
       }
       if (!ok) {
-		strcat(tmpString,"\nDriver Versions:");
+		strncat(tmpString,"\nDriver Versions:",sizeof(tmpString) - 1 - strlen(tmpString));
 		/* InstalledDrivers is REG_MULTI_SZ (extra terminating zero) */
-		for(drv = drivers; drv[0]; drv +=strlen(drv)) {
+		for(drv = drivers; drv[0]; drv +=wcslen(drv)) {
 		  DWORD verSize, hh;
 		  UINT vLen;
 		  LPVOID verInfo = NULL, vInfo;
+		  char drvA[MAX_PATH_UTF8];
 
 		  /* Concat driver name */
-		  strcat(tmpString,"\n\t"); 
-		  strcat(tmpString, drv);
-		  strcat(tmpString,": ");
+		  if (WideCharToMultiByte(CP_UTF8,0,drv,-1,drvA,MAX_PATH_UTF8,NULL,NULL)>0) {
+            strncat(tmpString, "\n\t", sizeof(tmpString) - 1 - strlen(tmpString));
+            strncat(tmpString, drvA  , sizeof(tmpString) - 1 - strlen(tmpString));
+            strncat(tmpString, ": "  , sizeof(tmpString) - 1 - strlen(tmpString));
+		  }
 
-		  verSize = GetFileVersionInfoSize(drv, &hh);
+		  verSize = GetFileVersionInfoSizeW(drv, &hh);
 		  if (!verSize) goto done;
 
 		  verInfo = malloc(verSize);
-		  if (!GetFileVersionInfo(drv, 0, verSize, verInfo)) goto done;
+		  if (!GetFileVersionInfoW(drv, 0, verSize, verInfo)) goto done;
 
 		  /* Try Unicode first */
-		  if (VerQueryValue(verInfo,"\\StringFileInfo\\040904B0\\FileVersion",
+		  if (VerQueryValueW(verInfo,L"\\StringFileInfo\\040904B0\\FileVersion",
 				   &vInfo, &vLen)) {
-			strcat(tmpString, vInfo);
-			goto done;
+            int utf8_len = WideCharToMultiByte(CP_UTF8, 0, vInfo, -1, NULL, 0, NULL, NULL);
+			char *utf8 = (char *)malloc(utf8_len);
+			if(utf8) {
+              WideCharToMultiByte(CP_UTF8, 0, vInfo, -1, utf8, utf8_len, NULL, NULL);
+              strncat(tmpString, utf8,sizeof(tmpString) - 1 - strlen(tmpString));
+              free(utf8);
+              goto done;
+            }
 		  }
 
 		  /* Try US/English next */
-		  if (VerQueryValue(verInfo,"\\StringFileInfo\\040904E4\\FileVersion",
+		  if (VerQueryValueW(verInfo,L"\\StringFileInfo\\040904E4\\FileVersion",
 				   &vInfo, &vLen)) {
-			strcat(tmpString, vInfo);
-			goto done;
+            int utf8_len = WideCharToMultiByte(CP_UTF8, 0, vInfo, -1, NULL, 0, NULL, NULL);
+            char *utf8 = (char *)malloc(utf8_len);
+            if (utf8) {
+              WideCharToMultiByte(CP_UTF8, 0, vInfo, -1, utf8, utf8_len, NULL, NULL);
+              strncat(tmpString, utf8, sizeof(tmpString) - 1 - strlen(tmpString));
+              free(utf8);
+              goto done;
+            }
 		  }
 
-		  strcat(tmpString, "???");
+		  strncat(tmpString, "???", sizeof(tmpString) - 1 - strlen(tmpString));
 
 		done:
 		  if (verInfo) {
@@ -813,7 +826,7 @@ void gatherSystemInfo(void) {
 			verInfo = NULL;
 		  }
 		}
-		strcat(tmpString,"\n");
+		strncat(tmpString,"\n",sizeof(tmpString) - 1 - strlen(tmpString));
       }
       RegCloseKey(hk);
     }
@@ -992,22 +1005,22 @@ versionInfo(void)
 /*                      Error handling                                      */
 /****************************************************************************/
 void SetupStderr()
-{ TCHAR tmpName[MAX_PATH+1];
+{ WCHAR tmpName[MAX_PATH+1];
 
   *stderrName = *stdoutName = 0;
   /* re-open stdout && stderr */
-  GetTempPath(MAX_PATH,tmpName);
+  GetTempPathW(MAX_PATH,tmpName);
   if(GetStdHandle(STD_ERROR_HANDLE) == INVALID_HANDLE_VALUE)
     {
-      GetTempFileName(tmpName,TEXT("sq"),0,stderrName);
-      freopen(stderrName,"w+t",stderr);
+      GetTempFileNameW(tmpName,L"sq",0,stderrName);
+      _wfreopen(stderrName,L"w+t",stderr);
     }
   else *stderrName = 0;
 
   if(GetStdHandle(STD_OUTPUT_HANDLE) == INVALID_HANDLE_VALUE)
     {
-      GetTempFileName(tmpName,TEXT("sq"),0,stdoutName);
-      freopen(stdoutName,"w+t",stdout);
+      GetTempFileNameW(tmpName,L"sq",0,stdoutName);
+      _wfreopen(stdoutName,L"w+t",stdout);
     }
   else *stdoutName = 0;
 }
@@ -1080,7 +1093,7 @@ extern char *__cogitBuildInfo;
     fprintf(f,"\n%s", gdInfoString);
 
     /* print VM version information */
-    fprintf(f,"\nVM Version: %s\n", VM_VERSION_TEXT);
+    fprintf(f,"\nVM Version: %s\n", VM_VERSION_VERBOSE);
 #if STACKVM
     fprintf(f,"Interpreter Build: %s\n", __interpBuildInfo);
 # if COGVM
@@ -1121,41 +1134,54 @@ static int inError = 0;
 void
 error(char *msg) {
   FILE *f;
-  TCHAR crashInfo[1024];
+  WCHAR crashInfo[1024];
   void *callstack[MAXFRAMES];
   symbolic_pc symbolic_pcs[MAXFRAMES];
   int nframes;
   int inVMThread = ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread());
+  int len;
+  WCHAR *msgW;
 
   if (inError)
 	exit(-2);
 
   inError = 1;
-	nframes = backtrace(callstack, MAXFRAMES);
-	symbolic_backtrace(++nframes, callstack, symbolic_pcs);
-
-    wsprintf(crashInfo,
-	   TEXT("Sorry but the VM has crashed.\n\n")
-	   TEXT("Reason: %s\n\n")
-	   TEXT("Current byte code: %d\n")
-	   TEXT("Primitive index: %d\n\n")
-	   TEXT("This information will be stored in the file\n")
-	   TEXT("%s\\%s\n")
-	   TEXT("with a complete stack dump"),
-	   msg,
-	   getCurrentBytecode(),
-	   methodPrimitiveIndex(),
-	   vmLogDirA,
-	   TEXT("crash.dmp"));
+  nframes = backtrace(callstack, MAXFRAMES);
+  symbolic_backtrace(++nframes, callstack, symbolic_pcs);
+  
+  len = MultiByteToWideChar(CP_UTF8, 0, msg, -1, NULL, 0);
+  if (len > 0) {
+    msgW = alloca(len * sizeof(WCHAR));
+    MultiByteToWideChar(CP_UTF8, 0, msg, -1, msgW, len);
+  }
+  else {
+    msgW = alloca(4 * sizeof(WCHAR));
+    wcscpy(msgW, L"???");
+  }
+#define __UNICODE_TEXT(x) L##x
+#define _UNICODE_TEXT(x) __UNICODE_TEXT(x)
+  _snwprintf(crashInfo,1024,
+      L"Sorry but the VM has crashed.\n\n"
+      L"Reason: %s\n\n"
+      L"Current byte code: %d\n"
+      L"Primitive index: %" _UNICODE_TEXT(PRIdSQINT) L"\n\n"
+      L"This information will be stored in the file\n"
+      L"%s\\%s\n"
+      L"with a complete stack dump",
+      msgW,
+      getCurrentBytecode(),
+      methodPrimitiveIndex(),
+      vmLogDirW,
+      L"crash.dmp");
   if(!fHeadlessImage)
-    MessageBox(stWindow,crashInfo,TEXT("Fatal VM error"),
+    MessageBoxW(stWindow,crashInfo,L"Fatal VM error",
                  MB_OK | MB_APPLMODAL | MB_ICONSTOP);
 
 #if !NewspeakVM
   SetCurrentDirectoryW(vmLogDirW);
 #endif
   /* print the above information */
-  f = fopen_for_append("crash.dmp");
+  f = fopen_for_append(L"crash.dmp");
   if(f){  
     time_t crashTime = time(NULL);
     fprintf(f,"---------------------------------------------------------------------\n");
@@ -1210,7 +1236,7 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
   void *callstack[MAXFRAMES];
   symbolic_pc symbolic_pcs[MAXFRAMES];
   int nframes, inVMThread;
-  TCHAR crashInfo[1024];
+  WCHAR crashInfo[1024];
   FILE *f;
   int byteCode = -2;
 
@@ -1237,32 +1263,36 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
 							callstack+1,
 							MAXFRAMES-1);
   symbolic_backtrace(++nframes, callstack, symbolic_pcs);
-  wsprintf(crashInfo,
-	   TEXT("Sorry but the VM has crashed.\n\n")
-	   TEXT("Exception code: %08X\n")
-	   TEXT("Exception address: %08X\n")
-	   TEXT("Current byte code: %d\n")
-	   TEXT("Primitive index: %d\n\n")
-	   TEXT("Crashed in %s thread\n\n")
-	   TEXT("This information will be stored in the file\n")
-	   TEXT("%s\\%s\n")
-	   TEXT("with a complete stack dump"),
+  _snwprintf(crashInfo,1024,
+	   L"Sorry but the VM has crashed.\n\n"
+	   L"Exception code:    %08x\n"
+#ifdef _WIN64
+	   L"Exception address: %016" _UNICODE_TEXT(PRIxSQPTR) L"\n"
+#else
+	   L"Exception address: %08" _UNICODE_TEXT(PRIxSQPTR) L"\n"
+#endif
+	   L"Current byte code: %d\n"
+	   L"Primitive index:   %" _UNICODE_TEXT(PRIdSQINT) L"\n\n"
+	   L"Crashed in %s thread\n\n"
+	   L"This information will be stored in the file\n"
+	   L"%s\\%s\n"
+	   L"with a complete stack dump",
 	   exp->ExceptionRecord->ExceptionCode,
-	   exp->ExceptionRecord->ExceptionAddress,
+	   (sqIntptr_t) (exp->ExceptionRecord->ExceptionAddress),
 	   byteCode,
 	   methodPrimitiveIndex(),
-	   inVMThread ? "the VM" : "some other",
-	   vmLogDirA,
-	   TEXT("crash.dmp"));
+	   inVMThread ? L"the VM" : L"some other",
+	   vmLogDirW,
+	   L"crash.dmp");
   if(!fHeadlessImage)
-    MessageBox(stWindow,crashInfo,TEXT("Fatal VM error"),
+    MessageBoxW(stWindow,crashInfo,L"Fatal VM error",
                  MB_OK | MB_APPLMODAL | MB_ICONSTOP);
 
 #if !NewspeakVM
   SetCurrentDirectoryW(vmLogDirW);
 #endif
   /* print the above information */
-  f = fopen_for_append("crash.dmp");
+  f = fopen_for_append(L"crash.dmp");
   if(f){  
     time_t crashTime = time(NULL);
     fprintf(f,"---------------------------------------------------------------------\n");
@@ -1372,7 +1402,7 @@ void __cdecl Cleanup(void)
   ioReleaseTime();
   /* tricky ... we have no systray icon when running
      headfull or when running as service on NT */
-  if(fHeadlessImage && (!fRunService || fWindows95))
+  if(fHeadlessImage && (!fRunService))
     SetSystemTrayIcon(0);
   if(palette) DeleteObject(palette);
   PROFILE_SHOW(ticksForReversal);
@@ -1380,12 +1410,12 @@ void __cdecl Cleanup(void)
   if(*stderrName)
     {
       fclose(stderr);
-      remove(stderrName);
+      _wremove(stderrName);
     }
   if(*stdoutName)
     {
       fclose(stdout);
-      remove(stdoutName);
+      _wremove(stdoutName);
     }
   OleUninitialize();
 }
@@ -1405,7 +1435,7 @@ sqImageFile findEmbeddedImage(void) {
 	int start;
 	int length;
 
-	f = sqImageFileOpen(vmName, "rb");
+	f = sqImageFileOpen(vmNameA, "rb");
 	if(!f) {
 		MessageBox(0,"Error opening VM",VM_NAME,MB_OK);
 		return 0;
@@ -1415,7 +1445,7 @@ sqImageFile findEmbeddedImage(void) {
 	sqImageFileSeek(f, endMarker);
     sqImageFileRead(&magic, 1, 4, f);
 	sqImageFileRead(&start, 1, 4, f);
-	sqMessageBox(MB_OK, "Magic number", "Expected:\t%x\nFound:\t\t%x", SQ_IMAGE_MAGIC, magic);
+	sqMessageBox(MB_OK, TEXT("Magic number", "Expected:\t%x\nFound:\t\t%x"), SQ_IMAGE_MAGIC, magic);
 	/* Magic number must be okay and start must be within executable boundaries */
 	if(magic != SQ_IMAGE_MAGIC || start < 0 || start >= endMarker) {
 		/* nope */
@@ -1425,7 +1455,7 @@ sqImageFile findEmbeddedImage(void) {
 	/* Might have an embedded image; seek back and double check */
 	sqImageFileSeek(f,start);
 	sqImageFileRead(&magic, 1, 4, f);
-	sqMessageBox(MB_OK, "Magic number", "Expected:\t%x\nFound:\t\t%x", SQ_IMAGE_MAGIC, magic);
+	sqMessageBox(MB_OK, TEXT("Magic number", "Expected:\t%x\nFound:\t\t%x"), SQ_IMAGE_MAGIC, magic);
 	if(magic != SQ_IMAGE_MAGIC) {
 		/* nope */
 		sqImageFileClose(f);
@@ -1441,6 +1471,7 @@ sqImageFile findEmbeddedImage(void) {
 	/* Gotcha! */
 	sqImageFileSeek(f, sqImageFilePosition(f) - 4);
 	strcpy(imageName, name);
+	MultiByteToWideChar(CP_UTF8,0,imageName,-1,imageNameW,MAX_PATH,NULL,NULL);
 	imageSize = endMarker - sqImageFilePosition(f);
 	return f;
 }
@@ -1490,7 +1521,7 @@ sqMain(int argc, char *argv[])
   int virtualMemory;
 
   /* set default fpu control word */
-  _controlfp(FPU_DEFAULT, _MCW_EM | _MCW_RC | _MCW_PC | _MCW_IC);
+  _controlfp(FPU_DEFAULT, FPU_MASK);
 
   LoadPreferences();
 
@@ -1498,9 +1529,9 @@ sqMain(int argc, char *argv[])
   if(fRunSingleApp) {
     HWND win = GetTopWindow(0);
     while (win != NULL) {
-      char buf[MAX_PATH];
-      GetClassName(win, buf, 80);
-      if(strcmp(windowClassName, buf) == 0) break;
+      TCHAR buf[MAX_PATH];
+      GetClassName(win, buf, MAX_PATH);
+      if(_tcscmp(windowClassName, buf) == 0) break;
       win = GetNextWindow(win, GW_HWNDNEXT);
     }
 
@@ -1547,11 +1578,6 @@ sqMain(int argc, char *argv[])
   fRunService = 0;
 #endif
 
-  /* look for a few things easy to handle */
-  if(fWindows95 && fBroadcastService95) {
-    PostMessage(HWND_BROADCAST, WM_BROADCAST_SERVICE, 0, 0);
-    return 0;
-  }
 
   /* set time zone accordingly */
   _tzset();
@@ -1567,17 +1593,14 @@ sqMain(int argc, char *argv[])
     svcStart = time(NULL);
     OutputLogMessage("\n\n");
     OutputLogMessage(ctime(&svcStart));
-    if(fWindows95) /* don't have a service name */
-      OutputLogMessage("The service");
-    else
-      OutputLogMessage(serviceName);
+    OutputLogMessageW(serviceName);
     OutputLogMessage(" started with the following command line\n");
     OutputLogMessage(initialCmdLine);
     OutputLogMessage("\n");
   }
 
   SetupFilesAndPath();
-  ioSetLogDirectoryOfSize(vmPath, strlen(vmPath));
+  ioSetLogDirectoryOfSize(vmPathA, strlen(vmPathA));
 
   /* release resources on exit */
   atexit(Cleanup);
@@ -1585,7 +1608,7 @@ sqMain(int argc, char *argv[])
 #ifndef NO_SERVICE
   /* if service installing is requested, do so */
   if(installServiceName && *installServiceName) {
-    strcpy(serviceName, installServiceName);
+    wcscpy(serviceName, installServiceName);
     sqServiceInstall();
     /* When installing was successful we won't come
        to this point. Otherwise ... */
@@ -1597,7 +1620,6 @@ sqMain(int argc, char *argv[])
   SetupKeymap();
   SetupWindows();
   SetupPixmaps();
-  SetupService95();
   { extern void ioInitTime(void);
 	extern void ioInitThreads(void);
 	ioInitTime();
@@ -1620,7 +1642,7 @@ sqMain(int argc, char *argv[])
 
 
   if(!imageFile) {
-    imageSize = SqueakImageLength(toUnicode(imageName));
+    imageSize = SqueakImageLength(imageNameW);
     if(imageSize == 0) printUsage(2);
   }
 
@@ -1650,13 +1672,13 @@ sqMain(int argc, char *argv[])
 
 #if !NewspeakVM
     /* set the CWD to the image location */
-    if(*imageName) {
-      char path[MAX_PATH+1], *ptr;
-      strcpy(path,imageName);
-      ptr = strrchr(path, '\\');
+    if(*imageNameW) {
+      WCHAR path[MAX_PATH+1], *ptr;
+      wcsncpy(path,imageNameW,MAX_PATH);
+      ptr = wcsrchr(path, '\\');
       if(ptr) {
-	*ptr = 0;
-	SetCurrentDirectory(path);
+        *ptr = 0;
+        SetCurrentDirectoryW(path);
       }
     }
 #endif /* !NewspeakVM */
@@ -1666,7 +1688,7 @@ sqMain(int argc, char *argv[])
 
     /* if headless running is requested, try to to create an icon
        in the Win95/NT system tray */
-    if(fHeadlessImage && (!fRunService || fWindows95))
+    if(fHeadlessImage && (!fRunService))
       SetSystemTrayIcon(1);
     
     /* read the image file */
@@ -1715,17 +1737,13 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
   /* a few things which need to be done first */
   gatherSystemInfo();
 
-  /* check if we're running NT or 95 */
-  fWindows95 = (GetVersion() & 0x80000000) != 0;
-
   /* fetch us a copy of the command line */
   initialCmdLine = _strdup(lpCmdLine);
 
   /* fetch us the name of the executable */
   {
-    WCHAR vmNameW[MAX_PATH];
     GetModuleFileNameW(hInst, vmNameW, MAX_PATH);
-    WideCharToMultiByte(CP_UTF8, 0, vmNameW, -1, vmName, MAX_PATH, NULL, NULL);
+    WideCharToMultiByte(CP_UTF8, 0, vmNameW, -1, vmNameA, MAX_PATH_UTF8, NULL, NULL);
   }
 	/* parse the command line into the unix-style argc, argv, converting to
 	 * UTF-8 on the way. */
@@ -1774,20 +1792,13 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
      if somebody out there knows how to find out when we're starting
      as a service - LET ME KNOW!
   */
-  if(!fWindows95)                      /* 1) running NT */
-    if(!*lpCmdLine)                  /* 2) No command line */
-      if(sqServiceMain())          /* try starting the service */
-	return 0;                /* service was run - exit */
+  if(!*lpCmdLine)          /* No command line */
+    if(sqServiceMain())    /* try starting the service */
+      return 0;            /* service was run - exit */
 
 #endif
 
-  SQ_LAUNCH_DROP = RegisterWindowMessage("SQUEAK_LAUNCH_DROP");
-
-  /* Special startup stuff for windows 95 */
-  if(fWindows95) {
-    /* The message we use for notifying services of user logon */
-    WM_BROADCAST_SERVICE = RegisterWindowMessage(msgBroadcastService);
-  }
+  SQ_LAUNCH_DROP = RegisterWindowMessage(TEXT("SQUEAK_LAUNCH_DROP"));
 
   /* start the non-service version */
   sqMain(clargc, clargv);
@@ -1836,19 +1847,27 @@ parseVMArgument(int argc, char *argv[])
 
 	/* parameters */
 	else if (argc > 1 && !strcmp(argv[0], VMOPTION("service"))) {
-		installServiceName = argv[1];
+		int len = MultiByteToWideChar(CP_UTF8, 0, argv[1], -1, installServiceName, 0);
+		installServiceName = malloc(len * sizeof(WCHAR)); /* note: we will never free installServiceName - it's a global for lifetime of the VM */
+		MultiByteToWideChar(CP_UTF8, 0, argv[1], -1, installServiceName, len);
 		return 2;
 	}
 	else if (!strncmp(argv[0], VMOPTION("service:"), strlen(VMOPTION("service:")))) {
-		installServiceName = argv[0] + strlen(VMOPTION("service:"));
+		int len = MultiByteToWideChar(CP_UTF8, 0, argv[0] + strlen(VMOPTION("log:")), -1, installServiceName, 0);
+		logName = malloc(len * sizeof(WCHAR));
+		MultiByteToWideChar(CP_UTF8, 0, argv[0] + strlen(VMOPTION("log:")), -1, installServiceName, len);
 		return 1;
 	}
 	else if (argc > 1 && !strcmp(argv[0], VMOPTION("log"))) {
-		logName = argv[1];
+		int len=MultiByteToWideChar(CP_UTF8, 0, argv[1], -1, logName, 0);
+		logName = malloc(len * sizeof(WCHAR)); /* note: we will never free logName - it's a global for lifetime of the VM */
+		MultiByteToWideChar(CP_UTF8, 0, argv[1], -1, logName, len);
 		return 2;
 	}
 	else if (!strncmp(argv[0], VMOPTION("log:"), strlen(VMOPTION("log:")))) {
-		logName = argv[0] + strlen(VMOPTION("log:"));
+		int len = MultiByteToWideChar(CP_UTF8, 0, argv[0] + strlen(VMOPTION("log:")), -1, logName, 0);
+		logName = malloc(len * sizeof(WCHAR));
+		MultiByteToWideChar(CP_UTF8, 0, argv[0] + strlen(VMOPTION("log:")), -1, logName, len);
 		return 1;
 	}
 	else if (argc > 1 && !strcmp(argv[0], VMOPTION("memory"))) {
@@ -2013,10 +2032,6 @@ parseVMArgument(int argc, char *argv[])
 #endif
 		return 1; }
 
-	/* service support on 95 */
-	else if (!strcmp(argv[0], VMOPTION("service95"))) { fRunService = true; return 1; }
-	else if (!strcmp(argv[0], VMOPTION("broadcast95"))) { fBroadcastService95 = true; return 1; }
-
 	return 0;	/* option not recognised */
 }
 
@@ -2086,7 +2101,7 @@ SubsystemType()
     IMAGE_OPTIONAL_HEADER image_optional_header;
 
     /* Open the reference file. */ 
-    hImage = CreateFile(vmName,
+    hImage = CreateFileW(vmNameW,
                         GENERIC_READ,
                         FILE_SHARE_READ,
                         NULL,
@@ -2150,7 +2165,8 @@ parseGenericArgs(int argc, char *argv[])
 
 	if (*imageName == 0) { /* only try to use image name if none is provided */
 		if (*argv[0] && IsImage(argv[0])) {
-			strcpy(imageName, argv[0]);
+			strncpy(imageName, argv[0],MAX_PATH_UTF8);
+			MultiByteToWideChar(CP_UTF8, 0, imageName, -1, imageNameW, MAX_PATH);
 			/* if provided, the image is a vm argument. */
 			vmOptions[numOptionsVM++] = argv[0];
 		}

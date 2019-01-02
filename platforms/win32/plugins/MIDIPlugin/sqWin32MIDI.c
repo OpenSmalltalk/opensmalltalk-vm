@@ -605,7 +605,7 @@ int finishSysExCommand(sqMidiPort *port, char *bufferPtr, int count)
 /* Return the port with the given number or NULL */
 static sqMidiPort* GetPort(int portNum)
 {
-  if(portNum > MAX_DEVICES || portNum < 0)
+  if(portNum >= MAX_DEVICES || portNum < 0)
     {
       success(false);
       return NULL;
