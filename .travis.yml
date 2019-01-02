@@ -24,7 +24,7 @@ jobs:
   fast_finish: true
   include:
   - stage: "linux32ARMv6 builds"
-  - env: ARCH="linux32ARMv6" FLAVOR="squeak.cog.spur" CHROOT="schroot -p -c rpi --
+    env: ARCH="linux32ARMv6" FLAVOR="squeak.cog.spur" CHROOT="schroot -p -c rpi --
       bash -c "
     dist: trusty
     group: edge
