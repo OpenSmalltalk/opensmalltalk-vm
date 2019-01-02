@@ -364,7 +364,7 @@ static void CALLBACK midiInCallback(HMIDIIN  hMidiIn,UINT  uMsg, DWORD_PTR  dwUs
     { /* Cache controller values in the driver */
       switch(cmd) {
         case ControlCmd: /* Read a control command */
-          channel = (dwParam1 >> 8) & 0xFF;
+          channel = (dwParam1 >> 8) & 0x7F;
           value =  (dwParam1 >> 16) & 0xFF;
           port->cache.sqControllers[channel] = value;
           return;
@@ -375,7 +375,7 @@ static void CALLBACK midiInCallback(HMIDIIN  hMidiIn,UINT  uMsg, DWORD_PTR  dwUs
           port->cache.sqPitchBend[channel] = (value2 << 7) + value;
           return;
         case PolyPressCmd: /* Read polyphonic key pressure */
-          channel = (dwParam1 >> 8) & 0xFF;
+          channel = (dwParam1 >> 8) & 0x7F;
           value =  (dwParam1 >> 16) & 0xFF;
           port->cache.sqKeyPressures[channel] = value;
           return;
