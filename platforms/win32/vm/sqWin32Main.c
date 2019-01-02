@@ -94,7 +94,6 @@ int getFullScreenFlag(void);
 sqInt methodPrimitiveIndex(void);
 int getCurrentBytecode(void);
 
-extern TCHAR squeakIniName[];
 extern void printPhaseTime(int);
 
 /* Import from sqWin32Alloc.c */

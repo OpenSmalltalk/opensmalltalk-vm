@@ -28,9 +28,6 @@ static char untrustedUserDirectoryUTF8[MAX_PATH];
 static char secureUserDirectoryUTF8[MAX_PATH];
 static char resourceDirectoryUTF8[MAX_PATH];
 
-/* imported from sqWin32Prefs.c */
-extern WCHAR squeakIniName[MAX_PATH];
-
 /* imported from sqWin32Main.c */
 extern BOOL fLowRights;  /* started as low integrity process, 
                         need to use alternate untrustedUserDirectory */
@@ -293,20 +290,20 @@ sqInt ioInitSecurity(void) {
   /* Query Squeak.ini for network installations */
   GetPrivateProfileStringW(L"Security", L"SecureDirectory",
                           secureUserDirectory, secureUserDirectory,
-                          MAX_PATH, squeakIniName);
+                          MAX_PATH, squeakIniNameW);
   if(fLowRights) {/* use alternate untrustedUserDirectory */
       GetPrivateProfileStringW(L"Security", L"UserDirectoryLow",
                           untrustedUserDirectory, untrustedUserDirectory,
-                          MAX_PATH, squeakIniName);
+                          MAX_PATH, squeakIniNameW);
   } else {
       GetPrivateProfileStringW(L"Security", L"UserDirectory",
                           untrustedUserDirectory, untrustedUserDirectory,
-                          MAX_PATH, squeakIniName);
+                          MAX_PATH, squeakIniNameW);
   }
 
   GetPrivateProfileStringW(L"Security", L"ResourceDirectory",
                           resourceDirectory, resourceDirectory,
-                          MAX_PATH, squeakIniName);
+                          MAX_PATH, squeakIniNameW);
 
   /* Attempt to read local user settings from registry */
   ok = RegOpenKeyA(HKEY_CURRENT_USER, HKEY_SQUEAK_ROOT, &hk);
