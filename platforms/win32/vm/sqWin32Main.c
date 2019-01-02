@@ -1674,6 +1674,7 @@ sqMain(int argc, char *argv[])
     if(*imageNameW) {
       WCHAR path[MAX_PATH+1], *ptr;
       wcsncpy(path,imageNameW,MAX_PATH);
+	  path[MAX_PATH] = 0;
       ptr = wcsrchr(path, '\\');
       if(ptr) {
         *ptr = 0;
