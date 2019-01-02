@@ -696,9 +696,9 @@ void gatherSystemInfo(void) {
   }
 #else
   snprintf(tmpString, sizeof(tmpString),
-	  TEXT("Display Information: \n")
-      TEXT("\tGraphics adapter name: %s\n")
-      TEXT("\tPrimary monitor resolution: %d x %d\n"),
+	  "Display Information: \n"
+      "\tGraphics adapter name: %s\n"
+      "\tPrimary monitor resolution: %d x %d\n",
 	  gDev.DeviceString,
 	  screenX, screenY);
 #endif
