@@ -1,7 +1,3 @@
-Test branch for ARCH="linux32ARMv6" FLAVOR="pharo.cog.spur"
-
-
-
 The Cog VM source tree
 ---------------------
 This is the README for the Cog Git source tree:

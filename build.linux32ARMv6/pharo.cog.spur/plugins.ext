@@ -1,17 +1,15 @@
-# Copied, perhaps edited, from ../../src/examplePlugins.ext
+# Copied, perhaps edited, from ../src/examplePlugins.ext
 EXTERNAL_PLUGINS = \
 B3DAcceleratorPlugin \
-FileAttributesPlugin \
-Squeak3D \
-SqueakFFIPrims \
+FT2Plugin \
+JPEGReaderPlugin \
+JPEGReadWriter2Plugin \
+RePlugin \
+InternetConfigPlugin \
+SurfacePlugin \
+EventsHandlerPlugin \
 SqueakSSL \
-LocalePlugin \
-UnicodePlugin \
-UnixOSProcessPlugin \
-UUIDPlugin \
-WeDoPlugin \
-ImmX11Plugin \
-XDisplayControlPlugin \
-#BochsIA32Plugin \
-#BochsX64Plugin \
-#GdbARMPlugin
+AioPlugin \
+FileAttributesPlugin \
+#SDL2DisplayPlugin \
+
