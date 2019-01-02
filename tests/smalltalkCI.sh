@@ -47,6 +47,6 @@ unzip -q -o smalltalkCI.zip
 
 pushd smalltalkCI-* > /dev/null
 
-"./run.sh" -s "${TESTIMAGE}" --vm "${VM}" "${STON_CONFIG}"
+"./run.sh" -s "${TESTIMAGE}" --vm "${VM}"  "${STON_CONFIG}"
 
 popd > /dev/null

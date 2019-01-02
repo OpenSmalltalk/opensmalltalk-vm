@@ -28,30 +28,30 @@ jobs:
   fast_finish: true
   include:
   - stage: "Main Squeak and Pharo builds"
-    env: ARCH="linux32x86"    FLAVOR="squeak.cog.spur"          TESTIMAGE="Squeak-5.1"
-  - env: ARCH="macos32x86"    FLAVOR="squeak.cog.spur"          TESTIMAGE="Squeak-5.1"
+    env: ARCH="linux32x86"    FLAVOR="squeak.cog.spur"          TESTIMAGE="Squeak32-5.1"
+  - env: ARCH="macos32x86"    FLAVOR="squeak.cog.spur"          TESTIMAGE="Squeak32-5.1"
     <<: *mac-build
   - env: ARCH="linux64x64"    FLAVOR="squeak.cog.spur"          TESTIMAGE="skip"
   - env: ARCH="macos64x64"    FLAVOR="squeak.cog.spur"          TESTIMAGE="skip"
     <<: *mac-build
-  - env: ARCH="linux32x86"    FLAVOR="pharo.cog.spur"           TESTIMAGE="Pharo-5.0"   HEARTBEAT="threaded"
-  - env: ARCH="macos32x86"    FLAVOR="pharo.cog.spur"           TESTIMAGE="Pharo-5.0"
+  - env: ARCH="linux32x86"    FLAVOR="pharo.cog.spur"           TESTIMAGE="Pharo32-5.0"   HEARTBEAT="threaded"
+  - env: ARCH="macos32x86"    FLAVOR="pharo.cog.spur"           TESTIMAGE="Pharo32-5.0"
     <<: *mac-build
-  - env: ARCH="linux64x64"    FLAVOR="pharo.cog.spur"           TESTIMAGE="skip"        HEARTBEAT="threaded" 
+  - env: ARCH="linux64x64"    FLAVOR="pharo.cog.spur"           TESTIMAGE="skip"          HEARTBEAT="threaded" 
   - env: ARCH="macos64x64"    FLAVOR="pharo.cog.spur"           TESTIMAGE="skip"
     <<: *mac-build
 
   - stage: "Other Linux builds"
     env: ARCH="linux64x64"    FLAVOR="newspeak.cog.spur"        TESTIMAGE="skip"
-  - env: ARCH="linux64x64"    FLAVOR="pharo.cog.spur"           TESTIMAGE="skip"        HEARTBEAT="itimer"
-  #-env: ARCH="linux64x64"    FLAVOR="pharo.sista.spur"         TESTIMAGE="skip"        HEARTBEAT="threaded"
+  - env: ARCH="linux64x64"    FLAVOR="pharo.cog.spur"           TESTIMAGE="skip"          HEARTBEAT="itimer"
+  #-env: ARCH="linux64x64"    FLAVOR="pharo.sista.spur"         TESTIMAGE="skip"          HEARTBEAT="threaded"
   - env: ARCH="linux32x86"    FLAVOR="newspeak.cog.spur"        TESTIMAGE="refer newspeakBootstrap.sh"
-  - env: ARCH="linux32x86"    FLAVOR="squeak.cog.v3"            TESTIMAGE="Squeak-4.6"
+  - env: ARCH="linux32x86"    FLAVOR="squeak.cog.v3"            TESTIMAGE="Squeak32-4.6"
   - env: ARCH="linux32x86"    FLAVOR="squeak.sista.spur"        TESTIMAGE="skip"
-  - env: ARCH="linux32x86"    FLAVOR="pharo.cog.spur"           TESTIMAGE="Pharo-5.0"   HEARTBEAT="itimer"
-  - env: ARCH="linux32x86"    FLAVOR="pharo.sista.spur"         TESTIMAGE="skip"        HEARTBEAT="threaded"
+  - env: ARCH="linux32x86"    FLAVOR="pharo.cog.spur"           TESTIMAGE="Pharo32-5.0"   HEARTBEAT="itimer"
+  - env: ARCH="linux32x86"    FLAVOR="pharo.sista.spur"         TESTIMAGE="skip"          HEARTBEAT="threaded"
     compiler: clang
-  - env: ARCH="linux32x86"    FLAVOR="pharo.sista.spur"         TESTIMAGE="skip"        HEARTBEAT="itimer" 
+  - env: ARCH="linux32x86"    FLAVOR="pharo.sista.spur"         TESTIMAGE="skip"          HEARTBEAT="itimer" 
     compiler: clang
 
   - stage: "Other Mac builds"
@@ -67,7 +67,7 @@ jobs:
     <<: *mac-build
   - env: ARCH="macos32x86"    FLAVOR="pharo.cog.spur.lowcode"   TESTIMAGE="skip"
     <<: *mac-build
-  - env: ARCH="macos32x86"    FLAVOR="squeak.cog.v3"            TESTIMAGE="Squeak-4.6"
+  - env: ARCH="macos32x86"    FLAVOR="squeak.cog.v3"            TESTIMAGE="Squeak32-4.6"
     <<: *mac-build
   - env: ARCH="macos32x86"    FLAVOR="squeak.sista.spur"        TESTIMAGE="skip"
     <<: *mac-build
@@ -76,8 +76,8 @@ jobs:
     env: ARCH="linux64x64"    FLAVOR="newspeak.stack.spur"      TESTIMAGE="refer newspeakBootstrap.sh"
   - env: ARCH="linux64x64"    FLAVOR="squeak.stack.spur"        TESTIMAGE="skip"
   - env: ARCH="linux32x86"    FLAVOR="newspeak.stack.spur"      TESTIMAGE="refer newspeakBootstrap.sh"
-  - env: ARCH="linux32x86"    FLAVOR="squeak.stack.spur"        TESTIMAGE="Squeak-5.1"
-  - env: ARCH="linux32x86"    FLAVOR="squeak.stack.v3"          TESTIMAGE="Squeak-4.6"
+  - env: ARCH="linux32x86"    FLAVOR="squeak.stack.spur"        TESTIMAGE="Squeak32-5.1"
+  - env: ARCH="linux32x86"    FLAVOR="squeak.stack.v3"          TESTIMAGE="Squeak32-4.6"
   - env: ARCH="macos64x64"    FLAVOR="pharo.stack.spur"         TESTIMAGE="skip"
     <<: *mac-build
   - env: ARCH="macos64x64"    FLAVOR="pharo.stack.spur.lowcode" TESTIMAGE="skip"
@@ -88,38 +88,38 @@ jobs:
     <<: *mac-build
   - env: ARCH="macos64x64"    FLAVOR="newspeak.stack.spur"      TESTIMAGE="refer newspeakBootstrap.sh"
     <<: *mac-build
-  - env: ARCH="macos32x86"    FLAVOR="pharo.stack.spur"         TESTIMAGE="Pharo-5.0"
+  - env: ARCH="macos32x86"    FLAVOR="pharo.stack.spur"         TESTIMAGE="Pharo32-5.0"
     <<: *mac-build
   - env: ARCH="macos32x86"    FLAVOR="pharo.stack.spur.lowcode" TESTIMAGE="skip"
     <<: *mac-build
-  - env: ARCH="macos32x86"    FLAVOR="squeak.stack.spur"        TESTIMAGE="Squeak-5.1"
+  - env: ARCH="macos32x86"    FLAVOR="squeak.stack.spur"        TESTIMAGE="Squeak32-5.1"
     <<: *mac-build
-  - env: ARCH="macos32x86"    FLAVOR="squeak.stack.v3"          TESTIMAGE="Squeak-4.6"
+  - env: ARCH="macos32x86"    FLAVOR="squeak.stack.v3"          TESTIMAGE="Squeak32-4.6"
     <<: *mac-build
 
 # Don't run tests on ARM (ARM builds already take a long time)
   - stage: "linux32ARMv6 builds"
-    env: ARCH="linux32ARMv6"  FLAVOR="newspeak.cog.spur"        TESTIMAGE="skip"        CHROOT="schroot -p -c rpi
+    env: ARCH="linux32ARMv6"  FLAVOR="newspeak.cog.spur"        TESTIMAGE="skip"          CHROOT="schroot -p -c rpi
       -- bash -c "
     dist: trusty
     group: edge
-  - env: ARCH="linux32ARMv6"  FLAVOR="newspeak.stack.spur"      TESTIMAGE="skip"        CHROOT="schroot -p -c rpi
+  - env: ARCH="linux32ARMv6"  FLAVOR="newspeak.stack.spur"      TESTIMAGE="skip"          CHROOT="schroot -p -c rpi
       -- bash -c "
     dist: trusty
     group: edge
-  - env: ARCH="linux32ARMv6"  FLAVOR="squeak.cog.spur"          TESTIMAGE="skip"        CHROOT="schroot -p -c rpi --
+  - env: ARCH="linux32ARMv6"  FLAVOR="squeak.cog.spur"          TESTIMAGE="skip"          CHROOT="schroot -p -c rpi --
       bash -c "
     dist: trusty
     group: edge
-  - env: ARCH="linux32ARMv6"  FLAVOR="pharo.cog.spur"           TESTIMAGE="skip"        CHROOT="schroot -p -c rpi --
+  - env: ARCH="linux32ARMv6"  FLAVOR="pharo.cog.spur"           TESTIMAGE="skip"          CHROOT="schroot -p -c rpi --
       bash -c "
     dist: trusty
     group: edge
-  - env: ARCH="linux32ARMv6"  FLAVOR="squeak.stack.spur"        TESTIMAGE="skip"        CHROOT="schroot -p -c rpi
+  - env: ARCH="linux32ARMv6"  FLAVOR="squeak.stack.spur"        TESTIMAGE="skip"          CHROOT="schroot -p -c rpi
       -- bash -c "
     dist: trusty
     group: edge
-  - env: ARCH="linux32ARMv6"  FLAVOR="squeak.stack.v3"          TESTIMAGE="skip"        CHROOT="schroot -p -c rpi --
+  - env: ARCH="linux32ARMv6"  FLAVOR="squeak.stack.v3"          TESTIMAGE="skip"          CHROOT="schroot -p -c rpi --
       bash -c "
     dist: trusty
     group: edge
