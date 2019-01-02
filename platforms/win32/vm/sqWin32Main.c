@@ -541,11 +541,13 @@ void gatherSystemInfo(void) {
 
   {
     HANDLE hUser = LoadLibraryA( "user32.dll" );
-    pfnEnumDisplayDevices pEnumDisplayDevices = (pfnEnumDisplayDevices)
-      GetProcAddress(hUser, "EnumDisplayDevicesA");
     ZeroMemory(&gDev, sizeof(gDev));
     gDev.cb = sizeof(gDev);
-    if (pEnumDisplayDevices) pEnumDisplayDevices(NULL, 0, &gDev, 0);
+	if(hUser) {
+      pfnEnumDisplayDevices pEnumDisplayDevices = (pfnEnumDisplayDevices)
+              GetProcAddress(hUser, "EnumDisplayDevicesA");
+      if (pEnumDisplayDevices) pEnumDisplayDevices(NULL, 0, &gDev, 0);
+    }
   }
 
   { /* Figure out make and model from OEMINFO.ini */
