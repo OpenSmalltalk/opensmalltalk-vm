@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set -ex
 # PharoVM with VM profiler and threaded heartbeat
 INSTALLDIR=phcogspurlinuxhtRPi
 # disable build of all dependencies by default because travis build takes too much time then fails.
