@@ -5,6 +5,8 @@ AsynchFilePlugin \
 B2DPlugin \
 BitBltPlugin \
 BMPReadWriterPlugin \
+JPEGReaderPlugin \
+JPEGReadWriter2Plugin \
 CroquetPlugin \
 ZipPlugin \
 DropPlugin \

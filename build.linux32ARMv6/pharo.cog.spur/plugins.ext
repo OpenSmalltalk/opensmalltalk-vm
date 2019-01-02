@@ -2,8 +2,6 @@
 EXTERNAL_PLUGINS = \
 B3DAcceleratorPlugin \
 FT2Plugin \
-JPEGReaderPlugin \
-JPEGReadWriter2Plugin \
 RePlugin \
 InternetConfigPlugin \
 SurfacePlugin \
