@@ -45,8 +45,7 @@ Class {
 		'thisInstruction',
 		'previousInstruction',
 		'jumpTarget',
-		'thisPC',
-		'targets'
+		'thisPC'
 	],
 	#classVars : [
 		'ReturnSelectors'
@@ -62,7 +61,7 @@ DominatorFinder class >> initialize [
 
 { #category : #'message handling' }
 DominatorFinder >> doesNotUnderstand: aMessage [
-	self recordThisInstruction: aMessage
+	self recordThisInstruction: aMessage selector
 ]
 
 { #category : #accessing }
@@ -84,13 +83,13 @@ DominatorFinder >> interpretNextInstructionFor: client [
 		previousInstruction == #jump:
 			ifTrue:
 		 		[(jumpTarget >= pc
-				  and: [(targets includes: jumpTarget) not]) ifTrue:
-					[dominators at: cameFromPC put: jumpTarget.
-					 targets add: jumpTarget]]
+				  and: [(cameFroms at: jumpTarget) isNil]) ifTrue:
+					[self assert: (dominators includesKey: cameFromPC) not.
+					 dominators at: cameFromPC put: jumpTarget]]
 			ifFalse:
-				[(targets includes: pc) ifFalse:
-					[dominators at: cameFromPC put: pc.
-					 targets add: pc]]].
+				"the first conditional branch that branches to a target not preceded by an unconditional branch dominates the target of the conditional branch"
+				[(dominators at: cameFromPC ifAbsent: nil) ifNil:
+					[dominators at: cameFromPC put: pc]]].
 	thisPC := pc.
 	result := encoderClass interpretNextInstructionFor: client in: self.
 	previousInstruction := thisInstruction
@@ -104,7 +103,7 @@ DominatorFinder >> isReturn: aMessageSelector [
 { #category : #'instruction decoding' }
 DominatorFinder >> jump: distance [
 	jumpTarget := pc + distance.
-	self recordThisInstruction: (Message selector: #jump: argument: distance)
+	self recordThisInstruction: #jump:
 ]
 
 { #category : #'instruction decoding' }
@@ -114,7 +113,7 @@ DominatorFinder >> jump: distance if: condition [
 	(cameFroms at: target)
 		ifNil: [cameFroms at: target put: thisPC]
 		ifNotNil: [:cameFromPC| self assert: cameFromPC < thisPC].
-	self recordThisInstruction: (Message selector: #jump: argument: distance)
+	self recordThisInstruction: #jump:if:
 ]
 
 { #category : #private }
@@ -122,11 +121,10 @@ DominatorFinder >> method: method pc: startpc [
 	super method: method pc: startpc.
 	cameFroms := Array new: method endPC.
 	encoderClass := method encoderClass.
-	dominators := Dictionary new.
-	targets := Set new
+	dominators := Dictionary new
 ]
 
 { #category : #private }
-DominatorFinder >> recordThisInstruction: aMessage [
-	thisInstruction := aMessage selector
+DominatorFinder >> recordThisInstruction: aSelector [
+	thisInstruction := aSelector
 ]
