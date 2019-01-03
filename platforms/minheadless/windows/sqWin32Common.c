@@ -9,7 +9,9 @@ BOOL fLowRights = 0;
 static TCHAR w_buffer1[MAX_BUFFER]; /* wide buffer 1 */
 static TCHAR w_buffer2[MAX_BUFFER]; /* wide buffer 2 */
 static char  a_buffer1[MAX_BUFFER]; /* ansi buffer 1 */
-TCHAR squeakIniName[MAX_PATH + 1];;
+
+/* Stub for SecurityPlugin */
+WCHAR squeakIniNameW[MAX_PATH + 1];
 
 static TCHAR *
 fromSqueakInto(const char *sqPtr, int sqSize, TCHAR* buffer)
