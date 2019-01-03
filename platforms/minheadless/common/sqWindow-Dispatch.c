@@ -92,7 +92,7 @@ ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth,
 void
 ioNoteDisplayChangedwidthheightdepth(void *b, int w, int h, int d)
 {
-    return currentWindowSystem->noteDisplayChangedWidthHeightDepth(b, w, h, d);
+    currentWindowSystem->noteDisplayChangedWidthHeightDepth(b, w, h, d);
 }
 
 sqInt
