@@ -4,7 +4,7 @@ set -e
 INSTALLDIR=phcogspurlinuxhtRPi
 # disable build of all dependencies by default because travis build takes too much time then fails.
 # in case we build "non-dependency" version, we need to remove plugins with dependencies (SDL2 in particular)
-if [ $1 = "all" ]; then
+if [ "$1" = "all" ]; then
 THIRDPARTYLIBS="libsdl2 libssh2 libgit2"
 EXTERNALPLUGINS="plugins.ext.all"
 shift 
