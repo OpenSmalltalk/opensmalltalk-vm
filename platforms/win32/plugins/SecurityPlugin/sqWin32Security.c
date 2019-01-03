@@ -388,7 +388,7 @@ int _ioSetImageWrite(int enable) {
 int _ioSetFileAccess(int enable) {
   if(enable == allowFileAccess) return 1;
   if(!allowFileAccess) {
-    if (!sqAskSecurityYesNoQuestion("WARNING: Re-enabling the ability to write the image is a serious security hazard. Do you want to continue?"))
+    if (!sqAskSecurityYesNoQuestion("WARNING: Re-enabling the ability to access arbitrary files is a serious security hazard. Do you want to continue?"))
       return 0;
     if (!sqAskSecurityYesNoQuestion("WARNING: Untrusted code could WIPE OUT your entire hard disk, STEAL your credit card information and send your PERSONAL documents to the entire world. Do you really want to continue?"))
       return 0;
@@ -402,7 +402,7 @@ int _ioSetFileAccess(int enable) {
 int _ioSetSocketAccess(int enable) {
   if(enable == allowSocketAccess) return 1;
   if(!allowSocketAccess) {
-    if (!sqAskSecurityYesNoQuestion("WARNING: Re-enabling the ability to write the image is a serious security hazard. Do you want to continue?"))
+    if (!sqAskSecurityYesNoQuestion("WARNING: Re-enabling the ability to use sockets is a serious security hazard. Do you want to continue?"))
       return 0;
     if (!sqAskSecurityYesNoQuestion("WARNING: Untrusted code could WIPE OUT your entire hard disk, STEAL your credit card information and send your PERSONAL documents to the entire world. Do you really want to continue?"))
       return 0;
