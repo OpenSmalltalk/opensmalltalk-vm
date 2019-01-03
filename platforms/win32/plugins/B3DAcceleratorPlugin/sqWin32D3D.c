@@ -1077,9 +1077,12 @@ int d3dSetIntProperty(int handle, int prop, int value)
     ERROR_CHECK;
     return 1;
   case 2: /* polygon mode */
-    if(value == 0) dwState = D3DFILL_SOLID;
-    if(value == 1) dwState = D3DFILL_WIREFRAME;
-    if(value == 2) dwState = D3DFILL_POINT;
+    switch (value) {
+      case 0: dwState = D3DFILL_SOLID; break;
+      case 1: dwState = D3DFILL_WIREFRAME; break;
+      case 2: dwState = D3DFILL_POINT; break;
+      default: return 0;
+    }
     hRes = lpDevice->lpVtbl->
       SetRenderState(lpDevice, D3DRENDERSTATE_FILLMODE, dwState);
     ERROR_CHECK;

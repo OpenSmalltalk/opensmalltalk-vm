@@ -269,17 +269,21 @@ extern WCHAR vmNameW[];          /* name of the interpreter's executable - UTF16
 extern char windowTitle[];       /* window title string - UTF8 */
 extern char vmBuildString[];     /* the vm build string */
 extern TCHAR windowClassName[];  /* class name for the window */
+extern char  squeakIniNameA[];   /* full path to ini file - UTF8 */
+extern WCHAR squeakIniNameW[];   /* full path to ini file - UTF16 */
 
 #ifdef UNICODE
 #define imageNameT imageNameW /* define the generic TCHAR* version */
 #define imagePath  imagePathW
 #define vmName vmNameW
 #define vmPath vmPathW
+#define squeakIniName squeakIniNameW
 #else
 #define imageNameT imageName
 #define imagePath  imagePathA
 #define vmName vmNameA
 #define vmPath vmPathA
+#define squeakIniName squeakIniNameA
 #endif
 
 extern UINT SQ_LAUNCH_DROP;

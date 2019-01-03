@@ -264,6 +264,10 @@ get_modules(void)
 	HANDLE hPsApi = LoadLibraryA("psapi.dll");
 	HMODULE *modules;
 
+	if (!hPsApi) {
+		printLastError(TEXT("LoadLibrary psapi"));
+		return;
+	}
 	EnumProcessModules = (void*)GetProcAddress(hPsApi, "EnumProcessModules");
 	GetModuleInformation=(void*)GetProcAddress(hPsApi, "GetModuleInformation");
 

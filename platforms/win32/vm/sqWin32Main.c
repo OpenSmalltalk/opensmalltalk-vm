@@ -94,7 +94,6 @@ int getFullScreenFlag(void);
 sqInt methodPrimitiveIndex(void);
 int getCurrentBytecode(void);
 
-extern TCHAR squeakIniName[];
 extern void printPhaseTime(int);
 
 /* Import from sqWin32Alloc.c */
@@ -542,11 +541,13 @@ void gatherSystemInfo(void) {
 
   {
     HANDLE hUser = LoadLibraryA( "user32.dll" );
-    pfnEnumDisplayDevices pEnumDisplayDevices = (pfnEnumDisplayDevices)
-      GetProcAddress(hUser, "EnumDisplayDevicesA");
     ZeroMemory(&gDev, sizeof(gDev));
     gDev.cb = sizeof(gDev);
-    if (pEnumDisplayDevices) pEnumDisplayDevices(NULL, 0, &gDev, 0);
+	if(hUser) {
+      pfnEnumDisplayDevices pEnumDisplayDevices = (pfnEnumDisplayDevices)
+              GetProcAddress(hUser, "EnumDisplayDevicesA");
+      if (pEnumDisplayDevices) pEnumDisplayDevices(NULL, 0, &gDev, 0);
+    }
   }
 
   { /* Figure out make and model from OEMINFO.ini */
@@ -697,9 +698,9 @@ void gatherSystemInfo(void) {
   }
 #else
   snprintf(tmpString, sizeof(tmpString),
-	  TEXT("Display Information: \n")
-      TEXT("\tGraphics adapter name: %s\n")
-      TEXT("\tPrimary monitor resolution: %d x %d\n"),
+	  "Display Information: \n"
+      "\tGraphics adapter name: %s\n"
+      "\tPrimary monitor resolution: %d x %d\n",
 	  gDev.DeviceString,
 	  screenX, screenY);
 #endif
@@ -1675,6 +1676,7 @@ sqMain(int argc, char *argv[])
     if(*imageNameW) {
       WCHAR path[MAX_PATH+1], *ptr;
       wcsncpy(path,imageNameW,MAX_PATH);
+	  path[MAX_PATH] = 0;
       ptr = wcsrchr(path, '\\');
       if(ptr) {
         *ptr = 0;

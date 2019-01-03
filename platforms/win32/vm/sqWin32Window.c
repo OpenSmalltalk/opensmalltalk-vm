@@ -64,17 +64,18 @@ extern sqInt deferDisplayUpdates;
 - UTF16 version is for interaction with WIN32 API
 whichever code modifies one version is responsible for updating the other
 */
-char  imageName [MAX_PATH_UTF8 + 1]; /* full path and name to image */
-WCHAR imageNameW[MAX_PATH      + 1]; /* full path and name to image */
-char  imagePathA[MAX_PATH_UTF8 + 1]; /* full path to image */
-WCHAR imagePathW[MAX_PATH      + 1]; /* full path to image */
-char  vmPathA[MAX_PATH_UTF8 + 1];    /* full path to interpreter's directory */
-WCHAR vmPathW[MAX_PATH      + 1];    /* full path to interpreter's directory */
-char  vmNameA[MAX_PATH_UTF8 + 1];    /* name of the interpreter's executable UTF8 */
-WCHAR vmNameW[MAX_PATH      + 1];    /* name of the interpreter's executable UTF16 */
-char windowTitle[MAX_PATH+1];        /* what should we display in the title? */
-TCHAR squeakIniName[MAX_PATH+1];     /* full path and name to ini file */
-TCHAR windowClassName[MAX_PATH+1];   /* Window class name */
+char  imageName [MAX_PATH_UTF8 + 1];     /* full path and name to image */
+WCHAR imageNameW[MAX_PATH      + 1];     /* full path and name to image */
+char  imagePathA[MAX_PATH_UTF8 + 1];     /* full path to image */
+WCHAR imagePathW[MAX_PATH      + 1];     /* full path to image */
+char  vmPathA[MAX_PATH_UTF8 + 1];        /* full path to interpreter's directory */
+WCHAR vmPathW[MAX_PATH      + 1];        /* full path to interpreter's directory */
+char  vmNameA[MAX_PATH_UTF8 + 1];        /* name of the interpreter's executable UTF8 */
+WCHAR vmNameW[MAX_PATH      + 1];        /* name of the interpreter's executable UTF16 */
+char windowTitle[MAX_PATH+1];            /* what should we display in the title? */
+WCHAR squeakIniNameW[MAX_PATH      + 1]; /* full path and name to ini file */
+char  squeakIniNameA[MAX_PATH_UTF8 + 1]; /* full path and name to ini file */
+TCHAR windowClassName[MAX_PATH+1];       /* Window class name */
 
 const TCHAR U_ON[]  = TEXT("1");
 const TCHAR U_OFF[] = TEXT("0");
@@ -2962,7 +2963,7 @@ int sqLaunchDrop(void) {
      Work around it for now. */
   static LPWSTR* (WINAPI *sqCommandLineToArgvW)(LPCWSTR,int*) = NULL;
   if(!sqCommandLineToArgvW) {
-    HANDLE hShell32 = LoadLibrary("shell32.dll");
+    HANDLE hShell32 = LoadLibraryA("shell32.dll");
     sqCommandLineToArgvW=(void*)GetProcAddress(hShell32, "CommandLineToArgvW");
     if(!sqCommandLineToArgvW) return 0;
   }

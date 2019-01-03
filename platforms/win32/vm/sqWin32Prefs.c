@@ -37,7 +37,6 @@ void printCallStack(void);
 void printAllStacks(void);
 
 /* VM preference variables */
-extern TCHAR squeakIniName[]; /* full path and name to ini file */
 HMENU vmPrefsMenu;         /* preferences menu */
 extern int caseSensitiveFileMode;
 
@@ -188,25 +187,25 @@ void LoadPreferences()
   int size;
 
   /* make ini file name based on executable file name */
-  lstrcpy(squeakIniName, vmName);
-  size = lstrlen(squeakIniName);
-  lstrcpy(squeakIniName + (size-3), TEXT("ini"));
+  wcscpy(squeakIniNameW, vmNameW);
+  size = wcslen(squeakIniNameW);
+  wcscpy(squeakIniNameW + (size-3), L"ini");
+  WideCharToMultiByte(CP_UTF8, 0, squeakIniNameW, -1, squeakIniNameA, MAX_PATH_UTF8, NULL, NULL);
 
   /* get image file name from ini file */
-  size = GetPrivateProfileString(U_GLOBAL, TEXT("ImageFile"), 
-			 TEXT(""), imageNameT, MAX_PATH, squeakIniName);
+  size = GetPrivateProfileStringW(L"Global", L"ImageFile", 
+			 L"", imageNameW, MAX_PATH, squeakIniNameW);
   if(size > 0) {
-    if( !(imageName[0] == '\\' && imageName[1] == '\\') && !(imageName[1] == ':' && imageName[2] == '\\')) {
+    if( !(imageNameW[0] == L'\\' && imageNameW[1] == L'\\') && !(imageNameW[1] == L':' && imageNameW[2] == L'\\')) {
       /* make the path relative to VM directory */
-      strcpy(imageName , vmNameA);
 	  wcscpy(imageNameW, vmNameW);
-      (strrchr(imageName ,'\\'           ))[1] = 0;
 	  (wcsrchr(imageNameW, W_BACKSLASH[0]))[1] = 0;
-      size = lstrlen(imageNameT);
-      size = GetPrivateProfileString(U_GLOBAL, TEXT("ImageFile"), 
-			 TEXT(""), imageNameT + size, MAX_PATH - size, squeakIniName);
+      size = wcslen(imageNameW);
+      size = GetPrivateProfileStringW(L"Global", L"ImageFile",
+			 L"", imageNameW + size, MAX_PATH - size, squeakIniNameW);
 	}
   }
+  WideCharToMultiByte(CP_UTF8, 0, imageNameW, -1, imageName, MAX_PATH_UTF8, NULL, NULL);
 
   /* get window title from ini file */
 #ifdef UNICODE
