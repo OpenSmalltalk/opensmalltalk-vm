@@ -53,6 +53,42 @@ Class {
 	#category : #'Cog-Explorations'
 }
 
+{ #category : #exploration }
+DominatorFinder class >> dominatorTupleForMethod: aCompiledMethod [
+	"Answer a tuple of
+		dominating optimized nodes, (inlined if's that are found by DominatorFinder)
+		anomalous optimized nodes, (inlined if's that are not found by DominatorFinder)
+		dominated nodes, (inlined if's nested within other inlined if's that occur at teh end of a basic block and hence jump to the same oplacfe as their parent)
+		dominator pcs (the dominatopr pcs found by the DominatorFinder)
+	 for aCompiledMethod"
+	| mn dominators offenders dominatorPCs dominated |
+	mn := CompiledMethod
+			noCheckSetPreferredBytecodeSetTo: aCompiledMethod encoderClass
+			while:
+				[[:c :s| c compile:(c sourceCodeAt: s)
+					environment: c environment
+					notifying: nil
+					trailer: aCompiledMethod trailer 
+					ifFail: [nil]] value: aCompiledMethod methodClass value: aCompiledMethod selector].
+	dominatorPCs := (self on: aCompiledMethod) dominators.
+	dominated := Set new. "The last statement of an inlined if cannot dominate the join of its enclosing if"
+	mn node nodesDo:
+		[:n| | lastStatement |
+		(n isMessage and: [n isOptimizedConditional]) ifTrue:
+			[lastStatement := n lastBlockOfOptimizedConditional statements last.
+			(lastStatement isMessage and: [lastStatement isOptimizedConditional]) ifTrue:
+				[dominated add: lastStatement]]].
+	dominators := OrderedCollection new.
+	offenders := OrderedCollection new.
+	mn node nodesDo:
+		[:n|
+		(n isMessage and: [n isOptimized and: [n isSingleReturningIf not and: [(dominated includes: n) not]]]) ifTrue:
+			[((dominatorPCs at: n pc ifAbsent: nil)
+				ifNil: [offenders]
+				ifNotNil: [dominators]) addLast: n]].
+	^{ dominators. offenders. dominated. dominatorPCs }
+]
+
 { #category : #'class initialization' }
 DominatorFinder class >> initialize [
 	"self initialize"
