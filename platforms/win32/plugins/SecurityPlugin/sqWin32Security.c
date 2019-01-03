@@ -240,7 +240,7 @@ sqInt ioInitSecurity(void) {
   int dirLen;
 
   /* establish the secure user directory */
-  sqUTF8ToUTF16Copy(secureUserDirectory, sizeof(secureUserDirectory)/sizeof(secureUserDirectory[0]), sqGetCurrentImagePath());
+  MultiByteToWideChar(CP_UTF8,0, sqGetCurrentImagePath(),-1,secureUserDirectory, MAX_PATH );
   dirLen = wcslen(secureUserDirectory);
   dwSize = MAX_PATH-dirLen;
   GetUserNameW(secureUserDirectory+dirLen, &dwSize);
@@ -249,7 +249,7 @@ sqInt ioInitSecurity(void) {
   wcscpy(untrustedUserDirectory, L"C:\\My Squeak\\%USERNAME%");
 
   /* establish untrusted user directory */
-  sqUTF8ToUTF16Copy(resourceDirectory, sizeof(resourceDirectory) / sizeof(resourceDirectory[0]), sqGetCurrentImagePath());
+  MultiByteToWideChar(CP_UTF8, 0, sqGetCurrentImagePath(), -1, resourceDirectory, MAX_PATH);
   if (resourceDirectory[wcslen(resourceDirectory)-1] == '\\') {
     resourceDirectory[wcslen(resourceDirectory)-1] = 0;
   }
