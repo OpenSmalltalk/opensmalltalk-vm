@@ -53,8 +53,7 @@
 static DWORD dwTimerPeriod = 0;
 static DWORD timerID = 0;
 
-sqLong
-ioHighResClock(void) {
+sqLong ioHighResClock(void) {
   sqLong value = 0;
 
 #if defined(__GNUC__) && (defined(i386) || defined(__i386) || defined(__i386__))

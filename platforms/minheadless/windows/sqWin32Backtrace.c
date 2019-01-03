@@ -264,6 +264,10 @@ get_modules(void)
 	HANDLE hPsApi = LoadLibraryA("psapi.dll");
 	HMODULE *modules;
 
+	if (!hPsApi) {
+		printLastError(TEXT("LoadLibrary psapi"));
+		return;
+	}
 	EnumProcessModules = (void*)GetProcAddress(hPsApi, "EnumProcessModules");
 	GetModuleInformation=(void*)GetProcAddress(hPsApi, "GetModuleInformation");
 
@@ -403,6 +407,8 @@ compute_exe_symbols(dll_exports *exports)
 {
 #if defined(_MSV_VER)
 # error parse of MSVC .map file as yet unimplemented
+# error Let me (eliot) suggest you get the Makefile to generate a BSD-style
+# error format from the MSVC /map file instead of writing the parser here.
 /* Create the file using "cl .... /link /map"
  * Parse it by looking for lines beginning with " 0001:" where 0001 is the
  * segment number of the .text segment.  Representative lines look like
@@ -553,8 +559,8 @@ compute_dll_symbols(dll_exports *exports)
     printf("  # of Names:      %08X\n", pExportDir->NumberOfNames);
 #endif
 
-    ordinals =	(PWORD)	(dllbase + (DWORD)pExportDir->AddressOfNameOrdinals);
-    functions =	(PDWORD)(dllbase + (DWORD)pExportDir->AddressOfFunctions);
+    ordinals =	(PWORD)	(dllbase + pExportDir->AddressOfNameOrdinals);
+    functions =	(ulong *)(dllbase + pExportDir->AddressOfFunctions);
 
     if (!(exports->sorted_ordinals = calloc(pExportDir->NumberOfNames, sizeof(int)))) {
 		printLastError(TEXT("compute_dll_symbols calloc"));
