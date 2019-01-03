@@ -203,8 +203,9 @@ char *ioGetUntrustedUserDirectory(void) {
 
 int expandMyDocuments(WCHAR *pathname, WCHAR *replacement, WCHAR *result)
 {
-/*  WCHAR search4[MAX_PATH+1];
+  WCHAR search4[MAX_PATH+1];
   WCHAR *start;
+  int len;
 
   wcscpy(search4, L"%MYDOCUMENTS%");
 
@@ -212,10 +213,13 @@ int expandMyDocuments(WCHAR *pathname, WCHAR *replacement, WCHAR *result)
 
   wcsncpy(result, pathname, start-pathname); 
   result[start-pathname] = L'\0';
-  swprintf(result+(start-pathname),L"%s%s", replacement, start+wcslen(search4));
-*/
-  /* TODO: Implement this properly. */
-  return 0;
+  len = _snwprintf(result+(start-pathname),MAX_PATH-(start - pathname),L"%s%s", replacement, start+wcslen(search4));
+
+  if (len < 0) { /* handle failure when replacement is too long: abort the replacement... what should we do? */
+    result[MAX_PATH]=0;
+    return 0;
+  } else
+    return len + (start - pathname);
 }
 
 static void expandVariableInDirectory(WCHAR *directory, WCHAR *wDir, WCHAR *wTmp)
