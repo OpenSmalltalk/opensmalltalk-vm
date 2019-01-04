@@ -75,30 +75,44 @@ abortMessage(TCHAR *fmt, ...)
 /****************************************************************************/
 #ifndef warnPrintf
 int __cdecl
-warnPrintf(TCHAR *fmt, ...)
-{ TCHAR *buf;
-	va_list args;
-
-	va_start(args, fmt);
-	if (fIsConsole)
-#if _UNICODE
-		vfwprintf(stderr, fmt, args);
-#else
-		vfprintf(stderr, fmt, args);
+warnPrintf(char *fmt, ...)
+{ char *buf;
+  va_list args;
+  
+  va_start(args, fmt);
+  if (fIsConsole)
+    vfprintf(stderr, fmt, args);
+  
+  buf = (char*) calloc(sizeof(char), 4096);
+  if (fmt[strlen(fmt)-1] == '\n')
+    fmt[strlen(fmt)-1] = 0;
+  vsprintf(buf, fmt, args);
+  va_end(args);
+  MessageBoxA(stWindow, buf, VM_NAME " Warning!", MB_OK | MB_ICONSTOP | MB_SETFOREGROUND);
+  free(buf);
+  return 0;
+}
 #endif
 
-	buf = (TCHAR*) calloc(sizeof(TCHAR), 4096);
-	if (fmt[_tcslen(fmt)-1] == '\n')
-		fmt[_tcslen(fmt)-1] = 0;
-#if _UNICODE
-	wvsprintf(buf, fmt, args);
-#else
-	vsprintf(buf, fmt, args);
-#endif
-	va_end(args);
-	MessageBox(stWindow, buf, TEXT(VM_NAME) TEXT(" Warning!"), MB_OK | MB_ICONSTOP | MB_SETFOREGROUND);
-	free(buf);
-	return 0;
+#ifndef warnPrintfW
+int __cdecl
+warnPrintfW(WCHAR *fmt, ...)
+{
+ WCHAR *buf;
+ va_list args;
+ 
+ va_start(args, fmt);
+ if (fIsConsole)
+   vfwprintf(stderr, fmt, args);
+ 
+ buf = (WCHAR*)calloc(sizeof(WCHAR), 4096);
+ if (fmt[wcslen(fmt) - 1] == '\n')
+   fmt[wcslen(fmt) - 1] = 0;
+ _vswprintf(buf, fmt, args);
+ va_end(args);
+ MessageBoxW(stWindow, buf, _UNICODE_TEXT(VM_NAME) L" Warning!", MB_OK | MB_ICONSTOP | MB_SETFOREGROUND);
+ free(buf);
+ return 0;
 }
 #endif
 
@@ -114,7 +128,7 @@ void printLastError(TCHAR *prefix)
   FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER |  FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
                 NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
                 (LPTSTR) &lpMsgBuf, 0, NULL );
-  warnPrintf(TEXT("%s (%ld) -- %s\n"), prefix, lastError, (char *)lpMsgBuf);
+  warnPrintfT(TEXT("%s (%ld) -- %s\n"), prefix, lastError, (LPTSTR)lpMsgBuf);
   LocalFree( lpMsgBuf );
 }
 #endif
@@ -134,7 +148,7 @@ void vprintLastError(TCHAR *fmt, ...)
   FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER |  FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
                 NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
                 (LPTSTR) &lpMsgBuf, 0, NULL );
-  warnPrintf(TEXT("%s (%ld: %s)\n"), buf, lastError, (char *)lpMsgBuf);
+  warnPrintfT(TEXT("%s (%ld: %s)\n"), buf, lastError, (LPTSTR)lpMsgBuf);
   LocalFree( lpMsgBuf );
   free(buf);
 }

@@ -81,34 +81,34 @@ EXPORT(int) win32JoystickDebugInfo(void)
 	JOYCAPS *caps;
 
 	if(methodArgumentCount() != 0) return primitiveFail();
-	warnPrintf(TEXT("<--- Joystick debug information --->\n"));
+	warnPrintf("<--- Joystick debug information --->\n");
 	for(i=0; i<numJoySticks; i++) {
 		caps = joySticks + i;
-		warnPrintf(TEXT("Joystick %d:\n"), i);
-		warnPrintf(TEXT("\tName: %s\n"), caps->szPname);
-		warnPrintf(TEXT("\tMin X: %d\n\tMax X: %d\n"), caps->wXmin, caps->wXmax);
-		warnPrintf(TEXT("\tMin Y: %d\n\tMax Y: %d\n"), caps->wYmin, caps->wYmax);
-		warnPrintf(TEXT("\tMin Z: %d\n\tMax Z: %d\n"), caps->wZmin, caps->wZmax);
-		warnPrintf(TEXT("\tMin R: %d\n\tMax R: %d\n"), caps->wRmin, caps->wRmax);
-		warnPrintf(TEXT("\tMin U: %d\n\tMax U: %d\n"), caps->wUmin, caps->wUmax);
-		warnPrintf(TEXT("\tMin V: %d\n\tMax V: %d\n"), caps->wVmin, caps->wVmax);
-		warnPrintf(TEXT("\tMaxButtons: %d\n"), caps->wMaxButtons);
-		warnPrintf(TEXT("\tNumButtons: %d\n"), caps->wNumButtons);
-		warnPrintf(TEXT("\tMaxAxes: %d\n"), caps->wMaxAxes);
-		warnPrintf(TEXT("\tNumAxes: %d\n"), caps->wNumAxes);
+		warnPrintf("Joystick %d:\n", i);
+		warnPrintfT(TEXT("\tName: %s\n"), caps->szPname);
+		warnPrintf("\tMin X: %d\n\tMax X: %d\n", caps->wXmin, caps->wXmax);
+		warnPrintf("\tMin Y: %d\n\tMax Y: %d\n", caps->wYmin, caps->wYmax);
+		warnPrintf("\tMin Z: %d\n\tMax Z: %d\n", caps->wZmin, caps->wZmax);
+		warnPrintf("\tMin R: %d\n\tMax R: %d\n", caps->wRmin, caps->wRmax);
+		warnPrintf("\tMin U: %d\n\tMax U: %d\n", caps->wUmin, caps->wUmax);
+		warnPrintf("\tMin V: %d\n\tMax V: %d\n", caps->wVmin, caps->wVmax);
+		warnPrintf("\tMaxButtons: %d\n", caps->wMaxButtons);
+		warnPrintf("\tNumButtons: %d\n", caps->wNumButtons);
+		warnPrintf("\tMaxAxes: %d\n", caps->wMaxAxes);
+		warnPrintf("\tNumAxes: %d\n", caps->wNumAxes);
 
-		warnPrintf(TEXT("\tCaps: "));
+		warnPrintf("\tCaps: ");
 		if(caps->wCaps & JOYCAPS_HASZ)
-			warnPrintf(TEXT("JOYCAPS_HASZ "));
+			warnPrintf("JOYCAPS_HASZ ");
 		if(caps->wCaps & JOYCAPS_HASR)
-			warnPrintf(TEXT("JOYCAPS_HASR "));
+			warnPrintf("JOYCAPS_HASR ");
 		if(caps->wCaps & JOYCAPS_HASU)
-			warnPrintf(TEXT("JOYCAPS_HASU "));
+			warnPrintf("JOYCAPS_HASU ");
 		if(caps->wCaps & JOYCAPS_HASV)
-			warnPrintf(TEXT("JOYCAPS_HASV "));
+			warnPrintf("JOYCAPS_HASV ");
 		if(caps->wCaps & JOYCAPS_HASPOV)
-			warnPrintf(TEXT("JOYCAPS_HASPOV "));
-		warnPrintf(TEXT("\n"));
+			warnPrintf("JOYCAPS_HASPOV ");
+		warnPrintf("\n");
 	}
 	return 1;
 }
@@ -126,24 +126,24 @@ EXPORT(int) win32JoystickDebugPrintRawValues(void)
 	if(failed()) return 0;
 	if(index < 1 || index > 2) return primitiveFail();
 
-	warnPrintf(TEXT("Raw joystick values (%d):\n"), index);
+	warnPrintf("Raw joystick values (%d):\n", index);
 	err = joyGetPos(index-1, &info);
 	if(err != JOYERR_NOERROR) {
 		if(err == MMSYSERR_NODRIVER)
-			warnPrintf(TEXT("\t<no driver present>\n\n"));
+			warnPrintf("\t<no driver present>\n\n");
 		else if(err == MMSYSERR_INVALPARAM)
-			warnPrintf(TEXT("\t<invalid param in joyGetPos()>\n\n"));
+			warnPrintf("\t<invalid param in joyGetPos()>\n\n");
 		else if(err == MMSYSERR_BADDEVICEID)
-			warnPrintf(TEXT("\t<bad device id>\n\n"));
+			warnPrintf("\t<bad device id>\n\n");
 		else if(err == JOYERR_UNPLUGGED)
-			warnPrintf(TEXT("\t<joystick unplugged>\n\n"));
+			warnPrintf("\t<joystick unplugged>\n\n");
 		else
-			warnPrintf(TEXT("\t<unknown error: %d>\n\n"), err);
+			warnPrintf("\t<unknown error: %d>\n\n", err);
 	} else {
-		warnPrintf(TEXT("\tX: %d\n"), info.wXpos);
-		warnPrintf(TEXT("\tY: %d\n"), info.wYpos);
-		warnPrintf(TEXT("\tZ: %d\n"), info.wZpos);
-		warnPrintf(TEXT("\tButtons: %x\n"), info.wButtons);
+		warnPrintf("\tX: %d\n", info.wXpos);
+		warnPrintf("\tY: %d\n", info.wYpos);
+		warnPrintf("\tZ: %d\n", info.wZpos);
+		warnPrintf("\tButtons: %x\n", info.wButtons);
 	}
 	pop(1); /* Leave rcvr on stack */
 	return 1;
@@ -162,30 +162,30 @@ EXPORT(int) win32JoystickDebugPrintAlternativeValues(void)
 	if(failed()) return 0;
 	if(index < 1 || index > 2) return primitiveFail();
 
-	warnPrintf(TEXT("Alternative joystick values (%d):\n"), index);
+	warnPrintf("Alternative joystick values (%d):\n", index);
 	info.dwSize = sizeof(info);
 	info.dwFlags = JOY_RETURNALL;
 	err = joyGetPosEx(index-1, &info);
 	if(err != JOYERR_NOERROR) {
 		if(err == MMSYSERR_NODRIVER)
-			warnPrintf(TEXT("\t<no driver present>\n\n"));
+			warnPrintf("\t<no driver present>\n\n");
 		else if(err == MMSYSERR_INVALPARAM)
-			warnPrintf(TEXT("\t<invalid param in joyGetPos()>\n\n"));
+			warnPrintf("\t<invalid param in joyGetPos()>\n\n");
 		else if(err == MMSYSERR_BADDEVICEID)
-			warnPrintf(TEXT("\t<bad device id>\n\n"));
+			warnPrintf("\t<bad device id>\n\n");
 		else if(err == JOYERR_UNPLUGGED)
-			warnPrintf(TEXT("\t<joystick unplugged>\n\n"));
+			warnPrintf("\t<joystick unplugged>\n\n");
 		else
-			warnPrintf(TEXT("\t<unknown error: %d>\n\n"), err);
+			warnPrintf("\t<unknown error: %d>\n\n", err);
 	} else {
-		warnPrintf(TEXT("\tX: %lu\n"), info.dwXpos);
-		warnPrintf(TEXT("\tY: %lu\n"), info.dwYpos);
-		warnPrintf(TEXT("\tZ: %lu\n"), info.dwZpos);
-		warnPrintf(TEXT("\tR: %lu\n"), info.dwRpos);
-		warnPrintf(TEXT("\tU: %lu\n"), info.dwUpos);
-		warnPrintf(TEXT("\tV: %lu\n"), info.dwVpos);
-		warnPrintf(TEXT("\tButtons: %lx\n"), info.dwButtons);
-		warnPrintf(TEXT("\tPOV: %lu\n"), info.dwPOV);
+		warnPrintf("\tX: %lu\n", info.dwXpos);
+		warnPrintf("\tZ: %lu\n", info.dwZpos);
+		warnPrintf("\tY: %lu\n", info.dwYpos);
+		warnPrintf("\tR: %lu\n", info.dwRpos);
+		warnPrintf("\tU: %lu\n", info.dwUpos);
+		warnPrintf("\tV: %lu\n", info.dwVpos);
+		warnPrintf("\tButtons: %lx\n", info.dwButtons);
+		warnPrintf("\tPOV: %lu\n", info.dwPOV);
 	}
 	pop(1); /* Leave rcvr on stack */
 	return 1;

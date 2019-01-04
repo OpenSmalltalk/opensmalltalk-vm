@@ -241,7 +241,7 @@ static MIDIHDR *midiHeaderList = NULL;
 
 
 #ifndef NDEBUG
-#define DBGPRINTF warnPrintf
+#define DBGPRINTF warnPrintfT
 #else
 #define DBGPRINTF
 #endif
@@ -470,7 +470,7 @@ int scheduleShortMessage(sqMidiPort *port, DWORD data, DWORD stamp)
   if(WaitForSingleObject(port->outBufferMutex, 5000) == WAIT_TIMEOUT)
     {
 #ifndef NO_WARNINGS
-      warnPrintf(TEXT("MIDI: Output busy for more than 5 seconds.\n"));
+      warnPrintfT(TEXT("MIDI: Output busy for more than 5 seconds.\n"));
 #endif
       return 0;
     }
@@ -783,7 +783,7 @@ int sqMIDIOpenPort(int portNum, int readSemaIndex, int interfaceClockRate) {
 #ifndef NO_WARNINGS
           TCHAR errorText[256];
           midiOutGetErrorText(err,errorText,255);
-          warnPrintf(TEXT("Failed to open MIDI output device %s:\n%s\n"),
+          warnPrintfT(TEXT("Failed to open MIDI output device %s:\n%s\n"),
                   caps.szPname, errorText);
 #endif
           FreePort(portNum);
@@ -813,7 +813,7 @@ int sqMIDIOpenPort(int portNum, int readSemaIndex, int interfaceClockRate) {
 #ifndef NO_WARNINGS
           TCHAR errorText[256];
           midiInGetErrorText(err,errorText,255);
-          warnPrintf(TEXT("Failed to open MIDI input device %s:\n%s\n"),
+          warnPrintfT(TEXT("Failed to open MIDI input device %s:\n%s\n"),
                   caps.szPname, errorText);
 #endif
           FreePort(portNum);

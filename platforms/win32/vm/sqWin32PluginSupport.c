@@ -81,7 +81,7 @@ EXPORT(int) primitivePluginBrowserReady(void)
 {
   if(!fBrowserMode) {
     /* fast failure is better when not in browser */
-    DPRINTF((TEXT("fBrowserMode == 0\n")));
+    DPRINTF(("fBrowserMode == 0\n"));
     return primitiveFail();
   }
   pop(1);
@@ -342,7 +342,7 @@ void pluginGetURLRequest(int id, void* urlIndex, int urlSize,
   DWORD dwWritten;
   
   if(!hBrowserPipe) {
-    warnPrintf(TEXT("Cannot submit URL request -- there is no connection to a browser\n"));
+    warnPrintf("Cannot submit URL request -- there is no connection to a browser\n");
     return;
   }
 
@@ -376,7 +376,7 @@ void pluginPostURLRequest(int id, void* urlIndex, int urlSize,
   DWORD dwWritten;
 
   if(!hBrowserPipe) {
-    warnPrintf(TEXT("Cannot submit URL post request -- there is no connection to a browser\n"));
+    warnPrintf("Cannot submit URL post request -- there is no connection to a browser\n");
     return;
   }
 
@@ -424,7 +424,7 @@ void pluginPostURLRequest(int id, void* urlIndex, int urlSize,
 */
 void pluginSetBrowserPipe(MSG *msg)
 {
-  DPRINTF((TEXT("New browser pipe: %x\n"),msg->lParam));
+  DPRINTF(("New browser pipe: %x\n",msg->lParam));
   if(hBrowserPipe) CloseHandle(hBrowserPipe);
   hBrowserPipe = (HANDLE) msg->lParam;
   if(!CreatePipe(&hClientReadEnd, &hClientWriteEnd, NULL, 4096))
@@ -469,15 +469,15 @@ void pluginInit(void)
 */
 void pluginHandleEvent(MSG *msg)
 {
-  DPRINTF((TEXT("Checking for plugin message (%x)\n"),msg->message));
-  DPRINTF((TEXT("\tg_WM_QUIT_SESSION: %x\n"),g_WM_QUIT_SESSION));
-  DPRINTF((TEXT("\tg_WM_BWND_SIZE: %x\n"),g_WM_BWND_SIZE));
-  DPRINTF((TEXT("\tg_WM_REQUEST_DATA: %x\n"),g_WM_REQUEST_DATA));
-  DPRINTF((TEXT("\tg_WM_POST_DATA: %x\n"),g_WM_POST_DATA));
-  DPRINTF((TEXT("\tg_WM_RECEIVE_DATA: %x\n"),g_WM_RECEIVE_DATA));
-  DPRINTF((TEXT("\tg_WM_INVALIDATE: %x\n"),g_WM_INVALIDATE));
-  DPRINTF((TEXT("\tg_WM_BROWSER_PIPE: %x\n"),g_WM_BROWSER_PIPE));
-  DPRINTF((TEXT("\tg_WM_CLIENT_PIPE: %x\n"),g_WM_CLIENT_PIPE));
+  DPRINTF(("Checking for plugin message (%x)\n",msg->message));
+  DPRINTF(("\tg_WM_QUIT_SESSION: %x\n",g_WM_QUIT_SESSION));
+  DPRINTF(("\tg_WM_BWND_SIZE: %x\n",g_WM_BWND_SIZE));
+  DPRINTF(("\tg_WM_REQUEST_DATA: %x\n",g_WM_REQUEST_DATA));
+  DPRINTF(("\tg_WM_POST_DATA: %x\n",g_WM_POST_DATA));
+  DPRINTF(("\tg_WM_RECEIVE_DATA: %x\n",g_WM_RECEIVE_DATA));
+  DPRINTF(("\tg_WM_INVALIDATE: %x\n",g_WM_INVALIDATE));
+  DPRINTF(("\tg_WM_BROWSER_PIPE: %x\n",g_WM_BROWSER_PIPE));
+  DPRINTF(("\tg_WM_CLIENT_PIPE: %x\n",g_WM_CLIENT_PIPE));
 
   /* Messages posted from a different process */
   if(msg->message == g_WM_QUIT_SESSION) exit(0);
