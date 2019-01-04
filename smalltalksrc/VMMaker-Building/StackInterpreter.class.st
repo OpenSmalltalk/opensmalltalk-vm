@@ -22386,9 +22386,8 @@ StackInterpreter >> voidLongRunningPrimitive: reason [
 	 that is longRunningPrimitiveCheckMethod is invalid, e.g. because it
 	 has eben sampled in the middle of a GC."
 	<var: #reason type: #'char *'>
-	<inline: false>
+	<inline: #never>
 	longRunningPrimitiveCheckMethod := nil.
-	longRunningPrimitiveCheckSequenceNumber = 0. "not strictly necessary but prevents this being inlined into checkForLongRunningPrimitive"
 	longRunningPrimitiveStartUsecs :=
 	longRunningPrimitiveStopUsecs := 0.
 	longRunningPrimitiveSignalUndelivered := true.
