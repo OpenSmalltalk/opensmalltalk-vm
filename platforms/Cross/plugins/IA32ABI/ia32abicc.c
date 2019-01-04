@@ -141,8 +141,8 @@ static VMCallbackContext *mostRecentCallbackContext = 0;
 VMCallbackContext *
 getMostRecentCallbackContext() { return mostRecentCallbackContext; }
 
-#define getRMCC(t) mostRecentCallbackContext
-#define setRMCC(t) (mostRecentCallbackContext = (void *)(t))
+#define getMRCC()   mostRecentCallbackContext
+#define setMRCC(t) (mostRecentCallbackContext = (void *)(t))
 
 /*
  * Entry-point for call-back thunks.  Args are thunk address and stack pointer,
@@ -199,19 +199,19 @@ thunkEntry(void *thunkp, sqIntptr_t *stackp)
 	}
 
 	if (!(returnType = setjmp(vmcc.trampoline))) {
-		previousCallbackContext = getRMCC();
-		setRMCC(&vmcc);
+		previousCallbackContext = getMRCC();
+		setMRCC(&vmcc);
 		vmcc.thunkp = thunkp;
 		vmcc.stackp = stackp + 2; /* skip address of retpc & retpc (thunk) */
 		vmcc.intregargsp = 0;
 		vmcc.floatregargsp = 0;
 		interpreterProxy->sendInvokeCallbackContext(&vmcc);
 		fprintf(stderr,"Warning; callback failed to invoke\n");
-		setRMCC(previousCallbackContext);
+		setMRCC(previousCallbackContext);
 		interpreterProxy->disownVM(flags);
 		return -1;
 	}
-	setRMCC(previousCallbackContext);
+	setMRCC(previousCallbackContext);
 	interpreterProxy->disownVM(flags);
 
 	switch (returnType) {

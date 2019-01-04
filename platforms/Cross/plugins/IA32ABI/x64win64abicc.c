@@ -167,8 +167,8 @@ static VMCallbackContext *mostRecentCallbackContext = 0;
 VMCallbackContext *
 getMostRecentCallbackContext() { return mostRecentCallbackContext; }
 
-#define getRMCC(t) mostRecentCallbackContext
-#define setRMCC(t) (mostRecentCallbackContext = (void *)(t))
+#define getMRCC()   mostRecentCallbackContext
+#define setMRCC(t) (mostRecentCallbackContext = (void *)(t))
 
 /*
  * Entry-point for call-back thunks.  Args are the integer register args, the
@@ -218,19 +218,19 @@ extern void saveFloatRegsWin64(long long xmm0,long long xmm1,long long xmm2, lon
 	}
 
 	if (!(returnType = setjmp(vmcc.trampoline))) {
-		previousCallbackContext = getRMCC();
-		setRMCC(&vmcc);
+		previousCallbackContext = getMRCC();
+		setMRCC(&vmcc);
 		vmcc.thunkp = thunkp;
 		vmcc.stackp = stackp + 2; /* skip address of retpc & retpc (thunk) */
 		vmcc.intregargsp = intargs;
 		vmcc.floatregargsp = fpargs;
 		interpreterProxy->sendInvokeCallbackContext(&vmcc);
 		fprintf(stderr,"Warning; callback failed to invoke\n");
-		setRMCC(previousCallbackContext);
+		setMRCC(previousCallbackContext);
 		interpreterProxy->disownVM(flags);
 		return -1;
 	}
-	setRMCC(previousCallbackContext);
+	setMRCC(previousCallbackContext);
 	interpreterProxy->disownVM(flags);
 
 	switch (returnType) {
