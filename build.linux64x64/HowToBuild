@@ -254,6 +254,6 @@ N.B. if you get failures due to version conflicts try
 and then retry.
 
 Ubuntu
-	sudo apt-get install uuid-dev libcairo2-dev libpango1.0-dev libgl1-mesa-dev libgl1-mesa-glx
+	sudo apt-get install uuid-dev libcairo2-dev libpango1.0-dev libgl1-mesa-dev libgl1-mesa-glx libssl-dev
 
 More advice and examples for other distros gratefully received.
