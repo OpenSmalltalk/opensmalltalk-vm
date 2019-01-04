@@ -20,6 +20,7 @@ else
 	fi
 	shift `expr $OPTIND - 1`
 fi
+if ../../scripts/checkSCCSversion ; then exit 1; fi
 if [ -n "$D" ]; then
 	rm -rf builddbg/vm/*.exe
 	make $@ debug 2>&1 | tee LOGD

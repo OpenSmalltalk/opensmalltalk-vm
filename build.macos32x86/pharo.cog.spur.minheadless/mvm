@@ -21,6 +21,7 @@ else
 	fi
 	shift `expr $OPTIND - 1`
 fi
+if ../../scripts/checkSCCSversion ; then exit 1; fi
 if [ -n "$D" ]; then
 	make $@ debug 2>&1 | tee LOGD ; test ${PIPESTATUS[0]} -eq 0
 fi

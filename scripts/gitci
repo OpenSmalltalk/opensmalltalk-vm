@@ -11,7 +11,7 @@ echo "Have you checked incoming?  Y/n/check \c"
 read n
 case $n in
 n|N|no|nO|No|NO)	exit 1;;
-c|C|ch*|C[hH]*)		git incoming; exit 0;;
+c|C|ch*|C[hH]*)		git remote update -p; git log ..@{u}; exit 0;;
 esac
 
 echo sanity checking generated files...
