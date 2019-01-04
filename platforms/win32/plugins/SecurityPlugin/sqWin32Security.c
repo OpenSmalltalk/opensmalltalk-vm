@@ -91,11 +91,12 @@ static int isAccessiblePathName(WCHAR *pathName, int writeFlag) {
 }
 
 static int isAccessibleUTF8PathName(char *pathName, int pathLen , int writeFlag) {
-	DWORD success;
+	DWORD len;
 	WCHAR widePath[MAX_PATH];
-	widePath[MAX_PATH - 1] = 0;
-	success = MultiByteToWideChar(CP_UTF8, 0, pathName, pathLen, widePath, MAX_PATH-1);
-	if (! success) return 0; /* if conversion fails, then it's not accessible */
+	/* this form of call is not going to put a terminating NULL */
+	len = MultiByteToWideChar(CP_UTF8, 0, pathName, pathLen, widePath, MAX_PATH-1);
+	if (len == 0) return 0; /* if conversion fails, then it's not accessible */
+	widePath[len] = 0;
 	return isAccessiblePathName(widePath, writeFlag);
 }
 
