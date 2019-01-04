@@ -2819,14 +2819,6 @@ SimpleStackBasedCogit >> genPushClosureCopyCopiedValuesBytecode [
 	^0
 ]
 
-{ #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genPushClosureTempsBytecode [
-	"SistaV1: 230		11100110	iiiiiiii		PushNClosureTemps iiiiiiii"
-	1 to: byte1 do:
-		[:i| self genPushLiteral: objectMemory nilObject].
-	^0
-]
-
 { #category : #'constant support' }
 SimpleStackBasedCogit >> genPushConstant: constant [
 	"If the objectMemory allows it, generates a quick constant push, else generates a word constant push"

@@ -13162,8 +13162,7 @@ StackToRegisterMappingCogit >> scanBlock: blockStart [
 			  at the end of the block in compileBlockBodies."
 			 (numPushNils := self numPushNils: descriptor pc: pc nExts: nExts method: methodObj) > 0
 				ifTrue:
-					[self assert: (descriptor numBytes = 1
-									or: [descriptor generator == #genPushClosureTempsBytecode]).
+					[self assert: descriptor numBytes = 1.
 					 blockStart numInitialNils: blockStart numInitialNils + numPushNils]
 				ifFalse:
 					[pushingNils := false]].

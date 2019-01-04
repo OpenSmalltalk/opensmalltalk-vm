@@ -7308,7 +7308,7 @@ SpurMemoryManager >> isValidClassIndex: classIndex [
 	classTablePage = nilObj ifTrue:
 		[^false].
 	(self addressCouldBeObj: classTablePage) ifFalse:
-		[false].
+		[^false].
 	^coInterpreter addressCouldBeClassObj:
 		(self
 			fetchPointer: (classIndex bitAnd: self classTableMinorIndexMask)

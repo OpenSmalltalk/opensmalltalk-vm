@@ -18769,17 +18769,6 @@ StackInterpreter >> pushClosureNumArgs: numArgs copiedValues: numCopied blockSiz
 ]
 
 { #category : #'stack bytecodes' }
-StackInterpreter >> pushClosureTempsBytecode [
-	"SistaV1:	230		11100110	iiiiiiii		PushNClosureTemps iiiiiiii"
-	| nTemps |
-	nTemps := self fetchByte.
-	self fetchNextBytecode.
-	1 to: nTemps do:
-		[:i|
-		self internalPush: objectMemory nilObject]
-]
-
-{ #category : #'stack bytecodes' }
 StackInterpreter >> pushConstantFalseBytecode [
 
 	self fetchNextBytecode.

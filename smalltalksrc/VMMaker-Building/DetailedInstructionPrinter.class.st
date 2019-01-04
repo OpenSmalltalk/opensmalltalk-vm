@@ -79,8 +79,29 @@ DetailedInstructionPrinter >> printInstructionsOn: aStream [
 	end := method endPC.
 	oldPC := scanner pc.
 	innerIndents := Array new: end withAll: 0.
+	fullBlockRecursionSelector := #printInstructionsOn:.
 	[scanner pc <= end] whileTrue:
 		[encoderClass interpretNextInstructionFor: self in: scanner]
+]
+
+{ #category : #printing }
+DetailedInstructionPrinter >> printInstructionsOn: aStream do: aBlock [
+	"Append to the stream, aStream, a description of each bytecode in the
+	 instruction stream. Evaluate aBlock with the receiver, the scanner and
+	 the stream after each instruction."
+	
+	| end |
+	encoderClass ifNil:
+		[^super printInstructionsOn: aStream do: aBlock].
+	stackHeightComputer encoderClass: encoderClass.
+	stream := aStream.
+	scanner := InstructionStream on: method.
+	end := method endPC.
+	oldPC := scanner pc.
+	innerIndents := Array new: end withAll: 0.
+	[scanner pc <= end] whileTrue:
+		[encoderClass interpretNextInstructionFor: self in: scanner.
+		 aBlock value: self value: scanner value: stream]
 ]
 
 { #category : #accessing }
