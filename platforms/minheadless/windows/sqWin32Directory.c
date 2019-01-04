@@ -60,7 +60,7 @@ static void read_permissions(sqInt *posixPermissions, WCHAR* path, sqInt pathLen
   if (attr & FILE_ATTRIBUTE_DIRECTORY) {
     *posixPermissions |= S_IXUSR | (S_IXUSR>>3) | (S_IXUSR>>6);
   }
-  else if (path && path[pathLength - 4] == L'.') {
+  else if (path && pathLength > 3 && path[pathLength - 4] == L'.') {
     WCHAR *ext = &path[pathLength - 3];
     if (!_wcsicmp (ext, L"COM")) {
       *posixPermissions |= S_IXUSR | (S_IXUSR>>3) | (S_IXUSR>>6);

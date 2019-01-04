@@ -43,15 +43,13 @@
 #endif
 
 /* returns the local wall clock time */
-int
-ioSeconds(void)
+int ioSeconds(void)
 { SYSTEMTIME sysTime;
   GetLocalTime(&sysTime);
   return convertToSqueakTime(sysTime);
 }
 
-int
-ioMSecs()
+int ioMSecs()
 {
   /* Make sure the value fits into Squeak SmallIntegers */
 #ifndef _WIN32_WCE
@@ -62,8 +60,7 @@ ioMSecs()
 }
 
 /* Note: ioMicroMSecs returns *milli*seconds */
-int
-ioMicroMSecs(void)
+int ioMicroMSecs(void)
 {
   /* Make sure the value fits into Squeak SmallIntegers */
   return timeGetTime() & MillisecondClockMask;

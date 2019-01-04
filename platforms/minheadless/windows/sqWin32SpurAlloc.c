@@ -30,8 +30,8 @@ LONG CALLBACK sqExceptionFilter(LPEXCEPTION_POINTERS exp)
   return EXCEPTION_WRONG_ACCESS;
 }
 
-static DWORD  pageMask;     /* bit mask for the start of a memory page */
-static DWORD  pageSize;     /* size of a memory page */
+static sqIntptr_t  pageMask;     /* bit mask for the start of a memory page */
+static sqIntptr_t  pageSize;     /* size of a memory page */
 static char  *minAppAddr;	/* SYSTEM_INFO lpMinimumApplicationAddress */
 static char  *maxAppAddr;	/* SYSTEM_INFO lpMaximumApplicationAddress */
 
@@ -63,7 +63,7 @@ sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
 	maxAppAddr = sysInfo.lpMaximumApplicationAddress;
 
 	/* choose a suitable starting point. In MinGW the malloc heap is below the
-	 * program, so take the max of a malloc and something form uninitialized
+	 * program, so take the max of a malloc and something from uninitialized
 	 * data.
 	 */
 	hint = malloc(1);

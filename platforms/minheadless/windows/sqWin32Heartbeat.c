@@ -53,11 +53,25 @@
 static DWORD dwTimerPeriod = 0;
 static DWORD timerID = 0;
 
-sqLong
-ioHighResClock(void) {
+sqLong ioHighResClock(void) {
   sqLong value = 0;
-#ifdef __GNUC__
-  __asm__ __volatile__ ("rdtsc" : "=A" (value));
+
+#if defined(__GNUC__) && (defined(i386) || defined(__i386) || defined(__i386__))
+    __asm__ __volatile__ ("rdtsc" : "=A"(value));
+#elif defined(__GNUC__) && (defined(x86_64) || defined(__x86_64) || defined (__x86_64__))
+    __asm__ __volatile__ ("rdtsc\n\t"			// Returns the time in EDX:EAX.
+						"shl $32, %%rdx\n\t"	// Shift the upper bits left.
+						"or %%rdx, %0"			// 'Or' in the lower bits.
+						: "=a" (value)
+						: 
+						: "rdx");
+#elif defined(_MSC_VER)
+  LARGE_INTEGER aux;
+  aux.QuadPart = 0;
+  QueryPerformanceCounter(&aux);
+  value = aux.QuadPart;
+#else
+# error "no high res clock defined"
 #endif
   return value;
 }
