@@ -8,6 +8,8 @@ I observe that
 - if no conditional branch that branches to a target, branches to a target preceded by an unconditional branch (i.e. all are preceded by returns) then the first conditional branch dominates the target
 - a conditional branch that branches to a target preceded by a backward branch dominates its target (loops)
 
+This DominatorFinder attempts to find conditional branches that dominate join points, while filtering out conditional branches that dominate non-joins (i.e. those following single returning ifs and those that jump to the end of loops).
+
 Instance Variables
 	cameFroms:			<Array>
 	dominators:			<Dictionary>
@@ -58,31 +60,47 @@ DominatorFinder class >> dominatorTupleForMethod: aCompiledMethod [
 	"Answer a tuple of
 		dominating optimized nodes, (inlined if's that are found by DominatorFinder)
 		anomalous optimized nodes, (inlined if's that are not found by DominatorFinder)
-		dominated nodes, (inlined if's nested within other inlined if's that occur at teh end of a basic block and hence jump to the same oplacfe as their parent)
-		dominator pcs (the dominatopr pcs found by the DominatorFinder)
-	 for aCompiledMethod"
-	| mn dominators offenders dominatorPCs dominated |
+		dominated nodes, (inlined if's nested within other inlined if's that occur at the end of a basic block and hence jump to the same place as their parent)
+		dominator pcs (the dominator pcs found by the DominatorFinder)
+	 for aCompiledMethod.  It is expected that the anomaloius nodes should be empty."
+	| mn optimizedNodes
+	  dominators offenders dominated dominatorPCs |
 	mn := CompiledMethod
 			noCheckSetPreferredBytecodeSetTo: aCompiledMethod encoderClass
 			while:
-				[[:c :s| c compile:(c sourceCodeAt: s)
+				[[:c :s|
+				  [c compile:(c sourceCodeAt: s)
 					environment: c environment
 					notifying: nil
 					trailer: aCompiledMethod trailer 
-					ifFail: [nil]] value: aCompiledMethod methodClass value: aCompiledMethod selector].
-	dominatorPCs := (self on: aCompiledMethod) dominators.
-	dominated := Set new. "The last statement of an inlined if cannot dominate the join of its enclosing if"
+					ifFail: [nil]]
+					on: SyntaxErrorNotification
+					do: [^#(#() #() #() #())]]
+						value: aCompiledMethod methodClass
+						value: aCompiledMethod selector].
+	"mn method ~= aCompiledMethod ifTrue:
+		[Transcript cr; show: 'warning: recompilation of ', aCompiledMethod reference, ' generated different code'.
+		 ^#(#() #() #() #())]."
+	dominatorPCs := (self on: mn method) dominators.
+	dominated := IdentitySet new. "The last statement of an inlined if cannot dominate the join of its enclosing if"
+	optimizedNodes := OrderedCollection new. "Avoid double traversal"
 	mn node nodesDo:
 		[:n| | lastStatement |
-		(n isMessage and: [n isOptimizedConditional]) ifTrue:
-			[lastStatement := n lastBlockOfOptimizedConditional statements last.
-			(lastStatement isMessage and: [lastStatement isOptimizedConditional]) ifTrue:
-				[dominated add: lastStatement]]].
-	dominators := OrderedCollection new.
-	offenders := OrderedCollection new.
-	mn node nodesDo:
+		(n isMessage and: [n isOptimized]) ifTrue:
+			[optimizedNodes addLast: n.
+			 n isOptimizedConditional ifTrue:
+				[lastStatement := n lastBlockOfOptimizedConditional statements last.
+				(lastStatement isMessage and: [lastStatement isOptimizedConditional]) ifTrue:
+					[dominated add: lastStatement]]]].
+	dominators := OrderedCollection new: optimizedNodes size.
+	offenders := OrderedCollection new: optimizedNodes size.
+	optimizedNodes do:
 		[:n|
-		(n isMessage and: [n isOptimized and: [n isSingleReturningIf not and: [(dominated includes: n) not]]]) ifTrue:
+		(n isOptimizedLoop not				"Loop CBs do dominate, but their target is not a join point"
+		 and: [n isSingleReturningIf not		"ifTrue: [^foo] CBs do dominate but their target is not a join point"
+		 and: [n isEmptyIf not				"ifTrue: [] generates no code"
+		 and: [n pc ~= 0					"caseOf: nodes get assigned a pc of 0; go figure..."
+		 and: [(dominated includes: n) not]]]]) ifTrue:
 			[((dominatorPCs at: n pc ifAbsent: nil)
 				ifNil: [offenders]
 				ifNotNil: [dominators]) addLast: n]].
@@ -115,11 +133,12 @@ DominatorFinder >> interpretNextInstructionFor: client [
 	| result |
 	(cameFroms at: pc) ifNotNil:
 		[:cameFromPC|
-		"the first conditional branch that branches to a target that is preceded by an unconditional branch dominates the target of the unconditional branch"
-		previousInstruction == #jump:
+		"the first conditional branch that branches to a target that is preceded by an unconditional forward branch dominates the target of the unconditional branch.
+		 (an unconditional backward branch indicates a loop)"
+		(previousInstruction == #jump:
+		 and: [jumpTarget >= pc])
 			ifTrue:
-		 		[(jumpTarget >= pc
-				  and: [(cameFroms at: jumpTarget) isNil]) ifTrue:
+		 		[(cameFroms at: jumpTarget) ifNil:
 					[self assert: (dominators includesKey: cameFromPC) not.
 					 dominators at: cameFromPC put: jumpTarget]]
 			ifFalse:
@@ -160,7 +179,30 @@ DominatorFinder >> method: method pc: startpc [
 	dominators := Dictionary new
 ]
 
+{ #category : #'instruction decoding' }
+DominatorFinder >> pushFullClosure: aCompiledBlock numCopied: numCopied [
+	self recordThisInstruction: #pushFullClosure:numCopied:;
+		recurseIntoBlock: aCompiledBlock
+]
+
+{ #category : #'instruction decoding' }
+DominatorFinder >> pushFullClosure: aCompiledBlock numCopied: numCopied receiverOnStack: rcvrOnStack ignoreOuterContext: ignoreOuterContext [
+	self recordThisInstruction: #pushFullClosure:numCopied:receiverOnStack:ignoreOuterContext:;
+		recurseIntoBlock: aCompiledBlock
+]
+
 { #category : #private }
 DominatorFinder >> recordThisInstruction: aSelector [
 	thisInstruction := aSelector
+]
+
+{ #category : #private }
+DominatorFinder >> recurseIntoBlock: aCompiledBlock [
+	"Recurse into a full block. Map its dominating pcs appropriately to match
+	 BytecodeEncoder>>nextPC's representyation for the pcs in nested full blocks."
+	(self class on: aCompiledBlock) dominators keysAndValuesDo:
+		[:key :value|
+		 dominators
+			at: (key isInteger ifTrue: [aCompiledBlock -> key] ifFalse: [key])
+			put: value]
 ]

@@ -1,6 +1,15 @@
 Extension { #name : #MessageNode }
 
 { #category : #'*Cog-Explorations-testing' }
+MessageNode >> isEmptyIf [
+	| block |
+	^((special between: 1 and: 2) "ifTrue:/ifFalse:"
+	    or: [special between: 15 and: 16]) "ifNil:/ifNotNil:"
+		and: [((block := self lastBlockOfOptimizedConditional) isJust: NodeNil)
+			or: [block returns not and: [block statements size = 1 and: [block statements first isLeaf]]]]
+]
+
+{ #category : #'*Cog-Explorations-testing' }
 MessageNode >> isOptimizedConditional [
 	"Answer if the receiver represents an inlined ifTrue: et al, and: et al, or ifNil: et al."
 
@@ -32,7 +41,7 @@ MessageNode >> lastBlockOfOptimizedConditional [
 	"Answer the actual last block for an inlined conditional"
 
 	^special >= 1 ifTrue:
-		[special <= 2 ifTrue: [^arguments first].	"ifTrue: ifFalse:"
+		[special <= 2 ifTrue: [^arguments at: special].	"ifTrue: ifFalse:"
 		 special <= 4 ifTrue: [^arguments last].	"ifTrue:ifFalse: ifFalse:ifTrue:"
 		 special <= 6 ifTrue: [^arguments first].	"and: or:"
 		 special <= 14 ifTrue: [^nil].
