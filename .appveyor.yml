@@ -97,6 +97,11 @@ cache:
   - .thirdparty-cache
 
 install:
+  # Search for [appveyor skip], [skip appveyor], [skip ci] or [ci skip] and exit if found in full commit message
+  - ps: $commit=$env:APPVEYOR_REPO_COMMIT_MESSAGE + $env:APPVEYOR_REPO_COMMIT_MESSAGE_EXTENDED
+  - ps: If ($commit.Contains("[skip appveyor]") -Or $commit.Contains("[appveyor skip]")) { Exit-AppVeyorBuild }
+  - ps: $commit=$env:APPVEYOR_REPO_COMMIT_MESSAGE + $env:APPVEYOR_REPO_COMMIT_MESSAGE_EXTENDED
+  - ps: If ($commit.Contains("[skip ci]") -Or $commit.Contains("[ci skip]")) { Exit-AppVeyorBuild }
   - 'curl -fsSL --retry 4 -m 600 -o "setup-x86.exe" "http://cygwin.com/setup-x86.exe" '
   - 'curl -fsSL --retry 4 -m 600 -o "setup-x86_64.exe" "http://cygwin.com/setup-x86_64.exe" '
   - 'call scripts/installCygwin.bat %MINGW_ARCH% "%CYG_ROOT%"'
