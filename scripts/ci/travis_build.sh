@@ -119,4 +119,8 @@ if [[ ! $(type -t build_$PLATFORM) ]]; then
     exit 99
 fi
 
+echo "Existing cache..."
+find ${PRODUCTS_DIR}/../.thirdparty-cache/ -name '*\.so*' -ls
 build_$PLATFORM
+echo "New cache..."
+find ${PRODUCTS_DIR}/../.thirdparty-cache/ -name '*\.so*' -ls
