@@ -509,10 +509,6 @@ elseif(WIN32)
     )
     set(VM_DEPENDENCIES_LIBRARIES Winmm ${VM_DEPENDENCIES_LIBRARIES})
     if(SQUEAK_PLATFORM_X86_32)
-        if(MSVC)
-#            add_definitions(-DALLOCA_LIES_SO_USE_GETSP=0)
-        else()
-        endif()
         add_definitions(
             -DX86
         )
