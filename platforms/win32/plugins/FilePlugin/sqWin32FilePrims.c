@@ -466,7 +466,7 @@ sqInt sqImageFileClose(sqImageFile h)
 }
 
 sqImageFile sqImageFileOpen(const char *fileName, const char *mode)
-{ char *modePtr;
+{ const char *modePtr;
   int writeFlag = 0;
   WCHAR *win32Path = NULL;
   HANDLE h;
