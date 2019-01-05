@@ -112,10 +112,9 @@
 #  define X86 i386
 # endif
 
-  /* Use console for warnings if possible */
-# ifndef UNICODE
-#	define warnPrintf printf
-# endif
+  /* Use console for warnings */
+# define warnPrintf printf
+# define warnPrintfW wprintf
 #endif /* _M_IX86 */
 
 /* We are stuck with Win32 as a misnomer for the Windows operating system for
@@ -135,10 +134,9 @@
 #	define WIN32_OS_NAME "NT"
 #	define WIN32_PROCESSOR_NAME "X64"
 
-  /* Use console for warnings if possible */
-#	ifndef UNICODE
-#		define warnPrintf printf
-#	endif
+  /* Use console for warnings */
+#	define warnPrintf printf
+#	define warnPrintfW wprintf
 #endif /* _M_X64 & al */
 
 #endif /* (_WIN32_WCE) */
@@ -286,6 +284,9 @@ extern WCHAR squeakIniNameW[];   /* full path to ini file - UTF16 */
 #define squeakIniName squeakIniNameA
 #endif
 
+#define __UNICODE_TEXT(x) L##x
+#define _UNICODE_TEXT(x) __UNICODE_TEXT(x)
+
 extern UINT SQ_LAUNCH_DROP;
 
 extern const TCHAR U_ON[];
@@ -357,7 +358,17 @@ int __cdecl sqMessageBox(DWORD dwFlags, const TCHAR *titleString, const TCHAR* f
 #endif
 
 #ifndef warnPrintf
-int __cdecl warnPrintf(TCHAR *fmt, ...);
+int __cdecl warnPrintf(char *fmt, ...);
+#endif
+
+#ifndef warnPrintfW
+int __cdecl warnPrintfW(WCHAR *fmt, ...);
+#endif
+
+#ifdef UNICODE
+#define warnPrintfT warnPrintfW
+#else
+#define warnPrintfT warnPrintf
 #endif
 
 #ifndef abortMessage

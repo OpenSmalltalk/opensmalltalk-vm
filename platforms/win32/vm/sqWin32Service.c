@@ -264,7 +264,7 @@ void sqServiceInstall(void)
   GetModuleFileNameW(hInstance,tmp, 255);
   if(!sqInstallService(serviceName, tmp))
     {
-      warnPrintf(TEXT("The service has NOT been installed."));
+      warnPrintf("The service has NOT been installed.");
       return;
     }
   /* Create a new key for our service */
@@ -318,15 +318,15 @@ void sqServiceInstall(void)
                   serviceName,MB_YESNOCANCEL) == IDYES)
     {
       if(!sqChangeServiceConfig(serviceName, SERVICE_AUTO_START))
-        warnPrintf(TEXT("The service was NOT configured.\n")
-                   TEXT("Please go to control panel and configure the service manually.\n"));
+        warnPrintf("The service was NOT configured.\n"
+                   "Please go to control panel and configure the service manually.\n");
     }
   if(MessageBoxW(0,L"Do you wish to start the service right now?",
                   serviceName,MB_YESNOCANCEL) == IDYES)
     {
       if(!sqStartService(serviceName))
-        warnPrintf(TEXT("The service was NOT started.\n")
-                   TEXT("Please go to the control panel and start the service manually.\n"));
+        warnPrintf("The service was NOT started.\n"
+                   "Please go to the control panel and start the service manually.\n");
     }
   exit(0);  
 }

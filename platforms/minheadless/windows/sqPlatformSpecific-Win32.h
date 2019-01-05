@@ -186,3 +186,11 @@ extern const unsigned long tltiIndex;
 #define EXCEPT(filter) if (0)
 #define FINALLY
 #endif
+
+/* alternative form of warnPrintf for WCHAR and TCHAR support */
+#define warnPrintfW wprintf
+#ifdef UNICODE
+#define warnPrintfT warnPrintfW
+#else
+#define warnPrintfT warnPrintf
+#endif

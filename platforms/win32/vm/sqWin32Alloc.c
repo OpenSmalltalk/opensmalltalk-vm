@@ -99,19 +99,19 @@ void *sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
 int sqGrowMemoryBy(int oldLimit, int delta) {
   /* round delta UP to page size */
   if(fShowAllocations) {
-    warnPrintf(TEXT("Growing memory by %d..."), delta);
+    warnPrintf("Growing memory by %d...", delta);
   }
   delta = (delta + pageSize) & pageMask;
   if(!VirtualAlloc(pageLimit, delta, MEM_COMMIT, PAGE_READWRITE)) {
     if(fShowAllocations) {
-      warnPrintf(TEXT("failed\n"));
+      warnPrintf("failed\n");
     }
     /* failed to grow */
     return oldLimit;
   }
   /* otherwise, expand pageLimit and return new top limit */
   if(fShowAllocations) {
-    warnPrintf(TEXT("okay\n"));
+    warnPrintf("okay\n");
   }
   pageLimit += delta;
   usedMemory += delta;
@@ -124,26 +124,26 @@ int sqGrowMemoryBy(int oldLimit, int delta) {
 int sqShrinkMemoryBy(int oldLimit, int delta) {
   /* round delta DOWN to page size */
   if(fShowAllocations) {
-    warnPrintf(TEXT("Shrinking by %d..."),delta);
+    warnPrintf("Shrinking by %d...",delta);
   }
 #ifdef DO_NOT_SHRINK
   {
     /* Experimental - do not unmap memory and avoid OGL crashes */
-    if(fShowAllocations) warnPrintf(TEXT(" - ignored\n"));
+    if(fShowAllocations) warnPrintf(" - ignored\n");
     return oldLimit;
   }
 #endif
   delta &= pageMask;
   if(!VirtualFree(pageLimit-delta, delta, MEM_DECOMMIT)) {
     if(fShowAllocations) {
-      warnPrintf(TEXT("failed\n"));
+      warnPrintf("failed\n");
     }
     /* failed to shrink */
     return oldLimit;
   }
   /* otherwise, shrink pageLimit and return new top limit */
   if(fShowAllocations) {
-    warnPrintf(TEXT("okay\n"));
+    warnPrintf("okay\n");
   }
   pageLimit -= delta;
   usedMemory -= delta;

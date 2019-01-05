@@ -306,7 +306,7 @@ sqInt ioShowDisplayOnWindow(unsigned char* dispBits, sqInt width,
 
   if(lines == 0) {
     printLastError(TEXT("SetDIBitsToDevice failed"));
-    warnPrintf(TEXT("width=%") TEXT(PRIdSQINT) TEXT(",height=%") TEXT(PRIdSQINT) TEXT(",bits=%") TEXT(PRIXSQPTR) TEXT(",dc=%") TEXT(PRIXSQPTR) TEXT("\n"),
+    warnPrintf("width=%" PRIdSQINT ",height=%" PRIdSQINT ",bits=%" PRIXSQPTR ",dc=%" PRIXSQPTR "\n",
 	       width, height, (usqIntptr_t)dispBits, (usqIntptr_t)dc);
   }
   /* reverse the image bits if necessary */

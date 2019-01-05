@@ -124,7 +124,7 @@ static char **clargv;
 
 /* console buffer */
 BOOL fIsConsole = 0;
-TCHAR consoleBuffer[4096];
+char consoleBuffer[4096];
 
 /* stderr and stdout names */
 WCHAR stderrName[MAX_PATH+1];
@@ -302,26 +302,26 @@ OutputConsoleString(char *string)
       "# To disable: F2 -> 'debug options' -> 'show console on errors'\n"
       );
   }
-  pos = SendMessage(consoleWindow,WM_GETTEXTLENGTH, 0,0);
-  SendMessage(consoleWindow, EM_SETSEL, pos, pos);
+  pos = SendMessageA(consoleWindow,WM_GETTEXTLENGTH, 0,0);
+  SendMessageA(consoleWindow, EM_SETSEL, pos, pos);
   while(*string)
     {
-      SendMessage( consoleWindow, WM_CHAR, *string, 1);
+      SendMessageA( consoleWindow, WM_CHAR, *string, 1);
       string++;
     }
   return 1;
 }
 
 // recommend using DPRINTF ifdef'ing to DPRINTF for debug output
-int __cdecl DPRINTF(const TCHAR *fmt, ...)
+int __cdecl DPRINTF(const char *fmt, ...)
 { va_list al;
 
   va_start(al, fmt);
   if (!fIsConsole) {
-	wvsprintf(consoleBuffer, fmt, al);
-	OutputDebugString(consoleBuffer);
+	vsprintf(consoleBuffer, fmt, al);
+	OutputDebugStringA(consoleBuffer);
   }
-  _vftprintf(stdout, fmt, al);
+  vfprintf(stdout, fmt, al);
   va_end(al);
   return 1;
 }
@@ -337,7 +337,7 @@ printf(const char *fmt, ...)
 
   va_start(al, fmt);
   if (!fIsConsole) {
-	wvsprintf(consoleBuffer, fmt, al);
+	vsprintf(consoleBuffer, fmt, al);
 	OutputLogMessage(consoleBuffer);
 	if (IsWindow(stWindow)) /* not running as service? */
 	  OutputConsoleString(consoleBuffer);
@@ -355,7 +355,7 @@ fprintf(FILE *fp, const char *fmt, ...)
   va_start(al, fmt);
   if (!fIsConsole && (fp == stdout || fp == stderr))
     {
-      wvsprintf(consoleBuffer, fmt, al);
+      vsprintf(consoleBuffer, fmt, al);
       OutputLogMessage(consoleBuffer);
       if (IsWindow(stWindow)) /* not running as service? */
         OutputConsoleString(consoleBuffer);
@@ -1159,8 +1159,6 @@ error(char *msg) {
     msgW = alloca(4 * sizeof(WCHAR));
     wcscpy(msgW, L"???");
   }
-#define __UNICODE_TEXT(x) L##x
-#define _UNICODE_TEXT(x) __UNICODE_TEXT(x)
   _snwprintf(crashInfo,1024,
       L"Sorry but the VM has crashed.\n\n"
       L"Reason: %s\n\n"

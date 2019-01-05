@@ -29,9 +29,6 @@ int sqMessageBox(DWORD dwFlags, const TCHAR *titleString, const char* fmt, ...);
 
 void sqWin32PrintLastError(const char *message);
 
-TCHAR *fromSqueak(const char *sqPtr, int sqSize);
-TCHAR *fromSqueak2(const char *sqPtr, int sqSize);
-
 extern BOOL fIsConsole;
 
 #endif /*SQ_WIN32_H*/

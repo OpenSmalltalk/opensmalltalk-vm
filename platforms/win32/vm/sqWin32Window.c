@@ -2228,7 +2228,7 @@ sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth, double
 	   the given horizontal and vertical scales in the given orientation */
 {
 #ifdef NO_PRINTER
-  warnPrintf(TEXT("This VM does not support printing.\n"));
+  warnPrintf("This VM does not support printing.\n");
   return success(false);
 #else /* !defined(NO_PRINTER) */
   DEVMODE *dmPtr;
@@ -2245,7 +2245,7 @@ sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth, double
   devNames = GlobalLock(printValues.hDevNames);
   if(!devNames)
     {
-      warnPrintf(TEXT("No printer configured\n"));
+      warnPrintf("No printer configured\n");
       return false;
     }
   dmPtr = GlobalLock(printValues.hDevMode);
@@ -2264,14 +2264,14 @@ sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth, double
 
   if(!dc)
     {
-      warnPrintf(TEXT("Unable to open printer.\n"));
+      warnPrintf("Unable to open printer.\n");
       return false;
     }
 
   bmi = BmiForDepth(depth);
   if(!bmi)
     {
-      warnPrintf(TEXT("Color depth %") TEXT(PRIdSQINT) TEXT(" not supported"), depth);
+      warnPrintf("Color depth %" PRIdSQINT " not supported", depth);
       return false;
     }
 
@@ -2596,7 +2596,7 @@ sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
 
   if(lines == 0) {
     printLastError(TEXT("SetDIBitsToDevice failed"));
-    warnPrintf(TEXT("width=%") TEXT(PRIdSQINT) TEXT(",height=%") TEXT(PRIdSQINT) TEXT(",bits=%") TEXT(PRIXSQINT) TEXT(",dc=%") TEXT(PRIXSQPTR) TEXT("\n"),
+    warnPrintf("width=%" PRIdSQINT ",height=%" PRIdSQINT ",bits=%" PRIXSQINT ",dc=%" PRIXSQPTR "\n",
 	       width, height, dispBits,(usqIntptr_t)dc);
   }
   /* reverse the image bits if necessary */
