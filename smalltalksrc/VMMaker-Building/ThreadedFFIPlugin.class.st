@@ -3,6 +3,68 @@ This plugin provides access to foreign function interfaces on those platforms th
 	self cppIf: COGMTVM
 		ifTrue: [...]
 form to arrange that it is only compiled in the threaded VM context.
+
+The callout primitives consume a type spec that defines the signature of the function to be called and a vector of arguments.  The type spec may be extracted from the method containing an FFI pragma or as an explicit parameter.  The arguments to be passed may either be arguments to the the method containing an FFI pragma or as an explicit Array of parameters.
+
+Space is allocated to house the marshalled parameters and the type spec and arguments are then parsed to marshall the actual parameters into that space.  The space is some combination of alloc'ed memory for parameters passed on the stack and a ""callout state"" struct (an instance of ThreadedFFICalloutState) to hold any parameters to be passed in registers.
+
+By using C's facilities appropriately we can arrange that the C compiler generates code for passing all parameters, avoiding having to descend to the assembler or machine-code level (*). The basic scheme is to use alloca to stack allocate space for passing stacked parameters, since the memory allocated by alloca s at top-of-stack and in exactly the right place for parameter passing (*), and to invoke the function to be called with as many arguments as there are integer register parameters in the calling convention.  For example, on x86/IA32 there are no register parameters and all arguments are passed on the stack, while on ARMv4/5/6 there are four integer register parameters.  Since float results are typically answered through a floating-point register and integer/pointer results answered through one (or, on 32-bits for 64-0bit results, two) register.  So on x86 the function to be called is invoked using
+
+	floatRet := self dispatchFunctionPointer: (self cCoerceSimple: procAddr to: 'double (*)()')
+or
+	intRet := self dispatchFunctionPointer: (self cCoerceSimple: procAddr to: 'usqLong (*)()')
+
+On ARMv4/5/6 it is invoked with
+
+	floatRet := self 
+			dispatchFunctionPointer: (self cCoerceSimple: procAddr to: 'float (*)(sqIntptr_t, sqIntptr_t, sqIntptr_t, sqIntptr_t)') 
+			with: (calloutState integerRegisters at: 0)
+			with: (calloutState integerRegisters at: 1)
+			with: (calloutState integerRegisters at: 2)
+			with: (calloutState integerRegisters at: 3)
+or
+	floatRet := self 
+				dispatchFunctionPointer: (self cCoerceSimple: procAddr to: 'double (*)(sqIntptr_t, sqIntptr_t, sqIntptr_t, sqIntptr_t)') 
+				with: (calloutState integerRegisters at: 0)
+				with: (calloutState integerRegisters at: 1)
+				with: (calloutState integerRegisters at: 2)
+				with: (calloutState integerRegisters at: 3)
+or
+	intRet := self 
+				dispatchFunctionPointer: (self cCoerceSimple: procAddr to: 'usqIntptr_t (*)(sqIntptr_t, sqIntptr_t, sqIntptr_t, sqIntptr_t)') 
+				with: (calloutState integerRegisters at: 0)
+				with: (calloutState integerRegisters at: 1)
+				with: (calloutState integerRegisters at: 2)
+				with: (calloutState integerRegisters at: 3)
+
+Hence the C compiler generates the code to pass regoster parameters appropriately.  All we have to do is provide sufficient register parameters and give the function (pointer) to be called a suitable type.
+
+Likewise we also persuade the C compiler to generate code to load any floating-point register arguments by preceding any call of a function that takes floating-point arguments passed in registers with a call to loadFloatRegs with as many floating-point parameters as trhere are floating-point parameter rtegisters.  loadFloatRegs is implementyed in platforms//Cross/plugins/SqueakFFIPrims/sqFFIPlugin.c as an empty function.  So floating-point registers are passed via calls such as:
+
+	calloutState floatRegisterIndex > 0 ifTrue:
+		[self loadFloatRegs:
+			   ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 0)) to: #'double *') at: 0)
+			_: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 2)) to: #'double *') at: 0)
+			_: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 4)) to: #'double *') at: 0)
+			_: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 6)) to: #'double *') at: 0)
+			_: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 8)) to: #'double *') at: 0)
+			_: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 10)) to: #'double *') at: 0)
+			_: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 12)) to: #'double *') at: 0)
+			_: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 14)) to: #'double *') at: 0)
+
+(*) some implementations of alloca do not answer the actual top-of-stack, but may answer an address a word or two away.  On these implementations we merely derive the top-of-stack instead of using the result of alloca, or perhaps set the stack pointer to the result of alloca, as befits the platform.
+
+Callbacks are not handled by this plugin.  Insteasd they are handled by image-level code to create Alien ""thunks"", small sequences of machine code, that invoke a function thunkEntry, implemented as required by each platform in one of the files in platforms/Cross/plugins/IA32ABI (a regrettable name; it should be something like platforms/Cross/plugins/AlienCallbacks).  Each platform's thunkEntry has a signature that takes all integer register parameters (if any), all floating-point register parameters (if any), a pointer to the thunk, and the stack pointer at the point the thunk was invoiked.  To pass a callback to foreign code, the marshaller in this plugin passes the address of the tunk.  When external code calls that address the think is invoked, and it invokes thunkEntry as required.  thunkEntry then saves its parameters locally in an instance of VMCallbackContext, which includes a jmpbuf.  thunkEntry then does a setjmp and enters the VM via sendInvokeCallbackContext[:], which creates an activation of invokeCallbackContext: to execute the callback.  This method then extracts the address of the thunk from the VMCallbackContext and invokes machinery in Callback to match the address with a Smalltalk block.  The block is then evaluated with the parameters extracted from the VMCallbackContext, marshalled by methods in Callback subclasses signatures ptotocol, which know whether a parameter would be passed in a register or on the stack.  The result of the block is then passed back to thunkEntry by storing it in a field in the VMCallbackContext and invoking primSignal:andReturnAs:fromContext:, which uses longjmp to jump back to thunkEntry which then extracts the result from its VMCallbackContext and returns.
+
+For  example, the signature of thunkEntry on x86/IA32 (platforms/Cross/plugins/IA32ABI/ia32abicc.c) is
+	long
+	thunkEntry(void *thunkp, sqIntptr_t *stackp)
+whereas on ARMv4/5/6 (platforms/Cross/plugins/IA32ABI/arm32abicc.c) it is
+	long long
+	thunkEntry(long r0, long r1, long r2, long r3,
+		            double d0, double d1, double d2, double d3,
+		            double d4, double d5, double d6, double d7,
+		            void *thunkpPlus16, sqIntptr_t *stackp)
 "
 Class {
 	#name : #ThreadedFFIPlugin,
@@ -369,6 +431,29 @@ ThreadedFFIPlugin >> dispatchFunctionPointer: aFunctionPointer with: int1 with: 
 			with: int4
 			with: int5
 			with: int6]
+		on: Error
+		do: [:ex|
+			interpreterProxy
+				primitiveFailForFFIException: PrimErrFFIException
+				at: aFunctionPointer asInteger.
+			ex pass "NOTREACHED if VM is handling FFI exceptions"]
+]
+
+{ #category : #'callout support' }
+ThreadedFFIPlugin >> dispatchFunctionPointer: aFunctionPointer with: int1 with: int2 with: int3 with: int4 with: int5 with: int6 with: int7 with: int8 [
+	"In C aFunctionPointer is void (*aFunctionPointer)(int, int, int, int, int, int)"
+	<cmacro: '(aFunctionPointer, int1, int2, int3, int4, int5, int6, int7, int8) (aFunctionPointer)(int1, int2, int3, int4, int5, int6, int7, int8)'>
+	"To write the FFI call failure code we simulate invoking the production VM's
+	 fatal exception handlers (sigsegv on Unix, squeakExceptionHandler on WIN32, et al)."
+	^[self perform: aFunctionPointer
+			with: int1
+			with: int2
+			with: int3
+			with: int4
+			with: int5
+			with: int6
+			with: int7
+			with: int8]
 		on: Error
 		do: [:ex|
 			interpreterProxy
