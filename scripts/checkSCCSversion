@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Script to ensure that platforms/Cross/vm/sqSCCSVersion.h has been updated
-# We woiuld like to run updateSCCSVersions automatically but this requires
+# We would like to run updateSCCSVersions automatically but this requires
 # git to be up-to-date, seems not to work on Cygin, etc.  Instead simply print
 # an error message and answer success. This script can be used in mvm
 
