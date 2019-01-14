@@ -56,6 +56,44 @@ Class {
 }
 
 { #category : #exploration }
+DominatorFinder class >> containsAssignedOptimizedConditionalExpressionValue: aCompiledMethod [
+	"Answer if aCompiledMethod contains an optimized conditional expression which is assigned."
+	[:dominatingNodes
+	 :anomalousNodes
+	 :dominatedNodes
+	 :dominatorMap
+	 :newMethod| | encoderClass |
+	^dominatorMap notEmpty
+	  and: [(encoderClass := newMethod encoderClass) supportsFullBlocks
+			ifFalse: "simple; can look at the single method object"
+				[| sps |
+				 sps := (StackDepthFinder on: newMethod) stackPointers.
+				 dominatorMap associations anySatisfy:
+					[:a| "Filter out expr ifTrue: [...] ifFalse: [...].  Both arms share a single pop"
+					((encoderClass isStorePopAt: a value in: newMethod)
+					or: [encoderClass isStoreAt: a value in: newMethod])
+					and: [(sps at: a key) <= (sps at: a value)]]]
+			ifTrue: "complex; have to locate the relevant sub-method"
+				[| asps |
+				 asps := (StackDepthFinder on: newMethod) allStackPointers.
+				 dominatorMap associations anySatisfy:
+					[:a| | dpc sps m |
+					a key isInteger
+						ifTrue:
+							[dpc := a key.
+							 m := newMethod]
+						ifFalse:
+							[dpc := a key value.
+							 m := a key key].
+						sps := asps at: m.
+					"Filter out expr ifTrue: [...] ifFalse: [...].  Both arms share a single pop"
+					((encoderClass isStorePopAt: a value in: m)
+					or: [encoderClass isStoreAt: a value in: m])
+					and: [(sps at: dpc) <= (sps at: a value)]]]]]
+		valueWithArguments: (self dominatorTupleForMethod: aCompiledMethod)
+]
+
+{ #category : #exploration }
 DominatorFinder class >> containsOptimizedConditionalExpressionValue: aCompiledMethod [
 	"Answer if aCompiledMethod contains an optimized conditional expression which
 	 is used as either a message receiver or parameter, or a value to store or return."
@@ -73,7 +111,7 @@ DominatorFinder class >> containsOptimizedConditionalExpressionValue: aCompiledM
 					[:a| "Filter out expr ifTrue: [...] ifFalse: [...].  Both arms share a single pop"
 					(encoderClass isJustPopAt: a value in: newMethod) not
 					and: [(sps at: a key) <= (sps at: a value)]]]
-			ifTrue: "complex; have to locate the reelevant sub-method"
+			ifTrue: "complex; have to locate the relevant sub-method"
 				[| asps |
 				 asps := (StackDepthFinder on: newMethod) allStackPointers.
 				 dominatorMap associations anySatisfy:
@@ -89,6 +127,46 @@ DominatorFinder class >> containsOptimizedConditionalExpressionValue: aCompiledM
 					"Filter out expr ifTrue: [...] ifFalse: [...].  Both arms share a single pop"
 					(encoderClass isJustPopAt: a value in: m) not
 					and: [(sps at: dpc) <= (sps at: a value)]]]]]
+		valueWithArguments: (self dominatorTupleForMethod: aCompiledMethod)
+]
+
+{ #category : #exploration }
+DominatorFinder class >> containsOptimizedConditionalExpressionValueOtherThanForBranching: aCompiledMethod [
+	"Answer if aCompiledMethod contains an optimized conditional expression which
+	 is used as either a message receiver or parameter, or a value to store or return,
+	 but not as a receiver to be branched upon."
+	[:dominatingNodes
+	 :anomalousNodes
+	 :dominatedNodes
+	 :dominatorMap
+	 :newMethod| | encoderClass |
+	^dominatorMap notEmpty
+	  and: [(encoderClass := newMethod encoderClass) supportsFullBlocks
+			ifFalse: "simple; can look at the single method object"
+				[| sps |
+				 sps := (StackDepthFinder on: newMethod) stackPointers.
+				 dominatorMap associations anySatisfy:
+					[:a| "Filter out expr ifTrue: [...] ifFalse: [...].  Both arms share a single pop"
+					(encoderClass isJustPopAt: a value in: newMethod) not
+					and: [(encoderClass isBranchAt: a value in: newMethod) not
+					and: [(sps at: a key) <= (sps at: a value)]]]]
+			ifTrue: "complex; have to locate the relevant sub-method"
+				[| asps |
+				 asps := (StackDepthFinder on: newMethod) allStackPointers.
+				 dominatorMap associations anySatisfy:
+					[:a| | dpc sps m |
+					a key isInteger
+						ifTrue:
+							[dpc := a key.
+							 m := newMethod]
+						ifFalse:
+							[dpc := a key value.
+							 m := a key key].
+						sps := asps at: m.
+					"Filter out expr ifTrue: [...] ifFalse: [...].  Both arms share a single pop"
+					(encoderClass isJustPopAt: a value in: m) not
+					and: [(encoderClass isBranchAt: a value in: m) not
+					and: [(sps at: dpc) <= (sps at: a value)]]]]]]
 		valueWithArguments: (self dominatorTupleForMethod: aCompiledMethod)
 ]
 
