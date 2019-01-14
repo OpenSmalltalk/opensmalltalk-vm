@@ -56,15 +56,55 @@ Class {
 }
 
 { #category : #exploration }
+DominatorFinder class >> containsOptimizedConditionalExpressionValue: aCompiledMethod [
+	"Answer if aCompiledMethod contains an optimized conditional expression which
+	 is used as either a message receiver or parameter, or a value to store or return."
+	[:dominatingNodes
+	 :anomalousNodes
+	 :dominatedNodes
+	 :dominatorMap
+	 :newMethod| | encoderClass |
+	^dominatorMap notEmpty
+	  and: [(encoderClass := newMethod encoderClass) supportsFullBlocks
+			ifFalse: "simple; can look at the single method object"
+				[| sps |
+				 sps := (StackDepthFinder on: newMethod) stackPointers.
+				 dominatorMap associations anySatisfy:
+					[:a| "Filter out expr ifTrue: [...] ifFalse: [...].  Both arms share a single pop"
+					(encoderClass isJustPopAt: a value in: newMethod) not
+					and: [(sps at: a key) <= (sps at: a value)]]]
+			ifTrue: "complex; have to locate the reelevant sub-method"
+				[| asps |
+				 asps := (StackDepthFinder on: newMethod) allStackPointers.
+				 dominatorMap associations anySatisfy:
+					[:a| | dpc sps m |
+					a key isInteger
+						ifTrue:
+							[dpc := a key.
+							 m := newMethod]
+						ifFalse:
+							[dpc := a key value.
+							 m := a key key].
+						sps := asps at: m.
+					"Filter out expr ifTrue: [...] ifFalse: [...].  Both arms share a single pop"
+					(encoderClass isJustPopAt: a value in: m) not
+					and: [(sps at: dpc) <= (sps at: a value)]]]]]
+		valueWithArguments: (self dominatorTupleForMethod: aCompiledMethod)
+]
+
+{ #category : #exploration }
 DominatorFinder class >> dominatorTupleForMethod: aCompiledMethod [
 	"Answer a tuple of
 		dominating optimized nodes, (inlined if's that are found by DominatorFinder)
 		anomalous optimized nodes, (inlined if's that are not found by DominatorFinder)
 		dominated nodes, (inlined if's nested within other inlined if's that occur at the end of a basic block and hence jump to the same place as their parent)
 		dominator pcs (the dominator pcs found by the DominatorFinder)
+		recompiled method
 	 for aCompiledMethod.  It is expected that the anomaloius nodes should be empty."
 	| mn optimizedNodes
 	  dominators offenders dominated dominatorPCs |
+	aCompiledMethod isQuick ifTrue:
+		[^#(#() #() #() #() #())].
 	mn := CompiledMethod
 			noCheckSetPreferredBytecodeSetTo: aCompiledMethod encoderClass
 			while:
@@ -75,12 +115,12 @@ DominatorFinder class >> dominatorTupleForMethod: aCompiledMethod [
 					trailer: aCompiledMethod trailer 
 					ifFail: [nil]]
 					on: SyntaxErrorNotification
-					do: [^#(#() #() #() #())]]
+					do: [^#(#() #() #() #() #())]]
 						value: aCompiledMethod methodClass
 						value: aCompiledMethod selector].
 	"mn method ~= aCompiledMethod ifTrue:
 		[Transcript cr; show: 'warning: recompilation of ', aCompiledMethod reference, ' generated different code'.
-		 ^#(#() #() #() #())]."
+		 ^#(#() #() #() #() #())]."
 	dominatorPCs := (self on: mn method) dominators.
 	dominated := IdentitySet new. "The last statement of an inlined if cannot dominate the join of its enclosing if"
 	optimizedNodes := OrderedCollection new. "Avoid double traversal"
@@ -104,7 +144,18 @@ DominatorFinder class >> dominatorTupleForMethod: aCompiledMethod [
 			[((dominatorPCs at: n pc ifAbsent: nil)
 				ifNil: [offenders]
 				ifNotNil: [dominators]) addLast: n]].
-	^{ dominators. offenders. dominated. dominatorPCs }
+	^{ dominators. offenders. dominated. dominatorPCs. mn method }
+]
+
+{ #category : #exploration }
+DominatorFinder class >> exampleMethod [
+	"(StackDepthFinder on: DominatorFinder class >> #exampleMethod) stackPointers.
+	 DominatorFinder dominatorTupleForMethod: DominatorFinder class >> #exampleMethod.
+	 (DominatorFinder class >> #exampleMethod) detailedSymbolic"
+	self isCollection
+		ifTrue: [self at: 1]
+		ifFalse: [self at: 2].
+	self at: (self isCollection ifTrue: [1] ifFalse: [2]) put: self
 ]
 
 { #category : #'class initialization' }
