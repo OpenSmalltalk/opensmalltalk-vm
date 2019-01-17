@@ -423,7 +423,7 @@ sqInt ioSetIconOfWindow(sqInt windowIndex, char * iconPath, sqInt sizeOfPath) {
 	if(len <= 0) return -1; /* invalid UTF8 ? */
 	iconPathW[len] = 0;
 	//Check if file exists and have read rights
-	if (_waccess(iconPath, 4) == -1) { return -1; }; 
+	if (_waccess(iconPathW, 4) == -1) { return -1; }; 
 	//Load the image into an icon
 	HICON hIcon = (HICON)LoadImageW(NULL, iconPathW, IMAGE_ICON, 0, 0, LR_LOADFROMFILE);
 	if (hIcon == 0)
