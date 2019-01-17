@@ -120,11 +120,16 @@ $(APP)/Contents/Resources/%.bundle: $(BLDDIR)/vm/%.bundle
 		echo cp -pR $< $(APP)/Contents/Resources; \
 		cp -pR $< $(APP)/Contents/Resources; \
 	fi
-	
+
 $(APP)/Contents/MacOS/Plugins/%.dylib: $(BLDDIR)/vm/%.dylib
 	@mkdir -p $(APP)/Contents/MacOS/Plugins
-	cp -p $< $(APP)/Contents/MacOS/Plugins
-	
+	@if [ -f $(basename $<).ignore ]; then \
+		echo $(notdir $<) is being ignored; \
+		rm -rf $^; \
+	else \
+		echo cp -p $< $(APP)/Contents/MacOS/Plugins; \
+		cp -p $< $(APP)/Contents/MacOS/Plugins; \
+	fi
 
 $(VMPLIST): $(OSXDIR)/$(SYSTEM)-Info.plist getversion
 	-mkdir -p $(APP)/Contents
