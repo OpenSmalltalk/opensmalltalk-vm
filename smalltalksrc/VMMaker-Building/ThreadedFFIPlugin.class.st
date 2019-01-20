@@ -231,6 +231,19 @@ ThreadedFFIPlugin class >> preambleCCode [
 # define setsp(sp) asm volatile ("movl %0,%%esp" : : "m"(sp))
 # elif defined(__GNUC__) && (defined(__amd64__) || defined(__x86_64__) ||  defined(__amd64) || defined(__x86_64))
 # define setsp(sp) asm volatile ("movq %0,%%rsp" : : "m"(sp))
+# elif defined(__arm64__) || defined(__aarch64__) || defined(ARM64)
+        /* https://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html#Extended-Asm
+         * http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.den0024a/index.html
+         */
+#  if __GNUC__
+#   define getfp() ({ usqIntptr_t fp;                                                           \
+                                          asm volatile ("mov x0, x29" : "=r"(x29) : );  \
+                                          fp; })
+#   define getsp() ({ usqIntptr_t sp;                                                           \
+                                          asm volatile ("mov x0, sp" : "=r"(sp) : );    \
+                                          sp; })
+# define setsp(sp) asm volatile ("ldr x16, %0 \n\t" "mov sp, x16"  : : "m"(sp) )
+#  endif
 # elif defined(__GNUC__) && (defined(__arm__))
 # define setsp(sp) asm volatile ("ldr %%sp, %0" : : "m"(sp))
 #endif

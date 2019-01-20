@@ -13,7 +13,7 @@ Class {
 
 { #category : #translation }
 ThreadedARMFFIPlugin class >> calloutStateClass [
-	^ThreadedFFICalloutStateForARM
+	^ThreadedFFICalloutStateForARM32
 ]
 
 { #category : #translation }

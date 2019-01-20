@@ -11,6 +11,11 @@ Class {
 }
 
 { #category : #translation }
+ThreadedARM64FFIPlugin class >> calloutStateClass [
+	^ThreadedFFICalloutStateForARM64
+]
+
+{ #category : #translation }
 ThreadedARM64FFIPlugin class >> identifyingPredefinedMacros [
 	^#('__ARM_ARCH_ISA_A64' '__aarch64__' '__arm64__' 'ARM64')
 ]
@@ -111,6 +116,169 @@ ThreadedARM64FFIPlugin >> ffiCalloutTo: procAddr SpecOnStack: specOnStack in: ca
 		 ^self ffiReturnStruct: intRet ofType: (self ffiReturnType: specOnStack) in: calloutState].
 	
 	^self ffiCreateIntegralResultOop: intRet ofAtomicType: atomicType in: calloutState
+]
+
+{ #category : #marshalling }
+ThreadedARM64FFIPlugin >> ffiPushDoubleFloat: value in: calloutState [
+	<var: #value type: #double>
+	<var: #calloutState type: #'CalloutState *'>
+	<inline: #always>
+
+	calloutState floatRegisterIndex < (NumFloatRegArgs - 1)
+		ifTrue:
+			[(self cCoerceSimple: 
+				(self addressOf: (calloutState floatRegisters at: calloutState floatRegisterIndex)) 
+					 to: 'double*')
+				at: 0
+				put: value.
+			 calloutState floatRegisterIndex: calloutState floatRegisterIndex + 2]
+		ifFalse:
+			[calloutState currentArg + self wordSize > calloutState limit ifTrue:
+				[^FFIErrorCallFrameTooBig].
+			 calloutState floatRegisterIndex: NumFloatRegArgs.
+			 interpreterProxy storeFloatAtPointer: calloutState currentArg from: value.
+			 calloutState currentArg: calloutState currentArg + self wordSize].
+	^0
+]
+
+{ #category : #marshalling }
+ThreadedARM64FFIPlugin >> ffiPushSignedInt: value in: calloutState [
+	<var: #calloutState type: #'CalloutState *'>
+	<inline: true>
+	calloutState integerRegisterIndex < NumIntRegArgs
+		ifTrue:
+			[calloutState integerRegisters 
+				at: calloutState integerRegisterIndex 
+				put: (self cCoerceSimple: value to: #sqLong).
+			 calloutState integerRegisterIndex: calloutState integerRegisterIndex + 1]
+		ifFalse:
+			[calloutState currentArg + self wordSize > calloutState limit ifTrue:
+				[^FFIErrorCallFrameTooBig].
+			 interpreterProxy longAt: calloutState currentArg put: value.
+			 calloutState currentArg: calloutState currentArg + self wordSize].
+	^0
+
+]
+
+{ #category : #marshalling }
+ThreadedARM64FFIPlugin >> ffiPushSignedLongLong: value in: calloutState [
+	<var: #value type: #sqLong>
+	<var: #calloutState type: #'CalloutState *'>
+	<inline: true>
+	calloutState integerRegisterIndex < NumIntRegArgs
+		ifTrue:
+			[calloutState integerRegisters 
+				at: calloutState integerRegisterIndex 
+				put: (self cCoerceSimple: value to: #sqLong).
+			 calloutState integerRegisterIndex: calloutState integerRegisterIndex + 1]
+		ifFalse:
+			[calloutState currentArg + self wordSize > calloutState limit ifTrue: [^FFIErrorCallFrameTooBig].
+			 interpreterProxy longAt: calloutState currentArg put: value.
+			 calloutState currentArg: calloutState currentArg + self wordSize].
+	^0
+]
+
+{ #category : #marshalling }
+ThreadedARM64FFIPlugin >> ffiPushSingleFloat: value in: calloutState [
+	<var: #value type: #float>
+	<var: #calloutState type: #'CalloutState *'>
+	<inline: #always>
+	calloutState floatRegisterIndex < NumFloatRegArgs
+		ifTrue: 
+			[calloutState floatRegisters 
+				at: calloutState floatRegisterIndex 
+				put: (self cCoerceSimple: value to: #double).
+			 calloutState floatRegisterIndex: calloutState floatRegisterIndex + 2]
+		ifFalse:
+			[calloutState currentArg + self wordSize > calloutState limit ifTrue:
+				[^FFIErrorCallFrameTooBig].
+			 interpreterProxy storeSingleFloatAtPointer: calloutState currentArg from: value.
+			 calloutState currentArg: calloutState currentArg + self wordSize].
+	^0
+]
+
+{ #category : #marshalling }
+ThreadedARM64FFIPlugin >> ffiPushStructure: pointer ofSize: structSize typeSpec: argSpec ofLength: argSpecSize in: calloutState [
+	<var: #pointer type: #'void *'>
+	<var: #argSpec type: #'sqInt *'>
+	<var: #calloutState type: #'CalloutState *'>
+	<inline: true>
+	| availableRegisterSpace stackPartSize roundedSize |
+
+	availableRegisterSpace := (NumIntRegArgs - calloutState integerRegisterIndex) * self wordSize.
+	stackPartSize := structSize.
+	availableRegisterSpace > 0
+		ifTrue: 
+			[structSize <= availableRegisterSpace
+				ifTrue:
+					["all in registers"
+					 stackPartSize := 0.
+					 self 
+						memcpy: (self cCoerceSimple: (self addressOf: (calloutState integerRegisters at: calloutState integerRegisterIndex)) to: 'void *') 
+						_: pointer 
+						_: structSize.
+					 calloutState integerRegisterIndex: calloutState integerRegisterIndex + (structSize + 3 bitShift: -2) ]
+				ifFalse:
+					["If no previous co-processor candidate arg has already been pushed on the stack, then split the struct between registers and stack.
+					  Otherwise push entire struct on stack."
+					 calloutState currentArg = calloutState argVector
+						ifTrue: 
+					 		[stackPartSize := structSize - availableRegisterSpace.
+					 		self 
+								memcpy: (self cCoerceSimple: (self addressOf: (calloutState integerRegisters at: calloutState integerRegisterIndex)) to: 'void *') 
+								_: pointer 
+								_: availableRegisterSpace]
+						ifFalse:
+							[availableRegisterSpace := 0].
+					calloutState integerRegisterIndex: NumIntRegArgs]].
+
+	stackPartSize > 0
+		ifTrue: 
+			[roundedSize := stackPartSize + 3 bitClear: 3.
+			 calloutState currentArg + roundedSize > calloutState limit ifTrue:
+				 [^FFIErrorCallFrameTooBig].
+			 self memcpy: calloutState currentArg _: (self addressOf: ((self cCoerceSimple: pointer to: 'char *') at: availableRegisterSpace)) _: stackPartSize.
+			 calloutState currentArg: calloutState currentArg + roundedSize].
+	^0
+]
+
+{ #category : #marshalling }
+ThreadedARM64FFIPlugin >> ffiPushUnsignedInt: value in: calloutState [
+	<var: #calloutState type: #'CalloutState *'>
+	<inline: true>
+	calloutState integerRegisterIndex < NumIntRegArgs
+		ifTrue:
+			[calloutState integerRegisters 
+				at: calloutState integerRegisterIndex 
+				put:  (self cCoerceSimple: value to: #usqLong).
+			 calloutState integerRegisterIndex: calloutState integerRegisterIndex + 1]
+		ifFalse:
+			[calloutState currentArg + self wordSize > calloutState limit ifTrue:
+				[^FFIErrorCallFrameTooBig].
+			 interpreterProxy longAt: calloutState currentArg put: value.
+			 calloutState currentArg: calloutState currentArg + self wordSize].
+	^0
+
+
+]
+
+{ #category : #marshalling }
+ThreadedARM64FFIPlugin >> ffiPushUnsignedLongLong: value in: calloutState [
+	<var: #value type: #usqLong>
+	<var: #calloutState type: #'CalloutState *'>
+	<inline: true>
+	calloutState integerRegisterIndex < NumIntRegArgs
+		ifTrue:
+			[calloutState integerRegisters 
+				at: calloutState integerRegisterIndex 
+				put:(self cCoerceSimple: value to: #usqLong).
+			 calloutState integerRegisterIndex: calloutState integerRegisterIndex + 1]
+		ifFalse:
+			[calloutState currentArg + self wordSize > calloutState limit ifTrue: [^FFIErrorCallFrameTooBig].
+			 interpreterProxy longAt: calloutState currentArg put: value.
+			 calloutState currentArg: calloutState currentArg + self wordSize].
+	^0
+
 ]
 
 { #category : #'simulation support' }
