@@ -10,6 +10,22 @@ Class {
 	#category : #'VMMaker-Support'
 }
 
+{ #category : #accessing }
+StackDepthFinder >> allStackPointers [
+	"Answer a Dictionary from method to Array of stack pointers for all methods ioncluded in the receiver's method."
+	"(StackDepthFinder on: StackDepthFinder >> #allStackPointers) allStackPointers"
+	| allStackPointers method endPC |
+	allStackPointers := Dictionary new.
+	allStackPointers at: (method := self method) put: self stackPointers.
+	endPC := pc.
+	method nestedBlockMethods do:
+		[:blockMethod|
+		self method: blockMethod pc: blockMethod initialPC.
+		allStackPointers at: blockMethod put: self stackPointers].
+	self method: method pc: endPC.
+	^allStackPointers
+]
+
 { #category : #'instruction decoding' }
 StackDepthFinder >> blockReturnConstant: value [
 	"Return Constant From Block bytecode."

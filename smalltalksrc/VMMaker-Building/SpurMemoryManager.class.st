@@ -2365,8 +2365,12 @@ SpurMemoryManager >> ambiguousClass: aClass allInstancesInto: start limit: limit
 
 { #category : #'interpreter access' }
 SpurMemoryManager >> areIntegers: oop1 and: oop2 [
-	"Test oop1 and oop2 to make sure both are SmallIntegers."
-	self subclassResponsibility
+	"Test oop1 and oop2 to make sure both are SmallIntegers.
+	 In 32-bits the tags are 1 = SmallInteger & 3 = SmallInteger, and 2 = Character.
+	 In 64-bits the  tags are 1 = SmallInteger, 2 = Character & 4 = SmallFloat64.
+	 In both cases we can test for two SmallIntegers by anding them together and
+	 if the result still has the least significant bit set then both are SmallIntegers."
+	^(oop1 bitAnd: oop2) anyMask: self smallIntegerTag
 ]
 
 { #category : #'class table puns' }

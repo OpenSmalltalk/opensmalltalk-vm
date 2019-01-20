@@ -147,12 +147,6 @@ Spur32BitMemoryManager >> allocateSlotsInOldSpace: numSlots bytes: totalBytes fo
 	^chunk
 ]
 
-{ #category : #'interpreter access' }
-Spur32BitMemoryManager >> areIntegers: oop1 and: oop2 [
-	"Test oop1 and oop2 to make sure both are SmallIntegers."
-	^((oop1 bitAnd: oop2) bitAnd: 1) ~= 0
-]
-
 { #category : #snapshot }
 Spur32BitMemoryManager >> byteSwapped: w [
 	"Answer the given integer with its bytes in the reverse order."
