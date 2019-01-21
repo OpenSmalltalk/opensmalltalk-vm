@@ -46,7 +46,7 @@
 #  else /* unknown platform */
 #  endif
 
-#elif defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
+#elif defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64) || defined(ARM64) || defined(__ARCH_ARM_ISA_A64)
 
 #  define IS_64_BIT_ARCH 1
 
