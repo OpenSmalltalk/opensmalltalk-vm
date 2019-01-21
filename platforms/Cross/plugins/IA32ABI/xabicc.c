@@ -15,6 +15,8 @@
 # else
 #	include "x64sysvabicc.c"
 # endif
+#elif defined(__ARM_ARCH_ISA_A64) || defined(__aarch64__) || defined(__arm64__) || defined(ARM64)
+# include "arm64abicc.c"
 #elif defined(__ARM_ARCH__) || defined(__arm__) || defined(__arm32__) || defined(ARM32) || defined(_M_ARM)
 # include "arm32abicc.c"
 #else

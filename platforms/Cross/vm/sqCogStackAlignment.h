@@ -22,7 +22,13 @@
 # endif
 #endif
 
-#if defined(__arm__) || defined(__arm32__) || defined(ARM32)
+#if defined(__arm64__) || defined(__aarch64__) || defined(ARM64)
+/* Quad-byte stack alignment on ARM64 is required.
+   (SP mod 16) == 0
+ */
+# define STACK_ALIGN_BYTES 16
+# define STACK_FP_ALIGNMENT 8
+#elif defined(__arm__) || defined(__arm32__) || defined(ARM32)
 /* 8-byte stack alignment on ARM32 is required for instructions which
  * require 8-byte aligned addresses to access doubles in memory.
  */
@@ -70,6 +76,21 @@
 #   define getsp() ({ register usqIntptr_t sp;					\
 					  asm volatile ("movl %%esp,%0" : "=r"(sp) : );	\
 					  sp; })
+#  endif
+# elif defined(__arm64__) || defined(__aarch64__) || defined(ARM64)
+	/* https://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html#Extended-Asm
+	 * http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.den0024a/index.html
+	 */
+#  if __GNUC__
+#   define getfp() ({ usqIntptr_t fp;								\
+					  asm volatile ("mov x0, x29" : "=r"(x29) : );	\
+					  fp; })
+#   define getsp() ({ usqIntptr_t sp;								\
+					  asm volatile ("mov x0, sp" : "=r"(sp) : );	\
+					  sp; })
+
+# define setsp(sp) asm volatile ("ldr x16, %0 \n\t" "mov sp, x16"  : : "m"(sp) )
+
 #  endif
 # elif defined(__arm__) || defined(__arm32__) || defined(ARM32)
 	/* http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dui0041c/Cegbidie.html

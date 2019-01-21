@@ -49,6 +49,11 @@ extern sqInt callIA32DoubleReturn  (SIGNATURE);
 #elif defined(__powerpc__) || defined(PPC) || defined(_POWER) || defined(_IBMR2) || defined(__ppc__)
 # define INT_REG_ARGS long,long,long,long,long,long,long,long,
 # define DBL_REG_ARGS /* none */
+#elif defined(__ARM_ARCH_ISA_A64) || defined(__arm64__) || defined(__aarch64__) || defined(ARM64)
+# undef thunkEntryType
+# define thunkEntryType long long
+# define INT_REG_ARGS long,long,long,long,long,long,long,long,
+# define DBL_REG_ARGS double,double,double,double,double,double,double,double,
 #elif defined(__ARM_ARCH__) || defined(__arm__) || defined(__arm32__) || defined(ARM32)
 # undef thunkEntryType
 # define thunkEntryType long long
