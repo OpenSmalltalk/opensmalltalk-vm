@@ -92,7 +92,7 @@ sqLong callIA32IntegralReturn(SIGNATURE) {
             double d0, double d1, double d2, double d3,
             double d4, double d5, double d6, double d7);
   long r;
-#include "dabusinessARM64.h"
+#include "dabusinessARM.h"
 }
 
 /*
@@ -104,7 +104,7 @@ sqLong callIA32FloatReturn(SIGNATURE) {
              double d0, double d1, double d2, double d3,
              double d4, double d5, double d6, double d7);
   float r;
-#include "dabusinessARM64.h"
+#include "dabusinessARM.h"
 }
 
 /*
@@ -117,7 +117,7 @@ callIA32DoubleReturn(SIGNATURE) {
               double d0, double d1, double d2, double d3,
               double d4, double d5, double d6, double d7);
   double r;
-#include "dabusinessARM64.h"
+#include "dabusinessARM.h"
 }
 
 /* Queueing order for callback returns.  To ensure that callback returns occur
