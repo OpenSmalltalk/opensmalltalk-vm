@@ -169,7 +169,7 @@ getMostRecentCallbackContext() { return mostRecentCallbackContext; }
  * args would get copied into a struct on the stack. A pointer to the struct
  * is then passed as an element of the VMCallbackContext.
  */
-long
+long __attribute__((optimize("O0")))
 thunkEntry(void *thunkp, sqIntptr_t *stackp)
 {
 	VMCallbackContext vmcc;
