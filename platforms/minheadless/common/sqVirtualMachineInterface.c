@@ -3,7 +3,7 @@
  *   Copyright (C) 2016 by Ronie Salgado
  *   All rights reserved.
  *
- *   This file is part of Minimalistic Headless Squeak.
+ *   This file is part of Minimalistic Headless OpenSmalltalk.
  *
  *   Permission is hereby granted, free of charge, to any person obtaining a
  *   copy of this software and associated documentation files (the "Software"),
@@ -644,7 +644,7 @@ osvm_main(int argc, const char **argv)
     if(error)
         return error;
 
-    /* Run Squeak */
+    /* Run OpenSmalltalk */
     error = osvm_run();
 
     /* Shutdown*/
