@@ -34,6 +34,17 @@ SocketPluginSimulator class >> shouldBeTranslated [
 	^false
 ]
 
+{ #category : #simulation }
+SocketPluginSimulator >> cCoerce: value to: cTypeString [
+	"Type coercion for translation only; just return the value when running in Smalltalk.
+	 This overrides the generic coercion method in VMClass.  For some reason we are the exception.
+	 If we want that style of coercion we can send cCoerce:to: to interpreterProxy, not self."
+
+	^cTypeString = #SocketPtr
+		ifTrue: [value coerceTo: #'char *' sim: interpreterProxy]
+		ifFalse: [super cCoerce: value to: cTypeString]
+]
+
 { #category : #'initialize-release' }
 SocketPluginSimulator >> close [  "close any sockets that ST may have opened"
 	openSocketHandles do: [:h | self closeAndDestroy: h].
