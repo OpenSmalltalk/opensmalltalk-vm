@@ -226,7 +226,7 @@ same formatting conventions as exist in the file.
 C function declarations should have the type on one line and the 
 function name and parameters on the following line, e.g.:
 
-```
+```c
 static int 
 convertCopy(char *from, int fromLen, char *to, int toLen, int term)
 ```
@@ -235,7 +235,10 @@ This facilitates searching for function definitions by searching for the
 name at the beginning of the line.
 
 
-## Tabs are 4 spaces
+## Tab stops are 4 spaces
 
-The heading says it all.
+In this case the first rule is to keep the existing formatting within a 
+file - we don't want to polute the code history with space changes.
+
+The goal is to use tabs set to 4 spaces.
 
