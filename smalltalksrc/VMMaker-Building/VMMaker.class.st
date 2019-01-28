@@ -176,10 +176,10 @@ VMMaker class >> forConfigurationFile: aFileName [
 	^vmMaker
 ]
 
-{ #category : #initialisation }
+{ #category : #'instance creation' }
 VMMaker class >> forPlatform: platformName [
 	"return a VMMaker initialised to build a default no-internal-plugins, no-external-plugins vm codebase"
-	^(self activeVMMakerClassFor: platformName) new initialize setPlatName: platformName
+	^(self activeVMMakerClassFor: platformName) new setPlatName: platformName
 ]
 
 { #category : #'file utilities' }
