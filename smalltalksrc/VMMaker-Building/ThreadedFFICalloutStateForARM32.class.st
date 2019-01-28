@@ -69,8 +69,8 @@ ThreadedFFICalloutStateForARM32 >> initialize [
 	integerRegisterIndex := 0.
 	floatRegisterIndex := 0.
 	backfillFloatRegisterIndex := 0.
-	integerRegisters := CArrayAccessor on: (Array new: ThreadedARMFFIPlugin numIntRegArgs).
-	floatRegisters := CArrayAccessor on: (Array new: ThreadedARMFFIPlugin numFloatRegArgs)
+	integerRegisters := CArrayAccessor on: (Array new: ThreadedARM32FFIPlugin numIntRegArgs).
+	floatRegisters := CArrayAccessor on: (Array new: ThreadedARM32FFIPlugin numFloatRegArgs)
 ]
 
 { #category : #accessing }

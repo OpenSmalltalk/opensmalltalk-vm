@@ -810,7 +810,7 @@ VMMaker class >> generateVMPlugins [
 					MiscPrimitivePlugin Mpeg3Plugin QuicktimePlugin RePlugin
 					ScratchPlugin SecurityPlugin SerialPlugin SocketPlugin
 					SoundCodecPlugin SoundGenerationPlugin SoundPlugin SqueakSSLPlugin StarSqueakPlugin
-					ThreadedFFIPlugin ThreadedARMFFIPlugin ThreadedARM64FFIPlugin ThreadedIA32FFIPlugin
+					ThreadedFFIPlugin ThreadedARM32FFIPlugin ThreadedARM64FFIPlugin ThreadedIA32FFIPlugin
 					ThreadedX64SysVFFIPlugin ThreadedX64Win64FFIPlugin
 					UnicodePlugin UnixAioPlugin UUIDPlugin UnixOSProcessPlugin
 					Win32OSProcessPlugin VMProfileLinuxSupportPlugin VMProfileMacSupportPlugin WeDoPlugin

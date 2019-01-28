@@ -6,7 +6,7 @@ Instance Variables
 "
 Class {
 	#name : #ThreadedARM64FFIPlugin,
-	#superclass : #ThreadedARMFFIPlugin,
+	#superclass : #ThreadedARM32FFIPlugin,
 	#category : #'VMMaker-Plugins-FFI'
 }
 
@@ -23,8 +23,8 @@ ThreadedARM64FFIPlugin class >> identifyingPredefinedMacros [
 { #category : #'class initialization' }
 ThreadedARM64FFIPlugin class >> initialize [
 	super initialize.
-	NumIntRegArgs     := 8.
-	NumFloatRegArgs := 16
+	NumIntRegArgs    := 8.
+	NumFloatRegArgs := 8
 ]
 
 { #category : #translation }
@@ -47,14 +47,14 @@ ThreadedARM64FFIPlugin >> ffiCalloutTo: procAddr SpecOnStack: specOnStack in: ca
 
 	calloutState floatRegisterIndex > 0 ifTrue:
 		[self loadFloatRegs:
-			   ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 0)) to: #'double *') at: 0)
-			_: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 2)) to: #'double *') at: 0)
-			_: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 4)) to: #'double *') at: 0)
-			_: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 6)) to: #'double *') at: 0)
-			_: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 8)) to: #'double *') at: 0)
-			_: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 10)) to: #'double *') at: 0)
-			_: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 12)) to: #'double *') at: 0)
-			_: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 14)) to: #'double *') at: 0)].
+			   (calloutState floatRegisters at: 0)
+			_: (calloutState floatRegisters at: 1)
+			_: (calloutState floatRegisters at: 2)
+			_: (calloutState floatRegisters at: 3)
+			_: (calloutState floatRegisters at: 4)
+			_: (calloutState floatRegisters at: 5)
+			_: (calloutState floatRegisters at: 6)
+			_: (calloutState floatRegisters at: 7)].
 
 	(self allocaLiesSoSetSpBeforeCall or: [self mustAlignStack]) ifTrue:
 		[self setsp: calloutState argVector].
@@ -124,14 +124,12 @@ ThreadedARM64FFIPlugin >> ffiPushDoubleFloat: value in: calloutState [
 	<var: #calloutState type: #'CalloutState *'>
 	<inline: #always>
 
-	calloutState floatRegisterIndex < (NumFloatRegArgs - 1)
+	calloutState floatRegisterIndex < NumFloatRegArgs
 		ifTrue:
-			[(self cCoerceSimple: 
-				(self addressOf: (calloutState floatRegisters at: calloutState floatRegisterIndex)) 
-					 to: 'double*')
-				at: 0
+			[calloutState floatRegisters
+				at: calloutState floatRegisterIndex
 				put: value.
-			 calloutState floatRegisterIndex: calloutState floatRegisterIndex + 2]
+			 calloutState floatRegisterIndex: calloutState floatRegisterIndex + 1]
 		ifFalse:
 			[calloutState currentArg + self wordSize > calloutState limit ifTrue:
 				[^FFIErrorCallFrameTooBig].
@@ -184,11 +182,13 @@ ThreadedARM64FFIPlugin >> ffiPushSingleFloat: value in: calloutState [
 	<var: #calloutState type: #'CalloutState *'>
 	<inline: #always>
 	calloutState floatRegisterIndex < NumFloatRegArgs
-		ifTrue: 
-			[calloutState floatRegisters 
-				at: calloutState floatRegisterIndex 
-				put: (self cCoerceSimple: value to: #double).
-			 calloutState floatRegisterIndex: calloutState floatRegisterIndex + 2]
+		ifTrue: "Note: this is a 'memcopy', so size is preserved. Casting to #double changes the size"
+			[(self cCoerceSimple: 
+				(self addressOf: (calloutState floatRegisters at: calloutState floatRegisterIndex)) 
+					 to: 'float*')
+				at: 0
+				put: value.
+			 calloutState floatRegisterIndex: calloutState floatRegisterIndex + 1]
 		ifFalse:
 			[calloutState currentArg + self wordSize > calloutState limit ifTrue:
 				[^FFIErrorCallFrameTooBig].
@@ -217,7 +217,8 @@ ThreadedARM64FFIPlugin >> ffiPushStructure: pointer ofSize: structSize typeSpec:
 						memcpy: (self cCoerceSimple: (self addressOf: (calloutState integerRegisters at: calloutState integerRegisterIndex)) to: 'void *') 
 						_: pointer 
 						_: structSize.
-					 calloutState integerRegisterIndex: calloutState integerRegisterIndex + (structSize + 3 bitShift: -2) ]
+						"Round structSize up and divide by 8 ( NB: _not_ 4 !)"
+					 calloutState integerRegisterIndex: calloutState integerRegisterIndex + (structSize + 3 bitShift: -3) ]
 				ifFalse:
 					["If no previous co-processor candidate arg has already been pushed on the stack, then split the struct between registers and stack.
 					  Otherwise push entire struct on stack."
@@ -279,6 +280,20 @@ ThreadedARM64FFIPlugin >> ffiPushUnsignedLongLong: value in: calloutState [
 			 calloutState currentArg: calloutState currentArg + self wordSize].
 	^0
 
+]
+
+{ #category : #marshalling }
+ThreadedARM64FFIPlugin >> nonRegisterStructReturnIsViaImplicitFirstArgument [
+	"Answer if a struct returned in memory is returned to the
+	 referent of a pointer passed as an implciit first argument.
+	 It almost always is.  Subclasses can override if not."
+	^false
+]
+
+{ #category : #marshalling }
+ThreadedARM64FFIPlugin >> returnStructInRegisters: returnStructSize [
+	"Answer if a struct result of a given size is returned in memory or not."
+	^returnStructSize <= (2 * self wordSize) "??numIntRegs--> 8 * wordsize??"
 ]
 
 { #category : #'simulation support' }

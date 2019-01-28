@@ -1566,7 +1566,7 @@ ThreadedFFIPlugin >> morphIntoConcreteSubclass: aCoInterpreter [
 								ifTrue: [ThreadedX64Win64FFIPlugin]
 								ifFalse: [ThreadedX64SysVFFIPlugin]].
 			[#IA32]	->	[ThreadedIA32FFIPlugin].
-			[#ARMv5]	->	[ThreadedARMFFIPlugin] }
+			[#ARMv5]	->	[ThreadedARM32FFIPlugin] }
 			otherwise: [self error: 'simulation not set up for this ISA'].
 	"If the concreteClass has an initialize method, other than ThreadedFFIPlugin class>>initialize
 	 then it needs to be run."

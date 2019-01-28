@@ -20,7 +20,7 @@ ThreadedFFICalloutStateForARM64 class >> instVarNamesAndTypesForTranslationDo: a
 		aBinaryBlock
 			value: ivn
 			value: (ivn caseOf: {
-						['integerRegisters']	-> [{#sqInt. '[NumIntRegArgs]'}].
+						['integerRegisters']	-> [{#sqInt.   '[NumIntRegArgs]'   }].
 						['floatRegisters']	-> [{#double. '[NumFloatRegArgs]'}] }
 					otherwise:
 						[#sqInt])]
