@@ -1536,14 +1536,6 @@ int recordMouseDown(WPARAM wParam, LPARAM lParam)
     else stButtons |= f3ButtonMouse ? 1 : 2;
   }
 
-  if (stButtons == 4)	/* red button honours the modifiers */
-    {
-      if (GetKeyState(VK_CONTROL) & 0x8000)
-        stButtons= 2;	/* blue button if CTRL down */
-      else if (GetKeyState(VK_MENU) & 0x8000)
-        stButtons= 1;	/* yellow button if META down */
-    }
-
 #endif /* defined(_WIN32_WCE) */
 
   buttonState = stButtons & 0x7;

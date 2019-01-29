@@ -141,16 +141,7 @@ static sqInt getButtonState(void)
    */
   int buttons= buttonState;
   int modifiers= modifierState;
-  if ((buttons == RedButtonBit) && modifiers)
-    {
-      int yellow= swapBtn ? BlueButtonBit   : YellowButtonBit;
-      int blue=   swapBtn ? YellowButtonBit : BlueButtonBit;
-      switch (modifiers)
-	{
-	case CtrlKeyBit:    buttons= yellow; modifiers &= ~CtrlKeyBit;    break;
-	case CommandKeyBit: buttons= blue;   modifiers &= ~CommandKeyBit; break;
-	}
-    }
+
 #if DEBUG_MOUSE_EVENTS
   printf("BUTTONS (getButtonState)");
   printModifiers(modifiers);
