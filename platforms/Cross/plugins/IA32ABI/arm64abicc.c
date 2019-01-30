@@ -83,6 +83,25 @@ struct VirtualMachine* interpreterProxy;
 #define intVal(oop)                                                            \
     (((long)(oop))>>1)
 
+
+/*
+ * Call a foreign function to set x8 structure result address return register
+ */
+void setStructReturnAddressRegister(sqLong structAddr)
+{
+  asm volatile ("mov x8, x0");
+}
+
+/*
+ * Call a foreign function to get structure value from X1 
+ * (x0's value already returned as result of ffi call)
+ */
+sqLong returnX1value()
+{
+  asm volatile ("mov x0, x1");
+}
+
+
 /*
  * Call a foreign function that answers an integral result in r0 according to
  * ARM EABI rules.
