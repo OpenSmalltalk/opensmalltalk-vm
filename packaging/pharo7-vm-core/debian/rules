@@ -1,0 +1,41 @@
+#!/usr/bin/make -f
+
+export DH_VERBOSE=1
+export DH_OPTIONS=-v
+
+export EXTRA_CPPFLAGS:=-DNDEBUG -DDEBUGVM=0 -D_GNU_SOURCE -DCOGMTVM=0 -DPharoVM -DIMMUTABILITY=1
+export EXTRA_CFLAGS:=
+
+ifeq ($(DEB_BUILD_ARCH),i386)
+EXTRA_CFLAGS:=-msse2
+EXTRA_CPPFLAGS:=$(EXTRA_CPPFLAGS) -D_FILE_OFFSET_BITS=64
+SOURCES:=spursrc
+endif
+ifeq ($(DEB_BUILD_ARCH),amd64)
+EXTRA_CFLAGS:=-msse2
+SOURCES:=spur64src
+endif
+
+# Make sure that dpkg-buildflags are passed to the building process
+export CPPFLAGS:=$(shell dpkg-buildflags --get CPPFLAGS) $(EXTRA_CPPFLAGS)
+export CFLAGS:=$(shell dpkg-buildflags --get CFLAGS) $(CPPFLAGS) $(EXTRA_CFLAGS)
+export CXXFLAGS:=$(shell dpkg-buildflags --get CXXFLAGS) $(CPPFLAGS) $(EXTRA_CFLAGS)
+export LDFLAGS:=$(shell dpkg-buildflags --get LDFLAGS)
+
+
+%:
+	dh $@ -v --sourcedirectory=platforms/unix/config --builddirectory=build/debian/build
+
+
+override_dh_auto_configure:
+	mkdir -p build/debian/build
+	cp build.linux32x86/pharo.cog.spur/plugins.* build/debian/build/
+	dh_auto_configure -- \
+		--without-npsqueak \
+		--with-vmversion=5.0 \
+		--with-src=$(SOURCES)
+
+override_dh_auto_install:
+	make -C build/debian/build install-squeak install-plugins prefix=$(CURDIR)/results
+	./build.linux32x86/editpharoinstall.sh $(CURDIR)/results
+

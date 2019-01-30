@@ -251,6 +251,7 @@ LRESULT CALLBACK MainWndProcA(HWND hwnd,
                               UINT message,
                               WPARAM wParam,
                               LPARAM lParam) {
+
   return DefWindowProc(hwnd, message, wParam, lParam);
 }
 
@@ -264,6 +265,30 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
   static UINT nrClicks = 0;
   UINT timeNow = 0;
   UINT timeDelta = 0;
+
+  MSG localMessage;
+  LPMSG messageTouse = NULL;
+
+  /*
+   * Newspeak uses the lastMessage pointer.
+   */
+#if NewspeakVM
+  messageTouse = lastMessage;
+#else
+  messageTouse = &localMessage;
+
+  localMessage.hwnd = hwnd;
+  localMessage.message = message;
+  localMessage.wParam = wParam;
+  localMessage.lParam = lParam;
+  localMessage.time = GetMessageTime();
+
+  DWORD point = GetMessagePos();
+
+  localMessage.pt.x = MAKEPOINTS(point).x;
+  localMessage.pt.y = MAKEPOINTS(point).y;
+#endif /*NewspeakVM */
+
 
   /* Intercept any messages if wanted */
   if(preMessageHook)
@@ -285,7 +310,7 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
     if(inputSemaphoreIndex) {
       sqKeyboardEvent *evt = (sqKeyboardEvent*) sqNextEventPut();
       evt->type = EventTypeKeyboard;
-      evt->timeStamp = lastMessage->time;
+      evt->timeStamp = messageTouse->time;
       evt->charCode = (zDelta > 0) ? 30 : 31;
       evt->pressCode = EventKeyChar;
       /* N.B. on iOS & X11 all meta bits are set to distinguish mouse wheel
@@ -366,7 +391,7 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
       nrClicks = 0;
 
     if(inputSemaphoreIndex) {
-      recordMouseEvent(lastMessage, nrClicks);
+      recordMouseEvent(messageTouse, nrClicks);
       break;
     }
     /* state based stuff */
@@ -393,7 +418,7 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
 	lastClickTime = timeNow;
 
     if(inputSemaphoreIndex) {
-      recordMouseEvent(lastMessage, nrClicks);
+      recordMouseEvent(messageTouse, nrClicks);
       break;
     }
     /* state based stuff */
@@ -425,7 +450,7 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
     if(GetFocus() != stWindow) SetFocus(stWindow);
     ReleaseCapture(); /* release mouse capture */
     if(inputSemaphoreIndex) {
-      recordMouseEvent(lastMessage, nrClicks);
+      recordMouseEvent(messageTouse, nrClicks);
       break;
     }
     /* state based stuff */
@@ -445,7 +470,7 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
     if(GetFocus() == consoleWindow)
       return DefWindowProcW(hwnd, message, wParam, lParam);
     if(inputSemaphoreIndex) {
-      recordKeyboardEvent(lastMessage);
+      recordKeyboardEvent(messageTouse);
       if(wParam == VK_F2 && prefsEnableF2Menu()) {
 	TrackPrefsMenu();
       }
@@ -465,7 +490,7 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
     if(GetFocus() == consoleWindow)
       return DefWindowProcW(hwnd, message, wParam, lParam);
     if(inputSemaphoreIndex) {
-      recordKeyboardEvent(lastMessage);
+      recordKeyboardEvent(messageTouse);
       break;
     }
     /* state based stuff */
@@ -475,11 +500,13 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
   case WM_CHAR:
   case WM_SYSCHAR:
     if(GetFocus() == consoleWindow)
-      return DefWindowProcW(hwnd, message, wParam, lParam);
+    	return DefWindowProcW(hwnd, message, wParam, lParam);
+
     if(inputSemaphoreIndex) {
-      recordKeyboardEvent(lastMessage);
+      recordKeyboardEvent(messageTouse);
       break;
     }
+
     /* state based stuff */
     recordModifierButtons();
     recordKeystroke(message,wParam,lParam);
@@ -1509,14 +1536,6 @@ int recordMouseDown(WPARAM wParam, LPARAM lParam)
     else stButtons |= f3ButtonMouse ? 1 : 2;
   }
 
-  if (stButtons == 4)	/* red button honours the modifiers */
-    {
-      if (GetKeyState(VK_CONTROL) & 0x8000)
-        stButtons= 2;	/* blue button if CTRL down */
-      else if (GetKeyState(VK_MENU) & 0x8000)
-        stButtons= 1;	/* yellow button if META down */
-    }
-
 #endif /* defined(_WIN32_WCE) */
 
   buttonState = stButtons & 0x7;
@@ -1623,6 +1642,7 @@ sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 	return microSeconds;
 	}
 
+
 sqInt ioProcessEvents(void)
 {	static MSG msg;
 	int result;
@@ -1652,11 +1672,6 @@ sqInt ioProcessEvents(void)
 	if (inIOProcessEvents) return -1;
 	inIOProcessEvents += 1;
 
-  /* WinCE doesn't retrieve WM_PAINTs from the queue with PeekMessage,
-     so we won't get anything painted unless we use GetMessage() if there
-     is a dirty rect. */
-	lastMessage = &msg;
-
 #ifdef PharoVM
 	if(ioCheckForEventsHooks) {
 		/* HACK for SDL 2 */
@@ -1664,14 +1679,14 @@ sqInt ioProcessEvents(void)
 	}
 	else {
 	
-		while(PeekMessage(&msg,NULL,0,0,PM_NOREMOVE)) {
-			GetMessage(&msg,NULL,0,0);
+		while(PeekMessageW(&msg,NULL,0,0,PM_NOREMOVE)) {
+			GetMessageW(&msg,NULL,0,0);
 # ifndef NO_PLUGIN_SUPPORT
 			if (msg.hwnd == NULL)
 				pluginHandleEvent(&msg);
 # endif
 			TranslateMessage(&msg);
-			DispatchMessage(&msg);
+			DispatchMessageW(&msg);
 
 		}
 	}
@@ -1697,8 +1712,6 @@ sqInt ioProcessEvents(void)
 	 && browserWindow
 	 && !IsWindow(browserWindow))
 		ioExit();
-
-	lastMessage = NULL;
 
 	if (inIOProcessEvents > 0)
 		inIOProcessEvents -= 1;
