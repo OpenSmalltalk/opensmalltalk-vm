@@ -87,7 +87,7 @@ struct VirtualMachine* interpreterProxy;
 /*
  * Call a foreign function to set x8 structure result address return register
  */
-void setStructReturnAddressRegister(sqLong structAddr)
+extern void setStructReturnAddressRegister(sqLong structAddr)
 {
   asm volatile ("mov x8, x0");
 }
@@ -96,7 +96,7 @@ void setStructReturnAddressRegister(sqLong structAddr)
  * Call a foreign function to get structure value from X1 
  * (x0's value already returned as result of ffi call)
  */
-sqLong returnX1value()
+extern sqLong returnX1value()
 {
   asm volatile ("mov x0, x1");
 }
