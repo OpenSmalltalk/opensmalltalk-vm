@@ -77,12 +77,12 @@ contributors this can mostly be ignored, as we can easily split any changes in
 those directories and cross-merge them across branches. The split is mostly just
 historical right now, since most development takes place on the Cog branch.
 
-Also a historical artifact is that we use source tree
-substitutions. Specifically, any sq*SCCSVersion.h files anywhere in the tree are
-processed to replace `$Rev$`, `$Date$`, and `$URL$` with the current revision
-(defined as the timestamp %Y%m%d%H%M of the latest commit), the human readable
-date of that commit, and the URL of the origin repository these sources were
-cloned from.
+Also a historical artifact is that we use source tree substitutions. 
+Specifically, any sq*SCCSVersion.h files anywhere in the tree are 
+processed to replace `$Rev$`, `$Date$`, `$URL$` and `$CommitHash$` with 
+the current revision (defined as the timestamp %Y%m%d%H%M of the latest 
+commit), the human readable date of that commit, and the URL of the 
+origin repository these sources were cloned from.
 
 The first time you clone this repository, you *must* therefore run this command:
 
@@ -212,3 +212,33 @@ If you were working on a feature branch, do this:
 
 If your feature branch is ready or you are an external contributor with your own
 fork, use the github web interface to open a pull request.
+
+
+# C Source Code Formatting
+
+When editing an existing file, please be polite and first follow the 
+guidelines below, and secondly follow the general rule of keeping to the 
+same formatting conventions as exist in the file.
+
+
+## C Function Declarations
+
+C function declarations should have the type on one line and the 
+function name and parameters on the following line, e.g.:
+
+```c
+static int 
+convertCopy(char *from, int fromLen, char *to, int toLen, int term)
+```
+
+This facilitates searching for function definitions by searching for the 
+name at the beginning of the line.
+
+
+## Tab stops are 4 spaces
+
+In this case the first rule is to keep the existing formatting within a 
+file - we don't want to polute the code history with space changes.
+
+The goal is to use tabs set to 4 spaces.
+
