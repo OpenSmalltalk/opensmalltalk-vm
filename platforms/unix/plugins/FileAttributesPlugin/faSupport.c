@@ -242,12 +242,19 @@ char	uxName[FA_PATH_MAX];
 
 sqInt faOpenDirectory(fapath *aFaPath)
 {
+sqInt	rstatus, cstatus;
+
 	/* Open the directory */ 
 	aFaPath->platformDir = opendir(faGetPlatPath(aFaPath));
 	if (aFaPath->platformDir == NULL)
 		return FA_CANT_OPEN_DIR;
 
-	return faReadDirectory(aFaPath);
+	rstatus = faReadDirectory(aFaPath);
+	if (rstatus == FA_NO_MORE_DATA) {
+		cstatus = faCloseDirectory(aFaPath);
+		if (cstatus != FA_SUCCESS)
+			return cstatus; }
+	return rstatus;
 }
 
 
