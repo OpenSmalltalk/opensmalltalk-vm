@@ -87,9 +87,22 @@ struct VirtualMachine* interpreterProxy;
 /*
  * Call a foreign function to set x8 structure result address return register
  */
-extern void setStructReturnAddressRegister(sqLong structAddr)
-{
-  asm volatile ("mov x8, x0");
+extern void callAndReturnWithStructAddr(sqLong structAddr, sqLong procAddr, sqLong regValuesArrayAddr)
+{ /* Any float regs already loaded
+     Place alloca'd struct address in x8 for results.
+     Spread int args into int registers.
+     Use IPC reg X17 to jump through.
+   */
+  asm volatile (
+	"mov x8,  x0 \n\t"
+	"mov X17, x1 \n\t"
+        "mov X7,  x2 \n\t"
+	"ldp x0, x1, [x7] \n\t"
+	"ldp x2, x3, [x7, #0x10] \n\t"
+	"ldp x4, x5, [x7, #0x20] \n\t"
+	"ldp x6, x7, [x7, #0x30] \n\t"
+	"br  x17" /* NB: 'br' NOT 'blr'. No need to return here! */
+  );
 }
 
 /*
