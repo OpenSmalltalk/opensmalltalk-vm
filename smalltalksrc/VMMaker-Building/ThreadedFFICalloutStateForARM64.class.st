@@ -1,3 +1,14 @@
+"
+A ThreadedFFICalloutStateForARM64 is used to pass FFI parameters for foreign calls.
+
+Instance Variables
+	floatRegisterIndex:	Integer
+	floatRegisters:		Array of SqInt [64 bit]
+	integerRegisterIndex: Integer
+	integerRegisters:	Array of Double
+
+			
+"
 Class {
 	#name : #ThreadedFFICalloutStateForARM64,
 	#superclass : #ThreadedFFICalloutState,
@@ -54,9 +65,11 @@ ThreadedFFICalloutStateForARM64 >> floatRegisters: anObject [
 ThreadedFFICalloutStateForARM64 >> initialize [
 	super initialize.
 	integerRegisterIndex := 0.
-	floatRegisterIndex := 0.
+	floatRegisterIndex     := 0.
+	resultAddress            := 0. "Only used for struct returns which do not fit in registers"
 	integerRegisters := CArrayAccessor on: (Array new: ThreadedARM64FFIPlugin numIntRegArgs).
-	floatRegisters     := CArrayAccessor on: (Array new: ThreadedARM64FFIPlugin numFloatRegArgs)
+	floatRegisters     := CArrayAccessor on: (Array new: ThreadedARM64FFIPlugin numFloatRegArgs).
+
 ]
 
 { #category : #accessing }

@@ -33,18 +33,118 @@ ThreadedARM64FFIPlugin class >> moduleName [
 ]
 
 { #category : #'callout support' }
+ThreadedARM64FFIPlugin >> ffiCall: externalFunction ArgArrayOrNil: argArrayOrNil NumArgs: nArgs [
+	"Generic callout. Does the actual work.  If argArrayOrNil is nil it takes args from the stack
+	 and the spec from the method.  If argArrayOrNil is not nil takes args from argArrayOrNil
+	 and the spec from the receiver."
+	| flags argTypeArray address argType oop argSpec argClass err theCalloutState calloutState requiredStackSize stackSize allocation result primNumArgs |
+	<inline: true>
+	<var: #theCalloutState type: #'CalloutState'>
+	<var: #calloutState type: #'CalloutState *'>
+	<var: #allocation type: #'char *'>
+
+	primNumArgs := interpreterProxy methodArgumentCount.
+	(interpreterProxy is: externalFunction KindOfClass: interpreterProxy classExternalFunction) ifFalse:
+		[^self ffiFail: FFIErrorNotFunction].
+	"Load and check the values in the externalFunction before we call out"
+	flags := interpreterProxy fetchInteger: ExternalFunctionFlagsIndex ofObject: externalFunction.
+	interpreterProxy failed ifTrue:
+		[^self ffiFail: FFIErrorBadArgs].
+
+	"This must come early for compatibility with the old FFIPlugin.  Image-level code
+	 may assume the function pointer is loaded eagerly.  Thanks to Nicolas Cellier."
+	address := self ffiLoadCalloutAddress: externalFunction.
+	interpreterProxy failed ifTrue:
+		[^0 "error code already set by ffiLoadCalloutAddress:"].
+	
+	argTypeArray := interpreterProxy fetchPointer: ExternalFunctionArgTypesIndex ofObject: externalFunction.
+	"must be array of arg types"
+	((interpreterProxy isArray: argTypeArray)
+	and: [(interpreterProxy slotSizeOf: argTypeArray) = (nArgs + 1)]) ifFalse:
+		[^self ffiFail: FFIErrorBadArgs].
+	"check if the calling convention is supported"
+	self cppIf: COGMTVM
+		ifTrue:
+			[(self ffiSupportsCallingConvention: (flags bitAnd: FFICallTypesMask)) ifFalse:
+				[^self ffiFail: FFIErrorCallType]]
+		ifFalse: "not masking causes threaded calls to fail, which is as they should if the plugin is not threaded."
+			[(self ffiSupportsCallingConvention: flags) ifFalse:
+				[^self ffiFail: FFIErrorCallType]].
+		
+	requiredStackSize := self externalFunctionHasStackSizeSlot
+							ifTrue: [interpreterProxy
+										fetchInteger: ExternalFunctionStackSizeIndex
+										ofObject: externalFunction]
+							ifFalse: [-1].
+	interpreterProxy failed ifTrue:
+		[^interpreterProxy primitiveFailFor: (argArrayOrNil isNil
+												ifTrue: [PrimErrBadMethod]
+												ifFalse: [PrimErrBadReceiver])].
+	stackSize := requiredStackSize < 0 ifTrue: [DefaultMaxStackSize] ifFalse: [requiredStackSize].
+	self cCode: [] inSmalltalk: [theCalloutState := self class calloutStateClass new].
+	calloutState := self addressOf: theCalloutState.
+	self cCode: [self me: calloutState ms: 0 et: (self sizeof: #CalloutState)].
+	calloutState callFlags: flags.
+	"Fetch return type and args"
+	argType := interpreterProxy fetchPointer: 0 ofObject: argTypeArray.
+	argSpec := interpreterProxy fetchPointer: 0 ofObject: argType.
+	argClass := interpreterProxy fetchPointer: 1 ofObject: argType.
+	(err := self ffiCheckReturn: argSpec With: argClass in: calloutState) ~= 0 ifTrue:
+		[^self ffiFail: err]. "cannot return"
+	"alloca the outgoing stack frame, leaving room for marshalling args, and including space for the return struct, if any.
+	Additional space reserved for saving register args like mandated by Win64 X64 or PPC ABI, will be managed by the call itself"
+	allocation := self alloca: stackSize + calloutState structReturnSize + self cStackAlignment.
+	self mustAlignStack ifTrue:
+		[allocation := self cCoerce: (allocation asUnsignedIntegerPtr bitClear: self cStackAlignment - 1) to: #'char *'].
+	calloutState
+		argVector: allocation;
+		currentArg: allocation;
+		limit: allocation + stackSize.
+	1 to: nArgs do:
+		[:i|
+		argType := interpreterProxy fetchPointer: i ofObject: argTypeArray.
+		argSpec := interpreterProxy fetchPointer: 0 ofObject: argType.
+		argClass := interpreterProxy fetchPointer: 1 ofObject: argType.
+		oop := argArrayOrNil isNil
+				ifTrue: [interpreterProxy stackValue: nArgs - i]
+				ifFalse: [interpreterProxy fetchPointer: i - 1 ofObject: argArrayOrNil].
+		err := self ffiArgument: oop Spec: argSpec Class: argClass in: calloutState.
+		err ~= 0 ifTrue:
+			[self cleanupCalloutState: calloutState.
+			 self cppIf: COGMTVM ifTrue:
+			 [err = PrimErrObjectMayMove negated ifTrue:
+				[^PrimErrObjectMayMove]]. "N.B. Do not fail if object may move because caller will GC and retry."
+			 ^self ffiFail: err]]. "coercion failed or out of stack space"
+	"Failures must be reported back from ffiArgument:Spec:Class:in:.
+	 Should not fail from here on in."
+	self assert: interpreterProxy failed not.
+	self ffiLogCallout: externalFunction.
+	(requiredStackSize < 0
+	 and: [self externalFunctionHasStackSizeSlot]) ifTrue:
+		[stackSize := calloutState currentArg - calloutState argVector.
+		 interpreterProxy storeInteger: ExternalFunctionStackSizeIndex ofObject: externalFunction withValue: stackSize].
+	"Go out and call this guy"
+	result := self ffiCalloutTo: address SpecOnStack: argArrayOrNil notNil in: calloutState.
+	self cleanupCalloutState: calloutState.
+	"Can not safely use argumentCount (via e.g. methodReturnValue:) since it may have been changed by a callback."
+	interpreterProxy pop: primNumArgs + 1 thenPush: result. 
+	^result
+]
+
+{ #category : #'callout support' }
 ThreadedARM64FFIPlugin >> ffiCalloutTo: procAddr SpecOnStack: specOnStack in: calloutState [
 	<var: #procAddr type: #'void *'>
 	<var: #calloutState type: #'CalloutState *'>
 	<var: #loadFloatRegs declareC: 'extern void loadFloatRegs(double, double, double, double, double, double, double, double)'>
 	"Go out, call this guy and create the return value.  This *must* be inlined because of
 	 the alloca of the outgoing stack frame in ffiCall:WithFlags:NumArgs:Args:AndTypes:"
-	| myThreadIndex atomicType floatRet intRet |
+	| myThreadIndex atomicType floatRet intRet x1Ret |
 	<var: #floatRet type: #double>
 	<var: #intRet type: #usqLong>
+	<var: #x1Ret type: #usqLong>
 	<inline: true>
 	myThreadIndex := interpreterProxy disownVM: (self disownFlagsFor: calloutState).
-
+	
 	calloutState floatRegisterIndex > 0 ifTrue:
 		[self loadFloatRegs:
 			   (calloutState floatRegisters at: 0)
@@ -92,7 +192,15 @@ ThreadedARM64FFIPlugin >> ffiCalloutTo: procAddr SpecOnStack: specOnStack in: ca
 
 		 ^interpreterProxy floatObjectOf: floatRet].
 
-	intRet := self 
+	"If struct address used for return value, call is special"
+	(self mustReturnStructOnStack: calloutState structReturnSize) 
+	ifTrue: [
+		intRet := 0.
+		self setReturnRegister: (self cCoerceSimple: calloutState limit to: 'sqLong') "stack alloca'd struct"
+			 andCall: (self cCoerceSimple: procAddr to: 'sqLong')
+			 withArgsArray: (self cCoerceSimple: (self addressOf: calloutState integerRegisters) to: 'sqLong').
+	] ifFalse: [
+		intRet := self 
 				dispatchFunctionPointer: (self cCoerceSimple: procAddr to: 'usqIntptr_t (*)(sqIntptr_t, sqIntptr_t, sqIntptr_t, sqIntptr_t, sqIntptr_t, sqIntptr_t, sqIntptr_t, sqIntptr_t)')
 				with: (calloutState integerRegisters at: 0)
 				with: (calloutState integerRegisters at: 1)
@@ -102,6 +210,16 @@ ThreadedARM64FFIPlugin >> ffiCalloutTo: procAddr SpecOnStack: specOnStack in: ca
 				with: (calloutState integerRegisters at: 5)
 				with: (calloutState integerRegisters at: 6)
 				with: (calloutState integerRegisters at: 7).
+	
+	 x1Ret := self getX1register. "Capture x1 immediately. No problem if unused"
+	].
+	"If struct returned in registers, 
+	 place register values into calloutState integerRegisters"
+	(calloutState structReturnSize > 0
+	 and: [self returnStructInRegisters: calloutState structReturnSize]) ifTrue: 
+		["Only 2 regs used in ARMv8/Aarch64 current"
+		 calloutState integerRegisters at: 0 put: intRet. "X0"
+		 calloutState integerRegisters at: 1 put: x1Ret]. "X1"
 
 	"undo any callee argument pops because it may confuse stack management with the alloca."
 	(self isCalleePopsConvention: calloutState callFlags) ifTrue:
@@ -282,6 +400,44 @@ ThreadedARM64FFIPlugin >> ffiPushUnsignedLongLong: value in: calloutState [
 
 ]
 
+{ #category : #'callout support' }
+ThreadedARM64FFIPlugin >> ffiReturnStruct: longLongRet ofType: ffiRetType in: calloutState [
+	<var: #longLongRet type: #usqLong>
+	<var: #calloutState type: #'CalloutState *'>
+	"Create a structure return value from an external function call.  The value has been stored in
+	 alloca'ed space pointed to by the calloutState or in the return value."
+	| retOop retClass oop |
+	<inline: true>
+	retClass := interpreterProxy fetchPointer: 1 ofObject: ffiRetType.
+	retOop := interpreterProxy instantiateClass: retClass indexableSize: 0.
+	self remapOop: retOop
+		in: [oop := interpreterProxy 
+					instantiateClass: interpreterProxy classByteArray 
+					indexableSize: calloutState structReturnSize].
+	self memcpy: (interpreterProxy firstIndexableField: oop)
+		_: ((self returnStructInRegisters: calloutState structReturnSize)
+				ifTrue: [self addressOf: calloutState integerRegisters]
+				ifFalse: [calloutState limit])
+		 _: calloutState structReturnSize.
+	interpreterProxy storePointer: 0 ofObject: retOop withValue: oop.
+	^retOop
+]
+
+{ #category : #'callout support' }
+ThreadedARM64FFIPlugin >> getX1register [
+
+	<inline: true>
+	<var: #returnX1value declareC: 'extern sqLong returnX1value()'>
+
+	^self returnX1value
+]
+
+{ #category : #marshalling }
+ThreadedARM64FFIPlugin >> mustReturnStructOnStack: returnStructSize [
+	"Answer if a struct result of a given size is unable to be returned in registers."
+	^returnStructSize > (2 * self wordSize)
+]
+
 { #category : #marshalling }
 ThreadedARM64FFIPlugin >> nonRegisterStructReturnIsViaImplicitFirstArgument [
 	"Answer if a struct returned in memory is returned to the
@@ -292,8 +448,21 @@ ThreadedARM64FFIPlugin >> nonRegisterStructReturnIsViaImplicitFirstArgument [
 
 { #category : #marshalling }
 ThreadedARM64FFIPlugin >> returnStructInRegisters: returnStructSize [
-	"Answer if a struct result of a given size is returned in memory or not."
-	^returnStructSize <= (2 * self wordSize) "??numIntRegs--> 8 * wordsize??"
+	"Answer if a struct result of a given size is able to be returned in registers.
+	NB: this is a predicate! #returnStructInRegisters: does NOT return a struct in anything!"
+	^returnStructSize <= (2 * self wordSize)
+]
+
+{ #category : #'callout support' }
+ThreadedARM64FFIPlugin >> setReturnRegister: structAddr andCall: procAddr withArgsArray: arrayAddr [
+
+	<inline: true>
+	<var: #structAddr type: #'sqLong'>
+	<var: #procAddr  type: #'sqLong'>
+	<var: #arrayAddr type: #'sqLong'>
+	<var: #callAndReturnWithStructAddr declareC: 'extern void callAndReturnWithStructAddr(sqLong structAddr,sqLong procAddr,sqLong arrayAddr)'>
+
+	self callAndReturnWithStructAddr: structAddr _: procAddr _: arrayAddr
 ]
 
 { #category : #'simulation support' }
