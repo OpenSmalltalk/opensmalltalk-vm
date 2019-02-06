@@ -88,6 +88,19 @@ DIR *openDir= 0;
 extern time_t convertToSqueakTime(time_t unixTime);
 
 
+void 
+sqCloseDir()
+{
+  /* Ensure that the cached open directory is closed */
+  if (lastPathValid)
+    closedir(openDir);
+  lastPathValid= false;
+  lastIndex= -1;
+  lastPath[0]= '\0';
+}
+
+
+
 sqInt dir_Create(char *pathString, sqInt pathStringLength)
 {
   /* Create a new directory with the given path. By default, this
@@ -110,12 +123,7 @@ sqInt dir_Delete(char *pathString, sqInt pathStringLength)
   if (!sq2uxPath(pathString, pathStringLength, name, MAXPATHLEN, 1))
     return false;
   if (lastPathValid && !strcmp(lastPath, name))
-    {
-      closedir(openDir);
-      lastPathValid= false;
-      lastIndex= -1;
-      lastPath[0]= '\0';
-    }
+    sqCloseDir();
   return rmdir(name) == 0;
 }
 
@@ -180,15 +188,21 @@ sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
   else if (!sq2uxPath(pathString, pathStringLength, unixPath, MAXPATHLEN, 1))
     return BAD_PATH;
 
-  /* get file or directory info */
-  if (!maybeOpenDir(unixPath))
-    return BAD_PATH;
-
-  if (++lastIndex == index)
-    index= 1;		/* fake that the dir is rewound and we want the first entry */
+  /* (Re)open the directory if required */
+  if (lastPathValid && 
+      ++lastIndex == index &&
+      !strcmp(lastPath, unixPath))
+    /* We can re-use the cached open directory.
+     * We want the next entry, so reset index */
+    index= 1;
   else
-    {
-      rewinddir(openDir);	/* really rewind it, and read to the index */
+    { /* The directory must be opened or reopened.
+       * We can't just rewind the directory as entries appear to be cached on
+       * CIFS mounted file systems, and files may have been deleted between 
+       * calls. */
+      sqCloseDir();
+      if (!maybeOpenDir(unixPath))
+        return BAD_PATH;
       lastIndex= index;
     }
 
