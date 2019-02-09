@@ -54,4 +54,4 @@ productDir=`(cd $productDir;pwd)`
 for lib in ${THIRDPARTYLIBS}; do
 	../../third-party/mvm ${lib} install $productDir
 done
-###@@FIXME: install @@ ../../editpharoinstall.sh ../../../products/$INSTALLDIR "$@"
+../../editpharoinstall.sh ../../../products/$INSTALLDIR "$@"
