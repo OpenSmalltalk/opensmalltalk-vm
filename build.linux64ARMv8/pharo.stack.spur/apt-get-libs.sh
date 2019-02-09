@@ -24,7 +24,6 @@ sudo apt-get install -yq --no-install-suggests --no-install-recommends --force-y
      libffi6 \
      libssl1.0.2 \
      libbz2-1.0 \
-     libgit2-27 \
      libgit2-dev \
      libssh2-1-dev \
      libc6-dev \
