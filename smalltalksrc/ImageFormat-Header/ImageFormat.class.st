@@ -479,6 +479,13 @@ ImageFormat class >> wordSize: bytesPerWord spur: spurRequired requiresNewSpur64
 
 ]
 
+{ #category : #comparing }
+ImageFormat >> = anImageFormat [
+	^self class == anImageFormat class
+		and: [self asInteger = anImageFormat asInteger].
+
+]
+
 { #category : #converting }
 ImageFormat >> asInteger [
 	"Answer an integer representation of this image format suitable for storage
@@ -557,6 +564,11 @@ ImageFormat >> fromInteger: anInteger [
 		ifFalse: [self error: 'invalid format number ', anInteger printString]
 	
 
+]
+
+{ #category : #comparing }
+ImageFormat >> hash [
+	^self asInteger hash
 ]
 
 { #category : #'initialize-release' }

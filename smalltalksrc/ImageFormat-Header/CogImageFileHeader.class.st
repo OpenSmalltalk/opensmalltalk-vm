@@ -37,6 +37,17 @@ CogImageFileHeader >> desiredNumStackPages: anInteger [
 	desiredNumStackPages := anInteger
 ]
 
+{ #category : #reading }
+CogImageFileHeader >> fromEntryStream: streamOfHeaderStateObjects [
+
+	super fromEntryStream: streamOfHeaderStateObjects.
+	desiredNumStackPages := streamOfHeaderStateObjects next.
+	unknownShortOrCodeSizeInKs := streamOfHeaderStateObjects next.
+	desiredEdenBytes := streamOfHeaderStateObjects next.
+	maxExtSemTabSizeSet := streamOfHeaderStateObjects next.
+
+]
+
 { #category : #accessing }
 CogImageFileHeader >> maxExtSemTabSizeSet [
 
@@ -50,15 +61,15 @@ CogImageFileHeader >> maxExtSemTabSizeSet: anInteger [
 ]
 
 { #category : #reading }
-CogImageFileHeader >> readFieldsFrom: aStream startingAt: imageOffset headerWordSize: headerWordSize littleEndian: littleEndian [
+CogImageFileHeader >> readFieldsFrom: aStream startingAt: imageOffset headerWordSize: headerWordSize littleEndian: littleEndian into: aCollection [
 	"Read data fields and answer number of bytes read"
 
 	| remainder bytesRead |
-	bytesRead := super readFieldsFrom: aStream startingAt: imageOffset headerWordSize: headerWordSize littleEndian: littleEndian.
-	desiredNumStackPages := self nextNumber: headerWordSize / 2 from: aStream littleEndian: littleEndian.
-	unknownShortOrCodeSizeInKs := self nextNumber: headerWordSize / 2 from: aStream littleEndian: littleEndian.
-	desiredEdenBytes := self nextNumber: headerWordSize from: aStream littleEndian: littleEndian.
-	maxExtSemTabSizeSet := self nextNumber: headerWordSize / 2 from: aStream littleEndian: littleEndian.
+	bytesRead := super readFieldsFrom: aStream startingAt: imageOffset headerWordSize: headerWordSize littleEndian: littleEndian into: aCollection.
+	aCollection add: (self nextNumber: headerWordSize / 2 from: aStream littleEndian: littleEndian). "desiredNumStackPages"
+	aCollection add: (self nextNumber: headerWordSize / 2 from: aStream littleEndian: littleEndian). "unknownShortOrCodeSizeInKs"
+	aCollection add: (self nextNumber: headerWordSize from: aStream littleEndian: littleEndian). "desiredEdenBytes"
+	aCollection add: (self nextNumber: headerWordSize / 2 from: aStream littleEndian: littleEndian). "maxExtSemTabSizeSet"
 	self nextNumber: headerWordSize / 2 from: aStream littleEndian: littleEndian.
 	remainder := headerSize - (12 * imageFormat wordSize).
 	self assert: remainder >= 0. "n.b. Mantis 7455 bug in original 64 bit image due to VMM error"

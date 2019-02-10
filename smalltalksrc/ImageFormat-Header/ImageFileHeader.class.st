@@ -30,6 +30,56 @@ Class {
 }
 
 { #category : #'instance creation' }
+ImageFileHeader class >> fromValues: headerValues [
+	"Answer an new instance initialized from an array of  values corresponding to
+	fields in an image file header on disk. The values may have been read from a
+	file, or they may have been created by querying the running VM."
+
+	"self fromValues:self primInterpreterStateSnapshot"
+
+	^self basicNew fromEntryStream: headerValues readStream
+
+]
+
+{ #category : #'primitive access' }
+ImageFileHeader class >> primInterpreterStateSnapshot [
+	"Answer an array of values suitable for creating an image file header"
+
+	"ImageFileHeader primInterpreterStateSnapshot"
+
+	"ImageFileHeader fromValues: ImageFileHeader primInterpreterStateSnapshot"
+
+	<primitive: 'primitiveInterpreterStateSnapshot'>
+	self primitiveFailed
+]
+
+{ #category : #'primitive access' }
+ImageFileHeader class >> primMemoryCopy [
+	"Answer an exact copy of the current object memory"
+
+	"ImageFileHeader primMemoryCopy"
+
+	<primitive: 'primitiveMemoryCopy'>
+	self primitiveFailed
+]
+
+{ #category : #'primitive access' }
+ImageFileHeader class >> primMemorySnapshotWithHeader [
+	"Answer an array with a snapshot of the object memory, and with an interpreter
+	state array of values suitable for creating an image file header. This is an atomic
+	request for primitiveMemorySnapshot and primitiveInterpreterStateSnapshot."
+
+	"ImageFileHeader primMemorySnapshotWithHeader"
+
+	" | result |
+	result := ImageFileHeader primMemorySnapshotWithHeader.
+	{ result first . ImageFileHeader fromValues: result second } "
+
+	<primitive: 'primitiveMemorySnapshotWithHeader'>
+	self primitiveFailed
+]
+
+{ #category : #'instance creation' }
 ImageFileHeader class >> readFrom: aStream [
 
 	^self readFrom: aStream startingAt: 0
@@ -38,13 +88,43 @@ ImageFileHeader class >> readFrom: aStream [
 { #category : #'instance creation' }
 ImageFileHeader class >> readFrom: aStream startingAt: imageOffset [
 
-	^self basicNew readFrom: aStream startingAt: imageOffset
+	^self basicNew readFrom: aStream startingAt: imageOffset into: OrderedCollection new
+]
+
+{ #category : #comparing }
+ImageFileHeader >> = other [
+
+	self species == other species ifFalse: [^ false].
+	1 to: self class instSize do:
+		[:i | (self instVarAt: i) = (other instVarAt: i) ifFalse: [^ false]].
+	^ true
 ]
 
 { #category : #converting }
 ImageFileHeader >> asByteArray [
 	^ ByteArray
 		streamContents: [:strm | self writeTo: strm littleEndian: Smalltalk isLittleEndian]
+]
+
+{ #category : #converting }
+ImageFileHeader >> asValues [
+	"Answer an array of values from which a copy of this instance could be
+	created with #fromValues:"
+
+	"self fromValues: (self fromValues:self primInterpreterStateSnapshot) asValues"
+
+	^Array new writeStream
+		nextPut: imageFormat asInteger;
+		nextPut: headerSize;
+		nextPut: imageBytes;
+		nextPut: startOfMemory;
+		nextPut: specialObjectsOop;
+		nextPut: lastHash;
+		nextPut: screenSize;
+		nextPut: imageHeaderFlags;
+		nextPut: extraVMMemory;
+		contents
+
 ]
 
 { #category : #accessing }
@@ -57,6 +137,27 @@ ImageFileHeader >> extraVMMemory [
 ImageFileHeader >> extraVMMemory: anInteger [
 
 	extraVMMemory := anInteger
+]
+
+{ #category : #reading }
+ImageFileHeader >> fromEntryStream: streamOfHeaderStateObjects [
+
+	imageFormat := ImageFormat fromInteger: streamOfHeaderStateObjects next.
+	headerSize := streamOfHeaderStateObjects next.
+	imageBytes := streamOfHeaderStateObjects next.
+	startOfMemory := streamOfHeaderStateObjects next.
+	specialObjectsOop := streamOfHeaderStateObjects next.
+	lastHash := streamOfHeaderStateObjects next.
+	screenSize := streamOfHeaderStateObjects next. "a Point with two integer values for X and Y extent"
+	imageHeaderFlags := streamOfHeaderStateObjects next.
+	extraVMMemory := streamOfHeaderStateObjects next.
+
+
+]
+
+{ #category : #comparing }
+ImageFileHeader >> hash [
+	^imageBytes hash xor: lastHash
 ]
 
 { #category : #accessing }
@@ -145,19 +246,20 @@ ImageFileHeader >> printOn: aStream [
 ]
 
 { #category : #reading }
-ImageFileHeader >> readFieldsFrom: aStream startingAt: imageOffset headerWordSize: headerWordSize littleEndian: littleEndian [
+ImageFileHeader >> readFieldsFrom: aStream startingAt: imageOffset headerWordSize: headerWordSize littleEndian: littleEndian into: aCollection [
 	"Read data fields and answer number of bytes read"
 
 	| remainder screenSizeWord |
 	headerSize := self nextNumber: headerWordSize from: aStream littleEndian: littleEndian.
-	imageBytes := self nextNumber: headerWordSize from: aStream littleEndian: littleEndian.
-	startOfMemory := self nextNumber: headerWordSize from: aStream littleEndian: littleEndian.
-	specialObjectsOop := self nextNumber: headerWordSize from: aStream littleEndian: littleEndian.
-	lastHash := self nextNumber: headerWordSize from: aStream littleEndian: littleEndian.
+	aCollection add: headerSize.
+	aCollection add: ( self nextNumber: headerWordSize from: aStream littleEndian: littleEndian). "imageBytes"
+	aCollection add: (self nextNumber: headerWordSize from: aStream littleEndian: littleEndian). "startOfMemory"
+	aCollection add: (self nextNumber: headerWordSize from: aStream littleEndian: littleEndian). "specialObjectsOop"
+	aCollection add: (self nextNumber: headerWordSize from: aStream littleEndian: littleEndian). "lastHash"
 	screenSizeWord := self nextNumber: headerWordSize from: aStream littleEndian: littleEndian.
-	screenSize := (screenSizeWord >> 16) @ (screenSizeWord bitAnd: 16rFFFF).
-	imageHeaderFlags := self nextNumber: headerWordSize from: aStream littleEndian: littleEndian.
-	extraVMMemory := self nextNumber: headerWordSize from: aStream littleEndian: littleEndian.
+	aCollection add: ((screenSizeWord >> 16) @ (screenSizeWord bitAnd: 16rFFFF)).
+	aCollection add: (self nextNumber: headerWordSize from: aStream littleEndian: littleEndian). "imageHeaderFlags"
+	aCollection add: (self nextNumber: headerWordSize from: aStream littleEndian: littleEndian). "extraVMMemory"
 	remainder := headerSize - (9 * imageFormat wordSize).
 	self assert: remainder >= 0. "n.b. Mantis 7455 bug in original 64 bit image due to VMM error"
 	^9 * imageFormat wordSize.
@@ -165,15 +267,18 @@ ImageFileHeader >> readFieldsFrom: aStream startingAt: imageOffset headerWordSiz
 ]
 
 { #category : #reading }
-ImageFileHeader >> readFrom: aStream startingAt: imageOffset [
+ImageFileHeader >> readFrom: aStream startingAt: imageOffset into: aCollection [
 
 	| remainder bytesRead headerWordSize littleEndian |
 	littleEndian := self readImageVersionFrom: aStream startingAt: imageOffset.
 	headerWordSize := aStream position - imageOffset.
-	bytesRead := self readFieldsFrom: aStream startingAt: imageOffset headerWordSize: headerWordSize littleEndian: littleEndian.
+	aCollection add: imageFormat asInteger.
+	bytesRead := self readFieldsFrom: aStream startingAt: imageOffset headerWordSize: headerWordSize littleEndian: littleEndian into: aCollection.
 	remainder := headerSize - bytesRead.
 	self assert: remainder >= 0. "n.b. Mantis 7455 bug in original 64 bit image due to VMM error"
 	aStream next: (headerSize - bytesRead).
+
+	self fromEntryStream: aCollection readStream.
 
 ]
 
