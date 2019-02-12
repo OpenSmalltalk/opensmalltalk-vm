@@ -1,7 +1,7 @@
 Name:		pharo7-ui-common
 Version:	1
 Release:	1%{?dist}
-Summary:	Pharo6 VM
+Summary:	Pharo7 VM
 
 Group:		VM
 License:	MIT
@@ -9,12 +9,13 @@ URL:		http://www.pharo.org
 Source0:	DEB_VERSION
 
 #BuildRequires:	libmpeg3-devel
-BuildRequires:	pharo7-sources-files
+BuildRequires:	pharo6-sources-files
 BuildRequires:	SDL-devel
 BuildRequires:  openssl-devel
 %if 0%{?suse_version}
 BuildRequires:	libpulse-devel
 BuildRequires:	freetype2-devel
+BuildRequires:  -post-build-checks
 %else
 BuildRequires:	pulseaudio-libs-devel
 BuildRequires:	freetype-devel
@@ -40,12 +41,12 @@ Requires:	bash
 %endif
 
 %description
-Pharo6 VM common files shared between the 32bit and 64bit flavor.
+Pharo7 VM common files shared between the 32bit and 64bit flavor.
 It will be installed automatically.
 
 %ifarch x86_64
 %package -n pharo7-64
-Summary: Pharo6 VM for 64bit
+Summary: Pharo7 VM for 64bit
 %description -n pharo7-64
 Description: Clean and innovative Smalltalk-inspired environment.
 Pharo's goal is to deliver a clean, innovative, free open-source
@@ -54,7 +55,7 @@ system, excellent dev tools, and maintained releases, Pharo is an
 attractive platform to build and deploy mission critical applications.
 
 %package -n pharo7-64-ui
-Summary: Pharo6 VM for 64bit with UI
+Summary: Pharo7 VM for 64bit with UI
 Requires: pharo7-64 pharo7-ui-common
 %description -n pharo7-64-ui
 Description: Clean and innovative Smalltalk-inspired environment.
@@ -68,7 +69,7 @@ Installs the 64bit pharo7 VM with GUI support.
 %endif
 %ifarch %{ix86}
 %package -n pharo7-32
-Summary: Pharo6 VM for 32bit
+Summary: Pharo7 VM for 32bit
 %description -n pharo7-32
 Description: Clean and innovative Smalltalk-inspired environment.
 Pharo's goal is to deliver a clean, innovative, free open-source
@@ -77,7 +78,7 @@ system, excellent dev tools, and maintained releases, Pharo is an
 attractive platform to build and deploy mission critical applications.
 
 %package -n pharo7-32-ui
-Summary: Pharo6 VM for 32bit with UI
+Summary: Pharo7 VM for 32bit with UI
 Requires: pharo7-32 pharo7-ui-common
 %description -n pharo7-32-ui
 Description: Clean and innovative Smalltalk-inspired environment.
@@ -125,8 +126,9 @@ rm %{?buildroot}/usr/bin/pharo7-32*
 rm %{?buildroot}%{_datadir}/applications/pharo7-32-ui.desktop
 rm %{?buildroot}%{_datadir}/man/man1/pharo7-32.1
 mv %{?buildroot}/usr/lib64/squeak/*/* %{?buildroot}/usr/lib64/pharo7-vm/
+rm %{?buildroot}/usr/lib64/pharo7-vm/*.a
 mv %{?buildroot}/usr/lib64/pharo7-vm/squeak %{?buildroot}/usr/lib64/pharo7-vm/pharo
-ln -s /usr/share/pharo7-vm/PharoV60.sources %{?buildroot}/usr/lib64/pharo7-vm/
+ln -s /usr/share/pharo6-vm/PharoV60.sources %{?buildroot}/usr/lib64/pharo7-vm/
 sed -i s,lib/x86_64-linux-gnu,lib64, %{?buildroot}/usr/bin/*
 %endif
 
@@ -137,25 +139,26 @@ rm %{?buildroot}/usr/bin/pharo7-64*
 rm %{?buildroot}%{_datadir}/applications/pharo7-64-ui.desktop
 rm %{?buildroot}%{_datadir}/man/man1/pharo7-64.1
 mv %{?buildroot}/usr/lib/squeak/*/* %{?buildroot}/usr/lib/pharo7-vm/ 
+rm %{?buildroot}/usr/lib/pharo7-vm/*.a
 mv %{?buildroot}/usr/lib/pharo7-vm/squeak %{?buildroot}/usr/lib/pharo7-vm/pharo
-ln -s /usr/share/pharo7-vm/PharoV60.sources %{?buildroot}/usr/lib/pharo7-vm/
+ln -s /usr/share/pharo6-vm/PharoV60.sources %{?buildroot}/usr/lib/pharo7-vm/
 sed -i s,lib/i386-linux-gnu,lib, %{?buildroot}/usr/bin/*
 %endif
 
 
 %files
 %doc
-
-%files
 %{_datadir}/icons
 %{_datadir}/mime
 
 %ifarch x86_64
 %files -n pharo7-64
+%dir %{_libdir}/pharo7-vm
 %{_bindir}/pharo7-64
 %{_libdir}/pharo7-vm/pharo
 %{_libdir}/pharo7-vm/AioPlugin.so
 %{_libdir}/pharo7-vm/EventsHandlerPlugin.so
+%{_libdir}/pharo7-vm/FileAttributesPlugin.so
 %{_libdir}/pharo7-vm/FT2Plugin.so
 %{_libdir}/pharo7-vm/InternetConfigPlugin.so
 %{_libdir}/pharo7-vm/JPEGReadWriter2Plugin.so
@@ -169,6 +172,7 @@ sed -i s,lib/i386-linux-gnu,lib, %{?buildroot}/usr/bin/*
 %{_mandir}/man1/pharo7-64.1.gz
 
 %files -n pharo7-64-ui
+%dir %{_libdir}/pharo7-vm
 %{_bindir}/pharo7-64-ui
 %{_libdir}/pharo7-vm/B3DAcceleratorPlugin.so
 %{_libdir}/pharo7-vm/vm-display-X11.so
@@ -181,10 +185,12 @@ sed -i s,lib/i386-linux-gnu,lib, %{?buildroot}/usr/bin/*
 
 %ifarch %{ix86}
 %files -n pharo7-32
+%dir %{_libdir}/pharo7-vm
 %{_bindir}/pharo7-32
 %{_libdir}/pharo7-vm/pharo
 %{_libdir}/pharo7-vm/AioPlugin.so
 %{_libdir}/pharo7-vm/EventsHandlerPlugin.so
+%{_libdir}/pharo7-vm/FileAttributesPlugin.so
 %{_libdir}/pharo7-vm/FT2Plugin.so
 %{_libdir}/pharo7-vm/InternetConfigPlugin.so
 %{_libdir}/pharo7-vm/JPEGReadWriter2Plugin.so
@@ -198,6 +204,7 @@ sed -i s,lib/i386-linux-gnu,lib, %{?buildroot}/usr/bin/*
 %{_mandir}/man1/pharo7-32.1.gz
 
 %files -n pharo7-32-ui
+%dir %{_libdir}/pharo7-vm
 %{_bindir}/pharo7-32-ui
 %{_libdir}/pharo7-vm/B3DAcceleratorPlugin.so
 %{_libdir}/pharo7-vm/vm-display-X11.so
