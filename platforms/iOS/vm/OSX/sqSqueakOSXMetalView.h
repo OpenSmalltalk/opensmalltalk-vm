@@ -64,7 +64,7 @@
 	unsigned int*      colorMap32;
 	BOOL clippyIsEmpty;
 	CGRect clippy;
-    NSRect lastFrameSize;
+    CGSize lastFrameSize;
 	
     BOOL fullScreenInProgress;
     void* fullScreendispBitsIndex;
