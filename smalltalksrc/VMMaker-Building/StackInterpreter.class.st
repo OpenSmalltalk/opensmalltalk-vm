@@ -9453,6 +9453,13 @@ StackInterpreter >> ioUTCMicrosecondsNow [
 	^self ioUTCMicroseconds
 ]
 
+{ #category : #'debug support' }
+StackInterpreter >> ioUnloadModule: moduleName OfLength: moduleNameLength [
+	"Fake forgiving stub.  The actual code is in platforms/Cross/vm/sqNamedPrims.c"
+	<doNotGenerate>
+	^true
+]
+
 { #category : #'system control primitives' }
 StackInterpreter >> ioUpdateVMTimezone [
 	"A noop in the simulator"

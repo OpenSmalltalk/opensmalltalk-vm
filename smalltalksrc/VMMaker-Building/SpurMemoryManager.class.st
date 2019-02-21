@@ -2476,6 +2476,10 @@ SpurMemoryManager >> assignClassIndicesAndPinFrom: segmentStart to: segmentLimit
 						ifTrue: [self fetchPointer: classRef - TopHashBit ofObject: outPointerArray]
 						ifFalse: [classRef - self firstClassIndexPun * self allocationUnit + segmentStart].
 		 classIndex := self rawHashBitsOf: classOop.
+		 classIndex = 0 ifTrue:
+			[classIndex := self ensureBehaviorHash: classOop.
+			 classIndex < 0 ifTrue: "Error code e.g. - PrimErrNoMemory"
+				[^classIndex negated halt]].
 		 self assert: (classIndex > self lastClassIndexPun
 					  and: [(self classOrNilAtIndex: classIndex) = classOop]).
 		 self setClassIndexOf: objOop to: classIndex.
@@ -7985,7 +7989,7 @@ SpurMemoryManager >> mapOopsAndValidateClassRefsFrom: segmentStart to: segmentLi
 		 numSegObjs := numSegObjs + 1.
 		 "No object in the segment should be marked.  If is is something is wrong."
 		 (self isMarked: objOop) ifTrue:
-			[^PrimErrInappropriate].
+			[^PrimErrInappropriate halt].
 		 classIndex := self classIndexOf: objOop.
 		 "validate the class ref, but don't update it until any internal classes have been added to the class table."
 		 (classIndex anyMask: TopHashBit)
@@ -7995,7 +7999,8 @@ SpurMemoryManager >> mapOopsAndValidateClassRefsFrom: segmentStart to: segmentLi
 					[^PrimErrBadIndex halt].
 				 mappedOop := self fetchPointer: classIndex ofObject: outPointerArray.
 				 hash := self rawHashBitsOf: mappedOop.
-				 (hash > self lastClassIndexPun and: [(self classOrNilAtIndex: hash) = mappedOop]) ifFalse:
+				 (hash = 0 "class has yet to be instantiated"
+				  or: [hash > self lastClassIndexPun and: [(self classOrNilAtIndex: hash) = mappedOop]]) ifFalse:
 					[^PrimErrInappropriate halt]]
 			ifFalse: "The class is contained within the segment."
 				[(oop := classIndex - self firstClassIndexPun * self allocationUnit + segmentStart) >= segmentLimit ifTrue:

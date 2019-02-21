@@ -1109,7 +1109,6 @@ CogObjectRepresentation >> genPrimitiveIntegerAt [
 { #category : #'primitive generators' }
 CogObjectRepresentation >> genPrimitiveIntegerAtPut [
 	"subclasses override if they can"
-	self break.
 	^UnimplementedPrimitive
 ]
 

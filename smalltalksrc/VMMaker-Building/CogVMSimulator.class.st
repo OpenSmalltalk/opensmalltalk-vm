@@ -1127,8 +1127,8 @@ CogVMSimulator >> flush [
 
 { #category : #'plugin support' }
 CogVMSimulator >> flushExternalPrimitives [
-	mappedPluginEntries := OrderedCollection new.
-	super flushExternalPrimitives.
+	self initializePluginEntries.
+	super flushExternalPrimitives
 ]
 
 { #category : #'control primitives' }
@@ -1479,14 +1479,7 @@ CogVMSimulator >> initialize [
 	externalPrimitiveTable := CArrayAccessor on: (Array new: MaxExternalPrimitiveTableSize).
 	externalPrimitiveTableFirstFreeIndex := 0.
 	primitiveTable := self class primitiveTable copy.
-	mappedPluginEntries := OrderedCollection new.
-	objectMemory hasSpurMemoryManagerAPI
-		ifTrue:
-			[primitiveAccessorDepthTable := Array new: primitiveTable size.
-			 pluginList := {}.
-			 self loadNewPlugin: '']
-		ifFalse:
-			[pluginList := {'' -> self }].
+	self initializePluginEntries.
 	desiredNumStackPages := desiredEdenBytes := desiredCogCodeSize := 0.
 	"This is initialized on loading the image, but convenient for testing stack page values..."
 	numStackPages := self defaultNumStackPages. 
@@ -1523,6 +1516,18 @@ CogVMSimulator >> initializeInterpreter: bytesToShift [
 	^self perform: #initializeInterpreter:
 		withArguments: {bytesToShift}
 		inSuperclass: (cogThreadManager ifNil: [CoInterpreterPrimitives] ifNotNil: [CoInterpreterMT])
+]
+
+{ #category : #'plugin support' }
+CogVMSimulator >> initializePluginEntries. [
+	mappedPluginEntries := OrderedCollection new.
+	objectMemory hasSpurMemoryManagerAPI
+		ifTrue:
+			[primitiveAccessorDepthTable := Array new: primitiveTable size.
+			 pluginList := {}.
+			 self loadNewPlugin: '']
+		ifFalse:
+			[pluginList := {'' -> self }]
 ]
 
 { #category : #'multi-threading simulation switch' }

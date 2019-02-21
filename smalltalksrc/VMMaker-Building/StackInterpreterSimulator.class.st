@@ -653,7 +653,7 @@ StackInterpreterSimulator >> flush [
 
 { #category : #'plugin support' }
 StackInterpreterSimulator >> flushExternalPrimitives [
-	mappedPluginEntries := OrderedCollection new.
+	self initializePluginEntries.
 	super flushExternalPrimitives
 ]
 
@@ -832,14 +832,7 @@ StackInterpreterSimulator >> initialize [
 	externalPrimitiveTable := CArrayAccessor on: (Array new: MaxExternalPrimitiveTableSize).
 	externalPrimitiveTableFirstFreeIndex := 0.
 	primitiveTable := self class primitiveTable copy.
-	mappedPluginEntries := OrderedCollection new.
-	objectMemory hasSpurMemoryManagerAPI
-		ifTrue:
-			[primitiveAccessorDepthTable := Array new: primitiveTable size.
-			 pluginList := {}.
-			 self loadNewPlugin: '']
-		ifFalse:
-			[pluginList := {'' -> self }].
+	self initializePluginEntries.
 	desiredNumStackPages := desiredEdenBytes := 0.
 	"This is initialized on loading the image, but convenient for testing stack page values..."
 	numStackPages := self defaultNumStackPages. 
@@ -857,7 +850,19 @@ StackInterpreterSimulator >> initialize [
 	systemAttributes := Dictionary new.
 	extSemTabSize := 256.
 	disableBooleanCheat := false.
-	assertVEPAES := true. "a flag so the assertValidExecutionPointers can be disabled for simulation speed"
+	assertVEPAES := false. "a flag so the assertValidExecutionPointers can be disabled for simulation speed and enabled when necessary."
+]
+
+{ #category : #'plugin support' }
+StackInterpreterSimulator >> initializePluginEntries. [
+	mappedPluginEntries := OrderedCollection new.
+	objectMemory hasSpurMemoryManagerAPI
+		ifTrue:
+			[primitiveAccessorDepthTable := Array new: primitiveTable size.
+			 pluginList := {}.
+			 self loadNewPlugin: '']
+		ifFalse:
+			[pluginList := {'' -> self }]
 ]
 
 { #category : #'frame access' }
