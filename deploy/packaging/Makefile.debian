@@ -1,5 +1,6 @@
 VER=`head -1 debian/changelog | cut -d ' ' -f 2 | sed s,"(","",  | sed s,")","",`
 
+BASE_DIR=../..
 
 all: build_srcpackage pharo6_sources
 
@@ -10,10 +11,10 @@ version_from_travis:
 build_srcpackage:
 	@echo "Generating source package"
 
-	cp -a ../spursrc ../spur64src ../platforms ../LICENSE ../mkNamedPrims.sh ../src pharo7-vm-core/
+	cp -a $(BASE_DIR)/spursrc $(BASE_DIR)/spur64src $(BASE_DIR)/platforms $(BASE_DIR)/LICENSE $(BASE_DIR)/mkNamedPrims.sh $(BASE_DIR)/src pharo7-vm-core/
 	mkdir -p pharo7-vm-core/build.linux32x86/
-	cp -a ../build.linux32x86/pharo.cog.spur pharo7-vm-core/build.linux32x86/
-	cp -a ../build.linux32x86/editpharoinstall.sh pharo7-vm-core/build.linux32x86/
+	cp -a $(BASE_DIR)/build.linux32x86/pharo.cog.spur pharo7-vm-core/build.linux32x86/
+	cp -a $(BASE_DIR)/build.linux32x86/editpharoinstall.sh pharo7-vm-core/build.linux32x86/
 
 	cd pharo7-vm-core/platforms/unix/config && make configure
 	cd pharo7-vm-core && dpkg-buildpackage -S -uc -us -d

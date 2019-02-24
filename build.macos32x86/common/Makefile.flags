@@ -29,7 +29,7 @@ ifdef CLANG_7_3_OR_ABOVE
 else
 	OBJC_CODE_MODEL := -fno-objc-arc
 endif
-CFLAGS:=$(CFLAGS) -DBUILD_FOR_OSX=1 \
+CFLAGS:=$(CFLAGS) -DBUILD_FOR_OSX=1 -DNO_METAL=1 \
 		-arch $(TARGET_ARCH) \
 		-mmacosx-version-min=$(TARGET_VERSION_MIN) -msse4.2 \
 			-fvisibility=default -fwrapv \
