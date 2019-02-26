@@ -1,0 +1,12 @@
+# Copied, perhaps edited, from ../src/examplePlugins.ext
+EXTERNAL_PLUGINS = \
+B3DAcceleratorPlugin \
+FT2Plugin \
+JPEGReaderPlugin \
+JPEGReadWriter2Plugin \
+RePlugin \
+InternetConfigPlugin \
+SurfacePlugin \
+EventsHandlerPlugin \
+SDL2DisplayPlugin \
+

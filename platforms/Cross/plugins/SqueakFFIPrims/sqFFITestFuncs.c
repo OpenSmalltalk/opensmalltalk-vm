@@ -27,6 +27,18 @@ typedef struct ffiSmallStruct1 {
    unsigned char y;
 } ffiSmallStruct1;
 
+
+typedef struct ffiTestBiggerStruct {
+	long long x;
+	long long y;
+	long long z;
+	long long w;
+  	long long r;
+	long long s;
+  	long long t;
+  	long long u;
+} ffiTestBiggerStruct;
+
 #pragma export on
 EXPORT(char) ffiTestChars(char c1, char c2, char c3, char c4);
 EXPORT(short) ffiTestShorts(short c1, short c2, short c3, short c4);
@@ -44,6 +56,7 @@ EXPORT(double) ffiTestDoubles(double d1, double d2);
 EXPORT(char *) ffiPrintString(char *string);
 EXPORT(ffiTestPoint2) ffiTestStruct64(ffiTestPoint2 pt1, ffiTestPoint2 pt2);
 EXPORT(ffiTestPoint4) ffiTestStructBig(ffiTestPoint4 pt1, ffiTestPoint4 pt2);
+EXPORT(ffiTestBiggerStruct) ffiTestStructBigger(ffiTestPoint4 pt1, ffiTestPoint4 pt2);
 EXPORT(ffiTestPoint4*) ffiTestPointers(ffiTestPoint4 *pt1, ffiTestPoint4 *pt2);
 EXPORT(ffiSmallStruct1) ffiTestSmallStructReturn(void);
 EXPORT(int) ffiTestMixedIntAndStruct(int i1, ffiTestPoint2 pt1, ffiTestPoint2 pt2);
@@ -197,6 +210,21 @@ EXPORT(ffiTestPoint4) ffiTestStructBig(ffiTestPoint4 pt1, ffiTestPoint4 pt2) {
 	result.z = pt1.z + pt2.z;
 	result.w = pt1.w + pt2.w;
 	return result;
+}
+
+EXPORT(ffiTestBiggerStruct) ffiTestStructBigger(ffiTestPoint4 pt1, ffiTestPoint4 pt2) {
+	ffiTestBiggerStruct result;
+
+	result.x = pt1.x;
+	result.y = pt1.y;
+	result.z = pt1.z;
+	result.w = pt1.w;
+	result.r = pt2.x;
+	result.s = pt2.y;	
+	result.t = pt2.z;
+	result.u = pt2.w;
+	
+	return( result );
 }
 
 /* test passing and returning pointers */

@@ -83,6 +83,38 @@ struct VirtualMachine* interpreterProxy;
 #define intVal(oop)                                                            \
     (((long)(oop))>>1)
 
+
+/*
+ * Call a foreign function to set x8 structure result address return register
+ */
+extern void callAndReturnWithStructAddr(sqLong structAddr, sqLong procAddr, sqLong regValuesArrayAddr)
+{ /* Any float regs already loaded
+     Place alloca'd struct address in x8 for results.
+     Spread int args into int registers.
+     Use IPC reg X17 to jump through.
+   */
+  asm volatile (
+	"mov x8,  x0 \n\t"
+	"mov X17, x1 \n\t"
+        "mov X7,  x2 \n\t"
+	"ldp x0, x1, [x7] \n\t"
+	"ldp x2, x3, [x7, #0x10] \n\t"
+	"ldp x4, x5, [x7, #0x20] \n\t"
+	"ldp x6, x7, [x7, #0x30] \n\t"
+	"br  x17" /* NB: 'br' NOT 'blr'. No need to return here! */
+  );
+}
+
+/*
+ * Call a foreign function to get structure value from X1 
+ * (x0's value already returned as result of ffi call)
+ */
+extern sqLong returnX1value()
+{
+  asm volatile ("mov x0, x1");
+}
+
+
 /*
  * Call a foreign function that answers an integral result in r0 according to
  * ARM EABI rules.
