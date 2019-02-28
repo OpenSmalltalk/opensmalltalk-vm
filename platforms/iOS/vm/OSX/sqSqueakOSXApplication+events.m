@@ -73,6 +73,8 @@ static int buttonState=0;
 // If the event does not correspond to this window, we take it from the event queue anyways and re-post it afterwards
 // This gives other windows the opportunity to consume their events
 - (void) pumpRunLoopEventSendAndSignal:(BOOL)signal {
+
+	@autoreleasepool {
        NSEvent *event;
        NSMutableArray *alienEventQueue = [[NSMutableArray alloc] init];
        while ((event = [NSApp nextEventMatchingMask:NSEventMaskAny
@@ -89,14 +91,14 @@ static int buttonState=0;
                interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
            }
          }
-     }
-
-     // Put back in the queue all events that did not belong to this window
-     // They will be managed by other windowing systems
-     // (or by a subsequent invocation to this function)
-     while ((event = [alienEventQueue firstObject])) {
-       [NSApp postEvent: event atStart: NO];
-       [alienEventQueue removeObject: event];
+       }
+       // Put back in the queue all events that did not belong to this window
+       // They will be managed by other windowing systems
+       // (or by a subsequent invocation to this function)
+       while ((event = [alienEventQueue firstObject])) {
+         [NSApp postEvent: event atStart: NO];
+         [alienEventQueue removeObject: event];
+       }
      }
 }
 
