@@ -3070,15 +3070,15 @@ SpurMemoryManager >> checkHeapIntegrity: excludeUnmarkedObjs classIndicesShouldB
 					 ok := false].
 				 fieldOop := self fetchPointer: self freeChunkNextIndex ofFreeChunk: obj.
 				 (fieldOop ~= 0
-				 and: [(heapMap heapMapAtWord: (self pointerForOop: obj)) ~= 0]) ifTrue:
+				 and: [(heapMap heapMapAtWord: (self pointerForOop: fieldOop)) ~= 0]) ifTrue:
 					[coInterpreter print: 'leak in free chunk '; printHex: obj; print: ' @ 0 = '; printHex: fieldOop; print: ' is mapped'; cr.
 					 self eek.
 					 ok := false].
 				(self isLilliputianSize: (self bytesInObject: obj)) ifFalse:
 					[fieldOop := self fetchPointer: self freeChunkPrevIndex ofFreeChunk: obj.
 					 (fieldOop ~= 0
-					 and: [(heapMap heapMapAtWord: (self pointerForOop: fieldOop)) = 0]) ifTrue:
-						[coInterpreter print: 'leak in free chunk '; printHex: obj; print: ' @ 0 = '; printHex: fieldOop; print: ' is unmapped'; cr.
+					 and: [(heapMap heapMapAtWord: (self pointerForOop: fieldOop)) ~= 0]) ifTrue:
+						[coInterpreter print: 'leak in free chunk '; printHex: obj; print: ' @ 1 = '; printHex: fieldOop; print: ' is mapped'; cr.
 						 self eek.
 						 ok := false]].
 				(self isLargeFreeObject: obj) ifTrue:
@@ -3086,52 +3086,52 @@ SpurMemoryManager >> checkHeapIntegrity: excludeUnmarkedObjs classIndicesShouldB
 						[:fi|
 						 fieldOop := self fetchPointer: fi ofFreeChunk: obj.
 						 (fieldOop ~= 0
-						 and: [(heapMap heapMapAtWord: (self pointerForOop: obj)) ~= 0]) ifTrue:
+						 and: [(heapMap heapMapAtWord: (self pointerForOop: fieldOop)) ~= 0]) ifTrue:
 							[coInterpreter print: 'leak in free chunk '; printHex: obj; print: ' @ '; printNum: fi; print: ' = '; printHex: fieldOop; print: ' is mapped'; cr.
 							 self eek.
 							 ok := false].]]]
 			ifFalse:
-				[(excludeUnmarkedObjs and: [(self isMarked: obj)not]) ifTrue: [] ifFalse: [
-				 containsYoung := false.
-				 (self isRemembered: obj) ifTrue:
-					[numRememberedObjectsInHeap := numRememberedObjectsInHeap + 1.
-					 (scavenger isInRememberedSet: obj) ifFalse:
-						[coInterpreter print: 'remembered object '; printHex: obj; print: ' is not in remembered table'; cr.
-						 self eek.
-						 ok := false]].
-				 (self isForwarded: obj)
-					ifTrue:
-						[fieldOop := self fetchPointer: 0 ofMaybeForwardedObject: obj.
-						 (heapMap heapMapAtWord: (self pointerForOop: fieldOop)) = 0 ifTrue:
-							[coInterpreter print: 'object leak in forwarder '; printHex: obj; print: ' to unmapped '; printHex: fieldOop; cr.
+				[(excludeUnmarkedObjs and: [(self isMarked: obj) not]) ifFalse:
+					[containsYoung := false.
+					 (self isRemembered: obj) ifTrue:
+						[numRememberedObjectsInHeap := numRememberedObjectsInHeap + 1.
+						 (scavenger isInRememberedSet: obj) ifFalse:
+							[coInterpreter print: 'remembered object '; printHex: obj; print: ' is not in remembered table'; cr.
 							 self eek.
-							 ok := false].
-						 (self isReallyYoung: fieldOop) ifTrue:
-							[containsYoung := true]]
-					ifFalse:
-						[classOop := self classOrNilAtIndex: (classIndex := self classIndexOf: obj).
-						 (classIndicesShouldBeValid
-						  and: [classOop = nilObj
-						  and: [classIndex > self lastClassIndexPun]]) ifTrue:
-							[coInterpreter print: 'object leak in '; printHex: obj; print: ' invalid class index '; printHex: classIndex; print: ' -> '; print: (classOop ifNil: ['nil'] ifNotNil: ['nilObj']); cr.
+							 ok := false]].
+					 (self isForwarded: obj)
+						ifTrue:
+							[fieldOop := self fetchPointer: 0 ofMaybeForwardedObject: obj.
+							 (heapMap heapMapAtWord: (self pointerForOop: fieldOop)) = 0 ifTrue:
+								[coInterpreter print: 'object leak in forwarder '; printHex: obj; print: ' to unmapped '; printHex: fieldOop; cr.
+								 self eek.
+								 ok := false].
+							 (self isReallyYoung: fieldOop) ifTrue:
+								[containsYoung := true]]
+						ifFalse:
+							[classOop := self classOrNilAtIndex: (classIndex := self classIndexOf: obj).
+							 (classIndicesShouldBeValid
+							  and: [classOop = nilObj
+							  and: [classIndex > self lastClassIndexPun]]) ifTrue:
+								[coInterpreter print: 'object leak in '; printHex: obj; print: ' invalid class index '; printHex: classIndex; print: ' -> '; print: (classOop ifNil: ['nil'] ifNotNil: ['nilObj']); cr.
+								 self eek.
+								 ok := false].
+							 0 to: (self numPointerSlotsOf: obj) - 1 do:
+								[:fi|
+								 fieldOop := self fetchPointer: fi ofObject: obj.
+								 (self isNonImmediate: fieldOop) ifTrue:
+									[(self heapMapAtWord: (self pointerForOop: fieldOop)) = 0 ifTrue:
+										[coInterpreter print: 'object leak in '; printHex: obj; print: ' @ '; printNum: fi; print: ' = '; printHex: fieldOop; cr.
+										 self eek.
+										 ok := false].
+									 "don't be misled by CogMethods; they appear to be young, but they're not"
+									 (self isReallyYoung: fieldOop) ifTrue:
+										[containsYoung := true]]]].
+					 containsYoung ifTrue:
+						[(self isRemembered: obj) ifFalse:
+							[coInterpreter print: 'unremembered object '; printHex: obj; print: ' contains young oop(s)'; cr.
 							 self eek.
-							 ok := false].
-						 0 to: (self numPointerSlotsOf: obj) - 1 do:
-							[:fi|
-							 fieldOop := self fetchPointer: fi ofObject: obj.
-							 (self isNonImmediate: fieldOop) ifTrue:
-								[(self heapMapAtWord: (self pointerForOop: fieldOop)) = 0 ifTrue:
-									[coInterpreter print: 'object leak in '; printHex: obj; print: ' @ '; printNum: fi; print: ' = '; printHex: fieldOop; cr.
-									 self eek.
-									 ok := false].
-								 "don't be misled by CogMethods; they appear to be young, but they're not"
-								 (self isReallyYoung: fieldOop) ifTrue:
-									[containsYoung := true]]]].
-				 containsYoung ifTrue:
-					[(self isRemembered: obj) ifFalse:
-						[coInterpreter print: 'unremembered object '; printHex: obj; print: ' contains young oop(s)'; cr.
-						 self eek.
-						 ok := false]]]]].
+							 ok := false]]]]].
 	numRememberedObjectsInHeap ~= scavenger rememberedSetSize ifTrue:
 		[coInterpreter
 			print: 'root count mismatch. #heap roots ';
@@ -10000,7 +10000,9 @@ SpurMemoryManager >> printFreeChunk: freeChunk printAsTreeNode: printAsTreeNode 
 	coInterpreter
 		print: 'freeChunk '; printHexPtrnp: freeChunk.
 	printAsTreeNode ifTrue:
-		[coInterpreter print: ' - '; printHexPtrnp:(self addressAfter: freeChunk)].
+		[coInterpreter
+			print: ((freeChunk = (freeLists at: 0)) ifTrue: [' + '] ifFalse: [' - ']);
+			printHexPtrnp:(self addressAfter: freeChunk)].
 	coInterpreter
 		print: ' bytes '; printNum: numBytes;
 		print: ' next '; printHexPtrnp: (self fetchPointer: self freeChunkNextIndex
@@ -11854,6 +11856,12 @@ SpurMemoryManager >> storeImageSegmentInto: segmentWordArrayArg outPointers: out
 	arrayOfObjects := self objectsReachableFromRoots: arrayOfRoots.
 	arrayOfObjects ifNil:
 		[^PrimErrNoMemory].
+	"If objectsReachableFromRoots: answers an integer there is not enough continuous free space in which to allocate the
+	 reachable objects.  If there is sufficient free space then answer an error code to prompt a compacting GC and a retry."
+	(self isIntegerObject: arrayOfObjects) ifTrue:
+		[totalFreeOldSpace - self allocationUnit >= (self integerValueOf: arrayOfObjects) ifTrue:
+			[^PrimErrNeedCompaction].
+		 ^PrimErrNoMemory].
 
 	self assert: self allObjectsUnmarked. "work to be done when the incremental GC is written"
 	self deny: (self forwardersIn: arrayOfObjects).
@@ -11889,6 +11897,10 @@ SpurMemoryManager >> storeImageSegmentInto: segmentWordArrayArg outPointers: out
 							classIndex: self thirtyTwoBitLongsClassIndexPun.
 	(savedFirstFields isNil or: [savedOutHashes isNil]) ifTrue:
 		[self freeObject: arrayOfObjects.
+		 (savedFirstFields notNil and: [self isInOldSpace: savedFirstFields]) ifTrue:
+			[self freeObject: savedFirstFields].
+		 (savedOutHashes notNil and: [self isInOldSpace: savedOutHashes]) ifTrue:
+			[self freeObject: savedOutHashes].
 		 ^PrimErrNoMemory].
 
 	self fillObj: savedFirstFields numSlots: (self numSlotsOf: savedFirstFields) with: 0.
@@ -11909,7 +11921,7 @@ SpurMemoryManager >> storeImageSegmentInto: segmentWordArrayArg outPointers: out
 	 and the remembered bit for all classes (clones) in the segment."
 	0 to: (self numSlotsOf: arrayOfObjects) - 1 do:
 		[:i| | newSegAddrOrError objOop |
-		"Check that classes in the segment are addressible.  Since the top bit of the hash field is used to tag
+		"Check that classes in the segment are addressable.  Since the top bit of the hash field is used to tag
 		 classes external to the segment, the segment offset must not inadvertently set this bit.  This limit still
 		 allows for a million or more classes."
 		(i = numClassesInSegment

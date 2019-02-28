@@ -4910,6 +4910,13 @@ In case of either success or failure, the headers must be restored.  In the even
 		ifFalse: [^self primitiveFail].
 
 	ecode := objectMemory storeImageSegmentInto: segmentWordArray outPointers: outPointerArray roots: arrayOfRoots.
+	(objectMemory hasSpurMemoryManagerAPI
+	 and: [ecode = PrimErrNeedCompaction]) ifTrue:
+		[objectMemory fullGC.
+		 outPointerArray := self stackTop.
+		 segmentWordArray := self stackValue: 1.
+		 arrayOfRoots := self stackValue: 2.
+		 ecode := objectMemory storeImageSegmentInto: segmentWordArray outPointers: outPointerArray roots: arrayOfRoots].
 	ecode = PrimNoErr
 		ifTrue: [self pop: 3]  "...leaving the receiver on the stack as return value"
 		ifFalse: [self primitiveFailFor: ecode]

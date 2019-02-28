@@ -49,6 +49,7 @@ Class {
 		'PrimErrInappropriate',
 		'PrimErrLimitExceeded',
 		'PrimErrNamedInternal',
+		'PrimErrNeedCompaction',
 		'PrimErrNoCMemory',
 		'PrimErrNoMemory',
 		'PrimErrNoModification',
