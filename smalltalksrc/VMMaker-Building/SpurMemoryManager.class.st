@@ -5538,7 +5538,7 @@ SpurMemoryManager >> fullDisplayUpdate [
 
 { #category : #'gc - global' }
 SpurMemoryManager >> fullGC [
-	"Perform a full lazy compacting GC.  Answer the size of the largest free chunk."
+	"Perform a full eager compacting GC.  Answer the size of the largest free chunk."
 	<returnTypeC: #usqLong>
 	<inline: #never> "for profiling"
 	needGCFlag := false.
