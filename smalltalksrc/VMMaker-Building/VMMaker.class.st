@@ -873,7 +873,7 @@ VMMaker class >> makerFor: interpreterClass and: cogitClassOrNil with: optionsPa
 	optionsPairsArray := (cogitClassOrNil isNil or: [optionsPairsArrayArg includes: #Cogit])
 							ifTrue: [optionsPairsArrayArg]
 							ifFalse: [optionsPairsArrayArg, { #Cogit. cogitClassOrNil name }].
-	VMClass initializeWithOptions: optionsPairsArray.
+	VMClass initializeForPlugins: optionsPairsArray.
 	^(self forPlatform: 'Cross')
 		sourceDirectoryName: (self fullNameForPath: srcDirName);
 		platformRootDirectoryName: (self fullNameForPath: platDirName);
@@ -1466,7 +1466,7 @@ VMMaker >> generateExternalPlugin: pluginName [
 			logger show: 'external plugin ' , plugin name , ' failed to validate: ' , ex messageText; cr.
 			^self].
 
-	VMClass initializeWithOptions: #().
+	VMClass initializeForPlugins: #().
 	[exports := plugin
 					translateInDirectory: (self externalPluginsDirectoryFor: plugin)
 					doInlining: inline]

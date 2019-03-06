@@ -168,6 +168,14 @@ VMClass class >> initialize [
 ]
 
 { #category : #initialization }
+VMClass class >> initializeForPlugins: optionsDictionaryOrArray [
+	"Do a default initialization, suitable for generating plugin sources."
+	StackInterpreterSimulator
+		initializeWithOptions: optionsDictionaryOrArray
+		objectMemoryClass: ObjectMemory
+]
+
+{ #category : #initialization }
 VMClass class >> initializeMiscConstants [
 	"Falsify the `what type of VM is this?' flags that are defined in the various interp.h files.
 	 Subclass implementations need to include a super initializeMiscConstants"
