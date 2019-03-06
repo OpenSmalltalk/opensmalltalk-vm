@@ -17,14 +17,6 @@ ThreadedX64FFIPlugin class >> calloutStateClass [
 	^ThreadedFFICalloutStateForX64
 ]
 
-{ #category : #translation }
-ThreadedX64FFIPlugin class >> identifyingPredefinedMacros [
-	"Answer the predefined macros that identify the platforms a subclass handles, if any.
-	 If the subclass isn't yet ready for production (a work in progress) simply answer nil.
-	 Override to filter-out this abstract class."
-	^nil
-]
-
 { #category : #'class initialization' }
 ThreadedX64FFIPlugin class >> initialize [
 	WordSize := 8.

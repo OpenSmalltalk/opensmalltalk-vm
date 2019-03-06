@@ -90,13 +90,13 @@ FilePluginSimulator >> fileOpenName: nameIndex size: nameSize write: writeFlag s
 	openFiles size >= maxOpenFiles ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrLimitExceeded].
 	path := (interpreterProxy asByteArray: nameIndex size: nameSize) utf8Decoded.
-	f := writeFlag
-			ifTrue: [FileStream fileNamed: path]
-			ifFalse:
-				[(StandardFileStream isAFileNamed: path) ifTrue:
-					[FileStream readOnlyFileNamed: path]].
+	(writeFlag
+	 or: [StandardFileStream isAFileNamed: path]) ifFalse:
+		[^interpreterProxy primitiveFail].
+	f := StandardFileStream new open: path forWrite: writeFlag.
 	f ifNil: [^interpreterProxy primitiveFail].
 	f binary.
+	self assert: f isReadOnly = writeFlag not.
 	index := (3 to: openFiles size + 1) detect: [:n| (openFiles includesKey: n) not].
 	openFiles at: index put: f.
 	^interpreterProxy integerObjectOf: index
@@ -111,10 +111,11 @@ FilePluginSimulator >> fileOpenNewName: nameIndex size: nameSize secure: secureF
 	path := (interpreterProxy interpreter asByteArray: nameIndex size: nameSize) utf8Decoded.
 	"the #defaultAction for FileExistsException creates a dialog,
 	so it is caught and resignaled as a generic Error"
-	[f := FileStream newFileNamed: nameIndex]
+	[f := StandardFileStream newFileNamed: path]
 		on: FileExistsException
 		do: [:error | ^ interpreterProxy primitiveFailFor: PrimErrInappropriate].
 	f ifNil: [^interpreterProxy primitiveFail].
+	self deny: f isReadOnly.
 	f binary.
 	index := (3 to: openFiles size + 1) detect: [:n| (openFiles includesKey: n) not].
 	openFiles at: index put: f.
@@ -231,6 +232,13 @@ FilePluginSimulator >> primLookupEntryIn: fullPath name: fName [
 				ifAbsent: [Smalltalk primitiveErrorTable size + 1]]
 ]
 
+{ #category : #'file primitives' }
+FilePluginSimulator >> primitiveFileGetPosition [
+	super primitiveFileGetPosition.
+	interpreterProxy failed ifTrue:
+		[self halt]
+]
+
 { #category : #simulation }
 FilePluginSimulator >> recordStateOf: file [
 	([file position]
@@ -308,10 +316,10 @@ FilePluginSimulator >> sqFileClose: file [
 { #category : #simulation }
 FilePluginSimulator >> sqFileDeleteName: nameIndex Size: nameSize [
 	| path |
-
 	path := (interpreterProxy asString: nameIndex size: nameSize) asByteArray utf8Decoded.
 	(StandardFileStream isAFileNamed: path) ifFalse:
 		[^interpreterProxy primitiveFail].
+	self halt: 'Deleting ', (path contractTo: 64).
 	[FileDirectory deleteFilePath: path]
 		on: Error
 		do: [:ex| interpreterProxy primitiveFail]
