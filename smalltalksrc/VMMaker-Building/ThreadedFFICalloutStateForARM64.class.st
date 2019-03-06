@@ -64,12 +64,9 @@ ThreadedFFICalloutStateForARM64 >> floatRegisters: anObject [
 { #category : #'initialize-release' }
 ThreadedFFICalloutStateForARM64 >> initialize [
 	super initialize.
-	integerRegisterIndex := 0.
-	floatRegisterIndex     := 0.
-	resultAddress            := 0. "Only used for struct returns which do not fit in registers"
+	integerRegisterIndex := floatRegisterIndex := 0.
 	integerRegisters := CArrayAccessor on: (Array new: ThreadedARM64FFIPlugin numIntRegArgs).
-	floatRegisters     := CArrayAccessor on: (Array new: ThreadedARM64FFIPlugin numFloatRegArgs).
-
+	floatRegisters     := CArrayAccessor on: (Array new: ThreadedARM64FFIPlugin numFloatRegArgs)
 ]
 
 { #category : #accessing }
