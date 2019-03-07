@@ -68,7 +68,7 @@ sqInt faSetPlatFile(fapath *aFaPath, char *pathName);
 #define	faGetPlatPath(aFaPath)		(aFaPath)->uxpath
 #define	faGetPlatFile(aFaPath)		(aFaPath)->uxpath_file
 #define faGetPlatPathByteCount(aFaPath)	((aFaPath)->uxpath_len * sizeof(char))
-#define faExists(aFaPath) access(faGetPlatPath(aFaPath), F_OK)
+#define faExists(aFaPath) (!access(faGetPlatPath(aFaPath), F_OK))
 
 sqLong faConvertUnixToLongSqueakTime(time_t unixTime);
 
