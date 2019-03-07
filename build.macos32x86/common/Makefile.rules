@@ -24,7 +24,7 @@ $(OBJDIR)/%.o: %.m deps/%.d $(MAKEFILE)
 	$(POSTCOMPILE)
 
 $(OBJDIR)/%.o: %.cpp deps/%.d $(MAKEFILE)
-	$(CC) -x c++ $(ALLFLAGS) $(INCLUDES) -c $< -o $@
+	$(CC) -x c++ -std=c++11 -stdlib=libc++ $(ALLFLAGS) $(INCLUDES) -c $< -o $@
 	$(POSTCOMPILE)
 
 deps/%.d: ;
