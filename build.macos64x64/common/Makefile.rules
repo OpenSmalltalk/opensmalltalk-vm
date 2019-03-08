@@ -29,6 +29,6 @@ $(OBJDIR)/%.o: %.cpp deps/%.d $(MAKEFILE)
 
 deps/%.d: ;
 
-.PRECIOUS: deps/%.d
+.PRECIOUS: deps/%.d $(OBJDIR)/%.air $(OBJDIR)/%.metallib
 
 -include $(patsubst %,deps/%.d,$(notdir $(basename $(VMSRC) $(LIBSRC))))
