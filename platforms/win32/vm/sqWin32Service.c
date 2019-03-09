@@ -22,8 +22,8 @@
 /* Imports from sqWin32Main.c                                  */
 /****************************************************************/
 
-extern TCHAR *logName;        /* full path and name to log file */
-extern TCHAR serviceName[];   /* The name of the NT service */
+extern WCHAR *logName;        /* full path and name to log file */
+extern WCHAR serviceName[];   /* The name of the NT service */
 
 
 HANDLE                  hServDoneEvent = NULL;
@@ -32,12 +32,12 @@ SERVICE_STATUS          ssStatus;       /* current status of the service */
 SERVICE_STATUS_HANDLE   sshStatusHandle;
 DWORD                   dwGlobalErr;
 
-void sqStopService(LPTSTR lpszMsg);
+void sqStopService(LPWSTR lpszMsg);
 void sqEventLogMessage(LPTSTR lpszMsg);
 BOOL ReportStatusToSCMgr(DWORD dwCurrentState, DWORD dwWin32ExitCode, 
                          DWORD dwCheckPoint,DWORD dwWaitHint);
 void sqServiceControl(DWORD dwCtrlCode);
-void sqServiceMainFunction(DWORD dwArgc, LPTSTR *lpszArgv);
+void sqServiceMainFunction(DWORD dwArgc, LPWSTR *lpszArgv);
 
 #define failOn(condition, msg)\
    if(condition)\
@@ -46,65 +46,49 @@ void sqServiceMainFunction(DWORD dwArgc, LPTSTR *lpszArgv);
        return 0;\
      }
 
-/* printCommandLine(): Return a command line string from the current settings */
+/* printCommandLine(): Return a command line string from the current settings, UTF8 encoded */
 
-TCHAR *printCommandLine(int printFor95)
-{ static TCHAR buffer[1024];
-  TCHAR lbuf[50];
+char *printCommandLine()
+{ static WCHAR buffer[1024];
+  static char utf8[1024*3]; /* remember: at most 3 byte char for 1 WCHAR - See comment of MAX_PATH_UTF8 */
+  WCHAR lbuf[50];
 
   *buffer = 0;
 
-  if(printFor95)
-    {
-      GetModuleFileName(hInstance, buffer, 1024);
-      lstrcat(buffer,TEXT(" -service95 -headless "));
-    }
-
   if(dwMemorySize) /* need -memory: mb */
     {
-      lstrcat(buffer,TEXT("-memory: "));
-#ifdef UNICODE
-      lstrcat(buffer, _ltow(dwMemorySize, lbuf, 10));
-#else
-      lstrcat(buffer, _ltoa(dwMemorySize, lbuf, 10));
-#endif
-      lstrcat(buffer,TEXT(" "));
+      wcsncat(buffer,L"-memory: ",1024 - 1 - wcslen(buffer));
+	  wcsncat(buffer, _ltow(dwMemorySize, lbuf, 10),1024 - 1 - wcslen(buffer));
+	  wcsncat(buffer,L" ",1024 - 1 - wcslen(buffer));
     }
 #if STACKVM
  { extern sqInt desiredNumStackPages;
    extern sqInt desiredEdenBytes;
    if (desiredEdenBytes) {
-      lstrcat(buffer,TEXT("-eden: "));
-# ifdef UNICODE
-      lstrcat(buffer, _ltow(desiredEdenBytes, lbuf, 10));
-# else
-      lstrcat(buffer, _ltoa(desiredEdenBytes, lbuf, 10));
-# endif
-      lstrcat(buffer,TEXT(" "));
+      wcsncat(buffer,L"-eden: ",1024 - 1 - wcslen(buffer));
+	  wcsncat(buffer, _ltow(desiredEdenBytes, lbuf, 10),1024 - 1 - wcslen(buffer));
+	  wcsncat(buffer,L" ",1024 - 1 - wcslen(buffer));
    }
    if (desiredNumStackPages) {
-      lstrcat(buffer,TEXT("-stackpages: "));
-# ifdef UNICODE
-      lstrcat(buffer, _ltow(desiredNumStackPages, lbuf, 10));
-# else
-      lstrcat(buffer, _ltoa(desiredNumStackPages, lbuf, 10));
-# endif
-      lstrcat(buffer,TEXT(" "));
+      wcsncat(buffer,L"-stackpages: ",1024 - 1 - wcslen(buffer));
+	  wcsncat(buffer, _ltow(desiredNumStackPages, lbuf, 10),1024 - 1 - wcslen(buffer));
+	  wcsncat(buffer,L" ",1024 - 1 - wcslen(buffer));
    }
  }
 #endif /* STACKVM */
   if(*logName) /* need -log: "logName" */
     {
-      lstrcat(buffer, TEXT("-log: \""));
-      lstrcat(buffer, logName);
-      lstrcat(buffer, TEXT("\" "));
+	  wcsncat(buffer, L"-log: \"",1024 - 1 - wcslen(buffer));
+      wcsncat(buffer, logName,1024 - 1 - wcslen(buffer));
+	  wcsncat(buffer, L"\" ",1024 - 1 - wcslen(buffer));
     }
   /* add image name */
-  lstrcat(buffer, TEXT("\""));
-  lstrcat(buffer, toUnicode(imageName));
-  lstrcat(buffer, TEXT("\"\0"));
+  wcsncat(buffer, L"\"",1024 - 1 - wcslen(buffer));
+  wcsncat(buffer, imageNameW,1024 - 1 - wcslen(buffer));
+  wcsncat(buffer, L"\"\0",1024 - 1 - wcslen(buffer));
 
-  return buffer;
+  WideCharToMultiByte(CP_UTF8, 0, buffer, -1, utf8, 1024 * 3, NULL, NULL);
+  return utf8;
 }
 
 /****************************************************************************
@@ -113,7 +97,7 @@ TCHAR *printCommandLine(int printFor95)
 
 /* sqStartService: start the named service */
 int
-sqStartService(LPCTSTR serviceName)
+sqStartService(LPCWSTR serviceName)
 {
   SC_HANDLE   schService;
   SC_HANDLE   schSCManager;
@@ -123,7 +107,7 @@ sqStartService(LPCTSTR serviceName)
   schSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
   failOn(!schSCManager, TEXT("OpenSCManager failed"));
 
-  schService = OpenService(schSCManager, serviceName, SERVICE_ALL_ACCESS);
+  schService = OpenServiceW(schSCManager, serviceName, SERVICE_ALL_ACCESS);
   if(schService)
     {
       /* This may take some time */
@@ -145,7 +129,7 @@ sqStartService(LPCTSTR serviceName)
 
 /* sqChangeServiceConfig: change the startup type of the named service */
 int
-sqChangeServiceConfig(LPCTSTR serviceName, DWORD startType)
+sqChangeServiceConfig(LPCWSTR serviceName, DWORD startType)
 {
   SC_HANDLE   schService;
   SC_HANDLE   schSCManager;
@@ -155,7 +139,7 @@ sqChangeServiceConfig(LPCTSTR serviceName, DWORD startType)
   schSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
   failOn(!schSCManager, TEXT("OpenSCManager failed"));
 
-  schService = OpenService(schSCManager, serviceName, SERVICE_ALL_ACCESS);
+  schService = OpenServiceW(schSCManager, serviceName, SERVICE_ALL_ACCESS);
   if (schService != NULL)
     {
       if(ChangeServiceConfig(schService,
@@ -184,7 +168,7 @@ sqChangeServiceConfig(LPCTSTR serviceName, DWORD startType)
 
 /* sqRemoveService: remove the named service */
 int
-sqRemoveService(LPCTSTR serviceName)
+sqRemoveService(LPCWSTR serviceName)
 {
   SC_HANDLE   schService;
   SC_HANDLE   schSCManager;
@@ -194,7 +178,7 @@ sqRemoveService(LPCTSTR serviceName)
   schSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
   failOn(!schSCManager, TEXT("OpenSCManager failed"));
 
-  schService = OpenService(schSCManager, serviceName, SERVICE_ALL_ACCESS);
+  schService = OpenServiceW(schSCManager, serviceName, SERVICE_ALL_ACCESS);
   if (schService == NULL)
     {
       printLastError(TEXT("OpenService failed"));
@@ -213,17 +197,17 @@ sqRemoveService(LPCTSTR serviceName)
 
 /* sqInstallService: install the named service */
 int
-sqInstallService(LPCTSTR serviceName, LPCTSTR serviceExe)
+sqInstallService(LPCWSTR serviceName, LPCWSTR serviceExe)
 {
-  LPCTSTR lpszBinaryPathName = serviceExe;
+  LPCWSTR lpszBinaryPathName = serviceExe;
   SC_HANDLE   schService;
   SC_HANDLE   schSCManager;
 
   /* open service control manager on the local machine with default database */
-  schSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
+  schSCManager = OpenSCManagerW(NULL, NULL, SC_MANAGER_ALL_ACCESS);
   failOn(!schSCManager, TEXT("OpenSCManager failed"));
 
-  schService = CreateService(
+  schService = CreateServiceW(
       schSCManager,               /* SCManager database */
       serviceName,                /* name of service    */
       serviceName,                /* name to display    */
@@ -245,7 +229,7 @@ sqInstallService(LPCTSTR serviceName, LPCTSTR serviceExe)
       if(GetLastError() == ERROR_SERVICE_EXISTS)
         {
           /* The service already exists - ask the user to remove it */
-          if(MessageBox(0,TEXT("A service of this name already exists. Try to remove it?"),
+          if(MessageBoxW(0,L"A service of this name already exists. Try to remove it?",
                         serviceName, MB_YESNOCANCEL) == IDYES)
             {
               /* Now close the service manager ... */
@@ -265,109 +249,6 @@ sqInstallService(LPCTSTR serviceName, LPCTSTR serviceExe)
   return schService != NULL;
 }
 
-/****************************************************************************
- Service Install/deinstall functions for Windows 95
- ****************************************************************************/
-
-/* sqInstallService95: install the named service on a Windows 95 system */
-int
-sqInstallService95(LPTSTR serviceName)
-{ TCHAR tmpString[1024];
-  DWORD dwSize, dwType;
-  HKEY hk;
-  int ok;
-
-  /* Add a broadcast  for user startup */
-  ok = RegOpenKey(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"), &hk);
-  failOn(ok != ERROR_SUCCESS, TEXT("RegOpenKey failed"));
-  dwSize = 1024;
-  ok = RegQueryValueEx(hk, TEXT("SqueakBroadcastNotification"),NULL, &dwType, (LPBYTE) &tmpString, &dwSize);
-  /* ERROR_SUCCESS indicates that we have already an entry */
-  if(ok != ERROR_SUCCESS)
-    /* ERROR_FILE_NOT_FOUND indicates no entry */
-    if(ok != ERROR_FILE_NOT_FOUND)
-      failOn(1 ,TEXT("RegQueryValueEx failed"));
-
-  /* set the new service entry */
-  GetModuleFileName(hInstance, tmpString, 1024);
-  lstrcat(tmpString,TEXT(" -broadcast95"));
-  ok = RegSetValueEx(hk,        /* subkey handle         */
-      TEXT("SqueakBroadcastNotification"), /* value name       */
-      0,                        /* must be zero          */
-      REG_SZ,                   /* value type            */
-      (LPBYTE) &tmpString,      /* address of value data */
-      lstrlen(tmpString));      /* length of value data  */
-  failOn(ok != ERROR_SUCCESS, TEXT("RegSetValueEx failed"));
-  RegCloseKey(hk);
-
-  ok = RegOpenKey(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunServices"), &hk);
-  if(ok != ERROR_SUCCESS) {
-    /* ERROR_FILE_NOT_FOUND indicates no entry */
-    if(ok != ERROR_FILE_NOT_FOUND)
-      failOn(1, TEXT("RegOpenKey failed"));
-    ok = RegCreateKey(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunServices"), &hk);
-    failOn(ok != ERROR_SUCCESS, TEXT("RegCreateKey failed"));
-  } else { /* check for any existing service */
-    dwSize = 1024;
-    ok = RegQueryValueEx(hk,serviceName,NULL, &dwType, (LPBYTE) &tmpString, &dwSize);
-    /* ERROR_SUCCESS indicates that we have already an entry */
-    if(ok == ERROR_SUCCESS) { 
-      /* The service already exists - ask the user to remove it */
-      if(MessageBox(0,TEXT("A service of this name already exists. Try to remove it?"),
-                    serviceName, MB_YESNOCANCEL) != IDYES)
-        return 0; /* Just return, in any other case we just overwrite the entry */
-    } else { /* ERROR_FILE_NOT_FOUND indicates no entry */
-      if(ok != ERROR_FILE_NOT_FOUND)
-        failOn(1 , TEXT("RegQueryValueEx failed"));
-	}
-  }
-  /* set the new service entry */
-  lstrcpy(tmpString, printCommandLine(1));
-  ok = RegSetValueEx(hk,        /* subkey handle         */
-      serviceName,              /* value name            */
-      0,                        /* must be zero          */
-      REG_SZ,                   /* value type            */
-      (LPBYTE) &tmpString,      /* address of value data */
-      lstrlen(tmpString));       /* length of value data  */
-  failOn(ok != ERROR_SUCCESS, TEXT("RegSetValueEx failed"));
-  RegCloseKey(hk);
-
-  return 1;
-}
-
-/* sqStartService95: start the named service on a Windows 95 system */
-int
-sqStartService95(LPTSTR serviceName)
-{ TCHAR tmpString[1024];
-  STARTUPINFO sInfo;
-  PROCESS_INFORMATION pInfo;
-  DWORD dwSize, dwType;
-  HKEY hk;
-  int ok;
-
-  ok = RegOpenKey(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunServices"), &hk);
-  failOn(ok != ERROR_SUCCESS, TEXT("RegOpenKey failed"));
-  /* get the name of the program to run */
-  dwSize = 1024;
-  ok = RegQueryValueEx(hk,serviceName,NULL, &dwType, (LPBYTE) &tmpString, &dwSize);
-  failOn(ok != ERROR_SUCCESS, TEXT("RegQueryValueEx failed"));
-  RegCloseKey(hk);
-  tmpString[dwSize] = 0;
-  /* and start up */
-  ZeroMemory(&sInfo, sizeof(sInfo));
-  ok = CreateProcess(NULL, /* no image name */
-                tmpString, /* but full command line */
-                NULL, /* no process security attributes */
-                NULL, /* no thread security attributes */
-                FALSE, /* don't inherit handles */
-                0, /* no special flags */
-                NULL, /* no separate environment */
-                NULL, /* no startup dir */
-                &sInfo, /* startup info */
-                &pInfo); /* process info */
-  failOn(ok == 0, TEXT("CreateProcess failed"));
-  return 1;
-}
 
 /****************************************************************************
  Main service install function
@@ -376,61 +257,43 @@ sqStartService95(LPTSTR serviceName)
                        NT Service. Run it afterwards */
 void sqServiceInstall(void)
 { HKEY hk;
-  TCHAR tmp[1024];
+  WCHAR tmp[1024];
   DWORD ok;
 
-  if( fWindows95 )
-    { /* Running on Win95 */
-      if(!sqInstallService95(serviceName))
-        {
-          warnPrintf(TEXT("The service was NOT installed."));
-          return;
-        }
-      if(MessageBox(0,TEXT("Service installation successful.\n")
-                      TEXT("Do you wish to start the service right now?"),
-                      serviceName,MB_YESNOCANCEL) == IDYES)
-        {
-          if(!sqStartService95(serviceName))
-            warnPrintf(TEXT("The service was NOT started.\n")
-                       TEXT("You have to restart your system first."));
-        }
-      /* success */
-      exit(0);
-    }
   /* get the VM name */
-  GetModuleFileName(hInstance,tmp, 255);
+  GetModuleFileNameW(hInstance,tmp, 255);
   if(!sqInstallService(serviceName, tmp))
     {
-      warnPrintf(TEXT("The service has NOT been installed."));
+      warnPrintf("The service has NOT been installed.");
       return;
     }
   /* Create a new key for our service */
-  wsprintf(tmp,TEXT("SYSTEM\\CurrentControlSet\\Services\\%s\\Startup"),serviceName);
-  ok = RegCreateKey(HKEY_LOCAL_MACHINE, tmp, &hk);
+  _snwprintf(tmp,1024,L"SYSTEM\\CurrentControlSet\\Services\\%s\\Startup",serviceName);
+  ok = RegCreateKeyW(HKEY_LOCAL_MACHINE, tmp, &hk);
   if(ok != ERROR_SUCCESS)
     {
       printLastError(TEXT("RegCreateKey failed"));
       return;
     }
   /* Add the image name to the subkey. */
-  ok = RegSetValueEx(hk,        /* subkey handle         */
-      TEXT("Image"),            /* value name            */
-      0,                        /* must be zero          */
-      REG_EXPAND_SZ,            /* value type            */
-      (LPBYTE) imageName,       /* address of value data */
-      strlen(imageName) + 1);   /* length of value data  */
+  ok = RegSetValueExW(hk,                     /* subkey handle         */
+      L"Image",                               /* value name            */
+      0,                                      /* must be zero          */
+      REG_EXPAND_SZ,                          /* value type            */
+      (LPBYTE) imageNameW,                    /* address of value data */
+      (wcslen(imageNameW)+1)*sizeof(WCHAR));  /* length of value data  */
   if(ok != ERROR_SUCCESS)
     {
       printLastError(TEXT("RegSetValueEX failed"));
       return;
     }
   /* Add the log file to the subkey. */
-  ok = RegSetValueEx(hk,        /* subkey handle         */
-      TEXT("Log"),              /* value name            */
-      0,                        /* must be zero          */
-      REG_EXPAND_SZ,            /* value type            */
-      (LPBYTE) logName,         /* address of value data */
-      lstrlen(logName) + 1);    /* length of value data  */
+  ok = RegSetValueEx(hk,                   /* subkey handle         */
+      TEXT("Log"),                         /* value name            */
+      0,                                   /* must be zero          */
+      REG_EXPAND_SZ,                       /* value type            */
+      (LPBYTE) logName,                    /* address of value data */
+      wcslen(logName) + 1)*sizeof(WCHAR);  /* length of value data */
   if(ok != ERROR_SUCCESS)
     {
       printLastError(TEXT("RegSetValueEX failed"));
@@ -450,20 +313,20 @@ void sqServiceInstall(void)
     }
   RegCloseKey(hk);
   /* Successfully finished install */
-  if(MessageBox(0,TEXT("Service installation successful. ")
-                  TEXT("Do you wish to start the service automatically on system startup?"), 
+  if(MessageBoxW(0,L"Service installation successful. "
+                  L"Do you wish to start the service automatically on system startup?", 
                   serviceName,MB_YESNOCANCEL) == IDYES)
     {
       if(!sqChangeServiceConfig(serviceName, SERVICE_AUTO_START))
-        warnPrintf(TEXT("The service was NOT configured.\n")
-                   TEXT("Please go to control panel and configure the service manually.\n"));
+        warnPrintf("The service was NOT configured.\n"
+                   "Please go to control panel and configure the service manually.\n");
     }
-  if(MessageBox(0,TEXT("Do you wish to start the service right now?"),
+  if(MessageBoxW(0,L"Do you wish to start the service right now?",
                   serviceName,MB_YESNOCANCEL) == IDYES)
     {
       if(!sqStartService(serviceName))
-        warnPrintf(TEXT("The service was NOT started.\n")
-                   TEXT("Please go to the control panel and start the service manually.\n"));
+        warnPrintf("The service was NOT started.\n"
+                   "Please go to the control panel and start the service manually.\n");
     }
   exit(0);  
 }
@@ -499,8 +362,7 @@ int sqServiceMain(void)
 DWORD WINAPI sqThreadMain(DWORD ignored)
 { DWORD dwSize, dwType, ok;
   HKEY hk;
-  static TCHAR tmpString[256];
-  static TCHAR lbuf[50];
+  static WCHAR tmpString[MAX_PATH+1];
   char *cmd;
 
   /* first of all set a few flags */
@@ -509,45 +371,46 @@ DWORD WINAPI sqThreadMain(DWORD ignored)
 
   /* get values from the registry settings */
   /* Create a new key for our service */
-  wsprintf(tmpString,TEXT("SYSTEM\\CurrentControlSet\\Services\\%s\\Startup"),serviceName);
-  ok = RegOpenKey(HKEY_LOCAL_MACHINE, tmpString, &hk);
+  _snwprintf(tmpString,MAX_PATH+1,L"SYSTEM\\CurrentControlSet\\Services\\%s\\Startup",serviceName);
+  ok = RegOpenKeyW(HKEY_LOCAL_MACHINE, tmpString, &hk);
   if(ok != ERROR_SUCCESS)
     {
-      sqStopService(TEXT("Failed to open registry for startup parameters"));
+      sqStopService(L"Failed to open registry for startup parameters");
       TerminateThread(GetCurrentThread(), 0);
     }
   /* Read the image name from the subkey. */
-  dwSize = MAX_PATH;
-  ok = RegQueryValueEx(hk,TEXT("Image"),NULL, &dwType, (LPBYTE) imageName, &dwSize);
+  dwSize = MAX_PATH*sizeof(WCHAR);
+  ok = RegQueryValueExW(hk,L"Image",NULL, &dwType, (LPBYTE) imageNameW, &dwSize);
   if(ok != ERROR_SUCCESS || dwType != REG_EXPAND_SZ)
     {
-      sqStopService(TEXT("Failed to read the image name from registry"));
+      sqStopService(L"Failed to read the image name from registry");
       TerminateThread(GetCurrentThread(), 0);
     }
-  imageName[dwSize] = 0;
+  imageNameW[dwSize/2] = 0;
+  WideCharToMultiByte(CP_UTF8, 0, imageNameW, -1, imageName, MAX_PATH_UTF8, NULL, NULL);
   /* Read the log file name from the subkey. */
-  dwSize = MAX_PATH;
-  ok = RegQueryValueEx(hk,TEXT("Log"),NULL, &dwType, (LPBYTE) &tmpString, &dwSize);
+  dwSize = MAX_PATH*sizeof(WCHAR);
+  ok = RegQueryValueExW(hk,L"Log",NULL, &dwType, (LPBYTE) &tmpString, &dwSize);
   if(ok != ERROR_SUCCESS || dwType != REG_EXPAND_SZ)
     {
-      sqStopService(TEXT("Failed to read the log file name from registry"));
+      sqStopService(L"Failed to read the log file name from registry");
       TerminateThread(GetCurrentThread(), 0);
     }
-  tmpString[dwSize] = 0;
-  logName = malloc(lstrlen(tmpString)+1);
-  lstrcpy(logName, tmpString);
+  tmpString[dwSize/2] = 0;
+  logName = malloc((wcslen(tmpString)+1)*sizeof(WCHAR));
+  wcscpy(logName, tmpString);
   /* Read the memory size from the subkey. */
   dwSize = sizeof(DWORD);
-  ok = RegQueryValueEx(hk,TEXT("Memory"),NULL, &dwType, (LPBYTE) &dwMemorySize, &dwSize);
+  ok = RegQueryValueExW(hk,L"Memory",NULL, &dwType, (LPBYTE) &dwMemorySize, &dwSize);
   if(ok != ERROR_SUCCESS || dwType != REG_DWORD)
     {
-      sqStopService(TEXT("Failed to read the memory amount from registry"));
+      sqStopService(L"Failed to read the memory amount from registry");
       TerminateThread(GetCurrentThread(), 0);
     }
   RegCloseKey(hk);
 
   /* and away we go ... */
-  cmd = printCommandLine(0);
+  cmd = printCommandLine();
   sqMain(0,&cmd);
   return 1;
 }
@@ -555,15 +418,15 @@ DWORD WINAPI sqThreadMain(DWORD ignored)
 /****************************************************************************
  sqServiceMain(): This function will be called when the service is about to run
  ****************************************************************************/
-void sqServiceMainFunction(DWORD dwArgc, LPTSTR *lpszArgv)
+void sqServiceMainFunction(DWORD dwArgc, LPWSTR *lpszArgv)
 { DWORD id;
   HANDLE eventList[2];
 
   /* store the name of our service */
-  lstrcpy(serviceName, lpszArgv[0]);
+  wcscpy(serviceName, lpszArgv[0]);
 
   /* register our service control handler: */
-  sshStatusHandle = RegisterServiceCtrlHandler( serviceName, 
+  sshStatusHandle = RegisterServiceCtrlHandlerW( serviceName, 
                       (LPHANDLER_FUNCTION) sqServiceControl);
 
   if (!sshStatusHandle) goto cleanup;
@@ -712,31 +575,31 @@ ReportStatusToSCMgr(DWORD dwCurrentState,
     if (!(fResult = SetServiceStatus( sshStatusHandle, &ssStatus)))
       {
         /* If an error occurs, stop the service. */
-        sqStopService(TEXT("SetServiceStatus"));
+        sqStopService(L"SetServiceStatus");
       }
     return fResult;
 }
 
 /* sqStopService: report an error, and stop the service. */
 
-void sqStopService(LPTSTR lpszMsg)
+void sqStopService(LPWSTR lpszMsg)
 {
-    TCHAR   chMsg[256];
+    WCHAR   chMsg[256];
     HANDLE  hEventSource;
-    LPTSTR  lpszStrings[2];
+    LPWSTR  lpszStrings[2];
 
     dwGlobalErr = GetLastError();
 
     /* Use event logging to log the error. */
-    hEventSource = RegisterEventSource(NULL, serviceName);
+    hEventSource = RegisterEventSourceW(NULL, serviceName);
 
-    wsprintf(chMsg, TEXT("%s error: %d"), serviceName, dwGlobalErr);
+    _snwprintf(chMsg, 256, L"%s error: %d", serviceName, dwGlobalErr);
     lpszStrings[0] = chMsg;
     lpszStrings[1] = lpszMsg;
 
     if (hEventSource != NULL)
       {
-        ReportEvent(hEventSource, EVENTLOG_ERROR_TYPE, 0, 0, NULL, 2, 0, (LPCTSTR*)lpszStrings, NULL);
+        ReportEventW(hEventSource, EVENTLOG_ERROR_TYPE, 0, 0, NULL, 2, 0, (LPCWSTR*)lpszStrings, NULL);
         DeregisterEventSource(hEventSource);
       }
 
@@ -751,7 +614,7 @@ void sqEventLogMessage(LPTSTR lpszMsg)
     HANDLE  hEventSource;
     LPTSTR  lpszStrings[1];
 
-    hEventSource = RegisterEventSource(NULL, serviceName);
+    hEventSource = RegisterEventSourceW(NULL, serviceName);
     lpszStrings[0] = lpszMsg;
     if (hEventSource != NULL) 
       {

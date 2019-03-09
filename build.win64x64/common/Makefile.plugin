@@ -75,10 +75,10 @@ endif
 
 XDEFS:=	
 DEFS:=	$(WINVER) -DWIN64=1 -DWIN32_FILE_SUPPORT -DNO_ISNAN \
-		-DNO_SERVICE -DNO_STD_FILE_SUPPORT \
+		-DNO_SERVICE \
 		$(NDEBUG) -DLSB_FIRST -DVM_NAME=\"$(VM)\" $(XDEFS)
 
-CFLAGS:= -fdeclspec -msse2 -ggdb2 -m64 -mdll \
+CFLAGS:= -fdeclspec -msse2 -ggdb2 -m64 \
 	-mno-rtd -mms-bitfields $(OFLAGS) $(NOBUILTIN) $(WARNINGS) $(COGDEFS)
 
 

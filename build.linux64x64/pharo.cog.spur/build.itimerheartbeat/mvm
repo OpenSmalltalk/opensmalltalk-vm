@@ -2,7 +2,7 @@
 set -e
 # PharoVM with VM profiler and itimer heartbeat
 THIRDPARTYLIBS="libsdl2 openssl libssh2 libgit2"
-INSTALLDIR=cogspur64linux
+INSTALLDIR=phcogspur64linux
 # Some gcc versions create a broken VM using -O2
 case $(c99 -dumpversion) in
 3.4.*)	OPT="-g -O1 -fwrapv -DNDEBUG -DDEBUGVM=0";;
@@ -14,6 +14,7 @@ if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
 fi
 
+if ../../scripts/checkSCCSversion ; then exit 1; fi
 echo -n "clean? "
 read a
 case $a in

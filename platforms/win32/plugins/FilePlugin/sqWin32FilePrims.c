@@ -465,8 +465,8 @@ sqInt sqImageFileClose(sqImageFile h)
   return CloseHandle((HANDLE)(h-1));
 }
 
-sqImageFile sqImageFileOpen(char *fileName, char *mode)
-{ char *modePtr;
+sqImageFile sqImageFileOpen(const char *fileName, const char *mode)
+{ const char *modePtr;
   int writeFlag = 0;
   WCHAR *win32Path = NULL;
   HANDLE h;
@@ -517,7 +517,7 @@ size_t sqImageFileRead(void *ptr, size_t sz, size_t count, sqImageFile h)
   ReadFile((HANDLE)(h-1), (LPVOID) ptr, count*sz, &dwReallyRead, NULL);
   while(dwReallyRead != (DWORD)(count*sz)) {
     DWORD err = GetLastError();
-    if(sqMessageBox(MB_ABORTRETRYIGNORE, TEXT("Squeak Warning"),"Image file read problem (%d out of %d bytes read)", dwReallyRead, count*sz)
+    if(sqMessageBox(MB_ABORTRETRYIGNORE, TEXT("Squeak Warning"),TEXT("Image file read problem (%d out of %d bytes read)"), dwReallyRead, count*sz)
        == IDABORT) return (dwReallyRead / sz);
     sqImageFileSeek(h, position);
     ReadFile((HANDLE)(h-1), (LPVOID) ptr, count*sz, &dwReallyRead, NULL);
@@ -533,7 +533,15 @@ squeakFileOffsetType sqImageFileSeek(sqImageFile h, squeakFileOffsetType pos)
   return ofs.offset;
 }
 
-size_t sqImageFileWrite(void *ptr, size_t sz, size_t count, sqImageFile h)
+squeakFileOffsetType sqImageFileSeekEnd(sqImageFile h, squeakFileOffsetType pos)
+{
+    win32FileOffset ofs;
+    ofs.offset = pos;
+    ofs.dwLow = SetFilePointer((HANDLE)(h - 1), ofs.dwLow, &ofs.dwHigh, FILE_END);
+    return ofs.offset;
+}
+
+size_t sqImageFileWrite(const void *ptr, size_t sz, size_t count, sqImageFile h)
 {
   DWORD dwReallyWritten;
   WriteFile((HANDLE)(h-1), (LPVOID) ptr, count*sz, &dwReallyWritten, NULL);

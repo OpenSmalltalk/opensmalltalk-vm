@@ -8,11 +8,69 @@
 #include "faCommon.h"
 
 extern struct VirtualMachine * interpreterProxy;
+int	vmSessionId = 0;
+
+
+/*
+ * faInitialiseModule
+ *
+ * Initialise global data for the FileAttributesPlugin.
+ *
+ * This function must be called only once each each time the VM is run.
+ */
+sqInt faInitialiseModule()
+{
+	if (vmSessionId == 0)
+		return interpreterProxy->falseObject();
+	vmSessionId = interpreterProxy->getThisSessionID();
+	return interpreterProxy->trueObject();
+}
+
+
+
+/*
+ * faInitSessionId
+ *
+ * Initialise the supplied session.
+ */
+sqInt faInitSessionId(int *sessionId)
+{
+	*sessionId = vmSessionId;
+	return FA_SUCCESS;
+}
+
+
+
+/*
+ * faValidateSessionId
+ *
+ * Check that the supplied faPath structure looks valid.
+ *
+ * Currently this is just checking that the sessionId is correct.
+ */
+sqInt faValidateSessionId(int sessionId)
+{
+	return sessionId == vmSessionId;
+}
+
+
+
+/*
+ * faInvalidateSessionId
+ *
+ * Mark the supplied faPath structure as invalid.
+ */
+sqInt faInvalidateSessionId(int *sessionId)
+{
+	*sessionId = 0;
+	return FA_SUCCESS;
+}
+
 
 
 sqInt faSetStDirOop(fapath *aFaPath, sqInt pathNameOop)
 {
-int		len;
+int	len;
 char	*pathName;
 
 

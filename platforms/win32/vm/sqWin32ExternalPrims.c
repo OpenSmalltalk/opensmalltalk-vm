@@ -41,7 +41,10 @@ void *ioLoadModule(char *pluginName)
 	TCHAR *name;
 
 #ifdef UNICODE
-	name = toUnicode(pluginName);
+	int len = MultiByteToWideChar(CP_UTF8, 0, pluginName, -1, NULL, 0);
+	if (len <= 0) return 0; /* invalid UTF8 ? */
+	name = alloca(len*sizeof(WCHAR));
+	if (MultiByteToWideChar(CP_UTF8, 0, pluginName, -1, name, len) == 0) return 0;
 #else
 	name = pluginName;
 #endif
@@ -69,19 +72,11 @@ ioFindExternalFunctionInAccessorDepthInto(char *lookupName, void *moduleHandle,
 	void *f;
 	char buffer[256];
 
-# ifdef UNICODE
-	f = GetProcAddress(moduleHandle, toUnicode(lookupName));
-# else
 	f = GetProcAddress(moduleHandle, lookupName);
-# endif
 	if (f && accessorDepthPtr) {
 		void *accessorDepthVarPtr;
 		snprintf(buffer,256,"%sAccessorDepth",lookupName);
-# ifdef UNICODE
-		accessorDepthVarPtr = GetProcAddress(moduleHandle, toUnicode(buffer));
-# else
 		accessorDepthVarPtr = GetProcAddress(moduleHandle, buffer);
-# endif
 		/* The Slang machinery assumes accessor depth defaults to -1, which
 		 * means "no accessor depth".  It saves space not outputting -1 depths.
 		 */
@@ -95,11 +90,7 @@ ioFindExternalFunctionInAccessorDepthInto(char *lookupName, void *moduleHandle,
 void *
 ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
 {
-# ifdef UNICODE
-	return GetProcAddress((HANDLE)moduleHandle, toUnicode(lookupName));
-# else
 	return GetProcAddress((HANDLE)moduleHandle, lookupName);
-# endif
 }
 #endif /* SPURVM */
 

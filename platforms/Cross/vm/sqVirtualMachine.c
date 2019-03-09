@@ -200,6 +200,10 @@ sqInt stringForCString(char *);
 sqInt primitiveFailForOSError(sqLong);
 sqInt primitiveFailForFFIExceptionat(usqLong exceptionCode, usqInt pc);
 #endif
+#if VM_PROXY_MINOR > 14 /* SmartSyntaxPlugin validation rewrite support */
+sqInt isBooleanObject(sqInt oop);
+sqInt isPositiveMachineIntegerObject(sqInt oop);
+#endif
 
 void *ioLoadFunctionFrom(char *fnName, char *modName);
 
@@ -535,6 +539,10 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->primitiveFailForFFIExceptionat = primitiveFailForFFIExceptionat;
 #endif
 
+#if VM_PROXY_MINOR > 14 /* SmartSyntaxPlugin validation rewrite support */
+	VM->isBooleanObject = isBooleanObject ;
+	VM->isPositiveMachineIntegerObject = isPositiveMachineIntegerObject;
+#endif
 	return VM;
 }
 

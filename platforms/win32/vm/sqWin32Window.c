@@ -56,21 +56,31 @@ extern sqInt deferDisplayUpdates;
 
 
 /*** Variables -- image and path names ***/
-#define IMAGE_NAME_SIZE MAX_PATH
+#define IMAGE_NAME_SIZE MAX_PATH_UTF8 
 
-char imageName[MAX_PATH+1];		  /* full path and name to image */
-TCHAR imagePath[MAX_PATH+1];	  /* full path to image */
-TCHAR vmPath[MAX_PATH+1];		    /* full path to interpreter's directory */
-TCHAR vmName[MAX_PATH+1];		    /* name of the interpreter's executable */
-TCHAR windowTitle[MAX_PATH];        /* what should we display in the title? */
-TCHAR squeakIniName[MAX_PATH+1];    /* full path and name to ini file */
-TCHAR windowClassName[MAX_PATH+1];        /* Window class name */
+/* IMPLEMENTATION NOTE:
+- both UTF8 and UTF16 versions are maintained in parallel
+- UTF8 version is for interaction with image
+- UTF16 version is for interaction with WIN32 API
+whichever code modifies one version is responsible for updating the other
+*/
+char  imageName [MAX_PATH_UTF8 + 1];     /* full path and name to image */
+WCHAR imageNameW[MAX_PATH      + 1];     /* full path and name to image */
+char  imagePathA[MAX_PATH_UTF8 + 1];     /* full path to image */
+WCHAR imagePathW[MAX_PATH      + 1];     /* full path to image */
+char  vmPathA[MAX_PATH_UTF8 + 1];        /* full path to interpreter's directory */
+WCHAR vmPathW[MAX_PATH      + 1];        /* full path to interpreter's directory */
+char  vmNameA[MAX_PATH_UTF8 + 1];        /* name of the interpreter's executable UTF8 */
+WCHAR vmNameW[MAX_PATH      + 1];        /* name of the interpreter's executable UTF16 */
+char windowTitle[MAX_PATH+1];            /* what should we display in the title? */
+WCHAR squeakIniNameW[MAX_PATH      + 1]; /* full path and name to ini file */
+char  squeakIniNameA[MAX_PATH_UTF8 + 1]; /* full path and name to ini file */
+TCHAR windowClassName[MAX_PATH+1];       /* Window class name */
 
 const TCHAR U_ON[]  = TEXT("1");
 const TCHAR U_OFF[] = TEXT("0");
 const TCHAR U_GLOBAL[] = TEXT("Global");
-const TCHAR U_SLASH[] = TEXT("/");
-const TCHAR U_BACKSLASH[] = TEXT("\\");
+const WCHAR W_BACKSLASH[] = L"\\";
 
 /*** Variables -- Event Recording ***/
 int inputSemaphoreIndex = 0;/* if non-zero the event semaphore index */
@@ -98,7 +108,6 @@ BITMAPINFO *bmi4;	         /*	4 bit depth bitmap info */
 BITMAPINFO *bmi8;	         /*	8 bit depth bitmap info */
 BITMAPINFO *bmi16;	       /*	16 bit depth bitmap info */
 BITMAPINFO *bmi32;	       /*	32 bit depth bitmap info */
-BOOL fWindows95;           /* Are we running on Win95 or NT? */
 BOOL fHasFocus = 0;        /* if Squeak has the input focus */
 
 /* Preference values */
@@ -188,6 +197,16 @@ EXPORT(void) setIoProcessEventsHandler(void * handler) {
 }
 #endif
 
+extern int sqAskSecurityYesNoQuestion(const char *question)
+{
+    return MessageBoxA(stWindow, question, "Squeak Security Alert", MB_YESNO | MB_ICONSTOP) == IDYES;
+}
+
+extern const char *sqGetCurrentImagePath(void)
+{
+    return imagePathA;
+}
+
 /****************************************************************************/
 /*                      Synchronization functions                           */
 /****************************************************************************/
@@ -232,6 +251,7 @@ LRESULT CALLBACK MainWndProcA(HWND hwnd,
                               UINT message,
                               WPARAM wParam,
                               LPARAM lParam) {
+
   return DefWindowProc(hwnd, message, wParam, lParam);
 }
 
@@ -245,6 +265,30 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
   static UINT nrClicks = 0;
   UINT timeNow = 0;
   UINT timeDelta = 0;
+
+  MSG localMessage;
+  LPMSG messageTouse = NULL;
+
+  /*
+   * Newspeak uses the lastMessage pointer.
+   */
+#if NewspeakVM
+  messageTouse = lastMessage;
+#else
+  messageTouse = &localMessage;
+
+  localMessage.hwnd = hwnd;
+  localMessage.message = message;
+  localMessage.wParam = wParam;
+  localMessage.lParam = lParam;
+  localMessage.time = GetMessageTime();
+
+  DWORD point = GetMessagePos();
+
+  localMessage.pt.x = MAKEPOINTS(point).x;
+  localMessage.pt.y = MAKEPOINTS(point).y;
+#endif /*NewspeakVM */
+
 
   /* Intercept any messages if wanted */
   if(preMessageHook)
@@ -266,7 +310,7 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
     if(inputSemaphoreIndex) {
       sqKeyboardEvent *evt = (sqKeyboardEvent*) sqNextEventPut();
       evt->type = EventTypeKeyboard;
-      evt->timeStamp = lastMessage->time;
+      evt->timeStamp = messageTouse->time;
       evt->charCode = (zDelta > 0) ? 30 : 31;
       evt->pressCode = EventKeyChar;
       /* N.B. on iOS & X11 all meta bits are set to distinguish mouse wheel
@@ -347,7 +391,7 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
       nrClicks = 0;
 
     if(inputSemaphoreIndex) {
-      recordMouseEvent(lastMessage, nrClicks);
+      recordMouseEvent(messageTouse, nrClicks);
       break;
     }
     /* state based stuff */
@@ -374,7 +418,7 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
 	lastClickTime = timeNow;
 
     if(inputSemaphoreIndex) {
-      recordMouseEvent(lastMessage, nrClicks);
+      recordMouseEvent(messageTouse, nrClicks);
       break;
     }
     /* state based stuff */
@@ -406,7 +450,7 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
     if(GetFocus() != stWindow) SetFocus(stWindow);
     ReleaseCapture(); /* release mouse capture */
     if(inputSemaphoreIndex) {
-      recordMouseEvent(lastMessage, nrClicks);
+      recordMouseEvent(messageTouse, nrClicks);
       break;
     }
     /* state based stuff */
@@ -426,7 +470,7 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
     if(GetFocus() == consoleWindow)
       return DefWindowProcW(hwnd, message, wParam, lParam);
     if(inputSemaphoreIndex) {
-      recordKeyboardEvent(lastMessage);
+      recordKeyboardEvent(messageTouse);
       if(wParam == VK_F2 && prefsEnableF2Menu()) {
 	TrackPrefsMenu();
       }
@@ -446,7 +490,7 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
     if(GetFocus() == consoleWindow)
       return DefWindowProcW(hwnd, message, wParam, lParam);
     if(inputSemaphoreIndex) {
-      recordKeyboardEvent(lastMessage);
+      recordKeyboardEvent(messageTouse);
       break;
     }
     /* state based stuff */
@@ -456,11 +500,13 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
   case WM_CHAR:
   case WM_SYSCHAR:
     if(GetFocus() == consoleWindow)
-      return DefWindowProcW(hwnd, message, wParam, lParam);
+    	return DefWindowProcW(hwnd, message, wParam, lParam);
+
     if(inputSemaphoreIndex) {
-      recordKeyboardEvent(lastMessage);
+      recordKeyboardEvent(messageTouse);
       break;
     }
+
     /* state based stuff */
     recordModifierButtons();
     recordKeystroke(message,wParam,lParam);
@@ -900,7 +946,7 @@ void SetupWindows()
   updateRgn = CreateRectRgn(0,0,1,1);
 
   /* No windows at all when running as NT service */
-  if(fRunService && !fWindows95) return;
+  if(fRunService) return;
 
   wc.style = CS_OWNDC; /* don't waste resources ;-) */
   wc.lpfnWndProc = (WNDPROC)MainWndProcA;
@@ -1490,14 +1536,6 @@ int recordMouseDown(WPARAM wParam, LPARAM lParam)
     else stButtons |= f3ButtonMouse ? 1 : 2;
   }
 
-  if (stButtons == 4)	/* red button honours the modifiers */
-    {
-      if (GetKeyState(VK_CONTROL) & 0x8000)
-        stButtons= 2;	/* blue button if CTRL down */
-      else if (GetKeyState(VK_MENU) & 0x8000)
-        stButtons= 1;	/* yellow button if META down */
-    }
-
 #endif /* defined(_WIN32_WCE) */
 
   buttonState = stButtons & 0x7;
@@ -1604,12 +1642,13 @@ sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 	return microSeconds;
 	}
 
+
 sqInt ioProcessEvents(void)
 {	static MSG msg;
 	int result;
 	extern sqInt inIOProcessEvents;
 
-	if (fRunService && !fWindows95) return 1;
+	if (fRunService) return 1;
 
 #if NewspeakVM
 	/* inIOProcessEvents controls ioProcessEvents.  If negative then
@@ -1633,11 +1672,6 @@ sqInt ioProcessEvents(void)
 	if (inIOProcessEvents) return -1;
 	inIOProcessEvents += 1;
 
-  /* WinCE doesn't retrieve WM_PAINTs from the queue with PeekMessage,
-     so we won't get anything painted unless we use GetMessage() if there
-     is a dirty rect. */
-	lastMessage = &msg;
-
 #ifdef PharoVM
 	if(ioCheckForEventsHooks) {
 		/* HACK for SDL 2 */
@@ -1645,14 +1679,14 @@ sqInt ioProcessEvents(void)
 	}
 	else {
 	
-		while(PeekMessage(&msg,NULL,0,0,PM_NOREMOVE)) {
-			GetMessage(&msg,NULL,0,0);
+		while(PeekMessageW(&msg,NULL,0,0,PM_NOREMOVE)) {
+			GetMessageW(&msg,NULL,0,0);
 # ifndef NO_PLUGIN_SUPPORT
 			if (msg.hwnd == NULL)
 				pluginHandleEvent(&msg);
 # endif
 			TranslateMessage(&msg);
-			DispatchMessage(&msg);
+			DispatchMessageW(&msg);
 
 		}
 	}
@@ -1679,8 +1713,6 @@ sqInt ioProcessEvents(void)
 	 && !IsWindow(browserWindow))
 		ioExit();
 
-	lastMessage = NULL;
-
 	if (inIOProcessEvents > 0)
 		inIOProcessEvents -= 1;
 
@@ -1694,7 +1726,7 @@ ioDrainEventQueue(void)
 { static MSG msg;
   POINT mousePt;
 
-  if(fRunService && !fWindows95) return 1;
+  if(fRunService) return 1;
 
   /* WinCE doesn't retrieve WM_PAINTs from the queue with PeekMessage,
      so we won't get anything painted unless we use GetMessage() if there
@@ -2209,7 +2241,7 @@ sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth, double
 	   the given horizontal and vertical scales in the given orientation */
 {
 #ifdef NO_PRINTER
-  warnPrintf(TEXT("This VM does not support printing.\n"));
+  warnPrintf("This VM does not support printing.\n");
   return success(false);
 #else /* !defined(NO_PRINTER) */
   DEVMODE *dmPtr;
@@ -2226,7 +2258,7 @@ sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth, double
   devNames = GlobalLock(printValues.hDevNames);
   if(!devNames)
     {
-      warnPrintf(TEXT("No printer configured\n"));
+      warnPrintf("No printer configured\n");
       return false;
     }
   dmPtr = GlobalLock(printValues.hDevMode);
@@ -2245,14 +2277,14 @@ sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth, double
 
   if(!dc)
     {
-      warnPrintf(TEXT("Unable to open printer.\n"));
+      warnPrintf("Unable to open printer.\n");
       return false;
     }
 
   bmi = BmiForDepth(depth);
   if(!bmi)
     {
-      warnPrintf(TEXT("Color depth %") TEXT(PRIdSQINT) TEXT(" not supported"), depth);
+      warnPrintf("Color depth %" PRIdSQINT " not supported", depth);
       return false;
     }
 
@@ -2577,7 +2609,7 @@ sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
 
   if(lines == 0) {
     printLastError(TEXT("SetDIBitsToDevice failed"));
-    warnPrintf(TEXT("width=%" PRIdSQINT ",height=%" PRIdSQINT ",bits=%" PRIXSQINT ",dc=%" PRIXSQPTR "\n"),
+    warnPrintf("width=%" PRIdSQINT ",height=%" PRIdSQINT ",bits=%" PRIXSQINT ",dc=%" PRIXSQPTR "\n",
 	       width, height, dispBits,(usqIntptr_t)dc);
   }
   /* reverse the image bits if necessary */
@@ -2743,7 +2775,7 @@ sqInt clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex) {
 
 sqInt vmPathSize(void)
 {
-  return lstrlen(vmPath);
+  return strlen(vmPathA);
 }
 
 sqInt vmPathGetLength(sqInt sqVMPathIndex, sqInt length)
@@ -2751,12 +2783,12 @@ sqInt vmPathGetLength(sqInt sqVMPathIndex, sqInt length)
   char *stVMPath= (char *)sqVMPathIndex;
   int count, i;
 
-  count= lstrlen(vmPath);
+  count= strlen(vmPathA);
   count= (length < count) ? length : count;
 
   /* copy the file name into the Squeak string */
   for (i= 0; i < count; i++)
-    stVMPath[i]= (char) vmPath[i]; /* will remove leading zeros from unicode */
+    stVMPath[i]= vmPathA[i];
 
   return count;
 }
@@ -2789,7 +2821,7 @@ sqInt imageNameGetLength(sqInt sqImageNameIndex, sqInt length)
 sqInt imageNamePutLength(sqInt sqImageNameIndex, sqInt length)
 {
   char *sqImageName= (char *)sqImageNameIndex;
-  char tmpImageName[MAX_PATH+1];
+  char tmpImageName[IMAGE_NAME_SIZE +1];
   char *tmp;
   int count, i;
 
@@ -2821,6 +2853,7 @@ sqInt imageNamePutLength(sqInt sqImageNameIndex, sqInt length)
           strcat(imageName,tmpImageName);
         }
     }
+  MultiByteToWideChar(CP_UTF8, 0, imageName, -1, imageNameW, MAX_PATH);
   SetWindowTitle();
   return 1;
 }
@@ -2846,7 +2879,7 @@ char * GetAttributeString(sqInt id) {
 	   could be reported this way as well.
 	*/
   /* id == 0 : return the full name of the VM */
-  if(id == 0) return fromUnicode(vmName);
+  if(id == 0) return vmNameA;
   /* 0 < id <= 1000 : return options of the image (e.g. given *after* the image name) */
   if(id > 0 && id <= 1000)
     return GetImageOption(id-1);
@@ -2943,7 +2976,7 @@ int sqLaunchDrop(void) {
      Work around it for now. */
   static LPWSTR* (WINAPI *sqCommandLineToArgvW)(LPCWSTR,int*) = NULL;
   if(!sqCommandLineToArgvW) {
-    HANDLE hShell32 = LoadLibrary("shell32.dll");
+    HANDLE hShell32 = LoadLibraryA("shell32.dll");
     sqCommandLineToArgvW=(void*)GetProcAddress(hShell32, "CommandLineToArgvW");
     if(!sqCommandLineToArgvW) return 0;
   }
@@ -2991,87 +3024,45 @@ int isLocalFileName(TCHAR *fileName)
 
 void SetupFilesAndPath(){ 
   char *tmp;
-  lstrcpy(imagePath, imageName);
-  tmp = lstrrchr(imagePath,'\\');
+  WCHAR *wtmp;
+  strcpy(imagePathA, imageNameA);
+  wcscpy(imagePathW, imageNameW);
+  tmp = strrchr(imagePathA,'\\');
   if(tmp) tmp[1] = 0;
+  wtmp = wcsrchr(imagePathW, '\\');
+  if (wtmp) wtmp[1] = 0;
 }
 
 #else /* defined(_WIN32_WCE) */
 
-void
-LongFileNameFromPossiblyShortName(TCHAR *nameBuffer)
-{ TCHAR oldDir[MAX_PATH+1];
-  TCHAR testName[13];
-  TCHAR nameBuf[MAX_PATH+1];
-  TCHAR *shortName;
-  WIN32_FIND_DATA findData;
-  HANDLE findHandle;
-
-  GetCurrentDirectory(MAX_PATH,oldDir);
-  shortName = lstrrchr(nameBuffer,U_BACKSLASH[0]);
-  if(!shortName) shortName = lstrrchr(nameBuffer,U_SLASH[0]);
-  if(!shortName) return;
-  /* if the file name is longer than 8.3
-     this can't be a short name */
-  *(shortName++) = 0;
-  if(lstrlen(shortName) > 12)
-    goto notFound;
-
-  /* back up the old and change to the given directory,
-     this makes searching easier */
-  lstrcpy(nameBuf, nameBuffer);
-  lstrcat(nameBuf,TEXT("\\"));
-  SetCurrentDirectory(nameBuf);
-
-  /* now search the directory */
-  findHandle = FindFirstFile(TEXT("*.*"),&findData);
-  if(findHandle == INVALID_HANDLE_VALUE) goto notFound; /* nothing found */
-  do {
-    if(lstrcmp(findData.cFileName,TEXT("..")) && lstrcmp(findData.cFileName,TEXT(".")))
-      lstrcpy(testName,findData.cAlternateFileName);
-    else
-      *testName = 0;
-    if(lstrcmp(testName,shortName) == 0) /* gotcha! */
-      {
-        FindClose(findHandle);
-        /* recurse down */
-        lstrcpy(nameBuf, findData.cFileName);
-        goto recurseDown;
-      }
-  } while(FindNextFile(findHandle,&findData) != 0);
-  /* nothing appropriate found */
-  FindClose(findHandle);
-notFound:
-  lstrcpy(nameBuf, shortName);
-recurseDown:
-  /* recurse down */
-  LongFileNameFromPossiblyShortName(nameBuffer);
-  lstrcat(nameBuffer,TEXT("\\"));
-  lstrcat(nameBuffer,nameBuf);
-  SetCurrentDirectory(oldDir);
-}
-
 void SetupFilesAndPath() {
   char *tmp;
-  WCHAR tmpName[MAX_PATH];
-  WCHAR imageNameW[MAX_PATH];
+  WCHAR *wtmp;
+  WCHAR tmpName[MAX_PATH+1];
 
   /* get the full path for the image */
-  MultiByteToWideChar(CP_UTF8, 0, imageName, -1, tmpName, MAX_PATH);
+  MultiByteToWideChar(CP_UTF8, 0, imageName , -1, tmpName, MAX_PATH);
   GetFullPathNameW(tmpName, MAX_PATH, imageNameW, NULL);
 
   /* and copy back to a UTF-8 string */
-  WideCharToMultiByte(CP_UTF8, 0, imageNameW,-1,imageName,MAX_PATH,NULL,NULL);
+  WideCharToMultiByte(CP_UTF8, 0, imageNameW,-1,imageName ,MAX_PATH_UTF8,NULL,NULL);
 
   /* get the VM directory */
-  lstrcpy(vmPath, vmName);
-  tmp = lstrrchr(vmPath,U_BACKSLASH[0]);
+  strcpy(vmPathA, vmNameA);
+  wcscpy(vmPathW, vmNameW);
+  tmp  = strrchr(vmPathA, '\\');
+  wtmp = wcsrchr(vmPathW, W_BACKSLASH[0]);
   if(tmp) *tmp = 0;
-  lstrcat(vmPath,U_BACKSLASH);
+  if (wtmp) *wtmp = 0;
+  strcat(vmPathA,"\\");
+  wcscat(vmPathW, W_BACKSLASH);
 
-  lstrcpy(imagePath, imageName);
-  tmp = lstrrchr(imagePath,U_BACKSLASH[0]);
+  strcpy(imagePathA, imageName );
+  wcscpy(imagePathW, imageNameW);
+  tmp  = strrchr(imagePathA,'\\');
+  wtmp = wcsrchr(imagePathW, W_BACKSLASH[0]);
   if(tmp) tmp[1] = 0;
+  if (wtmp) wtmp[1] = 0;
 }
 
 #endif /* !defined(_WIN32_WCE) */
@@ -3099,20 +3090,13 @@ DWORD SqueakImageLengthFromHandle(HANDLE hFile) {
   return 0;
 }
 
-DWORD SqueakImageLength(TCHAR *fileName) {
+DWORD SqueakImageLength(WCHAR *fileName) {
   DWORD dwSize;
   HANDLE hFile;
 
   /* open image file */
-#ifdef UNICODE
   hFile = CreateFileW(fileName, GENERIC_READ, FILE_SHARE_READ,
 		      NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-#else
-  WCHAR wideName[MAX_PATH];
-  MultiByteToWideChar(CP_UTF8, 0, fileName, -1, wideName, MAX_PATH);
-  hFile = CreateFileW(wideName, GENERIC_READ, FILE_SHARE_READ,
-		      NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-#endif
   if (hFile == INVALID_HANDLE_VALUE) return 0;
   dwSize = SqueakImageLengthFromHandle(hFile);
   CloseHandle(hFile);
@@ -3137,8 +3121,9 @@ int findImageFile(void) {
   nextFound = FindNextFileW(findHandle,&findData);
   FindClose(findHandle);
   if(nextFound) return 0; /* more than one entry */
-  WideCharToMultiByte(CP_UTF8, 0, findData.cFileName, -1, 
-		      imageName, MAX_PATH, NULL, NULL);
+  wcsncpy(imageNameW,findData.cFileName,MAX_PATH);
+  WideCharToMultiByte(CP_UTF8, 0, imageNameW, -1,
+		      imageName, MAX_PATH_UTF8, NULL, NULL);
   return 1;
 }
 
@@ -3164,7 +3149,8 @@ int openImageFile(void) {
   ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
   ofn.lpstrDefExt = L"image";
   if (!GetOpenFileNameW(&ofn)) return 0;
-  WideCharToMultiByte(CP_UTF8, 0, path, -1, 
+  wcsncpy(imageNameW,path,  MAX_PATH);
+  WideCharToMultiByte(CP_UTF8, 0, imageNameW, -1, 
 		      imageName, MAX_PATH, NULL, NULL);
   return 1;
 }
@@ -3211,21 +3197,21 @@ static LRESULT CALLBACK SplashWndProcA(HWND hwnd,
 
 void ShowSplashScreen(void) {
   WNDCLASS wc;
-  char splashFile[1024];
-  char splashTitle[1024];
+  TCHAR splashFile[1024];
+  TCHAR splashTitle[1024];
   BITMAP bm;
   RECT wa, rSplash;
 
   /* Look if we have a splash file somewhere */
-  GetPrivateProfileString("Global", "SplashScreen", "Splash.bmp", 
+  GetPrivateProfileString(TEXT("Global"), TEXT("SplashScreen"), TEXT("Splash.bmp"), 
 			  splashFile, 1024, squeakIniName);
 
   /* Also get the title for the splash window */
-  GetPrivateProfileString("Global", "SplashTitle", VM_NAME"!",
+  GetPrivateProfileString(TEXT("Global"), TEXT("SplashTitle"), TEXT(VM_NAME) TEXT("!"),
 			  splashTitle, 1024, squeakIniName);
 
   /* Look for the mimimum splash time to use */
-  splashTime = GetPrivateProfileInt("Global", "SplashTime", 
+  splashTime = GetPrivateProfileInt(TEXT("Global"), TEXT("SplashTime"), 
 				    1000, squeakIniName);
 
   if(!splashFile[0]) return; /* no splash file */
@@ -3236,7 +3222,7 @@ void ShowSplashScreen(void) {
   if(!hSplashDIB) {
     /* ignore the common case but print failures for the others */
     if(GetLastError() != ERROR_FILE_NOT_FOUND)
-      printLastError("LoadImage failed");
+      printLastError(TEXT("LoadImage failed"));
     return;
   }
   GetObject(hSplashDIB, sizeof(bm), &bm);
@@ -3298,6 +3284,7 @@ void HideSplashScreen(void) {
 /****************************************************************************/
 
 # define VMOPTION(arg) "-"arg
+# define TVMOPTION(arg) TEXT("-") TEXT(arg)
 
 /* print usage with different output levels */
 int printUsage(int level)
@@ -3310,43 +3297,43 @@ int printUsage(int level)
       abortMessage(TEXT("%s\n"),
                    TEXT("Usage: ") TEXT(VM_NAME) TEXT(" [vmOptions] imageFile [imageOptions]\n\n")
                    TEXT("vmOptions:")
-                   TEXT("\n\t") TEXT(VMOPTION("service:")) TEXT(" ServiceName \t(install VM as NT service)")
-                   TEXT("\n\t") TEXT(VMOPTION("headless")) TEXT(" \t\t(force VM to run headless)")
-                   TEXT("\n\t") TEXT(VMOPTION("timephases")) TEXT(" \t\t(print start load and run times)")
-                   TEXT("\n\t") TEXT(VMOPTION("log:")) TEXT(" LogFile \t\t(use LogFile for VM messages)")
-                   TEXT("\n\t") TEXT(VMOPTION("memory:")) TEXT(" megaByte \t(set memory to megaByte MB)")
+                   TEXT("\n\t") TVMOPTION("service:") TEXT(" ServiceName \t(install VM as NT service)")
+                   TEXT("\n\t") TVMOPTION("headless") TEXT(" \t\t(force VM to run headless)")
+                   TEXT("\n\t") TVMOPTION("timephases") TEXT(" \t\t(print start load and run times)")
+                   TEXT("\n\t") TVMOPTION("log:") TEXT(" LogFile \t\t(use LogFile for VM messages)")
+                   TEXT("\n\t") TVMOPTION("memory:") TEXT(" megaByte \t(set memory to megaByte MB)")
 #if STACKVM || NewspeakVM
-                   TEXT("\n\t") TEXT(VMOPTION("breaksel:")) TEXT(" string \t(call warning on send of sel for debug)")
+                   TEXT("\n\t") TVMOPTION("breaksel:") TEXT(" string \t(call warning on send of sel for debug)")
 #endif /* STACKVM || NewspeakVM */
 #if STACKVM
-                   TEXT("\n\t") TEXT(VMOPTION("breakmnu:")) TEXT(" string \t(call warning on MNU of sel for debug)")
-                   TEXT("\n\t") TEXT(VMOPTION("leakcheck:")) TEXT(" n \t\t(leak check on GC (1=full,2=incr,3=both))")
-                   TEXT("\n\t") TEXT(VMOPTION("eden:")) TEXT(" bytes \t\t(set eden memory size to bytes)")
-                   TEXT("\n\t") TEXT(VMOPTION("stackpages:")) TEXT(" n \t\t(use n stack pages)")
-                   TEXT("\n\t") TEXT(VMOPTION("numextsems:")) TEXT(" n \t\t(allow up to n external semaphores)")
-                   TEXT("\n\t") TEXT(VMOPTION("checkpluginwrites")) TEXT(" \t(check for writes past end of object in plugins")
-                   TEXT("\n\t") TEXT(VMOPTION("noheartbeat")) TEXT(" \t\t(no heartbeat for debug)")
+                   TEXT("\n\t") TVMOPTION("breakmnu:") TEXT(" string \t(call warning on MNU of sel for debug)")
+                   TEXT("\n\t") TVMOPTION("leakcheck:") TEXT(" n \t\t(leak check on GC (1=full,2=incr,3=both))")
+                   TEXT("\n\t") TVMOPTION("eden:") TEXT(" bytes \t\t(set eden memory size to bytes)")
+                   TEXT("\n\t") TVMOPTION("stackpages:") TEXT(" n \t\t(use n stack pages)")
+                   TEXT("\n\t") TVMOPTION("numextsems:") TEXT(" n \t\t(allow up to n external semaphores)")
+                   TEXT("\n\t") TVMOPTION("checkpluginwrites") TEXT(" \t(check for writes past end of object in plugins")
+                   TEXT("\n\t") TVMOPTION("noheartbeat") TEXT(" \t\t(no heartbeat for debug)")
 #endif /* STACKVM */
 #if STACKVM || NewspeakVM
 # if COGVM
-                   TEXT("\n\t") TEXT(VMOPTION("trace")) TEXT("[=num]\t\tenable tracing (optionally to a specific value)")
+                   TEXT("\n\t") TVMOPTION("trace") TEXT("[=num]\t\tenable tracing (optionally to a specific value)")
 # else
-                   TEXT("\n\t") TEXT(VMOPTION("sendtrace")) TEXT(" \t\t(trace sends to stdout for debug)")
+                   TEXT("\n\t") TVMOPTION("sendtrace") TEXT(" \t\t(trace sends to stdout for debug)")
 # endif
-                   TEXT("\n\t") TEXT(VMOPTION("warnpid")) TEXT("   \t\t(print pid in warnings)")
-                   TEXT("\n\t") TEXT(VMOPTION("[no]failonffiexception")) TEXT("   \t\t([never]always catch exceptions in FFI calls)")
+                   TEXT("\n\t") TVMOPTION("warnpid") TEXT("   \t\t(print pid in warnings)")
+                   TEXT("\n\t") TVMOPTION("[no]failonffiexception") TEXT("   \t\t([never]always catch exceptions in FFI calls)")
 #endif
 #if COGVM
-                   TEXT("\n\t") TEXT(VMOPTION("codesize:")) TEXT(" bytes \t(set machine-code memory size to bytes)")
-                   TEXT("\n\t") TEXT(VMOPTION("cogmaxlits:")) TEXT(" n \t\t(set max number of literals for methods to be compiled to machine code)")
-                   TEXT("\n\t") TEXT(VMOPTION("cogminjumps:")) TEXT(" n \t(set min number of backward jumps for interpreted methods to be considered for compilation to machine code)")
-                   TEXT("\n\t") TEXT(VMOPTION("tracestores")) TEXT(" \t\t(assert-check stores for debug)")
-                   TEXT("\n\t") TEXT(VMOPTION("reportheadroom")) TEXT(" \t(report unused stack headroom on exit)")
-                   TEXT("\n\t") TEXT(VMOPTION("dpcso:")) TEXT(" bytes \t\t(stack offset for prim calls for debug)")
+                   TEXT("\n\t") TVMOPTION("codesize:") TEXT(" bytes \t(set machine-code memory size to bytes)")
+                   TEXT("\n\t") TVMOPTION("cogmaxlits:") TEXT(" n \t\t(set max number of literals for methods to be compiled to machine code)")
+                   TEXT("\n\t") TVMOPTION("cogminjumps:") TEXT(" n \t(set min number of backward jumps for interpreted methods to be considered for compilation to machine code)")
+                   TEXT("\n\t") TVMOPTION("tracestores") TEXT(" \t\t(assert-check stores for debug)")
+                   TEXT("\n\t") TVMOPTION("reportheadroom") TEXT(" \t(report unused stack headroom on exit)")
+                   TEXT("\n\t") TVMOPTION("dpcso:") TEXT(" bytes \t\t(stack offset for prim calls for debug)")
 #endif /* COGVM */
 #if SPURVM
-                   TEXT("\n\t") TEXT(VMOPTION("maxoldspace:")) TEXT(" bytes \t(set max size of old space memory to bytes)")
-                   TEXT("\n\t") TEXT(VMOPTION("logscavenge")) TEXT(" \t\t(log scavenging to scavenge.log)")
+                   TEXT("\n\t") TVMOPTION("maxoldspace:") TEXT(" bytes \t(set max size of old space memory to bytes)")
+                   TEXT("\n\t") TVMOPTION("logscavenge") TEXT(" \t\t(log scavenging to scavenge.log)")
 #endif
                    TEXT("\n") TEXT("Options begin with single -, but -- prefix is silently accepted")
                    TEXT("\n") TEXT("Options with arguments -opt:n are also accepted with separators -opt n")
@@ -3359,7 +3346,7 @@ int printUsage(int level)
         TEXT("There are several ways to open an image file. You can:\n")
         TEXT("  1. Double-click on the desired image file.\n")
         TEXT("  2. Drop the image file onto the application.\n")
-        TEXT("Aborting...\n"), toUnicode(imageName));
+        TEXT("Aborting...\n"), imageNameT);
   }
   return -1;
 }

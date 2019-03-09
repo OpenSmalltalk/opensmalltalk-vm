@@ -437,7 +437,6 @@ void b3dAdjustFaceEdges(B3DPrimitiveFace *face, B3DPrimitiveEdge *edge1, B3DPrim
 */
 B3DPrimitiveEdge *b3dAddLowerEdgeFromFace(B3DPrimitiveFace *face, B3DPrimitiveEdge *oldEdge)
 {
-	B3DPrimitiveVertex *v0 = face->v0;
 	B3DPrimitiveVertex *v1 = face->v1;
 	B3DPrimitiveVertex *v2 = face->v2;
 	int xValue = v1->windowPosX;
@@ -1395,7 +1394,13 @@ RESUME_MERGING:
 					/*-- end of search for next top edge --*/
 
 					/*-- Now do the drawing from leftEdge to rightEdge --*/
-					assert(rightEdge);
+#if 1 /* This assert fails in rare cases; the fix is not understood. eem */
+					assert(leftEdge && rightEdge);
+#else
+					if(!leftEdge || !rightEdge)
+						FAIL_UPDATING(B3D_NO_MORE_EDGES); // another segfault
+						//FAIL_PAINTING(B3D_NO_MORE_EDGES); // blow up in allocating edges
+#endif
 					if(fillList->firstFace) {
 						/* Note: We fill *including* leftX and rightX */
 						int leftX = (leftEdge->xValue >> B3D_FixedToIntShift) + 1;

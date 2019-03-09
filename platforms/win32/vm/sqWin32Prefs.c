@@ -37,7 +37,6 @@ void printCallStack(void);
 void printAllStacks(void);
 
 /* VM preference variables */
-extern TCHAR squeakIniName[]; /* full path and name to ini file */
 HMENU vmPrefsMenu;         /* preferences menu */
 extern int caseSensitiveFileMode;
 
@@ -188,32 +187,46 @@ void LoadPreferences()
   int size;
 
   /* make ini file name based on executable file name */
-  lstrcpy(squeakIniName, vmName);
-  size = lstrlen(squeakIniName);
-  lstrcpy(squeakIniName + (size-3), TEXT("ini"));
+  wcscpy(squeakIniNameW, vmNameW);
+  size = wcslen(squeakIniNameW);
+  wcscpy(squeakIniNameW + (size-3), L"ini");
+  WideCharToMultiByte(CP_UTF8, 0, squeakIniNameW, -1, squeakIniNameA, MAX_PATH_UTF8, NULL, NULL);
 
   /* get image file name from ini file */
-  size = GetPrivateProfileString(U_GLOBAL, TEXT("ImageFile"), 
-			 TEXT(""), imageName, MAX_PATH, squeakIniName);
+  size = GetPrivateProfileStringW(L"Global", L"ImageFile", 
+			 L"", imageNameW, MAX_PATH, squeakIniNameW);
   if(size > 0) {
-    if( !(imageName[0] == '\\' && imageName[1] == '\\') && !(imageName[1] == ':' && imageName[2] == '\\')) {
+    if( !(imageNameW[0] == L'\\' && imageNameW[1] == L'\\') && !(imageNameW[1] == L':' && imageNameW[2] == L'\\')) {
       /* make the path relative to VM directory */
-      lstrcpy(imageName, vmName);
-      (lstrrchr(imageName,U_BACKSLASH[0]))[1] = 0;
-      size = lstrlen(imageName);
-      size = GetPrivateProfileString(U_GLOBAL, TEXT("ImageFile"), 
-			 TEXT(""), imageName + size, MAX_PATH - size, squeakIniName);
+	  wcscpy(imageNameW, vmNameW);
+	  (wcsrchr(imageNameW, W_BACKSLASH[0]))[1] = 0;
+      size = wcslen(imageNameW);
+      size = GetPrivateProfileStringW(L"Global", L"ImageFile",
+			 L"", imageNameW + size, MAX_PATH - size, squeakIniNameW);
 	}
   }
+  WideCharToMultiByte(CP_UTF8, 0, imageNameW, -1, imageName, MAX_PATH_UTF8, NULL, NULL);
 
   /* get window title from ini file */
+#ifdef UNICODE
+  {
+    TCHAR windowTitleT[MAX_PATH];
+    GetPrivateProfileString(U_GLOBAL, TEXT("WindowTitle"),
+      TEXT(""), windowTitleT, MAX_PATH, squeakIniName);
+	if (WideCharToMultiByte(CP_UTF8, 0, windowTitleT, -1, windowTitle, MAX_PATH, NULL, NULL) == 0) {
+		printLastError(TEXT("Failed to convert WindowTitle preference to UTF-8"));
+		windowTitle[0] = 0;
+	};
+  }
+#else
   GetPrivateProfileString(U_GLOBAL, TEXT("WindowTitle"), 
 			 TEXT(""), windowTitle, MAX_PATH, squeakIniName);
+#endif
 
   /* get the window class name from the ini file */
   GetPrivateProfileString(U_GLOBAL, TEXT("WindowClassName"), 
 #if NewspeakVM
-				TEXT(VM_NAME"WindowClass"),
+				TEXT(VM_NAME) TEXT("WindowClass"),
 #else
 				TEXT("SqueakWindowClass"),
 #endif
@@ -419,8 +432,8 @@ void TrackPrefsMenu(void) {
 void HandlePrefsMenu(int cmd) {
   switch(cmd) {
   case ID_ABOUT: 
-    MessageBox(stWindow,VM_VERSION_TEXT,
-	       TEXT("About ") TEXT(VM_NAME) TEXT(" on Win32"), MB_OK);
+    MessageBoxA(stWindow,VM_VERSION_VERBOSE,
+	       "About " VM_NAME " on Win32", MB_OK);
     break;
   case ID_DEFERUPDATES:
     fDeferredUpdate = !fDeferredUpdate;

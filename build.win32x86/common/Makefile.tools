@@ -53,7 +53,7 @@ CFLAGS:= -msse2 -ggdb2 -m32 \
 TZ:=$(shell date +%Z)
 XDEFS:=	-DSQUEAK_BUILTIN_PLUGIN
 DEFS:=	$(COGDEFS) $(WINVER) -DWIN32=1 -DWIN32_FILE_SUPPORT -DNO_ISNAN \
-		-DNO_SERVICE -DNO_STD_FILE_SUPPORT -D'TZ="$(TZ)"' \
+		-DNO_SERVICE -D'TZ="$(TZ)"' \
 		$(NDEBUG) -DLSB_FIRST -D'VM_NAME="$(VM_NAME)"' $(XDEFS) $(CROQUET)
 
 #############################################################################

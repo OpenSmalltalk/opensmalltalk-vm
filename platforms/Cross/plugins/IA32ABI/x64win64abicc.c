@@ -8,7 +8,7 @@
 /* null if compiled on other than x64, to get around gnu make bugs or
  * misunderstandings on our part.
  */
-#if x86_64|x64|__x86_64|__x86_64__|_M_AMD64|_M_X64
+#if defined(x86_64) || defined(__amd64) || defined(__x86_64) || defined(__amd64__) || defined(__x86_64__) || defined(_M_AMD64) || defined(_M_X64)
 
 #if defined(_MSC_VER) || defined(__MINGW32__)
 # include "windows.h" /* for GetSystemInfo & VirtualAlloc */
@@ -35,9 +35,12 @@
 
 #ifdef SQUEAK_BUILTIN_PLUGIN
 extern
-#endif 
+#endif
 struct VirtualMachine* interpreterProxy;
 
+#ifdef _MSC_VER
+# define alloca _alloca
+#endif
 #if __GNUC__
 # define setsp(sp) __asm__ volatile ("movq %0,%%rsp" : : "m"(sp))
 # define getsp() ({ void *sp; __asm__ volatile ("movq %%rsp,%0" : "=r"(sp) : ); sp;})
@@ -79,7 +82,7 @@ typedef union {
 } int64_or_double;
 
 /*
- * Call a foreign function that answers an integral result in %rax 
+ * Call a foreign function that answers an integral result in %rax
  * according to x64-ish ABI rules.
  */
 sqInt callIA32IntegralReturn(SIGNATURE) {
@@ -164,8 +167,8 @@ static VMCallbackContext *mostRecentCallbackContext = 0;
 VMCallbackContext *
 getMostRecentCallbackContext() { return mostRecentCallbackContext; }
 
-#define getRMCC(t) mostRecentCallbackContext
-#define setRMCC(t) (mostRecentCallbackContext = (void *)(t))
+#define getMRCC()   mostRecentCallbackContext
+#define setMRCC(t) (mostRecentCallbackContext = (void *)(t))
 
 /*
  * Entry-point for call-back thunks.  Args are the integer register args, the
@@ -205,7 +208,7 @@ thunkEntry(long long rcx, long long rdx,
 	intargs[1] = rdx;
 	intargs[2] = r8;
 	intargs[3] = r9;
-	
+
 extern void saveFloatRegsWin64(long long xmm0,long long xmm1,long long xmm2, long long xmm3,double *fpargs); /* fake passing long long args */
     saveFloatRegsWin64(rcx,rdx,r8,r9,fpargs); /* the callee expects double parameters that it will retrieve thru registers */
 
@@ -215,19 +218,19 @@ extern void saveFloatRegsWin64(long long xmm0,long long xmm1,long long xmm2, lon
 	}
 
 	if (!(returnType = setjmp(vmcc.trampoline))) {
-		previousCallbackContext = getRMCC();
-		setRMCC(&vmcc);
+		previousCallbackContext = getMRCC();
+		setMRCC(&vmcc);
 		vmcc.thunkp = thunkp;
 		vmcc.stackp = stackp + 2; /* skip address of retpc & retpc (thunk) */
 		vmcc.intregargsp = intargs;
 		vmcc.floatregargsp = fpargs;
 		interpreterProxy->sendInvokeCallbackContext(&vmcc);
 		fprintf(stderr,"Warning; callback failed to invoke\n");
-		setRMCC(previousCallbackContext);
+		setMRCC(previousCallbackContext);
 		interpreterProxy->disownVM(flags);
 		return -1;
 	}
-	setRMCC(previousCallbackContext);
+	setMRCC(previousCallbackContext);
 	interpreterProxy->disownVM(flags);
 
 	switch (returnType) {

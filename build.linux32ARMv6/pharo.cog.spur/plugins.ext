@@ -11,5 +11,7 @@ EventsHandlerPlugin \
 SqueakSSL \
 AioPlugin \
 FileAttributesPlugin \
-#SDL2DisplayPlugin \
-
+BochsIA32Plugin \
+BochsX64Plugin \
+GdbARMPlugin \
+#SDL2DisplayPlugin

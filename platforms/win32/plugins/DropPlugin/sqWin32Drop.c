@@ -212,19 +212,26 @@ HANDLE DibFromBitmap (
 }
 
 BOOL WriteDIB (
-    LPSTR szFile,
+    LPCWSTR szFile,
     HANDLE hdib)
 {
     BITMAPFILEHEADER    hdr;
     LPBITMAPINFOHEADER  lpbi;
-    HFILE               fh;
-    OFSTRUCT            of;
+    HANDLE              fh;
+	DWORD               nbwritten;
 
     if (!hdib)
         return FALSE;
 
-    fh = OpenFile(szFile, &of, (UINT)OF_CREATE|OF_READWRITE);
-    if (fh == -1)
+	fh = CreateFileW(szFile,
+		(GENERIC_READ | GENERIC_WRITE) ,
+		FILE_SHARE_READ ,
+		NULL, /* No security descriptor */
+		OPEN_ALWAYS ,
+		FILE_ATTRIBUTE_NORMAL,
+		NULL /* No template */);
+
+    if (fh == INVALID_HANDLE_VALUE)
         return FALSE;
 
     lpbi = (VOID FAR *)GlobalLock (hdib);
@@ -240,16 +247,16 @@ BOOL WriteDIB (
     /* Write the file header */
 
     /* write bfType*/
-    _lwrite(fh, (LPSTR)&hdr.bfType, (UINT)sizeof (WORD));
+    WriteFile(fh, (LPSTR)&hdr.bfType, (UINT)sizeof (WORD),&nbwritten,NULL);
     /* now pass over extra word, and only write next 3 DWORDS!*/
-    _lwrite(fh, (LPSTR)&hdr.bfSize, sizeof(DWORD) * 3);
+	WriteFile(fh, (LPSTR)&hdr.bfSize, sizeof(DWORD) * 3, &nbwritten, NULL);
 
     /* this struct already DWORD aligned!*/
     /* Write the DIB header and the bits */
-    _lwrite (fh, (LPSTR)lpbi, GlobalSize (hdib));
+	WriteFile(fh, (LPSTR)lpbi, GlobalSize (hdib), &nbwritten, NULL);
 
     GlobalUnlock (hdib);
-    _lclose(fh);
+    CloseHandle(fh);
     return TRUE;
 }
 
@@ -509,7 +516,7 @@ STDMETHODIMP DropTarget_Drop(DropTarget *dt,
     DWORD i;
 
     DPRINTF(("Success\n"));
-    numDropFiles = DragQueryFile(hDrop, -1, NULL, 0);
+    numDropFiles = DragQueryFileW(hDrop, -1, NULL, 0);
     dropFiles = calloc(numDropFiles, sizeof(char*));
     for(i=0; i<numDropFiles; i++) {
       WCHAR *tmpPath;
@@ -546,17 +553,20 @@ STDMETHODIMP DropTarget_Drop(DropTarget *dt,
 
   hRes = ido->lpVtbl->GetData(ido, &fmtetc, &medium);
   if(hRes == S_OK) {
-    TCHAR tmpName[MAX_PATH+1];
+    WCHAR tmpNameW[MAX_PATH+1];
     HANDLE hDib = medium.hGlobal;
 
     DPRINTF(("Success\n"));
 
-    GetTempPath(MAX_PATH,tmpName);
-    strcat(tmpName,"$$squeak$$.bmp");
-    if(WriteDIB(tmpName, hDib)) {
-      numDropFiles = 1;
-      dropFiles = calloc(1, sizeof(void*));
-      dropFiles[0] = _strdup(tmpName);
+    GetTempPathW(MAX_PATH,tmpNameW);
+    wcscat(tmpNameW,L"$$squeak$$.bmp");
+    if(WriteDIB(tmpNameW, hDib)) {
+      char tmpNameA[MAX_PATH_UTF8 + 1];
+	  if(WideCharToMultiByte(CP_UTF8, 0, tmpNameW, -1, tmpNameA, MAX_PATH_UTF8, NULL, NULL)) {
+        numDropFiles = 1;
+        dropFiles = calloc(1, sizeof(void*));
+        dropFiles[0] = _strdup(tmpNameA);
+	  }
     }
     if(medium.pUnkForRelease == NULL) {
       GlobalFree(hDib);
@@ -580,20 +590,23 @@ STDMETHODIMP DropTarget_Drop(DropTarget *dt,
 
   hRes = ido->lpVtbl->GetData(ido, &fmtetc, &medium);
   if(hRes == S_OK) {
-    TCHAR tmpName[MAX_PATH+1];
+    WCHAR tmpNameW[MAX_PATH+1];
     HANDLE hDib;
     HBITMAP hBM = medium.hBitmap;
 
     DPRINTF(("Success\n"));
 
-    GetTempPath(MAX_PATH,tmpName);
-    strcat(tmpName,"$$squeak$$.bmp");
+    GetTempPathW(MAX_PATH,tmpNameW);
+    wcscat(tmpNameW,L"$$squeak$$.bmp");
     hDib = DibFromBitmap(hBM, BI_RGB, 0, NULL);
     if(hDib) {
-      if(WriteDIB(tmpName, hDib)) {
-	numDropFiles = 1;
-	dropFiles = calloc(1, sizeof(void*));
-	dropFiles[0] = _strdup(tmpName);
+      if(WriteDIB(tmpNameW, hDib)) {
+        char tmpNameA[MAX_PATH_UTF8 + 1];
+        if (WideCharToMultiByte(CP_UTF8, 0, tmpNameW, -1, tmpNameA, MAX_PATH_UTF8, NULL, NULL)) {
+          numDropFiles = 1;
+          dropFiles = calloc(1, sizeof(void*));
+          dropFiles[0] = _strdup(tmpNameA);
+        }
       }
       DeleteObject(hDib);
     }
@@ -618,7 +631,7 @@ STDMETHODIMP DropTarget_Drop(DropTarget *dt,
 
   hRes = ido->lpVtbl->GetData(ido, &fmtetc, &medium);
   if(hRes == S_OK) {
-    TCHAR tmpName[MAX_PATH+1];
+    WCHAR tmpNameW[MAX_PATH+1];
     HANDLE hMF = medium.hGlobal;
     HANDLE hDib;
     BITMAPINFO bmi;
@@ -661,12 +674,15 @@ STDMETHODIMP DropTarget_Drop(DropTarget *dt,
       DeleteObject(hBM);
     }
 
-    GetTempPath(MAX_PATH,tmpName);
-    strcat(tmpName,"$$squeak$$.bmp");
-    if(WriteDIB(tmpName, hDib)) {
-      numDropFiles = 1;
-      dropFiles = calloc(1, sizeof(void*));
-      dropFiles[0] = _strdup(tmpName);
+    GetTempPathW(MAX_PATH,tmpNameW);
+    wcscat(tmpNameW,L"$$squeak$$.bmp");
+    if(WriteDIB(tmpNameW, hDib)) {
+      char tmpNameA[MAX_PATH_UTF8 + 1];
+      if (WideCharToMultiByte(CP_UTF8, 0, tmpNameW, -1, tmpNameA, MAX_PATH_UTF8, NULL, NULL)) {
+        numDropFiles = 1;
+        dropFiles = calloc(1, sizeof(void*));
+        dropFiles[0] = _strdup(tmpNameA);
+      }
     }
     GlobalFree(hDib);
     if(medium.pUnkForRelease == NULL) {

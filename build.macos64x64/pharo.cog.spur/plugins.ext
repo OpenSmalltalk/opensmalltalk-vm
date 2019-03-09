@@ -16,6 +16,9 @@ SerialPlugin \
 ObjectiveCPlugin \
 SDL2DisplayPlugin \
 EventsHandlerPlugin \
+BochsIA32Plugin \
+BochsX64Plugin \
+GdbARMPlugin \
 # Not working in 64bits (weird)
 # MIDIPlugin \
 # could work, but I don't know if relevant: \

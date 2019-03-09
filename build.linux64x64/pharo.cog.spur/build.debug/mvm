@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 set -e
 # debug PharoVM with VM profiler and threaded heartbeat
-INSTALLDIR=debug/cogspur64linuxht
+INSTALLDIR=debug/phcogspur64linuxht
 OPT="-g3 -O0 -fwrapv -DDEBUGVM=1 -DPharoVM"
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
 fi
 
+if ../../scripts/checkSCCSversion ; then exit 1; fi
 echo -n "clean? "
 read a
 case $a in

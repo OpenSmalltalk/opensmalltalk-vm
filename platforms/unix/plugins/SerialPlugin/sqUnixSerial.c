@@ -1,6 +1,4 @@
-/* sqUnixSerial.c -- Unix serial support
- * 
- * Last edited: 2011-03-14 14:01:56 by piumarta on emilia.ipe.media.kyoto-u.ac.jp
+/* sqUnixSerial.c -- Unix (including untested MacOS X) serial support
  */
 
 #include "sq.h"
@@ -17,10 +15,18 @@
 #include <errno.h>
 
 /*** Module variables ***/
+extern struct VirtualMachine *interpreterProxy;
+#if !defined(SQUEAK_BUILTIN_PLUGIN)
+# define success(bool) interpreterProxy->success(bool)
+#endif
 
 #define PORT_NAME_SIZE 64
 
+#if __APPLE
+static const char serialPortBaseName[]		= "/dev/cu.";
+#else
 static const char serialPortBaseName[]		= "/dev/tty";
+#endif
 static const char serialPortBaseNameDefault[]	= "/dev/ttyS0";
 
 /* stopBits	0=1.5, 1=1, 2=2 */

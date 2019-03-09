@@ -87,7 +87,7 @@ static NSString *stringWithCharacter(unichar character) {
 }
 
 @interface sqSqueakOSXMetalView ()
-@property (nonatomic,assign) NSRect lastFrameSize;
+@property (nonatomic,assign) CGSize lastFrameSize;
 @property (nonatomic,assign) BOOL fullScreenInProgress;
 @property (nonatomic,assign) void* fullScreendispBitsIndex;
 @property (nonatomic,strong) id<MTLCommandQueue> graphicsCommandQueue;
@@ -301,7 +301,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 		currentRenderEncoder = [currentCommandBuffer renderCommandEncoderWithDescriptor: renderPassDescriptor];
 		
 		// Set the viewport.
-		[currentRenderEncoder setViewport: (MTLViewport){0.0, 0.0, lastFrameSize.size.width, lastFrameSize.size.height}];
+		[currentRenderEncoder setViewport: (MTLViewport){0.0, 0.0, lastFrameSize.width, lastFrameSize.height}];
 
 		// Draw the screen rectangle.
 		[self drawScreenRect: rect];
@@ -324,11 +324,12 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 }
 
 - (void)loadTexturesFrom: (void*) displayStorage subRectangle: (NSRect) subRect {
-	NSRect r = self.frame;
-    if (!NSEqualRects(lastFrameSize,r) || !displayTexture ||
+	
+	CGSize drawableSize = self.drawableSize;
+    if (!CGSizeEqualToSize(lastFrameSize,drawableSize) || !displayTexture ||
 		currentDisplayStorage != displayStorage) {
 		//NSLog(@"old %f %f %f %f new %f %f %f %f",lastFrameSize.origin.x,lastFrameSize.origin.y,lastFrameSize.size.width,lastFrameSize.size.height,self.frame.origin.x,r.origin.y,r.size.width,r.size.height);
-        lastFrameSize = r;
+        lastFrameSize = drawableSize;
 		currentDisplayStorage = displayStorage;
 		[self updateDisplayTextureStorage];
     }
@@ -342,9 +343,9 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 }
 
 -(void) updateDisplayTextureStorage {
-	NSRect rectangle = self.frame;
-	displayTextureWidth = rectangle.size.width;
-	displayTextureHeight = rectangle.size.height;
+	CGSize drawableSize = self.drawableSize;
+	displayTextureWidth = drawableSize.width;
+	displayTextureHeight = drawableSize.height;
 	displayTexturePitch = displayTextureWidth*4;
 
 	if(displayTexture)

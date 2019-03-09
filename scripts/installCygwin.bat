@@ -69,6 +69,7 @@ echo Installing cygwin for architecture %CYG_INSTALL_ARCH% at %CYG_INSTALL_ROOT%
     -P mingw64-%CYG_INSTALL_ARCH%-libssh2^
     -P mingw64-%CYG_INSTALL_ARCH%-libgit2^
     -P mingw64-%CYG_INSTALL_ARCH%-cairo^
-    -P unzip
+    -P unzip^
+    -P patch
 
 REM unzip and curl are not needed for the VM build but is needed for the VMMaker image building. Thus I add it in this script so that people can use it when building VMMaker on their computer.

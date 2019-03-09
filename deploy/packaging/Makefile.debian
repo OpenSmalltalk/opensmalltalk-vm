@@ -1,0 +1,26 @@
+VER=`head -1 debian/changelog | cut -d ' ' -f 2 | sed s,"(","",  | sed s,")","",`
+
+BASE_DIR=../..
+
+all: build_srcpackage pharo6_sources
+
+version_from_travis:
+	cd pharo7-vm-core && dch -v $(VER).$(TRAVIS_JOB_NUMBER) -m "Travis build $(TRAVIS_JOB_NUMBER)"
+	cd pharo7-vm-core && sed -i s,DEB_VERSION,pharo7-vm-core_$(VER).tar.gz, ../pharo7.spec
+
+build_srcpackage:
+	@echo "Generating source package"
+
+	cp -a $(BASE_DIR)/spursrc $(BASE_DIR)/spur64src $(BASE_DIR)/platforms $(BASE_DIR)/LICENSE $(BASE_DIR)/mkNamedPrims.sh $(BASE_DIR)/src pharo7-vm-core/
+	mkdir -p pharo7-vm-core/build.linux32x86/
+	cp -a $(BASE_DIR)/build.linux32x86/pharo.cog.spur pharo7-vm-core/build.linux32x86/
+	cp -a $(BASE_DIR)/build.linux32x86/editpharoinstall.sh pharo7-vm-core/build.linux32x86/
+
+	cd pharo7-vm-core/platforms/unix/config && make configure
+	cd pharo7-vm-core && dpkg-buildpackage -S -uc -us -d
+
+pharo6_sources:
+	cd pharo6-sources-files && wget http://files.pharo.org/sources/PharoV60.sources.zip
+	cd pharo6-sources-files && unzip PharoV60.sources.zip
+	cd pharo6-sources-files && rm -rf PharoV60.sources.zip __MACOSX
+	cd pharo6-sources-files && dpkg-buildpackage -S -uc -us -d

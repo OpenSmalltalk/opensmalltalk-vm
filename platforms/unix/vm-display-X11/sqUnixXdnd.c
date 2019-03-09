@@ -755,7 +755,7 @@ struct { char *fileName; Window sourceWindow; } *launchDrops = 0;
 static int numLaunchDrops = 0;
 
 /* drastically simplified case of dndInDrop that leaves out the 8 step dance
- * (see http://www.newplanetsoftware.com/xdnd/).  Instead grab the fileName in
+ * (see http://www.freedesktop.org/xdnd/).  Instead grab the fileName in
  * the XdndSqueakLaunchDrop property and send an ack message.
  */
 enum XdndState
@@ -800,6 +800,7 @@ dndInLaunchDrop(XClientMessageEvent *evt)
 		launchDrops[i].fileName = fileName;
 		launchDrops[i].sourceWindow = xdndDrop_sourceWindow(evt);
 	}
+    return XdndStateIdle; /* Added by eem 2018/12/14 to remove a compiler warning; Is this correct? */
 }
 
 /* Send a XdndSqueakLaunchAck essage back to the launch dropper if the filename
@@ -1032,7 +1033,7 @@ windowHasLabel(Window w, char *label)
 	 */
 	if (win_text.nitems <= 0)
 		return 0;
-	hasLabel = !strcmp(label, win_text.value);
+	hasLabel = !strcmp(label, (char *)win_text.value);
 	(void)XFree(win_text.value);
 	return hasLabel;
 }

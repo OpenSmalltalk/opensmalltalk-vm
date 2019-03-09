@@ -3,13 +3,19 @@
 ifndef THIRDPARTYDIR
 	include ../common/Makefile.lib.extra
 endif
+include ../../third-party/freetype2.spec
 include ../../third-party/freetype2.spec.win64
 
-MINGWLIBDIR:=/usr/x86_64-w64-mingw32/sys-root/mingw/bin
-FREETYPE2LIBNAME:=$(freetype2_spec_product_name_windows)
-FREETYPE2LIB:=$(THIRDPARTYINSTALLDIR)/$(FREETYPE2LIBNAME)
+EXTERNALFILESURL:=https://files.pharo.org/vm/pharo-spur64/win/third-party
+FREETYPE2LIBNAME:=$(freetype2_spec_download_artifact_name_windows)
+FREETYPE2LIBINSTALLNAME:=$(freetype2_spec_product_name_windows)
+FREETYPE2LIB:=$(THIRDPARTYINSTALLDIR)/$(FREETYPE2LIBINSTALLNAME)
 
-$(FREETYPE2LIB): pkgconfig libpng $(MINGWLIBDIR)/$(FREETYPE2LIBNAME) 
-	cp -f $(MINGWLIBDIR)/$(FREETYPE2LIBNAME) $(THIRDPARTYINSTALLDIR)
+$(THIRDPARTYLIBDIR)/$(FREETYPE2LIBNAME):
+	echo 
+	$(WGET) -O $(THIRDPARTYLIBDIR)/$(FREETYPE2LIBNAME) $(EXTERNALFILESURL)/$(FREETYPE2LIBNAME)
+
+$(FREETYPE2LIB): pkgconfig libpng $(THIRDPARTYLIBDIR)/$(FREETYPE2LIBNAME)
+	cp -f $(THIRDPARTYLIBDIR)/$(FREETYPE2LIBNAME) $(FREETYPE2LIB)
 
 freetype2: $(FREETYPE2LIB)

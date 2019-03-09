@@ -306,7 +306,7 @@ sqInt ioShowDisplayOnWindow(unsigned char* dispBits, sqInt width,
 
   if(lines == 0) {
     printLastError(TEXT("SetDIBitsToDevice failed"));
-    warnPrintf(TEXT("width=%" PRIdSQINT ",height=%" PRIdSQINT ",bits=%" PRIXSQPTR ",dc=%" PRIXSQPTR "\n"),
+    warnPrintf("width=%" PRIdSQINT ",height=%" PRIdSQINT ",bits=%" PRIXSQPTR ",dc=%" PRIXSQPTR "\n",
 	       width, height, (usqIntptr_t)dispBits, (usqIntptr_t)dc);
   }
   /* reverse the image bits if necessary */
@@ -415,15 +415,20 @@ sqInt ioSetTitleOfWindow(sqInt windowIndex, char * newTitle, sqInt sizeOfTitle) 
  * int size of new logo path. If one of the function is failing, the logo is not set.
  */
 sqInt ioSetIconOfWindow(sqInt windowIndex, char * iconPath, sqInt sizeOfPath) {
+	WCHAR iconPathW[MAX_PATH + 1];
 	HWND hwnd = (windowIndex == 1 ? stWindow : ((HWND)windowIndex));
+	int len;
 	if (!IsWindow(hwnd)) return 0;
+	len = MultiByteToWideChar(CP_UTF8, 0, iconPath, sizeOfPath, iconPathW, MAX_PATH);
+	if(len <= 0) return -1; /* invalid UTF8 ? */
+	iconPathW[len] = 0;
 	//Check if file exists and have read rights
-	if (access(iconPath, 4) == -1) { return -1; }; 
+	if (_waccess(iconPathW, 4) == -1) { return -1; }; 
 	//Load the image into an icon
-	HICON hIcon = (HICON)LoadImage(NULL, iconPath, IMAGE_ICON, 0, 0, LR_LOADFROMFILE);
+	HICON hIcon = (HICON)LoadImageW(NULL, iconPathW, IMAGE_ICON, 0, 0, LR_LOADFROMFILE);
 	if (hIcon == 0)
 		return -2;
-	SendMessage(hwnd, WM_SETICON, ICON_BIG, (LONG)hIcon); 
+	SendMessage(hwnd, WM_SETICON, ICON_BIG, (LONG_PTR)hIcon); 
 	return 0;
 }
 

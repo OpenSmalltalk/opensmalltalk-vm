@@ -25,7 +25,7 @@
 #define FA_UNEXPECTED_ERROR		-14
 #define FA_INTERPRETER_ERROR		-15 /* Actual error flagged in interpreterProxy */
 #define	FA_CANT_READ_DIR		-16
-
+#define FA_BAD_SESSION_ID		-17
 
 
 #define FA_NO_MORE_DATA			  1

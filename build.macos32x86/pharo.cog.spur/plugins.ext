@@ -17,6 +17,9 @@ SerialPlugin \
 ObjectiveCPlugin \
 SDL2DisplayPlugin \
 EventsHandlerPlugin \
+BochsIA32Plugin \
+BochsX64Plugin \
+GdbARMPlugin \
 # TEMPORARY REMOVE
 # B3DAcceleratorPlugin \
 # could work, but I don't know if relevant:

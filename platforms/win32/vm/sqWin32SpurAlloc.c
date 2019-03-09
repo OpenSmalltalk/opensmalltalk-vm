@@ -29,8 +29,8 @@ LONG CALLBACK sqExceptionFilter(LPEXCEPTION_POINTERS exp)
   return EXCEPTION_WRONG_ACCESS;
 }
 
-static DWORD  pageMask;     /* bit mask for the start of a memory page */
-static DWORD  pageSize;     /* size of a memory page */
+static sqIntptr_t  pageMask;     /* bit mask for the start of a memory page */
+static sqIntptr_t  pageSize;     /* size of a memory page */
 static char  *minAppAddr;	/* SYSTEM_INFO lpMinimumApplicationAddress */
 static char  *maxAppAddr;	/* SYSTEM_INFO lpMaximumApplicationAddress */
 
@@ -50,7 +50,7 @@ sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
 
 	if (pageSize) {
 		sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Error:"),
-					 "sqAllocateMemory already called");
+					 TEXT("sqAllocateMemory already called"));
 		exit(1);
 	}
 
@@ -77,7 +77,7 @@ sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
 	if (!alloc) {
 		exit(errno);
 		sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Error:"),
-					 "sqAllocateMemory: initial alloc failed!\n");
+					 TEXT("sqAllocateMemory: initial alloc failed!\n"));
 		exit(1);
 	}
 	return alloc;
@@ -114,7 +114,7 @@ address_space_used(char *address, usqInt bytes)
 		return 1;
 	if (!VirtualQuery(address, &info, sizeof(info)))
 		sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Error:"),
-					"Unable to VirtualQuery range [%p, %p), Error: %u",
+					TEXT("Unable to VirtualQuery range [%p, %p), Error: %u"),
 					address, (char *)address + bytes, GetLastError());
 
 	addressSpaceUnused = info.BaseAddress == address
@@ -160,7 +160,7 @@ sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress
 			DWORD lastError = GetLastError();
 #if 0 /* Can't report this without making the system unusable... */
 			sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Error:"),
-						"Unable to VirtualAlloc committed memory at desired address (%" PRIuSQINT " bytes requested at %p, above %p), Error: %lu",
+						TEXT("Unable to VirtualAlloc committed memory at desired address (%") TEXT(PRIuSQINT) TEXT(" bytes requested at %p, above %p), Error: %lu"),
 						bytes, address, minAddress, lastError);
 #else
 			if (fIsConsole)
@@ -175,7 +175,7 @@ sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress
 		 */
 		if (alloc && !VirtualFree(alloc, SizeForRelease(bytes), MEM_RELEASE))
 			sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Warning:"),
-						"Unable to VirtualFree committed memory (%" PRIuSQINT " bytes requested), Error: %ul",
+						TEXT("Unable to VirtualFree committed memory (%") TEXT(PRIuSQINT) TEXT(" bytes requested), Error: %ul"),
 						bytes, GetLastError());
 		address += delta;
 	}
@@ -190,7 +190,7 @@ sqDeallocateMemorySegmentAtOfSize(void *addr, sqInt sz)
 {
 	if (!VirtualFree(addr, SizeForRelease(sz), MEM_RELEASE))
 		sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Warning:"),
-					"Unable to VirtualFree committed memory (%" PRIuSQINT " bytes requested), Error: %ul",
+					TEXT("Unable to VirtualFree committed memory (%") TEXT(PRIuSQINT) TEXT(" bytes requested), Error: %ul"),
 					sz, GetLastError());
 }
 
@@ -257,7 +257,7 @@ main()
 	return 0;
 }
 int __cdecl
-sqMessageBox(DWORD dwFlags, const TCHAR *titleString, const char* fmt, ...)
+sqMessageBox(DWORD dwFlags, const TCHAR *titleString, const TCHAR* fmt, ...)
 {
 	va_list args;
 	int result;

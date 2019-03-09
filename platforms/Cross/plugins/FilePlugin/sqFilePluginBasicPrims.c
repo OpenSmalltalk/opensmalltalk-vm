@@ -40,6 +40,12 @@
 #include <limits.h>
 #include <stdio.h>
 
+#ifdef _MSC_VER
+#ifndef S_ISFIFO
+#define S_ISFIFO(x) 0
+#endif
+#endif
+
 #include "sqMemoryAccess.h"
 #include "FilePlugin.h" /* must be included after sq.h */
 
@@ -802,7 +808,6 @@ sqFileWriteFromAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startInd
 
 	char *src;
 	size_t bytesWritten;
-	squeakFileOffsetType position;
 	FILE *file;
 
 	if (!(sqFileValid(f) && f->writable))

@@ -18,6 +18,7 @@ esac
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
 fi
+if ../../scripts/checkSCCSversion ; then exit 1; fi
 echo -n "clean? "
 read a
 case $a in
