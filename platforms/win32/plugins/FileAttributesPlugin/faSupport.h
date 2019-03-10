@@ -67,14 +67,14 @@ sqInt faSetStFile(fapath *aFaPath, char *pathName);
 sqInt faSetPlatPath(fapath *aFaPath, WCHAR *pathName);
 sqInt faSetPlatPathOop(fapath *aFaPath, sqInt pathNameOop);
 sqInt faSetPlatFile(fapath *aFaPath, WCHAR *pathName);
-#define	faGetStPath(aFaPath)		aFaPath->path
-#define faGetStPathLen(aFaPath)		aFaPath->path_len
-#define	faGetStFile(aFaPath)		aFaPath->path_file
-#define	faGetPlatPath(aFaPath)		aFaPath->winpath
-#define faGetPlatPathByteCount(aFaPath)	(aFaPath->winpath_len * sizeof(WCHAR))
-#define	faGetPlatPathLPP(aFaPath)		aFaPath->winpathLPP
-#define faGetPlatPathLPPByteCount(aFaPath)	(aFaPath->winpathLPP_len * sizeof(WCHAR))
-#define	faGetPlatFile(aFaPath)		aFaPath->winpath_file
+#define	faGetStPath(aFaPath)		(aFaPath)->path
+#define faGetStPathLen(aFaPath)		(aFaPath)->path_len
+#define	faGetStFile(aFaPath)		(aFaPath)->path_file
+#define	faGetPlatPath(aFaPath)		(aFaPath)->winpath
+#define faGetPlatPathByteCount(aFaPath)	((aFaPath)->winpath_len * sizeof(WCHAR))
+#define	faGetPlatPathLPP(aFaPath)		(aFaPath)->winpathLPP
+#define faGetPlatPathLPPByteCount(aFaPath)	((aFaPath)->winpathLPP_len * sizeof(WCHAR))
+#define	faGetPlatFile(aFaPath)		(aFaPath)->winpath_file
 
 /*
  * faGetPlatPathCPP
@@ -100,8 +100,7 @@ sqInt faSetPlatFile(fapath *aFaPath, WCHAR *pathName);
  * a call will fail, e.g. it might work with C:\a\b\c.txt, but fail with
  * C:\a\b\..\d\c.txt
  */
-#define faGetPlatPathCPP(aFaPath)	((aFaPath->winpath_len <= (MAX_PATH-12)) ? aFaPath->winpath : aFaPath->winpathLPP)
-
+#define faGetPlatPathCPP(aFaPath)	(((aFaPath)->winpath_len <= (MAX_PATH-12)) ? (aFaPath)->winpath : (aFaPath)->winpathLPP)
 
 
 sqInt faOpenDirectory(fapath *aFaPath);
@@ -112,4 +111,3 @@ sqInt faFileAttribute(fapath *aFaPath, sqInt attributeNumber);
 sqInt faFileStatAttributes(fapath *aFaPath, int lStat, sqInt attributeArray);
 sqInt faExists(fapath *aFaPath);
 sqInt faAccessAttributes(fapath *aFaPath, sqInt attributeArray, sqInt offset);
-

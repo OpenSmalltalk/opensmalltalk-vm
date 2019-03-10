@@ -547,23 +547,6 @@ char		targetFile[FA_PATH_MAX];
 }
 
 
-
-
-/*
- * faExists
- *
- * Answer a boolean indicating whether the supplied path name exists.
- */
-sqInt faExists(fapath *aFaPath)
-{
-	if (access(faGetPlatPath(aFaPath), F_OK))
-		return interpreterProxy->falseObject();
-	else
-		return interpreterProxy->trueObject();
-}
-
-
-
 /*
  * faAccessAttributes
  *

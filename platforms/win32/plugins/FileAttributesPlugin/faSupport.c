@@ -806,16 +806,11 @@ sqLong		fileSize;
  * Answer a boolean indicating whether the supplied path name exists.
  */
 sqInt faExists(fapath *aFaPath)
-{
-BOOL		status;
-WIN32_FILE_ATTRIBUTE_DATA winAttrs;
+{ WIN32_FILE_ATTRIBUTE_DATA winAttrs;
 
-	status = GetFileAttributesExW(faGetPlatPathCPP(aFaPath), 
-			GetFileExInfoStandard, &winAttrs);
-	if (status != 0)
-		return interpreterProxy->trueObject();
-	else
-		return interpreterProxy->falseObject();
+	return GetFileAttributesExW(faGetPlatPathCPP(aFaPath), 
+								GetFileExInfoStandard,
+								&winAttrs);
 }
 
 

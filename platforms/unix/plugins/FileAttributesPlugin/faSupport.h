@@ -62,12 +62,13 @@ sqInt faSetStFile(fapath *aFaPath, char *pathName);
 sqInt faSetPlatPath(fapath *aFaPath, char *pathName);
 sqInt faSetPlatPathOop(fapath *aFaPath, sqInt pathNameOop);
 sqInt faSetPlatFile(fapath *aFaPath, char *pathName);
-#define	faGetStPath(aFaPath)		aFaPath->path
-#define faGetStPathLen(aFaPath)		aFaPath->path_len
-#define	faGetStFile(aFaPath)		aFaPath->path_file
-#define	faGetPlatPath(aFaPath)		aFaPath->uxpath
-#define	faGetPlatFile(aFaPath)		aFaPath->uxpath_file
-#define faGetPlatPathByteCount(aFaPath)	(aFaPath->uxpath_len * sizeof(char))
+#define	faGetStPath(aFaPath)		(aFaPath)->path
+#define faGetStPathLen(aFaPath)		(aFaPath)->path_len
+#define	faGetStFile(aFaPath)		(aFaPath)->path_file
+#define	faGetPlatPath(aFaPath)		(aFaPath)->uxpath
+#define	faGetPlatFile(aFaPath)		(aFaPath)->uxpath_file
+#define faGetPlatPathByteCount(aFaPath)	((aFaPath)->uxpath_len * sizeof(char))
+#define faExists(aFaPath) (!access(faGetPlatPath(aFaPath), F_OK))
 
 sqLong faConvertUnixToLongSqueakTime(time_t unixTime);
 
@@ -77,6 +78,4 @@ sqInt faCloseDirectory(fapath *aFaPath);
 sqInt faRewindDirectory(fapath *aFaPath);
 sqInt faFileAttribute(fapath *aFaPath, sqInt attributeNumber);
 sqInt faFileStatAttributes(fapath *aFaPath, int lStat, sqInt attributeArray);
-sqInt faExists(fapath *aFaPath);
 sqInt faAccessAttributes(fapath *aFaPath, sqInt attributeArray, sqInt offset);
-
