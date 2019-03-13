@@ -4257,20 +4257,24 @@ CCodeGenerator >> nilOrBooleanConditionFor: nodeOrNil [
 	(#(and: or:) includes: nodeOrNil selector) ifTrue:
 		[^self nilOrBooleanConstantReceiverOf: nodeOrNil].
 	(#(cppIf:ifTrue: cppIf:ifTrue:ifFalse:) includes: nodeOrNil selector) ifTrue:
-		[(vmClass notNil
+		[| maybeName |
+		 maybeName := nodeOrNil args first isConstant ifTrue:
+							[nodeOrNil args first nameOrValue].
+		(vmClass notNil
 		 and: [nodeOrNil args first isConstant
-		 and: [nodeOrNil args first value isSymbol
-		 and: [((vmClass ifNil: [VMBasicConstants]) defineAtCompileTime: nodeOrNil args first value) not
-		 and: [(vmClass bindingOf: nodeOrNil args first value) notNil]]]]) ifTrue:
+		 and: [maybeName isSymbol
+		 and: [(vmClass defineAtCompileTime: maybeName) not
+		 and: [(vmClass bindingOf: maybeName) notNil]]]]) ifTrue:
 			[self logger
 					nextPutAll: 'Warning: cppIf: reference to ';
-					store: nodeOrNil args first value;
+					store: maybeName;
 					nextPutAll: ' when variable of same name exists.'; cr].
 
-		 ^(optionsDictionary notNil
+		 (optionsDictionary notNil
 		   and: [nodeOrNil args first isConstant
-		   and: [#(true false) includes: (optionsDictionary at: nodeOrNil args first name ifAbsent: [nil])]]) ifTrue:
-			[optionsDictionary at: nodeOrNil args first name]].
+		   and: [(#(true false) includes: (optionsDictionary at: maybeName ifAbsent: [nil]))
+		   and: [((vmClass ifNil: [VMBasicConstants]) defineAtCompileTime: maybeName) not]]]) ifTrue:
+			[^optionsDictionary at: maybeName]].
 	^nil
 ]
 
