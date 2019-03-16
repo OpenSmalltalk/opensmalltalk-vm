@@ -457,6 +457,141 @@ CogScripts class >> doClassSide [
 			notifying: nil]
 ]
 
+{ #category : #'plugin scripts' }
+CogScripts class >> eliminateCCodeInSmalltalkFrom: aPluginClass [
+	"Edit any self cCode: 'something that looks like a C call' [ inSmalltalk: [ ...] ]
+	 into the function: arg1 _: arg2 style, ensuring that if the class has (a) simulator
+	 subclass(es), that a stub implementation exists in the subclass. Write any failures
+	 to the transcript."
+
+	"(Smalltalk organization classesInCategory: #'3DICC-Plugins') do:
+		[:aPluginClass|
+		CogScripts eliminateCCodeInSmalltalkFrom: aPluginClass]"
+
+	| transformations |
+	transformations := Dictionary new.
+	aPluginClass selectorsAndMethodsDo:
+		[:selector :method|
+		(self mapCCodeToSmalltalkIn: method)
+			ifNotNil: [:edit| transformations at: selector put: edit]
+			ifNil: [((method sendsSelector: #cCode:) or: [method sendsSelector: #cCode:inSmalltalk:]) ifTrue:
+					[Transcript cr; show: 'mapCCodeToSmalltalkIn: failed to edit cCode:... in ', aPluginClass name, '>>', selector]]].
+	transformations keys sort do:
+		[:selector|
+		[:code :messages|
+		(aPluginClass compile: code notifying: nil)
+			ifNil: [Transcript cr; show: 'Failed to compile mapCCodeToSmalltalkIn: transformation for ', aPluginClass name, '>>', selector]
+			ifNotNil:
+				[(aPluginClass allSubclasses select: [:sc| sc name endsWith: 'Simulator']) do:
+					[:sc|
+					messages do:
+						[:msg|
+						(sc includesSelector: msg selector) ifFalse:
+							[sc compile: msg createStubMethod classified: 'simulation']]]]]
+			valueWithArguments: (transformations at: selector)]
+]
+
+{ #category : #'plugin scripts' }
+CogScripts class >> mapCCodeToSmalltalkIn: aMethod [
+	"Answer new source code for aMethod where cCode: strings have been mapped to the new foo: arg1 _: arg2
+	 format and any inSmalltalk: code is included in a trailing comment."
+	| methodNode edits text |
+	methodNode := aMethod methodNode.
+	edits := Dictionary new.
+	methodNode block nodesDo:
+		[:n| | cCode |
+		(n isMessage
+		 and: [(#(cCode: cCode:inSmalltalk:) includes: n selector key)
+		 and: [(cCode := n arguments first value key) isString
+		 and: [cCode notEmpty]]]) ifTrue:
+			[| argVec |
+			argVec := self processedCCodeCallFor: cCode.
+			edits at: (methodNode encoder sourceRangeFor: n)
+				put: (String streamContents:
+						[:s| | first |
+						argVec size > 2 ifTrue:
+							[s nextPutAll: 'cCoerce: (self '].
+						s nextPutAll: argVec first.
+						argVec size > 1 ifTrue:
+							[first := true.
+							 argVec second do:
+								[:thing| | param |
+								thing ~~ #, ifTrue:
+									[s nextPutAll: (first
+													ifTrue: [': ']
+													ifFalse: [' _: ']).
+									 first := false.
+									 param := thing isArray
+												ifTrue: [s nextPutAll: '(self cCoerce: '. thing first]
+												ifFalse: [thing].
+									(methodNode encoder lookupVariable: param ifAbsent: [])
+										ifNotNil: [s nextPutAll: param]
+										ifNil: [s store: param]].
+									thing isArray ifTrue:
+										[(self printTypeFor: thing last on: s) ifFalse:
+											[^nil].
+										 s nextPut: $)]]].
+						argVec size > 2 ifTrue:
+							[s nextPut: $).
+							 (self printTypeFor: argVec last on: s) ifFalse:
+								[^nil]].
+						#cCode:inSmalltalk: == n selector key ifTrue:
+							[| r |
+							 r := methodNode encoder sourceRangeFor: n arguments last.
+							 s space; nextPutAll: ' "inSmalltalk: '; nextPutAll: (methodNode sourceText copyFrom: r first to: r last); nextPut: $"]])]].
+	edits ifEmpty: [^nil].
+	text := methodNode sourceText asString.
+	(edits keys asSortedCollection: [:a :b| a first > b first]) do:
+		[:range|
+		text := text copyReplaceFrom: range first to: range last with: (edits at: range)].
+	^{ text.
+		(edits collect:
+			[:string| | selectorString index |
+			selectorString := (string beginsWith: 'cCoerce:') ifTrue: [string allButFirst: 10] ifFalse: [string].
+			(index := selectorString indexOfSubCollection: '"inSmalltalk') > 0 ifTrue:
+				[selectorString := selectorString first: index - 1].
+			(selectorString occurrencesOf: $)) > (selectorString occurrencesOf: $() ifTrue:
+				[selectorString := selectorString first: (selectorString lastIndexOf: $)) - 1].
+			(selectorString beginsWith: 'self') ifTrue:
+				[selectorString := selectorString allButFirst: 4].
+			selectorString := selectorString extractSelector.
+			Message
+				selector: selectorString asSymbol
+				arguments: (1 to: selectorString numArgs) asArray]) }
+]
+
+{ #category : #'plugin scripts' }
+CogScripts class >> printTypeFor: anArray on: aWriteStream [
+	| type |
+	type := String streamContents:
+				[:s|
+				anArray
+					do: [:ea| [s nextPutAll: ea] on: Error do: [:ex| ^false]]
+					separatedBy: [s space]].
+	aWriteStream nextPutAll: ' to: '; store: type asSymbol.
+	^true
+]
+
+{ #category : #'plugin scripts' }
+CogScripts class >> processedCCodeCallFor: aCCodeString [
+	"Take a cCode: string containing a C call and answer a literal array encoding the parameter
+	 list with any casts moved to the back, for ease of generating self cCoerce: thing to: type.
+
+		'func(a,b)'		=> #(func #(a b))
+		'(type)func()'	=> #(func #() #(type))
+		'func((type)a)')	=> #(func #(#(a #(type))))) 
+	"
+	| argVec parameterList |
+	argVec := Compiler evaluate: '#(', aCCodeString, ')'.
+	[argVec size > 2 and: [argVec last == #';']] whileTrue: [argVec := argVec allButLast].
+	argVec last notEmpty ifTrue:
+		[parameterList := (argVec last splitBy: #(#,)) collect: [:p| p size > 1 ifTrue: [{p last. p first}] ifFalse: [p first]].
+		 argVec at: argVec size put: parameterList].
+	^argVec first isArray
+		ifTrue: [argVec allButFirst, {argVec first}]
+		ifFalse: [argVec]
+]
+
 { #category : #'separate vm scripts' }
 CogScripts class >> readOnlyVars [
 	^#(#checkForLeaks #fullGCLock #gcStartUsecs #memoryLimit #scavengeThreshold #youngStart
