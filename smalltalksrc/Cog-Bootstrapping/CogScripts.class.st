@@ -582,7 +582,7 @@ CogScripts class >> processedCCodeCallFor: aCCodeString [
 		'func((type)a)')	=> #(func #(#(a #(type))))) 
 	"
 	| argVec parameterList |
-	argVec := Compiler evaluate: '#(', aCCodeString, ')'.
+	argVec := Compiler evaluate: '#(', (aCCodeString copyReplaceAll: $" asString with: $' asString), ')'.
 	[argVec size > 2 and: [argVec last == #';']] whileTrue: [argVec := argVec allButLast].
 	argVec last notEmpty ifTrue:
 		[parameterList := (argVec last splitBy: #(#,)) collect: [:p| p size > 1 ifTrue: [{p last. p first}] ifFalse: [p first]].
