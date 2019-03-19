@@ -4,6 +4,9 @@
 *.sources
 *.swp
 
+# Mac
+.DS_Store
+
 # /
 /ChangeHistory
 /MVALOG
