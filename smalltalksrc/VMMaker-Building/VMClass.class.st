@@ -268,7 +268,8 @@ VMClass class >> initializePrimitiveErrorCodes [
 	PrimErrCallbackError		:= pet indexOf: #'error in callback' ifAbsent: 20.
 	PrimErrOSError				:= pet indexOf: #'operating system error' ifAbsent: 21.
 	PrimErrFFIException		:= pet indexOf: #'ffi call exception' ifAbsent: 22.
-	PrimErrNeedCompaction	:= pet indexOf: #'heap compaction needed' ifAbsent: 23 "N.B. This is currently an internal error in Spur image segment saving."
+	PrimErrNeedCompaction	:= pet indexOf: #'heap compaction needed' ifAbsent: 23. "N.B. This is currently an internal error in Spur image segment saving."
+	PrimErrOperationFailed		:= pet indexOf: #'operation failed' ifAbsent: 24
 ]
 
 { #category : #initialization }

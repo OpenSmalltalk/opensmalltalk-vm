@@ -59,6 +59,7 @@ Class {
 		'PrimErrObjectMayMove',
 		'PrimErrObjectMoved',
 		'PrimErrObjectNotPinned',
+		'PrimErrOperationFailed',
 		'PrimErrUnsupported',
 		'PrimErrWritePastObject',
 		'PrimNoErr',
