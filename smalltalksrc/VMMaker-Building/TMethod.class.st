@@ -1601,7 +1601,7 @@ TMethod >> inlineableFunctionCall: aNode in: aCodeGen [
 		ifNotNil:
 			[:m|
 			 (m ~~ self
-			  and: [(m isFunctionalIn: aCodeGen)
+			  and: [((m isFunctionalIn: aCodeGen) or: [m mustBeInlined and: [m isComplete]])
 			  and: [m mayBeInlined
 			  and: [(aCodeGen mayInline: m selector)
 			  and: [aNode args allSatisfy: [:a| self isSubstitutableNode: a intoMethod: m in: aCodeGen]]]]])
@@ -1984,6 +1984,11 @@ TMethod >> methodIsEffectivelyComplete: selector in: aCodeGen [
 			 or: [m mayBeInlined not
 			 "Methods which are inlined as jumps don't need inlining"
 			 or: [m sharedCase notNil or: [m sharedLabel notNil]]]]
+]
+
+{ #category : #accessing }
+TMethod >> mustBeInlined [
+	^inline == #always
 ]
 
 { #category : #initialization }
