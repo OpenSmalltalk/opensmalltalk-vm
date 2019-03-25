@@ -46,10 +46,13 @@
 #import "sq.h"
 #import "sqVirtualMachine.h"
 
-#include "SqueakMainShaders.metal.inc"
-
 extern SqueakOSXAppDelegate *gDelegateApp;
 extern struct VirtualMachine* interpreterProxy;
+
+#define STRINGIFY_SHADER(src) #src
+static const char *squeakMainShadersSrc =
+#include "SqueakMainShaders.metal"
+;
 
 typedef struct
 {
@@ -96,6 +99,22 @@ static NSString *stringWithCharacter(unichar character) {
 @implementation sqSqueakOSXMetalView
 @synthesize squeakTrackingRectForCursor,lastSeenKeyBoardStrokeDetails,
 lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,lastFrameSize,fullScreenInProgress,fullScreendispBitsIndex,graphicsCommandQueue;
+
++ (BOOL) isMetalViewSupported {
+	// Try to create the MTL system device.
+	id<MTLDevice> device = MTLCreateSystemDefaultDevice();
+	if(!device)
+		return NO;
+		
+	// Try to compile the shader library.
+	id<MTLLibrary> library = [self compileShaderLibraryForDevice: device];
+	if(!library)
+		return NO;
+
+	RELEASEOBJ(library);
+	RELEASEOBJ(device);
+	return YES;
+}
 
 #pragma mark Initialization / Release
 
@@ -219,22 +238,26 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	graphicsCommandQueue = [self.device newCommandQueue];
 }
 
-- (void) buildPipelines {
-	NSError *libraryError;
-	dispatch_data_t metalLibraryData = dispatch_data_create(SqueakMainShaders_metallib, SqueakMainShaders_metallib_len, dispatch_get_global_queue(0, 0), ^{});
-	id<MTLLibrary> shaderLibrary = [self.device newLibraryWithData: metalLibraryData error: &libraryError];
-#if !__has_feature(objc_arc)
-	dispatch_release(metalLibraryData);
-#endif
++ (id<MTLLibrary>) compileShaderLibraryForDevice: (id<MTLDevice>) device {
+	NSString *shaderSource = [NSString stringWithCString: squeakMainShadersSrc encoding: NSUTF8StringEncoding];
+	MTLCompileOptions* compileOptions = [ MTLCompileOptions new ];
+	NSError *libraryError = nil;
+	id<MTLLibrary> shaderLibrary = [device newLibraryWithSource: shaderSource options: compileOptions error: &libraryError];
+	RELEASEOBJ(shaderSource);
+	RELEASEOBJ(compileOptions);
 	if(!shaderLibrary)
-	{
 		NSLog(@"Shader library error: %@", libraryError.localizedDescription);
-		return;
-	}
-	
+
+	return shaderLibrary;
+}
+
+- (void) buildPipelines {
+	id<MTLLibrary> shaderLibrary = [[self class] compileShaderLibraryForDevice: self.device ];
 	screenQuadPipelineState = [self buildPipelineWithLibrary: shaderLibrary vertexFunction: @"screenQuadFlipVertexShader" fragmentFunction: @"screenQuadFragmentShader" translucent: NO];
 	layerScreenQuadPipelineState = [self buildPipelineWithLibrary: shaderLibrary vertexFunction: @"layerScreenQuadVertexShader" fragmentFunction: @"screenQuadFragmentShader" translucent: NO];
+	RELEASEOBJ(shaderLibrary);
 }
+
 - (id<MTLRenderPipelineState>) buildPipelineWithLibrary: (id<MTLLibrary>)shaderLibrary vertexFunction: (NSString*)vertexFunctionName fragmentFunction: (NSString*)fragmentFunctionName translucent: (BOOL)translucent{
 	// Retrieve the shaders from the shader libary.
 	id<MTLFunction> vertexShader = [shaderLibrary newFunctionWithName: vertexFunctionName];
@@ -913,4 +936,4 @@ setMetalTextureLayerContent(unsigned int handle, id<MTLTexture> texture, int x, 
 			[mainMetalView draw];
 	}
 }
-#endif // NO_METAL
+#endif // USE_METAL

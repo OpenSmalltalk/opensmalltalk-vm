@@ -40,6 +40,8 @@
  such third-party acknowledgments.
  */
 //
+
+#ifdef USE_OPENGL
 #import <QuartzCore/QuartzCore.h>
 
 #import "sqSqueakOSXOpenGLView.h"
@@ -1184,3 +1186,5 @@ setOpenGLTextureLayerContent(unsigned int handle, GLuint texture, int x, int y, 
 			[mainOpenGLView clearScreen];
 	}
 }
+
+#endif // USE_OPENGL

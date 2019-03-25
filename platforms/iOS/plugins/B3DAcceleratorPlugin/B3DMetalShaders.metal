@@ -28,6 +28,7 @@
  
 #include "sqMetalStructures.h"
 
+STRINGIFY_SHADER(
 struct VertexInput {
     float3 position [[attribute(0)]];
     float4 color [[attribute(1)]];
@@ -226,3 +227,4 @@ fragment float4 texturedB3DFragmentShader(TexturedFragmentData in [[stage_in]], 
     
     return in.color*colorTexture.sample(textureSampler, in.texcoord);
 }
+)

@@ -38,6 +38,8 @@ such third-party acknowledgments.
 
 #ifdef BUILD_FOR_OSX
 #import <Cocoa/Cocoa.h>
+#import "sqSqueakOSXViewFactory.h"
+#include <string.h>
 
 int main(int argc, char **argv, char **envp)
 {	
@@ -49,6 +51,26 @@ int main(int argc, char **argv, char **envp)
 	argVec = argv;
 	envVec = envp;
 	
+	// HACK: Command line arguments are being parsed after creating the UI!!!
+	// This is a hack for selecting the proper view class by only looking at
+	// the first argument.
+	if(argc >= 2)
+	{
+#ifdef USE_METAL
+		if(!strcmp(argv[1], "-metal"))
+			sqCurrentOSXRequestedViewType = SQ_OSX_REQUESTED_VIEW_TYPE_METAL;
+#endif
+#ifdef USE_CORE_GRAPHICS
+		if(!strcmp(argv[1], "-core-graphics"))
+			sqCurrentOSXRequestedViewType = SQ_OSX_REQUESTED_VIEW_TYPE_CORE_GRAPHICS;
+#endif
+#ifdef USE_OPENGL
+		if(!strcmp(argv[1], "-opengl"))
+			sqCurrentOSXRequestedViewType = SQ_OSX_REQUESTED_VIEW_TYPE_OPENGL;
+#endif
+		if(!strcmp(argv[1], "-headless"))
+			sqCurrentOSXRequestedViewType = SQ_OSX_REQUESTED_VIEW_TYPE_NONE;
+	}
     return NSApplicationMain(argc,  (const char **) argv);
 }
 #else

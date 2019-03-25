@@ -17,7 +17,11 @@
 
 #ifdef B3DX_METAL
 #import "sqMetalRenderer.h"
-#import "B3DMetalShaders.metal.inc"
+
+#define STRINGIFY_SHADER(src) #src
+static const char *b3dMetalShadersSource =
+#include "B3DMetalShaders.metal"
+;
 
 #define MAIN_VERTEX_BUFFER_INDEX 4
 
@@ -108,12 +112,12 @@ int b3dMetalInitialize(void) {
             return 0;
     }
     
-    NSError *libraryError;
-    dispatch_data_t metalLibraryData = dispatch_data_create(B3DMetalShaders_metallib, B3DMetalShaders_metallib_len, dispatch_get_global_queue(0, 0), ^{});
-    id<MTLLibrary> shaderLibrary = [device newLibraryWithData: metalLibraryData error: &libraryError];
-#if !__has_feature(objc_arc)
-    dispatch_release(metalLibraryData);
-#endif
+    NSString *shaderSource = [NSString stringWithCString: b3dMetalShadersSource encoding: NSUTF8StringEncoding];
+	MTLCompileOptions* compileOptions = [ MTLCompileOptions new ];
+	NSError *libraryError = nil;
+	id<MTLLibrary> shaderLibrary = [device newLibraryWithSource: shaderSource options: compileOptions error: &libraryError];
+    RELEASEOBJ(shaderSource);
+	RELEASEOBJ(compileOptions);
     if(!shaderLibrary)
     {
         NSLog(@"Shader library error: %@", libraryError.localizedDescription);
@@ -415,7 +419,7 @@ int b3dMetalShutdown(void) {
     return textures[textureHandle].depth;
 }
 
-- (int) getTexture: (int)textureHandle colorMasksInto: (int*) masks {
+- (int) getTexture: (int)textureHandle colorMasksInto: (unsigned int*) masks {
     if(textureHandle < 0 || textureHandle >= MAX_NUMBER_OF_TEXTURES || !textures[textureHandle])
         return 0;
         
@@ -896,7 +900,7 @@ b3dMetalActualTextureDepth(int rendererHandle, int handle) {
 
 /* return true on success, false on error */
 int
-b3dMetalTextureColorMasks(int rendererHandle, int handle, int masks[4]) {
+b3dMetalTextureColorMasks(int rendererHandle, int handle, unsigned int masks[4]) {
     sqB3DMetalRenderer* renderer = [sqB3DMetalModule getRendererFromHandle: rendererHandle];
     if(!renderer) return 0;
 
@@ -1001,7 +1005,7 @@ b3dMetalGetRendererSurfaceDepth(int handle) {
 
 /* return true on success, false on error */
 int
-b3dMetalGetRendererColorMasks(int handle, int *masks)  {
+b3dMetalGetRendererColorMasks(int handle, unsigned int *masks)  {
     return 0;
 }
 

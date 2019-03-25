@@ -45,17 +45,15 @@
 //#import <Fabric/Fabric.h>
 //#import <Crashlytics/Crashlytics.h>
 
-#if defined(USE_METAL)
+#ifdef USE_METAL
 #  import "sqSqueakOSXMetalView.h"
-#  define ContentViewClass sqSqueakOSXMetalView
-#elif !defined(USE_CORE_GRAPHICS)
-#  import "sqSqueakOSXOpenGLView.h"
-#  define ContentViewClass sqSqueakOSXOpenGLView
-#else 
-#  import "sqSqueakOSXCGView.h"
-#  define ContentViewClass sqSqueakOSXCGView
 #endif
 
+#ifdef USE_CORE_GRAPHICS
+#  import "sqSqueakOSXCGView.h"
+#endif
+
+#import "sqSqueakOSXOpenGLView.h"
 
 SqueakOSXAppDelegate *gDelegateApp;
 
