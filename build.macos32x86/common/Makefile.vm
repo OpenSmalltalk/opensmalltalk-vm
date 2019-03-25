@@ -150,10 +150,13 @@ assert:
 debug:
 	$(MAKE) -f $(MAKEFILE_LIST) CONFIGURATION=debug $(@,debug=) default
 
-cleanallvm:	cleanvm cleanvmast cleanvmdbg cleangv
+cleanallvm:	cleandeps cleanvm cleanvmast cleanvmdbg cleangv
+
+cleandeps:
+	rm -rf deps
 
 cleanvm:
-	rm -rf sqNamedPrims.h build deps
+	rm -rf sqNamedPrims.h build
 
 cleanvmast:
 	rm -rf sqNamedPrims.h buildast
