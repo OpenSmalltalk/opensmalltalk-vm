@@ -49,6 +49,8 @@
 extern SqueakOSXAppDelegate *gDelegateApp;
 extern struct VirtualMachine* interpreterProxy;
 
+static sqSqueakOSXMetalView *mainMetalView;
+
 #define STRINGIFY_SHADER(src) #src
 static const char *squeakMainShadersSrc =
 #include "SqueakMainShaders.metal"
@@ -74,16 +76,22 @@ typedef struct LayerTransformation
     float translationX, translationY;
 } LayerTransformation;
 
-typedef struct ExtraLayer
-{
+@interface sqSqueakOSXMetalViewExtraDrawingLayer : NSObject {
 	id<MTLTexture> texture;
 	int x, y;
-	int w, h;
-} ExtraLayer;
+	int w, h;	
+}
 
-static sqSqueakOSXMetalView *mainMetalView;
-static ExtraLayer extraLayers[MAX_NUMBER_OF_EXTRA_LAYERS];
-static unsigned int allocatedExtraLayers = 0;
+@property (nonatomic,assign) int x;
+@property (nonatomic,assign) int y;
+@property (nonatomic,assign) int w;
+@property (nonatomic,assign) int h;
+@property (nonatomic,strong) id<MTLTexture> texture;
+@end
+
+@implementation sqSqueakOSXMetalViewExtraDrawingLayer
+@synthesize x, y, w, h, texture;
+@end
 
 static NSString *stringWithCharacter(unichar character) {
 	return [NSString stringWithCharacters: &character length: 1];
@@ -138,6 +146,12 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	
 	self.paused = YES;
 	self.enableSetNeedsDisplay = NO;
+	
+	NSMutableArray *drawingLayers = [NSMutableArray arrayWithCapacity: MAX_NUMBER_OF_EXTRA_LAYERS];
+	for(int i = 0; i < MAX_NUMBER_OF_EXTRA_LAYERS; ++i) {
+		[drawingLayers addObject: [sqSqueakOSXMetalViewExtraDrawingLayer new]];
+	}
+	extraDrawingLayers = drawingLayers;
 
 	inputMark = NSMakeRange(NSNotFound, 0);
 	inputSelection = NSMakeRange(0, 0);
@@ -329,11 +343,11 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 		// Draw the screen rectangle.
 		[self drawScreenRect: rect];
 		
-		unsigned int drawnExtraLayerMask = 0;
-		for(unsigned int i = 0; i < MAX_NUMBER_OF_EXTRA_LAYERS && drawnExtraLayerMask != allocatedExtraLayers; ++i) {
-			if(allocatedExtraLayers & (1 << i)) {
-				[self drawExtraLayer: i];
-				drawnExtraLayerMask |= 1 << i;
+		unsigned int drawnExtraDrawingLayerMask = 0;
+		for(unsigned int i = 0; i < MAX_NUMBER_OF_EXTRA_LAYERS && drawnExtraDrawingLayerMask != allocatedExtraDrawingLayers; ++i) {
+			if(allocatedExtraDrawingLayers & (1 << i)) {
+				[self drawExtraDrawingLayer: i];
+				drawnExtraDrawingLayerMask |= 1 << i;
 			}
 		}
 		
@@ -400,9 +414,9 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 		vertexCount: 4];
 }
 
-- (void) drawExtraLayer: (unsigned int) extraLayerIndex {
-	ExtraLayer *layer = &extraLayers[extraLayerIndex];
-	if(!layer->texture)
+- (void) drawExtraDrawingLayer: (unsigned int) extraDrawingLayerIndex {
+	sqSqueakOSXMetalViewExtraDrawingLayer *layer = extraDrawingLayers[extraDrawingLayerIndex];
+	if(!layer.texture)
 		return;
 		
 	if(layerScreenQuadPipelineState == nil || screenQuadVertexBuffer == nil)
@@ -412,14 +426,14 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	
 	NSRect screenRect = self.frame;
 	LayerTransformation transformation;
-	transformation.scaleX = (float)layer->w / screenRect.size.width;
-	transformation.scaleY = (float)layer->h / screenRect.size.height;
-	transformation.translationX = (2.0f*layer->x + layer->w) / screenRect.size.width - 1.0f;
-	transformation.translationY = 1.0f - (2.0f*layer->y + layer->h) / screenRect.size.height;
+	transformation.scaleX = (float)layer.w / screenRect.size.width;
+	transformation.scaleY = (float)layer.h / screenRect.size.height;
+	transformation.translationX = (2.0f*layer.x + layer.w) / screenRect.size.width - 1.0f;
+	transformation.translationY = 1.0f - (2.0f*layer.y + layer.h) / screenRect.size.height;
 
 	[currentRenderEncoder setVertexBuffer: screenQuadVertexBuffer offset: 0 atIndex: 0];
 	[currentRenderEncoder setVertexBytes: &transformation length: sizeof(transformation) atIndex: 1];
-	[currentRenderEncoder setFragmentTexture: layer->texture atIndex: 0];
+	[currentRenderEncoder setFragmentTexture: layer.texture atIndex: 0];
 	
 	// Draw the the 4 vertices of the of the screen quad.
 	[currentRenderEncoder drawPrimitives: MTLPrimitiveTypeTriangleStrip
@@ -872,6 +886,54 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 - (void) preDrawThelayers {
 }
 
+- (unsigned int) createTextureLayerHandle {
+	unsigned int i;
+	unsigned int bit;
+	for(i = 0; i < MAX_NUMBER_OF_EXTRA_LAYERS; ++i) {
+		bit = 1<<i;
+		if(!(allocatedExtraDrawingLayers & bit)) {
+			allocatedExtraDrawingLayers |= bit;
+			return i + 1;
+		}
+	}
+	return 0;
+}
+
+- (void) destroyTextureLayerHandle: (unsigned int) handle {
+	unsigned int bit = 1 << (handle - 1);
+	if(allocatedExtraDrawingLayers & bit) {
+		sqSqueakOSXMetalViewExtraDrawingLayer *layer = extraDrawingLayers[handle - 1];
+		if(layer.texture) {
+			RELEASEOBJ(layer.texture);
+			layer.texture = nil;
+		}
+		
+		allocatedExtraDrawingLayers &= ~bit;
+		
+		// Redraw the screen.
+		[self draw];
+	}	
+}
+
+- (void) setExtraLayer: (unsigned int) handle texture: (id<MTLTexture>) texture x: (int) x y: (int) y w: (int) w h: (int) h {
+	unsigned int bit = 1 << (handle - 1);
+	if(allocatedExtraDrawingLayers & bit) {
+		sqSqueakOSXMetalViewExtraDrawingLayer *layer = extraDrawingLayers[handle - 1];
+		RETAINOBJ(texture);
+		if(layer.texture)
+			RELEASEOBJ(texture);
+		layer.texture = texture;
+		layer.x = x;
+		layer.y = y;
+		layer.w = w;
+		layer.h = h;
+		
+		// Swap the buffers
+		if(mainMetalView)
+			[mainMetalView draw];
+	}
+}
+
 @end
 
 id<MTLDevice>
@@ -887,53 +949,23 @@ getMainWindowMetalCommandQueue(void) {
 
 unsigned int
 createMetalTextureLayerHandle(void) {
-	unsigned int i;
-	unsigned int bit;
-	for(i = 0; i < MAX_NUMBER_OF_EXTRA_LAYERS; ++i) {
-		bit = 1<<i;
-		if(!(allocatedExtraLayers & bit)) {
-			allocatedExtraLayers |= bit;
-			return i + 1;
-		}
-	}
-	return 0;
+	return mainMetalView ? [ mainMetalView createTextureLayerHandle ] : 0;
 }
 
 void
 destroyMetalTextureLayerHandle(unsigned int handle) {
-	unsigned int bit = 1 << (handle - 1);
-	if(allocatedExtraLayers & bit) {
-		ExtraLayer *layer = &extraLayers[handle - 1];
-		if(layer->texture) {
-			RELEASEOBJ(layer->texture);
-			layer->texture = nil;
-		}
-		
-		allocatedExtraLayers &= ~bit;
-		
-		// Redraw the screen.
-		if(mainMetalView)
-			[mainMetalView draw];
-	}
+	if(!mainMetalView)
+	 	return;
+
+	[ mainMetalView destroyTextureLayerHandle: handle ];
 }
 
 void
 setMetalTextureLayerContent(unsigned int handle, id<MTLTexture> texture, int x, int y, int w, int h) {
-	unsigned int bit = 1 << (handle - 1);
-	if(allocatedExtraLayers & bit) {
-		ExtraLayer *layer = &extraLayers[handle - 1];
-		RETAINOBJ(texture);
-		if(layer->texture)
-			RELEASEOBJ(texture);
-		layer->texture = texture;
-		layer->x = x;
-		layer->y = y;
-		layer->w = w;
-		layer->h = h;
-		
-		// Swap the buffers
-		if(mainMetalView)
-			[mainMetalView draw];
-	}
+	if(!mainMetalView)
+	 	return;
+	
+	[ mainMetalView setExtraLayer: handle texture: texture x: x y: y w: w h: h];
 }
+
 #endif // USE_METAL

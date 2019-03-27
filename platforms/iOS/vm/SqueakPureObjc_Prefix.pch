@@ -10,7 +10,7 @@
 #endif
 
 #if __has_feature(objc_arc)
-# define RELEASEOBJ(o) o
+# define RELEASEOBJ(o) (void)o
 # define RETAINOBJ(o) o
 # define AUTORELEASEOBJ(o) o
 # define SUPERDEALLOC
