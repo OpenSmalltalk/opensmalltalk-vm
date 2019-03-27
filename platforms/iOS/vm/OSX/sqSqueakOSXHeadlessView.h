@@ -2,7 +2,7 @@
 //  sqSqueakOSXMetalView.h
 //  SqueakPureObjc
 //
-//  Created by Ronie Salgado on 10-11-18.
+//  Created by Ronie Salgado on 25-03-19.
 /*
  MIT License
  Permission is hereby granted, free of charge, to any person
@@ -34,7 +34,6 @@
  */
 //
 
-#ifdef USE_METAL
 #import <Cocoa/Cocoa.h>
 #include <ApplicationServices/ApplicationServices.h>
 #import "keyBoardStrokeDetails.h"
@@ -43,10 +42,9 @@
 
 @class sqSqueakOSXScreenAndWindow;
 #import "sq.h"
-#import <Metal/Metal.h>
-#import <MetalKit/MetalKit.h>
 
-@interface sqSqueakOSXMetalView : MTKView <sqSqueakOSXView, sqViewClut, NSTextInputClient> {
+// TODO: Remove the unneeded elements.
+@interface sqSqueakOSXHeadlessView : NSView <sqSqueakOSXView, sqViewClut, NSTextInputClient> {
 	sqSqueakOSXScreenAndWindow *__weak windowLogic;
 	NSTrackingRectTag squeakTrackingRectForCursor;
 	NSRange inputMark;
@@ -64,29 +62,8 @@
 	unsigned int*      colorMap32;
 	BOOL clippyIsEmpty;
 	CGRect clippy;
-    CGSize lastFrameSize;
-	
-    BOOL fullScreenInProgress;
-    void* fullScreendispBitsIndex;
-	void* currentDisplayStorage;
-	
-	BOOL metalInitialized;
-	id<MTLCommandQueue> graphicsCommandQueue;
-	id<MTLCommandBuffer> currentCommandBuffer;
-	id<MTLRenderCommandEncoder> currentRenderEncoder;
-	
-	id<MTLTexture> displayTexture;
-	int displayTextureWidth;
-	int displayTexturePitch;
-	int displayTextureHeight;
-	
-	id<MTLRenderPipelineState> screenQuadPipelineState;
-	id<MTLRenderPipelineState> layerScreenQuadPipelineState;
-	id<MTLBuffer> screenQuadVertexBuffer;
 }
 
-+ (BOOL) isMetalViewSupported;
+@property (nonatomic,assign) NSRect	savedScreenBoundsAtTimeOfFullScreen;
 
 @end
-
-#endif //USE_METAL

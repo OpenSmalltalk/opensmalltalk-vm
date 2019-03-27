@@ -35,7 +35,7 @@
  */
 //
 
-#ifndef NO_METAL
+#ifdef USE_METAL
 #import <QuartzCore/QuartzCore.h>
 
 #import "sqSqueakOSXMetalView.h"
@@ -46,10 +46,13 @@
 #import "sq.h"
 #import "sqVirtualMachine.h"
 
-#include "SqueakMainShaders.metal.inc"
-
 extern SqueakOSXAppDelegate *gDelegateApp;
-extern struct	VirtualMachine* interpreterProxy;
+extern struct VirtualMachine* interpreterProxy;
+
+#define STRINGIFY_SHADER(src) #src
+static const char *squeakMainShadersSrc =
+#include "SqueakMainShaders.metal"
+;
 
 typedef struct
 {
@@ -63,6 +66,25 @@ static ScreenQuadVertex screenQuadVertices[] = {
 	{ 1.0f,  1.0f, 0.0f, 1.0f, 1.0f, 1.0f},
 };
 
+#define MAX_NUMBER_OF_EXTRA_LAYERS 16
+
+typedef struct LayerTransformation
+{
+    float scaleX, scaleY;
+    float translationX, translationY;
+} LayerTransformation;
+
+typedef struct ExtraLayer
+{
+	id<MTLTexture> texture;
+	int x, y;
+	int w, h;
+} ExtraLayer;
+
+static sqSqueakOSXMetalView *mainMetalView;
+static ExtraLayer extraLayers[MAX_NUMBER_OF_EXTRA_LAYERS];
+static unsigned int allocatedExtraLayers = 0;
+
 static NSString *stringWithCharacter(unichar character) {
 	return [NSString stringWithCharacters: &character length: 1];
 }
@@ -71,11 +93,28 @@ static NSString *stringWithCharacter(unichar character) {
 @property (nonatomic,assign) CGSize lastFrameSize;
 @property (nonatomic,assign) BOOL fullScreenInProgress;
 @property (nonatomic,assign) void* fullScreendispBitsIndex;
+@property (nonatomic,strong) id<MTLCommandQueue> graphicsCommandQueue;
 @end
 
 @implementation sqSqueakOSXMetalView
 @synthesize squeakTrackingRectForCursor,lastSeenKeyBoardStrokeDetails,
-lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,lastFrameSize,fullScreenInProgress,fullScreendispBitsIndex;
+lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,lastFrameSize,fullScreenInProgress,fullScreendispBitsIndex,graphicsCommandQueue;
+
++ (BOOL) isMetalViewSupported {
+	// Try to create the MTL system device.
+	id<MTLDevice> device = MTLCreateSystemDefaultDevice();
+	if(!device)
+		return NO;
+		
+	// Try to compile the shader library.
+	id<MTLLibrary> library = [self compileShaderLibraryForDevice: device];
+	if(!library)
+		return NO;
+
+	RELEASEOBJ(library);
+	RELEASEOBJ(device);
+	return YES;
+}
 
 #pragma mark Initialization / Release
 
@@ -95,6 +134,8 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 }
 
 - (void)initialize {
+	mainMetalView = self;
+	
 	self.paused = YES;
 	self.enableSetNeedsDisplay = NO;
 
@@ -197,26 +238,34 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	graphicsCommandQueue = [self.device newCommandQueue];
 }
 
-- (void) buildPipelines {
-	NSError *libraryError;
-	dispatch_data_t metalLibraryData = dispatch_data_create(SqueakMainShaders_metallib, SqueakMainShaders_metallib_len, dispatch_get_global_queue(0, 0), ^{});
-	id<MTLLibrary> shaderLibrary = [self.device newLibraryWithData: metalLibraryData error: &libraryError];
-#if !__has_feature(objc_arc)
-	dispatch_release(metalLibraryData);
-#endif
++ (id<MTLLibrary>) compileShaderLibraryForDevice: (id<MTLDevice>) device {
+	NSString *shaderSource = [NSString stringWithCString: squeakMainShadersSrc encoding: NSUTF8StringEncoding];
+	MTLCompileOptions* compileOptions = [ MTLCompileOptions new ];
+	NSError *libraryError = nil;
+	id<MTLLibrary> shaderLibrary = [device newLibraryWithSource: shaderSource options: compileOptions error: &libraryError];
+	RELEASEOBJ(shaderSource);
+	RELEASEOBJ(compileOptions);
 	if(!shaderLibrary)
-	{
 		NSLog(@"Shader library error: %@", libraryError.localizedDescription);
-		return;
-	}
-	
+
+	return shaderLibrary;
+}
+
+- (void) buildPipelines {
+	id<MTLLibrary> shaderLibrary = [[self class] compileShaderLibraryForDevice: self.device ];
+	screenQuadPipelineState = [self buildPipelineWithLibrary: shaderLibrary vertexFunction: @"screenQuadFlipVertexShader" fragmentFunction: @"screenQuadFragmentShader" translucent: NO];
+	layerScreenQuadPipelineState = [self buildPipelineWithLibrary: shaderLibrary vertexFunction: @"layerScreenQuadVertexShader" fragmentFunction: @"screenQuadFragmentShader" translucent: NO];
+	RELEASEOBJ(shaderLibrary);
+}
+
+- (id<MTLRenderPipelineState>) buildPipelineWithLibrary: (id<MTLLibrary>)shaderLibrary vertexFunction: (NSString*)vertexFunctionName fragmentFunction: (NSString*)fragmentFunctionName translucent: (BOOL)translucent{
 	// Retrieve the shaders from the shader libary.
-	id<MTLFunction> vertexShader = [shaderLibrary newFunctionWithName: @"screenQuadFlipVertexShader"];
-	id<MTLFunction> fragmentShader = [shaderLibrary newFunctionWithName: @"screenQuadFragmentShader"];
+	id<MTLFunction> vertexShader = [shaderLibrary newFunctionWithName: vertexFunctionName];
+	id<MTLFunction> fragmentShader = [shaderLibrary newFunctionWithName: fragmentFunctionName];
 	if(!vertexShader || !fragmentShader)
 	{
 		RELEASEOBJ(shaderLibrary);
-		return;
+		return nil;
 	}
 
 	// Create the screen quad pipeline.
@@ -224,18 +273,28 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	pipelineDescriptor.vertexFunction = vertexShader;
 	pipelineDescriptor.fragmentFunction = fragmentShader;
 	pipelineDescriptor.inputPrimitiveTopology = MTLPrimitiveTopologyClassTriangle;
-	pipelineDescriptor.colorAttachments[0].pixelFormat = self.colorPixelFormat;
+	MTLRenderPipelineColorAttachmentDescriptor *attachmentDescriptor = pipelineDescriptor.colorAttachments[0];
+	attachmentDescriptor.pixelFormat = self.colorPixelFormat;
+	if(translucent) {
+		attachmentDescriptor.blendingEnabled = YES;
+		attachmentDescriptor.sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
+		attachmentDescriptor.sourceAlphaBlendFactor = MTLBlendFactorSourceAlpha;
+		attachmentDescriptor.destinationRGBBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+		attachmentDescriptor.destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+	}
 	
 	NSError *pipelineError = NULL;
-	screenQuadPipelineState = [self.device newRenderPipelineStateWithDescriptor: pipelineDescriptor error: &pipelineError];
+	id<MTLRenderPipelineState> pipeline = [self.device newRenderPipelineStateWithDescriptor: pipelineDescriptor error: &pipelineError];
 	RELEASEOBJ(shaderLibrary);
 	RELEASEOBJ(vertexShader);
 	RELEASEOBJ(fragmentShader);
-	if(!screenQuadPipelineState)
+	if(!pipeline)
 	{
 		NSLog(@"Pipeline state creation error: %@", pipelineError.localizedDescription);
-		return;
+		return nil;
 	}
+	
+	return pipeline;
 }
 
 - (void) createScreenQuad {
@@ -269,6 +328,14 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 
 		// Draw the screen rectangle.
 		[self drawScreenRect: rect];
+		
+		unsigned int drawnExtraLayerMask = 0;
+		for(unsigned int i = 0; i < MAX_NUMBER_OF_EXTRA_LAYERS && drawnExtraLayerMask != allocatedExtraLayers; ++i) {
+			if(allocatedExtraLayers & (1 << i)) {
+				[self drawExtraLayer: i];
+				drawnExtraLayerMask |= 1 << i;
+			}
+		}
 		
 		[currentRenderEncoder endEncoding];
 		[currentCommandBuffer presentDrawable: self.currentDrawable];
@@ -326,6 +393,33 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	
 	[currentRenderEncoder setVertexBuffer: screenQuadVertexBuffer offset: 0 atIndex: 0];
 	[currentRenderEncoder setFragmentTexture: displayTexture atIndex: 0];
+	
+	// Draw the the 4 vertices of the of the screen quad.
+	[currentRenderEncoder drawPrimitives: MTLPrimitiveTypeTriangleStrip
+		vertexStart: 0
+		vertexCount: 4];
+}
+
+- (void) drawExtraLayer: (unsigned int) extraLayerIndex {
+	ExtraLayer *layer = &extraLayers[extraLayerIndex];
+	if(!layer->texture)
+		return;
+		
+	if(layerScreenQuadPipelineState == nil || screenQuadVertexBuffer == nil)
+		return;
+	
+	[currentRenderEncoder setRenderPipelineState: layerScreenQuadPipelineState];
+	
+	NSRect screenRect = self.frame;
+	LayerTransformation transformation;
+	transformation.scaleX = (float)layer->w / screenRect.size.width;
+	transformation.scaleY = (float)layer->h / screenRect.size.height;
+	transformation.translationX = (2.0f*layer->x + layer->w) / screenRect.size.width - 1.0f;
+	transformation.translationY = 1.0f - (2.0f*layer->y + layer->h) / screenRect.size.height;
+
+	[currentRenderEncoder setVertexBuffer: screenQuadVertexBuffer offset: 0 atIndex: 0];
+	[currentRenderEncoder setVertexBytes: &transformation length: sizeof(transformation) atIndex: 1];
+	[currentRenderEncoder setFragmentTexture: layer->texture atIndex: 0];
 	
 	// Draw the the 4 vertices of the of the screen quad.
 	[currentRenderEncoder drawPrimitives: MTLPrimitiveTypeTriangleStrip
@@ -778,6 +872,68 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 - (void) preDrawThelayers {
 }
 
-
 @end
-#endif // NO_METAL
+
+id<MTLDevice>
+getMainWindowMetalDevice(void) {
+	return mainMetalView ? mainMetalView.device : nil;
+}
+
+
+id<MTLCommandQueue>
+getMainWindowMetalCommandQueue(void) {
+	return mainMetalView ? mainMetalView.graphicsCommandQueue : nil;	
+}
+
+unsigned int
+createMetalTextureLayerHandle(void) {
+	unsigned int i;
+	unsigned int bit;
+	for(i = 0; i < MAX_NUMBER_OF_EXTRA_LAYERS; ++i) {
+		bit = 1<<i;
+		if(!(allocatedExtraLayers & bit)) {
+			allocatedExtraLayers |= bit;
+			return i + 1;
+		}
+	}
+	return 0;
+}
+
+void
+destroyMetalTextureLayerHandle(unsigned int handle) {
+	unsigned int bit = 1 << (handle - 1);
+	if(allocatedExtraLayers & bit) {
+		ExtraLayer *layer = &extraLayers[handle - 1];
+		if(layer->texture) {
+			RELEASEOBJ(layer->texture);
+			layer->texture = nil;
+		}
+		
+		allocatedExtraLayers &= ~bit;
+		
+		// Redraw the screen.
+		if(mainMetalView)
+			[mainMetalView draw];
+	}
+}
+
+void
+setMetalTextureLayerContent(unsigned int handle, id<MTLTexture> texture, int x, int y, int w, int h) {
+	unsigned int bit = 1 << (handle - 1);
+	if(allocatedExtraLayers & bit) {
+		ExtraLayer *layer = &extraLayers[handle - 1];
+		RETAINOBJ(texture);
+		if(layer->texture)
+			RELEASEOBJ(texture);
+		layer->texture = texture;
+		layer->x = x;
+		layer->y = y;
+		layer->w = w;
+		layer->h = h;
+		
+		// Swap the buffers
+		if(mainMetalView)
+			[mainMetalView draw];
+	}
+}
+#endif // USE_METAL

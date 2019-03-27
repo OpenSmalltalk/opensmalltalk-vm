@@ -21,6 +21,9 @@
 /* Platform specific definitions */
 #include "sqPlatformSpecific.h"
 #include "B3DAcceleratorPlugin.h"
+
+#ifdef B3DX_GL
+
 #include "sqMacOpenGL.h"
 #include "sqOpenGLRenderer.h"
 
@@ -401,3 +404,5 @@ glShutdown(void)
     }
     return 1;
 }
+
+#endif //B3DX_GL

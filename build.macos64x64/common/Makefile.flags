@@ -24,7 +24,7 @@ print-sdks:
 # N.B. ARC isn't supported by the os-x 32-bit legacy Objective-C runtime kernel.
 # ARC is supported only on 64-bits, and then only for the 10.7 SDK and later.
 OBJC_CODE_MODEL := -fobjc-arc
-CFLAGS:=$(CFLAGS) -DBUILD_FOR_OSX=1 \
+CFLAGS:=$(CFLAGS) -DBUILD_FOR_OSX=1 -DUSE_METAL=1 -DUSE_OPENGL=1 -DUSE_CORE_GRAPHICS=1 \
 		-arch $(TARGET_ARCH) \
 		-mmacosx-version-min=$(TARGET_VERSION_MIN) -msse4.2 \
 			-fvisibility=default -fwrapv \

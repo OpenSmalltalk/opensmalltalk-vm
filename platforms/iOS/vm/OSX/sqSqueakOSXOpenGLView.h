@@ -36,6 +36,7 @@
  */
 //
 
+#ifdef USE_OPENGL
 #import <Cocoa/Cocoa.h>
 #include <ApplicationServices/ApplicationServices.h>
 #import "keyBoardStrokeDetails.h"
@@ -88,3 +89,4 @@
 -(void)drawRect:(NSRect)rect flush:(BOOL)flush;
 
 @end
+#endif //USE_OPENGL
