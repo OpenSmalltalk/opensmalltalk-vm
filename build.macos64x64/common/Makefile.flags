@@ -6,8 +6,8 @@
 XCODE:=$(shell /usr/bin/xcode-select -p)
 XCUB:=$(XCODE)/usr/bin
 SDKsDIR:=$(XCODE)/Platforms/MacOSX.platform/Developer/SDKs
-#Build the oldest SDK installed (must be MacOSX10.11.sdk because of Metal and later)
-SDKs:=MacOSX10.11.sdk MacOSX10.12.sdk MacOSX10.13.sdk MacOSX10.14.sdk
+#Build oldest installed SDK (must be MacOSX10.12.sdk because of Metal and later)
+SDKs:=MacOSX10.12.sdk MacOSX10.13.sdk MacOSX10.14.sdk
 SDK:=$(firstword $(realpath $(addprefix $(SDKsDIR)/, $(SDKs))))
 ifeq ($(strip $(SDK)),)
 $(error could not find a valid SDK)
