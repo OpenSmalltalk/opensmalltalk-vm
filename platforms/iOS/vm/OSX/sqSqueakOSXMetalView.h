@@ -83,6 +83,9 @@
 	id<MTLRenderPipelineState> screenQuadPipelineState;
 	id<MTLRenderPipelineState> layerScreenQuadPipelineState;
 	id<MTLBuffer> screenQuadVertexBuffer;
+    
+    NSArray *extraDrawingLayers;
+    unsigned int allocatedExtraDrawingLayers;
 }
 
 + (BOOL) isMetalViewSupported;
