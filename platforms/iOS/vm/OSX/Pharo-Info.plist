@@ -534,5 +534,7 @@
 	<false/>
 	<key>SqueakUIFadeForFullScreenInSeconds</key>
 	<real>0.5</real>
+	<key>PharoHelpURL</key>
+	<string>https://www.pharo.org/documentation</string>
 </dict>
 </plist>

@@ -49,5 +49,21 @@
     } else {
        [super sendEvent:anEvent];
    }
-}   
+}
+#ifdef PharoVM
+- (void)showHelp:(id)sender;
+{
+    NSBundle *mainBundle = [NSBundle mainBundle];
+    NSDictionary *infoDictionary = [mainBundle infoDictionary];
+
+    id urlString = infoDictionary[@"PharoHelpURL"];
+    
+    if(urlString == Nil){
+        urlString = @"https://www.pharo.org";
+    }
+    
+    NSURL *url = [NSURL URLWithString: urlString];
+    [[NSWorkspace sharedWorkspace] openURL: url];
+}
+#endif
 @end
