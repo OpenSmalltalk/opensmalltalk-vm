@@ -38,8 +38,12 @@
 
 #import "SqueakOSXApplication.h"
 #import "sqSqueakOSXScreenAndWindow.h"
+#import "SqueakOSXAppDelegate.h"
+#import "sqSqueakOSXApplication.h"
 
-@implementation SqueakOSXApplication 
+@implementation SqueakOSXApplication
+
+extern SqueakOSXAppDelegate *gDelegateApp;
 
 -(void)sendEvent:(NSEvent*)anEvent
 {
@@ -66,4 +70,10 @@
     [[NSWorkspace sharedWorkspace] openURL: url];
 }
 #endif
+
+- (void)orderFrontStandardAboutPanel:(id)sender;
+{
+    [super orderFrontStandardAboutPanel: sender];
+    [gDelegateApp.squeakApplication setAboutWindow: [self keyWindow]];
+}
 @end
