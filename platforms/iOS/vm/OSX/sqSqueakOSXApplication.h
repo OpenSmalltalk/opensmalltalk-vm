@@ -41,12 +41,12 @@
 #import "sqSqueakMainApplication.h"
 
 @interface sqSqueakOSXApplication : sqSqueakMainApplication {
-    NSWindow         *aboutWindow;
+    NSWindow __weak  *aboutWindow;
     NSCursor         *squeakCursor;
 
 }
 @property (nonatomic,strong) NSCursor	*squeakCursor;
-@property (nonatomic,strong) NSWindow *aboutWindow;
+@property (nonatomic,weak) NSWindow *aboutWindow;
 
 - (int) parseArgument: (NSString *) argData peek: (char *) peek;
 - (void) parseArgs: (NSArray *) args;
