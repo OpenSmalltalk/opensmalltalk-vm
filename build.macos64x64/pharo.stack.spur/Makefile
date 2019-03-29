@@ -11,6 +11,7 @@ APPNAMEDEF:=$(APPNAME)
 APPIDENTIFIER:=org.pharo.$(APPNAME)
 USEPLUGINASDYLIB:=TRUE
 THIRDPARTYLIBS:=pkgconfig freetype2 openssl libssh2 libsdl2 pixman libpng cairo
+MENU_FILE:=Pharo-MainMenu.xib
 
 # Now include the Makefile proper, which is common to all Mac OS builds.
 #

@@ -1,6 +1,6 @@
 # Copied, perhaps edited, from ../src/examplePlugins.ext
 EXTERNAL_PLUGINS = \
-B3DAcceleratorPlugin \
+#B3DAcceleratorPlugin \
 ClipboardExtendedPlugin \
 CroquetPlugin \
 FT2Plugin \

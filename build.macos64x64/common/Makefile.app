@@ -36,6 +36,10 @@ ifeq ($(USEPLUGINASDYLIB),)
 USEPLUGINASDYLIB:=FALSE
 endif
 
+ifeq ($(MENU_FILE),)
+MENU_FILE:=MainMenu.xib
+endif
+
 ifeq ($(CONFIGURATION),debug)
 	APP:=$(APPNAME)Debug.app
 	VM_IDENTIFIER:=$(APPIDENTIFIER)Debug
@@ -149,13 +153,13 @@ $(VMLOCALIZATION): $(OSXCOMMONDIR)/English.lproj/$(SYSTEM)-Localizable.strings
 	@mkdir -p $(dir $@)
 	cp -p $< $@
 
-$(VMMENUNIB): $(PLATDIR)/iOS/vm/English.lproj/MainMenu.xib
+$(VMMENUNIB): $(PLATDIR)/iOS/vm/English.lproj/$(MENU_FILE)
 	@mkdir -p $(dir $@)
 	$(XCUB)/ibtool --errors --warnings --notices --module $(VM) \
 	--minimum-deployment-target $(TARGET_VERSION_MIN) \
 	--auto-activate-custom-fonts --output-format human-readable-text \
 	--compile $(VMMENUNIB) \
-	$(PLATDIR)/iOS/vm/English.lproj/MainMenu.xib
+	$(PLATDIR)/iOS/vm/English.lproj/$(MENU_FILE)
 
 $(APP)/Contents/Resources/%.icns: $(OSXDIR)/%.icns
 	@mkdir -p $(APP)/Contents/Resources
