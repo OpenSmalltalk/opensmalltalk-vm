@@ -25,40 +25,15 @@
 platforms/unix/config/autom4te.cache/
 
 # Don't track build directories 
-/build*/**/*
-# except do track these files
-!branding.gmk
-!branding-sed-rules.gmk
-!conf.COG
-!conf.COG.dbg
-!Croquet.def.in
-!Croquet.exe.manifest
-!Croquet.ico
-!Croquet.rc
-!GreenCogSqueak.ico
-!HowToBuild
-!makeall
-!makeallclean
-!makealldirty
-!makeclean
-!makeem
-!Makefile
-!Makefile.plugin
-!Makefile.rules
-!Makefile.tools
-!makeproduct
-!makeproductclean
-!mkNamedPrims.sh
-!mvm
-!NotYetImplemented
-!plugins.ext
-!plugins.int
-!Squeak.def.in
-!Squeak.exe.manifest
-!squeak.ico
-!Squeak.rc
-!editnewspeakinstall.sh
-!/build.linux32ARMv6/asasm
+# Track build config files,  e.g. /build.platform/dialect.type.mem/files
+# but not build directories, e.g. /build.platform/dialect.type.mem/build_directory/
+# distiguished by trailing slash...
+/build*/*/*/
+
+# except specially exclude a few generated files mixed with config files
+/build*/*/LOG*
+/build*/*/mkNamedPrims.exe
+/build*/*/sqNamedPrims.h
 
 # Ignore special Cadence-only build directories
 /build*/glue*
@@ -83,6 +58,7 @@ platforms/unix/config/autom4te.cache/
 # but ignore these files (derived from `grep xcode .gitignore.orig`)
 /build.macos32x86/xcode/*/Template.xcodeproj/*.mode1v3
 /build.macos32x86/xcode/*/Template.xcodeproj/*.pbxuser
+
 
 # Not sure what to do with nsvm files/directories. Track to be conservative.
 !nsvm*
