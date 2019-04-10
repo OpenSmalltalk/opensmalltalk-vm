@@ -365,36 +365,37 @@ ImageFormat class >> thisImageFileFormat [
 
 { #category : #'unix magic file entries' }
 ImageFormat class >> unixMagicFileEntries [
-	"Answer a string that can be appended to /etc/magic on a Unix system to support the file(1) utility"
-
-	"ImageFormat unixMagicFileEntries"
-
-	" | fs |
-	fs := FileStream newFileNamed: 'magic'.
-	[ fs nextPutAll: ImageFormat unixMagicFileEntries ]
-		ensure: [ fs close ] "
+	"Answer a string that can be appended to /etc/magic on a Unix system to support the file(1) utility.
+	For example, the file magic produced by
+	(FileStream newFileNamed: 'magic') in: [:fs |
+		 [fs nextPutAll: ImageFormat unixMagicFileEntries ]	ensure: [ fs close ]]
+	can be appended to $HOME/.magic and then
+	   $ file squeak.image pharo.image  ...
+	will describe the given image files precisely"
 
 	^String streamContents: [:s |
 		s nextPutAll: '# Smalltalk image file formats'; lf.
 		KnownVersionNumbers do: [ :num | | fmt |
 			#( 'le' 'be' ) do: [ :endian |
-				fmt := self fromInteger: num.
-				(fmt is64Bit and: [ endian = 'be' ])
-					ifTrue: [ s nextPut: $4 ]
-					ifFalse: [ s nextPut: $0 ].
-				s tab;
-				nextPutAll: endian;
-				nextPutAll: 'long';
-				tab;
-				nextPutAll: num asString;
-				tab;
-				nextPutAll: 'Smalltalk '.
-				fmt printTerseDescriptionOn: s.
-				s lf.
-				s nextPutAll: '!:mime application/';
-					nextPutAll: fmt simpleName;
-					nextPutAll: '-image';
-					lf
+				#(0 512) do: [ :offset |
+					fmt := self fromInteger: num.
+					(fmt is64Bit and: [ endian = 'be' ])
+						ifTrue: [ s nextPutAll:  (offset+4) asString ]
+						ifFalse: [ s nextPutAll: offset asString ].
+					s tab;
+					nextPutAll: endian;
+					nextPutAll: 'long';
+					tab;
+					nextPutAll: num asString;
+					tab;
+					nextPutAll: 'Smalltalk '.
+					fmt printTerseDescriptionOn: s.
+					s lf.
+					s nextPutAll: '!:mime application/';
+						nextPutAll: fmt simpleName;
+						nextPutAll: '-image';
+						lf
+				]
 			]
 		].
 		s lf.
