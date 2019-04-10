@@ -265,10 +265,8 @@ ImageFormatTest >> testIsValidVersionNumber [
 	self assert: (ImageFormat fromInteger: 6521) isValidVersionNumber.
 	self assert: (ImageFormat fromInteger:68000) isValidVersionNumber.
 	self assert: (ImageFormat fromInteger:68002) isValidVersionNumber.
-	self assert: (ImageFormat fromInteger:68004) isValidVersionNumber.
 	self assert: (ImageFormat fromInteger:68003) isValidVersionNumber. "valid but unused, as with 68019"
 	self assert: (ImageFormat fromInteger: 68019) isValidVersionNumber.
-	self assert: (ImageFormat fromInteger: 68021) isValidVersionNumber.
 
 
 ]
