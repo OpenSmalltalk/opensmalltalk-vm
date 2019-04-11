@@ -4,11 +4,9 @@
 # info reflects that of the current check-in.
 set -e
 
-is_run_as_hook() {
-    test -n "$GIT_DIR"
-}
-
-if is_run_as_hook; then
+hooks_dir=$(git rev-parse --git-dir)/hooks
+# check if we run as hook
+if [[ "$(dirname $0)" == *"$hooks_dir" ]]; then
     if [[ "$(basename $0)" == "post-checkout" ]]; then
         prevHEAD=$1
         newHEAD=$2
@@ -19,8 +17,8 @@ if is_run_as_hook; then
             exit 0
         fi
     fi
+# else install the hooks
 else
-    hooks_dir=$(git rev-parse --git-dir)/hooks
     mkdir -p "$hooks_dir"
     cp -f "$0" "$hooks_dir/post-commit"
     cp -f "$0" "$hooks_dir/post-merge"
