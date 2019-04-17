@@ -54,8 +54,8 @@ CFLAGS:= $(CFLAGS) $(OFLAGS) $(COGDEFS) $(DEBUGVM) $(XDEFS)
 #PLUGINSRCDIR:=	../../src/plugins
 
 ifeq ($(USEPLUGINASDYLIB),TRUE)
-# I do not like to use lib "as is" because that will strip all "lib" occurences, but I do not 
-# find any better solution :(
+# Esteban: I do not like to use lib "as is" because that will strip all "lib"
+# occurences, but I do not find any better solution :(
 LIBDIR:=$(subst lib,,$(LIBNAME))
 else
 LIBDIR:=$(LIBNAME)
@@ -121,6 +121,14 @@ VPATH:= $(SRCDIRS)
 # If plugins change from internal to external they must be recompiled.
 $(BUILD)/$(LIBNAME)/$(LIBNAME).o: plugins.int plugins.ext
 
+# If the plugins Makefile.plugin defines DYLIBS these will be copied into
+# OBJDIR/Frameworks, and eventually into VMAPP/Contents/Frameworks
+ifneq ($(DYLIBS),)
+PLUGINFWKS:=$(OBJDIR)/Frameworks
+else
+PLUGINFWKS:=
+endif
+
 #############################################################################
 # Rules for automated builds
 
@@ -154,6 +162,8 @@ print-settings:
 	@echo PLUGINLIB=$(PLUGINLIB)
 	@echo PLUGINEXE=$(PLUGINEXE)
 	@echo PLUGINBUNDLE=$(PLUGINBUNDLE)
+	@echo DYLIBS=$(wildcard $(DYLIBS))
+	@echo PLUGINFWKS=$(PLUGINFWKS)
 	@echo deps=$(patsubst %,deps/%.d,$(notdir $(basename $(LIBSRC))))
 	@echo -----------------------------------------------------
 
@@ -166,15 +176,15 @@ $(VMDIR):
 # If any prerequisites are declared all must exist to continue
 ifeq ($(realpath $(PREREQUISITES)),$(abspath $(PREREQUISITES)))
 
-$(PLUGINLIB): $(PLUGINREQS) $(VMDIR) $(OBJDIR) $(LIBOBJ)
+$(PLUGINLIB): $(PLUGINREQS) $(VMDIR) $(OBJDIR) $(LIBOBJ) $(PLUGINFWKS)
 	-rm $(PLUGINLIB)
 	ar -rc $(PLUGINLIB) $(LIBOBJ)
 
 # Either link with normal compiler/linker or with cpp compiler/linker.  If
 # LINK_WITH_CPP is set, use e.g. clang++
-$(PLUGINBUNDLE): $(PLUGINREQS) $(PLUGINEXE) $(PLUGINICONS) $(PLUGINPLIST)
+$(PLUGINBUNDLE): $(PLUGINREQS) $(PLUGINEXE) $(PLUGINICONS) $(PLUGINPLIST) $(PLUGINFWKS)
 
-$(PLUGINEXE): $(PLUGINREQS) $(VMDIR) $(OBJDIR) $(LIBOBJ)
+$(PLUGINEXE): $(PLUGINREQS) $(VMDIR) $(OBJDIR) $(LIBOBJ) $(PLUGINFWKS)
 	mkdir -p $(PLUGINBUNDLE)/Contents/MacOS
 ifneq ($(LINK_WITH_CPP),)
 	$(LDCXX) \
@@ -193,6 +203,15 @@ endif
 $(PLUGINICONS): $(OSXDIR)/SqueakPlugin.icns
 	mkdir -p $(PLUGINBUNDLE)/Contents/Resources
 	cp -p $< $@
+
+$(OBJDIR)/Frameworks: $(wildcard $(DYLIBS))
+	rm -f $(OBJDIR)/Frameworks/*
+	mkdir -p $(OBJDIR)/Frameworks
+	for f in $(wildcard $(DYLIBS)); do \
+		test -L $$f \
+			&& ln -s `readlink $$f` $(OBJDIR)/Frameworks/`basename $$f` \
+			|| ln $$f $(OBJDIR)/Frameworks; \
+	done
 
 $(PLUGINPLIST): $(PLATDIR)/iOS/plugins/Info.plist getversion
 	-mkdir -p $(PLUGINBUNDLE)/Contents

@@ -119,6 +119,12 @@ $(APP)/Contents/Resources/%.bundle: $(BLDDIR)/vm/%.bundle
 	else \
 		echo cp -pR $< $(APP)/Contents/Resources; \
 		cp -pR $< $(APP)/Contents/Resources; \
+		if [ -d $(BLDDIR)/`basename $< .bundle`/Frameworks ]; then \
+			echo copying frameworks for `basename $< .bundle` from $(BLDDIR)/`basename $< .bundle`/Frameworks; \
+			mkdir -p $(APP)/Contents/Frameworks; \
+			(cd $(BLDDIR)/`basename $< .bundle`/Frameworks >/dev/null; COPYFILE_DISABLE=1 tar cf - *) \
+			| (cd $(APP)/Contents/Frameworks >/dev/null; tar xf -); \
+		fi; \
 	fi
 
 $(APP)/Contents/MacOS/Plugins/%.dylib: $(BLDDIR)/vm/%.dylib
@@ -169,6 +175,7 @@ signapp:
 	echo "No signing identity found (SIGNING_IDENTITY unset). Not signing app."
 else
 signapp:
+	rm -rf $(APP)/Contents/MacOS/*.cstemp
 	codesign -f --deep -s "$(SIGNING_IDENTITY)" $(APP)
 endif
 
