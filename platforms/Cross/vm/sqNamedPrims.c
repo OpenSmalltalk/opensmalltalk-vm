@@ -12,6 +12,7 @@
 *****************************************************************************/
 
 #include "sq.h"
+#include "sqAssert.h"
 
 typedef struct {
   char *pluginName;
@@ -46,10 +47,12 @@ static void *
 findLoadedModule(char *pluginName)
 {
 	ModuleEntry *module;
-	if(!pluginName || !pluginName[0]) return squeakModule;
+	if (!pluginName || !pluginName[0])
+		return squeakModule;
 	module = firstModule;
-	while(module) {
-		if(strcmp(module->name, pluginName) == 0) return module;
+	while (module) {
+		if (strcmp(module->name, pluginName) == 0)
+			return module;
 		module = module->next;
 	}
 	return NULL;
@@ -80,11 +83,12 @@ removeFromList(ModuleEntry *entry)
 	ModuleEntry *prevModule;
 
 	/* Unlink the entry from the module chain */
-	if(entry == firstModule) {
+	if (entry == firstModule) {
 		firstModule = entry->next;
-	} else {
+	}
+	else {
 		prevModule = firstModule;
-		while(prevModule->next != entry)
+		while (prevModule->next != entry)
 			prevModule = prevModule->next;
 		prevModule->next = entry->next;
 	}
@@ -110,7 +114,7 @@ findExternalFunctionIn(char *functionName, ModuleEntry *module
 	void *result;
 
 	DPRINTF(("Looking (externally) for %s in %s... ", functionName,module->name));
-	if(module->handle)
+	if (module->handle)
 #if SPURVM
 		result = ioFindExternalFunctionInAccessorDepthInto(functionName, module->handle, accessorDepthPtr);
 #else
@@ -143,24 +147,24 @@ findInternalFunctionIn(char *functionName, char *pluginName
   DPRINTF(("Looking (internally) for %s in %s ... ", functionName, (pluginName ? pluginName : "<intrinsic>")));
 
   /* canonicalize functionName and pluginName to be NULL if not specified */
-  if(functionName && !functionName[0]) functionName = NULL;
-  if(pluginName && !pluginName[0]) pluginName = NULL;
-  for(listIndex=0;; listIndex++) {
+  if (functionName && !functionName[0]) functionName = NULL;
+  if (pluginName && !pluginName[0]) pluginName = NULL;
+  for (listIndex=0;; listIndex++) {
     exports = pluginExports[listIndex];
-    if(!exports) break;
-    for(index=0;; index++) {
+    if (!exports) break;
+    for (index=0;; index++) {
       plugin = exports[index].pluginName;
       function = exports[index].primitiveName;
       /* canonicalize plugin and function to be NULL if not specified */
-      if(plugin && !plugin[0]) plugin = NULL;
-      if(function && !function[0]) function = NULL;
-      if(!plugin && !function) break; /* At end of table. */
+      if (plugin && !plugin[0]) plugin = NULL;
+      if (function && !function[0]) function = NULL;
+      if (!plugin && !function) break; /* At end of table. */
       /* check for module name match */
-      if((pluginName == NULL) != (plugin == NULL)) continue; /* one is missing */
-      if(plugin && strcmp(pluginName, plugin)) continue; /* name mismatch */
+      if ((pluginName == NULL) != (plugin == NULL)) continue; /* one is missing */
+      if (plugin && strcmp(pluginName, plugin)) continue; /* name mismatch */
       /* check for function name match */
-      if((functionName == NULL) != (function == NULL)) continue; /* one is missing */
-      if(function && strcmp(functionName, function)) continue; /* name mismatch */
+      if ((functionName == NULL) != (function == NULL)) continue; /* one is missing */
+      if (function && strcmp(functionName, function)) continue; /* name mismatch */
 
       /* match */
       DPRINTF(("found\n"));
@@ -208,44 +212,41 @@ findFunctionIn(char *functionName, ModuleEntry *module)
 static sqInt
 callInitializersIn(ModuleEntry *module)
 {
-	void *init0;
-	void *init1;
-	void *init2;
 	char *moduleName;
 	sqInt okay;
+	void *init0 = findFunctionIn("getModuleName", module);
+	void *init1 = findFunctionIn("setInterpreter", module);
+	void *init2 = findFunctionIn("initialiseModule", module);
 
-	init0 = findFunctionIn("getModuleName", module);
-	init1 = findFunctionIn("setInterpreter", module);
-	init2 = findFunctionIn("initialiseModule", module);
-
-	if(init0) {
+	if (init0) {
 		/* Check the compiled name of the module */
 		moduleName = ((char* (*) (void))init0)();
-		if(!moduleName) {
+		if (!moduleName) {
 			DPRINTF(("ERROR: getModuleName() returned NULL\n"));
 			return 0;
 		}
-		if(strncmp(moduleName, module->name, strlen(module->name)) != 0) {
+		if (strncmp(moduleName, module->name, strlen(module->name)) != 0) {
 			DPRINTF(("ERROR: getModuleName returned %s (expected: %s)\n", moduleName, module->name));
 			return 0;
 		}
-	} else {
+	}
+	else {
 		/* Note: older plugins may not export the compiled module name */
 		DPRINTF(("WARNING: getModuleName() not found in %s\n", module->name));
 	}
-	if(!init1) { 
+	if (!init1) { 
 		DPRINTF(("ERROR: setInterpreter() not found\n"));
 		return 0;
 	}
 	/* call setInterpreter */
 	okay = ((sqInt (*) (struct VirtualMachine*))init1)(sqGetInterpreterProxy());
-	if(!okay) {
+	if (!okay) {
 		DPRINTF(("ERROR: setInterpreter() returned false\n"));
 		return 0;
 	}
-	if(init2) {
+	if (init2) {
 		okay = ((sqInt (*) (void)) init2)();
-		if(!okay) {
+		if (!okay) {
 			DPRINTF(("ERROR: initialiseModule() returned false\n"));
 			return 0;
 		}
@@ -268,11 +269,16 @@ callInitializersIn(ModuleEntry *module)
 #ifdef PharoVM
 static int moduleLoadingEnabled = 1;
 
-/* Disable module loading mechanism for the rest of current session. This operation should be not reversable! */
+/* Disable module loading mechanism for the rest of current session.
+ * This operation should be not reversable!
+ */
 void ioDisableModuleLoading() {
 	moduleLoadingEnabled = 0;
 }
 #endif
+
+extern char *breakSelector;
+extern sqInt breakSelectorLength;
 
 static ModuleEntry *
 findAndLoadModule(char *pluginName, sqInt ffiLoad)
@@ -285,25 +291,31 @@ findAndLoadModule(char *pluginName, sqInt ffiLoad)
 		return NULL;
 #endif
 	DPRINTF(("Looking for plugin %s\n", (pluginName ? pluginName : "<intrinsic>")));
+	if (breakSelectorLength > 0
+	 && !strncmp(pluginName, breakSelector, breakSelectorLength)
+	 && strlen(pluginName) == breakSelectorLength)
+		warning("plugin load");
+
 	/* Try to load the module externally */
 	handle = ioLoadModule(pluginName);
-	if(ffiLoad) {
+	if (ffiLoad) {
 		/* When dealing with the FFI, don't attempt to mess around internally */
-		if(!handle) return NULL;
+		if (!handle)
+			return NULL;
 		return addToModuleList(pluginName, handle, ffiLoad);
 	}
 	/* NOT ffiLoad */
-	if(!handle) {
+	if (!handle) {
 		/* might be internal, so go looking for setInterpreter() */
-		if(findInternalFunctionIn("setInterpreter", pluginName NADA))
+		if (findInternalFunctionIn("setInterpreter", pluginName NADA))
 			handle = squeakModule->handle;
 		else
 			return NULL; /* PluginName_setInterpreter() not found */
 	}
 	module = addToModuleList(pluginName, handle, ffiLoad);
-	if(!callInitializersIn(module)) {
+	if (!callInitializersIn(module)) {
 		/* Initializers failed */
-		if(handle != squeakModule->handle) {
+		if (handle != squeakModule->handle) {
 			/* physically unload module */
 			ioFreeModule(handle);
 		}
@@ -323,7 +335,7 @@ findOrLoadModule(char *pluginName, sqInt ffiLoad)
 {
 	ModuleEntry *module;
 
-	if(!squeakModule) {
+	if (!squeakModule) {
 		/* Load intrinsics (if possible) */
 		squeakModule = addToModuleList("", NULL, 1);
 		firstModule = NULL; /* drop off module list - will never be unloaded */
@@ -331,7 +343,7 @@ findOrLoadModule(char *pluginName, sqInt ffiLoad)
 
 	/* see if the module was already loaded */
 	module = findLoadedModule(pluginName);
-	if(!module) {
+	if (!module) {
 		/* if not try loading it */
 		module = findAndLoadModule(pluginName, ffiLoad);
 	}
@@ -346,18 +358,15 @@ findOrLoadModule(char *pluginName, sqInt ffiLoad)
 void *
 ioLoadFunctionFrom(char *functionName, char *pluginName)
 {
-	ModuleEntry *module;
-
-	module = findOrLoadModule(pluginName, 0);
-	if(!module) {
+	ModuleEntry *module = findOrLoadModule(pluginName, 0);
+	if (!module) {
 		/* no module */
 		DPRINTF(("Failed to find %s (module %s was not loaded)\n", functionName, pluginName));
 		return 0;
 	}
-	if(!functionName) {
+	if (!functionName)
 		/* only the module was requested but not any specific function */
 	  return (void *)1;
-	}
 	/* and load the actual function */
 	return findFunctionIn(functionName, module);
 }
@@ -370,12 +379,11 @@ ioLoadExternalFunctionOfLengthFromModuleOfLength
 	(sqInt functionNameIndex, sqInt functionNameLength,
 	 sqInt moduleNameIndex, sqInt moduleNameLength)
 {
-	char *functionNamePointer= pointerForOop((usqInt)functionNameIndex);
-	char *moduleNamePointer= pointerForOop((usqInt)moduleNameIndex);
-	char functionName[256];
-	char moduleName[256];
+	char *functionNamePointer = pointerForOop((usqInt)functionNameIndex);
+	char *moduleNamePointer = pointerForOop((usqInt)moduleNameIndex);
+	char functionName[256], moduleName[256];
 
-	if(functionNameLength > 255 || moduleNameLength > 255)
+	if (functionNameLength > 255 || moduleNameLength > 255)
 		return 0; /* can't cope with those */
 	strncpy(functionName, functionNamePointer, functionNameLength);
 	functionName[functionNameLength] = 0;
@@ -399,15 +407,14 @@ ioLoadFunctionFromAccessorDepthInto(char *functionName, char *pluginName,
 	void *function;
 
 	module = findOrLoadModule(pluginName, 0);
-	if(!module) {
+	if (!module) {
 		/* no module */
 		DPRINTF(("Failed to find %s (module %s was not loaded)\n", functionName, pluginName));
 		return 0;
 	}
-	if(!functionName) {
+	if (!functionName)
 		/* only the module was requested but not any specific function */
 	  return (void *)1;
-	}
 	/* and load the actual function */
 	function = findFunctionAndAccessorDepthIn(functionName, module, fnameLength, accessorDepthPtr);
 	return function;
@@ -421,12 +428,11 @@ ioLoadExternalFunctionOfLengthFromModuleOfLengthAccessorDepthInto
 	(sqInt functionNameIndex, sqInt functionNameLength,
 	 sqInt moduleNameIndex,   sqInt moduleNameLength, sqInt *accessorDepthPtr)
 {
-	char *functionNamePointer= pointerForOop((usqInt)functionNameIndex);
-	char *moduleNamePointer= pointerForOop((usqInt)moduleNameIndex);
-	char functionName[256];
-	char moduleName[256];
+	char *functionNamePointer = pointerForOop((usqInt)functionNameIndex);
+	char *moduleNamePointer = pointerForOop((usqInt)moduleNameIndex);
+	char functionName[256], moduleName[256];
 
-	if(functionNameLength > 255 || moduleNameLength > 255)
+	if (functionNameLength > 255 || moduleNameLength > 255)
 		return 0; /* can't cope with those */
 	strncpy(functionName, functionNamePointer, functionNameLength);
 	functionName[functionNameLength] = 0;
@@ -473,13 +479,15 @@ ioLoadModuleOfLength(sqInt moduleNameIndex, sqInt moduleNameLength)
 	char moduleName[256];
 	sqInt i;
 
-	if(moduleNameLength > 255) return 0; /* can't cope with those */
-	for(i=0; i< moduleNameLength; i++)
+	if (moduleNameLength > 255)
+		return 0; /* can't cope with those */
+	for (i=0; i< moduleNameLength; i++)
 		moduleName[i] = moduleNamePointer[i];
 	moduleName[moduleNameLength] = 0;
 
 	module = findOrLoadModule(moduleName, 1);
-	if(module) return module->handle;
+	if (module)
+		return module->handle;
 	return 0;
 }
 
@@ -490,13 +498,15 @@ ioLoadModuleOfLength(sqInt moduleNameIndex, sqInt moduleNameLength)
 static sqInt
 shutdownModule(ModuleEntry *module)
 {
-	void* fn;
+	void *fn;
 
-	if(module->ffiLoaded) return 1; /* don't even attempt for ffi loaded modules */
+	if (module->ffiLoaded)
+		return 1; /* don't even attempt for ffi loaded modules */
 
 	/* load the actual function */
 	fn = findFunctionIn("shutdownModule", module);
-	if(fn) return ((sqInt (*) (void)) fn) ();
+	if (fn)
+		return ((sqInt (*) (void)) fn) ();
 	return 1;
 }
 
@@ -506,9 +516,8 @@ shutdownModule(ModuleEntry *module)
 sqInt
 ioShutdownAllModules(void)
 {
-	ModuleEntry *entry;
-	entry = firstModule;
-	while(entry) {
+	ModuleEntry *entry = firstModule;
+	while (entry) {
 		shutdownModule(entry);
 		entry = entry->next;
 	}
@@ -523,24 +532,27 @@ ioUnloadModule(char *moduleName)
 {
 	ModuleEntry *entry, *temp;
 
-	if(!squeakModule) return 0; /* Nothing has been loaded */
-	if(!moduleName || !moduleName[0]) return 0; /* nope */
+	if (!squeakModule)
+		return 0; /* Nothing has been loaded */
+	if (!moduleName || !moduleName[0])
+		return 0; /* nope */
 
 	entry = findLoadedModule(moduleName);
-	if(!entry) return 1; /* module was never loaded */
+	if (!entry)
+		return 1; /* module was never loaded */
 
 	/* Try to shutdown the module */
-	if(!shutdownModule(entry)) {
+	if (!shutdownModule(entry)) {
 		/* Could not shut down the module. Bail out. */
 		return 0;
 	}
 	/* Notify all interested parties about the fact */
 	temp = firstModule;
-	while(temp) {
-		if(temp != entry) {
+	while (temp) {
+		if (temp != entry) {
 			/* Lookup moduleUnloaded: from the plugin */
 			void *fn = findFunctionIn("moduleUnloaded", temp);
-			if(fn) {
+			if (fn) {
 				/* call it */
 				((sqInt (*) (char *))fn)(entry->name);
 			}
@@ -548,7 +560,7 @@ ioUnloadModule(char *moduleName)
 		temp = temp->next;
 	}
 	/* And actually unload it if it isn't just the VM... */
-	if(entry->handle != squeakModule->handle)
+	if (entry->handle != squeakModule->handle)
 		ioFreeModule(entry->handle);
 	removeFromList(entry);
 	free(entry); /* give back space */
@@ -561,12 +573,13 @@ ioUnloadModule(char *moduleName)
 sqInt
 ioUnloadModuleOfLength(sqInt moduleNameIndex, sqInt moduleNameLength)
 {
-	char *moduleNamePointer= pointerForOop((usqInt) moduleNameIndex);
+	char *moduleNamePointer = pointerForOop((usqInt) moduleNameIndex);
 	char moduleName[256];
 	sqInt i;
 
-	if(moduleNameLength > 255) return 0; /* can't cope with those */
-	for(i=0; i< moduleNameLength; i++)
+	if (moduleNameLength > 255)
+		return 0; /* can't cope with those */
+	for (i=0; i< moduleNameLength; i++)
 		moduleName[i] = moduleNamePointer[i];
 	moduleName[moduleNameLength] = 0;
 	return ioUnloadModule(moduleName);
@@ -580,30 +593,30 @@ char *
 ioListBuiltinModule(sqInt moduleIndex)
 {
   sqInt index, listIndex;
-  char *function;
-  char *plugin;
+  char *function, *plugin;
   sqExport *exports;
 
-  for(listIndex=0;; listIndex++) {
+  for (listIndex=0;; listIndex++) {
     exports = pluginExports[listIndex];
-    if(!exports) break;
-    for(index=0;; index++) {
+    if (!exports) break;
+    for (index=0;; index++) {
       plugin = exports[index].pluginName;
       function = exports[index].primitiveName;
-      if(!function && !plugin) break; /* no more plugins */
-      if(strcmp(function,"setInterpreter") == 0) {
-	/* new module */
-	if(--moduleIndex == 0) {
-	  char *moduleName;
-	  void * init0;
-	  init0 = findInternalFunctionIn("getModuleName", plugin NADA);
-	  if(init0) {
-	    /* Check the compiled name of the module */
-	    moduleName = ((char* (*) (void))init0)();
-	    if(moduleName) { return moduleName;}
-	  }
-	  return plugin;
-	}
+      if (!function && !plugin) break; /* no more plugins */
+      if (strcmp(function,"setInterpreter") == 0) {
+        /* new module */
+        if (--moduleIndex == 0) {
+          char *moduleName;
+          void * init0;
+          init0 = findInternalFunctionIn("getModuleName", plugin NADA);
+          if (init0) {
+            /* Check the compiled name of the module */
+            moduleName = ((char* (*) (void))init0)();
+            if (moduleName)
+				return moduleName;
+          }
+          return plugin;
+        }
       }
     }
   }
@@ -614,12 +627,11 @@ char *
 ioListLoadedModule(sqInt moduleIndex)
 {
 	sqInt index = 1;
+	ModuleEntry *entry = firstModule;
 
-	ModuleEntry *entry;
-	entry = firstModule;
-
-	if ( moduleIndex < 1) return (char*)NULL;
-	while(entry && index < moduleIndex) {
+	if (moduleIndex < 1)
+		return (char*)NULL;
+	while (entry && index < moduleIndex) {
 		entry = entry->next;
 		index = index + 1;
 	}
@@ -628,12 +640,14 @@ ioListLoadedModule(sqInt moduleIndex)
 		void * init0;
 
 		init0 = findFunctionIn("getModuleName", entry);
-		if(init0) {
+		if (init0) {
 			/* Check the compiled name of the module */
 			moduleName = ((char* (*) (void))init0)();
-			if(moduleName) { return moduleName;}
+			if (moduleName)
+				return moduleName;
 		}
 		return entry->name;
 	}
-	else return (char*)NULL;
+	else
+		return (char*)NULL;
 }
