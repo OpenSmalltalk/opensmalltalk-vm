@@ -95,7 +95,7 @@ endif
 
 $(APP):	cleanbundles $(THIRDPARTYPREREQS) $(VMEXE) $(VMBUNDLES) $(VMPLUGINDYLIBS) \
 		$(VMPLIST) $(VMLOCALIZATION) $(VMMENUNIB) $(VMICONS) \
- 		$(SOURCES) $(THIRDPARTYLIBS) $(APPPOST) signapp touchapp
+ 		$(SOURCES) $(THIRDPARTYLIBS) $(APPPOST) pathapp signapp touchapp
 
 # Bundles with missing prerequisites won't be built. But we need to force the
 # attempt to make them every time in case the prerequisites /have/ been built.
@@ -166,6 +166,10 @@ $(VMMENUNIB): $(PLATDIR)/iOS/vm/English.lproj/MainMenu.xib
 $(APP)/Contents/Resources/%.icns: $(OSXDIR)/%.icns
 	@mkdir -p $(APP)/Contents/Resources
 	cp -p $< $(APP)/Contents/Resources
+
+pathapp:
+	test -d $(APP)/Contents/Frameworks && \
+	install_name_tool -add_rpath @executable_path/../Frameworks $(VMEXE)
 
 # To sign the app, set SIGNING_IDENTITY in the environment, e.g.
 # export SIGNING_IDENTITY="Developer ID Application: Eliot Miranda"

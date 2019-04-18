@@ -29,6 +29,7 @@ platforms/unix/config/autom4te.cache/
 # except do track these files
 !branding.gmk
 !branding-sed-rules.gmk
+!common
 !conf.COG
 !conf.COG.dbg
 !Croquet.def.in
@@ -43,6 +44,7 @@ platforms/unix/config/autom4te.cache/
 !makeclean
 !makeem
 !Makefile
+!Makefile.app*
 !Makefile.plugin
 !Makefile.rules
 !Makefile.tools
