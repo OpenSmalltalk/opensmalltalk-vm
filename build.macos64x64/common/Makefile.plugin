@@ -82,7 +82,7 @@ INCLUDES:= $(addprefix -I,. $(INCDIRS))
 #
 
 SRCDIRS:=$(SRCDIRS) $(MAKERDIR) $(CROSSDIR) $(OSXPLGDIR) 
-LIBSRC?= $(foreach d,$(SRCDIRS),$(wildcard $(d)/*.c) $(wildcard $(d)/*.cpp) $(wildcard $(d)/*.m))
+LIBSRC?= $(foreach d,$(SRCDIRS),$(wildcard $(d)/*.c) $(wildcard $(d)/*.cpp) $(wildcard $(d)/*.m) $(wildcard $(d)/*.mm))
 ifneq ($(EXCLUDESRC),)
 LIBSRC:=$(filter-out $(EXCLUDESRC),$(LIBSRC))
 endif
@@ -113,7 +113,8 @@ PLUGINDYLIB:= $(VMDIR)/$(LIBNAME).dylib
 PLUGINPLIST:= $(PLUGINBUNDLE)/Contents/Info.plist
 PLUGINICONS:= $(PLUGINBUNDLE)/Contents/Resources/SqueakPlugin.icns
 LIBOBJ?=$(notdir $(LIBSRC))
-LIBOBJ:=$(patsubst %.c,%.o,$(patsubst %.m,%.o,$(patsubst %.cpp,%.o,$(LIBOBJ))))
+LIBOBJ:=$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$(LIBOBJ)))
+LIBOBJ:=$(patsubst %.m,%.o,$(patsubst %.mm,%.o,$(LIBOBJ)))
 LIBOBJ:=$(addprefix $(OBJDIR)/,$(LIBOBJ))
 
 VPATH:= $(SRCDIRS)
