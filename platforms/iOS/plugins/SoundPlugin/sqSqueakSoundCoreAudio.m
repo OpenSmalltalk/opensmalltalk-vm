@@ -191,6 +191,9 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 	return 1;
 }
 
+#define isInput(i) (deviceTypes[i] & IsInput)
+#define isOutput(i) (deviceTypes[i] & IsOutput)
+
 - (sqInt) soundShutdown {
 	//NSLog(@"%i sound shutdown",ioMSecs());
 	if (self.outputAudioQueue) {
@@ -513,7 +516,7 @@ getVolumeOf(AudioDeviceID deviceID, char which)
 
 	size = sizeof(volume0);
 
-#if 0 /* Master always has volue of 0.0 (actually epsilon) */
+#if 0 /* Master always has volume of 0.0 (actually epsilon) */
 	address.mElement = kAudioObjectPropertyElementMaster;
 	if (AudioObjectHasProperty(deviceID, &address)) {
 		// See if the default channel has a volume.
@@ -684,7 +687,7 @@ getVolumeOf(AudioDeviceID deviceID, char which)
 	[self ensureDeviceList];
 	int n, i;
 	for (i = 0, n = 0; i < numDevices; i++)
-		if ((deviceTypes[i] & IsOutput))
+		if (isOutput(i))
 			++n;
 	return n;
 }
@@ -693,7 +696,7 @@ getVolumeOf(AudioDeviceID deviceID, char which)
 	[self ensureDeviceList];
 	int n, i;
 	for (i = 0, n = 0; i < numDevices; i++)
-		if ((deviceTypes[i] & IsInput))
+		if (isInput(i))
 			++n;
 	return n;
 }
@@ -704,7 +707,8 @@ getVolumeOf(AudioDeviceID deviceID, char which)
 	[self ensureDeviceList];
 
 	for (int i = 0; i < numDevices; i++)
-		if (deviceIDs[i] == deviceID)
+		if (deviceIDs[i] == deviceID
+		 && isOutput(i))
 			return deviceNames[i];
 
 	return 0;
@@ -716,7 +720,8 @@ getVolumeOf(AudioDeviceID deviceID, char which)
 	[self ensureDeviceList];
 
 	for (int i = 0; i < numDevices; i++)
-		if (deviceIDs[i] == deviceID)
+		if (deviceIDs[i] == deviceID
+		 && isInput(i))
 			return deviceNames[i];
 
 	return 0;
@@ -725,7 +730,7 @@ getVolumeOf(AudioDeviceID deviceID, char which)
 - (char *) getSoundPlayerDeviceName: (sqInt) di {
 	int n, i;
 	for (i = 0, n = 0; i < numDevices; i++)
-		if ((deviceTypes[i] & IsOutput))
+		if (isOutput(i))
 			if (n++ == di)
 				return deviceNames[i];
 	return 0;
@@ -734,7 +739,7 @@ getVolumeOf(AudioDeviceID deviceID, char which)
 - (char *) getSoundRecorderDeviceName: (sqInt) di {
 	int n, i;
 	for (i = 0, n = 0; i < numDevices; i++)
-		if ((deviceTypes[i] & IsInput))
+		if (isInput(i))
 			if (n++ == di)
 				return deviceNames[i];
 	return 0;
@@ -744,7 +749,7 @@ getVolumeOf(AudioDeviceID deviceID, char which)
 	[self ensureDeviceList];
 
 	for (int i = 0; i < numDevices; i++)
-		if ((deviceTypes[i] & IsOutput)
+		if (isOutput(i)
 		 && !strcmp(deviceName, deviceNames[i])) {
 			if (setDefaultDevice(deviceIDs[i], IsOutput) != deviceIDs[i])
 				interpreterProxy->primitiveFail();
@@ -756,7 +761,7 @@ getVolumeOf(AudioDeviceID deviceID, char which)
 	[self ensureDeviceList];
 
 	for (int i = 0; i < numDevices; i++)
-		if ((deviceTypes[i] & IsInput)
+		if (isInput(i)
 		 && !strcmp(deviceName, deviceNames[i])) {
 			if (setDefaultDevice(deviceIDs[i], IsInput) != deviceIDs[i])
 				interpreterProxy->primitiveFail();
