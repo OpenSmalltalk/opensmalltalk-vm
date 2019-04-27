@@ -741,8 +741,8 @@ setVolumeOf(AudioDeviceID deviceID, char which, float volume)
 
 - (sqInt) getNumberOfSoundPlayerDevices {
 	[self ensureDeviceList];
-	int n, i;
-	for (i = 0, n = 0; i < numDevices; i++)
+	int n = 0;
+	for (int i = 0; i < numDevices; i++)
 		if (isOutput(i))
 			++n;
 	return n;
@@ -750,17 +750,17 @@ setVolumeOf(AudioDeviceID deviceID, char which, float volume)
 
 - (sqInt) getNumberOfSoundRecorderDevices {
 	[self ensureDeviceList];
-	int n, i;
-	for (i = 0, n = 0; i < numDevices; i++)
+	int n = 0;
+	for (int i = 0; i < numDevices; i++)
 		if (isInput(i))
 			++n;
 	return n;
 }
 
 - (char *) getDefaultSoundPlayer {
-	AudioObjectID deviceID = defaultInputDevice();
 
 	[self ensureDeviceList];
+	AudioObjectID deviceID = defaultInputDevice();
 
 	for (int i = 0; i < numDevices; i++)
 		if (deviceIDs[i] == deviceID
@@ -771,9 +771,9 @@ setVolumeOf(AudioDeviceID deviceID, char which, float volume)
 }
 
 - (char *) getDefaultSoundRecorder {
-	AudioObjectID deviceID = defaultOutputDevice();
 
 	[self ensureDeviceList];
+	AudioObjectID deviceID = defaultOutputDevice();
 
 	for (int i = 0; i < numDevices; i++)
 		if (deviceIDs[i] == deviceID
@@ -784,8 +784,8 @@ setVolumeOf(AudioDeviceID deviceID, char which, float volume)
 }
 
 - (char *) getSoundPlayerDeviceName: (sqInt) di {
-	int n, i;
-	for (i = 0, n = 0; i < numDevices; i++)
+	[self ensureDeviceList];
+	for (int i = 0, n = 0; i < numDevices; i++)
 		if (isOutput(i)
 		 && n++ == di)
 			return deviceNames[i];
@@ -793,8 +793,8 @@ setVolumeOf(AudioDeviceID deviceID, char which, float volume)
 }
 
 - (char *) getSoundRecorderDeviceName: (sqInt) di {
-	int n, i;
-	for (i = 0, n = 0; i < numDevices; i++)
+	[self ensureDeviceList];
+	for (int i = 0, n = 0; i < numDevices; i++)
 		if (isInput(i)
 		 && n++ == di)
 			return deviceNames[i];
