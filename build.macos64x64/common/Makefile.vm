@@ -60,7 +60,7 @@ OSXSRC=$(wildcard $(OSXDIR)/*.c) $(wildcard $(OSXDIR)/*.m) \
 		$(wildcard $(OSXCLASSESDIR)/*.c) $(wildcard $(OSXCLASSESDIR)/*.m)
 OSXSRC:=$(filter-out $(XEX),$(OSXSRC))
 UNIXSRC:=$(addprefix $(UNIXVMDIR)/,aio.c sqUnixHeartbeat.c sqUnixSpurMemory.c \
-                     sqUnixThreads.c sqUnixVMProfile.c)
+                     sqUnixThreads.c sqUnixVMProfile.c debug.c)
 VMSRC:= $(MAKERSRC) $(CROSSSRC) $(OSXSRC) $(UNIXSRC)
 VMOBJ:=	$(notdir $(VMSRC))
 VMOBJ:=	$(VMOBJ:.c=.o)

@@ -33,6 +33,7 @@
 # include "sqMemoryAccess.h"
 #endif
 #include "sqUnixCharConv.h"
+#include "sq.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -115,7 +116,7 @@ void setEncoding(void **encoding, char *rawName)
       }
     else
       ++ap;
-  fprintf(stderr, "setEncoding: could not set encoding '%s'\n", name);
+  fprintf(VM_ERR(), "setEncoding: could not set encoding '%s'\n", name);
  done:
   free(name);
 }

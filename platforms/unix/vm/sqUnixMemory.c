@@ -116,7 +116,7 @@ void *
 uxAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
 {
 	if (heap) {
-		fprintf(stderr, "uxAllocateMemory: already called\n");
+		fprintf(VM_ERR(), "uxAllocateMemory: already called\n");
 		exit(1);
 	}
 	pageSize= getpagesize();
@@ -130,7 +130,7 @@ void *uxAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
 # endif
 
   if (heap) {
-      fprintf(stderr, "uxAllocateMemory: already called\n");
+      fprintf(VM_ERR(), "uxAllocateMemory: already called\n");
       exit(1);
   }
   pageSize= getpagesize();
@@ -159,7 +159,7 @@ void *uxAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
   }
 
   if (!heap) {
-      fprintf(stderr, "uxAllocateMemory: failed to allocate at least %lld bytes)\n", (long long)minHeapSize);
+      fprintf(VM_ERR(), "uxAllocateMemory: failed to allocate at least %lld bytes)\n", (long long)minHeapSize);
       useMmap= 0;
       return malloc(desiredHeapSize);
   }
@@ -262,7 +262,7 @@ void *
 uxAllocateMemory(sqInt minHeapSize, sqInt desiredHeapSize)
 {
 	if (pageMask) {
-		fprintf(stderr, "uxAllocateMemory: already called\n");
+		fprintf(VM_ERR(), "uxAllocateMemory: already called\n");
 		exit(1);
 	}
 	pageSize = getpagesize();

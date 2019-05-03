@@ -94,7 +94,7 @@ sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
     sqInt allocBytes;
 
 	if (pageSize) {
-		fprintf(stderr, "sqAllocateMemory: already called\n");
+		fprintf(VM_ERR(), "sqAllocateMemory: already called\n");
 		exit(1);
 	}
 	pageSize = getpagesize();
@@ -108,7 +108,7 @@ sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
 	alloc = sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto
 				(roundUpToPage(desiredHeapSize), address, &allocBytes);
 	if (!alloc) {
-		fprintf(stderr, "sqAllocateMemory: initial alloc failed!\n");
+		fprintf(VM_ERR(), "sqAllocateMemory: initial alloc failed!\n");
 		exit(errno);
 	}
 	return (usqInt)alloc;

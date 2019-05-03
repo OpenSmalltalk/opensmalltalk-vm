@@ -651,4 +651,11 @@ sqInt ioFreeModule(void *moduleHandle);
 /* The Squeak version from which this interpreter was generated. */
 extern const char *interpreterVersion;
 
+/* Debug helper - don't print to the user console directly */
+
+/*
+ * FILE pointing to the error output of the VM.
+ */
+extern FILE *VM_ERR(void);
+
 #endif /* _SQ_H */

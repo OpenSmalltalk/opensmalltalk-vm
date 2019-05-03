@@ -275,17 +275,17 @@ yieldToHighPriorityTickerThread()
 
 	if ((err = pthread_mutex_lock(&yield_mutex))) {
 		if (err != EDEADLK)
-			fprintf(stderr,"pthread_mutex_lock yield_mutex %s\n", strerror(err));
+			fprintf(VM_ERR(),"pthread_mutex_lock yield_mutex %s\n", strerror(err));
 	}
 	/* If lock fails then unblockVMThreadAfterYieldToHighPriorityTickerThread
 	 * has locked and we should not block.
 	 */
 	if ((err = pthread_mutex_lock(&yield_sync))) {
 		if (err != EDEADLK)
-			fprintf(stderr,"pthread_mutex_lock yield_sync %s\n", strerror(err));
+			fprintf(VM_ERR(),"pthread_mutex_lock yield_sync %s\n", strerror(err));
 	}
 	else if ((err = pthread_cond_wait(&yield_cond, &yield_mutex)))
-		fprintf(stderr,"pthread_cond_wait %s\n", strerror(err));
+		fprintf(VM_ERR(),"pthread_cond_wait %s\n", strerror(err));
 }
 
 /* Private to sqTicker.c checkHighPriorityTickees */

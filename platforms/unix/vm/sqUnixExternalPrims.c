@@ -141,7 +141,7 @@ tryLoadModule(char *in, char *name)
   char path[PATH_MAX], *out= path;
   void *handle= 0;
   int c;
-  DPRINTF((stderr, __FILE__ " %d tryLoadModule(%s,%s)\n", __LINE__, in, name));
+  DPRINTF((VM_ERR(), __FILE__ " %d tryLoadModule(%s,%s)\n", __LINE__, in, name));
   while ((c= *in++) && ':' != c) {	/* copy next plugin path to path[] */
     switch (c) {
     case '%':
@@ -165,11 +165,11 @@ tryLoadModule(char *in, char *name)
   snprintf(out, sizeof(path) - (out - path),
     "/" MODULE_PREFIX "%s" MODULE_SUFFIX, name);
   handle= dlopen(path, RTLD_NOW | RTLD_GLOBAL);
-  DPRINTF((stderr, __FILE__ " %d tryLoading dlopen(%s) = %p\n", __LINE__, path, handle));
+  DPRINTF((VM_ERR(), __FILE__ " %d tryLoading dlopen(%s) = %p\n", __LINE__, path, handle));
   if (!handle) {
     struct stat buf;
     if ((0 == stat(path, &buf)) && ! S_ISDIR(buf.st_mode))
-      fprintf(stderr, "%s\n", dlerror());
+      fprintf(VM_ERR(), "%s\n", dlerror());
   }
   return handle;
 }
@@ -181,14 +181,14 @@ void *ioLoadModule(char *pluginName)
   char *dir= squeakPlugins;
   void *handle= 0;
 
-  DPRINTF((stderr, __FILE__ " %d ioLoadModule(%s)\n", __LINE__, pluginName));
+  DPRINTF((VM_ERR(), __FILE__ " %d ioLoadModule(%s)\n", __LINE__, pluginName));
   if ((0 == pluginName) || ('\0' == pluginName[0])) {	/* find module in main program */
     handle= dlopen(0, RTLD_NOW | RTLD_GLOBAL);
     if (handle == 0) {
-      fprintf(stderr, __FILE__ " %d ioLoadModule dlopen(<intrinsic>): %s\n", __LINE__, dlerror());
+      fprintf(VM_ERR(), __FILE__ " %d ioLoadModule dlopen(<intrinsic>): %s\n", __LINE__, dlerror());
     }
     else {
-      DPRINTF((stderr, __FILE__ " %d ioLoadModule loaded: <intrinsic>\n", __LINE__));
+      DPRINTF((VM_ERR(), __FILE__ " %d ioLoadModule loaded: <intrinsic>\n", __LINE__));
     }
     return handle;
   }
@@ -207,7 +207,7 @@ void *ioLoadModule(char *pluginName)
   snprintf(path, sizeof(path), "%s%s%s", LIBRARY_PREFIX, pluginName, LIBRARY_SUFFIX);
 
   handle= dlopen(path, RTLD_NOW | RTLD_GLOBAL);
-  DPRINTF((stderr, __FILE__ " %d ioLoadModule dlopen(%s) = %p%s\n", __LINE__, path, handle, handle ? "" : dlerror()));
+  DPRINTF((VM_ERR(), __FILE__ " %d ioLoadModule dlopen(%s) = %p%s\n", __LINE__, path, handle, handle ? "" : dlerror()));
 
   return handle;
 }
@@ -229,11 +229,11 @@ tryLoading(char *dirName, char *moduleName)
   char	     **prefix= 0, **suffix= 0;
   struct stat  buf;
 
-  DPRINTF((stderr, __FILE__ " %d tryLoadModule(%s,%s)\n", __LINE__, dirName, moduleName));
+  DPRINTF((VM_ERR(), __FILE__ " %d tryLoadModule(%s,%s)\n", __LINE__, dirName, moduleName));
   /* If dirName does not exist it is pointless searching for libraries in it. */
   if (stat(dirName,&buf)) {
 	if (errno != ENOENT)
-		fprintf(stderr,
+		fprintf(VM_ERR(),
 				"tryLoading(%s,%s): stat(%s) %s\n",
 				dirName, moduleName, dirName, strerror(errno));
 	return 0;
@@ -246,23 +246,23 @@ tryLoading(char *dirName, char *moduleName)
 		assert(n >= 0 && n < NAME_MAX + 32);
 		if (!stat(libName, &buf)) {
 			if (S_ISDIR(buf.st_mode))
-				DPRINTF((stderr, __FILE__ " %d ignoring directory: %s\n", __LINE__, libName));
+				DPRINTF((VM_ERR(), __FILE__ " %d ignoring directory: %s\n", __LINE__, libName));
 			else {
 				char *why;
 				handle = dlopen(libName, RTLD_NOW | RTLD_GLOBAL);
 				if (!handle) {
 					why = dlerror();
 					if (strstr(why,"undefined symbol")) {
-						fprintf(stderr,
+						fprintf(VM_ERR(),
 								"tryLoading(%s,%s): dlopen: %s\n",
 								dirName, moduleName, why);
 						continue;
 					}
 				}
-				DPRINTF((stderr, __FILE__ " %d tryLoading dlopen(%s) = %p\n", __LINE__, libName, handle));
+				DPRINTF((VM_ERR(), __FILE__ " %d tryLoading dlopen(%s) = %p\n", __LINE__, libName, handle));
 				if (handle == 0) {
 					if (!sqIgnorePluginErrors)
-						fprintf(stderr, "ioLoadModule(%s):\n  %s\n", libName, why);
+						fprintf(VM_ERR(), "ioLoadModule(%s):\n  %s\n", libName, why);
 				}
 				else {
 # if DEBUG
@@ -285,7 +285,7 @@ static void *tryLoadingPath(char *varName, char *pluginName)
   if (path)
     {
       char pbuf[MAXPATHLEN];
-      DPRINTF((stderr, "try %s=%s\n", varName, path));
+      DPRINTF((VM_ERR(), "try %s=%s\n", varName, path));
       strncpy(pbuf, path, sizeof(pbuf));
       pbuf[sizeof(pbuf) - 1]= '\0';
       for (path= strtok(pbuf, ":");
@@ -294,7 +294,7 @@ static void *tryLoadingPath(char *varName, char *pluginName)
 	{
 	  char buf[MAXPATHLEN];
 	  snprintf(buf, sizeof(buf), "%s/", path);
-	  DPRINTF((stderr, "  path dir = %s\n", buf));
+	  DPRINTF((VM_ERR(), "  path dir = %s\n", buf));
 	  if ((handle= tryLoading(buf, pluginName)) != 0)
 	    break;
 	}
@@ -306,7 +306,7 @@ static void *tryLoadingPath(char *varName, char *pluginName)
 static void *tryLoadingLinked(char *libName)
 {
   void *handle= dlopen(libName, RTLD_NOW | RTLD_GLOBAL);
-  DPRINTF((stderr, __FILE__ " %d tryLoadingLinked dlopen(%s) = %p\n", __LINE__, libName, handle));
+  DPRINTF((VM_ERR(), __FILE__ " %d tryLoadingLinked dlopen(%s) = %p\n", __LINE__, libName, handle));
 # if DEBUG
   if(handle != 0) 
 	printf("%s: loaded plugin `%s'\n", exeName, libName);
@@ -328,10 +328,10 @@ ioLoadModule(char *pluginName)
 
 	if (!pluginName || !*pluginName) {
 		if (!(handle= dlopen(0, RTLD_NOW | RTLD_GLOBAL))) {
-			fprintf(stderr, __FILE__ " %d ioLoadModule(<intrinsic>): %s\n", __LINE__, dlerror());
+			fprintf(VM_ERR(), __FILE__ " %d ioLoadModule(<intrinsic>): %s\n", __LINE__, dlerror());
 			return 0;
 		}
-		DPRINTF((stderr, __FILE__ " %d ioLoadModule loaded: <intrinsic>\n", __LINE__));
+		DPRINTF((VM_ERR(), __FILE__ " %d ioLoadModule loaded: <intrinsic>\n", __LINE__));
 		return handle;
 	}
 
@@ -348,7 +348,7 @@ ioLoadModule(char *pluginName)
 				*out++= c;
 		}
 		*out= '\0';
-		DPRINTF((stderr, "%s %d ioLoadModule plugins = %s path = %s\n",
+		DPRINTF((VM_ERR(), "%s %d ioLoadModule plugins = %s path = %s\n",
 				__FILE__, __LINE__, squeakPlugins, path));
 		if ((handle= tryLoading("", path)))
 			return handle;
@@ -416,7 +416,7 @@ ioLoadModule(char *pluginName)
   }
 
 #if DEBUG
-  fprintf(stderr, "%s: could not load plugin `%s'\n", exeName, pluginName);
+  fprintf(VM_ERR(), "%s: could not load plugin `%s'\n", exeName, pluginName);
 #endif
   return 0;
 }
@@ -444,7 +444,7 @@ ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
 
   fn= dlsym(moduleHandle, buf);
 
-  DPRINTF((stderr, "ioFindExternalFunctionIn(%s, %d)\n",
+  DPRINTF((VM_ERR(), "ioFindExternalFunctionIn(%s, %d)\n",
 	   lookupName, moduleHandle));
 
   if ((fn == 0) && (!sqIgnorePluginErrors)
@@ -453,7 +453,7 @@ ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
       && strcmp(lookupName, "moduleUnloaded")
       && strcmp(lookupName, "setInterpreter")
       && strcmp(lookupName, "getModuleName"))
-    fprintf(stderr, "ioFindExternalFunctionIn(%s, %p):\n  %s\n",
+    fprintf(VM_ERR(), "ioFindExternalFunctionIn(%s, %p):\n  %s\n",
 	    lookupName, moduleHandle, dlerror());
 
 #if SPURVM
@@ -483,7 +483,7 @@ sqInt ioFreeModule(void *moduleHandle)
 {
   if (dlclose(moduleHandle))
     {
-      DPRINTF((stderr, "ioFreeModule(%d): %s\n", moduleHandle, dlerror()));
+      DPRINTF((VM_ERR(), "ioFreeModule(%d): %s\n", moduleHandle, dlerror()));
       return 0;
     }
   return 1;

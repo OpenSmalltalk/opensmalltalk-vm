@@ -298,6 +298,10 @@ static char *getVersionInfo(int verbose);
 		return 1;
 	}
 #endif
+	if ([argData isEqualToString: VMOPTIONOBJ("quiet")]) {
+		sqSetVmErrFile(fopen("/dev/null", "w"));
+		return 1;
+	}
 
 	/* Options with arguments */
 	if (!peek)
@@ -495,6 +499,7 @@ static char *getVersionInfo(int verbose);
 
 - (void) printUsage {
 	printf("\nCommon <option>s:\n");
+	printf("  "VMOPTION("quiet")"                don't print debugging messages from the VM\n");
 	printf("  "VMOPTION("help")"                 print this help message, then exit\n");
 	printf("  "VMOPTION("memory")" <size>[mk]    use fixed heap size (added to image size)\n");
     printf("  "VMOPTION("nohandlers")"           disable sigsegv & sigusr1 handlers\n");

@@ -113,7 +113,7 @@ extern unsigned volatile long long ioUTCMicrosecondsNow(void);
 	extern const char *__shortFileName(const char *);
 #   define FPRINTF(X) do { \
 	aioThisTick = ioMSecs(); \
-	fprintf(stderr, "%8ld %4ld %s:%d ", aioThisTick, aioThisTick - aioLastTick,\
+	fprintf(VM_ERR(), "%8ld %4ld %s:%d ", aioThisTick, aioThisTick - aioLastTick,\
 			__shortFileName(__FILE__),__LINE__); \
 	aioLastTick = aioThisTick; \
 	fprintf X; } while (0)

@@ -79,7 +79,7 @@ printAndQuit()
 void
 lockedup(int arg)
 {
-	fprintf(stderr,"system locked %s, time not advancing (yield method %s)\n",
+	fprintf(VM_ERR(),"system locked %s, time not advancing (yield method %s)\n",
 			arg == SIGINT ? "" : (char *)arg, method);
 	printf("vm %10lld hp %9lld hp+vm %10lld yields %d (%d,%d,%d) clk hz %ld\n",
 			vmcount, hpcount, vmcount + hpcount,
@@ -143,23 +143,23 @@ maybeYield()
 		case yield_via_wait_signal: { int err;
 			if ((err = pthread_mutex_lock(&yield_mutex))) {
 				if (err != EDEADLK)
-					fprintf(stderr,"pthread_mutex_lock yield_mutex %s\n", strerror(err));
+					fprintf(VM_ERR(),"pthread_mutex_lock yield_mutex %s\n", strerror(err));
 			}
 			else if ((err = pthread_mutex_lock(&yield_sync))) {
 				if (err != EDEADLK)
-					fprintf(stderr,"pthread_mutex_lock yield_sync %s\n", strerror(err));
+					fprintf(VM_ERR(),"pthread_mutex_lock yield_sync %s\n", strerror(err));
 			}
 			else {
 				sqLowLevelMFence();
 				if (yield
 				 && (err = pthread_cond_wait(&yield_cond, &yield_mutex)))
-					fprintf(stderr,"pthread_cond_wait %s\n", strerror(err));
+					fprintf(VM_ERR(),"pthread_cond_wait %s\n", strerror(err));
 			}
 			break;
 		}
 
 		default:
-			fprintf(stderr,"unrecognized yield method\n");
+			fprintf(VM_ERR(),"unrecognized yield method\n");
 			exit(5);
 	}
 }
@@ -236,7 +236,7 @@ main(int argc, char *argv[])
 		else if (!strcmp(argv[1],"wait_signal"))
 			yieldMethod = yield_via_wait_signal;
 		else {
-			fprintf(stderr,
+			fprintf(VM_ERR(),
 					"usage: %s [none] [sched_yield] [nanosleep] [cond_timedwait] [wait_signal] [yield usecs]\n",
 					argv[0]);
 			return 3;
@@ -281,4 +281,4 @@ ioNumProcessors(void)
 }
 
 void
-warning(char *msg) { fprintf(stderr,"%s\n", msg); }
+warning(char *msg) { fprintf(VM_ERR(),"%s\n", msg); }

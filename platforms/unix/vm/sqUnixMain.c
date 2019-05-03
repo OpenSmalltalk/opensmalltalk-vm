@@ -643,13 +643,13 @@ static void emergencyDump(int quit)
   printf("\nMost recent primitives\n");
   dumpPrimTraceLog();
 #endif
-  fprintf(stderr, "\n");
+  fprintf(VM_ERR(), "\n");
   printCallStack();
-  fprintf(stderr, "\nTo recover valuable content from this image:\n");
-  fprintf(stderr, "    %s %s\n", exeName, imageName);
-  fprintf(stderr, "and then evaluate\n");
-  fprintf(stderr, "    Smalltalk processStartUpList: true\n");
-  fprintf(stderr, "in a workspace.  DESTROY the dumped image after recovering content!");
+  fprintf(VM_ERR(), "\nTo recover valuable content from this image:\n");
+  fprintf(VM_ERR(), "    %s %s\n", exeName, imageName);
+  fprintf(VM_ERR(), "and then evaluate\n");
+  fprintf(VM_ERR(), "    Smalltalk processStartUpList: true\n");
+  fprintf(VM_ERR(), "in a workspace.  DESTROY the dumped image after recovering content!");
 
   if (quit) abort();
   strncpy(imageName, savedName, sizeof(imageName));
@@ -863,13 +863,13 @@ sqInt  primitivePluginRequestState(void)	{ return dpy->primitivePluginRequestSta
 
 static void outOfMemory(void)
 {
-  /* pushing stderr outputs the error report on stderr instead of stdout */
+  /* pushing VM_ERR() outputs the error report on VM_ERR() instead of stdout */
   pushOutputFile((char *)STDERR_FILENO);
   error("out of memory\n");
 }
 
 /* Print an error message, possibly a stack trace, do /not/ exit.
- * Allows e.g. writing to a log file and stderr.
+ * Allows e.g. writing to a log file and VM_ERR().
  */
 static void *printRegisterState(ucontext_t *uap);
 
@@ -1202,7 +1202,7 @@ struct SqModule *queryLoadModule(char *type, char *name, int query)
       else
 	if (!query)
 	  {
-	    fprintf(stderr, "could not find module %s\n", modName);
+	    fprintf(VM_ERR(), "could not find module %s\n", modName);
 	    return 0;
 	  }
     }
@@ -1211,7 +1211,7 @@ struct SqModule *queryLoadModule(char *type, char *name, int query)
       module= (struct SqModule *)itf;
       if (SqModuleVersion != module->version)
 	{
-	  fprintf(stderr, "module %s version %x does not have required version %x\n",
+	  fprintf(VM_ERR(), "module %s version %x does not have required version %x\n",
 		  modName, module->version, SqModuleVersion);
 	  abort();
 	}
@@ -1222,7 +1222,7 @@ struct SqModule *queryLoadModule(char *type, char *name, int query)
       return module;
     }
   if (!query)
-    fprintf(stderr, "could not find interface %s in module %s\n", itfName, modName);
+    fprintf(VM_ERR(), "could not find interface %s in module %s\n", itfName, modName);
   return 0;
 }
 
@@ -1283,7 +1283,7 @@ static void requireModuleNamed(char *type)	/*** NOTE: MODIFIES THE ARGUMENT! ***
       module= requireModule(type, name);
       if (!addr)
 	{
-	  fprintf(stderr, "this cannot happen\n");
+	  fprintf(VM_ERR(), "this cannot happen\n");
 	  abort();
 	}
       *addr= module;
@@ -1313,7 +1313,7 @@ static void checkModuleVersion(struct SqModule *module, int required, int actual
 {
   if (required != actual)
     {
-      fprintf(stderr, "module %s interface version %x does not have required version %x\n",
+      fprintf(VM_ERR(), "module %s interface version %x does not have required version %x\n",
 	      module->name, actual, required);
       abort();
     }
@@ -1324,10 +1324,10 @@ static void loadImplicit(struct SqModule **addr, char *evar, char *type, char *n
 {
   if ((!*addr) && getenv(evar) && !(*addr= queryModule(type, name)))
     {
-      fprintf(stderr, "could not find %s driver vm-%s-%s; either:\n", type, type, name);
-      fprintf(stderr, "  - check that %s/vm-%s-%s.so exists, or\n", vmPath, type, name);
-      fprintf(stderr, "  - use the '-plugins <path>' option to tell me where it is, or\n");
-      fprintf(stderr, "  - remove %s from your environment.\n", evar);
+      fprintf(VM_ERR(), "could not find %s driver vm-%s-%s; either:\n", type, type, name);
+      fprintf(VM_ERR(), "  - check that %s/vm-%s-%s.so exists, or\n", vmPath, type, name);
+      fprintf(VM_ERR(), "  - use the '-plugins <path>' option to tell me where it is, or\n");
+      fprintf(VM_ERR(), "  - remove %s from your environment.\n", evar);
       abort();
     }
 }
@@ -1343,19 +1343,19 @@ static void loadModules(void)
       if (!*md->addr)
 	if ((*md->addr= queryModule(md->type, md->name)))
 #	 if defined(DEBUG_MODULES)
-	  fprintf(stderr, "%s: %s driver defaulting to vm-%s-%s\n", exeName, md->type, md->type, md->name)
+	  fprintf(VM_ERR(), "%s: %s driver defaulting to vm-%s-%s\n", exeName, md->type, md->type, md->name)
 #	 endif
 	    ;
   }
 
   if (!displayModule)
     {
-      fprintf(stderr, "%s: could not find any display driver\n", exeName);
+      fprintf(VM_ERR(), "%s: could not find any display driver\n", exeName);
       abort();
     }
   if (!soundModule)
     {
-      fprintf(stderr, "%s: could not find any sound driver\n", exeName);
+      fprintf(VM_ERR(), "%s: could not find any sound driver\n", exeName);
       abort();
     }
 
@@ -1407,7 +1407,7 @@ static void vm_parseEnvironment(void)
   if (ev)
     setLocaleEncoding(ev);
   else
-    fprintf(stderr, "setlocale() failed (check values of LC_CTYPE, LANG and LC_ALL)\n");
+    fprintf(VM_ERR(), "setlocale() failed (check values of LC_CTYPE, LANG and LC_ALL)\n");
 
   if (documentName)
     strcpy(shortImageName, documentName);
@@ -1442,7 +1442,7 @@ static int parseModuleArgument(int argc, char **argv, struct SqModule **addr, ch
 {
   if (*addr)
     {
-      fprintf(stderr, "option '%s' conflicts with previously-loaded module '%s'\n", *argv, (*addr)->name);
+      fprintf(VM_ERR(), "option '%s' conflicts with previously-loaded module '%s'\n", *argv, (*addr)->name);
       exit(1);
     }
   *addr= requireModule(type, name);
@@ -1742,7 +1742,7 @@ static void vm_printUsageNotes(void)
 
 static void *vm_makeInterface(void)
 {
-  fprintf(stderr, "this cannot happen\n");
+  fprintf(VM_ERR(), "this cannot happen\n");
   abort();
 }
 
@@ -1885,7 +1885,7 @@ static void parseArguments(int argc, char **argv)
 #    endif
       if (n == 0)			/* option not recognised */
 	{
-	  fprintf(stderr, "unknown option: %s\n", argv[0]);
+	  fprintf(VM_ERR(), "unknown option: %s\n", argv[0]);
 	  usage();
 	  exit(1);
 	}
@@ -1919,7 +1919,7 @@ static void
 imageNotFound(char *imageName)
 {
   /* image file is not found */
-  fprintf(stderr,
+  fprintf(VM_ERR(),
 	  "Could not open the " IMAGE_DIALECT_NAME " image file `%s'.\n"
 	  "\n"
 	  "There are three ways to open a " IMAGE_DIALECT_NAME " image file.  You can:\n"
@@ -2115,7 +2115,7 @@ main(int argc, char **argv, char **envp)
       if (comp)
 	{
 	  ((void (*)(void))comp)();
-	  fprintf(stderr, "handing control back to interpret() -- have a nice day\n");
+	  fprintf(VM_ERR(), "handing control back to interpret() -- have a nice day\n");
 	}
       else
 	printf("could not find j_interpret\n");

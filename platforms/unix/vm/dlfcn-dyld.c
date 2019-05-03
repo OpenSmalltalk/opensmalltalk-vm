@@ -63,12 +63,12 @@ static const char *dlerror(void)
 
 static void dlUndefined(const char *symbol)
 {
-  fprintf(stderr, "dyld: undefined symbol: %s\n", symbol);
+  fprintf(VM_ERR(), "dyld: undefined symbol: %s\n", symbol);
 }
 
 static NSModule dlMultiple(NSSymbol s, NSModule oldModule, NSModule newModule)
 {
-  DPRINTF((stderr, "dyld: %s: %s previously defined in %s, new definition in %s\n",
+  DPRINTF((VM_ERR(), "dyld: %s: %s previously defined in %s, new definition in %s\n",
 	   NSNameOfSymbol(s), NSNameOfModule(oldModule), NSNameOfModule(newModule)));
   return newModule;
 }
@@ -77,7 +77,7 @@ static void dlLinkEdit(NSLinkEditErrors errorClass, int errorNumber,
 		       const char *fileName, const char *errorString)
 
 {
-  fprintf(stderr, "dyld: %s: %s\n", fileName, errorString);
+  fprintf(VM_ERR(), "dyld: %s: %s\n", fileName, errorString);
 }
 
 static NSLinkEditErrorHandlers errorHandlers=
@@ -126,7 +126,7 @@ static void *dlopen(const char *path, int mode)
   if (!handle)
     dlSetError("could not load shared object: %s", path);
 
-  DPRINTF((stderr, "dlopen: %s => %d\n", path, (int)handle));
+  DPRINTF((VM_ERR(), "dlopen: %s => %d\n", path, (int)handle));
 
   return handle;
 }
@@ -139,17 +139,17 @@ static void *dlsym(void *handle, const char *symbol)
 
   snprintf(_symbol, sizeof(_symbol), "_%s", symbol);
 
-  DPRINTF((stderr, "dlsym: looking for %s (%s) in %d\n", symbol, _symbol, (int)handle));
+  DPRINTF((VM_ERR(), "dlsym: looking for %s (%s) in %d\n", symbol, _symbol, (int)handle));
 
   if (!handle)
     {
-      DPRINTF((stderr, "dlsym: setting app context for this handle\n"));
+      DPRINTF((VM_ERR(), "dlsym: setting app context for this handle\n"));
       handle= DL_APP_CONTEXT;
     }
 
   if (DL_APP_CONTEXT == handle)
     {
-      DPRINTF((stderr, "dlsym: looking in app context\n"));
+      DPRINTF((VM_ERR(), "dlsym: looking in app context\n"));
       if (NSIsSymbolNameDefined(_symbol))
 	nsSymbol= NSLookupAndBindSymbol(_symbol);
     }
@@ -165,15 +165,15 @@ static void *dlsym(void *handle, const char *symbol)
 		 _symbol,
 		 NSLOOKUPSYMBOLINIMAGE_OPTION_BIND
 		 /*| NSLOOKUPSYMBOLINIMAGE_OPTION_RETURN_ON_ERROR*/);
-	      DPRINTF((stderr, "dlsym: bundle (image) lookup returned %p\n", nsSymbol));
+	      DPRINTF((VM_ERR(), "dlsym: bundle (image) lookup returned %p\n", nsSymbol));
 	    }
 	  else
-	    DPRINTF((stderr, "dlsym: bundle (image) symbol not defined\n"));
+	    DPRINTF((VM_ERR(), "dlsym: bundle (image) symbol not defined\n"));
 	}
       else
 	{
 	  nsSymbol= NSLookupSymbolInModule(handle, _symbol);
-	  DPRINTF((stderr, "dlsym: dylib (module) lookup returned %p\n", nsSymbol));
+	  DPRINTF((VM_ERR(), "dlsym: dylib (module) lookup returned %p\n", nsSymbol));
 	}
     }
 

@@ -31,6 +31,7 @@
  */
 
 #include "sqaio.h"
+#include "sq.h"
 
 #ifdef HAVE_CONFIG_H
 
@@ -99,7 +100,7 @@
 #endif /* !HAVE_CONFIG_H */
 
 /* function to inform the VM about idle time */
-extern void addIdleUsecs(long idleUsecs);
+extern void addIdleUsecs(sqInt idleUsecs);
 
 #if defined(AIO_DEBUG)
 long	aioLastTick = 0;
@@ -126,7 +127,7 @@ static fd_set xdMask;		/* external descriptor	 */
 static void 
 undefinedHandler(int fd, void *clientData, int flags)
 {
-	fprintf(stderr, "undefined handler called (fd %d, flags %x)\n", fd, flags);
+	fprintf(VM_ERR(), "undefined handler called (fd %d, flags %x)\n", fd, flags);
 }
 
 #ifdef AIO_DEBUG
@@ -221,7 +222,7 @@ static int tickCount = 0;
 #define TICKS_PER_CHAR 10
 #define DO_TICK(bool)				\
 do if ((bool) && !(++tickCount % TICKS_PER_CHAR)) {		\
-	fprintf(stderr, "\r%c\r", *ticker);		\
+	fprintf(VM_ERR(), "\r%c\r", *ticker);		\
 	if (!*ticker++) ticker= ticks;			\
 } while (0)
 
@@ -232,7 +233,7 @@ aioPoll(long microSeconds)
 	fd_set	rd, wr, ex;
 	unsigned long long us;
 
-	FPRINTF((stderr, "aioPoll(%ld)\n", microSeconds));
+	FPRINTF((VM_ERR(), "aioPoll(%ld)\n", microSeconds));
 	DO_TICK(SHOULD_TICK());
 
 	/*
@@ -269,7 +270,7 @@ aioPoll(long microSeconds)
 			return 0;
 		}
 		if (errno && (EINTR != errno)) {
-			fprintf(stderr, "errno %d\n", errno);
+			fprintf(VM_ERR(), "errno %d\n", errno);
 			perror("select");
 			return 0;
 		}
@@ -332,13 +333,13 @@ aioSleepForUsecs(long microSeconds)
 void 
 aioEnable(int fd, void *data, int flags)
 {
-	FPRINTF((stderr, "aioEnable(%d)\n", fd));
+	FPRINTF((VM_ERR(), "aioEnable(%d)\n", fd));
 	if (fd < 0) {
-		FPRINTF((stderr, "aioEnable(%d): IGNORED\n", fd));
+		FPRINTF((VM_ERR(), "aioEnable(%d): IGNORED\n", fd));
 		return;
 	}
 	if (FD_ISSET(fd, &fdMask)) {
-		fprintf(stderr, "aioEnable: descriptor %d already enabled\n", fd);
+		fprintf(VM_ERR(), "aioEnable: descriptor %d already enabled\n", fd);
 		return;
 	}
 	clientData[fd] = data;
@@ -395,9 +396,9 @@ aioEnable(int fd, void *data, int flags)
 void 
 aioHandle(int fd, aioHandler handlerFn, int mask)
 {
-	FPRINTF((stderr, "aioHandle(%d, %s, %d)\n", fd, handlerName(handlerFn), mask));
+	FPRINTF((VM_ERR(), "aioHandle(%d, %s, %d)\n", fd, handlerName(handlerFn), mask));
 	if (fd < 0) {
-		FPRINTF((stderr, "aioHandle(%d): IGNORED\n", fd));
+		FPRINTF((VM_ERR(), "aioHandle(%d): IGNORED\n", fd));
 		return;
 	}
 #undef _DO
@@ -416,10 +417,10 @@ void
 aioSuspend(int fd, int mask)
 {
 	if (fd < 0) {
-		FPRINTF((stderr, "aioSuspend(%d): IGNORED\n", fd));
+		FPRINTF((VM_ERR(), "aioSuspend(%d): IGNORED\n", fd));
 		return;
 	}
-	FPRINTF((stderr, "aioSuspend(%d)\n", fd));
+	FPRINTF((VM_ERR(), "aioSuspend(%d)\n", fd));
 #undef _DO
 #define _DO(FLAG, TYPE)							\
 	if (mask & FLAG) {							\
@@ -436,10 +437,10 @@ void
 aioDisable(int fd)
 {
 	if (fd < 0) {
-		FPRINTF((stderr, "aioDisable(%d): IGNORED\n", fd));
+		FPRINTF((VM_ERR(), "aioDisable(%d): IGNORED\n", fd));
 		return;
 	}
-	FPRINTF((stderr, "aioDisable(%d)\n", fd));
+	FPRINTF((VM_ERR(), "aioDisable(%d)\n", fd));
 	aioSuspend(fd, AIO_RWX);
 	FD_CLR(fd, &xdMask);
 	FD_CLR(fd, &fdMask);
