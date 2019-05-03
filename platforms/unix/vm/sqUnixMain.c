@@ -1659,6 +1659,10 @@ static int vm_parseArgument(int argc, char **argv)
     }
     return 2;
   }
+  else if (!strcmp(argv[0], VMOPTION("quiet"))) {
+    sqSetVmErrFile(fopen("/dev/null", "w"));
+    return 1;
+  }
   return 0; /* option not recognised */
 }
 
@@ -1666,6 +1670,7 @@ static int vm_parseArgument(int argc, char **argv)
 static void vm_printUsage(void)
 {
   printf("\nCommon <option>s:\n");
+  printf("  "VMOPTION("quiet")"                don't print debugging messages from the VM\n");
   printf("  "VMOPTION("encoding")" <enc>       set the internal character encoding (default: MacRoman)\n");
   printf("  "VMOPTION("help")"                 print this help message, then exit\n");
   printf("  "VMOPTION("memory")" <size>[mk]    use fixed heap size (added to image size)\n");

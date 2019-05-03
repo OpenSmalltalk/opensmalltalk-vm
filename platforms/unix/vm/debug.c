@@ -53,3 +53,8 @@ FILE *VM_ERR(void)
 	}
 	return VM_ERR_FILE;
 }
+
+void sqSetVmErrFile(FILE *file)
+{
+	VM_ERR_FILE = file;
+}

@@ -1,6 +1,7 @@
 #ifndef __sq_debug_h
 #define __sq_debug_h
 
+#include <stdio.h>
 
 #ifndef  DEBUG
 # define DEBUG	0
@@ -43,5 +44,7 @@ extern void __sq_eprintf(const char *fmt, ...);
     __sq_eprintf )
 
 extern void sqDebugAnchor(void);
+
+extern void sqSetVmErrFile(FILE* file);
 
 #endif /* __sq_debug_h */
