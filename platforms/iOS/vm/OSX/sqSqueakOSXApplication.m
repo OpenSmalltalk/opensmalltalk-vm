@@ -509,7 +509,7 @@ static char *getVersionInfo(int verbose);
 	printf("  "VMOPTION("stackpages")" num       use n stack pages\n");
 	printf("  "VMOPTION("numextsems")" num       make the external semaphore table num in size\n");
 	printf("  "VMOPTION("noheartbeat")"          disable the heartbeat for VM debugging. disables input\n");
-	printf("  "VMOPTION("pollpip")"              output . on each poll for input\n");
+	printf("  "VMOPTION("pollpip")" (0|1)        output on each poll for input\n");
 	printf("  "VMOPTION("checkpluginwrites")"    check for writes past end of object in plugins\n");
 #endif
 #if STACKVM || NewspeakVM
