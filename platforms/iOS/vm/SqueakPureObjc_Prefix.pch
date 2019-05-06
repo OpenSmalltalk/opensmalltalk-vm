@@ -6,6 +6,9 @@
 //
 
 #ifdef __OBJC__
+# ifdef __cplusplus
+#   define __ASSERTMACROS__ 1 // AssertMacros.h defines check, breaks boost
+# endif
 # import <Cocoa/Cocoa.h>
 #endif
 
