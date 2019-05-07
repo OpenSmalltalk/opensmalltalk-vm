@@ -8,7 +8,10 @@ RBProgramNode >> asTranslatorNodeIn: aTMethod [
 
 { #category : #'*VMMakerCompatibilityForPharo6-C translation' }
 RBProgramNode >> commentOrNil [
-	^self propertyAt: #comments ifAbsent: []
+	
+	| comments |
+	comments := self propertyAt: #comments ifAbsent: [ ^ nil ].
+	^ comments collect: #contents
 ]
 
 { #category : #'*VMMakerCompatibilityForPharo6-testing' }

@@ -9,11 +9,12 @@ RBMethodNode >> asTranslationMethodOfClass: aTMethodClass [
 		[pragmas do:
 			[:pragmaNode|
 			additionalMethodState := additionalMethodState copyWith: pragmaNode asPragma]].
+
 	^aTMethodClass new
 		setSelector: selector
 		definingClass: compilationContext getClass
 		args: arguments
-		locals: ((self allDefinedVariables copyWithoutAll: arguments) collect: [:string| string -> string])
+		locals: ((self allDefinedVariables copyWithoutAll: (arguments collect: #name)) collect: [:string| string -> string])
 		block: (body lastIsReturn
 					ifTrue: [body]
 					ifFalse: [body shallowCopy
