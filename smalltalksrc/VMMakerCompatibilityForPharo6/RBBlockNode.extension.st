@@ -12,6 +12,9 @@ RBBlockNode >> asTranslatorNodeIn: aTMethod [
 		 newS isStmtList
 			ifTrue:  [statementList addAll: newS statements]
 			ifFalse: [statementList add: newS]].
+	statementList ifEmpty: [ 
+		statementList add: (TVariableNode new setName: 'nil').
+	].
 	^TStmtListNode new
 		setArguments: (arguments asArray collect: [:arg | arg name])
 		statements: statementList;

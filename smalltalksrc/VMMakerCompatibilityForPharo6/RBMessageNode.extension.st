@@ -55,6 +55,59 @@ RBMessageNode >> asTranslatorNodeIn: aTMethod [
 							yourself)
 	].
 	
+	"If in the form of ifNil: [ :obj | ], replace that by an assignment and an ifFalse"
+	((usedSelector == #ifNotNil:) and: [ args first args notEmpty ]) ifTrue: [
+		^ TStmtListNode new
+			setArguments: #();
+			setStatements: {
+				TAssignmentNode new
+					setVariable: (TVariableNode new setName: args first args first)
+					expression: rcvrOrNil.
+	
+				TSendNode new
+					setSelector: #ifFalse:
+					receiver: (TSendNode new
+						setSelector: #==
+						receiver: (TVariableNode new setName: args first args first)
+						arguments: {(TVariableNode new setName: 'nil')};
+						yourself)
+					arguments: {args first}
+			};
+			yourself ].
+	
+	(#(#ifNotNil:ifNil: #ifNil:ifNotNil:) includes: usedSelector) ifTrue: [ | comparand expression blockWithPossibleArgument |
+		"We turn it always to an ifTrueIfFalse"
+		usedSelector = #ifNotNil:ifNil:
+			ifTrue: [ args := args reversed ].
+		blockWithPossibleArgument := args second.
+		expression := rcvrOrNil.
+		comparand := blockWithPossibleArgument args
+			ifEmpty: [ expression ]
+			ifNotEmpty: [ (TVariableNode new setName: blockWithPossibleArgument args first) ].
+		
+		usedSelector := #ifTrue:ifFalse:.
+		rcvrOrNil := TSendNode new
+			setSelector: #==
+			receiver: comparand
+			arguments: { TVariableNode new setName: 'nil' }.
+
+		"If there is a variable we should epand the message as a statement"
+		blockWithPossibleArgument args notEmpty ifTrue: [ 
+			^ TStmtListNode new
+				setArguments: #();
+				setStatements: {
+					TAssignmentNode new
+						setVariable: (TVariableNode new setName: blockWithPossibleArgument args first)
+						expression: expression.
+		
+					TSendNode new
+						setSelector: usedSelector
+						receiver: rcvrOrNil
+						arguments: args
+				};
+				yourself
+		 ] ].
+	
 	(usedSelector == #ifNil:ifNotNil:) ifTrue: [
 		usedSelector := #ifTrue:ifFalse:.
 		rcvrOrNil := TSendNode new

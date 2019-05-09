@@ -7,6 +7,12 @@ Class {
 	#category : #'VMMakerCompatibilityForPharo6-FileDirectoryToFileSystem'
 }
 
+{ #category : #accessing }
+FileDirectory class >> baseNameFor: aString [ 
+
+	^ aString asFileReference basename
+]
+
 { #category : #'instance creation' }
 FileDirectory class >> default [
 	
