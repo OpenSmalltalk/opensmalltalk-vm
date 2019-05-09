@@ -174,7 +174,7 @@ CogAbstractInstruction class >> instVarNamesAndTypesForTranslationDo: aBinaryBlo
 			value: (ivn caseOf: {
 						['address']			-> [#usqInt]. "usqInt is always large enough to contain a pointer; we do not need to use usqIntptr_t"
 						['machineCode']	-> [self machineCodeDeclaration].
-						['operands']		-> [{#usqInt. '[', NumOperands, ']'}].
+						['operands']		-> [{#usqInt. '[', NumOperands printString, ']'}].
 						['dependent']		-> ['struct _AbstractInstruction *']}
 					otherwise:
 						[#'unsigned char'])]
