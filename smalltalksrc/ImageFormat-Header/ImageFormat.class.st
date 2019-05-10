@@ -47,7 +47,7 @@ ImageFormat class >> allVersionNumberByteArrays [
 	^byteArrays
 ]
 
-{ #category : #'initialize-release' }
+{ #category : #'bit assignments' }
 ImageFormat class >> availableBits [
 	"Bits available for use as capability bits. Reserve high order bit as the
 	extension bit, to be set true if additional bits are required in the future."
@@ -82,11 +82,11 @@ ImageFormat class >> baseVersionNumbers [
 	representing additional requirements that the image expects to be
 	supported by the virtual machine."
 
-	^#(6502 6504 68000 68002)
+	^#(6502 6504 68000 68002 68004)
 
 ]
 
-{ #category : #'initialize-release' }
+{ #category : #'bit assignments' }
 ImageFormat class >> bitAssignments [
 
 	"ImageFormat bitAssignments
@@ -135,7 +135,7 @@ ImageFormat class >> bitAssignments [
 
 ]
 
-{ #category : #'image formats' }
+{ #category : #'bit assignments' }
 ImageFormat class >> bitsInUse [
 	"Answer a mask of the bits used by all known version format numbers"
 
@@ -313,7 +313,7 @@ ImageFormat class >> initialize [
 
 ]
 
-{ #category : #'initialize-release' }
+{ #category : #'image formats' }
 ImageFormat class >> knownVersionNumbers [
 	"Version numbers currently in use or likely to be used (e.g. 64-bit Cog formats)"
 
