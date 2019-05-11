@@ -7,7 +7,8 @@ option(SPUR_OBJECT_MODEL "Spur Object Model" ON)
 option(SISTA_OPTIMIZER "Sista Optimizer" OFF)
 option(LOWCODE_EXTENSIONS "Lowcode Extensions" OFF)
 option(PHARO_BRANDING "Pharo Branding" ON)
-option(SUPPORT_TRADITIONAL_DISPLAY "Enables building a VM with support for a window." ON)
+option(SUPPORT_TRADITIONAL_DISPLAY "Enables building a VM with support for a window." OFF)
+option(ALLOW_SDL2 "Enables support for the SDL2 display plugin" OFF)
 option(COG_JIT "Cog JIT" ON)
 
 # Check the build type
@@ -67,7 +68,7 @@ set(IS_64_BITS_BUILD_MACHINE False)
 set(IS_X86_ARCH_MACHINE False)
 if("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "x86_64" OR "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "AMD64")
 	set(IS_64_BITS_BUILD_MACHINE True)
-	# Do not build a 64 bit when invoking cmake with a 32 bits visual studio generator.
+	# Do not build a 64 bit VM when invoking cmake with a 32 bits visual studio generator.
 	if("${CMAKE_GENERATOR}" MATCHES "Visual Studio")
 		if(NOT CMAKE_CL_64)
 			set(IS_64_BITS_BUILD_MACHINE False)
@@ -116,6 +117,8 @@ if(SQUEAK_PLATFORM_X86_32)
 endif()
 
 set(VM_TARGET "${CMAKE_SYSTEM}")
+set(SourceFolderName "")
+set(ProductFolderName "")
 
 if(WIN32)
     set(OS_TYPE "Win32")
@@ -128,42 +131,56 @@ elseif(UNIX)
         set(DARWIN True)
     elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
         set(VM_TARGET_OS "linux-gnu")
+		set(ProductFolderName "linux")
     else()
         set(VM_TARGET_OS "${CMAKE_SYSTEM_NAME}")
+		set(ProductFolderName "${CMAKE_SYSTEM_NAME}")
     endif()
 endif()
 
-set(SourceFolderName "")
 
 # Spur object model
 
 if(SPUR_OBJECT_MODEL)
 	#add_definitions(SpurVM=1)
 	set(SourceFolderName "spur")
+	set(ProductFolderName "spur${ProductFolderName}")
 endif()
 
 # Sista optimizer
 if(SISTA_OPTIMIZER)
 	#add_definitions(SistaVM=1)
 	set(SourceFolderName "${SourceFolderName}sista")
+	set(ProductFolderName "${ProductFolderName}spur")
 endif()
 
 # Lowcode extended instructions
 if(LOWCODE_EXTENSIONS)
 	add_definitions(-DLowcodeVM=1)
 	set(SourceFolderName "${SourceFolderName}lowcode")
+	set(ProductFolderName "${ProductFolderName}lowcode")
 endif()
 
 # Stack interpreter
-if(NOT COG_JIT)
-    message("COG_JIT ${COG_JIT}")
+if(COG_JIT)
+	set(ProductFolderName "cog${ProductFolderName}")
+else()
     set(SourceFolderName "${SourceFolderName}stack")
+	set(ProductFolderName "stack${ProductFolderName}")
+endif()
+
+# Add the minheadless suffix
+set(ProductFolderName "${ProductFolderName}mhdls")
+if(HAVE_SDL2 AND SUPPORT_TRADITIONAL_DISPLAY)
+	set(ProductFolderName "${ProductFolderName}sdl2")
 endif()
 
 # 64 bits VM
 if(VM_64BITS)
 	set(SourceFolderName "${SourceFolderName}64")
+	set(ProductFolderName "${ProductFolderName}64")
 endif()
+
 
 # VM branding
 set(VM_EXECUTABLE_NAME squeak)
@@ -177,9 +194,13 @@ if(PHARO_BRANDING)
 	set(VM_EXECUTABLE_NAME pharo)
 	set(VM_LIBRARY_NAME PharoVMCore)
     set(VM_NAME Pharo)
+	set(VM_PLUGINS_ENV_VAR_NAME "PHARO_PLUGINS")
     set(PHARO_VM TRUE)
+	set(ProductFolderName "ph${ProductFolderName}")
 else()
     set(SQUEAK_VM TRUE)
+	set(VM_PLUGINS_ENV_VAR_NAME "SQUEAK_PLUGINS")
+	set(ProductFolderName "sq${ProductFolderName}")
 endif()
 add_definitions(-DVM_NAME="${VM_NAME}")
 
@@ -188,8 +209,22 @@ add_definitions(-DVM_NAME="${VM_NAME}")
 # OpenSmalltalkVM_BUILD_AS_INTERNAL_PROJECT can be used before including this
 # project using add_subdirectory()
 if(NOT OpenSmalltalkVM_BUILD_AS_INTERNAL_PROJECT)
-	set(EXECUTABLE_OUTPUT_PATH "${OpenSmalltalkVM_BINARY_DIR}/dist")
-	set(LIBRARY_OUTPUT_PATH "${OpenSmalltalkVM_BINARY_DIR}/dist")
+	set(ProductBaseDistFolder "${OpenSmalltalkVM_BINARY_DIR}/dist/${ProductFolderName}")
+	set(ProductDistFolder "${ProductBaseDistFolder}/lib/${VM_EXECUTABLE_NAME}")
+	set(HeadersDistFolder "${ProductBaseDistFolder}/include")
+	set(StartupScriptDistFolder "${ProductBaseDistFolder}/bin")
+
+	if(DARWIN)
+		set(ProductBaseDistFolder "${OpenSmalltalkVM_BINARY_DIR}/dist/")
+		set(ProductDistFolder "${ProductBaseDistFolder}")
+		set(HeadersDistFolder "${ProductDistFolder}/include")
+	elseif(WIN32)
+		set(ProductBaseDistFolder "${OpenSmalltalkVM_BINARY_DIR}/dist/")
+		set(ProductDistFolder "${ProductBaseDistFolder}")
+		set(HeadersDistFolder "${ProductDistFolder}/include")
+	endif()
+	set(EXECUTABLE_OUTPUT_PATH "${ProductDistFolder}")
+	set(LIBRARY_OUTPUT_PATH "${ProductDistFolder}")
 endif()
 
 # Cog JIT
@@ -381,7 +416,7 @@ find_path(SDL2_LIBRARY_PATH
 find_library(SDL2_LIBRARY NAMES SDL2-2.0 SDL2 PATHS ${SDL2_LIBRARY_PATH})
 
 set(HAVE_SDL2 False)
-if(SDL2_INCLUDE_DIR AND SDL2_LIBRARY)
+if(SDL2_INCLUDE_DIR AND SDL2_LIBRARY AND ALLOW_SDL2)
 	set(HAVE_SDL2 True)
 	include_directories("${SDL2_INCLUDE_DIR}")
 endif()
@@ -389,7 +424,7 @@ endif()
 # Choose the window system
 
 set(VM_WINDOW_SYSTEM)
-if(SUPPORT_TRADITIONAL_DISPLAY)
+if(SUPPORT_TRADITIONAL_DISPLAY AND ALLOW_SDL2)
 	if(HAVE_SDL2)
 		set(VM_WINDOW_SYSTEM
 			platforms/minheadless/sdl2-window/sqWindow-SDL2.c
@@ -519,7 +554,6 @@ else()
 		platforms/minheadless/generic/sqPlatformSpecific-Generic.c
 		${VM_PLATFORM_SOURCES}
 	)
-
 endif()
 
 set(VM_SOURCES
@@ -559,12 +593,42 @@ if(NOT ONLY_CONFIG_H)
         -DBUILD_VM_CORE
     )
 
-    # Build the VM executable(s)
-    add_executable(${VM_EXECUTABLE_NAME} platforms/minheadless/common/sqMain.c)
-    target_link_libraries(${VM_EXECUTABLE_NAME} ${VM_LIBRARY_NAME} ${VM_DEPENDENCIES_LIBRARIES})
+	# Copy the headers
+	file(GLOB HeaderFiles RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/include"
+	    "include/*.h"
+	    "include/*.hpp"
+	)
 
+	add_custom_target(CopyFiles ALL)
+	foreach(header_file ${HeaderFiles})
+	    add_custom_command(
+	        TARGET CopyFiles
+	        COMMAND cmake -E copy
+	            "${CMAKE_CURRENT_SOURCE_DIR}/include/${header_file}"
+	            "${HeadersDistFolder}/${header_file}"
+	        DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/include/${header_file}"
+	        COMMENT "Copy header ${header_file}"
+	    )
+	endforeach()
+
+    # Build the VM executable(s)
     if(WIN32)
-        add_executable(${VM_EXECUTABLE_NAME}w WIN32 platforms/minheadless/windows/sqWin32Main.c)
-        target_link_libraries(${VM_EXECUTABLE_NAME}w ${VM_LIBRARY_NAME} ${VM_DEPENDENCIES_LIBRARIES})
+		add_executable(${VM_EXECUTABLE_NAME}Console platforms/minheadless/common/sqMain.c)
+	    target_link_libraries(${VM_EXECUTABLE_NAME}Console ${VM_LIBRARY_NAME} ${VM_DEPENDENCIES_LIBRARIES})
+
+        add_executable(${VM_EXECUTABLE_NAME} WIN32 platforms/minheadless/windows/sqWin32Main.c)
+        target_link_libraries(${VM_EXECUTABLE_NAME} ${VM_LIBRARY_NAME} ${VM_DEPENDENCIES_LIBRARIES})
+	elif(DARWIN)
+		add_executable(${VM_EXECUTABLE_NAME} MACOSX_BUNDLE platforms/minheadless/common/sqMain.c)
+		target_link_libraries(${VM_EXECUTABLE_NAME} ${VM_LIBRARY_NAME} ${VM_DEPENDENCIES_LIBRARIES})
+	else()
+		add_executable(${VM_EXECUTABLE_NAME} platforms/minheadless/common/sqMain.c)
+	    target_link_libraries(${VM_EXECUTABLE_NAME} ${VM_LIBRARY_NAME} ${VM_DEPENDENCIES_LIBRARIES})
+
+	 	set(expanded_relative_imgdir "lib/${VM_EXECUTABLE_NAME}")
+		configure_file(${CMAKE_CURRENT_SOURCE_DIR}/platforms/minheadless/startup.sh.in "${ProductBaseDistFolder}/${VM_EXECUTABLE_NAME}" @ONLY)
+		set(expanded_relative_imgdir "../lib/${VM_EXECUTABLE_NAME}")
+		configure_file(${CMAKE_CURRENT_SOURCE_DIR}/platforms/minheadless/startup.sh.in "${ProductBaseDistFolder}/bin/${VM_EXECUTABLE_NAME}"@ONLY)
     endif()
+
 endif()

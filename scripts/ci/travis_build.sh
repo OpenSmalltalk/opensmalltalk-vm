@@ -37,8 +37,14 @@ echo "$(cat platforms/Cross/vm/sqSCCSVersion.h | .git_filters/RevDateURL.smudge)
 echo "$(cat platforms/Cross/plugins/sqPluginsSCCSVersion.h | .git_filters/RevDateURL.smudge)" > platforms/Cross/plugins/sqPluginsSCCSVersion.h
 
 # echo $PATH
-
-readonly BUILD_DIRECTORY="$(pwd)/build.${ARCH}/${FLAVOR}";
+if [[ "${BUILD_WITH_CMAKE}" == "yes" ]]; then
+    [[ -z "${CPU_ARCH}" ]] && exit 2
+    PLATFORM="minheadless_with_cmake"
+    BUILD_DIRECTORY="$(pwd)/build.minheadless.cmake/${CPU_ARCH}/${FLAVOR}";
+else
+    BUILD_DIRECTORY="$(pwd)/build.${ARCH}/${FLAVOR}";
+fi
+readonly BUILD_DIRECTORY
 readonly PRODUCTS_DIR="$(pwd)/products"
 mkdir "${PRODUCTS_DIR}" || true # ensure PRODUCTS_DIR exists
 
@@ -66,8 +72,8 @@ build_linux() {
     (cd platforms/unix/config/ && make configure)
     travis_fold end 'unix_configure'
 
-	# build will include both, threaded and itimer version unless 
-	# HEARTBEAT variable is set, in which case just one of both 
+	# build will include both, threaded and itimer version unless
+	# HEARTBEAT variable is set, in which case just one of both
 	# will be built.
 	# HEARTBEAT can be "threaded" or "itimer"
 
@@ -112,6 +118,20 @@ build_windows() {
     # zip -r "${output_file}.zip" "./builddbg/vm/" "./buildast/vm/" "./build/vm/"
     mv "./build/vm" "${PRODUCTS_DIR}/" # Move result to PRODUCTS_DIR
     popd
+}
+
+build_minheadless_with_cmake() {
+    [[ ! -d "${BUILD_DIRECTORY}" ]] && exit 150
+
+    local vm_variant_name="${FLAVOR}_minheadless-cmake_${ARCH}"
+
+    pushd "${BUILD_DIRECTORY}"
+    travis_fold start build_vm "Building OpenSmalltalk VM..."
+    bash -e ./mvm -f || exit 1
+    mv ./release/dist/* "${PRODUCTS_DIR}/"
+    travis_fold end build_vm
+    popd
+
 }
 
 if [[ ! $(type -t build_$PLATFORM) ]]; then
