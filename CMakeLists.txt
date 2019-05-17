@@ -1,5 +1,6 @@
 # OpenSmalltalkVM cmake build script.
 cmake_minimum_required(VERSION 2.8)
+cmake_policy(SET CMP0054 NEW)
 project(OpenSmalltalkVM)
 
 option(ONLY_CONFIG_H "Only generate config.h" OFF)
@@ -11,6 +12,7 @@ option(SUPPORT_TRADITIONAL_DISPLAY "Enables building a VM with support for a win
 option(ALLOW_SDL2 "Enables support for the SDL2 display plugin" OFF)
 option(COG_JIT "Cog JIT" ON)
 option(GENERATE_TOP_LEVEL_RUN_SCRIPT "Generate a top level run script on installation" ON)
+option(MINIMAL_PLUGIN_SET "Build the VM with the minimal number of plugins" OFF)
 option(BUILD_PLUGINS_AS_BUNDLES "Build VM plugins as bundles" OFF)
 
 # Check the build type

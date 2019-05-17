@@ -1,8 +1,11 @@
 set(CrossPlatformPluginFolder platforms/Cross/plugins)
+set(UnixPlatformPluginFolder platforms/unix/plugins)
 if (WIN32)
     set(PlatformPluginFolder platforms/win32/plugins)
+elseif(DARWIN)
+    set(PlatformPluginFolder platforms/iOS/plugins)
 elseif(UNIX)
-    set(PlatformPluginFolder platforms/unix/plugins)
+    set(PlatformPluginFolder ${UnixPlatformPluginFolder})
 else()
     set(PlatformPluginFolder)
 endif()
@@ -27,7 +30,7 @@ macro(add_vm_plugin NAME TYPE)
             source_group("Internal Plugins\\${NAME}" FILES ${VM_PLUGIN_${NAME}_SOURCES})
         else()
             if(NOT ONLY_CONFIG_H)
-                add_library(${NAME} MODULE ${ARGN})
+                add_library(${NAME} MODULE ${VM_PLUGIN_${NAME}_SOURCES})
                 set(VM_EXTERNAL_PLUGINS_TARGETS ${VM_EXTERNAL_PLUGINS_TARGETS} ${NAME})
                 if(DARWIN)
                     if(BUILD_PLUGINS_AS_BUNDLES)
@@ -64,11 +67,28 @@ macro(add_vm_plugin_auto NAME TYPE)
     file(GLOB PLUGIN_SOURCES
         "${PluginsSourceFolderName}/${NAME}/*.c"
         "${PlatformPluginFolder}/${NAME}/*.c"
+        "${PlatformPluginFolder}/${NAME}/*.m"
         "${PlatformPluginFolder}/${NAME}/*.h"
         "${CrossPlatformPluginFolder}/${NAME}/*.c"
         "${CrossPlatformPluginFolder}/${NAME}/*.h"
     )
-    add_vm_plugin_sources(${NAME} ${TYPE} ${PLUGIN_SOURCES} ${ARGN})
+    
+    set(ExtraSources ${ARGN})
+    if(DARWIN)
+        list(GET ExtraSources 0 USE_UNIX_SOURCES_ON_MAC)
+        if("${USE_UNIX_SOURCES_ON_MAC}" STREQUAL "USE_UNIX_SOURCES_ON_MAC")
+            list(REMOVE_AT ExtraSources 0)
+            file(GLOB PLUGIN_UNIX_SOURCES
+                "${UnixPlatformPluginFolder}/${NAME}/*.c"
+                "${UnixPlatformPluginFolder}/${NAME}/*.h"
+            )
+            set(ExtraSources ${PLUGIN_UNIX_SOURCES} ${ExtraSources})
+            include_directories(
+                "${UnixPlatformPluginFolder}/${NAME}"
+            )
+        endif()
+    endif()
+    add_vm_plugin_sources(${NAME} ${TYPE} ${PLUGIN_SOURCES} ${ExtraSources})
 endmacro()
 
 macro(vm_plugin_link_libraries NAME)
