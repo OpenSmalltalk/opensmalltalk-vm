@@ -189,6 +189,10 @@ set(VM_NAME Squeak)
 set(PHARO_VM FALSE)
 set(SQUEAK_VM FALSE)
 
+if(DARWIN OR WIN32)
+	set(VM_EXECUTABLE_NAME Squeak)
+endif()
+
 if(PHARO_BRANDING)
 	add_definitions(-DPharoVM=1 -DIMMUTABILITY=1)
 	set(VM_EXECUTABLE_NAME pharo)
@@ -197,6 +201,9 @@ if(PHARO_BRANDING)
 	set(VM_PLUGINS_ENV_VAR_NAME "PHARO_PLUGINS")
     set(PHARO_VM TRUE)
 	set(ProductFolderName "ph${ProductFolderName}")
+	if(DARWIN OR WIN32)
+		set(VM_EXECUTABLE_NAME Pharo)
+	endif()
 else()
     set(SQUEAK_VM TRUE)
 	set(VM_PLUGINS_ENV_VAR_NAME "SQUEAK_PLUGINS")
@@ -209,20 +216,15 @@ add_definitions(-DVM_NAME="${VM_NAME}")
 # OpenSmalltalkVM_BUILD_AS_INTERNAL_PROJECT can be used before including this
 # project using add_subdirectory()
 if(NOT OpenSmalltalkVM_BUILD_AS_INTERNAL_PROJECT)
-	set(ProductBaseDistFolder "${OpenSmalltalkVM_BINARY_DIR}/dist/${ProductFolderName}")
-	set(ProductDistFolder "${ProductBaseDistFolder}/lib/${VM_EXECUTABLE_NAME}")
-	set(HeadersDistFolder "${ProductBaseDistFolder}/include")
-	set(StartupScriptDistFolder "${ProductBaseDistFolder}/bin")
+	set(ProductDistFolder "${OpenSmalltalkVM_BINARY_DIR}/dist/")
+	set(ProductInstallBaseFolder "${ProductFolderName}")
+	set(ProductInstallProgramFolder "${ProductFolderName}lib/${VM_EXECUTABLE_NAME}")
 
-	if(DARWIN)
-		set(ProductBaseDistFolder "${OpenSmalltalkVM_BINARY_DIR}/dist/")
-		set(ProductDistFolder "${ProductBaseDistFolder}")
-		set(HeadersDistFolder "${ProductDistFolder}/include")
-	elseif(WIN32)
-		set(ProductBaseDistFolder "${OpenSmalltalkVM_BINARY_DIR}/dist/")
-		set(ProductDistFolder "${ProductBaseDistFolder}")
-		set(HeadersDistFolder "${ProductDistFolder}/include")
+	if(DARWIN OR WIN32)
+		set(ProductInstallBaseFolder ".")
+		set(ProductInstallProgramFolder ".")
 	endif()
+	
 	set(EXECUTABLE_OUTPUT_PATH "${ProductDistFolder}")
 	set(LIBRARY_OUTPUT_PATH "${ProductDistFolder}")
 endif()
@@ -395,6 +397,7 @@ endif()
 if(APPLE)
 	find_library(CoreFoundation_LIBRARY CoreFoundation)
 	find_library(CoreServices_LIBRARY CoreServices)
+	find_library(Security_LIBRARY Security)
 	set(VM_DEPENDENCIES_LIBRARIES
 		${CoreServices_LIBRARY}
 		${CoreFoundation_LIBRARY}
@@ -586,40 +589,51 @@ if(NOT ONLY_CONFIG_H)
     	add_definitions(-DBUILD_OSVM_STATIC)
     endif()
 
-    add_library(${VM_LIBRARY_NAME} ${VM_CORE_LIBRARY_TYPE} ${VM_SOURCES} ${VM_INTERNAL_PLUGIN_SOURCES})
-
-    target_compile_definitions(${VM_LIBRARY_NAME} PRIVATE
-    	-DSQUEAK_BUILTIN_PLUGIN
-        -DBUILD_VM_CORE
-    )
-
-	# Copy the headers
-	file(GLOB HeaderFiles RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/include"
+	# Extract the public header
+	file(GLOB PublicHeaderFiles RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
 	    "include/*.h"
 	    "include/*.hpp"
 	)
 
-	add_custom_target(CopyFiles ALL)
-	foreach(header_file ${HeaderFiles})
-	    add_custom_command(
-	        TARGET CopyFiles
-	        COMMAND cmake -E copy
-	            "${CMAKE_CURRENT_SOURCE_DIR}/include/${header_file}"
-	            "${HeadersDistFolder}/${header_file}"
-	        DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/include/${header_file}"
-	        COMMENT "Copy header ${header_file}"
-	    )
-	endforeach()
-
+    add_library(${VM_LIBRARY_NAME} ${VM_CORE_LIBRARY_TYPE} ${VM_SOURCES} ${VM_INTERNAL_PLUGIN_SOURCES})
+    target_compile_definitions(${VM_LIBRARY_NAME} PRIVATE
+    	-DSQUEAK_BUILTIN_PLUGIN
+        -DBUILD_VM_CORE
+    )
+	set_target_properties(${VM_LIBRARY_NAME} PROPERTIES
+		PUBLIC_HEADER ${PublicHeaderFiles}
+		FRAMEWORK TRUE)
+	
     # Build the VM executable(s)
+	set(VM_EXECUTABLE_TARGETS ${VM_EXECUTABLE_NAME})
     if(WIN32)
+		set(VM_EXECUTABLE_TARGETS ${VM_EXECUTABLE_TARGETS} ${VM_EXECUTABLE_NAME}Console)
 		add_executable(${VM_EXECUTABLE_NAME}Console platforms/minheadless/common/sqMain.c)
 	    target_link_libraries(${VM_EXECUTABLE_NAME}Console ${VM_LIBRARY_NAME} ${VM_DEPENDENCIES_LIBRARIES})
 
         add_executable(${VM_EXECUTABLE_NAME} WIN32 platforms/minheadless/windows/sqWin32Main.c)
         target_link_libraries(${VM_EXECUTABLE_NAME} ${VM_LIBRARY_NAME} ${VM_DEPENDENCIES_LIBRARIES})
-	elif(DARWIN)
-		add_executable(${VM_EXECUTABLE_NAME} MACOSX_BUNDLE platforms/minheadless/common/sqMain.c)
+	elseif(DARWIN)
+		if(PHARO_VM)
+			file(GLOB VM_ICONS RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
+				"platforms/iOS/vm/OSX/Pharo*.icns"
+			)
+			set(VM_EXECUTABLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/platforms/iOS/vm/OSX/Pharo-Info.plist")
+		else()
+			file(GLOB VM_ICONS RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
+				"platforms/iOS/vm/OSX/Squeak*.icns"
+			)
+			set(VM_EXECUTABLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/platforms/iOS/vm/OSX/Squeak-Info.plist")
+		endif()
+		set(VM_RESOURCE_FILES ${VM_ICONS})
+		add_executable(${VM_EXECUTABLE_NAME} MACOSX_BUNDLE
+			platforms/minheadless/common/sqMain.c
+			${VM_RESOURCE_FILES}
+		)
+
+		set_target_properties(${VM_EXECUTABLE_NAME} PROPERTIES
+			RESOURCE "${VM_RESOURCE_FILES}"
+			MACOSX_BUNDLE_INFO_PLIST ${VM_EXECUTABLE_INFO_PLIST})
 		target_link_libraries(${VM_EXECUTABLE_NAME} ${VM_LIBRARY_NAME} ${VM_DEPENDENCIES_LIBRARIES})
 	else()
 		add_executable(${VM_EXECUTABLE_NAME} platforms/minheadless/common/sqMain.c)
@@ -628,7 +642,34 @@ if(NOT ONLY_CONFIG_H)
 	 	set(expanded_relative_imgdir "lib/${VM_EXECUTABLE_NAME}")
 		configure_file(${CMAKE_CURRENT_SOURCE_DIR}/platforms/minheadless/startup.sh.in "${ProductBaseDistFolder}/${VM_EXECUTABLE_NAME}" @ONLY)
 		set(expanded_relative_imgdir "../lib/${VM_EXECUTABLE_NAME}")
-		configure_file(${CMAKE_CURRENT_SOURCE_DIR}/platforms/minheadless/startup.sh.in "${ProductBaseDistFolder}/bin/${VM_EXECUTABLE_NAME}"@ONLY)
+		configure_file(${CMAKE_CURRENT_SOURCE_DIR}/platforms/minheadless/startup.sh.in "${ProductBaseDistFolder}/bin/${VM_EXECUTABLE_NAME}" @ONLY)
     endif()
 
+	if(DARWIN)
+		function(MakeOSXBundleApp target binary_dir embedded_bundles embedded_frameworks)
+		  # Function from sample http://www.cmake.org/Wiki/images/e/e3/QTTest.zip
+		  # https://gitlab.kitware.com/cmake/community/wikis/doc/tutorials/BuildingOSXApplications
+	      SET (OSX_MAKE_STANDALONE_BUNDLE_CMAKE_SCRIPT "${binary_dir}/${target}_OSX_MakeStandAloneBundle.cmake")
+	      SET (OSX_MAKE_STANDALONE_BUNDLE_BASH_SCRIPT "${binary_dir}/${target}_OSX_MakeStandAloneBundle.sh")
+
+	      CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/cmake/CompleteBundle.cmake.in"
+	        "${OSX_MAKE_STANDALONE_BUNDLE_CMAKE_SCRIPT}" @ONLY IMMEDIATE)
+	      CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/cmake/CreateBundle.sh.in"
+	        "${OSX_MAKE_STANDALONE_BUNDLE_BASH_SCRIPT}" @ONLY IMMEDIATE)
+	   
+	     install(SCRIPT "${OSX_MAKE_STANDALONE_BUNDLE_CMAKE_SCRIPT}")
+	                      
+	    endfunction(MakeOSXBundleApp)
+		
+		MakeOSXBundleApp(${VM_EXECUTABLE_NAME} ${CMAKE_CURRENT_BINARY_DIR} "${VM_EXTERNAL_PLUGINS_TARGETS}" "")
+	else()
+		install(TARGETS ${VM_LIBRARY_NAME} ${VM_EXECUTABLE_TARGETS}
+			ARCHIVE DESTINATION ${ProductInstallProgramFolder}
+			LIBRARY DESTINATION ${ProductInstallProgramFolder}
+			RUNTIME DESTINATION ${ProductInstallProgramFolder}
+			PUBLIC_HEADER DESTINATION include
+		)
+	endif()
 endif()
+
+message("Build results can be installed to ${CMAKE_INSTALL_PREFIX}")
