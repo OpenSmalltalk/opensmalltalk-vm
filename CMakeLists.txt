@@ -10,6 +10,7 @@ option(PHARO_BRANDING "Pharo Branding" ON)
 option(SUPPORT_TRADITIONAL_DISPLAY "Enables building a VM with support for a window." OFF)
 option(ALLOW_SDL2 "Enables support for the SDL2 display plugin" OFF)
 option(COG_JIT "Cog JIT" ON)
+option(GENERATE_TOP_LEVEL_RUN_SCRIPT "Generate a top level run script on installation" ON)
 
 # Check the build type
 if (CMAKE_BUILD_TYPE STREQUAL "")
@@ -218,7 +219,7 @@ add_definitions(-DVM_NAME="${VM_NAME}")
 if(NOT OpenSmalltalkVM_BUILD_AS_INTERNAL_PROJECT)
 	set(ProductDistFolder "${OpenSmalltalkVM_BINARY_DIR}/dist/")
 	set(ProductInstallBaseFolder "${ProductFolderName}")
-	set(ProductInstallProgramFolder "${ProductFolderName}lib/${VM_EXECUTABLE_NAME}")
+	set(ProductInstallProgramFolder "${ProductFolderName}/lib/${VM_EXECUTABLE_NAME}")
 
 	if(DARWIN OR WIN32)
 		set(ProductInstallBaseFolder ".")
@@ -639,10 +640,15 @@ if(NOT ONLY_CONFIG_H)
 		add_executable(${VM_EXECUTABLE_NAME} platforms/minheadless/common/sqMain.c)
 	    target_link_libraries(${VM_EXECUTABLE_NAME} ${VM_LIBRARY_NAME} ${VM_DEPENDENCIES_LIBRARIES})
 
-	 	set(expanded_relative_imgdir "lib/${VM_EXECUTABLE_NAME}")
-		configure_file(${CMAKE_CURRENT_SOURCE_DIR}/platforms/minheadless/startup.sh.in "${ProductBaseDistFolder}/${VM_EXECUTABLE_NAME}" @ONLY)
+        if(GENERATE_TOP_LEVEL_RUN_SCRIPT)
+    	 	set(expanded_relative_imgdir "lib/${VM_EXECUTABLE_NAME}")
+    		configure_file(${CMAKE_CURRENT_SOURCE_DIR}/platforms/minheadless/startup.sh.in "${CMAKE_BINARY_DIR}/scripts/${VM_EXECUTABLE_NAME}" @ONLY)
+            install(FILES "${CMAKE_BINARY_DIR}/scripts/${VM_EXECUTABLE_NAME}" DESTINATION "${ProductInstallBaseFolder}")
+        endif()
+
 		set(expanded_relative_imgdir "../lib/${VM_EXECUTABLE_NAME}")
-		configure_file(${CMAKE_CURRENT_SOURCE_DIR}/platforms/minheadless/startup.sh.in "${ProductBaseDistFolder}/bin/${VM_EXECUTABLE_NAME}" @ONLY)
+		configure_file(${CMAKE_CURRENT_SOURCE_DIR}/platforms/minheadless/startup.sh.in "${CMAKE_BINARY_DIR}/scripts/bin/${VM_EXECUTABLE_NAME}" @ONLY)
+        install(FILES "${CMAKE_BINARY_DIR}/scripts/bin/${VM_EXECUTABLE_NAME}" DESTINATION "${ProductInstallBaseFolder}/bin")
     endif()
 
 	if(DARWIN)
@@ -658,16 +664,15 @@ if(NOT ONLY_CONFIG_H)
 	        "${OSX_MAKE_STANDALONE_BUNDLE_BASH_SCRIPT}" @ONLY IMMEDIATE)
 	   
 	     install(SCRIPT "${OSX_MAKE_STANDALONE_BUNDLE_CMAKE_SCRIPT}")
-	                      
 	    endfunction(MakeOSXBundleApp)
 		
 		MakeOSXBundleApp(${VM_EXECUTABLE_NAME} ${CMAKE_CURRENT_BINARY_DIR} "${VM_EXTERNAL_PLUGINS_TARGETS}" "")
 	else()
-		install(TARGETS ${VM_LIBRARY_NAME} ${VM_EXECUTABLE_TARGETS}
+		install(TARGETS ${VM_LIBRARY_NAME} ${VM_EXECUTABLE_TARGETS} ${VM_EXTERNAL_PLUGINS_TARGETS}
 			ARCHIVE DESTINATION ${ProductInstallProgramFolder}
 			LIBRARY DESTINATION ${ProductInstallProgramFolder}
 			RUNTIME DESTINATION ${ProductInstallProgramFolder}
-			PUBLIC_HEADER DESTINATION include
+			PUBLIC_HEADER DESTINATION ${ProductInstallBaseFolder}/include
 		)
 	endif()
 endif()
