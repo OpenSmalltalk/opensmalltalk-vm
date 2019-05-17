@@ -128,7 +128,7 @@ build_minheadless_with_cmake() {
     pushd "${BUILD_DIRECTORY}"
     travis_fold start build_vm "Building OpenSmalltalk VM..."
     bash -e ./mvm -f || exit 1
-    mv ./release/dist/* "${PRODUCTS_DIR}/"
+    mv ./release/install-dist/* "${PRODUCTS_DIR}/"
     travis_fold end build_vm
     popd
 
