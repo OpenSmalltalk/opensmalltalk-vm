@@ -20,7 +20,7 @@ OSX_App="@CMAKE_INSTALL_PREFIX@/$OSX_App_Name.app"
 ContentsDir="$OSX_App/Contents"
 LibrariesDir="$OSX_App/Contents/Libraries"
 FrameworksDir="$OSX_App/Contents/Frameworks"
-PluginsDir="$OSX_App/Contents/Plugins"
+PluginsDir="$OSX_App/Contents/MacOS/Plugins"
 
 # create directories in the @target@.app bundle
 mkdir -p "$SupportDir"
@@ -30,3 +30,4 @@ fi
 if [ ! -e $LibrariesDir ]; then
   mkdir -p "$LibrariesDir"
 fi
+mkdir -p "$PluginsDir"

@@ -4,6 +4,7 @@
 
 if(COMMAND cmake_policy)
   cmake_policy(SET CMP0009 NEW)
+  cmake_policy(SET CMP0011 NEW)
 endif(COMMAND cmake_policy)
 
 set(OriginalProgramOutputPath @EXECUTABLE_OUTPUT_PATH@)
@@ -11,6 +12,7 @@ set(OriginalLibraryOutputPath @LIBRARY_OUTPUT_PATH@)
 
 set(EmbeddedBundles @embedded_bundles@)
 set(EmbeddedFrameworks @embedded_frameworks@)
+set(EmbeddedPlugins @embedded_plugins@)
 
 # gp_item_default_embedded_path item default_embedded_path_var
 #
@@ -72,11 +74,19 @@ endfunction(gp_item_default_embedded_path_override)
 # -- Copy the App bundle to the installation location first
 EXECUTE_PROCESS( COMMAND "@OSX_MAKE_STANDALONE_BUNDLE_BASH_SCRIPT@" )
 
+set(PluginList)
+
 # -- Copy embedded bundles.
 foreach(bundle ${EmbeddedBundles})
-    message("Copy bundle ")
     file(COPY "${OriginalLibraryOutputPath}/${bundle}.bundle"
         DESTINATION "@CMAKE_INSTALL_PREFIX@/@target@.app/Contents/Resources")
+endforeach()
+
+# -- Copy embedded plugins.
+foreach(plugin ${EmbeddedPlugins})
+    file(COPY "${OriginalLibraryOutputPath}/lib${plugin}.dylib"
+        DESTINATION "@CMAKE_INSTALL_PREFIX@/@target@.app/Contents/MacOS/Plugins")
+    set(PluginList ${PluginList} "@CMAKE_INSTALL_PREFIX@/@target@.app/Contents/MacOS/Plugins/lib${plugin}.dylib")
 endforeach()
 
 # -- Copy embedded frameworks.

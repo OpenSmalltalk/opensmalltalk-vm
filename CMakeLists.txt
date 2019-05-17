@@ -11,6 +11,7 @@ option(SUPPORT_TRADITIONAL_DISPLAY "Enables building a VM with support for a win
 option(ALLOW_SDL2 "Enables support for the SDL2 display plugin" OFF)
 option(COG_JIT "Cog JIT" ON)
 option(GENERATE_TOP_LEVEL_RUN_SCRIPT "Generate a top level run script on installation" ON)
+option(BUILD_PLUGINS_AS_BUNDLES "Build VM plugins as bundles" OFF)
 
 # Check the build type
 if (CMAKE_BUILD_TYPE STREQUAL "")
@@ -652,7 +653,7 @@ if(NOT ONLY_CONFIG_H)
     endif()
 
 	if(DARWIN)
-		function(MakeOSXBundleApp target binary_dir embedded_bundles embedded_frameworks)
+		function(MakeOSXBundleApp target binary_dir embedded_bundles embedded_plugins embedded_frameworks)
 		  # Function from sample http://www.cmake.org/Wiki/images/e/e3/QTTest.zip
 		  # https://gitlab.kitware.com/cmake/community/wikis/doc/tutorials/BuildingOSXApplications
 	      SET (OSX_MAKE_STANDALONE_BUNDLE_CMAKE_SCRIPT "${binary_dir}/${target}_OSX_MakeStandAloneBundle.cmake")
@@ -666,7 +667,11 @@ if(NOT ONLY_CONFIG_H)
 	     install(SCRIPT "${OSX_MAKE_STANDALONE_BUNDLE_CMAKE_SCRIPT}")
 	    endfunction(MakeOSXBundleApp)
 		
-		MakeOSXBundleApp(${VM_EXECUTABLE_NAME} ${CMAKE_CURRENT_BINARY_DIR} "${VM_EXTERNAL_PLUGINS_TARGETS}" "")
+		if(BUILD_PLUGINS_AS_BUNDLES)
+			MakeOSXBundleApp(${VM_EXECUTABLE_NAME} ${CMAKE_CURRENT_BINARY_DIR} "${VM_EXTERNAL_PLUGINS_TARGETS}" "" "")
+		else()
+			MakeOSXBundleApp(${VM_EXECUTABLE_NAME} ${CMAKE_CURRENT_BINARY_DIR} "" "${VM_EXTERNAL_PLUGINS_TARGETS}" "")
+		endif()
 	else()
 		install(TARGETS ${VM_LIBRARY_NAME} ${VM_EXECUTABLE_TARGETS} ${VM_EXTERNAL_PLUGINS_TARGETS}
 			ARCHIVE DESTINATION ${ProductInstallProgramFolder}
