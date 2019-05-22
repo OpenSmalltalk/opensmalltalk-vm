@@ -45,6 +45,12 @@ VMMASTTranslationTest >> methodWithArgument: anArgument [
 ]
 
 { #category : #'generation-targets' }
+VMMASTTranslationTest >> methodWithExpressionInLoopCondition [
+
+	1 to: self something - 10 do: [ :i | self foo: i ]
+]
+
+{ #category : #'generation-targets' }
 VMMASTTranslationTest >> methodWithIfNil [
 
 	self something
@@ -320,6 +326,28 @@ VMMASTTranslationTest >> testKeywordMethodHasArgument [
 	translation := method asTranslationMethodOfClass: TMethod.
 	
 	self assert: (translation args includes: method methodNode arguments first name)
+]
+
+{ #category : #tests }
+VMMASTTranslationTest >> testMethodWithConditionInLoopLimitHasLimitVariable [
+
+	| translation method loop |
+	method := self class >> #methodWithExpressionInLoopCondition.
+	translation := method asTranslationMethodOfClass: TMethod.
+	
+	loop := translation statements first.
+	self assert: loop args size equals: 4
+]
+
+{ #category : #tests }
+VMMASTTranslationTest >> testMethodWithConstantConditionInLoopHasNoLimitVariable [
+
+	| translation method loop |
+	method := self class >> #methodWithLoop.
+	translation := method asTranslationMethodOfClass: TMethod.
+	
+	loop := translation statements first.
+	self assert: loop args size equals: 6
 ]
 
 { #category : #tests }

@@ -34,25 +34,33 @@ RBMessageNode >> asTranslatorNodeIn: aTMethod [
 	(usedSelector == #to:do:) ifTrue: [ | block |
 		usedSelector := #to:by:do:.
 		block := args second.
-		args := OrderedCollection
-			with: args first
-			with: (TConstantNode new setValue: 1)
-			with: args second
-			with: (TAssignmentNode new
-						setVariable: (arguments first asTranslatorNodeIn: aTMethod)
-						expression: (TConstantNode new setValue: 1);
-						yourself)
-			with: (TSendNode new
-				setSelector: #<=
-				receiver: (TVariableNode new setName: block args first)
-				arguments: { receiver asTranslatorNodeIn: aTMethod })
-			with: (TAssignmentNode new
-						setVariable: (TVariableNode new setName: block args first)
-						expression: (TSendNode new
-							setSelector: #+
-							receiver: (TVariableNode new setName: block args first)
-							arguments: { TConstantNode new setValue: 1 });
+		arguments first isLiteralNode ifTrue: [
+			args := OrderedCollection
+				with: args first
+				with: (TConstantNode new setValue: 1)
+				with: args second
+				with: (TAssignmentNode new
+							setVariable: (arguments first asTranslatorNodeIn: aTMethod)
+							expression: (TConstantNode new setValue: 1);
 							yourself)
+				with: (TSendNode new
+					setSelector: #<=
+					receiver: (TVariableNode new setName: block args first)
+					arguments: { receiver asTranslatorNodeIn: aTMethod })
+				with: (TAssignmentNode new
+							setVariable: (TVariableNode new setName: block args first)
+							expression: (TSendNode new
+								setSelector: #+
+								receiver: (TVariableNode new setName: block args first)
+								arguments: { TConstantNode new setValue: 1 });
+								yourself)
+		] ifFalse: [
+			args := OrderedCollection
+				with: args first
+				with: (TConstantNode new setValue: 1)
+				with: args second
+				with: (TVariableNode new setName: 'iLimiT')
+		]
 	].
 	
 	"If in the form of ifNil: [ :obj | ], replace that by an assignment and an ifFalse"

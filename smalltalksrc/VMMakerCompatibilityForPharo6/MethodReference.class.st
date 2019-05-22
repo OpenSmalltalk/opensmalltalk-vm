@@ -234,11 +234,11 @@ MethodReference >> setStandardClass: aClass methodSymbol: methodSym [
 
 { #category : #'initialize-release' }
 MethodReference >> setStandardClass: aClass methodSymbol: aSelector environment: anEnvironment [
-	classSymbol := aClass theNonMetaClass name.
+	classSymbol := aClass instanceSide name.
 	classIsMeta := aClass isMeta.
 	methodSymbol := aSelector.
 	environment := anEnvironment.
-	stringVersion := nil.
+	stringVersion := nil
 ]
 
 { #category : #accessing }
