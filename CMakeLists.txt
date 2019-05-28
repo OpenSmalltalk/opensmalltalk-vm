@@ -406,12 +406,10 @@ if(APPLE)
 		${CoreServices_LIBRARY}
 		${CoreFoundation_LIBRARY}
 		${VM_DEPENDENCIES_LIBRARIES})
-		# SDL2 and openssl need this
-	#include_directories(/opt/local/include)
 endif()
 
 set(HAVE_SDL2 False CACHE INTERNAL "Is SDL2 available?")
-set(HAVE_FreeType2 TRUE CACHE INTERNAL "Is FreeType available?")
+set(HAVE_FreeType2 False CACHE INTERNAL "Is FreeType available?")
 if(NOT ONLY_CONFIG_H)
 	include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/ThirdPartyDependencies.cmake")
 endif()

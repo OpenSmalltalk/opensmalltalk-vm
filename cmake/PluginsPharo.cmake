@@ -1,7 +1,7 @@
 # Plugin that are only used by Pharo
 
 if(NOT MINIMAL_PLUGIN_SET)
-	
+
 add_vm_plugin_auto(EventsHandlerPlugin EXTERNAL)
 allow_plugin_undefined_symbols(EventsHandlerPlugin _ioProcessEventsHandler _setIoProcessEventsHandler _vmIOProcessEvents)
 if(HAVE_SDL2)
@@ -18,7 +18,6 @@ endif()
 if(NOT HAVE_FreeType2)
 	find_package(Freetype)
 	if(FREETYPE_FOUND)
-		message("Use system freetype\n")
 		include_directories(${FREETYPE_INCLUDE_DIRS})
 		set(HAVE_FreeType2 TRUE CACHE INTERNAL "Do we have FreeType?")
 		set(FreeType2_LIBRARIES "${FREETYPE_LIBRARIES}" CACHE STRING "Do we have FreeType?")
