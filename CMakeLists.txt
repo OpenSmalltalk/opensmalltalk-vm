@@ -429,7 +429,6 @@ if(SDL2_INCLUDE_DIR AND SDL2_LIBRARY AND ALLOW_SDL2)
 endif()
 
 # Choose the window system
-
 set(VM_WINDOW_SYSTEM)
 if(SUPPORT_TRADITIONAL_DISPLAY AND ALLOW_SDL2)
 	if(HAVE_SDL2)
@@ -577,7 +576,9 @@ source_group("VM Platform Common Sources" FILES ${VM_PLATFORM_COMMON_SOURCES})
 source_group("VM Platform Sources" FILES ${VM_PLATFORM_SOURCES})
 source_group("VM Window System" FILES ${VM_WINDOW_SYSTEM})
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Plugins.cmake")
-include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/ThirdPartyDependencies.cmake")
+if(NOT ONLY_CONFIG_H)
+	include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/ThirdPartyDependencies.cmake")
+endif()
 
 # Generate the config dot h.
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/platforms/minheadless/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
