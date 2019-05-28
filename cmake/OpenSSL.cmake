@@ -7,6 +7,7 @@ set(OpenSSL_Spec_MacLibrariesSymlinks libssl*.dylib libcrypto*.dylib)
 set(OpenSSL_Spec_LinuxLibraries libssl.so.1.0.0 libcrypto.so.1.0.0)
 set(OpenSSL_Spec_LinuxLibrariesSymlinks libssl.so* libcrypto.so*)
 set(OpenSSL_Spec_WindowsDLLs ssleay32.dll libeay32.dll)
+set(OpenSSL_Spec_WindowsLibraries libssleay32.a libeay32.a) # TODO: Check and fixme this.
 
 #-------------------------------------------------------------------------------
 # OpenSSL dependency building
@@ -19,8 +20,9 @@ check_thirdparty_build_artifacts(HaveCachedOpenSSL
 
 if(HaveCachedOpenSSL)
     set(OpenSSL_BuildDep)
-    message(STATUS "Not building cached OpenSSL")
+    message(STATUS "Not building cached third-party dependency OpenSSL")
 else()
+    set(OpenSSL_InstallCommand make install)
     if(DARWIN)
         set(OpenSSL_ConfigureCommand "./Configure" darwin64-x86_64-cc
             "--prefix=${ThirdPartyCacheInstall}" shared )
@@ -29,6 +31,12 @@ else()
             make
             -s
         )
+        
+        # We need write permission on the build result for otool.
+        foreach(opensslLib ${OpenSSL_Spec_MacLibraries})
+            set(OpenSSL_InstallCommand ${OpenSSL_InstallCommand} "&&" chmod +w "${ThirdPartyCacheInstallLib}/${opensslLib}")
+        endforeach()
+        message("OpenSSL_InstallCommand ${OpenSSL_InstallCommand}")
     elseif(WIN32)
         if(SQUEAK_PLATFORM_X86_64)
             set(OpenSSL_ConfigureCommand "./Configure" mingw64
@@ -57,6 +65,7 @@ else()
         PREFIX "${CMAKE_CURRENT_BINARY_DIR}/thirdparty/OpenSSL"
         CONFIGURE_COMMAND "${OpenSSL_ConfigureCommand}"
         BUILD_COMMAND "${OpenSSL_BuildCommand}"
+        INSTALL_COMMAND "${OpenSSL_InstallCommand}"
         BUILD_IN_SOURCE TRUE
     )
     set(OpenSSL_BuildDep OpenSSL)
@@ -71,4 +80,10 @@ install_thirdparty_build_artifacts(OpenSSL
     LINUX_LIBRARIES ${OpenSSL_Spec_LinuxLibraries}
     LINUX_LIBRARIES_SYMLINK_PATTERNS ${OpenSSL_Spec_LinuxLibrariesSymlinks}
     WINDOWS_DLLS ${OpenSSL_Spec_WindowsDLLs}
+)
+
+export_included_thirdparty_libraries(OpenSSL
+    MAC_LIBRARIES ${OpenSSL_Spec_MacLibraries}
+    LINUX_LIBRARIES ${OpenSSL_Spec_LinuxLibraries}
+    WINDOWS_LIBRARIES ${OpenSSL_Spec_WindowsLibraries}
 )

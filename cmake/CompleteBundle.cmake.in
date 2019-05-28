@@ -10,9 +10,15 @@ endif(COMMAND cmake_policy)
 set(OriginalProgramOutputPath @EXECUTABLE_OUTPUT_PATH@)
 set(OriginalLibraryOutputPath @LIBRARY_OUTPUT_PATH@)
 
-set(EmbeddedBundles @embedded_bundles@)
-set(EmbeddedFrameworks @embedded_frameworks@)
-set(EmbeddedPlugins @embedded_plugins@)
+set(EmbeddedBundles "@embedded_bundles@")
+set(EmbeddedFrameworks "@embedded_frameworks@")
+set(EmbeddedPlugins "@embedded_plugins@")
+
+set(ThirdPartyCacheInstallLib "@ThirdPartyCacheInstallLib@")
+set(ThirdPartyLibrariesNames "@thirdparty_libraries_names@")
+set(ThirdPartyLibrariesPatterns "@thirdparty_libraries_patterns@")
+#set(ThirdPartyLibraryDestDir "@CMAKE_INSTALL_PREFIX@/@target@.app/Contents/Libraries")
+set(ThirdPartyLibraryDestDir "@CMAKE_INSTALL_PREFIX@/@target@.app/Contents/MacOS/Plugins")
 
 # gp_item_default_embedded_path item default_embedded_path_var
 #
@@ -46,9 +52,11 @@ function(gp_item_default_embedded_path_override item default_embedded_path_var)
   set(overridden 0)
 
   # Embed .dylibs in the Libraries Directory
+  # FIXME: Support the Libraries directory, instead of the Plugins directory hack.
   #
   if(item MATCHES "\\.dylib$")
-    set(path "${install_name_prefix}/../Libraries")
+    #set(path "${install_name_prefix}/../Libraries")
+    set(path "${install_name_prefix}/Plugins")
     set(overridden 1)
   endif(item MATCHES "\\.dylib$")
 
@@ -78,21 +86,39 @@ set(PluginList)
 
 # -- Copy embedded bundles.
 foreach(bundle ${EmbeddedBundles})
-    file(COPY "${OriginalLibraryOutputPath}/${bundle}.bundle"
+    file(INSTALL "${OriginalLibraryOutputPath}/${bundle}.bundle"
         DESTINATION "@CMAKE_INSTALL_PREFIX@/@target@.app/Contents/Resources")
 endforeach()
 
 # -- Copy embedded plugins.
 foreach(plugin ${EmbeddedPlugins})
-    file(COPY "${OriginalLibraryOutputPath}/lib${plugin}.dylib"
+    file(INSTALL "${OriginalLibraryOutputPath}/lib${plugin}.dylib"
         DESTINATION "@CMAKE_INSTALL_PREFIX@/@target@.app/Contents/MacOS/Plugins")
     set(PluginList ${PluginList} "@CMAKE_INSTALL_PREFIX@/@target@.app/Contents/MacOS/Plugins/lib${plugin}.dylib")
 endforeach()
 
 # -- Copy embedded frameworks.
 foreach(framework ${EmbeddedFrameworks})
-    file(COPY "${OriginalLibraryOutputPath}/${framework}.framework"
+    file(INSTALL "${OriginalLibraryOutputPath}/${framework}.framework"
     DESTINATION "@CMAKE_INSTALL_PREFIX@/@target@.app/Contents/Frameworks")
+endforeach()
+
+# -- Copy embedded third party libraries.
+foreach(libName ${ThirdPartyLibrariesNames})
+    file(INSTALL "${ThirdPartyCacheInstallLib}/${libName}"
+        DESTINATION ${ThirdPartyLibraryDestDir}
+        FILE_PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
+    set(PluginList ${PluginList} "${ThirdPartyLibraryDestDir}/${libName}")
+endforeach()
+
+# -- Copy embedded third party glob patterns.
+foreach(pattern ${ThirdPartyLibrariesPatterns})
+    file(GLOB libFiles "${ThirdPartyCacheInstallLib}/${pattern}")
+    if(libFiles)
+        file(INSTALL ${libFiles}
+            DESTINATION ${ThirdPartyLibraryDestDir}
+            FILE_PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
+    endif()
 endforeach()
 
 # -- Run the BundleUtilities cmake code

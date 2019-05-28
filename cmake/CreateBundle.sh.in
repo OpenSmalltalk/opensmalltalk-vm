@@ -23,11 +23,11 @@ FrameworksDir="$OSX_App/Contents/Frameworks"
 PluginsDir="$OSX_App/Contents/MacOS/Plugins"
 
 # create directories in the @target@.app bundle
-mkdir -p "$SupportDir"
-if [ ! -e $FrameworksDir ]; then
-    mkdir -p "$FrameworksDir"
-fi
-if [ ! -e $LibrariesDir ]; then
-  mkdir -p "$LibrariesDir"
-fi
+#mkdir -p "$SupportDir"
+#if [ ! -e $FrameworksDir ]; then
+#    mkdir -p "$FrameworksDir"
+#fi
+#if [ ! -e $LibrariesDir ]; then
+#  mkdir -p "$LibrariesDir"
+#fi
 mkdir -p "$PluginsDir"

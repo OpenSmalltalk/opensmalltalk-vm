@@ -19,5 +19,5 @@ add_thirdparty_with_autoconf(LibSSH2
     LINUX_LIBRARIES ${LibSSH2_Spec_LinuxLibraries}
     LINUX_LIBRARIES_SYMLINK_PATTERNS ${LibSSH2_Spec_LinuxLibrariesSymlinks}
     WINDOWS_DLLS ${LibSSH2_Spec_WindowsDLLs}
-    DEPENDENCIES ${LibSSH2_BuildDep}
+    DEPENDENCIES ${OpenSSL_BuildDep}
 )

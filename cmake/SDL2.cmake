@@ -8,7 +8,7 @@ set(LibSDL2_Spec_LinuxLibraries libSDL2-2.0.so.0.7.0)
 set(LibSDL2_Spec_LinuxLibrariesSymlinks libSDL2*so*)
 set(LibSDL2_Spec_WindowsDLLs SDL2.dll)
 
-add_thirdparty_with_autoconf(LibSDL2
+add_thirdparty_with_autoconf(SDL2
     DOWNLOAD_URL ${LibSDL2_Spec_URL}
     ARCHIVE_NAME ${LibSDL2_Spec_ArchiveName}
     ARCHIVE_SHA256 ${LibSDL2_Spec_ArchiveSha256}
@@ -18,5 +18,4 @@ add_thirdparty_with_autoconf(LibSDL2
     LINUX_LIBRARIES ${LibSDL2_Spec_LinuxLibraries}
     LINUX_LIBRARIES_SYMLINK_PATTERNS ${LibSDL2_Spec_LinuxLibrariesSymlinks}
     WINDOWS_DLLS ${LibSDL2_Spec_WindowsDLLs}
-    DEPENDENCIES ${LibSDL2_BuildDep}
 )

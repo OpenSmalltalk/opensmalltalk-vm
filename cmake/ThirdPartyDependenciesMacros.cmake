@@ -28,11 +28,20 @@ endif()
 
 ## Thirdparty cache install dir.
 set(ThirdPartyCacheInstall "${ThirdPartyCacheDirectory}/${ThirdPartyCacheOSName}/${ThirdPartyCacheArchName}")
+set(ThirdPartyCacheInstallBin "${ThirdPartyCacheInstall}/bin")
 set(ThirdPartyCacheInstallLib "${ThirdPartyCacheInstall}/lib")
 set(ThirdPartyCacheInstallInclude "${ThirdPartyCacheInstall}/include")
+include_directories(${ThirdPartyCacheInstallInclude})
 
 message(STATUS "Third party cache download location ${ThirdPartyCacheDownloadDirectory}")
 message(STATUS "Third party cache prefix ${ThirdPartyCacheInstall}")
+
+## On OS X, we cannot just copy the libraries. We use this hack to integrate
+## the libraries with the bundle creation utilities.
+if(DARWIN)
+    set(ThirdPartyLibrariesFileNames "" CACHE INTERNAL "List of built libraries to bundle.")
+    set(ThirdPartyLibrariesPatterns "" CACHE INTERNAL "List of built libraries glob patterns to bundle.")
+endif()
 
 ## Function for checking a list of files exists. This is used to avoid
 ## rebuilding cached thirdparty dependencies.
@@ -112,11 +121,53 @@ function(INSTALL_THIRDPARTY_BUILD_ARTIFACTS ThirdpartyProjectName)
         set(InstallLibraryGlobPatterns ${ARTIFACT_KIND_LINUX_LIBRARIES_SYMLINK_PATTERNS})
     endif()
 
-    ## CMake install(DIRECTORY ...) does not exclude subdirectories, So we
-    set(InstallScriptFileName "${CMAKE_CURRENT_BINARY_DIR}/${ThirdpartyProjectName}-install.cmake")
-    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/ThirdPartyDependencyInstallScript.cmake.in"
-        "${InstallScriptFileName}" @ONLY IMMEDIATE)
-    install(SCRIPT "${InstallScriptFileName}")
+    if(DARWIN)
+        set(newList ${ThirdPartyLibrariesFileNames} ${InstallLibraryFileNames})
+        set(ThirdPartyLibrariesFileNames "${newList}" CACHE INTERNAL "List of built libraries to bundle.")
+        set(newList ${ThirdPartyLibrariesPatterns} ${InstallLibraryGlobPatterns})
+        set(ThirdPartyLibrariesPatterns "${newList}" CACHE INTERNAL "List of built libraries glob patterns to bundle.")
+    else()
+        ## CMake install(DIRECTORY ...) does not exclude subdirectories, So we
+        set(InstallScriptFileName "${CMAKE_CURRENT_BINARY_DIR}/${ThirdpartyProjectName}-install.cmake")
+        configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/ThirdPartyDependencyInstallScript.cmake.in"
+            "${InstallScriptFileName}" @ONLY IMMEDIATE)
+        install(SCRIPT "${InstallScriptFileName}")
+    endif()
+endfunction()
+
+## This export variables for linking with an included thirdparty
+function (export_included_thirdparty_libraries NAME)
+    set(options)
+    set(oneValueArgs)
+    set(multiValueArgs
+        MAC_LIBRARIES
+        LINUX_LIBRARIES
+        WINDOWS_LIBRARIES)
+
+    cmake_parse_arguments(ARTIFACT_KIND "${options}" "${oneValueArgs}"
+                          "${multiValueArgs}" ${ARGN} )
+                          
+    set(libraries)
+    if(DARWIN)
+        set(libraries ${ARTIFACT_KIND_MAC_LIBRARIES})
+    elseif(WIN32)
+        set(libraries ${ARTIFACT_KIND_WINDOWS_LIBRARIES})
+    else()
+        set(libraries ${ARTIFACT_KIND_LINUX_LIBRARIES})
+    endif()
+    
+    if(libraries)
+        set(librariesFullPaths)
+        foreach(lib ${libraries})
+            set(librariesFullPaths ${librariesFullPaths} "${ThirdPartyCacheInstallLib}/${lib}")
+        endforeach()
+        
+        set(HAVE_${NAME} True CACHE INTERNAL "Is ${NAME} avaiable?" FORCE)
+        set(${NAME}_LIBRARIES "${librariesFullPaths}" CACHE STRING "${NAME} libraries" FORCE)
+        set(${NAME}_INCLUDE_DIR "" CACHE PATH "${NAME} include directory" FORCE)
+    else()
+        set(HAVE_${NAME} False CACHE INTERNAL "Is SDL2 avaiable?")
+    endif()
 endfunction()
 
 ## This function adds an autoconf based thirdparty dependency.
@@ -131,6 +182,7 @@ function(ADD_THIRDPARTY_WITH_AUTOCONF NAME)
         MAC_LIBRARIES_SYMLINK_PATTERNS
         LINUX_LIBRARIES
         LINUX_LIBRARIES_SYMLINK_PATTERNS
+        WINDOWS_LIBRARIES
         WINDOWS_DLLS)
 
     cmake_parse_arguments(parsed_arguments "${options}" "${oneValueArgs}"
@@ -177,6 +229,13 @@ function(ADD_THIRDPARTY_WITH_AUTOCONF NAME)
             "CFLAGS=${autoconf_cflags}"
             "LDFLAGS=${autoconf_ldflags}"
         )
+        
+        if(ThirdPartyPkgConfig AND ThirdPartyPkgConfigPath)
+            set(thirdparty_autoconf_command ${thirdparty_autoconf_command}
+                "PKG_CONFIG=${ThirdPartyPkgConfig}"
+                "PKG_CONFIG_PATH=${ThirdPartyPkgConfigPath}"
+            )
+        endif()
 
         ExternalProject_Add(${NAME}
             URL "${parsed_arguments_DOWNLOAD_URL}"
@@ -202,6 +261,12 @@ function(ADD_THIRDPARTY_WITH_AUTOCONF NAME)
         LINUX_LIBRARIES_SYMLINK_PATTERNS ${parsed_arguments_LINUX_LIBRARIES_SYMLINK_PATTERNS}
         WINDOWS_DLLS ${parsed_arguments_WINDOWS_DLLS}
     )
+    
+    export_included_thirdparty_libraries(${NAME}
+        MAC_LIBRARIES ${parsed_arguments_MAC_LIBRARIES}
+        LINUX_LIBRARIES ${parsed_arguments_LINUX_LIBRARIES}
+        WINDOWS_LIBRARIES ${parsed_arguments_WINDOWS_LIBRARIES}
+    )
 endfunction()
 
 function(ADD_THIRDPARTY_WITH_CMAKE NAME)
@@ -215,7 +280,8 @@ function(ADD_THIRDPARTY_WITH_CMAKE NAME)
         MAC_LIBRARIES_SYMLINK_PATTERNS
         LINUX_LIBRARIES
         LINUX_LIBRARIES_SYMLINK_PATTERNS
-        WINDOWS_DLLS)
+        WINDOWS_DLLS
+        WINDOWS_LIBRARIES)
 
     cmake_parse_arguments(parsed_arguments "${options}" "${oneValueArgs}"
                           "${multiValueArgs}" ${ARGN} )
@@ -291,5 +357,11 @@ function(ADD_THIRDPARTY_WITH_CMAKE NAME)
         LINUX_LIBRARIES ${parsed_arguments_LINUX_LIBRARIES}
         LINUX_LIBRARIES_SYMLINK_PATTERNS ${parsed_arguments_LINUX_LIBRARIES_SYMLINK_PATTERNS}
         WINDOWS_DLLS ${parsed_arguments_WINDOWS_DLLS}
+    )
+    
+    export_included_thirdparty_libraries(${NAME}
+        MAC_LIBRARIES ${parsed_arguments_MAC_LIBRARIES}
+        LINUX_LIBRARIES ${parsed_arguments_LINUX_LIBRARIES}
+        WINDOWS_LIBRARIES ${parsed_arguments_WINDOWS_LIBRARIES}
     )
 endfunction()

@@ -21,3 +21,6 @@ add_thirdparty_with_autoconf(PkgConfig
     EXTRA_BUILD_ARTIFACTS "bin/pkg-config"
     CFLAGS "-std=gnu89"
 )
+
+set(ThirdPartyPkgConfig "${ThirdPartyCacheInstallBin}/pkg-config")
+set(ThirdPartyPkgConfigPath "${ThirdPartyCacheInstallLib}/pkgconfig")

@@ -407,25 +407,33 @@ if(APPLE)
 		${CoreFoundation_LIBRARY}
 		${VM_DEPENDENCIES_LIBRARIES})
 		# SDL2 and openssl need this
-	include_directories(/opt/local/include)
+	#include_directories(/opt/local/include)
 endif()
 
-# Find SDL2
-find_path(SDL2_INCLUDE_DIR
-  NAMES SDL.h
-  PATH_SUFFIXES SDL2
-)
+set(HAVE_SDL2 False CACHE INTERNAL "Is SDL2 available?")
+set(HAVE_FreeType2 TRUE CACHE INTERNAL "Is FreeType available?")
+if(NOT ONLY_CONFIG_H)
+	include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/ThirdPartyDependencies.cmake")
+endif()
 
-find_path(SDL2_LIBRARY_PATH
-  NAMES SDL2-2.0.lib SDL2-2.0.a libSDL2-2.0.a libSDL2-2.0.so SDL2.lib SDL2.a libSDL2.a
-)
+# Find SDL2 if has not been specified by the include SDL2 thirdparty
+# dependendency
+if(NOT HAVE_SDL2)
+	find_path(SDL2_INCLUDE_DIR
+	  NAMES SDL.h
+	  PATH_SUFFIXES SDL2
+	)
 
-find_library(SDL2_LIBRARY NAMES SDL2-2.0 SDL2 PATHS ${SDL2_LIBRARY_PATH})
+	find_path(SDL2_LIBRARIES_PATH
+	  NAMES SDL2-2.0.lib SDL2-2.0.a libSDL2-2.0.a libSDL2-2.0.so SDL2.lib SDL2.a libSDL2.a
+	)
 
-set(HAVE_SDL2 False)
-if(SDL2_INCLUDE_DIR AND SDL2_LIBRARY AND ALLOW_SDL2)
-	set(HAVE_SDL2 True)
-	include_directories("${SDL2_INCLUDE_DIR}")
+	find_library(SDL2_LIBRARIES NAMES SDL2-2.0 SDL2 PATHS ${SDL2_LIBRARIES_PATH})
+
+	if(SDL2_INCLUDE_DIR AND SDL2_LIBRARIES AND ALLOW_SDL2)
+		set(HAVE_SDL2 True)
+		include_directories("${SDL2_INCLUDE_DIR}")
+	endif()
 endif()
 
 # Choose the window system
@@ -435,7 +443,7 @@ if(SUPPORT_TRADITIONAL_DISPLAY AND ALLOW_SDL2)
 		set(VM_WINDOW_SYSTEM
 			platforms/minheadless/sdl2-window/sqWindow-SDL2.c
 		)
-		set(VM_DEPENDENCIES_LIBRARIES ${SDL2_LIBRARY} ${VM_DEPENDENCIES_LIBRARIES})
+		set(VM_DEPENDENCIES_LIBRARIES ${SDL2_LIBRARIES} ${VM_DEPENDENCIES_LIBRARIES})
 	endif()
 endif()
 
@@ -576,9 +584,6 @@ source_group("VM Platform Common Sources" FILES ${VM_PLATFORM_COMMON_SOURCES})
 source_group("VM Platform Sources" FILES ${VM_PLATFORM_SOURCES})
 source_group("VM Window System" FILES ${VM_WINDOW_SYSTEM})
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Plugins.cmake")
-if(NOT ONLY_CONFIG_H)
-	include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/ThirdPartyDependencies.cmake")
-endif()
 
 # Generate the config dot h.
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/platforms/minheadless/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
@@ -657,7 +662,10 @@ if(NOT ONLY_CONFIG_H)
     endif()
 
 	if(DARWIN)
-		function(MakeOSXBundleApp target binary_dir embedded_bundles embedded_plugins embedded_frameworks)
+		function(MakeOSXBundleApp
+			target binary_dir embedded_bundles embedded_plugins embedded_frameworks
+			thirdparty_libraries_names thirdparty_libraries_patterns)
+
 		  # Function from sample http://www.cmake.org/Wiki/images/e/e3/QTTest.zip
 		  # https://gitlab.kitware.com/cmake/community/wikis/doc/tutorials/BuildingOSXApplications
 	      SET (OSX_MAKE_STANDALONE_BUNDLE_CMAKE_SCRIPT "${binary_dir}/${target}_OSX_MakeStandAloneBundle.cmake")
@@ -672,9 +680,14 @@ if(NOT ONLY_CONFIG_H)
 	    endfunction(MakeOSXBundleApp)
 
 		if(BUILD_PLUGINS_AS_BUNDLES)
-			MakeOSXBundleApp(${VM_EXECUTABLE_NAME} ${CMAKE_CURRENT_BINARY_DIR} "${VM_EXTERNAL_PLUGINS_TARGETS}" "" "")
+			MakeOSXBundleApp(${VM_EXECUTABLE_NAME} ${CMAKE_CURRENT_BINARY_DIR}
+				"${VM_EXTERNAL_PLUGINS_TARGETS}" "" ""
+				"${ThirdPartyLibrariesFileNames}" "${ThirdPartyLibrariesPatterns}")
 		else()
-			MakeOSXBundleApp(${VM_EXECUTABLE_NAME} ${CMAKE_CURRENT_BINARY_DIR} "" "${VM_EXTERNAL_PLUGINS_TARGETS}" "")
+			MakeOSXBundleApp(${VM_EXECUTABLE_NAME} ${CMAKE_CURRENT_BINARY_DIR}
+				"" "${VM_EXTERNAL_PLUGINS_TARGETS}" ""
+				"${ThirdPartyLibrariesFileNames}" "${ThirdPartyLibrariesPatterns}"
+			)
 		endif()
 	else()
 		install(TARGETS ${VM_LIBRARY_NAME} ${VM_EXECUTABLE_TARGETS} ${VM_EXTERNAL_PLUGINS_TARGETS}
