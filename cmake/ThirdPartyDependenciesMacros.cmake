@@ -133,22 +133,22 @@ function(ADD_THIRDPARTY_WITH_AUTOCONF NAME)
         LINUX_LIBRARIES_SYMLINK_PATTERNS
         WINDOWS_DLLS)
 
-    cmake_parse_arguments(ADD_THIRDPARTY_AUTOCONF "${options}" "${oneValueArgs}"
+    cmake_parse_arguments(parsed_arguments "${options}" "${oneValueArgs}"
                           "${multiValueArgs}" ${ARGN} )
     # Compute the actually used build artifacts.
     check_thirdparty_build_artifacts(HaveCachedBuildArtifacts
-        EXTRA_BUILD_ARTIFACTS ${ADD_THIRDPARTY_AUTOCONF_EXTRA_BUILD_ARTIFACTS}
-        MAC_LIBRARIES ${ADD_THIRDPARTY_AUTOCONF_MAC_LIBRARIES}
-        LINUX_LIBRARIES ${ADD_THIRDPARTY_AUTOCONF_LINUX_LIBRARIES}
-        WINDOWS_DLLS ${ADD_THIRDPARTY_AUTOCONF_WINDOWS_DLLS}
+        EXTRA_BUILD_ARTIFACTS ${parsed_arguments_EXTRA_BUILD_ARTIFACTS}
+        MAC_LIBRARIES ${parsed_arguments_MAC_LIBRARIES}
+        LINUX_LIBRARIES ${parsed_arguments_LINUX_LIBRARIES}
+        WINDOWS_DLLS ${parsed_arguments_WINDOWS_DLLS}
     )
 
     if(HaveCachedBuildArtifacts)
         message(STATUS "Not building cached third-party dependency ${NAME}.")
         set(${NAME}_BuildDep PARENT_SCOPE)
     else()
-        set(autoconf_cflags "${ADD_THIRDPARTY_AUTOCONF_CFLAGS}")
-        set(autoconf_ldflags "${ADD_THIRDPARTY_AUTOCONF_LDFLAGS} ")
+        set(autoconf_cflags "${parsed_arguments_CFLAGS}")
+        set(autoconf_ldflags "${parsed_arguments_LDFLAGS} ")
 
         if(DARWIN)
             if(SQUEAK_PLATFORM_X86_32)
@@ -173,22 +173,22 @@ function(ADD_THIRDPARTY_WITH_AUTOCONF NAME)
 
         set(thirdparty_autoconf_command "./configure"
             "--prefix=${ThirdPartyCacheInstall}"
-            ${ADD_THIRDPARTY_AUTOCONF_AUTOCONF_EXTRA_ARGS}
+            ${parsed_arguments_AUTOCONF_EXTRA_ARGS}
             "CFLAGS=${autoconf_cflags}"
             "LDFLAGS=${autoconf_ldflags}"
         )
 
         ExternalProject_Add(${NAME}
-            URL "${ADD_THIRDPARTY_AUTOCONF_DOWNLOAD_URL}"
-            URL_HASH "SHA256=${ADD_THIRDPARTY_AUTOCONF_ARCHIVE_SHA256}"
-            DOWNLOAD_NAME "${ADD_THIRDPARTY_AUTOCONF_ARCHIVE_NAME}"
+            URL "${parsed_arguments_DOWNLOAD_URL}"
+            URL_HASH "SHA256=${parsed_arguments_ARCHIVE_SHA256}"
+            DOWNLOAD_NAME "${parsed_arguments_ARCHIVE_NAME}"
             DOWNLOAD_DIR "${ThirdPartyCacheDownloadDirectory}"
             PREFIX "${CMAKE_CURRENT_BINARY_DIR}/thirdparty/${NAME}"
             CONFIGURE_COMMAND "${thirdparty_autoconf_command}"
             BUILD_IN_SOURCE TRUE
         )
 
-        foreach(dep ${ADD_THIRDPARTY_AUTOCONF_DEPENDENCIES})
+        foreach(dep ${parsed_arguments_DEPENDENCIES})
             add_dependencies(${NAME} ${dep})
         endforeach()
         set(${NAME}_BuildDep ${NAME} PARENT_SCOPE)
@@ -196,10 +196,100 @@ function(ADD_THIRDPARTY_WITH_AUTOCONF NAME)
 
     ## Install the relevant build artifacts
     install_thirdparty_build_artifacts(${NAME}
-        MAC_LIBRARIES ${ADD_THIRDPARTY_AUTOCONF_MAC_LIBRARIES}
-        MAC_LIBRARIES_SYMLINK_PATTERNS ${ADD_THIRDPARTY_AUTOCONF_MAC_LIBRARIES_SYMLINK_PATTERNS}
-        LINUX_LIBRARIES ${ADD_THIRDPARTY_AUTOCONF_LINUX_LIBRARIES}
-        LINUX_LIBRARIES_SYMLINK_PATTERNS ${ADD_THIRDPARTY_AUTOCONF_LINUX_LIBRARIES_SYMLINK_PATTERNS}
-        WINDOWS_DLLS ${ADD_THIRDPARTY_AUTOCONF_WINDOWS_DLLS}
+        MAC_LIBRARIES ${parsed_arguments_MAC_LIBRARIES}
+        MAC_LIBRARIES_SYMLINK_PATTERNS ${parsed_arguments_MAC_LIBRARIES_SYMLINK_PATTERNS}
+        LINUX_LIBRARIES ${parsed_arguments_LINUX_LIBRARIES}
+        LINUX_LIBRARIES_SYMLINK_PATTERNS ${parsed_arguments_LINUX_LIBRARIES_SYMLINK_PATTERNS}
+        WINDOWS_DLLS ${parsed_arguments_WINDOWS_DLLS}
+    )
+endfunction()
+
+function(ADD_THIRDPARTY_WITH_CMAKE NAME)
+    set(options)
+    set(oneValueArgs DOWNLOAD_URL ARCHIVE_NAME ARCHIVE_SHA256 UNPACK_DIR_NAME CFLAGS CXXFLAGS LDFLAGS)
+    set(multiValueArgs
+        CMAKE_EXTRA_ARGS
+        DEPENDENCIES
+        EXTRA_BUILD_ARTIFACTS
+        MAC_LIBRARIES
+        MAC_LIBRARIES_SYMLINK_PATTERNS
+        LINUX_LIBRARIES
+        LINUX_LIBRARIES_SYMLINK_PATTERNS
+        WINDOWS_DLLS)
+
+    cmake_parse_arguments(parsed_arguments "${options}" "${oneValueArgs}"
+                          "${multiValueArgs}" ${ARGN} )
+    # Compute the actually used build artifacts.
+    check_thirdparty_build_artifacts(HaveCachedBuildArtifacts
+        EXTRA_BUILD_ARTIFACTS ${parsed_arguments_EXTRA_BUILD_ARTIFACTS}
+        MAC_LIBRARIES ${parsed_arguments_MAC_LIBRARIES}
+        LINUX_LIBRARIES ${parsed_arguments_LINUX_LIBRARIES}
+        WINDOWS_DLLS ${parsed_arguments_WINDOWS_DLLS}
+    )
+
+    if(HaveCachedBuildArtifacts)
+        message(STATUS "Not building cached third-party dependency ${NAME}.")
+        set(${NAME}_BuildDep PARENT_SCOPE)
+    else()
+        set(cmake_cflags "${parsed_arguments_CFLAGS}")
+        set(cmake_cxxflags "${parsed_arguments_CXXFLAGS}")
+        set(cmake_ldflags "${parsed_arguments_LDFLAGS} ")
+
+        if(DARWIN)
+            if(SQUEAK_PLATFORM_X86_32)
+                set(cmake_cflags "${cmake_cflags} -arch i386")
+                set(cmake_cxxflags "${cmake_cxxflags} -arch i386")
+                set(cmake_ldflags "${cmake_ldflags} -arch i386")
+            elseif(SQUEAK_PLATFORM_X86_64)
+                set(cmake_cflags "${cmake_cflags} -arch x86_64")
+                set(cmake_cxxflags "${cmake_cxxflags} -arch x86_64")
+                set(cmake_ldflags "${cmake_ldflags} -arch x86_64")
+            endif()
+        else()
+            if(SQUEAK_PLATFORM_X86_32)
+                set(cmake_cflags "${cmake_cflags} -m32")
+                set(cmake_cxxflags "${cmake_cxxflags} -m32")
+                set(cmake_ldflags "${cmake_ldflags} -m32")
+            elseif(SQUEAK_PLATFORM_X86_64)
+                set(cmake_cflags "${cmake_cflags} -m64")
+                set(cmake_cxxflags "${cmake_cxxflags} -m64")
+                set(cmake_ldflags "${cmake_ldflags} -m64")
+            endif()
+        endif()
+
+        set(cmake_cflags "${cmake_cflags} -I${ThirdPartyCacheInstallInclude}")
+        set(cmake_ldflags "${cmake_ldflags} -L${ThirdPartyCacheInstallLib}")
+
+        set(thirdparty_cmake_command cmake "../${NAME}"
+            "-DCMAKE_INSTALL_PREFIX=${ThirdPartyCacheInstall}"
+            "-DCMAKE_PREFIX_PATH=${ThirdPartyCacheInstall}"
+            "-DCMAKE_C_FLAGS=${cmake_cflags}"
+            "-DCMAKE_CXX_FLAGS=${cmake_cxxflags}"
+            ${parsed_arguments_CMAKE_EXTRA_ARGS}
+        )
+
+        ExternalProject_Add(${NAME}
+            URL "${parsed_arguments_DOWNLOAD_URL}"
+            URL_HASH "SHA256=${parsed_arguments_ARCHIVE_SHA256}"
+            DOWNLOAD_NAME "${parsed_arguments_ARCHIVE_NAME}"
+            DOWNLOAD_DIR "${ThirdPartyCacheDownloadDirectory}"
+            PREFIX "${CMAKE_CURRENT_BINARY_DIR}/thirdparty/${NAME}"
+            CONFIGURE_COMMAND "${thirdparty_cmake_command}"
+            BUILD_IN_SOURCE FALSE
+        )
+
+        foreach(dep ${parsed_arguments_DEPENDENCIES})
+            add_dependencies(${NAME} ${dep})
+        endforeach()
+        set(${NAME}_BuildDep ${NAME} PARENT_SCOPE)
+    endif()
+
+    ## Install the relevant build artifacts
+    install_thirdparty_build_artifacts(${NAME}
+        MAC_LIBRARIES ${parsed_arguments_MAC_LIBRARIES}
+        MAC_LIBRARIES_SYMLINK_PATTERNS ${parsed_arguments_MAC_LIBRARIES_SYMLINK_PATTERNS}
+        LINUX_LIBRARIES ${parsed_arguments_LINUX_LIBRARIES}
+        LINUX_LIBRARIES_SYMLINK_PATTERNS ${parsed_arguments_LINUX_LIBRARIES_SYMLINK_PATTERNS}
+        WINDOWS_DLLS ${parsed_arguments_WINDOWS_DLLS}
     )
 endfunction()
