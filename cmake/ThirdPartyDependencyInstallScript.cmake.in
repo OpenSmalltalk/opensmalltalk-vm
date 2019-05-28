@@ -1,0 +1,26 @@
+set(ThirdPartyCache @ThirdPartyCacheInstall@)
+set(ThirdPartyCacheLibrarySourceFolder "@InstallLibrarySourceFolder@")
+
+set(InstallLibraryDestFolder "@InstallLibraryDestFolder@")
+set(InstallLibraryFileNames "@InstallLibraryFileNames@")
+set(InstallLibraryGlobPatterns "@InstallLibraryGlobPatterns@")
+set(InstallDestination "@CMAKE_INSTALL_PREFIX@")
+
+
+# Direct installation of specific files.
+foreach(filename ${InstallLibraryFileNames})
+    file(INSTALL "${ThirdPartyCache}/${ThirdPartyCacheLibrarySourceFolder}/${filename}"
+        DESTINATION "${InstallDestination}/${InstallLibraryDestFolder}")
+endforeach()
+
+# Compute each one of the globs, and then install the matched files.
+if(InstallLibraryGlobPatterns)
+    set(AbsoluteGlobPatterns "${InstallLibraryGlobPatterns}")
+    list(TRANSFORM AbsoluteGlobPatterns PREPEND "${ThirdPartyCache}/${ThirdPartyCacheLibrarySourceFolder}/")
+    file(GLOB matchedFiles
+        LIST_DIRECTORIES FALSE
+        ${AbsoluteGlobPatterns}
+        )
+    file(INSTALL ${matchedFiles}
+        DESTINATION "${InstallDestination}/${InstallLibraryDestFolder}")
+endif()

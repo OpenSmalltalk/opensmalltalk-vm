@@ -228,7 +228,7 @@ if(NOT OpenSmalltalkVM_BUILD_AS_INTERNAL_PROJECT)
 		set(ProductInstallBaseFolder ".")
 		set(ProductInstallProgramFolder ".")
 	endif()
-	
+
 	set(EXECUTABLE_OUTPUT_PATH "${ProductDistFolder}")
 	set(LIBRARY_OUTPUT_PATH "${ProductDistFolder}")
 endif()
@@ -242,7 +242,7 @@ endif()
 set(SourceFolderName "${SourceFolderName}src")
 set(PluginsSourceFolderName "src/plugins")
 
-message("Source folder name: ${SourceFolderName}")
+message(STATUS "Source folder name: ${SourceFolderName}")
 
 # Common defines
 add_definitions(-DUSE_GLOBAL_STRUCT=0
@@ -577,6 +577,7 @@ source_group("VM Platform Common Sources" FILES ${VM_PLATFORM_COMMON_SOURCES})
 source_group("VM Platform Sources" FILES ${VM_PLATFORM_SOURCES})
 source_group("VM Window System" FILES ${VM_WINDOW_SYSTEM})
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Plugins.cmake")
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/ThirdPartyDependencies.cmake")
 
 # Generate the config dot h.
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/platforms/minheadless/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
@@ -607,7 +608,7 @@ if(NOT ONLY_CONFIG_H)
 	set_target_properties(${VM_LIBRARY_NAME} PROPERTIES
 		PUBLIC_HEADER ${PublicHeaderFiles}
 		FRAMEWORK TRUE)
-	
+
     # Build the VM executable(s)
 	set(VM_EXECUTABLE_TARGETS ${VM_EXECUTABLE_NAME})
     if(WIN32)
@@ -665,10 +666,10 @@ if(NOT ONLY_CONFIG_H)
 	        "${OSX_MAKE_STANDALONE_BUNDLE_CMAKE_SCRIPT}" @ONLY IMMEDIATE)
 	      CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/cmake/CreateBundle.sh.in"
 	        "${OSX_MAKE_STANDALONE_BUNDLE_BASH_SCRIPT}" @ONLY IMMEDIATE)
-	   
+
 	     install(SCRIPT "${OSX_MAKE_STANDALONE_BUNDLE_CMAKE_SCRIPT}")
 	    endfunction(MakeOSXBundleApp)
-		
+
 		if(BUILD_PLUGINS_AS_BUNDLES)
 			MakeOSXBundleApp(${VM_EXECUTABLE_NAME} ${CMAKE_CURRENT_BINARY_DIR} "${VM_EXTERNAL_PLUGINS_TARGETS}" "" "")
 		else()
@@ -684,4 +685,4 @@ if(NOT ONLY_CONFIG_H)
 	endif()
 endif()
 
-message("Build results can be installed to ${CMAKE_INSTALL_PREFIX}")
+message(STATUS "Build results can be installed to ${CMAKE_INSTALL_PREFIX}")
