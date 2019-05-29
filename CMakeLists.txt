@@ -32,10 +32,15 @@ else()
 	set(WARNING_FLAG_LIST -Wall
 		-Wno-missing-field-initializers -Wno-missing-prototypes
 		-Wno-missing-braces -Wparentheses -Wswitch -Wno-unused-function
-		-Wno-unused-label -Wno-unused-parameter -Wunused-variable -Wunused-value
+		-Wno-unused-label -Wno-unused-parameter
 		-Wno-empty-body -Wno-uninitialized -Wno-unknown-pragmas -Wno-shadow
 		-Wno-conversion -Wno-int-conversion -Wno-sign-conversion -Wpointer-sign
 		-Wno-trigraphs -Wdeprecated-declarations
+
+        # -Wunused-variable -Wunused-value -Wunused-but-set-variable
+        # Supress these warning to reduce the side of the Travius log and avoid
+        # "The job exceeded the maximum log length, and has been terminated."
+        -Wno-unused-variable -Wno-unused-value -Wno-unused-but-set-variable
 	)
 
 	if(APPLE)
