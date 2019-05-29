@@ -48,11 +48,17 @@ jobs:
   - env: ARCH="linux64x64" FLAVOR="squeak.cog.spur" CPU_ARCH="x64" BUILD_WITH_CMAKE="yes"
   - env: ARCH="macos64x64" FLAVOR="squeak.cog.spur" CPU_ARCH="x64" BUILD_WITH_CMAKE="yes"
     <<: *mac-build
+  - env: ARCH="linux64x64" FLAVOR="squeak.cog.spur+sdl2" CPU_ARCH="x64" BUILD_WITH_CMAKE="yes"
+  - env: ARCH="macos64x64" FLAVOR="squeak.cog.spur+sdl2" CPU_ARCH="x64" BUILD_WITH_CMAKE="yes"
+    <<: *mac-build
   - env: ARCH="linux32x86" FLAVOR="pharo.cog.spur" CPU_ARCH="x86" HEARTBEAT="threaded" BUILD_WITH_CMAKE="yes"
   - env: ARCH="macos32x86" FLAVOR="pharo.cog.spur" CPU_ARCH="x86" BUILD_VM_WITH_CMAKE="yes"
     <<: *mac-build
   - env: ARCH="linux64x64" FLAVOR="pharo.cog.spur" CPU_ARCH="x64" HEARTBEAT="threaded" BUILD_WITH_CMAKE="yes"
   - env: ARCH="macos64x64" FLAVOR="pharo.cog.spur" CPU_ARCH="x64" BUILD_WITH_CMAKE="yes"
+    <<: *mac-build
+  - env: ARCH="linux64x64" FLAVOR="pharo.cog.spur+sdl2" CPU_ARCH="x64" HEARTBEAT="threaded" BUILD_WITH_CMAKE="yes"
+  - env: ARCH="macos64x64" FLAVOR="pharo.cog.spur+sdl2" CPU_ARCH="x64" BUILD_WITH_CMAKE="yes"
     <<: *mac-build
 
   - stage: "Other Linux builds"

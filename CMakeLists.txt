@@ -215,29 +215,10 @@ else()
 endif()
 add_definitions(-DVM_NAME="${VM_NAME}")
 
-
-# Set output dir.
-# OpenSmalltalkVM_BUILD_AS_INTERNAL_PROJECT can be used before including this
-# project using add_subdirectory()
-if(NOT OpenSmalltalkVM_BUILD_AS_INTERNAL_PROJECT)
-	set(ProductDistFolder "${OpenSmalltalkVM_BINARY_DIR}/dist/")
-	set(ProductInstallBaseFolder "${ProductFolderName}")
-	set(ProductInstallProgramFolder "${ProductFolderName}/lib/${VM_EXECUTABLE_NAME}")
-
-	if(DARWIN OR WIN32)
-		set(ProductInstallBaseFolder ".")
-		set(ProductInstallProgramFolder ".")
-	endif()
-
-	set(EXECUTABLE_OUTPUT_PATH "${ProductDistFolder}")
-	set(LIBRARY_OUTPUT_PATH "${ProductDistFolder}")
-endif()
-
 # Cog JIT
 if(COG_JIT)
 	#add_definitions(CogVM=1)
 endif()
-
 
 set(SourceFolderName "${SourceFolderName}src")
 set(PluginsSourceFolderName "src/plugins")
@@ -445,7 +426,25 @@ if(SUPPORT_TRADITIONAL_DISPLAY AND ALLOW_SDL2)
 			platforms/minheadless/sdl2-window/sqWindow-SDL2.c
 		)
 		set(VM_DEPENDENCIES_LIBRARIES ${SDL2_LIBRARIES} ${VM_DEPENDENCIES_LIBRARIES})
+		set(ProductFolderName "${ProductFolderName}+sdl2")
 	endif()
+endif()
+
+# Set output dir.
+# OpenSmalltalkVM_BUILD_AS_INTERNAL_PROJECT can be used before including this
+# project using add_subdirectory()
+if(NOT OpenSmalltalkVM_BUILD_AS_INTERNAL_PROJECT)
+	set(ProductDistFolder "${OpenSmalltalkVM_BINARY_DIR}/dist/")
+	set(ProductInstallBaseFolder "${ProductFolderName}")
+	set(ProductInstallProgramFolder "${ProductFolderName}/lib/${VM_EXECUTABLE_NAME}")
+
+	if(DARWIN OR WIN32)
+		set(ProductInstallBaseFolder ".")
+		set(ProductInstallProgramFolder ".")
+	endif()
+
+	set(EXECUTABLE_OUTPUT_PATH "${ProductDistFolder}")
+	set(LIBRARY_OUTPUT_PATH "${ProductDistFolder}")
 endif()
 
 # Different source categories
@@ -616,6 +615,9 @@ if(NOT ONLY_CONFIG_H)
 	set_target_properties(${VM_LIBRARY_NAME} PROPERTIES
 		PUBLIC_HEADER ${PublicHeaderFiles}
 		FRAMEWORK TRUE)
+	if(SUPPORT_TRADITIONAL_DISPLAY AND ALLOW_SDL2 AND SDL2_BuildDep)
+		add_dependencies(${VM_LIBRARY_NAME} ${SDL2_BuildDep})
+	endif()
 
     # Build the VM executable(s)
 	set(VM_EXECUTABLE_TARGETS ${VM_EXECUTABLE_NAME})

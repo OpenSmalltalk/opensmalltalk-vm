@@ -1,12 +1,17 @@
 #!/bin/sh
 VARIANT_FOLDER="$1"
 VARIANT_NAME="$2"
-OS_NAME="`uname -o`"
+OS_NAME="`uname`"
 GENERATOR_NAME="Unix Makefiles"
+CMAKE_EXTRA_ARGS=""
 
 rm -rf "./$VARIANT_FOLDER"
 mkdir "./$VARIANT_FOLDER"
 cd "./$VARIANT_FOLDER"
+
+if [ "$OS_NAME" != "Darwin" ]; then
+    OS_NAME="`uname -o`"
+fi
 
 if [ "$OS_NAME" = "Msys" ]; then
     GENERATOR_NAME="MSYS Makefiles"
