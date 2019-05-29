@@ -29,8 +29,29 @@ if (MSVC)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W3")
 	set(VM_MSVC TRUE)
 else()
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 -Wall")
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu99 -Wall")
+	set(WARNING_FLAG_LIST -Wall
+		-Wno-missing-field-initializers -Wno-missing-prototypes
+		-Wno-missing-braces -Wparentheses -Wswitch -Wno-unused-function
+		-Wno-unused-label -Wno-unused-parameter -Wunused-variable -Wunused-value
+		-Wno-empty-body -Wno-uninitialized -Wno-unknown-pragmas -Wno-shadow
+		-Wno-conversion -Wno-int-conversion -Wno-sign-conversion -Wpointer-sign
+		-Wno-trigraphs -Wdeprecated-declarations
+	)
+
+	if(APPLE)
+		set(WARNING_FLAG_LIST ${WARNING_FLAG_LIST}
+			-Wno-newline-eof -Wno-shorten-64-to-32 -Wno-enum-conversion
+			-Wno-bool-conversion -Wno-constant-conversion -Wno-four-char-constants
+		)
+	endif()
+
+	set(WARNING_FLAGS)
+	foreach(flag ${WARNING_FLAG_LIST})
+		set(WARNING_FLAGS "${WARNING_FLAGS} ${flag}")
+	endforeach()
+
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 ${WARNING_FLAGS}")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WARNING_FLAGS}")
     if(UNIX)
         set(CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
     endif()
@@ -111,12 +132,12 @@ endif()
 
 if(SQUEAK_PLATFORM_X86_32)
     if (MSVC)
-        set(CMAKE_CXX_FLAGS "/arch:SSE2")
-        set(CMAKE_C_FLAGS "/arch:SSE2")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:SSE2")
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /arch:SSE2")
     else()
         set(CMAKE_ASM-ATT_FLAGS "--32")
-        set(CMAKE_CXX_FLAGS "-m32 -msse2")
-        set(CMAKE_C_FLAGS "-m32 -msse2")
+        set(CMAKE_CXX_FLAGS "-m32 -msse2 ${CMAKE_CXX_FLAGS} ")
+        set(CMAKE_C_FLAGS "-m32 -msse2 ${CMAKE_C_FLAGS}")
     endif()
     set(FFI_VARIANT_IA32 True)
     set(VM_TARGET_CPU "i686")
