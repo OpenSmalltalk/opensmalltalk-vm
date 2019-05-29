@@ -5,7 +5,7 @@ OS_NAME="`uname`"
 GENERATOR_NAME="Unix Makefiles"
 CMAKE_EXTRA_ARGS=""
 OSX_SDK_ROOT_FOLDER="/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/"
-OSX_VALID_SDKS="MacOSX10.10.sdk MacOSX10.11.sdk MacOSX10.12.sdk MacOSX10.13.sdk"
+OSX_VALID_SDKS="MacOSX10.9.sdk MacOSX10.10.sdk MacOSX10.11.sdk MacOSX10.12.sdk MacOSX10.13.sdk"
 
 rm -rf "./$VARIANT_FOLDER"
 mkdir "./$VARIANT_FOLDER"
@@ -31,7 +31,7 @@ if [ "$OS_NAME" = "Darwin" ]; then
         echo "Not valid OS X SDK found. Aborting the build process."
         exit 1
     fi
-    
+
     echo "Selected OS X SDK $OSX_SELECTED_SDK"
     CMAKE_EXTRA_ARGS="${CMAKE_EXTRA_ARGS}
         -DCMAKE_OSX_SYSROOT=${OSX_SDK_ROOT_FOLDER}/${OSX_SELECTED_SDK}
