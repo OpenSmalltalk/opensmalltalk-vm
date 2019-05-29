@@ -10,7 +10,6 @@ add_thirdparty_with_autoconf(FreeType2
     DOWNLOAD_URL ${FreeType2_Spec_URL}
     ARCHIVE_NAME ${FreeType2_Spec_ArchiveName}
     ARCHIVE_SHA256 ${FreeType2_Spec_ArchiveSha256}
-    UNPACK_DIR_NAME ${FreeType2_Spec_UnpackDirName}
     AUTOCONF_EXTRA_ARGS "--without-png"
     MAC_LIBRARIES ${FreeType2_Spec_MacLibraries}
     MAC_LIBRARIES_SYMLINK_PATTERNS ${FreeType2_Spec_MacLibrariesSymlinks}

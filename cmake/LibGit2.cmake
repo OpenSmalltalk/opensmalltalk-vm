@@ -13,7 +13,6 @@ add_thirdparty_with_cmake(LibGit2
     DOWNLOAD_URL ${LibGit2_Spec_URL}
     ARCHIVE_NAME ${LibGit2_Spec_ArchiveName}
     ARCHIVE_SHA256 ${LibGit2_Spec_ArchiveSha256}
-    UNPACK_DIR_NAME ${LibGit2_Spec_UnpackDirName}
     CMAKE_EXTRA_ARGS -DBUILD_CLAR=OFF -DUSE_SSH=OFF
     MAC_LIBRARIES ${LibGit2_Spec_MacLibraries}
     MAC_LIBRARIES_SYMLINK_PATTERNS ${LibGit2_Spec_MacLibrariesSymlinks}

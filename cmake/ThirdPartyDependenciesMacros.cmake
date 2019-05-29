@@ -173,7 +173,7 @@ endfunction()
 ## This function adds an autoconf based thirdparty dependency.
 function(ADD_THIRDPARTY_WITH_AUTOCONF NAME)
     set(options)
-    set(oneValueArgs DOWNLOAD_URL ARCHIVE_NAME ARCHIVE_SHA256 UNPACK_DIR_NAME CFLAGS LDFLAGS)
+    set(oneValueArgs DOWNLOAD_URL ARCHIVE_NAME ARCHIVE_SHA256 PATCH CFLAGS LDFLAGS)
     set(multiValueArgs
         AUTOCONF_EXTRA_ARGS
         DEPENDENCIES
@@ -194,6 +194,11 @@ function(ADD_THIRDPARTY_WITH_AUTOCONF NAME)
         LINUX_LIBRARIES ${parsed_arguments_LINUX_LIBRARIES}
         WINDOWS_DLLS ${parsed_arguments_WINDOWS_DLLS}
     )
+    
+    set(computed_patch_command)
+    if(parsed_arguments_PATCH)
+        set(computed_patch_command PATCH_COMMAND patch -p1 < ${parsed_arguments_PATCH})
+    endif()
 
     if(HaveCachedBuildArtifacts)
         message(STATUS "Not building cached third-party dependency ${NAME}.")
@@ -243,6 +248,7 @@ function(ADD_THIRDPARTY_WITH_AUTOCONF NAME)
             DOWNLOAD_NAME "${parsed_arguments_ARCHIVE_NAME}"
             DOWNLOAD_DIR "${ThirdPartyCacheDownloadDirectory}"
             PREFIX "${CMAKE_CURRENT_BINARY_DIR}/thirdparty/${NAME}"
+            ${computed_patch_command}
             CONFIGURE_COMMAND "${thirdparty_autoconf_command}"
             BUILD_IN_SOURCE TRUE
         )
@@ -271,7 +277,7 @@ endfunction()
 
 function(ADD_THIRDPARTY_WITH_CMAKE NAME)
     set(options)
-    set(oneValueArgs DOWNLOAD_URL ARCHIVE_NAME ARCHIVE_SHA256 UNPACK_DIR_NAME CFLAGS CXXFLAGS LDFLAGS)
+    set(oneValueArgs DOWNLOAD_URL ARCHIVE_NAME ARCHIVE_SHA256 CFLAGS CXXFLAGS LDFLAGS)
     set(multiValueArgs
         CMAKE_EXTRA_ARGS
         DEPENDENCIES

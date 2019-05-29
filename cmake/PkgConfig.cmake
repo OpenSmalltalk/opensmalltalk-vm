@@ -17,7 +17,6 @@ add_thirdparty_with_autoconf(PkgConfig
     DOWNLOAD_URL ${PkgConfig_Spec_URL}
     ARCHIVE_NAME ${PkgConfig_Spec_ArchiveName}
     ARCHIVE_SHA256 ${PkgConfig_Spec_ArchiveSha256}
-    UNPACK_DIR_NAME ${PkgConfig_Spec_UnpackDirName}
     EXTRA_BUILD_ARTIFACTS "bin/pkg-config"
     CFLAGS "-std=gnu89"
 )
