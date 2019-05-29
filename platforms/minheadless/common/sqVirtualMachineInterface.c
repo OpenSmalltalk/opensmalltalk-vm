@@ -40,11 +40,17 @@
 #define DefaultHeapSize		  20	     	/* megabytes BEYOND actual image size */
 #define DefaultMmapSize		1024     	/* megabytes of virtual memory */
 
+struct OSVMInstance
+{
+    int singletonInitialized;
+};
+
 /**
  * Some VM options
  */
 extern int sqVMOptionTraceModuleLoading;
 
+static struct OSVMInstance osvmInstanceSingleton;
 
 char imageName[FILENAME_MAX];
 static char imagePath[FILENAME_MAX];
@@ -382,7 +388,16 @@ parseVMArgument(char **argv)
         sqVMOptionTraceModuleLoading = 1;
         return 1;
     }
-
+#ifdef __APPLE__
+    else if(IS_VM_OPTION("NSDocumentRevisionsDebugMode"))
+    {
+        return 2;
+    }
+    else if(!strncmp(*argv, "-psn", 4))
+    {
+        return 1;
+    }
+#endif
 #undef IS_VM_OPTION
 
     return 0;
@@ -443,10 +458,13 @@ osvm_getInterfaceVersion()
 }
 
 OSVM_VM_CORE_PUBLIC OSVMError
-osvm_loadImage(const char *fileName)
+osvm_loadImage(OSVMInstanceHandle vmHandle, const char *fileName)
 {
     size_t imageSize = 0;
     sqImageFile imageFile = 0;
+    
+    if(!vmHandle)
+        return OSVM_ERROR_INVALID_VM_INSTANCE_HANDLE;
 
     /* Open the image file. */
     imageFile = sqImageFileOpen(fileName, "rb");
@@ -483,9 +501,12 @@ osvm_loadImage(const char *fileName)
 
 static char tempImageNameAttempt[FILENAME_MAX];
 OSVM_VM_CORE_PUBLIC OSVMError
-osvm_loadDefaultImage(void)
+osvm_loadDefaultImage(OSVMInstanceHandle vmHandle)
 {
     OSVMError error;
+    
+    if(!vmHandle)
+        return OSVM_ERROR_INVALID_VM_INSTANCE_HANDLE;
 
     /* If the image name is empty, try to load the default image. */
     if(!shortImageName[0])
@@ -493,13 +514,13 @@ osvm_loadDefaultImage(void)
 
     /* Try to load the image as was passed. */
     sprintf(tempImageNameAttempt, "%s", shortImageName);
-    error = osvm_loadImage(tempImageNameAttempt);
+    error = osvm_loadImage(vmHandle, tempImageNameAttempt);
     if(!error)
         return OSVM_SUCCESS;
 
     /* Make the image path relative to the VM*/
     sprintf(tempImageNameAttempt, "%s/%s", vmPath, shortImageName);
-    error = osvm_loadImage(tempImageNameAttempt);
+    error = osvm_loadImage(vmHandle, tempImageNameAttempt);
     if(!error)
         return OSVM_SUCCESS;
 
@@ -508,8 +529,14 @@ osvm_loadDefaultImage(void)
 }
 
 OSVM_VM_CORE_PUBLIC OSVMError
-osvm_initialize(void)
+osvm_initialize(OSVMInstanceHandle *resultVMHandle)
 {
+    if(!resultVMHandle)
+        return OSVM_ERROR_NULL_POINTER;
+        
+    if(osvmInstanceSingleton.singletonInitialized)
+        return OSVM_ERROR_VM_IMPLEMENTATION_NON_REENTRANT;
+        
     /* check the interpreter's size assumptions for basic data types */
     if (sizeof(int) != 4) error("This C compiler's integers are not 32 bits.");
     if (sizeof(double) != 8) error("This C compiler's floats are not 64 bits.");
@@ -527,19 +554,39 @@ osvm_initialize(void)
     /* Perform platform specific initialization. */
     ioInitPlatformSpecific();
 
+    osvmInstanceSingleton.singletonInitialized = 1;
+    *resultVMHandle = &osvmInstanceSingleton;
+    
     return OSVM_SUCCESS;
 }
 
 OSVM_VM_CORE_PUBLIC OSVMError
-osvm_shutdown(void)
+osvm_shutdown(OSVMInstanceHandle vmHandle)
 {
-    /* Nothing required yet. */
+    if(!vmHandle)
+        return OSVM_ERROR_INVALID_VM_INSTANCE_HANDLE;
+
+    osvmInstanceSingleton.singletonInitialized = 0;
     return OSVM_SUCCESS;
 }
 
-OSVM_VM_CORE_PUBLIC OSVMError
-osvm_parseCommandLineArguments(int argc, const char **argv)
+OSVM_VM_CORE_PUBLIC int
+osvm_getVMCommandLineArgumentParameterCount(const char *argument)
 {
+#ifdef __APPLE__
+    if(!strcmp(argument, "-NSDocumentRevisionsDebugMode"))
+        return 1;
+#endif
+
+    return 0;
+}
+
+OSVM_VM_CORE_PUBLIC OSVMError
+osvm_parseCommandLineArguments(OSVMInstanceHandle vmHandle, int argc, const char **argv)
+{
+    if(!vmHandle)
+        return OSVM_ERROR_INVALID_VM_INSTANCE_HANDLE;
+        
     /* Make parameters global for access from plugins */
     argCnt = argc;
     argVec = (char**)argv;
@@ -563,26 +610,34 @@ osvm_parseCommandLineArguments(int argc, const char **argv)
 }
 
 OSVM_VM_CORE_PUBLIC OSVMError
-osvm_parseVMCommandLineArguments(int argc, const char **argv)
+osvm_parseVMCommandLineArguments(OSVMInstanceHandle vmHandle, int argc, const char **argv)
 {
+    if(!vmHandle)
+        return OSVM_ERROR_INVALID_VM_INSTANCE_HANDLE;
     return OSVM_ERROR_NOT_YET_IMPLEMENTED;
 }
 
 OSVM_VM_CORE_PUBLIC OSVMError
-osvm_setVMStringParameter(const char *name, const char *value)
+osvm_setVMStringParameter(OSVMInstanceHandle vmHandle, const char *name, const char *value)
 {
+    if(!vmHandle)
+        return OSVM_ERROR_INVALID_VM_INSTANCE_HANDLE;
     return OSVM_ERROR_UNSUPPORTED_PARAMETER;
 }
 
 OSVM_VM_CORE_PUBLIC OSVMError
-osvm_setVMIntegerParameter(const char *name, const char *value)
+osvm_setVMIntegerParameter(OSVMInstanceHandle vmHandle, const char *name, const char *value)
 {
+    if(!vmHandle)
+        return OSVM_ERROR_INVALID_VM_INSTANCE_HANDLE;
     return OSVM_ERROR_UNSUPPORTED_PARAMETER;
 }
 
 OSVM_VM_CORE_PUBLIC OSVMError
-osvm_passImageCommandLineArguments(int argc, const char **argv)
+osvm_passImageCommandLineArguments(OSVMInstanceHandle vmHandle, int argc, const char **argv)
 {
+    if(!vmHandle)
+        return OSVM_ERROR_INVALID_VM_INSTANCE_HANDLE;
     return OSVM_ERROR_NOT_YET_IMPLEMENTED;
 }
 
@@ -595,15 +650,21 @@ osvm_doRunInterpreter(void *userdata)
 }
 
 OSVM_VM_CORE_PUBLIC OSVMError
-osvm_run(void)
+osvm_run(OSVMInstanceHandle vmHandle)
 {
+    if(!vmHandle)
+        return OSVM_ERROR_INVALID_VM_INSTANCE_HANDLE;
+
     sqExecuteFunctionWithCrashExceptionCatching(&osvm_doRunInterpreter, NULL);
     return OSVM_SUCCESS;
 }
 
 OSVM_VM_CORE_PUBLIC OSVMError
-osvm_initializeVM(void)
+osvm_initializeVM(OSVMInstanceHandle vmHandle)
 {
+    if(!vmHandle)
+        return OSVM_ERROR_INVALID_VM_INSTANCE_HANDLE;
+        
     ioInitWindowSystem(headlessMode);
     ioInitTime();
     ioInitThreads();
@@ -614,8 +675,10 @@ osvm_initializeVM(void)
 }
 
 OSVM_VM_CORE_PUBLIC OSVMError
-osvm_shutdownVM(void)
+osvm_shutdownVM(OSVMInstanceHandle vmHandle)
 {
+    if(!vmHandle)
+        return OSVM_ERROR_INVALID_VM_INSTANCE_HANDLE;
     return OSVM_SUCCESS;
 }
 
@@ -623,32 +686,33 @@ OSVM_VM_CORE_PUBLIC OSVMError
 osvm_main(int argc, const char **argv)
 {
     OSVMError error;
+    OSVMInstanceHandle vmHandle;
 
     /* Global initialization */
-    error = osvm_initialize();
+    error = osvm_initialize(&vmHandle);
     if(error)
         return error;
 
     /* Parse the command line*/
-    error = osvm_parseCommandLineArguments(argc, argv);
+    error = osvm_parseCommandLineArguments(vmHandle, argc, argv);
     if(error)
         return error;
 
     /* Initialize the VM */
-    error = osvm_initializeVM();
+    error = osvm_initializeVM(vmHandle);
     if(error)
         return error;
 
     /* Load the command line image or the default one. */
-    error = osvm_loadDefaultImage();
+    error = osvm_loadDefaultImage(vmHandle);
     if(error)
         return error;
 
     /* Run OpenSmalltalk */
-    error = osvm_run();
+    error = osvm_run(vmHandle);
 
     /* Shutdown*/
-    osvm_shutdown();
+    osvm_shutdown(vmHandle);
 
     return error;
 }

@@ -401,10 +401,13 @@ endif()
 if(APPLE)
 	find_library(CoreFoundation_LIBRARY CoreFoundation)
 	find_library(CoreServices_LIBRARY CoreServices)
+	find_library(Foundation_LIBRARY Foundation)
+	find_library(AppKit_LIBRARY AppKit)
 	find_library(Security_LIBRARY Security)
 	set(VM_DEPENDENCIES_LIBRARIES
 		${CoreServices_LIBRARY}
 		${CoreFoundation_LIBRARY}
+		${Foundation_LIBRARY}
 		${VM_DEPENDENCIES_LIBRARIES})
 endif()
 
@@ -605,6 +608,7 @@ if(NOT ONLY_CONFIG_H)
 	)
 
     add_library(${VM_LIBRARY_NAME} ${VM_CORE_LIBRARY_TYPE} ${VM_SOURCES} ${VM_INTERNAL_PLUGIN_SOURCES})
+	target_link_libraries(${VM_LIBRARY_NAME} ${VM_DEPENDENCIES_LIBRARIES})
     target_compile_definitions(${VM_LIBRARY_NAME} PRIVATE
     	-DSQUEAK_BUILTIN_PLUGIN
         -DBUILD_VM_CORE
@@ -618,10 +622,10 @@ if(NOT ONLY_CONFIG_H)
     if(WIN32)
 		set(VM_EXECUTABLE_TARGETS ${VM_EXECUTABLE_TARGETS} ${VM_EXECUTABLE_NAME}Console)
 		add_executable(${VM_EXECUTABLE_NAME}Console platforms/minheadless/common/sqMain.c)
-	    target_link_libraries(${VM_EXECUTABLE_NAME}Console ${VM_LIBRARY_NAME} ${VM_DEPENDENCIES_LIBRARIES})
+	    target_link_libraries(${VM_EXECUTABLE_NAME}Console ${VM_LIBRARY_NAME})
 
         add_executable(${VM_EXECUTABLE_NAME} WIN32 platforms/minheadless/windows/sqWin32Main.c)
-        target_link_libraries(${VM_EXECUTABLE_NAME} ${VM_LIBRARY_NAME} ${VM_DEPENDENCIES_LIBRARIES})
+        target_link_libraries(${VM_EXECUTABLE_NAME} ${VM_LIBRARY_NAME})
 	elseif(DARWIN)
 		if(PHARO_VM)
 			file(GLOB VM_ICONS RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
@@ -636,17 +640,17 @@ if(NOT ONLY_CONFIG_H)
 		endif()
 		set(VM_RESOURCE_FILES ${VM_ICONS})
 		add_executable(${VM_EXECUTABLE_NAME} MACOSX_BUNDLE
-			platforms/minheadless/common/sqMain.c
+			platforms/minheadless/mac/sqMain.m
 			${VM_RESOURCE_FILES}
 		)
 
 		set_target_properties(${VM_EXECUTABLE_NAME} PROPERTIES
 			RESOURCE "${VM_RESOURCE_FILES}"
 			MACOSX_BUNDLE_INFO_PLIST ${VM_EXECUTABLE_INFO_PLIST})
-		target_link_libraries(${VM_EXECUTABLE_NAME} ${VM_LIBRARY_NAME} ${VM_DEPENDENCIES_LIBRARIES})
+		target_link_libraries(${VM_EXECUTABLE_NAME} ${VM_LIBRARY_NAME} ${Foundation_LIBRARY} ${AppKit_LIBRARY})
 	else()
 		add_executable(${VM_EXECUTABLE_NAME} platforms/minheadless/common/sqMain.c)
-	    target_link_libraries(${VM_EXECUTABLE_NAME} ${VM_LIBRARY_NAME} ${VM_DEPENDENCIES_LIBRARIES})
+	    target_link_libraries(${VM_EXECUTABLE_NAME} ${VM_LIBRARY_NAME})
 
         if(GENERATE_TOP_LEVEL_RUN_SCRIPT)
     	 	set(expanded_relative_imgdir "lib/${VM_EXECUTABLE_NAME}")
