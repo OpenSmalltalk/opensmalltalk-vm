@@ -27,7 +27,9 @@ else()
         set(OpenSSL_ConfigureCommand "./Configure" darwin64-x86_64-cc
             "--prefix=${ThirdPartyCacheInstall}" shared )
         set(OpenSSL_BuildCommand
-            "LDFLAGS=-Wl,-rpath,@executable_path:@executable_path/Plugins"
+            env
+            "LDFLAGS=-Wl,-rpath,@executable_path:@executable_path/Plugins --sysroot=${CMAKE_OSX_SYSROOT}"
+            "CFLAGS=--sysroot=${CMAKE_OSX_SYSROOT}"
             make
             -s
         )

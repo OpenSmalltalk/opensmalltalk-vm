@@ -173,7 +173,7 @@ endfunction()
 ## This function adds an autoconf based thirdparty dependency.
 function(ADD_THIRDPARTY_WITH_AUTOCONF NAME)
     set(options)
-    set(oneValueArgs DOWNLOAD_URL ARCHIVE_NAME ARCHIVE_SHA256 PATCH CFLAGS LDFLAGS)
+    set(oneValueArgs DOWNLOAD_URL ARCHIVE_NAME ARCHIVE_SHA256 PATCH CFLAGS CXXFLAGS LDFLAGS)
     set(multiValueArgs
         AUTOCONF_EXTRA_ARGS
         DEPENDENCIES
@@ -205,33 +205,50 @@ function(ADD_THIRDPARTY_WITH_AUTOCONF NAME)
         set(${NAME}_BuildDep PARENT_SCOPE)
     else()
         set(autoconf_cflags "${parsed_arguments_CFLAGS}")
+        set(autoconf_cxxflags "${parsed_arguments_CXXFLAGS}")
         set(autoconf_ldflags "${parsed_arguments_LDFLAGS} ")
-
+        set(ExtraRequiredAutoconfArgs)
+        set(ExtraRequiredAutoconfVariables)
+        
         if(DARWIN)
+            message("CMAKE_C_COMPILER ${CMAKE_C_COMPILER}")
+            set(ExtraRequiredAutoconfVariables
+                "CC=${CMAKE_C_COMPILER} --sysroot=${CMAKE_OSX_SYSROOT}"
+                "CXX=${CMAKE_CXX_COMPILER} --sysroot=${CMAKE_OSX_SYSROOT}"
+            )
+            set(ExtraRequiredAutoconfArgs ${ExtraRequiredAutoconfArgs} "--with-sysroot=${CMAKE_OSX_SYSROOT}")
             if(SQUEAK_PLATFORM_X86_32)
                 set(autoconf_cflags "${autoconf_cflags} -arch i386")
+                set(autoconf_cxxflags "${autoconf_cxxflags} -arch i386")
                 set(autoconf_ldflags "${autoconf_ldflags} -arch i386")
             elseif(SQUEAK_PLATFORM_X86_64)
                 set(autoconf_cflags "${autoconf_cflags} -arch x86_64")
+                set(autoconf_cxxflags "${autoconf_cxxflags} -arch x86_64")
                 set(autoconf_ldflags "${autoconf_ldflags} -arch x86_64")
             endif()
         else()
             if(SQUEAK_PLATFORM_X86_32)
                 set(autoconf_cflags "${autoconf_cflags} -m32")
+                set(autoconf_cxxflags "${autoconf_cxxflags} -m32")
                 set(autoconf_ldflags "${autoconf_ldflags} -m32")
             elseif(SQUEAK_PLATFORM_X86_64)
                 set(autoconf_cflags "${autoconf_cflags} -m64")
+                set(autoconf_cxxflags "${autoconf_cxxflags} -m64")
                 set(autoconf_ldflags "${autoconf_ldflags} -m64")
             endif()
         endif()
 
         set(autoconf_cflags "${autoconf_cflags} -I${ThirdPartyCacheInstallInclude}")
+        set(autoconf_cxxflags "${autoconf_cxxflags} -I${ThirdPartyCacheInstallInclude}")
         set(autoconf_ldflags "${autoconf_ldflags} -L${ThirdPartyCacheInstallLib}")
 
         set(thirdparty_autoconf_command "./configure"
             "--prefix=${ThirdPartyCacheInstall}"
+            ${ExtraRequiredAutoconfArgs}
             ${parsed_arguments_AUTOCONF_EXTRA_ARGS}
+            ${ExtraRequiredAutoconfVariables}
             "CFLAGS=${autoconf_cflags}"
+            "CXXFLAGS=${autoconf_cxxflags}"
             "LDFLAGS=${autoconf_ldflags}"
         )
         
@@ -337,6 +354,8 @@ function(ADD_THIRDPARTY_WITH_CMAKE NAME)
             "-DCMAKE_PREFIX_PATH=${ThirdPartyCacheInstall}"
             "-DCMAKE_C_FLAGS=${cmake_cflags}"
             "-DCMAKE_CXX_FLAGS=${cmake_cxxflags}"
+            "-DCMAKE_OSX_SYSROOT=${CMAKE_OSX_SYSROOT}"
+            "-DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES}"
             ${parsed_arguments_CMAKE_EXTRA_ARGS}
         )
 
