@@ -53,7 +53,7 @@ else()
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 ${WARNING_FLAGS}")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WARNING_FLAGS}")
     if(UNIX)
-        set(CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
     endif()
 
 	# Export symbols from applications.
