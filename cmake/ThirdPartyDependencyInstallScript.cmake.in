@@ -6,7 +6,6 @@ set(InstallLibraryFileNames "@InstallLibraryFileNames@")
 set(InstallLibraryGlobPatterns "@InstallLibraryGlobPatterns@")
 set(InstallDestination "@CMAKE_INSTALL_PREFIX@")
 
-
 # Direct installation of specific files.
 foreach(filename ${InstallLibraryFileNames})
     file(INSTALL "${ThirdPartyCache}/${ThirdPartyCacheLibrarySourceFolder}/${filename}"
@@ -15,8 +14,11 @@ endforeach()
 
 # Compute each one of the globs, and then install the matched files.
 if(InstallLibraryGlobPatterns)
-    set(AbsoluteGlobPatterns "${InstallLibraryGlobPatterns}")
-    list(TRANSFORM AbsoluteGlobPatterns PREPEND "${ThirdPartyCache}/${ThirdPartyCacheLibrarySourceFolder}/")
+    set(AbsoluteGlobPatterns)
+    foreach(relativeGlobPattern ${InstallLibraryGlobPatterns})
+        set(AbsoluteGlobPatterns ${AbsoluteGlobPatterns} "${ThirdPartyCache}/${ThirdPartyCacheLibrarySourceFolder}/${relativeGlobPattern}")
+    endforeach()
+
     file(GLOB matchedFiles
         LIST_DIRECTORIES FALSE
         ${AbsoluteGlobPatterns}

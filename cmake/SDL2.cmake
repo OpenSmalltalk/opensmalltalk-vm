@@ -12,6 +12,7 @@ add_thirdparty_with_autoconf(SDL2
     DOWNLOAD_URL ${LibSDL2_Spec_URL}
     ARCHIVE_NAME ${LibSDL2_Spec_ArchiveName}
     ARCHIVE_SHA256 ${LibSDL2_Spec_ArchiveSha256}
+    AUTOCONF_EXTRA_ARGS --disable-video-mir
     MAC_LIBRARIES ${LibSDL2_Spec_MacLibraries}
     MAC_LIBRARIES_SYMLINK_PATTERNS ${LibSDL2_Spec_MacLibrariesSymlinks}
     LINUX_LIBRARIES ${LibSDL2_Spec_LinuxLibraries}

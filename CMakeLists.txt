@@ -350,6 +350,32 @@ if(HAVE_ICONV)
     set(VM_DEPENDENCIES_LIBRARIES iconv ${VM_DEPENDENCIES_LIBRARIES})
 endif()
 
+# UUID
+find_library(UUID_LIBRARY NAMES uuid)
+
+check_include_files(sys/uuid.h HAVE_SYS_UUID_H)
+check_include_files(uuid/uuid.h HAVE_UUID_UUID_H)
+check_include_files(uuid.h HAVE_UUID_H)
+
+if(UUID_LIBRARY)
+	set(CMAKE_REQUIRED_LIBRARIES ${UUID_LIBRARY})
+	if(HAVE_SYS_UUID_H)
+		check_symbol_exists(uuidgen sys/uuid.h HAVE_UUIDGEN)
+		check_symbol_exists(uuid_generate sys/uuid.h HAVE_UUID_GENERATE)
+	elseif(HAVE_UUID_UUID_H)
+		check_symbol_exists(uuidgen uuid/uuid.h HAVE_UUIDGEN)
+		check_symbol_exists(uuid_generate uuid/uuid.h HAVE_UUID_GENERATE)
+	elseif(HAVE_UUID_H)
+		check_symbol_exists(uuidgen uuid.h HAVE_UUIDGEN)
+		check_symbol_exists(uuid_generate uuid.h HAVE_UUID_GENERATE)
+	endif()
+endif()
+
+set(HAVE_VALID_UUID_LIBRARY False)
+if(UUID_LIBRARY AND (HAVE_SYS_UUID_H OR HAVE_UUID_UUID_H OR HAVE_UUID_H) AND (HAVE_UUIDGEN OR HAVE_UUID_GENERATE))
+	set(HAVE_VALID_UUID_LIBRARY True)
+endif()
+
 # Add the current directory.
 include_directories(
 	.
@@ -392,42 +418,8 @@ if(APPLE)
 		${VM_DEPENDENCIES_LIBRARIES})
 endif()
 
-set(HAVE_SDL2 False CACHE INTERNAL "Is SDL2 available?")
-set(HAVE_FreeType2 False CACHE INTERNAL "Is FreeType available?")
-if(NOT ONLY_CONFIG_H)
-	include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/ThirdPartyDependencies.cmake")
-endif()
-
-# Find SDL2 if has not been specified by the include SDL2 thirdparty
-# dependendency
-if(NOT HAVE_SDL2)
-	find_path(SDL2_INCLUDE_DIR
-	  NAMES SDL.h
-	  PATH_SUFFIXES SDL2
-	)
-
-	find_path(SDL2_LIBRARIES_PATH
-	  NAMES SDL2-2.0.lib SDL2-2.0.a libSDL2-2.0.a libSDL2-2.0.so SDL2.lib SDL2.a libSDL2.a
-	)
-
-	find_library(SDL2_LIBRARIES NAMES SDL2-2.0 SDL2 PATHS ${SDL2_LIBRARIES_PATH})
-
-	if(SDL2_INCLUDE_DIR AND SDL2_LIBRARIES AND ALLOW_SDL2)
-		set(HAVE_SDL2 True)
-		include_directories("${SDL2_INCLUDE_DIR}")
-	endif()
-endif()
-
-# Choose the window system
-set(VM_WINDOW_SYSTEM)
 if(SUPPORT_TRADITIONAL_DISPLAY AND ALLOW_SDL2)
-	if(HAVE_SDL2)
-		set(VM_WINDOW_SYSTEM
-			platforms/minheadless/sdl2-window/sqWindow-SDL2.c
-		)
-		set(VM_DEPENDENCIES_LIBRARIES ${SDL2_LIBRARIES} ${VM_DEPENDENCIES_LIBRARIES})
-		set(ProductFolderName "${ProductFolderName}+sdl2")
-	endif()
+	set(ProductFolderName "${ProductFolderName}+sdl2")
 endif()
 
 # Set output dir.
@@ -445,6 +437,21 @@ if(NOT OpenSmalltalkVM_BUILD_AS_INTERNAL_PROJECT)
 
 	set(EXECUTABLE_OUTPUT_PATH "${ProductDistFolder}")
 	set(LIBRARY_OUTPUT_PATH "${ProductDistFolder}")
+endif()
+
+set(HAVE_SDL2 False CACHE INTERNAL "Is SDL2 available?")
+set(HAVE_FreeType2 False CACHE INTERNAL "Is FreeType available?")
+if(NOT ONLY_CONFIG_H)
+	include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/ThirdPartyDependencies.cmake")
+endif()
+
+# Choose the window system
+set(VM_WINDOW_SYSTEM)
+if(SUPPORT_TRADITIONAL_DISPLAY AND ALLOW_SDL2)
+	set(VM_WINDOW_SYSTEM
+		platforms/minheadless/sdl2-window/sqWindow-SDL2.c
+	)
+	set(VM_DEPENDENCIES_LIBRARIES ${VM_DEPENDENCIES_LIBRARIES} ${SDL2_LIBRARIES})
 endif()
 
 # Different source categories

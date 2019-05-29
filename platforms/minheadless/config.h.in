@@ -189,4 +189,12 @@
 # include "glibc.h"
 #endif
 
+/* Used by the UUID plugin */
+#cmakedefine HAVE_SYS_UUID_H 1
+#cmakedefine HAVE_UUID_UUID_H 1
+#cmakedefine HAVE_UUID_H 1
+
+#cmakedefine HAVE_UUIDGEN 1
+#cmakedefine HAVE_UUID_GENERATE 1
+
 #endif /* __sq_config_h */

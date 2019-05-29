@@ -146,7 +146,7 @@ function (export_included_thirdparty_libraries NAME)
 
     cmake_parse_arguments(ARTIFACT_KIND "${options}" "${oneValueArgs}"
                           "${multiValueArgs}" ${ARGN} )
-                          
+
     set(libraries)
     if(DARWIN)
         set(libraries ${ARTIFACT_KIND_MAC_LIBRARIES})
@@ -155,15 +155,18 @@ function (export_included_thirdparty_libraries NAME)
     else()
         set(libraries ${ARTIFACT_KIND_LINUX_LIBRARIES})
     endif()
-    
+
     if(libraries)
-        set(librariesFullPaths)
+        #set(librariesFullPaths)
         foreach(lib ${libraries})
-            set(librariesFullPaths ${librariesFullPaths} "${ThirdPartyCacheInstallLib}/${lib}")
+            #set(librariesFullPaths ${librariesFullPaths} "${ThirdPartyCacheInstallLib}/${lib}")
+            add_library(${lib} SHARED IMPORTED)
+            set_target_properties(${lib} PROPERTIES IMPORTED_LOCATION "${ThirdPartyCacheInstallLib}/${lib}")
         endforeach()
-        
+
         set(HAVE_${NAME} True CACHE INTERNAL "Is ${NAME} avaiable?" FORCE)
-        set(${NAME}_LIBRARIES "${librariesFullPaths}" CACHE STRING "${NAME} libraries" FORCE)
+        #set(${NAME}_LIBRARIES "${librariesFullPaths}" CACHE STRING "${NAME} libraries" FORCE)
+        set(${NAME}_LIBRARIES "${libraries}" CACHE STRING "${NAME} libraries" FORCE)
         set(${NAME}_INCLUDE_DIR "" CACHE PATH "${NAME} include directory" FORCE)
     else()
         set(HAVE_${NAME} False CACHE INTERNAL "Is SDL2 avaiable?")
@@ -194,7 +197,7 @@ function(ADD_THIRDPARTY_WITH_AUTOCONF NAME)
         LINUX_LIBRARIES ${parsed_arguments_LINUX_LIBRARIES}
         WINDOWS_DLLS ${parsed_arguments_WINDOWS_DLLS}
     )
-    
+
     set(computed_patch_command)
     if(parsed_arguments_PATCH)
         set(computed_patch_command PATCH_COMMAND patch -p1 < ${parsed_arguments_PATCH})
@@ -209,7 +212,7 @@ function(ADD_THIRDPARTY_WITH_AUTOCONF NAME)
         set(autoconf_ldflags "${parsed_arguments_LDFLAGS} ")
         set(ExtraRequiredAutoconfArgs)
         set(ExtraRequiredAutoconfVariables)
-        
+
         if(DARWIN)
             message("CMAKE_C_COMPILER ${CMAKE_C_COMPILER}")
             set(ExtraRequiredAutoconfVariables
@@ -251,7 +254,7 @@ function(ADD_THIRDPARTY_WITH_AUTOCONF NAME)
             "CXXFLAGS=${autoconf_cxxflags}"
             "LDFLAGS=${autoconf_ldflags}"
         )
-        
+
         if(ThirdPartyPkgConfig AND ThirdPartyPkgConfigPath)
             set(thirdparty_autoconf_command ${thirdparty_autoconf_command}
                 "PKG_CONFIG=${ThirdPartyPkgConfig}"
@@ -284,7 +287,7 @@ function(ADD_THIRDPARTY_WITH_AUTOCONF NAME)
         LINUX_LIBRARIES_SYMLINK_PATTERNS ${parsed_arguments_LINUX_LIBRARIES_SYMLINK_PATTERNS}
         WINDOWS_DLLS ${parsed_arguments_WINDOWS_DLLS}
     )
-    
+
     export_included_thirdparty_libraries(${NAME}
         MAC_LIBRARIES ${parsed_arguments_MAC_LIBRARIES}
         LINUX_LIBRARIES ${parsed_arguments_LINUX_LIBRARIES}
@@ -383,7 +386,7 @@ function(ADD_THIRDPARTY_WITH_CMAKE NAME)
         LINUX_LIBRARIES_SYMLINK_PATTERNS ${parsed_arguments_LINUX_LIBRARIES_SYMLINK_PATTERNS}
         WINDOWS_DLLS ${parsed_arguments_WINDOWS_DLLS}
     )
-    
+
     export_included_thirdparty_libraries(${NAME}
         MAC_LIBRARIES ${parsed_arguments_MAC_LIBRARIES}
         LINUX_LIBRARIES ${parsed_arguments_LINUX_LIBRARIES}
