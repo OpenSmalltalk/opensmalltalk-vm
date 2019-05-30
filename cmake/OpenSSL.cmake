@@ -24,8 +24,14 @@ if(HaveCachedOpenSSL)
 else()
     set(OpenSSL_InstallCommand make install)
     if(DARWIN)
-        set(OpenSSL_ConfigureCommand "./Configure" darwin64-x86_64-cc
-            "--prefix=${ThirdPartyCacheInstall}" shared )
+        if(SQUEAK_PLATFORM_X86_64)
+            set(OpenSSL_ConfigureCommand "./Configure" darwin64-x86_64-cc
+                "--prefix=${ThirdPartyCacheInstall}" shared )
+        elseif(SQUEAK_PLATFORM_X86_32)
+            set(OpenSSL_ConfigureCommand "./Configure" darwin-i386-cc
+                "--prefix=${ThirdPartyCacheInstall}" shared )
+        endif()
+        
         set(OpenSSL_BuildCommand
             env
             "LDFLAGS=-Wl,-rpath,@executable_path:@executable_path/Plugins --sysroot=${CMAKE_OSX_SYSROOT}"
