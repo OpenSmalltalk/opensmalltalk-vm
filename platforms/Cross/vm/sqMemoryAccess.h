@@ -191,8 +191,6 @@ typedef unsigned long long usqIntptr_t;
   static inline usqLong uint64AtPointer(char *ptr)			    { return (*((usqLong *)ptr)); }
   static inline usqLong uint64AtPointerput(char *ptr, usqLong val)	{ return (*((usqLong *)ptr)= val); }
 
-  static inline sqLong asIEEE64BitWord(double val) {return *((sqLong*)&val); }
-  static inline unsigned int asIEEE32BitWord(float val) {return *((unsigned int*)&val); }
 #else /* USE_INLINE_MEMORY_ACCESSORS */
   /* Use macros when static inline functions aren't efficient. */
 # define byteAtPointer(ptr)			((sqInt)(*((unsigned char *)(ptr))))
@@ -254,10 +252,29 @@ typedef unsigned long long usqIntptr_t;
 # define int64AtPointerput(ptr, val)  (*(sqLong*)(ptr) = val)
 # define uint64AtPointer(ptr)          (*(usqLong*)(ptr))
 # define uint64AtPointerput(ptr, val)  (*(usqLong*)(ptr) = val)
-
-# define asIEEE64BitWord(val) (*((sqLong*)&val))
-# define asIEEE32BitWord(val) (*((unsigned int*)&val))
 #endif /* USE_INLINE_MEMORY_ACCESSORS */
+
+static inline sqLong asIEEE64BitWord(double val)
+{
+    /* Use an union here to not violate the strict aliasing rule. */
+    union {
+        double input;
+        sqLong output;
+    } data;
+    data.input = val;
+    return data.output;
+}
+
+static inline unsigned int asIEEE32BitWord(float val)
+{
+    /* Use an union here to not violate the strict aliasing rule. */
+    union {
+        float input;
+        unsigned int output;
+    } data;
+    data.input = val;
+    return data.output;
+}
 
 #define long32At	intAt
 #define long32Atput	intAtput
