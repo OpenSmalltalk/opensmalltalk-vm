@@ -33,7 +33,7 @@ else()
             make
             -s
         )
-        
+
         # We need write permission on the build result for otool.
         foreach(opensslLib ${OpenSSL_Spec_MacLibraries})
             set(OpenSSL_InstallCommand ${OpenSSL_InstallCommand} "&&" chmod +w "${ThirdPartyCacheInstallLib}/${opensslLib}")
@@ -68,6 +68,7 @@ else()
         CONFIGURE_COMMAND "${OpenSSL_ConfigureCommand}"
         BUILD_COMMAND "${OpenSSL_BuildCommand}"
         INSTALL_COMMAND "${OpenSSL_InstallCommand}"
+        ${ThirdPartyProjectBuildMakeCommand}
         BUILD_IN_SOURCE TRUE
     )
     set(OpenSSL_BuildDep OpenSSL)
