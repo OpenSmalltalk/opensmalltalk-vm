@@ -34,11 +34,14 @@ else()
             -s
         )
 
-        # We need write permission on the build result for otool.
+        set(OpenSSL_LibrariesToAddPermission)
         foreach(opensslLib ${OpenSSL_Spec_MacLibraries})
-            set(OpenSSL_InstallCommand ${OpenSSL_InstallCommand} "&&" chmod +w "${ThirdPartyCacheInstallLib}/${opensslLib}")
+            set(OpenSSL_LibrariesToAddPermission "${OpenSSL_LibrariesToAddPermission} ${opensslLib}")
         endforeach()
-        message("OpenSSL_InstallCommand ${OpenSSL_InstallCommand}")
+        
+        configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/OpenSSL.mac-install.sh.in"
+            "${CMAKE_CURRENT_BINARY_DIR}/thirdparty/OpenSSL.mac-install.sh" @ONLY)
+        set(OpenSSL_InstallCommand "${CMAKE_CURRENT_BINARY_DIR}/thirdparty/OpenSSL.mac-install.sh")
     elseif(WIN32)
         if(SQUEAK_PLATFORM_X86_64)
             set(OpenSSL_ConfigureCommand "./Configure" mingw64

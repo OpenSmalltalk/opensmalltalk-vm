@@ -40,13 +40,17 @@ else()
         # -Wunused-variable -Wunused-value -Wunused-but-set-variable
         # Supress these warning to reduce the side of the Travius log and avoid
         # "The job exceeded the maximum log length, and has been terminated."
-        -Wno-unused-variable -Wno-unused-value -Wno-unused-but-set-variable
+        -Wno-unused-variable -Wno-unused-value
 	)
 
 	if(APPLE)
 		set(WARNING_FLAG_LIST ${WARNING_FLAG_LIST}
 			-Wno-newline-eof -Wno-shorten-64-to-32 -Wno-enum-conversion
 			-Wno-bool-conversion -Wno-constant-conversion -Wno-four-char-constants
+		)
+	else()
+		set(WARNING_FLAG_LIST ${WARNING_FLAG_LIST}
+			-Wno-unused-but-set-variable
 		)
 	endif()
 

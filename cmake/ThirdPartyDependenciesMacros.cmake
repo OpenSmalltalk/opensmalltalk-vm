@@ -225,7 +225,6 @@ function(ADD_THIRDPARTY_WITH_AUTOCONF NAME)
         set(ExtraRequiredAutoconfVariables)
 
         if(DARWIN)
-            message("CMAKE_C_COMPILER ${CMAKE_C_COMPILER}")
             set(ExtraRequiredAutoconfVariables
                 "CC=${CMAKE_C_COMPILER} --sysroot=${CMAKE_OSX_SYSROOT}"
                 "CXX=${CMAKE_CXX_COMPILER} --sysroot=${CMAKE_OSX_SYSROOT}"
