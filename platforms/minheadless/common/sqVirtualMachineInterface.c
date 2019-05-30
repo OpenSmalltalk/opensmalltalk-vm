@@ -395,7 +395,8 @@ parseVMArgument(char **argv)
     }
     else if(IS_VM_OPTION("vm-display-null"))
     {
-        /* Ignore this option. For compatibility with Smalltalk CI. */
+        /* For compatibility with Smalltalk CI. */
+        headlessMode = 1;
         return 1;
     }
 #ifdef __APPLE__
