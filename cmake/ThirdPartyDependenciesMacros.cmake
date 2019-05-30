@@ -43,7 +43,16 @@ if(DARWIN)
     set(ThirdPartyLibrariesPatterns "" CACHE INTERNAL "List of built libraries glob patterns to bundle.")
 endif()
 
-set(ThirdPartyProjectBuildMakeCommand BUILD_COMMAND make > build.log 2>&1)
+# Enable all of the logs to files.
+set(ThirdPartyProjectLogSettings
+    LOG_DOWNLOAD YES
+    LOG_PATCH YES
+    LOG_CONFIGURE YES
+    LOG_BUILD YES
+    LOG_INSTALL YES
+    LOG_MERGED_STDOUTERR YES
+    LOG_OUTPUT_ON_FAILURE YES
+)
 
 ## Function for checking a list of files exists. This is used to avoid
 ## rebuilding cached thirdparty dependencies.
@@ -272,7 +281,7 @@ function(ADD_THIRDPARTY_WITH_AUTOCONF NAME)
             PREFIX "${CMAKE_CURRENT_BINARY_DIR}/thirdparty/${NAME}"
             ${computed_patch_command}
             CONFIGURE_COMMAND "${thirdparty_autoconf_command}"
-            ${ThirdPartyProjectBuildMakeCommand}
+            ${ThirdPartyProjectLogSettings}
             BUILD_IN_SOURCE TRUE
         )
 
@@ -372,7 +381,7 @@ function(ADD_THIRDPARTY_WITH_CMAKE NAME)
             DOWNLOAD_DIR "${ThirdPartyCacheDownloadDirectory}"
             PREFIX "${CMAKE_CURRENT_BINARY_DIR}/thirdparty/${NAME}"
             CONFIGURE_COMMAND "${thirdparty_cmake_command}"
-            ${ThirdPartyProjectBuildMakeCommand}
+            ${ThirdPartyProjectLogSettings}
             BUILD_IN_SOURCE FALSE
         )
 

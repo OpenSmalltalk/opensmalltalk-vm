@@ -1,7 +1,6 @@
 set -e
 
 if [[ "${ARCH}" = "linux64x64" ]]; then
-    sudo add-apt-repository --remove http://dl.google.com/linux/chrome/deb # Hack for hash sum mismatch
     sudo apt-get update -y
     sudo apt-get install -yq --no-install-suggests --no-install-recommends --force-yes \
             debhelper \
@@ -18,7 +17,6 @@ if [[ "${ARCH}" = "linux64x64" ]]; then
             gcc-multilib \
             uuid-dev
 elif [[ "${ARCH}" = "linux32x86" ]]; then
-    sudo add-apt-repository --remove http://dl.google.com/linux/chrome/deb # Hack for hash sum mismatch
     sudo apt-get update -y
     sudo apt-get remove -q -y gvfs-daemons
     sudo apt-get install -yq --no-install-suggests --no-install-recommends --force-yes \

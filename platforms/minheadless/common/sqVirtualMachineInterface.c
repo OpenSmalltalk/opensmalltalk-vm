@@ -388,6 +388,16 @@ parseVMArgument(char **argv)
         sqVMOptionTraceModuleLoading = 1;
         return 1;
     }
+    else if(IS_VM_OPTION("nosound"))
+    {
+        /* Ignore this option. For compatibility with Smalltalk CI. */
+        return 1;
+    }
+    else if(IS_VM_OPTION("vm-display-null"))
+    {
+        /* Ignore this option. For compatibility with Smalltalk CI. */
+        return 1;
+    }
 #ifdef __APPLE__
     else if(IS_VM_OPTION("NSDocumentRevisionsDebugMode"))
     {
@@ -462,7 +472,7 @@ osvm_loadImage(OSVMInstanceHandle vmHandle, const char *fileName)
 {
     size_t imageSize = 0;
     sqImageFile imageFile = 0;
-    
+
     if(!vmHandle)
         return OSVM_ERROR_INVALID_VM_INSTANCE_HANDLE;
 
@@ -504,7 +514,7 @@ OSVM_VM_CORE_PUBLIC OSVMError
 osvm_loadDefaultImage(OSVMInstanceHandle vmHandle)
 {
     OSVMError error;
-    
+
     if(!vmHandle)
         return OSVM_ERROR_INVALID_VM_INSTANCE_HANDLE;
 
@@ -533,10 +543,10 @@ osvm_initialize(OSVMInstanceHandle *resultVMHandle)
 {
     if(!resultVMHandle)
         return OSVM_ERROR_NULL_POINTER;
-        
+
     if(osvmInstanceSingleton.singletonInitialized)
         return OSVM_ERROR_VM_IMPLEMENTATION_NON_REENTRANT;
-        
+
     /* check the interpreter's size assumptions for basic data types */
     if (sizeof(int) != 4) error("This C compiler's integers are not 32 bits.");
     if (sizeof(double) != 8) error("This C compiler's floats are not 64 bits.");
@@ -556,7 +566,7 @@ osvm_initialize(OSVMInstanceHandle *resultVMHandle)
 
     osvmInstanceSingleton.singletonInitialized = 1;
     *resultVMHandle = &osvmInstanceSingleton;
-    
+
     return OSVM_SUCCESS;
 }
 
@@ -586,7 +596,7 @@ osvm_parseCommandLineArguments(OSVMInstanceHandle vmHandle, int argc, const char
 {
     if(!vmHandle)
         return OSVM_ERROR_INVALID_VM_INSTANCE_HANDLE;
-        
+
     /* Make parameters global for access from plugins */
     argCnt = argc;
     argVec = (char**)argv;
@@ -664,7 +674,7 @@ osvm_initializeVM(OSVMInstanceHandle vmHandle)
 {
     if(!vmHandle)
         return OSVM_ERROR_INVALID_VM_INSTANCE_HANDLE;
-        
+
     ioInitWindowSystem(headlessMode);
     ioInitTime();
     ioInitThreads();
