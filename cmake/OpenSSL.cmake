@@ -31,7 +31,7 @@ else()
             set(OpenSSL_ConfigureCommand "./Configure" darwin-i386-cc
                 "--prefix=${ThirdPartyCacheInstall}" shared )
         endif()
-        
+
         set(OpenSSL_BuildCommand
             env
             "LDFLAGS=-Wl,-rpath,@executable_path:@executable_path/Plugins --sysroot=${CMAKE_OSX_SYSROOT}"
@@ -44,7 +44,7 @@ else()
         foreach(opensslLib ${OpenSSL_Spec_MacLibraries})
             set(OpenSSL_LibrariesToAddPermission "${OpenSSL_LibrariesToAddPermission} ${opensslLib}")
         endforeach()
-        
+
         configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/OpenSSL.mac-install.sh.in"
             "${CMAKE_CURRENT_BINARY_DIR}/thirdparty/OpenSSL.mac-install.sh" @ONLY)
         set(OpenSSL_InstallCommand "${CMAKE_CURRENT_BINARY_DIR}/thirdparty/OpenSSL.mac-install.sh")
@@ -83,6 +83,10 @@ else()
     set(OpenSSL_BuildDep OpenSSL)
     if(PkgConfig_BuildDep)
         add_dependencies(OpenSSL ${PkgConfig_BuildDep})
+    endif()
+
+    if(Zlib_BuildDep)
+        add_dependencies(OpenSSL ${Zlib_BuildDep})
     endif()
 endif()
 

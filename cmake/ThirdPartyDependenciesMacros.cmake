@@ -43,16 +43,22 @@ if(DARWIN)
     set(ThirdPartyLibrariesPatterns "" CACHE INTERNAL "List of built libraries glob patterns to bundle.")
 endif()
 
+option(LOG_THIRD_PARTY_BUILD_TO_FILE "Logs the build processes of third party dependencies to file if enabled, otherwise the output is " OFF)
+
 # Enable all of the logs to files.
-set(ThirdPartyProjectLogSettings
-    LOG_DOWNLOAD YES
-    LOG_PATCH YES
-    LOG_CONFIGURE YES
-    LOG_BUILD YES
-    LOG_INSTALL YES
-    LOG_MERGED_STDOUTERR YES
-    LOG_OUTPUT_ON_FAILURE YES
-)
+if(LOG_THIRD_PARTY_BUILD_TO_FILE)
+    set(ThirdPartyProjectLogSettings
+        LOG_DOWNLOAD YES
+        LOG_PATCH YES
+        LOG_CONFIGURE YES
+        LOG_BUILD YES
+        LOG_INSTALL YES
+        LOG_MERGED_STDOUTERR YES
+        LOG_OUTPUT_ON_FAILURE YES
+    )
+else()
+    set(ThirdPartyProjectLogSettings)
+endif()
 
 ## Function for checking a list of files exists. This is used to avoid
 ## rebuilding cached thirdparty dependencies.
@@ -126,7 +132,7 @@ function(INSTALL_THIRDPARTY_BUILD_ARTIFACTS ThirdpartyProjectName)
         set(InstallLibraryGlobPatterns ${ARTIFACT_KIND_MAC_LIBRARIES_SYMLINK_PATTERNS})
     elseif(WIN32)
         set(InstallLibrarySourceFolder bin)
-        set(InstallLibraryFileNames ${WINDOWS_DLLS})
+        set(InstallLibraryFileNames ${ARTIFACT_KIND_WINDOWS_DLLS})
     else()
         set(InstallLibraryFileNames ${ARTIFACT_KIND_LINUX_LIBRARIES})
         set(InstallLibraryGlobPatterns ${ARTIFACT_KIND_LINUX_LIBRARIES_SYMLINK_PATTERNS})
@@ -168,19 +174,33 @@ function (export_included_thirdparty_libraries NAME)
     endif()
 
     if(libraries)
-        #set(librariesFullPaths)
-        foreach(lib ${libraries})
-            #set(librariesFullPaths ${librariesFullPaths} "${ThirdPartyCacheInstallLib}/${lib}")
-            add_library(${lib} SHARED IMPORTED)
-            set_target_properties(${lib} PROPERTIES IMPORTED_LOCATION "${ThirdPartyCacheInstallLib}/${lib}")
-        endforeach()
+        if(FALSE)
+            set(HAVE_${NAME} True CACHE INTERNAL "Is ${NAME} avaiable?" FORCE)
+            set(libList -L${ThirdPartyCacheInstallLib} ${libraries})
+            set(${NAME}_LIBRARIES "${libList}" CACHE STRING "${NAME} libraries" FORCE)
+            set(${NAME}_INCLUDE_DIR "" CACHE PATH "${NAME} include directory" FORCE)
 
-        set(HAVE_${NAME} True CACHE INTERNAL "Is ${NAME} avaiable?" FORCE)
-        #set(${NAME}_LIBRARIES "${librariesFullPaths}" CACHE STRING "${NAME} libraries" FORCE)
-        set(${NAME}_LIBRARIES "${libraries}" CACHE STRING "${NAME} libraries" FORCE)
-        set(${NAME}_INCLUDE_DIR "" CACHE PATH "${NAME} include directory" FORCE)
+        else()
+            #set(librariesFullPaths)
+            foreach(lib ${libraries})
+                #set(librariesFullPaths ${librariesFullPaths} "${ThirdPartyCacheInstallLib}/${lib}")
+                if(WIN32)
+                    add_library(${lib} STATIC IMPORTED)
+                    set_target_properties(${lib} PROPERTIES IMPORTED_LOCATION "${ThirdPartyCacheInstallLib}/${lib}")
+                else()
+                    add_library(${lib} SHARED IMPORTED)
+                    set_target_properties(${lib} PROPERTIES IMPORTED_LOCATION "${ThirdPartyCacheInstallLib}/lib${lib}.a")
+                endif()
+            endforeach()
+
+            set(HAVE_${NAME} True CACHE INTERNAL "Is ${NAME} avaiable?" FORCE)
+            #set(${NAME}_LIBRARIES "${librariesFullPaths}" CACHE STRING "${NAME} libraries" FORCE)
+            set(${NAME}_LIBRARIES "${libraries}" CACHE STRING "${NAME} libraries" FORCE)
+            set(${NAME}_INCLUDE_DIR "" CACHE PATH "${NAME} include directory" FORCE)
+            #message("libraries ${NAME}_LIBRARIES ${${NAME}_LIBRARIES}")
+        endif()
     else()
-        set(HAVE_${NAME} False CACHE INTERNAL "Is SDL2 avaiable?")
+        set(HAVE_${NAME} False CACHE INTERNAL "Is ${NAME} avaiable?")
     endif()
 endfunction()
 
@@ -239,6 +259,18 @@ function(ADD_THIRDPARTY_WITH_AUTOCONF NAME)
                 set(autoconf_cxxflags "${autoconf_cxxflags} -arch x86_64")
                 set(autoconf_ldflags "${autoconf_ldflags} -arch x86_64")
             endif()
+        elseif(WIN32)
+            if(SQUEAK_PLATFORM_X86_32)
+                set(ExtraRequiredAutoconfArgs ${ExtraRequiredAutoconfArgs} "--host=i686-w64-mingw32")
+                set(autoconf_cflags "${autoconf_cflags} -m32 -static-libgcc -static-libstdc++")
+                set(autoconf_cxxflags "${autoconf_cxxflags} -m32 -static-libgcc -static-libstdc++")
+                set(autoconf_ldflags "${autoconf_ldflags} -m32 -static-libgcc -static-libstdc++")
+            elseif(SQUEAK_PLATFORM_X86_64)
+                set(ExtraRequiredAutoconfArgs ${ExtraRequiredAutoconfArgs} "--host=x86_64-w64-mingw32")
+                set(autoconf_cflags "${autoconf_cflags} -m64 -static-libgcc -static-libstdc++")
+                set(autoconf_cxxflags "${autoconf_cxxflags} -m64 -static-libgcc -static-libstdc++")
+                set(autoconf_ldflags "${autoconf_ldflags} -m64 -static-libgcc -static-libstdc++")
+            endif()
         else()
             if(SQUEAK_PLATFORM_X86_32)
                 set(autoconf_cflags "${autoconf_cflags} -m32")
@@ -266,6 +298,7 @@ function(ADD_THIRDPARTY_WITH_AUTOCONF NAME)
         )
 
         if(ThirdPartyPkgConfig AND ThirdPartyPkgConfigPath)
+            message("use pkgconfig with autoconf for ${NAME}: ${ThirdPartyPkgConfig} ${ThirdPartyPkgConfigPath}")
             set(thirdparty_autoconf_command ${thirdparty_autoconf_command}
                 "PKG_CONFIG=${ThirdPartyPkgConfig}"
                 "PKG_CONFIG_PATH=${ThirdPartyPkgConfigPath}"
@@ -308,11 +341,12 @@ endfunction()
 
 function(ADD_THIRDPARTY_WITH_CMAKE NAME)
     set(options)
-    set(oneValueArgs DOWNLOAD_URL ARCHIVE_NAME ARCHIVE_SHA256 CFLAGS CXXFLAGS LDFLAGS)
+    set(oneValueArgs DOWNLOAD_URL ARCHIVE_NAME ARCHIVE_SHA256 PATCH CFLAGS CXXFLAGS LDFLAGS)
     set(multiValueArgs
         CMAKE_EXTRA_ARGS
         DEPENDENCIES
         EXTRA_BUILD_ARTIFACTS
+        INSTALL_COMMAND
         MAC_LIBRARIES
         MAC_LIBRARIES_SYMLINK_PATTERNS
         LINUX_LIBRARIES
@@ -329,6 +363,11 @@ function(ADD_THIRDPARTY_WITH_CMAKE NAME)
         LINUX_LIBRARIES ${parsed_arguments_LINUX_LIBRARIES}
         WINDOWS_DLLS ${parsed_arguments_WINDOWS_DLLS}
     )
+
+    set(computed_patch_command)
+    if(parsed_arguments_PATCH)
+        set(computed_patch_command PATCH_COMMAND patch -p1 < ${parsed_arguments_PATCH})
+    endif()
 
     if(HaveCachedBuildArtifacts)
         message(STATUS "Not building cached third-party dependency ${NAME}.")
@@ -372,16 +411,27 @@ function(ADD_THIRDPARTY_WITH_CMAKE NAME)
             "-DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES}"
             ${parsed_arguments_CMAKE_EXTRA_ARGS}
         )
+        # Use the same toolchain file that we are using.
+        if(CMAKE_TOOLCHAIN_FILE)
+            set(thirdparty_cmake_command ${thirdparty_cmake_command}
+                "-DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}")
+        endif()
 
+        set(CustomInstallCommand)
+        if(parsed_arguments_INSTALL_COMMAND)
+            set(CustomInstallCommand INSTALL_COMMAND ${parsed_arguments_INSTALL_COMMAND})
+        endif()
         ExternalProject_Add(${NAME}
             URL "${parsed_arguments_DOWNLOAD_URL}"
             URL_HASH "SHA256=${parsed_arguments_ARCHIVE_SHA256}"
             DOWNLOAD_NAME "${parsed_arguments_ARCHIVE_NAME}"
             DOWNLOAD_DIR "${ThirdPartyCacheDownloadDirectory}"
             PREFIX "${CMAKE_CURRENT_BINARY_DIR}/thirdparty/${NAME}"
+            ${computed_patch_command}
             CONFIGURE_COMMAND "${thirdparty_cmake_command}"
             ${ThirdPartyProjectLogSettings}
             BUILD_IN_SOURCE FALSE
+            ${CustomInstallCommand}
         )
 
         foreach(dep ${parsed_arguments_DEPENDENCIES})

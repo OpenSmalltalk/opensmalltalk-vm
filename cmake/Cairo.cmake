@@ -14,5 +14,5 @@ add_thirdparty_with_autoconf(Cairo
     MAC_LIBRARIES ${Cairo_Spec_MacLibraries}
     MAC_LIBRARIES_SYMLINK_PATTERNS ${Cairo_Spec_MacLibrariesSymlinks}
     WINDOWS_DLLS ${Cairo_Spec_WindowsDLLs}
-    DEPENDENCIES ${Pixman_BuildDep}
+    DEPENDENCIES ${PkgConfig_BuildDep} ${Pixman_BuildDep} ${FreeType2_BuildDep} ${LibPNG_BuildDep}
 )

@@ -1,14 +1,14 @@
 /****************************************************************************
 *   PROJECT: Squeak Headers
 *   FILE:    sqMacSerialPort.c
-*   CONTENT: 
+*   CONTENT:
 *
 *   AUTHOR:  John Maloney, John McIntosh, and others.
-*   ADDRESS: 
+*   ADDRESS:
 *   EMAIL:   johnmci@smalltalkconsulting.com
 *   RCSID:   $Id: sqMacSerialPort.c 1708 2007-06-10 00:40:04Z johnmci $
 *
-*   NOTES: 
+*   NOTES:
 *  Feb 22nd, 2002, JMM enable 16 ports for serial, versus four, which was capped at 2?
 ****************************************************************************/
 
@@ -16,6 +16,8 @@
 #include "SerialPlugin.h"
 
 extern struct VirtualMachine *interpreterProxy;
+
+#ifndef NO_NULL_SERIAL_PLUGIN_IMPLEMENTATION
 
 /*** Constants ***/
 #define INPUT_BUF_SIZE 1000
@@ -139,3 +141,5 @@ EXPORT (int) serialPortWriteFromByName(const char *portName, int count, void *bu
 #pragma unused(portName,count,bufferPtr)
 	return interpreterProxy->success(false);
 }
+
+#endif //NO_NULL_SERIAL_PLUGIN_IMPLEMENTATION

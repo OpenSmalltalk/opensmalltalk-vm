@@ -13,5 +13,5 @@ add_thirdparty_with_autoconf(LibPNG
     MAC_LIBRARIES ${LibPNG_Spec_MacLibraries}
     MAC_LIBRARIES_SYMLINK_PATTERNS ${LibPNG_Spec_MacLibrariesSymlinks}
     WINDOWS_DLLS ${LibPNG_Spec_WindowsDLLs}
-    DEPENDENCIES ${PkgConfig_BuildDep}
+    DEPENDENCIES ${PkgConfig_BuildDep} ${Zlib_BuildDep}
 )

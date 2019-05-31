@@ -631,9 +631,9 @@ if(NOT ONLY_CONFIG_H)
 
     # Build the VM core library
     set(VM_CORE_LIBRARY_TYPE STATIC)
-    #if(WIN32)
-    #    set(VM_CORE_LIBRARY_TYPE SHARED)
-    #endif()
+    if(WIN32)
+        set(VM_CORE_LIBRARY_TYPE SHARED)
+	endif()
 
     if("${VM_CORE_LIBRARY_TYPE}" STREQUAL "STATIC")
     	add_definitions(-DBUILD_OSVM_STATIC)
@@ -661,7 +661,7 @@ if(NOT ONLY_CONFIG_H)
     # Build the VM executable(s)
 	set(VM_EXECUTABLE_TARGETS ${VM_EXECUTABLE_NAME})
     if(WIN32)
-		set(VM_EXECUTABLE_TARGETS ${VM_EXECUTABLE_TARGETS} ${VM_EXECUTABLE_NAME}Console)
+		set(VM_EXECUTABLE_TARGETS ${VM_EXECUTABLE_NAME} ${VM_EXECUTABLE_NAME}Console)
 		add_executable(${VM_EXECUTABLE_NAME}Console platforms/minheadless/common/sqMain.c)
 	    target_link_libraries(${VM_EXECUTABLE_NAME}Console ${VM_LIBRARY_NAME})
 
@@ -738,7 +738,18 @@ if(NOT ONLY_CONFIG_H)
 			LIBRARY DESTINATION ${ProductInstallProgramFolder}
 			RUNTIME DESTINATION ${ProductInstallProgramFolder}
 			PUBLIC_HEADER DESTINATION ${ProductInstallBaseFolder}/include
+			PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_WRITE GROUP_EXECUTE WORLD_READ WORLD_WRITE WORLD_EXECUTE
 		)
+
+		# HACK: On cygwin the resulting dlls and exe file are having wrong
+		# permissions.
+		if(CYGWIN)
+			set(FIX_CYGWIN_INSTALL_PERMISSIONS_BASH_SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/FixCygwinInstallPermissions.sh")
+			configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/FixCygwinInstallPermissions.sh.in" "${FIX_CYGWIN_INSTALL_PERMISSIONS_BASH_SCRIPT}" @ONLY)
+			set(FIX_CYGWIN_INSTALL_PERMISSIONS_SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/FixCygwinInstallPermissions.cmake")
+			configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/FixCygwinInstallPermissions.cmake.in" "${FIX_CYGWIN_INSTALL_PERMISSIONS_SCRIPT}" @ONLY)
+			install(SCRIPT "${FIX_CYGWIN_INSTALL_PERMISSIONS_SCRIPT}")
+		endif()
 	endif()
 endif()
 

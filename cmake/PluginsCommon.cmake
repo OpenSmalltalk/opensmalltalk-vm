@@ -2,7 +2,7 @@
 set(SqueakFFIPrims_Sources
     "${CrossPlatformPluginFolder}/SqueakFFIPrims/sqFFI.h"
     "${CrossPlatformPluginFolder}/SqueakFFIPrims/sqFFIPlugin.c"
-    "${CrossPlatformPluginFolder}/SqueakFFIPrims/sqFFITestFuncs.c"
+    #"${CrossPlatformPluginFolder}/SqueakFFIPrims/sqFFITestFuncs.c" # Clashes with AlienSUnitTestProcedures
     "${CrossPlatformPluginFolder}/SqueakFFIPrims/sqManualSurface.c"
     "${PluginsSourceFolderName}/SqueakFFIPrims/SqueakFFIPrims.c"
 )
@@ -54,7 +54,7 @@ add_vm_plugin_sources(DropPlugin INTERNAL
 add_vm_plugin_auto(ZipPlugin INTERNAL) # Used by Monticello
 
 if(NOT MINIMAL_PLUGIN_SET)
-    
+
 #===============================================================================
 # Plugins that are used by both, Squeak and Pharo
 #===============================================================================
@@ -74,7 +74,9 @@ if(NOT DARWIN)
     add_vm_plugin_auto(MIDIPlugin INTERNAL)
 endif()
 
+add_definitions(-DNO_NULL_SERIAL_PLUGIN_IMPLEMENTATION)
 add_vm_plugin_auto(SerialPlugin INTERNAL)
+
 add_vm_plugin_auto(SoundCodecPrims INTERNAL)
 add_vm_plugin_auto(SoundGenerationPlugin INTERNAL)
 #add_vm_plugin_auto(SoundPlugin INTERNAL)

@@ -1,0 +1,5 @@
+#!/bin/sh
+
+InstallPrefix="@CMAKE_INSTALL_PREFIX@"
+
+chmod a+rwx "$InstallPrefix"/*.dll "$InstallPrefix"/*.exe

@@ -19,7 +19,11 @@ add_thirdparty_with_autoconf(PkgConfig
     ARCHIVE_SHA256 ${PkgConfig_Spec_ArchiveSha256}
     EXTRA_BUILD_ARTIFACTS "bin/pkg-config"
     CFLAGS "-std=gnu89"
+    AUTOCONF_EXTRA_ARGS "--with-internal-glib"
 )
 
 set(ThirdPartyPkgConfig "${ThirdPartyCacheInstallBin}/pkg-config")
+if(WIN32)
+    set(ThirdPartyPkgConfig "${ThirdPartyCacheInstallBin}/pkg-config.exe")
+endif()
 set(ThirdPartyPkgConfigPath "${ThirdPartyCacheInstallLib}/pkgconfig")
