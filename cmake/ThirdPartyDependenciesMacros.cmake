@@ -189,7 +189,7 @@ function (export_included_thirdparty_libraries NAME)
                     set_target_properties(${lib} PROPERTIES IMPORTED_LOCATION "${ThirdPartyCacheInstallLib}/${lib}")
                 else()
                     add_library(${lib} SHARED IMPORTED)
-                    set_target_properties(${lib} PROPERTIES IMPORTED_LOCATION "${ThirdPartyCacheInstallLib}/lib${lib}.a")
+                    set_target_properties(${lib} PROPERTIES IMPORTED_LOCATION "${ThirdPartyCacheInstallLib}/${lib}")
                 endif()
             endforeach()
 
