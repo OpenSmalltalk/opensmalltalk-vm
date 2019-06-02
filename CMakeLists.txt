@@ -743,7 +743,7 @@ if(NOT ONLY_CONFIG_H)
 
 		# HACK: On cygwin the resulting dlls and exe file are having wrong
 		# permissions.
-		if(CYGWIN)
+		if(MINGW_ON_CYGWIN)
 			set(FIX_CYGWIN_INSTALL_PERMISSIONS_BASH_SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/FixCygwinInstallPermissions.sh")
 			configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/FixCygwinInstallPermissions.sh.in" "${FIX_CYGWIN_INSTALL_PERMISSIONS_BASH_SCRIPT}" @ONLY)
 			set(FIX_CYGWIN_INSTALL_PERMISSIONS_SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/FixCygwinInstallPermissions.cmake")

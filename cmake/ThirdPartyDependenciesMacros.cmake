@@ -174,31 +174,24 @@ function (export_included_thirdparty_libraries NAME)
     endif()
 
     if(libraries)
-        if(FALSE)
-            set(HAVE_${NAME} True CACHE INTERNAL "Is ${NAME} avaiable?" FORCE)
-            set(libList -L${ThirdPartyCacheInstallLib} ${libraries})
-            set(${NAME}_LIBRARIES "${libList}" CACHE STRING "${NAME} libraries" FORCE)
-            set(${NAME}_INCLUDE_DIR "" CACHE PATH "${NAME} include directory" FORCE)
+        #set(librariesFullPaths)
+        foreach(lib ${libraries})
+            #set(librariesFullPaths ${librariesFullPaths} "${ThirdPartyCacheInstallLib}/${lib}")
+            if(WIN32)
+                add_library(${lib} STATIC IMPORTED)
+                set_target_properties(${lib} PROPERTIES IMPORTED_LOCATION "${ThirdPartyCacheInstallLib}/${lib}")
+            else()
+                add_library(${lib} SHARED IMPORTED)
+                set_target_properties(${lib} PROPERTIES IMPORTED_LOCATION "${ThirdPartyCacheInstallLib}/lib${lib}.a")
+            endif()
+        endforeach()
 
-        else()
-            #set(librariesFullPaths)
-            foreach(lib ${libraries})
-                #set(librariesFullPaths ${librariesFullPaths} "${ThirdPartyCacheInstallLib}/${lib}")
-                if(WIN32)
-                    add_library(${lib} STATIC IMPORTED)
-                    set_target_properties(${lib} PROPERTIES IMPORTED_LOCATION "${ThirdPartyCacheInstallLib}/${lib}")
-                else()
-                    add_library(${lib} SHARED IMPORTED)
-                    set_target_properties(${lib} PROPERTIES IMPORTED_LOCATION "${ThirdPartyCacheInstallLib}/lib${lib}.a")
-                endif()
-            endforeach()
-
-            set(HAVE_${NAME} True CACHE INTERNAL "Is ${NAME} avaiable?" FORCE)
-            #set(${NAME}_LIBRARIES "${librariesFullPaths}" CACHE STRING "${NAME} libraries" FORCE)
-            set(${NAME}_LIBRARIES "${libraries}" CACHE STRING "${NAME} libraries" FORCE)
-            set(${NAME}_INCLUDE_DIR "" CACHE PATH "${NAME} include directory" FORCE)
-            #message("libraries ${NAME}_LIBRARIES ${${NAME}_LIBRARIES}")
-        endif()
+        set(HAVE_${NAME} True CACHE INTERNAL "Is ${NAME} avaiable?" FORCE)
+        #set(${NAME}_LIBRARIES "${librariesFullPaths}" CACHE STRING "${NAME} libraries" FORCE)
+        set(${NAME}_LIBRARIES "${libraries}" CACHE STRING "${NAME} libraries" FORCE)
+        set(${NAME}_INCLUDE_DIR "" CACHE PATH "${NAME} include directory" FORCE)
+        #message("libraries ${NAME}_LIBRARIES ${${NAME}_LIBRARIES}")
+        set(${NAME}_LibrariesNames "${libraries}" CACHE INTERNAL "The name of the libraries")
     else()
         set(HAVE_${NAME} False CACHE INTERNAL "Is ${NAME} avaiable?")
     endif()
@@ -206,12 +199,14 @@ endfunction()
 
 ## This function adds an autoconf based thirdparty dependency.
 function(ADD_THIRDPARTY_WITH_AUTOCONF NAME)
-    set(options)
+    set(options BUILD_AS_NATIVE_TOOL)
     set(oneValueArgs DOWNLOAD_URL ARCHIVE_NAME ARCHIVE_SHA256 PATCH CFLAGS CXXFLAGS LDFLAGS)
     set(multiValueArgs
         AUTOCONF_EXTRA_ARGS
         DEPENDENCIES
         EXTRA_BUILD_ARTIFACTS
+        BUILD_COMMAND
+        INSTALL_COMMAND
         MAC_LIBRARIES
         MAC_LIBRARIES_SYMLINK_PATTERNS
         LINUX_LIBRARIES
@@ -244,7 +239,9 @@ function(ADD_THIRDPARTY_WITH_AUTOCONF NAME)
         set(ExtraRequiredAutoconfArgs)
         set(ExtraRequiredAutoconfVariables)
 
-        if(DARWIN)
+        if(parsed_arguments_BUILD_AS_NATIVE_TOOL)
+            # Do not pass extra options.
+        elseif(DARWIN)
             set(ExtraRequiredAutoconfVariables
                 "CC=${CMAKE_C_COMPILER} --sysroot=${CMAKE_OSX_SYSROOT}"
                 "CXX=${CMAKE_CXX_COMPILER} --sysroot=${CMAKE_OSX_SYSROOT}"
@@ -262,9 +259,9 @@ function(ADD_THIRDPARTY_WITH_AUTOCONF NAME)
         elseif(WIN32)
             if(SQUEAK_PLATFORM_X86_32)
                 set(ExtraRequiredAutoconfArgs ${ExtraRequiredAutoconfArgs} "--host=i686-w64-mingw32")
-                set(autoconf_cflags "${autoconf_cflags} -m32 -static-libgcc -static-libstdc++")
-                set(autoconf_cxxflags "${autoconf_cxxflags} -m32 -static-libgcc -static-libstdc++")
-                set(autoconf_ldflags "${autoconf_ldflags} -m32 -static-libgcc -static-libstdc++")
+                set(autoconf_cflags "${autoconf_cflags} -m32 -march=pentium4 -static-libgcc -static-libstdc++")
+                set(autoconf_cxxflags "${autoconf_cxxflags} -m32 -march=pentium4 -static-libgcc -static-libstdc++")
+                set(autoconf_ldflags "${autoconf_ldflags} -m32 -march=pentium4 -static-libgcc -static-libstdc++")
             elseif(SQUEAK_PLATFORM_X86_64)
                 set(ExtraRequiredAutoconfArgs ${ExtraRequiredAutoconfArgs} "--host=x86_64-w64-mingw32")
                 set(autoconf_cflags "${autoconf_cflags} -m64 -static-libgcc -static-libstdc++")
@@ -273,9 +270,9 @@ function(ADD_THIRDPARTY_WITH_AUTOCONF NAME)
             endif()
         else()
             if(SQUEAK_PLATFORM_X86_32)
-                set(autoconf_cflags "${autoconf_cflags} -m32")
-                set(autoconf_cxxflags "${autoconf_cxxflags} -m32")
-                set(autoconf_ldflags "${autoconf_ldflags} -m32")
+                set(autoconf_cflags "${autoconf_cflags} -m32 -march=pentium4")
+                set(autoconf_cxxflags "${autoconf_cxxflags} -m32 -march=pentium4")
+                set(autoconf_ldflags "${autoconf_ldflags} -m32 -march=pentium4")
             elseif(SQUEAK_PLATFORM_X86_64)
                 set(autoconf_cflags "${autoconf_cflags} -m64")
                 set(autoconf_cxxflags "${autoconf_cxxflags} -m64")
@@ -298,11 +295,19 @@ function(ADD_THIRDPARTY_WITH_AUTOCONF NAME)
         )
 
         if(ThirdPartyPkgConfig AND ThirdPartyPkgConfigPath)
-            message("use pkgconfig with autoconf for ${NAME}: ${ThirdPartyPkgConfig} ${ThirdPartyPkgConfigPath}")
             set(thirdparty_autoconf_command ${thirdparty_autoconf_command}
                 "PKG_CONFIG=${ThirdPartyPkgConfig}"
                 "PKG_CONFIG_PATH=${ThirdPartyPkgConfigPath}"
             )
+        endif()
+
+        set(CustomBuildCommand)
+        if(parsed_arguments_BUILD_COMMAND)
+            set(CustomBuildCommand BUILD_COMMAND ${parsed_arguments_BUILD_COMMAND})
+        endif()
+        set(CustomInstallCommand)
+        if(parsed_arguments_INSTALL_COMMAND)
+            set(CustomInstallCommand INSTALL_COMMAND ${parsed_arguments_INSTALL_COMMAND})
         endif()
 
         ExternalProject_Add(${NAME}
@@ -313,6 +318,8 @@ function(ADD_THIRDPARTY_WITH_AUTOCONF NAME)
             PREFIX "${CMAKE_CURRENT_BINARY_DIR}/thirdparty/${NAME}"
             ${computed_patch_command}
             CONFIGURE_COMMAND "${thirdparty_autoconf_command}"
+            ${CustomBuildCommand}
+            ${CustomInstallCommand}
             ${ThirdPartyProjectLogSettings}
             BUILD_IN_SOURCE TRUE
         )
@@ -346,6 +353,7 @@ function(ADD_THIRDPARTY_WITH_CMAKE NAME)
         CMAKE_EXTRA_ARGS
         DEPENDENCIES
         EXTRA_BUILD_ARTIFACTS
+        BUILD_COMMAND
         INSTALL_COMMAND
         MAC_LIBRARIES
         MAC_LIBRARIES_SYMLINK_PATTERNS
@@ -389,9 +397,9 @@ function(ADD_THIRDPARTY_WITH_CMAKE NAME)
             endif()
         else()
             if(SQUEAK_PLATFORM_X86_32)
-                set(cmake_cflags "${cmake_cflags} -m32")
-                set(cmake_cxxflags "${cmake_cxxflags} -m32")
-                set(cmake_ldflags "${cmake_ldflags} -m32")
+                set(cmake_cflags "${cmake_cflags} -m32 -march=pentium4")
+                set(cmake_cxxflags "${cmake_cxxflags} -m32 -march=pentium4")
+                set(cmake_ldflags "${cmake_ldflags} -m32 -march=pentium4")
             elseif(SQUEAK_PLATFORM_X86_64)
                 set(cmake_cflags "${cmake_cflags} -m64")
                 set(cmake_cxxflags "${cmake_cxxflags} -m64")
@@ -417,10 +425,15 @@ function(ADD_THIRDPARTY_WITH_CMAKE NAME)
                 "-DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}")
         endif()
 
+        set(CustomBuildCommand)
+        if(parsed_arguments_BUILD_COMMAND)
+            set(CustomBuildCommand BUILD_COMMAND ${parsed_arguments_BUILD_COMMAND})
+        endif()
         set(CustomInstallCommand)
         if(parsed_arguments_INSTALL_COMMAND)
             set(CustomInstallCommand INSTALL_COMMAND ${parsed_arguments_INSTALL_COMMAND})
         endif()
+
         ExternalProject_Add(${NAME}
             URL "${parsed_arguments_DOWNLOAD_URL}"
             URL_HASH "SHA256=${parsed_arguments_ARCHIVE_SHA256}"
@@ -431,6 +444,7 @@ function(ADD_THIRDPARTY_WITH_CMAKE NAME)
             CONFIGURE_COMMAND "${thirdparty_cmake_command}"
             ${ThirdPartyProjectLogSettings}
             BUILD_IN_SOURCE FALSE
+            ${CustomBuildCommand}
             ${CustomInstallCommand}
         )
 

@@ -7,6 +7,7 @@ set(LibSSH2_Spec_MacLibrariesSymlinks libssh2*.dylib)
 set(LibSSH2_Spec_LinuxLibraries libssh2.so.1.0.1)
 set(LibSSH2_Spec_LinuxLibrariesSymlinks libssh2.so*)
 set(LibSSH2_Spec_WindowsDLLs libssh2-1.dll)
+set(LibSSH2_Spec_WindowsLibraries libssh2.dll.a)
 
 add_thirdparty_with_autoconf(LibSSH2
     DOWNLOAD_URL ${LibSSH2_Spec_URL}
@@ -18,5 +19,6 @@ add_thirdparty_with_autoconf(LibSSH2
     LINUX_LIBRARIES ${LibSSH2_Spec_LinuxLibraries}
     LINUX_LIBRARIES_SYMLINK_PATTERNS ${LibSSH2_Spec_LinuxLibrariesSymlinks}
     WINDOWS_DLLS ${LibSSH2_Spec_WindowsDLLs}
+    WINDOWS_LIBRARIES ${LibSSH2_Spec_WindowsLibraries}
     DEPENDENCIES ${OpenSSL_BuildDep}
 )

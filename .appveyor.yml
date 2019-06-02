@@ -83,10 +83,10 @@ matrix:
     - FLAVOR: pharo.cog.spur.lowcode
 
 notifications:
-  - provider: Email
-    to:
-      - vm-dev@lists.squeakfoundation.org
-    on_build_success: false
+#  - provider: Email
+#    to:
+#      - vm-dev@lists.squeakfoundation.org
+#    on_build_success: false
 
 platform:
   - x86
@@ -132,10 +132,10 @@ artifacts:
     name: osvm
 
 deploy:
-  provider: GitHub # Deploy stable tags to GitHub releases
-  description: 'Automatic release'
-  auth_token:
-    secure: SOq4LiXFepptbgPZ4w2McefZOsRRAy8u88/+dpNof57BG4gYTvyESV1EB4CXTXjX
-  artifact: osvm
-  on:
-    appveyor_repo_tag: true
+#  provider: GitHub # Deploy stable tags to GitHub releases
+#  description: 'Automatic release'
+#  auth_token:
+#    secure: SOq4LiXFepptbgPZ4w2McefZOsRRAy8u88/+dpNof57BG4gYTvyESV1EB4CXTXjX
+#  artifact: osvm
+#  on:
+#    appveyor_repo_tag: true

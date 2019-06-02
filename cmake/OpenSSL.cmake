@@ -7,7 +7,7 @@ set(OpenSSL_Spec_MacLibrariesSymlinks libssl*.dylib libcrypto*.dylib)
 set(OpenSSL_Spec_LinuxLibraries libssl.so.1.0.0 libcrypto.so.1.0.0)
 set(OpenSSL_Spec_LinuxLibrariesSymlinks libssl.so* libcrypto.so*)
 set(OpenSSL_Spec_WindowsDLLs ssleay32.dll libeay32.dll)
-set(OpenSSL_Spec_WindowsLibraries libssleay32.a libeay32.a) # TODO: Check and fixme this.
+set(OpenSSL_Spec_WindowsLibraries libssl.dll.a libcrypto.dll.a)
 
 #-------------------------------------------------------------------------------
 # OpenSSL dependency building
@@ -49,11 +49,22 @@ else()
             "${CMAKE_CURRENT_BINARY_DIR}/thirdparty/OpenSSL.mac-install.sh" @ONLY)
         set(OpenSSL_InstallCommand "${CMAKE_CURRENT_BINARY_DIR}/thirdparty/OpenSSL.mac-install.sh")
     elseif(WIN32)
+        set(OpenSSL_ConfigureCommand env
+            CC=${CMAKE_C_COMPILER}
+            #AR=x86_64-w64-mingw32-ar
+            #LD=$(LD)
+            #NM=$(NM)
+            #RC=$(RC)
+            #DLLTOOL=$(DLLTOOL)
+            #DLLWRAP=$(DLLWRAP)
+        )
         if(SQUEAK_PLATFORM_X86_64)
-            set(OpenSSL_ConfigureCommand "./Configure" mingw64
+            set(OpenSSL_ConfigureCommand ${OpenSSL_ConfigureCommand}
+                "./Configure" mingw64
                 "--prefix=${ThirdPartyCacheInstall}" shared)
         elseif(SQUEAK_PLATFORM_X86_32)
-            set(OpenSSL_ConfigureCommand "./Configure" mingw
+                set(OpenSSL_ConfigureCommand ${OpenSSL_ConfigureCommand}
+                "./Configure" mingw
                 "--prefix=${ThirdPartyCacheInstall}" shared)
         endif()
         set(OpenSSL_BuildCommand make)
