@@ -423,7 +423,11 @@ include_directories(
 
 # VM Flavor sources
 if(COG_JIT)
-	set(InterpreterSource ${SourceFolderName}/vm/cointerp.c)
+	if(VM_MSVC)
+		set(InterpreterSource ${SourceFolderName}/vm/cointerp.c)
+	else()
+		set(InterpreterSource ${SourceFolderName}/vm/gcc3x-cointerp.c)
+	endif()
 	set(VM_FAVLOR_SOURCES
 		${SourceFolderName}/vm/cogit.c
 		${InterpreterSource}
@@ -597,12 +601,16 @@ elseif(WIN32)
         -Dsetjmp=_setjmp
         -D_WIN32_WINNT=0x501
         -DWINVER=0x501
-        -DWIN32=1
     )
     set(VM_DEPENDENCIES_LIBRARIES Winmm ${VM_DEPENDENCIES_LIBRARIES})
     if(SQUEAK_PLATFORM_X86_32)
         add_definitions(
             -DX86
+			-DWIN32=1
+        )
+	elseif(SQUEAK_PLATFORM_X86_64)
+		add_definitions(
+			-DWIN64=1
         )
     endif()
 else()
