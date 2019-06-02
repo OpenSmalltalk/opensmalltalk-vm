@@ -174,7 +174,6 @@ function (export_included_thirdparty_libraries NAME)
     endif()
 
     if(libraries)
-        #set(librariesFullPaths)
         foreach(lib ${libraries})
             #set(librariesFullPaths ${librariesFullPaths} "${ThirdPartyCacheInstallLib}/${lib}")
             if(WIN32)
@@ -196,6 +195,7 @@ function (export_included_thirdparty_libraries NAME)
         set(HAVE_${NAME} False CACHE INTERNAL "Is ${NAME} avaiable?")
     endif()
 endfunction()
+
 
 ## This function adds an autoconf based thirdparty dependency.
 function(ADD_THIRDPARTY_WITH_AUTOCONF NAME)
@@ -238,6 +238,7 @@ function(ADD_THIRDPARTY_WITH_AUTOCONF NAME)
         set(autoconf_ldflags "${parsed_arguments_LDFLAGS} ")
         set(ExtraRequiredAutoconfArgs)
         set(ExtraRequiredAutoconfVariables)
+
 
         if(parsed_arguments_BUILD_AS_NATIVE_TOOL)
             # Do not pass extra options.
