@@ -43,7 +43,7 @@ else()
         -Wno-unused-variable -Wno-unused-value
 	)
 
-	if(APPLE)
+	if("${CMAKE_C_COMPILER_ID}" MATCHES "Clang")
 		set(WARNING_FLAG_LIST ${WARNING_FLAG_LIST}
 			-Wno-newline-eof -Wno-shorten-64-to-32 -Wno-enum-conversion
 			-Wno-bool-conversion -Wno-constant-conversion -Wno-four-char-constants
@@ -73,12 +73,11 @@ endif()
 set(CMAKE_CONFIGURATION_TYPES Debug Release RelWithDebInfo Assert)
 if (MSVC)
 else()
-	set(COMMON_FLAGS "")
-	if(WIN32)
-		set(COMMON_FLAGS "-falign-loops=16 -falign-jumps=16 -falign-functions=16 -falign-labels=16 -Dsetjmp=_setjmp"
-		)
-	endif()
-	set(OPTIMIZATION_FLAGS "-O3 -fno-omit-frame-pointer -finline-functions ${COMMON_FLAGS}")
+	set(COMMON_FLAGS "-fno-strict-aliasing")
+	#if(WIN32)
+	#	set(COMMON_FLAGS "${COMMON_FLAGS} -falign-loops=16 -falign-jumps=16 -falign-functions=16 -falign-labels=16 -Dsetjmp=_setjmp")
+	#endif()
+	set(OPTIMIZATION_FLAGS "-O2 -fno-omit-frame-pointer -finline-functions ${COMMON_FLAGS}")
 
 	set(CMAKE_C_FLAGS_DEBUG "-g ${COMMON_FLAGS} -DDEBUGVM=1")
 	set(CMAKE_CXX_FLAGS_DEBUG "-g ${COMMON_FLAGS} -DDEBUGVM=1")
@@ -255,6 +254,8 @@ add_definitions(-DVM_NAME="${VM_NAME}")
 if(COG_JIT)
 	#add_definitions(CogVM=1)
 endif()
+
+add_definitions(-DCOGMTVM=0)
 
 set(SourceFolderName "${SourceFolderName}src")
 set(PluginsSourceFolderName "src/plugins")
@@ -601,7 +602,14 @@ elseif(WIN32)
         -Dsetjmp=_setjmp
         -D_WIN32_WINNT=0x501
         -DWINVER=0x501
+		-D_MT
     )
+
+	if(NOT MSVC)
+		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf -mno-rtd -mms-bitfields")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf -mno-rtd -mms-bitfields")
+	endif()
+
     set(VM_DEPENDENCIES_LIBRARIES Winmm ${VM_DEPENDENCIES_LIBRARIES})
     if(SQUEAK_PLATFORM_X86_32)
         add_definitions(

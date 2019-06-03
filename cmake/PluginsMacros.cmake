@@ -22,7 +22,7 @@ macro(add_vm_plugin NAME TYPE)
     if(WIN32)
         set(VM_PLUGIN_${NAME}_TYPE INTERNAL)
     endif()
-    
+
     if(BUILD_PLUGIN_${NAME})
         if("${VM_PLUGIN_${NAME}_TYPE}" STREQUAL "INTERNAL")
             set(VM_INTERNAL_PLUGINS_INC_SOURCES "${VM_INTERNAL_PLUGINS_INC_SOURCES}\nINTERNAL_PLUGIN(${NAME})")
@@ -72,7 +72,7 @@ macro(add_vm_plugin_auto NAME TYPE)
         "${CrossPlatformPluginFolder}/${NAME}/*.c"
         "${CrossPlatformPluginFolder}/${NAME}/*.h"
     )
-    
+
     set(ExtraSources ${ARGN})
     if(DARWIN)
         list(GET ExtraSources 0 USE_UNIX_SOURCES_ON_MAC)

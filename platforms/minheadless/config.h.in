@@ -170,6 +170,11 @@
 #       define WIN32 1
 #   endif
 #endif
+#ifdef _WIN64
+#   ifndef WIN64
+#       define WIN64 1
+#   endif
+#endif
 
 #ifdef NEED_SUNOS_H
 # include "sunos.h"

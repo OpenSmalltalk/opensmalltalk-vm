@@ -50,7 +50,7 @@ else()
         set(OpenSSL_InstallCommand "${CMAKE_CURRENT_BINARY_DIR}/thirdparty/OpenSSL.mac-install.sh")
     elseif(WIN32)
         set(OpenSSL_ConfigureCommand env
-            CC=${CMAKE_C_COMPILER}
+            CC=${THIRDPARTY_C_COMPILER}
             #AR=x86_64-w64-mingw32-ar
             #LD=$(LD)
             #NM=$(NM)

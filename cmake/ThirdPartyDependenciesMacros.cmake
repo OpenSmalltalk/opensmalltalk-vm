@@ -45,6 +45,19 @@ endif()
 
 option(LOG_THIRD_PARTY_BUILD_TO_FILE "Logs the build processes of third party dependencies to file if enabled, otherwise the output is " OFF)
 
+# Some variables that could be different for third party projects.
+if(NOT THIRDPARTY_C_COMPILER)
+    set(THIRDPARTY_C_COMPILER "${CMAKE_C_COMPILER}")
+endif()
+if(NOT THIRDPARTY_CXX_COMPILER)
+    set(THIRDPARTY_CXX_COMPILER "${CMAKE_CXX_COMPILER}")
+endif()
+if(NOT THIRDPARTY_CMAKE_TOOLCHAIN_FILE)
+    if(CMAKE_TOOLCHAIN_FILE)
+        set(THIRDPARTY_CMAKE_TOOLCHAIN_FILE "${CMAKE_TOOLCHAIN_FILE}")
+    endif()
+endif()
+
 # Enable all of the logs to files.
 if(LOG_THIRD_PARTY_BUILD_TO_FILE)
     set(ThirdPartyProjectLogSettings
@@ -244,8 +257,8 @@ function(ADD_THIRDPARTY_WITH_AUTOCONF NAME)
             # Do not pass extra options.
         elseif(DARWIN)
             set(ExtraRequiredAutoconfVariables
-                "CC=${CMAKE_C_COMPILER} --sysroot=${CMAKE_OSX_SYSROOT}"
-                "CXX=${CMAKE_CXX_COMPILER} --sysroot=${CMAKE_OSX_SYSROOT}"
+                "CC=${THIRDPARTY_C_COMPILER} --sysroot=${CMAKE_OSX_SYSROOT}"
+                "CXX=${THIRDPARTY_CXX_COMPILER} --sysroot=${CMAKE_OSX_SYSROOT}"
             )
             set(ExtraRequiredAutoconfArgs ${ExtraRequiredAutoconfArgs} "--with-sysroot=${CMAKE_OSX_SYSROOT}")
             if(SQUEAK_PLATFORM_X86_32)
@@ -421,9 +434,9 @@ function(ADD_THIRDPARTY_WITH_CMAKE NAME)
             ${parsed_arguments_CMAKE_EXTRA_ARGS}
         )
         # Use the same toolchain file that we are using.
-        if(CMAKE_TOOLCHAIN_FILE)
+        if(THIRDPARTY_CMAKE_TOOLCHAIN_FILE)
             set(thirdparty_cmake_command ${thirdparty_cmake_command}
-                "-DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}")
+                "-DCMAKE_TOOLCHAIN_FILE=${THIRDPARTY_CMAKE_TOOLCHAIN_FILE}")
         endif()
 
         set(CustomBuildCommand)

@@ -6,6 +6,7 @@ GENERATOR_NAME="Unix Makefiles"
 CMAKE_EXTRA_ARGS=""
 OSX_SDK_ROOT_FOLDER="/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/"
 OSX_VALID_SDKS="MacOSX10.9.sdk MacOSX10.10.sdk MacOSX10.11.sdk MacOSX10.12.sdk MacOSX10.14.sdk"
+CONFIGURE_VARIANT_FOLDER="$(cd ../common && pwd)"
 
 rm -rf "./$VARIANT_FOLDER"
 mkdir "./$VARIANT_FOLDER"
@@ -41,7 +42,7 @@ if [ "$OS_NAME" = "Msys" ]; then
 fi
 
 if [ "$OS_NAME" = "Cygwin" ]; then
-    CMAKE_EXTRA_ARGS="-DCMAKE_TOOLCHAIN_FILE=../../common/Toolchain-mingw32-cygwin.cmake"
+    CMAKE_EXTRA_ARGS="-DCMAKE_TOOLCHAIN_FILE=$CONFIGURE_VARIANT_FOLDER/Toolchain-mingw32-cygwin-clang.cmake -DTHIRDPARTY_CMAKE_TOOLCHAIN_FILE=$CONFIGURE_VARIANT_FOLDER/Toolchain-mingw32-cygwin-gcc.cmake"
     export CC="x86_64-w64-mingw32-gcc"
     export CXX="x86_64-w64-mingw32-g++"
 fi
