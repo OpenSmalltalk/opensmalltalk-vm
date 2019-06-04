@@ -2,4 +2,4 @@
 
 InstallPrefix="@CMAKE_INSTALL_PREFIX@"
 
-chmod a+rwx "$InstallPrefix"/*.dll "$InstallPrefix"/*.exe
+chmod a+rwx "$InstallPrefix"/vm/*.dll "$InstallPrefix"/vm/*.exe

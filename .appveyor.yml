@@ -16,6 +16,51 @@ environment:
       ARCH: win64x64
       CYG_ROOT: C:\cygwin64
       MINGW_ARCH: x86_64
+
+    - FLAVOR: squeak.cog.spur
+      ARCH: win32x86
+      CYG_ROOT: C:\cygwin
+      MINGW_ARCH: i686
+      BUILD_WITH_CMAKE: yes
+    - FLAVOR: squeak.cog.spur
+      ARCH: win64x64
+      CYG_ROOT: C:\cygwin64
+      MINGW_ARCH: x86_64
+      BUILD_WITH_CMAKE: yes
+    - FLAVOR: pharo.cog.spur
+      ARCH: win32x86
+      CYG_ROOT: C:\cygwin
+      MINGW_ARCH: i686
+      BUILD_WITH_CMAKE: yes
+    - FLAVOR: pharo.cog.spur
+      ARCH: win64x64
+      BUILD_WITH_CMAKE: yes
+      CYG_ROOT: C:\cygwin64
+      MINGW_ARCH: x86_64
+      BUILD_WITH_CMAKE: yes
+
+    - FLAVOR: squeak.cog.spur+sdl2
+      ARCH: win32x86
+      CYG_ROOT: C:\cygwin
+      MINGW_ARCH: i686
+      BUILD_WITH_CMAKE: yes
+    - FLAVOR: squeak.cog.spur+sdl2
+      ARCH: win64x64
+      CYG_ROOT: C:\cygwin64
+      MINGW_ARCH: x86_64
+      BUILD_WITH_CMAKE: yes
+    - FLAVOR: pharo.cog.spur+sdl2
+      ARCH: win32x86
+      CYG_ROOT: C:\cygwin
+      MINGW_ARCH: i686
+      BUILD_WITH_CMAKE: yes
+    - FLAVOR: pharo.cog.spur+sdl2
+      ARCH: win64x64
+      BUILD_WITH_CMAKE: yes
+      CYG_ROOT: C:\cygwin64
+      MINGW_ARCH: x86_64
+      BUILD_WITH_CMAKE: yes
+
     - FLAVOR: squeak.sista.spur
       ARCH: win32x86
       CYG_ROOT: C:\cygwin
@@ -121,9 +166,10 @@ build_script:
 #  `deploy_script` is mutually exclusive to `deploy`.
 # In addition, the vm needs to be packed before artifacts are collected.
 after_build:
-  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER/deploy; exec 0</dev/null; exec ./filter-exec.sh pack-vm.sh"'
-  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER/deploy; exec 0</dev/null; exec ./filter-exec.sh bintray.sh"'
-  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER/deploy/pharo; exec 0</dev/null; exec ./filter-exec.sh deploy.sh"'
+  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER/deploy; exec 0</dev/null; exec ./pack-vm.sh"'
+#  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER/deploy; exec 0</dev/null; exec ./filter-exec.sh pack-vm.sh"'
+#  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER/deploy; exec 0</dev/null; exec ./filter-exec.sh bintray.sh"'
+#  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER/deploy/pharo; exec 0</dev/null; exec ./filter-exec.sh deploy.sh"'
 
 test: off
 

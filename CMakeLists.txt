@@ -471,9 +471,14 @@ if(NOT OpenSmalltalkVM_BUILD_AS_INTERNAL_PROJECT)
 	set(ProductInstallBaseFolder "${ProductFolderName}")
 	set(ProductInstallProgramFolder "${ProductFolderName}/lib/${VM_EXECUTABLE_NAME}")
 
-	if(DARWIN OR WIN32)
+	if(DARWIN)
 		set(ProductInstallBaseFolder ".")
 		set(ProductInstallProgramFolder ".")
+	elseif(WIN32)
+		# We use the vm folder for compatibility with the VM packing scripts
+		# for CI deployment.
+		set(ProductInstallBaseFolder "vm")
+		set(ProductInstallProgramFolder "vm")
 	endif()
 
 	set(EXECUTABLE_OUTPUT_PATH "${ProductDistFolder}")
