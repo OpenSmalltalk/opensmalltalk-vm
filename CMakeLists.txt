@@ -679,7 +679,10 @@ if(NOT ONLY_CONFIG_H)
 	set_target_properties(${VM_LIBRARY_NAME} PROPERTIES
 		PUBLIC_HEADER ${PublicHeaderFiles}
 		FRAMEWORK TRUE)
-	if(SUPPORT_TRADITIONAL_DISPLAY AND ALLOW_SDL2 AND SDL2_BuildDep)
+
+	# Build the VM after SDL2 always. If the SDL2DisplayPlugin is an internal plugin,
+	# or the SDL2 based display is used, then we need this dependency.  
+	if(SDL2_BuildDep)
 		add_dependencies(${VM_LIBRARY_NAME} ${SDL2_BuildDep})
 	endif()
 
