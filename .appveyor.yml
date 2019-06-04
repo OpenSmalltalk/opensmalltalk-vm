@@ -1,22 +1,7 @@
 environment:
   matrix:
-    - FLAVOR: squeak.cog.spur
-      ARCH: win32x86
-      CYG_ROOT: C:\cygwin
-      MINGW_ARCH: i686
-    - FLAVOR: squeak.cog.spur
-      ARCH: win64x64
-      CYG_ROOT: C:\cygwin64
-      MINGW_ARCH: x86_64
-    - FLAVOR: pharo.cog.spur
-      ARCH: win32x86
-      CYG_ROOT: C:\cygwin
-      MINGW_ARCH: i686
-    - FLAVOR: pharo.cog.spur
-      ARCH: win64x64
-      CYG_ROOT: C:\cygwin64
-      MINGW_ARCH: x86_64
 
+      # Main minheadless VM variants.
     - FLAVOR: squeak.cog.spur
       ARCH: win32x86
       CYG_ROOT: C:\cygwin
@@ -34,11 +19,11 @@ environment:
       BUILD_WITH_CMAKE: yes
     - FLAVOR: pharo.cog.spur
       ARCH: win64x64
-      BUILD_WITH_CMAKE: yes
       CYG_ROOT: C:\cygwin64
       MINGW_ARCH: x86_64
       BUILD_WITH_CMAKE: yes
 
+      # Minheadless VM variants with SDL2 based support for traditional display.
     - FLAVOR: squeak.cog.spur+sdl2
       ARCH: win32x86
       CYG_ROOT: C:\cygwin
@@ -56,11 +41,29 @@ environment:
       BUILD_WITH_CMAKE: yes
     - FLAVOR: pharo.cog.spur+sdl2
       ARCH: win64x64
-      BUILD_WITH_CMAKE: yes
       CYG_ROOT: C:\cygwin64
       MINGW_ARCH: x86_64
       BUILD_WITH_CMAKE: yes
 
+      # Main VM variants
+    - FLAVOR: squeak.cog.spur
+      ARCH: win32x86
+      CYG_ROOT: C:\cygwin
+      MINGW_ARCH: i686
+    - FLAVOR: squeak.cog.spur
+      ARCH: win64x64
+      CYG_ROOT: C:\cygwin64
+      MINGW_ARCH: x86_64
+    - FLAVOR: pharo.cog.spur
+      ARCH: win32x86
+      CYG_ROOT: C:\cygwin
+      MINGW_ARCH: i686
+    - FLAVOR: pharo.cog.spur
+      ARCH: win64x64
+      CYG_ROOT: C:\cygwin64
+      MINGW_ARCH: x86_64
+
+      # Other VM variants
     - FLAVOR: squeak.sista.spur
       ARCH: win32x86
       CYG_ROOT: C:\cygwin
