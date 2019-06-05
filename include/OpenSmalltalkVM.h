@@ -168,6 +168,33 @@ OSVM_VM_CORE_PUBLIC OSVMError osvm_loadDefaultImage(OSVMInstanceHandle vmHandle)
  */
 OSVM_VM_CORE_PUBLIC OSVMError osvm_run(OSVMInstanceHandle vmHandle);
 
+/**
+ * Malloc wrapper.
+ */
+OSVM_VM_CORE_PUBLIC void *osvm_malloc(size_t size);
+
+/**
+ * Calloc wrapper.
+ */
+OSVM_VM_CORE_PUBLIC void *osvm_calloc(size_t nmemb, size_t size);
+
+/**
+ * Free wrapper.
+ */
+OSVM_VM_CORE_PUBLIC void osvm_free(void*);
+
+/**
+ * Method for converting utf-8 string to utf-16 string. This method is for
+ * interfacing in platforms such as Windows. The result is allocated with osvm_malloc.
+ */
+OSVM_VM_CORE_PUBLIC uint16_t *osvm_utf8ToUtf16(const char *string);
+
+/**
+ * Method for converting utf-16 string to utf-8 string. This method is for
+ * interfacing in platforms such as Windows. The result is allocated with osvm_malloc
+ */
+OSVM_VM_CORE_PUBLIC char *osvm_utf16ToUt8(const uint16_t *wstring);
+
 #ifdef __cplusplus
 }
 #endif

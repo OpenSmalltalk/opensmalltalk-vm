@@ -14,7 +14,7 @@ if(WIN32)
         ARCHIVE_NAME ${FreeType2_Spec_ArchiveName}
         ARCHIVE_SHA256 ${FreeType2_Spec_ArchiveSha256}
         PATCH ${FreeType2_Spec_Patch}
-        CMAKE_EXTRA_ARGS -DWITH_PNG=OFF -DBUILD_SHARED_LIBS=ON
+        CMAKE_EXTRA_ARGS -DCMAKE_DISABLE_FIND_PACKAGE_PNG=TRUE -DCMAKE_DISABLE_FIND_PACKAGE_BZip2=TRUE -DBUILD_SHARED_LIBS=ON
         MAC_LIBRARIES ${FreeType2_Spec_MacLibraries}
         MAC_LIBRARIES_SYMLINK_PATTERNS ${FreeType2_Spec_MacLibrariesSymlinks}
         WINDOWS_DLLS ${FreeType2_Spec_WindowsDLLs}
@@ -27,7 +27,7 @@ else()
         ARCHIVE_NAME ${FreeType2_Spec_ArchiveName}
         ARCHIVE_SHA256 ${FreeType2_Spec_ArchiveSha256}
         PATCH ${FreeType2_Spec_Patch}
-        AUTOCONF_EXTRA_ARGS "--without-png"
+        AUTOCONF_EXTRA_ARGS "--without-png --without-bzip2"
         MAC_LIBRARIES ${FreeType2_Spec_MacLibraries}
         MAC_LIBRARIES_SYMLINK_PATTERNS ${FreeType2_Spec_MacLibrariesSymlinks}
         WINDOWS_DLLS ${FreeType2_Spec_WindowsDLLs}

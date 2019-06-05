@@ -36,6 +36,7 @@
 #include "OpenSmalltalkVM.h"
 #include "sq.h"
 #include "sqSCCSVersion.h"
+#include "sqTextEncoding.h"
 
 #define DefaultHeapSize		  20	     	/* megabytes BEYOND actual image size */
 #define DefaultMmapSize		1024     	/* megabytes of virtual memory */
@@ -460,6 +461,36 @@ parseArguments(int argc, char **argv)
 # undef saveArg
 # undef skipArg
     return OSVM_SUCCESS;
+}
+
+OSVM_VM_CORE_PUBLIC void *
+osvm_malloc(size_t size)
+{
+    return malloc(size);
+}
+
+OSVM_VM_CORE_PUBLIC void *
+osvm_calloc(size_t nmemb, size_t size)
+{
+    return calloc(nmemb, size);
+}
+
+OSVM_VM_CORE_PUBLIC void
+osvm_free(void* pointer)
+{
+    return free(pointer);
+}
+
+OSVM_VM_CORE_PUBLIC uint16_t*
+osvm_utf8ToUtf16(const char *string)
+{
+    return sqUTF8ToUTF16New(string);
+}
+
+OSVM_VM_CORE_PUBLIC char*
+osvm_utf16ToUt8(const uint16_t *wstring)
+{
+    return sqUTF16ToUTF8New(wstring);
 }
 
 OSVM_VM_CORE_PUBLIC int

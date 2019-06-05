@@ -681,7 +681,7 @@ if(NOT ONLY_CONFIG_H)
 		FRAMEWORK TRUE)
 
 	# Build the VM after SDL2 always. If the SDL2DisplayPlugin is an internal plugin,
-	# or the SDL2 based display is used, then we need this dependency.  
+	# or the SDL2 based display is used, then we need this dependency.
 	if(SDL2_BuildDep)
 		add_dependencies(${VM_LIBRARY_NAME} ${SDL2_BuildDep})
 	endif()
@@ -689,11 +689,23 @@ if(NOT ONLY_CONFIG_H)
     # Build the VM executable(s)
 	set(VM_EXECUTABLE_TARGETS ${VM_EXECUTABLE_NAME})
     if(WIN32)
+		set(VM_VERSION_FILEVERSION "minheadless CMake")
+		set(Win32ResourcesFolder "${CMAKE_CURRENT_SOURCE_DIR}/platforms/minheadless/windows/resources/${VM_EXECUTABLE_NAME}")
+		configure_file("${Win32ResourcesFolder}/${VM_EXECUTABLE_NAME}.rc.in"
+			"${CMAKE_CURRENT_BINARY_DIR}/${VM_EXECUTABLE_NAME}.rc" @ONLY IMMEDIATE)
+		configure_file("${Win32ResourcesFolder}/${VM_EXECUTABLE_NAME}.exe.manifest.in"
+			"${CMAKE_CURRENT_BINARY_DIR}/${VM_EXECUTABLE_NAME}.exe.manifest" @ONLY IMMEDIATE)
+		configure_file("${Win32ResourcesFolder}/${VM_EXECUTABLE_NAME}.exe.manifest.in"
+			"${CMAKE_CURRENT_BINARY_DIR}/${VM_EXECUTABLE_NAME}Console.exe.manifest" @ONLY IMMEDIATE)
+		set(Win32Resource "${CMAKE_CURRENT_BINARY_DIR}/${VM_EXECUTABLE_NAME}.rc")
+		set(Win32Manifest "${CMAKE_CURRENT_BINARY_DIR}/${VM_EXECUTABLE_NAME}.exe.manifest")
+		set(Win32ConsoleManifest "${CMAKE_CURRENT_BINARY_DIR}/${VM_EXECUTABLE_NAME}Console.exe.manifest")
+
 		set(VM_EXECUTABLE_TARGETS ${VM_EXECUTABLE_NAME} ${VM_EXECUTABLE_NAME}Console)
-		add_executable(${VM_EXECUTABLE_NAME}Console platforms/minheadless/common/sqMain.c)
+		add_executable(${VM_EXECUTABLE_NAME}Console platforms/minheadless/common/sqMain.c ${Win32Resource} ${Win32ConsoleManifest})
 	    target_link_libraries(${VM_EXECUTABLE_NAME}Console ${VM_LIBRARY_NAME})
 
-        add_executable(${VM_EXECUTABLE_NAME} WIN32 platforms/minheadless/windows/sqWin32Main.c)
+        add_executable(${VM_EXECUTABLE_NAME} WIN32 platforms/minheadless/windows/sqWin32Main.c ${Win32Resource} ${Win32Manifest})
         target_link_libraries(${VM_EXECUTABLE_NAME} ${VM_LIBRARY_NAME})
 	elseif(DARWIN)
 		if(PHARO_VM)

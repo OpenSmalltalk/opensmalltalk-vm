@@ -34,6 +34,7 @@ extern const char *sqUTF8ToUTF32Iterate(const char *string, int *dest);
 extern const unsigned short *sqUTF16ToUTF32Iterate(const unsigned short *string, int *dest);
 extern unsigned short *sqUTF8ToUTF16Copy(unsigned short *dest, size_t destSize, const char *src);
 extern char *sqUTF16ToUTF8Copy(char *dest, size_t destSize, const unsigned short *src);
-extern unsigned short *sqUTF8toUTF16New(const char *string);
+extern unsigned short *sqUTF8ToUTF16New(const char *string);
+extern char *sqUTF16ToUTF8New(const unsigned short *wstring);
 
 #endif /* SQ_TEXT_ENCODING_H */

@@ -150,7 +150,7 @@ platform:
 clone_depth: 5
 
 cache:
-  - .thirdparty-cache
+#  - .thirdparty-cache
 
 install:
   # Search for [appveyor skip], [skip appveyor], [skip ci] or [ci skip] and exit if found in full commit message
