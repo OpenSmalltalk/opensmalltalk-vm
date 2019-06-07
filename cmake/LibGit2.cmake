@@ -10,7 +10,7 @@ set(LibGit2_Spec_LinuxLibrariesSymlinks libgit2.so*)
 set(LibGit2_Spec_WindowsDLLs libgit2.dll)
 
 set(OpenSSL_EscapedLibrariesNames)
-foreach(lib ${OpenSSL_LibrariesNames})
+foreach(lib ${OpenSSL_FullLibrariesPaths})
     if(OpenSSL_EscapedLibrariesNames)
         set(OpenSSL_EscapedLibrariesNames "${OpenSSL_EscapedLibrariesNames}$<SEMICOLON>${lib}")
     else()
@@ -27,7 +27,7 @@ set(LibGit2_Spec_CMAKE_ARGS
 
     -DLIBSSH2_FOUND=ON
     "-DLIBSSH2_INCLUDE_DIRS=${ThirdPartyCacheInstallInclude}"
-    "-DLIBSSH2_LIBRARIES=${LibSSH2_LibrariesNames}"
+    "-DLIBSSH2_LIBRARIES=${LibSSH2_FullLibrariesPaths}"
 )
 
 add_thirdparty_with_cmake(LibGit2

@@ -34,6 +34,7 @@
 #define OPEN_SMALLTALK_VM_H
 
 #include <stdint.h>
+#include <stddef.h>
 
 #ifdef _WIN32
 #   ifdef BUILD_OSVM_STATIC
