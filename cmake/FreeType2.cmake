@@ -20,6 +20,7 @@ if(WIN32)
         WINDOWS_DLLS ${FreeType2_Spec_WindowsDLLs}
         DEPENDENCIES ${PkgConfig_BuildDep} ${Zlib_BuildDep}
         INSTALL_COMMAND make install && cp libfreetype.dll "${ThirdPartyCacheInstallBin}/${FreeType2_Spec_WindowsDLLs}"
+        NEVER_LOG_INSTALL
     )
 else()
     add_thirdparty_with_autoconf(FreeType2
@@ -27,7 +28,7 @@ else()
         ARCHIVE_NAME ${FreeType2_Spec_ArchiveName}
         ARCHIVE_SHA256 ${FreeType2_Spec_ArchiveSha256}
         PATCH ${FreeType2_Spec_Patch}
-        AUTOCONF_EXTRA_ARGS "--without-png --without-bzip2"
+        AUTOCONF_EXTRA_ARGS --without-png --without-bzip2
         MAC_LIBRARIES ${FreeType2_Spec_MacLibraries}
         MAC_LIBRARIES_SYMLINK_PATTERNS ${FreeType2_Spec_MacLibrariesSymlinks}
         WINDOWS_DLLS ${FreeType2_Spec_WindowsDLLs}
