@@ -41,4 +41,5 @@ add_thirdparty_with_cmake(LibGit2
     LINUX_LIBRARIES_SYMLINK_PATTERNS ${LibGit2_Spec_LinuxLibrariesSymlinks}
     WINDOWS_DLLS ${LibGit2_Spec_WindowsDLLs}
     DEPENDENCIES ${LibSSH2_BuildDep}
+    NEVER_LOG_CONFIGURE
 )

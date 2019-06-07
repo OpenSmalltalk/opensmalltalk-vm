@@ -20,7 +20,6 @@ else()
             "INCLUDE_PATH=${ThirdPartyCacheInstallInclude}"
             "LIBRARY_PATH=${ThirdPartyCacheInstallLib}"
             "BINARY_PATH=${ThirdPartyCacheInstallBin}"
-
          && cp "${ThirdPartyCacheInstallBin}/zlib1.dll" "${ThirdPartyCacheInstallBin}/libz.dll")
     if(SQUEAK_PLATFORM_X86_64)
         set(Zlib_BuildCommand make -fwin32/Makefile.gcc

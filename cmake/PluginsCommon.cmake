@@ -74,7 +74,9 @@ if(NOT DARWIN)
     add_vm_plugin_auto(MIDIPlugin INTERNAL)
 endif()
 
-add_definitions(-DNO_NULL_SERIAL_PLUGIN_IMPLEMENTATION)
+if(WIN32)
+    add_definitions(-DNO_NULL_SERIAL_PLUGIN_IMPLEMENTATION)
+endif()
 add_vm_plugin_auto(SerialPlugin INTERNAL)
 
 add_vm_plugin_auto(SoundCodecPrims INTERNAL)

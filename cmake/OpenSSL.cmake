@@ -89,6 +89,7 @@ else()
         BUILD_COMMAND "${OpenSSL_BuildCommand}"
         INSTALL_COMMAND "${OpenSSL_InstallCommand}"
         ${ThirdPartyProjectLogSettings}
+        ${ThirdPartyProjectInstallLogSettings}
         BUILD_IN_SOURCE TRUE
     )
     set(OpenSSL_BuildDep OpenSSL)

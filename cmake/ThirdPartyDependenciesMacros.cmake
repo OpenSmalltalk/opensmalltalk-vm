@@ -65,13 +65,38 @@ if(LOG_THIRD_PARTY_BUILD_TO_FILE)
         LOG_PATCH YES
         LOG_CONFIGURE YES
         LOG_BUILD YES
-        LOG_INSTALL YES
         LOG_MERGED_STDOUTERR YES
         LOG_OUTPUT_ON_FAILURE YES
     )
+    set(ThirdPartyProjectInstallLogSettings
+        LOG_INSTALL YES
+    )
 else()
     set(ThirdPartyProjectLogSettings)
+    set(ThirdPartyProjectInstallLogSettings)
 endif()
+
+macro(process_third_party_project_log_settings)
+    set(ProjectLogSettings)
+    if(LOG_THIRD_PARTY_BUILD_TO_FILE)
+        set(ProjectLogSettings
+            LOG_DOWNLOAD YES
+            LOG_PATCH YES
+            LOG_MERGED_STDOUTERR YES
+            LOG_OUTPUT_ON_FAILURE YES
+        )
+
+        if(NOT parsed_arguments_NEVER_LOG_CONFIGURE)
+            set(ProjectLogSettings ${ProjectLogSettings} LOG_CONFIGURE YES)
+        endif()
+        if(NOT parsed_arguments_NEVER_LOG_BUILD)
+            set(ProjectLogSettings ${ProjectLogSettings} LOG_BUILD YES)
+        endif()
+        if(NOT parsed_arguments_NEVER_LOG_INSTALL)
+            set(ProjectLogSettings ${ProjectLogSettings} LOG_INSTALL YES)
+        endif()
+    endif()
+endmacro()
 
 ## Function for checking a list of files exists. This is used to avoid
 ## rebuilding cached thirdparty dependencies.
@@ -214,7 +239,7 @@ endfunction()
 
 ## This function adds an autoconf based thirdparty dependency.
 function(ADD_THIRDPARTY_WITH_AUTOCONF NAME)
-    set(options BUILD_AS_NATIVE_TOOL)
+    set(options BUILD_AS_NATIVE_TOOL NEVER_LOG_CONFIGURE NEVER_LOG_BUILD NEVER_LOG_INSTALL)
     set(oneValueArgs DOWNLOAD_URL ARCHIVE_NAME ARCHIVE_SHA256 PATCH CFLAGS CXXFLAGS LDFLAGS)
     set(multiValueArgs
         AUTOCONF_EXTRA_ARGS
@@ -243,6 +268,8 @@ function(ADD_THIRDPARTY_WITH_AUTOCONF NAME)
     if(parsed_arguments_PATCH)
         set(computed_patch_command PATCH_COMMAND patch -p1 < ${parsed_arguments_PATCH})
     endif()
+
+    process_third_party_project_log_settings()
 
     if(HaveCachedBuildArtifacts)
         message(STATUS "Not building cached third-party dependency ${NAME}.")
@@ -336,7 +363,7 @@ function(ADD_THIRDPARTY_WITH_AUTOCONF NAME)
             CONFIGURE_COMMAND "${thirdparty_autoconf_command}"
             ${CustomBuildCommand}
             ${CustomInstallCommand}
-            ${ThirdPartyProjectLogSettings}
+            ${ProjectLogSettings}
             BUILD_IN_SOURCE TRUE
         )
 
@@ -363,7 +390,7 @@ function(ADD_THIRDPARTY_WITH_AUTOCONF NAME)
 endfunction()
 
 function(ADD_THIRDPARTY_WITH_CMAKE NAME)
-    set(options)
+    set(options NEVER_LOG_CONFIGURE NEVER_LOG_BUILD NEVER_LOG_INSTALL)
     set(oneValueArgs DOWNLOAD_URL ARCHIVE_NAME ARCHIVE_SHA256 PATCH CFLAGS CXXFLAGS LDFLAGS)
     set(multiValueArgs
         CMAKE_EXTRA_ARGS
@@ -392,6 +419,8 @@ function(ADD_THIRDPARTY_WITH_CMAKE NAME)
     if(parsed_arguments_PATCH)
         set(computed_patch_command PATCH_COMMAND patch -p1 < ${parsed_arguments_PATCH})
     endif()
+
+    process_third_party_project_log_settings()
 
     if(HaveCachedBuildArtifacts)
         message(STATUS "Not building cached third-party dependency ${NAME}.")
@@ -458,7 +487,7 @@ function(ADD_THIRDPARTY_WITH_CMAKE NAME)
             PREFIX "${CMAKE_CURRENT_BINARY_DIR}/thirdparty/${NAME}"
             ${computed_patch_command}
             CONFIGURE_COMMAND "${thirdparty_cmake_command}"
-            ${ThirdPartyProjectLogSettings}
+            ${ProjectLogSettings}
             BUILD_IN_SOURCE FALSE
             ${CustomBuildCommand}
             ${CustomInstallCommand}
