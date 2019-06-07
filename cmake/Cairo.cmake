@@ -11,6 +11,7 @@ set(Cairo_Spec_AutoconfFlags)
 if(WIN32)
     set(Cairo_Spec_BuildCommand BUILD_COMMAND
         sed -i "/.* sh .\\/make-/i\\\\ttest -e \\$\\@ \\&\\& rm \\$\\@" test/Makefile && make
+        NEVER_LOG_BUILD
     )
 
     set(Cairo_Spec_AutoconfFlags
