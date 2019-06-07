@@ -43,7 +43,7 @@ if(DARWIN)
     set(ThirdPartyLibrariesPatterns "" CACHE INTERNAL "List of built libraries glob patterns to bundle.")
 endif()
 
-option(LOG_THIRD_PARTY_BUILD_TO_FILE "Logs the build processes of third party dependencies to file if enabled, otherwise the output is " OFF)
+option(LOG_THIRD_PARTY_BUILD_TO_FILE "Logs the build processes of third party dependencies to file if enabled, otherwise the output is " ON)
 
 # Some variables that could be different for third party projects.
 if(NOT THIRDPARTY_C_COMPILER)
