@@ -56,7 +56,7 @@ jobs:
     <<: *mac-build
 
     # Minheadless CMake builds with SDL2 traditional display
-    env: ARCH="linux32x86" FLAVOR="squeak.cog.spur+sdl2" CPU_ARCH="x86" BUILD_WITH_CMAKE="yes"
+  - env: ARCH="linux32x86" FLAVOR="squeak.cog.spur+sdl2" CPU_ARCH="x86" BUILD_WITH_CMAKE="yes"
   - env: ARCH="macos32x86" FLAVOR="squeak.cog.spur+sdl2" CPU_ARCH="x86" BUILD_WITH_CMAKE="yes"
     <<: *mac-build
   - env: ARCH="linux64x64" FLAVOR="squeak.cog.spur+sdl2" CPU_ARCH="x64" BUILD_WITH_CMAKE="yes"
