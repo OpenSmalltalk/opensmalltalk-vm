@@ -2062,14 +2062,6 @@ static int x2sqKeyPlain(XKeyEvent *xevt, KeySym *symbolic)
       return -1;	/* unknown key */
   if ((charCode == 127) && mapDelBs)
     charCode= 8;
-  if (charCode >= 1 && charCode <= 26) {
-    /* check for Ctrl-letter that gets translated into charCode 1-26 instead of letters a-z */
-    KeySym keysym = *symbolic;
-    if (keysym >= XK_a && keysym <= XK_z)
-      return (int)'a' + (keysym - XK_a);
-    if (keysym >= XK_A && keysym <= XK_Z)
-      return (int)'A' + (keysym - XK_A);
-  }
   if (charCode >= 246 /* XK_Alt_R */ && charCode <= 255 /* XK_Shift_L */) /* hard coded values from translateCode */
     /* The shift, ctrl, alt keys shouldn't be translated by the recode below */
     return charCode;
