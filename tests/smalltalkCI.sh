@@ -3,37 +3,22 @@ set -e
 
 readonly STON_CONFIG="${TRAVIS_BUILD_DIR}/tests/smalltalk.ston"
 
-if [[ "${ARCH}" = *"64x64" ]]; then
-  echo "Skipping SUnit testing on ${ARCH}..."
-  exit 0
-fi
-
-if [[ "${FLAVOR}" = *"sista"* ]]; then
-  echo "Skipping SUnit testing in Sista builds..."
-  exit 0
+if [[ "${TESTIMAGE}" = "" ]]; then
+  echo "Error: TESTIMAGE is not defined!"
+  exit 1
 fi
 
 case "${FLAVOR}" in
   "squeak"*)
-    if [[ "${FLAVOR}" = *".spur" ]]; then
-      SMALLTALK_VERSION="Squeak-5.1"
-    else
-      SMALLTALK_VERSION="Squeak-4.6"
-    fi
     LINUX_BINARY="squeak"
     MACOS_BINARY="Squeak"
     ;;
   "Xpharo"*) # disabled until pharo-vm is merged
-    if [[ "${FLAVOR}" = *".spur" ]]; then
-      SMALLTALK_VERSION="Pharo-5.0"
-    else
-      SMALLTALK_VERSION="Pharo-5.0"
-    fi
     LINUX_BINARY="pharo"
     MACOS_BINARY="Pharo"
     ;;
   *)
-    echo "Skipping SUnit testing for ${FLAVOR}..."
+    echo "Skipping SUnit testing for unknown flavor ${FLAVOR}..."
     exit 0
     ;;
 esac
@@ -62,6 +47,6 @@ unzip -q -o smalltalkCI.zip
 
 pushd smalltalkCI-* > /dev/null
 
-"./run.sh" -s "${SMALLTALK_VERSION}" --vm "${VM}" "${STON_CONFIG}"
+"./run.sh" -s "${TESTIMAGE}" --vm "${VM}"  "${STON_CONFIG}"
 
 popd > /dev/null
