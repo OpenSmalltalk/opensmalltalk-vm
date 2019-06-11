@@ -2055,8 +2055,8 @@ static int x2sqKeyPlain(XKeyEvent *xevt, KeySym *symbolic)
 	if (!i) fprintf(stderr, " [");
 	fprintf(stderr, "%d(%02x)%c", buf[i], buf[i], i + 1 < nConv ? ',' : ']');
   }
-  fprintf(stderr, " %d(%02x) -> %d(%02x) (keysym %p %s)\n",
-	 xevt->keycode, xevt->keycode, charCode, charCode, symbolic, nameForKeycode(*symbolic));
+  fprintf(stderr, " %d(%02x) -> %d(%02x) (keysym %04x %s)\n",
+	 xevt->keycode, xevt->keycode, charCode, charCode, *symbolic, nameForKeycode(*symbolic));
 #endif
   if (!nConv && (charCode= translateCode(*symbolic, &modifierState, xevt)) < 0)
       return -1;	/* unknown key */
