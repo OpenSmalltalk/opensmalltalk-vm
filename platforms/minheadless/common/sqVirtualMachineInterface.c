@@ -515,7 +515,10 @@ osvm_findStartupImage(const char *vmExecutablePath, char **startupImagePathResul
     char *imagePathBuffer = osvm_malloc(FILENAME_MAX+1);
     char *vmPathBuffer = osvm_malloc(FILENAME_MAX+1);
     char *searchPathBuffer = osvm_malloc(FILENAME_MAX+1);
-    findExecutablePath(vmExecutablePath, vmPathBuffer, FILENAME_MAX+1);
+    if(osvm_isFile(vmExecutablePath))
+        findExecutablePath(vmExecutablePath, vmPathBuffer, FILENAME_MAX+1);
+    else
+        strcpy(vmPathBuffer, vmExecutablePath);
     
     if(startupImagePathResult)
         *startupImagePathResult = NULL;
@@ -545,6 +548,19 @@ osvm_findStartupImage(const char *vmExecutablePath, char **startupImagePathResul
         osvm_free(searchPathBuffer);
         return 1;
     }
+    
+    snprintf(imagePathBuffer, FILENAME_MAX+1, "%s/../../../startup.image", vmPathBuffer);
+    if(osvm_isFile(imagePathBuffer))
+    {
+        if(startupImagePathResult)
+            *startupImagePathResult = imagePathBuffer;
+        else
+            osvm_free(imagePathBuffer);
+        osvm_free(vmPathBuffer);
+        osvm_free(searchPathBuffer);
+        return 1;
+    }
+    
 #endif    
     
     // Find automatically an image.
@@ -557,11 +573,23 @@ osvm_findStartupImage(const char *vmExecutablePath, char **startupImagePathResul
     // Search along the bundled resources.
     snprintf(searchPathBuffer, FILENAME_MAX+1, "%s/../Resources", vmPathBuffer);
     foundImageCount += osvm_findImagesInFolder(searchPathBuffer, imagePathBuffer, FILENAME_MAX+1);
+
+    // Search in the folder that contains the bundle.
+    snprintf(searchPathBuffer, FILENAME_MAX+1, "%s/../../..", vmPathBuffer);
+    char *realBundlePath = osvm_malloc(FILENAME_MAX+1);
+    realpath(searchPathBuffer, realBundlePath);
+
+    sqGetCurrentWorkingDir(searchPathBuffer, FILENAME_MAX+1);
+    if(strcmp(realBundlePath, searchPathBuffer) != 0)
+        foundImageCount += osvm_findImagesInFolder(realBundlePath, imagePathBuffer, FILENAME_MAX+1);
+    
+    osvm_free(realBundlePath);
 #endif
 
     // Search in the current working directory.
     sqGetCurrentWorkingDir(searchPathBuffer, FILENAME_MAX+1);
-    foundImageCount += osvm_findImagesInFolder(searchPathBuffer, imagePathBuffer, FILENAME_MAX+1);
+    if(strcmp(searchPathBuffer, vmPathBuffer) != 0)
+        foundImageCount += osvm_findImagesInFolder(searchPathBuffer, imagePathBuffer, FILENAME_MAX+1);
     
     osvm_free(vmPathBuffer);
     osvm_free(searchPathBuffer);
