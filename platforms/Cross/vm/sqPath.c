@@ -131,5 +131,4 @@ void sqPathJoin(char *target, size_t targetSize, const char *first, const char *
         strcat(target, SEPARATOR_STRING);
     }
     strcat(target, second);
-    strcat(target, SEPARATOR_STRING);
 }

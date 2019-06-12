@@ -476,7 +476,7 @@ osvm_isFile(const char *path)
     struct stat s;
     if(stat(path, &s) == 0)
         return s.st_mode & S_IFREG;
-    
+
     return 0;
 }
 
@@ -488,23 +488,23 @@ osvm_findImagesInFolder(const char *searchPath, char *imagePathBuffer, size_t im
     DIR *dir = opendir(searchPath);
     if(!dir)
         return 0;
-    
+
     while((entry = readdir(dir)) != NULL)
     {
         char *name = entry->d_name;
         char *extension = strrchr(name, '.');
         if(!extension)
             continue;
-            
+
         if(strcmp(extension, ".image") != 0)
             continue;
-            
+
         if(result == 0)
             snprintf(imagePathBuffer, imagePathBufferSize, "%s/%s", searchPath, name);
         ++result;
     }
     closedir(dir);
-    
+
     return result;
 }
 #endif
@@ -519,12 +519,12 @@ osvm_findStartupImage(const char *vmExecutablePath, char **startupImagePathResul
         findExecutablePath(vmExecutablePath, vmPathBuffer, FILENAME_MAX+1);
     else
         strcpy(vmPathBuffer, vmExecutablePath);
-    
+
     if(startupImagePathResult)
         *startupImagePathResult = NULL;
 
     // Find the mandatory startup.image.
-    snprintf(imagePathBuffer, FILENAME_MAX+1, "%s/startup.image", vmPathBuffer);
+    sqPathJoin(imagePathBuffer, FILENAME_MAX+1, vmPathBuffer, "startup.image");
     if(osvm_isFile(imagePathBuffer))
     {
         if(startupImagePathResult)
@@ -535,9 +535,9 @@ osvm_findStartupImage(const char *vmExecutablePath, char **startupImagePathResul
         osvm_free(searchPathBuffer);
         return 1;
     }
-    
+
 #ifdef __APPLE__
-    snprintf(imagePathBuffer, FILENAME_MAX+1, "%s/../Resources/startup.image", vmPathBuffer);
+    sqPathJoin(imagePathBuffer, FILENAME_MAX+1, vmPathBuffer, "../Resources/startup.image");
     if(osvm_isFile(imagePathBuffer))
     {
         if(startupImagePathResult)
@@ -548,8 +548,8 @@ osvm_findStartupImage(const char *vmExecutablePath, char **startupImagePathResul
         osvm_free(searchPathBuffer);
         return 1;
     }
-    
-    snprintf(imagePathBuffer, FILENAME_MAX+1, "%s/../../../startup.image", vmPathBuffer);
+
+    sqPathJoin(imagePathBuffer, FILENAME_MAX+1, vmPathBuffer, "../../../startup.image");
     if(osvm_isFile(imagePathBuffer))
     {
         if(startupImagePathResult)
@@ -560,29 +560,29 @@ osvm_findStartupImage(const char *vmExecutablePath, char **startupImagePathResul
         osvm_free(searchPathBuffer);
         return 1;
     }
-    
-#endif    
-    
+
+#endif
+
     // Find automatically an image.
     int foundImageCount = 0;
 
     // Search on the VM executable path.
     foundImageCount += osvm_findImagesInFolder(vmPathBuffer, imagePathBuffer, FILENAME_MAX+1);
-    
+
 #ifdef __APPLE__
     // Search along the bundled resources.
-    snprintf(searchPathBuffer, FILENAME_MAX+1, "%s/../Resources", vmPathBuffer);
+    sqPathJoin(searchPathBuffer, FILENAME_MAX+1, vmPathBuffer, "../Resources");
     foundImageCount += osvm_findImagesInFolder(searchPathBuffer, imagePathBuffer, FILENAME_MAX+1);
 
     // Search in the folder that contains the bundle.
-    snprintf(searchPathBuffer, FILENAME_MAX+1, "%s/../../..", vmPathBuffer);
+    sqPathJoin(searchPathBuffer, FILENAME_MAX+1, vmPathBuffer, "../../..");
     char *realBundlePath = osvm_malloc(FILENAME_MAX+1);
     realpath(searchPathBuffer, realBundlePath);
 
     sqGetCurrentWorkingDir(searchPathBuffer, FILENAME_MAX+1);
     if(strcmp(realBundlePath, searchPathBuffer) != 0)
         foundImageCount += osvm_findImagesInFolder(realBundlePath, imagePathBuffer, FILENAME_MAX+1);
-    
+
     osvm_free(realBundlePath);
 #endif
 
@@ -590,7 +590,7 @@ osvm_findStartupImage(const char *vmExecutablePath, char **startupImagePathResul
     sqGetCurrentWorkingDir(searchPathBuffer, FILENAME_MAX+1);
     if(strcmp(searchPathBuffer, vmPathBuffer) != 0)
         foundImageCount += osvm_findImagesInFolder(searchPathBuffer, imagePathBuffer, FILENAME_MAX+1);
-    
+
     osvm_free(vmPathBuffer);
     osvm_free(searchPathBuffer);
     if(foundImageCount == 1)
@@ -605,7 +605,7 @@ osvm_findStartupImage(const char *vmExecutablePath, char **startupImagePathResul
     {
         // The image is not found or it is ambiguous.
         osvm_free(imagePathBuffer);
-        return 0;    
+        return 0;
     }
 }
 
