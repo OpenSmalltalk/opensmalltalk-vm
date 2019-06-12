@@ -1,5 +1,22 @@
 environment:
   matrix:
+      # Main VM variants
+    - FLAVOR: squeak.cog.spur
+      ARCH: win32x86
+      CYG_ROOT: C:\cygwin
+      MINGW_ARCH: i686
+    - FLAVOR: squeak.cog.spur
+      ARCH: win64x64
+      CYG_ROOT: C:\cygwin64
+      MINGW_ARCH: x86_64
+    - FLAVOR: pharo.cog.spur
+      ARCH: win32x86
+      CYG_ROOT: C:\cygwin
+      MINGW_ARCH: i686
+    - FLAVOR: pharo.cog.spur
+      ARCH: win64x64
+      CYG_ROOT: C:\cygwin64
+      MINGW_ARCH: x86_64
 
       # Main minheadless VM variants.
     - FLAVOR: squeak.cog.spur
@@ -53,81 +70,63 @@ environment:
       MINGW_ARCH: x86_64
       BUILD_WITH_CMAKE: yes
 
-      # Main VM variants
-#    - FLAVOR: squeak.cog.spur
-#      ARCH: win32x86
-#      CYG_ROOT: C:\cygwin
-#      MINGW_ARCH: i686
-#    - FLAVOR: squeak.cog.spur
-#      ARCH: win64x64
-#      CYG_ROOT: C:\cygwin64
-#      MINGW_ARCH: x86_64
-#    - FLAVOR: pharo.cog.spur
-#      ARCH: win32x86
-#      CYG_ROOT: C:\cygwin
-#      MINGW_ARCH: i686
-#    - FLAVOR: pharo.cog.spur
-#      ARCH: win64x64
-#      CYG_ROOT: C:\cygwin64
-#      MINGW_ARCH: x86_64
-
       # Other VM variants
-#    - FLAVOR: squeak.sista.spur
-#      ARCH: win32x86
-#      CYG_ROOT: C:\cygwin
-#      MINGW_ARCH: i686
-#    - FLAVOR: squeak.cog.spur.lowcode
-#      ARCH: win32x86
-#      CYG_ROOT: C:\cygwin
-#      MINGW_ARCH: i686
-#    - FLAVOR: squeak.cog.v3
-#      ARCH: win32x86
-#      CYG_ROOT: C:\cygwin
-#      MINGW_ARCH: i686
-#    - FLAVOR: squeak.stack.spur
-#      ARCH: win32x86
-#      CYG_ROOT: C:\cygwin
-#      MINGW_ARCH: i686
-#    - FLAVOR: squeak.stack.v3
-#      ARCH: win32x86
-#      CYG_ROOT: C:\cygwin
-#      MINGW_ARCH: i686
-#    - FLAVOR: pharo.sista.spur
-#      ARCH: win32x86
-#      CYG_ROOT: C:\cygwin
-#      MINGW_ARCH: i686
-#    - FLAVOR: pharo.cog.spur.lowcode
-#      ARCH: win32x86
-#      CYG_ROOT: C:\cygwin
-#      MINGW_ARCH: i686
-#    - FLAVOR: newspeak.cog.spur
-#      ARCH: win32x86
-#      CYG_ROOT: C:\cygwin
-#      MINGW_ARCH: i686
-#    - FLAVOR: newspeak.stack.spur
-#      ARCH: win32x86
-#      CYG_ROOT: C:\cygwin
-#      MINGW_ARCH: i686
+    - FLAVOR: squeak.sista.spur
+      ARCH: win32x86
+      CYG_ROOT: C:\cygwin
+      MINGW_ARCH: i686
+    - FLAVOR: squeak.cog.spur.lowcode
+      ARCH: win32x86
+      CYG_ROOT: C:\cygwin
+      MINGW_ARCH: i686
+    - FLAVOR: squeak.cog.v3
+      ARCH: win32x86
+      CYG_ROOT: C:\cygwin
+      MINGW_ARCH: i686
+    - FLAVOR: squeak.stack.spur
+      ARCH: win32x86
+      CYG_ROOT: C:\cygwin
+      MINGW_ARCH: i686
+    - FLAVOR: squeak.stack.v3
+      ARCH: win32x86
+      CYG_ROOT: C:\cygwin
+      MINGW_ARCH: i686
+    - FLAVOR: pharo.sista.spur
+      ARCH: win32x86
+      CYG_ROOT: C:\cygwin
+      MINGW_ARCH: i686
+    - FLAVOR: pharo.cog.spur.lowcode
+      ARCH: win32x86
+      CYG_ROOT: C:\cygwin
+      MINGW_ARCH: i686
+    - FLAVOR: newspeak.cog.spur
+      ARCH: win32x86
+      CYG_ROOT: C:\cygwin
+      MINGW_ARCH: i686
+    - FLAVOR: newspeak.stack.spur
+      ARCH: win32x86
+      CYG_ROOT: C:\cygwin
+      MINGW_ARCH: i686
     # - FLAVOR: pharo.sista.spur
     #   ARCH: win64x64
     #   CYG_ROOT: C:\cygwin64
     #   MINGW_ARCH: x86_64
-#    - FLAVOR: newspeak.cog.spur
-#      ARCH: win64x64
-#      CYG_ROOT: C:\cygwin64
-#      MINGW_ARCH: x86_64
-#    - FLAVOR: squeak.stack.spur
-#      ARCH: win64x64
-#      CYG_ROOT: C:\cygwin64
-#      MINGW_ARCH: x86_64
-#    - FLAVOR: pharo.stack.spur
-#      ARCH: win64x64
-#      CYG_ROOT: C:\cygwin64
-#      MINGW_ARCH: x86_64
-#    - FLAVOR: newspeak.stack.spur
-#      ARCH: win64x64
-#      CYG_ROOT: C:\cygwin64
-#      MINGW_ARCH: x86_64
+    - FLAVOR: newspeak.cog.spur
+      ARCH: win64x64
+      CYG_ROOT: C:\cygwin64
+      MINGW_ARCH: x86_64
+    - FLAVOR: squeak.stack.spur
+      ARCH: win64x64
+      CYG_ROOT: C:\cygwin64
+      MINGW_ARCH: x86_64
+    - FLAVOR: pharo.stack.spur
+      ARCH: win64x64
+      CYG_ROOT: C:\cygwin64
+      MINGW_ARCH: x86_64
+    - FLAVOR: newspeak.stack.spur
+      ARCH: win64x64
+      CYG_ROOT: C:\cygwin64
+      MINGW_ARCH: x86_64
 
 
 matrix:
@@ -139,10 +138,10 @@ matrix:
     - FLAVOR: pharo.cog.spur.lowcode
 
 notifications:
-#  - provider: Email
-#    to:
-#      - vm-dev@lists.squeakfoundation.org
-#    on_build_success: false
+  - provider: Email
+    to:
+      - vm-dev@lists.squeakfoundation.org
+    on_build_success: false
 
 platform:
   - x86
@@ -150,7 +149,7 @@ platform:
 clone_depth: 5
 
 cache:
-#  - .thirdparty-cache
+  - .thirdparty-cache
 
 install:
   # Search for [appveyor skip], [skip appveyor], [skip ci] or [ci skip] and exit if found in full commit message
@@ -177,10 +176,9 @@ build_script:
 #  `deploy_script` is mutually exclusive to `deploy`.
 # In addition, the vm needs to be packed before artifacts are collected.
 after_build:
-  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER/deploy; exec 0</dev/null; exec ./pack-vm.sh"'
-#  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER/deploy; exec 0</dev/null; exec ./filter-exec.sh pack-vm.sh"'
-#  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER/deploy; exec 0</dev/null; exec ./filter-exec.sh bintray.sh"'
-#  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER/deploy/pharo; exec 0</dev/null; exec ./filter-exec.sh deploy.sh"'
+  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER/deploy; exec 0</dev/null; exec ./filter-exec.sh pack-vm.sh"'
+  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER/deploy; exec 0</dev/null; exec ./filter-exec.sh bintray.sh"'
+  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER/deploy/pharo; exec 0</dev/null; exec ./filter-exec.sh deploy.sh"'
 
 test: off
 
@@ -189,10 +187,10 @@ artifacts:
     name: osvm
 
 deploy:
-#  provider: GitHub # Deploy stable tags to GitHub releases
-#  description: 'Automatic release'
-#  auth_token:
-#    secure: SOq4LiXFepptbgPZ4w2McefZOsRRAy8u88/+dpNof57BG4gYTvyESV1EB4CXTXjX
-#  artifact: osvm
-#  on:
-#    appveyor_repo_tag: true
+  provider: GitHub # Deploy stable tags to GitHub releases
+  description: 'Automatic release'
+  auth_token:
+    secure: SOq4LiXFepptbgPZ4w2McefZOsRRAy8u88/+dpNof57BG4gYTvyESV1EB4CXTXjX
+  artifact: osvm
+  on:
+    appveyor_repo_tag: true
