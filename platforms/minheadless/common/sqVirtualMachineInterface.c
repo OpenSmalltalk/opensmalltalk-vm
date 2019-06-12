@@ -804,6 +804,7 @@ osvm_parseCommandLineArguments(OSVMInstanceHandle vmHandle, int argc, const char
     sqPathMakeAbsolute(vmName, sizeof(vmName), argv[0]);
 #ifdef __APPLE__
     sqPathJoin(squeakExtraPluginsPath, sizeof(squeakExtraPluginsPath), squeakPlugins, "Plugins");
+    strcat(squeakExtraPluginsPath, "/");
 #endif
     return parseArguments(argc, (char**)argv);
 }
