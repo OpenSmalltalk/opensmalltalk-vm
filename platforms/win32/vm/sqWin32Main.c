@@ -1616,7 +1616,6 @@ sqMain(int argc, char *argv[])
 #endif
 
   /* initialisation */
-  SetupKeymap();
   SetupWindows();
   SetupPixmaps();
   { extern void ioInitTime(void);
