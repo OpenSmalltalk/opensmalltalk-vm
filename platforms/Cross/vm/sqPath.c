@@ -32,9 +32,9 @@
 #elif defined(__unix__) || defined(__MACH__) || defined(__APPLE__)
 #include <unistd.h>
 #else
-#include <string.h>
 #define getcwd(target, targetSize) strcpy(target, ".")
 #endif
+#include <string.h>
 
 #include "sqPath.h"
 #include "sqTextEncoding.h"

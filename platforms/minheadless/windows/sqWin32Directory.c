@@ -488,3 +488,16 @@ sqInt dir_Delete(char *pathString, sqInt pathLength) {
   if (hasCaseSensitiveDuplicate(win32Path)) return false;
   return RemoveDirectoryW(win32Path) == 0 ? false : true;
 }
+
+int osvm_isFile(const char *path)
+{
+    /* TODO: Implement this */
+    return 0;
+}
+
+int
+osvm_findImagesInFolder(const char *searchPath, char *imagePathBuffer, size_t imagePathBufferSize)
+{
+    /* TODO: Implmenent this */
+    return 0;
+}

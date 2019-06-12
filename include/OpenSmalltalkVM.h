@@ -83,6 +83,7 @@ typedef enum
     OSVM_ERROR_UNSUPPORTED_PARAMETER,
     OSVM_ERROR_FAILED_TO_OPEN_FILE,
     OSVM_ERROR_FAILED_TO_LOAD_IMAGE,
+    OSVM_ERROR_FAILED_TO_FIND_IMAGE,
 } OSVMError;
 
 /**
@@ -98,6 +99,14 @@ typedef struct OSVMInstance *OSVMInstanceHandle;
  * Get the virtual machine embedding interface version
  */
 OSVM_VM_CORE_PUBLIC int osvm_getInterfaceVersion(void);
+
+/**
+ * This function finds a default startup image for a given VM executable path.
+ * \param startupImagePathResult A pointer to store the startup image path.
+ *        Must be freed with osvm_free(). This can be NULL.
+ * \return 1 for found, 0 for not found.
+ */
+OSVM_VM_CORE_PUBLIC int osvm_findStartupImage(const char *vmExecutablePath, char **startupImagePathResult);
 
 /**
  * Simple all mighty main entry point for running an OpenSmalltalk VM

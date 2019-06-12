@@ -37,6 +37,10 @@
 static WCHAR openImageDialogResultBuffer[MAX_PATH + 1];
 static int mainEntryPoint(int argc, const char **argv)
 {
+    // If there is a startup image, then we should just use it.
+    if(osvm_findStartupImage(argv[0], NULL))
+        return osvm_main(argc, argv);
+
     // Try to find a explicit image on the command line.
     int hasImageArgument = 0;
     for(int i = 1; i < argc; ++i)

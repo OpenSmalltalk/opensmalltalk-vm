@@ -28,6 +28,8 @@
 
 #ifndef _WIN32
 #include <unistd.h>
+#include <dirent.h>
+#include <sys/stat.h>
 #endif
 
 #include <stdio.h>
@@ -50,6 +52,10 @@ struct OSVMInstance
  * Some VM options
  */
 extern int sqVMOptionTraceModuleLoading;
+
+extern int osvm_isFile(const char *path);
+extern int osvm_findImagesInFolder(const char *searchPath, char *imagePathBuffer, size_t imagePathBufferSize);
+
 
 static struct OSVMInstance osvmInstanceSingleton;
 
@@ -463,6 +469,118 @@ parseArguments(int argc, char **argv)
     return OSVM_SUCCESS;
 }
 
+#ifndef _WIN32
+int
+osvm_isFile(const char *path)
+{
+    struct stat s;
+    if(stat(path, &s) == 0)
+        return s.st_mode & S_IFREG;
+    
+    return 0;
+}
+
+int
+osvm_findImagesInFolder(const char *searchPath, char *imagePathBuffer, size_t imagePathBufferSize)
+{
+    struct dirent *entry;
+    int result = 0;
+    DIR *dir = opendir(searchPath);
+    if(!dir)
+        return 0;
+    
+    while((entry = readdir(dir)) != NULL)
+    {
+        char *name = entry->d_name;
+        char *extension = strrchr(name, '.');
+        if(!extension)
+            continue;
+            
+        if(strcmp(extension, ".image") != 0)
+            continue;
+            
+        if(result == 0)
+            snprintf(imagePathBuffer, imagePathBufferSize, "%s/%s", searchPath, name);
+        ++result;
+    }
+    closedir(dir);
+    
+    return result;
+}
+#endif
+
+OSVM_VM_CORE_PUBLIC int
+osvm_findStartupImage(const char *vmExecutablePath, char **startupImagePathResult)
+{
+    char *imagePathBuffer = osvm_malloc(FILENAME_MAX+1);
+    char *vmPathBuffer = osvm_malloc(FILENAME_MAX+1);
+    char *searchPathBuffer = osvm_malloc(FILENAME_MAX+1);
+    findExecutablePath(vmExecutablePath, vmPathBuffer, FILENAME_MAX+1);
+    
+    if(startupImagePathResult)
+        *startupImagePathResult = NULL;
+
+    // Find the mandatory startup.image.
+    snprintf(imagePathBuffer, FILENAME_MAX+1, "%s/startup.image", vmPathBuffer);
+    if(osvm_isFile(imagePathBuffer))
+    {
+        if(startupImagePathResult)
+            *startupImagePathResult = imagePathBuffer;
+        else
+            osvm_free(imagePathBuffer);
+        osvm_free(vmPathBuffer);
+        osvm_free(searchPathBuffer);
+        return 1;
+    }
+    
+#ifdef __APPLE__
+    snprintf(imagePathBuffer, FILENAME_MAX+1, "%s/../Resources/startup.image", vmPathBuffer);
+    if(osvm_isFile(imagePathBuffer))
+    {
+        if(startupImagePathResult)
+            *startupImagePathResult = imagePathBuffer;
+        else
+            osvm_free(imagePathBuffer);
+        osvm_free(vmPathBuffer);
+        osvm_free(searchPathBuffer);
+        return 1;
+    }
+#endif    
+    
+    // Find automatically an image.
+    int foundImageCount = 0;
+
+    // Search on the VM executable path.
+    foundImageCount += osvm_findImagesInFolder(vmPathBuffer, imagePathBuffer, FILENAME_MAX+1);
+    
+#ifdef __APPLE__
+    // Search along the bundled resources.
+    snprintf(searchPathBuffer, FILENAME_MAX+1, "%s/../Resources", vmPathBuffer);
+    foundImageCount += osvm_findImagesInFolder(searchPathBuffer, imagePathBuffer, FILENAME_MAX+1);
+#endif
+
+    // Search in the current working directory.
+    sqGetCurrentWorkingDir(searchPathBuffer, FILENAME_MAX+1);
+    foundImageCount += osvm_findImagesInFolder(searchPathBuffer, imagePathBuffer, FILENAME_MAX+1);
+    
+    osvm_free(vmPathBuffer);
+    osvm_free(searchPathBuffer);
+    if(foundImageCount == 1)
+    {
+        if(startupImagePathResult)
+            *startupImagePathResult = imagePathBuffer;
+        else
+            osvm_free(imagePathBuffer);
+        return 1;
+    }
+    else
+    {
+        // The image is not found or it is ambiguous.
+        osvm_free(imagePathBuffer);
+        return 0;    
+    }
+}
+
 OSVM_VM_CORE_PUBLIC void *
 osvm_malloc(size_t size)
 {
@@ -552,7 +670,18 @@ osvm_loadDefaultImage(OSVMInstanceHandle vmHandle)
 
     /* If the image name is empty, try to load the default image. */
     if(!shortImageName[0])
-        strcpy(shortImageName, DEFAULT_IMAGE_NAME);
+    {
+        char *startupImage;
+        if(osvm_findStartupImage(vmPath, &startupImage))
+        {
+            strcpy(shortImageName, startupImage);
+            osvm_free(startupImage);
+        }
+        else
+        {
+            return OSVM_ERROR_FAILED_TO_FIND_IMAGE;
+        }
+    }
 
     /* Try to load the image as was passed. */
     sprintf(tempImageNameAttempt, "%s", shortImageName);

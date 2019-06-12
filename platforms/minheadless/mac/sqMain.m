@@ -133,6 +133,10 @@ launcher_main(int argc, const char **argv)
 int
 main(int argc, const char **argv)
 {
+    // If there is a startup image, then we should just use it.
+    if(osvm_findStartupImage(argv[0], NULL))
+        return osvm_main(argc, argv);
+        
     // In OS X, the user may want to drop an image file to the VM application.
     // Dropped image files are treated as events, whose reception is only
     // obtained through the usage of an AppDelegate, which is tied to a
