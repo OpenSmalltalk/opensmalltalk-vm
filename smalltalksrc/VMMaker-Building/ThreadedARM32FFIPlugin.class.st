@@ -18,7 +18,7 @@ ThreadedARM32FFIPlugin class >> calloutStateClass [
 
 { #category : #translation }
 ThreadedARM32FFIPlugin class >> identifyingPredefinedMacros [
-	^#('__ARM_ARCH_5__' '__ARM_ARCH_6__' '__ARM_ARCH_7__' '__arm32__' 'ARM32')
+	^#('__ARM_ARCH_5__' '__ARM_ARCH_6__' '__ARM_ARCH_7__' '__arm32__' 'ARM32' '_M_ARM')
 ]
 
 { #category : #'class initialization' }

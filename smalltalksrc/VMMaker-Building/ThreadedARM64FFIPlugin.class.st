@@ -17,7 +17,7 @@ ThreadedARM64FFIPlugin class >> calloutStateClass [
 
 { #category : #translation }
 ThreadedARM64FFIPlugin class >> identifyingPredefinedMacros [
-	^#('__ARM_ARCH_ISA_A64' '__aarch64__' '__arm64__' 'ARM64')
+	^#('__ARM_ARCH_ISA_A64' '__aarch64__' '__arm64__' 'ARM64' '_M_ARM64')
 ]
 
 { #category : #'class initialization' }
