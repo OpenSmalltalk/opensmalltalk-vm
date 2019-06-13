@@ -69,4 +69,8 @@ else
 		exit 1
 	esac
 fi
+if [ "$1" = -vmargs ]; then
+	VM="$VM $2"
+	shift;shift
+fi
 echo latest 64-bit VM on $OS is $VM
