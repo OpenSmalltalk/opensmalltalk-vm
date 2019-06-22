@@ -4280,11 +4280,10 @@ void initWindow(char *displayName)
   XRectangle windowBounds= { 0, 0, 640, 480 };  /* default window bounds */
   int right, bottom;
 
-#ifdef PharoVM
-  // Some libraries require Xlib multi-threading support. When using
-  // multi-threading XInitThreads() has to be first Xlib function called.
+  // Some libraries such as OpenGL and Vulkan drivers, require Xlib
+  // multi-threading support. When using multi-threading XInitThreads() has to
+  // be first Xlib function called.
   XInitThreads();
-#endif
 
   XSetErrorHandler(xError);
 
