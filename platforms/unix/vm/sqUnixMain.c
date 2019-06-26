@@ -1682,7 +1682,7 @@ static void vm_printUsage(void)
 #endif
   printf("  "VMOPTION("noevents")"             disable event-driven input support\n");
   printf("  "VMOPTION("nohandlers")"           disable sigsegv & sigusr1 handlers\n");
-  printf("  "VMOPTION("pollpip")"              output . on each poll for input\n");
+  printf("  "VMOPTION("pollpip")" (0|1)        output on each poll for input\n");
   printf("  "VMOPTION("checkpluginwrites")"    check for writes past end of object in plugins\n");
   printf("  "VMOPTION("pathenc")" <enc>        set encoding for pathnames (default: UTF-8)\n");
   printf("  "VMOPTION("plugins")" <path>       specify alternative plugin location (see manpage)\n");
