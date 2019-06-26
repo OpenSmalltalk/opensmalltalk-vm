@@ -29,7 +29,26 @@
 #include "sq.h"
 #include "sqTextEncoding.h"
 
-const char *sqUTF8ToUTF32Iterate(const char *string, int *dest)
+static inline int
+isSurrogate(unsigned int codePoint)
+{
+    return 0xD800 <= codePoint && codePoint <= 0xDFFF;
+}
+
+static inline int
+isSurrogateLow(unsigned int codePoint)
+{
+    return 0xDC00 <= codePoint && codePoint <= 0xDFFF;
+}
+
+static inline int
+isSurrogateHigh(unsigned int codePoint)
+{
+    return 0xD800 <= codePoint && codePoint <= 0xDBFF;
+}
+
+const char *
+sqUTF8ToUTF32Iterate(const char *string, int *dest)
 {
     unsigned int first;
     unsigned int sequenceSize;
@@ -78,7 +97,8 @@ const char *sqUTF8ToUTF32Iterate(const char *string, int *dest)
     return string;
 }
 
-extern const unsigned short *sqUTF16ToUTF32Iterate(const unsigned short *string, int *dest)
+extern const unsigned short *
+sqUTF16ToUTF32Iterate(const unsigned short *string, int *dest)
 {
     unsigned int high;
     unsigned int low;
@@ -120,9 +140,10 @@ extern const unsigned short *sqUTF16ToUTF32Iterate(const unsigned short *string,
     return string;
 }
 
-extern unsigned short *sqUTF8ToUTF16Copy(unsigned short *dest, size_t destSize, const char *src)
+extern unsigned short *
+sqUTF8ToUTF16Copy(unsigned short *dest, size_t destSize, const char *src)
 {
-    unsigned int codePoint;
+    int codePoint;
     const char *pos;
     unsigned short *originalDestination = dest;
 
@@ -136,7 +157,7 @@ extern unsigned short *sqUTF8ToUTF16Copy(unsigned short *dest, size_t destSize, 
         pos = sqUTF8ToUTF32Iterate(pos, &codePoint);
         if(destSize <= 1 || !codePoint)
             break;
-        
+
         /* printf("CodePoint: %d\n", codePoint); */
         if(codePoint >= 0x10000)
         {
@@ -164,22 +185,97 @@ extern unsigned short *sqUTF8ToUTF16Copy(unsigned short *dest, size_t destSize, 
     return originalDestination;
 }
 
-extern char *sqUTF16ToUTF8Copy(char *dest, size_t destSize, const unsigned short *src)
+static size_t
+sqEncodeUTF8CodePoint(char *buffer, size_t bufferSize, int codePoint)
+{
+    if(codePoint < 128)
+    {
+        if(bufferSize >= 1)
+            *buffer = (char)codePoint;
+        return 1;
+    }
+
+    /* We first need to count the required number of characters */
+    size_t encodedSize = 1;
+    int remainingFirstBits = 6;
+    int testCodePoint = codePoint;
+    int codePointBits = 0;
+    while(testCodePoint >= (1 << remainingFirstBits))
+    {
+        --remainingFirstBits;
+        ++encodedSize;
+        testCodePoint >>= 6;
+        codePointBits += 6;
+    }
+
+    /* Only encode if there is enough space. */
+    if(bufferSize >= encodedSize)
+    {
+        /* Encode the first byte. */
+        unsigned int bitIndex = codePointBits;
+        unsigned int payloadMask = (1<<remainingFirstBits) - 1;
+        unsigned int payload = (codePoint >> bitIndex) & payloadMask;
+        *buffer++ = ((~payloadMask) ^ (payloadMask + 1)) | payload;
+
+        /* Encode the remaining elements*/
+        payloadMask = 63;
+        for(int i = 1; i < encodedSize; ++i)
+        {
+            bitIndex -= 6;
+            payload = (codePoint >> bitIndex) & payloadMask;
+            *buffer++ = 0x80 | payload;
+        }
+    }
+
+    return encodedSize;
+}
+
+extern char *
+sqUTF16ToUTF8Copy(char *dest, size_t destSize, const unsigned short *src)
 {
     char *originalDestination = dest;
+    int codePoint;
 
-    /* TODO: Implement this properly. */
+    if(!src)
+    {
+        *dest = 0;
+        return dest;
+    }
+
     while (*src && destSize > 1)
     {
-        *dest++ = *src++;
-        --destSize;
+        src = sqUTF16ToUTF32Iterate(src, &codePoint);
+        size_t encodedSize = sqEncodeUTF8CodePoint(dest, destSize - 1, codePoint);
+        if(destSize > encodedSize)
+        {
+            destSize -= encodedSize;
+            dest += encodedSize;
+        }
     }
 
     *dest = 0;
     return originalDestination;
 }
 
-extern unsigned short *sqUTF8toUTF16New(const char *string)
+extern size_t
+sqUTF16ToUTF8RequiredSize(const unsigned short *src)
+{
+    int codePoint;
+    size_t requiredSize = 1; /* Null terminator */
+    if(!src)
+        return requiredSize;
+
+    while (*src)
+    {
+        src = sqUTF16ToUTF32Iterate(src, &codePoint);
+        requiredSize += sqEncodeUTF8CodePoint(NULL, 0, codePoint);
+    }
+
+    return requiredSize;
+}
+
+unsigned short *
+sqUTF8ToUTF16New(const char *string)
 {
     unsigned short *result;
     size_t stringLength;
@@ -187,5 +283,29 @@ extern unsigned short *sqUTF8toUTF16New(const char *string)
     stringLength = strlen(string);
     result = (unsigned short*)calloc(stringLength + 1, sizeof(unsigned short));
     sqUTF8ToUTF16Copy(result, stringLength + 1, string);
+    return result;
+}
+
+static inline size_t
+wideStringLength(const wchar_t *wstring)
+{
+    size_t result = 0;
+    while(*wstring)
+    {
+        ++wstring;
+        ++result;
+    }
+
+    return result;
+}
+
+extern char *
+sqUTF16ToUTF8New(const unsigned short *string)
+{
+    char *result;
+
+    size_t bufferSize = sqUTF16ToUTF8RequiredSize(string);
+    result = (char*)calloc(bufferSize, 1); /* TODO: Count for the actually required buffer size. */
+    sqUTF16ToUTF8Copy(result, bufferSize, string);
     return result;
 }

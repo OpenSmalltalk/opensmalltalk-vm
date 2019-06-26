@@ -29,8 +29,76 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <commdlg.h>
 #include <stdlib.h>
+#include <string.h>
 #include "OpenSmalltalkVM.h"
+
+static WCHAR openImageDialogResultBuffer[MAX_PATH + 1];
+static int mainEntryPoint(int argc, const char **argv)
+{
+    // If there is a startup image, then we should just use it.
+    if(osvm_findStartupImage(argv[0], NULL))
+        return osvm_main(argc, argv);
+
+    // Try to find a explicit image on the command line.
+    int hasImageArgument = 0;
+    for(int i = 1; i < argc; ++i)
+    {
+        const char *argument = argv[i];
+
+        // Is this the point where the image command line arguments are starting?
+        if(!strcmp(argument, "--"))
+        {
+            break;
+        }
+        else if(*argument == '-')
+        {
+            // Ignore the option argument
+            i += osvm_getVMCommandLineArgumentParameterCount(argument);
+        }
+        else
+        {
+            // The first non-option argument must be the image name.
+            hasImageArgument = 1;
+            break;
+        }
+    }
+
+    // We found an image, so lets just start with the main VM process.
+    if(hasImageArgument)
+        return osvm_main(argc, argv);
+
+    // No image is specified, so lets ask the user about the image.
+    OPENFILENAMEW dialogArguments;
+    memset(&dialogArguments, 0, sizeof(dialogArguments));
+    dialogArguments.lStructSize = sizeof(dialogArguments);
+    dialogArguments.lpstrFile = openImageDialogResultBuffer;
+    dialogArguments.nMaxFile = sizeof(openImageDialogResultBuffer);
+    dialogArguments.lpstrFilter = L"Pharo image file (*image)\0*.image\0All files\0*.*\0\0";
+    dialogArguments.nFilterIndex = 0;
+    dialogArguments.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+    if(GetOpenFileNameW(&dialogArguments))
+    {
+        // Create a new set of command line arguments.
+        int newArgc = argc + 1;
+        const char **newArgv = (const char **)osvm_calloc(newArgc + 2, sizeof(const char*));
+        for(int i = 0; i < argc; ++i)
+            newArgv[i] = argv[i];
+
+        // Convert the image file path.
+        char *convertedPathString = osvm_utf16ToUt8(openImageDialogResultBuffer);
+        newArgv[argc] = convertedPathString;
+
+        // Run the VM with the new arguments.
+        int returnCode = osvm_main(newArgc, newArgv);
+        osvm_free(convertedPathString);
+        osvm_free(newArgv);
+        return returnCode;
+    }
+
+    return 0;
+}
 
 int CALLBACK WinMain(
   HINSTANCE hInstance,
@@ -39,5 +107,5 @@ int CALLBACK WinMain(
   int       nCmdShow
 )
 {
-    return osvm_main(__argc, (const char **)__argv);
+    return mainEntryPoint(__argc, (const char **)__argv);
 }

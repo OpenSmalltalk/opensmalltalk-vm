@@ -1,5 +1,6 @@
 # OpenSmalltalkVM cmake build script.
 cmake_minimum_required(VERSION 2.8)
+cmake_policy(SET CMP0054 NEW)
 project(OpenSmalltalkVM)
 
 option(ONLY_CONFIG_H "Only generate config.h" OFF)
@@ -7,8 +8,12 @@ option(SPUR_OBJECT_MODEL "Spur Object Model" ON)
 option(SISTA_OPTIMIZER "Sista Optimizer" OFF)
 option(LOWCODE_EXTENSIONS "Lowcode Extensions" OFF)
 option(PHARO_BRANDING "Pharo Branding" ON)
-option(SUPPORT_TRADITIONAL_DISPLAY "Enables building a VM with support for a window." ON)
+option(SUPPORT_TRADITIONAL_DISPLAY "Enables building a VM with support for a window." OFF)
+option(ALLOW_SDL2 "Enables support for the SDL2 display plugin" OFF)
 option(COG_JIT "Cog JIT" ON)
+option(GENERATE_TOP_LEVEL_RUN_SCRIPT "Generate a top level run script on installation" ON)
+option(MINIMAL_PLUGIN_SET "Build the VM with the minimal number of plugins" OFF)
+option(BUILD_PLUGINS_AS_BUNDLES "Build VM plugins as bundles" OFF)
 
 # Check the build type
 if (CMAKE_BUILD_TYPE STREQUAL "")
@@ -20,12 +25,44 @@ endif ()
 # Turn on warnings
 if (MSVC)
 	# using Visual Studio C++
-	set(CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} /W3")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W3")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W3")
 	set(VM_MSVC TRUE)
 else()
-	set(CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
+	set(WARNING_FLAG_LIST -Wall
+		-Wno-missing-field-initializers -Wno-missing-prototypes
+		-Wno-missing-braces -Wparentheses -Wswitch -Wno-unused-function
+		-Wno-unused-label -Wno-unused-parameter
+		-Wno-empty-body -Wno-uninitialized -Wno-unknown-pragmas -Wno-shadow
+		-Wno-conversion -Wno-int-conversion -Wno-sign-conversion -Wpointer-sign
+		-Wno-trigraphs -Wdeprecated-declarations
+
+        # -Wunused-variable -Wunused-value -Wunused-but-set-variable
+        # Supress these warning to reduce the side of the Travius log and avoid
+        # "The job exceeded the maximum log length, and has been terminated."
+        -Wno-unused-variable -Wno-unused-value
+	)
+
+	if("${CMAKE_C_COMPILER_ID}" MATCHES "Clang")
+		set(WARNING_FLAG_LIST ${WARNING_FLAG_LIST}
+			-Wno-newline-eof -Wno-shorten-64-to-32 -Wno-enum-conversion
+			-Wno-bool-conversion -Wno-constant-conversion -Wno-four-char-constants
+		)
+	else()
+		set(WARNING_FLAG_LIST ${WARNING_FLAG_LIST}
+			-Wno-unused-but-set-variable
+		)
+	endif()
+
+	set(WARNING_FLAGS)
+	foreach(flag ${WARNING_FLAG_LIST})
+		set(WARNING_FLAGS "${WARNING_FLAGS} ${flag}")
+	endforeach()
+
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 ${WARNING_FLAGS}")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WARNING_FLAGS}")
     if(UNIX)
-        set(CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
     endif()
 
 	# Export symbols from applications.
@@ -36,12 +73,11 @@ endif()
 set(CMAKE_CONFIGURATION_TYPES Debug Release RelWithDebInfo Assert)
 if (MSVC)
 else()
-	set(COMMON_FLAGS "")
-	if(WIN32)
-		set(COMMON_FLAGS "-falign-loops=16 -falign-jumps=16 -falign-functions=16 -falign-labels=16 -Dsetjmp=_setjmp"
-		)
-	endif()
-	set(OPTIMIZATION_FLAGS "-O3 -fno-omit-frame-pointer -finline-functions ${COMMON_FLAGS}")
+	set(COMMON_FLAGS "-fno-strict-aliasing")
+	#if(WIN32)
+	#	set(COMMON_FLAGS "${COMMON_FLAGS} -falign-loops=16 -falign-jumps=16 -falign-functions=16 -falign-labels=16 -Dsetjmp=_setjmp")
+	#endif()
+	set(OPTIMIZATION_FLAGS "-O2 -fno-omit-frame-pointer -finline-functions ${COMMON_FLAGS}")
 
 	set(CMAKE_C_FLAGS_DEBUG "-g ${COMMON_FLAGS} -DDEBUGVM=1")
 	set(CMAKE_CXX_FLAGS_DEBUG "-g ${COMMON_FLAGS} -DDEBUGVM=1")
@@ -67,7 +103,7 @@ set(IS_64_BITS_BUILD_MACHINE False)
 set(IS_X86_ARCH_MACHINE False)
 if("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "x86_64" OR "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "AMD64")
 	set(IS_64_BITS_BUILD_MACHINE True)
-	# Do not build a 64 bit when invoking cmake with a 32 bits visual studio generator.
+	# Do not build a 64 bit VM when invoking cmake with a 32 bits visual studio generator.
 	if("${CMAKE_GENERATOR}" MATCHES "Visual Studio")
 		if(NOT CMAKE_CL_64)
 			set(IS_64_BITS_BUILD_MACHINE False)
@@ -91,12 +127,13 @@ if(SQUEAK_PLATFORM_X86_64)
 	else()
 		set(VM_64BITS TRUE)
 		set(SourceFolderName "${SourceFolderName}64")
+		set(VM_TARGET_CPU "x86_64")
 		if(WIN32)
+			set(VM_TARGET_CPU "X64")
 			set(FFI_VARIANT_X64_WIN64 True)
 		else()
 			set(FFI_VARIANT_X64_SYSV True)
 		endif()
-        set(VM_TARGET_CPU "x86_64")
 	endif()
 else()
 	set(VM_64BITS False)
@@ -104,18 +141,23 @@ endif()
 
 if(SQUEAK_PLATFORM_X86_32)
     if (MSVC)
-        set(CMAKE_CXX_FLAGS "/arch:SSE2")
-        set(CMAKE_C_FLAGS "/arch:SSE2")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:SSE2")
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /arch:SSE2")
     else()
         set(CMAKE_ASM-ATT_FLAGS "--32")
-        set(CMAKE_CXX_FLAGS "-m32 -msse2")
-        set(CMAKE_C_FLAGS "-m32 -msse2")
+        set(CMAKE_CXX_FLAGS "-m32 -msse2 ${CMAKE_CXX_FLAGS} ")
+        set(CMAKE_C_FLAGS "-m32 -msse2 ${CMAKE_C_FLAGS}")
     endif()
     set(FFI_VARIANT_IA32 True)
     set(VM_TARGET_CPU "i686")
+	if(WIN32)
+		set(VM_TARGET_CPU "IX86")
+	endif()
 endif()
 
 set(VM_TARGET "${CMAKE_SYSTEM}")
+set(SourceFolderName "")
+set(ProductFolderName "")
 
 if(WIN32)
     set(OS_TYPE "Win32")
@@ -128,42 +170,56 @@ elseif(UNIX)
         set(DARWIN True)
     elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
         set(VM_TARGET_OS "linux-gnu")
+		set(ProductFolderName "linux")
     else()
         set(VM_TARGET_OS "${CMAKE_SYSTEM_NAME}")
+		set(ProductFolderName "${CMAKE_SYSTEM_NAME}")
     endif()
 endif()
 
-set(SourceFolderName "")
 
 # Spur object model
 
 if(SPUR_OBJECT_MODEL)
 	#add_definitions(SpurVM=1)
 	set(SourceFolderName "spur")
+	set(ProductFolderName "spur${ProductFolderName}")
 endif()
 
 # Sista optimizer
 if(SISTA_OPTIMIZER)
 	#add_definitions(SistaVM=1)
 	set(SourceFolderName "${SourceFolderName}sista")
+	set(ProductFolderName "${ProductFolderName}spur")
 endif()
 
 # Lowcode extended instructions
 if(LOWCODE_EXTENSIONS)
 	add_definitions(-DLowcodeVM=1)
 	set(SourceFolderName "${SourceFolderName}lowcode")
+	set(ProductFolderName "${ProductFolderName}lowcode")
 endif()
 
 # Stack interpreter
-if(NOT COG_JIT)
-    message("COG_JIT ${COG_JIT}")
+if(COG_JIT)
+	set(ProductFolderName "cog${ProductFolderName}")
+else()
     set(SourceFolderName "${SourceFolderName}stack")
+	set(ProductFolderName "stack${ProductFolderName}")
+endif()
+
+# Add the minheadless suffix
+set(ProductFolderName "${ProductFolderName}mhdls")
+if(HAVE_SDL2 AND SUPPORT_TRADITIONAL_DISPLAY)
+	set(ProductFolderName "${ProductFolderName}sdl2")
 endif()
 
 # 64 bits VM
 if(VM_64BITS)
 	set(SourceFolderName "${SourceFolderName}64")
+	set(ProductFolderName "${ProductFolderName}64")
 endif()
+
 
 # VM branding
 set(VM_EXECUTABLE_NAME squeak)
@@ -172,36 +228,39 @@ set(VM_NAME Squeak)
 set(PHARO_VM FALSE)
 set(SQUEAK_VM FALSE)
 
+if(DARWIN OR WIN32)
+	set(VM_EXECUTABLE_NAME Squeak)
+endif()
+
 if(PHARO_BRANDING)
 	add_definitions(-DPharoVM=1 -DIMMUTABILITY=1)
 	set(VM_EXECUTABLE_NAME pharo)
 	set(VM_LIBRARY_NAME PharoVMCore)
     set(VM_NAME Pharo)
+	set(VM_PLUGINS_ENV_VAR_NAME "PHARO_PLUGINS")
     set(PHARO_VM TRUE)
+	set(ProductFolderName "ph${ProductFolderName}")
+	if(DARWIN OR WIN32)
+		set(VM_EXECUTABLE_NAME Pharo)
+	endif()
 else()
     set(SQUEAK_VM TRUE)
+	set(VM_PLUGINS_ENV_VAR_NAME "SQUEAK_PLUGINS")
+	set(ProductFolderName "sq${ProductFolderName}")
 endif()
 add_definitions(-DVM_NAME="${VM_NAME}")
-
-
-# Set output dir.
-# OpenSmalltalkVM_BUILD_AS_INTERNAL_PROJECT can be used before including this
-# project using add_subdirectory()
-if(NOT OpenSmalltalkVM_BUILD_AS_INTERNAL_PROJECT)
-	set(EXECUTABLE_OUTPUT_PATH "${OpenSmalltalkVM_BINARY_DIR}/dist")
-	set(LIBRARY_OUTPUT_PATH "${OpenSmalltalkVM_BINARY_DIR}/dist")
-endif()
 
 # Cog JIT
 if(COG_JIT)
 	#add_definitions(CogVM=1)
 endif()
 
+add_definitions(-DCOGMTVM=0)
 
 set(SourceFolderName "${SourceFolderName}src")
 set(PluginsSourceFolderName "src/plugins")
 
-message("Source folder name: ${SourceFolderName}")
+message(STATUS "Source folder name: ${SourceFolderName}")
 
 # Common defines
 add_definitions(-DUSE_GLOBAL_STRUCT=0
@@ -328,6 +387,32 @@ if(HAVE_ICONV)
     set(VM_DEPENDENCIES_LIBRARIES iconv ${VM_DEPENDENCIES_LIBRARIES})
 endif()
 
+# UUID
+find_library(UUID_LIBRARY NAMES uuid)
+
+check_include_files(sys/uuid.h HAVE_SYS_UUID_H)
+check_include_files(uuid/uuid.h HAVE_UUID_UUID_H)
+check_include_files(uuid.h HAVE_UUID_H)
+
+if(UUID_LIBRARY)
+	set(CMAKE_REQUIRED_LIBRARIES ${UUID_LIBRARY})
+	if(HAVE_SYS_UUID_H)
+		check_symbol_exists(uuidgen sys/uuid.h HAVE_UUIDGEN)
+		check_symbol_exists(uuid_generate sys/uuid.h HAVE_UUID_GENERATE)
+	elseif(HAVE_UUID_UUID_H)
+		check_symbol_exists(uuidgen uuid/uuid.h HAVE_UUIDGEN)
+		check_symbol_exists(uuid_generate uuid/uuid.h HAVE_UUID_GENERATE)
+	elseif(HAVE_UUID_H)
+		check_symbol_exists(uuidgen uuid.h HAVE_UUIDGEN)
+		check_symbol_exists(uuid_generate uuid.h HAVE_UUID_GENERATE)
+	endif()
+endif()
+
+set(HAVE_VALID_UUID_LIBRARY False)
+if(UUID_LIBRARY AND (HAVE_SYS_UUID_H OR HAVE_UUID_UUID_H OR HAVE_UUID_H) AND (HAVE_UUIDGEN OR HAVE_UUID_GENERATE))
+	set(HAVE_VALID_UUID_LIBRARY True)
+endif()
+
 # Add the current directory.
 include_directories(
 	.
@@ -339,7 +424,11 @@ include_directories(
 
 # VM Flavor sources
 if(COG_JIT)
-	set(InterpreterSource ${SourceFolderName}/vm/cointerp.c)
+	if(VM_MSVC)
+		set(InterpreterSource ${SourceFolderName}/vm/cointerp.c)
+	else()
+		set(InterpreterSource ${SourceFolderName}/vm/gcc3x-cointerp.c)
+	endif()
 	set(VM_FAVLOR_SOURCES
 		${SourceFolderName}/vm/cogit.c
 		${InterpreterSource}
@@ -360,42 +449,55 @@ endif()
 if(APPLE)
 	find_library(CoreFoundation_LIBRARY CoreFoundation)
 	find_library(CoreServices_LIBRARY CoreServices)
+	find_library(Foundation_LIBRARY Foundation)
+	find_library(AppKit_LIBRARY AppKit)
+	find_library(Security_LIBRARY Security)
 	set(VM_DEPENDENCIES_LIBRARIES
 		${CoreServices_LIBRARY}
 		${CoreFoundation_LIBRARY}
+		${Foundation_LIBRARY}
 		${VM_DEPENDENCIES_LIBRARIES})
-		# SDL2 and openssl need this
-	include_directories(/opt/local/include)
 endif()
 
-# Find SDL2
-find_path(SDL2_INCLUDE_DIR
-  NAMES SDL.h
-  PATH_SUFFIXES SDL2
-)
+if(SUPPORT_TRADITIONAL_DISPLAY AND ALLOW_SDL2)
+	set(ProductFolderName "${ProductFolderName}+sdl2")
+endif()
 
-find_path(SDL2_LIBRARY_PATH
-  NAMES SDL2-2.0.lib SDL2-2.0.a libSDL2-2.0.a libSDL2-2.0.so SDL2.lib SDL2.a libSDL2.a
-)
+# Set output dir.
+# OpenSmalltalkVM_BUILD_AS_INTERNAL_PROJECT can be used before including this
+# project using add_subdirectory()
+if(NOT OpenSmalltalkVM_BUILD_AS_INTERNAL_PROJECT)
+	set(ProductDistFolder "${OpenSmalltalkVM_BINARY_DIR}/dist/")
+	set(ProductInstallBaseFolder "${ProductFolderName}")
+	set(ProductInstallProgramFolder "${ProductFolderName}/lib/${VM_EXECUTABLE_NAME}")
 
-find_library(SDL2_LIBRARY NAMES SDL2-2.0 SDL2 PATHS ${SDL2_LIBRARY_PATH})
+	if(DARWIN)
+		set(ProductInstallBaseFolder ".")
+		set(ProductInstallProgramFolder ".")
+	elseif(WIN32)
+		# We use the vm folder for compatibility with the VM packing scripts
+		# for CI deployment.
+		set(ProductInstallBaseFolder "vm")
+		set(ProductInstallProgramFolder "vm")
+	endif()
 
-set(HAVE_SDL2 False)
-if(SDL2_INCLUDE_DIR AND SDL2_LIBRARY)
-	set(HAVE_SDL2 True)
-	include_directories("${SDL2_INCLUDE_DIR}")
+	set(EXECUTABLE_OUTPUT_PATH "${ProductDistFolder}")
+	set(LIBRARY_OUTPUT_PATH "${ProductDistFolder}")
+endif()
+
+set(HAVE_SDL2 False CACHE INTERNAL "Is SDL2 available?")
+set(HAVE_FreeType2 False CACHE INTERNAL "Is FreeType available?")
+if(NOT ONLY_CONFIG_H)
+	include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/ThirdPartyDependencies.cmake")
 endif()
 
 # Choose the window system
-
 set(VM_WINDOW_SYSTEM)
-if(SUPPORT_TRADITIONAL_DISPLAY)
-	if(HAVE_SDL2)
-		set(VM_WINDOW_SYSTEM
-			platforms/minheadless/sdl2-window/sqWindow-SDL2.c
-		)
-		set(VM_DEPENDENCIES_LIBRARIES ${SDL2_LIBRARY} ${VM_DEPENDENCIES_LIBRARIES})
-	endif()
+if(SUPPORT_TRADITIONAL_DISPLAY AND ALLOW_SDL2)
+	set(VM_WINDOW_SYSTEM
+		platforms/minheadless/sdl2-window/sqWindow-SDL2.c
+	)
+	set(VM_DEPENDENCIES_LIBRARIES ${VM_DEPENDENCIES_LIBRARIES} ${SDL2_LIBRARIES})
 endif()
 
 # Different source categories
@@ -505,12 +607,23 @@ elseif(WIN32)
         -Dsetjmp=_setjmp
         -D_WIN32_WINNT=0x501
         -DWINVER=0x501
-        -DWIN32=1
+		-D_MT
     )
+
+	if(NOT MSVC)
+		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf -mno-rtd -mms-bitfields")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf -mno-rtd -mms-bitfields")
+	endif()
+
     set(VM_DEPENDENCIES_LIBRARIES Winmm ${VM_DEPENDENCIES_LIBRARIES})
     if(SQUEAK_PLATFORM_X86_32)
         add_definitions(
             -DX86
+			-DWIN32=1
+        )
+	elseif(SQUEAK_PLATFORM_X86_64)
+		add_definitions(
+			-DWIN64=1
         )
     endif()
 else()
@@ -519,7 +632,6 @@ else()
 		platforms/minheadless/generic/sqPlatformSpecific-Generic.c
 		${VM_PLATFORM_SOURCES}
 	)
-
 endif()
 
 set(VM_SOURCES
@@ -544,27 +656,141 @@ if(NOT ONLY_CONFIG_H)
 
     # Build the VM core library
     set(VM_CORE_LIBRARY_TYPE STATIC)
-    #if(WIN32)
-    #    set(VM_CORE_LIBRARY_TYPE SHARED)
-    #endif()
+    if(WIN32)
+        set(VM_CORE_LIBRARY_TYPE SHARED)
+	endif()
 
     if("${VM_CORE_LIBRARY_TYPE}" STREQUAL "STATIC")
     	add_definitions(-DBUILD_OSVM_STATIC)
     endif()
 
-    add_library(${VM_LIBRARY_NAME} ${VM_CORE_LIBRARY_TYPE} ${VM_SOURCES} ${VM_INTERNAL_PLUGIN_SOURCES})
+	# Extract the public header
+	file(GLOB PublicHeaderFiles RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
+	    "include/*.h"
+	    "include/*.hpp"
+	)
 
+    add_library(${VM_LIBRARY_NAME} ${VM_CORE_LIBRARY_TYPE} ${VM_SOURCES} ${VM_INTERNAL_PLUGIN_SOURCES})
+	target_link_libraries(${VM_LIBRARY_NAME} ${VM_DEPENDENCIES_LIBRARIES})
     target_compile_definitions(${VM_LIBRARY_NAME} PRIVATE
     	-DSQUEAK_BUILTIN_PLUGIN
         -DBUILD_VM_CORE
     )
+	set_target_properties(${VM_LIBRARY_NAME} PROPERTIES
+		PUBLIC_HEADER ${PublicHeaderFiles}
+		FRAMEWORK TRUE)
+
+	# Build the VM after SDL2 always. If the SDL2DisplayPlugin is an internal plugin,
+	# or the SDL2 based display is used, then we need this dependency.
+	if(SDL2_BuildDep)
+		add_dependencies(${VM_LIBRARY_NAME} ${SDL2_BuildDep})
+	endif()
 
     # Build the VM executable(s)
-    add_executable(${VM_EXECUTABLE_NAME} platforms/minheadless/common/sqMain.c)
-    target_link_libraries(${VM_EXECUTABLE_NAME} ${VM_LIBRARY_NAME} ${VM_DEPENDENCIES_LIBRARIES})
-
+	set(VM_EXECUTABLE_TARGETS ${VM_EXECUTABLE_NAME})
     if(WIN32)
-        add_executable(${VM_EXECUTABLE_NAME}w WIN32 platforms/minheadless/windows/sqWin32Main.c)
-        target_link_libraries(${VM_EXECUTABLE_NAME}w ${VM_LIBRARY_NAME} ${VM_DEPENDENCIES_LIBRARIES})
+		set(VM_VERSION_FILEVERSION "minheadless CMake")
+		set(Win32ResourcesFolder "${CMAKE_CURRENT_SOURCE_DIR}/platforms/minheadless/windows/resources/${VM_EXECUTABLE_NAME}")
+		configure_file("${Win32ResourcesFolder}/${VM_EXECUTABLE_NAME}.rc.in"
+			"${CMAKE_CURRENT_BINARY_DIR}/${VM_EXECUTABLE_NAME}.rc" @ONLY IMMEDIATE)
+		configure_file("${Win32ResourcesFolder}/${VM_EXECUTABLE_NAME}.exe.manifest.in"
+			"${CMAKE_CURRENT_BINARY_DIR}/${VM_EXECUTABLE_NAME}.exe.manifest" @ONLY IMMEDIATE)
+		configure_file("${Win32ResourcesFolder}/${VM_EXECUTABLE_NAME}.exe.manifest.in"
+			"${CMAKE_CURRENT_BINARY_DIR}/${VM_EXECUTABLE_NAME}Console.exe.manifest" @ONLY IMMEDIATE)
+		set(Win32Resource "${CMAKE_CURRENT_BINARY_DIR}/${VM_EXECUTABLE_NAME}.rc")
+		set(Win32Manifest "${CMAKE_CURRENT_BINARY_DIR}/${VM_EXECUTABLE_NAME}.exe.manifest")
+		set(Win32ConsoleManifest "${CMAKE_CURRENT_BINARY_DIR}/${VM_EXECUTABLE_NAME}Console.exe.manifest")
+
+		set(VM_EXECUTABLE_TARGETS ${VM_EXECUTABLE_NAME} ${VM_EXECUTABLE_NAME}Console)
+		add_executable(${VM_EXECUTABLE_NAME}Console platforms/minheadless/common/sqMain.c ${Win32Resource} ${Win32ConsoleManifest})
+	    target_link_libraries(${VM_EXECUTABLE_NAME}Console ${VM_LIBRARY_NAME})
+
+        add_executable(${VM_EXECUTABLE_NAME} WIN32 platforms/minheadless/windows/sqWin32Main.c ${Win32Resource} ${Win32Manifest})
+        target_link_libraries(${VM_EXECUTABLE_NAME} ${VM_LIBRARY_NAME})
+	elseif(DARWIN)
+		if(PHARO_VM)
+			file(GLOB VM_ICONS RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
+				"platforms/iOS/vm/OSX/Pharo*.icns"
+			)
+			set(VM_EXECUTABLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/platforms/iOS/vm/OSX/Pharo-Info.plist")
+		else()
+			file(GLOB VM_ICONS RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
+				"platforms/iOS/vm/OSX/Squeak*.icns"
+			)
+			set(VM_EXECUTABLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/platforms/iOS/vm/OSX/Squeak-Info.plist")
+		endif()
+		set(VM_RESOURCE_FILES ${VM_ICONS})
+		add_executable(${VM_EXECUTABLE_NAME} MACOSX_BUNDLE
+			platforms/minheadless/mac/sqMain.m
+			${VM_RESOURCE_FILES}
+		)
+
+		set_target_properties(${VM_EXECUTABLE_NAME} PROPERTIES
+			RESOURCE "${VM_RESOURCE_FILES}"
+			MACOSX_BUNDLE_INFO_PLIST ${VM_EXECUTABLE_INFO_PLIST})
+		target_link_libraries(${VM_EXECUTABLE_NAME} ${VM_LIBRARY_NAME} ${Foundation_LIBRARY} ${AppKit_LIBRARY})
+	else()
+		add_executable(${VM_EXECUTABLE_NAME} platforms/minheadless/common/sqMain.c)
+	    target_link_libraries(${VM_EXECUTABLE_NAME} ${VM_LIBRARY_NAME})
+
+        if(GENERATE_TOP_LEVEL_RUN_SCRIPT)
+    	 	set(expanded_relative_imgdir "lib/${VM_EXECUTABLE_NAME}")
+    		configure_file(${CMAKE_CURRENT_SOURCE_DIR}/platforms/minheadless/startup.sh.in "${CMAKE_BINARY_DIR}/scripts/${VM_EXECUTABLE_NAME}" @ONLY)
+            install(PROGRAMS "${CMAKE_BINARY_DIR}/scripts/${VM_EXECUTABLE_NAME}" DESTINATION "${ProductInstallBaseFolder}")
+        endif()
+
+		set(expanded_relative_imgdir "../lib/${VM_EXECUTABLE_NAME}")
+		configure_file(${CMAKE_CURRENT_SOURCE_DIR}/platforms/minheadless/startup.sh.in "${CMAKE_BINARY_DIR}/scripts/bin/${VM_EXECUTABLE_NAME}" @ONLY)
+        install(PROGRAMS "${CMAKE_BINARY_DIR}/scripts/bin/${VM_EXECUTABLE_NAME}" DESTINATION "${ProductInstallBaseFolder}/bin")
     endif()
+
+	if(DARWIN)
+		function(MakeOSXBundleApp
+			target binary_dir embedded_bundles embedded_plugins embedded_frameworks
+			thirdparty_libraries_names thirdparty_libraries_patterns)
+
+		  # Function from sample http://www.cmake.org/Wiki/images/e/e3/QTTest.zip
+		  # https://gitlab.kitware.com/cmake/community/wikis/doc/tutorials/BuildingOSXApplications
+	      SET (OSX_MAKE_STANDALONE_BUNDLE_CMAKE_SCRIPT "${binary_dir}/${target}_OSX_MakeStandAloneBundle.cmake")
+	      SET (OSX_MAKE_STANDALONE_BUNDLE_BASH_SCRIPT "${binary_dir}/${target}_OSX_MakeStandAloneBundle.sh")
+
+	      CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/cmake/CompleteBundle.cmake.in"
+	        "${OSX_MAKE_STANDALONE_BUNDLE_CMAKE_SCRIPT}" @ONLY IMMEDIATE)
+	      CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/cmake/CreateBundle.sh.in"
+	        "${OSX_MAKE_STANDALONE_BUNDLE_BASH_SCRIPT}" @ONLY IMMEDIATE)
+
+	     install(SCRIPT "${OSX_MAKE_STANDALONE_BUNDLE_CMAKE_SCRIPT}")
+	    endfunction(MakeOSXBundleApp)
+
+		if(BUILD_PLUGINS_AS_BUNDLES)
+			MakeOSXBundleApp(${VM_EXECUTABLE_NAME} ${CMAKE_CURRENT_BINARY_DIR}
+				"${VM_EXTERNAL_PLUGINS_TARGETS}" "" ""
+				"${ThirdPartyLibrariesFileNames}" "${ThirdPartyLibrariesPatterns}")
+		else()
+			MakeOSXBundleApp(${VM_EXECUTABLE_NAME} ${CMAKE_CURRENT_BINARY_DIR}
+				"" "${VM_EXTERNAL_PLUGINS_TARGETS}" ""
+				"${ThirdPartyLibrariesFileNames}" "${ThirdPartyLibrariesPatterns}"
+			)
+		endif()
+	else()
+		install(TARGETS ${VM_LIBRARY_NAME} ${VM_EXECUTABLE_TARGETS} ${VM_EXTERNAL_PLUGINS_TARGETS}
+			ARCHIVE DESTINATION ${ProductInstallProgramFolder}
+			LIBRARY DESTINATION ${ProductInstallProgramFolder}
+			RUNTIME DESTINATION ${ProductInstallProgramFolder}
+			PUBLIC_HEADER DESTINATION ${ProductInstallBaseFolder}/include
+			PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_WRITE GROUP_EXECUTE WORLD_READ WORLD_WRITE WORLD_EXECUTE
+		)
+
+		# HACK: On cygwin the resulting dlls and exe file are having wrong
+		# permissions.
+		if(MINGW_ON_CYGWIN)
+			set(FIX_CYGWIN_INSTALL_PERMISSIONS_BASH_SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/FixCygwinInstallPermissions.sh")
+			configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/FixCygwinInstallPermissions.sh.in" "${FIX_CYGWIN_INSTALL_PERMISSIONS_BASH_SCRIPT}" @ONLY)
+			set(FIX_CYGWIN_INSTALL_PERMISSIONS_SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/FixCygwinInstallPermissions.cmake")
+			configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/FixCygwinInstallPermissions.cmake.in" "${FIX_CYGWIN_INSTALL_PERMISSIONS_SCRIPT}" @ONLY)
+			install(SCRIPT "${FIX_CYGWIN_INSTALL_PERMISSIONS_SCRIPT}")
+		endif()
+	endif()
 endif()
+
+message(STATUS "Build results can be installed to ${CMAKE_INSTALL_PREFIX}")

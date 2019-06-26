@@ -32,9 +32,9 @@
 #elif defined(__unix__) || defined(__MACH__) || defined(__APPLE__)
 #include <unistd.h>
 #else
-#include <string.h>
 #define getcwd(target, targetSize) strcpy(target, ".")
 #endif
+#include <string.h>
 
 #include "sqPath.h"
 #include "sqTextEncoding.h"
@@ -131,5 +131,4 @@ void sqPathJoin(char *target, size_t targetSize, const char *first, const char *
         strcat(target, SEPARATOR_STRING);
     }
     strcat(target, second);
-    strcat(target, SEPARATOR_STRING);
 }

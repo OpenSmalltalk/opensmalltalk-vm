@@ -1,4 +1,8 @@
 #!/bin/sh
-
-./mvm_configure
-make
+if [ "$1" = "-f" ]; then
+    ./mvm_configure_variant release Release
+    make -C release all install
+else
+    ./mvm_configure
+    make
+fi

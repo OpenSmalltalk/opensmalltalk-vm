@@ -7,9 +7,15 @@ if [[ ! -d "${PRODUCTS_DIR}" ]]; then
   echo "No products directory found."
   exit 10
 fi
+
+BUILD_SYSTEM_PREFIX=""
+if [ "${BUILD_WITH_CMAKE}" = "yes" ]; then
+    BUILD_SYSTEM_PREFIX="cmake-minhdls-"
+fi
+readonly BUILD_SYSTEM_PREFIX
 readonly REV=$(grep -m1 "SvnRawRevisionString" "${BUILD_DIR}/platforms/Cross/vm/sqSCCSVersion.h" | sed 's/[^0-9.]*\([0-9.]*\).*/\1/')
-readonly IDENTIFIER="${FLAVOR}_${ARCH}_${REV}"
-readonly IDENTIFIER_ITIMER="${FLAVOR}_${ARCH}_itimer_${REV}"
+readonly IDENTIFIER="${BUILD_SYSTEM_PREFIX}${FLAVOR}_${ARCH}_${REV}"
+readonly IDENTIFIER_ITIMER="${BUILD_SYSTEM_PREFIX}${FLAVOR}_${ARCH}_itimer_${REV}"
 readonly KEY_CHAIN=macos-build.keychain
 
 macos_codesign() {

@@ -18,6 +18,7 @@
 #include "sqWin32File.h"
 # include <sys/types.h>
 # include <sys/stat.h>
+#include <string.h>
 
 /**
  * Posix permissions are not defined in Windows, except when using
@@ -487,4 +488,61 @@ sqInt dir_Delete(char *pathString, sqInt pathLength) {
 
   if (hasCaseSensitiveDuplicate(win32Path)) return false;
   return RemoveDirectoryW(win32Path) == 0 ? false : true;
+}
+
+int
+osvm_isFile(const char *path)
+{
+    WCHAR *pathW = sqUTF8ToUTF16New(path);
+    DWORD attributes = GetFileAttributesW(pathW);
+    printf("Is file %S %08x\n", pathW, attributes);
+    free(pathW);
+
+    if(attributes == INVALID_FILE_ATTRIBUTES)
+        return 0;
+
+    return (attributes & (FILE_ATTRIBUTE_DEVICE | FILE_ATTRIBUTE_DIRECTORY)) == 0;
+}
+
+int
+osvm_findImagesInFolder(const char *searchPath, char *imagePathBuffer, size_t imagePathBufferSize)
+{
+    WIN32_FIND_DATAW findFileData;
+    HANDLE findHandle;
+
+    WCHAR *searchPathW = sqUTF8ToUTF16New(searchPath);
+    WCHAR *searchPathPattern = malloc(FILENAME_MAX*2);
+    lstrcpyW(searchPathPattern, searchPathW);
+    lstrcatW(searchPathPattern, L"\\*.image");
+
+    findHandle = FindFirstFileW(searchPathPattern, &findFileData);
+    if(findHandle == INVALID_HANDLE_VALUE)
+    {
+        free(searchPathW);
+        return 0;
+    }
+
+    int result = 0;
+
+    WCHAR *pathConversionBuffer = malloc(FILENAME_MAX*2);
+
+    do
+    {
+        if(result == 0)
+        {
+            lstrcpyW(pathConversionBuffer, searchPathW);
+            lstrcatW(pathConversionBuffer, L"\\");
+            lstrcatW(pathConversionBuffer, findFileData.cFileName);
+            sqUTF16ToUTF8Copy(imagePathBuffer, imagePathBufferSize, pathConversionBuffer);
+        }
+
+        ++result;
+    } while(FindNextFileW(findHandle, &findFileData));
+
+    FindClose(findHandle);
+
+    free(pathConversionBuffer);
+    free(searchPathPattern);
+    free(searchPathW);
+    return result;
 }

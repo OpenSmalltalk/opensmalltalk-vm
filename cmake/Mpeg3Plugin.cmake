@@ -41,4 +41,7 @@ include_directories(
     "${CrossPlatformPluginFolder}/Mpeg3Plugin/libmpeg/audio"
     "${CrossPlatformPluginFolder}/Mpeg3Plugin/libmpeg/video"
 )
+if(WIN32)
+    add_definitions(-DNOPTHREADS)
+endif()
 add_vm_plugin_auto(Mpeg3Plugin INTERNAL "${LIB_MPEG3_SOURCES}")
