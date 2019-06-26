@@ -11,7 +11,7 @@ if [ $# -ge 1 ]; then
 	esac
 fi
 
-if ../../scripts/checkSCCSversion ; then exit 1; fi
+if ../../../scripts/checkSCCSversion ; then exit 1; fi
 echo -n "clean? "
 read a
 case $a in
