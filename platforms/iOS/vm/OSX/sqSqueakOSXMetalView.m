@@ -338,7 +338,8 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 		currentRenderEncoder = [currentCommandBuffer renderCommandEncoderWithDescriptor: renderPassDescriptor];
 		
 		// Set the viewport.
-		[currentRenderEncoder setViewport: (MTLViewport){0.0, 0.0, lastFrameSize.width, lastFrameSize.height}];
+		CGSize drawableSize = self.drawableSize;
+		[currentRenderEncoder setViewport: (MTLViewport){0.0, 0.0, drawableSize.width, drawableSize.height}];
 
 		// Draw the screen rectangle.
 		[self drawScreenRect: rect];
@@ -360,9 +361,16 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	}
 }
 
+- (CGSize) screenSizeForTexture {
+	CGRect screenRect = [self bounds];
+	CGSize screenSize;
+	screenSize.width = (sqInt)screenRect.size.width;
+	screenSize.height = (sqInt)screenRect.size.height;
+	return screenSize;
+}
+ 
 - (void)loadTexturesFrom: (void*) displayStorage subRectangle: (NSRect) subRect {
-	
-	CGSize drawableSize = self.drawableSize;
+	CGSize drawableSize = [self screenSizeForTexture];
     if (!CGSizeEqualToSize(lastFrameSize,drawableSize) || !displayTexture ||
 		currentDisplayStorage != displayStorage) {
 		//NSLog(@"old %f %f %f %f new %f %f %f %f",lastFrameSize.origin.x,lastFrameSize.origin.y,lastFrameSize.size.width,lastFrameSize.size.height,self.frame.origin.x,r.origin.y,r.size.width,r.size.height);
@@ -380,7 +388,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 }
 
 -(void) updateDisplayTextureStorage {
-	CGSize drawableSize = self.drawableSize;
+	CGSize drawableSize = [self screenSizeForTexture];
 	displayTextureWidth = drawableSize.width;
 	displayTextureHeight = drawableSize.height;
 	displayTexturePitch = displayTextureWidth*4;
