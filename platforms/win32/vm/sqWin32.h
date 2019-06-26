@@ -173,7 +173,6 @@ typedef int (*messageHook)(void *, unsigned int, unsigned int, long);
 /* Several setup functions                              */
 /********************************************************/
 void SetupFilesAndPath();
-void SetupKeymap();
 void SetupWindows();
 void SetupPixmaps();
 void SetupPrinter();
