@@ -8,14 +8,14 @@ if [[ ! -d "${PRODUCTS_DIR}" ]]; then
   exit 10
 fi
 
-BUILD_SYSTEM_PREFIX=""
+BUILD_SYSTEM_SUFFIX=""
 if [ "${BUILD_WITH_CMAKE}" = "yes" ]; then
-    BUILD_SYSTEM_PREFIX="cmake-minhdls-"
+    BUILD_SYSTEM_SUFFIX="-cmake-minhdls"
 fi
-readonly BUILD_SYSTEM_PREFIX
+readonly BUILD_SYSTEM_SUFFIX
 readonly REV=$(grep -m1 "SvnRawRevisionString" "${BUILD_DIR}/platforms/Cross/vm/sqSCCSVersion.h" | sed 's/[^0-9.]*\([0-9.]*\).*/\1/')
-readonly IDENTIFIER="${BUILD_SYSTEM_PREFIX}${FLAVOR}_${ARCH}_${REV}"
-readonly IDENTIFIER_ITIMER="${BUILD_SYSTEM_PREFIX}${FLAVOR}_${ARCH}_itimer_${REV}"
+readonly IDENTIFIER="${FLAVOR}${BUILD_SYSTEM_SUFFIX}_${ARCH}_${REV}"
+readonly IDENTIFIER_ITIMER="${FLAVOR}${BUILD_SYSTEM_SUFFIX}_${ARCH}_itimer_${REV}"
 readonly KEY_CHAIN=macos-build.keychain
 
 macos_codesign() {
