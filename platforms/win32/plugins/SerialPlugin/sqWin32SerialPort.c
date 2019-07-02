@@ -50,7 +50,7 @@ int portNumberForName(const char *portName)
 /*****************************************************************************
  Squeak Serial Port functions
  *****************************************************************************/
-int serialPortClose(int portNum)
+EXPORT(int) serialPortClose(int portNum)
 { HANDLE port;
   /* Allow ports that aren't open to be closed		20nov98 jfb */
   if(portNum <= 0 || portNum > MAX_SERIAL_PORTS)
@@ -68,7 +68,7 @@ int serialPortClose(int portNum)
   return 1;
 }
 
-int serialPortCloseByName(const char *portName)
+EXPORT(int) serialPortCloseByName(const char *portName)
 {
   int portNum = portNumberForName(portName);
   if (portNum < 0)
@@ -78,12 +78,12 @@ int serialPortCloseByName(const char *portName)
   return serialPortClose(portNum);
 }
 
-int serialPortMidiClockRate(int portNum, int interfaceClockRate)
+EXPORT(int) serialPortMidiClockRate(int portNum, int interfaceClockRate)
 { /* ignored for now */
   return 1;
 }
 
-int serialPortOpen(int portNum, int baudRate, int stopBitsType, 
+EXPORT(int) serialPortOpen(int portNum, int baudRate, int stopBitsType, 
                    int parityType, int dataBits, int inFlowCtrl, 
                    int outFlowCtrl, int xOnChar, int xOffChar)
 { TCHAR name[12];
@@ -179,7 +179,7 @@ errExit:
   return 0;
 }
 
-int serialPortOpenByName(char *portName, int baudRate, int stopBitsType,
+EXPORT(int) serialPortOpenByName(char *portName, int baudRate, int stopBitsType,
                    int parityType, int dataBits, int inFlowCtrl,
                    int outFlowCtrl, int xOnChar, int xOffChar)
 {
@@ -196,7 +196,7 @@ int serialPortOpenByName(char *portName, int baudRate, int stopBitsType,
    Read only up to the number of bytes in the port's input buffer; if fewer bytes
    than count have been received, do not wait for additional data to arrive.
    Return zero if no data is available. */
-int serialPortReadInto(int portNum, int count, void *startPtr)
+EXPORT(int) serialPortReadInto(int portNum, int count, void *startPtr)
 { DWORD cbReallyRead;
 
   if(!isValidComm(portNum)) return 0;
@@ -214,7 +214,7 @@ int serialPortReadInto(int portNum, int count, void *startPtr)
    Read only up to the number of bytes in the port's input buffer; if fewer bytes
    than count have been received, do not wait for additional data to arrive.
    Return zero if no data is available. */
-int serialPortReadIntoByName(const char *portName, int count, void *startPtr)
+EXPORT(int) serialPortReadIntoByName(const char *portName, int count, void *startPtr)
 {
   int portNum = portNumberForName(portName);
   if (portNum < 0)
@@ -227,7 +227,7 @@ int serialPortReadIntoByName(const char *portName, int count, void *startPtr)
 /* Write count bytes from the given byte array to the given serial port's
    output buffer. Return the number of bytes written. This implementation is
    asynchronous: it may return before the entire packet has been sent. */
-int serialPortWriteFrom(int portNum, int count, void *startPtr)
+EXPORT(int) serialPortWriteFrom(int portNum, int count, void *startPtr)
 { DWORD cbReallyWritten;
 
   if(!isValidComm(portNum)) return 0;
@@ -243,7 +243,7 @@ int serialPortWriteFrom(int portNum, int count, void *startPtr)
 /* Write count bytes from the named byte array to the given serial port's
    output buffer. Return the number of bytes written. This implementation is
    asynchronous: it may return before the entire packet has been sent. */
-int serialPortWriteFromByName(const char *portName, int count, void *startPtr)
+EXPORT(int) serialPortWriteFromByName(const char *portName, int count, void *startPtr)
 {
   int portNum = portNumberForName(portName);
   if (portNum < 0)
@@ -253,7 +253,7 @@ int serialPortWriteFromByName(const char *portName, int count, void *startPtr)
   return serialPortWriteFrom(portNum, count, startPtr);
 }
 
-int serialPortInit(void)
+EXPORT(int) serialPortInit(void)
 {
 	int i;
 	for(i=0; i < MAX_SERIAL_PORTS; i++)
@@ -261,7 +261,7 @@ int serialPortInit(void)
 	return 1;
 }
 
-int serialPortShutdown(void)
+EXPORT(int) serialPortShutdown(void)
 {
 	int i;
 	for(i=0; i < MAX_SERIAL_PORTS; i++)
