@@ -90,8 +90,8 @@ Gnuifier >> gnuifyFrom: inFileStream to: outFileStream [
 	inInterpretVars := false.    "whether we are in the variables of interpret"
 	beforePrimitiveResponse := true.  "whether we are before the beginning of primitiveResponse()"
 	inPrimitiveResponse := false.   "whether we are inside of primitiveResponse"
-	'Gnuifying'
-		displayProgressAt: Sensor cursorPoint
+	UIManager default
+		displayProgress: 'Gnuifying'
 		from: 1 to: (inData occurrencesOf: Character cr)
 		during:
 			[:bar | | lineNumber |

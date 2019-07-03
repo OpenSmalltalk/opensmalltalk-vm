@@ -301,8 +301,8 @@ CCodeGenerator >> addClass: aClass [
 		[variables addAll: (self instVarNamesForClass: aClass)].
 	self retainMethods: (aClass requiredMethodNames: self options).
 	
-	'Adding Class ' , aClass name , '...'
-		displayProgressAt: Sensor cursorPoint
+	UIManager default
+		displayProgress: 'Adding Class ' , aClass name , '...'
 		from: 0
 		to: aClass selectors size
 		during:
@@ -478,8 +478,8 @@ CCodeGenerator >> addStructClass: aClass [
 	self addPoolVarsFor: aClass.
 	self retainMethods: (aClass requiredMethodNames: self options).
 	
-	'Adding Class ' , aClass name , '...'
-		displayProgressAt: Sensor cursorPoint
+	UIManager default
+		displayProgress: 'Adding Class ' , aClass name , '...'
 		from: 0
 		to: aClass selectors size
 		during:
@@ -1091,8 +1091,8 @@ CCodeGenerator >> doBasicInlining: inlineFlagOrSymbol [
 	[progress] whileTrue: [
 		"repeatedly attempt to inline methods until no further progress is made"
 		progress := false.
-		('Inlining pass ', (pass := pass + 1) printString, '...')
-			displayProgressAt: Sensor cursorPoint
+		UIManager default
+			displayProgress: ('Inlining pass ', (pass := pass + 1) printString, '...')
 			from: 0 to: methods size
 			during: [:bar |
 				(self sortMethods: methods) doWithIndex: [:m :i |
@@ -1125,8 +1125,8 @@ CCodeGenerator >> doInlining: inlineFlagOrSymbol [
 
 	vmClass ifNil: [^self].
 
-	'Inlining bytecodes'
-		displayProgressAt: Sensor cursorPoint
+	UIManager default
+		displayProgress: 'Inlining bytecodes'
 		from: 1 to: 2
 		during: [:bar |
 			self inlineDispatchesInMethodNamed: #interpret
@@ -1389,8 +1389,8 @@ CCodeGenerator >> emitCMacros: methodList on: aStream [
 
 { #category : #'C code generator' }
 CCodeGenerator >> emitCMethods: methodList on: aStream [
-	'Writing Translated Code...'
-		displayProgressAt: Sensor cursorPoint
+	UIManager default
+		displayProgress: 'Writing Translated Code...'
 		from: 0 to: methods size
 		during:
 			[:bar |
