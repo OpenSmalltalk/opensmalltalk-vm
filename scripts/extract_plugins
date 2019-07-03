@@ -2,4 +2,4 @@
 # Extract the plugins from a set of plugins.ext or plugins.int files
 for f in "$@"; do
 	grep '\\' "$f" | grep -v = | sed 's/ .*$//'
-fi
+done
