@@ -1,1 +1,1 @@
-Package { #name : #'VMMaker-Building' }
+Package { #name : #VMMaker }
