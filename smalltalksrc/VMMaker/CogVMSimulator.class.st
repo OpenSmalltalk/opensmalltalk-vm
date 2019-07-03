@@ -1519,7 +1519,7 @@ CogVMSimulator >> initializeInterpreter: bytesToShift [
 ]
 
 { #category : #'plugin support' }
-CogVMSimulator >> initializePluginEntries. [
+CogVMSimulator >> initializePluginEntries [
 	mappedPluginEntries := OrderedCollection new.
 	objectMemory hasSpurMemoryManagerAPI
 		ifTrue:

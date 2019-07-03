@@ -854,7 +854,7 @@ StackInterpreterSimulator >> initialize [
 ]
 
 { #category : #'plugin support' }
-StackInterpreterSimulator >> initializePluginEntries. [
+StackInterpreterSimulator >> initializePluginEntries [
 	mappedPluginEntries := OrderedCollection new.
 	objectMemory hasSpurMemoryManagerAPI
 		ifTrue:
