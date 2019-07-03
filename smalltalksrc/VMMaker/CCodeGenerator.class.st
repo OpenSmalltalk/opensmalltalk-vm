@@ -800,6 +800,13 @@ CCodeGenerator >> cLiteralForUnsignedInteger: anInteger longlong: llBoolean [
 	^self cLiteralForUnsignedInteger: anInteger hex: hex longlong: llBoolean
 ]
 
+{ #category : #inlining }
+CCodeGenerator >> cannotInline: selector [
+
+	self error: 'Failed to inline ', selector,
+			' as it contains unrenamable C declarations or C code'
+]
+
 { #category : #'error notification' }
 CCodeGenerator >> checkClassForNameConflicts: aClass [
 	"Verify that the given class does not have constant, variable, or method names that conflict with
@@ -876,24 +883,22 @@ CCodeGenerator >> codeString [
 ]
 
 { #category : #inlining }
-CCodeGenerator >> collectInlineList: inlineFlagOrSymbol [
+CCodeGenerator >> collectInlineList: strategy [
 	"Make a list of methods that should be inlined.  If inlineFlagOrSymbol == #asSpecified
 	 only inline methods marked with <inline: true>.  If inlineFlagOrSymbol == #asSpecifiedOrQuick
 	 only inline methods marked with <inline: true> or methods that are quick (^constant, ^inst var)."
 	"Details: The method must not include any inline C, since the
 	 translator cannot currently map variable names in inlined C code.
 	 Methods to be inlined must be small or called from only one place."
-
-	| selectorsOfMethodsNotToInline callsOf |
-	self assert: (#(true false asSpecified asSpecifiedOrQuick) includes: inlineFlagOrSymbol).
+	
+	| selectorsOfMethodsNotToInline callsOf inlineStrategy |
+	inlineStrategy := strategy asCCodeInlineStrategy.
+	inlineStrategy codeGenerator: self.
+		
 	selectorsOfMethodsNotToInline := Set new: methods size.
 	selectorsOfMethodsNotToInline addAll: macros keys.
-	apiMethods ifNotNil:
-		[selectorsOfMethodsNotToInline addAll: apiMethods keys].
-	methods do:
-		[:m|
-		m isStructAccessor ifTrue:
-			[selectorsOfMethodsNotToInline add: m selector]].
+	apiMethods ifNotNil: [ selectorsOfMethodsNotToInline addAll: apiMethods keys ].
+	selectorsOfMethodsNotToInline addAll: self structAccessorSelectors.
 
 	"build dictionary to record the number of calls to each method"
 	callsOf := Dictionary new: methods size * 2.
@@ -908,50 +913,27 @@ CCodeGenerator >> collectInlineList: inlineFlagOrSymbol [
 		2. determine how many nodes it has
 		3. increment the sender counts of the methods it calls"
 	inlineList := Set new: methods size * 2.
-	(methods reject: [:m| selectorsOfMethodsNotToInline includes: m selector]) do:
-		[:m| | inlineIt hasUnrenamableCCode nodeCount |
-		((breakSrcInlineSelectors includes: m selector)
-		 and: [breakOnInline isNil]) ifTrue:
-			[self halt].
-		inlineIt := #dontCare.
-		(translationDict includesKey: m selector)
-			ifTrue: [hasUnrenamableCCode := true]
-			ifFalse:
-				[hasUnrenamableCCode := m hasUnrenamableCCode.
-				 nodeCount := 0.
-				 m parseTree nodesDo:
-					[:node|
-					node isSend ifTrue:
-						[callsOf
-							at: node selector
-							ifPresent:
-								[:senderCount| callsOf at: node selector put: senderCount + 1]].
-					 nodeCount := nodeCount + 1].
-				inlineIt := m extractInlineDirective].  "may be true, false, #always, #never or #dontCare"
-		(hasUnrenamableCCode or: [inlineIt == false])
-			ifTrue: "don't inline if method has C code or contains negative inline directive"
-				[inlineIt == true ifTrue:
-					[logger
-						ensureCr;
-						nextPutAll: 'failed to inline ';
-						nextPutAll: m selector;
-						nextPutAll: ' as it contains unrenamable C declarations or C code';
-						cr; flush].
-				selectorsOfMethodsNotToInline add: m selector]
-			ifFalse:
-				[(inlineFlagOrSymbol caseOf: {
-						[#asSpecified]			-> [inlineIt == true].
-						[#asSpecifiedOrQuick]	-> [inlineIt == true
-													or: [self isQuickCompiledMethod: m compiledMethod]].
-						[true]					-> [nodeCount < 40 or: [inlineIt == true]].
-						[false]					-> [false]})
-					ifTrue: "inline if method has no C code and is either small or contains inline directive"
-						[inlineList add: m selector]
-					ifFalse:
-						[(#(asSpecified asSpecifiedOrQuick) includes: inlineFlagOrSymbol) ifTrue:
-							[selectorsOfMethodsNotToInline add: m selector]]]].
+	methods
+		reject: [:m|
+			(selectorsOfMethodsNotToInline includes: m selector)
+				or: [ self isSpecialSelector: m selector ] ]
+		thenDo: [:m|
+			m parseTree nodesDo: [:node|
+				node isSend ifTrue: [
+					callsOf
+						at: node selector
+						ifPresent: [:senderCount| callsOf at: node selector put: senderCount + 1 ] ] ].
 
-	(#(asSpecified asSpecifiedOrQuick) includes: inlineFlagOrSymbol)
+		inlineStrategy validateCanInline: m.
+		(inlineStrategy shouldInlineMethod: m)
+			ifTrue: [ 
+				"inline if method has no C code and is either small or contains inline directive"
+				inlineList add: m selector]
+			ifFalse: [
+				inlineStrategy isSelectiveInlineStrategy
+					ifTrue: [selectorsOfMethodsNotToInline add: m selector] ] ].
+
+	inlineStrategy isSelectiveInlineStrategy
 		ifTrue:
 			[methods do: [:m| m inline ifNil: [m inline: (inlineList includes: m selector)]]]
 		ifFalse:
@@ -3923,6 +3905,12 @@ CCodeGenerator >> isSimpleType: aType [
 	  or: [self isIntegralCType: aType]
 ]
 
+{ #category : #inlining }
+CCodeGenerator >> isSpecialSelector: aSelector [
+		
+	^ translationDict includesKey: aSelector
+]
+
 { #category : #'spur primitive compilation' }
 CCodeGenerator >> isStackAccessor: selector given: interpreterClass [
 	^interpreterClass isStackAccessor: selector
@@ -5296,6 +5284,14 @@ CCodeGenerator >> storeHeaderOnFile: fileName contents: contents [
 		[aStream nextPutAll: (self fileHeaderVersionStampForSourceClass: nil); cr].
 	 aStream nextPutAll: contents]
 		ensure: [aStream close]
+]
+
+{ #category : #inlining }
+CCodeGenerator >> structAccessorSelectors [
+		
+	^ methods
+		select: [ :m | m isStructAccessor ]
+		thenCollect: [ :m | m selector]
 ]
 
 { #category : #accessing }

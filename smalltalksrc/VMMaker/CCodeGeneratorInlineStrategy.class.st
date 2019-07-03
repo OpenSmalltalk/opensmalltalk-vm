@@ -69,7 +69,7 @@ CCodeGeneratorInlineStrategy >> codeGenerator: anObject [
 { #category : #testing }
 CCodeGeneratorInlineStrategy >> hasUnrenamableCCode: aTMethod [
 
-	^ (codeGenerator translationDictionary includesKey: aTMethod selector)
+	^ (codeGenerator isSpecialSelector: aTMethod selector)
 		or: [ aTMethod hasUnrenamableCCode ]
 ]
 
