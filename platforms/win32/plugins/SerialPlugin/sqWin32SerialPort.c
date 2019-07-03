@@ -10,8 +10,11 @@
 *****************************************************************************/
 #include <windows.h>
 #include "sq.h"
+#include "sqWin32.h"
 
 #ifndef NO_SERIAL_PORT
+extern struct VirtualMachine *interpreterProxy;
+#define FAIL() interpreterProxy->primitiveFail()
 
 /* Maximum number of serial ports supported */
 #define MAX_SERIAL_PORTS 256
@@ -27,7 +30,7 @@ static int isValidComm(int portNum)
   if(portNum <= 0 || portNum > MAX_SERIAL_PORTS || 
      serialPorts[portNum-1] == INVALID_HANDLE_VALUE)
        {
-         success(false);
+         FAIL();
          return 0;
        }
   return 1;
@@ -55,7 +58,7 @@ EXPORT(int) serialPortClose(int portNum)
   /* Allow ports that aren't open to be closed		20nov98 jfb */
   if(portNum <= 0 || portNum > MAX_SERIAL_PORTS)
     { /* port number out of range */
-      success(false);
+      FAIL();
       return 0;
     }
   if ((port = serialPorts[portNum-1]) != INVALID_HANDLE_VALUE)
@@ -72,7 +75,7 @@ EXPORT(int) serialPortCloseByName(const char *portName)
 {
   int portNum = portNumberForName(portName);
   if (portNum < 0)
-  { success(false);
+  { FAIL();
     return 0;
   }
   return serialPortClose(portNum);
@@ -93,12 +96,12 @@ EXPORT(int) serialPortOpen(int portNum, int baudRate, int stopBitsType,
 
   if(portNum <= 0 || portNum > MAX_SERIAL_PORTS)
     { /* port number out of range */
-      success(false);
+      FAIL();
       return 0;
     }
   if(serialPorts[portNum-1] != INVALID_HANDLE_VALUE)
     { /* port already open */
-      success(false);
+      FAIL();
       return 0;
     }
   wsprintf(name,TEXT("\\\\.\\COM%d"),portNum);
@@ -113,7 +116,7 @@ EXPORT(int) serialPortOpen(int portNum, int baudRate, int stopBitsType,
   if(port == INVALID_HANDLE_VALUE)
     {
       printLastError(TEXT("OpenComm failed"));
-      success(false);
+      FAIL();
       return 0;
     }
   /* Flush the driver */
@@ -175,7 +178,7 @@ EXPORT(int) serialPortOpen(int portNum, int baudRate, int stopBitsType,
   return 1;
 errExit:
   CloseHandle(port);
-  success(false);
+  FAIL();
   return 0;
 }
 
@@ -185,7 +188,7 @@ EXPORT(int) serialPortOpenByName(char *portName, int baudRate, int stopBitsType,
 {
   int portNum = portNumberForName(portName);
   if (portNum < 0) {
-    success(false);
+    FAIL();
     return 0;
   }
   return serialPortOpen(portNum, baudRate, stopBitsType, parityType,
@@ -204,7 +207,7 @@ EXPORT(int) serialPortReadInto(int portNum, int count, void *startPtr)
   if(!ReadFile(serialPorts[portNum-1],startPtr,count,&cbReallyRead,NULL))
     {
       printLastError(TEXT("ReadComm failed"));
-      success(false);
+      FAIL();
       return 0;
     }
   return cbReallyRead;
@@ -218,7 +221,7 @@ EXPORT(int) serialPortReadIntoByName(const char *portName, int count, void *star
 {
   int portNum = portNumberForName(portName);
   if (portNum < 0)
-  { success(false);
+  { FAIL();
     return 0;
   }
   return serialPortReadInto(portNum, count, startPtr);
@@ -234,7 +237,7 @@ EXPORT(int) serialPortWriteFrom(int portNum, int count, void *startPtr)
   if(!WriteFile(serialPorts[portNum-1],startPtr,count,&cbReallyWritten,NULL))
     {
       printLastError(TEXT("WriteComm failed"));
-      success(false);
+      FAIL();
       return 0;
     }
   return cbReallyWritten;
@@ -247,7 +250,7 @@ EXPORT(int) serialPortWriteFromByName(const char *portName, int count, void *sta
 {
   int portNum = portNumberForName(portName);
   if (portNum < 0)
-  { success(false);
+  { FAIL();
     return 0;
   }
   return serialPortWriteFrom(portNum, count, startPtr);
