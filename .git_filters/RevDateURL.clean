@@ -1,6 +1,0 @@
-#!/usr/bin/perl -p
-
-s/\$Date[^\$]*\$/\$Date\$/;
-s/\$Rev[^\$]*\$/\$Rev\$/;
-s/\$URL[^\$]*\$/\$URL\$/;
-s/\$CommitHash[^\$]*\$/\$CommitHash\$/;
