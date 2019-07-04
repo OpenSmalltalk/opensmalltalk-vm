@@ -1,2 +1,0 @@
-#include "../AsynchFilePlugin/AsynchFilePlugin.h"
-
