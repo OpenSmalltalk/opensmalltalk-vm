@@ -1,6 +1,0 @@
-# Copied, perhaps edited, from ../../src/examplePlugins.ext
-EXTERNAL_PLUGINS = \
-SurfacePlugin \
-FT2Plugin \
-FileAttributesPlugin \
-#SqueakSSL 
