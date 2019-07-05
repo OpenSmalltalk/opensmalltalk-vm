@@ -293,3 +293,7 @@ else()
 endif()
 
 
+#
+# DSAPrims
+#
+add_vm_plugin(DSAPrims)
