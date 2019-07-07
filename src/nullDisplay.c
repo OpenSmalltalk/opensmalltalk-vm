@@ -3,7 +3,7 @@
 #define UNIMPLEMENTED unimplementedPrimitive(__FUNCTION__);
 
 void unimplementedPrimitive(const char* name){
-	fprintf(stderr, "Unimplemented primitive: %s\n", name);
+	logWarn("Unimplemented primitive: %s\n", name);
 }
 
 #ifdef WIN32

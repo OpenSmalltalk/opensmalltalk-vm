@@ -65,8 +65,8 @@ sqMakeMemoryExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 	if (mprotect((void *)firstPage,
 				 endAddr - firstPage + 1,
 				 PROT_READ | PROT_WRITE | PROT_EXEC) < 0){
-		perror("mprotect(x,y,PROT_READ | PROT_WRITE | PROT_EXEC)");
-		printf("ERRNO: %d\n", errno);
+		logWarn("mprotect(x,y,PROT_READ | PROT_WRITE | PROT_EXEC)");
+		logWarn("ERRNO: %d\n", errno);
 	}
 }
 
@@ -90,7 +90,7 @@ usqInt
 sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
 {
 	if (heap) {
-		fprintf(stderr, "uxAllocateMemory: already called\n");
+		logError("uxAllocateMemory: already called\n");
 		exit(1);
 	}
 	pageSize= getpagesize();
@@ -106,7 +106,7 @@ sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
   }
 
   if (!heap) {
-      fprintf(stderr, "uxAllocateMemory: failed to allocate at least %lld bytes)\n", (long long)minHeapSize);
+      logError("uxAllocateMemory: failed to allocate at least %lld bytes)\n", (long long)minHeapSize);
       return (usqInt)malloc(desiredHeapSize);
   }
 

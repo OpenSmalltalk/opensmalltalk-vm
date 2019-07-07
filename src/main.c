@@ -15,7 +15,7 @@ int main(int argc, char* argv[]){
 
 	parseArguments(argc, argv);
 
-	printf("Opening Image: %s\n", image);
+	logInfo("Opening Image: %s\n", image);
 
 	if(!initPharoVM(image, params, 2, imageParams, imageParamCount)){
 		fprintf(stderr, "Error opening image file: %s\n", image);

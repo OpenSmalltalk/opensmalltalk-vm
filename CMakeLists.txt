@@ -193,10 +193,9 @@ elseif(UNIX)
 endif()
 
 set(SUPPORT_SOURCES
-	src/printing.c
+	src/debug.c
 	src/utils.c
 	src/nullDisplay.c
-#	src/clock.c
 	src/externalPrimitives.c
 	src/client.c
 )

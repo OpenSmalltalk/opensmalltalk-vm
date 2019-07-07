@@ -6,42 +6,39 @@
 # define DEBUG	0
 #endif
 
+#define LOG_NONE 		0
+#define LOG_ERROR 		1
+#define LOG_WARN 		2
+#define LOG_INFO 		3
+#define LOG_DEBUG		4
+
+//FILENAME gives only the filename, as __FILE__ gives all the path
+#define __FILENAME__ (__FILE__ + SOURCE_PATH_SIZE)
+
+void logLevel(int level);
+
+void logMessage(int level, const char* fileName, const char* functionName, int line, ...);
+
+#define logDebug(...)	logMessage(LOG_DEBUG, __FILENAME__, __FUNCTION__, __LINE__, __VA_ARGS__)
+#define logInfo(...)	logMessage(LOG_INFO, __FILENAME__, __FUNCTION__, __LINE__, __VA_ARGS__)
+#define logWarn(...)	logMessage(LOG_WARN, __FILENAME__, __FUNCTION__, __LINE__, __VA_ARGS__)
+#define logError(...)	logMessage(LOG_ERROR, __FILENAME__, __FUNCTION__, __LINE__, __VA_ARGS__)
+
 
 #if (DEBUG)
-  /* the thing to use here is a variadic macro, but Apple's gcc barfs on
-  ** them when running in precomp mode.  did they _really_ have to break
-  ** the preprocessor just to implement precomp?  good _grief_.
-  */
-  extern void __sq_DPRINTF(const char *fmt, ...);
-# define DPRINTF(ARGS) __sq_DPRINTF ARGS
-#else
-# define DPRINTF(ARGS)	((void)0)
-#endif
-
-
-#undef assert
-
-#if (DEBUG)
-  extern void __sq_assert(char *file, int line, char *func, char *expr);
 # define assert(E) \
-    ((void)((E) ? 0 : __sq_assert(__FILE__, __LINE__, __FUNCTION__, #E)))
+    ((void)((E) ? 0 : logMessage(LOG_WARN, __FILENAME__, __FUNCTION__, __LINE__, #E)))
 #else
 # define assert(E)	((void)0)
 #endif
 
 
-extern char *__sq_errfile;
-extern int   __sq_errline;
-extern char *__sq_errfunc;
-
-extern void __sq_eprintf(const char *fmt, ...);
-
-# define EPRINTF				\
-  ( __sq_errfile= __FILE__,			\
-    __sq_errline= __LINE__,			\
-    __sq_errfunc= __FUNCTION__,			\
-    __sq_eprintf )
-
-extern void sqDebugAnchor(void);
+//# define EPRINTF				\
+//  ( __sq_errfile= __FILE__,			\
+//    __sq_errline= __LINE__,			\
+//    __sq_errfunc= __FUNCTION__,			\
+//    __sq_eprintf )
+//
+//extern void sqDebugAnchor(void);
 
 #endif /* __sq_debug_h */

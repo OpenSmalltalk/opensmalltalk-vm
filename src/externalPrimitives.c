@@ -98,7 +98,7 @@ ioLoadModule(char *pluginName)
             return moduleHandle;
     }
 
-    fprintf(stderr, "Failed to load module: %s\n", pluginName);
+    logWarn("Failed to load module: %s\n", pluginName);
 
     return 0;
 }
@@ -159,9 +159,8 @@ void * loadModuleHandle(const char *fileName)
 
     MultiByteToWideChar(CP_UTF8, 0, copiedFileName, -1, convertedPath, MAX_PATH + 1);
 
-#ifdef DEBUG
-//    printf("try loading  %s\n", copiedFileName);
-#endif
+    logDebug("Try loading  %s\n", copiedFileName);
+
     HMODULE m = LoadLibraryW(convertedPath);
 
    	return m;
@@ -191,9 +190,7 @@ loadModuleHandle(const char *fileName)
     flags |= RTLD_DEEPBIND; /* Prefer local symbols in the shared object vs external symbols. */
 #endif
 
-#ifdef DEBUG
-//    printf("try loading  %s\n", fileName);
-#endif
+    logDebug("Try loading  %s\n", fileName);
     return dlopen(fileName, flags);
 }
 
