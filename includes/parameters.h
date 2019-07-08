@@ -78,9 +78,6 @@ Deprecated:
 
  */
 
-typedef struct {
-
-} VM_OPTIONS;
 
 typedef struct {
 	char* imageFile;
@@ -92,8 +89,6 @@ typedef struct {
 
 	char** imageParams;
 	int imageParamsCount;
-
-	VM_OPTIONS options;
 } VM_PARAMETERS;
 
 void parseArguments(int argc, char* argv[], VM_PARAMETERS * parameters);

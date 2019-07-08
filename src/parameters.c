@@ -1,6 +1,8 @@
 #include "pharo.h"
 #include "parameters.h"
-
+#include <getopt.h>
+#include <unistd.h>
+#include "debug.h"
 
 int findImageNameIndex(int argc, char* argv[]){
 
@@ -100,6 +102,60 @@ void processImageFileName(VM_PARAMETERS* parameters){
 	}
 }
 
+void printUsage(){
+
+}
+
+typedef void (*OPTION_PROCESS_FUNCTION)(char*);
+
+void processLogLevelOption(char* value){
+
+	int intValue = 0;
+
+	intValue = strtol(value, NULL, 10);
+
+	if(intValue == 0){
+		printf("Invalid option for logLevel: %s\n", value);
+		printUsage();
+		exit(1);
+	}
+
+	logLevel(intValue);
+}
+
+void processHelpOption(char* value){
+	printUsage();
+	exit(0);
+}
+
+static struct option long_options[] = {
+	{"headless", no_argument, 0,  0 },
+	{"help", no_argument, 0,  0 },
+	{"logLevel", required_argument, 0, 0},
+	{0, 0, 0,  0 }
+};
+
+static OPTION_PROCESS_FUNCTION optionHandlers[] = {0, processHelpOption ,processLogLevelOption};
+
+void processVMOptions(VM_PARAMETERS* parameters){
+
+	int option_index = 0;
+	char r;
+	OPTION_PROCESS_FUNCTION processFunction;
+
+
+	while((r = getopt_long(parameters->vmParamsCount, parameters->vmParams, "", long_options, &option_index))!=-1){
+		// We have an invalid option
+		if(r == '?'){
+			printUsage();
+			exit(1);
+		}
+
+		if(optionHandlers[option_index])
+			optionHandlers[option_index](optarg);
+	}
+}
+
 void parseArguments(int argc, char* argv[], VM_PARAMETERS* parameters){
 	char* fullPath;
 
@@ -111,5 +167,8 @@ void parseArguments(int argc, char* argv[], VM_PARAMETERS* parameters){
 	setVMPath(fullPath);
 
 	processImageFileName(parameters);
+
+	processVMOptions(parameters);
+
 	logParameters(parameters);
 }

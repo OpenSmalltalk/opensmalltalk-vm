@@ -1,7 +1,7 @@
 #include <pharo.h>
 #include <stdarg.h>
 
-static int max_error_level = 2;
+static int max_error_level = 1;
 
 /*
  * This function set the logLevel to use in the VM
@@ -13,7 +13,7 @@ static int max_error_level = 2;
  * LOG_DEBUG		4
  *
  */
-void logLevel(int value){
+EXPORT(void) logLevel(int value){
 	max_error_level = value;
 }
 
@@ -27,12 +27,13 @@ static char* severityName[4] = {"ERROR", "WARN", "INFO", "DEBUG"};
 EXPORT(void) logMessage(int level, const char* fileName, const char* functionName, int line, ...){
 	char * format;
 	char timestamp[20];
-	time_t now = time(NULL);
-	strftime(timestamp, 20, "%Y-%m-%d %H:%M:%S", localtime(&now));
 
-	if(level < max_error_level){
+	if(level > max_error_level){
 		return;
 	}
+
+	time_t now = time(NULL);
+	strftime(timestamp, 20, "%Y-%m-%d %H:%M:%S", localtime(&now));
 
 	//Printing the header.
 	// Ex: [DEBUG] 2017-11-14 21:57:53,661 functionName (filename:line) - This is a debug log message.

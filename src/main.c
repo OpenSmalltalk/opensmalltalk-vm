@@ -13,7 +13,7 @@ int main(int argc, char* argv[]){
 
 	logInfo("Opening Image: %s\n", parameters.imageFile);
 
-	if(!initPharoVM(parameters.imageFile, parameters.vmParams, 2, parameters.imageParams, parameters.imageParamsCount)){
+	if(!initPharoVM(parameters.imageFile, parameters.vmParams, parameters.vmParamsCount, parameters.imageParams, parameters.imageParamsCount)){
 		logError("Error opening image file: %s\n", parameters.imageFile);
 		return -1;
 	}

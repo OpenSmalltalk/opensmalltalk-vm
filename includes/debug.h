@@ -20,7 +20,7 @@
 //FILENAME gives only the filename, as __FILE__ gives all the path
 #define __FILENAME__ (__FILE__ + SOURCE_PATH_SIZE)
 
-void logLevel(int level);
+EXPORT(void) logLevel(int level);
 
 EXPORT(void) logMessage(int level, const char* fileName, const char* functionName, int line, ...);
 
