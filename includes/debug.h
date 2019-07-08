@@ -22,7 +22,7 @@
 
 void logLevel(int level);
 
-void logMessage(int level, const char* fileName, const char* functionName, int line, ...);
+EXPORT(void) logMessage(int level, const char* fileName, const char* functionName, int line, ...);
 
 #define logDebug(...)	logMessage(LOG_DEBUG, __FILENAME__, __FUNCTION__, __LINE__, __VA_ARGS__)
 #define logInfo(...)	logMessage(LOG_INFO, __FILENAME__, __FUNCTION__, __LINE__, __VA_ARGS__)

@@ -24,7 +24,7 @@ void error(char *errorMessage){
 
 static char* severityName[4] = {"ERROR", "WARN", "INFO", "DEBUG"};
 
-void logMessage(int level, const char* fileName, const char* functionName, int line, ...){
+EXPORT(void) logMessage(int level, const char* fileName, const char* functionName, int line, ...){
 	char * format;
 	char timestamp[20];
 	time_t now = time(NULL);
