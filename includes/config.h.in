@@ -1,4 +1,8 @@
+/* Common configurations */
 #define VM_NAME "@VM_NAME@"
+#define DEFAULT_IMAGE_NAME "@DEFAULT_IMAGE_NAME@"
+
+/* Availabilit of Functions */
 
 #cmakedefine HAVE_DIRENT_H
 #cmakedefine HAVE_FEATURES_H

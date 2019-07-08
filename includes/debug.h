@@ -12,6 +12,11 @@
 #define LOG_INFO 		3
 #define LOG_DEBUG		4
 
+//This variable is set externally by CMAKE
+#ifndef SOURCE_PATH_SIZE
+# define SOURCE_PATH_SIZE 0
+#endif
+
 //FILENAME gives only the filename, as __FILE__ gives all the path
 #define __FILENAME__ (__FILE__ + SOURCE_PATH_SIZE)
 

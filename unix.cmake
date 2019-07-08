@@ -26,6 +26,7 @@ set(EXTRACTED_SOURCES
 
 set(VM_FRONTEND_SOURCES
     src/main.c
+    src/parameters.c    
     src/unixOpenFileDialog.c)
 
 

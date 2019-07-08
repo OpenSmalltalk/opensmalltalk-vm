@@ -22,19 +22,34 @@ void error(char *errorMessage){
     abort();
 }
 
+static char* severityName[4] = {"ERROR", "WARN", "INFO", "DEBUG"};
+
 void logMessage(int level, const char* fileName, const char* functionName, int line, ...){
 	char * format;
+	char timestamp[20];
+	time_t now = time(NULL);
+	strftime(timestamp, 20, "%Y-%m-%d %H:%M:%S", localtime(&now));
 
 	if(level < max_error_level){
 		return;
 	}
 
+	//Printing the header.
+	// Ex: [DEBUG] 2017-11-14 21:57:53,661 functionName (filename:line) - This is a debug log message.
+	printf("[%-5s] %s %s (%s:%d):", severityName[level - 1], timestamp, functionName, fileName, line);
+
+	//Printint the message from the var_args.
 	va_list list;
 	va_start(list, line);
 
 	format = va_arg(list, char*);
-	printf("%s (%s:%d):", functionName, fileName, line);
 	vprintf(format, list);
 
 	va_end(list);
+
+	int formatLength = strlen(format);
+
+	if(formatLength == 0 || format[formatLength - 1] != '\n'){
+		printf("\n");
+	}
 }

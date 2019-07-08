@@ -45,7 +45,7 @@ EXPORT(int) initPharoVM(char* image, char** vmParams, int vmParamCount, char** i
 	return loadPharoImage(image);
 }
 
-EXPORT(void) runInterpreter(void* data){
+EXPORT(void) runInterpreter(){
 	interpret();
 }
 

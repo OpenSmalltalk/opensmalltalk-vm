@@ -23,6 +23,7 @@ set(EXTRACTED_SOURCES
 
 set(VM_FRONTEND_SOURCES
     src/main.c
+    src/parameters.c
     src/winOpenFileDialog.cpp)
 
 macro(add_third_party_dependencies_per_platform)

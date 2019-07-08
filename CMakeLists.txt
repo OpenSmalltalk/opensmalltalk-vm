@@ -103,6 +103,16 @@ set(CMAKE_CXX_FLAGS "-g ${COMMON_FLAGS} ${OPTIMIZATION_FLAGS} -DNDEBUG -DDEBUGVM
 
 add_definitions(-DPharoVM=1 -DIMMUTABILITY=1)
 
+#
+# This definition is used to improve the logging of the messages, to cut-down the path
+# of the source files in the compilation of debug messages.
+#
+# The additional / is important to remove the last character from the path.
+# Note that it does not matter if the OS uses / or \, because we are only
+# saving the path size.
+string(LENGTH "${CMAKE_SOURCE_DIR}/" SOURCE_PATH_SIZE)
+add_definitions("-DSOURCE_PATH_SIZE=${SOURCE_PATH_SIZE}")
+
 if(UNIX AND NOT OSX)
     set(VM_EXECUTABLE_NAME pharo)
 else()
@@ -112,7 +122,7 @@ endif()
 set(VM_LIBRARY_NAME PharoVMCore)
 set(VM_NAME Pharo)
 set(PHARO_VM TRUE)
-
+set(DEFAULT_IMAGE_NAME Pharo.image)
 
 set(VM_TARGET "${CMAKE_SYSTEM}")
 

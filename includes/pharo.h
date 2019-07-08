@@ -51,7 +51,6 @@ void ioInitTime(void);
 
 EXPORT(int) fileExists(const char *aPath);
 
-void parseArguments(int argc, char* argv[]);
 int openFileDialog(char const * aTitle, char const * aDefaultPathAndFile, char const * filter, char ** selectedFile, char const * defaultFile);
 
 EXPORT(char*) getFullPath(char const *relativePath, char* fullPath, int fullPathSize);
