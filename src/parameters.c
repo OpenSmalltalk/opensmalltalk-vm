@@ -4,6 +4,8 @@
 #include <unistd.h>
 #include "debug.h"
 
+void printVersion();
+
 int findImageNameIndex(int argc, char* argv[]){
 
 	//The first parameters is the executable name
@@ -103,7 +105,20 @@ void processImageFileName(VM_PARAMETERS* parameters){
 }
 
 void printUsage(){
-
+	printf("Usage: %s [<option>...] [<imageName> [<argument>...]]\n", VM_NAME);
+	printf("       %s [<option>...] -- [<argument>...]\n", VM_NAME);
+	printf("\n");
+	printf("Common <option>s:\n");
+	printf("  --help                 print this help message, then exit\n");
+	printf("  --headless             run in headless (no window) mode (default: true)\n");
+	printf("  --logLevel=<level>     Sets the log level (ERROR, WARN, INFO or DEBUG)\n");
+	printf("  --version              print version information, then exit\n");
+	printf("\n");
+	printf("Notes:\n");
+	printf("\n");
+	printf("  <imageName> defaults to `Pharo.image'.\n");
+	printf("  <argument>s are ignored, but are processed by the Pharo image.\n");
+	printf("  Precede <arguments> by `--' to use default image.\n");
 }
 
 typedef void (*OPTION_PROCESS_FUNCTION)(char*);
@@ -128,14 +143,20 @@ void processHelpOption(char* value){
 	exit(0);
 }
 
+void processPrintVersionOption(char* value){
+	printVersion();
+	exit(0);
+}
+
 static struct option long_options[] = {
 	{"headless", no_argument, 0,  0 },
 	{"help", no_argument, 0,  0 },
 	{"logLevel", required_argument, 0, 0},
+	{"version", no_argument, 0, 0},
 	{0, 0, 0,  0 }
 };
 
-static OPTION_PROCESS_FUNCTION optionHandlers[] = {0, processHelpOption ,processLogLevelOption};
+static OPTION_PROCESS_FUNCTION optionHandlers[] = {0, processHelpOption, processLogLevelOption, processPrintVersionOption};
 
 void processVMOptions(VM_PARAMETERS* parameters){
 

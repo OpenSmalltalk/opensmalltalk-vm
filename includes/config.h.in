@@ -46,7 +46,9 @@
 #cmakedefine HAVE_UUID_GENERATE
 
 #if defined(_MSC_VER)
-#define VM_BUILD_STRING VM_NAME " built for " VM_TARGET_OS " on "__DATE__ " "__TIME__" Compiler: Visual C"
+#define VM_BUILD_STRING VM_NAME" @VERSION_MAJOR@.@VERSION_MINOR@.@VERSION_PATCH@ built on "__DATE__ " "__TIME__" Compiler: Visual C"
 #else
-#define VM_BUILD_STRING VM_NAME " built for " VM_TARGET_OS " on "__DATE__ " "__TIME__" Compiler: "__VERSION__
+#define VM_BUILD_STRING VM_NAME" @VERSION_MAJOR@.@VERSION_MINOR@.@VERSION_PATCH@ built on "__DATE__ " "__TIME__" Compiler: "__VERSION__
 #endif
+
+#define VM_BUILD_SOURCE_STRING "@BUILT_FROM@"

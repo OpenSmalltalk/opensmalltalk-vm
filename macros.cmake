@@ -70,3 +70,10 @@ macro(get_commit_hash VARNAME)
         OUTPUT_STRIP_TRAILING_WHITESPACE)
 endmacro()
 
+macro(get_git_describe VARNAME)
+    execute_process(
+        COMMAND git describe
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        OUTPUT_VARIABLE ${VARNAME}
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+endmacro()

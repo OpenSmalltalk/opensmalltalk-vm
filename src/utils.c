@@ -50,8 +50,12 @@ char** pluginPaths = NULL;
 char* emptyPaths[] = {NULL};
 
 
-char* sourceVersionString(){
-	return "Return somehting meaningful! Date: Thu Feb 7 15:45:49 2019 +0100";
+EXPORT(char*) getSourceVersion(){
+	return VM_BUILD_SOURCE_STRING;
+}
+
+EXPORT(char*) getVMVersion(){
+	return VM_BUILD_STRING;
 }
 
 char * GetAttributeString(sqInt id)
@@ -85,7 +89,7 @@ char * GetAttributeString(sqInt id)
         return  (char *)interpreterVersion;
     case 1006:
         /* vm build string */
-        return VM_BUILD_STRING;
+        return getVMVersion();
 #if STACKVM
     case 1007: { /* interpreter build info */
         extern char *__interpBuildInfo;
@@ -100,7 +104,7 @@ char * GetAttributeString(sqInt id)
 #endif
 
     case 1009: /* source tree version info */
-        return sourceVersionString();
+        return getSourceVersion();
 
     default:
         if ((id - 2) < getImageArgumentCount())
@@ -125,7 +129,7 @@ sqInt getAttributeIntoLength(sqInt id, sqInt byteArrayIndex, sqInt length)
 /**
  * Returns the VM Name
  */
-char* getVMName(){
+EXPORT(char*) getVMName(){
 	return vmName;
 }
 

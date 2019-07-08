@@ -3,10 +3,13 @@ cmake_minimum_required(VERSION 2.8.4)
 include(macros.cmake)
 
 set(VERSION_MAJOR 8)
-set(VERSION_MINOR 0)
+set(VERSION_MINOR 1)
 set(VERSION_PATCH 0)
 
 get_commit_hash(GIT_COMMIT_HASH)
+get_git_describe(GIT_DESCRIBE)
+
+set(BUILT_FROM "${GIT_DESCRIBE} - Commit: ${GIT_COMMIT_HASH}")
 
 if(WIN32 OR WIN OR CYGWIN)
     set(WIN 1)

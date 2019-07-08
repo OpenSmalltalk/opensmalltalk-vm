@@ -15,7 +15,10 @@
 
 #endif
 
-char* getVMName();
+EXPORT(char*) getSourceVersion();
+EXPORT(char*) getVMVersion();
+EXPORT(char*) getVMName();
+
 EXPORT(void) setVMName(const char* name);
 
 EXPORT(void) setVMPath(const char* path);

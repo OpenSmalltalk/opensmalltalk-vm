@@ -19,3 +19,8 @@ int main(int argc, char* argv[]){
 	}
 	runInterpreter();
 }
+
+void printVersion(){
+	printf("%s\n", getVMVersion());
+	printf("Built from: %s\n", getSourceVersion());
+}
