@@ -200,7 +200,6 @@ char *GetVMOption(int id);
 /* Misc functions                                       */
 /********************************************************/
 void SetWindowSize();
-int printUsage(int level);
 
 /********************************************************/
 /* Service Stuff                                        */
