@@ -5,9 +5,7 @@
 #include <time.h>
 #include <setjmp.h>
 
-#include "sqVirtualMachine.h"
-#include "sqAssert.h"
-
+#include "sq.h"
 
 /*** Function prototypes ***/
 
@@ -168,7 +166,7 @@ sqInt classExternalFunction(void);
 sqInt classExternalLibrary(void);
 sqInt classExternalStructure(void);
 void *ioLoadModuleOfLength(sqInt moduleNameIndex, sqInt moduleNameLength);
-void *ioLoadSymbolOfLengthFromModule(sqInt functionNameIndex, sqInt functionNameLength, sqInt moduleHandle);
+void *ioLoadSymbolOfLengthFromModule(sqInt functionNameIndex, sqInt functionNameLength, void* moduleHandle);
 sqInt isInMemory(sqInt address);
 sqInt classAlien(void); /* Alien FFI */
 sqInt classUnsafeAlien(void); /* Alien FFI */

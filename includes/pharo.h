@@ -6,7 +6,10 @@
 #include "sq.h"
 #include "config.h"
 
+#include "sqPlatformSpecific.h"
+
 #include "debug.h"
+#include "sqAssert.h"
 
 #ifdef WIN32
 

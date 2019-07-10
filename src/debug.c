@@ -1,8 +1,11 @@
 #include <pharo.h>
 #include <stdarg.h>
 
+#ifdef DEBUG
+static int max_error_level = 4;
+#else
 static int max_error_level = 1;
-
+#endif
 /*
  * This function set the logLevel to use in the VM
  *

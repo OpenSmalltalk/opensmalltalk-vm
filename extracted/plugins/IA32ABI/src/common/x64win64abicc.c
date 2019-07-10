@@ -21,6 +21,8 @@
 #include <setjmp.h>
 #include <stdio.h> /* for fprintf(stderr,...) */
 
+#include "sq.h"
+
 #include "sqMemoryAccess.h"
 #include "vmCallback.h"
 #include "sqAssert.h"

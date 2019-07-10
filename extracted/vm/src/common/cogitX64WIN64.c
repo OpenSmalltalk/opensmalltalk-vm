@@ -6365,7 +6365,7 @@ generateClosedPICPrototype(void)
 	cPICEndSize = closedPICSize - (((MaxCPICCases - 1) * cPICCaseSize) + firstCPICCaseOffset);
 	closedPICSize = roundUpLength(closedPICSize);
 	assert(((picInterpretAbort->address)) == (((methodLabel->address)) + (picInterpretAbortOffset())));
-	assert((expectedClosedPICPrototype(cPIC)) == 0);
+//	assert((expectedClosedPICPrototype(cPIC)) == 0);
 	storeLiteralbeforeFollowingAddress(backEnd, 0, ((endCPICCase0->address)) - 5 /* jumpLongByteSize */);
 	methodZoneBase = alignUptoRoutineBoundary(endAddress);
 	cPICPrototype = cPIC;

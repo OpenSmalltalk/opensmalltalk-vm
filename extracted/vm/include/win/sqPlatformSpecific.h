@@ -16,10 +16,7 @@
 #include "sqWin32Alloc.h"
 
 
-#ifdef _MSC_VER
 #include <windows.h>
-#define HAVE_BOOLEAN 1 /* for jpegReaderWriter plugin compatibility */
-#endif
 
 
 #ifdef _MSC_VER
@@ -133,7 +130,7 @@ extern void reportMinimumUnusedHeadroom(void);
 #if STACKVM || NewspeakVM
 # define sqLowLevelYield() Sleep(0)
 /* these are used both in the STACKVM & the COGMTVM */
-# define sqOSThread void *
+# define sqOSThread DWORD
 # define ioOSThreadsEqual(a,b) ((a) == (b))
 # if COGMTVM
 /* Please read the comment for CogThreadManager in the VMMaker package for

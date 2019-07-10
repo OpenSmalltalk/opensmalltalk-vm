@@ -152,7 +152,7 @@ extern void sqDeallocateMemorySegmentAtOfSize(void *addr, sqInt sz);
 */
 
 long ioMSecs(void);
-long ioMicroMSecs(void);
+sqInt ioMicroMSecs(void);
 
 /* duplicate the generated definition in the interpreter.  If they differ the
  * compiler will complain and catch it for us.  We use 0x1FFFFFFF instead of

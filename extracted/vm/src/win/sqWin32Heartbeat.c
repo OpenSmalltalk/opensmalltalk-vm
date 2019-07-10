@@ -265,7 +265,7 @@ long
 ioMSecs() { return millisecondClock; }
 
 /* ioMicroMSecs answers the millisecondClock right now */
-long ioMicroMSecs(void) { return microToMilliseconds(ioUTCMicrosecondsNow());}
+sqInt ioMicroMSecs(void) { return microToMilliseconds(ioUTCMicrosecondsNow());}
 
 /* returns the local wall clock time */
 sqInt

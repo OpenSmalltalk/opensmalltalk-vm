@@ -13,15 +13,8 @@
  * assertl, assertal & assertfl take a line number as an argument.
  */
 
-#pragma auto_inline(off)
-extern void warning(char *);
-extern void warningat(char *,int);
-void error(char *s);
-#pragma auto_inline(on)
+#include "debug.h"
 
-#undef assert
-# define __stringify(foo) #foo
-# define __stringifyNum(n) __stringify(n)
 #ifdef NDEBUG /* compatible with Mac OS X (FreeBSD) /usr/include/assert.h */
 # define assert(expr) 0 /* hack disabling of asserts.  Better in makefile? */
 # define asserta(expr) (expr)
@@ -31,52 +24,18 @@ void error(char *s);
 # define assertfl(msg,line) 0
 # define eassert(expr) 0 /* hack disabling of asserts.  Better in makefile? */
 # define PRODUCTION 1
-#elif 1
-#if defined(_MSC_VER)
-static inline int warningIf(int condition, char *message)
-{
-    if (condition)
-    {
-        warning(message);
-        return 0;
-    }
-    else
-    {
-        return 1;
-    }
-}
 
-static inline int warningIfAt(int condition, char *message, int line)
-{
-    if (condition)
-    {
-        warningat(message, line);
-        return 0;
-    }
-    else
-    {
-        return 1;
-    }
-}
-
-# define assert(expr)  warningIf(!(expr), #expr " " __stringifyNum(__LINE__))
-# define asserta(expr) warningIf(!(expr), #expr " " __stringifyNum(__LINE__))
-# define assertf(msg)  (warning(#msg " " __stringifyNum(__LINE__)),0)
-# define assertl(expr,line)  warningIfAt(!(expr), #expr, line)
-# define assertal(expr,line)  warningIfAt(!(expr), #expr, line)
-# define assertfl(msg,line)  (warningat(#msg,line),0)
-extern char expensiveAsserts;
-# define eassert(expr)  warningIf(!expensiveAsserts && !(expr), #expr " " __stringifyNum(__LINE__))
 #else
-# define assert(expr)  ((expr)||(warning(#expr " " __stringifyNum(__LINE__)),0))
-# define asserta(expr) ((expr)||(warning(#expr " " __stringifyNum(__LINE__)),0))
-# define assertf(msg)  (warning(#msg " " __stringifyNum(__LINE__)),0)
-# define assertl(expr,line)  ((expr)||(warningat(#expr,line),0))
-# define assertal(expr,line) ((expr)||(warningat(#expr,line),0))
-# define assertfl(msg,line)  (warningat(#msg,line),0)
+
+# define assert(expr)  ((expr)||(logMessage(LOG_WARN, __FILENAME__, __FUNCTION__, __LINE__, #expr),0))
+# define asserta(expr) assert(expr)
+# define assertf(msg)  (logMessage(LOG_WARN, __FILENAME__, __FUNCTION__, __LINE__, #msg),0)
+# define assertl(expr,line)  ((expr)||(logMessage(LOG_WARN, __FILENAME__, __FUNCTION__, line, #expr),0))
+# define assertal(expr,line) assertl(expr,line)
+# define assertfl(msg,line)  (logMessage(LOG_WARN, __FILENAME__, __FUNCTION__, line, #msg),0)
+
 extern char expensiveAsserts;
-# define eassert(expr)  (!expensiveAsserts||(expr) \
-						 ||(warning(#expr " " __stringifyNum(__LINE__)),0))
-#endif
+
+# define eassert(expr)  (!expensiveAsserts||assert(expr))
 # define PRODUCTION 0
 #endif

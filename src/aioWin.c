@@ -25,6 +25,10 @@ long aioSleepForUsecs(long microSeconds)
 }
 
 
+sqOSThread ioCurrentOSThread(){
+	return GetCurrentThreadId();
+}
+
 void aioInit(){
 
 }

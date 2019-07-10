@@ -19,8 +19,7 @@
  *
  ****************************************************************************/
 
-#include "sqMemoryAccess.h" 
-#include "sqAssert.h" /* for error */
+#include "sq.h"
 
 #include <stdlib.h>
 #include <string.h> /* for memset */
