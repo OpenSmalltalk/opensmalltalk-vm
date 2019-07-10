@@ -66,7 +66,7 @@ if(WIN)
 
 
     if(NOT MSVC)
-        set(COMMON_FLAGS "-fdeclspec -msse2 -ggdb2 -m64 -mno-rtd -mms-bitfields -O1 -momit-leaf-frame-pointer -funroll-loops -D_MT -fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf -Wall -Wno-unused-variable")
+        set(COMMON_FLAGS "-fdeclspec -msse2 -ggdb2 -m64 -mno-rtd -mms-bitfields -O1 -fno-omit-frame-pointer -D_MT -fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf -Wall -Wno-unused-variable")
     endif()
     
     set(OS_TYPE "Win32")
