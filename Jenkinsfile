@@ -79,6 +79,11 @@ def uploadPackages(){
 				return;
 			}
 			
+			if(env.BRANCH_NAME != 'headless'){
+				echo "[DO NO UPLOAD] In branch different that 'headless': ${env.BRANCH_NAME}";
+				return;
+			}
+			
 			upload('osx', 'mac')
 			upload('unix', 'linux')
 			upload('windows', 'win')
