@@ -8,6 +8,7 @@ BASE64=trunk6-64
 
 if test -x /usr/bin/uname; then
 	OS=`/usr/bin/uname -s`
+	CPU=`/usr/bin/uname -m`
 	OSREL=`/usr/bin/uname -r | sed 's/\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\).*$/\1.\2.\3/'`
 elif test -x /bin/uname; then
 	OS=`/bin/uname -s`
