@@ -167,7 +167,6 @@ CogThreadManager >> acquireVMFor: threadIndex [
 	<returnTypeC: #'CogVMThread *'>
 	| vmThread |
 	<var: #vmThread type: #'CogVMThread *'>
-	self assert: threadIndex = self ioGetThreadLocalThreadIndex.
 	vmThread := self vmThreadAt: threadIndex.
 	self assert: (vmThread state = CTMUnavailable
 				or: [vmThread state = CTMWantingOwnership]).
@@ -175,9 +174,9 @@ CogThreadManager >> acquireVMFor: threadIndex [
 		[vmThread state: CTMWantingOwnership.
 		 [self tryLockVMToIndex: threadIndex] whileFalse:
 			[[coInterpreter getMaxWaitingPriority < vmThread priority] whileTrue:
-				[cogit tryLockVMOwner ifTrue:
+				[coInterpreter tryLockVMOwner ifTrue:
 					[coInterpreter waitingPriorityIsAtLeast: vmThread priority.
-					 cogit unlockVMOwner]].
+					 coInterpreter unlockVMOwner]].
 			vmOwner ~= threadIndex ifTrue:
 				[self ioWaitOnOSSemaphore: (self addressOf: vmThread osSemaphore)]]].
 	vmOSThread := vmThread osThread.
@@ -224,15 +223,13 @@ CogThreadManager >> ensureRunningVMThread: vmIsRelinquishing [
 
 	"If we have failed to allocate thread storage before there is no point continuing to
 	 try to do so.  By this time we should have quite a few threads in the pool."
-	(memoryIsScarce
+	"(memoryIsScarce
 	 or: [(vmThread := self unusedThreadInfo) isNil]) ifTrue:
-		[self releaseVM.
+		["self releaseVM.
 		 "self cCode: [coInterpreter print: 'ERVT memory is scarce or no unused thread info or too many threads'; cr]."
-		 ^nil].
+		 ^nil"].
 
-	self setVMOwner: vmThread index.
-	(self startThreadForThreadInfo: vmThread) ifFalse:
-		[self releaseVM]
+	self wakeVMThreadFor: vmThread index"
 ]
 
 { #category : #'public api' }
@@ -263,6 +260,11 @@ CogThreadManager >> growThreadInfosToAtLeast: index [
 	<inline: false>
 	memoryIsScarce ifTrue:
 		[^false].
+	
+	"if we already have so many threads, do nothing but not fail"
+	index <= numThreads
+		ifTrue: [ ^ true ].
+	
 	newNumThreads := index + numThreadsIncrement - 1 // numThreadsIncrement * numThreadsIncrement.
 	newNumThreads >= self maxNumThreads ifTrue:
 		[^false].
@@ -457,7 +459,7 @@ CogThreadManager >> ioWaitOnOSSemaphore: aSemaphorePtr [
 
 { #category : #simulation }
 CogThreadManager >> maxNumThreads [
-	^self cCode: [ThreadIdMask] inSmalltalk: [16]
+	^self cCode: [ThreadIdMask] inSmalltalk: [32]
 ]
 
 { #category : #'public api' }
@@ -620,12 +622,17 @@ CogThreadManager >> testVMOwnerIs: index [
 	| retryCount ownerIsIndex |
 	self assert: index ~= 0.
 	retryCount := 0.
-	[cogit tryLockVMOwner] whileFalse:
+	[coInterpreter tryLockVMOwner] whileFalse:
 		[(retryCount := retryCount + 1) > 10 ifTrue:
 			[self ioTransferTimeslice]].
 	ownerIsIndex := self getVMOwner = index.
-	cogit unlockVMOwner.
+	coInterpreter unlockVMOwner.
 	^ownerIsIndex
+]
+
+{ #category : #accessing }
+CogThreadManager >> threads [
+	^ threads
 ]
 
 { #category : #locking }
@@ -634,10 +641,10 @@ CogThreadManager >> tryLockVMToIndex: index [
 	| vmThread locked |
 	<var: #vmThread type: #'CogVMThread *'>
 	self assert: index ~= 0.
-	cogit tryLockVMOwner ifFalse: [^false].
+	coInterpreter tryLockVMOwner ifFalse: [^false].
 	self getVMOwner = 0 ifTrue:
 		[self setVMOwner: index.
-		 cogit unlockVMOwner.
+		 coInterpreter unlockVMOwner.
 		 index >= 1 ifTrue:
 			[vmThread := self vmThreadAt: index.
 			 vmOSThread := vmThread osThread.
@@ -647,7 +654,7 @@ CogThreadManager >> tryLockVMToIndex: index [
 		[vmThread := self vmThreadAt: index.
 		 vmOSThread := vmThread osThread.
 		 self sqLowLevelMFence].
-	cogit unlockVMOwner.
+	coInterpreter unlockVMOwner.
 	^locked
 ]
 
@@ -681,6 +688,12 @@ CogThreadManager >> unusedThreadInfo [
 	^threads at: index
 ]
 
+{ #category : #accessing }
+CogThreadManager >> vmOwnerLock: aMutex [
+	<doNotGenerate>
+	vmOwnerLock := aMutex
+]
+
 { #category : #'public api' }
 CogThreadManager >> vmThreadAt: index [
 	<returnTypeC: #'CogVMThread *'>
@@ -705,14 +718,14 @@ CogThreadManager >> wakeVMThreadFor: index [
 	<returnTypeC: #void>
 	| vmThread |
 	<var: #vmThread type: #'CogVMThread *'>
-	self assert: (vmOwner > 0 and: [vmOwner ~= index]).
+	self assert: (vmOwner = -1 or: [(vmOwner > 0 and: [vmOwner ~= index])]).
 	self assert: index <= numThreads.
 	self setVMOwner: index.
 	vmThread := threads at: index.
 	vmThread state = nil
 		ifTrue: [self startThreadForThreadInfo: vmThread]
 		ifFalse:
-			[self assert: vmThread state = CTMWantingOwnership.
+			[self assert: (vmThread state = CTMAssignableOrInVM or: [vmThread state = CTMWantingOwnership]).
 			 self ioSignalOSSemaphore: (self addressOf: vmThread osSemaphore)].
 	self ioTransferTimeslice
 ]

@@ -1,6 +1,6 @@
 Class {
-	#name : #CoInterpreterMT,
-	#superclass : #CoInterpreterPrimitives,
+	#name : #StackInterpreterMT,
+	#superclass : #StackInterpreterPrimitives,
 	#instVars : [
 		'cogThreadManager',
 		'checkThreadActivation',
@@ -14,9 +14,24 @@ Class {
 		'activeProcessAffined',
 		'relinquishing',
 		'processHasThreadId',
-		'noThreadingOfGUIThread'
+		'noThreadingOfGUIThread',
+		'ownVMCount'
 	],
 	#classVars : [
+		'CSCallbackEnter',
+		'CSCallbackLeave',
+		'CSCheckEvents',
+		'CSEnterCriticalSection',
+		'CSExitCriticalSection',
+		'CSOwnVM',
+		'CSResume',
+		'CSSignal',
+		'CSSuspend',
+		'CSSwitchIfNeccessary',
+		'CSThreadBind',
+		'CSThreadSchedulingLoop',
+		'CSWait',
+		'CSYield',
 		'DisownFlagsShift',
 		'LockGUIThreadFlag',
 		'LockGUIThreadShift',
@@ -32,46 +47,74 @@ Class {
 }
 
 { #category : #translation }
-CoInterpreterMT class >> ancilliaryClasses [
+StackInterpreterMT class >> ancilliaryClasses [
 	"Answer any extra classes to be included in the translation."
 	^super ancilliaryClasses, { CogThreadManager. CogVMThread }
 ]
 
 { #category : #translation }
-CoInterpreterMT class >> apiExportHeaderName [
+StackInterpreterMT class >> apiExportHeaderName [
 	^'cointerpmt.h'
 ]
 
 { #category : #translation }
-CoInterpreterMT class >> declareCVarsIn: aCCodeGenerator [
+StackInterpreterMT class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator
 		addHeaderFile:'"sqAtomicOps.h"'. "For THRLOG"
 	aCCodeGenerator vmClass
 		declareInterpreterVersionIn: aCCodeGenerator
 		defaultName: 'Cog MT'.
 	aCCodeGenerator
-		var: #disowningVMThread type: #'CogVMThread *'
+		var: #disowningVMThread type: #'CogVMThread *';
+		var: #vmOwnerLock type: #'pthread_mutex_t'
 ]
 
 { #category : #initialization }
-CoInterpreterMT class >> initializeMiscConstants [
+StackInterpreterMT class >> initializeBytecodeTableForSistaV1 [
+	super initializeBytecodeTableForSistaV1.
+	COGMTVM
+		ifTrue: [ PrimitiveTable
+				at: 227 + 1 put: #primitiveVMCurrentThreadId;
+				at: 228 + 1 put: #primitiveProcessBoundThreadId;
+				at: 229 + 1 put: #primitiveProcessBindToThreadId ]
+]
+
+{ #category : #initialization }
+StackInterpreterMT class >> initializeMiscConstants [
 
 	super initializeMiscConstants.
 
 	"N.B. some of these DisownFlags are replicated in platforms/Cross/vm/sqVirtualMachine.h.
 	 Hence they should always be initialized."
 	DisownVMForProcessorRelinquish := 64.
+	
+	CSCallbackEnter := 3.
+	CSCallbackLeave := 4.
+	CSEnterCriticalSection := 5.
+	CSExitCriticalSection := 6.
+	CSResume := 7.
+	CSSignal := 8.
+	CSSuspend := 9.
+	CSWait := 10.
+	CSYield := 11.
+	CSCheckEvents := 12.
+	CSThreadSchedulingLoop := 13.
+	CSOwnVM := 14.
+	CSThreadBind := 15.
+	CSSwitchIfNeccessary := 16.
 
 	(InitializationOptions at: #COGMTVM ifAbsent: [false]) == false ifTrue:
 		[^self].
 
 	COGMTVM := true.
-
+	CSCheckEvents := 12.
+	CSSwitchIfNeccessary := 16.
+	
 	ReturnToThreadSchedulingLoop := 2 "setjmp/longjmp code."
 ]
 
 { #category : #initialization }
-CoInterpreterMT class >> initializePrimitiveTable [
+StackInterpreterMT class >> initializePrimitiveTable [
 	super initializePrimitiveTable.
 	COGMTVM ifTrue:
 		[(227 to: 229) do:
@@ -83,7 +126,7 @@ CoInterpreterMT class >> initializePrimitiveTable [
 ]
 
 { #category : #initialization }
-CoInterpreterMT class >> initializeSchedulerIndices [
+StackInterpreterMT class >> initializeSchedulerIndices [
 	super initializeSchedulerIndices.
 	"Class Process"
 	ThreadIdIndex := 4.
@@ -100,23 +143,23 @@ CoInterpreterMT class >> initializeSchedulerIndices [
 ]
 
 { #category : #accessing }
-CoInterpreterMT class >> interpreterVersion [ 
-	^ 'Cog MT'
+StackInterpreterMT class >> interpreterVersion [ 
+	^ 'Stack MT'
 ]
 
 { #category : #translation }
-CoInterpreterMT class >> isNonArgumentImplicitReceiverVariableName: aString [
+StackInterpreterMT class >> isNonArgumentImplicitReceiverVariableName: aString [
 	^'cogThreadManager' = aString
 	   or: [super isNonArgumentImplicitReceiverVariableName: aString]
 ]
 
 { #category : #testing }
-CoInterpreterMT class >> isThreadedVM [
+StackInterpreterMT class >> isThreadedVM [
 	^true
 ]
 
 { #category : #translation }
-CoInterpreterMT class >> mustBeGlobal: var [
+StackInterpreterMT class >> mustBeGlobal: var [
 	"Make disownCount global so that debugging/instrumentation code can use it to check
 	 if a threaded FFI call is in progress (i.e. this isn't necessary for production)"
 
@@ -125,19 +168,119 @@ CoInterpreterMT class >> mustBeGlobal: var [
 ]
 
 { #category : #'accessing class hierarchy' }
-CoInterpreterMT class >> primitivesClass [
-	^CoInterpreterMT
+StackInterpreterMT class >> primitivesClass [
+	^StackInterpreterMT
 ]
 
 { #category : #translation }
-CoInterpreterMT class >> sourceFileName [
+StackInterpreterMT class >> sourceFileName [
 	"Answer the filename for the core interpreter"
 
 	^'cointerpmt.c'
 ]
 
-{ #category : #'process primitive support' }
-CoInterpreterMT >> activateProcess: activeProc [
+{ #category : #'vm scheduling' }
+StackInterpreterMT >> activateNewClosure: blockClosure outer: outerContext method: theMethod  numArgs: numArgs mayContextSwitch: mayContextSwitch [
+	"Similar to activateNewMethod but for Closure and newMethod."
+	| numCopied closureIP switched |
+	<inline: true>
+	self assert: (objectMemory isContext: outerContext).
+	numCopied := self copiedValueCountOfClosure: blockClosure.
+	self assert: theMethod = (objectMemory fetchPointer: MethodIndex ofObject: outerContext).
+	self assert: (objectMemory isOopCompiledMethod: theMethod).
+
+	self push: instructionPointer.
+	self push: framePointer.
+	framePointer := stackPointer.
+	self push: theMethod.
+	self push: (self encodeFrameFieldHasContext: false isBlock: true numArgs: numArgs).
+	self push: objectMemory nilObject. "FxThisContext field"
+	"Because inst var access is not checked, we must follow the receiver in Spur to ensure it is valid."
+	self push: (objectMemory followField: ReceiverIndex ofObject: outerContext).
+
+	"Copy the copied values..."
+	0 to: numCopied - 1 do:
+		[:i|
+		self push: (objectMemory
+					fetchPointer: i + ClosureFirstCopiedValueIndex
+					ofObject: blockClosure)].
+
+	self assert: (self frameIsBlockActivation: framePointer).
+	self assert: (self frameHasContext: framePointer) not.
+
+	"The initial instructions in the block nil-out remaining temps."
+
+	"the instruction pointer is a pointer variable equal to 
+	method oop + ip + BaseHeaderSize 
+	-1 for 0-based addressing of fetchByte 
+	-1 because it gets incremented BEFORE fetching currentByte"
+	closureIP := self quickFetchInteger: ClosureStartPCIndex ofObject: blockClosure.
+	instructionPointer := theMethod + closureIP + objectMemory baseHeaderSize - 2.
+	self setMethod: theMethod.
+
+	"Now check for stack overflow or an event (interrupt, must scavenge, etc)"
+	switched := false.
+	stackPointer < stackLimit ifTrue:
+		[switched := self handleStackOverflowOrEventAllowContextSwitch: mayContextSwitch].
+	self returnToExecutive: true postContextSwitch: switched
+]
+
+{ #category : #'vm scheduling' }
+StackInterpreterMT >> activateNewFullClosure: blockClosure method: theMethod numArgs: numArgs mayContextSwitch: mayContextSwitch [
+	"Similar to activateNewMethod but for Closure and newMethod."
+	| numCopied methodHeader numTemps switched |
+	<inline: true>
+	self assert: theMethod = (objectMemory fetchPointer: FullClosureCompiledBlockIndex ofObject: blockClosure).
+	numCopied := self copiedValueCountOfFullClosure: blockClosure.
+	self push: instructionPointer.
+	self push: framePointer.
+	framePointer := stackPointer.
+	self push: theMethod.
+	self push: (self encodeFrameFieldHasContext: false isBlock: true numArgs: numArgs).
+	self push: objectMemory nilObject. "FxThisContext field"
+	"Because inst var access is not checked, we must follow the receiver in Spur to ensure it is valid."
+	self push: (objectMemory followField: FullClosureReceiverIndex ofObject: blockClosure).
+
+	"Copy the copied values..."
+	0 to: numCopied - 1 do:
+		[:i|
+		self push: (objectMemory
+					fetchPointer: i + FullClosureFirstCopiedValueIndex
+					ofObject: blockClosure)].
+
+	self assert: (self frameIsBlockActivation: framePointer).
+	self assert: (self frameHasContext: framePointer) not.
+
+	methodHeader := objectMemory methodHeaderOf: theMethod.
+	numTemps := self temporaryCountOfMethodHeader: methodHeader.
+
+	numArgs + numCopied + 1 to: numTemps do: [ :i | self push: objectMemory nilObject].
+
+	instructionPointer := (self initialIPForHeader: methodHeader method: theMethod) - 1.
+	
+	self setMethod: theMethod.
+
+	"Now check for stack overflow or an event (interrupt, must scavenge, etc)"
+	switched := false.
+	stackPointer < stackLimit ifTrue:
+		[switched := self handleStackOverflowOrEventAllowContextSwitch: mayContextSwitch].
+	self returnToExecutive: true postContextSwitch: switched
+]
+
+{ #category : #'vm scheduling' }
+StackInterpreterMT >> activateNewMethod [
+	| methodHeader switched |
+	methodHeader := self justActivateNewMethod: false. "either interpreted or machine code"
+
+	"Now check for stack overflow or an event (interrupt, must scavenge, etc)."
+	switched := true.
+	stackPointer < stackLimit ifTrue:
+		[switched := self handleStackOverflowOrEventAllowContextSwitch: (self canContextSwitchIfActivating: newMethod header: methodHeader)].
+	self returnToExecutive: true postContextSwitch: switched
+]
+
+{ #category : #accessing }
+StackInterpreterMT >> activateProcess: activeProc [
 
 	objectMemory
 		storePointerUnchecked: MyListIndex
@@ -149,35 +292,79 @@ CoInterpreterMT >> activateProcess: activeProc [
 		withValue: activeProc
 ]
 
-{ #category : #simulation }
-CoInterpreterMT >> assertCStackPointersBelongToCurrentThread [
-	<doNotGenerate>
-	| range |
-	range := self cStackRangeForCurrentThread.
-	self assert: ((range includes: cogit getCStackPointer)
-				and: [range includes: cogit getCFramePointer])
-]
-
-{ #category : #simulation }
-CoInterpreterMT >> assertCStackPointersBelongToCurrentVMOwner [
-	<doNotGenerate>
-	| range |
-	range := self cStackRangeForCurrentVMOwner.
-	self assert: (range notNil "VM is owned"
-				and: [(range includes: cogit getCStackPointer)
-				and: [range includes: cogit getCFramePointer]])
-]
-
 { #category : #'debug support' }
-CoInterpreterMT >> assertSaneThreadAndProcess [
+StackInterpreterMT >> assertSaneThreadAndProcess [
 	<inline: true>
 	self assert: cogThreadManager getVMOwner > 0.
 	self assert: cogThreadManager currentVMThread state = CTMAssignableOrInVM.
 	self assert: (objectMemory fetchPointer: MyListIndex ofObject: self activeProcess) = objectMemory nilObject
 ]
 
+{ #category : #'vm scheduling' }
+StackInterpreterMT >> baseFrameReturn [
+	"Return from a baseFrame (the bottom frame in a stackPage).  The context to
+	 return to (which may be married) is stored in the first word of the stack."
+	<inline: true>
+	| contextToReturnTo retToContext theFP theSP thePage newPage frameAbove |
+	<var: #theFP type: #'char *'>
+	<var: #theSP type: #'char *'>
+	<var: #thePage type: #'StackPage *'>
+	<var: #newPage type: #'StackPage *'>
+	<var: #frameAbove type: #'char *'>
+	contextToReturnTo := self frameCallerContext: localFP.
+
+	"The stack page is effectively free now, so free it.  We must free it to be
+	 correct in determining if contextToReturnTo is still married, and in case
+	 makeBaseFrameFor: cogs a method, which may cause a code compaction,
+	 in which case the frame must be free to avoid the relocation machinery
+	 tracing the dead frame.  Since freeing now temporarily violates the page-list
+	 ordering invariant, use the assert-free version."
+	stackPages freeStackPageNoAssert: stackPage.
+	retToContext := objectMemory isContext: contextToReturnTo.
+	(retToContext
+	 and: [self isStillMarriedContext: contextToReturnTo])
+		ifTrue:
+			[theFP := self frameOfMarriedContext: contextToReturnTo.
+			 thePage := stackPages stackPageFor: theFP.
+			 theFP = thePage headFP
+				ifTrue:
+					[theSP := thePage headSP]
+				ifFalse:
+					["Returning to some interior frame, presumably because of a sender assignment.
+					  Move the frames above to another page (they may be in use, e.g. via coroutining).
+					  Make the interior frame the top frame."
+					 frameAbove := self findFrameAbove: theFP inPage: thePage.
+					 "Since we've just deallocated a page we know that newStackPage won't deallocate an existing one."
+					 newPage := stackPages newStackPage.
+					 self assert: newPage = stackPage.
+					 self moveFramesIn: thePage through: frameAbove toPage: newPage.
+					 stackPages markStackPageMostRecentlyUsed: newPage.
+					 theFP := thePage headFP.
+					 theSP := thePage headSP]]
+		ifFalse:
+			[
+			(retToContext
+			  and: [objectMemory isIntegerObject: (objectMemory fetchPointer: InstructionPointerIndex ofObject: contextToReturnTo)]) ifFalse:
+				[^self internalCannotReturn: localReturnValue].
+			"We must void the instructionPointer to stop it being updated if makeBaseFrameFor:
+			  cogs a method, which may cause a code compaction."
+			 instructionPointer := 0.
+			 thePage := self makeBaseFrameFor: contextToReturnTo.
+			 theFP := thePage headFP.
+			 theSP := thePage headSP].
+	self setStackPageAndLimit: thePage.
+	self assert: (stackPages stackPageFor: theFP) = stackPage.
+	localSP := theSP.
+	localFP := theFP.
+	localIP := self pointerForOop: self internalStackTop.
+	self assert: (self checkIsStillMarriedContext: contextToReturnTo currentFP: localFP).
+	self setMethod: (self iframeMethod: localFP).
+	self internalStackTopPut: localReturnValue.
+	^self fetchNextBytecode
+]
+
 { #category : #'process primitive support' }
-CoInterpreterMT >> bindProcess: aProcess toId: newId [
+StackInterpreterMT >> bindProcess: aProcess toId: newId [
 	"Change a Process's thread binding and answer 0, otherwise answer a suitable error code.
 	 Cases:
 		process is unbound & unaffined
@@ -213,31 +400,86 @@ CoInterpreterMT >> bindProcess: aProcess toId: newId [
 	^0
 ]
 
-{ #category : #simulation }
-CoInterpreterMT >> cStackRangeForCurrentThread [
-	<doNotGenerate>
-	^self cStackRangeForThreadIndex: cogThreadManager ioGetThreadLocalThreadIndex
-]
+{ #category : #'vm scheduling' }
+StackInterpreterMT >> callbackEnter: callbackID [
+	"Re-enter the interpreter for executing a callback"
+	| savedReenterInterpreter
+	  wasInMachineCode calledFromMachineCode |
+	<volatile>
+	<export: true>
+	<var: #callbackID type: #'sqInt *'>
+	<var: #savedReenterInterpreter type: #'jmp_buf'>
 
-{ #category : #simulation }
-CoInterpreterMT >> cStackRangeForCurrentVMOwner [
-	<doNotGenerate>
-	^self cStackRangeForThreadIndex: cogThreadManager getVMOwner
-]
+	"For now, do not allow a callback unless we're in a primitiveResponse"
+	(self asserta: primitiveFunctionPointer ~= 0) ifFalse:
+		[^false].
 
-{ #category : #simulation }
-CoInterpreterMT >> cStackRangeForThreadIndex: threadIndex [
-	"Each simulated processor thread gets 4k of the rump C stack.
-	 The top-most section is reserved for in-memory variables such as vmOwnerLock."
-	<doNotGenerate>
-	| top |
-	^(threadIndex between: 1 and: cogThreadManager maxNumThreads) ifTrue:
-		[top := self rumpCStackAddress - (threadIndex * RumpCStackSize).
-		 top - RumpCStackSize + 1 to: top]
+	self assert: primFailCode = 0.
+
+	"Check if we've exceeded the callback depth"
+	(self asserta: jmpDepth < MaxJumpBuf) ifFalse:
+		[^false].
+	jmpDepth := jmpDepth + 1.
+
+	wasInMachineCode := self isMachineCodeFrame: framePointer.
+	calledFromMachineCode := instructionPointer <= objectMemory startOfMemory.
+
+	"Suspend the currently active process"
+	suspendedCallbacks at: jmpDepth put: self activeProcess.
+	"We need to preserve newMethod explicitly since it is not activated yet
+	and therefore no context has been created for it. If the caller primitive
+	for any reason decides to fail we need to make sure we execute the correct
+	method and not the one 'last used' in the call back"
+	suspendedMethods at: jmpDepth put: newMethod.
+	self flag: 'need to debug this properly.  Conceptually it is the right thing to do but it crashes in practice'.
+	false
+		ifTrue:
+			["Signal external semaphores since a signalSemaphoreWithIndex: request may
+			  have been issued immediately prior to this callback before the VM has any
+			  chance to do a signalExternalSemaphores in checkForEventsMayContextSwitch:"
+			 self signalExternalSemaphores.
+			 "If no process is awakened by signalExternalSemaphores then transfer
+			  to the highest priority runnable one."
+			 (suspendedCallbacks at: jmpDepth) = self activeProcess ifTrue:
+				[self transferTo: self wakeHighestPriority from: CSCallbackLeave]]
+		ifFalse:
+			[self transferTo: self wakeHighestPriority from: CSCallbackLeave].
+
+	"Typically, invoking the callback means that some semaphore has been 
+	signaled to indicate the callback. Force an interrupt check as soon as possible."
+	self forceInterruptCheck.
+
+	"Save the previous CStackPointers and interpreter entry jmp_buf."
+	self memcpy: savedReenterInterpreter asVoidPointer
+		_: reenterInterpreter
+		_: (self sizeof: #'jmp_buf').
+	(self setjmp: (jmpBuf at: jmpDepth)) = 0 ifTrue: "Fill in callbackID"
+		[callbackID at: 0 put: jmpDepth.
+		 self enterSmalltalkExecutive.
+		 self assert: false "NOTREACHED"].
+
+	self memcpy: reenterInterpreter
+		_: (self cCoerceSimple: savedReenterInterpreter to: #'void *')
+		_: (self sizeof: #'jmp_buf').
+
+	"Transfer back to the previous process so that caller can push result"
+	self putToSleep: self activeProcess yieldingIf: preemptionYields.
+	self transferTo: (suspendedCallbacks at: jmpDepth) from: CSCallbackLeave.
+	newMethod := suspendedMethods at: jmpDepth.	"see comment above"
+	argumentCount := self argumentCountOf: newMethod.
+	self assert: wasInMachineCode = (self isMachineCodeFrame: framePointer).
+	"Even if the context was flushed to the heap and rebuilt in transferTo:from:
+	above it will remain an interpreted frame because the context's pc would
+	remain a bytecode pc.  So the instructionPointer must also be a bytecode pc."
+	self assert: (self isMachineCodeFrame: framePointer) not.
+	self assert: instructionPointer > objectMemory startOfMemory.
+	self assert: primFailCode = 0.
+	jmpDepth := jmpDepth-1.
+	^true
 ]
 
 { #category : #'process primitive support' }
-CoInterpreterMT >> cedeToHigherPriorityThreads [
+StackInterpreterMT >> cedeToHigherPriorityThreads [
 	"Invoked from checkForEventsMayContextSwitch: to switch threads if a thread
 	 wanting to acquire the VM has higher priority than the active process."
 	| activeProc ownerIndex activeContext activePriority activeThread vmThread |
@@ -271,7 +513,7 @@ CoInterpreterMT >> cedeToHigherPriorityThreads [
 	statProcessSwitch := statProcessSwitch + 1.
 	activeContext := self ensureFrameIsMarried: framePointer SP: stackPointer.
 	objectMemory storePointer: SuspendedContextIndex ofObject: activeProc withValue: activeContext.
-	self ensurePushedInstructionPointer.
+	self push: instructionPointer.
 	self externalWriteBackHeadFramePointers.
 	self putToSleep: activeProc yieldingIf: preemptionYields.
 	"Transcript cr; print: #cedeToHighestPriorityThreadIfHigherThan:; cr.
@@ -281,14 +523,13 @@ CoInterpreterMT >> cedeToHigherPriorityThreads [
 ]
 
 { #category : #'process primitive support' }
-CoInterpreterMT >> checkForEventsMayContextSwitch: mayContextSwitch [
+StackInterpreterMT >> checkForEventsMayContextSwitch: mayContextSwitch [
 	"Check for possible interrupts and handle one if necessary.
 	 Answer if a context switch has occurred."
 	| switched sema now |
 	<inline: false>
 	<var: #now type: #usqLong>
 	self assertSaneThreadAndProcess.
-	cogit assertCStackWellAligned.
 	statCheckForEvents := statCheckForEvents + 1.
 
 	"restore the stackLimit if it has been smashed."
@@ -401,7 +642,7 @@ CoInterpreterMT >> checkForEventsMayContextSwitch: mayContextSwitch [
 ]
 
 { #category : #'process primitive support' }
-CoInterpreterMT >> checkVMOwnershipFromHeartbeat [
+StackInterpreterMT >> checkVMOwnershipFromHeartbeat [
 	"Check whether the VM is unowned and needs to set a thread running to try and own it.
 	 Do not attempt this if the image doesn't have a threadId inst var in Process; the VM
 	 can't thread these images."
@@ -412,45 +653,8 @@ CoInterpreterMT >> checkVMOwnershipFromHeartbeat [
 		[cogThreadManager ensureRunningVMThread: relinquishing]
 ]
 
-{ #category : #'process primitive support' }
-CoInterpreterMT >> deferStackLimitSmashAround: functionSymbol [
-	"Defer smashes of the stackLimit around the call of functionSymbol (for assert checks).	
-
-	 N.B. SYNCHRONIZE WITH forceInterruptCheckFromHeartbeat"
-
-	<var: #functionSymbol declareC: 'void (*functionSymbol)(void)'>
-	deferSmash := true.
-	self perform: functionSymbol.
-	deferSmash := false.
-	deferredSmash ifTrue:
-		[deferredSmash := false.
-		 self forceInterruptCheck.
-		 self checkVMOwnershipFromHeartbeat].
-	^true "called from assert"
-]
-
-{ #category : #'process primitive support' }
-CoInterpreterMT >> deferStackLimitSmashAround: functionSymbol with: arg [
-	"Defer smashes of the stackLimit around the call of functionSymbol (for assert checks).	
-
-	 N.B. SYNCHRONIZE WITH forceInterruptCheckFromHeartbeat"
-
-	<var: #functionSymbol declareC: 'void (*functionSymbol)(sqInt)'>
-	deferSmash := true.
-	self sqLowLevelMFence.
-	self perform: functionSymbol with: arg.
-	deferSmash := false.
-	self sqLowLevelMFence.
-	deferredSmash ifTrue:
-		[deferredSmash := false.
-		 self sqLowLevelMFence.
-		 self forceInterruptCheck.
-		 self checkVMOwnershipFromHeartbeat].
-	^true "called from assert"
-]
-
 { #category : #'vm scheduling' }
-CoInterpreterMT >> disownVM: flags [
+StackInterpreterMT >> disownVM: flags [
 	"Release the VM to other threads and answer the current thread's index.
 	 Currently valid flags:
 		DisownVMLockOutFullGC	- prevent fullGCs while this thread disowns the VM
@@ -478,8 +682,7 @@ CoInterpreterMT >> disownVM: flags [
 ]
 
 { #category : #'vm scheduling' }
-CoInterpreterMT >> disownVM: flags fromVMThread: vmThread [
-	<inline: #always>
+StackInterpreterMT >> disownVM: flags fromVMThread: vmThread [
 	"Release the VM to other threads and answer the current thread's index.
 	 Currently valid flags:
 		DisownVMLockOutFullGC	- prevent fullGCs while this thread disowns the VM
@@ -506,8 +709,6 @@ CoInterpreterMT >> disownVM: flags fromVMThread: vmThread [
 	| result |
 	<var: #vmThread type: #'CogVMThread *'>
 	self assert: self successful.
-	cogit recordEventTrace ifTrue:
-		[self recordTrace: TraceDisownVM thing: (objectMemory integerObjectOf: flags) source: 0].
 	processHasThreadId ifFalse:
 		[willNotThreadWarnCount < 10 ifTrue:
 			[self print: 'warning: VM parameter 48 indicates Process doesn''t have threadId; VM will not thread'; cr.
@@ -516,12 +717,6 @@ CoInterpreterMT >> disownVM: flags fromVMThread: vmThread [
 		[disowningVMThread := vmThread.
 		 vmThread state: CTMUnavailable.
 		 ^0].
-	self cCode: ''
-		inSmalltalk:
-			[| range |
-			 range := self cStackRangeForThreadIndex: vmThread index.
-			 self assert: (range includes: cogit getCStackPointer).
-			 self assert: (range includes: cogit getCFramePointer)].
 	(flags anyMask: DisownVMForProcessorRelinquish) ifTrue:
 		[| proc |
 		 (proc := objectMemory splObj: foreignCallbackProcessSlot) ~= objectMemory nilObject ifTrue:
@@ -563,19 +758,23 @@ CoInterpreterMT >> disownVM: flags fromVMThread: vmThread [
 	^result
 ]
 
+{ #category : #accessing }
+StackInterpreterMT >> disowningVMThread [
+	<doNotGenerate>
+	^ disowningVMThread
+]
+
 { #category : #initialization }
-CoInterpreterMT >> enterSmalltalkExecutive [
+StackInterpreterMT >> enterSmalltalkExecutive [
 	"Main entry-point into the interpreter at each execution level, where an
 	 execution level is either the start of execution or reentry for a callback."
 	<cmacro: '() enterSmalltalkExecutiveImplementation()'>
 	"Simulation of the setjmp in enterSmalltalkExecutiveImplementation for reentry
 	 into interpreter.  Simulation of the register state switch on thread switch."
-	| vmo tlti thisActivationsSP thisActivationsFP retVal |
+	| vmo tlti retVal |
 	[vmo := cogThreadManager getVMOwner.
 	 tlti := cogThreadManager ioGetThreadLocalThreadIndex.
 	 self assert: vmo = tlti.
-	 thisActivationsSP := cogit processor sp.
-	 thisActivationsFP := cogit processor fp.
 	 retVal := [self enterSmalltalkExecutiveImplementation]
 				on: ReenterInterpreter
 				do: [:ex|
@@ -584,21 +783,17 @@ CoInterpreterMT >> enterSmalltalkExecutive [
 					self assert: (ex returnValue = ReturnToThreadSchedulingLoop
 								 or: [vmo = tlti]).
 					ex return: ex returnValue].
-	 "We must cut back the stack pointers on return to mimic the longjmp."
-	 cogit processor
-		setFramePointer: thisActivationsFP
-		stackPointer: thisActivationsSP.
 	 retVal = ReturnToInterpreter] whileTrue
 ]
 
 { #category : #'callback support' }
-CoInterpreterMT >> enterSmalltalkExecutiveFromCallback [
+StackInterpreterMT >> enterSmalltalkExecutiveFromCallback [
 	<inline: true>
 	self threadSchedulingLoop: cogThreadManager currentVMThread
 ]
 
 { #category : #initialization }
-CoInterpreterMT >> enterSmalltalkExecutiveImplementation [
+StackInterpreterMT >> enterSmalltalkExecutiveImplementation [
 	"Main entry-point into the interpreter at each execution level, where an execution
 	 level is either the start of execution or reentry for a callback.  Capture the C stack
 	 pointers so that calls from machine-code into the C run-time occur at this level.
@@ -610,8 +805,6 @@ CoInterpreterMT >> enterSmalltalkExecutiveImplementation [
 	 control to another thread."
 	<inline: false>
 	self assertSaneThreadAndProcess.
-	cogit assertCStackWellAligned.
-	cogit ceCaptureCStackPointers.
 	"Setjmp for reentry into interpreter from elsewhere, e.g. machine-code trampolines."
 	(self sigset: reenterInterpreter jmp: 0) > 1 ifTrue:
 		[^0].
@@ -619,8 +812,6 @@ CoInterpreterMT >> enterSmalltalkExecutiveImplementation [
 		[self returnToExecutive: false postContextSwitch: true
 		 "NOTREACHED"].
 	self setMethod: (self iframeMethod: framePointer).
-	instructionPointer = cogit ceReturnToInterpreterPC ifTrue:
-		[instructionPointer := self iframeSavedIP: framePointer].
 	self assertValidExecutionPointe: instructionPointer r: framePointer s: stackPointer imbar: true line: #'__LINE__'.
 	self interpret.
 	"NOTREACHED"
@@ -628,7 +819,18 @@ CoInterpreterMT >> enterSmalltalkExecutiveImplementation [
 ]
 
 { #category : #'process primitive support' }
-CoInterpreterMT >> forceInterruptCheckFromHeartbeat [
+StackInterpreterMT >> forProcessPrimitiveReturnToExecutivePostContextSwitch: inInterpreter [
+	"Do a returnToExecutive: inInterpreter postContextSwitch: true for a process primtive
+	 being sure to sample the profile clock before making the switch."
+	<inline: true>
+	"If we are profiling, take accurate primitive measures"
+	nextProfileTick > 0 ifTrue:
+		[self checkProfileTick: newMethod].
+	^self returnToExecutive: inInterpreter postContextSwitch: true
+]
+
+{ #category : #UI }
+StackInterpreterMT >> forceInterruptCheckFromHeartbeat [
 	"Force an interrupt check ASAP. This version is the
 	 entry-point to forceInterruptCheck for the heartbeat
 	 timer to allow for repeatable debugging.
@@ -637,17 +839,22 @@ CoInterpreterMT >> forceInterruptCheckFromHeartbeat [
 	suppressHeartbeatFlag ifFalse:
 		[self checkForLongRunningPrimitive.
 		 self sqLowLevelMFence.
-		 deferSmash
+"		 deferSmash
 			ifTrue:
 				[deferredSmash := true.
 				self sqLowLevelMFence]
 			ifFalse:
-				[self forceInterruptCheck.
-				 self checkVMOwnershipFromHeartbeat]]
+				["self forceInterruptCheck.
+				 self checkVMOwnershipFromHeartbeat"]"]
+]
+
+{ #category : #accessing }
+StackInterpreterMT >> foreignCallbackProcessSlot: anInteger [ 
+	foreignCallbackProcessSlot := anInteger
 ]
 
 { #category : #'internal interpreter access' }
-CoInterpreterMT >> getCogVMFlags [
+StackInterpreterMT >> getCogVMFlags [
 	"Answer an array of flags indicating various properties of the Cog VM.
 	 These are the same as the image header flags shifted right two bits (excluding float order and full screen flags).
 	 Bit 0: implies the image's Process class has threadId as its 3rd inst var (zero relative)
@@ -657,7 +864,6 @@ CoInterpreterMT >> getCogVMFlags [
 	 Bit 4: if set, implies the new finalization scheme where WeakArrays are queued
 	 Bit 5: if set, implies wheel events will be delivered as such and not mapped to arrow key events"
 	^objectMemory integerObjectOf: (processHasThreadId ifTrue: [1] ifFalse: [0])
-									+ (flagInterpretedMethods ifTrue: [2] ifFalse: [0])
 									+ (preemptionYields ifTrue: [0] ifFalse: [4])
 									+ (noThreadingOfGUIThread ifTrue: [8] ifFalse: [0])
 									+ (newFinalization ifTrue: [16] ifFalse: [0])
@@ -665,12 +871,12 @@ CoInterpreterMT >> getCogVMFlags [
 ]
 
 { #category : #'image save/restore' }
-CoInterpreterMT >> getImageHeaderFlags [
+StackInterpreterMT >> getImageHeaderFlags [
 	"Answer the flags that are contained in the 7th long of the image header."
+	1halt.
 	^fullScreenFlag "0 or 1"
 	+ (VMBIGENDIAN ifTrue: [0] ifFalse: [2]) "this is the imageFloatsLittleEndian flag"
 	+ (processHasThreadId ifTrue: [4] ifFalse: [0])
-	+ (flagInterpretedMethods ifTrue: [8] ifFalse: [0])
 	+ (preemptionYields ifTrue: [0] ifFalse: [16r10])
 	+ (noThreadingOfGUIThread ifTrue: [16r20] ifFalse: [0])
 	+ (newFinalization ifTrue: [16r40] ifFalse: [0])
@@ -679,13 +885,38 @@ CoInterpreterMT >> getImageHeaderFlags [
 ]
 
 { #category : #'process primitive support' }
-CoInterpreterMT >> getMaxWaitingPriority [
+StackInterpreterMT >> getMaxWaitingPriority [
 	<cmacro: '() GIV(maxWaitingPriority)'>
 	^maxWaitingPriority
 ]
 
+{ #category : #'process primitive support' }
+StackInterpreterMT >> getVMSpecialObject: aVMObjectClass atIndex: anIndex [
+
+	^ self
+		cCode: [ objectMemory splObj: anIndex ]
+		inSmalltalk: [ 
+			aVMObjectClass
+				objectMemory: objectMemory
+				address: (objectMemory splObj: anIndex) ]
+]
+
 { #category : #'vm scheduling' }
-CoInterpreterMT >> inGUIThread [
+StackInterpreterMT >> ifBackwardsCheckForEvents: offset [
+	"Backward jump means we're in a loop; check for possible interrupts."
+	<inline: true>
+	(offset < 0
+	 and: [localSP < stackLimit]) ifTrue:
+		[ | switched |
+		 self externalizeIPandSP.
+		 switched := self checkForEventsMayContextSwitch: true.
+   		 self returnToExecutive: true postContextSwitch: switched.
+		 self browserPluginReturnIfNeeded.
+		 self internalizeIPandSP]
+]
+
+{ #category : #'vm scheduling' }
+StackInterpreterMT >> inGUIThread [
 	"The first thread is assumed to be the GUI thread, the VM thread that expects to receive
 	 window events, etc.  This might appear to invite race conditions but it is only to be used
 	 to decide whether to not give up the VM from the GUI thread (see disownVM:)."
@@ -693,7 +924,7 @@ CoInterpreterMT >> inGUIThread [
 ]
 
 { #category : #initialization }
-CoInterpreterMT >> initialEnterSmalltalkExecutive [
+StackInterpreterMT >> initialEnterSmalltalkExecutive [
 	"Main entry-point into the interpreter at system start-up."
 	"Ensure that the myList of the activeProcess is nil.  Needed to load
 	 old images which don't nil myList in transferTo:{from:}"
@@ -704,14 +935,18 @@ CoInterpreterMT >> initialEnterSmalltalkExecutive [
 ]
 
 { #category : #initialization }
-CoInterpreterMT >> initialize [
+StackInterpreterMT >> initialize [
 	super initialize.
 	relinquishing := checkThreadActivation := deferThreadSwitch := false.
-	foreignCallbackPriority := maxWaitingPriority := disownCount := willNotThreadWarnCount := 0
+	foreignCallbackPriority := maxWaitingPriority := disownCount := willNotThreadWarnCount := ownVMCount := 0.
+	
+	self
+		cCode: 'pthread_mutex_init(&vmOwnerLock, NULL)'
+		inSmalltalk: [ self threadManager vmOwnerLock: Mutex new ]
 ]
 
 { #category : #initialization }
-CoInterpreterMT >> initializeInterpreter: bytesToShift [ 
+StackInterpreterMT >> initializeInterpreter: bytesToShift [ 
 	super initializeInterpreter: bytesToShift.
 	foreignCallbackProcessSlot := (objectMemory lengthOf: objectMemory specialObjectsOop) > ForeignCallbackProcess
 										ifTrue: [ForeignCallbackProcess]
@@ -719,58 +954,106 @@ CoInterpreterMT >> initializeInterpreter: bytesToShift [
 ]
 
 { #category : #simulation }
-CoInterpreterMT >> initializeProcessorForThreadIndex: threadIndex [
+StackInterpreterMT >> initializeProcessorForThreadIndex: threadIndex [
 	"Each simulated processor thread gets 4k of the rump C stack."
 	<doNotGenerate>
-	cogit initializeProcessorStack: (self cStackRangeForThreadIndex: threadIndex) last
+
 ]
 
 { #category : #initialization }
-CoInterpreterMT >> initializeVMOwnerLock [
-	
-	"Initially it seems we do not need to call anybody.
-	The VMOwner lock is initialized by the cogit, which has a ifdef COGMT for it...
+StackInterpreterMT >> initializeVMOwnerLock [
+	self
+		cCode: 'pthread_mutex_init(&vmOwnerLock, NULL)'
+		inSmalltalk: [ self halt ]
+]
 
-	cogit generateVMOwnerLockFunctions"
+{ #category : #'vm scheduling' }
+StackInterpreterMT >> internalActivateNewMethod [
+	| methodHeader numTemps rcvr switched |
+	<inline: true>
+
+	methodHeader := objectMemory methodHeaderOf: newMethod.
+	numTemps := self temporaryCountOfMethodHeader: methodHeader.
+	self assert: argumentCount = (self argumentCountOfMethodHeader: methodHeader).
+	rcvr := self internalStackValue: argumentCount. "could new rcvr be set at point of send?"
+	self assert: (objectMemory isOopForwarded: rcvr) not.
+
+	self internalPush: localIP.
+	self internalPush: localFP.
+	localFP := localSP.
+	self internalPush: newMethod.
+	self setMethod: newMethod methodHeader: methodHeader.
+	self internalPush: (self
+						encodeFrameFieldHasContext: false
+						isBlock: false
+						numArgs: (self argumentCountOfMethodHeader: methodHeader)).
+	self internalPush: objectMemory nilObject. "FxThisContext field"
+	self internalPush: rcvr.
+
+	"Initialize temps..."
+	argumentCount + 1 to: numTemps do:
+		[:i | self internalPush: objectMemory nilObject].
+
+	"-1 to account for pre-increment in fetchNextBytecode"
+	localIP := self pointerForOop: (self initialIPForHeader: methodHeader method: newMethod) - 1.
+
+	(self methodHeaderHasPrimitive: methodHeader) ifTrue:
+		["Skip the CallPrimitive bytecode, if it's there, and store the error code if the method starts
+		  with a long store temp.  Strictly no need to skip the store because it's effectively a noop."
+		 localIP := localIP + (self sizeOfCallPrimitiveBytecode: methodHeader).
+		 primFailCode ~= 0 ifTrue:
+			[self reapAndResetErrorCodeTo: localSP header: methodHeader]].
+
+	self assert: (self frameNumArgs: localFP) = argumentCount.
+	self assert: (self frameIsBlockActivation: localFP) not.
+	self assert: (self frameHasContext: localFP) not.
+
+	"Now check for stack overflow or an event (interrupt, must scavenge, etc)."
+	localSP < stackLimit ifTrue:
+		[self externalizeIPandSP.
+		 switched := self handleStackOverflowOrEventAllowContextSwitch:
+						(self canContextSwitchIfActivating: newMethod header: methodHeader).
+		 self returnToExecutive: true postContextSwitch: switched.
+		 self internalizeIPandSP]
 ]
 
 { #category : #'process primitive support' }
-CoInterpreterMT >> isAffinedProcess: aProcess [
+StackInterpreterMT >> isAffinedProcess: aProcess [
 	^self isAffinedThreadId: (self ownerIndexOfProcess: aProcess)
 ]
 
 { #category : #'process primitive support' }
-CoInterpreterMT >> isAffinedThreadId: threadId [
+StackInterpreterMT >> isAffinedThreadId: threadId [
 	^(objectMemory isIntegerObject: threadId)
 	  and: [((objectMemory integerValueOf: threadId) bitAnd: 1) = 0]
 ]
 
 { #category : #'process primitive support' }
-CoInterpreterMT >> isBoundProcess: aProcess [
-	^self isBoundThreadId: (self threadIdFieldOf: aProcess)
+StackInterpreterMT >> isBoundProcess: aProcess [
+	^self isBoundThreadId: (self ownerIndexOfProcess: aProcess)
 ]
 
 { #category : #'process primitive support' }
-CoInterpreterMT >> isBoundThreadId: threadId [
+StackInterpreterMT >> isBoundThreadId: threadId [
 	^(objectMemory isIntegerObject: threadId)
 	  and: [((objectMemory integerValueOf: threadId) bitAnd: 1) = 1]
 ]
 
 { #category : #simulation }
-CoInterpreterMT >> isThreadedVM [
+StackInterpreterMT >> isThreadedVM [
 	<doNotGenerate>
 	^true
 ]
 
 { #category : #'process primitive support' }
-CoInterpreterMT >> isUnboundThreadId: threadId [
+StackInterpreterMT >> isUnboundThreadId: threadId [
 	"Answer if the threadId is neither affined nor bound.  Not the same as bound not."
 	^threadId = objectMemory nilObject
 	  or: [((objectMemory integerValueOf: threadId) bitAnd: (ThreadIdMask << 1) + 1) = 0]
 ]
 
 { #category : #initialization }
-CoInterpreterMT >> loadInitialContext [
+StackInterpreterMT >> loadInitialContext [
 	| activeProc |
 	super loadInitialContext.
 	activeProc := self activeProcess.
@@ -779,7 +1062,7 @@ CoInterpreterMT >> loadInitialContext [
 ]
 
 { #category : #'object memory support' }
-CoInterpreterMT >> mapInterpreterOops [
+StackInterpreterMT >> mapInterpreterOops [
 	"Map all oops in the interpreter's state to their new values 
 	 during garbage collection or a become: operation."
 	"Assume: All traced variables contain valid oops."
@@ -801,10 +1084,41 @@ CoInterpreterMT >> mapInterpreterOops [
 ]
 
 { #category : #'object memory support' }
-CoInterpreterMT >> markAndTraceInterpreterOops: fullGCFlag [
+StackInterpreterMT >> markAndTraceInterpreterOops: fullGCFlag [
 	"Mark and trace all oops in the interpreter's state."
+	"Assume: All traced variables contain valid oops.
+	 N.B. Don't trace messageSelector and lkupClass; these are ephemeral, live
+	 only during message lookup and because createActualMessageTo will not
+	 cause a GC these cannot change during message lookup."
+	| oop |
 	<var: #vmThread type: #'CogVMThread *'>
-	super markAndTraceInterpreterOops: fullGCFlag.
+	"Must mark stack pages first to initialize the per-page trace
+	 flags for full garbage collect before any subsequent tracing."
+	self markAndTraceStackPages: fullGCFlag.
+	self markAndTraceTraceLog.
+	self markAndTracePrimTraceLog.
+	objectMemory markAndTrace: objectMemory specialObjectsOop. "also covers nilObj, trueObj, falseObj, and compact classes"
+	(objectMemory isImmediate: newMethod) ifFalse:
+		[objectMemory markAndTrace: newMethod].
+	self traceProfileState.
+	tempOop = 0 ifFalse: [objectMemory markAndTrace: tempOop].
+	tempOop2 = 0 ifFalse: [objectMemory markAndTrace: tempOop2].
+
+	1 to: objectMemory remapBufferCount do:
+		[:i|
+		oop := objectMemory remapBuffer at: i.
+		(objectMemory isIntegerObject: oop) ifFalse:
+			[objectMemory markAndTrace: oop]].
+
+	"Callback support - trace suspended callback list - will be made per-thread soon"
+	1 to: jmpDepth do:
+		[:i|
+		oop := suspendedCallbacks at: i.
+		(objectMemory isIntegerObject: oop) ifFalse:
+			[objectMemory markAndTrace: oop].
+		oop := suspendedMethods at: i.
+		(objectMemory isIntegerObject: oop) ifFalse:
+			[objectMemory markAndTrace: oop]].
 
 	"Per-thread state; trace each thread's own newMethod and stack of awol processes."
 	1 to: cogThreadManager getNumThreads do:
@@ -818,8 +1132,14 @@ CoInterpreterMT >> markAndTraceInterpreterOops: fullGCFlag [
 				objectMemory markAndTrace: (vmThread awolProcesses at: j)]]]
 ]
 
+{ #category : #accessing }
+StackInterpreterMT >> newMethod: anInteger [ 
+	
+	newMethod := anInteger
+]
+
 { #category : #'vm scheduling' }
-CoInterpreterMT >> ownVM: threadIndexAndFlags [
+StackInterpreterMT >> ownVM: threadIndexAndFlags [
 	<api>
 	<inline: false>
 	"This is the entry-point for plugins and primitives that wish to reacquire the VM after having
@@ -848,8 +1168,6 @@ CoInterpreterMT >> ownVM: threadIndexAndFlags [
 		 self assert: disowningVMThread = nil.
 		 (flags anyMask: DisownVMLockOutFullGC) ifTrue:
 			[objectMemory decrementFullGCLock].
-		 cogit recordEventTrace ifTrue:
-			[self recordTrace: TraceOwnVM thing: ConstZero source: 0].
 		 ^0].
 
 	vmThread := cogThreadManager acquireVMFor: threadIndex.
@@ -859,17 +1177,9 @@ CoInterpreterMT >> ownVM: threadIndexAndFlags [
 		[objectMemory decrementFullGCLock].
 	disowningVMThread notNil ifTrue:
 		[vmThread = disowningVMThread ifTrue:
-			[self cCode: ''
-				inSmalltalk:
-					[| range |
-					 range := self cStackRangeForThreadIndex: threadIndex.
-					 self assert: (range includes: cogit getCStackPointer).
-					 self assert: (range includes: cogit getCFramePointer)].
-			 self assert: self successful.
+			[self assert: self successful.
 			 self assert: (objectMemory fetchPointer: MyListIndex ofObject: self activeProcess) = objectMemory nilObject.
 			 disowningVMThread := nil.
-			 cogit recordEventTrace ifTrue:
-				[self recordTrace: TraceOwnVM thing: ConstOne source: 0].
 			 ^0].  "if not preempted we're done."
 		self preemptDisowningThread].
 	"We've been preempted; we must restore state and update the threadId
@@ -891,21 +1201,14 @@ CoInterpreterMT >> ownVM: threadIndexAndFlags [
 	objectMemory
 		storePointer: ActiveProcessIndex ofObject: sched withValue: myProc;
 		storePointerUnchecked: MyListIndex ofObject: myProc withValue: objectMemory nilObject.
-
 	"Only unaffine if the process was affined at this level and did not become bound in the interim."
 	((threadIndexAndFlags anyMask: ProcessUnaffinedOnDisown)
-		and: [ (self isBoundProcess: myProc) not ])
-		ifTrue: [self setOwnerIndexOfProcess: myProc to: 0 bind: false].
-	activeProcessAffined := (self ownerIndexOfProcess: myProc) ~= 0.
-
+	 and: [(self isBoundProcess: myProc) not]) ifTrue:
+		[self setOwnerIndexOfProcess: myProc to: 0 bind: false].
 	self initPrimCall.
 	self externalSetStackPageAndPointersForSuspendedContextOfProcess: myProc.
 	"If this primitive is called from machine code maintain the invariant that the return pc
 	 of an interpreter callee calling a machine code caller is ceReturnToInterpreterPC."
-	(vmThread inMachineCode
-	 and: [instructionPointer >= objectMemory startOfMemory]) ifTrue:
-		[self iframeSavedIP: framePointer put: instructionPointer.
-		 instructionPointer := cogit ceReturnToInterpreterPC].
 	newMethod := vmThread newMethodOrNull.
 	argumentCount := vmThread argumentCount.
 	self cCode:
@@ -915,22 +1218,12 @@ CoInterpreterMT >> ownVM: threadIndexAndFlags [
 		inSmalltalk:
 			[reenterInterpreter := vmThread reenterInterpreter].
 	vmThread newMethodOrNull: nil.
-	self cCode: ''
-		inSmalltalk:
-			[| range |
-			 range := self cStackRangeForThreadIndex: threadIndex.
-			 self assert: (range includes: vmThread cStackPointer).
-			 self assert: (range includes: vmThread cFramePointer)].
-	cogit setCStackPointer: vmThread cStackPointer.
-	cogit setCFramePointer: vmThread cFramePointer.
 	self assert: newMethod ~~ nil.
-	cogit recordEventTrace ifTrue:
-		[self recordTrace: TraceOwnVM thing: ConstTwo source: 0].
 	^threadIndexAndFlags bitAnd: OwnVMForeignThreadFlag
 ]
 
 { #category : #'vm scheduling' }
-CoInterpreterMT >> ownVMFromUnidentifiedThread [
+StackInterpreterMT >> ownVMFromUnidentifiedThread [
 	"Attempt to take ownership from a thread that as yet doesn't know its index.
 	 This supports callbacks where the callback could originate from any thread.
 	
@@ -979,19 +1272,19 @@ CoInterpreterMT >> ownVMFromUnidentifiedThread [
 ]
 
 { #category : #'process primitive support' }
-CoInterpreterMT >> ownerIndexOfProcess: aProcess [
+StackInterpreterMT >> ownerIndexOfProcess: aProcess [
 	^self ownerIndexOfThreadId: (self threadIdFieldOf: aProcess)
 ]
 
 { #category : #'process primitive support' }
-CoInterpreterMT >> ownerIndexOfThreadId: threadId [
+StackInterpreterMT >> ownerIndexOfThreadId: threadId [
 	^(objectMemory isIntegerObject: threadId)
 		ifTrue: [(objectMemory integerValueOf: threadId) >> 1 bitAnd: ThreadIdMask]
 		ifFalse: [0]
 ]
 
 { #category : #'vm scheduling' }
-CoInterpreterMT >> preemptDisowningThread [
+StackInterpreterMT >> preemptDisowningThread [
 	"Set the relevant state for disowningVMThread so that it can resume after
 	 being preempted and set disowningVMThread to nil to indicate preemption.
 
@@ -1016,18 +1309,6 @@ CoInterpreterMT >> preemptDisowningThread [
 	self assert: disowningVMThread notNil.
 	self assert: (disowningVMThread state = CTMUnavailable
 				or: [disowningVMThread state = CTMWantingOwnership]).
-	self cCode: ''
-		inSmalltalk:
-			[| range |
-			 range := self cStackRangeForThreadIndex: disowningVMThread index.
-			 self assert: (range includes: cogit getCStackPointer).
-			 self assert: (range includes: cogit getCFramePointer)].
-	cogit recordEventTrace ifTrue:
-		[self recordTrace: TracePreemptDisowningThread
-			thing: (objectMemory integerObjectOf: disowningVMThread index)
-			source: 0].
-	disowningVMThread cStackPointer: cogit getCStackPointer.
-	disowningVMThread cFramePointer: cogit getCFramePointer.
 	activeProc := self activeProcess.
 	self assert: (objectMemory fetchPointer: MyListIndex ofObject: activeProc) = objectMemory nilObject.
 	objectMemory
@@ -1065,15 +1346,91 @@ CoInterpreterMT >> preemptDisowningThread [
 			[preemptedThread reenterInterpreter: reenterInterpreter]
 ]
 
-{ #category : #'I/O primitives' }
-CoInterpreterMT >> primitiveGetNextEvent [
+{ #category : #accessing }
+StackInterpreterMT >> preemptionYields: aBoolean [
+	<doNotGenerate>
+	
+	preemptionYields := aBoolean
+]
+
+{ #category : #'vm scheduling' }
+StackInterpreterMT >> primitiveEnterCriticalSection [
+	"Attempt to enter a CriticalSection/Mutex.  If not owned, set the owner to the current
+	 process and answer false. If owned by the current process  answer true.   Otherwise
+	 suspend the process.  Answer if the receiver is owned by the current process."
+	| criticalSection owningProcessIndex owningProcess activeProc inInterpreter |
+	argumentCount > 0
+		ifTrue:
+			[criticalSection := self stackValue: 1.  "rcvr"
+			 activeProc := self stackTop]
+		ifFalse:
+			[criticalSection := self stackTop.  "rcvr"
+			 activeProc := self activeProcess].
+	owningProcessIndex := ExcessSignalsIndex. "CriticalSections are laid out like Semaphores"
+	owningProcess := objectMemory fetchPointer: owningProcessIndex ofObject: criticalSection.
+	owningProcess = objectMemory nilObject ifTrue:
+		[objectMemory storePointer: owningProcessIndex
+			ofObject: criticalSection
+			withValue: activeProc.
+		 ^self pop: argumentCount + 1 thenPush: objectMemory falseObject].
+	owningProcess = activeProc ifTrue:
+		[^self pop: argumentCount + 1 thenPush: objectMemory trueObject].
+	"Arrange to answer false (unowned) when the process is resumed."
+	self pop: argumentCount + 1 thenPush: objectMemory falseObject.
+	"We're going to switch process, either to an interpreted frame or a machine
+	 code frame. To know whether to return or enter machine code we have to
+	 know from whence we came.  We could have come from the interpreter,
+	 either directly or via a machine code primitive.  We could have come from
+	 machine code.  The instructionPointer tells us where from:"
+	inInterpreter := instructionPointer >= objectMemory startOfMemory.
+	self addLastLink: activeProc toList: criticalSection.
+	self transferTo: self wakeHighestPriority from: CSEnterCriticalSection.
+	self forProcessPrimitiveReturnToExecutivePostContextSwitch: inInterpreter
+]
+
+{ #category : #'vm scheduling' }
+StackInterpreterMT >> primitiveExitCriticalSection [
+	"Exit the critical section.
+	 This may change the active process as a result."
+	| criticalSection owningProcessIndex inInterpreter owningProcess |
+	criticalSection := self stackTop.  "rcvr"
+	owningProcessIndex := ExcessSignalsIndex. "CriticalSections are laid out like Semaphores"
+	(self isEmptyList: criticalSection)
+		ifTrue:
+			[objectMemory storePointerUnchecked: owningProcessIndex
+				ofObject: criticalSection
+				withValue: objectMemory nilObject]
+		ifFalse:
+			["We're going to switch process, either to an interpreted frame or a machine
+			  code frame. To know whether to return or enter machine code we have to
+			  know from whence we came.  We could have come from the interpreter,
+			  either directly or via a machine code primitive.  We could have come from
+			  machine code.  The instructionPointer tells us where from:"
+			 inInterpreter := instructionPointer >= objectMemory startOfMemory.
+			 owningProcess := self removeFirstLinkOfList: criticalSection.
+			 "store check unnecessary because aSemaphore referred to owningProcess
+			  via its FirstLinkIndex slot before owningProcess was removed."
+			 objectMemory storePointerUnchecked: owningProcessIndex
+				ofObject: criticalSection
+				withValue: owningProcess.
+			 "Note that resume: isn't fair; it won't suspend the active process.
+			  For fairness we must do the equivalent of a primitiveYield, but that
+			  may break old code, so we stick with unfair resume:."
+			 (self resume: owningProcess
+				preemptedYieldingIf: preemptionYields
+				from: CSExitCriticalSection) ifTrue:
+						[self forProcessPrimitiveReturnToExecutivePostContextSwitch: inInterpreter]]
+]
+
+{ #category : #UI }
+StackInterpreterMT >> primitiveGetNextEvent [
 	self inGUIThread ifFalse: [ 
 		^ self primitiveFailFor: PrimErrInappropriate ].
 	^ super primitiveGetNextEvent
 ]
 
 { #category : #'process primitives' }
-CoInterpreterMT >> primitiveProcessBindToThreadId [
+StackInterpreterMT >> primitiveProcessBindToThreadId [
 	"Attempt to bind the receiver to the thread with the id of the argument or nil, where the receiver is a Process.
 	 If successful the VM will ensure that there are at least id many threads active."
 	| aProcess id ec |
@@ -1085,12 +1442,12 @@ CoInterpreterMT >> primitiveProcessBindToThreadId [
 										and: [(objectMemory integerValueOf: id) >= 0]])
 	and: [(objectMemory isPointers: aProcess)
 	and: [(objectMemory slotSizeOf: aProcess) >= (ThreadIdIndex + 1)]]) ifFalse:
-		[^self primitiveFailFor: PrimErrBadArgument].
+		[1halt.^self primitiveFailFor: PrimErrBadArgument].
 	id := id = objectMemory nilObject ifTrue: [0] ifFalse: [objectMemory integerValueOf: id].
 	id >= cogThreadManager maxNumThreads ifTrue:
-		[^self primitiveFailFor: PrimErrLimitExceeded].
+		[1halt.^self primitiveFailFor: PrimErrLimitExceeded].
 	(ec := self bindProcess: aProcess toId: id) ~= 0 ifTrue:
-		[^self primitiveFailFor: ec].
+		[1halt.^self primitiveFailFor: ec].
 	(aProcess = self activeProcess
 	and: [(activeProcessAffined := id ~= 0)
 	and: [id ~= cogThreadManager getVMOwner]]) ifTrue:
@@ -1102,7 +1459,7 @@ CoInterpreterMT >> primitiveProcessBindToThreadId [
 ]
 
 { #category : #'process primitives' }
-CoInterpreterMT >> primitiveProcessBoundThreadId [
+StackInterpreterMT >> primitiveProcessBoundThreadId [
 	"Answer the receiver's current thread Id or nil, where the receiver is a Process."
 	| aProcess id |
 	<export: true>
@@ -1116,7 +1473,7 @@ CoInterpreterMT >> primitiveProcessBoundThreadId [
 ]
 
 { #category : #'I/O primitives' }
-CoInterpreterMT >> primitiveRelinquishProcessor [
+StackInterpreterMT >> primitiveRelinquishProcessor [
 	"Relinquish the processor for up to the given number of microseconds.
 	 The exact behavior of this primitive is platform dependent.
 	 Override to check for waiting threads."
@@ -1141,9 +1498,7 @@ CoInterpreterMT >> primitiveRelinquishProcessor [
 		 cause a VM abort if no runnable process is found.  But we /do/ want to allow
 		 FFI calls that have completed, or callbacks a chance to get into the VM; they
 		 do have something to do.  DisownVMForProcessorRelinquish indicates this."
-		[currentCStackPointer := cogit getCStackPointer.
-		 currentCFramePointer := cogit getCFramePointer.
-		 self cCode:
+		[self cCode:
 			[self memcpy: savedReenterInterpreter asVoidPointer
 				_: reenterInterpreter
 				_: (self sizeof: #'jmp_buf')].
@@ -1154,8 +1509,6 @@ CoInterpreterMT >> primitiveRelinquishProcessor [
 		 self ownVM: threadIndexAndFlags.
 		 self assert: relinquishing not.
 		 self assert: cogThreadManager currentVMThread state = CTMAssignableOrInVM.
-		 self assert: currentCStackPointer = cogit getCStackPointer.
-		 self assert: currentCFramePointer = cogit getCFramePointer.
 		 self cCode:
 			[self assert: (self mem: (self cCoerceSimple: savedReenterInterpreter to: #'void *')
 						cm: reenterInterpreter
@@ -1164,107 +1517,216 @@ CoInterpreterMT >> primitiveRelinquishProcessor [
 	self pop: 1  "microSecs; leave rcvr on stack"
 ]
 
-{ #category : #'I/O primitives' }
-CoInterpreterMT >> primitiveScreenSize [
+{ #category : #'vm scheduling' }
+StackInterpreterMT >> primitiveResume [
+	"Put this process on the scheduler's lists thus allowing it to proceed next time there is
+	 a chance for processes of it's priority level.  It must go to the back of its run queue so
+	 as not to preempt any already running processes at this level.  If the process's priority
+	 is higher than the current process, preempt the current process."
+	| proc inInterpreter |
+	proc := self stackTop.  "rcvr"
+	(objectMemory isContext: (objectMemory followField: SuspendedContextIndex ofObject: proc)) ifFalse:
+		[^self primitiveFail].
+	"We're about to switch process, either to an interpreted frame or a
+	 machine code frame. To know whether to return or enter machine code
+	 we have to know from whence we came.  We could have come from the
+	 interpreter, either directly or via a machine code primitive.  We could have
+	 come from machine code.  The instructionPointer tells us where from:"
+	inInterpreter := instructionPointer >= objectMemory startOfMemory.
+	(self resume: proc preemptedYieldingIf: preemptionYields from: CSResume) ifTrue:
+		[self forProcessPrimitiveReturnToExecutivePostContextSwitch: inInterpreter]
+
+	"Personally I would like to check MyList, which should not be one of the elements of the scheduler lists.
+	 But there are awful race conditions in things like should:notTakeMoreThan: that mean we can't.
+	 eem 9/27/2010 23:08. e.g.
+
+	| proc myList classLinkedList |
+	proc := self stackTop.
+	myList := objectMemory fetchPointer: MyListIndex ofObject: proc.
+	classLinkedList := self superclassOf: (objectMemory splObj: ClassSemaphore).
+	((self fetchClassOfNonInt: myList) ~= classLinkedList
+	and: [objectMemory isContext: (objectMemory fetchPointer: SuspendedContextIndex ofObject: proc)]) ifFalse:
+		[^self primitiveFail].
+	''We're about to switch process, either to an interpreted frame or a
+	 machine code frame. To know whether to return or enter machine code
+	 we have to know from whence we came.  We could have come from the
+	 interpreter, either directly or via a machine code primitive.  We could have
+	 come from machine code.  The instructionPointer tells us where from:''
+	inInterpreter := instructionPointer >= objectMemory startOfMemory.
+	(self resume: proc  preemptedYieldingIf: preemptionYields from: CSResume) ifTrue:
+		[self forProcessPrimitiveReturnToExecutivePostContextSwitch: inInterpreter]"
+]
+
+{ #category : #UI }
+StackInterpreterMT >> primitiveScreenSize [
 
 	self inGUIThread ifFalse: [ 
 		^ self primitiveFailFor: PrimErrInappropriate ].
 	^ super primitiveScreenSize
 ]
 
-{ #category : #'I/O primitives' }
-CoInterpreterMT >> primitiveShowDisplayRect [
+{ #category : #'vm scheduling' }
+StackInterpreterMT >> primitiveSignal [
+	"Synchronously signal the semaphore.
+	 This may change the active process as a result."
+	| inInterpreter |
+	"We may be about to switch process, either to an interpreted frame or a
+	 machine code frame. To know whether to return or enter machine code
+	 we have to know from whence we came.  We could have come from the
+	 interpreter, either directly or via a machine code primitive.  We could have
+	 come from machine code.  The instructionPointer tells us where from:"
+	inInterpreter := instructionPointer >= objectMemory startOfMemory.
+	(self synchronousSignal: self stackTop) ifTrue:
+		[self forProcessPrimitiveReturnToExecutivePostContextSwitch: inInterpreter]
+]
 
-	self inGUIThread ifFalse: [ 
-		^ self primitiveFailFor: PrimErrInappropriate ].
-	^ super primitiveShowDisplayRect
+{ #category : #'vm scheduling' }
+StackInterpreterMT >> primitiveSuspend [
+	"Primitive. Suspend the receiver, aProcess such that it can be executed again
+	by sending #resume. If the given process is not currently running, take it off
+	its corresponding list. The primitive returns the list the receiver was previously on."
+	| process myList |
+	process := self stackTop.
+	process = self activeProcess ifTrue:
+		[| inInterpreter |
+		"We're going to switch process, either to an interpreted frame or a machine
+		 code frame. To know whether to return or enter machine code we have to
+		 know from whence we came.  We could have come from the interpreter,
+		 either directly or via a machine code primitive.  We could have come from
+		 machine code.  The instructionPointer tells us where from:"
+		self pop: 1 thenPush: objectMemory nilObject.
+		inInterpreter := instructionPointer >= objectMemory startOfMemory.
+		self transferTo: self wakeHighestPriority from: CSSuspend.
+		^self forProcessPrimitiveReturnToExecutivePostContextSwitch: inInterpreter].
+	myList := objectMemory fetchPointer: MyListIndex ofObject: process.
+	"XXXX Fixme. We should really check whether myList is a kind of LinkedList or not
+	but we can't easily so just do a quick check for nil which is the most common case."
+	myList = objectMemory nilObject ifTrue:
+		[^self primitiveFailFor: PrimErrBadReceiver].
+	"Alas in Spur we need a read barrier"
+	(objectMemory isForwarded: myList) ifTrue:
+		[myList := objectMemory followForwarded: myList.
+		 objectMemory storePointer: MyListIndex ofObject: process withValue: myList].
+	self removeProcess: process fromList: myList.
+	self successful ifTrue:
+		[objectMemory storePointer: MyListIndex ofObject: process withValue: objectMemory nilObject.
+		 self pop: 1 thenPush: myList]
 ]
 
 { #category : #'process primitives' }
-CoInterpreterMT >> primitiveVMCurrentThreadId [
+StackInterpreterMT >> primitiveVMCurrentThreadId [
 	<export: true>
 	"Answer the VM's current thread's Id"
 	self cCode: [] inSmalltalk: [cogThreadManager isNil ifTrue: [^self primitiveFail]].
 	self pop: 1 thenPushInteger: cogThreadManager getVMOwner
 ]
 
-{ #category : #'debug support' }
-CoInterpreterMT >> printLogEntryAt: i [
-	<inline: false>
-	| intOrClass selectorOrMethod source |
-	intOrClass := traceLog at: i.
-	selectorOrMethod := traceLog at: i + 1.
-	self printNum: ((traceLog at: i + 2) bitShift: -16); space.
-	source := (traceLog at: i + 2) bitAnd: 16rFFFF.
-	source <= TraceIsFromInterpreter ifTrue:
-		[self print: (traceSources at: source); space].
-	(objectMemory isIntegerObject: intOrClass)
+{ #category : #'vm scheduling' }
+StackInterpreterMT >> primitiveWait [
+	| sema excessSignals activeProc inInterpreter |
+	sema := self stackTop.  "rcvr"
+	excessSignals := self fetchInteger: ExcessSignalsIndex ofObject: sema.
+	excessSignals > 0
 		ifTrue:
-			[| value |
-			value := objectMemory integerValueOf: selectorOrMethod.
-			intOrClass = TraceContextSwitch ifTrue:
-				[self print: 'context switch'].
-			 intOrClass = TraceBlockActivation ifTrue:
-				[self print: ' [] in '; printHex: selectorOrMethod].
-			 intOrClass = TraceBlockCreation ifTrue:
-				[self print: 'create [] '; printHex: selectorOrMethod].
-			 intOrClass = TraceIncrementalGC ifTrue:
-				[self print: 'incrementalGC'].
-			 intOrClass = TraceFullGC ifTrue:
-				[self print: 'fullGC'].
-			 intOrClass = TraceCodeCompaction ifTrue:
-				[self print: 'compactCode'].
-			 intOrClass = TraceVMCallback ifTrue:
-				[self print: 'callback'].
-			 intOrClass = TraceVMCallbackReturn ifTrue:
-				[self print: 'return from callback'].
-			 intOrClass = TraceThreadSwitch ifTrue:
-				[self print: 'thread switch '; printNum: (value bitAnd: 16rFFFF); print: '->'; printNum: (value >> 16)].
-			 intOrClass = TracePreemptDisowningThread ifTrue:
-				[self print: 'preempt thread '; printNum: value].
-			 intOrClass = TraceOwnVM ifTrue:
-				[self print: 'ownVM '; printNum: value].
-			 intOrClass = TraceDisownVM ifTrue:
-				[self print: 'disownVM '; printHex: value]]
+			[self storeInteger: ExcessSignalsIndex
+				ofObject: sema
+				withValue: excessSignals - 1]
 		ifFalse:
-			[self space; printNameOfClass: intOrClass count: 5; print: '>>'; printStringOf: selectorOrMethod].
-	source > TraceIsFromInterpreter ifTrue:
-		[self space; print: (traceSources at: source)].
-	self cr
+			["We're going to switch process, either to an interpreted frame or a machine
+			  code frame. To know whether to return or enter machine code we have to
+			  know from whence we came.  We could have come from the interpreter,
+			  either directly or via a machine code primitive.  We could have come from
+			  machine code.  The instructionPointer tells us where from:"
+			inInterpreter := instructionPointer >= objectMemory startOfMemory.
+			activeProc := self activeProcess.
+			self addLastLink: activeProc toList: sema.
+			self transferTo: self wakeHighestPriority from: CSWait.
+			self forProcessPrimitiveReturnToExecutivePostContextSwitch: inInterpreter]
 ]
 
-{ #category : #'debug support' }
-CoInterpreterMT >> recordThreadSwitchTo: ownerIndex source: sourceCode [
-	cogit recordEventTrace ifTrue:
-		[self recordTrace: TraceThreadSwitch
-			thing: (objectMemory integerObjectOf: (ownerIndex << 16) + cogThreadManager getVMOwner)
-			source: sourceCode]
-]
+{ #category : #'vm scheduling' }
+StackInterpreterMT >> primitiveYield [
+"primitively do the equivalent of Process>yield"
+	| scheduler activeProc priority processLists processList inInterpreter |
+	scheduler := self schedulerPointer.
+	activeProc := objectMemory fetchPointer: ActiveProcessIndex ofObject: scheduler.
+	priority := self quickFetchInteger: PriorityIndex ofObject: activeProc.
+	processLists := objectMemory fetchPointer: ProcessListsIndex ofObject: scheduler.
+	processList := objectMemory fetchPointer: priority - 1 ofObject: processLists.
 
-{ #category : #'debug support' }
-CoInterpreterMT >> recordTrace: classOrInteger thing: selector source: source [
-	traceLog at: traceLogIndex put: classOrInteger.
-	traceLog at: traceLogIndex + 1 put: selector.
-	traceLog at: traceLogIndex + 2 put: source + (cogThreadManager getVMOwner bitShift: 16).
-	traceLogIndex := traceLogIndex + 3 \\ TraceBufferSize
+	(self isEmptyList: processList) ifTrue:
+		[^nil].
+	"We're going to switch process, either to an interpreted frame or a machine
+	 code frame. To know whether to return or enter machine code we have to
+	 know from whence we came.  We could have come from the interpreter,
+	 either directly or via a machine code primitive.  We could have come from
+	 machine code.  The instructionPointer tells us where from:"
+	inInterpreter := instructionPointer >= objectMemory startOfMemory.
+	self addLastLink: activeProc toList: processList.
+	self transferTo: self wakeHighestPriority from: CSYield.
+	self forProcessPrimitiveReturnToExecutivePostContextSwitch: inInterpreter
 ]
 
 { #category : #'process primitive support' }
-CoInterpreterMT >> returnToSchedulingLoopAndReleaseVMOrWakeThread: vmThread source: source [
+StackInterpreterMT >> recordContextSwitchFrom: aProcess in: sourceCode [
+	"nothing"
+]
+
+{ #category : #'debug support' }
+StackInterpreterMT >> recordThreadSwitchTo: ownerIndex source: sourceCode [
+]
+
+{ #category : #'process primitive support' }
+StackInterpreterMT >> resume: aProcess preemptedYieldingIf: yieldImplicitly from: sourceCode [
+	"Make aProcess runnable and if its priority is higher than  that of the
+	 current process, preempt the current process.   Answer if the current
+	 process was preempted.  If the current process was preempted then if
+	 yieldImplicitly add the current process to the back of its run queue,
+	 causing an implicit yeild to other processes on the run queue,  otherwise
+	 add the current process to the front of its run queue, hence not yielding.
+	 Blue book behaviour is to yield implicitly but is arguably incorrect.
+	 Override to add tracing info."
+	| activeProc activePriority newPriority |
+	<inline: false>
+	activeProc := self activeProcess.
+	activePriority := self quickFetchInteger: PriorityIndex ofObject: activeProc.
+	newPriority := self quickFetchInteger: PriorityIndex ofObject: aProcess.
+	newPriority <= activePriority ifTrue:
+		[self putToSleep: aProcess yieldingIf: true.
+		 ^false].
+	self putToSleep: activeProc yieldingIf: yieldImplicitly.
+	self transferTo: aProcess from: sourceCode.
+	^true
+]
+
+{ #category : #'process primitive support' }
+StackInterpreterMT >> returnToExecutive: inInterpreter postContextSwitch: switchedContext [
+	"Return to the current frame, either by entering machine code, or longjmp-ing back to the
+	 interpreter or simply returning, depending on where we are. To know whether to return or
+	 enter machine code we have to know from whence we came.  We could have come from
+	 the interpreter, either directly or via a machine code primitive.  We could have come from
+	 machine code.  The instructionPointer tells us where from.  If it is above startOfMemory we're
+	 in the interpreter.  If it is below, then we are in machine-code unless it is ceReturnToInterpreterPC,
+	 in which case we're in a machine-code primitive called from the interpreter."
+	<inline: false>
+	| fullyInInterpreter |
+	<var: #cogMethod type: #'CogBlockMethod *'>
+
+	self setMethod: (self iframeMethod: framePointer).
+	fullyInInterpreter := inInterpreter.
+	self assertValidExecutionPointe: instructionPointer r: framePointer s: stackPointer imbar: true line: #'__LINE__'.
+	fullyInInterpreter ifFalse:
+		[self siglong: reenterInterpreter jmp: ReturnToInterpreter.
+		 "NOTREACHED"].
+	^nil
+]
+
+{ #category : #'process primitive support' }
+StackInterpreterMT >> returnToSchedulingLoopAndReleaseVMOrWakeThread: vmThread source: source [
 	| savedReenterInterpreter |
 	<var: #savedReenterInterpreter type: #'jmp_buf'>
 	<var: #vmThread type: #'CogVMThread *'>
 	<inline: false>
-	self cCode:
-			[self flag: 'this is just for debugging.  Note the current C stack pointers'.
-			 cogThreadManager currentVMThread
-				cStackPointer: cogit getCStackPointer;
-				cFramePointer: cogit getCFramePointer]
-		inSmalltalk:
-			[| range |
-			 range := self cStackRangeForThreadIndex: cogThreadManager getVMOwner.
-			 self assert: (range includes: cogit getCStackPointer).
-			 self assert: (range includes: cogit getCFramePointer)].
 	"We must use a copy of reenterInterpreter since we're giving up the VM to another vmThread."
 	self cCode:
 			[self memcpy: savedReenterInterpreter asVoidPointer
@@ -1281,14 +1743,14 @@ CoInterpreterMT >> returnToSchedulingLoopAndReleaseVMOrWakeThread: vmThread sour
 ]
 
 { #category : #'callback support' }
-CoInterpreterMT >> sendInvokeCallbackContext: vmCallbackContext [
+StackInterpreterMT >> sendInvokeCallbackContext: vmCallbackContext [
 	"Override to add sanity assertions."
 	self assertSaneThreadAndProcess.
 	^super sendInvokeCallbackContext: vmCallbackContext
 ]
 
 { #category : #'internal interpreter access' }
-CoInterpreterMT >> setCogVMFlags: flags [
+StackInterpreterMT >> setCogVMFlags: flags [
 	"Set an array of flags indicating various properties of the Cog VM.
 	 Bit 0: if set, implies the image's Process class has threadId as its 3rd inst var (zero relative)
 	 Bit 1: if set, methods that are interpreted will have the flag bit set in their header
@@ -1299,7 +1761,6 @@ CoInterpreterMT >> setCogVMFlags: flags [
 	flags asUnsignedInteger > 63 ifTrue:
 		[^self primitiveFailFor: PrimErrUnsupported].
 	processHasThreadId := flags anyMask: 1.
-	flagInterpretedMethods := flags anyMask: 2.
 	preemptionYields := flags noMask: 4.
 	noThreadingOfGUIThread := flags anyMask: 8.
 	newFinalization := flags anyMask: 16.
@@ -1307,13 +1768,12 @@ CoInterpreterMT >> setCogVMFlags: flags [
 ]
 
 { #category : #'image save/restore' }
-CoInterpreterMT >> setImageHeaderFlagsFrom: headerFlags [
+StackInterpreterMT >> setImageHeaderFlagsFrom: headerFlags [
 	"Set the flags that are contained in the 7th long of the image header."
 	imageHeaderFlags := headerFlags. "so as to preserve unrecognised flags."
 	fullScreenFlag := headerFlags bitAnd: 1.
 	imageFloatsBigEndian := (headerFlags noMask: 2) ifTrue: [1] ifFalse: [0].
 	processHasThreadId := headerFlags anyMask: 4.
-	flagInterpretedMethods := headerFlags anyMask: 8.
 	preemptionYields := headerFlags noMask: 16.
 	noThreadingOfGUIThread := headerFlags anyMask: 32.
 	newFinalization := headerFlags anyMask: 64.
@@ -1324,12 +1784,12 @@ CoInterpreterMT >> setImageHeaderFlagsFrom: headerFlags [
 ]
 
 { #category : #'process primitive support' }
-CoInterpreterMT >> setMaxWaitingPriorityTo: minPriority [
+StackInterpreterMT >> setMaxWaitingPriorityTo: minPriority [
 	maxWaitingPriority := minPriority
 ]
 
 { #category : #'process primitive support' }
-CoInterpreterMT >> setOwnerIndexOfProcess: aProcess to: anIndex bind: bind [
+StackInterpreterMT >> setOwnerIndexOfProcess: aProcess to: anIndex bind: bind [
 	| threadId |
 	threadId := anIndex = 0
 				ifTrue: [objectMemory nilObject]
@@ -1338,20 +1798,48 @@ CoInterpreterMT >> setOwnerIndexOfProcess: aProcess to: anIndex bind: bind [
 ]
 
 { #category : #'process primitive support' }
-CoInterpreterMT >> threadIdFieldOf: aProcess [
+StackInterpreterMT >> synchronousSignal: aSemaphore [ 
+	"Signal the given semaphore from within the interpreter.
+	 Answer if the current process was preempted.
+	 Override to add tracing info."
+	| excessSignals |
+	<inline: false>
+	(self isEmptyList: aSemaphore) ifTrue:
+		["no process is waiting on this semaphore"
+		 excessSignals := self fetchInteger: ExcessSignalsIndex ofObject: aSemaphore.
+		 self storeInteger: ExcessSignalsIndex
+			ofObject: aSemaphore
+			withValue: excessSignals + 1.
+		 ^false].
+
+	objectMemory ensureSemaphoreUnforwardedThroughContext: aSemaphore.
+
+	^self resume: (self removeFirstLinkOfList: aSemaphore)
+		preemptedYieldingIf: preemptionYields
+		from: CSSignal
+]
+
+{ #category : #'process primitive support' }
+StackInterpreterMT >> threadIdFieldOf: aProcess [
 	^processHasThreadId
 		ifTrue: [objectMemory fetchPointer: ThreadIdIndex ofObject: aProcess]
 		ifFalse: [objectMemory nilObject]
 ]
 
 { #category : #accessing }
-CoInterpreterMT >> threadManager [
+StackInterpreterMT >> threadManager [
 	<doNotGenerate>
 	^cogThreadManager
 ]
 
 { #category : #'vm scheduling' }
-CoInterpreterMT >> threadSchedulingLoop: vmThread [
+StackInterpreterMT >> threadManager: aThreadManager [
+	<doNotGenerate>
+	cogThreadManager := aThreadManager
+]
+
+{ #category : #'vm scheduling' }
+StackInterpreterMT >> threadSchedulingLoop: vmThread [
 	"Enter a loop attempting to run the VM with the highest priority process and
 	 blocking on the thread's OS semaphore when unable to run that process.
 	 We will return to this via threadSwitchIfNecessary:from: which is called in the
@@ -1378,7 +1866,7 @@ CoInterpreterMT >> threadSchedulingLoop: vmThread [
 ]
 
 { #category : #'process primitive support' }
-CoInterpreterMT >> threadSwitchIfNecessary: newProc from: sourceCode [
+StackInterpreterMT >> threadSwitchIfNecessary: newProc from: sourceCode [
 	"Invoked from transferTo:from: to switch threads if the new process is bound or affined to some other thread."
 	| newProcThreadId vmThread activeContext tlti vmo |
 	<var: #vmThread type: #'CogVMThread *'>
@@ -1387,10 +1875,10 @@ CoInterpreterMT >> threadSwitchIfNecessary: newProc from: sourceCode [
 			[vmo := cogThreadManager getVMOwner.
 			 tlti := cogThreadManager ioGetThreadLocalThreadIndex.
 			 self assert: vmo = tlti].
-	newProcThreadId := self ownerIndexOfProcess: newProc.
-	activeProcessAffined := newProcThreadId ~= 0.
 	deferThreadSwitch ifTrue: [^self].
-	(activeProcessAffined and: [newProcThreadId ~= cogThreadManager getVMOwner]) ifTrue:
+	newProcThreadId := self ownerIndexOfProcess: newProc.
+	((activeProcessAffined := newProcThreadId ~= 0)
+	 and: [newProcThreadId ~= cogThreadManager getVMOwner]) ifTrue:
 		[self cCode: ''
 			inSmalltalk:
 				[self transcript ensureCr; nextPutAll: #threadSwitchIfNecessary:from:; space; print: newProc;
@@ -1414,8 +1902,14 @@ CoInterpreterMT >> threadSwitchIfNecessary: newProc from: sourceCode [
 		 self forceInterruptCheck]
 ]
 
+{ #category : #'vm scheduling' }
+StackInterpreterMT >> transferTo: aProcess [
+
+	self error: 'should use #transferTo:from:'
+]
+
 { #category : #'process primitive support' }
-CoInterpreterMT >> transferTo: newProc from: sourceCode [
+StackInterpreterMT >> transferTo: newProc from: sourceCode [
 	"Record a process to be awoken on the next interpreter cycle.  Override to
 	 potentially switch threads either if the new process is bound to another thread,
 	 or if there is no runnable process but there is a waiting thread. Note that the
@@ -1434,14 +1928,13 @@ CoInterpreterMT >> transferTo: newProc from: sourceCode [
 	sched := self schedulerPointer.
 	oldProc := objectMemory fetchPointer: ActiveProcessIndex ofObject: sched.
 	self recordContextSwitchFrom: oldProc in: sourceCode.
-	activeContext := self ensureFrameIsMarried: framePointer SP: stackPointer + objectMemory wordSize.
+	activeContext := self ensureFrameIsMarried: framePointer SP: stackPointer.
 	objectMemory storePointer: SuspendedContextIndex ofObject: oldProc withValue: activeContext.
 
 	newProc isNil ifTrue:
 		["Two possibilities.  One, there is at least one thread waiting to own the VM in which
 		  case it should be activated.  Two, there are no processes to run and so abort."
 		 vmThread := cogThreadManager willingVMThread.
-		 objectMemory storePointer: ActiveProcessIndex ofObject: sched withValue: objectMemory nilObject.
 		 self returnToSchedulingLoopAndReleaseVMOrWakeThread: vmThread source: sourceCode.
 		 self error: 'scheduler could not find a runnable process'].
 
@@ -1454,16 +1947,15 @@ CoInterpreterMT >> transferTo: newProc from: sourceCode [
 ]
 
 { #category : #'cog jit support' }
-CoInterpreterMT >> tryLockVMOwner [
-
-	"^ cogit cogitTryLockVMOwner"
+StackInterpreterMT >> tryLockVMOwner [
+	<api>
 	^ self
 		cCode: '!pthread_mutex_trylock(&vmOwnerLock)'
 		inSmalltalk: [ true "taken" ]
 ]
 
 { #category : #'vm scheduling' }
-CoInterpreterMT >> tryToExecuteSmalltalk: vmThread [
+StackInterpreterMT >> tryToExecuteSmalltalk: vmThread [
 	"Attempt to run the current process, if it exists, on the given vmThread."
 	<var: #vmThread type: #'CogVMThread *'>
 	| dvmt activeProc ownerIndex |
@@ -1490,7 +1982,6 @@ CoInterpreterMT >> tryToExecuteSmalltalk: vmThread [
 		[cogThreadManager releaseVM.
 		 ^nil].
 	ownerIndex := self ownerIndexOfProcess: activeProc.
-	activeProcessAffined := ownerIndex ~= 0.
 	(ownerIndex = 0
 	 or: [ownerIndex ~= 0 and: [ownerIndex = cogThreadManager getVMOwner]])
 		ifTrue:
@@ -1505,16 +1996,61 @@ CoInterpreterMT >> tryToExecuteSmalltalk: vmThread [
 ]
 
 { #category : #'cog jit support' }
-CoInterpreterMT >> unlockVMOwner [
-
-	"^ cogit cogitUnlockVMOwner"
+StackInterpreterMT >> unlockVMOwner [
+	<api>
 	^ self
 		cCode: 'pthread_mutex_unlock(&vmOwnerLock)'
 		inSmalltalk: [ self "unlock does never fail" ]
 ]
 
+{ #category : #'frame access' }
+StackInterpreterMT >> updateStateOfSpouseContextForFrame: theFP WithSP: theSP [
+	"Update the frame's spouse context with the frame's current state except for the
+	 sender and instruction pointer, which are used to mark the context as married."
+	| theContext tempIndex pointer argsPointer |
+	<inline: false>
+	<var: #theFP type: #'char *'>
+	<var: #theSP type: #'char *'>
+	<var: #pointer type: #'char *'>
+	<var: #argsPointer type: #'char *'>
+	self assert: (self frameHasContext: theFP).
+	theContext := self frameContext: theFP.
+	self assert: (objectMemory isContext: theContext).
+	self assert: (self frameReceiver: theFP)
+				= (objectMemory noFixupFollowField: ReceiverIndex ofObject: theContext).
+	tempIndex := self frameNumArgs: theFP.
+	 pointer := theFP + FoxReceiver - objectMemory wordSize.
+
+	"update the arguments. this would appear not to be strictly necessary, but is for two reasons.
+	 First, the fact that arguments are read-only is only as convention in the Smalltalk compiler;
+	 other languages may choose to modify arguments.
+	 Second, the Squeak runUntilErrorOrReturnFrom: nightmare pops the stack top, which may, in
+	 certain circumstances, be the last argument, and hence the last argument may not have been
+	 stored into the context."
+	argsPointer := theFP + (self frameStackedReceiverOffsetNumArgs: tempIndex).
+	1 to: tempIndex do:
+		[:i|
+		argsPointer := argsPointer - objectMemory wordSize.
+		self assert: (objectMemory addressCouldBeOop: (stackPages longAt: argsPointer)).
+		 objectMemory storePointer: ReceiverIndex + i
+			ofObject: theContext
+			withValue: (stackPages longAt: argsPointer)].
+	"now update the non-argument stack contents."
+	[pointer >= theSP] whileTrue:
+		[self assert: (objectMemory addressCouldBeOop: (stackPages longAt: pointer)).
+		 tempIndex := tempIndex + 1.
+		 objectMemory storePointer: ReceiverIndex + tempIndex
+			ofObject: theContext
+			withValue: (stackPages longAt: pointer).
+		 pointer := pointer - objectMemory wordSize].
+	self assert: ReceiverIndex + tempIndex < (objectMemory lengthOf: theContext).
+	objectMemory storePointerUnchecked: StackPointerIndex
+		ofObject: theContext
+		withValue: (objectMemory integerObjectOf: tempIndex)
+]
+
 { #category : #'cog jit support' }
-CoInterpreterMT >> vmOwnerLockAddress [
+StackInterpreterMT >> vmOwnerLockAddress [
 	<api> "NB. For the JIT only, so it can generate the lock & unlock functions."
 	<returnTypeC: #usqInt>
 	^processHasThreadId
@@ -1524,7 +2060,7 @@ CoInterpreterMT >> vmOwnerLockAddress [
 ]
 
 { #category : #'process primitive support' }
-CoInterpreterMT >> waitingPriorityIsAtLeast: minPriority [
+StackInterpreterMT >> waitingPriorityIsAtLeast: minPriority [
 	"Set the maxWaitingPriority to at least minPriority on behalf
 	 of a thread wanting to acquire the VM.  If maxWaitingPriority
 	 is increased, schedule a thread activation check asap."
@@ -1535,7 +2071,7 @@ CoInterpreterMT >> waitingPriorityIsAtLeast: minPriority [
 ]
 
 { #category : #'process primitive support' }
-CoInterpreterMT >> wakeHighestPriority [
+StackInterpreterMT >> wakeHighestPriority [
 	"Return the highest priority process that is ready to run.
 	 To save time looking at many empty lists before finding a
 	 runnable process the VM maintains a variable holding the
@@ -1571,7 +2107,5 @@ CoInterpreterMT >> wakeHighestPriority [
 					[highestRunnableProcessPriority := p + 1.
 					^proc].].
 			 self warning: 'evicted zombie process from run queue']].
-	1=1 ifTrue: [ "we can halt here"
-		^ nil ].
 	^nil
 ]

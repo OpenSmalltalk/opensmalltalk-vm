@@ -8589,6 +8589,12 @@ SpurMemoryManager >> memory: aValue [
 	^memory := aValue
 ]
 
+{ #category : #accessing }
+SpurMemoryManager >> memoryActiveProcess [
+
+	^ self fetchPointer: ActiveProcessIndex ofObject: self memorySchedulerPointer
+]
+
 { #category : #snapshot }
 SpurMemoryManager >> memoryBaseForImageRead [
 	"Answer the address to read the image into."
@@ -8606,6 +8612,12 @@ SpurMemoryManager >> memoryClass [
 { #category : #snapshot }
 SpurMemoryManager >> memoryLimit [
 	^endOfMemory
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> memorySchedulerPointer [
+
+	^ self fetchPointer: ValueIndex ofObject: (self splObj: SchedulerAssociation)
 ]
 
 { #category : #'simulation only' }

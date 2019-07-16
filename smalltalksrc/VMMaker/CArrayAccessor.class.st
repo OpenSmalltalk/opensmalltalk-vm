@@ -69,6 +69,12 @@ CArrayAccessor >> floatAt: index [
 ]
 
 { #category : #accessing }
+CArrayAccessor >> includes: anObject [
+
+	^ object includes: anObject
+]
+
+{ #category : #accessing }
 CArrayAccessor >> long32At: index [
 	| idx |
 	idx := (offset + index) // 4 + 1.
