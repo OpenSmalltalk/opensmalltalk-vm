@@ -1,3 +1,0 @@
-#!/usr/bin/env bash
-set -e
-git log -- `dirname $0`/../platforms/Cross/vm/sqSCCSVersion.h | more

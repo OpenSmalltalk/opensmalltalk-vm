@@ -1,4 +1,0 @@
-#!/bin/sh
-
-fgrep 'const char *interpreterVersion = ' $1 |
-sed 's,.*"Squeak,,;s, .*#,\.,;s,].*,,;s,\., ,g;s,$,,'

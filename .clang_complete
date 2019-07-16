@@ -1,9 +1,0 @@
--Iplatforms/Cross/vm
--Iinclude
--Isrc/vm
--Iplatforms/minheadless/common
--Iplatforms/minheadless/generic
--Iplatforms/minheadless/unix
--Iplatforms/minheadless/windows
--I/usr/include/SDL2
--DSPURVM

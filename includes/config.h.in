@@ -1,0 +1,48 @@
+#define VM_NAME "@VM_NAME@"
+
+#cmakedefine HAVE_DIRENT_H
+#cmakedefine HAVE_FEATURES_H
+#cmakedefine HAVE_UNISTD_H 1
+#cmakedefine HAVE_NDIR_H
+#cmakedefine HAVE_SYS_NDIR_H
+#cmakedefine HAVE_SYS_DIR_H
+#cmakedefine HAVE_SYS_FILIO_H
+#cmakedefine HAVE_SYS_TIME_H
+
+#cmakedefine AVE_DLFCN_H
+#cmakedefine HAVE_LIBDL
+#cmakedefine HAVE_DYLD
+#cmakedefine HAVE_TM_GMTOFF
+
+/* architecture */
+
+#define OS_TYPE "@OS_TYPE@"
+
+#define VM_HOST "@VM_TARGET@"
+#define VM_HOST_CPU "@VM_TARGET_CPU@"
+#define VM_HOST_OS "@VM_TARGET_OS@"
+#define VM_TARGET "@VM_TARGET@"
+#define VM_TARGET_CPU "@VM_TARGET_CPU@"
+#define VM_TARGET_OS "@VM_TARGET_OS@"
+
+/* widths of primitive types */
+
+#define SIZEOF_INT @SIZEOF_INT@
+#define SIZEOF_LONG @SIZEOF_LONG@
+#define SIZEOF_LONG_LONG @SIZEOF_LONG_LONG@
+#define SIZEOF_VOID_P @SIZEOF_VOID_P@
+
+#define squeakInt64 @SQUEAK_INT64_TYPEDEF@
+
+#cmakedefine HAVE_SYS_UUID_H
+#cmakedefine HAVE_UUID_UUID_H
+#cmakedefine HAVE_UUID_H
+
+#cmakedefine HAVE_UUIDGEN
+#cmakedefine HAVE_UUID_GENERATE
+
+#if defined(_MSC_VER)
+#define VM_BUILD_STRING VM_NAME " built for " VM_TARGET_OS " on "__DATE__ " "__TIME__" Compiler: Visual C"
+#else
+#define VM_BUILD_STRING VM_NAME " built for " VM_TARGET_OS " on "__DATE__ " "__TIME__" Compiler: "__VERSION__
+#endif

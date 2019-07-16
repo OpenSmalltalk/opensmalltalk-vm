@@ -1,3 +1,0 @@
-LIBOBJ:= xabicc.o IA32ABI.o x64win64stub.o
-
-include ../../Makefile.plugin

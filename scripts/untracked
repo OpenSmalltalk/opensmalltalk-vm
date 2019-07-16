@@ -1,3 +1,0 @@
-#!/bin/bash
-# echo untracked files to stdout
-git status --porcelain | grep '^??' | sed 's/^?? //'

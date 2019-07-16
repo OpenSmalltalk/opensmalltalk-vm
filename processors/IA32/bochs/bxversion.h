@@ -1,7 +1,0 @@
-/////////////////////////////////////////////////////////////////////////
-// This file is checked in as bxversion.h.in.  The configure script
-// substitutes variables and creates bxversion.h.
-/////////////////////////////////////////////////////////////////////////
-
-#define VER_STRING "2.3.7.cvs"
-#define REL_STRING "Build from CVS snapshot, after release 2.3.7"

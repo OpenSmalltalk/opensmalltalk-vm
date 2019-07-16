@@ -1,5 +1,0 @@
-#ifdef _WIN32
-1                       ICON    DISCARDABLE     "nsvm.ico"
-2                       ICON    DISCARDABLE     "nsvm.ico"
-3                       ICON    DISCARDABLE     "nsvm.ico"
-#endif

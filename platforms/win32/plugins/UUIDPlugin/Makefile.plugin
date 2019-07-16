@@ -1,3 +1,0 @@
-include ../common/Makefile.plugin
-
-EXTRALIBS:=-lole32

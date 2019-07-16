@@ -1,1 +1,0 @@
-PLUGIN_REQUIRE_LIBRARY (PULSE pulse-simple)
