@@ -22,7 +22,8 @@ Class {
 	#superclass : #Object,
 	#instVars : [
 		'directory',
-		'interpreterFilename'
+		'interpreterFilename',
+		'shouldCleanupOldFile'
 	],
 	#category : #'VMMaker-PostProcessing'
 }
@@ -56,6 +57,17 @@ Gnuifier >> deGnuify [
 ]
 
 { #category : #'as yet unclassified' }
+Gnuifier >> doCleanupOldFile [
+	
+	self doCleanupOldFile: true
+]
+
+{ #category : #'as yet unclassified' }
+Gnuifier >> doCleanupOldFile: aBoolean [
+	shouldCleanupOldFile := aBoolean
+]
+
+{ #category : #'as yet unclassified' }
 Gnuifier >> gnuify [
 	"This Gnuifier produces a file compatible with gcc 3.x and gcc 4.x.
 	 We label the gnuified VM so one can identify the valid gcc version.
@@ -65,9 +77,10 @@ Gnuifier >> gnuify [
 		[directory deleteFileNamed: 'gcc3x-', interpreterFilename].
 	self
 		gnuifyFrom: (directory oldFileNamed: interpreterFilename)
-		to: 			(VMMaker forceNewFileNamed: (directory fullNameFor: 'gcc3x-', interpreterFilename))
+		to: 			(VMMaker forceNewFileNamed: (directory fullNameFor: 'gcc3x-', interpreterFilename)).
 	
-
+	self shouldCleanupOldFile
+		ifTrue: [ (directory deleteFileNamed: interpreterFilename) ]
 ]
 
 { #category : #'as yet unclassified' }
@@ -172,6 +185,12 @@ Gnuifier >> gnuifyFrom: inFileStream to: outFileStream [
 ]
 
 { #category : #'as yet unclassified' }
+Gnuifier >> initialize [
+	super initialize.
+	shouldCleanupOldFile := false
+]
+
+{ #category : #'as yet unclassified' }
 Gnuifier >> interpreterFilename: aString [
 	interpreterFilename := aString
 ]
@@ -180,4 +199,10 @@ Gnuifier >> interpreterFilename: aString [
 Gnuifier >> setDirectory: aFileDirectory [
 
 	directory := aFileDirectory
+]
+
+{ #category : #'as yet unclassified' }
+Gnuifier >> shouldCleanupOldFile [
+	
+	^ shouldCleanupOldFile
 ]

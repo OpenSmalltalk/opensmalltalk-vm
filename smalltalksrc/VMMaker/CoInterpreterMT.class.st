@@ -39,7 +39,8 @@ CoInterpreterMT class >> ancilliaryClasses [
 
 { #category : #translation }
 CoInterpreterMT class >> apiExportHeaderName [
-	^'cointerpmt.h'
+
+	^'cointerp.h'
 ]
 
 { #category : #translation }
@@ -133,7 +134,7 @@ CoInterpreterMT class >> primitivesClass [
 CoInterpreterMT class >> sourceFileName [
 	"Answer the filename for the core interpreter"
 
-	^'cointerpmt.c'
+	^'cointerp.c'
 ]
 
 { #category : #'process primitive support' }

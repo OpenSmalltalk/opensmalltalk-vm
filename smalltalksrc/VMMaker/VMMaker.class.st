@@ -99,7 +99,8 @@ Class {
 		'interpreterClassName',
 		'is64BitVM',
 		'optionsDictionary',
-		'abortBlock'
+		'abortBlock',
+		'doCleanupOldFiles'
 	],
 	#classVars : [
 		'DirNames'
@@ -137,6 +138,12 @@ VMMaker class >> configurationNameFromSelector: aSelector [
 { #category : #accessing }
 VMMaker class >> coreVMDirName [
 	^DirNames at: #coreVMDir
+]
+
+{ #category : #accessing }
+VMMaker class >> coreVMHeadersDirName [
+
+	^ DirNames at: #coreVMHeadersDir ifAbsent: [ self coreVMDirName ]
 ]
 
 { #category : #initialisation }
@@ -495,6 +502,31 @@ VMMaker class >> generateEitherSqueakCogVM [
 		  options: ((coInterpreterClass includesBehavior: CoInterpreterMT)
 						ifTrue: [#(COGMTVM true)]
 						ifFalse: [#()])
+]
+
+{ #category : #utilities }
+VMMaker class >> generateMainVM: interpreterClass and: cogitClass with: optionsPairsArray to: srcDirName platformDir: platDirName including: inclusions [
+	"Generate the VM to the given target directory. Include only plugins in pluginList.
+	 Example:
+		(VMMaker
+			generate: CoInterpreter
+			and: SimpleStackBasedCogit
+			to: (FileDirectory default pathFromURI: '../src')
+			platformDir: (FileDirectory default pathFromURI: '../platforms')
+			including:#(	AsynchFilePlugin FloatArrayPlugin RePlugin B2DPlugin FloatMathPlugin SecurityPlugin
+						BMPReadWriterPlugin IA32ABI SocketPlugin BitBltPlugin JPEGReadWriter2Plugin SurfacePlugin
+						DSAPrims JPEGReaderPlugin UUIDPlugin DropPlugin LargeIntegers UnixOSProcessPlugin
+						FileCopyPlugin Matrix2x3Plugin Win32OSProcessPlugin FilePlugin MiscPrimitivePlugin ZipPlugin))"
+	(self
+		makerFor: interpreterClass
+		and: cogitClass
+		with: optionsPairsArray
+		to: srcDirName
+		platformDir: platDirName
+		including: inclusions)
+			doCleanupOldFiles;
+			generateInterpreterFile;
+			generateCogitFiles
 ]
 
 { #category : #configurations }
@@ -860,6 +892,18 @@ VMMaker class >> initialize [
 ]
 
 { #category : #initialisation }
+VMMaker class >> initializeForPharo [
+	"VMMaker initialize"
+	DirNames := Dictionary new.
+	DirNames
+		at: #coreVMDir put: 'vm/src/common';
+		at: #coreVMHeadersDir put: 'vm/include/common';
+		at: #platformsDir put: 'platforms';
+		at: #pluginsDir put: 'plugins/src/common';
+		at: #sourceDir put: 'src'
+]
+
+{ #category : #initialisation }
 VMMaker class >> isActiveVMMakerClassFor: platformName [ 
 	"Does this class claim to be that properly active subclass of VMMaker for 
 	this platform? Subclasses are welcome to override this default"
@@ -959,7 +1003,7 @@ VMMaker class >> sourceDirName [
 
 { #category : #accessing }
 VMMaker class >> sourceTree [
-	^DirNames at: #sourceTree
+	^DirNames at: #sourceTree ifAbsent: [ FileSystem workingDirectory pathString ]
 ]
 
 { #category : #'version testing' }
@@ -1195,6 +1239,15 @@ VMMaker >> coreVMDirectory [
 	^ fd
 ]
 
+{ #category : #'target directories' }
+VMMaker >> coreVMHeadersDirectory [
+	"return the target directory for the main VM sources, interp.c etc"
+	| fd |
+	fd := self sourceDirectory directoryNamed: self class coreVMHeadersDirName.
+	fd assureExistence.
+	^ fd
+]
+
 { #category : #'private - errors' }
 VMMaker >> couldNotFindDirectory: dirName [
 	"This should raise a nice exception to a UI"
@@ -1280,6 +1333,12 @@ VMMaker >> deleteUnwantedExternalPluginDirectories [
 { #category : #'target directories' }
 VMMaker >> deleteUnwantedInternalPluginDirectories [
 	"don't. in real life people back plugin directories with source code controls and simply deleting them really doesn't help."
+]
+
+{ #category : #initialize }
+VMMaker >> doCleanupOldFiles [
+
+	doCleanupOldFiles := true
 ]
 
 { #category : #'generate sources' }
@@ -1377,12 +1436,12 @@ VMMaker >> generateCogitFiles [
 		cg := self generateCogitFileFor: cogitClass].
 	cg vmClass additionalHeadersDo:
 		[:headerName :headerContents| | filePath |
-		 filePath := self coreVMDirectory fullNameFor: headerName.
+		 filePath := self coreVMHeadersDirectory fullNameFor: headerName.
 		 (cg needToGenerateHeader: headerName file: filePath contents: headerContents) ifTrue:
 			 [cg storeHeaderOnFile: filePath contents: headerContents]].
 	cogitClass apiExportHeaderName ifNotNil:
 		[cg storeAPIExportHeader: cogitClass apiExportHeaderName
-			OnFile: (self sourceFilePathFor: cogitClass apiExportHeaderName)]
+			OnFile: (self includeFilePathFor: cogitClass apiExportHeaderName)]
 ]
 
 { #category : #'generate sources' }
@@ -1533,7 +1592,7 @@ VMMaker >> generateInterpreterFile [
 
 	self interpreterClass additionalHeadersDo:
 		[:headerName :headerContents| | filePath |
-		 filePath := self coreVMDirectory fullNameFor: headerName.
+		 filePath := self coreVMHeadersDirectory fullNameFor: headerName.
 		 (cg needToGenerateHeader: headerName file: filePath contents: headerContents) ifTrue:
 			 [cg storeHeaderOnFile: filePath contents: headerContents]].
 
@@ -1548,7 +1607,7 @@ VMMaker >> generateInterpreterFile [
 	cg storeCodeOnFile: (self sourceFilePathFor: self interpreterClass sourceFileName) doInlining: self doInlining.
 	self interpreterClass apiExportHeaderName ifNotNil:
 		[cg storeAPIExportHeader: self interpreterClass apiExportHeaderName
-			OnFile: (self sourceFilePathFor: self interpreterClass apiExportHeaderName)].
+			OnFile: (self includeFilePathFor: self interpreterClass apiExportHeaderName)].
 	self gnuifyInterpreterFile
 ]
 
@@ -1580,8 +1639,15 @@ VMMaker >> generatePlugins [
 VMMaker >> gnuifyInterpreterFile [
 "post-process the interp.c file to make it gcc friendly"
 	(Gnuifier on: self coreVMDirectory)
+		doCleanupOldFile: doCleanupOldFiles;
 		interpreterFilename: self interpreterFilename;
 		gnuify.
+]
+
+{ #category : #'generate sources' }
+VMMaker >> includeFilePathFor: sourceFileName [
+	"Answer the fully-qualified path for the generated source file."
+	^self coreVMHeadersDirectory fullNameFor: sourceFileName
 ]
 
 { #category : #initialize }
@@ -1593,6 +1659,7 @@ VMMaker >> initialize [
 	externalPlugins := SortedCollection new.
 	platformName := 'Cross'.
 	is64BitVM := false.
+	doCleanupOldFiles := false.
 	interpreterClassName := StackInterpreterPrimitives name.
 	optionsDictionary := Dictionary newFromPairs: {#BytesPerWord. 4}.
 	VMStructType voidStructTypeCache
@@ -1691,7 +1758,7 @@ VMMaker >> interpreterClassName: aString [
 { #category : #'generate sources' }
 VMMaker >> interpreterExportsFilePath [
 	"return the full path for the interpreter exports file"
-	^self coreVMDirectory fullNameFor: 'sqNamedPrims.h'
+	^self coreVMHeadersDirectory fullNameFor: 'sqNamedPrims.h'
 ]
 
 { #category : #'target directories' }
@@ -1712,7 +1779,7 @@ VMMaker >> interpreterHeaderName [
 VMMaker >> interpreterHeaderPath [
 	"Answer the fully-qualified path for the generated interpreter header file."
 
-	^self coreVMDirectory fullNameFor: self interpreterHeaderName
+	^self coreVMHeadersDirectory fullNameFor: self interpreterHeaderName
 ]
 
 { #category : #'private - errors' }
