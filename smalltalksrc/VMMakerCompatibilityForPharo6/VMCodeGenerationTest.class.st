@@ -5,6 +5,12 @@ Class {
 }
 
 { #category : #'generation-targets' }
+VMCodeGenerationTest >> methodWithCommentInBlock [
+
+	self something ifNil: [ "comment" 1 ]
+]
+
+{ #category : #'generation-targets' }
 VMCodeGenerationTest >> methodWithIfNil [
 
 	self something
@@ -37,6 +43,12 @@ VMCodeGenerationTest >> methodWithIfNilAssignmentOfComplexStatements [
 ]
 
 { #category : #'generation-targets' }
+VMCodeGenerationTest >> methodWithInlinedCommentInBlock [
+
+	nil isNil ifTrue: [ "comment" 1 ]
+]
+
+{ #category : #'generation-targets' }
 VMCodeGenerationTest >> methodWithLoop [
 
 	1 to: 10 do: [ :i | self foo: i ]
@@ -48,6 +60,46 @@ VMCodeGenerationTest >> methodWithNilIfNil [
 	^ nil
 		ifNil: [ 1 ]
 		ifNotNil: [ 2 ]
+]
+
+{ #category : #tests }
+VMCodeGenerationTest >> testCommentsInBlocks [
+
+	| translation method codeGenerator result |
+	method := self class >> #methodWithCommentInBlock.
+	translation := method asTranslationMethodOfClass: TMethod.
+	codeGenerator := CCodeGeneratorGlobalStructure new.
+	codeGenerator addMethod: translation.
+	codeGenerator doInlining: true.
+		
+	result := String streamContents: [ :stream |
+		translation parseTree statements first emitCCodeOn: stream level: 0 generator: codeGenerator.
+	].
+	
+	self assert: result equals: 'if (!(something())) {
+
+	/* comment */
+}'
+]
+
+{ #category : #tests }
+VMCodeGenerationTest >> testCommentsInInlinedBlocks [
+
+	| translation method codeGenerator result |
+	method := self class >> #methodWithInlinedCommentInBlock.
+	translation := method asTranslationMethodOfClass: TMethod.
+	codeGenerator := CCodeGeneratorGlobalStructure new.
+	codeGenerator addMethod: translation.
+	codeGenerator doInlining: true.
+		
+	result := String streamContents: [ :stream |
+		translation parseTree emitCCodeOn: stream level: 0 generator: codeGenerator.
+	].
+	
+	self assert: result equals: 'if (!(something())) {
+
+	/* comment */
+}'
 ]
 
 { #category : #tests }

@@ -32,3 +32,9 @@ StackMTInterpreterSimulatorForTest >> ioNewOS: function Thread: vmThread [
 	self perform: function with: vmThread.
 	^0
 ]
+
+{ #category : #'as yet unclassified' }
+StackMTInterpreterSimulatorForTest >> methodCallingPush [
+	<api>
+	self pushLiteralVariable: 1.
+]

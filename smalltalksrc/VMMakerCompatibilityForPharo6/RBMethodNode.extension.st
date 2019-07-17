@@ -3,13 +3,20 @@ Extension { #name : #RBMethodNode }
 { #category : #'*VMMakerCompatibilityForPharo6-C translation' }
 RBMethodNode >> asTranslationMethodOfClass: aTMethodClass [
  	"Answer a TMethod (or subclass) derived from the receiver."
-	| additionalMethodState |
+	| additionalMethodState comment |
 	additionalMethodState := AdditionalMethodState forMethod: nil selector: selector.
 	pragmas ifNotNil:
 		[pragmas do:
 			[:pragmaNode|
 			additionalMethodState := additionalMethodState copyWith: pragmaNode asPragma]].
 
+	comment := self commentOrNil.
+	self body commentOrNil ifNotNil: [ :bodyComment |
+		comment := comment 
+			ifNil: [ bodyComment ]
+			ifNotNil: [ comment, self body commentOrNil ].
+	].
+	self haltIf: [ selector == #primitiveStoreImageSegment ].
 	^aTMethodClass new
 		setSelector: selector
 		definingClass: compilationContext getClass
@@ -25,7 +32,7 @@ RBMethodNode >> asTranslationMethodOfClass: aTMethodClass [
 						ifNil: [0]
 						ifNotNil: [:pragmaNode| pragmaNode arguments first value])
 		properties: additionalMethodState
-		comment: self commentOrNil
+		comment: comment
 ]
 
 { #category : #'*VMMakerCompatibilityForPharo6-results' }
