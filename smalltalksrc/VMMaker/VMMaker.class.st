@@ -896,10 +896,10 @@ VMMaker class >> initializeForPharo [
 	"VMMaker initialize"
 	DirNames := Dictionary new.
 	DirNames
-		at: #coreVMDir put: 'vm/src/common';
-		at: #coreVMHeadersDir put: 'vm/include/common';
+		at: #coreVMDir put: 'vm/src';
+		at: #coreVMHeadersDir put: 'vm/include';
 		at: #platformsDir put: 'platforms';
-		at: #pluginsDir put: 'plugins/src/common';
+		at: #pluginsDir put: 'plugins/src';
 		at: #sourceDir put: 'src'
 ]
 
