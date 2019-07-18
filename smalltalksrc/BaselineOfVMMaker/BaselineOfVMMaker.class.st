@@ -28,13 +28,12 @@ BaselineOfVMMaker >> baseline: spec [
 				
 			"Main VMMaker packages"	
 			spec
-				package: #'VMMakerCompatibilityForPharo6';
-				package: #'Balloon-Engine-Pools';
-				package: #'BytecodeSets';
-				package: #'VMMaker' with: [ spec requires: #Printf ];
-				package: #'Cog';
-				package: #'CogTools';
-				package: #'ImageFormat'.
+				package: 'Balloon-Engine-Pools';
+				package: 'BytecodeSets';
+				package: 'VMMaker' with: [ spec requires: 'Printf' ];
+				package: 'Cog';
+				package: 'CogTools';
+				package: 'ImageFormat'.
 				
 			"VMMaker plugins"
 			spec
