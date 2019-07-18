@@ -12,7 +12,8 @@ BaselineOfVMMaker >> baseline: spec [
 		do: [
 			"Initial VMMaker package for handling Pharo 6" 
 			spec
-				package: #'VMMakerCompatibilityForPharo6'.
+				package: #'VMMakerCompatibilityForPharo6' with: [
+					spec requires: 'VMMaker' ].
 			
 			"Dependencies from other repositories"
 			spec
@@ -30,7 +31,7 @@ BaselineOfVMMaker >> baseline: spec [
 				package: #'VMMakerCompatibilityForPharo6';
 				package: #'Balloon-Engine-Pools';
 				package: #'BytecodeSets';
-				package: #'VMMaker';
+				package: #'VMMaker' with: [ spec requires: #Printf ];
 				package: #'Cog';
 				package: #'CogTools';
 				package: #'ImageFormat'.
