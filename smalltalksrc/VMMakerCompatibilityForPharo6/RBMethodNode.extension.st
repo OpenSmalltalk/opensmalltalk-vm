@@ -16,7 +16,7 @@ RBMethodNode >> asTranslationMethodOfClass: aTMethodClass [
 			ifNil: [ bodyComment ]
 			ifNotNil: [ comment, self body commentOrNil ].
 	].
-	self haltIf: [ selector == #primitiveStoreImageSegment ].
+
 	^aTMethodClass new
 		setSelector: selector
 		definingClass: compilationContext getClass

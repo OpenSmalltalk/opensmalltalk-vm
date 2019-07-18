@@ -926,14 +926,15 @@ CCodeGenerator >> collectInlineList: strategy [
 
 		inlineStrategy validateCanInline: m.
 		(inlineStrategy canInline: m)
-			ifFalse: [ selectorsOfMethodsNotToInline add: m selector ].
-		(inlineStrategy shouldInlineMethod: m)
-			ifTrue: [ 
-				"inline if method has no C code and is either small or contains inline directive"
-				inlineList add: m selector]
-			ifFalse: [
-				inlineStrategy isSelectiveInlineStrategy
-					ifTrue: [selectorsOfMethodsNotToInline add: m selector] ] ].
+			ifFalse: [ selectorsOfMethodsNotToInline add: m selector ]
+			ifTrue: [
+				(inlineStrategy shouldInlineMethod: m)
+					ifTrue: [ 
+						"inline if method has no C code and is either small or contains inline directive"
+						inlineList add: m selector]
+					ifFalse: [
+						inlineStrategy isSelectiveInlineStrategy
+							ifTrue: [selectorsOfMethodsNotToInline add: m selector] ] ] ].
 
 	inlineStrategy isSelectiveInlineStrategy
 		ifTrue:
