@@ -54,3 +54,42 @@ macro(configure_installables)
     install(FILES "resources/mac/Pharo.icns" DESTINATION "Pharo.app/Contents/Resources")
 endmacro()
 
+macro(generate_vm_code)
+  ensure_pharo_vmmaker()
+  execute_process(
+    COMMAND ./pharo Pharo.image eval PharoVMMaker generateCoInterpreter
+    RESULT_VARIABLE SUCCESS
+  )
+  assert(SUCCESS 0 "Could not generate sources")
+endmacro()
+
+macro(ensure_pharo_vmmaker)
+  ensure_pharo()
+  if(NOT PHARO_IMAGE_SETUP)
+    execute_process(
+      COMMAND ./pharo Pharo.image --save --quit scripts/installVMMaker.st
+      RESULT_VARIABLE SUCCESS
+    )
+    assert(SUCCESS 0 "Could not setup VMMaker setup")
+    set(PHARO_IMAGE_SETUP TRUE CACHE BOOL "Has the image been setup with VMMaker?" FORCE)
+  endif()
+endmacro()
+
+macro(ensure_pharo)
+  if(NOT PHARO_DOWNLOAD_HAPPENED)
+    execute_process(
+      COMMAND bash -c "rm -rf Pharo.image Pharo.changes pharo-vm pharo-ui pharo Pharo*.sources"
+      COMMAND wget -O - get.pharo.org/64/70+vm
+      COMMAND bash
+      RESULT_VARIABLE SUCCESS
+    )
+    assert(SUCCESS 0 "Could not download Pharo image")
+    set(PHARO_DOWNLOAD_HAPPENED TRUE CACHE BOOL "Has the Pharo download happened?" FORCE)
+  endif()
+endmacro()
+
+macro(assert value expected message)
+  if(NOT ${value} EQUAL ${expected})
+    MESSAGE(FATAL_ERROR ${message})
+  endif()
+endmacro()

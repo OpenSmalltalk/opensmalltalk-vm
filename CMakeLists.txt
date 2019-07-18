@@ -192,6 +192,8 @@ elseif(UNIX)
     include(unix.cmake)
 endif()
 
+generate_vm_code()
+
 set(SUPPORT_SOURCES
 	src/printing.c
 	src/utils.c
