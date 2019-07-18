@@ -1,7 +1,7 @@
 Class {
 	#name : #StackMTInterpreterSimulatorForTest,
 	#superclass : #StackMTInterpreterSimulator,
-	#category : #'VMMakerCompatibilityForPharo6-Tests'
+	#category : #VMMakerTests
 }
 
 { #category : #'instance creation' }

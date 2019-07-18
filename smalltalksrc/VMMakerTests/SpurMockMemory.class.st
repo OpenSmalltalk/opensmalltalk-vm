@@ -11,7 +11,7 @@ Class {
 		'schedulerAssociation',
 		'processInExternalCodeTag'
 	],
-	#category : #'VMMakerCompatibilityForPharo6-Tests'
+	#category : #VMMakerTests
 }
 
 { #category : #testing }

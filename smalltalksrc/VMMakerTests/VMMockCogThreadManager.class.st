@@ -1,7 +1,7 @@
 Class {
 	#name : #VMMockCogThreadManager,
 	#superclass : #CogThreadManager,
-	#category : #'VMMakerCompatibilityForPharo6-Tests'
+	#category : #VMMakerTests
 }
 
 { #category : #simulation }
