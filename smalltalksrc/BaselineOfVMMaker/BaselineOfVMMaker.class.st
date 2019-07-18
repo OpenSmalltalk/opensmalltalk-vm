@@ -59,5 +59,6 @@ BaselineOfVMMaker >> baseline: spec [
 				
 			spec
 				package: 'AndreasProfiler' with: [
-					spec repository: 'http://ss3.gemstone.com/ss/AndreasSystemProfiler'] ]
+					spec repository: 'http://ss3.gemstone.com/ss/AndreasSystemProfiler'].
+			spec group: 'default' with: #('VMMakerCompatibilityForPharo6') ]
 ]
