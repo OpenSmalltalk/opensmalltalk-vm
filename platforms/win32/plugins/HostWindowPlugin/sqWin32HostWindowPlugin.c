@@ -45,7 +45,7 @@ LRESULT CALLBACK HostWndProcW (HWND hwnd,
   case WM_LBUTTONDOWN:
   case WM_RBUTTONDOWN:
   case WM_MBUTTONDOWN:
-    if(GetFocus() != hwnd) SetFocus(hwnd);
+    if (GetFocus() != hwnd) SetFocus(hwnd);
     SetCapture(hwnd); /* capture mouse input */
       recordMouseEvent(lastMessage,1);
       break;
@@ -53,7 +53,7 @@ LRESULT CALLBACK HostWndProcW (HWND hwnd,
   case WM_LBUTTONUP:
   case WM_RBUTTONUP:
   case WM_MBUTTONUP:
-    if(GetFocus() != hwnd) SetFocus(hwnd);
+    if (GetFocus() != hwnd) SetFocus(hwnd);
     ReleaseCapture(); /* release mouse capture */
       recordMouseEvent(lastMessage,1);
       break;
@@ -206,10 +206,10 @@ sqInt ioShowDisplayOnWindow(unsigned char* dispBits, sqInt width,
   int lines;
   int lsbDisplay;
 
-  if(!IsWindow(hwnd))
+  if (!IsWindow(hwnd))
     return 0;
 
-  if(affectedR < affectedL || affectedT > affectedB)
+  if (affectedR < affectedL || affectedT > affectedB)
     return 1;
 
   /* Careful here:
@@ -222,7 +222,7 @@ sqInt ioShowDisplayOnWindow(unsigned char* dispBits, sqInt width,
   if (affectedT > height) affectedT= height-1;
 
   /* Don't draw empty areas */
-  if(affectedL == affectedR || affectedT == affectedB) return 1;
+  if (affectedL == affectedR || affectedT == affectedB) return 1;
   /* reload the update rectangle */
   updateRect.left = affectedL;
   updateRect.top = affectedT;
@@ -230,10 +230,10 @@ sqInt ioShowDisplayOnWindow(unsigned char* dispBits, sqInt width,
   updateRect.bottom = affectedB;
   /* ----- EXPERIMENTAL ----- */
   lsbDisplay = depth < 0;
-  if(lsbDisplay) depth = -depth;
+  if (lsbDisplay) depth = -depth;
 
   bmi = BmiForDepth(depth);
-  if(!bmi)
+  if (!bmi)
     {
   	return 0;
     }
@@ -253,7 +253,7 @@ sqInt ioShowDisplayOnWindow(unsigned char* dispBits, sqInt width,
   bmi->bmiHeader.biSizeImage = 0;
 
   dc = GetDC(hwnd);
-  if(!dc) {
+  if (!dc) {
     printLastError(TEXT("ioShowDisplayBits: GetDC() failed"));
     return 0;
   }
@@ -273,7 +273,7 @@ sqInt ioShowDisplayOnWindow(unsigned char* dispBits, sqInt width,
 	    bmi,
 	    DIB_RGB_COLORS);
 
-  if(lines == 0) {
+  if (lines == 0) {
     /* Note: the above is at least five times faster than what follows.
        Unfortunately, it also requires quite a bit of resources to
        be available. These are almost always available except in a
@@ -304,15 +304,15 @@ sqInt ioShowDisplayOnWindow(unsigned char* dispBits, sqInt width,
 
   ReleaseDC(hwnd,dc);
 
-  if(lines == 0) {
+  if (lines == 0) {
     printLastError(TEXT("SetDIBitsToDevice failed"));
-    warnPrintf("width=%" PRIdSQINT ",height=%" PRIdSQINT ",bits=%" PRIXSQPTR ",dc=%" PRIXSQPTR "\n",
+    warnPrintf(TEXT("width=%" PRIdSQINT ",height=%" PRIdSQINT ",bits=%" PRIXSQPTR ",dc=%" PRIXSQPTR "\n"),
 	       width, height, (usqIntptr_t)dispBits, (usqIntptr_t)dc);
   }
   /* reverse the image bits if necessary */
 
-  if( !lsbDisplay && depth < 32 ) {
-    if(depth == 16)
+  if (!lsbDisplay && depth < 32) {
+    if (depth == 16)
       reverse_image_words((unsigned int*) dispBits, (unsigned int*) dispBits,
 			  depth, width, &updateRect);
     else
@@ -402,12 +402,12 @@ sqInt ioSetTitleOfWindow(sqInt windowIndex, char * newTitle, sqInt sizeOfTitle) 
   char titleString[1024];
   WCHAR wideTitle[1024];
 
-  if(!IsWindow(hwnd)) return 0;
+  if (!IsWindow(hwnd)) return 0;
   if (sizeOfTitle > 1023) sizeOfTitle = 1023;
   strncpy(titleString, newTitle, sizeOfTitle);
   titleString[sizeOfTitle] = 0;
   MultiByteToWideChar(CP_UTF8, 0, titleString, -1, wideTitle, 1024);
-  if(SetWindowTextW(hwnd, wideTitle) == 0) return -1;
+  if (SetWindowTextW(hwnd, wideTitle) == 0) return -1;
   return sizeOfTitle;
 }
 
@@ -420,7 +420,7 @@ sqInt ioSetIconOfWindow(sqInt windowIndex, char * iconPath, sqInt sizeOfPath) {
 	int len;
 	if (!IsWindow(hwnd)) return 0;
 	len = MultiByteToWideChar(CP_UTF8, 0, iconPath, sizeOfPath, iconPathW, MAX_PATH);
-	if(len <= 0) return -1; /* invalid UTF8 ? */
+	if (len <= 0) return -1; /* invalid UTF8 ? */
 	iconPathW[len] = 0;
 	//Check if file exists and have read rights
 	if (_waccess(iconPathW, 4) == -1) { return -1; }; 

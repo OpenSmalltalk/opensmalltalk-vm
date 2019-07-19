@@ -1794,7 +1794,6 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
   if(!*lpCmdLine)          /* No command line */
     if(sqServiceMain())    /* try starting the service */
       return 0;            /* service was run - exit */
-
 #endif
 
   SQ_LAUNCH_DROP = RegisterWindowMessage(TEXT("SQUEAK_LAUNCH_DROP"));
@@ -1804,6 +1803,66 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
   return 0;
 }
 
+
+/* Mingw32 automatically adds a main routine for -mconsole links.  MSVC's LINK
+ * does not.  So define a main routine for the console VM, but only if not on
+ * mingw.
+ */
+#if (!defined(__MINGW32__) && !defined(__MINGW64__))
+int
+main(int argc, char *argv[])
+{
+  /* Determine if we're running as a console application  We can't report
+   * allocation failures unless running as a console app because doing so
+   * via a MessageBox will make the system unusable.
+   */
+  fIsConsole = isOneStdioDescriptorATTY();
+
+  /* a few things which need to be done first */
+  gatherSystemInfo();
+
+  /* get us the instance handle */
+  hInstance = GetModuleHandle(0);
+
+  /* fetch us the name of the executable */
+  {
+    GetModuleFileNameW(hInstance, vmNameW, MAX_PATH);
+    WideCharToMultiByte(CP_UTF8, 0, vmNameW, -1, vmNameA, MAX_PATH_UTF8, NULL, NULL);
+  }
+
+  /* open all streams in binary mode */
+  _fmode  = _O_BINARY;
+
+#ifndef NO_PLUGIN_SUPPORT
+  pluginInit();
+#endif
+#ifndef NO_SERVICE
+  /* Find out if we're running from a service.
+     That's a bit tricky since there is no difference between
+     usual startup and service startup. We do two assumptions here:
+     1) If we're NOT running on NT we can't be service
+     2) If there is a command line we can't be service
+     Still, there is a chance that a user just double clicks on
+     the Squeak executable in NT. Therefore we _try_ to connect
+     to the service control manager in the sqServiceMain function.
+     If this fails, we try the usual startup. It might take a bit
+     longer than the normal startup but this only happens if there
+     is no image name given - and that's not our fault. Anyways,
+     if somebody out there knows how to find out when we're starting
+     as a service - LET ME KNOW!
+  */
+  if(!*lpCmdLine)          /* No command line */
+    if(sqServiceMain())    /* try starting the service */
+      return 0;            /* service was run - exit */
+#endif
+
+  SQ_LAUNCH_DROP = RegisterWindowMessage(TEXT("SQUEAK_LAUNCH_DROP"));
+
+  /* start the non-service version */
+  sqMain(argc, argv);
+  return 0;
+}
+#endif /* (!defined(__MINGW32__) && !defined(__MINGW64__)) */
 static sqIntptr_t	
 strtobkm(const char *str)	
 {
