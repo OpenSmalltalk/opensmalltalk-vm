@@ -1,13 +1,10 @@
 include_directories(
     extracted/vm/include/win
     extracted/vm/include/common
+    generated/vm/include
 )
 
 set(EXTRACTED_SOURCES
-#SPUR Source
-    extracted/vm/src/common/cogit.c
-    extracted/vm/src/common/gcc3x-cointerp.c
-
 #Common sources
     extracted/vm/src/common/sqHeapMap.c
     extracted/vm/src/common/sqVirtualMachine.c

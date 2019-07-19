@@ -194,6 +194,11 @@ endif()
 
 generate_vm_code()
 
+set(GENERATED_SOURCES
+    generated/vm/src/cogit.c
+    generated/vm/src/gcc3x-cointerp.c
+)
+
 set(SUPPORT_SOURCES
 	src/printing.c
 	src/utils.c

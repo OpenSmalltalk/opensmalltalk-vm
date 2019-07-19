@@ -5,11 +5,6 @@ include_directories(
     generated/vm/include
 )
 
-set(GENERATED_SOURCES
-    generated/vm/src/cogit.c
-    generated/vm/src/gcc3x-cointerp.c
-)
-
 set(EXTRACTED_SOURCES
 #Common sources
     extracted/vm/src/common/sqHeapMap.c
