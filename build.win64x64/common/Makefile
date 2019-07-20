@@ -182,23 +182,23 @@ nukelibs:
 	rm $(LIBS)
 
 print-settings:
-	@echo ---------------- Makefile settings ------------------
-	@echo CONFIGURATION=$(CONFIGURATION)
-	@echo THREADING=$(THREADING)
-	@echo VPATH=$(VPATH)
-	@echo INCLUDES=$(INCLUDES)
-	@echo CFLAGS=$(CFLAGS)
-	@echo INTERNAL_PLUGINS=$(INTERNAL_PLUGINS)
-	@echo EXTERNAL_PLUGINS=$(EXTERNAL_PLUGINS)
-	@echo OBJDIR=$(OBJDIR)
-	@echo LIBS=$(LIBS)
-	@echo DLLS=$(DLLS)
-	@echo -----------------------------------------------------
+	$(info ---------------- Makefile settings ------------------)
+	$(info CONFIGURATION=$(CONFIGURATION))
+	$(info THREADING=$(THREADING))
+	$(info VPATH=$(VPATH))
+	$(info INCLUDES=$(INCLUDES))
+	$(info CFLAGS=$(CFLAGS))
+	$(info INTERNAL_PLUGINS=$(INTERNAL_PLUGINS))
+	$(info EXTERNAL_PLUGINS=$(EXTERNAL_PLUGINS))
+	$(info OBJDIR=$(OBJDIR))
+	$(info LIBS=$(LIBS))
+	$(info DLLS=$(DLLS))
+	$(info -----------------------------------------------------)
 
 print-objects:
-	@echo ---------------- Makefile objects ------------------
-	@echo VMOBJ=$(VMOBJ)
-	@echo -----------------------------------------------------
+	$(info ---------------- Makefile objects ------------------)
+	$(info VMOBJ=$(VMOBJ))
+	$(info -----------------------------------------------------)
 
 ignore := $(addsuffix .%, $(basename $(wildcard $(BUILD)/vm/*.ignore)))
 

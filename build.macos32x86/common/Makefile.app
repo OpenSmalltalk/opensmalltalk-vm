@@ -194,15 +194,15 @@ $(APP)/Contents/Resources/%.sources: ../../sources/%.sources
 	ln $< $@
 
 print-app-settings:
-	@echo ---------------- Makefile.app settings ------------------
-	@echo APP=$(APP)
-	@echo VMEXE=$(VMEXE)
-	@echo VMBUNDLES=$(VMBUNDLES)
-	@echo VMPLUGINDYLIBS=$(VMPLUGINDYLIBS)
-	@echo VMPLIST=$(VMPLIST)
-	@echo VMICONS=$(VMICONS)
-	@echo SIGNING_IDENTITY=$(SIGNING_IDENTITY)
-	@echo SOURCEFILE=$(SOURCEFILE)
-	@echo APPSOURCE=$(APPSOURCE)
-	@echo SOURCES=$(SOURCES)
-	@echo -----------------------------------------------------
+	$(info ---------------- Makefile.app settings ------------------)
+	$(info APP=$(APP))
+	$(info VMEXE=$(VMEXE))
+	$(info VMBUNDLES=$(VMBUNDLES))
+	$(info VMPLUGINDYLIBS=$(VMPLUGINDYLIBS))
+	$(info VMPLIST=$(VMPLIST))
+	$(info VMICONS=$(VMICONS))
+	$(info SIGNING_IDENTITY=$(SIGNING_IDENTITY))
+	$(info SOURCEFILE=$(SOURCEFILE))
+	$(info APPSOURCE=$(APPSOURCE))
+	$(info SOURCES=$(SOURCES))
+	$(info -----------------------------------------------------)

@@ -168,31 +168,31 @@ cleangv:
 	rm -rf getversion getversion.*
 
 print-source:
-	@echo ---------------- Makefile.vm sources ------------------
-	@echo CROSSSRC=$(CROSSSRC)
-	@echo OSXSRC=$(OSXSRC)
-	@echo MAKERSRC=$(MAKERSRC)
-	@echo UNIXSRC=$(UNIXSRC)
-	@echo VMSRC=$(VMSRC)
+	$(info ---------------- Makefile.vm sources ------------------)
+	$(info CROSSSRC=$(CROSSSRC))
+	$(info OSXSRC=$(OSXSRC))
+	$(info MAKERSRC=$(MAKERSRC))
+	$(info UNIXSRC=$(UNIXSRC))
+	$(info VMSRC=$(VMSRC))
 
 print-settings:
-	@echo ---------------- Makefile.vm settings ------------------
-	@echo CONFIGURATION=$(CONFIGURATION)
-	@echo VPATH=$(VPATH)
-	@echo INCLUDES=$(INCLUDES)
-	@echo CFLAGS=$(CFLAGS)
-	@echo INTERNAL_PLUGINS=$(INTERNAL_PLUGINS)
-	@echo EXTERNAL_PLUGINS=$(EXTERNAL_PLUGINS)
-	@echo OBJDIR=$(OBJDIR)
-	@echo LIBS=$(LIBS)
-	@echo BUNDLES=$(BUNDLES)
-	@echo deps=$(patsubst %,deps/%.d,$(notdir $(basename $(VMSRC))))
-	@echo -----------------------------------------------------
+	$(info ---------------- Makefile.vm settings ------------------)
+	$(info CONFIGURATION=$(CONFIGURATION))
+	$(info VPATH=$(VPATH))
+	$(info INCLUDES=$(INCLUDES))
+	$(info CFLAGS=$(CFLAGS))
+	$(info INTERNAL_PLUGINS=$(INTERNAL_PLUGINS))
+	$(info EXTERNAL_PLUGINS=$(EXTERNAL_PLUGINS))
+	$(info OBJDIR=$(OBJDIR))
+	$(info LIBS=$(LIBS))
+	$(info BUNDLES=$(BUNDLES))
+	$(info deps=$(patsubst %,deps/%.d,$(notdir $(basename $(VMSRC)))))
+	$(info -----------------------------------------------------)
 
 print-objects:
-	@echo ---------------- Makefile.vm objects ------------------
-	@echo VMOBJ=$(VMOBJ)
-	@echo -----------------------------------------------------
+	$(info ---------------- Makefile.vm objects ------------------)
+	$(info VMOBJ=$(VMOBJ))
+	$(info -----------------------------------------------------)
 
 ignore := $(addsuffix .%, $(basename $(wildcard $(BUILD)/vm/*.ignore)))
 

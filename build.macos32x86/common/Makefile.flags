@@ -16,10 +16,10 @@ TARGET_ARCH:=i386
 TARGET_VERSION_MIN:=10.7
 
 print-sdks:
-	@echo ---------------- Makefile.flags settings ------------------
-	@echo SDKs=$(realpath $(addprefix $(SDKsDIR)/, $(SDKs)))
-	@echo SDK=$(SDK)
-	@echo -----------------------------------------------------
+	$(info ---------------- Makefile.flags settings ------------------)
+	$(info SDKs=$(realpath $(addprefix $(SDKsDIR)/, $(SDKs))))
+	$(info SDK=$(SDK))
+	$(info -----------------------------------------------------)
 
 # N.B. ARC isn't supported by the os-x 32-bit legacy Objective-C runtime kernel.
 # ARC is supported only on 64-bits, and then only for the 10.7 SDK and later.
