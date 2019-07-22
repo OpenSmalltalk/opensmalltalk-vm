@@ -2,7 +2,9 @@
 #include <sys/stat.h>
 
 #ifndef WIN64
+#include <libgen.h>
 #include <sys/param.h>
+
 #else
 #include <Windows.h>
 #endif
@@ -11,6 +13,7 @@
 
 char vmName[FILENAME_MAX] = {0};
 char imageName[FILENAME_MAX] = {0};
+char vmFullPath[FILENAME_MAX] = {0};
 char vmPath[FILENAME_MAX] = {0};
 
 #ifdef WIN64
@@ -72,7 +75,7 @@ char * GetAttributeString(sqInt id)
     switch (id)
     {
     case 0:
-        return vmPath;
+        return vmFullPath;
     case 1:
         return getImageName();
     case 1001:
@@ -154,11 +157,18 @@ void setImageName(const char* name){
 }
 
 /**
- * Sets the VMPath.
+ * Sets the Full VM Path.
  * It copies the parameter to internal storage.
  */
 EXPORT(void) setVMPath(const char* name){
-	strcpy(vmPath, name);
+	strcpy(vmFullPath, name);
+
+	int bufferSize = strlen(name) + 1;
+	char* tmpBasedir = alloca(bufferSize);
+
+	getBasePath(name, tmpBasedir, bufferSize);
+
+	strcpy(vmPath, tmpBasedir);
 }
 
 sqInt vmPathSize(void){
@@ -513,6 +523,36 @@ EXPORT(char*) getFullPath(char const *relativePath, char* fullPath, int fullPath
 
 #else
 	return realpath(relativePath, fullPath);
+#endif
+}
+
+EXPORT(void) getBasePath(char const *path, char* basePath, int basePathSize){
+#ifdef WIN64
+
+	int requiredSize = MultiByteToWideChar(CP_UTF8, 0, path, -1, NULL, 0);
+
+	LPWSTR pathWide = (LPWSTR)alloca(sizeof(WCHAR) * (requiredSize + 1));
+	LPWSTR basePathWide = (LPWSTR)alloca(sizeof(WCHAR)* basePathSize);
+	LPWSTR finalBasePathWide = (LPWSTR)alloca(sizeof(WCHAR)* basePathSize);
+	LPWSTR driveWide = (LPWSTR)alloca(sizeof(WCHAR)* (2 + 1));
+
+	MultiByteToWideChar(CP_UTF8, 0, path, -1, pathWide, requiredSize);
+
+	int error = _wsplitpath_s(pathWide, driveWide, 3, basePathWide, basePathSize, NULL, 0, NULL,0);
+
+	if(error != 0){
+		logError("Could not extract basepath: %s", path);
+		strcpy(basePath, "");
+		return;
+	}
+
+	wcscpy(finalBasePathWide, driveWide);
+	wcscat(finalBasePathWide, basePathWide);
+
+	WideCharToMultiByte(CP_UTF8, 0, finalBasePathWide, -1, basePath, basePathSize, NULL, 0);
+
+#else
+	strcpy(basePath, basename(path));
 #endif
 }
 

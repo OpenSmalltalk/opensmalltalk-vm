@@ -60,6 +60,7 @@ EXPORT(int) fileExists(const char *aPath);
 int openFileDialog(char const * aTitle, char const * aDefaultPathAndFile, char const * filter, char ** selectedFile, char const * defaultFile);
 
 EXPORT(char*) getFullPath(char const *relativePath, char* fullPath, int fullPathSize);
+EXPORT(void) getBasePath(char const *path, char* basePath, int basePathSize);
 
 #ifndef NULL
 #define NULL	0
