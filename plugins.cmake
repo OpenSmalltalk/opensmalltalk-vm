@@ -10,7 +10,7 @@ file(GLOB SecurityPlugin_SOURCES
     plugins/SecurityPlugin/common/*.c   
 )
 
-addLibraryWithRPATH(SecurityPlugin SHARED ${SecurityPlugin_SOURCES})
+addLibraryWithRPATH(SecurityPlugin ${SecurityPlugin_SOURCES})
 target_link_libraries(SecurityPlugin ${VM_LIBRARY_NAME})
 
 #
@@ -58,7 +58,7 @@ else()
     )    
 endif()
 
-addLibraryWithRPATH(FilePlugin SHARED ${FilePlugin_SOURCES})
+addLibraryWithRPATH(FilePlugin ${FilePlugin_SOURCES})
 target_link_libraries(FilePlugin ${VM_LIBRARY_NAME})
 
 if(OSX)
@@ -87,7 +87,7 @@ file(GLOB UUIDPlugin_SOURCES
     plugins/UUIDPlugin/common/*.c   
 )
 
-addLibraryWithRPATH(UUIDPlugin SHARED ${UUIDPlugin_SOURCES})
+addLibraryWithRPATH(UUIDPlugin ${UUIDPlugin_SOURCES})
 target_link_libraries(UUIDPlugin ${VM_LIBRARY_NAME})
 if(WIN)
     target_link_libraries(UUIDPlugin "-lole32")
@@ -128,7 +128,7 @@ set(SqueakFFIPrims_SOURCES
     extracted/plugins/SqueakFFIPrims/src/common/sqFFITestFuncs.c
 )
 
-addLibraryWithRPATH(SqueakFFIPrims SHARED ${SqueakFFIPrims_SOURCES})
+addLibraryWithRPATH(SqueakFFIPrims ${SqueakFFIPrims_SOURCES})
 target_link_libraries(SqueakFFIPrims ${VM_LIBRARY_NAME})
 
 #
@@ -152,7 +152,7 @@ if(WIN)
     )
 endif()
 
-addLibraryWithRPATH(IA32ABI SHARED ${IA32ABI_SOURCES})
+addLibraryWithRPATH(IA32ABI ${IA32ABI_SOURCES})
 target_link_libraries(IA32ABI ${VM_LIBRARY_NAME})
 
 #
@@ -179,7 +179,7 @@ set(BitBltPlugin_SOURCES
     extracted/plugins/BitBltPlugin/src/common/BitBltPlugin.c   
 )
 
-addLibraryWithRPATH(BitBltPlugin SHARED ${BitBltPlugin_SOURCES})
+addLibraryWithRPATH(BitBltPlugin ${BitBltPlugin_SOURCES})
 target_link_libraries(BitBltPlugin ${VM_LIBRARY_NAME})
 
 #
@@ -226,7 +226,7 @@ else()
     )    
 endif()
 
-addLibraryWithRPATH(LocalePlugin SHARED ${LocalePlugin_SOURCES})
+addLibraryWithRPATH(LocalePlugin ${LocalePlugin_SOURCES})
 target_link_libraries(LocalePlugin ${VM_LIBRARY_NAME})
 
 if(OSX)
@@ -279,7 +279,7 @@ else()
     endif()
 endif()
 
-addLibraryWithRPATH(SqueakSSL SHARED ${SqueakSSL_SOURCES})
+addLibraryWithRPATH(SqueakSSL ${SqueakSSL_SOURCES})
 target_link_libraries(SqueakSSL ${VM_LIBRARY_NAME})
 
 if(OSX)

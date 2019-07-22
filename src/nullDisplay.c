@@ -6,7 +6,7 @@ void unimplementedPrimitive(const char* name){
 	logWarn("Unimplemented primitive: %s\n", name);
 }
 
-#ifdef WIN32
+#ifdef WIN64
 int ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt extentY, sqInt offsetX, sqInt offsetY)
 #else
 sqInt ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt extentY, sqInt offsetX, sqInt offsetY)

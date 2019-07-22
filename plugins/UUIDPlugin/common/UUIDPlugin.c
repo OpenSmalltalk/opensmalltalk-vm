@@ -9,7 +9,7 @@ int sqUUIDShutdown(void);
 
 struct VirtualMachine* interpreterProxy;
 
-#ifdef WIN32
+#ifdef WIN64
 	#include <windows.h>
 	#include <ole2.h>
 
@@ -108,3 +108,57 @@ EXPORT(sqInt) setInterpreter(struct VirtualMachine *anInterpreter)
 
 	interpreterProxy = anInterpreter;
 }
+
+EXPORT(const char*)
+getModuleName(void)
+{
+	return "UUIDPlugin";
+}
+
+EXPORT(sqInt)
+initialiseModule(void)
+{
+return sqUUIDInit();
+}
+
+EXPORT(sqInt)
+shutdownModule(void)
+{
+	return sqUUIDShutdown();
+}
+
+/* UUIDPlugin>>#primitiveMakeUUID */
+EXPORT(sqInt)
+primitiveMakeUUID(void)
+{
+char *location;
+sqInt oop;
+
+oop = stackValue(0);
+if (!(((methodArgumentCount()) == 0)
+	 && ((isBytes(oop))
+	 && ((byteSizeOf(oop)) == 16)))) {
+	return primitiveFail();
+}
+location = firstIndexableField(oop);
+MakeUUID(location);
+return oop;
+}
+
+#ifdef SQUEAK_BUILTIN_PLUGIN
+
+static char _m[] = "UUIDPlugin";
+void* UUIDPlugin_exports[][3] = {
+	{(void*)_m, "getModuleName", (void*)getModuleName},
+	{(void*)_m, "initialiseModule", (void*)initialiseModule},
+	{(void*)_m, "primitiveMakeUUID\000\001", (void*)primitiveMakeUUID},
+	{(void*)_m, "setInterpreter", (void*)setInterpreter},
+	{(void*)_m, "shutdownModule\000\377", (void*)shutdownModule},
+	{NULL, NULL, NULL}
+};
+
+#else /* ifdef SQ_BUILTIN_PLUGIN */
+
+signed char primitiveMakeUUIDAccessorDepth = 1;
+
+#endif /* ifdef SQ_BUILTIN_PLUGIN */

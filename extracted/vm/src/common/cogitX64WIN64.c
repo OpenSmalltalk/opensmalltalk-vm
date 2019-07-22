@@ -5740,6 +5740,11 @@ fillInMethodHeadersizeselector(CogMethod *method, sqInt size, sqInt selector)
 		assert(methodHeader == ((originalMethod->methodHeader)));
 			}
 	else {
+		assert(method < startOfMemory());
+		assert(method >= cogCodeBase());
+		assert(((sqInt)method) < startOfMemory());
+		assert(((sqInt)method) >= cogCodeBase());
+
 		rawHeaderOfput(methodObj, ((sqInt)method));
 			}
 	(method->methodHeader = methodHeader);
@@ -10285,6 +10290,10 @@ compactCompiledCode(void)
 				   cog methods.  For Newspeak not necessarily, but only for anonymous accessors. */
 				/* Only update the original method's header if it is referring to this CogMethod. */
 				if ((((sqInt)(rawHeaderOf((dest->methodObject))))) == (((sqInt)source))) {
+					assert(dest < startOfMemory());
+					assert(dest >= cogCodeBase());
+					assert(((sqInt)dest) < startOfMemory());
+					assert(((sqInt)dest) >= cogCodeBase());
 					rawHeaderOfput((dest->methodObject), ((sqInt)dest));
 				}
 				else {

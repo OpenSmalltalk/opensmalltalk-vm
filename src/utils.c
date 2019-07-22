@@ -1,7 +1,7 @@
 #include <pharo.h>
 #include <sys/stat.h>
 
-#ifndef WIN32
+#ifndef WIN64
 #include <sys/param.h>
 #else
 #include <Windows.h>
@@ -13,7 +13,7 @@ char vmName[FILENAME_MAX] = {0};
 char imageName[FILENAME_MAX] = {0};
 char vmPath[FILENAME_MAX] = {0};
 
-#ifdef WIN32
+#ifdef WIN64
 BOOL fIsConsole = 1;
 #endif
 
@@ -24,7 +24,7 @@ void *os_exports[][3]=
 };
 
 static const char* systemSearchPaths[] = {
-#ifdef _WIN32
+#ifdef WIN64
 #endif
 #if defined(__linux__) || defined(unix) || defined(__APPLE__)
 	"./",
@@ -297,7 +297,7 @@ sqGetFilenameFromString(char * aCharBuffer, char * aFilenameString, sqInt filena
     memcpy(aCharBuffer, aFilenameString, filenameLength);
     aCharBuffer[filenameLength]= 0;
 
-#ifndef WIN32
+#ifndef WIN64
     if (resolveAlias)
     {
         for (;;)	/* aCharBuffer might refer to link or alias */
@@ -390,7 +390,7 @@ static char * volatile p = 0;
 	static void sighandler(int sig) { p = (char *)&sig; }
 #endif
 
-#ifndef WIN32
+#ifndef WIN64
 static sqInt min(int x, int y) { return (x < y) ? x : y; }
 static sqInt max(int x, int y) { return (x > y) ? x : y; }
 #endif
@@ -437,7 +437,7 @@ osCogStackPageHeadroom()
 /* Helper to pop up a message box with a message formatted from the         */
 /*   printf() format string and arguments                                   */
 /****************************************************************************/
-#ifdef WIN32
+#ifdef WIN64
 EXPORT(int) __cdecl sqMessageBox(DWORD dwFlags, const char *titleString, const char* fmt, ...)
 { TCHAR *buf;
   va_list args;
@@ -495,7 +495,7 @@ int fileExists(const char *aPath){
 }
 
 EXPORT(char*) getFullPath(char const *relativePath, char* fullPath, int fullPathSize){
-#ifdef WIN32
+#ifdef WIN64
 
 	int requiredSize = MultiByteToWideChar(CP_UTF8, 0, relativePath, -1, NULL, 0);
 	LPWSTR relativePathWide = (LPWSTR)alloca(sizeof(WCHAR) * (requiredSize + 1));

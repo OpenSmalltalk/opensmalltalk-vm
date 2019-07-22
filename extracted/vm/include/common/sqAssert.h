@@ -27,12 +27,12 @@
 
 #else
 
-# define assert(expr)  ((expr)||(logMessage(LOG_WARN, __FILENAME__, __FUNCTION__, __LINE__, #expr),0))
+# define assert(expr)  ((expr)||(logAssert(__FILENAME__, __FUNCTION__, __LINE__, #expr),0))
 # define asserta(expr) assert(expr)
-# define assertf(msg)  (logMessage(LOG_WARN, __FILENAME__, __FUNCTION__, __LINE__, #msg),0)
-# define assertl(expr,line)  ((expr)||(logMessage(LOG_WARN, __FILENAME__, __FUNCTION__, line, #expr),0))
+# define assertf(msg)  (logAssert(__FILENAME__, __FUNCTION__, __LINE__, #msg),0)
+# define assertl(expr,line)  ((expr)||(logAssert(__FILENAME__, __FUNCTION__, line, #expr),0))
 # define assertal(expr,line) assertl(expr,line)
-# define assertfl(msg,line)  (logMessage(LOG_WARN, __FILENAME__, __FUNCTION__, line, #msg),0)
+# define assertfl(msg,line)  (logAssert(__FILENAME__, __FUNCTION__, line, #msg),0)
 
 extern char expensiveAsserts;
 

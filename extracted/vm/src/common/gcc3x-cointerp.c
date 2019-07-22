@@ -21418,7 +21418,9 @@ resumepreemptedYieldingIffrom(sqInt aProcess, sqInt yieldImplicitly, sqInt sourc
 		putToSleepyieldingIf(aProcess, 1);
 		return 0;
 	}
+	assert((GIV(framePointer) - GIV(stackPointer)) < (LargeContextSlots * BytesPerOop));
 	putToSleepyieldingIf(activeProc, yieldImplicitly);
+	assert((GIV(framePointer) - GIV(stackPointer)) < (LargeContextSlots * BytesPerOop));
 	transferTofrom(aProcess, sourceCode);
 	return 1;
 }
@@ -22539,6 +22541,8 @@ synchronousSignal(sqInt aSemaphore)
     sqInt proc;
     sqInt referent;
 
+    assert(isSemaphoreOop(aSemaphore));
+
 	if ((assert(!(isForwarded(aSemaphore))),
 	(longAt((aSemaphore + BaseHeaderSize) + (((sqInt)((usqInt)(FirstLinkIndex) << (shiftForWord())))))) == GIV(nilObj))) {
 
@@ -22698,6 +22702,7 @@ transferTofrom(sqInt newProc, sqInt sourceCode)
     sqInt valuePointer;
 
 	GIV(statProcessSwitch) += 1;
+	assert((GIV(framePointer) - GIV(stackPointer)) < (LargeContextSlots * BytesPerOop));
 	/* begin push: */
 	longAtput((sp = GIV(stackPointer) - BytesPerWord), GIV(instructionPointer));
 	GIV(stackPointer) = sp;
@@ -62747,6 +62752,9 @@ checkForEventsMayContextSwitch(sqInt mayContextSwitch)
 			GIV(nextWakeupUsecs) = 0;
 			/* begin splObj: */
 			sema = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(TheTimerSemaphore) << (shiftForWord())))));
+			if (sema != *((sqInt*)(specialObjectsOop + 8 + (29<< 3)))){
+				logWarn("printf");
+			}
 			if ((sema != GIV(nilObj))
 			 && (synchronousSignal(sema))) {
 				switched = 1;

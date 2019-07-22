@@ -1,5 +1,9 @@
 #pragma once
 
+#ifndef EXPORT
+#define EXPORT(x)  x
+#endif
+
 #ifndef  DEBUG
 # define DEBUG	0
 #endif
@@ -12,6 +16,7 @@
 
 EXPORT(void) logLevel(int level);
 EXPORT(void) logMessage(int level, const char* fileName, const char* functionName, int line, ...);
+EXPORT(void) logAssert(const char* fileName, const char* functionName, int line, char* msg);
 
 //This variable is set externally by CMAKE
 #ifndef SOURCE_PATH_SIZE
@@ -25,3 +30,5 @@ EXPORT(void) logMessage(int level, const char* fileName, const char* functionNam
 #define logInfo(...)	logMessage(LOG_INFO, __FILENAME__, __FUNCTION__, __LINE__, __VA_ARGS__)
 #define logWarn(...)	logMessage(LOG_WARN, __FILENAME__, __FUNCTION__, __LINE__, __VA_ARGS__)
 #define logError(...)	logMessage(LOG_ERROR, __FILENAME__, __FUNCTION__, __LINE__, __VA_ARGS__)
+
+#define LOG_SIZEOF(expr) logDebug("sizeof("#expr"): %ld", sizeof(expr))

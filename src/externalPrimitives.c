@@ -26,7 +26,7 @@
  * Author: roniesalg@gmail.com
  */
 
-#ifdef _WIN32
+#ifdef WIN64
 #include <windows.h>
 #endif
 
@@ -40,7 +40,7 @@ static void *getModuleSymbol(void *module, const char *symbol);
 
 const char *moduleNamePatterns[] = {
     "%s%s",
-#if defined(_WIN32)
+#if defined(WIN64)
     "%s%s.dll",
     "%slib%s.dll",
 #elif defined(__APPLE__)
@@ -145,7 +145,7 @@ ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
     return function;
 }
 
-#if defined(_WIN32)
+#if defined(WIN64)
 
 void * loadModuleHandle(const char *fileName)
 {

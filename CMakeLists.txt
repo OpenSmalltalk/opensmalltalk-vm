@@ -11,7 +11,7 @@ get_git_describe(GIT_DESCRIBE)
 
 set(BUILT_FROM "${GIT_DESCRIBE} - Commit: ${GIT_COMMIT_HASH}")
 
-if(WIN32 OR WIN OR CYGWIN)
+if(WIN64 OR WIN OR CYGWIN)
     set(WIN 1)
 
     # specify the cross compiler
@@ -65,9 +65,9 @@ if(WIN)
     set(CMAKE_SHARED_MODULE_SUFFIX ".dll")    
 
 
-    if(NOT MSVC)
-        set(COMMON_FLAGS "-fdeclspec -msse2 -ggdb2 -m64 -mno-rtd -mms-bitfields -O1 -fno-omit-frame-pointer -D_MT -fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf -Wall -Wno-unused-variable")
-    endif()
+#    if(NOT MSVC)
+        set(COMMON_FLAGS "-fwrapv -fdeclspec -msse2 -ggdb2 -m64 -mno-rtd -mms-bitfields -O0 -momit-leaf-frame-pointer -funroll-loops -D_MT -fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf -Wall -Wno-unused-variable -fno-optimize-sibling-calls")
+#    endif()
     
     set(OS_TYPE "Win32")
     set(VM_TARGET_OS "Win64")
@@ -75,10 +75,10 @@ if(WIN)
     # this one is important
     SET(CMAKE_SYSTEM_NAME Windows)
 
-    add_definitions(-DLSB_FIRST=1)
-    
+    add_definitions(-DNO_ISNAN -DNO_SERVICE -D'TZ="CEST"' "-D'VM_LABEL(foo)=0'" -DLSB_FIRST=1 -DAllocationCheckFiller=0xADD4E55)
+
     #Setting minimal Windows Version to VISTA
-    add_definitions(-DWIN32 -D_WIN32_WINNT=0x0600 -DWINVER=0x0600 -DNTDDI_VERSION=0x06000000 -DWIN64=1)
+    add_definitions(-D_WIN32_WINNT=0x0600 -DWINVER=0x0600 -DNTDDI_VERSION=0x06000000 -DWIN64=1)
     
 elseif(UNIX)
 
@@ -99,12 +99,17 @@ elseif(UNIX)
     endif()
 endif()
 
+add_definitions(-DSQUEAK_BUILTIN_PLUGIN=1)
+
+
 set(OPTIMIZATION_FLAGS "")
 
 set(CMAKE_C_FLAGS "-g ${COMMON_FLAGS} ${OPTIMIZATION_FLAGS} -DDEBUG -DDEBUGVM=1")
 set(CMAKE_CXX_FLAGS "-g ${COMMON_FLAGS} ${OPTIMIZATION_FLAGS} -DDEBUG -DDEBUGVM=1")
 
-add_definitions(-DPharoVM=1 -DIMMUTABILITY=1)
+add_definitions(-DIMMUTABILITY=1)
+add_definitions(-DCOGMTVM=0)
+add_definitions(-DPharoVM=1)
 
 #
 # This definition is used to improve the logging of the messages, to cut-down the path
@@ -218,10 +223,27 @@ set(VM_SOURCES
 	${EXTRACTED_SOURCES}
 )
 
-addLibraryWithRPATH(${VM_LIBRARY_NAME} SHARED ${VM_SOURCES})
+addLibraryWithRPATH(${VM_LIBRARY_NAME} ${VM_SOURCES})
 add_executable(${VM_EXECUTABLE_NAME} ${VM_FRONTEND_SOURCES})
 
 target_link_libraries(${VM_EXECUTABLE_NAME} ${VM_LIBRARY_NAME})
+
+
+target_link_libraries(${VM_EXECUTABLE_NAME} SecurityPlugin)
+target_link_libraries(${VM_EXECUTABLE_NAME} FilePlugin)
+target_link_libraries(${VM_EXECUTABLE_NAME} FileAttributesPlugin)
+target_link_libraries(${VM_EXECUTABLE_NAME} UUIDPlugin)
+target_link_libraries(${VM_EXECUTABLE_NAME} SocketPlugin)
+target_link_libraries(${VM_EXECUTABLE_NAME} SurfacePlugin)
+target_link_libraries(${VM_EXECUTABLE_NAME} SqueakFFIPrims)
+target_link_libraries(${VM_EXECUTABLE_NAME} IA32ABI)
+target_link_libraries(${VM_EXECUTABLE_NAME} LargeIntegers)
+target_link_libraries(${VM_EXECUTABLE_NAME} MiscPrimitivePlugin)
+target_link_libraries(${VM_EXECUTABLE_NAME} BitBltPlugin)
+target_link_libraries(${VM_EXECUTABLE_NAME} LocalePlugin)
+target_link_libraries(${VM_EXECUTABLE_NAME} MD5Plugin)
+target_link_libraries(${VM_EXECUTABLE_NAME} SqueakSSL)
+target_link_libraries(${VM_EXECUTABLE_NAME} DSAPrims)
 
 if(NOT WIN AND UNIX AND OSX)
    target_link_libraries(${VM_EXECUTABLE_NAME} "-framework AppKit")

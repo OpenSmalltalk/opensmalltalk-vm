@@ -3,8 +3,6 @@
 
 sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds){
     aioSleepForUsecs(microSeconds);
-
-    ceCheckForInterrupts();
     return 0;
 }
 

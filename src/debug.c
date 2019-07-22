@@ -27,6 +27,10 @@ void error(char *errorMessage){
 
 static char* severityName[4] = {"ERROR", "WARN", "INFO", "DEBUG"};
 
+EXPORT(void) logAssert(const char* fileName, const char* functionName, int line, char* msg){
+	logMessage(LOG_WARN, fileName, functionName, line, msg);
+}
+
 EXPORT(void) logMessage(int level, const char* fileName, const char* functionName, int line, ...){
 	char * format;
 	char timestamp[20];
@@ -56,4 +60,6 @@ EXPORT(void) logMessage(int level, const char* fileName, const char* functionNam
 	if(formatLength == 0 || format[formatLength - 1] != '\n'){
 		printf("\n");
 	}
+
+	fflush(stdout);
 }
