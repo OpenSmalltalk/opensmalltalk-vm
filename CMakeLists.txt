@@ -99,13 +99,10 @@ elseif(UNIX)
     endif()
 endif()
 
-add_definitions(-DSQUEAK_BUILTIN_PLUGIN=1)
-
-
 set(OPTIMIZATION_FLAGS "")
 
-set(CMAKE_C_FLAGS "-g ${COMMON_FLAGS} ${OPTIMIZATION_FLAGS} -DDEBUG -DDEBUGVM=1")
-set(CMAKE_CXX_FLAGS "-g ${COMMON_FLAGS} ${OPTIMIZATION_FLAGS} -DDEBUG -DDEBUGVM=1")
+set(CMAKE_C_FLAGS "-g ${COMMON_FLAGS} ${OPTIMIZATION_FLAGS} -DNDEBUG -DDEBUGVM=0")
+set(CMAKE_CXX_FLAGS "-g ${COMMON_FLAGS} ${OPTIMIZATION_FLAGS} -DNDEBUG -DDEBUGVM=0")
 
 add_definitions(-DIMMUTABILITY=1)
 add_definitions(-DCOGMTVM=0)
@@ -227,23 +224,6 @@ addLibraryWithRPATH(${VM_LIBRARY_NAME} ${VM_SOURCES})
 add_executable(${VM_EXECUTABLE_NAME} ${VM_FRONTEND_SOURCES})
 
 target_link_libraries(${VM_EXECUTABLE_NAME} ${VM_LIBRARY_NAME})
-
-
-target_link_libraries(${VM_EXECUTABLE_NAME} SecurityPlugin)
-target_link_libraries(${VM_EXECUTABLE_NAME} FilePlugin)
-target_link_libraries(${VM_EXECUTABLE_NAME} FileAttributesPlugin)
-target_link_libraries(${VM_EXECUTABLE_NAME} UUIDPlugin)
-target_link_libraries(${VM_EXECUTABLE_NAME} SocketPlugin)
-target_link_libraries(${VM_EXECUTABLE_NAME} SurfacePlugin)
-target_link_libraries(${VM_EXECUTABLE_NAME} SqueakFFIPrims)
-target_link_libraries(${VM_EXECUTABLE_NAME} IA32ABI)
-target_link_libraries(${VM_EXECUTABLE_NAME} LargeIntegers)
-target_link_libraries(${VM_EXECUTABLE_NAME} MiscPrimitivePlugin)
-target_link_libraries(${VM_EXECUTABLE_NAME} BitBltPlugin)
-target_link_libraries(${VM_EXECUTABLE_NAME} LocalePlugin)
-target_link_libraries(${VM_EXECUTABLE_NAME} MD5Plugin)
-target_link_libraries(${VM_EXECUTABLE_NAME} SqueakSSL)
-target_link_libraries(${VM_EXECUTABLE_NAME} DSAPrims)
 
 if(NOT WIN AND UNIX AND OSX)
    target_link_libraries(${VM_EXECUTABLE_NAME} "-framework AppKit")

@@ -1,7 +1,7 @@
 #include <pharo.h>
 #include <stdarg.h>
 
-#ifdef DEBUG
+#if defined(DEBUG) && DEBUG
 static int max_error_level = 4;
 #else
 static int max_error_level = 1;

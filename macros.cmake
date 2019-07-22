@@ -2,7 +2,7 @@ macro(addLibraryWithRPATH NAME)
     SET(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
     set(CMAKE_INSTALL_RPATH "@executable_path/Plugins")
 
-    add_library(${NAME} STATIC ${ARGN})
+    add_library(${NAME} SHARED ${ARGN})
     set_target_properties(${NAME} PROPERTIES MACOSX_RPATH ON)
     set_target_properties(${NAME} PROPERTIES INSTALL_NAME_DIR "@executable_path/Plugins")
 endmacro()
