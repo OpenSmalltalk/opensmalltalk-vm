@@ -6,3 +6,13 @@ Makefile
 cmake_install.cmake
 build
 install_manifest.txt
+
+Pharo.changes
+Pharo.image
+Pharo*.sources
+PharoDebug.log
+generated/
+pharo
+pharo-local/
+pharo-ui
+pharo-vm/
