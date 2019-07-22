@@ -93,13 +93,25 @@ endmacro()
 
 macro(ensure_pharo)
   if(NOT PHARO_DOWNLOAD_HAPPENED)
+
     execute_process(
-      COMMAND bash -c "rm -rf Pharo.image Pharo.changes pharo-vm pharo-ui pharo Pharo*.sources"
-      COMMAND wget -O - get.pharo.org/64/70+vm
+      COMMAND rm -rf Pharo.image Pharo.changes pharo-vm pharo-ui pharo Pharo*.sources
+    )
+
+    execute_process(
+      COMMAND wget -O - get.pharo.org/64/vm70
+      COMMAND bash
+      RESULT_VARIABLE SUCCESS
+    )
+    assert(SUCCESS 0 "Could not download the vm")
+
+    execute_process(
+      COMMAND wget -O - get.pharo.org/64/70
       COMMAND bash
       RESULT_VARIABLE SUCCESS
     )
     assert(SUCCESS 0 "Could not download Pharo image")
+
     set(PHARO_DOWNLOAD_HAPPENED TRUE CACHE BOOL "Has the Pharo download happened?" FORCE)
   endif()
 endmacro()
