@@ -73,7 +73,7 @@ endmacro()
 macro(generate_vm_code)
   ensure_pharo_vmmaker()
   execute_process(
-    COMMAND ./pharo Pharo.image eval PharoVMMaker generateCoInterpreter
+    COMMAND bash -c "./pharo Pharo.image eval PharoVMMaker generateCoInterpreter"
     RESULT_VARIABLE SUCCESS
   )
   assert(SUCCESS 0 "Could not generate sources")
@@ -83,7 +83,7 @@ macro(ensure_pharo_vmmaker)
   ensure_pharo()
   if(NOT PHARO_IMAGE_SETUP)
     execute_process(
-      COMMAND ./pharo Pharo.image --save --quit scripts/installVMMaker.st
+      COMMAND bash -c "./pharo Pharo.image --save --quit scripts/installVMMaker.st"
       RESULT_VARIABLE SUCCESS
     )
     assert(SUCCESS 0 "Could not setup VMMaker setup")
