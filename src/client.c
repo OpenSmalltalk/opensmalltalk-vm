@@ -68,7 +68,10 @@ int loadPharoImage(char* fileName){
     readImageFromFileHeapSizeStartingAt(imageFile, 0, 0);
     fclose(imageFile);
 
-    setImageName(fileName);
+    char* fullImageName = alloca(FILENAME_MAX);
+	fullImageName = getFullPath(fileName, fullImageName, FILENAME_MAX);
+
+    setImageName(fullImageName);
 
     return true;
 }
