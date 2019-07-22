@@ -207,6 +207,13 @@ elseif(UNIX)
     include(unix.cmake)
 endif()
 
+generate_vm_code()
+
+set(GENERATED_SOURCES
+    generated/vm/src/cogit.c
+    generated/vm/src/gcc3x-cointerp.c
+)
+
 set(SUPPORT_SOURCES
 	src/debug.c
 	src/utils.c
@@ -217,6 +224,7 @@ set(SUPPORT_SOURCES
 
 set(VM_SOURCES
 	${SUPPORT_SOURCES}
+  ${GENERATED_SOURCES}
 	${EXTRACTED_SOURCES}
 )
 

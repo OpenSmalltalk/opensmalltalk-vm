@@ -200,6 +200,12 @@ Spur32BitMMLESimulator >> inSortedFreeListLink: freeChunk to: nextFree given: pr
 	super inSortedFreeListLink: freeChunk to: nextFree given: prevFree
 ]
 
+{ #category : #simulation }
+Spur32BitMMLESimulator >> includesBehavior: anInteger ThatOf: anInteger2 [ 
+
+	^ coInterpreter includesBehavior: anInteger ThatOf: anInteger2 
+]
+
 { #category : #initialization }
 Spur32BitMMLESimulator >> initialize [
 	super initialize.

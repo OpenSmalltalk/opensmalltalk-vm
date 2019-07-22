@@ -235,9 +235,13 @@ double floatArg(sqInt index);
 sqInt methodReturnValue(sqInt oop);
 sqInt topRemappableOop(void);
 
+#if ASYNC_FFI_QUEUE
+
 sqInt ptExitInterpreterToCallback(vmccp);
 sqInt ptEnterInterpreterFromCallback(vmccp);
 sqInt ptDisableCogIt(void*);
+
+#endif //ASYNC_FFI_QUEUE
 
 sqInt isNonImmediate(sqInt oop);
 
@@ -548,9 +552,14 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->isPositiveMachineIntegerObject = isPositiveMachineIntegerObject;
 #endif
 
+
+#if ASYNC_FFI_QUEUE
+
 	VM->ptEnterInterpreterFromCallback = ptEnterInterpreterFromCallback;
 	VM->ptExitInterpreterToCallback = ptExitInterpreterToCallback;
 	VM->ptDisableCogIt = ptDisableCogIt;
+
+#endif // ASYNC_FFI_QUEUE
 
 	VM->isNonImmediate = isNonImmediate;
 

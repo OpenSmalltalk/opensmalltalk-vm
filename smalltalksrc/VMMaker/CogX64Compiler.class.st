@@ -440,7 +440,7 @@ CogX64Compiler >> computeMaximumSize [
 		[CDQ]					-> [^2].
 		[IDIVR]					-> [^3].
 		[IMULRR]				-> [^4].
-		"[CPUID]					-> [^2].
+		[CPUID]					-> [^2].
 		[CMPXCHGAwR]			-> [^8].
 		[CMPXCHGMwrR]		-> [^9].
 		[LFENCE]				-> [^3].
@@ -448,7 +448,7 @@ CogX64Compiler >> computeMaximumSize [
 		[SFENCE]				-> [^3].
 		[LOCK]					-> [^1].
 		[XCHGAwR]				-> [^6].
-		[XCHGMwrR]			-> [^7]."
+		[XCHGMwrR]			-> [^7].
 		[XCHGRR]				-> [^((operands at: 0) = RAX
 									   or: [(operands at: 1) = RAX])
 											ifTrue: [2]
@@ -1239,6 +1239,16 @@ CogX64Compiler >> concretizeConvertRsRd [
 		at: skip + 2 put: 16r5A;
 		at: skip + 3 put: (self mod: ModReg RM: srcReg RO: destReg).
 	 ^machineCodeSize := skip + 4
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeFENCE: regOpcode [
+	<inline: true>
+	machineCode
+		at: 0 put: 16r0F;
+		at: 1 put: 16rAE;
+		at: 2 put: (self mod: ModReg RM: 0 RO: regOpcode).
+	^machineCodeSize := 3
 ]
 
 { #category : #'generate machine code' }
@@ -2918,6 +2928,27 @@ CogX64Compiler >> concretizeTstCqR [
 ]
 
 { #category : #'generate machine code' }
+CogX64Compiler >> concretizeXCHGAwR [
+	<inline: true>
+	| addressOperand reg |
+	addressOperand := operands at: 0.
+	reg := operands at: 1.
+	machineCode
+		at: 0 put: (self rexw: true r: reg x: 0 b: 0);
+		at: 1 put: 16r87;
+		at: 2 put: (self mod: ModReg RM: 0 RO: 7);
+		at: 3 put: (addressOperand bitAnd: 16rFF);
+		at: 4 put: (addressOperand >> 8 bitAnd: 16rFF);
+		at: 5 put: (addressOperand >> 16 bitAnd: 16rFF);
+		at: 6 put: (addressOperand >> 24 bitAnd: 16rFF);
+		at: 7 put: (addressOperand >> 32 bitAnd: 16rFF);
+		at: 8 put: (addressOperand >> 40 bitAnd: 16rFF);
+		at: 9 put: (addressOperand >> 48 bitAnd: 16rFF);
+		at: 10 put: (addressOperand >> 56 bitAnd: 16rFF).
+	^machineCodeSize := 11
+]
+
+{ #category : #'generate machine code' }
 CogX64Compiler >> concretizeXCHGRR [
 	| r1 r2 |
 	r1 := operands at: 0.
@@ -3191,14 +3222,14 @@ CogX64Compiler >> dispatchConcretizeProcessorSpecific [
 		[CDQ]					-> [^self concretizeCDQ].
 		[IDIVR]					-> [^self concretizeIDIVR].
 		[IMULRR]				-> [^self concretizeMulRR].
-		"[CPUID]					-> [^self concretizeCPUID]."
-		"[CMPXCHGAwR]			-> [^self concretizeCMPXCHGAwR]."
-		"[CMPXCHGMwrR]		-> [^self concretizeCMPXCHGMwrR]."
-		"[LFENCE]				-> [^self concretizeFENCE: 5]."
-		"[MFENCE]				-> [^self concretizeFENCE: 6].
-		[SFENCE]				-> [^self concretizeFENCE: 7]."
+"		[CPUID]					-> [^self concretizeCPUID].
+		[CMPXCHGAwR]			-> [^self concretizeCMPXCHGAwR].
+		[CMPXCHGMwrR]		-> [^self concretizeCMPXCHGMwrR].
+		"[LFENCE]				-> [^self concretizeFENCE: 5].
+		[MFENCE]				-> [^self concretizeFENCE: 6].
+		[SFENCE]				-> [^self concretizeFENCE: 7].
 		"[LOCK]					-> [^self concretizeLOCK]."
-		"[XCHGAwR]				-> [^self concretizeXCHGAwR]."
+		[XCHGAwR]				-> [^self concretizeXCHGAwR].
 		"[XCHGMwrR]			-> [^self concretizeXCHGMwrR]."
 		[XCHGRR]				-> [^self concretizeXCHGRR].
 		[REP]					-> [^self concretizeREP].
@@ -3819,6 +3850,36 @@ CogX64Compiler >> generalPurposeRegisterMap [
 			#r15. R15	}
 ]
 
+{ #category : #'multi-threading' }
+CogX64Compiler >> generateLowLevelTryLock: vmOwnerLockAddress [
+	"Generate a function that attempts to lock the vmOwnerLock and answers
+	 true if it succeeded."
+	vmOwnerLockAddress = 0 ifTrue:
+		[cogit
+			MoveCq: 1 R: RAX;
+			RetN: 0.
+		 ^self].
+	cogit
+		MoveCq: 1 R: RAX;
+		gen: MFENCE; "make the XCHG globally consistent"
+		MoveAw: vmOwnerLockAddress R: R10;
+		gen: XCHGRR operand: RAX operand: R10;
+		gen: SFENCE; "make the store globally visible"
+		SubCq: 1 R: RAX; "Since we only ever set the lock to 1 or 0, subtracting 1 sets
+						   EAX to 0 if the lock was already locked and non-zero if it wasn't."
+		RetN: 0
+]
+
+{ #category : #'multi-threading' }
+CogX64Compiler >> generateLowLevelUnlock: vmOwnerLockAddress [
+	vmOwnerLockAddress ~= 0 ifTrue:
+		[cogit
+			MoveCq: 0 R: RAX;
+			MoveR: RAX Aw: vmOwnerLockAddress;
+			gen: SFENCE].
+	cogit RetN: 0
+]
+
 { #category : #testing }
 CogX64Compiler >> hasConditionRegister [
 	"Answer if the receiver supports, e.g., JumpOverflow after a regular AddRR"
@@ -4086,6 +4147,18 @@ CogX64Compiler >> nsSendCacheAt: callSiteReturnAddress [
 { #category : #accessing }
 CogX64Compiler >> numIntRegArgs [
 	^SysV ifTrue: [6] ifFalse: [4]
+]
+
+{ #category : #'multi-threading' }
+CogX64Compiler >> numLowLevelLockOpcodes [
+	"movq   $0x1, %rax
+    mfence 
+    movq   0x13850(%rbx), %r9
+    xchgq  %r9, %rax
+    sfence 
+    subq   $0x1, %rax
+    retq"
+	^14
 ]
 
 { #category : #'generate machine code' }

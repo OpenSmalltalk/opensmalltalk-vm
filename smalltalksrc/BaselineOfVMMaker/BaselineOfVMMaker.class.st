@@ -12,7 +12,10 @@ BaselineOfVMMaker >> baseline: spec [
 		do: [
 			"Initial VMMaker package for handling Pharo 6" 
 			spec
-				package: #'VMMakerCompatibilityForPharo6'.
+				package: 'VMMakerTests' with: [
+					spec requires: 'VMMakerCompatibilityForPharo6' ].
+			spec
+				package: 'VMMakerCompatibilityForPharo6'.
 			
 			"Dependencies from other repositories"
 			spec
@@ -27,13 +30,12 @@ BaselineOfVMMaker >> baseline: spec [
 				
 			"Main VMMaker packages"	
 			spec
-				package: #'VMMakerCompatibilityForPharo6';
-				package: #'Balloon-Engine-Pools';
-				package: #'BytecodeSets';
-				package: #'VMMaker';
-				package: #'Cog';
-				package: #'CogTools';
-				package: #'ImageFormat'.
+				package: 'Balloon-Engine-Pools';
+				package: 'BytecodeSets';
+				package: 'VMMaker' with: [ spec requires: #( 'VMMakerCompatibilityForPharo6' 'Printf') ];
+				package: 'Cog';
+				package: 'CogTools';
+				package: 'ImageFormat'.
 				
 			"VMMaker plugins"
 			spec
@@ -58,5 +60,6 @@ BaselineOfVMMaker >> baseline: spec [
 				
 			spec
 				package: 'AndreasProfiler' with: [
-					spec repository: 'http://ss3.gemstone.com/ss/AndreasSystemProfiler'] ]
+					spec repository: 'http://ss3.gemstone.com/ss/AndreasSystemProfiler'].
+			spec group: 'default' with: #('VMMaker' 'VMMakerTests') ]
 ]

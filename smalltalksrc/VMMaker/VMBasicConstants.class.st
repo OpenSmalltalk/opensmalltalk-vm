@@ -20,6 +20,7 @@ Class {
 		'CloneOnGC',
 		'CloneOnScavenge',
 		'DisownVMForFFICall',
+		'DisownVMForProcessorRelinquish',
 		'DisownVMForThreading',
 		'DisownVMLockOutFullGC',
 		'DoAssertionChecks',

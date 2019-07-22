@@ -2309,7 +2309,7 @@ StackInterpreter >> activateNewMethod [
 StackInterpreter >> activeProcess [
 	"Answer the current activeProcess."
 	<api> "useful for VM debugging"
-	^objectMemory fetchPointer: ActiveProcessIndex ofObject: self schedulerPointer
+	^objectMemory memoryActiveProcess
 ]
 
 { #category : #'process primitive support' }
@@ -8767,6 +8767,12 @@ StackInterpreter >> install: rcvr inAtCache: cache at: atIx string: stringy [
 	cache at: atIx+AtCacheFixedFields put: fixedFields.
 	cache at: atIx+AtCacheSize put: totalLength - fixedFields.
 	^true
+]
+
+{ #category : #accessing }
+StackInterpreter >> instructionPointer: anInteger [
+	<doNotGenerate>
+	instructionPointer := anInteger
 ]
 
 { #category : #'frame access' }
@@ -16928,6 +16934,12 @@ StackInterpreter >> numSlotsOfMarriedContext: aContext [
 	^CtxtTempFrameStart + contextSize
 ]
 
+{ #category : #accessing }
+StackInterpreter >> numStackPages: anInteger [ 
+	<doNotGenerate>
+	numStackPages := anInteger
+]
+
 { #category : #'stack pages' }
 StackInterpreter >> numStkPages [
 	<inline: true>
@@ -21246,12 +21258,25 @@ StackInterpreter >> stackPageHeadroom [
 	^0
 ]
 
+{ #category : #accessing }
+StackInterpreter >> stackPages: anInterpreterStackPages [
+	<doNotGenerate>
+	stackPages := anInterpreterStackPages
+]
+
 { #category : #initialization }
 StackInterpreter >> stackPagesClass [
 	<doNotGenerate>
 	^VMBIGENDIAN
 		ifTrue: [InterpreterStackPagesMSB]
 		ifFalse: [InterpreterStackPagesLSB]
+]
+
+{ #category : #'cog jit support' }
+StackInterpreter >> stackPointer: theSP [
+	"Simulation only"
+	<doNotGenerate>
+	stackPointer := theSP
 ]
 
 { #category : #'internal interpreter access' }

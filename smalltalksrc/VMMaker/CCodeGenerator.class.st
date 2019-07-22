@@ -925,13 +925,16 @@ CCodeGenerator >> collectInlineList: strategy [
 						ifPresent: [:senderCount| callsOf at: node selector put: senderCount + 1 ] ] ].
 
 		inlineStrategy validateCanInline: m.
-		(inlineStrategy shouldInlineMethod: m)
-			ifTrue: [ 
-				"inline if method has no C code and is either small or contains inline directive"
-				inlineList add: m selector]
-			ifFalse: [
-				inlineStrategy isSelectiveInlineStrategy
-					ifTrue: [selectorsOfMethodsNotToInline add: m selector] ] ].
+		(inlineStrategy canInline: m)
+			ifFalse: [ selectorsOfMethodsNotToInline add: m selector ]
+			ifTrue: [
+				(inlineStrategy shouldInlineMethod: m)
+					ifTrue: [ 
+						"inline if method has no C code and is either small or contains inline directive"
+						inlineList add: m selector]
+					ifFalse: [
+						inlineStrategy isSelectiveInlineStrategy
+							ifTrue: [selectorsOfMethodsNotToInline add: m selector] ] ] ].
 
 	inlineStrategy isSelectiveInlineStrategy
 		ifTrue:
@@ -941,7 +944,7 @@ CCodeGenerator >> collectInlineList: strategy [
 				[:assoc|
 				(assoc value = 1
 				 and: [(selectorsOfMethodsNotToInline includes: assoc key) not]) ifTrue:
-					[inlineList add: assoc key]]]
+					[ inlineList add: assoc key ]]]
 ]
 
 { #category : #utilities }

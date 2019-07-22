@@ -2,13 +2,10 @@ include_directories(
     extracted/vm/include/osx
     extracted/vm/include/unix
     extracted/vm/include/common
+    generated/vm/include
 )
 
 set(EXTRACTED_SOURCES
-#SPUR Source
-    extracted/vm/src/common/cogit.c
-    extracted/vm/src/common/gcc3x-cointerp.c
-
 #Common sources
     extracted/vm/src/common/sqHeapMap.c
     extracted/vm/src/common/sqVirtualMachine.c
@@ -52,4 +49,3 @@ macro(configure_installables)
     install(FILES "build/includes/Info.plist" DESTINATION "Pharo.app/Contents")
     install(FILES "resources/mac/Pharo.icns" DESTINATION "Pharo.app/Contents/Resources")
 endmacro()
-

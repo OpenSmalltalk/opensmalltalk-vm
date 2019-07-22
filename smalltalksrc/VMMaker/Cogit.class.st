@@ -1207,7 +1207,9 @@ Cogit class >> notesAndQueries [
 
 { #category : #accessing }
 Cogit class >> numTrampolines [
-	^39 "31 + 4 each for self and super sends" + (LowcodeVM ifTrue: [1] ifFalse: [0])
+	^39 "31 + 4 each for self and super sends"
+		+ (LowcodeVM ifTrue: [1] ifFalse: [0])
+		+ (COGMTVM ifTrue: [ 2 ] ifFalse: [ 0 ])
 
 	"self withAllSubclasses collect: [:c| {c. (c instVarNames select: [:ea| ea beginsWith: 'ce']) size}]"
 ]
@@ -4952,6 +4954,23 @@ Cogit >> cogitPostGCAction: gcMode [
 	self assert: ((gcMode noMask: GCModeFull+GCModeNewSpace) or: [methodZone kosherYoungReferrers])
 ]
 
+{ #category : #'multi-threading' }
+Cogit >> cogitTryLockVMOwner [
+	<api>
+		"ceTryLockVMOwner does an atomic swap of the lock with 1 and
+		 then subtracts 1from lock's value.  So if the result is 0 the lock was
+		 already held.  Anything else (in fact -1) implies we hold the lock."
+	<cmacro: '() (ceTryLockVMOwner() != 0)'>
+	^(self simulateLeafCallOf: ceTryLockVMOwner) ~= 0
+]
+
+{ #category : #'multi-threading' }
+Cogit >> cogitUnlockVMOwner [
+	<api>
+	<cmacro: '() ceUnlockVMOwner()'>
+	^self simulateLeafCallOf: ceUnlockVMOwner
+]
+
 { #category : #'profiling primitives' }
 Cogit >> collectCogConstituentFor: descriptor Annotation: isBackwardBranchAndAnnotation Mcpc: mcpc Bcpc: bcpc Method: cogMethodArg [
 	<var: #descriptor type: #'BytecodeDescriptor *'>
@@ -8386,25 +8405,22 @@ Cogit >> generateTrampolines [
 { #category : #initialization }
 Cogit >> generateVMOwnerLockFunctions [
 	| startAddress |
-	<inline: true>
 	self cppIf: COGMTVM
 		ifTrue:
-			[self allocateOpcodes: backEnd numLowLevelLockOpcodes bytecodes: 0.
-			self zeroOpcodeIndex.
+			[self allocateOpcodes: 30 bytecodes: 0.
 			startAddress := methodZoneBase.
+			self zeroOpcodeIndex.
 			backEnd generateLowLevelTryLock: coInterpreter vmOwnerLockAddress.
 			self outputInstructionsForGeneratedRuntimeAt: startAddress.
 			self recordGeneratedRunTime: 'ceTryLockVMOwner' address: startAddress.
 			ceTryLockVMOwner := self cCoerceSimple: startAddress to: #'usqIntptr_t (*)(void)'.
 
-			self zeroOpcodeIndex.
-			initialPC := 0.
-			endPC := numAbstractOpcodes - 1.
 			startAddress := methodZoneBase.
+			self zeroOpcodeIndex.
 			backEnd generateLowLevelUnlock: coInterpreter vmOwnerLockAddress.
 			self outputInstructionsForGeneratedRuntimeAt: startAddress.
 			self recordGeneratedRunTime: 'ceUnlockVMOwner' address: startAddress.
-			ceUnlockVMOwner := self cCoerceSimple: startAddress to: #'void (*)(void)']
+			ceUnlockVMOwner := self cCoerceSimple: startAddress to: #'void (*)(void)' ]
 ]
 
 { #category : #'compile abstract instructions' }
@@ -12545,16 +12561,6 @@ Cogit >> trampolineName: routinePrefix numRegArgs: numArgs [
 	^self trampolineName: routinePrefix numArgs: numArgs limit: self numRegArgs
 ]
 
-{ #category : #'multi-threading' }
-Cogit >> tryLockVMOwner [
-	<api>
-		"ceTryLockVMOwner does an atomic swap of the lock with 1 and
-		 then subtracts 1from lock's value.  So if the result is 0 the lock was
-		 already held.  Anything else (in fact -1) implies we hold the lock."
-	<cmacro: '() (ceTryLockVMOwner() != 0)'>
-	^(self simulateLeafCallOf: ceTryLockVMOwner) ~= 0
-]
-
 { #category : #'bytecode generators' }
 Cogit >> unknownBytecode [
 	^EncounteredUnknownBytecode
@@ -12898,13 +12904,6 @@ Cogit >> unlinkSendsToFree [
 		cogMethod := methodZone methodAfter: cogMethod].
 	codeModified ifTrue: "After possibly updating inline caches we need to flush the icache."
 		[processor flushICacheFrom: methodZoneBase asUnsignedInteger to: methodZone limitZony asUnsignedInteger]
-]
-
-{ #category : #'multi-threading' }
-Cogit >> unlockVMOwner [
-	<api>
-	<cmacro: '() ceUnlockVMOwner()'>
-	^self simulateLeafCallOf: ceUnlockVMOwner
 ]
 
 { #category : #accessing }
