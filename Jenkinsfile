@@ -48,6 +48,42 @@ def runBuild(platform){
 	}
 }
 
+def runTests(platform){
+	cleanWs()
+
+	stage("Tests-${platform}"){
+		
+		def vmDir = ''
+		
+		if(platform == 'osx'){
+			vmDir = 'mac'
+		}else{
+			if(platform == 'unix')
+				vmDir = 'linux'
+			else
+				vmDir = 'win'
+		}
+
+		unstash name: "packages-${platform}"
+
+		if(isWindows()){
+		}else{
+			def zipFile = sh(returnStdout: true, script: "ls build/packages/PharoVM-*-${vmDir}64.zip").trim()
+			
+			shell "mkdir runTests"
+			shell "unzip ${zipFile} -d runTests/"
+			shell "cd runTests"
+			shell "wget -O - get.pharo.org/64/80 | bash "
+			
+			if(platform == 'mac'){
+				shell "./Pharo.app/Contents/MacOS/Pharo Pharo.image test '.*'"
+			}			
+		}
+		
+		stash excludes: '_CPack_Packages', includes: 'build/packages/*', name: "packages-${platform}"
+		archiveArtifacts artifacts: 'build/packages/*', excludes: '_CPack_Packages'
+	}
+}
 
 def upload(platform, vmDir) {
 
@@ -96,6 +132,7 @@ try{
 
     def platforms = ['unix', 'osx', 'windows']
 	def builders = [:]
+	def tests = [:]
 
 	for (platf in platforms) {
         // Need to bind the label variable before the closure - can't do 'for (label in labels)'
@@ -108,11 +145,21 @@ try{
 				}
 			}
 		}
+		
+		tests[platform] = {
+			node(platform){
+				timeout(30){
+					runTests(platform)
+				}
+			}
+		}
 	}
 	
 	parallel builders
 	
 	uploadPackages()
+
+	parallel tests
 
 } catch (e) {
   throw e
