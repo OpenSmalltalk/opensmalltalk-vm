@@ -8,8 +8,9 @@ set(VERSION_PATCH 0)
 
 get_commit_hash(GIT_COMMIT_HASH)
 get_git_describe(GIT_DESCRIBE)
+get_git_date(GIT_COMMIT_DATE)
 
-set(BUILT_FROM "${GIT_DESCRIBE} - Commit: ${GIT_COMMIT_HASH}")
+set(BUILT_FROM "${GIT_DESCRIBE} - Commit: ${GIT_COMMIT_HASH} - Date: ${GIT_COMMIT_DATE}")
 
 if(WIN64 OR WIN OR CYGWIN)
     set(WIN 1)

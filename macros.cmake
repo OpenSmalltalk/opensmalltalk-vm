@@ -124,7 +124,15 @@ endmacro()
 
 macro(get_git_describe VARNAME)
     execute_process(
-        COMMAND git describe
+        COMMAND git describe --always
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        OUTPUT_VARIABLE ${VARNAME}
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+endmacro()
+
+macro(get_git_date VARNAME)
+    execute_process(
+        COMMAND git log -1 --format=%aI
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         OUTPUT_VARIABLE ${VARNAME}
         OUTPUT_STRIP_TRAILING_WHITESPACE)
