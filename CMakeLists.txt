@@ -12,6 +12,8 @@ get_git_date(GIT_COMMIT_DATE)
 
 set(BUILT_FROM "${GIT_DESCRIBE} - Commit: ${GIT_COMMIT_HASH} - Date: ${GIT_COMMIT_DATE}")
 
+message(STATUS ${BUILT_FROM})
+
 if(WIN64 OR WIN OR CYGWIN)
     set(WIN 1)
 
