@@ -132,7 +132,7 @@ endmacro()
 
 macro(get_git_date VARNAME)
     execute_process(
-        COMMAND git log -1 --format=%aI
+        COMMAND git log -1 --format=%ai
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         OUTPUT_VARIABLE ${VARNAME}
         OUTPUT_STRIP_TRAILING_WHITESPACE)
