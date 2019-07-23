@@ -72,14 +72,16 @@ def runTests(platform){
 			
 			shell "mkdir runTests"
 			shell "unzip ${zipFile} -d runTests/"
-			shell "cd runTests"
-			shell "wget -O - get.pharo.org/64/80 | bash "
+
+			dir("runTests"){
+				shell "wget -O - get.pharo.org/64/80 | bash "
 			
-			if(platform == 'osx'){
-				shell "./Pharo.app/Contents/MacOS/Pharo Pharo.image test '.*'"
-			}			
-			if(platform == 'unix'){
-				shell "./pharo Pharo.image test '.*'"
+				if(platform == 'osx'){
+					shell "./Pharo.app/Contents/MacOS/Pharo Pharo.image test '.*'"
+				}			
+				if(platform == 'unix'){
+					shell "./pharo Pharo.image test '.*'"
+				}
 			}			
 		}
 		
