@@ -70,10 +70,10 @@ macro(get_commit_hash VARNAME)
         OUTPUT_STRIP_TRAILING_WHITESPACE)
 endmacro()
 
-macro(generate_vm_code)
+macro(generate_vm_code FLAVOUR)
   ensure_pharo_vmmaker()
   execute_process(
-    COMMAND bash -c "./pharo Pharo.image eval PharoVMMaker generateCoInterpreter"
+    COMMAND bash -c "./pharo Pharo.image eval PharoVMMaker generate: ${FLAVOUR}"
     RESULT_VARIABLE SUCCESS
   )
   assert(SUCCESS 0 "Could not generate sources")

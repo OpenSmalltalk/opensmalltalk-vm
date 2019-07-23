@@ -186,6 +186,10 @@ check_include_files(uuid.h HAVE_UUID_H)
 check_library_exists(uuid uuidgen "" HAVE_UUIDGEN)
 check_library_exists(uuid uuid_generate "" HAVE_UUID_GENERATE)
 
+#Generates the vm code
+generate_vm_code('#CoInterpreterWithQueueFFI')
+add_definitions(-DASYNC_FFI_QUEUE=1)
+
 #Generating config file
 configure_file(includes/config.h.in build/includes/config.h)
 include_directories(build/includes)
@@ -206,8 +210,6 @@ elseif(OSX)
 elseif(UNIX)
     include(unix.cmake)
 endif()
-
-generate_vm_code()
 
 set(GENERATED_SOURCES
     generated/vm/src/cogit.c
