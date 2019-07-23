@@ -10,6 +10,13 @@ Class {
 { #category : #generation }
 PharoVMMaker class >> generate: aClassName [
 
+	Transcript 
+		nextPutAll: 'Generating ';
+	 	nextPutAll: aClassName printString;
+		nextPutAll: '...';
+		cr;
+		flush.
+		
 	self perform: #generate , aClassName asSymbol
 ]
 
