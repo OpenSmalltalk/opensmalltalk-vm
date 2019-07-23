@@ -10,7 +10,7 @@ Class {
 { #category : #generation }
 PharoVMMaker class >> generate: aClassName [
 
-	self perform: #generate , aClassName
+	self perform: #generate , aClassName asSymbol
 ]
 
 { #category : #generation }
