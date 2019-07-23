@@ -187,7 +187,7 @@ check_library_exists(uuid uuidgen "" HAVE_UUIDGEN)
 check_library_exists(uuid uuid_generate "" HAVE_UUID_GENERATE)
 
 #Generates the vm code
-generate_vm_code('#CoInterpreterWithQueueFFI')
+generate_vm_code(CoInterpreterWithQueueFFI)
 add_definitions(-DASYNC_FFI_QUEUE=1)
 
 #Generating config file
