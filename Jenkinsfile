@@ -67,6 +67,12 @@ def runTests(platform){
 		unstash name: "packages-${platform}"
 
 		if(isWindows()){
+			runInCygwin "mkdir runTests"
+			runInCygwin "unzip build/packages/PharoVM-*-${vmDir}64.zip -d runTests/"
+			dir("runTests"){
+				bat "Pharo.exe Pharo.image test --junit-xml-output --stage-name=win64 '.*'"
+				junit allowEmptyResults: true, testResults: "*.xml"
+			}
 		}else{
 			def zipFile = sh(returnStdout: true, script: "ls build/packages/PharoVM-*-${vmDir}64.zip").trim()
 			
