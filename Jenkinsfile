@@ -77,16 +77,18 @@ def runTests(platform){
 				shell "wget -O - get.pharo.org/64/80 | bash "
 			
 				if(platform == 'osx'){
-					shell "./Pharo.app/Contents/MacOS/Pharo Pharo.image test '.*'"
+					shell "./Pharo.app/Contents/MacOS/Pharo Pharo.image test --junit-xml-output --stage-name=osx64 '.*'"
 				}			
 				if(platform == 'unix'){
-					shell "./pharo Pharo.image test '.*'"
+					shell "./pharo Pharo.image test --junit-xml-output --stage-name=unix64 '.*'" 
 				}
+				
+				junit allowEmptyResults: true, testResults: "*.xml"
 			}			
 		}
-		
+				
 		stash excludes: '_CPack_Packages', includes: 'build/packages/*', name: "packages-${platform}"
-		archiveArtifacts artifacts: 'build/packages/*', excludes: '_CPack_Packages'
+		archiveArtifacts artifacts: 'runTests/*.xml', excludes: '_CPack_Packages'
 	}
 }
 
