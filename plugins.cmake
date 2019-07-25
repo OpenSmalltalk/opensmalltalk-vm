@@ -234,12 +234,6 @@ if(OSX)
 endif()
 
 #
-# MD5Plugin
-#
-
-add_vm_plugin(MD5Plugin)
-
-#
 # SqueakSSL
 #
 
