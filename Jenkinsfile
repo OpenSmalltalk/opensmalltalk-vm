@@ -71,7 +71,7 @@ def runTests(platform){
 			runInCygwin "unzip build/packages/PharoVM-*-${vmDir}64.zip -d runTests/"
 			dir("runTests"){
 				shell "wget -O - get.pharo.org/64/80 | bash "
-				bat "Pharo.exe Pharo.image test --junit-xml-output --stage-name=win64 '.*'"
+				bat "Pharo.exe Pharo.image test --junit-xml-output --stage-name=win64 .*"
 				junit allowEmptyResults: true, testResults: "*.xml"
 			}
 		}else{
