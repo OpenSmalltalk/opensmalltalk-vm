@@ -12,6 +12,8 @@ int main(int argc, char* argv[]){
 
 	parseArguments(argc, argv, &parameters);
 
+	installErrorHandlers();
+
 	logInfo("Opening Image: %s\n", parameters.imageFile);
 
 	getcwd(buffer, sizeof(buffer));

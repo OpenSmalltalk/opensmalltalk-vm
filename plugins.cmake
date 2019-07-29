@@ -167,6 +167,12 @@ add_vm_plugin(LargeIntegers)
 
 add_vm_plugin(JPEGReaderPlugin)
 
+#
+# JPEGReadWriter2Plugin
+#
+
+add_vm_plugin(JPEGReadWriter2Plugin)
+
 
 #
 # MiscPrimitivePlugin
