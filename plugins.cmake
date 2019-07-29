@@ -162,6 +162,13 @@ target_link_libraries(IA32ABI ${VM_LIBRARY_NAME})
 add_vm_plugin(LargeIntegers)
 
 #
+# JPEGReaderPlugin
+#
+
+add_vm_plugin(JPEGReaderPlugin)
+
+
+#
 # MiscPrimitivePlugin
 #
 
