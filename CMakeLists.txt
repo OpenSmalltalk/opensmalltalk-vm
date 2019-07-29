@@ -69,7 +69,7 @@ if(WIN)
 
 
 #    if(NOT MSVC)
-        set(COMMON_FLAGS "-fwrapv -fdeclspec -msse2 -ggdb2 -m64 -mno-rtd -mms-bitfields -O0 -momit-leaf-frame-pointer -funroll-loops -D_MT -fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf -Wall -Wno-unused-variable -fno-optimize-sibling-calls")
+        set(COMMON_FLAGS "-fwrapv -fdeclspec -msse2 -ggdb2 -m64 -mno-rtd -mms-bitfields -O2 -momit-leaf-frame-pointer -funroll-loops -D_MT -fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf -Wall -Wno-unused-variable -fno-optimize-sibling-calls")
 #    endif()
     
     set(OS_TYPE "Win32")
@@ -88,6 +88,8 @@ elseif(UNIX)
     set(COMMON_FLAGS "")
 
     add_definitions(-DLSB_FIRST=1)
+
+    set(COMMON_FLAGS "-O2")
 
     set(OS_TYPE "unix")
     if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
