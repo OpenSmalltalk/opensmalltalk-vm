@@ -2,7 +2,10 @@
 #include <stdarg.h>
 
 #if __linux__
-#include <sys/regset.h>
+
+#define __USE_GNU
+#include <ucontext.h>
+
 #endif
 
 #if defined(DEBUG) && DEBUG
