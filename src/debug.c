@@ -1,5 +1,6 @@
 #include <pharo.h>
 #include <stdarg.h>
+#include <sys/ucontext.h>
 
 #if defined(DEBUG) && DEBUG
 static int max_error_level = 4;
@@ -363,7 +364,6 @@ char *getVersionInfo(int verbose)
 # define INTERP_BUILD interpreterVersion
 #endif
   extern char *revisionAsString();
-  extern char *cc_version;
   char *info= (char *)malloc(4096);
   info[0]= '\0';
 
