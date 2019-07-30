@@ -1,6 +1,6 @@
 #include <pharo.h>
 #include <stdarg.h>
-#include <sys/ucontext.h>
+#include <ucontext.h>
 
 #if defined(DEBUG) && DEBUG
 static int max_error_level = 4;
