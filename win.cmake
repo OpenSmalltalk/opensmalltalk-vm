@@ -16,6 +16,7 @@ set(EXTRACTED_SOURCES
     extracted/vm/src/win/sqWin32SpurAlloc.c
     extracted/vm/src/win/sqWin32Heartbeat.c
     src/aioWin.c
+    src/debugWin.c
 )
 
 set(VM_FRONTEND_SOURCES

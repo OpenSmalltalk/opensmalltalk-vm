@@ -152,13 +152,13 @@ typedef unsigned int UINT16;
 /* INT16 must hold at least the values -32768..32767. */
 
 #ifndef XMD_H			/* X11/xmd.h correctly defines INT16 */
-typedef short INT16;
+typedef int16_t INT16;
 #endif
 
 /* INT32 must hold at least signed 32-bit values. */
 
 #ifndef XMD_H			/* X11/xmd.h correctly defines INT32 */
-typedef long INT32;
+typedef int32_t INT32;
 #endif
 
 /* Datatype used for image dimensions.  The JPEG standard only supports
@@ -224,7 +224,7 @@ typedef unsigned int JDIMENSION;
  */
 
 #ifndef HAVE_BOOLEAN
-typedef int boolean;
+typedef unsigned char boolean;
 #endif
 #ifndef FALSE			/* in case these macros already exist */
 #define FALSE	0		/* values of boolean */

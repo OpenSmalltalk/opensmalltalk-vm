@@ -16,6 +16,7 @@ set(EXTRACTED_SOURCES
 #Platform sources
     extracted/vm/src/unix/aio.c
     extracted/vm/src/unix/sqUnixHeartbeat.c
+    src/debugUnix.c
 
 #Virtual Memory functions
     src/memoryUnix.c
