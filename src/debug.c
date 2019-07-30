@@ -4,9 +4,22 @@
 #if __linux__
 
 #define __USE_GNU
+#define _GNU_SOURCE
+
 #include <ucontext.h>
 
 #endif
+
+#ifndef WIN64
+
+#include <execinfo.h>
+
+#endif
+
+#include <signal.h>
+
+#define BACKTRACE_DEPTH 64
+
 
 #if defined(DEBUG) && DEBUG
 static int max_error_level = 4;
@@ -70,10 +83,6 @@ EXPORT(void) logMessage(int level, const char* fileName, const char* functionNam
 
 	fflush(stdout);
 }
-#include <signal.h>
-#include <execinfo.h>
-
-#define BACKTRACE_DEPTH 64
 
 void ifValidWriteBackStackPointersSaveTo(void *theCFP, void *theCSP, char **savedFPP, char **savedSPP);
 
