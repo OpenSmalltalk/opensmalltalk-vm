@@ -1,6 +1,9 @@
 #include <pharo.h>
 #include <stdarg.h>
-#include <ucontext.h>
+
+#if __linux__
+#include <sys/regset.h>
+#endif
 
 #if defined(DEBUG) && DEBUG
 static int max_error_level = 4;
