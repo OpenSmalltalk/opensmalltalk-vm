@@ -37,6 +37,7 @@
  */
 #include "libmpeg3.h"
 #include "mpeg3video.h"
+#include "mpeg3videoprotos.h"
 #include <string.h>
 
 unsigned char gClipArray[1026];

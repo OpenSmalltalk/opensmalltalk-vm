@@ -39,6 +39,8 @@ void memoryFree(void *stuff);
 #endif
 
 
+typedef struct mpeg3 mpeg3_t;
+
 #include "mpeg3atrack.h"
 #include "mpeg3css.h"
 #include "mpeg3io.h"
@@ -46,7 +48,7 @@ void memoryFree(void *stuff);
 #include "mpeg3title.h"
 #include "mpeg3vtrack.h"
 
-typedef struct
+struct mpeg3
 {
 	mpeg3_fs_t *fs;      /* Store entry path here */
 	mpeg3_demuxer_t *demuxer;        /* Master tables */
@@ -72,9 +74,6 @@ typedef struct
 	int program;  /* Number of program to play */
 	int cpus;
 	int have_mmx;
-} mpeg3_t;
-
-
-
+};
 
 #endif

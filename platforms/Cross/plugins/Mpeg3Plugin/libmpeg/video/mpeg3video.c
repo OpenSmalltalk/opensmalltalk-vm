@@ -312,7 +312,7 @@ int mpeg3video_delete_struct(mpeg3video_t *video)
 	if(video->total_slice_decoders)
 	{
 		for(i = 0; i < video->total_slice_decoders; i++)
-			mpeg3_delete_slice_decoder(video->slice_decoders[i]);
+			mpeg3_delete_slice_decoder(&(video->slice_decoders[i]));
 	}
 	for(i = 0; i < video->slice_buffers_initialized; i++)
 		mpeg3_delete_slice_buffer(&(video->slice_buffers[i]));

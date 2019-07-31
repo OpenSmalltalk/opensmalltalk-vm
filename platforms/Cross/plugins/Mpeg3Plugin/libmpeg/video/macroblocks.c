@@ -28,6 +28,7 @@
     http://www.squeak.org/license.html
  */
 #include "mpeg3video.h"
+#include "mpeg3videoprotos.h"
 #include "slice.h"
 #include "vlc.h"
 

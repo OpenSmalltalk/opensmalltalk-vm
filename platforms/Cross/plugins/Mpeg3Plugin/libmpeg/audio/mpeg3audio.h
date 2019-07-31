@@ -4,6 +4,8 @@
 #ifndef MPEG3AUDIO_H
 #define MPEG3AUDIO_H
 
+typedef struct mpeg3 mpeg3_t;
+
 #include "ac3.h"
 #include "bitstream.h"
 #ifndef M_PI

@@ -52,7 +52,6 @@
 //
 
 #ifdef macintoshSqueak
-//#define SQUEAK_BUILTIN_PLUGIN
 #define ENABLE_URL_FETCH
 /* replace the image file manipulation macros with functions */
 

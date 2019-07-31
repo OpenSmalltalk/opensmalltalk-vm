@@ -24,6 +24,14 @@ typedef struct
 
 unsigned int mpeg3demux_read_char_packet(mpeg3_demuxer_t *demuxer);
 unsigned int mpeg3demux_read_prev_char_packet(mpeg3_demuxer_t *demuxer);
+int mpeg3bits_seek_end(mpeg3_bits_t* stream);
+int mpeg3bits_seek_start(mpeg3_bits_t* stream);
+int mpeg3bits_seek_time(mpeg3_bits_t* stream, double time_position);
+int mpeg3bits_seek_byte(mpeg3_bits_t* stream, long position);
+int mpeg3bits_seek_percentage(mpeg3_bits_t* stream, double percentage);
+void mpeg3bits_start_reverse(mpeg3_bits_t* stream);
+void mpeg3bits_start_forward(mpeg3_bits_t* stream);
+
 
 /* ======================================================================== */
 /*                                 Entry Points */

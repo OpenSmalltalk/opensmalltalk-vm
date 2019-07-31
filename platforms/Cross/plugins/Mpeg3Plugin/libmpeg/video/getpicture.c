@@ -30,8 +30,8 @@
  /*  Changed Sept 15th by John M McIntosh to support Macintosh & Squeak
  */
 #include "mpeg3private.h"
-
 #include "mpeg3video.h"
+#include "mpeg3videoprotos.h"
 #include "vlc.h"
 
 #include <stdio.h>
@@ -707,7 +707,7 @@ int mpeg3video_allocate_decoders(mpeg3video_t *video, int decoder_count)
 	{
 		for(i = 0; i < video->total_slice_decoders; i++)
 		{
-			mpeg3_delete_slice_decoder(video->slice_decoders[i]);
+			mpeg3_delete_slice_decoder(&(video->slice_decoders[i]));
 		}
 
 		for(i = 0; i < file->cpus && i < MPEG3_MAX_CPUS; i++)

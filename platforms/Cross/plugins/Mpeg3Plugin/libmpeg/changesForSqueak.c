@@ -36,6 +36,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "mpeg3private.h"
+#include "mpeg3protos.h"
 #include "changesForSqueak.h"
 
 #if defined(TARGET_OS_MAC) && !defined ( __APPLE__ ) && !defined ( __MACH__ )

@@ -35,9 +35,25 @@ typedef struct
 #endif
 
 #define mpeg3io_total_bytes(fs) (((mpeg3_fs_t *)(fs))->total_bytes)
-inline int mpeg3io_fgetc(mpeg3_fs_t *fs);
 
-static inline unsigned int mpeg3io_read_int32(mpeg3_fs_t *fs)
+static inline int
+mpeg3io_fgetc(mpeg3_fs_t *fs) {
+	if (fs->mpeg_is_in_buffer) {
+		unsigned int value;
+		fs->mpeg_is_in_buffer_file_position++;
+		if (fs->mpeg_is_in_buffer_file_position >= fs->mpeg_buffer_size) {
+			fs->mpeg_is_in_buffer_file_position = fs->mpeg_buffer_size;
+			return 0;
+		}
+		value = (unsigned int) fs->mpeg_is_in_buffer[fs->mpeg_is_in_buffer_file_position-1];
+		return value;
+	}
+	return (fs->fd ? fgetc(fs->fd) : 0);
+}
+
+
+static inline unsigned int
+mpeg3io_read_int32(mpeg3_fs_t *fs)
 {
 	int a, b, c, d;
 	unsigned int result;
