@@ -71,6 +71,8 @@ if(WIN)
 #    if(NOT MSVC)
         set(COMMON_FLAGS "-fwrapv -fdeclspec -msse2 -ggdb2 -m64 -mno-rtd -mms-bitfields -O2 -momit-leaf-frame-pointer -funroll-loops -D_MT -fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf -Wall -Wno-unused-variable -fno-optimize-sibling-calls")
 #    endif()
+
+    set(CMAKE_EXE_LINKER_FLAGS "-mwindows")
     
     set(OS_TYPE "Win32")
     set(VM_TARGET_OS "Win64")
@@ -255,6 +257,7 @@ endif()
 
 if(WIN)
    target_link_libraries(${VM_LIBRARY_NAME} winmm)
+   target_link_libraries(${VM_LIBRARY_NAME} DbgHelp)
    target_link_libraries(${VM_EXECUTABLE_NAME} Ole32)
    target_link_libraries(${VM_EXECUTABLE_NAME} comctl32)
    target_link_libraries(${VM_EXECUTABLE_NAME} uuid)

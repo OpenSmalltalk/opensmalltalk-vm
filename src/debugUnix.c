@@ -284,11 +284,11 @@ void reportStackState(const char *msg, char *date, int printAll, ucontext_t *uap
 			printingStack = true;
 			if (printAll) {
 				fprintf(output, "\n\nAll Smalltalk process stacks (active first):\n");
-				printAllStacks(output);
+				printAllStacks();
 			}
 			else {
 				fprintf(output,"\n\nSmalltalk stack dump:\n");
-				printCallStack(output);
+				printCallStack();
 			}
 			printingStack = false;
 #if COGVM

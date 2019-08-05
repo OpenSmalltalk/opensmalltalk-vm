@@ -7,12 +7,12 @@
 
 int main(int argc, char* argv[]){
 
+	installErrorHandlers();
+
 	VM_PARAMETERS parameters;
 	char buffer[4096+1];
 
 	parseArguments(argc, argv, &parameters);
-
-	installErrorHandlers();
 
 	logInfo("Opening Image: %s\n", parameters.imageFile);
 
@@ -33,6 +33,7 @@ int main(int argc, char* argv[]){
 		logError("Error opening image file: %s\n", parameters.imageFile);
 		return -1;
 	}
+
 	runInterpreter();
 }
 
