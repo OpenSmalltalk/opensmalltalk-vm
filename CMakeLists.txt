@@ -245,6 +245,8 @@ add_executable(${VM_EXECUTABLE_NAME} ${VM_FRONTEND_SOURCES})
 target_link_libraries(${VM_EXECUTABLE_NAME} ${VM_LIBRARY_NAME})
 
 if(NOT WIN AND UNIX AND OSX)
+   target_link_libraries(${VM_LIBRARY_NAME} "-framework AppKit")
+
    target_link_libraries(${VM_EXECUTABLE_NAME} "-framework AppKit")
    target_link_libraries(${VM_EXECUTABLE_NAME} "-framework CoreGraphics")
 endif()

@@ -16,6 +16,10 @@ char imageName[FILENAME_MAX] = {0};
 char vmFullPath[FILENAME_MAX] = {0};
 char vmPath[FILENAME_MAX] = {0};
 
+#if __APPLE__
+	void fillApplicationDirectory(char* vmPath);
+#endif
+
 #ifdef WIN64
 BOOL fIsConsole = 1;
 #endif
@@ -166,9 +170,14 @@ EXPORT(void) setVMPath(const char* name){
 	int bufferSize = strlen(name) + 1;
 	char* tmpBasedir = alloca(bufferSize);
 
+#if __APPLE__
+	fillApplicationDirectory(vmPath);
+
+#else
 	getBasePath(name, tmpBasedir, bufferSize);
 
 	strcpy(vmPath, tmpBasedir);
+#endif
 }
 
 sqInt vmPathSize(void){
@@ -522,7 +531,18 @@ EXPORT(char*) getFullPath(char const *relativePath, char* fullPath, int fullPath
 	return fullPath;
 
 #else
-	return realpath(relativePath, fullPath);
+
+	//If the path is relative everything is fine.
+	if(relativePath[0] == '/' || relativePath[0] == '.'){
+		return realpath(relativePath, fullPath);
+	}
+
+	//If the path is not relative we have to add the './' in the beginning.
+	char* tmpPath = (char*)alloca(fullPathSize);
+	strcpy(tmpPath, "./");
+	strcat(tmpPath, relativePath);
+
+	return realpath(tmpPath, fullPath);
 #endif
 }
 
@@ -552,7 +572,7 @@ EXPORT(void) getBasePath(char const *path, char* basePath, int basePathSize){
 	WideCharToMultiByte(CP_UTF8, 0, finalBasePathWide, -1, basePath, basePathSize, NULL, 0);
 
 #else
-	strcpy(basePath, basename(path));
+	strcpy(basePath, dirname(path));
 #endif
 }
 
