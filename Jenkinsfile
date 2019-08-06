@@ -65,34 +65,27 @@ def runTests(platform){
 		}
 
 		unstash name: "packages-${platform}"
+    
+    environment { 
+      PHARO_CI_TESTING_ENVIRONMENT = 'true'
+    }
 
-		if(isWindows()){
-			runInCygwin "mkdir runTests"
-			runInCygwin "unzip build/packages/PharoVM-*-${vmDir}64.zip -d runTests/"
-			dir("runTests"){
-				shell "wget -O - get.pharo.org/64/80 | bash "
-				bat "Pharo.exe Pharo.image test --junit-xml-output --stage-name=win64 .*"
-				junit allowEmptyResults: true, testResults: "*.xml"
-			}
-		}else{
-			def zipFile = sh(returnStdout: true, script: "ls build/packages/PharoVM-*-${vmDir}64.zip").trim()
-			
-			shell "mkdir runTests"
-			shell "unzip ${zipFile} -d runTests/"
-
-			dir("runTests"){
-				shell "wget -O - get.pharo.org/64/80 | bash "
-			
-				if(platform == 'osx'){
-					shell "./Pharo.app/Contents/MacOS/Pharo Pharo.image test --junit-xml-output --stage-name=osx64 '.*'"
+		shell "mkdir runTests"
+		dir("runTests"){
+      shell "wget -O - get.pharo.org/64/80 | bash "
+      runInCygwin "unzip build/packages/PharoVM-*-${vmDir}64.zip -d ."
+      if(isWindows()){
+			  runInCygwin "PHARO_CI_TESTING_ENVIRONMENT=true Pharo.exe Pharo.image test --junit-xml-output --stage-name=win64 .*"
+		   }else{          
+        if(platform == 'osx'){
+          shell "PHARO_CI_TESTING_ENVIRONMENT=true ./Pharo.app/Contents/MacOS/Pharo Pharo.image test --junit-xml-output --stage-name=osx64 '.*'"
 				}			
-				if(platform == 'unix'){
-					shell "./pharo Pharo.image test --junit-xml-output --stage-name=unix64 '.*'" 
-				}
-				
-				junit allowEmptyResults: true, testResults: "*.xml"
-			}			
-		}
+        if(platform == 'unix'){
+          shell "PHARO_CI_TESTING_ENVIRONMENT=true ./pharo Pharo.image test --junit-xml-output --stage-name=unix64 '.*'" 
+        }
+		  }
+		  junit allowEmptyResults: true, testResults: "*.xml"
+	  }
 				
 		stash excludes: '_CPack_Packages', includes: 'build/packages/*', name: "packages-${platform}"
 		archiveArtifacts artifacts: 'runTests/*.xml', excludes: '_CPack_Packages'
