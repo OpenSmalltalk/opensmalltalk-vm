@@ -17,6 +17,7 @@ set(EXTRACTED_SOURCES
     extracted/vm/src/unix/aio.c
     extracted/vm/src/unix/sqUnixHeartbeat.c
     src/debugUnix.c
+    src/utilsMac.mm
 
 #Virtual Memory functions
     src/memoryUnix.c

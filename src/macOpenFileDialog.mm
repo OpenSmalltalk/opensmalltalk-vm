@@ -9,9 +9,9 @@ extern "C" {
                        char const * filter,
                        char ** selectedFile,
                        char const * defaultFile);
+   
 }
 
-    
 int openFileDialog(char const * aTitle,
                    char const * aDefaultPathAndFile,
                    char const * filter,
