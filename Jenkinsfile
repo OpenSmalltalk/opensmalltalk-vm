@@ -73,13 +73,15 @@ def runTests(platform){
     	shell "mkdir runTests"
     	dir("runTests"){
           shell "wget -O - get.pharo.org/64/80 | bash "
-          runInCygwin "unzip build/packages/PharoVM-*-${vmDir}64.zip -d ."
           if(isWindows()){
+            runInCygwin "unzip build/packages/PharoVM-*-${vmDir}64.zip -d ."
     	    runInCygwin "PHARO_CI_TESTING_ENVIRONMENT=true cd runTests; ./Pharo.exe Pharo.image test --junit-xml-output --stage-name=win64 .*"
     	  }else{
+            shell "unzip build/packages/PharoVM-*-${vmDir}64.zip -d ."
+
             if(platform == 'osx'){
               shell "PHARO_CI_TESTING_ENVIRONMENT=true ./Pharo.app/Contents/MacOS/Pharo Pharo.image test --junit-xml-output --stage-name=osx64 '.*'"
-    				}			
+    		}			
             if(platform == 'unix'){
               shell "PHARO_CI_TESTING_ENVIRONMENT=true ./pharo Pharo.image test --junit-xml-output --stage-name=unix64 '.*'" 
             }
