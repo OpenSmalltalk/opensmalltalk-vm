@@ -99,7 +99,7 @@ elseif(UNIX)
         set(OS_TYPE "Mac OS")
         set(VM_TARGET_OS "1000") # Used to recognise OS X      
         
-        set(COMMON_FLAGS "-mmacosx-version-min=10.7 ${COMMON_FLAGS}")
+        set(COMMON_FLAGS "-stdlib=libc++ -mmacosx-version-min=10.7 ${COMMON_FLAGS}")
         
     elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
         set(VM_TARGET_OS "linux-gnu")
