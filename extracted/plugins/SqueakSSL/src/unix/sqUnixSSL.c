@@ -33,8 +33,6 @@ typedef struct sqSSL {
 } sqSSL;
 
 
-static bool wasInitialized = false;
-
 static sqSSL **handleBuf = NULL;
 static sqInt handleMax = 0;
 
@@ -117,7 +115,7 @@ enum sqMatchResult sqVerifyNameInner(sqSSL* ssl, X509* cert, const void* serverN
 				break;
 			}
 		}
-		sk_GENERAL_NAME_pop_free(sANs, (sk_GENERAL_NAME_freefunc)sk_free);
+		sk_pop_free(sANs, sk_free);
 	}
 	return matchFound;
 }
@@ -162,9 +160,8 @@ char* sqVerifyFindStar(char* sANData, size_t sANDataSize) {
 }
 
 sqInt sqVerifySAN(sqSSL* ssl, const GENERAL_NAME* sAN, const void* data, const size_t dataSizeIn, const int matchType) {
-	char* sANData = (char *) (ASN1_STRING_get0_data
-			? ASN1_STRING_get0_data(sAN->d.ia5)
-			: ASN1_STRING_data(sAN->d.ia5));
+
+	char* sANData = ASN1_STRING_data(sAN->d.ia5));
 	size_t sANDataSize = (size_t) ASN1_STRING_length(sAN->d.ia5);
 	size_t dataSize = dataSizeIn;
 
@@ -234,11 +231,9 @@ sqInt sqVerifySAN(sqSSL* ssl, const GENERAL_NAME* sAN, const void* data, const s
 sqInt sqSetupSSL(sqSSL *ssl, int server) {
 	/* Fixme. Needs to use specified version */
 	if(ssl->loglevel) printf("sqSetupSSL: setting method\n");
-        if (TLS_method) {
-            ssl->method = (SSL_METHOD*) TLS_method();
-        } else {
-            ssl->method = (SSL_METHOD*) SSLv23_method();
-        }
+
+	ssl->method = (SSL_METHOD*) SSLv23_method();
+
 	if(ssl->loglevel) printf("sqSetupSSL: Creating context\n");
 	ssl->ctx = SSL_CTX_new(ssl->method);
 	if(ssl->loglevel) printf("sqSetupSSL: Disabling SSLv2 and SSLv3\n");
@@ -284,13 +279,6 @@ sqInt sqSetupSSL(sqSSL *ssl, int server) {
 sqInt sqCreateSSL(void) {
 	sqInt handle = 0;
 	sqSSL *ssl = NULL;
-
-	if (!wasInitialized) {
- 		if (!loadLibrary()) {
-			return 0;
-		}
-		wasInitialized = true;
-	}
 
 	ssl = calloc(1, sizeof(sqSSL));
 	ssl->bioRead = BIO_new(BIO_s_mem());
