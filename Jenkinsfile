@@ -71,7 +71,7 @@ def runTests(platform){
 			runInCygwin "unzip build/packages/PharoVM-*-${vmDir}64.zip -d runTests/"
 			dir("runTests"){
 				shell "wget -O - get.pharo.org/64/80 | bash "
-				bat "Pharo.exe Pharo.image test --junit-xml-output --stage-name=win64 .*"
+				bat "PHARO_CI_TESTING_ENVIRONMENT=true Pharo.exe Pharo.image test --junit-xml-output --stage-name=win64 .*"
 				junit allowEmptyResults: true, testResults: "*.xml"
 			}
 		}else{
@@ -87,7 +87,7 @@ def runTests(platform){
 					shell "./Pharo.app/Contents/MacOS/Pharo Pharo.image test --junit-xml-output --stage-name=osx64 '.*'"
 				}			
 				if(platform == 'unix'){
-					shell "./pharo Pharo.image test --junit-xml-output --stage-name=unix64 '.*'" 
+					shell "PHARO_CI_TESTING_ENVIRONMENT=true ./pharo Pharo.image test --junit-xml-output --stage-name=unix64 '.*'" 
 				}
 				
 				junit allowEmptyResults: true, testResults: "*.xml"
