@@ -12,7 +12,7 @@ def shell(params){
 }
 
 def runInCygwin(command){
-    def c = """#!c:\\cygwin64\\bin\\bash --logins
+    def c = """#!c:\\cygwin64\\bin\\bash --login
     set -ex
     ${command}
     """
