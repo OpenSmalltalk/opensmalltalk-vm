@@ -13,6 +13,7 @@ def shell(params){
 
 def runInCygwin(command){
     def c = """#!c:\\cygwin64\\bin\\bash --login
+    cd `cygpath \"$WORKSPACE\"`
     set -ex
     ${command}
     """
@@ -74,7 +75,7 @@ def runTests(platform){
       shell "wget -O - get.pharo.org/64/80 | bash "
       runInCygwin "unzip build/packages/PharoVM-*-${vmDir}64.zip -d ."
       if(isWindows()){
-			  runInCygwin "PHARO_CI_TESTING_ENVIRONMENT=true Pharo.exe Pharo.image test --junit-xml-output --stage-name=win64 .*"
+			  runInCygwin "PHARO_CI_TESTING_ENVIRONMENT=true cd runTests; Pharo.exe Pharo.image test --junit-xml-output --stage-name=win64 .*"
 		   }else{          
         if(platform == 'osx'){
           shell "PHARO_CI_TESTING_ENVIRONMENT=true ./Pharo.app/Contents/MacOS/Pharo Pharo.image test --junit-xml-output --stage-name=osx64 '.*'"
