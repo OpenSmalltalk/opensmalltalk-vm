@@ -161,7 +161,7 @@ char* sqVerifyFindStar(char* sANData, size_t sANDataSize) {
 
 sqInt sqVerifySAN(sqSSL* ssl, const GENERAL_NAME* sAN, const void* data, const size_t dataSizeIn, const int matchType) {
 
-	char* sANData = ASN1_STRING_data(sAN->d.ia5));
+	char* sANData = ASN1_STRING_data(sAN->d.ia5);
 	size_t sANDataSize = (size_t) ASN1_STRING_length(sAN->d.ia5);
 	size_t dataSize = dataSizeIn;
 
