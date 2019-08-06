@@ -64,7 +64,7 @@ def runTests(platform){
 				vmDir = 'win'
 		}
 
-		unstash name: "packages-${platform}"
+    	unstash name: "packages-${platform}"
     
         environment { 
           PHARO_CI_TESTING_ENVIRONMENT = 'true'
@@ -74,10 +74,10 @@ def runTests(platform){
     	dir("runTests"){
           shell "wget -O - get.pharo.org/64/80 | bash "
           if(isWindows()){
-            runInCygwin "unzip build/packages/PharoVM-*-${vmDir}64.zip -d ."
-    	    runInCygwin "PHARO_CI_TESTING_ENVIRONMENT=true cd runTests; ./Pharo.exe Pharo.image test --junit-xml-output --stage-name=win64 .*"
+            runInCygwin "cd runTests && unzip ../build/packages/PharoVM-*-${vmDir}64.zip -d ."
+    	    runInCygwin "PHARO_CI_TESTING_ENVIRONMENT=true cd runTests && ./Pharo.exe Pharo.image test --junit-xml-output --stage-name=win64 .*"
     	  }else{
-            shell "unzip build/packages/PharoVM-*-${vmDir}64.zip -d ."
+            shell "unzip ../build/packages/PharoVM-*-${vmDir}64.zip -d ."
 
             if(platform == 'osx'){
               shell "PHARO_CI_TESTING_ENVIRONMENT=true ./Pharo.app/Contents/MacOS/Pharo Pharo.image test --junit-xml-output --stage-name=osx64 '.*'"
