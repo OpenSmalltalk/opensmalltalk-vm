@@ -75,7 +75,7 @@ def runTests(platform){
           shell "wget -O - get.pharo.org/64/80 | bash "
           if(isWindows()){
             runInCygwin "cd runTests && unzip ../build/packages/PharoVM-*-${vmDir}64.zip -d ."
-    	    runInCygwin "PHARO_CI_TESTING_ENVIRONMENT=true cd runTests && ./Pharo.exe Pharo.image test --junit-xml-output --stage-name=win64 .*"
+    	    runInCygwin "PHARO_CI_TESTING_ENVIRONMENT=true cd runTests && ./Pharo.exe Pharo.image test --junit-xml-output --stage-name=win64 '.*'"
     	  }else{
             shell "unzip ../build/packages/PharoVM-*-${vmDir}64.zip -d ."
 
