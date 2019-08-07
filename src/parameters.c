@@ -93,7 +93,7 @@ int isConsole(){
 #if WIN64
 	return GetStdHandle(STD_INPUT_HANDLE) != NULL;
 #else
-	return FALSE;
+	return false;
 #endif
 }
 
