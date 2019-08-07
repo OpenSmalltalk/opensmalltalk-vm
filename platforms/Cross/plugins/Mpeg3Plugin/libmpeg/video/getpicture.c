@@ -30,6 +30,7 @@
  /*  Changed Sept 15th by John M McIntosh to support Macintosh & Squeak
  */
 #include "mpeg3private.h"
+#include "mpeg3protos.h"
 #include "mpeg3video.h"
 #include "mpeg3videoprotos.h"
 #include "vlc.h"

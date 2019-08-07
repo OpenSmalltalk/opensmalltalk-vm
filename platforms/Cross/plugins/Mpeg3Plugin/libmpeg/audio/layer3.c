@@ -925,7 +925,7 @@ int mpeg3audio_III_antialias(mpeg3audio_t *audio,
 /* 
  * III_stereo: calculate float channel values for Joint-I-Stereo-mode
  */
-int mpeg3audio_III_i_stereo(mpeg3audio_t *audio, 
+void mpeg3audio_III_i_stereo(mpeg3audio_t *audio, 
 		float xr_buf[2][SBLIMIT][SSLIMIT],
 		int *scalefac,
    		struct gr_info_s *gr_info,

@@ -18,7 +18,7 @@ typedef struct
 } mpeg3_atrack_t;
 
 mpeg3_atrack_t* mpeg3_new_atrack(mpeg3_t *file, int stream_id, int is_ac3, mpeg3_demuxer_t *demuxer);
-int mpeg3_delete_atrack(mpeg3_t *file, mpeg3_atrack_t *atrack);
+void mpeg3_delete_atrack(mpeg3_t *file, mpeg3_atrack_t *atrack);
 mpeg3audio_t* mpeg3audio_new(mpeg3_t *file, mpeg3_atrack_t *track, int is_ac3);
 
 #endif

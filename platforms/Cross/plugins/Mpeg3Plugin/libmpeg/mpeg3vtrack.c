@@ -55,7 +55,7 @@ mpeg3_vtrack_t* mpeg3_new_vtrack(mpeg3_t *file, int stream_id, mpeg3_demuxer_t *
 	return new_vtrack;
 }
 
-int mpeg3_delete_vtrack(mpeg3_t *file, mpeg3_vtrack_t *vtrack)
+void mpeg3_delete_vtrack(mpeg3_t *file, mpeg3_vtrack_t *vtrack)
 {
 	if(vtrack->video)
 		mpeg3video_delete(vtrack->video);

@@ -126,5 +126,34 @@ typedef struct
 } mpeg3audio_t;
 
 
+/* dct.c */
+int mpeg3audio_dct64_1(float *out0, float *out1, float *b1, float *b2, float *samples);
+int mpeg3audio_dct64(float *a, float *b, float *c);
+int mpeg3audio_dct36(float *inbuf, float *o1, float *o2, float *wintab, float *tsbuf);
+int mpeg3audio_dct12(float *in, float *rawout1, float *rawout2, register float *wi, register float *ts);
+int mpeg3audio_imdct_init(mpeg3audio_t *audio);
+/* header.c */
+int mpeg3audio_prev_header(mpeg3audio_t *audio);
+int mpeg3audio_read_header(mpeg3audio_t *audio);
+/* layer2.c */
+int mpeg3audio_dolayer2(mpeg3audio_t *audio);
+/* layer3.c */
+int mpeg3audio_read_layer3_frame(mpeg3audio_t *audio);
+int mpeg3audio_dolayer3(mpeg3audio_t *audio);
+/* mpeg3audio.c */
+int mpeg3audio_replace_buffer(mpeg3audio_t *audio, long new_allocation);
+int mpeg3audio_seek_percentage(mpeg3audio_t *audio, double percentage);
+int mpeg3audio_seek_sample(mpeg3audio_t *audio, long sample);
+int mpeg3audio_read_raw(mpeg3audio_t *audio, unsigned char *output, long *size, long max_size);
+int mpeg3audio_decode_audio(mpeg3audio_t *audio, float *output_f, short *output_i, int channel, long start_position, long len);
+/* pcm.c */
+int mpeg3audio_read_pcm_header(mpeg3audio_t *audio);
+int mpeg3audio_do_pcm(mpeg3audio_t *audio);
+/* synthesizers.c */
+int mpeg3audio_synth_stereo(mpeg3audio_t *audio, float *bandPtr, int channel, float *out, int *pnt);
+int mpeg3audio_synth_mono(mpeg3audio_t *audio, float *bandPtr, float *samples, int *pnt);
+int mpeg3audio_reset_synths(mpeg3audio_t *audio);
+/* tables.c */
+int mpeg3audio_new_decode_tables(mpeg3audio_t *audio);
 
-#endif
+#endif /* MPEG3AUDIO_H */

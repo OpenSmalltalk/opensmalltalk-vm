@@ -1365,7 +1365,7 @@ mpeg3_demuxer_t* mpeg3_new_demuxer(mpeg3_t *file, int do_audio, int do_video, in
 	return demuxer;
 }
 
-int mpeg3_delete_demuxer(mpeg3_demuxer_t *demuxer)
+void mpeg3_delete_demuxer(mpeg3_demuxer_t *demuxer)
 {
 	int i;
 

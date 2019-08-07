@@ -296,7 +296,7 @@ mpeg3video_t* mpeg3video_allocate_struct(mpeg3_t *file, mpeg3_vtrack_t *track)
 	return video;
 }
 
-int mpeg3video_delete_struct(mpeg3video_t *video)
+void mpeg3video_delete_struct(mpeg3video_t *video)
 {
 	int i;
 	mpeg3bits_delete_stream(video->vstream);

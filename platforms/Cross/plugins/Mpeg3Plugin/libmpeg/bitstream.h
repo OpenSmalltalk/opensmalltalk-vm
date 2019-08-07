@@ -32,6 +32,14 @@ int mpeg3bits_seek_percentage(mpeg3_bits_t* stream, double percentage);
 void mpeg3bits_start_reverse(mpeg3_bits_t* stream);
 void mpeg3bits_start_forward(mpeg3_bits_t* stream);
 
+int mpeg3bits_byte_align(mpeg3_bits_t *stream);
+int mpeg3bits_delete_stream(mpeg3_bits_t *stream);
+int mpeg3bits_getbitoffset(mpeg3_bits_t *stream);
+int mpeg3bits_read_buffer(mpeg3_bits_t *stream, unsigned char *buffer, int bytes);
+int mpeg3bits_refill(mpeg3_bits_t *stream);
+int mpeg3bits_refill_backwards(mpeg3_bits_t *stream);
+int mpeg3bits_use_demuxer(mpeg3_bits_t *stream);
+int mpeg3bits_use_ptr(mpeg3_bits_t *stream, unsigned char *buffer);
 
 /* ======================================================================== */
 /*                                 Entry Points */

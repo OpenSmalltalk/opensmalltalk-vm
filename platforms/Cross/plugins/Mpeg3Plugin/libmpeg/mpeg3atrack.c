@@ -57,7 +57,7 @@ mpeg3_atrack_t* mpeg3_new_atrack(mpeg3_t *file, int stream_id, int format, mpeg3
 	return new_atrack;
 }
 
-int mpeg3_delete_atrack(mpeg3_t *file, mpeg3_atrack_t *atrack)
+void mpeg3_delete_atrack(mpeg3_t *file, mpeg3_atrack_t *atrack)
 {
 	if(atrack->audio)
 		mpeg3audio_delete(atrack->audio);

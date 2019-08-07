@@ -19,6 +19,6 @@ typedef struct
 
 mpeg3video_t* mpeg3video_new(mpeg3_t *file, mpeg3_vtrack_t *track);
 mpeg3_vtrack_t* mpeg3_new_vtrack(mpeg3_t *file, int stream_id, mpeg3_demuxer_t *demuxer);
-int mpeg3_delete_vtrack(mpeg3_t *file, mpeg3_vtrack_t *vtrack);
+void mpeg3_delete_vtrack(mpeg3_t *file, mpeg3_vtrack_t *vtrack);
 
 #endif

@@ -8,7 +8,7 @@ mpeg3_css_t* mpeg3_new_css();
 /* DEMUX */
 
 mpeg3_demuxer_t* mpeg3_new_demuxer(mpeg3_t *file, int do_audio, int do_video, int stream_id);
-int mpeg3_delete_demuxer(mpeg3_demuxer_t *demuxer);
+void mpeg3_delete_demuxer(mpeg3_demuxer_t *demuxer);
 int mpeg3demux_read_data(mpeg3_demuxer_t *demuxer, unsigned char *output, long size);
 unsigned int mpeg3demux_read_int32(mpeg3_demuxer_t *demuxer);
 unsigned int mpeg3demux_read_int24(mpeg3_demuxer_t *demuxer);
@@ -30,6 +30,10 @@ mpeg3_title_t* mpeg3_new_title(mpeg3_t *file, char *path);
 /* AUDIO */
 #if defined(MPEG3AUDIO_H)
 int mpeg3audio_delete(mpeg3audio_t *audio);
+int mpeg3audio_seek_percentage(mpeg3audio_t *audio, double percentage);
+int mpeg3audio_seek_sample(mpeg3audio_t *audio, long sample);
+int mpeg3audio_read_raw(mpeg3audio_t *audio, unsigned char *output, long *size, long max_size);
+int mpeg3audio_decode_audio(mpeg3audio_t *audio, float *output_f, short *output_i, int channel, long start_position, long len);
 #endif
 
 
@@ -74,7 +78,7 @@ int mpeg3_decrypt_packet(mpeg3_css_t *css, unsigned char *sector);
 int IsImageName(char *name);
 /* libmpeg3.c */
 mpeg3_t *mpeg3_new(char *path, int size);
-int mpeg3_delete(mpeg3_t *file);
+void mpeg3_delete(mpeg3_t *file);
 int mpeg3_check_sig(char *path);
 mpeg3_t *mpeg3_open_copy(char *path, mpeg3_t *old_file, int size);
 mpeg3_t *mpeg3_open(char *path, int size);
@@ -159,8 +163,8 @@ int mpeg3io_scanf(mpeg3_fs_t *fs, char *format, void *string1, void *string2);
 int mpeg3io_scanf5(mpeg3_fs_t *fs, char *format, void *string1, void *string2, void *string3, void *string4, void *string5);
 /* mpeg3title.c */
 int mpeg3_delete_title(mpeg3_title_t *title);
-int mpeg3_copy_title(mpeg3_title_t *dst, mpeg3_title_t *src);
-int mpeg3_dump_title(mpeg3_title_t *title);
+void mpeg3_copy_title(mpeg3_title_t *dst, mpeg3_title_t *src);
+void mpeg3_dump_title(mpeg3_title_t *title);
 /* video/mmxtest.c */
 int mpeg3_mmx_test(void);
 #endif

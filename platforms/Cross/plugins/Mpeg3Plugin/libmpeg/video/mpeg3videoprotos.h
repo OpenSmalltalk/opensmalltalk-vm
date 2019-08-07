@@ -43,4 +43,17 @@ int mpeg3_delete_slice_buffer(mpeg3_slice_buffer_t *slice_buffer);
 int mpeg3_expand_slice_buffer(mpeg3_slice_buffer_t *slice_buffer);
 int mpeg3_new_slice_decoder(void *video, mpeg3_slice_t *slice);
 int mpeg3_delete_slice_decoder(mpeg3_slice_t *slice);
+/* mpeg3video.c */
+int mpeg3video_set_cpus(mpeg3video_t *video, int cpus);
+int mpeg3video_set_mmx(mpeg3video_t *video, int use_mmx);
+int mpeg3video_seek_percentage(mpeg3video_t *video, double percentage);
+int mpeg3video_previous_frame(mpeg3video_t *video);
+int mpeg3video_seek_frame(mpeg3video_t *video, long frame);
+int mpeg3video_read_raw(mpeg3video_t *video, unsigned char *output, long *size, long max_size);
+int mpeg3video_read_yuvframe(mpeg3video_t *video, long frame_number, char *y_output, char *u_output, char *v_output, int in_x, int in_y, int in_w, int in_h);
+/* seek.c */
+unsigned int mpeg3bits_next_startcode(mpeg3_bits_t *stream);
+int mpeg3video_next_code(mpeg3_bits_t *stream, unsigned int code);
+int mpeg3video_prev_code(mpeg3_bits_t *stream, unsigned int code);
+int mpeg3video_drop_frames(mpeg3video_t *video, long frames);
 #endif
