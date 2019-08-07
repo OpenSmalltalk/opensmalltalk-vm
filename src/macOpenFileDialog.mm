@@ -51,6 +51,6 @@ int openFileDialog(char const * aTitle,
         return true;
     }
     
-    *selectedFile = defaultFile;
+    *selectedFile = (char*)defaultFile;
     return false;
 }
