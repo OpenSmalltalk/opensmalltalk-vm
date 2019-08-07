@@ -19,7 +19,9 @@ def runInCygwin(command){
     """
     
     echo("Executing: ${c}")
-    return sh(c)
+    withEnv(["PHARO_CI_TESTING_ENVIRONMENT=true"]) {    
+      return sh(c)
+    }
 }
 
 
@@ -65,11 +67,7 @@ def runTests(platform){
 		}
 
     	unstash name: "packages-${platform}"
-    
-        environment { 
-          PHARO_CI_TESTING_ENVIRONMENT = 'true'
-        }
-    
+
     	shell "mkdir runTests"
     	dir("runTests"){
           shell "wget -O - get.pharo.org/64/80 | bash "
@@ -77,7 +75,7 @@ def runTests(platform){
           
           if(isWindows()){
             runInCygwin "cd runTests && unzip ../build/packages/PharoVM-*-${vmDir}64.zip -d ."
-    	    runInCygwin "PHARO_CI_TESTING_ENVIRONMENT=true cd runTests && ./Pharo.exe Pharo.image test --junit-xml-output --stage-name=win64 '.*'"
+            runInCygwin "PHARO_CI_TESTING_ENVIRONMENT=true cd runTests && ./Pharo.exe Pharo.image test --junit-xml-output --stage-name=win64 '.*'"
     	  }else{
             shell "unzip ../build/packages/PharoVM-*-${vmDir}64.zip -d ."
 
