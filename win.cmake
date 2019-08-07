@@ -45,3 +45,12 @@ macro(configure_installables)
     
     install(DIRECTORY "${CMAKE_SOURCE_DIR}/build/vm/" DESTINATION "./" USE_SOURCE_PERMISSIONS)
 endmacro()
+
+macro(add_required_libs_per_platform)
+   target_link_libraries(${VM_LIBRARY_NAME} winmm)
+   target_link_libraries(${VM_LIBRARY_NAME} DbgHelp)
+   target_link_libraries(${VM_EXECUTABLE_NAME} Ole32)
+   target_link_libraries(${VM_EXECUTABLE_NAME} comctl32)
+   target_link_libraries(${VM_EXECUTABLE_NAME} uuid)
+endmacro()
+

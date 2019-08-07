@@ -244,26 +244,7 @@ add_executable(${VM_EXECUTABLE_NAME} ${VM_FRONTEND_SOURCES})
 
 target_link_libraries(${VM_EXECUTABLE_NAME} ${VM_LIBRARY_NAME})
 
-if(NOT WIN AND UNIX AND OSX)
-   target_link_libraries(${VM_LIBRARY_NAME} "-framework AppKit")
-
-   target_link_libraries(${VM_EXECUTABLE_NAME} "-framework AppKit")
-   target_link_libraries(${VM_EXECUTABLE_NAME} "-framework CoreGraphics")
-endif()
-
-if(NOT WIN AND UNIX AND NOT OSX)
-   target_link_libraries(${VM_EXECUTABLE_NAME} dl)
-   target_link_libraries(${VM_EXECUTABLE_NAME} m)
-   target_link_libraries(${VM_EXECUTABLE_NAME} pthread)
-endif()
-
-if(WIN)
-   target_link_libraries(${VM_LIBRARY_NAME} winmm)
-   target_link_libraries(${VM_LIBRARY_NAME} DbgHelp)
-   target_link_libraries(${VM_EXECUTABLE_NAME} Ole32)
-   target_link_libraries(${VM_EXECUTABLE_NAME} comctl32)
-   target_link_libraries(${VM_EXECUTABLE_NAME} uuid)
-endif()
+add_required_libs_per_platform()
 
 include(plugins.cmake)
 

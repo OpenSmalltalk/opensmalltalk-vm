@@ -51,3 +51,10 @@ macro(configure_installables)
     install(FILES "build/includes/Info.plist" DESTINATION "Pharo.app/Contents")
     install(FILES "resources/mac/Pharo.icns" DESTINATION "Pharo.app/Contents/Resources")
 endmacro()
+
+macro(add_required_libs_per_platform)
+   target_link_libraries(${VM_LIBRARY_NAME} "-framework AppKit")
+
+   target_link_libraries(${VM_EXECUTABLE_NAME} "-framework AppKit")
+   target_link_libraries(${VM_EXECUTABLE_NAME} "-framework CoreGraphics")
+endmacro()
