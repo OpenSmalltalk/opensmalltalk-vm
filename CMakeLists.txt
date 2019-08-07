@@ -71,8 +71,6 @@ if(WIN)
 #    if(NOT MSVC)
         set(COMMON_FLAGS "-fwrapv -fdeclspec -msse2 -ggdb2 -m64 -mno-rtd -mms-bitfields -O2 -momit-leaf-frame-pointer -funroll-loops -D_MT -fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf -Wall -Wno-unused-variable -fno-optimize-sibling-calls")
 #    endif()
-
-    set(CMAKE_EXE_LINKER_FLAGS "-mwindows")
     
     set(OS_TYPE "Win32")
     set(VM_TARGET_OS "Win64")
@@ -196,7 +194,7 @@ check_library_exists(uuid uuidgen "" HAVE_UUIDGEN)
 check_library_exists(uuid uuid_generate "" HAVE_UUID_GENERATE)
 
 #Generates the vm code
-generate_vm_code(CoInterpreterWithQueueFFI)
+#generate_vm_code(CoInterpreterWithQueueFFI)
 add_definitions(-DASYNC_FFI_QUEUE=1)
 
 #Generating config file

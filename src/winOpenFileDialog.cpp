@@ -21,6 +21,13 @@ int openFileDialog(char const * aTitle,
 	filters[1].pszName = L"All files";
 	filters[1].pszSpec = L"*.*";
 
+
+	//If I am in the console
+	if(GetStdHandle(STD_INPUT_HANDLE) != NULL){
+		*selectedFile = defaultFile;
+		return false;
+	};
+
 	HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
 
 	if (SUCCEEDED(hr)){

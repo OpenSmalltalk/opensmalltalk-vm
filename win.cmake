@@ -47,10 +47,22 @@ macro(configure_installables)
 endmacro()
 
 macro(add_required_libs_per_platform)
+   set(VM_EXECUTABLE_CONSOLE_NAME "${VM_EXECUTABLE_NAME}Console")
+
+   add_executable(${VM_EXECUTABLE_CONSOLE_NAME} ${VM_FRONTEND_SOURCES})
+   target_link_libraries(${VM_EXECUTABLE_CONSOLE_NAME} ${VM_LIBRARY_NAME}) 
+
    target_link_libraries(${VM_LIBRARY_NAME} winmm)
    target_link_libraries(${VM_LIBRARY_NAME} DbgHelp)
    target_link_libraries(${VM_EXECUTABLE_NAME} Ole32)
    target_link_libraries(${VM_EXECUTABLE_NAME} comctl32)
    target_link_libraries(${VM_EXECUTABLE_NAME} uuid)
+
+   target_link_libraries(${VM_EXECUTABLE_CONSOLE_NAME} Ole32)
+   target_link_libraries(${VM_EXECUTABLE_CONSOLE_NAME} comctl32)
+   target_link_libraries(${VM_EXECUTABLE_CONSOLE_NAME} uuid)
+
+   set_target_properties(${VM_EXECUTABLE_NAME} PROPERTIES LINK_FLAGS "-mwindows")
+   set_target_properties(${VM_EXECUTABLE_CONSOLE_NAME} PROPERTIES LINK_FLAGS "-mconsole")
 endmacro()
 

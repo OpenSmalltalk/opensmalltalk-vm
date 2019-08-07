@@ -10,5 +10,5 @@ int openFileDialog(char const * aTitle,
 
 	*selectedFile = defaultFile;
 
-	return true;
+	return false;
 }

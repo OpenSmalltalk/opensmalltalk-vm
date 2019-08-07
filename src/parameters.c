@@ -5,6 +5,7 @@
 #include "debug.h"
 
 void printVersion();
+void printUsage();
 
 int findImageNameIndex(int argc, char* argv[]){
 
@@ -88,15 +89,27 @@ void logParameters(VM_PARAMETERS* parameters){
 	logDebug("imageParams: %s", buffer);
 }
 
+int isConsole(){
+#if WIN64
+	return GetStdHandle(STD_INPUT_HANDLE) != NULL;
+#else
+	return FALSE;
+#endif
+}
+
 void processImageFileName(VM_PARAMETERS* parameters){
 	if(parameters->isDefaultImage){
 		if(!fileExists(parameters->imageFile)){
-			openFileDialog("Choose image file", "", "image", &(parameters->imageFile), DEFAULT_IMAGE_NAME);
+			if(!openFileDialog("Choose image file", "", "image", &(parameters->imageFile), DEFAULT_IMAGE_NAME)){
+				printUsage();
+				exit(1);
+			}
+
 			parameters->hasBeenSelectedByUser = true;
 		}
 		//If there are no parameters, we are next to the launch of the VM, we need to add the interactive flag
 		//As we always have two parameters (the --headless)
-		if(parameters->vmParamsCount == 2 && parameters->imageParamsCount == 0){
+		if(parameters->vmParamsCount == 2 && parameters->imageParamsCount == 0 && !isConsole()){
 			parameters->imageParams = malloc(sizeof(void*));
 			parameters->imageParamsCount = 1;
 			parameters->imageParams[0] = "--interactive";

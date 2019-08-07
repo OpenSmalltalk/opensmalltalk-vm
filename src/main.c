@@ -5,6 +5,8 @@
 #include <pharoClient.h>
 #include <pharo.h>
 
+#include <windows.h>
+
 int main(int argc, char* argv[]){
 
 	installErrorHandlers();

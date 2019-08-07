@@ -48,7 +48,9 @@ int openFileDialog(char const * aTitle,
             *selectedFile = (char*)malloc(strlen(value)+1);
             strcpy(*selectedFile, value);
         }
+        return true;
     }
     
-    return true;
+    *selectedFile = defaultFile;
+    return false;
 }
