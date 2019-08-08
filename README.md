@@ -1,10 +1,9 @@
 Headless OpenSmalltalk-VM for Pharo
 -----------------------------------
 
-This is the Branch of the Headless VM used for Pharo.
-Much of the code is extracted from this repository.
+This is the branch of the Headless VM used for Pharo.
 This branch has the modifications required to run Pharo in a true headless environment.
-The Image running on the VM is responsible of handling the UI and the events. 
+The image running on the VM is responsible of handling the UI and the events. 
 
 The image includes a default implementation of the handling of UI through the use of SDL2.
 
@@ -30,13 +29,17 @@ For building the VM it is required the following set of tools:
 
 Building in OSX / Linux:
 
+```bash
 $ cmake . 
 $ make install
+```
 
 Building in Windows:
 
+```bash
 $ cmake . -DWIN=1
 $ make install
+```
 
 The VM is built from generated code and code written by hand.
 The generated code is the result of converting Smalltalk code into C.
@@ -65,7 +68,8 @@ The code that has been specially created or modified for this branch is stored i
 Overview of OpenSmalltalk-VM
 ----------------------------
 
-First, opensmalltalk-vm (a.k.a. the Cog VM) is the virtual machine beneath the
+This branch is based on the open-smalltalk vm (https://github.com/OpenSmalltalk/opensmalltalk-vm).
+Opensmalltalk-vm (a.k.a. the Cog VM) is the virtual machine beneath the
 Cuis, Pharo and Squeak Smalltalk dialects and one of the VMs beneath the
 Newspeak language.  For issues related to these systems that are unrelated to
 the VM itself, please use their forums:
