@@ -440,11 +440,6 @@ ioLoadExternalFunctionOfLengthFromModuleOfLengthAccessorDepthInto
 /* ioLoadSymbolOfLengthFromModule
 	This entry point is exclusively for the FFI.
 */
-#ifdef PharoVM
-#  define IO_LOAD_GLOBAL(fn) ioLoadFunctionFrom(fn, "")
-#else 
-#  define IO_LOAD_GLOBAL(fn) 0 
-#endif
 void *
 ioLoadSymbolOfLengthFromModule(sqInt functionNameIndex, sqInt functionNameLength, void *moduleHandle)
 {
@@ -457,7 +452,7 @@ ioLoadSymbolOfLengthFromModule(sqInt functionNameIndex, sqInt functionNameLength
 	functionName[functionNameLength] = 0;
 	return moduleHandle
 		? ioFindExternalFunctionIn(functionName, moduleHandle)
-		: IO_LOAD_GLOBAL(functionName);
+		:  dlsym(dlopen(NULL,0), functionName);
 }
 
 /* ioLoadModuleOfLength

@@ -34,9 +34,9 @@
 
 int sqVMOptionTraceModuleLoading = 0;
 
-static void *loadModuleHandle(const char *fileName);
-static sqInt freeModuleHandle(void *module);
-static void *getModuleSymbol(void *module, const char *symbol);
+void *loadModuleHandle(const char *fileName);
+sqInt freeModuleHandle(void *module);
+void *getModuleSymbol(void *module, const char *symbol);
 
 const char *moduleNamePatterns[] = {
     "%s%s",
@@ -166,14 +166,12 @@ void * loadModuleHandle(const char *fileName)
    	return m;
 }
 
-static sqInt
-freeModuleHandle(void *module)
+sqInt freeModuleHandle(void *module)
 {
     return FreeLibrary((HMODULE)module) ? 1 : 0;
 }
 
-static void *
-getModuleSymbol(void *module, const char *symbol)
+void * getModuleSymbol(void *module, const char *symbol)
 {
     return (void*)GetProcAddress((HMODULE)module, symbol);
 }
@@ -182,8 +180,7 @@ getModuleSymbol(void *module, const char *symbol)
 
 #include <dlfcn.h>
 
-static void *
-loadModuleHandle(const char *fileName)
+void * loadModuleHandle(const char *fileName)
 {
     int flags = RTLD_NOW | RTLD_GLOBAL;
 #ifdef RTLD_DEEPBIND
@@ -194,34 +191,30 @@ loadModuleHandle(const char *fileName)
     return dlopen(fileName, flags);
 }
 
-static sqInt
-freeModuleHandle(void *module)
+sqInt freeModuleHandle(void *module)
 {
     return dlclose(module) == 0 ? 0 : 1;
 }
 
-static void *
-getModuleSymbol(void *module, const char *symbol)
+void * getModuleSymbol(void *module, const char *symbol)
 {
-    return dlsym(module, symbol);
+
+    return dlsym(module ? module: dlopen(NULL,0), symbol);
 }
 
 #else
 
-static void *
-loadModuleHandle(const char *fileName)
+void * loadModuleHandle(const char *fileName)
 {
     return 0;
 }
 
-static sqInt
-freeModuleHandle(void *module)
+sqInt freeModuleHandle(void *module)
 {
     return 1;
 }
 
-static void *
-getModuleSymbol(void *module, const char *symbol)
+void * getModuleSymbol(void *module, const char *symbol)
 {
     return 0;
 }
