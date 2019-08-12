@@ -35,15 +35,15 @@ def runBuild(platform){
 
 
 	stage("Build-${platform}"){
-    	if(isWindows()){
-    	    runInCygwin "cmake . -DWIN=1"
-    	    runInCygwin "make install"
-    	    runInCygwin "make package"
-    	}else{
-    		cmakeBuild generator: 'Unix Makefiles', installation: 'InSearchPath'
-    		shell "make install"
-			shell "make package"			
-    	}
+      if(isWindows()){
+          runInCygwin "cmake . -DWIN=1"
+          runInCygwin "make install"
+          runInCygwin "make package"
+      }else{
+        cmakeBuild generator: 'Unix Makefiles', installation: 'InSearchPath'
+        shell "make install"
+        shell "make package"			
+      }
 		
 		stash excludes: '_CPack_Packages', includes: 'build/packages/*', name: "packages-${platform}"
 		archiveArtifacts artifacts: 'build/packages/*', excludes: '_CPack_Packages'
@@ -74,10 +74,10 @@ def runTests(platform){
           shell "echo 80 > pharo.version"
           
           if(isWindows()){
-            runInCygwin "cd runTests && unzip ../build/packages/PharoVM-*-${vmDir}64.zip -d ."
+            runInCygwin "cd runTests && unzip ../build/packages/PharoVM-*-${vmDir}64-bin.zip -d ."
             runInCygwin "PHARO_CI_TESTING_ENVIRONMENT=true cd runTests && ./PharoConsole.exe Pharo.image test --junit-xml-output --stage-name=win64 '.*'"
     	  }else{
-            shell "unzip ../build/packages/PharoVM-*-${vmDir}64.zip -d ."
+            shell "unzip ../build/packages/PharoVM-*-${vmDir}64-bin.zip -d ."
 
             if(platform == 'osx'){
               shell "PHARO_CI_TESTING_ENVIRONMENT=true ./Pharo.app/Contents/MacOS/Pharo Pharo.image test --junit-xml-output --stage-name=osx64 '.*'"
@@ -98,16 +98,23 @@ def upload(platform, vmDir) {
 
 	unstash name: "packages-${platform}"
 
-	def expandedFileName = sh(returnStdout: true, script: "ls build/packages/PharoVM-*-${vmDir}64.zip").trim()
+	def expandedBinaryFileName = sh(returnStdout: true, script: "ls build/packages/PharoVM-*-${vmDir}64-bin.zip").trim()
+  def expandedHeadersFileName = sh(returnStdout: true, script: "ls build/packages/PharoVM-*-${vmDir}64-include.zip").trim()
 
 	sshagent (credentials: ['b5248b59-a193-4457-8459-e28e9eb29ed7']) {
 		sh "scp -o StrictHostKeyChecking=no \
-		${expandedFileName} \
+		${expandedBinaryFileName} \
 		pharoorgde@ssh.cluster023.hosting.ovh.net:/home/pharoorgde/files/vm/pharo-spur64-headless/${vmDir}"
+		sh "scp -o StrictHostKeyChecking=no \
+		${expandedHeadersFileName} \
+		pharoorgde@ssh.cluster023.hosting.ovh.net:/home/pharoorgde/files/vm/pharo-spur64-headless/${vmDir}/include"
 
 		sh "scp -o StrictHostKeyChecking=no \
-		${expandedFileName} \
+		${expandedBinaryFileName} \
 		pharoorgde@ssh.cluster023.hosting.ovh.net:/home/pharoorgde/files/vm/pharo-spur64-headless/${vmDir}/latest.zip"
+		sh "scp -o StrictHostKeyChecking=no \
+		${expandedHeadersFileName} \
+		pharoorgde@ssh.cluster023.hosting.ovh.net:/home/pharoorgde/files/vm/pharo-spur64-headless/${vmDir}/include/latest.zip"
 	}
 }
 
