@@ -208,7 +208,7 @@ add_custom_command(
 #Custom command that installs VMMaker into a Pharo image in ${VMMAKER_OUTPUT_PATH}
 add_custom_command(
   OUTPUT ${VMMAKER_OUTPUT_PATH}/VMMaker.image
-  COMMAND ./pharo Pharo.image --save --quit ${CMAKE_CURRENT_SOURCE_DIR}/scripts/installVMMaker.st
+  COMMAND ./pharo Pharo.image --save --quit ${CMAKE_CURRENT_SOURCE_DIR}/scripts/installVMMaker.st ${CMAKE_CURRENT_SOURCE_DIR}
   COMMAND ./pharo Pharo.image save VMMaker --delete-old
   MAIN_DEPENDENCY ${VMMAKER_OUTPUT_PATH}/Pharo.image
   DEPENDS ${VMMAKER_OUTPUT_PATH}/pharo
