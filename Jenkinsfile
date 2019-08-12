@@ -74,10 +74,10 @@ def runTests(platform){
           shell "echo 80 > pharo.version"
           
           if(isWindows()){
-            runInCygwin "cd runTests && unzip ../build/packages/PharoVM-*-${vmDir}64.zip -d ."
+            runInCygwin "cd runTests && unzip ../build/packages/PharoVM-*-${vmDir}64-bin.zip -d ."
             runInCygwin "PHARO_CI_TESTING_ENVIRONMENT=true cd runTests && ./PharoConsole.exe Pharo.image test --junit-xml-output --stage-name=win64 '.*'"
     	  }else{
-            shell "unzip ../build/packages/PharoVM-*-${vmDir}64.zip -d ."
+            shell "unzip ../build/packages/PharoVM-*-${vmDir}64-bin.zip -d ."
 
             if(platform == 'osx'){
               shell "PHARO_CI_TESTING_ENVIRONMENT=true ./Pharo.app/Contents/MacOS/Pharo Pharo.image test --junit-xml-output --stage-name=osx64 '.*'"
