@@ -225,8 +225,6 @@ add_custom_command(
   WORKING_DIRECTORY ${VMMAKER_OUTPUT_PATH}
   COMMENT "Generating VM files for flavour: ${FLAVOUR}")
 
-
-#generate_vm_code(CoInterpreterWithQueueFFI)
 add_definitions(-DASYNC_FFI_QUEUE=1)
 
 #Generating config file
