@@ -252,7 +252,7 @@ add_third_party_dependencies_per_platform()
 
 # Selecting files to include in the package
 
-configure_installables(binary)
+configure_installables(bin)
 
 install(FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/common/sq.h
@@ -262,7 +262,7 @@ install(FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/generated/vm/include/vmCallback.h
   ${CMAKE_CURRENT_SOURCE_DIR}/generated/vm/include/interp.h
   DESTINATION include
-  COMPONENT headers)
+  COMPONENT include)
 
 # Packaging Setup 
 
