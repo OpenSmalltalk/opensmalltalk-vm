@@ -252,7 +252,17 @@ add_third_party_dependencies_per_platform()
 
 # Selecting files to include in the package
 
-configure_installables()
+configure_installables(binary)
+
+install(FILES
+  ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/common/sq.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/common/sqMemoryAccess.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/common/sqVirtualMachine.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/generated/vm/include/interp.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/generated/vm/include/vmCallback.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/generated/vm/include/interp.h
+  DESTINATION include
+  COMPONENT headers)
 
 # Packaging Setup 
 
@@ -272,5 +282,7 @@ set(CPACK_PACKAGE_CHECKSUM "SHA1")
 set(CPACK_GENERATOR "ZIP")
 set(CPACK_INCLUDE_TOPLEVEL_DIRECTORY FALSE)
 
-include (CPack)
+#Tell CPACK to archive each sub component separately
+set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
 
+include (CPack)

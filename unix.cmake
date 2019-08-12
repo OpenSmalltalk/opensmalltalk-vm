@@ -38,11 +38,19 @@ macro(add_third_party_dependencies_per_platform)
 endmacro()
 
 
-macro(configure_installables)
+macro(configure_installables INSTALL_COMPONENT)
     set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/build/dist")
     
-    install(DIRECTORY "${CMAKE_SOURCE_DIR}/packaging/linux/" DESTINATION "./" USE_SOURCE_PERMISSIONS)
-    install(DIRECTORY "${CMAKE_SOURCE_DIR}/build/vm/" DESTINATION "lib" USE_SOURCE_PERMISSIONS)
+    install(
+      DIRECTORY "${CMAKE_SOURCE_DIR}/packaging/linux/"
+      DESTINATION "./"
+      USE_SOURCE_PERMISSIONS
+      COMPONENT ${INSTALL_COMPONENT})
+    install(
+      DIRECTORY "${CMAKE_SOURCE_DIR}/build/vm/"
+      DESTINATION "lib"
+      USE_SOURCE_PERMISSIONS
+      COMPONENT ${INSTALL_COMPONENT})
 endmacro()
 
 macro(add_required_libs_per_platform)
