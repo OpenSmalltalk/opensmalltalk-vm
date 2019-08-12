@@ -40,7 +40,7 @@ macro(add_third_party_dependencies_per_platform)
 endmacro()
 
 
-macro(configure_installablesINSTALL_COMPONENT)
+macro(configure_installables INSTALL_COMPONENT)
     set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/build/dist")
     
     install(
