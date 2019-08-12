@@ -168,6 +168,8 @@ else()
 endif()
 
 #Setting output directories
+set(VMMAKER_OUTPUT_PATH "build/vmmaker")
+make_directory(${VMMAKER_OUTPUT_PATH})
 set(EXECUTABLE_OUTPUT_PATH "build/vm")
 set(LIBRARY_OUTPUT_PATH "build/vm")
 
@@ -193,8 +195,38 @@ check_include_files(uuid.h HAVE_UUID_H)
 check_library_exists(uuid uuidgen "" HAVE_UUIDGEN)
 check_library_exists(uuid uuid_generate "" HAVE_UUID_GENERATE)
 
-#Generates the vm code
-generate_vm_code(CoInterpreterWithQueueFFI)
+set(FLAVOUR CoInterpreterWithQueueFFI)
+
+#Custom command that downloads a Pharo image and VM in ${VMMAKER_OUTPUT_PATH}
+add_custom_command(
+  OUTPUT ${VMMAKER_OUTPUT_PATH}/Pharo.image ${VMMAKER_OUTPUT_PATH}/pharo
+  COMMAND wget -O - get.pharo.org/64/70 | bash
+  COMMAND wget -O - get.pharo.org/64/vm70 | bash
+  WORKING_DIRECTORY ${VMMAKER_OUTPUT_PATH}
+  COMMENT "Downloading Pharo 70")
+
+#Custom command that installs VMMaker into a Pharo image in ${VMMAKER_OUTPUT_PATH}
+add_custom_command(
+  OUTPUT ${VMMAKER_OUTPUT_PATH}/VMMaker.image
+  COMMAND ./pharo Pharo.image --save --quit ${CMAKE_CURRENT_SOURCE_DIR}/scripts/installVMMaker.st
+  COMMAND ./pharo Pharo.image save VMMaker --delete-old
+  MAIN_DEPENDENCY ${VMMAKER_OUTPUT_PATH}/Pharo.image
+  DEPENDS ${VMMAKER_OUTPUT_PATH}/pharo
+  WORKING_DIRECTORY ${VMMAKER_OUTPUT_PATH}
+  COMMENT "Generating VMMaker image")
+
+#Custom command that generates the vm source code from VMMaker into ${VMMAKER_OUTPUT_PATH} and copies it to ${CMAKE_CURRENT_SOURCE_DIR}
+add_custom_command(
+  OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/generated/vm/src/cogit.c ${CMAKE_CURRENT_SOURCE_DIR}/generated/vm/src/gcc3x-cointerp.c
+  COMMAND ./pharo VMMaker.image eval "PharoVMMaker generate: #'${FLAVOUR}'"
+  COMMAND rm -rf ${CMAKE_CURRENT_SOURCE_DIR}/generated
+  COMMAND mv generated ${CMAKE_CURRENT_SOURCE_DIR}
+  MAIN_DEPENDENCY ${VMMAKER_OUTPUT_PATH}/VMMaker.image
+  WORKING_DIRECTORY ${VMMAKER_OUTPUT_PATH}
+  COMMENT "Generating VM files for flavour: ${FLAVOUR}")
+
+
+#generate_vm_code(CoInterpreterWithQueueFFI)
 add_definitions(-DASYNC_FFI_QUEUE=1)
 
 #Generating config file
