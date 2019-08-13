@@ -211,7 +211,7 @@ add_custom_command(
   COMMAND ./pharo Pharo.image --save --quit ${CMAKE_CURRENT_SOURCE_DIR}/scripts/installVMMaker.st
   COMMAND ./pharo Pharo.image save VMMaker --delete-old
   MAIN_DEPENDENCY ${VMMAKER_OUTPUT_PATH}/Pharo.image
-  DEPENDS ${VMMAKER_OUTPUT_PATH}/pharo
+  DEPENDS ${VMMAKER_OUTPUT_PATH}/Pharo.image
   WORKING_DIRECTORY ${VMMAKER_OUTPUT_PATH}
   COMMENT "Generating VMMaker image")
 
