@@ -11,36 +11,20 @@ get_git_describe(GIT_DESCRIBE)
 get_git_date(GIT_COMMIT_DATE)
 
 set(BUILT_FROM "${GIT_DESCRIBE} - Commit: ${GIT_COMMIT_HASH} - Date: ${GIT_COMMIT_DATE}")
-
 message(STATUS ${BUILT_FROM})
 
-if(WIN64 OR WIN OR CYGWIN)
-    set(WIN 1)
+if (CMAKE_HOST_UNIX AND ${CMAKE_HOST_SYSTEM_NAME} MATCHES "CYGWIN*")
+  message(STATUS "Building on CYGWIN CMAKE: Adapting paths")
+  set(CYGWIN 1)
+  set(WIN 1)
+  
+  # specify the cross compiler
+  set(CMAKE_TOOLCHAIN_PREFIX x86_64-w64-mingw32)
 
-    # specify the cross compiler
-    set(CMAKE_TOOLCHAIN_PREFIX x86_64-w64-mingw32)
-
-    SET(CMAKE_C_COMPILER   ${CMAKE_TOOLCHAIN_PREFIX}-clang)
-    SET(CMAKE_CXX_COMPILER ${CMAKE_TOOLCHAIN_PREFIX}-clang++)
-    SET(CMAKE_RC_COMPILER ${CMAKE_TOOLCHAIN_PREFIX}-windres)
-    SET(CMAKE_SYSTEM_PROCESSOR x86_64)
-endif()
-
-if(CYGWIN)
-
-    # where is the target environment 
-    SET(CMAKE_FIND_ROOT_PATH  /usr/x86_64-w64-mingw32/sys-root/mingw/)
-
-    # search for programs in the build host directories
-    SET(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
-    # for libraries and headers in the target directories
-    SET(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
-    SET(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
-    
-endif()
-
-if(MSVC)
-   set(WIN 1)
+  SET(CMAKE_C_COMPILER   ${CMAKE_TOOLCHAIN_PREFIX}-clang)
+  SET(CMAKE_CXX_COMPILER ${CMAKE_TOOLCHAIN_PREFIX}-clang++)
+  SET(CMAKE_RC_COMPILER ${CMAKE_TOOLCHAIN_PREFIX}-windres)
+  SET(CMAKE_SYSTEM_PROCESSOR x86_64)
 endif()
 
 project(PharoVM)
@@ -58,9 +42,18 @@ set(COMMON_FLAGS "")
 set(BUILD_I386_VERSION NO)
 
 if(WIN)
-    unset(UNIX)
-
     message(STATUS "Building for WINDOWS")
+
+    #Tell the system we are not in UNIX. This is required for Cygwin builds
+    unset(UNIX)
+    unset(UNIX CACHE)
+    
+  	# transform the path into a windows path with unix backslashes C:/bla/blu
+  	# this is the path required to send as argument to libraries outside of the control of cygwin (like pharo itself)
+  	execute_process(
+          COMMAND cygpath ${CMAKE_CURRENT_SOURCE_DIR} --mixed
+          OUTPUT_VARIABLE CMAKE_CURRENT_SOURCE_DIR_TO_OUT
+          OUTPUT_STRIP_TRAILING_WHITESPACE)
 
     set(CMAKE_SHARED_LIBRARY_PREFIX "")
     set(CMAKE_SHARED_LIBRARY_SUFFIX ".dll")
@@ -84,6 +77,9 @@ if(WIN)
     add_definitions(-D_WIN32_WINNT=0x0600 -DWINVER=0x0600 -DNTDDI_VERSION=0x06000000 -DWIN64=1)
     
 elseif(UNIX)
+
+    # Use the default path to send as argument of extrernal apps (like pharo itself)
+    set(CMAKE_CURRENT_SOURCE_DIR_TO_OUT ${CMAKE_CURRENT_SOURCE_DIR})
 
     set(COMMON_FLAGS "")
 
@@ -208,7 +204,7 @@ add_custom_command(
 #Custom command that installs VMMaker into a Pharo image in ${VMMAKER_OUTPUT_PATH}
 add_custom_command(
   OUTPUT ${VMMAKER_OUTPUT_PATH}/VMMaker.image
-  COMMAND ./pharo Pharo.image --save --quit ${CMAKE_CURRENT_SOURCE_DIR}/scripts/installVMMaker.st
+  COMMAND ./pharo Pharo.image --save --quit ${CMAKE_CURRENT_SOURCE_DIR_TO_OUT}/scripts/installVMMaker.st
   COMMAND ./pharo Pharo.image save VMMaker --delete-old
   MAIN_DEPENDENCY ${VMMAKER_OUTPUT_PATH}/Pharo.image
   DEPENDS ${VMMAKER_OUTPUT_PATH}/Pharo.image
