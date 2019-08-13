@@ -206,9 +206,13 @@ add_custom_command(
   COMMENT "Downloading Pharo 70")
 
 #Custom command that installs VMMaker into a Pharo image in ${VMMAKER_OUTPUT_PATH}
+SET(VM_MAKER_INSTALL_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/scripts/installVMMaker.st)
+
+MESSAGE("Executing Script: ${VM_MAKER_INSTALL_SCRIPT}")
+
 add_custom_command(
   OUTPUT ${VMMAKER_OUTPUT_PATH}/VMMaker.image
-  COMMAND ./pharo Pharo.image --save --quit ${CMAKE_CURRENT_SOURCE_DIR}/scripts/installVMMaker.st
+  COMMAND ./pharo Pharo.image --save --quit ${VM_MAKER_INSTALL_SCRIPT}
   COMMAND ./pharo Pharo.image save VMMaker --delete-old
   MAIN_DEPENDENCY ${VMMAKER_OUTPUT_PATH}/Pharo.image
   DEPENDS ${VMMAKER_OUTPUT_PATH}/Pharo.image
@@ -291,6 +295,7 @@ install(FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/generated/vm/include/interp.h
   ${CMAKE_CURRENT_SOURCE_DIR}/generated/vm/include/vmCallback.h
   ${CMAKE_CURRENT_SOURCE_DIR}/generated/vm/include/interp.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/build/includes/config.h
   DESTINATION include
   COMPONENT include)
 
