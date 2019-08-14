@@ -42,8 +42,8 @@ def runBuild(platform){
           runInCygwin "cd build && make package"
       }else{
         cmakeBuild generator: "Unix Makefiles", buildDir: "build", installation: "InSearchPath"
-        shell "make install"
-        shell "make package"			
+        shell "cd build && make install"
+        shell "cd build && make package"			
       }
 		
 		stash excludes: '_CPack_Packages', includes: 'build/build/packages/*', name: "packages-${platform}"
