@@ -5,34 +5,34 @@ macro(add_vm_plugin NAME)
     if(OSX)
         file(GLOB ${NAME}_SOURCES
             ${${NAME}_SOURCES_EXTRA}
-            extracted/plugins/${NAME}/src/common/*.c   
-            extracted/plugins/${NAME}/src/osx/*.c   
-            extracted/plugins/${NAME}/src/unix/*.c 
+            ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/${NAME}/src/common/*.c   
+            ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/${NAME}/src/osx/*.c   
+            ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/${NAME}/src/unix/*.c 
         )
         include_directories(
-            extracted/plugins/${NAME}/include/common
-            extracted/plugins/${NAME}/include/osx
-            extracted/plugins/${NAME}/include/unix
+            ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/${NAME}/include/common
+            ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/${NAME}/include/osx
+            ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/${NAME}/include/unix
         )        
     elseif(UNIX)
         file(GLOB ${NAME}_SOURCES
             ${${NAME}_SOURCES_EXTRA}
-            extracted/plugins/${NAME}/src/common/*.c   
-            extracted/plugins/${NAME}/src/unix/*.c 
+            ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/${NAME}/src/common/*.c   
+            ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/${NAME}/src/unix/*.c 
         )         
         include_directories(
-            extracted/plugins/${NAME}/include/common
-            extracted/plugins/${NAME}/include/unix
+            ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/${NAME}/include/common
+            ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/${NAME}/include/unix
         )
     else()
         file(GLOB ${NAME}_SOURCES
             ${${NAME}_SOURCES_EXTRA}       
-            extracted/plugins/${NAME}/src/common/*.c   
-            extracted/plugins/${NAME}/src/win/*.c 
+            ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/${NAME}/src/common/*.c   
+            ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/${NAME}/src/win/*.c 
         )                 
         include_directories(
-            extracted/plugins/${NAME}/include/common
-            extracted/plugins/${NAME}/include/win
+            ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/${NAME}/include/common
+            ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/${NAME}/include/win
         )
     endif()
 
