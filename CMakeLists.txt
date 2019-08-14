@@ -13,7 +13,7 @@ get_git_date(GIT_COMMIT_DATE)
 set(BUILT_FROM "${GIT_DESCRIBE} - Commit: ${GIT_COMMIT_HASH} - Date: ${GIT_COMMIT_DATE}")
 message(STATUS ${BUILT_FROM})
 
-if (CMAKE_HOST_UNIX AND ${CMAKE_HOST_SYSTEM_NAME} MATCHES "CYGWIN*")
+if ((CMAKE_HOST_UNIX) AND (${CMAKE_HOST_SYSTEM_NAME} MATCHES "CYGWIN*"))
   message(STATUS "Building on CYGWIN CMAKE: Adapting paths")
   set(CYGWIN 1)
   set(WIN 1)
@@ -212,19 +212,15 @@ add_custom_command(
 
 #Custom command that generates the vm source code from VMMaker into ${VMMAKER_OUTPUT_PATH} and copies it to ${CMAKE_CURRENT_SOURCE_DIR}
 add_custom_command(
-  OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/generated/vm/src/cogit.c ${CMAKE_CURRENT_SOURCE_DIR}/generated/vm/src/gcc3x-cointerp.c
-  COMMAND ./pharo VMMaker.image eval "PharoVMMaker generate: #'${FLAVOUR}'"
-  COMMAND rm -rf ${CMAKE_CURRENT_SOURCE_DIR}/generated
-  COMMAND mv generated ${CMAKE_CURRENT_SOURCE_DIR}
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/src/cogit.c ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/src/gcc3x-cointerp.c
+  COMMAND ${VMMAKER_OUTPUT_PATH}/pharo ${VMMAKER_OUTPUT_PATH}/VMMaker.image eval "PharoVMMaker generate: #'${FLAVOUR}'"
   MAIN_DEPENDENCY ${VMMAKER_OUTPUT_PATH}/VMMaker.image
-  WORKING_DIRECTORY ${VMMAKER_OUTPUT_PATH}
   COMMENT "Generating VM files for flavour: ${FLAVOUR}")
 
 add_definitions(-DASYNC_FFI_QUEUE=1)
 
 #Generating config file
-configure_file(includes/config.h.in build/includes/config.h)
-include_directories(build/includes)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/includes/config.h.in build/includes/config.h)
 
 message(STATUS "C Compiler: ${CMAKE_C_COMPILER}")
 message(STATUS "C++ Compiler: ${CMAKE_CXX_COMPILER}")
@@ -232,7 +228,9 @@ message(STATUS "Resource Compiler: ${CMAKE_RC_COMPILER}")
 
 
 include_directories(
-	includes
+	${CMAKE_CURRENT_SOURCE_DIR}/includes
+  ${CMAKE_CURRENT_BINARY_DIR}/build/includes/
+  ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/include
 )
 
 if(WIN)
@@ -244,16 +242,16 @@ elseif(UNIX)
 endif()
 
 set(GENERATED_SOURCES
-    generated/vm/src/cogit.c
-    generated/vm/src/gcc3x-cointerp.c
+    ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/src/cogit.c
+    ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/src/gcc3x-cointerp.c
 )
 
 set(SUPPORT_SOURCES
-	src/debug.c
-	src/utils.c
-	src/nullDisplay.c
-	src/externalPrimitives.c
-	src/client.c
+	${CMAKE_CURRENT_SOURCE_DIR}/src/debug.c
+	${CMAKE_CURRENT_SOURCE_DIR}/src/utils.c
+	${CMAKE_CURRENT_SOURCE_DIR}/src/nullDisplay.c
+	${CMAKE_CURRENT_SOURCE_DIR}/src/externalPrimitives.c
+	${CMAKE_CURRENT_SOURCE_DIR}/src/client.c
 )
 
 set(VM_SOURCES
@@ -283,10 +281,9 @@ install(FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/common/sq.h
   ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/common/sqMemoryAccess.h
   ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/common/sqVirtualMachine.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/generated/vm/include/interp.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/generated/vm/include/vmCallback.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/generated/vm/include/interp.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/build/includes/config.h
+  ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/include/interp.h
+  ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/include/vmCallback.h
+  ${CMAKE_CURRENT_BINARY_DIR}/build/includes/config.h
   DESTINATION include
   COMPONENT include)
 

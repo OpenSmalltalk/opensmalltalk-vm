@@ -47,21 +47,21 @@ macro(configure_installables INSTALL_COMPONENT)
     set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/build/dist")
     
     install(
-      DIRECTORY "${CMAKE_SOURCE_DIR}/build/vm/"
+      DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/build/vm/"
       DESTINATION "Pharo.app/Contents/MacOS"
       COMPONENT ${INSTALL_COMPONENT}
       USE_SOURCE_PERMISSIONS FILES_MATCHING PATTERN ${VM_EXECUTABLE_NAME})
     install(
-      DIRECTORY "${CMAKE_SOURCE_DIR}/build/vm/"
+      DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/build/vm/"
       DESTINATION "Pharo.app/Contents/MacOS/Plugins"
       COMPONENT ${INSTALL_COMPONENT}
       USE_SOURCE_PERMISSIONS FILES_MATCHING PATTERN *.dylib)
     install(
-      FILES "build/includes/Info.plist"
+      FILES "${CMAKE_CURRENT_BINARY_DIR}/build/includes/Info.plist"
       DESTINATION "Pharo.app/Contents"
       COMPONENT ${INSTALL_COMPONENT})
     install(
-      FILES "resources/mac/Pharo.icns"
+      FILES "${CMAKE_CURRENT_SOURCE_DIR}/resources/mac/Pharo.icns"
       DESTINATION "Pharo.app/Contents/Resources"
       COMPONENT ${INSTALL_COMPONENT})
 endmacro()
