@@ -36,17 +36,18 @@ def runBuild(platform){
 
 	stage("Build-${platform}"){
       if(isWindows()){
-          runInCygwin "cmake ."
-          runInCygwin "make install"
-          runInCygwin "make package"
+          runInCygwin "mkdir build"
+          runInCygwin "cd build && cmake ."
+          runInCygwin "cd build && make install"
+          runInCygwin "cd build && make package"
       }else{
-        cmakeBuild generator: 'Unix Makefiles', installation: 'InSearchPath'
+        cmakeBuild generator: "Unix Makefiles", buildDir: "build", installation: "InSearchPath"
         shell "make install"
         shell "make package"			
       }
 		
-		stash excludes: '_CPack_Packages', includes: 'build/packages/*', name: "packages-${platform}"
-		archiveArtifacts artifacts: 'build/packages/*', excludes: '_CPack_Packages'
+		stash excludes: '_CPack_Packages', includes: 'build/build/packages/*', name: "packages-${platform}"
+		archiveArtifacts artifacts: 'build/build/packages/*', excludes: '_CPack_Packages'
 	}
 }
 
