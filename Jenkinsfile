@@ -36,7 +36,7 @@ def runBuild(platform){
 
 	stage("Build-${platform}"){
       if(isWindows()){
-          runInCygwin "cmake . -DWIN=1"
+          runInCygwin "cmake ."
           runInCygwin "make install"
           runInCygwin "make package"
       }else{
