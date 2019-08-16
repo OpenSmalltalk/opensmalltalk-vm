@@ -41,7 +41,7 @@ macro(configure_installables INSTALL_COMPONENT)
     set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/build/dist")
     
     install(
-      DIRECTORY "${CMAKE_BINARY_DIR}/packaging/linux/"
+      DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/packaging/linux/"
       DESTINATION "./"
       USE_SOURCE_PERMISSIONS
       COMPONENT ${INSTALL_COMPONENT})
