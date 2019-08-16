@@ -57,6 +57,10 @@ if(WIN)
           COMMAND cygpath ${CMAKE_CURRENT_SOURCE_DIR} --mixed
           OUTPUT_VARIABLE CMAKE_CURRENT_SOURCE_DIR_TO_OUT
           OUTPUT_STRIP_TRAILING_WHITESPACE)
+    execute_process(
+          COMMAND cygpath ${CMAKE_CURRENT_BINARY_DIR} --mixed
+          OUTPUT_VARIABLE CMAKE_CURRENT_BINARY_DIR_TO_OUT
+          OUTPUT_STRIP_TRAILING_WHITESPACE)
 
     set(CMAKE_SHARED_LIBRARY_PREFIX "")
     set(CMAKE_SHARED_LIBRARY_SUFFIX ".dll")
@@ -83,6 +87,7 @@ elseif(UNIX)
 
     # Use the default path to send as argument of extrernal apps (like pharo itself)
     set(CMAKE_CURRENT_SOURCE_DIR_TO_OUT ${CMAKE_CURRENT_SOURCE_DIR})
+    set(CMAKE_CURRENT_BINARY_DIR_TO_OUT ${CMAKE_CURRENT_BINARY_DIR})
 
     set(COMMON_FLAGS "")
 
@@ -216,7 +221,7 @@ COMMENT "Generating VMMaker image")
 #Custom command that generates the vm source code from VMMaker into ${VMMAKER_OUTPUT_PATH} and copies it to ${CMAKE_CURRENT_SOURCE_DIR}
 add_custom_command(
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/src/cogit.c ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/src/gcc3x-cointerp.c
-  COMMAND ${VMMAKER_OUTPUT_PATH}/pharo ${VMMAKER_OUTPUT_PATH}/VMMaker.image eval \"PharoVMMaker generate: \#\'${FLAVOUR}\' outputDirectory: \'${CMAKE_CURRENT_BINARY_DIR}\'\"
+  COMMAND ${VMMAKER_OUTPUT_PATH}/pharo ${VMMAKER_OUTPUT_PATH}/VMMaker.image eval \"PharoVMMaker generate: \#\'${FLAVOUR}\' outputDirectory: \'${CMAKE_CURRENT_BINARY_DIR_TO_OUT}\'\"
   MAIN_DEPENDENCY ${VMMAKER_OUTPUT_PATH}/VMMaker.image
   COMMENT "Generating VM files for flavour: ${FLAVOUR}")
 
