@@ -1,28 +1,27 @@
 include_directories(
-    extracted/vm/include/win
-    extracted/vm/include/common
-    generated/vm/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/win
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/common
 )
 
 set(EXTRACTED_SOURCES
 #Common sources
-    extracted/vm/src/common/sqHeapMap.c
-    extracted/vm/src/common/sqVirtualMachine.c
-    extracted/vm/src/common/sqNamedPrims.c
-    extracted/vm/src/common/sqExternalSemaphores.c
-    extracted/vm/src/common/sqTicker.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/common/sqHeapMap.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/common/sqVirtualMachine.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/common/sqNamedPrims.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/common/sqExternalSemaphores.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/common/sqTicker.c
 
 #Platform sources
-    extracted/vm/src/win/sqWin32SpurAlloc.c
-    extracted/vm/src/win/sqWin32Heartbeat.c
-    src/aioWin.c
-    src/debugWin.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/win/sqWin32SpurAlloc.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/win/sqWin32Heartbeat.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/aioWin.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/debugWin.c
 )
 
 set(VM_FRONTEND_SOURCES
-    src/main.c
-    src/parameters.c
-    src/winOpenFileDialog.cpp)
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/parameters.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/winOpenFileDialog.cpp)
 
 macro(add_third_party_dependencies_per_platform)
     add_third_party_dependency("pixman-0.34.0" "build/vm")
@@ -41,10 +40,10 @@ endmacro()
 
 
 macro(configure_installables INSTALL_COMPONENT)
-    set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/build/dist")
+    set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/build/dist")
     
     install(
-      DIRECTORY "${CMAKE_SOURCE_DIR}/build/vm/"
+      DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}//build/vm/"
       DESTINATION "./"
       USE_SOURCE_PERMISSIONS
       COMPONENT ${INSTALL_COMPONENT})
