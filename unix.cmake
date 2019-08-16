@@ -1,30 +1,30 @@
 include_directories(
-    ${CMAKE_CURRENT_BINARY_DIR}/extracted/vm/include/unix
-    ${CMAKE_CURRENT_BINARY_DIR}/extracted/vm/include/common
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/unix
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/common
 )
 
 set(EXTRACTED_SOURCES
 #Common sources
-    ${CMAKE_CURRENT_BINARY_DIR}/extracted/vm/src/common/sqHeapMap.c
-    ${CMAKE_CURRENT_BINARY_DIR}/extracted/vm/src/common/sqVirtualMachine.c
-    ${CMAKE_CURRENT_BINARY_DIR}/extracted/vm/src/common/sqNamedPrims.c
-    ${CMAKE_CURRENT_BINARY_DIR}/extracted/vm/src/common/sqExternalSemaphores.c
-    ${CMAKE_CURRENT_BINARY_DIR}/extracted/vm/src/common/sqTicker.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/common/sqHeapMap.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/common/sqVirtualMachine.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/common/sqNamedPrims.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/common/sqExternalSemaphores.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/common/sqTicker.c
 
 #Platform sources
-    ${CMAKE_CURRENT_BINARY_DIR}/extracted/vm/src/unix/aio.c
-    ${CMAKE_CURRENT_BINARY_DIR}/extracted/vm/src/unix/sqUnixHeartbeat.c
-    ${CMAKE_CURRENT_BINARY_DIR}/src/debugUnix.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/unix/aio.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/unix/sqUnixHeartbeat.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/debugUnix.c
 
 #Virtual Memory functions
-    ${CMAKE_CURRENT_BINARY_DIR}/src/memoryUnix.c
-    ${CMAKE_CURRENT_BINARY_DIR}/src/aioUnix.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/memoryUnix.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/aioUnix.c
 )
 
 set(VM_FRONTEND_SOURCES
-    ${CMAKE_CURRENT_BINARY_DIR}/src/main.c
-    ${CMAKE_CURRENT_BINARY_DIR}/src/parameters.c    
-    ${CMAKE_CURRENT_BINARY_DIR}/src/unixOpenFileDialog.c)
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/parameters.c    
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/unixOpenFileDialog.c)
 
 
 macro(add_third_party_dependencies_per_platform)
@@ -38,7 +38,7 @@ endmacro()
 
 
 macro(configure_installables INSTALL_COMPONENT)
-    set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/build/dist")
+    set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/build/dist")
     
     install(
       DIRECTORY "${CMAKE_SOURCE_DIR}/packaging/linux/"

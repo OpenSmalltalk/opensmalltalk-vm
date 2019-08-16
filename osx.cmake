@@ -23,9 +23,9 @@ set(EXTRACTED_SOURCES
 )
 
 set(VM_FRONTEND_SOURCES
-    src/main.c
-    src/parameters.c
-    src/macOpenFileDialog.mm)
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/parameters.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/macOpenFileDialog.mm)
 
 configure_file(resources/mac/Info.plist.in build/includes/Info.plist)
 
