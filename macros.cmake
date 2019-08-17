@@ -46,19 +46,19 @@ macro(add_third_party_dependency NAME TARGETPATH)
     
     message("Adding third-party libraries for ${PLATNAME}: ${NAME}")
 
-    add_custom_command(OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/build/third-party/${NAME}.zip"
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_SOURCE_DIR}/build/third-party
-        COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_CURRENT_SOURCE_DIR}/build/third-party wget --no-check-certificate "https://files.pharo.org/vm/pharo-spur64/${PLATNAME}/third-party/${NAME}.zip"
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+    add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/build/third-party/${NAME}.zip"
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/build/third-party
+        COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_CURRENT_BINARY_DIR}/build/third-party wget --no-check-certificate "https://files.pharo.org/vm/pharo-spur64/${PLATNAME}/third-party/${NAME}.zip"
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
-    add_custom_command(OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/build/third-party/${NAME}.done"
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_SOURCE_DIR}/${TARGETPATH}
-        COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_CURRENT_SOURCE_DIR}/build/third-party unzip -o "${NAME}.zip" -d ${CMAKE_CURRENT_SOURCE_DIR}/${TARGETPATH}
-        COMMAND ${CMAKE_COMMAND} -E touch "${CMAKE_CURRENT_SOURCE_DIR}/build/third-party/${NAME}.done"
+    add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/build/third-party/${NAME}.done"
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/${TARGETPATH}
+        COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_CURRENT_BINARY_DIR}/build/third-party unzip -o "${NAME}.zip" -d ${CMAKE_CURRENT_BINARY_DIR}/${TARGETPATH}
+        COMMAND ${CMAKE_COMMAND} -E touch "${CMAKE_CURRENT_BINARY_DIR}/build/third-party/${NAME}.done"
         DEPENDS "build/third-party/${NAME}.zip"
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
-    add_custom_target(${NAME} ALL DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/build/third-party/${NAME}.done")        
+    add_custom_target(${NAME} ALL DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/build/third-party/${NAME}.done")        
     add_dependencies(${NAME} ${VM_EXECUTABLE_NAME} )
 endmacro()
 
