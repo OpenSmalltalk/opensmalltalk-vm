@@ -43,8 +43,8 @@ def runBuild(platform){
       runInCygwin "cd build && make install"
       runInCygwin "cd build && make package"
     }else{
+      cmakeBuild generator: "Unix Makefiles", sourceDir: "repository", buildDir: "build", installation: "InSearchPath"
       dir("build"){
-        cmakeBuild generator: "Unix Makefiles", sourceDir: "repository", buildDir: "build", installation: "InSearchPath"
         shell "cd build && make install"
         shell "cd build && make package"
       }
