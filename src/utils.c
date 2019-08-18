@@ -580,23 +580,23 @@ int vmProcessArgumentCount = 0;
 char ** vmProcessArgumentVector = NULL;
 char ** vmProcessEnvironmentVector = NULL;
 
-void setProcessArguments(int count, char** args){
+EXPORT(void) setProcessArguments(int count, char** args){
 	vmProcessArgumentCount = count;
 	vmProcessArgumentVector = args;
 }
 
-void setProcessEnvironmentVector(char** environment){
+EXPORT(void) setProcessEnvironmentVector(char** environment){
 	vmProcessEnvironmentVector = environment;
 }
 
-int getProcessArgumentCount(){
+EXPORT(int) getProcessArgumentCount(){
 	return vmProcessArgumentCount;
 }
 
-char** getProcessArgumentVector(){
+EXPORT(char**) getProcessArgumentVector(){
 	return vmProcessArgumentVector;
 }
 
-char ** getProcessEnvironmentVector(){
+EXPORT(char **) getProcessEnvironmentVector(){
 	return vmProcessEnvironmentVector;
 }

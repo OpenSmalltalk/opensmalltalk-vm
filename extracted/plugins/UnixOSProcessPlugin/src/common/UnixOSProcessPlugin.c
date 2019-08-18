@@ -32,9 +32,9 @@ static char __buildInfo[] = "UnixOSProcessPlugin VMConstruction-Plugins-OSProces
 # include <sys/signalvar.h>
 #endif
 
-int getProcessArgumentCount();
-char** getProcessArgumentVector();
-char** getProcessEnvironmentVector();
+EXPORT(int) getProcessArgumentCount();
+EXPORT(char**) getProcessArgumentVector();
+EXPORT(char**) getProcessEnvironmentVector();
 
 /* Default EXPORT macro that does nothing (see comment in sq.h): */
 #define EXPORT(returnType) returnType
