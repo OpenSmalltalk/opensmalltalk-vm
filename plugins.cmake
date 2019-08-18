@@ -304,3 +304,12 @@ endif()
 # DSAPrims
 #
 add_vm_plugin(DSAPrims)
+
+#
+# UnixOSProcessPlugin
+#
+
+if(NOT WIN)
+    add_vm_plugin(UnixOSProcessPlugin)
+    target_link_libraries(UnixOSProcessPlugin FilePlugin)
+endif()

@@ -576,3 +576,27 @@ EXPORT(void) getBasePath(char const *path, char* basePath, int basePathSize){
 #endif
 }
 
+int vmProcessArgumentCount = 0;
+char ** vmProcessArgumentVector = NULL;
+char ** vmProcessEnvironmentVector = NULL;
+
+void setProcessArguments(int count, char** args){
+	vmProcessArgumentCount = count;
+	vmProcessArgumentVector = args;
+}
+
+void setProcessEnvironmentVector(char** environment){
+	vmProcessEnvironmentVector = environment;
+}
+
+int getProcessArgumentCount(){
+	return vmProcessArgumentCount;
+}
+
+char** getProcessArgumentVector(){
+	return vmProcessArgumentVector;
+}
+
+char ** getProcessEnvironmentVector(){
+	return vmProcessEnvironmentVector;
+}

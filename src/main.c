@@ -5,9 +5,13 @@
 #include <pharoClient.h>
 #include <pharo.h>
 
-int main(int argc, char* argv[]){
+int main(int argc, char* argv[], char** env){
 
 	installErrorHandlers();
+
+	setProcessArguments(argc, argv);
+	setProcessEnvironmentVector(env);
+
 
 	VM_PARAMETERS parameters;
 	char buffer[4096+1];
