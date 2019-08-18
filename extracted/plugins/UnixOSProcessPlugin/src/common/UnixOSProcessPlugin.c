@@ -29,9 +29,6 @@ static char __buildInfo[] = "UnixOSProcessPlugin VMConstruction-Plugins-OSProces
 # include <sys/signalvar.h>
 #endif
 
-EXPORT(int) getProcessArgumentCount();
-EXPORT(char**) getProcessArgumentVector();
-EXPORT(char**) getProcessEnvironmentVector();
 
 /* Default EXPORT macro that does nothing (see comment in sq.h): */
 #define EXPORT(returnType) returnType
@@ -64,6 +61,9 @@ EXPORT(char**) getProcessEnvironmentVector();
 #define PrimErrUnsupported 7
 #define SESSIONIDENTIFIERTYPE int
 
+EXPORT(int) getProcessArgumentCount();
+EXPORT(char**) getProcessArgumentVector();
+EXPORT(char**) getProcessEnvironmentVector();
 
 /*** Function Prototypes ***/
 static sqInt argumentAtAsType(sqInt classIdentifier);
