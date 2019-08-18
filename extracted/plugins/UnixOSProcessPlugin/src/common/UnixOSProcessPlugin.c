@@ -31,7 +31,7 @@ static char __buildInfo[] = "UnixOSProcessPlugin VMConstruction-Plugins-OSProces
 
 int getProcessArgumentCount();
 char** getProcessArgumentVector();
-void ** getProcessEnvironmentVector();
+char** getProcessEnvironmentVector();
 
 /* Default EXPORT macro that does nothing (see comment in sq.h): */
 #define EXPORT(returnType) returnType
