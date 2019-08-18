@@ -11,9 +11,6 @@ static char __buildInfo[] = "UnixOSProcessPlugin VMConstruction-Plugins-OSProces
 
 #include "config.h"
 
-//This is needed because the sighold is deprecated in linux. We have to activate it.
-#define _XOPEN_SOURCE 500
-
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -4802,7 +4799,11 @@ sigErrorNumber(void)
 static void *
 sigHoldNumber(void)
 {
+#ifdef SIG_HOLD
 	return SIG_HOLD;
+#else
+	return -1;
+#endif
 }
 
 
