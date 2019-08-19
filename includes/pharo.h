@@ -35,7 +35,6 @@ char* getVMArgument(int index);
 int getImageArgumentCount();
 char* getImageArgument(int index);
 
-
 char** getSystemSearchPaths();
 char** getPluginPaths();
 
@@ -61,6 +60,15 @@ int openFileDialog(char const * aTitle, char const * aDefaultPathAndFile, char c
 
 EXPORT(char*) getFullPath(char const *relativePath, char* fullPath, int fullPathSize);
 EXPORT(void) getBasePath(char const *path, char* basePath, int basePathSize);
+
+EXPORT(void) setProcessArguments(int count, char** args);
+EXPORT(void) setProcessEnvironmentVector(char** environment);
+
+// Get information about the process arguments.
+// Only available if the process using the VM has given them before.
+EXPORT(int) getProcessArgumentCount();
+EXPORT(char**) getProcessArgumentVector();
+EXPORT(char**) getProcessEnvironmentVector();
 
 #ifndef NULL
 #define NULL	0
