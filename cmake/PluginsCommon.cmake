@@ -100,7 +100,7 @@ if (APPLE)
 	set(SqueakSSL_Sources
 	    "platforms/iOS/plugins/SqueakSSL/sqMacSSL.c"
 	)
-	add_vm_plugin_sources(SqueakSSL EXTERNAL ${SqueakSSL_Sources})
+	add_vm_plugin_auto(SqueakSSL EXTERNAL ${SqueakSSL_Sources})
 	vm_plugin_link_libraries(SqueakSSL ${CoreFoundation_LIBRARY} ${Security_LIBRARY})
 else()
 	add_vm_plugin_auto(SqueakSSL EXTERNAL)
