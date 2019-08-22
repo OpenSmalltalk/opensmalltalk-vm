@@ -96,6 +96,10 @@ if(DARWIN)
 endif()
 
 # Squeak SSL plugin
+# In the case of the minheadless VM for OS X, we are treating the VM as it were
+# an unix since we are removing all of the platform specific windowing code in
+# this VM variant. For this reason, in the cases where OS X is different than
+# another unix, the plugin code has to be added manually.
 if (APPLE)
 	set(SqueakSSL_Sources
 	    "platforms/iOS/plugins/SqueakSSL/sqMacSSL.c"
