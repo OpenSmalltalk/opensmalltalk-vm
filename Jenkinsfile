@@ -36,7 +36,7 @@ def runBuild(platform, configuration){
     }
 
 
-	stage("Build-${platform}"){
+	stage("Build-${platform}-${configuration}"){
     if(isWindows()){
       runInCygwin "mkdir build"
       runInCygwin "cd build && cmake -DFLAVOUR=${configuration} ../repository"
