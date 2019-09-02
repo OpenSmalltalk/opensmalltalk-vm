@@ -129,6 +129,30 @@ else {
 ]
 
 { #category : #tests }
+VMCodeGenerationTest >> testEmptyStructTypeDef [
+
+	| typedef |
+	typedef := String streamContents: [:str | MockEmptyVMStruct printTypedefOn: str ].
+	self
+		assert: typedef trimBoth
+		equals: 'typedef struct {
+ } MockEmptyVMStruct;' trimBoth
+]
+
+{ #category : #tests }
+VMCodeGenerationTest >> testEmptyStructWithRedefinedStructNameTypeDef [
+
+	| typedef |
+	typedef := String streamContents: [:str | MockEmptyVMStructWithRedefinedStructName printTypedefOn: str ].
+	self
+		assert: typedef trimBoth
+		equals: 'typedef struct {
+ } RedefinedStruct;
+
+#define MockEmptyVMStructWithRedefinedStructName RedefinedStruct' trimBoth
+]
+
+{ #category : #tests }
 VMCodeGenerationTest >> testLoopVariableIsTemp [
 
 	| translation method codeGenerator result |
