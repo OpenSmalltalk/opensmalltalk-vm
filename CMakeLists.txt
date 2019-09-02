@@ -32,6 +32,8 @@ endif()
 
 project(PharoVM)
 
+set(FLAVOUR CoInterpreterWithQueueFFI CACHE STRING "The kind of VM to generate. Possible values: StackVM, CogVM, CoInterpreterWithQueueFFI")
+
 # Configuration
 include(CheckIncludeFiles)
 include(CheckFunctionExists)
@@ -198,8 +200,6 @@ check_include_files(uuid/uuid.h HAVE_UUID_UUID_H)
 check_include_files(uuid.h HAVE_UUID_H)
 check_library_exists(uuid uuidgen "" HAVE_UUIDGEN)
 check_library_exists(uuid uuid_generate "" HAVE_UUID_GENERATE)
-
-set(FLAVOUR CoInterpreterWithQueueFFI)
 
 #Custom command that downloads a Pharo image and VM in ${VMMAKER_OUTPUT_PATH}
 add_custom_command(
