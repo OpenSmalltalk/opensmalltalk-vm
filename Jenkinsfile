@@ -25,7 +25,7 @@ def runInCygwin(command){
 }
 
 
-def runBuild(platform){
+def runBuild(platform, configuration){
 	cleanWs()
 	
 
@@ -39,11 +39,11 @@ def runBuild(platform){
 	stage("Build-${platform}"){
     if(isWindows()){
       runInCygwin "mkdir build"
-      runInCygwin "cd build && cmake ../repository"
+      runInCygwin "cd build && cmake -DFLAVOUR=${configuration} ../repository"
       runInCygwin "cd build && make install"
       runInCygwin "cd build && make package"
     }else{
-      cmakeBuild generator: "Unix Makefiles", sourceDir: "repository", buildDir: "build", installation: "InSearchPath"
+      cmakeBuild generator: "Unix Makefiles", cmakeArgs: "-DFLAVOUR=${configuration}", sourceDir: "repository", buildDir: "build", installation: "InSearchPath"
       dir("build"){
         shell "make install"
         shell "make package"
@@ -161,7 +161,7 @@ try{
 		builders[platform] = {
 			node(platform){
 				timeout(30){
-					runBuild(platform)
+					runBuild(platform, "CoInterpreterWithQueueFFI")
 				}
 			}
 		}
@@ -174,7 +174,14 @@ try{
 			}
 		}
 	}
-	
+  builders["StackVM"] = {
+    node('osx'){
+      timeout(30){
+        runBuild('osx', "StackVM")
+      }
+    }
+  }
+    
 	parallel builders
 	
 	uploadPackages()
