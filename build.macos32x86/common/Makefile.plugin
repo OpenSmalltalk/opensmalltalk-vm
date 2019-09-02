@@ -63,7 +63,12 @@ endif
 
 CROSSDIR:=	$(PLATDIR)/Cross/plugins/$(LIBDIR)
 OSXDIR:=	$(PLATDIR)/iOS/vm/OSX
+#quick hack for B3DAcceleratorPlugin: no 32 bit METAL FRAMEWORK
+ifeq ($(LIBDIR),B3DAcceleratorPlugin)
+OSXPLGDIR:=	$(PLATDIR)/iOS/plugins/$(LIBDIR)32
+else
 OSXPLGDIR:=	$(PLATDIR)/iOS/plugins/$(LIBDIR)
+endif
 UNIXDIR:=	$(PLATDIR)/unix/vm
 MAKERDIR:=	$(PLUGINSRCDIR)/$(LIBDIR)
 BUILDDIR:=	$(BUILD)/$(LIBDIR)

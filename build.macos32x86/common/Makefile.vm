@@ -216,10 +216,12 @@ endif
 #
 .PHONY: $(OBJDIR)/%.lib $(OBJDIR)/%.bundle $(OBJDIR)/%.dylib
 
+hack-b3d = $(subst B3DAcceleratorPlugin,B3DAcceleratorPlugin32,$(1))
+
 ifeq ($(USEPLUGINASDYLIB),TRUE)
-plugin-makefile = $(firstword $(realpath $(OSXPLUGINSDIR)/$(subst lib,,$(1))/Makefile ../common/Makefile.plugin))
+plugin-makefile = $(firstword $(realpath $(OSXPLUGINSDIR)/$(subst lib,,$(call hack-b3d,$(1)))/Makefile ../common/Makefile.plugin))
 else
-plugin-makefile = $(firstword $(realpath $(OSXPLUGINSDIR)/$(1)/Makefile ../common/Makefile.plugin))
+plugin-makefile = $(firstword $(realpath $(OSXPLUGINSDIR)/$(call hack-b3d,$(1))/Makefile ../common/Makefile.plugin))
 endif
 
 # Internal plugin.  Build as lib then link in lib
@@ -241,7 +243,7 @@ prereqs/%.lib:
 	@-ls -rlt	$(call plugin-makefile,$(*F)) $(wildcard $(*F).ignore) \
 				$(wildcard $(PLUGINSRCDIR)/$(*F)/*.c) \
 				$(wildcard $(PLATDIR)/Cross/plugins/$(*F)/*.*) \
-				$(wildcard $(OSXPLUGINSDIR)/$(*F)/*.*)
+				$(wildcard $(OSXPLUGINSDIR)/$(call hack-b3d,$(*F))/*.*)
 
 # It would be nice to have this abbreviation but it creates havoc eem 2/2016
 #%.lib: $(OBJDIR)/%.lib
