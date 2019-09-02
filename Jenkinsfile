@@ -49,15 +49,15 @@ def runBuild(platform, configuration){
         shell "make package"
       }
     }
-		stash excludes: '_CPack_Packages', includes: 'build/build/packages/*', name: "packages-${platform}"
+		stash excludes: '_CPack_Packages', includes: 'build/build/packages/*', name: "packages-${platform}-${configuration}"
 		archiveArtifacts artifacts: 'build/build/packages/*', excludes: '_CPack_Packages'
 	}
 }
 
-def runTests(platform){
+def runTests(platform, configuration){
 	cleanWs()
 
-	stage("Tests-${platform}"){
+	stage("Tests-${platform}-${configuration}"){
 		
 		def vmDir = ''
 		
@@ -70,7 +70,7 @@ def runTests(platform){
 				vmDir = 'win'
 		}
 
-    	unstash name: "packages-${platform}"
+    	unstash name: "packages-${platform}-${configuration}"
 
     	shell "mkdir runTests"
     	dir("runTests"){
@@ -79,28 +79,28 @@ def runTests(platform){
           
           if(isWindows()){
             runInCygwin "cd runTests && unzip ../build/build/packages/PharoVM-*-${vmDir}64-bin.zip -d ."
-            runInCygwin "PHARO_CI_TESTING_ENVIRONMENT=true cd runTests && ./PharoConsole.exe Pharo.image test --junit-xml-output --stage-name=win64 '.*'"
+            runInCygwin "PHARO_CI_TESTING_ENVIRONMENT=true cd runTests && ./PharoConsole.exe Pharo.image test --junit-xml-output --stage-name=win64-${configuration} '.*'"
     	  }else{
             shell "unzip ../build/build/packages/PharoVM-*-${vmDir}64-bin.zip -d ."
 
             if(platform == 'osx'){
-              shell "PHARO_CI_TESTING_ENVIRONMENT=true ./Pharo.app/Contents/MacOS/Pharo Pharo.image test --junit-xml-output --stage-name=osx64 '.*'"
+              shell "PHARO_CI_TESTING_ENVIRONMENT=true ./Pharo.app/Contents/MacOS/Pharo Pharo.image test --junit-xml-output --stage-name=osx64-${configuration} '.*'"
     		}			
             if(platform == 'unix'){
-              shell "PHARO_CI_TESTING_ENVIRONMENT=true ./pharo Pharo.image test --junit-xml-output --stage-name=unix64 '.*'" 
+              shell "PHARO_CI_TESTING_ENVIRONMENT=true ./pharo Pharo.image test --junit-xml-output --stage-name=unix64-${configuration} '.*'" 
             }
     	  }
     		junit allowEmptyResults: true, testResults: "*.xml"
     	}
 				
-		stash excludes: '_CPack_Packages', includes: 'build/build/packages/*', name: "packages-${platform}"
+		stash excludes: '_CPack_Packages', includes: 'build/build/packages/*', name: "packages-${platform}-${configuration}"
 		archiveArtifacts artifacts: 'runTests/*.xml', excludes: '_CPack_Packages'
 	}
 }
 
-def upload(platform, vmDir) {
+def upload(platform, configuration, vmDir) {
 
-	unstash name: "packages-${platform}"
+	unstash name: "packages-${platform}-${configuration}"
 
 	def expandedBinaryFileName = sh(returnStdout: true, script: "ls build/build/packages/PharoVM-*-${vmDir}64-bin.zip").trim()
   def expandedHeadersFileName = sh(returnStdout: true, script: "ls build/build/packages/PharoVM-*-${vmDir}64-include.zip").trim()
@@ -140,9 +140,9 @@ def uploadPackages(){
 				return;
 			}
 			
-			upload('osx', 'mac')
-			upload('unix', 'linux')
-			upload('windows', 'win')
+			upload('osx', "CoInterpreterWithQueueFFI", 'mac')
+			upload('unix', "CoInterpreterWithQueueFFI",'linux')
+			upload('windows', "CoInterpreterWithQueueFFI", 'win')
 		}
 	}
 }
@@ -169,15 +169,23 @@ try{
 		tests[platform] = {
 			node(platform){
 				timeout(30){
-					runTests(platform)
+					runTests(platform, "CoInterpreterWithQueueFFI")
 				}
 			}
 		}
 	}
+  
   builders["StackVM"] = {
     node('osx'){
       timeout(30){
         runBuild('osx', "StackVM")
+      }
+    }
+  }
+  tests["StackVM"] = {
+    node('osx'){
+      timeout(30){
+        runTests('osx', "StackVM")
       }
     }
   }
