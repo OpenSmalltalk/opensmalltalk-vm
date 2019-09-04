@@ -54,7 +54,7 @@ def runBuild(platform, configuration){
 	}
 }
 
-def runTests(platform, configuration){
+def runTests(platform, configuration, packages){
 	cleanWs()
 
 	stage("Tests-${platform}-${configuration}"){
@@ -79,15 +79,15 @@ def runTests(platform, configuration){
           
           if(isWindows()){
             runInCygwin "cd runTests && unzip ../build/build/packages/PharoVM-*-${vmDir}64-bin.zip -d ."
-            runInCygwin "PHARO_CI_TESTING_ENVIRONMENT=true cd runTests && ./PharoConsole.exe Pharo.image test --junit-xml-output --stage-name=win64-${configuration} '.*'"
+            runInCygwin "PHARO_CI_TESTING_ENVIRONMENT=true cd runTests && ./PharoConsole.exe Pharo.image test --junit-xml-output --stage-name=win64-${configuration} '${packages}'"
     	  }else{
             shell "unzip ../build/build/packages/PharoVM-*-${vmDir}64-bin.zip -d ."
 
             if(platform == 'osx'){
-              shell "PHARO_CI_TESTING_ENVIRONMENT=true ./Pharo.app/Contents/MacOS/Pharo Pharo.image test --junit-xml-output --stage-name=osx64-${configuration} '.*'"
+              shell "PHARO_CI_TESTING_ENVIRONMENT=true ./Pharo.app/Contents/MacOS/Pharo Pharo.image test --junit-xml-output --stage-name=osx64-${configuration} '${packages}'"
     		}			
             if(platform == 'unix'){
-              shell "PHARO_CI_TESTING_ENVIRONMENT=true ./pharo Pharo.image test --junit-xml-output --stage-name=unix64-${configuration} '.*'" 
+              shell "PHARO_CI_TESTING_ENVIRONMENT=true ./pharo Pharo.image test --junit-xml-output --stage-name=unix64-${configuration} '${packages}'" 
             }
     	  }
     		junit allowEmptyResults: true, testResults: "*.xml"
@@ -169,7 +169,7 @@ try{
 		tests[platform] = {
 			node(platform){
 				timeout(30){
-					runTests(platform, "CoInterpreterWithQueueFFI")
+					runTests(platform, "CoInterpreterWithQueueFFI", ".*")
 				}
 			}
 		}
@@ -184,8 +184,8 @@ try{
   }
   tests["StackVM"] = {
     node('osx'){
-      timeout(30){
-        runTests('osx', "StackVM")
+      timeout(40){
+        runTests('osx', "StackVM", "Kernel.*")
       }
     }
   }
