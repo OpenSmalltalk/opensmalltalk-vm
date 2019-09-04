@@ -155,6 +155,8 @@ jobs:
   - env: FLAVOR="pharo.sista.spur"
   - env: FLAVOR="squeak.cog.spur.lowcode"
   - env: FLAVOR="pharo.cog.spur.lowcode"
+  - env: ARCH="linux64x64" FLAVOR="newspeak.cog.spur"
+  - env: ARCH="macos64x64" FLAVOR="newspeak.cog.spur"
 
 install: ./scripts/ci/travis_install.sh
 
