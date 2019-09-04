@@ -119,6 +119,9 @@
 /* Define to 1 if you have the <libutil.h> header file. */
 #undef HAVE_LIBUTIL_H
 
+/* Have Xrender library */
+#undef HAVE_LIBXRENDER
+
 /* Define to 1 if you have the <linux/fb.h> header file. */
 #undef HAVE_LINUX_FB_H
 
