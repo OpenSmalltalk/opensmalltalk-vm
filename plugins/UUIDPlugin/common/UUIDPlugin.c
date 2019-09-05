@@ -159,6 +159,6 @@ void* UUIDPlugin_exports[][3] = {
 
 #else /* ifdef SQ_BUILTIN_PLUGIN */
 
-signed char primitiveMakeUUIDAccessorDepth = 1;
+EXPORT(signed char) primitiveMakeUUIDAccessorDepth = 1;
 
 #endif /* ifdef SQ_BUILTIN_PLUGIN */

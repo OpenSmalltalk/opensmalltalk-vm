@@ -1816,9 +1816,9 @@ void* JPEGReaderPlugin_exports[][3] = {
 
 #else /* ifdef SQ_BUILTIN_PLUGIN */
 
-signed char primitiveColorConvertGrayscaleMCUAccessorDepth = 2;
-signed char primitiveColorConvertMCUAccessorDepth = 3;
-signed char primitiveDecodeMCUAccessorDepth = 2;
-signed char primitiveIdctIntAccessorDepth = 1;
+EXPORT(signed char) primitiveColorConvertGrayscaleMCUAccessorDepth = 2;
+EXPORT(signed char) primitiveColorConvertMCUAccessorDepth = 3;
+EXPORT(signed char) primitiveDecodeMCUAccessorDepth = 2;
+EXPORT(signed char) primitiveIdctIntAccessorDepth = 1;
 
 #endif /* ifdef SQ_BUILTIN_PLUGIN */

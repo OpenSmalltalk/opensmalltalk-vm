@@ -729,10 +729,10 @@ void* DSAPrims_exports[][3] = {
 
 #else /* ifdef SQ_BUILTIN_PLUGIN */
 
-signed char primitiveBigDivideAccessorDepth = 1;
-signed char primitiveBigMultiplyAccessorDepth = 1;
-signed char primitiveExpandBlockAccessorDepth = 1;
-signed char primitiveHashBlockAccessorDepth = 1;
-signed char primitiveHighestNonZeroDigitIndexAccessorDepth = 1;
+EXPORT(signed char) primitiveBigDivideAccessorDepth = 1;
+EXPORT(signed char) primitiveBigMultiplyAccessorDepth = 1;
+EXPORT(signed char) primitiveExpandBlockAccessorDepth = 1;
+EXPORT(signed char) primitiveHashBlockAccessorDepth = 1;
+EXPORT(signed char) primitiveHighestNonZeroDigitIndexAccessorDepth = 1;
 
 #endif /* ifdef SQ_BUILTIN_PLUGIN */

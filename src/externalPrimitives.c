@@ -140,6 +140,10 @@ ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
     	*accessorDepthPtr = accessorDepthVarPtr
     							? *accessorDepthVarPtr
     							: -1;
+
+    	//If the primitive does not have accessor depth we generate a warning.
+    	if(accessorDepthVarPtr == NULL)
+    		logWarn("Missing Accessor Depth: %s", lookupName);
     }
 #endif /* SPURVM */
     return function;
@@ -204,26 +208,6 @@ static void *
 getModuleSymbol(void *module, const char *symbol)
 {
     return dlsym(module, symbol);
-}
-
-#else
-
-static void *
-loadModuleHandle(const char *fileName)
-{
-    return 0;
-}
-
-static sqInt
-freeModuleHandle(void *module)
-{
-    return 1;
-}
-
-static void *
-getModuleSymbol(void *module, const char *symbol)
-{
-    return 0;
 }
 
 #endif
