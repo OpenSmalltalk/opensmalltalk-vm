@@ -8150,12 +8150,12 @@ void* BitBltPlugin_exports[][3] = {
 
 #else /* ifdef SQ_BUILTIN_PLUGIN */
 
-signed char copyBitsAccessorDepth = 3;
-signed char primitiveCompareColorsAccessorDepth = 3;
-signed char primitiveCopyBitsAccessorDepth = 3;
-signed char primitiveDisplayStringAccessorDepth = 3;
-signed char primitiveDrawLoopAccessorDepth = 3;
-signed char primitivePixelValueAtAccessorDepth = 1;
-signed char primitiveWarpBitsAccessorDepth = 3;
+EXPORT(signed char) copyBitsAccessorDepth = 3;
+EXPORT(signed char) primitiveCompareColorsAccessorDepth = 3;
+EXPORT(signed char) primitiveCopyBitsAccessorDepth = 3;
+EXPORT(signed char) primitiveDisplayStringAccessorDepth = 3;
+EXPORT(signed char) primitiveDrawLoopAccessorDepth = 3;
+EXPORT(signed char) primitivePixelValueAtAccessorDepth = 1;
+EXPORT(signed char) primitiveWarpBitsAccessorDepth = 3;
 
 #endif /* ifdef SQ_BUILTIN_PLUGIN */

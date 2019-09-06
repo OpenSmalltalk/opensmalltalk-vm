@@ -573,14 +573,14 @@ void* SqueakSSL_exports[][3] = {
 
 #else /* ifdef SQ_BUILTIN_PLUGIN */
 
-signed char primitiveAcceptAccessorDepth = 1;
-signed char primitiveConnectAccessorDepth = 1;
-signed char primitiveDecryptAccessorDepth = 1;
-signed char primitiveDestroyAccessorDepth = 0;
-signed char primitiveEncryptAccessorDepth = 1;
-signed char primitiveGetIntPropertyAccessorDepth = 0;
-signed char primitiveGetStringPropertyAccessorDepth = 0;
-signed char primitiveSetIntPropertyAccessorDepth = 0;
-signed char primitiveSetStringPropertyAccessorDepth = 1;
+EXPORT(signed char) primitiveAcceptAccessorDepth = 1;
+EXPORT(signed char) primitiveConnectAccessorDepth = 1;
+EXPORT(signed char) primitiveDecryptAccessorDepth = 1;
+EXPORT(signed char) primitiveDestroyAccessorDepth = 0;
+EXPORT(signed char) primitiveEncryptAccessorDepth = 1;
+EXPORT(signed char) primitiveGetIntPropertyAccessorDepth = 0;
+EXPORT(signed char) primitiveGetStringPropertyAccessorDepth = 0;
+EXPORT(signed char) primitiveSetIntPropertyAccessorDepth = 0;
+EXPORT(signed char) primitiveSetStringPropertyAccessorDepth = 1;
 
 #endif /* ifdef SQ_BUILTIN_PLUGIN */

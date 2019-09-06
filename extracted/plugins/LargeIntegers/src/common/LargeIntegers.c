@@ -3846,18 +3846,18 @@ void* LargeIntegers_exports[][3] = {
 
 #else /* ifdef SQ_BUILTIN_PLUGIN */
 
-signed char primAnyBitFromToAccessorDepth = 1;
-signed char primDigitAddAccessorDepth = 1;
-signed char primDigitBitAndAccessorDepth = 1;
-signed char primDigitBitOrAccessorDepth = 1;
-signed char primDigitBitShiftMagnitudeAccessorDepth = 3;
-signed char primDigitBitXorAccessorDepth = 1;
-signed char primDigitCompareAccessorDepth = 0;
-signed char primDigitDivNegativeAccessorDepth = 2;
-signed char primDigitMultiplyNegativeAccessorDepth = 1;
-signed char primDigitSubtractAccessorDepth = 1;
-signed char primMontgomeryTimesModuloAccessorDepth = 1;
-signed char primNormalizeNegativeAccessorDepth = 1;
-signed char primNormalizePositiveAccessorDepth = 1;
+EXPORT(signed char) primAnyBitFromToAccessorDepth = 1;
+EXPORT(signed char) primDigitAddAccessorDepth = 1;
+EXPORT(signed char) primDigitBitAndAccessorDepth = 1;
+EXPORT(signed char) primDigitBitOrAccessorDepth = 1;
+EXPORT(signed char) primDigitBitShiftMagnitudeAccessorDepth = 3;
+EXPORT(signed char) primDigitBitXorAccessorDepth = 1;
+EXPORT(signed char) primDigitCompareAccessorDepth = 0;
+EXPORT(signed char) primDigitDivNegativeAccessorDepth = 2;
+EXPORT(signed char) primDigitMultiplyNegativeAccessorDepth = 1;
+EXPORT(signed char) primDigitSubtractAccessorDepth = 1;
+EXPORT(signed char) primMontgomeryTimesModuloAccessorDepth = 1;
+EXPORT(signed char) primNormalizeNegativeAccessorDepth = 1;
+EXPORT(signed char) primNormalizePositiveAccessorDepth = 1;
 
 #endif /* ifdef SQ_BUILTIN_PLUGIN */
