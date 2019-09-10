@@ -32,6 +32,18 @@ endif()
 
 project(PharoVM)
 
+set(FLAVOUR CoInterpreterWithQueueFFI CACHE STRING "The kind of VM to generate. Possible values: StackVM, CogVM, CoInterpreterWithQueueFFI")
+
+if(FLAVOUR MATCHES "StackVM")
+  set(VMSOURCEFILES ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/src/gcc3x-interp.c)
+else()
+  set(VMSOURCEFILES ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/src/cogit.c ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/src/gcc3x-cointerp.c)
+endif()
+
+if(FLAVOUR MATCHES "CoInterpreterWithQueueFFI")
+  add_definitions(-DASYNC_FFI_QUEUE=1)
+endif()
+
 # Configuration
 include(CheckIncludeFiles)
 include(CheckFunctionExists)
@@ -119,6 +131,10 @@ add_definitions(-DIMMUTABILITY=1)
 add_definitions(-DCOGMTVM=0)
 add_definitions(-DPharoVM=1)
 
+#We require that VM_LABEL does nothing.
+#We should actually cleanup all the places where this is set/used in the VM
+add_definitions(-D"VM_LABEL\(foo\)=0")
+
 #
 # This definition is used to improve the logging of the messages, to cut-down the path
 # of the source files in the compilation of debug messages.
@@ -199,8 +215,6 @@ check_include_files(uuid.h HAVE_UUID_H)
 check_library_exists(uuid uuidgen "" HAVE_UUIDGEN)
 check_library_exists(uuid uuid_generate "" HAVE_UUID_GENERATE)
 
-set(FLAVOUR CoInterpreterWithQueueFFI)
-
 #Custom command that downloads a Pharo image and VM in ${VMMAKER_OUTPUT_PATH}
 add_custom_command(
   OUTPUT ${VMMAKER_OUTPUT_PATH}/Pharo.image ${VMMAKER_OUTPUT_PATH}/pharo
@@ -220,12 +234,10 @@ COMMENT "Generating VMMaker image")
 
 #Custom command that generates the vm source code from VMMaker into ${VMMAKER_OUTPUT_PATH} and copies it to ${CMAKE_CURRENT_SOURCE_DIR}
 add_custom_command(
-  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/src/cogit.c ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/src/gcc3x-cointerp.c
+  OUTPUT ${VMSOURCEFILES}
   COMMAND ${VMMAKER_OUTPUT_PATH}/pharo ${VMMAKER_OUTPUT_PATH}/VMMaker.image eval \"PharoVMMaker generate: \#\'${FLAVOUR}\' outputDirectory: \'${CMAKE_CURRENT_BINARY_DIR_TO_OUT}\'\"
   MAIN_DEPENDENCY ${VMMAKER_OUTPUT_PATH}/VMMaker.image
   COMMENT "Generating VM files for flavour: ${FLAVOUR}")
-
-add_definitions(-DASYNC_FFI_QUEUE=1)
 
 #Generating config file
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/includes/config.h.in build/includes/config.h)
@@ -249,10 +261,7 @@ elseif(UNIX)
     include(unix.cmake)
 endif()
 
-set(GENERATED_SOURCES
-    ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/src/cogit.c
-    ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/src/gcc3x-cointerp.c
-)
+set(GENERATED_SOURCES ${VMSOURCEFILES})
 
 set(SUPPORT_SOURCES
 	${CMAKE_CURRENT_SOURCE_DIR}/src/debug.c
