@@ -3,6 +3,8 @@
 /scripts/**/*.bat eol=crlf
 /image/*.st eol=lf
 /image/*.sh eol=lf
+conf.COG eol=lf
+makeem eol=lf
 mvm eol=lf
 mvm_configure eol=lf
 mvm_configure_variant eol=lf
