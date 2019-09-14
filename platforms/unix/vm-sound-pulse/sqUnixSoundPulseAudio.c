@@ -715,7 +715,7 @@ DBGMSG("[readerThread: stopped]");
 /* ================================== IO INIT */
 
 static void ioInit() {
-	if (initDone) return true;
+	if (initDone) return ;
 	initDone = true; 
 	
 	/* AUDIO OUT */
