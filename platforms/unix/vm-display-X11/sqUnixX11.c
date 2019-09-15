@@ -1262,7 +1262,7 @@ static Atom stringToAtom(char *target, size_t size)
 {
   char *formatString;
   Atom  result;
- 
+
   formatString= (char *) malloc(size + 1);
   memcpy(formatString, target, size);
   formatString[size]= 0;
@@ -1308,7 +1308,7 @@ static sqInt display_clipboardSize(void)
 
 static sqInt display_clipboardWriteFromAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex)
 {
-  display_clipboardWriteWithType(pointerForOop(byteArrayIndex + startIndex), count, NULL, 0, 0, 1);
+  display_clipboardWriteWithType(pointerForOop(byteArrayIndex + startIndex), count, "", 0, 0, 1);
   return 0;
 }
 
