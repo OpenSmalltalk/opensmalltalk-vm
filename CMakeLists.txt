@@ -20,7 +20,7 @@ if ((CMAKE_HOST_UNIX) AND (${CMAKE_HOST_SYSTEM_NAME} MATCHES "CYGWIN*"))
   message(STATUS "Building on CYGWIN CMAKE: Adapting paths")
   set(CYGWIN 1)
   set(WIN 1)
-  
+
   # specify the cross compiler
   set(CMAKE_TOOLCHAIN_PREFIX x86_64-w64-mingw32)
 
@@ -62,7 +62,7 @@ if(WIN)
     #Tell the system we are not in UNIX. This is required for Cygwin builds
     unset(UNIX)
     unset(UNIX CACHE)
-    
+
   	# transform the path into a windows path with unix backslashes C:/bla/blu
   	# this is the path required to send as argument to libraries outside of the control of cygwin (like pharo itself)
   	execute_process(
@@ -77,13 +77,13 @@ if(WIN)
     set(CMAKE_SHARED_LIBRARY_PREFIX "")
     set(CMAKE_SHARED_LIBRARY_SUFFIX ".dll")
     set(CMAKE_SHARED_MODULE_PREFIX "")
-    set(CMAKE_SHARED_MODULE_SUFFIX ".dll")    
+    set(CMAKE_SHARED_MODULE_SUFFIX ".dll")
 
 
 #    if(NOT MSVC)
         set(COMMON_FLAGS "-fwrapv -fdeclspec -msse2 -ggdb2 -m64 -mno-rtd -mms-bitfields -O2 -momit-leaf-frame-pointer -funroll-loops -D_MT -fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf -Wall -Wno-unused-variable -fno-optimize-sibling-calls")
 #    endif()
-    
+
     set(OS_TYPE "Win32")
     set(VM_TARGET_OS "Win64")
 
@@ -94,7 +94,7 @@ if(WIN)
 
     #Setting minimal Windows Version to VISTA
     add_definitions(-D_WIN32_WINNT=0x0600 -DWINVER=0x0600 -DNTDDI_VERSION=0x06000000 -DWIN64=1)
-    
+
 elseif(UNIX)
 
     # Use the default path to send as argument of extrernal apps (like pharo itself)
@@ -111,10 +111,10 @@ elseif(UNIX)
     if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
         set(OSX 1)
         set(OS_TYPE "Mac OS")
-        set(VM_TARGET_OS "1000") # Used to recognise OS X      
-        
+        set(VM_TARGET_OS "1000") # Used to recognise OS X
+
         set(COMMON_FLAGS "-stdlib=libc++ -mmacosx-version-min=10.7 ${COMMON_FLAGS}")
-        
+
     elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
         set(VM_TARGET_OS "linux-gnu")
     else()
@@ -240,7 +240,7 @@ add_custom_command(
   COMMENT "Generating VM files for flavour: ${FLAVOUR}")
 
 #Generating config file
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/includes/config.h.in build/includes/config.h)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/config.h.in build/include/config.h)
 
 message(STATUS "C Compiler: ${CMAKE_C_COMPILER}")
 message(STATUS "C++ Compiler: ${CMAKE_CXX_COMPILER}")
@@ -248,9 +248,9 @@ message(STATUS "Resource Compiler: ${CMAKE_RC_COMPILER}")
 
 
 include_directories(
-	${CMAKE_CURRENT_SOURCE_DIR}/includes
-  ${CMAKE_CURRENT_BINARY_DIR}/build/includes/
-  ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_BINARY_DIR}/build/include/
+    ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/include
 )
 
 if(WIN)
@@ -300,7 +300,7 @@ install(FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/common/sqVirtualMachine.h
   ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/include/interp.h
   ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/include/vmCallback.h
-  ${CMAKE_CURRENT_BINARY_DIR}/build/includes/config.h
+  ${CMAKE_CURRENT_BINARY_DIR}/build/include/config.h
   DESTINATION include
   COMPONENT include)
 
