@@ -22,7 +22,7 @@ set(EXTRACTED_SOURCES
 )
 
 set(VM_FRONTEND_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/vmMain.m
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/vmMain.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/unixMain.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/parameters.c)
 
