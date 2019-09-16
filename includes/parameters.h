@@ -107,13 +107,14 @@ typedef struct pharovm_parameters_s
 {
 	const char* imageFileName;
 	bool isDefaultImage;
+	bool hasMultipleDefaultImages; // Do we have multiple default image, so a file dialog should be shown?
 	bool isForcedStartupImage; // Is this a forced startup image?
 	bool hasBeenSelectedByUserInteractively;
-	
+
 	// FIXME: Why passing this is needed when we have the separated vectors?
 	int processArgc;
 	const char** processArgv;
-	
+
 	// FIXME: Passing this environment vector seems hackish. getenv should be used instead.
 	const char** environmentVector;
 
