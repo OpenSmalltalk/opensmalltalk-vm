@@ -23,9 +23,9 @@ void mtfsfi(unsigned long long fpscr)
 #   define mtfsfi(fpscr)
 #endif
 
-int loadPharoImage(char* fileName);
+int loadPharoImage(const char* fileName);
 
-EXPORT(int) initPharoVM(char* image, char** vmParams, int vmParamCount, char** imageParams, int imageParamCount){
+EXPORT(int) initPharoVM(const char* imageFileName, const pharovm_parameter_vector_t *vmParameters, const pharovm_parameter_vector_t *imageParameters) {
 	initGlobalStructure();
 
 	//Unix Initialization specific
@@ -40,16 +40,19 @@ EXPORT(int) initPharoVM(char* image, char** vmParams, int vmParamCount, char** i
 
 	aioInit();
 
-	setPharoCommandLineParameters(vmParams, vmParamCount, imageParams, imageParamCount);
+	setPharoCommandLineParameters(vmParameters->parameters, vmParameters->count,
+			imageParameters->parameters, imageParameters->count);
 
-	return loadPharoImage(image);
+	return loadPharoImage(imageFileName);
 }
 
-EXPORT(void) runInterpreter(){
+EXPORT(void) runInterpreter()
+{
 	interpret();
 }
 
-int loadPharoImage(char* fileName){
+int loadPharoImage(const char* fileName)
+{
     size_t imageSize = 0;
     FILE* imageFile = NULL;
 

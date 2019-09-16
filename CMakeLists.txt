@@ -101,7 +101,7 @@ elseif(UNIX)
     set(CMAKE_CURRENT_SOURCE_DIR_TO_OUT ${CMAKE_CURRENT_SOURCE_DIR})
     set(CMAKE_CURRENT_BINARY_DIR_TO_OUT ${CMAKE_CURRENT_BINARY_DIR})
 
-    set(COMMON_FLAGS "")
+    set(COMMON_FLAGS "-Wall")
 
     add_definitions(-DLSB_FIRST=1)
 
@@ -155,6 +155,7 @@ set(VM_LIBRARY_NAME PharoVMCore)
 set(VM_NAME Pharo)
 set(PHARO_VM TRUE)
 set(DEFAULT_IMAGE_NAME Pharo.image)
+set(FORCED_STARTUP_IMAGE_NAME startup.image)
 
 set(VM_TARGET "${CMAKE_SYSTEM}")
 
@@ -253,8 +254,9 @@ include_directories(
   ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/include
 )
 
+set(VM_FRONTEND_APPLICATION_TYPE)
 if(WIN)
-    include(win.cmake)
+    include(win32.cmake)
 elseif(OSX)
     include(osx.cmake)
 elseif(UNIX)
@@ -278,7 +280,7 @@ set(VM_SOURCES
 )
 
 addLibraryWithRPATH(${VM_LIBRARY_NAME} ${VM_SOURCES})
-add_executable(${VM_EXECUTABLE_NAME} ${VM_FRONTEND_SOURCES})
+add_executable(${VM_EXECUTABLE_NAME} ${VM_FRONTEND_APPLICATION_TYPE} ${VM_FRONTEND_SOURCES})
 
 target_link_libraries(${VM_EXECUTABLE_NAME} ${VM_LIBRARY_NAME})
 

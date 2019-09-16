@@ -26,5 +26,122 @@
 	<string>English</string>
 	<key>CFBundleDisplayName</key>
 	<string>Pharo</string>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>image</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>Pharo.icns</string>
+			<key>CFBundleTypeName</key>
+			<string>Pharo Image File</string>
+			<key>CFBundleTypeOSTypes</key>
+			<array>
+				<string>STim</string>
+			</array>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>sources</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>PharoSources.icns</string>
+			<key>CFBundleTypeName</key>
+			<string>Squeak Sources File</string>
+			<key>CFBundleTypeOSTypes</key>
+			<array>
+				<string>STso</string>
+			</array>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>changes</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>PharoChanges.icns</string>
+			<key>CFBundleTypeName</key>
+			<string>Squeak Changes File</string>
+			<key>CFBundleTypeOSTypes</key>
+			<array>
+				<string>STch</string>
+			</array>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+		</dict>
+	</array>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Pharo Image File</string>
+			<key>UTTypeIdentifier</key>
+			<string>org.pharo.image</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>com.apple.ostype</key>
+				<string>STim</string>
+				<key>public.filename-extension</key>
+				<array>
+					<string>image</string>
+				</array>
+				<key>public.mime-type</key>
+				<string>application/pharo-image</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.utf8-plain-text</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Pharo Sources File</string>
+			<key>UTTypeIdentifier</key>
+			<string>org.pharo.sources</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>com.apple.ostype</key>
+				<string>STso</string>
+				<key>public.filename-extension</key>
+				<array>
+					<string>sources</string>
+				</array>
+				<key>public.mime-type</key>
+				<string>application/pharo-sources</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.utf8-plain-text</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Pharo Changes File</string>
+			<key>UTTypeIdentifier</key>
+			<string>org.pharo.changes</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>com.apple.ostype</key>
+				<string>STch</string>
+				<key>public.filename-extension</key>
+				<array>
+					<string>changes</string>
+				</array>
+				<key>public.mime-type</key>
+				<string>application/pharo-changes</string>
+			</dict>
+		</dict>
+	</array>
 </dict>
 </plist>

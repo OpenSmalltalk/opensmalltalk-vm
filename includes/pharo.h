@@ -1,3 +1,9 @@
+#ifndef PHAROVM_PHARO_H
+#define PHAROVM_PHARO_H
+
+#pragma once
+
+#include <stddef.h>
 #include <stdio.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,7 +19,7 @@
 
 #ifdef WIN64
 
-#include "Windows.h"
+#include <windows.h>
 #include "aioWin.h"
 
 #endif
@@ -38,7 +44,7 @@ char* getImageArgument(int index);
 char** getSystemSearchPaths();
 char** getPluginPaths();
 
-void setPharoCommandLineParameters(char** newVMParams, int newVMParamsCount, char** newImageParams, int newImageParamsCount);
+void setPharoCommandLineParameters(const char** newVMParams, int newVMParamsCount, const char** newImageParams, int newImageParamsCount);
 
 void initGlobalStructure(void);
 void ioInitExternalSemaphores(void);
@@ -56,20 +62,16 @@ void ioInitTime(void);
 
 EXPORT(int) fileExists(const char *aPath);
 
-int openFileDialog(char const * aTitle, char const * aDefaultPathAndFile, char const * filter, char ** selectedFile, char const * defaultFile);
-
 EXPORT(char*) getFullPath(char const *relativePath, char* fullPath, int fullPathSize);
 EXPORT(void) getBasePath(char const *path, char* basePath, int basePathSize);
 
-EXPORT(void) setProcessArguments(int count, char** args);
-EXPORT(void) setProcessEnvironmentVector(char** environment);
+EXPORT(void) setProcessArguments(int count, const char** args);
+EXPORT(void) setProcessEnvironmentVector(const char** environment);
 
 // Get information about the process arguments.
 // Only available if the process using the VM has given them before.
 EXPORT(int) getProcessArgumentCount();
-EXPORT(char**) getProcessArgumentVector();
-EXPORT(char**) getProcessEnvironmentVector();
+EXPORT(const char**) getProcessArgumentVector();
+EXPORT(const char**) getProcessEnvironmentVector();
 
-#ifndef NULL
-#define NULL	0
-#endif
+#endif //PHAROVM_PHARO_H

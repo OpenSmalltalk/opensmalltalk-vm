@@ -18,10 +18,20 @@ set(EXTRACTED_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/debugWin.c
 )
 
-set(VM_FRONTEND_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
+set(VM_FRONTEND_SOURCES_COMMON
     ${CMAKE_CURRENT_SOURCE_DIR}/src/parameters.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/winOpenFileDialog.cpp)
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/vmMain.c
+)
+
+set(VM_FRONTEND_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/win32Main.c
+    ${VM_FRONTEND_SOURCES_COMMON})
+
+set(VM_CONSOLE_FRONTEND_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/win32ConsoleMain.c
+    ${VM_FRONTEND_SOURCES_COMMON})
+
+set(VM_FRONTEND_APPLICATION_TYPE WIN32)
 
 macro(add_third_party_dependencies_per_platform)
     add_third_party_dependency("pixman-0.34.0" "build/vm")
@@ -52,7 +62,7 @@ endmacro()
 macro(add_required_libs_per_platform)
    set(VM_EXECUTABLE_CONSOLE_NAME "${VM_EXECUTABLE_NAME}Console")
 
-   add_executable(${VM_EXECUTABLE_CONSOLE_NAME} ${VM_FRONTEND_SOURCES})
+   add_executable(${VM_EXECUTABLE_CONSOLE_NAME} ${VM_CONSOLE_FRONTEND_SOURCES})
    target_link_libraries(${VM_EXECUTABLE_CONSOLE_NAME} ${VM_LIBRARY_NAME}) 
 
    target_link_libraries(${VM_LIBRARY_NAME} winmm)
@@ -64,8 +74,4 @@ macro(add_required_libs_per_platform)
    target_link_libraries(${VM_EXECUTABLE_CONSOLE_NAME} Ole32)
    target_link_libraries(${VM_EXECUTABLE_CONSOLE_NAME} comctl32)
    target_link_libraries(${VM_EXECUTABLE_CONSOLE_NAME} uuid)
-
-   set_target_properties(${VM_EXECUTABLE_NAME} PROPERTIES LINK_FLAGS "-mwindows")
-   set_target_properties(${VM_EXECUTABLE_CONSOLE_NAME} PROPERTIES LINK_FLAGS "-mconsole")
 endmacro()
-

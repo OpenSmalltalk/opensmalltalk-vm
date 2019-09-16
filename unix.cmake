@@ -22,9 +22,9 @@ set(EXTRACTED_SOURCES
 )
 
 set(VM_FRONTEND_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/parameters.c    
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/unixOpenFileDialog.c)
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/vmMain.m
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/unixMain.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/parameters.c)
 
 
 macro(add_third_party_dependencies_per_platform)

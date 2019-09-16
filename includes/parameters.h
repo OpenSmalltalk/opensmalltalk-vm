@@ -1,4 +1,16 @@
+#ifndef PHAROVM_PARAMETERS_H
+#define PHAROVM_PARAMETERS_H
+
 #pragma once
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include "errorCodes.h"
+#include <stdbool.h> // For bool
+#include <stddef.h>
+#include <stdint.h>
 
 /**
 
@@ -78,17 +90,50 @@ Deprecated:
 
  */
 
+/**
+ * Parameter vector.
+ * I am used to hold an array of arguments.
+ */
+typedef struct pharovm_parameter_vector_s
+{
+	uint32_t count;
+	const char ** parameters;
+} pharovm_parameter_vector_t;
 
-typedef struct {
-	char* imageFile;
-	char isDefaultImage;
-	char hasBeenSelectedByUser;
+pharovm_error_code_t pharovm_parameter_vector_destroy(pharovm_parameter_vector_t *vector);
+pharovm_error_code_t pharovm_parameter_vector_insertFrom(pharovm_parameter_vector_t *vector, uint32_t count, const char **arguments);
 
-	char** vmParams;
-	int vmParamsCount;
+typedef struct pharovm_parameters_s
+{
+	const char* imageFileName;
+	bool isDefaultImage;
+	bool isForcedStartupImage; // Is this a forced startup image?
+	bool hasBeenSelectedByUserInteractively;
+	
+	// FIXME: Why passing this is needed when we have the separated vectors?
+	int processArgc;
+	const char** processArgv;
+	
+	// FIXME: Passing this environment vector seems hackish. getenv should be used instead.
+	const char** environmentVector;
 
-	char** imageParams;
-	int imageParamsCount;
-} VM_PARAMETERS;
+	pharovm_parameter_vector_t vmParameters;
+	pharovm_parameter_vector_t imageParameters;
+} pharovm_parameters_t;
 
-void parseArguments(int argc, char* argv[], VM_PARAMETERS * parameters);
+/**
+ * Parse an argument vector into a VM parameter holding structure.
+ * \param parsedParameters the resulting parsed parameters.
+ */
+pharovm_error_code_t pharovm_parameters_parse(int argc, const char** argv, pharovm_parameters_t *parsedParameters);
+
+/**
+ * Destroy an allocated instance \ref pharovm_parameter_vector_t.
+ */
+pharovm_error_code_t pharovm_parameters_destroy(pharovm_parameters_t *parameters);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif //PHAROVM_PARAMETERS_H
