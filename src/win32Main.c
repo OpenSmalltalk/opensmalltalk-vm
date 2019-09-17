@@ -9,8 +9,6 @@
 #include <windows.h>
 #include <Shobjidl.h>
 
-static char *fileNameDialogPathResult;
-
 static pharovm_error_code_t
 openImageFileDialog(pharovm_parameters_t *parameters)
 {
@@ -47,13 +45,16 @@ openImageFileDialog(pharovm_parameters_t *parameters)
 
 				if (SUCCEEDED(hresult)) {
 					int requiredSize = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, filePath, -1, NULL, 0, NULL, NULL);
-					fileNameDialogPathResult = (char*)calloc(1, requiredSize + 1);
-					int result = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, filePath, -1, fileNameDialogPathResult, requiredSize, NULL, NULL);
+					char *resultString = (char*)calloc(1, requiredSize + 1);
+					int result = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, filePath, -1, resultString, requiredSize, NULL, NULL);
 
 					if(result != 0) {
-						parameters->imageFileName = fileNameDialogPathResult;
+                        free(parameters->imageFileName);
+						parameters->imageFileName = resultString;
                         parameters->hasBeenSelectedByUserInteractively = true;
-					}
+					} else {
+                        free(resultString);
+                    }
 
 					CoTaskMemFree(filePath);
 				} else {

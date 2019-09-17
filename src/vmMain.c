@@ -36,8 +36,8 @@ pharovm_mainWithParameters(const pharovm_parameters_t *parameters)
 	}
 
 	runInterpreter();
-	
-	return 0;	
+
+	return 0;
 }
 
 int pharovm_main(int argc, const char** argv, const char** env)
@@ -53,7 +53,14 @@ int pharovm_main(int argc, const char** argv, const char** env)
 		if(error == PHAROVM_ERROR_EXIT_WITH_SUCCESS) return 0;
 		return 1;
 	}
-	
+
+	if(parameters.hasMultipleDefaultImages) {
+		printf(
+"Multiple images that can be executed by this VM have been found. Please select\n"
+"one of them explicitly as a command line argument.\n");
+		return 0;
+	}
+
 	int exitCode = pharovm_mainWithParameters(&parameters);
 	pharovm_parameters_destroy(&parameters);
 	return exitCode;

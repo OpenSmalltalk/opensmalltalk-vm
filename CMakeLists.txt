@@ -271,6 +271,7 @@ set(SUPPORT_SOURCES
 	${CMAKE_CURRENT_SOURCE_DIR}/src/nullDisplay.c
 	${CMAKE_CURRENT_SOURCE_DIR}/src/externalPrimitives.c
 	${CMAKE_CURRENT_SOURCE_DIR}/src/client.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pathUtilities.c
 )
 
 set(VM_SOURCES

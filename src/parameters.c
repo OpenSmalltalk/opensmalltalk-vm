@@ -2,6 +2,7 @@
 #include "parameters.h"
 #include "debug.h"
 #include "errorCodes.h"
+#include "pathUtilities.h"
 #include <assert.h>
 
 typedef pharovm_error_code_t (*pharovm_parameter_process_function)(const char *argument);
@@ -27,7 +28,7 @@ static const pharovm_parameter_spec_t pharovm_parametersSpec[] = {
 	{.name = "h", .hasArgument = false, .function = processHelpOption},
 	{.name = "version", .hasArgument = false, .function = processPrintVersionOption},
 	{.name = "logLevel", .hasArgument = true, .function = processLogLevelOption},
-	
+
 #ifdef __APPLE__
 	// This parameter is passed by the XCode debugger.
 	{.name = "NSDocumentRevisionsDebugMode", .hasArgument = false, .function = NULL},
@@ -55,24 +56,24 @@ findParameterArity(const char *parameter)
 	if(*parameter != '-') {
 		return 0;
 	};
-	
+
 	// Ignore the preceding hyphens
 	++parameter;
 	if(*parameter == '-') {
 		++parameter;
 	}
-	
+
 	// Does the parameter have an equal (=)?
 	if(strchr(parameter, '=') != NULL) {
 		return 0;
 	}
-	
+
 	// Find the parameter spec.
 	const pharovm_parameter_spec_t* spec = findParameterWithName(parameter, strlen(parameter));
 	if(!spec) {
 		return 0;
 	}
-	
+
 	return spec->hasArgument ? 1 : 0;
 }
 
@@ -96,20 +97,20 @@ pharovm_parameter_vector_insertFrom(pharovm_parameter_vector_t *vector, uint32_t
 	if(!newVectorData) {
 		return PHAROVM_ERROR_OUT_OF_MEMORY;
 	}
-	
+
 	// Copy the old vector parameters.
 	for(uint32_t i = 0; i < vector->count; ++i)
 		newVectorData[i] = vector->parameters[i];
-		
+
 	// Copy the new vector parameters.
 	for(uint32_t i = 0; i < count; ++i)
 		newVectorData[vector->count + i] = elements[i];
-		
+
 	// Free the old vector parameters
 	free(vector->parameters); // Free of NULL is a no-op.
 	vector->count = newVectorCount;
 	vector->parameters = newVectorData;
-		
+
 	return PHAROVM_SUCCESS;
 }
 
@@ -117,10 +118,133 @@ pharovm_error_code_t
 pharovm_parameters_destroy(pharovm_parameters_t *parameters)
 {
 	if(!parameters) return PHAROVM_ERROR_NULL_POINTER;
-	
+
+	free(parameters->imageFileName);
 	pharovm_parameter_vector_destroy(&parameters->vmParameters);
 	pharovm_parameter_vector_destroy(&parameters->imageParameters);
 	memset(parameters, 0, sizeof(pharovm_parameters_t));
+	return PHAROVM_SUCCESS;
+}
+
+pharovm_error_code_t
+pharovm_findStartupImage(const char *vmExecutablePath, pharovm_parameters_t *parameters)
+{
+    char *imagePathBuffer = (char*)calloc(1, FILENAME_MAX+1);
+    char *vmPathBuffer = (char*)calloc(1, FILENAME_MAX+1);
+    char *searchPathBuffer = (char*)calloc(1, FILENAME_MAX+1);
+
+	if(!imagePathBuffer || !vmPathBuffer || !searchPathBuffer) {
+		free(imagePathBuffer);
+		free(vmPathBuffer);
+		free(searchPathBuffer);
+		return PHAROVM_ERROR_OUT_OF_MEMORY;
+	}
+
+    if(fileExists(vmExecutablePath)) {
+		pharovm_path_extractDirnameInto(vmPathBuffer, FILENAME_MAX+1, vmExecutablePath);
+	}
+    else {
+        strncpy(vmPathBuffer, vmExecutablePath, FILENAME_MAX);
+		vmPathBuffer[FILENAME_MAX] = 0;
+	}
+
+	// Find the mandatory startup.image.
+    pharovm_path_joinInto(imagePathBuffer, FILENAME_MAX+1, vmPathBuffer, FORCED_STARTUP_IMAGE_NAME);
+    if(fileExists(imagePathBuffer))
+    {
+		parameters->imageFileName = imagePathBuffer;
+		parameters->isDefaultImage = true;
+		parameters->hasBeenSelectedByUserInteractively = false;
+		parameters->isForcedStartupImage = true;
+        free(vmPathBuffer);
+        free(searchPathBuffer);
+        return PHAROVM_SUCCESS;
+    }
+
+#ifdef __APPLE__
+    pharovm_path_joinInto(imagePathBuffer, FILENAME_MAX+1, vmPathBuffer, "../Resources/" FORCED_STARTUP_IMAGE_NAME);
+	if(fileExists(imagePathBuffer))
+    {
+		parameters->imageFileName = imagePathBuffer;
+		parameters->isDefaultImage = true;
+		parameters->hasBeenSelectedByUserInteractively = false;
+		parameters->isForcedStartupImage = true;
+        free(vmPathBuffer);
+        free(searchPathBuffer);
+        return PHAROVM_SUCCESS;
+    }
+
+    pharovm_path_joinInto(imagePathBuffer, FILENAME_MAX+1, vmPathBuffer, "../../../" FORCED_STARTUP_IMAGE_NAME);
+	if(fileExists(imagePathBuffer))
+    {
+		parameters->imageFileName = imagePathBuffer;
+		parameters->isDefaultImage = true;
+		parameters->hasBeenSelectedByUserInteractively = false;
+		parameters->isForcedStartupImage = true;
+        free(vmPathBuffer);
+        free(searchPathBuffer);
+        return PHAROVM_SUCCESS;
+    }
+
+#endif
+
+/*
+	// FIXME: Make the forced startup image path absolute.
+	if(fileExists(FORCED_STARTUP_IMAGE_NAME)) {
+		printf("Use forced startup image\n");
+		parameters->imageFileName = strdup(FORCED_STARTUP_IMAGE_NAME);
+		parameters->isDefaultImage = true;
+		parameters->hasBeenSelectedByUserInteractively = false;
+		parameters->isForcedStartupImage = true;
+	} else {
+		printf("Use default image\n");
+		parameters->imageFileName = strdup(DEFAULT_IMAGE_NAME);
+		parameters->isDefaultImage = true;
+		parameters->hasBeenSelectedByUserInteractively = false;
+	}
+*/
+
+    // Find automatically an image.
+    int foundImageCount = 0;
+
+    // Search on the VM executable path.
+	strcpy(imagePathBuffer, "");
+    foundImageCount += pharovm_path_findImagesInFolder(vmPathBuffer, imagePathBuffer, FILENAME_MAX+1);
+
+#ifdef __APPLE__
+    // Search along the bundled resources.
+    pharovm_path_joinInto(searchPathBuffer, FILENAME_MAX+1, vmPathBuffer, "../Resources");
+    foundImageCount += pharovm_path_findImagesInFolder(searchPathBuffer, imagePathBuffer, FILENAME_MAX+1);
+
+    // Search in the folder that contains the bundle.
+    pharovm_path_joinInto(searchPathBuffer, FILENAME_MAX+1, vmPathBuffer, "../../..");
+    char *realBundlePath = (char*)calloc(1, FILENAME_MAX+1);
+    realpath(searchPathBuffer, realBundlePath);
+
+    pharovm_path_get(searchPathBuffer, FILENAME_MAX+1);
+    if(strcmp(realBundlePath, searchPathBuffer) != 0)
+        foundImageCount += pharovm_path_findImagesInFolder(realBundlePath, imagePathBuffer, FILENAME_MAX+1);
+
+    free(realBundlePath);
+#endif
+
+    // Search in the current working directory.
+    pharovm_path_getCurrentWorkingDirInto(searchPathBuffer, FILENAME_MAX+1);
+    if(strcmp(searchPathBuffer, vmPathBuffer) != 0)
+        foundImageCount += pharovm_path_findImagesInFolder(searchPathBuffer, imagePathBuffer, FILENAME_MAX+1);
+
+    free(vmPathBuffer);
+    free(searchPathBuffer);
+
+	// If there are not images, fallback to the default image name.
+	if(foundImageCount == 0) {
+		strcpy(imagePathBuffer, DEFAULT_IMAGE_NAME);
+	}
+
+	parameters->imageFileName = imagePathBuffer;
+	parameters->isDefaultImage = true;
+	parameters->hasBeenSelectedByUserInteractively = false;
+	parameters->hasMultipleDefaultImages = foundImageCount > 1;
 	return PHAROVM_SUCCESS;
 }
 
@@ -130,18 +254,18 @@ findImageNameIndex(int argc, const char** argv)
 	//The first parameters is the executable name
 	for(int i=1; i < argc; i ++) {
 		const char *argument = argv[i];
-		
+
 		// Is this a mark for where the image parameters begins?
 		if(strcmp(argument, "--") == 0) {
 			return i;
 		}
-		
+
 		// Is this an option?
 		if(*argv[i] == '-') {
 			i += findParameterArity(argument);
 			continue;
 		}
-		
+
 		// This must be the first non vmoption argument, so this must be the image.
 		return i;
 	}
@@ -153,6 +277,7 @@ findImageNameIndex(int argc, const char** argv)
 static pharovm_error_code_t
 splitVMAndImageParameters(int argc, const char** argv, pharovm_parameters_t* parameters)
 {
+	pharovm_error_code_t error;
 	int imageNameIndex = findImageNameIndex(argc, argv);
 	int numberOfVMParameters = imageNameIndex;
 	int numberOfImageParameters = argc - imageNameIndex - 1;
@@ -162,31 +287,27 @@ splitVMAndImageParameters(int argc, const char** argv, pharovm_parameters_t* par
 
 	// We get the image file name
 	if(imageNameIndex == argc || strcmp("--", argv[imageNameIndex]) == 0) {
-		// FIXME: Make the forced startup image path absolute.
-		if(fileExists(FORCED_STARTUP_IMAGE_NAME)) {
-			parameters->imageFileName = FORCED_STARTUP_IMAGE_NAME;
-			parameters->isDefaultImage = true;
-			parameters->hasBeenSelectedByUserInteractively = false;
-			parameters->isForcedStartupImage = true;
-		} else {
-			parameters->imageFileName = DEFAULT_IMAGE_NAME;
-			parameters->isDefaultImage = true;
-			parameters->hasBeenSelectedByUserInteractively = false;			
+		error = pharovm_findStartupImage(argv[0], parameters);
+		if(error) {
+			return error;
 		}
 	} else {
-		parameters->imageFileName = argv[imageNameIndex];
+		parameters->imageFileName = strdup(argv[imageNameIndex]);
 		parameters->isDefaultImage = false;
 		parameters->hasBeenSelectedByUserInteractively = false;
 	}
 
 	// Copy image parameters.
-	pharovm_error_code_t error = pharovm_parameter_vector_insertFrom(&parameters->imageParameters, numberOfImageParameters, &argv[imageNameIndex + 1]);
-	if(error) return error;
-	
+	error = pharovm_parameter_vector_insertFrom(&parameters->imageParameters, numberOfImageParameters, &argv[imageNameIndex + 1]);
+	if(error) {
+		pharovm_parameters_destroy(parameters);
+		return error;
+	}
+
 	// Copy the VM parameters.
 	error = pharovm_parameter_vector_insertFrom(&parameters->vmParameters, numberOfVMParameters, argv);
 	if(error) {
-		pharovm_parameter_vector_destroy(&parameters->imageParameters);
+		pharovm_parameters_destroy(parameters);
 		return error;
 	}
 
@@ -194,15 +315,14 @@ splitVMAndImageParameters(int argc, const char** argv, pharovm_parameters_t* par
 	const char *extraVMParameters = "--headless";
 	error = pharovm_parameter_vector_insertFrom(&parameters->vmParameters, 1, &extraVMParameters);
 	if(error) {
-		pharovm_parameter_vector_destroy(&parameters->imageParameters);
-		pharovm_parameter_vector_destroy(&parameters->vmParameters);
+		pharovm_parameters_destroy(parameters);
 		return error;
 	}
-	
+
 	return PHAROVM_SUCCESS;
 }
 
-static void 
+static void
 logParameterVector(const char* vectorName, const pharovm_parameter_vector_t *vector)
 {
 	logDebug("%s [count = %u]:", vectorName, vector->count);
@@ -227,7 +347,7 @@ logParameters(const pharovm_parameters_t* parameters)
 static int
 isConsole()
 {
-#if WIN64
+#ifdef _WIN32
 	return GetStdHandle(STD_INPUT_HANDLE) != NULL;
 #else
 	return false;
@@ -245,7 +365,7 @@ processImageOptions(pharovm_parameters_t* parameters){
 			if(error) return error;
 		}
 	}
-	
+
 	return PHAROVM_SUCCESS;
 }
 
@@ -312,7 +432,7 @@ processVMOptions(pharovm_parameters_t* parameters)
 		if(!param) {
 			break;
 		}
-		
+
 		// We only care about specific parameters here.
 		if(*param != '-') {
 			continue;
@@ -328,9 +448,9 @@ processVMOptions(pharovm_parameters_t* parameters)
 		// Ignore the leading dashes (--)
 		const char *argumentName = param + 1;
 		if(*argumentName == '-') {
-			++argumentName;			
+			++argumentName;
 		}
-			
+
 		// Find the argument value.
 		const char *argumentValue = strchr(argumentName, '=');
 		size_t argumentNameSize = strlen(argumentName);
@@ -338,7 +458,7 @@ processVMOptions(pharovm_parameters_t* parameters)
 			argumentNameSize = argumentValue - argumentName;
 			++argumentValue;
 		}
-		
+
 		// Find a matching parameter
 		const pharovm_parameter_spec_t *paramSpec = findParameterWithName(argumentName, argumentNameSize);
 		if(!paramSpec) {
@@ -346,17 +466,17 @@ processVMOptions(pharovm_parameters_t* parameters)
 			printUsageTo(stderr);
 			return PHAROVM_ERROR_INVALID_PARAMETER;
 		}
-		
+
 		// If the parameter has a required argument, it may be passed as the next parameter in the vector.
 		if(paramSpec->hasArgument) {
 			// Try to fetch the argument from additional means
 			if(argumentValue == NULL)
 			{
 				if(i + 1 < vector->count) {
-					argumentValue = vector->parameters[++i];					
+					argumentValue = vector->parameters[++i];
 				}
 			}
-			
+
 			// Make sure the argument value is present.
 			if(argumentValue == NULL) {
 				fprintf(stderr, "VM parameter %s requires a value\n", param);
@@ -364,15 +484,15 @@ processVMOptions(pharovm_parameters_t* parameters)
 				return PHAROVM_ERROR_INVALID_PARAMETER_VALUE;
 			}
 		}
-		
+
 		// Invoke the VM parameter processing function.
 		if(paramSpec->function)
 		{
 			pharovm_error_code_t error = paramSpec->function(argumentValue);
-			if(error) return error;			
+			if(error) return error;
 		}
 	}
-	
+
 	return PHAROVM_SUCCESS;
 }
 
@@ -391,7 +511,7 @@ pharovm_parameters_parse(int argc, const char** argv, pharovm_parameters_t* para
 		pharovm_parameters_destroy(parameters);
 		return PHAROVM_ERROR_OUT_OF_MEMORY;
 	}
-	
+
 	fullPath = getFullPath(argv[0], fullPathBuffer, FILENAME_MAX);
 	setVMPath(fullPath);
 	free(fullPathBuffer);
@@ -410,6 +530,6 @@ pharovm_parameters_parse(int argc, const char** argv, pharovm_parameters_t* para
 	}
 
 	logParameters(parameters);
-	
+
 	return PHAROVM_SUCCESS;
 }

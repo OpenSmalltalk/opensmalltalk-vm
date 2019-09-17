@@ -105,10 +105,20 @@ pharovm_error_code_t pharovm_parameter_vector_insertFrom(pharovm_parameter_vecto
 
 typedef struct pharovm_parameters_s
 {
-	const char* imageFileName;
+	/**
+	 * The image file name.
+	 * This string is owned by the \ref pharovm_parameters_t structure, so it should be assigned by using strdup.
+	 */
+	char* imageFileName;
+
 	bool isDefaultImage;
-	bool hasMultipleDefaultImages; // Do we have multiple default image, so a file dialog should be shown?
-	bool isForcedStartupImage; // Is this a forced startup image?
+	/// Do we have multiple default image, so a file dialog should be shown?
+	bool hasMultipleDefaultImages;
+
+	/// Is this a forced startup image?
+	bool isForcedStartupImage;
+
+	/// Has the image been selected interactively by an user (e.g: by using a file open dialog.).
 	bool hasBeenSelectedByUserInteractively;
 
 	// FIXME: Why passing this is needed when we have the separated vectors?
