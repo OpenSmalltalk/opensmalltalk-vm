@@ -57,7 +57,7 @@ static PharoVMLaunchAppDelegate *launchAppDelegate = nil;
     {
         for (NSURL *url in [panel URLs])
         {
-            if(url.fileURL)
+            if([url isFileURL])
                 [filesToOpen addObject: url.path];
         }
 
