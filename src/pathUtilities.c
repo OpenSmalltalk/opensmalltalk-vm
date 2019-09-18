@@ -77,12 +77,13 @@ pharovm_path_makeAbsoluteInto(char *target, size_t targetSize, const char *src)
         }
 
         size_t workDirSize = strlen(target);
-        
+
 #ifdef _WIN32
-        if(workDirSize > 0 && target[workDirSize - 1] != '\') {
+#error should not be defined
+        if(workDirSize > 0 && target[workDirSize - 1] != '\\') {
             stringAppend(target, "\\", targetSize);
         }
-        
+
         if (src[0] == '.' && (src[1] == '/' || src[1] == '\\')) {
             stringAppend(target, src + 2, targetSize);
         } else {
@@ -92,7 +93,7 @@ pharovm_path_makeAbsoluteInto(char *target, size_t targetSize, const char *src)
         if(workDirSize > 0 && target[workDirSize - 1] != '/') {
             stringAppend(target, "/", targetSize);
         }
-        
+
         if(src[0] == '.' && src[1] == '/') {
             stringAppend(target, src + 2, targetSize);
         } else {

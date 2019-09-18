@@ -141,7 +141,6 @@ pharovm_findStartupImage(const char *vmExecutablePath, pharovm_parameters_t *par
 	}
 
 	pharovm_path_makeAbsoluteInto(searchPathBuffer, FILENAME_MAX+1, vmExecutablePath);
-	printf("searchPathBuffer absolute: %s\n", searchPathBuffer);
     if(fileExists(searchPathBuffer)) {
 		pharovm_path_extractDirnameInto(vmPathBuffer, FILENAME_MAX+1, searchPathBuffer);
 	}
@@ -208,7 +207,6 @@ pharovm_findStartupImage(const char *vmExecutablePath, pharovm_parameters_t *par
     realpath(searchPathBuffer, realBundlePath);
 
     pharovm_path_getCurrentWorkingDirInto(searchPathBuffer, FILENAME_MAX+1);
-	printf("realBundlePath %s workdir %s\n", realBundlePath, searchPathBuffer);
     if(strcmp(realBundlePath, searchPathBuffer) != 0)
         foundImageCount += pharovm_path_findImagesInFolder(realBundlePath, imagePathBuffer, FILENAME_MAX+1);
 
@@ -218,7 +216,6 @@ pharovm_findStartupImage(const char *vmExecutablePath, pharovm_parameters_t *par
     // Search in the current working directory.
 	// CHECK ME: Is it correct to seach in the working directory?
     pharovm_path_getCurrentWorkingDirInto(searchPathBuffer, FILENAME_MAX+1);
-	printf("vmPathBuffer %s workdir %s\n", vmPathBuffer, searchPathBuffer);
     if(strcmp(searchPathBuffer, vmPathBuffer) != 0)
         foundImageCount += pharovm_path_findImagesInFolder(searchPathBuffer, imagePathBuffer, FILENAME_MAX+1);
 
@@ -230,7 +227,6 @@ pharovm_findStartupImage(const char *vmExecutablePath, pharovm_parameters_t *par
 		strcpy(imagePathBuffer, DEFAULT_IMAGE_NAME);
 	}
 
-	printf("foundImageCount %d\n", foundImageCount);
 	parameters->imageFileName = imagePathBuffer;
 	parameters->isDefaultImage = true;
 	parameters->hasBeenSelectedByUserInteractively = false;
