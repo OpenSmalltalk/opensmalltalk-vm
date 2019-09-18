@@ -30,7 +30,7 @@ EXPORT(pharovm_error_code_t)
 pharovm_path_getCurrentWorkingDirInto(char *target, size_t targetSize)
 {
 #ifdef _WIN32
-    DWORD tempBufferSize = GetCurrentDirectoryW(0, NULL) + ; // for \0
+    DWORD tempBufferSize = GetCurrentDirectoryW(0, NULL) + 1; // for \0
 	WCHAR *tempBuffer = (WCHAR*)calloc(tempBufferSize, sizeof(WCHAR));
     if(!tempBuffer) {
         return PHAROVM_ERROR_OUT_OF_MEMORY;
@@ -79,7 +79,6 @@ pharovm_path_makeAbsoluteInto(char *target, size_t targetSize, const char *src)
         size_t workDirSize = strlen(target);
 
 #ifdef _WIN32
-#error should not be defined
         if(workDirSize > 0 && target[workDirSize - 1] != '\\') {
             stringAppend(target, "\\", targetSize);
         }

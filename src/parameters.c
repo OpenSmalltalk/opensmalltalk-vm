@@ -214,7 +214,7 @@ pharovm_findStartupImage(const char *vmExecutablePath, pharovm_parameters_t *par
 #endif
 
     // Search in the current working directory.
-	// CHECK ME: Is it correct to seach in the working directory?
+	// CHECK ME: Is it correct to search in the working directory?
     pharovm_path_getCurrentWorkingDirInto(searchPathBuffer, FILENAME_MAX+1);
     if(strcmp(searchPathBuffer, vmPathBuffer) != 0)
         foundImageCount += pharovm_path_findImagesInFolder(searchPathBuffer, imagePathBuffer, FILENAME_MAX+1);
