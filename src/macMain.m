@@ -90,8 +90,8 @@ static PharoVMLaunchAppDelegate *launchAppDelegate = nil;
         abort();
     }
 
-    NSArray<NSString*> *processCommandLineArguments = [[NSProcessInfo processInfo] arguments];
-    NSMutableArray<NSString*> *newVMProcessCommandLineArguments = [NSMutableArray new];
+    NSArray *processCommandLineArguments = [[NSProcessInfo processInfo] arguments];
+    NSMutableArray *newVMProcessCommandLineArguments = [NSMutableArray new];
 
     [newVMProcessCommandLineArguments addObjectsFromArray: processCommandLineArguments];
     [newVMProcessCommandLineArguments addObjectsFromArray: filesToOpen];
