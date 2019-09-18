@@ -39,7 +39,6 @@ static PharoVMLaunchAppDelegate *launchAppDelegate = nil;
         
     // Do we have a default image to execute?
     if(parsedParameters->isDefaultImage && parsedParameters->defaultImageCount == 1) {
-        printf("Restart with explicit default image: %s\n", parsedParameters->imageFileName);
         [filesToOpen addObject: [NSString stringWithUTF8String: parsedParameters->imageFileName]];
         return [self executeVMProcess];
     }
