@@ -98,7 +98,7 @@ mainEntryPoint(int argc, const char **argv)
 	}
 
     // Do we have to ask the user for an image?
-    if(!parameters.isForcedStartupImage && parameters.isDefaultImage/* && parameters.hasMultipleDefaultImages*/)
+    if(!parameters.isForcedStartupImage && parameters.isDefaultImage && parameters.defaultImageCount != 1)
     {
         error = openImageFileDialog(&parameters);
         if(error) {

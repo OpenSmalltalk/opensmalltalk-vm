@@ -5,7 +5,7 @@
 #include <mach-o/dyld.h> // For _NSGetExecutablePath
 
 extern char **environ;
- 
+
 @interface PharoVMLaunchApplication : NSApplication
 @end
 
@@ -36,7 +36,7 @@ static PharoVMLaunchAppDelegate *launchAppDelegate = nil;
     // Execute the VM process if We already have a list of files to open.
     if([filesToOpen count] > 0)
         return [self executeVMProcess];
-        
+
     // No image file is specified. Display the file open dialog.
     NSOpenPanel *panel = [NSOpenPanel openPanel];
     panel.title = @"Image selection";
@@ -45,7 +45,7 @@ static PharoVMLaunchAppDelegate *launchAppDelegate = nil;
     panel.canChooseDirectories = NO;
     panel.allowsMultipleSelection = NO;
     panel.allowedFileTypes = [NSArray arrayWithObjects:@"image", nil];
-    
+
     NSInteger clickedButton = [panel runModal];
     if(clickedButton == NSModalResponseOK)
     {
@@ -54,11 +54,11 @@ static PharoVMLaunchAppDelegate *launchAppDelegate = nil;
             if(url.fileURL)
                 [filesToOpen addObject: url.path];
         }
-        
+
         if([filesToOpen count] > 0)
             return [self executeVMProcess];
     }
-    
+
     [NSApp terminate: nil];
 }
 
@@ -74,37 +74,37 @@ static PharoVMLaunchAppDelegate *launchAppDelegate = nil;
     if(!path)
     {
         NSLog(@"Out of memory. Aborting.\n");
-        abort();        
+        abort();
     }
-    
+
     uint32_t size = FILENAME_MAX;
     if(_NSGetExecutablePath(path, &size))
     {
         NSLog(@"VM executable path name is too long. Aborting.\n");
         abort();
     }
-    
+
     NSArray<NSString*> *processCommandLineArguments = [[NSProcessInfo processInfo] arguments];
     NSMutableArray<NSString*> *newVMProcessCommandLineArguments = [NSMutableArray new];
 
     [newVMProcessCommandLineArguments addObjectsFromArray: processCommandLineArguments];
     [newVMProcessCommandLineArguments addObjectsFromArray: filesToOpen];
     [newVMProcessCommandLineArguments addObject: @"--interactive"];
-    
+
     char **vmArgv = calloc([newVMProcessCommandLineArguments count] + 1, sizeof(char *));
     if(!vmArgv) {
         NSLog(@"Out of memory. Aborting.\n");
         abort();
     }
-    
+
     for(int i = 0; i < [newVMProcessCommandLineArguments count]; ++i) {
         vmArgv[i] = strdup([newVMProcessCommandLineArguments[i] UTF8String]);
         if(!vmArgv[i]) {
             NSLog(@"Out of memory. Aborting.\n");
-            abort();            
+            abort();
         }
     }
-    
+
     execv(path, vmArgv);
 }
 @end
@@ -114,12 +114,12 @@ launcher_main(const pharovm_parameters_t *parameters, int argc, const char *argv
 {
     // Create the application.
     NSApplication *application = [PharoVMLaunchApplication sharedApplication];
-    
+
     // Create the application delegate.
     launchAppDelegate = [[PharoVMLaunchAppDelegate alloc] init];
     launchAppDelegate.parsedParameters = parameters;
     [application setDelegate: launchAppDelegate];
-    
+
     // Start the main run loop.
     [application performSelectorOnMainThread: @selector(run)
         withObject: nil waitUntilDone: YES];
@@ -153,11 +153,11 @@ main(int argc, const char *argv[])
 		if(error == PHAROVM_ERROR_EXIT_WITH_SUCCESS) return 0;
 		return 1;
 	}
-	
+
     // Look for something that looks like an image file.
     bool isImageFilePassedOnTheCommandLine = !parameters.isDefaultImage;
     bool programExecutedAsCommandLineTool = false;
-    
+
     for(int i = 1; i < parameters.vmParameters.count - /* --headless */1; ++i)
     {
         const char *arg = parameters.vmParameters.parameters[i];
@@ -175,17 +175,17 @@ main(int argc, const char *argv[])
             }
         }
     }
-    
+
     // If this is a program executed as a command line tool, or we found the
     // file passed on the command line, then just hand over the execution to the
     // normal VM execution machinery.
-    if(parameters.isForcedStartupImage || programExecutedAsCommandLineTool || isImageFilePassedOnTheCommandLine)
+    if(parameters.isForcedStartupImage || programExecutedAsCommandLineTool || isImageFilePassedOnTheCommandLine || (parameters.isDefaultImage && parameters.defaultImageCount == 1))
     {
         int exitCode = pharovm_mainWithParameters(&parameters);
         pharovm_parameters_destroy(&parameters);
         return exitCode;
     }
-        
+
     // This program does not know what VM to run, so run as a separate image
     // launcher program.
     return launcher_main(&parameters, argc, argv);

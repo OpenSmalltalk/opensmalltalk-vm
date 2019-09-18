@@ -17,7 +17,7 @@ typedef struct pharovm_parameter_spec_s
 // FIXME: Where is this print version defined? this should be a static definition.
 void printVersion();
 
-static void printUsageTo(FILE *out);
+void pharovm_printUsageTo(FILE *out);
 static pharovm_error_code_t processHelpOption(const char *argument);
 static pharovm_error_code_t processPrintVersionOption(const char *argument);
 static pharovm_error_code_t processLogLevelOption(const char *argument);
@@ -188,22 +188,6 @@ pharovm_findStartupImage(const char *vmExecutablePath, pharovm_parameters_t *par
 
 #endif
 
-/*
-	// FIXME: Make the forced startup image path absolute.
-	if(fileExists(FORCED_STARTUP_IMAGE_NAME)) {
-		printf("Use forced startup image\n");
-		parameters->imageFileName = strdup(FORCED_STARTUP_IMAGE_NAME);
-		parameters->isDefaultImage = true;
-		parameters->hasBeenSelectedByUserInteractively = false;
-		parameters->isForcedStartupImage = true;
-	} else {
-		printf("Use default image\n");
-		parameters->imageFileName = strdup(DEFAULT_IMAGE_NAME);
-		parameters->isDefaultImage = true;
-		parameters->hasBeenSelectedByUserInteractively = false;
-	}
-*/
-
     // Find automatically an image.
     int foundImageCount = 0;
 
@@ -229,6 +213,7 @@ pharovm_findStartupImage(const char *vmExecutablePath, pharovm_parameters_t *par
 #endif
 
     // Search in the current working directory.
+	// CHECK ME: Is it correct to seach in the working directory?
     pharovm_path_getCurrentWorkingDirInto(searchPathBuffer, FILENAME_MAX+1);
     if(strcmp(searchPathBuffer, vmPathBuffer) != 0)
         foundImageCount += pharovm_path_findImagesInFolder(searchPathBuffer, imagePathBuffer, FILENAME_MAX+1);
@@ -244,7 +229,7 @@ pharovm_findStartupImage(const char *vmExecutablePath, pharovm_parameters_t *par
 	parameters->imageFileName = imagePathBuffer;
 	parameters->isDefaultImage = true;
 	parameters->hasBeenSelectedByUserInteractively = false;
-	parameters->hasMultipleDefaultImages = foundImageCount > 1;
+	parameters->defaultImageCount = foundImageCount;
 	return PHAROVM_SUCCESS;
 }
 
@@ -369,8 +354,8 @@ processImageOptions(pharovm_parameters_t* parameters){
 	return PHAROVM_SUCCESS;
 }
 
-static void
-printUsageTo(FILE *out)
+void
+pharovm_printUsageTo(FILE *out)
 {
 	fprintf(out,
 "Usage: " VM_NAME " [<option>...] [<imageName> [<argument>...]]\n"
@@ -398,7 +383,7 @@ processLogLevelOption(const char* value)
 
 	if(intValue == 0) {
 		fprintf(stderr, "Invalid option for logLevel: %s\n", value);
-		printUsageTo(stderr);
+		pharovm_printUsageTo(stderr);
 		return PHAROVM_ERROR_INVALID_PARAMETER_VALUE;
 	}
 
@@ -410,7 +395,7 @@ static pharovm_error_code_t
 processHelpOption(const char* argument)
 {
 	(void)argument;
-	printUsageTo(stdout);
+	pharovm_printUsageTo(stdout);
 	return PHAROVM_ERROR_EXIT_WITH_SUCCESS;
 }
 
@@ -463,7 +448,7 @@ processVMOptions(pharovm_parameters_t* parameters)
 		const pharovm_parameter_spec_t *paramSpec = findParameterWithName(argumentName, argumentNameSize);
 		if(!paramSpec) {
 			fprintf(stderr, "Invalid or unknown VM parameter %s\n", param);
-			printUsageTo(stderr);
+			pharovm_printUsageTo(stderr);
 			return PHAROVM_ERROR_INVALID_PARAMETER;
 		}
 
@@ -480,7 +465,7 @@ processVMOptions(pharovm_parameters_t* parameters)
 			// Make sure the argument value is present.
 			if(argumentValue == NULL) {
 				fprintf(stderr, "VM parameter %s requires a value\n", param);
-				printUsageTo(stderr);
+				pharovm_printUsageTo(stderr);
 				return PHAROVM_ERROR_INVALID_PARAMETER_VALUE;
 			}
 		}

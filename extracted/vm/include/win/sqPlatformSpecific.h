@@ -46,10 +46,12 @@ squeakFileOffsetType sqImageFileSeek(sqImageFile h, squeakFileOffsetType pos);
 squeakFileOffsetType sqImageFileSeekEnd(sqImageFile h, squeakFileOffsetType pos);
 size_t sqImageFileWrite(const void *ptr, size_t sz, size_t count, sqImageFile h);
 #else /* when no WIN32_FILE_SUPPORT, add necessary stub for using regular Cross/plugins/FilePlugin functions */
-#include <stdlib.h>
-#include <io.h> /* _get_osfhandle */
-#define PATH_MAX _MAX_PATH
-#define fsync(filenumber) FlushFileBuffers((HANDLE)_get_osfhandle(filenumber))
+#   include <stdlib.h>
+#   include <io.h> /* _get_osfhandle */
+#   ifndef PATH_MAX
+#       define PATH_MAX _MAX_PATH
+#   endif
+#   define fsync(filenumber) FlushFileBuffers((HANDLE)_get_osfhandle(filenumber))
 #endif /* WIN32_FILE_SUPPORT */
 
 /* pluggable primitive support */
@@ -57,8 +59,8 @@ size_t sqImageFileWrite(const void *ptr, size_t sz, size_t count, sqImageFile h)
 #  undef EXPORT
 #  define EXPORT(returnType) __declspec( dllexport ) returnType
 #  undef VM_EXPORT
-#  define VM_EXPORT __declspec( dllexport ) 
-#endif 
+#  define VM_EXPORT __declspec( dllexport )
+#endif
 
 
 /* missing functions */
@@ -94,7 +96,7 @@ size_t sqImageFileWrite(const void *ptr, size_t sz, size_t count, sqImageFile h)
 #  endif
 #endif
 
-#else 
+#else
 error "Not Win32 or Win64!"
 #endif /* _WIN32 || _WIN64 */
 

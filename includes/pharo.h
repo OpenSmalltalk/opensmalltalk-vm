@@ -17,7 +17,7 @@
 #include "debug.h"
 #include "sqAssert.h"
 
-#ifdef WIN64
+#ifdef _WIN32
 
 #include <windows.h>
 #include "aioWin.h"

@@ -11,6 +11,7 @@ extern "C" {
 #include <stdbool.h> // For bool
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 
 /**
 
@@ -113,7 +114,7 @@ typedef struct pharovm_parameters_s
 
 	bool isDefaultImage;
 	/// Do we have multiple default image, so a file dialog should be shown?
-	bool hasMultipleDefaultImages;
+	uint32_t defaultImageCount;
 
 	/// Is this a forced startup image?
 	bool isForcedStartupImage;
@@ -142,6 +143,11 @@ pharovm_error_code_t pharovm_parameters_parse(int argc, const char** argv, pharo
  * Destroy an allocated instance \ref pharovm_parameter_vector_t.
  */
 pharovm_error_code_t pharovm_parameters_destroy(pharovm_parameters_t *parameters);
+
+/**
+ * Prints the command line parameter usage string to a file.
+ */
+void pharovm_printUsageTo(FILE *output);
 
 #ifdef __cplusplus
 }

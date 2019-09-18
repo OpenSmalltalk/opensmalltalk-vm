@@ -26,23 +26,30 @@ stringAppend(char *dest, const char *source, size_t destBufferSize)
     dest[destIndex] = 0;
 }
 
-pharovm_error_code_t
+EXPORT(pharovm_error_code_t)
 pharovm_path_getCurrentWorkingDirInto(char *target, size_t targetSize)
 {
 #ifdef _WIN32
-    unsigned short *tempBuffer = (unsigned short*)calloc(MAX_PATH + 1, sizeof(unsigned short));
-    GetCurrentDirectoryW(MAX_PATH + 1, tempBuffer);
-    sqUTF16ToUTF8Copy(target, targetSize, tempBuffer);
-    free(tempBuffer);
+    DWORD tempBufferSize = GetCurrentDirectoryW(0, NULL) + 2; // NULL and extra '\\'
+	WCHAR *tempBuffer = (WCHAR*)calloc(tempBufferSize, sizeof(WCHAR));
+    if(!tempBuffer) {
+        return PHAROVM_ERROR_OUT_OF_MEMORY;
+    }
+    GetCurrentDirectoryW(tempBufferSize, tempBuffer);
+	lstrcatW(tempBuffer, L"\\");
+
+    WideCharToMultiByte(CP_UTF8, 0, tempBuffer, tempBufferSize, target, targetSize, NULL, FALSE);
+	target[targetSize - 1] = 0; // CHECK ME: Is this really needed?
 #else
-    if(getcwd(target, targetSize) == NULL)
+    if(getcwd(target, targetSize) == NULL) {
         return PHAROVM_ERROR;
+    }
 #endif
 
     return PHAROVM_SUCCESS;
 }
 
-bool
+EXPORT(bool)
 pharovm_path_isAbsolutePath(const char *path)
 {
 #ifdef _WIN32
@@ -53,7 +60,7 @@ pharovm_path_isAbsolutePath(const char *path)
 #endif
 }
 
-pharovm_error_code_t
+EXPORT(pharovm_error_code_t)
 pharovm_path_makeAbsoluteInto(char *target, size_t targetSize, const char *src)
 {
     pharovm_error_code_t error;
@@ -88,7 +95,7 @@ pharovm_path_makeAbsoluteInto(char *target, size_t targetSize, const char *src)
     return PHAROVM_SUCCESS;
 }
 
-pharovm_error_code_t
+EXPORT(pharovm_error_code_t)
 pharovm_path_extractDirnameInto(char *target, size_t targetSize, const char *src)
 {
     size_t copySize;
@@ -113,7 +120,7 @@ pharovm_path_extractDirnameInto(char *target, size_t targetSize, const char *src
     return PHAROVM_SUCCESS;
 }
 
-pharovm_error_code_t
+EXPORT(pharovm_error_code_t)
 pharovm_path_extractBaseName(char *target, size_t targetSize, const char *src)
 {
     const char *lastSeparator = strrchr(src, '/');
@@ -144,7 +151,7 @@ pharovm_path_extractBaseName(char *target, size_t targetSize, const char *src)
 # define SEPARATOR_CHAR '/'
 #endif
 
-pharovm_error_code_t
+EXPORT(pharovm_error_code_t)
 pharovm_path_joinInto(char *target, size_t targetSize, const char *first, const char *second)
 {
     strncpy(target, first, targetSize - 1);
@@ -160,9 +167,56 @@ pharovm_path_joinInto(char *target, size_t targetSize, const char *first, const 
 
 #ifdef _WIN32
 
+EXPORT(size_t)
+pharovm_path_findImagesInFolder(const char *searchPath, char *imagePathBuffer, size_t imagePathBufferSize)
+{
+    WIN32_FIND_DATAW findFileData;
+    HANDLE findHandle;
+
+    size_t searchPathWSize = MultiByteToWideChar(CP_UTF8, 0, searchPath, strlen(searchPath), NULL, 0);
+    WCHAR *searchPathW = (WCHAR*)calloc(searchPathWSize + 1, 2);
+    MultiByteToWideChar(CP_UTF8, 0, searchPath, strlen(searchPath), searchPathW, searchPathWSize + 1);
+    WCHAR *searchPathPattern = (WCHAR*)calloc(FILENAME_MAX, 2);
+    lstrcpyW(searchPathPattern, searchPathW);
+    lstrcatW(searchPathPattern, L"\\*.image");
+
+    findHandle = FindFirstFileW(searchPathPattern, &findFileData);
+    if(findHandle == INVALID_HANDLE_VALUE)
+    {
+        free(searchPathW);
+        return 0;
+    }
+
+    bool hasPreviousOutput = *imagePathBuffer != 0;
+    int result = 0;
+
+    WCHAR *pathConversionBuffer = (WCHAR*)calloc(FILENAME_MAX, 2);
+
+    do
+    {
+        if(!hasPreviousOutput)
+        {
+            lstrcpyW(pathConversionBuffer, searchPathW);
+            lstrcatW(pathConversionBuffer, L"\\");
+            lstrcatW(pathConversionBuffer, findFileData.cFileName);
+            WideCharToMultiByte(CP_UTF8, 0, pathConversionBuffer, -1, imagePathBuffer, imagePathBufferSize, NULL, FALSE);
+            imagePathBuffer[imagePathBufferSize - 1] = 0; // CHECK ME: Is this really needed?
+        }
+
+        hasPreviousOutput = true;
+        ++result;
+    } while(FindNextFileW(findHandle, &findFileData));
+
+    FindClose(findHandle);
+
+    free(pathConversionBuffer);
+    free(searchPathPattern);
+    free(searchPathW);
+    return result;
+}
 #else
 
-size_t
+EXPORT(size_t)
 pharovm_path_findImagesInFolder(const char *searchPath, char *imagePathBuffer, size_t imagePathBufferSize)
 {
     struct dirent *entry;

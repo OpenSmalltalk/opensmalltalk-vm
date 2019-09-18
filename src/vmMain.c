@@ -8,6 +8,11 @@
 int
 pharovm_mainWithParameters(const pharovm_parameters_t *parameters)
 {
+	if(parameters->isDefaultImage && parameters->defaultImageCount == 0) {
+		printf("No image has been specified, and no default image has been found.\n");
+		pharovm_printUsageTo(stdout);
+		return 0;
+	}
 	installErrorHandlers();
 
 	setProcessArguments(parameters->processArgc, parameters->processArgv);
@@ -54,7 +59,7 @@ int pharovm_main(int argc, const char** argv, const char** env)
 		return 1;
 	}
 
-	if(parameters.hasMultipleDefaultImages) {
+	if(parameters.isDefaultImage && parameters.defaultImageCount > 1) {
 		printf(
 "Multiple images that can be executed by this VM have been found. Please select\n"
 "one of them explicitly as a command line argument.\n");

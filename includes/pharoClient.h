@@ -1,3 +1,6 @@
+#ifndef PHAROVM_PHARO_CLIENT_H
+#define PHAROVM_PHARO_CLIENT_H
+
 #pragma once
 
 #include "parameters.h"
@@ -7,3 +10,5 @@ int pharovm_mainWithParameters(const pharovm_parameters_t *parameters);
 int pharovm_main(int argc, const char **arguments, const char **envp);
 int initPharoVM(const char* imageFileName, const pharovm_parameter_vector_t *vmParameters, const pharovm_parameter_vector_t *imageParameters);
 void runInterpreter();
+
+#endif //PHAROVM_PHARO_CLIENT_H
