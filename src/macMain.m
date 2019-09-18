@@ -36,6 +36,13 @@ static PharoVMLaunchAppDelegate *launchAppDelegate = nil;
     // Execute the VM process if We already have a list of files to open.
     if([filesToOpen count] > 0)
         return [self executeVMProcess];
+        
+    // Do we have a default image to execute?
+    if(parsedParameters->isDefaultImage && parsedParameters->defaultImageCount == 1) {
+        printf("Restart with explicit default image: %s\n", parsedParameters->imageFileName);
+        [filesToOpen addObject: [NSString stringWithUTF8String: parsedParameters->imageFileName]];
+        return [self executeVMProcess];
+    }
 
     // No image file is specified. Display the file open dialog.
     NSOpenPanel *panel = [NSOpenPanel openPanel];
@@ -179,7 +186,7 @@ main(int argc, const char *argv[])
     // If this is a program executed as a command line tool, or we found the
     // file passed on the command line, then just hand over the execution to the
     // normal VM execution machinery.
-    if(parameters.isForcedStartupImage || programExecutedAsCommandLineTool || isImageFilePassedOnTheCommandLine || (parameters.isDefaultImage && parameters.defaultImageCount == 1))
+    if(parameters.isForcedStartupImage || programExecutedAsCommandLineTool || isImageFilePassedOnTheCommandLine)
     {
         int exitCode = pharovm_mainWithParameters(&parameters);
         pharovm_parameters_destroy(&parameters);

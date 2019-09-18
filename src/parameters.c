@@ -140,8 +140,10 @@ pharovm_findStartupImage(const char *vmExecutablePath, pharovm_parameters_t *par
 		return PHAROVM_ERROR_OUT_OF_MEMORY;
 	}
 
-    if(fileExists(vmExecutablePath)) {
-		pharovm_path_extractDirnameInto(vmPathBuffer, FILENAME_MAX+1, vmExecutablePath);
+	pharovm_path_makeAbsoluteInto(searchPathBuffer, FILENAME_MAX+1, vmExecutablePath);
+	printf("searchPathBuffer absolute: %s\n", searchPathBuffer);
+    if(fileExists(searchPathBuffer)) {
+		pharovm_path_extractDirnameInto(vmPathBuffer, FILENAME_MAX+1, searchPathBuffer);
 	}
     else {
         strncpy(vmPathBuffer, vmExecutablePath, FILENAME_MAX);
@@ -205,7 +207,8 @@ pharovm_findStartupImage(const char *vmExecutablePath, pharovm_parameters_t *par
     char *realBundlePath = (char*)calloc(1, FILENAME_MAX+1);
     realpath(searchPathBuffer, realBundlePath);
 
-    pharovm_path_get(searchPathBuffer, FILENAME_MAX+1);
+    pharovm_path_getCurrentWorkingDirInto(searchPathBuffer, FILENAME_MAX+1);
+	printf("realBundlePath %s workdir %s\n", realBundlePath, searchPathBuffer);
     if(strcmp(realBundlePath, searchPathBuffer) != 0)
         foundImageCount += pharovm_path_findImagesInFolder(realBundlePath, imagePathBuffer, FILENAME_MAX+1);
 
@@ -215,6 +218,7 @@ pharovm_findStartupImage(const char *vmExecutablePath, pharovm_parameters_t *par
     // Search in the current working directory.
 	// CHECK ME: Is it correct to seach in the working directory?
     pharovm_path_getCurrentWorkingDirInto(searchPathBuffer, FILENAME_MAX+1);
+	printf("vmPathBuffer %s workdir %s\n", vmPathBuffer, searchPathBuffer);
     if(strcmp(searchPathBuffer, vmPathBuffer) != 0)
         foundImageCount += pharovm_path_findImagesInFolder(searchPathBuffer, imagePathBuffer, FILENAME_MAX+1);
 
@@ -226,6 +230,7 @@ pharovm_findStartupImage(const char *vmExecutablePath, pharovm_parameters_t *par
 		strcpy(imagePathBuffer, DEFAULT_IMAGE_NAME);
 	}
 
+	printf("foundImageCount %d\n", foundImageCount);
 	parameters->imageFileName = imagePathBuffer;
 	parameters->isDefaultImage = true;
 	parameters->hasBeenSelectedByUserInteractively = false;

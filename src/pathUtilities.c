@@ -22,7 +22,7 @@ stringAppend(char *dest, const char *source, size_t destBufferSize)
     size_t destIndex = destSize;
 
     for(destIndex = destSize; (destIndex < destBufferSize - 1) && (*source != 0); ++destIndex)
-        dest[destIndex] = *source;
+        dest[destIndex] = *(source++);
     dest[destIndex] = 0;
 }
 
@@ -30,13 +30,12 @@ EXPORT(pharovm_error_code_t)
 pharovm_path_getCurrentWorkingDirInto(char *target, size_t targetSize)
 {
 #ifdef _WIN32
-    DWORD tempBufferSize = GetCurrentDirectoryW(0, NULL) + 2; // NULL and extra '\\'
+    DWORD tempBufferSize = GetCurrentDirectoryW(0, NULL) + ; // for \0
 	WCHAR *tempBuffer = (WCHAR*)calloc(tempBufferSize, sizeof(WCHAR));
     if(!tempBuffer) {
         return PHAROVM_ERROR_OUT_OF_MEMORY;
     }
     GetCurrentDirectoryW(tempBufferSize, tempBuffer);
-	lstrcatW(tempBuffer, L"\\");
 
     WideCharToMultiByte(CP_UTF8, 0, tempBuffer, tempBufferSize, target, targetSize, NULL, FALSE);
 	target[targetSize - 1] = 0; // CHECK ME: Is this really needed?
@@ -106,10 +105,10 @@ pharovm_path_extractDirnameInto(char *target, size_t targetSize, const char *src
         lastSeparator = lastSeparator2;
 #endif
     copySize = targetSize - 1;
-    if (lastSeparator && lastSeparator - src + 1 < copySize)
+    if (lastSeparator && lastSeparator - src < copySize)
     {
         // FIXME: raise an error code, and handle this case.
-        size_t newCopySize = lastSeparator - src + 1;
+        size_t newCopySize = lastSeparator - src;
         if(newCopySize < copySize)
             copySize = newCopySize;
     }
