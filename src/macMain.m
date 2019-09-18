@@ -10,7 +10,7 @@ extern char **environ;
 @end
 
 @interface PharoVMLaunchAppDelegate : NSObject<NSApplicationDelegate> {
-    NSMutableArray<NSString*> *filesToOpen;
+    NSMutableArray *filesToOpen;
     const pharovm_parameters_t *parsedParameters;
 }
 @property const pharovm_parameters_t *parsedParameters;
