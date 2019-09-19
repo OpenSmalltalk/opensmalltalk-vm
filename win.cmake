@@ -43,10 +43,20 @@ macro(configure_installables INSTALL_COMPONENT)
     set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/build/dist")
     
     install(
-      DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/build/vm/"
-      DESTINATION "./"
-      USE_SOURCE_PERMISSIONS
-      COMPONENT ${INSTALL_COMPONENT})
+          DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/build/vm/"
+          DESTINATION "./"
+          FILES_MATCHING PATTERN *.dll
+          PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+          COMPONENT ${INSTALL_COMPONENT})
+    
+    install(
+          DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/build/vm/"
+          USE_SOURCE_PERMISSIONS
+          DESTINATION "./"
+          USE_SOURCE_PERMISSIONS FILES_MATCHING PATTERN *
+          EXCLUDE *.dll
+          COMPONENT ${INSTALL_COMPONENT})
+
 endmacro()
 
 macro(add_required_libs_per_platform)
