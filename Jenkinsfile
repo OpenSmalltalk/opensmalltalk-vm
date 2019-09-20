@@ -38,7 +38,7 @@ def buildGTKBundle(){
 			dir("build"){
 				shell "wget http://files.pharo.org/vm/pharo-spur64/win/third-party/Gtk3.zip"
 				shell "unzip Gtk3.zip -d ./bundleGTK"
-				shell "unzip build/build/packages/PharoVM-*-win64-bin.zip -d ./bundleGTK"
+				shell "unzip build/packages/PharoVM-*-win64-bin.zip -d ./bundleGTK"
 
 				dir("bundleGTK"){
 					shell "zip ../${gtkBundleName} *"
