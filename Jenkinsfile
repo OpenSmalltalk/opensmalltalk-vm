@@ -41,7 +41,7 @@ def buildGTKBundle(){
 				shell "unzip -n build/packages/PharoVM-*-win64-bin.zip -d ./bundleGTK"
 
 				dir("bundleGTK"){
-					shell "zip ../${gtkBundleName} *"
+					shell "zip -r -9 ../${gtkBundleName} *"
 				}
 			
 				stash includes: "${gtkBundleName}", name: "packages-windows-gtkBundle"
