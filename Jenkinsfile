@@ -29,8 +29,10 @@ def buildGTKBundle(){
 	node("unix"){
 		stage("build-GTK-bundle"){
 
+			def commitHash = checkout(scm).GIT_COMMIT
+
 			unstash name: "packages-windows-CoInterpreterWithQueueFFI"
-			def shortGitHash = env.GIT_COMMIT.substring(0,8)
+			def shortGitHash = commitHash.substring(0,8)
 			def gtkBundleName = "PharoVM-8.1.0-GTK-${shortGitHash}-win64-bin.zip"
 
 			dir("build"){
