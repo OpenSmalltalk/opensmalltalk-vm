@@ -24,6 +24,26 @@ def runInCygwin(command){
     }
 }
 
+def buildGTKBundle(){
+
+	stage("unix"){
+
+	unstash name: "packages-windows-CoInterpreterWithQueueFFI"
+
+		dir("build"){
+			shell "wget http://files.pharo.org/vm/pharo-spur64/win/third-party/Gtk3.zip"
+			shell "unzip Gtk3.zip -d ./bundleGTK"
+			shell "unzip build/build/packages/PharoVM-*-win64-bin.zip -d ./bundleGTK"
+
+			dir("bundleGTK"){
+				shell "zip ../PharoVM-GTK-win64-bin.zip *"
+			}
+			
+			stash includes: 'build/build/packages/PharoVM-GTK-win64-bin.zip', name: "packages-windows-CoInterpreterWithQueueFFI"
+		}
+	}
+
+}
 
 def runBuild(platform, configuration){
 	cleanWs()
@@ -103,7 +123,7 @@ def upload(platform, configuration, vmDir) {
 	unstash name: "packages-${platform}-${configuration}"
 
 	def expandedBinaryFileName = sh(returnStdout: true, script: "ls build/build/packages/PharoVM-*-${vmDir}64-bin.zip").trim()
-  def expandedHeadersFileName = sh(returnStdout: true, script: "ls build/build/packages/PharoVM-*-${vmDir}64-include.zip").trim()
+	def expandedHeadersFileName = sh(returnStdout: true, script: "ls build/build/packages/PharoVM-*-${vmDir}64-include.zip").trim()
 
 	sshagent (credentials: ['b5248b59-a193-4457-8459-e28e9eb29ed7']) {
 		sh "scp -o StrictHostKeyChecking=no \
@@ -193,6 +213,8 @@ try{
 	parallel builders
 	
 	uploadPackages()
+
+	buildGTKBundle()
 
 	parallel tests
 
