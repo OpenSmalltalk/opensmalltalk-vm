@@ -44,7 +44,7 @@ def buildGTKBundle(){
 					shell "zip ../${gtkBundleName} *"
 				}
 			
-				stash includes: "${gtkBundleName}", name: "packages-windows-CoInterpreterWithQueueFFI"
+				stash includes: "${gtkBundleName}", name: "packages-windows-gtkBundle"
 				
 				if(isPullRequest() && env.BRANCH_NAME == 'headless'){
 					sshagent (credentials: ['b5248b59-a193-4457-8459-e28e9eb29ed7']) {
