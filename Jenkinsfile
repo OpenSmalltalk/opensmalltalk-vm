@@ -26,23 +26,34 @@ def runInCygwin(command){
 
 def buildGTKBundle(){
 
-	stage("unix"){
+	node("unix"){
+		stage("build-GTK-bundle"){
 
-	unstash name: "packages-windows-CoInterpreterWithQueueFFI"
+			unstash name: "packages-windows-CoInterpreterWithQueueFFI"
+			def shortGitHash = env.GIT_COMMIT.substring(0,8)
+			def gtkBundleName = "PharoVM-8.1.0-GTK-${shortGitHash}-win64-bin.zip"
 
-		dir("build"){
-			shell "wget http://files.pharo.org/vm/pharo-spur64/win/third-party/Gtk3.zip"
-			shell "unzip Gtk3.zip -d ./bundleGTK"
-			shell "unzip build/build/packages/PharoVM-*-win64-bin.zip -d ./bundleGTK"
+			dir("build"){
+				shell "wget http://files.pharo.org/vm/pharo-spur64/win/third-party/Gtk3.zip"
+				shell "unzip Gtk3.zip -d ./bundleGTK"
+				shell "unzip build/build/packages/PharoVM-*-win64-bin.zip -d ./bundleGTK"
 
-			dir("bundleGTK"){
-				shell "zip ../PharoVM-GTK-win64-bin.zip *"
-			}
+				dir("bundleGTK"){
+					shell "zip ../${gtkBundleName} *"
+				}
 			
-			stash includes: 'build/build/packages/PharoVM-GTK-win64-bin.zip', name: "packages-windows-CoInterpreterWithQueueFFI"
+				stash includes: "${gtkBundleName}", name: "packages-windows-CoInterpreterWithQueueFFI"
+				
+				if(isPullRequest() && env.BRANCH_NAME == 'headless'){
+					sshagent (credentials: ['b5248b59-a193-4457-8459-e28e9eb29ed7']) {
+						sh "scp -o StrictHostKeyChecking=no \
+						${gtkBundleName} \
+						pharoorgde@ssh.cluster023.hosting.ovh.net:/home/pharoorgde/files/vm/pharo-spur64-headless/win/${gtkBundleName}"
+					}
+				}
+			}
 		}
 	}
-
 }
 
 def runBuild(platform, configuration){
