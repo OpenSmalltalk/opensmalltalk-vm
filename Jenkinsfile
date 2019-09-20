@@ -45,6 +45,7 @@ def buildGTKBundle(){
 				}
 			
 				stash includes: "${gtkBundleName}", name: "packages-windows-gtkBundle"
+				archiveArtifacts artifacts: "${gtkBundleName}"
 				
 				if(isPullRequest() && env.BRANCH_NAME == 'headless'){
 					sshagent (credentials: ['b5248b59-a193-4457-8459-e28e9eb29ed7']) {
