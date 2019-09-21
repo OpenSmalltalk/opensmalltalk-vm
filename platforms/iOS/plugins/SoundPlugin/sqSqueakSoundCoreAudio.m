@@ -82,12 +82,12 @@ MyAudioQueuePropertyListener (void *              inUserData,
 							  AudioQueueRef           inAQ,
 							  AudioQueuePropertyID    inID)
 {
-	sqInt	isRunning;
+	UInt32 isRunning;
 	UInt32 size = sizeof(isRunning);
 	sqSqueakSoundCoreAudio * myInstance = (__bridge  sqSqueakSoundCoreAudio *)inUserData;
 
 	AudioQueueGetProperty (inAQ, kAudioQueueProperty_IsRunning, &isRunning, &size);
-	myInstance.outputIsRunning = isRunning;
+	myInstance.outputIsRunning = isRunning != 0;
 	//NSLog(@"%i Is Running %i",ioMSecs(),isRunning);
 }
 
