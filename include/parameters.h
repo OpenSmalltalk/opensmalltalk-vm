@@ -140,7 +140,12 @@ typedef struct pharovm_parameters_s
 pharovm_error_code_t pharovm_parameters_parse(int argc, const char** argv, pharovm_parameters_t *parsedParameters);
 
 /**
- * Destroy an allocated instance \ref pharovm_parameter_vector_t.
+ * This ensures that the interactive parameter is passed to the image when required.
+ */
+pharovm_error_code_t pharovm_parameters_ensureInteractiveImageParameter(pharovm_parameters_t* parameters);
+
+/**
+ * Destroy an allocated instance \ref pharovm_parameters_t.
  */
 pharovm_error_code_t pharovm_parameters_destroy(pharovm_parameters_t *parameters);
 

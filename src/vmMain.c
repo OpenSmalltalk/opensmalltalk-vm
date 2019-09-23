@@ -6,8 +6,14 @@
 #include <pharo.h>
 
 int
-pharovm_mainWithParameters(const pharovm_parameters_t *parameters)
+pharovm_mainWithParameters(pharovm_parameters_t *parameters)
 {
+	// HACK: In some cases we need to add an explicit --interactive option to the image.
+	pharovm_error_code_t error = pharovm_parameters_ensureInteractiveImageParameter(parameters);
+	if (error) {
+		return 1;
+	}
+
 	if(parameters->isDefaultImage && parameters->defaultImageCount == 0) {
 		printf("No image has been specified, and no default image has been found.\n");
 		pharovm_printUsageTo(stdout);

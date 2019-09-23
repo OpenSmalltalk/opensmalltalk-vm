@@ -340,15 +340,16 @@ isConsole()
 #endif
 }
 
-static pharovm_error_code_t
-processImageOptions(pharovm_parameters_t* parameters){
-	if(parameters->isDefaultImage || parameters->hasBeenSelectedByUserInteractively) {
+pharovm_error_code_t
+pharovm_parameters_ensureInteractiveImageParameter(pharovm_parameters_t* parameters)
+{
+	if ((parameters->isDefaultImage && !isConsole()) || parameters->hasBeenSelectedByUserInteractively) {
 		//If there are no parameters, we are next to the launch of the VM, we need to add the interactive flag
-		//As we always have two parameters (the --headless)
-		if(parameters->vmParameters.count == 2 && parameters->imageParameters.count == 0 && !isConsole()){
-			const char *interactiveParameter = "--interactive";
+		//As we always have two parameters (the --headless).
+		if (parameters->vmParameters.count == 2 && parameters->imageParameters.count == 0) {
+			const char* interactiveParameter = "--interactive";
 			pharovm_error_code_t error = pharovm_parameter_vector_insertFrom(&parameters->imageParameters, 1, &interactiveParameter);
-			if(error) return error;
+			if (error) return error;
 		}
 	}
 
@@ -503,13 +504,6 @@ pharovm_parameters_parse(int argc, const char** argv, pharovm_parameters_t* para
 	free(fullPathBuffer);
 
 	error = processVMOptions(parameters);
-	if(error) {
-		pharovm_parameters_destroy(parameters);
-		return error;
-	}
-
-	// HACK: if the image does not receive parameters, add the --interactive flag.
-	error = processImageOptions(parameters);
 	if(error) {
 		pharovm_parameters_destroy(parameters);
 		return error;

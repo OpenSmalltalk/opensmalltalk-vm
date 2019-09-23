@@ -107,6 +107,7 @@ mainEntryPoint(int argc, const char **argv)
     	}
     }
 
+	parameters.hasBeenSelectedByUserInteractively = true;
     int exitCode = pharovm_mainWithParameters(&parameters);
     pharovm_parameters_destroy(&parameters);
     return exitCode;
