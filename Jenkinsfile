@@ -25,8 +25,8 @@ def runInCygwin(command){
 }
 
 def buildGTKBundle(){
-
 	node("unix"){
+		cleanWs()
 		stage("build-GTK-bundle"){
 
 			def commitHash = checkout(scm).GIT_COMMIT
@@ -132,6 +132,8 @@ def runTests(platform, configuration, packages){
 }
 
 def upload(platform, configuration, vmDir) {
+
+	cleanWs()
 
 	unstash name: "packages-${platform}-${configuration}"
 
