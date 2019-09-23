@@ -52,6 +52,10 @@ def buildGTKBundle(){
 						sh "scp -o StrictHostKeyChecking=no \
 						${gtkBundleName} \
 						pharoorgde@ssh.cluster023.hosting.ovh.net:/home/pharoorgde/files/vm/pharo-spur64-headless/win/${gtkBundleName}"
+
+						sh "scp -o StrictHostKeyChecking=no \
+						${gtkBundleName} \
+						pharoorgde@ssh.cluster023.hosting.ovh.net:/home/pharoorgde/files/vm/pharo-spur64-headless/win/latest-win64-GTK.zip"
 					}
 				}
 			}
