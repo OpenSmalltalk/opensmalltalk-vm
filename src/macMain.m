@@ -10,7 +10,7 @@ extern char **environ;
 @end
 
 @interface PharoVMLaunchAppDelegate : NSObject<NSApplicationDelegate> {
-    NSMutableArray<NSString*> *filesToOpen;
+    NSMutableArray *filesToOpen;
     const pharovm_parameters_t *parsedParameters;
 }
 @property const pharovm_parameters_t *parsedParameters;
@@ -57,7 +57,7 @@ static PharoVMLaunchAppDelegate *launchAppDelegate = nil;
     {
         for (NSURL *url in [panel URLs])
         {
-            if(url.fileURL)
+            if([url isFileURL])
                 [filesToOpen addObject: url.path];
         }
 
@@ -90,8 +90,8 @@ static PharoVMLaunchAppDelegate *launchAppDelegate = nil;
         abort();
     }
 
-    NSArray<NSString*> *processCommandLineArguments = [[NSProcessInfo processInfo] arguments];
-    NSMutableArray<NSString*> *newVMProcessCommandLineArguments = [NSMutableArray new];
+    NSArray *processCommandLineArguments = [[NSProcessInfo processInfo] arguments];
+    NSMutableArray *newVMProcessCommandLineArguments = [NSMutableArray new];
 
     [newVMProcessCommandLineArguments addObjectsFromArray: processCommandLineArguments];
     [newVMProcessCommandLineArguments addObjectsFromArray: filesToOpen];
