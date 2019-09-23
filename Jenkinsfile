@@ -127,7 +127,6 @@ def runTests(platform, configuration, packages){
     		junit allowEmptyResults: true, testResults: "*.xml"
     	}
 				
-		stash excludes: '_CPack_Packages', includes: 'build/build/packages/*', name: "packages-${platform}-${configuration}"
 		archiveArtifacts artifacts: 'runTests/*.xml', excludes: '_CPack_Packages'
 	}
 }
