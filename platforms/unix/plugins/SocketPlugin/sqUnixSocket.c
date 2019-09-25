@@ -45,6 +45,16 @@
 #include "sq.h"
 #include "SocketPlugin.h"
 #include "sqaio.h"
+#include <string.h>
+#ifdef HAVE_STDINT_H
+#  include <stdint.h> /* uint64_t uint32_t uint8_t (C99) */
+#else
+#ifdef HAVE_INTTYPES_H
+#  include <inttypes.h>
+#else
+#  include <sys/types.h> /* we could test HAVE_SYS_TYPES_H here, but else what?... */
+#endif
+#endif
 
 #ifdef ACORN
 # include <time.h>
@@ -139,7 +149,7 @@ static int thisNetSession= 0;
 static int one= 1;
 
 static char   localHostName[MAXHOSTNAMELEN];
-static u_long localHostAddress;	/* GROSS IPv4 ASSUMPTION! */
+static uint32_t localHostAddress;	/* GROSS IPv4 ASSUMPTION! */
 
 union sockaddr_any
 {
@@ -260,7 +270,7 @@ static void setLinger(int fd, int flag)
 
 static const char *addrToName(int netAddress)
 {
-  u_long nAddr;
+  uint32_t nAddr;
   struct hostent *he;
 
   lastError= 0;			/* for the resolver */
@@ -279,7 +289,7 @@ static int nameToAddr(char *hostName)
 
   lastError= 0;			/* ditto */
   if ((he= gethostbyname(hostName)))
-    return ntohl(*(long *)(he->h_addr_list[0]));
+    return ntohl(*(uint32_t *)(he->h_addr_list[0]));
   lastError= h_errno;		/* and one more ditto */
   return 0;
 }
@@ -599,7 +609,7 @@ void sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaI
   s->sessionID= thisNetSession;
   s->socketType= socketType;
   s->privateSocketPtr= pss;
-  FPRINTF((stderr, "create(%d) -> %lx\n", SOCKET(s), (unsigned long)PSP(s)));
+  FPRINTF((stderr, "create(%d) -> %p\n", SOCKET(s), PSP(s)));
   /* Note: socket is in BLOCKING mode until aioEnable is called for it! */
 }
 
@@ -646,7 +656,7 @@ void sqSocketCreateRawProtoTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(Soc
   s->sessionID= thisNetSession;
   s->socketType= RAWSocketType;
   s->privateSocketPtr= pss;
-  FPRINTF((stderr, "create(%d) -> %lx\n", SOCKET(s), (unsigned long)PSP(s)));
+  FPRINTF((stderr, "create(%d) -> %p\n", SOCKET(s), PSP(s)));
   /* Note: socket is in BLOCKING mode until aioEnable is called for it! */
 }
 
