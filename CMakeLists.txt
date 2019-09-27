@@ -218,8 +218,8 @@ check_library_exists(uuid uuid_generate "" HAVE_UUID_GENERATE)
 #Custom command that downloads a Pharo image and VM in ${VMMAKER_OUTPUT_PATH}
 add_custom_command(
   OUTPUT ${VMMAKER_OUTPUT_PATH}/Pharo.image ${VMMAKER_OUTPUT_PATH}/pharo
-  COMMAND wget -O - get.pharo.org/64/70 | bash
-  COMMAND wget -O - get.pharo.org/64/vm70 | bash
+  COMMAND wget -O - https://get.pharo.org/64/70 | bash
+  COMMAND wget -O - https://get.pharo.org/64/vm70 | bash
   WORKING_DIRECTORY ${VMMAKER_OUTPUT_PATH}
   COMMENT "Downloading Pharo 70")
 
