@@ -28,7 +28,7 @@ set(VM_FRONTEND_SOURCES
 
 
 macro(add_third_party_dependencies_per_platform)
-    add_third_party_dependency("PThreadedFFI-1.0.2-linux64" "build/vm")
+    add_third_party_dependency("PThreadedFFI-1.1.1-linux64" "build/vm")
     add_third_party_dependency("libffi-3.3-rc0" "build/vm")
     add_third_party_dependency("libgit2-0.25.1" "build/vm")
     add_third_party_dependency("libssh2-1.7.0" "build/vm")
