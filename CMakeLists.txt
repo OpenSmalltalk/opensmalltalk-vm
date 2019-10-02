@@ -191,7 +191,9 @@ endif()
 set(VMMAKER_OUTPUT_PATH "build/vmmaker")
 make_directory(${VMMAKER_OUTPUT_PATH})
 set(EXECUTABLE_OUTPUT_PATH "build/vm")
-set(LIBRARY_OUTPUT_PATH "build/vm")
+set(LIBRARY_OUTPUT_DIRECTORY "build/vm/$<CONFIG>/Pharo.app/Contents/MacOS/Plugins")
+
+#make_directory(${LIBRARY_OUTPUT_PATH})
 
 check_include_files(dirent.h HAVE_DIRENT_H)
 check_include_files(features.h HAVE_FEATURES_H)
@@ -278,7 +280,22 @@ set(VM_SOURCES
 )
 
 addLibraryWithRPATH(${VM_LIBRARY_NAME} ${VM_SOURCES})
-add_executable(${VM_EXECUTABLE_NAME} ${VM_FRONTEND_SOURCES})
+add_executable(${VM_EXECUTABLE_NAME} ${VM_FRONTEND_SOURCES} "${CMAKE_CURRENT_SOURCE_DIR}/resources/mac/Pharo.icns")
+
+set_source_files_properties(
+  "${CMAKE_CURRENT_SOURCE_DIR}/resources/mac/Pharo.icns"
+  PROPERTIES
+  MACOSX_PACKAGE_LOCATION Resources
+)
+
+set_target_properties(
+    ${VM_EXECUTABLE_NAME}
+    PROPERTIES
+    MACOSX_BUNDLE YES
+    MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/resources/mac/Info.plist.in"
+    RESOURCE "${CMAKE_CURRENT_SOURCE_DIR}/resources/mac/Pharo.icns"
+)
+
 
 target_link_libraries(${VM_EXECUTABLE_NAME} ${VM_LIBRARY_NAME})
 
