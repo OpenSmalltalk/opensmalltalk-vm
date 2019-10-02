@@ -35,7 +35,7 @@ macro(add_third_party_dependencies_per_platform)
     add_third_party_dependency("gcc-runtime-3.4" "build/vm")
     add_third_party_dependency("zlib-1.2.11-fixLibGit" "build/vm")
     add_third_party_dependency("SDL2-2.0.5" "build/vm")   
-    add_third_party_dependency("PThreadedFFI-1.0.2-win64" "build/vm")
+    add_third_party_dependency("PThreadedFFI-1.1.1-win64" "build/vm")
 endmacro()
 
 
