@@ -71,8 +71,8 @@ endif()
 #
 # FileAttributesPlugin
 #
-
 add_vm_plugin(FileAttributesPlugin)
+target_link_libraries(FileAttributesPlugin FilePlugin)
 
 #
 # UUIDPlugin
