@@ -43,9 +43,13 @@ macro(add_third_party_dependencies_per_platform)
 endmacro()
 
 macro(configure_installables INSTALL_COMPONENT)
-    set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/build/dist")
+  set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/build/dist")
     
-
+  install(
+    DIRECTORY "${CMAKE_BINARY_DIR}/build/vm/"
+    DESTINATION "./"
+    USE_SOURCE_PERMISSIONS
+    COMPONENT ${INSTALL_COMPONENT})
 endmacro()
 
 macro(add_required_libs_per_platform)
