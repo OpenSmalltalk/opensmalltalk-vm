@@ -6,6 +6,11 @@ macro(addLibraryWithRPATH NAME)
     set_target_properties(${NAME} PROPERTIES MACOSX_RPATH ON)
     set_target_properties(${NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_DIRECTORY})
     set_target_properties(${NAME} PROPERTIES INSTALL_NAME_DIR "@executable_path/Plugins")
+
+    #Declare the plugin depends on the VM core library
+    target_link_libraries(${NAME} ${VM_LIBRARY_NAME})
+    #Declare the main executable depends on the plugin so it gets built with it
+    target_link_libraries(${VM_EXECUTABLE_NAME} ${NAME})
 endmacro()
 
 

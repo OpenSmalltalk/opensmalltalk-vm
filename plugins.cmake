@@ -11,8 +11,6 @@ file(GLOB SecurityPlugin_SOURCES
 )
 
 addLibraryWithRPATH(SecurityPlugin ${SecurityPlugin_SOURCES})
-target_link_libraries(SecurityPlugin ${VM_LIBRARY_NAME})
-target_link_libraries(${VM_EXECUTABLE_NAME} SecurityPlugin)
 
 #
 # FilePlugin
@@ -60,8 +58,6 @@ else()
 endif()
 
 addLibraryWithRPATH(FilePlugin ${FilePlugin_SOURCES})
-target_link_libraries(FilePlugin ${VM_LIBRARY_NAME})
-target_link_libraries(${VM_EXECUTABLE_NAME} FilePlugin)
 
 if(OSX)
     target_link_libraries(FilePlugin "-framework CoreFoundation")
@@ -77,8 +73,6 @@ endif()
 #
 
 add_vm_plugin(FileAttributesPlugin)
-target_link_libraries(FileAttributesPlugin FilePlugin)
-target_link_libraries(${VM_EXECUTABLE_NAME} FileAttributesPlugin)
 
 #
 # UUIDPlugin
@@ -91,8 +85,6 @@ file(GLOB UUIDPlugin_SOURCES
 )
 
 addLibraryWithRPATH(UUIDPlugin ${UUIDPlugin_SOURCES})
-target_link_libraries(UUIDPlugin ${VM_LIBRARY_NAME})
-target_link_libraries(${VM_EXECUTABLE_NAME} UUIDPlugin)
 if(WIN)
     target_link_libraries(UUIDPlugin "-lole32")
 endif()
@@ -133,8 +125,6 @@ set(SqueakFFIPrims_SOURCES
 )
 
 addLibraryWithRPATH(SqueakFFIPrims ${SqueakFFIPrims_SOURCES})
-target_link_libraries(SqueakFFIPrims ${VM_LIBRARY_NAME})
-target_link_libraries(${VM_EXECUTABLE_NAME} SqueakFFIPrims)
 
 #
 # IA32ABI Plugin
@@ -158,8 +148,6 @@ if(WIN)
 endif()
 
 addLibraryWithRPATH(IA32ABI ${IA32ABI_SOURCES})
-target_link_libraries(IA32ABI ${VM_LIBRARY_NAME})
-target_link_libraries(${VM_EXECUTABLE_NAME} IA32ABI)
 
 #
 # LargeIntegers Plugin
@@ -199,8 +187,6 @@ set(BitBltPlugin_SOURCES
 )
 
 addLibraryWithRPATH(BitBltPlugin ${BitBltPlugin_SOURCES})
-target_link_libraries(BitBltPlugin ${VM_LIBRARY_NAME})
-target_link_libraries(${VM_EXECUTABLE_NAME} BitBltPlugin)
 
 #
 # B2DPlugin
@@ -247,8 +233,6 @@ else()
 endif()
 
 addLibraryWithRPATH(LocalePlugin ${LocalePlugin_SOURCES})
-target_link_libraries(LocalePlugin ${VM_LIBRARY_NAME})
-target_link_libraries(${VM_EXECUTABLE_NAME} LocalePlugin)
 
 if(OSX)
     target_link_libraries(LocalePlugin "-framework CoreFoundation")
@@ -295,8 +279,6 @@ else()
 endif()
 
 addLibraryWithRPATH(SqueakSSL ${SqueakSSL_SOURCES})
-target_link_libraries(SqueakSSL ${VM_LIBRARY_NAME})
-target_link_libraries(${VM_EXECUTABLE_NAME} SqueakSSL)
 
 if(OSX)
     target_link_libraries(SqueakSSL "-framework CoreFoundation")
