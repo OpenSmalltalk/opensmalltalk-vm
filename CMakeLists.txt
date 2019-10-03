@@ -285,8 +285,8 @@ set(VM_SOURCES
 	${EXTRACTED_SOURCES}
 )
 
-addLibraryWithRPATH(${VM_LIBRARY_NAME} ${VM_SOURCES})
 add_executable(${VM_EXECUTABLE_NAME} ${VM_FRONTEND_SOURCES})
+addLibraryWithRPATH(${VM_LIBRARY_NAME} ${VM_SOURCES})
 
 #If in OSX, configure creation of Bundle
 if(OSX)
