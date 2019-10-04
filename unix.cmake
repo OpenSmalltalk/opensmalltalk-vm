@@ -38,7 +38,7 @@ endmacro()
 
 
 macro(configure_installables INSTALL_COMPONENT)
-    set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/build/dist")
+    set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/build/dist")
     
     install(
       DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/packaging/linux/"
@@ -53,7 +53,7 @@ macro(configure_installables INSTALL_COMPONENT)
 endmacro()
 
 macro(add_required_libs_per_platform)
-   target_link_libraries(${VM_EXECUTABLE_NAME} dl)
-   target_link_libraries(${VM_EXECUTABLE_NAME} m)
-   target_link_libraries(${VM_EXECUTABLE_NAME} pthread)
+  target_link_libraries(${VM_LIBRARY_NAME} dl)
+  target_link_libraries(${VM_LIBRARY_NAME} m)
+  target_link_libraries(${VM_LIBRARY_NAME} pthread)  
 endmacro()
