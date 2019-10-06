@@ -154,6 +154,42 @@ handlerName(aioHandler h)
 
 #endif
 
+/* In various configurations it is necessary to use sigaltstack and the
+ * SA_ONSTACK flag to ensure that signals are delivered on a dedicated signal
+ * stack, rather than the user stack.  Two cases are described below.
+ */
+
+/* Allow the VM builder to override the default in their makefile. */
+#if !defined(USE_SIGALTSTACK)
+
+/* Especially useful on linux when LD_BIND_NOW is not in effect and the
+ * dynamic linker happens to run in a signal handler.
+ */
+# if ITIMER_HEARTBEAT
+#	define USE_SIGALTSTACK 1
+# endif
+
+/* At least on macOS circa 10.13 it appears that if SIGIO is delivered in an
+ * enilopmart jumping in to JIT code then the code zone can be corrupted.  We
+ * do leave lots of headroom at the end of a stack page to ensure a hardware
+ * interrupt can be delivered.  But a software signal may have more complex
+ * constraints. As a workaround we use sigaltstack by default in the JIT.
+ */
+# if COG
+#	define USE_SIGALTSTACK 1
+# endif
+
+#endif /* !defined(USE_SIGALTSTACK) */
+
+#if USE_SIGALTSTACK
+/* If the ticker is run from the heartbeat signal handler one needs to use an
+ * alternative stack to avoid overflowing the VM's stack pages.  Keep
+ * the structure around for reference during debugging.
+ */
+# define SIGNAL_STACK_SIZE (1024 * sizeof(void *) * 16)
+static stack_t signal_stack;
+#endif /* USE_SIGALTSTACK */
+
 /* initialise asynchronous i/o */
 
 void 
@@ -167,8 +203,35 @@ aioInit(void)
 	FD_ZERO(&exMask);
 	FD_ZERO(&xdMask);
 	maxFd = 0;
+
 	signal(SIGPIPE, SIG_IGN);
+#if !USE_SIGALTSTACK
 	signal(SIGIO, forceInterruptCheck);
+#else
+# define max(x,y) (((x)>(y))?(x):(y))
+	if (!signal_stack.ss_size) {
+		signal_stack.ss_flags = 0;
+		signal_stack.ss_size = max(SIGNAL_STACK_SIZE,MINSIGSTKSZ);
+		if (!(signal_stack.ss_sp = malloc(signal_stack.ss_size))) {
+			perror("ioInitHeartbeat malloc");
+			exit(1);
+		}
+		if (sigaltstack(&signal_stack, 0) < 0) {
+			perror("ioInitHeartbeat sigaltstack");
+			exit(1);
+		}
+	}
+	{	struct sigaction sigio_action;
+
+		sigio_action.sa_sigaction = forceInterruptCheck;
+		sigio_action.sa_flags = SA_RESTART | SA_ONSTACK;
+		sigemptyset(&sigio_action.sa_mask);
+		if (sigaction(SIGIO, &sigio_action, 0)) {
+			perror("aioInit sigaction SIGIO");
+			exit(1);
+		}
+	}
+#endif /* USE_SIGALTSTACK */
 }
 
 

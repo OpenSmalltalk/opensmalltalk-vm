@@ -330,19 +330,6 @@ heartbeat_handler(int sig, struct siginfo *sig_info, void *context)
 #endif
 }
 
-/* Especially useful on linux when LD_BIND_NOW is not in effect and the
- * dynamic linker happens to run in a signal handler.
- */
-#define NEED_SIGALTSTACK 1
-#if NEED_SIGALTSTACK
-/* If the ticker is run from the heartbeat signal handler one needs to use an
- * alternative stack to avoid overflowing the VM's stack pages.  Keep
- * the structure around for reference during debugging.
- */
-# define SIGNAL_STACK_SIZE (1024 * sizeof(void *) * 16)
-static stack_t signal_stack;
-#endif /* NEED_SIGALTSTACK */
-
 static void
 setIntervalTimer(long milliseconds)
 {
@@ -367,32 +354,12 @@ extern sqInt suppressHeartbeatFlag;
 
 	if (suppressHeartbeatFlag) return;
 
-#if NEED_SIGALTSTACK
-# define max(x,y) (((x)>(y))?(x):(y))
-	if (!signal_stack.ss_size) {
-		signal_stack.ss_flags = 0;
-		signal_stack.ss_size = max(SIGNAL_STACK_SIZE,MINSIGSTKSZ);
-		if (!(signal_stack.ss_sp = malloc(signal_stack.ss_size))) {
-			perror("ioInitHeartbeat malloc");
-			exit(1);
-		}
-		if (sigaltstack(&signal_stack, 0) < 0) {
-			perror("ioInitHeartbeat sigaltstack");
-			exit(1);
-		}
-	}
-#endif /* NEED_SIGALTSTACK */
-
 	heartbeat_handler_action.sa_sigaction = heartbeat_handler;
 	/* N.B. We _do not_ include SA_NODEFER to specifically prevent reentrancy
 	 * during the heartbeat.  We *must* include SA_RESTART to avoid breaking
 	 * lots of external code (e.g. the mysql odbc connect).
 	 */
-#if NEED_SIGALTSTACK
 	heartbeat_handler_action.sa_flags = SA_RESTART | SA_ONSTACK;
-#else
-	heartbeat_handler_action.sa_flags = SA_RESTART;
-#endif
 	sigemptyset(&heartbeat_handler_action.sa_mask);
 	if (sigaction(ITIMER_SIGNAL, &heartbeat_handler_action, 0)) {
 		perror("ioInitHeartbeat sigaction");
