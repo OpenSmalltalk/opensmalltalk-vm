@@ -30,6 +30,7 @@
  * Last edited: Tue Mar 29 13:06:00 PDT 2016
  */
 
+#include "interp.h" /* For COGVM define */
 #include "sqaio.h"
 
 #ifdef HAVE_CONFIG_H
@@ -142,17 +143,16 @@ handlerName(aioHandler h)
 {
 	if (h == undefinedHandler)
 		return "undefinedHandler";
-#ifdef DEBUG_SOCKETS
+# ifdef DEBUG_SOCKETS
 	{
 		extern char *socketHandlerName(aioHandler);
 
 		return socketHandlerName(h);
 	}
-#endif
+# endif
 	return "***unknown***";
 }
-
-#endif
+#endif /* AIO_DEBUG */
 
 /* In various configurations it is necessary to use sigaltstack and the
  * SA_ONSTACK flag to ensure that signals are delivered on a dedicated signal
@@ -175,7 +175,7 @@ handlerName(aioHandler h)
  * interrupt can be delivered.  But a software signal may have more complex
  * constraints. As a workaround we use sigaltstack by default in the JIT.
  */
-# if COG
+# if COGVM
 #	define USE_SIGALTSTACK 1
 # endif
 
