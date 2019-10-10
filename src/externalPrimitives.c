@@ -140,6 +140,10 @@ ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
     	*accessorDepthPtr = accessorDepthVarPtr
     							? *accessorDepthVarPtr
     							: -1;
+
+    	//If the primitive does not have accessor depth we generate a warning.
+    	if(accessorDepthVarPtr == NULL)
+    		logWarn("Missing Accessor Depth: %s", lookupName);
     }
 #endif /* SPURVM */
     return function;

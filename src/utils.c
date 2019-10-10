@@ -374,6 +374,7 @@ void bzero(void *s, size_t n){
 }
 #endif
 
+#ifdef COGVM
 /*
  * Cog has already captured CStackPointer  before calling this routine.  Record
  * the original value, capture the pointers again and determine if CFramePointer
@@ -393,6 +394,7 @@ isCFramePointerInUse()
 	assert(CStackPointer < currentCSP);
 	return CFramePointer >= CStackPointer && CFramePointer <= currentCSP;
 }
+#endif // COGVM
 
 /* Answer an approximation of the size of the redzone (if any).  Do so by
  * sending a signal to the process and computing the difference between the
@@ -576,3 +578,27 @@ EXPORT(void) getBasePath(char const *path, char* basePath, int basePathSize){
 #endif
 }
 
+int vmProcessArgumentCount = 0;
+char ** vmProcessArgumentVector = NULL;
+char ** vmProcessEnvironmentVector = NULL;
+
+EXPORT(void) setProcessArguments(int count, char** args){
+	vmProcessArgumentCount = count;
+	vmProcessArgumentVector = args;
+}
+
+EXPORT(void) setProcessEnvironmentVector(char** environment){
+	vmProcessEnvironmentVector = environment;
+}
+
+EXPORT(int) getProcessArgumentCount(){
+	return vmProcessArgumentCount;
+}
+
+EXPORT(char**) getProcessArgumentVector(){
+	return vmProcessArgumentVector;
+}
+
+EXPORT(char **) getProcessEnvironmentVector(){
+	return vmProcessEnvironmentVector;
+}

@@ -24,36 +24,78 @@ def runInCygwin(command){
     }
 }
 
+def buildGTKBundle(){
+	node("unix"){
+		cleanWs()
+		stage("build-GTK-bundle"){
 
-def runBuild(platform){
+			def commitHash = checkout(scm).GIT_COMMIT
+
+			unstash name: "packages-windows-CoInterpreterWithQueueFFI"
+			def shortGitHash = commitHash.substring(0,8)
+			def gtkBundleName = "PharoVM-8.1.0-GTK-${shortGitHash}-win64-bin.zip"
+
+			dir("build"){
+				shell "wget http://files.pharo.org/vm/pharo-spur64/win/third-party/Gtk3.zip"
+				shell "unzip Gtk3.zip -d ./bundleGTK"
+				shell "unzip -n build/packages/PharoVM-*-win64-bin.zip -d ./bundleGTK"
+
+				dir("bundleGTK"){
+					shell "zip -r -9 ../${gtkBundleName} *"
+				}
+			
+				stash includes: "${gtkBundleName}", name: "packages-windows-gtkBundle"
+				archiveArtifacts artifacts: "${gtkBundleName}"
+				
+				if(!isPullRequest() && env.BRANCH_NAME == 'headless'){
+					sshagent (credentials: ['b5248b59-a193-4457-8459-e28e9eb29ed7']) {
+						sh "scp -o StrictHostKeyChecking=no \
+						${gtkBundleName} \
+						pharoorgde@ssh.cluster023.hosting.ovh.net:/home/pharoorgde/files/vm/pharo-spur64-headless/win/${gtkBundleName}"
+
+						sh "scp -o StrictHostKeyChecking=no \
+						${gtkBundleName} \
+						pharoorgde@ssh.cluster023.hosting.ovh.net:/home/pharoorgde/files/vm/pharo-spur64-headless/win/latest-win64-GTK.zip"
+					}
+				}
+			}
+		}
+	}
+}
+
+def runBuild(platform, configuration){
 	cleanWs()
 	
 
     stage("Checkout-${platform}"){
-        checkout scm
+      dir('repository') {
+          checkout scm
+      }
     }
 
 
-	stage("Build-${platform}"){
-    	if(isWindows()){
-    	    runInCygwin "cmake . -DWIN=1"
-    	    runInCygwin "make install"
-    	    runInCygwin "make package"
-    	}else{
-    		cmakeBuild generator: 'Unix Makefiles', installation: 'InSearchPath'
-    		shell "make install"
-			shell "make package"			
-    	}
-		
-		stash excludes: '_CPack_Packages', includes: 'build/packages/*', name: "packages-${platform}"
-		archiveArtifacts artifacts: 'build/packages/*', excludes: '_CPack_Packages'
+	stage("Build-${platform}-${configuration}"){
+    if(isWindows()){
+      runInCygwin "mkdir build"
+      runInCygwin "cd build && cmake -DFLAVOUR=${configuration} ../repository"
+      runInCygwin "cd build && make install"
+      runInCygwin "cd build && make package"
+    }else{
+      cmakeBuild generator: "Unix Makefiles", cmakeArgs: "-DFLAVOUR=${configuration}", sourceDir: "repository", buildDir: "build", installation: "InSearchPath"
+      dir("build"){
+        shell "make install"
+        shell "make package"
+      }
+    }
+		stash excludes: '_CPack_Packages', includes: 'build/build/packages/*', name: "packages-${platform}-${configuration}"
+		archiveArtifacts artifacts: 'build/build/packages/*', excludes: '_CPack_Packages'
 	}
 }
 
-def runTests(platform){
+def runTests(platform, configuration, packages){
 	cleanWs()
 
-	stage("Tests-${platform}"){
+	stage("Tests-${platform}-${configuration}"){
 		
 		def vmDir = ''
 		
@@ -66,7 +108,7 @@ def runTests(platform){
 				vmDir = 'win'
 		}
 
-    	unstash name: "packages-${platform}"
+    	unstash name: "packages-${platform}-${configuration}"
 
     	shell "mkdir runTests"
     	dir("runTests"){
@@ -74,40 +116,48 @@ def runTests(platform){
           shell "echo 80 > pharo.version"
           
           if(isWindows()){
-            runInCygwin "cd runTests && unzip ../build/packages/PharoVM-*-${vmDir}64.zip -d ."
-            runInCygwin "PHARO_CI_TESTING_ENVIRONMENT=true cd runTests && ./PharoConsole.exe Pharo.image test --junit-xml-output --stage-name=win64 '.*'"
+            runInCygwin "cd runTests && unzip ../build/build/packages/PharoVM-*-${vmDir}64-bin.zip -d ."
+            runInCygwin "PHARO_CI_TESTING_ENVIRONMENT=true cd runTests && ./PharoConsole.exe Pharo.image test --junit-xml-output --stage-name=win64-${configuration} '${packages}'"
     	  }else{
-            shell "unzip ../build/packages/PharoVM-*-${vmDir}64.zip -d ."
+            shell "unzip ../build/build/packages/PharoVM-*-${vmDir}64-bin.zip -d ."
 
             if(platform == 'osx'){
-              shell "PHARO_CI_TESTING_ENVIRONMENT=true ./Pharo.app/Contents/MacOS/Pharo Pharo.image test --junit-xml-output --stage-name=osx64 '.*'"
+              shell "PHARO_CI_TESTING_ENVIRONMENT=true ./Pharo.app/Contents/MacOS/Pharo Pharo.image test --junit-xml-output --stage-name=osx64-${configuration} '${packages}'"
     		}			
             if(platform == 'unix'){
-              shell "PHARO_CI_TESTING_ENVIRONMENT=true ./pharo Pharo.image test --junit-xml-output --stage-name=unix64 '.*'" 
+              shell "PHARO_CI_TESTING_ENVIRONMENT=true ./pharo Pharo.image test --junit-xml-output --stage-name=unix64-${configuration} '${packages}'" 
             }
     	  }
     		junit allowEmptyResults: true, testResults: "*.xml"
     	}
 				
-		stash excludes: '_CPack_Packages', includes: 'build/packages/*', name: "packages-${platform}"
 		archiveArtifacts artifacts: 'runTests/*.xml', excludes: '_CPack_Packages'
 	}
 }
 
-def upload(platform, vmDir) {
+def upload(platform, configuration, vmDir) {
 
-	unstash name: "packages-${platform}"
+	cleanWs()
 
-	def expandedFileName = sh(returnStdout: true, script: "ls build/packages/PharoVM-*-${vmDir}64.zip").trim()
+	unstash name: "packages-${platform}-${configuration}"
+
+	def expandedBinaryFileName = sh(returnStdout: true, script: "ls build/build/packages/PharoVM-*-${vmDir}64-bin.zip").trim()
+	def expandedHeadersFileName = sh(returnStdout: true, script: "ls build/build/packages/PharoVM-*-${vmDir}64-include.zip").trim()
 
 	sshagent (credentials: ['b5248b59-a193-4457-8459-e28e9eb29ed7']) {
 		sh "scp -o StrictHostKeyChecking=no \
-		${expandedFileName} \
+		${expandedBinaryFileName} \
 		pharoorgde@ssh.cluster023.hosting.ovh.net:/home/pharoorgde/files/vm/pharo-spur64-headless/${vmDir}"
+		sh "scp -o StrictHostKeyChecking=no \
+		${expandedHeadersFileName} \
+		pharoorgde@ssh.cluster023.hosting.ovh.net:/home/pharoorgde/files/vm/pharo-spur64-headless/${vmDir}/include"
 
 		sh "scp -o StrictHostKeyChecking=no \
-		${expandedFileName} \
+		${expandedBinaryFileName} \
 		pharoorgde@ssh.cluster023.hosting.ovh.net:/home/pharoorgde/files/vm/pharo-spur64-headless/${vmDir}/latest.zip"
+		sh "scp -o StrictHostKeyChecking=no \
+		${expandedHeadersFileName} \
+		pharoorgde@ssh.cluster023.hosting.ovh.net:/home/pharoorgde/files/vm/pharo-spur64-headless/${vmDir}/include/latest.zip"
 	}
 }
 
@@ -129,9 +179,9 @@ def uploadPackages(){
 				return;
 			}
 			
-			upload('osx', 'mac')
-			upload('unix', 'linux')
-			upload('windows', 'win')
+			upload('osx', "CoInterpreterWithQueueFFI", 'mac')
+			upload('unix', "CoInterpreterWithQueueFFI",'linux')
+			upload('windows', "CoInterpreterWithQueueFFI", 'win')
 		}
 	}
 }
@@ -150,7 +200,7 @@ try{
 		builders[platform] = {
 			node(platform){
 				timeout(30){
-					runBuild(platform)
+					runBuild(platform, "CoInterpreterWithQueueFFI")
 				}
 			}
 		}
@@ -158,15 +208,32 @@ try{
 		tests[platform] = {
 			node(platform){
 				timeout(30){
-					runTests(platform)
+					runTests(platform, "CoInterpreterWithQueueFFI", ".*")
 				}
 			}
 		}
 	}
-	
+  
+  builders["StackVM"] = {
+    node('osx'){
+      timeout(30){
+        runBuild('osx', "StackVM")
+      }
+    }
+  }
+  tests["StackVM"] = {
+    node('osx'){
+      timeout(40){
+        runTests('osx', "StackVM", "Kernel.*")
+      }
+    }
+  }
+    
 	parallel builders
 	
 	uploadPackages()
+
+	buildGTKBundle()
 
 	parallel tests
 

@@ -1,4 +1,5 @@
+path := CommandLineArguments default commandLineArguments last.
 Metacello new
-		baseline: 'VMMaker';
-		repository: 'gitlocal://smalltalksrc';
-		load
+  baseline: 'VMMaker';
+	repository: 'gitlocal://' , path , '/smalltalksrc';
+	load

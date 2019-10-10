@@ -1300,17 +1300,17 @@ void* FileAttributesPlugin_exports[][3] = {
 
 #else /* ifdef SQ_BUILTIN_PLUGIN */
 
-signed char primitiveChangeModeAccessorDepth = 0;
-signed char primitiveChangeOwnerAccessorDepth = 0;
-signed char primitiveClosedirAccessorDepth = 0;
-signed char primitiveFileAttributeAccessorDepth = 0;
-signed char primitiveFileAttributesAccessorDepth = 1;
-signed char primitiveFileExistsAccessorDepth = 0;
-signed char primitiveOpendirAccessorDepth = 0;
-signed char primitivePlatToStPathAccessorDepth = 0;
-signed char primitiveReaddirAccessorDepth = 0;
-signed char primitiveRewinddirAccessorDepth = 0;
-signed char primitiveStToPlatPathAccessorDepth = 0;
-signed char primitiveSymlinkChangeOwnerAccessorDepth = 0;
+EXPORT(signed char) primitiveChangeModeAccessorDepth = 0;
+EXPORT(signed char) primitiveChangeOwnerAccessorDepth = 0;
+EXPORT(signed char) primitiveClosedirAccessorDepth = 0;
+EXPORT(signed char) primitiveFileAttributeAccessorDepth = 0;
+EXPORT(signed char) primitiveFileAttributesAccessorDepth = 1;
+EXPORT(signed char) primitiveFileExistsAccessorDepth = 0;
+EXPORT(signed char) primitiveOpendirAccessorDepth = 0;
+EXPORT(signed char) primitivePlatToStPathAccessorDepth = 0;
+EXPORT(signed char) primitiveReaddirAccessorDepth = 0;
+EXPORT(signed char) primitiveRewinddirAccessorDepth = 0;
+EXPORT(signed char) primitiveStToPlatPathAccessorDepth = 0;
+EXPORT(signed char) primitiveSymlinkChangeOwnerAccessorDepth = 0;
 
 #endif /* ifdef SQ_BUILTIN_PLUGIN */

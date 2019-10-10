@@ -1,35 +1,34 @@
 include_directories(
-    extracted/vm/include/unix
-    extracted/vm/include/common
-    generated/vm/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/unix
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/common
 )
 
 set(EXTRACTED_SOURCES
 #Common sources
-    extracted/vm/src/common/sqHeapMap.c
-    extracted/vm/src/common/sqVirtualMachine.c
-    extracted/vm/src/common/sqNamedPrims.c
-    extracted/vm/src/common/sqExternalSemaphores.c
-    extracted/vm/src/common/sqTicker.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/common/sqHeapMap.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/common/sqVirtualMachine.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/common/sqNamedPrims.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/common/sqExternalSemaphores.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/common/sqTicker.c
 
 #Platform sources
-    extracted/vm/src/unix/aio.c
-    extracted/vm/src/unix/sqUnixHeartbeat.c
-    src/debugUnix.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/unix/aio.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/unix/sqUnixHeartbeat.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/debugUnix.c
 
 #Virtual Memory functions
-    src/memoryUnix.c
-    src/aioUnix.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/memoryUnix.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/aioUnix.c
 )
 
 set(VM_FRONTEND_SOURCES
-    src/main.c
-    src/parameters.c    
-    src/unixOpenFileDialog.c)
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/parameters.c    
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/unixOpenFileDialog.c)
 
 
 macro(add_third_party_dependencies_per_platform)
-    add_third_party_dependency("pthreadedPlugin-0.0.1" "build/vm")
+    add_third_party_dependency("PThreadedFFI-1.1.1-linux64" "build/vm")
     add_third_party_dependency("libffi-3.3-rc0" "build/vm")
     add_third_party_dependency("libgit2-0.25.1" "build/vm")
     add_third_party_dependency("libssh2-1.7.0" "build/vm")
@@ -38,15 +37,23 @@ macro(add_third_party_dependencies_per_platform)
 endmacro()
 
 
-macro(configure_installables)
-    set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/build/dist")
+macro(configure_installables INSTALL_COMPONENT)
+    set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/build/dist")
     
-    install(DIRECTORY "${CMAKE_SOURCE_DIR}/packaging/linux/" DESTINATION "./" USE_SOURCE_PERMISSIONS)
-    install(DIRECTORY "${CMAKE_SOURCE_DIR}/build/vm/" DESTINATION "lib" USE_SOURCE_PERMISSIONS)
+    install(
+      DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/packaging/linux/"
+      DESTINATION "./"
+      USE_SOURCE_PERMISSIONS
+      COMPONENT ${INSTALL_COMPONENT})
+    install(
+      DIRECTORY "${CMAKE_BINARY_DIR}/build/vm/"
+      DESTINATION "lib"
+      USE_SOURCE_PERMISSIONS
+      COMPONENT ${INSTALL_COMPONENT})
 endmacro()
 
 macro(add_required_libs_per_platform)
-   target_link_libraries(${VM_EXECUTABLE_NAME} dl)
-   target_link_libraries(${VM_EXECUTABLE_NAME} m)
-   target_link_libraries(${VM_EXECUTABLE_NAME} pthread)
+  target_link_libraries(${VM_LIBRARY_NAME} dl)
+  target_link_libraries(${VM_LIBRARY_NAME} m)
+  target_link_libraries(${VM_LIBRARY_NAME} pthread)  
 endmacro()

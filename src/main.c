@@ -23,12 +23,16 @@ void* getMainThreadWorker(){
 }
 
 
-int main(int argc, char* argv[]){
+int main(int argc, char* argv[], char** env){
 
 	void*(*pworker_newSpawning)(bool);
 	void*(*pworker_run)(void*);
 
 	installErrorHandlers();
+
+	setProcessArguments(argc, argv);
+	setProcessEnvironmentVector(env);
+
 
 	VM_PARAMETERS parameters;
 	char buffer[4096+1];

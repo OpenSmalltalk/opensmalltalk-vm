@@ -6405,21 +6405,21 @@ void* X64Win64FFIPlugin_exports[][3] = {
 
 #else /* ifdef SQ_BUILTIN_PLUGIN */
 
-signed char primitiveCalloutAccessorDepth = 2;
-signed char primitiveCalloutWithArgsAccessorDepth = 4;
-signed char primitiveCreateManualSurfaceAccessorDepth = 0;
-signed char primitiveDestroyManualSurfaceAccessorDepth = 0;
-signed char primitiveFFIAllocateAccessorDepth = 1;
-signed char primitiveFFIDoubleAtAccessorDepth = 1;
-signed char primitiveFFIDoubleAtPutAccessorDepth = 1;
-signed char primitiveFFIFloatAtAccessorDepth = 1;
-signed char primitiveFFIFloatAtPutAccessorDepth = 1;
-signed char primitiveFFIFreeAccessorDepth = 1;
-signed char primitiveFFIIntegerAtAccessorDepth = 1;
-signed char primitiveFFIIntegerAtPutAccessorDepth = 1;
-signed char primitiveForceLoadAccessorDepth = 2;
-signed char primitiveLoadSymbolFromModuleAccessorDepth = 2;
-signed char primitiveLogCallsToAccessorDepth = 0;
-signed char primitiveSetManualSurfacePointerAccessorDepth = 0;
+EXPORT(signed char) primitiveCalloutAccessorDepth = 2;
+EXPORT(signed char) primitiveCalloutWithArgsAccessorDepth = 4;
+EXPORT(signed char) primitiveCreateManualSurfaceAccessorDepth = 0;
+EXPORT(signed char) primitiveDestroyManualSurfaceAccessorDepth = 0;
+EXPORT(signed char) primitiveFFIAllocateAccessorDepth = 1;
+EXPORT(signed char) primitiveFFIDoubleAtAccessorDepth = 1;
+EXPORT(signed char) primitiveFFIDoubleAtPutAccessorDepth = 1;
+EXPORT(signed char) primitiveFFIFloatAtAccessorDepth = 1;
+EXPORT(signed char) primitiveFFIFloatAtPutAccessorDepth = 1;
+EXPORT(signed char) primitiveFFIFreeAccessorDepth = 1;
+EXPORT(signed char) primitiveFFIIntegerAtAccessorDepth = 1;
+EXPORT(signed char) primitiveFFIIntegerAtPutAccessorDepth = 1;
+EXPORT(signed char) primitiveForceLoadAccessorDepth = 2;
+EXPORT(signed char) primitiveLoadSymbolFromModuleAccessorDepth = 2;
+EXPORT(signed char) primitiveLogCallsToAccessorDepth = 0;
+EXPORT(signed char) primitiveSetManualSurfacePointerAccessorDepth = 0;
 
 #endif /* ifdef SQ_BUILTIN_PLUGIN */

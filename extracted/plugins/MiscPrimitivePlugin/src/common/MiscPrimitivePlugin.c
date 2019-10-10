@@ -795,13 +795,13 @@ void* MiscPrimitivePlugin_exports[][3] = {
 
 #else /* ifdef SQ_BUILTIN_PLUGIN */
 
-signed char primitiveCompareStringAccessorDepth = 2;
-signed char primitiveConvert8BitSignedAccessorDepth = 2;
-signed char primitiveDecompressFromByteArrayAccessorDepth = 0;
-signed char primitiveFindFirstInStringAccessorDepth = 2;
-signed char primitiveFindSubstringAccessorDepth = 2;
-signed char primitiveIndexOfAsciiInStringAccessorDepth = 2;
-signed char primitiveStringHashAccessorDepth = 1;
-signed char primitiveTranslateStringWithTableAccessorDepth = 1;
+EXPORT(signed char) primitiveCompareStringAccessorDepth = 2;
+EXPORT(signed char) primitiveConvert8BitSignedAccessorDepth = 2;
+EXPORT(signed char) primitiveDecompressFromByteArrayAccessorDepth = 0;
+EXPORT(signed char) primitiveFindFirstInStringAccessorDepth = 2;
+EXPORT(signed char) primitiveFindSubstringAccessorDepth = 2;
+EXPORT(signed char) primitiveIndexOfAsciiInStringAccessorDepth = 2;
+EXPORT(signed char) primitiveStringHashAccessorDepth = 1;
+EXPORT(signed char) primitiveTranslateStringWithTableAccessorDepth = 1;
 
 #endif /* ifdef SQ_BUILTIN_PLUGIN */
