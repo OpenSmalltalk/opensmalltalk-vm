@@ -1086,25 +1086,19 @@ getVersionInfo(int verbose)
  *    the size of the redzone, if any.
  */
 # if defined(i386) || defined(__i386) || defined(__i386__)
-/*
- * Cog has already captured CStackPointer  before calling this routine.  Record
- * the original value, capture the pointers again and determine if CFramePointer
- * lies between the two stack pointers and hence is likely in use.  This is
- * necessary since optimizing C compilers for x86 may use %ebp as a general-
- * purpose register, in which case it must not be captured.
- */
 int
-isCFramePointerInUse()
+isCFramePointerInUse(usqIntptr_t *cFrmPtrPtr, usqIntptr_t *cStkPtrPtr)
 {
-	extern unsigned long CStackPointer, CFramePointer;
 	extern void (*ceCaptureCStackPointers)(void);
-	unsigned long currentCSP = CStackPointer;
+	usqIntptr_t currentCSP = *cStkPtrPtr;
 
 	ceCaptureCStackPointers();
-	assert(CStackPointer < currentCSP);
-	return CFramePointer >= CStackPointer && CFramePointer <= currentCSP;
+	assert(*cStkPtrPtr < currentCSP);
+	return *cFrmPtrPtr >= *cStkPtrPtr && *cFrmPtrPtr <= currentCSP;
 }
-# endif /* defined(i386) || defined(__i386) || defined(__i386__) */
+# else
+#	error please provide a deifnition of isCFramePointerInUse for this platform
+# endif /* defined(i386) et al */
 
 /* Answer an approximation of the size of the redzone (if any).  Do so by
  * sending a signal to the process and computing the difference between the

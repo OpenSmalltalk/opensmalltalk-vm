@@ -178,7 +178,17 @@ extern int numAsyncTickees; /* prodHighPriorityThread unless necessary */
 # endif						/* see platforms/unix/vm/sqUnixHeartbeat.c */
 void	ioGetClockLogSizeUsecsIdxMsecsIdx(sqInt*,void**,sqInt*,void**,sqInt*);
 void	addIdleUsecs(sqInt);
-#endif
+
+# if COGVM
+/* Cog has already captured CStackPointer before calling this routine.  Record
+ * the original value, capture the pointers again and determine if CFramePointer
+ * lies between the two stack pointers and hence is likely in use.  This is
+ * necessary since optimizing C compilers may allocate the frame pointer as a
+ * purpose register, in which case it need not and should not be captured.
+ */
+extern int isCFramePointerInUse(usqIntptr_t *cFpPtr, usqIntptr_t *cSpPtr);
+# endif
+#endif /* STACKVM */
 
 /* this function should return the value of the high performance
    counter if there is such a thing on this platform (otherwise return 0) */

@@ -31,7 +31,7 @@ amInVMThread(void)
 }
 
 int
-isCFramePointerInUse(void)
+isCFramePointerInUse(usqIntptr_t *cFrmPtrPtr, usqIntptr_t *cStkPtrPtr)
 {
     return true;
 }

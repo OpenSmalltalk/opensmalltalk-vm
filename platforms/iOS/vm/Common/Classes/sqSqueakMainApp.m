@@ -419,28 +419,20 @@ sqInt reportStackHeadroom;
  * Support code for Cog.
  * a) Answer whether the C frame pointer is in use, for capture of the C stack
  *    pointers.
+ * b) answer the amount of stack room to ensure in a Cog stack page, including
+ *    the size of the redzone, if any.
  */
 
-/*
- * Cog has already captured CStackPointer before calling this routine.  Record
- * the original value, capture the pointers again and see if CFramePointer
- * lies between the two stack pointers and hence is likely in use.  This is
- * necessary since optimizing C compilers for x86, x64 et al may use the frame
- * pointer register (%ebp, %rbp et al) as a general-purpose register, in which
- * case it must not be captured.  Assumes stacks descend.
- */
 int
-isCFramePointerInUse()
+isCFramePointerInUse(usqIntptr_t *cFrmPtrPtr, usqIntptr_t *cStkPtrPtr)
 {
-	extern unsigned long CStackPointer, CFramePointer;
 	extern void (*ceCaptureCStackPointers)(void);
-	unsigned long currentCSP = CStackPointer;
+	usqIntptr_t currentCSP = *cStkPtrPtr;
 
 	ceCaptureCStackPointers();
-	assert(CStackPointer < currentCSP);
-	return CFramePointer >= CStackPointer && CFramePointer <= currentCSP;
+	assert(*cStkPtrPtr < currentCSP);
+	return *cFrmPtrPtr >= *cStkPtrPtr && *cFrmPtrPtr <= currentCSP;
 }
-
 
 /* Answer an approximation of the size of the redzone (if any).  Do so by
  * sending a signal to the process and computing the difference between the
