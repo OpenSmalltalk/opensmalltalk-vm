@@ -137,6 +137,9 @@ ioInitExternalSemaphores(void)
  * multiple threads may attempt to signal the same semaphore without error.
  * An index of zero should be and is silently ignored.
  */
+
+void interruptAIOPoll();
+
 sqInt
 signalSemaphoreWithIndex(sqInt index)
 {
@@ -188,6 +191,8 @@ signalSemaphoreWithIndex(sqInt index)
 	}
 
 	checkSignalRequests = 1;
+
+	interruptAIOPoll();
 
 	forceInterruptCheck();
 	return 1;

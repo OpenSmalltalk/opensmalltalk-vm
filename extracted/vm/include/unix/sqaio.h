@@ -97,6 +97,8 @@ extern long aioSleepForUsecs(long microSeconds);
 extern unsigned volatile long long ioUTCMicroseconds(void);
 extern unsigned volatile long long ioUTCMicrosecondsNow(void);
 
+void interruptAIOPoll();
+
 /* debugging stuff. */
 #ifdef AIO_DEBUG
 # ifdef ACORN

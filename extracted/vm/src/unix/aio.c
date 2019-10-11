@@ -156,6 +156,8 @@ handlerName(aioHandler h)
 
 /* initialise asynchronous i/o */
 
+static int signal_pipe_fd[2];
+
 void 
 aioInit(void)
 {
@@ -167,7 +169,13 @@ aioInit(void)
 	FD_ZERO(&exMask);
 	FD_ZERO(&xdMask);
 	maxFd = 0;
-	signal(SIGPIPE, SIG_IGN);
+
+	if (pipe(signal_pipe_fd) == -1) {
+	    perror("pipe");
+	    exit(-1);
+	}
+
+	//signal(SIGPIPE, SIG_IGN);
 	signal(SIGIO, forceInterruptCheck);
 }
 
@@ -225,6 +233,31 @@ do if ((bool) && !(++tickCount % TICKS_PER_CHAR)) {		\
 	if (!*ticker++) ticker= ticks;			\
 } while (0)
 
+/*
+ * I Try to clear all the data available in the pipe, so it does not passes the limit of data.
+ */
+
+void clearPipe(int fd){
+	char buf[1024];
+	int n;
+	fd_set readFD;
+	struct timeval tv;
+
+	tv.tv_sec = 0;
+	tv.tv_usec = 0;
+
+	FD_SET(fd, &readFD);
+
+	do {
+
+		if(select(fd + 1, &readFD, NULL, NULL, &tv) == 0)
+			return;
+
+		n = read(fd, &buf, 1024);
+	} while(n == 1024);
+
+}
+
 long 
 aioPoll(long microSeconds)
 {
@@ -253,6 +286,8 @@ aioPoll(long microSeconds)
 	ex = exMask;
 	us = ioUTCMicroseconds();
 
+	FD_SET(signal_pipe_fd[0], &rd);
+
 	for (;;) {
 		struct timeval tv;
 		int	n;
@@ -260,7 +295,7 @@ aioPoll(long microSeconds)
 
 		tv.tv_sec = microSeconds / 1000000;
 		tv.tv_usec = microSeconds % 1000000;
-		n = select(maxFd, &rd, &wr, &ex, &tv);
+		n = select(FD_SETSIZE, &rd, &wr, &ex, &tv);
 		if (n > 0)
 			break;
 		if (n == 0) {
@@ -280,6 +315,11 @@ aioPoll(long microSeconds)
 		us = now;
 	}
 
+	if(FD_ISSET(signal_pipe_fd[0], &rd)){
+		FD_CLR(signal_pipe_fd[0], &rd);
+		clearPipe(signal_pipe_fd[0]);
+	}
+
 	for (fd = 0; fd < maxFd; ++fd) {
 #undef _DO
 #define _DO(FLAG, TYPE)								\
@@ -292,6 +332,14 @@ aioPoll(long microSeconds)
 		_DO_FLAG_TYPE();
 	}
 	return 1;
+}
+
+void interruptAIOPoll(){
+	int n;
+	n = write(signal_pipe_fd[1], "1", 1);
+	if(n != 1){
+		perror("write");
+	}
 }
 
 
