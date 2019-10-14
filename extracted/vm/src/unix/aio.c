@@ -237,7 +237,8 @@ do if ((bool) && !(++tickCount % TICKS_PER_CHAR)) {		\
  * I Try to clear all the data available in the pipe, so it does not passes the limit of data.
  */
 
-void clearPipe(int fd){
+void
+clearPipe(int fd){
 	char buf[1024];
 	int n;
 	fd_set readFD;
@@ -334,7 +335,8 @@ aioPoll(long microSeconds)
 	return 1;
 }
 
-void interruptAIOPoll(){
+void
+interruptAIOPoll(){
 	int n;
 	n = write(signal_pipe_fd[1], "1", 1);
 	if(n != 1){
