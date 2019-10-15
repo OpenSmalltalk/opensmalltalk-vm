@@ -442,8 +442,8 @@ ioLoadExternalFunctionOfLengthFromModuleOfLengthAccessorDepthInto
 */
 #ifdef PharoVM
 #  define IO_LOAD_GLOBAL(fn) ioLoadFunctionFrom(fn, "")
-#else 
-#  define IO_LOAD_GLOBAL(fn) 0 
+#else
+#  define IO_LOAD_GLOBAL(fn) 0
 #endif
 void *
 ioLoadSymbolOfLengthFromModule(sqInt functionNameIndex, sqInt functionNameLength, void *moduleHandle)

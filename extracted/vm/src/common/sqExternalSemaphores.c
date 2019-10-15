@@ -132,11 +132,16 @@ ioInitExternalSemaphores(void)
 	ioSetMaxExtSemTableSize(INITIAL_EXT_SEM_TABLE_SIZE);
 }
 
+// This is defined here as there is no common interface for unix AIO and windows AIO
+void aioInterruptPoll();
+
+
 /* Signal the external semaphore with the given index.  Answer non-zero on
  * success, zero otherwise.  This function is (should be) thread-safe;
  * multiple threads may attempt to signal the same semaphore without error.
  * An index of zero should be and is silently ignored.
  */
+
 sqInt
 signalSemaphoreWithIndex(sqInt index)
 {
@@ -188,6 +193,8 @@ signalSemaphoreWithIndex(sqInt index)
 	}
 
 	checkSignalRequests = 1;
+
+	aioInterruptPoll();
 
 	forceInterruptCheck();
 	return 1;
