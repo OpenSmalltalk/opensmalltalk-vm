@@ -32,7 +32,6 @@
 #include "sqAssert.h"
 #include "sqAtomicOps.h"
 #include "sqMemoryFence.h"
-#include "sqaio.h"
 
 /* This implements "lock-free" signalling of external semaphores where there is
  * no lock between the signal responder (the VM) and signal requestors, but
@@ -132,6 +131,10 @@ ioInitExternalSemaphores(void)
 {
 	ioSetMaxExtSemTableSize(INITIAL_EXT_SEM_TABLE_SIZE);
 }
+
+// This is defined here as there is no common interface for unix AIO and windows AIO
+void aioInterruptPoll();
+
 
 /* Signal the external semaphore with the given index.  Answer non-zero on
  * success, zero otherwise.  This function is (should be) thread-safe;

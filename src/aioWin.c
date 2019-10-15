@@ -30,3 +30,7 @@ sqOSThread ioCurrentOSThread(){
 void aioInit(){
 
 }
+
+void aioInterruptPoll(){
+	// TODO: Dummy impl
+}
