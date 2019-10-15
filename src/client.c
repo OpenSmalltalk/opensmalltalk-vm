@@ -25,6 +25,9 @@ void mtfsfi(unsigned long long fpscr)
 
 int loadPharoImage(char* fileName);
 
+static Semaphore* mainLoopSemaphore;
+static sqInt (*mainLoopClosure)();
+
 EXPORT(int) initPharoVM(char* image, char** vmParams, int vmParamCount, char** imageParams, int imageParamCount){
 	initGlobalStructure();
 
@@ -32,6 +35,7 @@ EXPORT(int) initPharoVM(char* image, char** vmParams, int vmParamCount, char** i
 	fldcw(0x12bf);	/* signed infinity, round to nearest, REAL8, disable intrs, disable signals */
     mtfsfi(0);		/* disable signals, IEEE mode, round to nearest */
 
+    mainLoopSemaphore = platform_semaphore_new(0);
 
     ioInitTime();
 
@@ -75,3 +79,16 @@ int loadPharoImage(char* fileName){
 
     return true;
 }
+
+EXPORT(int) mainThreadLoop(){
+	do{
+		mainLoopSemaphore->wait(mainLoopSemaphore);
+		mainLoopClosure();
+	}while(true);
+}
+
+EXPORT(sqInt) mainThread_schedule(sqInt (*closure)()){
+	mainLoopClosure = closure;
+	mainLoopSemaphore->signal(mainLoopSemaphore);
+}
+

@@ -5,7 +5,7 @@
 #include <pharoClient.h>
 #include <pharo.h>
 
-int runThread(void* p){
+int runVMThread(void* p){
 
 	VM_PARAMETERS *parameters = (VM_PARAMETERS*)p;
 
@@ -16,23 +16,12 @@ int runThread(void* p){
 	runInterpreter();
 }
 
-void* mainThreadWorker = NULL;
-
-void* getMainThreadWorker(){
-	return mainThreadWorker;
-}
-
-
 int main(int argc, char* argv[], char** env){
-
-	void*(*pworker_newSpawning)(bool);
-	void*(*pworker_run)(void*);
 
 	installErrorHandlers();
 
 	setProcessArguments(argc, argv);
 	setProcessEnvironmentVector(env);
-
 
 	VM_PARAMETERS parameters;
 	char buffer[4096+1];
@@ -61,36 +50,39 @@ int main(int argc, char* argv[], char** env){
 
 	pthread_attr_t tattr;
 	pthread_t thread_id;
-
-	pthread_attr_init(&tattr);
-
 	size_t size;
+
+	/*
+	 * I have to get the attributes of the main thread
+	 * to get the max stack size.
+	 * We need to set this value to the newly created thread,
+	 * as the created threads does not auto-grow.
+	 */
+	pthread_attr_init(&tattr);
 	pthread_attr_getstacksize(&tattr, &size);
 
-	printf("%ld\n", size);
+	logDebug("Stack size: %ld\n", size);
 
-    if(pthread_attr_setstacksize(&tattr, size*4)){
-		perror("Thread attr");
+
+    if(pthread_attr_setstacksize(&tattr, size * 4)){
+		perror("Setting thread stack size");
+		exit(-1);
     }
 
-	if(pthread_create(&thread_id, &tattr, runThread, &parameters)){
-		perror("Thread creation");
+	if(pthread_create(&thread_id, &tattr, runVMThread, &parameters)){
+		perror("Spawning the VM thread");
+		exit(-1);
 	}
 
 	pthread_detach(thread_id);
 
-	void* module = ioLoadModule("PThreadedPlugin");
+	/**
+	 * I will now wait if any plugin wants to run stuff in the main thread.
+	 * This is used by the ThreadedFFI plugin to run a worker in the main thread.
+	 * This runner is used to create and handle UI operations, required by OSX.
+	 */
 
-	pworker_newSpawning = dlsym(module, "worker_newSpawning");
-	pworker_run = dlsym(module, "worker_run");
-
-	logInfo("worker_newSpawning: %p worker_run: %p\n",pworker_newSpawning, pworker_run);
-
-	mainThreadWorker = pworker_newSpawning(false);
-
-	logInfo("worker: %p ", mainThreadWorker);
-
-	pworker_run(mainThreadWorker);
+	return mainThreadLoop();
 }
 
 void printVersion(){

@@ -70,6 +70,8 @@ EXPORT(int) getProcessArgumentCount();
 EXPORT(char**) getProcessArgumentVector();
 EXPORT(char**) getProcessEnvironmentVector();
 
+EXPORT(sqInt) mainThread_schedule(sqInt (*closure)());
+
 #ifndef NULL
 #define NULL	0
 #endif
