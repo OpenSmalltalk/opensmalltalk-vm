@@ -265,6 +265,7 @@ aioPoll(long microSeconds)
 	int	fd;
 	fd_set	rd, wr, ex;
 	unsigned long long us;
+	int maxFdToUse
 
 	FPRINTF((stderr, "aioPoll(%ld)\n", microSeconds));
 	DO_TICK(SHOULD_TICK());
@@ -289,6 +290,8 @@ aioPoll(long microSeconds)
 
 	FD_SET(signal_pipe_fd[0], &rd);
 
+	maxFdToUse = maxFd > (signal_pipe_fd[0] + 1) ? maxFd : signal_pipe_fd[0] + 1;
+
 	for (;;) {
 		struct timeval tv;
 		int	n;
@@ -296,7 +299,7 @@ aioPoll(long microSeconds)
 
 		tv.tv_sec = microSeconds / 1000000;
 		tv.tv_usec = microSeconds % 1000000;
-		n = select(FD_SETSIZE, &rd, &wr, &ex, &tv);
+		n = select(maxFdToUse, &rd, &wr, &ex, &tv);
 		if (n > 0)
 			break;
 		if (n == 0) {
@@ -335,8 +338,13 @@ aioPoll(long microSeconds)
 	return 1;
 }
 
+/*
+ * This function is used to interrupt a aioPoll.
+ * Used when signalling a Pharo semaphore to re-wake the VM and execute code of the image.
+ */
+
 void
-interruptAIOPoll(){
+aioInterruptPoll(){
 	int n;
 	n = write(signal_pipe_fd[1], "1", 1);
 	if(n != 1){

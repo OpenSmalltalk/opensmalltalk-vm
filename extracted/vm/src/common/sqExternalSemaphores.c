@@ -32,6 +32,7 @@
 #include "sqAssert.h"
 #include "sqAtomicOps.h"
 #include "sqMemoryFence.h"
+#include "sqaio.h"
 
 /* This implements "lock-free" signalling of external semaphores where there is
  * no lock between the signal responder (the VM) and signal requestors, but
@@ -138,8 +139,6 @@ ioInitExternalSemaphores(void)
  * An index of zero should be and is silently ignored.
  */
 
-void interruptAIOPoll();
-
 sqInt
 signalSemaphoreWithIndex(sqInt index)
 {
@@ -192,7 +191,7 @@ signalSemaphoreWithIndex(sqInt index)
 
 	checkSignalRequests = 1;
 
-	interruptAIOPoll();
+	aioInterruptPoll();
 
 	forceInterruptCheck();
 	return 1;

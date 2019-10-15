@@ -268,6 +268,7 @@ sqInt ioSetWindowWidthHeight(sqInt w, sqInt h);
 sqInt ioIsWindowObscured(void);
 
 sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds);
+
 #if STACKVM || NewspeakVM
 /* thread subsystem support for e.g. sqExternalSemaphores.c */
 void ioInitThreads();
