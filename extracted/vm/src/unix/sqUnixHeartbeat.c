@@ -233,11 +233,6 @@ ioUTCSeconds(void) { return get64(utcMicrosecondClock) / MicrosecondsPerSecond; 
 sqInt
 ioUTCSecondsNow(void) { return currentUTCMicroseconds() / MicrosecondsPerSecond; }
 
-/*
- * On Mac OS X use the following.
- * On Unix use dpy->ioRelinquishProcessorForMicroseconds
- */
-#if macintoshSqueak
 sqInt
 ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 {
@@ -264,7 +259,6 @@ ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 
 	return 0;
 }
-#endif /* !macintoshSqueak */
 
 void
 ioInitTime(void)
