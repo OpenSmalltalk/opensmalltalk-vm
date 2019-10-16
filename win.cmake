@@ -72,10 +72,12 @@ macro(add_required_libs_per_platform)
    target_link_libraries(${VM_EXECUTABLE_NAME} Ole32)
    target_link_libraries(${VM_EXECUTABLE_NAME} comctl32)
    target_link_libraries(${VM_EXECUTABLE_NAME} uuid)
+   target_link_libraries(${VM_EXECUTABLE_NAME} pthread)
 
    target_link_libraries(${VM_EXECUTABLE_CONSOLE_NAME} Ole32)
    target_link_libraries(${VM_EXECUTABLE_CONSOLE_NAME} comctl32)
    target_link_libraries(${VM_EXECUTABLE_CONSOLE_NAME} uuid)
+   target_link_libraries(${VM_EXECUTABLE_CONSOLE_NAME} pthread)
 
    set_target_properties(${VM_EXECUTABLE_NAME} PROPERTIES LINK_FLAGS "-mwindows")
    set_target_properties(${VM_EXECUTABLE_CONSOLE_NAME} PROPERTIES LINK_FLAGS "-mconsole")
