@@ -39,5 +39,4 @@ macro(add_vm_plugin NAME)
     message(STATUS "Adding plugin: ${NAME}")    
 
     addLibraryWithRPATH(${NAME} ${${NAME}_SOURCES})
-    target_link_libraries(${NAME} ${VM_LIBRARY_NAME})   
 endmacro()

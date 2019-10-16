@@ -24,6 +24,44 @@ def runInCygwin(command){
     }
 }
 
+def buildGTKBundle(){
+	node("unix"){
+		cleanWs()
+		stage("build-GTK-bundle"){
+
+			def commitHash = checkout(scm).GIT_COMMIT
+
+			unstash name: "packages-windows-CoInterpreterWithQueueFFI"
+			def shortGitHash = commitHash.substring(0,8)
+			def gtkBundleName = "PharoVM-8.1.0-GTK-${shortGitHash}-win64-bin.zip"
+
+			dir("build"){
+				shell "wget http://files.pharo.org/vm/pharo-spur64/win/third-party/Gtk3.zip"
+				shell "unzip Gtk3.zip -d ./bundleGTK"
+				shell "unzip -n build/packages/PharoVM-*-win64-bin.zip -d ./bundleGTK"
+
+				dir("bundleGTK"){
+					shell "zip -r -9 ../${gtkBundleName} *"
+				}
+			
+				stash includes: "${gtkBundleName}", name: "packages-windows-gtkBundle"
+				archiveArtifacts artifacts: "${gtkBundleName}"
+				
+				if(!isPullRequest() && env.BRANCH_NAME == 'headless'){
+					sshagent (credentials: ['b5248b59-a193-4457-8459-e28e9eb29ed7']) {
+						sh "scp -o StrictHostKeyChecking=no \
+						${gtkBundleName} \
+						pharoorgde@ssh.cluster023.hosting.ovh.net:/home/pharoorgde/files/vm/pharo-spur64-headless/win/${gtkBundleName}"
+
+						sh "scp -o StrictHostKeyChecking=no \
+						${gtkBundleName} \
+						pharoorgde@ssh.cluster023.hosting.ovh.net:/home/pharoorgde/files/vm/pharo-spur64-headless/win/latest-win64-GTK.zip"
+					}
+				}
+			}
+		}
+	}
+}
 
 def runBuild(platform, configuration){
 	cleanWs()
@@ -93,17 +131,18 @@ def runTests(platform, configuration, packages){
     		junit allowEmptyResults: true, testResults: "*.xml"
     	}
 				
-		stash excludes: '_CPack_Packages', includes: 'build/build/packages/*', name: "packages-${platform}-${configuration}"
 		archiveArtifacts artifacts: 'runTests/*.xml', excludes: '_CPack_Packages'
 	}
 }
 
 def upload(platform, configuration, vmDir) {
 
+	cleanWs()
+
 	unstash name: "packages-${platform}-${configuration}"
 
 	def expandedBinaryFileName = sh(returnStdout: true, script: "ls build/build/packages/PharoVM-*-${vmDir}64-bin.zip").trim()
-  def expandedHeadersFileName = sh(returnStdout: true, script: "ls build/build/packages/PharoVM-*-${vmDir}64-include.zip").trim()
+	def expandedHeadersFileName = sh(returnStdout: true, script: "ls build/build/packages/PharoVM-*-${vmDir}64-include.zip").trim()
 
 	sshagent (credentials: ['b5248b59-a193-4457-8459-e28e9eb29ed7']) {
 		sh "scp -o StrictHostKeyChecking=no \
@@ -193,6 +232,8 @@ try{
 	parallel builders
 	
 	uploadPackages()
+
+	buildGTKBundle()
 
 	parallel tests
 
