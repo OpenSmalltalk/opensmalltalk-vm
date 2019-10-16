@@ -18,6 +18,7 @@ if [[ "${ARCH}" = "linux64x64" ]]; then
             gcc-multilib \
             uuid-dev \
             libglu1-mesa-dev \
+            automake \
             autoconf \
             libtool \
             curl \
