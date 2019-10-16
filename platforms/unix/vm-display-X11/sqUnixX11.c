@@ -3718,7 +3718,8 @@ handleEvent(XEvent *evt)
 		if (sendWheelEvents)
 			recordMouseWheelEvent(mouseWheelXDelta[evt->xbutton.button - 3],
 								  mouseWheelYDelta[evt->xbutton.button - 3]);
-		else {
+		else if (evt->xbutton.button <= 5) { /* only emulate up/down, as left/right
+												is used for text editing */
 		  int keyCode = mouseWheel2Squeak[evt->xbutton.button - 4];
 		  /* Set every meta bit to distinguish the fake event from a real
 		   * right/left arrow.
