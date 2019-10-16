@@ -179,7 +179,7 @@ freeModuleHandle(void *module)
 static void *
 getModuleSymbol(void *module, const char *symbol)
 {
-    return (void*)GetProcAddress((HMODULE)module, symbol);
+    return (void*)GetProcAddress((HMODULE)(module ? module : GetModuleHandle(NULL)), symbol);
 }
 
 #elif defined(__linux__) || defined(__unix__) || defined(__APPLE__)
@@ -199,15 +199,36 @@ loadModuleHandle(const char *fileName)
 }
 
 static sqInt
-freeModuleHandle(void *module)
-{
+freeModuleHandle(void *module){
     return dlclose(module) == 0 ? 0 : 1;
 }
 
 static void *
-getModuleSymbol(void *module, const char *symbol)
-{
+getModuleSymbol(void *module, const char *symbol){
+    return dlsym(module ? module: dlopen(NULL,0), symbol);
+}
+
+#else
+
+void *
+loadModuleHandle(const char *fileName){
+    return 0;
+}
+
+sqInt
+freeModuleHandle(void *module){
+	return 0;
+}
+
+static void *
+getModuleSymbol(void *module, const char *symbol){
+    return 0;
+}
+
+void *
+getModuleSymbol(void *module, const char *symbol){
+    return 0;
     return dlsym(module, symbol);
 }
 
-#endif
+ #endif
