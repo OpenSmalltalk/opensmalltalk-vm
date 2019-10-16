@@ -68,28 +68,28 @@ macro(add_third_party_dependencies_per_platform)
     add_third_party_dependency("openssl-1.0.2q-fixLigGit" "build/vm")
     add_third_party_dependency("gcc-runtime-3.4" "build/vm")
     add_third_party_dependency("zlib-1.2.11-fixLibGit" "build/vm")
-    add_third_party_dependency("SDL2-2.0.5" "build/vm")   
+    add_third_party_dependency("SDL2-2.0.5" "build/vm")
     add_third_party_dependency("PThreadedFFI-1.1.2-win64" "build/vm")
 endmacro()
 
 
 macro(configure_installables INSTALL_COMPONENT)
     set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/build/dist")
-    
+
     install(
           DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/build/vm/"
           DESTINATION "./"
           COMPONENT ${INSTALL_COMPONENT}
           FILES_MATCHING PATTERN *.dll
           PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
-    
+
     install(
           DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/build/vm/"
           USE_SOURCE_PERMISSIONS
           DESTINATION "./"
-          USE_SOURCE_PERMISSIONS 
+          USE_SOURCE_PERMISSIONS
           COMPONENT ${INSTALL_COMPONENT}
-          FILES_MATCHING 
+          FILES_MATCHING
             PATTERN *
             PATTERN *.dll EXCLUDE)
 
@@ -101,12 +101,7 @@ macro(add_required_libs_per_platform)
 
    target_link_libraries(${VM_LIBRARY_NAME} winmm)
    target_link_libraries(${VM_LIBRARY_NAME} DbgHelp)
-   target_link_libraries(${VM_EXECUTABLE_NAME} Ole32)
-   target_link_libraries(${VM_EXECUTABLE_NAME} comctl32)
-   target_link_libraries(${VM_EXECUTABLE_NAME} uuid)
-
-   target_link_libraries(${VM_EXECUTABLE_CONSOLE_NAME} Ole32)
-   target_link_libraries(${VM_EXECUTABLE_CONSOLE_NAME} comctl32)
-   target_link_libraries(${VM_EXECUTABLE_CONSOLE_NAME} uuid)
+   target_link_libraries(${VM_LIBRARY_NAME} Ole32)
+   target_link_libraries(${VM_LIBRARY_NAME} comctl32)
+   target_link_libraries(${VM_LIBRARY_NAME} uuid)
 endmacro()
-

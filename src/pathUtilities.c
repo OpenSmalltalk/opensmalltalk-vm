@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 #ifdef _WIN32
+#   define WIN32_LEAN_AND_MEAN
 #   include <windows.h>
 #elif defined(__unix__) || defined(__MACH__) || defined(__APPLE__)
 #   include <unistd.h>
@@ -176,9 +177,7 @@ vm_path_find_files_with_extension_in_folder(const char *searchPath, const char *
     WIN32_FIND_DATAW findFileData;
     HANDLE findHandle;
 
-    size_t searchPathWSize = MultiByteToWideChar(CP_UTF8, 0, searchPath, strlen(searchPath), NULL, 0);
-    WCHAR *searchPathW = (WCHAR*)calloc(searchPathWSize + 1, 2);
-    MultiByteToWideChar(CP_UTF8, 0, searchPath, strlen(searchPath), searchPathW, searchPathWSize + 1);
+    WCHAR *searchPathW = vm_string_convert_utf8_to_utf16(searchPath);
     WCHAR *searchPathPattern = (WCHAR*)calloc(FILENAME_MAX, 2);
     lstrcpyW(searchPathPattern, searchPathW);
     lstrcatW(searchPathPattern, L"\\*.image");
