@@ -1,10 +1,10 @@
 #ifndef __PLATFORM_SEMAPHORE__
 #define __PLATFORM_SEMAPHORE__
 
+#include "pSemaphore.h"
 #include "pharo.h"
 
 #include <stdlib.h>
-#include "Semaphore.h"
 
 #ifndef __APPLE__
 // I am a normal unix
