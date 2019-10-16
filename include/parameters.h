@@ -7,10 +7,7 @@
 extern "C" {
 #endif
 
-#include "errorCodes.h"
-#include <stdbool.h> // For bool
-#include <stddef.h>
-#include <stdint.h>
+#include "parameterVector.h"
 #include <stdio.h>
 
 /**
@@ -91,36 +88,22 @@ Deprecated:
 
  */
 
-/**
- * Parameter vector.
- * I am used to hold an array of arguments.
- */
-typedef struct pharovm_parameter_vector_s
-{
-	uint32_t count;
-	const char ** parameters;
-} pharovm_parameter_vector_t;
-
-pharovm_error_code_t pharovm_parameter_vector_destroy(pharovm_parameter_vector_t *vector);
-pharovm_error_code_t pharovm_parameter_vector_insertFrom(pharovm_parameter_vector_t *vector, uint32_t count, const char **arguments);
-
-typedef struct pharovm_parameters_s
+typedef struct VMParameters_
 {
 	/**
 	 * The image file name.
-	 * This string is owned by the \ref pharovm_parameters_t structure, so it should be assigned by using strdup.
+	 * This string is owned by the \ref VMParameters structure, so it should be assigned by using strdup.
 	 */
 	char* imageFileName;
 
+	/// Is this image a default image
 	bool isDefaultImage;
-	/// Do we have multiple default image, so a file dialog should be shown?
-	uint32_t defaultImageCount;
 
-	/// Is this a forced startup image?
-	bool isForcedStartupImage;
+	/// Has the default image been found?
+	bool defaultImageFound;
 
-	/// Has the image been selected interactively by an user (e.g: by using a file open dialog.).
-	bool hasBeenSelectedByUserInteractively;
+	/// Is this an interactive session?
+	bool isInteractiveSession;
 
 	// FIXME: Why passing this is needed when we have the separated vectors?
 	int processArgc;
@@ -129,30 +112,30 @@ typedef struct pharovm_parameters_s
 	// FIXME: Passing this environment vector seems hackish. getenv should be used instead.
 	const char** environmentVector;
 
-	pharovm_parameter_vector_t vmParameters;
-	pharovm_parameter_vector_t imageParameters;
-} pharovm_parameters_t;
+	VMParameterVector vmParameters;
+	VMParameterVector imageParameters;
+} VMParameters;
 
 /**
  * Parse an argument vector into a VM parameter holding structure.
  * \param parsedParameters the resulting parsed parameters.
  */
-pharovm_error_code_t pharovm_parameters_parse(int argc, const char** argv, pharovm_parameters_t *parsedParameters);
+EXPORT(VMErrorCode) vm_parameters_parse(int argc, const char** argv, VMParameters *parsedParameters);
 
 /**
  * This ensures that the interactive parameter is passed to the image when required.
  */
-pharovm_error_code_t pharovm_parameters_ensureInteractiveImageParameter(pharovm_parameters_t* parameters);
+EXPORT(VMErrorCode) vm_parameters_ensure_interactive_image_parameter(VMParameters* parameters);
 
 /**
- * Destroy an allocated instance \ref pharovm_parameters_t.
+ * Destroy an allocated instance \ref VMParameters.
  */
-pharovm_error_code_t pharovm_parameters_destroy(pharovm_parameters_t *parameters);
+EXPORT(VMErrorCode) vm_parameters_destroy(VMParameters *parameters);
 
 /**
  * Prints the command line parameter usage string to a file.
  */
-void pharovm_printUsageTo(FILE *output);
+EXPORT(void) vm_printUsageTo(FILE *output);
 
 #ifdef __cplusplus
 }

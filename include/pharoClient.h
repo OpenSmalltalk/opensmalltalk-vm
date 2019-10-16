@@ -6,9 +6,9 @@
 #include "parameters.h"
 
 // CHECK ME: envp is not portable, does it make sense to have it as a parameter here?
-int pharovm_mainWithParameters(pharovm_parameters_t *parameters);
-int pharovm_main(int argc, const char **arguments, const char **envp);
-int initPharoVM(const char* imageFileName, const pharovm_parameter_vector_t *vmParameters, const pharovm_parameter_vector_t *imageParameters);
-void runInterpreter();
+EXPORT(int) vm_main_with_parameters(VMParameters *parameters);
+EXPORT(int) vm_main(int argc, const char **arguments, const char **envp);
+EXPORT(int) vm_init(const char* imageFileName, const VMParameterVector *vmParameters, const VMParameterVector *imageParameters);
+EXPORT(void) vm_run_interpreter();
 
 #endif //PHAROVM_PHARO_CLIENT_H

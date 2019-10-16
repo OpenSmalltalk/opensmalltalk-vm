@@ -29,13 +29,14 @@ set(EXTRACTED_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/aioWin.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/debugWin.c
 
+# Support sources
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/fileDialogWin32.c
+
 # Resource with DLL version info.
     ${Win32DLLResource}
 )
 
 set(VM_FRONTEND_SOURCES_COMMON
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/parameters.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/vmMain.c
     ${Win32Resource}
 )
 
@@ -45,7 +46,7 @@ set(VM_FRONTEND_SOURCES
     ${VM_FRONTEND_SOURCES_COMMON})
 
 set(VM_CONSOLE_FRONTEND_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/win32ConsoleMain.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/unixMain.c
     ${Win32ConsoleManifest}
     ${VM_FRONTEND_SOURCES_COMMON})
 

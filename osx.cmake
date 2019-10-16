@@ -18,14 +18,15 @@ set(EXTRACTED_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/debugUnix.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/utilsMac.mm
 
+# Support sources
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/fileDialogMac.m
+
 #Virtual Memory functions
     ${CMAKE_CURRENT_SOURCE_DIR}/src/memoryUnix.c
 )
 
 set(VM_FRONTEND_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/vmMain.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/macMain.m
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/parameters.c)
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/unixMain.m)
 
 configure_file(resources/mac/Info.plist.in build/includes/Info.plist)
 
@@ -44,7 +45,7 @@ endmacro()
 
 macro(configure_installables INSTALL_COMPONENT)
     set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/build/dist")
-    
+
     install(
       DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/build/vm/"
       DESTINATION "Pharo.app/Contents/MacOS"

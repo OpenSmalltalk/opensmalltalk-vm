@@ -1,8 +1,6 @@
 #include "pharoClient.h"
 
-extern char **environ;
-
-int main(int argc, const char *argv[])
+int main(int argc, const char *argv[], const char *envp[])
 {
-    return pharovm_main(argc, argv, (const char**)environ);
+    return vm_main(argc, argv, envp);
 }

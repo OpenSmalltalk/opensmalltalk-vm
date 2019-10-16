@@ -6,7 +6,6 @@
 /* Common configurations */
 #define VM_NAME "@VM_NAME@"
 #define DEFAULT_IMAGE_NAME "@DEFAULT_IMAGE_NAME@"
-#define FORCED_STARTUP_IMAGE_NAME "@FORCED_STARTUP_IMAGE_NAME@"
 
 /* Availabilit of Functions */
 

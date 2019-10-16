@@ -155,7 +155,6 @@ set(VM_LIBRARY_NAME PharoVMCore)
 set(VM_NAME Pharo)
 set(PHARO_VM TRUE)
 set(DEFAULT_IMAGE_NAME Pharo.image)
-set(FORCED_STARTUP_IMAGE_NAME startup.image)
 
 set(VM_TARGET "${CMAKE_SYSTEM}")
 
@@ -268,16 +267,21 @@ set(GENERATED_SOURCES ${VMSOURCEFILES})
 set(SUPPORT_SOURCES
 	${CMAKE_CURRENT_SOURCE_DIR}/src/debug.c
 	${CMAKE_CURRENT_SOURCE_DIR}/src/utils.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/errorCode.c
 	${CMAKE_CURRENT_SOURCE_DIR}/src/nullDisplay.c
 	${CMAKE_CURRENT_SOURCE_DIR}/src/externalPrimitives.c
 	${CMAKE_CURRENT_SOURCE_DIR}/src/client.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/pathUtilities.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/parameterVector.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/parameters.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/fileDialogCommon.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/stringUtilities.c
 )
 
 set(VM_SOURCES
-	${SUPPORT_SOURCES}
-  ${GENERATED_SOURCES}
-	${EXTRACTED_SOURCES}
+    ${SUPPORT_SOURCES}
+    ${GENERATED_SOURCES}
+    ${EXTRACTED_SOURCES}
 )
 
 addLibraryWithRPATH(${VM_LIBRARY_NAME} ${VM_SOURCES})
