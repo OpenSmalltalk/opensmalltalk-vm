@@ -301,6 +301,8 @@ static volatile machine_state beatState = nascent;
 static int beatMilliseconds = DEFAULT_BEAT_MS;
 static struct timespec beatperiod = { 0, DEFAULT_BEAT_MS * 1000 * 1000 };
 
+void aioWaitIfInPoll();
+
 static void *
 beatStateMachine(void *careLess)
 {
@@ -349,6 +351,7 @@ beatStateMachine(void *careLess)
 # define MINSLEEPNS 2000 /* don't bother sleeping for short times */
 		struct timespec naptime = beatperiod;
 
+
 		while (nanosleep(&naptime, &naptime) == -1
 			&& naptime.tv_sec >= 0 /* oversleeps can return tv_sec < 0 */
 			&& (naptime.tv_sec > 0 || naptime.tv_nsec > MINSLEEPNS)) /*repeat*/
@@ -356,6 +359,8 @@ beatStateMachine(void *careLess)
 				perror("nanosleep");
 				exit(1);
 			}
+
+		aioWaitIfInPoll();
 		heartbeat();
 	}
 	beatState = dead;

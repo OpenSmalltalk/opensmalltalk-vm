@@ -259,6 +259,7 @@ message(STATUS "Resource Compiler: ${CMAKE_RC_COMPILER}")
 
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/semaphores
     ${CMAKE_CURRENT_BINARY_DIR}/build/include/
     ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/include
 )
@@ -274,17 +275,18 @@ endif()
 set(GENERATED_SOURCES ${VMSOURCEFILES})
 
 set(SUPPORT_SOURCES
-	${CMAKE_CURRENT_SOURCE_DIR}/src/debug.c
-	${CMAKE_CURRENT_SOURCE_DIR}/src/utils.c
-	${CMAKE_CURRENT_SOURCE_DIR}/src/nullDisplay.c
-	${CMAKE_CURRENT_SOURCE_DIR}/src/externalPrimitives.c
-	${CMAKE_CURRENT_SOURCE_DIR}/src/client.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/debug.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/utils.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/nullDisplay.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/externalPrimitives.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/client.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/semaphores/platformSemaphore.c
 )
 
 set(VM_SOURCES
-	${SUPPORT_SOURCES}
-  ${GENERATED_SOURCES}
-	${EXTRACTED_SOURCES}
+    ${SUPPORT_SOURCES}
+    ${GENERATED_SOURCES}
+    ${EXTRACTED_SOURCES}
 )
 
 add_executable(${VM_EXECUTABLE_NAME} ${VM_FRONTEND_SOURCES})
