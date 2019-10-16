@@ -16,7 +16,13 @@ if [[ "${ARCH}" = "linux64x64" ]]; then
             libpulse-dev \
             libaudio-dev \
             gcc-multilib \
-            uuid-dev
+            uuid-dev \
+            libglu1-mesa-dev \
+            automake \
+            autoconf \
+            libtool \
+            curl \
+            cmake
 elif [[ "${ARCH}" = "linux32x86" ]]; then
     sudo apt-get update -y
     sudo apt-get remove -q -y gvfs-daemons
