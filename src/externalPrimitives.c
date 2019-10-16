@@ -170,13 +170,13 @@ void * loadModuleHandle(const char *fileName)
    	return m;
 }
 
-static sqInt
+sqInt
 freeModuleHandle(void *module)
 {
     return FreeLibrary((HMODULE)module) ? 1 : 0;
 }
 
-static void *
+void *
 getModuleSymbol(void *module, const char *symbol)
 {
     return (void*)GetProcAddress((HMODULE)(module ? module : GetModuleHandle(NULL)), symbol);
@@ -186,7 +186,7 @@ getModuleSymbol(void *module, const char *symbol)
 
 #include <dlfcn.h>
 
-static void *
+void *
 loadModuleHandle(const char *fileName)
 {
     int flags = RTLD_NOW | RTLD_GLOBAL;
@@ -198,12 +198,12 @@ loadModuleHandle(const char *fileName)
     return dlopen(fileName, flags);
 }
 
-static sqInt
+sqInt
 freeModuleHandle(void *module){
     return dlclose(module) == 0 ? 0 : 1;
 }
 
-static void *
+void *
 getModuleSymbol(void *module, const char *symbol){
     return dlsym(module ? module: dlopen(NULL,0), symbol);
 }
