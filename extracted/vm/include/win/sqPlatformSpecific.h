@@ -60,6 +60,7 @@ size_t sqImageFileWrite(const void *ptr, size_t sz, size_t count, sqImageFile h)
 #  define VM_EXPORT __declspec( dllexport ) 
 #endif 
 
+# define ioCurrentOSThread() pthread_self()
 
 /* missing functions */
 #ifdef _MSC_VER

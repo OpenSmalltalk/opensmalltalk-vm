@@ -15,13 +15,6 @@
 *
 *****************************************************************************/
 
-#if ITIMER_HEARTBEAT
-# if VM_TICKER
-#   include "sqUnixITimerTickerHeartbeat.c"
-# else
-#   include "sqUnixITimerHeartbeat.c"
-# endif
-#else /* ITIMER_HEARTBEAT */
 
 #include "sq.h"
 #include "sqAssert.h"
@@ -33,6 +26,10 @@
 #include <sys/types.h>
 #include <sys/time.h>
 #include "sqaio.h"
+
+#ifdef WIN64
+# include "Windows.h"
+#endif
 
 #define SecondsFrom1901To1970      2177452800LL
 #define MicrosecondsFrom1901To1970 2177452800000000LL
@@ -160,10 +157,19 @@ ioUpdateVMTimezone()
   extern time_t timezone, altzone;
   extern int daylight;
   vmGMTOffset = -1 * (daylight ? altzone : timezone) * MicrosecondsPerSecond;
-# else
-#  error: cannot determine timezone correction
-# endif
 #endif
+
+#ifdef WIN64
+  TIME_ZONE_INFORMATION timeZoneInformation;
+  if(GetTimeZoneInformation(&timeZoneInformation) == TIME_ZONE_ID_INVALID){
+	  logError("Unable to get timezone information");
+	  vmGMTOffset = 0;
+	  return;
+  }
+  //The Bias is in minutes
+  vmGMTOffset = timeZoneInformation.Bias * 60 * MicrosecondsPerSecond;
+#endif
+
 }
 
 sqLong
@@ -218,7 +224,7 @@ long
 ioMSecs() { return millisecondClock; }
 
 /* ioMicroMSecs answers the millisecondClock right now */
-long ioMicroMSecs(void) { return microToMilliseconds(currentUTCMicroseconds());}
+sqInt ioMicroMSecs(void) { return microToMilliseconds(currentUTCMicroseconds());}
 
 /* returns the local wall clock time */
 sqInt
