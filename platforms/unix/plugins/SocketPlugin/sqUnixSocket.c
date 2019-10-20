@@ -1446,10 +1446,11 @@ void sqSocketSetReusable(SocketPtr s)
 {
   size_t bufSize;
   unsigned char buf[4];
+  int one=1;
 
   if (!socketValid(s)) return;
 
-  *(int *)buf= 1;
+  memcpy(buf,4,&one);
   bufSize= 4;
   if (setsockopt(SOCKET(s), SOL_SOCKET, SO_REUSEADDR, buf, bufSize) < 0)
     {
