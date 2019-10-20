@@ -5106,6 +5106,7 @@ static sqInt display_ioSetCursorWithMaskBig(sqInt cursorBitsIndex, sqInt cursorM
   if (cursorMaskIndex == null)
     cursorMask= cursorBits;
 
+  d=m=0; /* Note: this is not strictly necessary since all 32 bits will be shifted away, but it avoids compiler warning */
   for (i= 0; i < 32; i++)
     {
       for (j= 0; j < 32; j++)
