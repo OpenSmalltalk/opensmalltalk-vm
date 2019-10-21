@@ -874,7 +874,7 @@ void sqSocketConnectToPort(SocketPtr s, sqInt addr, sqInt port)
 	      /* connection error */
 	      perror("sqConnectToPort");
 
-	      logError("WSAGetLastError: %d", WSAGetLastError());
+	      logError("LastSocketError: %d", getLastSocketError());
 
 	      SOCKETSTATE(s)= Unconnected;
 	      SOCKETERROR(s)= lastError;
