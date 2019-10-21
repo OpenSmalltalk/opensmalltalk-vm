@@ -852,9 +852,6 @@ void sqSocketConnectToPort(SocketPtr s, sqInt addr, sqInt port)
 
       aioEnable(SOCKET(s), PSP(s), 0);
       struct sockaddr_in * p = &saddr;
-
-      printf("%s\n", inet_ntoa(p->sin_addr));
-
       result= connect(SOCKET(s), (struct sockaddr *)p, sizeof(saddr));
 
       lastError = getLastSocketError();
