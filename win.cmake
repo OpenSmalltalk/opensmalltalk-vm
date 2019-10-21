@@ -14,7 +14,6 @@ set(EXTRACTED_SOURCES
 #Platform sources
     ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/win/sqWin32SpurAlloc.c
     ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/win/aioWin.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/unix/sqUnixHeartbeat.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/debugWin.c
 )
 

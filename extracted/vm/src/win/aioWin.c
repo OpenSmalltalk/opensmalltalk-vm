@@ -249,20 +249,25 @@ EXPORT(long) aioPoll(long microSeconds){
 	 */
 	handlesToQuery[size] = interruptEvent;
 
+	heartbeat_poll_enter(microSeconds);
+
 	returnValue = WaitForMultipleObjectsEx(size + 1, handlesToQuery, FALSE, microSeconds / 1000, FALSE);
 
 	if(returnValue == WAIT_TIMEOUT){
+		heartbeat_poll_exit(microSeconds);
 		return 0;
 	}
 
 	if(returnValue == WAIT_FAILED){
 		perror("aioPoll");
 		logError("Error aioPoll: %ld", GetLastError());
+		heartbeat_poll_exit(microSeconds);
 		return 0;
 	}
 
 	signaledIndex = returnValue - WAIT_OBJECT_0;
 
+	heartbeat_poll_exit(microSeconds);
 
 	/*
 	 * If it is the first is the interrupt event that we use to break the poll.
@@ -284,7 +289,3 @@ EXPORT(void) aioInterruptPoll(){
 	SetEvent(interruptEvent);
 }
 
-
-EXPORT(void) aioWaitIfInPoll(){
-
-}

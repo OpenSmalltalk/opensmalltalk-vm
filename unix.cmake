@@ -13,7 +13,6 @@ set(EXTRACTED_SOURCES
 
 #Platform sources
     ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/unix/aio.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/unix/sqUnixHeartbeat.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/debugUnix.c
 
 #Virtual Memory functions

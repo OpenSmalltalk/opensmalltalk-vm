@@ -125,17 +125,8 @@ static fd_set exMask;		/* handle exception	 */
 static fd_set xdMask;		/* external descriptor	 */
 
 
-void aioPollEnter(long microSeconds);
-void aioPollExit(long microSeconds);
-
-/*
- * These semaphores are used to stop the heartbeat if we are in a poll
- */
-
-Semaphore* heartbeatStopMutex;
-Semaphore* heartbeatSemaphore;
-int inPool = 0;
-int stoppedHeartbeat = 0;
+void heartbeat_poll_enter(long microSeconds);
+void heartbeat_poll_exit(long microSeconds);
 
 static void 
 undefinedHandler(int fd, void *clientData, int flags)
@@ -183,11 +174,6 @@ aioInit(void)
 	FD_ZERO(&exMask);
 	FD_ZERO(&xdMask);
 	maxFd = 0;
-
-	heartbeatStopMutex = platform_semaphore_new(1);
-	heartbeatSemaphore = platform_semaphore_new(0);
-	inPool = 0;
-
 
 	if (pipe(signal_pipe_fd) == -1) {
 	    perror("pipe");
@@ -313,7 +299,7 @@ aioPoll(long microSeconds)
 
 	maxFdToUse = maxFd > (signal_pipe_fd[0] + 1) ? maxFd : signal_pipe_fd[0] + 1;
 
-	aioPollEnter(microSeconds);
+	heartbeat_poll_enter(microSeconds);
 
 	for (;;) {
 		struct timeval tv;
@@ -328,26 +314,26 @@ aioPoll(long microSeconds)
 		if (n == 0) {
 			if (remainingMicroSeconds)
 				addIdleUsecs(remainingMicroSeconds);
-			aioPollExit(microSeconds);
+			heartbeat_poll_exit(microSeconds);
 			return 0;
 		}
 		if (errno && (EINTR != errno)) {
 			fprintf(stderr, "errno %d\n", errno);
 			perror("select");
-			aioPollExit(microSeconds);
+			heartbeat_poll_exit(microSeconds);
 			return 0;
 		}
 		now = ioUTCMicroseconds();
 		remainingMicroSeconds -= max(now - us, 1);
 
 		if (remainingMicroSeconds <= 0){
-			aioPollExit(microSeconds);
+			heartbeat_poll_exit(microSeconds);
 			return 0;
 		}
 		us = now;
 	}
 
-	aioPollExit(microSeconds);
+	heartbeat_poll_exit(microSeconds);
 
 	if(FD_ISSET(signal_pipe_fd[0], &rd)){
 		FD_CLR(signal_pipe_fd[0], &rd);
@@ -536,48 +522,4 @@ aioDisable(int fd)
 	/* keep maxFd accurate (drops to zero if no more sockets) */
 	while (maxFd && !FD_ISSET(maxFd - 1, &fdMask))
 		--maxFd;
-}
-
-/**
- * The heartbeat should not run if we are in a poll
- */
-
-void
-aioWaitIfInPoll(){
-	heartbeatStopMutex->wait(heartbeatStopMutex);
-	if(inPool == 0){
-		heartbeatStopMutex->signal(heartbeatStopMutex);
-		return;
-	}
-
-	stoppedHeartbeat = 1;
-
-	heartbeatStopMutex->signal(heartbeatStopMutex);
-	heartbeatSemaphore->wait(heartbeatSemaphore);
-}
-
-void
-aioPollEnter(long microSeconds){
-	//I only care if waited time is bigger than a millisecond
-	if(microSeconds <= 1000)
-		return;
-
-	heartbeatStopMutex->wait(heartbeatStopMutex);
-	inPool = 1;
-	heartbeatStopMutex->signal(heartbeatStopMutex);
-}
-
-void
-aioPollExit(long microSeconds){
-	//I only care if waited time is bigger than a millisecond
-	if(microSeconds <= 1000)
-		return;
-
-	heartbeatStopMutex->wait(heartbeatStopMutex);
-	inPool = 0;
-
-	if(stoppedHeartbeat)
-		heartbeatSemaphore->signal(heartbeatSemaphore);
-
-	heartbeatStopMutex->signal(heartbeatStopMutex);
 }

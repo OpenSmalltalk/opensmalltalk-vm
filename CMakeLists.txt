@@ -281,6 +281,7 @@ set(SUPPORT_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/externalPrimitives.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/client.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/semaphores/platformSemaphore.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/common/heartbeat.c
 )
 
 set(VM_SOURCES
