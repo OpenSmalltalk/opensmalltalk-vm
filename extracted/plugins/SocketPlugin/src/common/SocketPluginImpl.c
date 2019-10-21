@@ -364,7 +364,11 @@ static int nameToAddr(char *hostName)
 
 	   if(anAddressInfo->ai_family == AF_INET){
 		   addr = (struct sockaddr_in *)anAddressInfo->ai_addr;
+#ifdef WIN64
 		   address = ntohl(addr->sin_addr.S_un.S_addr);
+#else
+		   address = ntohl(addr->sin_addr.S_addr);
+#endif
 	   }
 
 	   anAddressInfo = anAddressInfo->ai_next;
