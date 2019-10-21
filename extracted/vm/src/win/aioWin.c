@@ -212,6 +212,10 @@ EXPORT(void) aioHandle(int fd, aioHandler handlerFn, int mask){
 	AioFileDescriptor * aioFileDescriptor;
 	aioFileDescriptor = aioFileDescriptor_find(fd);
 
+	if(!aioFileDescriptor){
+		return;
+	}
+
 	aioFileDescriptor->handlerFn = handlerFn;
 	aioFileDescriptor->mask = mask;
 
