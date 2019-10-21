@@ -367,7 +367,7 @@ static int nameToAddr(char *hostName)
 #ifdef WIN64
 		   address = ntohl(addr->sin_addr.S_un.S_addr);
 #else
-		   address = ntohl(addr->sin_addr.S_addr);
+		   address = ntohl(addr->sin_addr.s_addr);
 #endif
 	   }
 
