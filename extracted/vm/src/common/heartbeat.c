@@ -174,6 +174,7 @@ ioUpdateVMTimezone()
   extern time_t timezone, altzone;
   extern int daylight;
   vmGMTOffset = -1 * (daylight ? altzone : timezone) * MicrosecondsPerSecond;
+# endif
 #endif
 
 #ifdef WIN64
