@@ -465,7 +465,6 @@ ioHeartbeatFrequency(int resetStats)
 	}
 	return frequency;
 }
-#endif /* ITIMER_HEARTBEAT */
 
 
 EXPORT(long long) getVMGMTOffset(){

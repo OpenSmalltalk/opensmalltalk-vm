@@ -93,7 +93,7 @@ endif()
 # 
 
 if(WIN)
-    add_vm_plugin(SocketPlugin ${CMAKE_CURRENT_SOURCE_DIR}/plugins/SocketPlugin/win32/src/win32SocketPluginExtras.c)
+    add_vm_plugin(SocketPlugin)
     target_link_libraries(SocketPlugin "-lWs2_32")
 else()
     add_vm_plugin(SocketPlugin)
