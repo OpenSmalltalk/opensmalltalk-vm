@@ -261,7 +261,7 @@ ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 			realTimeToWait = microSeconds;
 	}
 
-	aioSleepForUsecs(realTimeToWait);
+    aioPoll(realTimeToWait);
 
 	return 0;
 }
@@ -306,8 +306,6 @@ static volatile machine_state beatState = nascent;
 #endif
 static int beatMilliseconds = DEFAULT_BEAT_MS;
 static struct timespec beatperiod = { 0, DEFAULT_BEAT_MS * 1000 * 1000 };
-
-void aioWaitIfInPoll();
 
 static void *
 beatStateMachine(void *careLess)

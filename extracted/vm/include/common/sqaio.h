@@ -89,12 +89,6 @@ EXPORT(void) aioDisable(int fd);
  */
 EXPORT(long) aioPoll(long microSeconds);
 
-/* As above, but avoid sleeping in select() if microSeconds is small
- * (less than a timeslice).  Handlers are called, if neccessary, at
- * the start and end of the sleep.
- */
-EXPORT(long) aioSleepForUsecs(long microSeconds);
-
 extern unsigned volatile long long ioUTCMicroseconds(void);
 extern unsigned volatile long long ioUTCMicrosecondsNow(void);
 
@@ -103,6 +97,12 @@ extern unsigned volatile long long ioUTCMicrosecondsNow(void);
  * For example, when signalling a Pharo semaphore
  */
 EXPORT(void) aioInterruptPoll();
+
+/**
+ * I block the caller if we are in the aioPoll
+ */
+EXPORT(void) aioWaitIfInPoll();
+
 
 /* debugging stuff. */
 #ifdef AIO_DEBUG
