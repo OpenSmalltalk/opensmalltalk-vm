@@ -1444,7 +1444,11 @@ sqInt sqSocketSetOptionsoptionNameStartoptionNameSizeoptionValueStartoptionValue
       socketOption *opt= findOption(optionName, (size_t)optionNameSize);
       if (opt != 0)
 	{
-	  int   val= 0;
+#ifdef WIN64
+	  ULONG   val= 0;
+#else
+	  int val=0;
+#endif
 	  char  buf[32];
 	  char *endptr;
 	  /* this is JUST PLAIN WRONG (I mean the design in the image rather
@@ -1508,6 +1512,8 @@ sqInt sqSocketGetOptionsoptionNameStartoptionNameSizereturnedValue(SocketPtr s, 
 			  return getLastSocketError();
 		  }
 
+		  *result = optval;
+
 		  return 0;
 	  }
   }
@@ -1540,12 +1546,12 @@ void sqSocketBindToPort(SocketPtr s, int addr, int port)
 void sqSocketSetReusable(SocketPtr s)
 {
   size_t bufSize;
-  unsigned char buf[4];
+  unsigned char buf[8];
 
   if (!socketValid(s)) return;
 
-  *(int *)buf= 1;
-  bufSize= 4;
+  *(sqInt *)buf= 1;
+  bufSize= 8;
   if (setsockopt(SOCKET(s), SOL_SOCKET, SO_REUSEADDR, buf, bufSize) < 0)
     {
       PSP(s)->sockError= getLastSocketError();
