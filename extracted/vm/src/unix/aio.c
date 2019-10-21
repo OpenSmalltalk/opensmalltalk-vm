@@ -175,6 +175,7 @@ aioInit(void)
 	FD_ZERO(&xdMask);
 	maxFd = 0;
 
+
 	if (pipe(signal_pipe_fd) == -1) {
 	    perror("pipe");
 	    exit(-1);
