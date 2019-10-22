@@ -10,7 +10,9 @@ typedef struct _AioFileDescriptor {
 	int flags;
 	int mask;
 	aioHandler handlerFn;
-	HANDLE handle;
+
+	HANDLE readEvent;
+	HANDLE writeEvent;
 
 	struct _AioFileDescriptor* next;
 
@@ -84,7 +86,8 @@ void aioFileDescriptor_remove(int fd){
 		previous->next = found->next;
 	}
 
-	WSACloseEvent(found->handle);
+	WSACloseEvent(found->readEvent);
+	WSACloseEvent(found->writeEvent);
 
 	free(found);
 }
@@ -106,66 +109,56 @@ void aioFileDescriptor_fillHandles(HANDLE* handles){
 	long index = 0;
 
 	while(element){
-		handles[index] = element->handle;
+		handles[index] = element->readEvent;
+		index++;
+
+		handles[index] = element->writeEvent;
 		index++;
 		element = element->next;
 	}
 
 }
 
-void aioFileDescriptor_signal_atIndex(long signaledIndex){
+void aioFileDescriptor_signal_withHandle(HANDLE event){
 
 	AioFileDescriptor* element = fileDescriptorList;
-	long count = 0;
 
 	while(element){
 
-		if(count == signaledIndex){
+		if(element->readEvent == event){
 
 			/**
 			 * The event should be reset once it has been processed.
 			 */
-			WSAResetEvent(element->handle);
+			WSAResetEvent(element->readEvent);
 
-			fd_set read;
-			fd_set write;
-			fd_set error;
-
-			FD_ZERO(&read);
-			FD_ZERO(&write);
-			FD_ZERO(&error);
-
-			struct timeval tm;
-
-			tm.tv_sec = 0;
-			tm.tv_usec = 0;
-
-			if(element->mask & AIO_R){
-				FD_SET(element->fd, &read);
+			if(element->mask == 0) {
+				return;
 			}
+			//We set the event to 0 so it is not recalled after
+			WSAEventSelect(element->fd, element->readEvent, 0);
 
-			if(element->mask & AIO_W){
-				FD_SET(element->fd, &write);
-			}
-
-			if(element->mask & AIO_X){
-				FD_SET(element->fd, &error);
-			}
-
-			select(element->fd + 1, &read, &write, &error, &tm);
-
-			if(FD_ISSET(element->fd, &read)){
-				element->handlerFn(element->fd, element->clientData, AIO_R);
-			}
-			if(FD_ISSET(element->fd, &write)){
-				element->handlerFn(element->fd, element->clientData, AIO_W);
-			}
-			if(FD_ISSET(element->fd, &error)){
-				element->handlerFn(element->fd, element->clientData, AIO_X);
-			}
+			element->handlerFn(element->fd, element->clientData, AIO_R);
+			return;
 		}
 
-		count++;
+		if(element->writeEvent == event){
+
+			/**
+			 * The event should be reset once it has been processed.
+			 */
+			WSAResetEvent(element->writeEvent);
+
+			if(element->mask == 0) {
+				return;
+			}
+			//We set the event to 0 so it is not recalled after
+			WSAEventSelect(element->fd, element->writeEvent, 0);
+
+			element->handlerFn(element->fd, element->clientData, AIO_W);
+			return;
+		}
+
 		element = element->next;
 	}
 }
@@ -193,11 +186,14 @@ EXPORT(void) aioEnable(int fd, void *clientData, int flags){
 	aioFileDescriptor->fd = fd;
 	aioFileDescriptor->clientData = clientData;
 	aioFileDescriptor->flags = flags;
-	aioFileDescriptor->handle = (HANDLE)WSACreateEvent();
-	WSAEventSelect(aioFileDescriptor->fd, aioFileDescriptor->handle, 0);
+	aioFileDescriptor->readEvent = (HANDLE)WSACreateEvent();
+	aioFileDescriptor->writeEvent = (HANDLE)WSACreateEvent();
+	aioFileDescriptor->mask = 0;
+
+	WSAEventSelect(aioFileDescriptor->fd, aioFileDescriptor->writeEvent, 0);
+	WSAEventSelect(aioFileDescriptor->fd, aioFileDescriptor->readEvent, 0);
 
 	aioFileDescriptor->next = NULL;
-
 
 	u_long iMode = 1;
 	int iResult;
@@ -210,6 +206,8 @@ EXPORT(void) aioEnable(int fd, void *clientData, int flags){
 
 EXPORT(void) aioHandle(int fd, aioHandler handlerFn, int mask){
 	AioFileDescriptor * aioFileDescriptor;
+	char buf[100];
+
 	aioFileDescriptor = aioFileDescriptor_find(fd);
 
 	if(!aioFileDescriptor){
@@ -223,7 +221,16 @@ EXPORT(void) aioHandle(int fd, aioHandler handlerFn, int mask){
 	 * Remember to reset the event once is processed
 	 */
 
-	WSAEventSelect(aioFileDescriptor->fd, aioFileDescriptor->handle, FD_READ | FD_WRITE | FD_CLOSE | FD_OOB | FD_ACCEPT | FD_CONNECT);
+	if(mask & AIO_R){
+		WSAEventSelect(aioFileDescriptor->fd, aioFileDescriptor->readEvent, FD_READ | FD_ACCEPT | FD_OOB | FD_CLOSE);
+		recv(aioFileDescriptor->fd, (void*)buf, 100, MSG_PEEK);
+		return;
+	}
+
+	if(mask & AIO_W){
+		WSAEventSelect(aioFileDescriptor->fd, aioFileDescriptor->writeEvent, FD_WRITE);
+		return;
+	}
 
 }
 
@@ -231,6 +238,7 @@ EXPORT(void) aioSuspend(int fd, int mask){
 	/**
 	 * TODO: It is not used, so we don't implement it now
 	 */
+	printf("No implemented");
 }
 
 EXPORT(void) aioDisable(int fd){
@@ -239,11 +247,13 @@ EXPORT(void) aioDisable(int fd){
 
 EXPORT(long) aioPoll(long microSeconds){
 
-	int size = aioFileDescriptor_size();
 	HANDLE* handlesToQuery;
 	DWORD returnValue;
 	long signaledIndex;
 	AioFileDescriptor* signaled;
+
+	//We require two events per socket
+	int size = aioFileDescriptor_size() * 2;
 
 	handlesToQuery = malloc(sizeof(HANDLE) * (size+1));
 	aioFileDescriptor_fillHandles(handlesToQuery);
@@ -259,6 +269,7 @@ EXPORT(long) aioPoll(long microSeconds){
 
 	if(returnValue == WAIT_TIMEOUT){
 		heartbeat_poll_exit(microSeconds);
+		free(handlesToQuery);
 		return 0;
 	}
 
@@ -266,6 +277,7 @@ EXPORT(long) aioPoll(long microSeconds){
 		perror("aioPoll");
 		logError("Error aioPoll: %ld", GetLastError());
 		heartbeat_poll_exit(microSeconds);
+		free(handlesToQuery);
 		return 0;
 	}
 
@@ -281,10 +293,17 @@ EXPORT(long) aioPoll(long microSeconds){
 	 */
 	if(signaledIndex == size){
 		ResetEvent(interruptEvent);
+		free(handlesToQuery);
 		return 0;
 	}
 
-	aioFileDescriptor_signal_atIndex(signaledIndex);
+	for(int i=0; i < size; i++){
+		if(WaitForSingleObject(handlesToQuery[i], 0) == WAIT_OBJECT_0) {
+			aioFileDescriptor_signal_withHandle(handlesToQuery[i]);
+		}
+	}
+
+	free(handlesToQuery);
 
 	return 1;
 }

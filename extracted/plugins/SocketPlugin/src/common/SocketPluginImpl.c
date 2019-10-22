@@ -211,6 +211,7 @@ typedef struct privateSocketStruct
   socklen_t senderSize;		/* dynamic sizeof(sender) */
   int multiListen;		/* whether to listen for multiple connections */
   int acceptedSock;		/* a connection that has been accepted */
+  int socketType;
 } privateSocketStruct;
 
 #define CONN_NOTIFY	(1<<0)
@@ -393,12 +394,24 @@ static int socketValid(SocketPtr s)
           0 if read would block, or
          -1 if the socket is no longer connected */
 
-static int socketReadable(int s)
+static int socketReadable(int s, int type)
 {
-  char buf[1];
-  int n= recv(s, (void *)buf, 1, MSG_PEEK);
+  static char buf[100];
+  int error;
+  sqInt n;
+
+  if(type == UDPSocketType) {
+	  n = recvfrom(s, (void*)buf, 100, MSG_PEEK, NULL, NULL);
+  }else{
+	  n = recv(s, (void *)buf, 100, MSG_PEEK);
+  }
+
   if (n > 0) return 1;
-  if ((n < 0) && (getLastSocketError() == ERROR_WOULD_BLOCK)) return 0;
+  if ((n < 0) && ((error = getLastSocketError()) == ERROR_WOULD_BLOCK)) return 0;
+
+  if ((n < 0) && (error == WSAEMSGSIZE)) return 1;
+//  logError("Error: %d", error);
+
   return -1;	/* EOF */
 }
 
@@ -412,6 +425,7 @@ static int socketWritable(int s)
   
   FD_ZERO(&fds);
   FD_SET(s, &fds);
+
   return select(s+1, 0, &fds, 0, &tv) > 0;
 }
 
@@ -540,7 +554,7 @@ static void dataHandler(int fd, void *data, int flags)
 
   if (flags & AIO_R)
     {
-      int n= socketReadable(fd);
+      int n= socketReadable(fd, pss->socketType);
       if (n == 0)
 	{
 	  fprintf(stderr, "dataHandler: selected socket fd=%d flags=0x%x would block (why?)\n", fd, flags);
@@ -574,7 +588,7 @@ static void closeHandler(int fd, void *data, int flags)
   FPRINTF((stderr, "closeHandler(%d, %p, %d)\n", fd, data, flags));
   pss->sockState= Unconnected;
   pss->s= -1;
-  notify(pss, CONN_NOTIFY);
+  notify(pss, READ_NOTIFY | CONN_NOTIFY);
 }
 
 
@@ -675,6 +689,7 @@ void sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaI
   pss->connSema= semaIndex;
   pss->readSema= readSemaIndex;
   pss->writeSema= writeSemaIndex;
+  pss->socketType = socketType;
 
   /* UDP sockets are born "connected" */
   if (UDPSocketType == socketType)
@@ -729,6 +744,7 @@ void sqSocketCreateRawProtoTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(Soc
   pss->connSema= semaIndex;
   pss->readSema= readSemaIndex;
   pss->writeSema= writeSemaIndex;
+  pss->socketType=s->socketType;
 
   /* RAW sockets are born "connected" */
   pss->sockState= Connected;
@@ -938,6 +954,9 @@ void sqSocketAcceptFromRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(SocketPtr s
   pss->writeSema= writeSemaIndex;
   pss->sockState= Connected;
   pss->sockError= 0;
+
+  pss->socketType = s->socketType;
+
   aioEnable(SOCKET(s), PSP(s), 0);
 }
 
@@ -956,7 +975,6 @@ void sqSocketCloseConnection(SocketPtr s)
   if (SOCKET(s) < 0)
     return;	/* already closed */
 
-  aioDisable(SOCKET(s));
   SOCKETSTATE(s)= ThisEndClosed;
   result = closesocket(SOCKET(s));
   int lastError = getLastSocketError();
@@ -966,6 +984,8 @@ void sqSocketCloseConnection(SocketPtr s)
       /* error */
       SOCKETSTATE(s)= Unconnected;
       SOCKETERROR(s)= lastError;
+      aioDisable(SOCKET(s));
+
       notify(PSP(s), CONN_NOTIFY);
       perror("closeConnection");
     }
@@ -973,12 +993,17 @@ void sqSocketCloseConnection(SocketPtr s)
     {
       /* close completed synchronously */
       SOCKETSTATE(s)= Unconnected;
+      aioDisable(SOCKET(s));
+
       FPRINTF((stderr, "closeConnection: disconnected\n"));
       SOCKET(s)= -1;
     }
   else
     {
       /* asynchronous close in progress */
+
+	  shutdown(SOCKET(s), SD_SEND);
+
       SOCKETSTATE(s)= ThisEndClosed;
       aioHandle(SOCKET(s), closeHandler, AIO_RWX);  /* => close() done */
       FPRINTF((stderr, "closeConnection: deferred [aioHandle is set]\n"));
@@ -1117,7 +1142,7 @@ sqInt sqSocketReceiveDataAvailable(SocketPtr s)
   if (SOCKETSTATE(s) == Connected)
     {
       int fd= SOCKET(s);
-      int n=  socketReadable(fd);
+      int n=  socketReadable(fd, s->socketType);
       if (n > 0)
 	{
 	  FPRINTF((stderr, "receiveDataAvailable(%d) -> true\n", fd));
