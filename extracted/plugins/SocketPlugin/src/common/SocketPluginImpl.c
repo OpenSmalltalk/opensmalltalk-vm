@@ -105,6 +105,7 @@ struct sockaddr_un
 #include <ifaddrs.h>
 
 #define closesocket(x) close(x)
+#define SD_READ SHUT_RD
 
 #endif
 

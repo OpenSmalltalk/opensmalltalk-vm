@@ -223,6 +223,7 @@ EXPORT(void) aioHandle(int fd, aioHandler handlerFn, int mask){
 
 	if(mask & AIO_R){
 		WSAEventSelect(aioFileDescriptor->fd, aioFileDescriptor->readEvent, FD_READ | FD_ACCEPT | FD_OOB | FD_CLOSE);
+		//This recv will always generates a WOULDBLOCK, but this is needed to generate the correct event in Windows.
 		recv(aioFileDescriptor->fd, (void*)buf, 100, MSG_PEEK);
 		return;
 	}
