@@ -410,8 +410,14 @@ static int socketReadable(int s, int type)
   if (n > 0) return 1;
   if ((n < 0) && ((error = getLastSocketError()) == ERROR_WOULD_BLOCK)) return 0;
 
+#ifdef WIN64
+  /*
+   * In Windows we can receive an error that the buffer is
+   * not big enough. This situation leads to know that there is data to read.
+   */
+
   if ((n < 0) && (error == WSAEMSGSIZE)) return 1;
-//  logError("Error: %d", error);
+#endif
 
   return -1;	/* EOF */
 }
