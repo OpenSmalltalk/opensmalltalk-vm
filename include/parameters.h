@@ -1,4 +1,14 @@
+#ifndef PHAROVM_PARAMETERS_H
+#define PHAROVM_PARAMETERS_H
+
 #pragma once
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include "parameterVector.h"
+#include <stdio.h>
 
 /**
 
@@ -78,17 +88,57 @@ Deprecated:
 
  */
 
+typedef struct VMParameters_
+{
+	/**
+	 * The image file name.
+	 * This string is owned by the \ref VMParameters structure, so it should be assigned by using strdup.
+	 */
+	char* imageFileName;
 
-typedef struct {
-	char* imageFile;
-	char isDefaultImage;
-	char hasBeenSelectedByUser;
+	/// Is this image a default image
+	bool isDefaultImage;
 
-	char** vmParams;
-	int vmParamsCount;
+	/// Has the default image been found?
+	bool defaultImageFound;
 
-	char** imageParams;
-	int imageParamsCount;
-} VM_PARAMETERS;
+	/// Is this an interactive session?
+	bool isInteractiveSession;
 
-void parseArguments(int argc, char* argv[], VM_PARAMETERS * parameters);
+	// FIXME: Why passing this is needed when we have the separated vectors?
+	int processArgc;
+	const char** processArgv;
+
+	// FIXME: Passing this environment vector seems hackish. getenv should be used instead.
+	const char** environmentVector;
+
+	VMParameterVector vmParameters;
+	VMParameterVector imageParameters;
+} VMParameters;
+
+/**
+ * Parse an argument vector into a VM parameter holding structure.
+ * \param parsedParameters the resulting parsed parameters.
+ */
+EXPORT(VMErrorCode) vm_parameters_parse(int argc, const char** argv, VMParameters *parsedParameters);
+
+/**
+ * This ensures that the interactive parameter is passed to the image when required.
+ */
+EXPORT(VMErrorCode) vm_parameters_ensure_interactive_image_parameter(VMParameters* parameters);
+
+/**
+ * Destroy an allocated instance \ref VMParameters.
+ */
+EXPORT(VMErrorCode) vm_parameters_destroy(VMParameters *parameters);
+
+/**
+ * Prints the command line parameter usage string to a file.
+ */
+EXPORT(void) vm_printUsageTo(FILE *output);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif //PHAROVM_PARAMETERS_H

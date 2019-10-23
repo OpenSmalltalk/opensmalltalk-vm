@@ -1,3 +1,8 @@
+#ifndef PHAROVM_CONFIG_H
+#define PHAROVM_CONFIG_H
+
+#pragma once
+
 /* Common configurations */
 #define VM_NAME "@VM_NAME@"
 #define DEFAULT_IMAGE_NAME "@DEFAULT_IMAGE_NAME@"
@@ -54,3 +59,5 @@
 #endif
 
 #define VM_BUILD_SOURCE_STRING "@BUILT_FROM@"
+
+#endif //PHAROVM_CONFIG_H

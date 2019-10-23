@@ -7,17 +7,19 @@ macro(addLibraryWithRPATH NAME)
     set_target_properties(${NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_DIRECTORY})
     set_target_properties(${NAME} PROPERTIES INSTALL_NAME_DIR "@executable_path/Plugins")
 
-    #Declare the main executable depends on the plugin so it gets built with it
-    target_link_libraries(${VM_EXECUTABLE_NAME} ${NAME})
+    # Declare the main executable depends on the plugin so it gets built with it
+    add_dependencies(${VM_EXECUTABLE_NAME} ${NAME})
     #Declare the plugin depends on the VM core library
-    target_link_libraries(${NAME} ${VM_LIBRARY_NAME})
+    if(NOT "${NAME}" STREQUAL "${VM_LIBRARY_NAME}")
+        target_link_libraries(${NAME} ${VM_LIBRARY_NAME})
+    endif()
 endmacro()
 
 
 macro(get_platform_name VARNAME)
     if(WIN)
         set(${VARNAME} "win")
-    else()    
+    else()
         if(OSX)
             set(${VARNAME} "mac")
         else()
@@ -27,16 +29,16 @@ macro(get_platform_name VARNAME)
 endmacro()
 
 macro(get_full_platform_name VARNAME)
-    
+
     if(SIZEOF_VOID_P EQUAL 8)
         set(ARCH 64)
-    else()    
+    else()
         set(ARCH 32)
     endif()
 
     if(WIN)
         set(${VARNAME} "win${ARCH}")
-    else()    
+    else()
         if(OSX)
             set(${VARNAME} "mac${ARCH}")
         else()
@@ -49,7 +51,7 @@ endmacro()
 macro(add_third_party_dependency NAME TARGETPATH)
 
     get_platform_name(PLATNAME)
-    
+
     message("Adding third-party libraries for ${PLATNAME}: ${NAME}")
 
     add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/build/third-party/${NAME}.zip"
@@ -64,7 +66,7 @@ macro(add_third_party_dependency NAME TARGETPATH)
         DEPENDS "build/third-party/${NAME}.zip"
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
-    add_custom_target(${NAME} ALL DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/build/third-party/${NAME}.done")        
+    add_custom_target(${NAME} ALL DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/build/third-party/${NAME}.done")
     add_dependencies(${VM_EXECUTABLE_NAME} ${NAME})
 endmacro()
 

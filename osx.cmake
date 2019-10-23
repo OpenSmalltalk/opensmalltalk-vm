@@ -18,14 +18,15 @@ set(EXTRACTED_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/debugUnix.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/utilsMac.mm
 
+# Support sources
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/fileDialogMac.m
+
 #Virtual Memory functions
     ${CMAKE_CURRENT_SOURCE_DIR}/src/memoryUnix.c
 )
 
 set(VM_FRONTEND_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/parameters.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/macOpenFileDialog.mm)
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/unixMain.c)
 
 configure_file(resources/mac/Info.plist.in build/includes/Info.plist)
 
@@ -54,7 +55,5 @@ endmacro()
 
 macro(add_required_libs_per_platform)
    target_link_libraries(${VM_LIBRARY_NAME} "-framework AppKit")
-
-   target_link_libraries(${VM_EXECUTABLE_NAME} "-framework AppKit")
-   target_link_libraries(${VM_EXECUTABLE_NAME} "-framework CoreGraphics")
+   target_link_libraries(${VM_LIBRARY_NAME} "-framework CoreGraphics")
 endmacro()
