@@ -34,10 +34,6 @@
 
 int sqVMOptionTraceModuleLoading = 0;
 
-static void *loadModuleHandle(const char *fileName);
-static sqInt freeModuleHandle(void *module);
-static void *getModuleSymbol(void *module, const char *symbol);
-
 const char *moduleNamePatterns[] = {
     "%s%s",
 #if defined(WIN64)
