@@ -1,208 +1,466 @@
 #include "pharo.h"
 #include "parameters.h"
-#include <getopt.h>
-#include <unistd.h>
 #include "debug.h"
+#include "pathUtilities.h"
+#include <assert.h>
 
-void printVersion();
-void printUsage();
+typedef VMErrorCode (*vm_parameter_process_function)(const char *argument);
 
-int findImageNameIndex(int argc, char* argv[]){
+typedef struct VMParameterSpec_
+{
+	const char *name;
+	bool hasArgument;
+	vm_parameter_process_function function;
+} VMParameterSpec;
 
-	//The first parameters is the executable name
-	for(int i=1; i < argc; i ++){
-		if(strcmp(argv[i], "--") == 0 || (strncmp("--",argv[i],2) != 0)){
-			return i;
+void vm_printUsageTo(FILE *out);
+static VMErrorCode processHelpOption(const char *argument);
+static VMErrorCode processPrintVersionOption(const char *argument);
+static VMErrorCode processLogLevelOption(const char *argument);
+
+static const VMParameterSpec vm_parameters_spec[] =
+{
+	{.name = "headless", .hasArgument = false, .function = NULL},
+	{.name = "interactive", .hasArgument = false, .function = NULL}, // For pharo-ui scripts.
+	{.name = "vm-display-null", .hasArgument = false, .function = NULL}, // For Smalltalk CI.
+	{.name = "help", .hasArgument = false, .function = processHelpOption},
+	{.name = "h", .hasArgument = false, .function = processHelpOption},
+	{.name = "version", .hasArgument = false, .function = processPrintVersionOption},
+	{.name = "logLevel", .hasArgument = true, .function = processLogLevelOption},
+
+#ifdef __APPLE__
+	// This parameter is passed by the XCode debugger.
+	{.name = "NSDocumentRevisionsDebugMode", .hasArgument = false, .function = NULL},
+#endif
+};
+
+// TODO: Turn this array size computation into a macro.
+static const size_t vm_parameters_spec_size = sizeof(vm_parameters_spec) / sizeof(vm_parameters_spec[0]);
+
+/**
+ * Folder search suffixes for finding images.
+ */
+static const char * const vm_image_search_suffixes[] = {
+	DEFAULT_IMAGE_NAME,
+
+#ifdef __APPLE__
+	"../Resources/" DEFAULT_IMAGE_NAME,
+	"../../../" DEFAULT_IMAGE_NAME,
+#endif
+};
+
+static const size_t vm_image_search_suffixes_count = sizeof(vm_image_search_suffixes) / sizeof(vm_image_search_suffixes[0]);
+
+static const VMParameterSpec*
+findParameterWithName(const char *argumentName, size_t argumentNameSize)
+{
+	for(size_t i = 0; i < vm_parameters_spec_size; ++i) {
+		const VMParameterSpec *paramSpec = &vm_parameters_spec[i];
+		if(strlen(paramSpec->name) == argumentNameSize &&
+		   strncmp(paramSpec->name, argumentName, argumentNameSize) == 0) {
+	        return paramSpec;
 		}
 	}
-
-	// I didn't find it.
-	return argc;
+	return NULL;
 }
 
-void splitVMAndImageParameters(int argc, char* argv[], VM_PARAMETERS* parameters){
+static int
+findParameterArity(const char *parameter)
+{
+	if(*parameter != '-') return 0;
 
-	int imageNameIndex = findImageNameIndex(argc, argv);
-	int numberParametersVM = imageNameIndex;
-	int numberImageParameters = argc - imageNameIndex - 1;
-
-	if(numberImageParameters < 0)
-		numberImageParameters = 0;
-
-	//We get the image file name
-	if(imageNameIndex == argc || strcmp("--", argv[imageNameIndex]) == 0){
-		parameters->imageFile = DEFAULT_IMAGE_NAME;
-		parameters->isDefaultImage = true;
-		parameters->hasBeenSelectedByUser = false;
-	}else{
-		parameters->imageFile = argv[imageNameIndex];
-		parameters->isDefaultImage = false;
-		parameters->hasBeenSelectedByUser = false;
+	// Ignore the preceding hyphens
+	++parameter;
+	if(*parameter == '-')
+	{
+		++parameter;
 	}
 
-	//Copy image parameters
+	// Does the parameter have an equal (=)?
+	if(strchr(parameter, '=') != NULL) return 0;
 
-	parameters->imageParams = malloc(sizeof(void*) * numberImageParameters);
-	parameters->imageParamsCount = numberImageParameters;
-	for(int i=0; i < numberImageParameters; i++){
-		parameters->imageParams[i] = argv[imageNameIndex + i + 1];
-	}
+	// Find the parameter spec.
+	const VMParameterSpec* spec = findParameterWithName(parameter, strlen(parameter));
+	if(!spec) return 0;
 
-	//Copy vm parameters
-	//We have to guarantee that the VM parameters includes --headless
-	//As it is checked by the image.
-
-	parameters->vmParams = malloc(sizeof(void*) * (numberParametersVM +1));
-	parameters->vmParamsCount = numberParametersVM + 1;
-	for(int i=0; i < numberParametersVM; i++){
-		parameters->vmParams[i] = argv[i];
-	}
-	parameters->vmParams[numberParametersVM] = "--headless";
+	return spec->hasArgument ? 1 : 0;
 }
 
 
-void logParameters(VM_PARAMETERS* parameters){
-	char buffer[4096];
-
-	logDebug("ImageFile: %s", parameters->imageFile);
-	logDebug("Is default Image: %d", parameters->isDefaultImage);
-	logDebug("Has been selected: %d", parameters->hasBeenSelectedByUser);
-
-	logDebug("vmParamsCount: %d", parameters->vmParamsCount);
-
-	buffer[0] = 0;
-	for(int i=0; i < parameters->vmParamsCount; i++){
-		strcat(buffer, parameters->vmParams[i]);
-		strcat(buffer, " ");
-	}
-
-	logDebug("vmParams: %s", buffer);
-
-	logDebug("imageParamsCount: %d", parameters->imageParamsCount);
-
-	buffer[0] = 0;
-	for(int i=0; i < parameters->imageParamsCount; i++){
-		strcat(buffer, parameters->imageParams[i]);
-		strcat(buffer, " ");
-	}
-
-	logDebug("imageParams: %s", buffer);
-}
-
-int isConsole(){
-#if WIN64
+// FIXME: This should be provided by the client.
+static int
+isInConsole()
+{
+#ifdef _WIN32
 	return GetStdHandle(STD_INPUT_HANDLE) != NULL;
 #else
 	return false;
 #endif
 }
 
-void processImageFileName(VM_PARAMETERS* parameters){
-	if(parameters->isDefaultImage){
-		if(!fileExists(parameters->imageFile)){
-			if(!openFileDialog("Choose image file", "", "image", &(parameters->imageFile), DEFAULT_IMAGE_NAME)){
-				printUsage();
-				exit(1);
-			}
+VMErrorCode
+vm_parameters_destroy(VMParameters *parameters)
+{
+	if(!parameters) return VM_ERROR_NULL_POINTER;
 
-			parameters->hasBeenSelectedByUser = true;
+	free(parameters->imageFileName);
+	vm_parameter_vector_destroy(&parameters->vmParameters);
+	vm_parameter_vector_destroy(&parameters->imageParameters);
+	memset(parameters, 0, sizeof(VMParameters));
+	return VM_SUCCESS;
+}
+
+VMErrorCode
+vm_find_startup_image(const char *vmExecutablePath, VMParameters *parameters)
+{
+    char *imagePathBuffer = (char*)calloc(1, FILENAME_MAX+1);
+    char *vmPathBuffer = (char*)calloc(1, FILENAME_MAX+1);
+    char *searchPathBuffer = (char*)calloc(1, FILENAME_MAX+1);
+
+	if(!imagePathBuffer || !vmPathBuffer || !searchPathBuffer)
+	{
+		free(imagePathBuffer);
+		free(vmPathBuffer);
+		free(searchPathBuffer);
+		return VM_ERROR_OUT_OF_MEMORY;
+	}
+
+	// Find the VM absolute directory.
+	vm_path_make_absolute_into(searchPathBuffer, FILENAME_MAX+1, vmExecutablePath);
+    if(fileExists(searchPathBuffer))
+	{
+		vm_path_extract_dirname_into(vmPathBuffer, FILENAME_MAX+1, searchPathBuffer);
+	}
+    else
+	{
+        strncpy(vmPathBuffer, vmExecutablePath, FILENAME_MAX);
+		vmPathBuffer[FILENAME_MAX] = 0;
+	}
+
+	// Find the image in the different search directory suffixes.
+	for(size_t i = 0; i < vm_image_search_suffixes_count; ++i)
+	{
+		const char *searchSuffix = vm_image_search_suffixes[i];
+		vm_path_join_into(imagePathBuffer, FILENAME_MAX+1, vmPathBuffer, searchSuffix);
+	    if(fileExists(imagePathBuffer))
+		{
+			parameters->imageFileName = imagePathBuffer;
+			parameters->isDefaultImage = true;
+			parameters->defaultImageFound = true;
+	        free(vmPathBuffer);
+	        free(searchPathBuffer);
+	        return VM_SUCCESS;
 		}
-		//If there are no parameters, we are next to the launch of the VM, we need to add the interactive flag
-		//As we always have two parameters (the --headless)
-		if(parameters->vmParamsCount == 2 && parameters->imageParamsCount == 0 && !isConsole()){
-			parameters->imageParams = malloc(sizeof(void*));
-			parameters->imageParamsCount = 1;
-			parameters->imageParams[0] = "--interactive";
+	}
+
+	// Find the image in the current work directory.
+	vm_path_get_current_working_dir_into(searchPathBuffer, FILENAME_MAX+1);
+	vm_path_join_into(imagePathBuffer, FILENAME_MAX+1, searchPathBuffer, DEFAULT_IMAGE_NAME);
+	free(vmPathBuffer);
+	free(searchPathBuffer);
+	if(fileExists(imagePathBuffer))
+	{
+		parameters->imageFileName = imagePathBuffer;
+		parameters->isDefaultImage = true;
+		parameters->defaultImageFound = true;
+		return VM_SUCCESS;
+	}
+
+	free(imagePathBuffer);
+	parameters->imageFileName = strdup(DEFAULT_IMAGE_NAME);
+	parameters->isDefaultImage = true;
+	parameters->defaultImageFound = false;
+	return VM_SUCCESS;
+}
+
+static int
+findImageNameIndex(int argc, const char** argv)
+{
+	//The first parameters is the executable name
+	for(int i=1; i < argc; i ++)
+	{
+		const char *argument = argv[i];
+
+		// Is this a mark for where the image parameters begins?
+		if(strcmp(argument, "--") == 0)
+		{
+			return i;
 		}
+
+		// Is this an option?
+		if(*argv[i] == '-') {
+			i += findParameterArity(argument);
+			continue;
+		}
+
+		// This must be the first non vmoption argument, so this must be the image.
+		return i;
+	}
+
+	// I could not find it.
+	return argc;
+}
+
+static VMErrorCode
+splitVMAndImageParameters(int argc, const char** argv, VMParameters* parameters)
+{
+	VMErrorCode error;
+	int imageNameIndex = findImageNameIndex(argc, argv);
+	int numberOfVMParameters = imageNameIndex;
+	int numberOfImageParameters = argc - imageNameIndex - 1;
+
+	if(numberOfImageParameters < 0)
+		numberOfImageParameters = 0;
+
+	// We get the image file name
+	if(imageNameIndex == argc || strcmp("--", argv[imageNameIndex]) == 0) {
+		error = vm_find_startup_image(argv[0], parameters);
+		if(error)
+		{
+			return error;
+		}
+	}
+	else
+	{
+		parameters->imageFileName = strdup(argv[imageNameIndex]);
+		parameters->isDefaultImage = false;
+	}
+
+	// Copy image parameters.
+	error = vm_parameter_vector_insert_from(&parameters->imageParameters, numberOfImageParameters, &argv[imageNameIndex + 1]);
+	if(error)
+	{
+		vm_parameters_destroy(parameters);
+		return error;
+	}
+
+	// Copy the VM parameters.
+	error = vm_parameter_vector_insert_from(&parameters->vmParameters, numberOfVMParameters, argv);
+	if(error)
+	{
+		vm_parameters_destroy(parameters);
+		return error;
+	}
+
+	// Add additional VM parameters.
+	const char *extraVMParameters = "--headless";
+	error = vm_parameter_vector_insert_from(&parameters->vmParameters, 1, &extraVMParameters);
+	if(error)
+	{
+		vm_parameters_destroy(parameters);
+		return error;
+	}
+
+	return VM_SUCCESS;
+}
+
+static void
+logParameterVector(const char* vectorName, const VMParameterVector *vector)
+{
+	logDebug("%s [count = %u]:", vectorName, vector->count);
+	for(size_t i = 0; i < vector->count; ++i)
+	{
+		logDebug(" %s", vector->parameters[i]);
 	}
 }
 
-void printUsage(){
-	printf("Usage: %s [<option>...] [<imageName> [<argument>...]]\n", VM_NAME);
-	printf("       %s [<option>...] -- [<argument>...]\n", VM_NAME);
-	printf("\n");
-	printf("Common <option>s:\n");
-	printf("  --help                 print this help message, then exit\n");
-	printf("  --headless             run in headless (no window) mode (default: true)\n");
-	printf("  --logLevel=<level>     Sets the log level (ERROR, WARN, INFO or DEBUG)\n");
-	printf("  --version              print version information, then exit\n");
-	printf("\n");
-	printf("Notes:\n");
-	printf("\n");
-	printf("  <imageName> defaults to `Pharo.image'.\n");
-	printf("  <argument>s are ignored, but are processed by the Pharo image.\n");
-	printf("  Precede <arguments> by `--' to use default image.\n");
+static void
+logParameters(const VMParameters* parameters)
+{
+	logDebug("Image file name: %s", parameters->imageFileName);
+	logDebug("Is default Image: %s", parameters->isDefaultImage ? "yes" : "no");
+	logDebug("Is interactive session: %s", parameters->isInteractiveSession ? "yes" : "no");
+
+	logParameterVector("vmParameters", &parameters->vmParameters);
+	logParameterVector("imageParameters", &parameters->imageParameters);
 }
 
-typedef void (*OPTION_PROCESS_FUNCTION)(char*);
+VMErrorCode
+vm_parameters_ensure_interactive_image_parameter(VMParameters* parameters)
+{
+	if (parameters->isInteractiveSession)
+	{
+		if (!vm_parameter_vector_has_element(&parameters->imageParameters, "--interactive"))
+		{
+			const char* interactiveParameter = "--interactive";
+			VMErrorCode error = vm_parameter_vector_insert_from(&parameters->imageParameters, 1, &interactiveParameter);
+			if (error) return error;
+		}
+	}
 
-void processLogLevelOption(char* value){
+	return VM_SUCCESS;
+}
 
+void
+vm_printUsageTo(FILE *out)
+{
+	fprintf(out,
+"Usage: " VM_NAME " [<option>...] [<imageName> [<argument>...]]\n"
+"       " VM_NAME " [<option>...] -- [<argument>...]\n"
+"\n"
+"Common <option>s:\n"
+"  --help                 print this help message, then exit\n"
+"  --headless             run in headless (no window) mode (default: true)\n"
+"  --logLevel=<level>     Sets the log level (ERROR, WARN, INFO or DEBUG)\n"
+"  --version              print version information, then exit\n"
+"\n"
+"Notes:\n"
+"\n"
+"  <imageName> defaults to `Pharo.image'.\n"
+"  <argument>s are ignored, but are processed by the Pharo image.\n"
+"  Precede <arguments> by `--' to use default image.\n");
+}
+
+static VMErrorCode
+processLogLevelOption(const char* value)
+{
 	int intValue = 0;
 
 	intValue = strtol(value, NULL, 10);
 
-	if(intValue == 0){
-		printf("Invalid option for logLevel: %s\n", value);
-		printUsage();
-		exit(1);
+	if(intValue == 0)
+	{
+		fprintf(stderr, "Invalid option for logLevel: %s\n", value);
+		vm_printUsageTo(stderr);
+		return VM_ERROR_INVALID_PARAMETER_VALUE;
 	}
 
 	logLevel(intValue);
+	return VM_SUCCESS;
 }
 
-void processHelpOption(char* value){
-	printUsage();
-	exit(0);
+static VMErrorCode
+processHelpOption(const char* argument)
+{
+	(void)argument;
+	vm_printUsageTo(stdout);
+	return VM_ERROR_EXIT_WITH_SUCCESS;
 }
 
-void processPrintVersionOption(char* value){
-	printVersion();
-	exit(0);
+static VMErrorCode
+processPrintVersionOption(const char* argument)
+{
+	(void)argument;
+	printf("%s\n", getVMVersion());
+	printf("Built from: %s\n", getSourceVersion());
+	return VM_ERROR_EXIT_WITH_SUCCESS;
 }
 
-static struct option long_options[] = {
-	{"headless", no_argument, 0,  0 },
-	{"help", no_argument, 0,  0 },
-	{"logLevel", required_argument, 0, 0},
-	{"version", no_argument, 0, 0},
-	{0, 0, 0,  0 }
-};
-
-static OPTION_PROCESS_FUNCTION optionHandlers[] = {0, processHelpOption, processLogLevelOption, processPrintVersionOption};
-
-void processVMOptions(VM_PARAMETERS* parameters){
-
-	int option_index = 0;
-	char r;
-	OPTION_PROCESS_FUNCTION processFunction;
-
-
-	while((r = getopt_long(parameters->vmParamsCount, parameters->vmParams, "", long_options, &option_index))!=-1){
-		// We have an invalid option
-		if(r == '?'){
-			printUsage();
-			exit(1);
+static VMErrorCode
+processVMOptions(VMParameters* parameters)
+{
+	VMParameterVector *vector = &parameters->vmParameters;
+	for(size_t i = 1; i < vector->count; ++i)
+	{
+		const char *param = vector->parameters[i];
+		if(!param)
+		{
+			break;
 		}
 
-		if(optionHandlers[option_index])
-			optionHandlers[option_index](optarg);
+		// We only care about specific parameters here.
+		if(*param != '-')
+		{
+			continue;
+		}
+
+#ifdef __APPLE__
+		// Ignore the process serial number special argument passed to OS X applications.
+		if(strncmp(param, "-psn_", 5) == 0)
+		{
+			continue;
+		}
+#endif
+
+		// Ignore the leading dashes (--)
+		const char *argumentName = param + 1;
+		if(*argumentName == '-')
+		{
+			++argumentName;
+		}
+
+		// Find the argument value.
+		const char *argumentValue = strchr(argumentName, '=');
+		size_t argumentNameSize = strlen(argumentName);
+		if(argumentValue != NULL)
+		{
+			argumentNameSize = argumentValue - argumentName;
+			++argumentValue;
+		}
+
+		// Find a matching parameter
+		const VMParameterSpec *paramSpec = findParameterWithName(argumentName, argumentNameSize);
+		if(!paramSpec)
+		{
+			fprintf(stderr, "Invalid or unknown VM parameter %s\n", param);
+			vm_printUsageTo(stderr);
+			return VM_ERROR_INVALID_PARAMETER;
+		}
+
+		// If the parameter has a required argument, it may be passed as the next parameter in the vector.
+		if(paramSpec->hasArgument)
+		{
+			// Try to fetch the argument from additional means
+			if(argumentValue == NULL)
+			{
+				if(i + 1 < vector->count)
+				{
+					argumentValue = vector->parameters[++i];
+				}
+			}
+
+			// Make sure the argument value is present.
+			if(argumentValue == NULL)
+			{
+				fprintf(stderr, "VM parameter %s requires a value\n", param);
+				vm_printUsageTo(stderr);
+				return VM_ERROR_INVALID_PARAMETER_VALUE;
+			}
+		}
+
+		// Invoke the VM parameter processing function.
+		if(paramSpec->function)
+		{
+			VMErrorCode error = paramSpec->function(argumentValue);
+			if(error) return error;
+		}
 	}
+
+	return VM_SUCCESS;
 }
 
-void parseArguments(int argc, char* argv[], VM_PARAMETERS* parameters){
+EXPORT(VMErrorCode)
+vm_parameters_parse(int argc, const char** argv, VMParameters* parameters)
+{
 	char* fullPath;
 
-	splitVMAndImageParameters(argc, argv, parameters);
+	// Split the argument vector in two separate vectors.
+	VMErrorCode error = splitVMAndImageParameters(argc, argv, parameters);
+	if(error) return error;
 
-	//I get the VM location from the argv[0]
-	fullPath = alloca(FILENAME_MAX);
-	fullPath = getFullPath(argv[0], fullPath, FILENAME_MAX);
+	// Is this an interactive environment?
+	parameters->isInteractiveSession = !isInConsole() && parameters->isDefaultImage;
+
+	// I get the VM location from the argv[0]
+	char *fullPathBuffer = (char*)calloc(1, FILENAME_MAX);
+	if(!fullPathBuffer)
+	{
+		vm_parameters_destroy(parameters);
+		return VM_ERROR_OUT_OF_MEMORY;
+	}
+
+	fullPath = getFullPath(argv[0], fullPathBuffer, FILENAME_MAX);
 	setVMPath(fullPath);
+	free(fullPathBuffer);
 
-	processImageFileName(parameters);
-
-	processVMOptions(parameters);
+	error = processVMOptions(parameters);
+	if(error)
+	{
+		vm_parameters_destroy(parameters);
+		return error;
+	}
 
 	logParameters(parameters);
+
+	return VM_SUCCESS;
 }

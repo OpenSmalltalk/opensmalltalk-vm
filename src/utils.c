@@ -257,7 +257,8 @@ char* getImageArgument(int index){
 	return imageParams[index];
 }
 
-void copyParams(int newCount, char** new, int* oldCount, char*** old){
+static void
+copyParams(int newCount, const char** new, int* oldCount, char*** old){
 
 	//Releasing the old params
 	if(*oldCount > 0){
@@ -279,8 +280,8 @@ void copyParams(int newCount, char** new, int* oldCount, char*** old){
 	}
 }
 
-
-void setPharoCommandLineParameters(char** newVMParams, int newVMParamsCount, char** newImageParams, int newImageParamsCount){
+void
+setPharoCommandLineParameters(const char** newVMParams, int newVMParamsCount, const char** newImageParams, int newImageParamsCount){
 	copyParams(newVMParamsCount, newVMParams, &vmParamsCount, &vmParams);
 	copyParams(newImageParamsCount, newImageParams, &imageParamsCount, &imageParams);
 }
@@ -579,15 +580,15 @@ EXPORT(void) getBasePath(char const *path, char* basePath, int basePathSize){
 }
 
 int vmProcessArgumentCount = 0;
-char ** vmProcessArgumentVector = NULL;
-char ** vmProcessEnvironmentVector = NULL;
+const char ** vmProcessArgumentVector = NULL;
+const char ** vmProcessEnvironmentVector = NULL;
 
-EXPORT(void) setProcessArguments(int count, char** args){
+EXPORT(void) setProcessArguments(int count, const char** args){
 	vmProcessArgumentCount = count;
 	vmProcessArgumentVector = args;
 }
 
-EXPORT(void) setProcessEnvironmentVector(char** environment){
+EXPORT(void) setProcessEnvironmentVector(const char** environment){
 	vmProcessEnvironmentVector = environment;
 }
 
@@ -595,10 +596,10 @@ EXPORT(int) getProcessArgumentCount(){
 	return vmProcessArgumentCount;
 }
 
-EXPORT(char**) getProcessArgumentVector(){
+EXPORT(const char**) getProcessArgumentVector(){
 	return vmProcessArgumentVector;
 }
 
-EXPORT(char **) getProcessEnvironmentVector(){
+EXPORT(const char **) getProcessEnvironmentVector(){
 	return vmProcessEnvironmentVector;
 }

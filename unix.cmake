@@ -19,12 +19,13 @@ set(EXTRACTED_SOURCES
 #Virtual Memory functions
     ${CMAKE_CURRENT_SOURCE_DIR}/src/memoryUnix.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/aioUnix.c
+
+# Support sources
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/fileDialogUnix.c
 )
 
 set(VM_FRONTEND_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/parameters.c    
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/unixOpenFileDialog.c)
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/unixMain.c)
 
 
 macro(add_third_party_dependencies_per_platform)

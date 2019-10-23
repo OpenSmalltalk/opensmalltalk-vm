@@ -101,7 +101,7 @@ elseif(UNIX)
     set(CMAKE_CURRENT_SOURCE_DIR_TO_OUT ${CMAKE_CURRENT_SOURCE_DIR})
     set(CMAKE_CURRENT_BINARY_DIR_TO_OUT ${CMAKE_CURRENT_BINARY_DIR})
 
-    set(COMMON_FLAGS "")
+    set(COMMON_FLAGS "-Wall")
 
     add_definitions(-DLSB_FIRST=1)
 
@@ -263,8 +263,9 @@ include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/include
 )
 
+set(VM_FRONTEND_APPLICATION_TYPE)
 if(WIN)
-    include(win.cmake)
+    include(win32.cmake)
 elseif(OSX)
     include(osx.cmake)
 elseif(UNIX)
@@ -276,18 +277,24 @@ set(GENERATED_SOURCES ${VMSOURCEFILES})
 set(SUPPORT_SOURCES
 	${CMAKE_CURRENT_SOURCE_DIR}/src/debug.c
 	${CMAKE_CURRENT_SOURCE_DIR}/src/utils.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/errorCode.c
 	${CMAKE_CURRENT_SOURCE_DIR}/src/nullDisplay.c
 	${CMAKE_CURRENT_SOURCE_DIR}/src/externalPrimitives.c
 	${CMAKE_CURRENT_SOURCE_DIR}/src/client.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pathUtilities.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/parameterVector.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/parameters.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/fileDialogCommon.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/stringUtilities.c
 )
 
 set(VM_SOURCES
-	${SUPPORT_SOURCES}
-  ${GENERATED_SOURCES}
-	${EXTRACTED_SOURCES}
+    ${SUPPORT_SOURCES}
+    ${GENERATED_SOURCES}
+    ${EXTRACTED_SOURCES}
 )
 
-add_executable(${VM_EXECUTABLE_NAME} ${VM_FRONTEND_SOURCES})
+add_executable(${VM_EXECUTABLE_NAME} ${VM_FRONTEND_APPLICATION_TYPE} ${VM_FRONTEND_SOURCES})
 addLibraryWithRPATH(${VM_LIBRARY_NAME} ${VM_SOURCES})
 
 #If in OSX, configure creation of Bundle
@@ -331,7 +338,7 @@ install(FILES
   DESTINATION include
   COMPONENT include)
 
-# Packaging Setup 
+# Packaging Setup
 
 make_directory("build/packages")
 
