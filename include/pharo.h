@@ -74,4 +74,9 @@ EXPORT(int) getProcessArgumentCount();
 EXPORT(const char**) getProcessArgumentVector();
 EXPORT(const char**) getProcessEnvironmentVector();
 
+void * loadModuleHandle(const char *fileName);
+sqInt freeModuleHandle(void *module);
+void *getModuleSymbol(void *module, const char *symbol);
+
+
 #endif //PHAROVM_PHARO_H
