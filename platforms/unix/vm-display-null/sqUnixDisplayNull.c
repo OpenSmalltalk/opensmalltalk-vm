@@ -6,9 +6,9 @@
 
 static char *display_winSystemName(void) { return "none"; }
 static void  display_winInit(void) {}
-static void  display_winOpen(void) {}
+static void  display_winOpen(int ignored,char **ignored2) {}
 static void  display_winSetName(char *title) {}
-static long  display_winImageFind(char *imageName, long size) { return 0; }
+static long  display_winImageFind(char *imageName, int size) { return 0; }
 static void  display_winImageNotFound(void) {}
 static void  display_winExit(void) {}
 

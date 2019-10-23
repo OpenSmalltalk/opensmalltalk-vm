@@ -5106,6 +5106,7 @@ static sqInt display_ioSetCursorWithMaskBig(sqInt cursorBitsIndex, sqInt cursorM
   if (cursorMaskIndex == null)
     cursorMask= cursorBits;
 
+  d=m=0; /* Note: this is not strictly necessary since all 32 bits will be shifted away, but it avoids compiler warning */
   for (i= 0; i < 32; i++)
     {
       for (j= 0; j < 32; j++)
@@ -7204,7 +7205,7 @@ static long display_hostWindowCreate(long w, long h, long x, long y, char *list,
 static long display_hostWindowClose(long index)                                               { return 0; }
 static long display_hostWindowCloseAll(void)                                                 { return 0; }
 static long display_hostWindowShowDisplay(unsigned *dispBitsIndex, long width, long height, long depth,
-					 int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex)
+					 long affectedL, long affectedR, long affectedT, long affectedB, long windowIndex)
 											    { return 0; }
 
 /* By convention for HostWindowPlugin, handle 1 refers to the display window */
@@ -7368,7 +7369,7 @@ static void display_winExit(void)
 }
 
 
-static long  display_winImageFind(char *buf, long len)	{ return 0; }
+static long  display_winImageFind(char *buf, int len)	{ return 0; }
 static void display_winImageNotFound(void)		{}
 
 #if SqDisplayVersionMajor >= 1 && SqDisplayVersionMinor >= 3
