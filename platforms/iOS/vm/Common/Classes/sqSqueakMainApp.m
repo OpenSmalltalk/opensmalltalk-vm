@@ -257,7 +257,7 @@ printRegisterState(ucontext_t *uap)
 			"\tr12 0x%016llx r13 0x%016llx r14 0x%016llx r15 0x%016llx\n"
 			"\trip 0x%016llx\n",
 			regs->__rax, regs->__rbx, regs->__rcx, regs->__rdx,
-			regs->__rdi, regs->__rdi, regs->__rbp, regs->__rsp,
+			regs->__rdi, regs->__rsi, regs->__rbp, regs->__rsp,
 			regs->__r8 , regs->__r9 , regs->__r10, regs->__r11,
 			regs->__r12, regs->__r13, regs->__r14, regs->__r15,
 			regs->__rip);
