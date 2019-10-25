@@ -3,10 +3,7 @@ set -e
 # Spur VM with VM profiler and itimer heartbeat
 INSTALLDIR=nscogspur64linux
 # Some gcc versions create a broken VM using -O2
-case $(c99 -dumpversion) in
-3.4.*)	OPT="-g -O1 -fwrapv -DNDEBUG -DDEBUGVM=0";;
-*)		OPT="-g -O2 -DNDEBUG -DDEBUGVM=0";;
-esac
+OPT="-g -O2 -DNDEBUG -DDEBUGVM=0"
 
 if [ $# -ge 1 ]; then
 	case "$1" in
@@ -29,6 +26,7 @@ test -f config.h || ../../../platforms/unix/config/configure \
 		--with-src=nsspur64src \
 		--without-vm-display-fbdev --without-npsqueak \
 	TARGET_ARCH="-m64" \
+	CC=clang \
 	CFLAGS="$OPT -msse2 -DITIMER_HEARTBEAT=1"
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../products/$INSTALLDIR
