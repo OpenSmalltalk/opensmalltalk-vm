@@ -41,4 +41,4 @@
 
 int aioPoll(int microSeconds);
 void aioInit(void);
-int aioSleep(int microSeconds);
+long aioSleepForUsecs(long microSeconds);

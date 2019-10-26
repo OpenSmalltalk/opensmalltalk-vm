@@ -145,8 +145,8 @@ ioUTCSeconds(void)
  * On Unix use dpy->ioRelinquishProcessorForMicroseconds
  */
 #if macintoshSqueak
-int
-ioRelinquishProcessorForMicroseconds(int microSeconds)
+sqInt
+ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 {
     usqLong	realTimeToWait;
 	extern usqLong getNextWakeupUsecs();

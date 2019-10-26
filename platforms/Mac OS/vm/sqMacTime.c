@@ -94,23 +94,26 @@ ioSeconds(void) {
     return unixTime + ((52*365UL + 17*366UL) * 24*60*60UL);
 }
 
-int ioRelinquishProcessorForMicroseconds(int microSeconds) {
+sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds) {
 	/* This operation is platform dependent. 	 */
 
-    long	   realTimeToWait,now;
-	extern int getNextWakeupTick();
+    usqLong	   realTimeToWait,now;
+	extern usqLong getNextWakeupUsecs();
 
     now = (ioMSecs() & MillisecondClockMask);
-    if (getNextWakeupTick() <= now)
-        if (getNextWakeupTick() == 0)
+    if (getNextWakeupUsecs() <= now) {
+        if (getNextWakeupUsecs() == 0)
             realTimeToWait = microSeconds;
-        else {
+        else
             return 0;
     }
-    else
-        realTimeToWait = (getNextWakeupTick() - now) * 1000; 
+    else {
+        realTimeToWait = getNextWakeupUsecs() - now; 
+		if ( realTimeToWait > microSeconds )
+			realTimeToWait = microSeconds;
+	}
 
-	aioSleepForUsecs(realTimeToWait);
+	aioSleepForUsecs((long)realTimeToWait);
 
 	return 0;
 }

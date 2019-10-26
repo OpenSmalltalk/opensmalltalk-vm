@@ -55,7 +55,7 @@ void aioInit(void) {
 
 }
 
-sqInt aioSleepForUsecs(sqInt microSeconds)
+long aioSleepForUsecs(long microSeconds)
 {
 #if defined(HAVE_NANOSLEEP)
     if (microSeconds < (1000000/60))	/* < 1 timeslice? */
@@ -70,20 +70,6 @@ sqInt aioSleepForUsecs(sqInt microSeconds)
 }
 
 
-/* sleep for microSeconds*/
-
-sqInt aioSleep(sqInt microSeconds)
-{
-#if defined(HAVE_NANOSLEEP)
-	if (microSeconds < (1000000/60))	/* < 1 timeslice? */
-	{
-		struct timespec rqtp= { 0, microSeconds * 1000 };
-		struct timespec rmtp;
-		nanosleep(&rqtp, &rmtp);
-	}
-#endif
-	return 0;
-}
 
 void aioEnable(int fd, void *clientData, int flags) {}
 void aioDisable(int fd) {}
