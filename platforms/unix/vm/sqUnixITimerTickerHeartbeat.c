@@ -235,7 +235,7 @@ ioUTCSecondsNow(void) { return currentUTCMicroseconds() / MicrosecondsPerSecond;
 sqInt
 ioRelinquishProcessorForMicroseconds(int microSeconds)
 {
-    long	realTimeToWait;
+    usqLong	realTimeToWait;
 	extern usqLong getNextWakeupUsecs();
 	usqLong nextWakeupUsecs = getNextWakeupUsecs();
 	usqLong utcNow = get64(utcMicrosecondClock);
