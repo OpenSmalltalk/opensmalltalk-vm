@@ -230,9 +230,9 @@ ioUTCSecondsNow(void) { return currentUTCMicroseconds() / MicrosecondsPerSecond;
  */
 #if macintoshSqueak
 sqInt
-ioRelinquishProcessorForMicroseconds(int microSeconds)
+ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 {
-    long	realTimeToWait;
+    usqLong	realTimeToWait;
 	extern usqLong getNextWakeupUsecs();
 	usqLong nextWakeupUsecs = getNextWakeupUsecs();
 	usqLong utcNow = get64(utcMicrosecondClock);

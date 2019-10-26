@@ -357,7 +357,7 @@ static int display_ioBeep(void)
 }
 
 
-static int display_ioRelinquishProcessorForMicroseconds(int microSeconds)
+static sqInt display_ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 {
   return aioPoll(microSeconds);
 }
