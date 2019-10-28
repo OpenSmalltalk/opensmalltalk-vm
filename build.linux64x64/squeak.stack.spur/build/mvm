@@ -2,7 +2,7 @@
 set -e
 # Stack Spur VM with VM profiler and threaded heartbeat
 INSTALLDIR=sqstkspur64linuxht
-OPT="-g -O1 -fwrapv -DNDEBUG -DDEBUGVM=0"
+OPT="-g -O1 -DNDEBUG -DDEBUGVM=0"
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
