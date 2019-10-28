@@ -1,14 +1,14 @@
 #!/bin/bash -e
-case "`uname -m`" in # ensure we see x86 as machine type
-i*86) ;; # we're good
-*) if type i386 2>&1 >/dev/null; then
-	echo "Re-exec as x86"
-	exec i386 "$0" "$@"
+case "`uname -m`" in # ensure we see x86_64 as machine type
+x86_64) ;; # we're good
+*) if type x86_64 2>&1 >/dev/null; then
+	echo "Re-exec as x86"_64
+	exec x86_64 "$0" "$@"
 fi ;;
 esac
 # assert VM with VM profiler and itimer heartbeat
 INSTALLDIR=assert/phphcogspurlinux
-OPT="-g3 -O1 -fwrapv -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -DDEBUGVM=0"
+OPT="-g3 -O1 -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -DDEBUGVM=0"
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
@@ -26,8 +26,8 @@ test -f plugins.ext || (test -f ../plugins.ext && cp -p ../plugins.ext . || cp -
 test -f config.h || ../../../platforms/unix/config/configure --without-npsqueak \
 		--with-vmversion=5.0 \
 		--with-src=spursrc \
-	CC="gcc -m32" \
-	CXX="g++ -m32" \
+	CC="clang" \
+	CXX="clang++" \
 	CFLAGS="$OPT -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DCOGMTVM=0 -DITIMER_HEARTBEAT=1" \
 	LIBS="-lpthread -luuid -Wl,-rpath,'\$\$ORIGIN' " \
 	LDFLAGS=-Wl,-z,now
