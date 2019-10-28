@@ -36,6 +36,7 @@ test -f config.h || ../../../platforms/unix/config/configure --without-npsqueak 
 		--with-vmversion=5.0 \
 		--with-src=spur64src \
 	TARGET_ARCH="-m64" \
+	CC=clang \
 	CFLAGS="$CFLAGS" \
 	LIBS="$LIBS" \
 	LDFLAGS="$LDFLAGS"
