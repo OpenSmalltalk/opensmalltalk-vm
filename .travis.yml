@@ -159,7 +159,7 @@ jobs:
   - env: ARCH="linux32x86" FLAVOR="newspeak.cog.spur"
   - env: ARCH="macos64x64" FLAVOR="newspeak.cog.spur"
   - env: ARCH="macos32x86" FLAVOR="newspeak.cog.spur"
-    env: ARCH="linux64x64" FLAVOR="newspeak.stack.spur"
+  - env: ARCH="linux64x64" FLAVOR="newspeak.stack.spur"
   - env: ARCH="linux32x86" FLAVOR="newspeak.stack.spur"
   - env: ARCH="macos64x64" FLAVOR="newspeak.stack.spur"
   - env: ARCH="macos32x86" FLAVOR="newspeak.stack.spur"

@@ -24,6 +24,7 @@ for lib in ${THIRDPARTYLIBS}; do
 done
 
 LDFLAGS="-L../../../.thirdparty-cache/linux/x86_64/lib" \
+CC=clang \
 CFLAGS="-I../../../.thirdparty-cache/linux/x86_64/include -I../../.thirdparty-cache/linux/x86_64/include/SDL2" \
 	cmake \
 		-DCMAKE_BUILD_TYPE=Debug \

@@ -1,11 +1,11 @@
 #!/bin/bash -e
 # PharoVM with VM profiler and itimer heartbeat
 
-case "`uname -m`" in # ensure we see x86 as machine type
-i*86) ;; # we're good
-*) if type i386 2>&1 >/dev/null; then
-	echo "Re-exec as x86"
-	exec i386 "$0" "$@"
+case "`uname -m`" in # ensure we see x86_64 as machine type
+x86_64) ;; # we're good
+*) if type x86_64 2>&1 >/dev/null; then
+	echo "Re-exec as x86"_64
+	exec x86_64 "$0" "$@"
 fi ;;
 esac
 
@@ -13,11 +13,7 @@ THIRDPARTYLIBS="libsdl2 openssl libssh2 libgit2"
 INSTALLDIR=phcogspurlinux
 
 # Some gcc versions create a broken VM using -O2
-case `gcc -v 2>&1 | grep version | sed 's/gcc version *//'` in
-3.4.*)	OPT="-g -O1 -fwrapv -DNDEBUG -DDEBUGVM=0";;
-*)	OPT="-g -O2 -DNDEBUG -DDEBUGVM=0";;
-esac
-OPT="$OPT -DPharoVM -DIMMUTABILITY=1"
+OPT="-g -O2 -DNDEBUG -DDEBUGVM=0 -DPharoVM -DIMMUTABILITY=1"
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
@@ -43,8 +39,8 @@ done
 test -f config.h || ../../../platforms/unix/config/configure --without-npsqueak \
 		--with-vmversion=5.0 \
 		--with-src=spursrc \
-	CC="gcc -m32" \
-	CXX="g++ -m32" \
+	CC="clang" \
+	CXX="clang++" \
 	CFLAGS="$OPT -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DCOGMTVM=0 -DITIMER_HEARTBEAT=1" \
 	LIBS="-lpthread -luuid -Wl,-rpath,'\$\$ORIGIN' " \
 	LDFLAGS=-Wl,-z,now

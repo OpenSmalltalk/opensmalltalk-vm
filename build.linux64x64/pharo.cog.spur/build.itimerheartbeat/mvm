@@ -4,10 +4,7 @@ set -e
 THIRDPARTYLIBS="libsdl2 openssl libssh2 libgit2"
 INSTALLDIR=phcogspur64linux
 # Some gcc versions create a broken VM using -O2
-case $(c99 -dumpversion) in
-3.4.*)	OPT="-g -O1 -fwrapv -DNDEBUG -DDEBUGVM=0";;
-*)	OPT="-g -O2 -DNDEBUG -DDEBUGVM=0";;
-esac
+OPT="-g -O2 -DNDEBUG -DDEBUGVM=0"
 OPT="$OPT -DPharoVM"
 
 if [ $# -ge 1 ]; then
@@ -36,6 +33,7 @@ test -f config.h || ../../../platforms/unix/config/configure \
 		--with-vmversion=5.0 \
 		--with-src=spur64src \
 	TARGET_ARCH="-m64" \
+	CC=clang \
 	CFLAGS="$OPT -msse2 -DCOGMTVM=0 -DITIMER_HEARTBEAT=1" \
 	LDFLAGS="-Wl,-rpath,'\$\$ORIGIN' "
 rm -f vm/sqUnixMain.o # nuke version info

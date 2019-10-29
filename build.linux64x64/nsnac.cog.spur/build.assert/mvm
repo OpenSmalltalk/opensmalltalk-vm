@@ -2,7 +2,7 @@
 set -e
 # assert Spur VM with VM profiler and threaded heartbeat
 INSTALLDIR=assert/nsnaccogspur64linuxht
-OPT="-g3 -O1 -fwrapv -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -DDEBUGVM=0"
+OPT="-g3 -O1 -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -DDEBUGVM=0"
 
 if [ $# -ge 1 ]; then
 	case "$1" in
@@ -25,6 +25,7 @@ test -f config.h || ../../../platforms/unix/config/configure \
 		--with-src=nsspur64src \
 		--without-vm-display-fbdev --without-npsqueak \
 	TARGET_ARCH="-m64" \
+	CC=clang \
 	CFLAGS="$OPT -DEnforceAccessControl=0 -msse2"
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../products/$INSTALLDIR
