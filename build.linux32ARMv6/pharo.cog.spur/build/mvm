@@ -12,7 +12,7 @@ else
 THIRDPARTYLIBS=
 EXTERNALPLUGINS="plugins.ext"
 fi
-OPT="-g -O2 -fwrapv -DNDEBUG -DDEBUGVM=0 -DPharoVM"
+OPT="-g -O2 -DNDEBUG -DDEBUGVM=0 -DPharoVM"
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift

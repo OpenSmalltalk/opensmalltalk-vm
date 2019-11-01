@@ -9,8 +9,7 @@ fi ;;
 esac
 # debug Spur VM with VM profiler and threaded heartbeat
 INSTALLDIR=debug/phcoglowcodelinuxht
-OPT="-g3 -O0 -fwrapv -DDEBUGVM=1"
-OPT="$OPT -DPharoVM"
+OPT="-g3 -O0 -DDEBUGVM=1 -DPharoVM"
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
