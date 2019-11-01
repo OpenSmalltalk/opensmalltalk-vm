@@ -32,7 +32,7 @@ endif
 CFLAGS:=$(CFLAGS) -DBUILD_FOR_OSX=1 -DUSE_OPENGL=1 -DUSE_CORE_GRAPHICS=1 \
 		-arch $(TARGET_ARCH) \
 		-mmacosx-version-min=$(TARGET_VERSION_MIN) -msse4.2 \
-			-fvisibility=default -fwrapv \
+			-fvisibility=default \
 			-fmacro-backtrace-limit=0 -fdiagnostics-show-note-include-stack \
 			-fmessage-length=0 -fpascal-strings -fasm-blocks -fstrict-aliasing \
 			$(OBJC_CODE_MODEL) \
