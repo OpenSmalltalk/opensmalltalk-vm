@@ -1450,7 +1450,7 @@ void sqSocketSetReusable(SocketPtr s)
 
   if (!socketValid(s)) return;
 
-  memcpy(buf,4,&one);
+  memcpy(buf,&one,4);
   bufSize= 4;
   if (setsockopt(SOCKET(s), SOL_SOCKET, SO_REUSEADDR, buf, bufSize) < 0)
     {
