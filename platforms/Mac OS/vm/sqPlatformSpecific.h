@@ -28,6 +28,7 @@
    Define plugin for Netscape Plugin building, needed for CodeWarrior
 */
 
+# include <stdio.h>
 #ifdef macintoshSqueak
 #if defined(TARGET_API_MAC_CARBON)
 # include <Types.h>
