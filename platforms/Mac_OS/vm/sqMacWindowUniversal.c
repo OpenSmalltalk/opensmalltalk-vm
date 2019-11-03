@@ -265,7 +265,6 @@ static sqInt
 ioSetFullScreenActual(sqInt fullScreen) {
     Rect                screen, workArea;
     int                 width, height, maxWidth, maxHeight;
-    int                 oldWidth, oldHeight;
     static Rect			rememberOldLocation = {0,0,0,0};
     GDHandle            dominantGDevice;
 	windowDescriptorBlock *	targetWindowBlock  = windowBlockFromIndex(1);
