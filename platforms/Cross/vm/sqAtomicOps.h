@@ -31,6 +31,9 @@
 
 #include <limits.h>
 
+# if TARGET_OS_IS_IPHONE
+#include <libkern/OSAtomic.h>  /* For Mac OS atomics ops for SDK 10.4 (Tiger) and above */
+#endif
 
 #if defined(_MSC_VER)
 #include <windows.h> /* for atomic ops */
@@ -85,20 +88,20 @@
 
 # if TARGET_OS_IS_IPHONE
 static inline void
-AtomicSet(uint64_t *target, uint64_t new_value)
+AtomicSet(int64_t *target, int64_t new_value)
 {
 	while (true) {
-		uint64_t old_value = *target;
+		int64_t old_value = *target;
 		if (OSAtomicCompareAndSwap64Barrier(old_value, new_value, target))
 			return;
 	}
 }
 
-static inline uint64_t
-AtomicGet(uint64_t *target)
+static inline int64_t
+AtomicGet(int64_t *target)
 {
 	while (true) {
-		int64 value = *target;
+		int64_t value = *target;
 		if (OSAtomicCompareAndSwap64Barrier(value, value, target))
 			return value;
 	}
@@ -240,7 +243,7 @@ AtomicGet(__int64 *target)
 #undef ATOMICADD16
 
 #if TARGET_OS_IS_IPHONE
-# define sqAtomicAddConst(var,n) (assert(sizeof(var) == 4), OSAtomicAdd32(n,&(var))
+# define sqAtomicAddConst(var,n) assert(sizeof(var) == 4), OSAtomicAdd32(n,&(var))
 
 #elif defined(__GNUC__) || defined(__clang__)
 /* N.B. I know you want to use the intrinsics; they're pretty; they're official;
