@@ -2,7 +2,7 @@
 
 #if defined(TARGET_API_MAC_CARBON)
   /* For Apple's OS X versions of darwin */
-# include <MacTypes.h>
+# include <Carbon/Carbon.h>
 #endif
 #define macintoshSqueak 1
 

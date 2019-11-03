@@ -31,7 +31,7 @@
 # include <stdio.h>
 #ifdef macintoshSqueak
 #if defined(TARGET_API_MAC_CARBON)
-# include <Types.h>
+# include <Carbon/Carbon.h>
 #endif
 #define ENABLE_URL_FETCH
 /* replace the image file manipulation macros with functions */
@@ -106,13 +106,6 @@ extern usqInt sqAllocateMemoryMac(usqInt desiredHeapSize, usqInt minHeapSize);
 #ifdef TARGET_API_MAC_CARBON  
 # undef TARGET_API_MAC_CARBON
 # define TARGET_API_MAC_CARBON 1
-#endif 
-
-#if defined(TARGET_API_MAC_CARBON)
-/* prototypes missing from CW11 headers */
-#include <TextUtils.h>
-void CopyPascalStringToC(ConstStr255Param src, char* dst);
-void CopyCStringToPascal(const char* src, Str255 dst);
 #endif
 
 
