@@ -1,0 +1,13 @@
+# Copied, perhaps edited, from ../src/examplePlugins.ext
+EXTERNAL_PLUGINS = \
+B3DAcceleratorPlugin \
+BochsIA32Plugin \
+BochsX64Plugin \
+CameraPlugin \
+CroquetPlugin \
+GdbARMPlugin \
+Mpeg3Plugin \
+SqueakFFIPrims \
+Squeak3D \
+SqueakSSL \
+UnixOSProcessPlugin

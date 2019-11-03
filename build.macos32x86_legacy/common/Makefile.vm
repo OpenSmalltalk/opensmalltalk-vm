@@ -1,0 +1,287 @@
+#############################################################################
+# Generic Makefile for Mac OS VM 
+# Do make getversion to get makwe -n to work
+#
+# This is designed to be invoked by Makefile in a specific build directory via
+# include ../common/Makefile.app
+#
+# Parameters:
+# VMSRCDIR defines the locaton of the VM source to build.  Required.
+#
+# COGDEFS supply any command-line defines to use, and may be null.
+#
+# The name of the VM to build, e.g. Squeak or "Newspeak Virtual Machine"
+# and its short name, e.g. Squeak or Newspeak, used to choose app icon files.
+
+VM?=Squeak
+SYSTEM?=$(VM)
+
+# PLUGINSRCDIR defines the locaton of the plugin source, the subsets of which
+# selected by plugins.int and plugins.ext will be built.
+
+PLUGINSRCDIR?=../../src/plugins
+
+# CONFIGURATION defines what version of the VM to build, product, assert or
+# debug.  The default is overridden in the mvm script
+
+CONFIGURATION?=product
+
+
+#############################################################################
+# Build directories
+#
+
+ifeq ($(CONFIGURATION),assert)
+	BUILD:=buildast
+else ifeq ($(CONFIGURATION),debug)
+	BUILD:=builddbg
+else # default CONFIGURATION=product
+	BUILD:=build
+endif
+$(shell mkdir -p deps >/dev/null) # deps is the dependencies directory
+BLDDIR:= $(BUILD)
+OBJDIR:= $(BLDDIR)/vm
+
+PLATDIR:=../../platforms
+CROSSDIR:=$(PLATDIR)/Cross/vm
+OSXDIR:=$(PLATDIR)/Mac_OS/vm
+RESDIR:=$(PLATDIR)/Mac_OS/Resources
+OSXCOMMONDIR:=$(PLATDIR)/Mac_OS/vm
+OSXPLUGINSDIR:=$(PLATDIR)/Mac_OS/plugins
+UNIXVMDIR:=$(PLATDIR)/unix/vm
+
+MAKERSRC:=$(wildcard $(VMSRCDIR)/gcc3x-*interp.c $(VMSRCDIR)/cogit.c)
+CROSSSRC:= $(wildcard $(CROSSDIR)/*.c)
+OSXSRC=$(wildcard $(OSXDIR)/*.c) $(wildcard $(OSXDIR)/*.m) 
+UNIXSRC:=$(addprefix $(UNIXVMDIR)/,aio.c sqUnixHeartbeat.c sqUnixSpurMemory.c \
+                     sqUnixThreads.c sqUnixVMProfile.c)
+VMSRC:= $(MAKERSRC) $(CROSSSRC) $(OSXSRC) $(UNIXSRC)
+VMOBJ:=	$(notdir $(VMSRC))
+VMOBJ:=	$(VMOBJ:.c=.o)
+VMOBJ:=	$(VMOBJ:.m=.o)
+VMOBJ:=	$(VMOBJ:.cpp=.o)
+VMOBJ:= $(addprefix $(OBJDIR)/,$(VMOBJ))
+
+SRCDIRS:=$(VMSRCDIR) $(OSXDIR) $(UNIXVMDIR) $(CROSSDIR)
+VPATH:=$(SRCDIRS)
+# Additonal includes are required, eg for SoundPlugin/sqSqueakSoundCoreAudio.h
+PluginIncludes := FilePlugin HostWindowPlugin SoundPlugin DropPlugin SurfacePlugin SocketPlugin
+OSPluginIncludes := FilePlugin HostWindowPlugin SoundPlugin DropPlugin SurfacePlugin SocketPlugin
+SRCDIRS:=$(SRCDIRS) \
+			$(addprefix $(PLATDIR)/Cross/plugins/,$(PluginIncludes)) \
+			$(addprefix $(OSXPLUGINSDIR)/,$(OSPluginIncludes))
+
+# The internal (.lib) and external (.bundle) plugins
+#
+include plugins.int
+include plugins.ext
+
+LIBS:= $(addprefix $(OBJDIR)/, $(addsuffix .lib, $(INTERNAL_PLUGINS)))
+BUNDLES:= $(addprefix $(OBJDIR)/, $(addsuffix .bundle, $(EXTERNAL_PLUGINS)))
+
+# VM config flags.
+ifeq ($(CONFIGURATION),debug)
+OFLAGS:= -g -O0 -fno-omit-frame-pointer
+DEBUGVM=-DDEBUGVM=1
+INTERPFLAGS:=-DAllocationCheckFiller=0xADD4E55 -D'VM_LABEL(foo)=0'
+else ifeq ($(CONFIGURATION),assert)
+OFLAGS:= -g -O1 -fno-omit-frame-pointer
+DEBUGVM=-DDEBUGVM=0
+INTERPFLAGS:=-DAllocationCheckFiller=0xADD4E55 -D'VM_LABEL(foo)=0'
+else # default CONFIGURATION=product
+OFLAGS:= -g -Os
+DEBUGVM=-DDEBUGVM=0 -DNDEBUG=1 # Define NDEBUG for production to exclude asserts
+INTERPFLAGS:=-D'VM_LABEL(foo)=0'
+endif
+
+TZ:=$(shell date +%Z)
+DEFS:=	$(COGDEFS) -DUSE_GLOBAL_STRUCT=0 -DNO_ISNAN=1 \
+		-DUSE_INLINE_MEMORY_ACCESSORS -D'TZ="$(TZ)"' \
+		$(INTERPFLAGS)
+
+# DEFS:=	$(COGDEFS) -DUSE_GLOBAL_STRUCT=0 -DNO_ISNAN=1 \
+# 		-DUSE_CORE_GRAPHICS=1 \
+# 		-DUSE_INLINE_MEMORY_ACCESSORS -D'TZ="$(TZ)"' \
+# 		$(INTERPFLAGS)
+
+XDEFS:=	-DSQUEAK_BUILTIN_PLUGIN
+CFLAGS:= $(OFLAGS) $(COGDEFS) $(DEBUGVM) $(DEFS) $(XDEFS)
+INCLUDES:= $(addprefix -I,. $(SRCDIRS))
+
+#############################################################################
+# Linker settings
+#
+LD:=	 gcc
+
+#############################################################################
+#
+SVNREV:= $(shell sed -e "s/^static.*GitRawRevisionString.*Rev: \([0-9][0-9]*\).*/\\1/p" -e d $(PLATDIR)/Cross/vm/sqSCCSVersion.h)
+
+
+#############################################################################
+# Common build rules
+#
+include ../common/Makefile.rules
+
+svnver:
+	@-echo $(SVNREV)
+
+getversion: $(OSXCOMMONDIR)/version.c deps/version.d $(CROSSDIR)/sqSCCSVersion.h
+	$(CC) -x c -DVERSION_PROGRAM=1 $(ALLFLAGS) $(INCLUDES) $< -o $@
+	$(POSTCOMPILE)
+
+-include deps/version.d
+
+product:
+	$(MAKE) -f $(MAKEFILE_LIST) CONFIGURATION=product $(@,product=) default
+
+assert:
+	$(MAKE) -f $(MAKEFILE_LIST) CONFIGURATION=assert $(@,assert=) default
+
+debug:
+	$(MAKE) -f $(MAKEFILE_LIST) CONFIGURATION=debug $(@,debug=) default
+
+cleanallvm:	cleandeps cleanvm cleanvmast cleanvmdbg cleangv
+
+cleandeps:
+	rm -rf deps
+
+cleanvm:
+	rm -rf sqNamedPrims.h build
+
+cleanvmast:
+	rm -rf sqNamedPrims.h buildast
+
+cleanvmdbg:
+	rm -rf sqNamedPrims.h builddbg
+
+cleangv:
+	rm -rf getversion getversion.*
+
+print-source:
+	$(info ---------------- Makefile.vm sources ------------------)
+	$(info CROSSSRC=$(CROSSSRC))
+	$(info OSXSRC=$(OSXSRC))
+	$(info MAKERSRC=$(MAKERSRC))
+	$(info UNIXSRC=$(UNIXSRC))
+	$(info VMSRC=$(VMSRC))
+
+print-settings:
+	$(info ---------------- Makefile.vm settings ------------------)
+	$(info CONFIGURATION=$(CONFIGURATION))
+	$(info VPATH=$(VPATH))
+	$(info INCLUDES=$(INCLUDES))
+	$(info CFLAGS=$(CFLAGS))
+	$(info INTERNAL_PLUGINS=$(INTERNAL_PLUGINS))
+	$(info EXTERNAL_PLUGINS=$(EXTERNAL_PLUGINS))
+	$(info OBJDIR=$(OBJDIR))
+	$(info LIBS=$(LIBS))
+	$(info BUNDLES=$(BUNDLES))
+	$(info deps=$(patsubst %,deps/%.d,$(notdir $(basename $(VMSRC)))))
+	$(info -----------------------------------------------------)
+
+print-objects:
+	$(info ---------------- Makefile.vm objects ------------------)
+	$(info VMOBJ=$(VMOBJ))
+	$(info -----------------------------------------------------)
+
+ignore := $(addsuffix .%, $(basename $(wildcard $(BUILD)/vm/*.ignore)))
+
+$(OBJDIR)/$(VM): $(OBJDIR) $(VMOBJ) $(LIBS)
+	$(CC) -march=$(TARGET_ARCH) -o $(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -c $(OSXCOMMONDIR)/version.c
+	$(CC) -march=$(TARGET_ARCH) -isysroot $(SDK) $(LDFLAGS) $(FRAMEWORKS) \
+			-o $(OBJDIR)/$(VM) $(VMOBJ) $(filter-out $(call ignore), $(LIBS))
+
+$(OBJDIR):
+	@-mkdir -p $(BLDDIR)
+	mkdir -p $(OBJDIR)
+ifneq ($(INTERNAL_PLUGINS),)
+	mkdir -p $(addprefix $(BLDDIR)/, $(INTERNAL_PLUGINS))
+endif
+ifneq ($(EXTERNAL_PLUGINS),)
+	mkdir -p $(addprefix $(BLDDIR)/, $(EXTERNAL_PLUGINS))
+endif
+
+#############################################################################
+# Building plugins
+#
+.PHONY: $(OBJDIR)/%.lib $(OBJDIR)/%.bundle $(OBJDIR)/%.dylib
+
+ifeq ($(USEPLUGINASDYLIB),TRUE)
+plugin-makefile = $(firstword $(realpath $(OSXPLUGINSDIR)/$(subst lib,,$(1))/Makefile ../common/Makefile.plugin))
+else
+plugin-makefile = $(firstword $(realpath $(OSXPLUGINSDIR)/$(1)/Makefile ../common/Makefile.plugin))
+endif
+
+# Internal plugin.  Build as lib then link in lib
+# Check for Makefile in Mac_OS plugins directory otherwise use default Makefile
+# N.B.  PLATDIR *must* be a relative path for this to work
+$(OBJDIR)/%.lib: FORCE
+	@-mkdir -p $(BLDDIR)/$(*F)
+	test $@ -ot $(call plugin-makefile,$(*F)) && rm -rf $(BUILD)/vm/$(*F).* || true
+	rm -f $(BUILD)/vm/$(*F).ignore
+	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
+		-f $(call plugin-makefile,$(*F)) MAKEFILE=$(call plugin-makefile,$(*F)) \
+		CONFIGURATION=$(CONFIGURATION) ARCH=$(TARGET_ARCH) \
+		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
+		LIBNAME=$(*F) COGDEFS="$(COGDEFS)" XDEFS=-DSQUEAK_BUILTIN_PLUGIN \
+		$(PLUGINHACK) \
+		$(OBJDIR)/$(*F).lib
+
+prereqs/%.lib:
+	@-ls -rlt	$(call plugin-makefile,$(*F)) $(wildcard $(*F).ignore) \
+				$(wildcard $(PLUGINSRCDIR)/$(*F)/*.c) \
+				$(wildcard $(PLATDIR)/Cross/plugins/$(*F)/*.*) \
+				$(wildcard $(OSXPLUGINSDIR)/$(*F)/*.*)
+
+# It would be nice to have this abbreviation but it creates havoc eem 2/2016
+#%.lib: $(OBJDIR)/%.lib
+#	make $(MAKEFLAGS) $<
+
+# External plugin.  Build as bundle and copy to vm dir ($(OBJDIR)).
+# Check for Makefile in Mac_OS plugins directory otherwise use default Makefile
+$(OBJDIR)/%.bundle:	FORCE
+	@-mkdir -p $(BLDDIR)/$(*F)
+	test $@ -ot $(call plugin-makefile,$(*F)) && rm -rf $(BUILD)/vm/$(*F).* || true
+	rm -f $(BUILD)/vm/$(*F).ignore
+	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
+		-f $(call plugin-makefile,$(*F)) MAKEFILE=$(call plugin-makefile,$(*F)) \
+		CONFIGURATION=$(CONFIGURATION) ARCH=$(TARGET_ARCH) \
+		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
+		LIBNAME=$(*F) COGDEFS="$(COGDEFS)" \
+		APP=$(APP) VM=$(VM) BLDDIR=$(BLDDIR) \
+		THIRDPARTYOUTDIR=$(THIRDPARTYOUTDIR) \
+		$(PLUGINHACK) \
+		$(OBJDIR)/$(*F).bundle
+		
+# External plugin. Made in the "Pharo way": as a simple dylib to be included in 
+# Plugins directory
+$(OBJDIR)/%.dylib: FORCE
+	@-mkdir -p $(BLDDIR)/$(*F)
+	test $@ -ot $(call plugin-makefile,$(*F)) && rm -rf $(BUILD)/vm/$(*F).* || true
+	rm -f $(BUILD)/vm/$(*F).ignore
+	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
+		-f $(call plugin-makefile,$(*F)) MAKEFILE=$(call plugin-makefile,$(*F)) \
+		CONFIGURATION=$(CONFIGURATION) ARCH=$(TARGET_ARCH) \
+		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
+		LIBNAME=$(*F) COGDEFS="$(COGDEFS)" \
+		APP=$(APP) VM=$(VM) BLDDIR=$(BLDDIR) USEPLUGINASDYLIB=TRUE \
+		THIRDPARTYOUTDIR=$(THIRDPARTYOUTDIR) \
+		$(PLUGINHACK) \
+		$(OBJDIR)/$(*F).dylib
+
+# It would be nice to have this abbreviation but it creates havoc eem 2/2016
+#%.bundle: $(OBJDIR)/%.bundle
+#	make $(MAKEFLAGS) $<
+
+FORCE:
+
+.PRECIOUS: $(OBJDIR)/%.lib $(OBJDIR)/%.bundle
+
+#############################################################################
+# Extra specific dependencies
+#
+sqNamedPrims.h: plugins.int
+	../common/mkNamedPrims.sh plugins.int > sqNamedPrims.h
+
+$(OBJDIR)/sqNamedPrims.o:	sqNamedPrims.c sqNamedPrims.h

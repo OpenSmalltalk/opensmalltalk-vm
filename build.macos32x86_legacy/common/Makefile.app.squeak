@@ -1,0 +1,22 @@
+##############################################################################
+# Generic Makefile for Mac OS X Squeak Cog Cocoa VM
+#
+
+# The caller should set VMSRCDIR to point to the relevant VM source
+# e.g. VMSRCDIR:= ../../spursrc/vm
+
+# Produce Squeak.app, SqueakAssert.app & SqueakDebug.app
+APPNAME:=Squeak
+APPNAMEDEF:=$(APPNAME)
+APPIDENTIFIER:=org.squeak.$(APPNAME)
+
+APPPOST:=overwriteSqueakIcon
+
+# Now include the Makefile proper, which is common to all Mac OS builds.
+#
+include ../common/Makefile.app
+
+# Replace the standard yellow VM icon with the green one used for Cog VMs
+
+overwriteSqueakIcon: $(APP)/Contents/Resources/Squeak.icns
+	cp -p $(RESDIR)/GreenCogSqueak.icns $(APP)/Contents/Resources/Squeak.icns

@@ -1,0 +1,56 @@
+#############################################################################
+# Compilation flags & paths for Mac OS X
+#
+# These are derived from Xcode v 6.2 for Apple LLVM version 6.0 (clang-600.0.57)
+
+XCODE:=$(shell /usr/bin/xcode-select -p)
+XCUB:=$(XCODE)/usr/bin
+SDKsDIR:=$(XCODE)/Platforms/MacOSX.platform/Developer/SDKs
+#Build the oldest SDK installed
+SDKs:=MacOSX10.5.sdk MacOSX10.6.sdk MacOSX10.7.sdk
+SDK:=$(firstword $(realpath $(addprefix $(SDKsDIR)/, $(SDKs))))
+ifeq ($(strip $(SDK)),)
+$(error could not find a valid SDK)
+endif
+TARGET_ARCH:=i386
+TARGET_VERSION_MIN:=10.5
+
+print-sdks:
+	$(info ---------------- Makefile.flags settings ------------------)
+	$(info SDKs=$(realpath $(addprefix $(SDKsDIR)/, $(SDKs))))
+	$(info SDK=$(SDK))
+	$(info -----------------------------------------------------)
+
+# N.B. ARC isn't supported by the os-x 32-bit legacy Objective-C runtime kernel.
+# ARC is supported only on 64-bits, and then only for the 10.7 SDK and later.
+include ../common/Makefile.clangversion
+CFLAGS:=$(CFLAGS) -DTARGET_API_MAC_CARBON=1 -DBUILD_FOR_OSX=1 -DUSE_OPENGL=1 -DUSE_CORE_GRAPHICS=1 \
+		-std=gnu99 \
+		-march=$(TARGET_ARCH) \
+		-mmacosx-version-min=$(TARGET_VERSION_MIN) -msse4.2 \
+			-fvisibility=default \
+			-fmessage-length=0 -fpascal-strings -fasm-blocks -fstrict-aliasing \
+			$(OBJC_CODE_MODEL) \
+			$(XCFLAGS) \
+		-isysroot $(SDK) \
+
+#		-include "$(PLATDIR)/Mac_OS/vm/sqConfig.h"
+#		-I$(SDK)/Developer/Headers/FlatCarbon
+
+BFLAGS:=-march=$(TARGET_ARCH) -bundle -isysroot $(SDK) $(EXTRABFLAGS)
+DYFLAGS:=-march=$(TARGET_ARCH) -shared -isysroot $(SDK) $(EXTRADYFLAGS)
+
+WARNINGS:= -Wall -Wno-missing-field-initializers -Wno-missing-prototypes \
+	-Wno-missing-braces -Wparentheses -Wswitch -Wno-unused-function \
+	-Wno-unused-label -Wno-unused-parameter \
+	-Wno-empty-body -Wno-unknown-pragmas  \
+	-Wno-four-char-constants \
+	-Wno-newline-eof \
+	-Wno-trigraphs
+
+FRAMEWORKS:=-fobjc-link-runtime \
+			-framework Carbon -framework AppKit -framework IOKit \
+			-framework CoreFoundation -framework AudioToolbox -framework CoreAudio \
+			-framework OpenGL -framework AGL -framework QuickTime \
+			-framework Foundation -framework SystemConfiguration \
+			-framework QuartzCore -framework Cocoa

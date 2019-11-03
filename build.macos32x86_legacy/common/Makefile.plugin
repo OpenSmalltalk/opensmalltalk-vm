@@ -1,0 +1,271 @@
+#############################################################################
+# Generic Makefile for plugins on Cocoa Mac OS X
+# Do make getversion to get make -n to work
+#
+# The following variables can be overridden in the platform Makefile, e.g.
+# platforms/Mac_OS/plugins/AioPlugin/Makefile.  Look at
+# platforms/Mac_OS/plugins/*/Makefile for examples.
+#
+# CFLAGS     	 adds additional compilation flags to source file compilation
+# XCFLAGS    	 adds additional compilation flags after all other flags
+# EXCLUDESRC 	 defines patterns of source files to not compile, e.g. %/dump.c
+# EXTRALIBS  	 defines additional libraries to link into an external plugin bundle
+# INCDIRS    	 defines additonal directories in which to search for includes
+# LIBSRC     	 overrides the set of files to compile (if EXCLUDESRC inconvenient)
+# LINK_WITH_CPP  set to non-empty to link external plugin bundle with c++ runtime
+# SRCDIRS    	 supplies additional directories containing files to compile.
+# PREREQUISITES  supplies names of files that must exist to make lib or bundle
+# THIRDPARTYLIBS supplies names for third-party libraries that needs to be built
+
+$(info $$(LIBNAME): $(LIBNAME))
+
+# VM config flags.
+ifeq ($(CONFIGURATION),product)
+OFLAGS:= -g -Os
+AT_MOST_OPT_LEVEL_ONE:=-O1
+DEBUGVM=-DDEBUGVM=0 -DNDEBUG=1
+BUILD:=build
+else ifeq ($(CONFIGURATION),assert)
+OFLAGS:= -g -O1 -fno-omit-frame-pointer
+AT_MOST_OPT_LEVEL_ONE:=-O1
+DEBUGVM=-DDEBUGVM=0
+BUILD:=buildast
+else
+OFLAGS:= -g -O0 -fno-omit-frame-pointer
+AT_MOST_OPT_LEVEL_ONE:=-O0
+DEBUGVM=-DDEBUGVM=1
+BUILD:=builddbg
+endif
+
+CFLAGS:= $(CFLAGS) $(OFLAGS) $(COGDEFS) $(DEBUGVM) $(XDEFS)
+
+# The following are the four key locations (set via invocation):
+# PLUGINSRCDIR: Where is the root of the src/plugins source tree?
+# VMSRCDIR: Where is the root of the src vm source tree?
+# PLATDIR: Where is the root of the platforms tree?
+
+#############################################################################
+# Standard directory locations:
+#   CROSSDIR: The location of the cross platform sources
+#   OSXPLGDIR: The location of the Mac_OS sources
+#   MAKERDIR: The location of the VMMaker generated sources
+#   BUILDDIR: The location where the plugin is built
+#
+#PLUGINSRCDIR:=	../../src/plugins
+
+ifeq ($(USEPLUGINASDYLIB),TRUE)
+# Esteban: I do not like to use lib "as is" because that will strip all "lib"
+# occurences, but I do not find any better solution :(
+LIBDIR:=$(subst lib,,$(LIBNAME))
+else
+LIBDIR:=$(LIBNAME)
+endif
+
+CROSSDIR:=	$(PLATDIR)/Cross/plugins/$(LIBDIR)
+RESDIR:=	$(PLATDIR)/Mac_OS/Resources
+OSXDIR:=	$(PLATDIR)/Mac_OS/vm
+OSXPLGDIR:=	$(PLATDIR)/Mac_OS/plugins/$(LIBDIR)
+UNXPLGDIR:=	$(PLATDIR)/unix/plugins/$(LIBDIR)
+UNIXDIR:=	$(PLATDIR)/unix/vm
+MAKERDIR:=	$(PLUGINSRCDIR)/$(LIBDIR)
+BUILDDIR:=	$(BUILD)/$(LIBDIR)
+
+# Support directory locations
+CROSSVMDIR:=$(PLATDIR)/Cross/vm
+OSXVMDIR:=$(PLATDIR)/Mac_OS/vm
+MAKERVMDIR:=$(VMSRCDIR)
+
+# INCDIRS are where include files are searched for. A superset of SRCDIRS.
+INCDIRS:= $(MAKERVMDIR) $(CROSSVMDIR) $(MAKERDIR) $(OSXPLGDIR) $(OSXVMDIR) $(CROSSDIR) $(INCDIRS) $(UNXPLGDIR) $(UNIXDIR)
+# Additonal includes are required, eg for AioPlugin
+PluginIncludes := FilePlugin SocketPlugin
+OSPluginIncludes := FilePlugin SocketPlugin
+INCDIRS:=$(INCDIRS) \
+			$(addprefix $(PLATDIR)/Cross/plugins/,$(PluginIncludes)) \
+			$(addprefix $(PLATDIR)/Mac_OS/plugins/,$(OSPluginIncludes)) \
+			$(addprefix $(PLATDIR)/Unix/plugins/,$(PluginIncludes)) 
+
+INCLUDES:= $(addprefix -I,. $(INCDIRS))
+
+#############################################################################
+# If no source files were given, use standard set
+#
+
+SRCDIRS:=$(SRCDIRS) $(MAKERDIR) $(CROSSDIR) $(OSXPLGDIR) 
+LIBSRC?= $(foreach d,$(SRCDIRS),$(wildcard $(d)/*.c) $(wildcard $(d)/*.cpp) $(wildcard $(d)/*.m) $(wildcard $(d)/*.mm))
+ifneq ($(EXCLUDESRC),)
+LIBSRC:=$(filter-out $(EXCLUDESRC),$(LIBSRC))
+endif
+
+#############################################################################
+# bundle settings
+#
+# Note: By default DLLTOOL/DLLWRAP do the work for everything related to plugins
+# but if LINK_WITH_GCC we use gcc and if LINK_WITH_GPP we use g++.
+#
+DLLTOOL:=	dlltool
+DLLWRAP:=	dllwrap -mno-cygwin
+#OPTSTRIP:=	strip # for production
+OPTSTRIP:=	echo not doing strip
+
+#############################################################################
+# Plugin settings
+#
+OBJDIR:=    $(BUILD)/$(LIBNAME)
+VMDIR:=     $(BUILD)/vm
+PLUGINLIB:= $(VMDIR)/$(LIBNAME).lib
+PLUGINBUNDLE:= $(VMDIR)/$(LIBNAME).bundle
+PLUGINEXE:= $(PLUGINBUNDLE)/Contents/MacOS/$(LIBNAME)
+
+PLUGINDYLIB:= $(VMDIR)/$(LIBNAME).dylib
+
+# https://developer.apple.com/library/ios/documentation/General/Reference/InfoPlistKeyReference/Introduction/Introduction.html
+PLUGINPLIST:= $(PLUGINBUNDLE)/Contents/Info.plist
+PLUGINICONS:= $(PLUGINBUNDLE)/Contents/Resources/SqueakPlugin.icns
+LIBOBJ?=$(notdir $(LIBSRC))
+LIBOBJ:=$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$(LIBOBJ)))
+LIBOBJ:=$(patsubst %.m,%.o,$(patsubst %.mm,%.o,$(LIBOBJ)))
+LIBOBJ:=$(addprefix $(OBJDIR)/,$(LIBOBJ))
+
+VPATH:= $(SRCDIRS)
+
+# If plugins change from internal to external they must be recompiled.
+$(BUILD)/$(LIBNAME)/$(LIBNAME).o: plugins.int plugins.ext
+
+# If the plugins Makefile.plugin defines DYLIBS these will be copied into
+# OBJDIR/Frameworks, and eventually into VMAPP/Contents/Frameworks
+ifneq ($(DYLIBS),)
+PLUGINFWKS:=$(OBJDIR)/Frameworks
+else
+PLUGINFWKS:=
+endif
+
+#############################################################################
+# Rules for automated builds
+
+include ../common/Makefile.rules
+
+all: $(PLUGINLIB) $(PLUGINBUNDLE) $(PLUGINDYLIB)
+
+print-settings:
+	$(info ---------------- Makefile.plugin settings ------------------)
+	$(info PWD=$(shell pwd))
+	$(info MAKEFILE=$(MAKEFILE))
+	$(info VPATH=$(VPATH))
+	$(info INCLUDES=$(INCLUDES))
+	$(info CFLAGS=$(CFLAGS))
+	$(info PLUGINSRCDIR=$(PLUGINSRCDIR))
+	$(info VMSRCDIR=$(VMSRCDIR))
+	$(info CROSSDIR=$(CROSSDIR))
+	$(info OSXPLGDIR=$(OSXPLGDIR))
+	$(info OSXDIR=$(OSXDIR))
+	$(info MAKERDIR=$(MAKERDIR))
+	$(info CROSSSRC=$(CROSSSRC))
+	$(info OSXSRC=$(OSXSRC))
+	$(info MAKERSRC=$(MAKERSRC))
+	$(info SRCDIRS=$(SRCDIRS))
+	$(info INCDIRS=$(INCDIRS))
+	$(info EXCLUDESRC=$(EXCLUDESRC))
+	$(info LIBSRC=$(LIBSRC))
+	$(info LIBOBJ=$(LIBOBJ))
+	$(info BUILD=$(BUILD))
+	$(info OBJDIR=$(OBJDIR))
+	$(info VMDIR=$(VMDIR))
+	$(info PLUGINLIB=$(PLUGINLIB))
+	$(info PLUGINEXE=$(PLUGINEXE))
+	$(info PLUGINBUNDLE=$(PLUGINBUNDLE))
+	$(info DYLIBS=$(wildcard $(DYLIBS)))
+	$(info PLUGINFWKS=$(PLUGINFWKS))
+	$(info deps=$(patsubst %,deps/%.d,$(notdir $(basename $(LIBSRC)))))
+	$(info -----------------------------------------------------)
+
+$(OBJDIR):
+	mkdir -p $(OBJDIR)
+
+$(VMDIR):
+	mkdir -p $(VMDIR)
+
+# If any prerequisites are declared all must exist to continue
+ifeq ($(realpath $(PREREQUISITES)),$(abspath $(PREREQUISITES)))
+
+$(PLUGINLIB): $(PLUGINREQS) $(VMDIR) $(OBJDIR) $(LIBOBJ) $(PLUGINFWKS)
+	-rm $(PLUGINLIB)
+	ar -rc $(PLUGINLIB) $(LIBOBJ)
+
+# Either link with normal compiler/linker or with cpp compiler/linker.  If
+# LINK_WITH_CPP is set, use e.g. clang++
+$(PLUGINBUNDLE): $(PLUGINREQS) $(PLUGINEXE) $(PLUGINICONS) $(PLUGINPLIST) $(PLUGINFWKS)
+
+$(PLUGINEXE): $(PLUGINREQS) $(VMDIR) $(OBJDIR) $(LIBOBJ) $(PLUGINFWKS)
+	mkdir -p $(PLUGINBUNDLE)/Contents/MacOS
+ifneq ($(LINK_WITH_CPP),)
+	$(LDCXX) \
+	$(BFLAGS) \
+	-Wl,-bundle_loader,$(VMDIR)/$(VM) \
+	$(LIBOBJ) $(EXTRALIBS) \
+	-o $(PLUGINBUNDLE)/Contents/MacOS/$(LIBNAME)
+else
+	$(LD) \
+	$(BFLAGS) \
+	-Wl,-bundle_loader,$(VMDIR)/$(VM) \
+	$(LIBOBJ) $(EXTRALIBS) \
+	-o $(PLUGINBUNDLE)/Contents/MacOS/$(LIBNAME)
+endif
+
+$(PLUGINICONS): $(RESDIR)/SqueakPlugin.icns
+	mkdir -p $(PLUGINBUNDLE)/Contents/Resources
+	cp -p $< $@
+
+$(OBJDIR)/Frameworks: $(wildcard $(DYLIBS))
+	rm -f $(OBJDIR)/Frameworks/*
+	mkdir -p $(OBJDIR)/Frameworks
+	for f in $(wildcard $(DYLIBS)); do \
+		test -L $$f \
+			&& ln -s `readlink $$f` $(OBJDIR)/Frameworks/`basename $$f` \
+			|| ln $$f $(OBJDIR)/Frameworks; \
+	done
+
+$(PLUGINPLIST): $(PLATDIR)/Mac_OS/plugins/Info.plist getversion
+	mkdir -p $(PLUGINBUNDLE)/Contents
+	sed "s/\$$(VERSION)/`./getversion VERSION_TAG`/" $< | \
+	sed "s/\$(LIBNAME)/$(LIBNAME)/" > $(PLUGINPLIST)
+
+$(PLUGINDYLIB): $(PLUGINREQS) $(VMDIR) $(OBJDIR) $(LIBOBJ)
+ifneq ($(LINK_WITH_CPP),)
+	$(LDCXX) \
+	$(DYFLAGS) \
+	-install_name @executable_path/Plugins/$(LIBNAME).dylib \
+	$(LIBOBJ) $(EXTRALIBS) \
+	-o $(VMDIR)/$(LIBNAME).dylib
+else
+	$(LD) \
+	$(DYFLAGS) \
+	-install_name @executable_path/Plugins/$(LIBNAME).dylib \
+	$(LIBOBJ) $(EXTRALIBS) \
+	-o $(VMDIR)/$(LIBNAME).dylib
+endif
+
+getversion:
+	make -f ../common/Makefile.vm getversion
+
+else # ifeq ($(realpath $(PREREQUISITES)),$(PREREQUISITES))
+# If any prerequisites are missing simply create a .ignore file
+
+#$(info $$(PREREQUISITES): $(abspath $(PREREQUISITES)))
+#$(info $$(realpath $$(PREREQUISITES)): $(realpath $(PREREQUISITES)))
+
+$(PLUGINLIB): FORCE
+	$(warning $(PLUGINLIB) has missing prerequisites. Not building.)
+	echo >$(basename $(PLUGINLIB)).ignore
+
+$(PLUGINBUNDLE):	FORCE
+	$(warning $(PLUGINBUNDLE) has missing prerequisites. Not building.)
+	echo >$(basename $(PLUGINBUNDLE)).ignore
+
+$(PLUGINDYLIB):	FORCE
+	$(warning $(PLUGINDYLIB) has missing prerequisites. Not building.)
+	echo >$(basename $(PLUGINDYLIB)).ignore
+
+FORCE:
+
+endif

@@ -1,0 +1,33 @@
+# 
+# THIRDPARTYLIBS			The libraries to build (you define them in ./third-party/LIB/Makefile.lib)
+# THIRDPARTYDIR				Where to build libraries
+# THIRDPARTYOUTDIR 			Where to first install libraries (output place)
+# THIRDPARTYCACHEDIR 		Where to download thirdparty libraries
+# 
+# REQUIRES: 
+#   USEPLUGINASDYLIB 		Used to define where to place built libraries (default is FALSE (or absent)). 
+# 
+
+THIRDPARTYDIR?=$(BLDDIR)/third-party
+THIRDPARTYLIBDIR?=$(THIRDPARTYOUTDIR)/lib
+THIRDPARTYINCLUDEDIR?=$(THIRDPARTYOUTDIR)/include
+THIRDPARTYCACHEDIR?=../../.thirdparty-cache
+THIRDPARTYOUTDIR?=$(abspath $(THIRDPARTYCACHEDIR)/Mac_OS/i386)
+
+ifeq ($(USEPLUGINASDYLIB),TRUE)
+THIRDPARTYINSTALLDIR:=$(APP)/Contents/MacOS/Plugins
+else 
+THIRDPARTYINSTALLDIR:=$(APP)/Contents/Resources
+endif 
+
+$(THIRDPARTYDIR):
+	if [ ! -d $(THIRDPARTYDIR) ]; then mkdir -p $(THIRDPARTYDIR); fi
+	
+$(THIRDPARTYOUTDIR): $(THIRDPARTYDIR)
+	if [ ! -d $(THIRDPARTYOUTDIR) ]; then mkdir -p $(THIRDPARTYOUTDIR); fi
+	
+$(THIRDPARTYINSTALLDIR):
+	if [ ! -d $(THIRDPARTYINSTALLDIR) ]; then mkdir -p $(THIRDPARTYINSTALLDIR); fi
+		
+$(THIRDPARTYCACHEDIR):
+	if [ ! -d $(THIRDPARTYCACHEDIR) ]; then mkdir -p $(THIRDPARTYCACHEDIR); fi

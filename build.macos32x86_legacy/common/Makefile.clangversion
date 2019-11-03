@@ -1,0 +1,10 @@
+#############################################################################
+# Determine clang version and set CLANG_7_3_OR_ABOVE & CLANG_7_2_OR_BELOW as so
+#
+
+XCODETOOLCHAINS := /Applications/Xcode.app/Contents/Developer/Toolchains
+XCODETOOLCHAIN := $(XCODETOOLCHAINS)/XcodeDefault.xctoolchain
+
+# /usr/bin/clang, a.k.a. $(XCODETOOLCHAIN)/usr/bin/clang
+CC := i686-apple-darwin10-llvm-gcc-4.2
+CLANG_7_2_OR_BELOW:=true

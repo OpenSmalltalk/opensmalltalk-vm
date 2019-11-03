@@ -1,0 +1,39 @@
+# Copied, perhaps edited, from ../src/examplePlugins.int
+INTERNAL_PLUGINS = \
+ADPCMCodecPlugin \
+AioPlugin \
+AsynchFilePlugin \
+B2DPlugin \
+BitBltPlugin \
+BMPReadWriterPlugin \
+ZipPlugin \
+DropPlugin \
+DSAPrims \
+FFTPlugin \
+FilePlugin \
+FileAttributesPlugin \
+FloatArrayPlugin \
+FloatMathPlugin \
+HostWindowPlugin \
+IA32ABI \
+JPEGReaderPlugin \
+JPEGReadWriter2Plugin \
+Klatt \
+LargeIntegers \
+LocalePlugin \
+Matrix2x3Plugin \
+MiscPrimitivePlugin \
+RePlugin \
+SecurityPlugin \
+SerialPlugin \
+SocketPlugin \
+SoundCodecPrims \
+SoundGenerationPlugin \
+SoundPlugin \
+StarSqueakPlugin \
+SurfacePlugin \
+UUIDPlugin \
+VMProfileMacSupportPlugin \
+# InternetConfigPlugin \
+# JoystickTabletPlugin \
+# MacMenubarPlugin # Does not work under Cocoa
