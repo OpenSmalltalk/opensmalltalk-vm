@@ -33,9 +33,10 @@ Karl Goiser 14/01/01
 #endif
 extern struct VirtualMachine* interpreterProxy;
  
+
 /* initialize/shutdown */
-int soundInit() { return true; }
-int soundShutdown() { snd_Stop(); 	return 1;}
+sqInt soundInit() { return true; }
+sqInt soundShutdown() { snd_Stop(); 	return 1;}
 
 /* End of adjustments for pluginized VM */
 
@@ -255,7 +256,7 @@ pascal void FlipRecordBuffers(SPBPtr pb) {
 
 /*** exported sound output functions ***/
 
-int snd_AvailableSpace(void) {
+sqInt snd_AvailableSpace(void) {
 	if (!bufState.open) return -1;
 	if ((bufState.bufState0 == BUF_EMPTY) ||
 		(bufState.bufState1 == BUF_EMPTY)) {
@@ -264,7 +265,8 @@ int snd_AvailableSpace(void) {
 	return 0;
 }
 
-int snd_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int startIndex) {
+sqInt snd_PlaySamplesFromAtLength(sqInt frameCount, void *srcBufPtr, sqInt startIndex)
+{
 	SndDoubleBufferPtr buf;
 	int framesWritten;
 
@@ -290,7 +292,7 @@ int snd_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int startIndex) 
 
 	if (BYTES_PER_SAMPLE == 1) {  /* 8-bit samples */
 		unsigned char *src, *dst, *end;
-		src = (unsigned char *) (arrayIndex + startIndex);
+		src = ((unsigned char *) srcBufPtr)  + startIndex;
 		end = (unsigned char *) src + (framesWritten * (bufState.stereo ? 2 : 1));
 		dst = (unsigned char *) &buf->dbSoundData[0];
 		while (src < end) {
@@ -298,8 +300,8 @@ int snd_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int startIndex) 
 		}
 	} else {  /* 16-bit samples */
 		short int *src, *dst, *end;
-		src = (short int *) (arrayIndex + (startIndex * 4));
-		end = (short int *) (arrayIndex + ((startIndex + framesWritten) * 4));
+		src = ((short int *) srcBufPtr) + (startIndex * 4);
+		end = ((short int *) srcBufPtr) + ((startIndex + framesWritten) * 4);
 		dst = (short int *) &buf->dbSoundData[0];
 		if (bufState.stereo) {  /* stereo */
 			while (src < end) {
@@ -361,7 +363,7 @@ int MixInSamples(int count, char *srcBufPtr, int srcStartIndex, char *dstBufPtr,
 	return 0;
 }
 
-int snd_InsertSamplesFromLeadTime(int frameCount, int srcBufPtr, int samplesOfLeadTime) {
+sqInt snd_InsertSamplesFromLeadTime(sqInt frameCount, void *srcBufPtr, sqInt samplesOfLeadTime) {
 	SndDoubleBufferPtr bufPlaying, otherBuf;
 	int samplesInserted, startSample, count;
 
@@ -396,7 +398,7 @@ int snd_InsertSamplesFromLeadTime(int frameCount, int srcBufPtr, int samplesOfLe
 	return samplesInserted + count;
 }
 
-int snd_PlaySilence(void) {
+sqInt snd_PlaySilence(void) {
 	if (!bufState.open) return -1;
 
 	if (bufState.bufState0 == BUF_EMPTY) {
@@ -413,7 +415,7 @@ int snd_PlaySilence(void) {
 	return bufState.bufSizeInBytes;
 }
 
-int snd_Start(int frameCount, int samplesPerSec, int stereo, int semaIndex) {
+sqInt snd_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sqInt semaIndex) {
 	OSErr				err;
 	SndDoubleBufferPtr	buffer;
 	int					bytesPerFrame, bufferBytes, i;
@@ -486,7 +488,7 @@ int snd_Start(int frameCount, int samplesPerSec, int stereo, int semaIndex) {
 	return true;
 }
 
-int snd_Stop(void) {
+sqInt snd_Stop(void) {
 	OSErr				err;
 	SndDoubleBufferPtr	buffer;
 	SCStatus			status;
@@ -520,23 +522,22 @@ int snd_Stop(void) {
 
 /*** exported sound input functions ***/
 
-int snd_SetRecordLevel(int level) {
+void snd_SetRecordLevel(sqInt level) {
 	/* set the recording level to a value between 0 (minimum gain) and 1000. */
 	Fixed inputGainArg;
 	int err;
 
 	if (!recordingInProgress || (level < 0) || (level > 1000)) {
 		interpreterProxy->success(false);
-		return 0;  /* noop if not recording */
+		return ;  /* noop if not recording */
 	}
 
 	inputGainArg = ((500 + level) << 16) / 1000;  /* gain is Fixed between 0.5 and 1.5 */
 	err = SPBSetDeviceInfo(soundInputRefNum, siInputGain, &inputGainArg);
 	/* don't fail on error; hardware may not support setting the gain */
-	return 0;
 }
 
-int snd_StartRecording(int desiredSamplesPerSec, int stereo, int semaIndex) {
+sqInt snd_StartRecording(sqInt desiredSamplesPerSec, sqInt stereo, sqInt semaIndex) {
 	/* turn on sound recording, trying to use a sampling rate close to
 	   the one specified. semaIndex is the index in the exportedObject
 	   array of a semaphore to be signalled when input data is available. */
@@ -669,7 +670,7 @@ int snd_StartRecording(int desiredSamplesPerSec, int stereo, int semaIndex) {
 	return 0;
 }
 
-int snd_StopRecording(void) {
+sqInt snd_StopRecording(void) {
 	/* turn off sound recording */
 	int err;
 
@@ -717,7 +718,7 @@ double snd_GetRecordingSampleRate(void) {
 			((double) (sampleRateArg & 0xFFFF) / 65536.0);
 }
 
-int snd_RecordSamplesIntoAtLength(int buf, int startSliceIndex, int bufferSizeInBytes) {
+sqInt snd_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex, sqInt bufferSizeInBytes) {
 	/* if data is available, copy as many sample slices as possible into the
 	   given buffer starting at the given slice index. do not write past the
 	   end of the buffer, which is buf + bufferSizeInBytes. return the number
@@ -767,7 +768,7 @@ int snd_RecordSamplesIntoAtLength(int buf, int startSliceIndex, int bufferSizeIn
 	recBuf->readIndex = src - &recBuf->samples[0];  /* update read index */
 
 	/* return the number of slices copied */
-	bytesCopied = (int) nextBuf - (buf + (startSliceIndex * bytesPerSlice));
+	bytesCopied = (int) (nextBuf - (((char *)buf) + (startSliceIndex * bytesPerSlice)));
 	return bytesCopied / bytesPerSlice;
 }
 
