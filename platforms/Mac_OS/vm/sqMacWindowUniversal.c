@@ -73,6 +73,8 @@ PixMapHandle	stPixMap = nil;
 /*** Functions ***/
 static void SetColorEntry(int index, int red, int green, int blue);
 
+void  ioNoteDisplayChangedwidthheightdepth(void *b, int w, int h, int d) {}
+
 WindowPtr getSTWindow(void) {
 	if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return NULL;
     return  windowHandleFromIndex(1);
