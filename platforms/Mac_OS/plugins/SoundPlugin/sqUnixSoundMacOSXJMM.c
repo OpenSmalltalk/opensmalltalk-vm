@@ -103,7 +103,7 @@ dprintf(const char *fmt, ...)
 }
 
 #else // !DEBUG
-inline_and_export void
+void
 dumpFormat(AudioStreamBasicDescription *fmt) {
  #pragma unused(fmt)
  }
@@ -138,7 +138,7 @@ str4(UInt32 chars)
   return str;
 }
 
-inline_and_export sqInt
+sqInt
 checkError(OSStatus err, char *op, char *param)
 {
   if (kAudioHardwareNoError != noErr)
@@ -198,18 +198,18 @@ Buffer_delete(Buffer *b)
 
 // answer how many bytes are available for reading
 // 
-inline_and_export sqInt
+sqInt
 Buffer_avail(Buffer *b) { return b->avail; }
 
 // answer how many bytes can be written
 // 
-inline_and_export sqInt
+sqInt
 Buffer_free(Buffer *b) { return b->size - Buffer_avail(b); }
 
 // set outputs to address and size of zero (empty), one (contiguous) or two
 // (wrapped, fragmented) populated regions in the buffer
 // 
-inline_and_export sqInt
+sqInt
 Buffer_getOutputPointers(Buffer *b, char **p1, sqInt *n1, char **p2, sqInt *n2)
 {
   sqInt optr=     b->optr;
@@ -238,7 +238,7 @@ Buffer_getOutputPointers(Buffer *b, char **p1, sqInt *n1, char **p2, sqInt *n2)
 // set the output to the current read position and answer the amount of
 // data at that location
 // 
-inline sqInt
+sqInt
 Buffer_getOutputPointer(Buffer *b, char **ptr)
 {
   sqInt optr=     b->optr;
@@ -253,7 +253,7 @@ Buffer_getOutputPointer(Buffer *b, char **ptr)
 // set the output to the current write location and answer the number of
 // bytes that can be written to that location
 // 
-inline sqInt
+sqInt
 Buffer_getInputPointer(Buffer *b, char **ptr)
 {
   sqInt iptr=     b->iptr;
@@ -267,7 +267,7 @@ Buffer_getInputPointer(Buffer *b, char **ptr)
 
 // increment the output pointer over a contiguous section of buffer
 // 
-inline_and_export void
+void
 Buffer_advanceOutputPointer(Buffer *b, sqInt size)
 {
   sqInt optr=  b->optr;
@@ -283,7 +283,7 @@ Buffer_advanceOutputPointer(Buffer *b, sqInt size)
 
 // advance the input pointer over a contiguous section of buffer
 // 
-inline void
+void
 Buffer_advanceInputPointer(Buffer *b, sqInt size)
 {
   sqInt iptr= b->iptr;
@@ -300,7 +300,7 @@ Buffer_advanceInputPointer(Buffer *b, sqInt size)
 // clear the given number of bytes at the input position and advance the
 // input pointer past them
 // 
-inline void
+void
 Buffer_prefill(Buffer *b, sqInt bytes)
 {
   char *ptr;
@@ -313,7 +313,7 @@ Buffer_prefill(Buffer *b, sqInt bytes)
 // write at most nbytes from buf into the buffer, wrapping in the middle if
 // necessary.  answer the actual number of bytes written.
 // 
-inline_and_export sqInt
+sqInt
 Buffer_write(Buffer *b, char *buf, sqInt nbytes)
 {
   sqInt iptr= b->iptr;
@@ -340,7 +340,7 @@ Buffer_write(Buffer *b, char *buf, sqInt nbytes)
   return bytesCopied;
 }
 
-inline_and_export sqInt
+sqInt
 Buffer_writeRecheck(Buffer *b, char *buf, sqInt nbytes)
 {
   sqInt iptr= b->iptr;
@@ -373,7 +373,7 @@ Buffer_writeRecheck(Buffer *b, char *buf, sqInt nbytes)
 // read at most nbytes from the buffer into buf, wrapping in the middle if
 // necessary.  answer the actual number of bytes read.
 // 
-inline sqInt
+sqInt
 Buffer_read(Buffer *b, char *buf, sqInt nbytes)
 {
   sqInt optr= b->optr;
