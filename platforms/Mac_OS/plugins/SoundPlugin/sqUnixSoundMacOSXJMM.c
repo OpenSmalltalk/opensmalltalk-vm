@@ -1072,6 +1072,29 @@ sqInt Stream_stop(Stream *s)
   return setVolume(1, (double)level / 1000.0L, (double)level / 1000.0L);
 }
 
+/* newer API not implemented */
+
+sqInt snd_SupportsAEC(void) { return 0; }
+
+sqInt snd_EnableAEC(sqInt flag) { return -1; }
+
+int snd_GetRecordLevel(void) { return -1; }
+
+void  setDefaultSoundRecorder(char *deviceName) { return ; }
+
+void  setDefaultSoundPlayer(char *deviceName) { return ; }
+
+char *getDefaultSoundPlayer(void) { return NULL; }
+
+char *getDefaultSoundRecorder(void) { return NULL; }
+
+sqInt getNumberOfSoundPlayerDevices(void) { return -1; }
+
+sqInt getNumberOfSoundRecorderDevices(void) { return -1; }
+
+char *getSoundPlayerDeviceName(sqInt i) { return NULL; }
+
+char *getSoundRecorderDeviceName(sqInt i) { return NULL; }
 
 /// 
 /// debugging
