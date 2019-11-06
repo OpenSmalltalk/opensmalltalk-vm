@@ -33,7 +33,7 @@
 *****************************************************************************/
 
 #include <Carbon/Carbon.h>
-#include <Movies.h>
+#include <QuickTime/Movies.h>
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <pthread.h>
