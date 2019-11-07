@@ -195,7 +195,7 @@ sqInt dir_Delimitor(void) {
 sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
   /* outputs: */
   char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
-  sqInt *isDirectory, squeakFileOffsetType *sizeIfFile) {
+  sqInt *isDirectory, squeakFileOffsetType *sizeIfFile, sqInt *posixPermissions, sqInt *isSymlink) {
 	/* Lookup the index-th entry of the directory with the given path, starting
 	   at the root of the file system. Set the name, name length, creation date,
 	   creation time, directory flag, and file size (if the entry is a file).
@@ -310,7 +310,7 @@ sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
 sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
   /* outputs: */
   char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
-  sqInt *isDirectory, squeakFileOffsetType *sizeIfFile) {
+  sqInt *isDirectory, squeakFileOffsetType *sizeIfFile, sqInt *posixPermissions, sqInt *isSymlink) {
 	/* Lookup the index-th entry of the directory with the given path, starting
 	   at the root of the file system. Set the name, name length, creation date,
 	   creation time, directory flag, and file size (if the entry is a file).
