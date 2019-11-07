@@ -143,13 +143,13 @@ currentUTCMicroseconds()
 			+ MicrosecondsFrom1901To1970;
 }
 
-unsigned volatile long long
+unsigned long long
 ioUTCMicroseconds() { return currentUTCMicroseconds(); }
 
 /* This is an expensive interface for use by profiling code that wants the time
  * now rather than as of the last heartbeat.
  */
-unsigned volatile long long
+unsigned long long
 ioUTCMicrosecondsNow() { return currentUTCMicroseconds(); }
 #endif /* STACKVM */
 
