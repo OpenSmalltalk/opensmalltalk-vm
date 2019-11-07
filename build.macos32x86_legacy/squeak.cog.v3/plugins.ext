@@ -1,10 +1,11 @@
 # Copied, perhaps edited, from ../src/examplePlugins.ext
 EXTERNAL_PLUGINS = \
 B3DAcceleratorPlugin \
-CameraPlugin \
 CroquetPlugin \
-Mpeg3Plugin \
-SqueakFFIPrims \
 Squeak3D \
+SqueakFFIPrims \
 SqueakSSL \
 UnixOSProcessPlugin
+#CameraPlugin \
+#Mpeg3Plugin \
+
