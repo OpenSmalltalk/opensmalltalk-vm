@@ -12,9 +12,11 @@
 
 #include <stdio.h>
 #include "sqMacUIEvents.h"
+/*
 #if !NewspeakVM
 # include "SerialPlugin.h"
 #endif
+*/
 
 /* duh ... this is ugly */
 #define XFN(export) {"", #export, (void*)export},
@@ -24,11 +26,13 @@ WindowPtr getSTWindow(void);
 void setMessageHook(eventMessageHook theHook);
 void setPostMessageHook(eventMessageHook theHook);
 char * GetAttributeString(sqInt id);
+/*
 #if !NewspeakVM
 int serialPortSetControl(int portNum,int control, char *data);
 int serialPortIsOpen(int portNum);
 int serialPortNames(int portNum, char *portName, char *inName, char *outName);
 #endif
+*/
 Boolean IsKeyDown(void);
 sqInt primitivePluginBrowserReady(void);
 #ifdef ENABLE_URL_FETCH
@@ -46,6 +50,7 @@ void *os_exports[][3] = {
 	XFN(setPostMessageHook)
 	XFN(GetAttributeString)
 	XFN(recordDragDropEvent)
+/*
 #if !NewspeakVM
 	XFN(serialPortSetControl)
 	XFN(serialPortIsOpen)
@@ -56,6 +61,7 @@ void *os_exports[][3] = {
 	XFN(serialPortReadInto)
 	XFN(serialPortWriteFrom)
 #endif
+*/
 	XFN(IsKeyDown)
 	XFN(getUIToLock)
 /* Plugin support primitives
