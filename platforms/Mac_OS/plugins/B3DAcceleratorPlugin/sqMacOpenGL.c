@@ -663,11 +663,6 @@ int glSetBufferRect(int handle, int x, int y, int w, int h) {
 	return 1;
 }
 
-int glSetVerboseLevel(int level) {
-	verboseLevel = level;
-	return 1;
-}
-
 int glIsOverlayRenderer(int handle) {
 #pragma unused(handle)
   /* we never use overlay renderers */
