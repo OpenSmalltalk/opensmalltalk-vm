@@ -25,6 +25,7 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
+#if ! SPURVM /* SPURVM uses unix source code */
 extern usqLong  gMaxHeapSize;
 static usqLong	gHeapSize;
 void *mmapWasAt;
@@ -54,20 +55,12 @@ usqInt
 sqAllocateMemoryMac(usqInt desiredHeapSize, usqInt minHeapSize)
 {
     void * debug, *actually;
-#if SPURVM
-	pageSize= getpagesize();
-	pageMask= ~(pageSize - 1);
-
-    gHeapSize = roundUpToPage(desiredHeapSize);
-    debug = mmap(NULL, gHeapSize,PROT_READ|PROT_WRITE,MAP_ANON|MAP_SHARED,-1,0);
-#else
 # pragma unused(minHeapSize,desiredHeapSize)
 
 	pageSize= getpagesize();
 	pageMask= ~(pageSize - 1);
     gHeapSize = gMaxHeapSize;
     debug = mmap( NULL, gMaxHeapSize+pageSize, PROT_READ | PROT_WRITE, MAP_ANON | MAP_SHARED,-1,0);
-#endif /* SPURVM */
 
     if (debug == MAP_FAILED)
         return 0;
@@ -78,7 +71,6 @@ sqAllocateMemoryMac(usqInt desiredHeapSize, usqInt minHeapSize)
 	return memoryAllocationBase = (usqInt) actually;
 }
 
-#if !SPURVM
 sqInt
 sqGrowMemoryBy(sqInt memoryLimit, sqInt delta)
 {
@@ -100,23 +92,14 @@ sqMemoryExtraBytesLeft(int flag)
 {
     return flag ? gMaxHeapSize - gHeapSize : 0;
 }
-#endif /* ! SPURVM */
 
 void
 sqMacMemoryFree()
 {
 	if (!memoryAllocationBase) 
 		return;
-#if SPURVM
-	/* N.B. This is a hack for an unsupported configuration (NSPlugin(*/
-	/* If we really need to free memry we need to unmap all segments. */
-	/* But right now this is called only on exit and so is unnecessary. */
-	if (munmap((void *)memoryAllocationBase,gHeapSize))
-		perror("munmap");
-#else
 	if (munmap((void *)memoryAllocationBase,gMaxHeapSize+pageSize))
 		perror("munmap");
-#endif
 	memoryAllocationBase = 0;
 }
 
@@ -213,45 +196,4 @@ sqMakeMemoryNotExecutableFromTo(usqInt startAddr, usqInt endAddr)
 }
 #endif /* COGVM */
 
-#if SPURVM
-/* Allocate a region of memory of al least size bytes, at or above minAddress.
- *  If the attempt fails, answer null.  If the attempt succeeds, answer the
- * start of the region and assign its size through allocatedSizePointer.
- */
-void *
-sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress, sqInt *allocatedSizePointer)
-{
-	void *alloc;
-	long bytes = roundUpToPage(size);
-
-	if (!pageSize) {
-		pageSize = getpagesize();
-		pageMask = pageSize - 1;
-	}
-	*allocatedSizePointer = bytes;
-	while ((char *)minAddress + bytes > (char *)minAddress) {
-		alloc = mmap((void *)roundUpToPage((unsigned long)minAddress), bytes,
-					PROT_READ | PROT_WRITE, MAP_ANON | MAP_SHARED, -1, 0);
-		if (alloc == MAP_FAILED) {
-			perror("sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto mmap");
-			return 0;
-		}
-		if (alloc >= minAddress)
-			return alloc;
-		if (munmap(alloc, bytes) != 0)
-			perror("sqAllocateMemorySegment... munmap");
-		minAddress = (void *)((char *)minAddress + bytes);
-	}
-	return 0;
-}
-
-/* Deallocate a region of memory previously allocated by
- * sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto.  Cannot fail.
- */
-void
-sqDeallocateMemorySegmentAtOfSize(void *addr, sqInt sz)
-{
-	if (munmap(addr, sz) != 0)
-		perror("sqDeallocateMemorySegment... munmap");
-}
 #endif /* SPURVM */
