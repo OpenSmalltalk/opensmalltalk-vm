@@ -152,7 +152,7 @@ $(VMPLIST): $(OSXDIR)/$(SYSTEM)-Info.plist getversion
 		s!$$(VM_IDENTIFIER)!$(VM_IDENTIFIER)!g;\
 	' $@
 
-$(VMLOCALIZATION): $(OSXCOMMONDIR)/English.lproj/$(SYSTEM)-Localizable.strings
+$(VMLOCALIZATION): $(RESDIR)/English.lproj/$(SYSTEM)-Localizable.strings
 	@mkdir -p $(dir $@)
 	cp -p $< $@
 
