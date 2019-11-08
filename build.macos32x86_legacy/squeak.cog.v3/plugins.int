@@ -21,6 +21,7 @@ JPEGReadWriter2Plugin \
 Klatt \
 LargeIntegers \
 LocalePlugin \
+MacMenubarPlugin \
 Matrix2x3Plugin \
 MiscPrimitivePlugin \
 RePlugin \
@@ -29,11 +30,11 @@ SerialPlugin \
 SocketPlugin \
 SoundCodecPrims \
 SoundGenerationPlugin \
-SoundPlugin \
 StarSqueakPlugin \
 SurfacePlugin \
 UUIDPlugin \
 VMProfileMacSupportPlugin \
 # InternetConfigPlugin \
 # JoystickTabletPlugin \
-# MacMenubarPlugin # Does not work under Cocoa
+#SoundPlugin \
+
