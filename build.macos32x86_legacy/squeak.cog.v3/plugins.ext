@@ -2,10 +2,10 @@
 EXTERNAL_PLUGINS = \
 B3DAcceleratorPlugin \
 CroquetPlugin \
+Mpeg3Plugin \
 Squeak3D \
 SqueakFFIPrims \
 SqueakSSL \
 UnixOSProcessPlugin
 #CameraPlugin \
-#Mpeg3Plugin \
 
