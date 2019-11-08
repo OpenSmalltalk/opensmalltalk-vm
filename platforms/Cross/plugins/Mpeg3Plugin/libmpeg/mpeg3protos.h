@@ -1,6 +1,8 @@
 #ifndef MPEG3PROTOS_H
 #define MPEG3PROTOS_H
 
+#include "mpeg3private.h" /* mpeg3_t */
+
 /* CSS */
 
 mpeg3_css_t* mpeg3_new_css();
