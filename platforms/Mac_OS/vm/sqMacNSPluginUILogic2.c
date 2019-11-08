@@ -9,8 +9,12 @@
  *
  */
 
-#include <Debugging.h>
+#if TARGET_API_MAC_CARBON
 #include <Carbon/Carbon.h>
+#else
+#include <Debugging.h>
+#endif
+
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdio.h>

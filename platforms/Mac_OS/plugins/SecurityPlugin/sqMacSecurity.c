@@ -11,7 +11,11 @@
 #include "sqMacUIConstants.h"
 #include "FilePlugin.h"
 
-#include <Files.h> 
+#if TARGET_API_MAC_CARBON
+#include <Carbon/Carbon.h>
+#else
+#include <Files.h>
+#endif
 
 #if !defined(PATH_MAX)
 # include <sys/syslimits.h>

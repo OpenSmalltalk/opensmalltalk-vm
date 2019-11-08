@@ -28,7 +28,7 @@ Some of this code comes from
 				Some techniques borrowed from Pete Gontier's original FinderDragPro.
 
 
-	Copyright: 	Copyright: © 1999 by Apple Computer, Inc.
+	Copyright: 	Copyright: ï¿½ 1999 by Apple Computer, Inc.
 				all rights reserved.
 	
 	Disclaimer:	You may incorporate this sample code into your applications without
@@ -55,11 +55,14 @@ Some of this code comes from
 
 #include "sq.h"
 
+#if TARGET_API_MAC_CARBON
+#include <Carbon/Carbon.h>
+#else
 #include <Drag.h>
 #include <MacWindows.h>
 #include <Gestalt.h>
 #include <Quickdraw.h>
-
+#endif
 
 #include "sqVirtualMachine.h"
 #include "sqMacUnixFileInterface.h"	

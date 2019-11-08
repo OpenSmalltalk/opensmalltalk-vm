@@ -55,7 +55,13 @@
 
 #include <pthread.h>
 #include "sqaio.h"
+
+#if TARGET_API_MAC_CARBON
+#include <Carbon/Carbon.h>
+#else
 #include <Quickdraw.h>
+#endif
+
 #include <unistd.h>
 
 enum { KeyMapSize= 32 };
@@ -264,6 +270,7 @@ ioGetNextEvent(sqInputEvent *evt)
 		if (postMessageHook)
 			postMessageHook((EventRecord *) evt->unused1);
 		free((void *) evt->unused1);
+        evt->unused1 = NULL;
 		return ioGetNextEvent(evt);
 	}
 	return true;

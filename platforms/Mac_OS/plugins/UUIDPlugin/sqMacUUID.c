@@ -17,7 +17,12 @@
 
 extern struct VirtualMachine *interpreterProxy;
 
+#if TARGET_API_MAC_CARBON
+#include <Carbon/Carbon.h>
+#else
 #include <CFUUID.h>
+#endif
+
 int sqUUIDInit(void);
 int sqUUIDShutdown(void);
 

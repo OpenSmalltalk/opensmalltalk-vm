@@ -99,7 +99,12 @@
 
 #include <unistd.h>
 #include <pthread.h>
+
+#if TARGET_API_MAC_CARBON
+#include <Carbon/Carbon.h>
+#else
 #include <Processes.h>
+#endif
 
 #if !defined(PATH_MAX)
 # include <sys/syslimits.h>
