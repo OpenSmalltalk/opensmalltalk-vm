@@ -114,7 +114,7 @@ char * GetAttributeString(sqInt id)
         return getSourceVersion();
             
     case 1010: /* Implements AIO Interrupt */
-        return "true";
+        return "AIO";
 
     default:
         if ((id - 2) < getImageArgumentCount())
