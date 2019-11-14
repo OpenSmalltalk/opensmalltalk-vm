@@ -1,0 +1,39 @@
+LIBDEPS=../cpu/libcpu.a
+ARMGDB=../../../processors/ARM/gdb-8.3.1
+INCLUDES := -I../sim/aarch64 -I../bfd -I../gdb -I.. \
+			-I$(ARMGDB)/include \
+			-I$(ARMGDB)/sim/aarch64 \
+			-I$(ARMGDB)/sim/common \
+			-I$(ARMGDB)/bfd
+LIBS:=-L../bfd -L../libiberty -L../opcodes -L../sim/aarch64 \
+           -lbfd -liberty -lopcodes -lopcodes -lsim
+CFLAGS=-m64 -DCOG=1 -DFOR64BITS=1 -DMODET -DWITH_PROFILE=-1 $(INCLUDES) $(LIBS)
+
+GDBARMEXP=.
+CLASS=GdbARMv8Alien64
+
+.PHONY:	$(LIBDEPS)
+
+all: ${CLASS}-regs.st ${CLASS}-ctrl.st ${CLASS}-vfp.st
+
+${CLASS}-regs.st: printcpu64
+	./printcpu64 >${CLASS}-regs.st
+
+${CLASS}-ctrl.st: printcpuctrl64
+	./printcpuctrl64 >${CLASS}-ctrl.st
+
+${CLASS}-vfp.st: printcpuvfp64
+	./printcpuvfp64 >${CLASS}-vfp.st
+
+clean:
+	rm -f ${CLASS}-regs.st ${CLASS}-vfp.st
+	rm -f printcpu64 printcpuctrl64 printcpuvfp64
+
+printcpu64: $(GDBARMEXP)/printcpu.c $(LIBDEPS)
+	$(CC) -o $@ $< $(CFLAGS)
+
+printcpuctrl64: $(GDBARMEXP)/printcpuctrl.c $(LIBDEPS)
+	$(CC) -o $@ $< $(CFLAGS)
+
+printcpuvfp64: $(GDBARMEXP)/printcpuvfp.c $(LIBDEPS)
+	$(CC) -o $@ $< $(CFLAGS)
