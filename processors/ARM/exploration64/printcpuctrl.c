@@ -22,9 +22,9 @@ lower(char *s)
 }
 
 #if FOR64BITS
-# define CLASS "!GdbARMAlien64"
+# define CLASS "!GdbARMv8Alien64"
 #else
-# define CLASS "!GdbARMAlien"
+# define CLASS "!GdbARMv8Alien"
 #endif
 
 int
