@@ -150,6 +150,15 @@ assert:
 debug:
 	$(MAKE) -f $(MAKEFILE_LIST) CONFIGURATION=debug $(@,debug=) default
 
+productilc:
+	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) CONFIGURATION=product build/vm/validImage
+
+assertilc:
+	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) CONFIGURATION=assert buildast/vm/validImage
+
+debugilc:
+	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) CONFIGURATION=debug builddbg/vm/validImage
+
 cleanallvm:	cleandeps cleanvm cleanvmast cleanvmdbg cleangv
 
 cleandeps:
@@ -200,6 +209,9 @@ $(OBJDIR)/$(VM): $(OBJDIR) $(VMOBJ) $(LIBS)
 	$(CC) -arch $(TARGET_ARCH) -o $(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -c $(OSXCOMMONDIR)/version.c
 	$(CC) -arch $(TARGET_ARCH) -isysroot $(SDK) $(LDFLAGS) $(FRAMEWORKS) \
 			-o $(OBJDIR)/$(VM) $(VMOBJ) $(filter-out $(call ignore), $(LIBS))
+
+$(OBJDIR)/validImage: $(OBJDIR)/validImage.o $(OBJDIR)/sqUnixSpurMemory.o $(OBJDIR)/sqHeapMap.o
+	$(LD) -arch $(TARGET_ARCH) -o $@ $^
 
 $(OBJDIR):
 	@-mkdir -p $(BLDDIR)
