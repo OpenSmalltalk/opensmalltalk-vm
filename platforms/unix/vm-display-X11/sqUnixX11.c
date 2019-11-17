@@ -3583,7 +3583,7 @@ extern sqInt sendWheelEvents; /* If true deliver EventTypeMouseWheel else kybd *
 static int mouseWheel2Squeak[4] = {30, 31, 28, 29};
 /* if sendWheelEvents is true this determines how much x & y are incremented */
 static int mouseWheelXDelta[4] = {0, 0, -120, 120};
-static int mouseWheelYDelta[4] = {-120, 120, 0, 0};
+static int mouseWheelYDelta[4] = {120, -120, 0, 0};
 
 static void
 handleEvent(XEvent *evt)
@@ -3716,8 +3716,8 @@ handleEvent(XEvent *evt)
 	  }
 	  else if (evt->xbutton.button <= 7) { /* mouse wheel */
 		if (sendWheelEvents)
-			recordMouseWheelEvent(mouseWheelXDelta[evt->xbutton.button - 3],
-								  mouseWheelYDelta[evt->xbutton.button - 3]);
+			recordMouseWheelEvent(mouseWheelXDelta[evt->xbutton.button - 4],
+								  mouseWheelYDelta[evt->xbutton.button - 4]);
 		else if (evt->xbutton.button <= 5) { /* only emulate up/down, as left/right
 												is used for text editing */
 		  int keyCode = mouseWheel2Squeak[evt->xbutton.button - 4];
