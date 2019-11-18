@@ -31,6 +31,9 @@
 #ifndef __sqaio_h
 #define __sqaio_h
 
+#ifndef EXPORT
+# define EXPORT(returnType) returnType
+#endif
 
 #define AIO_X	(1<<0)	/* handle for exceptions */
 #define AIO_R	(1<<1)	/* handle for read */
@@ -44,15 +47,15 @@
 
 #define AIO_RWX	(AIO_R | AIO_W | AIO_X)
 
-extern void aioInit(void);
-extern void aioFini(void);
+EXPORT(void) aioInit(void);
+EXPORT(void) aioFini(void);
 
 /* Initialise `fd' for handling by AIO.  `flags' can be 0 (aio takes
  * over the descriptor entirely and the application should not assume
  * anything about its subsequent behaviour) or AIO_EXT (aio will never
  * set NBIO on `fd' or close it on behalf of the client).
  */
-extern void aioEnable(int fd, void *clientData, int flags);
+EXPORT(void) aioEnable(int fd, void *clientData, int flags);
 
 /* Declare an interest in one or more events on `fd'.  `mask' can be
  * any combination in AIO_[R][W][X].  `handlerFn' will be called the
@@ -71,33 +74,37 @@ extern void aioEnable(int fd, void *clientData, int flags);
  * with the mask currently in effect for `fd'.)
  */
 typedef void (*aioHandler)(int fd, void *clientData, int flag);
-extern void aioHandle(int fd, aioHandler handlerFn, int mask);
+EXPORT(void) aioHandle(int fd, aioHandler handlerFn, int mask);
 
 /* Suspend handling of the events in `mask' for `fd'.
  */
-extern void aioSuspend(int fd, int mask);
+EXPORT(void) aioSuspend(int fd, int mask);
 
 /* Disable further AIO handling of `fd'.  The descriptor is reset to its
  * default state (w.r.t. NBIO, etc.) but is NOT closed.
  */
-extern void aioDisable(int fd);
+EXPORT(void) aioDisable(int fd);
 
 /* Sleep for at most `microSeconds'.  Any event(s) arriving for
  * handled fd(s) will terminate the sleep, with the appropriate
  * handler(s) being called before returning.
  */
-extern long aioPoll(long microSeconds);
-
-/* As above, but avoid sleeping in select() if microSeconds is small
- * (less than a timeslice).  Handlers are called, if neccessary, at
- * the start and end of the sleep.
- */
-extern long aioSleepForUsecs(long microSeconds);
+EXPORT(long) aioPoll(long microSeconds);
 
 extern unsigned volatile long long ioUTCMicroseconds(void);
 extern unsigned volatile long long ioUTCMicrosecondsNow(void);
 
-void aioInterruptPoll();
+/*
+ * I interrupt the poll when there is an event that the VM should handle.
+ * For example, when signalling a Pharo semaphore
+ */
+EXPORT(void) aioInterruptPoll();
+
+/**
+ * I block the caller if we are in the aioPoll
+ */
+EXPORT(void) aioWaitIfInPoll();
+
 
 /* debugging stuff. */
 #ifdef AIO_DEBUG

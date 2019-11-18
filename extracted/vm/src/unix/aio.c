@@ -31,6 +31,8 @@
  */
 
 #include "sqaio.h"
+#include "debug.h"
+#include "platformSemaphore.h"
 
 #ifdef HAVE_CONFIG_H
 
@@ -122,6 +124,9 @@ static fd_set wrMask;		/* handle write		 */
 static fd_set exMask;		/* handle exception	 */
 static fd_set xdMask;		/* external descriptor	 */
 
+
+void heartbeat_poll_enter(long microSeconds);
+void heartbeat_poll_exit(long microSeconds);
 
 static void 
 undefinedHandler(int fd, void *clientData, int flags)
@@ -265,9 +270,9 @@ aioPoll(long microSeconds)
 	int	fd;
 	fd_set	rd, wr, ex;
 	unsigned long long us;
-	int maxFdToUse
+	int maxFdToUse;
+	long remainingMicroSeconds;
 
-	FPRINTF((stderr, "aioPoll(%ld)\n", microSeconds));
 	DO_TICK(SHOULD_TICK());
 
 	/*
@@ -288,36 +293,47 @@ aioPoll(long microSeconds)
 	ex = exMask;
 	us = ioUTCMicroseconds();
 
+	remainingMicroSeconds = microSeconds;
+
 	FD_SET(signal_pipe_fd[0], &rd);
 
 	maxFdToUse = maxFd > (signal_pipe_fd[0] + 1) ? maxFd : signal_pipe_fd[0] + 1;
+
+	heartbeat_poll_enter(microSeconds);
 
 	for (;;) {
 		struct timeval tv;
 		int	n;
 		unsigned long long now;
 
-		tv.tv_sec = microSeconds / 1000000;
-		tv.tv_usec = microSeconds % 1000000;
+		tv.tv_sec = remainingMicroSeconds / 1000000;
+		tv.tv_usec = remainingMicroSeconds % 1000000;
 		n = select(maxFdToUse, &rd, &wr, &ex, &tv);
 		if (n > 0)
 			break;
 		if (n == 0) {
-			if (microSeconds)
-				addIdleUsecs(microSeconds);
+			if (remainingMicroSeconds)
+				addIdleUsecs(remainingMicroSeconds);
+			heartbeat_poll_exit(microSeconds);
 			return 0;
 		}
 		if (errno && (EINTR != errno)) {
 			fprintf(stderr, "errno %d\n", errno);
 			perror("select");
+			heartbeat_poll_exit(microSeconds);
 			return 0;
 		}
 		now = ioUTCMicroseconds();
-		microSeconds -= max(now - us, 1);
-		if (microSeconds <= 0)
+		remainingMicroSeconds -= max(now - us, 1);
+
+		if (remainingMicroSeconds <= 0){
+			heartbeat_poll_exit(microSeconds);
 			return 0;
+		}
 		us = now;
 	}
+
+	heartbeat_poll_exit(microSeconds);
 
 	if(FD_ISSET(signal_pipe_fd[0], &rd)){
 		FD_CLR(signal_pipe_fd[0], &rd);

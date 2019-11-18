@@ -16,13 +16,13 @@ PlatformSemaphore
 semaphore_new(long initialValue){
 	PlatformSemaphore wrapper = malloc(sizeof(sem_t));
     int returnCode;
-    
+
     returnCode = sem_init(wrapper, 0, initialValue);
-    
+
     if(returnCode != 0){
         return NULL;
     }
-    
+
     return wrapper;
 }
 
@@ -43,7 +43,7 @@ int
 semaphore_release(PlatformSemaphore sem){
     sem_destroy(sem);
     free(sem);
-    return 0;    
+    return 0;
 }
 
 #else

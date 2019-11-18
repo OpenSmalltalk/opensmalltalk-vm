@@ -13,12 +13,10 @@ set(EXTRACTED_SOURCES
 
 #Platform sources
     ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/unix/aio.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/unix/sqUnixHeartbeat.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/debugUnix.c
 
 #Virtual Memory functions
     ${CMAKE_CURRENT_SOURCE_DIR}/src/memoryUnix.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/aioUnix.c
 )
 
 set(VM_FRONTEND_SOURCES

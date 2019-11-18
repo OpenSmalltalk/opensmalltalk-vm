@@ -112,6 +112,12 @@ char * GetAttributeString(sqInt id)
 
     case 1009: /* source tree version info */
         return getSourceVersion();
+            
+    case 1010: /* Implements AIO Interrupt */
+        return "AIO";
+
+    case 1011: /* Runs on secondary thread */
+        return "SECONDARY_THREAD";
 
     default:
         if ((id - 2) < getImageArgumentCount())
