@@ -5,15 +5,65 @@
 #include <pharoClient.h>
 #include <pharo.h>
 
+//TODO: This needs to be put in VM_PARAMETERS
+int flagVMRunOnWorkerThread = 0;
+
 int runVMThread(void* p){
+    VM_PARAMETERS *parameters = (VM_PARAMETERS*)p;
 
-	VM_PARAMETERS *parameters = (VM_PARAMETERS*)p;
+    if(!initPharoVM(parameters->imageFile, parameters->vmParams, parameters->vmParamsCount, parameters->imageParams, parameters->imageParamsCount)) {
+        logError("Error opening image file: %s\n", parameters->imageFile);
+        exit(-1);
+    }
+    setFlagVMRunOnWorkerThread(flagVMRunOnWorkerThread);
+    
+    runInterpreter();
+}
 
-	if(!initPharoVM(parameters->imageFile, parameters->vmParams, parameters->vmParamsCount, parameters->imageParams, parameters->imageParamsCount)){
-		logError("Error opening image file: %s\n", parameters->imageFile);
-		exit(-1);
-	}
-	runInterpreter();
+int runOnMainThread(VM_PARAMETERS *parameters) {
+    logDebug("Running VM on main thread\n");
+    runVMThread((void *)parameters);
+    return 0;
+}
+
+int runOnWorkerThread(VM_PARAMETERS *parameters) {
+    pthread_attr_t tattr;
+    pthread_t thread_id;
+    size_t size;
+
+    logDebug("Running VM on worker thread\n");
+    
+    /*
+     * I have to get the attributes of the main thread
+     * to get the max stack size.
+     * We need to set this value to the newly created thread,
+     * as the created threads does not auto-grow.
+     */
+    pthread_attr_init(&tattr);
+    pthread_attr_getstacksize(&tattr, &size);
+
+    logDebug("Stack size: %ld\n", size);
+
+
+    if(pthread_attr_setstacksize(&tattr, size * 4)){
+        perror("Setting thread stack size");
+        exit(-1);
+    }
+
+    if(pthread_create(&thread_id, &tattr, runVMThread, parameters)){
+        perror("Spawning the VM thread");
+        exit(-1);
+    }
+
+    pthread_detach(thread_id);
+
+    /**
+     * I will now wait if any plugin wants to run stuff in the main thread.
+     * This is used by the ThreadedFFI plugin to run a worker in the main thread.
+     * This runner is used to create and handle UI operations, required by OSX.
+     */
+
+    return mainThreadLoop();
 }
 
 int main(int argc, char* argv[], char** env){
@@ -38,7 +88,6 @@ int main(int argc, char* argv[], char** env){
 	getcwd(buffer, sizeof(buffer));
 	logDebug("Working Directory %s", buffer);
 
-
 	LOG_SIZEOF(int);
 	LOG_SIZEOF(long);
 	LOG_SIZEOF(long long);
@@ -48,41 +97,9 @@ int main(int argc, char* argv[], char** env){
 	LOG_SIZEOF(float);
 	LOG_SIZEOF(double);
 
-	pthread_attr_t tattr;
-	pthread_t thread_id;
-	size_t size;
-
-	/*
-	 * I have to get the attributes of the main thread
-	 * to get the max stack size.
-	 * We need to set this value to the newly created thread,
-	 * as the created threads does not auto-grow.
-	 */
-	pthread_attr_init(&tattr);
-	pthread_attr_getstacksize(&tattr, &size);
-
-	logDebug("Stack size: %ld\n", size);
-
-
-    if(pthread_attr_setstacksize(&tattr, size * 4)){
-		perror("Setting thread stack size");
-		exit(-1);
-    }
-
-	if(pthread_create(&thread_id, &tattr, runVMThread, &parameters)){
-		perror("Spawning the VM thread");
-		exit(-1);
-	}
-
-	pthread_detach(thread_id);
-
-	/**
-	 * I will now wait if any plugin wants to run stuff in the main thread.
-	 * This is used by the ThreadedFFI plugin to run a worker in the main thread.
-	 * This runner is used to create and handle UI operations, required by OSX.
-	 */
-
-	return mainThreadLoop();
+    return flagVMRunOnWorkerThread
+        ? runOnWorkerThread(&parameters)
+        : runOnMainThread(&parameters);
 }
 
 void printVersion(){

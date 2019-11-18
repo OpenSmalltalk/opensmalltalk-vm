@@ -124,6 +124,7 @@ void printUsage(){
 	printf("Common <option>s:\n");
 	printf("  --help                 print this help message, then exit\n");
 	printf("  --headless             run in headless (no window) mode (default: true)\n");
+    printf("  --worker               run in worker thread (default: false)\n");
 	printf("  --logLevel=<level>     Sets the log level (ERROR, WARN, INFO or DEBUG)\n");
 	printf("  --version              print version information, then exit\n");
 	printf("\n");
@@ -135,6 +136,11 @@ void printUsage(){
 }
 
 typedef void (*OPTION_PROCESS_FUNCTION)(char*);
+
+extern int flagVMRunOnWorkerThread;
+void processWorkerOption(char* value) {
+    flagVMRunOnWorkerThread = 1;
+}
 
 void processLogLevelOption(char* value){
 
@@ -163,13 +169,19 @@ void processPrintVersionOption(char* value){
 
 static struct option long_options[] = {
 	{"headless", no_argument, 0,  0 },
+    {"worker", no_argument, 0,  0 },
 	{"help", no_argument, 0,  0 },
 	{"logLevel", required_argument, 0, 0},
 	{"version", no_argument, 0, 0},
-	{0, 0, 0,  0 }
+	{0, 0, 0, 0 }
 };
 
-static OPTION_PROCESS_FUNCTION optionHandlers[] = {0, processHelpOption, processLogLevelOption, processPrintVersionOption};
+static OPTION_PROCESS_FUNCTION optionHandlers[] = {
+    0, /* No processing needed */
+    processWorkerOption,
+    processHelpOption,
+    processLogLevelOption,
+    processPrintVersionOption};
 
 void processVMOptions(VM_PARAMETERS* parameters){
 

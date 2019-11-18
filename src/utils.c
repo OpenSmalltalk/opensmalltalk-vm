@@ -116,8 +116,8 @@ char * GetAttributeString(sqInt id)
     case 1010: /* Implements AIO Interrupt */
         return "AIO";
 
-    case 1011: /* Runs on secondary thread */
-        return "SECONDARY_THREAD";
+    case 1011:
+        return isVMRunOnWorkerThread() ? "SECONDARY_THREAD" : "MAIN_THREAD";
 
     default:
         if ((id - 2) < getImageArgumentCount())
@@ -285,12 +285,10 @@ void copyParams(int newCount, char** new, int* oldCount, char*** old){
 	}
 }
 
-
 void setPharoCommandLineParameters(char** newVMParams, int newVMParamsCount, char** newImageParams, int newImageParamsCount){
 	copyParams(newVMParamsCount, newVMParams, &vmParamsCount, &vmParams);
 	copyParams(newImageParamsCount, newImageParams, &imageParamsCount, &imageParams);
 }
-
 
 char** getSystemSearchPaths(){
 	return (char**)systemSearchPaths;

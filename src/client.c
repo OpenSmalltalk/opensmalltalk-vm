@@ -29,6 +29,17 @@ static void ensureSemaphoreInitialized();
 static Semaphore* mainLoopSemaphore;
 static sqInt (*mainLoopClosure)();
 
+static int vmRunOnWorkerThread = 0;
+
+//TODO: All this should be concentrated in an unique vm parameters structure.
+EXPORT(void) setFlagVMRunOnWorkerThread(int flag) {
+    vmRunOnWorkerThread = flag;
+}
+
+EXPORT(int) isVMRunOnWorkerThread() {
+    return vmRunOnWorkerThread;
+}
+
 EXPORT(int) initPharoVM(char* image, char** vmParams, int vmParamCount, char** imageParams, int imageParamCount){
 	initGlobalStructure();
 
