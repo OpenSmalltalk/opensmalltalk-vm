@@ -53,7 +53,11 @@ AR = @AR@
 AR_FLAGS = rc
 
 CC = @CC@
+ifeq ($(COG), 1)
+CFLAGS = @CFLAGS@ -DCOG=1
+else
 CFLAGS = @CFLAGS@
+endif
 CPPFLAGS = @CPPFLAGS@
 RANLIB = @RANLIB@
 MAKEINFO = @MAKEINFO@

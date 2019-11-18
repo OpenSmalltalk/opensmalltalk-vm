@@ -394,6 +394,21 @@ ARMul_OSHandleSWI (ARMul_State * state, ARMword number)
 
   switch (number)
     {
+#if COG
+#define InstructionPrefetchError 5
+    case SWI_CogPrefetch:
+      // TPR - This is the SWI number which is returned by our memory interface 
+      // if there is an instruction fetch for an illegal address.
+      // this #define stolen from GdbARMPlugin.h and ought to be done better
+      state->Emulate = STOP;
+      state->EndCondition = InstructionPrefetchError;
+      
+      // during execution, the pc points the next fetch address, which is 8 byte after the current instruction.
+      gdb_log_printf(NULL, "Illegal Instruction fetch address (%#p).", state->Reg[15]-8);
+      return TRUE; // escape immediately
+      break;
+#endif
+
     case SWI_Read:
       if (swi_mask & SWI_MASK_DEMON)
 	SWIread (state, state->Reg[0], state->Reg[1], state->Reg[2]);

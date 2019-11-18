@@ -33,6 +33,12 @@
 #define SWI_Exit                   0x11
 #define SWI_EnterOS                0x16
 
+#if COG
+/* Add prefetch error for Cog usage of this simulator, hacked up albeit.
+   It isn't a real SWI but (ab)uses the mechanism to do it's eeeeeevil work */
+# define SWI_CogPrefetch           0x42 /* because why wouldn't we? */
+#endif
+
 #define SWI_GetErrno               0x60
 #define SWI_Clock                  0x61
 #define SWI_Time                   0x63

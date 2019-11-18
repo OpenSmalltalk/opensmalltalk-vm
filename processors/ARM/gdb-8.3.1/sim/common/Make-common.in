@@ -261,7 +261,11 @@ RUNTESTFLAGS =
 callback_h = $(srcroot)/include/gdb/callback.h
 remote_sim_h = $(srcroot)/include/gdb/remote-sim.h
 
+ifeq ($(COG),1)
+all: $(SIM_EXTRA_ALL) libsim.a
+else
 all: $(SIM_EXTRA_ALL) libsim.a run$(EXEEXT) .gdbinit
+endif
 
 libsim.a: $(LIB_OBJS)
 	rm -f libsim.a

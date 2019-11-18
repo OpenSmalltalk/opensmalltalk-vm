@@ -1242,6 +1242,14 @@ ARMul_Emulate26 (ARMul_State * state)
 	  break;
 	}
 
+#if COG
+// TPR - save the pc to help in CogVM sim error handling, IFF the instr is not an abort SWI
+      if ( instr != (0xEF000000 | SWI_CogPrefetch))
+	{
+	  state->temp = pc;
+	}
+#endif
+
       if (state->EventSet)
 	ARMul_EnvokeEvent (state);
 

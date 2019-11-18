@@ -3163,6 +3163,8 @@ elf_fake_sections (bfd *abfd, asection *asect, void *fsarg)
 
   if (arg->link_info)
     {
+      /* TAO -- removed for Cog */
+#if !COG
       /* ld: compress DWARF debug sections with names: .debug_*.  */
       if ((arg->link_info->compress_debug & COMPRESS_DEBUG)
 	  && (asect->flags & SEC_DEBUGGING)
@@ -3178,6 +3180,7 @@ elf_fake_sections (bfd *abfd, asection *asect, void *fsarg)
 	     _bfd_elf_assign_file_positions_for_non_load.  */
 	  delay_st_name_p = TRUE;
 	}
+#endif /* COG */
     }
   else if ((asect->flags & SEC_ELF_RENAME))
     {

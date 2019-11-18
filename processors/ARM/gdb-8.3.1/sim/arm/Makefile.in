@@ -17,14 +17,20 @@
 
 ## COMMON_PRE_CONFIG_FRAG
 
+ifeq ($(COG),1)
+SIM_EXTRA_CFLAGS = -DMODET -DNEED_UI_LOOP_HOOK -DSIM_TARGET_SWITCHES -DCOG=1
+SIM_ARM_MEM_OBJ = armulmem.o
+else
 SIM_EXTRA_CFLAGS = -DMODET
+SIM_ARM_MEM_OBJ = armvirt.o
+endif
 SIM_EXTRA_LIBS = -lm
 
 SIM_OBJS = \
 	wrapper.o \
 	$(SIM_NEW_COMMON_OBJS) \
 	armemu26.o armemu32.o arminit.o armos.o armsupp.o \
-	armvirt.o thumbemu.o \
+	$(SIM_ARM_MEM_OBJ) thumbemu.o \
 	armcopro.o maverick.o iwmmxt.o
 
 ## COMMON_POST_CONFIG_FRAG

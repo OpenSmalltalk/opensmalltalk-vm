@@ -95,6 +95,18 @@ print_insn (ARMword instr)
   disassembler_ftype disassemble_fn;
 
   opbuf[0] = 0;
+
+#if COG
+  /* TAO -- added for debug, because Cog use doesn't currently initialize info structure */
+  if (!info.read_memory_func) {
+    INIT_DISASSEMBLE_INFO (info, stdout, op_printf);
+    info.read_memory_func = sim_dis_read;
+    info.endian_code = BFD_ENDIAN_LITTLE;
+    info.arch = bfd_arch_arm;
+    disassemble_init_for_target (& info);
+  }
+#endif
+
   info.application_data = & instr;
   disassemble_fn = disassembler (bfd_arch_arm, 0, 0, NULL);
   size = disassemble_fn (0, & info);

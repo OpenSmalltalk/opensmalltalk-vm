@@ -520,8 +520,11 @@ struct bfd_link_info
   /* Separator between archive and filename in linker script filespecs.  */
   char path_separator;
 
+  /* TAO -- removed for Cog */
+#if !COG
   /* Compress DWARF debug sections.  */
   enum compressed_debug_section_type compress_debug;
+#endif
 
   /* Default stack size.  Zero means default (often zero itself), -1
      means explicitly zero-sized.  */

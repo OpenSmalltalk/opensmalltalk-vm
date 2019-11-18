@@ -1983,6 +1983,16 @@ ARMul_ThumbDecode (ARMul_State * state,
   ARMword next_instr;
   ARMword  old_tinstr = tinstr;
 
+#if COG
+// tpr - catch our special SWI and effectively skip over thumb nonsense
+  if (tinstr == 0xEF200000)
+    {
+      // that's us - hate using magic numbers but that's life
+      *ainstr = tinstr;
+      return valid;
+    }
+#endif
+
   if (skipping_32bit_thumb == pc)
     {
       skipping_32bit_thumb = 0;
