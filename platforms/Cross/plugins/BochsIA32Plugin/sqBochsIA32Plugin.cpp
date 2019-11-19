@@ -545,7 +545,7 @@ logfunctions::logfunctions(void) {}
 
 logfunctions::~logfunctions() {}
 
-#define sprintlog(fmt, ap) \
+#define sprintlog(fmt,ap) \
 do { \
 	va_list ap; \
 	va_start(ap, fmt); \

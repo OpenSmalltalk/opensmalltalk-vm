@@ -78,7 +78,7 @@ GetWord (ARMul_State * state, ARMword address, int check)
   if(address < minReadAddress || address + 4 > (state->MemSize))
   {
     //raise memory access error
-    state->EndCondition = MemoryLoadBoundsError;
+    state->EndCondition = MemoryReadBoundsError;
     state->Emulate = FALSE;
     gdb_log_printf(NULL, "Illegal memory read at %#p. ", address);
     return 0;

@@ -18,10 +18,6 @@
 
 ARMul_State*	lastCPU = NULL;
 
-/* When compiling armulator, it generally sets NEED_UI_LOOP_HOOK, which 
-	makes the main emulation step require this symbol to be set. */
-extern int (*deprecated_ui_loop_hook) (int) = NULL;
-
 // These two variables exist, in case there are library-functions which write to a stream.
 // In that case, we would write functions which print to that stream instead of stderr or similar
 #define LOGSIZE 4096
@@ -30,8 +26,12 @@ static int	gdblog_index = 0;
 
 ulong	minReadAddress, minWriteAddress;
 
-// what is that for?
-	   void			(*prevInterruptCheckChain)() = 0;
+/* The interrupt check chain is a convention wherein functions wanting to be
+ * called on interrupt check chain themselves together by remembering the head
+ * of the interruptCheckChain when they register to be informed. See the source
+ * of the plugin itself, src/plugins/GdbARMv8Plugin/GdbARMv8Plugin.c
+ */
+void	(*prevInterruptCheckChain)() = 0;
 
 void
 print_state(ARMul_State* state)
@@ -205,3 +205,110 @@ getlog(long *len)
 	return gdb_log;
 }
 
+/* Adapted from sim/aarch64/memory.c -- Memory accessor functions for the AArch64 simulator
+
+   Copyright (C) 2015-2019 Free Software Foundation, Inc.
+
+ */
+
+#if 0
+#include "config.h"
+#include <sys/types.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "libiberty.h"
+
+#include "memory.h"
+#include "simulator.h"
+
+#include "sim-core.h"
+#endif
+
+/* FIXME: AArch64 requires aligned memory access if SCTRLR_ELx.A is set,
+   but we are not implementing that here.  */
+#define FETCH_FUNC(RETURN_TYPE, ACCESS_TYPE, NAME, N)					\
+  RETURN_TYPE															\
+  aarch64_get_mem_##NAME (sim_cpu *cpu, uint64_t address)				\
+  { RETURN_TYPE val;													\
+	if (address < minReadAddress										\
+	 || address + N > theMemorySize)									\
+		longjmp(bx_cpu.jmp_buf_env,MemoryBoundsError);					\
+	memcpy(&val, theMemory + address, N);								\
+    return val;															\
+  }
+
+FETCH_FUNC(uint64_t, uint64_t, u64, 8)
+FETCH_FUNC(int64_t,   int64_t, s64, 8)
+FETCH_FUNC(uint32_t, uint32_t, u32, 4)
+FETCH_FUNC(int32_t,   int32_t, s32, 4)
+FETCH_FUNC(uint32_t, uint16_t, u16, 2)
+FETCH_FUNC(int32_t,   int16_t, s16, 2)
+FETCH_FUNC(uint32_t,  uint8_t, u8, 1)
+FETCH_FUNC(int32_t,    int8_t, s8, 1)
+
+void
+aarch64_get_mem_long_double (sim_cpu *cpu, uint64_t address, FRegister *a)
+{
+	if (address < minReadAddress
+	 || address + 16 > theMemorySize)
+		longjmp(bx_cpu.jmp_buf_env,MemoryBoundsError);
+	memcpy(a, theMemory + address, 16);
+}
+
+/* FIXME: Aarch64 requires aligned memory access if SCTRLR_ELx.A is set,
+   but we are not implementing that here.  */
+#define STORE_FUNC(TYPE, NAME, N)										\
+  void																	\
+  aarch64_set_mem_##NAME (sim_cpu *cpu, uint64_t address, TYPE value)	\
+  {																		\
+	if (address < minWriteAddress										\
+	 || address + N > theMemorySize)									\
+		longjmp(bx_cpu.jmp_buf_env,MemoryBoundsError);					\
+	memcpy(theMemory + address, &value, N);								\
+  }
+
+STORE_FUNC (uint64_t, u64, 8)
+STORE_FUNC (int64_t,  s64, 8)
+STORE_FUNC (uint32_t, u32, 4)
+STORE_FUNC (int32_t,  s32, 4)
+STORE_FUNC (uint16_t, u16, 2)
+STORE_FUNC (int16_t,  s16, 2)
+STORE_FUNC (uint8_t,  u8, 1)
+STORE_FUNC (int8_t,   s8, 1)
+
+void
+aarch64_set_mem_long_double (sim_cpu *cpu, uint64_t address, FRegister a)
+{
+	if (address < minReadAddress
+	 || address + 16 > theMemorySize)
+		longjmp(bx_cpu.jmp_buf_env,MemoryBoundsError);
+	memcpy(theMemory + address, a, 16);
+}
+
+void
+aarch64_get_mem_blk(sim_cpu *cpu, uint64_t address,
+					char *buffer, unsigned length)
+{
+	if (address < minReadAddress
+	 || address + length > theMemorySize)
+		longjmp(bx_cpu.jmp_buf_env,MemoryBoundsError);
+	memcpy(address, theMemory + address, length);
+}
+
+const char *
+aarch64_get_mem_ptr(sim_cpu *cpu, uint64_t address) { return address; }
+
+/* We implement a combined stack and heap.  That way the sbrk()
+   function in libgloss/aarch64/syscalls.c has a chance to detect
+   an out-of-memory condition by noticing a stack/heap collision.
+
+   The heap starts at the end of loaded memory and carries on up
+   to an arbitary 2Gb limit.  */
+
+uint64_t
+aarch64_get_heap_start (sim_cpu *cpu) { return 0; }
+
+uint64_t
+aarch64_get_stack_start (sim_cpu *cpu) { return STACK_TOP; }

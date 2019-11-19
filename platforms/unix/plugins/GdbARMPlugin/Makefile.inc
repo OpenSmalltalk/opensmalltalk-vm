@@ -1,6 +1,5 @@
 GDBBUILDFOLDER	= ../../../gdbarm32
 GDBSOURCEFOLDER	= ../../../../processors/ARM/gdb-7.10/
-XCFLAGS		= -DNEED_UI_LOOP_HOOK
 
 XINCLUDES	+= -I$(GDBSOURCEFOLDER)/include
 XINCLUDES	+= -I$(GDBSOURCEFOLDER)/sim/arm

@@ -1,13 +1,11 @@
+/* Include file for the ARMv8/ARM64 processor simulator plugin, GdbARMv8Plugin */
 /* heavily based on BochsIA32Plugin.h */
-/* Bochs seems to use error code 1 for execution errors.
- * So we use > 1 for various errors
- */
 
 /* TPR - added MemoryWriteBoundsError */
 #define NoError 0
 #define ExecutionError 1
 #define BadCPUInstance 2
-#define MemoryLoadBoundsError 3
+#define MemoryReadBoundsError 3
 #define MemoryWriteBoundsError 4
 #define InstructionPrefetchError 5
 #define PanicError 6

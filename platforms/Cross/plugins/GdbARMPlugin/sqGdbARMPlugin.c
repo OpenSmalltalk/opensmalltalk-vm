@@ -18,10 +18,6 @@
 
 ARMul_State*	lastCPU = NULL;
 
-/* When compiling armulator, it generally sets NEED_UI_LOOP_HOOK, which 
-	makes the main emulation step require this symbol to be set. */
-extern int (*deprecated_ui_loop_hook) (int) = NULL;
-
 // These two variables exist, in case there are library-functions which write to a stream.
 // In that case, we would write functions which print to that stream instead of stderr or similar
 #define LOGSIZE 4096
@@ -30,8 +26,12 @@ static int	gdblog_index = 0;
 
 ulong	minReadAddress, minWriteAddress;
 
-// what is that for?
-	   void			(*prevInterruptCheckChain)() = 0;
+/* The interrupt check chain is a convention wherein functions wanting to be
+ * called on interrupt check chain themselves together by remembering the head
+ * of the interruptCheckChain when they register to be informed. See the source
+ * of the plugin itself, src/plugins/GdbARMPlugin/GdbARMPlugin.c
+ */
+void	(*prevInterruptCheckChain)() = 0;
 
 void
 print_state(ARMul_State* state)
