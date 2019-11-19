@@ -77,6 +77,9 @@ bfd_compress_section_contents (bfd *abfd, sec_ptr sec,
 			       bfd_byte *uncompressed_buffer,
 			       bfd_size_type uncompressed_size)
 {
+#if COG
+	return -1;
+#else
   uLong compressed_size;
   bfd_byte *buffer;
   bfd_size_type buffer_size;
@@ -204,6 +207,7 @@ bfd_compress_section_contents (bfd *abfd, sec_ptr sec,
   sec->compress_status = COMPRESS_SECTION_DONE;
 
   return uncompressed_size;
+#endif /* COG */
 }
 
 /*

@@ -38,7 +38,6 @@ table. The routines PutWord and GetWord implement this. Pages are never
 freed as they might be needed again. A single area of memory may be
 defined to generate aborts. */
 
-#include "armopts.h"
 #include "armos.h"
 #include "armdefs.h"
 #include "ansidecl.h"
