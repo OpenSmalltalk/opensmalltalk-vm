@@ -111,7 +111,8 @@ runOnCPU(void *cpu, void *memory,
 	else {
 		continueRunning = 1;
 		while (continueRunning
-			&& aarch64_step(cpu));
+			&& aarch64_step(cpu)
+			&& !gdblog_index);
 	}
 
 #if 0

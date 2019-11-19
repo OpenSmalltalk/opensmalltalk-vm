@@ -1,12 +1,13 @@
 LIBDEPS=../cpu/libcpu.a
 ARMGDB=../../../processors/ARM/gdb-8.3.1
 INCLUDES := -I$(ARMGDB)/include \
+			-I$(ARMGDB)/sim/common \
 			-I$(ARMGDB)/sim/aarch64 \
 			-I$(ARMGDB)/bfd \
 			-I../bfd -I../gdb -I..
 LIBS:=-L../bfd -L../libiberty -L../opcodes -L../sim/aarch64 \
            -lbfd -liberty -lopcodes -lopcodes -lsim -lz
-CFLAGS=-m32 -DCOG=1 -DMODET $(INCLUDES) $(LIBS)
+CFLAGS=-m32 -DCOG=1 -DMODET -DWITH_PROFILE=-1 $(INCLUDES) $(LIBS)
 
 GDBARMEXP=.
 CLASS=GdbARMv8Alien
