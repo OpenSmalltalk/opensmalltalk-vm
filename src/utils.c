@@ -117,7 +117,7 @@ char * GetAttributeString(sqInt id)
         return "AIO";
 
     case 1011:
-        return isVMRunOnWorkerThread() ? "SECONDARY_THREAD" : "MAIN_THREAD";
+        return isVMRunOnWorkerThread() ? "WORKER_THREAD" : "MAIN_THREAD";
 
     default:
         if ((id - 2) < getImageArgumentCount())
