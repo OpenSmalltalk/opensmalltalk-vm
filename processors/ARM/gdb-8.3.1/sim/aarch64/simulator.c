@@ -14323,7 +14323,11 @@ aarch64_decode_and_execute (sim_cpu *cpu, uint64_t pc)
     }
 }
 
+#if COG
+bfd_boolean
+#else
 static bfd_boolean
+#endif
 aarch64_step (sim_cpu *cpu)
 {
   uint64_t pc = aarch64_get_PC (cpu);

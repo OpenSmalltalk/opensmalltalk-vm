@@ -5,6 +5,7 @@
 #define NoError 0
 #define ExecutionError 1
 #define BadCPUInstance 2
+#define MemoryBoundsError 3
 #define MemoryReadBoundsError 3
 #define MemoryWriteBoundsError 4
 #define InstructionPrefetchError 5
@@ -19,8 +20,7 @@
 typedef unsigned long ulong;
 #endif
 
-extern ulong	minReadAddress, minWriteAddress;
-extern long gdb_log_printf(void* stream, const char * format, ...);
+extern int gdb_log_printf(void* stream, const char * format, ...);
 
 
 /*

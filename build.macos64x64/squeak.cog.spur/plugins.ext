@@ -6,6 +6,7 @@ BochsX64Plugin \
 CameraPlugin \
 CroquetPlugin \
 GdbARMPlugin \
+GdbARMv8Plugin \
 Mpeg3Plugin \
 SqueakFFIPrims \
 Squeak3D \

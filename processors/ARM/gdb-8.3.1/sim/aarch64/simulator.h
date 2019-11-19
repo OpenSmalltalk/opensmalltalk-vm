@@ -46,6 +46,9 @@ extern void         aarch64_init (sim_cpu *, uint64_t);
    hit an error.  */
 
 extern void         aarch64_run (SIM_DESC);
+#if COG
+extern bfd_boolean  aarch64_step (sim_cpu *);
+#endif
 extern const char * aarch64_get_func (SIM_DESC, uint64_t);
 extern void         aarch64_init_LIT_table (void);
 

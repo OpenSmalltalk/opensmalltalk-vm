@@ -2,21 +2,39 @@
 #define FOR_COG_PLUGIN 1
 
 #include "sqAssert.h"
-#include "GdbARMPlugin.h"
-//disassembler
-#if __APPLE__ && __MACH__
-# include "config.h"
-#endif
-#include <bfd.h>
-#include <dis-asm.h>
+#include "GdbARMv8Plugin.h"
 
 #include <stdarg.h>
 
-//emulator
-#include <armdefs.h>
-#include <armemu.h>
+#include <aarch64/config.h>
+#undef PACKAGE
+#undef PACKAGE_NAME
+#undef PACKAGE_STRING
+#undef PACKAGE_TARNAME
+#undef PACKAGE_VERSION
+#include <simulator.h>
+#include <memory.h>
+#undef PACKAGE
+#undef PACKAGE_NAME
+#undef PACKAGE_STRING
+#undef PACKAGE_TARNAME
+#undef PACKAGE_VERSION
+#include <bfd.h>
+#include <disassemble.h>
 
-ARMul_State*	lastCPU = NULL;
+/*
+ * Define setjmp and longjmp to be the most minimal setjmp/longjmp available
+ * on the platform.
+ */
+#if !_WIN32
+# define setjmp(jb) _setjmp(jb)
+# define longjmp(jb,v) _longjmp(jb,v)
+#endif
+
+struct sim_state *lastCPU = NULL;
+sim_cpu initialSimState = {0,};
+
+jmp_buf error_abort;
 
 // These two variables exist, in case there are library-functions which write to a stream.
 // In that case, we would write functions which print to that stream instead of stderr or similar
@@ -24,7 +42,12 @@ ARMul_State*	lastCPU = NULL;
 static char	gdb_log[LOGSIZE+1];
 static int	gdblog_index = 0;
 
-ulong	minReadAddress, minWriteAddress;
+static unsigned char *theMemory = 0;
+static unsigned long  theMemorySize;
+static unsigned long  minReadAddress;
+static unsigned long  minWriteAddress;
+static int            theErrorAcorn;
+static int            continueRunning;
 
 /* The interrupt check chain is a convention wherein functions wanting to be
  * called on interrupt check chain themselves together by remembering the head
@@ -33,83 +56,65 @@ ulong	minReadAddress, minWriteAddress;
  */
 void	(*prevInterruptCheckChain)() = 0;
 
-void
-print_state(ARMul_State* state)
-{
-	printf("NextInstr: %i\ttheMemory: 0x%p\tNumInstrs: 0x%p\tPC: 0x%p\tmode: %i\tEndCondition: %i\tprog32Sig: %s\tEmulate: %i\n", 
-		state->NextInstr, state->MemDataPtr, 
-		state->NumInstrs, state->Reg[15], 
-		state->Mode, state->EndCondition, 
-		state->prog32Sig == LOW ? "LOW" : (state->prog32Sig == HIGH ? "HIGH" :
-		(state->prog32Sig == HIGHLOW ? "HIGHLOW" : "???")), state->Emulate);
-}
-
-void*
+void *
 newCPU()
 {
-	if(lastCPU == NULL) ARMul_EmulateInit();
-	lastCPU = ARMul_NewState();
-#if 0 /* XScale seems to disable floating point */
-	ARMul_SelectProcessor (lastCPU, ARM_v5_Prop | ARM_v5e_Prop | ARM_XScale_Prop | ARM_v6_Prop);
-#else /* see sim_create_inferior in sim/arm/wrapper.c */
-	ARMul_SelectProcessor (lastCPU, ARM_v5_Prop | ARM_v5e_Prop | ARM_v6_Prop);
-#endif
+	char *av8_argv[] = {"ARMv8", 0};
+
+	if (!lastCPU) {
+		lastCPU = sim_open(SIM_OPEN_STANDALONE, 0, 0, av8_argv);
+		initialSimState = *(lastCPU->cpu[0]);
+	}
 	return lastCPU;
 }
 
 long
 resetCPU(void* cpu)
 {
-	unsigned int i, j;
-	ARMul_State* state = (ARMul_State*) cpu;
-	// test whether the supplied instance is an ARMul type?
-
 	gdblog_index = 0;
 
-	// reset registers in all modes
-	for (i = 0; i < 16; i++) {
-		state->Reg[i] = 0;
-		for (j = 0; j < 7; j++)
-			state->RegBank[j][i] = 0;
-	}
-	for (i = 0; i < 7; i++)
-		state->Spsr[i] = 0;
-	for (i = 0; i < 32; i++)
-		state->VFP_Reg[i].dword = 0ULL;
-	// make sure the processor is at least in 32-bit mode
-	if (!state->prog32Sig)
-		state->prog32Sig = HIGH;
-	ARMul_Reset(state);
+	*(lastCPU->cpu[0]) = initialSimState;
 	return 0;
 }
 
+#define run 0
+#define step 1
+
 static inline long
 runOnCPU(void *cpu, void *memory, 
-		ulong byteSize, ulong minAddr, ulong minWriteMaxExecAddr, ARMword (*run)(ARMul_State*))
+		ulong byteSize, ulong minAddr, ulong minWriteMaxExecAddr, int runOrStep)
 {
-	ARMul_State* state = (ARMul_State*) cpu;
-	lastCPU = state;
-
-	assert(state->prog32Sig == HIGH || state->prog32Sig == HIGHLOW);
-	// test whether the supplied instance is an ARMul type?
-	state->MemDataPtr = (unsigned char*) memory;
-	state->MemSize = byteSize;
+	theMemory = (unsigned char *)memory;
+	theMemorySize = byteSize;
 	minReadAddress = minAddr;
 	minWriteAddress = minWriteMaxExecAddr;
+	theErrorAcorn = 0;
 
+	if ((theErrorAcorn = setjmp(error_abort)) != 0) {
+#if 0
+		anx64->gen_reg[BX_64BIT_REG_RIP].dword.erx = anx64->prev_rip;
+#endif
+		return theErrorAcorn;
+	}
 	gdblog_index = 0;
 
-	state->EndCondition = NoError;
-	state->NextInstr = RESUME;
+	if (runOrStep == step)
+		aarch64_step(cpu);
+	else {
+		continueRunning = 1;
+		while (continueRunning
+			&& aarch64_step(cpu));
+	}
 
-	state->Reg[15] = run(state);
-
+#if 0
 	// collect the PSR from their dedicated flags to have easy access from the image.
 	ARMul_SetCPSR(state, ARMul_GetCPSR(state));
 
-	if(state->EndCondition != NoError){
+	if (state->EndCondition != NoError)
 		return state->EndCondition;
-	}
+#endif
+	if (theErrorAcorn)
+		return theErrorAcorn;
 
 	return gdblog_index == 0 ? 0 : SomethingLoggedError;
 }
@@ -118,14 +123,14 @@ long
 singleStepCPUInSizeMinAddressReadWrite(void *cpu, void *memory, 
 		ulong byteSize, ulong minAddr, ulong minWriteMaxExecAddr)
 {
-	return runOnCPU(cpu, memory, byteSize, minAddr, minWriteMaxExecAddr, ARMul_DoInstr);
+	return runOnCPU(cpu, memory, byteSize, minAddr, minWriteMaxExecAddr, step);
 }
 
 long
 runCPUInSizeMinAddressReadWrite(void *cpu, void *memory, 
 		ulong byteSize, ulong minAddr, ulong minWriteMaxExecAddr)
 {
-	return runOnCPU(cpu, memory, byteSize, minAddr, minWriteMaxExecAddr, ARMul_DoProg);
+	return runOnCPU(cpu, memory, byteSize, minAddr, minWriteMaxExecAddr, run);
 }
 
 /*
@@ -139,19 +144,19 @@ flushICacheFromTo(void *cpu, ulong saddr, ulong eaddr)
 #endif
 }
 
-long
-gdb_log_printf(void* stream, const char * format, ...)
+int
+gdb_log_printf(void *stream, const char * format, ...)
 {
 	va_list arg;
 	int n;
 	va_start(arg,format);
 
-	if(stream == NULL){
+	if (!stream) {
 		n = vsnprintf((char*) (&gdb_log) + gdblog_index, LOGSIZE-gdblog_index, format, arg);
 		gdblog_index = gdblog_index + n;
-	} else {
-		vfprintf(stream, format, arg);
 	}
+	else
+		vfprintf(stream, format, arg);
 	return 0;
 }
 
@@ -168,8 +173,10 @@ disassembleForAtInSize(void *cpu, ulong laddr,
 	// void init_disassemble_info (struct disassemble_info *dinfo, void *stream, fprintf_ftype fprintf_func)
 	init_disassemble_info ( dis, NULL, gdb_log_printf);
 
-	dis->arch = bfd_arch_arm;
-	dis->mach = bfd_mach_arm_unknown;
+	dis->arch = bfd_arch_aarch64;
+#if 0
+	dis->mach = bfd_mach_aarch64_unknown;
+#endif
 
 	// sets some fields in the structure dis to architecture specific values
 	disassemble_init_for_target( dis );
@@ -181,7 +188,7 @@ disassembleForAtInSize(void *cpu, ulong laddr,
 	// first print the address
 	gdb_log_printf( NULL, "%08lx: ", laddr);
 	//other possible functions are listed in opcodes/dissassemble.c
-	unsigned int size = print_insn_little_arm((bfd_vma) laddr, dis);
+	unsigned int size = print_insn_aarch64((bfd_vma) laddr, dis);
 
 	free(dis);
 	gdb_log[gdblog_index+1] = 0;
@@ -190,13 +197,10 @@ disassembleForAtInSize(void *cpu, ulong laddr,
 }
 
 void
-forceStopRunning()
-{
-	lastCPU->Emulate = STOP;
-}
+forceStopRunning() { continueRunning = 0; }
 
 long
-errorAcorn(void) { return 0; }
+errorAcorn(void) { return errorAcorn; }
 
 char *
 getlog(long *len)
@@ -234,7 +238,7 @@ getlog(long *len)
   { RETURN_TYPE val;													\
 	if (address < minReadAddress										\
 	 || address + N > theMemorySize)									\
-		longjmp(bx_cpu.jmp_buf_env,MemoryBoundsError);					\
+		longjmp(error_abort,MemoryBoundsError);							\
 	memcpy(&val, theMemory + address, N);								\
     return val;															\
   }
@@ -253,7 +257,7 @@ aarch64_get_mem_long_double (sim_cpu *cpu, uint64_t address, FRegister *a)
 {
 	if (address < minReadAddress
 	 || address + 16 > theMemorySize)
-		longjmp(bx_cpu.jmp_buf_env,MemoryBoundsError);
+		longjmp(error_abort,MemoryBoundsError);
 	memcpy(a, theMemory + address, 16);
 }
 
@@ -265,26 +269,26 @@ aarch64_get_mem_long_double (sim_cpu *cpu, uint64_t address, FRegister *a)
   {																		\
 	if (address < minWriteAddress										\
 	 || address + N > theMemorySize)									\
-		longjmp(bx_cpu.jmp_buf_env,MemoryBoundsError);					\
+		longjmp(error_abort,MemoryBoundsError);							\
 	memcpy(theMemory + address, &value, N);								\
   }
 
-STORE_FUNC (uint64_t, u64, 8)
-STORE_FUNC (int64_t,  s64, 8)
-STORE_FUNC (uint32_t, u32, 4)
-STORE_FUNC (int32_t,  s32, 4)
-STORE_FUNC (uint16_t, u16, 2)
-STORE_FUNC (int16_t,  s16, 2)
-STORE_FUNC (uint8_t,  u8, 1)
-STORE_FUNC (int8_t,   s8, 1)
+STORE_FUNC(uint64_t, u64, 8)
+STORE_FUNC( int64_t, s64, 8)
+STORE_FUNC(uint32_t, u32, 4)
+STORE_FUNC( int32_t, s32, 4)
+STORE_FUNC(uint16_t, u16, 2)
+STORE_FUNC( int16_t, s16, 2)
+STORE_FUNC(uint8_t,   u8, 1)
+STORE_FUNC( int8_t,   s8, 1)
 
 void
 aarch64_set_mem_long_double (sim_cpu *cpu, uint64_t address, FRegister a)
 {
 	if (address < minReadAddress
 	 || address + 16 > theMemorySize)
-		longjmp(bx_cpu.jmp_buf_env,MemoryBoundsError);
-	memcpy(theMemory + address, a, 16);
+		longjmp(error_abort,MemoryBoundsError);
+	memcpy(theMemory + address, &a, 16);
 }
 
 void
@@ -293,7 +297,7 @@ aarch64_get_mem_blk(sim_cpu *cpu, uint64_t address,
 {
 	if (address < minReadAddress
 	 || address + length > theMemorySize)
-		longjmp(bx_cpu.jmp_buf_env,MemoryBoundsError);
+		longjmp(error_abort,MemoryBoundsError);
 	memcpy(address, theMemory + address, length);
 }
 
