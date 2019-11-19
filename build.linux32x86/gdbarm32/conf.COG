@@ -1,7 +1,7 @@
 #!/bin/sh -e
 S=../../../processors/ARM/gdb-8.3.1
-CFLAGS="-g -Os -m32"
-#CFLAGS="-g3 -O0 -m32"
+export CFLAGS="-g -Os -m32 -DCOG=1 -DWORDS_BIGENDIAN=0"
+#export CFLAGS="-g3 -O0 -m32 -DCOG=1 -DWORDS_BIGENDIAN=0"
 CONFFLAGS='--target=arm-linux --with-system-zlib=yes'
 mkdir -p bfd libiberty opcodes sim/common sim/arm
 for d in bfd libiberty opcodes; do

@@ -62,10 +62,16 @@ newCPU()
 	char *av8_argv[] = {"ARMv8", 0};
 
 	if (!lastCPU) {
+		int i;
 		lastCPU = sim_open(SIM_OPEN_STANDALONE, 0, 0, av8_argv);
 		initialSimState = *(lastCPU->cpu[0]);
+		for (i = 0; i < 32; i++) {
+			initialSimState.gr[i].u64 = 0;
+			initialSimState.fr[i].v[0] = 0;
+			initialSimState.fr[i].v[1] = 0;
+		}
 	}
-	return lastCPU;
+	return lastCPU->cpu[0];
 }
 
 long
@@ -73,7 +79,9 @@ resetCPU(void* cpu)
 {
 	gdblog_index = 0;
 
-	*(lastCPU->cpu[0]) = initialSimState;
+	*(sim_cpu *)cpu = initialSimState;
+	if (lastCPU->cpu[0]) /* why does this get nilled? eem 2019/11/19 */
+		*(lastCPU->cpu[0]) = initialSimState;
 	return 0;
 }
 

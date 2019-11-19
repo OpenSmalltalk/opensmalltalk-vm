@@ -1,11 +1,7 @@
 #!/bin/sh
 S=../../../processors/ARM/gdb-8.3.1
-export CFLAGS="-g -O2 -m64"
+export CFLAGS="-g -O2 -m64 -DCOG=1 -DWORDS_BIGENDIAN=0"
 CONFFLAGS='--target=aarch64-linux --with-system-zlib=yes'
-#mkdir -p zlib
-#for d in zlib; do
-#	(cd $d; $S/$d/configure COG=1 CFLAGS="$CFLAGS" $CONFFLAGS)
-#done
 mkdir -p bfd gdb libiberty opcodes sim/common sim/aarch64
 for d in bfd gdb libiberty opcodes; do
 	(cd $d; $S/$d/configure COG=1 CFLAGS="$CFLAGS" $CONFFLAGS)

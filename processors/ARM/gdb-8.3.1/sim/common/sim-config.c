@@ -25,7 +25,15 @@
 #include "bfd.h"
 
 
+#if COG
+# if WORDS_BIGENDIAN
+enum bfd_endian current_target_byte_order = BFD_ENDIAN_BIG;
+# else
+enum bfd_endian current_target_byte_order = BFD_ENDIAN_LITTLE;
+# endif
+#else
 enum bfd_endian current_target_byte_order = BFD_ENDIAN_UNKNOWN;
+#endif
 int current_stdio;
 
 enum sim_alignments current_alignment;
@@ -143,6 +151,13 @@ sim_config (SIM_DESC sd)
   SIM_ASSERT (STATE_MAGIC (sd) == SIM_MAGIC_NUMBER);
 
   /* extract all relevant information */
+#if COG
+# if WORDS_BIGENDIAN
+    prefered_target_byte_order = BFD_ENDIAN_BIG;
+# else
+    prefered_target_byte_order = BFD_ENDIAN_LITTLE;
+# endif
+#else
   if (STATE_PROG_BFD (sd) == NULL
       /* If we have a binary input file (presumably with specified
 	 "--architecture"), it'll have no endianness.  */
@@ -153,6 +168,7 @@ sim_config (SIM_DESC sd)
     prefered_target_byte_order = (bfd_little_endian (STATE_PROG_BFD (sd))
 				  ? BFD_ENDIAN_LITTLE
 				  : BFD_ENDIAN_BIG);
+#endif
 
   /* set the target byte order */
 #if (WITH_TREE_PROPERTIES)
