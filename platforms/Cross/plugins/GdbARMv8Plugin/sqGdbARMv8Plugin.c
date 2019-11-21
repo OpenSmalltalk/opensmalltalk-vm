@@ -59,23 +59,21 @@ void	(*prevInterruptCheckChain)() = 0;
 void *
 newCPU()
 {
-	char *av8_argv[] = {"ARMv8", 0};
-
 	if (!lastCPU) {
-		int i;
+		char *av8_argv[] = {"ARMv8", 0};
+
 		lastCPU = sim_open(SIM_OPEN_STANDALONE, 0, 0, av8_argv);
 		initialSimState = *(lastCPU->cpu[0]);
-		for (i = 0; i < 32; i++) {
-			initialSimState.gr[i].u64 = 0;
-			initialSimState.fr[i].v[0] = 0;
-			initialSimState.fr[i].v[1] = 0;
-		}
+		memset(&initialSimState.gr[0],
+				0,
+				(char *)&initialSimState.fr[32] - (char *)&initialSimState.gr[0]);
+		lastCPU->base.engine.jmpbuf = error_abort;
 	}
 	return lastCPU->cpu[0];
 }
 
 long
-resetCPU(void* cpu)
+resetCPU(void *cpu)
 {
 	gdblog_index = 0;
 
@@ -89,9 +87,11 @@ resetCPU(void* cpu)
 #define step 1
 
 static inline long
-runOnCPU(void *cpu, void *memory, 
+runOnCPU(sim_cpu *cpu, void *memory, 
 		ulong byteSize, ulong minAddr, ulong minWriteMaxExecAddr, int runOrStep)
 {
+	uint64_t postpc = cpu->pc + sizeof(cpu->instr);
+
 	theMemory = (unsigned char *)memory;
 	theMemorySize = byteSize;
 	minReadAddress = minAddr;
@@ -104,16 +104,28 @@ runOnCPU(void *cpu, void *memory,
 #endif
 		return theErrorAcorn;
 	}
+	assert(lastCPU->base.engine.jmpbuf = error_abort);
 	gdblog_index = 0;
 
-	if (runOrStep == step)
-		aarch64_step(cpu);
+	if (runOrStep == step) {
+		if (postpc <= minWriteMaxExecAddr
+		 && aarch64_step(cpu)
+		 && cpu->nextpc <= minWriteMaxExecAddr)
+			cpu->pc = cpu->nextpc;
+	}
 	else {
 		continueRunning = 1;
 		while (continueRunning
+			&& postpc <= minWriteMaxExecAddr
 			&& aarch64_step(cpu)
-			&& !gdblog_index);
+			&& !gdblog_index) {
+			if (cpu->nextpc <= minWriteMaxExecAddr)
+				cpu->pc = cpu->nextpc;
+			postpc = cpu->nextpc + sizeof(cpu->instr);
+		}
 	}
+	if (postpc > minWriteMaxExecAddr)
+		return InstructionPrefetchError;
 
 #if 0
 	// collect the PSR from their dedicated flags to have easy access from the image.
@@ -294,7 +306,7 @@ STORE_FUNC( int8_t,   s8, 1)
 void
 aarch64_set_mem_long_double (sim_cpu *cpu, uint64_t address, FRegister a)
 {
-	if (address < minReadAddress
+	if (address < minWriteAddress
 	 || address + 16 > theMemorySize)
 		longjmp(error_abort,MemoryBoundsError);
 	memcpy(theMemory + address, &a, 16);

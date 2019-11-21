@@ -47,7 +47,7 @@ print_state(ARMul_State* state)
 void*
 newCPU()
 {
-	if(lastCPU == NULL) ARMul_EmulateInit();
+	if (lastCPU == NULL) ARMul_EmulateInit();
 	lastCPU = ARMul_NewState();
 #if 0 /* XScale seems to disable floating point */
 	ARMul_SelectProcessor (lastCPU, ARM_v5_Prop | ARM_v5e_Prop | ARM_XScale_Prop | ARM_v6_Prop);
@@ -107,9 +107,8 @@ runOnCPU(void *cpu, void *memory,
 	// collect the PSR from their dedicated flags to have easy access from the image.
 	ARMul_SetCPSR(state, ARMul_GetCPSR(state));
 
-	if(state->EndCondition != NoError){
+	if (state->EndCondition != NoError)
 		return state->EndCondition;
-	}
 
 	return gdblog_index == 0 ? 0 : SomethingLoggedError;
 }
@@ -146,7 +145,7 @@ gdb_log_printf(void* stream, const char * format, ...)
 	int n;
 	va_start(arg,format);
 
-	if(stream == NULL){
+	if (stream == NULL){
 		n = vsnprintf((char*) (&gdb_log) + gdblog_index, LOGSIZE-gdblog_index, format, arg);
 		gdblog_index = gdblog_index + n;
 	} else {

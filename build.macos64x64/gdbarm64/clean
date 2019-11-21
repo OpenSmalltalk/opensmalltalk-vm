@@ -1,0 +1,2 @@
+#!/bin/sh
+rm -rf bfd gdb libiberty opcodes sim

@@ -1,16 +1,14 @@
 /* Include file for the ARMv6/ARM32 processor simulator plugin, GdbARMPlugin */
 /* heavily based on BochsIA32Plugin.h */
 
-/* TPR - added MemoryWriteBoundsError */
 #define NoError 0
 #define ExecutionError 1
 #define BadCPUInstance 2
-#define MemoryReadBoundsError 3
-#define MemoryWriteBoundsError 4
-#define InstructionPrefetchError 5
-#define PanicError 6
-#define UnsupportedOperationError 7
-#define SomethingLoggedError 8
+#define MemoryBoundsError 3
+#define PanicError 4
+#define UnsupportedOperationError 5
+#define SomethingLoggedError 6
+#define InstructionPrefetchError 7
 
 // TPR - The library is compiled with TFlag, therefore, we also need to set it.
 #define MODET
