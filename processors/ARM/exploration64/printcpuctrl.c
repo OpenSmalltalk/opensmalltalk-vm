@@ -40,6 +40,14 @@ printf(CLASS " methodsFor: 'accessing' stamp: 'eem %d/%d/%d %d:%02d'!\r"\
 	"%s: anUnsignedInteger\r\t^self unsignedLongLongAt: %ld put: anUnsignedInteger! !\r", m,d,y,h,i, #s, \
 	stoffsetof(struct _sim_cpu,f))
 
+#define print32(f,s) \
+printf(CLASS " methodsFor: 'accessing' stamp: 'eem %d/%d/%d %d:%02d'!\r"\
+	"%s\r\t^self unsignedLongAt: %ld! !\r", m,d,y,h,i, #s, \
+	stoffsetof(struct _sim_cpu,f));\
+printf(CLASS " methodsFor: 'accessing' stamp: 'eem %d/%d/%d %d:%02d'!\r"\
+	"%s: anUnsignedInteger\r\t^self unsignedLongAt: %ld put: anUnsignedInteger! !\r", m,d,y,h,i, #s, \
+	stoffsetof(struct _sim_cpu,f))
+
 	time_t nowsecs = time(0);
 	struct tm now = *localtime(&nowsecs);
 	int m = now.tm_mon + 1; /* strange but true */
@@ -56,6 +64,7 @@ printf(CLASS " methodsFor: 'accessing' stamp: 'eem %d/%d/%d %d:%02d'!\r"\
 	print(FPSR,fpCPSR);
 	print(FPCR,fpCPCR);
 	print(nextpc,nextpc);
+	print32(instr,instr);
 
 	return 0;
 }

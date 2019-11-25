@@ -34,9 +34,9 @@ ulong	minReadAddress, minWriteAddress;
 void	(*prevInterruptCheckChain)() = 0;
 
 void
-print_state(ARMul_State* state)
+print_state(ARMul_State *state)
 {
-	printf("NextInstr: %i\ttheMemory: 0x%p\tNumInstrs: 0x%p\tPC: 0x%p\tmode: %i\tEndCondition: %i\tprog32Sig: %s\tEmulate: %i\n", 
+	printf("NextInstr: %u\ttheMemory: %p\tNumInstrs: %ld\tPC: 0x%u\tmode: %u\tEndCondition: %u\tprog32Sig: %s\tEmulate: %u\n", 
 		state->NextInstr, state->MemDataPtr, 
 		state->NumInstrs, state->Reg[15], 
 		state->Mode, state->EndCondition, 
@@ -58,10 +58,10 @@ newCPU()
 }
 
 long
-resetCPU(void* cpu)
+resetCPU(void *cpu)
 {
 	unsigned int i, j;
-	ARMul_State* state = (ARMul_State*) cpu;
+	ARMul_State *state = (ARMul_State*) cpu;
 	// test whether the supplied instance is an ARMul type?
 
 	gdblog_index = 0;
@@ -84,31 +84,30 @@ resetCPU(void* cpu)
 }
 
 static inline long
-runOnCPU(void *cpu, void *memory, 
+runOnCPU(ARMul_State *cpu, void *memory, 
 		ulong byteSize, ulong minAddr, ulong minWriteMaxExecAddr, ARMword (*run)(ARMul_State*))
 {
-	ARMul_State* state = (ARMul_State*) cpu;
-	lastCPU = state;
+	assert(lastCPU == cpu);
 
-	assert(state->prog32Sig == HIGH || state->prog32Sig == HIGHLOW);
+	assert(cpu->prog32Sig == HIGH || cpu->prog32Sig == HIGHLOW);
 	// test whether the supplied instance is an ARMul type?
-	state->MemDataPtr = (unsigned char*) memory;
-	state->MemSize = byteSize;
+	cpu->MemDataPtr = (unsigned char *)memory;
+	cpu->MemSize = byteSize;
 	minReadAddress = minAddr;
 	minWriteAddress = minWriteMaxExecAddr;
 
 	gdblog_index = 0;
 
-	state->EndCondition = NoError;
-	state->NextInstr = RESUME;
+	cpu->EndCondition = NoError;
+	cpu->NextInstr = RESUME;
 
-	state->Reg[15] = run(state);
+	cpu->Reg[15] = run(cpu);
 
 	// collect the PSR from their dedicated flags to have easy access from the image.
-	ARMul_SetCPSR(state, ARMul_GetCPSR(state));
+	ARMul_SetCPSR(cpu, ARMul_GetCPSR(cpu));
 
-	if (state->EndCondition != NoError)
-		return state->EndCondition;
+	if (cpu->EndCondition != NoError)
+		return cpu->EndCondition;
 
 	return gdblog_index == 0 ? 0 : SomethingLoggedError;
 }
@@ -138,8 +137,8 @@ flushICacheFromTo(void *cpu, ulong saddr, ulong eaddr)
 #endif
 }
 
-long
-gdb_log_printf(void* stream, const char * format, ...)
+int
+gdb_log_printf(void *stream, const char *format, ...)
 {
 	va_list arg;
 	int n;
@@ -163,7 +162,7 @@ disassembleForAtInSize(void *cpu, ulong laddr,
 	// start disassembling at laddr relative to memory
 	// stop disassembling at memory+byteSize
 
-	disassemble_info* dis = (disassemble_info*) calloc(1, sizeof(disassemble_info));
+	disassemble_info *dis = (disassemble_info*) calloc(1, sizeof(disassemble_info));
 	// void init_disassemble_info (struct disassemble_info *dinfo, void *stream, fprintf_ftype fprintf_func)
 	init_disassemble_info ( dis, NULL, gdb_log_printf);
 

@@ -11,14 +11,14 @@
 #define InstructionPrefetchError 7
 
 // TPR - The library is compiled with TFlag, therefore, we also need to set it.
-#define MODET
+#define MODET 1
 
 #if !defined(ulong)
 typedef unsigned long ulong;
 #endif
 
 extern ulong	minReadAddress, minWriteAddress;
-extern long gdb_log_printf(void* stream, const char * format, ...);
+extern int gdb_log_printf(void* stream, const char * format, ...);
 
 
 /*
