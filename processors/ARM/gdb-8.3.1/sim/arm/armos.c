@@ -31,6 +31,10 @@
 #include <string.h>
 #include "targ-vals.h"
 
+#if COG
+# include "GdbARMPlugin.h"
+#endif
+
 #ifndef TARGET_O_BINARY
 #define TARGET_O_BINARY 0
 #endif
@@ -395,11 +399,9 @@ ARMul_OSHandleSWI (ARMul_State * state, ARMword number)
   switch (number)
     {
 #if COG
-#define InstructionPrefetchError 5
     case SWI_CogPrefetch:
       // TPR - This is the SWI number which is returned by our memory interface 
       // if there is an instruction fetch for an illegal address.
-      // this #define stolen from GdbARMPlugin.h and ought to be done better
       state->Emulate = STOP;
       state->EndCondition = InstructionPrefetchError;
       

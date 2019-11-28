@@ -36,8 +36,8 @@ void	(*prevInterruptCheckChain)() = 0;
 void
 print_state(ARMul_State *state)
 {
-	printf("NextInstr: %u\ttheMemory: %p\tNumInstrs: %ld\tPC: 0x%u\tmode: %u\tEndCondition: %u\tprog32Sig: %s\tEmulate: %u\n", 
-		state->NextInstr, state->MemDataPtr, 
+	printf("ErorCode: %u\tNextInstr: %u\ttheMemory: %p\tNumInstrs: %ld\tPC: 0x%u\tmode: %u\tEndCondition: %u\tprog32Sig: %s\tEmulate: %u\n", 
+		state->ErrorCode, state->NextInstr, state->MemDataPtr, 
 		state->NumInstrs, state->Reg[15], 
 		state->Mode, state->EndCondition, 
 		state->prog32Sig == LOW ? "LOW" : (state->prog32Sig == HIGH ? "HIGH" :
@@ -85,7 +85,7 @@ resetCPU(void *cpu)
 
 static inline long
 runOnCPU(ARMul_State *cpu, void *memory, 
-		ulong byteSize, ulong minAddr, ulong minWriteMaxExecAddr, ARMword (*run)(ARMul_State*))
+		ulong byteSize, ulong minAddr, ulong minWriteMaxExecAddr, ARMword (*runOrStep)(ARMul_State*))
 {
 	assert(lastCPU == cpu);
 
@@ -101,7 +101,7 @@ runOnCPU(ARMul_State *cpu, void *memory,
 	cpu->EndCondition = NoError;
 	cpu->NextInstr = RESUME;
 
-	cpu->Reg[15] = run(cpu);
+	cpu->Reg[15] = runOrStep(cpu);
 
 	// collect the PSR from their dedicated flags to have easy access from the image.
 	ARMul_SetCPSR(cpu, ARMul_GetCPSR(cpu));
@@ -110,6 +110,15 @@ runOnCPU(ARMul_State *cpu, void *memory,
 		return cpu->EndCondition;
 
 	return gdblog_index == 0 ? 0 : SomethingLoggedError;
+}
+
+ARMword
+ARMul_Emulate26 (ARMul_State * state)
+{
+	assertf("GdbARMPlugin is in Thumb mode.  This should not happen!");
+	/* i.e. we *should never* switch to Thumb mode */
+	state->EndCondition = PanicError;
+	return state->Reg[15];
 }
 
 long

@@ -32,7 +32,7 @@ else
 				while [ ! -d "/Volumes/$VOLUME/Squeak.app" ]; do sleep 1; done
 				rm -rf $VM
 				cp -Rp "/Volumes/$VOLUME/Squeak.app" $VM
-				eject "/Volumes/$VOLUME"
+				diskutil eject "/Volumes/$VOLUME"
 			fi
 		fi
 		VM=$VM/Contents/MacOS/Squeak;;

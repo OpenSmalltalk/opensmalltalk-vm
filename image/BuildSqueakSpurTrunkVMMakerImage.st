@@ -4,7 +4,7 @@
 Scanner allowUnderscoreAsAssignment: false.
 
 manifest := #(	('http://source.squeak.org/FFI'					1	('FFI-Pools' 'FFI-Kernel'))
-				('http://source.squeak.org/VMMaker'				6	('Balloon-Engine-Pools' 'BytecodeSets.spur' 'VMMaker.oscog' 'Cog' 'CogTools' 'ImageFormat'))
+				('http://source.squeak.org/VMMaker'				6	('Balloon-Engine-Pools' 'CogPools-ISAs' 'BytecodeSets.spur' 'VMMaker.oscog' 'Cog' 'CogTools' 'ImageFormat'))
 				('http://ss3.gemstone.com/ss/MethodMassage'		3	('MethodMassage' 'MethodMassageCompatibility'))
 				('http://www.squeaksource.com/AioPlugin'		7	('VMConstruction-Plugins-AioPlugin.oscog'))
 				('http://www.squeaksource.com/Alien'			0	('Alien-Core' 'Alien-Tests-Core' 'Alien-Win32'))

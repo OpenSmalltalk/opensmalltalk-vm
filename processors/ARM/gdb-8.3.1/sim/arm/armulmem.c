@@ -11,7 +11,9 @@
   TPR - changed Get/PutWord to ensure address used is an actual word address ie bottom 
   two bits are zeros. Without that, fetching bytes becomes... fun
 */
-#include "GdbARMPlugin.h"
+#if COG
+# include "GdbARMPlugin.h"
+#endif
 
 /*  armvirt.c -- ARMulator virtual memory interace:  ARM6 Instruction Emulator.
     Copyright (C) 1994 Advanced RISC Machines Ltd.
