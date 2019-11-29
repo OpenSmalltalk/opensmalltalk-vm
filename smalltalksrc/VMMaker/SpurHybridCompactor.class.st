@@ -43,6 +43,7 @@ SpurHybridCompactor class >> declareCVarsIn: aCCodeGenerator [
 
 { #category : #api }
 SpurHybridCompactor >> biasForGC [
+	<inline: true>
 	planNotSelect := false.
 	selectiveCompactor biasForGC
 ]

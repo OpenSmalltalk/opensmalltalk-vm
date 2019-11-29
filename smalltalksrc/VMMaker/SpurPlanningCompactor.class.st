@@ -188,6 +188,7 @@ SpurPlanningCompactor class >> simulatorClass [
 
 { #category : #'compaction - api' }
 SpurPlanningCompactor >> biasForGC [
+	<inline: true>
 	biasForGC := true
 ]
 
@@ -247,8 +248,17 @@ SpurPlanningCompactor >> compact [
 	  chunk to the total ammount of free space is high."
 	 finalPass or: [biasForGC]] whileFalse:
 		[firstPass := false.
-		 self reinitializeScanFrom: firstFreeObject;
-			updateSavedFirstFieldsSpaceIfNecessary].
+		 self reinitializeScanFrom: firstFreeObject.
+		 firstMobileObject > firstFreeObject ifFalse: 
+			["We get here when firstFreeObject is the last object in memory. 
+		   	 firstMobileObject may be random value from previous compaction
+		   	 in this case, and heap is fully compacted. Abort compaction."
+		  	 "We set firstFreeObject to firstMobileObject for unmarking."
+			 firstFreeObject := firstMobileObject.
+			 self unmarkObjectsFromFirstFreeObject.
+		  	 manager checkFreeSpace: GCModeFull.
+			 ^self endCompaction].
+		 self updateSavedFirstFieldsSpaceIfNecessary].
 	manager checkFreeSpace: GCModeFull.
 	self endCompaction
 ]
