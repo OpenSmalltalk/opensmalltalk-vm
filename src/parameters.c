@@ -21,6 +21,7 @@ static VMErrorCode processLogLevelOption(const char *argument);
 static const VMParameterSpec vm_parameters_spec[] =
 {
 	{.name = "headless", .hasArgument = false, .function = NULL},
+    {.name = "worker", .hasArgument = false, .function = NULL},
 	{.name = "interactive", .hasArgument = false, .function = NULL}, // For pharo-ui scripts.
 	{.name = "vm-display-null", .hasArgument = false, .function = NULL}, // For Smalltalk CI.
 	{.name = "help", .hasArgument = false, .function = processHelpOption},
@@ -301,6 +302,7 @@ vm_printUsageTo(FILE *out)
 "Common <option>s:\n"
 "  --help                 print this help message, then exit\n"
 "  --headless             run in headless (no window) mode (default: true)\n"
+"  --worker               run in worker thread (default: false)\n"
 "  --logLevel=<level>     Sets the log level (ERROR, WARN, INFO or DEBUG)\n"
 "  --version              print version information, then exit\n"
 "\n"

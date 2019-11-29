@@ -123,9 +123,11 @@ vm_main_with_parameters(VMParameters *parameters)
 	LOG_SIZEOF(float);
 	LOG_SIZEOF(double);
 
+    vmRunOnWorkerThread = vm_parameter_vector_has_element(&parameters->vmParameters, "--worker");
+    
     return vmRunOnWorkerThread
-        ? runOnWorkerThread(&parameters)
-        : runOnMainThread(&parameters);
+        ? runOnWorkerThread(parameters)
+        : runOnMainThread(parameters);
 }
 
 EXPORT(int)
