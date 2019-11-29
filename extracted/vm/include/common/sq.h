@@ -25,6 +25,8 @@
 #include "sqMemoryAccess.h"
 #include "sqVirtualMachine.h"
 
+#include "platformSemaphore.h"
+
 #define true	1
 #define false	0
 #define null	0  /* using "null" because nil is predefined in Think C */
@@ -268,6 +270,7 @@ sqInt ioSetWindowWidthHeight(sqInt w, sqInt h);
 sqInt ioIsWindowObscured(void);
 
 sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds);
+
 #if STACKVM || NewspeakVM
 /* thread subsystem support for e.g. sqExternalSemaphores.c */
 void ioInitThreads();

@@ -25,8 +25,7 @@ set(EXTRACTED_SOURCES
 
 #Platform sources
     ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/win/sqWin32SpurAlloc.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/win/sqWin32Heartbeat.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/aioWin.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/win/aioWin.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/debugWin.c
 
 # Support sources
@@ -100,8 +99,18 @@ macro(add_required_libs_per_platform)
    target_link_libraries(${VM_EXECUTABLE_CONSOLE_NAME} ${VM_LIBRARY_NAME})
 
    target_link_libraries(${VM_LIBRARY_NAME} winmm)
+   target_link_libraries(${VM_LIBRARY_NAME} Ws2_32)
    target_link_libraries(${VM_LIBRARY_NAME} DbgHelp)
-   target_link_libraries(${VM_LIBRARY_NAME} Ole32)
-   target_link_libraries(${VM_LIBRARY_NAME} comctl32)
-   target_link_libraries(${VM_LIBRARY_NAME} uuid)
+
+   target_link_libraries(${VM_LIBRARY_NAME} pthread)
+   target_link_libraries(${VM_EXECUTABLE_NAME} Ole32)
+   target_link_libraries(${VM_EXECUTABLE_NAME} comctl32)
+   target_link_libraries(${VM_EXECUTABLE_NAME} uuid)
+
+   target_link_libraries(${VM_EXECUTABLE_CONSOLE_NAME} Ole32)
+   target_link_libraries(${VM_EXECUTABLE_CONSOLE_NAME} comctl32)
+   target_link_libraries(${VM_EXECUTABLE_CONSOLE_NAME} uuid)
+
+   set_target_properties(${VM_EXECUTABLE_NAME} PROPERTIES LINK_FLAGS "-mwindows")
+   set_target_properties(${VM_EXECUTABLE_CONSOLE_NAME} PROPERTIES LINK_FLAGS "-mconsole")
 endmacro()

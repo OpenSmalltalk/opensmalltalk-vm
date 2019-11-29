@@ -81,7 +81,7 @@ if(WIN)
 
 
 #    if(NOT MSVC)
-        set(COMMON_FLAGS "-fwrapv -fdeclspec -msse2 -ggdb2 -m64 -mno-rtd -mms-bitfields -O2 -momit-leaf-frame-pointer -funroll-loops -D_MT -fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf -Wall -Wno-unused-variable -fno-optimize-sibling-calls")
+        set(COMMON_FLAGS "-fwrapv -fdeclspec -O2 -msse2 -ggdb2 -m64 -mno-rtd -mms-bitfields -momit-leaf-frame-pointer -funroll-loops -D_MT -fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf -Wall -Wno-unused-variable -fno-optimize-sibling-calls")
 #    endif()
 
     set(OS_TYPE "Win32")
@@ -226,12 +226,12 @@ check_library_exists(uuid uuidgen "" HAVE_UUIDGEN)
 check_library_exists(uuid uuid_generate "" HAVE_UUID_GENERATE)
 
 #Custom command that downloads a Pharo image and VM in ${VMMAKER_OUTPUT_PATH}
-add_custom_command(
-  OUTPUT ${VMMAKER_OUTPUT_PATH}/Pharo.image ${VMMAKER_OUTPUT_PATH}/pharo
-  COMMAND wget -O - https://get.pharo.org/64/80 | bash
-  COMMAND wget -O - https://get.pharo.org/64/vm80 | bash
-  WORKING_DIRECTORY ${VMMAKER_OUTPUT_PATH}
-  COMMENT "Downloading Pharo 80")
+#add_custom_command(
+#  OUTPUT ${VMMAKER_OUTPUT_PATH}/Pharo.image ${VMMAKER_OUTPUT_PATH}/pharo
+#  COMMAND wget -O - https://get.pharo.org/64/80 | bash
+#  COMMAND wget -O - https://get.pharo.org/64/vm80 | bash
+#  WORKING_DIRECTORY ${VMMAKER_OUTPUT_PATH}
+#  COMMENT "Downloading Pharo 80")
 
 add_custom_command(
   OUTPUT ${VMMAKER_OUTPUT_PATH}/VMMaker.image
@@ -259,6 +259,7 @@ message(STATUS "Resource Compiler: ${CMAKE_RC_COMPILER}")
 
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/semaphores
     ${CMAKE_CURRENT_BINARY_DIR}/build/include/
     ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/include
 )
@@ -286,6 +287,8 @@ set(SUPPORT_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/parameters.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/fileDialogCommon.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/stringUtilities.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/semaphores/platformSemaphore.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/common/heartbeat.c
 )
 
 set(VM_SOURCES
