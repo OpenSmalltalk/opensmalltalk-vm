@@ -1,5 +1,5 @@
-Headless OpenSmalltalk-VM for Pharo
------------------------------------
+# Headless OpenSmalltalk-VM for Pharo
+
 
 This is the branch of the Headless VM used for Pharo.
 This branch has the modifications required to run Pharo in a true headless environment.
@@ -7,16 +7,15 @@ The image running on the VM is responsible of handling the UI and the events.
 
 The image includes a default implementation of the handling of UI through the use of SDL2.
 
-CI
----
+## CI
 
 This project is continuously built and test in the CI infrastructure located at:
 
 [https://ci.inria.fr/pharo-ci-jenkins2/job/pharo-vm/job/headless/](https://ci.inria.fr/pharo-ci-jenkins2/job/pharo-vm/job/headless/)
 
 
-Building
---------
+## Building
+
 
 For building the VM it is required the following set of tools:
 
@@ -54,6 +53,16 @@ The generated code is the result of converting Smalltalk code into C.
 This conversion is performed during the *cmake* process. 
 
 This will generate the VM in *build/dist/*
+
+###  VM flavours
+
+By default the cmake build will build a CogVM, that is, a VM configuration with JIT compilation. Our cmake configuration accepts a `FLAVOUR` argument to specify different vm flavours to build, which you can use as follows:
+
+$ cmake -DFLAVOUR=[your flavour] .
+
+The accepted flavours for the moment are as follows:
+- *CoInterpreterWithQueueFFI*: VM including JIT
+- *StackVM*: VM with context to native stack mapping, without JI
 
 Source Directory Structure
 --------------------------
