@@ -1,5 +1,5 @@
-#include "pharo.h"
-#include "windows.h"
+#include "pharovm/pharo.h"
+#include <windows.h>
 
 /****************************************************************************/
 /*                      Synchronization functions                           */
