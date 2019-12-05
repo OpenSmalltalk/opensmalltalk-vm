@@ -1,4 +1,4 @@
-#include <pharo.h>
+#include "pharovm/pharo.h"
 
 #if __linux__
 
@@ -310,4 +310,3 @@ void reportStackState(const char *msg, char *date, int printAll, ucontext_t *uap
 	printf("\n\t(%s)\n", msg);
 	fflush(output);
 }
-

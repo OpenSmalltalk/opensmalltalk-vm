@@ -1,4 +1,4 @@
-#include "pharoClient.h"
+#include "pharovm/pharoClient.h"
 
 int main(int argc, const char *argv[], const char *envp[])
 {
