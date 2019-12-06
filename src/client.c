@@ -1,7 +1,7 @@
-#include "pharo.h"
-#include "pharoClient.h"
-#include "fileDialog.h"
-#include "pathUtilities.h"
+#include "pharovm/pharo.h"
+#include "pharovm/pharoClient.h"
+#include "pharovm/fileDialog.h"
+#include "pharovm/pathUtilities.h"
 
 #if defined(__GNUC__) && ( defined(i386) || defined(__i386) || defined(__i386__)  \
 			|| defined(i486) || defined(__i486) || defined (__i486__) \

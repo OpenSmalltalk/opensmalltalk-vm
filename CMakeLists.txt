@@ -250,7 +250,7 @@ add_custom_command(
   COMMENT "Generating VM files for flavour: ${FLAVOUR}")
 
 #Generating config file
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/config.h.in build/include/config.h)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/pharovm/config.h.in build/include/pharovm/config.h)
 
 message(STATUS "C Compiler: ${CMAKE_C_COMPILER}")
 message(STATUS "C++ Compiler: ${CMAKE_CXX_COMPILER}")
@@ -260,6 +260,7 @@ message(STATUS "Resource Compiler: ${CMAKE_RC_COMPILER}")
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_BINARY_DIR}/build/include/
+    ${CMAKE_CURRENT_BINARY_DIR}/build/include/pharovm/
     ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/include
 )
 
@@ -334,9 +335,15 @@ install(FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/common/sqVirtualMachine.h
   ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/include/interp.h
   ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/include/vmCallback.h
-  ${CMAKE_CURRENT_BINARY_DIR}/build/include/config.h
-  DESTINATION include
+  ${CMAKE_CURRENT_BINARY_DIR}/build/include/pharovm/config.h
+  DESTINATION include/pharovm
   COMPONENT include)
+
+install(
+    DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/pharovm"
+    DESTINATION include
+    COMPONENT include
+    FILES_MATCHING PATTERN *.h)
 
 # Packaging Setup
 

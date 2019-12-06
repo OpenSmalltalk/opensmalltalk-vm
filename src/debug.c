@@ -1,4 +1,4 @@
-#include <pharo.h>
+#include "pharovm/pharo.h"
 #include <stdarg.h>
 
 char * GetAttributeString(sqInt id);

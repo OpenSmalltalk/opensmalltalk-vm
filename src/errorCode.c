@@ -1,4 +1,4 @@
-#include "errorCode.h"
+#include "pharovm/errorCode.h"
 
 EXPORT(const char*)
 vm_error_code_to_string(VMErrorCode errorCode)
