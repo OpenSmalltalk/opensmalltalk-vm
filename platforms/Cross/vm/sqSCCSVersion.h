@@ -28,13 +28,13 @@
 
 #if SUBVERSION
 # define PREFIX "r"
-static char SvnRawRevisionString[] = "$Rev$";
+static char SvnRawRevisionString[] = "$Rev: 201911192350 $";
 # define REV_START (SvnRawRevisionString + 6)
 
-static char SvnRawRevisionDate[] = "$Date$";
+static char SvnRawRevisionDate[] = "$Date: Tue Nov 19 15:50:02 2019 -0800 $";
 # define DATE_START (SvnRawRevisionDate + 7)
 
-static char SvnRawRepositoryURL[] = "$URL$";
+static char SvnRawRepositoryURL[] = "$URL: kendi3he@penguin:OpenSmalltalk/oscogvm $";
 # define URL_START (SvnRawRepositoryURL + 6)
 
 static char *
@@ -71,16 +71,16 @@ revisionShortHash() { return "N.A."; }
 # undef URL_START
 #elif GIT
 # define PREFIX ""
-static char GitRawRevisionString[] = "$Rev$";
+static char GitRawRevisionString[] = "$Rev: 201911192350 $";
 # define REV_START (GitRawRevisionString + 6)
 
-static char GitRawRevisionDate[] = "$Date$";
+static char GitRawRevisionDate[] = "$Date: Tue Nov 19 15:50:02 2019 -0800 $";
 # define DATE_START (GitRawRevisionDate + 7)
 
-static char GitRawRepositoryURL[] = "$URL$";
+static char GitRawRepositoryURL[] = "$URL: kendi3he@penguin:OpenSmalltalk/oscogvm $";
 # define URL_START (GitRawRepositoryURL + 6)
 
-static char GitRawRevisionShortHash[] = "$CommitHash$";
+static char GitRawRevisionShortHash[] = "$CommitHash: 9336eea43 $";
 # define SHORTHASH_START (GitRawRevisionShortHash + 13)
 
 static char *

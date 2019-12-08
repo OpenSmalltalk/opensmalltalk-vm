@@ -859,6 +859,11 @@ sqInt  primitivePluginDestroyRequest(void)	{ return dpy->primitivePluginDestroyR
 sqInt  primitivePluginRequestState(void)	{ return dpy->primitivePluginRequestState(); }
 
 
+#ifdef MUSL
+void pushOutputFile(char *filenameOrStdioIndex) {;}
+void popOutputFile() {;}
+#endif
+
 /*** errors ***/
 
 static void outOfMemory(void)
