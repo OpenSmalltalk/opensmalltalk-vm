@@ -1,0 +1,2 @@
+PLIBS           = -lsndio
+
