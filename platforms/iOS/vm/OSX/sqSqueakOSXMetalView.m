@@ -379,9 +379,19 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 		[self updateDisplayTextureStorage];
     }
 	
+	// Clip the subrect against the texture bounds, to avoid an edge condition
+	// that ends crashing the VM.
+	subRect = NSIntersectionRect(subRect, NSMakeRect(0, 0, displayTextureWidth, displayTextureHeight));
+	if(NSIsEmptyRect(subRect))
+	{
+		// Discard the update of empty texture regions.
+		return;
+	}
+	
 	MTLRegion region = MTLRegionMake2D(subRect.origin.x, displayTextureHeight - subRect.origin.y - subRect.size.height, subRect.size.width, subRect.size.height);
 	
 	unsigned int sourcePitch = displayTextureWidth*4;
+
 	//char *source = ((char*)displayStorage) + (unsigned int)(subRect.origin.x + subRect.origin.y*displayTextureWidth)*4;
 	char *source = ((char*)displayStorage) + (unsigned int)(subRect.origin.x + (displayTextureHeight-subRect.origin.y-subRect.size.height)*displayTextureWidth)*4;
 	[displayTexture replaceRegion: region mipmapLevel: 0 withBytes: source bytesPerRow: sourcePitch];
