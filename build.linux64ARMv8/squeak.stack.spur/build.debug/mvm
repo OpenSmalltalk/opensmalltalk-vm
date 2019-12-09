@@ -2,7 +2,12 @@
 set -e
 # debug Stack Spur VM with VM profiler and threaded heartbeat
 INSTALLDIR=sqstkspur64linuxhtDebug
-OPT="-g3 -O0 -DDEBUGVM=1"
+# MUSL is not libc
+if [ "$MUSL" = "" ]; then
+OPT="-g3 -O1 -DNDEBUG -DDEBUGVM=1"
+else
+OPT="-g3 -O1 -DNDEBUG -DDEBUGVM=1 -DMUSL -D_GNU_SOURCE"
+fi
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
