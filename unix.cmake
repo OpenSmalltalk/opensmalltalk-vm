@@ -17,7 +17,6 @@ set(EXTRACTED_SOURCES
 
 #Virtual Memory functions
     ${CMAKE_CURRENT_SOURCE_DIR}/src/memoryUnix.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/aioUnix.c
 
 # Support sources
     ${CMAKE_CURRENT_SOURCE_DIR}/src/fileDialogUnix.c
