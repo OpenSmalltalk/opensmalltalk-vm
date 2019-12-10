@@ -1,5 +1,5 @@
-#include "pharo.h"
-#include "platformSemaphore.h"
+#include "pharovm/pharo.h"
+#include "pharovm/semaphores/platformSemaphore.h"
 
 /*
  * This Functions are private to the implementation

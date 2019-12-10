@@ -25,11 +25,17 @@
 #include "sqMemoryAccess.h"
 #include "sqVirtualMachine.h"
 
-#include "platformSemaphore.h"
 
 #define true	1
 #define false	0
 #define null	0  /* using "null" because nil is predefined in Think C */
+
+#ifndef EXPORT
+#define EXPORT(returnType) returnType
+#endif
+
+#include "pharovm/semaphores/platformSemaphore.h"
+
 
 #if !defined(IMAGE_DIALECT_NAME)
 # if NewspeakVM
@@ -58,7 +64,6 @@
    If the platform requires special declaration modifiers, the EXPORT and
    VM_EXPORT macros can be redefined.
 */
-#define EXPORT(returnType) returnType
 #define VM_EXPORT
 #define VM_FUNCTION_EXPORT(returnType) returnType
 
