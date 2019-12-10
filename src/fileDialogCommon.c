@@ -1,4 +1,4 @@
-#include "fileDialog.h"
+#include "pharovm/fileDialog.h"
 
 VMErrorCode
 vm_file_dialog_destroy(VMFileDialog *dialog)

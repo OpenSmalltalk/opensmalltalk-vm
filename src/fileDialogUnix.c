@@ -1,5 +1,5 @@
-#include "fileDialog.h"
-#include "pathUtilities.h"
+#include "pharovm/fileDialog.h"
+#include "pharovm/pathUtilities.h"
 
 bool
 vm_file_dialog_is_nop(void)

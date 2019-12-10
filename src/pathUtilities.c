@@ -1,5 +1,5 @@
-#include "pathUtilities.h"
-#include "stringUtilities.h"
+#include "pharovm/pathUtilities.h"
+#include "pharovm/stringUtilities.h"
 #include <string.h>
 #include <stdio.h>
 

@@ -1,4 +1,4 @@
-#include "pharo.h"
+#include "pharovm/pharo.h"
 
 #define UNIMPLEMENTED unimplementedPrimitive(__FUNCTION__);
 

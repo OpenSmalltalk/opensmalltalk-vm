@@ -13,7 +13,7 @@
  * assertl, assertal & assertfl take a line number as an argument.
  */
 
-#include "debug.h"
+#include "pharovm/debug.h"
 
 #ifdef NDEBUG /* compatible with Mac OS X (FreeBSD) /usr/include/assert.h */
 # define assert(expr) 0 /* hack disabling of asserts.  Better in makefile? */

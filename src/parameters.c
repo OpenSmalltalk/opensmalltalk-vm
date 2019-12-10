@@ -1,7 +1,7 @@
-#include "pharo.h"
-#include "parameters.h"
-#include "debug.h"
-#include "pathUtilities.h"
+#include "pharovm/pharo.h"
+#include "pharovm/parameters.h"
+#include "pharovm/debug.h"
+#include "pharovm/pathUtilities.h"
 #include <assert.h>
 
 typedef VMErrorCode (*vm_parameter_process_function)(const char *argument);

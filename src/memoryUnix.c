@@ -1,4 +1,4 @@
-#include "pharo.h"
+#include "pharovm/pharo.h"
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <signal.h>

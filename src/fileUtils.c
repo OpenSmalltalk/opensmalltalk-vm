@@ -1,4 +1,4 @@
-#include "pharo.h"
+#include "pharovm/pharo.h"
 
 time_t convertToSqueakTime(time_t unixTime)
 {

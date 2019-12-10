@@ -30,7 +30,7 @@
 #include <windows.h>
 #endif
 
-#include "pharo.h"
+#include "pharovm/pharo.h"
 
 int sqVMOptionTraceModuleLoading = 0;
 

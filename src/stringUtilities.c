@@ -1,4 +1,4 @@
-#include "stringUtilities.h"
+#include "pharovm/stringUtilities.h"
 
 void
 vm_string_append_into(char *dest, const char *source, size_t destBufferSize)
