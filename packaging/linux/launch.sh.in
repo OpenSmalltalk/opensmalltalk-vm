@@ -1,7 +1,7 @@
 #!/bin/sh
 # Run the VM, setting SQUEAK_PLUGINS if unset to the VM's containing directory
 # if unset, and ensuring LD_LIBRARY_PATH includes the VM's containing directory.
-BIN=`/usr/bin/dirname "$0"`/../lib
+BIN=`/usr/bin/dirname "$0"`/lib/
 GDB=
 if [ "${SQUEAK_PLUGINS-unset}" = unset ]; then
     export SQUEAK_PLUGINS="$BIN"
@@ -19,23 +19,23 @@ case "$BIN" in
 esac
 
 if [ $(uname -s) = "OpenBSD" ]; then
-  LD_LIBRARY_PATH="$PLUGINS:${LD_LIBRARY_PATH}" exec $GDB "$BIN/pharo" "$@"
+  LD_LIBRARY_PATH="$PLUGINS:${LD_LIBRARY_PATH}" exec $GDB "$BIN/@VM_EXECUTABLE_NAME@" "$@"
 fi
 
 # On some linuxes there multiple versions of the C library.  If the image uses
 # libc (e.g. through the FFI) then it must use the same version that the VM uses
 # and so it should take precedence over /lib libc.  This is done by setting
 # LD_LIBRARY_PATH appropriately, based on ldd's idea of the libc use by the VM.
-LIBC_SO="`/usr/bin/ldd "$BIN/pharo" | /bin/fgrep /libc. | sed 's/^.*=> \([^ ]*\).*/\1/'`"
+LIBC_SO="`/usr/bin/ldd "$BIN/@VM_EXECUTABLE_NAME@" | /bin/fgrep /libc. | sed 's/^.*=> \([^ ]*\).*/\1/'`"
 PLATFORMLIBDIR=`expr "$LIBC_SO" : '\(.*\)/libc.*'`
 
 if [ "$PLATFORMLIBDIR" = "" ]; then
 {
-    echo "Error. Could not determine platform's libc path for VM. " 
+    echo "Error. Could not determine platform's libc path for VM. "
     echo "Try forcing \$PLATFORMLIBDIR in $0, based on LIBC_SO."
-    echo "Please report what works to pharo [vm-dev] mail list." 
+    echo "Please report what works to @VM_EXECUTABLE_NAME@ [vm-dev] mail list."
     echo "  LIBC_SO="$LIBC_SO
-    cat /etc/*-release*  |  grep -v // | sed 's/^/  /' 
+    cat /etc/*-release*  |  grep -v // | sed 's/^/  /'
     echo -n "  UNAME=" ; uname -a
     MACHINE=`uname -m`
     case "$MACHINE" in
@@ -43,7 +43,7 @@ if [ "$PLATFORMLIBDIR" = "" ]; then
             echo "  System seems to be 64 bit. You may need to (re)install the 32-bit libraries."
             ;;
     esac
-    exit 1 
+    exit 1
 } 1>&2
 fi
 # prepending is less flexible but safer because it ensures we find the plugins
@@ -53,4 +53,4 @@ case $PLATFORMLIBDIR in
 /lib|/usr/lib)  SVMLLP=/lib:/usr/lib;;
 *)              SVMLLP="$PLATFORMLIBDIR:/lib:/usr$PLATFORMLIBDIR:/usr/lib"
 esac
-LD_LIBRARY_PATH="$PLUGINS:$SVMLLP:${LD_LIBRARY_PATH}" exec $GDB "$BIN/pharo" "$@"
+LD_LIBRARY_PATH="$PLUGINS:$SVMLLP:${LD_LIBRARY_PATH}" exec $GDB "$BIN/@VM_EXECUTABLE_NAME@" "$@"
