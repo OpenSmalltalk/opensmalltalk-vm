@@ -8762,6 +8762,11 @@ SpurMemoryManager >> needGCFlag [
 	^needGCFlag
 ]
 
+{ #category : #accessing }
+SpurMemoryManager >> needGCFlag: anInteger [
+	needGCFlag := anInteger ~= 0
+]
+
 { #category : #'header access' }
 SpurMemoryManager >> newHashBitsOf: objOop [
 	| hash |
