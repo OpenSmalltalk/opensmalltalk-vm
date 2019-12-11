@@ -1,7 +1,7 @@
 Class {
 	#name : #VMMASTTranslationTest,
 	#superclass : #TestCase,
-	#category : #'VMMakerCompatibilityForPharo6-Tests'
+	#category : #VMMakerTests
 }
 
 { #category : #'generation-targets' }
