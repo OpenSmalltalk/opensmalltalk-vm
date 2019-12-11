@@ -84,6 +84,8 @@
 # include <sys/param.h>
 # include <sys/stat.h>
 # include <sys/socket.h>
+# include <sys/ioctl.h>
+# include <net/if.h>
 # include <sys/un.h>
 # include <netinet/in.h>
 # include <netinet/udp.h>
@@ -1523,22 +1525,31 @@ sqInt sqResolverLocalAddress(void)
         if (ifa->ifa_addr == NULL)
             continue;  
 
-        s=getnameinfo(ifa->ifa_addr,sizeof(struct sockaddr_in),host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
-
-        if(((strcmp(ifa->ifa_name,"eth0")==0)||(strcmp(ifa->ifa_name,"wlan0")==0))&&(ifa->ifa_addr->sa_family==AF_INET))
-        {
-            if (s != 0)
-            {
-                success(false);
-                return 0;
-            }
-            FPRINTF((stderr, "\tInterface : <%s>\n",ifa->ifa_name ));
-            FPRINTF((stderr, "\t IP       : <%s>\n", inet_ntoa(((struct sockaddr_in *)(ifa->ifa_addr))->sin_addr)));
-            if(localAddr == 0) { /* take the first plausible answer */
-                localAddr = ((struct sockaddr_in *)(ifa->ifa_addr))->sin_addr.s_addr;
-            }
-           
+        // Skip interfaces which
+        //  - are not running (IFF_UP),
+        //  - don't have a valid broadcast address set (IFF_BROADCAST),
+        //  - don't have resources allocated (IFF_RUNNING),
+        //  - are loopback interfaces (IFF_LOOPBACK)
+        //  - or do not have AF_INET address family (no IPv6 support here)
+        if (
+            !(ifa->ifa_flags & (IFF_UP | IFF_BROADCAST | IFF_RUNNING))
+                || (ifa->ifa_flags & IFF_LOOPBACK)
+                || ifa->ifa_addr->sa_family != AF_INET
+        ) {
+            continue;
         }
+
+        FPRINTF((stderr, "\tInterface : <%s>\n", ifa->ifa_name));
+        s=getnameinfo(ifa->ifa_addr,sizeof(struct sockaddr_in),host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
+        if (s == 0) {
+            FPRINTF((stderr, "\t IP       : <%s>\n", inet_ntoa(((struct sockaddr_in *) (ifa->ifa_addr))->sin_addr)));
+            if (localAddr == 0) { /* take the first plausible answer */
+                localAddr = ((struct sockaddr_in *) (ifa->ifa_addr))->sin_addr.s_addr;
+            }
+        } else {
+            FPRINTF((stderr, "\t No address defined for this interface\n"));
+        }
+
     }
 
     freeifaddrs(ifaddr);
