@@ -4360,6 +4360,12 @@ SpurMemoryManager >> endSlidingCompaction [
 	gcPhaseInProgress := 0
 ]
 
+{ #category : #'memory access' }
+SpurMemoryManager >> endianness [
+	<doNotGenerate>
+	self subclassResponsibility
+]
+
 { #category : #'class table' }
 SpurMemoryManager >> ensureBehaviorHash: aBehavior [
 	| hash err |
