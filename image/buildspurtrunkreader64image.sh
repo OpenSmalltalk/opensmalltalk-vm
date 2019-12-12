@@ -10,8 +10,8 @@ set -e
 
 echo $0 3 $@
 
-cp -p ${BASE}.image spurreader-64.image
-cp -p ${BASE}.changes spurreader-64.changes
+cp -p ${BASE64}.image spurreader-64.image
+cp -p ${BASE64}.changes spurreader-64.changes
 
 if [ "$1" = FFI ]; then
 	echo $VM spurreader-64.image LoadFFI.st
