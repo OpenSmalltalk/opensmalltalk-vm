@@ -1,0 +1,117 @@
+name: Continuous integration
+on: [push, pull_request]
+
+jobs:
+    build-unixes:
+        name: Build Unixes
+        runs-on: ${{ matrix.variant.os }}
+        strategy:
+            matrix:
+                variant:
+                    - os: ubuntu-18.04
+                      appname: Pharo
+                      vmExecutable: pharo
+                    - os: macos-latest
+                      appname: Pharo
+                      vmExecutable: Pharo
+        env:
+            APPNAME: ${{matrix.variant.appname}}
+            VM_EXECUTABLE_NAME: ${{ matrix.variant.vmExecutable }}
+            CC: clang
+            CXX: clang++
+        steps:
+            - name: Install dependencies
+              if: matrix.variant.os == 'ubuntu-18.04'
+              run: sudo apt-get install uuid-dev
+
+            - uses: actions/checkout@v1
+
+            - name: CMake configuration
+              run: |
+                mkdir -p build
+                cd build
+                cmake .. -DAPPNAME=$APPNAME -DVM_EXECUTABLE_NAME=$VM_EXECUTABLE_NAME
+
+            - name: make
+              run: cd build && make
+            - name: make install
+              run: cd build && make install
+
+            - name: Package artifacts
+              run: |
+                cd build
+                make package
+                mkdir -p ../artifacts
+                cp -f build/packages/*.zip build/packages/*.sha1 ../artifacts
+            - name: Upload artifacts
+              uses: actions/upload-artifact@v1
+              with:
+                  name: build-artifacts
+                  path: artifacts
+
+            - name: Run tests
+              continue-on-error: true
+              run: scripts/runTests.sh
+            - name: Upload test results
+              continue-on-error: true
+              uses: actions/upload-artifact@v1
+              with:
+                  name: test-results
+                  path: test-results
+
+    build-windows-cygwin:
+        name: Build Windows Cygwin
+        runs-on: windows-2016
+        strategy:
+            matrix:
+                variant:
+                    - appname: Pharo
+                      vmExecutable: Pharo
+        env:
+            APPNAME: ${{matrix.variant.appname}}
+            VM_EXECUTABLE_NAME: ${{ matrix.variant.vmExecutable }}
+        steps:
+            - uses: actions/checkout@v1
+
+            - name: Install Cygwin
+              run: .\scripts\installCygwin.ps1 "setup-x86_64.exe" x86_64
+
+            - name: CMake configuration
+              run: |
+                mkdir -p build
+                cd build
+                cmake .. -DAPPNAME=$APPNAME -DVM_EXECUTABLE_NAME=$VM_EXECUTABLE_NAME
+              shell: pwsh.exe -File .\scripts\runScriptInCygwinBash.ps1 {0}
+
+            - name: make
+              run: cd build && make
+              shell: pwsh.exe -File .\scripts\runScriptInCygwinBash.ps1 {0}
+            - name: make install
+              run: cd build && make install
+              shell: pwsh.exe -File .\scripts\runScriptInCygwinBash.ps1 {0}
+
+            - name: Package artifacts
+              run: |
+                cd build
+                make package
+                mkdir -p ../artifacts
+                cp -f build/packages/*.zip build/packages/*.sha1 ../artifacts
+              shell: pwsh.exe -File .\scripts\runScriptInCygwinBash.ps1 {0}
+
+            - name: Upload artifacts
+              uses: actions/upload-artifact@v1
+              with:
+                  name: build-artifacts
+                  path: artifacts
+
+            - name: Run tests
+              continue-on-error: true
+              run: scripts/runTests.sh
+              shell: pwsh.exe -File .\scripts\runScriptInCygwinBash.ps1 {0}
+
+            - name: Upload test results
+              continue-on-error: true
+              uses: actions/upload-artifact@v1
+              with:
+                  name: test-results
+                  path: test-results
