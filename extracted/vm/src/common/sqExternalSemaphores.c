@@ -153,8 +153,11 @@ signalSemaphoreWithIndex(sqInt index)
 	assert(index >= 0 && index <= numSignalRequests);
 
 	LogEventChain((dbgEvtChF,"sSWI(%d)%c.",index,(unsigned)i >= numSignalRequests?'-':'+'));
-	if ((unsigned)i >= numSignalRequests)
+    if ((unsigned)i >= numSignalRequests) {
+        aioInterruptPoll();
+        forceInterruptCheck();
 		return 0;
+    }
 
 	sqLowLevelMFence();
 	b4 = signalRequests[i];

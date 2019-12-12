@@ -242,10 +242,10 @@ do if ((bool) && !(++tickCount % TICKS_PER_CHAR)) {		\
  * I Try to clear all the data available in the pipe, so it does not passes the limit of data.
  */
 
-void
+int
 clearPipe(int fd){
 	char buf[1024];
-	int n;
+    int n;
 	fd_set readFD;
 	struct timeval tv;
 
@@ -257,16 +257,18 @@ clearPipe(int fd){
 	do {
 
 		if(select(fd + 1, &readFD, NULL, NULL, &tv) == 0)
-			return;
+			return 0;
 
 		n = read(fd, &buf, 1024);
 	} while(n == 1024);
 
+    return 1;
 }
 
 long 
 aioPoll(long microSeconds)
 {
+    
 	int	fd;
 	fd_set	rd, wr, ex;
 	unsigned long long us;
@@ -288,6 +290,9 @@ aioPoll(long microSeconds)
 		return 0;
 #endif
 
+    if(clearPipe(signal_pipe_fd[0]))
+       return 1;
+    
 	rd = rdMask;
 	wr = wrMask;
 	ex = exMask;
