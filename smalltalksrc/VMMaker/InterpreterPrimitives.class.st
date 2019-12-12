@@ -1993,25 +1993,31 @@ InterpreterPrimitives >> primitiveFloatAt [
 	"Provide platform-independent access to 32-bit words comprising
 	 a Float.  Map index 1 onto the most significant word and index 2
 	 onto the least significant word."
-	| rcvr index result |
+	| rcvr index result indexToUse |
 	<var: #result type: #usqInt>
+	
 	rcvr := self stackValue: 1.
 	index := self stackTop.
-	index = ConstOne ifTrue:
-		[result := self positive32BitIntegerFor:
-					(objectMemory
-						fetchLong32: (VMBIGENDIAN ifTrue: [0] ifFalse: [1])
-						ofFloatObject: rcvr).
-		^self pop: 2 thenPush: result].
-	index = ConstTwo ifTrue:
-		[result := self positive32BitIntegerFor:
-					(objectMemory
-						fetchLong32: (VMBIGENDIAN ifTrue: [1] ifFalse: [0])
-						ofFloatObject: rcvr).
-		^self pop: 2 thenPush: result].
-	self primitiveFailFor: ((objectMemory isIntegerObject: index)
+	
+	index = ConstOne 
+		ifTrue: [ indexToUse := 0 ]
+		ifFalse: [
+			index = ConstTwo 
+				ifTrue: [ indexToUse := 1 ]
+				ifFalse: [ 
+					^ self primitiveFailFor: ((objectMemory isIntegerObject: index)
 							ifTrue: [PrimErrBadIndex]
-							ifFalse: [PrimErrBadArgument])
+							ifFalse: [PrimErrBadArgument]) ]].
+	
+	VMBIGENDIAN ifFalse: [ 
+		indexToUse := indexToUse = 0 ifTrue: [ 1 ] ifFalse: [ 0 ]].
+	
+	result := self positive32BitIntegerFor: (objectMemory
+							fetchLong32: indexToUse
+							ofFloatObject: rcvr).
+	
+	^self pop: 2 thenPush: result.
+
 ]
 
 { #category : #'indexing primitives' }
