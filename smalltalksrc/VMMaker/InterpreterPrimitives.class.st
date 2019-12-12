@@ -499,6 +499,12 @@ InterpreterPrimitives >> maybeInlinePositive32BitValueOf: oop [
 			^self cCoerceSimple: (objectMemory byteSwapped32IfBigEndian: (objectMemory fetchLong32: 0 ofObject: oop)) to: #'unsigned int']
 ]
 
+{ #category : #'simulation support' }
+InterpreterPrimitives >> newMethod: oop [
+	<doNotGenerate>
+	newMethod := oop
+]
+
 { #category : #'primitive support' }
 InterpreterPrimitives >> noInlineSigned32BitValueGutsOf: oop [
 	"Convert the given object into an integer value.
@@ -5408,6 +5414,27 @@ InterpreterPrimitives >> primitiveYield [
 	(self isEmptyList: processList) ifFalse:
 		[self addLastLink: activeProc toList: processList.
 		 self transferTo: self wakeHighestPriority]
+]
+
+{ #category : #accessing }
+InterpreterPrimitives >> profileMethod: anOop [
+
+	<doNotGenerate>
+	profileMethod := anOop
+]
+
+{ #category : #accessing }
+InterpreterPrimitives >> profileProcess: anOop [
+
+	<doNotGenerate>
+	profileProcess := anOop
+]
+
+{ #category : #accessing }
+InterpreterPrimitives >> profileSemaphore: anOop [
+
+	<doNotGenerate>
+	profileSemaphore := anOop
 ]
 
 { #category : #'arithmetic integer primitives' }

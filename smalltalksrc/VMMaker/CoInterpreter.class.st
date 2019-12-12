@@ -6008,12 +6008,6 @@ CoInterpreter >> newMethod [
 	^newMethod
 ]
 
-{ #category : #'cog jit support' }
-CoInterpreter >> newMethod: oop [
-	<doNotGenerate>
-	newMethod := oop
-]
-
 { #category : #'trampoline support' }
 CoInterpreter >> newMethodAddress [
 	<api>

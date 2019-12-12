@@ -16465,6 +16465,12 @@ StackInterpreter >> metaclassNumSlots [
 	^metaclassNumSlots
 ]
 
+{ #category : #accessing }
+StackInterpreter >> method: oop [
+	<doNotGenerate>
+	method := oop
+]
+
 { #category : #'plugin primitive support' }
 StackInterpreter >> methodArg: index [
 	"Like #stackValue: but access method arguments left-to-right"
@@ -16989,7 +16995,6 @@ StackInterpreter >> objectMemory [
 { #category : #initialization }
 StackInterpreter >> objectMemory: anObjectMemory [
 	<doNotGenerate>
-	objectMemory ifNotNil: [self halt].
 	objectMemory := anObjectMemory
 ]
 

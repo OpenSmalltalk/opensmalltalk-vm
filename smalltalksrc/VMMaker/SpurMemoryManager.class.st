@@ -1876,6 +1876,32 @@ SpurMemoryManager >> allocateBytes: numBytes classIndex: classIndex [
 		classIndex: classIndex
 ]
 
+{ #category : #bootstrap }
+SpurMemoryManager >> allocateClassTable [
+	<doNotGenerate>
+	"Create the class table root with enough slots for many class table pages and some hidden root slots.
+	Create only a first mandatory class table page here.
+	Others will be created on demand."	
+	| classTableRootOop firstPageOop |
+	classTableRootOop := self
+		allocateSlots: self classTableRootSlots + self hiddenRootSlots
+		format: self arrayFormat
+		classIndex: self arrayClassIndexPun.
+
+	self nilFieldsOf: classTableRootOop.
+	firstPageOop := self
+		allocateSlots: self classTablePageSize
+		format: self arrayFormat
+		classIndex: self arrayClassIndexPun.
+	
+	self nilFieldsOf: firstPageOop.
+	self storePointer: 0 ofObject: classTableRootOop withValue: firstPageOop.
+
+	self setHiddenRootsObj: classTableRootOop.
+		
+	^ classTableRootOop
+]
+
 { #category : #'free space' }
 SpurMemoryManager >> allocateLargestFreeChunk [
 	"Answer the largest free chunk in the free lists."
@@ -6220,6 +6246,23 @@ SpurMemoryManager >> initialize [
 							ifNil: [0]
 ]
 
+{ #category : #bootstrap }
+SpurMemoryManager >> initializeFreeList [
+
+	| freeListOop |
+	freeListOop := self objectMemory
+		allocateSlots: self numFreeLists
+		format: self wordIndexableFormat
+		classIndex: self wordSizeClassIndexPun.
+	0 to: self numFreeLists - 1 do: [ :i |
+		self
+			storePointerUnchecked: i
+			ofObject: freeListOop
+			withValue: 0].
+	self initializeFreeSpacePostLoad: freeListOop.
+	^ freeListOop
+]
+
 { #category : #snapshot }
 SpurMemoryManager >> initializeFreeSpacePostLoad: freeListObj [
 	"Reinitialize the free list info.  The freeLists object needs to be swizzled
@@ -8712,6 +8755,12 @@ SpurMemoryManager >> minSmallInteger [
 { #category : #'spur bootstrap' }
 SpurMemoryManager >> mournQueue [
 	^mournQueue
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> mournQueue: anOop [ 
+	<doNotGenerate>
+	mournQueue := anOop
 ]
 
 { #category : #'image segment in/out' }
