@@ -1,4 +1,4 @@
-#include <pharo.h>
+#include "pharovm/pharo.h"
 #include <sys/stat.h>
 
 #ifndef WIN64

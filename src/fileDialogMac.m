@@ -1,7 +1,7 @@
 #import <Foundation/Foundation.h>
 #import <AppKit/AppKit.h>
-#include "fileDialog.h"
-#include "stringUtilities.h"
+#include "pharovm/fileDialog.h"
+#include "pharovm/stringUtilities.h"
 #include <string.h>
 
 bool
@@ -18,7 +18,7 @@ vm_file_dialog_run_modal_open(VMFileDialog *dialog)
     {
         allowedExtension = [NSString stringWithUTF8String: dialog->filterExtension + 1];
     }
-    
+
     // No image file is specified. Display the file open dialog.
     NSOpenPanel *panel = [NSOpenPanel openPanel];
     panel.title = [NSString stringWithUTF8String: dialog->title];
@@ -26,15 +26,15 @@ vm_file_dialog_run_modal_open(VMFileDialog *dialog)
     panel.canChooseFiles = YES;
     panel.canChooseDirectories = NO;
     panel.allowsMultipleSelection = NO;
-    
+
     if(allowedExtension != nil)
     {
-        panel.allowedFileTypes = [NSArray arrayWithObjects: allowedExtension, nil];        
+        panel.allowedFileTypes = [NSArray arrayWithObjects: allowedExtension, nil];
     }
 
     dialog->succeeded = false;
     dialog->selectedFileName = NULL;
-    
+
     NSInteger clickedButton = [panel runModal];
     if(clickedButton == NSModalResponseOK)
     {

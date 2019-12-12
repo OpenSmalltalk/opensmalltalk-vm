@@ -1,11 +1,11 @@
 /****************************************************************************
 *   PROJECT: Common include
 *   FILE:    sq.h
-*   CONTENT: 
+*   CONTENT:
 *
-*   AUTHOR:  
-*   ADDRESS: 
-*   EMAIL:   
+*   AUTHOR:
+*   ADDRESS:
+*   EMAIL:
 *   RCSID:   $Id: sq.h 1283 2005-12-31 00:51:12Z rowledge $
 *
 */
@@ -25,11 +25,17 @@
 #include "sqMemoryAccess.h"
 #include "sqVirtualMachine.h"
 
-#include "platformSemaphore.h"
 
 #define true	1
 #define false	0
 #define null	0  /* using "null" because nil is predefined in Think C */
+
+#ifndef EXPORT
+#define EXPORT(returnType) returnType
+#endif
+
+#include "pharovm/semaphores/platformSemaphore.h"
+
 
 #if !defined(IMAGE_DIALECT_NAME)
 # if NewspeakVM
@@ -38,7 +44,9 @@
 #	define IMAGE_ENV_NAME "NEWSPEAK_IMAGE"
 # elif PharoVM
 #	define IMAGE_DIALECT_NAME "Pharo"
-#	define DEFAULT_IMAGE_NAME "Pharo.image"
+#	if !defined(DEFAULT_IMAGE_NAME)
+#		define DEFAULT_IMAGE_NAME "Pharo.image"
+#	endif
 #	define IMAGE_ENV_NAME "PHARO_IMAGE"
 # else
 #	define IMAGE_DIALECT_NAME "Squeak"
@@ -56,7 +64,6 @@
    If the platform requires special declaration modifiers, the EXPORT and
    VM_EXPORT macros can be redefined.
 */
-#define EXPORT(returnType) returnType
 #define VM_EXPORT
 #define VM_FUNCTION_EXPORT(returnType) returnType
 
@@ -186,7 +193,7 @@ void	addIdleUsecs(sqInt);
    counter if there is such a thing on this platform (otherwise return 0) */
 sqLong ioHighResClock(void);
 
-/* New filename converting function; used by the interpreterProxy function 
+/* New filename converting function; used by the interpreterProxy function
   ioFilenamefromStringofLengthresolveAliases. Most platforms can ignore the
   resolveAlias boolean - it seems to only be of use by OSX but is crucial there.
 */
@@ -197,7 +204,7 @@ sqInt sqGetFilenameFromString(char * aCharBuffer, char * aFilenameString, sqInt 
    Override in sqPlatformSpecific.h for each platform that implements a
    file truncate, or consider replacing the
    ../Cross/plugins/FilePlugin/sqFilePluginBasicPrims.c
-   file with a platform specific version as Win32 and RISC OS do. 
+   file with a platform specific version as Win32 and RISC OS do.
 */
 #define sqFTruncate(filenum, fileoffset) true
 
@@ -216,11 +223,11 @@ sqInt sqGetFilenameFromString(char * aCharBuffer, char * aFilenameString, sqInt 
 /* Interpreter entry points. */
 
 /* Disable Intel compiler inlining of error which is used for breakpoints */
-#ifdef __INTEL_COMPILER 
+#ifdef __INTEL_COMPILER
 #   pragma auto_inline(off)
 #endif
 extern void error(char *s);
-#ifdef __INTEL_COMPILER 
+#ifdef __INTEL_COMPILER
 #   pragma auto_inline(on)
 #endif
 sqInt checkedByteAt(sqInt byteAddress);
@@ -380,7 +387,7 @@ sqInt ioDisablePowerManager(sqInt disableIfNonZero);
    In general, either set of input function can be supported,
    depending on the platform. This (first) set is state based
    and should be supported even on platforms that make use
-   of the newer event driven API to support older images 
+   of the newer event driven API to support older images
    without event support.
 */
 

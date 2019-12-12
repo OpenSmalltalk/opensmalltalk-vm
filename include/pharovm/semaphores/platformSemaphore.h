@@ -2,7 +2,7 @@
 #define __PLATFORM_SEMAPHORE__
 
 #include "pSemaphore.h"
-#include "pharo.h"
+#include "pharovm/pharo.h"
 
 #include <stdlib.h>
 

@@ -17,7 +17,6 @@ set(EXTRACTED_SOURCES
 
 #Virtual Memory functions
     ${CMAKE_CURRENT_SOURCE_DIR}/src/memoryUnix.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/aioUnix.c
 
 # Support sources
     ${CMAKE_CURRENT_SOURCE_DIR}/src/fileDialogUnix.c
@@ -39,9 +38,13 @@ endmacro()
 
 macro(configure_installables INSTALL_COMPONENT)
     set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/build/dist")
-    
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/packaging/linux/launch.sh.in
+        ${CMAKE_CURRENT_BINARY_DIR}/build/packaging/linux/${VM_EXECUTABLE_NAME} @ONLY)
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/packaging/linux/bin/launch.sh.in
+        ${CMAKE_CURRENT_BINARY_DIR}/build/packaging/linux/bin/${VM_EXECUTABLE_NAME} @ONLY)
+
     install(
-      DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/packaging/linux/"
+      DIRECTORY "${CMAKE_BINARY_DIR}/build/packaging/linux/"
       DESTINATION "./"
       USE_SOURCE_PERMISSIONS
       COMPONENT ${INSTALL_COMPONENT})
@@ -55,5 +58,5 @@ endmacro()
 macro(add_required_libs_per_platform)
   target_link_libraries(${VM_LIBRARY_NAME} dl)
   target_link_libraries(${VM_LIBRARY_NAME} m)
-  target_link_libraries(${VM_LIBRARY_NAME} pthread)  
+  target_link_libraries(${VM_LIBRARY_NAME} pthread)
 endmacro()

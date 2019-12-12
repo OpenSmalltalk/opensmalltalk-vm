@@ -27,8 +27,6 @@
 #include <sys/time.h>
 #include "sqaio.h"
 
-#include "platformSemaphore.h"
-
 #ifdef WIN64
 # include "Windows.h"
 #endif

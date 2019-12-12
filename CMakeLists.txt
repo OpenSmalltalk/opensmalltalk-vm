@@ -9,6 +9,8 @@ set(VERSION_MAJOR 8)
 set(VERSION_MINOR 2)
 set(VERSION_PATCH 0)
 
+set(APPNAME Pharo CACHE STRING "VM Application name")
+
 get_commit_hash(GIT_COMMIT_HASH)
 get_git_describe(GIT_DESCRIBE)
 get_git_date(GIT_COMMIT_DATE)
@@ -145,16 +147,18 @@ add_definitions(-D"VM_LABEL\(foo\)=0")
 string(LENGTH "${CMAKE_SOURCE_DIR}/" SOURCE_PATH_SIZE)
 add_definitions("-DSOURCE_PATH_SIZE=${SOURCE_PATH_SIZE}")
 
-if(UNIX AND NOT OSX)
-    set(VM_EXECUTABLE_NAME pharo)
+if(UNIX AND NOT OSX AND NOT WIN)
+    set(VM_EXECUTABLE_NAME pharo CACHE STRING "VM Executable name")
 else()
-    set(VM_EXECUTABLE_NAME Pharo)
+    set(VM_EXECUTABLE_NAME Pharo CACHE STRING "VM Executable name")
 endif()
 
-set(VM_LIBRARY_NAME PharoVMCore)
-set(VM_NAME Pharo)
+message(STATUS "Building ${APPNAME} with executable named ${VM_EXECUTABLE_NAME}")
+
+set(VM_LIBRARY_NAME ${APPNAME}VMCore)
+set(VM_NAME ${APPNAME})
 set(PHARO_VM TRUE)
-set(DEFAULT_IMAGE_NAME Pharo.image)
+set(DEFAULT_IMAGE_NAME ${APPNAME}.image)
 
 set(VM_TARGET "${CMAKE_SYSTEM}")
 
@@ -194,7 +198,7 @@ set(EXECUTABLE_OUTPUT_PATH "build/vm")
 
 #If in OSX, configure creation of Bundle
 if (OSX)
-  set(LIBRARY_OUTPUT_DIRECTORY "build/vm/$<CONFIG>/Pharo.app/Contents/MacOS/Plugins")
+  set(LIBRARY_OUTPUT_DIRECTORY "build/vm/$<CONFIG>/${VM_EXECUTABLE_NAME}.app/Contents/MacOS/Plugins")
 else()
   set(LIBRARY_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})
 endif()
@@ -226,18 +230,17 @@ check_library_exists(uuid uuidgen "" HAVE_UUIDGEN)
 check_library_exists(uuid uuid_generate "" HAVE_UUID_GENERATE)
 
 #Custom command that downloads a Pharo image and VM in ${VMMAKER_OUTPUT_PATH}
-#add_custom_command(
-#  OUTPUT ${VMMAKER_OUTPUT_PATH}/Pharo.image ${VMMAKER_OUTPUT_PATH}/pharo
-#  COMMAND wget -O - https://get.pharo.org/64/80 | bash
-#  COMMAND wget -O - https://get.pharo.org/64/vm80 | bash
-#  WORKING_DIRECTORY ${VMMAKER_OUTPUT_PATH}
-#  COMMENT "Downloading Pharo 80")
+add_custom_command(
+  OUTPUT ${VMMAKER_OUTPUT_PATH}/Pharo.image ${VMMAKER_OUTPUT_PATH}/pharo
+  COMMAND wget -O - https://get.pharo.org/64/80 | bash
+  COMMAND wget -O - https://get.pharo.org/64/vm80 | bash
+  WORKING_DIRECTORY ${VMMAKER_OUTPUT_PATH}
+  COMMENT "Downloading Pharo 80")
 
 add_custom_command(
   OUTPUT ${VMMAKER_OUTPUT_PATH}/VMMaker.image
   COMMAND ./pharo Pharo.image --save --quit ${CMAKE_CURRENT_SOURCE_DIR_TO_OUT}/scripts/installVMMaker.st ${CMAKE_CURRENT_SOURCE_DIR_TO_OUT}
   COMMAND ./pharo Pharo.image save VMMaker --delete-old
-  MAIN_DEPENDENCY ${VMMAKER_OUTPUT_PATH}/Pharo.image
   DEPENDS ${VMMAKER_OUTPUT_PATH}/Pharo.image
   WORKING_DIRECTORY ${VMMAKER_OUTPUT_PATH}
 COMMENT "Generating VMMaker image")
@@ -246,11 +249,11 @@ COMMENT "Generating VMMaker image")
 add_custom_command(
   OUTPUT ${VMSOURCEFILES}
   COMMAND ${VMMAKER_OUTPUT_PATH}/pharo ${VMMAKER_OUTPUT_PATH}/VMMaker.image eval \"PharoVMMaker generate: \#\'${FLAVOUR}\' outputDirectory: \'${CMAKE_CURRENT_BINARY_DIR_TO_OUT}\'\"
-  MAIN_DEPENDENCY ${VMMAKER_OUTPUT_PATH}/VMMaker.image
+  DEPENDS ${VMMAKER_OUTPUT_PATH}/VMMaker.image
   COMMENT "Generating VM files for flavour: ${FLAVOUR}")
 
 #Generating config file
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/config.h.in build/include/config.h)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/pharovm/config.h.in build/include/pharovm/config.h)
 
 message(STATUS "C Compiler: ${CMAKE_C_COMPILER}")
 message(STATUS "C++ Compiler: ${CMAKE_CXX_COMPILER}")
@@ -261,6 +264,7 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/include/semaphores
     ${CMAKE_CURRENT_BINARY_DIR}/build/include/
+    ${CMAKE_CURRENT_BINARY_DIR}/build/include/pharovm/
     ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/include
 )
 
@@ -337,9 +341,15 @@ install(FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/common/sqVirtualMachine.h
   ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/include/interp.h
   ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/include/vmCallback.h
-  ${CMAKE_CURRENT_BINARY_DIR}/build/include/config.h
-  DESTINATION include
+  ${CMAKE_CURRENT_BINARY_DIR}/build/include/pharovm/config.h
+  DESTINATION include/pharovm
   COMPONENT include)
+
+install(
+    DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/pharovm"
+    DESTINATION include
+    COMPONENT include
+    FILES_MATCHING PATTERN *.h)
 
 # Packaging Setup
 
@@ -347,13 +357,13 @@ make_directory("build/packages")
 
 get_full_platform_name(FULL_PLATFORM_NAME)
 
-set(CPACK_PACKAGE_DESCRIPTION "Pharo Headless VM for ${FULL_PLATFORM_NAME}")
+set(CPACK_PACKAGE_DESCRIPTION "${APPNAME} Headless VM for ${FULL_PLATFORM_NAME}")
 set(CPACK_PACKAGE_VERSION_MAJOR "${VERSION_MAJOR}")
 set(CPACK_PACKAGE_VERSION_MINOR "${VERSION_MINOR}")
 set(CPACK_PACKAGE_VERSION_PATCH "${VERSION_PATCH}")
-set(CPACK_PACKAGE_VENDOR "Pharo")
+set(CPACK_PACKAGE_VENDOR "${APPNAME}")
 set(CPACK_PACKAGE_HOMEPAGE_URL "https://pharo.org")
-set(CPACK_PACKAGE_FILE_NAME "PharoVM-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}-${GIT_COMMIT_HASH}-${FULL_PLATFORM_NAME}")
+set(CPACK_PACKAGE_FILE_NAME "${APPNAME}VM-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}-${GIT_COMMIT_HASH}-${FULL_PLATFORM_NAME}")
 set(CPACK_PACKAGE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/build/packages")
 set(CPACK_PACKAGE_CHECKSUM "SHA1")
 set(CPACK_GENERATOR "ZIP")

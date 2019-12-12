@@ -42,7 +42,7 @@
  *	many of the connection-oriented functions should be removed and cremated.
  */
 
-#include "pharo.h"
+#include "pharovm/pharo.h"
 #include "sq.h"
 #include "SocketPlugin.h"
 #include "sqaio.h"

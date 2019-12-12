@@ -1,5 +1,5 @@
 set(VM_EXECUTABLE_CONSOLE_NAME "${VM_EXECUTABLE_NAME}Console")
-set(VM_VERSION_FILEVERSION "PharoVM-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}-${GIT_COMMIT_HASH}")
+set(VM_VERSION_FILEVERSION "${APPNAME}VM-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}-${GIT_COMMIT_HASH}")
 
 set(Win32ResourcesFolder "${CMAKE_CURRENT_SOURCE_DIR}/resources/windows")
 if(NOT Win32VMExecutableIcon)
@@ -101,6 +101,9 @@ macro(add_required_libs_per_platform)
    target_link_libraries(${VM_LIBRARY_NAME} winmm)
    target_link_libraries(${VM_LIBRARY_NAME} Ws2_32)
    target_link_libraries(${VM_LIBRARY_NAME} DbgHelp)
+   target_link_libraries(${VM_LIBRARY_NAME} Ole32)
+   target_link_libraries(${VM_LIBRARY_NAME} comctl32)
+   target_link_libraries(${VM_LIBRARY_NAME} uuid)
 
    target_link_libraries(${VM_LIBRARY_NAME} pthread)
    target_link_libraries(${VM_EXECUTABLE_NAME} Ole32)

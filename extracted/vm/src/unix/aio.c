@@ -31,8 +31,8 @@
  */
 
 #include "sqaio.h"
-#include "debug.h"
-#include "platformSemaphore.h"
+#include "pharovm/debug.h"
+#include "pharovm/semaphores/platformSemaphore.h"
 
 #ifdef HAVE_CONFIG_H
 
