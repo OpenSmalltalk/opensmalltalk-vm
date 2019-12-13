@@ -74,7 +74,6 @@ int manualSurfaceGetFormat(sqIntptr_t surfaceArg, int* width, int* height, int* 
 	*height = surface->height;
 	*depth = surface->depth;
 	*isMSB = surface->isMSB;
-	DPRINTF(("Getting Surface Format: %" PRIxSQPTR " %ld %ld %ld %ld\n", (sqIntptr_t) surface, *width, *height, *depth, *isMSB));
 	return 1;
 }
 
@@ -96,14 +95,12 @@ sqIntptr_t manualSurfaceLock(sqIntptr_t surfaceArg, int *pitch, int x, int y, in
 	
 	/* Success!  Return the pointer. */
 	*pitch = surface->rowPitch;
-	DPRINTF(("Locked Surface: %" PRIxSQPTR " Input Rect: %ld %ld %ld %ld  Row Pitch: %ld\n", (sqIntptr_t) surface, x, y, w, h, *pitch));
 	return (sqIntptr_t)(surface->ptr);
 }
 
 int manualSurfaceUnlock(sqIntptr_t surfaceArg, int x, int y, int w, int h) {
 	ManualSurface* surface = (ManualSurface *)surfaceArg;
     surface->isLocked = 0;
-	DPRINTF(("Unlocked Surface: %" PRIxSQPTR " Rect: %ld %ld %ld %ld\n", (sqIntptr_t) surface, x, y, w, h));
 	return 1;	
 }
 
@@ -159,6 +156,5 @@ int setManualSurfacePointer(int surfaceID, void* ptr) {
 	surface = (ManualSurface*)surfaceHandle;	
 	if (surface->isLocked) return FALSE; /* can't set pointer while surface is locked */
 	surface->ptr = ptr;
-	DPRINTF(("Set Surface: %lx Pointer: %" PRIxSQPTR "\n", surfaceID, (sqIntptr_t)ptr));
 	return TRUE;
 }
