@@ -128,6 +128,9 @@ static fd_set xdMask;		/* external descriptor	 */
 void heartbeat_poll_enter(long microSeconds);
 void heartbeat_poll_exit(long microSeconds);
 
+Semaphore* interruptFIFOMutex;
+
+
 static void 
 undefinedHandler(int fd, void *clientData, int flags)
 {
@@ -167,6 +170,8 @@ void
 aioInit(void)
 {
 	extern void forceInterruptCheck(int);	/* not really, but hey */
+
+	interruptFIFOMutex = platform_semaphore_new(1);
 
 	FD_ZERO(&fdMask);
 	FD_ZERO(&rdMask);
@@ -252,15 +257,21 @@ clearPipe(int fd){
 	tv.tv_sec = 0;
 	tv.tv_usec = 0;
 
+	interruptFIFOMutex->wait(interruptFIFOMutex);
+
 	FD_SET(fd, &readFD);
 
 	do {
 
-		if(select(fd + 1, &readFD, NULL, NULL, &tv) == 0)
+		if(select(fd + 1, &readFD, NULL, NULL, &tv) == 0){
+			interruptFIFOMutex->signal(interruptFIFOMutex);
 			return 0;
+		}
 
 		n = read(fd, &buf, 1024);
 	} while(n == 1024);
+
+	interruptFIFOMutex->signal(interruptFIFOMutex);
 
     return 1;
 }
@@ -290,8 +301,12 @@ aioPoll(long microSeconds)
 		return 0;
 #endif
 
-    if(clearPipe(signal_pipe_fd[0]))
-       return 1;
+	logTrace("microSeconds(%ld)", microSeconds);
+
+    if(clearPipe(signal_pipe_fd[0])){
+    	logTrace("clearPipe");
+    	return 1;
+    }
     
 	rd = rdMask;
 	wr = wrMask;
@@ -320,12 +335,14 @@ aioPoll(long microSeconds)
 			if (remainingMicroSeconds)
 				addIdleUsecs(remainingMicroSeconds);
 			heartbeat_poll_exit(microSeconds);
+	    	logTrace("n == 0");
 			return 0;
 		}
 		if (errno && (EINTR != errno)) {
 			fprintf(stderr, "errno %d\n", errno);
 			perror("select");
 			heartbeat_poll_exit(microSeconds);
+	    	logTrace("error");
 			return 0;
 		}
 		now = ioUTCMicroseconds();
@@ -333,6 +350,7 @@ aioPoll(long microSeconds)
 
 		if (remainingMicroSeconds <= 0){
 			heartbeat_poll_exit(microSeconds);
+	    	logTrace("remainingMicroSeconds <= 0");
 			return 0;
 		}
 		us = now;
@@ -356,6 +374,8 @@ aioPoll(long microSeconds)
 		}
 		_DO_FLAG_TYPE();
 	}
+
+	logTrace("processed");
 	return 1;
 }
 
@@ -367,10 +387,18 @@ aioPoll(long microSeconds)
 void
 aioInterruptPoll(){
 	int n;
+
+	interruptFIFOMutex->wait(interruptFIFOMutex);
+
 	n = write(signal_pipe_fd[1], "1", 1);
+
+	logTrace("");
+
 	if(n != 1){
 		perror("write");
 	}
+
+	interruptFIFOMutex->signal(interruptFIFOMutex);
 }
 
 
