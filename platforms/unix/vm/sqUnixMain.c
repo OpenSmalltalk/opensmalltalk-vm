@@ -1166,6 +1166,7 @@ static struct moduleDescription moduleDescriptions[]=
   { &displayModule, "display", "custom" },	/*** NO DEFAULT ***/
   { &soundModule,   "sound",   "NAS"    },	/*** NO DEFAULT ***/
   { &soundModule,   "sound",   "custom" },	/*** NO DEFAULT ***/
+  { &soundModule,   "sound",   "sndio"  },	/*** NO DEFAULT ***/
   /* when adding an entry above be sure to change the defaultModules offset below */
   { &displayModule, "display", "Quartz" },	/* defaults... */
   { &soundModule,   "sound",   "OSS"    },
@@ -1177,7 +1178,7 @@ static struct moduleDescription moduleDescriptions[]=
   { 0,              0,         0	}
 };
 
-static struct moduleDescription *defaultModules= moduleDescriptions + 6;
+static struct moduleDescription *defaultModules= moduleDescriptions + 7;
 
 
 struct SqModule *queryLoadModule(char *type, char *name, int query)
