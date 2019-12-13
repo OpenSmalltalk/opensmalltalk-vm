@@ -1,5 +1,6 @@
 #include "pharovm/pharo.h"
 #include <stdarg.h>
+#include <sys/time.h>
 
 char * GetAttributeString(sqInt id);
 
@@ -16,6 +17,7 @@ static int max_error_level = 1;
  * LOG_WARN 		2
  * LOG_INFO 		3
  * LOG_DEBUG		4
+ * LOG_TRACE		5
  *
  */
 EXPORT(void) logLevel(int value){
@@ -27,7 +29,7 @@ void error(char *errorMessage){
     abort();
 }
 
-static char* severityName[4] = {"ERROR", "WARN", "INFO", "DEBUG"};
+static char* severityName[5] = {"ERROR", "WARN", "INFO", "DEBUG", "TRACE"};
 
 EXPORT(void) logAssert(const char* fileName, const char* functionName, int line, char* msg){
 	logMessage(LOG_WARN, fileName, functionName, line, msg);
@@ -42,11 +44,21 @@ EXPORT(void) logMessage(int level, const char* fileName, const char* functionNam
 	}
 
 	time_t now = time(NULL);
-	strftime(timestamp, 20, "%Y-%m-%d %H:%M:%S", localtime(&now));
+	struct tm* ltime = localtime(&now);
+
+	strftime(timestamp, 20, "%Y-%m-%d %H:%M:%S", ltime);
 
 	//Printing the header.
 	// Ex: [DEBUG] 2017-11-14 21:57:53,661 functionName (filename:line) - This is a debug log message.
-	printf("[%-5s] %s %s (%s:%d):", severityName[level - 1], timestamp, functionName, fileName, line);
+	if(level == LOG_TRACE){
+
+		struct timeval utcNow;
+		gettimeofday(&utcNow,0);
+
+		printf("[%-5s] %s.%03d %s (%s:%d):", severityName[level - 1], timestamp, utcNow.tv_usec / 1000 , functionName, fileName, line);
+	}else{
+		printf("[%-5s] %s %s (%s:%d):", severityName[level - 1], timestamp, functionName, fileName, line);
+	}
 
 	//Printint the message from the var_args.
 	va_list list;
