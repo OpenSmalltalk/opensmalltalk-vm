@@ -357,7 +357,6 @@ static int nameToAddr(char *hostName)
 	/* resolve the domain name into a list of addresses */
    error = getaddrinfo(hostName, NULL, NULL, &result);
    if (error != 0) {
-	   perror("getaddrinfo");
 	   return 0;
    }
 

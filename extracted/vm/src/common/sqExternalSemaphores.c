@@ -154,8 +154,6 @@ signalSemaphoreWithIndex(sqInt index)
 
 	LogEventChain((dbgEvtChF,"sSWI(%d)%c.",index,(unsigned)i >= numSignalRequests?'-':'+'));
     if ((unsigned)i >= numSignalRequests) {
-        aioInterruptPoll();
-        forceInterruptCheck();
 		return 0;
     }
 
