@@ -124,7 +124,8 @@ runOnCPU(sim_cpu *cpu, void *memory,
 			postpc = cpu->nextpc + sizeof(cpu->instr);
 		}
 	}
-	if (postpc > minWriteMaxExecAddr)
+	if (postpc > minWriteMaxExecAddr
+	 || cpu->nextpc > minWriteMaxExecAddr)
 		return InstructionPrefetchError;
 
 #if 0
