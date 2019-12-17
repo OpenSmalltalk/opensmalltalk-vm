@@ -7,7 +7,7 @@
 	<key>CFBundleGetInfoString</key>
 	<string>@APPNAME@ VM</string>
 	<key>CFBundleIconFile</key>
-	<string>Pharo.icns</string>
+	<string>@APPNAME@.icns</string>
 	<key>CFBundleIdentifier</key>
 	<string>org.pharo.vm</string>
 	<key>CFBundleInfoDictionaryVersion</key>
@@ -34,7 +34,7 @@
 				<string>image</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
-			<string>Pharo.icns</string>
+			<string>@APPNAME@.icns</string>
 			<key>CFBundleTypeName</key>
 			<string>@APPNAME@ Image File</string>
 			<key>CFBundleTypeOSTypes</key>
@@ -50,9 +50,9 @@
 				<string>sources</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
-			<string>PharoSources.icns</string>
+			<string>@APPNAME@Sources.icns</string>
 			<key>CFBundleTypeName</key>
-			<string>Squeak Sources File</string>
+			<string>@APPNAME@ Sources File</string>
 			<key>CFBundleTypeOSTypes</key>
 			<array>
 				<string>STso</string>
@@ -66,9 +66,9 @@
 				<string>changes</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
-			<string>PharoChanges.icns</string>
+			<string>@APPNAME@Changes.icns</string>
 			<key>CFBundleTypeName</key>
-			<string>Squeak Changes File</string>
+			<string>@APPNAME@ Changes File</string>
 			<key>CFBundleTypeOSTypes</key>
 			<array>
 				<string>STch</string>
