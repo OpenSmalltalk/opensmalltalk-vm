@@ -3571,11 +3571,6 @@ CogVMSimulator >> stackPages [
 	^stackPages
 ]
 
-{ #category : #'debug support' }
-CogVMSimulator >> stackPointer [
-	^stackPointer
-]
-
 { #category : #'stack pages' }
 CogVMSimulator >> stackZoneBase [
 	"In the simulator the stack zone starts immediately after the code zone."

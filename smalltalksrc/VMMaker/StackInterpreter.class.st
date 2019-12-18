@@ -21277,6 +21277,12 @@ StackInterpreter >> stackPagesClass [
 		ifFalse: [InterpreterStackPagesLSB]
 ]
 
+{ #category : #accessing }
+StackInterpreter >> stackPointer [
+	<doNotGenerate>
+	^stackPointer
+]
+
 { #category : #'cog jit support' }
 StackInterpreter >> stackPointer: theSP [
 	"Simulation only"
