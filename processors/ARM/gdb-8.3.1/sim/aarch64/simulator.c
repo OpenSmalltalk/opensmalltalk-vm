@@ -55,7 +55,21 @@
     }									\
   while (0)
 
-#define HALT_NYI							\
+#if COG // We want no error reporting from the plugin; only a halt
+# define HALT_NYI							\
+  do									\
+    {									\
+      TRACE_DISASM (cpu, aarch64_get_PC (cpu));				\
+      TRACE_INSN (cpu,							\
+		  "Unimplemented instruction detected at sim line %d,"	\
+		  " exe addr %" PRIx64,					\
+		  __LINE__, aarch64_get_PC (cpu));			\
+      sim_engine_halt (CPU_STATE (cpu), cpu, NULL, aarch64_get_PC (cpu),\
+		       sim_stopped, SIM_SIGABRT);			\
+    }									\
+  while (0)
+#else
+# define HALT_NYI							\
   do									\
     {									\
       TRACE_DISASM (cpu, aarch64_get_PC (cpu));				\
@@ -70,6 +84,7 @@
 		       sim_stopped, SIM_SIGABRT);			\
     }									\
   while (0)
+#endif
 
 #define NYI_assert(HI, LO, EXPECTED)					\
   do									\
