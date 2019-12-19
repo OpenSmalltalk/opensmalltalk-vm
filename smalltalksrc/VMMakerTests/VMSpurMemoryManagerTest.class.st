@@ -23,7 +23,7 @@ VMSpurMemoryManagerTest >> fillEden [
 		do: [ :index | self newZeroSizedObject ]
 ]
 
-{ #category : #'tests-scavenge' }
+{ #category : #'tests-3-scavenge-basic' }
 VMSpurMemoryManagerTest >> initializeOldSpaceForScavenger [
 
 	"Create a nil object required to initialize several fields"
@@ -54,6 +54,54 @@ VMSpurMemoryManagerTest >> initializeOldSpaceForScavenger [
 	memory scavenger initializeRememberedSet.
 ]
 
+{ #category : #'tests-4-scavenge-stack' }
+VMSpurMemoryManagerTest >> makeBaseFrameWithMethod: aMethodOop context: aContextOop receiver: aReceiverOop args: argsOops andStack: stackOops [
+	
+	| page pointer |
+	page := memory coInterpreter stackPages newStackPage.
+	pointer := page baseAddress.
+	memory coInterpreter stackPointer: pointer + memory wordSize.
+	"Receiver"
+	memory coInterpreter push: aReceiverOop.
+	argsOops do: [ :e | memory coInterpreter push: e ].
+	"sender context"
+	memory coInterpreter push: memory nilObject.
+	"base frame's saved fp is null"
+	memory coInterpreter push: 0.
+	page
+		baseFP: memory coInterpreter stackPointer;
+		headFP: memory coInterpreter stackPointer.
+	"method"
+	memory coInterpreter push: aMethodOop.
+	"Flags: this stack frame is single. I.e., it has no context object.
+	Otherwise GC fails with an assertion looking for it in the heap"
+	memory coInterpreter push: (memory coInterpreter 
+		encodeFrameFieldHasContext: (aContextOop ~= memory nilObject)
+		isBlock: false
+		numArgs: argsOops size).
+	"context"
+	memory coInterpreter push: aContextOop.
+	"rcvr"
+	memory coInterpreter push: aReceiverOop.
+	"frame stack => empty"
+	stackOops do: [ :e | memory coInterpreter push: e ].
+	"ip"
+	memory coInterpreter push: (aMethodOop + memory baseHeaderSize - 2).
+	page headSP: memory coInterpreter stackPointer.
+	memory coInterpreter setStackPageAndLimit: page.
+	memory coInterpreter setStackPointersFromPage: page.
+	memory coInterpreter popStack.
+	
+	"Mark context as married by setting its sender to the frame pointer plus SmallInteger
+	 tags and the InstructionPointer to the saved fp (which ensures correct alignment
+	 w.r.t. the frame when we check for validity) plus SmallInteger tags."
+	(aContextOop ~= memory nilObject) ifTrue: [ 
+		memory
+			storePointerUnchecked: 0 "SenderIndex"
+			ofObject: aContextOop
+			withValue: (memory coInterpreter withSmallIntegerTags: page baseFP) ]
+]
+
 { #category : #helpers }
 VMSpurMemoryManagerTest >> newObjectWithSlots: slots [
 	
@@ -72,7 +120,7 @@ VMSpurMemoryManagerTest >> newObjectWithSlots: slots classIndex: anIndex [
 	^ oop
 ]
 
-{ #category : #'tests-scavenge' }
+{ #category : #helpers }
 VMSpurMemoryManagerTest >> newZeroSizedObject [
 	
 	^ memory
@@ -128,6 +176,33 @@ VMSpurMemoryManagerTest >> sizeOfObjectWithSlots: slots [
 	^ objectHeaderSize + ((slots min: 1 "at least one for the forwarder pointer") * memory wordSize "bytes")
 ]
 
+{ #category : #'tests-4-scavenge-stack' }
+VMSpurMemoryManagerTest >> testArgumentInStackShouldSurviveScanvenge [
+
+	| newObjectOop newObjectHash newObjectAddress |
+	self initializeOldSpaceForScavenger.
+	memory lastHash: 1.
+	
+	newObjectOop := self newZeroSizedObject.
+	newObjectHash := (memory hashBitsOf: newObjectOop).
+	
+	self
+		makeBaseFrameWithMethod: memory nilObject
+		context: memory nilObject
+		receiver: memory nilObject
+		args: { newObjectOop }
+		andStack: #().
+
+	"Nil should survive, but newObjectOop should survive too.
+	Nil is referenced by the roots because many of their slots are nilled.
+	newObjectOop is referenced by the stack"
+	memory doScavenge: 1 "TenureByAge".
+	
+	"Remap our object address to its new location"
+	newObjectAddress := memory remapObj: newObjectOop.
+	self assert: (memory hashBitsOf: newObjectAddress) equals: newObjectHash
+]
+
 { #category : #'tests-memory-bootstrap' }
 VMSpurMemoryManagerTest >> testClassTableHasTablePagesAndHiddenRoots [
 
@@ -162,6 +237,33 @@ VMSpurMemoryManagerTest >> testClassTableHasTablePagesAndHiddenRoots [
 		equals: memory classTableRootSlots + memory hiddenRootSlots
 ]
 
+{ #category : #'tests-4-scavenge-stack' }
+VMSpurMemoryManagerTest >> testContextInStackShouldSurviveScanvenge [
+
+	| newObjectOop newObjectHash newObjectAddress |
+	self initializeOldSpaceForScavenger.
+	memory lastHash: 1.
+	
+	newObjectOop := self newZeroSizedObject.
+	newObjectHash := (memory hashBitsOf: newObjectOop).
+	
+	self
+		makeBaseFrameWithMethod: memory nilObject
+		context: newObjectOop
+		receiver: memory nilObject
+		args: #()
+		andStack: #().
+
+	"Nil should survive, but newObjectOop should survive too.
+	Nil is referenced by the roots because many of their slots are nilled.
+	newObjectOop is referenced by the stack"
+	memory doScavenge: 1 "TenureByAge".
+	
+	"Remap our object address to its new location"
+	newObjectAddress := memory remapObj: newObjectOop.
+	self assert: (memory hashBitsOf: newObjectAddress) equals: newObjectHash
+]
+
 { #category : #'tests-memory-bootstrap' }
 VMSpurMemoryManagerTest >> testFreeListHasAsManySlotsAsRequiredByTheVM [
 
@@ -189,6 +291,33 @@ VMSpurMemoryManagerTest >> testInstantiateNewObjectMovesFreeStartAfterObject [
 	
 	"New zero sized object has 64bit header + 1 * 64bit empty slot = 16bytes"
 	self assert: memory freeStart equals: freeStartBefore + emptyObjectSize
+]
+
+{ #category : #'tests-4-scavenge-stack' }
+VMSpurMemoryManagerTest >> testMethodInStackShouldSurviveScanvenge [
+
+	| newObjectOop newObjectHash newObjectAddress |
+	self initializeOldSpaceForScavenger.
+	memory lastHash: 1.
+	
+	newObjectOop := self newZeroSizedObject.
+	newObjectHash := (memory hashBitsOf: newObjectOop).
+	
+	self
+		makeBaseFrameWithMethod: newObjectOop
+		context: memory nilObject
+		receiver: memory nilObject
+		args: #()
+		andStack: #().
+
+	"Nil should survive, but newObjectOop should survive too.
+	Nil is referenced by the roots because many of their slots are nilled.
+	newObjectOop is referenced by the stack"
+	memory doScavenge: 1 "TenureByAge".
+	
+	"Remap our object address to its new location"
+	newObjectAddress := memory remapObj: newObjectOop.
+	self assert: (memory hashBitsOf: newObjectAddress) equals: newObjectHash
 ]
 
 { #category : #'tests-memory-bootstrap' }
@@ -331,7 +460,61 @@ VMSpurMemoryManagerTest >> testNewObjectPositionIsBeforeObjectHeader [
 	self assert: oop equals: freeStartBefore
 ]
 
-{ #category : #'tests-scavenge' }
+{ #category : #'tests-4-scavenge-stack' }
+VMSpurMemoryManagerTest >> testObjectInStackShouldSurviveScanvenge [
+
+	| newObjectOop newObjectHash newObjectAddress |
+	self initializeOldSpaceForScavenger.
+	memory lastHash: 1.
+	
+	newObjectOop := self newZeroSizedObject.
+	newObjectHash := (memory hashBitsOf: newObjectOop).
+	
+	self
+		makeBaseFrameWithMethod: memory nilObject
+		context: memory nilObject
+		receiver: memory nilObject
+		args: #()
+		andStack: { newObjectOop }.
+
+	"Nil should survive, but newObjectOop should survive too.
+	Nil is referenced by the roots because many of their slots are nilled.
+	newObjectOop is referenced by the stack"
+	memory doScavenge: 1 "TenureByAge".
+
+	"Remap our object address to its new location"
+	newObjectAddress := memory remapObj: newObjectOop.
+	self assert: (memory hashBitsOf: newObjectAddress) equals: newObjectHash
+]
+
+{ #category : #'tests-4-scavenge-stack' }
+VMSpurMemoryManagerTest >> testReceiverInStackShouldSurviveScanvenge [
+
+	| newObjectOop newObjectHash newObjectAddress |
+	self initializeOldSpaceForScavenger.
+	memory lastHash: 1.
+	
+	newObjectOop := self newZeroSizedObject.
+	newObjectHash := (memory hashBitsOf: newObjectOop).
+	
+	self
+		makeBaseFrameWithMethod: memory nilObject
+		context: memory nilObject
+		receiver: newObjectOop
+		args: #()
+		andStack: #().
+
+	"Nil should survive, but newObjectOop should survive too.
+	Nil is referenced by the roots because many of their slots are nilled.
+	newObjectOop is referenced by the stack"
+	memory doScavenge: 1 "TenureByAge".
+	
+	"Remap our object address to its new location"
+	newObjectAddress := memory remapObj: newObjectOop.
+	self assert: (memory hashBitsOf: newObjectAddress) equals: newObjectHash
+]
+
+{ #category : #'tests-3-scavenge-basic' }
 VMSpurMemoryManagerTest >> testScavengeEmptyMemoryShouldExchangePastAndFutureSpaces [
 
 	| oldPastSpaceStart oldFutureSpaceStart |
@@ -347,7 +530,7 @@ VMSpurMemoryManagerTest >> testScavengeEmptyMemoryShouldExchangePastAndFutureSpa
 	self assert: memory scavenger futureSpace start equals: oldPastSpaceStart.
 ]
 
-{ #category : #'tests-scavenge' }
+{ #category : #'tests-3-scavenge-basic' }
 VMSpurMemoryManagerTest >> testScavengeNonSurvivorShouldEmptyEden [
 
 	self initializeOldSpaceForScavenger.
@@ -361,7 +544,7 @@ VMSpurMemoryManagerTest >> testScavengeNonSurvivorShouldEmptyEden [
 	self assert: memory freeStart equals: memory scavenger eden start
 ]
 
-{ #category : #'tests-scavenge' }
+{ #category : #'tests-3-scavenge-basic' }
 VMSpurMemoryManagerTest >> testScavengeNonSurvivorShouldOnlyCopySurvivorObjectToPastSpace [
 
 	self initializeOldSpaceForScavenger.
@@ -375,58 +558,7 @@ VMSpurMemoryManagerTest >> testScavengeNonSurvivorShouldOnlyCopySurvivorObjectTo
 	self assert: memory pastSpaceStart equals: memory scavenger pastSpace start + emptyObjectSize
 ]
 
-{ #category : #'tests-scavenge' }
-VMSpurMemoryManagerTest >> testScavengeShouldCopySurvivorObjectReferencedFromStackToPastSpace [
-
-	| newObjectOop page pointer newObjectHash newObjectAddress |
-	self initializeOldSpaceForScavenger.
-	memory lastHash: 1.
-	
-	newObjectOop := self newZeroSizedObject.
-	newObjectHash := (memory hashBitsOf: newObjectOop).
-	
-	page := memory coInterpreter stackPages newStackPage.
-	pointer := page baseAddress.
-	memory coInterpreter stackPointer: pointer + memory wordSize.
-	"Receiver"
-	memory coInterpreter push: memory nilObject.
-	"sender context"
-	memory coInterpreter push: memory nilObject.
-	"base frame's saved fp is null"
-	memory coInterpreter push: 0.
-	page
-		baseFP: memory coInterpreter stackPointer;
-		headFP: memory coInterpreter stackPointer.
-	"method"
-	memory coInterpreter push: newObjectOop.
-	"Flags: this stack frame is single. I.e., it has no context object.
-	Otherwise GC fails with an assertion looking for it in the heap"
-	memory coInterpreter push: (memory coInterpreter 
-		encodeFrameFieldHasContext: false
-		isBlock: false
-		numArgs: 0).
-	"context"
-	memory coInterpreter push: memory nilObject.
-	"rcvr"
-	memory coInterpreter push: memory nilObject.
-	"frame stack => empty"
-	"ip"
-	memory coInterpreter push: (memory nilObject + memory baseHeaderSize - 2).
-	page headSP: memory coInterpreter stackPointer.
-	memory coInterpreter setStackPageAndLimit: page.
-	memory coInterpreter setStackPointersFromPage: page.
-	memory coInterpreter popStack.
-
-	"Nil should survive, but newObjectOop should survive too.
-	Nil is referenced by the roots because many of their slots are nilled.
-	newObjectOop is referenced by the stack"
-	memory doScavenge: 1 "TenureByAge".
-	
-	newObjectAddress := memory scavenger pastSpace start + emptyObjectSize.
-	self assert: (memory hashBitsOf: newObjectAddress) equals: newObjectHash
-]
-
-{ #category : #'tests-scavenge' }
+{ #category : #'tests-3-scavenge-basic' }
 VMSpurMemoryManagerTest >> testScavengeShouldCopySurvivorObjectToPastSpace [
 
 	self initializeOldSpaceForScavenger.
@@ -438,7 +570,7 @@ VMSpurMemoryManagerTest >> testScavengeShouldCopySurvivorObjectToPastSpace [
 	self assert: memory pastSpaceStart equals: memory scavenger pastSpace start + emptyObjectSize
 ]
 
-{ #category : #'tests-scavenge' }
+{ #category : #'tests-3-scavenge-basic' }
 VMSpurMemoryManagerTest >> testScavengeSurvivorShouldEmptyEden [
 
 	self initializeOldSpaceForScavenger.
@@ -448,7 +580,7 @@ VMSpurMemoryManagerTest >> testScavengeSurvivorShouldEmptyEden [
 	self assert: memory freeStart equals: memory scavenger eden start
 ]
 
-{ #category : #'tests-scavenge' }
+{ #category : #'tests-3-scavenge-basic' }
 VMSpurMemoryManagerTest >> testScavengeTwiceShouldExchangePastAndFutureSpacesBackAndForth [
 
 	| oldPastSpaceStart oldFutureSpaceStart |
