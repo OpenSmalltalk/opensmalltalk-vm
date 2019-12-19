@@ -34,3 +34,6 @@ EXPORT(void) installErrorHandlers();
 #define logError(...)	logMessage(LOG_ERROR, __FILENAME__, __FUNCTION__, __LINE__, __VA_ARGS__)
 
 #define LOG_SIZEOF(expr) logDebug("sizeof("#expr"): %ld", sizeof(expr))
+
+int vm_printf( const char * format, ... );
+void vm_setVMOutputStream(FILE * stream);

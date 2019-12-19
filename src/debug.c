@@ -131,29 +131,27 @@ char *getVersionInfo(int verbose)
  *  This SHOULD be rewritten passing the FILE* as a parameter.
  */
 
-#define STDOUT_STACK_SZ 5
-static int stdoutStackIdx = -1;
-static FILE stdoutStack[STDOUT_STACK_SZ];
+static FILE* outputStream = NULL;
 
 void
-pushOutputFile(FILE* aFile)
-{
-	if (stdoutStackIdx + 2 >= STDOUT_STACK_SZ) {
-		fprintf(stderr,"output file stack is full.\n");
-		return;
-	}
-	stdoutStack[++stdoutStackIdx] = *stdout;
-	*stdout = *aFile;
+vm_setVMOutputStream(FILE * stream){
+	fflush(outputStream);
+	outputStream = stream;
 }
 
-void
-popOutputFile()
-{
-	if (stdoutStackIdx < 0) {
-		fprintf(stderr,"output file stack is empty.\n");
-		return;
+int
+vm_printf(const char * format, ... ){
+
+	va_list list;
+	va_start(list, format);
+
+	if(outputStream == NULL){
+		outputStream = stdout;
 	}
 
-	fflush(stdout);
-	*stdout = stdoutStack[stdoutStackIdx--];
+	int returnValue = vfprintf(outputStream, format, list);
+
+	va_end(list);
+
+	return returnValue;
 }
