@@ -213,7 +213,7 @@ try{
 			}
 		}
 	}
-  
+/*  
   builders["StackVM"] = {
     node('osx'){
       timeout(30){
@@ -228,7 +228,7 @@ try{
       }
     }
   }
-    
+*/    
 	parallel builders
 	
 	uploadPackages()
