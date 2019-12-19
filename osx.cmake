@@ -24,8 +24,22 @@ set(EXTRACTED_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/memoryUnix.c
 )
 
+set_source_files_properties(
+  "${CMAKE_CURRENT_SOURCE_DIR}/resources/mac/${APPNAME}.icns"
+  "${CMAKE_CURRENT_SOURCE_DIR}/resources/mac/${APPNAME}Changes.icns"
+  "${CMAKE_CURRENT_SOURCE_DIR}/resources/mac/${APPNAME}Image.icns"
+  "${CMAKE_CURRENT_SOURCE_DIR}/resources/mac/${APPNAME}Sources.icns"
+  PROPERTIES
+  MACOSX_PACKAGE_LOCATION Resources
+)
+
 set(VM_FRONTEND_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/unixMain.c)
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/unixMain.c
+    "${CMAKE_CURRENT_SOURCE_DIR}/resources/mac/${APPNAME}.icns"
+    "${CMAKE_CURRENT_SOURCE_DIR}/resources/mac/${APPNAME}Changes.icns"
+    "${CMAKE_CURRENT_SOURCE_DIR}/resources/mac/${APPNAME}Image.icns"
+    "${CMAKE_CURRENT_SOURCE_DIR}/resources/mac/${APPNAME}Sources.icns"
+)
 
 configure_file(resources/mac/Info.plist.in build/includes/Info.plist)
 

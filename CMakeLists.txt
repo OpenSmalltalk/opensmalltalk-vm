@@ -306,18 +306,11 @@ addLibraryWithRPATH(${VM_LIBRARY_NAME} ${VM_SOURCES})
 
 #If in OSX, configure creation of Bundle
 if(OSX)
-  set_source_files_properties(
-    "${CMAKE_CURRENT_SOURCE_DIR}/resources/mac/Pharo.icns"
-    PROPERTIES
-    MACOSX_PACKAGE_LOCATION Resources
-  )
-
   set_target_properties(
     ${VM_EXECUTABLE_NAME}
     PROPERTIES
     MACOSX_BUNDLE YES
     MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/resources/mac/Info.plist.in"
-    RESOURCE "${CMAKE_CURRENT_SOURCE_DIR}/resources/mac/Pharo.icns"
   )
 endif()
 

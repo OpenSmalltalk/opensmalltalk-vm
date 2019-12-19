@@ -42,8 +42,9 @@ vm_file_dialog_run_modal_open(VMFileDialog *dialog)
         {
             if([url isFileURL])
             {
-                dialog->succeeded = false;
+                dialog->succeeded = true;
                 dialog->selectedFileName = strdup([url.path UTF8String]);
+                break;
             }
         }
     }
