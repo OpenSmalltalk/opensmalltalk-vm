@@ -215,6 +215,7 @@ check_include_files(sys/ndir.h HAVE_SYS_NDIR_H)
 check_include_files(sys/dir.h HAVE_SYS_DIR_H)
 check_include_files(sys/filio.h HAVE_SYS_FILIO_H)
 check_include_files(sys/time.h HAVE_SYS_TIME_H)
+check_include_files(execinfo.h HAVE_EXECINFO_H)
 
 check_include_files(dlfcn.h HAVE_DLFCN_H)
 check_library_exists(dl dlopen "" HAVE_LIBDL)

@@ -9,7 +9,9 @@
 
 #endif
 
-#include <execinfo.h>
+#ifdef HAVE_EXECINFO_H
+# include <execinfo.h>
+#endif
 
 #include <signal.h>
 
@@ -219,7 +221,7 @@ void reportStackState(const char *msg, char *date, int printAll, ucontext_t *uap
 		return;
 #endif
 
-#if !defined(NOEXECINFO)
+#ifdef HAVE_EXECINFO_H
 	fprintf(output,"C stack backtrace & registers:\n");
 	if (uap) {
 		addrs[0] = printRegisterState(uap, output);
