@@ -293,6 +293,116 @@ VMSpurMemoryManagerTest >> testInstantiateNewObjectMovesFreeStartAfterObject [
 	self assert: memory freeStart equals: freeStartBefore + emptyObjectSize
 ]
 
+{ #category : #'tests-5-scavenge-specialObjects' }
+VMSpurMemoryManagerTest >> testInterpreterMethodShouldSurviveScanvenge [
+
+	| newObjectOop newObjectHash newObjectAddress |
+	self initializeOldSpaceForScavenger.
+	memory lastHash: 1.
+	
+	newObjectOop := self newZeroSizedObject.
+	newObjectHash := (memory hashBitsOf: newObjectOop).
+	
+	memory coInterpreter method: newObjectOop.
+
+	"Nil should survive, but newObjectOop should survive too.
+	Nil is referenced by the roots because many of their slots are nilled.
+	newObjectOop is referenced by the stack"
+	memory doScavenge: 1 "TenureByAge".
+	
+	"Remap our object address to its new location"
+	newObjectAddress := memory remapObj: newObjectOop.
+	self assert: (memory hashBitsOf: newObjectAddress) equals: newObjectHash
+]
+
+{ #category : #'tests-5-scavenge-specialObjects' }
+VMSpurMemoryManagerTest >> testInterpreterNewMethodShouldSurviveScanvenge [
+
+	| newObjectOop newObjectHash newObjectAddress |
+	self initializeOldSpaceForScavenger.
+	memory lastHash: 1.
+	
+	newObjectOop := self newZeroSizedObject.
+	newObjectHash := (memory hashBitsOf: newObjectOop).
+	
+	memory coInterpreter newMethod: newObjectOop.
+
+	"Nil should survive, but newObjectOop should survive too.
+	Nil is referenced by the roots because many of their slots are nilled.
+	newObjectOop is referenced by the stack"
+	memory doScavenge: 1 "TenureByAge".
+	
+	"Remap our object address to its new location"
+	newObjectAddress := memory remapObj: newObjectOop.
+	self assert: (memory hashBitsOf: newObjectAddress) equals: newObjectHash
+]
+
+{ #category : #'tests-5-scavenge-specialObjects' }
+VMSpurMemoryManagerTest >> testInterpreterProfileMethodShouldSurviveScanvenge [
+
+	| newObjectOop newObjectHash newObjectAddress |
+	self initializeOldSpaceForScavenger.
+	memory lastHash: 1.
+	
+	newObjectOop := self newZeroSizedObject.
+	newObjectHash := (memory hashBitsOf: newObjectOop).
+	
+	memory coInterpreter profileMethod: newObjectOop.
+
+	"Nil should survive, but newObjectOop should survive too.
+	Nil is referenced by the roots because many of their slots are nilled.
+	newObjectOop is referenced by the stack"
+	memory doScavenge: 1 "TenureByAge".
+	
+	"Remap our object address to its new location"
+	newObjectAddress := memory remapObj: newObjectOop.
+	self assert: (memory hashBitsOf: newObjectAddress) equals: newObjectHash
+]
+
+{ #category : #'tests-5-scavenge-specialObjects' }
+VMSpurMemoryManagerTest >> testInterpreterProfileProcessShouldSurviveScanvenge [
+
+	| newObjectOop newObjectHash newObjectAddress |
+	self initializeOldSpaceForScavenger.
+	memory lastHash: 1.
+	
+	newObjectOop := self newZeroSizedObject.
+	newObjectHash := (memory hashBitsOf: newObjectOop).
+	
+	memory coInterpreter profileProcess: newObjectOop.
+
+	"Nil should survive, but newObjectOop should survive too.
+	Nil is referenced by the roots because many of their slots are nilled.
+	newObjectOop is referenced by the stack"
+	memory doScavenge: 1 "TenureByAge".
+	
+	"Remap our object address to its new location"
+	newObjectAddress := memory remapObj: newObjectOop.
+	self assert: (memory hashBitsOf: newObjectAddress) equals: newObjectHash
+]
+
+{ #category : #'tests-5-scavenge-specialObjects' }
+VMSpurMemoryManagerTest >> testInterpreterProfileSemaphoreShouldSurviveScanvenge [
+
+	| newObjectOop newObjectHash newObjectAddress |
+	self initializeOldSpaceForScavenger.
+	memory lastHash: 1.
+	
+	newObjectOop := self newZeroSizedObject.
+	newObjectHash := (memory hashBitsOf: newObjectOop).
+	
+	memory coInterpreter profileSemaphore: newObjectOop.
+
+	"Nil should survive, but newObjectOop should survive too.
+	Nil is referenced by the roots because many of their slots are nilled.
+	newObjectOop is referenced by the stack"
+	memory doScavenge: 1 "TenureByAge".
+	
+	"Remap our object address to its new location"
+	newObjectAddress := memory remapObj: newObjectOop.
+	self assert: (memory hashBitsOf: newObjectAddress) equals: newObjectHash
+]
+
 { #category : #'tests-4-scavenge-stack' }
 VMSpurMemoryManagerTest >> testMethodInStackShouldSurviveScanvenge [
 
