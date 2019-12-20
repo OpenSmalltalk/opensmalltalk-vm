@@ -129,7 +129,7 @@ void heartbeat_poll_enter(long microSeconds);
 void heartbeat_poll_exit(long microSeconds);
 
 Semaphore* interruptFIFOMutex;
-int aio_in_sleep = 0
+int aio_in_sleep = 0;
 int aio_request_interrupt = 0;
 
 static void 
