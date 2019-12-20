@@ -259,10 +259,8 @@ aio_flush_pipe(int fd){
 	tv.tv_sec = 0;
 	tv.tv_usec = 0;
 
-
-	FD_SET(fd, &readFD);
-
 	do {
+		FD_SET(fd, &readFD);
 		selectResult = select(fd + 1, &readFD, NULL, NULL, &tv);
 
 		if(FD_ISSET(fd, &readFD)){
