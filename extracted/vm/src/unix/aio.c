@@ -265,10 +265,12 @@ aio_flush_pipe(int fd){
 	do {
 		selectResult = select(fd + 1, &readFD, NULL, NULL, &tv);
 
-		if(selectResult == 1){
+		if(FD_ISSET(fd, &readFD)){
 			bytesRead = read(fd, &buf, 1024);
+		}else{
+			bytesRead = 0;
 		}
-	} while(selectResult !=0 && bytesRead == 1024);
+	} while(bytesRead == 1024);
 }
 
 /**
