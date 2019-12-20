@@ -129,7 +129,8 @@ void heartbeat_poll_enter(long microSeconds);
 void heartbeat_poll_exit(long microSeconds);
 
 Semaphore* interruptFIFOMutex;
-
+int aio_in_sleep = 0
+int aio_request_interrupt = 0;
 
 static void 
 undefinedHandler(int fd, void *clientData, int flags)
@@ -245,35 +246,70 @@ do if ((bool) && !(++tickCount % TICKS_PER_CHAR)) {		\
 
 /*
  * I Try to clear all the data available in the pipe, so it does not passes the limit of data.
+ * Do not call me outside the mutex area of interruptFIFOMutex.
  */
-
-int
-clearPipe(int fd){
+void
+aio_flush_pipe(int fd){
 	char buf[1024];
-    int n;
+    int bytesRead;
+    int selectResult;
 	fd_set readFD;
 	struct timeval tv;
 
 	tv.tv_sec = 0;
 	tv.tv_usec = 0;
 
-	interruptFIFOMutex->wait(interruptFIFOMutex);
 
 	FD_SET(fd, &readFD);
 
 	do {
+		selectResult = select(fd + 1, &readFD, NULL, NULL, &tv);
 
-		if(select(fd + 1, &readFD, NULL, NULL, &tv) == 0){
-			interruptFIFOMutex->signal(interruptFIFOMutex);
-			return 0;
+		if(selectResult != 0){
+			bytesRead = read(fd, &buf, 1024);
 		}
+	} while(selectResult !=0 && bytesRead == 1024);
+}
 
-		n = read(fd, &buf, 1024);
-	} while(n == 1024);
+/**
+ * I check the status of the flags signalling an interruption.
+ * If there is a pending interruption I return 1, and clear the pipe.
+ * The aioPoll will not execute.
+ * If there is not, I return 0. The AIOpoll has to run.
+ */
+int
+aio_checkAndEnterSleep(int fd){
+	interruptFIFOMutex->wait(interruptFIFOMutex);
+
+	if(aio_request_interrupt){
+		aio_request_interrupt = false;
+		aio_in_sleep = false;
+		aio_flush_pipe(fd);
+
+		interruptFIFOMutex->signal(interruptFIFOMutex);
+		return 1;
+	}
+
+	aio_in_sleep = true;
+
+	interruptFIFOMutex->signal(interruptFIFOMutex);
+    return 0;
+}
+
+/**
+ * I flush the pipe and mark the exit of the aioPoll
+ */
+void
+aio_flushAndExitSleep(int fd){
+	interruptFIFOMutex->wait(interruptFIFOMutex);
+
+	aio_flush_pipe(fd);
+
+	aio_request_interrupt = false;
+	aio_in_sleep = false;
 
 	interruptFIFOMutex->signal(interruptFIFOMutex);
 
-    return 1;
 }
 
 long 
@@ -301,10 +337,7 @@ aioPoll(long microSeconds)
 		return 0;
 #endif
 
-	logTrace("microSeconds(%ld)", microSeconds);
-
-    if(clearPipe(signal_pipe_fd[0])){
-    	logTrace("clearPipe");
+    if(aio_checkAndEnterSleep(signal_pipe_fd[0])){
     	return 1;
     }
     
@@ -357,11 +390,7 @@ aioPoll(long microSeconds)
 	}
 
 	heartbeat_poll_exit(microSeconds);
-
-	if(FD_ISSET(signal_pipe_fd[0], &rd)){
-		FD_CLR(signal_pipe_fd[0], &rd);
-		clearPipe(signal_pipe_fd[0]);
-	}
+	aio_flushAndExitSleep(signal_pipe_fd[0]);
 
 	for (fd = 0; fd < maxFd; ++fd) {
 #undef _DO
@@ -390,13 +419,15 @@ aioInterruptPoll(){
 
 	interruptFIFOMutex->wait(interruptFIFOMutex);
 
-	n = write(signal_pipe_fd[1], "1", 1);
+	if(aio_in_sleep){
+		n = write(signal_pipe_fd[1], "1", 1);
 
-	logTrace("");
-
-	if(n != 1){
-		perror("write");
+		if(n != 1){
+			perror("write");
+		}
 	}
+
+	aio_request_interrupt = true;
 
 	interruptFIFOMutex->signal(interruptFIFOMutex);
 }
