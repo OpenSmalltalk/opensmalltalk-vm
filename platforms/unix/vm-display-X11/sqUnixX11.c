@@ -1357,41 +1357,6 @@ static void getMousePosition(void)
 }
 
 
-/* John Brandt notes on 2018/11/28 that in x2sqKeyPlain below, when the Ctrl
- * and/or Shift key is pressed we are taking the true branch, but when the key
- * is released we are taking the false branch:
-  return nConv == 0 && (modifierState & (CommandKeyBit+CtrlKeyBit+OptionKeyBit))
-            ? charCode
-            : recode(charCode);
- * but that recode (here) does not know how to convert the shift/ctrl keycodes
- * so it uses the "?" character (code 63). Since we released the key,
- * modifierState is being reset and we take the false branch. modifierState is
- * being reset in x2sqKeyPlain by:
-   if (!nConv && (charCode= translateCode(*symbolic, &modifierState, xevt)) < 0)
-      return -1;
- *
- * The underlying issue here is the lack of a key event on pressing the shift
- * key; a feature that GT depends upon.
- */
-int recode(int charCode)
-{
-  if (charCode >= 128)
-    {
-      unsigned char buf[32];
-      unsigned char out[32];
-      buf[0]= charCode;
-      if (convertChars((char *)buf, 1, uxXWinEncoding,
-		       (char *)out, sizeof(out),
-		       sqTextEncoding, 0, 1))
-	charCode= out[0];
-#    if DEBUG_KEYBOARD_EVENTS
-      fprintf(stderr, "  8-bit: %d=%02x [%c->%c]\n", charCode, charCode,
-	      (char *)uxXWinEncoding, (char *)sqTextEncoding);
-#    endif
-    }
-  return charCode;
-}
-
 char *setLocale(char *localeName, size_t len)
 {
   char  name[len + 1];
@@ -1881,7 +1846,7 @@ static int x2sqKeyInput(XKeyEvent *xevt, KeySym *symbolic)
 	DCONV_FPRINTF(stderr, "x2sqKey XLookupChars count %d\n", count);
       case XLookupBoth:
 	DCONV_FPRINTF(stderr, "x2sqKey XLookupBoth count %d\n", count);
-	lastKey= (count ? recode(string[0]) : -1);
+	lastKey= (count ? string[0] : -1);
 	DCONV_FPRINTF(stderr, "x2sqKey == %d\n", lastKey);
 	return lastKey;
 
@@ -1986,7 +1951,7 @@ static int x2sqKeyCompositionInput(XKeyEvent *xevt, KeySym *symbolic)
 	else if (inputCount == 1)
 	  {
 	    inputCount= 0;
-	    return lastKey= recode(inputBuf[0]);
+	    return lastKey= inputBuf[0];
 	  }
 	else
 	  {
@@ -2070,12 +2035,7 @@ static int x2sqKeyPlain(XKeyEvent *xevt, KeySym *symbolic)
     if (keysym >= XK_A && keysym <= XK_Z)
       return (int)'A' + (keysym - XK_A);
   }
-  if (charCode >= 246 /* XK_Alt_R */ && charCode <= 255 /* XK_Shift_L */) /* hard coded values from translateCode */
-    /* The shift, ctrl, alt keys shouldn't be translated by the recode below */
-    return charCode;
-  return nConv == 0 && (modifierState & (CommandKeyBit+CtrlKeyBit+OptionKeyBit))
-			? charCode
-			: recode(charCode);
+  return charCode;
 }
 
 
