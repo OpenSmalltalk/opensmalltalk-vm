@@ -809,6 +809,7 @@ with_custom_display
 with_vm_display_fbdev
 with_vm_sound_OSS
 with_custom_sound
+with_sndio_sound
 enable_iconv
 enable_mpg_mmx
 enable_mpg_pthreads
@@ -1503,6 +1504,7 @@ Optional Packages:
   --without-vm-display-fbdev      disable frame buffer vm display support default=enabled
   --without-vm-sound-OSS  disable OSS vm sound support (default=enabled)
   --with-custom-sound     enable custom sound support default=disabled
+  --with-sndio-sound     enable sndio sound support default=disabled
   --with-libtls           Use libtls instead of OpenSSL unconditionally
 
 Some influential environment variables:
@@ -17292,6 +17294,105 @@ if test "${plibs}"; then
   done
   echo ${llibs} > ${plugin}.lib
 fi
+plugin="vm-sound-sndio"
+plibs=""
+rm -f vm-sound-sndio.sub vm-sound-sndio.lib
+# -*- sh -*-
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for sndio sound support" >&5
+$as_echo_n "checking for sndio sound support... " >&6; }
+
+
+# Check whether --with-sndio-sound was given.
+if test "${with_sndio_sound+set}" = set; then :
+  withval=$with_sndio_sound; have_snd_sndio="$withval"
+else
+  have_snd_sndio="no"
+fi
+
+
+if test "$have_snd_sndio" = "yes"; then
+  # check for libraries, headers, etc., here...
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OpenBSD sndio Sound System" >&5
+$as_echo_n "checking for OpenBSD sndio Sound System... " >&6; }
+  sio_h_found="no"
+  for ac_header in sndio.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "sndio.h" "ac_cv_header_sndio_h" "$ac_includes_default"
+if test "x$ac_cv_header_sndio_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_SNDIO_H 1
+_ACEOF
+ sndio_h_found="yes"; break
+fi
+
+done
+
+  if test "$sndio_h_found" = "no"; then
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: ******** disabling ${plugin}" >&5
+$as_echo "******** disabling ${plugin}" >&6; }
+  disabled_plugins="${disabled_plugins} ${plugin}"
+  else
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for sio_open in -lsndio" >&5
+$as_echo_n "checking for sio_open in -lsndio... " >&6; }
+if ${ac_cv_lib_sndio_sio_open+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lsndio  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char sio_open ();
+int
+main ()
+{
+return sio_open ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_sndio_sio_open=yes
+else
+  ac_cv_lib_sndio_sio_open=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_sndio_sio_open" >&5
+$as_echo "$ac_cv_lib_sndio_sio_open" >&6; }
+if test "x$ac_cv_lib_sndio_sio_open" = xyes; then :
+
+  plibs="${plibs} sndio"
+fi
+
+  fi
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: ******** disabling ${plugin}" >&5
+$as_echo "******** disabling ${plugin}" >&6; }
+  disabled_plugins="${disabled_plugins} ${plugin}"
+fi
+if test "${plibs}"; then
+  llibs="${LIBS}"
+  for l in ${plibs}; do
+  llibs="${llibs} -l${l}"
+  done
+  echo ${llibs} > ${plugin}.lib
+fi
 plugin="vm"
 plibs=""
 rm -f vm.sub vm.lib
@@ -17618,6 +17719,27 @@ if test -f ../../gdbarm32/sim/arm/libsim.a; then
 	echo "libsim.a has been built; building GdbARMPlugin"
 else
 	echo "../../gdbarm32/sim/arm/libsim.a has not been built; not building GdbARMPlugin"
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: ******** disabling ${plugin}" >&5
+$as_echo "******** disabling ${plugin}" >&6; }
+  disabled_plugins="${disabled_plugins} ${plugin}"
+fi
+if test "${plibs}"; then
+  llibs="${LIBS}"
+  for l in ${plibs}; do
+  llibs="${llibs} -l${l}"
+  done
+  echo ${llibs} > ${plugin}.lib
+fi
+plugin="GdbARMv8Plugin"
+plibs=""
+rm -f GdbARMv8Plugin.sub GdbARMv8Plugin.lib
+# To build the GdbARMPlugin one must build libsim.a from gdb
+if test -f ../../gdbarm64/sim/aarch64/libsim.a; then
+	echo "libsim.a has been built; building GdbARMPlugin"
+else
+	echo "../../gdbarm64/sim/aarch64/libsim.a has not been built; not building GdbARMPlugin"
 
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: ******** disabling ${plugin}" >&5
