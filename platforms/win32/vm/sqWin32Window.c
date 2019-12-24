@@ -302,7 +302,7 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
   /* RvL 1999-04-19 00:23
      MOUSE WHEELING START */
   if( WM_MOUSEWHEEL == message || g_WM_MOUSEWHEEL == message ) {
-    /* Record mouse wheel msgs as CTRL-Up/Down.
+    /* Record mouse wheel msgs as Up/Down arrow keypress + meta bits.
      * N.B. On iOS & X11 we also handle horizonal mouse wheel events.
      * Should the same happen here?
      */
@@ -313,16 +313,10 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
       evt->timeStamp = messageTouse->time;
       evt->charCode = (zDelta > 0) ? 30 : 31;
       evt->pressCode = EventKeyChar;
-      /* N.B. on iOS & X11 all meta bits are set to distinguish mouse wheel
-       * events from real arrow key events.  Should the same happen here?
+      /* Set every meta bit to distinguish the fake event from a real arrow keypress
        */
-      evt->modifiers = CtrlKeyBit;
-      /* It would be good if this were set in the SqueakVM also, no? */
-#ifdef PharoVM
-     evt->utf32Code = evt->charCode;
-#else
-      evt->utf32Code = 0;
-#endif
+      evt->modifiers = CtrlKeyBit|OptionKeyBit|CommandKeyBit|ShiftKeyBit;
+      evt->utf32Code = evt->charCode;
       evt->reserved1 = 0;
     } else {
       buttonState = 64;
