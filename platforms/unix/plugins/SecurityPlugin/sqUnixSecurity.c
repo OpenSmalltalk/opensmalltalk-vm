@@ -214,7 +214,7 @@ ioInitSecurity(void)
     strncpy(secureUserDirectory, imageName, imagePathLen);
   else {
 /*@@MUSL@@*/
-    getcwd(secureUserDirectory, imagePathLen);
+    getcwd(secureUserDirectory, MAXPATHLEN);
 	imagePathLen = strlen(secureUserDirectory);
   }
 
