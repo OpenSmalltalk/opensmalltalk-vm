@@ -2417,7 +2417,10 @@ static int xkeysym2ucs4(KeySym keysym)
  	return keysym & 0x007f;
   if (keysym == XK_KP_Equal)
     return XK_equal;
-
+# if defined(XK_ISO_Left_Tab)
+  if (keysym == XK_ISO_Left_Tab) /* make shift-tab work */
+    return 9;
+#endif
 
   /* explicitly mapped */
 #define map(lo, hi) if (keysym >= 0x##lo && keysym <= 0x##hi) return ucs4_##lo##_##hi[keysym - 0x##lo];
