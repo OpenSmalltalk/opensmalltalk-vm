@@ -2012,7 +2012,9 @@ static int x2sqKeyPlain(XKeyEvent *xevt, KeySym *symbolic)
 {
   unsigned char buf[32];
   int nConv= XLookupString(xevt, (char *)buf, sizeof(buf), symbolic, 0);
-  int charCode= buf[0];
+  int charCode= *symbolic;
+  if ((charCode == XK_Delete) && mapDelBs)
+    charCode= XK_BackSpace;
 #if DEBUG_KEYBOARD_EVENTS
   int i;
   fprintf(stderr, "convert keycode");
@@ -2025,16 +2027,6 @@ static int x2sqKeyPlain(XKeyEvent *xevt, KeySym *symbolic)
 #endif
   if (!nConv && (charCode= translateCode(*symbolic, &modifierState, xevt)) < 0)
       return -1;	/* unknown key */
-  if ((charCode == 127) && mapDelBs)
-    charCode= 8;
-  if (charCode >= 1 && charCode <= 26) {
-    /* check for Ctrl-letter that gets translated into charCode 1-26 instead of letters a-z */
-    KeySym keysym = *symbolic;
-    if (keysym >= XK_a && keysym <= XK_z)
-      return (int)'a' + (keysym - XK_a);
-    if (keysym >= XK_A && keysym <= XK_Z)
-      return (int)'A' + (keysym - XK_A);
-  }
   return charCode;
 }
 
