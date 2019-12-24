@@ -9,10 +9,10 @@
  */
 
 #if SUBVERSION
-static char SvnRawPluginsRevisionString[] = "$Rev: 201911192350 $";
+static char SvnRawPluginsRevisionString[] = "$Rev$";
 # define PLUGINS_REV_START (SvnRawPluginsRevisionString + 6)
 
-static char SvnRawPluginsRepositoryURL[] = "$URL: kendi3he@penguin:OpenSmalltalk/oscogvm $";
+static char SvnRawPluginsRepositoryURL[] = "$URL$";
 # define URL_START (SvnRawPluginsRepositoryURL + 6)
 
 static char *
@@ -35,10 +35,10 @@ pluginsRepositoryURL()
 # undef PLUGINS_REV_START
 # undef URL_START
 #elif GIT
-static char GitRawPluginsRevisionString[] = "$Rev: 201911192350 $";
+static char GitRawPluginsRevisionString[] = "$Rev$";
 # define PLUGINS_REV_START (GitRawPluginsRevisionString + 6)
 
-static char GitRawPluginsRepositoryURL[] = "$URL: kendi3he@penguin:OpenSmalltalk/oscogvm $";
+static char GitRawPluginsRepositoryURL[] = "$URL$";
 # define URL_START (GitRawPluginsRepositoryURL + 6)
 
 static char *
