@@ -295,34 +295,6 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
   if(message == SQ_LAUNCH_DROP) 
     return sqLaunchDrop();
 
-  if( WM_MOUSEWHEEL == message ) {
-    /* Record mouse wheel msgs as Up/Down arrow keypress + meta bits.
-     * N.B. On iOS & X11 we also handle horizonal mouse wheel events.
-     * Should the same happen here?
-     */
-    short zDelta = (short) HIWORD(wParam);
-    if(inputSemaphoreIndex) {
-      sqKeyboardEvent *evt = (sqKeyboardEvent*) sqNextEventPut();
-      evt->type = EventTypeKeyboard;
-      evt->timeStamp = messageTouse->time;
-      evt->charCode = (zDelta > 0) ? 30 : 31;
-      evt->pressCode = EventKeyChar;
-      /* Set every meta bit to distinguish the fake event from a real arrow keypress
-       */
-      evt->modifiers = CtrlKeyBit|OptionKeyBit|CommandKeyBit|ShiftKeyBit;
-      evt->utf32Code = evt->charCode;
-      evt->reserved1 = 0;
-    } else {
-      buttonState = 64;
-      if (zDelta < 0) {
-	recordVirtualKey(message,VK_DOWN,lParam);
-      } else {
-	recordVirtualKey(message,VK_UP,lParam);
-      }
-    }
-    return 1;
-  }
-
   switch(message) {
   case WM_SYSCOMMAND:
   case WM_COMMAND: {
@@ -384,6 +356,33 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
     mousePosition.x = LOWORD(lParam);
     mousePosition.y = HIWORD(lParam);
     break;
+  case WM_MOUSEWHEEL: {
+    /* Record mouse wheel msgs as Up/Down arrow keypress + meta bits.
+     * N.B. On iOS & X11 we also handle horizonal mouse wheel events.
+     * Should the same happen here?
+     */
+    short zDelta = (short) HIWORD(wParam);
+    if(inputSemaphoreIndex) {
+      sqKeyboardEvent *evt = (sqKeyboardEvent*) sqNextEventPut();
+      evt->type = EventTypeKeyboard;
+      evt->timeStamp = messageTouse->time;
+      evt->charCode = (zDelta > 0) ? 30 : 31;
+      evt->pressCode = EventKeyChar;
+      /* Set every meta bit to distinguish the fake event from a real arrow keypress
+       */
+      evt->modifiers = CtrlKeyBit|OptionKeyBit|CommandKeyBit|ShiftKeyBit;
+      evt->utf32Code = evt->charCode;
+      evt->reserved1 = 0;
+    } else {
+      buttonState = 64;
+      if (zDelta < 0) {
+	recordVirtualKey(message,VK_DOWN,lParam);
+      } else {
+	recordVirtualKey(message,VK_UP,lParam);
+      }
+    }
+    break;
+  }
   case WM_LBUTTONDOWN:
   case WM_RBUTTONDOWN:
   case WM_MBUTTONDOWN:
