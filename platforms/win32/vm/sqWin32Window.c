@@ -21,6 +21,7 @@
 *
 *****************************************************************************/
 #include <windows.h>
+#include <windowsx.h>
 #include <shellapi.h>
 #include <commdlg.h>
 #include <excpt.h>
@@ -353,8 +354,8 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
       break;
     }
     /* state based stuff */
-    mousePosition.x = LOWORD(lParam);
-    mousePosition.y = HIWORD(lParam);
+    mousePosition.x = GET_X_LPARAM(lParam);
+    mousePosition.y = GET_Y_LPARAM(lParam);
     break;
   case WM_MOUSEWHEEL: {
     /* Record mouse wheel msgs as Up/Down arrow keypress + meta bits.
@@ -407,8 +408,8 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
       break;
     }
     /* state based stuff */
-    mousePosition.x = LOWORD(lParam);
-    mousePosition.y = HIWORD(lParam);
+    mousePosition.x = GET_X_LPARAM(lParam);
+    mousePosition.y = GET_Y_LPARAM(lParam);
     /* check for console focus */
     recordMouseDown(wParam, lParam);
     recordModifierButtons();
@@ -439,8 +440,8 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
       break;
     }
     /* state based stuff */
-    mousePosition.x = LOWORD(lParam);
-    mousePosition.y = HIWORD(lParam);
+    mousePosition.x = GET_X_LPARAM(lParam);
+    mousePosition.y = GET_Y_LPARAM(lParam);
     /* check for console focus */
     if(GetFocus() != stWindow) SetFocus(stWindow);
     recordMouseDown(wParam,lParam);
@@ -1172,8 +1173,8 @@ int recordMouseEvent(MSG *msg, UINT nrClicks) {
   /* first the basics */
   proto.type = EventTypeMouse;
   proto.timeStamp = msg->time;
-  proto.x = (int)(short)LOWORD(msg->lParam);
-  proto.y = (int)(short)HIWORD(msg->lParam);
+  proto.x = GET_X_LPARAM(msg->lParam);
+  proto.y = GET_Y_LPARAM(msg->lParam);
   /* then the buttons */
   proto.buttons = 0;
   proto.buttons |= red ? RedButtonBit : 0;
