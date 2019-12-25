@@ -161,9 +161,6 @@ PRINTDLG printValues;
 static int printerSetup = FALSE;
 #endif
 
-#ifndef NO_WHEEL_MOUSE
-UINT g_WM_MOUSEWHEEL = 0;	/* RvL: 1999-04-19 The message we receive from wheel mices */
-#endif
 
 /* misc forward declarations */
 int recordMouseEvent(MSG *msg, UINT nrClicks);
@@ -298,10 +295,7 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
   if(message == SQ_LAUNCH_DROP) 
     return sqLaunchDrop();
 
-#ifndef NO_WHEEL_MOUSE
-  /* RvL 1999-04-19 00:23
-     MOUSE WHEELING START */
-  if( WM_MOUSEWHEEL == message || g_WM_MOUSEWHEEL == message ) {
+  if( WM_MOUSEWHEEL == message ) {
     /* Record mouse wheel msgs as Up/Down arrow keypress + meta bits.
      * N.B. On iOS & X11 we also handle horizonal mouse wheel events.
      * Should the same happen here?
@@ -328,8 +322,6 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
     }
     return 1;
   }
-  /* MOUSE WHEELING END */
-#endif
 
   switch(message) {
   case WM_SYSCOMMAND:
@@ -986,9 +978,6 @@ void SetupWindows()
   /* Force Unicode WM_CHAR */
   SetWindowLongPtrW(stWindow,GWLP_WNDPROC,(LONG_PTR)MainWndProcW);
 
-#ifndef NO_WHEEL_MOUSE
-  g_WM_MOUSEWHEEL = RegisterWindowMessage( TEXT("MSWHEEL_ROLLMSG") ); /* RvL 1999-04-19 00:23 */
-#endif
 
 #if defined(_WIN32_WCE)
   /* WinCE does not support RegisterClassEx(), so we must set

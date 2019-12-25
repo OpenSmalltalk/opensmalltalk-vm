@@ -150,7 +150,6 @@
 #	define NO_SERVICE
 #	define NO_PREFERENCES
 #	define NO_PRINTER
-#	define NO_WHEEL_MOUSE
   /* Use stub definitions from sqWin32Stubs.c */
 #	define NO_SOUND
 #	define NO_SERIAL_PORT
