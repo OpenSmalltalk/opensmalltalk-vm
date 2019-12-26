@@ -279,7 +279,8 @@ static int buttonState=0;
 		//printf("x:%f y:%f ex:%ld ey:%ld\n", x, y, evt.x, evt.y);
 
 		int buttonAndModifiers = [self mapMouseAndModifierStateToSqueakBits: theEvent];
-		evt.buttons = buttonAndModifiers >> 3;
+		evt.buttons = buttonAndModifiers & 7;
+		evt.modifiers = buttonAndModifiers >> 3;
 		evt.windowIndex =  aView.windowLogic.windowIndex;
 		[self pushEventToQueue:(sqInputEvent *) &evt];
 	}

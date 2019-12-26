@@ -183,11 +183,14 @@ static void recordMouseEvent(void)
 
 static void recordMouseWheelEvent(int dx, int dy)
 {
+  int state= getButtonState();
   sqMouseEvent *evt= allocateMouseWheelEvent();
   evt->x= dx;
   evt->y= dy;
-  // VM reads fifth (4th 0-based) field for event's modifiers
-  evt->buttons= (getButtonState() >> 3);
+  evt->buttons= (state & 0x7);
+  evt->modifiers= (state >> 3);
+  evt->nrClicks=
+    evt->windowIndex= 0;
   signalInputEvent();
 #if DEBUG_MOUSE_EVENTS
   printf("EVENT (recordMouseWheelEvent): time: %d  mouse dx %d dy %d", evt->timeStamp, dx, dy);
