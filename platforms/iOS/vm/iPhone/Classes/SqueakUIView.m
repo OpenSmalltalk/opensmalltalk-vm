@@ -260,7 +260,7 @@ SInt32 undoCounter=1, oldValue=0;  // jdr undo support
 - (void) recordCharEvent:(NSString *) unicodeString {
 	sqKeyboardEvent evt;
 	unichar unicode;
-	unsigned char macRomanCharacter;
+	unsigned char isoCharacter;
 	NSInteger	i;
 	NSRange picker;
 	NSUInteger totaLength;
@@ -274,13 +274,13 @@ SInt32 undoCounter=1, oldValue=0;  // jdr undo support
 		
 		unicode = [unicodeString characterAtIndex: i];
 		NSString *lookupString = [[NSString alloc] initWithCharacters: &unicode length: 1];
-		[lookupString getBytes: &macRomanCharacter maxLength: 1 usedLength: NULL encoding: NSMacOSRomanStringEncoding
+		[lookupString getBytes: &isoCharacter maxLength: 1 usedLength: NULL encoding: NSISOLatin1StringEncoding
 					   options: 0 range: picker remainingRange: NULL];
 		
 		// LF -> CR
-		if (macRomanCharacter == 10) {
+		if (isoCharacter == 10) {
 			unicode = 13;
-            macRomanCharacter = 13;
+            isoCharacter = 13;
         }
 		
 		evt.pressCode = EventKeyDown;
@@ -294,7 +294,7 @@ SInt32 undoCounter=1, oldValue=0;  // jdr undo support
 		evt.windowIndex = 1;
 		[self pushEventToQueue: (sqInputEvent *)&evt];
 		
-		evt.charCode =	macRomanCharacter;
+		evt.charCode =	isoCharacter;
 		evt.pressCode = EventKeyChar;
 		evt.modifiers = evt.modifiers;
 		if ((evt.modifiers & CommandKeyBit) && (evt.modifiers & ShiftKeyBit)) {  /* command and shift */

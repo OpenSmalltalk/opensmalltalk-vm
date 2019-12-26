@@ -461,78 +461,6 @@ void   browserProcessCommand(void);       /* see sqUnixMozilla.c */
 
 static inline int min(int x, int y) { return (x < y) ? x : y; }
 
-
-#if 0
-
-/* Conversion table from X to Squeak (reversible) */
-
-static unsigned char X_to_Squeak[256] =
-{
-  0,   1,   2,   3,   4,   5,   6,   7,       /*   0 -   7 */
-  8,   9,   13,  11,  12,  10,  14,  15,      /*   8 -  15 */
-  16,  17,  18,  19,  20,  21,  22,  23,      /*  16 -  23 */
-  24,  25,  26,  27,  28,  29,  30,  31,      /*  24 -  31 */
-  32,  33,  34,  35,  36,  37,  38,  39,      /*  32 -  39 */
-  40,  41,  42,  43,  44,  45,  46,  47,      /*  40 -  47 */
-  48,  49,  50,  51,  52,  53,  54,  55,      /*  48 -  55 */
-  56,  57,  58,  59,  60,  61,  62,  63,      /*  56 -  63 */
-  64,  65,  66,  67,  68,  69,  70,  71,      /*  64 -  71 */
-  72,  73,  74,  75,  76,  77,  78,  79,      /*  72 -  79 */
-  80,  81,  82,  83,  84,  85,  86,  87,      /*  80 -  87 */
-  88,  89,  90,  91,  92,  93,  94,  95,      /*  88 -  95 */
-  96,  97,  98,  99, 100, 101, 102, 103,      /*  96 - 103 */
-  104, 105, 106, 107, 108, 109, 110, 111,     /* 104 - 111 */
-  112, 113, 114, 115, 116, 117, 118, 119,     /* 112 - 119 */
-  120, 121, 122, 123, 124, 125, 126, 127,     /* 120 - 127 */
-  196, 197, 165, 201, 209, 247, 220, 225,     /* 128 - 135 */
-  224, 226, 228, 227, 198, 176, 170, 248,     /* 136 - 143 */
-  213, 206, 195, 207, 211, 212, 210, 219,     /* 144 - 151 */
-  218, 221, 246, 245, 250, 249, 251, 252,     /* 152 - 159 */
-  160, 193, 162, 163, 223, 180, 182, 164,     /* 160 - 167 */
-  172, 169, 187, 199, 194, 173, 168, 255,     /* 168 - 175 */
-  161, 177, 178, 179, 171, 181, 166, 183,     /* 176 - 183 */
-  184, 185, 188, 200, 186, 189, 202, 192,     /* 184 - 191 */
-  203, 231, 229, 204, 128, 129, 174, 130,     /* 192 - 199 */
-  233, 131, 230, 232, 237, 234, 235, 236,     /* 200 - 207 */
-  208, 132, 241, 238, 239, 205, 133, 215,     /* 208 - 215 */
-  175, 244, 242, 243, 134, 217, 222, 167,     /* 216 - 223 */
-  136, 135, 137, 139, 138, 140, 190, 141,     /* 224 - 231 */
-  143, 142, 144, 145, 147, 146, 148, 149,     /* 232 - 239 */
-  240, 150, 152, 151, 153, 155, 154, 214,     /* 240 - 247 */
-  191, 157, 156, 158, 159, 253, 254, 216,     /* 248 - 255 */
-};
-
-unsigned char Squeak_to_X[256];
-
-void initCharmap(void)
-{
-  int i;
-  for(i= 0; i < 256; i++)
-    Squeak_to_X[X_to_Squeak[i]]= i;
-}
-
-void st2ux(unsigned char *string)
-{
-  if (!string) return;
-  while (*string)
-    {
-     *string= Squeak_to_X[*string];
-      string++;
-    }
-}
-
-void ux2st(unsigned char *string)
-{
-  if (!string) return;
-  while (*string)
-    {
-      *string= X_to_Squeak[*string];
-      string++;
-    }
-}
-
-#endif
-
 /*** X-related Functions ***/
 
 /* Called prior to forking a squeak session.
@@ -1357,41 +1285,6 @@ static void getMousePosition(void)
 }
 
 
-/* John Brandt notes on 2018/11/28 that in x2sqKeyPlain below, when the Ctrl
- * and/or Shift key is pressed we are taking the true branch, but when the key
- * is released we are taking the false branch:
-  return nConv == 0 && (modifierState & (CommandKeyBit+CtrlKeyBit+OptionKeyBit))
-            ? charCode
-            : recode(charCode);
- * but that recode (here) does not know how to convert the shift/ctrl keycodes
- * so it uses the "?" character (code 63). Since we released the key,
- * modifierState is being reset and we take the false branch. modifierState is
- * being reset in x2sqKeyPlain by:
-   if (!nConv && (charCode= translateCode(*symbolic, &modifierState, xevt)) < 0)
-      return -1;
- *
- * The underlying issue here is the lack of a key event on pressing the shift
- * key; a feature that GT depends upon.
- */
-int recode(int charCode)
-{
-  if (charCode >= 128)
-    {
-      unsigned char buf[32];
-      unsigned char out[32];
-      buf[0]= charCode;
-      if (convertChars((char *)buf, 1, uxXWinEncoding,
-		       (char *)out, sizeof(out),
-		       sqTextEncoding, 0, 1))
-	charCode= out[0];
-#    if DEBUG_KEYBOARD_EVENTS
-      fprintf(stderr, "  8-bit: %d=%02x [%c->%c]\n", charCode, charCode,
-	      (char *)uxXWinEncoding, (char *)sqTextEncoding);
-#    endif
-    }
-  return charCode;
-}
-
 char *setLocale(char *localeName, size_t len)
 {
   char  name[len + 1];
@@ -1881,7 +1774,7 @@ static int x2sqKeyInput(XKeyEvent *xevt, KeySym *symbolic)
 	DCONV_FPRINTF(stderr, "x2sqKey XLookupChars count %d\n", count);
       case XLookupBoth:
 	DCONV_FPRINTF(stderr, "x2sqKey XLookupBoth count %d\n", count);
-	lastKey= (count ? recode(string[0]) : -1);
+	lastKey= (count ? string[0] : -1);
 	DCONV_FPRINTF(stderr, "x2sqKey == %d\n", lastKey);
 	return lastKey;
 
@@ -1986,7 +1879,7 @@ static int x2sqKeyCompositionInput(XKeyEvent *xevt, KeySym *symbolic)
 	else if (inputCount == 1)
 	  {
 	    inputCount= 0;
-	    return lastKey= recode(inputBuf[0]);
+	    return lastKey= inputBuf[0];
 	  }
 	else
 	  {
@@ -2062,6 +1955,7 @@ static int x2sqKeyPlain(XKeyEvent *xevt, KeySym *symbolic)
       return -1;	/* unknown key */
   if ((charCode == 127) && mapDelBs)
     charCode= 8;
+#ifdef PharoVM
   if (charCode >= 1 && charCode <= 26) {
     /* check for Ctrl-letter that gets translated into charCode 1-26 instead of letters a-z */
     KeySym keysym = *symbolic;
@@ -2070,12 +1964,8 @@ static int x2sqKeyPlain(XKeyEvent *xevt, KeySym *symbolic)
     if (keysym >= XK_A && keysym <= XK_Z)
       return (int)'A' + (keysym - XK_A);
   }
-  if (charCode >= 246 /* XK_Alt_R */ && charCode <= 255 /* XK_Shift_L */) /* hard coded values from translateCode */
-    /* The shift, ctrl, alt keys shouldn't be translated by the recode below */
-    return charCode;
-  return nConv == 0 && (modifierState & (CommandKeyBit+CtrlKeyBit+OptionKeyBit))
-			? charCode
-			: recode(charCode);
+#endif
+  return charCode;
 }
 
 

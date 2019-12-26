@@ -142,7 +142,7 @@ static int buttonState=0;
 - (void) recordCharEvent:(NSString *) unicodeString fromView: (NSView <sqSqueakOSXView> *) mainView {
 	sqKeyboardEvent evt;
 	unichar unicode;
-	unsigned char macRomanCharacter;
+	unsigned char isoCharacter;
 	NSInteger	i;
 	NSRange picker;
 	NSUInteger totaLength;
@@ -173,7 +173,7 @@ static int buttonState=0;
 		}
 
 		NSString *lookupString = AUTORELEASEOBJ([[NSString alloc] initWithCharacters: &unicode length: 1]);
-		[lookupString getBytes: &macRomanCharacter maxLength: 1 usedLength: NULL encoding: NSMacOSRomanStringEncoding
+		[lookupString getBytes: &isoCharacter maxLength: 1 usedLength: NULL encoding: NSISOLatin1StringEncoding
 					   options: 0 range: picker remainingRange: NULL];
 
 		evt.pressCode = EventKeyDown;
@@ -183,7 +183,7 @@ static int buttonState=0;
 		evt.windowIndex =   mainView.windowLogic.windowIndex;
 		[self pushEventToQueue: (sqInputEvent *)&evt];
 
-		evt.charCode =	macRomanCharacter;
+		evt.charCode =	isoCharacter;
 		evt.pressCode = EventKeyChar;
 		evt.modifiers = evt.modifiers;		
 		evt.utf32Code = unicode;
