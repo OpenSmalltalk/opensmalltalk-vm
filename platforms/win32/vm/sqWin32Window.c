@@ -271,6 +271,11 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
   static UINT nrClicks = 0;
   UINT timeNow = 0;
   UINT timeDelta = 0;
+  /* variables for accumulating mouse wheel deltas if too small */
+  static int hWheelDelta = 0;
+  static int vWheelDelta = 0;
+  static int prevHWheelTime = 0;
+  static int prevVWheelTime = 0;
 
   MSG localMessage;
   LPMSG messageTouse = NULL;
@@ -367,7 +372,15 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
     break;
   case WM_MOUSEHWHEEL: {
     if(inputSemaphoreIndex && sendWheelEvents) {
-      short zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
+      int zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
+      /* accumulate enough delta before sending the event to the image */
+      int limit = WHEEL_DELTA / 6; /* threshold for delivering events */
+      timeNow = GetMessageTime(); /* Win32 - gets time of last GetMessage() */
+      hWheelDelta = (timeNow - prevHWheelTime < 500 /* milliseconds */) ? hWheelDelta + zDelta : zDelta;
+      prevHWheelTime = timeNow;
+      if( - limit < hWheelDelta && hWheelDelta < limit ) break;
+      zDelta = hWheelDelta;
+      hWheelDelta = 0;
       recordMouseWheelEvent(messageTouse,zDelta,0);
       break;   
     } else {
@@ -378,7 +391,15 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
   case WM_MOUSEWHEEL: {
     /* Record mouse wheel msgs as Up/Down arrow keypress + meta bits.
      */
-    short zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
+    int zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
+    /* accumulate enough delta before sending the event to the image */
+    int limit = WHEEL_DELTA / 6; /* threshold for delivering events */
+    timeNow = GetMessageTime(); /* Win32 - gets time of last GetMessage() */
+    vWheelDelta = (timeNow - prevVWheelTime < 500 /* milliseconds */) ? vWheelDelta + zDelta : zDelta;
+    prevVWheelTime = timeNow;
+    if( - limit < vWheelDelta && vWheelDelta < limit ) break;
+    zDelta = vWheelDelta;
+    vWheelDelta = 0;
     if(inputSemaphoreIndex) {
       if(sendWheelEvents) {
         recordMouseWheelEvent(messageTouse,0,zDelta);
@@ -398,9 +419,9 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
     } else {
       buttonState = 64;
       if (zDelta < 0) {
-	recordVirtualKey(message,VK_DOWN,lParam);
+        recordVirtualKey(message,VK_DOWN,lParam);
       } else {
-	recordVirtualKey(message,VK_UP,lParam);
+        recordVirtualKey(message,VK_UP,lParam);
       }
       /* state based stuff */
       mousePosition.x = GET_X_LPARAM(lParam);
