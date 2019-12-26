@@ -1785,6 +1785,8 @@ static int x2sqKeyInput(XKeyEvent *xevt, KeySym *symbolic)
 	  DCONV_FPRINTF("SYM %d -> %d\n", symbolic, charCode);
 	  if (charCode < 0)
 	    return -1;	/* unknown key */
+	  if ((charCode == 127) && mapDelBs)
+	    charCode= 8;
 	  return lastKey= charCode;
 	}
 
@@ -1917,6 +1919,8 @@ static int x2sqKeyCompositionInput(XKeyEvent *xevt, KeySym *symbolic)
 	  DCONV_PRINTF("SYM %x -> %d\n", *symbolic, charCode);
 	  if (charCode < 0)
 	    return -1;	/* unknown key */
+	  if ((charCode == 127) && mapDelBs)
+	    charCode= 8;
 	  return lastKey= charCode;
 	}
 
@@ -1936,20 +1940,21 @@ static int x2sqKeyPlain(XKeyEvent *xevt, KeySym *symbolic)
 {
   unsigned char buf[32];
   int nConv= XLookupString(xevt, (char *)buf, sizeof(buf), symbolic, 0);
-  int charCode= translateCode(*symbolic, &modifierState, xevt);
-  if( charCode < 0) charCode = (nConv>0)?*symbolic:-1 /* unknown key */;
+  int charCode= *symbolic;
+  if ((charCode == XK_Delete) && mapDelBs)
+    charCode= XK_BackSpace;
 #if DEBUG_KEYBOARD_EVENTS
-  {
-    int i;
-    fprintf(stderr, "convert keycode");
-    for (i = 0; i < nConv; i++) {
-      if (!i) fprintf(stderr, " [");
-      fprintf(stderr, "%d(%02x)%c", buf[i], buf[i], i + 1 < nConv ? ',' : ']');
-    }
-    fprintf(stderr, " %d(%02x) -> %d(%02x) (keysym %04x %s)\n",
-       xevt->keycode, xevt->keycode, charCode, charCode, *symbolic, nameForKeycode(*symbolic));
+  int i;
+  fprintf(stderr, "convert keycode");
+  for (i = 0; i < nConv; i++) {
+	if (!i) fprintf(stderr, " [");
+	fprintf(stderr, "%d(%02x)%c", buf[i], buf[i], i + 1 < nConv ? ',' : ']');
   }
+  fprintf(stderr, " %d(%02x) -> %d(%02x) (keysym %04x %s)\n",
+	 xevt->keycode, xevt->keycode, charCode, charCode, *symbolic, nameForKeycode(*symbolic));
 #endif
+  if (!nConv && (charCode= translateCode(*symbolic, &modifierState, xevt)) < 0)
+      return -1;	/* unknown key */
   return charCode;
 }
 
@@ -4551,12 +4556,6 @@ translateCode(KeySym symbolic, int *modp, XKeyEvent *evt)
     case XK_Home:	return  1;
     case XK_End:	return  4;
 
-    case XK_Tab:	return  9;
-    case XK_Return:	return 13;
-    case XK_Escape:	return 27;
-    case XK_BackSpace:	return  8;
-    case XK_Delete:	return  (mapDelBs)?8:127;
-
     case XK_KP_Left:	return 28;
     case XK_KP_Up:	return 30;
     case XK_KP_Right:	return 29;
@@ -4566,7 +4565,6 @@ translateCode(KeySym symbolic, int *modp, XKeyEvent *evt)
     case XK_KP_Next:	return 12;	/* page down */
     case XK_KP_Home:	return  1;
     case XK_KP_End:	return  4;
-    case XK_KP_Enter:	return 13;
 
     /* "aliases" for Sun keyboards */
     case XK_R9:		return 11;	/* page up */
