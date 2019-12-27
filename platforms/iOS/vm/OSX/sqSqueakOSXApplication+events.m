@@ -270,12 +270,19 @@ static int buttonState=0;
 #if (MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_7)
 	CGFloat x = [theEvent scrollingDeltaX];
 	CGFloat y = [theEvent scrollingDeltaY];
+	/* Convert event units into scrolling units
+	   Assume that 1 event unit corresponds to a single wheel mouse notch
+	   A single notch evaluates to 120 scrolling units */
 	float xDelta = x * 120;
 	float yDelta = y * 120;
 	if ([theEvent respondsToSelector:@selector(hasPreciseScrollingDeltas)]) {
 		if ([theEvent hasPreciseScrollingDeltas]) {
-			xDelta = x;
-			yDelta = y;
+			/* Note: in case of precise scrolling x,y are given in points
+			   Assume that 120 scrolling units corresponds to 3 lines delta 
+			   that is 40 points for a 13.3 point line grid
+			   hence the factor 3 */
+			xDelta = x * 3;
+			yDelta = y * 3;
 		}
 	}
 #else
@@ -295,7 +302,7 @@ static int buttonState=0;
 		prevYTime = now;
 	}
 	if (sendWheelEvents) {
-		float limit = 10;
+		float limit = 20;
 		if (-limit < prevXDelta && prevXDelta < limit && -limit < prevYDelta && prevYDelta < limit ) return;
 		sqMouseEvent evt;
 		memset(&evt,0,sizeof(evt));
