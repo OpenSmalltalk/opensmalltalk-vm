@@ -263,8 +263,23 @@ static int buttonState=0;
 - (void) recordWheelEvent:(NSEvent *) theEvent fromView: (NSView <sqSqueakOSXView> *) aView{
 
 	[self recordMouseEvent: theEvent fromView: aView];
+#if (MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_7)
+	CGFloat x = [theEvent scrollingDeltaX];
+	CGFloat y = [theEvent scrollingDeltaY];
+	int xDelta = x * 120;
+	int yDelta = y * 120;
+	if ([theEvent respondsToSelector:@selector(hasPreciseScrollingDeltas)]) {
+		if ([theEvent hasPreciseScrollingDeltas]) {
+			xDelta = x;
+			yDelta = y;
+		}
+	}
+#else
 	CGFloat x = [theEvent deltaX];
 	CGFloat y = [theEvent deltaY];
+	int xDelta = x * 120;
+	int yDelta = y * 120;
+#endif
 
 	if (sendWheelEvents) {
 		sqMouseEvent evt;
@@ -273,8 +288,8 @@ static int buttonState=0;
 		evt.type = EventTypeMouseWheel;
 		evt.timeStamp = ioMSecs();
 
-		evt.x =  x * 32;
-		evt.y =  y * 32;
+		evt.x =  xDelta;
+		evt.y =  yDelta;
 
 		//printf("x:%f y:%f ex:%ld ey:%ld\n", x, y, evt.x, evt.y);
 
@@ -285,11 +300,11 @@ static int buttonState=0;
 		[self pushEventToQueue:(sqInputEvent *) &evt];
 	}
 	else {
-		if (x != 0.0f) {
-			[self fakeMouseWheelKeyboardEventsKeyCode: (x < 0 ? 124 : 123) ascii: (x < 0 ? 29 : 28) windowIndex:   aView.windowLogic.windowIndex];
+		if (xDelta != 0) {
+			[self fakeMouseWheelKeyboardEventsKeyCode: (xDelta < 0 ? 124 : 123) ascii: (xDelta < 0 ? 29 : 28) windowIndex: aView.windowLogic.windowIndex];
 		}
-		if (y != 0.0f) {
-			[self fakeMouseWheelKeyboardEventsKeyCode: (y < 0 ? 125 : 126) ascii: (y < 0 ? 31 : 30) windowIndex:  aView.windowLogic.windowIndex];
+		if (yDelta != 0) {
+			[self fakeMouseWheelKeyboardEventsKeyCode: (yDelta < 0 ? 125 : 126) ascii: (yDelta < 0 ? 31 : 30) windowIndex: aView.windowLogic.windowIndex];
 		}
 	}
 }
