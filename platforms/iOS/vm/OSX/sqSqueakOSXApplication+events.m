@@ -263,11 +263,15 @@ static int buttonState=0;
 - (void) recordWheelEvent:(NSEvent *) theEvent fromView: (NSView <sqSqueakOSXView> *) aView{
 
 	[self recordMouseEvent: theEvent fromView: aView];
+	static float prevXDelta = 0;
+	static float prevYDelta = 0;
+	static int prevXTime = 0;
+	static int prevYTime = 0;
 #if (MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_7)
 	CGFloat x = [theEvent scrollingDeltaX];
 	CGFloat y = [theEvent scrollingDeltaY];
-	int xDelta = x * 120;
-	int yDelta = y * 120;
+	float xDelta = x * 120;
+	float yDelta = y * 120;
 	if ([theEvent respondsToSelector:@selector(hasPreciseScrollingDeltas)]) {
 		if ([theEvent hasPreciseScrollingDeltas]) {
 			xDelta = x;
@@ -277,21 +281,33 @@ static int buttonState=0;
 #else
 	CGFloat x = [theEvent deltaX];
 	CGFloat y = [theEvent deltaY];
-	int xDelta = x * 120;
-	int yDelta = y * 120;
+	float xDelta = x * 120;
+	float yDelta = y * 120;
 #endif
-
+	/* accumulate enough delta before sending the event to the image */
+	int now = ioMSecs();
+	if( xDelta != 0 ) {
+		prevXDelta = ( now - prevXTime < 500) ? prevXDelta + xDelta : xDelta;
+		prevXTime = now;
+	}
+	if( yDelta != 0 ) {
+		prevYDelta = ( now - prevYTime < 500) ? prevYDelta + yDelta : yDelta;
+		prevYTime = now;
+	}
 	if (sendWheelEvents) {
+		float limit = 10;
+		if (-limit < prevXDelta && prevXDelta < limit && -limit < prevYDelta && prevYDelta < limit ) return;
 		sqMouseEvent evt;
 		memset(&evt,0,sizeof(evt));
 
 		evt.type = EventTypeMouseWheel;
 		evt.timeStamp = ioMSecs();
 
-		evt.x =  xDelta;
-		evt.y =  yDelta;
+		evt.x = prevXDelta;
+		evt.y = prevYDelta;
 
-		//printf("x:%f y:%f ex:%ld ey:%ld\n", x, y, evt.x, evt.y);
+		prevXDelta = 0;
+		prevYDelta = 0;
 
 		int buttonAndModifiers = [self mapMouseAndModifierStateToSqueakBits: theEvent];
 		evt.buttons = buttonAndModifiers & 7;
@@ -300,11 +316,14 @@ static int buttonState=0;
 		[self pushEventToQueue:(sqInputEvent *) &evt];
 	}
 	else {
-		if (xDelta != 0) {
-			[self fakeMouseWheelKeyboardEventsKeyCode: (xDelta < 0 ? 124 : 123) ascii: (xDelta < 0 ? 29 : 28) windowIndex: aView.windowLogic.windowIndex];
+		float limit = 120;
+		if (prevXDelta <= -limit || limit <= prevXDelta) {
+			[self fakeMouseWheelKeyboardEventsKeyCode: (prevXDelta < 0 ? 124 : 123) ascii: (prevXDelta < 0 ? 29 : 28) windowIndex: aView.windowLogic.windowIndex];
+			prevXDelta = 0;
 		}
-		if (yDelta != 0) {
-			[self fakeMouseWheelKeyboardEventsKeyCode: (yDelta < 0 ? 125 : 126) ascii: (yDelta < 0 ? 31 : 30) windowIndex: aView.windowLogic.windowIndex];
+		if (prevYDelta <= -limit || limit <= prevYDelta) {
+			[self fakeMouseWheelKeyboardEventsKeyCode: (prevYDelta < 0 ? 125 : 126) ascii: (prevYDelta < 0 ? 31 : 30) windowIndex: aView.windowLogic.windowIndex];
+			prevYDelta = 0;
 		}
 	}
 }
