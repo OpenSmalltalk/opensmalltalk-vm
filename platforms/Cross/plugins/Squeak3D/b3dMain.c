@@ -1393,14 +1393,19 @@ RESUME_MERGING:
 					}
 					/*-- end of search for next top edge --*/
 
-					/*-- Now do the drawing from leftEdge to rightEdge --*/
-#if 1 /* This assert fails in rare cases; the fix is not understood. eem */
+					/* If the "edge is not on top toggle its (back) fills" guard
+					 * above nilled rightEdge then presumably we're done.  So
+					 * arrange that we quit the main loop (see BEGIN MAINLOOP at
+					 * about line 1227 above). eem 2019/12/29
+					 */
+					if (!rightEdge) {
+						aet->size = 0;
+						b3dCleanupFill(fillList);
+						break;
+					}
 					assert(leftEdge && rightEdge);
-#else
-					if(!leftEdge || !rightEdge)
-						FAIL_UPDATING(B3D_NO_MORE_EDGES); // another segfault
-						//FAIL_PAINTING(B3D_NO_MORE_EDGES); // blow up in allocating edges
-#endif
+
+					/*-- Now do the drawing from leftEdge to rightEdge --*/
 					if(fillList->firstFace) {
 						/* Note: We fill *including* leftX and rightX */
 						int leftX = (leftEdge->xValue >> B3D_FixedToIntShift) + 1;
