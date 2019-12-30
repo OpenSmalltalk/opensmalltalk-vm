@@ -3,6 +3,7 @@
 # (deploy/filter-exec.sh adapted for Pharo)
 #
 # execute script if:
+#   - Deployment secrets are available (see deploy-key.sh)
 #   - FLAVOR is 'pharo.cog.spur'
 #   - REPOSITORY=OpenSmalltalk/opensmalltalk-vm
 #   - Build is not triggered by a pull request
@@ -12,6 +13,11 @@ readonly REPO_NAME="${TRAVIS_REPO_SLUG:-${APPVEYOR_REPO_NAME}}"
 readonly PR_SHA="${TRAVIS_PULL_REQUEST_SHA:-${APPVEYOR_PULL_REQUEST_HEAD_COMMIT}}"
 readonly BRANCH_NAME="${TRAVIS_BRANCH:-${APPVEYOR_REPO_BRANCH}}"
 readonly TAG_NAME="${TRAVIS_TAG:-${APPVEYOR_REPO_TAG_NAME}}"
+
+if [[ -z "${PHARO_DEPLOY_USER}" ]] || [[ -z "${PHARO_DEPLOY_KEY}" ]]; then
+	echo 'Skipping a Pharo deployment because $PHARO_DEPLOY_USER and $PHARO_DEPLOY_KEY were not provided.'
+  exit
+fi
 
 if ! ([[ "${FLAVOR}" = "pharo.cog.spur" ]] || [[ "${FLAVOR}" = "pharo.sista.spur" ]]); then
   echo "Trying to deploy flavour: ${FLAVOR}. Skipping."
