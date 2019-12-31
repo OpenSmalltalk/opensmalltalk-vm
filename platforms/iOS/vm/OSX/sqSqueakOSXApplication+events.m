@@ -310,8 +310,10 @@ static int buttonState=0;
 		evt.type = EventTypeMouseWheel;
 		evt.timeStamp = ioMSecs();
 
-		evt.x = prevXDelta;
-		evt.y = prevYDelta;
+		/* Note: if natural scrolling preference is enabled, the VM should generate a positive x for motion from left to right
+		 * and a positive y for a motion from bottom to up */
+		evt.x = - prevXDelta; /* we have to change the x convention, presumably because natural is inverted */
+		evt.y = + prevYDelta; /* but not that of y presumably because the view isFlipped (see implementation of isFlipped) */
 
 		prevXDelta = 0;
 		prevYDelta = 0;
