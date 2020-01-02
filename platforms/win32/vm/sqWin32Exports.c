@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "interp.h"
+#include "sqMemoryAccess.h"
 
 char * GetAttributeString(sqInt id);
 #if !NewspeakVM

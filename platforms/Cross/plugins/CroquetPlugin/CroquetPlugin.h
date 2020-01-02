@@ -2,6 +2,8 @@
 #define CROQUET_PLUGIN_H
 /* CroquetPlugin.h include file */
 
+#include "sqMemoryAccess.h"
+
 /* Include MD5 code for primitives */
 #include "md5.h"
 

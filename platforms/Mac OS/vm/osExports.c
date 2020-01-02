@@ -4,6 +4,7 @@
    style you may as well insert the exports right here */
 
 #include "sqVirtualMachine.h"
+#include "sqMemoryAccess.h"
 /* Configuration options */
 #include "sqConfig.h"
 /* Platform specific definitions */
