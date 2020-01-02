@@ -22,21 +22,21 @@
 WindowPtr getSTWindow(void);
 void setMessageHook(eventMessageHook theHook);
 void setPostMessageHook(eventMessageHook theHook);
-char * GetAttributeString(int id);
+char * GetAttributeString(sqInt id);
 #if !NewspeakVM
 int serialPortSetControl(int portNum,int control, char *data);
 int serialPortIsOpen(int portNum);
 int serialPortNames(int portNum, char *portName, char *inName, char *outName);
 #endif
 Boolean IsKeyDown(void);
-int primitivePluginBrowserReady(void);
+sqInt primitivePluginBrowserReady(void);
 #ifdef ENABLE_URL_FETCH
-int primitivePluginDestroyRequest(void);
-int primitivePluginRequestFileHandle(void);
-int primitivePluginRequestState(void);
-int primitivePluginRequestURL(void);
-int primitivePluginRequestURLStream(void);
-int primitivePluginPostURL(void);
+sqInt primitivePluginDestroyRequest(void);
+sqInt primitivePluginRequestFileHandle(void);
+sqInt primitivePluginRequestState(void);
+sqInt primitivePluginRequestURL(void);
+sqInt primitivePluginRequestURLStream(void);
+sqInt primitivePluginPostURL(void);
 #endif
 
 void *os_exports[][3] = {

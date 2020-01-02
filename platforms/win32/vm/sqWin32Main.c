@@ -100,7 +100,7 @@ extern void printPhaseTime(int);
 LONG CALLBACK sqExceptionFilter(LPEXCEPTION_POINTERS exp);
 
 /* Import from sqWin32Window.c */
-char * GetAttributeString(int id);
+char * GetAttributeString(sqInt id);
 void ShowSplashScreen(void);
 void HideSplashScreen(void);
 

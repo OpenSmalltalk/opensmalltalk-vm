@@ -1451,7 +1451,7 @@ msg(char *s)
 static sqInt
 needSigaltstack(void)
 {
-    char * (*GetAttributeString)(int);
+    char * (*GetAttributeString)(sqInt);
     sqInt SigStackSize;
     stack_t sigstack;
 
