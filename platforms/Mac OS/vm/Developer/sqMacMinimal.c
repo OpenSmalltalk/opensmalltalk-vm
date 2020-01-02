@@ -139,7 +139,7 @@ char modifierMap[32] = {
 };
 
 /*** Functions ***/
-char * GetAttributeString(int id);
+char * GetAttributeString(sqInt id);
 int  HandleEvents(void);
 void HandleMenu(int mSelect);
 void HandleMouseDown(EventRecord *theEvent);
@@ -727,7 +727,7 @@ int clipboardWriteFromAt(int count, int byteArrayIndex, int startIndex) {
 
 /*** System Attributes ***/
 
-char * GetAttributeString(int id) {
+char * GetAttributeString(sqInt id) {
 	/* This is a hook for getting various status strings back from
 	   the OS. In particular, it allows Squeak to be passed arguments
 	   such as the name of a file to be processed. Command line options

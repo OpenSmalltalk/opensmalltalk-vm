@@ -176,7 +176,7 @@ after_success: (cd deploy && ./filter-exec.sh pack-vm.sh)
 
 deploy:
   - provider: script # Deploy bleeding edge to Bintray
-    script: (cd deploy && ./bintray.sh)
+    script: (cd deploy && ./filter-exec.sh ./bintray.sh)
     skip_cleanup: true
     on:
       repo: OpenSmalltalk/opensmalltalk-vm

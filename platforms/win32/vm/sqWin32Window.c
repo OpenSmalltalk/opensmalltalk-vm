@@ -21,9 +21,15 @@
 *
 *****************************************************************************/
 #include <windows.h>
+#include <windowsx.h>
 #include <shellapi.h>
 #include <commdlg.h>
 #include <excpt.h>
+
+/* only supported since Vista, and absent from some cygwin/mingw header */
+#ifndef WM_MOUSEHWHEEL
+#define WM_MOUSEHWHEEL                  0x020E
+#endif
 
 #if defined(__MINGW32_VERSION) && (__MINGW32_MAJOR_VERSION < 3)
 /** Kludge to get multimonitor API's to compile in the mingw/directx7 mix. **/
@@ -54,6 +60,8 @@ void setFullScreenFlag(sqInt);
 sqInt getSavedWindowSize(void);
 extern sqInt deferDisplayUpdates;
 
+extern sqInt sendWheelEvents; /* If true deliver EventTypeMouseWheel else kybd */
+/* if sendWheelEvents is false this maps wheel events to arrow keys */
 
 /*** Variables -- image and path names ***/
 #define IMAGE_NAME_SIZE MAX_PATH_UTF8 
@@ -161,12 +169,10 @@ PRINTDLG printValues;
 static int printerSetup = FALSE;
 #endif
 
-#ifndef NO_WHEEL_MOUSE
-UINT g_WM_MOUSEWHEEL = 0;	/* RvL: 1999-04-19 The message we receive from wheel mices */
-#endif
 
 /* misc forward declarations */
 int recordMouseEvent(MSG *msg, UINT nrClicks);
+int recordMouseWheelEvent(MSG *msg, int dx, int dy);
 int recordKeyboardEvent(MSG *msg);
 int recordWindowEvent(int action, RECT *r);
 #if NewspeakVM
@@ -265,6 +271,11 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
   static UINT nrClicks = 0;
   UINT timeNow = 0;
   UINT timeDelta = 0;
+  /* variables for accumulating mouse wheel deltas if too small */
+  static int hWheelDelta = 0;
+  static int vWheelDelta = 0;
+  static int prevHWheelTime = 0;
+  static int prevVWheelTime = 0;
 
   MSG localMessage;
   LPMSG messageTouse = NULL;
@@ -297,45 +308,6 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
 
   if(message == SQ_LAUNCH_DROP) 
     return sqLaunchDrop();
-
-#ifndef NO_WHEEL_MOUSE
-  /* RvL 1999-04-19 00:23
-     MOUSE WHEELING START */
-  if( WM_MOUSEWHEEL == message || g_WM_MOUSEWHEEL == message ) {
-    /* Record mouse wheel msgs as CTRL-Up/Down.
-     * N.B. On iOS & X11 we also handle horizonal mouse wheel events.
-     * Should the same happen here?
-     */
-    short zDelta = (short) HIWORD(wParam);
-    if(inputSemaphoreIndex) {
-      sqKeyboardEvent *evt = (sqKeyboardEvent*) sqNextEventPut();
-      evt->type = EventTypeKeyboard;
-      evt->timeStamp = messageTouse->time;
-      evt->charCode = (zDelta > 0) ? 30 : 31;
-      evt->pressCode = EventKeyChar;
-      /* N.B. on iOS & X11 all meta bits are set to distinguish mouse wheel
-       * events from real arrow key events.  Should the same happen here?
-       */
-      evt->modifiers = CtrlKeyBit;
-      /* It would be good if this were set in the SqueakVM also, no? */
-#ifdef PharoVM
-     evt->utf32Code = evt->charCode;
-#else
-      evt->utf32Code = 0;
-#endif
-      evt->reserved1 = 0;
-    } else {
-      buttonState = 64;
-      if (zDelta < 0) {
-	recordVirtualKey(message,VK_DOWN,lParam);
-      } else {
-	recordVirtualKey(message,VK_UP,lParam);
-      }
-    }
-    return 1;
-  }
-  /* MOUSE WHEELING END */
-#endif
 
   switch(message) {
   case WM_SYSCOMMAND:
@@ -395,9 +367,68 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
       break;
     }
     /* state based stuff */
-    mousePosition.x = LOWORD(lParam);
-    mousePosition.y = HIWORD(lParam);
+    mousePosition.x = GET_X_LPARAM(lParam);
+    mousePosition.y = GET_Y_LPARAM(lParam);
     break;
+  case WM_MOUSEHWHEEL: {
+    if(inputSemaphoreIndex && sendWheelEvents) {
+      int zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
+      /* accumulate enough delta before sending the event to the image */
+      int limit = WHEEL_DELTA / 6; /* threshold for delivering events */
+      timeNow = GetMessageTime(); /* Win32 - gets time of last GetMessage() */
+      hWheelDelta = (timeNow - prevHWheelTime < 500 /* milliseconds */) ? hWheelDelta + zDelta : zDelta;
+      prevHWheelTime = timeNow;
+      if( - limit < hWheelDelta && hWheelDelta < limit ) break;
+      zDelta = hWheelDelta;
+      hWheelDelta = 0;
+      recordMouseWheelEvent(messageTouse,zDelta,0);
+      break;   
+    } else {
+      /* Note: do not generate left/right arrow, images are not prepared to it */
+      return DefWindowProcW(hwnd,message,wParam,lParam);
+    }
+  }
+  case WM_MOUSEWHEEL: {
+    /* Record mouse wheel msgs as Up/Down arrow keypress + meta bits.
+     */
+    int zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
+    /* accumulate enough delta before sending the event to the image */
+    int limit = WHEEL_DELTA / 6; /* threshold for delivering events */
+    timeNow = GetMessageTime(); /* Win32 - gets time of last GetMessage() */
+    vWheelDelta = (timeNow - prevVWheelTime < 500 /* milliseconds */) ? vWheelDelta + zDelta : zDelta;
+    prevVWheelTime = timeNow;
+    if( - limit < vWheelDelta && vWheelDelta < limit ) break;
+    zDelta = vWheelDelta;
+    vWheelDelta = 0;
+    if(inputSemaphoreIndex) {
+      if(sendWheelEvents) {
+        recordMouseWheelEvent(messageTouse,0,zDelta);
+        break;   
+      } else {
+        sqKeyboardEvent *evt = (sqKeyboardEvent*) sqNextEventPut();
+        evt->type = EventTypeKeyboard;
+        evt->timeStamp = messageTouse->time;
+        evt->charCode = (zDelta > 0) ? 30 : 31;
+        evt->pressCode = EventKeyChar;
+        /* Set every meta bit to distinguish the fake event from a real arrow keypress
+         */
+        evt->modifiers = CtrlKeyBit|OptionKeyBit|CommandKeyBit|ShiftKeyBit;
+        evt->utf32Code = evt->charCode;
+        evt->reserved1 = 0;
+      }
+    } else {
+      buttonState = 64;
+      if (zDelta < 0) {
+        recordVirtualKey(message,VK_DOWN,lParam);
+      } else {
+        recordVirtualKey(message,VK_UP,lParam);
+      }
+      /* state based stuff */
+      mousePosition.x = GET_X_LPARAM(lParam);
+      mousePosition.y = GET_Y_LPARAM(lParam);
+    }
+    break;
+  }
   case WM_LBUTTONDOWN:
   case WM_RBUTTONDOWN:
   case WM_MBUTTONDOWN:
@@ -422,8 +453,8 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
       break;
     }
     /* state based stuff */
-    mousePosition.x = LOWORD(lParam);
-    mousePosition.y = HIWORD(lParam);
+    mousePosition.x = GET_X_LPARAM(lParam);
+    mousePosition.y = GET_Y_LPARAM(lParam);
     /* check for console focus */
     recordMouseDown(wParam, lParam);
     recordModifierButtons();
@@ -454,8 +485,8 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
       break;
     }
     /* state based stuff */
-    mousePosition.x = LOWORD(lParam);
-    mousePosition.y = HIWORD(lParam);
+    mousePosition.x = GET_X_LPARAM(lParam);
+    mousePosition.y = GET_Y_LPARAM(lParam);
     /* check for console focus */
     if(GetFocus() != stWindow) SetFocus(stWindow);
     recordMouseDown(wParam,lParam);
@@ -992,9 +1023,6 @@ void SetupWindows()
   /* Force Unicode WM_CHAR */
   SetWindowLongPtrW(stWindow,GWLP_WNDPROC,(LONG_PTR)MainWndProcW);
 
-#ifndef NO_WHEEL_MOUSE
-  g_WM_MOUSEWHEEL = RegisterWindowMessage( TEXT("MSWHEEL_ROLLMSG") ); /* RvL 1999-04-19 00:23 */
-#endif
 
 #if defined(_WIN32_WCE)
   /* WinCE does not support RegisterClassEx(), so we must set
@@ -1170,7 +1198,6 @@ int recordMouseEvent(MSG *msg, UINT nrClicks) {
 
   /* printf("HWND: %x MSG: %x WPARAM: %x LPARAM: %x\n", msg->hwnd, msg->message, wParam, msg->lParam); */
 
-
   alt = GetKeyState(VK_MENU) & 0x8000;
   shift = wParam & MK_SHIFT;
   ctrl  = wParam & MK_CONTROL;
@@ -1190,8 +1217,8 @@ int recordMouseEvent(MSG *msg, UINT nrClicks) {
   /* first the basics */
   proto.type = EventTypeMouse;
   proto.timeStamp = msg->time;
-  proto.x = (int)(short)LOWORD(msg->lParam);
-  proto.y = (int)(short)HIWORD(msg->lParam);
+  proto.x = GET_X_LPARAM(msg->lParam);
+  proto.y = GET_Y_LPARAM(msg->lParam);
   /* then the buttons */
   proto.buttons = 0;
   proto.buttons |= red ? RedButtonBit : 0;
@@ -1211,6 +1238,60 @@ int recordMouseEvent(MSG *msg, UINT nrClicks) {
   }
   firstEventTime = msg->time;
 #endif
+  /* and lastly, fill in the event itself */
+  event = (sqMouseEvent*) sqNextEventPut();
+  *event = proto;
+  return 1;
+}
+
+int recordMouseWheelEvent(MSG *msg,int dx,int dy) {
+#ifndef NO_DIRECTINPUT
+  static DWORD firstEventTime = 0;
+#endif
+  DWORD wParam;
+  sqMouseEvent proto, *event;
+  int alt, shift, ctrl, red, blue, yellow;
+  if(!msg) return 0;
+  
+  /* clear out the button state for events we haven't seen */
+  wParam = msg->wParam & 
+    ~(MK_LBUTTON + MK_MBUTTON + MK_RBUTTON - winButtonState);
+
+  /* printf("HWND: %x MSG: %x WPARAM: %x LPARAM: %x\n", msg->hwnd, msg->message, wParam, msg->lParam); */
+
+  alt = GetKeyState(VK_MENU) & 0x8000;
+  shift = wParam & MK_SHIFT;
+  ctrl  = wParam & MK_CONTROL;
+  red   = wParam & MK_LBUTTON;
+  if(f1ButtonMouse) {
+    /* there's just a single button y'know */
+    red |= wParam & MK_MBUTTON;
+    red |= wParam & MK_RBUTTON;
+    blue = yellow = 0;
+  } else if(!f3ButtonMouse) {
+    blue   = wParam & MK_MBUTTON;
+    yellow = wParam & MK_RBUTTON;
+  } else {
+    blue   = wParam & MK_RBUTTON;
+    yellow = wParam & MK_MBUTTON;
+  }
+  /* first the basics */
+  proto.type = EventTypeMouseWheel;
+  proto.timeStamp = msg->time;
+  proto.x = dx;   /* Almost like other mouse events ... */
+  proto.y = dy;   /* except that we store the scroll delta here rather than mouse position */
+  /* then the buttons */
+  proto.buttons = 0;
+  proto.buttons |= red ? RedButtonBit : 0;
+  proto.buttons |= blue ? BlueButtonBit : 0;
+  proto.buttons |= yellow ? YellowButtonBit : 0;
+  /* then the modifiers */
+  proto.modifiers = 0;
+  proto.modifiers |= shift ? ShiftKeyBit : 0;
+  proto.modifiers |= ctrl ? CtrlKeyBit : 0;
+  proto.modifiers |= alt ? CommandKeyBit : 0;
+  proto.nrClicks = 0;
+  proto.windowIndex = msg->hwnd == stWindow ? 0 : (sqIntptr_t) msg->hwnd;
   /* and lastly, fill in the event itself */
   event = (sqMouseEvent*) sqNextEventPut();
   *event = proto;

@@ -160,7 +160,7 @@ static long display_hostWindowCloseAll(void)                { return 0; }
 
 #if (SqDisplayVersionMajor >= 1 && SqDisplayVersionMinor >= 3)
 
-long display_ioSetCursorPositionXY(long x, long y) { return 0; }
+long display_ioSetCursorPositionXY(long x, long y) { return -1; }
 
 long display_ioPositionOfScreenWorkArea (long windowIndex) { return -1; }
 
