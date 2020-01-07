@@ -265,6 +265,32 @@ VMSpurScavengerTest >> testMethodInStackShouldSurviveScanvenge [
 	self assert: (memory hashBitsOf: newObjectAddress) equals: newObjectHash
 ]
 
+{ #category : #'tests-3-scavenge-basic' }
+VMSpurScavengerTest >> testMovingReferencedObjectShouldUpdateReference [
+
+	| rootObjectAddress newRootObjectAddress referencedObjectAddress referencedObjectHash |
+	rootObjectAddress := self newObjectWithSlots: 1.
+
+	referencedObjectAddress := self newZeroSizedObject.
+	referencedObjectHash := (memory hashBitsOf: referencedObjectAddress).
+	
+	memory storePointer: 0 ofObject: rootObjectAddress withValue: referencedObjectAddress.
+	
+	memory coInterpreter method: rootObjectAddress.
+
+	"Nil should survive, but newObjectOop should survive too.
+	Nil is referenced by the roots because many of their slots are nilled.
+	newObjectOop is referenced by the stack"
+	memory doScavenge: 1 "TenureByAge".
+	
+	"Remap our object address to its new location"
+	newRootObjectAddress := memory remapObj: rootObjectAddress.
+	
+	self
+		assert: (memory hashBitsOf: (memory fetchPointer: 0 ofObject: newRootObjectAddress))
+		equals: referencedObjectHash
+]
+
 { #category : #'tests-4-scavenge-stack' }
 VMSpurScavengerTest >> testObjectInStackShouldSurviveScanvenge [
 
@@ -375,6 +401,48 @@ VMSpurScavengerTest >> testScavengeNonSurvivorShouldOnlyCopySurvivorObjectToPast
 	self assertPastSpaceHasOnlyNil
 ]
 
+{ #category : #'tests-6-scavenge-order' }
+VMSpurScavengerTest >> testScavengeObjectInStackShouldBeBeforeObjectInSpecialVariable [
+
+	| objectInTheStack objectInSpecialVariable |
+	objectInTheStack := self newZeroSizedObject.
+	objectInSpecialVariable := self newZeroSizedObject.
+	
+	self
+		makeBaseFrameWithMethod: objectInTheStack
+		context: memory nilObject
+		receiver: memory nilObject
+		args: #()
+		andStack: #().
+		
+	memory coInterpreter method: objectInSpecialVariable.
+	
+	memory doScavenge: 1 "TenureByAge".
+	
+	self assert: (memory remapObj: objectInTheStack) < (memory remapObj: objectInSpecialVariable)
+]
+
+{ #category : #'tests-6-scavenge-order' }
+VMSpurScavengerTest >> testScavengeObjectInStackShouldBeInvertedToBeBeforeObjectInSpecialVariable [
+
+	| objectInTheStack objectInSpecialVariable |
+	objectInSpecialVariable := self newZeroSizedObject.
+	objectInTheStack := self newZeroSizedObject.
+	
+	self
+		makeBaseFrameWithMethod: objectInTheStack
+		context: memory nilObject
+		receiver: memory nilObject
+		args: #()
+		andStack: #().
+		
+	memory coInterpreter method: objectInSpecialVariable.
+	
+	memory doScavenge: 1 "TenureByAge".
+	
+	self assert: (memory remapObj: objectInTheStack) < (memory remapObj: objectInSpecialVariable)
+]
+
 { #category : #'tests-3-scavenge-basic' }
 VMSpurScavengerTest >> testScavengeShouldCopySurvivorObjectToPastSpace [	
 	"Nil should survive.
@@ -405,6 +473,42 @@ VMSpurScavengerTest >> testScavengeTwiceShouldExchangePastAndFutureSpacesBackAnd
 	self assert: memory scavenger futureSpace start equals: oldFutureSpaceStart.
 ]
 
+{ #category : #'tests-6-scavenge-order' }
+VMSpurScavengerTest >> testScavengedObjectsShouldBeCopiedInInstanceVariableOrder [
+
+	| rootObjectAddress objectThatShouldGoSecond objectThatShouldGoFirst |
+	rootObjectAddress := self newObjectWithSlots: 2.
+	objectThatShouldGoSecond := self newZeroSizedObject.
+	objectThatShouldGoFirst := self newZeroSizedObject.
+	
+	memory storePointer: 0 ofObject: rootObjectAddress withValue: objectThatShouldGoFirst.
+	memory storePointer: 1 ofObject: rootObjectAddress withValue: objectThatShouldGoSecond.
+	
+	memory coInterpreter method: rootObjectAddress.
+	
+	memory doScavenge: 1 "TenureByAge".
+	
+	self assert: (memory remapObj: objectThatShouldGoFirst) < (memory remapObj: objectThatShouldGoSecond)
+]
+
+{ #category : #'tests-6-scavenge-order' }
+VMSpurScavengerTest >> testScavengedRootObjectsShouldBeCopiedBeforeOtherObjects [
+
+	| firstRootObjectAddress nonRootObjectAddress secondRootObjectAddress |
+	firstRootObjectAddress := self newObjectWithSlots: 1.
+	nonRootObjectAddress := self newZeroSizedObject.
+	secondRootObjectAddress := self newZeroSizedObject.
+	
+	memory storePointer: 0 ofObject: firstRootObjectAddress withValue: nonRootObjectAddress.
+	
+	memory coInterpreter method: firstRootObjectAddress.
+	memory coInterpreter newMethod: secondRootObjectAddress.
+	
+	memory doScavenge: 1 "TenureByAge".
+	
+	self assert: (memory remapObj: secondRootObjectAddress) < (memory remapObj: nonRootObjectAddress)
+]
+
 { #category : #'tests-3-scavenge-basic' }
 VMSpurScavengerTest >> testUnreferencedObjectCycleShouldNotSurviveScavenge [
 	| objectA objectB |
@@ -418,7 +522,6 @@ VMSpurScavengerTest >> testUnreferencedObjectCycleShouldNotSurviveScavenge [
 		storePointer: 0
 		ofObject: objectB
 		withValue: objectA.
-
 
 	"Nil should survive, but newObjectOop should survive too.
 	Nil is referenced by the roots because many of their slots are nilled.
