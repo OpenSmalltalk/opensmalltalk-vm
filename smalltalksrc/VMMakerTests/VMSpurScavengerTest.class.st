@@ -4,15 +4,17 @@ Class {
 	#category : #VMMakerTests
 }
 
-{ #category : #'tests-3-scavenge-basic' }
-VMSpurScavengerTest >> assertPastSpaceHasOnlyNil [
+{ #category : #asserting }
+VMSpurScavengerTest >> assertPastSpaceIsEmpty [
 	self
 		assert: memory pastSpaceStart
-		equals: memory scavenger pastSpace start + emptyObjectSize
+		equals: memory scavenger pastSpace start
 ]
 
-{ #category : #'tests-3-scavenge-basic' }
+{ #category : #helpers }
 VMSpurScavengerTest >> initializeOldSpaceForScavenger [
+
+	memory coInterpreter bootstrapping: true.
 
 	"Create a nil object required to initialize several fields"
 	memory nilObject: self newZeroSizedObject.
@@ -20,7 +22,6 @@ VMSpurScavengerTest >> initializeOldSpaceForScavenger [
 	"Initialize Stack"
 	memory coInterpreter desiredNumStackPages: 8.
 	memory coInterpreter initStackPages.
-	memory coInterpreter bootstrapping: true.
 
 	"Initialize Special Root objects"
 	memory coInterpreter method: memory nilObject.
@@ -40,9 +41,23 @@ VMSpurScavengerTest >> initializeOldSpaceForScavenger [
 	memory initializeOldSpaceFirstFree: memory freeOldSpaceStart.
 	memory allocateClassTable.	
 	memory scavenger initializeRememberedSet.
+	memory specialObjectsOop: (self newObjectWithSlots: 20).
+	
+	"Force moving the special objects array to old space..."
+	memory flushNewSpace.
+	
+	"Initialize Special Root objects"
+	memory nilObject: (memory remapObj: memory nilObject).
+	memory coInterpreter method: memory nilObject.
+	memory coInterpreter instructionPointer: memory nilObject.
+	memory coInterpreter newMethod: memory nilObject.
+	memory coInterpreter profileProcess: memory nilObject.
+	memory coInterpreter profileMethod: memory nilObject.
+	memory coInterpreter profileSemaphore: memory nilObject.
+	memory mournQueue: memory nilObject.
 ]
 
-{ #category : #'tests-4-scavenge-stack' }
+{ #category : #helpers }
 VMSpurScavengerTest >> makeBaseFrameWithMethod: aMethodOop context: aContextOop receiver: aReceiverOop args: argsOops andStack: stackOops [
 	
 	| page pointer |
@@ -90,7 +105,7 @@ VMSpurScavengerTest >> makeBaseFrameWithMethod: aMethodOop context: aContextOop 
 			withValue: (memory coInterpreter withSmallIntegerTags: page baseFP) ]
 ]
 
-{ #category : #'tests-4-scavenge-stack' }
+{ #category : #running }
 VMSpurScavengerTest >> setUp [
 
 	super setUp.
@@ -315,6 +330,20 @@ VMSpurScavengerTest >> testObjectInStackShouldSurviveScanvenge [
 	self assert: (memory hashBitsOf: newObjectAddress) equals: newObjectHash
 ]
 
+{ #category : #'tests-6-scavenge-rememberedset' }
+VMSpurScavengerTest >> testOldObjectIsNotRemembered [
+
+	| oldObjectAddress |
+	
+	"Create an object, reference it, and move it to old space"
+	oldObjectAddress := self newObjectWithSlots: 1.
+	memory coInterpreter newMethod: oldObjectAddress.
+	memory flushNewSpace.
+	oldObjectAddress := memory remapObj: oldObjectAddress.
+
+	self deny: (memory isRemembered: oldObjectAddress).
+]
+
 { #category : #'tests-4-scavenge-stack' }
 VMSpurScavengerTest >> testReceiverInStackShouldSurviveScanvenge [
 
@@ -365,6 +394,33 @@ VMSpurScavengerTest >> testReferencedObjectShouldSurviveScavenge [
 	self assert: (memory hashBitsOf: newReferencedObjectAddress) equals: referencedObjectHash
 ]
 
+{ #category : #'tests-6-scavenge-rememberedset' }
+VMSpurScavengerTest >> testRememberedObjectShouldSurviveScanvenge [
+
+	| oldObjectAddress rememberedObjectAddress rememberedObjectHash newRememberedObjectAddress |
+	
+	"Create an object, reference it, and move it to old space"
+	oldObjectAddress := self newObjectWithSlots: 1.
+	memory coInterpreter newMethod: oldObjectAddress.
+	memory flushNewSpace.
+	oldObjectAddress := memory remapObj: oldObjectAddress.
+
+	"Create a young object and reference it from the old object"
+	rememberedObjectAddress := self newZeroSizedObject.
+	rememberedObjectHash := memory hashBitsOf: rememberedObjectAddress.
+	memory storePointer: 0 ofObject: oldObjectAddress withValue: rememberedObjectAddress.
+	
+
+	"Nil should survive, but newObjectOop should survive too.
+	Nil is referenced by the roots because many of their slots are nilled.
+	newObjectOop is referenced by the stack"
+	memory doScavenge: 1 "TenureByAge".
+	
+	"Remap our object address to its new location"
+	newRememberedObjectAddress := memory remapObj: rememberedObjectAddress.
+	self assert: (memory hashBitsOf: newRememberedObjectAddress) equals: rememberedObjectHash
+]
+
 { #category : #'tests-3-scavenge-basic' }
 VMSpurScavengerTest >> testScavengeEmptyMemoryShouldExchangePastAndFutureSpaces [
 
@@ -398,10 +454,68 @@ VMSpurScavengerTest >> testScavengeNonSurvivorShouldOnlyCopySurvivorObjectToPast
 	
 	memory doScavenge: 1 "TenureByAge".
 	
-	self assertPastSpaceHasOnlyNil
+	self assertPastSpaceIsEmpty
 ]
 
-{ #category : #'tests-6-scavenge-order' }
+{ #category : #'tests-7-scavenge-order' }
+VMSpurScavengerTest >> testScavengeObjectInRememberedSetShouldBeInvertedToBeBeforeObjectInStack [
+
+	| objectInTheStack oldObjectAddress objectInRememberedSet |
+	"Create an object, reference it, and move it to old space"
+	oldObjectAddress := self newObjectWithSlots: 1.
+	memory coInterpreter newMethod: oldObjectAddress.
+	memory flushNewSpace.
+	oldObjectAddress := memory remapObj: oldObjectAddress.
+
+	"Instantiate first the object in the stack, then the object in the remembered set.
+	They will be inverted in memory when the scavenger copies them to future space"
+	objectInTheStack := self newZeroSizedObject.
+	objectInRememberedSet := self newZeroSizedObject.
+	
+	self
+		makeBaseFrameWithMethod: objectInTheStack
+		context: memory nilObject
+		receiver: memory nilObject
+		args: #()
+		andStack: #().
+		
+	memory storePointer: 0 ofObject: oldObjectAddress withValue: objectInRememberedSet.
+	
+	memory doScavenge: 1 "TenureByAge".
+	
+	self assert: (memory remapObj: objectInRememberedSet) < (memory remapObj: objectInTheStack)
+]
+
+{ #category : #'tests-7-scavenge-order' }
+VMSpurScavengerTest >> testScavengeObjectInRemembererdSetShouldBeBeforeObjectInStack [
+
+	| objectInTheStack oldObjectAddress objectInRememberedSet |
+	"Create an object, reference it, and move it to old space"
+	oldObjectAddress := self newObjectWithSlots: 1.
+	memory coInterpreter newMethod: oldObjectAddress.
+	memory flushNewSpace.
+	oldObjectAddress := memory remapObj: oldObjectAddress.
+
+	"Instantiate first the object in the remembered set, then the object in the stack.
+	They will be copied to future space in the same order by the scavenger"
+	objectInRememberedSet := self newZeroSizedObject.
+	objectInTheStack := self newZeroSizedObject.
+	
+	self
+		makeBaseFrameWithMethod: objectInTheStack
+		context: memory nilObject
+		receiver: memory nilObject
+		args: #()
+		andStack: #().
+		
+	memory storePointer: 0 ofObject: oldObjectAddress withValue: objectInRememberedSet.
+	
+	memory doScavenge: 1 "TenureByAge".
+	
+	self assert: (memory remapObj: objectInRememberedSet) < (memory remapObj: objectInTheStack)
+]
+
+{ #category : #'tests-7-scavenge-order' }
 VMSpurScavengerTest >> testScavengeObjectInStackShouldBeBeforeObjectInSpecialVariable [
 
 	| objectInTheStack objectInSpecialVariable |
@@ -422,7 +536,7 @@ VMSpurScavengerTest >> testScavengeObjectInStackShouldBeBeforeObjectInSpecialVar
 	self assert: (memory remapObj: objectInTheStack) < (memory remapObj: objectInSpecialVariable)
 ]
 
-{ #category : #'tests-6-scavenge-order' }
+{ #category : #'tests-7-scavenge-order' }
 VMSpurScavengerTest >> testScavengeObjectInStackShouldBeInvertedToBeBeforeObjectInSpecialVariable [
 
 	| objectInTheStack objectInSpecialVariable |
@@ -449,7 +563,7 @@ VMSpurScavengerTest >> testScavengeShouldCopySurvivorObjectToPastSpace [
 	It is referenced by the roots because many of their slots are nilled."
 	memory doScavenge: 1 "TenureByAge".
 	
-	self assertPastSpaceHasOnlyNil
+	self assertPastSpaceIsEmpty
 ]
 
 { #category : #'tests-3-scavenge-basic' }
@@ -473,7 +587,7 @@ VMSpurScavengerTest >> testScavengeTwiceShouldExchangePastAndFutureSpacesBackAnd
 	self assert: memory scavenger futureSpace start equals: oldFutureSpaceStart.
 ]
 
-{ #category : #'tests-6-scavenge-order' }
+{ #category : #'tests-7-scavenge-order' }
 VMSpurScavengerTest >> testScavengedObjectsShouldBeCopiedInInstanceVariableOrder [
 
 	| rootObjectAddress objectThatShouldGoSecond objectThatShouldGoFirst |
@@ -491,7 +605,7 @@ VMSpurScavengerTest >> testScavengedObjectsShouldBeCopiedInInstanceVariableOrder
 	self assert: (memory remapObj: objectThatShouldGoFirst) < (memory remapObj: objectThatShouldGoSecond)
 ]
 
-{ #category : #'tests-6-scavenge-order' }
+{ #category : #'tests-7-scavenge-order' }
 VMSpurScavengerTest >> testScavengedRootObjectsShouldBeCopiedBeforeOtherObjects [
 
 	| firstRootObjectAddress nonRootObjectAddress secondRootObjectAddress |
@@ -507,6 +621,24 @@ VMSpurScavengerTest >> testScavengedRootObjectsShouldBeCopiedBeforeOtherObjects 
 	memory doScavenge: 1 "TenureByAge".
 	
 	self assert: (memory remapObj: secondRootObjectAddress) < (memory remapObj: nonRootObjectAddress)
+]
+
+{ #category : #'tests-6-scavenge-rememberedset' }
+VMSpurScavengerTest >> testStoreYoungObjectInOldObjectShouldRememberOldObject [
+
+	| oldObjectAddress rememberedObjectAddress |
+	
+	"Create an object, reference it, and move it to old space"
+	oldObjectAddress := self newObjectWithSlots: 1.
+	memory coInterpreter newMethod: oldObjectAddress.
+	memory flushNewSpace.
+	oldObjectAddress := memory remapObj: oldObjectAddress.
+
+	"Create a young object and reference it from the old object"
+	rememberedObjectAddress := self newZeroSizedObject.
+	memory storePointer: 0 ofObject: oldObjectAddress withValue: rememberedObjectAddress.
+	
+	self assert: (memory isRemembered: oldObjectAddress).
 ]
 
 { #category : #'tests-3-scavenge-basic' }
@@ -528,7 +660,7 @@ VMSpurScavengerTest >> testUnreferencedObjectCycleShouldNotSurviveScavenge [
 	newObjectOop is referenced by the stack"
 	memory doScavenge: 1. "TenureByAge"
 	
-	self assertPastSpaceHasOnlyNil
+	self assertPastSpaceIsEmpty
 ]
 
 { #category : #'tests-3-scavenge-basic' }
@@ -546,5 +678,5 @@ VMSpurScavengerTest >> testUnreferencedObjectGraphShouldNotSurviveScavenge [
 	newObjectOop is referenced by the stack"
 	memory doScavenge: 1. "TenureByAge"
 	
-	self assertPastSpaceHasOnlyNil
+	self assertPastSpaceIsEmpty
 ]
