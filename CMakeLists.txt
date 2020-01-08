@@ -291,6 +291,7 @@ set(SUPPORT_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/parameters.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/fileDialogCommon.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/stringUtilities.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/imageAccess.c
 )
 
 set(VM_SOURCES
