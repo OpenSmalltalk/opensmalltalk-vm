@@ -77,7 +77,7 @@ static int isFileURL(int urlOop) {
   has been established. Only necessary if some
   sort of asynchronous communications are used.
 */
-EXPORT(int) primitivePluginBrowserReady(void)
+EXPORT(sqInt) primitivePluginBrowserReady(void)
 {
   if(!fBrowserMode) {
     /* fast failure is better when not in browser */
@@ -97,7 +97,7 @@ EXPORT(int) primitivePluginBrowserReady(void)
   Returns a handle used in subsequent calls to plugin
   stream functions.
 */
-EXPORT(int) primitivePluginRequestURLStream(void)
+EXPORT(sqInt) primitivePluginRequestURLStream(void)
 {
   sqStreamRequest *req;
   int id, url, length, semaIndex;
@@ -133,7 +133,7 @@ EXPORT(int) primitivePluginRequestURLStream(void)
   primitivePluginRequestURL: url target: target semaIndex: semaIndex
   Request a URL into the given target.
 */
-EXPORT(int) primitivePluginRequestURL(void)
+EXPORT(sqInt) primitivePluginRequestURL(void)
 {
   sqStreamRequest *req;
   int url, urlLength;
@@ -176,7 +176,7 @@ EXPORT(int) primitivePluginRequestURL(void)
   primitivePluginPostURL: url target: target data: data semaIndex: semaIndex
   Post data to a URL.
 */
-EXPORT(int) primitivePluginPostURL(void)
+EXPORT(sqInt) primitivePluginPostURL(void)
 {
   sqStreamRequest *req;
   int url, urlLength;
@@ -236,7 +236,7 @@ EXPORT(int) primitivePluginPostURL(void)
    security reasons.
 */
 
-EXPORT(int) primitivePluginRequestFileHandle(void)
+EXPORT(sqInt) primitivePluginRequestFileHandle(void)
 {
   sqStreamRequest *req;
   int id, fileHandle;
@@ -266,7 +266,7 @@ EXPORT(int) primitivePluginRequestFileHandle(void)
   primitivePluginDestroyRequest: id
   Destroy a request that has been issued before.
 */
-EXPORT(int) primitivePluginDestroyRequest(void)
+EXPORT(sqInt) primitivePluginDestroyRequest(void)
 {
   sqStreamRequest *req;
   int id;
@@ -289,7 +289,7 @@ EXPORT(int) primitivePluginDestroyRequest(void)
   Return false if the operation was aborted.
   Return nil if the operation is still in progress.
 */
-EXPORT(int) primitivePluginRequestState(void)
+EXPORT(sqInt) primitivePluginRequestState(void)
 {
   sqStreamRequest *req;
   int id;

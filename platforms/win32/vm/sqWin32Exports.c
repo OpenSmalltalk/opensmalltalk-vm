@@ -1,7 +1,8 @@
 #include <stdio.h>
 #include "interp.h"
+#include "sqMemoryAccess.h"
 
-char * GetAttributeString(int id);
+char * GetAttributeString(sqInt id);
 #if !NewspeakVM
 int win32JoystickDebugInfo(void);
 int win32JoystickDebugPrintRawValues(void);
@@ -10,14 +11,14 @@ int win32JoystickDebugPrintAlternativeValues(void);
 #ifndef NO_NETWORK
 int win32DebugPrintSocketState(void);
 #endif
-int primitivePluginBrowserReady(void);
-int primitivePluginRequestURLStream(void);
-int primitivePluginRequestURL(void);
-int primitivePluginPostURL(void);
-int primitivePluginRequestFileHandle(void);
-int primitivePluginDestroyRequest(void);
-int primitivePluginRequestState(void);
-int primitiveDnsInfo(void);
+sqInt primitivePluginBrowserReady(void);
+sqInt primitivePluginRequestURLStream(void);
+sqInt primitivePluginRequestURL(void);
+sqInt primitivePluginPostURL(void);
+sqInt primitivePluginRequestFileHandle(void);
+sqInt primitivePluginDestroyRequest(void);
+sqInt primitivePluginRequestState(void);
+sqInt primitiveDnsInfo(void);
 
 extern void* stWindow;
 extern void* firstMessageHook;

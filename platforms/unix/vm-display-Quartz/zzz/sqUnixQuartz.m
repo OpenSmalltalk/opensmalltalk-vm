@@ -2378,13 +2378,13 @@ static int display_winImageFind(char *buf, int len)
 }
 
 
-static int display_primitivePluginBrowserReady()	{ return primitiveFail(); }
-static int display_primitivePluginRequestURLStream()	{ return primitiveFail(); }
-static int display_primitivePluginRequestURL()		{ return primitiveFail(); }
-static int display_primitivePluginPostURL()		{ return primitiveFail(); }
-static int display_primitivePluginRequestFileHandle()	{ return primitiveFail(); }
-static int display_primitivePluginDestroyRequest()	{ return primitiveFail(); }
-static int display_primitivePluginRequestState()	{ return primitiveFail(); }
+static sqInt display_primitivePluginBrowserReady()	{ return primitiveFail(); }
+static sqInt display_primitivePluginRequestURLStream()	{ return primitiveFail(); }
+static sqInt display_primitivePluginRequestURL()		{ return primitiveFail(); }
+static sqInt display_primitivePluginPostURL()		{ return primitiveFail(); }
+static sqInt display_primitivePluginRequestFileHandle()	{ return primitiveFail(); }
+static sqInt display_primitivePluginDestroyRequest()	{ return primitiveFail(); }
+static sqInt display_primitivePluginRequestState()	{ return primitiveFail(); }
 
 
 /// 
