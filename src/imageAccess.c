@@ -1,5 +1,6 @@
 #include "pharovm/pharo.h"
 #include <stdio.h>
+#include <sys/stat.h>
 
 sqInt basicImageFileClose(sqImageFile f){
 	return fclose((FILE*)f);
@@ -29,6 +30,12 @@ size_t basicImageFileWrite(void* ptr, size_t sz, size_t count, sqImageFile f){
 	return fwrite(ptr, sz, count, (FILE*)f);
 }
 
+int basicImageFileExists(const char* aPath){
+	struct stat st;
+
+	return stat(aPath, &st) == 0;
+}
+
 FileAccessHandler defaultFileAccessHandler = {
 		basicImageFileClose,
 		basicImageFileOpen,
@@ -36,7 +43,8 @@ FileAccessHandler defaultFileAccessHandler = {
 		basicImageFileRead,
 		basicImageFileSeek,
 		basicImageFileSeekEnd,
-		basicImageFileWrite
+		basicImageFileWrite,
+		basicImageFileExists
 };
 
 FileAccessHandler* fileAccessHandler = &defaultFileAccessHandler;

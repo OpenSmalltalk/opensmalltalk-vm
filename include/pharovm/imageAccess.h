@@ -5,10 +5,6 @@
 
 #include <stdlib.h>
 
-#ifndef EXPORT
-#define EXPORT(type) type
-#endif
-
 #define sqImageFile void*
 #define squeakFileOffsetType size_t
 
@@ -22,13 +18,13 @@ typedef struct {
 	int (*imageFileSeek)(sqImageFile f, long int pos);
 	int (*imageFileSeekEnd)(sqImageFile f, long int pos);
 	size_t (*imageFileWrite)(void* ptr, size_t sz, size_t count, sqImageFile f);
-
+	int (*imageFileExists)(const char* aPath);
 } _FileAccessHandler;
 
 typedef _FileAccessHandler FileAccessHandler;
 
 EXPORT(FileAccessHandler*) currentFileAccessHandler();
-void setFileAccessHandler(FileAccessHandler* aFileAccessHandler);
+EXPORT(void) setFileAccessHandler(FileAccessHandler* aFileAccessHandler);
 
 #define sqImageFileClose(f) 				currentFileAccessHandler()->imageFileClose(f)
 #define sqImageFileOpen(fileName, mode)		currentFileAccessHandler()->imageFileOpen(fileName, mode)
@@ -39,6 +35,8 @@ void setFileAccessHandler(FileAccessHandler* aFileAccessHandler);
 #define sqImageFileSeek(f, pos)				currentFileAccessHandler()->imageFileSeek(f, pos)
 #define sqImageFileSeekEnd(f, pos)			currentFileAccessHandler()->imageFileSeekEnd(f, pos)
 #define sqImageFileWrite(ptr, sz, count, f)	currentFileAccessHandler()->imageFileWrite(ptr, sz, count, f)
+
+#define sqImageFileExists(aPath)			currentFileAccessHandler()->imageFileExists(aPath)
 
 #define sqImageFileStartLocation(fileRef, fileName, size)  0
 

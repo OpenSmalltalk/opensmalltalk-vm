@@ -23,7 +23,6 @@
 #include <limits.h>
 
 #include "sqMemoryAccess.h"
-#include "pharovm/imageAccess.h"
 #include "sqVirtualMachine.h"
 
 
@@ -560,6 +559,8 @@ sqInt readableFormat(sqInt imageVersion);
 sqInt ioCanRenameImage(void);
 sqInt ioCanWriteImage(void);
 sqInt ioDisableImageWrite(void);
+
+#include "pharovm/imageAccess.h"
 
 size_t readImageFromFileHeapSizeStartingAt(sqImageFile f, usqInt desiredHeapSize, size_t imageOffset);
 
