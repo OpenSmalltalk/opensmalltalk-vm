@@ -93,6 +93,12 @@ macro(configure_installables INSTALL_COMPONENT)
             PATTERN *
             PATTERN *.dll EXCLUDE)
 
+	install(
+	    DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/win/"
+	    DESTINATION include/pharovm
+	    COMPONENT include
+	    FILES_MATCHING PATTERN *.h)
+
 endmacro()
 
 macro(add_required_libs_per_platform)
