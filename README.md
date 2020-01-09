@@ -64,8 +64,7 @@ The accepted flavours for the moment are as follows:
 - *CoInterpreterWithQueueFFI*: VM including JIT
 - *StackVM*: VM with context to native stack mapping, without JI
 
-Source Directory Structure
---------------------------
+## Source Directory Structure
 
 The headless mode is developed on top of code of the Cog branch of Opensmalltalk-vm.
 The code that is used without changes is stored in the *extracted* directory. 
@@ -81,6 +80,12 @@ The code that has been specially created or modified for this branch is stored i
 - extracted: This code is literally the same code base used in the normal OpenSmalltalk-VM build.
 - plugins: The code of the different plugins developed for headless mode.
 
+## Editing the VM code in your image
+
+You can load the Pharo code of the VM using Pharo's git client Iceberg.
+You can do so by cloning directly this repository from Iceberg, or by adding an already existing clone to it.
+
+Alternatively, if you're building the VM using the instructions above, the build process does already generate a Pharo image with the VM code loaded. You'll find such Image in the `build/vmmaker` directory inside your build directory.
 
 Overview of OpenSmalltalk-VM
 ----------------------------
