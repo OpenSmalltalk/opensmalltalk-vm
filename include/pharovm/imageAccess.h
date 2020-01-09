@@ -3,8 +3,6 @@
 #ifndef __imageAccess_h__
 #define __imageAccess_h__
 
-#include <stdlib.h>
-
 #define sqImageFile void*
 #define squeakFileOffsetType size_t
 
