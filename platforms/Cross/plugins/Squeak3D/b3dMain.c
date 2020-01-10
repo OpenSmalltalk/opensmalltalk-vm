@@ -14,6 +14,7 @@
 *****************************************************************************/
 #include <stdio.h>  /* printf() */
 #include <stdlib.h> /* exit()   */
+#include <limits.h> /* INT_MIN INT_MAX */
 #if 0
 # include <assert.h> /* assert() */
 #endif
@@ -772,7 +773,9 @@ int b3dComputeIntersection(B3DPrimitiveFace *frontFace,
 	if(det == 0.0) return errorValue;
 	{ 
 		double det2 = ((px * dz2) - (pz * dx2)) / det;
-		return frontFace->leftEdge->xValue + (int)(dx1 * det2);
+        double res = frontFace->leftEdge->xValue + dx1 * det2;
+        if(res < INT_MIN || INT_MAX < res) return errorValue;
+		return (int)(res);
 	}
 	/* not reached */
 }
