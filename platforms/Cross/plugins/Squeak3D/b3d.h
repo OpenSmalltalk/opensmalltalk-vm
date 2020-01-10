@@ -15,6 +15,12 @@
 #ifndef __B3D_H
 #define __B3D_H
 
+/* we need sqInt definition, but we MUST not have interpreter function definitions */
+#ifndef SQ_CONFIG_DONE
+#include "sqConfig.h"
+#endif
+#include "sqMemoryAccess.h"
+
 #ifdef DEBUG
 #define b3dDebug 1
 #else
@@ -64,7 +70,7 @@ typedef struct B3DAttrAllocList {
 } B3DAttrAllocList;
 /************************ End Allocator definitions ************************/
 
-typedef int (*b3dDrawBufferFunction) (int leftX, int rightX, int yValue);
+typedef int (*b3dDrawBufferFunction) (sqInt leftX, sqInt rightX, sqInt yValue);
 
 typedef struct B3DRasterizerState {
 
