@@ -65,6 +65,12 @@ macro(configure_installables INSTALL_COMPONENT)
     DESTINATION "./"
     USE_SOURCE_PERMISSIONS
     COMPONENT ${INSTALL_COMPONENT})
+
+	install(
+	    DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/osx/"
+	    DESTINATION include/pharovm
+	    COMPONENT include
+	    FILES_MATCHING PATTERN *.h)
 endmacro()
 
 macro(add_required_libs_per_platform)

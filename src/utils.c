@@ -509,13 +509,6 @@ EXPORT(int) __cdecl abortMessage(TCHAR *fmt, ...)
 
 #endif
 
-
-int fileExists(const char *aPath){
-	struct stat st;
-
-	return stat(aPath, &st) == 0;
-}
-
 EXPORT(char*) getFullPath(char const *relativePath, char* fullPath, int fullPathSize){
 #ifdef WIN64
 

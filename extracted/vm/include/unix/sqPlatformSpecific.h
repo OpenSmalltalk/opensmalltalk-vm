@@ -89,8 +89,6 @@ extern const pthread_key_t tltiIndex;
 
 #include <sys/types.h>
 
-typedef off_t squeakFileOffsetType;
-
 #undef	sqFilenameFromString
 #undef	sqFilenameFromStringOpen
 #define sqFilenameFromStringOpen sqFilenameFromString
