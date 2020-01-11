@@ -1141,7 +1141,7 @@ void b3dClearSpanBuffer(B3DActiveEdgeTable *aet)
 void b3dDrawSpanBuffer(B3DActiveEdgeTable *aet, int yValue)
 {
 	int leftX, rightX;
-	if(aet->size && currentState->spanDrawer) {
+	if(aet->size && currentState->spanDrawer && yValue >= 0) {
 		leftX = aet->data[0]->xValue >> B3D_FixedToIntShift;
 		rightX = aet->data[aet->size-1]->xValue >> B3D_FixedToIntShift;
 		if(leftX < 0) leftX = 0;
