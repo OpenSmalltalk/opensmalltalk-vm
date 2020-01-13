@@ -45,6 +45,7 @@ static char __buildInfo[] = "UnixOSProcessPlugin VMConstruction-Plugins-OSProces
 # undef EXPORT
 # define EXPORT(returnType) static returnType
 #endif
+#include "pharovm/imageAccess.h"
 
 #include "FilePlugin.h"
 #include "SocketPlugin.h"

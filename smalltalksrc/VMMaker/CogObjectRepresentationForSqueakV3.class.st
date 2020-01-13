@@ -31,8 +31,8 @@ CogObjectRepresentationForSqueakV3 class >> defaultObjectMemoryClass [
 
 { #category : #'class initialization' }
 CogObjectRepresentationForSqueakV3 class >> initialize [
-	RootBit ifNil: [ObjectMemory initializeObjectHeaderConstants].
-	RootBitDigitLength := RootBit digitLength
+	RootBit ifNil: [ ObjectMemory initializeObjectHeaderConstants ].
+	RootBitDigitLength := RootBit bytesCount
 ]
 
 { #category : #accessing }

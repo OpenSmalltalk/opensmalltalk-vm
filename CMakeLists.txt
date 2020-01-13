@@ -215,6 +215,7 @@ check_include_files(sys/ndir.h HAVE_SYS_NDIR_H)
 check_include_files(sys/dir.h HAVE_SYS_DIR_H)
 check_include_files(sys/filio.h HAVE_SYS_FILIO_H)
 check_include_files(sys/time.h HAVE_SYS_TIME_H)
+check_include_files(execinfo.h HAVE_EXECINFO_H)
 
 check_include_files(dlfcn.h HAVE_DLFCN_H)
 check_library_exists(dl dlopen "" HAVE_LIBDL)
@@ -291,6 +292,7 @@ set(SUPPORT_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/parameters.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/fileDialogCommon.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/stringUtilities.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/imageAccess.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/semaphores/platformSemaphore.c
     ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/common/heartbeat.c
 )
@@ -329,11 +331,6 @@ add_third_party_dependencies_per_platform()
 configure_installables(bin)
 
 install(FILES
-  ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/common/sq.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/common/sqMemoryAccess.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/common/sqVirtualMachine.h
-  ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/include/interp.h
-  ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/include/vmCallback.h
   ${CMAKE_CURRENT_BINARY_DIR}/build/include/pharovm/config.h
   DESTINATION include/pharovm
   COMPONENT include)
@@ -341,6 +338,18 @@ install(FILES
 install(
     DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/pharovm"
     DESTINATION include
+    COMPONENT include
+    FILES_MATCHING PATTERN *.h)
+
+install(
+    DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/common/"
+    DESTINATION include/pharovm
+    COMPONENT include
+    FILES_MATCHING PATTERN *.h)
+
+install(
+    DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/generated/vm/include/"
+    DESTINATION include/pharovm
     COMPONENT include
     FILES_MATCHING PATTERN *.h)
 

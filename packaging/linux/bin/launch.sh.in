@@ -26,8 +26,17 @@ fi
 # libc (e.g. through the FFI) then it must use the same version that the VM uses
 # and so it should take precedence over /lib libc.  This is done by setting
 # LD_LIBRARY_PATH appropriately, based on ldd's idea of the libc use by the VM.
+#Try extracting Libc
 LIBC_SO="`/usr/bin/ldd "$BIN/@VM_EXECUTABLE_NAME@" | /bin/fgrep /libc. | sed 's/^.*=> \([^ ]*\).*/\1/'`"
 PLATFORMLIBDIR=`expr "$LIBC_SO" : '\(.*\)/libc.*'`
+
+#If empty try extracting Musl
+if [ "$PLATFORMLIBDIR" = "" ]; then
+{
+	LIBC_SO="`/usr/bin/ldd "$BIN/@VM_EXECUTABLE_NAME@" | /bin/fgrep libc. | sed 's/^.*=> \([^ ]*\).*/\1/'`"
+	PLATFORMLIBDIR=`expr "$LIBC_SO" : '\(.*\)/ld-musl.*'`
+}
+fi
 
 if [ "$PLATFORMLIBDIR" = "" ]; then
 {

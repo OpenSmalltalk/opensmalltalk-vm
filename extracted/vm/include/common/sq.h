@@ -67,22 +67,6 @@
 #define VM_EXPORT
 #define VM_FUNCTION_EXPORT(returnType) returnType
 
-/* Image save/restore macros. */
-
-/* Note: The image file save and restore code uses these macros; they
-   can be redefined in sqPlatformSpecific.h if desired. These default
-   versions are defined in terms of the ANSI Standard C libraries.
-*/
-#define sqImageFile					   FILE *
-#define sqImageFileClose(f)                  		   fclose(f)
-#define sqImageFileOpen(fileName, mode)      		   fopen(fileName, mode)
-#define sqImageFilePosition(f)               		   ftell(f)
-#define sqImageFileRead(ptr, sz, count, f)   		   fread(ptr, sz, count, f)
-#define sqImageFileSeek(f, pos)              		   fseek(f, pos, SEEK_SET)
-#define sqImageFileSeekEnd(f, pos)              	   fseek(f, pos, SEEK_END)
-#define sqImageFileWrite(ptr, sz, count, f)  		   fwrite(ptr, sz, count, f)
-#define sqImageFileStartLocation(fileRef, fileName, size)  0
-
 /* Platform-dependent macros for handling object memory. */
 
 /* Note: The grow/shrink macros assume that the object memory can be extended
@@ -583,9 +567,9 @@ sqInt ioCanRenameImage(void);
 sqInt ioCanWriteImage(void);
 sqInt ioDisableImageWrite(void);
 
-/* Save/restore. */
-/* Read the image from the given file starting at the given image offset */
-size_t readImageFromFileHeapSizeStartingAt(sqImageFile f, usqInt desiredHeapSize, squeakFileOffsetType imageOffset);
+#include "pharovm/imageAccess.h"
+
+size_t readImageFromFileHeapSizeStartingAt(sqImageFile f, usqInt desiredHeapSize, size_t imageOffset);
 
 /* Clipboard (cut/copy/paste). */
 sqInt clipboardSize(void);

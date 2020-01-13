@@ -178,10 +178,10 @@ static int
 loadPharoImage(const char* fileName)
 {
     size_t imageSize = 0;
-    FILE* imageFile = NULL;
+    sqImageFile imageFile = NULL;
 
     /* Open the image file. */
-    imageFile = fopen(fileName, "rb");
+    imageFile = sqImageFileOpen(fileName, "rb");
     if(!imageFile)
 	{
     	perror("Opening Image");
@@ -189,12 +189,12 @@ loadPharoImage(const char* fileName)
     }
 
     /* Get the size of the image file*/
-    fseek(imageFile, 0, SEEK_END);
-    imageSize = ftell(imageFile);
-    fseek(imageFile, 0, SEEK_SET);
+    sqImageFileSeekEnd(imageFile, 0);
+    imageSize = sqImageFilePosition(imageFile);
+    sqImageFileSeek(imageFile, 0);
 
     readImageFromFileHeapSizeStartingAt(imageFile, 0, 0);
-    fclose(imageFile);
+    sqImageFileClose(imageFile);
 
     char* fullImageName = alloca(FILENAME_MAX);
 	fullImageName = getFullPath(fileName, fullImageName, FILENAME_MAX);
