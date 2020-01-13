@@ -376,8 +376,11 @@ such third-party acknowledgments.
 		return 0;
 	}
 	
-	NSNumber *typeCode = [NSNumber numberWithUnsignedLong: CFSwapInt32HostToBig(*((uint32_t *) fType))];
-	NSNumber *creatorCode = [NSNumber numberWithUnsignedLong: CFSwapInt32HostToBig(*((uint32_t *) fCreator))];
+    uint32_t type,creator;
+    memcpy( &type , fType , sizeof(type) );
+    memcpy( &creator , fCreator , sizeof(creator) );
+	NSNumber *typeCode = [NSNumber numberWithUnsignedLong: CFSwapInt32HostToBig(type)];
+	NSNumber *creatorCode = [NSNumber numberWithUnsignedLong: CFSwapInt32HostToBig(creator)];
     return [fileMgr
              setAttributes: @{ NSFileHFSTypeCode: typeCode, NSFileHFSCreatorCode: creatorCode }
              ofItemAtPath: filePath
