@@ -212,3 +212,18 @@ getlog(long *len)
 	return gdb_log;
 }
 
+void
+storeIntegerRegisterStateOfinto(void *cpu, int *registerState)
+{
+	for (int n = -1; ++n < 16;)
+		registerState[n] = ((ARMul_State *)cpu)->Reg[n];
+#if 1
+	registerState[16] = ((ARMul_State *)cpu)->Cpsr;
+#else
+	registerState[16] = ((((ARMul_State *)cpu)->NFlag & 1) << 5)
+					  + ((((ARMul_State *)cpu)->ZFlag & 1) << 4)
+					  + ((((ARMul_State *)cpu)->CFlag & 1) << 3)
+					  + ((((ARMul_State *)cpu)->VFlag & 1) << 2)
+					  +  (((ARMul_State *)cpu)->IFFlags & 3);
+#endif
+}

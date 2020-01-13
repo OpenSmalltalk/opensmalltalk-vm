@@ -1,6 +1,8 @@
 /* Include file for the ARMv8/ARM64 processor simulator plugin, GdbARMv8Plugin */
 /* heavily based on BochsIA32Plugin.h */
 
+#define NumIntegerRegisterStateFields 34 /* the 32 registers plus pc & flags */
+
 #define NoError 0
 #define ExecutionError 1
 #define BadCPUInstance 2
@@ -67,3 +69,9 @@ extern long   errorAcorn();
  * The current log (if singleStep failed with SomethingLoggedError).
  */
 extern char *getlog(long *len);
+
+/*
+ * Fill an integer array with the register state, including the pc and, if
+ * appropriate, the condition code flags, etc.
+ */
+extern void storeIntegerRegisterStateOfinto(void *cpu, long long *registerState);

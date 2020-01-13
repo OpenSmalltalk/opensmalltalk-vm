@@ -81,23 +81,23 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 		bx_cpu.sregs[BX_SEG_REG_SS].cache.u.segment.limit = 0xffff;
 		bx_cpu.sregs[BX_SEG_REG_SS].cache.u.segment.limit_scaled = 0xffffffff;
 
-		bx_cpu.gen_reg[BX_64BIT_REG_RAX].dword.erx = 0;
-		bx_cpu.gen_reg[BX_64BIT_REG_RBX].dword.erx = 0;
-		bx_cpu.gen_reg[BX_64BIT_REG_RCX].dword.erx = 0;
-		bx_cpu.gen_reg[BX_64BIT_REG_RDX].dword.erx = 0;
-		bx_cpu.gen_reg[BX_64BIT_REG_RSP].dword.erx = 0;
-		bx_cpu.gen_reg[BX_64BIT_REG_RBP].dword.erx = 0;
-		bx_cpu.gen_reg[BX_64BIT_REG_RSI].dword.erx = 0;
-		bx_cpu.gen_reg[BX_64BIT_REG_RDI].dword.erx = 0;
-		bx_cpu.gen_reg[BX_64BIT_REG_R8].dword.erx = 0;
-		bx_cpu.gen_reg[BX_64BIT_REG_R9].dword.erx = 0;
-		bx_cpu.gen_reg[BX_64BIT_REG_R10].dword.erx = 0;
-		bx_cpu.gen_reg[BX_64BIT_REG_R11].dword.erx = 0;
-		bx_cpu.gen_reg[BX_64BIT_REG_R12].dword.erx = 0;
-		bx_cpu.gen_reg[BX_64BIT_REG_R13].dword.erx = 0;
-		bx_cpu.gen_reg[BX_64BIT_REG_R14].dword.erx = 0;
-		bx_cpu.gen_reg[BX_64BIT_REG_R15].dword.erx = 0;
-		bx_cpu.gen_reg[BX_64BIT_REG_RIP].dword.erx = 0;
+		bx_cpu.gen_reg[BX_64BIT_REG_RAX].rrx = 0;
+		bx_cpu.gen_reg[BX_64BIT_REG_RBX].rrx = 0;
+		bx_cpu.gen_reg[BX_64BIT_REG_RCX].rrx = 0;
+		bx_cpu.gen_reg[BX_64BIT_REG_RDX].rrx = 0;
+		bx_cpu.gen_reg[BX_64BIT_REG_RSP].rrx = 0;
+		bx_cpu.gen_reg[BX_64BIT_REG_RBP].rrx = 0;
+		bx_cpu.gen_reg[BX_64BIT_REG_RSI].rrx = 0;
+		bx_cpu.gen_reg[BX_64BIT_REG_RDI].rrx = 0;
+		bx_cpu.gen_reg[BX_64BIT_REG_R8 ].rrx = 0;
+		bx_cpu.gen_reg[BX_64BIT_REG_R9 ].rrx = 0;
+		bx_cpu.gen_reg[BX_64BIT_REG_R10].rrx = 0;
+		bx_cpu.gen_reg[BX_64BIT_REG_R11].rrx = 0;
+		bx_cpu.gen_reg[BX_64BIT_REG_R12].rrx = 0;
+		bx_cpu.gen_reg[BX_64BIT_REG_R13].rrx = 0;
+		bx_cpu.gen_reg[BX_64BIT_REG_R14].rrx = 0;
+		bx_cpu.gen_reg[BX_64BIT_REG_R15].rrx = 0;
+		bx_cpu.gen_reg[BX_64BIT_REG_RIP].rrx = 0;
 		bx_cpu.efer.set_LMA(1); /* Hack.  The old version we use have doesn't support set_EFER */
 		bx_cpu.SetCR0(0x80000101); // Enter protected mode
 		return bx_cpu.cpu_mode == BX_MODE_LONG_64
@@ -119,7 +119,7 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 		minReadAddress = minAddr;
 		minWriteAddress = minWriteMaxExecAddr;
 		if ((theErrorAcorn = setjmp(anx64->jmp_buf_env)) != 0) {
-			anx64->gen_reg[BX_64BIT_REG_RIP].dword.erx = anx64->prev_rip;
+			anx64->gen_reg[BX_64BIT_REG_RIP].rrx = anx64->prev_rip;
 			return theErrorAcorn;
 		}
 
@@ -151,7 +151,7 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 		minReadAddress = minAddr;
 		minWriteAddress = minWriteMaxExecAddr;
 		if ((theErrorAcorn = setjmp(anx64->jmp_buf_env)) != 0) {
-			anx64->gen_reg[BX_64BIT_REG_RIP].dword.erx = anx64->prev_rip;
+			anx64->gen_reg[BX_64BIT_REG_RIP].rrx = anx64->prev_rip;
 			return theErrorAcorn;
 		}
 
@@ -168,7 +168,7 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 		bx_pc_system.kill_bochs_request = 0;
 		anx64->cpu_loop(0 /* = "run forever" until exception or interupt */);
 		if (anx64->stop_reason != STOP_NO_REASON) {
-			anx64->gen_reg[BX_64BIT_REG_RIP].dword.erx = anx64->prev_rip;
+			anx64->gen_reg[BX_64BIT_REG_RIP].rrx = anx64->prev_rip;
 			if (theErrorAcorn == NoError)
 				theErrorAcorn = ExecutionError;
 			return theErrorAcorn;
@@ -246,6 +246,29 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 	{
 		*len = blidx;
 		return bochs_log;
+	}
+	void
+	storeIntegerRegisterStateOfinto(void *cpu, long long *registerState)
+	{
+		/* N.B. RAX=0,RCX=1,RDX=2,RBX=3,RSP=4,RBP=5,RSI=6,RDI=7 */
+		registerState[0]  = bx_cpu.gen_reg[BX_64BIT_REG_RAX].rrx;
+		registerState[1]  = bx_cpu.gen_reg[BX_64BIT_REG_RBX].rrx;
+		registerState[2]  = bx_cpu.gen_reg[BX_64BIT_REG_RCX].rrx;
+		registerState[3]  = bx_cpu.gen_reg[BX_64BIT_REG_RDX].rrx;
+		registerState[4]  = bx_cpu.gen_reg[BX_64BIT_REG_RSP].rrx;
+		registerState[5]  = bx_cpu.gen_reg[BX_64BIT_REG_RBP].rrx;
+		registerState[6]  = bx_cpu.gen_reg[BX_64BIT_REG_RDI].rrx;
+		registerState[7]  = bx_cpu.gen_reg[BX_64BIT_REG_RSI].rrx;
+		registerState[8]  = bx_cpu.gen_reg[BX_64BIT_REG_R8 ].rrx;
+		registerState[9]  = bx_cpu.gen_reg[BX_64BIT_REG_R9 ].rrx;
+		registerState[10] = bx_cpu.gen_reg[BX_64BIT_REG_R10].rrx;
+		registerState[11] = bx_cpu.gen_reg[BX_64BIT_REG_R11].rrx;
+		registerState[12] = bx_cpu.gen_reg[BX_64BIT_REG_R12].rrx;
+		registerState[13] = bx_cpu.gen_reg[BX_64BIT_REG_R13].rrx;
+		registerState[14] = bx_cpu.gen_reg[BX_64BIT_REG_R14].rrx;
+		registerState[15] = bx_cpu.gen_reg[BX_64BIT_REG_R15].rrx;
+		registerState[16] = bx_cpu.gen_reg[BX_64BIT_REG_RIP].rrx;
+		registerState[17] = bx_cpu.eflags;
 	}
 } // extern "C"
 

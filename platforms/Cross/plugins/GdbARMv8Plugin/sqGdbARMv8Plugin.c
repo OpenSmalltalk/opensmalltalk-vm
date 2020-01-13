@@ -98,12 +98,9 @@ runOnCPU(sim_cpu *cpu, void *memory,
 	minWriteAddress = minWriteMaxExecAddr;
 	theErrorAcorn = 0;
 
-	if ((theErrorAcorn = setjmp(error_abort)) != 0) {
-#if 0
-		anx64->gen_reg[BX_64BIT_REG_RIP].dword.erx = anx64->prev_rip;
-#endif
+	if ((theErrorAcorn = setjmp(error_abort)) != 0)
 		return theErrorAcorn;
-	}
+
 	assert(lastCPU->base.engine.jmpbuf = error_abort);
 	gdblog_index = 0;
 
@@ -231,26 +228,20 @@ getlog(long *len)
 	return gdb_log;
 }
 
+void
+storeIntegerRegisterStateOfinto(void *cpu, long long *registerState)
+{
+	for (int n = -1; ++n < 32;)
+		registerState[n] = ((sim_cpu *)cpu)->gr[n].u64;
+	registerState[32] = ((sim_cpu *)cpu)->pc;
+	registerState[33] = ((sim_cpu *)cpu)->CPSR;
+}
+
 /* Adapted from sim/aarch64/memory.c -- Memory accessor functions for the AArch64 simulator
 
    Copyright (C) 2015-2019 Free Software Foundation, Inc.
 
  */
-
-#if 0
-#include "config.h"
-#include <sys/types.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include "libiberty.h"
-
-#include "memory.h"
-#include "simulator.h"
-
-#include "sim-core.h"
-#endif
 
 /* FIXME: AArch64 requires aligned memory access if SCTRLR_ELx.A is set,
    but we are not implementing that here.  */
