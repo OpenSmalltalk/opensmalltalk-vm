@@ -7,7 +7,10 @@ The image running on the VM is responsible of handling the UI and the events.
 
 The image includes a default implementation of the handling of UI through the use of SDL2.
 
-For more details about the whole Pharo VM project refer to our [wiki](https://github.com/pharo-project/opensmalltalk-vm/wiki)
+For more details about the whole Pharo VM project refer to our [wiki](https://github.com/pharo-project/opensmalltalk-vm/wiki). 
+
+This is a fork of [OpenSmalltalk-vm](https://github.com/OpenSmalltalk/opensmalltalk-vm).
+We are doing our best to keep compatibility and contribute back, as long as it fits the objective of Pharo community.
 
 ## CI
 
