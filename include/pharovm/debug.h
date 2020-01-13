@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdio.h>
+
 #ifndef EXPORT
 #define EXPORT(x)  x
 #endif
