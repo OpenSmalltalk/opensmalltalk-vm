@@ -69,22 +69,6 @@
 
 /* Platform-dependent macros for handling object memory. */
 
-/* Note: The grow/shrink macros assume that the object memory can be extended
-   continuously at its prior end. The garbage collector cannot deal with
-   'holes' in the object memory so the support code needs to reserve the
-   virtual maximum of pages that can be allocated beforehand. The amount of
-   'extra' memory should describe the amount of memory that can be allocated
-   from the OS (including swap space if the flag is set to true) and must not
-   exceed the prior reserved memory.
-   In other words: don't you dare to report more free space then you can
-   actually allocate.
-   The default implementation assumes a fixed size memory allocated at startup.
-*/
-#define sqAllocateMemory(minHeapSize, desiredHeapSize)  malloc(desiredHeapSize)
-#define sqGrowMemoryBy(oldLimit, delta)			oldLimit
-#define sqShrinkMemoryBy(oldLimit, delta)		oldLimit
-#define sqMemoryExtraBytesLeft(includingSwap)		0
-
 #if SPURVM
 /* Allocate a region of memory of al least sz bytes, at or above minAddr.
  * If the attempt fails, answer null.  If the attempt succeeds, answer the
