@@ -41,7 +41,7 @@ static char  *maxAppAddr;	/* SYSTEM_INFO lpMaximumApplicationAddress */
 /* sqAllocateMemory: Initialize virtual memory                          */
 /************************************************************************/
 void *
-sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
+sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize, usqInt desiredBaseAddress)
 {
 	char *hint, *address, *alloc;
 	usqIntptr_t alignment;

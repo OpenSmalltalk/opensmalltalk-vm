@@ -79,16 +79,11 @@ void		sqFilenameFromStringOpen(char *buffer,sqInt fileIndex, long fileLength);
 void		sqFilenameFromString(char *buffer,sqInt fileIndex, long fileLength);
 #undef allocateMemoryMinimumImageFileHeaderSize
 
-#if SPURVM
-extern usqInt sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize);
-# define allocateMemoryMinimumImageFileHeaderSize(heapSize, minimumMemory, fileStream, headerSize) \
-sqAllocateMemory(minimumMemory, heapSize)
+extern usqInt sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize, usqInt baseAddress);
+#define allocateMemoryMinimumImageFileHeaderSizeBaseAddress(heapSize, minimumMemory, fileStream, headerSize, baseAddress) \
+sqAllocateMemory(minimumMemory, heapSize, baseAddress)
+
 # define sqMacMemoryFree() 
-#else
-usqInt sqAllocateMemoryMac(usqInt desiredHeapSize,sqInt minHeapSize, FILE * f,usqInt headersize);
-#define allocateMemoryMinimumImageFileHeaderSize(heapSize, minimumMemory, fileStream, headerSize) \
-sqAllocateMemoryMac(heapSize, minimumMemory, fileStream, headerSize)
-#endif
 
 #include <dlfcn.h>
 
