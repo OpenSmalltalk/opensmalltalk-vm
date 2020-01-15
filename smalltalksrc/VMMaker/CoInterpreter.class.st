@@ -6945,7 +6945,8 @@ CoInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: imag
 								allocateMemory: heapSize
 								minimum: minimumMemory
 								imageFile: f
-								headerSize: headerSize) asUnsignedInteger.
+								headerSize: headerSize
+								desiredPosition: oldBaseAddr) asUnsignedInteger.
 	objectMemory memory ifNil:
 		[self insufficientMemoryAvailableError].
 

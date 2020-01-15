@@ -2526,6 +2526,26 @@ StackInterpreter >> allocateMemory: heapSize minimum: minimumMemory imageFile: f
 							HeaderSize: headerSize)
 ]
 
+{ #category : #'image save/restore' }
+StackInterpreter >> allocateMemory: heapSize minimum: minimumMemory imageFile: fileStream headerSize: headerSize desiredPosition: desiredBaseAddress [
+	"Translate to C function call with (case sensitive) camelCase. The purpose of this
+	 method is to document the translation.
+	 The default implementation is sqAllocateMemory(minimumMemory, heapSize). This may
+	 be redefined to make use of the image file and header size parameters for efficient
+	 implementation with mmap().
+	 See CCodeGenerator>>writeDefaultMacrosOn: which specifies a default implementation."
+
+	<inline: true>
+	<returnTypeC: #'char *'>
+	<var: #fileStream type: #sqImageFile>
+	^self pointerForOop: (self
+							allocateMemory: heapSize
+							Minimum: minimumMemory
+							ImageFile: fileStream
+							HeaderSize: headerSize
+							BaseAddress: desiredBaseAddress)
+]
+
 { #category : #'compiled methods' }
 StackInterpreter >> alternateHeaderHasPrimitiveFlag: methodHeader [
 	<inline: true>
@@ -19344,7 +19364,8 @@ StackInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: i
 								allocateMemory: heapSize
 								minimum: minimumMemory
 								imageFile: f
-								headerSize: headerSize) asUnsignedInteger.
+								headerSize: headerSize
+								desiredPosition: oldBaseAddr) asUnsignedInteger.
 	objectMemory memory ifNil: [self insufficientMemoryAvailableError].
 
 	objectMemory
