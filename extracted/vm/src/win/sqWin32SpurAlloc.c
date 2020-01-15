@@ -40,7 +40,7 @@ static char  *maxAppAddr;	/* SYSTEM_INFO lpMaximumApplicationAddress */
 /************************************************************************/
 /* sqAllocateMemory: Initialize virtual memory                          */
 /************************************************************************/
-void *
+usqInt
 sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize, usqInt desiredBaseAddress)
 {
 	char *hint, *address, *alloc;
