@@ -70,6 +70,8 @@ VMSpurMemoryManagerTest >> setUp [
 	memory coInterpreter: interpreter.
 	interpreter objectMemory: memory.
 	
+	memory bootstrapping: true.
+	
 	memory
 		allocateMemoryOfSize: oldSpaceSize
 		newSpaceSize: newSpaceSize
@@ -77,6 +79,7 @@ VMSpurMemoryManagerTest >> setUp [
 		codeSize: 0.
 	memory initializePostBootstrap.
 	memory setHeapSizeAtPreviousGC.
+	memory segmentManager collapseSegmentsPostSwizzle.
 	
 	"Schedule a GC, so it does not try to schedule one"
 	memory needGCFlag: 1.
