@@ -1465,6 +1465,17 @@ SpurMemoryManager >> allExistingOldSpaceObjectsDo: aBlock [
 ]
 
 { #category : #'free space' }
+SpurMemoryManager >> allFreeHeads [
+	<doNotGenerate>
+	| freeObjects |
+	freeObjects := OrderedCollection new.
+	0 to: self numFreeLists - 1 do: [:i| | obj |
+		obj := freeLists at: i.
+		obj ~= 0 ifTrue: [ freeObjects add: obj ]].
+	^freeObjects
+]
+
+{ #category : #'free space' }
 SpurMemoryManager >> allFreeObjects [
 	<doNotGenerate>
 	| freeObjects |
