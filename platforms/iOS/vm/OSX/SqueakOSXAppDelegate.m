@@ -167,6 +167,16 @@ SqueakOSXAppDelegate *gDelegateApp;
     
 }
 
+- (void) placeMainWindowOnLargerScreenGivenWidth: (sqInt) width height: (sqInt) height {
+        for (NSScreen *screen in [NSScreen screens]) {
+                CGSize screenSize = screen.visibleFrame.size;
+                if ((height <= screenSize.height) && (width <= screenSize.width)) {
+                    self.window.frameOrigin = screen.visibleFrame.origin;
+                    break;
+                }
+        }
+}
+
 - (id) createPossibleWindow {
     // Creates the window
     [self setupWindow];
