@@ -51,6 +51,7 @@ such third-party acknowledgments.
 
 - (void) makeMainWindowOnMainThread ;
 - (void) makeMainWindow;
+- (void) placeMainWindowOnLargerScreenGivenWidth: (sqInt) width height: (sqInt) height;
 - (id) createPossibleWindow;
 - (void) workerThreadStart;
 - (void) singleThreadStart;

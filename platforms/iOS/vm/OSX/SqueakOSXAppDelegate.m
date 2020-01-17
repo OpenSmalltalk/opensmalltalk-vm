@@ -171,6 +171,16 @@ SqueakOSXAppDelegate *gDelegateApp;
     return [self window];
 }
 
+- (void) placeMainWindowOnLargerScreenGivenWidth: (sqInt) width height: (sqInt) height {
+        for (NSScreen *screen in [NSScreen screens]) {
+                CGSize screenSize = screen.visibleFrame.size;
+                if ((height <= screenSize.height) && (width <= screenSize.width)) {
+                    self.window.frameOrigin = screen.visibleFrame.origin;
+                    break;
+                }
+        }
+}
+
 - (BOOL)application:(NSApplication *)theApplication openFile:(NSString *)fileName {
 	if (self.checkForFileNameOnFirstParm == YES) {
 		self.checkForFileNameOnFirstParm = NO;
