@@ -172,6 +172,7 @@ SqueakOSXAppDelegate *gDelegateApp;
 }
 
 - (void) placeMainWindowOnLargerScreenGivenWidth: (sqInt) width height: (sqInt) height {
+#if SQ_HOST64 /* This API is 64-bits only :-( */
         for (NSScreen *screen in [NSScreen screens]) {
                 CGSize screenSize = screen.visibleFrame.size;
                 if ((height <= screenSize.height) && (width <= screenSize.width)) {
@@ -179,6 +180,7 @@ SqueakOSXAppDelegate *gDelegateApp;
                     break;
                 }
         }
+#endif
 }
 
 - (BOOL)application:(NSApplication *)theApplication openFile:(NSString *)fileName {

@@ -204,6 +204,13 @@ sqInt primitiveFailForFFIExceptionat(usqLong exceptionCode, usqInt pc);
 sqInt isBooleanObject(sqInt oop);
 sqInt isPositiveMachineIntegerObject(sqInt oop);
 #endif
+#if VM_PROXY_MINOR > 15 /* Spur integer and float array classes */
+sqInt classDoubleByteArray(void);
+sqInt classWordArray(void);
+sqInt classDoubleWordArray(void);
+sqInt classFloat32Array(void);
+sqInt classFloat64Array(void);
+#endif
 
 void *ioLoadFunctionFrom(char *fnName, char *modName);
 
@@ -542,6 +549,13 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 #if VM_PROXY_MINOR > 14 /* SmartSyntaxPlugin validation rewrite support */
 	VM->isBooleanObject = isBooleanObject ;
 	VM->isPositiveMachineIntegerObject = isPositiveMachineIntegerObject;
+#endif
+#if VM_PROXY_MINOR > 15 /* Spur integer and float array classes */
+	VM->classDoubleByteArray = classDoubleByteArray;
+	VM->classWordArray = classWordArray;
+	VM->classDoubleWordArray = classDoubleWordArray;
+	VM->classFloat32Array = classFloat32Array;
+	VM->classFloat64Array = classFloat64Array;
 #endif
 	return VM;
 }

@@ -45,6 +45,16 @@
 # define PrimErrBadMethod 12
 # define PrimErrNamedInternal 13
 # define PrimErrObjectMayMove 14
+# define PrimErrLimitExceeded 15
+# define PrimErrObjectIsPinned 16
+# define PrimErrWritePastObject 17
+# define PrimErrObjectMoved 18
+# define PrimErrObjectNotPinned 19
+# define PrimErrCallbackError 20
+# define PrimErrOSError 21
+# define PrimErrFFIException 22
+# define PrimErrNeedCompaction 23
+# define PrimErrOperationFailed 24
 
 /* VMCallbackContext opaque type avoids all including setjmp.h & vmCallback.h */
 typedef struct _VMCallbackContext *vmccp;
@@ -365,6 +375,13 @@ typedef struct VirtualMachine {
 #if VM_PROXY_MINOR > 14 /* SmartSyntaxPlugin validation rewrite support */
   sqInt  (*isBooleanObject)(sqInt oop);
   sqInt  (*isPositiveMachineIntegerObject)(sqInt);
+#endif
+#if VM_PROXY_MINOR > 15 /* Spur integer and float array classes */
+  sqInt (*classDoubleByteArray)(void);
+  sqInt (*classWordArray)(void);
+  sqInt (*classDoubleWordArray)(void);
+  sqInt (*classFloat32Array)(void);
+  sqInt (*classFloat64Array)(void);
 #endif
 } VirtualMachine;
 
