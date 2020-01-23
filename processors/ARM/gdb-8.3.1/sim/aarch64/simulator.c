@@ -14007,7 +14007,14 @@ system_get (sim_cpu *cpu, unsigned op0, unsigned op1, unsigned crn,
 
   if (crn == 0 && op1 == 3 && crm == 0 && op2 == 1)
     /* Cache Type Register.  */
+#if COG
+    /* Value on Broadcom BCM2711/Raspberry Pi 4 B
+	 * Quad core 64-bit ARM-Cortex A72
+	 */
+    return 0x8444c004;
+#else
     return 0x80008000UL;
+#endif
 
   if (crn == 13 && op1 == 3 && crm == 0 && op2 == 2)
     /* TPIDR_EL0 - thread pointer id.  */
@@ -14166,7 +14173,7 @@ dexSystem (sim_cpu *cpu)
      op2 : DSB ==> 100, DMB ==> 101, ISB ==> 110
      CRm<3:2> ==> domain, CRm<1:0> ==> types,
      domain : 00 ==> OuterShareable, 01 ==> Nonshareable,
-              10 ==> InerShareable, 11 ==> FullSystem
+              10 ==> InnerShareable, 11 ==> FullSystem
      types :  01 ==> Reads, 10 ==> Writes,
               11 ==> All, 00 ==> All (domain == FullSystem).  */
 
@@ -14213,9 +14220,16 @@ dexSystem (sim_cpu *cpu)
       do_mrs (cpu);
       return;
 
+#if COG
+    case 0x087:
+    case 0x0B7:
+      do_SYS (cpu); /* DC/IC are aliases of SYS.  */
+      return;
+#else
     case 0x0B7:
       do_SYS (cpu); /* DC is an alias of SYS.  */
       return;
+#endif
 
     default:
       if (INSTR (21, 20) == 0x1)
