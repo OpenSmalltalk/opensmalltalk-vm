@@ -37,4 +37,8 @@
 /* Make the gcc/clang asm keyword available, even when running
  * in standard C mode.
  */
-#define asm __asm__
+#if __GNUC__ >= 9
+# define asm __asm
+#else
+# define asm __asm__
+#endif

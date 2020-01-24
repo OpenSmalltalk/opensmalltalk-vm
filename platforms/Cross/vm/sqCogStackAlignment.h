@@ -82,23 +82,23 @@
 	 * http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.den0024a/index.html
 	 */
 #  if __GNUC__
-#   define getfp() ({ usqIntptr_t fp;								\
-					  asm volatile ("mov x0, x29" : "=r"(x29) : );	\
-					  fp; })
-#   define getsp() ({ usqIntptr_t sp;								\
-					  asm volatile ("mov x0, sp" : "=r"(sp) : );	\
-					  sp; })
+#   define getfp() ({ usqIntptr_t fpval;							\
+					  __asm volatile ("mov %0, fp" : "=r"(fpval) );	\
+					  fpval; })
+#   define getsp() ({ usqIntptr_t spval;							\
+					  __asm volatile ("mov %0, sp" : "=r"(spval) );	\
+					  spval; })
 
-# define setsp(sp) asm volatile ("ldr x16, %0 \n\t" "mov sp, x16"  : : "m"(sp) )
+#	define setsp(spval) __asm volatile ("mov sp, %0"  : : "r"(spval))
 
 #  endif
-# elif defined(__arm__) || defined(__arm32__) || defined(ARM32)
+# elif defined(__arm32__) || defined(ARM32)
 	/* http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dui0041c/Cegbidie.html
 	 * ARM DUI 0041C Page 9-7
 	 */
 #  if __GNUC__
 #   define getfp() ({ usqIntptr_t fp;								\
-					  asm volatile ("mov %0, %%fp" : "=r"(fp) : );	\
+					 asm volatile ("mov %0, %%fp" : "=r"(fp) : );	\
 					  fp; })
 #   define getsp() ({ usqIntptr_t sp;								\
 					  asm volatile ("mov %0, %%sp" : "=r"(sp) : );	\
@@ -106,10 +106,10 @@
 #  endif
 # elif defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
 #  if __GNUC__ || __clang__
-#   define getfp() ({ register usqIntptr_t fp;					\
+#	define getfp() ({ register usqIntptr_t fp;						\
 					  asm volatile ("movq %%rbp,%0" : "=r"(fp) : );	\
 					  fp; })
-#   define getsp() ({ register usqIntptr_t sp;					\
+#	define getsp() ({ register usqIntptr_t sp;						\
 					  asm volatile ("movq %%rsp,%0" : "=r"(sp) : );	\
 					  sp; })
 #  else /* MSVC for example: use ceGetFP ceGetSP */

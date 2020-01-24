@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 # Stack Spur VM with VM profiler and threaded heartbeat
-INSTALLDIR=sqstkspur64linuxht
+INSTALLDIR=sqstkspur64ARMv8linuxht
 OPT="-g -O2 -DNDEBUG -DDEBUGVM=0"
 
 if [ $# -ge 1 ]; then
