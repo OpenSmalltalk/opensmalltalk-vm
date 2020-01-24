@@ -129,7 +129,7 @@ sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress
 	delta = max(pageSize,1024*1024);
 
 	while ((unsigned long)(address + bytes) > (unsigned long)address) {
-		alloc = mmap(address, bytes, PROT_READ | PROT_WRITE,
+		alloc = mmap(address, bytes, PROT_READ | PROT_WRITE | PROT_EXEC,
 					 MAP_ANON | MAP_PRIVATE, -1, 0);
 		if (alloc == MAP_FAILED) {
 			mmapErrno = errno;

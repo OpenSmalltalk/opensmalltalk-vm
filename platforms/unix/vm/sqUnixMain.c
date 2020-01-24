@@ -1021,9 +1021,25 @@ printRegisterState(ucontext_t *uap)
 			regs[REG_R12], regs[REG_R13], regs[REG_R14], regs[REG_R15],
 			regs[REG_RIP]);
 	return (void *)regs[REG_RIP];
-# elif __linux__ && (defined(__arm64__))
- 	printf("@@FIXME@@: derive register state from a ucontext_t on aarch64 \n");
-	return 0;
+# elif __linux__ && (defined(__arm64__) || defined(__aarch64__))
+	unsigned long *regs = (unsigned long *)&uap->uc_mcontext.regs[0];
+	printf(	"\tx0 %p x1 %p x2 %p x3 %p\n"
+			"\tx4 %p x5 %p x6 %p x7 %p\n"
+			"\tx8 %p x9 %p x10 %p x11 %p\n"
+			"\tx12 %p x13 %p x14 %p x15 %p\n"
+			"\tx16 %p x17 %p x18 %p x19 %p\n"
+			"\tx20 %p x21 %p x22 %p x23 %p\n"
+			"\tx24 %p x25 %p x26 %p x27 %p\n"
+			"\tx29 %p  fp %p  lr %p  sp %p\n",
+			regs[0], regs[1], regs[2], regs[3],
+			regs[4], regs[5], regs[6], regs[7],
+			regs[8], regs[9], regs[10], regs[11],
+			regs[12], regs[13], regs[14], regs[15],
+			regs[16], regs[17], regs[18], regs[19],
+			regs[20], regs[21], regs[22], regs[23],
+			regs[24], regs[25], regs[26], regs[27],
+			regs[28], regs[29], regs[30], uap->uc_mcontext.sp);
+	return uap->uc_mcontext.pc;
 # elif __linux__ && (defined(__arm__) || defined(__arm32__) || defined(ARM32))
 	struct sigcontext *regs = &uap->uc_mcontext;
 	printf(	"\t r0 0x%08x r1 0x%08x r2 0x%08x r3 0x%08x\n"
