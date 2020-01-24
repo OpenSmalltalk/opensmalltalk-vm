@@ -316,6 +316,8 @@ int b3dQuickSortInitialFaces(B3DPrimitiveObject *obj, int i, int j)
   int ij, k, l, n;
   B3DPrimitiveVertex *di, *dj, *dij, *tt, *vtx = obj->vertices;
 
+  if( i >= j ) return B3D_NO_ERROR;
+
   /* Keep us enough headroom */
   INIT((j-i)*2);
   PUSH(i,j);
@@ -379,7 +381,9 @@ int b3dQuickSortObjects(B3DPrimitiveObject **array, int i, int j)
 {
   int ij, k, l, n;
   B3DPrimitiveObject *di, *dj, *dij, *tmp;
-	
+
+  if( i >= j ) return B3D_NO_ERROR;
+
   /* Keep us enough headroom */
   INIT((j-i)*2);
   PUSH(i,j);
