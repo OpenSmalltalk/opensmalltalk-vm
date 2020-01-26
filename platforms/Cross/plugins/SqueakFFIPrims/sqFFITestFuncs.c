@@ -118,9 +118,13 @@ EXPORT(ffiTestSSdi5)ffiTestReturnSSdi5() { return ffiTestInitSSdi5(
 EXPORT(double) ffiTestSumSfd(ffiTestSfd x) { return (double) x.a + (double) x.b ; }
 EXPORT(double) ffiTestSumSfd_2(ffiTestSfd x,ffiTestSfd y) { return ffiTestSumSfd(x) + ffiTestSumSfd(y); }
 EXPORT(double) ffiTestSumSfd_4(ffiTestSfd x,ffiTestSfd y,ffiTestSfd z,ffiTestSfd t) { return ffiTestSumSfd_2(x,y) + ffiTestSumSfd_2(z,t); }
+EXPORT(double) ffiTestSumfWithSfd_4(float f,ffiTestSfd x,ffiTestSfd y,ffiTestSfd z,ffiTestSfd t) { return ((double) f) + ffiTestSumSfd_2(x,y) + ffiTestSumSfd_2(z,t); } /* consume 1 float register with first argument */
 EXPORT(double) ffiTestSumSdi(ffiTestSdi x) { return (double) x.a + (double) x.b ; }
 EXPORT(double) ffiTestSumSdi_2(ffiTestSdi x,ffiTestSdi y) { return ffiTestSumSdi(x) + ffiTestSumSdi(y); }
 EXPORT(double) ffiTestSumSdi_4(ffiTestSdi x,ffiTestSdi y,ffiTestSdi z,ffiTestSdi t) { return ffiTestSumSdi_2(x,y) + ffiTestSumSdi_2(z,t); }
+EXPORT(double) ffiTestSumdiWithSdi_4(double a,int b,ffiTestSdi x,ffiTestSdi y,ffiTestSdi z,ffiTestSdi t) { return a + ((double) b) + ffiTestSumSdi_2(x,y) + ffiTestSumSdi_2(z,t); } /* consume one int and 1 float register with 1st two arguments */
+EXPORT(double) ffiTestSumdWithSdi_4(double a,ffiTestSdi x,ffiTestSdi y,ffiTestSdi z,ffiTestSdi t) { return a + ffiTestSumSdi_2(x,y) + ffiTestSumSdi_2(z,t); } /* consume one float register with 1st argument */
+EXPORT(double) ffiTestSumiWithSdi_4(int b,ffiTestSdi x,ffiTestSdi y,ffiTestSdi z,ffiTestSdi t) { return ((double) b) + ffiTestSumSdi_2(x,y) + ffiTestSumSdi_2(z,t); } /* consume one int register with 1st argument */
 EXPORT(double) ffiTestSumSSdi5(ffiTestSSdi5 x) { return ffiTestSumSdi_4(x.a,x.b,x.c,x.d) + ffiTestSumSdi(x.e) ; }
 
 EXPORT(double) ffiTestSumSslf(ffiTestSslf x) { return (double) x.a + (double) x.b + (double) x.c ; }
