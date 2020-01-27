@@ -46,7 +46,7 @@ typedef struct ffiTestBiggerStruct {
 
 typedef struct Sd2 {double a,b;} ffiTestSd2;
 typedef struct Sf2 {float a,b;} ffiTestSf2;
-typedef struct Sl2 {long a,b;} ffiTestSl2;
+typedef struct Sl2 {long long a,b;} ffiTestSl2;
 typedef struct Si2 {int a,b;} ffiTestSi2;
 typedef struct Ss2 {short a,b;} ffiTestSs2;
 typedef struct Ssi {short a; int b;} ffiTestSsi;
