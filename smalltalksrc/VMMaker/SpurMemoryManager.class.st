@@ -1476,6 +1476,21 @@ SpurMemoryManager >> allFreeHeads [
 ]
 
 { #category : #'free space' }
+SpurMemoryManager >> allFreeListHeads [
+	<doNotGenerate>
+	"Return all the head nodes of the free lists.
+	The free lists are all the entries in the freeLists array between 2 and numFreeLists - 1.
+	We skip indexes 0 and 1: index 0 is the free tree and index 1 unused"
+	
+	| freeObjects |
+	freeObjects := OrderedCollection new.
+	2 to: self numFreeLists - 1 do: [:i| | obj |
+		obj := freeLists at: i.
+		obj ~= 0 ifTrue: [ freeObjects add: obj ]].
+	^freeObjects
+]
+
+{ #category : #'free space' }
 SpurMemoryManager >> allFreeObjects [
 	<doNotGenerate>
 	| freeObjects |
