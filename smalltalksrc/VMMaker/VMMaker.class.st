@@ -523,10 +523,12 @@ VMMaker class >> generateMainVM: interpreterClass and: cogitClass with: optionsP
 		with: optionsPairsArray
 		to: srcDirName
 		platformDir: platDirName
-		including: inclusions)
+		including: inclusions).
+		1halt.
+"		 buildCodeGeneratorForInterpreter
 			doCleanupOldFiles;
 			generateInterpreterFile;
-			generateCogitFiles
+			generateCogitFiles"
 ]
 
 { #category : #configurations }

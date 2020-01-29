@@ -4,7 +4,7 @@ Class {
 	#category : #VMMakerTests
 }
 
-{ #category : #'tests-6-allocation-strategy-list-exact' }
+{ #category : #helpers }
 VMSpurOldSpaceTest >> assertFreeListEmpty: aFreeListOop [
 
 	self assert: aFreeListOop equals: 0
@@ -19,7 +19,7 @@ VMSpurOldSpaceTest >> createFreeChunkOfSize: aSize [
 	^ address
 ]
 
-{ #category : #'tests-6-allocation-strategy-list-exact' }
+{ #category : #helpers }
 VMSpurOldSpaceTest >> denyFreeListEmpty: aFreeListOop [
 
 	self deny: aFreeListOop equals: 0
@@ -103,6 +103,55 @@ VMSpurOldSpaceTest >> testAllocateAllFreeMemoryShouldLeaveNoFreeMemory [
 	self assert: memory totalFreeListBytes equals: 0
 ]
 
+{ #category : #'tests-8-allocation-strategy-list-bestfit' }
+VMSpurOldSpaceTest >> testAllocateBestFitInListShouldAddLeftoverInList [
+
+	self createFreeChunkOfSize: 120.
+	self createFreeChunkOfSize: 160.
+
+	"Not exact, nor multiple of a power of 2"
+	memory allocateOldSpaceChunkOfBytes: 96.
+
+	self denyFreeListEmpty: (self freeListForSize: 24)
+]
+
+{ #category : #'tests-8-allocation-strategy-list-bestfit' }
+VMSpurOldSpaceTest >> testAllocateBestFitInListShouldRemoveSmallerNodeFromLists [
+
+	self createFreeChunkOfSize: 120.
+	self createFreeChunkOfSize: 160.
+
+	"Not exact, nor multiple of a power of 2"
+	memory allocateOldSpaceChunkOfBytes: 96.
+
+	self assertFreeListEmpty: (self freeListForSize: 120)
+]
+
+{ #category : #'tests-8-allocation-strategy-list-bestfit' }
+VMSpurOldSpaceTest >> testAllocateBestFitInListShouldReuseSmallerAddress [
+
+	| smallerAddress newAddress |
+	smallerAddress := self createFreeChunkOfSize: 120.
+	self createFreeChunkOfSize: 160.
+
+	"Not exact, nor multiple of a power of 2"
+	newAddress := memory allocateOldSpaceChunkOfBytes: 96.
+
+	self assert: newAddress equals: smallerAddress
+]
+
+{ #category : #'tests-8-allocation-strategy-list-bestfit' }
+VMSpurOldSpaceTest >> testAllocateBestFitInListShouldUseIgnoreBiggerChunk [
+
+	self createFreeChunkOfSize: 120.
+	self createFreeChunkOfSize: 160.
+
+	"Not exact, nor multiple of a power of 2"
+	memory allocateOldSpaceChunkOfBytes: 96.
+
+	self denyFreeListEmpty: (self freeListForSize: 160)
+]
+
 { #category : #'tests-2-allocation-basic' }
 VMSpurOldSpaceTest >> testAllocateChunkOfMemoryShouldHaveSoMuchMemoryLessAfter [
 
@@ -158,6 +207,25 @@ VMSpurOldSpaceTest >> testAllocateExactFitInListShouldReuseAddress [
 	self assert: newAddress equals: secondAddress
 ]
 
+{ #category : #'tests-9-allocation-strategy-tree' }
+VMSpurOldSpaceTest >> testAllocateExactFitTreeRootShouldRemoveRootFromTree [
+
+	memory allocateOldSpaceChunkOfBytes: (memory bytesInObject: self freeTreeRootOop).
+
+	self assert: self freeTreeRootOop equals: 0
+]
+
+{ #category : #'tests-9-allocation-strategy-tree' }
+VMSpurOldSpaceTest >> testAllocateExactTreeRootShouldReuseRootAddress [
+
+	| oldRootAddress newAddress |
+	oldRootAddress := self freeTreeRootStartAddress.
+
+	newAddress := memory allocateOldSpaceChunkOfBytes: (memory bytesInObject: self freeTreeRootOop).
+
+	self assert: newAddress equals: oldRootAddress
+]
+
 { #category : #'tests-4-free-tree' }
 VMSpurOldSpaceTest >> testAllocateHalfOfTreeNodeShouldSplitIt [
 	| size childAddress smallerChildOop largerChildOop aBitBiggerThanHalf |
@@ -208,6 +276,39 @@ VMSpurOldSpaceTest >> testAllocateMoreThanFreeMemoryShouldFailReturningNil [
 	self assert: address isNil
 ]
 
+{ #category : #'tests-9-allocation-strategy-tree' }
+VMSpurOldSpaceTest >> testAllocatePartOfTreeRootShouldAddBigLeftOverAsFreeTreeRoot [
+
+	| leftOverSize |
+	leftOverSize := 64 * 8 "more than 63 slots".
+	memory allocateOldSpaceChunkOfBytes: (memory totalFreeListBytes - leftOverSize).
+
+	self assert: (memory bytesInObject: self freeTreeRootOop) equals: leftOverSize
+]
+
+{ #category : #'tests-9-allocation-strategy-tree' }
+VMSpurOldSpaceTest >> testAllocatePartOfTreeRootShouldAddSmallLeftOverInFreeList [
+
+	| leftOverSize |
+	leftOverSize := 120.
+	memory allocateOldSpaceChunkOfBytes: (memory totalFreeListBytes - leftOverSize).
+
+	self denyFreeListEmpty: (self freeListForSize: leftOverSize)
+]
+
+{ #category : #'tests-9-allocation-strategy-tree' }
+VMSpurOldSpaceTest >> testAllocatePartOfTreeRootShouldReuseRootAddress [
+
+	| oldRootAddress newAddress |
+	oldRootAddress := self freeTreeRootStartAddress.
+
+	"At this point we can allocate whatever we want, only the tree has space, so we will take space from the tree anyways"
+	self assert: 120 < (memory bytesInObject: self freeTreeRootOop).
+	newAddress := memory allocateOldSpaceChunkOfBytes: 120.
+
+	self assert: newAddress equals: oldRootAddress
+]
+
 { #category : #'tests-7-allocation-strategy-list-power' }
 VMSpurOldSpaceTest >> testAllocatePowerInListShouldAddLeftoverInList [
 
@@ -222,7 +323,7 @@ VMSpurOldSpaceTest >> testAllocatePowerInListShouldAddLeftoverInList [
 ]
 
 { #category : #'tests-7-allocation-strategy-list-power' }
-VMSpurOldSpaceTest >> testAllocatePowerInListShouldIgnoreNonMultiples [
+VMSpurOldSpaceTest >> testAllocatePowerInListShouldIgnoreNonPowers [
 
 	| sizeToAllocate powerOfSizeToAllocate nonMultipleAddress newAddress |
 	sizeToAllocate := 80.
