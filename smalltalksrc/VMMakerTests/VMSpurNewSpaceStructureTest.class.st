@@ -24,6 +24,17 @@ VMSpurNewSpaceStructureTest >> testInstantiateNewObjectMovesFreeStartAfterObject
 	self assert: memory freeStart equals: freeStartBefore + emptyObjectSize
 ]
 
+{ #category : #'tests-2-instantiation' }
+VMSpurNewSpaceStructureTest >> testInstantiateNewObjectWithSlotMovesFreeStartAfterObject [
+	
+	| freeStartBefore |
+	freeStartBefore := memory freeStart.
+	self newObjectWithSlots: 0.
+	
+	"New zero sized object has 64bit header + 1 * 64bit empty slot = 16bytes"
+	self assert: memory freeStart equals: freeStartBefore + emptyObjectSize
+]
+
 { #category : #'tests-1-memory-initialization' }
 VMSpurNewSpaceStructureTest >> testNewMemoryEdenEndIsAtTheStartOfOldSpace [
 
@@ -150,6 +161,17 @@ VMSpurNewSpaceStructureTest >> testNewObjectPositionIsBeforeObjectHeader [
 	freeStartBefore := memory freeStart.
 	
 	oop := self newZeroSizedObject.
+	
+	self assert: oop equals: freeStartBefore
+]
+
+{ #category : #'tests-2-instantiation' }
+VMSpurNewSpaceStructureTest >> testNewObjectWithSlotsPositionIsBeforeObjectHeader [
+	
+	| freeStartBefore oop |
+	freeStartBefore := memory freeStart.
+	
+	oop := self newObjectWithSlots: 0.
 	
 	self assert: oop equals: freeStartBefore
 ]

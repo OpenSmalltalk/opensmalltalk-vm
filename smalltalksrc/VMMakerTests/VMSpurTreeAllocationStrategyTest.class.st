@@ -1,6 +1,6 @@
 Class {
-	#name : #VMSpurTreeAllocationStrategy,
-	#superclass : #VMSpurOldSpaceTest,
+	#name : #VMSpurTreeAllocationStrategyTest,
+	#superclass : #VMSpurInitializedOldSpaceTest,
 	#instVars : [
 		'sizesInBreadthFirstOrder',
 		'chunkAddresses'
@@ -9,13 +9,13 @@ Class {
 }
 
 { #category : #accessing }
-VMSpurTreeAllocationStrategy >> addressOfChunkOf: aSize [
+VMSpurTreeAllocationStrategyTest >> addressOfChunkOf: aSize [
 
 	^ chunkAddresses at: aSize
 ]
 
 { #category : #running }
-VMSpurTreeAllocationStrategy >> setUp [
+VMSpurTreeAllocationStrategyTest >> setUp [
 
 	"          1120
 	          /    \
@@ -57,13 +57,13 @@ VMSpurTreeAllocationStrategy >> setUp [
 ]
 
 { #category : #accessing }
-VMSpurTreeAllocationStrategy >> sizeOfChildInBreadthFirstOrder: anInteger [ 
+VMSpurTreeAllocationStrategyTest >> sizeOfChildInBreadthFirstOrder: anInteger [ 
 
 	^ sizesInBreadthFirstOrder at: anInteger
 ]
 
 { #category : #'tests-10-bestfit-liliputian-leftovers' }
-VMSpurTreeAllocationStrategy >> test01AllocateBestFitTreeRootWithChildrenShouldReplaceNodeWithSmaller [
+VMSpurTreeAllocationStrategyTest >> test01AllocateBestFitTreeRootWithChildrenShouldReplaceNodeWithSmaller [
 
 	memory allocateOldSpaceChunkOfBytes: (self sizeOfChildInBreadthFirstOrder: 1) - 16.
 	
@@ -71,7 +71,7 @@ VMSpurTreeAllocationStrategy >> test01AllocateBestFitTreeRootWithChildrenShouldR
 ]
 
 { #category : #'tests-09-exact-fit' }
-VMSpurTreeAllocationStrategy >> test01AllocateExactTreeRootWithChildrenShouldReplaceNodeWithSmaller [
+VMSpurTreeAllocationStrategyTest >> test01AllocateExactTreeRootWithChildrenShouldReplaceNodeWithSmaller [
 
 	memory allocateOldSpaceChunkOfBytes: (self sizeOfChildInBreadthFirstOrder: 1).
 	
@@ -79,7 +79,7 @@ VMSpurTreeAllocationStrategy >> test01AllocateExactTreeRootWithChildrenShouldRep
 ]
 
 { #category : #'tests-11-bestfit-smaller-than-liliputian-leftovers' }
-VMSpurTreeAllocationStrategy >> test01AllocateSmallerThanLiliputianDiffFromTreeRootWithChildrenShouldUseLargerThanRoot [
+VMSpurTreeAllocationStrategyTest >> test01AllocateSmallerThanLiliputianDiffFromTreeRootWithChildrenShouldUseLargerThanRoot [
 
 	memory allocateOldSpaceChunkOfBytes: (self sizeOfChildInBreadthFirstOrder: 1) - 8.
 	
@@ -88,7 +88,7 @@ VMSpurTreeAllocationStrategy >> test01AllocateSmallerThanLiliputianDiffFromTreeR
 ]
 
 { #category : #'tests-10-bestfit-liliputian-leftovers' }
-VMSpurTreeAllocationStrategy >> test02AllocateBestFitTreeRootWithChildrenShouldReInsertSmallerLargerChildFromRoot [
+VMSpurTreeAllocationStrategyTest >> test02AllocateBestFitTreeRootWithChildrenShouldReInsertSmallerLargerChildFromRoot [
 
 	memory allocateOldSpaceChunkOfBytes: (self sizeOfChildInBreadthFirstOrder: 1) - 16.
 
@@ -96,7 +96,7 @@ VMSpurTreeAllocationStrategy >> test02AllocateBestFitTreeRootWithChildrenShouldR
 ]
 
 { #category : #'tests-09-exact-fit' }
-VMSpurTreeAllocationStrategy >> test02AllocateExactTreeRootWithChildrenShouldReInsertSmallerLargerChildFromRoot [
+VMSpurTreeAllocationStrategyTest >> test02AllocateExactTreeRootWithChildrenShouldReInsertSmallerLargerChildFromRoot [
 
 	memory allocateOldSpaceChunkOfBytes: (self sizeOfChildInBreadthFirstOrder: 1).
 
@@ -104,7 +104,7 @@ VMSpurTreeAllocationStrategy >> test02AllocateExactTreeRootWithChildrenShouldReI
 ]
 
 { #category : #'tests-11-bestfit-smaller-than-liliputian-leftovers' }
-VMSpurTreeAllocationStrategy >> test02AllocateSmallerThanLiliputianDiffFromTreeRootWithChildrenShouldInsertLeftOverInFreeList [
+VMSpurTreeAllocationStrategyTest >> test02AllocateSmallerThanLiliputianDiffFromTreeRootWithChildrenShouldInsertLeftOverInFreeList [
 
 	| allocatedSize |
 	allocatedSize := (self sizeOfChildInBreadthFirstOrder: 1) - 8.
@@ -115,7 +115,7 @@ VMSpurTreeAllocationStrategy >> test02AllocateSmallerThanLiliputianDiffFromTreeR
 ]
 
 { #category : #'tests-10-bestfit-liliputian-leftovers' }
-VMSpurTreeAllocationStrategy >> test03AllocateBestFitTreeRootWithChildrenShouldReplaceSmallerChildWithSmallerSmaller [
+VMSpurTreeAllocationStrategyTest >> test03AllocateBestFitTreeRootWithChildrenShouldReplaceSmallerChildWithSmallerSmaller [
 
 	memory allocateOldSpaceChunkOfBytes: (self sizeOfChildInBreadthFirstOrder: 1) - 16.
 	
@@ -123,7 +123,7 @@ VMSpurTreeAllocationStrategy >> test03AllocateBestFitTreeRootWithChildrenShouldR
 ]
 
 { #category : #'tests-09-exact-fit' }
-VMSpurTreeAllocationStrategy >> test03AllocateExactTreeRootWithChildrenShouldReplaceSmallerChildWithSmallerSmaller [
+VMSpurTreeAllocationStrategyTest >> test03AllocateExactTreeRootWithChildrenShouldReplaceSmallerChildWithSmallerSmaller [
 
 	memory allocateOldSpaceChunkOfBytes: (self sizeOfChildInBreadthFirstOrder: 1).
 	
@@ -131,7 +131,7 @@ VMSpurTreeAllocationStrategy >> test03AllocateExactTreeRootWithChildrenShouldRep
 ]
 
 { #category : #'tests-11-bestfit-smaller-than-liliputian-leftovers' }
-VMSpurTreeAllocationStrategy >> test03AllocateSmallerThanLiliputianDiffFromTreeRootWithChildrenShouldUseLargerThanRootAddress [
+VMSpurTreeAllocationStrategyTest >> test03AllocateSmallerThanLiliputianDiffFromTreeRootWithChildrenShouldUseLargerThanRootAddress [
 
 	| desiredAddress allocatedAddress |
 	desiredAddress := self addressOfChunkOf: 1152.
@@ -141,7 +141,7 @@ VMSpurTreeAllocationStrategy >> test03AllocateSmallerThanLiliputianDiffFromTreeR
 ]
 
 { #category : #'tests-10-bestfit-liliputian-leftovers' }
-VMSpurTreeAllocationStrategy >> test04AllocateBestFitTreeRootWithChildrenShouldInsertLiliputianInFreeList [
+VMSpurTreeAllocationStrategyTest >> test04AllocateBestFitTreeRootWithChildrenShouldInsertLiliputianInFreeList [
 
 	memory allocateOldSpaceChunkOfBytes: (self sizeOfChildInBreadthFirstOrder: 1) - 16.
 	
@@ -149,7 +149,7 @@ VMSpurTreeAllocationStrategy >> test04AllocateBestFitTreeRootWithChildrenShouldI
 ]
 
 { #category : #'tests-09-exact-fit' }
-VMSpurTreeAllocationStrategy >> test04AllocateExactSmallerTreeNodeShouldReplaceNodeWithSmaller [
+VMSpurTreeAllocationStrategyTest >> test04AllocateExactSmallerTreeNodeShouldReplaceNodeWithSmaller [
 
 	memory allocateOldSpaceChunkOfBytes: (self sizeOfChildInBreadthFirstOrder: 2).
 
@@ -157,7 +157,7 @@ VMSpurTreeAllocationStrategy >> test04AllocateExactSmallerTreeNodeShouldReplaceN
 ]
 
 { #category : #'tests-11-bestfit-smaller-than-liliputian-leftovers' }
-VMSpurTreeAllocationStrategy >> test04AllocateSmallerThanLiliputianDiffFromSmallerWithChildrenShouldUseLargestSmallerThanRoot [
+VMSpurTreeAllocationStrategyTest >> test04AllocateSmallerThanLiliputianDiffFromSmallerWithChildrenShouldUseLargestSmallerThanRoot [
 
 	memory allocateOldSpaceChunkOfBytes: (self sizeOfChildInBreadthFirstOrder: 2) - 8.
 	
@@ -166,7 +166,7 @@ VMSpurTreeAllocationStrategy >> test04AllocateSmallerThanLiliputianDiffFromSmall
 ]
 
 { #category : #'tests-10-bestfit-liliputian-leftovers' }
-VMSpurTreeAllocationStrategy >> test05AllocateBestFitSmallerTreeNodeShouldReplaceNodeWithSmaller [
+VMSpurTreeAllocationStrategyTest >> test05AllocateBestFitSmallerTreeNodeShouldReplaceNodeWithSmaller [
 
 	memory allocateOldSpaceChunkOfBytes: (self sizeOfChildInBreadthFirstOrder: 2) - 16.
 
@@ -174,7 +174,7 @@ VMSpurTreeAllocationStrategy >> test05AllocateBestFitSmallerTreeNodeShouldReplac
 ]
 
 { #category : #'tests-09-exact-fit' }
-VMSpurTreeAllocationStrategy >> test05AllocateExactSmallerTreeNodeShouldReuseNodeAddress [
+VMSpurTreeAllocationStrategyTest >> test05AllocateExactSmallerTreeNodeShouldReuseNodeAddress [
 
 	| desiredAddress allocatedAddress |
 	desiredAddress := self smallerNodeOf: self freeTreeRootOop.
@@ -184,7 +184,7 @@ VMSpurTreeAllocationStrategy >> test05AllocateExactSmallerTreeNodeShouldReuseNod
 ]
 
 { #category : #'tests-11-bestfit-smaller-than-liliputian-leftovers' }
-VMSpurTreeAllocationStrategy >> test05AllocateSmallerThanLiliputianDiffFromSmallerWithChildrenShouldInsertLeftOverInFreeList [
+VMSpurTreeAllocationStrategyTest >> test05AllocateSmallerThanLiliputianDiffFromSmallerWithChildrenShouldInsertLeftOverInFreeList [
 
 	| allocatedSize |
 	allocatedSize := (self sizeOfChildInBreadthFirstOrder: 2) - 8.
@@ -195,7 +195,7 @@ VMSpurTreeAllocationStrategy >> test05AllocateSmallerThanLiliputianDiffFromSmall
 ]
 
 { #category : #'tests-10-bestfit-liliputian-leftovers' }
-VMSpurTreeAllocationStrategy >> test06AllocateBestFitSmallerTreeNodeShouldReuseNodeAddress [
+VMSpurTreeAllocationStrategyTest >> test06AllocateBestFitSmallerTreeNodeShouldReuseNodeAddress [
 
 	| desiredAddress allocatedAddress |
 	desiredAddress := self smallerNodeOf: self freeTreeRootOop.
@@ -205,7 +205,7 @@ VMSpurTreeAllocationStrategy >> test06AllocateBestFitSmallerTreeNodeShouldReuseN
 ]
 
 { #category : #'tests-09-exact-fit' }
-VMSpurTreeAllocationStrategy >> test06AllocateExactBiggerTreeNodeShouldReplaceNodeWithSmaller [
+VMSpurTreeAllocationStrategyTest >> test06AllocateExactBiggerTreeNodeShouldReplaceNodeWithSmaller [
 
 	memory allocateOldSpaceChunkOfBytes: (self sizeOfChildInBreadthFirstOrder: 3).
 	
@@ -213,7 +213,7 @@ VMSpurTreeAllocationStrategy >> test06AllocateExactBiggerTreeNodeShouldReplaceNo
 ]
 
 { #category : #'tests-11-bestfit-smaller-than-liliputian-leftovers' }
-VMSpurTreeAllocationStrategy >> test06AllocateSmallerThanLiliputianDiffFromSmallerWithChildrenShouldUseSmallerThanRootAddress [
+VMSpurTreeAllocationStrategyTest >> test06AllocateSmallerThanLiliputianDiffFromSmallerWithChildrenShouldUseSmallerThanRootAddress [
 
 	| desiredAddress allocatedAddress |
 	desiredAddress := self addressOfChunkOf: 1088.
@@ -223,7 +223,7 @@ VMSpurTreeAllocationStrategy >> test06AllocateSmallerThanLiliputianDiffFromSmall
 ]
 
 { #category : #'tests-10-bestfit-liliputian-leftovers' }
-VMSpurTreeAllocationStrategy >> test07AllocateBestFitSmallerTreeNodeShouldInsertLiliputianInFreeList [
+VMSpurTreeAllocationStrategyTest >> test07AllocateBestFitSmallerTreeNodeShouldInsertLiliputianInFreeList [
 
 	memory allocateOldSpaceChunkOfBytes: (self sizeOfChildInBreadthFirstOrder: 2) - 16.
 	
@@ -231,7 +231,7 @@ VMSpurTreeAllocationStrategy >> test07AllocateBestFitSmallerTreeNodeShouldInsert
 ]
 
 { #category : #'tests-09-exact-fit' }
-VMSpurTreeAllocationStrategy >> test07AllocateExactBiggerTreeNodeShouldReuseNodeAddress [
+VMSpurTreeAllocationStrategyTest >> test07AllocateExactBiggerTreeNodeShouldReuseNodeAddress [
 
 	| desiredAddress allocatedAddress |
 	desiredAddress := self largerNodeOf: self freeTreeRootOop.
@@ -241,7 +241,7 @@ VMSpurTreeAllocationStrategy >> test07AllocateExactBiggerTreeNodeShouldReuseNode
 ]
 
 { #category : #'tests-11-bestfit-smaller-than-liliputian-leftovers' }
-VMSpurTreeAllocationStrategy >> test07AllocateSmallerThanLiliputianDiffFromSmallerLeafShouldUseIntermediateNode [
+VMSpurTreeAllocationStrategyTest >> test07AllocateSmallerThanLiliputianDiffFromSmallerLeafShouldUseIntermediateNode [
 
 	memory allocateOldSpaceChunkOfBytes: (self sizeOfChildInBreadthFirstOrder: 4) - 8.
 	
@@ -251,7 +251,7 @@ VMSpurTreeAllocationStrategy >> test07AllocateSmallerThanLiliputianDiffFromSmall
 ]
 
 { #category : #'tests-09-exact-fit' }
-VMSpurTreeAllocationStrategy >> test08AllocateExactSmallerOfSmallerLeafTreeNodeShouldRemoveNode [
+VMSpurTreeAllocationStrategyTest >> test08AllocateExactSmallerOfSmallerLeafTreeNodeShouldRemoveNode [
 
 	memory allocateOldSpaceChunkOfBytes: (self sizeOfChildInBreadthFirstOrder: 4).
 
@@ -259,7 +259,7 @@ VMSpurTreeAllocationStrategy >> test08AllocateExactSmallerOfSmallerLeafTreeNodeS
 ]
 
 { #category : #'tests-11-bestfit-smaller-than-liliputian-leftovers' }
-VMSpurTreeAllocationStrategy >> test08AllocateSmallerThanLiliputianDiffFromSmallerLeafShouldInsertLeftOverInFreeList [
+VMSpurTreeAllocationStrategyTest >> test08AllocateSmallerThanLiliputianDiffFromSmallerLeafShouldInsertLeftOverInFreeList [
 	| allocatedSize |
 	allocatedSize :=  (self sizeOfChildInBreadthFirstOrder: 4) - 8.
 	memory allocateOldSpaceChunkOfBytes: allocatedSize.
@@ -269,7 +269,7 @@ VMSpurTreeAllocationStrategy >> test08AllocateSmallerThanLiliputianDiffFromSmall
 ]
 
 { #category : #'tests-09-exact-fit' }
-VMSpurTreeAllocationStrategy >> test09AllocateExactSmallerOfSmallerLeafTreeNodeShouldReuseNodeAddress [
+VMSpurTreeAllocationStrategyTest >> test09AllocateExactSmallerOfSmallerLeafTreeNodeShouldReuseNodeAddress [
 
 	| desiredAddress allocatedAddress |
 	desiredAddress := self smallerNodeOf: (self smallerNodeOf: self freeTreeRootOop).
@@ -279,7 +279,7 @@ VMSpurTreeAllocationStrategy >> test09AllocateExactSmallerOfSmallerLeafTreeNodeS
 ]
 
 { #category : #'tests-11-bestfit-smaller-than-liliputian-leftovers' }
-VMSpurTreeAllocationStrategy >> test09AllocateSecondSmallerThanLiliputianDiffFromSmallerLeafShouldUseRootNode [
+VMSpurTreeAllocationStrategyTest >> test09AllocateSecondSmallerThanLiliputianDiffFromSmallerLeafShouldUseRootNode [
 
 	memory allocateOldSpaceChunkOfBytes: (self sizeOfChildInBreadthFirstOrder: 5) - 8.
 	
@@ -289,7 +289,7 @@ VMSpurTreeAllocationStrategy >> test09AllocateSecondSmallerThanLiliputianDiffFro
 ]
 
 { #category : #'tests-09-exact-fit' }
-VMSpurTreeAllocationStrategy >> test10AllocateExactLargerOfSmallerLeafTreeNodeShouldRemoveNode [
+VMSpurTreeAllocationStrategyTest >> test10AllocateExactLargerOfSmallerLeafTreeNodeShouldRemoveNode [
 
 	memory allocateOldSpaceChunkOfBytes: (self sizeOfChildInBreadthFirstOrder: 5).
 	
@@ -297,7 +297,7 @@ VMSpurTreeAllocationStrategy >> test10AllocateExactLargerOfSmallerLeafTreeNodeSh
 ]
 
 { #category : #'tests-11-bestfit-smaller-than-liliputian-leftovers' }
-VMSpurTreeAllocationStrategy >> test10AllocateSecondSmallerThanLiliputianDiffFromSmallerLeafShouldInsertLeftOverInFreeList [
+VMSpurTreeAllocationStrategyTest >> test10AllocateSecondSmallerThanLiliputianDiffFromSmallerLeafShouldInsertLeftOverInFreeList [
 
 	| allocatedSize |
 	allocatedSize := (self sizeOfChildInBreadthFirstOrder: 5) - 8.
@@ -308,7 +308,7 @@ VMSpurTreeAllocationStrategy >> test10AllocateSecondSmallerThanLiliputianDiffFro
 ]
 
 { #category : #'tests-09-exact-fit' }
-VMSpurTreeAllocationStrategy >> test11AllocateExactLargerOfSmallerLeafTreeNodeShouldReuseNodeAddress [
+VMSpurTreeAllocationStrategyTest >> test11AllocateExactLargerOfSmallerLeafTreeNodeShouldReuseNodeAddress [
 
 	| desiredAddress allocatedAddress |
 	desiredAddress := self largerNodeOf: (self smallerNodeOf: self freeTreeRootOop).
@@ -317,7 +317,7 @@ VMSpurTreeAllocationStrategy >> test11AllocateExactLargerOfSmallerLeafTreeNodeSh
 ]
 
 { #category : #'tests-11-bestfit-smaller-than-liliputian-leftovers' }
-VMSpurTreeAllocationStrategy >> test11AllocateSmallerThanLiliputianDiffFromLargerWithChildrenShouldUseLargestLeafNode [
+VMSpurTreeAllocationStrategyTest >> test11AllocateSmallerThanLiliputianDiffFromLargerWithChildrenShouldUseLargestLeafNode [
 
 	memory allocateOldSpaceChunkOfBytes: (self sizeOfChildInBreadthFirstOrder: 3) - 8.
 	
@@ -326,7 +326,7 @@ VMSpurTreeAllocationStrategy >> test11AllocateSmallerThanLiliputianDiffFromLarge
 ]
 
 { #category : #'tests-09-exact-fit' }
-VMSpurTreeAllocationStrategy >> test12AllocateExactSmallerOfLargerLeafTreeNodeShouldRemoveNode [
+VMSpurTreeAllocationStrategyTest >> test12AllocateExactSmallerOfLargerLeafTreeNodeShouldRemoveNode [
 
 	memory allocateOldSpaceChunkOfBytes: (self sizeOfChildInBreadthFirstOrder: 6).
 
@@ -334,7 +334,7 @@ VMSpurTreeAllocationStrategy >> test12AllocateExactSmallerOfLargerLeafTreeNodeSh
 ]
 
 { #category : #'tests-11-bestfit-smaller-than-liliputian-leftovers' }
-VMSpurTreeAllocationStrategy >> test12AllocateSmallerThanLiliputianDiffFromLargerWithChildrenShouldInsertLeftOverInFreeList [
+VMSpurTreeAllocationStrategyTest >> test12AllocateSmallerThanLiliputianDiffFromLargerWithChildrenShouldInsertLeftOverInFreeList [
 
 	| allocatedSize |
 	
@@ -346,7 +346,7 @@ VMSpurTreeAllocationStrategy >> test12AllocateSmallerThanLiliputianDiffFromLarge
 ]
 
 { #category : #'tests-09-exact-fit' }
-VMSpurTreeAllocationStrategy >> test13AllocateExactSmallerOfLargerLeafTreeNodeShouldReuseNodeAddress [
+VMSpurTreeAllocationStrategyTest >> test13AllocateExactSmallerOfLargerLeafTreeNodeShouldReuseNodeAddress [
 
 	| desiredAddress allocatedAddress |
 	desiredAddress := self smallerNodeOf: (self largerNodeOf: self freeTreeRootOop).
@@ -356,7 +356,7 @@ VMSpurTreeAllocationStrategy >> test13AllocateExactSmallerOfLargerLeafTreeNodeSh
 ]
 
 { #category : #'tests-11-bestfit-smaller-than-liliputian-leftovers' }
-VMSpurTreeAllocationStrategy >> test13AllocateSmallerThanLiliputianDiffFromSmallerLeafInLargerSideShouldUseIntermediateLargerNode [
+VMSpurTreeAllocationStrategyTest >> test13AllocateSmallerThanLiliputianDiffFromSmallerLeafInLargerSideShouldUseIntermediateLargerNode [
 
 	memory allocateOldSpaceChunkOfBytes: (self sizeOfChildInBreadthFirstOrder: 6) - 8.
 	
@@ -365,7 +365,7 @@ VMSpurTreeAllocationStrategy >> test13AllocateSmallerThanLiliputianDiffFromSmall
 ]
 
 { #category : #'tests-09-exact-fit' }
-VMSpurTreeAllocationStrategy >> test14AllocateExactLargerOfLargerLeafTreeNodeShouldRemoveChildNode [
+VMSpurTreeAllocationStrategyTest >> test14AllocateExactLargerOfLargerLeafTreeNodeShouldRemoveChildNode [
 
 	memory allocateOldSpaceChunkOfBytes: (self sizeOfChildInBreadthFirstOrder: 7).
 	
@@ -373,7 +373,7 @@ VMSpurTreeAllocationStrategy >> test14AllocateExactLargerOfLargerLeafTreeNodeSho
 ]
 
 { #category : #'tests-11-bestfit-smaller-than-liliputian-leftovers' }
-VMSpurTreeAllocationStrategy >> test14AllocateSmallerThanLiliputianDiffFromSmallerLeafInLargerSideShouldInsertLeftOverInFreeList [
+VMSpurTreeAllocationStrategyTest >> test14AllocateSmallerThanLiliputianDiffFromSmallerLeafInLargerSideShouldInsertLeftOverInFreeList [
 
 	| allocatedSize |
 	
@@ -385,7 +385,7 @@ VMSpurTreeAllocationStrategy >> test14AllocateSmallerThanLiliputianDiffFromSmall
 ]
 
 { #category : #'tests-10-bestfit-liliputian-leftovers' }
-VMSpurTreeAllocationStrategy >> test15AllocateBestFitBiggerTreeNodeShouldReplaceNodeWithSmaller [
+VMSpurTreeAllocationStrategyTest >> test15AllocateBestFitBiggerTreeNodeShouldReplaceNodeWithSmaller [
 
 	memory allocateOldSpaceChunkOfBytes: (self sizeOfChildInBreadthFirstOrder: 3) - 16.
 	
@@ -393,7 +393,7 @@ VMSpurTreeAllocationStrategy >> test15AllocateBestFitBiggerTreeNodeShouldReplace
 ]
 
 { #category : #'tests-09-exact-fit' }
-VMSpurTreeAllocationStrategy >> test15AllocateExactLargerOfLargerLeafTreeNodeShouldReuseNodeAddress [
+VMSpurTreeAllocationStrategyTest >> test15AllocateExactLargerOfLargerLeafTreeNodeShouldReuseNodeAddress [
 
 	| desiredAddress allocatedAddress |
 	desiredAddress := self largerNodeOf: (self largerNodeOf: self freeTreeRootOop).
@@ -403,13 +403,13 @@ VMSpurTreeAllocationStrategy >> test15AllocateExactLargerOfLargerLeafTreeNodeSho
 ]
 
 { #category : #'tests-11-bestfit-smaller-than-liliputian-leftovers' }
-VMSpurTreeAllocationStrategy >> test15AllocateSmallerThanLiliputianDiffFromLargestLeaShouldFindNoMemory [
+VMSpurTreeAllocationStrategyTest >> test15AllocateSmallerThanLiliputianDiffFromLargestLeaShouldFindNoMemory [
 
 	self assert: (memory allocateOldSpaceChunkOfBytes: (self sizeOfChildInBreadthFirstOrder: 7) - 8) equals: nil
 ]
 
 { #category : #'tests-10-bestfit-liliputian-leftovers' }
-VMSpurTreeAllocationStrategy >> test16AllocateBestFitBiggerTreeNodeShouldReuseNodeAddress [
+VMSpurTreeAllocationStrategyTest >> test16AllocateBestFitBiggerTreeNodeShouldReuseNodeAddress [
 
 	| desiredAddress allocatedAddress |
 	desiredAddress := self largerNodeOf: self freeTreeRootOop.
@@ -419,7 +419,7 @@ VMSpurTreeAllocationStrategy >> test16AllocateBestFitBiggerTreeNodeShouldReuseNo
 ]
 
 { #category : #'tests-10-bestfit-liliputian-leftovers' }
-VMSpurTreeAllocationStrategy >> test17AllocateBestFitLargerTreeNodeShouldInsertLiliputianInFreeList [
+VMSpurTreeAllocationStrategyTest >> test17AllocateBestFitLargerTreeNodeShouldInsertLiliputianInFreeList [
 
 	memory allocateOldSpaceChunkOfBytes: (self sizeOfChildInBreadthFirstOrder: 3) - 16.
 	
@@ -427,7 +427,7 @@ VMSpurTreeAllocationStrategy >> test17AllocateBestFitLargerTreeNodeShouldInsertL
 ]
 
 { #category : #'tests-10-bestfit-liliputian-leftovers' }
-VMSpurTreeAllocationStrategy >> test20AllocateBestFitSmallerOfSmallerLeafTreeNodeShouldRemoveNode [
+VMSpurTreeAllocationStrategyTest >> test20AllocateBestFitSmallerOfSmallerLeafTreeNodeShouldRemoveNode [
 
 	memory allocateOldSpaceChunkOfBytes: (self sizeOfChildInBreadthFirstOrder: 4) - 16.
 
@@ -435,7 +435,7 @@ VMSpurTreeAllocationStrategy >> test20AllocateBestFitSmallerOfSmallerLeafTreeNod
 ]
 
 { #category : #'tests-10-bestfit-liliputian-leftovers' }
-VMSpurTreeAllocationStrategy >> test21AllocateBestFitSmallerOfSmallerLeafTreeNodeShouldReuseNodeAddress [
+VMSpurTreeAllocationStrategyTest >> test21AllocateBestFitSmallerOfSmallerLeafTreeNodeShouldReuseNodeAddress [
 
 	| desiredAddress allocatedAddress |
 	desiredAddress := self smallerNodeOf: (self smallerNodeOf: self freeTreeRootOop).
@@ -445,7 +445,7 @@ VMSpurTreeAllocationStrategy >> test21AllocateBestFitSmallerOfSmallerLeafTreeNod
 ]
 
 { #category : #'tests-10-bestfit-liliputian-leftovers' }
-VMSpurTreeAllocationStrategy >> test22AllocateBestFitSmallerOfSmallerLeafTreeNodeShouldInsertLiliputianInFreeList [
+VMSpurTreeAllocationStrategyTest >> test22AllocateBestFitSmallerOfSmallerLeafTreeNodeShouldInsertLiliputianInFreeList [
 
 	memory allocateOldSpaceChunkOfBytes: (self sizeOfChildInBreadthFirstOrder: 4) - 16.
 	
@@ -453,7 +453,7 @@ VMSpurTreeAllocationStrategy >> test22AllocateBestFitSmallerOfSmallerLeafTreeNod
 ]
 
 { #category : #'tests-10-bestfit-liliputian-leftovers' }
-VMSpurTreeAllocationStrategy >> test25AllocateBestFitLargerOfSmallerLeafTreeNodeShouldRemoveNode [
+VMSpurTreeAllocationStrategyTest >> test25AllocateBestFitLargerOfSmallerLeafTreeNodeShouldRemoveNode [
 
 	memory allocateOldSpaceChunkOfBytes: (self sizeOfChildInBreadthFirstOrder: 5) - 16.
 	
@@ -461,7 +461,7 @@ VMSpurTreeAllocationStrategy >> test25AllocateBestFitLargerOfSmallerLeafTreeNode
 ]
 
 { #category : #'tests-10-bestfit-liliputian-leftovers' }
-VMSpurTreeAllocationStrategy >> test26AllocateBestFitLargerOfSmallerLeafTreeNodeShouldReuseNodeAddress [
+VMSpurTreeAllocationStrategyTest >> test26AllocateBestFitLargerOfSmallerLeafTreeNodeShouldReuseNodeAddress [
 
 	| desiredAddress allocatedAddress |
 	desiredAddress := self largerNodeOf: (self smallerNodeOf: self freeTreeRootOop).
@@ -470,7 +470,7 @@ VMSpurTreeAllocationStrategy >> test26AllocateBestFitLargerOfSmallerLeafTreeNode
 ]
 
 { #category : #'tests-10-bestfit-liliputian-leftovers' }
-VMSpurTreeAllocationStrategy >> test27AllocateBestFitLargerOfSmallerLeafTreeNodeShouldShouldInsertLiliputianInFreeList [
+VMSpurTreeAllocationStrategyTest >> test27AllocateBestFitLargerOfSmallerLeafTreeNodeShouldShouldInsertLiliputianInFreeList [
 
 	memory allocateOldSpaceChunkOfBytes: (self sizeOfChildInBreadthFirstOrder: 5) - 16.
 	
@@ -478,7 +478,7 @@ VMSpurTreeAllocationStrategy >> test27AllocateBestFitLargerOfSmallerLeafTreeNode
 ]
 
 { #category : #'tests-10-bestfit-liliputian-leftovers' }
-VMSpurTreeAllocationStrategy >> test30AllocateBestFitSmallerOfLargerLeafTreeNodeShouldRemoveNode [
+VMSpurTreeAllocationStrategyTest >> test30AllocateBestFitSmallerOfLargerLeafTreeNodeShouldRemoveNode [
 
 	memory allocateOldSpaceChunkOfBytes: (self sizeOfChildInBreadthFirstOrder: 6) - 16.
 
@@ -486,7 +486,7 @@ VMSpurTreeAllocationStrategy >> test30AllocateBestFitSmallerOfLargerLeafTreeNode
 ]
 
 { #category : #'tests-10-bestfit-liliputian-leftovers' }
-VMSpurTreeAllocationStrategy >> test31AllocateBestFitSmallerOfLargerLeafTreeNodeShouldReuseNodeAddress [
+VMSpurTreeAllocationStrategyTest >> test31AllocateBestFitSmallerOfLargerLeafTreeNodeShouldReuseNodeAddress [
 
 	| desiredAddress allocatedAddress |
 	desiredAddress := self smallerNodeOf: (self largerNodeOf: self freeTreeRootOop).
@@ -496,7 +496,7 @@ VMSpurTreeAllocationStrategy >> test31AllocateBestFitSmallerOfLargerLeafTreeNode
 ]
 
 { #category : #'tests-10-bestfit-liliputian-leftovers' }
-VMSpurTreeAllocationStrategy >> test32AllocateBestFitSmallerOfLargerLeafTreeNodeShouldInsertLiliputianInFreeList [
+VMSpurTreeAllocationStrategyTest >> test32AllocateBestFitSmallerOfLargerLeafTreeNodeShouldInsertLiliputianInFreeList [
 
 	memory allocateOldSpaceChunkOfBytes: (self sizeOfChildInBreadthFirstOrder: 6) - 16.
 
@@ -504,7 +504,7 @@ VMSpurTreeAllocationStrategy >> test32AllocateBestFitSmallerOfLargerLeafTreeNode
 ]
 
 { #category : #'tests-10-bestfit-liliputian-leftovers' }
-VMSpurTreeAllocationStrategy >> test35AllocateBestFitLargerOfLargerLeafTreeNodeShouldRemoveChildNode [
+VMSpurTreeAllocationStrategyTest >> test35AllocateBestFitLargerOfLargerLeafTreeNodeShouldRemoveChildNode [
 
 	memory allocateOldSpaceChunkOfBytes: (self sizeOfChildInBreadthFirstOrder: 7) - 16.
 
@@ -512,7 +512,7 @@ VMSpurTreeAllocationStrategy >> test35AllocateBestFitLargerOfLargerLeafTreeNodeS
 ]
 
 { #category : #'tests-10-bestfit-liliputian-leftovers' }
-VMSpurTreeAllocationStrategy >> test36AllocateBestFitLargerOfLargerLeafTreeNodeShouldReuseNodeAddress [
+VMSpurTreeAllocationStrategyTest >> test36AllocateBestFitLargerOfLargerLeafTreeNodeShouldReuseNodeAddress [
 
 	| desiredAddress allocatedAddress |
 	desiredAddress := self largerNodeOf: (self largerNodeOf: self freeTreeRootOop).
@@ -522,7 +522,7 @@ VMSpurTreeAllocationStrategy >> test36AllocateBestFitLargerOfLargerLeafTreeNodeS
 ]
 
 { #category : #'tests-10-bestfit-liliputian-leftovers' }
-VMSpurTreeAllocationStrategy >> test37AllocateBestFitLargerOfLargerLeafTreeNodeShouldInsertLiliputianInFreeList [
+VMSpurTreeAllocationStrategyTest >> test37AllocateBestFitLargerOfLargerLeafTreeNodeShouldInsertLiliputianInFreeList [
 
 	memory allocateOldSpaceChunkOfBytes: (self sizeOfChildInBreadthFirstOrder: 7) - 16.
 	

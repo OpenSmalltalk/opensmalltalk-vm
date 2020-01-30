@@ -23,12 +23,36 @@ VMSpurMemoryManagerTest >> newObjectWithSlots: slots [
 { #category : #helpers }
 VMSpurMemoryManagerTest >> newObjectWithSlots: slots classIndex: anIndex [
 	
+	^ self newObjectWithSlots: slots format: memory arrayFormat classIndex: anIndex
+]
+
+{ #category : #helpers }
+VMSpurMemoryManagerTest >> newObjectWithSlots: slots format: aFormat classIndex: anIndex [
+	
 	| oop |
 	oop := memory
 			allocateSlots: slots
+			format: aFormat
+			classIndex: anIndex.
+	oop ifNotNil: [ memory fillObj: oop numSlots: slots with: memory nilObject ].
+	^ oop
+]
+
+{ #category : #helpers }
+VMSpurMemoryManagerTest >> newOldSpaceObjectWithSlots: slots [
+	
+	^ self newOldSpaceObjectWithSlots: slots classIndex: memory arrayClassIndexPun
+]
+
+{ #category : #helpers }
+VMSpurMemoryManagerTest >> newOldSpaceObjectWithSlots: slots classIndex: anIndex [
+	
+	| oop |
+	oop := memory
+			allocateSlotsInOldSpace: slots
 			format: memory arrayFormat
 			classIndex: anIndex.
-	memory nilFieldsOf: oop.
+	oop ifNotNil: [ memory fillObj: oop numSlots: slots with: memory nilObject ].
 	^ oop
 ]
 
@@ -56,7 +80,7 @@ VMSpurMemoryManagerTest >> setUp [
 	super setUp.
 
 	"100 k at least to put the class table in the old space"
-	oldSpaceSize := 100 * 1024.
+	oldSpaceSize := 1000 * 1024.
  	newSpaceSize := 1 * 1024.
 	stackSize := 16 * 1024.
 	

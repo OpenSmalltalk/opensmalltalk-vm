@@ -1910,13 +1910,13 @@ SpurMemoryManager >> allocateClassTable [
 	Others will be created on demand."	
 	| classTableRootOop firstPageOop |
 	classTableRootOop := self
-		allocateSlots: self classTableRootSlots + self hiddenRootSlots
+		allocateSlotsInOldSpace: self classTableRootSlots + self hiddenRootSlots
 		format: self arrayFormat
 		classIndex: self arrayClassIndexPun.
 
 	self nilFieldsOf: classTableRootOop.
 	firstPageOop := self
-		allocateSlots: self classTablePageSize
+		allocateSlotsInOldSpace: self classTablePageSize
 		format: self arrayFormat
 		classIndex: self arrayClassIndexPun.
 	
@@ -6280,6 +6280,31 @@ SpurMemoryManager >> initializeFreeList [
 		allocateSlots: self numFreeLists
 		format: self wordIndexableFormat
 		classIndex: self wordSizeClassIndexPun.
+	0 to: self numFreeLists - 1 do: [ :i |
+		self
+			storePointerUnchecked: i
+			ofObject: freeListOop
+			withValue: 0].
+	self initializeFreeSpacePostLoad: freeListOop.
+	^ freeListOop
+]
+
+{ #category : #bootstrap }
+SpurMemoryManager >> initializeFreeListInOldSpace: inOldSpace [
+
+	| freeListOop |
+	
+	freeListOop := inOldSpace ifTrue: [
+		self objectMemory
+			allocateSlotsInOldSpace: self numFreeLists
+			format: self wordIndexableFormat
+			classIndex: self wordSizeClassIndexPun.
+	] ifFalse: [ 
+		self objectMemory
+			allocateSlots: self numFreeLists
+			format: self wordIndexableFormat
+			classIndex: self wordSizeClassIndexPun.
+	].
 	0 to: self numFreeLists - 1 do: [ :i |
 		self
 			storePointerUnchecked: i

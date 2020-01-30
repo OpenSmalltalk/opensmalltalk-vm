@@ -17114,6 +17114,12 @@ StackInterpreter >> ownVM: threadIndexAndFlags [
 	^objectMemory integerObjectOf: argumentCount
 ]
 
+{ #category : #accessing }
+StackInterpreter >> pendingFinalizationSignals [
+	<doNotGenerate>
+	^ pendingFinalizationSignals
+]
+
 { #category : #'debug printing' }
 StackInterpreter >> penultimateLiteralOf: aMethodOop [
 	<api>

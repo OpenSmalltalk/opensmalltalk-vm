@@ -4,97 +4,6 @@ Class {
 	#category : #VMMakerTests
 }
 
-{ #category : #helpers }
-VMSpurOldSpaceTest >> assertFreeListEmpty: aFreeListOop [
-
-	self assert: aFreeListOop equals: 0
-]
-
-{ #category : #helpers }
-VMSpurOldSpaceTest >> createFreeChunkOfSize: aSize [
-
-	| address |
-	address := memory allocateOldSpaceChunkOfBytes: aSize.
-	memory freeChunkWithBytes: aSize at: address.
-	^ address
-]
-
-{ #category : #helpers }
-VMSpurOldSpaceTest >> denyFreeListEmpty: aFreeListOop [
-
-	self deny: aFreeListOop equals: 0
-]
-
-{ #category : #helpers }
-VMSpurOldSpaceTest >> freeListForSize: allocationSize [
-	
-	^ memory freeLists at: allocationSize / memory allocationUnit
-]
-
-{ #category : #helpers }
-VMSpurOldSpaceTest >> freeTreeRootOop [
-
-	"Initially the old space has a single big chunk of free memory and no small free chunks.
-	So
-	 - the free lists are empty
-	 - the single big chunk of memory is the root of the free tree
-	
-	The root of the free tree has no child nodes"
-
-	^ memory freeLists at: 0
-]
-
-{ #category : #helpers }
-VMSpurOldSpaceTest >> freeTreeRootStartAddress [
-
-	"The free tree lists stores the oop of free tree nodes.
-	That means that the address stored references the beginning of the base header of the tree node.
-	This is important because tree nodes can be large objects and have more than one header.
-	
-	We use #startOfObject: to return invariably the address where the node starts"
-	^ memory startOfObject: self freeTreeRootOop
-]
-
-{ #category : #helpers }
-VMSpurOldSpaceTest >> largerNodeOf: aNode [
-
-	^ memory
-		fetchPointer: memory freeChunkLargerIndex
-		ofFreeChunk: aNode
-]
-
-{ #category : #helpers }
-VMSpurOldSpaceTest >> nextNodeOf: aNode [
-
-	^ memory
-		fetchPointer: memory freeChunkNextIndex
-		ofFreeChunk: aNode
-]
-
-{ #category : #helpers }
-VMSpurOldSpaceTest >> parentNodeOf: aNode [
-
-	^ memory
-		fetchPointer: memory freeChunkParentIndex
-		ofFreeChunk: aNode
-]
-
-{ #category : #helpers }
-VMSpurOldSpaceTest >> previousNodeOf: aNode [
-
-	^ memory
-		fetchPointer: memory freeChunkPrevIndex
-		ofFreeChunk: aNode
-]
-
-{ #category : #helpers }
-VMSpurOldSpaceTest >> smallerNodeOf: aNode [
-
-	^ memory
-		fetchPointer: memory freeChunkSmallerIndex
-		ofFreeChunk: aNode
-]
-
 { #category : #'tests-2-allocation-basic' }
 VMSpurOldSpaceTest >> testAllocateAllFreeMemoryShouldLeaveNoFreeMemory [
 
@@ -798,33 +707,6 @@ VMSpurOldSpaceTest >> testLargeFreeChunkInFreeTreeNodeShouldStoreChunkOop [
 	
 	smallerNodeOop := self smallerNodeOf: self freeTreeRootOop.
 	self assert: (memory startOfObject: smallerNodeOop) equals: firstAddress
-]
-
-{ #category : #'tests-5-allocation-strategy' }
-VMSpurOldSpaceTest >> testManyEqualSizeChildNodesInFreeTreeShouldKnowParent [
-
-	| smallerChild freeTreeRoot size child1 child2 nextChild child3 parentOop |
-	size := 800.
-	child1 := memory allocateOldSpaceChunkOfBytes: size.
-	child2 := memory allocateOldSpaceChunkOfBytes: size.
-	child3 := memory allocateOldSpaceChunkOfBytes: size.
-	memory freeChunkWithBytes: size at: child1.
-	memory freeChunkWithBytes: size at: child2.
-	memory freeChunkWithBytes: size at: child3.
-		
-	freeTreeRoot := memory freeLists at: 0.
-
-	nextChild := memory fetchPointer: memory freeChunkSmallerIndex ofFreeChunk: freeTreeRoot.
-	parentOop := memory fetchPointer: memory freeChunkParentIndex ofFreeChunk: nextChild.
-	self assert: parentOop equals: freeTreeRoot.
-	
-	nextChild := memory fetchPointer: memory freeChunkNextIndex ofFreeChunk: child1.
-	parentOop := memory fetchPointer: memory freeChunkParentIndex ofFreeChunk: nextChild.
-	self assert: parentOop equals: freeTreeRoot.
-
-	nextChild := memory fetchPointer: memory freeChunkNextIndex ofFreeChunk: nextChild.
-	parentOop := memory fetchPointer: memory freeChunkParentIndex ofFreeChunk: nextChild.
-	self assert: parentOop equals: freeTreeRoot.
 ]
 
 { #category : #'tests-5-allocation-strategy' }
