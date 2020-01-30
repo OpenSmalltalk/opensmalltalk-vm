@@ -100,6 +100,9 @@
 extern void *sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt sz, void *minAddr, sqInt *asp);
 extern void sqDeallocateMemorySegmentAtOfSize(void *addr, sqInt sz);
 #endif /* SPURVM */
+#if COGVM
+extern void ioAllocateDualMappedCodeZoneOfSizeWritableZone(void **,usqInt,void **);
+#endif
 /* Platform-dependent memory size adjustment macro. */
 
 /* Note: This macro can be redefined to allows platforms with a
@@ -264,6 +267,7 @@ sqInt ioSeconds(void);
 sqInt ioSecondsNow(void);
 sqInt ioSetCursor(sqInt cursorBitsIndex, sqInt offsetX, sqInt offsetY);
 sqInt ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt offsetX, sqInt offsetY);
+sqInt ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt extentY, sqInt offsetX, sqInt offsetY);
 sqInt ioShowDisplay(sqInt dispBitsIndex, sqInt width, sqInt height, sqInt depth,
 		    sqInt affectedL, sqInt affectedR, sqInt affectedT, sqInt affectedB);
 sqInt ioHasDisplayDepth(sqInt depth);

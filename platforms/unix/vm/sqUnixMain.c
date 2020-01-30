@@ -1022,7 +1022,7 @@ printRegisterState(ucontext_t *uap)
 			regs[REG_RIP]);
 	return (void *)regs[REG_RIP];
 # elif __linux__ && (defined(__arm64__) || defined(__aarch64__))
-	unsigned long *regs = (unsigned long *)&uap->uc_mcontext.regs[0];
+	void **regs = (void **)&uap->uc_mcontext.regs[0];
 	printf(	"\tx0 %p x1 %p x2 %p x3 %p\n"
 			"\tx4 %p x5 %p x6 %p x7 %p\n"
 			"\tx8 %p x9 %p x10 %p x11 %p\n"
@@ -1038,7 +1038,7 @@ printRegisterState(ucontext_t *uap)
 			regs[16], regs[17], regs[18], regs[19],
 			regs[20], regs[21], regs[22], regs[23],
 			regs[24], regs[25], regs[26], regs[27],
-			regs[28], regs[29], regs[30], uap->uc_mcontext.sp);
+			regs[28], regs[29], regs[30], (void *)(uap->uc_mcontext.sp));
 	return uap->uc_mcontext.pc;
 # elif __linux__ && (defined(__arm__) || defined(__arm32__) || defined(ARM32))
 	struct sigcontext *regs = &uap->uc_mcontext;

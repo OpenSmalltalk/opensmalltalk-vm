@@ -29,6 +29,11 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/mman.h>
+#if DUAL_MAPPED_CODE_ZONE
+# include <sys/prctl.h>
+# include <sys/stat.h>        /* For mode constants */
+# include <fcntl.h>           /* For O_* constants */
+#endif
 
 #include "sq.h"
 #include "sqMemoryAccess.h"
@@ -186,6 +191,83 @@ sqMakeMemoryNotExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 				 PROT_READ | PROT_WRITE) < 0)
 		perror("mprotect(x,y,PROT_READ | PROT_WRITE)");
 }
+
+#	if DUAL_MAPPED_CODE_ZONE
+/* We are indebted to Chris Wellons who designed this elegant API for dual
+ * mapping which we depend on for fine-grained code modification (classical
+ * Deutsch/Schiffman style inline cacheing and derivatives).  Chris's code is:
+	https://nullprogram.com/blog/2016/04/10/
+ *
+ * To cope with modern OSs that disallow executing code in writable memory we
+ * dual-map the code zone, one mapping with read/write permissions and the other
+ * with read/execute permissions. In such a configuration the code zone has
+ * already been alloated and is not included in (what is no longer) the initial
+ * alloc.
+ */
+void
+memory_alias_map(size_t size, size_t naddr, void **addrs)
+{
+extern char  *exeName;
+	char path[128];
+	snprintf(path, sizeof(path), "/%s(%lu,%p)",
+			 exeName ? exeName : __FUNCTION__, (long)getpid(), addrs);
+	int fd = shm_open(path, O_RDWR | O_CREAT | O_EXCL, 0600);
+	if (fd == -1) {
+		perror("memory_alias_map: shm_open");
+		exit(0666);
+	}
+	shm_unlink(path);
+	ftruncate(fd, size);
+	for (size_t i = 0; i < naddr; i++) {
+		addrs[i] = mmap(addrs[i], size,
+						PROT_READ | PROT_WRITE, MAP_SHARED,
+						fd, 0);
+		if (addrs[i] == MAP_FAILED) {
+			perror("memory_alias_map: mmap(addrs[i]...");
+			exit(0667);
+		}
+	}
+	close(fd);
+	return;
+}
+
+/* Allocate a code zone of size codeSizeBytes and assign the pointer to the
+ * read/execute mapping through executableZonePtr, and assign the read/write
+ * mapping through writableZonePtr.  If failures occur print an error and exit.
+ * Be careful to put the executableZone below the writableZone.  This is done
+ * to match the VM simulator.
+ */
+void
+ioAllocateDualMappedCodeZoneOfSizeWritableZone
+	(void **executableZonePtr, usqInt codeSizeBytes, void **writableZonePtr)
+{	void *codeMappings[2];
+	int low, high;
+
+	memory_alias_map(codeSizeBytes, 2, codeMappings);
+
+	if ((unsigned long)codeMappings[0] < (unsigned long)codeMappings[1])
+		low = 0, high = 1;
+	else
+		low = 1, high = 0;
+
+	if (mprotect(codeMappings[low], codeSizeBytes, PROT_READ | PROT_EXEC) < 0) {
+		perror("mprotect(codezone...");
+		exit(0670);
+	}
+	*executableZonePtr = codeMappings[low];
+	*writableZonePtr = codeMappings[high];
+}
+#	else /* DUAL_MAPPED_CODE_ZONE */
+/* Do not allocate a code zone and assign zero, indicating that dual-mapping
+ * is unnecessary on this plaform.
+ */
+void
+ioAllocateDualMappedCodeZoneOfSizeWritableZone
+	(void **executableZonePtr, usqInt codeSizeBytes, void **writableZonePtr)
+{
+	*executableZonePtr = *writableZonePtr = 0;
+}
+#	endif /* DUAL_MAPPED_CODE_ZONE */
 # endif /* COGVM */
 
 # if TEST_MEMORY
