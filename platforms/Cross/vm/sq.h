@@ -101,8 +101,10 @@ extern void *sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt sz, void 
 extern void sqDeallocateMemorySegmentAtOfSize(void *addr, sqInt sz);
 #endif /* SPURVM */
 #if COGVM
-extern void ioAllocateDualMappedCodeZoneOfSizeWritableZone(void **,usqInt,void **);
+extern void sqMakeMemoryExecutableFromToCodeToDataDelta(usqInt, usqInt, sqInt*);
+extern void sqMakeMemoryNotExecutableFromTo(unsigned long, unsigned long);
 #endif
+
 /* Platform-dependent memory size adjustment macro. */
 
 /* Note: This macro can be redefined to allows platforms with a
