@@ -134,9 +134,6 @@ sqInt ioSetCursorARGB(sqInt bitsIndex, sqInt w, sqInt h, sqInt x, sqInt y);
 #define PROF_THREAD_PRIORITY THREAD_PRIORITY_TIME_CRITICAL
 
 #if COGVM
-extern void sqMakeMemoryExecutableFromTo(usqIntptr_t, usqIntptr_t);
-extern void sqMakeMemoryNotExecutableFromTo(usqIntptr_t, usqIntptr_t);
-
 extern int osCogStackPageHeadroom(void);
 extern void reportMinimumUnusedHeadroom(void);
 #endif
