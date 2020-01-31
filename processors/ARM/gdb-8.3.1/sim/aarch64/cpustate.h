@@ -277,6 +277,10 @@ extern int32_t     aarch64_get_reg_s16 (sim_cpu *, GReg, int);
 extern uint32_t    aarch64_get_reg_u8  (sim_cpu *, GReg, int);
 extern int32_t     aarch64_get_reg_s8  (sim_cpu *, GReg, int);
 
+/* These two are for COG to check and enforce 16-byte sp alignment */
+extern uint64_t    aarch64_get_reg_u64_check_sp (sim_cpu *, GReg, int);
+extern int64_t     aarch64_get_reg_s64_check_sp (sim_cpu *, GReg, int);
+
 extern void        aarch64_set_reg_u64 (sim_cpu *, GReg, int, uint64_t);
 extern void        aarch64_set_reg_u32 (sim_cpu *, GReg, int, uint32_t);
 extern void        aarch64_set_reg_s64 (sim_cpu *, GReg, int, int64_t);
