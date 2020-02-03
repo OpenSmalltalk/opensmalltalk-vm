@@ -19,16 +19,7 @@ sqInt uxMemoryExtraBytesLeft(sqInt includingSwap);
 
 #define MAP_PROT	(PROT_READ | PROT_WRITE)
 
-#if __APPLE__
-# define MAP_FLAGS	(MAP_ANON | MAP_PRIVATE)
-#else
-
-#ifndef MAP_FIXED_NOREPLACE
-# define MAP_FIXED_NOREPLACE 0x100000
-#endif
-
-# define MAP_FLAGS	(MAP_ANON | MAP_PRIVATE | MAP_FIXED_NOREPLACE)
-#endif
+#define MAP_FLAGS	(MAP_ANON | MAP_PRIVATE)
 
 #define valign(x)	((x) & pageMask)
 
@@ -97,6 +88,8 @@ sqMakeMemoryNotExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 usqInt
 sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize, usqInt desiredBaseAddress) {
 
+	int increment = 1;
+
 	if (heap) {
 		logError("uxAllocateMemory: already called\n");
 		exit(1);
@@ -113,26 +106,29 @@ sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize, usqInt desiredBaseA
 
 	while ((!heap) && (heapLimit >= minHeapSize)) {
 		if (MAP_FAILED == (heap = mmap((void*) desiredBaseAddressAligned, heapLimit, MAP_PROT, MAP_FLAGS, devZero, 0))) {
-
-#ifdef __APPLE__
-
-			// If the MMAP operation failed we try to get a smaller piece of memory.
-
 			heap = 0;
 			heapLimit = valign(heapLimit / 4 * 3);
-#else
-			// The MMAP can fail with two errors: (1) if the errno is EEXIST is that the requested address is not available, we are going
-			// to ask another in the next page.
-			// (2) if the requested memory is to big, we retry with a smaller one.
+		}
 
-			if (errno == EEXIST) {
-				desiredBaseAddressAligned = valign(desiredBaseAddressAligned + pageSize);
-			} else {
-				heap = 0;
-				heapLimit = valign(heapLimit / 4 * 3);
+		if(heap != MAP_FAILED && heap != desiredBaseAddressAligned){
+
+			desiredBaseAddressAligned = valign(desiredBaseAddressAligned + (pageSize * increment));
+
+			//If the memory given is before the asked one
+			if(heap < desiredBaseAddressAligned){
+				logError("I cannot find a good memory address starting from: %p", (void*)desiredBaseAddress);
+				exit(-1);
 			}
-#endif
 
+			//If I overflow.
+			if(desiredHeapSize > desiredBaseAddressAligned){
+				logError("I cannot find a good memory address starting from: %p", (void*)desiredBaseAddress);
+				exit(-1);
+			}
+
+			munmap(heap, heapLimit);
+
+			increment = increment * 2;
 		}
 	}
 
