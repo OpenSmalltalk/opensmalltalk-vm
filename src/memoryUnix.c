@@ -99,7 +99,7 @@ sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize, usqInt desiredBaseA
   heapLimit= valign(max(desiredHeapSize, 1));
   usqInt desiredBaseAddressAligned = valign(desiredBaseAddress);
 
-  logDebug("Loading the image in %p\n", (void*)desiredBaseAddressAligned);
+  logDebug("Trying to load the image in %p\n", (void*)desiredBaseAddressAligned);
 
 
   while ((!heap) && (heapLimit >= minHeapSize)) {
@@ -118,6 +118,8 @@ sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize, usqInt desiredBaseA
 
   if (overallocateMemory)
     uxShrinkMemoryBy(heap + heapLimit, heapLimit - desiredHeapSize);
+
+  logDebug("Loading the image in %p\n", (void*)heap);
 
   return (usqInt)heap;
 }
