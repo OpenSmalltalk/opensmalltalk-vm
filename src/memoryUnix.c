@@ -22,6 +22,11 @@ sqInt uxMemoryExtraBytesLeft(sqInt includingSwap);
 #if __APPLE__
 # define MAP_FLAGS	(MAP_ANON | MAP_PRIVATE)
 #else
+
+#ifndef MAP_FIXED_NOREPLACE
+# define MAP_FIXED_NOREPLACE 0x100000
+#endif
+
 # define MAP_FLAGS	(MAP_ANON | MAP_PRIVATE | MAP_FIXED_NOREPLACE)
 #endif
 
