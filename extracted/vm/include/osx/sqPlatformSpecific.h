@@ -94,12 +94,8 @@ sqAllocateMemory(minimumMemory, heapSize, baseAddress)
 #define ReturnFromInterpret() return 0
 
 /* undef the memory routines for our logic */
-#undef sqGrowMemoryBy
-#undef sqShrinkMemoryBy
 #undef sqMemoryExtraBytesLeft
 
-sqInt sqGrowMemoryBy(sqInt memoryLimit, sqInt delta);
-sqInt sqShrinkMemoryBy(sqInt memoryLimit, sqInt delta);
 sqInt sqMemoryExtraBytesLeft(sqInt includingSwap);
 
     #undef insufficientMemorySpecifiedError

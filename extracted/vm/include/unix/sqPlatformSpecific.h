@@ -33,8 +33,6 @@
 extern usqInt sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize, usqInt baseAddress);
 #define allocateMemoryMinimumImageFileHeaderSizeBaseAddress(heapSize, minimumMemory, fileStream, headerSize, baseAddress) \
 sqAllocateMemory(minimumMemory, heapSize, baseAddress)
-extern sqInt sqGrowMemoryBy(sqInt oldLimit, sqInt delta);
-extern sqInt sqShrinkMemoryBy(sqInt oldLimit, sqInt delta);
 extern sqInt sqMemoryExtraBytesLeft(sqInt includingSwap);
 #if COGVM
 extern void sqMakeMemoryExecutableFromTo(unsigned long, unsigned long);
