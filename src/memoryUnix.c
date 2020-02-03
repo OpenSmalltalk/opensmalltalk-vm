@@ -88,8 +88,6 @@ sqMakeMemoryNotExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 usqInt
 sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize, usqInt desiredBaseAddress) {
 
-	int increment = 1;
-
 	if (heap) {
 		logError("uxAllocateMemory: already called\n");
 		exit(1);
@@ -112,7 +110,7 @@ sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize, usqInt desiredBaseA
 
 		if(heap != MAP_FAILED && heap != desiredBaseAddressAligned){
 
-			desiredBaseAddressAligned = valign(desiredBaseAddressAligned + (pageSize * increment));
+			desiredBaseAddressAligned = valign(desiredBaseAddressAligned + pageSize);
 
 			//If the memory given is before the asked one
 			if(heap < desiredBaseAddressAligned){
@@ -121,14 +119,13 @@ sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize, usqInt desiredBaseA
 			}
 
 			//If I overflow.
-			if(desiredHeapSize > desiredBaseAddressAligned){
+			if(desiredBaseAddress > desiredBaseAddressAligned){
 				logError("I cannot find a good memory address starting from: %p", (void*)desiredBaseAddress);
 				exit(-1);
 			}
 
 			munmap(heap, heapLimit);
-
-			increment = increment * 2;
+			heap = 0;
 		}
 	}
 
