@@ -99,6 +99,8 @@ sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize, usqInt desiredBaseA
   heapLimit= valign(max(desiredHeapSize, 1));
   usqInt desiredBaseAddressAligned = valign(desiredBaseAddress);
 
+  logDebug("Loading the image in %p\n", (void*)desiredBaseAddressAligned);
+
 
   while ((!heap) && (heapLimit >= minHeapSize)) {
       if (MAP_FAILED == (heap= mmap((void*)desiredBaseAddressAligned, heapLimit, MAP_PROT, MAP_FLAGS, devZero, 0))) {
@@ -214,12 +216,12 @@ sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress
 		}
 
 		if(count >= 6){
-			printf("Para Moses para!!\n");
+			logDebug("More than 6 retries... maybe something is wrong\n");
 		}
 
-		printf("%10p %10p %10p\n", alloc, minAddress, startAddress);
+		logDebug("Asked: %10p %10p %10p\n", alloc, minAddress, startAddress);
 		if (alloc >= minAddress){
-			printf("Allocated Piece: %10p\n", alloc);
+			logDebug("Allocated Piece: %10p\n", alloc);
 			return alloc;
 		}
 
