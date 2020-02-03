@@ -28,6 +28,8 @@ typedef struct _stat	faStatStruct;
  * in a single string (path) to simplify stat()ing the file.
  *
  * path		- The path name in precomposed UTF8 encoding (Smalltalk encoding).
+ * path_dirlen	- length of the directory component of the path.
+ * 		  0 if directory not set.
  * path_len	- length of path.
  * path_file	- When iterating over a directory, this points to the 
  * 		  character after the trailing path separator.
@@ -35,8 +37,8 @@ typedef struct _stat	faStatStruct;
  * 		  stat() each file.
  * max_file_len	- The space remaining after the path for the file name.
  *
- * winpath, winpath_len, winpath_file and winmax_file_len are the Windows 
- * wide string encoded equivalents.
+ * winpath, winpath_dirlen, winpath_len, winpath_file and winmax_file_len are 
+ * the Windows wide string encoded equivalents.
  *
  * Some windows functions require the path name be prepended with "\\?\" to
  * support long file names, while others support long file names without the
@@ -45,15 +47,17 @@ typedef struct _stat	faStatStruct;
  */
 typedef struct fapathstruct {
 	char	path[FA_PATH_MAX];
+	sqInt	path_dirlen;
 	sqInt	path_len;
 	char	*path_file;
 	sqInt	max_file_len;
 
 	/* Add 4 bytes to winpath for the \\?\ prefix */
 	WCHAR	winpathLPP[FA_PATH_MAX+4];
-	sqInt	winpathLPP_len; /* Number of characters, including the prefix */
+	sqInt	winpathLPP_len; /* Number of characters, including the LPP */
 	WCHAR	*winpath_file;
-	WCHAR	*winpath;
+	WCHAR	*winpath;	/* Pointer to the path, excluding the LPP */
+	sqInt	winpath_dirlen; /* Number of characters, not bytes */
 	sqInt	winpath_len; /* Number of characters, not bytes */
 	sqInt	winmax_file_len;
 
@@ -68,6 +72,7 @@ sqInt faSetPlatPath(fapath *aFaPath, WCHAR *pathName);
 sqInt faSetPlatPathOop(fapath *aFaPath, sqInt pathNameOop);
 sqInt faSetPlatFile(fapath *aFaPath, WCHAR *pathName);
 #define	faGetStPath(aFaPath)		(aFaPath)->path
+#define faGetStDirLen(aFaPath)		(aFaPath)->path_dirlen
 #define faGetStPathLen(aFaPath)		(aFaPath)->path_len
 #define	faGetStFile(aFaPath)		(aFaPath)->path_file
 #define	faGetPlatPath(aFaPath)		(aFaPath)->winpath
@@ -100,7 +105,7 @@ sqInt faSetPlatFile(fapath *aFaPath, WCHAR *pathName);
  * a call will fail, e.g. it might work with C:\a\b\c.txt, but fail with
  * C:\a\b\..\d\c.txt
  */
-#define faGetPlatPathCPP(aFaPath)	(((aFaPath)->winpath_len <= (MAX_PATH-12)) ? (aFaPath)->winpath : (aFaPath)->winpathLPP)
+#define faGetPlatPathCPP(aFaPath)	((wcslen((aFaPath)->winpath) <= (MAX_PATH-12)) ? (aFaPath)->winpath : (aFaPath)->winpathLPP)
 
 
 sqInt faOpenDirectory(fapath *aFaPath);
