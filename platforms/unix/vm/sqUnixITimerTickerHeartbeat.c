@@ -173,7 +173,7 @@ ioHighResClock(void)
 						: "=a" (value)
 						: 
 						: "rdx");
-#elif defined(__ARM_ARCH_ISA_A64)
+#elif defined(__ARM_ARCH_ISA_A64) || defined(__arm64__) || defined(__aarch64__) || defined(ARM64)
     __asm__ __volatile__ ("MRS  X0, CNTVCT_EL0");
 #elif defined(__arm__) && (defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7A__))
 	/* tpr - do nothing for now; needs input from eliot to decide further */
