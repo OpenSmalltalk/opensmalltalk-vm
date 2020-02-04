@@ -108,9 +108,19 @@ sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize, usqInt desiredBaseA
 			heapLimit = valign(heapLimit / 4 * 3);
 		}
 
+/*
+ * If we are in linux we have the problem that maybe it gives us a memory location too high in the memory map.
+ * To avoid it, we force to use the required base address
+ */
+#ifndef __APPLE__
 		if(heap != MAP_FAILED && heap != desiredBaseAddressAligned){
 
 			desiredBaseAddressAligned = valign(desiredBaseAddressAligned + pageSize);
+
+			if(heap < desiredBaseAddress){
+				logError("I cannot find a good memory address starting from: %p", (void*)desiredBaseAddress);
+				exit(-1);
+			}
 
 			//If I overflow.
 			if(desiredBaseAddress > desiredBaseAddressAligned){
@@ -121,6 +131,7 @@ sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize, usqInt desiredBaseA
 			munmap(heap, heapLimit);
 			heap = 0;
 		}
+#endif
 	}
 
 	if (!heap) {
