@@ -7,7 +7,7 @@ Class {
 	#classVars : [
 		'ShouldRun'
 	],
-	#category : #'VMMakerCompatibilityForPharo6-SUnit-Extensions'
+	#category : #VMMakerLoadingDependencies
 }
 
 { #category : #accessing }

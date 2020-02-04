@@ -13,7 +13,7 @@ Class {
 		'ForceUpdate',
 		'RedirectToStdOut'
 	],
-	#category : #'VMMakerCompatibilityForPharo6-System'
+	#category : #VMMakerLoadingDependencies
 }
 
 { #category : #preferences }

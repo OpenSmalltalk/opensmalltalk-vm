@@ -6,7 +6,7 @@ Class {
 		'labels',
 		'labelling'
 	],
-	#category : #'VMMakerCompatibilityForPharo6-Kernel-Methods'
+	#category : #VMMakerLoadingDependencies
 }
 
 { #category : #'instruction decoding' }
