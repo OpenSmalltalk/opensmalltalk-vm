@@ -335,7 +335,6 @@ VMSpurScavengerTest >> testOverflowRememberedSetShouldMakeItGrow [
 	"Flush them to the old space"
 	memory coInterpreter method: oldObjectRootAddress.
 	memory flushNewSpace.
-	oldObjectRootAddress := memory remapObj: oldObjectRootAddress.
 	
 	"Make old objects reference a young object"
 	youngObjectAddress := self newZeroSizedObject.

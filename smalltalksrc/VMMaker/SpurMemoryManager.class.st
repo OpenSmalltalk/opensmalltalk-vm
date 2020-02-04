@@ -6310,7 +6310,6 @@ SpurMemoryManager >> initializeFreeListInOldSpace: inOldSpace [
 			storePointerUnchecked: i
 			ofObject: freeListOop
 			withValue: 0].
-	self initializeFreeSpacePostLoad: freeListOop.
 	^ freeListOop
 ]
 

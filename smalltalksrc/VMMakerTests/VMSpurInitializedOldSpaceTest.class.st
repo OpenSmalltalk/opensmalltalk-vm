@@ -64,6 +64,7 @@ VMSpurInitializedOldSpaceTest >> freeTreeRootStartAddress [
 { #category : #helpers }
 VMSpurInitializedOldSpaceTest >> initializeOldSpaceForScavenger [
 
+	| freeListOop |
 	memory coInterpreter bootstrapping: true.
 
 	"Create a nil object required to initialize several fields"
@@ -87,8 +88,13 @@ VMSpurInitializedOldSpaceTest >> initializeOldSpaceForScavenger [
 	memory initializeFreeList.
 	memory segmentManager collapseSegmentsPostSwizzle.
 	memory updateFreeLists.
-	memory computeFreeSpacePostSwizzle.
 	memory initializeOldSpaceFirstFree: memory freeOldSpaceStart.
+	
+	freeListOop := memory initializeFreeListInOldSpace: true.
+	memory initializeFreeSpacePostLoad: freeListOop.
+	memory computeFreeSpacePostSwizzle.
+	memory initializeOldSpaceFirstFree: (memory addressAfter: freeListOop).
+	
 	memory allocateClassTable.	
 	memory scavenger initializeRememberedSet.
 	memory specialObjectsOop: (self newObjectWithSlots: 20).
