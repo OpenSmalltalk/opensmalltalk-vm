@@ -1930,7 +1930,7 @@ sqInt ioSetCursor(sqInt cursorBitsIndex, sqInt offsetX, sqInt offsetY) {
   return ioSetCursorWithMask(cursorBitsIndex, 0, offsetX, offsetY);
 }
 
-int ioSetCursorARGB(sqInt bitsIndex, sqInt w, sqInt h, sqInt x, sqInt y) {
+sqInt ioSetCursorARGB(sqInt bitsIndex, sqInt w, sqInt h, sqInt x, sqInt y) {
   ICONINFO info;
   HBITMAP hbmMask = NULL;
   HBITMAP hbmColor = NULL;

@@ -102,7 +102,7 @@ extern void sqDeallocateMemorySegmentAtOfSize(void *addr, sqInt sz);
 #endif /* SPURVM */
 #if COGVM
 extern void sqMakeMemoryExecutableFromToCodeToDataDelta(usqInt, usqInt, sqInt*);
-extern void sqMakeMemoryNotExecutableFromTo(unsigned long, unsigned long);
+extern void sqMakeMemoryNotExecutableFromTo(usqInt, usqInt);
 #endif
 
 /* Platform-dependent memory size adjustment macro. */

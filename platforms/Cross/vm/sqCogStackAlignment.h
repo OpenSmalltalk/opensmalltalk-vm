@@ -92,7 +92,7 @@
 #	define setsp(spval) __asm volatile ("mov sp, %0"  : : "r"(spval))
 
 #  endif
-# elif defined(__arm32__) || defined(ARM32)
+# elif defined(__arm__) || defined(__arm32__) || defined(ARM32)
 	/* http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dui0041c/Cegbidie.html
 	 * ARM DUI 0041C Page 9-7
 	 */

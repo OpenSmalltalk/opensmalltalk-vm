@@ -69,6 +69,8 @@
     }									\
   while (0)
 #else
+# define aarch64_get_reg_u64_check_sp aarch64_get_reg_u64
+# define aarch64_get_reg_s64_check_sp aarch64_get_reg_s64
 # define HALT_NYI							\
   do									\
     {									\
@@ -402,7 +404,7 @@ stur32 (sim_cpu *cpu, int32_t offset)
 
   TRACE_DECODE (cpu, "emulated at line %d", __LINE__);
   aarch64_set_mem_u32 (cpu,
-		       aarch64_get_reg_u64 (cpu, rn, SP_OK) + offset,
+		       aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK) + offset,
 		       aarch64_get_reg_u32 (cpu, rd, NO_SP));
 }
 
@@ -415,7 +417,7 @@ stur64 (sim_cpu *cpu, int32_t offset)
 
   TRACE_DECODE (cpu, "emulated at line %d", __LINE__);
   aarch64_set_mem_u64 (cpu,
-		       aarch64_get_reg_u64 (cpu, rn, SP_OK) + offset,
+		       aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK) + offset,
 		       aarch64_get_reg_u64 (cpu, rd, NO_SP));
 }
 
@@ -428,7 +430,7 @@ sturb (sim_cpu *cpu, int32_t offset)
 
   TRACE_DECODE (cpu, "emulated at line %d", __LINE__);
   aarch64_set_mem_u8 (cpu,
-		      aarch64_get_reg_u64 (cpu, rn, SP_OK) + offset,
+		      aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK) + offset,
 		      aarch64_get_reg_u8 (cpu, rd, NO_SP));
 }
 
@@ -441,7 +443,7 @@ sturh (sim_cpu *cpu, int32_t offset)
 
   TRACE_DECODE (cpu, "emulated at line %d", __LINE__);
   aarch64_set_mem_u16 (cpu,
-		       aarch64_get_reg_u64 (cpu, rn, SP_OK) + offset,
+		       aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK) + offset,
 		       aarch64_get_reg_u16 (cpu, rd, NO_SP));
 }
 
@@ -766,7 +768,7 @@ ldr32_abs (sim_cpu *cpu, uint32_t offset)
   TRACE_DECODE (cpu, "emulated at line %d", __LINE__);
   /* The target register may not be SP but the source may be.  */
   aarch64_set_reg_u64 (cpu, rt, NO_SP, aarch64_get_mem_u32
-		       (cpu, aarch64_get_reg_u64 (cpu, rn, SP_OK)
+		       (cpu, aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK)
 			+ SCALE (offset, 32)));
 }
 
@@ -781,7 +783,7 @@ ldr32_wb (sim_cpu *cpu, int32_t offset, WriteBack wb)
   if (rn == rt && wb != NoWriteBack)
     HALT_UNALLOC;
 
-  address = aarch64_get_reg_u64 (cpu, rn, SP_OK);
+  address = aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK);
 
   if (wb != Post)
     address += offset;
@@ -806,7 +808,7 @@ ldr32_scale_ext (sim_cpu *cpu, Scaling scaling, Extension extension)
   unsigned rt = INSTR (4, 0);
   /* rn may reference SP, rm and rt must reference ZR  */
 
-  uint64_t address = aarch64_get_reg_u64 (cpu, rn, SP_OK);
+  uint64_t address = aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK);
   int64_t extended = extend (aarch64_get_reg_u32 (cpu, rm, NO_SP), extension);
   uint64_t displacement =  OPT_SCALE (extended, 32, scaling);
 
@@ -825,7 +827,7 @@ ldr_abs (sim_cpu *cpu, uint32_t offset)
   TRACE_DECODE (cpu, "emulated at line %d", __LINE__);
   /* The target register may not be SP but the source may be.  */
   aarch64_set_reg_u64 (cpu, rt, NO_SP, aarch64_get_mem_u64
-		       (cpu, aarch64_get_reg_u64 (cpu, rn, SP_OK)
+		       (cpu, aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK)
 			+ SCALE (offset, 64)));
 }
 
@@ -840,7 +842,7 @@ ldr_wb (sim_cpu *cpu, int32_t offset, WriteBack wb)
   if (rn == rt && wb != NoWriteBack)
     HALT_UNALLOC;
 
-  address = aarch64_get_reg_u64 (cpu, rn, SP_OK);
+  address = aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK);
 
   if (wb != Post)
     address += offset;
@@ -865,7 +867,7 @@ ldr_scale_ext (sim_cpu *cpu, Scaling scaling, Extension extension)
   unsigned rt = INSTR (4, 0);
   /* rn may reference SP, rm and rt must reference ZR  */
 
-  uint64_t address = aarch64_get_reg_u64 (cpu, rn, SP_OK);
+  uint64_t address = aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK);
   int64_t extended = extend (aarch64_get_reg_u32 (cpu, rm, NO_SP), extension);
   uint64_t displacement =  OPT_SCALE (extended, 64, scaling);
 
@@ -886,7 +888,7 @@ ldrb32_abs (sim_cpu *cpu, uint32_t offset)
      there is no scaling required for a byte load.  */
   aarch64_set_reg_u64 (cpu, rt, NO_SP,
 		       aarch64_get_mem_u8
-		       (cpu, aarch64_get_reg_u64 (cpu, rn, SP_OK) + offset));
+		       (cpu, aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK) + offset));
 }
 
 /* 32 bit load zero-extended byte unscaled signed 9 bit with pre- or post-writeback.  */
@@ -900,7 +902,7 @@ ldrb32_wb (sim_cpu *cpu, int32_t offset, WriteBack wb)
   if (rn == rt && wb != NoWriteBack)
     HALT_UNALLOC;
 
-  address = aarch64_get_reg_u64 (cpu, rn, SP_OK);
+  address = aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK);
 
   if (wb != Post)
     address += offset;
@@ -925,7 +927,7 @@ ldrb32_scale_ext (sim_cpu *cpu, Scaling scaling, Extension extension)
   unsigned rt = INSTR (4, 0);
   /* rn may reference SP, rm and rt must reference ZR  */
 
-  uint64_t address = aarch64_get_reg_u64 (cpu, rn, SP_OK);
+  uint64_t address = aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK);
   int64_t displacement = extend (aarch64_get_reg_u32 (cpu, rm, NO_SP),
 				 extension);
 
@@ -948,7 +950,7 @@ ldrsb_wb (sim_cpu *cpu, int32_t offset, WriteBack wb)
   if (rn == rt && wb != NoWriteBack)
     HALT_UNALLOC;
 
-  address = aarch64_get_reg_u64 (cpu, rn, SP_OK);
+  address = aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK);
 
   if (wb != Post)
     address += offset;
@@ -981,7 +983,7 @@ ldrsb_scale_ext (sim_cpu *cpu, Scaling scaling, Extension extension)
   unsigned rt = INSTR (4, 0);
   /* rn may reference SP, rm and rt must reference ZR  */
 
-  uint64_t address = aarch64_get_reg_u64 (cpu, rn, SP_OK);
+  uint64_t address = aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK);
   int64_t displacement = extend (aarch64_get_reg_u32 (cpu, rm, NO_SP),
 				 extension);
   TRACE_DECODE (cpu, "emulated at line %d", __LINE__);
@@ -1000,7 +1002,7 @@ ldrh32_abs (sim_cpu *cpu, uint32_t offset)
 
   TRACE_DECODE (cpu, "emulated at line %d", __LINE__);
   /* The target register may not be SP but the source may be.  */
-  val = aarch64_get_mem_u16 (cpu, aarch64_get_reg_u64 (cpu, rn, SP_OK)
+  val = aarch64_get_mem_u16 (cpu, aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK)
 			     + SCALE (offset, 16));
   aarch64_set_reg_u32 (cpu, rt, NO_SP, val);
 }
@@ -1017,7 +1019,7 @@ ldrh32_wb (sim_cpu *cpu, int32_t offset, WriteBack wb)
   if (rn == rt && wb != NoWriteBack)
     HALT_UNALLOC;
 
-  address = aarch64_get_reg_u64 (cpu, rn, SP_OK);
+  address = aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK);
 
   if (wb != Post)
     address += offset;
@@ -1042,7 +1044,7 @@ ldrh32_scale_ext (sim_cpu *cpu, Scaling scaling, Extension extension)
   unsigned rt = INSTR (4, 0);
   /* rn may reference SP, rm and rt must reference ZR  */
 
-  uint64_t address = aarch64_get_reg_u64 (cpu, rn, SP_OK);
+  uint64_t address = aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK);
   int64_t extended = extend (aarch64_get_reg_u32 (cpu, rm, NO_SP), extension);
   uint64_t displacement =  OPT_SCALE (extended, 16, scaling);
 
@@ -1061,7 +1063,7 @@ ldrsh32_abs (sim_cpu *cpu, uint32_t offset)
 
   TRACE_DECODE (cpu, "emulated at line %d", __LINE__);
   /* The target register may not be SP but the source may be.  */
-  val = aarch64_get_mem_s16 (cpu, aarch64_get_reg_u64 (cpu, rn, SP_OK)
+  val = aarch64_get_mem_s16 (cpu, aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK)
 			     + SCALE (offset, 16));
   aarch64_set_reg_s32 (cpu, rt, NO_SP, val);
 }
@@ -1078,7 +1080,7 @@ ldrsh32_wb (sim_cpu *cpu, int32_t offset, WriteBack wb)
   if (rn == rt && wb != NoWriteBack)
     HALT_UNALLOC;
 
-  address = aarch64_get_reg_u64 (cpu, rn, SP_OK);
+  address = aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK);
 
   if (wb != Post)
     address += offset;
@@ -1104,7 +1106,7 @@ ldrsh32_scale_ext (sim_cpu *cpu, Scaling scaling, Extension extension)
   unsigned rt = INSTR (4, 0);
   /* rn may reference SP, rm and rt must reference ZR  */
 
-  uint64_t address = aarch64_get_reg_u64 (cpu, rn, SP_OK);
+  uint64_t address = aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK);
   int64_t extended = extend (aarch64_get_reg_u32 (cpu, rm, NO_SP), extension);
   uint64_t displacement =  OPT_SCALE (extended, 16, scaling);
 
@@ -1124,7 +1126,7 @@ ldrsh_abs (sim_cpu *cpu, uint32_t offset)
 
   TRACE_DECODE (cpu, "emulated at line %d", __LINE__);
   /* The target register may not be SP but the source may be.  */
-  val = aarch64_get_mem_s16  (cpu, aarch64_get_reg_u64 (cpu, rn, SP_OK)
+  val = aarch64_get_mem_s16  (cpu, aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK)
 			      + SCALE (offset, 16));
   aarch64_set_reg_s64 (cpu, rt, NO_SP, val);
 }
@@ -1143,7 +1145,7 @@ ldrsh64_wb (sim_cpu *cpu, int32_t offset, WriteBack wb)
     HALT_UNALLOC;
 
   TRACE_DECODE (cpu, "emulated at line %d", __LINE__);
-  address = aarch64_get_reg_u64 (cpu, rn, SP_OK);
+  address = aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK);
 
   if (wb != Post)
     address += offset;
@@ -1169,7 +1171,7 @@ ldrsh_scale_ext (sim_cpu *cpu, Scaling scaling, Extension extension)
 
   /* rn may reference SP, rm and rt must reference ZR  */
 
-  uint64_t address = aarch64_get_reg_u64 (cpu, rn, SP_OK);
+  uint64_t address = aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK);
   int64_t extended = extend (aarch64_get_reg_u32 (cpu, rm, NO_SP), extension);
   uint64_t displacement = OPT_SCALE (extended, 16, scaling);
   int64_t val;
@@ -1188,7 +1190,7 @@ ldrsw_abs (sim_cpu *cpu, uint32_t offset)
   int64_t val;
 
   TRACE_DECODE (cpu, "emulated at line %d", __LINE__);
-  val = aarch64_get_mem_s32 (cpu, aarch64_get_reg_u64 (cpu, rn, SP_OK)
+  val = aarch64_get_mem_s32 (cpu, aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK)
 			     + SCALE (offset, 32));
   /* The target register may not be SP but the source may be.  */
   return aarch64_set_reg_s64 (cpu, rt, NO_SP, val);
@@ -1206,7 +1208,7 @@ ldrsw_wb (sim_cpu *cpu, int32_t offset, WriteBack wb)
   if (rn == rt && wb != NoWriteBack)
     HALT_UNALLOC;
 
-  address = aarch64_get_reg_u64 (cpu, rn, SP_OK);
+  address = aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK);
 
   if (wb != Post)
     address += offset;
@@ -1231,7 +1233,7 @@ ldrsw_scale_ext (sim_cpu *cpu, Scaling scaling, Extension extension)
   unsigned rt = INSTR (4, 0);
   /* rn may reference SP, rm and rt must reference ZR  */
 
-  uint64_t address = aarch64_get_reg_u64 (cpu, rn, SP_OK);
+  uint64_t address = aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK);
   int64_t extended = extend (aarch64_get_reg_u32 (cpu, rm, NO_SP), extension);
   uint64_t displacement =  OPT_SCALE (extended, 32, scaling);
 
@@ -1252,7 +1254,7 @@ str32_abs (sim_cpu *cpu, uint32_t offset)
 
   TRACE_DECODE (cpu, "emulated at line %d", __LINE__);
   /* The target register may not be SP but the source may be.  */
-  aarch64_set_mem_u32 (cpu, (aarch64_get_reg_u64 (cpu, rn, SP_OK)
+  aarch64_set_mem_u32 (cpu, (aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK)
 			     + SCALE (offset, 32)),
 		       aarch64_get_reg_u32 (cpu, rt, NO_SP));
 }
@@ -1268,7 +1270,7 @@ str32_wb (sim_cpu *cpu, int32_t offset, WriteBack wb)
   if (rn == rt && wb != NoWriteBack)
     HALT_UNALLOC;
 
-  address = aarch64_get_reg_u64 (cpu, rn, SP_OK);
+  address = aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK);
   if (wb != Post)
     address += offset;
 
@@ -1291,7 +1293,7 @@ str32_scale_ext (sim_cpu *cpu, Scaling scaling, Extension extension)
   unsigned rn = INSTR (9, 5);
   unsigned rt = INSTR (4, 0);
 
-  uint64_t address = aarch64_get_reg_u64 (cpu, rn, SP_OK);
+  uint64_t address = aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK);
   int64_t  extended = extend (aarch64_get_reg_u32 (cpu, rm, NO_SP), extension);
   uint64_t displacement = OPT_SCALE (extended, 32, scaling);
 
@@ -1309,7 +1311,7 @@ str_abs (sim_cpu *cpu, uint32_t offset)
 
   TRACE_DECODE (cpu, "emulated at line %d", __LINE__);
   aarch64_set_mem_u64 (cpu,
-		       aarch64_get_reg_u64 (cpu, rn, SP_OK)
+		       aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK)
 		       + SCALE (offset, 64),
 		       aarch64_get_reg_u64 (cpu, rt, NO_SP));
 }
@@ -1325,7 +1327,7 @@ str_wb (sim_cpu *cpu, int32_t offset, WriteBack wb)
   if (rn == rt && wb != NoWriteBack)
     HALT_UNALLOC;
 
-  address = aarch64_get_reg_u64 (cpu, rn, SP_OK);
+  address = aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK);
 
   if (wb != Post)
     address += offset;
@@ -1350,7 +1352,7 @@ str_scale_ext (sim_cpu *cpu, Scaling scaling, Extension extension)
   unsigned rt = INSTR (4, 0);
   /* rn may reference SP, rm and rt must reference ZR  */
 
-  uint64_t address = aarch64_get_reg_u64 (cpu, rn, SP_OK);
+  uint64_t address = aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK);
   int64_t   extended = extend (aarch64_get_reg_u32 (cpu, rm, NO_SP),
 			       extension);
   uint64_t displacement = OPT_SCALE (extended, 64, scaling);
@@ -1371,7 +1373,7 @@ strb_abs (sim_cpu *cpu, uint32_t offset)
   /* The target register may not be SP but the source may be.
      There is no scaling required for a byte load.  */
   aarch64_set_mem_u8 (cpu,
-		      aarch64_get_reg_u64 (cpu, rn, SP_OK) + offset,
+		      aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK) + offset,
 		      aarch64_get_reg_u8 (cpu, rt, NO_SP));
 }
 
@@ -1386,7 +1388,7 @@ strb_wb (sim_cpu *cpu, int32_t offset, WriteBack wb)
   if (rn == rt && wb != NoWriteBack)
     HALT_UNALLOC;
 
-  address = aarch64_get_reg_u64 (cpu, rn, SP_OK);
+  address = aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK);
 
   if (wb != Post)
     address += offset;
@@ -1411,7 +1413,7 @@ strb_scale_ext (sim_cpu *cpu, Scaling scaling, Extension extension)
   unsigned rt = INSTR (4, 0);
   /* rn may reference SP, rm and rt must reference ZR  */
 
-  uint64_t address = aarch64_get_reg_u64 (cpu, rn, SP_OK);
+  uint64_t address = aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK);
   int64_t displacement = extend (aarch64_get_reg_u32 (cpu, rm, NO_SP),
 				 extension);
 
@@ -1430,7 +1432,7 @@ strh_abs (sim_cpu *cpu, uint32_t offset)
 
   TRACE_DECODE (cpu, "emulated at line %d", __LINE__);
   /* The target register may not be SP but the source may be.  */
-  aarch64_set_mem_u16 (cpu, aarch64_get_reg_u64 (cpu, rn, SP_OK)
+  aarch64_set_mem_u16 (cpu, aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK)
 		       + SCALE (offset, 16),
 		       aarch64_get_reg_u16 (cpu, rt, NO_SP));
 }
@@ -1446,7 +1448,7 @@ strh_wb (sim_cpu *cpu, int32_t offset, WriteBack wb)
   if (rn == rt && wb != NoWriteBack)
     HALT_UNALLOC;
 
-  address = aarch64_get_reg_u64 (cpu, rn, SP_OK);
+  address = aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK);
 
   if (wb != Post)
     address += offset;
@@ -1471,7 +1473,7 @@ strh_scale_ext (sim_cpu *cpu, Scaling scaling, Extension extension)
   unsigned rt = INSTR (4, 0);
   /* rn may reference SP, rm and rt must reference ZR  */
 
-  uint64_t address = aarch64_get_reg_u64 (cpu, rn, SP_OK);
+  uint64_t address = aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK);
   int64_t extended = extend (aarch64_get_reg_u32 (cpu, rm, NO_SP), extension);
   uint64_t displacement =  OPT_SCALE (extended, 16, scaling);
 
@@ -1492,7 +1494,7 @@ prfm_abs (sim_cpu *cpu, uint32_t offset)
                           10100 ==> PSTL3KEEP, 10101 ==> PSTL3STRM,
                           ow ==> UNALLOC
      PrfOp prfop = prfop (instr, 4, 0);
-     uint64_t address = aarch64_get_reg_u64 (cpu, rn, SP_OK)
+     uint64_t address = aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK)
      + SCALE (offset, 64).  */
 
   /* TODO : implement prefetch of address.  */
@@ -1511,7 +1513,7 @@ prfm_scale_ext (sim_cpu *cpu, Scaling scaling, Extension extension)
                           ow ==> UNALLOC
      rn may reference SP, rm may only reference ZR
      PrfOp prfop = prfop (instr, 4, 0);
-     uint64_t base = aarch64_get_reg_u64 (cpu, rn, SP_OK);
+     uint64_t base = aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK);
      int64_t extended = extend (aarch64_get_reg_u32 (cpu, rm, NO_SP),
                                 extension);
      uint64_t displacement =  OPT_SCALE (extended, 64, scaling);
@@ -1544,7 +1546,7 @@ ldxr (sim_cpu *cpu)
 {
   unsigned rn = INSTR (9, 5);
   unsigned rt = INSTR (4, 0);
-  uint64_t address = aarch64_get_reg_u64 (cpu, rn, SP_OK);
+  uint64_t address = aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK);
   int size = INSTR (31, 30);
   /* int ordered = INSTR (15, 15);  */
   /* int exclusive = ! INSTR (23, 23);  */
@@ -1573,7 +1575,7 @@ stxr (sim_cpu *cpu)
   unsigned rn = INSTR (9, 5);
   unsigned rt = INSTR (4, 0);
   unsigned rs = INSTR (20, 16);
-  uint64_t address = aarch64_get_reg_u64 (cpu, rn, SP_OK);
+  uint64_t address = aarch64_get_reg_u64_check_sp (cpu, rn, SP_OK);
   int      size = INSTR (31, 30);
   uint64_t data = aarch64_get_reg_u64 (cpu, rt, NO_SP);
 

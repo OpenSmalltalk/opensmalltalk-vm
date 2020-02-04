@@ -240,7 +240,7 @@ sqMakeMemoryExecutableFromToCodeToDataDelta(usqInt startAddr,
 }
 
 void
-sqMakeMemoryNotExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
+sqMakeMemoryNotExecutableFromTo(usqInt startAddr, usqInt endAddr)
 {
 	unsigned long firstPage = roundDownToPage(startAddr);
 	unsigned long size = endAddr - firstPage;

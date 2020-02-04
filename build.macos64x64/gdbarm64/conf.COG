@@ -10,5 +10,5 @@ done
 for d in sim/common sim/aarch64; do
 	(cd $d;
 	 ../$S/$d/configure COG=1 CFLAGS="$CFLAGS" $CONFFLAGS \
-		--disable-sim-trace --without-profile)
+		--disable-sim-trace)
 done

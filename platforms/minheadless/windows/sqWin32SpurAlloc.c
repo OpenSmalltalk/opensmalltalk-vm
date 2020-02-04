@@ -214,7 +214,7 @@ sqMakeMemoryExecutableFromToCodeToDataDelta(usqInt startAddr,
 }
 
 void
-sqMakeMemoryNotExecutableFromTo(usqIntptr_t startAddr, usqIntptr_t endAddr)
+sqMakeMemoryNotExecutableFromTo(usqInt startAddr, usqInt endAddr)
 {
 	DWORD previous;
     SIZE_T size;

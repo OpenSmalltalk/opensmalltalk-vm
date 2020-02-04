@@ -76,6 +76,34 @@ aarch64_get_reg_s64 (sim_cpu *cpu, GReg reg, int r31_is_sp)
   return cpu->gr[reg_num(reg)].s64;
 }
 
+#if COG
+/* These two enforce 16-byte stack pointer alignment */
+# define HALT_IF_UNALIGNED_SP(regno,regval)									\
+	do {																	\
+		if ((regno) == 31 && ((regval) & 0xf)) {							\
+		  TRACE_INSN (cpu,													\
+			  "Unimplemented instruction detected at sim line %d,"			\
+			  " exe addr %" PRIx64,											\
+			  __LINE__, aarch64_get_PC (cpu));								\
+		  sim_engine_halt (CPU_STATE (cpu), cpu, NULL, aarch64_get_PC (cpu),\
+							sim_stopped, SIM_SIGABRT);						\
+		}																	\
+  } while (0)
+uint64_t
+aarch64_get_reg_u64_check_sp (sim_cpu *cpu, GReg reg, int r31_is_sp)
+{
+  HALT_IF_UNALIGNED_SP(reg_num(reg),cpu->gr[reg_num(reg)].u64);
+  return cpu->gr[reg_num(reg)].u64;
+}
+
+int64_t
+aarch64_get_reg_s64_check_sp (sim_cpu *cpu, GReg reg, int r31_is_sp)
+{
+  HALT_IF_UNALIGNED_SP(reg_num(reg),cpu->gr[reg_num(reg)].u64);
+  return cpu->gr[reg_num(reg)].s64;
+}
+#endif
+
 uint32_t
 aarch64_get_reg_u32 (sim_cpu *cpu, GReg reg, int r31_is_sp)
 {
