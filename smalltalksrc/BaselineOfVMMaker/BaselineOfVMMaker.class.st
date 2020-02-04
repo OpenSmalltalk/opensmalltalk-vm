@@ -15,7 +15,9 @@ BaselineOfVMMaker >> baseline: spec [
 				package: 'VMMakerTests' with: [
 					spec requires: 'VMMakerCompatibilityForPharo6' ].
 			spec
-				package: 'VMMakerCompatibilityForPharo6'.
+				package: 'VMMakerCompatibilityForPharo6'
+				with: [ spec requires: 'VMMaker' ];
+				package: 'VMMakerLoadingDependencies'.
 			
 			"Dependencies from other repositories"
 			spec
@@ -32,7 +34,7 @@ BaselineOfVMMaker >> baseline: spec [
 			spec
 				package: 'Balloon-Engine-Pools';
 				package: 'BytecodeSets';
-				package: 'VMMaker' with: [ spec requires: #( 'VMMakerCompatibilityForPharo6' 'Printf') ];
+				package: 'VMMaker' with: [ spec requires: #( 'VMMakerLoadingDependencies' 'Printf') ];
 				package: 'Cog';
 				package: 'CogTools';
 				package: 'ImageFormat'.
