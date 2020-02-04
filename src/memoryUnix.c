@@ -112,12 +112,6 @@ sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize, usqInt desiredBaseA
 
 			desiredBaseAddressAligned = valign(desiredBaseAddressAligned + pageSize);
 
-			//If the memory given is before the asked one
-			if(heap < desiredBaseAddressAligned){
-				logError("I cannot find a good memory address starting from: %p", (void*)desiredBaseAddress);
-				exit(-1);
-			}
-
 			//If I overflow.
 			if(desiredBaseAddress > desiredBaseAddressAligned){
 				logError("I cannot find a good memory address starting from: %p", (void*)desiredBaseAddress);
