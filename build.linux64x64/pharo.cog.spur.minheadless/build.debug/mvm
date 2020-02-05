@@ -1,7 +1,7 @@
 #!/bin/bash -e
 # PharoVM with VM profiler and threaded heartbeat
 THIRDPARTYLIBS="libsdl2 openssl libssh2 libgit2"
-INSTALLDIR=phcogspurlinuxht
+INSTALLDIR=debug/phcogspur64linuxht
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift

@@ -10,7 +10,7 @@ i*86) ;; # we're good
 fi ;;
 esac
 # Spur VM with VM profiler and threaded heartbeat
-INSTALLDIR=phcogspurlinuxht
+INSTALLDIR=assert/phcogspurlinuxht
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift

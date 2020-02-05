@@ -11,8 +11,8 @@
  
 #if __i386__ || _M_IX86
 # if __SSE2__ || (__APPLE__ && __MACH__) || __linux__ || _M_IX86_FP==2
-/* 16-byte stack alignment on x86 is required for SSE instructions which
- * require 16-byte aligned addresses to access 64 or 128 bit values in memory.
+/* 16 byte stack alignment on x86 is required for SSE instructions which
+ * require 16 byte aligned addresses to access 64 or 128 bit values in memory.
  */
 #	define STACK_ALIGN_BYTES 16
 #	define STACK_FP_ALIGNMENT 8 /* aligned sp - retpc - saved fp */
@@ -23,14 +23,12 @@
 #endif
 
 #if defined(__arm64__) || defined(__aarch64__) || defined(ARM64)
-/* Quad-byte stack alignment on ARM64 is required.
-   (SP mod 16) == 0
- */
+/* 16 byte stack alignment on ARM64 is required always. (SP mod 16) == 0 */
 # define STACK_ALIGN_BYTES 16
-# define STACK_FP_ALIGNMENT 8
+# define STACK_FP_ALIGNMENT 0
 #elif defined(__arm__) || defined(__arm32__) || defined(ARM32)
-/* 8-byte stack alignment on ARM32 is required for instructions which
- * require 8-byte aligned addresses to access doubles in memory.
+/* 8 byte stack alignment on ARM32 is required for instructions which
+ * require 8 byte aligned addresses to access doubles in memory.
  */
 # define STACK_ALIGN_BYTES 8
 # define STACK_FP_ALIGNMENT 4
