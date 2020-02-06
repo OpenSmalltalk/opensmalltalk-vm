@@ -95,8 +95,9 @@ VMSpurInitializedOldSpaceTest >> initializeOldSpaceForScavenger [
 	memory computeFreeSpacePostSwizzle.
 	memory initializeOldSpaceFirstFree: (memory addressAfter: freeListOop).
 	
-	memory allocateClassTable.	
+	memory allocateClassTable.
 	memory scavenger initializeRememberedSet.
+	memory scavenger remember: memory hiddenRootsObject.
 	memory specialObjectsOop: (self newObjectWithSlots: 20).
 	
 	"Force moving the special objects array to old space..."
@@ -111,6 +112,16 @@ VMSpurInitializedOldSpaceTest >> initializeOldSpaceForScavenger [
 	memory coInterpreter profileMethod: memory nilObject.
 	memory coInterpreter profileSemaphore: memory nilObject.
 	memory mournQueue: memory nilObject.
+]
+
+{ #category : #tests }
+VMSpurInitializedOldSpaceTest >> keepObject1: ephemeronObjectOop [
+	memory coInterpreter newMethod: ephemeronObjectOop
+]
+
+{ #category : #tests }
+VMSpurInitializedOldSpaceTest >> keepObject2: nonEphemeronObjectOop [
+	memory coInterpreter profileSemaphore: nonEphemeronObjectOop
 ]
 
 { #category : #helpers }
