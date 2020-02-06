@@ -85,23 +85,36 @@ VMSpurScavengeEphemeronTest >> testScavengeEphemeronObjectBecomesNormalObjectAft
 
 { #category : #tests }
 VMSpurScavengeEphemeronTest >> testScavengeEphemeronObjectReferencingDyingObjectShouldBeAddedInTheMournQueue [
-	| ephemeronObjectOop nonEphemeronObjectOop  |
+	| ephemeronObjectOop nonEphemeronObjectOop  anotherEphemeronObjectOop anotherNonEphemeronObjectOop |
 	self createEphemeronClass.
 	ephemeronObjectOop := self newEphemeronObject.
+	anotherEphemeronObjectOop := self newEphemeronObject.
 	nonEphemeronObjectOop := self newZeroSizedObject.
+	anotherNonEphemeronObjectOop := self newZeroSizedObject.
 	memory
 		storePointer: 0
 		ofObject: ephemeronObjectOop
 		withValue: nonEphemeronObjectOop.
+		
+	memory
+		storePointer: 0
+		ofObject: anotherEphemeronObjectOop
+		withValue: anotherNonEphemeronObjectOop.
 
 	"Force object to not be collected by putting them in special variables"
 	self keepObject1: ephemeronObjectOop.
+	self keepObject2: anotherEphemeronObjectOop.
 
 	memory doScavenge: 1.	"TenureByAge"
 	ephemeronObjectOop := memory remapObj: ephemeronObjectOop.
+	anotherEphemeronObjectOop := memory remapObj: anotherEphemeronObjectOop.
 	self
 		assert: memory dequeueMourner
-		equals: ephemeronObjectOop
+		equals: ephemeronObjectOop.
+
+	self
+		assert: memory dequeueMourner
+		equals: anotherEphemeronObjectOop.
 ]
 
 { #category : #tests }
