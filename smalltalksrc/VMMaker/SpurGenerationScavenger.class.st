@@ -503,9 +503,12 @@ SpurGenerationScavenger >> fireEphemeronsOnEphemeronList [
 			 manager
 				storePointerUnchecked: 0
 				ofObject: ephemeron
-				withValue: (self copyAndForward: key)].
-		 "Fired ephemerons should have had their format changed."
-		 self deny: ((self isScavengeSurvivor: key) and: [manager isEphemeron: ephemeron]).
+				withValue: (self copyAndForward: key).
+			"Fired ephemerons should have had their format changed."
+			 self deny: 
+				((self isScavengeSurvivor: key) 
+				and: [manager isEphemeron: ephemeron])].
+
 		 self cCoerceSimple: (self scavengeReferentsOf: ephemeron) to: #void.
 		 oldCorpse := ephemeronCorpse.
 		 ephemeronCorpse := self nextCorpseOrNil: ephemeronCorpse]

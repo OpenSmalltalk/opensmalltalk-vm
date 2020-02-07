@@ -31,6 +31,11 @@ VMSpurInitializedOldSpaceTest >> denyFreeListEmpty: aFreeListOop [
 	self deny: aFreeListOop equals: 0
 ]
 
+{ #category : #tests }
+VMSpurInitializedOldSpaceTest >> forgetObject3 [
+	memory coInterpreter profileMethod: memory nilObject
+]
+
 { #category : #helpers }
 VMSpurInitializedOldSpaceTest >> freeListForSize: allocationSize [
 	
@@ -122,6 +127,11 @@ VMSpurInitializedOldSpaceTest >> keepObject1: ephemeronObjectOop [
 { #category : #tests }
 VMSpurInitializedOldSpaceTest >> keepObject2: nonEphemeronObjectOop [
 	memory coInterpreter profileSemaphore: nonEphemeronObjectOop
+]
+
+{ #category : #tests }
+VMSpurInitializedOldSpaceTest >> keepObject3: ephemeronObjectOop [
+	memory coInterpreter profileMethod: ephemeronObjectOop
 ]
 
 { #category : #helpers }
