@@ -826,7 +826,7 @@ int b3dCheckIntersectionOfFaces(B3DPrimitiveFace *frontFace,
 		if(xValue > rightX) xValue = rightX;
 		/* Ignore intersections at or before the leftEdge's x value. Important. */
 		if((xValue >> B3D_FixedToIntShift) <= (leftEdge->xValue >> B3D_FixedToIntShift))
-			xValue = ((leftEdge->xValue >> B3D_FixedToIntShift) + 1) << B3D_IntToFixedShift;
+			xValue = (unsigned)((leftEdge->xValue >> B3D_FixedToIntShift) + 1) << B3D_IntToFixedShift;
 		if(xValue < nextIntersection->xValue) {
 			nextIntersection->xValue = xValue;
 			nextIntersection->leftFace = frontFace;
@@ -1249,9 +1249,9 @@ RESUME_ADDING:
 		/* STEP 2: Add new edges if necessary */
 		if(yValue == nextEdgeY) {
 			B3DPrimitiveObject *obj = activeStart;
-			int scaledY = (yValue+1) << B3D_IntToFixedShift;
+			int scaledY = (unsigned)(yValue+1) << B3D_IntToFixedShift;
 
-			nextEdgeY = nextObjY << B3D_IntToFixedShift;
+			nextEdgeY = (unsigned)nextObjY << B3D_IntToFixedShift;
 			while(obj != passiveStart) {
 				B3DInputFace *objFaces = obj->faces;
 				B3DPrimitiveVertex *objVtx = obj->vertices;
