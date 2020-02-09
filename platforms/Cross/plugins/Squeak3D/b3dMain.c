@@ -945,6 +945,8 @@ void b3dRemoveFill(B3DFillList *fillList, B3DPrimitiveFace *aFace)
 		aFace->nextFace->prevFace = aFace->prevFace;
 	else
 		fillList->lastFace = aFace->prevFace;
+	aFace->prevFace = NULL;
+	aFace->nextFace = NULL;
 }
 /* --INLINE-- */
 
