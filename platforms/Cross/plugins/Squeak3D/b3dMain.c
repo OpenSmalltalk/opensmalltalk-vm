@@ -773,8 +773,8 @@ int b3dComputeIntersection(B3DPrimitiveFace *frontFace,
 	if(det == 0.0) return errorValue;
 	{ 
 		double det2 = ((px * dz2) - (pz * dx2)) / det;
-        double res = frontFace->leftEdge->xValue + dx1 * det2;
-        if(res < INT_MIN || INT_MAX < res) return errorValue;
+		double res = frontFace->leftEdge->xValue + dx1 * det2;
+		if(res < INT_MIN || INT_MAX < res) return errorValue;
 		return (int)(res);
 	}
 	/* not reached */
