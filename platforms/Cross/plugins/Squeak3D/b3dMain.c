@@ -1374,9 +1374,12 @@ RESUME_MERGING:
 
 					/*-- Toggle the faces of the top edge (the left edge is always on top) --*/
 					if(leftEdge == lastIntersection) {
-						/* Special case if this is a intersection edge */
+						/* Special case if this is an intersection edge */
 						assert(fillList->firstFace == leftEdge->leftFace);
-						b3dRemoveFill(fillList, leftEdge->rightFace);
+						if(b3dIsInFillList(fillList,leftEdge->rightFace))
+							b3dRemoveFill(fillList, leftEdge->rightFace);
+						 else
+							leftEdge->rightFace->flags ^= B3D_FACE_ACTIVE;
 						b3dAddFrontFill(fillList, leftEdge->rightFace);
 					} else {
 						b3dToggleTopFills(fillList, leftEdge, yValue);
