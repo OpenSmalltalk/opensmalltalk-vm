@@ -862,6 +862,16 @@ void b3dAdjustIntersections(B3DFillList *fillList,
 /*************************************************************/
 /*************************************************************/
 
+int b3dIsInFillList( B3DFillList *fillList, B3DPrimitiveFace *aFace)
+{
+	B3DPrimitiveFace *face = fillList->firstFace;
+	while( face ) {
+		if( face == aFace ) return 1;
+		face = face->nextFace;
+	}
+	return 0;
+}
+
 void b3dValidateFillList(B3DFillList *list)
 {
 	B3DPrimitiveFace *firstFace = list->firstFace;
@@ -870,12 +880,15 @@ void b3dValidateFillList(B3DFillList *list)
 
 	if(!firstFace && !lastFace) return;
 	if(firstFace->prevFace)
-		b3dAbort("Bad fill list");
+		b3dAbort("Bad fill list firstFace is not first");
 	if(lastFace->nextFace)
-		b3dAbort("Bad fill list");
+		b3dAbort("Bad fill list lastFace is not last");
 	face = firstFace;
-	while(face != lastFace)
+	while(face != lastFace) {
+		if( face == NULL )
+			b3dAbort("Bad fill list lastFace is not in the face chain");
 		face = face->nextFace;
+	}
 	/* Validate sort order */
 	if(firstFace == lastFace)
 		return; /* 0 or 1 element */
@@ -891,6 +904,7 @@ void b3dValidateFillList(B3DFillList *list)
 void b3dAddFirstFill(B3DFillList *fillList, B3DPrimitiveFace *aFace)
 {
 	B3DPrimitiveFace *firstFace = fillList->firstFace;
+	if(b3dDebug) if( b3dIsInFillList(fillList,aFace )) b3dAbort("Trying to add first a face already in fillList");
 	if(firstFace)
 		firstFace->prevFace = aFace;
 	else
@@ -906,6 +920,7 @@ void b3dAddFirstFill(B3DFillList *fillList, B3DPrimitiveFace *aFace)
 void b3dAddLastFill(B3DFillList *fillList, B3DPrimitiveFace *aFace)
 {
 	B3DPrimitiveFace *lastFace = fillList->lastFace;
+	if(b3dDebug) if( b3dIsInFillList(fillList,aFace )) b3dAbort("Trying to add last a face already in fillList");
 	if(lastFace)
 		lastFace->nextFace = aFace;
 	else
@@ -920,6 +935,7 @@ void b3dAddLastFill(B3DFillList *fillList, B3DPrimitiveFace *aFace)
 /* INLINE b3dRemoveFill(fillList, aFace) */
 void b3dRemoveFill(B3DFillList *fillList, B3DPrimitiveFace *aFace)
 {
+	if(b3dDebug) if(! b3dIsInFillList(fillList,aFace )) b3dAbort("Trying to remove a face not in fillList");
 	if(b3dDebug) b3dValidateFillList(fillList);
 	if(aFace->prevFace)
 		aFace->prevFace->nextFace = aFace->nextFace;
