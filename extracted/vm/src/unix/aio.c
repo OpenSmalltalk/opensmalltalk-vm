@@ -392,16 +392,37 @@ aioPoll(long microSeconds)
 	heartbeat_poll_exit(microSeconds);
 	aio_flushAndExitSleep(signal_pipe_fd[0]);
 
+    // We clear signal_pipe_fd because when it arrives here we do not care anymore
+    // about it, but it may provoque a crash if it is set because we do not have
+    // a handler for it. Another solution could be to just add a handler to signal_pipe_fd
+    // but for now it does not seems needed.
+    FD_CLR(signal_pipe_fd[0], &rd);
+    
 	for (fd = 0; fd < maxFd; ++fd) {
-#undef _DO
-#define _DO(FLAG, TYPE)								\
-		if (FD_ISSET(fd, &TYPE)) {					\
-			aioHandler handler= TYPE##Handler[fd];	\
-			FD_CLR(fd, &TYPE##Mask);				\
-			TYPE##Handler[fd]= undefinedHandler;	\
-			handler(fd, clientData[fd], FLAG);		\
-		}
-		_DO_FLAG_TYPE();
+        aioHandler handler;
+        
+		//_DO_FLAG_TYPE();
+        //_DO(AIO_R, rd)
+        if (FD_ISSET(fd, &rd)) {
+            handler = rdHandler[fd];
+            FD_CLR(fd, &rdMask);
+            handler(fd, clientData[fd], AIO_R);
+            rdHandler[fd]= undefinedHandler;
+        }
+        //_DO(AIO_W, wr)
+        if (FD_ISSET(fd, &wr)) {
+            handler = wrHandler[fd];
+            FD_CLR(fd, &wrMask);
+            handler(fd, clientData[fd], AIO_W);
+            wrHandler[fd]= undefinedHandler;
+        }
+        //_DO(AIO_X, ex)
+        if (FD_ISSET(fd, &ex)) {
+            handler = exHandler[fd];
+            FD_CLR(fd, &exMask);
+            handler(fd, clientData[fd], AIO_X);
+            exHandler[fd]= undefinedHandler;
+        }
 	}
 
 	logTrace("processed");
