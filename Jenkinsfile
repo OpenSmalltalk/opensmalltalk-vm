@@ -210,7 +210,7 @@ try{
 		
 		tests[platform] = {
 			node(platform){
-				timeout(30){
+				timeout(45){
 					runTests(platform, "CoInterpreterWithQueueFFI", ".*")
 				}
 			}
