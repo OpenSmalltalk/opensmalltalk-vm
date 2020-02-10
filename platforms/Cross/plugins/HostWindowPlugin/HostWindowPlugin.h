@@ -83,3 +83,19 @@ extern sqInt ioSetIconOfWindow(sqInt windowIndex, char * iconPath, sqInt sizeOfP
  * No useful return value since we're getting out of Dodge anyway.
  */
 extern sqInt ioCloseAllWindows(void);
+
+/* ioGetWindowHandle: returns the VM window handle.
+ */
+extern void *ioGetWindowHandle(void);
+
+/* ioPositionOfScreenWorkArea: returns the encoded position of a window.
+ */
+extern sqInt ioPositionOfScreenWorkArea(long windowIndex);
+
+/* ioSizeOfScreenWorkArea: returns the encoded size of a window.
+ */
+extern sqInt ioSizeOfScreenWorkArea(long windowIndex);
+
+/* ioSetCursorPositionXY: moves manually the position of the cursor.
+ */
+extern sqInt ioSetCursorPositionXY(long x, long y);
