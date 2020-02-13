@@ -1908,20 +1908,25 @@ SpurMemoryManager >> allocateClassTable [
 	"Create the class table root with enough slots for many class table pages and some hidden root slots.
 	Create only a first mandatory class table page here.
 	Others will be created on demand."	
-	| classTableRootOop firstPageOop |
+	| classTableRootOop pageOop |
 	classTableRootOop := self
 		allocateSlotsInOldSpace: self classTableRootSlots + self hiddenRootSlots
 		format: self arrayFormat
 		classIndex: self arrayClassIndexPun.
 
 	self nilFieldsOf: classTableRootOop.
-	firstPageOop := self
-		allocateSlotsInOldSpace: self classTablePageSize
-		format: self arrayFormat
-		classIndex: self arrayClassIndexPun.
-	
-	self nilFieldsOf: firstPageOop.
-	self storePointer: 0 ofObject: classTableRootOop withValue: firstPageOop.
+
+	"We don't know how many class table pages we need. Seeing an assert in #validateClassTable
+	we assume that it needs at least 2"
+	0 to: 1  do: [ :index |		
+		pageOop := self
+			allocateSlotsInOldSpace: self classTablePageSize
+			format: self arrayFormat
+			classIndex: self arrayClassIndexPun.
+		
+		self nilFieldsOf: pageOop.
+		self storePointer: index ofObject: classTableRootOop withValue: pageOop.
+	].
 
 	self setHiddenRootsObj: classTableRootOop.
 		
@@ -4405,6 +4410,12 @@ SpurMemoryManager >> emptyObjStack: objStack [
 SpurMemoryManager >> endOfMemory [
 	<cmacro: '() GIV(endOfMemory)'>
 	^endOfMemory
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> endOfMemory: anInteger [ 
+	<doNotGenerate>
+	endOfMemory := anInteger
 ]
 
 { #category : #'gc - scavenge/compact' }

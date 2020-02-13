@@ -4,6 +4,13 @@ Class {
 	#category : #VMMakerTests
 }
 
+{ #category : #testing }
+VMSpurOldSpaceGarbageCollectorTest >> isValidFirstBridge [
+
+	^ memory segmentManager
+		isValidSegmentBridge: (memory segmentManager bridgeAt: 0)
+]
+
 { #category : #tests }
 VMSpurOldSpaceGarbageCollectorTest >> testAnOldObjectReferencedFromVMVariableShouldBeKept [
 

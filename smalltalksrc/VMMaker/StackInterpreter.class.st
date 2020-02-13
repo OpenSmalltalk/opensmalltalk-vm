@@ -16842,6 +16842,13 @@ StackInterpreter >> nativeStackSize [
 	^ 4 *1024 * 1024
 ]
 
+{ #category : #accessing }
+StackInterpreter >> newMethod [
+	<doNotGenerate>
+
+	^ newMethod
+]
+
 { #category : #'compiled methods' }
 StackInterpreter >> noAssertHeaderOf: methodPointer [
 	^objectMemory fetchPointer: HeaderIndex ofObject: methodPointer

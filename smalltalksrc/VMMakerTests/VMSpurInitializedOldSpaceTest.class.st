@@ -69,8 +69,21 @@ VMSpurInitializedOldSpaceTest >> freeTreeRootStartAddress [
 { #category : #helpers }
 VMSpurInitializedOldSpaceTest >> initializeOldSpaceForFullGC [
 
+	| ourArrayClass |
+
 	memory markStack: memory nilObject.
-	memory weaklingStack: memory nilObject
+	memory weaklingStack: memory nilObject.
+	
+	ourArrayClass := self newObjectWithSlots: 3.
+	memory
+		storePointer: "InstanceSpecificationIndex" 2
+		ofObject: ourArrayClass
+		withValue: (memory integerObjectOf: Array format).
+	memory ensureBehaviorHash: ourArrayClass.
+	
+	memory storePointer: 16 ofObject: memory classTableFirstPage withValue: ourArrayClass.
+	memory shrinkThreshold: 1*1024*1024.
+
 ]
 
 { #category : #helpers }
@@ -79,8 +92,18 @@ VMSpurInitializedOldSpaceTest >> initializeOldSpaceForScavenger [
 	| freeListOop firstClassTablePage |
 	memory coInterpreter bootstrapping: true.
 
+	"Initialize old space with free list, class table, hidden roots and remembered set to be able to scavenge"
+	memory initializeFreeList.
+	memory segmentManager collapseSegmentsPostSwizzle.
+	memory updateFreeLists.
+	memory initializeOldSpaceFirstFree: memory freeOldSpaceStart.
+
 	"Create a nil object required to initialize several fields"
-	memory nilObject: self newZeroSizedObject.
+	memory nilObject: (self newOldSpaceObjectWithSlots: 0).
+	"Create false object required to initialize several fields"
+	memory falseObject: (self newOldSpaceObjectWithSlots: 0).
+	"Create true object required to initialize several fields"
+	memory trueObject: (self newOldSpaceObjectWithSlots: 0).
 
 	"Initialize Stack"
 	memory coInterpreter desiredNumStackPages: 8.
@@ -95,16 +118,13 @@ VMSpurInitializedOldSpaceTest >> initializeOldSpaceForScavenger [
 	memory coInterpreter profileSemaphore: memory nilObject.
 	memory mournQueue: memory nilObject.
 	memory specialObjectsOop: memory nilObject.
-	
-	"Initialize old space with free list, class table, hidden roots and remembered set to be able to scavenge"
-	memory initializeFreeList.
-	memory segmentManager collapseSegmentsPostSwizzle.
-	memory updateFreeLists.
-	memory initializeOldSpaceFirstFree: memory freeOldSpaceStart.
-	
+		
 	freeListOop := memory initializeFreeListInOldSpace: true.
 	memory initializeFreeSpacePostLoad: freeListOop.
 	memory computeFreeSpacePostSwizzle.
+		
+	memory endOfMemory: memory endOfMemory + memory bridgeSize.
+	
 	memory initializeOldSpaceFirstFree: (memory addressAfter: freeListOop).
 	
 	memory allocateClassTable.
@@ -116,18 +136,8 @@ VMSpurInitializedOldSpaceTest >> initializeOldSpaceForScavenger [
 	memory scavenger remember: firstClassTablePage.
 	memory specialObjectsOop: (self newObjectWithSlots: 20).
 	
-	"Force moving the special objects array to old space..."
-	memory flushNewSpace.
-	
-	"Initialize Special Root objects"
-	memory nilObject: (memory remapObj: memory nilObject).
-	memory coInterpreter method: memory nilObject.
-	memory coInterpreter instructionPointer: memory nilObject.
-	memory coInterpreter newMethod: memory nilObject.
-	memory coInterpreter profileProcess: memory nilObject.
-	memory coInterpreter profileMethod: memory nilObject.
-	memory coInterpreter profileSemaphore: memory nilObject.
-	memory mournQueue: memory nilObject.
+	memory scavengingGCTenuringIf: 1.
+	self deny: memory needGCFlag.
 ]
 
 { #category : #tests }
