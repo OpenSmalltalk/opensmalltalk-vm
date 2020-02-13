@@ -12,7 +12,22 @@ VMSpurOldSpaceGarbageCollectorTest >> isValidFirstBridge [
 ]
 
 { #category : #tests }
-VMSpurOldSpaceGarbageCollectorTest >> testAnOldObjectReferencedFromVMVariableShouldBeKept [
+VMSpurOldSpaceGarbageCollectorTest >> testAnOldObjectNotReferencedShouldGoToOblivion [
+
+	| oldFreeSpaceSize |
+	
+	memory fullGC.
+	oldFreeSpaceSize := memory totalFreeListBytes.
+	1halt.	
+	
+	self newOldSpaceObjectWithSlots: 0.	
+	memory fullGC.
+	
+	self assert: memory totalFreeListBytes equals: oldFreeSpaceSize.
+]
+
+{ #category : #tests }
+VMSpurOldSpaceGarbageCollectorTest >> testAnOldObjectReferencedFromVMVariableShouldBeKeptAndNotMove [
 
 	| anObjectOop |
 	

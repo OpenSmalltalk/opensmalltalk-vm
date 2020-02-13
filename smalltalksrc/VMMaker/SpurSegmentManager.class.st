@@ -700,6 +700,7 @@ SpurSegmentManager >> shrinkObjectMemory: delta [
 	| shrinkage emptySeg |
 	<var: #shrinkage type: #usqInt>
 	<var: #emptySeg type: #'SpurSegmentInfo *'>
+
 	manager checkFreeSpace: GCModeFreeSpace.
 	shrinkage := delta.
 	[emptySeg := self findEmptySegNearestInSizeTo: shrinkage.
