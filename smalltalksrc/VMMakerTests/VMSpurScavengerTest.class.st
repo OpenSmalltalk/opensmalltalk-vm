@@ -60,6 +60,65 @@ VMSpurScavengerTest >> makeBaseFrameWithMethod: aMethodOop context: aContextOop 
 ]
 
 { #category : #'tests-4-scavenge-stack' }
+VMSpurScavengerTest >> testAllocatingObjectsBelowThresholdDoesNotScheduleScavenge [
+
+	| times |
+	times := ((memory scavengeThreshold - memory freeStart) / 16) floor.
+	
+	times timesRepeat: [ self newZeroSizedObject ].
+	
+	"We are just below the threshold and we do not need a GC"
+	self deny: memory needGCFlag
+]
+
+{ #category : #'tests-4-scavenge-stack' }
+VMSpurScavengerTest >> testAllocatingObjectsBelowThresholdShouldBeYoung [
+
+	| times anObjectOop |
+	times := ((memory scavengeThreshold - memory freeStart) / 16) floor.
+	
+	times timesRepeat: [ anObjectOop := self newZeroSizedObject ].
+	
+	self assert: (memory isYoungObject: anObjectOop)
+]
+
+{ #category : #'tests-4-scavenge-stack' }
+VMSpurScavengerTest >> testAllocatingObjectsOverThresholdShouldBeOld [
+
+	| times anObject |
+	times := ((memory scavengeThreshold - memory freeStart) / 16) floor.
+	times timesRepeat: [ self newZeroSizedObject ].
+	
+	"We are just below the threshold and we do not need a GC"
+	"We will allocate a new one forcing the allocation in the old space and asking the GC"
+	
+	anObject := memory
+		allocateSlots: 0
+		format: 0 "zero sized object"
+		classIndex: self zeroSizedObjectClassIndex.
+		
+	self assert: (memory isOldObject: anObject)
+]
+
+{ #category : #'tests-4-scavenge-stack' }
+VMSpurScavengerTest >> testAllocatingObjectsOverThresholdShouldScheduleScavenge [
+
+	| times |
+	times := ((memory scavengeThreshold - memory freeStart) / 16) floor.
+	times timesRepeat: [ self newZeroSizedObject ].
+	
+	"We are just below the threshold and we do not need a GC"
+	"We will allocate a new one forcing the allocation in the old space and asking the GC"
+	
+	memory
+		allocateSlots: 0
+		format: 0 "zero sized object"
+		classIndex: self zeroSizedObjectClassIndex.
+		
+	self assert: memory needGCFlag
+]
+
+{ #category : #'tests-4-scavenge-stack' }
 VMSpurScavengerTest >> testArgumentInStackShouldSurviveScanvenge [
 
 	| newObjectOop newObjectHash newObjectAddress |	

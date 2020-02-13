@@ -40,7 +40,7 @@ VMSpurScavengeEphemeronTest >> testDequeueMournerWithOnlyOneEphemeronShouldEmpty
 		withValue: nonEphemeronObjectOop.
 
 	"Force object to not be collected by putting them in special variables"
-	self keepObject1: ephemeronObjectOop.
+	self keepObjectInVMVariable1: ephemeronObjectOop.
 
 	memory doScavenge: 1.	"TenureByAge"
 	ephemeronObjectOop := memory remapObj: ephemeronObjectOop.
@@ -65,7 +65,7 @@ VMSpurScavengeEphemeronTest >> testScavengeEphemeronInRememberdSetBecomesNormalO
 	self createEphemeronClass.
 	ephemeronObjectOop := self newEphemeronObject.
 	"Force object to not be collected by putting them in special variables"
-	self keepObject1: ephemeronObjectOop.
+	self keepObjectInVMVariable1: ephemeronObjectOop.
 	"Move ephemeron to old space"
 	memory flushNewSpace.
 	ephemeronObjectOop := memory remapObj: ephemeronObjectOop.
@@ -88,7 +88,7 @@ VMSpurScavengeEphemeronTest >> testScavengeEphemeronInRememberedSetReferencingDy
 	self createEphemeronClass.
 	ephemeronObjectOop := self newEphemeronObject.
 	"Force object to not be collected by putting them in special variables"
-	self keepObject1: ephemeronObjectOop.
+	self keepObjectInVMVariable1: ephemeronObjectOop.
 	"Move ephemeron to old space"
 	memory flushNewSpace.
 	ephemeronObjectOop := memory remapObj: ephemeronObjectOop.
@@ -98,9 +98,6 @@ VMSpurScavengeEphemeronTest >> testScavengeEphemeronInRememberedSetReferencingDy
 		storePointer: 0
 		ofObject: ephemeronObjectOop
 		withValue: nonEphemeronObjectOop.
-
-	"Force object to not be collected by putting them in special variables"
-	self keepObject1: ephemeronObjectOop.
 
 	memory doScavenge: 1.	"TenureByAge"
 	self
@@ -114,7 +111,7 @@ VMSpurScavengeEphemeronTest >> testScavengeEphemeronInRememberedSetReferencingDy
 	self createEphemeronClass.
 	ephemeronObjectOop := self newEphemeronObject.
 	"Force object to not be collected by putting them in special variables"
-	self keepObject1: ephemeronObjectOop.
+	self keepObjectInVMVariable1: ephemeronObjectOop.
 	"Move ephemeron to old space"
 	memory flushNewSpace.
 	ephemeronObjectOop := memory remapObj: ephemeronObjectOop.
@@ -127,7 +124,7 @@ VMSpurScavengeEphemeronTest >> testScavengeEphemeronInRememberedSetReferencingDy
 		withValue: nonEphemeronObjectOop.
 
 	"Force object to not be collected by putting them in special variables"
-	self keepObject1: ephemeronObjectOop.
+	self keepObjectInVMVariable1: ephemeronObjectOop.
 
 	memory doScavenge: 1.	"TenureByAge"
 	self
@@ -141,7 +138,7 @@ VMSpurScavengeEphemeronTest >> testScavengeEphemeronInRememberedSetReferencingDy
 	self createEphemeronClass.
 	ephemeronObjectOop := self newEphemeronObject.
 	"Force object to not be collected by putting them in special variables"
-	self keepObject1: ephemeronObjectOop.
+	self keepObjectInVMVariable1: ephemeronObjectOop.
 	"Move ephemeron to old space"
 	memory flushNewSpace.
 	ephemeronObjectOop := memory remapObj: ephemeronObjectOop.
@@ -154,7 +151,7 @@ VMSpurScavengeEphemeronTest >> testScavengeEphemeronInRememberedSetReferencingDy
 		withValue: nonEphemeronObjectOop.
 
 	"Force object to not be collected by putting them in special variables"
-	self keepObject1: ephemeronObjectOop.
+	self keepObjectInVMVariable1: ephemeronObjectOop.
 
 	memory doScavenge: 1.	"TenureByAge"
 	self
@@ -168,7 +165,7 @@ VMSpurScavengeEphemeronTest >> testScavengeEphemeronInRememberedSetReferencingSu
 	self createEphemeronClass.
 	ephemeronObjectOop := self newEphemeronObject.
 	"Force object to not be collected by putting them in special variables"
-	self keepObject1: ephemeronObjectOop.
+	self keepObjectInVMVariable1: ephemeronObjectOop.
 	"Move ephemeron to old space"
 	memory flushNewSpace.
 	ephemeronObjectOop := memory remapObj: ephemeronObjectOop.
@@ -181,8 +178,8 @@ VMSpurScavengeEphemeronTest >> testScavengeEphemeronInRememberedSetReferencingSu
 		withValue: nonEphemeronObjectOop.
 
 	"Force object to not be collected by putting them in special variables"
-	self keepObject1: ephemeronObjectOop.
-	self keepObject2: nonEphemeronObjectOop.
+	self keepObjectInVMVariable1: ephemeronObjectOop.
+	self keepObjectInVMVariable2: nonEphemeronObjectOop.
 	
 	memory doScavenge: 1.	"TenureByAge"
 	self
@@ -202,7 +199,7 @@ VMSpurScavengeEphemeronTest >> testScavengeEphemeronObjectBecomesNormalObjectAft
 		withValue: nonEphemeronObjectOop.
 
 	"Force object to not be collected by putting them in special variables"
-	self keepObject1: ephemeronObjectOop.
+	self keepObjectInVMVariable1: ephemeronObjectOop.
 	
 	memory doScavenge: 1.	"TenureByAge"
 	ephemeronObjectOop := memory remapObj: ephemeronObjectOop.
@@ -225,7 +222,7 @@ VMSpurScavengeEphemeronTest >> testScavengeEphemeronObjectReferencingDyingObject
 		withValue: nonEphemeronObjectOop.
 
 	"Force object to not be collected by putting them in special variables"
-	self keepObject1: ephemeronObjectOop.
+	self keepObjectInVMVariable1: ephemeronObjectOop.
 
 	memory doScavenge: 1.	"TenureByAge"
 	ephemeronObjectOop := memory remapObj: ephemeronObjectOop.
@@ -247,7 +244,7 @@ VMSpurScavengeEphemeronTest >> testScavengeEphemeronObjectReferencingDyingObject
 		withValue: nonEphemeronObjectOop.
 
 	"Force object to not be collected by putting them in special variables"
-	self keepObject1: ephemeronObjectOop.
+	self keepObjectInVMVariable1: ephemeronObjectOop.
 
 	memory doScavenge: 1.	"TenureByAge"
 	ephemeronObjectOop := memory remapObj: ephemeronObjectOop.
@@ -269,7 +266,7 @@ VMSpurScavengeEphemeronTest >> testScavengeEphemeronObjectReferencingDyingObject
 		withValue: nonEphemeronObjectOop.
 
 	"Force object to not be collected by putting them in special variables"
-	self keepObject1: ephemeronObjectOop.
+	self keepObjectInVMVariable1: ephemeronObjectOop.
 
 	memory doScavenge: 1.	"TenureByAge"
 	nonEphemeronObjectOop := memory remapObj: nonEphemeronObjectOop.
@@ -291,8 +288,8 @@ VMSpurScavengeEphemeronTest >> testScavengeEphemeronObjectReferencingSurvivorSho
 		withValue: nonEphemeronObjectOop.
 
 	"Force object to not be collected by putting them in special variables"
-	self keepObject1: ephemeronObjectOop.
-	self keepObject2: nonEphemeronObjectOop.
+	self keepObjectInVMVariable1: ephemeronObjectOop.
+	self keepObjectInVMVariable2: nonEphemeronObjectOop.
 	
 	memory doScavenge: 1.	"TenureByAge"
 	ephemeronObjectOop := memory remapObj: ephemeronObjectOop.
@@ -322,8 +319,8 @@ VMSpurScavengeEphemeronTest >> testScavengeTwoEphemeronObjectsReferencingDiffere
 		withValue: anotherNonEphemeronObjectOop.
 
 	"Force object to not be collected by putting them in special variables"
-	self keepObject1: ephemeronObjectOop.
-	self keepObject2: anotherEphemeronObjectOop.
+	self keepObjectInVMVariable1: ephemeronObjectOop.
+	self keepObjectInVMVariable2: anotherEphemeronObjectOop.
 
 	memory doScavenge: 1.	"TenureByAge"
 	ephemeronObjectOop := memory remapObj: ephemeronObjectOop.
@@ -356,9 +353,9 @@ VMSpurScavengeEphemeronTest >> testScavengeTwoEphemeronObjectsReferencingDiffere
 		withValue: anotherNonEphemeronObjectOop.
 
 	"Force object to not be collected by putting them in special variables"
-	self keepObject1: ephemeronObjectOop.
-	self keepObject2: anotherEphemeronObjectOop.
-	self keepObject3: anotherNonEphemeronObjectOop.
+	self keepObjectInVMVariable1: ephemeronObjectOop.
+	self keepObjectInVMVariable2: anotherEphemeronObjectOop.
+	self keepObjectInVMVariable3: anotherNonEphemeronObjectOop.
 
 	"Scavence once so all three objects are moved from eden to past space"
 	memory doScavenge: 1.	"TenureByAge"
@@ -399,8 +396,8 @@ VMSpurScavengeEphemeronTest >> testScavengeTwoEphemeronObjectsReferencingSameDyi
 		withValue: nonEphemeronObjectOop.
 
 	"Force object to not be collected by putting them in special variables"
-	self keepObject1: ephemeronObjectOop.
-	self keepObject2: anotherEphemeronObjectOop.
+	self keepObjectInVMVariable1: ephemeronObjectOop.
+	self keepObjectInVMVariable2: anotherEphemeronObjectOop.
 
 	memory doScavenge: 1.	"TenureByAge"
 	ephemeronObjectOop := memory remapObj: ephemeronObjectOop.
@@ -432,8 +429,8 @@ VMSpurScavengeEphemeronTest >> testScavengeTwoEphemeronObjectsReferencingSameDyi
 		withValue: nonEphemeronObjectOop.
 
 	"Force object to not be collected by putting them in special variables"
-	self keepObject1: ephemeronObjectOop.
-	self keepObject2: anotherEphemeronObjectOop.
+	self keepObjectInVMVariable1: ephemeronObjectOop.
+	self keepObjectInVMVariable2: anotherEphemeronObjectOop.
 
 	memory doScavenge: 1.	"TenureByAge"
 	ephemeronObjectOop := memory remapObj: ephemeronObjectOop.
@@ -463,8 +460,8 @@ VMSpurScavengeEphemeronTest >> testScavengeTwoEphemeronObjectsReferencingSameDyi
 		withValue: nonEphemeronObjectOop.
 
 	"Force object to not be collected by putting them in special variables"
-	self keepObject1: ephemeronObjectOop.
-	self keepObject2: anotherEphemeronObjectOop.
+	self keepObjectInVMVariable1: ephemeronObjectOop.
+	self keepObjectInVMVariable2: anotherEphemeronObjectOop.
 
 	memory doScavenge: 1.	"TenureByAge"
 	ephemeronObjectOop := memory remapObj: ephemeronObjectOop.
@@ -500,8 +497,8 @@ VMSpurScavengeEphemeronTest >> testScavengeTwoEphemeronObjectsReferencingSameDyi
 		withValue: nonEphemeronObjectOop.
 
 	"Force object to not be collected by putting them in special variables"
-	self keepObject1: ephemeronObjectOop.
-	self keepObject2: anotherEphemeronObjectOop.
+	self keepObjectInVMVariable1: ephemeronObjectOop.
+	self keepObjectInVMVariable2: anotherEphemeronObjectOop.
 
 	memory doScavenge: 1.	"TenureByAge"
 	ephemeronObjectOop := memory remapObj: ephemeronObjectOop.
@@ -529,8 +526,8 @@ VMSpurScavengeEphemeronTest >> testScavengeTwoEphemeronObjectsReferencingSameDyi
 		withValue: nonEphemeronObjectOop.
 
 	"Force object to not be collected by putting them in special variables"
-	self keepObject1: ephemeronObjectOop.
-	self keepObject2: anotherEphemeronObjectOop.
+	self keepObjectInVMVariable1: ephemeronObjectOop.
+	self keepObjectInVMVariable2: anotherEphemeronObjectOop.
 
 	memory doScavenge: 1.	"TenureByAge"
 	ephemeronObjectOop := memory remapObj: ephemeronObjectOop.

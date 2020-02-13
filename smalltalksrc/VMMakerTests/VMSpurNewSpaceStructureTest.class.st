@@ -175,3 +175,11 @@ VMSpurNewSpaceStructureTest >> testNewObjectWithSlotsPositionIsBeforeObjectHeade
 	
 	self assert: oop equals: freeStartBefore
 ]
+
+{ #category : #'tests-2-instantiation' }
+VMSpurNewSpaceStructureTest >> testScavengeThresholdIsInsideTheEden [
+
+	self assert:(memory scavengeThreshold
+						between: memory scavenger eden start
+						and: memory scavenger eden limit)
+]

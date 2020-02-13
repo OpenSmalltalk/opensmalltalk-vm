@@ -6338,6 +6338,9 @@ SpurMemoryManager >> initializeMarkStack [
 { #category : #'gc - scavenging' }
 SpurMemoryManager >> initializeNewSpaceVariables [
 	<inline: #never>
+	
+	1halt.
+	
 	freeStart := scavenger eden start.
 	pastSpaceStart := scavenger pastSpace start.
 	scavengeThreshold := scavenger eden limit
@@ -8533,6 +8536,12 @@ SpurMemoryManager >> markObjectsIn: arrayOfRoots [
 { #category : #'spur bootstrap' }
 SpurMemoryManager >> markStack [
 	^markStack
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> markStack: anOop [ 
+	<doNotGenerate>
+	markStack := anOop
 ]
 
 { #category : #'gc - global' }
@@ -13040,6 +13049,12 @@ SpurMemoryManager >> weakArrayFormat [
 { #category : #'spur bootstrap' }
 SpurMemoryManager >> weaklingStack [
 	^weaklingStack
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> weaklingStack: anOop [ 
+	<doNotGenerate>
+	weaklingStack := anOop
 ]
 
 { #category : #'debug printing' }

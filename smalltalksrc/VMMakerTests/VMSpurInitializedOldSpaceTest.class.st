@@ -67,9 +67,16 @@ VMSpurInitializedOldSpaceTest >> freeTreeRootStartAddress [
 ]
 
 { #category : #helpers }
+VMSpurInitializedOldSpaceTest >> initializeOldSpaceForFullGC [
+
+	memory markStack: memory nilObject.
+	memory weaklingStack: memory nilObject
+]
+
+{ #category : #helpers }
 VMSpurInitializedOldSpaceTest >> initializeOldSpaceForScavenger [
 
-	| freeListOop |
+	| freeListOop firstClassTablePage |
 	memory coInterpreter bootstrapping: true.
 
 	"Create a nil object required to initialize several fields"
@@ -101,8 +108,12 @@ VMSpurInitializedOldSpaceTest >> initializeOldSpaceForScavenger [
 	memory initializeOldSpaceFirstFree: (memory addressAfter: freeListOop).
 	
 	memory allocateClassTable.
+	
+	firstClassTablePage := memory fetchPointer: 0 ofObject: memory hiddenRootsObject.
+	
 	memory scavenger initializeRememberedSet.
 	memory scavenger remember: memory hiddenRootsObject.
+	memory scavenger remember: firstClassTablePage.
 	memory specialObjectsOop: (self newObjectWithSlots: 20).
 	
 	"Force moving the special objects array to old space..."
@@ -120,18 +131,23 @@ VMSpurInitializedOldSpaceTest >> initializeOldSpaceForScavenger [
 ]
 
 { #category : #tests }
-VMSpurInitializedOldSpaceTest >> keepObject1: ephemeronObjectOop [
+VMSpurInitializedOldSpaceTest >> keepObjectInVMVariable1: ephemeronObjectOop [
 	memory coInterpreter newMethod: ephemeronObjectOop
 ]
 
 { #category : #tests }
-VMSpurInitializedOldSpaceTest >> keepObject2: nonEphemeronObjectOop [
+VMSpurInitializedOldSpaceTest >> keepObjectInVMVariable2: nonEphemeronObjectOop [
 	memory coInterpreter profileSemaphore: nonEphemeronObjectOop
 ]
 
 { #category : #tests }
-VMSpurInitializedOldSpaceTest >> keepObject3: ephemeronObjectOop [
+VMSpurInitializedOldSpaceTest >> keepObjectInVMVariable3: ephemeronObjectOop [
 	memory coInterpreter profileMethod: ephemeronObjectOop
+]
+
+{ #category : #tests }
+VMSpurInitializedOldSpaceTest >> keptObjectInVMVariable1 [
+	^ memory coInterpreter newMethod
 ]
 
 { #category : #helpers }
@@ -171,6 +187,7 @@ VMSpurInitializedOldSpaceTest >> setUp [
 
 	super setUp.
 	self initializeOldSpaceForScavenger.
+	self initializeOldSpaceForFullGC.
 	memory lastHash: 1.
 ]
 
