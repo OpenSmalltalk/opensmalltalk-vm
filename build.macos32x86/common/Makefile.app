@@ -168,8 +168,8 @@ $(APP)/Contents/Resources/%.icns: $(OSXDIR)/%.icns
 	cp -p $< $(APP)/Contents/Resources
 
 pathapp:
-	-test -d $(APP)/Contents/Frameworks && \
 	install_name_tool -add_rpath @executable_path/../Frameworks $(VMEXE)
+	install_name_tool -add_rpath @loader_path/../Frameworks $(VMEXE)
 
 # To sign the app, set SIGNING_IDENTITY in the environment, e.g.
 # export SIGNING_IDENTITY="Developer ID Application: Eliot Miranda"
