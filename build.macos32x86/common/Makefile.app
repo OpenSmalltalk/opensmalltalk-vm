@@ -95,7 +95,7 @@ endif
 
 $(APP):	cleanbundles $(THIRDPARTYPREREQS) $(VMEXE) $(VMBUNDLES) $(VMPLUGINDYLIBS) \
 		$(VMPLIST) $(VMLOCALIZATION) $(VMMENUNIB) $(VMICONS) \
- 		$(SOURCES) $(THIRDPARTYLIBS) $(APPPOST) pathapp signapp touchapp
+ 		$(SOURCES) $(THIRDPARTYLIBS) pathapp $(APPPOST) signapp touchapp
 
 # Bundles with missing prerequisites won't be built. But we need to force the
 # attempt to make them every time in case the prerequisites /have/ been built.
