@@ -13,7 +13,8 @@
 *  Apr 17th, 2002, JMM os 9 check
 ****************************************************************************/
 
-    #include <Carbon/Carbon.h>
+#include <Carbon/Carbon.h>
+#include "sq.h"
 
 void SqueakTerminate();
 void ExitCleanup();
