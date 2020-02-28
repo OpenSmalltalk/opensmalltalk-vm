@@ -48,6 +48,7 @@
 
 extern SqueakOSXAppDelegate *gDelegateApp;
 extern struct VirtualMachine* interpreterProxy;
+extern int getFullScreenFlag();
 
 static sqSqueakOSXMetalView *mainMetalView;
 
@@ -230,7 +231,6 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	
 	if (!firstDrawCompleted) {
 		firstDrawCompleted = YES;
-        extern sqInt getFullScreenFlag(void);
 		if (getFullScreenFlag() == 0) {
 			[self.window makeKeyAndOrderFront: self];
         }
@@ -876,25 +876,13 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 #pragma mark Fullscreen
 
 - (void)  ioSetFullScreen: (sqInt) fullScreen {
+	if (getFullScreenFlag() == (fullScreen == 1))
+		return; // not changing fullscreen mode
 
-	if ([self isInFullScreenMode] == YES && (fullScreen == 1))
-		return;
-	if ([self isInFullScreenMode] == NO && (fullScreen == 0))
-		return;
+	self.fullScreenInProgress = YES;
+	[self.window toggleFullScreen:self];
 
-	if ([self isInFullScreenMode] == NO && (fullScreen == 1)) {
-       self.fullScreenInProgress = YES;
-		NSDictionary* options = [NSDictionary dictionaryWithObjectsAndKeys:
-			[NSNumber numberWithInt:
-				NSApplicationPresentationHideDock |
-				NSApplicationPresentationHideMenuBar ],
-			NSFullScreenModeApplicationPresentationOptions, nil];
-		[self enterFullScreenMode:[NSScreen mainScreen] withOptions:options];
-	}
-
-	if ([self isInFullScreenMode] == YES && (fullScreen == 0)) {
-        self.fullScreenInProgress = YES;
-		[self exitFullScreenModeWithOptions: NULL];
+	if (getFullScreenFlag() && (fullScreen == 0)) {
 		if ([self.window isKeyWindow] == NO) {
 			[self.window makeKeyAndOrderFront: self];
 		}
