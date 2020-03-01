@@ -5,9 +5,9 @@
 # for an explanation of the dependency management scheme.
 
 # /usr/bin/clang, a.k.a. /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang
-CC := i686-apple-darwin10-llvm-gcc-4.2
-CXX := i686-apple-darwin10-llvm-g++-4.2
-LD := i686-apple-darwin10-llvm-gcc-4.2
+CC := clang
+CXX := clang++
+LD := clang
 LDCXX := clang++ # For linking c++ bundles
 
 include ../common/Makefile.flags

@@ -111,7 +111,7 @@ INCLUDES:= $(addprefix -I,. $(SRCDIRS))
 #############################################################################
 # Linker settings
 #
-LD:=	 gcc
+LD:=	 clang
 
 #############################################################################
 #
@@ -188,9 +188,13 @@ print-objects:
 ignore := $(addsuffix .%, $(basename $(wildcard $(BUILD)/vm/*.ignore)))
 
 $(OBJDIR)/$(VM): $(OBJDIR) $(VMOBJ) $(LIBS)
-	$(CC) -march=$(TARGET_ARCH) -o $(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -c $(OSXCOMMONDIR)/version.c
-	$(CC) -march=$(TARGET_ARCH) -isysroot $(SDK) $(LDFLAGS) $(FRAMEWORKS) \
+	$(CC) -arch $(TARGET_ARCH) -o $(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -c $(OSXCOMMONDIR)/version.c
+	$(CC) -arch $(TARGET_ARCH) -isysroot $(SDK) $(LDFLAGS) $(FRAMEWORKS) \
+			-Wl,-headerpad_max_install_names \
 			-o $(OBJDIR)/$(VM) $(VMOBJ) $(filter-out $(call ignore), $(LIBS))
+
+$(OBJDIR)/validImage: $(OBJDIR)/validImage.o $(OBJDIR)/sqUnixSpurMemory.o $(OBJDIR)/sqHeapMap.o
+	$(LD) -arch $(TARGET_ARCH) -o $@ $^
 
 $(OBJDIR):
 	@-mkdir -p $(BLDDIR)

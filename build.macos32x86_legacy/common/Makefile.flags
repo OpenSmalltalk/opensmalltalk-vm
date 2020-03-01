@@ -24,21 +24,27 @@ print-sdks:
 # N.B. ARC isn't supported by the os-x 32-bit legacy Objective-C runtime kernel.
 # ARC is supported only on 64-bits, and then only for the 10.7 SDK and later.
 include ../common/Makefile.clangversion
+#ifdef CLANG_7_3_OR_ABOVE
+#	OBJC_CODE_MODEL := -fobjc-weak
+#else
+	OBJC_CODE_MODEL := -fno-objc-arc
+#endif
 CFLAGS:=$(CFLAGS) -DTARGET_API_MAC_CARBON=1 -DBUILD_FOR_OSX=1 -DUSE_OPENGL=1 -DUSE_CORE_GRAPHICS=1 \
 		-std=gnu99 \
-		-march=$(TARGET_ARCH) \
+		-arch $(TARGET_ARCH) \
 		-mmacosx-version-min=$(TARGET_VERSION_MIN) -msse4.2 \
 			-fvisibility=default \
+			-fmacro-backtrace-limit=0 -fdiagnostics-show-note-include-stack \
 			-fmessage-length=0 -fpascal-strings -fasm-blocks -fstrict-aliasing \
 			$(OBJC_CODE_MODEL) \
 			$(XCFLAGS) \
 		-isysroot $(SDK) \
+		-I$(SDK)/Developer/Headers/FlatCarbon
 
 #		-include "$(PLATDIR)/Mac_OS/vm/sqConfig.h"
-#		-I$(SDK)/Developer/Headers/FlatCarbon
 
-BFLAGS:=-march=$(TARGET_ARCH) -bundle -isysroot $(SDK) $(EXTRABFLAGS)
-DYFLAGS:=-march=$(TARGET_ARCH) -shared -isysroot $(SDK) $(EXTRADYFLAGS)
+BFLAGS:=-arch $(TARGET_ARCH) -bundle -isysroot $(SDK) $(EXTRABFLAGS)
+DYFLAGS:=-arch $(TARGET_ARCH) -shared -isysroot $(SDK) $(EXTRADYFLAGS)
 
 WARNINGS:= -Wall -Wno-missing-field-initializers -Wno-missing-prototypes \
 	-Wno-missing-braces -Wparentheses -Wswitch -Wno-unused-function \
