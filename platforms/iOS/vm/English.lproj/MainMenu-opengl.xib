@@ -463,6 +463,8 @@
 					</object>
 					<object class="NSMenuItem" id="448692316">
 						<reference key="NSMenu" ref="649796088"/>
+						<bool key="NSIsDisabled">YES</bool>
+						<bool key="NSIsHidden">YES</bool>
 						<string key="NSTitle">Help</string>
 						<string key="NSKeyEquiv"/>
 						<int key="NSMnemonicLoc">2147483647</int>
@@ -475,7 +477,7 @@
 							<array class="NSMutableArray" key="NSMenuItems">
 								<object class="NSMenuItem" id="105068016">
 									<reference key="NSMenu" ref="992780483"/>
-									<string key="NSTitle">SqueakOSXApp Help</string>
+									<string key="NSTitle">Squeak Help</string>
 									<string key="NSKeyEquiv">?</string>
 									<int key="NSKeyEquivModMask">1048576</int>
 									<int key="NSMnemonicLoc">2147483647</int>
