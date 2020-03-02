@@ -74,6 +74,7 @@ static int buttonState=0;
 // This gives other windows the opportunity to consume their events
 - (void) pumpRunLoopEventSendAndSignal:(BOOL)signal {
 
+#ifdef PharoVM
 	@autoreleasepool {
        NSEvent *event;
        NSMutableArray *alienEventQueue = [[NSMutableArray alloc] init];
@@ -100,6 +101,21 @@ static int buttonState=0;
          [alienEventQueue removeObject: event];
        }
      }
+#else
+	NSEvent *event;
+
+    while ((event = [NSApp
+                        nextEventMatchingMask:NSAnyEventMask
+                        untilDate:nil 
+                        inMode:NSEventTrackingRunLoopMode 
+                        dequeue:YES])) {
+
+        [NSApp sendEvent: event];
+        if (signal) {
+            interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
+        }
+    }
+#endif
 }
 
 - (void) pumpRunLoop {	
