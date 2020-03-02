@@ -67,14 +67,14 @@ static int buttonState=0;
 
 @implementation sqSqueakOSXApplication (events)
 
-// Consume all pending events in the NSApp
-// Events may come from the window open by the VM or windows open by other windowing systems
-// We need to consume all events in the queue, otherwise this may produce lockups when e.g., switching resolutions
-// If the event does not correspond to this window, we take it from the event queue anyways and re-post it afterwards
-// This gives other windows the opportunity to consume their events
 - (void) pumpRunLoopEventSendAndSignal:(BOOL)signal {
 
 #ifdef PharoVM
+	// Consume all pending events in the NSApp
+	// Events may come from the window open by the VM or windows open by other windowing systems
+	// We need to consume all events in the queue, otherwise this may produce lockups when e.g., switching resolutions
+	// If the event does not correspond to this window, we take it from the event queue anyways and re-post it afterwards
+	// This gives other windows the opportunity to consume their events
 	@autoreleasepool {
        NSEvent *event;
        NSMutableArray *alienEventQueue = [[NSMutableArray alloc] init];
