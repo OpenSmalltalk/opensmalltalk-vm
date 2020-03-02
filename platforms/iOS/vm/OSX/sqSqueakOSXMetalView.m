@@ -127,7 +127,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 #pragma mark Initialization / Release
 
 - (id)initWithFrame:(NSRect)frameRect {
-    self = [self initWithFrame: NSRectToCGRect(frameRect) device: MTLCreateSystemDefaultDevice()];
+	self = [super initWithFrame:frameRect];
 
     [self setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
     [self setAutoresizesSubviews:YES];
@@ -138,6 +138,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 }
 
 - (void)awakeFromNib {
+	[super awakeFromNib];
     [self initialize];
 }
 
@@ -323,7 +324,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	[self setupMetal];
     [self setupFullScreendispBitsIndex];
 
-	// Alawys try to fill the texture with the pixels.
+	// Always try to fill the texture with the pixels.
 	if ( fullScreendispBitsIndex ) {
 		[self loadTexturesFrom: fullScreendispBitsIndex subRectangle: (clippyIsEmpty ? rect : NSRectFromCGRect(clippy))];
 		//[self loadTexturesFrom: fullScreendispBitsIndex subRectangle: rect];
@@ -724,15 +725,15 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	inputSelection= NSMakeRange(NSNotFound, 0);
 }
 
-- (void)		 unmarkText {
+- (void)unmarkText {
 	inputMark= NSMakeRange(NSNotFound, 0);
 }
 
-- (BOOL)		 hasMarkedText {
+- (BOOL)hasMarkedText {
 	return inputMark.location != NSNotFound;
 }
 
-- (NSInteger)		 conversationIdentifier	{
+- (NSInteger)conversationIdentifier	{
 	return (NSInteger )self;
 }
 
@@ -740,11 +741,11 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	return nil;
 }
 
-- (NSRange)		 markedRange {
+- (NSRange)markedRange {
 	return inputMark;
 }
 
-- (NSRange)		 selectedRange {
+- (NSRange)selectedRange {
 	return inputSelection;
 }
 
@@ -752,11 +753,11 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	return NSMakeRect(0,0, 0,0);
 }
 
-- (NSUInteger) characterIndexForPoint: (NSPoint)thePoint {
+- (NSUInteger)characterIndexForPoint: (NSPoint)thePoint {
 	return 0;
 }
 
-- (NSArray *) validAttributesForMarkedText {
+- (NSArray *)validAttributesForMarkedText {
 	return nil;
 }
 
@@ -939,7 +940,6 @@ id<MTLDevice>
 getMainWindowMetalDevice(void) {
 	return mainMetalView ? mainMetalView.device : nil;
 }
-
 
 id<MTLCommandQueue>
 getMainWindowMetalCommandQueue(void) {
