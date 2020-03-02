@@ -48,7 +48,6 @@
 
 extern SqueakOSXAppDelegate *gDelegateApp;
 extern struct VirtualMachine* interpreterProxy;
-extern sqInt getFullScreenFlag();
 
 static sqSqueakOSXMetalView *mainMetalView;
 
@@ -231,7 +230,8 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	
 	if (!firstDrawCompleted) {
 		firstDrawCompleted = YES;
-		if (!getFullScreenFlag()) {
+		extern sqInt getFullScreenFlag(void);
+		if (getFullScreenFlag() == 0) {
 			[self.window makeKeyAndOrderFront: self];
         }
 	}
@@ -875,17 +875,10 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 
 #pragma mark Fullscreen
 
-- (void)  ioSetFullScreen: (sqInt) fullScreen {
-	if (getFullScreenFlag() == fullScreen)
-		return; // not changing fullscreen mode
-
-	self.fullScreenInProgress = YES;
-	[self.window toggleFullScreen:self];
-
-	if (getFullScreenFlag() && !fullScreen) {
-		if ([self.window isKeyWindow] == NO) {
-			[self.window makeKeyAndOrderFront: self];
-		}
+- (void) ioSetFullScreen: (sqInt) fullScreen {
+	if ((self.window.styleMask & NSFullScreenWindowMask) != (fullScreen == 1)) {
+		self.fullScreenInProgress = YES;
+        [self.window toggleFullScreen: nil];
 	}
 }
 
