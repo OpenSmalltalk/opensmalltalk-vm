@@ -190,7 +190,7 @@ sqMakeMemoryExecutableFromToCodeToDataDelta(usqInt startAddr,
 				 PROT_READ | PROT_WRITE | PROT_EXEC) < 0)
 		perror("mprotect(x,y,PROT_READ | PROT_WRITE | PROT_EXEC)");
 
-	*codeToDataDelta = 0;
+	assert(!codeToDataDelta);
 #  endif
 }
 

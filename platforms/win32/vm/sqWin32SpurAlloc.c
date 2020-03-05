@@ -209,7 +209,8 @@ sqMakeMemoryExecutableFromToCodeToDataDelta(usqInt startAddr,
 						PAGE_EXECUTE_READWRITE,
 						&previous))
 		perror("VirtualProtect(x,y,PAGE_EXECUTE_READWRITE)");
-	*codeToDataDelta = 0;
+	if (codeToDataDelta)
+		*codeToDataDelta = 0;
 }
 
 void
