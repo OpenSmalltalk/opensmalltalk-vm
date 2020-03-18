@@ -21,7 +21,7 @@ test -f config.h || ../../../platforms/unix/config/configure --without-npsqueak 
 		--without-vm-display-fbdev --with-vmversion=5.0 \
 		--with-src=nsspursrc \
 		--without-vm-display-fbdev --without-npsqueak \
-	CFLAGS="$OPT  -DI_REALLY_DONT_CARE_HOW_UNSAFE_THIS_IS -DCOGMTVM=0"
+	CFLAGS="$OPT -DI_REALLY_DONT_CARE_HOW_UNSAFE_THIS_IS -DCOGMTVM=0"
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../products/$INSTALLDIR
 # prefer make install prefix=`readlink -f \`pwd\`/../../../products/$INSTALLDIR`

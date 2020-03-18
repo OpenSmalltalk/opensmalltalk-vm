@@ -9,7 +9,7 @@
 *   FILE:    sqAtomicOps.h
 *
 *   AUTHOR:  Eliot Miranda
-*   EMAIL:   eliot@teleplace.com
+*   EMAIL:   eliot.miranda@gmail.com
 *
 *****************************************************************************/
 
@@ -81,7 +81,6 @@
 # define set64(variable,value) (variable = value)
 
 #elif IS_32_BIT_ARCH
-
 
 # if TARGET_OS_IS_IPHONE
 static inline void

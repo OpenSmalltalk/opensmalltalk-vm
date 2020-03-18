@@ -254,7 +254,8 @@ sudo apt-get install libpango1.0-dev
 sudo apt-get install libssl-dev
 sudo apt-get install uuid-dev uuid-runtime
 sudo apt-get install libasound2-dev
-sudo apt-get install libgl-mesa-dev
+#sudo apt-get install libgl-mesa-dev
+sudo apt-get install libgl1-mesa-dev
 sudo apt-get install libgles1-mesa-dev
 sudo apt-get install libgles2-mesa-dev
 
