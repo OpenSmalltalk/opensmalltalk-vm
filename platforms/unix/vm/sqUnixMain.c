@@ -1592,10 +1592,6 @@ static int vm_parseArgument(int argc, char **argv)
   else if (argc > 1 && !strcmp(argv[0], VMOPTION("numextsems"))) { 
     ioSetMaxExtSemTableSize(atoi(argv[1]));
     return 2; }
-  else if (!strcmp(argv[0], VMOPTION("checkpluginwrites"))) { 
-    extern sqInt checkAllocFiller;
-    checkAllocFiller = 1;
-    return 1; }
   else if (!strcmp(argv[0], VMOPTION("noheartbeat"))) { 
     extern sqInt suppressHeartbeatFlag;
     suppressHeartbeatFlag = 1;

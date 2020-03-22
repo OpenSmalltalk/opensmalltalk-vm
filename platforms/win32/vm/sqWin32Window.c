@@ -3358,7 +3358,6 @@ int printUsage(int level)
                    TEXT("\n\t") TVMOPTION("eden:") TEXT(" bytes \t\t(set eden memory size to bytes)")
                    TEXT("\n\t") TVMOPTION("stackpages:") TEXT(" n \t\t(use n stack pages)")
                    TEXT("\n\t") TVMOPTION("numextsems:") TEXT(" n \t\t(allow up to n external semaphores)")
-                   TEXT("\n\t") TVMOPTION("checkpluginwrites") TEXT(" \t(check for writes past end of object in plugins")
                    TEXT("\n\t") TVMOPTION("noheartbeat") TEXT(" \t\t(no heartbeat for debug)")
 #endif /* STACKVM */
 #if STACKVM || NewspeakVM
@@ -3376,7 +3375,6 @@ int printUsage(int level)
                    TEXT("\n\t") TVMOPTION("cogminjumps:") TEXT(" n \t(set min number of backward jumps for interpreted methods to be considered for compilation to machine code)")
                    TEXT("\n\t") TVMOPTION("tracestores") TEXT(" \t\t(assert-check stores for debug)")
                    TEXT("\n\t") TVMOPTION("reportheadroom") TEXT(" \t(report unused stack headroom on exit)")
-                   TEXT("\n\t") TVMOPTION("dpcso:") TEXT(" bytes \t\t(stack offset for prim calls for debug)")
 #endif /* COGVM */
 #if SPURVM
                    TEXT("\n\t") TVMOPTION("maxoldspace:") TEXT(" bytes \t(set max size of old space memory to bytes)")

@@ -269,11 +269,6 @@ static char *getVersionInfo(int verbose);
 	}
 #endif
 #if STACKVM
-	if ([argData isEqualToString: VMOPTIONOBJ("checkpluginwrites")]) {
-		extern sqInt checkAllocFiller;
-		checkAllocFiller = 1;
-		return 1;
-	}
 	if ([argData isEqualToString: VMOPTIONOBJ("noheartbeat")]) {
 		extern sqInt suppressHeartbeatFlag;
 		suppressHeartbeatFlag = 1;
@@ -364,11 +359,6 @@ static char *getVersionInfo(int verbose);
 	if ([argData isEqualToString: VMOPTIONOBJ("codesize")]) {
 		extern sqInt desiredCogCodeSize;
 		desiredCogCodeSize = [self strtobkm: peek];		 
-		return 2;
-	}
-	if ([argData isEqualToString: VMOPTIONOBJ("dpcso")]) {
-		extern unsigned long debugPrimCallStackOffset;
-		debugPrimCallStackOffset = (unsigned long)[self strtobkm: peek];		 
 		return 2;
 	}
 	if ([argData isEqualToString: VMOPTIONOBJ("cogmaxlits")]) {
@@ -510,7 +500,6 @@ static char *getVersionInfo(int verbose);
 	printf("  "VMOPTION("numextsems")" num       make the external semaphore table num in size\n");
 	printf("  "VMOPTION("noheartbeat")"          disable the heartbeat for VM debugging. disables input\n");
 	printf("  "VMOPTION("pollpip")" (0|1)        output on each poll for input\n");
-	printf("  "VMOPTION("checkpluginwrites")"    check for writes past end of object in plugins\n");
 #endif
 #if STACKVM || NewspeakVM
 # if COGVM

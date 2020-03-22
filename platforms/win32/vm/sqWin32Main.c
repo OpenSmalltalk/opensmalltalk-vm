@@ -1985,10 +1985,6 @@ parseVMArgument(int argc, char *argv[])
 		extern sqInt desiredNumStackPages;
 		desiredNumStackPages = atoi(argv[0]+strlen(VMOPTION("stackpages:")));	 
 		return 1; }
-	else if (!strcmp(argv[0], VMOPTION("checkpluginwrites"))) {
-		extern sqInt checkAllocFiller;
-		checkAllocFiller = 1;
-		return 1; }
 	else if (!strcmp(argv[0], VMOPTION("noheartbeat"))) {
 		extern sqInt suppressHeartbeatFlag;
 		suppressHeartbeatFlag = 1;
@@ -2029,14 +2025,6 @@ parseVMArgument(int argc, char *argv[])
 	else if (!strcmp(argv[0], VMOPTION("tracestores"))) {
 		extern sqInt traceStores;
 		traceStores = 1;
-		return 1; }
-	else if (argc > 1 && !strcmp(argv[0], VMOPTION("dpcso"))) {
-		extern usqIntptr_t debugPrimCallStackOffset;
-		debugPrimCallStackOffset = (usqIntptr_t) strtobkm(argv[1]);
-		return 2; }
-	else if (!strcmp(argv[0], VMOPTION("dpcso:"))) {
-		extern usqIntptr_t debugPrimCallStackOffset;
-		debugPrimCallStackOffset = strtobkm(argv[0]+strlen(VMOPTION("dpcso:")));
 		return 1; }
 	else if (argc > 1 && !strcmp(argv[0], VMOPTION("cogmaxlits"))) {
 		extern sqInt maxLiteralCountForCompile;
