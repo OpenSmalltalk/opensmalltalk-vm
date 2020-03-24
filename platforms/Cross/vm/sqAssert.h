@@ -71,7 +71,7 @@ static inline int warningIfAt(int condition, char *message, int line)
 # define assertal(expr,line) warningIfAt(!(expr), #expr, line)
 # define assertfl(msg,line)  (warningat(#msg,line),0)
 extern char expensiveAsserts;
-# define eassert(expr)  warningIf(!expensiveAsserts && !(expr), #expr " " __stringifyNum(__LINE__))
+# define eassert(expr)  warningIf(expensiveAsserts && !(expr), #expr " " __stringifyNum(__LINE__))
 # define PRODUCTION 0
 #else
 # define assert(expr)  ((expr)||(warning(#expr " " __stringifyNum(__LINE__)),0))
