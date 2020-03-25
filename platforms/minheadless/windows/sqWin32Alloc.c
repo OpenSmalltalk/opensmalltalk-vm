@@ -190,7 +190,8 @@ sqMakeMemoryExecutableFromToCodeToDataDelta(usqInt startAddr, usqInt endAddr, sq
 						PAGE_EXECUTE_READWRITE,
 						&previous))
 		sqWin32PrintLastError("VirtualProtect(x,y,PAGE_EXECUTE_READWRITE)");
-	*codeToDataDelta = 0;
+	if(codeToDataDelta)
+		*codeToDataDelta = 0;
 }
 
 void
