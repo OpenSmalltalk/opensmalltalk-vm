@@ -331,7 +331,8 @@ sqMakeMemoryExecutableFromToCodeToDataDelta(usqInt startAddr,
 				 endAddr - firstPage + 1,
 				 PROT_READ | PROT_WRITE | PROT_EXEC) < 0)
 		perror("mprotect(x,y,PROT_READ | PROT_WRITE | PROT_EXEC)");
-	*codeToDataDelta = 0;
+	if( codeToDataDelta )
+		*codeToDataDelta = 0;
 }
 
 void
