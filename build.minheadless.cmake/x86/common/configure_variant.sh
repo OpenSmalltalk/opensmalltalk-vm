@@ -5,7 +5,7 @@ OS_NAME="`uname`"
 GENERATOR_NAME="Unix Makefiles"
 CMAKE_EXTRA_ARGS=""
 OSX_SDK_ROOT_FOLDER="/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/"
-OSX_VALID_SDKS="MacOSX10.9.sdk MacOSX10.10.sdk MacOSX10.11.sdk MacOSX10.12.sdk MacOSX10.13.sdk"
+OSX_VALID_SDKS="MacOSX10.11.sdk MacOSX10.12.sdk MacOSX10.13.sdk"
 CONFIGURE_VARIANT_FOLDER="$(cd ../common && pwd)"
 
 rm -rf "./$VARIANT_FOLDER"

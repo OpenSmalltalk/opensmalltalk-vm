@@ -220,7 +220,7 @@ sqMakeMemoryExecutableFromToCodeToDataDelta(usqInt startAddr,
 	mappings[1] = 0;
 
 	memory_alias_map(size, 2, (void **)mappings);
-	assert(mappings[0] == firstPage);
+	/* assert(mappings[0] == firstPage); */
 	*codeToDataDelta = mappings[1] - startAddr;
 
 	if (mprotect((void *)firstPage,
@@ -235,7 +235,7 @@ sqMakeMemoryExecutableFromToCodeToDataDelta(usqInt startAddr,
 				 PROT_READ | PROT_WRITE | PROT_EXEC) < 0)
 		perror("mprotect(x,y,PROT_READ | PROT_WRITE | PROT_EXEC)");
 
-	*codeToDataDelta = 0;
+	/* assert(!codeToDataDelta); */
 #  endif
 }
 
