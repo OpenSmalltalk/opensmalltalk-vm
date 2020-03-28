@@ -1,6 +1,6 @@
 #############################################################################
 # Generic Makefile for Mac OS VM 
-# Do make getversion to get makwe -n to work
+# Do make getversion to get make -n to work
 #
 # This is designed to be invoked by Makefile in a specific build directory via
 # include ../common/Makefile.app
@@ -118,8 +118,15 @@ INCLUDES:= $(addprefix -I,. $(SRCDIRS))
 LD:=	 gcc
 
 #############################################################################
+# Ensure version control info is up-to-date, and extract it from the file.
 #
-SVNREV:= $(shell sed -e "s/^static.*GitRawRevisionString.*Rev: \([0-9][0-9]*\).*/\\1/p" -e d $(PLATDIR)/Cross/vm/sqSCCSVersion.h)
+SCCSVER:=$(PLATDIR)/Cross/vm/sqSCCSVersion.h
+
+ifneq ($(shell grep 'GitRawRevisionString.*$$Rev$$.' $(SCCSVER)),)
+$(shell bash -c "cd ../../scripts; ./updateSCCSVersions")
+endif
+
+SVNREV:= $(shell sed -e "s/^static.*GitRawRevisionString.*Rev: \([0-9][0-9]*\).*/\\1/p" -e d $(SCCSVER))
 
 
 #############################################################################

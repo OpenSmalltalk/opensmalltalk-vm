@@ -91,8 +91,14 @@ OBJCOPY:=	$(TOOLPREFIX)objcopy
 # Note: RC compiles the .rc files into linkable .o files
 #
 RC:=	 $(TOOLPREFIX)windres
-SVNMAJOR := $(shell sed -e "s/^static.*GitRawRevisionString.*Rev: \([0-9][0-9][0-9][0-9]\).*/\\1/p" -e d $(PLATDIR)/Cross/vm/sqSCCSVersion.h | sed -e 's/^0*//')
-SVNMINOR := $(shell sed -e "s/^static.*GitRawRevisionString.*Rev: [0-9][0-9][0-9][0-9]\([0-9][0-9]\).*/\\1/p" -e "s/^0*//" -e d $(PLATDIR)/Cross/vm/sqSCCSVersion.h | sed -e 's/^0*//')
-SVNREV := $(shell sed -e "s/^static.*GitRawRevisionString.*Rev: [0-9][0-9][0-9][0-9][0-9][0-9]\([0-9][0-9]\).*/\\1/p" -e "s/^0*//" -e d $(PLATDIR)/Cross/vm/sqSCCSVersion.h | sed -e 's/^0*//')
-SVNBUILD := $(shell sed -e "s/^static.*GitRawRevisionString.*Rev: [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]\([0-9][0-9]*\).*/\\1/p" -e "s/^0*//" -e d $(PLATDIR)/Cross/vm/sqSCCSVersion.h | sed -e 's/^0*//')
+SCCSVER:=$(PLATDIR)/Cross/vm/sqSCCSVersion.h
+
+ifneq ($(shell grep 'GitRawRevisionString.*$$Rev$$.' $(SCCSVER)),)
+$(shell bash -c "cd ../../scripts; ./updateSCCSVersions")
+endif
+SVNMAJOR := $(shell $(SED) -e "s/^static.*GitRawRevisionString.*Rev: \([0-9][0-9][0-9][0-9]\).*/\\1/p" -e d $(SCCSVER) | $(SED) -e 's/^0*//')
+SVNMINOR := $(shell $(SED) -e "s/^static.*GitRawRevisionString.*Rev: [0-9][0-9][0-9][0-9]\([0-9][0-9]\).*/\\1/p" -e "s/^0*//" -e d $(SCCSVER) | $(SED) -e 's/^0*//')
+SVNREV := $(shell $(SED) -e "s/^static.*GitRawRevisionString.*Rev: [0-9][0-9][0-9][0-9][0-9][0-9]\([0-9][0-9]\).*/\\1/p" -e "s/^0*//" -e d $(SCCSVER) | $(SED) -e 's/^0*//')
+SVNBUILD := $(shell $(SED) -e "s/^static.*GitRawRevisionString.*Rev: [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]\([0-9][0-9]*\).*/\\1/p" -e "s/^0*//" -e d $(SCCSVER) | $(SED) -e 's/^0*//')
+
 RCFLAGS:= --include-dir $(PLATDIR)/win32/misc -D_WIN32 -DFILEVERSIONVALUES=$(SVNMAJOR),$(SVNMINOR),$(SVNREV),$(SVNBUILD) '-DFILEVERSIONSTRING=\"$(SVNMAJOR).$(SVNMINOR).$(SVNREV).$(SVNBUILD)\\0\"'

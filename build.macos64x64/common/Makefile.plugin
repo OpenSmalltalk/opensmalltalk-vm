@@ -236,7 +236,7 @@ else
 endif
 
 getversion:
-	make -f ../common/Makefile.vm getversion
+	$(MAKE) -f ../common/Makefile.vm getversion
 
 else # ifeq ($(realpath $(PREREQUISITES)),$(PREREQUISITES))
 # If any prerequisites are missing simply create a .ignore file
