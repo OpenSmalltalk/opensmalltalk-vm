@@ -41,7 +41,7 @@
 			(__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 7))
 #endif
 
-#if defined(__GNUC__) || defined(__clang__) || defined(__SUNPRO_C)
+#if defined(__GNUC__) || defined(__clang__)
 # if GCC_HAS_BUILTIN_SYNC || defined(__clang__)
 #	define sqLowLevelMFence() __sync_synchronize()
 # elif defined(i386) || defined(__i386) || defined(__i386__) || defined(_X86_)
@@ -52,6 +52,8 @@
 #	 define sqLowLevelMFence() asm volatile ("mfence")
 #	endif
 # endif
+#elif defined(__SUNPRO_C)
+#	 define sqLowLevelMFence() asm volatile ("mfence")
 #elif defined(_MSC_VER)
   /* # define sqLowLevelMFence() _asm { mfence } */
   /* could use mfence here but */ \
