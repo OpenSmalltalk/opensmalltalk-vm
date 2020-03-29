@@ -79,6 +79,7 @@ STDLIBS:= -lddraw -ldinput -lopengl32 -lws2_32 -lcomdlg32 -lole32 -lwinmm \
 AR:= $(TOOLPREFIX)ar rc
 CP:= cp
 RM:= rm
+SED:=sed
 NM:= $(TOOLPREFIX)nm
 DLLTOOL:=	$(TOOLPREFIX)dlltool
 DLLWRAP:=	$(TOOLPREFIX)dllwrap
