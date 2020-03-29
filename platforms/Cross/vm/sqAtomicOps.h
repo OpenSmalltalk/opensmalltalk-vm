@@ -106,7 +106,7 @@ AtomicGet(uint64_t *target)
 #	define set64(variable,value) AtomicSet(&(variable),value)
 
 	/* Currently we provide definitions for x86 and GCC only.  But see below. */
-# elif defined(__GNUC__) && (defined(i386) || defined(__i386) || defined(__i386__) || defined(_X86_))
+# elif (defined(__GNUC__) || defined(__SUNPRO_C)) && (defined(i386) || defined(__i386) || defined(__i386__) || defined(_X86_))
 
 /* atomic read & write of 64-bit values using SSE2 movq to/from sse register.
  * 64-bit reads & writes are only guaranteed to be atomic if aligned on a 64-bit
@@ -210,6 +210,7 @@ AtomicGet(__int64 *target)
 # define set64(variable,value) (variable = value)
 
 #else
+
 /* Dear implementor, you have choices.  For example consider defining get64 &
  * set64 thusly
  * #define get64(var)  read64(&(var))
@@ -241,7 +242,7 @@ AtomicGet(__int64 *target)
 #if TARGET_OS_IS_IPHONE
 # define sqAtomicAddConst(var,n) (assert(sizeof(var) == 4), OSAtomicAdd32(n,&(var))
 
-#elif defined(__GNUC__) || defined(__clang__)
+#elif defined(__GNUC__) || defined(__clang__) || defined(__SUNPRO_C)
 /* N.B. I know you want to use the intrinsics; they're pretty; they're official;
  * they're portable.  But they only apply to int, long and long long sizes.
  * Since we want to use 16-bit variables for signal requests and responses in
@@ -307,7 +308,7 @@ AtomicGet(__int64 *target)
 		? OSAtomicCompareAndSwap64(old, new, &var) \
 		: OSAtomicCompareAndSwap32(old, new, &var))
 
-#elif defined(__GNUC__) || defined(__clang__)
+#elif defined(__GNUC__) || defined(__clang__) || defined(__SUNPRO_C)
 # if GCC_HAS_BUILTIN_SYNC || defined(__clang__)
 #	define sqCompareAndSwap(var,old,new) \
 	__sync_bool_compare_and_swap(&(var), old, new)

@@ -1,0 +1,119 @@
+
+How To Build On Solaris
+-----------------------
+
+Contents:
+        - Overview
+	- Real-Time
+	- Swapspace
+	- C Compiler
+	- GNU make
+
+Overview
+--------
+
+These are some notes on building the OpenSmalltalk VM on Oracle Solaris 11.
+
+To build,
+
+  cd build.sunos32x86
+  cd squeak.cog.spur
+  cd build
+  ./mvm or ./mvm INSTALLDIR
+
+This will build and install into INSTALLDIR.
+The default value for INSTALLDIR is products/squeak.cog.spur-sunos32x86.
+
+To run the vm, consider running the process in the RT (real-time) class.
+ 
+For Solaris specific suggestions please contact me David Stes (stes@telenet.be),
+or the OpenSmalltalk team for general OpenSmalltalk issues.
+
+Real-Time
+---------
+
+When running the squeak vm, after copying a Squeak .image and .change file,
+and after copying the Squeak Smalltalk source file (SqueakV50.sources).
+
+bash-4.4$ bin/squeak Squeak6.0alpha-19547-32bit.image 
+pthread_setschedparam failed: Not owner
+
+Note that it is possible to suppress the "pthread_setschedparam" warning,
+by running the squeak vm in the RT (real-time) class.
+
+One way would be to use priocntl -e and execute the squeak in the -c RT class.
+
+Or perhaps at the "authorization" (auths) level it could perhaps
+be possible to have an entry in /etc/security/exec_attr.d for
+an authorization that gives "proc_priocntl" to squeak.
+
+You must do this as "root".
+
+Another way is to change a "bash" shell to RT class,
+
+bash-4.4$ priocntl -d $$
+INTERACTIVE CLASS PROCESSES:
+   PID[/LWP]       IAUPRILIM     IAUPRI     IAMODE
+   4026                0            0          1
+
+bash-4.4$ sudo priocntl -c RT -p 0 -s $$
+
+bash-4.4$ priocntl -d $$
+REAL TIME PROCESSES:
+   PID[/LWP]         RTPRI       TQNTM      TQSIG
+   3966                0          1000         0
+
+After changing the "bash" shell to the RT class, you can launch
+
+bash-4.4$ bin/squeak Squeak6.0alpha-19547-32bit.image
+
+It will inherit the RT class and the pthread_setschedparam warning is gone.
+
+Verify as follows the squeak threads (LWP light-weight processes)
+
+bash-4.4$ ps -eLo pid,pri,lwp,class,comm | grep squeak
+ 4029 100      1   RT bin/../lib/squeak/5.0-202003240214-solaris/squeak
+ 4029 101      2   RT bin/../lib/squeak/5.0-202003240214-solaris/squeak
+
+Note that one thread is running in priority 101 and another in priority 100.
+
+Swapspace
+---------
+
+Make sure there is sufficient free space in /tmp, mounted on swap in Solaris.
+The C compiler may use a lot of space for temporary files under /tmp.
+
+For example (the example 8G is what I use) :
+
+$ df -h /tmp
+Filesystem             Size   Used  Available Capacity  Mounted on
+swap                   8.2G    78M       8.1G     1%    /tmp
+
+If required, increase the "volsize" of the rpool/swap volume :
+
+# zfs get volsize rpool/swap
+NAME        PROPERTY  VALUE  SOURCE
+rpool/swap  volsize   8G     local
+
+The command to increase the size is:
+
+# zpool list rpool (check FREE space)
+# zfs set volsize=8G rpool/swap
+
+This can be done online, but a reboot is not a bad idea after doing this.
+
+C Compiler
+----------
+
+As C compiler we use the Sun C compiler:
+
+$ /opt/developerstudio12.6/bin/cc  -V
+cc: Studio 12.6 Sun C 5.15 SunOS_i386 2017/05/30
+
+This is the developer/developerstudio-126/cc (solarisstudio) package.
+
+GNU Make
+--------
+
+For the Makefiles, pkg:/developer/build/gnu-make  must be installed.
+

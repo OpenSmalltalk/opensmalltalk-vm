@@ -36,6 +36,10 @@
 # define _PC_IN_UCONTEXT uc_mcontext->__ss.__rip
 #elif __APPLE__ && __MACH__ && __x86_64__
 # define _PC_IN_UCONTEXT uc_mcontext->ss.rip
+#elif __SUNPRO_C && __i386__
+# define _PC_IN_UCONTEXT uc_mcontext.gregs[EIP]
+#elif __SUNPRO && __amd64
+# define _PC_IN_UCONTEXT uc_mcontext.gregs[REG_RIP]
 #elif __linux__ && __i386__
 # define _PC_IN_UCONTEXT uc_mcontext.gregs[REG_EIP]
 #elif __linux__ && __x86_64__
