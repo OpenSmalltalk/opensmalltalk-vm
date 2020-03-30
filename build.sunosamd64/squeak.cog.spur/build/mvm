@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 # Spur VM with VM profiler and threaded heartbeat
-INSTALLDIR=squeak.cog.spur-sunosamd64
+INSTALLDIR=squeak.cog.spur-sunosamd64/usr
 # Some gcc versions create a broken VM using -O2
 OPT="-O2 -DNDEBUG -DDEBUGVM=0"
 MAKE=/usr/bin/gmake
@@ -9,13 +9,6 @@ MAKE=/usr/bin/gmake
 CFLAGS="$OPT -DCOGMTVM=0"
 LIBS=""
 LDFLAGS=""
-case $(uname -s) in
-  OpenBSD)
-           CFLAGS="$CFLAGS -I/usr/local/include"
-           LIBS="$LIBS -lexecinfo"
-           LDFLAGS="$LDFLAGS -L/usr/local/lib"
-           ;;
-esac
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
@@ -42,4 +35,4 @@ rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../products/$INSTALLDIR
 # prefer $MAKE install prefix=`readlink -f \`pwd\`/../../../products/$INSTALLDIR`
 # but older linux readlinks lack the -f flag
-$MAKE install-squeak install-plugins prefix=`(cd ../../../;pwd)`/products/$INSTALLDIR 2>&1 | tee LOG
+$MAKE install-squeak install-doc install-plugins prefix=`(cd ../../../;pwd)`/products/$INSTALLDIR 2>&1 | tee LOG

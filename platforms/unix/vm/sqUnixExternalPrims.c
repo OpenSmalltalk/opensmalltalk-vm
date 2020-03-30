@@ -187,7 +187,11 @@ void *ioLoadModule(char *pluginName)
   if ((0 == pluginName) || ('\0' == pluginName[0])) {	/* find module in main program */
     handle= dlopen(0, RTLD_NOW | RTLD_GLOBAL);
     if (handle == 0) {
+#ifdef __SUNPRO_C
+      fprintf(stderr, " %d ioLoadModule dlopen(<intrinsic>): %s\n", __LINE__, dlerror());
+#else
       fprintf(stderr, __FILE__ " %d ioLoadModule dlopen(<intrinsic>): %s\n", __LINE__, dlerror());
+#endif
       fflush(stderr);
     }
     else {
@@ -323,7 +327,11 @@ ioLoadModule(char *pluginName)
 
 	if (!pluginName || !*pluginName) {
 		if (!(handle= dlopen(0, RTLD_NOW | RTLD_GLOBAL))) {
+#ifdef __SUNPRO_C
+			fprintf(stderr, " %d ioLoadModule(<intrinsic>): %s\n", __LINE__, dlerror());
+#else
 			fprintf(stderr, __FILE__ " %d ioLoadModule(<intrinsic>): %s\n", __LINE__, dlerror());
+#endif
 			fflush(stderr);
 			return 0;
 		}
