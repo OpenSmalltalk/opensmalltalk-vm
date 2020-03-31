@@ -7,7 +7,7 @@
 #include "interp.h"
 
 #if SPURVM
-# define VM_VERSION "5.0"
+# define VM_VERSION "5.3.1"
 #else
 # define VM_VERSION "4.5"
 #endif
