@@ -226,6 +226,22 @@ sqInt sqGetFilenameFromString(char * aCharBuffer, char * aFilenameString, sqInt 
 
 #include "sqPlatformSpecific.h"
 
+/* getReturnAddress optionally defined here rather than in sqPlatformSpecific.h
+ * to reduce duplication. The GCC intrinics are provided by other compilers too.
+ */
+#if COGVM && !defined(getReturnAddress)
+# if _MSVC
+#	define getReturnAddress() _ReturnAddress()
+#	include <intrin.h>
+#	pragma intrinsic(_ReturnAddress)
+# elif defined(__GNUC__) /* gcc, clang, icc etc */
+#	define getReturnAddress() __builtin_extract_return_addr(__builtin_return_address(0))
+# else
+#	error "Cog requires getReturnAddress defining for the current platform."
+# endif
+#endif /* COG && !defined(getReturnAddress */
+
+
 /* Interpreter entry points. */
 
 /* Disable Intel compiler inlining of error which is used for breakpoints */
