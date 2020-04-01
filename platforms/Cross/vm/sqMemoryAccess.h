@@ -153,7 +153,7 @@ typedef unsigned long long usqIntptr_t;
   static inline sqInt oopForPointer(void *ptr)			{ return (sqInt)ptr; }
 # else
   static inline char *pointerForOop(usqInt oop)			{ return sqMemoryBase + oop; }
-  static inline sqInt oopForPointer(void *ptr)			{ return (sqInt)(ptr - sqMemoryBase); }
+  static inline sqInt oopForPointer(void *ptr)			{ return (sqInt)((char *)ptr - sqMemoryBase); }
 # endif
   static inline sqInt byteAt(sqInt oop)				{ return byteAtPointer(pointerForOop(oop)); }
   static inline sqInt byteAtput(sqInt oop, int val)		{ return byteAtPointerput(pointerForOop(oop), val); }
