@@ -1,0 +1,10 @@
+#############################################################################
+# Plugin Makefile for Win32/64 VM using MSVC, e.g. 2017 Community, and gnu make
+# Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
+#############################################################################
+# Makefile for SqueakSSL plugin.
+
+DL:=/DEFAULTLIB:
+EXTRALIBS:= $(DL)crypt32 $(DL)secur32
+
+include ../common/Makefile.msvc.plugin
