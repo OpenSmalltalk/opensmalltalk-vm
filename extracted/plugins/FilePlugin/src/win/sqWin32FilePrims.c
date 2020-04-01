@@ -31,6 +31,8 @@
 
 #include "sqWin32File.h"
 
+#include "pharovm/debug.h"
+
 extern struct VirtualMachine *interpreterProxy;
 
 #ifdef WIN32_FILE_SUPPORT
@@ -430,7 +432,7 @@ sqInt sqFileValid(SQFile *f) {
   if(NULL == f) return false;
   if(f->sessionID != thisSession) return false;
   if(!IsHandleInTable(win32Files, FILE_HANDLE(f))) {
-    printf("WARNING: Manufactured file handle detected!\n");
+    logWarn("WARNING: Manufactured file handle detected!\n");
     return false;
   }
   return true;

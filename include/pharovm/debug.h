@@ -26,7 +26,7 @@ EXPORT(void) installErrorHandlers();
 #endif
 
 //FILENAME gives only the filename, as __FILE__ gives all the path
-#define __FILENAME__ (__FILE__ + SOURCE_PATH_SIZE)
+#define __FILENAME__ ((char*)__FILE__ + SOURCE_PATH_SIZE)
 
 #define logDebug(...)	logMessage(LOG_DEBUG, __FILENAME__, __FUNCTION__, __LINE__, __VA_ARGS__)
 #define logInfo(...)	logMessage(LOG_INFO, __FILENAME__, __FUNCTION__, __LINE__, __VA_ARGS__)

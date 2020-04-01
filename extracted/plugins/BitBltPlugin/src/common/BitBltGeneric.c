@@ -38,32 +38,6 @@
 static const uint8_t log2table[33] = { 0, 0, 1, 0, 2, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0,
 		                               4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5 };
 
-#ifdef DEBUG
-#define dprintf(args) do { check_printf args; } while (0)
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdarg.h>
-static int check_printf(char *format, ...)
-{
-	static bool envChecked;
-	static bool debugEnabled;
-	int result = 0;
-	if (!envChecked) {
-		debugEnabled = getenv("DEBUG");
-		envChecked = true;
-	}
-	if (debugEnabled) {
-		va_list ap;
-		va_start(ap, format);
-		result = vprintf(format, ap);
-		va_end(ap);
-	}
-	return result;
-}
-#else
-#define dprintf(args)
-#endif
-
 
 static void fastPathClearWord4(operation_t *op, uint32_t flags)
 {

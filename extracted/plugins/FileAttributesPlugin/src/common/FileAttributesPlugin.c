@@ -37,10 +37,8 @@ static char __buildInfo[] = "FileAttributesPlugin FileAttributesPlugin.oscog-akg
 # define HAVE_LSTAT 1
 #endif
 #include <unistd.h>
+#include <pharovm/debug.h>
 /* AKG 2018 - FileAttributesPlugin.c translated from class FileAttributesPlugin */
-
-/* Default EXPORT macro that does nothing (see comment in sq.h): */
-#define EXPORT(returnType) returnType
 
 /* Do not include the entire sq.h file but just those parts needed. */
 #include "sqConfig.h"			/* Configuration options */
@@ -1168,10 +1166,7 @@ readLinkintomaxLength(char *cPathName, char *cLinkPtr, size_t maxLength)
 #  endif /* defined(_WIN32) */
 		;
 	if (len < 0) {
-		
-#    if defined(INDEBUG)
-		fprintf(stderr, "FileAttributesPlugin: unable to readlink(): %d, errno=%d\n", len, errno);
-#    endif /* defined(INDEBUG) */
+		logDebug("FileAttributesPlugin: unable to readlink(): %d, errno=%d\n", len, errno);
 		/* begin cantReadlink */
 		return -8;
 	}
