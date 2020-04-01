@@ -1,0 +1,1 @@
+make | tee LOGF

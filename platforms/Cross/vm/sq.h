@@ -230,7 +230,7 @@ sqInt sqGetFilenameFromString(char * aCharBuffer, char * aFilenameString, sqInt 
  * to reduce duplication. The GCC intrinics are provided by other compilers too.
  */
 #if COGVM && !defined(getReturnAddress)
-# if _MSVC
+# if _MSC_VER
 #	define getReturnAddress() _ReturnAddress()
 #	include <intrin.h>
 #	pragma intrinsic(_ReturnAddress)

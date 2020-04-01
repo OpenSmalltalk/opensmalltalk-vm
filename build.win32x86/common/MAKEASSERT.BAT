@@ -1,0 +1,1 @@
+make assert | tee LOGA

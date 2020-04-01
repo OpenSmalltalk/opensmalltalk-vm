@@ -5,4 +5,5 @@
 # will be found
 #
 include ../common/Makefile.msvc.plugin
-INCLUDES += -I$(PLATDIR)/win32/plugins/FilePlugin
+
+INCLUDES += -I$(PLATDIR)/win32/plugins/FilePlugin -I$(SdkDir)/ucrt
