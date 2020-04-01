@@ -19,7 +19,6 @@
 # include <stdlib.h> /* for valloc */
 #include <string.h> /* for memcpy et al */
 #include <setjmp.h>
-#include <stdio.h> /* for fprintf(stderr,...) */
 
 #include "sq.h"
 
@@ -28,6 +27,8 @@
 #include "sqAssert.h"
 #include "sqVirtualMachine.h"
 #include "ia32abi.h"
+
+#include "pharovm/debug.h"
 
 #if !defined(min)
 # define min(a,b) ((a) < (b) ? (a) : (b))
@@ -215,7 +216,7 @@ extern void saveFloatRegsWin64(long long xmm0,long long xmm1,long long xmm2, lon
     saveFloatRegsWin64(rcx,rdx,r8,r9,fpargs); /* the callee expects double parameters that it will retrieve thru registers */
 
 	if ((flags = interpreterProxy->ownVM(0)) < 0) {
-		fprintf(stderr,"Warning; callback failed to own the VM\n");
+		logWarn("Warning; callback failed to own the VM\n");
 		return -1;
 	}
 
@@ -227,7 +228,7 @@ extern void saveFloatRegsWin64(long long xmm0,long long xmm1,long long xmm2, lon
 		vmcc.intregargsp = intargs;
 		vmcc.floatregargsp = fpargs;
 		interpreterProxy->sendInvokeCallbackContext(&vmcc);
-		fprintf(stderr,"Warning; callback failed to invoke\n");
+		logWarn("Warning; callback failed to invoke\n");
 		setMRCC(previousCallbackContext);
 		interpreterProxy->disownVM(flags);
 		return -1;
@@ -250,7 +251,7 @@ extern void saveFloatRegsWin64(long long xmm0,long long xmm1,long long xmm2, lon
 							vmcc.rvs.valstruct.size);
 					return stackp[1];
 	}
-	fprintf(stderr,"Warning; invalid callback return type\n");
+	logWarn("Warning; invalid callback return type\n");
 	return 0;
 }
 

@@ -218,7 +218,6 @@ thunkEntry(void *thunkp, sqIntptr_t *stackp)
 		exit(1);
 	}
 	if (!CheckInVMThread()) {
-		printf("NOT IN VM THREAD!\n");
 		perror("Not in VM thread!\n");
 		exit(666);
 	}

@@ -6,10 +6,10 @@
 #include <unistd.h>
 #include <assert.h>
 
-#include <pharovm/debug.h>
 
 #include "sq.h"
 #include "faCommon.h"
+#include <pharovm/debug.h>
 
 #define	S_IFLNK	0xA000
 

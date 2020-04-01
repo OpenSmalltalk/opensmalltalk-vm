@@ -35,5 +35,7 @@ EXPORT(void) installErrorHandlers();
 
 #define LOG_SIZEOF(expr) logDebug("sizeof("#expr"): %ld", sizeof(expr))
 
+#include <stdio.h>
+
 int vm_printf( const char * format, ... );
 void vm_setVMOutputStream(FILE * stream);
