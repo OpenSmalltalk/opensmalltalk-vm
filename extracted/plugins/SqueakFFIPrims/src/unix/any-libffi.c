@@ -238,7 +238,7 @@ ffi_type* ffiCreateType(int *structSpec, int structSize)
   }
   /* note: nTypes == 0 means an invalid structure */
   if(nTypes == 0) {
-    printf("Warning: nTypes == 0 in ffiCreateTypes\n");
+    logWarn("Warning: nTypes == 0 in ffiCreateTypes\n");
     return NULL;
   }
   /* allocate the structure type */
@@ -288,7 +288,7 @@ ffi_type* ffiCreateType(int *structSpec, int structSize)
     case FFITypeDoubleFloat:
       newTypes[nTypes++] = &ffi_type_double; break;
     default:
-      printf("Warning: unknown atomic type (%x) in ffiCreateTypes\n", 
+      logWarn("Warning: unknown atomic type (%x) in ffiCreateTypes\n",
 	     typeSpec);
       free(newTypes);
       free(structType);
