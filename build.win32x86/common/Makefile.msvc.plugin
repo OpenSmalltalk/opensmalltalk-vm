@@ -109,6 +109,7 @@ print-settings:
 	$(info 'LIBOBJ=$(LIBOBJ)')
 	$(info 'OBJDIR=$(OBJDIR)')
 	$(info 'VMDIR=$(VMDIR)')
+	$(info 'VMLIB=$(VMLIB)')
 	$(info 'PLUGINSRCDIR=$(PLUGINSRCDIR)')
 	$(info 'PLUGINLIB=$(PLUGINLIB)')
 	$(info 'PLUGINDLL=$(PLUGINDLL)')
@@ -127,5 +128,11 @@ $(PLUGINLIB): $(VMDIR) $(OBJDIR) $(LIBOBJ)
 	$(LIBRARIAN) $(LIBOBJ) $(EXTRALIBS) /out:$(subst /,\\,$(PLUGINLIB))
 
 $(PLUGINDLL): $(VMDIR) $(OBJDIR) $(LIBOBJ)
-	$(LD) WinMM.lib ole32.lib dsound.lib msdmo.lib kernel32.lib $(LDFLAGS) /DLL $(LIBOBJ) $(EXTRALIBS) /LIBPATH:"$(WindowsSdkDir)LIB/$(WindowsSDKVersion)/um/x86" /LIBPATH:"$(WindowsSdkDir)LIB/$(WindowsSDKVersion)/ucrt/x86" /LIBPATH:"$(VCToolsInstallDir)/lib/x86/" $(EXTRALIBPATH) /LIBPATH:"../../platforms/win32/third-party/dx9sdk/Lib" /OUT:$(subst /,\\,$(PLUGINDLL))
+	$(LD) WinMM.lib ole32.lib dsound.lib msdmo.lib kernel32.lib $(VMLIB) $(LDFLAGS) /DLL $(LIBOBJ) $(EXTRALIBS) \
+	/LIBPATH:$(BUILD)/vm \
+	/LIBPATH:"$(WindowsSdkDir)LIB/$(WindowsSDKVersion)/um/x86" \
+	/LIBPATH:"$(WindowsSdkDir)LIB/$(WindowsSDKVersion)/ucrt/x86" \
+	/LIBPATH:"$(VCToolsInstallDir)/lib/x86/" $(EXTRALIBPATH) \
+	/LIBPATH:"../../platforms/win32/third-party/dx9sdk/Lib" \
+	/OUT:$(subst /,\\,$(PLUGINDLL))
 
