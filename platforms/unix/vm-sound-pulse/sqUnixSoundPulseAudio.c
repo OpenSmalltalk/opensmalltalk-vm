@@ -275,6 +275,13 @@ static double	max_delay_frames = 0;
 
 /* ================================== UTILS */
 
+
+#ifdef __SUNPRO_C
+/* MIN is not C stdlib - perhaps <sys/param.h> is defining it on Linux */
+static int MIN(int a,int b) { return (a<b)?a:b; }
+static int MAX(int a,int b) { return (a<b)?b:a; }
+#endif
+
 /* RATE CONVERSION: from dsp code but not used (yet). Maybe not needed at all with AlSA */
 /* RATE CONVERSION: fixed preset rates are used. TBD: choose nearest to requested */
 /*
