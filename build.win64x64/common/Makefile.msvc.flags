@@ -58,11 +58,9 @@ MSVCLINK:=	$(TOOLPREFIX)link.exe
 # DO NOT USE := FOR OFLAGS BECAUSE SOME PLUGINS REDEFINE THIS!!
 # /Z7 debug info in files; /Zi debug info in PDB
 OFLAGS= /Ot
-EXCEPTION_C_FLAGS = /EHsc # choosing this produces spurious buffer overrun crashes in long jumps
-EXCEPTION_C_FLAGS = 
 CFLAGS=	/MD /DWIN64=1 /Z7 $(OFLAGS) \
 		-Dalloca=_alloca -Dhuge=my_huge \
-		$(EXCEPTION_C_FLAGS) $(NOBUILTIN) $(WARNINGS)
+		/EHsc $(NOBUILTIN) $(WARNINGS)
 
 # Do _not_ define NDEBUG.  The entire point of the msvc build is to debug with
 # MSVC and defining NDEBUG installs a default catch-everything exception handler
