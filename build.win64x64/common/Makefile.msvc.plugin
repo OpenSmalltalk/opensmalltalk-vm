@@ -78,13 +78,6 @@ include ../common/Makefile.msvc.flags
 include ../common/Makefile.msvc.tools
 include ../common/Makefile.msvc.rules
 
-#############################################################################
-# Linker settings
-#
-#LD:=	 link
-LDFLAGS:= /DEBUG:NONE
-LD:=	$(MSVCLINK)
-
 VPATH:= $(MAKERDIR) $(WIN32DIR) $(CROSSDIR) $(OBJDIR)
 
 all:	$(PLUGINLIB) $(PLUGINDLL)

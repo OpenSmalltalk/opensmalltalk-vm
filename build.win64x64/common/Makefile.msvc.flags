@@ -42,19 +42,6 @@ endif
 MSVCINCLUDES:=-I"$(subst \,/,$(subst ;," -I",$(INCLUDE)))"
 #$(info MSVCINCLUDES is $(MSVCINCLUDES))
 
-#############################################################################
-# C compiler settings Visual C++ 2017 Community Edition
-#
-CC:=$(TOOLPREFIX)cl.exe /nologo
-#$(info CC=$(CC))
-
-#############################################################################
-# C linker settings Visual C++ 2017 Community Edition
-#
-MSVCLINK:=	$(TOOLPREFIX)link.exe
-#$(info MSVCLINK=$(MSVCLINK))
-
-
 # DO NOT USE := FOR OFLAGS BECAUSE SOME PLUGINS REDEFINE THIS!!
 # /Z7 debug info in files; /Zi debug info in PDB
 OFLAGS= /Ot

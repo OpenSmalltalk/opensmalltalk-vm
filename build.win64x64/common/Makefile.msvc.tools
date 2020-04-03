@@ -62,6 +62,12 @@ DEFS:=	$(COGDEFS) $(MEMACCESS) $(WINVER) /DWIN32=1 /DWIN32_FILE_SUPPORT /DNO_ISN
 		$(NDEBUG) -DLSB_FIRST -D'VM_NAME="$(VM_NAME)"' $(XDEFS) $(CROQUET)
 
 #############################################################################
+# C compiler settings Visual C++ 2017 Community Edition
+#
+CC:=$(TOOLPREFIX)cl.exe /nologo
+#$(info CC=$(CC))
+
+#############################################################################
 # Linker settings
 #
 LD:=	LINK /nologo /MACHINE:X64
