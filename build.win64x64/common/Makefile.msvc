@@ -137,22 +137,22 @@ svnver:
 	echo $(RC) $(RCFLAGS)
 
 productmt:;
-	$(MAKE) -f $(MAKEFILE_LIST) CONFIGURATION=product THREADING=multi $(@,product=) default
+	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) CONFIGURATION=product THREADING=multi $(@,product=) default
 
 product:;
-	$(MAKE) -f $(MAKEFILE_LIST) CONFIGURATION=product THREADING=single $(@,product=) default
+	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) CONFIGURATION=product THREADING=single $(@,product=) default
 
 assertmt:
-	$(MAKE) -f $(MAKEFILE_LIST) CONFIGURATION=assert THREADING=multi $(@,assert=) default
+	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) CONFIGURATION=assert THREADING=multi $(@,assert=) default
 
 assert:
-	$(MAKE) -f $(MAKEFILE_LIST) CONFIGURATION=assert THREADING=single $(@,assert=) default
+	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) CONFIGURATION=assert THREADING=single $(@,assert=) default
 
 debugmt:
-	$(MAKE) -f $(MAKEFILE_LIST) CONFIGURATION=debug THREADING=multi $(@,debug=) default
+	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) CONFIGURATION=debug THREADING=multi $(@,debug=) default
 
 debug:
-	$(MAKE) -f $(MAKEFILE_LIST) CONFIGURATION=debug THREADING=single $(@,debug=) default
+	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) CONFIGURATION=debug THREADING=single $(@,debug=) default
 
 # Do make init to allow make -n to function.
 init: $(THIRDPARTYPREREQS) $(OBJDIR) mkNamedPrims.exe

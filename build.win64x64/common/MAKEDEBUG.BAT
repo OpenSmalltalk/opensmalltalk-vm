@@ -1,1 +1,1 @@
-make debug | tee LOGD
+make CONFIGURATION=debug THREADING=single default | tee LOGD

@@ -13,17 +13,43 @@ ifeq ($(VCToolsInstallDir),)
 # For wildcard we /must/ escape spaces and /must not/ escape parentheses.
 RT:=C:/Program\ Files\ (x86)/Microsoft\ Visual\ Studio/2017/Community/VC/Tools/MSVC
 VCToolsInstallDir:=$(wildcard $(RT)/*)
-#$(info VCToolsInstallDir found to be $(VCToolsInstallDir))
 else
 # If VCToolsInstallDir is taken from the environment then modify it to use the
 # Unix / file separator, so that subsequent rules work in both cygwin or cmd
 override VCToolsInstallDir:=$(subst \,/,$(VCToolsInstallDir))
 endif
+$(info VCToolsInstallDir found to be $(VCToolsInstallDir))
+override VCINSTALLDIR:=$(subst \,/,$(VCINSTALLDIR))
+# For wildcard we /must/ escape spaces and /must not/ escape parentheses.
+# For shell we escape spaces and parentheses.
+# It shouldn't be this hard, but it is...
+override VCINSTALLDIR:=$(shell echo "$(VCINSTALLDIR)" | sed 's/ /\\ /g')
+override VCINSTALLDIRSH:=$(shell echo "$(VCINSTALLDIR)" | sed 's/[()]/\\&/g')
 
-HOST:=HostX64/x64
-override TOOLPREFIX:="$(VCToolsInstallDir)/bin/$(HOST)/"
+#############################################################################
+# C compiler settings Visual C++ 2017 Community Edition
+#
+# Now choose the compiler.  If Clang/C2 has been installed use it, otherwise
+# use MSVC
 
-#$(info TOOLPREFIX=$(TOOLPREFIX))
+$(info VCINSTALLDIR=$(VCINSTALLDIR))
+$(info VCINSTALLDIRSH=$(VCINSTALLDIRSH))
+#$(info wildcard VCINSTALLDIR $(wildcard $(VCINSTALLDIR)/.*))
+#$(info wildcard VCINSTALLDIR/Tools/ClangC2 $(wildcard $(VCINSTALLDIR)/Tools/ClangC2/.*))
+#$(info wildcard VCINSTALLDIR/Tools/ClangC3 $(wildcard $(VCINSTALLDIR)/Tools/ClangC3/.*))
+ifneq ($(wildcard $(VCINSTALLDIR)/Tools/ClangC2/.*),)
+$(info Clang/C2 detected)
+#$(info shell echo VCINST...SH/./clang.exe $(shell echo $(VCINSTALLDIRSH)Tools/ClangC2/*/bin/HostX64/clang.exe))
+CC:="$(shell echo $(VCINSTALLDIRSH)Tools/ClangC2/*/bin/HostX64/clang.exe)"
+COMPILER_IN_USE:=ClangC2
+else
+$(info Clang/C2 not found)
+override TOOLPREFIX:="$(VCToolsInstallDir)bin/Host64/x64/"
+COMPILER_IN_USE:=MSVC
+CC:=$(TOOLPREFIX)cl.exe /nologo
+endif
+$(info CC=$(CC))
+
 
 ifeq ($(WindowsSdkDir),)
 WindowsSdkDir:=C:/Program Files (x86)/Windows Kits/10/

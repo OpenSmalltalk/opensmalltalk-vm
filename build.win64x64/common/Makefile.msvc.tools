@@ -5,6 +5,9 @@
 # Compilation rules for 64-bit MSVC 2017 compiler on Microsoft Windows
 #############################################################################
 
+# N.B. Compiler selection is in Makefile.msvc.flags.  Alas this is because of
+# ordering issues I'm too lazy to fix now.  If you can fix this, please do.
+
 # Overridable location of the Cygwin installation Cygwin Bin Directory
 CBD=c:/cygwin64/bin
 CBD64=c:/cygwin64/usr/x86_64-w64-mingw32/bin
@@ -60,12 +63,6 @@ TZ:=$(shell $(CBD)/date +%Z)
 DEFS:=	$(COGDEFS) $(MEMACCESS) $(WINVER) /DWIN32=1 /DWIN32_FILE_SUPPORT /DNO_ISNAN \
 		/DNO_SERVICE /D'TZ="$(TZ)"' \
 		$(NDEBUG) -DLSB_FIRST -D'VM_NAME="$(VM_NAME)"' $(XDEFS) $(CROQUET)
-
-#############################################################################
-# C compiler settings Visual C++ 2017 Community Edition
-#
-CC:=$(TOOLPREFIX)cl.exe /nologo
-#$(info CC=$(CC))
 
 #############################################################################
 # Linker settings
