@@ -98,6 +98,8 @@
 
 #endif /* !HAVE_CONFIG_H */
 
+#include "pharovm/debug.h"
+
 /* function to inform the VM about idle time */
 extern void addIdleUsecs(long idleUsecs);
 
@@ -270,7 +272,7 @@ aioPoll(long microSeconds)
 		}
 		if (errno && (EINTR != errno)) {
 			fprintf(stderr, "errno %d\n", errno);
-			perror("select");
+			logErrorFromErrno("select");
 			return 0;
 		}
 		now = ioUTCMicroseconds();
@@ -364,27 +366,27 @@ aioEnable(int fd, void *data, int flags)
 
 #if defined(O_ASYNC)
 		if (fcntl(fd, F_SETOWN, getpid()) < 0)
-			perror("fcntl(F_SETOWN, getpid())");
+			logErrorFromErrno("fcntl(F_SETOWN, getpid())");
 		if ((arg = fcntl(fd, F_GETFL, 0)) < 0)
-			perror("fcntl(F_GETFL)");
+			logErrorFromErrno("fcntl(F_GETFL)");
 		if (fcntl(fd, F_SETFL, arg | O_NONBLOCK | O_ASYNC) < 0)
-			perror("fcntl(F_SETFL, O_ASYNC)");
+			logErrorFromErrno("fcntl(F_SETFL, O_ASYNC)");
 
 #elif defined(FASYNC)
 		if (fcntl(fd, F_SETOWN, getpid()) < 0)
-			perror("fcntl(F_SETOWN, getpid())");
+			logErrorFromErrno("fcntl(F_SETOWN, getpid())");
 		if ((arg = fcntl(fd, F_GETFL, 0)) < 0)
-			perror("fcntl(F_GETFL)");
+			logErrorFromErrno("fcntl(F_GETFL)");
 		if (fcntl(fd, F_SETFL, arg | O_NONBLOCK | FASYNC) < 0)
-			perror("fcntl(F_SETFL, FASYNC)");
+			logErrorFromErrno("fcntl(F_SETFL, FASYNC)");
 
 #elif defined(FIOASYNC)
 		arg = getpid();
 		if (ioctl(fd, SIOCSPGRP, &arg) < 0)
-			perror("ioctl(SIOCSPGRP, getpid())");
+			logErrorFromErrno("ioctl(SIOCSPGRP, getpid())");
 		arg = 1;
 		if (ioctl(fd, FIOASYNC, &arg) < 0)
-			perror("ioctl(FIOASYNC, 1)");
+			logErrorFromErrno("ioctl(FIOASYNC, 1)");
 #endif
 	}
 }

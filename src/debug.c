@@ -16,6 +16,7 @@ static int max_error_level = 1;
  * LOG_WARN 		2
  * LOG_INFO 		3
  * LOG_DEBUG		4
+ * LOG_TRACE		5
  *
  */
 EXPORT(void) logLevel(int value){
@@ -32,6 +33,19 @@ static char* severityName[4] = {"ERROR", "WARN", "INFO", "DEBUG"};
 EXPORT(void) logAssert(const char* fileName, const char* functionName, int line, char* msg){
 	logMessage(LOG_WARN, fileName, functionName, line, msg);
 }
+
+void logMessageFromErrno(int level, const char* msg, const char* fileName, const char* functionName, int line){
+	char buffer[1024+1];
+	int msgLength;
+
+	msgLength = strlen(msg);
+	strcpy(buffer, msg);
+	strerror_r(errno, buffer + msgLength, 1024 - msgLength);
+
+
+	logMessage(level, fileName, functionName, line, msg);
+}
+
 
 EXPORT(void) logMessage(int level, const char* fileName, const char* functionName, int line, ...){
 	char * format;

@@ -144,7 +144,7 @@
 # if defined(SQ_USE_GLOBAL_STRUCT) /* define only in interpreter */
 static FILE *bct = 0;
 void openBytecodeTraceFile(char *fn)
-{ if (!(bct = fopen(fn,"r"))) perror("fopen"); }
+{ if (!(bct = fopen(fn,"r"))) logErrorFromErrno("fopen"); }
 void closeBytecodeTraceFile() { if (bct) { fclose(bct); bct = 0; } }
 # endif
 # define bytecodeDispatchDebugHook() do { char line[64], expected[64]; \

@@ -257,7 +257,7 @@ static void iconvFail(char *toCode, char *fromCode)
     {
       char buf[256];
       snprintf(buf, sizeof(buf), "iconv_open(%s, %s)", toCode, fromCode);
-      perror(buf);
+      logErrorFromErrno(buf);
     }
 }
 
@@ -444,7 +444,7 @@ int main()
     in= "tésté";	// UTF-8 decomposed Unicode (libiconv fails on this one, MacOSX passes)
     n= convertChars(in, strlen(in), uxPathEncoding, out, sizeof(out), uxTextEncoding, 0, 1);
     printf("%d: %s -> %s\n", n, in, out);
-    in= "t�st�";		// ISO-8859-15
+    in= "t�st�";		// ISO-8859-15
     n= convertChars(in, strlen(in), uxTextEncoding, out, sizeof(out), uxPathEncoding, 0, 1);
     printf("%d: %s -> %s\n", n, in, out); // default composition -- should yield "tésté"
     n= convertChars(in, strlen(in), uxTextEncoding, out, sizeof(out), uxPathEncoding, 1, 1);

@@ -214,11 +214,11 @@ thunkEntry(void *thunkp, sqIntptr_t *stackp)
 	CallBackReturnSpec * volatile rs;
 
 	if (sizeof(int) != sizeof(rs)) {
-		perror("setjmp cannot return a pointer; reimplement!\n");
+		logErrorFromErrno("setjmp cannot return a pointer; reimplement!\n");
 		exit(1);
 	}
 	if (!CheckInVMThread()) {
-		perror("Not in VM thread!\n");
+		logErrorFromErrno("Not in VM thread!\n");
 		exit(666);
 	}
 
@@ -229,7 +229,7 @@ thunkEntry(void *thunkp, sqIntptr_t *stackp)
 													(sqInt)(stackp + 2),
 													0,
 													(sqInt)&trampoline);
-		perror("Warning; callback failed to invoke\n");
+		logErrorFromErrno("Warning; callback failed to invoke\n");
 		return 0;
 	}
 	noteExitCallback();
@@ -269,7 +269,7 @@ thunkEntry(void *thunkp, sqIntptr_t *stackp)
 						rs->rvs.valstruct.size);
 				return stackp[1];
 	}
-	perror("Warning; invalid callback return type\n");
+	logErrorFromErrno("Warning; invalid callback return type\n");
 	return 0;
 }
 

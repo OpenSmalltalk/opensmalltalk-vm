@@ -206,7 +206,7 @@ sqMakeMemoryExecutableFromTo(usqIntptr_t startAddr, usqIntptr_t endAddr)
 						size,
 						PAGE_EXECUTE_READWRITE,
 						&previous))
-		perror("VirtualProtect(x,y,PAGE_EXECUTE_READWRITE)");
+		logErrorFromErrno("VirtualProtect(x,y,PAGE_EXECUTE_READWRITE)");
 }
 
 void
@@ -220,7 +220,7 @@ sqMakeMemoryNotExecutableFromTo(usqIntptr_t startAddr, usqIntptr_t endAddr)
 						size,
 						PAGE_READWRITE,
 						&previous))
-		perror("VirtualProtect(x,y,PAGE_EXECUTE_READWRITE)");
+		logErrorFromErrno("VirtualProtect(x,y,PAGE_EXECUTE_READWRITE)");
 }
 # endif /* COGVM */
 

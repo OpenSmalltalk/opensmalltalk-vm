@@ -379,7 +379,7 @@ static void acceptHandler(int fd, void *data, int flags)
 	  /* something really went wrong */
 	  pss->sockError= errno;
 	  pss->sockState= Invalid;
-	  perror("acceptHandler");
+	  logErrorFromErrno("acceptHandler");
 	  aioDisable(fd);
 	  close(fd);
 	  logDebug("acceptHandler: aborting server %d pss=%p\n", fd, pss);
@@ -417,7 +417,7 @@ static void connectHandler(int fd, void *data, int flags)
       aioDisable(fd);
       pss->sockError= socketError(fd);
       pss->sockState= Unconnected;
-      perror("connectHandler");
+      logErrorFromErrno("connectHandler");
     }
   else /* (flags & AIO_W) -- connect completed */
     {
@@ -796,7 +796,7 @@ void sqSocketConnectToPort(SocketPtr s, sqInt addr, sqInt port)
 	  else
 	    {
 	      /* connection error */
-	      perror("sqConnectToPort");
+	      logErrorFromErrno("sqConnectToPort");
 	      SOCKETSTATE(s)= Unconnected;
 	      SOCKETERROR(s)= errno;
 	      notify(PSP(s), CONN_NOTIFY);
@@ -885,7 +885,7 @@ void sqSocketCloseConnection(SocketPtr s)
       SOCKETSTATE(s)= Unconnected;
       SOCKETERROR(s)= errno;
       notify(PSP(s), CONN_NOTIFY);
-      perror("closeConnection");
+      logErrorFromErrno("closeConnection");
     }
   else if (0 == result)
     {
@@ -1372,7 +1372,7 @@ sqInt sqSocketSetOptionsoptionNameStartoptionNameSizeoptionValueStartoptionValue
 	  if ((setsockopt(PSP(s)->s, opt->optlevel, opt->optname,
 			  (const void *)buf, optionValueSize)) < 0)
 	    {
-	      perror("setsockopt");
+	      logErrorFromErrno("setsockopt");
 	      goto barf;
 	    }
 	  /* it isn't clear what we're supposed to return here, since
@@ -2129,7 +2129,7 @@ void sqSocketConnectToAddressSize(SocketPtr s, char *addr, sqInt addrSize)
 	  else
 	    {
 	      /* connection error */
-	      perror("sqConnectToAddressSize");
+	      logErrorFromErrno("sqConnectToAddressSize");
 	      SOCKETSTATE(s)= Unconnected;
 	      SOCKETERROR(s)= errno;
 	      notify(PSP(s), CONN_NOTIFY);

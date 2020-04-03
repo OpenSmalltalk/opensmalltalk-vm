@@ -322,7 +322,7 @@ beatStateMachine(void *careLess)
 		 */
 		extern char *revisionAsString();
 		errno = er;
-		perror("pthread_setschedparam failed");
+		logErrorFromErrno("pthread_setschedparam failed");
 #if PharoVM
 # define VMNAME "pharo"
 #elif NewspeakVM
@@ -359,7 +359,7 @@ beatStateMachine(void *careLess)
 			&& naptime.tv_sec >= 0 /* oversleeps can return tv_sec < 0 */
 			&& (naptime.tv_sec > 0 || naptime.tv_nsec > MINSLEEPNS)) /*repeat*/
 			if (errno != EINTR) {
-				perror("nanosleep");
+				logErrorFromErrno("nanosleep");
 				exit(1);
 			}
 		heartbeat();
@@ -384,7 +384,7 @@ ioInitHeartbeat()
 										&stateMachinePolicy,
 										&stateMachinePriority))) {
 			errno = er;
-			perror("pthread_getschedparam failed");
+			logErrorFromErrno("pthread_getschedparam failed");
 			exit(errno);
 		}
 		assert(stateMachinePolicy != UNDEFINED);
@@ -406,7 +406,7 @@ ioInitHeartbeat()
 							beatStateMachine,
 							0))) {
 		errno = er;
-		perror("beat thread creation failed");
+		logErrorFromErrno("beat thread creation failed");
 		exit(errno);
 	}
 	while (beatState == nascent)

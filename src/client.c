@@ -166,7 +166,7 @@ static int loadPharoImage(const char* fileName)
     imageFile = sqImageFileOpen(fileName, "rb");
     if(!imageFile)
 	{
-    	perror("Opening Image");
+    	logErrorFromErrno("Opening Image");
         return false;
     }
 

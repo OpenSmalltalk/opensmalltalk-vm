@@ -37,6 +37,12 @@ EXPORT(void) installErrorHandlers();
 
 #define LOG_SIZEOF(expr) logDebug("sizeof("#expr"): %ld", sizeof(expr))
 
+#define logErrorFromErrno(msg) 	logMessageFromErrno(LOG_ERROR, msg, __FILENAME__, __FUNCTION__, __LINE__);
+#define logWarnFromErrno(msg) 	logMessageFromErrno(LOG_WARN, msg, __FILENAME__, __FUNCTION__, __LINE__);
+#define logDebugFromErrno(msg) 	logMessageFromErrno(LOG_DEBUG, msg, __FILENAME__, __FUNCTION__, __LINE__);
+
+void logMessageFromErrno(int level, const char* msg, const char* fileName, const char* functionName, int line);
+
 #include <stdio.h>
 
 int vm_printf( const char * format, ... );
