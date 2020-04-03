@@ -391,7 +391,7 @@ ioLoadFunctionFromAccessorDepthInto(char *functionName, char *pluginName,
 	module = findOrLoadModule(pluginName, 0);
 	if(!module) {
 		/* no module */
-		logTrace("Failed to find %s (module %s was not loaded)\n", functionName, pluginName));
+		logTrace("Failed to find %s (module %s was not loaded)\n", functionName, pluginName);
 		return 0;
 	}
 	if(!functionName) {
