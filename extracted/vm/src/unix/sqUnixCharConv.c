@@ -40,6 +40,8 @@
 #include <ctype.h>
 #include <errno.h>
 
+#include "pharovm/debug.h"
+
 static inline int min(int x, int y) { return (x < y) ? x : y; }
 
 static int convertCopy(char *from, int fromLen, char *to, int toLen, int term)
