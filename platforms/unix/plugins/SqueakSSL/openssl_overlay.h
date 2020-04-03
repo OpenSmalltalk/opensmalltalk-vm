@@ -34,6 +34,10 @@
 #include <openssl/err.h>
 #include <openssl/x509v3.h>
 
+#ifdef __SUNPRO_C
+#include <openssl/opensslv.h> /* define OPENSSL_VERSION_NUMBER */
+#endif
+
 
 
 /*
@@ -68,7 +72,6 @@
 #define sqo_ERR_print_errors_fp ERR_print_errors_fp
 #define sqo_SSL_CTX_new SSL_CTX_new
 #define sqo_SSL_CTX_free SSL_CTX_free
-#define sqo_SSL_CTX_set_options SSL_CTX_set_options
 #define sqo_SSL_CTX_set_cipher_list SSL_CTX_set_cipher_list
 #define sqo_SSL_CTX_set_default_verify_paths SSL_CTX_set_default_verify_paths
 #define sqo_SSL_CTX_ctrl SSL_CTX_ctrl
@@ -103,6 +106,7 @@
 #define sqo_sk_GENERAL_NAME_pop_free sk_GENERAL_NAME_pop_free
 
 #if OPENSSL_VERSION_NUMBER >= 0x10002000L
+#define sqo_SSL_CTX_set_options SSL_CTX_set_options
 #define sqo_X509_check_ip_asc X509_check_ip_asc
 #define sqo_X509_check_host X509_check_host
 #elif  OPENSSL_VERSION_NUMBER < 0x10002000L
