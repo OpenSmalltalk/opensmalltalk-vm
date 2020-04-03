@@ -40,8 +40,12 @@ void logMessageFromErrno(int level, const char* msg, const char* fileName, const
 
 	msgLength = strlen(msg);
 	strcpy(buffer, msg);
-	strerror_r(errno, buffer + msgLength, 1024 - msgLength);
 
+#ifdef WIN32
+	strerror_s(buffer + msgLength, 1024 - msgLength, errno);
+#else
+	strerror_r(errno, buffer + msgLength, 1024 - msgLength);
+#endif
 
 	logMessage(level, fileName, functionName, line, msg);
 }

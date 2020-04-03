@@ -1445,7 +1445,7 @@ moduleUnloaded(char *aModuleName)
 static sqInt
 msg(char *s)
 {
-	fprintf(stderr, "\n%s: %s", moduleName, s);
+	logTrace("\n%s: %s", moduleName, s);
 	return 0;
 }
 

@@ -11,8 +11,7 @@
 #include <windows.h>
 #include <errno.h>
 #include "sq.h"
-
-#if SPURVM /* Non-spur uses sqWin32Alloc.c */
+#include "pharovm/debug.h"
 
 /* Why does this have to be *here*?? eem 6/24/2014 */
 #if !defined(NDEBUG)
@@ -224,68 +223,3 @@ sqMakeMemoryNotExecutableFromTo(usqIntptr_t startAddr, usqIntptr_t endAddr)
 }
 # endif /* COGVM */
 
-# if TEST_MEMORY
-
-#	define MBytes	*1024UL*1024UL
-
-BOOL fIsConsole = 1;
-
-int
-main()
-{
-	char *mem;
-	usqInt i, t = 16 MBytes;
-
-	mem= (char *)sqAllocateMemory(t, t);
-	printf("memory allocated at %p\n", mem);
-	*mem = 1;
-	/* create some roadbumps */
-	for (i = 80 MBytes; i < 2048UL MBytes; i += 80 MBytes) {
-		void *alloc = VirtualAlloc(mem + i, pageSize, MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE);
-		printf("roadbump created at %p (%p)\n", mem + i, alloc);
-		*(char *)alloc = 1;
-	}
-	for (;;) {
-		sqInt segsz = 0;
-		char *seg = sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(32 MBytes, mem + 16 MBytes, &segsz);
-		if (!seg)
-			return 0;
-		*seg = 1;
-		t += segsz;
-		printf("memory extended at %p (total %ld Mb)\n", seg, t / (1 MBytes));
-	}
-	return 0;
-}
-int __cdecl
-sqMessageBox(DWORD dwFlags, const TCHAR *titleString, const TCHAR* fmt, ...)
-{
-	va_list args;
-	int result;
-	char buf[1024];
-
-	strcpy(buf, titleString);
-	strcat(buf, fmt);
-	strcat(buf, "\n");
-	va_start(args, fmt);
-#if 0
-	result = vfprintf(stderr, buf, args);
-#else
-	result = vprintf(buf, args);
-#endif
-	va_end(args);
-	printLastError((char *)titleString);
-	return result;
-}
-void printLastError(TCHAR *prefix)
-{ LPVOID lpMsgBuf;
-  DWORD lastError;
-
-  lastError = GetLastError();
-  FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER |  FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-                NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                (LPTSTR) &lpMsgBuf, 0, NULL );
-  fprintf(stderr,TEXT("%s (%d) -- %s\n"), prefix, lastError, lpMsgBuf);
-  LocalFree( lpMsgBuf );
-}
-# endif /* TEST_MEMORY */
-#endif /* SPURVM */

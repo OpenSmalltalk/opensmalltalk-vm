@@ -259,19 +259,3 @@ doSignalExternalSemaphores(sqInt externalSemaphoreTableSize)
 
 	return switched;
 }
-
-#if FOR_SQUEAK_VM_TESTS
-/* see e.g. tests/sqExternalSemaphores/unixmain.c */
-int
-allRequestsAreAnswered(int externalSemaphoreTableSize)
-{
-	int i;
-	for (i = 1; i < externalSemaphoreTableSize; i++)
-		if (signalRequests[i].responses != signalRequests[i].requests) {
-			printf("signalRequests[%ld] requests %d responses %d\n",
-					i, signalRequests[i].requests, signalRequests[i].responses);
-			return 0;
-		}
-	return 1;
-}
-#endif /* FOR_SQUEAK_VM_TESTS */
