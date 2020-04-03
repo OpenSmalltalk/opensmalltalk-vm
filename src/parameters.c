@@ -320,7 +320,7 @@ processLogLevelOption(const char* value)
 
 	if(intValue == 0)
 	{
-		fprintf(stderr, "Invalid option for logLevel: %s\n", value);
+		logError("Invalid option for logLevel: %s\n", value);
 		vm_printUsageTo(stderr);
 		return VM_ERROR_INVALID_PARAMETER_VALUE;
 	}
@@ -392,7 +392,7 @@ processVMOptions(VMParameters* parameters)
 		const VMParameterSpec *paramSpec = findParameterWithName(argumentName, argumentNameSize);
 		if(!paramSpec)
 		{
-			fprintf(stderr, "Invalid or unknown VM parameter %s\n", param);
+			logError("Invalid or unknown VM parameter %s\n", param);
 			vm_printUsageTo(stderr);
 			return VM_ERROR_INVALID_PARAMETER;
 		}
@@ -412,7 +412,7 @@ processVMOptions(VMParameters* parameters)
 			// Make sure the argument value is present.
 			if(argumentValue == NULL)
 			{
-				fprintf(stderr, "VM parameter %s requires a value\n", param);
+				logError("VM parameter %s requires a value\n", param);
 				vm_printUsageTo(stderr);
 				return VM_ERROR_INVALID_PARAMETER_VALUE;
 			}

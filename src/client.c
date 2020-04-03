@@ -65,7 +65,7 @@ vm_main_with_parameters(VMParameters *parameters)
 
 	if(parameters->isDefaultImage && !parameters->defaultImageFound)
 	{
-		printf("No image has been specified, and no default image has been found.\n");
+		logError("No image has been specified, and no default image has been found.\n");
 		vm_printUsageTo(stdout);
 		return 0;
 	}
@@ -80,14 +80,14 @@ vm_main_with_parameters(VMParameters *parameters)
 	char *workingDirectoryBuffer = (char*)calloc(1, FILENAME_MAX+1);
 	if(!workingDirectoryBuffer)
 	{
-		fprintf(stderr, "Out of memory.\n");
+		logErrorFromErrno("Out of memory.\n");
 		return 1;
 	}
 
 	error = vm_path_get_current_working_dir_into(workingDirectoryBuffer, FILENAME_MAX+1);
 	if(error)
 	{
-		fprintf(stderr, "Failed to obtain the current working directory: %s\n", vm_error_code_to_string(error));
+		logError("Failed to obtain the current working directory: %s\n", vm_error_code_to_string(error));
 		return 1;
 	}
 

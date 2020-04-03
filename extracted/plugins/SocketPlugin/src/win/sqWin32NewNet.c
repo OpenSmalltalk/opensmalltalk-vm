@@ -28,6 +28,8 @@
 #include "sq.h"
 #include "SocketPlugin.h"
 
+#include "pharovm/debug.h"
+
 #ifndef NO_NETWORK
 
 #ifndef STACK_SIZE_PARAM_IS_A_RESERVATION

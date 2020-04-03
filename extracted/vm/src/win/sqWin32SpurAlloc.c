@@ -136,8 +136,8 @@ sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress
 # define printProbes 0
 # define printMaps 0
 	while ((usqIntptr_t)(address + bytes) > (usqIntptr_t)address) {
-		if (printProbes && fIsConsole)
-			printf("probing [%p,%p)\n", address, address + bytes);
+		if (printProbes)
+			logTrace("probing [%p,%p)\n", address, address + bytes);
 		if (address_space_used(address, bytes)) {
 			address += delta;
 			continue;
@@ -148,34 +148,26 @@ sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress
 		 * So accept allocs above minAddress rather than allocs above address
 		 */
 		if (alloc >= (char *)minAddress && alloc <= address + delta) {
-			if (printMaps && fIsConsole)
-				fprintf(stderr,
-						"VirtualAlloc [%p,%p) above %p)\n",
+			if (printMaps)
+				logWarn("VirtualAlloc [%p,%p) above %p)\n",
 						address, address+bytes, minAddress);
 			*allocatedSizePointer = bytes;
 			return alloc;
 		}
 		if (!alloc) {
 			DWORD lastError = GetLastError();
-#if 0 /* Can't report this without making the system unusable... */
-			sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Error:"),
-						TEXT("Unable to VirtualAlloc committed memory at desired address (%") TEXT(PRIuSQINT) TEXT(" bytes requested at %p, above %p), Error: %lu"),
+			logWarn("Unable to VirtualAlloc committed memory at desired address (%" PRIuSQINT " bytes requested at %p, above %p), Error: %lu\n",
 						bytes, address, minAddress, lastError);
-#else
-			if (fIsConsole)
-				fprintf(stderr,
-						"Unable to VirtualAlloc committed memory at desired address (%" PRIuSQINT " bytes requested at %p, above %p), Error: %lu\n",
-						bytes, address, minAddress, lastError);
-#endif
 			return 0;
 		}
 		/* VirtualAlloc answered a mapping well away from where Spur prefers.
 		 * Discard the mapping and try again delta higher.
 		 */
-		if (alloc && !VirtualFree(alloc, SizeForRelease(bytes), MEM_RELEASE))
-			sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Warning:"),
-						TEXT("Unable to VirtualFree committed memory (%") TEXT(PRIuSQINT) TEXT(" bytes requested), Error: %ul"),
-						bytes, GetLastError());
+		if (alloc && !VirtualFree(alloc, SizeForRelease(bytes), MEM_RELEASE)){
+			logWarn("Unable to VirtualFree committed memory at desired address (%" PRIuSQINT " bytes requested at %p, above %p), Error: %lu\n",
+						bytes, address, minAddress, GetLastError());
+		}
+
 		address += delta;
 	}
 	return 0;
