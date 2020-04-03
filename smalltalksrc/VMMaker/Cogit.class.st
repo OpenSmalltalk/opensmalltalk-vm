@@ -1035,11 +1035,7 @@ Cogit class >> initializeMiscConstants [
 			[EagerInstructionDecoration ifNil:
 				[EagerInstructionDecoration := false]]. "speeds up single stepping but could lose fidelity"
 
-	ProcessorClass := (InitializationOptions at: #ISA ifAbsentPut: [self objectMemoryClass defaultISA]) caseOf: {
-							[#X64] 		->	[BochsX64Alien].
-							[#IA32] 	->	[BochsIA32Alien].
-							[#ARMv5]	->	[GdbARMAlien].
-							[#MIPSEL]	->	[MIPSELSimulator] }.
+	ProcessorClass := InitializationOptions at: #ProcessorClass ifAbsentPut: [ UnicornProcessor ].
 	CogCompilerClass := self activeCompilerClass.
 	(CogCompilerClass withAllSuperclasses copyUpTo: CogAbstractInstruction) reverseDo:
 		[:compilerClass| compilerClass initialize; initializeAbstractRegisters].

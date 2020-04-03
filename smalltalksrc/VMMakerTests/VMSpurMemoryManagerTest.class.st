@@ -15,6 +15,18 @@ Class {
 }
 
 { #category : #helpers }
+VMSpurMemoryManagerTest >> newInterpreter [
+
+	^ StackInterpreterSimulator newWithOptions: {#BytesPerWord . 8}
+]
+
+{ #category : #helpers }
+VMSpurMemoryManagerTest >> newMemory [
+
+	^ Spur64BitMMLESimulator new
+]
+
+{ #category : #helpers }
 VMSpurMemoryManagerTest >> newObjectWithSlots: slots [
 	
 	^ self newObjectWithSlots: slots classIndex: memory arrayClassIndexPun
@@ -88,8 +100,8 @@ VMSpurMemoryManagerTest >> setUp [
 	emptyObjectSize := objectHeaderSize + 8 "minimum required single empty slot, to use for forwarders".
 	
 	"Set it to bootstrapping to allow smaller memories"
-	interpreter := StackInterpreterSimulator newWithOptions: {#BytesPerWord . 8}.
-	memory := Spur64BitMMLESimulator new.
+	interpreter := self newInterpreter.
+	memory := self newMemory.
 	
 	memory coInterpreter: interpreter.
 	interpreter objectMemory: memory.
