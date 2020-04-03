@@ -269,7 +269,7 @@ $(OBJDIR)/%.dll: $(call plugin-makefile,$(*F))
 		CONFIGURATION=$(CONFIGURATION) ARCH=$(ARCH) TOOLPREFIX=$(TOOLPREFIX) \
 		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
 		THIRDPARTYOUTDIR=$(THIRDPARTYOUTDIR) XDEFS=-DSQUEAK_EXTERNAL_PLUGIN \
-		COGDEFS="$(COGDEFS)" LIBNAME=$(*F) $(OBJDIR)/$(*F).dll
+		COGDEFS="$(COGDEFS)" LIBNAME=$(*F) VMLIB=$(VMLIB) $(OBJDIR)/$(*F).dll
 
 #############################################################################
 # Basic rules
