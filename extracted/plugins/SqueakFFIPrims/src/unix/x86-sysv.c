@@ -45,12 +45,6 @@
 # define LONGLONG long long
 #endif
 
-#if 0
-# define DPRINTF(ARGS)printf ARGS
-#else
-# define DPRINTF(ARGS)
-#endif
-
 #if defined(FFI_TEST)
   static int primitiveFail(void) { puts("primitive fail"); exit(1); return 0; }
 #else
@@ -75,36 +69,8 @@ int	*ffiStructReturnValue;
 
 extern int ffiCallAddressOf(void *addr, void *stack, int size);
 
-
-static FILE *ffiLogFile = NULL;
-
-int ffiLogFileNameOfLength(void *nameIndex, int nameLength) {
-  char fileName[MAXPATHLEN];
-  FILE *fp;
-
-  if(nameIndex && nameLength) {
-    if(nameLength >= MAXPATHLEN) return 0;
-    strncpy(fileName, nameIndex, nameLength);
-    fileName[nameLength] = 0;
-    /* attempt to open the file and if we can't fail */
-    fp = fopen(fileName, "at");
-    if(fp == NULL) return 0;
-    /* close the old log file if needed and use the new one */
-    if(ffiLogFile) fclose(ffiLogFile);
-    ffiLogFile = fp;
-    fprintf(ffiLogFile, "------- Log started -------\n");
-    fflush(fp);
-  } else {
-    if(ffiLogFile) fclose(ffiLogFile);
-    ffiLogFile = NULL;
-  }
-  return 1;
-}
-
 int ffiLogCallOfLength(void *nameIndex, int nameLength) {
-    if(ffiLogFile == NULL) return 0;
-    fprintf(ffiLogFile, "%.*s\n", nameIndex, nameLength);
-    fflush(ffiLogFile);
+   logTrace("%.*s\n", nameIndex, nameLength);
 }
 
 
@@ -165,63 +131,54 @@ int ffiCanReturn(int *structSpec, int specSize)
 
 int ffiPushSignedChar(int value)
 { 
-  DPRINTF(("ffiPushSignedChar %d\n", value));
   pushInt(value);
   return 1; 
 }
 
 int ffiPushUnsignedChar(int value)
 { 
-  DPRINTF(("ffiPushUnsignedChar %d\n", value));
   pushInt(value);
   return 1; 
 }
 
 int ffiPushSignedByte(int value)
 { 
-  DPRINTF(("ffiPushSignedByte %d\n", value));
   pushInt(value);
   return 1; 
 }
 
 int ffiPushUnsignedByte(int value)
 { 
-  DPRINTF(("ffiPushUnsignedByte %d\n", value));
   pushInt(value);
   return 1; 
 }
 
 int ffiPushSignedShort(int value)
 { 
-  DPRINTF(("ffiPushSignedShort %d\n", value));
   pushInt(value);
   return 1; 
 }
 
 int ffiPushUnsignedShort(int value)
 { 
-  DPRINTF(("ffiPushUnsignedShort %d\n", value));
   pushInt(value);
   return 1; 
 }
 
 int ffiPushSignedInt(int value)
 { 
-  DPRINTF(("ffiPushSignedInt %d\n", value));
   pushInt(value);
   return 1; 
 }
 
 int ffiPushUnsignedInt(int value)
 { 
-  DPRINTF(("ffiPushUnsignedInt %d\n", value));
   pushInt(value);
   return 1; 
 }
 
 int ffiPushSignedLongLong(int low, int high)
 { 
-  DPRINTF(("ffiPushSignedLongLong %d %d\n", low, high));
   pushInt(low);
   pushInt(high);
   return 1; 
@@ -229,7 +186,6 @@ int ffiPushSignedLongLong(int low, int high)
 
 int ffiPushUnsignedLongLong(int low, int high)
 { 
-  DPRINTF(("ffiPushUnsignedLongLong %d %d\n", low, high));
   pushInt(low);
   pushInt(high);
   return 1; 
@@ -237,7 +193,6 @@ int ffiPushUnsignedLongLong(int low, int high)
 
 int ffiPushPointer(int pointer)
 { 
-  DPRINTF(("ffiPushPointer %d\n", pointer));
   pushInt(pointer);
   return 1; 
 }
@@ -245,14 +200,12 @@ int ffiPushPointer(int pointer)
 int ffiPushSingleFloat(double value)
 { 
   float f= (float)value;
-  DPRINTF(("ffiPushSingleFloat %f\n", value));
   pushInt(*(int *)&f);
   return 1; 
 }
 
 int ffiPushDoubleFloat(double value)
 { 
-  DPRINTF(("ffiPushDoubleFloat %f\n", value));
   pushInt(((int *)&value)[0]);
   pushInt(((int *)&value)[1]);
   return 1; 
@@ -261,12 +214,10 @@ int ffiPushDoubleFloat(double value)
 int ffiPushStringOfLength(int srcIndex, int length)
 {
   char *ptr;
-  DPRINTF(("ffiPushStringOfLength %d\n", length));
   checkStack();
   ptr= (char *)malloc(length + 1);
   if (!ptr)
     return primitiveFail();
-  DPRINTF(("  ++ alloc string\n"));
   memcpy(ptr, (void *)srcIndex, length);
   ptr[length]= '\0';
   ffiTempStrings[ffiTempStringCount++]= ptr;
@@ -278,7 +229,6 @@ int ffiPushStructureOfLength(int pointer, int *structSpec, int specSize)
 {
   int lbs= *structSpec & FFIStructSizeMask;
   int size= (lbs + sizeof(int) - 1) / sizeof(int);
-  DPRINTF(("ffiPushStructureOfLength %d (%db %dw)\n", specSize, lbs, size));
   if (ffiStackIndex + size > FFI_MAX_STACK)
     return primitiveFail();
   memcpy((void *)(ffiStack + ffiStackIndex), (void *)pointer, lbs);
@@ -294,7 +244,6 @@ int	ffiLongLongResultHigh(void)	{ return ffiLongReturnValue; }
 
 int ffiStoreStructure(int address, int structSize)
 {
-  DPRINTF(("ffiStoreStructure %d %d\n", address, structSize));
   memcpy((void *)address, (ffiStructReturnValue
 			   ? (void *)ffiStructReturnValue
 			   : (void *)&ffiIntReturnValue),
@@ -306,16 +255,13 @@ int ffiStoreStructure(int address, int structSize)
 int ffiCleanup(void)
 {
   int i;
-  DPRINTF(("ffiCleanup\n"));
   for (i= 0;  i < ffiTempStringCount;  ++i)
     {
-      DPRINTF(("  ++ free string\n"));
       free(ffiTempStrings[i]);
     }
   ffiTempStringCount= 0;
   if (ffiStructReturnValue)
     {
-      DPRINTF(("  ++ free struct\n"));
       free(ffiStructReturnValue);
       ffiStructReturnValue= 0;
     }
