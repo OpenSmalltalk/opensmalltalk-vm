@@ -68,6 +68,7 @@
 #define sqo_ERR_print_errors_fp ERR_print_errors_fp
 #define sqo_SSL_CTX_new SSL_CTX_new
 #define sqo_SSL_CTX_free SSL_CTX_free
+#define sqo_SSL_CTX_set_options SSL_CTX_set_options
 #define sqo_SSL_CTX_set_cipher_list SSL_CTX_set_cipher_list
 #define sqo_SSL_CTX_set_default_verify_paths SSL_CTX_set_default_verify_paths
 #define sqo_SSL_CTX_ctrl SSL_CTX_ctrl
