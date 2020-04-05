@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 # Spur VM with VM profiler and threaded heartbeat
-INSTALLDIR=squeak.cog.spur-sunosamd64/usr
+INSTALLDIR=sqcogspursunosht/usr
 # Some gcc versions create a broken VM using -O2
 OPT="-O2 -DNDEBUG -DDEBUGVM=0"
 MAKE=/usr/bin/gmake

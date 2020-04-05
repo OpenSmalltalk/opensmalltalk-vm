@@ -2,7 +2,7 @@
 set -e
 # Spur VM with VM profiler and itimer heartbeat
 MAKE=/usr/bin/gmake
-INSTALLDIR=squeak.cog.spur-timer-sunosamd64/usr
+INSTALLDIR=sqcogspursunosht/usr
 # Some gcc versions create a broken VM using -O2
 OPT="-g -O2 -DNDEBUG -DDEBUGVM=0"
 
