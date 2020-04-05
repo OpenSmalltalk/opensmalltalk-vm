@@ -23,7 +23,7 @@ To build,
   ./mvm or ./mvm INSTALLDIR
 
 This will build and install into INSTALLDIR.
-The default value for INSTALLDIR is products/squeak.cog.spur-sunosamd64/usr
+The default value for INSTALLDIR is products/sqcogspursunos[ht]/usr
 
 To run the vm, consider running the process in the RT (real-time) class.
  
