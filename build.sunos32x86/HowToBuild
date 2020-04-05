@@ -8,6 +8,7 @@ Contents:
 	- Swapspace
 	- C Compiler
 	- GNU make
+	- IPS package
 
 Overview
 --------
@@ -22,7 +23,7 @@ To build,
   ./mvm or ./mvm INSTALLDIR
 
 This will build and install into INSTALLDIR.
-The default value for INSTALLDIR is products/squeak.cog.spur-sunos32x86.
+The default value for INSTALLDIR is products/sqcogspursunos[ht]/usr
 
 To run the vm, consider running the process in the RT (real-time) class.
  
@@ -116,4 +117,29 @@ GNU Make
 --------
 
 For the Makefiles, pkg:/developer/build/gnu-make  must be installed.
+
+IPS Package 
+-----------
+
+To build an IPS package, the IPS manifest squeak5.p5m can be used
+
+1. Strip the executable if not already done
+
+$strip ./usr/lib/squeak/5.0-202003291930-solaris/squeak
+
+2. Create a repository for publisher 'squeak'
+
+$pkgrepo create -s myrepo
+$pkgrepo -s myrepo set publisher/prefix=squeak
+
+3. Publish the executable in the repository
+
+$pkgrepo publish -d squeak.cog.spur-sunosamd64/ -s myrepo squeak5.p5m
+
+4. Verify and optionally create an archive
+
+$ pkgrepo -s myrepo list
+$ pkgrecv -s myrepo -d squeak5.0.0-solaris11.3-amd64.p5p -a '*'
+
+The .p5p archive of the IPS package can be used to distribute the binaries.
 
