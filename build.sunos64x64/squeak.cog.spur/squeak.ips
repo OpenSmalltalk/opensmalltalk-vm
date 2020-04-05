@@ -1,0 +1,38 @@
+#!/bin/sh
+
+# Every release of the IPS package will have its own /usr/lib/squeak dirs
+# as the date (and time) of the compile is in the Squeak5 builds.
+#
+# Revision history
+# 5.0.1 - initial version
+
+DBX=
+TOP=
+#TOP=./reloc
+LIB32=$TOP/usr/lib/squeak/5.0-202004051137-solaris
+LIB64=$TOP/usr/lib/squeak/5.0-202004051206-solaris
+
+if [ "${SQUEAK_PLUGINS-unset}" = unset ]; then
+	export SQUEAK_PLUGINS="$LIB32"
+fi
+
+#
+# the following code will be replaced by something
+# that checks the Smalltalk image (perhaps via 'ckformat')
+# and then exec the appropriate vm
+#
+
+case $1 in
+  -dbx)
+	shift
+	DBX='dbx -C'
+        ;;
+  -64)
+	shift;
+  	export SQUEAK_PLUGINS="$LIB64"
+	;;
+   *)   ;;
+esac
+
+LD_LIBRARY_PATH="${SQUEAK_PLUGINS}:${LD_LIBRARY_PATH}" exec $DBX "$SQUEAK_PLUGINS/squeak" "$@"
+

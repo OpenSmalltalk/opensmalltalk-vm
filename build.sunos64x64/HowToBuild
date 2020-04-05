@@ -123,23 +123,35 @@ IPS Package
 
 To build an IPS package, the IPS manifest squeak5.p5m can be used
 
-1. Strip the executable if not already done
+1. We use 5.0 as the version number and append a IPS specific third digit.
 
-$strip ./usr/lib/squeak/5.0-202003291930-solaris/squeak
+So the number of the IPS packages is squeak5.0.0, squeak5.0.1 and so on.
+The last digit is Solaris specific, for our IPS package.
+
+Also note that the Squeak V4 branch has its own package, squeak4.
 
 2. Create a repository for publisher 'squeak'
+
+The script 'make-ips-pkg.sh' can be used, or manually make a repo:
 
 $pkgrepo create -s myrepo
 $pkgrepo -s myrepo set publisher/prefix=squeak
 
 3. Publish the executable in the repository
 
-$pkgrepo publish -d squeak.cog.spur-sunosamd64/ -s myrepo squeak5.p5m
+It is possible to create a 64bit or 32bit specific package,
+but we prefer to copy the 32bit and 64bit into one package :
+
+$pkgrepo publish -d reloc/ -s myrepo squeak5.p5m
+
+The script 'make-ips-pkg.sh' can be copied to the products/ directory for doing this.
 
 4. Verify and optionally create an archive
 
 $ pkgrepo -s myrepo list
-$ pkgrecv -s myrepo -d squeak5.0.0-solaris11.3-amd64.p5p -a '*'
+$ pkgrecv -s myrepo -d squeak5.0.0-solaris11.3.p5p -a '*'
 
+This is also done by the make-ips-pkg.sh script.
+Note that this script bundles the 32bit and 64bit binaries into 1 (one) package.
 The .p5p archive of the IPS package can be used to distribute the binaries.
 

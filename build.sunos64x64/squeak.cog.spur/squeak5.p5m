@@ -1,34 +1,132 @@
-set name=pkg.fmri value=pkg:/runtime/squeak5@5.3.1
-set name=pkg.description value="Squeak V5"
+set name=pkg.fmri value=pkg:/runtime/squeak5@5.0.1
 set name=pkg.summary value="The Squeak V5 Smalltalk System"
-
-file usr/share/man/man1/inisqueak.1 group=bin mode=0644 owner=root path=usr/share/man/man1/inisqueak.1
+set name=pkg.description value="Squeak V5"
+file usr/bin/squeak path=usr/bin/squeak owner=root group=bin mode=0755
+dir  path=usr/lib/squeak owner=root group=bin mode=0755
+dir  path=usr/lib/squeak/5.0-202004051137-solaris owner=root group=bin mode=0755
+file usr/lib/squeak/5.0-202004051137-solaris/B3DAcceleratorPlugin.so \
+    path=usr/lib/squeak/5.0-202004051137-solaris/B3DAcceleratorPlugin.so \
+    owner=root group=bin mode=0755
+file usr/lib/squeak/5.0-202004051137-solaris/FileAttributesPlugin.so \
+    path=usr/lib/squeak/5.0-202004051137-solaris/FileAttributesPlugin.so \
+    owner=root group=bin mode=0755
+file usr/lib/squeak/5.0-202004051137-solaris/ImmX11Plugin.so \
+    path=usr/lib/squeak/5.0-202004051137-solaris/ImmX11Plugin.so owner=root \
+    group=bin mode=0755
+file usr/lib/squeak/5.0-202004051137-solaris/LocalePlugin.so \
+    path=usr/lib/squeak/5.0-202004051137-solaris/LocalePlugin.so owner=root \
+    group=bin mode=0755
+file usr/lib/squeak/5.0-202004051137-solaris/Squeak3D.so \
+    path=usr/lib/squeak/5.0-202004051137-solaris/Squeak3D.so owner=root \
+    group=bin mode=0755
+file usr/lib/squeak/5.0-202004051137-solaris/SqueakFFIPrims.so \
+    path=usr/lib/squeak/5.0-202004051137-solaris/SqueakFFIPrims.so owner=root \
+    group=bin mode=0755
+file usr/lib/squeak/5.0-202004051137-solaris/SqueakSSL.so \
+    path=usr/lib/squeak/5.0-202004051137-solaris/SqueakSSL.so owner=root \
+    group=bin mode=0755
+file usr/lib/squeak/5.0-202004051137-solaris/UUIDPlugin.so \
+    path=usr/lib/squeak/5.0-202004051137-solaris/UUIDPlugin.so owner=root \
+    group=bin mode=0755
+file usr/lib/squeak/5.0-202004051137-solaris/UnicodePlugin.so \
+    path=usr/lib/squeak/5.0-202004051137-solaris/UnicodePlugin.so owner=root \
+    group=bin mode=0755
+file usr/lib/squeak/5.0-202004051137-solaris/UnixOSProcessPlugin.so \
+    path=usr/lib/squeak/5.0-202004051137-solaris/UnixOSProcessPlugin.so \
+    owner=root group=bin mode=0755
+file usr/lib/squeak/5.0-202004051137-solaris/XDisplayControlPlugin.so \
+    path=usr/lib/squeak/5.0-202004051137-solaris/XDisplayControlPlugin.so \
+    owner=root group=bin mode=0755
+file usr/lib/squeak/5.0-202004051137-solaris/squeak \
+    path=usr/lib/squeak/5.0-202004051137-solaris/squeak owner=root group=bin \
+    mode=0755
+file usr/lib/squeak/5.0-202004051137-solaris/vm-display-X11.so \
+    path=usr/lib/squeak/5.0-202004051137-solaris/vm-display-X11.so owner=root \
+    group=bin mode=0755
+file usr/lib/squeak/5.0-202004051137-solaris/vm-display-null.so \
+    path=usr/lib/squeak/5.0-202004051137-solaris/vm-display-null.so \
+    owner=root group=bin mode=0755
+file usr/lib/squeak/5.0-202004051137-solaris/vm-sound-OSS.so \
+    path=usr/lib/squeak/5.0-202004051137-solaris/vm-sound-OSS.so owner=root \
+    group=bin mode=0755
+file usr/lib/squeak/5.0-202004051137-solaris/vm-sound-Sun.so \
+    path=usr/lib/squeak/5.0-202004051137-solaris/vm-sound-Sun.so owner=root \
+    group=bin mode=0755
+file usr/lib/squeak/5.0-202004051137-solaris/vm-sound-null.so \
+    path=usr/lib/squeak/5.0-202004051137-solaris/vm-sound-null.so owner=root \
+    group=bin mode=0755
+file usr/lib/squeak/5.0-202004051137-solaris/vm-sound-pulse.so \
+    path=usr/lib/squeak/5.0-202004051137-solaris/vm-sound-pulse.so owner=root \
+    group=bin mode=0755
+dir  path=usr/lib/squeak/5.0-202004051206-solaris owner=root group=bin mode=0755
+file usr/lib/squeak/5.0-202004051206-solaris/B3DAcceleratorPlugin.so \
+    path=usr/lib/squeak/5.0-202004051206-solaris/B3DAcceleratorPlugin.so \
+    owner=root group=bin mode=0755
+file usr/lib/squeak/5.0-202004051206-solaris/FileAttributesPlugin.so \
+    path=usr/lib/squeak/5.0-202004051206-solaris/FileAttributesPlugin.so \
+    owner=root group=bin mode=0755
+file usr/lib/squeak/5.0-202004051206-solaris/ImmX11Plugin.so \
+    path=usr/lib/squeak/5.0-202004051206-solaris/ImmX11Plugin.so owner=root \
+    group=bin mode=0755
+file usr/lib/squeak/5.0-202004051206-solaris/LocalePlugin.so \
+    path=usr/lib/squeak/5.0-202004051206-solaris/LocalePlugin.so owner=root \
+    group=bin mode=0755
+file usr/lib/squeak/5.0-202004051206-solaris/Squeak3D.so \
+    path=usr/lib/squeak/5.0-202004051206-solaris/Squeak3D.so owner=root \
+    group=bin mode=0755
+file usr/lib/squeak/5.0-202004051206-solaris/SqueakFFIPrims.so \
+    path=usr/lib/squeak/5.0-202004051206-solaris/SqueakFFIPrims.so owner=root \
+    group=bin mode=0755
+file usr/lib/squeak/5.0-202004051206-solaris/SqueakSSL.so \
+    path=usr/lib/squeak/5.0-202004051206-solaris/SqueakSSL.so owner=root \
+    group=bin mode=0755
+file usr/lib/squeak/5.0-202004051206-solaris/UUIDPlugin.so \
+    path=usr/lib/squeak/5.0-202004051206-solaris/UUIDPlugin.so owner=root \
+    group=bin mode=0755
+file usr/lib/squeak/5.0-202004051206-solaris/UnicodePlugin.so \
+    path=usr/lib/squeak/5.0-202004051206-solaris/UnicodePlugin.so owner=root \
+    group=bin mode=0755
+file usr/lib/squeak/5.0-202004051206-solaris/UnixOSProcessPlugin.so \
+    path=usr/lib/squeak/5.0-202004051206-solaris/UnixOSProcessPlugin.so \
+    owner=root group=bin mode=0755
+file usr/lib/squeak/5.0-202004051206-solaris/XDisplayControlPlugin.so \
+    path=usr/lib/squeak/5.0-202004051206-solaris/XDisplayControlPlugin.so \
+    owner=root group=bin mode=0755
+file usr/lib/squeak/5.0-202004051206-solaris/squeak \
+    path=usr/lib/squeak/5.0-202004051206-solaris/squeak owner=root group=bin \
+    mode=0755
+file usr/lib/squeak/5.0-202004051206-solaris/vm-display-X11.so \
+    path=usr/lib/squeak/5.0-202004051206-solaris/vm-display-X11.so owner=root \
+    group=bin mode=0755
+file usr/lib/squeak/5.0-202004051206-solaris/vm-display-null.so \
+    path=usr/lib/squeak/5.0-202004051206-solaris/vm-display-null.so \
+    owner=root group=bin mode=0755
+file usr/lib/squeak/5.0-202004051206-solaris/vm-sound-OSS.so \
+    path=usr/lib/squeak/5.0-202004051206-solaris/vm-sound-OSS.so owner=root \
+    group=bin mode=0755
+file usr/lib/squeak/5.0-202004051206-solaris/vm-sound-Sun.so \
+    path=usr/lib/squeak/5.0-202004051206-solaris/vm-sound-Sun.so owner=root \
+    group=bin mode=0755
+file usr/lib/squeak/5.0-202004051206-solaris/vm-sound-null.so \
+    path=usr/lib/squeak/5.0-202004051206-solaris/vm-sound-null.so owner=root \
+    group=bin mode=0755
+file usr/lib/squeak/5.0-202004051206-solaris/vm-sound-pulse.so \
+    path=usr/lib/squeak/5.0-202004051206-solaris/vm-sound-pulse.so owner=root \
+    group=bin mode=0755
+dir  path=usr/share/doc/squeak owner=root group=bin mode=0755
+file usr/share/doc/squeak/COPYING.gz path=usr/share/doc/squeak/COPYING.gz \
+    owner=root group=bin mode=0644
+file usr/share/doc/squeak/COPYRIGHT.gz path=usr/share/doc/squeak/COPYRIGHT.gz \
+    owner=root group=bin mode=0644
+file usr/share/doc/squeak/LICENSE.gz path=usr/share/doc/squeak/LICENSE.gz \
+    owner=root group=bin mode=0644
+file usr/share/doc/squeak/README.Contributing.gz \
+    path=usr/share/doc/squeak/README.Contributing.gz owner=root group=bin \
+    mode=0644
+file usr/share/doc/squeak/README.Keyboard.gz \
+    path=usr/share/doc/squeak/README.Keyboard.gz owner=root group=bin mode=0644
+file usr/share/doc/squeak/README.Sound.gz \
+    path=usr/share/doc/squeak/README.Sound.gz owner=root group=bin mode=0644
+file usr/share/man/man1/inisqueak.1 path=usr/share/man/man1/inisqueak.1 \
+    owner=root group=bin mode=0644
 hardlink path=usr/share/man/man1/squeak.1 target=inisqueak.1
-dir group=bin mode=0755 owner=root path=usr/share/doc/squeak
-file usr/share/doc/squeak/README.Sound.gz group=bin mode=0644 owner=root path=usr/share/doc/squeak/README.Sound.gz
-file usr/share/doc/squeak/COPYING.gz group=bin mode=0644 owner=root path=usr/share/doc/squeak/COPYING.gz
-file usr/share/doc/squeak/README.Keyboard.gz group=bin mode=0644 owner=root path=usr/share/doc/squeak/README.Keyboard.gz
-file usr/share/doc/squeak/COPYRIGHT.gz group=bin mode=0644 owner=root path=usr/share/doc/squeak/COPYRIGHT.gz
-file usr/share/doc/squeak/LICENSE.gz group=bin mode=0644 owner=root path=usr/share/doc/squeak/LICENSE.gz
-file usr/share/doc/squeak/README.Contributing.gz group=bin mode=0644 owner=root path=usr/share/doc/squeak/README.Contributing.gz
-file usr/bin/squeak group=bin mode=0755 owner=root path=usr/bin/squeak
-dir group=bin mode=0755 owner=root path=usr/lib/squeak
-dir group=bin mode=0755 owner=root path=usr/lib/squeak/5.0-202004011604-solaris
-file usr/lib/squeak/5.0-202004011604-solaris/FileAttributesPlugin.so group=bin mode=0755 owner=root path=usr/lib/squeak/5.0-202004011604-solaris/FileAttributesPlugin.so
-file usr/lib/squeak/5.0-202004011604-solaris/XDisplayControlPlugin.so group=bin mode=0755 owner=root path=usr/lib/squeak/5.0-202004011604-solaris/XDisplayControlPlugin.so
-file usr/lib/squeak/5.0-202004011604-solaris/vm-sound-OSS.so group=bin mode=0755 owner=root path=usr/lib/squeak/5.0-202004011604-solaris/vm-sound-OSS.so
-file usr/lib/squeak/5.0-202004011604-solaris/vm-display-X11.so group=bin mode=0755 owner=root path=usr/lib/squeak/5.0-202004011604-solaris/vm-display-X11.so
-file usr/lib/squeak/5.0-202004011604-solaris/squeak group=bin mode=0755 owner=root path=usr/lib/squeak/5.0-202004011604-solaris/squeak
-file usr/lib/squeak/5.0-202004011604-solaris/vm-display-null.so group=bin mode=0755 owner=root path=usr/lib/squeak/5.0-202004011604-solaris/vm-display-null.so
-file usr/lib/squeak/5.0-202004011604-solaris/B3DAcceleratorPlugin.so group=bin mode=0755 owner=root path=usr/lib/squeak/5.0-202004011604-solaris/B3DAcceleratorPlugin.so
-file usr/lib/squeak/5.0-202004011604-solaris/vm-sound-Sun.so group=bin mode=0755 owner=root path=usr/lib/squeak/5.0-202004011604-solaris/vm-sound-Sun.so
-file usr/lib/squeak/5.0-202004011604-solaris/SqueakSSL.so group=bin mode=0755 owner=root path=usr/lib/squeak/5.0-202004011604-solaris/SqueakSSL.so
-file usr/lib/squeak/5.0-202004011604-solaris/vm-sound-pulse.so group=bin mode=0755 owner=root path=usr/lib/squeak/5.0-202004011604-solaris/vm-sound-pulse.so
-file usr/lib/squeak/5.0-202004011604-solaris/SqueakFFIPrims.so group=bin mode=0755 owner=root path=usr/lib/squeak/5.0-202004011604-solaris/SqueakFFIPrims.so
-file usr/lib/squeak/5.0-202004011604-solaris/ImmX11Plugin.so group=bin mode=0755 owner=root path=usr/lib/squeak/5.0-202004011604-solaris/ImmX11Plugin.so
-file usr/lib/squeak/5.0-202004011604-solaris/UnicodePlugin.so group=bin mode=0755 owner=root path=usr/lib/squeak/5.0-202004011604-solaris/UnicodePlugin.so
-file usr/lib/squeak/5.0-202004011604-solaris/Squeak3D.so group=bin mode=0755 owner=root path=usr/lib/squeak/5.0-202004011604-solaris/Squeak3D.so
-file usr/lib/squeak/5.0-202004011604-solaris/UnixOSProcessPlugin.so group=bin mode=0755 owner=root path=usr/lib/squeak/5.0-202004011604-solaris/UnixOSProcessPlugin.so
-file usr/lib/squeak/5.0-202004011604-solaris/UUIDPlugin.so group=bin mode=0755 owner=root path=usr/lib/squeak/5.0-202004011604-solaris/UUIDPlugin.so
-file usr/lib/squeak/5.0-202004011604-solaris/vm-sound-null.so group=bin mode=0755 owner=root path=usr/lib/squeak/5.0-202004011604-solaris/vm-sound-null.so
-file usr/lib/squeak/5.0-202004011604-solaris/LocalePlugin.so group=bin mode=0755 owner=root path=usr/lib/squeak/5.0-202004011604-solaris/LocalePlugin.so
