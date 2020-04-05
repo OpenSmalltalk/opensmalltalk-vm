@@ -11,7 +11,7 @@ esac
 MAKE=/usr/bin/gmake
 #INSTALLDIR=sqcogspursunosht
 INSTALLDIR=squeak.cog.spur-sunos32x86
-OPT="-g -O2 -DNDEBUG -DDEBUGVM=0"
+OPT="-O2 -DNDEBUG -DDEBUGVM=0"
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
