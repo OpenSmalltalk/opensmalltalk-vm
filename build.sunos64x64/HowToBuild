@@ -23,7 +23,7 @@ To build,
   ./mvm or ./mvm INSTALLDIR
 
 This will build and install into INSTALLDIR.
-The default value for INSTALLDIR is products/sqcogspursunos[ht]/usr
+The default value for INSTALLDIR is products/sqcogspur64sunos[ht]/usr
 
 To run the vm, consider running the process in the RT (real-time) class.
  

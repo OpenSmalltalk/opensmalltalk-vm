@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 # Spur VM with VM profiler and threaded heartbeat
-INSTALLDIR=sqcogspursunosht/usr
+INSTALLDIR=sqcogspur64sunosht/usr
 # Some gcc versions create a broken VM using -O2
 OPT="-O2 -DNDEBUG -DDEBUGVM=0"
 MAKE=/usr/bin/gmake
@@ -26,6 +26,7 @@ test -f plugins.ext || (test -f ../plugins.ext && cp -p ../plugins.ext . || cp -
 test -f config.h || ../../../platforms/unix/config/configure --without-npsqueak \
 		--with-vmversion=5.0 \
 		--disable-dynamicopenssl \
+		--libdir=$INSTALLDIR/lib/amd64
 		--with-src=spur64src \
 	TARGET_ARCH="-m64" \
 	ac_cv_cflags_warn_all="" \
