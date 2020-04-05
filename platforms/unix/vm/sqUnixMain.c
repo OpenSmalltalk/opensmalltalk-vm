@@ -1191,12 +1191,19 @@ static struct moduleDescription moduleDescriptions[]=
   { &soundModule,   "sound",   "sndio"  },	/*** NO DEFAULT ***/
   /* when adding an entry above be sure to change the defaultModules offset below */
   { &displayModule, "display", "Quartz" },	/* defaults... */
+#ifdef __sun__
   { &soundModule,   "sound",   "pulse"  },
+  { &soundModule,   "sound",   "OSS"    },
+  { &soundModule,   "sound",   "Sun"    },
+  { &soundModule,   "sound",   "null"   },
+#else
   { &soundModule,   "sound",   "OSS"    },
   { &soundModule,   "sound",   "MacOSX" },
   { &soundModule,   "sound",   "Sun"    },
+  { &soundModule,   "sound",   "pulse"  },
   { &soundModule,   "sound",   "ALSA"   },
   { &soundModule,   "sound",   "null"   },
+#endif
   { 0,              0,         0	}
 };
 
