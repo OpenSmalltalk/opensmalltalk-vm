@@ -17,30 +17,33 @@ CBD32=c:/cygwin64/usr/i686-w64-mingw32/bin
 # C compiler settings (MSVC 2017 Community Edition)
 #
 
-# WARNINGS:= -Wall -Wno-unused-variable -Wno-unknown-pragmas -Wno-unused-value -Wno-unused-function -Wno-unused-but-set-variable
 # https://docs.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warnings-c4000-through-c4199?view=vs-2017
-WARNINGS:= /W4 /wd4100 /wd4668 /wd4255 /wd4555 /wd4706
+ifdef MSVC
+WARNINGS:= -W4 -wd4100 -wd4668 -wd4255 -wd4555 -wd4706
+else ifdef ClangC2
+WARNINGS:= -Wall -Wno-unused-variable -Wno-unknown-pragmas -Wno-unused-value -Wno-unused-function -Wno-unused-but-set-variable
+endif
 
 # VM config flags.
 ifeq ($(CONFIGURATION),product)
-# /Ob enable inline expansion /Oy omit frame pointer, Oi enable intrinsics
-OFLAGS:=/Ox /Ob1 /Oi /Oy
-NDEBUG:=/DNDEBUG /D'VM_LABEL(foo)=0' # Define NDEBUG for production to exclude asserts
+# -Ob enable inline expansion -Oy omit frame pointer, Oi enable intrinsics
+OFLAGS:=$(PRODUCTION_OFLAGS)
+NDEBUG:=-DNDEBUG -D'VM_LABEL(foo)=0' # Define NDEBUG for production to exclude asserts
 DEBUGVM=0
 else ifeq ($(CONFIGURATION),assert)
-OFLAGS:=/Os /Oi- /Oy-
+OFLAGS:=$(ASSERT_OFLAGS)
 DEBUGVM=0
-NDEBUG:=/D'VM_LABEL(foo)=0'
+NDEBUG:=-D'VM_LABEL(foo)=0'
 else
-OFLAGS:=/Od
+OFLAGS:=$(DEBUG_OFLAGS)
 DEBUGVM=1
-NDEBUG:=/D'VM_LABEL(foo)=0'
+NDEBUG:=-D'VM_LABEL(foo)=0'
 endif
 
 ifeq ($(THREADING),multi)
-COGDEFS:= $(COGDEFS) /DCOGMTVM=1 /DDEBUGVM=$(DEBUGVM)
+COGDEFS:= $(COGDEFS) -DCOGMTVM=1 -DDEBUGVM=$(DEBUGVM)
 else
-COGDEFS:= $(COGDEFS) /DCOGMTVM=0 /DDEBUGVM=$(DEBUGVM)
+COGDEFS:= $(COGDEFS) -DCOGMTVM=0 -DDEBUGVM=$(DEBUGVM)
 endif
 
 # MSVC's preprocessor (bless its heart) can't manage complex expansions
@@ -50,19 +53,18 @@ MEMACCESS:=-DUSE_INLINE_MEMORY_ACCESSORS=1
 
 # Set minimum version to Windows 8 (see /cygwin/usr/include/w32api/w32api.h)
 #but if so, sqWin32AEC.cpp includes DeviceTopology.h & barfs
-#WINVER:=/D_WIN32_WINNT=0x0801 /DWINVER=0x0801
+#WINVER:=-D_WIN32_WINNT=0x0801 -DWINVER=0x0801
 # Set minimum version to Windows 10
-WINVER:=/D_WIN64=1 /D_WIN32_WINNT=0x1001 /DWINVER=0x1001
+WINVER:=-D_WIN64=1 -D_WIN32_WINNT=0x1001 -DWINVER=0x1001
 
 # define _MT to eliminate the inline versions of printf et al in mingw/stdio.h
 #NOBUILTIN:= -fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf
-NOBUILTIN:=/D_MT
+NOBUILTIN:=-D_MT
 MACHINE:=x64
 
-TZ:=$(shell $(CBD)/date +%Z)
-DEFS:=	$(COGDEFS) $(MEMACCESS) $(WINVER) /DWIN32=1 /DWIN32_FILE_SUPPORT /DNO_ISNAN \
-		/DNO_SERVICE /D'TZ="$(TZ)"' \
-		$(NDEBUG) -DLSB_FIRST -D'VM_NAME="$(VM_NAME)"' $(XDEFS) $(CROQUET)
+DEFS:=	$(COGDEFS) $(MEMACCESS) $(WINVER) \
+	-DWIN32=1 -DWIN32_FILE_SUPPORT -DNO_ISNAN -DNO_SERVICE \
+	$(NDEBUG) -DLSB_FIRST -D'VM_NAME="$(VM_NAME)"' $(XDEFS) $(CROQUET)
 
 #############################################################################
 # Linker settings
