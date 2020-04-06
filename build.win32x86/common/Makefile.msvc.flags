@@ -1,12 +1,12 @@
 #############################################################################
-# Common Makefile for Win64 VM using MSVC, e.g. 2017 Community, and gnu make
+# Common Makefile for Win32 VM using MSVC, e.g. 2017 Community, and gnu make
 # Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
 #
 # Compilation rules and flags for plugins built with the MSVC toolchain, such
 # as the SoundPlugin.
 #############################################################################
 
-ARCH:=x64
+ARCH:=x86
 
 # Find out where the MSVC tools are if not already defined.
 ifeq ($(VCToolsInstallDir),)
@@ -46,9 +46,13 @@ undefine MSVC
 LINKERARGS=-Xlinker
 CLANG_ADAPT:=-fmsc-version=1916 # as reported by boost for MSVC Community 2017
 CLANG_LINK_ADAPT:=-defaultlib:libcmt
+CLANG_VERSION:=$(basename $(dir $(dir $(dir $(CC)))))
+$(info CLANG_VERSION=$(CLANG_VERSION))
+PATH:=$(PATH):$(dir $(shell echo $(VCINSTALLDIRSH)Tools/ClangC2/*/bin/HostX64/clang.exe))x86
+$(info $$PATH=$(PATH))
 else
 $(info Clang/C2 not found)
-override TOOLPREFIX:="$(VCToolsInstallDir)bin/HostX64/x64/"
+override TOOLPREFIX:="$(VCToolsInstallDir)bin/HostX64/x86/"
 MSVC:=MSVC
 undefine ClangC2
 LINKERARGS=/link
@@ -81,7 +85,7 @@ PRODUCTION_OFLAGS:=-Ox -Ob1 -Oi -Oy
 ASSERT_OFLAGS:=-Os -Oi- -Oy-
 DEBUG_OFLAGS:=-Od
 OFLAGS= -Ot
-CFLAGS=	-MD -DWIN64=1 -Z7 $(OFLAGS) \
+CFLAGS=	-MD -DWIN32=1 -Z7 $(OFLAGS) \
 	-Dalloca=_alloca -Dhuge=my_huge \
 	-EHsc $(NOBUILTIN) $(WARNINGS)
 else ifdef ClangC2
@@ -89,7 +93,7 @@ PRODUCTION_OFLAGS:=-Os
 ASSERT_OFLAGS:=-Od
 DEBUG_OFLAGS:=-O0
 OFLAGS=-O3
-CFLAGS=	-MD -DWIN64=1 -gcodeview $(OFLAGS) \
+CFLAGS=	-m32 -MD -DWIN32=1 -gcodeview $(OFLAGS) \
 	-Dalloca=_alloca -Dhuge=my_huge \
 	-fcxx-exceptions $(NOBUILTIN) $(WARNINGS)
 endif
@@ -99,7 +103,7 @@ endif
 # that effectively disables debugging.
 #DEFS:=	-DWIN32_FILE_SUPPORT -DNO_SERVICE -DNO_STD_FILE_SUPPORT -DNDEBUG \
 #	-DLSB_FIRST -DVM_NAME=\"$(VM)\" -DX86 $(XDEFS) $(CROQUET)
-DEFS:=	-DWIN32_FILE_SUPPORT -DNO_SERVICE -DLSB_FIRST -DX64 $(XDEFS) $(CROQUET)
+DEFS:=	-DWIN32_FILE_SUPPORT -DNO_SERVICE -DLSB_FIRST -DX86 $(XDEFS) $(CROQUET)
 # XDEFS=	-DSQUEAK_BUILTIN_PLUGIN
 # Include the Microsoft headers and any extras.
 # Put -I. last because boost includes bizarreness such as
