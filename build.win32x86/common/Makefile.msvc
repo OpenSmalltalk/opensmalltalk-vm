@@ -105,7 +105,6 @@ VMOBJ:= $(addprefix $(OBJDIR)/,$(VMOBJ))
 VMEXE:=  $(OBJDIR)/$(VM).exe
 CONSOLEVMEXE:=  $(OBJDIR)/$(VM)Console.exe
 VMDEF:=	$(VM).def
-#VMEXP:=	$(OBJDIR)/$(VM).exp
 VMMAP:=	$(OBJDIR)/$(VM).map
 CONSOLEVMMAP:=	$(OBJDIR)/$(VM)Console.map
 VMLIB:=	$(VM).lib
@@ -137,22 +136,22 @@ svnver:
 	echo $(RC) $(RCFLAGS)
 
 productmt:;
-	$(MAKE) -f $(MAKEFILE_LIST) CONFIGURATION=product THREADING=multi $(@,product=) default
+	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) CONFIGURATION=product THREADING=multi $(@,product=) default
 
 product:;
-	$(MAKE) -f $(MAKEFILE_LIST) CONFIGURATION=product THREADING=single $(@,product=) default
+	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) CONFIGURATION=product THREADING=single $(@,product=) default
 
 assertmt:
-	$(MAKE) -f $(MAKEFILE_LIST) CONFIGURATION=assert THREADING=multi $(@,assert=) default
+	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) CONFIGURATION=assert THREADING=multi $(@,assert=) default
 
 assert:
-	$(MAKE) -f $(MAKEFILE_LIST) CONFIGURATION=assert THREADING=single $(@,assert=) default
+	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) CONFIGURATION=assert THREADING=single $(@,assert=) default
 
 debugmt:
-	$(MAKE) -f $(MAKEFILE_LIST) CONFIGURATION=debug THREADING=multi $(@,debug=) default
+	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) CONFIGURATION=debug THREADING=multi $(@,debug=) default
 
 debug:
-	$(MAKE) -f $(MAKEFILE_LIST) CONFIGURATION=debug THREADING=single $(@,debug=) default
+	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) CONFIGURATION=debug THREADING=single $(@,debug=) default
 
 # Do make init to allow make -n to function.
 init: $(THIRDPARTYPREREQS) $(OBJDIR) mkNamedPrims.exe
@@ -202,24 +201,27 @@ print-objects:
 ignore := $(addsuffix .%, $(basename $(wildcard $(BUILD)/vm/*.ignore)))
 
 mkNamedPrims.exe: $(WIN32UTILDIR)/mkNamedPrims.c
-	$(CC) /Fe$@ /arch:x86 $< /link /subsystem:console
+	$(CC) -c $< -o mkNamedPrims.obj
+	$(LD) /out:$@ mkNamedPrims.obj /subsystem:console /defaultlib:libcmt
 
 $(BTOBJ):	$(WIN32MISCDIR)/btext.c
-	$(CC) -c /Fo$@ /Oy /Os $<
+	$(CC) -c -Fo$@ -Oy -Os $<
 
 $(ETOBJ):	$(WIN32MISCDIR)/etext.c
-	$(CC) -c /Fo$@ /Oy /Os $<
+	$(CC) -c -Fo$@ -Oy -Os $<
 
 vm:	$(VMEXE)
 
+TZ:=$(shell $(CBD)/date +%Z)
+
 $(VMEXE): $(OBJDIR) $(THIRDPARTYLIBS) $(VMOBJ) $(LIBS) resource.o $(BTOBJ) $(ETOBJ)
-	$(CC) /Fo$(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -c $(WIN32DIR)/version.c
+	$(CC) -Fo$(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -D'TZ="$(TZ)"' -c $(WIN32DIR)/version.c
 	$(LD) $(LDFLAGS) /OUT:$(VMEXE) \
 			$(BTOBJ) $(VMOBJ) $(OBJDIR)/resource.o $(filter-out $(call ignore), $(LIBS)) $(STDLIBS) $(ETOBJ)
 	$(NM) --numeric-sort --defined-only -f bsd $(VMEXE) >$(VMMAP)
 
 $(CONSOLEVMEXE): $(VMOBJ) $(LIBS) resource.o $(BTOBJ) $(ETOBJ)
-	$(CC) /Fo$(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -c $(WIN32DIR)/version.c
+	$(CC) -Fo$(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -D'TZ="$(TZ)"' -c $(WIN32DIR)/version.c
 	$(LD) $(CONSOLELDFLAGS) /OUT:$(CONSOLEVMEXE) \
 			$(BTOBJ) $(VMOBJ) $(OBJDIR)/resource.o $(filter-out $(call ignore), $(LIBS)) $(STDLIBS) $(ETOBJ)
 	$(NM) --numeric-sort --defined-only -f bsd $(CONSOLEVMEXE) >$(CONSOLEVMMAP)

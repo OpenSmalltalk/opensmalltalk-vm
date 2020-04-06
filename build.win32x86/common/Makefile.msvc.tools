@@ -2,8 +2,11 @@
 # Common Makefile for Win32 VM using MSVC, e.g. 2017 Community, and gnu make
 # Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
 #
-# Compilation rules for 32-bit MSVC 2017 compiler on Microsoft Windows
+# Compilation rules for 64-bit MSVC 2017 compiler on Microsoft Windows
 #############################################################################
+
+# N.B. Compiler selection is in Makefile.msvc.flags.  Alas this is because of
+# ordering issues I'm too lazy to fix now.  If you can fix this, please do.
 
 # Overridable location of the Cygwin installation Cygwin Bin Directory
 CBD=c:/cygwin64/bin
@@ -14,30 +17,33 @@ CBD32=c:/cygwin64/usr/i686-w64-mingw32/bin
 # C compiler settings (MSVC 2017 Community Edition)
 #
 
-# WARNINGS:= -Wall -Wno-unused-variable -Wno-unknown-pragmas -Wno-unused-value -Wno-unused-function -Wno-unused-but-set-variable
 # https://docs.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warnings-c4000-through-c4199?view=vs-2017
-WARNINGS:= /W4 /wd4100 /wd4668 /wd4255 /wd4555 /wd4706
+ifdef MSVC
+WARNINGS:= -W4 -wd4100 -wd4668 -wd4255 -wd4555 -wd4706
+else ifdef ClangC2
+WARNINGS:= -Wall -Wno-unused-variable -Wno-unknown-pragmas -Wno-unused-value -Wno-unused-function -Wno-unused-but-set-variable
+endif
 
 # VM config flags.
 ifeq ($(CONFIGURATION),product)
-# /Ob enable inline expansion /Oy omit frame pointer, Oi enable intrinsics
-OFLAGS:=/Ox /Ob1 /Oi /Oy
-NDEBUG:=/DNDEBUG /D'VM_LABEL(foo)=0' # Define NDEBUG for production to exclude asserts
+# -Ob enable inline expansion -Oy omit frame pointer, Oi enable intrinsics
+OFLAGS:=$(PRODUCTION_OFLAGS)
+NDEBUG:=-DNDEBUG -D'VM_LABEL(foo)=0' # Define NDEBUG for production to exclude asserts
 DEBUGVM=0
 else ifeq ($(CONFIGURATION),assert)
-OFLAGS:=/Os /Oi- /Oy-
+OFLAGS:=$(ASSERT_OFLAGS)
 DEBUGVM=0
-NDEBUG:=/D'VM_LABEL(foo)=0'
+NDEBUG:=-D'VM_LABEL(foo)=0'
 else
-OFLAGS:=/Od
+OFLAGS:=$(DEBUG_OFLAGS)
 DEBUGVM=1
-NDEBUG:=/D'VM_LABEL(foo)=0'
+NDEBUG:=-D'VM_LABEL(foo)=0'
 endif
 
 ifeq ($(THREADING),multi)
-COGDEFS:= $(COGDEFS) /DCOGMTVM=1 /DDEBUGVM=$(DEBUGVM)
+COGDEFS:= $(COGDEFS) -DCOGMTVM=1 -DDEBUGVM=$(DEBUGVM)
 else
-COGDEFS:= $(COGDEFS) /DCOGMTVM=0 /DDEBUGVM=$(DEBUGVM)
+COGDEFS:= $(COGDEFS) -DCOGMTVM=0 -DDEBUGVM=$(DEBUGVM)
 endif
 
 # MSVC's preprocessor (bless its heart) can't manage complex expansions
@@ -46,26 +52,22 @@ endif
 MEMACCESS:=-DUSE_INLINE_MEMORY_ACCESSORS=1
 
 # Set minimum version to WindowsXP (see /cygwin/usr/include/w32api/w32api.h)
-WINVER:=/D_WIN32_WINNT=0x0501 /DWINVER=0x0501
+WINVER:=-D_WIN32_WINNT=0x0501 -DWINVER=0x0501
 
 # define _MT to eliminate the inline versions of printf et al in mingw/stdio.h
 #NOBUILTIN:= -fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf
-NOBUILTIN:=/D_MT
-#CFLAGS:= -msse2 -ggdb2 -m32 \
-#	-mno-rtd -mms-bitfields $(OFLAGS) $(NOBUILTIN) $(WARNINGS)
-#CFLAGS:= /arch:SSE2 /favor:blend $(OFLAGS) /EHa $(NOBUILTIN) $(WARNINGS)
+NOBUILTIN:=-D_MT
 MACHINE:=x86
 
-TZ:=$(shell $(CBD)/date +%Z)
-DEFS:=	$(COGDEFS) $(MEMACCESS) $(WINVER) /DWIN32=1 /DWIN32_FILE_SUPPORT /DNO_ISNAN \
-		/DNO_SERVICE /D'TZ="$(TZ)"' \
-		$(NDEBUG) -DLSB_FIRST -D'VM_NAME="$(VM_NAME)"' $(XDEFS) $(CROQUET)
+DEFS:=	$(COGDEFS) $(MEMACCESS) $(WINVER) \
+	-DWIN32=1 -DWIN32_FILE_SUPPORT -DNO_ISNAN -DNO_SERVICE \
+	$(NDEBUG) -DLSB_FIRST -D'VM_NAME="$(VM_NAME)"' $(XDEFS) $(CROQUET)
 
 #############################################################################
 # Linker settings
 #
-LD:=	LINK /nologo
-LDCXX:=	LINK /nologo
+LD:=	LINK /nologo /MACHINE:$(MACHINE)
+LDCXX:=	LINK /nologo /MACHINE:$(MACHINE)
 LIBRARIAN:=LIB /nologo
 # dlltool is used to create import libraries.  The alternatives are
 # Digital Mars' IMPLIB.EXE (32-bit only?) and mbarcadero's MKEXP.EXE (64-bit)
@@ -104,10 +106,12 @@ MKDIR:=$(CBD)/mkdir -p
 RC:=rc /nologo
 CVTRES:=cvtres /nologo
 SED:=$(CBD)/sed
+GREP:=$(CBD)/grep
+BASH:=$(CBD)/bash
 SCCSVER:=$(PLATDIR)/Cross/vm/sqSCCSVersion.h
 
-ifneq ($(shell grep 'GitRawRevisionString.*$$Rev$$.' $(SCCSVER)),)
-$(shell bash -c "cd ../../scripts; ./updateSCCSVersions")
+ifneq ($(shell $(GREP) 'GitRawRevisionString.*$$Rev$$.' $(SCCSVER)),)
+$(shell $(BASH) -c "cd ../../scripts; ./updateSCCSVersions")
 endif
 SVNMAJOR := $(shell $(SED) -e "s/^static.*GitRawRevisionString.*Rev: \([0-9][0-9][0-9][0-9]\).*/\\1/p" -e d $(SCCSVER) | $(SED) -e 's/^0*//')
 SVNMINOR := $(shell $(SED) -e "s/^static.*GitRawRevisionString.*Rev: [0-9][0-9][0-9][0-9]\([0-9][0-9]\).*/\\1/p" -e "s/^0*//" -e d $(SCCSVER) | $(SED) -e 's/^0*//')

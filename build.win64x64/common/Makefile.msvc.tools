@@ -1,5 +1,5 @@
 #############################################################################
-# Common Makefile for Win32 VM using MSVC, e.g. 2017 Community, and gnu make
+# Common Makefile for Win64 VM using MSVC, e.g. 2017 Community, and gnu make
 # Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
 #
 # Compilation rules for 64-bit MSVC 2017 compiler on Microsoft Windows
@@ -69,8 +69,8 @@ DEFS:=	$(COGDEFS) $(MEMACCESS) $(WINVER) \
 #############################################################################
 # Linker settings
 #
-LD:=	LINK /nologo /MACHINE:X64
-LDCXX:=	LINK /nologo /MACHINE:X64
+LD:=	LINK /nologo /MACHINE:$(MACHINE)
+LDCXX:=	LINK /nologo /MACHINE:$(MACHINE)
 LIBRARIAN:=LIB /nologo
 # dlltool is used to create import libraries.  The alternatives are
 # Digital Mars' IMPLIB.EXE (32-bit only?) and mbarcadero's MKEXP.EXE (64-bit)

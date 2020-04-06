@@ -36,11 +36,10 @@ MAKERVMDIR:= $(SRCDIR)/vm
 #############################################################################
 # Standard include sources
 #
-DXDIR:=$(PLATDIR)/win32/third-party/dx9sdk/Include
 
 INCLUDES:= -I. \
 			-I$(VMSRCDIR) -I$(WIN32VMDIR) -I$(CROSSVMDIR) \
-			-I$(MAKERDIR) -I$(WIN32DIR) -I$(CROSSDIR) -I$(DXDIR)
+			-I$(MAKERDIR) -I$(WIN32DIR) -I$(CROSSDIR)
 
 #############################################################################
 # If no source files were given, use standard set
@@ -78,13 +77,6 @@ LIBOBJ:=    $(addprefix $(OBJDIR)/,$(LIBOBJ))
 include ../common/Makefile.msvc.flags
 include ../common/Makefile.msvc.tools
 include ../common/Makefile.msvc.rules
-
-#############################################################################
-# Linker settings
-#
-#LD:=	 link
-LDFLAGS:= /DEBUG:NONE
-LD:=	$(MSVCLINK)
 
 VPATH:= $(MAKERDIR) $(WIN32DIR) $(CROSSDIR) $(OBJDIR)
 
@@ -125,14 +117,14 @@ $(VMDIR):
 
 $(PLUGINLIB): $(VMDIR) $(OBJDIR) $(LIBOBJ)
 	-$(RM) $(PLUGINLIB)
-	$(LIBRARIAN) $(LIBOBJ) $(EXTRALIBS) /out:$(subst /,\\,$(PLUGINLIB))
+	$(LIBRARIAN) $(LIBOBJ) $(EXTRALIBS) -out:$(subst /,\\,$(PLUGINLIB))
 
 $(PLUGINDLL): $(VMDIR) $(OBJDIR) $(LIBOBJ)
-	$(LD) WinMM.lib ole32.lib dsound.lib msdmo.lib kernel32.lib $(VMLIB) $(LDFLAGS) /DLL $(LIBOBJ) $(EXTRALIBS) \
-	/LIBPATH:$(BUILD)/vm \
-	/LIBPATH:"$(WindowsSdkDir)LIB/$(WindowsSDKVersion)/um/x86" \
-	/LIBPATH:"$(WindowsSdkDir)LIB/$(WindowsSDKVersion)/ucrt/x86" \
-	/LIBPATH:"$(VCToolsInstallDir)/lib/x86/" $(EXTRALIBPATH) \
-	/LIBPATH:"../../platforms/win32/third-party/dx9sdk/Lib" \
-	/OUT:$(subst /,\\,$(PLUGINDLL))
+	$(LD) WinMM.lib ole32.lib dsound.lib msdmo.lib kernel32.lib $(VMLIB) $(LDFLAGS) -DLL $(LIBOBJ) $(EXTRALIBS) \
+	-LIBPATH:$(BUILD)/vm \
+	-LIBPATH:"$(WindowsSdkDir)LIB/$(WindowsSDKVersion)/um/x86" \
+	-LIBPATH:"$(WindowsSdkDir)LIB/$(WindowsSDKVersion)/ucrt/x86" \
+	-LIBPATH:"$(VCToolsInstallDir)/lib/x86/" $(EXTRALIBPATH) \
+	-LIBPATH:"../../platforms/win32/third-party/dx9sdk/Lib" \
+	-OUT:$(subst /,\\,$(PLUGINDLL))
 
