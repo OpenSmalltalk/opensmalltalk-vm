@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 use POSIX qw(strftime);
 
 $myrev = `git log -n1 --format="%at"`;
