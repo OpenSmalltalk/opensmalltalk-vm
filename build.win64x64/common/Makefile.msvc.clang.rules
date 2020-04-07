@@ -2,7 +2,7 @@
 # Common Makefile for Win64 VM using MSVC, e.g. 2017 Community, and gnu make
 # Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
 #
-# Compilation rules for Microsoft Visual C++ Toolchain using ClangC2
+# Compilation rules for Microsoft Visual C++ Toolchain using LLVM/Clang 10
 #
 # See http://make.mad-scientist.net/papers/advanced-auto-dependency-generation
 # for an explanation of the dependency management scheme.
@@ -19,7 +19,7 @@ $(info OBJDIR is $(OBJDIR))
 # We delete any and all system include files.  If the system changes, rebuild.
 # We're only interested in rebuilding correctly when our code changes.
 # Hence generate the dep files to a temporary .Td file and edit to a .d file.
-DEPFLAGS = -MT $@ -MP -MF deps/$(*F).Td
+DEPFLAGS = -MP -MF deps/$(*F).Td
 ALLFLAGS = $(DEPFLAGS) $(CFLAGS) $(INCLUDES) $(DEFS)
 POSTCOMPILE = tr \\015 \\012 <deps/$(*F).Td | egrep -v 'Community|Windows\\ Kits' | sed -e '/^[A-Z]:.*:$$/d' -e 's/ [^ ]*:/:/' -e 's/^build[^/]*/$$(BUILD)/' | grep '[/\\\\]' | sed "s|\\\\[^ (]|/|g" > deps/$(*F).d; rm deps/$(*F).Td; touch -r $< deps/$(*F).d
 
@@ -47,3 +47,9 @@ $(OBJDIR)/%.o: %.cpp
 
 .c.dep:
 	$(CC) -M -o $(notdir $@) $(ALLFLAGS) -c $<
+
+deps/%.d: ;
+
+.PRECIOUS: deps/%.d $(OBJDIR)/%.air $(OBJDIR)/%.metallib
+
+-include $(patsubst %,deps/%.d,$(notdir $(basename $(VMSRC) $(LIBSRC))))

@@ -47,3 +47,9 @@ $(OBJDIR)/%.o: %.cpp
 
 .c.dep:
 	$(CC) -M -o $(notdir $@) $(ALLFLAGS) -c $<
+
+deps/%.d: ;
+
+.PRECIOUS: deps/%.d $(OBJDIR)/%.air $(OBJDIR)/%.metallib
+
+-include $(patsubst %,deps/%.d,$(notdir $(basename $(VMSRC) $(LIBSRC))))

@@ -1,3 +1,8 @@
+Extra README for edits on 2020/04/07 by eem
+Introduced MOI (MINUS_ONE_INT) define to avoid warnings for left shift of
+negative numbers (undefined behaviour).  Changed jmorecfg.h to not conflict
+with Microsoft Windows SDKs for definitions of INT32 and FAR.
+
 Extra README for release 6b2 of 25-Dec-2013
 ===========================================
 

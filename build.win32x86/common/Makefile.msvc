@@ -205,10 +205,10 @@ mkNamedPrims.exe: $(WIN32UTILDIR)/mkNamedPrims.c
 	$(LD) /out:$@ mkNamedPrims.obj /subsystem:console /defaultlib:libcmt
 
 $(BTOBJ):	$(WIN32MISCDIR)/btext.c
-	$(CC) -c $(DASH_O)$@ -Oy -Os $<
+	$(CC) -c $< -Oy -Os $(DASH_O)$@
 
 $(ETOBJ):	$(WIN32MISCDIR)/etext.c
-	$(CC) -c $(DASH_O)$@ -Oy -Os $<
+	$(CC) -c $< -Oy -Os $(DASH_O)$@
 
 vm:	$(VMEXE)
 

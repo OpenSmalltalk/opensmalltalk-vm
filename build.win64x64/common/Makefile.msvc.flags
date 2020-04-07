@@ -27,31 +27,41 @@ override VCINSTALLDIR:=$(shell echo "$(VCINSTALLDIR)" | sed 's/ /\\ /g')
 override VCINSTALLDIRSH:=$(shell echo "$(VCINSTALLDIR)" | sed 's/[()]/\\&/g')
 
 #############################################################################
-# C compiler settings Visual C++ 2017 Community Edition
+# C compiler settings assuming Visual C++ 2017 Community Edition
 #
-# Now choose the compiler.  If Clang/C2 has been installed use it, otherwise
-# use MSVC
+# Try and choose a compiler.  In order try:
+# If LLVM is installed in C:\Program FIles\LLVM use clang-cl.exe from there.
+# If ClangC2 is installed in Microsoft Visual Studio use that (a mistake)
+# Otherwise use MSVC
+#
 
 $(info VCINSTALLDIR=$(VCINSTALLDIR))
 $(info VCINSTALLDIRSH=$(VCINSTALLDIRSH))
 #$(info wildcard VCINSTALLDIR $(wildcard $(VCINSTALLDIR)/.*))
+$(info wildcard  C:/Program\ Files/LLVM/bin/.* $(wildcard C:/Program\ Files/LLVM/bin/.*))
 #$(info wildcard VCINSTALLDIR/Tools/ClangC2 $(wildcard $(VCINSTALLDIR)/Tools/ClangC2/.*))
 #$(info wildcard VCINSTALLDIR/Tools/ClangC3 $(wildcard $(VCINSTALLDIR)/Tools/ClangC3/.*))
-ifneq ($(wildcard $(VCINSTALLDIR)/Tools/ClangC2/.*),)
+
+ifneq ($(wildcard C:/Program\ Files/LLVM/bin/.*),)
+$(info LLVM/Clang detected)
+CC:="C:/Program Files/LLVM/bin/clang-cl.exe"
+Clang:=Clang
+undefine ClangC2
+undefine MSVC
+else ifneq ($(wildcard $(VCINSTALLDIR)/Tools/ClangC2/.*),)
 $(info Clang/C2 detected)
 #$(info shell echo VCINST...SH/./clang.exe $(shell echo $(VCINSTALLDIRSH)Tools/ClangC2/*/bin/HostX64/clang.exe))
 CC:="$(shell echo $(VCINSTALLDIRSH)Tools/ClangC2/*/bin/HostX64/clang.exe)"
 ClangC2:=ClangC2
+undefine Clang
 undefine MSVC
-LINKERARGS=-Xlinker
 CLANG_ADAPT:=-fmsc-version=1916 # as reported by boost for MSVC Community 2017
-CLANG_LINK_ADAPT:=-defaultlib:libcmt
 else
-$(info Clang/C2 not found)
+$(info neither CLang nor Clang/C2 found using MSVC)
 override TOOLPREFIX:="$(VCToolsInstallDir)bin/HostX64/x64/"
 MSVC:=MSVC
+undefine Clang
 undefine ClangC2
-LINKERARGS=/link
 CC:=$(TOOLPREFIX)cl.exe -nologo
 endif
 $(info CC=$(CC))
@@ -82,7 +92,16 @@ ASSERT_OFLAGS:=-Os -Oi- -Oy-
 DEBUG_OFLAGS:=-Od
 DASH_O:=-Fo
 OFLAGS= -Ot
-CFLAGS=	-MD -DWIN64=1 -Z7 $(OFLAGS) \
+CFLAGS=	-MD -DLLP64=1 -DWIN64=1 -Z7 $(OFLAGS) \
+	-Dalloca=_alloca -Dhuge=my_huge \
+	-EHsc $(NOBUILTIN) $(WARNINGS)
+else ifdef Clang
+PRODUCTION_OFLAGS:=-Ox -Ob1 -Oi -Oy
+ASSERT_OFLAGS:=-Os -Oi- -Oy-
+DEBUG_OFLAGS:=-Od
+DASH_O:=-o
+OFLAGS= -Ot
+CFLAGS=	-MD -DLLP64=1 -DWIN64=1 -Z7 $(OFLAGS) \
 	-Dalloca=_alloca -Dhuge=my_huge \
 	-EHsc $(NOBUILTIN) $(WARNINGS)
 else ifdef ClangC2
@@ -91,7 +110,7 @@ ASSERT_OFLAGS:=-Od
 DEBUG_OFLAGS:=-O0
 DASH_O:=-o
 OFLAGS=-O3
-CFLAGS=	-MD -DWIN64=1 -gcodeview $(OFLAGS) \
+CFLAGS=	-MD -DLLP64=1 -DWIN64=1 -gcodeview $(OFLAGS) \
 	-Dalloca=_alloca -Dhuge=my_huge \
 	$(NOBUILTIN) $(WARNINGS)
 endif

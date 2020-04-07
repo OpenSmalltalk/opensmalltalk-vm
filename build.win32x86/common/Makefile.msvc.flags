@@ -86,7 +86,7 @@ ASSERT_OFLAGS:=-Os -Oi- -Oy-
 DEBUG_OFLAGS:=-Od
 DASH_O:=-Fo
 OFLAGS= -Ot
-CFLAGS=	-MD -DWIN32=1 -Z7 $(OFLAGS) \
+CFLAGS=	-MD -DLP32=1 -DWIN32=1 -Z7 $(OFLAGS) \
 	-Dalloca=_alloca -Dhuge=my_huge \
 	-EHsc $(NOBUILTIN) $(WARNINGS)
 else ifdef ClangC2
@@ -95,7 +95,7 @@ ASSERT_OFLAGS:=-Od
 DEBUG_OFLAGS:=-O0
 DASH_O:=-o
 OFLAGS=-O3
-CFLAGS=	-m32 -MD -DWIN32=1 -gcodeview $(OFLAGS) \
+CFLAGS=	-m32 -MD -DLP32=1 -DWIN32=1 -gcodeview $(OFLAGS) \
 	-Dalloca=_alloca -Dhuge=my_huge \
 	$(NOBUILTIN) $(WARNINGS)
 endif

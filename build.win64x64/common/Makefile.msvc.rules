@@ -4,20 +4,13 @@
 #
 # Compilation rules for Microsoft Visual C++ Toolchain
 #
-# See http://make.mad-scientist.net/papers/advanced-auto-dependency-generation
-# for an explanation of the dependency management scheme.
 #############################################################################
-
-.SUFFIXES:	.c .cpp .o .s .rc .res .dep
-
-$(info OBJDIR is $(OBJDIR))
-
-#############################################################################
-# Rules for automated builds
-#
 
 ifdef MSVC
 include ../common/Makefile.msvc.msvc.rules
+else ifdef Clang
+#include ../common/Makefile.msvc.clang.rules
+include ../common/Makefile.msvc.msvc.rules
 else ifdef ClangC2
-include ../common/Makefile.msvc.clang.rules
+include ../common/Makefile.msvc.clangc2.rules
 endif

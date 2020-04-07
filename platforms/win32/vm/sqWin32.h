@@ -171,17 +171,17 @@ typedef int (*messageHook)(void *, unsigned int, unsigned int, long);
 /********************************************************/
 /* Several setup functions                              */
 /********************************************************/
-void SetupFilesAndPath();
-void SetupWindows();
-void SetupPixmaps();
-void SetupPrinter();
-void SetupMIDI();
+void SetupFilesAndPath(void);
+void SetupWindows(void);
+void SetupPixmaps(void);
+void SetupPrinter(void);
+void SetupMIDI(void);
 
 /********************************************************/
 /* Startup helper functions                             */
 /********************************************************/
-int findImageFile();
-int openImageFile();
+int findImageFile(void);
+int openImageFile(void);
 
 /********************************************************/
 /* external SYNCHRONIZED signaling of semaphores        */
@@ -197,7 +197,7 @@ char *GetVMOption(int id);
 /********************************************************/
 /* Misc functions                                       */
 /********************************************************/
-void SetWindowSize();
+void SetWindowSize(void);
 int printUsage(int level);
 
 /********************************************************/
@@ -269,17 +269,17 @@ extern char  squeakIniNameA[];   /* full path to ini file - UTF8 */
 extern WCHAR squeakIniNameW[];   /* full path to ini file - UTF16 */
 
 #ifdef UNICODE
-#define imageNameT imageNameW /* define the generic TCHAR* version */
-#define imagePath  imagePathW
-#define vmName vmNameW
-#define vmPath vmPathW
-#define squeakIniName squeakIniNameW
+# define imageNameT imageNameW /* define the generic TCHAR* version */
+# define imagePath  imagePathW
+# define vmName vmNameW
+# define vmPath vmPathW
+# define squeakIniName squeakIniNameW
 #else
-#define imageNameT imageName
-#define imagePath  imagePathA
-#define vmName vmNameA
-#define vmPath vmPathA
-#define squeakIniName squeakIniNameA
+# define imageNameT imageName
+# define imagePath  imagePathA
+# define vmName vmNameA
+# define vmPath vmPathA
+# define squeakIniName squeakIniNameA
 #endif
 
 #define __UNICODE_TEXT(x) L##x
