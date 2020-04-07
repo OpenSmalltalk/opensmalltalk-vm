@@ -18284,6 +18284,7 @@ fi
 
 
 
+# "The result of this test is cached in the ac_cv_search_... variable as 'none required' if function is already available."
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing uuid_generate" >&5
 $as_echo_n "checking for library containing uuid_generate... " >&6; }
 if ${ac_cv_search_uuid_generate+:} false; then :
@@ -18338,7 +18339,7 @@ ac_res=$ac_cv_search_uuid_generate
 if test "$ac_res" != no; then :
   test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
 
-    if test "ac_cv_search_uuid_generate" != "none required"; then
+    if test "$ac_cv_search_uuid_generate" != "none required"; then
 
   plibs="${plibs} uuid"
     fi
@@ -18402,8 +18403,7 @@ ac_res=$ac_cv_search_uuidgen
 if test "$ac_res" != no; then :
   test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
 
-        # The result of this test is cached in the ac_cv_search_... variable as 'none required' if function is already available.
-        if test "ac_cv_search_uuidgen" != "none required"; then
+        if test "$ac_cv_search_uuidgen" != "none required"; then
 
   plibs="${plibs} uuid"
         fi
