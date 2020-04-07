@@ -18338,8 +18338,10 @@ ac_res=$ac_cv_search_uuid_generate
 if test "$ac_res" != no; then :
   test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
 
+    if test "ac_cv_search_uuid_generate" != "none required"; then
 
   plibs="${plibs} uuid"
+    fi
 
 $as_echo "#define HAVE_UUID_GENERATE 1" >>confdefs.h
 
@@ -18400,8 +18402,11 @@ ac_res=$ac_cv_search_uuidgen
 if test "$ac_res" != no; then :
   test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
 
+        # The result of this test is cached in the ac_cv_search_... variable as 'none required' if function is already available.
+        if test "ac_cv_search_uuidgen" != "none required"; then
 
   plibs="${plibs} uuid"
+        fi
 
 $as_echo "#define HAVE_UUIDGEN 1" >>confdefs.h
 
