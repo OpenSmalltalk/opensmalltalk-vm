@@ -47,7 +47,7 @@ VMCogBytecodeTest >> testPushNil [
 { #category : #tests }
 VMCogBytecodeTest >> testReturnNil [
 
-	| cogit codeSize |
+	| cogit codeSize lastAddress unicorn edxValue |
 	cogit := StackToRegisterMappingCogit new setInterpreter: memory coInterpreter.
 	memory nilObject: 24.
 	memory hiddenRootsObject: 100.
@@ -72,7 +72,25 @@ VMCogBytecodeTest >> testReturnNil [
 	
 	codeSize := cogit generateInstructionsAt: 0 "methodLabel address + headerSize?".
 	cogit methodZone allocate: codeSize.
-	cogit outputInstructionsAt: 0.
+	lastAddress := cogit outputInstructionsAt: 0.
 	
-	1halt.
+	unicorn := Unicorn x86.
+	unicorn
+		mapMemoryOfSize: 2 * 1024 * 1024
+		atAddress: 16r1000000
+		withPermissions: UnicornConstants permissionAll.
+	
+	unicorn
+		memoryAt: 16r1000000
+		write: memory memory asByteArray
+		size: lastAddress.
+	
+	unicorn startAt: 16r1000000
+		until: 16r1000000 + lastAddress - 1
+		timeout: 0
+		count: 0.
+	
+	edxValue := #[ 0 0 0 0 ].
+	unicorn register: UcX86Registers edx value readInto: edxValue.
+	self assert: (edxValue longAt: 1) equals: 24
 ]

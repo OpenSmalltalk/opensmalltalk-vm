@@ -13070,6 +13070,11 @@ StackToRegisterMappingCogit >> receiverIsInReceiverResultReg [
 	^self simSelf liveRegister = ReceiverResultReg
 ]
 
+{ #category : #accessing }
+StackToRegisterMappingCogit >> regArgsHaveBeenPushed: aBoolean [
+	regArgsHaveBeenPushed := aBoolean
+]
+
 { #category : #'compile abstract instructions' }
 StackToRegisterMappingCogit >> reinitializeFixupsFrom: start through: end [
 	"When a block must be recompiled due to overestimating the
