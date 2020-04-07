@@ -21,7 +21,7 @@ CBD32=c:/cygwin64/usr/i686-w64-mingw32/bin
 ifdef MSVC
 WARNINGS:= -W4 -wd4100 -wd4668 -wd4255 -wd4555 -wd4706
 else ifdef ClangC2
-WARNINGS:= -Wall -Wno-unused-variable -Wno-unknown-pragmas -Wno-unused-value -Wno-unused-function -Wno-unused-but-set-variable
+WARNINGS:= -Wall -Wno-unused-variable -Wno-unknown-pragmas -Wno-unused-value -Wno-unused-function
 endif
 
 # VM config flags.
@@ -49,7 +49,9 @@ endif
 # MSVC's preprocessor (bless its heart) can't manage complex expansions
 # and so unless we specify USE_INLINE_MEMORY_ACCESSORS lots of things
 # break, including the checks in checkAssumedCompactClasses
+ifdef MSVC
 MEMACCESS:=-DUSE_INLINE_MEMORY_ACCESSORS=1
+endif
 
 # Set minimum version to Windows 8 (see /cygwin/usr/include/w32api/w32api.h)
 #but if so, sqWin32AEC.cpp includes DeviceTopology.h & barfs

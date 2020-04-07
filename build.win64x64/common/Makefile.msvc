@@ -205,22 +205,22 @@ mkNamedPrims.exe: $(WIN32UTILDIR)/mkNamedPrims.c
 	$(LD) /out:$@ mkNamedPrims.obj /subsystem:console /defaultlib:libcmt
 
 $(BTOBJ):	$(WIN32MISCDIR)/btext.c
-	$(CC) -c -Fo$@ -Oy -Os $<
+	$(CC) -c $(DASH_O)$@ -Oy -Os $<
 
 $(ETOBJ):	$(WIN32MISCDIR)/etext.c
-	$(CC) -c -Fo$@ -Oy -Os $<
+	$(CC) -c $(DASH_O)$@ -Oy -Os $<
 
 vm:	$(VMEXE)
 
 TZ:=$(shell $(CBD)/date +%Z)
 
 $(VMEXE): $(OBJDIR) $(THIRDPARTYLIBS) $(VMOBJ) $(LIBS) resource.o $(BTOBJ) $(ETOBJ)
-	$(CC) -Fo$(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -D'TZ="$(TZ)"' -c $(WIN32DIR)/version.c
+	$(CC) $(DASH_O)$(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -D'TZ="$(TZ)"' -c $(WIN32DIR)/version.c
 	$(LD) $(LDFLAGS) -OUT:$(VMEXE) -MAP:$(VMMAP) \
 			$(BTOBJ) $(VMOBJ) $(OBJDIR)/resource.o $(filter-out $(call ignore), $(LIBS)) $(STDLIBS) $(ETOBJ)
 
 $(CONSOLEVMEXE): $(VMOBJ) $(LIBS) resource.o $(BTOBJ) $(ETOBJ)
-	$(CC) -Fo$(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -D'TZ="$(TZ)"' -c $(WIN32DIR)/version.c
+	$(CC) $(DASH_O)$(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -D'TZ="$(TZ)"' -c $(WIN32DIR)/version.c
 	$(LD) $(CONSOLELDFLAGS) -OUT:$(CONSOLEVMEXE) -MAP:$(CONSOLEVMMAP) \
 			$(BTOBJ) $(VMOBJ) $(OBJDIR)/resource.o $(filter-out $(call ignore), $(LIBS)) $(STDLIBS) $(ETOBJ)
 
