@@ -10,6 +10,13 @@ BaselineOfVMMaker >> baseline: spec [
 	spec
 		for: #common
 		do: [
+			
+			spec baseline: 'Unicorn' with: [ spec repository: 'github://guillep/pharo-unicorn' ].
+			
+			spec
+				package: 'VMMakerTests' with: [
+					spec requires: #('VMMakerCompatibilityForPharo6' 'Unicorn') ].
+			
 			"Initial VMMaker package for handling Pharo 6" 
 			spec
 				package: 'VMMakerTests' with: [
