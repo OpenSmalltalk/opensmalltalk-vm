@@ -414,7 +414,10 @@ Class {
 		'statIdleUsecs',
 		'debugCallbackPath',
 		'debugCallbackReturns',
-		'debugCallbackInvokes'
+		'debugCallbackInvokes',
+		'printedStackFrames',
+		'maxStacksToPrint',
+		'maxStackMessagePrinted'
 	],
 	#classVars : [
 		'AccessModifierPrivate',
@@ -8506,6 +8509,7 @@ StackInterpreter >> initialize [
 	nextWakeupUsecs := 0.
 	tempOop := tempOop2 := theUnknownShort := 0.
 	interruptPending := false.
+	maxStacksToPrint := 0.
 	inIOProcessEvents := 0.
 	fullScreenFlag := 0.
 	sendWheelEvents := deferDisplayUpdates := false.
@@ -16323,6 +16327,12 @@ StackInterpreter >> marryFrame: theFP SP: theSP copyTemps: copyTemps [
 
 ]
 
+{ #category : #'debug printing' }
+StackInterpreter >> maxStacksToPrint: anInteger [
+	<api>
+	maxStacksToPrint := anInteger
+]
+
 { #category : #'primitive support' }
 StackInterpreter >> maybeFailForLastObjectOverwrite [
 	<inline: true>
@@ -17726,6 +17736,8 @@ StackInterpreter >> printAtCache [
 { #category : #'debug printing' }
 StackInterpreter >> printCallStack [
 	<inline: false>
+	
+	self resetStackPrintedCount.
 	framePointer = nil
 		ifTrue: [self printCallStackOf: (objectMemory fetchPointer: SuspendedContextIndex ofObject: self activeProcess)]
 		ifFalse: [self printCallStackFP: framePointer]
@@ -17736,6 +17748,8 @@ StackInterpreter >> printCallStackFP: theFP [
 	| context |
 	<inline: false>
 	<var: #theFP type: #'char *'>
+
+	self resetStackPrintedCount.
 	context := self shortReversePrintFrameAndCallers: theFP.
 	[context = objectMemory nilObject] whileFalse:
 		[(self isMarriedOrWidowedContext: context)
@@ -17753,6 +17767,9 @@ StackInterpreter >> printCallStackOf: aContextOrProcessOrFrame [
 	<api>
 	| context |
 	<inline: false>
+	
+	self resetStackPrintedCount.
+	
 	(stackPages couldBeFramePointer: aContextOrProcessOrFrame) ifTrue:
 		[^self printCallStackFP: (self cCoerceSimple: aContextOrProcessOrFrame to: #'char *')].
 	(self couldBeProcess: aContextOrProcessOrFrame) ifTrue:
@@ -17778,6 +17795,8 @@ StackInterpreter >> printCallStackOf: aContext currentFP: currFP [
 	<var: #currFP type: #'char *'>
 	<var: #theFP type: #'char *'>
 	<var: #thePage type: #'StackPage *'>
+
+	self resetStackPrintedCount.
 	ctxt := aContext.
 	[ctxt = objectMemory nilObject] whileFalse:
 		[(self isMarriedOrWidowedContext: ctxt)
@@ -19546,6 +19565,12 @@ StackInterpreter >> removeProcess: aProcess fromList: aList [
 	objectMemory storePointer: NextLinkIndex ofObject: aProcess withValue: objectMemory nilObject
 ]
 
+{ #category : #'debug printing' }
+StackInterpreter >> resetStackPrintedCount [
+
+	printedStackFrames := maxStackMessagePrinted := 0
+]
+
 { #category : #'sista bytecodes' }
 StackInterpreter >> respondToSistaTrap [
 	| ourContext |
@@ -20547,6 +20572,15 @@ StackInterpreter >> shortPrintFrame: theFP [
 	<inline: false>
 	<var: #theFP type: #'char *'>
 	| rcvr |
+	
+	printedStackFrames := printedStackFrames + 1.
+	(maxStacksToPrint ~= 0 and:[ printedStackFrames > maxStacksToPrint])
+		ifTrue: [ 
+			maxStackMessagePrinted = 1 ifFalse: [  
+				self print: '...'; cr.
+				maxStackMessagePrinted := 1 ].
+			^ nil ].	
+	
 	(stackPages couldBeFramePointer: theFP) ifFalse:
 		[self print: 'invalid frame pointer'; cr.
 		 ^nil].
@@ -20566,6 +20600,7 @@ StackInterpreter >> shortPrintFrame: theFP AndNCallers: n [
 	<api>
 	<inline: false>
 	<var: #theFP type: #'char *'>
+	self resetStackPrintedCount.
 	(n ~= 0 and: [stackPages couldBeFramePointer: theFP]) ifTrue:
 		[self shortPrintFrame: theFP.
 		 self shortPrintFrame: (self frameCallerFP: theFP) AndNCallers: n - 1]
@@ -20584,6 +20619,7 @@ StackInterpreter >> shortPrintFrameAndCallers: theFP [
 { #category : #'debug printing' }
 StackInterpreter >> shortPrintFramesInCurrentPage [
 	<inline: false>
+	self resetStackPrintedCount.
 	self shortPrintFrameAndCallers: localFP
 ]
 

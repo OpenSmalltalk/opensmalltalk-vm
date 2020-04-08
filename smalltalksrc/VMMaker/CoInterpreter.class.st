@@ -7351,6 +7351,15 @@ CoInterpreter >> shortPrintFrame: theFP [
 	<inline: false>
 	<var: #theFP type: #'char *'>
 	| rcvr mthd |
+	
+	printedStackFrames := printedStackFrames + 1.
+	(maxStacksToPrint ~= 0 and:[ printedStackFrames > maxStacksToPrint])
+		ifTrue: [ 
+			maxStackMessagePrinted = 1 ifFalse: [  
+				self print: '...'; cr.
+				maxStackMessagePrinted := 1 ].
+			^ nil ].
+	
 	(stackPages couldBeFramePointer: theFP) ifFalse:
 		[self print: 'invalid frame pointer'; cr.
 		 ^nil].
