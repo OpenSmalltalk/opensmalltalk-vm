@@ -50,10 +50,23 @@ void logMessageFromErrno(int level, const char* msg, const char* fileName, const
 	logMessage(level, fileName, functionName, line, msg);
 }
 
+FILE* getStreamForLevel(int level){
+	if(level <= LOG_ERROR){
+		return stderr;
+	}else{
+		return stdout;
+	}
+}
+
 
 EXPORT(void) logMessage(int level, const char* fileName, const char* functionName, int line, ...){
 	char * format;
 	char timestamp[20];
+
+	FILE* outputStream;
+
+	outputStream = getStreamForLevel(level);
+
 
 	if(level > max_error_level){
 		return;
@@ -64,24 +77,24 @@ EXPORT(void) logMessage(int level, const char* fileName, const char* functionNam
 
 	//Printing the header.
 	// Ex: [DEBUG] 2017-11-14 21:57:53,661 functionName (filename:line) - This is a debug log message.
-	printf("[%-5s] %s %s (%s:%d):", severityName[level - 1], timestamp, functionName, fileName, line);
+	fprintf(outputStream, "[%-5s] %s %s (%s:%d):", severityName[level - 1], timestamp, functionName, fileName, line);
 
 	//Printint the message from the var_args.
 	va_list list;
 	va_start(list, line);
 
 	format = va_arg(list, char*);
-	vprintf(format, list);
+	vfprintf(outputStream, format, list);
 
 	va_end(list);
 
 	int formatLength = strlen(format);
 
 	if(formatLength == 0 || format[formatLength - 1] != '\n'){
-		printf("\n");
+		fprintf(outputStream,"\n");
 	}
 
-	fflush(stdout);
+	fflush(outputStream);
 }
 
 void getCrashDumpFilenameInto(char *buf)
