@@ -6995,10 +6995,10 @@ CoInterpreter >> reportMinimumUnusedHeadroom [
 	"Report the stack page size and minimum unused headroom to stdout."
 	<api>
 	self cCode:
-			[self pri: 'stack page bytes %lld available headroom %lld minimum unused headroom %lld\n'
-				n: self stackPageByteSize asUnsignedLongLong
-				t: (self stackPageByteSize - self stackLimitBytes - self stackLimitOffset) asUnsignedLongLong
-				f: self minimumUnusedHeadroom asUnsignedLongLong]
+			[self vm_printf: 'stack page bytes %lld available headroom %lld minimum unused headroom %lld\n'
+				_: self stackPageByteSize asUnsignedLongLong
+				_: (self stackPageByteSize - self stackLimitBytes - self stackLimitOffset) asUnsignedLongLong
+				_: self minimumUnusedHeadroom asUnsignedLongLong]
 		inSmalltalk:
 			["CogVMSimulator new initStackPagesForTests reportMinimumUnusedHeadroom"
 			 self print: 'stack page bytes '; printNum: self stackPageByteSize;
@@ -7351,6 +7351,15 @@ CoInterpreter >> shortPrintFrame: theFP [
 	<inline: false>
 	<var: #theFP type: #'char *'>
 	| rcvr mthd |
+	
+	printedStackFrames := printedStackFrames + 1.
+	(maxStacksToPrint ~= 0 and:[ printedStackFrames > maxStacksToPrint])
+		ifTrue: [ 
+			maxStackMessagePrinted = 1 ifFalse: [  
+				self print: '...'; cr.
+				maxStackMessagePrinted := 1 ].
+			^ nil ].
+	
 	(stackPages couldBeFramePointer: theFP) ifFalse:
 		[self print: 'invalid frame pointer'; cr.
 		 ^nil].

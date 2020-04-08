@@ -105,6 +105,9 @@ typedef struct VMParameters_
 	/// Is this an interactive session?
 	bool isInteractiveSession;
 
+	//The number of smalltalk frames to print in a process dump, (0 to print all).
+	int maxStackFramesToPrint;
+
 	// FIXME: Why passing this is needed when we have the separated vectors?
 	int processArgc;
 	const char** processArgv;

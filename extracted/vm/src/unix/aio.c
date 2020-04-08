@@ -98,6 +98,8 @@
 
 #endif /* !HAVE_CONFIG_H */
 
+#include "pharovm/debug.h"
+
 /* function to inform the VM about idle time */
 extern void addIdleUsecs(long idleUsecs);
 
@@ -126,7 +128,7 @@ static fd_set xdMask;		/* external descriptor	 */
 static void 
 undefinedHandler(int fd, void *clientData, int flags)
 {
-	fprintf(stderr, "undefined handler called (fd %d, flags %x)\n", fd, flags);
+	logError("Undefined handler called (fd %d, flags %x)\n", fd, flags);
 }
 
 #ifdef AIO_DEBUG
@@ -221,7 +223,7 @@ static int tickCount = 0;
 #define TICKS_PER_CHAR 10
 #define DO_TICK(bool)				\
 do if ((bool) && !(++tickCount % TICKS_PER_CHAR)) {		\
-	fprintf(stderr, "\r%c\r", *ticker);		\
+	logError("\r%c\r", *ticker);		\
 	if (!*ticker++) ticker= ticks;			\
 } while (0)
 
@@ -232,7 +234,6 @@ aioPoll(long microSeconds)
 	fd_set	rd, wr, ex;
 	unsigned long long us;
 
-	FPRINTF((stderr, "aioPoll(%ld)\n", microSeconds));
 	DO_TICK(SHOULD_TICK());
 
 	/*
@@ -269,8 +270,8 @@ aioPoll(long microSeconds)
 			return 0;
 		}
 		if (errno && (EINTR != errno)) {
-			fprintf(stderr, "errno %d\n", errno);
-			perror("select");
+			logError("errno %d\n", errno);
+			logErrorFromErrno("select");
 			return 0;
 		}
 		now = ioUTCMicroseconds();
@@ -332,13 +333,12 @@ aioSleepForUsecs(long microSeconds)
 void 
 aioEnable(int fd, void *data, int flags)
 {
-	FPRINTF((stderr, "aioEnable(%d)\n", fd));
 	if (fd < 0) {
-		FPRINTF((stderr, "aioEnable(%d): IGNORED\n", fd));
+		logWarn("AioEnable(%d): IGNORED - Negative Number", fd);
 		return;
 	}
 	if (FD_ISSET(fd, &fdMask)) {
-		fprintf(stderr, "aioEnable: descriptor %d already enabled\n", fd);
+		logWarn("AioEnable: descriptor %d already enabled", fd);
 		return;
 	}
 	clientData[fd] = data;
@@ -364,27 +364,27 @@ aioEnable(int fd, void *data, int flags)
 
 #if defined(O_ASYNC)
 		if (fcntl(fd, F_SETOWN, getpid()) < 0)
-			perror("fcntl(F_SETOWN, getpid())");
+			logErrorFromErrno("fcntl(F_SETOWN, getpid())");
 		if ((arg = fcntl(fd, F_GETFL, 0)) < 0)
-			perror("fcntl(F_GETFL)");
+			logErrorFromErrno("fcntl(F_GETFL)");
 		if (fcntl(fd, F_SETFL, arg | O_NONBLOCK | O_ASYNC) < 0)
-			perror("fcntl(F_SETFL, O_ASYNC)");
+			logErrorFromErrno("fcntl(F_SETFL, O_ASYNC)");
 
 #elif defined(FASYNC)
 		if (fcntl(fd, F_SETOWN, getpid()) < 0)
-			perror("fcntl(F_SETOWN, getpid())");
+			logErrorFromErrno("fcntl(F_SETOWN, getpid())");
 		if ((arg = fcntl(fd, F_GETFL, 0)) < 0)
-			perror("fcntl(F_GETFL)");
+			logErrorFromErrno("fcntl(F_GETFL)");
 		if (fcntl(fd, F_SETFL, arg | O_NONBLOCK | FASYNC) < 0)
-			perror("fcntl(F_SETFL, FASYNC)");
+			logErrorFromErrno("fcntl(F_SETFL, FASYNC)");
 
 #elif defined(FIOASYNC)
 		arg = getpid();
 		if (ioctl(fd, SIOCSPGRP, &arg) < 0)
-			perror("ioctl(SIOCSPGRP, getpid())");
+			logErrorFromErrno("ioctl(SIOCSPGRP, getpid())");
 		arg = 1;
 		if (ioctl(fd, FIOASYNC, &arg) < 0)
-			perror("ioctl(FIOASYNC, 1)");
+			logErrorFromErrno("ioctl(FIOASYNC, 1)");
 #endif
 	}
 }
@@ -395,9 +395,8 @@ aioEnable(int fd, void *data, int flags)
 void 
 aioHandle(int fd, aioHandler handlerFn, int mask)
 {
-	FPRINTF((stderr, "aioHandle(%d, %s, %d)\n", fd, handlerName(handlerFn), mask));
 	if (fd < 0) {
-		FPRINTF((stderr, "aioHandle(%d): IGNORED\n", fd));
+		logWarn("aioHandle(%d): IGNORED - Negative FD", fd);
 		return;
 	}
 #undef _DO
@@ -416,10 +415,10 @@ void
 aioSuspend(int fd, int mask)
 {
 	if (fd < 0) {
-		FPRINTF((stderr, "aioSuspend(%d): IGNORED\n", fd));
+		logWarn("aioSuspend(%d): IGNORED - Negative FD\n", fd);
 		return;
 	}
-	FPRINTF((stderr, "aioSuspend(%d)\n", fd));
+
 #undef _DO
 #define _DO(FLAG, TYPE)							\
 	if (mask & FLAG) {							\
@@ -436,10 +435,9 @@ void
 aioDisable(int fd)
 {
 	if (fd < 0) {
-		FPRINTF((stderr, "aioDisable(%d): IGNORED\n", fd));
+		logWarn( "aioDisable(%d): IGNORED - Negative FD\n", fd);
 		return;
 	}
-	FPRINTF((stderr, "aioDisable(%d)\n", fd));
 	aioSuspend(fd, AIO_RWX);
 	FD_CLR(fd, &xdMask);
 	FD_CLR(fd, &fdMask);

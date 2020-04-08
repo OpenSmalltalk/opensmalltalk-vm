@@ -16,6 +16,7 @@ static int max_error_level = 1;
  * LOG_WARN 		2
  * LOG_INFO 		3
  * LOG_DEBUG		4
+ * LOG_TRACE		5
  *
  */
 EXPORT(void) logLevel(int value){
@@ -33,9 +34,39 @@ EXPORT(void) logAssert(const char* fileName, const char* functionName, int line,
 	logMessage(LOG_WARN, fileName, functionName, line, msg);
 }
 
+void logMessageFromErrno(int level, const char* msg, const char* fileName, const char* functionName, int line){
+	char buffer[1024+1];
+	int msgLength;
+
+	msgLength = strlen(msg);
+	strcpy(buffer, msg);
+
+#ifdef WIN32
+	strerror_s(buffer + msgLength, 1024 - msgLength, errno);
+#else
+	strerror_r(errno, buffer + msgLength, 1024 - msgLength);
+#endif
+
+	logMessage(level, fileName, functionName, line, msg);
+}
+
+FILE* getStreamForLevel(int level){
+	if(level <= LOG_ERROR){
+		return stderr;
+	}else{
+		return stdout;
+	}
+}
+
+
 EXPORT(void) logMessage(int level, const char* fileName, const char* functionName, int line, ...){
 	char * format;
 	char timestamp[20];
+
+	FILE* outputStream;
+
+	outputStream = getStreamForLevel(level);
+
 
 	if(level > max_error_level){
 		return;
@@ -46,24 +77,24 @@ EXPORT(void) logMessage(int level, const char* fileName, const char* functionNam
 
 	//Printing the header.
 	// Ex: [DEBUG] 2017-11-14 21:57:53,661 functionName (filename:line) - This is a debug log message.
-	printf("[%-5s] %s %s (%s:%d):", severityName[level - 1], timestamp, functionName, fileName, line);
+	fprintf(outputStream, "[%-5s] %s %s (%s:%d):", severityName[level - 1], timestamp, functionName, fileName, line);
 
 	//Printint the message from the var_args.
 	va_list list;
 	va_start(list, line);
 
 	format = va_arg(list, char*);
-	vprintf(format, list);
+	vfprintf(outputStream, format, list);
 
 	va_end(list);
 
 	int formatLength = strlen(format);
 
 	if(formatLength == 0 || format[formatLength - 1] != '\n'){
-		printf("\n");
+		fprintf(outputStream,"\n");
 	}
 
-	fflush(stdout);
+	fflush(outputStream);
 }
 
 void getCrashDumpFilenameInto(char *buf)

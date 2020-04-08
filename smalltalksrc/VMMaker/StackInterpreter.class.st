@@ -414,7 +414,10 @@ Class {
 		'statIdleUsecs',
 		'debugCallbackPath',
 		'debugCallbackReturns',
-		'debugCallbackInvokes'
+		'debugCallbackInvokes',
+		'printedStackFrames',
+		'maxStacksToPrint',
+		'maxStackMessagePrinted'
 	],
 	#classVars : [
 		'AccessModifierPrivate',
@@ -5515,7 +5518,8 @@ StackInterpreter >> couldBeProcess: oop [
 StackInterpreter >> cr [
 	"For testing in Smalltalk, this method should be overridden in a subclass."
 	<inline: true>
-	self printf: '\n'
+	self print: '\n'.
+	^ 1.
 ]
 
 { #category : #'message sending' }
@@ -8505,6 +8509,7 @@ StackInterpreter >> initialize [
 	nextWakeupUsecs := 0.
 	tempOop := tempOop2 := theUnknownShort := 0.
 	interruptPending := false.
+	maxStacksToPrint := 0.
 	inIOProcessEvents := 0.
 	fullScreenFlag := 0.
 	sendWheelEvents := deferDisplayUpdates := false.
@@ -17725,6 +17730,8 @@ StackInterpreter >> printAtCache [
 { #category : #'debug printing' }
 StackInterpreter >> printCallStack [
 	<inline: false>
+	
+	self resetStackPrintedCount.
 	framePointer = nil
 		ifTrue: [self printCallStackOf: (objectMemory fetchPointer: SuspendedContextIndex ofObject: self activeProcess)]
 		ifFalse: [self printCallStackFP: framePointer]
@@ -17735,6 +17742,8 @@ StackInterpreter >> printCallStackFP: theFP [
 	| context |
 	<inline: false>
 	<var: #theFP type: #'char *'>
+
+	self resetStackPrintedCount.
 	context := self shortReversePrintFrameAndCallers: theFP.
 	[context = objectMemory nilObject] whileFalse:
 		[(self isMarriedOrWidowedContext: context)
@@ -17752,6 +17761,9 @@ StackInterpreter >> printCallStackOf: aContextOrProcessOrFrame [
 	<api>
 	| context |
 	<inline: false>
+	
+	self resetStackPrintedCount.
+	
 	(stackPages couldBeFramePointer: aContextOrProcessOrFrame) ifTrue:
 		[^self printCallStackFP: (self cCoerceSimple: aContextOrProcessOrFrame to: #'char *')].
 	(self couldBeProcess: aContextOrProcessOrFrame) ifTrue:
@@ -17777,6 +17789,8 @@ StackInterpreter >> printCallStackOf: aContext currentFP: currFP [
 	<var: #currFP type: #'char *'>
 	<var: #theFP type: #'char *'>
 	<var: #thePage type: #'StackPage *'>
+
+	self resetStackPrintedCount.
 	ctxt := aContext.
 	[ctxt = objectMemory nilObject] whileFalse:
 		[(self isMarriedOrWidowedContext: ctxt)
@@ -17804,7 +17818,7 @@ StackInterpreter >> printCallStackOf: aContext currentFP: currFP [
 StackInterpreter >> printChar: aByte [
 	<api>
 	"For testing in Smalltalk, this method should be overridden in a subclass."
-	self putchar: aByte.
+	self cCode: 'vm_printf("%c", aByte)' inSmalltalk: [self putchar: aByte].
 ]
 
 { #category : #'debug printing' }
@@ -18166,14 +18180,15 @@ StackInterpreter >> printHexnp: n [
 	<api>
 	<var: #n type: #usqInt>
 	"Print n in hex,  in the form '0x1234', unpadded"
-	^'0x%lx' printf: n
+	^ self cCode: 'vm_printf("0x%lx", n)'inSmalltalk: ['0x%lx' printf: n]
 ]
 
 { #category : #'debug printing' }
 StackInterpreter >> printHexnpnp: n [
 	<var: #n type: #usqInt>
 	"Print n in hex, in the form '1234', unpadded"
-	^'%lx' printf: n
+	^ self cCode: 'vm_printf("%lx", n)'inSmalltalk: ['%lx' printf: n]
+	
 ]
 
 { #category : #'debug printing' }
@@ -18317,28 +18332,30 @@ StackInterpreter >> printOop: oop [
 	| cls fmt lastIndex startIP bytecodesPerLine column |
 	<inline: false>
 	(objectMemory isImmediate: oop) ifTrue:
-		[^self shortPrintOop: oop].
+		[^ self shortPrintOop: oop].
 	self printHex: oop.
 	(objectMemory addressCouldBeObj: oop) ifFalse:
-		[^self print: ((oop bitAnd: objectMemory allocationUnit - 1) ~= 0
+		[self print: ((oop bitAnd: objectMemory allocationUnit - 1) ~= 0
 						ifTrue: [' is misaligned']
-						ifFalse: [self whereIs: oop]); cr].
+						ifFalse: [self whereIs: oop]); cr. ^self].
+					
 	(objectMemory isFreeObject: oop) ifTrue:
 		[self print: ' is a free chunk of size '; printNum: (objectMemory sizeOfFree: oop).
 		 objectMemory hasSpurMemoryManagerAPI ifTrue:
 			[self print: ' 0th: '; printHex: (objectMemory fetchPointer: 0 ofFreeChunk: oop).
 			 objectMemory printHeaderTypeOf: oop].
-		 ^self cr].
+		 self cr. 
+		^ self].
 	(objectMemory isForwarded: oop) ifTrue:
 		[self
 			print: ' is a forwarded object to '; printHex: (objectMemory followForwarded: oop);
 			print: ' of slot size '; printNum: (objectMemory numSlotsOfAny: oop).
 		 objectMemory printHeaderTypeOf: oop.
-		 ^self cr].
+		 self cr. ^ self].
 	self print: ': a(n) '.
 	self printNameOfClass: (cls := objectMemory fetchClassOfNonImm: oop) count: 5.
 	cls = (objectMemory splObj: ClassFloat) ifTrue:
-		[^self cr; printFloat: (objectMemory dbgFloatValueOf: oop); cr].
+		[self cr; printFloat: (objectMemory dbgFloatValueOf: oop); cr. ^ self].
 	fmt := objectMemory formatOf: oop.
 	fmt > objectMemory lastPointerFormat ifTrue:
 		[self print: ' nbytes '; printNum: (objectMemory numBytesOf: oop)].
@@ -19542,6 +19559,12 @@ StackInterpreter >> removeProcess: aProcess fromList: aList [
 	objectMemory storePointer: NextLinkIndex ofObject: aProcess withValue: objectMemory nilObject
 ]
 
+{ #category : #'debug printing' }
+StackInterpreter >> resetStackPrintedCount [
+
+	printedStackFrames := maxStackMessagePrinted := 0
+]
+
 { #category : #'sista bytecodes' }
 StackInterpreter >> respondToSistaTrap [
 	| ourContext |
@@ -20264,6 +20287,12 @@ StackInterpreter >> setMaxExtSemSizeTo: maxExtSemTabSize [
 	self ioSetMaxExtSemTableSize: maxExtSemTabSize
 ]
 
+{ #category : #'debug printing' }
+StackInterpreter >> setMaxStacksToPrint: anInteger [
+	<api>
+	maxStacksToPrint := anInteger
+]
+
 { #category : #'internal interpreter access' }
 StackInterpreter >> setMethod: aMethodObj [
 	"Set the method and determine the bytecode set based on the method header's sign.
@@ -20543,6 +20572,15 @@ StackInterpreter >> shortPrintFrame: theFP [
 	<inline: false>
 	<var: #theFP type: #'char *'>
 	| rcvr |
+	
+	printedStackFrames := printedStackFrames + 1.
+	(maxStacksToPrint ~= 0 and:[ printedStackFrames > maxStacksToPrint])
+		ifTrue: [ 
+			maxStackMessagePrinted = 1 ifFalse: [  
+				self print: '...'; cr.
+				maxStackMessagePrinted := 1 ].
+			^ nil ].	
+	
 	(stackPages couldBeFramePointer: theFP) ifFalse:
 		[self print: 'invalid frame pointer'; cr.
 		 ^nil].
@@ -20562,6 +20600,7 @@ StackInterpreter >> shortPrintFrame: theFP AndNCallers: n [
 	<api>
 	<inline: false>
 	<var: #theFP type: #'char *'>
+	self resetStackPrintedCount.
 	(n ~= 0 and: [stackPages couldBeFramePointer: theFP]) ifTrue:
 		[self shortPrintFrame: theFP.
 		 self shortPrintFrame: (self frameCallerFP: theFP) AndNCallers: n - 1]
@@ -20580,6 +20619,7 @@ StackInterpreter >> shortPrintFrameAndCallers: theFP [
 { #category : #'debug printing' }
 StackInterpreter >> shortPrintFramesInCurrentPage [
 	<inline: false>
+	self resetStackPrintedCount.
 	self shortPrintFrameAndCallers: localFP
 ]
 

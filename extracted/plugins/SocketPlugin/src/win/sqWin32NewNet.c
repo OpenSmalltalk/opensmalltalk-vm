@@ -28,6 +28,8 @@
 #include "sq.h"
 #include "SocketPlugin.h"
 
+#include "pharovm/debug.h"
+
 #ifndef NO_NETWORK
 
 #ifndef STACK_SIZE_PARAM_IS_A_RESERVATION
@@ -323,21 +325,21 @@ static int acceptHandler(privateSocketStruct *pss)
 /*****************************************************************************
  ****************************************************************************/
 static void debugPrintSocket(privateSocketStruct *pss) {
-  printf("### Socket [%p]\n", pss);
-  printf("\tHandle: %" PRIxSQPTR "\n", pss->s);
-  printf("\tType: %d\n", pss->sockType);
-  printf("\tState: %x", pss->sockState & SOCK_PUBLIC_MASK);
+  logTrace("### Socket [%p]\n", pss);
+  logTrace("\tHandle: %" PRIxSQPTR "\n", pss->s);
+  logTrace("\tType: %d\n", pss->sockType);
+  logTrace("\tState: %x", pss->sockState & SOCK_PUBLIC_MASK);
   if(pss->sockState & SOCK_DATA_READABLE)
-    printf(" [readable]");
+    logTrace(" [readable]");
   if(pss->sockState & SOCK_DATA_WRITABLE)
-    printf(" [writable]");
+    logTrace(" [writable]");
   if(pss->sockState & SOCK_BOUND_UDP)
-    printf(" [bound for udp]");
-  printf("\n");
-  printf("\tError: %x\n", pss->sockError);
-  printf("\treadSema: %d\n", pss->readSema);
-  printf("\twriteSema: %d\n", pss->writeSema);
-  printf("\tconnSema: %d\n", pss->connSema);
+    logTrace(" [bound for udp]");
+  logTrace("\n");
+  logTrace("\tError: %x\n", pss->sockError);
+  logTrace("\treadSema: %d\n", pss->readSema);
+  logTrace("\twriteSema: %d\n", pss->writeSema);
+  logTrace("\tconnSema: %d\n", pss->connSema);
   { /* count pending accept()s */
     acceptedSocketStruct *tmp = pss->accepted;
     int n = 0;
@@ -345,13 +347,13 @@ static void debugPrintSocket(privateSocketStruct *pss) {
       tmp = tmp->next;
       n++;
     }
-    printf("\tPending accepts: %d\n",n);
+    logTrace("\tPending accepts: %d\n",n);
   }
-  printf("\tRead Watcher Op: %lu\n", pss->readWatcherOp);
-  printf("\tWrite Watcher Op: %lu\n",pss->writeWatcherOp);
-  printf("\tClose pending: %lu\n",pss->closePending);
-  printf("\tIn read select: %d\n", pss->readSelect);
-  printf("\tIn write select: %d\n", pss->writeSelect);
+  logTrace("\tRead Watcher Op: %lu\n", pss->readWatcherOp);
+  logTrace("\tWrite Watcher Op: %lu\n",pss->writeWatcherOp);
+  logTrace("\tClose pending: %lu\n",pss->closePending);
+  logTrace("\tIn read select: %d\n", pss->readSelect);
+  logTrace("\tIn write select: %d\n", pss->writeSelect);
 }
 
 int win32DebugPrintSocketState(void) {
@@ -405,21 +407,21 @@ static void debugCheckWatcherThreads(privateSocketStruct *pss, char* caller) {
       printReason |= 64; /* not watching for close */
   }
   if(printReason) {
-    printf("#### WARNING: Watcher threads are running wild on socket (%s)\n", caller);
+	logWarn("#### WARNING: Watcher threads are running wild on socket (%s)\n", caller);
     if(printReason & 1)
-      printf("\t* Watching for stuff while unconnected\n");
+    	logWarn("\t* Watching for stuff while unconnected\n");
     if(printReason & 2)
-      printf("\t* Watching for non-data while no data readable\n");
+    	logWarn("\t* Watching for non-data while no data readable\n");
     if(printReason & 4)
-      printf("\t* Socket read state differs from select() state\n");
+    	logWarn("\t* Socket read state differs from select() state\n");
     if(printReason & 8)
-      printf("\t* Watching for non-data while no data writable\n");
+    	logWarn("\t* Watching for non-data while no data writable\n");
     if(printReason & 16)
-      printf("\t* Socket write state differs from select() state\n");
+    	logWarn("\t* Socket write state differs from select() state\n");
     if(printReason & 32)
-      printf("\t* Watching for non-connect while connecting\n");
+    	logWarn("\t* Watching for non-connect while connecting\n");
     if(printReason & 64)
-      printf("\t* Watching for non-close while closing\n");
+    	logWarn("\t* Watching for non-close while closing\n");
     debugPrintSocket(pss);
   }
 }
@@ -554,7 +556,7 @@ static DWORD WINAPI writeWatcherThread(privateSocketStruct *pss)
 	    SIGNAL(pss->connSema);
 	  } else {
 	    /* get socket error */
-	    /* printf("ERROR: %d\n", WSAGetLastError()); */
+	    /* logTrace("ERROR: %d\n", WSAGetLastError()); */
 	    errSize = sizeof(pss->sockError);
 	    getsockopt(pss->s, SOL_SOCKET, SO_ERROR, (char*)&pss->sockError, &errSize);
 	    SIGNAL(pss->writeSema);
@@ -1093,7 +1095,7 @@ sqInt sqSocketReceiveDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
     result = recv(pss->s,buf, bufSize, 0);
   }
 
-/* printf("Data read (%d) WSAGetLastError (%d)\n", result, WSAGetLastError()); */
+/* logTrace("Data read (%d) WSAGetLastError (%d)\n", result, WSAGetLastError()); */
 
   /* Guard eventual writes to socket state */
   LOCKSOCKET(pss->mutex, INFINITE)
@@ -1107,7 +1109,7 @@ sqInt sqSocketReceiveDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
       } else if(result < 0) {
 	int err = WSAGetLastError();
 	if(err != WSAEWOULDBLOCK) {
-	  /* printf("ERROR: %d\n", err); */
+	  /* logTrace("ERROR: %d\n", err); */
 	  /* NOTE: We consider all other errors to be fatal, e.g.,
 	     report them as "other end closed". Looking at the
 	     WSock documentation this ought to be correct. */
@@ -1175,7 +1177,7 @@ sqInt sqSocketSendDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
   } else {
     result = send(pss->s, buf, bufSize, 0);
   }
-/* printf("Data sent (%d) WSAGetLastError (%d)\n", result, WSAGetLastError()); */
+/* logTrace("Data sent (%d) WSAGetLastError (%d)\n", result, WSAGetLastError()); */
 
   /* Guard eventual writes to socket state */
   LOCKSOCKET(pss->mutex, INFINITE)
@@ -1189,7 +1191,7 @@ sqInt sqSocketSendDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
       } else {
 	int err = WSAGetLastError();
 	if(err != WSAEWOULDBLOCK) {
-	  /* printf("ERROR: %d\n", err); */
+	  /* logTrace("ERROR: %d\n", err); */
 	  /* NOTE: We consider all other errors to be fatal, e.g.,
 	     report them as "other end closed". Looking at the
 	     WSock documentation this ought to be correct. */
@@ -1697,7 +1699,7 @@ sqInt sqSocketSetOptionsoptionNameStartoptionNameSizeoptionValueStartoptionValue
       /* integer options */
       ((int*)buf)[0] = atoi(optionValue);
       bufSize = sizeof(int);
-      /* printf("optionValue: %d (%s)\n", ((int*)buf)[0], optionValue); */
+      /* logTrace("optionValue: %d (%s)\n", ((int*)buf)[0], optionValue); */
     } else if(opt->optType == 100) {
       /* multicast options, taking one or two IP addresses, e.g.,
          '1.2.3.4|5.6.7.8' specifies multicast group + interface
@@ -1719,7 +1721,7 @@ sqInt sqSocketSetOptionsoptionNameStartoptionNameSizeoptionValueStartoptionValue
     {
       int err;
       err = setsockopt(SOCKET(s), opt->optLevel, opt->optName,buf, bufSize);
-      /* printf("setsockopt(): %d\n", err); */
+      /* logTrace("setsockopt(): %d\n", err); */
       if(err < 0) goto barf;
     }
     /* it isn't clear what we're supposed to return here, since
@@ -1755,7 +1757,7 @@ sqInt sqSocketGetOptionsoptionNameStartoptionNameSizereturnedValue
   if (!SocketValid(s)) goto barf;
   opt= findOption(optionName, (size_t)optionNameSize);
   if (opt == 0) {
-    /* printf("option not found\n"); */
+    /* logTrace("option not found\n"); */
     goto barf;
   }
   if (opt->optType == 1) {
@@ -1763,11 +1765,11 @@ sqInt sqSocketGetOptionsoptionNameStartoptionNameSizereturnedValue
     if ((getsockopt(SOCKET(s), opt->optLevel, opt->optName,
 		    (char*)&optval,&len)) < 0)
       {
-	/* printf("getsockopt() returned < 0\n"); */
+	/* logTrace("getsockopt() returned < 0\n"); */
 	goto barf;
       }
     if (len != sizeof(optval)) {
-      /* printf("len != sizeof(optval)"); */
+      /* logTrace("len != sizeof(optval)"); */
       goto barf;
     }
     *result= optval;
@@ -1787,12 +1789,12 @@ sqInt sqSocketGetOptionsoptionNameStartoptionNameSizereturnedValue
 		   &sz,
 		   NULL, NULL);
     if(err) {
-      printf("WSAIoctl error: %d (WSAGetLastError=%d)\n",
+      logWarn("WSAIoctl error: %d (WSAGetLastError=%d)\n",
 	     err, WSAGetLastError());
       goto barf;
     }
     if(sz != sizeof(addr)) {
-      printf("WSAIoctl returned %d instead of %d\n", sz, sizeof(addr));
+      logWarn("WSAIoctl returned %d instead of %d\n", sz, sizeof(addr));
       goto barf;
     }
     *result = ntohl(addr.sin_addr.s_addr);
@@ -2177,11 +2179,9 @@ void sqResolverGetAddressInfoHostSizeServiceSizeFlagsFamilyTypeProtocol(char *ho
 
   gaiError= getaddrinfo(hostSize ? host : 0, servSize ? serv : 0, &request, &addrList);
 
-  if (gaiError)
-    {
-      fwprintf(stderr, L"getaddrinfo: %s\n", gai_strerrorW(gaiError));
+  if (gaiError){
       addrList= 0;	/* succeed with zero results for impossible constraints */
-    }
+  }
 
   addrInfo= addrList;
   interpreterProxy->signalSemaphoreWithIndex(resolverSemaphoreIndex);
@@ -2340,8 +2340,6 @@ void sqResolverGetNameInfoSizeFlags(char *addr, sqInt addrSize, sqInt flags)
 
   if (flags & SQ_SOCKET_NUMERIC) niFlags |= (NI_NUMERICHOST | NI_NUMERICSERV);
 
-  /*dumpAddr(socketAddress(addr), addrSize - AddressHeaderSize);  fprintf(stderr, "%02x\n", niFlags);*/
-
   gaiError= getnameinfo(socketAddress(addr), addrSize - AddressHeaderSize,
 			hostNameInfo, sizeof(hostNameInfo),
 			servNameInfo, sizeof(servNameInfo),
@@ -2349,7 +2347,6 @@ void sqResolverGetNameInfoSizeFlags(char *addr, sqInt addrSize, sqInt flags)
 
   if (gaiError)
     {
-      fwprintf(stderr, L"getnameinfo: %s\n", gai_strerrorW(gaiError));
       lastError= gaiError;
       goto fail;
     }

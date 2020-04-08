@@ -22,6 +22,8 @@ static char __buildInfo[] = "ThreadedIA32FFIPlugin VMMaker.oscog-eem.2481 uuid: 
 #include "sqVirtualMachine.h"	/*  The virtual machine proxy definition */
 #include "sqPlatformSpecific.h"	/* Platform specific definitions */
 
+#include "pharovm/debug.h"
+
 #define true 1
 #define false 0
 #define null 0  /* using 'null' because nil is predefined in Think C */
@@ -117,7 +119,7 @@ static char __buildInfo[] = "ThreadedIA32FFIPlugin VMMaker.oscog-eem.2481 uuid: 
 /* but print assert failures. */
 void
 warning(char *s) { /* Print an error message but don't exit. */
-	printf("\n%s\n", s);
+	logWarn("\n%s\n", s);
 }
 #endif
 
@@ -3298,7 +3300,7 @@ isDirectAlien(sqInt oop)
 static sqInt
 msg(char *s)
 {
-	fprintf(stderr, "\n%s: %s", getModuleName(), s);
+	logDebug("\n%s: %s", getModuleName(), s);
 	return 0;
 }
 
