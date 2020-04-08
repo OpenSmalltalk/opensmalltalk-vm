@@ -27,7 +27,7 @@ void mtfsfi(unsigned long long fpscr)
 
 static int loadPharoImage(const char* fileName);
 
-EXPORT(int) vm_init(const char* imageFileName, const VMParameterVector *vmParameters, const VMParameterVector *imageParameters) {
+EXPORT(int) vm_init(VMParameters* parameters) {
 	initGlobalStructure();
 
 	//Unix Initialization specific
@@ -39,13 +39,14 @@ EXPORT(int) vm_init(const char* imageFileName, const VMParameterVector *vmParame
 
     ioVMThread = ioCurrentOSThread();
 	ioInitExternalSemaphores();
+	setMaxStacksToPrint(parameters->maxStackFramesToPrint);
 
 	aioInit();
 
-	setPharoCommandLineParameters(vmParameters->parameters, vmParameters->count,
-			imageParameters->parameters, imageParameters->count);
+	setPharoCommandLineParameters(parameters->vmParameters.parameters, parameters->vmParameters.count,
+			parameters->imageParameters.parameters, parameters->imageParameters.count);
 
-	return loadPharoImage(imageFileName);
+	return loadPharoImage(parameters->imageFileName);
 }
 
 EXPORT(void) vm_run_interpreter()
@@ -102,7 +103,7 @@ vm_main_with_parameters(VMParameters *parameters)
 	LOG_SIZEOF(float);
 	LOG_SIZEOF(double);
 
-	if(!vm_init(parameters->imageFileName, &parameters->vmParameters, &parameters->imageParameters))
+	if(!vm_init(parameters))
 	{
 		logError("Error opening image file: %s\n", parameters->imageFileName);
 		return -1;
