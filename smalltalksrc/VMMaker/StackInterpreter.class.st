@@ -5515,7 +5515,8 @@ StackInterpreter >> couldBeProcess: oop [
 StackInterpreter >> cr [
 	"For testing in Smalltalk, this method should be overridden in a subclass."
 	<inline: true>
-	self print: '\n'
+	self print: '\n'.
+	^ 1.
 ]
 
 { #category : #'message sending' }
@@ -18318,28 +18319,30 @@ StackInterpreter >> printOop: oop [
 	| cls fmt lastIndex startIP bytecodesPerLine column |
 	<inline: false>
 	(objectMemory isImmediate: oop) ifTrue:
-		[^self shortPrintOop: oop].
+		[^ self shortPrintOop: oop].
 	self printHex: oop.
 	(objectMemory addressCouldBeObj: oop) ifFalse:
-		[^self print: ((oop bitAnd: objectMemory allocationUnit - 1) ~= 0
+		[self print: ((oop bitAnd: objectMemory allocationUnit - 1) ~= 0
 						ifTrue: [' is misaligned']
-						ifFalse: [self whereIs: oop]); cr].
+						ifFalse: [self whereIs: oop]); cr. ^self].
+					
 	(objectMemory isFreeObject: oop) ifTrue:
 		[self print: ' is a free chunk of size '; printNum: (objectMemory sizeOfFree: oop).
 		 objectMemory hasSpurMemoryManagerAPI ifTrue:
 			[self print: ' 0th: '; printHex: (objectMemory fetchPointer: 0 ofFreeChunk: oop).
 			 objectMemory printHeaderTypeOf: oop].
-		 ^self cr].
+		 self cr. 
+		^ self].
 	(objectMemory isForwarded: oop) ifTrue:
 		[self
 			print: ' is a forwarded object to '; printHex: (objectMemory followForwarded: oop);
 			print: ' of slot size '; printNum: (objectMemory numSlotsOfAny: oop).
 		 objectMemory printHeaderTypeOf: oop.
-		 ^self cr].
+		 self cr. ^ self].
 	self print: ': a(n) '.
 	self printNameOfClass: (cls := objectMemory fetchClassOfNonImm: oop) count: 5.
 	cls = (objectMemory splObj: ClassFloat) ifTrue:
-		[^self cr; printFloat: (objectMemory dbgFloatValueOf: oop); cr].
+		[self cr; printFloat: (objectMemory dbgFloatValueOf: oop); cr. ^ self].
 	fmt := objectMemory formatOf: oop.
 	fmt > objectMemory lastPointerFormat ifTrue:
 		[self print: ' nbytes '; printNum: (objectMemory numBytesOf: oop)].
