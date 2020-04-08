@@ -5515,7 +5515,7 @@ StackInterpreter >> couldBeProcess: oop [
 StackInterpreter >> cr [
 	"For testing in Smalltalk, this method should be overridden in a subclass."
 	<inline: true>
-	self printf: '\n'
+	self print: '\n'
 ]
 
 { #category : #'message sending' }
@@ -17804,7 +17804,7 @@ StackInterpreter >> printCallStackOf: aContext currentFP: currFP [
 StackInterpreter >> printChar: aByte [
 	<api>
 	"For testing in Smalltalk, this method should be overridden in a subclass."
-	self putchar: aByte.
+	self cCode: 'vm_printf("%c", aByte)' inSmalltalk: [self putchar: aByte].
 ]
 
 { #category : #'debug printing' }
@@ -18166,14 +18166,15 @@ StackInterpreter >> printHexnp: n [
 	<api>
 	<var: #n type: #usqInt>
 	"Print n in hex,  in the form '0x1234', unpadded"
-	^'0x%lx' printf: n
+	^ self cCode: 'vm_printf("0x%lx", n)'inSmalltalk: ['0x%lx' printf: n]
 ]
 
 { #category : #'debug printing' }
 StackInterpreter >> printHexnpnp: n [
 	<var: #n type: #usqInt>
 	"Print n in hex, in the form '1234', unpadded"
-	^'%lx' printf: n
+	^ self cCode: 'vm_printf("%lx", n)'inSmalltalk: ['%lx' printf: n]
+	
 ]
 
 { #category : #'debug printing' }
