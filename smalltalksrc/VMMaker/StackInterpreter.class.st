@@ -16327,12 +16327,6 @@ StackInterpreter >> marryFrame: theFP SP: theSP copyTemps: copyTemps [
 
 ]
 
-{ #category : #'debug printing' }
-StackInterpreter >> maxStacksToPrint: anInteger [
-	<api>
-	maxStacksToPrint := anInteger
-]
-
 { #category : #'primitive support' }
 StackInterpreter >> maybeFailForLastObjectOverwrite [
 	<inline: true>
@@ -20291,6 +20285,12 @@ StackInterpreter >> setInterruptPending: value [
 StackInterpreter >> setMaxExtSemSizeTo: maxExtSemTabSize [
 	maxExtSemTabSizeSet := true.
 	self ioSetMaxExtSemTableSize: maxExtSemTabSize
+]
+
+{ #category : #'debug printing' }
+StackInterpreter >> setMaxStacksToPrint: anInteger [
+	<api>
+	maxStacksToPrint := anInteger
 ]
 
 { #category : #'internal interpreter access' }
