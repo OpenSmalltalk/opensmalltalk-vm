@@ -28,7 +28,7 @@ test -f config.h || ../../../platforms/unix/config/configure --without-npsqueak 
 		--disable-dynamicopenssl \
 		--with-src=spur64src \
 	TARGET_ARCH="-m64" \
-	ac_cv_cflags_warn_all="" \
+	ac_cv_cflags_warn_all="-v" \
 	CFLAGS="$CFLAGS" \
 	LIBS="$LIBS" \
 	LDFLAGS="$LDFLAGS"
