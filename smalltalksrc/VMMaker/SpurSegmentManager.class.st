@@ -92,7 +92,8 @@ SpurSegmentManager >> addSegmentOfSize: ammount [
 			Above: (self firstGapOfSizeAtLeast: ammount)
 			AllocatedSizeInto: (self cCode: [self addressOf: allocatedSize]
 									inSmalltalk: [[:sz| allocatedSize := sz]])) ifNotNil:
-		[:segAddress| | newSegIndex newSeg |
+		[:segAddress| | newSegIndex newSeg numSegmentsM1 |
+		numSegmentsM1 := numSegments - 1.
 		 newSegIndex := self insertSegmentFor: segAddress asUnsignedIntegerPtr.
 		 "Simulation insertion code duplicates entries if newSegIndex ~= numSegments - 1"
 		 self cCode: '' inSmalltalk: [segments at: newSegIndex put: SpurSegmentInfo new].
@@ -103,16 +104,16 @@ SpurSegmentManager >> addSegmentOfSize: ammount [
 			swizzle: 0. "Required in the C version only"
 		 self assert: self segmentOverlap not. "self printSegmentAddresses."
 		 self bridgeFrom: (self addressOf: (segments at: newSegIndex - 1)) to: newSeg.
-		 self bridgeFrom: newSeg to: (newSegIndex = (numSegments - 1) ifFalse:
+		 self bridgeFrom: newSeg to: (newSegIndex = (numSegmentsM1) ifFalse:
 										[self addressOf: (segments at: newSegIndex + 1)]).
 		 totalHeapSizeIncludingBridges := totalHeapSizeIncludingBridges + allocatedSize.
 		 "test isInMemory:"
-		 0 to: numSegments - 1 do:
+		 0 to: numSegmentsM1 do:
 			[:i|
 			self assert: (self isInSegments: (segments at: i) segStart).
 			self assert: (self isInSegments: (segments at: i) segLimit - manager wordSize).
 			self assert: ((self isInSegments: (segments at: i) segLimit) not
-						or: [i < (numSegments - 1)
+						or: [i < (numSegmentsM1)
 							and: [(segments at: i) segLimit = (segments at: i + 1) segStart]]).
 			self assert: ((self isInSegments: (segments at: i) segStart - manager wordSize) not
 							or: [i > 0
