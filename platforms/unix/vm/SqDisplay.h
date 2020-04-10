@@ -78,7 +78,7 @@ struct SqDisplay
   /* host window support */
   long    (*hostWindowClose)(long index);
   long    (*hostWindowCreate)(long w, long h, long x, long y, char * list, long attributeListLength);
-  long    (*hostWindowShowDisplay)(unsigned* dispBitsIndex, long width, long height, long depth, long affectedL, long affectedR, long affectedT, long affectedB, long windowIndex);
+  long    (*hostWindowShowDisplay)(unsigned* dispBitsIndex, long width, long height, long depth, long affectedL, long affectedR, long affectedT, long affectedB, sqIntptr_t windowIndex);
   long    (*hostWindowGetSize)(long windowIndex);
   long    (*hostWindowSetSize)(long windowIndex, long w, long h);
   long    (*hostWindowGetPosition)(long windowIndex);

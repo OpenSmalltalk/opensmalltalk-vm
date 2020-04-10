@@ -15,7 +15,7 @@
 
 /* window handle type */
 #define wHandleType WindowPtr
-#define wIndexType sqInt
+#define wIndexType sqIntptr_t
 
 typedef struct windowDescriptorBlock {
 	struct windowDescriptorBlock * next;

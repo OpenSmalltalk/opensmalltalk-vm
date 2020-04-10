@@ -7098,7 +7098,7 @@ static long display_hostWindowCreate(long w, long h, long x, long y, char *list,
 static long display_hostWindowClose(long index)                                               { return 0; }
 static long display_hostWindowCloseAll(void)                                                 { return 0; }
 static long display_hostWindowShowDisplay(unsigned *dispBitsIndex, long width, long height, long depth,
-					 long affectedL, long affectedR, long affectedT, long affectedB, long windowIndex)
+					 long affectedL, long affectedR, long affectedT, long affectedB, sqIntptr_t windowIndex)
 											    { return 0; }
 
 /* By convention for HostWindowPlugin, handle 1 refers to the display window */

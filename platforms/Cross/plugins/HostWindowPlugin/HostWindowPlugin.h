@@ -4,9 +4,9 @@
  * windowHandles etc are expected to be SmallInteger valid values
  * windowHandle 1 is the traditional main window */
 
-/* closeWindow: arg is sqInt windowIndex. Fail (return 0) if anything goes wrong
- * - typically the windowIndex invalid or similar */
-extern sqInt closeWindow(sqInt index);
+/* closeWindow: arg is sqIntptr_t windowIndex. Fail (return 0) if anything
+ * goes wrong - typically the windowIndex invalid or similar */
+extern sqInt closeWindow(sqIntptr_t index);
 
 /* createWindow: takes sqInt width, height and origin x/y plus a char* list of
  * as yet undefined attributes. Returns an sqInt window index or 0 for failure
@@ -14,11 +14,11 @@ extern sqInt closeWindow(sqInt index);
  * windows already extant (platform dependant), the specified size being
  * unreasonable etc. */
 extern sqInt createWindowWidthheightoriginXyattrlength(sqInt w, sqInt h, sqInt x, sqInt y,
-char * list, sqInt attributeListLength);
+char *list, sqInt attributeListLength);
 
 /* ioShowDisplayOnWindow: similar to ioShowDisplay but adds the sqIntptr_t windowIndex
  * Return true if ok, false if not, but not currently checked */
-extern sqInt ioShowDisplayOnWindow(unsigned char * dispBitsIndex, sqInt width, sqInt
+extern sqInt ioShowDisplayOnWindow(unsigned char *dispBitsIndex, sqInt width, sqInt
 height, sqInt depth, sqInt affectedL, sqInt affectedR, sqInt affectedT, sqInt affectedB,
 sqIntptr_t windowIndex);
 
@@ -71,12 +71,12 @@ extern sqInt ioPositionOfWindowSetxy(sqIntptr_t windowIndex, sqInt x, sqInt y);
 /* ioSetTitleOfWindow: args are sqIntptr_t windowIndex, char* newTitle and
  * sqInt size of new title. Fail with -1 if windowIndex is invalid, string is too
 long for platform etc. Leave previous title in place on failure */
-sqInt ioSetTitleOfWindow(sqIntptr_t windowIndex, char * newTitle, sqInt sizeOfTitle);
+sqInt ioSetTitleOfWindow(sqIntptr_t windowIndex, char *newTitle, sqInt sizeOfTitle);
 
 /* ioSetIconOfWindow: args are int windowIndex windowIndex, char* iconPath and
  * int size of new logo path. If one of the function is failing, the logo is not set.
  */
-extern sqInt ioSetIconOfWindow(sqIntptr_t windowIndex, char * iconPath, sqInt sizeOfPath);
+extern sqInt ioSetIconOfWindow(sqIntptr_t windowIndex, char *iconPath, sqInt sizeOfPath);
 
 /* ioCloseAllWindows: intended for VM shutdown.
  * Close all the windows that appear to be open.

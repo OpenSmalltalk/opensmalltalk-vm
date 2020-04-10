@@ -91,6 +91,29 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 		return 0;
 	}
 
+#if 0
+# define initEipFetchPtr(cpup) \
+	((cpup)->eipFetchPtr = theMemory)
+#else
+# define initEipFetchPtr(cpup) \
+	((cpup)->eipFetchPtr = theMemory + (cpup)->gen_reg[BX_32BIT_REG_EIP].dword.erx)
+#endif
+
+#if 1
+# define resetInstructionFetch(cpup) \
+	((cpup)->eipPageWindowSize = minWriteMaxExecAddr)
+#elif 1
+# define resetInstructionFetch(cpup) do { \
+		(cpup)->eipPageBias = 0; \
+		(cpup)->eipPageWindowSize = 0; } while (0)
+#elif 1
+# define resetInstructionFetch(cpup) \
+	((cpup)->eipPageWindowSize = 0)
+#else
+# define resetInstructionFetch(cpup) \
+	((cpup)->eipPageBias = 0)
+#endif
+
 	long
 	singleStepCPUInSizeMinAddressReadWrite(void *cpu,
 									void *memory, ulong byteSize,
@@ -117,8 +140,9 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.limit = minWriteMaxExecAddr >> 16;
 		bx_cpu.sregs[BX_SEG_REG_DS].cache.u.segment.limit =
 		bx_cpu.sregs[BX_SEG_REG_SS].cache.u.segment.limit = byteSize >> 16;
-		anx86->eipFetchPtr = theMemory;
-		anx86->eipPageWindowSize = minWriteMaxExecAddr;
+		initEipFetchPtr(anx86);
+		resetInstructionFetch(anx86);
+
 		anx86->cpu_single_step();
 
 		return blidx == 0 ? 0 : SomethingLoggedError;
@@ -149,8 +173,9 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.limit = minWriteMaxExecAddr >> 16;
 		bx_cpu.sregs[BX_SEG_REG_DS].cache.u.segment.limit =
 		bx_cpu.sregs[BX_SEG_REG_SS].cache.u.segment.limit = byteSize >> 16;
-		anx86->eipFetchPtr = theMemory;
-		anx86->eipPageWindowSize = minWriteMaxExecAddr;
+		initEipFetchPtr(anx86);
+		resetInstructionFetch(anx86);
+
 		bx_pc_system.kill_bochs_request = 0;
 		anx86->cpu_loop(0 /* = "run forever" until exception or interupt */);
 		if (anx86->stop_reason != STOP_NO_REASON) {

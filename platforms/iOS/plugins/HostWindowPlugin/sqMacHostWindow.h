@@ -49,7 +49,7 @@
 #endif
 /* window handle type */
 #define wHandleType void *
-#define wIndexType sqInt 
+#define wIndexType sqIntptr_t
 
 typedef struct windowDescriptorBlock {
 	struct windowDescriptorBlock * next;
