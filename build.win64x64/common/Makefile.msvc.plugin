@@ -105,6 +105,7 @@ print-settings:
 	$(info 'PLUGINSRCDIR=$(PLUGINSRCDIR)')
 	$(info 'PLUGINLIB=$(PLUGINLIB)')
 	$(info 'PLUGINDLL=$(PLUGINDLL)')
+	$(info 'PLUGINDLL_LIBS=$(PLUGINDLL_LIBS)')
 	$(info 'XINC=$(XINC)')
 	$(info 'XDEFS=$(XDEFS)')
 	$(info -----------------------------------------------------)
@@ -119,12 +120,17 @@ $(PLUGINLIB): $(VMDIR) $(OBJDIR) $(LIBOBJ)
 	-$(RM) $(PLUGINLIB)
 	$(LIBRARIAN) $(LIBOBJ) $(EXTRALIBS) -out:$(subst /,\\,$(PLUGINLIB))
 
+PLUGINDLL_LIBS:=WinMM.lib ole32.lib dsound.lib msdmo.lib kernel32.lib
+
+ifdef Clang
+PLUGINDLL_LIBS+=libconcrt.lib /NODEFAULTLIB:msvcrt.lib
+endif
+
 $(PLUGINDLL): $(VMDIR) $(OBJDIR) $(LIBOBJ)
-	$(LD) WinMM.lib ole32.lib dsound.lib msdmo.lib kernel32.lib $(VMLIB) $(LDFLAGS) -DLL $(LIBOBJ) $(EXTRALIBS) \
+	$(LD) $(VMLIB) $(LDFLAGS) -DLL $(LIBOBJ) $(PLUGINDLL_LIBS) $(EXTRALIBS) \
 	-LIBPATH:$(BUILD)/vm \
 	-LIBPATH:"$(WindowsSdkDir)LIB/$(WindowsSDKVersion)/um/x64" \
 	-LIBPATH:"$(WindowsSdkDir)LIB/$(WindowsSDKVersion)/ucrt/x64" \
 	-LIBPATH:"$(VCToolsInstallDir)/lib/x64/" $(EXTRALIBPATH) \
 	-LIBPATH:"../../platforms/win32/third-party/dx9sdk/Lib" \
 	-OUT:$(subst /,\\,$(PLUGINDLL))
-
