@@ -8,9 +8,15 @@ then
    exit 0
 fi
 
-if [ ! -f squeak.ips ]
+if [ ! -x squeak.ips ]
 then
    echo "Please copy the squeak.ips script to this directory."
+   exit 0
+fi
+
+if [ ! -x ckformat ]
+then
+   echo "Please copy the ckformat executable to this directory."
    exit 0
 fi
 
@@ -61,6 +67,7 @@ rm -f reloc/usr/squeak
 
 # now install our own IPS script for /usr/bin/squeak
 # this script selects the 32bit or the 64bit vm
+cp ckformat reloc/usr/bin/ckformat
 cp squeak.ips reloc/usr/bin/squeak
 
 # the following p5m manifest should be edited
