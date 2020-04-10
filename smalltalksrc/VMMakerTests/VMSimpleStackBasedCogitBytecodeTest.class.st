@@ -1,5 +1,5 @@
 Class {
-	#name : #VMCogBytecodeTest,
+	#name : #VMSimpleStackBasedCogitBytecodeTest,
 	#superclass : #VMSpurMemoryManagerTest,
 	#instVars : [
 		'cogit',
@@ -14,13 +14,13 @@ Class {
 }
 
 { #category : #helpers }
-VMCogBytecodeTest >> compile: aBlockClosure [ 
+VMSimpleStackBasedCogitBytecodeTest >> compile: aBlockClosure [ 
 
 	^ self compile: aBlockClosure bytecodes: 1
 ]
 
 { #category : #helpers }
-VMCogBytecodeTest >> compile: aBlockClosure bytecodes: bytecodes [
+VMSimpleStackBasedCogitBytecodeTest >> compile: aBlockClosure bytecodes: bytecodes [
 
 	"We estimate the same ammount of bytecode as the Cogit"
 	cogit allocateOpcodes: (bytecodes + 10) * 10 bytecodes: bytecodes ifFail: [ self fail ].
@@ -46,7 +46,7 @@ VMCogBytecodeTest >> compile: aBlockClosure bytecodes: bytecodes [
 ]
 
 { #category : #helpers }
-VMCogBytecodeTest >> disassemble [
+VMSimpleStackBasedCogitBytecodeTest >> disassemble [
 	
 	^ LLVMDisassembler amd64 
 		disassembleNext: opcodes
@@ -54,25 +54,25 @@ VMCogBytecodeTest >> disassemble [
 ]
 
 { #category : #'helpers - registers' }
-VMCogBytecodeTest >> instructionPointer [
+VMSimpleStackBasedCogitBytecodeTest >> instructionPointer [
 
 	^ self readRegister: UcX86Registers rip
 ]
 
 { #category : #helpers }
-VMCogBytecodeTest >> newInterpreter [
+VMSimpleStackBasedCogitBytecodeTest >> newInterpreter [
 
 	^ CogVMSimulator newWithOptions: {#BytesPerWord . 8}
 ]
 
 { #category : #helpers }
-VMCogBytecodeTest >> newMemory [
+VMSimpleStackBasedCogitBytecodeTest >> newMemory [
 
 	^ Spur64BitMMLECoSimulator new
 ]
 
 { #category : #helpers }
-VMCogBytecodeTest >> pop [
+VMSimpleStackBasedCogitBytecodeTest >> pop [
 
 	| stackAddress stackAddressIntegerValue poppedByteArray |
 
@@ -94,13 +94,13 @@ VMCogBytecodeTest >> pop [
 ]
 
 { #category : #helpers }
-VMCogBytecodeTest >> popAddress [
+VMSimpleStackBasedCogitBytecodeTest >> popAddress [
 	
 	^ self pop integerAt: 1 size: self wordSize signed: false
 ]
 
 { #category : #helpers }
-VMCogBytecodeTest >> push: aByteArray [
+VMSimpleStackBasedCogitBytecodeTest >> push: aByteArray [
 
 	| stackAddress stackAddressIntegerValue |
 
@@ -127,7 +127,7 @@ VMCogBytecodeTest >> push: aByteArray [
 ]
 
 { #category : #helpers }
-VMCogBytecodeTest >> pushAddress: anInteger [
+VMSimpleStackBasedCogitBytecodeTest >> pushAddress: anInteger [
 
 	| aByteArray |
 	aByteArray := ByteArray new: self wordSize.
@@ -136,21 +136,27 @@ VMCogBytecodeTest >> pushAddress: anInteger [
 ]
 
 { #category : #'helpers - registers' }
-VMCogBytecodeTest >> readRegister: aRegisterID [
+VMSimpleStackBasedCogitBytecodeTest >> readRegister: aRegisterID [
 
 	registerValue := ByteArray new: self wordSize.
 	unicorn register: aRegisterID value readInto: registerValue.
 	^ registerValue integerAt: 1 size: self wordSize signed: false
 ]
 
+{ #category : #helpers }
+VMSimpleStackBasedCogitBytecodeTest >> receiverRegister: anInteger [ 
+
+	self writeRegister: UcX86Registers rdx value: anInteger
+]
+
 { #category : #'helpers - registers' }
-VMCogBytecodeTest >> returnValue [
+VMSimpleStackBasedCogitBytecodeTest >> returnValue [
 
 	^ self readRegister: UcX86Registers rdx
 ]
 
 { #category : #helpers }
-VMCogBytecodeTest >> runGeneratedCode [
+VMSimpleStackBasedCogitBytecodeTest >> runGeneratedCode [
 
 	unicorn startAt: 16r1000000
 		until: 0
@@ -160,7 +166,7 @@ VMCogBytecodeTest >> runGeneratedCode [
 ]
 
 { #category : #helpers }
-VMCogBytecodeTest >> runUntilReturn [
+VMSimpleStackBasedCogitBytecodeTest >> runUntilReturn [
 
 	unicorn startAt: 16r1000000
 		until: callerAddress
@@ -170,12 +176,15 @@ VMCogBytecodeTest >> runUntilReturn [
 ]
 
 { #category : #running }
-VMCogBytecodeTest >> setUp [
+VMSimpleStackBasedCogitBytecodeTest >> setUp [
 
 	super setUp.
 	
 	cogit := SimpleStackBasedCogit new setInterpreter: memory coInterpreter.
 	memory nilObject: 24.
+	memory trueObject: 40.
+	memory falseObject: 56.
+	
 	memory hiddenRootsObject: 100.
 	
 	cogit methodZone manageFrom: 0 to: 23.
@@ -208,28 +217,110 @@ VMCogBytecodeTest >> setUp [
 
 ]
 
-{ #category : #tests }
-VMCogBytecodeTest >> testPushNil [
+{ #category : #'tests - single bytecode' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushConstantFalseBytecodePushesFalse [
 	
-	self compile: [ cogit genPushConstantNilBytecode ].	
+	self compile: [ cogit genPushConstantFalseBytecode ].	
 	self runGeneratedCode.
 	
-	self assert: (self popAddress) equals: 24
+	self assert: (self popAddress) equals: memory falseObject
 ]
 
-{ #category : #tests }
-VMCogBytecodeTest >> testPushNilAndThenReturn [
+{ #category : #'tests - two bytecodes' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushConstantNilAndThenReturn [
 	
 	self compile: [ 
 		cogit genPushConstantNilBytecode.
 		cogit genReturnTopFromMethod ] bytecodes: 2.	
 	self runGeneratedCode.
 	
-	self assert: (self returnValue) equals: 24
+	self assert: (self returnValue) equals: memory nilObject
 ]
 
-{ #category : #tests }
-VMCogBytecodeTest >> testReturnNilLeavesNilInReturnRegister [
+{ #category : #'tests - single bytecode' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushConstantNilBytecodePushesNil [
+	
+	self compile: [ cogit genPushConstantNilBytecode ].	
+	self runGeneratedCode.
+	
+	self assert: (self popAddress) equals: memory nilObject
+]
+
+{ #category : #'tests - single bytecode' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushConstantTrueBytecodePushesTrue [
+	
+	self compile: [ cogit genPushConstantTrueBytecode ].	
+	self runGeneratedCode.
+	
+	self assert: (self popAddress) equals: memory trueObject
+]
+
+{ #category : #'tests - single bytecode' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushConstantZeroBytecodePushesASmallIntegerZero [
+	
+	self compile: [ cogit genPushConstantZeroBytecode ].	
+	self runGeneratedCode.
+	
+	self assert: (self popAddress) equals: (memory integerObjectOf: 0)
+]
+
+{ #category : #'tests - single bytecode' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushQuickIntegerMinusOnePushesAMinusOne [
+	
+	cogit byte0: 116. 
+	
+	self compile: [ cogit genPushQuickIntegerConstantBytecode ].	
+	self runGeneratedCode.
+	
+	self assert: (self popAddress) equals: (memory integerObjectOf: -1)
+]
+
+{ #category : #'tests - single bytecode' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushQuickIntegerOnePushesOne [
+	
+	cogit byte0: 118. 
+	
+	self compile: [ cogit genPushQuickIntegerConstantBytecode ].	
+	self runGeneratedCode.
+	
+	self assert: (self popAddress) equals: (memory integerObjectOf: 1)
+]
+
+{ #category : #'tests - single bytecode' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushQuickIntegerTwoPushesTwo [
+	
+	cogit byte0: 119. 
+	
+	self compile: [ cogit genPushQuickIntegerConstantBytecode ].	
+	self runGeneratedCode.
+	
+	self assert: (self popAddress) equals: (memory integerObjectOf: 2)
+]
+
+{ #category : #'tests - single bytecode' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushQuickIntegerZeroPushesAZero [
+	
+	cogit byte0: 117. 
+	
+	self compile: [ cogit genPushQuickIntegerConstantBytecode ].	
+	self runGeneratedCode.
+	
+	self assert: (self popAddress) equals: (memory integerObjectOf: 0)
+]
+
+{ #category : #'tests - single bytecode' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushReceiverBytecodePushesTheReceiver [
+
+	self receiverRegister: 75. 
+	
+	self compile: [ cogit genPushReceiverBytecode ].	
+	self runGeneratedCode.
+	
+	self assert: (self popAddress) equals: 75
+]
+
+{ #category : #'tests - single bytecode' }
+VMSimpleStackBasedCogitBytecodeTest >> testReturnNilLeavesNilInReturnRegister [
 
 	self compile: [ cogit genReturnNil ].	
 	self runUntilReturn.
@@ -237,8 +328,8 @@ VMCogBytecodeTest >> testReturnNilLeavesNilInReturnRegister [
 	self assert: self returnValue equals: 24
 ]
 
-{ #category : #tests }
-VMCogBytecodeTest >> testReturnNilReturnsToCaller [
+{ #category : #'tests - single bytecode' }
+VMSimpleStackBasedCogitBytecodeTest >> testReturnNilReturnsToCaller [
 
 	self compile: [ cogit genReturnNil ].	
 	self runUntilReturn.
@@ -247,7 +338,17 @@ VMCogBytecodeTest >> testReturnNilReturnsToCaller [
 ]
 
 { #category : #helpers }
-VMCogBytecodeTest >> wordSize [
+VMSimpleStackBasedCogitBytecodeTest >> wordSize [
 	
 	^ memory wordSize
+]
+
+{ #category : #'helpers - registers' }
+VMSimpleStackBasedCogitBytecodeTest >> writeRegister: anUcX86Registers value: anInteger [ 
+
+	| value |
+	value := ByteArray new: self wordSize.
+	value integerAt: 1 put: anInteger size: self wordSize signed: false.
+	unicorn register: anUcX86Registers value write: value.
+
 ]

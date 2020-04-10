@@ -1,6 +1,12 @@
 Extension { #name : #Cogit }
 
 { #category : #'*VMMakerTests' }
+Cogit >> byte0: anInteger [
+
+	byte0 := anInteger
+]
+
+{ #category : #'*VMMakerTests' }
 Cogit >> inBlock: anInteger [ 
 	inBlock := anInteger
 ]
