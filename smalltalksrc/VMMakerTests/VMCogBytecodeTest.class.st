@@ -6,10 +6,41 @@ Class {
 		'codeSize',
 		'lastAddress',
 		'unicorn',
-		'rdxValue'
+		'callerAddress',
+		'registerValue'
 	],
 	#category : #VMMakerTests
 }
+
+{ #category : #helpers }
+VMCogBytecodeTest >> compile: aBlockClosure opcodes: anInteger [ 
+
+	cogit allocateOpcodes: anInteger bytecodes: 1 ifFail: [ self fail ].
+	cogit zeroOpcodeIndex.
+	
+	aBlockClosure value.
+
+	cogit methodLabel address: 0.
+	cogit computeMaximumSizes.
+	
+	codeSize := cogit generateInstructionsAt: 0 "methodLabel address + headerSize?".
+	cogit methodZone allocate: codeSize.
+	lastAddress := cogit outputInstructionsAt: 0.
+
+	
+	"Install the code in the memory"
+	unicorn
+		memoryAt: 16r1000000
+		write: memory memory asByteArray
+		size: lastAddress.
+
+]
+
+{ #category : #tests }
+VMCogBytecodeTest >> instructionPointer [
+
+	^ self readRegister: UcX86Registers rip
+]
 
 { #category : #helpers }
 VMCogBytecodeTest >> newInterpreter [
@@ -21,6 +52,60 @@ VMCogBytecodeTest >> newInterpreter [
 VMCogBytecodeTest >> newMemory [
 
 	^ Spur64BitMMLECoSimulator new
+]
+
+{ #category : #helpers }
+VMCogBytecodeTest >> push: aByteArray [
+
+	| stackAddress stackAddressIntegerValue |
+
+	self assert: aByteArray size equals: self wordSize.
+
+	stackAddress := ByteArray new: self wordSize.
+	
+	unicorn register: UcX86Registers rsp value readInto: stackAddress. 
+
+	"Getting address from stack register"
+	stackAddressIntegerValue := stackAddress integerAt: 1 size: self wordSize signed: false.
+
+	"Updating SP"
+	stackAddressIntegerValue := stackAddressIntegerValue - self wordSize.
+	stackAddress integerAt: 1 put: stackAddressIntegerValue size: self wordSize signed: false.
+	unicorn register: UcX86Registers rsp value write: stackAddress.
+	
+	"Putting the value in the stack memory"
+	unicorn
+		memoryAt: stackAddressIntegerValue
+		write: aByteArray
+		size: self wordSize.
+
+]
+
+{ #category : #helpers }
+VMCogBytecodeTest >> pushAddress: anInteger [
+
+	| aByteArray |
+	aByteArray := ByteArray new: self wordSize.
+	aByteArray integerAt: 1 put: anInteger size: self wordSize signed: false.
+	self push: aByteArray
+]
+
+{ #category : #tests }
+VMCogBytecodeTest >> readRegister: aRegisterID [
+
+	registerValue := ByteArray new: self wordSize.
+	unicorn register: aRegisterID value readInto: registerValue.
+	^ registerValue integerAt: 1 size: self wordSize signed: false
+]
+
+{ #category : #helpers }
+VMCogBytecodeTest >> runUntilReturn [
+
+	unicorn startAt: 16r1000000
+		until: callerAddress
+		timeout: 0
+		count: 0.
+
 ]
 
 { #category : #running }
@@ -51,6 +136,8 @@ VMCogBytecodeTest >> setUp [
 		withPermissions: UnicornConstants permissionAll.
 			
 	unicorn register: UcX86Registers rsp value write:  #[8 0 31 1 0 0 0 0]. 
+	callerAddress := 16r11E0000.
+	self pushAddress: callerAddress.	
 	
 	unicorn 
 		registerInvalidMemoryAccessHook: UcHookType invalidMemoryAccess value 
@@ -142,36 +229,14 @@ VMCogBytecodeTest >> testReturnNilLeavesNilInReturnRegister [
 { #category : #tests }
 VMCogBytecodeTest >> testReturnNilReturnsToCaller [
 
-	cogit allocateOpcodes: 2 bytecodes: 1 ifFail: [ self fail ].
-	cogit zeroOpcodeIndex.
-	
-	cogit genReturnNil .
+	self compile: [ cogit genReturnNil ] opcodes: 2.	
+	self runUntilReturn.
 
-	cogit methodLabel address: 0.
-	cogit computeMaximumSizes.
-	
-	codeSize := cogit generateInstructionsAt: 0 "methodLabel address + headerSize?".
-	cogit methodZone allocate: codeSize.
-	lastAddress := cogit outputInstructionsAt: 0.
-	
-	unicorn register: UcX86Registers rsp value write:  #[0 0 31 1 0 0 0 0]. 
-	unicorn
-		memoryAt: 16r11F0000
-		write:  #[0 0 30 1 0 0 0 0]
-		size: 8.
+	self assert: self instructionPointer equals: callerAddress
+]
 
-	"Install the code in the memory"
-	unicorn
-		memoryAt: 16r1000000
-		write: memory memory asByteArray
-		size: lastAddress.
+{ #category : #helpers }
+VMCogBytecodeTest >> wordSize [
 	
-	unicorn startAt: 16r1000000
-		until: 16r11E0000
-		timeout: 0
-		count: 0.
-
-	rdxValue := #[ 0 0 0 0 0 0 0 0].
-	unicorn register: UcX86Registers rip value readInto: rdxValue.
-	self assert: (rdxValue longAt: 1) equals: 16r11E0000
+	^ memory wordSize
 ]
