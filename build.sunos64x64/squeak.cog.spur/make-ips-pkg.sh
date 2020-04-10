@@ -1,6 +1,6 @@
 #!/bin/sh
 
-TARGET=squeak5.0.1-solaris11.3.p5p 
+TARGET=squeak5.0.2-solaris11.3.p5p 
 
 if [ -f $TARGET ]
 then
