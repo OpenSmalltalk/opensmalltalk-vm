@@ -17,7 +17,7 @@
 
 
 #ifdef _MSC_VER
-#include <windows.h>
+#include <Windows.h>
 #define HAVE_BOOLEAN 1 /* for jpegReaderWriter plugin compatibility */
 #endif
 

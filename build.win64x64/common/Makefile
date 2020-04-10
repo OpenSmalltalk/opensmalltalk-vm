@@ -123,7 +123,7 @@ DXDIR:=     $(PLATDIR)/win32/third-party/dx9sdk/Include
 # Toolchain
 #
 include ../common/Makefile.tools
- 
+
 INCLUDES:= -I. -I$(VMSRCDIR) -I$(WIN32DIR) -I$(CROSSDIR) $(XINC)
 
 .SUFFIXES:
@@ -132,6 +132,7 @@ INCLUDES:= -I. -I$(VMSRCDIR) -I$(WIN32DIR) -I$(CROSSDIR) $(XINC)
 #############################################################################
 # Common build rules
 #
+
 default: print-settings init $(VMEXE) $(CONSOLEVMEXE) $(DLLS) $(STRIPEXE) $(STRIPCONSOLEEXE) nukelibs
 
 svnver:

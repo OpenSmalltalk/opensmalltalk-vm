@@ -262,7 +262,7 @@ static sqInt isNonIntegerObject(sqInt objectPointer)
 #endif
 
 #if STACKVM
-extern void (*setInterruptCheckChain(void (*aFunction)(void)))();
+extern void *setInterruptCheckChain(void (*aFunction)(void));
 #else
 void (*setInterruptCheckChain(void (*aFunction)(void)))() { return 0; }
 #endif

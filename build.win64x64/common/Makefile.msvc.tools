@@ -21,7 +21,7 @@ CBD32=c:/cygwin64/usr/i686-w64-mingw32/bin
 ifdef MSVC
 WARNINGS:= -W4 -wd4100 -wd4668 -wd4255 -wd4555 -wd4706
 else ifdef Clang
-WARNINGS:= -Wall -Wno-unused-variable -Wno-unknown-pragmas -Wno-unused-value -Wno-unused-function -Wno-missing-variable-declarations -Wno-unused-macros -Wno-sign-compare -Wno-sign-conversion -Wno-pedantic -Wno-reserved-id-macro
+WARNINGS:= -Wall -Wno-unused-variable -Wno-unknown-pragmas -Wno-unused-value -Wno-unused-function -Wno-missing-variable-declarations -Wno-unused-macros -Wno-sign-compare -Wno-sign-conversion -Wno-pedantic -Wno-reserved-id-macro -Wno-undef
 else ifdef ClangC2
 WARNINGS:= -Wall -Wno-unused-variable -Wno-unknown-pragmas -Wno-unused-value -Wno-unused-function
 endif
