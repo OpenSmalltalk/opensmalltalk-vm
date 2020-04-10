@@ -320,6 +320,25 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushReceiverBytecodePushesTheReceiver
 ]
 
 { #category : #'tests - single bytecode' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushReceiverVariableBytecodeZeroPushesFirstVariable [
+
+	| obj |
+	cogit byte0: 0.
+	
+	obj := self newObjectWithSlots: 1.
+	
+	self receiverRegister: obj.
+	memory storePointer: 0 ofObject: obj withValue: memory falseObject.
+	
+	self syncMemory.
+	
+	self compile: [ cogit genPushReceiverVariableBytecode ].	
+	self runGeneratedCode.
+
+	self assert: self popAddress equals: memory falseObject
+]
+
+{ #category : #'tests - single bytecode' }
 VMSimpleStackBasedCogitBytecodeTest >> testReturnNilLeavesNilInReturnRegister [
 
 	self compile: [ cogit genReturnNil ].	
