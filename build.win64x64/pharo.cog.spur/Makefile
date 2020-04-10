@@ -17,7 +17,7 @@ include ../common/Makefile
 #
 include ../third-party/Makefile.pkgconfig
 include ../third-party/Makefile.freetype2
-include ../third-party/Makefile.openssl
+include ../third-party/Makefile.openssl.win64
 include ../third-party/Makefile.libssh2
 include ../third-party/Makefile.libgit2
 include ../third-party/Makefile.libsdl2
