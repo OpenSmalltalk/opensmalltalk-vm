@@ -14,16 +14,16 @@ Class {
 }
 
 { #category : #helpers }
-VMCogBytecodeTest >> compile: aBlockClosure opcodes: anInteger [ 
+VMCogBytecodeTest >> compile: aBlockClosure [ 
 
-	^ self compile: aBlockClosure opcodes: anInteger bytecodes: 1
+	^ self compile: aBlockClosure bytecodes: 1
 ]
 
 { #category : #helpers }
-VMCogBytecodeTest >> compile: aBlockClosure opcodes: amountOfInstructions bytecodes: bytecodes [
+VMCogBytecodeTest >> compile: aBlockClosure bytecodes: bytecodes [
 
-	opcodes := amountOfInstructions.
-	cogit allocateOpcodes: amountOfInstructions bytecodes: bytecodes ifFail: [ self fail ].
+	"We estimate the same ammount of bytecode as the Cogit"
+	cogit allocateOpcodes: (bytecodes + 10) * 10 bytecodes: bytecodes ifFail: [ self fail ].
 	cogit zeroOpcodeIndex.
 	
 	aBlockClosure value.
@@ -35,6 +35,7 @@ VMCogBytecodeTest >> compile: aBlockClosure opcodes: amountOfInstructions byteco
 	cogit methodZone allocate: codeSize.
 	lastAddress := cogit outputInstructionsAt: 0.
 
+	opcodes := cogit getOpcodeIndex .
 	
 	"Install the code in the memory"
 	unicorn
@@ -152,9 +153,9 @@ VMCogBytecodeTest >> returnValue [
 VMCogBytecodeTest >> runGeneratedCode [
 
 	unicorn startAt: 16r1000000
-		until: 16r1000000 + lastAddress - 1
+		until: 0
 		timeout: 0
-		count: 0.
+		count: opcodes.
 
 ]
 
@@ -210,8 +211,7 @@ VMCogBytecodeTest >> setUp [
 { #category : #tests }
 VMCogBytecodeTest >> testPushNil [
 	
-	1halt.
-	self compile: [ cogit genPushConstantNilBytecode ] opcodes: 1.	
+	self compile: [ cogit genPushConstantNilBytecode ].	
 	self runGeneratedCode.
 	
 	self assert: (self popAddress) equals: 24
@@ -222,7 +222,7 @@ VMCogBytecodeTest >> testPushNilAndThenReturn [
 	
 	self compile: [ 
 		cogit genPushConstantNilBytecode.
-		cogit genReturnTopFromMethod ] opcodes: 2 bytecodes: 2.	
+		cogit genReturnTopFromMethod ] bytecodes: 2.	
 	self runGeneratedCode.
 	
 	self assert: (self returnValue) equals: 24
@@ -231,7 +231,7 @@ VMCogBytecodeTest >> testPushNilAndThenReturn [
 { #category : #tests }
 VMCogBytecodeTest >> testReturnNilLeavesNilInReturnRegister [
 
-	self compile: [ cogit genReturnNil ] opcodes: 2.	
+	self compile: [ cogit genReturnNil ].	
 	self runUntilReturn.
 
 	self assert: self returnValue equals: 24
@@ -240,7 +240,7 @@ VMCogBytecodeTest >> testReturnNilLeavesNilInReturnRegister [
 { #category : #tests }
 VMCogBytecodeTest >> testReturnNilReturnsToCaller [
 
-	self compile: [ cogit genReturnNil ] opcodes: 2.	
+	self compile: [ cogit genReturnNil ].	
 	self runUntilReturn.
 
 	self assert: self instructionPointer equals: callerAddress
