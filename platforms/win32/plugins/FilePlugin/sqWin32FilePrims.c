@@ -37,6 +37,7 @@ extern struct VirtualMachine *interpreterProxy;
 
 #define true  1
 #define false 0
+static const DWORD MAX_DWORD = 4294967295;
 
 #define FILE_HANDLE(f) ((HANDLE) (f)->file)
 #define FAIL() { return interpreterProxy->primitiveFail(); }
@@ -511,10 +512,24 @@ squeakFileOffsetType sqImageFilePosition(sqImageFile h)
 size_t sqImageFileRead(void *ptr, size_t sz, size_t count, sqImageFile h)
 {
   DWORD dwReallyRead;
+
+  size_t reallyRead = 0;
+
+  size_t totalToRead = count * sz;
+
   squeakFileOffsetType position;
-	
+
+  if (totalToRead > (size_t)MAX_DWORD - 1) {
+    while (reallyRead != totalToRead) {
+      DWORD toRead = (totalToRead - reallyRead) > (size_t)MAX_DWORD ? MAX_DWORD : totalToRead - reallyRead;
+      ReadFile((HANDLE)(h - 1), (LPVOID)((sqInt)ptr + (sqInt)reallyRead), toRead, &dwReallyRead, NULL);
+      reallyRead += dwReallyRead;
+    }
+    return (reallyRead / sz);
+  }
+
   position = sqImageFilePosition(h);
-  ReadFile((HANDLE)(h-1), (LPVOID) ptr, count*sz, &dwReallyRead, NULL);
+  ReadFile((HANDLE)(h - 1), (LPVOID)ptr, count * sz, &dwReallyRead, NULL);
   while(dwReallyRead != (DWORD)(count*sz)) {
     DWORD err = GetLastError();
     if(sqMessageBox(MB_ABORTRETRYIGNORE, TEXT("Squeak Warning"),TEXT("Image file read problem (%d out of %d bytes read)"), dwReallyRead, count*sz)
@@ -522,7 +537,7 @@ size_t sqImageFileRead(void *ptr, size_t sz, size_t count, sqImageFile h)
     sqImageFileSeek(h, position);
     ReadFile((HANDLE)(h-1), (LPVOID) ptr, count*sz, &dwReallyRead, NULL);
   }
-  return (dwReallyRead / sz);
+  return (size_t)(dwReallyRead / sz);
 }
 
 squeakFileOffsetType sqImageFileSeek(sqImageFile h, squeakFileOffsetType pos)
@@ -543,9 +558,20 @@ squeakFileOffsetType sqImageFileSeekEnd(sqImageFile h, squeakFileOffsetType pos)
 
 size_t sqImageFileWrite(const void *ptr, size_t sz, size_t count, sqImageFile h)
 {
+  size_t reallyWritten =0;
   DWORD dwReallyWritten;
-  WriteFile((HANDLE)(h-1), (LPVOID) ptr, count*sz, &dwReallyWritten, NULL);
-  return (size_t) (dwReallyWritten / sz);
+  size_t totalToWrite = count * sz;
+  if (totalToWrite < (size_t)MAX_DWORD -1) {
+    WriteFile((HANDLE)(h - 1), (LPVOID)ptr, count * sz, &dwReallyWritten, NULL);
+    return (size_t)(dwReallyWritten / sz);
+  }
+
+  while (reallyWritten != totalToWrite) {
+    DWORD toWrite = (totalToWrite - reallyWritten) > (size_t) MAX_DWORD ? MAX_DWORD : totalToWrite - reallyWritten;
+    WriteFile((HANDLE)(h - 1), (LPVOID)((sqInt)ptr + (sqInt) reallyWritten), toWrite, &dwReallyWritten, NULL);
+    reallyWritten += dwReallyWritten;
+  }
+  return (size_t) (reallyWritten / sz);
 }
 
 squeakFileOffsetType sqImageFileSize(sqImageFile h)
