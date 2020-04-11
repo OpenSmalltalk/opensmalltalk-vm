@@ -63,9 +63,9 @@ typedef struct windowDescriptorBlock {
 } windowDescriptorBlock;
 
 windowDescriptorBlock *windowBlockFromHandle(wHandleType windowHandle);
-sqInt windowIndexFromBlock( windowDescriptorBlock * thisWindow);
-sqInt windowIndexFromHandle(wHandleType windowHandle);
+wIndexType windowIndexFromBlock( windowDescriptorBlock * thisWindow);
+wIndexType windowIndexFromHandle(wHandleType windowHandle);
 wHandleType windowHandleFromIndex(wIndexType windowIndex);
 windowDescriptorBlock *AddWindowBlock(void);
-windowDescriptorBlock *windowBlockFromIndex(sqInt windowIndex);
+windowDescriptorBlock *windowBlockFromIndex(wIndexType windowIndex);
 sqInt getCurrentIndexInUse(void);
