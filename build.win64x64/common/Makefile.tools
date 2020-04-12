@@ -51,8 +51,8 @@ CFLAGS:= -fdeclspec -msse2 -ggdb2 -m64 \
 	-mno-rtd -mms-bitfields $(OFLAGS) $(NOBUILTIN) $(WARNINGS)
 
 TZ:=$(shell date +%Z)
-DEFS:=	$(COGDEFS) $(WINVER) -DWIN64=1 -DWIN32_FILE_SUPPORT -DNO_ISNAN \
-		-DNO_SERVICE -D'TZ="$(TZ)"' \
+DEFS:=	-D$(VM)VM=1 $(COGDEFS) $(WINVER) \
+		-DWIN64=1 -DWIN32_FILE_SUPPORT -DNO_ISNAN -DNO_SERVICE \
 		$(NDEBUG) -DLSB_FIRST -D'VM_NAME="$(VM_NAME)"' $(XDEFS) $(CROQUET)
 
 #############################################################################
@@ -79,6 +79,7 @@ STDLIBS:= -lddraw -ldinput -lopengl32 -lws2_32 -lcomdlg32 -lole32 -lwinmm \
 AR:= $(TOOLPREFIX)ar rc
 CP:= cp
 RM:= rm
+SED:=sed
 NM:= $(TOOLPREFIX)nm
 DLLTOOL:=	$(TOOLPREFIX)dlltool
 DLLWRAP:=	$(TOOLPREFIX)dllwrap

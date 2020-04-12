@@ -25,14 +25,16 @@ extern MSG *lastMessage;
 LRESULT CALLBACK HostWndProcA(HWND hwnd,
                               UINT message,
                               WPARAM wParam,
-                              LPARAM lParam) {
+                              LPARAM lParam)
+{
   return DefWindowProc(hwnd, message, wParam, lParam);
 }
 
 LRESULT CALLBACK HostWndProcW (HWND hwnd,
                               UINT message,
                               WPARAM wParam,
-                              LPARAM lParam) {
+                              LPARAM lParam)
+{
   RECT boundingRect;
 
  switch(message){
@@ -140,7 +142,9 @@ LRESULT CALLBACK HostWndProcW (HWND hwnd,
 
 /* closeWindow: arg is int windowIndex. Fail (return 0) if anything goes wrong
  * - typically the windowIndex invalid or similar */
-sqInt closeWindow(sqInt windowIndex) {
+sqInt
+closeWindow(sqIntptr_t windowIndex)
+{
   HWND hwnd = (windowIndex == 1 ? stWindow : ((HWND)windowIndex));
   if (!IsWindow(hwnd)) return 0;
   DestroyWindow(hwnd);
@@ -152,7 +156,9 @@ sqInt closeWindow(sqInt windowIndex) {
  * Failure may occur because of an inability to add the window, too many
  * windows already extant (platform dependant), the specified size being
  * unreasonable etc. */
-sqInt createWindowWidthheightoriginXyattrlength(sqInt w, sqInt h, sqInt x, sqInt y, char * list, sqInt attributeListLength) {
+sqInt
+createWindowWidthheightoriginXyattrlength(sqInt w, sqInt h, sqInt x, sqInt y, char * list, sqInt attributeListLength)
+{
   HWND hwnd;
 
   WNDCLASS wc;
@@ -196,10 +202,12 @@ sqInt createWindowWidthheightoriginXyattrlength(sqInt w, sqInt h, sqInt x, sqInt
 
 /* ioShowDisplayOnWindow: similar to ioShowDisplay but adds the int windowIndex
  * Return true if ok, false if not, but not currently checked */
-sqInt ioShowDisplayOnWindow(unsigned char* dispBits, sqInt width, 
+sqInt
+ioShowDisplayOnWindow(unsigned char* dispBits, sqInt width, 
 			    sqInt height, sqInt depth, sqInt affectedL, 
 			    sqInt affectedR, sqInt affectedT, sqInt affectedB, 
-			    sqInt windowIndex) {
+			    sqIntptr_t windowIndex)
+{
   HWND hwnd = (windowIndex == 1 ? stWindow : ((HWND)windowIndex));
   HDC dc;
   BITMAPINFO *bmi;
@@ -234,9 +242,7 @@ sqInt ioShowDisplayOnWindow(unsigned char* dispBits, sqInt width,
 
   bmi = BmiForDepth(depth);
   if (!bmi)
-    {
   	return 0;
-    }
 
   /* reverse the image bits if necessary */
 
@@ -255,7 +261,7 @@ sqInt ioShowDisplayOnWindow(unsigned char* dispBits, sqInt width,
   dc = GetDC(hwnd);
   if (!dc) {
     printLastError(TEXT("ioShowDisplayBits: GetDC() failed"));
-    return 0;
+	return 0;
   }
 
 
@@ -329,7 +335,9 @@ sqInt ioShowDisplayOnWindow(unsigned char* dispBits, sqInt width,
  * Return -1 for failure - typically invalid windowIndex
  * -1 is chosen since itwould correspond to a window size of 64k@64k which
  * I hope is unlikely for some time to come */
-sqInt ioSizeOfWindow(sqInt windowIndex) {
+sqInt
+ioSizeOfWindow(sqIntptr_t windowIndex)
+{
   HWND hwnd = (windowIndex == 1 ? stWindow : ((HWND)windowIndex));
   RECT boundingRect;
   int wsize;
@@ -337,7 +345,7 @@ sqInt ioSizeOfWindow(sqInt windowIndex) {
   if ((GetWindowRect(hwnd, &boundingRect)) != 0){
 
     wsize = ((boundingRect.right - boundingRect.left) << 16)| (boundingRect.bottom - boundingRect.top);
-    return wsize;
+	return wsize;
   }
   return -1;
 }
@@ -345,80 +353,90 @@ sqInt ioSizeOfWindow(sqInt windowIndex) {
 /* ioSizeOfWindowSetxy: args are int windowIndex, int w & h for the
  * width / height to make the window. Return the actual size the OS
  * produced in (width<<16 | height) format or -1 for failure as above. */
-sqInt ioSizeOfWindowSetxy(sqInt windowIndex, sqInt w, sqInt h) {
+sqInt
+ioSizeOfWindowSetxy(sqIntptr_t windowIndex, sqInt w, sqInt h)
+{
   HWND hwnd = (windowIndex == 1 ? stWindow : ((HWND)windowIndex));
   RECT boundingRect;
-  int wsize;
  
-  if ((GetWindowRect(hwnd, &boundingRect)) == 0)return -1;
+  if ((GetWindowRect(hwnd, &boundingRect)) == 0)
+	return -1;
 
   if (MoveWindow(hwnd,
 		 boundingRect.left,
 		 boundingRect.top,
 		 w,
 		 h,
-		 TRUE)==0) return -1;
-  wsize = ioSizeOfWindow(windowIndex);
-  return wsize;
+		 TRUE)==0)
+	return -1;
+  return ioSizeOfWindow(windowIndex);
 }
 
 /* ioPositionOfWindow: arg is int windowIndex. Return the pos of the specified
  * window in (left<<16 | top) format like ioScreenSize.
  * Return -1 (as above) for failure - tpyically invalid windowIndex */
-sqInt ioPositionOfWindow(sqInt windowIndex) {
+sqInt
+ioPositionOfWindow(sqIntptr_t windowIndex)
+{
   HWND hwnd = (windowIndex == 1 ? stWindow : ((HWND)windowIndex));
   RECT boundingRect;
-  int wpos;
 
-  if ((GetWindowRect(hwnd, &boundingRect)) != 0){
-    wpos = ((boundingRect.left) << 16)| (boundingRect.top);
-    return wpos;
-  }
+  if ((GetWindowRect(hwnd, &boundingRect)) != 0)
+    return ((boundingRect.left) << 16)| (boundingRect.top);
   return -1;
 }
 
 /* ioPositionOfWindowSetxy: args are int windowIndex, int x & y for the
  * origin x/y for the window. Return the actual origin the OS
  * produced in (left<<16 | top) format or -1 for failure, as above */
-sqInt ioPositionOfWindowSetxy(sqInt windowIndex, sqInt x, sqInt y) {
+sqInt
+ioPositionOfWindowSetxy(sqIntptr_t windowIndex, sqInt x, sqInt y)
+{
   HWND hwnd = (windowIndex == 1 ? stWindow : ((HWND)windowIndex));
   RECT boundingRect;
-  int wpos;
 
-  if ((GetWindowRect(hwnd, &boundingRect)) == 0)return -1;
+  if ((GetWindowRect(hwnd, &boundingRect)) == 0)
+	return -1;
 
   if (MoveWindow(hwnd, x, y,
 		 (boundingRect.right - boundingRect.left),
 		 (boundingRect.bottom - boundingRect.top),
-		 TRUE)==0) return -1;
-  wpos = ioPositionOfWindow(windowIndex);
-  return wpos;
+		 TRUE)==0)
+	return -1;
+  return ioPositionOfWindow(windowIndex);
 }
 
 /* ioSetTitleOfWindow: args are int windowIndex, char* newTitle and
  * int size of new title. Fail with -1 if windowIndex is invalid, string is too long for platform etc. Leave previous title in place on failure */
-sqInt ioSetTitleOfWindow(sqInt windowIndex, char * newTitle, sqInt sizeOfTitle) {
+sqInt
+ioSetTitleOfWindow(sqIntptr_t windowIndex, char * newTitle, sqInt sizeOfTitle)
+{
   HWND hwnd = (windowIndex == 1 ? stWindow : ((HWND)windowIndex));
   char titleString[1024];
   WCHAR wideTitle[1024];
 
-  if (!IsWindow(hwnd)) return 0;
+  if (!IsWindow(hwnd))
+	return 0;
   if (sizeOfTitle > 1023) sizeOfTitle = 1023;
   strncpy(titleString, newTitle, sizeOfTitle);
   titleString[sizeOfTitle] = 0;
   MultiByteToWideChar(CP_UTF8, 0, titleString, -1, wideTitle, 1024);
-  if (SetWindowTextW(hwnd, wideTitle) == 0) return -1;
+  if (SetWindowTextW(hwnd, wideTitle) == 0)
+	return -1;
   return sizeOfTitle;
 }
 
 /* ioSetIconOfWindow: args are int windowIndex, char* iconPath and
  * int size of new logo path. If one of the function is failing, the logo is not set.
  */
-sqInt ioSetIconOfWindow(sqInt windowIndex, char * iconPath, sqInt sizeOfPath) {
+sqInt
+ioSetIconOfWindow(sqIntptr_t windowIndex, char * iconPath, sqInt sizeOfPath)
+{
 	WCHAR iconPathW[MAX_PATH + 1];
 	HWND hwnd = (windowIndex == 1 ? stWindow : ((HWND)windowIndex));
 	int len;
-	if (!IsWindow(hwnd)) return 0;
+	if (!IsWindow(hwnd))
+	  return 0;
 	len = MultiByteToWideChar(CP_UTF8, 0, iconPath, sizeOfPath, iconPathW, MAX_PATH);
 	if (len <= 0) return -1; /* invalid UTF8 ? */
 	iconPathW[len] = 0;
@@ -438,7 +456,8 @@ sqInt ioSetIconOfWindow(sqInt windowIndex, char * iconPath, sqInt sizeOfPath) {
  * Close all the windows that appear to be open.
  * No useful return value since we're getting out of Dodge anyway.
  */
-sqInt ioCloseAllWindows(void){
+sqInt
+ioCloseAllWindows(void){
 	return 0;
 }
 

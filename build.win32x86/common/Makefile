@@ -183,23 +183,23 @@ nukelibs:
 	rm $(LIBS)
 
 print-settings:
-	$(info ---------------- Makefile settings ------------------)
-	$(info CONFIGURATION=$(CONFIGURATION))
-	$(info THREADING=$(THREADING))
-	$(info VPATH=$(VPATH))
-	$(info INCLUDES=$(INCLUDES))
-	$(info CFLAGS=$(CFLAGS))
-	$(info INTERNAL_PLUGINS=$(INTERNAL_PLUGINS))
-	$(info EXTERNAL_PLUGINS=$(EXTERNAL_PLUGINS))
-	$(info OBJDIR=$(OBJDIR))
-	$(info LIBS=$(LIBS))
-	$(info DLLS=$(DLLS))
-	$(info -----------------------------------------------------)
+	$(info ---------------- Makefile settings ------------------)
+	$(info CONFIGURATION=$(CONFIGURATION))
+	$(info THREADING=$(THREADING))
+	$(info VPATH=$(VPATH))
+	$(info INCLUDES=$(INCLUDES))
+	$(info CFLAGS=$(CFLAGS))
+	$(info INTERNAL_PLUGINS=$(INTERNAL_PLUGINS))
+	$(info EXTERNAL_PLUGINS=$(EXTERNAL_PLUGINS))
+	$(info OBJDIR=$(OBJDIR))
+	$(info LIBS=$(LIBS))
+	$(info DLLS=$(DLLS))
+	$(info -----------------------------------------------------)
 
 print-objects:
-	$(info ---------------- Makefile objects ------------------)
-	$(info VMOBJ=$(VMOBJ))
-	$(info -----------------------------------------------------)
+	$(info ---------------- Makefile objects ------------------)
+	$(info VMOBJ=$(VMOBJ))
+	$(info -----------------------------------------------------)
 
 ignore := $(addsuffix .%, $(basename $(wildcard $(BUILD)/vm/*.ignore)))
 
@@ -270,6 +270,7 @@ $(OBJDIR)/%.lib: $(call plugin-makefile,$(*F))
 	rm -f $(BUILD)/vm/$(*F).ignore
 	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) \
+		"VM=$(VM)" "VM_NAME=$(VM_NAME)" \
 		CONFIGURATION=$(CONFIGURATION) TOOLPREFIX=$(TOOLPREFIX) \
 		THIRDPARTYOUTDIR=$(THIRDPARTYOUTDIR) \
 		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
@@ -282,6 +283,7 @@ $(OBJDIR)/%.dll: $(call plugin-makefile,$(*F))
 	rm -f $(BUILD)/$(*F).ignore
 	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) \
+		"VM=$(VM)" "VM_NAME=$(VM_NAME)" \
 		CONFIGURATION=$(CONFIGURATION) TOOLPREFIX=$(TOOLPREFIX) \
 		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
 		THIRDPARTYOUTDIR=$(THIRDPARTYOUTDIR) \

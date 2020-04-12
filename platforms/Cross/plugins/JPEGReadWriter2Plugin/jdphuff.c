@@ -198,9 +198,12 @@ start_pass_phuff_decoder (j_decompress_ptr cinfo)
  * On some machines, a shift and add will be faster than a table lookup.
  */
 
+/* MOI = MinusOneInt. N.B. signed left shift is now undefined. eem 20/04/07 */
+#define MOI (unsigned)-1
+
 #ifdef AVOID_TABLES
 
-#define HUFF_EXTEND(x,s)  ((x) < (1<<((s)-1)) ? (x) + (((-1)<<(s)) + 1) : (x))
+#define HUFF_EXTEND(x,s)  ((x) < (1<<((s)-1)) ? (x) + ((MOI<<(s)) + 1) : (x))
 
 #else
 
@@ -211,12 +214,14 @@ static const int extend_test[16] =   /* entry n is 2**(n-1) */
     0x0100, 0x0200, 0x0400, 0x0800, 0x1000, 0x2000, 0x4000 };
 
 static const int extend_offset[16] = /* entry n is (-1 << n) + 1 */
-  { 0, ((-1)<<1) + 1, ((-1)<<2) + 1, ((-1)<<3) + 1, ((-1)<<4) + 1,
-    ((-1)<<5) + 1, ((-1)<<6) + 1, ((-1)<<7) + 1, ((-1)<<8) + 1,
-    ((-1)<<9) + 1, ((-1)<<10) + 1, ((-1)<<11) + 1, ((-1)<<12) + 1,
-    ((-1)<<13) + 1, ((-1)<<14) + 1, ((-1)<<15) + 1 };
+  { 0, (MOI<<1) + 1, (MOI<<2) + 1, (MOI<<3) + 1, (MOI<<4) + 1,
+    (MOI<<5) + 1, (MOI<<6) + 1, (MOI<<7) + 1, (MOI<<8) + 1,
+    (MOI<<9) + 1, (MOI<<10) + 1, (MOI<<11) + 1, (MOI<<12) + 1,
+    (MOI<<13) + 1, (MOI<<14) + 1, (MOI<<15) + 1 };
 
 #endif /* AVOID_TABLES */
+
+#define MINUS_ONE_INT (unsigned)-1
 
 
 /*

@@ -169,9 +169,9 @@ AtomicGet(uint64_t *target)
 							: "memory", "eax", "ebx", "ecx", "edx", "cc")
 #  endif /* __SSE2__ */
 
-# elif defined(_MSC_VER) && (defined(_M_IX86) || defined(_X86_) || defined(i386))
+# elif defined(_MSC_VER) &&	(defined(_M_IX86) || defined(_X86_) || defined(i386))
 
-# pragma message(" TODO: verify thoroughly")
+#	pragma message(" TODO: verify thoroughly")
 /* see http://web.archive.org/web/20120411073941/http://www.niallryan.com/node/137 */
 
 static __inline void
@@ -241,6 +241,16 @@ AtomicGet(__int64 *target)
 #if TARGET_OS_IS_IPHONE
 # define sqAtomicAddConst(var,n) (assert(sizeof(var) == 4), OSAtomicAdd32(n,&(var))
 
+#elif defined(_MSC_VER)
+#	define sqAtomicAddConst(var,n) do {\
+	if (sizeof(var) == sizeof(int)) \
+		InterlockedAdd(&var,n); \
+	else if (sizeof(var) == 8) \
+		InterlockedAdd64(&var,n); \
+	else \
+		error("no interlocked add for this variable size"); \
+	} while (0)
+
 #elif defined(__GNUC__) || defined(__clang__)
 /* N.B. I know you want to use the intrinsics; they're pretty; they're official;
  * they're portable.  But they only apply to int, long and long long sizes.
@@ -259,6 +269,7 @@ AtomicGet(__int64 *target)
 	else \
 		asm volatile ("lock addl %1, %0" : "=m" (var) : "i" (n), "m" (var)); \
 	} while (0)
+
 # elif defined(x86_64) || defined(__x86_64) || defined(__x86_64__)
 #	define ATOMICADD16 1
 #	define sqAtomicAddConst(var,n) do {\
@@ -271,18 +282,10 @@ AtomicGet(__int64 *target)
 	else \
 		asm volatile ("lock addq %1, %0" : "=m" (var) : "i" (n), "m" (var)); \
 	} while (0)
+
 # elif GCC_HAS_BUILTIN_SYNC || defined(__clang__)
 #	define sqAtomicAddConst(var,n) __sync_fetch_and_add((sqInt *)&(var), n)
 # endif
-#elif defined(_MSC_VER)
-#	define sqAtomicAddConst(var,n) do {\
-	if (sizeof(var) == sizeof(int)) \
-		InterlockedAdd(&var,n); \
-	else if (sizeof(var) == 8) \
-		InterlockedAdd64(&var,n); \
-	else \
-		error("no interlocked add for this variable size"); \
-	} while (0)
 #endif
 
 #if !defined(sqAtomicAddConst)
@@ -307,6 +310,10 @@ AtomicGet(__int64 *target)
 		? OSAtomicCompareAndSwap64(old, new, &var) \
 		: OSAtomicCompareAndSwap32(old, new, &var))
 
+#elif defined(_MSC_VER)
+#	define sqCompareAndSwap(var,old,new) \
+	InterlockedCompareExchange(&(var), new, old)
+
 #elif defined(__GNUC__) || defined(__clang__)
 # if GCC_HAS_BUILTIN_SYNC || defined(__clang__)
 #	define sqCompareAndSwap(var,old,new) \
@@ -329,9 +336,6 @@ AtomicGet(__int64 *target)
 	} while (0)
 # endif
 
-#elif defined(_MSC_VER)
-#	define sqCompareAndSwap(var,old,new) \
-	InterlockedCompareExchange(&(var), new, old)
 #else
 /* Dear implementor, you have choices.  Google atomic compare and swap and you
  * will find a number of alternative implementations.

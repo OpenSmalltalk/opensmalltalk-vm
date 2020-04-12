@@ -123,7 +123,7 @@ DXDIR:=     $(PLATDIR)/win32/third-party/dx9sdk/Include
 # Toolchain
 #
 include ../common/Makefile.tools
- 
+
 INCLUDES:= -I. -I$(VMSRCDIR) -I$(WIN32DIR) -I$(CROSSDIR) $(XINC)
 
 .SUFFIXES:
@@ -132,6 +132,7 @@ INCLUDES:= -I. -I$(VMSRCDIR) -I$(WIN32DIR) -I$(CROSSDIR) $(XINC)
 #############################################################################
 # Common build rules
 #
+
 default: print-settings init $(VMEXE) $(CONSOLEVMEXE) $(DLLS) $(STRIPEXE) $(STRIPCONSOLEEXE) nukelibs
 
 svnver:
@@ -269,6 +270,7 @@ $(OBJDIR)/%.lib: $(call plugin-makefile,$(*F))
 	rm -f $(BUILD)/vm/$(*F).ignore
 	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) \
+		"VM=$(VM)" "VM_NAME=$(VM_NAME)" \
 		CONFIGURATION=$(CONFIGURATION) TOOLPREFIX=$(TOOLPREFIX) \
 		THIRDPARTYOUTDIR=$(THIRDPARTYOUTDIR) \
 		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
@@ -281,6 +283,7 @@ $(OBJDIR)/%.dll: $(call plugin-makefile,$(*F))
 	rm -f $(BUILD)/$(*F).ignore
 	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) \
+		"VM=$(VM)" "VM_NAME=$(VM_NAME)" \
 		CONFIGURATION=$(CONFIGURATION) TOOLPREFIX=$(TOOLPREFIX) \
 		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
 		THIRDPARTYOUTDIR=$(THIRDPARTYOUTDIR) \

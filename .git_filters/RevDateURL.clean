@@ -1,6 +1,11 @@
-#!/usr/bin/perl -p
+#!/usr/bin/env perl
+while (<>) {
 
 s/\$Date[^\$]*\$/\$Date\$/;
 s/\$Rev[^\$]*\$/\$Rev\$/;
 s/\$URL[^\$]*\$/\$URL\$/;
 s/\$CommitHash[^\$]*\$/\$CommitHash\$/;
+
+} continue {
+    print or die "-p destination: $!\n";
+}

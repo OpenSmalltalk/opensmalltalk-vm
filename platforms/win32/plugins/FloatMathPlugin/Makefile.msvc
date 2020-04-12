@@ -1,0 +1,10 @@
+#############################################################################
+# Plugin Makefile for Win32/64 VM using MSVC, e.g. 2017 Community, and gnu make
+# Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
+#############################################################################
+
+include ../common/Makefile.msvc.plugin
+
+# MSVC v6 (as does gcc 2.95.x) screws up the FloatMathPlugin under optimization
+# SO disable optmization
+OFLAGS= -Od

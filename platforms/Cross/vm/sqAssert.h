@@ -14,9 +14,13 @@
  */
 
 #pragma auto_inline(off)
+#if defined(EXPORT) && !defined(SQUEAK_BUILTIN_PLUGIN)
+EXPORT(void) warning(char *);
+EXPORT(void) warningat(char *,int);
+#else
 extern void warning(char *);
 extern void warningat(char *,int);
-void error(char *s);
+#endif
 #pragma auto_inline(on)
 
 #undef assert
@@ -32,46 +36,28 @@ void error(char *s);
 # define eassert(expr) 0 /* hack disabling of asserts.  Better in makefile? */
 # define PRODUCTION 1
 #elif defined(_MSC_VER)
-# ifdef SQUEAK_EXTERNAL_PLUGIN
-static void (*warnfp)(char *) = 0;
-static void (*warnatfp)(char *,int) = 0;
-# endif
-static inline int warningIf(int condition, char *message)
+static inline sqInt warningIfNot(sqInt condition, char *message)
 {
     if (!condition)
-        return 1;
-#	ifdef SQUEAK_EXTERNAL_PLUGIN
-	if (!warnfp)
-		warnfp = (void (*)(char *))GetProcAddress(GetModuleHandle(0),"warning");
-	warnfp(message);
-#	else
-	warning(message);
-#	endif
-	return 0;
+		warning(message);
+	return condition;
 }
 
-static inline int warningIfAt(int condition, char *message, int line)
+static inline sqInt warningIfNotAt(sqInt condition, char *message, int line)
 {
     if (!condition)
-        return 1;
-#	ifdef SQUEAK_EXTERNAL_PLUGIN
-	if (!warnatfp)
-		warnatfp = (void (*)(char *,int))GetProcAddress(GetModuleHandle(0),"warningat");
-	warnatfp(message, line);
-#	else
-	warningat(message, line);
-#	endif
-	return 0;
+		warningat(message, line);
+	return condition;
 }
 
-# define assert(expr)  warningIf(!(expr), #expr " " __stringifyNum(__LINE__))
-# define asserta(expr) warningIf(!(expr), #expr " " __stringifyNum(__LINE__))
+# define assert(expr)  warningIfNot(expr, #expr " " __stringifyNum(__LINE__))
+# define asserta(expr) warningIfNot(expr, #expr " " __stringifyNum(__LINE__))
 # define assertf(msg)  (warning(#msg " " __stringifyNum(__LINE__)),0)
-# define assertl(expr,line)  warningIfAt(!(expr), #expr, line)
-# define assertal(expr,line) warningIfAt(!(expr), #expr, line)
+# define assertl(expr,line)  warningIfNotAt(expr, #expr, line)
+# define assertal(expr,line) warningIfNotAt(expr, #expr, line)
 # define assertfl(msg,line)  (warningat(#msg,line),0)
 extern char expensiveAsserts;
-# define eassert(expr)  warningIf(expensiveAsserts && !(expr), #expr " " __stringifyNum(__LINE__))
+# define eassert(expr)  warningIfNot(!expensiveAsserts || !(expr), #expr " " __stringifyNum(__LINE__))
 # define PRODUCTION 0
 #else
 # define assert(expr)  ((expr)||(warning(#expr " " __stringifyNum(__LINE__)),0))

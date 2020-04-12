@@ -3,7 +3,21 @@
  */
 #include <errno.h>
 #include <sys/types.h>
-#include <unistd.h>
+#if _MSC_VER
+# include <sys/stat.h>
+# define  S_IRUSR S_IREAD
+# define  S_IWUSR S_IWRITE
+# define  S_IXUSR S_IEXEC
+# define  S_IRGRP (S_IREAD >> 3)
+# define  S_IWGRP (S_IWRITE >> 3)
+# define  S_IXGRP (S_IEXEC >> 3)
+# define  S_IROTH (S_IREAD >> 6)
+# define  S_IWOTH (S_IWRITE >> 6)
+# define  S_IXOTH (S_IEXEC >> 6)
+# define S_ISDIR(m)  (((m) & S_IFMT) == S_IFDIR)
+#else
+# include <unistd.h>
+#endif
 #include <assert.h>
 
 #include "sq.h"
@@ -303,25 +317,24 @@ int	i;
  */
 sqInt faCheckFindData(fapath *aFaPath, sqInt closeFind)
 {
-sqInt	sz;
 sqInt	status;
 sqInt	haveEntry;
 
-haveEntry = FALSE;
-do {
-	if ((!(aFaPath->findData.cFileName[0] == L'.' && 
-		aFaPath->findData.cFileName[1] == 0)) 
-		&& wcscmp(aFaPath->findData.cFileName, L".."))
-			haveEntry = TRUE;
-	else {
-		status = FindNextFileW(aFaPath->directoryHandle, &aFaPath->findData);
-		if (status == 0) {
-			if (closeFind == 1)
-				FindClose(aFaPath->directoryHandle);
-			return FA_NO_MORE_DATA;
+	haveEntry = FALSE;
+	do {
+		if ((!(aFaPath->findData.cFileName[0] == L'.' && 
+			aFaPath->findData.cFileName[1] == 0)) 
+			&& wcscmp(aFaPath->findData.cFileName, L".."))
+				haveEntry = TRUE;
+		else {
+			status = FindNextFileW(aFaPath->directoryHandle, &aFaPath->findData);
+			if (status == 0) {
+				if (closeFind == 1)
+					FindClose(aFaPath->directoryHandle);
+				return FA_NO_MORE_DATA;
+			}
 		}
-	}
-} while (!haveEntry);
+	} while (!haveEntry);
 
 	status = faSetPlatFile(aFaPath, aFaPath->findData.cFileName);
 	if (status) return status;

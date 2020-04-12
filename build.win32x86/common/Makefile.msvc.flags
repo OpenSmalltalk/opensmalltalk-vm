@@ -1,0 +1,115 @@
+#############################################################################
+# Common Makefile for Win32 VM using MSVC, e.g. 2017 Community, and gnu make
+# Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
+#
+# Compilation rules and flags for plugins built with the MSVC toolchain, such
+# as the SoundPlugin.
+#############################################################################
+
+ARCH:=x86
+
+# Find out where the MSVC tools are if not already defined.
+ifeq ($(VCToolsInstallDir),)
+# For wildcard we /must/ escape spaces and /must not/ escape parentheses.
+RT:=C:/Program\ Files\ (x86)/Microsoft\ Visual\ Studio/2017/Community/VC/Tools/MSVC
+VCToolsInstallDir:=$(wildcard $(RT)/*)
+else
+# If VCToolsInstallDir is taken from the environment then modify it to use the
+# Unix / file separator, so that subsequent rules work in both cygwin or cmd
+override VCToolsInstallDir:=$(subst \,/,$(VCToolsInstallDir))
+endif
+$(info VCToolsInstallDir found to be $(VCToolsInstallDir))
+override VCINSTALLDIR:=$(subst \,/,$(VCINSTALLDIR))
+# For wildcard we /must/ escape spaces and /must not/ escape parentheses.
+# For shell we escape spaces and parentheses.
+# It shouldn't be this hard, but it is...
+override VCINSTALLDIR:=$(shell echo "$(VCINSTALLDIR)" | sed 's/ /\\ /g')
+override VCINSTALLDIRSH:=$(shell echo "$(VCINSTALLDIR)" | sed 's/[()]/\\&/g')
+
+#############################################################################
+# C compiler settings Visual C++ 2017 Community Edition
+#
+# Now choose the compiler.  If Clang/C2 has been installed use it, otherwise
+# use MSVC
+
+$(info VCINSTALLDIR=$(VCINSTALLDIR))
+$(info VCINSTALLDIRSH=$(VCINSTALLDIRSH))
+#$(info wildcard VCINSTALLDIR $(wildcard $(VCINSTALLDIR)/.*))
+#$(info wildcard VCINSTALLDIR/Tools/ClangC2 $(wildcard $(VCINSTALLDIR)/Tools/ClangC2/.*))
+#$(info wildcard VCINSTALLDIR/Tools/ClangC3 $(wildcard $(VCINSTALLDIR)/Tools/ClangC3/.*))
+ifneq ($(wildcard $(VCINSTALLDIR)/Tools/ClangC2/.*),)
+$(info Clang/C2 detected)
+#$(info shell echo VCINST...SH/./clang.exe $(shell echo $(VCINSTALLDIRSH)Tools/ClangC2/*/bin/HostX64/clang.exe))
+CC:="$(shell echo $(VCINSTALLDIRSH)Tools/ClangC2/*/bin/HostX64/clang.exe)"
+ClangC2:=ClangC2
+undefine MSVC
+LINKERARGS=-Xlinker
+CLANG_ADAPT:=-fmsc-version=1916 # as reported by boost for MSVC Community 2017
+CLANG_LINK_ADAPT:=-defaultlib:libcmt
+CLANG_VERSION:=$(basename $(dir $(dir $(dir $(CC)))))
+$(info CLANG_VERSION=$(CLANG_VERSION))
+PATH:=$(PATH):$(dir $(shell echo $(VCINSTALLDIRSH)Tools/ClangC2/*/bin/HostX64/clang.exe))x86
+$(info $$PATH=$(PATH))
+else
+$(info Clang/C2 not found)
+override TOOLPREFIX:="$(VCToolsInstallDir)bin/HostX64/x86/"
+MSVC:=MSVC
+undefine ClangC2
+LINKERARGS=/link
+CC:=$(TOOLPREFIX)cl.exe -nologo
+endif
+$(info CC=$(CC))
+
+
+ifeq ($(WindowsSdkDir),)
+WindowsSdkDir:=C:/Program Files (x86)/Windows Kits/10/
+else
+override WindowsSdkDir:=$(subst \,/,$(WindowsSdkDir))
+endif
+ifeq ($(WindowsSDKVersion),)
+WindowsSDKVersion:=10.0.15063.0
+endif
+ifeq ($(INCLUDE),)
+INCLUDE:=$(VCToolsInstallDir)/ATLMFC/include;$(VCToolsInstallDir)/include;$(WindowsSdkDir)/include/$(WindowsSDKVersion)/shared;$(WindowsSdkDir)/include/$(WindowsSDKVersion)/ucrt;$(WindowsSdkDir)/include/$(WindowsSDKVersion)/um;$(WindowsSdkDir)/include/$(WindowsSDKVersion)/winrt
+INCLUDE:=$(subst //,/,$(INCLUDE))
+INCLUDE:=$(subst /,\,$(INCLUDE))
+#$(info INCLUDE is $(INCLUDE))
+endif
+MSVCINCLUDES:=-I"$(subst \,/,$(subst ;," -I",$(INCLUDE)))"
+#$(info MSVCINCLUDES is $(MSVCINCLUDES))
+
+# DO NOT USE := FOR OFLAGS BECAUSE SOME PLUGINS REDEFINE THIS!!
+# -Z7 debug info in files; -Zi debug info in PDB
+ifdef MSVC
+PRODUCTION_OFLAGS:=-Ox -Ob1 -Oi -Oy
+ASSERT_OFLAGS:=-Os -Oi- -Oy-
+DEBUG_OFLAGS:=-Od
+DASH_O:=-Fo
+OFLAGS= -Ot
+CFLAGS=	-MD -DLP32=1 -DWIN32=1 -Z7 $(OFLAGS) \
+	-Dalloca=_alloca -Dhuge=my_huge \
+	-EHsc $(NOBUILTIN) $(WARNINGS)
+else ifdef ClangC2
+PRODUCTION_OFLAGS:=-Os
+ASSERT_OFLAGS:=-Od
+DEBUG_OFLAGS:=-O0
+DASH_O:=-o
+OFLAGS=-O3
+CFLAGS=	-m32 -MD -DLP32=1 -DWIN32=1 -gcodeview $(OFLAGS) \
+	-Dalloca=_alloca -Dhuge=my_huge \
+	$(NOBUILTIN) $(WARNINGS)
+endif
+
+# Do _not_ define NDEBUG.  The entire point of the msvc build is to debug with
+# MSVC and defining NDEBUG installs a default catch-everything exception handler
+# that effectively disables debugging.
+#DEFS:=	-DWIN32_FILE_SUPPORT -DNO_SERVICE -DNO_STD_FILE_SUPPORT -DNDEBUG \
+#	-DLSB_FIRST -DVM_NAME=\"$(VM)\" -DX86 $(XDEFS) $(CROQUET)
+DEFS:=	-DWIN32_FILE_SUPPORT -DNO_SERVICE -DLSB_FIRST -DX86 $(XDEFS) $(CROQUET)
+# XDEFS=	-DSQUEAK_BUILTIN_PLUGIN
+# Include the Microsoft headers and any extras.
+# Put -I. last because boost includes bizarreness such as
+# include <list> which will include a local file called list if -I. comes
+# early in the include path.  Fragile.
+# override INCLUDES:= $(filter-out -I., $(INCLUDES)) $(MSVCINCLUDES) $(XINC) -I.
+INCLUDES:= $(filter-out -I., $(INCLUDES)) $(MSVCINCLUDES) $(XINC) -I.
