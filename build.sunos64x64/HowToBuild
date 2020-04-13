@@ -17,6 +17,7 @@ These are some notes on building the OpenSmalltalk VM on Oracle Solaris 11.
 
 To build,
 
+  scripts/updateSCCSVersions
   cd build.sunosamd64
   cd squeak.cog.spur
   cd build
