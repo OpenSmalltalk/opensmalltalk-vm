@@ -114,7 +114,10 @@ cc: Studio 12.6 Sun C 5.15 SunOS_i386 2017/05/30
 
 This is the developer/developerstudio-126/cc (solarisstudio) package.
 
-Alternatively also works is GCC : the developer/gcc package.                     
+You can also compile with GCC : install the developer/gcc package.                     
+Currently we have succesfully built the VM with gcc 7.3 and gcc 9.2.
+
+
 GNU Make
 --------
 
