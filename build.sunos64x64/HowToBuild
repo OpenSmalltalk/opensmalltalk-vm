@@ -107,13 +107,14 @@ This can be done online, but a reboot is not a bad idea after doing this.
 C Compiler
 ----------
 
-As C compiler we use the Sun C compiler:
+As C compiler we have used both the Sun C compiler and GCC for Solaris :
 
 $ /opt/developerstudio12.6/bin/cc  -V
 cc: Studio 12.6 Sun C 5.15 SunOS_i386 2017/05/30
 
 This is the developer/developerstudio-126/cc (solarisstudio) package.
 
+Alternatively also works is GCC : the developer/gcc package.                     
 GNU Make
 --------
 
