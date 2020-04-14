@@ -96,8 +96,8 @@ VMSimpleStackBasedCogitBytecodeTest >> createFramefulCallFrom: returnAddress rec
 	self pushAddress: returnAddress.	
 
 	"These are pushed when activating the method"	
-	self pushAddress: self stackBaseRegisterValue.
-	self stackBaseRegisterValue: self stackPointerRegisterValue.
+	self pushAddress: self framePointerRegisterValue.
+	self framePointerRegisterValue: self stackPointerRegisterValue.
 
 	"
 		In a machine code frame
@@ -216,6 +216,18 @@ VMSimpleStackBasedCogitBytecodeTest >> doPopIntoReceiverVariableBytecodeStoresVa
 	self compile: [ 
 		cogit genStoreAndPopReceiverVariableBytecode ].	
 	self runGeneratedCode.
+]
+
+{ #category : #'helpers - registers' }
+VMSimpleStackBasedCogitBytecodeTest >> framePointerRegisterValue [
+
+	^ self readRegister: UcX86Registers rbp
+]
+
+{ #category : #'helpers - registers' }
+VMSimpleStackBasedCogitBytecodeTest >> framePointerRegisterValue: aValue [
+	
+	self writeRegister: UcX86Registers rbp value: aValue
 ]
 
 { #category : #running }
@@ -337,6 +349,29 @@ VMSimpleStackBasedCogitBytecodeTest >> readRegister: aRegisterID [
 	^ registerValue integerAt: 1 size: self wordSize signed: false
 ]
 
+{ #category : #'helpers - frames' }
+VMSimpleStackBasedCogitBytecodeTest >> readTemporaryValueAt: anIndex [
+
+	"
+	fp->	saved fp
+			method
+			context (initialized to nil)
+			receiver
+			first temp	
+			...
+	sp->	Nth temp
+	
+		The first temporary is the 6th value from the FP to the top of the stack.
+		It is negative because the stack begins from a high address and after each push the SP is goingDown
+	
+		THIS METHOD ONLY WORK IN FRAMEFUL MACHINE FRAMES
+	"
+	
+	self assert: cogit needsFrame.
+	
+	^ self readMemoryAt: self framePointerRegisterValue  - ((3 + anIndex) * self wordSize)
+]
+
 { #category : #helpers }
 VMSimpleStackBasedCogitBytecodeTest >> receiverRegister: anInteger [ 
 
@@ -403,18 +438,6 @@ VMSimpleStackBasedCogitBytecodeTest >> setUp [
 
 	
 
-]
-
-{ #category : #'helpers - registers' }
-VMSimpleStackBasedCogitBytecodeTest >> stackBaseRegisterValue [
-
-	^ self readRegister: UcX86Registers rbp
-]
-
-{ #category : #'helpers - registers' }
-VMSimpleStackBasedCogitBytecodeTest >> stackBaseRegisterValue: aValue [
-	
-	self writeRegister: UcX86Registers rbp value: aValue
 ]
 
 { #category : #'helpers - registers' }
@@ -550,6 +573,36 @@ VMSimpleStackBasedCogitBytecodeTest >> testExtendedStoreStoresInstanceVariableIn
 	self assert: (memory fetchPointer: instanceVariableToWrite - 1 ofObject: obj) equals: memory falseObject
 ]
 
+{ #category : #'tests - single bytecode - pop into temp' }
+VMSimpleStackBasedCogitBytecodeTest >> testPopInto3rdTempUpdatesTemporaryWithFalse [
+
+	self testPopIntoTempUpdatesVariableAt: 3
+]
+
+{ #category : #'tests - single bytecode - pop into temp' }
+VMSimpleStackBasedCogitBytecodeTest >> testPopInto4thTempUpdatesTemporaryWithFalse [
+
+	self testPopIntoTempUpdatesVariableAt: 4
+]
+
+{ #category : #'tests - single bytecode - pop into temp' }
+VMSimpleStackBasedCogitBytecodeTest >> testPopInto5thTempUpdatesTemporaryWithFalse [
+
+	self testPopIntoTempUpdatesVariableAt: 5
+]
+
+{ #category : #'tests - single bytecode - pop into temp' }
+VMSimpleStackBasedCogitBytecodeTest >> testPopInto6thTempUpdatesTemporaryWithFalse [
+
+	self testPopIntoTempUpdatesVariableAt: 6
+]
+
+{ #category : #'tests - single bytecode - pop into temp' }
+VMSimpleStackBasedCogitBytecodeTest >> testPopInto7thTempUpdatesTemporaryWithFalse [
+
+	self testPopIntoTempUpdatesVariableAt: 7
+]
+
 { #category : #'tests - single bytecode - pop into inst var' }
 VMSimpleStackBasedCogitBytecodeTest >> testPopIntoEighthReceiverVariableBytecodePopsValue [
 
@@ -572,6 +625,12 @@ VMSimpleStackBasedCogitBytecodeTest >> testPopIntoFirstReceiverVariableBytecodeP
 	"The block pushed and then pops.
 	The stack should remain unchanged after the execution"
 	self assertStackRemainsUnchangedDuring: [ self doPopIntoReceiverVariableBytecodeStoresVariableAt: 1 ]
+]
+
+{ #category : #'tests - single bytecode - pop into temp' }
+VMSimpleStackBasedCogitBytecodeTest >> testPopIntoFirstTempUpdatesTemporaryWithFalse [
+
+	self testPopIntoTempUpdatesVariableAt: 1
 ]
 
 { #category : #'tests - single bytecode - pop into inst var' }
@@ -647,6 +706,12 @@ VMSimpleStackBasedCogitBytecodeTest >> testPopIntoSecondReceiverVariableBytecode
 	self assertStackRemainsUnchangedDuring: [ self doPopIntoReceiverVariableBytecodeStoresVariableAt: 2 ]
 ]
 
+{ #category : #'tests - single bytecode - pop into temp' }
+VMSimpleStackBasedCogitBytecodeTest >> testPopIntoSecondTempUpdatesTemporaryWithFalse [
+
+	self testPopIntoTempUpdatesVariableAt: 2
+]
+
 { #category : #'tests - single bytecode - pop into inst var' }
 VMSimpleStackBasedCogitBytecodeTest >> testPopIntoSeventhReceiverVariableBytecodePopsValue [
 
@@ -663,6 +728,31 @@ VMSimpleStackBasedCogitBytecodeTest >> testPopIntoSixthReceiverVariableBytecodeP
 	self assertStackRemainsUnchangedDuring: [ self doPopIntoReceiverVariableBytecodeStoresVariableAt: 6 ]
 ]
 
+{ #category : #'tests - single bytecode - pop into temp' }
+VMSimpleStackBasedCogitBytecodeTest >> testPopIntoTempUpdatesVariableAt: tempVariableUnderTest [
+
+	| temporaries |
+	
+	temporaries  := (1 to: tempVariableUnderTest) 
+		collect: [ :anIndex | memory nilObject].
+
+	self 
+		createFramefulCallFrom: callerAddress 
+		receiver: memory nilObject 
+		arguments: #() 
+		temporaries: temporaries.
+
+	"The bytecode of the push temporary variable is used to identify the index (from 0 to 7) and it starts from 104 to 111"
+	cogit byte0: tempVariableUnderTest - 1 + 104.
+	self compile: [ cogit genStoreAndPopTemporaryVariableBytecode ].	
+
+	self pushAddress: memory falseObject.
+
+	self runGeneratedCode.
+
+	self assert: (self readTemporaryValueAt: tempVariableUnderTest) equals: memory falseObject
+]
+
 { #category : #'tests - single bytecode - pop into inst var' }
 VMSimpleStackBasedCogitBytecodeTest >> testPopIntoThirdReceiverVariableBytecodePopsValue [
 
@@ -677,10 +767,22 @@ VMSimpleStackBasedCogitBytecodeTest >> testPush10thTempVariablePushesVariable [
 	self testPushTempVariablePushesVariableAt: 10
 ]
 
+{ #category : #'tests - single bytecode - push temp - arg' }
+VMSimpleStackBasedCogitBytecodeTest >> testPush10thTempVariableWithArgumentsPushesArgument [
+
+	self testPushTempVariablePushesArgumentAt: 10
+]
+
 { #category : #'tests - single bytecode - push temp' }
 VMSimpleStackBasedCogitBytecodeTest >> testPush11thTempVariablePushesVariable [
 
 	self testPushTempVariablePushesVariableAt: 11
+]
+
+{ #category : #'tests - single bytecode - push temp - arg' }
+VMSimpleStackBasedCogitBytecodeTest >> testPush11thTempVariableWithArgumentsPushesArgument [
+
+	self testPushTempVariablePushesArgumentAt: 11
 ]
 
 { #category : #'tests - single bytecode - push temp' }
@@ -689,10 +791,22 @@ VMSimpleStackBasedCogitBytecodeTest >> testPush12thTempVariablePushesVariable [
 	self testPushTempVariablePushesVariableAt: 12
 ]
 
+{ #category : #'tests - single bytecode - push temp - arg' }
+VMSimpleStackBasedCogitBytecodeTest >> testPush12thTempVariableWithArgumentsPushesArgument [
+
+	self testPushTempVariablePushesArgumentAt: 12
+]
+
 { #category : #'tests - single bytecode - push temp' }
 VMSimpleStackBasedCogitBytecodeTest >> testPush13thTempVariablePushesVariable [
 
 	self testPushTempVariablePushesVariableAt: 13
+]
+
+{ #category : #'tests - single bytecode - push temp - arg' }
+VMSimpleStackBasedCogitBytecodeTest >> testPush13thTempVariableWithArgumentsPushesArgument [
+
+	self testPushTempVariablePushesArgumentAt: 13
 ]
 
 { #category : #'tests - single bytecode - push temp' }
@@ -701,10 +815,28 @@ VMSimpleStackBasedCogitBytecodeTest >> testPush14thTempVariablePushesVariable [
 	self testPushTempVariablePushesVariableAt: 14
 ]
 
+{ #category : #'tests - single bytecode - push temp - arg' }
+VMSimpleStackBasedCogitBytecodeTest >> testPush14thTempVariableWithArgumentsPushesArgument [
+
+	self testPushTempVariablePushesArgumentAt: 14
+]
+
 { #category : #'tests - single bytecode - push temp' }
 VMSimpleStackBasedCogitBytecodeTest >> testPush15thTempVariablePushesVariable [
 
 	self testPushTempVariablePushesVariableAt: 15
+]
+
+{ #category : #'tests - single bytecode - push temp - arg' }
+VMSimpleStackBasedCogitBytecodeTest >> testPush15thTempVariableWithArgumentsPushesArgument [
+
+	self testPushTempVariablePushesArgumentAt: 15
+]
+
+{ #category : #'tests - single bytecode - push temp - arg' }
+VMSimpleStackBasedCogitBytecodeTest >> testPush3rdTempVariableWithArgumentsPushesArgument [
+
+	self testPushTempVariablePushesArgumentAt: 3
 ]
 
 { #category : #'tests - single bytecode - push temp' }
@@ -713,10 +845,22 @@ VMSimpleStackBasedCogitBytecodeTest >> testPush4thTempVariablePushesVariable [
 	self testPushTempVariablePushesVariableAt: 4
 ]
 
+{ #category : #'tests - single bytecode - push temp - arg' }
+VMSimpleStackBasedCogitBytecodeTest >> testPush4thTempVariableWithArgumentsPushesArgument [
+
+	self testPushTempVariablePushesArgumentAt: 4
+]
+
 { #category : #'tests - single bytecode - push temp' }
 VMSimpleStackBasedCogitBytecodeTest >> testPush5thTempVariablePushesVariable [
 
 	self testPushTempVariablePushesVariableAt: 5
+]
+
+{ #category : #'tests - single bytecode - push temp - arg' }
+VMSimpleStackBasedCogitBytecodeTest >> testPush5thTempVariableWithArgumentsPushesArgument [
+
+	self testPushTempVariablePushesArgumentAt: 5
 ]
 
 { #category : #'tests - single bytecode - push temp' }
@@ -725,10 +869,22 @@ VMSimpleStackBasedCogitBytecodeTest >> testPush6thTempVariablePushesVariable [
 	self testPushTempVariablePushesVariableAt: 6
 ]
 
+{ #category : #'tests - single bytecode - push temp - arg' }
+VMSimpleStackBasedCogitBytecodeTest >> testPush6thTempVariableWithArgumentsPushesArgument [
+
+	self testPushTempVariablePushesArgumentAt: 6
+]
+
 { #category : #'tests - single bytecode - push temp' }
 VMSimpleStackBasedCogitBytecodeTest >> testPush7thTempVariablePushesVariable [
 
 	self testPushTempVariablePushesVariableAt: 7
+]
+
+{ #category : #'tests - single bytecode - push temp - arg' }
+VMSimpleStackBasedCogitBytecodeTest >> testPush7thTempVariableWithArgumentsPushesArgument [
+
+	self testPushTempVariablePushesArgumentAt: 7
 ]
 
 { #category : #'tests - single bytecode - push temp' }
@@ -737,10 +893,22 @@ VMSimpleStackBasedCogitBytecodeTest >> testPush8thTempVariablePushesVariable [
 	self testPushTempVariablePushesVariableAt: 8
 ]
 
+{ #category : #'tests - single bytecode - push temp - arg' }
+VMSimpleStackBasedCogitBytecodeTest >> testPush8thTempVariableWithArgumentsPushesArgument [
+
+	self testPushTempVariablePushesArgumentAt: 8
+]
+
 { #category : #'tests - single bytecode - push temp' }
 VMSimpleStackBasedCogitBytecodeTest >> testPush9thTempVariablePushesVariable [
 
 	self testPushTempVariablePushesVariableAt: 9
+]
+
+{ #category : #'tests - single bytecode - push temp - arg' }
+VMSimpleStackBasedCogitBytecodeTest >> testPush9thTempVariableWithArgumentsPushesArgument [
+
+	self testPushTempVariablePushesArgumentAt: 9
 ]
 
 { #category : #'tests - single bytecode' }
@@ -795,6 +963,12 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushConstantZeroBytecodePushesASmallI
 VMSimpleStackBasedCogitBytecodeTest >> testPushFirstTempVariablePushesVariable [
 
 	self testPushTempVariablePushesVariableAt: 1
+]
+
+{ #category : #'tests - single bytecode - push temp - arg' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushFirstTempVariableWithArgumentsPushesArgument [
+
+	self testPushTempVariablePushesArgumentAt: 1
 ]
 
 { #category : #'tests - single bytecode' }
@@ -972,6 +1146,35 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushReceiverVariableBytecodeZeroPushe
 VMSimpleStackBasedCogitBytecodeTest >> testPushSecondTempVariablePushesVariable [
 
 	self testPushTempVariablePushesVariableAt: 2
+]
+
+{ #category : #'tests - single bytecode - push temp - arg' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushSecondTempVariableWithArgumentsPushesArgument [
+
+	self testPushTempVariablePushesArgumentAt: 2
+]
+
+{ #category : #'tests - single bytecode - push temp - arg' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushTempVariablePushesArgumentAt: tempVariableUnderTest [
+
+	| arguments |
+	
+	arguments  := (1 to: tempVariableUnderTest) collect: [ :anIndex | 
+		anIndex = tempVariableUnderTest ifTrue: [ memory falseObject ] ifFalse: [memory nilObject]].
+
+	self 
+		createFramefulCallFrom: callerAddress 
+		receiver: memory nilObject 
+		arguments: arguments 
+		temporaries: #().
+
+	"The bytecode of the push temporary variable is used to identify the index (from 0 to 15) and it starts from 16 to 31"
+	cogit byte0: tempVariableUnderTest - 1 + 16.
+	self compile: [ cogit genPushTemporaryVariableBytecode ].	
+
+	self runGeneratedCode.
+
+	self assert: self popAddress equals: memory falseObject
 ]
 
 { #category : #'tests - single bytecode - push temp' }
