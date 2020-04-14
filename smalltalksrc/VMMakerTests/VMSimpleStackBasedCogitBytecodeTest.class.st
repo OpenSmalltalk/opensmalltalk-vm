@@ -43,7 +43,7 @@ VMSimpleStackBasedCogitBytecodeTest >> disassemble [
 	
 	^ LLVMDisassembler amd64 
 		disassembleNext: opcodes
-		instructionsIn: (memory memory copyFrom: 1 to: 24) asByteArray pc: 0
+		instructionsIn: (memory memory memoryObject copyFrom: 1 to: 24) asByteArray pc: 0
 ]
 
 { #category : #'helpers - registers' }
@@ -116,7 +116,6 @@ VMSimpleStackBasedCogitBytecodeTest >> push: aByteArray [
 		memoryAt: stackAddressIntegerValue
 		write: aByteArray
 		size: self wordSize.
-
 ]
 
 { #category : #helpers }
@@ -171,6 +170,7 @@ VMSimpleStackBasedCogitBytecodeTest >> runUntilReturn [
 { #category : #running }
 VMSimpleStackBasedCogitBytecodeTest >> setUp [
 
+	| stackValueBytes |
 	super setUp.
 	
 	cogit := SimpleStackBasedCogit new setInterpreter: memory coInterpreter.
@@ -197,14 +197,22 @@ VMSimpleStackBasedCogitBytecodeTest >> setUp [
 	unicorn
 		mapHostMemory: memory memory memoryObject
 		atAddress: initialAddress
-		withPermissions: UnicornConstants permissionAll
-		"mapMemoryOfSize: 2 * 1024 * 1024
-		atAddress: 16r1000000
-		withPermissions: UnicornConstants permissionAll".
+		withPermissions: UnicornConstants permissionAll.
 
-	self writeRegister: UcX86Registers rsp value: initialAddress + memory memory size - 16.
-	callerAddress := initialAddress + memory memory size - 8.
-	self pushAddress: callerAddress.	
+	"Put whatever caller address for now. This is not okeish but it lets tests run for now.
+	We should refine these when we properly test returns and sends."
+	callerAddress := initialAddress + memory memory size - 24.
+	self writeRegister: UcX86Registers rsp value: callerAddress.
+	stackValueBytes := ByteArray new: self wordSize.
+	stackValueBytes
+		integerAt: 1 put: callerAddress
+		size: self wordSize
+		signed: false.
+	unicorn
+		memoryAt: callerAddress
+		write: stackValueBytes
+		size: self wordSize.
+	self pushAddress: callerAddress.
 	
 	unicorn 
 		registerInvalidMemoryAccessHook: UcHookType invalidMemoryAccess value 
@@ -226,10 +234,9 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushConstantFalseBytecodePushesFalse 
 { #category : #'tests - two bytecodes' }
 VMSimpleStackBasedCogitBytecodeTest >> testPushConstantNilAndThenReturn [
 	
-	self skip.
 	self compile: [ 
 		cogit genPushConstantNilBytecode.
-		cogit genReturnTopFromMethod ] bytecodes: 2.	
+		cogit genReturnTopFromMethod ] bytecodes: 2.
 	self runGeneratedCode.
 	
 	self assert: (self returnValue) equals: memory nilObject
