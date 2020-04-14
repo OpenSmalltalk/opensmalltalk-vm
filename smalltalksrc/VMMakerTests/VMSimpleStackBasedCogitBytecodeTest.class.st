@@ -90,20 +90,19 @@ VMSimpleStackBasedCogitBytecodeTest >> createFramefulCallFrom: returnAddress rec
 			...
 	sp->	Nth temp	
 	"
-	"These are pushed by the caller"	
-	self pushAddress: receiver.
-	arguments do: [ :anArgument | self pushAddress: anArgument ].
-	self pushAddress: returnAddress.	
-
-	"These are pushed when activating the method"	
-	self pushAddress: self framePointerRegisterValue.
-	self framePointerRegisterValue: self stackPointerRegisterValue.
+	
+	"The first part is the same with or without frame, as it is pushed by the caller"
+	self createFramelessCallFrom: returnAddress receiver: receiver arguments: arguments.
 
 	"
 		In a machine code frame
 		the flag indicating if the context is valid is the least significant bit of the method pointer
 		the flag for a block activation is the next most significant bit of the method pointer"
 	
+	"These are pushed when activating the method"	
+	self pushAddress: self framePointerRegisterValue.
+	self framePointerRegisterValue: self stackPointerRegisterValue.
+
 	self pushAddress: (memory nilObject bitOr: 1). "method"
 	self pushAddress: memory nilObject. "context"
 
@@ -111,16 +110,6 @@ VMSimpleStackBasedCogitBytecodeTest >> createFramefulCallFrom: returnAddress rec
 	temps do: [ :aTemporary | self pushAddress: aTemporary ].
 	
 	cogit needsFrame: true.
-	self receiverRegister: receiver.
-
-	"We initialize the internal Cogit state by hand because we don't have a method to cog"	
-"	cogit methodOrBlockNumTemps: 0.
-	cogit initSimStackForFramelessMethod: 1".
-	cogit methodOrBlockNumArgs: arguments size.
-	cogit needsFrame: true.
-	cogit inBlock: 0.
-"	cogit regArgsHaveBeenPushed: false".
-
 ]
 
 { #category : #'helpers - frames' }
@@ -574,9 +563,21 @@ VMSimpleStackBasedCogitBytecodeTest >> testExtendedStoreStoresInstanceVariableIn
 ]
 
 { #category : #'tests - single bytecode - pop into temp' }
+VMSimpleStackBasedCogitBytecodeTest >> testPopInto3rdTempPopsValue [
+
+	self testPopIntoTempPopsValueAt: 3
+]
+
+{ #category : #'tests - single bytecode - pop into temp' }
 VMSimpleStackBasedCogitBytecodeTest >> testPopInto3rdTempUpdatesTemporaryWithFalse [
 
 	self testPopIntoTempUpdatesVariableAt: 3
+]
+
+{ #category : #'tests - single bytecode - pop into temp' }
+VMSimpleStackBasedCogitBytecodeTest >> testPopInto4thTempPopsValue [
+
+	self testPopIntoTempPopsValueAt: 4
 ]
 
 { #category : #'tests - single bytecode - pop into temp' }
@@ -586,15 +587,33 @@ VMSimpleStackBasedCogitBytecodeTest >> testPopInto4thTempUpdatesTemporaryWithFal
 ]
 
 { #category : #'tests - single bytecode - pop into temp' }
+VMSimpleStackBasedCogitBytecodeTest >> testPopInto5thTempPopsValue [
+
+	self testPopIntoTempPopsValueAt: 5
+]
+
+{ #category : #'tests - single bytecode - pop into temp' }
 VMSimpleStackBasedCogitBytecodeTest >> testPopInto5thTempUpdatesTemporaryWithFalse [
 
 	self testPopIntoTempUpdatesVariableAt: 5
 ]
 
 { #category : #'tests - single bytecode - pop into temp' }
+VMSimpleStackBasedCogitBytecodeTest >> testPopInto6thTempPopsValue [
+
+	self testPopIntoTempPopsValueAt: 6
+]
+
+{ #category : #'tests - single bytecode - pop into temp' }
 VMSimpleStackBasedCogitBytecodeTest >> testPopInto6thTempUpdatesTemporaryWithFalse [
 
 	self testPopIntoTempUpdatesVariableAt: 6
+]
+
+{ #category : #'tests - single bytecode - pop into temp' }
+VMSimpleStackBasedCogitBytecodeTest >> testPopInto7thTempPopsValue [
+
+	self testPopIntoTempPopsValueAt: 7
 ]
 
 { #category : #'tests - single bytecode - pop into temp' }
@@ -625,6 +644,12 @@ VMSimpleStackBasedCogitBytecodeTest >> testPopIntoFirstReceiverVariableBytecodeP
 	"The block pushed and then pops.
 	The stack should remain unchanged after the execution"
 	self assertStackRemainsUnchangedDuring: [ self doPopIntoReceiverVariableBytecodeStoresVariableAt: 1 ]
+]
+
+{ #category : #'tests - single bytecode - pop into temp' }
+VMSimpleStackBasedCogitBytecodeTest >> testPopIntoFirstTempPopsValue [
+
+	self testPopIntoTempPopsValueAt: 1
 ]
 
 { #category : #'tests - single bytecode - pop into temp' }
@@ -707,6 +732,12 @@ VMSimpleStackBasedCogitBytecodeTest >> testPopIntoSecondReceiverVariableBytecode
 ]
 
 { #category : #'tests - single bytecode - pop into temp' }
+VMSimpleStackBasedCogitBytecodeTest >> testPopIntoSecondTempPopsValue [
+
+	self testPopIntoTempPopsValueAt: 2
+]
+
+{ #category : #'tests - single bytecode - pop into temp' }
 VMSimpleStackBasedCogitBytecodeTest >> testPopIntoSecondTempUpdatesTemporaryWithFalse [
 
 	self testPopIntoTempUpdatesVariableAt: 2
@@ -726,6 +757,33 @@ VMSimpleStackBasedCogitBytecodeTest >> testPopIntoSixthReceiverVariableBytecodeP
 	"The block pushed and then pops.
 	The stack should remain unchanged after the execution"
 	self assertStackRemainsUnchangedDuring: [ self doPopIntoReceiverVariableBytecodeStoresVariableAt: 6 ]
+]
+
+{ #category : #'tests - single bytecode - pop into temp' }
+VMSimpleStackBasedCogitBytecodeTest >> testPopIntoTempPopsValueAt: tempVariableUnderTest [
+
+	| temporaries |
+	
+	temporaries  := (1 to: tempVariableUnderTest) 
+		collect: [ :anIndex | memory nilObject].
+
+	self 
+		createFramefulCallFrom: callerAddress 
+		receiver: memory nilObject 
+		arguments: #() 
+		temporaries: temporaries.
+
+	"The bytecode of the push temporary variable is used to identify the index (from 0 to 7) and it starts from 104 to 111"
+	cogit byte0: tempVariableUnderTest - 1 + 104.
+	self compile: [ cogit genStoreAndPopTemporaryVariableBytecode ].	
+
+	"I push two values, so I can test that the false is pop out"
+	self pushAddress: memory trueObject.
+	self pushAddress: memory falseObject.
+
+	self runGeneratedCode.
+
+	self assert: self popAddress equals: memory trueObject
 ]
 
 { #category : #'tests - single bytecode - pop into temp' }
