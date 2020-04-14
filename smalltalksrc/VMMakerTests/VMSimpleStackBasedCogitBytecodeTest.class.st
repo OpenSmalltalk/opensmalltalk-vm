@@ -335,8 +335,6 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushReceiverVariableBytecodeZeroPushe
 	self receiverRegister: obj.
 	memory storePointer: 0 ofObject: obj withValue: memory falseObject.
 	
-	self syncMemory.
-	
 	self compile: [ cogit genPushReceiverVariableBytecode ].	
 	self runGeneratedCode.
 
