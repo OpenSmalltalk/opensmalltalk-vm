@@ -1962,6 +1962,15 @@ SpurMemoryManager >> allocateMemoryOfSize: memoryBytes [
 	memory := self memoryClass new: memoryBytes + bytesPerElement - 1 // bytesPerElement
 ]
 
+{ #category : #testing }
+SpurMemoryManager >> allocateMemoryOfSize: memoryBytes initialAddress: initialAddress [
+	<doNotGenerate>
+	| bytesPerElement |
+	bytesPerElement := (self memoryClass basicNew: 0) bytesPerElement.
+	memory := self memoryClass new: memoryBytes + bytesPerElement - 1 // bytesPerElement.
+	memory initialAddress: initialAddress
+]
+
 { #category : #'spur bootstrap' }
 SpurMemoryManager >> allocateMemoryOfSize: memoryBytes newSpaceSize: newSpaceBytes stackSize: stackBytes codeSize: codeBytes [
 	"Intialize the receiver for bootsraping an image.
@@ -1969,12 +1978,29 @@ SpurMemoryManager >> allocateMemoryOfSize: memoryBytes newSpaceSize: newSpaceByt
 	 to allocate in oldSpace.  Later on (in initializePostBootstrap) freeStart and scavengeThreshold
 	 will be set to sane values."
 	<doNotGenerate>
+
+	self
+		allocateMemoryOfSize: memoryBytes
+		newSpaceSize: newSpaceBytes
+		stackSize: stackBytes
+		codeSize: codeBytes
+		initialAddress: 0
+]
+
+{ #category : #'spur bootstrap' }
+SpurMemoryManager >> allocateMemoryOfSize: memoryBytes newSpaceSize: newSpaceBytes stackSize: stackBytes codeSize: codeBytes initialAddress: initialAddress [
+	"Intialize the receiver for bootsraping an image.
+	 Set up a large oldSpace and an empty newSpace and set-up freeStart and scavengeThreshold
+	 to allocate in oldSpace.  Later on (in initializePostBootstrap) freeStart and scavengeThreshold
+	 will be set to sane values."
+	<doNotGenerate>
 	self assert: (memoryBytes \\ self allocationUnit = 0
 				and: [newSpaceBytes \\ self allocationUnit = 0
-				and: [codeBytes \\ self allocationUnit = 0]]).
-	self allocateMemoryOfSize: memoryBytes + newSpaceBytes + codeBytes + stackBytes.
-	newSpaceStart := codeBytes + stackBytes.
-	endOfMemory := freeOldSpaceStart := memoryBytes + newSpaceBytes + codeBytes + stackBytes.
+				and: [codeBytes \\ self allocationUnit = 0
+				and: [initialAddress \\ self allocationUnit = 0 ]]]).
+	self allocateMemoryOfSize: memoryBytes + newSpaceBytes + codeBytes + stackBytes initialAddress: initialAddress.
+	newSpaceStart := initialAddress + codeBytes + stackBytes.
+	endOfMemory := freeOldSpaceStart := initialAddress + memoryBytes + newSpaceBytes + codeBytes + stackBytes.
 	"leave newSpace empty for the bootstrap"
 	freeStart := newSpaceBytes + newSpaceStart.
 	oldSpaceStart := newSpaceLimit := newSpaceBytes + newSpaceStart.

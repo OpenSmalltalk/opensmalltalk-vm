@@ -9,7 +9,8 @@ Class {
 		'nextIndex',
 		'objectHeaderSize',
 		'zeroSizedObjectClassIndex',
-		'emptyObjectSize'
+		'emptyObjectSize',
+		'initialAddress'
 	],
 	#category : #VMMakerTests
 }
@@ -95,6 +96,7 @@ VMSpurMemoryManagerTest >> setUp [
 	oldSpaceSize := 1000 * 1024.
  	newSpaceSize := 1 * 1024.
 	stackSize := 16 * 1024.
+	initialAddress := 16r1000000.
 	
 	objectHeaderSize := 8 "bytes".
 	emptyObjectSize := objectHeaderSize + 8 "minimum required single empty slot, to use for forwarders".
@@ -112,7 +114,8 @@ VMSpurMemoryManagerTest >> setUp [
 		allocateMemoryOfSize: oldSpaceSize
 		newSpaceSize: newSpaceSize
 		stackSize: stackSize
-		codeSize: 0.
+		codeSize: 0
+		initialAddress: initialAddress.
 	memory initializePostBootstrap.
 	memory setHeapSizeAtPreviousGC.
 	memory segmentManager collapseSegmentsPostSwizzle.
