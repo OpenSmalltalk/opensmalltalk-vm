@@ -31,9 +31,9 @@ VMSimpleStackBasedCogitBytecodeTest >> compile: aBlockClosure bytecodes: bytecod
 	cogit methodLabel address: 0.
 	cogit computeMaximumSizes.
 	
-	codeSize := cogit generateInstructionsAt: 0 "methodLabel address + headerSize?".
+	codeSize := cogit generateInstructionsAt: initialAddress "methodLabel address + headerSize?".
 	cogit methodZone allocate: codeSize.
-	lastAddress := cogit outputInstructionsAt: 0.
+	lastAddress := cogit outputInstructionsAt: initialAddress.
 
 	opcodes := cogit getOpcodeIndex .
 	
@@ -41,7 +41,7 @@ VMSimpleStackBasedCogitBytecodeTest >> compile: aBlockClosure bytecodes: bytecod
 	unicorn
 		memoryAt: 16r1000000
 		write: memory memory asByteArray
-		size: lastAddress.
+		size: lastAddress - initialAddress.
 
 ]
 
