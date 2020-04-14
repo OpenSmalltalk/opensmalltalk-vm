@@ -9,7 +9,10 @@ Class {
 		'callerAddress',
 		'registerValue',
 		'opcodes',
-		'obj'
+		'obj',
+		'stackMemory',
+		'stackMemoryStartAddress',
+		'stackMemoryEndAddress'
 	],
 	#category : #VMMakerTests
 }
@@ -61,6 +64,90 @@ VMSimpleStackBasedCogitBytecodeTest >> compile: aBlockClosure bytecodes: bytecod
 	lastAddress := cogit outputInstructionsAt: initialAddress.
 
 	opcodes := cogit getOpcodeIndex
+]
+
+{ #category : #'helpers - frames' }
+VMSimpleStackBasedCogitBytecodeTest >> createFramefulCallFrom: returnAddress receiver: receiver arguments: arguments [
+
+	self createFramefulCallFrom: returnAddress receiver: receiver arguments: arguments temporaries: #()
+]
+
+{ #category : #'helpers - frames' }
+VMSimpleStackBasedCogitBytecodeTest >> createFramefulCallFrom: returnAddress receiver: receiver arguments: arguments temporaries: temps [
+
+	"I create a frameful call for machine code. 
+
+			receiver for method activations/closure for block activations
+			arg0
+			...
+			argN
+			caller's saved ip/this stackPage (for a base frame)
+	fp->	saved fp
+			method
+			context (initialized to nil)
+			receiver
+			first temp
+			...
+	sp->	Nth temp	
+	"
+	"These are pushed by the caller"	
+	self pushAddress: receiver.
+	arguments do: [ :anArgument | self pushAddress: anArgument ].
+	self pushAddress: returnAddress.	
+
+	"These are pushed when activating the method"	
+	self pushAddress: self stackBaseRegisterValue.
+	self stackBaseRegisterValue: self stackPointerRegisterValue.
+
+	"
+		In a machine code frame
+		the flag indicating if the context is valid is the least significant bit of the method pointer
+		the flag for a block activation is the next most significant bit of the method pointer"
+	
+	self pushAddress: (memory nilObject bitOr: 1). "method"
+	self pushAddress: memory nilObject. "context"
+
+	self pushAddress: receiver.
+	temps do: [ :aTemporary | self pushAddress: aTemporary ].
+	
+	cogit needsFrame: true.
+	self receiverRegister: receiver.
+
+	"We initialize the internal Cogit state by hand because we don't have a method to cog"	
+"	cogit methodOrBlockNumTemps: 0.
+	cogit initSimStackForFramelessMethod: 1".
+	cogit methodOrBlockNumArgs: arguments size.
+	cogit needsFrame: true.
+	cogit inBlock: 0.
+"	cogit regArgsHaveBeenPushed: false".
+
+]
+
+{ #category : #'helpers - frames' }
+VMSimpleStackBasedCogitBytecodeTest >> createFramelessCallFrom: returnAddress receiver: receiver arguments: arguments [.
+
+	"I create a frameless call
+	
+	Frameless method activation looks like
+			receiver
+			args
+	sp->	ret pc.
+	"
+	self pushAddress: receiver.
+	arguments do: [ :anArgument | self pushAddress: anArgument ].
+	self pushAddress: returnAddress.	
+
+	self receiverRegister: receiver.
+
+	"We initialize the internal Cogit state by hand because we don't have a method to cog"	
+"	cogit methodOrBlockNumTemps: 0.
+	cogit initSimStackForFramelessMethod: 1".
+	cogit methodOrBlockNumArgs: arguments size.
+	cogit needsFrame: false.
+	cogit inBlock: 0.
+"	cogit regArgsHaveBeenPushed: false".
+
+
 ]
 
 { #category : #helpers }
@@ -129,6 +216,38 @@ VMSimpleStackBasedCogitBytecodeTest >> doPopIntoReceiverVariableBytecodeStoresVa
 	self compile: [ 
 		cogit genStoreAndPopReceiverVariableBytecode ].	
 	self runGeneratedCode.
+]
+
+{ #category : #running }
+VMSimpleStackBasedCogitBytecodeTest >> initializeInitialStackFrame [
+
+	"I will create the initial stack with a well-known caller address so we know if the code comes back
+	correctly. The address should be in a valid space of the memory if not unicorn complains. 
+	So we just put it in the start of the stack"
+
+	callerAddress := stackMemoryStartAddress.
+	self createFramelessCallFrom: callerAddress receiver: memory nilObject arguments: #().
+	
+
+]
+
+{ #category : #running }
+VMSimpleStackBasedCogitBytecodeTest >> initializeStackMemory [.
+
+	"Let's add a 4K stack location far away"
+	stackMemory := ByteArray new: 4096.
+	stackMemoryStartAddress := 16r9000000.
+	stackMemoryEndAddress := stackMemoryStartAddress + stackMemory size.
+
+	unicorn
+		mapHostMemory: stackMemory
+		atAddress: stackMemoryStartAddress
+		withPermissions: UnicornConstants permissionAll.
+
+	"The stack pointer is at the top of the stack"
+	self stackPointerRegisterValue: stackMemoryEndAddress.
+	
+
 ]
 
 { #category : #'helpers - registers' }
@@ -253,10 +372,11 @@ VMSimpleStackBasedCogitBytecodeTest >> runUntilReturn [
 { #category : #running }
 VMSimpleStackBasedCogitBytecodeTest >> setUp [
 
-	| stackValueBytes |
 	super setUp.
 	
 	cogit := SimpleStackBasedCogit new setInterpreter: memory coInterpreter.
+	cogit objectRepresentation class initializeMiscConstants.
+	
 	memory nilObject: 24.
 	memory trueObject: 40.
 	memory falseObject: 56.
@@ -264,16 +384,8 @@ VMSimpleStackBasedCogitBytecodeTest >> setUp [
 	memory hiddenRootsObject: 100.
 	
 	cogit methodZone manageFrom: 0 to: 23.
-
-	"We initialize the internal Cogit state by hand because we don't have a method to cog"	
-	cogit methodOrBlockNumArgs: 0.
-"	cogit methodOrBlockNumTemps: 0.
-	cogit initSimStackForFramelessMethod: 1".
-	cogit needsFrame: false.
-	cogit inBlock: 0.
-"	cogit regArgsHaveBeenPushed: false".
 	
-	"Initializing Unicorn with 2MB memory and a stack at the end"
+	"Initializing Unicorn with 2MB memory"
 	
 	unicorn := Unicorn x8664.
 	memory memory memoryObject pinInMemory.
@@ -282,20 +394,8 @@ VMSimpleStackBasedCogitBytecodeTest >> setUp [
 		atAddress: initialAddress
 		withPermissions: UnicornConstants permissionAll.
 
-	"Put whatever caller address for now. This is not okeish but it lets tests run for now.
-	We should refine these when we properly test returns and sends."
-	callerAddress := initialAddress + memory memory size - 24.
-	self stackPointerRegisterValue: callerAddress.
-	stackValueBytes := ByteArray new: self wordSize.
-	stackValueBytes
-		integerAt: 1 put: callerAddress
-		size: self wordSize
-		signed: false.
-	unicorn
-		memoryAt: callerAddress
-		write: stackValueBytes
-		size: self wordSize.
-	self pushAddress: callerAddress.
+	self initializeStackMemory.
+	self initializeInitialStackFrame.
 	
 	unicorn 
 		registerInvalidMemoryAccessHook: UcHookType invalidMemoryAccess value 
@@ -303,6 +403,18 @@ VMSimpleStackBasedCogitBytecodeTest >> setUp [
 
 	
 
+]
+
+{ #category : #'helpers - registers' }
+VMSimpleStackBasedCogitBytecodeTest >> stackBaseRegisterValue [
+
+	^ self readRegister: UcX86Registers rbp
+]
+
+{ #category : #'helpers - registers' }
+VMSimpleStackBasedCogitBytecodeTest >> stackBaseRegisterValue: aValue [
+	
+	self writeRegister: UcX86Registers rbp value: aValue
 ]
 
 { #category : #'helpers - registers' }
@@ -559,6 +671,78 @@ VMSimpleStackBasedCogitBytecodeTest >> testPopIntoThirdReceiverVariableBytecodeP
 	self assertStackRemainsUnchangedDuring: [ self doPopIntoReceiverVariableBytecodeStoresVariableAt: 3 ]
 ]
 
+{ #category : #'tests - single bytecode - push temp' }
+VMSimpleStackBasedCogitBytecodeTest >> testPush10thTempVariablePushesVariable [
+
+	self testPushTempVariablePushesVariableAt: 10
+]
+
+{ #category : #'tests - single bytecode - push temp' }
+VMSimpleStackBasedCogitBytecodeTest >> testPush11thTempVariablePushesVariable [
+
+	self testPushTempVariablePushesVariableAt: 11
+]
+
+{ #category : #'tests - single bytecode - push temp' }
+VMSimpleStackBasedCogitBytecodeTest >> testPush12thTempVariablePushesVariable [
+
+	self testPushTempVariablePushesVariableAt: 12
+]
+
+{ #category : #'tests - single bytecode - push temp' }
+VMSimpleStackBasedCogitBytecodeTest >> testPush13thTempVariablePushesVariable [
+
+	self testPushTempVariablePushesVariableAt: 13
+]
+
+{ #category : #'tests - single bytecode - push temp' }
+VMSimpleStackBasedCogitBytecodeTest >> testPush14thTempVariablePushesVariable [
+
+	self testPushTempVariablePushesVariableAt: 14
+]
+
+{ #category : #'tests - single bytecode - push temp' }
+VMSimpleStackBasedCogitBytecodeTest >> testPush15thTempVariablePushesVariable [
+
+	self testPushTempVariablePushesVariableAt: 15
+]
+
+{ #category : #'tests - single bytecode - push temp' }
+VMSimpleStackBasedCogitBytecodeTest >> testPush4thTempVariablePushesVariable [
+
+	self testPushTempVariablePushesVariableAt: 4
+]
+
+{ #category : #'tests - single bytecode - push temp' }
+VMSimpleStackBasedCogitBytecodeTest >> testPush5thTempVariablePushesVariable [
+
+	self testPushTempVariablePushesVariableAt: 5
+]
+
+{ #category : #'tests - single bytecode - push temp' }
+VMSimpleStackBasedCogitBytecodeTest >> testPush6thTempVariablePushesVariable [
+
+	self testPushTempVariablePushesVariableAt: 6
+]
+
+{ #category : #'tests - single bytecode - push temp' }
+VMSimpleStackBasedCogitBytecodeTest >> testPush7thTempVariablePushesVariable [
+
+	self testPushTempVariablePushesVariableAt: 7
+]
+
+{ #category : #'tests - single bytecode - push temp' }
+VMSimpleStackBasedCogitBytecodeTest >> testPush8thTempVariablePushesVariable [
+
+	self testPushTempVariablePushesVariableAt: 8
+]
+
+{ #category : #'tests - single bytecode - push temp' }
+VMSimpleStackBasedCogitBytecodeTest >> testPush9thTempVariablePushesVariable [
+
+	self testPushTempVariablePushesVariableAt: 9
+]
+
 { #category : #'tests - single bytecode' }
 VMSimpleStackBasedCogitBytecodeTest >> testPushConstantFalseBytecodePushesFalse [
 	
@@ -574,6 +758,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushConstantNilAndThenReturn [
 	self compile: [ 
 		cogit genPushConstantNilBytecode.
 		cogit genReturnTopFromMethod ] bytecodes: 2.
+
 	self runGeneratedCode.
 	
 	self assert: (self returnValue) equals: memory nilObject
@@ -604,6 +789,12 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushConstantZeroBytecodePushesASmallI
 	self runGeneratedCode.
 	
 	self assert: (self popAddress) equals: (memory integerObjectOf: 0)
+]
+
+{ #category : #'tests - single bytecode - push temp' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushFirstTempVariablePushesVariable [
+
+	self testPushTempVariablePushesVariableAt: 1
 ]
 
 { #category : #'tests - single bytecode' }
@@ -775,6 +966,43 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushReceiverVariableBytecodeZeroPushe
 	self runGeneratedCode.
 
 	self assert: self popAddress equals: memory falseObject
+]
+
+{ #category : #'tests - single bytecode - push temp' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushSecondTempVariablePushesVariable [
+
+	self testPushTempVariablePushesVariableAt: 2
+]
+
+{ #category : #'tests - single bytecode - push temp' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushTempVariablePushesVariableAt: tempVariableUnderTest [
+
+	| temporaries |
+	
+	temporaries  := (1 to: tempVariableUnderTest) collect: [ :anIndex | 
+		anIndex = tempVariableUnderTest ifTrue: [ memory falseObject ] ifFalse: [memory nilObject]].
+
+	self 
+		createFramefulCallFrom: callerAddress 
+		receiver: memory nilObject 
+		arguments: #() 
+		temporaries: temporaries.
+
+	self assert: (self readMemoryAt: self stackPointerRegisterValue) equals: memory falseObject.
+	
+	"The bytecode of the push temporary variable is used to identify the index (from 0 to 15) and it starts from 16 to 31"
+	cogit byte0: tempVariableUnderTest - 1 + 16.
+	self compile: [ cogit genPushTemporaryVariableBytecode ].	
+
+	self runGeneratedCode.
+
+	self assert: self popAddress equals: memory falseObject
+]
+
+{ #category : #'tests - single bytecode - push temp' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushThirdTempVariablePushesVariable [
+
+	self testPushTempVariablePushesVariableAt: 3
 ]
 
 { #category : #'tests - single bytecode' }
