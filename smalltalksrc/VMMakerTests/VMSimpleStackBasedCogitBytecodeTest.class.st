@@ -8,10 +8,23 @@ Class {
 		'unicorn',
 		'callerAddress',
 		'registerValue',
-		'opcodes'
+		'opcodes',
+		'obj'
 	],
 	#category : #VMMakerTests
 }
+
+{ #category : #helpers }
+VMSimpleStackBasedCogitBytecodeTest >> assertStackRemainsUnchangedDuring: aBlockClosure [ 
+	
+	| before |
+	before := self stackPointerRegisterValue.
+	aBlockClosure value.
+	
+	self
+		assert: self stackPointerRegisterValue
+		equals: before
+]
 
 { #category : #helpers }
 VMSimpleStackBasedCogitBytecodeTest >> compile: aBlockClosure [ 
@@ -46,6 +59,30 @@ VMSimpleStackBasedCogitBytecodeTest >> disassemble [
 		instructionsIn: (memory memory memoryObject copyFrom: 1 to: 24) asByteArray pc: 0
 ]
 
+{ #category : #'tests - single bytecode - pop into inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> doPopIntoReceiverVariableBytecodeStoresVariableAt: instanceVariableToWrite [
+
+	"Create an object with at least `instanceVariableToWrite` instance variables.
+	In memory, instance variables are 0-indexed so substract 1"
+	obj := self newObjectWithSlots: instanceVariableToWrite.
+	
+	"The receiver should be in a receiver register based on Cog's calling convention"
+	self receiverRegister: obj.
+
+	"The object is filled with nils.
+	Push false into the stack and execute the store and pop bytecode."	
+	self pushAddress: memory falseObject.
+	"Set an address as store check trampoline.
+	The bytecode below will jump to it if it is a old -> young store"
+	cogit objectRepresentation ceStoreCheckTrampoline: memory nilObject.
+	
+	"The first byte of the push receiver instance variable bytecode family is used to identify which variable (0-based again)"
+	cogit byte0: instanceVariableToWrite - 1.		
+	self compile: [ 
+		cogit genStoreAndPopReceiverVariableBytecode ].	
+	self runGeneratedCode.
+]
+
 { #category : #'helpers - registers' }
 VMSimpleStackBasedCogitBytecodeTest >> instructionPointer [
 
@@ -67,21 +104,16 @@ VMSimpleStackBasedCogitBytecodeTest >> newMemory [
 { #category : #helpers }
 VMSimpleStackBasedCogitBytecodeTest >> pop [
 
-	| stackAddress stackAddressIntegerValue poppedByteArray |
-
-	stackAddress := ByteArray new: self wordSize.
-	unicorn register: UcX86Registers rsp value readInto: stackAddress. 
+	| stackAddressIntegerValue poppedByteArray |
 
 	"Getting address from stack register"
-	stackAddressIntegerValue := stackAddress integerAt: 1 size: self wordSize signed: false.
+	stackAddressIntegerValue := self stackPointerRegisterValue.
 
 	"Putting the value in the stack memory"
 	poppedByteArray := unicorn memoryAt: stackAddressIntegerValue readNext: self wordSize.
 
 	"Updating SP"
-	stackAddressIntegerValue := stackAddressIntegerValue + self wordSize.
-	stackAddress integerAt: 1 put: stackAddressIntegerValue size: self wordSize signed: false.
-	unicorn register: UcX86Registers rsp value write: stackAddress.
+	self stackPointerRegisterValue: stackAddressIntegerValue.
 	
 	^ poppedByteArray
 ]
@@ -95,27 +127,22 @@ VMSimpleStackBasedCogitBytecodeTest >> popAddress [
 { #category : #helpers }
 VMSimpleStackBasedCogitBytecodeTest >> push: aByteArray [
 
-	| stackAddress stackAddressIntegerValue |
-
+	| stackAddressIntegerValue |
 	self assert: aByteArray size equals: self wordSize.
 
-	stackAddress := ByteArray new: self wordSize.
-	
-	unicorn register: UcX86Registers rsp value readInto: stackAddress. 
-
 	"Getting address from stack register"
-	stackAddressIntegerValue := stackAddress integerAt: 1 size: self wordSize signed: false.
+	stackAddressIntegerValue := self stackPointerRegisterValue.
 
 	"Updating SP"
 	stackAddressIntegerValue := stackAddressIntegerValue - self wordSize.
-	stackAddress integerAt: 1 put: stackAddressIntegerValue size: self wordSize signed: false.
-	unicorn register: UcX86Registers rsp value write: stackAddress.
+	self stackPointerRegisterValue: stackAddressIntegerValue.
 	
 	"Putting the value in the stack memory"
 	unicorn
 		memoryAt: stackAddressIntegerValue
 		write: aByteArray
 		size: self wordSize.
+
 ]
 
 { #category : #helpers }
@@ -220,6 +247,139 @@ VMSimpleStackBasedCogitBytecodeTest >> setUp [
 
 	
 
+]
+
+{ #category : #'helpers - registers' }
+VMSimpleStackBasedCogitBytecodeTest >> stackPointerRegisterValue [
+
+	^ self readRegister: UcX86Registers rsp
+]
+
+{ #category : #'helpers - registers' }
+VMSimpleStackBasedCogitBytecodeTest >> stackPointerRegisterValue: aValue [
+	
+	self writeRegister: UcX86Registers rsp value: aValue
+]
+
+{ #category : #'tests - single bytecode - pop into inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testPopIntoEighthReceiverVariableBytecodePopsValue [
+
+	"The block pushed and then pops.
+	The stack should remain unchanged after the execution"
+	self assertStackRemainsUnchangedDuring: [ self doPopIntoReceiverVariableBytecodeStoresVariableAt: 8 ]
+]
+
+{ #category : #'tests - single bytecode - pop into inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testPopIntoFifthReceiverVariableBytecodePopsValue [
+
+	"The block pushed and then pops.
+	The stack should remain unchanged after the execution"
+	self assertStackRemainsUnchangedDuring: [ self doPopIntoReceiverVariableBytecodeStoresVariableAt: 5 ]
+]
+
+{ #category : #'tests - single bytecode - pop into inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testPopIntoFirstReceiverVariableBytecodePopsValue [
+
+	"The block pushed and then pops.
+	The stack should remain unchanged after the execution"
+	self assertStackRemainsUnchangedDuring: [ self doPopIntoReceiverVariableBytecodeStoresVariableAt: 1 ]
+]
+
+{ #category : #'tests - single bytecode - pop into inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testPopIntoFourthReceiverVariableBytecodePopsValue [
+
+	"The block pushed and then pops.
+	The stack should remain unchanged after the execution"
+	self assertStackRemainsUnchangedDuring: [ self doPopIntoReceiverVariableBytecodeStoresVariableAt: 4 ]
+]
+
+{ #category : #'tests - single bytecode - pop into inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testPopIntoReceiverVariableBytecodeStoresEigthInstanceVariable [
+
+	self testPopIntoReceiverVariableBytecodeStoresVariableAt: 8
+]
+
+{ #category : #'tests - single bytecode - pop into inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testPopIntoReceiverVariableBytecodeStoresFifthInstanceVariable [
+
+	self testPopIntoReceiverVariableBytecodeStoresVariableAt: 5
+]
+
+{ #category : #'tests - single bytecode - pop into inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testPopIntoReceiverVariableBytecodeStoresFirstInstanceVariable [
+
+	self testPopIntoReceiverVariableBytecodeStoresVariableAt: 1
+]
+
+{ #category : #'tests - single bytecode - pop into inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testPopIntoReceiverVariableBytecodeStoresFourthInstanceVariable [
+
+	self testPopIntoReceiverVariableBytecodeStoresVariableAt: 4
+]
+
+{ #category : #'tests - single bytecode - pop into inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testPopIntoReceiverVariableBytecodeStoresSecondInstanceVariable [
+
+	self testPopIntoReceiverVariableBytecodeStoresVariableAt: 2
+]
+
+{ #category : #'tests - single bytecode - pop into inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testPopIntoReceiverVariableBytecodeStoresSeventhInstanceVariable [
+
+	self testPopIntoReceiverVariableBytecodeStoresVariableAt: 7
+]
+
+{ #category : #'tests - single bytecode - pop into inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testPopIntoReceiverVariableBytecodeStoresSixthInstanceVariable [
+
+	self testPopIntoReceiverVariableBytecodeStoresVariableAt: 6
+]
+
+{ #category : #'tests - single bytecode - pop into inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testPopIntoReceiverVariableBytecodeStoresThirdInstanceVariable [
+
+	self testPopIntoReceiverVariableBytecodeStoresVariableAt: 3
+]
+
+{ #category : #'tests - single bytecode - pop into inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testPopIntoReceiverVariableBytecodeStoresVariableAt: instanceVariableToWrite [
+
+	self doPopIntoReceiverVariableBytecodeStoresVariableAt: instanceVariableToWrite.
+
+	"After execution false should be popped from the stack and false should be stored in the object's variable (0-based)."
+	self assert: (memory fetchPointer: instanceVariableToWrite - 1 ofObject: obj) equals: memory falseObject
+]
+
+{ #category : #'tests - single bytecode - pop into inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testPopIntoSecondReceiverVariableBytecodePopsValue [
+
+	"The block pushed and then pops.
+	The stack should remain unchanged after the execution"
+	self assertStackRemainsUnchangedDuring: [ self doPopIntoReceiverVariableBytecodeStoresVariableAt: 2 ]
+]
+
+{ #category : #'tests - single bytecode - pop into inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testPopIntoSeventhReceiverVariableBytecodePopsValue [
+
+	"The block pushed and then pops.
+	The stack should remain unchanged after the execution"
+	self assertStackRemainsUnchangedDuring: [ self doPopIntoReceiverVariableBytecodeStoresVariableAt: 7 ]
+]
+
+{ #category : #'tests - single bytecode - pop into inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testPopIntoSixthReceiverVariableBytecodePopsValue [
+
+	"The block pushed and then pops.
+	The stack should remain unchanged after the execution"
+	self assertStackRemainsUnchangedDuring: [ self doPopIntoReceiverVariableBytecodeStoresVariableAt: 6 ]
+]
+
+{ #category : #'tests - single bytecode - pop into inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testPopIntoThirdReceiverVariableBytecodePopsValue [
+
+	"The block pushed and then pops.
+	The stack should remain unchanged after the execution"
+	self assertStackRemainsUnchangedDuring: [ self doPopIntoReceiverVariableBytecodeStoresVariableAt: 3 ]
 ]
 
 { #category : #'tests - single bytecode' }

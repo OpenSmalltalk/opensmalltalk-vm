@@ -3532,7 +3532,7 @@ SimpleStackBasedCogit >> genStorePop: popBoolean ReceiverVariable: slotIndex [
 	popBoolean
 		ifTrue: [self PopR: ClassReg]
 		ifFalse: [self MoveMw: 0 r: SPReg R: ClassReg].
-	self
+	objectRepresentation
 		genStoreSourceReg: ClassReg 
 		slotIndex: slotIndex 
 		destReg: ReceiverResultReg 

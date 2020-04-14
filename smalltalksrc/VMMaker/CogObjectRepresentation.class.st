@@ -81,6 +81,12 @@ CogObjectRepresentation >> canPinObjects [
 	^false
 ]
 
+{ #category : #accessing }
+CogObjectRepresentation >> ceStoreCheckTrampoline: anAddress [
+	<doNotGenerate>
+	ceStoreCheckTrampoline := anAddress
+]
+
 { #category : #'garbage collection' }
 CogObjectRepresentation >> checkValidObjectReference: anOop [
 	^(objectMemory isImmediate: anOop) not
