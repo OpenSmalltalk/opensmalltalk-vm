@@ -3575,6 +3575,12 @@ Cogit >> breakPC: anAddressArrayOrNil [
 	singleStep := singleStep or: [anAddressArrayOrNil singleStepRequiredToTriggerIn: self]
 ]
 
+{ #category : #accessing }
+Cogit >> byte1: anInteger [
+	<doNotGenerate>
+	byte1 := anInteger
+]
+
 { #category : #'simulation only' }
 Cogit >> bytecodeFixupClass [
 	self subclassResponsibility

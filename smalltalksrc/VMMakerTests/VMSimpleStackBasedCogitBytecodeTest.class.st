@@ -15,6 +15,18 @@ Class {
 }
 
 { #category : #helpers }
+VMSimpleStackBasedCogitBytecodeTest >> assertPushed: anOop after: aBlockClosure [
+	
+	| before after |
+	before := self stackPointerRegisterValue.
+	aBlockClosure value.
+	after := self stackPointerRegisterValue.
+	
+	self assert: after equals: before - self wordSize.
+	self assert: (self readMemoryAt: after) equals: anOop
+]
+
+{ #category : #helpers }
 VMSimpleStackBasedCogitBytecodeTest >> assertStackRemainsUnchangedDuring: aBlockClosure [ 
 	
 	| before |
@@ -59,6 +71,41 @@ VMSimpleStackBasedCogitBytecodeTest >> disassemble [
 		instructionsIn: (memory memory memoryObject copyFrom: 1 to: 24) asByteArray pc: 0
 ]
 
+{ #category : #'tests - extended store bytecode - store inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> doExtendedStoreStoresInstanceVariableIndex: instanceVariableToWrite [
+
+	"Create an object with at least `instanceVariableToWrite` instance variables.
+	In memory, instance variables are 0-indexed so substract 1"
+	obj := self newObjectWithSlots: instanceVariableToWrite.
+	
+	"The receiver should be in a receiver register based on Cog's calling convention"
+	self receiverRegister: obj.
+
+	self doExtendedStoreStoresVariableType: 0 index: instanceVariableToWrite.
+]
+
+{ #category : #'tests - extended store bytecode - store inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> doExtendedStoreStoresVariableType: type index: index [
+
+	"Type = 0 is instance variable"
+	"Type = 1 is temp variable"
+	"Type = 2 is unused/invalid"
+	"Type = 3 is literal variable (~association)"
+	
+	"The object is filled with nils.
+	Push false into the stack and execute the store and pop bytecode."	
+	self pushAddress: memory falseObject.
+	
+	"Set an address as store check trampoline.
+	The bytecode below will jump to it if it is a old -> young store"
+	cogit objectRepresentation ceStoreCheckTrampoline: memory nilObject.
+	
+	"The first byte of the push receiver instance variable bytecode family is used to identify which variable (0-based again)"
+	cogit byte1: type << 6 + index - 1.
+	self compile: [ cogit extendedStoreBytecode ].	
+	self runGeneratedCode.
+]
+
 { #category : #'tests - single bytecode - pop into inst var' }
 VMSimpleStackBasedCogitBytecodeTest >> doPopIntoReceiverVariableBytecodeStoresVariableAt: instanceVariableToWrite [
 
@@ -72,6 +119,7 @@ VMSimpleStackBasedCogitBytecodeTest >> doPopIntoReceiverVariableBytecodeStoresVa
 	"The object is filled with nils.
 	Push false into the stack and execute the store and pop bytecode."	
 	self pushAddress: memory falseObject.
+	
 	"Set an address as store check trampoline.
 	The bytecode below will jump to it if it is a old -> young store"
 	cogit objectRepresentation ceStoreCheckTrampoline: memory nilObject.
@@ -152,6 +200,14 @@ VMSimpleStackBasedCogitBytecodeTest >> pushAddress: anInteger [
 	aByteArray := ByteArray new: self wordSize.
 	aByteArray integerAt: 1 put: anInteger size: self wordSize signed: false.
 	self push: aByteArray
+]
+
+{ #category : #helpers }
+VMSimpleStackBasedCogitBytecodeTest >> readMemoryAt: anAddress [
+
+	| bytes |
+	bytes := unicorn memoryAt: anAddress readNext: self wordSize.
+	^ bytes integerAt: 1 size: self wordSize signed: false
 ]
 
 { #category : #'helpers - registers' }
@@ -259,6 +315,127 @@ VMSimpleStackBasedCogitBytecodeTest >> stackPointerRegisterValue [
 VMSimpleStackBasedCogitBytecodeTest >> stackPointerRegisterValue: aValue [
 	
 	self writeRegister: UcX86Registers rsp value: aValue
+]
+
+{ #category : #'tests - extended push bytecode - push inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testExtendedPushPushesInstanceVariable1 [
+
+	self testExtendedPushPushesInstanceVariable: 1
+]
+
+{ #category : #'tests - extended push bytecode - push inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testExtendedPushPushesInstanceVariable2 [
+
+	self testExtendedPushPushesInstanceVariable: 2
+]
+
+{ #category : #'tests - extended push bytecode - push inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testExtendedPushPushesInstanceVariable3 [
+
+	self testExtendedPushPushesInstanceVariable: 3
+]
+
+{ #category : #'tests - extended push bytecode - push inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testExtendedPushPushesInstanceVariable32 [
+
+	self testExtendedPushPushesInstanceVariable: 32
+]
+
+{ #category : #'tests - extended push bytecode - push inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testExtendedPushPushesInstanceVariable64 [
+
+	self testExtendedPushPushesInstanceVariable: 64
+]
+
+{ #category : #'tests - extended push bytecode - push inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testExtendedPushPushesInstanceVariable: instanceVariableToWrite [
+
+	self testExtendedPushPushesVariableType: 0 "Instance variable type" index: instanceVariableToWrite
+]
+
+{ #category : #'tests - extended push bytecode - push inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testExtendedPushPushesVariableType: type index: instanceVariableToWrite [
+
+	"Type = 0 is instance variable"
+	"Type = 1 is temp variable"
+	"Type = 2 is literal object"
+	"Type = 3 is literal variable (~association)"
+
+	"Create an object with at least `instanceVariableToWrite` instance variables.
+	In memory, instance variables are 0-indexed so substract 1"
+	obj := self newObjectWithSlots: instanceVariableToWrite.
+	memory storePointer: instanceVariableToWrite - 1 ofObject: obj withValue: memory falseObject.
+	
+	"The receiver should be in a receiver register based on Cog's calling convention"
+	self receiverRegister: obj.
+	
+	"The first byte of the push receiver instance variable bytecode family is used to identify which variable (0-based again)"
+	cogit byte1: type << 6 + instanceVariableToWrite - 1.
+	self compile: [ cogit extendedPushBytecode ].	
+	self runGeneratedCode.
+
+	self assert: self popAddress equals: memory falseObject
+]
+
+{ #category : #'tests - extended store bytecode - store inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testExtendedStoreInstanceVariableIndex1LeavesStackUnchanged [
+
+	"Check that we push a false that is not popped"
+	self assertPushed: memory falseObject after: [ self doExtendedStoreStoresInstanceVariableIndex: 1 ]
+]
+
+{ #category : #'tests - extended store bytecode - store inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testExtendedStoreInstanceVariableIndex2LeavesStackUnchanged [
+
+	"Check that we push a false that is not popped"
+	self assertPushed: memory falseObject after: [ self doExtendedStoreStoresInstanceVariableIndex: 2 ]
+]
+
+{ #category : #'tests - extended store bytecode - store inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testExtendedStoreInstanceVariableIndex32LeavesStackUnchanged [
+
+	"Check that we push a false that is not popped"
+	self assertPushed: memory falseObject after: [ self doExtendedStoreStoresInstanceVariableIndex: 32 ]
+]
+
+{ #category : #'tests - extended store bytecode - store inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testExtendedStoreInstanceVariableIndex64LeavesStackUnchanged [
+
+	"Check that we push a false that is not popped"
+	self assertPushed: memory falseObject after: [ self doExtendedStoreStoresInstanceVariableIndex: 64 ]
+]
+
+{ #category : #'tests - extended store bytecode - store inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testExtendedStoreStoresInstanceVariableIndex1 [
+
+	self testExtendedStoreStoresInstanceVariableIndex: 1
+]
+
+{ #category : #'tests - extended store bytecode - store inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testExtendedStoreStoresInstanceVariableIndex2 [
+
+	self testExtendedStoreStoresInstanceVariableIndex: 2
+]
+
+{ #category : #'tests - extended store bytecode - store inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testExtendedStoreStoresInstanceVariableIndex32 [
+
+	self testExtendedStoreStoresInstanceVariableIndex: 32
+]
+
+{ #category : #'tests - extended store bytecode - store inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testExtendedStoreStoresInstanceVariableIndex64 [
+
+	self testExtendedStoreStoresInstanceVariableIndex: 64
+]
+
+{ #category : #'tests - extended store bytecode - store inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testExtendedStoreStoresInstanceVariableIndex: instanceVariableToWrite [
+
+	self doExtendedStoreStoresInstanceVariableIndex: instanceVariableToWrite.
+
+	"After execution false should be popped from the stack and false should be stored in the object's variable (0-based)."
+	self assert: (memory fetchPointer: instanceVariableToWrite - 1 ofObject: obj) equals: memory falseObject
 ]
 
 { #category : #'tests - single bytecode - pop into inst var' }
