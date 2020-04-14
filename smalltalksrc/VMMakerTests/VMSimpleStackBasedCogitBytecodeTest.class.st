@@ -67,6 +67,16 @@ VMSimpleStackBasedCogitBytecodeTest >> compile: aBlockClosure bytecodes: bytecod
 ]
 
 { #category : #'helpers - frames' }
+VMSimpleStackBasedCogitBytecodeTest >> createFramefulCallFrom: anAddress [
+
+	self
+		createFramefulCallFrom: anAddress
+		receiver: memory nilObject
+		arguments: #()
+		temporaries: #()
+]
+
+{ #category : #'helpers - frames' }
 VMSimpleStackBasedCogitBytecodeTest >> createFramefulCallFrom: returnAddress receiver: receiver arguments: arguments [
 
 	self createFramefulCallFrom: returnAddress receiver: receiver arguments: arguments temporaries: #()
@@ -1266,8 +1276,30 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushThirdTempVariablePushesVariable [
 	self testPushTempVariablePushesVariableAt: 3
 ]
 
-{ #category : #'tests - single bytecode' }
-VMSimpleStackBasedCogitBytecodeTest >> testReturnNilLeavesNilInReturnRegister [
+{ #category : #'tests - single bytecode - return' }
+VMSimpleStackBasedCogitBytecodeTest >> testReturnNilFramefulLeavesNilInReturnRegister [
+
+	self createFramefulCallFrom: callerAddress.
+	
+	self compile: [ cogit genReturnNil ].	
+	self runUntilReturn.
+
+	self assert: self returnValue equals: 24
+]
+
+{ #category : #'tests - single bytecode - return' }
+VMSimpleStackBasedCogitBytecodeTest >> testReturnNilFramefulReturnsToCaller [
+
+	self createFramefulCallFrom: callerAddress.
+	
+	self compile: [ cogit genReturnNil ].	
+	self runUntilReturn.
+
+	self assert: self instructionPointer equals: callerAddress
+]
+
+{ #category : #'tests - single bytecode - return' }
+VMSimpleStackBasedCogitBytecodeTest >> testReturnNilFramelessLeavesNilInReturnRegister [
 
 	self compile: [ cogit genReturnNil ].	
 	self runUntilReturn.
@@ -1275,8 +1307,8 @@ VMSimpleStackBasedCogitBytecodeTest >> testReturnNilLeavesNilInReturnRegister [
 	self assert: self returnValue equals: 24
 ]
 
-{ #category : #'tests - single bytecode' }
-VMSimpleStackBasedCogitBytecodeTest >> testReturnNilReturnsToCaller [
+{ #category : #'tests - single bytecode - return' }
+VMSimpleStackBasedCogitBytecodeTest >> testReturnNilFramelessReturnsToCaller [
 
 	self compile: [ cogit genReturnNil ].	
 	self runUntilReturn.
