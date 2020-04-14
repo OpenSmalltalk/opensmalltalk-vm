@@ -3,10 +3,11 @@
 #include "jpeglib.h"
 #include <setjmp.h>
 
+/* c.f. Error.c */
 struct error_mgr2 {
   struct jpeg_error_mgr pub;	/* "public" fields */
 
-  jmp_buf *setjmp_buffer;	/* for return to caller */
+  jmp_buf setjmp_buffer;	/* for return to caller */
 };
 
 typedef struct error_mgr2* error_ptr2;
