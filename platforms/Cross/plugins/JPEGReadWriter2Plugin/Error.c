@@ -5,7 +5,7 @@
 struct error_mgr2 {
   struct jpeg_error_mgr pub;	/* "public" fields */
 
-  jmp_buf setjmp_buffer;	/* for return to caller */
+  jmp_buf *setjmp_buffer;	/* for return to caller */
 };
 
 typedef struct error_mgr2 * error_ptr2;
@@ -20,5 +20,5 @@ void error_exit (j_common_ptr cinfo)
   error_ptr2 myerr = (error_ptr2) cinfo->err;
 
   /* Return control to the setjmp point */
-  longjmp(myerr->setjmp_buffer, 1);
+  longjmp(*myerr->setjmp_buffer, 1);
 }
