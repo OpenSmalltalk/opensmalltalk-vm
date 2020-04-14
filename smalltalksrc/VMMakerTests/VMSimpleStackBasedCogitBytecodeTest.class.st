@@ -229,7 +229,7 @@ VMSimpleStackBasedCogitBytecodeTest >> setUp [
 	"Put whatever caller address for now. This is not okeish but it lets tests run for now.
 	We should refine these when we properly test returns and sends."
 	callerAddress := initialAddress + memory memory size - 24.
-	self writeRegister: UcX86Registers rsp value: callerAddress.
+	self stackPointerRegisterValue: callerAddress.
 	stackValueBytes := ByteArray new: self wordSize.
 	stackValueBytes
 		integerAt: 1 put: callerAddress
