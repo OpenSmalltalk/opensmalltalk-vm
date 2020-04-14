@@ -324,17 +324,116 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushReceiverBytecodePushesTheReceiver
 	self assert: (self popAddress) equals: 75
 ]
 
-{ #category : #'tests - single bytecode' }
+{ #category : #'tests - single bytecode - push inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushReceiverVariableBytecodeZeroPushesEighthVariable [
+
+	self testPushReceiverVariableBytecodeZeroPushesVariableAt: 8
+]
+
+{ #category : #'tests - single bytecode - push inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushReceiverVariableBytecodeZeroPushesEleventhVariable [
+
+	self testPushReceiverVariableBytecodeZeroPushesVariableAt: 11
+]
+
+{ #category : #'tests - single bytecode - push inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushReceiverVariableBytecodeZeroPushesFifteenthVariable [
+
+	self testPushReceiverVariableBytecodeZeroPushesVariableAt: 15
+]
+
+{ #category : #'tests - single bytecode - push inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushReceiverVariableBytecodeZeroPushesFifthVariable [
+
+	self testPushReceiverVariableBytecodeZeroPushesVariableAt: 5
+]
+
+{ #category : #'tests - single bytecode - push inst var' }
 VMSimpleStackBasedCogitBytecodeTest >> testPushReceiverVariableBytecodeZeroPushesFirstVariable [
 
-	| obj |
-	cogit byte0: 0.
+	self testPushReceiverVariableBytecodeZeroPushesVariableAt: 1
+]
+
+{ #category : #'tests - single bytecode - push inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushReceiverVariableBytecodeZeroPushesFourteenthVariable [
+
+	self testPushReceiverVariableBytecodeZeroPushesVariableAt: 14
+]
+
+{ #category : #'tests - single bytecode - push inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushReceiverVariableBytecodeZeroPushesFourthVariable [
+
+	self testPushReceiverVariableBytecodeZeroPushesVariableAt: 4
+]
+
+{ #category : #'tests - single bytecode - push inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushReceiverVariableBytecodeZeroPushesNinthVariable [
+
+	self testPushReceiverVariableBytecodeZeroPushesVariableAt: 9
+]
+
+{ #category : #'tests - single bytecode - push inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushReceiverVariableBytecodeZeroPushesSecondVariable [
+
+	self testPushReceiverVariableBytecodeZeroPushesVariableAt: 2
+]
+
+{ #category : #'tests - single bytecode - push inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushReceiverVariableBytecodeZeroPushesSeventhVariable [
+
+	self testPushReceiverVariableBytecodeZeroPushesVariableAt: 7
+]
+
+{ #category : #'tests - single bytecode - push inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushReceiverVariableBytecodeZeroPushesSixteenthVariable [
+
+	self testPushReceiverVariableBytecodeZeroPushesVariableAt: 16
+]
+
+{ #category : #'tests - single bytecode - push inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushReceiverVariableBytecodeZeroPushesSixthVariable [
+
+	self testPushReceiverVariableBytecodeZeroPushesVariableAt: 6
+]
+
+{ #category : #'tests - single bytecode - push inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushReceiverVariableBytecodeZeroPushesTenthVariable [
+
+	self testPushReceiverVariableBytecodeZeroPushesVariableAt: 10
+]
+
+{ #category : #'tests - single bytecode - push inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushReceiverVariableBytecodeZeroPushesThirdVariable [
+
+	self testPushReceiverVariableBytecodeZeroPushesVariableAt: 3
+]
+
+{ #category : #'tests - single bytecode - push inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushReceiverVariableBytecodeZeroPushesThirteenthVariable [
+
+	self testPushReceiverVariableBytecodeZeroPushesVariableAt: 13
+]
+
+{ #category : #'tests - single bytecode - push inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushReceiverVariableBytecodeZeroPushesTwelfthVariable [
+
+	self testPushReceiverVariableBytecodeZeroPushesVariableAt: 12
+]
+
+{ #category : #'tests - single bytecode - push inst var' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushReceiverVariableBytecodeZeroPushesVariableAt: instanceVariableToWrite [
+
+	| obj |	
+	"Create an object with at least `instanceVariableToWrite` instance variables.
+	In memory, instance variables are 0-indexed so substract 1"
+	obj := self newObjectWithSlots: instanceVariableToWrite.
+	memory storePointer: instanceVariableToWrite - 1 ofObject: obj withValue: memory falseObject.
 	
-	obj := self newObjectWithSlots: 1.
-	
+	"The receiver should be in a receiver register based on Cog's calling convention"
 	self receiverRegister: obj.
-	memory storePointer: 0 ofObject: obj withValue: memory falseObject.
 	
+	"The first byte of the push receiver instance variable bytecode family is used to identify which variable (0-based again)"
+	cogit byte0: instanceVariableToWrite - 1.		
 	self compile: [ cogit genPushReceiverVariableBytecode ].	
 	self runGeneratedCode.
 
