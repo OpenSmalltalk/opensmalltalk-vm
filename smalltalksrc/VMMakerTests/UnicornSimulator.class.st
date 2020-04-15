@@ -119,6 +119,12 @@ UnicornSimulator >> receiverRegisterValue: anInteger [
 	self writeRegister: self receiverRegister value: anInteger
 ]
 
+{ #category : #'reading memory' }
+UnicornSimulator >> register: anIndex readInto: aByteArray [ 
+
+	unicorn register: anIndex readInto: aByteArray 
+]
+
 { #category : #registers }
 UnicornSimulator >> returnRegisterValue [
 	

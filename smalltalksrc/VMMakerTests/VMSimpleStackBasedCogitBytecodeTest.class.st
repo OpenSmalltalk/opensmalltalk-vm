@@ -141,6 +141,15 @@ VMSimpleStackBasedCogitBytecodeTest >> createFramefulCallFrom: returnAddress rec
 ]
 
 { #category : #'helpers - frames' }
+VMSimpleStackBasedCogitBytecodeTest >> createFramelessCallFrom: anAddress [
+
+	self
+		createFramelessCallFrom: anAddress
+		receiver: memory nilObject
+		arguments: #()
+]
+
+{ #category : #'helpers - frames' }
 VMSimpleStackBasedCogitBytecodeTest >> createFramelessCallFrom: returnAddress receiver: receiver arguments: arguments [.
 
 	"I create a frameless call
@@ -233,6 +242,52 @@ VMSimpleStackBasedCogitBytecodeTest >> doPopIntoReceiverVariableBytecodeStoresVa
 	self compile: [ 
 		cogit genStoreAndPopReceiverVariableBytecode ].	
 	self runGeneratedCode.
+]
+
+{ #category : #'tests - single bytecode - return' }
+VMSimpleStackBasedCogitBytecodeTest >> doTestReturnCleansStackWithFrame: isFrameful onBlock: generationBlock [
+
+	| oldFP oldSP |
+
+	"After the execution of the return the stack should be in the same state than before sending the message"	
+	oldFP := self framePointerRegisterValue.
+	oldSP := self stackPointerRegisterValue.
+
+	isFrameful 
+		ifTrue: [self createFramefulCallFrom: callerAddress]
+		ifFalse: [self createFramelessCallFrom: callerAddress].		
+	
+	self compile: generationBlock.	
+	self runUntilReturn.
+
+	self assert: oldFP equals: self framePointerRegisterValue.
+	self assert: oldSP equals: self stackPointerRegisterValue.
+]
+
+{ #category : #'tests - single bytecode - return' }
+VMSimpleStackBasedCogitBytecodeTest >> doTestReturnReturnsObjectInReturnRegister: anAddress withFrame: isFrameful onBlock: compilationBlock [
+
+	isFrameful 
+		ifTrue: [self createFramefulCallFrom: callerAddress]
+		ifFalse: [self createFramelessCallFrom: callerAddress].		
+	
+	self compile: compilationBlock.	
+	self runUntilReturn.
+
+	self assert: unicorn returnRegisterValue equals: anAddress
+]
+
+{ #category : #'tests - single bytecode - return' }
+VMSimpleStackBasedCogitBytecodeTest >> doTestReturnReturnsToCallerWithFrame: isFrameful onBlock: compilationBlock [
+
+	isFrameful 
+		ifTrue: [self createFramefulCallFrom: callerAddress]
+		ifFalse: [self createFramelessCallFrom: callerAddress].		
+	
+	self compile: compilationBlock.	
+	self runUntilReturn.
+
+	self assert: unicorn instructionPointerValue equals: callerAddress
 ]
 
 { #category : #'helpers - registers' }
@@ -1288,43 +1343,151 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushThirdTempVariablePushesVariable [
 ]
 
 { #category : #'tests - single bytecode - return' }
+VMSimpleStackBasedCogitBytecodeTest >> testReturnNilFramefulCleansStack [
+
+	self doTestReturnCleansStackWithFrame: true onBlock: [ cogit genReturnNil ]
+]
+
+{ #category : #'tests - single bytecode - return' }
 VMSimpleStackBasedCogitBytecodeTest >> testReturnNilFramefulLeavesNilInReturnRegister [
 
-	self createFramefulCallFrom: callerAddress.
-	
-	self compile: [ cogit genReturnNil ].	
-	self runUntilReturn.
-
-	self assert: unicorn returnRegisterValue equals: 24
+	self
+		doTestReturnReturnsObjectInReturnRegister: memory nilObject
+		withFrame: true
+		onBlock: [ cogit genReturnNil ]
 ]
 
 { #category : #'tests - single bytecode - return' }
 VMSimpleStackBasedCogitBytecodeTest >> testReturnNilFramefulReturnsToCaller [
 
-	self createFramefulCallFrom: callerAddress.
-	
-	self compile: [ cogit genReturnNil ].	
-	self runUntilReturn.
+	self doTestReturnReturnsToCallerWithFrame: true onBlock: [ cogit genReturnNil ]
+]
 
-	self assert: unicorn instructionPointerValue equals: callerAddress
+{ #category : #'tests - single bytecode - return' }
+VMSimpleStackBasedCogitBytecodeTest >> testReturnNilFramelessCleansStack [
+
+	self doTestReturnCleansStackWithFrame: false onBlock: [ cogit genReturnNil ]
 ]
 
 { #category : #'tests - single bytecode - return' }
 VMSimpleStackBasedCogitBytecodeTest >> testReturnNilFramelessLeavesNilInReturnRegister [
 
-	self compile: [ cogit genReturnNil ].	
-	self runUntilReturn.
-
-	self assert: unicorn returnRegisterValue equals: 24
+	self
+		doTestReturnReturnsObjectInReturnRegister: memory nilObject
+		withFrame: false
+		onBlock: [ cogit genReturnNil ]
 ]
 
 { #category : #'tests - single bytecode - return' }
 VMSimpleStackBasedCogitBytecodeTest >> testReturnNilFramelessReturnsToCaller [
 
-	self compile: [ cogit genReturnNil ].	
-	self runUntilReturn.
+	self doTestReturnReturnsToCallerWithFrame: false onBlock: [ cogit genReturnNil ]
+]
 
-	self assert: unicorn instructionPointerValue equals: callerAddress
+{ #category : #'tests - single bytecode - return' }
+VMSimpleStackBasedCogitBytecodeTest >> testReturnTopFramefulLeavesTopObjectInReturnRegister [
+
+	self
+		doTestReturnReturnsObjectInReturnRegister: memory falseObject
+		withFrame: true
+		onBlock: [ 
+			self pushAddress: memory falseObject.
+			cogit genReturnTopFromMethod ]
+]
+
+{ #category : #'tests - single bytecode - return' }
+VMSimpleStackBasedCogitBytecodeTest >> testReturnTopFramefullCleansStack [
+
+	self doTestReturnCleansStackWithFrame: true onBlock: [ 
+		self pushAddress: memory falseObject.
+		cogit genReturnTopFromMethod ]
+]
+
+{ #category : #'tests - single bytecode - return' }
+VMSimpleStackBasedCogitBytecodeTest >> testReturnTopFramefullReturnsToCaller [
+
+	self doTestReturnReturnsToCallerWithFrame: true onBlock: [ 
+		self pushAddress: memory falseObject.
+		cogit genReturnTopFromMethod ]
+]
+
+{ #category : #'tests - single bytecode - return' }
+VMSimpleStackBasedCogitBytecodeTest >> testReturnTopFramelesCleansStack [
+
+	self doTestReturnCleansStackWithFrame: false onBlock: [ 
+		self pushAddress: memory falseObject.
+		cogit genReturnTopFromMethod ]
+]
+
+{ #category : #'tests - single bytecode - return' }
+VMSimpleStackBasedCogitBytecodeTest >> testReturnTopFramelessLeavesTopObjectInReturnRegister [
+
+	self
+		doTestReturnReturnsObjectInReturnRegister: memory falseObject
+		withFrame: false
+		onBlock: [ 
+			self pushAddress: memory falseObject.
+			cogit genReturnTopFromMethod ]
+]
+
+{ #category : #'tests - single bytecode - return' }
+VMSimpleStackBasedCogitBytecodeTest >> testReturnTopFramelessReturnsToCaller [
+
+	self doTestReturnReturnsToCallerWithFrame: false onBlock: [ 
+		self pushAddress: memory falseObject.
+		cogit genReturnTopFromMethod ]
+]
+
+{ #category : #'tests - single bytecode - return' }
+VMSimpleStackBasedCogitBytecodeTest >> testReturnTrueFramefulCleansStack [
+
+	self
+		doTestReturnCleansStackWithFrame: true
+		onBlock: [ cogit genReturnTrue ]
+]
+
+{ #category : #'tests - single bytecode - return' }
+VMSimpleStackBasedCogitBytecodeTest >> testReturnTrueFramefulLeavesTrueObjectInReturnRegister [
+
+	self
+		doTestReturnReturnsObjectInReturnRegister: memory trueObject
+		withFrame: true
+		onBlock: [ 
+			cogit genReturnTrue ]
+]
+
+{ #category : #'tests - single bytecode - return' }
+VMSimpleStackBasedCogitBytecodeTest >> testReturnTrueFramefulReturnsToCaller [
+
+	self
+		doTestReturnReturnsToCallerWithFrame: true
+		onBlock: [ cogit genReturnTrue ]
+]
+
+{ #category : #'tests - single bytecode - return' }
+VMSimpleStackBasedCogitBytecodeTest >> testReturnTrueFramelessCleansStack [
+
+	self
+		doTestReturnCleansStackWithFrame: false
+		onBlock: [ cogit genReturnTrue ]
+]
+
+{ #category : #'tests - single bytecode - return' }
+VMSimpleStackBasedCogitBytecodeTest >> testReturnTrueFramelessLeavesTrueObjectInReturnRegister [
+
+	self
+		doTestReturnReturnsObjectInReturnRegister: memory trueObject
+		withFrame: false
+		onBlock: [ 
+			cogit genReturnTrue ]
+]
+
+{ #category : #'tests - single bytecode - return' }
+VMSimpleStackBasedCogitBytecodeTest >> testReturnTrueFramelessReturnsToCaller [
+
+	self
+		doTestReturnReturnsToCallerWithFrame: false
+		onBlock: [ cogit genReturnTrue ]
 ]
 
 { #category : #helpers }
