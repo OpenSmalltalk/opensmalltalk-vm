@@ -1,6 +1,6 @@
 #!/bin/sh
 
-TARGET=squeak5.0.2-solaris11.3.p5p 
+TARGET=squeak5.0.3-solaris11.3.p5p 
 
 if [ -f $TARGET ]
 then
@@ -27,14 +27,14 @@ then
 fi
 
 # create a reloc directory with 
-if [ ! -d sqcogspursunosht ]
+if [ ! -d sqstkspursunosht ]
 then
    echo "Please run this script in the 'products' directory."
    echo "Please build the 32bit binaries."
    exit 0
 fi
 
-if [ ! -d sqcogspur64sunosht ]
+if [ ! -d sqstkspur64sunosht ]
 then
    echo "Please run this script in the 'products' directory."
    echo "Please build the 64bit binaries."
@@ -55,8 +55,8 @@ fi
 
 mkdir reloc
 
-(cd sqcogspursunosht; find . | cpio -mdvp ../reloc)
-(cd sqcogspur64sunosht; find . | cpio -mdvp ../reloc)
+(cd sqstkspursunosht; find . | cpio -mdvp ../reloc)
+(cd sqstkspur64sunosht; find . | cpio -mdvp ../reloc)
 
 # remove .a files (archives) from the build
 # I don't understand why they are built

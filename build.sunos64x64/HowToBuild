@@ -28,7 +28,7 @@ The default value for INSTALLDIR is products/sqcogspur64sunos[ht]/usr
 
 To run the vm, consider running the process in the RT (real-time) class.
  
-For Solaris specific suggestions please contact me David Stes (stes@telenet.be),
+For Solaris specific suggestions please contact me (David Stes)
 or the OpenSmalltalk team for general OpenSmalltalk issues.
 
 Real-Time
