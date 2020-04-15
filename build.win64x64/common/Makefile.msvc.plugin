@@ -120,11 +120,7 @@ $(PLUGINLIB): $(VMDIR) $(OBJDIR) $(LIBOBJ)
 	-$(RM) $(PLUGINLIB)
 	$(LIBRARIAN) $(LIBOBJ) $(EXTRALIBS) -out:$(subst /,\\,$(PLUGINLIB))
 
-PLUGINDLL_LIBS:=WinMM.lib ole32.lib dsound.lib msdmo.lib kernel32.lib
-
-ifdef Clang
-PLUGINDLL_LIBS+=libconcrt.lib /NODEFAULTLIB:msvcrt.lib
-endif
+PLUGINDLL_LIBS:=WinMM.lib ole32.lib dsound.lib msdmo.lib kernel32.lib /NODEFAULTLIB:libc /NODEFAULTLIB:libcmt /DEFAULTLIB:msvcrt
 
 $(PLUGINDLL): $(VMDIR) $(OBJDIR) $(LIBOBJ)
 	$(LD) $(VMLIB) $(LDFLAGS) -DLL $(LIBOBJ) $(PLUGINDLL_LIBS) $(EXTRALIBS) \

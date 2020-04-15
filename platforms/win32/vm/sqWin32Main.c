@@ -1858,6 +1858,8 @@ main(int argc, char *argv[])
 
   SQ_LAUNCH_DROP = RegisterWindowMessage(TEXT("SQUEAK_LAUNCH_DROP"));
 
+  vmOptions = calloc(argc + 1, sizeof(char *));
+  imageOptions = calloc(argc + 1, sizeof(char *));
   /* start the non-service version */
   sqMain(argc, argv);
   return 0;
