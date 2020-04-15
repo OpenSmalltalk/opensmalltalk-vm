@@ -244,7 +244,7 @@ Integer >> signedIntFromLong64 [
 	"(self >= -1073741824 and: [self <= 1073741823]) ifTrue:
 		[^self]."
 	bits := self bitAnd: 16rFFFFFFFFFFFFFFFF.
-	(bits digitAt: 8) <= 16r7F ifTrue: [^bits].
+	(bits byteAt: 8) <= 16r7F ifTrue: [^bits].
 	^bits - 16r10000000000000000
 ]
 

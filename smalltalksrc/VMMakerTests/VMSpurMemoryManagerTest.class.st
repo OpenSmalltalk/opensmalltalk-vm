@@ -1,6 +1,6 @@
 Class {
 	#name : #VMSpurMemoryManagerTest,
-	#superclass : #TestCase,
+	#superclass : #ParametrizedTestCase,
 	#instVars : [
 		'newSpaceSize',
 		'stackSize',

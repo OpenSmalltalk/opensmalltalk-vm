@@ -12,18 +12,36 @@ Class {
 		'obj',
 		'stackMemory',
 		'stackMemoryStartAddress',
-		'stackMemoryEndAddress'
+		'stackMemoryEndAddress',
+		'isa',
+		'wordSize'
 	],
 	#category : #VMMakerTests
 }
+
+{ #category : #'building suites' }
+VMSimpleStackBasedCogitBytecodeTest class >> testParameters [
+
+	^ ParametrizedTestMatrix new
+		addCase: { #ISA -> #'X64'. #wordSize -> 8};
+		addCase: { #ISA -> #'IA32'. #wordSize -> 4};
+		"forSelector: #ISA addOptions: #( X64 IA32 ARMv5 );"
+		yourself
+]
+
+{ #category : #running }
+VMSimpleStackBasedCogitBytecodeTest >> ISA: anISA [
+
+	isa := anISA
+]
 
 { #category : #helpers }
 VMSimpleStackBasedCogitBytecodeTest >> assertPushed: anOop after: aBlockClosure [
 	
 	| before after |
-	before := self stackPointerRegisterValue.
+	before := unicorn stackPointerRegisterValue.
 	aBlockClosure value.
-	after := self stackPointerRegisterValue.
+	after := unicorn stackPointerRegisterValue.
 	
 	self assert: after equals: before - self wordSize.
 	self assert: (self readMemoryAt: after) equals: anOop
@@ -33,11 +51,11 @@ VMSimpleStackBasedCogitBytecodeTest >> assertPushed: anOop after: aBlockClosure 
 VMSimpleStackBasedCogitBytecodeTest >> assertStackRemainsUnchangedDuring: aBlockClosure [ 
 	
 	| before |
-	before := self stackPointerRegisterValue.
+	before := unicorn stackPointerRegisterValue.
 	aBlockClosure value.
 	
 	self
-		assert: self stackPointerRegisterValue
+		assert: unicorn stackPointerRegisterValue
 		equals: before
 ]
 
@@ -110,8 +128,8 @@ VMSimpleStackBasedCogitBytecodeTest >> createFramefulCallFrom: returnAddress rec
 		the flag for a block activation is the next most significant bit of the method pointer"
 	
 	"These are pushed when activating the method"	
-	self pushAddress: self framePointerRegisterValue.
-	self framePointerRegisterValue: self stackPointerRegisterValue.
+	self pushAddress: unicorn framePointerRegisterValue.
+	unicorn framePointerRegisterValue: unicorn stackPointerRegisterValue.
 
 	self pushAddress: (memory nilObject bitOr: 1). "method"
 	self pushAddress: memory nilObject. "context"
@@ -136,7 +154,7 @@ VMSimpleStackBasedCogitBytecodeTest >> createFramelessCallFrom: returnAddress re
 	arguments do: [ :anArgument | self pushAddress: anArgument ].
 	self pushAddress: returnAddress.	
 
-	self receiverRegister: receiver.
+	unicorn receiverRegisterValue: receiver.
 
 	"We initialize the internal Cogit state by hand because we don't have a method to cog"	
 "	cogit methodOrBlockNumTemps: 0.
@@ -165,7 +183,7 @@ VMSimpleStackBasedCogitBytecodeTest >> doExtendedStoreStoresInstanceVariableInde
 	obj := self newObjectWithSlots: instanceVariableToWrite.
 	
 	"The receiver should be in a receiver register based on Cog's calling convention"
-	self receiverRegister: obj.
+	unicorn receiverRegisterValue: obj.
 
 	self doExtendedStoreStoresVariableType: 0 index: instanceVariableToWrite.
 ]
@@ -200,7 +218,7 @@ VMSimpleStackBasedCogitBytecodeTest >> doPopIntoReceiverVariableBytecodeStoresVa
 	obj := self newObjectWithSlots: instanceVariableToWrite.
 	
 	"The receiver should be in a receiver register based on Cog's calling convention"
-	self receiverRegister: obj.
+	unicorn receiverRegisterValue: obj.
 
 	"The object is filled with nils.
 	Push false into the stack and execute the store and pop bytecode."	
@@ -250,13 +268,10 @@ VMSimpleStackBasedCogitBytecodeTest >> initializeStackMemory [.
 	stackMemoryStartAddress := 16r9000000.
 	stackMemoryEndAddress := stackMemoryStartAddress + stackMemory size.
 
-	unicorn
-		mapHostMemory: stackMemory
-		atAddress: stackMemoryStartAddress
-		withPermissions: UnicornConstants permissionAll.
+	unicorn mapMemory: stackMemory at: stackMemoryStartAddress.
 
 	"The stack pointer is at the top of the stack"
-	self stackPointerRegisterValue: stackMemoryEndAddress.
+	unicorn stackPointerRegisterValue: stackMemoryEndAddress.
 	
 
 ]
@@ -273,10 +288,12 @@ VMSimpleStackBasedCogitBytecodeTest >> newInterpreter [
 	^ CogVMSimulator newWithOptions: {#BytesPerWord . 8}
 ]
 
-{ #category : #helpers }
+{ #category : #running }
 VMSimpleStackBasedCogitBytecodeTest >> newMemory [
 
-	^ Spur64BitMMLECoSimulator new
+	^ wordSize = 4
+		ifTrue: [ Spur32BitMMLECoSimulator new ]
+		ifFalse: [ Spur64BitMMLECoSimulator new ]
 ]
 
 { #category : #helpers }
@@ -285,13 +302,13 @@ VMSimpleStackBasedCogitBytecodeTest >> pop [
 	| stackAddressIntegerValue poppedByteArray |
 
 	"Getting address from stack register"
-	stackAddressIntegerValue := self stackPointerRegisterValue.
+	stackAddressIntegerValue := unicorn stackPointerRegisterValue.
 
 	"Putting the value in the stack memory"
 	poppedByteArray := unicorn memoryAt: stackAddressIntegerValue readNext: self wordSize.
 
 	"Updating SP"
-	self stackPointerRegisterValue: stackAddressIntegerValue.
+	unicorn stackPointerRegisterValue: stackAddressIntegerValue.
 	
 	^ poppedByteArray
 ]
@@ -309,11 +326,11 @@ VMSimpleStackBasedCogitBytecodeTest >> push: aByteArray [
 	self assert: aByteArray size equals: self wordSize.
 
 	"Getting address from stack register"
-	stackAddressIntegerValue := self stackPointerRegisterValue.
+	stackAddressIntegerValue := unicorn stackPointerRegisterValue.
 
 	"Updating SP"
 	stackAddressIntegerValue := stackAddressIntegerValue - self wordSize.
-	self stackPointerRegisterValue: stackAddressIntegerValue.
+	unicorn stackPointerRegisterValue: stackAddressIntegerValue.
 	
 	"Putting the value in the stack memory"
 	unicorn
@@ -368,7 +385,7 @@ VMSimpleStackBasedCogitBytecodeTest >> readTemporaryValueAt: anIndex [
 	
 	self assert: cogit needsFrame.
 	
-	^ self readMemoryAt: self framePointerRegisterValue  - ((3 + anIndex) * self wordSize)
+	^ self readMemoryAt: unicorn framePointerRegisterValue  - ((3 + anIndex) * self wordSize)
 ]
 
 { #category : #helpers }
@@ -408,6 +425,7 @@ VMSimpleStackBasedCogitBytecodeTest >> setUp [
 
 	super setUp.
 	
+	SimpleStackBasedCogit initializeWithOptions: (Cogit asOptionsDictionary: { #ISA . isa }).
 	cogit := SimpleStackBasedCogit new setInterpreter: memory coInterpreter.
 	cogit objectRepresentation class initializeMiscConstants.
 	
@@ -419,30 +437,24 @@ VMSimpleStackBasedCogitBytecodeTest >> setUp [
 	
 	cogit methodZone manageFrom: 0 to: 23.
 	
-	"Initializing Unicorn with 2MB memory"
-	
-	unicorn := Unicorn x8664.
-	memory memory memoryObject pinInMemory.
-	unicorn
-		mapHostMemory: memory memory memoryObject
-		atAddress: initialAddress
-		withPermissions: UnicornConstants permissionAll.
-
+	"Initializing Unicorn processor"
+	self setUpCPUSimulator.
 	self initializeStackMemory.
 	self initializeInitialStackFrame.
-	
-	unicorn 
-		registerInvalidMemoryAccessHook: UcHookType invalidMemoryAccess value 
-		doing: [ :type :address :size :value | self halt.].
+]
 
-	
+{ #category : #running }
+VMSimpleStackBasedCogitBytecodeTest >> setUpCPUSimulator [
 
+	unicorn := UnicornSimulator perform: isa asSymbol.
+	memory memory memoryObject pinInMemory.
+	unicorn mapMemory: memory memory memoryObject at: initialAddress.
 ]
 
 { #category : #'helpers - registers' }
 VMSimpleStackBasedCogitBytecodeTest >> stackPointerRegisterValue [
 
-	^ self readRegister: UcX86Registers rsp
+	^ self readRegister: UcX86Registers esp
 ]
 
 { #category : #'helpers - registers' }
@@ -501,7 +513,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testExtendedPushPushesVariableType: type 
 	memory storePointer: instanceVariableToWrite - 1 ofObject: obj withValue: memory falseObject.
 	
 	"The receiver should be in a receiver register based on Cog's calling convention"
-	self receiverRegister: obj.
+	unicorn receiverRegisterValue: obj.
 	
 	"The first byte of the push receiver instance variable bytecode family is used to identify which variable (0-based again)"
 	cogit byte1: type << 6 + instanceVariableToWrite - 1.
@@ -997,7 +1009,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushConstantNilAndThenReturn [
 
 	self runGeneratedCode.
 	
-	self assert: (self returnValue) equals: memory nilObject
+	self assert: unicorn receiverRegisterValue equals: memory nilObject
 ]
 
 { #category : #'tests - single bytecode' }
@@ -1086,7 +1098,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushQuickIntegerZeroPushesAZero [
 { #category : #'tests - single bytecode' }
 VMSimpleStackBasedCogitBytecodeTest >> testPushReceiverBytecodePushesTheReceiver [
 
-	self receiverRegister: 75. 
+	unicorn receiverRegisterValue: 75. 
 	
 	self compile: [ cogit genPushReceiverBytecode ].	
 	self runGeneratedCode.
@@ -1193,14 +1205,13 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushReceiverVariableBytecodeZeroPushe
 { #category : #'tests - single bytecode - push inst var' }
 VMSimpleStackBasedCogitBytecodeTest >> testPushReceiverVariableBytecodeZeroPushesVariableAt: instanceVariableToWrite [
 
-	| obj |	
 	"Create an object with at least `instanceVariableToWrite` instance variables.
 	In memory, instance variables are 0-indexed so substract 1"
 	obj := self newObjectWithSlots: instanceVariableToWrite.
 	memory storePointer: instanceVariableToWrite - 1 ofObject: obj withValue: memory falseObject.
 	
 	"The receiver should be in a receiver register based on Cog's calling convention"
-	self receiverRegister: obj.
+	unicorn receiverRegisterValue: obj.
 	
 	"The first byte of the push receiver instance variable bytecode family is used to identify which variable (0-based again)"
 	cogit byte0: instanceVariableToWrite - 1.		
@@ -1259,7 +1270,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushTempVariablePushesVariableAt: tem
 		arguments: #() 
 		temporaries: temporaries.
 
-	self assert: (self readMemoryAt: self stackPointerRegisterValue) equals: memory falseObject.
+	self assert: (self readMemoryAt: unicorn stackPointerRegisterValue) equals: memory falseObject.
 	
 	"The bytecode of the push temporary variable is used to identify the index (from 0 to 15) and it starts from 16 to 31"
 	cogit byte0: tempVariableUnderTest - 1 + 16.
@@ -1284,7 +1295,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testReturnNilFramefulLeavesNilInReturnReg
 	self compile: [ cogit genReturnNil ].	
 	self runUntilReturn.
 
-	self assert: self returnValue equals: 24
+	self assert: unicorn returnRegisterValue equals: 24
 ]
 
 { #category : #'tests - single bytecode - return' }
@@ -1295,7 +1306,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testReturnNilFramefulReturnsToCaller [
 	self compile: [ cogit genReturnNil ].	
 	self runUntilReturn.
 
-	self assert: self instructionPointer equals: callerAddress
+	self assert: unicorn instructionPointerValue equals: callerAddress
 ]
 
 { #category : #'tests - single bytecode - return' }
@@ -1304,7 +1315,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testReturnNilFramelessLeavesNilInReturnRe
 	self compile: [ cogit genReturnNil ].	
 	self runUntilReturn.
 
-	self assert: self returnValue equals: 24
+	self assert: unicorn returnRegisterValue equals: 24
 ]
 
 { #category : #'tests - single bytecode - return' }
@@ -1313,13 +1324,19 @@ VMSimpleStackBasedCogitBytecodeTest >> testReturnNilFramelessReturnsToCaller [
 	self compile: [ cogit genReturnNil ].	
 	self runUntilReturn.
 
-	self assert: self instructionPointer equals: callerAddress
+	self assert: unicorn instructionPointerValue equals: callerAddress
 ]
 
 { #category : #helpers }
 VMSimpleStackBasedCogitBytecodeTest >> wordSize [
 	
 	^ memory wordSize
+]
+
+{ #category : #running }
+VMSimpleStackBasedCogitBytecodeTest >> wordSize: aWordSize [
+
+	wordSize := aWordSize
 ]
 
 { #category : #'helpers - registers' }
