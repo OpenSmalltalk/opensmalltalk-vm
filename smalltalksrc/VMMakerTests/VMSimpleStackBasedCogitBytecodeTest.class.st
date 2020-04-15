@@ -285,7 +285,7 @@ VMSimpleStackBasedCogitBytecodeTest >> instructionPointer [
 { #category : #helpers }
 VMSimpleStackBasedCogitBytecodeTest >> newInterpreter [
 
-	^ CogVMSimulator newWithOptions: {#BytesPerWord . 8}
+	^ CogVMSimulator newWithOptions: {#BytesPerWord . wordSize}
 ]
 
 { #category : #running }
