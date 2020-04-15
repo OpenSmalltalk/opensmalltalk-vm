@@ -8,7 +8,7 @@ i86pc) ;; # we're good
 fi ;;
 esac
 # Stack Spur VM with VM profiler and threaded heartbeat
-INSTALLDIR=sqstkspursunosht
+INSTALLDIR=sqstkspursunosht/usr
 # Some gcc versions create a broken VM using -O2
 OPT="-g -O2 -DNDEBUG -DDEBUGVM=0"
 
