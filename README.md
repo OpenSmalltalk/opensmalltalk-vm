@@ -37,6 +37,8 @@ Building in OSX / Linux:
 $ cmake . 
 $ make install
 ```
+In some latest Ubuntu installations is required to install the package libssl-dev.
+We are working to solve this dependency as the others in the build.
 
 Building in Windows:
 
