@@ -76,8 +76,8 @@ void heartbeat_wait_if_polling();
 
 Semaphore* heartbeatStopMutex;
 Semaphore* heartbeatSemaphore;
-int polling = 0;
-int stoppedHeartbeat = 0;
+static int polling = 0;
+static int stoppedHeartbeat = 0;
 
 
 void
@@ -502,7 +502,7 @@ heartbeat_poll_enter(long microSeconds){
 void
 heartbeat_poll_exit(long microSeconds){
 	//I only care if waited time is bigger than a millisecond
-	if(microSeconds <= 1000)
+	if(microSeconds <= 1000 && polling == 0)
 		return;
 
 	heartbeatStopMutex->wait(heartbeatStopMutex);
