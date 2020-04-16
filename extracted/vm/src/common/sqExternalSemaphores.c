@@ -62,13 +62,13 @@ extern sqInt doSignalSemaphoreWithIndex(sqInt semaIndex);
 
 /* Use 16-bit counters if possible, otherwise 32-bit */
 typedef struct {
-# if ATOMICADD16
-		short requests;
-		short responses;
-# else
+//# if ATOMICADD16
+//		short requests;
+//		short responses;
+//# else
 		int requests;
 		int responses;
-# endif
+//# endif
 	} SignalRequest;
 
 /* We would like to use something like the following for the tides
@@ -93,6 +93,9 @@ static volatile sqInt checkSignalRequests;
 static volatile char useTideA = 1;
 static volatile int lowTideA = MaxTide, highTideA = MinTide;
 static volatile int lowTideB = MaxTide, highTideB = MinTide;
+
+#define max(a,b) (a > b ? a : b)
+#define min(a,b) (a < b ? a : b)
 
 int
 ioGetMaxExtSemTableSize(void) { return numSignalRequests; }
@@ -198,6 +201,7 @@ signalSemaphoreWithIndex(sqInt index)
 	aioInterruptPoll();
 
 	forceInterruptCheck();
+
 	return 1;
 }
 
@@ -212,7 +216,7 @@ signalSemaphoreWithIndex(sqInt index)
 sqInt
 doSignalExternalSemaphores(sqInt externalSemaphoreTableSize)
 {
-	int i, lowTide, highTide;
+	volatile int i, lowTide, highTide;
 	char switched, signalled = 0;
 
 	sqLowLevelMFence();
@@ -256,15 +260,32 @@ doSignalExternalSemaphores(sqInt externalSemaphoreTableSize)
 			signalled = 1;
 		}
 
+	int hasSignalsNotProcessed = 0;
+
 	if (signalled)
 		LogEventChain((dbgEvtChF,"\n"));
 
 	/* If a signal came in while processing, check for signals again soon.
 	 */
 	sqLowLevelMFence();
-	if (checkSignalRequests)
+	if (checkSignalRequests){
 		forceInterruptCheck();
 
+		/*
+		 * If there still signals to check we want to preserve all indexes
+		 */
+		sqLowLevelMFence();
+		if (useTideA) {
+			lowTideA = min(lowTideA, lowTideB);
+			highTideA = max(lowTideA, lowTideB);
+		}
+		else {
+			lowTideB = min(lowTideA, lowTideB);
+			highTideB = max(lowTideA, lowTideB);
+		}
+		sqLowLevelMFence();
+
+	}
 	return switched;
 }
 
