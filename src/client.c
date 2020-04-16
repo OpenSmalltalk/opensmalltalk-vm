@@ -217,8 +217,8 @@ mainThreadLoop()
 {
     ensureSemaphoreInitialized();
     do {
+    	if(mainLoopClosure != NULL)mainLoopClosure();
         mainLoopSemaphore->wait(mainLoopSemaphore);
-        mainLoopClosure();
     } while(true);
 }
 
@@ -272,6 +272,7 @@ runOnWorkerThread(VMParameters *parameters)
 
     logDebug("Stack size: %ld\n", size);
 
+    ensureSemaphoreInitialized();
 
     if(pthread_attr_setstacksize(&tattr, size * 4)){
         perror("Setting thread stack size");
