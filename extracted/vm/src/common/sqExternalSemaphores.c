@@ -277,11 +277,11 @@ doSignalExternalSemaphores(sqInt externalSemaphoreTableSize)
 		sqLowLevelMFence();
 		if (useTideA) {
 			lowTideA = min(lowTideA, lowTideB);
-			highTideA = max(lowTideA, lowTideB);
+			highTideA = max(highTideA, highTideB);
 		}
 		else {
 			lowTideB = min(lowTideA, lowTideB);
-			highTideB = max(lowTideA, lowTideB);
+			highTideB = max(highTideA, highTideB);
 		}
 		sqLowLevelMFence();
 
