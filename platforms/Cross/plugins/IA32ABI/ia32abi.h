@@ -25,6 +25,8 @@
  * the downward-growing stack.
  */
 
+#include "sqSetjmpShim.h"
+
 #define SIGNATURE	sqInt *argVector/* call args on stack or in array */, \
 					int numArgs,	/* arg count of function to call (*) */ \
 					int funcOffset, /* stack offset of func Alien   */ \
@@ -64,25 +66,3 @@ extern thunkEntryType  thunkEntry (INT_REG_ARGS DBL_REG_ARGS void *,sqIntptr_t *
 extern void *allocateExecutablePage(long *pagesize);
 extern VMCallbackContext *getMostRecentCallbackContext(void);
 #undef thunkEntryType
-
-/* Use the most minimal setjmp/longjmp pair available; no signal handling
- * wanted or necessary.
- */
-#if !defined(_WIN32)
-# undef setjmp
-# undef longjmp
-# define setjmp _setjmp
-# define longjmp _longjmp
-#endif
-/*  Note: on windows 64 via mingw-w64, the 2nd argument NULL to _setjmp prevents stack unwinding
- */
-#if defined(_WIN64)
-# undef setjmp
-# undef longjmp
-# if defined(__GNUC__)
-#  define setjmp(jb) _setjmp(jb,NULL)
-# elif defined(_MSC_VER)
-#  define setjmp(jb) _setjmp(jb)
-# endif
-#endif
-

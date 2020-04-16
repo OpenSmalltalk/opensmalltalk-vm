@@ -8,15 +8,9 @@
 #include <cpu/cpu.h>
 #include <iodev/iodev.h>
 
+#include "sqSetjmpShim.h"
+
 #define min(a,b) ((a)<=(b)?(a):(b))
-/*
- * Define setjmp and longjmp to be the most minimal setjmp/longjmp available
- * on the platform.
- */
-#if !_WIN32
-# define setjmp(jb) _setjmp(jb)
-# define longjmp(jb,v) _longjmp(jb,v)
-#endif
 
 BOCHSAPI BX_CPU_C bx_cpu;
 

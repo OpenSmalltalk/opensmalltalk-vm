@@ -27,8 +27,9 @@
  *   FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  *   DEALINGS IN THE SOFTWARE.
  */
-#include "JPEGReadWriter2Plugin.h"
+#include <stdio.h> /* abs */
 #include <stdlib.h> /* abs */
+#include "JPEGReadWriter2Plugin.h"
 
 /*
  * For more info regarding what's being done here, download libjpeg 6b from
@@ -50,20 +51,19 @@ primJPEGWriteImageonByteArrayformqualityprogressiveJPEGerrorMgrWriteScanlines(
     char* destination,
     unsigned int* destinationSizePtr)
 {
+	jmp_buf jb;
+
+	if (!*destinationSizePtr)
+		return;
+
     j_compress_ptr pcinfo = (j_compress_ptr)jpegCompressStruct;
 	error_ptr2 pjerr = (error_ptr2)jpegErrorMgr2Struct;
 
 	pcinfo->err = jpeg_std_error(&pjerr->pub);
-	pjerr->setjmp_buffer = (jmp_buf *) malloc(sizeof(jmp_buf));
+	pjerr->setjmp_buffer = &jb;
 	pjerr->pub.error_exit = error_exit;
 
-	if (setjmp(*pjerr->setjmp_buffer)) {
-		jpeg_destroy_compress(pcinfo);
-
-		*destinationSizePtr = 0;
-	}
-
-	if (*destinationSizePtr) {
+	if (!setjmp(jb)) {
 		jpeg_create_compress(pcinfo);
 		jpeg_mem_dest(pcinfo, destination, destinationSizePtr);
 
@@ -132,9 +132,8 @@ primJPEGWriteImageonByteArrayformqualityprogressiveJPEGerrorMgrWriteScanlines(
 		}
 
 		jpeg_finish_compress(pcinfo);
-		jpeg_destroy_compress(pcinfo);
 	}
-	free(pjerr->setjmp_buffer);
+	jpeg_destroy_compress(pcinfo);
 }
 
 void
@@ -149,15 +148,16 @@ primJPEGReadImagefromByteArrayonFormdoDitheringerrorMgrReadScanlines(
     unsigned int wordsPerRow,
     int nativeDepth)
 {
+	jmp_buf jb;
 	j_decompress_ptr pcinfo = (j_decompress_ptr)jpegDecompressStruct;
 	error_ptr2 pjerr = (error_ptr2)jpegErrorMgr2Struct;
 
 	int ok = 1;
 	pcinfo->err = jpeg_std_error(&pjerr->pub);
-	pjerr->setjmp_buffer = (jmp_buf *) malloc(sizeof(jmp_buf));
+	pjerr->setjmp_buffer = &jb;
 	pjerr->pub.error_exit = error_exit;
 
-	if (setjmp(*pjerr->setjmp_buffer)) {
+	if (setjmp(jb)) {
 		jpeg_destroy_decompress(pcinfo);
 		ok = 0;
 	}
@@ -283,7 +283,6 @@ primJPEGReadImagefromByteArrayonFormdoDitheringerrorMgrReadScanlines(
 		jpeg_finish_decompress(pcinfo);
 		jpeg_destroy_decompress(pcinfo);
 	}
-	free(pjerr->setjmp_buffer);
 }
 
 void
@@ -293,22 +292,35 @@ primJPEGReadHeaderfromByteArraysizeerrorMgrReadHeader(
     unsigned int sourceSize,
     char* jpegErrorMgr2Struct)
 {
+	jmp_buf jb;
+
+	if (!sourceSize)
+		return;
+
     j_decompress_ptr pcinfo = (j_decompress_ptr)jpegDecompressStruct;
 	error_ptr2 pjerr = (error_ptr2)jpegErrorMgr2Struct;
 
 	pcinfo->err = jpeg_std_error(&pjerr->pub);
-	pjerr->setjmp_buffer = (jmp_buf *) malloc(sizeof(jmp_buf));
+	pjerr->setjmp_buffer = &jb;
 	pjerr->pub.error_exit = error_exit;
 
-	if (setjmp(*pjerr->setjmp_buffer)) {
+	if (setjmp(jb)) {
 		jpeg_destroy_decompress(pcinfo);
-		sourceSize = 0;
+		return;
 	}
 
-	if (sourceSize) {
-		jpeg_create_decompress(pcinfo);
-		jpeg_mem_src(pcinfo, source, sourceSize);
-		jpeg_read_header(pcinfo, TRUE);
-	}
-	free(pjerr->setjmp_buffer);
+	jpeg_create_decompress(pcinfo);
+	jpeg_mem_src(pcinfo, source, sourceSize);
+	jpeg_read_header(pcinfo, TRUE);
+}
+
+/*
+ * Here's the routine that replaces the standard error_exit method:
+ * It returns control to the setjmp points above.
+ */
+void
+error_exit (j_common_ptr cinfo)
+{
+  /* cinfo->err really points to a error_mgr2 struct, so coerce the pointer */
+  longjmp(*((error_ptr2)(cinfo->err))->setjmp_buffer, 1);
 }
