@@ -46,7 +46,7 @@
 #include "sq.h"
 #include "SocketPlugin.h"
 #include "sqaio.h"
-
+#include "pharovm/debug.h"
 
 #ifdef ACORN
 
@@ -122,8 +122,6 @@ struct sockaddr_un
 # include <unistd.h>
 
 #endif /* !ACORN */
-
-#include "pharovm/debug.h"
 
 /* Solaris sometimes fails to define this in netdb.h */
 #ifndef  MAXHOSTNAMELEN

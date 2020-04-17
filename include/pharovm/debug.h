@@ -41,7 +41,7 @@ EXPORT(void) installErrorHandlers();
 #define logWarnFromErrno(msg) 	logMessageFromErrno(LOG_WARN, msg, __FILENAME__, __FUNCTION__, __LINE__);
 #define logDebugFromErrno(msg) 	logMessageFromErrno(LOG_DEBUG, msg, __FILENAME__, __FUNCTION__, __LINE__);
 
-void logMessageFromErrno(int level, const char* msg, const char* fileName, const char* functionName, int line);
+EXPORT(void) logMessageFromErrno(int level, const char* msg, const char* fileName, const char* functionName, int line);
 
 #include <stdio.h>
 
