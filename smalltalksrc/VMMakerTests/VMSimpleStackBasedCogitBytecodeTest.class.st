@@ -1529,7 +1529,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testReturnTrueFramelessReturnsToCaller [
 ]
 
 { #category : #'tests - special sends' }
-VMSimpleStackBasedCogitBytecodeTest >> testSendPlusDoesNotMovesIntoSendNumArgsRegister [
+VMSimpleStackBasedCogitBytecodeTest >> testSendOneArgSpecialMessageDoesNotMovesIntoSendNumArgsRegister [
 	
 	| sendTrampolineAddress sendAddress specialObjectsOop previousValue |
 	specialObjectsOop := self newObjectWithSlots: 24.
@@ -1559,7 +1559,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendPlusDoesNotMovesIntoSendNumArgsRe
 ]
 
 { #category : #'tests - special sends' }
-VMSimpleStackBasedCogitBytecodeTest >> testSendPlusMovesNegatedSelectorIndexIntoClassRegister [
+VMSimpleStackBasedCogitBytecodeTest >> testSendOneArgSpecialMessageMovesNegatedSelectorIndexIntoClassRegister [
 	
 	| sendTrampolineAddress sendAddress specialObjectsOop |
 	specialObjectsOop := self newObjectWithSlots: 24.
@@ -1587,7 +1587,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendPlusMovesNegatedSelectorIndexInto
 ]
 
 { #category : #'tests - special sends' }
-VMSimpleStackBasedCogitBytecodeTest >> testSendPlusMovesReceiverFromStackTopIntoReceiverRegister [
+VMSimpleStackBasedCogitBytecodeTest >> testSendOneArgSpecialMessageMovesReceiverFromStackTopIntoReceiverRegister [
 	
 	| sendTrampolineAddress sendAddress specialObjectsOop |
 	specialObjectsOop := self newObjectWithSlots: 24.
@@ -1613,7 +1613,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendPlusMovesReceiverFromStackTopInto
 ]
 
 { #category : #'tests - special sends' }
-VMSimpleStackBasedCogitBytecodeTest >> testSendPlusPushesReturnValueFromReceiverRegisterAfterReturn [
+VMSimpleStackBasedCogitBytecodeTest >> testSendOneArgSpecialMessagePushesReturnValueFromReceiverRegisterAfterReturn [
 	
 	| sendTrampolineAddress sendAddress specialObjectsOop |
 	specialObjectsOop := self newObjectWithSlots: 24.
