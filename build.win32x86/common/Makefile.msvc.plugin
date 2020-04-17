@@ -125,6 +125,5 @@ $(PLUGINDLL): $(VMDIR) $(OBJDIR) $(LIBOBJ)
 	-LIBPATH:"$(WindowsSdkDir)LIB/$(WindowsSDKVersion)/um/x86" \
 	-LIBPATH:"$(WindowsSdkDir)LIB/$(WindowsSDKVersion)/ucrt/x86" \
 	-LIBPATH:"$(VCToolsInstallDir)/lib/x86/" $(EXTRALIBPATH) \
-	-LIBPATH:"../../platforms/win32/third-party/dx9sdk/Lib" \
 	-OUT:$(subst /,\\,$(PLUGINDLL))
 

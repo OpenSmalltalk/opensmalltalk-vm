@@ -115,11 +115,6 @@ ETOBJ:= $(OBJDIR)/etext.o
 .PRECIOUS: mkNamedPrims.exe
 
 #############################################################################
-# DirectX definitions - NOT USED - superseded by mingw provided files
-#
-DXDIR:=     $(PLATDIR)/win32/third-party/dx9sdk/Include
-
-#############################################################################
 # Toolchain
 #
 include ../common/Makefile.tools
