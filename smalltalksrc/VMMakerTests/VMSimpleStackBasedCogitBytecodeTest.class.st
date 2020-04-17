@@ -474,6 +474,16 @@ VMSimpleStackBasedCogitBytecodeTest >> returnValue [
 ]
 
 { #category : #helpers }
+VMSimpleStackBasedCogitBytecodeTest >> runFrom: startAddress until: endAddress [
+
+	unicorn startAt: startAddress
+		until: endAddress
+		timeout: 0
+		count: 0.
+
+]
+
+{ #category : #helpers }
 VMSimpleStackBasedCogitBytecodeTest >> runGeneratedCode [
 
 	unicorn startAt: initialAddress
@@ -487,6 +497,16 @@ VMSimpleStackBasedCogitBytecodeTest >> runGeneratedCode [
 VMSimpleStackBasedCogitBytecodeTest >> runUntilReturn [
 
 	unicorn startAt: 16r1000000
+		until: callerAddress
+		timeout: 0
+		count: 0.
+
+]
+
+{ #category : #helpers }
+VMSimpleStackBasedCogitBytecodeTest >> runUntilReturnFrom: anAddress [
+
+	unicorn startAt: anAddress
 		until: callerAddress
 		timeout: 0
 		count: 0.
