@@ -85,9 +85,9 @@ EXPORT(void) logMessage(int level, const char* fileName, const char* functionNam
 		struct timeval utcNow;
 		gettimeofday(&utcNow,0);
 
-		frintf(outputStream, "[%-5s] %s.%03d %s (%s:%d):", severityName[level - 1], timestamp, utcNow.tv_usec / 1000 , functionName, fileName, line);
+		fprintf(outputStream, "[%-5s] %s.%03d %s (%s:%d):", severityName[level - 1], timestamp, utcNow.tv_usec / 1000 , functionName, fileName, line);
 	}else{
-		frintf(outputStream, "[%-5s] %s %s (%s:%d):", severityName[level - 1], timestamp, functionName, fileName, line);
+		fprintf(outputStream, "[%-5s] %s %s (%s:%d):", severityName[level - 1], timestamp, functionName, fileName, line);
 	}
 
 	//Printint the message from the var_args.
