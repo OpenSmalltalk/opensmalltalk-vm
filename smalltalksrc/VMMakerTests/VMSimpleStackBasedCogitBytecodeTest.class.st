@@ -179,9 +179,15 @@ VMSimpleStackBasedCogitBytecodeTest >> createFramelessCallFrom: returnAddress re
 { #category : #helpers }
 VMSimpleStackBasedCogitBytecodeTest >> disassemble [
 	
+	^ self disassembleFrom: 1
+]
+
+{ #category : #helpers }
+VMSimpleStackBasedCogitBytecodeTest >> disassembleFrom: anIndex [
+	
 	^ LLVMDisassembler amd64 
 		disassembleNext: opcodes
-		instructionsIn: (memory memory memoryObject copyFrom: 1 to: 24) asByteArray pc: 0
+		instructionsIn: (memory memory memoryObject copyFrom: anIndex to: 100) asByteArray pc: 0
 ]
 
 { #category : #'tests - extended store bytecode - store inst var' }
