@@ -19,6 +19,18 @@ UnicornSimulator class >> X64 [
 	^ UnicornX64Simulator new
 ]
 
+{ #category : #registers }
+UnicornSimulator >> classRegister [
+	
+	^ self subclassResponsibility
+]
+
+{ #category : #registers }
+UnicornSimulator >> classRegisterValue [
+	
+	^ self readRegister: self classRegister
+]
+
 { #category : #initialization }
 UnicornSimulator >> createUnicorn [
 
@@ -129,6 +141,35 @@ UnicornSimulator >> register: anIndex readInto: aByteArray [
 UnicornSimulator >> returnRegisterValue [
 	
 	^ self receiverRegisterValue
+]
+
+{ #category : #registers }
+UnicornSimulator >> returnRegisterValue: aValue [
+	
+	^ self receiverRegisterValue: aValue
+]
+
+{ #category : #registers }
+UnicornSimulator >> sendNumberOfArgumentsRegister [
+
+	self subclassResponsibility
+]
+
+{ #category : #regiters }
+UnicornSimulator >> sendNumberOfArgumentsRegister: anInteger [ 
+	self shouldBeImplemented.
+]
+
+{ #category : #registers }
+UnicornSimulator >> sendNumberOfArgumentsRegisterValue [
+	
+	^ self readRegister: self sendNumberOfArgumentsRegister
+]
+
+{ #category : #registers }
+UnicornSimulator >> sendNumberOfArgumentsRegisterValue: aValue [
+
+	^ self writeRegister: self sendNumberOfArgumentsRegister value: aValue
 ]
 
 { #category : #registers }

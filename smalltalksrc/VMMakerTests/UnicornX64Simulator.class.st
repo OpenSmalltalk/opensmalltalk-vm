@@ -4,6 +4,12 @@ Class {
 	#category : #VMMakerTests
 }
 
+{ #category : #registers }
+UnicornX64Simulator >> classRegister [
+	
+	^ UcX86Registers rcx
+]
+
 { #category : #'as yet unclassified' }
 UnicornX64Simulator >> createUnicorn [
 
@@ -26,6 +32,12 @@ UnicornX64Simulator >> instructionPointerRegister [
 UnicornX64Simulator >> receiverRegister [
 	
 	^ UcX86Registers rdx
+]
+
+{ #category : #registers }
+UnicornX64Simulator >> sendNumberOfArgumentsRegister [
+	
+	^ UcX86Registers r9
 ]
 
 { #category : #registers }
