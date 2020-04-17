@@ -1529,6 +1529,36 @@ VMSimpleStackBasedCogitBytecodeTest >> testReturnTrueFramelessReturnsToCaller [
 ]
 
 { #category : #'tests - special sends' }
+VMSimpleStackBasedCogitBytecodeTest >> testSendPlusDoesNotMovesIntoSendNumArgsRegister [
+	
+	| sendTrampolineAddress sendAddress specialObjectsOop previousValue |
+	specialObjectsOop := self newObjectWithSlots: 24.
+	obj := self newObjectWithSlots: 2.
+	memory storePointer: 1 ofObject: obj withValue: (memory integerObjectOf: #+ numArgs).
+	memory storePointer: 23 ofObject: specialObjectsOop withValue: obj.
+	memory specialObjectsOop: specialObjectsOop.
+	cogit byte0: 176.
+	
+	"We will call to this address"
+	sendTrampolineAddress := self compile: [ cogit RetN: 0 ].
+	cogit ordinarySendTrampolineAt: #+ numArgs put: sendTrampolineAddress.
+	
+	self createFramefulCallFrom: callerAddress.
+	sendAddress := self compile: [ cogit genSpecialSelectorSend ].
+	
+	unicorn sendNumberOfArgumentsRegisterValue: (previousValue := 42).
+	
+	"Push receiver, arg, then send"
+	self pushAddress: memory falseObject.
+	self pushAddress: memory trueObject.
+	self runFrom: sendAddress until: sendTrampolineAddress.
+	
+	self
+		assert: unicorn sendNumberOfArgumentsRegisterValue
+		equals: previousValue
+]
+
+{ #category : #'tests - special sends' }
 VMSimpleStackBasedCogitBytecodeTest >> testSendPlusMovesNegatedSelectorIndexIntoClassRegister [
 	
 	| sendTrampolineAddress sendAddress specialObjectsOop |
