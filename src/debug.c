@@ -35,9 +35,39 @@ EXPORT(void) logAssert(const char* fileName, const char* functionName, int line,
 	logMessage(LOG_WARN, fileName, functionName, line, msg);
 }
 
+void logMessageFromErrno(int level, const char* msg, const char* fileName, const char* functionName, int line){
+	char buffer[1024+1];
+	int msgLength;
+
+	msgLength = strlen(msg);
+	strcpy(buffer, msg);
+
+#ifdef WIN32
+	strerror_s(buffer + msgLength, 1024 - msgLength, errno);
+#else
+	strerror_r(errno, buffer + msgLength, 1024 - msgLength);
+#endif
+
+	logMessage(level, fileName, functionName, line, msg);
+}
+
+FILE* getStreamForLevel(int level){
+	if(level <= LOG_ERROR){
+		return stderr;
+	}else{
+		return stdout;
+	}
+}
+
+
 EXPORT(void) logMessage(int level, const char* fileName, const char* functionName, int line, ...){
 	char * format;
 	char timestamp[20];
+
+	FILE* outputStream;
+
+	outputStream = getStreamForLevel(level);
+
 
 	if(level > max_error_level){
 		return;
@@ -55,9 +85,9 @@ EXPORT(void) logMessage(int level, const char* fileName, const char* functionNam
 		struct timeval utcNow;
 		gettimeofday(&utcNow,0);
 
-		printf("[%-5s] %s.%03d %s (%s:%d):", severityName[level - 1], timestamp, utcNow.tv_usec / 1000 , functionName, fileName, line);
+		frintf(outputStream, "[%-5s] %s.%03d %s (%s:%d):", severityName[level - 1], timestamp, utcNow.tv_usec / 1000 , functionName, fileName, line);
 	}else{
-		printf("[%-5s] %s %s (%s:%d):", severityName[level - 1], timestamp, functionName, fileName, line);
+		frintf(outputStream, "[%-5s] %s %s (%s:%d):", severityName[level - 1], timestamp, functionName, fileName, line);
 	}
 
 	//Printint the message from the var_args.
@@ -65,17 +95,17 @@ EXPORT(void) logMessage(int level, const char* fileName, const char* functionNam
 	va_start(list, line);
 
 	format = va_arg(list, char*);
-	vprintf(format, list);
+	vfprintf(outputStream, format, list);
 
 	va_end(list);
 
 	int formatLength = strlen(format);
 
 	if(formatLength == 0 || format[formatLength - 1] != '\n'){
-		printf("\n");
+		fprintf(outputStream,"\n");
 	}
 
-	fflush(stdout);
+	fflush(outputStream);
 }
 
 void getCrashDumpFilenameInto(char *buf)

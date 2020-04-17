@@ -43,8 +43,7 @@ isVMRunOnWorkerThread()
     return vmRunOnWorkerThread;
 }
 
-EXPORT(int)
-vm_init(const char* imageFileName, const VMParameterVector *vmParameters, const VMParameterVector *imageParameters)
+EXPORT(int) vm_init(VMParameters* parameters)
 {
 	initGlobalStructure();
 
@@ -58,13 +57,14 @@ vm_init(const char* imageFileName, const VMParameterVector *vmParameters, const 
 
     ioVMThread = ioCurrentOSThread();
 	ioInitExternalSemaphores();
+	setMaxStacksToPrint(parameters->maxStackFramesToPrint);
 
 	aioInit();
 
-	setPharoCommandLineParameters(vmParameters->parameters, vmParameters->count,
-			imageParameters->parameters, imageParameters->count);
+	setPharoCommandLineParameters(parameters->vmParameters.parameters, parameters->vmParameters.count,
+			parameters->imageParameters.parameters, parameters->imageParameters.count);
 
-	return loadPharoImage(imageFileName);
+	return loadPharoImage(parameters->imageFileName);
 }
 
 EXPORT(void)
@@ -82,8 +82,9 @@ vm_main_with_parameters(VMParameters *parameters)
 		return 1;
 	}
 
-	if(parameters->isDefaultImage && !parameters->defaultImageFound) {
-		printf("No image has been specified, and no default image has been found.\n");
+	if(parameters->isDefaultImage && !parameters->defaultImageFound)
+	{
+		logError("No image has been specified, and no default image has been found.\n");
 		vm_printUsageTo(stdout);
 		return 0;
 	}
@@ -101,14 +102,16 @@ vm_main_with_parameters(VMParameters *parameters)
 
 	// Retrieve the working directory.
 	char *workingDirectoryBuffer = (char*)calloc(1, FILENAME_MAX+1);
-	if(!workingDirectoryBuffer) {
-		fprintf(stderr, "Out of memory.\n");
+	if(!workingDirectoryBuffer)
+	{
+		logErrorFromErrno("Out of memory.\n");
 		return 1;
 	}
 
 	error = vm_path_get_current_working_dir_into(workingDirectoryBuffer, FILENAME_MAX+1);
-	if(error) {
-		fprintf(stderr, "Failed to obtain the current working directory: %s\n", vm_error_code_to_string(error));
+	if(error)
+	{
+		logError("Failed to obtain the current working directory: %s\n", vm_error_code_to_string(error));
 		return 1;
 	}
 
@@ -184,7 +187,7 @@ loadPharoImage(const char* fileName)
     imageFile = sqImageFileOpen(fileName, "rb");
     if(!imageFile)
 	{
-    	perror("Opening Image");
+    	logErrorFromErrno("Opening Image");
         return false;
     }
 
@@ -234,7 +237,7 @@ runVMThread(void* p)
 {
     VMParameters *parameters = (VMParameters*)p;
 
-    if(!vm_init(parameters->imageFileName, &parameters->vmParameters, &parameters->imageParameters))
+    if(!vm_init(parameters))
     {
         logError("Error opening image file: %s\n", parameters->imageFileName);
         return -1;

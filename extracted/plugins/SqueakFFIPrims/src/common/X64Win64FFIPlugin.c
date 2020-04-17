@@ -40,6 +40,8 @@ static char __buildInfo[] = "ThreadedX64Win64FFIPlugin VMMaker.oscog-eem.2481 uu
 #include "sqFFI.h" /* for logging and surface functions */
 #include "sqCogStackAlignment.h" /* for STACK_ALIGN_BYTES and getsp() */
 
+#include "pharovm/debug.h"
+
 #ifdef _MSC_VER
 # define alloca _alloca
 #endif
@@ -117,7 +119,7 @@ static char __buildInfo[] = "ThreadedX64Win64FFIPlugin VMMaker.oscog-eem.2481 uu
 /* but print assert failures. */
 void
 warning(char *s) { /* Print an error message but don't exit. */
-	printf("\n%s\n", s);
+	logWarn("\n%s\n", s);
 }
 #endif
 
@@ -2791,26 +2793,6 @@ ffiLogCallout(sqInt lit)
 EXPORT(sqInt)
 ffiLogCallsTo(char *fileName)
 {
-    sqInt ok;
-
-	if (fileName == null) {
-
-		/* disable logging */
-		ok = ffiLogFileNameOfLength(null, 0);
-		if (!ok) {
-			return 0;
-		}
-		ffiLogEnabled = 0;
-	}
-	else {
-
-		/* enable logging */
-		ok = ffiLogFileNameOfLength(fileName, strlen(fileName));
-		if (!ok) {
-			return 0;
-		}
-		ffiLogEnabled = 1;
-	}
 	return 1;
 }
 
@@ -3753,7 +3735,7 @@ isDirectAlien(sqInt oop)
 static sqInt
 msg(char *s)
 {
-	fprintf(stderr, "\n%s: %s", getModuleName(), s);
+	logTrace("\n%s: %s", getModuleName(), s);
 	return 0;
 }
 
@@ -6158,32 +6140,7 @@ primitiveLogCallsTo(void)
     sqInt logFile;
     sqInt ok;
 
-	if (!((methodArgumentCount()) == 1)) {
-		return primitiveFail();
-	}
-	logFile = stackValue(0);
-	if (logFile == (nilObject())) {
-
-		/* disable logging */
-		ok = ffiLogFileNameOfLength(null, 0);
-		if (!ok) {
-			return primitiveFail();
-		}
-		ffiLogEnabled = 0;
-	}
-	else {
-
-		/* enable logging */
-		if (!(isBytes(logFile))) {
-			return primitiveFail();
-		}
-		ok = ffiLogFileNameOfLength(firstIndexableField(logFile), byteSizeOf(logFile));
-		if (!ok) {
-			return primitiveFail();
-		}
-		ffiLogEnabled = 1;
-	}
-	return pop(1);
+	return primitiveFail();
 }
 
 

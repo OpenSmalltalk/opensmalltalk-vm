@@ -272,14 +272,6 @@ int newBP;
 	Perform the actual function call. */
 int ffiCallAddress(int fn)
 {
-#if 0
-   {
-     FILE *f = fopen("ffi.log","at");
-     fprintf(f, "%x",fn);
-     fflush(f);
-     fclose(f);
-   }
-#endif
 #ifdef _MSC_VER
 	__asm {
 		push ebx
@@ -360,18 +352,6 @@ int ffiCallAddress(int fn)
 "movl %%esp, _newSP\n\t"
 		: /* no outputs */ : "ebx" (fn) : "eax" /* clobbered registers */);
 		/* done */
-#endif
-#if 0
-   {
-     FILE *f = fopen("ffi.log","at");
-     fprintf(f, "...ok\n");
-     if(oldBP != newBP || oldSP != newSP) {
-       fprintf(f,"oldSP=%x, oldBP=%x\nnewSP=%x, newBP=%x\n",oldSP, oldBP,newSP,newBP);
-     }
-       fprintf(f,"SP=%x, BP=%x\n",newSP,newBP);
-     fflush(f);
-     fclose(f);
-   }
 #endif
 	return intReturnValue;
 }

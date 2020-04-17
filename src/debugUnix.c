@@ -45,7 +45,7 @@ void doReport(char* fault, ucontext_t *uap){
 
 	reportStackState(fault, ctimebuf, 1, uap, crashDumpFile);
 
-	vm_setVMOutputStream(stdout);
+	vm_setVMOutputStream(stderr);
 	fclose(crashDumpFile);
 
 	reportStackState(fault, ctimebuf, 1, uap, stderr);
@@ -297,7 +297,7 @@ void reportStackState(const char *msg, char *date, int printAll, ucontext_t *uap
 		}
 	}
 	else
-		printf("\nCan't dump Smalltalk stack(s). Not in VM thread\n");
+		fprintf(output,"\nCan't dump Smalltalk stack(s). Not in VM thread\n");
 #if STACKVM
 	fprintf(output, "\nMost recent primitives\n");
 	dumpPrimTraceLog();
@@ -306,6 +306,6 @@ void reportStackState(const char *msg, char *date, int printAll, ucontext_t *uap
 	reportMinimumUnusedHeadroom();
 # endif
 #endif
-	printf("\n\t(%s)\n", msg);
+	fprintf(output,"\n\t(%s)\n", msg);
 	fflush(output);
 }

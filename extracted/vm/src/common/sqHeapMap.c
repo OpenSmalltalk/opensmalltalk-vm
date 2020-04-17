@@ -23,7 +23,9 @@
 
 #include <stdlib.h>
 #include <string.h> /* for memset */
-#include <stdio.h> /* for perror */
+#include <stdio.h> /* for logErrorFromErrno */
+
+#include "pharovm/debug.h"
 
 #define ulong usqIntptr_t   /* enough for holding a pointer - unsigned long does not fit in LLP64 */
 #define uchar unsigned char
@@ -76,7 +78,7 @@ heapMapAtWordPut(void *wordPointer, int bit)
 		error("misaligned word");
 	if (!page) {
 		if (!(page = malloc(PAGESIZE))) {
-			perror("heapMap malloc");
+			logErrorFromErrno("heapMap malloc");
 			exit(1);
 		}
 		mapPages[PAGEINDEX(address)] = page;
@@ -159,7 +161,7 @@ heapMapAtWordPut(void *wordPointer, int bit)
 		error("misaligned word");
 	if (!(directory = mapPages[DIRECTORYINDEX(address)])) {
 		if (!(directory = malloc(DIRECTORYSIZE))) {
-			perror("heapMap malloc");
+			logErrorFromErrno("heapMap malloc");
 			exit(1);
 		}
 		mapPages[DIRECTORYINDEX(address)] = directory;
@@ -167,7 +169,7 @@ heapMapAtWordPut(void *wordPointer, int bit)
 	}
 	if (!(page = directory[PAGEINDEX(address)])) {
 		if (!(page = malloc(PAGESIZE))) {
-			perror("heapMap malloc");
+			logErrorFromErrno("heapMap malloc");
 			exit(1);
 		}
 		directory[PAGEINDEX(address)] = page;

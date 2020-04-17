@@ -7,6 +7,8 @@
 
 #include "sqAssert.h"
 
+#include "pharovm/debug.h"
+
 #if !defined(VMBIGENDIAN)
 # error "sqConfig.h does not define VMBIGENDIAN"
 #elif !((VMBIGENDIAN == 1) || (VMBIGENDIAN == 0))
@@ -38,14 +40,14 @@
 #elif SENDTRACE /* send tracing.  */
 # define sendBreakpointreceiver(sel, len, rcvr) do { \
 	if (sendTrace) \
-		printf("%.*s\n", (int)(len), (char *)(sel)); \
+		logTrace("%.*s\n", (int)(len), (char *)(sel)); \
 } while (0)
 # define mnuBreakpointreceiver(sel, len, rcvr) 0
 
 #elif 0 /* send trace/byte count.  */
 # define sendBreakpointreceiver(sel, len, rcvr) do { \
 	if (sendTrace) \
-		printf("%u %.*s\n", GIV(byteCount), (int)(len), (char *)(sel)); \
+		logTrace("%u %.*s\n", GIV(byteCount), (int)(len), (char *)(sel)); \
 } while (0)
 # define mnuBreakpointreceiver(sel, len, rcvr) 0
 
@@ -57,7 +59,7 @@
 		if (0) sendTrace = 1; \
 	} \
 	if (sendTrace) \
-		printf("%.*s\n", (int)(len), (char *)(sel)); \
+		logTrace("%.*s\n", (int)(len), (char *)(sel)); \
 } while (0)
 # define mnuBreakpointreceiver(sel, len, rcvr) do { \
 	if ((len) == -breakSelectorLength \
@@ -128,14 +130,14 @@
 
 #elif 0 /* maintain byteCount & check for valid instruction pointer */
 #define bytecodeDispatchDebugHook() do { \
-	printf("%ld: %d %x(%d)\n", ++GIV(byteCount), localIP-GIV(method)-3, currentBytecode, currentBytecode); \
+	logTrace("%ld: %d %x(%d)\n", ++GIV(byteCount), localIP-GIV(method)-3, currentBytecode, currentBytecode); \
 	if (!ValidInstructionPointerCheck()) \
 		warning("invalidInstructionPointerinMethod"); \
 	if (sendTrace > 1) printContext(GIV(activeContext)); \
   } while (0)
 #elif 0 /* maintain byteCount & check for valid instruction pointer */
 #define bytecodeDispatchDebugHook() do { \
-	printf("%ld: %d %x(%d)\n", ++GIV(byteCount), localIP-GIV(method)-3, currentBytecode, currentBytecode); \
+	logTrace("%ld: %d %x(%d)\n", ++GIV(byteCount), localIP-GIV(method)-3, currentBytecode, currentBytecode); \
 	if (!ValidInstructionPointerCheck()) \
 		warning("invalidInstructionPointerinMethod"); \
 	if (sendTrace > 1) printCallStack(); \
@@ -144,7 +146,7 @@
 # if defined(SQ_USE_GLOBAL_STRUCT) /* define only in interpreter */
 static FILE *bct = 0;
 void openBytecodeTraceFile(char *fn)
-{ if (!(bct = fopen(fn,"r"))) perror("fopen"); }
+{ if (!(bct = fopen(fn,"r"))) logErrorFromErrno("fopen"); }
 void closeBytecodeTraceFile() { if (bct) { fclose(bct); bct = 0; } }
 # endif
 # define bytecodeDispatchDebugHook() do { char line[64], expected[64]; \
@@ -152,7 +154,7 @@ void closeBytecodeTraceFile() { if (bct) { fclose(bct); bct = 0; } }
 	snprintf(expected, sizeof(expected), "%ld: %d %d(%x) %d %s\n", \
 			++GIV(byteCount), localIP-GIV(method)-3, currentBytecode, currentBytecode, \
 			(localFP-localSP)/sizeof(sqInt)-5, bytecodeNameTable[currentBytecode]); \
-	printf(expected); \
+	logTrace(expected); \
 	if (bct) { \
 		fgets(line, sizeof(line) - 1, bct); \
 		if (strcmp(line,expected)) \
@@ -165,14 +167,14 @@ void closeBytecodeTraceFile() { if (bct) { fclose(bct); bct = 0; } }
 #elif 0 /* print current frame & instruction pointer on every bytecode. */
 # define bytecodeDispatchDebugHook() do { \
 	printFrameWithSP(localFP,localSP); \
-	printf("%d %x\n", localIP - GIV(method) - 3, currentBytecode); \
+	logTrace("%d %x\n", localIP - GIV(method) - 3, currentBytecode); \
   } while (0)
 
 #elif 0 /* print current frame & pc on every bytecode if sendTrace/hit break. */
 # define bytecodeDispatchDebugHook() do { \
 	if (sendTrace) { \
 		printFrameWithSP(localFP,localSP); \
-		printf("%d %x\n", localIP - GIV(method) - 3, currentBytecode); \
+		logTrace("%d %x\n", localIP - GIV(method) - 3, currentBytecode); \
 	} \
   } while (0)
 #elif 0

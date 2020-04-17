@@ -1,7 +1,5 @@
 #pragma once
 
-#include <stdio.h>
-
 #ifndef EXPORT
 #define EXPORT(x)  x
 #endif
@@ -29,17 +27,23 @@ EXPORT(void) installErrorHandlers();
 #endif
 
 //FILENAME gives only the filename, as __FILE__ gives all the path
-#define __FILENAME__ (__FILE__ + SOURCE_PATH_SIZE)
+#define __FILENAME__ ((char*)__FILE__ + SOURCE_PATH_SIZE)
 
-#define logTrace(...)	0
-
-// #define logTrace(...)	logMessage(LOG_TRACE, __FILENAME__, __FUNCTION__, __LINE__, __VA_ARGS__)
+#define logTrace(...)	logMessage(LOG_TRACE, __FILENAME__, __FUNCTION__, __LINE__, __VA_ARGS__)
 #define logDebug(...)	logMessage(LOG_DEBUG, __FILENAME__, __FUNCTION__, __LINE__, __VA_ARGS__)
 #define logInfo(...)	logMessage(LOG_INFO, __FILENAME__, __FUNCTION__, __LINE__, __VA_ARGS__)
 #define logWarn(...)	logMessage(LOG_WARN, __FILENAME__, __FUNCTION__, __LINE__, __VA_ARGS__)
 #define logError(...)	logMessage(LOG_ERROR, __FILENAME__, __FUNCTION__, __LINE__, __VA_ARGS__)
 
 #define LOG_SIZEOF(expr) logDebug("sizeof("#expr"): %ld", sizeof(expr))
+
+#define logErrorFromErrno(msg) 	logMessageFromErrno(LOG_ERROR, msg, __FILENAME__, __FUNCTION__, __LINE__);
+#define logWarnFromErrno(msg) 	logMessageFromErrno(LOG_WARN, msg, __FILENAME__, __FUNCTION__, __LINE__);
+#define logDebugFromErrno(msg) 	logMessageFromErrno(LOG_DEBUG, msg, __FILENAME__, __FUNCTION__, __LINE__);
+
+void logMessageFromErrno(int level, const char* msg, const char* fileName, const char* functionName, int line);
+
+#include <stdio.h>
 
 int vm_printf( const char * format, ... );
 void vm_setVMOutputStream(FILE * stream);

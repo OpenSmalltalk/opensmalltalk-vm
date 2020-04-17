@@ -37,16 +37,20 @@ Building in OSX / Linux:
 $ cmake . 
 $ make install
 ```
+In some latest Ubuntu installations is required to install the package libssl-dev.
+We are working to solve this dependency as the others in the build.
 
 Building in Windows:
 
 The build in Windows, uses Cygwin. This tool should be installed, and the following Cygwin packages are needed:
 
-cmake
-mingw64-x86_64-clang
-zip
-unzip
-wget
+- cmake
+- mingw64-x86_64-clang
+- zip
+- unzip
+- wget
+- curl 
+- make
 
 ```bash
 $ cmake .

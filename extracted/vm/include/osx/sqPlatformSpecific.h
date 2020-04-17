@@ -149,11 +149,6 @@ extern const pthread_key_t tltiIndex;
 # endif /* COGMTVM */
 #endif /* STACKVM */
 
-/* warnPrintf is provided (and needed) on the win32 platform.
- * But it may be mentioned elsewhere, so provide a suitable def.
- */
-#define warnPrintf printf
-
 // From Joshua Gargus, for XCode 3.1
 #ifdef __GNUC__
 # undef EXPORT

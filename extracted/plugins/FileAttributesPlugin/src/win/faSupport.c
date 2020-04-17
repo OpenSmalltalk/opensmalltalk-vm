@@ -6,8 +6,10 @@
 #include <unistd.h>
 #include <assert.h>
 
+
 #include "sq.h"
 #include "faCommon.h"
+#include <pharovm/debug.h>
 
 #define	S_IFLNK	0xA000
 
@@ -253,27 +255,26 @@ void faClearFile(fapath *aFaPath)
  *
  * Print the contents of the supplied fapath
  */
-void faDbgDump(fapath *aFaPath)
-{
-int	i;
+void faDbgDump(fapath *aFaPath){
 
-	printf("StPath: %s\n", aFaPath->path);
-	printf("StPathLen:	%d\n", aFaPath->path_len);
-	printf("StPath strlen:	%d\n", strlen(aFaPath->path));
-	printf("Path: 0x%p, File: 0x%p\n", (void *)aFaPath->path, (void *)aFaPath->path_file);
-	printf("Max File Len:	%d\n", aFaPath->max_file_len);
-	printf("Plat code points: ");
+	int	i;
+
+	logDebug("StPath: %s\n", aFaPath->path);
+	logDebug("StPathLen:	%d\n", aFaPath->path_len);
+	logDebug("StPath strlen:	%d\n", strlen(aFaPath->path));
+	logDebug("Path: 0x%p, File: 0x%p\n", (void *)aFaPath->path, (void *)aFaPath->path_file);
+	logDebug("Max File Len:	%d\n", aFaPath->max_file_len);
+	logDebug("Plat code points: ");
 	for (i=0; i<wcslen(aFaPath->winpath); i++) {
-		printf(" %d", aFaPath->winpath[i]);
+		logDebug(" %d", aFaPath->winpath[i]);
 	}
-	printf("\n");
-	printf("PlatPathLen:	%d\n", aFaPath->winpath_len);
-	printf("PlatPath wcslen: %d\n", wcslen(aFaPath->winpath));
-	printf("PathLPP: 0x%p, Path: 0x%p, File: 0x%p\n",
+	logDebug("\n");
+	logDebug("PlatPathLen:	%d\n", aFaPath->winpath_len);
+	logDebug("PlatPath wcslen: %d\n", wcslen(aFaPath->winpath));
+	logDebug("PathLPP: 0x%p, Path: 0x%p, File: 0x%p\n",
 		(void *)aFaPath->winpathLPP, (void *)aFaPath->winpath, (void *)aFaPath->winpath_file);
-	printf("Max File Len:	%d\n", aFaPath->winmax_file_len);
-	printf("faGetPlatPathCPP(): 0x%p\n", faGetPlatPathCPP(aFaPath));
-	fflush(stdout);
+	logDebug("Max File Len:	%d\n", aFaPath->winmax_file_len);
+	logDebug("faGetPlatPathCPP(): 0x%p\n", faGetPlatPathCPP(aFaPath));
 }
 
 

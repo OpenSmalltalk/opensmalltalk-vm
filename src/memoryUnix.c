@@ -80,7 +80,7 @@ sqMakeMemoryNotExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 //	if (mprotect((void *)firstPage,
 //				 endAddr - firstPage + 1,
 //				 PROT_READ | PROT_WRITE) < 0)
-//		perror("mprotect(x,y,PROT_READ | PROT_WRITE)");
+//		logErrorFromErrno("mprotect(x,y,PROT_READ | PROT_WRITE)");
 }
 
 /* answer the address of (minHeapSize <= N <= desiredHeapSize) bytes of memory. */
@@ -165,7 +165,7 @@ void
 sqDeallocateMemorySegmentAtOfSize(void *addr, sqInt sz)
 {
 	if (munmap(addr, sz) != 0)
-		perror("sqDeallocateMemorySegment... munmap");
+		logErrorFromErrno("sqDeallocateMemorySegment... munmap");
 }
 
 void *
@@ -187,7 +187,7 @@ sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress
 		alloc = mmap(startAddress, bytes,
 					PROT_READ | PROT_WRITE, MAP_ANON | MAP_SHARED, -1, 0);
 		if (alloc == MAP_FAILED) {
-			perror("sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto mmap");
+			logErrorFromErrno("sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto mmap");
 			return 0;
 		}
 
@@ -204,7 +204,7 @@ sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress
 		count++;
 
 		if (munmap(alloc, bytes) != 0)
-			perror("sqAllocateMemorySegment... munmap");
+			logErrorFromErrno("sqAllocateMemorySegment... munmap");
 		minAddress = (void *)((char *)minAddress + bytes);
 	}
 	return 0;

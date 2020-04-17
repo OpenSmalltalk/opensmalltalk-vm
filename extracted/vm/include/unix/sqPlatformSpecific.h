@@ -43,11 +43,6 @@ extern int osCogStackPageHeadroom(void);
 extern void reportMinimumUnusedHeadroom(void);
 #endif
 
-/* warnPrintf is provided (and needed) on the win32 platform.
- * But it may be mentioned elsewhere, so provide a suitable def.
- */
-#define warnPrintf printf
-
 /* Thread support for thread-safe signalSemaphoreWithIndex and/or the COGMTVM */
 #if STACKVM || NewspeakVM
 # define sqLowLevelYield() sched_yield()

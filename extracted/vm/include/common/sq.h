@@ -279,24 +279,6 @@ unsigned long ioHeartbeatFrequency(int);
 #endif /* STACKVM */
 
 #if COGMTVM
-#define THRLOGSZ 256
-extern int thrlogidx;
-extern char *thrlog[];
-
-/* Debug logging that defers printing.  Use like printf, e.g.
- * TLOG("tryLockVMToIndex vmOwner = %d\n", vmOwner);
- * Requires #include "sqAtomicOps.h"
- * N.B. The following still isn't safe.  If enough log entries are made by other
- * threads after myindex is obtained but before asprintf completes we can get
- * two threads using the same entry.  But this is good enough for now.
- */
-#define THRLOG(...) do { int myidx, nextidx; \
-	do { myidx = thrlogidx; \
-		 nextidx = (myidx+1)&(THRLOGSZ-1); \
-	} while (!sqCompareAndSwap(thrlogidx,myidx,nextidx)); \
-	if (thrlog[myidx]) free(thrlog[myidx]); \
-	asprintf(thrlog + myidx, __VA_ARGS__); \
-} while (0)
 
 extern sqOSThread getVMOSThread();
 /* Please read the comment for CogThreadManager in the VMMaker package for
@@ -523,14 +505,6 @@ typedef struct sqComplexEvent
 sqInt ioSetInputSemaphore(sqInt semaIndex);
 /* Retrieve the next input event from the OS. */
 sqInt ioGetNextEvent(sqInputEvent *evt);
-
-/* Log the event procesing chain. */
-#if defined(DEBUG_EVENT_CHAIN)
-# define LogEventChain(parms) fprintf parms
-# define dbgEvtChF stderr
-#else
-# define LogEventChain(parms) 0
-#endif
 
 /* Image file and VM path names. */
 extern char imageName[];
