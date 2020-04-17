@@ -9,12 +9,12 @@ Class {
 		'callerAddress',
 		'registerValue',
 		'opcodes',
-		'obj',
 		'stackMemory',
 		'stackMemoryStartAddress',
 		'stackMemoryEndAddress',
 		'isa',
-		'wordSize'
+		'wordSize',
+		'obj'
 	],
 	#category : #VMMakerTests
 }
@@ -490,7 +490,7 @@ VMSimpleStackBasedCogitBytecodeTest >> setUp [
 	
 	memory hiddenRootsObject: 100.
 	
-	cogit methodZone manageFrom: 0 to: 23.
+	cogit methodZone manageFrom: initialAddress to: initialAddress + 100.
 	
 	"Initializing Unicorn processor"
 	self setUpCPUSimulator.
