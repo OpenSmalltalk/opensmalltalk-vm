@@ -61,14 +61,23 @@ VMSimpleStackBasedCogitBytecodeTest >> assertStackRemainsUnchangedDuring: aBlock
 
 { #category : #helpers }
 VMSimpleStackBasedCogitBytecodeTest >> compile: aBlockClosure [ 
-
+	"Compiles some native code using the code inside the block closure as builder.
+	This version assumes the block has a single 1-bytecode statement 
+	  => this is used to estimate the amount of memory to preallocate for the geneated code.
+	Return the address to the generated piece of code."
 	^ self compile: aBlockClosure bytecodes: 1
 ]
 
 { #category : #helpers }
 VMSimpleStackBasedCogitBytecodeTest >> compile: aBlockClosure bytecodes: bytecodes [
+	
+	"Compiles some native code using the code inside the block closure as builder.
+	The bytecodes variable contains an estimate of the number of bytecodes generated
+	  => this is used to estimate the amount of memory to preallocate for the geneated code.
+	Return the address to the generated piece of code."
 
 	"We estimate the same ammount of bytecode as the Cogit"
+	| allocatedAddress |
 	cogit allocateOpcodes: (bytecodes + 10) * 10 bytecodes: bytecodes ifFail: [ self fail ].
 	cogit zeroOpcodeIndex.
 	
@@ -77,11 +86,14 @@ VMSimpleStackBasedCogitBytecodeTest >> compile: aBlockClosure bytecodes: bytecod
 	cogit methodLabel address: 0.
 	cogit computeMaximumSizes.
 	
-	codeSize := cogit generateInstructionsAt: initialAddress "methodLabel address + headerSize?".
-	cogit methodZone allocate: codeSize.
-	lastAddress := cogit outputInstructionsAt: initialAddress.
+	"methodLabel address + headerSize?"
+	codeSize := cogit generateInstructionsAt: cogit methodZone freeStart.
+	allocatedAddress := cogit methodZone allocate: codeSize.
+	lastAddress := cogit outputInstructionsAt: allocatedAddress.
 
-	opcodes := cogit getOpcodeIndex
+	opcodes := cogit getOpcodeIndex.
+	
+	^ allocatedAddress
 ]
 
 { #category : #'helpers - frames' }
