@@ -1528,6 +1528,90 @@ VMSimpleStackBasedCogitBytecodeTest >> testReturnTrueFramelessReturnsToCaller [
 		onBlock: [ cogit genReturnTrue ]
 ]
 
+{ #category : #'tests - special sends' }
+VMSimpleStackBasedCogitBytecodeTest >> testSendPlusMovesNegatedSelectorIndexIntoClassRegister [
+	
+	| sendTrampolineAddress sendAddress specialObjectsOop |
+	specialObjectsOop := self newObjectWithSlots: 24.
+	obj := self newObjectWithSlots: 2.
+	memory storePointer: 1 ofObject: obj withValue: (memory integerObjectOf: #+ numArgs).
+	memory storePointer: 23 ofObject: specialObjectsOop withValue: obj.
+	memory specialObjectsOop: specialObjectsOop.
+	cogit byte0: 176.
+	
+	"We will call to this address"
+	sendTrampolineAddress := self compile: [ cogit RetN: 0 ].
+	cogit ordinarySendTrampolineAt: #+ numArgs put: sendTrampolineAddress.
+	
+	self createFramefulCallFrom: callerAddress.
+	sendAddress := self compile: [ cogit genSpecialSelectorSend ].
+	
+	"Push receiver, arg, then send"
+	self pushAddress: memory falseObject.
+	self pushAddress: memory trueObject.
+	self runFrom: sendAddress until: sendTrampolineAddress.
+	
+	self
+		assert: (unicorn classRegisterValue asByteArray signedLongAt: 1)
+		equals: (Smalltalk specialSelectors indexOf: #+) negated
+]
+
+{ #category : #'tests - special sends' }
+VMSimpleStackBasedCogitBytecodeTest >> testSendPlusMovesReceiverFromStackTopIntoReceiverRegister [
+	
+	| sendTrampolineAddress sendAddress specialObjectsOop |
+	specialObjectsOop := self newObjectWithSlots: 24.
+	obj := self newObjectWithSlots: 2.
+	memory storePointer: 1 ofObject: obj withValue: (memory integerObjectOf: #+ numArgs).
+	memory storePointer: 23 ofObject: specialObjectsOop withValue: obj.
+	memory specialObjectsOop: specialObjectsOop.
+	cogit byte0: 176.
+	
+	"We will call to this address"
+	sendTrampolineAddress := self compile: [ cogit RetN: 0 ].
+	cogit ordinarySendTrampolineAt: #+ numArgs put: sendTrampolineAddress.
+	
+	self createFramefulCallFrom: callerAddress.
+	sendAddress := self compile: [ cogit genSpecialSelectorSend ].
+	
+	"Push receiver, arg, then send"
+	self pushAddress: memory falseObject.
+	self pushAddress: memory trueObject.
+	self runFrom: sendAddress until: sendTrampolineAddress.
+	
+	self assert: unicorn receiverRegisterValue equals: memory falseObject
+]
+
+{ #category : #'tests - special sends' }
+VMSimpleStackBasedCogitBytecodeTest >> testSendPlusPushesReturnValueFromReceiverRegisterAfterReturn [
+	
+	| sendTrampolineAddress sendAddress specialObjectsOop |
+	specialObjectsOop := self newObjectWithSlots: 24.
+	obj := self newObjectWithSlots: 2.
+	memory storePointer: 1 ofObject: obj withValue: (memory integerObjectOf: #+ numArgs).
+	memory storePointer: 23 ofObject: specialObjectsOop withValue: obj.
+	memory specialObjectsOop: specialObjectsOop.
+	cogit byte0: 176.
+	
+	"We will call to this address"
+	sendTrampolineAddress := self compile: [ cogit RetN: 0 ].
+	cogit ordinarySendTrampolineAt: #+ numArgs put: sendTrampolineAddress.
+	
+	self createFramefulCallFrom: callerAddress.
+	sendAddress := self compile: [ cogit genSpecialSelectorSend ].
+	
+	"Push receiver, arg, then send"
+	self pushAddress: memory falseObject.
+	self pushAddress: memory trueObject.
+	self runFrom: sendAddress until: sendTrampolineAddress.
+	
+	"Now return from called function/method and execute until the end of the send instruction"
+	unicorn returnRegisterValue: (memory integerObjectOf: 42).
+	self runFrom: unicorn instructionPointerValue until: lastAddress.
+	
+	self assert: self popAddress equals: (memory integerObjectOf: 42).
+]
+
 { #category : #helpers }
 VMSimpleStackBasedCogitBytecodeTest >> wordSize [
 	
