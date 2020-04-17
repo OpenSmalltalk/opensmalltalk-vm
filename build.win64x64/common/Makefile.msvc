@@ -247,7 +247,7 @@ plugin-makefile = $(realpath $(firstword $(wildcard $(WIN32PLUGINSDIR)/$(1)/Make
 $(OBJDIR)/%.lib: $(call plugin-makefile,$(*F))
 	@-$(MKDIR) $(BUILD)/$(*F)
 	$(RM) -f $(BUILD)/vm/$(*F).ignore
-	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
+	$(MAKE) $(MFLAGS) -I../common BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) \
 		"VM=$(VM)" "VM_NAME=$(VM_NAME)" \
 		CONFIGURATION=$(CONFIGURATION) ARCH=$(ARCH) TOOLPREFIX=$(TOOLPREFIX) \
@@ -259,7 +259,7 @@ $(OBJDIR)/%.lib: $(call plugin-makefile,$(*F))
 $(OBJDIR)/%.dll: $(call plugin-makefile,$(*F))
 	@-$(MKDIR) $(BUILD)/$(*F)
 	$(RM) -f $(BUILD)/$(*F).ignore
-	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
+	$(MAKE) $(MFLAGS) -I../common BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) \
 		"VM=$(VM)" "VM_NAME=$(VM_NAME)" \
 		CONFIGURATION=$(CONFIGURATION) ARCH=$(ARCH) TOOLPREFIX=$(TOOLPREFIX) \

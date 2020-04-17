@@ -31,6 +31,7 @@ BUILDDIR:=	$(BUILD)/$(LIBNAME)
 # Support directory locations
 CROSSVMDIR:= $(PLATDIR)/Cross/vm
 WIN32VMDIR:= $(PLATDIR)/win32/vm
+WIN32MISCDIR:=$(PLATDIR)/win32/misc
 MAKERVMDIR:= $(SRCDIR)/vm
 
 #############################################################################
@@ -92,6 +93,7 @@ print-settings:
 	$(info 'SRCDIR=$(SRCDIR)')
 	$(info 'CROSSDIR=$(CROSSDIR)')
 	$(info 'WIN32DIR=$(WIN32DIR)')
+	$(info 'WIN32MISCDIR=$(WIN32MISCDIR)')
 	$(info 'MAKERDIR=$(MAKERDIR)')
 	$(info 'CROSSSRC=$(CROSSSRC)')
 	$(info 'WIN32SRC=$(WIN32SRC)')

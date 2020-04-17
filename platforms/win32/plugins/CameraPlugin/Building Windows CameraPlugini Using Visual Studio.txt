@@ -1,3 +1,6 @@
+0. N.B. you *do not need to build using Visual Studio*.  The normal
+   Makefile.msvc will do. But if you insist...
+
 1. Installs:
 	Visual Studio .NET (2003) v7.1
 	Microsoft Platform SDK for Windows Server 2003 R2
