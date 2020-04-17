@@ -3205,6 +3205,7 @@ SimpleStackBasedCogit >> genSend: selectorIndex numArgs: numArgs sendTable: send
 			and: IsDirectedSuperBindingSend]) ifTrue:
 		[self genMoveConstant: tempOop R: TempReg].
 	self genLoadInlineCacheWithSelector: selectorIndex.
+
 	(self Call: (sendTable at: (numArgs min: NumSendTrampolines - 1))) annotation: annotation.
 	self PushR: ReceiverResultReg.
 	^0

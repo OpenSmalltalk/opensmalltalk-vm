@@ -10630,6 +10630,13 @@ Cogit >> opcodePrintStringFrom: startIndex to: stopIndex [
 			(abstractOpcodes at: i) printStateOn: s]]) allButFirst
 ]
 
+{ #category : #accessing }
+Cogit >> ordinarySendTrampolineAt: anInteger put: aTrampolineAddress [ 
+	<doNotGenerate>
+	
+	ordinarySendTrampolines at: anInteger put: aTrampolineAddress
+]
+
 { #category : #'generate machine code' }
 Cogit >> outputInstructionsAt: startAddress [
 	"Store the generated machine code, answering the last address"
