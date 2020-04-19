@@ -409,7 +409,7 @@ VMSimpleStackBasedCogitBytecodeTest >> pop [
 	poppedByteArray := unicorn memoryAt: stackAddressIntegerValue readNext: self wordSize.
 
 	"Updating SP"
-	unicorn stackPointerRegisterValue: stackAddressIntegerValue.
+	unicorn stackPointerRegisterValue: stackAddressIntegerValue + self wordSize.
 	
 	^ poppedByteArray
 ]
