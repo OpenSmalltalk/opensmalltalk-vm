@@ -554,7 +554,8 @@ VMSimpleStackBasedCogitBytecodeTest >> setUp [
 	memory trueObject: (self newObjectWithSlots: 0).
 	memory falseObject: (self newObjectWithSlots: 0).
 	
-	memory hiddenRootsObject: 100.
+	"We don't access its contents, but we need it to be after nil, true and false"
+	memory hiddenRootsObject: (self newObjectWithSlots: 0).
 	
 	cogit methodZone manageFrom: initialAddress to: initialAddress + 100.
 	
