@@ -249,11 +249,11 @@ void *ioGetWindowHandle(void)
 	return getSTWindow();
 }
 sqInt
-ioPositionOfNativeWindow(wIndexType windowHandle)
+ioPositionOfNativeWindow(usqIntptr_t windowHandle)
 {	return -1; }
 
 sqInt
-ioSizeOfNativeWindow(wIndexType windowHandle)
+ioSizeOfNativeWindow(usqIntptr_t windowHandle)
 {	return -1; }
 
 sqInt
