@@ -2258,7 +2258,7 @@ SimpleStackBasedCogit >> genInlinedIdenticalOrNotIf: orNot [
 		genEnsureOopInRegNotForwarded: ClassReg
 		scratchReg: TempReg.
 	self CmpR: Arg0Reg R: ClassReg.
-	jumpNotEqual := self genConditionalBranch: (orNot ifTrue: [JumpZero] ifFalse: [JumpZero]) operand: 0.
+	jumpNotEqual := self genConditionalBranch: (orNot ifTrue: [JumpZero] ifFalse: [JumpNonZero]) operand: 0.
 	self annotate: (self genMoveTrueR: Arg0Reg)
 		objRef: objectMemory trueObject.
 	jumpPush := self Jump: 0.
