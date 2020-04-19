@@ -1633,6 +1633,86 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendOneArgSpecialMessagePushesReturnV
 ]
 
 { #category : #'tests - special sends' }
+VMSimpleStackBasedCogitBytecodeTest >> testSendTwoArgSpecialMessageDoesNotMovesIntoSendNumArgsRegister [
+	
+	| previousValue |
+	sentSelector := #at:put:.
+	self createSpecialSelectorArray.
+	self compileSpecialSend.
+	
+	unicorn sendNumberOfArgumentsRegisterValue: (previousValue := 42).
+	
+	"Push receiver, arg1, arg2 then send"
+	self pushAddress: memory falseObject.
+	self pushAddress: memory trueObject.
+	self pushAddress: (memory integerObjectOf: 7).
+	self runFrom: sendAddress until: sendTrampolineAddress.
+	
+	self
+		assert: unicorn sendNumberOfArgumentsRegisterValue
+		equals: previousValue
+]
+
+{ #category : #'tests - special sends' }
+VMSimpleStackBasedCogitBytecodeTest >> testSendTwoArgSpecialMessageMovesNegatedSelectorIndexIntoClassRegister [
+	
+	| signed |
+	sentSelector := #at:put:.
+	self createSpecialSelectorArray.
+	self compileSpecialSend.
+	
+	"Push receiver, arg1, arg2 then send"
+	self pushAddress: memory falseObject.
+	self pushAddress: memory trueObject.
+	self pushAddress: (memory integerObjectOf: 7).
+	self runFrom: sendAddress until: sendTrampolineAddress.
+	
+	signed := (ByteArray new: self wordSize)
+		in: [ :a | 
+			a integerAt: 1 put: unicorn classRegisterValue size: self wordSize signed: false.
+			a integerAt: 1 size: self wordSize signed: true ].
+	self
+		assert: signed
+		equals: (selectorIndex + 1 / 2) negated
+]
+
+{ #category : #'tests - special sends' }
+VMSimpleStackBasedCogitBytecodeTest >> testSendTwoArgSpecialMessageMovesReceiverFromStackTopIntoReceiverRegister [
+	
+	sentSelector := #at:put:.
+	self createSpecialSelectorArray.
+	self compileSpecialSend.
+
+	"Push receiver, arg1, arg2 then send"
+	self pushAddress: memory falseObject.
+	self pushAddress: memory trueObject.
+	self pushAddress: (memory integerObjectOf: 7).
+	self runFrom: sendAddress until: sendTrampolineAddress.
+	
+	self assert: unicorn receiverRegisterValue equals: memory falseObject
+]
+
+{ #category : #'tests - special sends' }
+VMSimpleStackBasedCogitBytecodeTest >> testSendTwoArgSpecialMessagePushesReturnValueFromReceiverRegisterAfterReturn [
+	
+	sentSelector := #at:put:.
+	self createSpecialSelectorArray.
+	self compileSpecialSend.
+	
+	"Push receiver, arg1, arg2 then send"
+	self pushAddress: memory falseObject.
+	self pushAddress: memory trueObject.
+	self pushAddress: (memory integerObjectOf: 7).
+	self runFrom: sendAddress until: sendTrampolineAddress.
+	
+	"Now return from called function/method and execute until the end of the send instruction"
+	unicorn returnRegisterValue: (memory integerObjectOf: 42).
+	self runFrom: unicorn instructionPointerValue until: lastAddress.
+	
+	self assert: self popAddress equals: (memory integerObjectOf: 42).
+]
+
+{ #category : #'tests - special sends' }
 VMSimpleStackBasedCogitBytecodeTest >> testSendZeroArgSpecialMessageDoesNotMovesIntoSendNumArgsRegister [
 	
 	| previousValue |
