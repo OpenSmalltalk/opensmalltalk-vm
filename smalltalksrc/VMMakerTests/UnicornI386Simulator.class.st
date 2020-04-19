@@ -35,6 +35,12 @@ UnicornI386Simulator >> receiverRegister [
 ]
 
 { #category : #registers }
+UnicornI386Simulator >> sendNumberOfArgumentsRegister [
+
+	^ UcX86Registers ebx
+]
+
+{ #category : #registers }
 UnicornI386Simulator >> stackPointerRegister [
 	
 	^ UcX86Registers esp
