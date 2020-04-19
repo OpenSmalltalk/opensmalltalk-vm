@@ -1242,7 +1242,6 @@ sqInt sqSocketReceiveDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
 		  SOCKETSTATE(s)= OtherEndClosed;
 		  SOCKETERROR(s)= lastError;
 		  logTrace("TCP receiveData(%d) < 1 [b:%d] return: %d", SOCKET(s), lastError, nread);
-		  logWarnFromErrno("recv");
 		  notify(PSP(s), CONN_NOTIFY);
 		  return 0;
       }
