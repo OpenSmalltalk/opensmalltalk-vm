@@ -181,6 +181,7 @@ EXPORT(void) aioEnable(int fd, void *clientData, int flags){
 	aioFileDescriptor = aioFileDescriptor_find(fd);
 	if(!aioFileDescriptor){
 		aioFileDescriptor = aioFileDescriptor_new();
+		aioFileDescriptor->next = NULL;
 	}
 
 	aioFileDescriptor->fd = fd;
@@ -192,8 +193,6 @@ EXPORT(void) aioEnable(int fd, void *clientData, int flags){
 
 	WSAEventSelect(aioFileDescriptor->fd, aioFileDescriptor->writeEvent, 0);
 	WSAEventSelect(aioFileDescriptor->fd, aioFileDescriptor->readEvent, 0);
-
-	aioFileDescriptor->next = NULL;
 
 	u_long iMode = 1;
 	int iResult;

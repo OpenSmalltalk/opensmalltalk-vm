@@ -192,12 +192,12 @@ sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress
 		}
 
 		if(count >= 6){
-			logDebug("More than 6 retries... maybe something is wrong\n");
+			logTrace("More than 6 retries... maybe something is wrong\n");
 		}
 
-		logDebug("Asked: %10p %10p %10p\n", alloc, minAddress, startAddress);
+		logTrace("Asked: %10p %10p %10p\n", alloc, minAddress, startAddress);
 		if (alloc >= minAddress){
-			logDebug("Allocated Piece: %10p\n", alloc);
+			logTrace("Allocated Piece: %10p\n", alloc);
 			return alloc;
 		}
 

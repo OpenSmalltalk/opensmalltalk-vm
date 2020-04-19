@@ -13,7 +13,7 @@ set(EXTRACTED_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/common/sqTicker.c
 
 #Platform sources
-    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/unix/aio.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/osx/aioOSX.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/debugUnix.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/utilsMac.mm
 

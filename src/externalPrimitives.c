@@ -195,7 +195,7 @@ loadModuleHandle(const char *fileName)
     flags |= RTLD_DEEPBIND; /* Prefer local symbols in the shared object vs external symbols. */
 #endif
 
-    logDebug("Try loading  %s\n", fileName);
+    logTrace("Try loading  %s\n", fileName);
     return dlopen(fileName, flags);
 }
 

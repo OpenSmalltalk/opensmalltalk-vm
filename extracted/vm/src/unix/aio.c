@@ -33,72 +33,21 @@
 #include "sqaio.h"
 #include "pharovm/debug.h"
 #include "pharovm/semaphores/platformSemaphore.h"
+#include "sqMemoryFence.h"
 
-#ifdef HAVE_CONFIG_H
+#include <sys/types.h>
+#include <sys/socket.h>
 
-# include "config.h"
-
-# ifdef HAVE_UNISTD_H
-#   include <sys/types.h>
-#   include <unistd.h>
-# endif /* HAVE_UNISTD_H */
-
-# ifdef NEED_GETHOSTNAME_P
-    extern int gethostname();
-# endif
-
-# include <stdio.h>
-# include <signal.h>
-# include <errno.h>
-# include <fcntl.h>
-# include <sys/ioctl.h>
-
-# ifdef HAVE_SYS_TIME_H
-#   include <sys/time.h>
-# else
-#   include <time.h>
-# endif
-
-# if HAVE_KQUEUE
-#   include <sys/event.h>
-# elif HAVE_EPOLL
-#   include <sys/epoll.h>
-# elif HAVE_SELECT
-#   include <sys/select.h>
-# endif
-
-# ifndef FIONBIO
-#   ifdef HAVE_SYS_FILIO_H
-#     include <sys/filio.h>
-#   endif
-#   ifndef FIONBIO
-#     ifdef FIOSNBIO
-#       define FIONBIO FIOSNBIO
-#     else
-#       error: FIONBIO is not defined
-#     endif
-#   endif
-# endif
-
-# if __sun__
-  # include <sys/sockio.h>
-  # define signal(a, b) sigset(a, b)
-# endif
-
-#else /* !HAVE_CONFIG_H -- assume lowest common demoninator */
-
-# include <stdio.h>
-# include <stdlib.h>
-# include <unistd.h>
-# include <errno.h>
-# include <signal.h>
-# include <sys/types.h>
-# include <sys/time.h>
-# include <sys/select.h>
-# include <sys/ioctl.h>
-# include <fcntl.h>
-
-#endif /* !HAVE_CONFIG_H */
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <errno.h>
+#include <signal.h>
+#include <sys/types.h>
+#include <sys/time.h>
+#include <sys/select.h>
+#include <sys/ioctl.h>
+#include <fcntl.h>
 
 /* function to inform the VM about idle time */
 extern void addIdleUsecs(long idleUsecs);
@@ -165,7 +114,7 @@ handlerName(aioHandler h)
 
 /* initialise asynchronous i/o */
 
-static int signal_pipe_fd[2];
+int signal_pipe_fd[2];
 
 void 
 aioInit(void)
@@ -181,10 +130,15 @@ aioInit(void)
 	FD_ZERO(&xdMask);
 	maxFd = 0;
 
-	if (pipe(signal_pipe_fd) == -1) {
-	    perror("pipe");
+	if (pipe(signal_pipe_fd) != 0) {
+	    logErrorFromErrno("pipe");
 	    exit(-1);
 	}
+
+	if(fcntl(signal_pipe_fd[0], F_SETFL, O_NONBLOCK) !=0){
+	    logErrorFromErrno("pipe - fcntl");
+	}
+
 
 	//signal(SIGPIPE, SIG_IGN);
 	signal(SIGIO, forceInterruptCheck);
@@ -244,31 +198,36 @@ do if ((bool) && !(++tickCount % TICKS_PER_CHAR)) {		\
 	if (!*ticker++) ticker= ticks;			\
 } while (0)
 
+volatile int aio_requests = 0;
+volatile int aio_responses = 0;
+
 /*
  * I Try to clear all the data available in the pipe, so it does not passes the limit of data.
  * Do not call me outside the mutex area of interruptFIFOMutex.
  */
 void
 aio_flush_pipe(int fd){
-	char buf[1024];
-    int bytesRead;
-    int selectResult;
-	fd_set readFD;
-	struct timeval tv;
 
-	tv.tv_sec = 0;
-	tv.tv_usec = 0;
+	int bytesRead;
+	char buf[1024];
 
 	do {
-		FD_SET(fd, &readFD);
-		selectResult = select(fd + 1, &readFD, NULL, NULL, &tv);
+		bytesRead = read(fd, &buf, 1);
 
-		if(FD_ISSET(fd, &readFD)){
-			bytesRead = read(fd, &buf, 1024);
-		}else{
-			bytesRead = 0;
+		if(bytesRead == -1){
+
+			if(errno == EAGAIN || errno == EWOULDBLOCK){
+				return;
+			}
+
+			logErrorFromErrno("pipe - read");
+
+			return;
 		}
-	} while(bytesRead == 1024);
+
+		aio_responses += bytesRead;
+
+	} while(bytesRead > 0);
 }
 
 /**
@@ -281,6 +240,8 @@ int
 aio_checkAndEnterSleep(int fd){
 	interruptFIFOMutex->wait(interruptFIFOMutex);
 
+	sqLowLevelMFence();
+
 	if(aio_request_interrupt){
 		aio_request_interrupt = false;
 		aio_in_sleep = false;
@@ -291,6 +252,7 @@ aio_checkAndEnterSleep(int fd){
 	}
 
 	aio_in_sleep = true;
+	sqLowLevelMFence();
 
 	interruptFIFOMutex->signal(interruptFIFOMutex);
     return 0;
@@ -307,6 +269,11 @@ aio_flushAndExitSleep(int fd){
 
 	aio_request_interrupt = false;
 	aio_in_sleep = false;
+	sqLowLevelMFence();
+
+	if(aio_requests != aio_responses){
+		logError("Unbalanced AIO Requests - Req: %d - Res: %d", aio_requests, aio_responses);
+	}
 
 	interruptFIFOMutex->signal(interruptFIFOMutex);
 
@@ -329,13 +296,8 @@ aioPoll(long microSeconds)
 	 * cpu
 	 */
 
-#ifdef TARGET_OS_IS_IPHONE
-	if (maxFd == 0)
-		return 0;
-#else
 	if ((maxFd == 0) && (microSeconds == 0))
 		return 0;
-#endif
 
     if(aio_checkAndEnterSleep(signal_pipe_fd[0])){
     	return 1;
@@ -368,7 +330,6 @@ aioPoll(long microSeconds)
 			if (remainingMicroSeconds)
 				addIdleUsecs(remainingMicroSeconds);
 			heartbeat_poll_exit(microSeconds);
-	    	logTrace("n == 0");
 			return 0;
 		}
 		if (errno && (EINTR != errno)) {
@@ -382,17 +343,20 @@ aioPoll(long microSeconds)
 
 		if (remainingMicroSeconds <= 0){
 			heartbeat_poll_exit(microSeconds);
-	    	logTrace("remainingMicroSeconds <= 0");
 			return 0;
 		}
 		us = now;
+	}
+
+	if(FD_ISSET(signal_pipe_fd[0], &rd)){
+		logError("AIO INTERRUPTED");
 	}
 
 	heartbeat_poll_exit(microSeconds);
 	aio_flushAndExitSleep(signal_pipe_fd[0]);
 
     // We clear signal_pipe_fd because when it arrives here we do not care anymore
-    // about it, but it may provoque a crash if it is set because we do not have
+    // about it, but it may cause a crash if it is set because we do not have
     // a handler for it. Another solution could be to just add a handler to signal_pipe_fd
     // but for now it does not seems needed.
     FD_CLR(signal_pipe_fd[0], &rd);
@@ -424,7 +388,6 @@ aioPoll(long microSeconds)
         }
 	}
 
-	logTrace("processed");
 	return 1;
 }
 
@@ -441,13 +404,15 @@ aioInterruptPoll(){
 
 	if(aio_in_sleep){
 		n = write(signal_pipe_fd[1], "1", 1);
-
 		if(n != 1){
-			perror("write");
+			logErrorFromErrno("write to pipe");
 		}
 	}
 
+	aio_requests += 1;
+
 	aio_request_interrupt = true;
+	sqLowLevelMFence();
 
 	interruptFIFOMutex->signal(interruptFIFOMutex);
 }

@@ -39,16 +39,13 @@ void logMessageFromErrno(int level, const char* msg, const char* fileName, const
 	char buffer[1024+1];
 	int msgLength;
 
-	msgLength = strlen(msg);
-	strcpy(buffer, msg);
-
 #ifdef WIN32
-	strerror_s(buffer + msgLength, 1024 - msgLength, errno);
+	strerror_s(buffer, 1024, errno);
 #else
-	strerror_r(errno, buffer + msgLength, 1024 - msgLength);
+	strerror_r(errno, buffer, 1024);
 #endif
 
-	logMessage(level, fileName, functionName, line, msg);
+	logMessage(level, fileName, functionName, line, "%s: %s", msg, buffer);
 }
 
 FILE* getStreamForLevel(int level){
