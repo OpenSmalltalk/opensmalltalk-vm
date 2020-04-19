@@ -550,9 +550,9 @@ VMSimpleStackBasedCogitBytecodeTest >> setUp [
 	cogit := SimpleStackBasedCogit new setInterpreter: memory coInterpreter.
 	cogit objectRepresentation class initializeMiscConstants.
 	
-	memory nilObject: 24.
-	memory trueObject: 40.
-	memory falseObject: 56.
+	memory nilObject: (self newObjectWithSlots: 0).
+	memory trueObject: (self newObjectWithSlots: 0).
+	memory falseObject: (self newObjectWithSlots: 0).
 	
 	memory hiddenRootsObject: 100.
 	
@@ -1554,6 +1554,66 @@ VMSimpleStackBasedCogitBytecodeTest >> testReturnTrueFramelessReturnsToCaller [
 	self
 		doTestReturnReturnsToCallerWithFrame: false
 		onBlock: [ cogit genReturnTrue ]
+]
+
+{ #category : #'tests - special sends' }
+VMSimpleStackBasedCogitBytecodeTest >> testSendEqualsEqualsWithIdenticalObjectsPushesTrue [
+
+	sendAddress := self compile: [ cogit genSpecialSelectorEqualsEquals ].
+	
+	"Push receiver, arg then send"
+	self pushAddress: memory nilObject.
+	self pushAddress: memory nilObject.
+	self runFrom: sendAddress until: lastAddress.
+	
+	self
+		assert: self popAddress
+		equals: memory trueObject
+]
+
+{ #category : #'tests - special sends' }
+VMSimpleStackBasedCogitBytecodeTest >> testSendEqualsEqualsWithNonIdenticalObjectsPushesFalse [
+
+	sendAddress := self compile: [ cogit genSpecialSelectorEqualsEquals ].
+	
+	"Push receiver, arg then send"
+	self pushAddress: memory nilObject.
+	self pushAddress: memory trueObject.
+	self runFrom: sendAddress until: lastAddress.
+	
+	self
+		assert: self popAddress
+		equals: memory falseObject
+]
+
+{ #category : #'tests - special sends' }
+VMSimpleStackBasedCogitBytecodeTest >> testSendNotEqualsEqualsWithIdenticalObjectsPushesFalse [
+
+	sendAddress := self compile: [ cogit genSpecialSelectorNotEqualsEquals ].
+	
+	"Push receiver, arg then send"
+	self pushAddress: memory nilObject.
+	self pushAddress: memory nilObject.
+	self runFrom: sendAddress until: lastAddress.
+	
+	self
+		assert: self popAddress
+		equals: memory falseObject
+]
+
+{ #category : #'tests - special sends' }
+VMSimpleStackBasedCogitBytecodeTest >> testSendNotEqualsEqualsWithNonIdenticalObjectsPushesTrue [
+
+	sendAddress := self compile: [ cogit genSpecialSelectorNotEqualsEquals ].
+	
+	"Push receiver, arg then send"
+	self pushAddress: memory nilObject.
+	self pushAddress: memory falseObject.
+	self runFrom: sendAddress until: lastAddress.
+	
+	self
+		assert: self popAddress
+		equals: memory trueObject
 ]
 
 { #category : #'tests - special sends' }
