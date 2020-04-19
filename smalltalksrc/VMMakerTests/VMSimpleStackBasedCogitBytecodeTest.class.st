@@ -18,7 +18,8 @@ Class {
 		'selectorIndex',
 		'sendAddress',
 		'sendTrampolineAddress',
-		'sentSelector'
+		'sentSelector',
+		'selectorAtIndex'
 	],
 	#category : #VMMakerTests
 }
@@ -211,7 +212,12 @@ VMSimpleStackBasedCogitBytecodeTest >> createSpecialSelectorArray [
 	specialObjectsOop := self newObjectWithSlots: 24.
 	selectorIndex := Smalltalk specialSelectors indexOf: sentSelector.
 	obj := self newObjectWithSlots: selectorIndex + 1.
-	memory storePointer: selectorIndex ofObject: obj withValue: (memory integerObjectOf: sentSelector numArgs).
+	memory
+		storePointer: selectorIndex - 1
+		ofObject: obj withValue: (selectorAtIndex := memory integerObjectOf: 77 "Some object to test").
+	memory
+		storePointer: selectorIndex
+		ofObject: obj withValue: (memory integerObjectOf: sentSelector numArgs).
 	memory storePointer: 23 ofObject: specialObjectsOop withValue: obj.
 	memory specialObjectsOop: specialObjectsOop.
 ]
@@ -1638,9 +1644,12 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendOneArgSpecialMessageDoesNotMovesI
 ]
 
 { #category : #'tests - special sends' }
-VMSimpleStackBasedCogitBytecodeTest >> testSendOneArgSpecialMessageMovesNegatedSelectorIndexIntoClassRegister [
+VMSimpleStackBasedCogitBytecodeTest >> testSendOneArgSpecialMessageMovesNegatedSelectorIndexIntoClassRegisterIn64bits [
 	
 	| signed |
+	
+	self wordSize = 4 ifTrue: [ self skip ].
+	
 	sentSelector := #+.
 	self createSpecialSelectorArray.
 	self compileSpecialSend.
@@ -1661,7 +1670,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendOneArgSpecialMessageMovesNegatedS
 
 { #category : #'tests - special sends' }
 VMSimpleStackBasedCogitBytecodeTest >> testSendOneArgSpecialMessageMovesReceiverFromStackTopIntoReceiverRegister [
-	
+
 	sentSelector := #+.
 	self createSpecialSelectorArray.
 	self compileSpecialSend.
@@ -1672,6 +1681,25 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendOneArgSpecialMessageMovesReceiver
 	self runFrom: sendAddress until: sendTrampolineAddress.
 	
 	self assert: unicorn receiverRegisterValue equals: memory falseObject
+]
+
+{ #category : #'tests - special sends' }
+VMSimpleStackBasedCogitBytecodeTest >> testSendOneArgSpecialMessageMovesSelectorIntoClassRegisterIn32bits [
+	
+	self wordSize = 8 ifTrue: [ self skip ].
+	
+	sentSelector := #+.
+	self createSpecialSelectorArray.
+	self compileSpecialSend.
+	
+	"Push receiver, arg, then send"
+	self pushAddress: memory falseObject.
+	self pushAddress: memory trueObject.
+	self runFrom: sendAddress until: sendTrampolineAddress.
+	
+	self
+		assert: unicorn classRegisterValue
+		equals: selectorAtIndex
 ]
 
 { #category : #'tests - special sends' }
@@ -1715,9 +1743,12 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendTwoArgSpecialMessageDoesNotMovesI
 ]
 
 { #category : #'tests - special sends' }
-VMSimpleStackBasedCogitBytecodeTest >> testSendTwoArgSpecialMessageMovesNegatedSelectorIndexIntoClassRegister [
+VMSimpleStackBasedCogitBytecodeTest >> testSendTwoArgSpecialMessageMovesNegatedSelectorIndexIntoClassRegisterIn64bits [
 	
 	| signed |
+	
+	self wordSize = 4 ifTrue: [ self skip ].
+	
 	sentSelector := #at:put:.
 	self createSpecialSelectorArray.
 	self compileSpecialSend.
@@ -1751,6 +1782,32 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendTwoArgSpecialMessageMovesReceiver
 	self runFrom: sendAddress until: sendTrampolineAddress.
 	
 	self assert: unicorn receiverRegisterValue equals: memory falseObject
+]
+
+{ #category : #'tests - special sends' }
+VMSimpleStackBasedCogitBytecodeTest >> testSendTwoArgSpecialMessageMovesSelectorIntoClassRegisterIn32bits [
+	
+	| signed |
+	
+	self wordSize = 4 ifTrue: [ self skip ].
+	
+	sentSelector := #at:put:.
+	self createSpecialSelectorArray.
+	self compileSpecialSend.
+	
+	"Push receiver, arg1, arg2 then send"
+	self pushAddress: memory falseObject.
+	self pushAddress: memory trueObject.
+	self pushAddress: (memory integerObjectOf: 7).
+	self runFrom: sendAddress until: sendTrampolineAddress.
+	
+	signed := (ByteArray new: self wordSize)
+		in: [ :a | 
+			a integerAt: 1 put: unicorn classRegisterValue size: self wordSize signed: false.
+			a integerAt: 1 size: self wordSize signed: true ].
+	self
+		assert: signed
+		equals: (selectorIndex + 1 / 2) negated
 ]
 
 { #category : #'tests - special sends' }
@@ -1793,9 +1850,12 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendZeroArgSpecialMessageDoesNotMoves
 ]
 
 { #category : #'tests - special sends' }
-VMSimpleStackBasedCogitBytecodeTest >> testSendZeroArgSpecialMessageMovesNegatedSelectorIndexIntoClassRegister [
+VMSimpleStackBasedCogitBytecodeTest >> testSendZeroArgSpecialMessageMovesNegatedSelectorIndexIntoClassRegisterIn64Bits [
 	
 	| signed |
+	
+	self wordSize = 4 ifTrue: [ self skip ].
+	
 	sentSelector := #atEnd.
 	self createSpecialSelectorArray.
 	self compileSpecialSend.
@@ -1825,6 +1885,24 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendZeroArgSpecialMessageMovesReceive
 	self runFrom: sendAddress until: sendTrampolineAddress.
 	
 	self assert: unicorn receiverRegisterValue equals: memory falseObject
+]
+
+{ #category : #'tests - special sends' }
+VMSimpleStackBasedCogitBytecodeTest >> testSendZeroArgSpecialMessageMovesSelectorIntoClassRegisterIn32Bits [
+	
+	self wordSize = 8 ifTrue: [ self skip ].
+	
+	sentSelector := #atEnd.
+	self createSpecialSelectorArray.
+	self compileSpecialSend.
+	
+	"Push receiver, then send"
+	self pushAddress: memory falseObject.
+	self runFrom: sendAddress until: sendTrampolineAddress.
+	
+	self
+		assert: unicorn classRegisterValue
+		equals: selectorAtIndex
 ]
 
 { #category : #'tests - special sends' }
