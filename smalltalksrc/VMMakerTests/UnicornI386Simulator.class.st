@@ -4,6 +4,12 @@ Class {
 	#category : #VMMakerTests
 }
 
+{ #category : #registers }
+UnicornI386Simulator >> classRegister [
+
+	^ UcX86Registers ecx
+]
+
 { #category : #'as yet unclassified' }
 UnicornI386Simulator >> createUnicorn [
 
