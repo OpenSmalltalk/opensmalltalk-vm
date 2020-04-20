@@ -10,10 +10,12 @@
 
 #include "sqaio.h"
 #include "pharovm/debug.h"
+#include "pharovm/semaphores/platformSemaphore.h"
 #include "sqaio.h"
 #include "sqMemoryFence.h"
 
 #include <sys/types.h>
+#include <sys/socket.h>
 #include <sys/event.h>
 #include <sys/time.h>
 #include <errno.h>
@@ -27,6 +29,15 @@
 #ifndef NULL
 # define NULL	0
 #endif
+
+#ifndef true
+# define true	1
+#endif
+
+#ifndef false
+# define false	0
+#endif
+
 
 #define INCOMING_EVENTS_SIZE	50
 
@@ -53,9 +64,14 @@ int signal_pipe_fd[2];
 void heartbeat_poll_enter(long microSeconds);
 void heartbeat_poll_exit(long microSeconds);
 
-static int aio_handle_events(struct kevent* changes, int numberOfChanges, long microSecondsTimeout);
+static int aio_handle_events(struct kevent* changes, int numberOfChanges, long microSecondsTimeout, int flushingPipe);
 static void aio_flush_pipe(int fd);
 
+int isPendingSemaphores();
+
+Semaphore * interruptFIFOMutex;
+
+volatile int pendingInterruption = 0;
 volatile int aio_requests = 0;
 volatile int aio_responses = 0;
 
@@ -67,17 +83,27 @@ aioInit(void){
 		logErrorFromErrno("kqueue");
 	}
 
-	if (pipe(signal_pipe_fd) != 0) {
+	if (socketpair(AF_UNIX, SOCK_STREAM,0,signal_pipe_fd) != 0) {
 	    logErrorFromErrno("pipe");
 	    exit(-1);
 	}
 
-	if(fcntl(signal_pipe_fd[0], F_SETFL, O_NONBLOCK) !=0){
-	    logErrorFromErrno("pipe - fcntl");
-	}
+	int arg;
+	if ((arg = fcntl(signal_pipe_fd[0], F_GETFL, 0)) < 0)
+		logErrorFromErrno("fcntl(F_GETFL)");
+	if (fcntl(signal_pipe_fd[0], F_SETFL, arg | O_NONBLOCK | O_ASYNC) < 0)
+		logErrorFromErrno("fcntl(F_SETFL, O_ASYNC)");
 
-	EV_SET(&pipeEvent, signal_pipe_fd[0], EVFILT_READ, EV_ADD, 0, 0, NULL);
-	aio_handle_events(&pipeEvent, 1, 0);
+	if ((arg = fcntl(signal_pipe_fd[1], F_GETFL, 0)) < 0)
+		logErrorFromErrno("fcntl(F_GETFL)");
+	if (fcntl(signal_pipe_fd[1], F_SETFL, arg | O_NONBLOCK | O_ASYNC | O_APPEND) < 0)
+		logErrorFromErrno("fcntl(F_SETFL, O_ASYNC)");
+
+
+	interruptFIFOMutex = platform_semaphore_new(1);
+
+	EV_SET(&pipeEvent, signal_pipe_fd[0], EVFILT_READ, EV_ADD | EV_POLL, 0, 0, NULL);
+	aio_handle_events(&pipeEvent, 1, 0, false);
 }
 
 /*
@@ -89,19 +115,19 @@ aioInit(void){
  */
 
 static int
-aio_handle_events(struct kevent* changes, int numberOfChanges, long microSecondsTimeout){
+aio_handle_events(struct kevent* changes, int numberOfChanges, long microSecondsTimeout, int flushingPipe){
 
 	struct kevent incomingEvents[INCOMING_EVENTS_SIZE];
 	int keventReturn;
 
 	struct timespec timeout;
 
-	timeout.tv_nsec = (microSecondsTimeout % 1000000) * 1000;
-	timeout.tv_sec = microSecondsTimeout / 1000000;
-
 	//I notify the heartbeat of a pause
 	heartbeat_poll_enter(microSecondsTimeout);
 
+
+	timeout.tv_nsec = (microSecondsTimeout % 1000000) * 1000;
+	timeout.tv_sec = microSecondsTimeout / 1000000;
 	keventReturn = kevent(kqueueDescriptor, changes, numberOfChanges, incomingEvents, INCOMING_EVENTS_SIZE, &timeout);
 
 	//I notify the heartbeat of the end of the pause
@@ -114,10 +140,13 @@ aio_handle_events(struct kevent* changes, int numberOfChanges, long microSeconds
 		return 0;
 	}
 
+	if(flushingPipe)
+		aio_flush_pipe(signal_pipe_fd[0]);
+
 	if(keventReturn == 0){
 		sqLowLevelMFence();
-		if(aio_requests != aio_responses)
-			logError("Unbalanced AIO Requests - Req: %d - Res: %d", aio_requests, aio_responses);
+		if(flushingPipe)
+			return 1;
 
 		return 0;
 	}
@@ -150,12 +179,6 @@ aio_handle_events(struct kevent* changes, int numberOfChanges, long microSeconds
 		}
 	}
 
-	aio_flush_pipe(signal_pipe_fd[0]);
-
-	sqLowLevelMFence();
-	if(aio_requests != aio_responses)
-		logError("Unbalanced AIO Requests - Req: %d - Res: %d", aio_requests, aio_responses);
-
 	return 1;
 }
 
@@ -165,23 +188,31 @@ aio_flush_pipe(int fd){
 	int bytesRead;
 	char buf[1024];
 
+	interruptFIFOMutex->wait(interruptFIFOMutex);
+	if(pendingInterruption){
+		aio_responses = aio_requests;
+		pendingInterruption = false;
+	}
+
 	do {
 		bytesRead = read(fd, &buf, 1024);
 
 		if(bytesRead == -1){
 
 			if(errno == EAGAIN || errno == EWOULDBLOCK){
+				interruptFIFOMutex->signal(interruptFIFOMutex);
 				return;
 			}
 
 			logErrorFromErrno("pipe - read");
 
+			interruptFIFOMutex->signal(interruptFIFOMutex);
 			return;
 		}
 
-		aio_responses += bytesRead;
-
 	} while(bytesRead > 0);
+
+	interruptFIFOMutex->signal(interruptFIFOMutex);
 }
 
 
@@ -192,7 +223,26 @@ aioFini(void){
 
 EXPORT(long)
 aioPoll(long microSeconds){
-	return aio_handle_events(NULL, 0, microSeconds);
+
+	long timeout;
+
+	interruptFIFOMutex->wait(interruptFIFOMutex);
+
+	if(pendingInterruption || isPendingSemaphores()){
+		timeout = 0;
+	}else{
+		timeout = microSeconds;
+	}
+
+	if(pendingInterruption){
+		aio_responses = aio_requests;
+		pendingInterruption = false;
+	}
+
+	interruptFIFOMutex->signal(interruptFIFOMutex);
+
+
+	return aio_handle_events(NULL, 0, timeout, true);
 }
 
 EXPORT(void)
@@ -203,9 +253,12 @@ aioInterruptPoll(){
 	if(n != 1){
 		logErrorFromErrno("write to pipe");
 	}
+	fsync(signal_pipe_fd[1]);
 
-	aio_requests += 1;
-	sqLowLevelMFence();
+	interruptFIFOMutex->wait(interruptFIFOMutex);
+		aio_requests += 1;
+		pendingInterruption = true;
+	interruptFIFOMutex->signal(interruptFIFOMutex);
 }
 
 EXPORT(void)
@@ -273,7 +326,7 @@ aioSuspend(int fd, int mask){
 		cant++;
 	}
 
-	aio_handle_events(newEvents, cant, 0);
+	aio_handle_events(newEvents, cant, 0, false);
 }
 
 EXPORT(void)
@@ -302,7 +355,7 @@ aioHandle(int fd, aioHandler handlerFn, int mask){
 	descriptor->writeHandlerFn = hasWrite ? handlerFn : NULL;
 	EV_SET(&newEvents[1], fd, EVFILT_WRITE, hasWrite?(EV_ADD | EV_ONESHOT):EV_DELETE, 0, 0, descriptor);
 
-	aio_handle_events(newEvents, 2, 0);
+	aio_handle_events(newEvents, 2, 0, false);
 }
 
 AioOSXDescriptor* AioOSXDescriptor_find(int fd){
