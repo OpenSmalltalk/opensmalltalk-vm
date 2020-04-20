@@ -41,6 +41,9 @@
 
 #define INCOMING_EVENTS_SIZE	50
 
+/*
+ * This is the struct that I am keeping for the registered FD
+ */
 typedef struct _AioOSXDescriptor {
 
 	int fd;
@@ -51,30 +54,53 @@ typedef struct _AioOSXDescriptor {
 
 } AioOSXDescriptor;
 
+/*
+ * I have to keep a list of the registered FDs as the operations are divided in two functions
+ * I only need to use the aioHandle, but I need information from the aioEnable
+ */
 AioOSXDescriptor* descriptorList = NULL;
 
+/*
+ * I can access the elements in the list
+ */
 AioOSXDescriptor* AioOSXDescriptor_find(int fd);
 void AioOSXDescriptor_remove(int fd);
 
-
+/*
+ * This is kqueue used in the poll of the events.
+ */
 int kqueueDescriptor;
 
+/*
+ * This is the pipe used to notify of interruptions in the AIO process.
+ */
 int signal_pipe_fd[2];
 
+/*
+ * These functions are used to notify the heartbeat if we are entering and leaving a long pause.
+ * Maybe the heartbeat want to stop if we are in a long pause.
+ */
 void heartbeat_poll_enter(long microSeconds);
 void heartbeat_poll_exit(long microSeconds);
 
 static int aio_handle_events(struct kevent* changes, int numberOfChanges, long microSecondsTimeout, int flushingPipe);
 static void aio_flush_pipe(int fd);
 
+/*
+ * This is important, the AIO poll should only do a long pause if there is no pending signals for semaphores.
+ * Check ExternalSemaphores to understand this function.
+ */
 int isPendingSemaphores();
 
+/*
+ * The access to the pendingInterruption variable is done through the use of a mutex
+ */
 Semaphore * interruptFIFOMutex;
-
 volatile int pendingInterruption = 0;
-volatile int aio_requests = 0;
-volatile int aio_responses = 0;
 
+/*
+ * I initialize the AIO infrastructure
+ */
 EXPORT(void)
 aioInit(void){
 	struct kevent pipeEvent;
@@ -83,7 +109,7 @@ aioInit(void){
 		logErrorFromErrno("kqueue");
 	}
 
-	if (socketpair(AF_UNIX, SOCK_STREAM,0,signal_pipe_fd) != 0) {
+	if (pipe(signal_pipe_fd) != 0) {
 	    logErrorFromErrno("pipe");
 	    exit(-1);
 	}
@@ -182,6 +208,9 @@ aio_handle_events(struct kevent* changes, int numberOfChanges, long microSeconds
 	return 1;
 }
 
+/*
+ * A helper function to clean the signaling pipe.
+ */
 static void
 aio_flush_pipe(int fd){
 
@@ -190,7 +219,6 @@ aio_flush_pipe(int fd){
 
 	interruptFIFOMutex->wait(interruptFIFOMutex);
 	if(pendingInterruption){
-		aio_responses = aio_requests;
 		pendingInterruption = false;
 	}
 
@@ -215,12 +243,21 @@ aio_flush_pipe(int fd){
 	interruptFIFOMutex->signal(interruptFIFOMutex);
 }
 
-
+/*
+ * There is no implementation of the shutdown.
+ */
 EXPORT(void)
 aioFini(void){
 
 }
 
+/*
+ * This is the entry point to the aioPoll
+ * The parameter is the maximum time the poll will stop.
+ * The pause can be smaller if there are pending interruptions or pending signals to semaphores
+ * from external semaphores.
+ * Also if there is IO operations it will return ASAP.
+ */
 EXPORT(long)
 aioPoll(long microSeconds){
 
@@ -235,7 +272,6 @@ aioPoll(long microSeconds){
 	}
 
 	if(pendingInterruption){
-		aio_responses = aio_requests;
 		pendingInterruption = false;
 	}
 
@@ -245,6 +281,10 @@ aioPoll(long microSeconds){
 	return aio_handle_events(NULL, 0, timeout, true);
 }
 
+/*
+ * With this is is possible to interrupt a long AIO poll.
+ * The external semaphores uses this function to interrupt the poll loop.
+ */
 EXPORT(void)
 aioInterruptPoll(){
 	int n;
@@ -256,11 +296,16 @@ aioInterruptPoll(){
 	fsync(signal_pipe_fd[1]);
 
 	interruptFIFOMutex->wait(interruptFIFOMutex);
-		aio_requests += 1;
-		pendingInterruption = true;
+	pendingInterruption = true;
 	interruptFIFOMutex->signal(interruptFIFOMutex);
 }
 
+/*
+ * I am part of the API of AIO
+ * I enable the FD to use AIO.
+ * The possible flags are here: AIO_EXT if the FD is external (and we should not change its properties).
+ * This function should be call to each FD to use.
+ */
 EXPORT(void)
 aioEnable(int fd, void *clientData, int flags){
 	AioOSXDescriptor * descriptor;
@@ -294,6 +339,14 @@ aioEnable(int fd, void *clientData, int flags){
 	}
 }
 
+/*
+ * This function is part of the API
+ * This is used to suspend the receive of events.
+ * The mask parameter says which handlers to suspend, it can be any combinatio of
+ *
+ * - AIO_R
+ * - AIO_W
+ */
 EXPORT(void)
 aioSuspend(int fd, int mask){
 	int cant = 0;
@@ -329,11 +382,26 @@ aioSuspend(int fd, int mask){
 	aio_handle_events(newEvents, cant, 0, false);
 }
 
+/*
+ * I disable all the events of a given FD and I forget about it!
+ */
 EXPORT(void)
 aioDisable(int fd){
 	aioSuspend(fd, AIO_RWX);
 	AioOSXDescriptor_remove(fd);
 }
+
+/*
+ * This function is part of the API
+ * This is used to enable the receive of events.
+ * The mask parameter says which handlers to receive with this handle, it can be any combination of:
+ *
+ * - AIO_R
+ * - AIO_W
+ *
+ * Once the event arrives and the handle is notified, it will be disabled.
+ * If the same event is desired again, it should be re-register.
+ */
 
 EXPORT(void)
 aioHandle(int fd, aioHandler handlerFn, int mask){
