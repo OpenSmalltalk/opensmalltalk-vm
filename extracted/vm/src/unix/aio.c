@@ -49,15 +49,6 @@
 #include <sys/ioctl.h>
 #include <fcntl.h>
 
-/* function to inform the VM about idle time */
-extern void addIdleUsecs(long idleUsecs);
-
-#if defined(AIO_DEBUG)
-long	aioLastTick = 0;
-long	aioThisTick = 0;
-
-#endif
-
 #define _DO_FLAG_TYPE()	do { _DO(AIO_R, rd) _DO(AIO_W, wr) _DO(AIO_X, ex) } while (0)
 
 static aioHandler rdHandler[FD_SETSIZE];
@@ -73,11 +64,18 @@ static fd_set wrMask;		/* handle write		 */
 static fd_set exMask;		/* handle exception	 */
 static fd_set xdMask;		/* external descriptor	 */
 
+/*
+ * This is important, the AIO poll should only do a long pause if there is no pending signals for semaphores.
+ * Check ExternalSemaphores to understand this function.
+ */
+int isPendingSemaphores();
 
 void heartbeat_poll_enter(long microSeconds);
 void heartbeat_poll_exit(long microSeconds);
+static int aio_handle_events(long microSeconds);
 
 Semaphore* interruptFIFOMutex;
+int pendingInterruption;
 int aio_in_sleep = 0;
 int aio_request_interrupt = 0;
 
@@ -87,31 +85,6 @@ undefinedHandler(int fd, void *clientData, int flags)
 	logError("Undefined handler called (fd %d, flags %x)\n", fd, flags);
 }
 
-#ifdef AIO_DEBUG
-const char *
-__shortFileName(const char *full__FILE__name)
-{
-	const char *p = strrchr(full__FILE__name, '/');
-
-	return p ? p + 1 : full__FILE__name;
-}
-static char *
-handlerName(aioHandler h)
-{
-	if (h == undefinedHandler)
-		return "undefinedHandler";
-#ifdef DEBUG_SOCKETS
-	{
-		extern char *socketHandlerName(aioHandler);
-
-		return socketHandlerName(h);
-	}
-#endif
-	return "***unknown***";
-}
-
-#endif
-
 /* initialise asynchronous i/o */
 
 int signal_pipe_fd[2];
@@ -120,6 +93,7 @@ void
 aioInit(void)
 {
 	extern void forceInterruptCheck(int);	/* not really, but hey */
+	int arg;
 
 	interruptFIFOMutex = platform_semaphore_new(1);
 
@@ -135,12 +109,17 @@ aioInit(void)
 	    exit(-1);
 	}
 
-	if(fcntl(signal_pipe_fd[0], F_SETFL, O_NONBLOCK) !=0){
-	    logErrorFromErrno("pipe - fcntl");
-	}
+	if ((arg = fcntl(signal_pipe_fd[0], F_GETFL, 0)) < 0)
+		logErrorFromErrno("fcntl(F_GETFL)");
+	if (fcntl(signal_pipe_fd[0], F_SETFL, arg | O_NONBLOCK | O_ASYNC ) < 0)
+		logErrorFromErrno("fcntl(F_SETFL, O_ASYNC)");
+
+	if ((arg = fcntl(signal_pipe_fd[1], F_GETFL, 0)) < 0)
+		logErrorFromErrno("fcntl(F_GETFL)");
+	if (fcntl(signal_pipe_fd[1], F_SETFL, arg | O_NONBLOCK | O_ASYNC | O_APPEND) < 0)
+		logErrorFromErrno("fcntl(F_SETFL, O_ASYNC)");
 
 
-	//signal(SIGPIPE, SIG_IGN);
 	signal(SIGIO, forceInterruptCheck);
 }
 
@@ -166,37 +145,7 @@ aioFini(void)
 	signal(SIGPIPE, SIG_DFL);
 }
 
-
-/*
- * answer whether i/o becomes possible within the given number of
- * microSeconds
- */
 #define max(x,y) (((x)>(y))?(x):(y))
-
-long	pollpip = 0;		/* set in sqUnixMain.c by -pollpip arg */
-
-#if COGMTVM
-/*
- * If on the MT VM and pollpip > 1 only pip if a threaded FFI call is in
- * progress, which we infer from disownCount being non-zero.
- */
-extern long disownCount;
-
-# define SHOULD_TICK() (pollpip == 1 || (pollpip > 1 && disownCount))
-#else
-# define SHOULD_TICK() pollpip
-#endif
-
-static char *ticks = "-\\|/";
-static char *ticker = "";
-static int tickCount = 0;
-
-#define TICKS_PER_CHAR 10
-#define DO_TICK(bool)				\
-do if ((bool) && !(++tickCount % TICKS_PER_CHAR)) {		\
-	logError("\r%c\r", *ticker);		\
-	if (!*ticker++) ticker= ticks;			\
-} while (0)
 
 volatile int aio_requests = 0;
 volatile int aio_responses = 0;
@@ -211,98 +160,65 @@ aio_flush_pipe(int fd){
 	int bytesRead;
 	char buf[1024];
 
+	interruptFIFOMutex->wait(interruptFIFOMutex);
+	if(pendingInterruption){
+		pendingInterruption = false;
+	}
+
 	do {
-		bytesRead = read(fd, &buf, 1);
+		bytesRead = read(fd, &buf, 1024);
 
 		if(bytesRead == -1){
 
 			if(errno == EAGAIN || errno == EWOULDBLOCK){
+				interruptFIFOMutex->signal(interruptFIFOMutex);
 				return;
 			}
 
 			logErrorFromErrno("pipe - read");
 
+			interruptFIFOMutex->signal(interruptFIFOMutex);
 			return;
 		}
 
-		aio_responses += bytesRead;
-
 	} while(bytesRead > 0);
-}
-
-/**
- * I check the status of the flags signalling an interruption.
- * If there is a pending interruption I return 1, and clear the pipe.
- * The aioPoll will not execute.
- * If there is not, I return 0. The AIOpoll has to run.
- */
-int
-aio_checkAndEnterSleep(int fd){
-	interruptFIFOMutex->wait(interruptFIFOMutex);
-
-	sqLowLevelMFence();
-
-	if(aio_request_interrupt){
-		aio_request_interrupt = false;
-		aio_in_sleep = false;
-		aio_flush_pipe(fd);
-
-		interruptFIFOMutex->signal(interruptFIFOMutex);
-		return 1;
-	}
-
-	aio_in_sleep = true;
-	sqLowLevelMFence();
 
 	interruptFIFOMutex->signal(interruptFIFOMutex);
-    return 0;
 }
 
-/**
- * I flush the pipe and mark the exit of the aioPoll
- */
-void
-aio_flushAndExitSleep(int fd){
+long
+aioPoll(long microSeconds){
+	long timeout;
+
 	interruptFIFOMutex->wait(interruptFIFOMutex);
 
-	aio_flush_pipe(fd);
+	if(pendingInterruption || isPendingSemaphores()){
+		timeout = 0;
+	}else{
+		timeout = microSeconds;
+	}
 
-	aio_request_interrupt = false;
-	aio_in_sleep = false;
-	sqLowLevelMFence();
-
-	if(aio_requests != aio_responses){
-		logError("Unbalanced AIO Requests - Req: %d - Res: %d", aio_requests, aio_responses);
+	if(pendingInterruption){
+		pendingInterruption = false;
 	}
 
 	interruptFIFOMutex->signal(interruptFIFOMutex);
 
+	return aio_handle_events(timeout);
 }
 
-long 
-aioPoll(long microSeconds)
-{
-    
+static int
+aio_handle_events(long microSeconds){
 	int	fd;
 	fd_set	rd, wr, ex;
 	unsigned long long us;
 	int maxFdToUse;
 	long remainingMicroSeconds;
 
-	DO_TICK(SHOULD_TICK());
-
 	/*
-	 * get out early if there is no pending i/o and no need to relinquish
-	 * cpu
+	 * Copy the Masks as they are used to know which
+	 * FD wants which event
 	 */
-
-	if ((maxFd == 0) && (microSeconds == 0))
-		return 0;
-
-    if(aio_checkAndEnterSleep(signal_pipe_fd[0])){
-    	return 1;
-    }
-    
 	rd = rdMask;
 	wr = wrMask;
 	ex = exMask;
@@ -323,7 +239,9 @@ aioPoll(long microSeconds)
 
 		tv.tv_sec = remainingMicroSeconds / 1000000;
 		tv.tv_usec = remainingMicroSeconds % 1000000;
+
 		n = select(maxFdToUse, &rd, &wr, &ex, &tv);
+
 		if (n > 0)
 			break;
 		if (n == 0) {
@@ -348,12 +266,8 @@ aioPoll(long microSeconds)
 		us = now;
 	}
 
-	if(FD_ISSET(signal_pipe_fd[0], &rd)){
-		logError("AIO INTERRUPTED");
-	}
-
 	heartbeat_poll_exit(microSeconds);
-	aio_flushAndExitSleep(signal_pipe_fd[0]);
+	aio_flush_pipe(signal_pipe_fd[0]);
 
     // We clear signal_pipe_fd because when it arrives here we do not care anymore
     // about it, but it may cause a crash if it is set because we do not have
@@ -400,57 +314,16 @@ void
 aioInterruptPoll(){
 	int n;
 
-	interruptFIFOMutex->wait(interruptFIFOMutex);
-
-	if(aio_in_sleep){
-		n = write(signal_pipe_fd[1], "1", 1);
-		if(n != 1){
-			logErrorFromErrno("write to pipe");
-		}
+	n = write(signal_pipe_fd[1], "1", 1);
+	if(n != 1){
+		logErrorFromErrno("write to pipe");
 	}
+	fsync(signal_pipe_fd[1]);
 
-	aio_requests += 1;
-
-	aio_request_interrupt = true;
-	sqLowLevelMFence();
-
+	interruptFIFOMutex->wait(interruptFIFOMutex);
+	pendingInterruption = true;
 	interruptFIFOMutex->signal(interruptFIFOMutex);
 }
-
-
-/*
- * sleep for microSeconds or until i/o becomes possible, avoiding sleeping in
- * select() if timeout too small
- */
-
-long 
-aioSleepForUsecs(long microSeconds)
-{
-	/* This makes no sense at all.  This simply increases latency.  It calls
-	 * aioPoll and then immediately enters a nonasleep for the requested time.
-	 * Hence if there is pending i/o it will prevent responding to that i/o for
-	 * the requested sleep.  Not a good idea. eem May 2017.
-	 */
-#if defined(HAVE_NANOSLEEP) && 0
-	if (microSeconds < (1000000 / 60)) {	/* < 1 timeslice? */
-		if (!aioPoll(0)) {
-			struct timespec rqtp = {0, microSeconds * 1000};
-			struct timespec rmtp = {0, 0};
-
-			nanosleep(&rqtp, &rmtp);
-			addIdleUsecs((rqtp.tv_nsec - rmtp.tv_nsec) / 1000);
-			microSeconds = 0;	/* poll but don't block */
-		}
-	}
-#endif
-	/* This makes perfect sense.  Poll with a timeout of microSeconds, returning
-	 * when the timeout has elapsed or i/o is possible, whichever is sooner.
-	 */
-	return aioPoll(microSeconds);
-}
-
-
-/* enable asynchronous notification for a descriptor */
 
 void 
 aioEnable(int fd, void *data, int flags)
