@@ -53,6 +53,15 @@ SpurSimulatedMemory >> initializeSlots: anInteger [
 	memoryObject := ByteArray new: anInteger * self bytesPerElement
 ]
 
+{ #category : #accessing }
+SpurSimulatedMemory >> long64At: address [ 
+	
+	^ memoryObject
+		integerAt: address - initialAddress
+		size: 8
+		signed: false
+]
+
 { #category : #converting }
 SpurSimulatedMemory >> memoryObject [
 	

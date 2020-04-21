@@ -10363,6 +10363,18 @@ Cogit >> methodNumArgs [
 ]
 
 { #category : #accessing }
+Cogit >> methodObj [
+	<doNotGenerate>
+	^ methodObj
+]
+
+{ #category : #accessing }
+Cogit >> methodObj: anObject [
+	<doNotGenerate>
+	methodObj := anObject
+]
+
+{ #category : #accessing }
 Cogit >> methodZone [
 	^methodZone
 ]

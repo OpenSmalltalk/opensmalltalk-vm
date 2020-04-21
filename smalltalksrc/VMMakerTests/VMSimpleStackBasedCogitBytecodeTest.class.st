@@ -404,6 +404,34 @@ VMSimpleStackBasedCogitBytecodeTest >> newMemory [
 ]
 
 { #category : #helpers }
+VMSimpleStackBasedCogitBytecodeTest >> newMethodWithLiteral: literalObject at: literalIndex [
+	
+| method methodHeader nativeAddress |
+	
+	"Create a cogged compiled method object containing the given literal at the given index.
+	The method has to have a cogged counterpart to play in the JIT.
+	The cogged counterpart has to be in an address lower then the method address.
+	The method header points to the cogged method.
+	The cogged method has the real method header"
+	
+	method := self
+		newObjectWithSlots: literalIndex + 1 "index is 0 based" + 1 "one extra for the header"
+		format: (memory compiledMethodFormatForNumBytes: 0)
+		classIndex: 16r10.
+	methodHeader := (0 "nArgs" bitShift: 24)
+						+ (0 "nTemps" bitShift: 18)
+						+ (0 "small frame")
+						+ literalIndex + 2 "number of literaps"
+						+ 0 "primitive".
+	memory storePointer: 0 ofObject: method withValue: (memory integerObjectOf: methodHeader).
+	memory
+		storePointer: literalIndex + 1
+		ofObject: method
+		withValue: literalObject.
+	^ method
+]
+
+{ #category : #helpers }
 VMSimpleStackBasedCogitBytecodeTest >> pop [
 
 	| stackAddressIntegerValue poppedByteArray |
@@ -554,6 +582,7 @@ VMSimpleStackBasedCogitBytecodeTest >> setUp [
 	
 	SimpleStackBasedCogit initializeWithOptions: (Cogit asOptionsDictionary: { #ISA . isa }).
 	cogit := SimpleStackBasedCogit new setInterpreter: memory coInterpreter.
+	memory coInterpreter cogit: cogit.
 	cogit objectRepresentation class initializeMiscConstants.
 	
 	memory nilObject: (self newObjectWithSlots: 0).
@@ -1591,6 +1620,49 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendEqualsEqualsWithNonIdenticalObjec
 	self
 		assert: self popAddress
 		equals: memory falseObject
+]
+
+{ #category : #'tests - sends' }
+VMSimpleStackBasedCogitBytecodeTest >> testSendLiteralZeroWithZeroArgsMovesReceiverFromStackTopIntoReceiverRegister [
+
+	sendTrampolineAddress := self compile: [ cogit RetN: 0 ].
+	cogit ordinarySendTrampolineAt: 0 "num args" put: sendTrampolineAddress.
+	
+	self createFramefulCallFrom: callerAddress.
+	
+	cogit byte0: 0.
+	cogit methodObj: (self newMethodWithLiteral: memory falseObject at: 0).
+	sendAddress := self compile: [ cogit genSendLiteralSelector0ArgsBytecode ].
+
+	"Push receiver then send"
+	self pushAddress: memory falseObject.
+	self runFrom: sendAddress until: sendTrampolineAddress.
+	
+	self assert: unicorn receiverRegisterValue equals: memory falseObject
+]
+
+{ #category : #'tests - sends' }
+VMSimpleStackBasedCogitBytecodeTest >> testSendLiteralZeroWithZeroArgsPushesReturnValueFromReceiverRegisterAfterReturn [
+
+	sendTrampolineAddress := self compile: [ cogit RetN: 0 ].
+	cogit ordinarySendTrampolineAt: 0 "num args" put: sendTrampolineAddress.
+	
+	self createFramefulCallFrom: callerAddress.
+	
+	cogit byte0: 0.
+	cogit methodObj: (self newMethodWithLiteral: memory falseObject at: 0).
+	sendAddress := self compile: [ cogit genSendLiteralSelector0ArgsBytecode ].
+
+	"Push receiver, arg, then send"
+	self pushAddress: memory falseObject.
+	self pushAddress: memory trueObject.
+	self runFrom: sendAddress until: sendTrampolineAddress.
+	
+	"Now return from called function/method and execute until the end of the send instruction"
+	unicorn returnRegisterValue: (memory integerObjectOf: 42).
+	self runFrom: unicorn instructionPointerValue until: lastAddress.
+	
+	self assert: self popAddress equals: (memory integerObjectOf: 42).
 ]
 
 { #category : #'tests - special sends' }
