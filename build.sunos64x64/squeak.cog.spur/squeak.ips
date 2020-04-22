@@ -24,7 +24,7 @@ DBX=
 ROOT=/
 #ROOT=./reloc/
 LIB32=${ROOT}usr/lib/squeak/5.0-202004221436-sunos
-LIB64=${ROOT}usr/lib/squeak/
+LIB64=${ROOT}usr/lib/squeak/5.0-202004221445-sunos
 CK=${ROOT}usr/bin/ckformat
 
 if [ "${SQUEAK_PLUGINS-unset}" = unset ]; then
