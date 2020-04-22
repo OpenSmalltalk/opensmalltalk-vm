@@ -273,7 +273,10 @@ AC_DEFUN([AC_PLUGIN_SEARCH_LIBS],[
   save_LIBS="$LIBS"
   LIBS=""
   AC_SEARCH_LIBS($1,$2,
-    [plibs="${plibs} ${LIBS}"],
+    [dnl AC_SEARCH_LIBS generates LIBS with -l, plibs expects libnames wihtout
+    dnl since at most one can be found, strip the "-l"
+    plib=`echo "${LIBS}" | cut -c2-`
+    plibs="${plibs} ${plib}"],
     [AC_MSG_RESULT([******** disabling ${plugin} due to missing libraries])
     disabled_plugins="${disabled_plugins} ${plugin}"])
   LIBS="$save_LIBS"])
