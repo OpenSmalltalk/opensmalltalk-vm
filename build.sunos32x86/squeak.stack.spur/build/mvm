@@ -10,7 +10,7 @@ esac
 # Stack Spur VM with VM profiler and threaded heartbeat
 INSTALLDIR=sqstkspursunosht/usr
 # Some gcc versions create a broken VM using -O2
-OPT="-g -O2 -DNDEBUG -DDEBUGVM=0"
+OPT="-DNDEBUG -DDEBUGVM=0"
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
@@ -30,7 +30,6 @@ test -f config.h || ../../../platforms/unix/config/configure \
 	--with-src=spurstacksrc --disable-cogit \
 	--without-vm-display-fbdev --without-npsqueak \
 	TARGET_ARCH="-m32" \
-        ac_cv_cflags_warn_all="-v" \
 	CFLAGS="$OPT"
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../products/$INSTALLDIR

@@ -4,7 +4,7 @@ set -e
 MAKE=/usr/bin/gmake
 INSTALLDIR=sqcogspur64sunosht/usr
 # Some gcc versions create a broken VM using -O2
-OPT="-g -O2 -DNDEBUG -DDEBUGVM=0"
+OPT="-DNDEBUG -DDEBUGVM=0"
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
@@ -23,7 +23,6 @@ test -f config.h || ../../../platforms/unix/config/configure --without-npsqueak 
 		--with-vmversion=5.0 \
 		--with-src=spur64src \
 	TARGET_ARCH="-m64" \
-        ac_cv_cflags_warn_all="-v" \
 	CFLAGS="$OPT -m64 -DCOGMTVM=0 -DITIMER_HEARTBEAT=1"
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../products/$INSTALLDIR

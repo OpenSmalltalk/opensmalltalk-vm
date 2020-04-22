@@ -2,7 +2,7 @@
 set -e
 # Stack Spur VM with VM profiler and threaded heartbeat
 INSTALLDIR=sqstkspur64sunosht/usr
-OPT="-O2 -DNDEBUG -DDEBUGVM=0"
+OPT="-DNDEBUG -DDEBUGVM=0"
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
@@ -22,7 +22,6 @@ test -f config.h || ../../../platforms/unix/config/configure \
 	--with-src=spurstack64src --disable-cogit \
 	--without-vm-display-fbdev --without-npsqueak \
 	TARGET_ARCH="-m64" \
-        ac_cv_cflags_warn_all="-v" \
 	CFLAGS="$OPT"
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../products/$INSTALLDIR
