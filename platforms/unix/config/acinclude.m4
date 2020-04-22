@@ -251,7 +251,7 @@ AC_MSG_RESULT($CFLAGS_32)])
 ### plugin support
 
 
-# AC_PLUGIN_SUBST(varname,value)
+dnl AC_PLUGIN_SUBST(varname,value)
 
 AC_DEFUN([AC_PLUGIN_DISABLE_PLUGIN],[
   AC_MSG_RESULT([******** disabling $1])
@@ -266,22 +266,27 @@ AC_DEFUN([AC_PLUGIN_USE_LIB],[
 AC_DEFUN([AC_PLUGIN_DEFINE_UNQUOTED],[
   echo 's%[\['$1'\]]%'$2'%g' >> ${plugin}.sub])
 
-# AC_PLUGIN_SEARCH_LIBS(function,libs...)
+dnl AC_PLUGIN_SEARCH_LIBS(function,libs...)
 
 AC_DEFUN([AC_PLUGIN_SEARCH_LIBS],[
-  AC_SEARCH_LIBS($1,$2,,
-    AC_MSG_RESULT([******** disabling ${plugin} due to missing libraries])
-    disabled_plugins="${disabled_plugins} ${plugin}")])
+  # Do not put into LIBS because plibs should get it.
+  save_LIBS="$LIBS"
+  LIBS=""
+  AC_SEARCH_LIBS($1,$2,
+    [plibs="${plibs} ${LIBS}"],
+    [AC_MSG_RESULT([******** disabling ${plugin} due to missing libraries])
+    disabled_plugins="${disabled_plugins} ${plugin}"])
+  LIBS="$save_LIBS"])
 
-# AC_PLUGIN_CHECK_LIB(lib,func,ok,bad)
+dnl AC_PLUGIN_CHECK_LIB(lib,func,ok,bad)
 
 AC_DEFUN([AC_PLUGIN_CHECK_LIB],[
   AC_CHECK_LIB($1,$2,
-    plibs="${plibs} $1",
-    AC_MSG_RESULT([******** disabling ${plugin} due to missing libraries])
-    disabled_plugins="${disabled_plugins} ${plugin}")])
+    [plibs="${plibs} $1"],
+    [AC_MSG_RESULT([******** disabling ${plugin} due to missing libraries])
+    disabled_plugins="${disabled_plugins} ${plugin}"])])
 
-# Recent Unix stuff
+dnl Recent Unix stuff
 m4_include([ax_require_defined.m4])
 m4_include([ax_append_flag.m4])
 m4_include([ax_have_epoll.m4])
