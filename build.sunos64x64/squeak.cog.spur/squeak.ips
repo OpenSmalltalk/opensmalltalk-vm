@@ -18,12 +18,13 @@
 # 5.0.1 - initial version
 # 5.0.2 - add ckformat
 # 5.0.3 - build vm based on "Stack Spur" VM instead of "Cog Spur"
+# 5.0.4 - merge Cog master changes into Solaris version
 
 DBX=
 ROOT=/
 #ROOT=./reloc/
-LIB32=${ROOT}usr/lib/squeak/5.0-202004131624-solaris
-LIB64=${ROOT}usr/lib/squeak/5.0-202004101141-solaris
+LIB32=${ROOT}usr/lib/squeak/5.0-202004221436-sunos
+LIB64=${ROOT}usr/lib/squeak/
 CK=${ROOT}usr/bin/ckformat
 
 if [ "${SQUEAK_PLUGINS-unset}" = unset ]; then
