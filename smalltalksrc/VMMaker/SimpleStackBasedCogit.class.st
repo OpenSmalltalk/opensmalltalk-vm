@@ -3827,6 +3827,13 @@ SimpleStackBasedCogit >> methodUsesPrimitiveErrorCode: aMethodObj header: aMetho
 				ofObject: aMethodObj)]
 ]
 
+{ #category : #accessing }
+SimpleStackBasedCogit >> minCallAddress: anInteger [ 
+	<doNotGenerate>
+
+	minValidCallAddress:=anInteger
+]
+
 { #category : #testing }
 SimpleStackBasedCogit >> numRegArgs [
 	<api>

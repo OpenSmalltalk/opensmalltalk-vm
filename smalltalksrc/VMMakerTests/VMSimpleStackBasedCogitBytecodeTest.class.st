@@ -354,6 +354,21 @@ VMSimpleStackBasedCogitBytecodeTest >> framePointerRegisterValue: aValue [
 	self writeRegister: UcX86Registers rbp value: aValue
 ]
 
+{ #category : #'helpers - methods' }
+VMSimpleStackBasedCogitBytecodeTest >> generateCogMethod: aBlockClosure selector: anSelectorOop [ 
+
+	| targetCog targetCogAddress |
+	targetCog := cogit cogMethodSurrogateAt: (cogit methodZone allocate: (cogit sizeof: CogMethod)).
+	targetCog selector: anSelectorOop.
+
+	targetCogAddress := self compile: [ cogit RetN: 0 ].	
+	
+	self assert: targetCog asInteger + cogit entryOffset equals: targetCogAddress.
+	
+	^ targetCog
+
+]
+
 { #category : #running }
 VMSimpleStackBasedCogitBytecodeTest >> initializeInitialStackFrame [
 
@@ -431,7 +446,27 @@ VMSimpleStackBasedCogitBytecodeTest >> newMethodWithLiteral: literalObject at: l
 	^ method
 ]
 
-{ #category : #helpers }
+{ #category : #'helpers - stack' }
+VMSimpleStackBasedCogitBytecodeTest >> peek [
+
+	| stackAddressIntegerValue peekedByteArray |
+
+	"Getting address from stack register"
+	stackAddressIntegerValue := unicorn stackPointerRegisterValue.
+
+	"Putting the value in the stack memory"
+	peekedByteArray := unicorn memoryAt: stackAddressIntegerValue readNext: self wordSize.
+	
+	^ peekedByteArray
+]
+
+{ #category : #'helpers - stack' }
+VMSimpleStackBasedCogitBytecodeTest >> peekAddress [
+	
+	^ self peek integerAt: 1 size: self wordSize signed: false
+]
+
+{ #category : #'helpers - stack' }
 VMSimpleStackBasedCogitBytecodeTest >> pop [
 
 	| stackAddressIntegerValue poppedByteArray |
@@ -448,13 +483,13 @@ VMSimpleStackBasedCogitBytecodeTest >> pop [
 	^ poppedByteArray
 ]
 
-{ #category : #helpers }
+{ #category : #'helpers - stack' }
 VMSimpleStackBasedCogitBytecodeTest >> popAddress [
 	
 	^ self pop integerAt: 1 size: self wordSize signed: false
 ]
 
-{ #category : #helpers }
+{ #category : #'helpers - stack' }
 VMSimpleStackBasedCogitBytecodeTest >> push: aByteArray [
 
 	| stackAddressIntegerValue |
@@ -475,7 +510,7 @@ VMSimpleStackBasedCogitBytecodeTest >> push: aByteArray [
 
 ]
 
-{ #category : #helpers }
+{ #category : #'helpers - stack' }
 VMSimpleStackBasedCogitBytecodeTest >> pushAddress: anInteger [
 
 	| aByteArray |
@@ -583,7 +618,9 @@ VMSimpleStackBasedCogitBytecodeTest >> setUp [
 	SimpleStackBasedCogit initializeWithOptions: (Cogit asOptionsDictionary: { #ISA . isa }).
 	cogit := SimpleStackBasedCogit new setInterpreter: memory coInterpreter.
 	memory coInterpreter cogit: cogit.
+	memory cogit: cogit.
 	cogit objectRepresentation class initializeMiscConstants.
+	cogit entryOffset: (cogit sizeof: CogMethod).
 	
 	memory nilObject: (self newObjectWithSlots: 0).
 	memory trueObject: (self newObjectWithSlots: 0).
@@ -592,7 +629,9 @@ VMSimpleStackBasedCogitBytecodeTest >> setUp [
 	"We don't access its contents, but we need it to be after nil, true and false"
 	memory hiddenRootsObject: (self newObjectWithSlots: 0).
 	
-	cogit methodZone manageFrom: initialAddress to: initialAddress + 100.
+	cogit methodZone manageFrom: initialAddress to: initialAddress + 256.
+	cogit methodZoneBase: initialAddress.
+	cogit minCallAddress: initialAddress.
 	
 	"Initializing Unicorn processor"
 	self setUpCPUSimulator.
@@ -618,6 +657,27 @@ VMSimpleStackBasedCogitBytecodeTest >> stackPointerRegisterValue [
 VMSimpleStackBasedCogitBytecodeTest >> stackPointerRegisterValue: aValue [
 	
 	self writeRegister: UcX86Registers rsp value: aValue
+]
+
+{ #category : #'tests - PIC' }
+VMSimpleStackBasedCogitBytecodeTest >> testCreatingAPicWithTwoCogMethodsHastheTwoMethods [
+
+	| selector cogMethod1 cogMethod2 cogMethod2Tag pic |	
+
+	selector := memory oldSpaceStart.
+	cogMethod1 := self generateCogMethod: [ cogit RetN: 0 ] selector: selector.
+	cogMethod2 := self generateCogMethod: [ cogit RetN: 0 ] selector: selector.
+
+	cogMethod2Tag := memory classIndexOf: memory trueObject.
+
+	pic := cogit cogPICSelector: selector
+					numArgs: 0
+					Case0Method: cogMethod1
+					Case1Method: cogMethod2
+					tag: cogMethod2Tag
+					isMNUCase: false.
+
+	self halt.
 ]
 
 { #category : #'tests - extended push bytecode - push inst var' }
@@ -739,6 +799,49 @@ VMSimpleStackBasedCogitBytecodeTest >> testExtendedStoreStoresInstanceVariableIn
 
 	"After execution false should be popped from the stack and false should be stored in the object's variable (0-based)."
 	self assert: (memory fetchPointer: instanceVariableToWrite - 1 ofObject: obj) equals: memory falseObject
+]
+
+{ #category : #'tests - PIC' }
+VMSimpleStackBasedCogitBytecodeTest >> testLinkCallDuringSendInTrampolineReplacesTheCallTargetWithTheCogMethodAddress [
+
+	"This is for the monomorphic case"
+
+	| sendingMethod targetCog selector executedTheTrampoline |
+	
+	sendTrampolineAddress := self compile: [ cogit RetN: 0 ].
+	cogit ordinarySendTrampolineAt: 0 "num args" put: sendTrampolineAddress.
+
+	selector := memory falseObject.
+	targetCog := self generateCogMethod: [ cogit RetN: 0 ] selector: selector.
+	
+	self createFramefulCallFrom: callerAddress.
+	
+	cogit byte0: 0.
+	sendingMethod := self newMethodWithLiteral: selector at: 0.
+	cogit methodObj: sendingMethod.
+	sendAddress := self compile: [ cogit genSendLiteralSelector0ArgsBytecode ].
+
+	"Push receiver then send"
+	self pushAddress: memory falseObject.
+	self runFrom: sendAddress until: sendTrampolineAddress.
+	
+	cogit 
+		linkSendAt: self peekAddress 
+		in: sendingMethod 
+		to: targetCog 
+		offset: cogit entryOffset 
+		receiver: memory falseObject.
+
+	self pushAddress: memory falseObject.
+
+	executedTheTrampoline := false.
+	unicorn 
+		registerHook: [executedTheTrampoline := true] 
+		atAddress: sendTrampolineAddress.
+
+	self runFrom: sendAddress until: targetCog asInteger + cogit entryOffset.
+  	self deny: executedTheTrampoline.
+
 ]
 
 { #category : #'tests - single bytecode - pop into temp' }
@@ -1634,14 +1737,23 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendLiteralOneWithZeroArgsMovesSelect
 	self createFramefulCallFrom: callerAddress.
 	
 	literalIndex := 1.
-	cogit byte0: literalIndex.
+	"The literal index is extracted from the byte0 of the instruction
+	It is encoded with the bytecode number.
+	The 208 is the first bytecode to send messages with zero arguments.
+	The literal taken starts from zero in 208, one in 209... and so on"
+	cogit byte0: 208 + literalIndex.
 	selector := memory falseObject.
 	cogit methodObj: (self newMethodWithLiteral: selector at: literalIndex).
+
+	"The method will have 3 literals.
+	The first literal is the methodHeader (smallInteger with flags).
+	Literal 0 -> we are not using it (now it is nil)
+	Literal 1 -> our selector"
+	
 	sendAddress := self compile: [ cogit genSendLiteralSelector0ArgsBytecode ].
 
 	"Push receiver, arg, then send"
 	self pushAddress: memory falseObject.
-	self pushAddress: memory trueObject.
 	self runFrom: sendAddress until: sendTrampolineAddress.
 	
 	self

@@ -137,6 +137,14 @@ UnicornSimulator >> register: anIndex readInto: aByteArray [
 	unicorn register: anIndex readInto: aByteArray 
 ]
 
+{ #category : #initialization }
+UnicornSimulator >> registerHook: aBlock atAddress: anAddress [
+
+	unicorn
+		registerInvalidMemoryAccessHook: UcHookType fetchingAccess value 
+		doing: [ :type :address :size :value | address = anAddress ifTrue: aBlock ]
+]
+
 { #category : #registers }
 UnicornSimulator >> returnRegisterValue [
 	

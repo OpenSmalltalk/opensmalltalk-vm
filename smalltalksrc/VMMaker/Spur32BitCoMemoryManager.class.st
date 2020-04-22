@@ -103,6 +103,12 @@ Spur32BitCoMemoryManager >> clearLeakMapAndMapAccessibleObjects [
 	cogit addCogMethodsToHeapMap
 ]
 
+{ #category : #accessing }
+Spur32BitCoMemoryManager >> cogit: aCogit [ 
+	<doNotGenerate>
+	cogit := aCogit
+]
+
 { #category : #'cog jit support' }
 Spur32BitCoMemoryManager >> ensureNoForwardedLiteralsIn: aMethodObj [
 	"Ensure there are no forwarded literals in the argument."
