@@ -255,7 +255,7 @@ INCLUDES="-I${blddir} -I${vmmcfg} -I${topdir}/platforms/unix/vm -I${topdir}/plat
 
 # these are not always added
 case $host_os in
-  cygwin*)
+  cygwin*|freebsd*)
     : #noop
     ;;
   *)

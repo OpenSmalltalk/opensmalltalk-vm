@@ -10,10 +10,10 @@ extern char **uxDropFileNames;
 #define SqDisplayVersionMinor	5
 #define SqDisplayVersion	((SqDisplayVersionMajor << 16) | (SqDisplayVersionMinor))
 
-#if (AVOID_OPENGL_H)
-  typedef struct glRenderer glRenderer;
-#else
+#if (REALIZE_OPENGL_H)
 # include "sqUnixOpenGL.h"
+#else
+typedef struct glRenderer glRenderer;
 #endif
 
 struct SqDisplay

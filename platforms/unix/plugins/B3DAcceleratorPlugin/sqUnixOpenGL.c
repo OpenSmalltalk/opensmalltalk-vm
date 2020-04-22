@@ -36,6 +36,8 @@
 #include "sq.h"
 #include "B3DAcceleratorPlugin.h"
 #include "sqOpenGLRenderer.h"
+
+#define REALIZE_OPENGL_H 1
 #include "SqDisplay.h"
 
 #include <stdio.h>
