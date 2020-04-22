@@ -1643,6 +1643,12 @@ SimpleStackBasedCogit >> duplicateTopBytecode [
 	^0
 ]
 
+{ #category : #'*VMMaker-Tests' }
+SimpleStackBasedCogit >> entryOffset: anInteger [ 
+	<doNotGenerate>
+	cmEntryOffset := anInteger
+]
+
 { #category : #'trampoline support' }
 SimpleStackBasedCogit >> evaluateTrampolineCallBlock: block protectLinkRegIfNot: inFrame [
 	<inline: true>

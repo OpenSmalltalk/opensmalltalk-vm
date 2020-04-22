@@ -10385,6 +10385,12 @@ Cogit >> methodZoneBase [
 	^methodZoneBase
 ]
 
+{ #category : #'*VMMaker-Tests' }
+Cogit >> methodZoneBase: anInteger [ 
+	<doNotGenerate>
+	methodZoneBase := anInteger
+]
+
 { #category : #accessing }
 Cogit >> minCallAddress [
 	<cmacro: '() minValidCallAddress'>
