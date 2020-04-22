@@ -10,7 +10,7 @@ esac
 # Stack Spur VM with VM profiler and threaded heartbeat
 INSTALLDIR=sqstkspursunosht/usr
 # Some gcc versions create a broken VM using -O2
-OPT="-DNDEBUG -DDEBUGVM=0"
+OPT="-g -DNDEBUG -DDEBUGVM=0"
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
