@@ -1623,6 +1623,60 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendEqualsEqualsWithNonIdenticalObjec
 ]
 
 { #category : #'tests - sends' }
+VMSimpleStackBasedCogitBytecodeTest >> testSendLiteralOneWithZeroArgsMovesSelectorIndexClassRegisterIn64bits [
+	
+	| selector literalIndex |
+	self wordSize = 4 ifTrue: [ ^ self skip ].
+
+	sendTrampolineAddress := self compile: [ cogit RetN: 0 ].
+	cogit ordinarySendTrampolineAt: 0 "num args" put: sendTrampolineAddress.
+	
+	self createFramefulCallFrom: callerAddress.
+	
+	literalIndex := 1.
+	cogit byte0: literalIndex.
+	selector := memory falseObject.
+	cogit methodObj: (self newMethodWithLiteral: selector at: literalIndex).
+	sendAddress := self compile: [ cogit genSendLiteralSelector0ArgsBytecode ].
+
+	"Push receiver, arg, then send"
+	self pushAddress: memory falseObject.
+	self pushAddress: memory trueObject.
+	self runFrom: sendAddress until: sendTrampolineAddress.
+	
+	self
+		assert: unicorn classRegisterValue
+		equals: literalIndex
+]
+
+{ #category : #'tests - sends' }
+VMSimpleStackBasedCogitBytecodeTest >> testSendLiteralOneWithZeroArgsMovesSelectorIntoClassRegisterIn32bits [
+	
+	| selector literalIndex |
+	self wordSize = 8 ifTrue: [ ^ self skip ].
+
+	sendTrampolineAddress := self compile: [ cogit RetN: 0 ].
+	cogit ordinarySendTrampolineAt: 0 "num args" put: sendTrampolineAddress.
+	
+	self createFramefulCallFrom: callerAddress.
+	
+	literalIndex := 1.
+	cogit byte0: literalIndex.
+	selector := memory falseObject.
+	cogit methodObj: (self newMethodWithLiteral: selector at: literalIndex).
+	sendAddress := self compile: [ cogit genSendLiteralSelector0ArgsBytecode ].
+
+	"Push receiver, arg, then send"
+	self pushAddress: memory falseObject.
+	self pushAddress: memory trueObject.
+	self runFrom: sendAddress until: sendTrampolineAddress.
+	
+	self
+		assert: unicorn classRegisterValue
+		equals: selector
+]
+
+{ #category : #'tests - sends' }
 VMSimpleStackBasedCogitBytecodeTest >> testSendLiteralZeroWithZeroArgsMovesReceiverFromStackTopIntoReceiverRegister [
 
 	sendTrampolineAddress := self compile: [ cogit RetN: 0 ].
@@ -1639,6 +1693,58 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendLiteralZeroWithZeroArgsMovesRecei
 	self runFrom: sendAddress until: sendTrampolineAddress.
 	
 	self assert: unicorn receiverRegisterValue equals: memory falseObject
+]
+
+{ #category : #'tests - sends' }
+VMSimpleStackBasedCogitBytecodeTest >> testSendLiteralZeroWithZeroArgsMovesSelectorIndexClassRegisterIn64bits [
+	
+	| selector literalIndex |
+	self wordSize = 4 ifTrue: [ ^ self skip ].
+
+	sendTrampolineAddress := self compile: [ cogit RetN: 0 ].
+	cogit ordinarySendTrampolineAt: 0 "num args" put: sendTrampolineAddress.
+	
+	self createFramefulCallFrom: callerAddress.
+	
+	cogit byte0: 0.
+	selector := memory falseObject.
+	cogit methodObj: (self newMethodWithLiteral: selector at: (literalIndex := 0)).
+	sendAddress := self compile: [ cogit genSendLiteralSelector0ArgsBytecode ].
+
+	"Push receiver, arg, then send"
+	self pushAddress: memory falseObject.
+	self pushAddress: memory trueObject.
+	self runFrom: sendAddress until: sendTrampolineAddress.
+	
+	self
+		assert: unicorn classRegisterValue
+		equals: literalIndex
+]
+
+{ #category : #'tests - sends' }
+VMSimpleStackBasedCogitBytecodeTest >> testSendLiteralZeroWithZeroArgsMovesSelectorIntoClassRegisterIn32bits [
+	
+	| selector |
+	self wordSize = 8 ifTrue: [ ^ self skip ].
+
+	sendTrampolineAddress := self compile: [ cogit RetN: 0 ].
+	cogit ordinarySendTrampolineAt: 0 "num args" put: sendTrampolineAddress.
+	
+	self createFramefulCallFrom: callerAddress.
+	
+	cogit byte0: 0.
+	selector := memory falseObject.
+	cogit methodObj: (self newMethodWithLiteral: selector at: 0).
+	sendAddress := self compile: [ cogit genSendLiteralSelector0ArgsBytecode ].
+
+	"Push receiver, arg, then send"
+	self pushAddress: memory falseObject.
+	self pushAddress: memory trueObject.
+	self runFrom: sendAddress until: sendTrampolineAddress.
+	
+	self
+		assert: unicorn classRegisterValue
+		equals: selector
 ]
 
 { #category : #'tests - sends' }
