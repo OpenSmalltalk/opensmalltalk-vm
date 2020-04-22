@@ -47,6 +47,9 @@ COGDEFS:= $(COGDEFS) -DCOGMTVM=1 -DDEBUGVM=$(DEBUGVM)
 else
 COGDEFS:= $(COGDEFS) -DCOGMTVM=0 -DDEBUGVM=$(DEBUGVM)
 endif
+ifdef BIT_IDENTICAL_FLOATING_POINT
+COGDEFS:= $(COGDEFS) -DBIT_IDENTICAL_FLOATING_POINT=1
+endif
 
 # MSVC's preprocessor (bless its heart) can't manage complex expansions
 # and so unless we specify USE_INLINE_MEMORY_ACCESSORS lots of things

@@ -16,6 +16,7 @@
 #include "sqConfig.h"
 
 #include <math.h>
+#include "sqMathShim.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -169,14 +170,14 @@ long ioMicroMSecs(void);
 
 #if STACKVM
 extern void forceInterruptCheckFromHeartbeat(void);
-unsigned volatile long long  ioUTCMicrosecondsNow();
-unsigned volatile long long  ioUTCMicroseconds();
-unsigned volatile long long  ioLocalMicrosecondsNow();
-unsigned volatile long long  ioLocalMicroseconds();
-unsigned          long long  ioUTCStartMicroseconds();
-sqInt	ioLocalSecondsOffset();
-void	ioUpdateVMTimezone();
-void	ioSynchronousCheckForEvents();
+unsigned volatile long long ioUTCMicrosecondsNow(void);
+unsigned volatile long long ioUTCMicroseconds(void);
+unsigned volatile long long ioLocalMicrosecondsNow(void);
+unsigned volatile long long ioLocalMicroseconds(void);
+unsigned          long long ioUTCStartMicroseconds(void);
+sqInt	ioLocalSecondsOffset(void);
+void	ioUpdateVMTimezone(void);
+void	ioSynchronousCheckForEvents(void);
 void	checkHighPriorityTickees(usqLong);
 # if ITIMER_HEARTBEAT		/* Hack; allow heartbeat to avoid */
 extern int numAsyncTickees; /* prodHighPriorityThread unless necessary */
@@ -302,7 +303,7 @@ sqInt ioIsWindowObscured(void);
 sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds);
 #if STACKVM || NewspeakVM
 /* thread subsystem support for e.g. sqExternalSemaphores.c */
-void ioInitThreads();
+void ioInitThreads(void);
 
 /* Management of the external semaphore table (max size set at startup) */
 #if !defined(INITIAL_EXT_SEM_TABLE_SIZE)
@@ -352,7 +353,7 @@ extern char *thrlog[];
 	asprintf(thrlog + myidx, __VA_ARGS__); \
 } while (0)
 
-extern sqOSThread getVMOSThread();
+extern sqOSThread getVMOSThread(void);
 /* Please read the comment for CogThreadManager in the VMMaker package for
  * documentation of this API.  N.B. code is included from sqPlatformSpecific.h
  * before the code here.  e.g.
