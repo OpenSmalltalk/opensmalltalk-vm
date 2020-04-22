@@ -49,4 +49,7 @@ export LDFLAGS
 echo cp config.h bochsconfig.h
 cp config.h bochsconfig.h
 
+rm -f THIS_IS_A_*
+echo >THIS_IS_A_DEBUG_CONFIG
+
 echo "and don't forget to run ./makeem"

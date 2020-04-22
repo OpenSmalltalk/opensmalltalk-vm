@@ -115,12 +115,6 @@ ETOBJ:= $(OBJDIR)/etext.o
 
 .PRECIOUS: mkNamedPrims.exe
 
-#############################################################################
-# DirectX definitions - NOT USED - superseded by mingw provided files
-#
-DXDIR:=     $(PLATDIR)/win32/third-party/dx9sdk/Include
-
-
 INCLUDES:= -I. -I$(VMSRCDIR) -I$(WIN32DIR) -I$(CROSSDIR) $(XINC)
 
 .SUFFIXES:
@@ -255,24 +249,24 @@ plugin-makefile = $(realpath $(firstword $(wildcard $(WIN32PLUGINSDIR)/$(1)/Make
 $(OBJDIR)/%.lib: $(call plugin-makefile,$(*F))
 	@-$(MKDIR) $(BUILD)/$(*F)
 	$(RM) -f $(BUILD)/vm/$(*F).ignore
-	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
+	$(MAKE) $(MFLAGS) -I../common BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) \
 		"VM=$(VM)" "VM_NAME=$(VM_NAME)" \
 		CONFIGURATION=$(CONFIGURATION) ARCH=$(ARCH) TOOLPREFIX=$(TOOLPREFIX) \
-		THIRDPARTYOUTDIR=$(THIRDPARTYOUTDIR) XDEFS=-DSQUEAK_BUILTIN_PLUGIN \
 		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
-		COGDEFS="$(COGDEFS)" LIBNAME=$(*F) $(OBJDIR)/$(*F).lib
+		THIRDPARTYOUTDIR=$(THIRDPARTYOUTDIR) \
+		COGDEFS="$(COGDEFS) -DSQUEAK_BUILTIN_PLUGIN" LIBNAME=$(*F) $(OBJDIR)/$(*F).lib
 
 # External plugin.  Build as dll and copy to vm dir ($(OBJDIR)).
 $(OBJDIR)/%.dll: $(call plugin-makefile,$(*F))
 	@-$(MKDIR) $(BUILD)/$(*F)
 	$(RM) -f $(BUILD)/$(*F).ignore
-	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
+	$(MAKE) $(MFLAGS) -I../common BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) \
 		"VM=$(VM)" "VM_NAME=$(VM_NAME)" \
 		CONFIGURATION=$(CONFIGURATION) ARCH=$(ARCH) TOOLPREFIX=$(TOOLPREFIX) \
 		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
-		THIRDPARTYOUTDIR=$(THIRDPARTYOUTDIR) XDEFS=-DSQUEAK_EXTERNAL_PLUGIN \
+		THIRDPARTYOUTDIR=$(THIRDPARTYOUTDIR) \
 		COGDEFS="$(COGDEFS)" LIBNAME=$(*F) VMLIB=$(VMLIB) $(OBJDIR)/$(*F).dll
 
 #############################################################################

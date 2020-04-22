@@ -62,6 +62,7 @@
 #include "sqaio.h"
 
 #undef HAVE_OPENGL_GL_H		/* don't include Quartz OpenGL if configured */
+#define REALIZE_OPENGL_H 1
 #include "SqDisplay.h"
 
 #if defined(ENABLE_FAST_BLT)

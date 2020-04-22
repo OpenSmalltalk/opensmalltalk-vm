@@ -22,14 +22,7 @@
 #include <bfd.h>
 #include <disassemble.h>
 
-/*
- * Define setjmp and longjmp to be the most minimal setjmp/longjmp available
- * on the platform.
- */
-#if !_WIN32
-# define setjmp(jb) _setjmp(jb)
-# define longjmp(jb,v) _longjmp(jb,v)
-#endif
+#include "sqSetjmpShim.h"
 
 struct sim_state *lastCPU = NULL;
 sim_cpu initialSimState = {0,};

@@ -57,8 +57,7 @@ OBJS		= [COBJS_OR_IOBJS] # see mkmf
 
 XINCLUDES	= [includes] \
 		  -I$(topdir)/platforms/Cross/plugins/FilePlugin \
-		  -I$(topdir)/platforms/unix/plugins/B3DAcceleratorPlugin \
-		  $(X_INCLUDES)
+		  -I$(topdir)/platforms/unix/plugins/B3DAcceleratorPlugin
 
 $(TARGET) : $(OBJS) Makefile
 	$(LINK) $(TARGET) $(OBJS)

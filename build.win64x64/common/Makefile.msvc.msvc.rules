@@ -45,3 +45,9 @@ $(OBJDIR)/%.o: %.cpp
 
 .c.dep:
 	$(CC) -M -o $(notdir $@) $(CFLAGS) $(INCLUDES) $(DEFS) -c $<
+
+.asm.o:
+	$(AS) /Fo$(OBJDIR)/$@ $(DEFS) -c $<
+
+$(OBJDIR)/%.o: %.asm
+	$(AS) /Fo$@ $(DEFS) -c $<

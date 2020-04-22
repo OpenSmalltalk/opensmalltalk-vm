@@ -1858,6 +1858,8 @@ main(int argc, char *argv[])
 
   SQ_LAUNCH_DROP = RegisterWindowMessage(TEXT("SQUEAK_LAUNCH_DROP"));
 
+  vmOptions = calloc(argc + 1, sizeof(char *));
+  imageOptions = calloc(argc + 1, sizeof(char *));
   /* start the non-service version */
   sqMain(argc, argv);
   return 0;
@@ -2206,7 +2208,10 @@ parseGenericArgs(int argc, char *argv[])
 		case IMAGE_SUBSYSTEM_WINDOWS_CE_GUI:
 			return 1; /* ok not to have an image since user can choose one. */
 		default:
-			return 0;
+			/* It is OK to run the console VM provided an image has been
+			 * provided by the ini file.
+			 */
+			return imageName != 0;
 		}
 
 	if (*imageName == 0) { /* only try to use image name if none is provided */

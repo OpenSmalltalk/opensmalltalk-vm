@@ -115,11 +115,6 @@ ETOBJ:= $(OBJDIR)/etext.o
 .PRECIOUS: mkNamedPrims.exe
 
 #############################################################################
-# DirectX definitions - NOT USED - superseded by mingw provided files
-#
-DXDIR:=     $(PLATDIR)/win32/third-party/dx9sdk/Include
-
-#############################################################################
 # Toolchain
 #
 include ../common/Makefile.tools
@@ -274,7 +269,7 @@ $(OBJDIR)/%.lib: $(call plugin-makefile,$(*F))
 		CONFIGURATION=$(CONFIGURATION) TOOLPREFIX=$(TOOLPREFIX) \
 		THIRDPARTYOUTDIR=$(THIRDPARTYOUTDIR) \
 		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
-		LIBNAME=$(*F) COGDEFS="$(COGDEFS)" XDEFS=-DSQUEAK_BUILTIN_PLUGIN \
+		LIBNAME=$(*F) COGDEFS="$(COGDEFS) -DSQUEAK_BUILTIN_PLUGIN" \
 		$(OBJDIR)/$(*F).lib
 
 # External plugin.  Build as dll and copy to vm dir ($(OBJDIR)).

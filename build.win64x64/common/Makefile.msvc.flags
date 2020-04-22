@@ -57,7 +57,7 @@ undefine Clang
 undefine MSVC
 CLANG_ADAPT:=-fmsc-version=1916 # as reported by boost for MSVC Community 2017
 else
-$(info neither CLang nor Clang/C2 found using MSVC)
+$(info neither Clang nor Clang/C2 found using MSVC)
 override TOOLPREFIX:="$(VCToolsInstallDir)bin/HostX64/x64/"
 MSVC:=MSVC
 undefine Clang
@@ -65,6 +65,7 @@ undefine ClangC2
 CC:=$(TOOLPREFIX)cl.exe -nologo
 endif
 $(info CC=$(CC))
+AS:=ml64
 
 
 ifeq ($(WindowsSdkDir),)
