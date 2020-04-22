@@ -289,7 +289,7 @@ dnl AC_PLUGIN_CHECK_LIB(lib,func,ok,bad)
 AC_DEFUN([AC_PLUGIN_CHECK_LIB],[
   AC_CHECK_LIB($1,$2,
     [AC_PLUGIN_USE_LIB($1)],
-    [AC_PLUGIN_DISABLE_PLUGIN_MISSING(${plugin})])
+    [AC_PLUGIN_DISABLE_PLUGIN_MISSING(${plugin})])])
 
 dnl Recent Unix stuff
 m4_include([ax_require_defined.m4])
