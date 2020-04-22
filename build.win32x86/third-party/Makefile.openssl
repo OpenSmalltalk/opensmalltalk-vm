@@ -21,7 +21,6 @@ $(OPENSSLARCHIVE):
 
 $(THIRDPARTYLIBDIR)/$(OPENSSLLIBNAME): $(OPENSSLARCHIVE)
 	tar x -f $(OPENSSLARCHIVE) -C $(THIRDPARTYDIR)
-	sed -i 's/symlink/copy/g'  $(OPENSSLDIR)/util/mklink.pl
 	cd $(OPENSSLDIR) \
 		&&  CC='$(CC)' \
 			LD='$(LD)' \
@@ -31,7 +30,7 @@ $(THIRDPARTYLIBDIR)/$(OPENSSLLIBNAME): $(OPENSSLARCHIVE)
 			DLLWRAP='$(DLLWRAP)' \
 			./Configure mingw --prefix='$(THIRDPARTYOUTDIR)' shared $(THIRDPARTY_CFLAGS) \
 		&& make \
-		&& make install
+		&& make install_sw
 
 # Assuming building ssleay32.dll will also build libeay32.dll
 $(OPENSSLLIB): $(THIRDPARTYLIBDIR)/$(OPENSSLLIBNAME)
