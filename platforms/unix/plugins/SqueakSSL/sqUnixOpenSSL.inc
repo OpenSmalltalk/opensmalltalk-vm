@@ -13,6 +13,11 @@
 
 #include <sys/param.h>
 
+#ifdef __sun
+/* MIN is not C stdlib - perhaps <sys/param.h> is defining it on Linux */
+static int MIN(int a,int b) { return (a<b)?a:b; }
+#endif
+
 typedef struct sqSSL {
 	int state;
 	int certFlags;
@@ -114,7 +119,11 @@ enum sqMatchResult sqVerifyNameInner(sqSSL* ssl, X509* cert, const void* serverN
 				break;
 			}
 		}
+#ifdef __SUNPRO_C
+		sqo_sk_GENERAL_NAME_pop_free(sANs, NULL);
+#else
 		sqo_sk_GENERAL_NAME_pop_free(sANs, (sk_GENERAL_NAME_freefunc)sqo_sk_free);
+#endif
 	}
 	return matchFound;
 }

@@ -943,6 +943,9 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 # elif __sun__ && __i386__
 			void *fp = (void *)(uap ? uap->uc_mcontext.gregs[REG_FP] : 0);
 			void *sp = (void *)(uap ? uap->uc_mcontext.gregs[REG_SP] : 0);
+# elif __sun__ && __amd64
+			void *fp = (void *)(uap ? uap->uc_mcontext.gregs[REG_FP] : 0);
+			void *sp = (void *)(uap ? uap->uc_mcontext.gregs[REG_SP] : 0);
 # elif defined(__arm64__) || defined(__aarch64__) || defined(ARM64)
 			void *fp = (void *)(uap ? uap->uc_mcontext.regs[29] : 0);
 			void *sp = (void *)(uap ? uap->uc_mcontext.sp : 0);
@@ -1189,12 +1192,19 @@ static struct moduleDescription moduleDescriptions[]=
   { &soundModule,   "sound",   "sndio"  },	/*** NO DEFAULT ***/
   /* when adding an entry above be sure to change the defaultModules offset below */
   { &displayModule, "display", "Quartz" },	/* defaults... */
+#ifdef __sun__
+  { &soundModule,   "sound",   "pulse"  },
+  { &soundModule,   "sound",   "OSS"    },
+  { &soundModule,   "sound",   "Sun"    },
+  { &soundModule,   "sound",   "null"   },
+#else
   { &soundModule,   "sound",   "OSS"    },
   { &soundModule,   "sound",   "MacOSX" },
   { &soundModule,   "sound",   "Sun"    },
   { &soundModule,   "sound",   "pulse"  },
   { &soundModule,   "sound",   "ALSA"   },
   { &soundModule,   "sound",   "null"   },
+#endif
   { 0,              0,         0	}
 };
 

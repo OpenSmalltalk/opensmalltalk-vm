@@ -172,9 +172,9 @@ ioHighResClock(void)
   /* return the value of the high performance counter */
   sqLong value = 0;
 
-#if defined(__GNUC__) && (defined(i386) || defined(__i386) || defined(__i386__))
+#if (defined(__GNUC__) || defined(__SUNPRO_C)) && (defined(i386) || defined(__i386) || defined(__i386__))
     __asm__ __volatile__ ("rdtsc" : "=A"(value));
-#elif defined(__GNUC__) && (defined(x86_64) || defined(__x86_64) || defined (__x86_64__))
+#elif (defined(__GNUC__) || defined(__SUNPRO_C)) && (defined(x86_64) || defined(__x86_64) || defined (__x86_64__))
     __asm__ __volatile__ ("rdtsc\n\t"			// Returns the time in EDX:EAX.
 						"shl $32, %%rdx\n\t"	// Shift the upper bits left.
 						"or %%rdx, %0"			// 'Or' in the lower bits.

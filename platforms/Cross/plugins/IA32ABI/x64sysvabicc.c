@@ -224,7 +224,7 @@ thunkEntry(long a0, long a1, long a2, long a3, long a4, long a5,
 		double valflt64 = vmcc.rvs.valflt64;
 #if _MSC_VER
 				_asm mov qword ptr valflt64, xmm0;
-#elif __GNUC__
+#elif __GNUC__ || __SUNPRO_C
 				__asm__("movq %0, %%xmm0" : : "m"(valflt64));
 #else
 # error need to load %xmm0 with vmcc.rvs.valflt64 on this compiler

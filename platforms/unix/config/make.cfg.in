@@ -56,7 +56,7 @@ datadir=	@datadir@
 mandir=		@mandir@
 imgdir=		@imgdir@
 plgdir=		@plgdir@
-docdir=		$(prefix)/doc/squeak
+docdir=		@datarootdir@/doc/squeak
 
 SHELL=		@SHELL@
 MKINSTALLDIRS=	mkdir -p
