@@ -52,8 +52,7 @@ findDirs() {
   echo ${dirs} | tr ' ' '\012' | sort | uniq | tr '\012' ' '
 }
 
-plibs=""
-
+# expects plibs to be set correctly
 mkmf() {
   default=$1
   name=$2
@@ -167,12 +166,14 @@ s%\[make_targets\]%%g" > ${name}/Makefile
   /bin/rm -f ${make_targets} makefile.in makefile.sub
 }
 
+plibs=""
 if test "${int_modules}" != ""; then
   for p in ${int_modules}; do
     mkmf int ${p} ${vmi_dirs}
   done
 fi
 
+plibs=""
 if test "${ext_modules}" != ""; then
   for p in ${ext_modules}; do
     if test -f ${p}.lib; then
@@ -184,12 +185,14 @@ if test "${ext_modules}" != ""; then
   done
 fi
 
+plibs=""
 if test "${int_plugins}" != ""; then
   for p in ${int_plugins}; do
     mkmf int ${p} ${int_dirs}
   done
 fi
 
+plibs=""
 if test "${ext_plugins}" != ""; then
   for p in ${ext_plugins}; do
     if test -f ${p}.lib; then
