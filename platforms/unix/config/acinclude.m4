@@ -256,6 +256,10 @@ dnl AC_PLUGIN_SUBST(varname,value)
 AC_DEFUN([AC_PLUGIN_DISABLE_PLUGIN],[
   AC_MSG_RESULT([******** disabling $1])
   disabled_plugins="${disabled_plugins} $1"])
+AC_DEFUN([AC_PLUGIN_DISABLE_PLUGIN_MISSING],[
+  AC_MSG_RESULT([******** disabling $1 due to missing libraries])
+  disabled_plugins="${disabled_plugins} $1"])
+
   
 AC_DEFUN([AC_PLUGIN_DISABLE],[
   AC_PLUGIN_DISABLE_PLUGIN(${plugin})])
@@ -276,18 +280,16 @@ AC_DEFUN([AC_PLUGIN_SEARCH_LIBS],[
     [dnl AC_SEARCH_LIBS generates LIBS with -l, plibs expects libnames wihtout
     dnl since at most one can be found, strip the "-l"
     plib=`echo "${LIBS}" | cut -c3-`
-    plibs="${plibs} ${plib}"],
-    [AC_MSG_RESULT([******** disabling ${plugin} due to missing libraries])
-    disabled_plugins="${disabled_plugins} ${plugin}"])
+    AC_PLUGIN_USE_LIB(${plib})],
+    [AC_PLUGIN_DISABLE_PLUGIN_MISSING(${plugin})])
   LIBS="$save_LIBS"])
 
 dnl AC_PLUGIN_CHECK_LIB(lib,func,ok,bad)
 
 AC_DEFUN([AC_PLUGIN_CHECK_LIB],[
   AC_CHECK_LIB($1,$2,
-    [plibs="${plibs} $1"],
-    [AC_MSG_RESULT([******** disabling ${plugin} due to missing libraries])
-    disabled_plugins="${disabled_plugins} ${plugin}"])])
+    [AC_PLUGIN_USE_LIB($1)],
+    [AC_PLUGIN_DISABLE_PLUGIN_MISSING(${plugin})])
 
 dnl Recent Unix stuff
 m4_include([ax_require_defined.m4])
