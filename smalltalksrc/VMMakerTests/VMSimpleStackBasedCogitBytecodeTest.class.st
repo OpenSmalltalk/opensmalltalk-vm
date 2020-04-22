@@ -85,6 +85,7 @@ VMSimpleStackBasedCogitBytecodeTest >> compile: aBlockClosure bytecodes: bytecod
 	| allocatedAddress |
 	cogit allocateOpcodes: (bytecodes + 10) * 10 bytecodes: bytecodes ifFail: [ self fail ].
 	cogit zeroOpcodeIndex.
+	cogit maxLitIndex: -1.
 	
 	aBlockClosure value.
 

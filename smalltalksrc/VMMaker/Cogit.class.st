@@ -10093,6 +10093,12 @@ Cogit >> maxCogMethodAddress [
 	^methodZone limitZony asUnsignedInteger
 ]
 
+{ #category : #accessing }
+Cogit >> maxLitIndex: anInteger [ 
+	<doNotGenerate>
+	maxLitIndex := anInteger
+]
+
 { #category : #'compile abstract instructions' }
 Cogit >> maybeAllocAndInitCounters [
 	"No-op in the non-Sista Cogits..."

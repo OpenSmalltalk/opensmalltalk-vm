@@ -92,3 +92,22 @@ SpurSimulatedMemory >> unsignedLong64At: address put: aValue [
 		size: 8
 		signed: false
 ]
+
+{ #category : #accessing }
+SpurSimulatedMemory >> unsignedLongAt: address [
+
+	^ memoryObject
+		integerAt: address - initialAddress
+		size: 4
+		signed: false
+]
+
+{ #category : #accessing }
+SpurSimulatedMemory >> unsignedLongAt: address put: aValue [ 
+
+	^ memoryObject
+		integerAt: address - initialAddress
+		put: aValue
+		size: 4
+		signed: false
+]
