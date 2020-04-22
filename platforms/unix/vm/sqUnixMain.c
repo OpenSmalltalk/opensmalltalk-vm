@@ -131,6 +131,7 @@ int inModalLoop= 0;
 int sqIgnorePluginErrors	= 0;
 int runInterpreter		= 1;
 
+
 #include "SqDisplay.h"
 #include "SqSound.h"
 

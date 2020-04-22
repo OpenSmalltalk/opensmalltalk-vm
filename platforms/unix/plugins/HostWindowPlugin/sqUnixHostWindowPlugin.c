@@ -25,8 +25,6 @@
  *   SOFTWARE.
  */
 
-#define AVOID_OPENGL_H	1
-
 #include "sq.h"
 #include "SqDisplay.h"
 #include "HostWindowPlugin.h"
