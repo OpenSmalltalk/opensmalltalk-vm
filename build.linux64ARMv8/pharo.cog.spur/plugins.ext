@@ -1,5 +1,6 @@
 # Copied, perhaps edited, from ../src/examplePlugins.ext
 EXTERNAL_PLUGINS = \
+MIDIPlugin \
 B3DAcceleratorPlugin \
 FT2Plugin \
 JPEGReaderPlugin \
