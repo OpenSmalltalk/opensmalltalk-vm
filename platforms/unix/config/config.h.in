@@ -66,6 +66,9 @@
 /* Define to 1 if you have the <alsa/asoundlib.h> header file. */
 #undef HAVE_ALSA_ASOUNDLIB_H
 
+/* Define to 1 if you have the <audio/audiolib.h> header file. */
+#undef HAVE_AUDIO_AUDIOLIB_H
+
 /* Define to 1 if you have the declaration of `tzname', and to 0 if you don't.
    */
 #undef HAVE_DECL_TZNAME
