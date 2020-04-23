@@ -15,6 +15,7 @@ if [[ "${ARCH}" = "linux64x64" ]]; then
             libpango1.0-dev \
             libpulse-dev \
             libaudio-dev \
+            libsndio-dev \
             gcc-multilib \
             uuid-dev \
             libglu1-mesa-dev \
@@ -52,6 +53,7 @@ elif [[ "${ARCH}" = "linux32x86" ]]; then
               libgirepository-1.0-1:i386 \
             libpulse-dev:i386 \
             libaudio-dev:i386 \
+            libsndio-dev:i386 \
             gcc-multilib \
             uuid-dev:i386 \
             libcurl4-openssl-dev:i386 \
