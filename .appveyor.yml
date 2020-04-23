@@ -119,10 +119,10 @@ environment:
       ARCH: win64x64
       CYG_ROOT: C:\cygwin64
       MINGW_ARCH: x86_64
-    - FLAVOR: pharo.stack.spur
-      ARCH: win64x64
-      CYG_ROOT: C:\cygwin64
-      MINGW_ARCH: x86_64
+    # - FLAVOR: pharo.stack.spur
+    #   ARCH: win64x64
+    #   CYG_ROOT: C:\cygwin64
+    #   MINGW_ARCH: x86_64
     - FLAVOR: newspeak.stack.spur
       ARCH: win64x64
       CYG_ROOT: C:\cygwin64
