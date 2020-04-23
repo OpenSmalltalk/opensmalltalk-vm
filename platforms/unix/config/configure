@@ -809,7 +809,6 @@ with_custom_display
 with_vm_display_fbdev
 with_vm_sound_OSS
 with_custom_sound
-with_sndio_sound
 enable_iconv
 enable_mpg_mmx
 enable_mpg_pthreads
@@ -1504,7 +1503,6 @@ Optional Packages:
   --without-vm-display-fbdev      disable frame buffer vm display support default=enabled
   --without-vm-sound-OSS  disable OSS vm sound support (default=enabled)
   --with-custom-sound     enable custom sound support default=disabled
-  --with-sndio-sound     enable sndio sound support default=disabled
   --with-libtls           Use libtls instead of OpenSSL unconditionally
 
 Some influential environment variables:
@@ -16822,6 +16820,9 @@ fi
 done
 
 
+  # Do not put into LIBS because plibs should get it.
+  save_LIBS="$LIBS"
+  LIBS=""
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing snd_pcm_open" >&5
 $as_echo_n "checking for library containing snd_pcm_open... " >&6; }
 if ${ac_cv_search_snd_pcm_open+:} false; then :
@@ -16875,13 +16876,17 @@ $as_echo "$ac_cv_search_snd_pcm_open" >&6; }
 ac_res=$ac_cv_search_snd_pcm_open
 if test "$ac_res" != no; then :
   test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+          plib=`echo "${LIBS}" | cut -c3-`
 
+  plibs="${plibs} ${plib}"
 else
+
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: ******** disabling ${plugin} due to missing libraries" >&5
 $as_echo "******** disabling ${plugin} due to missing libraries" >&6; }
-    disabled_plugins="${disabled_plugins} ${plugin}"
+  disabled_plugins="${disabled_plugins} ${plugin}"
 fi
 
+  LIBS="$save_LIBS"
 if test "${plibs}"; then
   llibs="${LIBS}"
   for l in ${plibs}; do
@@ -16939,34 +16944,92 @@ rm -f vm-sound-NAS.sub vm-sound-NAS.lib
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Network Audio System" >&5
 $as_echo_n "checking for Network Audio System... " >&6; }
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <audio/audio.h>
-int
-main ()
-{
-AuElementNotifyKindLowWater;
-  ;
-  return 0;
-}
+for ac_header in audio/audiolib.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "audio/audiolib.h" "ac_cv_header_audio_audiolib_h" "$ac_includes_default"
+if test "x$ac_cv_header_audio_audiolib_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_AUDIO_AUDIOLIB_H 1
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
 
 else
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
 
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: ******** disabling ${plugin}" >&5
 $as_echo "******** disabling ${plugin}" >&6; }
   disabled_plugins="${disabled_plugins} ${plugin}"
-
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
+done
+
+
+  # Do not put into LIBS because plibs should get it.
+  save_LIBS="$LIBS"
+  LIBS=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing AuOpenServer" >&5
+$as_echo_n "checking for library containing AuOpenServer... " >&6; }
+if ${ac_cv_search_AuOpenServer+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char AuOpenServer ();
+int
+main ()
+{
+return AuOpenServer ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' audio; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_AuOpenServer=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if ${ac_cv_search_AuOpenServer+:} false; then :
+  break
+fi
+done
+if ${ac_cv_search_AuOpenServer+:} false; then :
+
+else
+  ac_cv_search_AuOpenServer=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_AuOpenServer" >&5
+$as_echo "$ac_cv_search_AuOpenServer" >&6; }
+ac_res=$ac_cv_search_AuOpenServer
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+          plib=`echo "${LIBS}" | cut -c3-`
+
+  plibs="${plibs} ${plib}"
+else
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: ******** disabling ${plugin} due to missing libraries" >&5
+$as_echo "******** disabling ${plugin} due to missing libraries" >&6; }
+  disabled_plugins="${disabled_plugins} ${plugin}"
+fi
+
+  LIBS="$save_LIBS"
 if test "${plibs}"; then
   llibs="${LIBS}"
   for l in ${plibs}; do
@@ -17224,6 +17287,9 @@ fi
 done
 
 
+  # Do not put into LIBS because plibs should get it.
+  save_LIBS="$LIBS"
+  LIBS=""
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing pa_simple_new" >&5
 $as_echo_n "checking for library containing pa_simple_new... " >&6; }
 if ${ac_cv_search_pa_simple_new+:} false; then :
@@ -17277,13 +17343,17 @@ $as_echo "$ac_cv_search_pa_simple_new" >&6; }
 ac_res=$ac_cv_search_pa_simple_new
 if test "$ac_res" != no; then :
   test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+          plib=`echo "${LIBS}" | cut -c3-`
 
+  plibs="${plibs} ${plib}"
 else
+
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: ******** disabling ${plugin} due to missing libraries" >&5
 $as_echo "******** disabling ${plugin} due to missing libraries" >&6; }
-    disabled_plugins="${disabled_plugins} ${plugin}"
+  disabled_plugins="${disabled_plugins} ${plugin}"
 fi
 
+  LIBS="$save_LIBS"
 if test "${plibs}"; then
   llibs="${LIBS}"
   for l in ${plibs}; do
@@ -17296,49 +17366,36 @@ plibs=""
 rm -f vm-sound-sndio.sub vm-sound-sndio.lib
 # -*- sh -*-
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for sndio sound support" >&5
-$as_echo_n "checking for sndio sound support... " >&6; }
-
-
-# Check whether --with-sndio-sound was given.
-if test "${with_sndio_sound+set}" = set; then :
-  withval=$with_sndio_sound; have_snd_sndio="$withval"
-else
-  have_snd_sndio="no"
-fi
-
-
-if test "$have_snd_sndio" = "yes"; then
-  # check for libraries, headers, etc., here...
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OpenBSD sndio Sound System" >&5
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for OpenBSD sndio Sound System" >&5
 $as_echo_n "checking for OpenBSD sndio Sound System... " >&6; }
-  sio_h_found="no"
-  for ac_header in sndio.h
+for ac_header in sndio.h
 do :
   ac_fn_c_check_header_mongrel "$LINENO" "sndio.h" "ac_cv_header_sndio_h" "$ac_includes_default"
 if test "x$ac_cv_header_sndio_h" = xyes; then :
   cat >>confdefs.h <<_ACEOF
 #define HAVE_SNDIO_H 1
 _ACEOF
- sndio_h_found="yes"; break
-fi
 
-done
-
-  if test "$sndio_h_found" = "no"; then
+else
 
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: ******** disabling ${plugin}" >&5
 $as_echo "******** disabling ${plugin}" >&6; }
   disabled_plugins="${disabled_plugins} ${plugin}"
-  else
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for sio_open in -lsndio" >&5
-$as_echo_n "checking for sio_open in -lsndio... " >&6; }
-if ${ac_cv_lib_sndio_sio_open+:} false; then :
+fi
+
+done
+
+
+  # Do not put into LIBS because plibs should get it.
+  save_LIBS="$LIBS"
+  LIBS=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing sio_open" >&5
+$as_echo_n "checking for library containing sio_open... " >&6; }
+if ${ac_cv_search_sio_open+:} false; then :
   $as_echo_n "(cached) " >&6
 else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lsndio  $LIBS"
+  ac_func_search_save_LIBS=$LIBS
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -17357,32 +17414,46 @@ return sio_open ();
   return 0;
 }
 _ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_sndio_sio_open=yes
-else
-  ac_cv_lib_sndio_sio_open=no
+for ac_lib in '' sndio; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_sio_open=$ac_res
 fi
 rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
+    conftest$ac_exeext
+  if ${ac_cv_search_sio_open+:} false; then :
+  break
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_sndio_sio_open" >&5
-$as_echo "$ac_cv_lib_sndio_sio_open" >&6; }
-if test "x$ac_cv_lib_sndio_sio_open" = xyes; then :
+done
+if ${ac_cv_search_sio_open+:} false; then :
 
-  plibs="${plibs} sndio"
-fi
-
-  fi
 else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
+  ac_cv_search_sio_open=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_sio_open" >&5
+$as_echo "$ac_cv_search_sio_open" >&6; }
+ac_res=$ac_cv_search_sio_open
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+          plib=`echo "${LIBS}" | cut -c3-`
 
+  plibs="${plibs} ${plib}"
+else
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: ******** disabling ${plugin}" >&5
-$as_echo "******** disabling ${plugin}" >&6; }
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: ******** disabling ${plugin} due to missing libraries" >&5
+$as_echo "******** disabling ${plugin} due to missing libraries" >&6; }
   disabled_plugins="${disabled_plugins} ${plugin}"
 fi
+
+  LIBS="$save_LIBS"
 if test "${plibs}"; then
   llibs="${LIBS}"
   for l in ${plibs}; do
@@ -17769,39 +17840,96 @@ plibs=""
 rm -f MIDIPlugin.sub MIDIPlugin.lib
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for MIDI support via ALSA" >&5
 $as_echo_n "checking for MIDI support via ALSA... " >&6; }
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
 
-  #include <alsa/asoundlib.h>
-
-int
-main ()
-{
-;
-  ;
-  return 0;
-}
+for ac_header in alsa/asoundlib.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "alsa/asoundlib.h" "ac_cv_header_alsa_asoundlib_h" "$ac_includes_default"
+if test "x$ac_cv_header_alsa_asoundlib_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_ALSA_ASOUNDLIB_H 1
 _ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
 
 $as_echo "#define USE_MIDI_ALSA 1" >>confdefs.h
 
-
 else
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
 
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: ******** disabling ${plugin}" >&5
 $as_echo "******** disabling ${plugin}" >&6; }
   disabled_plugins="${disabled_plugins} ${plugin}"
-
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
+done
+
+
+  # Do not put into LIBS because plibs should get it.
+  save_LIBS="$LIBS"
+  LIBS=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing snd_seq_open" >&5
+$as_echo_n "checking for library containing snd_seq_open... " >&6; }
+if ${ac_cv_search_snd_seq_open+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char snd_seq_open ();
+int
+main ()
+{
+return snd_seq_open ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' asound; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_snd_seq_open=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if ${ac_cv_search_snd_seq_open+:} false; then :
+  break
+fi
+done
+if ${ac_cv_search_snd_seq_open+:} false; then :
+
+else
+  ac_cv_search_snd_seq_open=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_snd_seq_open" >&5
+$as_echo "$ac_cv_search_snd_seq_open" >&6; }
+ac_res=$ac_cv_search_snd_seq_open
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+          plib=`echo "${LIBS}" | cut -c3-`
+
+  plibs="${plibs} ${plib}"
+else
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: ******** disabling ${plugin} due to missing libraries" >&5
+$as_echo "******** disabling ${plugin} due to missing libraries" >&6; }
+  disabled_plugins="${disabled_plugins} ${plugin}"
+fi
+
+  LIBS="$save_LIBS"
 if test "${plibs}"; then
   llibs="${LIBS}"
   for l in ${plibs}; do
@@ -18012,6 +18140,9 @@ if test "x$ac_cv_header_openssl_ssl_h" = xyes; then :
 _ACEOF
 
 
+  # Do not put into LIBS because plibs should get it.
+  save_LIBS="$LIBS"
+  LIBS=""
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing dlopen" >&5
 $as_echo_n "checking for library containing dlopen... " >&6; }
 if ${ac_cv_search_dlopen+:} false; then :
@@ -18065,13 +18196,17 @@ $as_echo "$ac_cv_search_dlopen" >&6; }
 ac_res=$ac_cv_search_dlopen
 if test "$ac_res" != no; then :
   test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+          plib=`echo "${LIBS}" | cut -c3-`
 
+  plibs="${plibs} ${plib}"
 else
+
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: ******** disabling ${plugin} due to missing libraries" >&5
 $as_echo "******** disabling ${plugin} due to missing libraries" >&6; }
-    disabled_plugins="${disabled_plugins} ${plugin}"
+  disabled_plugins="${disabled_plugins} ${plugin}"
 fi
 
+  LIBS="$save_LIBS"
                     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for SSL support" >&5
 $as_echo_n "checking for SSL support... " >&6; }
                     { $as_echo "$as_me:${as_lineno-$LINENO}: result: OpenSSL (dynamic)" >&5
@@ -18099,6 +18234,9 @@ done
 else
 
 
+  # Do not put into LIBS because plibs should get it.
+  save_LIBS="$LIBS"
+  LIBS=""
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing BIO_new" >&5
 $as_echo_n "checking for library containing BIO_new... " >&6; }
 if ${ac_cv_search_BIO_new+:} false; then :
@@ -18152,14 +18290,21 @@ $as_echo "$ac_cv_search_BIO_new" >&6; }
 ac_res=$ac_cv_search_BIO_new
 if test "$ac_res" != no; then :
   test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+          plib=`echo "${LIBS}" | cut -c3-`
 
+  plibs="${plibs} ${plib}"
 else
+
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: ******** disabling ${plugin} due to missing libraries" >&5
 $as_echo "******** disabling ${plugin} due to missing libraries" >&6; }
-    disabled_plugins="${disabled_plugins} ${plugin}"
+  disabled_plugins="${disabled_plugins} ${plugin}"
 fi
 
+  LIBS="$save_LIBS"
 
+  # Do not put into LIBS because plibs should get it.
+  save_LIBS="$LIBS"
+  LIBS=""
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing SSL_new" >&5
 $as_echo_n "checking for library containing SSL_new... " >&6; }
 if ${ac_cv_search_SSL_new+:} false; then :
@@ -18213,13 +18358,17 @@ $as_echo "$ac_cv_search_SSL_new" >&6; }
 ac_res=$ac_cv_search_SSL_new
 if test "$ac_res" != no; then :
   test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+          plib=`echo "${LIBS}" | cut -c3-`
 
+  plibs="${plibs} ${plib}"
 else
+
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: ******** disabling ${plugin} due to missing libraries" >&5
 $as_echo "******** disabling ${plugin} due to missing libraries" >&6; }
-    disabled_plugins="${disabled_plugins} ${plugin}"
+  disabled_plugins="${disabled_plugins} ${plugin}"
 fi
 
+  LIBS="$save_LIBS"
 
 $as_echo "#define SQSSL_OPENSSL_LINKED 1" >>confdefs.h
 
