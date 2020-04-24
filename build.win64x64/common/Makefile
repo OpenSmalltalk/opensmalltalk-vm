@@ -49,6 +49,7 @@ OBJDIR:= $(BUILD)/vm
 
 PLATDIR:=../../platforms
 CROSSDIR:=$(PLATDIR)/Cross/vm
+TPDIR:=$(PLATDIR)/Cross/third-party
 WIN32DIR:=$(PLATDIR)/win32/vm
 WIN32PLUGINSDIR:=$(PLATDIR)/win32/plugins
 WIN32MISCDIR:=$(PLATDIR)/win32/misc
@@ -73,6 +74,10 @@ include plugins.int
 
 LIBS:= $(addprefix $(OBJDIR)/, $(addsuffix .lib, $(INTERNAL_PLUGINS)))
 DLLS:= $(addprefix $(OBJDIR)/, $(addsuffix .dll, $(EXTERNAL_PLUGINS)))
+
+ifdef BIT_IDENTICAL_FLOATING_POINT
+LIBS:=$(BUILD)/fdlibm/libm.a $(LIBS)
+endif
 
 #############################################################################
 # The third-party libraries
@@ -283,6 +288,12 @@ $(OBJDIR)/%.dll: $(call plugin-makefile,$(*F))
 		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
 		THIRDPARTYOUTDIR=$(THIRDPARTYOUTDIR) \
 		COGDEFS="$(COGDEFS)" LIBNAME=$(*F) $(OBJDIR)/$(*F).dll
+
+$(BUILD)/fdlibm/libm.a:
+	@-mkdir -p $(@D)
+	$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS) -D_IEEE_LIBM" -C $(@D) \
+		TP=../../$(TPDIR) -f ../../$(TPDIR)/fdlibm/Makefile.remote
+
 
 #############################################################################
 # Basic rules
