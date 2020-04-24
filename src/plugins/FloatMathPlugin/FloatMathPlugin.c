@@ -9,6 +9,7 @@ static char __buildInfo[] = "FloatMathPlugin VMMaker.oscog-eem.2719 uuid: e40f3e
 
 #include "config.h"
 #include <math.h>
+#include "sqMathShim.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
