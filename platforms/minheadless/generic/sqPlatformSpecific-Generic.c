@@ -54,25 +54,25 @@ ioMicroMSecs(void)
     return 0;
 }
 
-unsigned volatile long long
+unsigned long long
 ioUTCMicrosecondsNow()
 {
     return 0;
 }
 
-unsigned volatile long long
+unsigned long long
 ioUTCMicroseconds()
 {
     return 0;
 }
 
-unsigned volatile long long
+unsigned long long
 ioLocalMicrosecondsNow()
 {
     return 0;
 }
 
-unsigned volatile long long
+unsigned long long
 ioLocalMicroseconds()
 {
     return 0;
