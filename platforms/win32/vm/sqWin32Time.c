@@ -97,10 +97,11 @@ currentUTCMicroseconds(unsigned __int64 *utcTickBaseUsecsp, DWORD *lastTickp, DW
 	 * resync to the system time.  
 	 */
 	if (currentTick < prevTick) {
-
+		unsigned __int64 now;
 		*baseTickp = currentTick;
 		GetSystemTimeAsFileTime(&utcNow);
-		*utcTickBaseUsecsp = *(unsigned __int64 *)&utcNow
+		now = ((unsigned __int64) utcNow.dwHighDateTime) << 32 | utcNow.dwLowDateTime;
+		*utcTickBaseUsecsp = now
 							/ TocksPerMicrosecond
 							- MicrosecondsFrom1601To1901;
 		return *utcTickBaseUsecsp;
