@@ -19,6 +19,9 @@
 #endif
 #ifdef __OpenBSD__
 # include <sys/signal.h>
+#elif __sun
+/* Single UNIX Specification (SUS), Version 2 specifies <ucontext.h> */
+# include <ucontext.h>
 #else
 # include <sys/ucontext.h>
 #endif
