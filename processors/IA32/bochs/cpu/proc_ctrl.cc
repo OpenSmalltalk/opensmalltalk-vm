@@ -1311,7 +1311,7 @@ bx_bool BX_CPP_AttrRegparmN(1) BX_CPU_C::SetCR4(bx_address val)
 
   // Need to GPF if trying to set undefined bits.
   if (val & ~allowMask) {
-    BX_ERROR(("#GP(0): SetCR4: Write of 0x%08x not supported (allowMask=0x%x)", val, allowMask));
+    BX_ERROR(("#GP(0): SetCR4: Write of 0x%08lx not supported (allowMask=0x%lx)", val, allowMask));
     return 0;
   }
 
