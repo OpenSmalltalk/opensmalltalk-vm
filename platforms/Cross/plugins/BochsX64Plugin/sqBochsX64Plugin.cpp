@@ -104,53 +104,10 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 				: InitializationError;
 	}
 
-#if 0
-# define initEipFetchPtr(cpup) ((cpup)->eipFetchPtr = theMemory)
-#elif 1
-# define initEipFetchPtr(cpup) ((cpup)->eipFetchPtr = 0)
-#else
-# define initEipFetchPtr(cpup) \
-	((cpup)->eipFetchPtr = theMemory + (cpup)->gen_reg[BX_64BIT_REG_RIP].rrx)
-#endif
-
-#if 1
-# define resetInstructionFetch(cpup) \
-	((cpup)->eipPageBias = (bx_address)theMemory)
-#elif 0
-	// single steps but does NOT run
-# define resetInstructionFetch(cpup) \
-	((cpup)->eipPageWindowSize = minWriteMaxExecAddr)
-#elif 1
-# define resetInstructionFetch(cpup) do { \
-		(cpup)->eipPageBias = (bx_address)theMemory; \
-		(cpup)->eipPageWindowSize = 0; } while (0)
-#elif 1
-	// does NOT single step
-# define resetInstructionFetch(cpup) do { \
-		(cpup)->eipPageBias = 0; \
-		(cpup)->eipPageWindowSize = 0; } while (0)
-#elif 0
-	// does NOT single step
-# define resetInstructionFetch(cpup) \
-	((cpup)->eipPageWindowSize = 0)
-#else
-	// does NOT single step
-# define resetInstructionFetch(cpup) \
-	((cpup)->eipPageBias = 0)
-#endif
-
-#if 0
-static void inline
-setSegReg(int seg,void *memory,ulong byteSize)
-{
-	bx_cpu.sregs[seg].cache.u.segment.base
-		= (bx_address)memory;
-	bx_cpu.sregs[seg].cache.u.segment.limit_scaled
-		= (bx_address)memory + byteSize - 1;
-	bx_cpu.sregs[seg].cache.u.segment.limit =
-		bx_cpu.sregs[seg].cache.u.segment.limit_scaled >> 16;
-};
-#endif
+#define initEipFetchPtr(cpup) ((cpup)->eipFetchPtr = theMemory)
+#define resetInstructionFetch(cpup) do { \
+		(cpup)->eipPageBias = (bx_address)0; \
+		(cpup)->eipPageWindowSize = minWriteMaxExecAddr; } while (0)
 
 	long
 	singleStepCPUInSizeMinAddressReadWrite(void *cpu,
@@ -171,7 +128,6 @@ setSegReg(int seg,void *memory,ulong byteSize)
 		}
 
 		blidx = 0;
-#if 1
 		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.limit_scaled
 			= minWriteMaxExecAddr > 0 ? minWriteMaxExecAddr - 1 : 0;
 		bx_cpu.sregs[BX_SEG_REG_DS].cache.u.segment.limit_scaled =
@@ -179,11 +135,7 @@ setSegReg(int seg,void *memory,ulong byteSize)
 		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.limit = minWriteMaxExecAddr >> 16;
 		bx_cpu.sregs[BX_SEG_REG_DS].cache.u.segment.limit =
 		bx_cpu.sregs[BX_SEG_REG_SS].cache.u.segment.limit = byteSize >> 16;
-#else
-		setSegReg(BX_SEG_REG_CS,memory,byteSize);
-		setSegReg(BX_SEG_REG_DS,memory,byteSize);
-		setSegReg(BX_SEG_REG_SS,memory,byteSize);
-#endif
+
 		initEipFetchPtr(anx64);
 		resetInstructionFetch(anx64);
 
@@ -204,13 +156,8 @@ setSegReg(int seg,void *memory,ulong byteSize)
 		theMemorySize = byteSize;
 		minReadAddress = minAddr;
 		minWriteAddress = minWriteMaxExecAddr;
-		if ((theErrorAcorn = setjmp(anx64->jmp_buf_env)) != 0) {
-			anx64->gen_reg[BX_64BIT_REG_RIP].rrx = anx64->prev_rip;
-			return theErrorAcorn;
-		}
 
 		blidx = 0;
-#if 1
 		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.limit_scaled
 			= minWriteMaxExecAddr > 0 ? minWriteMaxExecAddr - 1 : 0;
 		bx_cpu.sregs[BX_SEG_REG_DS].cache.u.segment.limit_scaled =
@@ -218,11 +165,6 @@ setSegReg(int seg,void *memory,ulong byteSize)
 		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.limit = minWriteMaxExecAddr >> 16;
 		bx_cpu.sregs[BX_SEG_REG_DS].cache.u.segment.limit =
 		bx_cpu.sregs[BX_SEG_REG_SS].cache.u.segment.limit = byteSize >> 16;
-#else
-		setSegReg(BX_SEG_REG_CS,memory,byteSize);
-		setSegReg(BX_SEG_REG_DS,memory,byteSize);
-		setSegReg(BX_SEG_REG_SS,memory,byteSize);
-#endif
 		initEipFetchPtr(anx64);
 		resetInstructionFetch(anx64);
 

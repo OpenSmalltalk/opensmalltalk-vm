@@ -85,28 +85,10 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 		return 0;
 	}
 
-#if 0
-# define initEipFetchPtr(cpup) \
-	((cpup)->eipFetchPtr = theMemory)
-#else
-# define initEipFetchPtr(cpup) \
-	((cpup)->eipFetchPtr = theMemory + (cpup)->gen_reg[BX_32BIT_REG_EIP].dword.erx)
-#endif
-
-#if 1
-# define resetInstructionFetch(cpup) \
-	((cpup)->eipPageWindowSize = minWriteMaxExecAddr)
-#elif 1
-# define resetInstructionFetch(cpup) do { \
-		(cpup)->eipPageBias = 0; \
-		(cpup)->eipPageWindowSize = 0; } while (0)
-#elif 1
-# define resetInstructionFetch(cpup) \
-	((cpup)->eipPageWindowSize = 0)
-#else
-# define resetInstructionFetch(cpup) \
-	((cpup)->eipPageBias = 0)
-#endif
+#define initEipFetchPtr(cpup) ((cpup)->eipFetchPtr = theMemory)
+#define resetInstructionFetch(cpup) do { \
+		(cpup)->eipPageBias = (bx_address)0; \
+		(cpup)->eipPageWindowSize = minWriteMaxExecAddr; } while (0)
 
 	long
 	singleStepCPUInSizeMinAddressReadWrite(void *cpu,
@@ -154,10 +136,6 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 		theMemorySize = byteSize;
 		minReadAddress = minAddr;
 		minWriteAddress = minWriteMaxExecAddr;
-		if ((theErrorAcorn = setjmp(anx86->jmp_buf_env)) != 0) {
-			anx86->gen_reg[BX_32BIT_REG_EIP].dword.erx = anx86->prev_rip;
-			return theErrorAcorn;
-		}
 
 		blidx = 0;
 		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.limit_scaled
