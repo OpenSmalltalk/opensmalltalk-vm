@@ -8,7 +8,7 @@
 *
 *****************************************************************************/
 
-#include <windows.h>
+#include <Windows.h>
 #include <errno.h>
 #include "sq.h"
 

@@ -10,7 +10,7 @@
 *
 *****************************************************************************/
 
-#include <windows.h>
+#include <Windows.h>
 #include <mmsystem.h>
 
 #include "sq.h"

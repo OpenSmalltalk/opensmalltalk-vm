@@ -15,7 +15,7 @@ void TrackPrefsMenu(void) {}
 void HandlePrefsMenu(int) {}
 #else
 
-#include <windows.h>
+#include <Windows.h>
 #include "sq.h"
 #include "sqWin32Prefs.h"
 

@@ -4,7 +4,7 @@
 *	trunk sqWin32Window.c
 *****************************************************************************/
 
-#include <windows.h>
+#include <Windows.h>
 
 #include "sq.h"
 

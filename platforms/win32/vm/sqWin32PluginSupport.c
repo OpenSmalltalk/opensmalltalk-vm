@@ -1,5 +1,5 @@
 /* Plugin support primitives */
-#include <windows.h>
+#include <Windows.h>
 #include "sq.h"
 #include "../plugins/FilePlugin/FilePlugin.h"
 

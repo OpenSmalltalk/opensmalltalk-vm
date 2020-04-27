@@ -30,7 +30,7 @@
 #endif
 #endif 
 
-#include <windows.h>
+#include <Windows.h>
 #include <ole2.h>
 #include "sq.h"
 #ifdef __MINGW32__

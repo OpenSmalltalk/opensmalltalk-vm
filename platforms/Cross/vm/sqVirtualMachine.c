@@ -34,6 +34,7 @@ sqInt  fetchClassOf(sqInt oop);
 double fetchFloatofObject(sqInt fieldIndex, sqInt objectPointer);
 sqInt  fetchIntegerofObject(sqInt fieldIndex, sqInt objectPointer);
 sqInt  fetchPointerofObject(sqInt index, sqInt oop);
+#if OLD_FOR_REFERENCE /* slot repurposed for error */
 /* sqInt  fetchWordofObject(sqInt fieldIndex, sqInt oop);     *
  * has been rescinded as of VMMaker 3.8 and the 64bitclean VM *
  * work. To support old plugins we keep a valid function in   *
@@ -42,6 +43,7 @@ sqInt  fetchPointerofObject(sqInt index, sqInt oop);
  * equivalent but 64 bit valid function is added as           *
  * 'fetchLong32OfObject'                                      */
 sqInt  obsoleteDontUseThisFetchWordofObject(sqInt index, sqInt oop);
+#endif
 sqInt  fetchLong32ofObject(sqInt index, sqInt oop); 
 void  *firstFixedField(sqInt oop);
 void  *firstIndexableField(sqInt oop);
@@ -155,6 +157,7 @@ sqInt getThisSessionID(void);
 sqInt ioFilenamefromStringofLengthresolveAliases(char* aCharBuffer, char* filenameIndex, sqInt filenameLength, sqInt resolveFlag);
 sqInt vmEndianness(void);	
 sqInt getInterruptPending(void);
+void  error(char *);
 
 /* InterpreterProxy methodsFor: 'BitBlt support' */
 sqInt loadBitBltFrom(sqInt bbOop);
@@ -323,7 +326,11 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->fetchIntegerofObject = fetchIntegerofObject;
 #endif
 	VM->fetchPointerofObject = fetchPointerofObject;
+#if OLD_FOR_REFERENCE /* slot repurposed for error */
 	VM->obsoleteDontUseThisFetchWordofObject = obsoleteDontUseThisFetchWordofObject;
+#else
+	VM->error = error;
+#endif
 	VM->firstFixedField = firstFixedField;
 	VM->firstIndexableField = firstIndexableField;
 	VM->literalofMethod = literalofMethod;

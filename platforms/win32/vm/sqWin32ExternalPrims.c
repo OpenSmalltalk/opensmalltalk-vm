@@ -11,7 +11,7 @@
 *     1) Currently, we're looking for DLLs named either sample.dll or sample32.dll
 *
 *****************************************************************************/
-#include <windows.h>
+#include <Windows.h>
 #include <stdio.h>
 #include <assert.h>
 #include "sq.h"
