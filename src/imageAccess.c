@@ -24,7 +24,6 @@ long int basicImageFilePosition(sqImageFile f){
 
 size_t basicImageFileRead(void * initialPtr, size_t sz, size_t count, sqImageFile f){
 
-	off_t initialPosition;
 	size_t readBytes = 0;
 	size_t bytesToRead = sz * count;
 	size_t lastReadBytes = 0;
@@ -35,9 +34,9 @@ size_t basicImageFileRead(void * initialPtr, size_t sz, size_t count, sqImageFil
 		return fread(initialPtr, sz, count, (FILE*)f);
 	}
 
-	initialPosition = sqImageFilePosition(f);
-
 #ifdef posix_fadvise
+	off_t initialPosition;
+	initialPosition = sqImageFilePosition(f);
 	if(posix_fadvise(fileno(f), initialPosition, bytesToRead, POSIX_FADV_SEQUENTIAL)){
 		logErrorFromErrno("posix_fadvise");
 	}
