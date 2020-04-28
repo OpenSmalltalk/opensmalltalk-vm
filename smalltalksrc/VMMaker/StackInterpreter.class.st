@@ -20540,6 +20540,15 @@ StackInterpreter >> shortPrintContext: aContext [
 	(objectMemory isContext: aContext) ifFalse:
 		[self printHex: aContext; print: ' is not a context'; cr.
 		^nil].
+	
+	printedStackFrames := printedStackFrames + 1.
+	(maxStacksToPrint ~= 0 and:[ printedStackFrames > maxStacksToPrint])
+		ifTrue: [ 
+			maxStackMessagePrinted = 1 ifFalse: [  
+				self print: '    ... more contexts ...'; cr.
+				maxStackMessagePrinted := 1 ].
+			^ nil ].		
+	
 	self printHex: aContext.
 	(self isMarriedOrWidowedContext: aContext)
 		ifTrue: [(self checkIsStillMarriedContext: aContext currentFP: framePointer)
@@ -20577,7 +20586,7 @@ StackInterpreter >> shortPrintFrame: theFP [
 	(maxStacksToPrint ~= 0 and:[ printedStackFrames > maxStacksToPrint])
 		ifTrue: [ 
 			maxStackMessagePrinted = 1 ifFalse: [  
-				self print: '...'; cr.
+				self print: '    ... more contexts ...'; cr.
 				maxStackMessagePrinted := 1 ].
 			^ nil ].	
 	

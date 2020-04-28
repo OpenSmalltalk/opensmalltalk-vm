@@ -7356,7 +7356,7 @@ CoInterpreter >> shortPrintFrame: theFP [
 	(maxStacksToPrint ~= 0 and:[ printedStackFrames > maxStacksToPrint])
 		ifTrue: [ 
 			maxStackMessagePrinted = 1 ifFalse: [  
-				self print: '...'; cr.
+				self print: '    ... more contexts ...'; cr.
 				maxStackMessagePrinted := 1 ].
 			^ nil ].
 	
