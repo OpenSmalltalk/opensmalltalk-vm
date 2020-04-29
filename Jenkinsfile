@@ -112,8 +112,8 @@ def runTests(platform, configuration, packages){
 
     	shell "mkdir runTests"
     	dir("runTests"){
-          shell "wget -O - get.pharo.org/64/80 | bash "
-          shell "echo 80 > pharo.version"
+          shell "wget -O - get.pharo.org/64/90 | bash "
+          shell "echo 90 > pharo.version"
           
           if(isWindows()){
             runInCygwin "cd runTests && unzip ../build/build/packages/PharoVM-*-${vmDir}64-bin.zip -d ."

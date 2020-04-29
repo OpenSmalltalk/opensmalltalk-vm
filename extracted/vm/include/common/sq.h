@@ -30,6 +30,13 @@
 #define false	0
 #define null	0  /* using "null" because nil is predefined in Think C */
 
+#ifndef EXPORT
+#define EXPORT(returnType) returnType
+#endif
+
+#include "pharovm/semaphores/platformSemaphore.h"
+
+
 #if !defined(IMAGE_DIALECT_NAME)
 # if NewspeakVM
 #	define IMAGE_DIALECT_NAME "Newspeak"
@@ -57,7 +64,6 @@
    If the platform requires special declaration modifiers, the EXPORT and
    VM_EXPORT macros can be redefined.
 */
-#define EXPORT(returnType) returnType
 #define VM_EXPORT
 #define VM_FUNCTION_EXPORT(returnType) returnType
 
@@ -255,6 +261,7 @@ sqInt ioSetWindowWidthHeight(sqInt w, sqInt h);
 sqInt ioIsWindowObscured(void);
 
 sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds);
+
 #if STACKVM || NewspeakVM
 /* thread subsystem support for e.g. sqExternalSemaphores.c */
 void ioInitThreads();

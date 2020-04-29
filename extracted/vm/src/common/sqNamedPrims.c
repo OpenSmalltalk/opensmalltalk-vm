@@ -442,7 +442,7 @@ ioLoadSymbolOfLengthFromModule(sqInt functionNameIndex, sqInt functionNameLength
 	functionName[functionNameLength] = 0;
 	return moduleHandle
 		? ioFindExternalFunctionIn(functionName, moduleHandle)
-		: getModuleSymbol(NULL, functionName);
+		:  getModuleSymbol(NULL, functionName);
 }
 
 /* ioLoadModuleOfLength

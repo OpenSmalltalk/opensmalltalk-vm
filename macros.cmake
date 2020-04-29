@@ -47,6 +47,38 @@ macro(get_full_platform_name VARNAME)
     endif()
 endmacro()
 
+macro(get_full_platform_name_with_osx VARNAME)
+
+    if(SIZEOF_VOID_P EQUAL 8)
+        set(ARCH 64)
+    else()
+        set(ARCH 32)
+    endif()
+
+    if(WIN)
+        set(${VARNAME} "win${ARCH}")
+    else()
+        if(OSX)
+            set(${VARNAME} "osx${ARCH}")
+        else()
+            set(${VARNAME} "linux${ARCH}")
+        endif()
+    endif()
+endmacro()
+
+
+
+macro(do_decompress_thirdparty NAME TARGETPATH)
+    add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/build/third-party/${NAME}.done"
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/${TARGETPATH}
+        COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_CURRENT_BINARY_DIR}/build/third-party unzip -o "${NAME}.zip" -d ${CMAKE_CURRENT_BINARY_DIR}/${TARGETPATH}
+        COMMAND ${CMAKE_COMMAND} -E touch "${CMAKE_CURRENT_BINARY_DIR}/build/third-party/${NAME}.done"
+        DEPENDS "build/third-party/${NAME}.zip"
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+
+    add_custom_target(${NAME} ALL DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/build/third-party/${NAME}.done")
+    add_dependencies(${VM_EXECUTABLE_NAME} ${NAME})
+endmacro()
 
 macro(add_third_party_dependency NAME TARGETPATH)
 
@@ -59,15 +91,23 @@ macro(add_third_party_dependency NAME TARGETPATH)
         COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_CURRENT_BINARY_DIR}/build/third-party wget --no-check-certificate "https://files.pharo.org/vm/pharo-spur64/${PLATNAME}/third-party/${NAME}.zip"
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
-    add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/build/third-party/${NAME}.done"
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/${TARGETPATH}
-        COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_CURRENT_BINARY_DIR}/build/third-party unzip -o "${NAME}.zip" -d ${CMAKE_CURRENT_BINARY_DIR}/${TARGETPATH}
-        COMMAND ${CMAKE_COMMAND} -E touch "${CMAKE_CURRENT_BINARY_DIR}/build/third-party/${NAME}.done"
-        DEPENDS "build/third-party/${NAME}.zip"
+	do_decompress_thirdparty(${NAME} ${TARGETPATH})
+endmacro()
+
+macro(add_third_party_dependency_from_jenkins LIBNAME TARGETPATH JOB BRANCH VERSION)
+    get_full_platform_name_with_osx(PLATNAME)
+
+	set(NAME ${LIBNAME}-${VERSION}-${PLATNAME})
+	set(URL "https://ci.inria.fr/pharo-ci-jenkins2/job/${JOB}/job/${BRANCH}/lastSuccessfulBuild/artifact/build/packages/${NAME}.zip")
+
+    message("Adding third-party libraries for ${PLATNAME} from Jenkins: ${NAME} (at ${URL})")
+    
+    add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/build/third-party/${NAME}.zip"
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/build/third-party
+        COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_CURRENT_BINARY_DIR}/build/third-party wget --no-check-certificate "${URL}"
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
-    add_custom_target(${NAME} ALL DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/build/third-party/${NAME}.done")
-    add_dependencies(${VM_EXECUTABLE_NAME} ${NAME})
+	do_decompress_thirdparty(${NAME} ${TARGETPATH})
 endmacro()
 
 macro(get_commit_hash VARNAME)

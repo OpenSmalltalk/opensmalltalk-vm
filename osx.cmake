@@ -53,8 +53,9 @@ macro(add_third_party_dependencies_per_platform)
     add_third_party_dependency("libpng-1.2.49" ${LIBRARY_OUTPUT_DIRECTORY})
     add_third_party_dependency("libssh2-1.7.0" ${LIBRARY_OUTPUT_DIRECTORY})
     add_third_party_dependency("openssl-1.0.2q" ${LIBRARY_OUTPUT_DIRECTORY})
-    add_third_party_dependency("PThreadedFFI-1.2.0-osx64" ${LIBRARY_OUTPUT_DIRECTORY})
     add_third_party_dependency("SDL2-2.0.7" ${LIBRARY_OUTPUT_DIRECTORY})
+
+	add_third_party_dependency_from_jenkins("PThreadedFFI" ${LIBRARY_OUTPUT_DIRECTORY} "threadedFFI-plugin" "split-main-thread" "1.2.0")
 endmacro()
 
 macro(configure_installables INSTALL_COMPONENT)

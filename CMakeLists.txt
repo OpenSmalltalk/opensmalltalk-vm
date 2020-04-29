@@ -83,7 +83,7 @@ if(WIN)
 
 
 #    if(NOT MSVC)
-        set(COMMON_FLAGS "-fwrapv -fdeclspec -msse2 -ggdb2 -m64 -mno-rtd -mms-bitfields -O2 -momit-leaf-frame-pointer -funroll-loops -D_MT -fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf -Wall -Wno-unused-variable -fno-optimize-sibling-calls")
+        set(COMMON_FLAGS "-fwrapv -fdeclspec -O2 -msse2 -ggdb2 -m64 -mno-rtd -mms-bitfields -momit-leaf-frame-pointer -funroll-loops -D_MT -fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf -Wall -Wno-unused-variable -fno-optimize-sibling-calls")
 #    endif()
 
     set(OS_TYPE "Win32")
@@ -242,7 +242,6 @@ add_custom_command(
   OUTPUT ${VMMAKER_OUTPUT_PATH}/VMMaker.image
   COMMAND ./pharo Pharo.image --save --quit ${CMAKE_CURRENT_SOURCE_DIR_TO_OUT}/scripts/installVMMaker.st ${CMAKE_CURRENT_SOURCE_DIR_TO_OUT}
   COMMAND ./pharo Pharo.image save VMMaker --delete-old
-  MAIN_DEPENDENCY ${VMMAKER_OUTPUT_PATH}/Pharo.image
   DEPENDS ${VMMAKER_OUTPUT_PATH}/Pharo.image
   WORKING_DIRECTORY ${VMMAKER_OUTPUT_PATH}
 COMMENT "Generating VMMaker image")
@@ -251,7 +250,7 @@ COMMENT "Generating VMMaker image")
 add_custom_command(
   OUTPUT ${VMSOURCEFILES}
   COMMAND ${VMMAKER_OUTPUT_PATH}/pharo ${VMMAKER_OUTPUT_PATH}/VMMaker.image eval \"PharoVMMaker generate: \#\'${FLAVOUR}\' outputDirectory: \'${CMAKE_CURRENT_BINARY_DIR_TO_OUT}\'\"
-  MAIN_DEPENDENCY ${VMMAKER_OUTPUT_PATH}/VMMaker.image
+  DEPENDS ${VMMAKER_OUTPUT_PATH}/VMMaker.image
   COMMENT "Generating VM files for flavour: ${FLAVOUR}")
 
 #Generating config file
@@ -264,6 +263,7 @@ message(STATUS "Resource Compiler: ${CMAKE_RC_COMPILER}")
 
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/semaphores
     ${CMAKE_CURRENT_BINARY_DIR}/build/include/
     ${CMAKE_CURRENT_BINARY_DIR}/build/include/pharovm/
     ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/include
@@ -293,6 +293,7 @@ set(SUPPORT_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/fileDialogCommon.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/stringUtilities.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/imageAccess.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/semaphores/platformSemaphore.c
 )
 
 set(VM_SOURCES
