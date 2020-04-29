@@ -52,6 +52,8 @@
 #	 define sqLowLevelMFence() asm volatile ("mfence")
 #	endif
 # endif
+#elif defined(__SUNPRO_C)
+#	 define sqLowLevelMFence() asm volatile ("mfence")
 #elif defined(_MSC_VER)
   /* # define sqLowLevelMFence() _asm { mfence } */
   /* could use mfence here but */ \
