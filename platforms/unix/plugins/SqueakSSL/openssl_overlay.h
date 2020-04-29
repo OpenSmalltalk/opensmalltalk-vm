@@ -102,6 +102,7 @@
 #define sqo_sk_GENERAL_NAME_pop_free sk_GENERAL_NAME_pop_free
 
 #if OPENSSL_VERSION_NUMBER >= 0x10002000L
+#define sqo_SSL_CTX_set_options SSL_CTX_set_options
 #define sqo_X509_check_ip_asc X509_check_ip_asc
 #define sqo_X509_check_host X509_check_host
 #elif  OPENSSL_VERSION_NUMBER < 0x10002000L
