@@ -155,13 +155,20 @@ squeak.1 : $(topdir)/platforms/unix/doc/squeak.1 getversion
 
 # VMM configuration changes
 
-config.sh : $(vmmcfg)/plugins.int $(vmmcfg)/plugins.ext
+config.sh : $(vmmcfg)/plugins.int $(vmmcfg)/plugins.ext libtool
 	./config.status
 	@echo
 	@echo "configuration changed: please run make again"
 	@echo
 	@exit 1
 
+# bookkeeping
+LIBTOOL_DEPS = @LIBTOOL_DEPS@
+libtool: $(LIBTOOL_DEPS)
+	$(SHELL) ./config.status libtool
+
+
+# targets
 [make_targets]
 
 .force :
