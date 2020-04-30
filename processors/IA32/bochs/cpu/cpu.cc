@@ -98,22 +98,36 @@ void BX_CPU_C::cpu_loop(Bit32u max_instr_count)
   BX_CPU_THIS_PTR stop_reason = STOP_NO_REASON;
 #endif
 
+#if COG
+  int longjmparg;
+  if ((longjmparg = setjmp(BX_CPU_THIS_PTR jmp_buf_env))) {
+    // only from exception function we can get here ...
+    BX_INSTR_NEW_INSTRUCTION(BX_CPU_ID);
+    BX_TICK1_IF_SINGLE_PROCESSOR();
+# if BX_DEBUGGER || BX_EXTERNAL_DEBUGGER || BX_GDBSTUB
+    if (dbg_instruction_epilog()) return;
+# endif
+    CHECK_MAX_INSTRUCTIONS(max_instr_count);
+# if BX_GDBSTUB
+    if (bx_dbg.gdbstub_enabled) return;
+# endif
+	BX_CPU_THIS_PTR stop_reason = longjmparg;
+	return;
+  }
+#else /* COG */
   if (setjmp(BX_CPU_THIS_PTR jmp_buf_env)) {
     // only from exception function we can get here ...
     BX_INSTR_NEW_INSTRUCTION(BX_CPU_ID);
     BX_TICK1_IF_SINGLE_PROCESSOR();
-#if BX_DEBUGGER || BX_EXTERNAL_DEBUGGER || BX_GDBSTUB
+# if BX_DEBUGGER || BX_EXTERNAL_DEBUGGER || BX_GDBSTUB
     if (dbg_instruction_epilog()) return;
-#endif
+# endif
     CHECK_MAX_INSTRUCTIONS(max_instr_count);
-#if BX_GDBSTUB
+# if BX_GDBSTUB
     if (bx_dbg.gdbstub_enabled) return;
-#endif
-#if COG
-	BX_CPU_THIS_PTR stop_reason = STOP_CPU_HALTED;
-	return;
-#endif
+# endif
   }
+#endif /* COG */
 
   // If the exception() routine has encountered a nasty fault scenario,
   // the debugger may request that control is returned to it so that
@@ -144,15 +158,6 @@ void BX_CPU_C::cpu_loop(Bit32u max_instr_count)
 
 no_async_event:
 
-#if COG
-    bxInstruction_c iStorage, *i = &iStorage;
-# if BX_SUPPORT_X86_64
-	if (BX_CPU_THIS_PTR cpu_mode == BX_MODE_LONG_64)
-	  fetchDecode64((Bit8u *)(RIP + BX_CPU_THIS_PTR eipPageBias), i, 15);
-	else
-# endif
-	  fetchDecode32((Bit8u *)(EIP + BX_CPU_THIS_PTR eipPageBias), i, 15);
-#else
     Bit32u eipBiased = RIP + BX_CPU_THIS_PTR eipPageBias;
 
     if (eipBiased >= BX_CPU_THIS_PTR eipPageWindowSize) {
@@ -160,7 +165,7 @@ no_async_event:
       eipBiased = RIP + BX_CPU_THIS_PTR eipPageBias;
     }
 
-# if BX_SUPPORT_ICACHE
+#if BX_SUPPORT_ICACHE
     bx_phy_address pAddr = BX_CPU_THIS_PTR pAddrA20Page + eipBiased;
     bxICacheEntry_c *entry = BX_CPU_THIS_PTR iCache.get_entry(pAddr);
     bxInstruction_c *i = entry->i;
@@ -180,11 +185,10 @@ no_async_event:
       serveICacheMiss(entry, eipBiased, pAddr);
       i = entry->i;
     }
-# else
+#else
     bxInstruction_c iStorage, *i = &iStorage;
     fetchInstruction(i, eipBiased);
-# endif // BX_SUPPORT_ICACHE
-#endif // COG
+#endif
 
 #if BX_SUPPORT_TRACE_CACHE
     unsigned length = entry->ilen;
@@ -251,15 +255,6 @@ void BX_CPU_C::cpu_single_step()
   BX_CPU_THIS_PTR EXT = 0;
   BX_CPU_THIS_PTR errorno = 0;
 
-#if COG
-    bxInstruction_c iStorage, *i = &iStorage;
-# if BX_SUPPORT_X86_64
-	if (BX_CPU_THIS_PTR cpu_mode == BX_MODE_LONG_64)
-	  fetchDecode64((Bit8u *)(RIP + BX_CPU_THIS_PTR eipPageBias), i, 15);
-	else
-# endif
-	  fetchDecode32((Bit8u *)(EIP + BX_CPU_THIS_PTR eipPageBias), i, 15);
-#else
     Bit32u eipBiased = RIP + BX_CPU_THIS_PTR eipPageBias;
 
     if (eipBiased >= BX_CPU_THIS_PTR eipPageWindowSize) {
@@ -267,7 +262,7 @@ void BX_CPU_C::cpu_single_step()
       eipBiased = RIP + BX_CPU_THIS_PTR eipPageBias;
     }
 
-# if BX_SUPPORT_ICACHE
+#if BX_SUPPORT_ICACHE
     bx_phy_address pAddr = BX_CPU_THIS_PTR pAddrA20Page + eipBiased;
     bxICacheEntry_c *entry = BX_CPU_THIS_PTR iCache.get_entry(pAddr);
     bxInstruction_c *i = entry->i;
@@ -287,11 +282,10 @@ void BX_CPU_C::cpu_single_step()
       serveICacheMiss(entry, eipBiased, pAddr);
       i = entry->i;
     }
-# else // BX_SUPPORT_ICACHE
+#else // BX_SUPPORT_ICACHE
     bxInstruction_c iStorage, *i = &iStorage;
     fetchInstruction(i, eipBiased);
-# endif // BX_SUPPORT_ICACHE
-#endif // COG
+#endif // BX_SUPPORT_ICACHE
 
 #if BX_SUPPORT_TRACE_CACHE
 # error "COG assumes no BX_SUPPORT_TRACE_CACHE
@@ -699,7 +693,6 @@ unsigned BX_CPU_C::handleAsyncEvent(void)
 
 void BX_CPU_C::prefetch(void)
 {
-#if !COG
   bx_address laddr = BX_CPU_THIS_PTR get_laddr(BX_SEG_REG_CS, RIP);
   bx_phy_address pAddr;
   unsigned pageOffset = PAGE_OFFSET(laddr);
@@ -707,7 +700,6 @@ void BX_CPU_C::prefetch(void)
   // Calculate RIP at the beginning of the page.
   BX_CPU_THIS_PTR eipPageBias = pageOffset - RIP;
   BX_CPU_THIS_PTR eipPageWindowSize = 4096;
-#endif
 
 #if BX_SUPPORT_X86_64
   if (Is64BitMode()) {

@@ -1,1 +1,1 @@
-set PATH=%PATH%;\cygwin64\bin
+set PATH=%PATH%;c:\cygwin64\bin

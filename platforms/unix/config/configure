@@ -662,6 +662,12 @@ npsqueak
 VM_APP_ICONS
 INTERP
 ALLOCA
+LIBADD_DL
+LT_DLPREOPEN
+LIBADD_DLD_LINK
+LIBADD_SHL_LOAD
+LIBADD_DLOPEN
+LT_DLLOADERS
 PTHREAD_CFLAGS
 PTHREAD_LIBS
 PTHREAD_CC
@@ -673,6 +679,27 @@ WFLAGS
 INSTALL_DATA
 INSTALL_SCRIPT
 INSTALL_PROGRAM
+AS
+SET_MAKE
+target_os
+target_vendor
+target_cpu
+target
+plgdir
+expanded_relative_imgdir
+imgdir
+SQ_VERSION
+SQ_UPDATE
+SQ_MINOR
+SQ_MAJOR
+blddir
+vmmcfg
+vmpdir
+vmmdir
+cfgdir
+topdir
+cogit
+LIBTOOL_DEPS
 LT_SYS_LIBRARY_PATH
 OTOOL64
 OTOOL
@@ -692,8 +719,15 @@ ac_ct_DUMPBIN
 DUMPBIN
 FGREP
 SED
+host_os
+host_vendor
+host_cpu
+host
+build_os
+build_vendor
+build_cpu
+build
 LIBTOOL
-AS
 EGREP
 GREP
 CPP
@@ -704,33 +738,6 @@ CPPFLAGS
 LDFLAGS
 CFLAGS
 CC
-SET_MAKE
-target_os
-target_vendor
-target_cpu
-target
-host_os
-host_vendor
-host_cpu
-host
-build_os
-build_vendor
-build_cpu
-build
-plgdir
-expanded_relative_imgdir
-imgdir
-SQ_VERSION
-SQ_UPDATE
-SQ_MINOR
-SQ_MAJOR
-blddir
-vmmcfg
-vmpdir
-vmmdir
-cfgdir
-topdir
-cogit
 target_alias
 host_alias
 build_alias
@@ -782,6 +789,14 @@ Makefile_rpm
 Makefile_deb'
 ac_user_opts='
 enable_option_checking
+enable_static
+enable_shared
+with_pic
+enable_fast_install
+with_aix_soname
+with_gnu_ld
+with_sysroot
+enable_libtool_lock
 with_vmversion
 with_sqversion
 with_src
@@ -790,14 +805,6 @@ with_vmmcfg
 enable_cogit
 with_gnu_awk
 with_gnu_as
-enable_shared
-enable_static
-with_pic
-enable_fast_install
-with_aix_soname
-with_gnu_ld
-with_sysroot
-enable_libtool_lock
 with_rfb
 enable_largefile
 with_npsqueak
@@ -1456,12 +1463,12 @@ Optional Features:
   --disable-option-checking  ignore unrecognized --enable/--with options
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
-   --disable-cogit        compile a cogit VM (default=enabled)
+  --enable-static[=PKGS]  build static libraries [default=no]
   --enable-shared[=PKGS]  build shared libraries [default=yes]
-  --enable-static[=PKGS]  build static libraries [default=yes]
   --enable-fast-install[=PKGS]
                           optimize for fast installation [default=yes]
   --disable-libtool-lock  avoid locking (might break parallel builds)
+   --disable-cogit        compile a cogit VM (default=enabled)
   --disable-largefile     omit support for large files
   --enable-fast-bitblt    enable fast BitBlt optimizations (default=no)
   --disable-iconv disable iconv support (default=enabled)
@@ -1475,6 +1482,14 @@ Optional Features:
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
+  --with-pic[=PKGS]       try to use only PIC/non-PIC objects [default=use
+                          both]
+  --with-aix-soname=aix|svr4|both
+                          shared library versioning (aka "SONAME") variant to
+                          provide on AIX, [default=aix].
+  --with-gnu-ld           assume the C compiler uses GNU ld [default=no]
+  --with-sysroot[=DIR]    Search for dependent libraries within DIR (or the
+                          compiler's sysroot if not specified).
    --with-vmversion=M.N   vm version number (default=5.0)
    --with-sqversion=M.N   squeak version number (default=5.0)
    --with-src=dir         generated src directory (default=src)
@@ -1484,14 +1499,6 @@ Optional Packages:
                           and plugins.ext (default=.)
    --with-gnu-awk         assume that awk is GNU gawk (default=no)
    --with-gnu-as          assume that as is the GNU assembler (default=no)
-  --with-pic[=PKGS]       try to use only PIC/non-PIC objects [default=use
-                          both]
-  --with-aix-soname=aix|svr4|both
-                          shared library versioning (aka "SONAME") variant to
-                          provide on AIX, [default=aix].
-  --with-gnu-ld           assume the C compiler uses GNU ld [default=no]
-  --with-sysroot[=DIR]    Search for dependent libraries within DIR (or the
-                          compiler's sysroot if not specified).
    --without-rfb          disable Remote FrameBuffer support (default=enabled)
    --without-npsqueak     disable browser plugin support (default=enabled)
   --without-quartz        disable MacOSX Window System support
@@ -2658,453 +2665,6 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 
-SVNREV=`grep '\$Rev: ' ${srcdir}/../../../platforms/Cross/vm/sqSCCSVersion.h \
-	        | sed 's/.*$Rev: \(0-90-9*\).*";/\1/' \
-	        | head -n 1`
-
-# Check whether --with-vmversion was given.
-if test "${with_vmversion+set}" = set; then :
-  withval=$with_vmversion; vmversion="${with_vmversion}"
-else
-  vmversion="5.0"
-fi
-
-vmmajor=`echo ${vmversion} | sed 's/\..*//'`
-vmminor=`echo ${vmversion} | sed 's/^.*\.//'`
-
-# Check whether --with-sqversion was given.
-if test "${with_sqversion+set}" = set; then :
-  withval=$with_sqversion; sqversion="${with_sqversion}"
-else
-  sqversion="5.0"
-fi
-
-sqmajor=`echo ${sqversion} | sed 's/\..*//'`
-sqminor=`echo ${sqversion} | sed 's/^.*\.//'`
-
-
-# VM_MAJOR=${vmmajor}
-# VM_MINOR=${vmminor}
-# VM_RELEASE=${SVNREV}
-# SQ_MAJOR=${sqmajor}
-# SQ_MINOR=${sqminor}
-# SQ_UPDATE=0
-
-
-topdir=`cd ${srcdir}/../../..; pwd`
-cfgdir=`cd ${srcdir}; pwd`
-
-
-# Check whether --with-src was given.
-if test "${with_src+set}" = set; then :
-  withval=$with_src; vmmsrc="${with_src}"
-else
-  vmmsrc="src"
-fi
-
-
-vmmdir="${topdir}/${vmmsrc}"
-
-
-# Check whether --with-plugins was given.
-if test "${with_plugins+set}" = set; then :
-  withval=$with_plugins; vmpsrc="${topdir}/${with_plugins}"
-else
-  vmpsrc="${topdir}/src/plugins"
-fi
-
-
-vmpdir="${vmpsrc}"
-
-if test ! -d "${topdir}/${vmmsrc}"; then
-  if test -d "${topdir}/platforms/unix/${vmmsrc}/vm"; then
-    vmmdir="${topdir}/platforms/unix/${vmmsrc}/vm"
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: using built-in src directory" >&5
-$as_echo "using built-in src directory" >&6; }
-  fi
-fi
-
-if test ! -d "${topdir}/${vmpsrc}"; then
-  if test -d "${topdir}/platforms/unix/${vmpsrc}"; then
-    vmpdir="${topdir}/platforms/unix/${vmpsrc}"
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: using built-in pligins directory" >&5
-$as_echo "using built-in pligins directory" >&6; }
-  fi
-fi
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: ${vmmdir}" >&5
-$as_echo "${vmmdir}" >&6; }
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: ${vmpdir}" >&5
-$as_echo "${vmpdir}" >&6; }
-
-blddir=`pwd`
-
-
-# Check whether --with-vmmcfg was given.
-if test "${with_vmmcfg+set}" = set; then :
-  withval=$with_vmmcfg; vmmcfg="${with-vmmcfg}"
-else
-  vmmcfg="${blddir}"
-fi
-
-
-# Compiling a Cogit VM or not?  If so, need a cogit$o, cointerp, etc.
-
-# Check whether --enable-cogit was given.
-if test "${enable_cogit+set}" = set; then :
-  enableval=$enable_cogit; cogit="$enableval"
-else
-  cogit="yes"
-fi
-
-
-
-# Check the generated src dir looks sane
-
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking sanity of generated src directory" >&5
-$as_echo_n "checking sanity of generated src directory... " >&6; }
-  vmmcheck () {
-    if test ! ${2} ${3}; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: bad" >&5
-$as_echo "bad" >&6; }
-      echo "missing ${1}: ${3}"
-      exit 1
-    fi
-  }
-  vmmcheck dir  -d ${vmmcfg}
-  vmmcheck file -f ${vmmcfg}/plugins.int
-  vmmcheck file -f ${vmmcfg}/plugins.ext
-  vmmcheck dir  -d ${vmmdir}
-  vmmcheck dir  -d ${vmpdir}
-  vmmcheck dir  -d ${vmmdir}/vm
-  vmmcheck file -f ${vmmdir}/vm/interp.h
-  vmmcheck file -f ${vmmdir}/vm/vmCallback.h
-  if test "$cogit" = yes ; then
-	  vmmcheck file -f ${vmmdir}/vm/cogit.c
-	  vmmcheck file -f ${vmmdir}/vm/cogit.h
-	  vmmcheck file -f ${vmmdir}/vm/cogmethod.h
-	  vmmcheck file -f ${vmmdir}/vm/cointerp.c
-	  vmmcheck file -f ${vmmdir}/vm/cointerp.h
-	  vmmcheck file -f ${vmmdir}/vm/gcc3x-cointerp.c
-  else
-	  vmmcheck file -f ${vmmdir}/vm/interp.c
-	  vmmcheck file -f ${vmmdir}/vm/gcc3x-interp.c
-  fi
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: okay" >&5
-$as_echo "okay" >&6; }
-
-
-
-
-
-
-
-
-SQ_VERSION=${SQ_MAJOR}.${SQ_MINOR}-${SQ_UPDATE}
-
-
-cat >>confdefs.h <<_ACEOF
-#define SQ_VERSION "${SQ_VERSION}"
-_ACEOF
-
-
-
-
-
-
-
-#VM_VERSION=${VM_MAJOR}.${VM_MINOR}-${VM_RELEASE}
-
-#AC_DEFINE_UNQUOTED(VM_VERSION, "${VM_VERSION}", [VM version])
-
-#AC_SUBST(VM_MAJOR)
-#AC_SUBST(VM_MINOR)
-#AC_SUBST(VM_RELEASE)
-#AC_SUBST(VM_VERSION)
-
-# libdir contains ${exec_prefix}, so we have to default and expand early
-test "x$prefix" = xNONE && prefix=$ac_default_prefix
-test "x$exec_prefix" = xNONE && exec_prefix='${prefix}'
-imgdir=`eval echo ${libdir}/squeak`
-expanded_relative_imgdir=`eval echo lib/squeak/${VM_VERSION}`
-plgdir='${imgdir}/`${blddir}/getversion VERSION_TAG`'
-
-
-
-
-
-
-$as_echo "#define OS_TYPE \"unix\"" >>confdefs.h
-
-
-ac_aux_dir=
-for ac_dir in "$srcdir" "$srcdir/.." "$srcdir/../.."; do
-  if test -f "$ac_dir/install-sh"; then
-    ac_aux_dir=$ac_dir
-    ac_install_sh="$ac_aux_dir/install-sh -c"
-    break
-  elif test -f "$ac_dir/install.sh"; then
-    ac_aux_dir=$ac_dir
-    ac_install_sh="$ac_aux_dir/install.sh -c"
-    break
-  elif test -f "$ac_dir/shtool"; then
-    ac_aux_dir=$ac_dir
-    ac_install_sh="$ac_aux_dir/shtool install -c"
-    break
-  fi
-done
-if test -z "$ac_aux_dir"; then
-  as_fn_error $? "cannot find install-sh, install.sh, or shtool in \"$srcdir\" \"$srcdir/..\" \"$srcdir/../..\"" "$LINENO" 5
-fi
-
-# These three variables are undocumented and unsupported,
-# and are intended to be withdrawn in a future Autoconf release.
-# They can cause serious problems if a builder's source tree is in a directory
-# whose full name contains unusual characters.
-ac_config_guess="$SHELL $ac_aux_dir/config.guess"  # Please don't use this var.
-ac_config_sub="$SHELL $ac_aux_dir/config.sub"  # Please don't use this var.
-ac_configure="$SHELL $ac_aux_dir/configure"  # Please don't use this var.
-
-
-# Make sure we can run config.sub.
-$SHELL "$ac_aux_dir/config.sub" sun4 >/dev/null 2>&1 ||
-  as_fn_error $? "cannot run $SHELL $ac_aux_dir/config.sub" "$LINENO" 5
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking build system type" >&5
-$as_echo_n "checking build system type... " >&6; }
-if ${ac_cv_build+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_build_alias=$build_alias
-test "x$ac_build_alias" = x &&
-  ac_build_alias=`$SHELL "$ac_aux_dir/config.guess"`
-test "x$ac_build_alias" = x &&
-  as_fn_error $? "cannot guess build type; you must specify one" "$LINENO" 5
-ac_cv_build=`$SHELL "$ac_aux_dir/config.sub" $ac_build_alias` ||
-  as_fn_error $? "$SHELL $ac_aux_dir/config.sub $ac_build_alias failed" "$LINENO" 5
-
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_build" >&5
-$as_echo "$ac_cv_build" >&6; }
-case $ac_cv_build in
-*-*-*) ;;
-*) as_fn_error $? "invalid value of canonical build" "$LINENO" 5;;
-esac
-build=$ac_cv_build
-ac_save_IFS=$IFS; IFS='-'
-set x $ac_cv_build
-shift
-build_cpu=$1
-build_vendor=$2
-shift; shift
-# Remember, the first character of IFS is used to create $*,
-# except with old shells:
-build_os=$*
-IFS=$ac_save_IFS
-case $build_os in *\ *) build_os=`echo "$build_os" | sed 's/ /-/g'`;; esac
-
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking host system type" >&5
-$as_echo_n "checking host system type... " >&6; }
-if ${ac_cv_host+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  if test "x$host_alias" = x; then
-  ac_cv_host=$ac_cv_build
-else
-  ac_cv_host=`$SHELL "$ac_aux_dir/config.sub" $host_alias` ||
-    as_fn_error $? "$SHELL $ac_aux_dir/config.sub $host_alias failed" "$LINENO" 5
-fi
-
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_host" >&5
-$as_echo "$ac_cv_host" >&6; }
-case $ac_cv_host in
-*-*-*) ;;
-*) as_fn_error $? "invalid value of canonical host" "$LINENO" 5;;
-esac
-host=$ac_cv_host
-ac_save_IFS=$IFS; IFS='-'
-set x $ac_cv_host
-shift
-host_cpu=$1
-host_vendor=$2
-shift; shift
-# Remember, the first character of IFS is used to create $*,
-# except with old shells:
-host_os=$*
-IFS=$ac_save_IFS
-case $host_os in *\ *) host_os=`echo "$host_os" | sed 's/ /-/g'`;; esac
-
-
-
-host_cpu=`echo $host | sed 's,-.*,,'`
-host=`echo $host | sed 's,-unknown,,'`
-
-
-
-
-
-
-
-cat >>confdefs.h <<_ACEOF
-#define VM_HOST "$host"
-_ACEOF
-
-
-cat >>confdefs.h <<_ACEOF
-#define VM_HOST_OS "$host_os"
-_ACEOF
-
-
-cat >>confdefs.h <<_ACEOF
-#define VM_HOST_VERNDOR "$host_vendor"
-_ACEOF
-
-
-cat >>confdefs.h <<_ACEOF
-#define VM_HOST_CPU "$host_cpu"
-_ACEOF
-
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking target system type" >&5
-$as_echo_n "checking target system type... " >&6; }
-if ${ac_cv_target+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  if test "x$target_alias" = x; then
-  ac_cv_target=$ac_cv_host
-else
-  ac_cv_target=`$SHELL "$ac_aux_dir/config.sub" $target_alias` ||
-    as_fn_error $? "$SHELL $ac_aux_dir/config.sub $target_alias failed" "$LINENO" 5
-fi
-
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_target" >&5
-$as_echo "$ac_cv_target" >&6; }
-case $ac_cv_target in
-*-*-*) ;;
-*) as_fn_error $? "invalid value of canonical target" "$LINENO" 5;;
-esac
-target=$ac_cv_target
-ac_save_IFS=$IFS; IFS='-'
-set x $ac_cv_target
-shift
-target_cpu=$1
-target_vendor=$2
-shift; shift
-# Remember, the first character of IFS is used to create $*,
-# except with old shells:
-target_os=$*
-IFS=$ac_save_IFS
-case $target_os in *\ *) target_os=`echo "$target_os" | sed 's/ /-/g'`;; esac
-
-
-# The aliases save the names the user supplied, while $host etc.
-# will get canonicalized.
-test -n "$target_alias" &&
-  test "$program_prefix$program_suffix$program_transform_name" = \
-    NONENONEs,x,x, &&
-  program_prefix=${target_alias}-
-
-target_cpu=`echo $target | sed 's,-.*,,'`
-target=`echo $target | sed 's,-unknown,,'`
-
-
-
-
-
-
-
-cat >>confdefs.h <<_ACEOF
-#define VM_TARGET "$target"
-_ACEOF
-
-
-cat >>confdefs.h <<_ACEOF
-#define VM_TARGET_OS "$target_os"
-_ACEOF
-
-
-cat >>confdefs.h <<_ACEOF
-#define VM_TARGET_VENDOR "target_vendor"
-_ACEOF
-
-
-cat >>confdefs.h <<_ACEOF
-#define VM_TARGET_CPU "$target_cpu"
-_ACEOF
-
-
-echo
-echo "Configuring Squeak ${VM_VERSION} (${SQ_VERSION}) for ${host}"
-echo
-
-# Checks for programs.
-
-
-# Check whether --with-gnu-awk was given.
-if test "${with_gnu_awk+set}" = set; then :
-  withval=$with_gnu_awk; GAWK="$withval"
-else
-  case $host_os in
-	  darwin*)	GAWK="yes";;
-	  *)		GAWK="unknown";;
-	esac
-fi
-
-
-
-# Check whether --with-gnu-as was given.
-if test "${with_gnu_as+set}" = set; then :
-  withval=$with_gnu_as; GAS="$withval"
-else
-  GAS="unknown"
-fi
-
-
-########################
-
-TARGET_ARCH="$TARGET_ARCH"
-
-# tpr - try to keep msse out of it for Pi CFLAGS="$CFLAGS_32 $CFLAGS -msse"
-CFLAGS="$CFLAGS_32 $CFLAGS"
-
-CPPFLAGS="$CPPFLAGS $TARGET_ARCH"
-LDFLAGS="$TARGET_ARCH $LDFLAGS"
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether ${MAKE-make} sets \$(MAKE)" >&5
-$as_echo_n "checking whether ${MAKE-make} sets \$(MAKE)... " >&6; }
-set x ${MAKE-make}
-ac_make=`$as_echo "$2" | sed 's/+/p/g; s/[^a-zA-Z0-9_]/_/g'`
-if eval \${ac_cv_prog_make_${ac_make}_set+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  cat >conftest.make <<\_ACEOF
-SHELL = /bin/sh
-all:
-	@echo '@@@%%%=$(MAKE)=@@@%%%'
-_ACEOF
-# GNU make sometimes prints "make[1]: Entering ...", which would confuse us.
-case `${MAKE-make} -f conftest.make 2>/dev/null` in
-  *@@@%%%=?*=@@@%%%*)
-    eval ac_cv_prog_make_${ac_make}_set=yes;;
-  *)
-    eval ac_cv_prog_make_${ac_make}_set=no;;
-esac
-rm -f conftest.make
-fi
-if eval test \$ac_cv_prog_make_${ac_make}_set = yes; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-  SET_MAKE=
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-  SET_MAKE="MAKE=${MAKE-make}"
-fi
-
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
@@ -3894,183 +3454,6 @@ ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
-   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $CC option to accept ISO C99" >&5
-$as_echo_n "checking for $CC option to accept ISO C99... " >&6; }
-if ${ac_cv_prog_cc_c99+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_cv_prog_cc_c99=no
-ac_save_CC=$CC
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <stdarg.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <wchar.h>
-#include <stdio.h>
-
-// Check varargs macros.  These examples are taken from C99 6.10.3.5.
-#define debug(...) fprintf (stderr, __VA_ARGS__)
-#define showlist(...) puts (#__VA_ARGS__)
-#define report(test,...) ((test) ? puts (#test) : printf (__VA_ARGS__))
-static void
-test_varargs_macros (void)
-{
-  int x = 1234;
-  int y = 5678;
-  debug ("Flag");
-  debug ("X = %d\n", x);
-  showlist (The first, second, and third items.);
-  report (x>y, "x is %d but y is %d", x, y);
-}
-
-// Check long long types.
-#define BIG64 18446744073709551615ull
-#define BIG32 4294967295ul
-#define BIG_OK (BIG64 / BIG32 == 4294967297ull && BIG64 % BIG32 == 0)
-#if !BIG_OK
-  your preprocessor is broken;
-#endif
-#if BIG_OK
-#else
-  your preprocessor is broken;
-#endif
-static long long int bignum = -9223372036854775807LL;
-static unsigned long long int ubignum = BIG64;
-
-struct incomplete_array
-{
-  int datasize;
-  double data[];
-};
-
-struct named_init {
-  int number;
-  const wchar_t *name;
-  double average;
-};
-
-typedef const char *ccp;
-
-static inline int
-test_restrict (ccp restrict text)
-{
-  // See if C++-style comments work.
-  // Iterate through items via the restricted pointer.
-  // Also check for declarations in for loops.
-  for (unsigned int i = 0; *(text+i) != '\0'; ++i)
-    continue;
-  return 0;
-}
-
-// Check varargs and va_copy.
-static void
-test_varargs (const char *format, ...)
-{
-  va_list args;
-  va_start (args, format);
-  va_list args_copy;
-  va_copy (args_copy, args);
-
-  const char *str;
-  int number;
-  float fnumber;
-
-  while (*format)
-    {
-      switch (*format++)
-	{
-	case 's': // string
-	  str = va_arg (args_copy, const char *);
-	  break;
-	case 'd': // int
-	  number = va_arg (args_copy, int);
-	  break;
-	case 'f': // float
-	  fnumber = va_arg (args_copy, double);
-	  break;
-	default:
-	  break;
-	}
-    }
-  va_end (args_copy);
-  va_end (args);
-}
-
-int
-main ()
-{
-
-  // Check bool.
-  _Bool success = false;
-
-  // Check restrict.
-  if (test_restrict ("String literal") == 0)
-    success = true;
-  char *restrict newvar = "Another string";
-
-  // Check varargs.
-  test_varargs ("s, d' f .", "string", 65, 34.234);
-  test_varargs_macros ();
-
-  // Check flexible array members.
-  struct incomplete_array *ia =
-    malloc (sizeof (struct incomplete_array) + (sizeof (double) * 10));
-  ia->datasize = 10;
-  for (int i = 0; i < ia->datasize; ++i)
-    ia->data[i] = i * 1.234;
-
-  // Check named initializers.
-  struct named_init ni = {
-    .number = 34,
-    .name = L"Test wide string",
-    .average = 543.34343,
-  };
-
-  ni.number = 58;
-
-  int dynamic_array[ni.number];
-  dynamic_array[ni.number - 1] = 543;
-
-  // work around unused variable warnings
-  return (!success || bignum == 0LL || ubignum == 0uLL || newvar[0] == 'x'
-	  || dynamic_array[ni.number - 1] != 543);
-
-  ;
-  return 0;
-}
-_ACEOF
-for ac_arg in '' -std=gnu99 -std=c99 -c99 -AC99 -D_STDC_C99= -qlanglvl=extc99
-do
-  CC="$ac_save_CC $ac_arg"
-  if ac_fn_c_try_compile "$LINENO"; then :
-  ac_cv_prog_cc_c99=$ac_arg
-fi
-rm -f core conftest.err conftest.$ac_objext
-  test "x$ac_cv_prog_cc_c99" != "xno" && break
-done
-rm -f conftest.$ac_ext
-CC=$ac_save_CC
-
-fi
-# AC_CACHE_VAL
-case "x$ac_cv_prog_cc_c99" in
-  x)
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: none needed" >&5
-$as_echo "none needed" >&6; } ;;
-  xno)
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: unsupported" >&5
-$as_echo "unsupported" >&6; } ;;
-  *)
-    CC="$CC $ac_cv_prog_cc_c99"
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_prog_cc_c99" >&5
-$as_echo "$ac_cv_prog_cc_c99" >&6; } ;;
-esac
-if test "x$ac_cv_prog_cc_c99" != xno; then :
-
-fi
-
-
 
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
@@ -4530,136 +3913,35 @@ $as_echo "$ac_cv_safe_to_define___extensions__" >&6; }
   $as_echo "#define _TANDEM_SOURCE 1" >>confdefs.h
 
 
-ac_ext=c
-ac_cpp='$CPP $CPPFLAGS'
-ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
-ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
-ac_compiler_gnu=$ac_cv_c_compiler_gnu
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking CFLAGS for maximum warnings" >&5
-$as_echo_n "checking CFLAGS for maximum warnings... " >&6; }
-if ${ac_cv_cflags_warn_all+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_cv_cflags_warn_all="no, unknown"
-ac_save_CFLAGS="$CFLAGS"
-for ac_arg in "-warn all  % -warn all"      "-pedantic  % -Wall"          "-xstrconst % -v"             "-std1      % -verbose -w0 -warnprotos"    "-qlanglvl=ansi % -qsrcmsg -qinfo=all:noppt:noppc:noobs:nocnd"    "-ansi -ansiE % -fullwarn"    "+ESlit     % +w1"            "-Xc        % -pvctl,fullmsg"    "-h conform % -h msglevel 2"    #
-do CFLAGS="$ac_save_CFLAGS "`echo $ac_arg | sed -e 's,%%.*,,' -e 's,%,,'`
-   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-int
-main ()
-{
-
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-  ac_cv_cflags_warn_all=`echo $ac_arg | sed -e 's,.*% *,,'` ; break
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-done
-CFLAGS="$ac_save_CFLAGS"
-
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_cflags_warn_all" >&5
-$as_echo "$ac_cv_cflags_warn_all" >&6; }
-
-
-case ".$ac_cv_cflags_warn_all" in
-     .ok|.ok,*)  ;;
-   .|.no|.no,*)  ;;
-   *)
-if ${CFLAGS+:} false; then :
-
-  case " $CFLAGS " in #(
-  *" $ac_cv_cflags_warn_all "*) :
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: : CFLAGS already contains \$ac_cv_cflags_warn_all"; } >&5
-  (: CFLAGS already contains $ac_cv_cflags_warn_all) 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; } ;; #(
-  *) :
-
-     as_fn_append CFLAGS " $ac_cv_cflags_warn_all"
-     { { $as_echo "$as_me:${as_lineno-$LINENO}: : CFLAGS=\"\$CFLAGS\""; } >&5
-  (: CFLAGS="$CFLAGS") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }
-     ;;
-esac
-
-else
-
-  CFLAGS=$ac_cv_cflags_warn_all
-  { { $as_echo "$as_me:${as_lineno-$LINENO}: : CFLAGS=\"\$CFLAGS\""; } >&5
-  (: CFLAGS="$CFLAGS") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }
-
-fi
- ;;
-esac
-
-ac_ext=c
-ac_cpp='$CPP $CPPFLAGS'
-ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
-ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
-ac_compiler_gnu=$ac_cv_c_compiler_gnu
-
-
-# Extract the first word of "as", so it can be a program name with args.
-set dummy as; ac_word=$2
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
-$as_echo_n "checking for $ac_word... " >&6; }
-if ${ac_cv_prog_AS+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  if test -n "$AS"; then
-  ac_cv_prog_AS="$AS" # Let the user override the test.
-else
-as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-    for ac_exec_ext in '' $ac_executable_extensions; do
-  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
-    ac_cv_prog_AS="as"
-    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
+ac_aux_dir=
+for ac_dir in "$srcdir" "$srcdir/.." "$srcdir/../.."; do
+  if test -f "$ac_dir/install-sh"; then
+    ac_aux_dir=$ac_dir
+    ac_install_sh="$ac_aux_dir/install-sh -c"
+    break
+  elif test -f "$ac_dir/install.sh"; then
+    ac_aux_dir=$ac_dir
+    ac_install_sh="$ac_aux_dir/install.sh -c"
+    break
+  elif test -f "$ac_dir/shtool"; then
+    ac_aux_dir=$ac_dir
+    ac_install_sh="$ac_aux_dir/shtool install -c"
+    break
   fi
 done
-  done
-IFS=$as_save_IFS
-
-fi
-fi
-AS=$ac_cv_prog_AS
-if test -n "$AS"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $AS" >&5
-$as_echo "$AS" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
+if test -z "$ac_aux_dir"; then
+  as_fn_error $? "cannot find install-sh, install.sh, or shtool in \"$srcdir\" \"$srcdir/..\" \"$srcdir/../..\"" "$LINENO" 5
 fi
 
+# These three variables are undocumented and unsupported,
+# and are intended to be withdrawn in a future Autoconf release.
+# They can cause serious problems if a builder's source tree is in a directory
+# whose full name contains unusual characters.
+ac_config_guess="$SHELL $ac_aux_dir/config.guess"  # Please don't use this var.
+ac_config_sub="$SHELL $ac_aux_dir/config.sub"  # Please don't use this var.
+ac_configure="$SHELL $ac_aux_dir/configure"  # Please don't use this var.
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for GNU as" >&5
-$as_echo_n "checking for GNU as... " >&6; }
-case "$GAS" in
-yes|no) ;;
-*) if test "$AS" = "as" && as -v /dev/null </dev/null 2>&1 | fgrep -i gnu >/dev/null
-   then GAS=yes
-   else GAS=no
-   fi ;;
-esac
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $GAS" >&5
-$as_echo "$GAS" >&6; }
+
 case `pwd` in
   *\ * | *\	*)
     { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Libtool does not cope well with whitespace in \`pwd\`" >&5
@@ -4684,6 +3966,77 @@ macro_revision='2.4.6'
 
 
 ltmain=$ac_aux_dir/ltmain.sh
+
+# Make sure we can run config.sub.
+$SHELL "$ac_aux_dir/config.sub" sun4 >/dev/null 2>&1 ||
+  as_fn_error $? "cannot run $SHELL $ac_aux_dir/config.sub" "$LINENO" 5
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking build system type" >&5
+$as_echo_n "checking build system type... " >&6; }
+if ${ac_cv_build+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_build_alias=$build_alias
+test "x$ac_build_alias" = x &&
+  ac_build_alias=`$SHELL "$ac_aux_dir/config.guess"`
+test "x$ac_build_alias" = x &&
+  as_fn_error $? "cannot guess build type; you must specify one" "$LINENO" 5
+ac_cv_build=`$SHELL "$ac_aux_dir/config.sub" $ac_build_alias` ||
+  as_fn_error $? "$SHELL $ac_aux_dir/config.sub $ac_build_alias failed" "$LINENO" 5
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_build" >&5
+$as_echo "$ac_cv_build" >&6; }
+case $ac_cv_build in
+*-*-*) ;;
+*) as_fn_error $? "invalid value of canonical build" "$LINENO" 5;;
+esac
+build=$ac_cv_build
+ac_save_IFS=$IFS; IFS='-'
+set x $ac_cv_build
+shift
+build_cpu=$1
+build_vendor=$2
+shift; shift
+# Remember, the first character of IFS is used to create $*,
+# except with old shells:
+build_os=$*
+IFS=$ac_save_IFS
+case $build_os in *\ *) build_os=`echo "$build_os" | sed 's/ /-/g'`;; esac
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking host system type" >&5
+$as_echo_n "checking host system type... " >&6; }
+if ${ac_cv_host+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test "x$host_alias" = x; then
+  ac_cv_host=$ac_cv_build
+else
+  ac_cv_host=`$SHELL "$ac_aux_dir/config.sub" $host_alias` ||
+    as_fn_error $? "$SHELL $ac_aux_dir/config.sub $host_alias failed" "$LINENO" 5
+fi
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_host" >&5
+$as_echo "$ac_cv_host" >&6; }
+case $ac_cv_host in
+*-*-*) ;;
+*) as_fn_error $? "invalid value of canonical host" "$LINENO" 5;;
+esac
+host=$ac_cv_host
+ac_save_IFS=$IFS; IFS='-'
+set x $ac_cv_host
+shift
+host_cpu=$1
+host_vendor=$2
+shift; shift
+# Remember, the first character of IFS is used to create $*,
+# except with old shells:
+host_os=$*
+IFS=$ac_save_IFS
+case $host_os in *\ *) host_os=`echo "$host_os" | sed 's/ /-/g'`;; esac
+
 
 # Backslashify metacharacters that are still active within
 # double-quoted strings.
@@ -8004,10 +7357,38 @@ done
 
 
 # Set options
+enable_dlopen=yes
+# Check whether --enable-static was given.
+if test "${enable_static+set}" = set; then :
+  enableval=$enable_static; p=${PACKAGE-default}
+    case $enableval in
+    yes) enable_static=yes ;;
+    no) enable_static=no ;;
+    *)
+     enable_static=no
+      # Look at the argument we got.  We use all the common list separators.
+      lt_save_ifs=$IFS; IFS=$IFS$PATH_SEPARATOR,
+      for pkg in $enableval; do
+	IFS=$lt_save_ifs
+	if test "X$pkg" = "X$p"; then
+	  enable_static=yes
+	fi
+      done
+      IFS=$lt_save_ifs
+      ;;
+    esac
+else
+  enable_static=no
+fi
 
 
 
-        enable_dlopen=no
+
+
+
+
+
+
 
 
   enable_win32_dll=no
@@ -8036,36 +7417,6 @@ else
   enable_shared=yes
 fi
 
-
-
-
-
-
-
-
-
-  # Check whether --enable-static was given.
-if test "${enable_static+set}" = set; then :
-  enableval=$enable_static; p=${PACKAGE-default}
-    case $enableval in
-    yes) enable_static=yes ;;
-    no) enable_static=no ;;
-    *)
-     enable_static=no
-      # Look at the argument we got.  We use all the common list separators.
-      lt_save_ifs=$IFS; IFS=$IFS$PATH_SEPARATOR,
-      for pkg in $enableval; do
-	IFS=$lt_save_ifs
-	if test "X$pkg" = "X$p"; then
-	  enable_static=yes
-	fi
-      done
-      IFS=$lt_save_ifs
-      ;;
-    esac
-else
-  enable_static=yes
-fi
 
 
 
@@ -12311,6 +11662,1135 @@ CC=$lt_save_CC
 # Only expand once:
 
 
+
+
+
+SVNREV=`grep '\$Rev: ' ${srcdir}/../../../platforms/Cross/vm/sqSCCSVersion.h \
+	        | sed 's/.*$Rev: \(0-90-9*\).*";/\1/' \
+	        | head -n 1`
+
+# Check whether --with-vmversion was given.
+if test "${with_vmversion+set}" = set; then :
+  withval=$with_vmversion; vmversion="${with_vmversion}"
+else
+  vmversion="5.0"
+fi
+
+vmmajor=`echo ${vmversion} | sed 's/\..*//'`
+vmminor=`echo ${vmversion} | sed 's/^.*\.//'`
+
+# Check whether --with-sqversion was given.
+if test "${with_sqversion+set}" = set; then :
+  withval=$with_sqversion; sqversion="${with_sqversion}"
+else
+  sqversion="5.0"
+fi
+
+sqmajor=`echo ${sqversion} | sed 's/\..*//'`
+sqminor=`echo ${sqversion} | sed 's/^.*\.//'`
+
+
+# VM_MAJOR=${vmmajor}
+# VM_MINOR=${vmminor}
+# VM_RELEASE=${SVNREV}
+# SQ_MAJOR=${sqmajor}
+# SQ_MINOR=${sqminor}
+# SQ_UPDATE=0
+
+
+topdir=`cd ${srcdir}/../../..; pwd`
+cfgdir=`cd ${srcdir}; pwd`
+
+
+# Check whether --with-src was given.
+if test "${with_src+set}" = set; then :
+  withval=$with_src; vmmsrc="${with_src}"
+else
+  vmmsrc="src"
+fi
+
+
+vmmdir="${topdir}/${vmmsrc}"
+
+
+# Check whether --with-plugins was given.
+if test "${with_plugins+set}" = set; then :
+  withval=$with_plugins; vmpsrc="${topdir}/${with_plugins}"
+else
+  vmpsrc="${topdir}/src/plugins"
+fi
+
+
+vmpdir="${vmpsrc}"
+
+if test ! -d "${topdir}/${vmmsrc}"; then
+  if test -d "${topdir}/platforms/unix/${vmmsrc}/vm"; then
+    vmmdir="${topdir}/platforms/unix/${vmmsrc}/vm"
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: using built-in src directory" >&5
+$as_echo "using built-in src directory" >&6; }
+  fi
+fi
+
+if test ! -d "${topdir}/${vmpsrc}"; then
+  if test -d "${topdir}/platforms/unix/${vmpsrc}"; then
+    vmpdir="${topdir}/platforms/unix/${vmpsrc}"
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: using built-in pligins directory" >&5
+$as_echo "using built-in pligins directory" >&6; }
+  fi
+fi
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: ${vmmdir}" >&5
+$as_echo "${vmmdir}" >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: ${vmpdir}" >&5
+$as_echo "${vmpdir}" >&6; }
+
+blddir=`pwd`
+
+
+# Check whether --with-vmmcfg was given.
+if test "${with_vmmcfg+set}" = set; then :
+  withval=$with_vmmcfg; vmmcfg="${with-vmmcfg}"
+else
+  vmmcfg="${blddir}"
+fi
+
+
+# Compiling a Cogit VM or not?  If so, need a cogit$o, cointerp, etc.
+
+# Check whether --enable-cogit was given.
+if test "${enable_cogit+set}" = set; then :
+  enableval=$enable_cogit; cogit="$enableval"
+else
+  cogit="yes"
+fi
+
+
+
+# Check the generated src dir looks sane
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking sanity of generated src directory" >&5
+$as_echo_n "checking sanity of generated src directory... " >&6; }
+  vmmcheck () {
+    if test ! ${2} ${3}; then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: bad" >&5
+$as_echo "bad" >&6; }
+      echo "missing ${1}: ${3}"
+      exit 1
+    fi
+  }
+  vmmcheck dir  -d ${vmmcfg}
+  vmmcheck file -f ${vmmcfg}/plugins.int
+  vmmcheck file -f ${vmmcfg}/plugins.ext
+  vmmcheck dir  -d ${vmmdir}
+  vmmcheck dir  -d ${vmpdir}
+  vmmcheck dir  -d ${vmmdir}/vm
+  vmmcheck file -f ${vmmdir}/vm/interp.h
+  vmmcheck file -f ${vmmdir}/vm/vmCallback.h
+  if test "$cogit" = yes ; then
+	  vmmcheck file -f ${vmmdir}/vm/cogit.c
+	  vmmcheck file -f ${vmmdir}/vm/cogit.h
+	  vmmcheck file -f ${vmmdir}/vm/cogmethod.h
+	  vmmcheck file -f ${vmmdir}/vm/cointerp.c
+	  vmmcheck file -f ${vmmdir}/vm/cointerp.h
+	  vmmcheck file -f ${vmmdir}/vm/gcc3x-cointerp.c
+  else
+	  vmmcheck file -f ${vmmdir}/vm/interp.c
+	  vmmcheck file -f ${vmmdir}/vm/gcc3x-interp.c
+  fi
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: okay" >&5
+$as_echo "okay" >&6; }
+
+
+
+
+
+
+
+
+SQ_VERSION=${SQ_MAJOR}.${SQ_MINOR}-${SQ_UPDATE}
+
+
+cat >>confdefs.h <<_ACEOF
+#define SQ_VERSION "${SQ_VERSION}"
+_ACEOF
+
+
+
+
+
+
+
+#VM_VERSION=${VM_MAJOR}.${VM_MINOR}-${VM_RELEASE}
+
+#AC_DEFINE_UNQUOTED(VM_VERSION, "${VM_VERSION}", [VM version])
+
+#AC_SUBST(VM_MAJOR)
+#AC_SUBST(VM_MINOR)
+#AC_SUBST(VM_RELEASE)
+#AC_SUBST(VM_VERSION)
+
+# libdir contains ${exec_prefix}, so we have to default and expand early
+test "x$prefix" = xNONE && prefix=$ac_default_prefix
+test "x$exec_prefix" = xNONE && exec_prefix='${prefix}'
+imgdir=`eval echo ${libdir}/squeak`
+expanded_relative_imgdir=`eval echo lib/squeak/${VM_VERSION}`
+plgdir='${imgdir}/`${blddir}/getversion VERSION_TAG`'
+
+
+
+
+
+
+$as_echo "#define OS_TYPE \"unix\"" >>confdefs.h
+
+
+
+
+host_cpu=`echo $host | sed 's,-.*,,'`
+host=`echo $host | sed 's,-unknown,,'`
+
+
+
+
+
+
+
+cat >>confdefs.h <<_ACEOF
+#define VM_HOST "$host"
+_ACEOF
+
+
+cat >>confdefs.h <<_ACEOF
+#define VM_HOST_OS "$host_os"
+_ACEOF
+
+
+cat >>confdefs.h <<_ACEOF
+#define VM_HOST_VERNDOR "$host_vendor"
+_ACEOF
+
+
+cat >>confdefs.h <<_ACEOF
+#define VM_HOST_CPU "$host_cpu"
+_ACEOF
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking target system type" >&5
+$as_echo_n "checking target system type... " >&6; }
+if ${ac_cv_target+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test "x$target_alias" = x; then
+  ac_cv_target=$ac_cv_host
+else
+  ac_cv_target=`$SHELL "$ac_aux_dir/config.sub" $target_alias` ||
+    as_fn_error $? "$SHELL $ac_aux_dir/config.sub $target_alias failed" "$LINENO" 5
+fi
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_target" >&5
+$as_echo "$ac_cv_target" >&6; }
+case $ac_cv_target in
+*-*-*) ;;
+*) as_fn_error $? "invalid value of canonical target" "$LINENO" 5;;
+esac
+target=$ac_cv_target
+ac_save_IFS=$IFS; IFS='-'
+set x $ac_cv_target
+shift
+target_cpu=$1
+target_vendor=$2
+shift; shift
+# Remember, the first character of IFS is used to create $*,
+# except with old shells:
+target_os=$*
+IFS=$ac_save_IFS
+case $target_os in *\ *) target_os=`echo "$target_os" | sed 's/ /-/g'`;; esac
+
+
+# The aliases save the names the user supplied, while $host etc.
+# will get canonicalized.
+test -n "$target_alias" &&
+  test "$program_prefix$program_suffix$program_transform_name" = \
+    NONENONEs,x,x, &&
+  program_prefix=${target_alias}-
+
+target_cpu=`echo $target | sed 's,-.*,,'`
+target=`echo $target | sed 's,-unknown,,'`
+
+
+
+
+
+
+
+cat >>confdefs.h <<_ACEOF
+#define VM_TARGET "$target"
+_ACEOF
+
+
+cat >>confdefs.h <<_ACEOF
+#define VM_TARGET_OS "$target_os"
+_ACEOF
+
+
+cat >>confdefs.h <<_ACEOF
+#define VM_TARGET_VENDOR "target_vendor"
+_ACEOF
+
+
+cat >>confdefs.h <<_ACEOF
+#define VM_TARGET_CPU "$target_cpu"
+_ACEOF
+
+
+echo
+echo "Configuring Squeak ${VM_VERSION} (${SQ_VERSION}) for ${host}"
+echo
+
+# Checks for programs.
+
+
+# Check whether --with-gnu-awk was given.
+if test "${with_gnu_awk+set}" = set; then :
+  withval=$with_gnu_awk; GAWK="$withval"
+else
+  case $host_os in
+	  darwin*)	GAWK="yes";;
+	  *)		GAWK="unknown";;
+	esac
+fi
+
+
+
+# Check whether --with-gnu-as was given.
+if test "${with_gnu_as+set}" = set; then :
+  withval=$with_gnu_as; GAS="$withval"
+else
+  GAS="unknown"
+fi
+
+
+########################
+
+TARGET_ARCH="$TARGET_ARCH"
+
+# tpr - try to keep msse out of it for Pi CFLAGS="$CFLAGS_32 $CFLAGS -msse"
+CFLAGS="$CFLAGS_32 $CFLAGS"
+
+CPPFLAGS="$CPPFLAGS $TARGET_ARCH"
+LDFLAGS="$TARGET_ARCH $LDFLAGS"
+
+ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for C compiler vendor" >&5
+$as_echo_n "checking for C compiler vendor... " >&6; }
+if ${ax_cv_c_compiler_vendor+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+	vendors="
+		intel:		__ICC,__ECC,__INTEL_COMPILER
+		ibm:		__xlc__,__xlC__,__IBMC__,__IBMCPP__,__ibmxl__
+		pathscale:	__PATHCC__,__PATHSCALE__
+		clang:		__clang__
+		cray:		_CRAYC
+		fujitsu:	__FUJITSU
+		sdcc:		SDCC,__SDCC
+		sx:		_SX
+		portland:	__PGI
+		gnu:		__GNUC__
+		sun:		__SUNPRO_C,__SUNPRO_CC,__SUNPRO_F90,__SUNPRO_F95
+		hp:		__HP_cc,__HP_aCC
+		dec:		__DECC,__DECCXX,__DECC_VER,__DECCXX_VER
+		borland:	__BORLANDC__,__CODEGEARC__,__TURBOC__
+		comeau:		__COMO__
+		kai:		__KCC
+		lcc:		__LCC__
+		sgi:		__sgi,sgi
+		microsoft:	_MSC_VER
+		metrowerks:	__MWERKS__
+		watcom:		__WATCOMC__
+		tcc:		__TINYC__
+		unknown:	UNKNOWN
+	"
+	for ventest in $vendors; do
+	    case $ventest in
+		*:)
+		    vendor=$ventest
+		    continue
+		    ;;
+		*)
+		    vencpp="defined("`echo $ventest | sed 's/,/) || defined(/g'`")"
+		    ;;
+	    esac
+
+	    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+#if !($vencpp)
+      thisisanerror;
+#endif
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  break
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+	done
+
+	ax_cv_c_compiler_vendor=`echo $vendor | cut -d: -f1`
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_c_compiler_vendor" >&5
+$as_echo "$ax_cv_c_compiler_vendor" >&6; }
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether ${MAKE-make} sets \$(MAKE)" >&5
+$as_echo_n "checking whether ${MAKE-make} sets \$(MAKE)... " >&6; }
+set x ${MAKE-make}
+ac_make=`$as_echo "$2" | sed 's/+/p/g; s/[^a-zA-Z0-9_]/_/g'`
+if eval \${ac_cv_prog_make_${ac_make}_set+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat >conftest.make <<\_ACEOF
+SHELL = /bin/sh
+all:
+	@echo '@@@%%%=$(MAKE)=@@@%%%'
+_ACEOF
+# GNU make sometimes prints "make[1]: Entering ...", which would confuse us.
+case `${MAKE-make} -f conftest.make 2>/dev/null` in
+  *@@@%%%=?*=@@@%%%*)
+    eval ac_cv_prog_make_${ac_make}_set=yes;;
+  *)
+    eval ac_cv_prog_make_${ac_make}_set=no;;
+esac
+rm -f conftest.make
+fi
+if eval test \$ac_cv_prog_make_${ac_make}_set = yes; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+  SET_MAKE=
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+  SET_MAKE="MAKE=${MAKE-make}"
+fi
+
+ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+if test -n "$ac_tool_prefix"; then
+  for ac_prog in clang icc gcc cc
+  do
+    # Extract the first word of "$ac_tool_prefix$ac_prog", so it can be a program name with args.
+set dummy $ac_tool_prefix$ac_prog; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_prog_CC+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test -n "$CC"; then
+  ac_cv_prog_CC="$CC" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_prog_CC="$ac_tool_prefix$ac_prog"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+fi
+fi
+CC=$ac_cv_prog_CC
+if test -n "$CC"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $CC" >&5
+$as_echo "$CC" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+    test -n "$CC" && break
+  done
+fi
+if test -z "$CC"; then
+  ac_ct_CC=$CC
+  for ac_prog in clang icc gcc cc
+do
+  # Extract the first word of "$ac_prog", so it can be a program name with args.
+set dummy $ac_prog; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_prog_ac_ct_CC+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test -n "$ac_ct_CC"; then
+  ac_cv_prog_ac_ct_CC="$ac_ct_CC" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_prog_ac_ct_CC="$ac_prog"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+fi
+fi
+ac_ct_CC=$ac_cv_prog_ac_ct_CC
+if test -n "$ac_ct_CC"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_ct_CC" >&5
+$as_echo "$ac_ct_CC" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+  test -n "$ac_ct_CC" && break
+done
+
+  if test "x$ac_ct_CC" = x; then
+    CC=""
+  else
+    case $cross_compiling:$ac_tool_warned in
+yes:)
+{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
+$as_echo "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
+ac_tool_warned=yes ;;
+esac
+    CC=$ac_ct_CC
+  fi
+fi
+
+
+test -z "$CC" && { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "no acceptable C compiler found in \$PATH
+See \`config.log' for more details" "$LINENO" 5; }
+
+# Provide some information about the compiler.
+$as_echo "$as_me:${as_lineno-$LINENO}: checking for C compiler version" >&5
+set X $ac_compile
+ac_compiler=$2
+for ac_option in --version -v -V -qversion; do
+  { { ac_try="$ac_compiler $ac_option >&5"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval ac_try_echo="\"\$as_me:${as_lineno-$LINENO}: $ac_try_echo\""
+$as_echo "$ac_try_echo"; } >&5
+  (eval "$ac_compiler $ac_option >&5") 2>conftest.err
+  ac_status=$?
+  if test -s conftest.err; then
+    sed '10a\
+... rest of stderr output deleted ...
+         10q' conftest.err >conftest.er1
+    cat conftest.er1 >&5
+  fi
+  rm -f conftest.er1 conftest.err
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }
+done
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether we are using the GNU C compiler" >&5
+$as_echo_n "checking whether we are using the GNU C compiler... " >&6; }
+if ${ac_cv_c_compiler_gnu+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+#ifndef __GNUC__
+       choke me
+#endif
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_compiler_gnu=yes
+else
+  ac_compiler_gnu=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+ac_cv_c_compiler_gnu=$ac_compiler_gnu
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_c_compiler_gnu" >&5
+$as_echo "$ac_cv_c_compiler_gnu" >&6; }
+if test $ac_compiler_gnu = yes; then
+  GCC=yes
+else
+  GCC=
+fi
+ac_test_CFLAGS=${CFLAGS+set}
+ac_save_CFLAGS=$CFLAGS
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether $CC accepts -g" >&5
+$as_echo_n "checking whether $CC accepts -g... " >&6; }
+if ${ac_cv_prog_cc_g+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_save_c_werror_flag=$ac_c_werror_flag
+   ac_c_werror_flag=yes
+   ac_cv_prog_cc_g=no
+   CFLAGS="-g"
+   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_prog_cc_g=yes
+else
+  CFLAGS=""
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+
+else
+  ac_c_werror_flag=$ac_save_c_werror_flag
+	 CFLAGS="-g"
+	 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_prog_cc_g=yes
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+   ac_c_werror_flag=$ac_save_c_werror_flag
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_prog_cc_g" >&5
+$as_echo "$ac_cv_prog_cc_g" >&6; }
+if test "$ac_test_CFLAGS" = set; then
+  CFLAGS=$ac_save_CFLAGS
+elif test $ac_cv_prog_cc_g = yes; then
+  if test "$GCC" = yes; then
+    CFLAGS="-g -O2"
+  else
+    CFLAGS="-g"
+  fi
+else
+  if test "$GCC" = yes; then
+    CFLAGS="-O2"
+  else
+    CFLAGS=
+  fi
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $CC option to accept ISO C89" >&5
+$as_echo_n "checking for $CC option to accept ISO C89... " >&6; }
+if ${ac_cv_prog_cc_c89+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_cv_prog_cc_c89=no
+ac_save_CC=$CC
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdarg.h>
+#include <stdio.h>
+struct stat;
+/* Most of the following tests are stolen from RCS 5.7's src/conf.sh.  */
+struct buf { int x; };
+FILE * (*rcsopen) (struct buf *, struct stat *, int);
+static char *e (p, i)
+     char **p;
+     int i;
+{
+  return p[i];
+}
+static char *f (char * (*g) (char **, int), char **p, ...)
+{
+  char *s;
+  va_list v;
+  va_start (v,p);
+  s = g (p, va_arg (v,int));
+  va_end (v);
+  return s;
+}
+
+/* OSF 4.0 Compaq cc is some sort of almost-ANSI by default.  It has
+   function prototypes and stuff, but not '\xHH' hex character constants.
+   These don't provoke an error unfortunately, instead are silently treated
+   as 'x'.  The following induces an error, until -std is added to get
+   proper ANSI mode.  Curiously '\x00'!='x' always comes out true, for an
+   array size at least.  It's necessary to write '\x00'==0 to get something
+   that's true only with -std.  */
+int osf4_cc_array ['\x00' == 0 ? 1 : -1];
+
+/* IBM C 6 for AIX is almost-ANSI by default, but it replaces macro parameters
+   inside strings and character constants.  */
+#define FOO(x) 'x'
+int xlc6_cc_array[FOO(a) == 'x' ? 1 : -1];
+
+int test (int i, double x);
+struct s1 {int (*f) (int a);};
+struct s2 {int (*f) (double a);};
+int pairnames (int, char **, FILE *(*)(struct buf *, struct stat *, int), int, int);
+int argc;
+char **argv;
+int
+main ()
+{
+return f (e, argv, 0) != argv[0]  ||  f (e, argv, 1) != argv[1];
+  ;
+  return 0;
+}
+_ACEOF
+for ac_arg in '' -qlanglvl=extc89 -qlanglvl=ansi -std \
+	-Ae "-Aa -D_HPUX_SOURCE" "-Xc -D__EXTENSIONS__"
+do
+  CC="$ac_save_CC $ac_arg"
+  if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_prog_cc_c89=$ac_arg
+fi
+rm -f core conftest.err conftest.$ac_objext
+  test "x$ac_cv_prog_cc_c89" != "xno" && break
+done
+rm -f conftest.$ac_ext
+CC=$ac_save_CC
+
+fi
+# AC_CACHE_VAL
+case "x$ac_cv_prog_cc_c89" in
+  x)
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: none needed" >&5
+$as_echo "none needed" >&6; } ;;
+  xno)
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: unsupported" >&5
+$as_echo "unsupported" >&6; } ;;
+  *)
+    CC="$CC $ac_cv_prog_cc_c89"
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_prog_cc_c89" >&5
+$as_echo "$ac_cv_prog_cc_c89" >&6; } ;;
+esac
+if test "x$ac_cv_prog_cc_c89" != xno; then :
+
+fi
+
+ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $CC option to accept ISO C99" >&5
+$as_echo_n "checking for $CC option to accept ISO C99... " >&6; }
+if ${ac_cv_prog_cc_c99+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_cv_prog_cc_c99=no
+ac_save_CC=$CC
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdarg.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <wchar.h>
+#include <stdio.h>
+
+// Check varargs macros.  These examples are taken from C99 6.10.3.5.
+#define debug(...) fprintf (stderr, __VA_ARGS__)
+#define showlist(...) puts (#__VA_ARGS__)
+#define report(test,...) ((test) ? puts (#test) : printf (__VA_ARGS__))
+static void
+test_varargs_macros (void)
+{
+  int x = 1234;
+  int y = 5678;
+  debug ("Flag");
+  debug ("X = %d\n", x);
+  showlist (The first, second, and third items.);
+  report (x>y, "x is %d but y is %d", x, y);
+}
+
+// Check long long types.
+#define BIG64 18446744073709551615ull
+#define BIG32 4294967295ul
+#define BIG_OK (BIG64 / BIG32 == 4294967297ull && BIG64 % BIG32 == 0)
+#if !BIG_OK
+  your preprocessor is broken;
+#endif
+#if BIG_OK
+#else
+  your preprocessor is broken;
+#endif
+static long long int bignum = -9223372036854775807LL;
+static unsigned long long int ubignum = BIG64;
+
+struct incomplete_array
+{
+  int datasize;
+  double data[];
+};
+
+struct named_init {
+  int number;
+  const wchar_t *name;
+  double average;
+};
+
+typedef const char *ccp;
+
+static inline int
+test_restrict (ccp restrict text)
+{
+  // See if C++-style comments work.
+  // Iterate through items via the restricted pointer.
+  // Also check for declarations in for loops.
+  for (unsigned int i = 0; *(text+i) != '\0'; ++i)
+    continue;
+  return 0;
+}
+
+// Check varargs and va_copy.
+static void
+test_varargs (const char *format, ...)
+{
+  va_list args;
+  va_start (args, format);
+  va_list args_copy;
+  va_copy (args_copy, args);
+
+  const char *str;
+  int number;
+  float fnumber;
+
+  while (*format)
+    {
+      switch (*format++)
+	{
+	case 's': // string
+	  str = va_arg (args_copy, const char *);
+	  break;
+	case 'd': // int
+	  number = va_arg (args_copy, int);
+	  break;
+	case 'f': // float
+	  fnumber = va_arg (args_copy, double);
+	  break;
+	default:
+	  break;
+	}
+    }
+  va_end (args_copy);
+  va_end (args);
+}
+
+int
+main ()
+{
+
+  // Check bool.
+  _Bool success = false;
+
+  // Check restrict.
+  if (test_restrict ("String literal") == 0)
+    success = true;
+  char *restrict newvar = "Another string";
+
+  // Check varargs.
+  test_varargs ("s, d' f .", "string", 65, 34.234);
+  test_varargs_macros ();
+
+  // Check flexible array members.
+  struct incomplete_array *ia =
+    malloc (sizeof (struct incomplete_array) + (sizeof (double) * 10));
+  ia->datasize = 10;
+  for (int i = 0; i < ia->datasize; ++i)
+    ia->data[i] = i * 1.234;
+
+  // Check named initializers.
+  struct named_init ni = {
+    .number = 34,
+    .name = L"Test wide string",
+    .average = 543.34343,
+  };
+
+  ni.number = 58;
+
+  int dynamic_array[ni.number];
+  dynamic_array[ni.number - 1] = 543;
+
+  // work around unused variable warnings
+  return (!success || bignum == 0LL || ubignum == 0uLL || newvar[0] == 'x'
+	  || dynamic_array[ni.number - 1] != 543);
+
+  ;
+  return 0;
+}
+_ACEOF
+for ac_arg in '' -std=gnu99 -std=c99 -c99 -AC99 -D_STDC_C99= -qlanglvl=extc99
+do
+  CC="$ac_save_CC $ac_arg"
+  if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_prog_cc_c99=$ac_arg
+fi
+rm -f core conftest.err conftest.$ac_objext
+  test "x$ac_cv_prog_cc_c99" != "xno" && break
+done
+rm -f conftest.$ac_ext
+CC=$ac_save_CC
+
+fi
+# AC_CACHE_VAL
+case "x$ac_cv_prog_cc_c99" in
+  x)
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: none needed" >&5
+$as_echo "none needed" >&6; } ;;
+  xno)
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: unsupported" >&5
+$as_echo "unsupported" >&6; } ;;
+  *)
+    CC="$CC $ac_cv_prog_cc_c99"
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_prog_cc_c99" >&5
+$as_echo "$ac_cv_prog_cc_c99" >&6; } ;;
+esac
+if test "x$ac_cv_prog_cc_c99" != xno; then :
+
+fi
+
+
+    ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+
+
+
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking CFLAGS for most reasonable warnings" >&5
+$as_echo_n "checking CFLAGS for most reasonable warnings... " >&6; }
+if ${ac_cv_cflags_warn_all+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+	ac_cv_cflags_warn_all=""
+	ac_save_cflags_warn_all_found="yes"
+		case "$ax_cv_c_compiler_vendor" in #(
+  intel) :
+    ac_cv_cflags_warn_all="-w2" ;; #(
+  ibm) :
+    ac_cv_cflags_warn_all="-qsrcmsg -qinfo=all:noppt:noppc:noobs:nocnd" ;; #(
+  pathscale) :
+     ;; #(
+  clang) :
+    ac_cv_cflags_warn_all="-Wall" ;; #(
+  cray) :
+    ac_cv_cflags_warn_all="-h msglevel 2" ;; #(
+  fujitsu) :
+     ;; #(
+  sdcc) :
+     ;; #(
+  sx) :
+    ac_cv_cflags_warn_all="-pvctl,fullmsg" ;; #(
+  portland) :
+     ;; #(
+  gnu) :
+    ac_cv_cflags_warn_all="-Wall" ;; #(
+  sun) :
+    ac_cv_cflags_warn_all="-v" ;; #(
+  hp) :
+    ac_cv_cflags_warn_all="+w1" ;; #(
+  dec) :
+    ac_cv_cflags_warn_all="-verbose -w0 -warnprotos" ;; #(
+  borland) :
+     ;; #(
+  comeau) :
+     ;; #(
+  kai) :
+     ;; #(
+  lcc) :
+     ;; #(
+  sgi) :
+    ac_cv_cflags_warn_all="-fullwarn" ;; #(
+  microsoft) :
+     ;; #(
+  metrowerks) :
+     ;; #(
+  watcom) :
+     ;; #(
+  tcc) :
+     ;; #(
+  unknown) :
+
+				    ac_cv_cflags_warn_all=""
+				    ac_save_cflags_warn_all_found="no"
+				 ;; #(
+  *) :
+
+				    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Unknown compiler vendor returned by AX_COMPILER_VENDOR" >&5
+$as_echo "$as_me: WARNING: Unknown compiler vendor returned by AX_COMPILER_VENDOR" >&2;}
+				    ac_cv_cflags_warn_all=""
+				    ac_save_cflags_warn_all_found="no"
+
+	 ;;
+esac
+
+	if test "x$ac_save_cflags_warn_all_found" = "xyes"; then :
+  	    if test "x$ac_cv_cflags_warn_all" != "x"; then :
+
+if ${CFLAGS+:} false; then :
+
+  case " $CFLAGS " in #(
+  *" $ac_cv_cflags_warn_all "*) :
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: : CFLAGS already contains \$ac_cv_cflags_warn_all"; } >&5
+  (: CFLAGS already contains $ac_cv_cflags_warn_all) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; } ;; #(
+  *) :
+
+     CFLAGS="$ac_cv_cflags_warn_all $CFLAGS"
+     { { $as_echo "$as_me:${as_lineno-$LINENO}: : CFLAGS=\"\$CFLAGS\""; } >&5
+  (: CFLAGS="$CFLAGS") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }
+     ;;
+esac
+
+else
+
+  CFLAGS=$ac_cv_cflags_warn_all
+  { { $as_echo "$as_me:${as_lineno-$LINENO}: : CFLAGS=\"\$CFLAGS\""; } >&5
+  (: CFLAGS="$CFLAGS") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }
+
+fi
+
+fi
+
+else
+  	    true
+
+fi
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_cflags_warn_all" >&5
+$as_echo "$ac_cv_cflags_warn_all" >&6; }
+
+    ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+
+# Extract the first word of "as", so it can be a program name with args.
+set dummy as; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_prog_AS+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test -n "$AS"; then
+  ac_cv_prog_AS="$AS" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_prog_AS="as"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+fi
+fi
+AS=$ac_cv_prog_AS
+if test -n "$AS"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $AS" >&5
+$as_echo "$AS" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for GNU as" >&5
+$as_echo_n "checking for GNU as... " >&6; }
+case "$GAS" in
+yes|no) ;;
+*) if test "$AS" = "as" && as -v /dev/null </dev/null 2>&1 | fgrep -i gnu >/dev/null
+   then GAS=yes
+   else GAS=no
+   fi ;;
+esac
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $GAS" >&5
+$as_echo "$GAS" >&6; }
 # Find a good install program.  We prefer a C program (faster),
 # so one script is as good as another.  But avoid the broken or
 # incompatible versions:
@@ -13936,10 +14416,12 @@ fi
 # (e.g. DEC) have both -lpthread and -lpthreads, where one of the
 # libraries is broken (non-POSIX).
 
-# Create a list of thread flags to try.  Items starting with a "-" are
-# C compiler flags, and other items are library names, except for "none"
-# which indicates that we try without any flags at all, and "pthread-config"
-# which is a program returning the flags for the Pth emulation library.
+# Create a list of thread flags to try. Items with a "," contain both
+# C compiler flags (before ",") and linker flags (after ","). Other items
+# starting with a "-" are C compiler flags, and remaining items are
+# library names, except for "none" which indicates that we try without
+# any flags at all, and "pthread-config" which is a program returning
+# the flags for the Pth emulation library.
 
 ax_pthread_flags="pthreads none -Kthread -pthread -pthreads -mthreads pthread --thread-safe -mt pthread-config"
 
@@ -14015,38 +14497,9 @@ rm -f conftest*
         # that too in a future libc.)  So we'll check first for the
         # standard Solaris way of linking pthreads (-mt -lpthread).
 
-        ax_pthread_flags="-mt,pthread pthread $ax_pthread_flags"
+        ax_pthread_flags="-mt,-lpthread pthread $ax_pthread_flags"
         ;;
 esac
-
-# GCC generally uses -pthread, or -pthreads on some platforms (e.g. SPARC)
-
-if test "x$GCC" = "xyes"; then :
-  ax_pthread_flags="-pthread -pthreads $ax_pthread_flags"
-fi
-
-# The presence of a feature test macro requesting re-entrant function
-# definitions is, on some systems, a strong hint that pthreads support is
-# correctly enabled
-
-case $host_os in
-        darwin* | hpux* | linux* | osf* | solaris*)
-        ax_pthread_check_macro="_REENTRANT"
-        ;;
-
-        aix*)
-        ax_pthread_check_macro="_THREAD_SAFE"
-        ;;
-
-        *)
-        ax_pthread_check_macro="--"
-        ;;
-esac
-if test "x$ax_pthread_check_macro" = "x--"; then :
-  ax_pthread_check_cond=0
-else
-  ax_pthread_check_cond="!defined($ax_pthread_check_macro)"
-fi
 
 # Are we compiling with Clang?
 
@@ -14079,107 +14532,51 @@ fi
 $as_echo "$ax_cv_PTHREAD_CLANG" >&6; }
 ax_pthread_clang="$ax_cv_PTHREAD_CLANG"
 
-ax_pthread_clang_warning=no
 
-# Clang needs special handling, because older versions handle the -pthread
-# option in a rather... idiosyncratic way
+# GCC generally uses -pthread, or -pthreads on some platforms (e.g. SPARC)
 
-if test "x$ax_pthread_clang" = "xyes"; then
+# Note that for GCC and Clang -pthread generally implies -lpthread,
+# except when -nostdlib is passed.
+# This is problematic using libtool to build C++ shared libraries with pthread:
+# [1] https://gcc.gnu.org/bugzilla/show_bug.cgi?id=25460
+# [2] https://bugzilla.redhat.com/show_bug.cgi?id=661333
+# [3] https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=468555
+# To solve this, first try -pthread together with -lpthread for GCC
 
-        # Clang takes -pthread; it has never supported any other flag
+if test "x$GCC" = "xyes"; then :
+  ax_pthread_flags="-pthread,-lpthread -pthread -pthreads $ax_pthread_flags"
+fi
 
-        # (Note 1: This will need to be revisited if a system that Clang
-        # supports has POSIX threads in a separate library.  This tends not
-        # to be the way of modern systems, but it's conceivable.)
+# Clang takes -pthread (never supported any other flag), but we'll try with -lpthread first
 
-        # (Note 2: On some systems, notably Darwin, -pthread is not needed
-        # to get POSIX threads support; the API is always present and
-        # active.  We could reasonably leave PTHREAD_CFLAGS empty.  But
-        # -pthread does define _REENTRANT, and while the Darwin headers
-        # ignore this macro, third-party headers might not.)
+if test "x$ax_pthread_clang" = "xyes"; then :
+  ax_pthread_flags="-pthread,-lpthread -pthread"
+fi
 
-        PTHREAD_CFLAGS="-pthread"
-        PTHREAD_LIBS=
 
-        ax_pthread_ok=yes
+# The presence of a feature test macro requesting re-entrant function
+# definitions is, on some systems, a strong hint that pthreads support is
+# correctly enabled
 
-        # However, older versions of Clang make a point of warning the user
-        # that, in an invocation where only linking and no compilation is
-        # taking place, the -pthread option has no effect ("argument unused
-        # during compilation").  They expect -pthread to be passed in only
-        # when source code is being compiled.
-        #
-        # Problem is, this is at odds with the way Automake and most other
-        # C build frameworks function, which is that the same flags used in
-        # compilation (CFLAGS) are also used in linking.  Many systems
-        # supported by AX_PTHREAD require exactly this for POSIX threads
-        # support, and in fact it is often not straightforward to specify a
-        # flag that is used only in the compilation phase and not in
-        # linking.  Such a scenario is extremely rare in practice.
-        #
-        # Even though use of the -pthread flag in linking would only print
-        # a warning, this can be a nuisance for well-run software projects
-        # that build with -Werror.  So if the active version of Clang has
-        # this misfeature, we search for an option to squash it.
+case $host_os in
+        darwin* | hpux* | linux* | osf* | solaris*)
+        ax_pthread_check_macro="_REENTRANT"
+        ;;
 
-        { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether Clang needs flag to prevent \"argument unused\" warning when linking with -pthread" >&5
-$as_echo_n "checking whether Clang needs flag to prevent \"argument unused\" warning when linking with -pthread... " >&6; }
-if ${ax_cv_PTHREAD_CLANG_NO_WARN_FLAG+:} false; then :
-  $as_echo_n "(cached) " >&6
+        aix*)
+        ax_pthread_check_macro="_THREAD_SAFE"
+        ;;
+
+        *)
+        ax_pthread_check_macro="--"
+        ;;
+esac
+if test "x$ax_pthread_check_macro" = "x--"; then :
+  ax_pthread_check_cond=0
 else
-  ax_cv_PTHREAD_CLANG_NO_WARN_FLAG=unknown
-             # Create an alternate version of $ac_link that compiles and
-             # links in two steps (.c -> .o, .o -> exe) instead of one
-             # (.c -> exe), because the warning occurs only in the second
-             # step
-             ax_pthread_save_ac_link="$ac_link"
-             ax_pthread_sed='s/conftest\.\$ac_ext/conftest.$ac_objext/g'
-             ax_pthread_link_step=`$as_echo "$ac_link" | sed "$ax_pthread_sed"`
-             ax_pthread_2step_ac_link="($ac_compile) && (echo ==== >&5) && ($ax_pthread_link_step)"
-             ax_pthread_save_CFLAGS="$CFLAGS"
-             for ax_pthread_try in '' -Qunused-arguments -Wno-unused-command-line-argument unknown; do
-                if test "x$ax_pthread_try" = "xunknown"; then :
-  break
+  ax_pthread_check_cond="!defined($ax_pthread_check_macro)"
 fi
-                CFLAGS="-Werror -Wunknown-warning-option $ax_pthread_try -pthread $ax_pthread_save_CFLAGS"
-                ac_link="$ax_pthread_save_ac_link"
-                cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-int main(void){return 0;}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_link="$ax_pthread_2step_ac_link"
-                     cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-int main(void){return 0;}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  break
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
 
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-             done
-             ac_link="$ax_pthread_save_ac_link"
-             CFLAGS="$ax_pthread_save_CFLAGS"
-             if test "x$ax_pthread_try" = "x"; then :
-  ax_pthread_try=no
-fi
-             ax_cv_PTHREAD_CLANG_NO_WARN_FLAG="$ax_pthread_try"
-
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_PTHREAD_CLANG_NO_WARN_FLAG" >&5
-$as_echo "$ax_cv_PTHREAD_CLANG_NO_WARN_FLAG" >&6; }
-
-        case "$ax_cv_PTHREAD_CLANG_NO_WARN_FLAG" in
-                no | unknown) ;;
-                *) PTHREAD_CFLAGS="$ax_cv_PTHREAD_CLANG_NO_WARN_FLAG $PTHREAD_CFLAGS" ;;
-        esac
-
-fi # $ax_pthread_clang = yes
 
 if test "x$ax_pthread_ok" = "xno"; then
 for ax_pthread_try_flag in $ax_pthread_flags; do
@@ -14190,11 +14587,11 @@ for ax_pthread_try_flag in $ax_pthread_flags; do
 $as_echo_n "checking whether pthreads work without any flags... " >&6; }
                 ;;
 
-                -mt,pthread)
-                { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether pthreads work with -mt -lpthread" >&5
-$as_echo_n "checking whether pthreads work with -mt -lpthread... " >&6; }
-                PTHREAD_CFLAGS="-mt"
-                PTHREAD_LIBS="-lpthread"
+                *,*)
+                PTHREAD_CFLAGS=`echo $ax_pthread_try_flag | sed "s/^\(.*\),\(.*\)$/\1/"`
+                PTHREAD_LIBS=`echo $ax_pthread_try_flag | sed "s/^\(.*\),\(.*\)$/\2/"`
+                { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether pthreads work with \"$PTHREAD_CFLAGS\" and \"$PTHREAD_LIBS\"" >&5
+$as_echo_n "checking whether pthreads work with \"$PTHREAD_CFLAGS\" and \"$PTHREAD_LIBS\"... " >&6; }
                 ;;
 
                 -*)
@@ -14277,7 +14674,13 @@ $as_echo_n "checking for the pthreads library -l$ax_pthread_try_flag... " >&6; }
 #                       if $ax_pthread_check_cond
 #                        error "$ax_pthread_check_macro must be defined"
 #                       endif
-                        static void routine(void *a) { a = 0; }
+                        static void *some_global = NULL;
+                        static void routine(void *a)
+                          {
+                             /* To avoid any unused-parameter or
+                                unused-but-set-parameter warning.  */
+                             some_global = a;
+                          }
                         static void *start_routine(void *a) { return a; }
 int
 main ()
@@ -14311,6 +14714,104 @@ fi
         PTHREAD_CFLAGS=""
 done
 fi
+
+
+# Clang needs special handling, because older versions handle the -pthread
+# option in a rather... idiosyncratic way
+
+if test "x$ax_pthread_clang" = "xyes"; then
+
+        # Clang takes -pthread; it has never supported any other flag
+
+        # (Note 1: This will need to be revisited if a system that Clang
+        # supports has POSIX threads in a separate library.  This tends not
+        # to be the way of modern systems, but it's conceivable.)
+
+        # (Note 2: On some systems, notably Darwin, -pthread is not needed
+        # to get POSIX threads support; the API is always present and
+        # active.  We could reasonably leave PTHREAD_CFLAGS empty.  But
+        # -pthread does define _REENTRANT, and while the Darwin headers
+        # ignore this macro, third-party headers might not.)
+
+        # However, older versions of Clang make a point of warning the user
+        # that, in an invocation where only linking and no compilation is
+        # taking place, the -pthread option has no effect ("argument unused
+        # during compilation").  They expect -pthread to be passed in only
+        # when source code is being compiled.
+        #
+        # Problem is, this is at odds with the way Automake and most other
+        # C build frameworks function, which is that the same flags used in
+        # compilation (CFLAGS) are also used in linking.  Many systems
+        # supported by AX_PTHREAD require exactly this for POSIX threads
+        # support, and in fact it is often not straightforward to specify a
+        # flag that is used only in the compilation phase and not in
+        # linking.  Such a scenario is extremely rare in practice.
+        #
+        # Even though use of the -pthread flag in linking would only print
+        # a warning, this can be a nuisance for well-run software projects
+        # that build with -Werror.  So if the active version of Clang has
+        # this misfeature, we search for an option to squash it.
+
+        { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether Clang needs flag to prevent \"argument unused\" warning when linking with -pthread" >&5
+$as_echo_n "checking whether Clang needs flag to prevent \"argument unused\" warning when linking with -pthread... " >&6; }
+if ${ax_cv_PTHREAD_CLANG_NO_WARN_FLAG+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ax_cv_PTHREAD_CLANG_NO_WARN_FLAG=unknown
+             # Create an alternate version of $ac_link that compiles and
+             # links in two steps (.c -> .o, .o -> exe) instead of one
+             # (.c -> exe), because the warning occurs only in the second
+             # step
+             ax_pthread_save_ac_link="$ac_link"
+             ax_pthread_sed='s/conftest\.\$ac_ext/conftest.$ac_objext/g'
+             ax_pthread_link_step=`$as_echo "$ac_link" | sed "$ax_pthread_sed"`
+             ax_pthread_2step_ac_link="($ac_compile) && (echo ==== >&5) && ($ax_pthread_link_step)"
+             ax_pthread_save_CFLAGS="$CFLAGS"
+             for ax_pthread_try in '' -Qunused-arguments -Wno-unused-command-line-argument unknown; do
+                if test "x$ax_pthread_try" = "xunknown"; then :
+  break
+fi
+                CFLAGS="-Werror -Wunknown-warning-option $ax_pthread_try -pthread $ax_pthread_save_CFLAGS"
+                ac_link="$ax_pthread_save_ac_link"
+                cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+int main(void){return 0;}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_link="$ax_pthread_2step_ac_link"
+                     cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+int main(void){return 0;}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  break
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+             done
+             ac_link="$ax_pthread_save_ac_link"
+             CFLAGS="$ax_pthread_save_CFLAGS"
+             if test "x$ax_pthread_try" = "x"; then :
+  ax_pthread_try=no
+fi
+             ax_cv_PTHREAD_CLANG_NO_WARN_FLAG="$ax_pthread_try"
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_PTHREAD_CLANG_NO_WARN_FLAG" >&5
+$as_echo "$ax_cv_PTHREAD_CLANG_NO_WARN_FLAG" >&6; }
+
+        case "$ax_cv_PTHREAD_CLANG_NO_WARN_FLAG" in
+                no | unknown) ;;
+                *) PTHREAD_CFLAGS="$ax_cv_PTHREAD_CLANG_NO_WARN_FLAG $PTHREAD_CFLAGS" ;;
+        esac
+
+fi # $ax_pthread_clang = yes
+
+
 
 # Various other checks:
 if test "x$ax_pthread_ok" = "xyes"; then
@@ -14393,6 +14894,7 @@ int
 main ()
 {
 int i = PTHREAD_PRIO_INHERIT;
+                                               return i;
   ;
   return 0;
 }
@@ -14732,6 +15234,19 @@ fi
 
 done
 
+
+LT_DLLOADERS=
+
+
+ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+lt_dlload_save_LIBS=$LIBS
+
+LIBADD_DLOPEN=
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing dlopen" >&5
 $as_echo_n "checking for library containing dlopen... " >&6; }
 if ${ac_cv_search_dlopen+:} false; then :
@@ -14756,7 +15271,7 @@ return dlopen ();
   return 0;
 }
 _ACEOF
-for ac_lib in '' dl dld; do
+for ac_lib in '' dl; do
   if test -z "$ac_lib"; then
     ac_res="none required"
   else
@@ -14788,7 +15303,257 @@ if test "$ac_res" != no; then :
 
 $as_echo "#define HAVE_LIBDL 1" >>confdefs.h
 
+	if test "$ac_cv_search_dlopen" != "none required"; then
+	  LIBADD_DLOPEN=-ldl
+	fi
+	libltdl_cv_lib_dl_dlopen=yes
+	LT_DLLOADERS="$LT_DLLOADERS ${lt_dlopen_dir+$lt_dlopen_dir/}dlopen.la"
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#if HAVE_DLFCN_H
+#  include <dlfcn.h>
+#endif
+
+int
+main ()
+{
+dlopen(0, 0);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+
+$as_echo "#define HAVE_LIBDL 1" >>confdefs.h
+
+	    libltdl_cv_func_dlopen=yes
+	    LT_DLLOADERS="$LT_DLLOADERS ${lt_dlopen_dir+$lt_dlopen_dir/}dlopen.la"
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for dlopen in -lsvld" >&5
+$as_echo_n "checking for dlopen in -lsvld... " >&6; }
+if ${ac_cv_lib_svld_dlopen+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lsvld  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char dlopen ();
+int
+main ()
+{
+return dlopen ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_svld_dlopen=yes
+else
+  ac_cv_lib_svld_dlopen=no
 fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_svld_dlopen" >&5
+$as_echo "$ac_cv_lib_svld_dlopen" >&6; }
+if test "x$ac_cv_lib_svld_dlopen" = xyes; then :
+
+$as_echo "#define HAVE_LIBDL 1" >>confdefs.h
+
+	        LIBADD_DLOPEN=-lsvld libltdl_cv_func_dlopen=yes
+		LT_DLLOADERS="$LT_DLLOADERS ${lt_dlopen_dir+$lt_dlopen_dir/}dlopen.la"
+fi
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+fi
+
+if test yes = "$libltdl_cv_func_dlopen" || test yes = "$libltdl_cv_lib_dl_dlopen"
+then
+  lt_save_LIBS=$LIBS
+  LIBS="$LIBS $LIBADD_DLOPEN"
+  for ac_func in dlerror
+do :
+  ac_fn_c_check_func "$LINENO" "dlerror" "ac_cv_func_dlerror"
+if test "x$ac_cv_func_dlerror" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_DLERROR 1
+_ACEOF
+
+fi
+done
+
+  LIBS=$lt_save_LIBS
+fi
+
+
+LIBADD_SHL_LOAD=
+ac_fn_c_check_func "$LINENO" "shl_load" "ac_cv_func_shl_load"
+if test "x$ac_cv_func_shl_load" = xyes; then :
+
+$as_echo "#define HAVE_SHL_LOAD 1" >>confdefs.h
+
+	LT_DLLOADERS="$LT_DLLOADERS ${lt_dlopen_dir+$lt_dlopen_dir/}shl_load.la"
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for shl_load in -ldld" >&5
+$as_echo_n "checking for shl_load in -ldld... " >&6; }
+if ${ac_cv_lib_dld_shl_load+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-ldld  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char shl_load ();
+int
+main ()
+{
+return shl_load ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_dld_shl_load=yes
+else
+  ac_cv_lib_dld_shl_load=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_dld_shl_load" >&5
+$as_echo "$ac_cv_lib_dld_shl_load" >&6; }
+if test "x$ac_cv_lib_dld_shl_load" = xyes; then :
+
+$as_echo "#define HAVE_SHL_LOAD 1" >>confdefs.h
+
+	    LT_DLLOADERS="$LT_DLLOADERS ${lt_dlopen_dir+$lt_dlopen_dir/}shl_load.la"
+	    LIBADD_SHL_LOAD=-ldld
+fi
+
+fi
+
+
+
+case $host_os in
+darwin[1567].*)
+# We only want this for pre-Mac OS X 10.4.
+  ac_fn_c_check_func "$LINENO" "_dyld_func_lookup" "ac_cv_func__dyld_func_lookup"
+if test "x$ac_cv_func__dyld_func_lookup" = xyes; then :
+
+$as_echo "#define HAVE_DYLD 1" >>confdefs.h
+
+	LT_DLLOADERS="$LT_DLLOADERS ${lt_dlopen_dir+$lt_dlopen_dir/}dyld.la"
+fi
+
+  ;;
+beos*)
+  LT_DLLOADERS="$LT_DLLOADERS ${lt_dlopen_dir+$lt_dlopen_dir/}load_add_on.la"
+  ;;
+cygwin* | mingw* | pw32*)
+  ac_fn_c_check_decl "$LINENO" "cygwin_conv_path" "ac_cv_have_decl_cygwin_conv_path" "#include <sys/cygwin.h>
+"
+if test "x$ac_cv_have_decl_cygwin_conv_path" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_CYGWIN_CONV_PATH $ac_have_decl
+_ACEOF
+
+  LT_DLLOADERS="$LT_DLLOADERS ${lt_dlopen_dir+$lt_dlopen_dir/}loadlibrary.la"
+  ;;
+esac
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for dld_link in -ldld" >&5
+$as_echo_n "checking for dld_link in -ldld... " >&6; }
+if ${ac_cv_lib_dld_dld_link+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-ldld  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char dld_link ();
+int
+main ()
+{
+return dld_link ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_dld_dld_link=yes
+else
+  ac_cv_lib_dld_dld_link=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_dld_dld_link" >&5
+$as_echo "$ac_cv_lib_dld_dld_link" >&6; }
+if test "x$ac_cv_lib_dld_dld_link" = xyes; then :
+
+$as_echo "#define HAVE_DLD 1" >>confdefs.h
+
+		LT_DLLOADERS="$LT_DLLOADERS ${lt_dlopen_dir+$lt_dlopen_dir/}dld_link.la"
+fi
+
+
+
+
+LT_DLPREOPEN=
+if test -n "$LT_DLLOADERS"
+then
+  for lt_loader in $LT_DLLOADERS; do
+    LT_DLPREOPEN="$LT_DLPREOPEN-dlpreopen $lt_loader "
+  done
+
+$as_echo "#define HAVE_LIBDLLOADER 1" >>confdefs.h
+
+fi
+
+
+LIBADD_DL="$LIBADD_DLOPEN $LIBADD_SHL_LOAD"
+
+
+LIBS=$lt_dlload_save_LIBS
+ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
 
 
 for ac_func in snprintf __snprintf
@@ -15045,10 +15810,10 @@ else
 int
 main ()
 {
-int fd, rc;
+int fd;
 struct epoll_event ev;
 fd = epoll_create(128);
-rc = epoll_wait(fd, &ev, 1, 0);
+epoll_wait(fd, &ev, 1, 0);
   ;
   return 0;
 }
@@ -15101,11 +15866,11 @@ else
 int
 main ()
 {
-int fd, rc;
+int fd;
 struct epoll_event ev;
 fd = epoll_create(128);
-rc = epoll_wait(fd, &ev, 1, 0);
-rc = epoll_pwait(fd, &ev, 1, 0, (sigset_t const *)(0));
+epoll_wait(fd, &ev, 1, 0);
+epoll_pwait(fd, &ev, 1, 0, (sigset_t const *)(0));
   ;
   return 0;
 }
@@ -19435,8 +20200,8 @@ double_quote_subst='$double_quote_subst'
 delay_variable_subst='$delay_variable_subst'
 macro_version='`$ECHO "$macro_version" | $SED "$delay_single_quote_subst"`'
 macro_revision='`$ECHO "$macro_revision" | $SED "$delay_single_quote_subst"`'
-enable_shared='`$ECHO "$enable_shared" | $SED "$delay_single_quote_subst"`'
 enable_static='`$ECHO "$enable_static" | $SED "$delay_single_quote_subst"`'
+enable_shared='`$ECHO "$enable_shared" | $SED "$delay_single_quote_subst"`'
 pic_mode='`$ECHO "$pic_mode" | $SED "$delay_single_quote_subst"`'
 enable_fast_install='`$ECHO "$enable_fast_install" | $SED "$delay_single_quote_subst"`'
 shared_archive_member_spec='`$ECHO "$shared_archive_member_spec" | $SED "$delay_single_quote_subst"`'
@@ -20378,11 +21143,11 @@ available_tags=''
 macro_version=$macro_version
 macro_revision=$macro_revision
 
-# Whether or not to build shared libraries.
-build_libtool_libs=$enable_shared
-
 # Whether or not to build static libraries.
 build_old_libs=$enable_static
+
+# Whether or not to build shared libraries.
+build_libtool_libs=$enable_shared
 
 # What type of objects to build.
 pic_mode=$pic_mode

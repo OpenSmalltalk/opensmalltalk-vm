@@ -8,7 +8,7 @@
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
 *
 *****************************************************************************/
-#include <windows.h>
+#include <Windows.h>
 #include "sq.h"
 
 #if !defined(NO_VIRTUAL_MEMORY) && !SPURVM /* Spur uses sqWin32SpurAlloc.c */

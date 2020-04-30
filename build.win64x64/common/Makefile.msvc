@@ -129,7 +129,7 @@ INCLUDES:= -I. -I$(VMSRCDIR) -I$(WIN32DIR) -I$(CROSSDIR) $(XINC)
 # Common build rules
 #
 
-default: print-settings init $(VMEXE) $(CONSOLEVMEXE) $(DLLS) nukelibs
+default: print-settings init $(VMEXE) $(CONSOLEVMEXE) $(DLLS) nukelibs $(APPPOST)
 
 svnver:
 	echo $(RC) $(RCFLAGS)

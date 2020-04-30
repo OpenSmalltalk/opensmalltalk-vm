@@ -170,11 +170,11 @@ long ioMicroMSecs(void);
 
 #if STACKVM
 extern void forceInterruptCheckFromHeartbeat(void);
-unsigned volatile long long ioUTCMicrosecondsNow(void);
-unsigned volatile long long ioUTCMicroseconds(void);
-unsigned volatile long long ioLocalMicrosecondsNow(void);
-unsigned volatile long long ioLocalMicroseconds(void);
-unsigned          long long ioUTCStartMicroseconds(void);
+unsigned long long ioUTCMicrosecondsNow(void);
+unsigned long long ioUTCMicroseconds(void);
+unsigned long long ioLocalMicrosecondsNow(void);
+unsigned long long ioLocalMicroseconds(void);
+unsigned long long ioUTCStartMicroseconds(void);
 sqInt	ioLocalSecondsOffset(void);
 void	ioUpdateVMTimezone(void);
 void	ioSynchronousCheckForEvents(void);

@@ -11,7 +11,7 @@
 *    1) When using this module the virtual machine MUST NOT be compiled
 *       with Unicode support.
 *****************************************************************************/
-#include <windows.h>
+#include <Windows.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>

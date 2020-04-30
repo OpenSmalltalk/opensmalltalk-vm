@@ -97,10 +97,11 @@ currentUTCMicroseconds(unsigned __int64 *utcTickBaseUsecsp, DWORD *lastTickp, DW
 	 * resync to the system time.
 	 */
 	if (currentTick < prevTick) {
-
+		unsigned __int64 now;
 		*baseTickp = currentTick;
 		GetSystemTimeAsFileTime(&utcNow);
-		*utcTickBaseUsecsp = *(unsigned __int64 *)&utcNow
+		now = ((unsigned __int64) utcNow.dwHighDateTime) << 32 | utcNow.dwLowDateTime;
+		*utcTickBaseUsecsp = now
 							/ TocksPerMicrosecond
 							- MicrosecondsFrom1601To1901;
 		return *utcTickBaseUsecsp;
@@ -109,13 +110,13 @@ currentUTCMicroseconds(unsigned __int64 *utcTickBaseUsecsp, DWORD *lastTickp, DW
 		  + (currentTick - *baseTickp) * MicrosecondsPerMillisecond;
 }
 
-unsigned volatile long long
+unsigned long long
 ioUTCMicroseconds() { return currentUTCMicroseconds(&utcTickBaseMicroseconds, &lastTick, &baseTick); }
 
 /* This is an expensive interface for use by profiling code that wants the time
  * now rather than as of the last heartbeat.
  */
-unsigned volatile long long
+unsigned long long
 ioUTCMicrosecondsNow() { return currentUTCMicroseconds(&utcTickBaseMicroseconds, &lastTick, &baseTick); }
 
 static DWORD dwTimerPeriod;

@@ -12,7 +12,7 @@
 *        (Marcel Taeumel, Hasso Plattner Institute, Postdam, Germany)
 *
 *****************************************************************************/
-#include <windows.h>
+#include <Windows.h>
 
 #include "sq.h"
 #include "../plugins/FilePlugin/sqWin32File.h"

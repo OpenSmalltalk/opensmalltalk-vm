@@ -10,7 +10,7 @@
 *
 *****************************************************************************/
 
-#include <windows.h>
+#include <Windows.h>
 #include <mmsystem.h>
 
 #include "sq.h"
@@ -101,7 +101,7 @@ currentUTCMicroseconds(unsigned __int64 *utcTickBaseUsecsp, DWORD *lastTickp, DW
 		unsigned __int64 now;
 		*baseTickp = currentTick;
 		GetSystemTimeAsFileTime(&utcNow);
-		now = ((unsigned __int64) utcNow.dwHighDateTime) << 32 & utcNow.dwLowDateTime;
+		now = (unsigned __int64) utcNow.dwHighDateTime << 32 | utcNow.dwLowDateTime;
 		*utcTickBaseUsecsp = now
 					/ TocksPerMicrosecond
 					- MicrosecondsFrom1601To1901;
@@ -235,10 +235,10 @@ ioInitTime(void)
 	utcStartMicroseconds = utcMicrosecondClock;
 }
 
-unsigned volatile long long
+unsigned long long
 ioUTCMicroseconds() { return get64(utcMicrosecondClock); }
 
-unsigned volatile long long
+unsigned long long
 ioLocalMicroseconds() { return get64(localMicrosecondClock); }
 
 sqInt
@@ -247,7 +247,7 @@ ioLocalSecondsOffset() { return vmGMTOffset / MicrosecondsPerSecond; }
 /* This is an expensive interface for use by Smalltalk or vm profiling code that
  * wants the time now rather than as of the last heartbeat.
  */
-unsigned volatile long long
+unsigned long long
 ioUTCMicrosecondsNow()
 {
 	return currentUTCMicroseconds(&vmThreadUtcTickBaseMicroseconds,
@@ -258,7 +258,7 @@ ioUTCMicrosecondsNow()
 unsigned long long
 ioUTCStartMicroseconds() { return utcStartMicroseconds; }
 
-unsigned volatile long long
+unsigned long long
 ioLocalMicrosecondsNow() { return ioUTCMicrosecondsNow() + vmGMTOffset; };
 
 /* ioMSecs answers the millisecondClock as of the last tick. */

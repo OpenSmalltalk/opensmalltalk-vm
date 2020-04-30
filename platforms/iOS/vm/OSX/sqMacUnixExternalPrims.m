@@ -142,7 +142,11 @@ tryLoadingVariations(NSString *dirNameString, char *moduleName)
 	char	   **prefix, **suffix;
 	struct stat  buf;
 	static char *prefixes[]= { "", "lib", 0 };
-	static char *suffixes[]= { "", "so", "dylib",0 };
+#if PharoVM
+	static char *suffixes[]= { "", "so", "dylib", 0 };
+#else
+	static char *suffixes[]= { "", "dylib", "so", 0 };
+#endif
 
 	if (thePListInterface.SqueakPluginsBuiltInOrLocalOnly)
 		return NULL;
@@ -180,36 +184,24 @@ tryLoadingVariations(NSString *dirNameString, char *moduleName)
 	return NULL;
 }
 
-#if PharoVM
-static void *
-tryLoadingLinked(char *libName)
-{
-    void *handle= dlopen(libName, RTLD_NOW | RTLD_GLOBAL);
-    DPRINTF((stderr, __FILE__ " %d tryLoadingLinked dlopen(%s) = %p\n", __LINE__, libName, handle));
-# if DEBUG
-    if(handle != 0)
-        printf("%s: loaded plugin `%s'\n", exeName, libName);
-# endif
-    return handle;
-}
-#else /* PharoVM */
 static void *
 tryLoadingLinked(char *libName)
 {
     void *handle;
 
+#if !PharoVM
 	if (thePListInterface.SqueakPluginsBuiltInOrLocalOnly)
 		return NULL;
+#endif
 
 	handle = dlopen(libName, RTLD_NOW | RTLD_GLOBAL);
     DPRINTF((stderr, __FILE__ " %d tryLoadingLinked dlopen(%s) = %p\n", __LINE__, libName, handle));
-# if DEBUG
+#if DEBUG
     if(handle != 0)
         printf("%s: loaded plugin `%s'\n", exeName, libName);
-# endif
+#endif
     return handle;
 }
-#endif /* PharoVM */
 
 /*  Find and load the named module.  Answer 0 if not found (do NOT fail
  *  the primitive!).
@@ -217,8 +209,7 @@ tryLoadingLinked(char *libName)
 void *
 ioLoadModule(char *pluginName) {
 	@autoreleasepool {
-		void* result = ioLoadModuleRaw(pluginName);
-		return result;
+		return ioLoadModuleRaw(pluginName);
 	}
 }
 
@@ -227,34 +218,42 @@ ioLoadModuleRaw(char *pluginName)
 {
 	void *handle;
 
-	if ((pluginName == null) || (pluginName[0] == 0x00)) {
+	if (!pluginName || !pluginName[0]) {
 		handle = dlopen(0, RTLD_NOW | RTLD_GLOBAL);
-		if (handle == null) {
+		if (!handle) {
 			char * why = dlerror();
 			dprintf((stderr, "ioLoadModule(<intrinsic>): %s\n", why));
 			return NULL;
-		} else {
-			dprintf((stderr, "loaded: <intrinsic>\n"));
-			return handle;
 		}
+		dprintf((stderr, "loaded: <intrinsic>\n"));
+		return handle;
     }
 
+#if PharoVM
 	/* first, look in the "<Squeak VM directory>Plugins" directory for the library */
 	NSString *pluginDirPath = [[[NSBundle mainBundle] bundlePath] stringByAppendingPathComponent: @"Contents/MacOS/Plugins"];
+#endif
+	NSString *frameworksDirPath = [[[NSBundle mainBundle] bundlePath] stringByAppendingPathComponent: @"Contents/Frameworks"];
 	NSString *vmDirPath = [[NSBundle mainBundle] resourcePath];
 
 	if (thePListInterface.SqueakPluginsBuiltInOrLocalOnly) {
 	  if ((   handle= tryLoadingLinked(                     pluginName))
-          || (handle= tryLoadingVariations( pluginDirPath,	pluginName))
 		  || (handle= tryLoadingBundle( vmDirPath,			pluginName))
+          || (handle= tryLoadingVariations( frameworksDirPath,	pluginName))
+#if PharoVM
+          || (handle= tryLoadingVariations( pluginDirPath,	pluginName))
+#endif
 		  )
 		return handle;
 	}
     else {
 	  if ((   handle= tryLoadingLinked(                     pluginName))
-          || (handle= tryLoadingVariations( pluginDirPath,	pluginName))
-		  || (handle= tryLoadingVariations( @"./",			pluginName))
 		  || (handle= tryLoadingBundle( vmDirPath,			pluginName))
+          || (handle= tryLoadingVariations( frameworksDirPath,	pluginName))
+#if PharoVM
+          || (handle= tryLoadingVariations( pluginDirPath,	pluginName))
+#endif
+		  || (handle= tryLoadingVariations( @"./",			pluginName))
 		  || (handle= tryLoadingVariations( @"",			pluginName))
 		  )
 		return handle;
@@ -305,6 +304,8 @@ ioLoadModuleRaw(char *pluginName)
 					if ((handle= tryLoadingVariations(path, workingData)))
 						return handle;
 				}
+
+#if PharoVM
 				path = [pluginDirPath stringByAppendingPathComponent: @(pluginName)];
 
 				if (thePListInterface.SqueakPluginsBuiltInOrLocalOnly) {
@@ -315,6 +316,7 @@ ioLoadModuleRaw(char *pluginName)
 					if ((handle= tryLoadingVariations(path, workingData)))
 						return handle;
 				}
+#endif
 
 				path = [systemFolder stringByAppendingPathComponent: @(pluginName)];
 				if (thePListInterface.SqueakPluginsBuiltInOrLocalOnly) {

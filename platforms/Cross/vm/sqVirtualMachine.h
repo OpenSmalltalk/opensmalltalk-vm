@@ -91,6 +91,7 @@ typedef struct VirtualMachine {
 	double (*fetchFloatofObject)(sqInt fieldIndex, sqInt objectPointer);
 	sqInt  (*fetchIntegerofObject)(sqInt fieldIndex, sqInt objectPointer);
 	sqInt  (*fetchPointerofObject)(sqInt fieldIndex, sqInt oop);
+#if OLD_FOR_REFERENCE
 /*  sqInt  (*fetchWordofObject)(sqInt fieldFieldIndex, sqInt oop); *
  * has been rescinded as of VMMaker 3.8 and the 64bitclean VM      *
  * work. To support old plugins we keep a valid function in        *
@@ -99,6 +100,9 @@ typedef struct VirtualMachine {
  * equivalent but 64 bit valid function is added as                *
  * 'fetchLong32OfObject'                                           */
 	sqInt  (*obsoleteDontUseThisFetchWordofObject)(sqInt fieldFieldIndex, sqInt oop);
+#else /* since there is no legacy plugin problem back to 3.8 we repurpose... */
+	void   (*error)(char *);
+#endif
 	void  *(*firstFixedField)(sqInt oop);
 	void  *(*firstIndexableField)(sqInt oop);
 	sqInt  (*literalofMethod)(sqInt offset, sqInt methodPointer);
@@ -331,7 +335,7 @@ typedef struct VirtualMachine {
   sqInt	(*ownVM)   (sqInt threadIdAndFlags);
   void  (*addHighPriorityTickee)(void (*ticker)(void), unsigned periodms);
   void  (*addSynchronousTickee)(void (*ticker)(void), unsigned periodms, unsigned roundms);
-  usqLong volatile (*utcMicroseconds)(void);
+  usqLong (*utcMicroseconds)(void);
   void (*tenuringIncrementalGC)(void);
   sqInt (*isYoung) (sqInt anOop);
   sqInt (*isKindOfClass)(sqInt oop, sqInt aClass);

@@ -294,6 +294,8 @@ AC_DEFUN([AC_PLUGIN_CHECK_LIB],[
 dnl Recent Unix stuff
 m4_include([ax_require_defined.m4])
 m4_include([ax_append_flag.m4])
+m4_include([ax_prepend_flag.m4])
 m4_include([ax_have_epoll.m4])
 m4_include([ax_pthread.m4])
+m4_include([ax_compiler_vendor.m4])
 m4_include([ax_cflags_warn_all.m4])

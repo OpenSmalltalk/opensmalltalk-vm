@@ -14,7 +14,7 @@
  * Eliot Miranda, 7 january 2010.
  */
 
-#include <windows.h>
+#include <Windows.h>
 #include <stdio.h>
 #include <string.h>
 
