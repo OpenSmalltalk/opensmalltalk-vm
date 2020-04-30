@@ -1022,6 +1022,18 @@ printRegisterState(ucontext_t *uap)
 			regs[REG_R12], regs[REG_R13], regs[REG_R14], regs[REG_R15],
 			regs[REG_RIP]);
 	return (void *)regs[REG_RIP];
+# elif __OpenBSD__ && __x86_64__
+	printf(	"\trax 0x%08lx rbx 0x%08lx rcx 0x%08lx rdx 0x%08lx\n"
+			"\trdi 0x%08lx rsi 0x%08lx rbp 0x%08lx rsp 0x%08lx\n"
+			"\tr8  0x%08lx r9  0x%08lx r10 0x%08lx r11 0x%08lx\n"
+			"\tr12 0x%08lx r13 0x%08lx r14 0x%08lx r15 0x%08lx\n"
+			"\trip 0x%08lx\n",
+			uap->sc_rax, uap->sc_rbx, uap->sc_rcx, uap->sc_rdx,
+			uap->sc_rdi, uap->sc_rsi, uap->sc_rbp, uap->sc_rsp,
+			uap->sc_r8, uap->sc_r9, uap->sc_r10, uap->sc_r11,
+			uap->sc_r12, uap->sc_r13, uap->sc_r14, uap->sc_r15,
+			uap->sc_rip);
+	return (void*)uap->sc_rip;
 # elif __linux__ && (defined(__arm64__) || defined(__aarch64__))
 	void **regs = (void **)&uap->uc_mcontext.regs[0];
 	printf(	"\tx0 %p x1 %p x2 %p x3 %p\n"
