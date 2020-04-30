@@ -1,5 +1,6 @@
 #include "pharovm/pharo.h"
 #include <stdarg.h>
+#include <sys/time.h>
 
 char * GetAttributeString(sqInt id);
 
@@ -28,7 +29,7 @@ void error(char *errorMessage){
     abort();
 }
 
-static char* severityName[4] = {"ERROR", "WARN", "INFO", "DEBUG"};
+static char* severityName[5] = {"ERROR", "WARN", "INFO", "DEBUG", "TRACE"};
 
 EXPORT(void) logAssert(const char* fileName, const char* functionName, int line, char* msg){
 	logMessage(LOG_WARN, fileName, functionName, line, msg);
@@ -38,16 +39,13 @@ void logMessageFromErrno(int level, const char* msg, const char* fileName, const
 	char buffer[1024+1];
 	int msgLength;
 
-	msgLength = strlen(msg);
-	strcpy(buffer, msg);
-
 #ifdef WIN32
-	strerror_s(buffer + msgLength, 1024 - msgLength, errno);
+	strerror_s(buffer, 1024, errno);
 #else
-	strerror_r(errno, buffer + msgLength, 1024 - msgLength);
+	strerror_r(errno, buffer, 1024);
 #endif
 
-	logMessage(level, fileName, functionName, line, msg);
+	logMessage(level, fileName, functionName, line, "%s: %s", msg, buffer);
 }
 
 FILE* getStreamForLevel(int level){
@@ -73,11 +71,17 @@ EXPORT(void) logMessage(int level, const char* fileName, const char* functionNam
 	}
 
 	time_t now = time(NULL);
-	strftime(timestamp, 20, "%Y-%m-%d %H:%M:%S", localtime(&now));
+	struct tm* ltime = localtime(&now);
+
+	strftime(timestamp, 20, "%Y-%m-%d %H:%M:%S", ltime);
 
 	//Printing the header.
 	// Ex: [DEBUG] 2017-11-14 21:57:53,661 functionName (filename:line) - This is a debug log message.
-	fprintf(outputStream, "[%-5s] %s %s (%s:%d):", severityName[level - 1], timestamp, functionName, fileName, line);
+
+	struct timeval utcNow;
+	gettimeofday(&utcNow,0);
+
+	fprintf(outputStream, "[%-5s] %s.%03d %s (%s:%d):", severityName[level - 1], timestamp, utcNow.tv_usec / 1000 , functionName, fileName, line);
 
 	//Printint the message from the var_args.
 	va_list list;

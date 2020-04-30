@@ -48,8 +48,7 @@ sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
 	SYSTEM_INFO sysInfo;
 
 	if (pageSize) {
-		sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Error:"),
-					 TEXT("sqAllocateMemory already called"));
+		logError("sqAllocateMemory have already been called");
 		exit(1);
 	}
 
