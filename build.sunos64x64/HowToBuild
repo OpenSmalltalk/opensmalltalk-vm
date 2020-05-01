@@ -4,6 +4,7 @@ How To Build On Solaris
 
 Contents:
         - Overview
+	- Audio Headers
 	- Real-Time
 	- Swapspace
 	- C Compiler
@@ -36,6 +37,24 @@ To run the vm, consider running the process in the RT (real-time) class.
  
 For Solaris specific suggestions you can contact me (David Stes)
 or alternatively (and maybe better!) the OpenSmalltalk team ...
+
+Audio Headers
+-------------
+
+The configure script will look for header files (#include) and enable
+the build of some sound plugins, depending on what it finds.
+
+Personally I like the "pulse" server supported by the "vm-sound-pulse" plugin.
+
+Make sure that you *uninstall* the audio headers:
+
+# pkg list -a system/header/header-audio
+# pkg list -a library/audio/pulseaudio
+
+Make sure (before you configure and build) that header-audio is uninstalled,
+and that pulseaudio is installed.
+
+The header files for pulseaudio are in the pulseaudio package.
 
 Real-Time
 ---------
