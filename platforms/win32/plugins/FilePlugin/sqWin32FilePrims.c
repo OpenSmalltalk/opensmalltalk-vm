@@ -37,7 +37,6 @@ extern struct VirtualMachine *interpreterProxy;
 
 #define true  1
 #define false 0
-static const DWORD MAX_DWORD = 4294967295;
 
 #define FILE_HANDLE(f) ((HANDLE) (f)->file)
 #define FAIL() { return interpreterProxy->primitiveFail(); }
@@ -518,11 +517,11 @@ size_t sqImageFileRead(void *ptr, size_t sz, size_t count, sqImageFile h)
 
   position = sqImageFilePosition(h);
   while (reallyRead != totalToRead) {
-    DWORD toRead = (totalToRead - reallyRead) > (size_t)MAX_DWORD ? MAX_DWORD : totalToRead - reallyRead;
+    DWORD toRead = (totalToRead - reallyRead) > (size_t)MAXDWORD  ? MAXDWORD  : totalToRead - reallyRead;
     BOOL ret = ReadFile((HANDLE)(h - 1), (LPVOID)((sqInt)ptr + (sqInt)reallyRead), toRead, &dwReallyRead, NULL);
     reallyRead += dwReallyRead;
 
-    if (!ret | dwReallyRead != toRead) {
+    if (!ret || dwReallyRead != toRead) {
       DWORD err = GetLastError();
       if (sqMessageBox(MB_ABORTRETRYIGNORE, TEXT("VM Warning"), TEXT("Image file read problem (%d out of %d bytes read)"), dwReallyRead, toRead)
         == IDABORT) return (size_t)(reallyRead / sz);
@@ -559,11 +558,11 @@ size_t sqImageFileWrite(const void *ptr, size_t sz, size_t count, sqImageFile h)
 
   position = sqImageFilePosition(h);
   while (reallyWritten != totalToWrite) {
-    DWORD toWrite = (totalToWrite - reallyWritten) > (size_t) MAX_DWORD ? MAX_DWORD : totalToWrite - reallyWritten;
+    DWORD toWrite = (totalToWrite - reallyWritten) > (size_t) MAXDWORD  ? MAXDWORD  : totalToWrite - reallyWritten;
     BOOL ret = WriteFile((HANDLE)(h - 1), (LPVOID)((sqInt)ptr + (sqInt) reallyWritten), toWrite, &dwReallyWritten, NULL);
     reallyWritten += dwReallyWritten;
 
-    if (!ret | dwReallyWritten != toWrite) {
+    if (!ret || dwReallyWritten != toWrite) {
       DWORD err = GetLastError();
       if (sqMessageBox(MB_ABORTRETRYIGNORE, TEXT("VM Warning"), TEXT("Image file read problem (%d out of %d bytes read)"), dwReallyWritten, toWrite)
         == IDABORT) return (size_t)(reallyWritten / sz);
