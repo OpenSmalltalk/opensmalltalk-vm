@@ -5,6 +5,7 @@ How To Build On Solaris
 Contents:
         - Overview
 	- Audio Headers
+	- OpenSSL
 	- Real-Time
 	- Swapspace
 	- C Compiler
@@ -55,6 +56,24 @@ Make sure (before you configure and build) that header-audio is uninstalled,
 and that pulseaudio is installed.
 
 The header files for pulseaudio are in the pulseaudio package.
+
+OpenSSL
+-------
+
+We have tested with openssl 1.0.2 and build the VM with the option:
+
+	--disable-dynamicopenssl
+
+You may have to uninstall packages that provide/ usr/include/tls.h.
+
+The configure script may think that it has to enable TLS support,
+if it finds the tls.h header file.
+
+The package runtime/tcl-8 or runtime/tcl-8/tcl-openssl may provide tls.h.
+
+In order to avoid this problem, we build the VM with the option:
+
+	--without-libtls
 
 Real-Time
 ---------
