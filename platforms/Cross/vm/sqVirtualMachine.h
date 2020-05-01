@@ -387,6 +387,10 @@ typedef struct VirtualMachine {
   sqInt (*classFloat32Array)(void);
   sqInt (*classFloat64Array)(void);
 #endif
+#if VM_PROXY_MINOR > 16 /* Spur isShorts and isLong64s testing support */
+  sqInt (*isShorts)(sqInt oop);
+  sqInt (*isLong64s)(sqInt oop);
+#endif
 } VirtualMachine;
 
 #endif /* _SqueakVM_H */
