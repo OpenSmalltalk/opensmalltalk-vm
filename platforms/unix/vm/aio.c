@@ -81,6 +81,7 @@
 
 # if __sun__
   # include <sys/sockio.h>
+  # include <sys/file.h> /* FASYNC or ioctl FIOASYNC will be issued  */
   # define signal(a, b) sigset(a, b)
 # endif
 

@@ -19,6 +19,9 @@
 #endif
 #ifdef __OpenBSD__
 # include <sys/signal.h>
+#elif __sun
+/* Single UNIX Specification (SUS), Version 2 specifies <ucontext.h> */
+# include <ucontext.h>
 #else
 # include <sys/ucontext.h>
 #endif
@@ -36,6 +39,10 @@
 # define _PC_IN_UCONTEXT uc_mcontext->__ss.__rip
 #elif __APPLE__ && __MACH__ && __x86_64__
 # define _PC_IN_UCONTEXT uc_mcontext->ss.rip
+#elif __sun && __amd64
+# define _PC_IN_UCONTEXT uc_mcontext.gregs[REG_RIP]
+#elif __sun && __i386__
+# define _PC_IN_UCONTEXT uc_mcontext.gregs[EIP]
 #elif __linux__ && __i386__
 # define _PC_IN_UCONTEXT uc_mcontext.gregs[REG_EIP]
 #elif __linux__ && __x86_64__

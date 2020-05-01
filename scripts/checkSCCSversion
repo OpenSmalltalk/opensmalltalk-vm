@@ -6,7 +6,7 @@
 
 PWD="`dirname $0`"
 VERSION_FILE="platforms/Cross/vm/sqSCCSVersion.h"
-if fgrep -q '$Rev$' "$PWD/../$VERSION_FILE" ; then
+if fgrep '$Rev$' "$PWD/../$VERSION_FILE" ; then
 	echo "$VERSION_FILE not up-to-date." 1>&2
 	echo "You must run $PWD/updateSCCSVersions" 1>&2
 	exit 0 # i.e. so that we can say if checkSCCSVersion; then exit 1; fi
