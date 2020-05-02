@@ -232,7 +232,7 @@ thunkEntry(void *thunkp, sqIntptr_t *stackp)
 		long vhigh = vmcc.rvs.valleint64.high;
 #if _MSC_VER
 				_asm mov edx, dword ptr vhigh;
-#elif __GNUC__
+#elif __GNUC__  || __SUNPRO_C
 				__asm__ ("mov %0,%%edx" : : "m"(vhigh));
 #else
 # error need to load edx with vmcc.rvs.valleint64.high on this compiler
@@ -244,7 +244,7 @@ thunkEntry(void *thunkp, sqIntptr_t *stackp)
 		double valflt64 = vmcc.rvs.valflt64;
 #if _MSC_VER
 				_asm fld qword ptr valflt64;
-#elif __GNUC__
+#elif __GNUC__ || __SUNPRO_C
 				__asm__ ("fldl %0" : : "m"(valflt64));
 #else
 # error need to load %f0 with vmcc.rvs.valflt64 on this compiler

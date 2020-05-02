@@ -1,0 +1,183 @@
+
+How To Build On Solaris
+-----------------------
+
+Contents:
+        - Overview
+	- Audio Headers
+	- OpenSSL
+	- Real-Time
+	- Swapspace
+	- C Compiler
+	- GNU make
+	- IPS package
+
+Overview
+--------
+
+These are some notes on building the OpenSmalltalk VM on Oracle Solaris 11.
+
+For some history on this operating system, see
+https://en.wikipedia.org/wiki/Solaris_(operating_system)
+
+On Solaris "uname -s" reports the value "SunOS".
+
+To build,
+
+  scripts/updateSCCSVersions
+  cd build.sunos64x64  (or cd build.sunos32x86)
+  cd squeak.cog.spur (or cd squeak.stack.spur)
+  cd build
+  ./mvm or ./mvm INSTALLDIR
+
+This will build and install into INSTALLDIR.
+The default value for INSTALLDIR is products/sqcogspur64sunos[ht]/usr,
+for the Cog Spur VM (see other values in the mvm scripts).
+
+To run the vm, consider running the process in the RT (real-time) class.
+ 
+For Solaris specific suggestions you can contact me (David Stes)
+or alternatively (and maybe better!) the OpenSmalltalk team ...
+
+Audio Headers
+-------------
+
+The configure script will look for header files (#include) and enable
+the build of some sound plugins, depending on what it finds.
+
+Personally I like the "pulse" server supported by the "vm-sound-pulse" plugin.
+
+Make sure that you *uninstall* the audio headers:
+
+# pkg list -a system/header/header-audio
+# pkg list -a library/audio/pulseaudio
+
+Make sure (before you configure and build) that header-audio is uninstalled,
+and that pulseaudio is installed.
+
+The header files for pulseaudio are in the pulseaudio package.
+
+OpenSSL
+-------
+
+We have tested with openssl 1.0.2 and build the VM with the option:
+
+	--disable-dynamicopenssl
+
+You may have to uninstall packages that provide/ usr/include/tls.h.
+
+The configure script may think that it has to enable TLS support,
+if it finds the tls.h header file.
+
+The package runtime/tcl-8 or runtime/tcl-8/tcl-openssl may provide tls.h.
+
+In order to avoid this problem, we build the VM with the option:
+
+	--without-libtls
+
+Real-Time
+---------
+
+When running the squeak vm, after copying a Squeak .image and .change file,
+and after copying the Squeak Smalltalk source file (SqueakV50.sources).
+
+bash-4.4$ bin/squeak Squeak6.0alpha-19547-32bit.image 
+pthread_setschedparam failed: Not owner
+
+Note that it is possible to suppress the "pthread_setschedparam" warning,
+by running the squeak vm in the RT (real-time) class.
+
+One way would be to use priocntl -e and execute the squeak in the -c RT class.
+
+Or perhaps at the "authorization" (auths) level it could perhaps
+be possible to have an entry in /etc/security/exec_attr.d for
+an authorization that gives "proc_priocntl" to squeak.
+
+You must do this as "root".
+
+Another way is to change a "bash" shell to RT class,
+
+bash-4.4$ priocntl -d $$
+INTERACTIVE CLASS PROCESSES:
+   PID[/LWP]       IAUPRILIM     IAUPRI     IAMODE
+   4026                0            0          1
+
+bash-4.4$ sudo priocntl -c RT -p 0 -s $$
+
+bash-4.4$ priocntl -d $$
+REAL TIME PROCESSES:
+   PID[/LWP]         RTPRI       TQNTM      TQSIG
+   3966                0          1000         0
+
+After changing the "bash" shell to the RT class, you can launch
+
+bash-4.4$ bin/squeak Squeak6.0alpha-19547-32bit.image
+
+It will inherit the RT class and the pthread_setschedparam warning is gone.
+
+Verify as follows the squeak threads (LWP light-weight processes)
+
+bash-4.4$ ps -eLo pid,pri,lwp,class,comm | grep squeak
+ 4029 100      1   RT bin/../lib/squeak/5.0-202003240214-solaris/squeak
+ 4029 101      2   RT bin/../lib/squeak/5.0-202003240214-solaris/squeak
+
+Note that one thread is running in priority 101 and another in priority 100.
+
+Swapspace
+---------
+
+It's not certain that the following notes apply, it depends on how much
+RAM you have in your machine(s) ...
+
+But make sure that there is sufficient free space in /tmp,
+mounted on swap in Solaris.
+
+The C compiler may use a lot of space for temporary files under /tmp.
+
+For example (the example 8G is what I use) :
+
+$ df -h /tmp
+Filesystem             Size   Used  Available Capacity  Mounted on
+swap                   8.2G    78M       8.1G     1%    /tmp
+
+If required, increase the "volsize" of the rpool/swap volume :
+
+# zfs get volsize rpool/swap
+NAME        PROPERTY  VALUE  SOURCE
+rpool/swap  volsize   8G     local
+
+The command to increase the size is:
+
+# zpool list rpool (check FREE space)
+# zfs set volsize=8G rpool/swap
+
+This can be done online, but a reboot is not a bad idea after doing this.
+
+C Compiler
+----------
+
+As C compiler we have used both the Sun C compiler and GCC for Solaris.
+Currently we have succesfully built the VM with gcc 7.3 and gcc 9.2.
+
+Note that in the past Squeak3 was available on SunOS for SPARC and Intel.
+
+http://squeakvm.org/unix/release/Squeak-3.7-7.sparc-sun-solaris2.9.tar.gz
+http://squeakvm.org/unix/release/Squeak-3.7-7.i386-pc-solaris2.9.tar.gz
+
+It appears that those old Squeak V3 VM's were built with "gcc" for Solaris.
+
+GNU Make
+--------
+
+For the Makefiles, pkg:/developer/build/gnu-make  must be installed.
+
+IPS Package
+-----------
+
+There exists an IPS (Solaris Image Packaging System) package for squeak.
+
+That's the easiest way to get a Squeak VM to run Squeak images,
+instead of compiling yourself.
+
+That package is available in the "solaris-userland" .
+

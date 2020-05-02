@@ -214,6 +214,10 @@ sqInt classDoubleWordArray(void);
 sqInt classFloat32Array(void);
 sqInt classFloat64Array(void);
 #endif
+#if VM_PROXY_MINOR > 16 /* Spur isShorts and isLong64s testing support */
+sqInt isShorts(sqInt oop);
+sqInt isLong64s(sqInt oop);
+#endif
 
 void *ioLoadFunctionFrom(char *fnName, char *modName);
 
@@ -563,6 +567,10 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->classDoubleWordArray = classDoubleWordArray;
 	VM->classFloat32Array = classFloat32Array;
 	VM->classFloat64Array = classFloat64Array;
+#endif
+#if VM_PROXY_MINOR > 16 /* Spur isShorts and isLong64s testing support */
+	VM->isShorts = isShorts;
+	VM->isLong64s = isLong64s;
 #endif
 	return VM;
 }
