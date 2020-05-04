@@ -12,7 +12,10 @@
 
 /* 128 Kb */
 #define CHUNK_SIZE 128 * 1024
+#define BARLENGTH 50
 
+
+static char* progressText = "";
 
 sqInt basicImageFileClose(sqImageFile f){
 	return fclose((FILE*)f);
@@ -64,7 +67,7 @@ size_t basicImageFileRead(void * initialPtr, size_t sz, size_t count, sqImageFil
 		currentPtr += lastReadBytes;
 		remainingBytes -= lastReadBytes;
 
-		sqImageReportProgress(bytesToRead, readBytes, "Loading image");
+		sqImageReportProgress(bytesToRead, readBytes);
 
 	} while(lastReadBytes > 0 && readBytes < bytesToRead);
 
@@ -112,7 +115,7 @@ size_t basicImageFileWrite(void* initialPtr, size_t sz, size_t count, sqImageFil
 		currentPtr += lastWriteBytes;
 		remainingBytes -= lastWriteBytes;
 
-		sqImageReportProgress(bytesToWrite, wroteBytes, "Writing image");
+		sqImageReportProgress(bytesToWrite, wroteBytes);
 
 	} while(bytesToWrite > wroteBytes);
 
@@ -129,9 +132,7 @@ int basicImageFileExists(const char* aPath){
 	return stat(aPath, &st) == 0;
 }
 
-#define BARLENGTH 50
-
-void basicImageReportProgress(size_t totalSize, size_t currentSize, char* text){
+void basicImageReportProgress(size_t totalSize, size_t currentSize){
 
 	char bar[BARLENGTH + 1];
 	bar[BARLENGTH] = 0;
@@ -143,9 +144,9 @@ void basicImageReportProgress(size_t totalSize, size_t currentSize, char* text){
 			bar[i] = percentage >= ((i+1) * (100/BARLENGTH)) ? '#' : '-';
 		}
 
-		printf("\r%s: [%s] %d%%", text, bar, percentage);
+		printf("\r%s: [%s] %d%%", progressText, bar, percentage);
 	}else{
-		printf("\r%s...", text);
+		printf("\r%s...", progressText);
 	}
 
 	if(totalSize <= currentSize)
