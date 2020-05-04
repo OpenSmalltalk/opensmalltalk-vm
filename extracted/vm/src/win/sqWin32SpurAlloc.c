@@ -155,7 +155,7 @@ sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress
 		}
 		if (!alloc) {
 			DWORD lastError = GetLastError();
-			logWarn("Unable to VirtualAlloc committed memory at desired address (%" PRIuSQINT " bytes requested at %p, above %p), Error: %lu\n",
+			logError("Unable to VirtualAlloc committed memory at desired address (%" PRIuSQINT " bytes requested at %p, above %p), Error: %lu\n",
 						bytes, address, minAddress, lastError);
 			return 0;
 		}
@@ -169,6 +169,7 @@ sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress
 
 		address += delta;
 	}
+	logError("Unable to VirtualAlloc committed memory at desired address");
 	return 0;
 }
 
