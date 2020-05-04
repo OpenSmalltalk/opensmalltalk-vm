@@ -10,6 +10,10 @@
  * Check https://eklitzke.org/efficient-file-copying-on-linux
  */
 
+/* 128 Kb */
+#define CHUNK_SIZE 128 * 1024
+
+
 sqInt basicImageFileClose(sqImageFile f){
 	return fclose((FILE*)f);
 }
@@ -27,12 +31,14 @@ size_t basicImageFileRead(void * initialPtr, size_t sz, size_t count, sqImageFil
 	size_t readBytes = 0;
 	size_t bytesToRead = sz * count;
 	size_t lastReadBytes = 0;
-	size_t chunkToRead = 128 * 1024; // 128 Kb
+	size_t chunkToRead = 0;
+	size_t remainingBytes = 0;
 	void* currentPtr = initialPtr;
 
-	if(bytesToRead <= chunkToRead){
+	if(bytesToRead <= CHUNK_SIZE){
 		return fread(initialPtr, sz, count, (FILE*)f);
 	}
+
 
 #ifdef posix_fadvise
 	off_t initialPosition;
@@ -42,7 +48,11 @@ size_t basicImageFileRead(void * initialPtr, size_t sz, size_t count, sqImageFil
 	}
 #endif
 
+	remainingBytes = bytesToRead;
+
 	do{
+		chunkToRead = remainingBytes < CHUNK_SIZE? remainingBytes : CHUNK_SIZE;
+
 		lastReadBytes = fread(currentPtr, 1, chunkToRead, (FILE*)f);
 
 		if(lastReadBytes < 0){
@@ -52,12 +62,17 @@ size_t basicImageFileRead(void * initialPtr, size_t sz, size_t count, sqImageFil
 
 		readBytes += lastReadBytes;
 		currentPtr += lastReadBytes;
+		remainingBytes -= lastReadBytes;
 
 		sqImageReportProgress(bytesToRead, readBytes, "Loading image");
 
 	} while(lastReadBytes > 0 && readBytes < bytesToRead);
 
-	return bytesToRead;
+	if(bytesToRead != readBytes){
+		logError("Error reading expected to read: %lld actual read:%lld", (long long)bytesToRead, (long long)readBytes);
+	}
+
+	return readBytes;
 }
 
 int basicImageFileSeek(sqImageFile f, long int pos){
@@ -68,8 +83,44 @@ int basicImageFileSeekEnd(sqImageFile f, long int pos){
 	return fseek((FILE*)f, pos, SEEK_END);
 }
 
-size_t basicImageFileWrite(void* ptr, size_t sz, size_t count, sqImageFile f){
-	return fwrite(ptr, sz, count, (FILE*)f);
+size_t basicImageFileWrite(void* initialPtr, size_t sz, size_t count, sqImageFile f){
+
+	size_t wroteBytes = 0;
+	size_t remainingBytes = 0;
+	size_t bytesToWrite = sz * count;
+	size_t lastWriteBytes = 0;
+	size_t chunkToWrite = 0;
+	void* currentPtr = initialPtr;
+
+	if(bytesToWrite <= CHUNK_SIZE){
+		return fwrite(initialPtr, sz, count, (FILE*)f);
+ 	 }
+
+	remainingBytes = bytesToWrite;
+
+	do{
+		chunkToWrite = remainingBytes < CHUNK_SIZE ? remainingBytes : CHUNK_SIZE;
+
+		lastWriteBytes = fwrite(currentPtr, 1, chunkToWrite, (FILE*)f);
+
+		if(lastWriteBytes != chunkToWrite){
+			logErrorFromErrno("fwrite");
+			return lastWriteBytes + wroteBytes;
+		}
+
+		wroteBytes += chunkToWrite;
+		currentPtr += lastWriteBytes;
+		remainingBytes -= lastWriteBytes;
+
+		sqImageReportProgress(bytesToWrite, wroteBytes, "Writing image");
+
+	} while(bytesToWrite > wroteBytes);
+
+	if(bytesToWrite != wroteBytes){
+		logError("Error reading expected to write: %lld actual wrote:%lld", (long long)bytesToWrite, (long long)wroteBytes);
+	}
+
+	return bytesToWrite;
 }
 
 int basicImageFileExists(const char* aPath){
@@ -94,7 +145,7 @@ void basicImageReportProgress(size_t totalSize, size_t currentSize, char* text){
 
 		printf("\r%s: [%s] %d%%", text, bar, percentage);
 	}else{
-		printf("\r%s...");
+		printf("\r%s...", text);
 	}
 
 	if(totalSize <= currentSize)
