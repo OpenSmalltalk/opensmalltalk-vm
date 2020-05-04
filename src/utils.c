@@ -413,8 +413,8 @@ static char * volatile p = 0;
 #endif
 
 #ifndef WIN64
-static sqInt min(int x, int y) { return (x < y) ? x : y; }
-static sqInt max(int x, int y) { return (x > y) ? x : y; }
+static sqInt min(sqInt x, sqInt y) { return (x < y) ? x : y; }
+static sqInt max(sqInt x, sqInt y) { return (x > y) ? x : y; }
 #endif
 
 static int getRedzoneSize()
