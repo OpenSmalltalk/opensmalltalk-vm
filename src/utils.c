@@ -412,10 +412,7 @@ static char * volatile p = 0;
 	static void sighandler(int sig) { p = (char *)&sig; }
 #endif
 
-#ifndef WIN64
-static sqInt min(sqInt x, sqInt y) { return (x < y) ? x : y; }
-static sqInt max(sqInt x, sqInt y) { return (x > y) ? x : y; }
-#endif
+#define min(x,y) ((x)<(y) ? (x): (y))
 
 static int getRedzoneSize()
 {
