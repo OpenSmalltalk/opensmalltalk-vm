@@ -50,8 +50,12 @@ static char *heap	=  0;
 static sqInt   heapSize	=  0;
 static sqInt   heapLimit	=  0;
 
-static sqInt min(sqInt x, sqInt y) { return (x < y) ? x : y; }
-static sqInt max(sqInt x, sqInt y) { return (x > y) ? x : y; }
+#ifndef max
+# define max(a, b)  (((a) > (b)) ? (a) : (b))
+#endif
+#ifndef min
+# define min(a, b)  (((a) < (b)) ? (a) : (b))
+#endif
 
 static sqInt pageSize = 0;
 static usqInt pageMask = 0;
