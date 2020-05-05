@@ -1282,7 +1282,7 @@ sqInt sqSocketSendDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
     {
       /* --- TCP --- */
       logTrace( "TCP sendData(%d, %ld)\n", SOCKET(s), bufSize);
-      if ((nsent= write(SOCKET(s), buf, bufSize)) <= 0)
+      if ((nsent= send(SOCKET(s), buf, bufSize, 0)) <= 0)
 	{
       lastError = getLastSocketError();
 	  if ((nsent == -1) && (lastError == ERROR_WOULD_BLOCK))
