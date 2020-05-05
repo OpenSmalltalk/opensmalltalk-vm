@@ -155,7 +155,7 @@ sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress
 		}
 		if (!alloc) {
 			DWORD lastError = GetLastError();
-			logError("Unable to VirtualAlloc committed memory at desired address (%" PRIuSQINT " bytes requested at %p, above %p), Error: %lu\n",
+			logWarn("Unable to VirtualAlloc committed memory at desired address (%lld bytes requested at %p, above %p), Error: %lu\n",
 						bytes, address, minAddress, lastError);
 			return 0;
 		}
@@ -163,13 +163,13 @@ sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress
 		 * Discard the mapping and try again delta higher.
 		 */
 		if (alloc && !VirtualFree(alloc, SizeForRelease(bytes), MEM_RELEASE)){
-			logWarn("Unable to VirtualFree committed memory at desired address (%" PRIuSQINT " bytes requested at %p, above %p), Error: %lu\n",
+			logWarn("Unable to VirtualFree committed memory at desired address (%lld bytes requested at %p, above %p), Error: %lu\n",
 						bytes, address, minAddress, GetLastError());
 		}
 
 		address += delta;
 	}
-	logError("Unable to VirtualAlloc committed memory at desired address");
+	logWarn("Unable to VirtualAlloc committed memory at desired address");
 	return 0;
 }
 

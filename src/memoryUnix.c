@@ -207,13 +207,13 @@ sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress
 		alloc = mmap((void *)roundUpToPage((unsigned long)minAddress), bytes,
 					PROT_READ | PROT_WRITE, MAP_ANON | MAP_SHARED, -1, 0);
 		if (alloc == MAP_FAILED) {
-			logErrorFromErrno("sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto mmap");
+			logWarnFromErrno("sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto mmap");
 			return 0;
 		}
 		if (alloc >= minAddress)
 			return alloc;
 		if (munmap(alloc, bytes) != 0)
-			logErrorFromErrno("sqAllocateMemorySegment... munmap");
+			logWarnFromErrno("sqAllocateMemorySegment... munmap");
 		minAddress = (void *)((char *)minAddress + bytes);
 	}
 	return 0;
