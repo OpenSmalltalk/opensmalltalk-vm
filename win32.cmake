@@ -68,8 +68,7 @@ macro(add_third_party_dependencies_per_platform)
     add_third_party_dependency("gcc-runtime-3.4" "build/vm")
     add_third_party_dependency("zlib-1.2.11-fixLibGit" "build/vm")
     add_third_party_dependency("SDL2-2.0.5" "build/vm")
-
-	add_third_party_dependency_from_jenkins("PThreadedFFI" "build/vm" "threadedFFI-plugin" "split-main-thread" "1.2.0")
+    add_third_party_dependency("PThreadedFFI-1.3.0-win64" "build/vm")
 endmacro()
 
 

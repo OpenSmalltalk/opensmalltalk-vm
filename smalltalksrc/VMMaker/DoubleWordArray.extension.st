@@ -18,12 +18,13 @@ DoubleWordArray class >> defaultIntegerBaseInDebugger [
 { #category : #'*VMMaker-JITSimulation' }
 DoubleWordArray >> long64At: byteIndex [
 	| lowBits wordIndex value high low |
+
 	wordIndex := byteIndex - 1 // 8 + 1.
 	(lowBits := byteIndex - 1 \\ 8) = 0
 		ifTrue:
 			[value := self at: wordIndex]
 		ifFalse:
-			[high := ((self at: wordIndex + 1) bitAnd: (1 bitShift: lowBits * 8) - 1) bitShift: 8 - lowBits * 8.
+			[high := ((self at: wordIndex + 1) bitAnd: (1 bitShift: (lowBits bitShift: 3)) - 1) bitShift: ((8 - lowBits) bitShift: 3).
 			 low := (self at: wordIndex) bitShift: lowBits * -8.
 			 high = 0 ifTrue:
 				[^low].
@@ -43,9 +44,9 @@ DoubleWordArray >> long64At: byteIndex put: aValue [
 	allOnes := 16rFFFFFFFFFFFFFFFF.
 	(lowBits := byteIndex - 1 bitAnd: 7) = 0 ifTrue:
 		[^self at: wordIndex put: (aValue >= 0 ifTrue: [aValue] ifFalse: [aValue bitAnd: allOnes])].
-	mask := allOnes bitShift: 8 - lowBits * -8.
+	mask := allOnes bitShift: ((lowBits-8) bitShift:3).
 	self at: wordIndex put: (((self at: wordIndex) bitAnd: mask) bitXor: ((aValue bitShift: lowBits * 8) bitAnd: allOnes - mask)).
-	self at: wordIndex + 1 put: (((self at: wordIndex + 1) bitAnd: allOnes - mask) bitXor: (allOnes bitAnd: ((aValue bitShift: 8 - lowBits * -8) bitAnd: mask))).
+	self at: wordIndex + 1 put: (((self at: wordIndex + 1) bitAnd: allOnes - mask) bitXor: (allOnes bitAnd: ((aValue bitShift: ((lowBits-8) bitShift:3)) bitAnd: mask))).
 	^aValue
 ]
 

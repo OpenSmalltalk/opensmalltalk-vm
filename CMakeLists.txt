@@ -6,8 +6,8 @@ cmake_policy(SET CMP0053 NEW)
 include(macros.cmake)
 
 set(VERSION_MAJOR 8)
-set(VERSION_MINOR 3)
-set(VERSION_PATCH 0)
+set(VERSION_MINOR 4)
+set(VERSION_PATCH 1)
 
 set(APPNAME Pharo CACHE STRING "VM Application name")
 
@@ -83,7 +83,7 @@ if(WIN)
 
 
 #    if(NOT MSVC)
-        set(COMMON_FLAGS "-fwrapv -fdeclspec -O2 -msse2 -ggdb2 -m64 -mno-rtd -mms-bitfields -momit-leaf-frame-pointer -funroll-loops -D_MT -fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf -Wall -Wno-unused-variable -fno-optimize-sibling-calls")
+        set(COMMON_FLAGS "-fwrapv -fdeclspec -msse2 -ggdb2 -m64 -mno-rtd -mms-bitfields -O2 -momit-leaf-frame-pointer -funroll-loops -D_MT -fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf -Wall -Wno-unused-variable -fno-optimize-sibling-calls")
 #    endif()
 
     set(OS_TYPE "Win32")

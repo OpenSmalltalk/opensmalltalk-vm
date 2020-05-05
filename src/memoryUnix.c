@@ -49,8 +49,12 @@ static char *heap	=  0;
 static sqInt   heapSize	=  0;
 static sqInt   heapLimit	=  0;
 
-static sqInt min(int x, int y) { return (x < y) ? x : y; }
-static sqInt max(int x, int y) { return (x > y) ? x : y; }
+#ifndef max
+# define max(a, b)  (((a) > (b)) ? (a) : (b))
+#endif
+#ifndef min
+# define min(a, b)  (((a) < (b)) ? (a) : (b))
+#endif
 
 static sqInt pageSize = 0;
 static usqInt pageMask = 0;
@@ -187,7 +191,7 @@ sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress
 		alloc = mmap(startAddress, bytes,
 					PROT_READ | PROT_WRITE, MAP_ANON | MAP_SHARED, -1, 0);
 		if (alloc == MAP_FAILED) {
-			logErrorFromErrno("sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto mmap");
+			logWarnFromErrno("sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto mmap");
 			return 0;
 		}
 
@@ -204,7 +208,7 @@ sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress
 		count++;
 
 		if (munmap(alloc, bytes) != 0)
-			logErrorFromErrno("sqAllocateMemorySegment... munmap");
+			logWarnFromErrno("sqAllocateMemorySegment... munmap");
 		minAddress = (void *)((char *)minAddress + bytes);
 	}
 	return 0;

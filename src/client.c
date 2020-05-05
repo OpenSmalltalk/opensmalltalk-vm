@@ -297,3 +297,13 @@ runOnWorkerThread(VMParameters *parameters)
 
     return mainThreadLoop();
 }
+
+/**
+ * This function is just an empty implementation that returns -1 as an error
+ */
+EXPORT(sqInt)
+mainThread_schedule(sqInt (*closure)())
+{
+	return -1;
+}
+

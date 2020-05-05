@@ -145,7 +145,15 @@ aioFini(void)
 	signal(SIGPIPE, SIG_DFL);
 }
 
-#define max(x,y) (((x)>(y))?(x):(y))
+
+/*
+ * answer whether i/o becomes possible within the given number of
+ * microSeconds
+ */
+#ifndef max
+# define max(a, b)  (((a) > (b)) ? (a) : (b))
+#endif
+
 
 volatile int aio_requests = 0;
 volatile int aio_responses = 0;
