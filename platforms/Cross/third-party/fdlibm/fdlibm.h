@@ -81,12 +81,14 @@ struct exception {
 
 #define X_TLOSS         1.41484755040568800000e+16 
 
-#define DOMAIN          1
-#define SING            2
-#define OVERFLOW        3
-#define UNDERFLOW       4
-#define TLOSS           5
-#define PLOSS           6
+#if !defined(DOMAIN)
+# define DOMAIN          1
+# define SING            2
+# define OVERFLOW        3
+# define UNDERFLOW       4
+# define TLOSS           5
+# define PLOSS           6
+#endif
 
 /*
  * ANSI/POSIX

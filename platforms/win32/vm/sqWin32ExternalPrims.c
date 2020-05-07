@@ -11,12 +11,14 @@
 *     1) Currently, we're looking for DLLs named either sample.dll or sample32.dll
 *
 *****************************************************************************/
+
 #include <Windows.h>
 #include <stdio.h>
 #include <assert.h>
 #include "sq.h"
 
-HANDLE tryLoading(TCHAR *prefix, TCHAR *baseName, TCHAR *postfix)
+static HANDLE
+tryLoading(TCHAR *prefix, TCHAR *baseName, TCHAR *postfix)
 {
   TCHAR libName[300];
   HANDLE h;
@@ -34,33 +36,42 @@ HANDLE tryLoading(TCHAR *prefix, TCHAR *baseName, TCHAR *postfix)
   return h;
 }
 
-/* Return the module entry for the given module name */
-void *ioLoadModule(char *pluginName)
+/* Return the module entry for the given module name, or null if not found */
+void *
+ioLoadModule(char *pluginName)
 {
 	HANDLE handle;
 	TCHAR *name;
-
+	int nameLen = pluginName ? (int)strlen(pluginName) : 0;
+	int endsInDLL = nameLen > 4 && !strcmp(pluginName + nameLen - 4, ".dll");
+			
 #ifdef UNICODE
 	int len = MultiByteToWideChar(CP_UTF8, 0, pluginName, -1, NULL, 0);
-	if (len <= 0) return 0; /* invalid UTF8 ? */
+	if (len <= 0)
+		return 0; /* invalid UTF8 ? */
 	name = alloca(len*sizeof(WCHAR));
-	if (MultiByteToWideChar(CP_UTF8, 0, pluginName, -1, name, len) == 0) return 0;
+	if (MultiByteToWideChar(CP_UTF8, 0, pluginName, -1, name, len) == 0)
+		return 0;
 #else
 	name = pluginName;
 #endif
 
-	handle = tryLoading(TEXT(""),name,TEXT(""));
-	if(handle) return handle;
-	handle = tryLoading(TEXT(""),name,TEXT(".dll"));
-	if(handle) return handle;
-	handle = tryLoading(TEXT(""),name,TEXT("32.dll"));
-	if(handle) return handle;
-	handle = tryLoading(imagePath,name,TEXT(""));
-	if(handle) return handle;
-	handle = tryLoading(imagePath,name,TEXT(".dll"));
-	if(handle) return handle;
-	handle = tryLoading(imagePath,name,TEXT("32.dll"));
-	if(handle) return handle;
+	if ((handle = tryLoading(TEXT(""),name,TEXT(""))))
+		return handle;
+	if (!endsInDLL) {
+		if ((handle = tryLoading(TEXT(""),name,TEXT(".dll"))))
+			return handle;
+		if ((handle = tryLoading(TEXT(""),name,TEXT("32.dll"))))
+			return handle;
+	}
+	if ((handle = tryLoading(imagePath,name,TEXT(""))))
+		return handle;
+	if (!endsInDLL) {
+		if ((handle = tryLoading(imagePath,name,TEXT(".dll"))))
+			return handle;
+		if ((handle = tryLoading(imagePath,name,TEXT("32.dll"))))
+			return handle;
+	}
 	return 0;
 }
 
@@ -94,7 +105,6 @@ ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
 }
 #endif /* SPURVM */
 
-sqInt ioFreeModule(void *moduleHandle)
-{
-	return FreeLibrary((HANDLE) moduleHandle);
-}
+sqInt
+ioFreeModule(void *moduleHandle)
+{ return FreeLibrary((HANDLE) moduleHandle); }

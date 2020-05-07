@@ -70,7 +70,7 @@ NOBUILTIN:=-D_MT
 MACHINE:=x64
 
 DEFS:=	-D$(VM)VM=1 $(COGDEFS) $(MEMACCESS) $(WINVER) \
-		-DWIN32=1 -DWIN32_FILE_SUPPORT -DNO_ISNAN -DNO_SERVICE \
+		-DWIN32=1 -DUNICODE=1 -DWIN32_FILE_SUPPORT -DNO_ISNAN -DNO_SERVICE \
 		$(NDEBUG) -DLSB_FIRST -D'VM_NAME="$(VM_NAME)"' $(XDEFS) $(CROQUET)
 
 #############################################################################
