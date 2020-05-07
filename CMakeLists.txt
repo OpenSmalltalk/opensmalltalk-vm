@@ -7,7 +7,7 @@ include(macros.cmake)
 
 set(VERSION_MAJOR 8)
 set(VERSION_MINOR 4)
-set(VERSION_PATCH 1)
+set(VERSION_PATCH 2)
 
 set(APPNAME Pharo CACHE STRING "VM Application name")
 
