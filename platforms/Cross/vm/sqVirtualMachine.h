@@ -387,9 +387,10 @@ typedef struct VirtualMachine {
   sqInt (*classFloat32Array)(void);
   sqInt (*classFloat64Array)(void);
 #endif
-#if VM_PROXY_MINOR > 16 /* Spur isShorts and isLong64s testing support */
+#if VM_PROXY_MINOR > 16 /* Spur isShorts and isLong64s testing support, hash */
   sqInt (*isShorts)(sqInt oop);
   sqInt (*isLong64s)(sqInt oop);
+  sqInt (*identityHashOf)(sqInt oop);
 #endif
 } VirtualMachine;
 
