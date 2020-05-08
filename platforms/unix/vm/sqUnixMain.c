@@ -2032,8 +2032,6 @@ void imgInit(void)
 # define mtfsfi(fpscr)
 #endif
 
-extern void initGlobalStructure(void); // this is effectively null if a global register is not being used
-
 int
 main(int argc, char **argv, char **envp)
 {
@@ -2063,8 +2061,6 @@ main(int argc, char **argv, char **envp)
   }
 #endif
 
-	initGlobalStructure();
- 
  /* Allocate arrays to store copies of pointers to command line
      arguments.  Used by getAttributeIntoLength(). */
 

@@ -92,7 +92,6 @@ int sqVMOptionInstallExceptionHandlers = 1;
 int sqVMOptionBlockOnError = 0;
 int sqVMOptionBlockOnWarn = 0;
 
-extern void initGlobalStructure(void); // this is effectively null if a global register is not being used
 extern void findExecutablePath(const char *localVmName, char *dest, size_t destSize);
 
 extern void ioInitWindowSystem(sqInt headlessMode);
@@ -744,8 +743,6 @@ osvm_initialize(OSVMInstanceHandle *resultVMHandle)
     argCnt = 0;
     argVec = emptyArgumentVector;
     envVec = emptyEnvironmentVector;
-
-    initGlobalStructure();
 
     /* Initialize the list of internal primitives. */
     ioInitializeInternalPluginPrimitives();
