@@ -7,17 +7,19 @@ if [ "$1" = "-t" ]; then
 	TEST=-t
 	shift
 fi
-while [ -n "$1" -a  -d "$1" ]; do
-	$0 $TEST `git status --porcelain -- "$1" | grep "^\s*M" | sed 's/^\s*M *//'`
-	shift
+for f in "$@"; do
+	if [ -d "$f" ]; then
+		$0 $TEST `git status --porcelain -- "$f" | grep "^\s*M" | sed 's/^\s*M *//'`
+	else
+		case `git status --porcelain -- "$f"` in
+		*M*)	;;
+		*)	continue
+		esac
+		RESULT="`git diff -- "$f" | grep '^[+-]' | egrep -v ' VMMaker[-.][a-z][a-z-]*\.[0-9][0-9]* uuid:| Cog[-.][a-z][a-z]*\.[0-9][0-9]* uuid:| Qwaq-Plugins[-.][a-z][a-z]*\.[0-9][0-9]* uuid:| VMMaker[-.][a-z][a-z-]*\.[0-9][0-9]* \([ie]\)|static const char \*moduleName.*" INT_EXT;| Cog[-.][a-z][a-z-]*\.[0-9][0-9]* \([ie]\)| Qwaq-Plugins[-.][a-z][a-z]*\.[0-9][0-9]* \([ie]\)| VMConstruction-Plugins-OSProcessPlugin[a-z.-][a-z.-]*\.[0-9][0-9]* | Sound[-.][a-z][a-z]*\.[0-9][0-9]* uuid:|^\-\-\-|^\+\+\+|^[+-]$'`"
+		if [ -z "$TEST" ]; then
+			test -z "$RESULT" && (echo reverting "$f"; git checkout -- "$f")
+		else
+			git diff -- "$f" | grep '^[+-]' | egrep -v ' VMMaker[-.][a-z][a-z-]*\.[0-9][0-9]* uuid:| Cog[-.][a-z][a-z]*\.[0-9][0-9]* uuid:| Qwaq-Plugins[-.][a-z][a-z]*\.[0-9][0-9]* uuid:| VMMaker[-.][a-z][a-z-]*\.[0-9][0-9]* \([ie]\)|static const char \*moduleName.*" INT_EXT;| Cog[-.][a-z][a-z-]*\.[0-9][0-9]* \([ie]\)| Qwaq-Plugins[-.][a-z][a-z]*\.[0-9][0-9]* \([ie]\)| VMConstruction-Plugins-OSProcessPlugin[a-z.-][a-z.-]*\.[0-9][0-9]* | Sound[-.][a-z][a-z]*\.[0-9][0-9]* uuid:|^\-\-\-|^\+\+\+|^[+-]$'
+		fi
+	fi
 done
-case `git status --porcelain -- "$1"` in
-*M*)	;;
-*)	exit 0
-esac
-RESULT="`git diff -- "$1" | grep '^[+-]' | egrep -v ' VMMaker[-.][a-z][a-z-]*\.[0-9][0-9]* uuid:| Cog[-.][a-z][a-z]*\.[0-9][0-9]* uuid:| Qwaq-Plugins[-.][a-z][a-z]*\.[0-9][0-9]* uuid:| VMMaker[-.][a-z][a-z-]*\.[0-9][0-9]* \([ie]\)|static const char \*moduleName.*" INT_EXT;| Cog[-.][a-z][a-z-]*\.[0-9][0-9]* \([ie]\)| Qwaq-Plugins[-.][a-z][a-z]*\.[0-9][0-9]* \([ie]\)| VMConstruction-Plugins-OSProcessPlugin[a-z.-][a-z.-]*\.[0-9][0-9]* | Sound[-.][a-z][a-z]*\.[0-9][0-9]* uuid:|^\-\-\-|^\+\+\+|^[+-]$'`"
-if [ -z "$TEST" ]; then
-	test -z "$RESULT" && (echo reverting "$1"; git checkout -- "$1")
-else
-	git diff -- "$1" | grep '^[+-]' | egrep -v ' VMMaker[-.][a-z][a-z-]*\.[0-9][0-9]* uuid:| Cog[-.][a-z][a-z]*\.[0-9][0-9]* uuid:| Qwaq-Plugins[-.][a-z][a-z]*\.[0-9][0-9]* uuid:| VMMaker[-.][a-z][a-z-]*\.[0-9][0-9]* \([ie]\)|static const char \*moduleName.*" INT_EXT;| Cog[-.][a-z][a-z-]*\.[0-9][0-9]* \([ie]\)| Qwaq-Plugins[-.][a-z][a-z]*\.[0-9][0-9]* \([ie]\)| VMConstruction-Plugins-OSProcessPlugin[a-z.-][a-z.-]*\.[0-9][0-9]* | Sound[-.][a-z][a-z]*\.[0-9][0-9]* uuid:|^\-\-\-|^\+\+\+|^[+-]$'
-fi
