@@ -45,6 +45,10 @@ ifdef BIT_IDENTICAL_FLOATING_POINT
 COGDEFS:= $(COGDEFS) -DBIT_IDENTICAL_FLOATING_POINT=1
 endif
 
+ifeq ($(COMPILER_TO_USE),clang)
+COGDEFS:=$(COGDEFS) -mno-stack-arg-probe
+endif
+
 # Set minimum version to WindowsXP (see /cygwin/usr/include/w32api/w32api.h)
 WINVER:=-D_WIN32_WINNT=0x0501 -DWINVER=0x0501
 

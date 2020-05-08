@@ -1,0 +1,3 @@
+EXTRALIBS:=-lopengl32 -lddraw -ldxguid -lgdi32 -lOle32
+
+include ../common/Makefile.plugin

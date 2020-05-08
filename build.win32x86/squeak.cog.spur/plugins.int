@@ -2,7 +2,6 @@
 INTERNAL_PLUGINS = \
 ADPCMCodecPlugin \
 AsynchFilePlugin \
-B3DAcceleratorPlugin \
 B2DPlugin \
 BitBltPlugin \
 BMPReadWriterPlugin \
