@@ -15,6 +15,7 @@ DSAPrims \
 FFTPlugin \
 FileCopyPlugin \
 FilePlugin \
+Float64ArrayPlugin \
 FloatArrayPlugin \
 #FloatMathPlugin \
 HostWindowPlugin \
