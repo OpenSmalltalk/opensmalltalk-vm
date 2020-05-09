@@ -4,7 +4,6 @@
 #############################################################################
 # Makefile for SqueakSSL plugin.
 
-DL:=/DEFAULTLIB:
-EXTRALIBS:= $(DL)crypt32 $(DL)secur32
+EXTRALIBS:=crypt32.lib secur32.lib
 
 include ../common/Makefile.msvc.plugin

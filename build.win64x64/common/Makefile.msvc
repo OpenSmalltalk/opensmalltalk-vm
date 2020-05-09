@@ -254,7 +254,7 @@ $(OBJDIR)/%.lib: $(call plugin-makefile,$(*F))
 	$(RM) -f $(BUILD)/vm/$(*F).ignore
 	$(MAKE) $(MFLAGS) -I../common BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) \
-		"VM=$(VM)" "VM_NAME=$(VM_NAME)" \
+		"VM=$(VM)" "VM_NAME=$(VM_NAME)" INTERNAL_PLUGIN=1 TPDIR=$(TPDIR) \
 		CONFIGURATION=$(CONFIGURATION) ARCH=$(ARCH) TOOLPREFIX=$(TOOLPREFIX) \
 		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
 		THIRDPARTYOUTDIR=$(THIRDPARTYOUTDIR) \
@@ -266,7 +266,7 @@ $(OBJDIR)/%.dll: $(call plugin-makefile,$(*F))
 	$(RM) -f $(BUILD)/$(*F).ignore
 	$(MAKE) $(MFLAGS) -I../common BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) \
-		"VM=$(VM)" "VM_NAME=$(VM_NAME)" \
+		"VM=$(VM)" "VM_NAME=$(VM_NAME)" EXTERNAL_PLUGIN=1 TPDIR=$(TPDIR) \
 		CONFIGURATION=$(CONFIGURATION) ARCH=$(ARCH) TOOLPREFIX=$(TOOLPREFIX) \
 		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
 		THIRDPARTYOUTDIR=$(THIRDPARTYOUTDIR) \
