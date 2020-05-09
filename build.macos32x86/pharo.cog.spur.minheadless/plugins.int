@@ -10,6 +10,7 @@ DSAPrims \
 DropPlugin \
 FFTPlugin \
 FilePlugin \
+Float64ArrayPlugin \
 FloatArrayPlugin \
 GeniePlugin \
 IA32ABI \
