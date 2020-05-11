@@ -14,16 +14,26 @@ VMSpurOldSpaceGarbageCollectorTest >> isValidFirstBridge [
 { #category : #tests }
 VMSpurOldSpaceGarbageCollectorTest >> testAnOldObjectNotReferencedShouldGoToOblivion [
 
-	| oldFreeSpaceSize |
+	| oldFreeSpaceSize obj2 keptObjectSize |
+	
+	"The free objects are only reclaimed when there is a object after it. 
+	For example if I have a free object and then only free space, the compactor assumes 
+	that the heap is compacted, but it does not compact the free list. So the last free chunk is never 
+	count on.
+	This is a ""feature"" of the compactor. Changing the compactor strategy may change this behavior."
 	
 	memory fullGC.
 	oldFreeSpaceSize := memory totalFreeListBytes.
-	1halt.	
 	
 	self newOldSpaceObjectWithSlots: 0.	
+	obj2 := self newOldSpaceObjectWithSlots: 0.
+	
+	self keepObjectInVMVariable1: obj2.
+	keptObjectSize := memory bytesInObject: obj2.
+	
 	memory fullGC.
 	
-	self assert: memory totalFreeListBytes equals: oldFreeSpaceSize.
+	self assert: memory totalFreeListBytes equals: oldFreeSpaceSize - keptObjectSize.
 ]
 
 { #category : #tests }

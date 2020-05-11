@@ -84,6 +84,8 @@ VMSpurInitializedOldSpaceTest >> initializeOldSpaceForFullGC [
 	memory storePointer: 16 ofObject: memory classTableFirstPage withValue: ourArrayClass.
 	memory shrinkThreshold: 0.
 	memory growHeadroom: 10*1024*1024.
+	
+	memory flushNewSpace.
 ]
 
 { #category : #helpers }
