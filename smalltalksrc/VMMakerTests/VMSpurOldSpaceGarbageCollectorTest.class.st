@@ -37,7 +37,20 @@ VMSpurOldSpaceGarbageCollectorTest >> testAnOldObjectNotReferencedShouldGoToObli
 ]
 
 { #category : #tests }
-VMSpurOldSpaceGarbageCollectorTest >> testAnOldObjectReferencedFromVMVariableShouldBeKeptAndNotMove [
+VMSpurOldSpaceGarbageCollectorTest >> testAnOldObjectReferencedFromVMVariableShouldBeKept [
+	| anObjectOop |
+	
+	anObjectOop := self newOldSpaceObjectWithSlots: 0.
+
+	self keepObjectInVMVariable1: anObjectOop.
+	
+	memory fullGC.
+	
+	self deny: (memory isFreeObject: anObjectOop)
+]
+
+{ #category : #tests }
+VMSpurOldSpaceGarbageCollectorTest >> testAnOldObjectReferencedFromVMVariableShouldBeNotMoved [
 
 	| anObjectOop |
 	
