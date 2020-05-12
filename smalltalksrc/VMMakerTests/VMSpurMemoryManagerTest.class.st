@@ -150,7 +150,7 @@ VMSpurMemoryManagerTest >> setUp [
 	Get total size be a multiple of 4K so Unicorn CPU emulator accepts it"
 	oldSpaceSize := 999 * 1024.
  	newSpaceSize := 1 * 1024.
-	stackSize := 16 * 1024.
+	stackSize := 9 * 4096.
 	initialAddress := 16r1000000.
 	
 	objectHeaderSize := 8 "bytes".

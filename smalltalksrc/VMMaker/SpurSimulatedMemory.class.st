@@ -62,6 +62,16 @@ SpurSimulatedMemory >> long64At: address [
 		signed: true
 ]
 
+{ #category : #accessing }
+SpurSimulatedMemory >> longAt: address put: aValue [
+
+	^ memoryObject
+		integerAt: address - initialAddress
+		put: aValue
+		size: 4
+		signed: true
+]
+
 { #category : #converting }
 SpurSimulatedMemory >> memoryObject [
 	

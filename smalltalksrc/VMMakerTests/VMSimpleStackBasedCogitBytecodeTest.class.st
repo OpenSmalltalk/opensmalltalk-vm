@@ -359,10 +359,10 @@ VMSimpleStackBasedCogitBytecodeTest >> framePointerRegisterValue: aValue [
 VMSimpleStackBasedCogitBytecodeTest >> generateCogMethod: aBlockClosure selector: anSelectorOop [ 
 
 	| targetCog targetCogAddress |
-	targetCog := cogit cogMethodSurrogateAt: (cogit methodZone allocate: (cogit sizeof: CogMethod)).
+	targetCog := cogit cogMethodSurrogateAt: (cogit methodZone allocate: cogit entryOffset).
 	targetCog selector: anSelectorOop.
 
-	targetCogAddress := self compile: [ cogit RetN: 0 ].	
+	targetCogAddress := self compile: aBlockClosure.	
 	
 	self assert: targetCog asInteger + cogit entryOffset equals: targetCogAddress.
 	
@@ -630,15 +630,23 @@ VMSimpleStackBasedCogitBytecodeTest >> setUp [
 	
 	"We don't access its contents, but we need it to be after nil, true and false"
 	memory hiddenRootsObject: (self newObjectWithSlots: 0).
-	
-	cogit methodZone manageFrom: initialAddress to: initialAddress + 256.
-	cogit methodZoneBase: initialAddress.
-	cogit minCallAddress: initialAddress.
-	
+
 	"Initializing Unicorn processor"
 	self setUpCPUSimulator.
 	self initializeStackMemory.
 	self initializeInitialStackFrame.
+	
+	cogit methodZone manageFrom: initialAddress to: initialAddress + self initialCodeSize.
+	cogit methodZoneBase: initialAddress.
+	cogit minCallAddress: initialAddress.
+	cogit cogCodeBase: initialAddress.
+	memory coInterpreter cogCodeSize: self initialCodeSize.
+	memory coInterpreter heapBase: stackMemoryEndAddress.
+	
+	memory coInterpreter numStackPages: 8.
+
+	self initializeOldSpaceForScavenger.	
+
 ]
 
 { #category : #running }
@@ -662,9 +670,27 @@ VMSimpleStackBasedCogitBytecodeTest >> stackPointerRegisterValue: aValue [
 ]
 
 { #category : #'tests - PIC' }
+VMSimpleStackBasedCogitBytecodeTest >> testCalculateClosePICSize [
+
+	"Calculate the size of the Closed Pic"
+	cogit ceCPICMissTrampoline: 16r10.
+	cogit cePICAbortTrampoline: 16r11.
+	cogit ceMethodAbortTrampoline: 16r12.
+	
+	cogit computeEntryOffsets.
+	cogit generateClosedPICPrototype.
+	
+	self assert: cogit closedPICSize isNotNil
+]
+
+{ #category : #'tests - PIC' }
 VMSimpleStackBasedCogitBytecodeTest >> testCreatingAPicWithTwoCogMethodsHastheTwoMethods [
 
 	| selector cogMethod1 cogMethod2 cogMethod2Tag pic |	
+
+	self testCalculateClosePICSize.
+	
+	cogit methodZone manageFrom: cogit methodZoneBase to: cogit methodZone effectiveLimit.
 
 	selector := self newOldSpaceObjectWithSlots: 0.
 	cogMethod1 := self generateCogMethod: [ cogit RetN: 0 ] selector: selector.

@@ -3956,6 +3956,18 @@ Cogit >> ceMalloc: size [
 ]
 
 { #category : #accessing }
+Cogit >> ceMethodAbortTrampoline: anInteger [ 
+	<doNotGenerate>
+	ceMethodAbortTrampoline := anInteger
+]
+
+{ #category : #accessing }
+Cogit >> cePICAbortTrampoline: anInteger [ 
+	<doNotGenerate>
+	cePICAbortTrampoline := anInteger
+]
+
+{ #category : #accessing }
 Cogit >> ceReturnToInterpreterPC [
 	<api>
 	<cmacro: '() ((usqInt)ceReturnToInterpreterTrampoline)'>

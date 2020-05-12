@@ -861,6 +861,12 @@ SimpleStackBasedCogit >> cPICMissTrampolineFor: numArgs [
 	^ceCPICMissTrampoline
 ]
 
+{ #category : #accessing }
+SimpleStackBasedCogit >> ceCPICMissTrampoline: anAddress [ 
+	
+	ceCPICMissTrampoline := anAddress
+]
+
 { #category : #trampolines }
 SimpleStackBasedCogit >> ceClosureCopyDescriptor: descriptor [ "<Integer>" 
 	^coInterpreter

@@ -77,7 +77,8 @@ Class {
 		'performFilters',
 		'eventQueue',
 		'expectedSends',
-		'expecting'
+		'expecting',
+		'bootstrapping'
 	],
 	#classVars : [
 		'ByteCountsPerMicrosecond',
@@ -243,6 +244,7 @@ CogVMSimulator >> bindProcess: aProcess toId: newId [
 
 { #category : #accessing }
 CogVMSimulator >> bootstrapping: aBoolean [
+	bootstrapping := aBoolean.
 	objectMemory ifNotNil:
 		[objectMemory bootstrapping: aBoolean]
 ]
@@ -1456,6 +1458,7 @@ CogVMSimulator >> initialize [
 	super initialize.
 
 	transcript := Transcript.
+	bootstrapping := false.
 
 	objectMemory ifNil:
 		[objectMemory := self class objectMemoryClass simulatorClass new].
@@ -1678,6 +1681,14 @@ CogVMSimulator >> interpret [
 	self externalizeIPandSP.
 	^nil
 
+]
+
+{ #category : #'stack pages' }
+CogVMSimulator >> interpreterAllocationReserveBytes [
+
+	^ bootstrapping
+		ifTrue: [ 0 ]
+		ifFalse: [ super interpreterAllocationReserveBytes ]
 ]
 
 { #category : #'interpreter shell' }
