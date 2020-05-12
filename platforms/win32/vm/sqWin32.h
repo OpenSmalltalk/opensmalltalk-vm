@@ -398,47 +398,6 @@ void pluginHandleEvent(MSG* msg);
 int recordDragDropEvent(HWND wnd, int dragType, int x, int y, int numFiles);
 #endif
 
-/****************************************************************************/
-/* few addtional definitions for those having older include files           */
-/****************************************************************************/
-#if (WINVER < 0x0400) && !defined(_GNU_H_WINDOWS_H)
-/* CreateWindowEx params since Win95/NT4 */
-#define WS_EX_WINDOWEDGE        0x00000100L
-#define WS_EX_CLIENTEDGE        0x00000200L
-#define WS_EX_OVERLAPPEDWINDOW  (WS_EX_WINDOWEDGE | WS_EX_CLIENTEDGE)
-#define WS_EX_APPWINDOW         0x00040000L
-#define WS_EX_TOOLWINDOW        0x00000080L
-#define WS_EX_CONTEXTHELP       0x00000400L
-
-/* WM_USERCHANGED since Win95/NT4 */
-#define WM_USERCHANGED                  0x0054
-
-/* Shell_NoifiyIcon() for the system tray on Win95/NT4 */
-typedef struct _NOTIFYICONDATAA {
-        DWORD cbSize;
-        HWND hWnd;
-        UINT uID;
-        UINT uFlags;
-        UINT uCallbackMessage;
-        HICON hIcon;
-        CHAR   szTip[64];
-} NOTIFYICONDATA, *PNOTIFYICONDATA;
-
-#define NIM_ADD         0x00000000
-#define NIM_MODIFY      0x00000001
-#define NIM_DELETE      0x00000002
-
-#define NIF_MESSAGE     0x00000001
-#define NIF_ICON        0x00000002
-#define NIF_TIP         0x00000004
-
-#endif /* WINVER < 0x0400 */
-
-/* WM_MOUSEWHEEL since Win98/NT4 */
-#ifndef WM_MOUSEWHEEL
-#define WM_MOUSEWHEEL 0x020A
-#endif
-
 /******************************************************/
 /* Profiling support                                  */
 /******************************************************/
