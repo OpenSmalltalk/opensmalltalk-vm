@@ -242,6 +242,12 @@ CogVMSimulator >> bindProcess: aProcess toId: newId [
 ]
 
 { #category : #accessing }
+CogVMSimulator >> bootstrapping: aBoolean [
+	objectMemory ifNotNil:
+		[objectMemory bootstrapping: aBoolean]
+]
+
+{ #category : #accessing }
 CogVMSimulator >> breakCount [
 	^breakCount
 ]

@@ -2744,6 +2744,11 @@ CoInterpreter >> cogCodeSize [
 	^cogCodeSize
 ]
 
+{ #category : #accessing }
+CoInterpreter >> cogCodeSize: anInteger [ 
+	cogCodeSize := anInteger
+]
+
 { #category : #'compiled methods' }
 CoInterpreter >> cogMethodOf: aMethodOop [
 	<api>
@@ -4107,6 +4112,11 @@ CoInterpreter >> handleMNU: selectorIndex InMachineCodeTo: rcvr classForMessage:
 CoInterpreter >> heapBase [
 	<cmacro: '() heapBase'>
 	^heapBase
+]
+
+{ #category : #accessing }
+CoInterpreter >> heapBase: anInteger [ 
+	heapBase := anInteger
 ]
 
 { #category : #'message sending' }

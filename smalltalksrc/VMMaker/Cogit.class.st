@@ -4544,6 +4544,13 @@ Cogit >> cogCodeBase [
 	^codeBase
 ]
 
+{ #category : #accessing }
+Cogit >> cogCodeBase: anInteger [ 
+	<doNotGenerate>
+	codeBase := anInteger
+	
+]
+
 { #category : #'profiling primitives' }
 Cogit >> cogCodeConstituents: withDetails [
 	"Answer the contents of the code zone as an array of pair-wise element, address in ascending address order.

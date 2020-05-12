@@ -88,60 +88,6 @@ VMSpurInitializedOldSpaceTest >> initializeOldSpaceForFullGC [
 	memory flushNewSpace.
 ]
 
-{ #category : #helpers }
-VMSpurInitializedOldSpaceTest >> initializeOldSpaceForScavenger [
-
-	| freeListOop firstClassTablePage |
-	memory coInterpreter bootstrapping: true.
-
-	"Initialize old space with free list, class table, hidden roots and remembered set to be able to scavenge"
-	memory initializeFreeList.
-	memory segmentManager collapseSegmentsPostSwizzle.
-	memory updateFreeLists.
-	memory initializeOldSpaceFirstFree: memory freeOldSpaceStart.
-
-	"Create a nil object required to initialize several fields"
-	memory nilObject: (self newOldSpaceObjectWithSlots: 0).
-	"Create false object required to initialize several fields"
-	memory falseObject: (self newOldSpaceObjectWithSlots: 0).
-	"Create true object required to initialize several fields"
-	memory trueObject: (self newOldSpaceObjectWithSlots: 0).
-
-	"Initialize Stack"
-	memory coInterpreter desiredNumStackPages: 8.
-	memory coInterpreter initStackPages.
-
-	"Initialize Special Root objects"
-	memory coInterpreter method: memory nilObject.
-	memory coInterpreter instructionPointer: memory nilObject.
-	memory coInterpreter newMethod: memory nilObject.
-	memory coInterpreter profileProcess: memory nilObject.
-	memory coInterpreter profileMethod: memory nilObject.
-	memory coInterpreter profileSemaphore: memory nilObject.
-	memory mournQueue: memory nilObject.
-	memory specialObjectsOop: memory nilObject.
-		
-	freeListOop := memory initializeFreeListInOldSpace: true.
-	memory initializeFreeSpacePostLoad: freeListOop.
-	memory computeFreeSpacePostSwizzle.
-		
-	memory endOfMemory: memory endOfMemory + memory bridgeSize.
-	
-	memory initializeOldSpaceFirstFree: (memory addressAfter: freeListOop).
-	
-	memory allocateClassTable.
-	
-	firstClassTablePage := memory fetchPointer: 0 ofObject: memory hiddenRootsObject.
-	
-	memory scavenger initializeRememberedSet.
-	memory scavenger remember: memory hiddenRootsObject.
-	memory scavenger remember: firstClassTablePage.
-	memory specialObjectsOop: (self newObjectWithSlots: 20).
-	
-	memory scavengingGCTenuringIf: 1.
-	self deny: memory needGCFlag.
-]
-
 { #category : #tests }
 VMSpurInitializedOldSpaceTest >> keepObjectInVMVariable1: ephemeronObjectOop [
 	memory coInterpreter newMethod: ephemeronObjectOop

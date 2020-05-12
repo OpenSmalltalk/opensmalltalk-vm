@@ -370,6 +370,11 @@ VMSimpleStackBasedCogitBytecodeTest >> generateCogMethod: aBlockClosure selector
 
 ]
 
+{ #category : #accessing }
+VMSimpleStackBasedCogitBytecodeTest >> initialCodeSize [
+	^ 4 * 1024
+]
+
 { #category : #running }
 VMSimpleStackBasedCogitBytecodeTest >> initializeInitialStackFrame [
 
@@ -386,12 +391,8 @@ VMSimpleStackBasedCogitBytecodeTest >> initializeInitialStackFrame [
 { #category : #running }
 VMSimpleStackBasedCogitBytecodeTest >> initializeStackMemory [.
 
-	"Let's add a 4K stack location far away"
-	stackMemory := ByteArray new: 4096.
-	stackMemoryStartAddress := 16r9000000.
-	stackMemoryEndAddress := stackMemoryStartAddress + stackMemory size.
-
-	unicorn mapMemory: stackMemory at: stackMemoryStartAddress.
+	stackMemoryStartAddress := initialAddress + self initialCodeSize.
+	stackMemoryEndAddress := stackMemoryStartAddress + stackSize.
 
 	"The stack pointer is at the top of the stack"
 	unicorn stackPointerRegisterValue: stackMemoryEndAddress.
@@ -665,7 +666,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testCreatingAPicWithTwoCogMethodsHastheTw
 
 	| selector cogMethod1 cogMethod2 cogMethod2Tag pic |	
 
-	selector := memory oldSpaceStart.
+	selector := self newOldSpaceObjectWithSlots: 0.
 	cogMethod1 := self generateCogMethod: [ cogit RetN: 0 ] selector: selector.
 	cogMethod2 := self generateCogMethod: [ cogit RetN: 0 ] selector: selector.
 
