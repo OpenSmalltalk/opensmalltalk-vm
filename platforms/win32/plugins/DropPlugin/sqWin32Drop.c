@@ -776,14 +776,10 @@ char *dropRequestFileName(int dropIndex) {
 
 sqInt dropRequestFileHandle(sqInt dropIndex) {
   sqInt fileHandle;
-  int wasBrowserMode;
   char *dropName = dropRequestFileName(dropIndex);
   if(!dropName)
     return interpreterProxy->nilObject();
   fileHandle = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classByteArray(), fileRecordSize());
-  wasBrowserMode = fBrowserMode;
-  fBrowserMode = false;
   sqFileOpen(fileValueOf(fileHandle),dropName, strlen(dropName), 0);
-  fBrowserMode = wasBrowserMode;
   return fileHandle;
 }
