@@ -319,9 +319,7 @@ beatThreadStateMachine(void *careLess)
 											? beatMilliseconds
 											: INFINITE);
 		if (res == WAIT_TIMEOUT
-#if !defined(_WIN32_WCE) // for pulsing by timeSetEvent below
-		 || res == WAIT_OBJECT_0
-#endif
+		 || res == WAIT_OBJECT_0 /* for pulsing by timeSetEvent below */
 		   )
 			heartbeat();
 		else if (res == WAIT_FAILED)
@@ -406,7 +404,6 @@ ioSetHeartbeatMilliseconds(int ms)
 							 GetLastError());
 		}
 	}
-#if !defined(_WIN32_WCE)
 	/* Belt and braces.  Use timeSetEvent to signal beatSemaphore periodically
 	 * to avoid cases where Windows doesn't honour the timeout in a timely
 	 * fashion in the above WaitForSingleObject.
@@ -429,19 +426,16 @@ ioSetHeartbeatMilliseconds(int ms)
 								TIME_PERIODIC |
 								TIME_CALLBACK_EVENT_PULSE);
 	}
-#endif /* defined(_WIN32_WCE) */
 }
 
 void
 ioReleaseTime(void)
 {
-#if !defined(_WIN32_WCE)
 	if (timerID) {
 		timeKillEvent(timerID);
 		timeEndPeriod(dwTimerPeriod);
 		timerID = 0;
 	}
-#endif /* !defined(_WIN32_WCE) */
 }
 
 

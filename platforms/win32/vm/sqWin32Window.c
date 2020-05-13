@@ -315,16 +315,14 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
       HandlePrefsMenu(cmd);
       break;
     }
-#if !defined(_WIN32_WCE)
     if(cmd == SC_MINIMIZE) {
       if(fHeadlessImage) ShowWindow(stWindow, SW_HIDE);
       else return DefWindowProcW(hwnd, message, wParam, lParam);
       break;
     }
-#endif /* defined(_WIN32_WCE) */
     if(cmd == SC_CLOSE) {
 #if NewspeakVM
-		/* Newspeak doesn't easnt to quit if the main window is closed.  Only
+		/* Newspeak doesn't want to quit if the main window is closed.  Only
 		 * when the last native window is closed.
 		 */
 		if(fEnableAltF4Quit)
@@ -587,8 +585,6 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
     }
     break;
 
-#if !defined(_WIN32_WCE)
-    /* Don't change the cursor or system tray on WinCE */
     /* cursor redraw */
   case WM_SETCURSOR:
     /* keep currentCursor */
@@ -610,7 +606,7 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
       BringWindowToTop(stWindow);
     }
     return 0;
-#endif /* !defined(_WIN32_WCE) */
+
     /* Focus handling */
   case WM_SETFOCUS:
     fHasFocus = 1;
@@ -1002,18 +998,6 @@ void SetupWindows()
   /* Force Unicode WM_CHAR */
   SetWindowLongPtrW(stWindow,GWLP_WNDPROC,(LONG_PTR)MainWndProcW);
 
-
-#if defined(_WIN32_WCE)
-  /* WinCE does not support RegisterClassEx(), so we must set
-     the small icon after creating the window. */
-  SendMessage(stWindow,WM_SETICON, FALSE,
-	      (LPARAM)LoadImage(hInstance, MAKEINTRESOURCE(1),
-				IMAGE_ICON, 16, 16, 0));
-
-  consoleWindow = NULL; /* We do not use console under WinCE */
-
-#else /* defined(_WIN32_WCE) */
-
   consoleWindow = CreateWindowEx(0,
 				 TEXT("EDIT"),
 				 TEXT(""),
@@ -1027,7 +1011,6 @@ void SetupWindows()
 				 NULL,
 				 hInstance,
 				 NULL);
-#endif /* defined(_WIN32_WCE) */
 
   /* Modify the system menu for any VM options */
   CreatePrefsMenu();
@@ -1046,8 +1029,6 @@ void SetupWindows()
   ioScreenSize(); /* compute new rect initially */
 }
 
-
-#if !defined(_WIN32_WCE)  /* Unused under WinCE */
 
 void SetWindowSize(void) {
   RECT r, workArea;
@@ -1096,8 +1077,6 @@ void SetWindowSize(void) {
   		SWP_NOZORDER | SWP_HIDEWINDOW);
 
 }
-
-#endif /* !defined(_WIN32_WCE) */
 
 /****************************************************************************/
 /*              Keyboard and Mouse                                          */
@@ -1540,17 +1519,6 @@ int recordMouseDown(WPARAM wParam, LPARAM lParam)
 {
   int stButtons= 0;
 
-#if defined(_WIN32_WCE)
-
-  if (wParam & MK_LBUTTON) stButtons |= 4;
-  if (stButtons == 4)	/* red button honours the modifiers */
-    {
-      if (wParam & MK_CONTROL) stButtons = 1;	/* blue button if CTRL down */
-      else if (GetKeyState(VK_LMENU) & 0x8000) stButtons = 2;	/* yellow button if META down */
-    }
-
-#else /* defined(_WIN32_WCE) */
-
   if(GetKeyState(VK_LBUTTON) & 0x8000) stButtons |= 4;
   if(GetKeyState(VK_MBUTTON) & 0x8000) {
     if(f1ButtonMouse) stButtons |= 4;
@@ -1560,8 +1528,6 @@ int recordMouseDown(WPARAM wParam, LPARAM lParam)
     if(f1ButtonMouse) stButtons |= 4;
     else stButtons |= f3ButtonMouse ? 1 : 2;
   }
-
-#endif /* defined(_WIN32_WCE) */
 
   buttonState = stButtons & 0x7;
   return 1;
@@ -1811,11 +1777,6 @@ sqInt ioScreenDepth(void) {
 
 sqInt ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt offsetX, sqInt offsetY)
 {
-#if !defined(_WIN32_WCE)
-	/****************************************************/
-	/* Only one cursor is defined under CE...           */
-	/* (the wait cursor)                         :-(    */
-	/****************************************************/
   static unsigned char *andMask=0,*xorMask=0;
   static int cx=0,cy=0,cursorSize=0;
   int i;
@@ -1874,7 +1835,7 @@ sqInt ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt of
     {
       printLastError(TEXT("CreateCursor failed"));
     }
-#endif /* !defined(_WIN32_WCE) */
+
   return 1;
 }
 
@@ -1930,24 +1891,18 @@ sqInt ioSetFullScreen(sqInt fullScreen) {
   }
   if(fullScreen)
     {
-#if !defined(_WIN32_WCE)
       SetWindowLongPtr(stWindow,GWL_STYLE, WS_POPUP | WS_CLIPCHILDREN);
       SetWindowLongPtr(stWindow,GWL_EXSTYLE, WS_EX_APPWINDOW);
       ShowWindow(stWindow, SW_SHOWMAXIMIZED);
-#else /* !defined(_WIN32_WCE) */
-      ShowWindow(stWindow,SW_SHOWNORMAL);
-#endif /* !defined(_WIN32_WCE) */
       setFullScreenFlag(1);
     }
   else
     {
-#if !defined(_WIN32_WCE)
       ShowWindow(stWindow, SW_RESTORE);
       ShowWindow(stWindow, SW_HIDE);
       SetWindowLongPtr(stWindow,GWL_STYLE, WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN);
       SetWindowLongPtr(stWindow,GWL_EXSTYLE, WS_EX_APPWINDOW /* | WS_EX_OVERLAPPEDWINDOW */ );
       SetWindowPos(stWindow,0,0,0,0,0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED | SWP_NOREDRAW);
-#endif /* !defined(_WIN32_WCE) */
       ShowWindow(stWindow,SW_SHOWNORMAL);
       setFullScreenFlag(0);
     }
@@ -1986,15 +1941,8 @@ int reverse_image_bytes(unsigned int* dst, unsigned int *src,
 {
   int pitch, first, last, nWords, delta, yy;
 
-  /* --- SPECIAL HACK FOR WINDOWS CE --- */
-#ifdef _WIN32_WCE
-  int reverseBits = 0;
-  if(depth == 1)
-    reverseBits = 1;
-#else
   /* compiler will optimize it away */
   static const int reverseBits = 0;
-#endif
 
   /* note: all  of the below are in DWORDs not BYTEs */
   pitch = ((width * depth) + 31) / 32;
@@ -2125,9 +2073,6 @@ sqInt ioHasDisplayDepth(sqInt depth) {
 
 sqInt ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenFlag)
 {
-#ifdef _WIN32_WCE
-  return 0; /* Not implemented on CE */
-#else
   RECT r;
 #ifdef USE_DIRECT_X
   static int wasFullscreen = 0;
@@ -2165,7 +2110,6 @@ sqInt ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenF
 	       SWP_NOMOVE | SWP_NOZORDER);
   SetFocus(stWindow);
   return 1;
-#endif /* _WIN32_WCE */
 }
 
 /* force an update of the squeak window if using deferred updates */
@@ -2582,7 +2526,7 @@ sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
   }
   PROFILE_END(ticksForReversal)
 #endif /* NO_BYTE_REVERSAL */
-#endif /* defined(_WIN32_WCE) */
+#endif /* defined(USE_DIB_SECTIONS) */
   return 1;
 }
 
@@ -2970,28 +2914,6 @@ int isLocalFileName(TCHAR *fileName)
   return 1;
 }
 
-#if defined(_WIN32_WCE)
-	/* WinCE does not support short file names, and has
-	   no concept of a current directory. Space is at a
-	   premium, the file system is small, and we are unlikely
-	   to have a full sources file anyway (too big). All these
-	   factors means that we stick with a simpler scheme, of
-	   either requiring the image name to be fully pathed, or
-	   if not, popping up a file open dialog */
-
-void SetupFilesAndPath(){ 
-  char *tmp;
-  WCHAR *wtmp;
-  strcpy(imagePathA, imageNameA);
-  wcscpy(imagePathW, imageNameW);
-  tmp = strrchr(imagePathA,'\\');
-  if(tmp) tmp[1] = 0;
-  wtmp = wcsrchr(imagePathW, '\\');
-  if (wtmp) wtmp[1] = 0;
-}
-
-#else /* defined(_WIN32_WCE) */
-
 void SetupFilesAndPath() {
   char *tmp;
   WCHAR *wtmp;
@@ -3021,8 +2943,6 @@ void SetupFilesAndPath() {
   if(tmp) tmp[1] = 0;
   if (wtmp) wtmp[1] = 0;
 }
-
-#endif /* !defined(_WIN32_WCE) */
 
 /* SqueakImageLength():
    Return the length of the image if it is a valid Squeak image file.
