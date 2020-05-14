@@ -879,7 +879,11 @@ sqInt  fileHandleType(HANDLE fdHandle) {
 	int size = sizeof(FILE_NAME_INFO) + sizeof(WCHAR) * MAX_PATH;
 	FILE_NAME_INFO *nameinfo;
 	WCHAR *p = NULL;
-	nameinfo = alloca(size);
+
+	nameinfo = malloc(size);
+	if (nameinfo == NULL) {
+		return -1;
+	}
 	/* Check the name of the pipe: '\{cygwin,msys}-XXXXXXXXXXXXXXXX-ptyN-{from,to}-master' */
 	if (GetFileInformationByHandleEx(fdHandle, FileNameInfo, nameinfo, size)) {
 		nameinfo->FileName[nameinfo->FileNameLength / sizeof(WCHAR)] = L'\0';
@@ -888,11 +892,15 @@ sqInt  fileHandleType(HANDLE fdHandle) {
 		if ((((wcsstr(p, L"msys-") || wcsstr(p, L"cygwin-"))) &&
 			(wcsstr(p, L"-pty") && wcsstr(p, L"-master")))) {
 			//The openned pipe is a msys xor cygwin pipe to pty
+			free(nameinfo);
 			return 4;
 		}
-		else
+		else {
+			free(nameinfo);
 			return 2; //else it is just a standard pipe
+		}
 	}
+	free(nameinfo);
 	return -1;
 }
 
