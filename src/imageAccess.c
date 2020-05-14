@@ -14,6 +14,7 @@
 #define CHUNK_SIZE 128 * 1024
 #define BARLENGTH 50
 
+static int showOutputInConsole = false;
 
 static char* progressText = "";
 
@@ -136,6 +137,9 @@ void basicImageReportProgress(size_t totalSize, size_t currentSize){
 
 	char bar[BARLENGTH + 1];
 	bar[BARLENGTH] = 0;
+
+	if(!showOutputInConsole)
+		return;
 
 	if(totalSize){
 		int percentage = currentSize * 100 / totalSize;
