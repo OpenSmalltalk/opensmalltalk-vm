@@ -31,6 +31,12 @@ UnicornSimulator >> classRegisterValue [
 	^ self readRegister: self classRegister
 ]
 
+{ #category : #registers }
+UnicornSimulator >> classRegisterValue: aValue [
+	
+	^ self writeRegister: self classRegister value: aValue
+]
+
 { #category : #initialization }
 UnicornSimulator >> createUnicorn [
 

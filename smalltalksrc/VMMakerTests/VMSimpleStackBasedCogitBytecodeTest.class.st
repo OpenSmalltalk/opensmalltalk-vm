@@ -590,6 +590,9 @@ VMSimpleStackBasedCogitBytecodeTest >> runFrom: startAddress until: endAddress [
 		timeout: 1 second asMicroseconds
 		count: 0.
 
+	"Verify we stopped because we arrived to the right end addres and not a timeout"
+	unicorn instructionPointerValue = endAddress
+		ifFalse: [ self error: 'Execution Timeout. The simulator did not arrive to ', endAddress hex, ' before 1 second' ]
 ]
 
 { #category : #helpers }
@@ -874,7 +877,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testMissOffsetIsEqualsToEntryOffset [
 { #category : #'tests - PIC' }
 VMSimpleStackBasedCogitBytecodeTest >> testNewPolymorphicPICWithTwoCoggedMethodsCallsMissTrampolineOnMiss [
 
-	| selector cogMethod1 cogMethod2 cogMethod2Tag pic compiledMethod1 compiledMethod2 |	
+	| selector cogMethod1 cogMethod2 cogMethod2Tag pic compiledMethod1 compiledMethod2 cogMethod1Tag receiver |	
 
 	self testCalculateClosePICSize.
 	
@@ -890,8 +893,8 @@ VMSimpleStackBasedCogitBytecodeTest >> testNewPolymorphicPICWithTwoCoggedMethods
 	cogMethod2 := self generateCogMethod: [ cogit RetN: 0 ] selector: selector.
 	cogit coInterpreter rawHeaderOf: compiledMethod2 put: cogMethod2 asInteger.
 
-	cogMethod2Tag := memory classIndexOf: memory trueObject.
-
+	cogMethod1Tag := 1.
+	cogMethod2Tag := 2.
 	pic := cogit cogPICSelector: selector
 					numArgs: 0
 					Case0Method: compiledMethod1
@@ -899,14 +902,23 @@ VMSimpleStackBasedCogitBytecodeTest >> testNewPolymorphicPICWithTwoCoggedMethods
 					tag: cogMethod2Tag
 					isMNUCase: false.
 
+	"Receiver is nil, class tag of the first entry is 1 (a small integer).
+	 - the receiver does not match with the class tag for case 0
+	 - the receiver does not match with the class tag for case 1
+	 - so it should call the closed pic miss trampoline"
+	unicorn receiverRegisterValue: (receiver := memory nilObject).
+	unicorn classRegisterValue: 3 "whatever, different from what the receiver class tag is".
+
 	unicorn instructionPointerValue: pic address + cogit entryOffset.
-	VMMachineCodeDebugger new
-		machineSimulator: unicorn;
-		cogit: cogit;
-		openWithSpec.
-1halt.
 	self runFrom: pic address + cogit entryOffset until: cogit ceCPICMissTrampoline.
-	self assert: false "the trampoline should parameters"
+
+	"Failing all two PIC cases calls the pic trampoline.
+	 - The instruction pointer is at the trampoline
+	 - The class register value contains the pic
+	 - the receiver register value contains the receiver"	
+	self assert: unicorn instructionPointerValue equals: cogit ceCPICMissTrampoline.
+	self assert: unicorn classRegisterValue equals: pic address.
+	self assert: unicorn receiverRegisterValue equals: receiver
 ]
 
 { #category : #'tests - single bytecode - pop into temp' }
