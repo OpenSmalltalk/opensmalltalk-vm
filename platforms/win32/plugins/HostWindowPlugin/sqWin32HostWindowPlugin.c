@@ -9,6 +9,7 @@
 *****************************************************************************/
 
 #include <windows.h>
+
 #include "sq.h"
 #include "HostWindowPlugin.h"
 
