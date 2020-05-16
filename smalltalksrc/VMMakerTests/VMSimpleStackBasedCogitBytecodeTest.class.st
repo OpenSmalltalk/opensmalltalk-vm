@@ -990,6 +990,61 @@ VMSimpleStackBasedCogitBytecodeTest >> testNewPolymorphicPICWithTwoCoggedMethods
 	self assert: unicorn receiverRegisterValue equals: receiver
 ]
 
+{ #category : #'tests - PIC' }
+VMSimpleStackBasedCogitBytecodeTest >> testPolymorphicPICHitDoesNotCallEntryOffset [
+
+	| selector cogMethod1 cogMethod2 cogMethod2Tag pic compiledMethod1 compiledMethod2 cogMethod1Tag receiver methodCheckEntryPoint |	
+
+	self testCalculateClosePICSize.
+	
+	cogit methodZone manageFrom: cogit methodZoneBase to: cogit methodZone effectiveLimit.
+
+	selector := self newOldSpaceObjectWithSlots: 0.
+
+	compiledMethod1 := self newMethodWithLiteral: selector at: 0.
+	cogMethod1 := self generateCogMethod: [ cogit RetN: 0 ] selector: selector.
+	cogit coInterpreter rawHeaderOf: compiledMethod1 put: cogMethod1 asInteger.
+	
+	compiledMethod2 := self newMethodWithLiteral: selector at: 0.
+	cogMethod2 := self generateCogMethod: [ cogit RetN: 0 ] selector: selector.
+	cogit coInterpreter rawHeaderOf: compiledMethod2 put: cogMethod2 asInteger.
+
+	receiver := memory nilObject.
+	cogMethod1Tag := (memory classIndexOf: receiver).
+	cogMethod2Tag := 2.
+
+	pic := cogit cogPICSelector: selector
+					numArgs: 0
+					Case0Method: cogMethod1
+					Case1Method: compiledMethod2
+					tag: cogMethod2Tag
+					isMNUCase: false.
+
+	"Receiver is nil, class tag of the first entry is the receiver's class tag.
+	 - the receiver matches class tag for case 0
+	 - the receiver does not match with the class tag for case 1
+	 - so it should call method for case 0"
+	unicorn receiverRegisterValue: receiver.
+	self assert: (memory classIndexOf: receiver) equals: cogMethod1Tag.
+	self deny: (memory classIndexOf: receiver) equals: cogMethod2Tag.
+	unicorn classRegisterValue: cogMethod1Tag.
+
+	"Should call method 1 just after the type check (to avoid it).
+	The check was already done in the PIC.
+	We execute from the PIC expecting to arrive to the entry offset of the cog method.
+	Since we should never arrive there, this execution should timeout"
+	[  methodCheckEntryPoint := cogMethod1 address + cogit entryOffset. 
+		self
+			runFrom: pic address + cogit entryOffset
+			until: methodCheckEntryPoint.
+			"fail if it does not timeout"
+			self fail ]
+			on: UnicornTimeout
+			do: [ :e | 
+				"Let's assert that at this point the execution went above that instruction pointer"
+				self assert: unicorn instructionPointerValue > methodCheckEntryPoint ].
+]
+
 { #category : #'tests - single bytecode - pop into temp' }
 VMSimpleStackBasedCogitBytecodeTest >> testPopInto3rdTempPopsValue [
 
