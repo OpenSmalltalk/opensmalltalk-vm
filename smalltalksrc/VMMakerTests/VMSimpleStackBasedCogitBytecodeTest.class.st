@@ -704,7 +704,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testCalculateClosePICSize [
 	"Calculate the size of the Closed Pic"
 	cogit ceCPICMissTrampoline: (self compile: [ cogit RetN: 0 ]).
 	cogit cePICAbortTrampoline: (self compile: [ cogit RetN: 0 ]).
-	cogit ceMethodAbortTrampoline: 16r12.
+	cogit ceMethodAbortTrampoline: (self compile: [ cogit RetN: 0 ]).
 	
 	cogit computeEntryOffsets.
 	cogit generateClosedPICPrototype.
