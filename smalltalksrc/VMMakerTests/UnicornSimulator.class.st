@@ -2,7 +2,8 @@ Class {
 	#name : #UnicornSimulator,
 	#superclass : #Object,
 	#instVars : [
-		'unicorn'
+		'unicorn',
+		'stopReason'
 	],
 	#category : #VMMakerTests
 }
@@ -74,7 +75,14 @@ UnicornSimulator >> initializeUnicorn [
 
 	unicorn
 		registerInvalidMemoryAccessHook: UcHookType invalidMemoryAccess value 
-		doing: [ :type :address :size :value | self halt ]
+		doing: [ :type :address :size :value | 
+			unicorn stop.
+			stopReason := UnicornInvalidMemoryAccess new
+				type: type;
+				address: address;
+				size: size;
+				yourself.
+			false ]
 ]
 
 { #category : #registers }
@@ -219,7 +227,12 @@ UnicornSimulator >> stackPointerRegisterValue: aValue [
 { #category : #executing }
 UnicornSimulator >> startAt: begin until: until timeout: timeout count: count [ 
 
-	unicorn startAt: begin until: until timeout: timeout count: count
+	| error |
+	unicorn startAt: begin until: until timeout: timeout count: count.
+	stopReason ifNotNil: [ 
+		error := stopReason.
+		stopReason := nil.
+		error signal ]
 ]
 
 { #category : #actions }

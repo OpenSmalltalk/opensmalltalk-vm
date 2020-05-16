@@ -596,12 +596,14 @@ VMSimpleStackBasedCogitBytecodeTest >> runFrom: startAddress until: endAddress [
 
 	unicorn startAt: startAddress
 		until: endAddress
-		timeout: 1 second asMicroseconds
+		timeout: 100
 		count: 0.
 
 	"Verify we stopped because we arrived to the right end addres and not a timeout"
-	unicorn instructionPointerValue = endAddress
-		ifFalse: [ self error: 'Execution Timeout. The simulator did not arrive to ', endAddress hex, ' before 1 second' ]
+	unicorn instructionPointerValue = endAddress ifFalse: [
+		UnicornTimeout new
+			target: endAddress;
+			signal ]
 ]
 
 { #category : #helpers }
