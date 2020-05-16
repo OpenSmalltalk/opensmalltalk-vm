@@ -915,15 +915,17 @@ VMSimpleStackBasedCogitBytecodeTest >> testNewPolymorphicPICWithTwoCoggedMethods
 					tag: cogMethod2Tag
 					isMNUCase: false.
 
-	"Receiver is nil, class tag of the first entry is 1 (a small integer).
-	 - the receiver does not match with the class tag for case 0
+	"Receiver is nil, class tag of the first entry is the receiver's class tag.
+	 - the receiver matches class tag for case 0
 	 - the receiver does not match with the class tag for case 1
-	 - so it should call the closed pic miss trampoline"
+	 - so it should call method for case 0"
 	unicorn receiverRegisterValue: receiver.
 	self assert: (memory classIndexOf: receiver) equals: cogMethod1Tag.
 	self deny: (memory classIndexOf: receiver) equals: cogMethod2Tag.
 	unicorn classRegisterValue: cogMethod1Tag.
 
+	"Should call method 1 just after the type check (to avoid it).
+	The check was already done in the PIC"
 	self runFrom: pic address + cogit entryOffset until: cogMethod1 address + cogit noCheckEntryOffset.
 
 	"Failing all two PIC cases calls the pic trampoline.
