@@ -3888,6 +3888,11 @@ Cogit >> ceCPICMiss: cPIC receiver: receiver [
 	^nil
 ]
 
+{ #category : #accessing }
+Cogit >> ceCPICMissTrampoline [
+	^ ceCPICMissTrampoline
+]
+
 { #category : #'simulation only' }
 Cogit >> ceCallCogCodePopReceiverAndClassRegs [
 	<api: 'extern void (*ceCallCogCodePopReceiverAndClassRegs)()'>
@@ -3959,6 +3964,12 @@ Cogit >> ceMalloc: size [
 Cogit >> ceMethodAbortTrampoline: anInteger [ 
 	<doNotGenerate>
 	ceMethodAbortTrampoline := anInteger
+]
+
+{ #category : #accessing }
+Cogit >> cePICAbortTrampoline [
+	<doNotGenerate>
+	^ cePICAbortTrampoline
 ]
 
 { #category : #accessing }
@@ -10426,6 +10437,12 @@ Cogit >> minCallAddress [
 Cogit >> minCogMethodAddress [
 	<api>
 	^methodZoneBase
+]
+
+{ #category : #accessing }
+Cogit >> missOffset [
+	<doNotGenerate>
+	^ missOffset
 ]
 
 { #category : #'in-line cacheing' }

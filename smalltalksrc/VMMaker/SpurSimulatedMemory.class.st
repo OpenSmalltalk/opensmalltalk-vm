@@ -42,6 +42,17 @@ SpurSimulatedMemory >> bytesPerElement [
 ]
 
 { #category : #accessing }
+SpurSimulatedMemory >> copyFrom: start to: end [
+	
+	^ memoryObject copyFrom: start - initialAddress + 1 to: end - initialAddress + 1
+]
+
+{ #category : #accessing }
+SpurSimulatedMemory >> initialAddress [
+	^ initialAddress
+]
+
+{ #category : #accessing }
 SpurSimulatedMemory >> initialAddress: anAddress [
 
 	initialAddress := anAddress
@@ -58,6 +69,16 @@ SpurSimulatedMemory >> long64At: address [
 	
 	^ memoryObject
 		integerAt: address - initialAddress
+		size: 8
+		signed: true
+]
+
+{ #category : #accessing }
+SpurSimulatedMemory >> long64At: address put: aValue [
+	
+	^ memoryObject
+		integerAt: address - initialAddress
+		put: aValue
 		size: 8
 		signed: true
 ]
@@ -82,6 +103,25 @@ SpurSimulatedMemory >> memoryObject [
 SpurSimulatedMemory >> size [
 
 	^ memoryObject size
+]
+
+{ #category : #accessing }
+SpurSimulatedMemory >> unsignedByteAt: anAddress [ 
+	
+	^ memoryObject
+		integerAt: anAddress - initialAddress
+		size: 1
+		signed: false
+]
+
+{ #category : #accessing }
+SpurSimulatedMemory >> unsignedByteAt: anAddress put: aValue [
+	
+	^ memoryObject
+		integerAt: anAddress - initialAddress
+		put: aValue
+		size: 1
+		signed: false
 ]
 
 { #category : #accessing }
@@ -119,5 +159,24 @@ SpurSimulatedMemory >> unsignedLongAt: address put: aValue [
 		integerAt: address - initialAddress
 		put: aValue
 		size: 4
+		signed: false
+]
+
+{ #category : #accessing }
+SpurSimulatedMemory >> unsignedShortAt: anAddress [ 
+	
+	^ memoryObject
+		integerAt: anAddress - initialAddress
+		size: 2
+		signed: false
+]
+
+{ #category : #accessing }
+SpurSimulatedMemory >> unsignedShortAt: anAddress put: aValue [
+	
+	^ memoryObject
+		integerAt: anAddress - initialAddress
+		put: aValue
+		size: 2
 		signed: false
 ]

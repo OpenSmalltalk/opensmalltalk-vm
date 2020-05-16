@@ -232,9 +232,19 @@ VMSimpleStackBasedCogitBytecodeTest >> disassemble [
 { #category : #helpers }
 VMSimpleStackBasedCogitBytecodeTest >> disassembleFrom: anIndex [
 	
+	^ self disassembleFrom: anIndex opcodes: opcodes
+]
+
+{ #category : #helpers }
+VMSimpleStackBasedCogitBytecodeTest >> disassembleFrom: anIndex opcodes: numberOfInstructions [
+	
 	^ LLVMDisassembler amd64 
-		disassembleNext: opcodes
-		instructionsIn: (memory memory memoryObject copyFrom: anIndex to: 100) asByteArray pc: 0
+		disassembleNext: numberOfInstructions
+		instructionsIn: (memory memory memoryObject
+			copyFrom: anIndex - initialAddress + 1
+			to: memory memory memoryObject size)
+		startAddress: anIndex
+		pc: 0
 ]
 
 { #category : #'tests - extended store bytecode - store inst var' }
@@ -577,7 +587,7 @@ VMSimpleStackBasedCogitBytecodeTest >> runFrom: startAddress until: endAddress [
 
 	unicorn startAt: startAddress
 		until: endAddress
-		timeout: 0
+		timeout: 1 second asMicroseconds
 		count: 0.
 
 ]
@@ -673,39 +683,14 @@ VMSimpleStackBasedCogitBytecodeTest >> stackPointerRegisterValue: aValue [
 VMSimpleStackBasedCogitBytecodeTest >> testCalculateClosePICSize [
 
 	"Calculate the size of the Closed Pic"
-	cogit ceCPICMissTrampoline: 16r10.
-	cogit cePICAbortTrampoline: 16r11.
+	cogit ceCPICMissTrampoline: (self compile: [ cogit RetN: 0 ]).
+	cogit cePICAbortTrampoline: (self compile: [ cogit RetN: 0 ]).
 	cogit ceMethodAbortTrampoline: 16r12.
 	
 	cogit computeEntryOffsets.
 	cogit generateClosedPICPrototype.
 	
 	self assert: cogit closedPICSize isNotNil
-]
-
-{ #category : #'tests - PIC' }
-VMSimpleStackBasedCogitBytecodeTest >> testCreatingAPicWithTwoCogMethodsHastheTwoMethods [
-
-	| selector cogMethod1 cogMethod2 cogMethod2Tag pic |	
-
-	self testCalculateClosePICSize.
-	
-	cogit methodZone manageFrom: cogit methodZoneBase to: cogit methodZone effectiveLimit.
-
-	selector := self newOldSpaceObjectWithSlots: 0.
-	cogMethod1 := self generateCogMethod: [ cogit RetN: 0 ] selector: selector.
-	cogMethod2 := self generateCogMethod: [ cogit RetN: 0 ] selector: selector.
-
-	cogMethod2Tag := memory classIndexOf: memory trueObject.
-
-	pic := cogit cogPICSelector: selector
-					numArgs: 0
-					Case0Method: cogMethod1
-					Case1Method: cogMethod2
-					tag: cogMethod2Tag
-					isMNUCase: false.
-
-	self halt.
 ]
 
 { #category : #'tests - extended push bytecode - push inst var' }
@@ -870,6 +855,58 @@ VMSimpleStackBasedCogitBytecodeTest >> testLinkCallDuringSendInTrampolineReplace
 	self runFrom: sendAddress until: targetCog asInteger + cogit entryOffset.
   	self deny: executedTheTrampoline.
 
+]
+
+{ #category : #'tests - PIC' }
+VMSimpleStackBasedCogitBytecodeTest >> testMissOffsetIsEqualsToEntryOffset [
+
+	"Calculate the size of the Closed Pic"
+	cogit ceCPICMissTrampoline: (self compile: [ cogit RetN: 0 ]).
+	cogit cePICAbortTrampoline: (self compile: [ cogit RetN: 0 ]).
+	cogit ceMethodAbortTrampoline: 16r12.
+	
+	cogit computeEntryOffsets.
+	cogit generateClosedPICPrototype.
+
+	self assert: cogit missOffset equals: cogit entryOffset
+]
+
+{ #category : #'tests - PIC' }
+VMSimpleStackBasedCogitBytecodeTest >> testNewPolymorphicPICWithTwoCoggedMethodsCallsMissTrampolineOnMiss [
+
+	| selector cogMethod1 cogMethod2 cogMethod2Tag pic compiledMethod1 compiledMethod2 |	
+
+	self testCalculateClosePICSize.
+	
+	cogit methodZone manageFrom: cogit methodZoneBase to: cogit methodZone effectiveLimit.
+
+	selector := self newOldSpaceObjectWithSlots: 0.
+
+	compiledMethod1 := self newMethodWithLiteral: selector at: 0.
+	cogMethod1 := self generateCogMethod: [ cogit RetN: 0 ] selector: selector.
+	cogit coInterpreter rawHeaderOf: compiledMethod1 put: cogMethod1 asInteger.
+	
+	compiledMethod2 := self newMethodWithLiteral: selector at: 0.
+	cogMethod2 := self generateCogMethod: [ cogit RetN: 0 ] selector: selector.
+	cogit coInterpreter rawHeaderOf: compiledMethod2 put: cogMethod2 asInteger.
+
+	cogMethod2Tag := memory classIndexOf: memory trueObject.
+
+	pic := cogit cogPICSelector: selector
+					numArgs: 0
+					Case0Method: compiledMethod1
+					Case1Method: compiledMethod2
+					tag: cogMethod2Tag
+					isMNUCase: false.
+
+	unicorn instructionPointerValue: pic address + cogit entryOffset.
+	VMMachineCodeDebugger new
+		machineSimulator: unicorn;
+		cogit: cogit;
+		openWithSpec.
+1halt.
+	self runFrom: pic address + cogit entryOffset until: cogit ceCPICMissTrampoline.
+	self assert: false "the trampoline should parameters"
 ]
 
 { #category : #'tests - single bytecode - pop into temp' }
