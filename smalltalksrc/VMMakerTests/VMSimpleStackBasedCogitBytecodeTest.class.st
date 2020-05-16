@@ -369,12 +369,17 @@ VMSimpleStackBasedCogitBytecodeTest >> framePointerRegisterValue: aValue [
 VMSimpleStackBasedCogitBytecodeTest >> generateCogMethod: aBlockClosure selector: anSelectorOop [ 
 
 	| targetCog targetCogAddress |
-	targetCog := cogit cogMethodSurrogateAt: (cogit methodZone allocate: cogit entryOffset).
+
+	targetCog := cogit cogMethodSurrogateAt: (cogit methodZone allocate: (cogit sizeof: CogMethod)).
 	targetCog selector: anSelectorOop.
 
-	targetCogAddress := self compile: aBlockClosure.	
+	targetCogAddress := self compile: [
+		cogit compileAbort.
+		cogit compileEntry.
+		aBlockClosure value
+	].	
 	
-	self assert: targetCog asInteger + cogit entryOffset equals: targetCogAddress.
+	self assert: targetCog asInteger + (cogit sizeof: CogMethod) equals: targetCogAddress.
 	
 	^ targetCog
 
