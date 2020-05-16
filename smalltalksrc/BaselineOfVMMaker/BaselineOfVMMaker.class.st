@@ -11,11 +11,17 @@ BaselineOfVMMaker >> baseline: spec [
 		for: #common
 		do: [
 			
-			spec baseline: 'Unicorn' with: [ spec repository: 'github://guillep/pharo-unicorn' ].
+			spec baseline: 'Unicorn' with: [ 
+				spec repository: 'github://guillep/pharo-unicorn' ].
+			spec baseline: 'LLVMDisassembler' with: [ 
+				spec repository: 'github://guillep/pharo-llvmDisassembler' ].
 			
 			spec
 				package: 'VMMakerTests' with: [
-					spec requires: #('VMMakerCompatibilityForPharo6' 'Unicorn') ].
+					spec requires: #('VMMakerCompatibilityForPharo6' 'Unicorn' 'LLVMDisassembler') ].
+				
+			spec package: 'VMMaker-Tools' with: [ 
+				spec requires: #( 'VMMakerCompatibilityForPharo6' 'VMMakerTests' ) ].
 			
 			"Initial VMMaker package for handling Pharo 6" 
 			spec
@@ -68,5 +74,5 @@ BaselineOfVMMaker >> baseline: spec [
 			spec
 				package: 'AndreasProfiler' with: [
 					spec repository: 'http://ss3.gemstone.com/ss/AndreasSystemProfiler'].
-			spec group: 'default' with: #('VMMaker' 'VMMakerTests') ]
+			spec group: 'default' with: #('VMMaker' 'VMMakerTests' 'VMMaker-Tools') ]
 ]

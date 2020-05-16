@@ -83,6 +83,12 @@ UnicornSimulator >> instructionPointerValue [
 	^ self readRegister: self instructionPointerRegister
 ]
 
+{ #category : #registers }
+UnicornSimulator >> instructionPointerValue: aValue [
+	
+	^ self writeRegister: self instructionPointerRegister value: aValue
+]
+
 { #category : #memory }
 UnicornSimulator >> mapMemory: aMemory at: anAddress [
 
@@ -135,6 +141,12 @@ UnicornSimulator >> receiverRegisterValue: anInteger [
 UnicornSimulator >> register: anIndex readInto: aByteArray [ 
 
 	unicorn register: anIndex readInto: aByteArray 
+]
+
+{ #category : #accessing }
+UnicornSimulator >> registerDescriptors [
+	
+	self subclassResponsibility
 ]
 
 { #category : #initialization }
@@ -202,6 +214,16 @@ UnicornSimulator >> stackPointerRegisterValue: aValue [
 UnicornSimulator >> startAt: begin until: until timeout: timeout count: count [ 
 
 	unicorn startAt: begin until: until timeout: timeout count: count
+]
+
+{ #category : #actions }
+UnicornSimulator >> step [
+	
+	self
+		startAt: self instructionPointerValue
+		until: 0
+		timeout: 0
+		count: 1
 ]
 
 { #category : #accessing }
