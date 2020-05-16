@@ -907,9 +907,10 @@ VMSimpleStackBasedCogitBytecodeTest >> testNewPolymorphicPICWithTwoCoggedMethods
 	 - the receiver does not match with the class tag for case 1
 	 - so it should call the closed pic miss trampoline"
 	unicorn receiverRegisterValue: (receiver := memory nilObject).
-	unicorn classRegisterValue: 3 "whatever, different from what the receiver class tag is".
+	self deny: (memory classIndexOf: receiver) equals: cogMethod1Tag.
+	self deny: (memory classIndexOf: receiver) equals: cogMethod2Tag.
+	unicorn classRegisterValue: cogMethod1Tag.
 
-	unicorn instructionPointerValue: pic address + cogit entryOffset.
 	self runFrom: pic address + cogit entryOffset until: cogit ceCPICMissTrampoline.
 
 	"Failing all two PIC cases calls the pic trampoline.
