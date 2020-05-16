@@ -458,6 +458,15 @@ VMSimpleStackBasedCogitBytecodeTest >> newMethodWithLiteral: literalObject at: l
 	^ method
 ]
 
+{ #category : #helpers }
+VMSimpleStackBasedCogitBytecodeTest >> openMachineDebugger [
+	
+	VMMachineCodeDebugger new
+		cogit: cogit;
+		machineSimulator: unicorn;
+		openWithSpec.
+]
+
 { #category : #'helpers - stack' }
 VMSimpleStackBasedCogitBytecodeTest >> peek [
 
@@ -872,6 +881,56 @@ VMSimpleStackBasedCogitBytecodeTest >> testMissOffsetIsEqualsToEntryOffset [
 	cogit generateClosedPICPrototype.
 
 	self assert: cogit missOffset equals: cogit entryOffset
+]
+
+{ #category : #'tests - PIC' }
+VMSimpleStackBasedCogitBytecodeTest >> testNewPolymorphicPICWithTwoCoggedMethodsCallsCase0IfMatch [
+
+	| selector cogMethod1 cogMethod2 cogMethod2Tag pic compiledMethod1 compiledMethod2 cogMethod1Tag receiver |	
+
+	self testCalculateClosePICSize.
+	
+	cogit methodZone manageFrom: cogit methodZoneBase to: cogit methodZone effectiveLimit.
+
+	selector := self newOldSpaceObjectWithSlots: 0.
+
+	compiledMethod1 := self newMethodWithLiteral: selector at: 0.
+	cogMethod1 := self generateCogMethod: [ cogit RetN: 0 ] selector: selector.
+	cogit coInterpreter rawHeaderOf: compiledMethod1 put: cogMethod1 asInteger.
+	
+	compiledMethod2 := self newMethodWithLiteral: selector at: 0.
+	cogMethod2 := self generateCogMethod: [ cogit RetN: 0 ] selector: selector.
+	cogit coInterpreter rawHeaderOf: compiledMethod2 put: cogMethod2 asInteger.
+
+	receiver := memory nilObject.
+	cogMethod1Tag := (memory classIndexOf: receiver).
+	cogMethod2Tag := 2.
+
+	pic := cogit cogPICSelector: selector
+					numArgs: 0
+					Case0Method: cogMethod1
+					Case1Method: compiledMethod2
+					tag: cogMethod2Tag
+					isMNUCase: false.
+
+	"Receiver is nil, class tag of the first entry is 1 (a small integer).
+	 - the receiver does not match with the class tag for case 0
+	 - the receiver does not match with the class tag for case 1
+	 - so it should call the closed pic miss trampoline"
+	unicorn receiverRegisterValue: receiver.
+	self assert: (memory classIndexOf: receiver) equals: cogMethod1Tag.
+	self deny: (memory classIndexOf: receiver) equals: cogMethod2Tag.
+	unicorn classRegisterValue: cogMethod1Tag.
+
+	self runFrom: pic address + cogit entryOffset until: cogMethod1 address + cogit noCheckEntryOffset.
+
+	"Failing all two PIC cases calls the pic trampoline.
+	 - The instruction pointer is at the trampoline
+	 - The class register value contains the pic
+	 - the receiver register value contains the receiver"	
+	self assert: unicorn instructionPointerValue equals: cogMethod1 address + cogit noCheckEntryOffset.
+	self assert: unicorn classRegisterValue equals: cogMethod1Tag.
+	self assert: unicorn receiverRegisterValue equals: receiver
 ]
 
 { #category : #'tests - PIC' }
