@@ -50,7 +50,8 @@ VMMachineCodeDebugger >> connectPresenters [
 { #category : #showing }
 VMMachineCodeDebugger >> initialDisassembly [
 
-	^ LLVMDisassembler amd64 
+	^ LLVMDisassembler amd64
+		printImmediatesInHexa;
 		disassembleNext: 50
 		instructionsIn: (cogit objectMemory memory memoryObject
 			copyFrom: machineSimulator instructionPointerValue - cogit objectMemory memory initialAddress + 1

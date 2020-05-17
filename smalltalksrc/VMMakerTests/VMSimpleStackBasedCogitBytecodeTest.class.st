@@ -238,7 +238,8 @@ VMSimpleStackBasedCogitBytecodeTest >> disassembleFrom: anIndex [
 { #category : #helpers }
 VMSimpleStackBasedCogitBytecodeTest >> disassembleFrom: anIndex opcodes: numberOfInstructions [
 	
-	^ LLVMDisassembler amd64 
+	^ LLVMDisassembler amd64
+		printImmediatesInHexa;
 		disassembleNext: numberOfInstructions
 		instructionsIn: (memory memory memoryObject
 			copyFrom: anIndex - initialAddress + 1
@@ -470,6 +471,13 @@ VMSimpleStackBasedCogitBytecodeTest >> openMachineDebugger [
 		cogit: cogit;
 		machineSimulator: unicorn;
 		openWithSpec.
+]
+
+{ #category : #helpers }
+VMSimpleStackBasedCogitBytecodeTest >> openMachineDebuggerAt: anInteger [ 
+	
+	unicorn instructionPointerValue: anInteger.
+	self openMachineDebugger
 ]
 
 { #category : #'helpers - stack' }
