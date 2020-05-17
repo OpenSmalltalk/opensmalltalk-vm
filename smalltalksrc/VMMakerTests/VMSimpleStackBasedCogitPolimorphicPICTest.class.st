@@ -6,12 +6,13 @@ Class {
 		'compiledMethod0',
 		'cogMethod0',
 		'compiledMethod1',
-		'cogMethod1'
+		'cogMethod1',
+		'numArgs'
 	],
 	#category : #VMMakerTests
 }
 
-{ #category : #'tests - PIC' }
+{ #category : #helpers }
 VMSimpleStackBasedCogitPolimorphicPICTest >> assertPIC: pic hits: hitMethod withReceiver: receiver andCallSiteTag: theCallsiteTag [
 	"Receiver is nil, class tag of the first entry is the receiver's class tag.
 	 - the receiver matches class tag for case 0
@@ -33,7 +34,7 @@ VMSimpleStackBasedCogitPolimorphicPICTest >> assertPIC: pic hits: hitMethod with
 	self assert: unicorn receiverRegisterValue equals: receiver
 ]
 
-{ #category : #'tests - PIC' }
+{ #category : #helpers }
 VMSimpleStackBasedCogitPolimorphicPICTest >> assertPICMiss: pic withReceiver: receiver andCallSiteTag: theCallsiteTag [
 
 	"Receiver is nil, class tag of the first entry is 1 (a small integer).
@@ -54,18 +55,18 @@ VMSimpleStackBasedCogitPolimorphicPICTest >> assertPICMiss: pic withReceiver: re
 	self assert: unicorn receiverRegisterValue equals: receiver
 ]
 
-{ #category : #'tests - PIC' }
+{ #category : #helpers }
 VMSimpleStackBasedCogitPolimorphicPICTest >> makePolymorphicPICWithCase0CogMethod: aCase0CogMethod case1CompiledMethod: aCase1CompiledMEthod case1MethodTag: cogMethod1Tag [
 	
 	^ cogit cogPICSelector: selector
-		numArgs: 0
+		numArgs: numArgs
 		Case0Method: aCase0CogMethod
 		Case1Method: aCase1CompiledMEthod
 		tag: cogMethod1Tag
 		isMNUCase: false
 ]
 
-{ #category : #'tests - PIC' }
+{ #category : #running }
 VMSimpleStackBasedCogitPolimorphicPICTest >> setUp [
 
 	super setUp.
@@ -76,6 +77,7 @@ VMSimpleStackBasedCogitPolimorphicPICTest >> setUp [
 
 	"Prepare the methods to put in PICs"	
 	selector := self newOldSpaceObjectWithSlots: 0.
+	numArgs := 0.
 
 	compiledMethod0 := self newMethodWithLiteral: selector at: 0.
 	cogMethod0 := self generateCogMethod: [ cogit RetN: 0 ] selector: selector.
@@ -157,11 +159,67 @@ VMSimpleStackBasedCogitPolimorphicPICTest >> testNewPolymorphicPICWithTwoCoggedM
 ]
 
 { #category : #'tests - PIC' }
+VMSimpleStackBasedCogitPolimorphicPICTest >> testNewPolymorphicPICWithTwoCoggedMethodsHasGivenNumberOfArguments [
+	| cogMethod1Tag pic |	
+
+	cogMethod1Tag := 2.
+	
+	pic := self
+		makePolymorphicPICWithCase0CogMethod: cogMethod0
+		case1CompiledMethod: compiledMethod1
+		case1MethodTag: cogMethod1Tag.
+
+	self assert: pic cmNumArgs equals: numArgs
+]
+
+{ #category : #'tests - PIC' }
+VMSimpleStackBasedCogitPolimorphicPICTest >> testNewPolymorphicPICWithTwoCoggedMethodsHasGivenSelector [
+	| cogMethod1Tag pic |	
+
+	cogMethod1Tag := 2.
+	
+	pic := self
+		makePolymorphicPICWithCase0CogMethod: cogMethod0
+		case1CompiledMethod: compiledMethod1
+		case1MethodTag: cogMethod1Tag.
+
+	self assert: pic selector equals: selector
+]
+
+{ #category : #'tests - PIC' }
+VMSimpleStackBasedCogitPolimorphicPICTest >> testNewPolymorphicPICWithTwoCoggedMethodsHasTwoCases [
+	| cogMethod1Tag pic |	
+
+	cogMethod1Tag := 2.
+	
+	pic := self
+		makePolymorphicPICWithCase0CogMethod: cogMethod0
+		case1CompiledMethod: compiledMethod1
+		case1MethodTag: cogMethod1Tag.
+
+	self assert: (cogit backend callTargetFromReturnAddress: pic asInteger + cogit missOffset) equals: (cogit picAbortTrampolineFor: numArgs)
+]
+
+{ #category : #'tests - PIC' }
+VMSimpleStackBasedCogitPolimorphicPICTest >> testNewPolymorphicPICWithTwoCoggedMethodsIsClosedPic [
+	| cogMethod1Tag pic |	
+
+	cogMethod1Tag := 2.
+	
+	pic := self
+		makePolymorphicPICWithCase0CogMethod: cogMethod0
+		case1CompiledMethod: compiledMethod1
+		case1MethodTag: cogMethod1Tag.
+
+	self assert: pic cmType equals: 4"CMClosedPIC".
+]
+
+{ #category : #'tests - PIC' }
 VMSimpleStackBasedCogitPolimorphicPICTest >> testPolymorphicPICHitDoesNotCallEntryOffset [
 
 	| cogMethod1Tag pic cogMethod0Tag receiver methodCheckEntryPoint |	
 	receiver := memory nilObject.
-	cogMethod0Tag := (memory classIndexOf: receiver).
+	cogMethod0Tag := memory classIndexOf: receiver.
 	cogMethod1Tag := 2.
 
 	pic := self

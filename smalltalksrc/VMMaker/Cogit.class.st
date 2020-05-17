@@ -3330,6 +3330,12 @@ Cogit >> backEnd [
 	^backEnd
 ]
 
+{ #category : #accessing }
+Cogit >> backend [
+	<doNotGenerate>
+	^ backEnd
+]
+
 { #category : #'tests-method map' }
 Cogit >> bcpcsAndDescriptorsFor: aMethod bsOffset: bsOffset do: quaternaryBlock [
 	"Evaluate quaternaryBlock with the pc, byte, descriptor and numExtensions for
