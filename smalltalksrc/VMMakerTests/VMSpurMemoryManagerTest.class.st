@@ -15,6 +15,11 @@ Class {
 	#category : #VMMakerTests
 }
 
+{ #category : #accessing }
+VMSpurMemoryManagerTest >> initialCodeSize [
+	^ 4 * 1024
+]
+
 { #category : #helpers }
 VMSpurMemoryManagerTest >> initializeOldSpaceForScavenger [
 

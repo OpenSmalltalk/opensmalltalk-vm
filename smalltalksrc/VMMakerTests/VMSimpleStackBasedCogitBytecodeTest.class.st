@@ -370,11 +370,6 @@ VMSimpleStackBasedCogitBytecodeTest >> generateCogMethod: aBlockClosure selector
 
 ]
 
-{ #category : #accessing }
-VMSimpleStackBasedCogitBytecodeTest >> initialCodeSize [
-	^ 4 * 1024
-]
-
 { #category : #running }
 VMSimpleStackBasedCogitBytecodeTest >> initializeInitialStackFrame [
 
