@@ -599,9 +599,15 @@ VMSimpleStackBasedCogitBytecodeTest >> returnValue [
 { #category : #helpers }
 VMSimpleStackBasedCogitBytecodeTest >> runFrom: startAddress until: endAddress [
 
+	self runFrom: startAddress until: endAddress timeout: 300 "microseconds"
+]
+
+{ #category : #helpers }
+VMSimpleStackBasedCogitBytecodeTest >> runFrom: startAddress until: endAddress timeout: microseconds [
+
 	unicorn startAt: startAddress
 		until: endAddress
-		timeout: 100
+		timeout: microseconds
 		count: 0.
 
 	"Verify we stopped because we arrived to the right end addres and not a timeout"
@@ -1036,7 +1042,8 @@ VMSimpleStackBasedCogitBytecodeTest >> testPolymorphicPICHitDoesNotCallEntryOffs
 	[  methodCheckEntryPoint := cogMethod1 address + cogit entryOffset. 
 		self
 			runFrom: pic address + cogit entryOffset
-			until: methodCheckEntryPoint.
+			until: methodCheckEntryPoint
+			timeout: 100.
 			"fail if it does not timeout"
 			self fail ]
 			on: UnicornTimeout
