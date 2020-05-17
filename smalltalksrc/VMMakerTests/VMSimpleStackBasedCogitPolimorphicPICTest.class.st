@@ -3,16 +3,12 @@ Class {
 	#superclass : #VMSimpleStackBasedCogitMonomorphicPICTest,
 	#instVars : [
 		'selector',
-		'compiledMethod0',
-		'cogMethod0',
-		'compiledMethod1',
-		'cogMethod1',
 		'numArgs',
-		'compiledMethod2',
-		'cogMethod2',
 		'receiver',
 		'receiverTag',
-		'picTypeTags'
+		'picTypeTags',
+		'cogMethods',
+		'compiledMethods'
 	],
 	#category : #VMMakerTests
 }
@@ -61,24 +57,34 @@ VMSimpleStackBasedCogitPolimorphicPICTest >> assertPICMiss: pic [
 ]
 
 { #category : #helpers }
-VMSimpleStackBasedCogitPolimorphicPICTest >> makePolymorphicPICWithCase0CogMethod: aCase0CogMethod case1CompiledMethod: aCase1CompiledMEthod [ 	
+VMSimpleStackBasedCogitPolimorphicPICTest >> extendPIC: aPic [
+
+	cogit
+		cogExtendPIC: aPic
+		CaseNMethod: (compiledMethods at: aPic cPICNumCases)
+		tag: (picTypeTags at: aPic cPICNumCases)
+		isMNUCase: false.
+]
+
+{ #category : #helpers }
+VMSimpleStackBasedCogitPolimorphicPICTest >> makePolymorphicPIC [
 
 	^ cogit cogPICSelector: selector
 		numArgs: numArgs
-		Case0Method: aCase0CogMethod
-		Case1Method: aCase1CompiledMEthod
+		Case0Method: (cogMethods at: 0)
+		Case1Method: (compiledMethods at: 1)
 		tag: (picTypeTags at: 1)
 		isMNUCase: false
 ]
 
 { #category : #helpers }
-VMSimpleStackBasedCogitPolimorphicPICTest >> makePolymorphicPICWithCase0CogMethod: aCase0CogMethod case1CompiledMethod: aCase1CompiledMEthod case1MethodTag: cogMethod1Tag [
-	
+VMSimpleStackBasedCogitPolimorphicPICTest >> makePolymorphicPICWithCase0CogMethod: aCase0CogMethod [
+
 	^ cogit cogPICSelector: selector
 		numArgs: numArgs
-		Case0Method: aCase0CogMethod
-		Case1Method: aCase1CompiledMEthod
-		tag: cogMethod1Tag
+		Case0Method: (cogMethods at: 0)
+		Case1Method: (compiledMethods at: 1)
+		tag: (picTypeTags at: 1)
 		isMNUCase: false
 ]
 
@@ -98,39 +104,31 @@ VMSimpleStackBasedCogitPolimorphicPICTest >> setUp [
 
 	receiverTag := memory classIndexOf: receiver.
 	picTypeTags := Dictionary new.
+	compiledMethods := Dictionary new.
+	cogMethods := Dictionary new.
 	"Configure by default some type tags.
 	None of them should match by costruction the tag of the receiver.
 	Specific tests should override this to force a PIC HIT"
-	1 to: 6 "Maximum polymorphic  cases" do: [ :index |
-		picTypeTags at: index - 1 put: receiverTag + index ].
+	1 to: 6 "Maximum polymorphic  cases" do: [ :index | | cogMethod compiledMethod |
+		picTypeTags at: index - 1 put: receiverTag + index.
 
-	compiledMethod0 := self newMethodWithLiteral: selector at: 0.
-	cogMethod0 := self generateCogMethod: [ cogit RetN: 0 ] selector: selector.
-	cogit coInterpreter rawHeaderOf: compiledMethod0 put: cogMethod0 asInteger.
-	
-	compiledMethod1 := self newMethodWithLiteral: selector at: 0.
-	cogMethod1 := self generateCogMethod: [ cogit RetN: 0 ] selector: selector.
-	cogit coInterpreter rawHeaderOf: compiledMethod1 put: cogMethod1 asInteger.
-	
-	compiledMethod2 := self newMethodWithLiteral: selector at: 0.
-	cogMethod2 := self generateCogMethod: [ cogit RetN: 0 ] selector: selector.
-	cogit coInterpreter rawHeaderOf: compiledMethod2 put: cogMethod2 asInteger.
+		compiledMethod := self newMethodWithLiteral: selector at: 0.
+		cogMethod := self generateCogMethod: [ cogit RetN: 0 ] selector: selector.
+		cogit coInterpreter rawHeaderOf: compiledMethod put: cogMethod asInteger.
+		
+		compiledMethods at: index - 1 put: compiledMethod.
+		cogMethods at: index - 1 put: cogMethod.
+	]
 ]
 
 { #category : #'tests - extension' }
 VMSimpleStackBasedCogitPolimorphicPICTest >> testExtendTwoCasePicWithCoggedMethodHasThreeCases [
 
 	| pic |
-	pic := self
-		makePolymorphicPICWithCase0CogMethod: cogMethod0
-		case1CompiledMethod: compiledMethod1.
-		
-	cogit
-		cogExtendPIC: pic
-		CaseNMethod: compiledMethod2
-		tag: 1
-		isMNUCase: false.
-		
+	pic := self makePolymorphicPIC.
+	
+	self extendPIC: pic.
+
 	self assert: pic cPICNumCases equals: 3
 ]
 
@@ -140,11 +138,9 @@ VMSimpleStackBasedCogitPolimorphicPICTest >> testNewPolymorphicPICWithTwoCoggedM
 	| pic |	
 	picTypeTags at: 0 put: receiverTag.
 	
-	pic := self
-		makePolymorphicPICWithCase0CogMethod: cogMethod0
-		case1CompiledMethod: compiledMethod1.
+	pic := self makePolymorphicPIC.
 
-	self assertPIC: pic hits: cogMethod0
+	self assertPIC: pic hits: (cogMethods at: 0)
 ]
 
 { #category : #'tests - new polymorphic PICs' }
@@ -153,11 +149,9 @@ VMSimpleStackBasedCogitPolimorphicPICTest >> testNewPolymorphicPICWithTwoCoggedM
 	| pic |	
 	picTypeTags at: 1 put: receiverTag.
 
-	pic := self
-		makePolymorphicPICWithCase0CogMethod: cogMethod0
-		case1CompiledMethod: compiledMethod1.
+	pic := self makePolymorphicPIC.
 
-	self assertPIC: pic hits: cogMethod1
+	self assertPIC: pic hits: (cogMethods at: 1)
 ]
 
 { #category : #'tests - new polymorphic PICs' }
@@ -165,9 +159,7 @@ VMSimpleStackBasedCogitPolimorphicPICTest >> testNewPolymorphicPICWithTwoCoggedM
 
 	| pic |	
 
-	pic := self
-		makePolymorphicPICWithCase0CogMethod: cogMethod0
-		case1CompiledMethod: compiledMethod1.
+	pic := self makePolymorphicPIC.
 
 	self assertPICMiss: pic
 ]
@@ -176,9 +168,7 @@ VMSimpleStackBasedCogitPolimorphicPICTest >> testNewPolymorphicPICWithTwoCoggedM
 VMSimpleStackBasedCogitPolimorphicPICTest >> testNewPolymorphicPICWithTwoCoggedMethodsHasGivenNumberOfArguments [
 	| pic |
 	
-	pic := self
-		makePolymorphicPICWithCase0CogMethod: cogMethod0
-		case1CompiledMethod: compiledMethod1.
+	pic := self makePolymorphicPIC.
 
 	self assert: pic cmNumArgs equals: numArgs
 ]
@@ -187,9 +177,7 @@ VMSimpleStackBasedCogitPolimorphicPICTest >> testNewPolymorphicPICWithTwoCoggedM
 VMSimpleStackBasedCogitPolimorphicPICTest >> testNewPolymorphicPICWithTwoCoggedMethodsHasGivenSelector [
 	| pic |	
 
-	pic := self
-		makePolymorphicPICWithCase0CogMethod: cogMethod0
-		case1CompiledMethod: compiledMethod1.
+	pic := self makePolymorphicPIC.
 
 	self assert: pic selector equals: selector
 ]
@@ -197,9 +185,7 @@ VMSimpleStackBasedCogitPolimorphicPICTest >> testNewPolymorphicPICWithTwoCoggedM
 { #category : #'tests - metadata' }
 VMSimpleStackBasedCogitPolimorphicPICTest >> testNewPolymorphicPICWithTwoCoggedMethodsHasJumpToAbortTrampoline [
 	| pic |	
-	pic := self
-		makePolymorphicPICWithCase0CogMethod: cogMethod0
-		case1CompiledMethod: compiledMethod1.
+	pic := self makePolymorphicPIC.
 
 	self assert: (cogit backend callTargetFromReturnAddress: pic asInteger + cogit missOffset) equals: (cogit picAbortTrampolineFor: numArgs)
 ]
@@ -208,9 +194,7 @@ VMSimpleStackBasedCogitPolimorphicPICTest >> testNewPolymorphicPICWithTwoCoggedM
 VMSimpleStackBasedCogitPolimorphicPICTest >> testNewPolymorphicPICWithTwoCoggedMethodsHasTwoCases [
 	| pic |	
 
-	pic := self
-		makePolymorphicPICWithCase0CogMethod: cogMethod0
-		case1CompiledMethod: compiledMethod1.
+	pic := self makePolymorphicPIC.
 
 	self assert: pic cPICNumCases equals: 2
 ]
@@ -218,9 +202,7 @@ VMSimpleStackBasedCogitPolimorphicPICTest >> testNewPolymorphicPICWithTwoCoggedM
 { #category : #'tests - metadata' }
 VMSimpleStackBasedCogitPolimorphicPICTest >> testNewPolymorphicPICWithTwoCoggedMethodsIsClosedPic [
 	| pic |	
-	pic := self
-		makePolymorphicPICWithCase0CogMethod: cogMethod0
-		case1CompiledMethod: compiledMethod1.
+	pic := self makePolymorphicPIC.
 
 	self assert: pic cmType equals: 4"CMClosedPIC".
 ]
@@ -231,9 +213,7 @@ VMSimpleStackBasedCogitPolimorphicPICTest >> testPolymorphicPICHitDoesNotCallEnt
 	| pic methodCheckEntryPoint |	
 	picTypeTags at: 0 put: receiverTag.
 	
-	pic := self
-		makePolymorphicPICWithCase0CogMethod: cogMethod0
-		case1CompiledMethod: compiledMethod1.
+	pic := self makePolymorphicPIC.
 
 	"Receiver is nil, class tag of the first entry is the receiver's class tag.
 	 - the receiver matches class tag for case 0
@@ -246,7 +226,7 @@ VMSimpleStackBasedCogitPolimorphicPICTest >> testPolymorphicPICHitDoesNotCallEnt
 	The check was already done in the PIC.
 	We execute from the PIC expecting to arrive to the entry offset of the cog method.
 	Since we should never arrive there, this execution should timeout"
-	[  methodCheckEntryPoint := cogMethod0 address + cogit entryOffset. 
+	[  methodCheckEntryPoint := (cogMethods at: 0) address + cogit entryOffset. 
 		self
 			runFrom: pic address + cogit entryOffset
 			until: methodCheckEntryPoint
