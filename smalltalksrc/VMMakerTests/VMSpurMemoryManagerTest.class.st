@@ -114,10 +114,19 @@ VMSpurMemoryManagerTest >> newOldSpaceObjectWithSlots: slots [
 { #category : #helpers }
 VMSpurMemoryManagerTest >> newOldSpaceObjectWithSlots: slots classIndex: anIndex [
 	
+	^ self
+		newOldSpaceObjectWithSlots: slots
+		format: memory arrayFormat
+		classIndex: anIndex
+]
+
+{ #category : #helpers }
+VMSpurMemoryManagerTest >> newOldSpaceObjectWithSlots: slots format: aFormat classIndex: anIndex [
+	
 	| oop |
 	oop := memory
 			allocateSlotsInOldSpace: slots
-			format: memory arrayFormat
+			format: aFormat
 			classIndex: anIndex.
 	oop ifNotNil: [ memory fillObj: oop numSlots: slots with: memory nilObject ].
 	^ oop

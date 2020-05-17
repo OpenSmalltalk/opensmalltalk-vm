@@ -439,16 +439,12 @@ VMSimpleStackBasedCogitBytecodeTest >> newMemory [
 { #category : #helpers }
 VMSimpleStackBasedCogitBytecodeTest >> newMethodWithLiteral: literalObject at: literalIndex [
 	
-| method methodHeader nativeAddress |
-	
-	"Create a cogged compiled method object containing the given literal at the given index.
-	The method has to have a cogged counterpart to play in the JIT.
-	The cogged counterpart has to be in an address lower then the method address.
-	The method header points to the cogged method.
-	The cogged method has the real method header"
+	| method methodHeader |
+
+	"Create a bytecode compiled method object containing the given literal at the given index"
 	
 	method := self
-		newObjectWithSlots: literalIndex + 1 "index is 0 based" + 1 "one extra for the header"
+		newOldSpaceObjectWithSlots: literalIndex + 1 "index is 0 based" + 1 "one extra for the header"
 		format: (memory compiledMethodFormatForNumBytes: 0)
 		classIndex: 16r10.
 	methodHeader := (0 "nArgs" bitShift: 24)
