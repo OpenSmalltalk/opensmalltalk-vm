@@ -11,8 +11,8 @@ Class {
 		'compiledMethod2',
 		'cogMethod2',
 		'receiver',
-		'tags',
-		'receiverTag'
+		'receiverTag',
+		'picTypeTags'
 	],
 	#category : #VMMakerTests
 }
@@ -24,7 +24,7 @@ VMSimpleStackBasedCogitPolimorphicPICTest >> assertPIC: pic hits: hitMethod [
 	 - the receiver does not match with the class tag for case 1
 	 - so it should call method for case 0"
 	unicorn receiverRegisterValue: receiver.
-	unicorn classRegisterValue: (tags at: 0).
+	unicorn classRegisterValue: (picTypeTags at: 0).
 
 	"Should call method 1 just after the type check (to avoid it).
 	The check was already done in the PIC"
@@ -35,7 +35,7 @@ VMSimpleStackBasedCogitPolimorphicPICTest >> assertPIC: pic hits: hitMethod [
 	 - The class register value case 0 tag regardless of the hit
 	 - the receiver register value contains the receiver"
 	self assert: unicorn instructionPointerValue equals: hitMethod address + cogit noCheckEntryOffset.
-	self assert: unicorn classRegisterValue equals: (tags at: 0).
+	self assert: unicorn classRegisterValue equals: (picTypeTags at: 0).
 	self assert: unicorn receiverRegisterValue equals: receiver
 ]
 
@@ -47,7 +47,7 @@ VMSimpleStackBasedCogitPolimorphicPICTest >> assertPICMiss: pic [
 	 - the receiver does not match with the class tag for case 1
 	 - so it should call the closed pic miss trampoline"
 	unicorn receiverRegisterValue: receiver.
-	unicorn classRegisterValue: (tags at: 0).
+	unicorn classRegisterValue: (picTypeTags at: 0).
 
 	self runFrom: pic address + cogit entryOffset until: cogit ceCPICMissTrampoline.
 
@@ -67,7 +67,7 @@ VMSimpleStackBasedCogitPolimorphicPICTest >> makePolymorphicPICWithCase0CogMetho
 		numArgs: numArgs
 		Case0Method: aCase0CogMethod
 		Case1Method: aCase1CompiledMEthod
-		tag: (tags at: 1)
+		tag: (picTypeTags at: 1)
 		isMNUCase: false
 ]
 
@@ -97,12 +97,12 @@ VMSimpleStackBasedCogitPolimorphicPICTest >> setUp [
 	numArgs := 0.
 
 	receiverTag := memory classIndexOf: receiver.
-	tags := Dictionary new.
+	picTypeTags := Dictionary new.
 	"Configure by default some type tags.
 	None of them should match by costruction the tag of the receiver.
 	Specific tests should override this to force a PIC HIT"
 	1 to: 6 "Maximum polymorphic  cases" do: [ :index |
-		tags at: index - 1 put: receiverTag + index ].
+		picTypeTags at: index - 1 put: receiverTag + index ].
 
 	compiledMethod0 := self newMethodWithLiteral: selector at: 0.
 	cogMethod0 := self generateCogMethod: [ cogit RetN: 0 ] selector: selector.
@@ -138,7 +138,7 @@ VMSimpleStackBasedCogitPolimorphicPICTest >> testExtendTwoCasePicWithCoggedMetho
 VMSimpleStackBasedCogitPolimorphicPICTest >> testNewPolymorphicPICWithTwoCoggedMethodsCallsCase0OnHit [
 
 	| pic |	
-	tags at: 0 put: receiverTag.
+	picTypeTags at: 0 put: receiverTag.
 	
 	pic := self
 		makePolymorphicPICWithCase0CogMethod: cogMethod0
@@ -151,7 +151,7 @@ VMSimpleStackBasedCogitPolimorphicPICTest >> testNewPolymorphicPICWithTwoCoggedM
 VMSimpleStackBasedCogitPolimorphicPICTest >> testNewPolymorphicPICWithTwoCoggedMethodsCallsCase1OnHit [
 
 	| pic |	
-	tags at: 1 put: receiverTag.
+	picTypeTags at: 1 put: receiverTag.
 
 	pic := self
 		makePolymorphicPICWithCase0CogMethod: cogMethod0
@@ -229,7 +229,7 @@ VMSimpleStackBasedCogitPolimorphicPICTest >> testNewPolymorphicPICWithTwoCoggedM
 VMSimpleStackBasedCogitPolimorphicPICTest >> testPolymorphicPICHitDoesNotCallEntryOffset [
 
 	| pic methodCheckEntryPoint |	
-	tags at: 0 put: receiverTag.
+	picTypeTags at: 0 put: receiverTag.
 	
 	pic := self
 		makePolymorphicPICWithCase0CogMethod: cogMethod0
@@ -240,7 +240,7 @@ VMSimpleStackBasedCogitPolimorphicPICTest >> testPolymorphicPICHitDoesNotCallEnt
 	 - the receiver does not match with the class tag for case 1
 	 - so it should call method for case 0"
 	unicorn receiverRegisterValue: receiver.
-	unicorn classRegisterValue: (tags at: 0).
+	unicorn classRegisterValue: (picTypeTags at: 0).
 
 	"Should call method 1 just after the type check (to avoid it).
 	The check was already done in the PIC.
