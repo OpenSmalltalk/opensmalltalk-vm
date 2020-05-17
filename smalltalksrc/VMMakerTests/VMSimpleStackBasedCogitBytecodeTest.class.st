@@ -680,8 +680,7 @@ VMSimpleStackBasedCogitBytecodeTest >> setUp [
 	
 	memory coInterpreter numStackPages: 8.
 
-	self initializeOldSpaceForScavenger.	
-
+	self initializeOldSpaceForScavenger.
 ]
 
 { #category : #running }
@@ -690,6 +689,16 @@ VMSimpleStackBasedCogitBytecodeTest >> setUpCPUSimulator [
 	unicorn := UnicornSimulator perform: isa asSymbol.
 	memory memory memoryObject pinInMemory.
 	unicorn mapMemory: memory memory memoryObject at: initialAddress.
+]
+
+{ #category : #'tests - PIC' }
+VMSimpleStackBasedCogitBytecodeTest >> setUpCogMethodEntry [
+	
+	cogit ceCPICMissTrampoline: (self compile: [ cogit RetN: 0 ]).
+	cogit cePICAbortTrampoline: (self compile: [ cogit RetN: 0 ]).
+	cogit ceMethodAbortTrampoline: (self compile: [ cogit RetN: 0 ]).
+	
+	cogit computeEntryOffsets.
 ]
 
 { #category : #'helpers - registers' }
@@ -708,11 +717,7 @@ VMSimpleStackBasedCogitBytecodeTest >> stackPointerRegisterValue: aValue [
 VMSimpleStackBasedCogitBytecodeTest >> testCalculateClosePICSize [
 
 	"Calculate the size of the Closed Pic"
-	cogit ceCPICMissTrampoline: (self compile: [ cogit RetN: 0 ]).
-	cogit cePICAbortTrampoline: (self compile: [ cogit RetN: 0 ]).
-	cogit ceMethodAbortTrampoline: (self compile: [ cogit RetN: 0 ]).
-	
-	cogit computeEntryOffsets.
+	self setUpCogMethodEntry.
 	cogit generateClosedPICPrototype.
 	
 	self assert: cogit closedPICSize isNotNil
@@ -845,7 +850,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testLinkCallDuringSendInTrampolineReplace
 	"This is for the monomorphic case"
 
 	| sendingMethod targetCog selector executedTheTrampoline |
-	
+	self setUpCogMethodEntry.
 	sendTrampolineAddress := self compile: [ cogit RetN: 0 ].
 	cogit ordinarySendTrampolineAt: 0 "num args" put: sendTrampolineAddress.
 
@@ -886,11 +891,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testLinkCallDuringSendInTrampolineReplace
 VMSimpleStackBasedCogitBytecodeTest >> testMissOffsetIsEqualsToEntryOffset [
 
 	"Calculate the size of the Closed Pic"
-	cogit ceCPICMissTrampoline: (self compile: [ cogit RetN: 0 ]).
-	cogit cePICAbortTrampoline: (self compile: [ cogit RetN: 0 ]).
-	cogit ceMethodAbortTrampoline: 16r12.
-	
-	cogit computeEntryOffsets.
+	self setUpCogMethodEntry.
 	cogit generateClosedPICPrototype.
 
 	self assert: cogit missOffset equals: cogit entryOffset
