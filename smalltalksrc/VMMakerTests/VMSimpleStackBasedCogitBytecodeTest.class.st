@@ -898,7 +898,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testMissOffsetIsEqualsToEntryOffset [
 ]
 
 { #category : #'tests - PIC' }
-VMSimpleStackBasedCogitBytecodeTest >> testNewPolymorphicPICWithTwoCoggedMethodsCallsCase0IfMatch [
+VMSimpleStackBasedCogitBytecodeTest >> testNewPolymorphicPICWithTwoCoggedMethodsCallsCase0OnHit [
 
 	| selector cogMethod1 cogMethod2 cogMethod2Tag pic compiledMethod1 compiledMethod2 cogMethod1Tag receiver |	
 
@@ -940,11 +940,63 @@ VMSimpleStackBasedCogitBytecodeTest >> testNewPolymorphicPICWithTwoCoggedMethods
 	The check was already done in the PIC"
 	self runFrom: pic address + cogit entryOffset until: cogMethod1 address + cogit noCheckEntryOffset.
 
-	"Failing all two PIC cases calls the pic trampoline.
-	 - The instruction pointer is at the trampoline
-	 - The class register value contains the pic
-	 - the receiver register value contains the receiver"	
+	"When a PIC Hits
+	 - The instruction pointer is at no check entry offset of the hitted method
+	 - The class register value case 0 tag regardless of the hit
+	 - the receiver register value contains the receiver"
 	self assert: unicorn instructionPointerValue equals: cogMethod1 address + cogit noCheckEntryOffset.
+	self assert: unicorn classRegisterValue equals: cogMethod1Tag.
+	self assert: unicorn receiverRegisterValue equals: receiver
+]
+
+{ #category : #'tests - PIC' }
+VMSimpleStackBasedCogitBytecodeTest >> testNewPolymorphicPICWithTwoCoggedMethodsCallsCase1OnHit [
+
+	| selector cogMethod1 cogMethod2 cogMethod2Tag pic compiledMethod1 compiledMethod2 cogMethod1Tag receiver |	
+
+	self testCalculateClosePICSize.
+	
+	cogit methodZone manageFrom: cogit methodZoneBase to: cogit methodZone effectiveLimit.
+
+	selector := self newOldSpaceObjectWithSlots: 0.
+
+	compiledMethod1 := self newMethodWithLiteral: selector at: 0.
+	cogMethod1 := self generateCogMethod: [ cogit RetN: 0 ] selector: selector.
+	cogit coInterpreter rawHeaderOf: compiledMethod1 put: cogMethod1 asInteger.
+	
+	compiledMethod2 := self newMethodWithLiteral: selector at: 0.
+	cogMethod2 := self generateCogMethod: [ cogit RetN: 0 ] selector: selector.
+	cogit coInterpreter rawHeaderOf: compiledMethod2 put: cogMethod2 asInteger.
+
+	receiver := memory nilObject.
+	cogMethod1Tag := 2.
+	cogMethod2Tag := memory classIndexOf: receiver.
+
+	pic := cogit cogPICSelector: selector
+					numArgs: 0
+					Case0Method: cogMethod1
+					Case1Method: compiledMethod2
+					tag: cogMethod2Tag
+					isMNUCase: false.
+
+	"Receiver is nil, class tag of the first entry is the receiver's class tag.
+	 - the receiver does not match the class tag for case 0
+	 - the receiver matches the class tag for case 1
+	 - so it should call method for case 1"
+	unicorn receiverRegisterValue: receiver.
+	self assert: (memory classIndexOf: receiver) equals: cogMethod2Tag.
+	self deny: (memory classIndexOf: receiver) equals: cogMethod1Tag.
+	unicorn classRegisterValue: cogMethod1Tag.
+
+	"Should call method 1 just after the type check (to avoid it).
+	The check was already done in the PIC"
+	self runFrom: pic address + cogit entryOffset until: cogMethod2 address + cogit noCheckEntryOffset.
+
+	"When a PIC Hits
+	 - The instruction pointer is at no check entry offset of the hitted method
+	 - The class register value case 0 tag regardless of the hit
+	 - the receiver register value contains the receiver"
+	self assert: unicorn instructionPointerValue equals: cogMethod2 address + cogit noCheckEntryOffset.
 	self assert: unicorn classRegisterValue equals: cogMethod1Tag.
 	self assert: unicorn receiverRegisterValue equals: receiver
 ]
