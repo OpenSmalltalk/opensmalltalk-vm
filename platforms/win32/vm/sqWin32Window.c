@@ -2346,56 +2346,6 @@ sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth, double
 }
 
 
-#ifdef USE_DIB_SECTIONS
-
-/* CreateBitmapDC():
-   Create a device context for a DIB of the selected size.
-*/
-HDC CreateBitmapDC(HDC dc, int depth, int width, int height, void** pBitsOut)
-{
-  /* Cached DIBSection */
-  static HBITMAP hbm = NULL;
-  static int lastDepth = 0;
-  static int lastWidth = 0;
-  static int lastHeight = 0;
-  static void* pBits;
-  static HDC memDC;
-  BITMAPINFO *bmi;
-
-  bmi = BmiForDepth(depth);
-  if(!bmi)
-    abortMessage(TEXT("Fatal error: Color depth %d not supported"),depth);
-
-  if (depth != lastDepth || width != lastWidth || height != lastHeight)
-    {
-      lastDepth = depth;
-      lastHeight = height;
-      lastWidth = width;
-      bmi->bmiHeader.biWidth = width;
-      bmi->bmiHeader.biHeight = -height;
-      if (hbm)
-	DeleteObject(hbm);
-      hbm = CreateDIBSection(dc, bmi, DIB_RGB_COLORS, &pBits, NULL, 0);
-      if (!hbm)
-	abortMessage(TEXT("Fatal error: Cannot create device bitmap!"));
-    }
-
-  *pBitsOut = pBits;
-  memDC = CreateCompatibleDC(dc);
-  SelectObject(memDC, hbm);
-  return memDC;
-}
-
-/* ReleaseBitmapDC():
-   Clean up the given DC.
-*/
-void ReleaseBitmapDC(HDC memDC)
-{
-  DeleteDC(memDC);
-}
-
-#endif /* USE_DIB_SECTIONS */
-
 sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
 		  sqInt affectedL, sqInt affectedR, sqInt affectedT, sqInt affectedB)
 { HDC dc;
@@ -2464,53 +2414,6 @@ sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
   /* ----- EXPERIMENTAL ----- */
   lsbDisplay = depth < 0;
   if(lsbDisplay) depth = -depth;
-
-#if defined(USE_DIB_SECTIONS)
-	/******************************************************/
-	/* Windows CE version, using DIBSection               */
-	/* (does not support palettes or SetDIBitsToDevice()) */
-	/******************************************************/
-  {
-    void* pBits;
-    HDC memDC;
-
-    dc = GetDC(stWindow);
-    if (!dc)
-      error("GetDC() failed");
-
-    memDC = CreateBitmapDC(dc, depth, width, height, &pBits);
-    /* Reverse the affected area out of the squeak bitmap, into the DIBSection */
-
-    PROFILE_BEGIN(PROFILE_DISPLAY)
-      if( !lsbDisplay && depth < 32 ) {
-	if(depth == 16)
-	  reverse_image_words((unsigned int*) pBits, (unsigned int*) dispBits,
-			      depth, width, &updateRect);
-	else
-	  reverse_image_bytes((unsigned int*) pBits, (unsigned int*) dispBits,
-			      depth, width, &updateRect);
-      } else {
-	copy_image_words((int*)pBits, (int*) dispBits,
-			 depth, width, &updateRect);
-      }
-    PROFILE_END(ticksForReversal)
-
-      PROFILE_BEGIN(PROFILE_DISPLAY);
-    BitBlt(dc,
-	   updateRect.left,/* dst_x */
-	   updateRect.top, /* dst_y */
-	   (updateRect.right - updateRect.left),/* dst_w */
-	   (updateRect.bottom - updateRect.top),/* dst_h */
-	   memDC,
-	   updateRect.left, /* src_x */
-	   updateRect.top,  /* src_y */
-	   SRCCOPY);
-
-    ReleaseBitmapDC(memDC);
-    ReleaseDC(stWindow,dc);
-    PROFILE_END(ticksForBlitting);
-  }
-#else /* !defined(USE_DIB_SECTIONS) */
 
   bmi = BmiForDepth(depth);
   if(!bmi)
@@ -2616,7 +2519,6 @@ sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
   }
   PROFILE_END(ticksForReversal)
 #endif /* NO_BYTE_REVERSAL */
-#endif /* defined(USE_DIB_SECTIONS) */
   return 1;
 }
 
