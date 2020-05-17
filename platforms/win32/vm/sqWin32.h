@@ -71,7 +71,6 @@
   /* The hardcoded defs:
    * No virtual memory support; no service support; no preferences; no printing
    */
-#	define NO_VIRTUAL_MEMORY
 #	define NO_SERVICE
 #	define NO_PREFERENCES
 #	define NO_PRINTER
