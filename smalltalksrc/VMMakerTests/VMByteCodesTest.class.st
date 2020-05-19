@@ -115,3 +115,21 @@ VMByteCodesTest >> testPushConstantTrueBytecode [
 		assert: [ self interpret: [ interpreter pushConstantTrueBytecode ] ]
 		pushed: memory trueObject
 ]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testPushConstantTwoBytecode [
+
+	self frameBuilder buildFrame.
+	self
+		assert: [ self interpret: [ interpreter pushConstantTwoBytecode ] ]
+		pushed: (memory integerObjectOf: 2)
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testPushConstantZeroBytecode [
+
+	self frameBuilder buildFrame.
+	self
+		assert: [ self interpret: [ interpreter pushConstantZeroBytecode ] ]
+		pushed: (memory integerObjectOf: 0)
+]
