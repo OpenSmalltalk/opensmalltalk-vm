@@ -100,7 +100,8 @@ Class {
 		'is64BitVM',
 		'optionsDictionary',
 		'abortBlock',
-		'doCleanupOldFiles'
+		'doCleanupOldFiles',
+		'silently'
 	],
 	#classVars : [
 		'DirNames'
@@ -1039,6 +1040,12 @@ VMMaker >> availablePlugins [
 	^allPlugins
 ]
 
+{ #category : #accessing }
+VMMaker >> beSilent [
+
+	silently := true
+]
+
 { #category : #'generate sources' }
 VMMaker >> buildCodeGeneratorForCogit [
 	"Answer the code generator for translating the cogit."
@@ -1146,9 +1153,11 @@ VMMaker >> buildCodeGeneratorForInterpreter: interpreterClass includeAPIMethods:
 		 (cg structClassesForTranslationClasses: interpreterClasses) do:
 			[:structClass| structClass initialize]].
 
-	cg addStructClasses: (cg structClassesForTranslationClasses: interpreterClasses).
+	cg
+		addStructClasses: (cg structClassesForTranslationClasses: interpreterClasses)
+		silently: self silently.
 
-	interpreterClasses do: [:ic| cg addClass: ic].
+	interpreterClasses do: [:ic| cg addClass: ic silently: self silently].
 
 	getAPIMethods ifTrue:
 		[interpreterClass cogitClass ifNotNil:
@@ -1664,7 +1673,9 @@ VMMaker >> initialize [
 	doCleanupOldFiles := false.
 	interpreterClassName := StackInterpreterPrimitives name.
 	optionsDictionary := Dictionary newFromPairs: {#BytesPerWord. 4}.
-	VMStructType voidStructTypeCache
+	VMStructType voidStructTypeCache.
+	
+	silently := false
 ]
 
 { #category : #initialize }
@@ -2176,6 +2187,12 @@ VMMaker >> saveConfigurationTo: aFile [
 VMMaker >> setPlatName: aString [
 	"private - just set the platform name string, nothing else. Go away...."
 	platformName := aString
+]
+
+{ #category : #accessing }
+VMMaker >> silently [
+
+	^ silently
 ]
 
 { #category : #'target directories' }
