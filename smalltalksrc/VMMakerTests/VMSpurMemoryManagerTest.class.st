@@ -3,17 +3,22 @@ Class {
 	#superclass : #ParametrizedTestCase,
 	#instVars : [
 		'newSpaceSize',
-		'stackSize',
 		'memory',
 		'oldSpaceSize',
 		'nextIndex',
 		'objectHeaderSize',
 		'zeroSizedObjectClassIndex',
 		'emptyObjectSize',
-		'initialAddress'
+		'initialAddress',
+		'stackSpaceSize'
 	],
 	#category : #VMMakerTests
 }
+
+{ #category : #accessing }
+VMSpurMemoryManagerTest >> initialCodeSize [
+	^ 4 * 1024
+]
 
 { #category : #helpers }
 VMSpurMemoryManagerTest >> initializeOldSpaceForScavenger [
@@ -70,15 +75,72 @@ VMSpurMemoryManagerTest >> initializeOldSpaceForScavenger [
 ]
 
 { #category : #helpers }
+VMSpurMemoryManagerTest >> makeBaseFrameWithMethod: aMethodOop context: aContextOop receiver: aReceiverOop args: argsOops andStack: stackOops [
+	
+	| page pointer |
+	page := memory coInterpreter stackPages newStackPage.
+	pointer := page baseAddress.
+	memory coInterpreter stackPointer: pointer + memory wordSize.
+	"Receiver"
+	memory coInterpreter push: aReceiverOop.
+	argsOops do: [ :e | memory coInterpreter push: e ].
+	"sender context"
+	memory coInterpreter push: memory nilObject.
+	"base frame's saved fp is null"
+	memory coInterpreter push: 0.
+	page
+		baseFP: memory coInterpreter stackPointer;
+		headFP: memory coInterpreter stackPointer.
+	"method"
+	memory coInterpreter push: aMethodOop.
+	"Flags: this stack frame is single. I.e., it has no context object.
+	Otherwise GC fails with an assertion looking for it in the heap"
+	memory coInterpreter push: (memory coInterpreter 
+		encodeFrameFieldHasContext: (aContextOop ~= memory nilObject)
+		isBlock: false
+		numArgs: argsOops size).
+	"context"
+	memory coInterpreter push: aContextOop.
+	"rcvr"
+	memory coInterpreter push: aReceiverOop.
+	"frame stack => empty"
+	stackOops do: [ :e | memory coInterpreter push: e ].
+	"ip"
+	memory coInterpreter push: (aMethodOop + memory baseHeaderSize - 2).
+	page headSP: memory coInterpreter stackPointer.
+	memory coInterpreter setStackPageAndLimit: page.
+	memory coInterpreter setStackPointersFromPage: page.
+	memory coInterpreter popStack.
+	
+	"Mark context as married by setting its sender to the frame pointer plus SmallInteger
+	 tags and the InstructionPointer to the saved fp (which ensures correct alignment
+	 w.r.t. the frame when we check for validity) plus SmallInteger tags."
+	(aContextOop ~= memory nilObject) ifTrue: [ 
+		memory
+			storePointerUnchecked: 0 "SenderIndex"
+			ofObject: aContextOop
+			withValue: (memory coInterpreter withSmallIntegerTags: page baseFP) ]
+]
+
+{ #category : #accessor }
+VMSpurMemoryManagerTest >> memory [
+	^ memory
+]
+
+{ #category : #helpers }
 VMSpurMemoryManagerTest >> newInterpreter [
 
-	^ StackInterpreterSimulator newWithOptions: {#BytesPerWord . 8}
+	^ StackInterpreterSimulator newWithOptions: 
+		{	
+			#BytesPerWord . 8.
+			#ObjectMemory . self newMemory class name
+			}
 ]
 
 { #category : #helpers }
 VMSpurMemoryManagerTest >> newMemory [
 
-	^ Spur64BitMMLESimulator new
+	^ Spur64BitMemoryManager new
 ]
 
 { #category : #helpers }
@@ -159,7 +221,7 @@ VMSpurMemoryManagerTest >> setUp [
 	Get total size be a multiple of 4K so Unicorn CPU emulator accepts it"
 	oldSpaceSize := 999 * 1024.
  	newSpaceSize := 1 * 1024.
-	stackSize := 9 * 4096.
+	stackSpaceSize := 9 * 4096.
 	initialAddress := 16r1000000.
 	
 	objectHeaderSize := 8 "bytes".
@@ -167,7 +229,7 @@ VMSpurMemoryManagerTest >> setUp [
 	
 	"Set it to bootstrapping to allow smaller memories"
 	interpreter := self newInterpreter.
-	memory := self newMemory.
+	memory := interpreter objectMemory.
 	
 	memory coInterpreter: interpreter.
 	interpreter objectMemory: memory.
@@ -177,7 +239,7 @@ VMSpurMemoryManagerTest >> setUp [
 	memory
 		allocateMemoryOfSize: oldSpaceSize
 		newSpaceSize: newSpaceSize
-		stackSize: stackSize
+		stackSize: stackSpaceSize
 		codeSize: self initialCodeSize
 		initialAddress: initialAddress.
 	memory initializePostBootstrap.

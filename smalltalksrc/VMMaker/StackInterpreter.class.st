@@ -9325,7 +9325,7 @@ StackInterpreter >> interpret [
 	self internalizeIPandSP.
 	self initExtensions.
 	self fetchNextBytecode.
-	[true] whileTrue: [self dispatchOn: currentBytecode in: BytecodeTable].
+	[true] whileTrue: [self interpretCurrentByteCode ].
 	localIP := localIP - 1.  "undo the pre-increment of IP before returning"
 	self externalizeIPandSP.
 	^nil

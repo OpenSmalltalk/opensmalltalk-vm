@@ -45,9 +45,7 @@ Spur64BitMemoryManager class >> numSmallIntegerTagBits [
 
 { #category : #'simulation only' }
 Spur64BitMemoryManager class >> simulatorClass [
-	^Spur64BitMMLESimulatorFor64Bits basicNew memoryClass
-		ifNil: [Spur64BitMMLESimulator]
-		ifNotNil: [Spur64BitMMLESimulatorFor64Bits]
+	^ Spur64BitMMLESimulator
 ]
 
 { #category : #'word size' }
