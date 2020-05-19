@@ -130,17 +130,20 @@ VMSpurMemoryManagerTest >> memory [
 { #category : #helpers }
 VMSpurMemoryManagerTest >> newInterpreter [
 
-	^ StackInterpreterSimulator newWithOptions: 
-		{	
-			#BytesPerWord . 8.
-			#ObjectMemory . self newMemory class name
-			}
+	StackInterpreterSimulatorLSB
+		initializeWithOptions: {
+			#BytesPerWord. 8.
+			#ObjectMemory. #Spur64BitMemoryManager}
+		objectMemoryClass: Spur64BitMemoryManager.
+	^ StackInterpreterSimulatorLSB basicNew
+		objectMemory: self newMemory;
+		basicInitialize
 ]
 
 { #category : #helpers }
 VMSpurMemoryManagerTest >> newMemory [
 
-	^ Spur64BitMemoryManager new
+	^ Spur64BitMemoryManager simulatorClass new
 ]
 
 { #category : #helpers }

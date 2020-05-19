@@ -378,9 +378,7 @@ VMSimpleStackBasedCogitBytecodeTest >> generateCogMethod: aBlockClosure selector
 		cogit compileAbort.
 		cogit compileEntry.
 		aBlockClosure value
-	].	
-	
-	self assert: targetCog asInteger + (cogit sizeof: CogMethod) equals: targetCogAddress.
+	].
 	
 	^ targetCog
 
@@ -420,18 +418,27 @@ VMSimpleStackBasedCogitBytecodeTest >> instructionPointer [
 { #category : #helpers }
 VMSimpleStackBasedCogitBytecodeTest >> newInterpreter [
 
-	^ CogVMSimulator newWithOptions: {	
-			#BytesPerWord . wordSize.
-			#ObjectMemory . self newMemory class name
-			}
+	| theMemory |
+	theMemory := self newMemory.
+
+	CogVMSimulatorLSB
+		initializeWithOptions: {
+			#BytesPerWord. 8.
+			#ObjectMemory. theMemory class name}
+		objectMemoryClass: theMemory class.
+		
+		
+	^ CogVMSimulatorLSB basicNew
+		objectMemory: theMemory;
+		basicInitialize
 ]
 
 { #category : #running }
 VMSimpleStackBasedCogitBytecodeTest >> newMemory [
 
 	^ wordSize = 4
-		ifTrue: [ Spur32BitCoMemoryManager new ]
-		ifFalse: [ Spur64BitCoMemoryManager new ]
+		ifTrue: [ Spur32BitCoMemoryManager simulatorClass new ]
+		ifFalse: [ Spur64BitCoMemoryManager simulatorClass new ]
 ]
 
 { #category : #helpers }
