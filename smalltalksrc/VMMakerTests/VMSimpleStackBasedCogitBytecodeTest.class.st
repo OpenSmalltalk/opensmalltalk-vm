@@ -385,6 +385,11 @@ VMSimpleStackBasedCogitBytecodeTest >> generateCogMethod: aBlockClosure selector
 ]
 
 { #category : #running }
+VMSimpleStackBasedCogitBytecodeTest >> initialCodeSize [
+	^ 4 * 1024
+]
+
+{ #category : #running }
 VMSimpleStackBasedCogitBytecodeTest >> initializeInitialStackFrame [
 
 	"I will create the initial stack with a well-known caller address so we know if the code comes back

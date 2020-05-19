@@ -17,7 +17,7 @@ Class {
 
 { #category : #accessing }
 VMSpurMemoryManagerTest >> initialCodeSize [
-	^ 4 * 1024
+	^ 0
 ]
 
 { #category : #helpers }
