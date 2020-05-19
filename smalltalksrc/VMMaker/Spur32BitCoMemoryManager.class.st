@@ -49,7 +49,7 @@ Spur32BitCoMemoryManager class >> objectRepresentationClass [
 
 { #category : #simulation }
 Spur32BitCoMemoryManager class >> simulatorClass [
-	^Spur32BitMMLECoSimulator
+	^ Spur32BitMMLECoSimulator
 ]
 
 { #category : #'growing/shrinking memory' }

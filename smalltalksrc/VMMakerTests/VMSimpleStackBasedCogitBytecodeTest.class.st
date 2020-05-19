@@ -387,7 +387,7 @@ VMSimpleStackBasedCogitBytecodeTest >> initializeInitialStackFrame [
 VMSimpleStackBasedCogitBytecodeTest >> initializeStackMemory [.
 
 	stackMemoryStartAddress := initialAddress + self initialCodeSize.
-	stackMemoryEndAddress := stackMemoryStartAddress + stackSize.
+	stackMemoryEndAddress := stackMemoryStartAddress + stackSpaceSize.
 
 	"The stack pointer is at the top of the stack"
 	unicorn stackPointerRegisterValue: stackMemoryEndAddress.
@@ -404,15 +404,18 @@ VMSimpleStackBasedCogitBytecodeTest >> instructionPointer [
 { #category : #helpers }
 VMSimpleStackBasedCogitBytecodeTest >> newInterpreter [
 
-	^ CogVMSimulator newWithOptions: {#BytesPerWord . wordSize}
+	^ CogVMSimulator newWithOptions: {	
+			#BytesPerWord . wordSize.
+			#ObjectMemory . self newMemory class name
+			}
 ]
 
 { #category : #running }
 VMSimpleStackBasedCogitBytecodeTest >> newMemory [
 
 	^ wordSize = 4
-		ifTrue: [ Spur32BitMMLECoSimulator new ]
-		ifFalse: [ Spur64BitMMLECoSimulator new ]
+		ifTrue: [ Spur32BitCoMemoryManager new ]
+		ifFalse: [ Spur64BitCoMemoryManager new ]
 ]
 
 { #category : #helpers }
@@ -609,7 +612,6 @@ VMSimpleStackBasedCogitBytecodeTest >> runUntilReturnFrom: anAddress [
 
 { #category : #running }
 VMSimpleStackBasedCogitBytecodeTest >> setUp [
-
 	super setUp.
 	
 	SimpleStackBasedCogit initializeWithOptions: (Cogit asOptionsDictionary: { #ISA . isa }).

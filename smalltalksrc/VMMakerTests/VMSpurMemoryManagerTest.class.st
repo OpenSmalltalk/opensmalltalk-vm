@@ -122,16 +122,25 @@ VMSpurMemoryManagerTest >> makeBaseFrameWithMethod: aMethodOop context: aContext
 			withValue: (memory coInterpreter withSmallIntegerTags: page baseFP) ]
 ]
 
+{ #category : #accessor }
+VMSpurMemoryManagerTest >> memory [
+	^ memory
+]
+
 { #category : #helpers }
 VMSpurMemoryManagerTest >> newInterpreter [
 
-	^ StackInterpreterSimulator newWithOptions: {#BytesPerWord . 8}
+	^ StackInterpreterSimulator newWithOptions: 
+		{	
+			#BytesPerWord . 8.
+			#ObjectMemory . self newMemory class name
+			}
 ]
 
 { #category : #helpers }
 VMSpurMemoryManagerTest >> newMemory [
 
-	^ Spur64BitMMLESimulator new
+	^ Spur64BitMemoryManager new
 ]
 
 { #category : #helpers }
@@ -203,7 +212,7 @@ VMSpurMemoryManagerTest >> setUp [
 	Get total size be a multiple of 4K so Unicorn CPU emulator accepts it"
 	oldSpaceSize := 999 * 1024.
  	newSpaceSize := 1 * 1024.
-	stackSize := 9 * 4096.
+	stackSpaceSize := 9 * 4096.
 	initialAddress := 16r1000000.
 	
 	objectHeaderSize := 8 "bytes".
@@ -211,7 +220,7 @@ VMSpurMemoryManagerTest >> setUp [
 	
 	"Set it to bootstrapping to allow smaller memories"
 	interpreter := self newInterpreter.
-	memory := self newMemory.
+	memory := interpreter objectMemory.
 	
 	memory coInterpreter: interpreter.
 	interpreter objectMemory: memory.
@@ -221,7 +230,7 @@ VMSpurMemoryManagerTest >> setUp [
 	memory
 		allocateMemoryOfSize: oldSpaceSize
 		newSpaceSize: newSpaceSize
-		stackSize: stackSize
+		stackSize: stackSpaceSize
 		codeSize: self initialCodeSize
 		initialAddress: initialAddress.
 	memory initializePostBootstrap.

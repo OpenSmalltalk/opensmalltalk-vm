@@ -35,7 +35,7 @@ Spur32BitMemoryManager class >> numSmallIntegerTagBits [
 
 { #category : #'simulation only' }
 Spur32BitMemoryManager class >> simulatorClass [
-	^Spur32BitMMLESimulator
+	^ Spur32BitMMLESimulator
 ]
 
 { #category : #'word size' }
