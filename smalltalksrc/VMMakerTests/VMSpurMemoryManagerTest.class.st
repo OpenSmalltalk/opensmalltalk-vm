@@ -137,7 +137,7 @@ VMSpurMemoryManagerTest >> newInterpreter [
 		objectMemoryClass: Spur64BitMemoryManager.
 	^ StackInterpreterSimulatorLSB basicNew
 		objectMemory: self newMemory;
-		initialize
+		basicInitialize
 ]
 
 { #category : #helpers }

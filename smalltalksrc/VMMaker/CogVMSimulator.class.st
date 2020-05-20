@@ -296,7 +296,10 @@ CogVMSimulator >> basicInitialize [
 	traceSources := TraceSources.
 	statCodeCompactionCount := 0.
 	statCodeCompactionUsecs := 0.
-	extSemTabSize := 256
+	extSemTabSize := 256.
+	
+	"This will be overriden when calling initializePluginEntries"
+	mappedPluginEntries := OrderedCollection new.
 ]
 
 { #category : #'multi-threading simulation switch' }
