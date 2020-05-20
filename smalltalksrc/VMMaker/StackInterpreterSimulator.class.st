@@ -200,6 +200,9 @@ StackInterpreterSimulator >> basicInitialize [
 	extSemTabSize := 256.
 	disableBooleanCheat := false.
 	assertVEPAES := false. "a flag so the assertValidExecutionPointers can be disabled for simulation speed and enabled when necessary."
+	
+	"This will be overriden when calling initializePluginEntries"
+	mappedPluginEntries := OrderedCollection new.
 ]
 
 { #category : #utilities }
