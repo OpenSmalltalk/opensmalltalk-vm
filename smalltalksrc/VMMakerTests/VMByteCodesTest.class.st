@@ -19,6 +19,17 @@ VMByteCodesTest >> assert: aBlock pushed: anOop [
 	
 ]
 
+{ #category : #'helper-interpretation' }
+VMByteCodesTest >> assertPoped: aBlock [
+	| oldStackSize |
+	oldStackSize := interpreter stackPointer.
+	
+	aBlock value.
+	
+	self assert: interpreter stackPointer equals: oldStackSize + memory wordSize.
+	
+]
+
 { #category : #'helper-frame' }
 VMByteCodesTest >> frameBuilder [
 	^ VMFrameBuilderForTest new
@@ -57,6 +68,39 @@ VMByteCodesTest >> setUp [
 	
 
 
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testDuplicateStackTop [
+
+	self frameBuilder buildFrame.
+	
+	"first we push something, so there is something to duplicate"
+	self
+		assert: [ self interpret: [ interpreter pushConstantOneBytecode ] ]
+		pushed: (memory integerObjectOf: 1).
+
+	"then we duplicate it"
+	self
+		assert: [ self interpret: [ interpreter duplicateTopBytecode  ] ]
+		pushed: (memory integerObjectOf: 1).
+	
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testPopStackTopBytecode [
+
+	self frameBuilder buildFrame.
+	
+	"first we push something"
+	self
+		assert: [ self interpret: [ interpreter pushConstantOneBytecode ] ]
+		pushed: (memory integerObjectOf: 1).
+	
+	"then we pop it"
+	self
+		assertPoped: [ self interpret: [ interpreter popStackBytecode ] ]
+	
 ]
 
 { #category : #'test-push-simple' }
