@@ -2,12 +2,16 @@ Class {
 	#name : #VMFrameBuilderForTest,
 	#superclass : #Object,
 	#instVars : [
-		'test',
 		'method',
 		'context',
 		'receiver',
 		'args',
-		'stack'
+		'temps',
+		'stack',
+		'memory',
+		'page',
+		'interpreter',
+		'senderContext'
 	],
 	#category : #VMMakerTests
 }
@@ -24,12 +28,26 @@ VMFrameBuilderForTest >> args: anObject [
 
 { #category : #building }
 VMFrameBuilderForTest >> buildFrame [
-	^ test
-		makeBaseFrameWithMethod: method
-		context: context
-		receiver: receiver
-		args: args
-		andStack: stack
+
+	self createStackPage.
+	self pushMethod.
+	
+	"Flags: this stack frame is single. I.e., it has no context object.
+	Otherwise GC fails with an assertion looking for it in the heap"
+	interpreter push: (interpreter 
+		encodeFrameFieldHasContext: (context ~= memory nilObject)
+		isBlock: false
+		numArgs: args size).
+	self pushContext.
+		
+	"Mark context as married by setting its sender to the frame pointer plus SmallInteger
+	 tags and the InstructionPointer to the saved fp (which ensures correct alignment
+	 w.r.t. the frame when we check for validity) plus SmallInteger tags."
+	(context ~= memory nilObject) ifTrue: [ 
+		memory
+			storePointerUnchecked: 0 "SenderIndex"
+			ofObject: context
+			withValue: (interpreter withSmallIntegerTags: page baseFP) ]
 ]
 
 { #category : #accessing }
@@ -42,14 +60,26 @@ VMFrameBuilderForTest >> context: anObject [
 	context := anObject
 ]
 
+{ #category : #building }
+VMFrameBuilderForTest >> createStackPage [
+	| pointer |
+	page := interpreter stackPages newStackPage.
+	pointer := page baseAddress.
+	interpreter stackPointer: pointer + memory wordSize.
+]
+
 { #category : #initialization }
 VMFrameBuilderForTest >> initializeForTest: aVMByteCodesTest [ 
-	test := aVMByteCodesTest.
-	method := test memory nilObject.
-	context := test memory nilObject.
-	receiver := test memory nilObject.
+	memory := aVMByteCodesTest memory.
+	interpreter := aVMByteCodesTest interpreter. "allow to not care if it's for a cog or stack interpreter"
+	method := memory nilObject.
+	context := memory nilObject.
+	receiver := memory nilObject.
 	args := OrderedCollection new.
 	stack := OrderedCollection new.
+	
+
+	senderContext := memory nilObject.
 ]
 
 { #category : #accessing }
@@ -60,6 +90,34 @@ VMFrameBuilderForTest >> method [
 { #category : #accessing }
 VMFrameBuilderForTest >> method: anObject [
 	method := anObject
+]
+
+{ #category : #building }
+VMFrameBuilderForTest >> pushContext [
+	interpreter push: context.
+	interpreter push: receiver.
+	stack do: [ :aMemoryObject | interpreter push: aMemoryObject ].
+	"ip"
+	interpreter push: (method + memory baseHeaderSize - 2).
+	page headSP: interpreter stackPointer.
+	interpreter setStackPageAndLimit: page.
+	interpreter setStackPointersFromPage: page.
+	interpreter popStack.
+]
+
+{ #category : #building }
+VMFrameBuilderForTest >> pushMethod [
+	"page has to be created first"
+	
+	interpreter push: receiver.
+	args do: [ :anArg | interpreter push: anArg ].
+	interpreter push: senderContext.
+	"base frame's saved fp is null"
+	memory coInterpreter push: 0.
+	page
+		baseFP: interpreter stackPointer;
+		headFP: interpreter stackPointer.
+	interpreter push: method.
 ]
 
 { #category : #accessing }
@@ -83,11 +141,11 @@ VMFrameBuilderForTest >> stack: anObject [
 ]
 
 { #category : #accessing }
-VMFrameBuilderForTest >> test [
-	^ test
+VMFrameBuilderForTest >> temps [
+	^ temps
 ]
 
 { #category : #accessing }
-VMFrameBuilderForTest >> test: anObject [
-	test := anObject
+VMFrameBuilderForTest >> temps: anObject [
+	temps := anObject
 ]
