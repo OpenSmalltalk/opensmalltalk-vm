@@ -2,9 +2,6 @@ Class {
 	#name : #VMByteCodesTest,
 	#superclass : #VMSpurMemoryManagerTest,
 	#instVars : [
-		'stackMemoryStartAddress',
-		'stackMemoryEndAddress',
-		'bytecodeTable',
 		'interpreter'
 	],
 	#category : #VMMakerTests
