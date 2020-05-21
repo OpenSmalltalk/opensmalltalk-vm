@@ -17,7 +17,7 @@ VMByteCodesTest >> assert: aBlock pushed: anOop [
 ]
 
 { #category : #'helper-interpretation' }
-VMByteCodesTest >> assertPoped: aBlock [
+VMByteCodesTest >> assertPopped: aBlock [
 	| oldStackSize |
 	oldStackSize := interpreter stackPointer.
 	
@@ -88,7 +88,7 @@ VMByteCodesTest >> testPopStackTopBytecode [
 	
 	"then we pop it"
 	self
-		assertPoped: [ self interpret: [ interpreter popStackBytecode ] ]
+		assertPopped: [ self interpret: [ interpreter popStackBytecode ] ]
 	
 ]
 
