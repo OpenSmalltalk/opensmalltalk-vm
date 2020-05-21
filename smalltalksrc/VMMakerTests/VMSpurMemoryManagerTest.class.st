@@ -4,6 +4,7 @@ Class {
 	#instVars : [
 		'newSpaceSize',
 		'memory',
+		'interpreter',
 		'oldSpaceSize',
 		'nextIndex',
 		'objectHeaderSize',
@@ -14,6 +15,14 @@ Class {
 	],
 	#category : #VMMakerTests
 }
+
+{ #category : #'helper-frame' }
+VMSpurMemoryManagerTest >> frameBuilder [
+	^ VMFrameBuilderForTest new
+		initializeForTest: self;
+		yourself
+
+]
 
 { #category : #accessing }
 VMSpurMemoryManagerTest >> initialCodeSize [
@@ -72,6 +81,11 @@ VMSpurMemoryManagerTest >> initializeOldSpaceForScavenger [
 	
 	memory scavengingGCTenuringIf: 1.
 	self deny: memory needGCFlag.
+]
+
+{ #category : #accessor }
+VMSpurMemoryManagerTest >> interpreter [
+	^ interpreter
 ]
 
 { #category : #helpers }
@@ -216,8 +230,6 @@ VMSpurMemoryManagerTest >> nextOrdinaryClassIndex [
 
 { #category : #running }
 VMSpurMemoryManagerTest >> setUp [
-	
-	| interpreter |
 	super setUp.
 
 	"100 k at least to put the class table in the old space.

@@ -1,9 +1,6 @@
 Class {
 	#name : #VMByteCodesTest,
 	#superclass : #VMSpurMemoryManagerTest,
-	#instVars : [
-		'interpreter'
-	],
 	#category : #VMMakerTests
 }
 
@@ -28,14 +25,6 @@ VMByteCodesTest >> assertPoped: aBlock [
 	
 	self assert: interpreter stackPointer equals: oldStackSize + memory wordSize.
 	
-]
-
-{ #category : #'helper-frame' }
-VMByteCodesTest >> frameBuilder [
-	^ VMFrameBuilderForTest new
-		initializeForTest: self;
-		yourself
-
 ]
 
 { #category : #'helper-interpret' }
