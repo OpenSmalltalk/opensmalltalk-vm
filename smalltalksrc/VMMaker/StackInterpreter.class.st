@@ -1323,7 +1323,7 @@ StackInterpreter class >> initializePrimitiveTable [
 	"self initializePrimitiveTable"
 
 	"NOTE: The real limit here is 2047 because of the old method header layout but there is no point in going over the needed size"
-	MaxPrimitiveIndex := 575.	
+	MaxPrimitiveIndex := 660.	
 	MaxQuickPrimitiveIndex := 519.
 	PrimNumberExternalCall := 117.
 	PrimNumberDoPrimitive := 118.
@@ -1665,7 +1665,42 @@ StackInterpreter class >> initializePrimitiveTable [
 		(574 primitiveFail) "reserved for addl. external support prims"
 
 		"Unassigned Primitives"
-		(575 primitiveFail))
+		(575 599 primitiveFail)
+		
+		"Memory accessor primitives"
+		(600 primitiveLoadBoolean8FromBytes)
+		(601 primitiveLoadUInt8FromBytes)
+		(602 primitiveLoadInt8FromBytes)
+		(603 primitiveLoadUInt16FromBytes)
+		(604 primitiveLoadInt16FromBytes)
+		(605 primitiveLoadUInt32FromBytes)
+		(606 primitiveLoadInt32FromBytes)
+		(607 primitiveLoadUInt64FromBytes)
+		(608 primitiveLoadInt64FromBytes)
+		(609 primitiveLoadPointerFromBytes)
+		(610 primitiveLoadChar8FromBytes)
+		(611 primitiveLoadChar16FromBytes)
+		(612 primitiveLoadChar32FromBytes)
+		(613 primitiveLoadFloat32FromBytes)
+		(614 primitiveLoadFloat64FromBytes)
+		(615 primitiveStoreBoolean8IntoBytes)
+		(616 primitiveStoreUInt8IntoBytes)
+		(617 primitiveStoreInt8IntoBytes)
+		(618 primitiveStoreUInt16IntoBytes)
+		(619 primitiveStoreInt16IntoBytes)
+		(620 primitiveStoreUInt32IntoBytes)
+		(621 primitiveStoreInt32IntoBytes)
+		(622 primitiveStoreUInt64IntoBytes)
+		(623 primitiveStoreInt64IntoBytes)
+		(624 primitiveStorePointerIntoBytes)
+		(625 primitiveStoreChar8IntoBytes)
+		(626 primitiveStoreChar16IntoBytes)
+		(627 primitiveStoreChar32IntoBytes)
+		(628 primitiveStoreFloat32IntoBytes)
+		(629 primitiveStoreFloat64IntoBytes)
+		
+		(630 660 primitiveFail)
+		)
 ]
 
 { #category : #initialization }

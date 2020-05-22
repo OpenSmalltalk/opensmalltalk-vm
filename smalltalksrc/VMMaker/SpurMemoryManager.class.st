@@ -4811,6 +4811,17 @@ SpurMemoryManager >> firstByteFormat [
 	^16
 ]
 
+{ #category : #'object access' }
+SpurMemoryManager >> firstBytePointerOfDataObject: objOop [
+	<returnTypeC: #'void *'>
+	<api>
+	<inline: true>
+	| fmt |
+	fmt := self formatOf: objOop.
+	fmt < self firstLongFormat ifTrue: [ ^ 0 ].
+	^ self firstFixedField: objOop
+]
+
 { #category : #'class table puns' }
 SpurMemoryManager >> firstClassIndexPun [
 	"Class puns are class indices not used by any class.  There is an entry
