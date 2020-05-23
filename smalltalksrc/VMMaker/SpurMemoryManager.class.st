@@ -3415,6 +3415,12 @@ SpurMemoryManager >> classExternalAddress [
 	^self splObj: ClassExternalAddress
 ]
 
+{ #category : #instantiation }
+SpurMemoryManager >> classExternalAddressIndex [
+	<api>
+	^ self ensureBehaviorHash: self classExternalAddress
+]
+
 { #category : #accessing }
 SpurMemoryManager >> classExternalData [
 	^self splObj: ClassExternalData
