@@ -5939,6 +5939,8 @@ InterpreterPrimitives >> primitiveStoreInt32IntoBytes [
 		[^self primitiveFailFor: PrimErrBadArgument].
 	index := objectMemory integerValueOf: index.
 	value := self signed32BitValueOf: valueObject.
+	self failed ifTrue: [ ^ nil ].
+
 	bytes := objectMemory firstBytePointerOfDataObject: rcvr.
 	bytes == 0 ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
 
@@ -5965,6 +5967,8 @@ InterpreterPrimitives >> primitiveStoreInt32IntoExternalAddress [
 		[^self primitiveFailFor: PrimErrBadArgument].
 	index := objectMemory integerValueOf: index.
 	value := self signed32BitValueOf: valueObject.
+	self failed ifTrue: [ ^ nil ].
+	
 	bytes := self pointerAtPointer: (objectMemory firstBytePointerOfDataObject: rcvr).
 	bytes == 0 ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
 	
@@ -5987,6 +5991,8 @@ InterpreterPrimitives >> primitiveStoreInt64IntoBytes [
 		[^self primitiveFailFor: PrimErrBadArgument].
 	index := objectMemory integerValueOf: index.
 	value := self signed64BitValueOf: valueObject.
+	self failed ifTrue: [ ^ nil ].
+	
 	bytes := objectMemory firstBytePointerOfDataObject: rcvr.
 	bytes == 0 ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
 
@@ -6013,6 +6019,8 @@ InterpreterPrimitives >> primitiveStoreInt64IntoExternalAddress [
 		[^self primitiveFailFor: PrimErrBadArgument].
 	index := objectMemory integerValueOf: index.
 	value := self signed64BitValueOf: valueObject.
+	self failed ifTrue: [ ^ nil ].
+	
 	bytes := self pointerAtPointer: (objectMemory firstBytePointerOfDataObject: rcvr).
 	bytes == 0 ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
 	
@@ -6135,6 +6143,8 @@ InterpreterPrimitives >> primitiveStoreUInt16IntoBytes [
 		[^self primitiveFailFor: PrimErrBadArgument].
 	index := objectMemory integerValueOf: index.
 	value := objectMemory integerValueOf: valueObject.
+	value < 0 ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+
 	bytes := objectMemory firstBytePointerOfDataObject: rcvr.
 	bytes == 0 ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
 
@@ -6161,6 +6171,8 @@ InterpreterPrimitives >> primitiveStoreUInt16IntoExternalAddress [
 		[^self primitiveFailFor: PrimErrBadArgument].
 	index := objectMemory integerValueOf: index.
 	value := objectMemory integerValueOf: valueObject.
+	value < 0 ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+
 	bytes := self pointerAtPointer: (objectMemory firstBytePointerOfDataObject: rcvr).
 	bytes == 0 ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
 	
@@ -6183,6 +6195,8 @@ InterpreterPrimitives >> primitiveStoreUInt32IntoBytes [
 		[^self primitiveFailFor: PrimErrBadArgument].
 	index := objectMemory integerValueOf: index.
 	value := self positive32BitValueOf: valueObject.
+	self failed ifTrue: [ ^ nil ].
+	
 	bytes := objectMemory firstBytePointerOfDataObject: rcvr.
 	bytes == 0 ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
 
@@ -6209,6 +6223,8 @@ InterpreterPrimitives >> primitiveStoreUInt32IntoExternalAddress [
 		[^self primitiveFailFor: PrimErrBadArgument].
 	index := objectMemory integerValueOf: index.
 	value := self positive32BitValueOf: valueObject.
+	self failed ifTrue: [ ^ nil ].
+	
 	bytes := self pointerAtPointer: (objectMemory firstBytePointerOfDataObject: rcvr).
 	bytes == 0 ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
 	
@@ -6231,6 +6247,8 @@ InterpreterPrimitives >> primitiveStoreUInt64IntoBytes [
 		[^self primitiveFailFor: PrimErrBadArgument].
 	index := objectMemory integerValueOf: index.
 	value := self positive64BitValueOf: valueObject.
+	self failed ifTrue: [ ^ nil ].
+	
 	bytes := objectMemory firstBytePointerOfDataObject: rcvr.
 	bytes == 0 ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
 
@@ -6257,6 +6275,8 @@ InterpreterPrimitives >> primitiveStoreUInt64IntoExternalAddress [
 		[^self primitiveFailFor: PrimErrBadArgument].
 	index := objectMemory integerValueOf: index.
 	value := self positive64BitValueOf: valueObject.
+	self failed ifTrue: [ ^ nil ].
+	
 	bytes := self pointerAtPointer: (objectMemory firstBytePointerOfDataObject: rcvr).
 	bytes == 0 ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
 	
@@ -6279,6 +6299,8 @@ InterpreterPrimitives >> primitiveStoreUInt8IntoBytes [
 		[^self primitiveFailFor: PrimErrBadArgument].
 	index := objectMemory integerValueOf: index.
 	value := objectMemory integerValueOf: valueObject.
+	value < 0 ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+
 	bytes := objectMemory firstBytePointerOfDataObject: rcvr.
 	bytes == 0 ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
 
@@ -6305,6 +6327,8 @@ InterpreterPrimitives >> primitiveStoreUInt8IntoExternalAddress [
 		[^self primitiveFailFor: PrimErrBadArgument].
 	index := objectMemory integerValueOf: index.
 	value := objectMemory integerValueOf: valueObject.
+	value < 0 ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+
 	bytes := self pointerAtPointer: (objectMemory firstBytePointerOfDataObject: rcvr).
 	bytes == 0 ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
 	
