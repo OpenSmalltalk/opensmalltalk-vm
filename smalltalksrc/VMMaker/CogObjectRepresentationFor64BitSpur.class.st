@@ -1436,8 +1436,33 @@ CogObjectRepresentationFor64BitSpur >> genPrimitiveLoadInt32FromBytes [
 ]
 
 { #category : #'primitive generators' }
+CogObjectRepresentationFor64BitSpur >> genPrimitiveLoadInt32FromExternalAddress [
+	^ self genPrimitiveLoadFromExternalAddressWith: [ :sourcePointer |
+		cogit MoveM32: 0 r: sourcePointer R: ReceiverResultReg.
+		cogit SignExtend32R: ReceiverResultReg R: ReceiverResultReg.
+	
+		self genConvertIntegerToSmallIntegerInReg: ReceiverResultReg.
+		cogit genPrimReturn
+	].
+]
+
+{ #category : #'primitive generators' }
 CogObjectRepresentationFor64BitSpur >> genPrimitiveLoadInt64FromBytes [
 	^ self genPrimitiveLoad: 8 fromBytesWith: [ :sourcePointer |
+		| jumpFailAlloc |
+		cogit MoveM64: 0 r: sourcePointer R: ClassReg.
+		jumpFailAlloc := self genIntegerTo64BitSignedIntegerValue: ClassReg into: SendNumArgsReg scratchReg: Extra0Reg scratchReg: TempReg.
+			 cogit MoveR: SendNumArgsReg R: ReceiverResultReg.
+			 cogit genPrimReturn.
+		cogit MoveR: SendNumArgsReg R: ReceiverResultReg.
+		cogit genPrimReturn.
+		jumpFailAlloc jmpTarget: cogit Label
+	] needsToTrap: true.
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationFor64BitSpur >> genPrimitiveLoadInt64FromExternalAddress [
+	^ self genPrimitiveLoadFromExternalAddressWith: [ :sourcePointer |
 		| jumpFailAlloc |
 		cogit MoveM64: 0 r: sourcePointer R: ClassReg.
 		jumpFailAlloc := self genIntegerTo64BitSignedIntegerValue: ClassReg into: SendNumArgsReg scratchReg: Extra0Reg scratchReg: TempReg.
@@ -1461,8 +1486,33 @@ CogObjectRepresentationFor64BitSpur >> genPrimitiveLoadUInt32FromBytes [
 ]
 
 { #category : #'primitive generators' }
+CogObjectRepresentationFor64BitSpur >> genPrimitiveLoadUInt32FromExternalAddress [
+	^ self genPrimitiveLoadFromExternalAddressWith: [ :sourcePointer |
+		cogit MoveM32: 0 r: sourcePointer R: ReceiverResultReg.
+		cogit ZeroExtend32R: ReceiverResultReg R: ReceiverResultReg.
+	
+		self genConvertIntegerToSmallIntegerInReg: ReceiverResultReg.
+		cogit genPrimReturn
+	].
+]
+
+{ #category : #'primitive generators' }
 CogObjectRepresentationFor64BitSpur >> genPrimitiveLoadUInt64FromBytes [
 	^ self genPrimitiveLoad: 8 fromBytesWith: [ :sourcePointer |
+		| jumpFailAlloc |
+		cogit MoveM64: 0 r: sourcePointer R: ClassReg.
+		jumpFailAlloc := self genIntegerTo64BitPositiveIntegerValue: ClassReg into: SendNumArgsReg scratchReg: Extra0Reg scratchReg: TempReg.
+			 cogit MoveR: SendNumArgsReg R: ReceiverResultReg.
+			 cogit genPrimReturn.
+		cogit MoveR: SendNumArgsReg R: ReceiverResultReg.
+		cogit genPrimReturn.
+		jumpFailAlloc jmpTarget: cogit Label
+	] needsToTrap: true.
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationFor64BitSpur >> genPrimitiveLoadUInt64FromExternalAddress [
+	^ self genPrimitiveLoadFromExternalAddressWith: [ :sourcePointer |
 		| jumpFailAlloc |
 		cogit MoveM64: 0 r: sourcePointer R: ClassReg.
 		jumpFailAlloc := self genIntegerTo64BitPositiveIntegerValue: ClassReg into: SendNumArgsReg scratchReg: Extra0Reg scratchReg: TempReg.
@@ -2125,8 +2175,38 @@ CogObjectRepresentationFor64BitSpur >> genPrimitiveStoreInt32IntoBytes [
 ]
 
 { #category : #'primitive generators' }
+CogObjectRepresentationFor64BitSpur >> genPrimitiveStoreInt32IntoExternalAddress [
+	^ self genPrimitiveStoreIntoExternalAddressWith: [ :destPointer :valueOop |
+		| jumpNonSmallInteger |
+		jumpNonSmallInteger := self genJumpNotSmallInteger: valueOop scratchReg: TempReg.
+		cogit MoveR: valueOop R: ReceiverResultReg.
+	
+		self genConvertSmallIntegerToIntegerInReg: valueOop.
+		cogit MoveR: valueOop M32: 0 r: destPointer.
+		cogit genPrimReturn.
+		
+		jumpNonSmallInteger jmpTarget: cogit Label
+	].
+]
+
+{ #category : #'primitive generators' }
 CogObjectRepresentationFor64BitSpur >> genPrimitiveStoreInt64IntoBytes [
 	^ self genPrimitiveStore: 8 intoBytesWith: [ :destPointer :valueOop |
+		| jumpNonSmallInteger |
+		jumpNonSmallInteger := self genJumpNotSmallInteger: valueOop scratchReg: TempReg.
+		cogit MoveR: valueOop R: ReceiverResultReg.
+	
+		self genConvertSmallIntegerToIntegerInReg: valueOop.
+		cogit MoveR: valueOop M64: 0 r: destPointer.
+		cogit genPrimReturn.
+		
+		jumpNonSmallInteger jmpTarget: cogit Label
+	] needsToTrap: true.
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationFor64BitSpur >> genPrimitiveStoreInt64IntoExternalAddress [
+	^ self genPrimitiveStoreIntoExternalAddressWith: [ :destPointer :valueOop |
 		| jumpNonSmallInteger |
 		jumpNonSmallInteger := self genJumpNotSmallInteger: valueOop scratchReg: TempReg.
 		cogit MoveR: valueOop R: ReceiverResultReg.
@@ -2158,8 +2238,44 @@ CogObjectRepresentationFor64BitSpur >> genPrimitiveStoreUInt32IntoBytes [
 ]
 
 { #category : #'primitive generators' }
+CogObjectRepresentationFor64BitSpur >> genPrimitiveStoreUInt32IntoExternalAddress [
+	^ self genPrimitiveStoreIntoExternalAddressWith: [ :destPointer :valueOop |
+		| jumpNonSmallInteger jumpNegative |
+		jumpNonSmallInteger := self genJumpNotSmallInteger: valueOop scratchReg: TempReg.
+		cogit CmpCq: 0 R: valueOop.
+		jumpNegative := cogit JumpLess: 0.
+		
+		cogit MoveR: valueOop R: ReceiverResultReg.
+	
+		self genConvertSmallIntegerToIntegerInReg: valueOop.
+		cogit MoveR: valueOop M32: 0 r: destPointer.
+		cogit genPrimReturn.
+		
+		jumpNonSmallInteger jmpTarget: (jumpNegative jmpTarget: cogit Label)
+	].
+]
+
+{ #category : #'primitive generators' }
 CogObjectRepresentationFor64BitSpur >> genPrimitiveStoreUInt64IntoBytes [
 	^ self genPrimitiveStore: 8 intoBytesWith: [ :destPointer :valueOop |
+		| jumpNonSmallInteger jumpNegative |
+		jumpNonSmallInteger := self genJumpNotSmallInteger: valueOop scratchReg: TempReg.
+		cogit CmpCq: 0 R: valueOop.
+		jumpNegative := cogit JumpLess: 0.
+		
+		cogit MoveR: valueOop R: ReceiverResultReg.
+	
+		self genConvertSmallIntegerToIntegerInReg: valueOop.
+		cogit MoveR: valueOop M64: 0 r: destPointer.
+		cogit genPrimReturn.
+		
+		jumpNonSmallInteger jmpTarget: (jumpNegative jmpTarget: cogit Label)
+	] needsToTrap: true.
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationFor64BitSpur >> genPrimitiveStoreUInt64IntoExternalAddress [
+	^ self genPrimitiveStoreIntoExternalAddressWith: [ :destPointer :valueOop |
 		| jumpNonSmallInteger jumpNegative |
 		jumpNonSmallInteger := self genJumpNotSmallInteger: valueOop scratchReg: TempReg.
 		cogit CmpCq: 0 R: valueOop.
