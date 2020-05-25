@@ -84,7 +84,6 @@ endmacro()
 macro(add_third_party_dependency_with_baseurl NAME TARGETPATH BASEURL)
 
     get_platform_name(PLATNAME)
-
     message("Adding third-party libraries for ${PLATNAME}: ${NAME}")
 
     add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/build/third-party/${NAME}.zip"
