@@ -722,7 +722,7 @@ CogObjectRepresentationFor64BitSpur >> genIntegerTo64BitSignedIntegerValue: valu
 	| jumpNotSmallInteger jumpMerge jumpFail |
 	cogit MoveR: valueReg R: scratch1.
 	cogit ArithmeticShiftRightCq: self numSmallIntegerBits R: scratch1. "If in range this is now 0 or -1"
-	cogit AndCq: 16rF R: scratch1.
+	cogit AddCq: 1 R: scratch1.
 	cogit CmpCq: 1 R: scratch1.
 	jumpNotSmallInteger := cogit JumpAbove: 0.
 	
@@ -1452,8 +1452,6 @@ CogObjectRepresentationFor64BitSpur >> genPrimitiveLoadInt64FromBytes [
 		| jumpFailAlloc |
 		cogit MoveM64: 0 r: sourcePointer R: ClassReg.
 		jumpFailAlloc := self genIntegerTo64BitSignedIntegerValue: ClassReg into: SendNumArgsReg scratchReg: Extra0Reg scratchReg: TempReg.
-			 cogit MoveR: SendNumArgsReg R: ReceiverResultReg.
-			 cogit genPrimReturn.
 		cogit MoveR: SendNumArgsReg R: ReceiverResultReg.
 		cogit genPrimReturn.
 		jumpFailAlloc jmpTarget: cogit Label
@@ -1466,8 +1464,6 @@ CogObjectRepresentationFor64BitSpur >> genPrimitiveLoadInt64FromExternalAddress 
 		| jumpFailAlloc |
 		cogit MoveM64: 0 r: sourcePointer R: ClassReg.
 		jumpFailAlloc := self genIntegerTo64BitSignedIntegerValue: ClassReg into: SendNumArgsReg scratchReg: Extra0Reg scratchReg: TempReg.
-			 cogit MoveR: SendNumArgsReg R: ReceiverResultReg.
-			 cogit genPrimReturn.
 		cogit MoveR: SendNumArgsReg R: ReceiverResultReg.
 		cogit genPrimReturn.
 		jumpFailAlloc jmpTarget: cogit Label
@@ -1502,8 +1498,6 @@ CogObjectRepresentationFor64BitSpur >> genPrimitiveLoadUInt64FromBytes [
 		| jumpFailAlloc |
 		cogit MoveM64: 0 r: sourcePointer R: ClassReg.
 		jumpFailAlloc := self genIntegerTo64BitPositiveIntegerValue: ClassReg into: SendNumArgsReg scratchReg: Extra0Reg scratchReg: TempReg.
-			 cogit MoveR: SendNumArgsReg R: ReceiverResultReg.
-			 cogit genPrimReturn.
 		cogit MoveR: SendNumArgsReg R: ReceiverResultReg.
 		cogit genPrimReturn.
 		jumpFailAlloc jmpTarget: cogit Label
@@ -1516,8 +1510,6 @@ CogObjectRepresentationFor64BitSpur >> genPrimitiveLoadUInt64FromExternalAddress
 		| jumpFailAlloc |
 		cogit MoveM64: 0 r: sourcePointer R: ClassReg.
 		jumpFailAlloc := self genIntegerTo64BitPositiveIntegerValue: ClassReg into: SendNumArgsReg scratchReg: Extra0Reg scratchReg: TempReg.
-			 cogit MoveR: SendNumArgsReg R: ReceiverResultReg.
-			 cogit genPrimReturn.
 		cogit MoveR: SendNumArgsReg R: ReceiverResultReg.
 		cogit genPrimReturn.
 		jumpFailAlloc jmpTarget: cogit Label
