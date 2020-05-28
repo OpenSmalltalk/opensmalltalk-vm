@@ -29,6 +29,18 @@ UnicornX64Simulator >> instructionPointerRegister [
 ]
 
 { #category : #'phisical-registers' }
+UnicornX64Simulator >> r8 [
+
+	^ self readRegister: UcX86Registers r8
+]
+
+{ #category : #'phisical-registers' }
+UnicornX64Simulator >> r9 [
+
+	^ self readRegister: UcX86Registers r9
+]
+
+{ #category : #'phisical-registers' }
 UnicornX64Simulator >> rax [
 
 	^ self readRegister: UcX86Registers rax
@@ -67,7 +79,7 @@ UnicornX64Simulator >> receiverRegister [
 { #category : #accessing }
 UnicornX64Simulator >> registerDescriptors [
 	
-	^ #( rip rax rbx rcx rdx rsp rbp ) collect: [ :e |
+	^ #( rip rax rbx rcx rdx rsp rbp r8 r9) collect: [ :e |
 		UnicornRegisterDescriptor new
 			simulator: self;
 			name: e;
