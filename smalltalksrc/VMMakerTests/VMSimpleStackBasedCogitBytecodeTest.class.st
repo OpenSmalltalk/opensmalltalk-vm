@@ -135,28 +135,25 @@ VMSimpleStackBasedCogitBytecodeTest >> createFramefulCallFrom: returnAddress rec
 
 	"I create a frameful call for machine code. 
 
+	 Stacks grow down:
+
 			receiver for method activations/closure for block activations
 			arg0
 			...
 			argN
-			caller's saved ip/this stackPage (for a base frame)
+			caller's method ip/base frame's sender context
 	fp->	saved fp
 			method
-			context (initialized to nil)
+			frame flags
+			context (uninitialized)
 			receiver
 			first temp
 			...
-	sp->	Nth temp	
-	"
+	sp->	Nth temp"
 	
 	"The first part is the same with or without frame, as it is pushed by the caller"
 	self createFramelessCallFrom: returnAddress receiver: receiver arguments: arguments.
 
-	"
-		In a machine code frame
-		the flag indicating if the context is valid is the least significant bit of the method pointer
-		the flag for a block activation is the next most significant bit of the method pointer"
-	
 	"These are pushed when activating the method"	
 	self pushAddress: unicorn framePointerRegisterValue.
 	unicorn framePointerRegisterValue: unicorn stackPointerRegisterValue.
@@ -165,6 +162,7 @@ VMSimpleStackBasedCogitBytecodeTest >> createFramefulCallFrom: returnAddress rec
 	self pushAddress: memory nilObject. "context"
 
 	self pushAddress: receiver.
+
 	temps do: [ :aTemporary | self pushAddress: aTemporary ].
 	
 	cogit needsFrame: true.
@@ -204,6 +202,47 @@ VMSimpleStackBasedCogitBytecodeTest >> createFramelessCallFrom: returnAddress re
 "	cogit regArgsHaveBeenPushed: false".
 
 
+]
+
+{ #category : #'helpers - frames' }
+VMSimpleStackBasedCogitBytecodeTest >> createInterpreterFramefulCallFrom: returnAddress receiver: receiver arguments: arguments temporaries: temps [
+
+	"I create a frameful call for interpreter.
+	Pay attention I am different than a machine code framefull context!! 
+
+	 Stacks grow down:
+
+			receiver for method activations/closure for block activations
+			arg0
+			...
+			argN
+			caller's method ip/base frame's sender context
+	fp->	saved fp
+			method
+			context (initialized to nil)
+			frame flags (interpreter only)
+			saved method ip (initialized to 0; interpreter only)
+			first temp
+			...
+	sp->	Nth temp"
+	
+	"The first part is the same with or without frame, as it is pushed by the caller"
+	self createFramelessCallFrom: returnAddress receiver: receiver arguments: arguments.
+
+	"These are pushed when activating the method"	
+	self pushAddress: unicorn framePointerRegisterValue.
+	unicorn framePointerRegisterValue: unicorn stackPointerRegisterValue.
+
+	self pushAddress: (memory nilObject bitOr: 1). "method"
+	self pushAddress: memory nilObject. "context"
+	self pushAddress: 0. "flags"
+	self pushAddress: 0. "method ip"
+
+	self pushAddress: receiver.
+
+	temps do: [ :aTemporary | self pushAddress: aTemporary ].
+	
+	cogit needsFrame: true.
 ]
 
 { #category : #'tests - special sends' }
@@ -429,7 +468,8 @@ VMSimpleStackBasedCogitBytecodeTest >> newInterpreter [
 	CogVMSimulatorLSB
 		initializeWithOptions: {
 			#BytesPerWord. 8.
-			#ObjectMemory. theMemory class name}
+			#ObjectMemory. theMemory class name.
+			#bytecodeTableInitializer. #initializeBytecodeTableForSqueakV3PlusClosures}
 		objectMemoryClass: theMemory class.
 		
 		

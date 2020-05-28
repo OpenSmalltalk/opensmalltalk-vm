@@ -77,7 +77,8 @@ VMMachineCodeDebugger >> initializePresenters [
 					ifTrue: [ self iconNamed: #forward ] ])
 				width: 50;
 				yourself);
-		addColumn: (SpStringTableColumn evaluated: #assemblyCodeString).
+		addColumn: (SpStringTableColumn evaluated: #assemblyCodeString);
+		addColumn: (SpStringTableColumn evaluated: [:e | e codeBytesString: cogit objectMemory memory ]).
 	
 	stepButton := self newButton.
 	stepButton label: 'Step'
