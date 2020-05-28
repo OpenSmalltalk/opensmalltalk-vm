@@ -67,8 +67,8 @@ VMSpurMemoryManagerTest >> initializeOldSpaceForScavenger [
 	
 	memory scavenger initializeRememberedSet.
 	memory scavenger remember: memory hiddenRootsObject.
-	memory scavenger remember: firstClassTablePage.
-	memory specialObjectsOop: (self newObjectWithSlots: 20).
+	memory scavenger remember: firstClassTablePage. 
+	memory specialObjectsOop: (self newObjectWithSlots: 60).
 	
 	memory scavengingGCTenuringIf: 1.
 	self deny: memory needGCFlag.

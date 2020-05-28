@@ -613,7 +613,7 @@ VMSimpleStackBasedCogitBytecodeTest >> returnValue [
 { #category : #helpers }
 VMSimpleStackBasedCogitBytecodeTest >> runFrom: startAddress until: endAddress [
 
-	self runFrom: startAddress until: endAddress timeout: 300 "microseconds"
+	self runFrom: startAddress until: endAddress timeout: 1000 "microseconds"
 ]
 
 { #category : #helpers }
@@ -702,6 +702,16 @@ VMSimpleStackBasedCogitBytecodeTest >> setUpCPUSimulator [
 	unicorn := UnicornSimulator perform: isa asSymbol.
 	memory memory memoryObject pinInMemory.
 	unicorn mapMemory: memory memory memoryObject at: initialAddress.
+]
+
+{ #category : #'tests - PIC' }
+VMSimpleStackBasedCogitBytecodeTest >> setUpCogMethodEntry [
+	
+	cogit ceCPICMissTrampoline: (self compile: [ cogit RetN: 0 ]).
+	cogit cePICAbortTrampoline: (self compile: [ cogit RetN: 0 ]).
+	cogit ceMethodAbortTrampoline: (self compile: [ cogit RetN: 0 ]).
+	
+	cogit computeEntryOffsets.
 ]
 
 { #category : #'helpers - registers' }

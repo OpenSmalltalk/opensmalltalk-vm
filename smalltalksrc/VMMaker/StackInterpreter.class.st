@@ -21073,6 +21073,21 @@ StackInterpreter >> specialSelector: index [
 ]
 
 { #category : #'message sending' }
+StackInterpreter >> specialSelector: index put: aValue [
+	<doNotGenerate>
+	^objectMemory
+		storePointer: (index * 2)
+		ofObject: (objectMemory splObj: SpecialSelectors)
+		withValue: aValue
+]
+
+{ #category : #'message sending' }
+StackInterpreter >> specialSelectorArray: anOop [
+	<doNotGenerate>
+	objectMemory splObj: SpecialSelectors put: anOop
+]
+
+{ #category : #'message sending' }
 StackInterpreter >> specialSelectorNumArgs: index [
 	^objectMemory integerValueOf: (objectMemory fetchPointer: (index * 2) + 1 ofObject: (objectMemory splObj: SpecialSelectors))
 ]

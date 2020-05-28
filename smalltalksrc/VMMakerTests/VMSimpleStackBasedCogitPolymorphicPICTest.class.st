@@ -1,6 +1,6 @@
 Class {
-	#name : #VMSimpleStackBasedCogitTwoCasePolimorphicPICTest,
-	#superclass : #VMSimpleStackBasedCogitMonomorphicPICTest,
+	#name : #VMSimpleStackBasedCogitPolymorphicPICTest,
+	#superclass : #VMSimpleStackBasedCogitBytecodeTest,
 	#instVars : [
 		'selector',
 		'numArgs',
@@ -15,7 +15,7 @@ Class {
 }
 
 { #category : #'building suites' }
-VMSimpleStackBasedCogitTwoCasePolimorphicPICTest class >> testParameters [
+VMSimpleStackBasedCogitPolymorphicPICTest class >> testParameters [
 
 	^ super testParameters * 
 		(ParametrizedTestMatrix new
@@ -24,7 +24,7 @@ VMSimpleStackBasedCogitTwoCasePolimorphicPICTest class >> testParameters [
 ]
 
 { #category : #helpers }
-VMSimpleStackBasedCogitTwoCasePolimorphicPICTest >> assertHitAtCase: aCase [	
+VMSimpleStackBasedCogitPolymorphicPICTest >> assertHitAtCase: aCase [
 	| pic |
 	"Only run this test if the test is configured for so much cases"
 	aCase < self configuredPicCases ifFalse: [ ^ self skip ].
@@ -35,7 +35,7 @@ VMSimpleStackBasedCogitTwoCasePolimorphicPICTest >> assertHitAtCase: aCase [
 ]
 
 { #category : #helpers }
-VMSimpleStackBasedCogitTwoCasePolimorphicPICTest >> assertPIC: pic hits: hitMethod [
+VMSimpleStackBasedCogitPolymorphicPICTest >> assertPIC: pic hits: hitMethod [
 	"Receiver is nil, class tag of the first entry is the receiver's class tag.
 	 - the receiver matches class tag for case 0
 	 - the receiver does not match with the class tag for case 1
@@ -57,7 +57,7 @@ VMSimpleStackBasedCogitTwoCasePolimorphicPICTest >> assertPIC: pic hits: hitMeth
 ]
 
 { #category : #helpers }
-VMSimpleStackBasedCogitTwoCasePolimorphicPICTest >> assertPICMiss: pic [
+VMSimpleStackBasedCogitPolymorphicPICTest >> assertPICMiss: pic [
 
 	"Receiver is nil, class tag of the first entry is 1 (a small integer).
 	 - the receiver does not match with the class tag for case 0
@@ -78,19 +78,19 @@ VMSimpleStackBasedCogitTwoCasePolimorphicPICTest >> assertPICMiss: pic [
 ]
 
 { #category : #helpers }
-VMSimpleStackBasedCogitTwoCasePolimorphicPICTest >> configuredPicCases [
+VMSimpleStackBasedCogitPolymorphicPICTest >> configuredPicCases [
 	
 	^ configuredPicCases
 ]
 
 { #category : #helpers }
-VMSimpleStackBasedCogitTwoCasePolimorphicPICTest >> configuredPicCases: aNumber [
+VMSimpleStackBasedCogitPolymorphicPICTest >> configuredPicCases: aNumber [
 	
 	configuredPicCases := aNumber
 ]
 
 { #category : #helpers }
-VMSimpleStackBasedCogitTwoCasePolimorphicPICTest >> extendPIC: aPic [
+VMSimpleStackBasedCogitPolymorphicPICTest >> extendPIC: aPic [
 
 	cogit
 		cogExtendPIC: aPic
@@ -100,7 +100,7 @@ VMSimpleStackBasedCogitTwoCasePolimorphicPICTest >> extendPIC: aPic [
 ]
 
 { #category : #helpers }
-VMSimpleStackBasedCogitTwoCasePolimorphicPICTest >> makePolymorphicPIC [
+VMSimpleStackBasedCogitPolymorphicPICTest >> makePolymorphicPIC [
 
 	| pic |
 	pic := cogit cogPICSelector: selector
@@ -115,11 +115,11 @@ VMSimpleStackBasedCogitTwoCasePolimorphicPICTest >> makePolymorphicPIC [
 ]
 
 { #category : #running }
-VMSimpleStackBasedCogitTwoCasePolimorphicPICTest >> setUp [
+VMSimpleStackBasedCogitPolymorphicPICTest >> setUp [
 
 	super setUp.
 	self setUpCogMethodEntry.
-	cogit generateClosedPICPrototype. 
+	cogit generateClosedPICPrototype.
 
 	cogit methodZone manageFrom: cogit methodZoneBase to: cogit methodZone effectiveLimit.
 
@@ -148,7 +148,7 @@ VMSimpleStackBasedCogitTwoCasePolimorphicPICTest >> setUp [
 ]
 
 { #category : #'tests - metadata' }
-VMSimpleStackBasedCogitTwoCasePolimorphicPICTest >> testHasConfiguredCases [
+VMSimpleStackBasedCogitPolymorphicPICTest >> testHasConfiguredCases [
 	| pic |	
 
 	pic := self makePolymorphicPIC.
@@ -157,7 +157,7 @@ VMSimpleStackBasedCogitTwoCasePolimorphicPICTest >> testHasConfiguredCases [
 ]
 
 { #category : #'tests - metadata' }
-VMSimpleStackBasedCogitTwoCasePolimorphicPICTest >> testHasJumpToAbortTrampoline [
+VMSimpleStackBasedCogitPolymorphicPICTest >> testHasJumpToAbortTrampoline [
 	| pic |	
 	pic := self makePolymorphicPIC.
 
@@ -165,43 +165,43 @@ VMSimpleStackBasedCogitTwoCasePolimorphicPICTest >> testHasJumpToAbortTrampoline
 ]
 
 { #category : #'tests - hit/miss' }
-VMSimpleStackBasedCogitTwoCasePolimorphicPICTest >> testHitCase0 [
+VMSimpleStackBasedCogitPolymorphicPICTest >> testHitCase0 [
 
 	self assertHitAtCase: 0
 ]
 
 { #category : #'tests - hit/miss' }
-VMSimpleStackBasedCogitTwoCasePolimorphicPICTest >> testHitCase1 [
+VMSimpleStackBasedCogitPolymorphicPICTest >> testHitCase1 [
 
 	self assertHitAtCase: 1
 ]
 
 { #category : #'tests - hit/miss' }
-VMSimpleStackBasedCogitTwoCasePolimorphicPICTest >> testHitCase2 [
+VMSimpleStackBasedCogitPolymorphicPICTest >> testHitCase2 [
 
 	self assertHitAtCase: 2
 ]
 
 { #category : #'tests - hit/miss' }
-VMSimpleStackBasedCogitTwoCasePolimorphicPICTest >> testHitCase3 [
+VMSimpleStackBasedCogitPolymorphicPICTest >> testHitCase3 [
 
 	self assertHitAtCase: 3
 ]
 
 { #category : #'tests - hit/miss' }
-VMSimpleStackBasedCogitTwoCasePolimorphicPICTest >> testHitCase4 [
+VMSimpleStackBasedCogitPolymorphicPICTest >> testHitCase4 [
 
 	self assertHitAtCase: 4
 ]
 
 { #category : #'tests - hit/miss' }
-VMSimpleStackBasedCogitTwoCasePolimorphicPICTest >> testHitCase5 [
+VMSimpleStackBasedCogitPolymorphicPICTest >> testHitCase5 [
 	"This is the last case. Cog PICs have 6 cases (0-based)"
 	self assertHitAtCase: 5
 ]
 
 { #category : #'tests - metadata' }
-VMSimpleStackBasedCogitTwoCasePolimorphicPICTest >> testIsClosedPic [
+VMSimpleStackBasedCogitPolymorphicPICTest >> testIsClosedPic [
 	| pic |	
 	pic := self makePolymorphicPIC.
 
@@ -209,7 +209,7 @@ VMSimpleStackBasedCogitTwoCasePolimorphicPICTest >> testIsClosedPic [
 ]
 
 { #category : #'tests - hit/miss' }
-VMSimpleStackBasedCogitTwoCasePolimorphicPICTest >> testMiss [
+VMSimpleStackBasedCogitPolymorphicPICTest >> testMiss [
 
 	| pic |	
 
@@ -219,7 +219,7 @@ VMSimpleStackBasedCogitTwoCasePolimorphicPICTest >> testMiss [
 ]
 
 { #category : #'tests - metadata' }
-VMSimpleStackBasedCogitTwoCasePolimorphicPICTest >> testNumberOfArgumentsInHeader [
+VMSimpleStackBasedCogitPolymorphicPICTest >> testNumberOfArgumentsInHeader [
 	| pic |
 	
 	pic := self makePolymorphicPIC.
@@ -228,9 +228,9 @@ VMSimpleStackBasedCogitTwoCasePolimorphicPICTest >> testNumberOfArgumentsInHeade
 ]
 
 { #category : #'tests - hit/miss' }
-VMSimpleStackBasedCogitTwoCasePolimorphicPICTest >> testPolymorphicPICHitDoesNotCallEntryOffset [
+VMSimpleStackBasedCogitPolymorphicPICTest >> testPolymorphicPICHitDoesNotCallEntryOffset [
 
-	| pic methodCheckEntryPoint |	
+	| pic methodCheckEntryPoint methodNoCheckEntryPoint passedByCheckEntryPoint |	
 	picTypeTags at: 0 put: receiverTag.
 	
 	pic := self makePolymorphicPIC.
@@ -242,25 +242,24 @@ VMSimpleStackBasedCogitTwoCasePolimorphicPICTest >> testPolymorphicPICHitDoesNot
 	unicorn receiverRegisterValue: receiver.
 	unicorn classRegisterValue: (picTypeTags at: 0).
 
-	"Should call method 1 just after the type check (to avoid it).
+	"Should call method of case 0 just after the type check (to avoid it).
 	The check was already done in the PIC.
-	We execute from the PIC expecting to arrive to the entry offset of the cog method.
-	Since we should never arrive there, this execution should timeout"
-	[  methodCheckEntryPoint := (cogMethods at: 0) address + cogit entryOffset. 
-		self
-			runFrom: pic address + cogit entryOffset
-			until: methodCheckEntryPoint
-			timeout: 100.
-			"fail if it does not timeout"
-			self fail ]
-			on: UnicornTimeout
-			do: [ :e | 
-				"Let's assert that at this point the execution went above that instruction pointer"
-				self assert: unicorn instructionPointerValue > methodCheckEntryPoint ].
+	We execute from the PIC expecting to arrive to the no entry offset of the cog method, checking we never pass through the check entry"
+	methodCheckEntryPoint := (cogMethods at: 0) address + cogit entryOffset.
+	methodNoCheckEntryPoint := (cogMethods at: 0) address + cogit noCheckEntryOffset.
+	passedByCheckEntryPoint := false.
+	unicorn 
+		registerHook: [ passedByCheckEntryPoint := true ] 
+		atAddress: methodCheckEntryPoint.
+	self
+		runFrom: pic address + cogit entryOffset
+		until: methodNoCheckEntryPoint.
+
+	self deny: passedByCheckEntryPoint
 ]
 
 { #category : #'tests - metadata' }
-VMSimpleStackBasedCogitTwoCasePolimorphicPICTest >> testSelectorInHeader [
+VMSimpleStackBasedCogitPolymorphicPICTest >> testSelectorInHeader [
 	| pic |	
 
 	pic := self makePolymorphicPIC.

@@ -5,16 +5,6 @@ Class {
 }
 
 { #category : #'tests - PIC' }
-VMSimpleStackBasedCogitMonomorphicPICTest >> setUpCogMethodEntry [
-	
-	cogit ceCPICMissTrampoline: (self compile: [ cogit RetN: 0 ]).
-	cogit cePICAbortTrampoline: (self compile: [ cogit RetN: 0 ]).
-	cogit ceMethodAbortTrampoline: (self compile: [ cogit RetN: 0 ]).
-	
-	cogit computeEntryOffsets.
-]
-
-{ #category : #'tests - PIC' }
 VMSimpleStackBasedCogitMonomorphicPICTest >> testCalculateClosePICSize [
 
 	"Calculate the size of the Closed Pic"
@@ -75,4 +65,11 @@ VMSimpleStackBasedCogitMonomorphicPICTest >> testMissOffsetIsEqualsToEntryOffset
 	cogit generateClosedPICPrototype.
 
 	self assert: cogit missOffset equals: cogit entryOffset
+]
+
+{ #category : #'tests - PIC' }
+VMSimpleStackBasedCogitMonomorphicPICTest >> testObtainInlineCacheFromLinkedCall [
+
+	self assert: false
+	"we should test inlineCacheTagAt:"
 ]
