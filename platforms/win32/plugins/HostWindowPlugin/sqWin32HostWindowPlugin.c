@@ -9,20 +9,21 @@
 *****************************************************************************/
 
 #include <windows.h>
+
 #include "sq.h"
 #include "HostWindowPlugin.h"
 
 /* Import from sqWin32Window.c */
-int recordMouseEvent(MSG *msg, UINT nrClicks);
-int recordKeyboardEvent(MSG *msg);
-sqInputEvent *sqNextEventPut();
+extern int recordMouseEvent(MSG *msg, UINT nrClicks);
+extern int recordKeyboardEvent(MSG *msg);
+extern sqInputEvent *sqNextEventPut(void);
 
 BITMAPINFO *BmiForDepth(int depth);
 extern HINSTANCE hInstance;
 extern MSG *lastMessage;
 
 /* main window procedure(s) */
-LRESULT CALLBACK HostWndProcA(HWND hwnd,
+static LRESULT CALLBACK HostWndProcA(HWND hwnd,
                               UINT message,
                               WPARAM wParam,
                               LPARAM lParam)
@@ -30,35 +31,35 @@ LRESULT CALLBACK HostWndProcA(HWND hwnd,
   return DefWindowProc(hwnd, message, wParam, lParam);
 }
 
-LRESULT CALLBACK HostWndProcW (HWND hwnd,
+static LRESULT CALLBACK HostWndProcW (HWND hwnd,
                               UINT message,
                               WPARAM wParam,
                               LPARAM lParam)
 {
   RECT boundingRect;
 
- switch(message){
+ switch(message) {
   /*  mousing */
 
   case WM_MOUSEMOVE:
-      recordMouseEvent(lastMessage,0);
-      break;
+    recordMouseEvent(lastMessage,0);
+    break;
 
   case WM_LBUTTONDOWN:
   case WM_RBUTTONDOWN:
   case WM_MBUTTONDOWN:
     if (GetFocus() != hwnd) SetFocus(hwnd);
     SetCapture(hwnd); /* capture mouse input */
-      recordMouseEvent(lastMessage,1);
-      break;
+    recordMouseEvent(lastMessage,1);
+    break;
 
   case WM_LBUTTONUP:
   case WM_RBUTTONUP:
   case WM_MBUTTONUP:
     if (GetFocus() != hwnd) SetFocus(hwnd);
     ReleaseCapture(); /* release mouse capture */
-      recordMouseEvent(lastMessage,1);
-      break;
+    recordMouseEvent(lastMessage,1);
+    break;
 
 
   /*keyboard events*/
@@ -76,31 +77,29 @@ LRESULT CALLBACK HostWndProcW (HWND hwnd,
   case WM_MOVE:
   case WM_SIZE:
     if ((GetWindowRect(hwnd, &boundingRect)) != 0){
-
-	sqWindowEvent *windowevent = (sqWindowEvent*) sqNextEventPut();
-	windowevent->type = EventTypeWindow;
-	windowevent->timeStamp = lastMessage ? lastMessage->time : GetTickCount();
-	windowevent->action = WindowEventMetricChange;
-	windowevent->value1 = boundingRect.left ;
-	windowevent->value2 = boundingRect.top;
-	windowevent->value3 = boundingRect.right;
-	windowevent->value4 = boundingRect.bottom;
-	windowevent->windowIndex =(sqIntptr_t) hwnd;
+      sqWindowEvent *windowevent = (sqWindowEvent*) sqNextEventPut();
+      windowevent->type = EventTypeWindow;
+      windowevent->timeStamp = lastMessage ? lastMessage->time : GetTickCount();
+      windowevent->action = WindowEventMetricChange;
+      windowevent->value1 = boundingRect.left ;
+      windowevent->value2 = boundingRect.top;
+      windowevent->value3 = boundingRect.right;
+      windowevent->value4 = boundingRect.bottom;
+      windowevent->windowIndex =(sqIntptr_t) hwnd;
     }
     break;
-	
+
   case WM_PAINT:	
     if ((GetWindowRect(hwnd, &boundingRect)) != 0){
-
-	sqWindowEvent *windowevent = (sqWindowEvent*) sqNextEventPut();
-	windowevent->type = EventTypeWindow;
-	windowevent->timeStamp = lastMessage ? lastMessage->time : GetTickCount();
-	windowevent->action = WindowEventPaint;
-	windowevent->value1 = boundingRect.left ;
-	windowevent->value2 = boundingRect.top;
-	windowevent->value3 = boundingRect.right;
-	windowevent->value4 = boundingRect.bottom;
-	windowevent->windowIndex =(sqIntptr_t) hwnd;
+      sqWindowEvent *windowevent = (sqWindowEvent*) sqNextEventPut();
+      windowevent->type = EventTypeWindow;
+      windowevent->timeStamp = lastMessage ? lastMessage->time : GetTickCount();
+      windowevent->action = WindowEventPaint;
+      windowevent->value1 = boundingRect.left ;
+      windowevent->value2 = boundingRect.top;
+      windowevent->value3 = boundingRect.right;
+      windowevent->value4 = boundingRect.bottom;
+      windowevent->windowIndex =(sqIntptr_t) hwnd;
     }
     break;
 
@@ -145,8 +144,9 @@ LRESULT CALLBACK HostWndProcW (HWND hwnd,
 sqInt
 closeWindow(sqIntptr_t windowIndex)
 {
-  HWND hwnd = (windowIndex == 1 ? stWindow : ((HWND)windowIndex));
-  if (!IsWindow(hwnd)) return 0;
+  HWND hwnd = windowIndex == 1 ? stWindow : (HWND)windowIndex;
+  if (!IsWindow(hwnd))
+	return 0;
   DestroyWindow(hwnd);
   return 1;
 }
@@ -208,7 +208,7 @@ ioShowDisplayOnWindow(unsigned char* dispBits, sqInt width,
 			    sqInt affectedR, sqInt affectedT, sqInt affectedB, 
 			    sqIntptr_t windowIndex)
 {
-  HWND hwnd = (windowIndex == 1 ? stWindow : ((HWND)windowIndex));
+  HWND hwnd = windowIndex == 1 ? stWindow : (HWND)windowIndex;
   HDC dc;
   BITMAPINFO *bmi;
   int lines;
@@ -230,7 +230,8 @@ ioShowDisplayOnWindow(unsigned char* dispBits, sqInt width,
   if (affectedT > height) affectedT= height-1;
 
   /* Don't draw empty areas */
-  if (affectedL == affectedR || affectedT == affectedB) return 1;
+  if (affectedL == affectedR || affectedT == affectedB)
+	return 1;
   /* reload the update rectangle */
   updateRect.left = affectedL;
   updateRect.top = affectedT;
@@ -246,12 +247,12 @@ ioShowDisplayOnWindow(unsigned char* dispBits, sqInt width,
 
   /* reverse the image bits if necessary */
 
-  if (!lsbDisplay && depth < 32) {
-	  if (depth == 16)
-		  reverse_image_words((unsigned int*)dispBits, (unsigned int*)dispBits,
+  if ( !lsbDisplay && depth < 32 ) {
+    if (depth == 16)
+      reverse_image_words((unsigned int*) dispBits, (unsigned int*) dispBits,
 			  depth, width, &updateRect);
-	  else
-		  reverse_image_bytes((unsigned int*)dispBits, (unsigned int*)dispBits,
+    else
+      reverse_image_bytes((unsigned int*) dispBits, (unsigned int*) dispBits,
 			  depth, width, &updateRect);
   }
   bmi->bmiHeader.biWidth = width;
@@ -261,7 +262,7 @@ ioShowDisplayOnWindow(unsigned char* dispBits, sqInt width,
   dc = GetDC(hwnd);
   if (!dc) {
     printLastError(TEXT("ioShowDisplayBits: GetDC() failed"));
-	return 0;
+    return 0;
   }
 
 
@@ -312,12 +313,16 @@ ioShowDisplayOnWindow(unsigned char* dispBits, sqInt width,
 
   if (lines == 0) {
     printLastError(TEXT("SetDIBitsToDevice failed"));
+#if UNICODE
+    warnPrintfW(TEXT("width=%" PRIdSQINT ",height=%" PRIdSQINT ",bits=%" PRIXSQPTR ",dc=%" PRIXSQPTR "\n"),
+#else
     warnPrintf(TEXT("width=%" PRIdSQINT ",height=%" PRIdSQINT ",bits=%" PRIXSQPTR ",dc=%" PRIXSQPTR "\n"),
+#endif
 	       width, height, (usqIntptr_t)dispBits, (usqIntptr_t)dc);
   }
   /* reverse the image bits if necessary */
 
-  if (!lsbDisplay && depth < 32) {
+  if ( !lsbDisplay && depth < 32 ) {
     if (depth == 16)
       reverse_image_words((unsigned int*) dispBits, (unsigned int*) dispBits,
 			  depth, width, &updateRect);
@@ -338,17 +343,47 @@ ioShowDisplayOnWindow(unsigned char* dispBits, sqInt width,
 sqInt
 ioSizeOfWindow(sqIntptr_t windowIndex)
 {
-  HWND hwnd = (windowIndex == 1 ? stWindow : ((HWND)windowIndex));
+  HWND hwnd = windowIndex == 1 ? stWindow : (HWND)windowIndex;
   RECT boundingRect;
   int wsize;
 
   if ((GetWindowRect(hwnd, &boundingRect)) != 0){
 
     wsize = ((boundingRect.right - boundingRect.left) << 16)| (boundingRect.bottom - boundingRect.top);
-	return wsize;
+    return wsize;
   }
   return -1;
 }
+
+#if TerfVM
+/* ioSizeOfNativeWindow: arg is void* windowHandle, defined as usqIntptr_t
+ * for convenience. Return the size of the specified native window in
+ * (width<<16 | height) format like ioScreenSize.
+ * Return -1 for failure - typically invalid windowHandle
+ * -1 is chosen since it would correspond to a window size of +/-32k@+/-32k
+ * which it is hoped is unlikely for some time to come */
+sqInt
+ioSizeOfNativeWindow(usqIntptr_t windowHandle)
+{
+	RECT boundingRect;
+
+	return GetWindowRect((HWND)windowHandle, &boundingRect)
+		? ((boundingRect.right - boundingRect.left) << 16)
+			| ((boundingRect.bottom - boundingRect.top) & 0xFFFF)
+		: -1;
+}
+
+sqInt
+ioSizeOfNativeDisplay(usqIntptr_t windowHandle)
+{
+	RECT boundingRect;
+
+	return GetClientRect((HWND)windowHandle, &boundingRect)
+		? ((boundingRect.right - boundingRect.left) << 16)
+			| ((boundingRect.bottom - boundingRect.top) & 0xFFFF)
+		: -1;
+}
+#endif /* TerfVM */
 
 /* ioSizeOfWindowSetxy: args are int windowIndex, int w & h for the
  * width / height to make the window. Return the actual size the OS
@@ -356,18 +391,14 @@ ioSizeOfWindow(sqIntptr_t windowIndex)
 sqInt
 ioSizeOfWindowSetxy(sqIntptr_t windowIndex, sqInt w, sqInt h)
 {
-  HWND hwnd = (windowIndex == 1 ? stWindow : ((HWND)windowIndex));
+  HWND hwnd = windowIndex == 1 ? stWindow : (HWND)windowIndex;
   RECT boundingRect;
  
-  if ((GetWindowRect(hwnd, &boundingRect)) == 0)
-	return -1;
-
-  if (MoveWindow(hwnd,
-		 boundingRect.left,
-		 boundingRect.top,
-		 w,
-		 h,
-		 TRUE)==0)
+  if (!GetWindowRect(hwnd, &boundingRect)
+   || !MoveWindow(hwnd,
+		 boundingRect.left, boundingRect.top,
+		 w, h,
+		 TRUE))
 	return -1;
   return ioSizeOfWindow(windowIndex);
 }
@@ -378,13 +409,57 @@ ioSizeOfWindowSetxy(sqIntptr_t windowIndex, sqInt w, sqInt h)
 sqInt
 ioPositionOfWindow(sqIntptr_t windowIndex)
 {
-  HWND hwnd = (windowIndex == 1 ? stWindow : ((HWND)windowIndex));
+  HWND hwnd = windowIndex == 1 ? stWindow : (HWND)windowIndex;
   RECT boundingRect;
 
-  if ((GetWindowRect(hwnd, &boundingRect)) != 0)
-    return ((boundingRect.left) << 16)| (boundingRect.top);
-  return -1;
+	return GetWindowRect(hwnd, &boundingRect)
+		? (boundingRect.left << 16) | boundingRect.top
+		: -1;
 }
+
+#if TerfVM
+/* ioPositionOfNativeWindow: arg is void* windowHandle, defined as usqIntptr_t
+ * for convenience. Return the pos of the specified native window in
+ * (left<<16 | top) format like ioScreenSize (& ioPositionOfWindow).
+ * Return -1 (as above) for failure - typically invalid windowHandle */
+sqInt
+ioPositionOfNativeWindow(usqIntptr_t windowHandle)
+{
+	RECT boundingRect;
+
+	return GetWindowRect((HWND)windowHandle, &boundingRect)
+		? (boundingRect.left << 16) | boundingRect.top
+		: -1;
+}
+
+sqInt
+ioPositionOfNativeDisplay(usqIntptr_t windowHandle)
+{
+	RECT boundingRect;
+	WINDOWINFO wi;
+	int insideHeight, windowHeight, titleHeight, x, y;
+
+	wi.cbSize = sizeof(wi);
+	GetWindowInfo((HWND)windowHandle, &wi);
+	DPRINTF("rcWindow %d@%d corner: %d@%d\n",
+			wi.rcWindow.left, wi.rcWindow.top,
+			wi.rcWindow.right, wi.rcWindow.bottom);
+	DPRINTF("rcClient %d@%d corner: %d@%d\n",
+			wi.rcClient.left, wi.rcClient.top,
+			wi.rcClient.right, wi.rcClient.bottom);
+	DPRINTF("cxWindowBorders %d cyWindowBorders %d\n",
+			wi.cxWindowBorders, wi.cyWindowBorders);
+
+	if (!GetWindowRect((HWND)windowHandle, &boundingRect))
+		return -1;
+	windowHeight = wi.rcWindow.bottom - wi.rcWindow.top;
+	insideHeight = wi.rcClient.bottom - wi.rcClient.top;
+	titleHeight = windowHeight - insideHeight - wi.cyWindowBorders;
+	x = boundingRect.left + wi.cxWindowBorders;
+	y = boundingRect.top + titleHeight;
+	return (x << 16) | (short)y;
+}
+#endif /* TerfVM */
 
 /* ioPositionOfWindowSetxy: args are int windowIndex, int x & y for the
  * origin x/y for the window. Return the actual origin the OS
@@ -392,16 +467,14 @@ ioPositionOfWindow(sqIntptr_t windowIndex)
 sqInt
 ioPositionOfWindowSetxy(sqIntptr_t windowIndex, sqInt x, sqInt y)
 {
-  HWND hwnd = (windowIndex == 1 ? stWindow : ((HWND)windowIndex));
+  HWND hwnd = windowIndex == 1 ? stWindow : (HWND)windowIndex;
   RECT boundingRect;
 
-  if ((GetWindowRect(hwnd, &boundingRect)) == 0)
-	return -1;
-
-  if (MoveWindow(hwnd, x, y,
-		 (boundingRect.right - boundingRect.left),
-		 (boundingRect.bottom - boundingRect.top),
-		 TRUE)==0)
+  if (!GetWindowRect(hwnd, &boundingRect)
+   || !MoveWindow(hwnd, x, y,
+		 boundingRect.right - boundingRect.left,
+		 boundingRect.bottom - boundingRect.top,
+		 TRUE))
 	return -1;
   return ioPositionOfWindow(windowIndex);
 }
@@ -411,18 +484,16 @@ ioPositionOfWindowSetxy(sqIntptr_t windowIndex, sqInt x, sqInt y)
 sqInt
 ioSetTitleOfWindow(sqIntptr_t windowIndex, char * newTitle, sqInt sizeOfTitle)
 {
-  HWND hwnd = (windowIndex == 1 ? stWindow : ((HWND)windowIndex));
+  HWND hwnd = windowIndex == 1 ? stWindow : (HWND)windowIndex;
   char titleString[1024];
   WCHAR wideTitle[1024];
 
-  if (!IsWindow(hwnd))
-	return 0;
+  if (!IsWindow(hwnd)) return 0;
   if (sizeOfTitle > 1023) sizeOfTitle = 1023;
   strncpy(titleString, newTitle, sizeOfTitle);
   titleString[sizeOfTitle] = 0;
   MultiByteToWideChar(CP_UTF8, 0, titleString, -1, wideTitle, 1024);
-  if (SetWindowTextW(hwnd, wideTitle) == 0)
-	return -1;
+  if (SetWindowTextW(hwnd, wideTitle) == 0) return -1;
   return sizeOfTitle;
 }
 
@@ -433,15 +504,15 @@ sqInt
 ioSetIconOfWindow(sqIntptr_t windowIndex, char * iconPath, sqInt sizeOfPath)
 {
 	WCHAR iconPathW[MAX_PATH + 1];
-	HWND hwnd = (windowIndex == 1 ? stWindow : ((HWND)windowIndex));
+	HWND hwnd = windowIndex == 1 ? stWindow : (HWND)windowIndex;
 	int len;
-	if (!IsWindow(hwnd))
-	  return 0;
+	if (!IsWindow(hwnd)) return 0;
 	len = MultiByteToWideChar(CP_UTF8, 0, iconPath, sizeOfPath, iconPathW, MAX_PATH);
 	if (len <= 0) return -1; /* invalid UTF8 ? */
 	iconPathW[len] = 0;
 	//Check if file exists and have read rights
-	if (_waccess(iconPathW, 4) == -1) { return -1; }; 
+	if (_waccess(iconPathW, 4) == -1)
+		return -1;
 	//Load the image into an icon
 	HICON hIcon = (HICON)LoadImageW(NULL, iconPathW, IMAGE_ICON, 0, 0, LR_LOADFROMFILE);
 	if (hIcon == 0)
@@ -451,13 +522,49 @@ ioSetIconOfWindow(sqIntptr_t windowIndex, char * iconPath, sqInt sizeOfPath)
 }
 
 
-
 /* ioCloseAllWindows: intended for VM shutdown.
  * Close all the windows that appear to be open.
  * No useful return value since we're getting out of Dodge anyway.
  */
 sqInt
-ioCloseAllWindows(void){
-	return 0;
+ioCloseAllWindows(void){ return 0; }
+
+#if TerfVM
+sqInt
+ioSetCursorPositionXY(long x, long y)
+{
+	return SetCursorPos(x,y)
+		? 0
+		: -1;
 }
 
+/* Return the pixel origin (topleft) of the platform-defined working area
+   for the screen containing the given window. */
+sqInt
+ioPositionOfScreenWorkArea (sqIntptr_t windowIndex)
+{
+	HMONITOR hMonitor;
+	MONITORINFO mi;
+	RECT workArea;
+  	hMonitor = MonitorFromWindow ((HWND) windowIndex, MONITOR_DEFAULTTONEAREST);
+	mi.cbSize = (sizeof(mi));
+	GetMonitorInfo(hMonitor, &mi);
+	workArea = mi.rcWork;
+	return (workArea.left << 16) | (workArea.top & 0xFFFF);
+}
+
+/* Return the pixel extent of the platform-defined working area
+   for the screen containing the given window. */
+sqInt
+ioSizeOfScreenWorkArea (sqIntptr_t windowIndex)
+{
+	HMONITOR hMonitor;
+	MONITORINFO mi;
+	RECT workArea;
+  	hMonitor = MonitorFromWindow ((HWND) windowIndex, MONITOR_DEFAULTTONEAREST);
+	mi.cbSize = (sizeof(mi));
+	GetMonitorInfo(hMonitor, &mi);
+	workArea = mi.rcWork;
+	return ((workArea.right - workArea.left) << 16) | ((workArea.bottom - workArea.top) & 0xFFFF);
+}
+#endif /* TerfVM */
