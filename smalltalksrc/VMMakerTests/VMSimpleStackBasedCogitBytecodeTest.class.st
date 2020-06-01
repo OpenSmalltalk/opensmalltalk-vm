@@ -199,7 +199,7 @@ VMSimpleStackBasedCogitBytecodeTest >> createFramelessCallFrom: returnAddress re
 	self pushAddress: returnAddress.
 
 	unicorn hasLinkRegister 
-		ifTrue: [ unicorn linkRegisterRegisterValue: returnAddress ].	
+		ifTrue: [ unicorn linkRegisterValue: returnAddress ].	
 
 	unicorn receiverRegisterValue: receiver.
 	
@@ -541,26 +541,6 @@ VMSimpleStackBasedCogitBytecodeTest >> openMachineDebuggerAt: anInteger [
 	
 	unicorn instructionPointerValue: anInteger.
 	self openMachineDebugger
-]
-
-{ #category : #'helpers - stack' }
-VMSimpleStackBasedCogitBytecodeTest >> peek [
-
-	| stackAddressIntegerValue peekedByteArray |
-
-	"Getting address from stack register"
-	stackAddressIntegerValue := unicorn stackPointerRegisterValue.
-
-	"Putting the value in the stack memory"
-	peekedByteArray := unicorn memoryAt: stackAddressIntegerValue readNext: self wordSize.
-	
-	^ peekedByteArray
-]
-
-{ #category : #'helpers - stack' }
-VMSimpleStackBasedCogitBytecodeTest >> peekAddress [
-	
-	^ self peek integerAt: 1 size: self wordSize signed: false
 ]
 
 { #category : #'helpers - stack' }

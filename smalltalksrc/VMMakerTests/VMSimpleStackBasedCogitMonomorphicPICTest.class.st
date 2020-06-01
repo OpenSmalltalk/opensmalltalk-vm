@@ -49,7 +49,7 @@ VMSimpleStackBasedCogitMonomorphicPICTest >> testLinkCallDuringSendInTrampolineR
 	self runFrom: sendAddress until: sendTrampolineAddress.
 	
 	cogit 
-		linkSendAt: self peekAddress 
+		linkSendAt: unicorn getReturnAddress 
 		in: sendingMethod 
 		to: targetCog 
 		offset: cogit entryOffset 

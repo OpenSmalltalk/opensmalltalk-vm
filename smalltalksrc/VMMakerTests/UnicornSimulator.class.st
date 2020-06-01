@@ -155,6 +155,26 @@ UnicornSimulator >> memoryAt: address write: bytes size: size [
 	unicorn memoryAt: address write: bytes size: size
 ]
 
+{ #category : #'helpers - stack' }
+UnicornSimulator >> peek [
+
+	| stackAddressIntegerValue peekedByteArray |
+
+	"Getting address from stack register"
+	stackAddressIntegerValue := self stackPointerRegisterValue.
+
+	"Putting the value in the stack memory"
+	peekedByteArray := self memoryAt: stackAddressIntegerValue readNext: self wordSize.
+	
+	^ peekedByteArray
+]
+
+{ #category : #'helpers - stack' }
+UnicornSimulator >> peekAddress [
+	
+	^ self peek integerAt: 1 size: self wordSize signed: false
+]
+
 { #category : #registers }
 UnicornSimulator >> readRegister: aRegisterID [
 

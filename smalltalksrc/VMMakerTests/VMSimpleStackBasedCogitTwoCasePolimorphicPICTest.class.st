@@ -230,7 +230,7 @@ VMSimpleStackBasedCogitTwoCasePolimorphicPICTest >> testNumberOfArgumentsInHeade
 { #category : #'tests - hit/miss' }
 VMSimpleStackBasedCogitTwoCasePolimorphicPICTest >> testPolymorphicPICHitDoesNotCallEntryOffset [
 
-	| pic methodCheckEntryPoint |	
+	| pic methodCheckEntryPoint executedTypeCheck methodNoCheckEntryPoint |	
 	picTypeTags at: 0 put: receiverTag.
 	
 	pic := self makePolymorphicPIC.
@@ -245,18 +245,22 @@ VMSimpleStackBasedCogitTwoCasePolimorphicPICTest >> testPolymorphicPICHitDoesNot
 	"Should call method 1 just after the type check (to avoid it).
 	The check was already done in the PIC.
 	We execute from the PIC expecting to arrive to the entry offset of the cog method.
-	Since we should never arrive there, this execution should timeout"
-	[  methodCheckEntryPoint := (cogMethods at: 0) address + cogit entryOffset. 
-		self
-			runFrom: pic address + cogit entryOffset
-			until: methodCheckEntryPoint
-			timeout: 100.
-			"fail if it does not timeout"
-			self fail ]
-			on: UnicornTimeout
-			do: [ :e | 
-				"Let's assert that at this point the execution went above that instruction pointer"
-				self assert: unicorn instructionPointerValue > methodCheckEntryPoint ].
+	Since we should never arrive there, executedTypeCheck should be false"
+	
+	executedTypeCheck := false.
+	methodCheckEntryPoint := (cogMethods at: 0) address + cogit entryOffset.
+	methodNoCheckEntryPoint := (cogMethods at: 0) address + cogit noCheckEntryOffset.
+	
+	unicorn 
+		registerHook: [executedTypeCheck := true] 
+		atAddress: methodCheckEntryPoint.
+	
+	self
+		runFrom: pic address + cogit entryOffset
+		until: methodNoCheckEntryPoint.
+			
+	self deny: executedTypeCheck.
+
 ]
 
 { #category : #'tests - metadata' }

@@ -79,6 +79,12 @@ UnicornARMv5Simulator >> getLastAddress: abstractInstructions [
 	^ last address + last machineCodeSize 
 ]
 
+{ #category : #accessing }
+UnicornARMv5Simulator >> getReturnAddress [
+	
+	^ self linkRegisterValue
+]
+
 { #category : #testing }
 UnicornARMv5Simulator >> hasLinkRegister [
 	^ true
@@ -96,8 +102,14 @@ UnicornARMv5Simulator >> linkRegister [
 	^ UcARMRegisters lr
 ]
 
+{ #category : #accessing }
+UnicornARMv5Simulator >> linkRegisterValue [
+
+	^ self readRegister: self linkRegister 
+]
+
 { #category : #registers }
-UnicornARMv5Simulator >> linkRegisterRegisterValue: aValue [ 
+UnicornARMv5Simulator >> linkRegisterValue: aValue [ 
 
 	^ self writeRegister: self linkRegister value: aValue
 ]

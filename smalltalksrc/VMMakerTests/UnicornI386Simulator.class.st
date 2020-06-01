@@ -22,6 +22,12 @@ UnicornI386Simulator >> framePointerRegister [
 	^ UcX86Registers ebp
 ]
 
+{ #category : #accessing }
+UnicornI386Simulator >> getReturnAddress [
+	
+	^ self peekAddress
+]
+
 { #category : #registers }
 UnicornI386Simulator >> instructionPointerRegister [
 	

@@ -28,6 +28,12 @@ UnicornX64Simulator >> framePointerRegister [
 	^ UcX86Registers rbp
 ]
 
+{ #category : #accessing }
+UnicornX64Simulator >> getReturnAddress [
+	
+	^ self peekAddress 
+]
+
 { #category : #'virtual-registers' }
 UnicornX64Simulator >> instructionPointerRegister [
 	
