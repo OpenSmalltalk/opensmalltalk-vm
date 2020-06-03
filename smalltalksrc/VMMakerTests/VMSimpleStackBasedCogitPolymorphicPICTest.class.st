@@ -1,6 +1,6 @@
 Class {
 	#name : #VMSimpleStackBasedCogitPolymorphicPICTest,
-	#superclass : #VMSimpleStackBasedCogitBytecodeTest,
+	#superclass : #VMSimpleStackBasedCogitAbstractTest,
 	#instVars : [
 		'selector',
 		'numArgs',

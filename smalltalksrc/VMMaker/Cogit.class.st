@@ -3967,6 +3967,12 @@ Cogit >> ceMalloc: size [
 ]
 
 { #category : #accessing }
+Cogit >> ceMethodAbortTrampoline [
+	<doNotGenerate>
+	^ ceMethodAbortTrampoline
+]
+
+{ #category : #accessing }
 Cogit >> ceMethodAbortTrampoline: anInteger [ 
 	<doNotGenerate>
 	ceMethodAbortTrampoline := anInteger

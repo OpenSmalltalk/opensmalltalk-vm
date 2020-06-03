@@ -1,6 +1,6 @@
 Class {
 	#name : #VMSimpleStackBasedCogitMonomorphicPICTest,
-	#superclass : #VMSimpleStackBasedCogitBytecodeTest,
+	#superclass : #VMSimpleStackBasedCogitAbstractTest,
 	#category : #VMMakerTests
 }
 

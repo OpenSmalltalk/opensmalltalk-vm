@@ -1,6 +1,6 @@
 Class {
 	#name : #VMSimpleStackBasedCogitMegamorphicPICTest,
-	#superclass : #VMSimpleStackBasedCogitBytecodeTest,
+	#superclass : #VMSimpleStackBasedCogitAbstractTest,
 	#pools : [
 		'CogMethodConstants'
 	],
