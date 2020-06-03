@@ -1,6 +1,9 @@
 Class {
 	#name : #VMSimpleStackBasedCogitMegamorphicPICTest,
 	#superclass : #VMSimpleStackBasedCogitBytecodeTest,
+	#pools : [
+		'CogMethodConstants'
+	],
 	#category : #VMMakerTests
 }
 
@@ -29,7 +32,6 @@ VMSimpleStackBasedCogitMegamorphicPICTest >> testLookupExistingMegamorphicPICRet
 	
 	createdPic := cogit cogOpenPICSelector: selector numArgs: 1.
 	
-	
 	self assert: (cogit methodZone openPICWithSelector: selector) equals: createdPic.
 ]
 
@@ -42,89 +44,145 @@ VMSimpleStackBasedCogitMegamorphicPICTest >> testLookupNonExistingMegamorphicPIC
 { #category : #'tests - metadata' }
 VMSimpleStackBasedCogitMegamorphicPICTest >> testNewMegamorphicPICCallsPicAbortTrampoline [
 
-	"self assert: pic cmType = CMOpenPIC.
-	self assert: pic selector = selector.
-	self assert: pic cmNumArgs = numArgs.
-	self assert: (backEnd callTargetFromReturnAddress: pic asInteger + missOffset) = (self picAbortTrampolineFor: numArgs).
-	self assert: openPICSize = (methodZone roundUpLength: openPICSize)."
-
+	"We have to call the pic and see if it reaches the abort trampoline"
 	self assert: false
-" self patchToOpenPICFor: cPIC selector
-					numArgs: cPIC cmNumArgs
-					receiver: rec"
+		
 ]
 
 { #category : #'tests - metadata' }
-VMSimpleStackBasedCogitMegamorphicPICTest >> testNewMegamorphicPICNumArgs [
+VMSimpleStackBasedCogitMegamorphicPICTest >> testNewMegamorphicPICHasTheCorrectPicAbortTrampoline [
 
-	"self assert: pic cmType = CMOpenPIC.
-	self assert: pic selector = selector.
-	self assert: pic cmNumArgs = numArgs.
-	self assert: (backEnd callTargetFromReturnAddress: pic asInteger + missOffset) = (self picAbortTrampolineFor: numArgs).
-	self assert: openPICSize = (methodZone roundUpLength: openPICSize)."
+	| createdPic selector |
 
-	self assert: false
-" self patchToOpenPICFor: cPIC selector
-					numArgs: cPIC cmNumArgs
-					receiver: rec"
+	selector := memory trueObject.
+	createdPic := cogit cogOpenPICSelector: selector numArgs: 1.
+
+	self
+		assert: (cogit backend callTargetFromReturnAddress: createdPic asInteger + cogit missOffset)
+		equals: (cogit picAbortTrampolineFor: 1)
+]
+
+{ #category : #'tests - metadata' }
+VMSimpleStackBasedCogitMegamorphicPICTest >> testNewMegamorphicPICNumArgs: numArgs [
+
+	| selector createdPic |
+	selector := memory trueObject.
+	createdPic := cogit cogOpenPICSelector: selector numArgs: numArgs.
+	self assert: createdPic cmNumArgs equals: numArgs
+]
+
+{ #category : #'tests - metadata' }
+VMSimpleStackBasedCogitMegamorphicPICTest >> testNewMegamorphicPICNumArgsWith1 [
+
+	self testNewMegamorphicPICNumArgs: 1
+]
+
+{ #category : #'tests - metadata' }
+VMSimpleStackBasedCogitMegamorphicPICTest >> testNewMegamorphicPICNumArgsWith16 [
+
+	self testNewMegamorphicPICNumArgs: 16
+]
+
+{ #category : #'tests - metadata' }
+VMSimpleStackBasedCogitMegamorphicPICTest >> testNewMegamorphicPICNumArgsWith2 [
+
+	self testNewMegamorphicPICNumArgs: 2
+]
+
+{ #category : #'tests - metadata' }
+VMSimpleStackBasedCogitMegamorphicPICTest >> testNewMegamorphicPICNumArgsWith4 [
+
+	self testNewMegamorphicPICNumArgs: 4
+]
+
+{ #category : #'tests - metadata' }
+VMSimpleStackBasedCogitMegamorphicPICTest >> testNewMegamorphicPICNumArgsWith8 [
+
+	self testNewMegamorphicPICNumArgs: 8
+]
+
+{ #category : #'tests - metadata' }
+VMSimpleStackBasedCogitMegamorphicPICTest >> testNewMegamorphicPICNumArgsWithoutArgs [
+
+	self testNewMegamorphicPICNumArgs: 0
 ]
 
 { #category : #'tests - metadata' }
 VMSimpleStackBasedCogitMegamorphicPICTest >> testNewMegamorphicPICSelector [
+	| createdPic selector |
 
-	"self assert: pic cmType = CMOpenPIC.
-	self assert: pic selector = selector.
-	self assert: pic cmNumArgs = numArgs.
-	self assert: (backEnd callTargetFromReturnAddress: pic asInteger + missOffset) = (self picAbortTrampolineFor: numArgs).
-	self assert: openPICSize = (methodZone roundUpLength: openPICSize)."
-
-	self assert: false
-" self patchToOpenPICFor: cPIC selector
-					numArgs: cPIC cmNumArgs
-					receiver: rec"
+	selector := memory trueObject.
+	createdPic := cogit cogOpenPICSelector: selector numArgs: 1.
+	self assert: createdPic selector equals: selector
 ]
 
 { #category : #'tests - metadata' }
 VMSimpleStackBasedCogitMegamorphicPICTest >> testNewMegamorphicPICSize [
+	| createdPic selector |
 
-	"self assert: pic cmType = CMOpenPIC.
-	self assert: pic selector = selector.
-	self assert: pic cmNumArgs = numArgs.
-	self assert: (backEnd callTargetFromReturnAddress: pic asInteger + missOffset) = (self picAbortTrampolineFor: numArgs).
-	self assert: openPICSize = (methodZone roundUpLength: openPICSize)."
-
-	self assert: false
-" self patchToOpenPICFor: cPIC selector
-					numArgs: cPIC cmNumArgs
-					receiver: rec"
+	selector := memory trueObject.
+	createdPic := cogit cogOpenPICSelector: selector numArgs: 1.
+	self assert: createdPic blockSize equals: cogit openPICSize.
 ]
 
 { #category : #'tests - metadata' }
 VMSimpleStackBasedCogitMegamorphicPICTest >> testNewMegamorphicPICType [
 
-	"self assert: pic cmType = CMOpenPIC.
-	self assert: pic selector = selector.
-	self assert: pic cmNumArgs = numArgs.
-	self assert: (backEnd callTargetFromReturnAddress: pic asInteger + missOffset) = (self picAbortTrampolineFor: numArgs).
-	self assert: openPICSize = (methodZone roundUpLength: openPICSize)."
+	| selector createdPic |
+	selector := memory trueObject.
+	createdPic := cogit cogOpenPICSelector: selector numArgs: 1.
+	self assert: createdPic cmType equals: CMOpenPIC.
 
-	self assert: false
-" self patchToOpenPICFor: cPIC selector
-					numArgs: cPIC cmNumArgs
-					receiver: rec"
 ]
 
 { #category : #'tests - PIC' }
 VMSimpleStackBasedCogitMegamorphicPICTest >> testRelinkCallSiteToMegamorphicPICCallsNewPIC [
+	
+	| selector literalIndex method createdPic returnAfterCallAddress patchedCogMethod |	
+	
+	sendTrampolineAddress := self compile: [ cogit RetN: 0 ].
+	cogit ordinarySendTrampolineAt: 0 "num args" put: sendTrampolineAddress.
+	self createFramefulCallFrom: callerAddress.
+	
+	literalIndex := 1.
+	"The literal index is extracted from the byte0 of the instruction
+	It is encoded with the bytecode number.
+	The 208 is the first bytecode to send messages with zero arguments.
+	The literal taken starts from zero in 208, one in 209... and so on"
+	cogit byte0: 208 + literalIndex.
+	selector := memory falseObject.
+	method := self newMethodWithLiteral: selector at: literalIndex.
+	cogit methodObj: method.
 
-	"self assert: pic cmType = CMOpenPIC.
-	self assert: pic selector = selector.
-	self assert: pic cmNumArgs = numArgs.
-	self assert: (backEnd callTargetFromReturnAddress: pic asInteger + missOffset) = (self picAbortTrampolineFor: numArgs).
-	self assert: openPICSize = (methodZone roundUpLength: openPICSize)."
+	"The method will have 3 literals.
+	The first literal is the methodHeader (smallInteger with flags).
+	Literal 0 -> we are not using it (now it is nil)
+	Literal 1 -> our selector"
+	patchedCogMethod := self 
+		generateCogMethod: [ cogit genSendLiteralSelector0ArgsBytecode ] 
+		selector: selector.
 
-	self assert: false
-" self patchToOpenPICFor: cPIC selector
-					numArgs: cPIC cmNumArgs
-					receiver: rec"
+	createdPic := cogit cogOpenPICSelector: selector numArgs: 1.
+
+	"We call to get to the send trampoline"
+	self runFrom: patchedCogMethod asInteger + cogit noCheckEntryOffset until: sendTrampolineAddress. 
+
+	returnAfterCallAddress := unicorn hasLinkRegister 
+		ifTrue: [ unicorn linkRegisterValue ] 
+		ifFalse: [ unicorn peekAddress ].
+	
+	"Let's rewrite the call site"
+	cogit backEnd
+				rewriteInlineCacheAt: returnAfterCallAddress
+				tag: (cogit inlineCacheValueForSelector: selector
+						  in: patchedCogMethod
+						  at: returnAfterCallAddress)
+				target: createdPic asInteger + cogit entryOffset.
+
+	"Let's rerun it to check if it gets to the patched address openPic"
+	self 
+		runFrom: patchedCogMethod address + cogit noCheckEntryOffset 
+		until: createdPic asInteger + cogit entryOffset. 
+	
+	self assert: unicorn instructionPointerValue equals: createdPic asInteger + cogit entryOffset
 ]

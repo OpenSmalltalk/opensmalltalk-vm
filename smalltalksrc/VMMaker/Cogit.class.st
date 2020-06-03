@@ -10697,6 +10697,12 @@ Cogit >> opcodePrintStringFrom: startIndex to: stopIndex [
 ]
 
 { #category : #accessing }
+Cogit >> openPICSize [
+	<doNotGenerate>
+	^ openPICSize
+]
+
+{ #category : #accessing }
 Cogit >> ordinarySendTrampolineAt: anInteger put: aTrampolineAddress [ 
 	<doNotGenerate>
 	

@@ -286,7 +286,7 @@ UnicornSimulator >> startAt: begin until: until timeout: timeout count: count [
 		error signal ].
 	
 	"Verify we stopped because we arrived to the right end addres and not a timeout"
-	self instructionPointerValue = until ifFalse: [
+	(until = 0 or: [self instructionPointerValue = until]) ifFalse: [
 		UnicornTimeout new
 			target: until;
 			signal ]

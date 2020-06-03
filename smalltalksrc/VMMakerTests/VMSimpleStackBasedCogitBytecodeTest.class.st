@@ -83,6 +83,12 @@ VMSimpleStackBasedCogitBytecodeTest >> compile: aBlockClosure [
 { #category : #helpers }
 VMSimpleStackBasedCogitBytecodeTest >> compile: aBlockClosure bytecodes: bytecodes [
 	
+	^ self compile: aBlockClosure bytecodes: bytecodes headerSize: 0
+]
+
+{ #category : #helpers }
+VMSimpleStackBasedCogitBytecodeTest >> compile: aBlockClosure bytecodes: bytecodes headerSize: headerSize [
+	
 	"Compiles some native code using the code inside the block closure as builder.
 	The bytecodes variable contains an estimate of the number of bytecodes generated
 	  => this is used to estimate the amount of memory to preallocate for the geneated code.
@@ -100,9 +106,9 @@ VMSimpleStackBasedCogitBytecodeTest >> compile: aBlockClosure bytecodes: bytecod
 	cogit computeMaximumSizes.
 	
 	"methodLabel address + headerSize?"
-	codeSize := cogit generateInstructionsAt: cogit methodZone freeStart.
-	allocatedAddress := cogit methodZone allocate: codeSize.
-	cogit outputInstructionsAt: allocatedAddress.
+	codeSize := cogit generateInstructionsAt: cogit methodZone freeStart + headerSize.
+	allocatedAddress := cogit methodZone allocate: (cogit methodZone roundUpLength: codeSize + headerSize).
+	cogit outputInstructionsAt: allocatedAddress + headerSize.
 	opcodes := cogit getOpcodeIndex.
 	
 	^ allocatedAddress
@@ -418,16 +424,17 @@ VMSimpleStackBasedCogitBytecodeTest >> framePointerRegisterValue: aValue [
 { #category : #'helpers - methods' }
 VMSimpleStackBasedCogitBytecodeTest >> generateCogMethod: aBlockClosure selector: anSelectorOop [ 
 
-	| targetCog targetCogAddress |
+	| targetCog allocatedAddress |
 
-	targetCog := cogit cogMethodSurrogateAt: (cogit methodZone allocate: (cogit sizeof: CogMethod)).
+	allocatedAddress := self compile: [ 
+			cogit compileAbort.
+			cogit compileEntry.
+			aBlockClosure value ] 
+		  bytecodes: 1 headerSize: (cogit sizeof: CogMethod).
+	
+	targetCog := cogit cogMethodSurrogateAt: allocatedAddress.
 	targetCog selector: anSelectorOop.
-
-	targetCogAddress := self compile: [
-		cogit compileAbort.
-		cogit compileEntry.
-		aBlockClosure value
-	].
+	targetCog blockSize: cogit methodZone freeStart - allocatedAddress.
 	
 	^ targetCog
 

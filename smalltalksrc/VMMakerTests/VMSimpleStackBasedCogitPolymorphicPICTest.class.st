@@ -11,6 +11,9 @@ Class {
 		'compiledMethods',
 		'configuredPicCases'
 	],
+	#pools : [
+		'CogMethodConstants'
+	],
 	#category : #VMMakerTests
 }
 
@@ -205,7 +208,7 @@ VMSimpleStackBasedCogitPolymorphicPICTest >> testIsClosedPic [
 	| pic |	
 	pic := self makePolymorphicPIC.
 
-	self assert: pic cmType equals: 4"CMClosedPIC".
+	self assert: pic cmType equals: CMClosedPIC. 
 ]
 
 { #category : #'tests - hit/miss' }
