@@ -10,14 +10,14 @@ VMSimpleStackBasedCogitMegamorphicPICTest >> setUp [
 	| specialSelectorsArray |
 	super setUp.
 	self setUpCogMethodEntry.
-	1halt.
+
 	memory coInterpreter
-		moveMethodCacheToMemoryAt: initialAddress + memory cogCodeBase + self initialCodeSize + stackSpaceSize.
+		moveMethodCacheToMemoryAt: initialAddress "+ The guard page? memory cogCodeBase" + self initialCodeSize + stackSpaceSize.
 	specialSelectorsArray := self newOldSpaceObjectWithSlots: 2.
 	memory coInterpreter
 		specialSelectorArray: specialSelectorsArray;
 		specialSelector: 0 put: memory falseObject.
-	
+
 	cogit generateOpenPICPrototype.
 ]
 

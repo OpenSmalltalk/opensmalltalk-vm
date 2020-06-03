@@ -466,8 +466,7 @@ VMSimpleStackBasedCogitBytecodeTest >> initializeStackMemory [.
 
 	"The stack pointer is at the top of the stack"
 	unicorn stackPointerRegisterValue: stackMemoryEndAddress.
-	
-
+	unicorn framePointerRegisterValue: stackMemoryEndAddress.
 ]
 
 { #category : #'helpers - registers' }
@@ -564,6 +563,12 @@ VMSimpleStackBasedCogitBytecodeTest >> pop [
 VMSimpleStackBasedCogitBytecodeTest >> popAddress [
 	
 	^ self pop integerAt: 1 size: self wordSize signed: false
+]
+
+{ #category : #helpers }
+VMSimpleStackBasedCogitBytecodeTest >> primitiveTraceLogSize [
+	
+	^ 256 * 8 "word size"
 ]
 
 { #category : #'helpers - stack' }
@@ -712,14 +717,19 @@ VMSimpleStackBasedCogitBytecodeTest >> setUp [
 	"Initializing Unicorn processor"
 	self setUpCPUSimulator.
 	self initializeStackMemory.
-	self initializeInitialStackFrame.
 	
+	cogit processor machineSimulator: unicorn.
+	cogit setStackAlignment: 16 expectedSPOffset: 0 expectedFPOffset: 0.
+	cogit initializeBackend.
 	cogit methodZone manageFrom: initialAddress to: initialAddress + self initialCodeSize.
 	cogit methodZoneBase: initialAddress.
 	cogit minCallAddress: initialAddress.
 	cogit cogCodeBase: initialAddress.
 	memory coInterpreter cogCodeSize: self initialCodeSize.
-	memory coInterpreter heapBase: stackMemoryEndAddress.
+	memory coInterpreter heapBase: stackMemoryEndAddress + methodCacheSize.
+	cogit generateStackPointerCapture.
+
+	self initializeInitialStackFrame.
 	
 	memory coInterpreter numStackPages: 8.
 

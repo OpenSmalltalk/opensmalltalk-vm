@@ -11,7 +11,9 @@ Class {
 		'zeroSizedObjectClassIndex',
 		'emptyObjectSize',
 		'initialAddress',
-		'stackSpaceSize'
+		'stackSpaceSize',
+		'methodCacheSize',
+		'rumpCStackSize'
 	],
 	#category : #VMMakerTests
 }
@@ -228,6 +230,23 @@ VMSpurMemoryManagerTest >> nextOrdinaryClassIndex [
 		ifNotNil: [ nextIndex := nextIndex + 1 ]
 ]
 
+{ #category : #helpers }
+VMSpurMemoryManagerTest >> primitiveTraceLogSize [
+	^ 0
+]
+
+{ #category : #helpers }
+VMSpurMemoryManagerTest >> roundToPageSize: anInteger [ 
+
+	"Unicorn simulator requires mapped memory to be multiple of 4096"
+	| pageSize remainder |
+	pageSize := 4096.
+	remainder := anInteger \\ pageSize.
+	remainder = 0 ifTrue: [ ^ anInteger ].
+
+	^ anInteger + (pageSize - remainder)
+]
+
 { #category : #running }
 VMSpurMemoryManagerTest >> setUp [
 	super setUp.
@@ -237,9 +256,12 @@ VMSpurMemoryManagerTest >> setUp [
 	oldSpaceSize := 999 * 1024.
  	newSpaceSize := 1 * 1024.
 	stackSpaceSize := 9 * 4096.
+	methodCacheSize := 4096 * 8 "wordSize".
+	rumpCStackSize := 0.
+	
 	initialAddress := 16r1000000.
 	
-	objectHeaderSize := 8 "bytes".
+	objectHeaderSize := 8 "bytes. Always.".
 	emptyObjectSize := objectHeaderSize + 8 "minimum required single empty slot, to use for forwarders".
 	
 	"Set it to bootstrapping to allow smaller memories"
@@ -256,6 +278,9 @@ VMSpurMemoryManagerTest >> setUp [
 		newSpaceSize: newSpaceSize
 		stackSize: stackSpaceSize
 		codeSize: self initialCodeSize
+		methodCacheSize: methodCacheSize
+		primitiveTraceLogSize: (self roundToPageSize: self primitiveTraceLogSize)
+		rumpCStackSize: rumpCStackSize
 		initialAddress: initialAddress.
 	memory initializePostBootstrap.
 	memory setHeapSizeAtPreviousGC.

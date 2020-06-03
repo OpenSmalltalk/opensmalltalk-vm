@@ -1994,13 +1994,33 @@ SpurMemoryManager >> allocateMemoryOfSize: memoryBytes newSpaceSize: newSpaceByt
 	 to allocate in oldSpace.  Later on (in initializePostBootstrap) freeStart and scavengeThreshold
 	 will be set to sane values."
 	<doNotGenerate>
+	
+	self
+		allocateMemoryOfSize: memoryBytes
+		newSpaceSize: newSpaceBytes
+		stackSize: stackBytes
+		codeSize: codeBytes
+		methodCacheSize: 0
+		primitiveTraceLogSize: 0
+		rumpCStackSize: 0
+		initialAddress: initialAddress
+]
+
+{ #category : #asd }
+SpurMemoryManager >> allocateMemoryOfSize: memoryBytes newSpaceSize: newSpaceBytes stackSize: stackBytes codeSize: codeBytes methodCacheSize: methodCacheSize primitiveTraceLogSize: primitiveLogSize rumpCStackSize: rumpCStackSize initialAddress: initialAddress [
+
+		"Intialize the receiver for bootsraping an image.
+	 Set up a large oldSpace and an empty newSpace and set-up freeStart and scavengeThreshold
+	 to allocate in oldSpace.  Later on (in initializePostBootstrap) freeStart and scavengeThreshold
+	 will be set to sane values."
+	<doNotGenerate>
 	self assert: (memoryBytes \\ self allocationUnit = 0
 				and: [newSpaceBytes \\ self allocationUnit = 0
 				and: [codeBytes \\ self allocationUnit = 0
 				and: [initialAddress \\ self allocationUnit = 0 ]]]).
-	self allocateMemoryOfSize: memoryBytes + newSpaceBytes + codeBytes + stackBytes initialAddress: initialAddress.
-	newSpaceStart := initialAddress + codeBytes + stackBytes.
-	endOfMemory := freeOldSpaceStart := initialAddress + memoryBytes + newSpaceBytes + codeBytes + stackBytes.
+	self allocateMemoryOfSize: memoryBytes + newSpaceBytes + codeBytes + stackBytes + methodCacheSize + primitiveLogSize + rumpCStackSize initialAddress: initialAddress.
+	newSpaceStart := initialAddress + codeBytes + stackBytes + methodCacheSize + primitiveLogSize + rumpCStackSize.
+	endOfMemory := freeOldSpaceStart := initialAddress + memoryBytes + newSpaceBytes + codeBytes + stackBytes + methodCacheSize + primitiveLogSize + rumpCStackSize.
 	"leave newSpace empty for the bootstrap"
 	freeStart := newSpaceBytes + newSpaceStart.
 	oldSpaceStart := newSpaceLimit := newSpaceBytes + newSpaceStart.
