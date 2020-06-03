@@ -78,19 +78,19 @@ VMSpurNewSpaceStructureTest >> testNewMemoryFutureSurvivorSpaceIsAtFutureSpaceSt
 { #category : #'tests-1-memory-initialization' }
 VMSpurNewSpaceStructureTest >> testNewMemoryLimitIsSumOfSpaces [
 	
-	self assert: memory memoryLimit equals: oldSpaceSize + newSpaceSize + stackSpaceSize + initialAddress
+	self assert: memory memoryLimit equals: oldSpaceSize + newSpaceSize + stackSpaceSize + initialAddress + self primitiveTraceLogSize + methodCacheSize 
 ]
 
 { #category : #'tests-1-memory-initialization' }
 VMSpurNewSpaceStructureTest >> testNewMemoryNewSpaceLimitIsNewSpaceStartPlusSize [
 	
-	self assert: memory newSpaceLimit equals: newSpaceSize + stackSpaceSize + initialAddress
+	self assert: memory newSpaceLimit equals: newSpaceSize + stackSpaceSize + initialAddress	+ self primitiveTraceLogSize + methodCacheSize 
 ]
 
 { #category : #'tests-1-memory-initialization' }
 VMSpurNewSpaceStructureTest >> testNewMemoryNewSpaceStartIsStackSize [
 
-	self assert: memory newSpaceStart equals: stackSpaceSize + initialAddress
+	self assert: memory newSpaceStart equals: stackSpaceSize + initialAddress + self primitiveTraceLogSize + methodCacheSize 
 ]
 
 { #category : #'tests-1-memory-initialization' }

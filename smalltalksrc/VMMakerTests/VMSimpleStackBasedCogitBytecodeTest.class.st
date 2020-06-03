@@ -202,7 +202,6 @@ VMSimpleStackBasedCogitBytecodeTest >> createFramelessCallFrom: returnAddress re
 		ifTrue: [ unicorn linkRegisterValue: returnAddress ].	
 
 	unicorn receiverRegisterValue: receiver.
-	
 
 	"We initialize the internal Cogit state by hand because we don't have a method to cog"	
 "	cogit methodOrBlockNumTemps: 0.
@@ -451,7 +450,6 @@ VMSimpleStackBasedCogitBytecodeTest >> initializeInitialStackFrame [
 	"I will create the initial stack with a well-known caller address so we know if the code comes back
 	correctly. The address should be in a valid space of the memory if not unicorn complains. 
 	So we just put it in the start of the stack"
-
 	callerAddress := stackMemoryStartAddress.
 	self createFramelessCallFrom: callerAddress receiver: memory nilObject arguments: #().
 	
@@ -726,8 +724,10 @@ VMSimpleStackBasedCogitBytecodeTest >> setUp [
 	cogit minCallAddress: initialAddress.
 	cogit cogCodeBase: initialAddress.
 	memory coInterpreter cogCodeSize: self initialCodeSize.
-	memory coInterpreter heapBase: stackMemoryEndAddress + methodCacheSize.
+	memory coInterpreter heapBase: memory newSpaceStart.
 	cogit generateStackPointerCapture.
+	cogit methodZone manageFrom: cogit cogCodeBase to: initialAddress + self initialCodeSize.
+
 
 	self initializeInitialStackFrame.
 	
