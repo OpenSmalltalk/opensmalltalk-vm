@@ -4,7 +4,6 @@ Class {
 	#instVars : [
 		'cogit',
 		'codeSize',
-		'lastAddress',
 		'unicorn',
 		'callerAddress',
 		'registerValue',
@@ -28,6 +27,7 @@ Class {
 VMSimpleStackBasedCogitBytecodeTest class >> testParameters [
 
 	^ ParametrizedTestMatrix new
+		addCase: { #ISA -> #'ARMv5'. #wordSize -> 4};
 		addCase: { #ISA -> #'X64'. #wordSize -> 8};
 		addCase: { #ISA -> #'IA32'. #wordSize -> 4};
 		"forSelector: #ISA addOptions: #( X64 IA32 ARMv5 );"
@@ -38,6 +38,13 @@ VMSimpleStackBasedCogitBytecodeTest class >> testParameters [
 VMSimpleStackBasedCogitBytecodeTest >> ISA: anISA [
 
 	isa := anISA
+]
+
+{ #category : #accessing }
+VMSimpleStackBasedCogitBytecodeTest >> abstractInstructions [
+
+	^ (0 to: cogit getOpcodeIndex - 1)
+		collect: [ :i | cogit abstractOpcodes at: i ]
 ]
 
 { #category : #helpers }
@@ -86,17 +93,16 @@ VMSimpleStackBasedCogitBytecodeTest >> compile: aBlockClosure bytecodes: bytecod
 	cogit allocateOpcodes: (bytecodes + 10) * 10 bytecodes: bytecodes ifFail: [ self fail ].
 	cogit zeroOpcodeIndex.
 	cogit maxLitIndex: -1.
+	cogit methodLabel address: cogit methodZone freeStart.
 	
 	aBlockClosure value.
 
-	cogit methodLabel address: 0.
 	cogit computeMaximumSizes.
 	
 	"methodLabel address + headerSize?"
 	codeSize := cogit generateInstructionsAt: cogit methodZone freeStart.
 	allocatedAddress := cogit methodZone allocate: codeSize.
-	lastAddress := cogit outputInstructionsAt: allocatedAddress.
-
+	cogit outputInstructionsAt: allocatedAddress.
 	opcodes := cogit getOpcodeIndex.
 	
 	^ allocatedAddress
@@ -189,9 +195,14 @@ VMSimpleStackBasedCogitBytecodeTest >> createFramelessCallFrom: returnAddress re
 	"
 	self pushAddress: receiver.
 	arguments do: [ :anArgument | self pushAddress: anArgument ].
-	self pushAddress: returnAddress.	
+
+	self pushAddress: returnAddress.
+
+	unicorn hasLinkRegister 
+		ifTrue: [ unicorn linkRegisterValue: returnAddress ].	
 
 	unicorn receiverRegisterValue: receiver.
+	
 
 	"We initialize the internal Cogit state by hand because we don't have a method to cog"	
 "	cogit methodOrBlockNumTemps: 0.
@@ -265,7 +276,7 @@ VMSimpleStackBasedCogitBytecodeTest >> createSpecialSelectorArray [
 { #category : #helpers }
 VMSimpleStackBasedCogitBytecodeTest >> disassemble [
 	
-	^ self disassembleFrom: 1
+	^ self disassembleFrom: initialAddress
 ]
 
 { #category : #helpers }
@@ -277,7 +288,7 @@ VMSimpleStackBasedCogitBytecodeTest >> disassembleFrom: anIndex [
 { #category : #helpers }
 VMSimpleStackBasedCogitBytecodeTest >> disassembleFrom: anIndex opcodes: numberOfInstructions [
 	
-	^ LLVMDisassembler amd64
+	^ unicorn disassembler
 		printImmediatesInHexa;
 		disassembleNext: numberOfInstructions
 		instructionsIn: (memory memory memoryObject
@@ -423,6 +434,12 @@ VMSimpleStackBasedCogitBytecodeTest >> generateCogMethod: aBlockClosure selector
 
 ]
 
+{ #category : #accessing }
+VMSimpleStackBasedCogitBytecodeTest >> getLastAddress [
+	
+	^ unicorn getLastAddress: self abstractInstructions.
+]
+
 { #category : #running }
 VMSimpleStackBasedCogitBytecodeTest >> initialCodeSize [
 	^ 4 * 1024
@@ -524,26 +541,6 @@ VMSimpleStackBasedCogitBytecodeTest >> openMachineDebuggerAt: anInteger [
 	
 	unicorn instructionPointerValue: anInteger.
 	self openMachineDebugger
-]
-
-{ #category : #'helpers - stack' }
-VMSimpleStackBasedCogitBytecodeTest >> peek [
-
-	| stackAddressIntegerValue peekedByteArray |
-
-	"Getting address from stack register"
-	stackAddressIntegerValue := unicorn stackPointerRegisterValue.
-
-	"Putting the value in the stack memory"
-	peekedByteArray := unicorn memoryAt: stackAddressIntegerValue readNext: self wordSize.
-	
-	^ peekedByteArray
-]
-
-{ #category : #'helpers - stack' }
-VMSimpleStackBasedCogitBytecodeTest >> peekAddress [
-	
-	^ self peek integerAt: 1 size: self wordSize signed: false
 ]
 
 { #category : #'helpers - stack' }
@@ -663,22 +660,15 @@ VMSimpleStackBasedCogitBytecodeTest >> runFrom: startAddress until: endAddress t
 		until: endAddress
 		timeout: microseconds
 		count: 0.
-
-	"Verify we stopped because we arrived to the right end addres and not a timeout"
-	unicorn instructionPointerValue = endAddress ifFalse: [
-		UnicornTimeout new
-			target: endAddress;
-			signal ]
 ]
 
 { #category : #helpers }
 VMSimpleStackBasedCogitBytecodeTest >> runGeneratedCode [
+	"The different platforms generates code in a different way, so the number of opcodes can not be valid. Eg: ARM generates more instructions per opcode. It has to calculate the instructions to run differently"
 
-	unicorn startAt: initialAddress
-		until: 0
-		timeout: 0
-		count: opcodes.
-
+	unicorn
+		doRunGeneratedCodeStartAt: initialAddress
+		instructions: self abstractInstructions
 ]
 
 { #category : #helpers }
@@ -687,7 +677,7 @@ VMSimpleStackBasedCogitBytecodeTest >> runUntilReturn [
 	unicorn startAt: 16r1000000
 		until: callerAddress
 		timeout: 0
-		count: 0.
+		count: 3000.
 
 ]
 
@@ -1746,8 +1736,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendEqualsEqualsWithIdenticalObjectsP
 	"Push receiver, arg then send"
 	self pushAddress: memory nilObject.
 	self pushAddress: memory nilObject.
-	self runFrom: sendAddress until: lastAddress.
-	
+	self runFrom: sendAddress until: self getLastAddress.		
 	self
 		assert: self popAddress
 		equals: memory trueObject
@@ -1761,7 +1750,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendEqualsEqualsWithNonIdenticalObjec
 	"Push receiver, arg then send"
 	self pushAddress: memory nilObject.
 	self pushAddress: memory trueObject.
-	self runFrom: sendAddress until: lastAddress.
+	self runFrom: sendAddress until: self getLastAddress.
 	
 	self
 		assert: self popAddress
@@ -1918,10 +1907,10 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendLiteralZeroWithZeroArgsPushesRetu
 	self pushAddress: memory falseObject.
 	self pushAddress: memory trueObject.
 	self runFrom: sendAddress until: sendTrampolineAddress.
-	
+		
 	"Now return from called function/method and execute until the end of the send instruction"
 	unicorn returnRegisterValue: (memory integerObjectOf: 42).
-	self runFrom: unicorn instructionPointerValue until: lastAddress.
+	self runFrom: unicorn instructionPointerValue until: self getLastAddress.
 	
 	self assert: self popAddress equals: (memory integerObjectOf: 42).
 ]
@@ -1934,7 +1923,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendNotEqualsEqualsWithIdenticalObjec
 	"Push receiver, arg then send"
 	self pushAddress: memory nilObject.
 	self pushAddress: memory nilObject.
-	self runFrom: sendAddress until: lastAddress.
+	self runFrom: sendAddress until: self getLastAddress.
 	
 	self
 		assert: self popAddress
@@ -1949,7 +1938,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendNotEqualsEqualsWithNonIdenticalOb
 	"Push receiver, arg then send"
 	self pushAddress: memory nilObject.
 	self pushAddress: memory falseObject.
-	self runFrom: sendAddress until: lastAddress.
+	self runFrom: sendAddress until: self getLastAddress.
 	
 	self
 		assert: self popAddress
@@ -2049,7 +2038,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendOneArgSpecialMessagePushesReturnV
 	
 	"Now return from called function/method and execute until the end of the send instruction"
 	unicorn returnRegisterValue: (memory integerObjectOf: 42).
-	self runFrom: unicorn instructionPointerValue until: lastAddress.
+	self runFrom: unicorn instructionPointerValue until: self getLastAddress.
 	
 	self assert: self popAddress equals: (memory integerObjectOf: 42).
 ]
@@ -2158,7 +2147,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendTwoArgSpecialMessagePushesReturnV
 	
 	"Now return from called function/method and execute until the end of the send instruction"
 	unicorn returnRegisterValue: (memory integerObjectOf: 42).
-	self runFrom: unicorn instructionPointerValue until: lastAddress.
+	self runFrom: unicorn instructionPointerValue until: self getLastAddress.
 	
 	self assert: self popAddress equals: (memory integerObjectOf: 42).
 ]
@@ -2251,7 +2240,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendZeroArgSpecialMessagePushesReturn
 	
 	"Now return from called function/method and execute until the end of the send instruction"
 	unicorn returnRegisterValue: (memory integerObjectOf: 42).
-	self runFrom: unicorn instructionPointerValue until: lastAddress.
+	self runFrom: unicorn instructionPointerValue until: self getLastAddress.
 	
 	self assert: self popAddress equals: (memory integerObjectOf: 42).
 ]

@@ -16,10 +16,22 @@ UnicornX64Simulator >> createUnicorn [
 	^ Unicorn x8664
 ]
 
+{ #category : #disassembling }
+UnicornX64Simulator >> disassembler [
+	
+	^ LLVMDisassembler amd64
+]
+
 { #category : #'virtual-registers' }
 UnicornX64Simulator >> framePointerRegister [
 	
 	^ UcX86Registers rbp
+]
+
+{ #category : #accessing }
+UnicornX64Simulator >> getReturnAddress [
+	
+	^ self peekAddress 
 ]
 
 { #category : #'virtual-registers' }

@@ -9,12 +9,18 @@ Class {
 }
 
 { #category : #'instance creation' }
+UnicornSimulator class >> ARMv5 [
+	
+	^ UnicornARMv5Simulator new
+]
+
+{ #category : #'instance creation' }
 UnicornSimulator class >> IA32 [
 
 	^ UnicornI386Simulator new
 ]
 
-{ #category : #accessing }
+{ #category : #'instance creation' }
 UnicornSimulator class >> X64 [
 	
 	^ UnicornX64Simulator new
@@ -44,6 +50,20 @@ UnicornSimulator >> createUnicorn [
 	self subclassResponsibility
 ]
 
+{ #category : #disassembling }
+UnicornSimulator >> disassembler [
+	self subclassResponsibility
+]
+
+{ #category : #executing }
+UnicornSimulator >> doRunGeneratedCodeStartAt: initialAddress instructions: instructions [
+
+	^ unicorn startAt: initialAddress
+		until: 0
+		timeout: 0
+		count: instructions size.
+]
+
 { #category : #registers }
 UnicornSimulator >> framePointerRegister [
 	
@@ -60,6 +80,17 @@ UnicornSimulator >> framePointerRegisterValue [
 UnicornSimulator >> framePointerRegisterValue: aValue [
 	
 	self writeRegister: self framePointerRegister value: aValue
+]
+
+{ #category : #accessing }
+UnicornSimulator >> getLastAddress: abstractInstructions [ 
+
+	^ abstractInstructions last address + abstractInstructions last machineCodeSize
+]
+
+{ #category : #testing }
+UnicornSimulator >> hasLinkRegister [
+	^ false
 ]
 
 { #category : #initialization }
@@ -88,7 +119,7 @@ UnicornSimulator >> initializeUnicorn [
 { #category : #registers }
 UnicornSimulator >> instructionPointerRegister [
 
-	self subclassResponsibility
+	^ self subclassResponsibility
 ]
 
 { #category : #registers }
@@ -122,6 +153,26 @@ UnicornSimulator >> memoryAt: address readNext: byteSize [
 UnicornSimulator >> memoryAt: address write: bytes size: size [
 
 	unicorn memoryAt: address write: bytes size: size
+]
+
+{ #category : #'helpers - stack' }
+UnicornSimulator >> peek [
+
+	| stackAddressIntegerValue peekedByteArray |
+
+	"Getting address from stack register"
+	stackAddressIntegerValue := self stackPointerRegisterValue.
+
+	"Putting the value in the stack memory"
+	peekedByteArray := self memoryAt: stackAddressIntegerValue readNext: self wordSize.
+	
+	^ peekedByteArray
+]
+
+{ #category : #'helpers - stack' }
+UnicornSimulator >> peekAddress [
+	
+	^ self peek integerAt: 1 size: self wordSize signed: false
 ]
 
 { #category : #registers }
@@ -232,7 +283,13 @@ UnicornSimulator >> startAt: begin until: until timeout: timeout count: count [
 	stopReason ifNotNil: [ 
 		error := stopReason.
 		stopReason := nil.
-		error signal ]
+		error signal ].
+	
+	"Verify we stopped because we arrived to the right end addres and not a timeout"
+	self instructionPointerValue = until ifFalse: [
+		UnicornTimeout new
+			target: until;
+			signal ]
 ]
 
 { #category : #actions }
