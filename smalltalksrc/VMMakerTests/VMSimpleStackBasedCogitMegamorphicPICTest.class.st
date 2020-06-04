@@ -63,12 +63,11 @@ VMSimpleStackBasedCogitMegamorphicPICTest >> testMiss [
 
 	"We call to get to the abort trampoline. If this fails this will timeout"
 	finishedSimulation := false.
-	1halt.
+
 	machineSimulator instructionPointerValue: createdPic asInteger + cogit entryOffset.
 	[ finishedSimulation ] whileFalse: [
 		[ self runFrom: machineSimulator instructionPointerValue until: inlineCacheMissTrampoline ]
 			on: UnicornInvalidMemoryAccess do: [ :invalidAccess | 
-				1halt.
 				(invalidAccess isFetch and: [ invalidAccess address = inlineCacheMissTrampoline ])
 					ifTrue: [ finishedSimulation := true ]
 					ifFalse: [ cogit handleSimulationTrap: (UnicornSimulationTrap simulator: machineSimulator error: invalidAccess) ] ] ].
