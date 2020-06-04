@@ -7,7 +7,7 @@ Class {
 { #category : #registers }
 UnicornARMv5Simulator >> baseRegister [
 
-	^ self r10
+	^ UcARMRegisters r10
 ]
 
 { #category : #registers }

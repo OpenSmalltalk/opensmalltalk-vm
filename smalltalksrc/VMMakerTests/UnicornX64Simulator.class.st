@@ -7,7 +7,7 @@ Class {
 { #category : #'phisical-registers' }
 UnicornX64Simulator >> baseRegister [
 
-	^ self rbx
+	^ UcX86Registers rbx
 ]
 
 { #category : #'virtual-registers' }

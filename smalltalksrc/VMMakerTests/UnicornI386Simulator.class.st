@@ -7,7 +7,7 @@ Class {
 { #category : #registers }
 UnicornI386Simulator >> baseRegister [
 
-	^ self ebx
+	^ UcX86Registers ebx
 ]
 
 { #category : #registers }
