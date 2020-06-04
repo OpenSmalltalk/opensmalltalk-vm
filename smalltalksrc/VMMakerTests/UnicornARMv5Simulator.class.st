@@ -5,6 +5,12 @@ Class {
 }
 
 { #category : #registers }
+UnicornARMv5Simulator >> baseRegister [
+
+	^ self r10
+]
+
+{ #category : #registers }
 UnicornARMv5Simulator >> classRegister [
 	
 	^ UcARMRegisters r2
@@ -19,7 +25,7 @@ UnicornARMv5Simulator >> createUnicorn [
 { #category : #disassembling }
 UnicornARMv5Simulator >> disassembler [
 	
-	^ LLVMDisassembler arm
+	^ LLVMDisassembler armv5
 ]
 
 { #category : #executing }
@@ -132,6 +138,11 @@ UnicornARMv5Simulator >> r0 [
 { #category : #registers }
 UnicornARMv5Simulator >> r1 [
 	^ self readRegister: UcARMRegisters r1
+]
+
+{ #category : #registers }
+UnicornARMv5Simulator >> r10 [
+	^ self readRegister: UcARMRegisters r10
 ]
 
 { #category : #registers }

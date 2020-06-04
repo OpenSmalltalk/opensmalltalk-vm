@@ -21,11 +21,11 @@ VMSimpleStackBasedCogitCoggedMethods >> testUsingEntryOffsetChecksClassRegisterA
 	cogMethod := self generateCogMethod: [ cogit Jump: otherBlock ] selector: memory falseObject.
 	
 	"Let's set the receiver class index in the classRegister"
-	unicorn classRegisterValue: (memory classIndexOf: memory nilObject).
+	machineSimulator classRegisterValue: (memory classIndexOf: memory nilObject).
 	
 	self runFrom: cogMethod address + cogit entryOffset until: otherBlock.
 
-	self assert: unicorn instructionPointerValue equals: otherBlock 
+	self assert: machineSimulator instructionPointerValue equals: otherBlock 
 ]
 
 { #category : #tests }
@@ -36,11 +36,11 @@ VMSimpleStackBasedCogitCoggedMethods >> testUsingEntryOffsetChecksClassRegisterA
 	cogMethod := self generateCogMethod: [ cogit Jump: otherBlock ] selector: memory falseObject.
 	
 	"Let's set any value in the ClassRegister"
-	unicorn classRegisterValue: 16rFF.
+	machineSimulator classRegisterValue: 16rFF.
 	
 	self runFrom: cogMethod address + cogit entryOffset until: cogit ceMethodAbortTrampoline.
 
-	self assert: unicorn instructionPointerValue equals: cogit ceMethodAbortTrampoline 
+	self assert: machineSimulator instructionPointerValue equals: cogit ceMethodAbortTrampoline 
 ]
 
 { #category : #tests }
@@ -51,9 +51,9 @@ VMSimpleStackBasedCogitCoggedMethods >> testUsingNoCheckEntryDoesNotCheckClassTa
 	cogMethod := self generateCogMethod: [ cogit Jump: otherBlock ] selector: memory falseObject.
 	
 	"Let's set any value in the ClassRegister"
-	unicorn classRegisterValue: 16rFF.
+	machineSimulator classRegisterValue: 16rFF.
 	
 	self runFrom: cogMethod address + cogit noCheckEntryOffset until: otherBlock.
 
-	self assert: unicorn instructionPointerValue equals: otherBlock 
+	self assert: machineSimulator instructionPointerValue equals: otherBlock 
 ]

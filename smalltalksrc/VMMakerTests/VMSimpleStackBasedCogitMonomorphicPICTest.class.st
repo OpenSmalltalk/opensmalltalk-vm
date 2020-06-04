@@ -39,7 +39,7 @@ VMSimpleStackBasedCogitMonomorphicPICTest >> testLinkCallDuringSendInTrampolineR
 	self runFrom: sendAddress until: sendTrampolineAddress.
 	
 	cogit 
-		linkSendAt: unicorn getReturnAddress 
+		linkSendAt: machineSimulator getReturnAddress 
 		in: sendingMethod 
 		to: targetCog 
 		offset: cogit entryOffset 
@@ -48,7 +48,7 @@ VMSimpleStackBasedCogitMonomorphicPICTest >> testLinkCallDuringSendInTrampolineR
 	self pushAddress: memory falseObject.
 
 	executedTheTrampoline := false.
-	unicorn 
+	machineSimulator 
 		registerHook: [executedTheTrampoline := true] 
 		atAddress: sendTrampolineAddress.
 

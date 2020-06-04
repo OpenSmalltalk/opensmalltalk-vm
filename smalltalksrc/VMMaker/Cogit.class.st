@@ -8683,8 +8683,9 @@ Cogit >> handleWriteSimulationTrap: aProcessorSimulationTrap [
 	| variableValue |
 	(self addressIsInCodeZone: aProcessorSimulationTrap address) ifTrue:
 		[self error: 'attempt to write to code space'].
-	variableValue := processor perform: aProcessorSimulationTrap registerAccessor.
+	variableValue := aProcessorSimulationTrap writtenValue.
 	(simulatedVariableSetters at: aProcessorSimulationTrap address) value: variableValue.
+
 	processor pc: aProcessorSimulationTrap nextpc
 ]
 

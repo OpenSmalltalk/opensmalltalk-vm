@@ -5,6 +5,12 @@ Class {
 }
 
 { #category : #registers }
+UnicornI386Simulator >> baseRegister [
+
+	^ self ebx
+]
+
+{ #category : #registers }
 UnicornI386Simulator >> classRegister [
 
 	^ UcX86Registers ecx

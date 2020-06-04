@@ -3,7 +3,8 @@ Class {
 	#superclass : #Object,
 	#instVars : [
 		'unicorn',
-		'stopReason'
+		'stopReason',
+		'memory'
 	],
 	#category : #VMMakerTests
 }
@@ -24,6 +25,24 @@ UnicornSimulator class >> IA32 [
 UnicornSimulator class >> X64 [
 	
 	^ UnicornX64Simulator new
+]
+
+{ #category : #registers }
+UnicornSimulator >> baseRegister [
+
+	^ self subclassResponsibility
+]
+
+{ #category : #registers }
+UnicornSimulator >> baseRegisterValue [
+	
+	^ self readRegister: self baseRegister
+]
+
+{ #category : #registers }
+UnicornSimulator >> baseRegisterValue: aValue [
+	
+	^ self writeRegister: self baseRegister value: aValue
 ]
 
 { #category : #registers }
@@ -48,6 +67,23 @@ UnicornSimulator >> classRegisterValue: aValue [
 UnicornSimulator >> createUnicorn [
 
 	self subclassResponsibility
+]
+
+{ #category : #disassembling }
+UnicornSimulator >> disassembleCurrentInstruction [
+	
+	^ (self disassembleFrom: self instructionPointerValue opcodes: 1) first
+]
+
+{ #category : #disassembling }
+UnicornSimulator >> disassembleFrom: anIndex opcodes: numberOfInstructions [
+
+	^ self disassembler
+		printImmediatesInHexa;
+		disassembleNext: numberOfInstructions
+		instructionsIn: (memory memory copyFrom: anIndex)
+		startAddress: anIndex
+		pc: self instructionPointerValue
 ]
 
 { #category : #disassembling }
@@ -112,6 +148,7 @@ UnicornSimulator >> initializeUnicorn [
 				type: type;
 				address: address;
 				size: size;
+				value: value;
 				yourself.
 			false ]
 ]
@@ -141,6 +178,12 @@ UnicornSimulator >> mapMemory: aMemory at: anAddress [
 		mapHostMemory: aMemory
 		atAddress: anAddress
 		withPermissions: UnicornConstants permissionAll.
+]
+
+{ #category : #accessing }
+UnicornSimulator >> memory: aSpur64BitMMLECoSimulator [
+	
+	memory := aSpur64BitMMLECoSimulator 
 ]
 
 { #category : #memory }
@@ -240,7 +283,7 @@ UnicornSimulator >> sendNumberOfArgumentsRegister [
 	self subclassResponsibility
 ]
 
-{ #category : #regiters }
+{ #category : #registers }
 UnicornSimulator >> sendNumberOfArgumentsRegister: anInteger [ 
 	self shouldBeImplemented.
 ]
@@ -278,12 +321,16 @@ UnicornSimulator >> stackPointerRegisterValue: aValue [
 { #category : #executing }
 UnicornSimulator >> startAt: begin until: until timeout: timeout count: count [ 
 
-	| error |
-	unicorn startAt: begin until: until timeout: timeout count: count.
+	| error result |
+	result := unicorn startAt: begin until: until timeout: timeout count: count.
+	
 	stopReason ifNotNil: [ 
 		error := stopReason.
 		stopReason := nil.
 		error signal ].
+	
+	"If we did not stop for a known reason, verify the error code of the function"
+	self verifyErrorCode: result.
 	
 	"Verify we stopped because we arrived to the right end addres and not a timeout"
 	(until = 0 or: [self instructionPointerValue = until]) ifFalse: [

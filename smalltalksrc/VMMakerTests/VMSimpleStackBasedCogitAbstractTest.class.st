@@ -4,7 +4,6 @@ Class {
 	#instVars : [
 		'cogit',
 		'codeSize',
-		'unicorn',
 		'callerAddress',
 		'registerValue',
 		'opcodes',
@@ -18,7 +17,9 @@ Class {
 		'sendAddress',
 		'sendTrampolineAddress',
 		'sentSelector',
-		'selectorAtIndex'
+		'selectorAtIndex',
+		'inlineCacheMissTrampoline',
+		'machineSimulator'
 	],
 	#category : #VMMakerTests
 }
@@ -27,9 +28,9 @@ Class {
 VMSimpleStackBasedCogitAbstractTest class >> testParameters [
 
 	^ ParametrizedTestMatrix new
-		addCase: { #ISA -> #'ARMv5'. #wordSize -> 4};
 		addCase: { #ISA -> #'X64'. #wordSize -> 8};
 		addCase: { #ISA -> #'IA32'. #wordSize -> 4};
+		addCase: { #ISA -> #'ARMv5'. #wordSize -> 4};
 		"forSelector: #ISA addOptions: #( X64 IA32 ARMv5 );"
 		yourself
 ]
@@ -51,9 +52,9 @@ VMSimpleStackBasedCogitAbstractTest >> abstractInstructions [
 VMSimpleStackBasedCogitAbstractTest >> assertPushed: anOop after: aBlockClosure [
 	
 	| before after |
-	before := unicorn stackPointerRegisterValue.
+	before := machineSimulator stackPointerRegisterValue.
 	aBlockClosure value.
-	after := unicorn stackPointerRegisterValue.
+	after := machineSimulator stackPointerRegisterValue.
 	
 	self assert: after equals: before - self wordSize.
 	self assert: (self readMemoryAt: after) equals: anOop
@@ -63,11 +64,11 @@ VMSimpleStackBasedCogitAbstractTest >> assertPushed: anOop after: aBlockClosure 
 VMSimpleStackBasedCogitAbstractTest >> assertStackRemainsUnchangedDuring: aBlockClosure [ 
 	
 	| before |
-	before := unicorn stackPointerRegisterValue.
+	before := machineSimulator stackPointerRegisterValue.
 	aBlockClosure value.
 	
 	self
-		assert: unicorn stackPointerRegisterValue
+		assert: machineSimulator stackPointerRegisterValue
 		equals: before
 ]
 
@@ -167,8 +168,8 @@ VMSimpleStackBasedCogitAbstractTest >> createFramefulCallFrom: returnAddress rec
 	self createFramelessCallFrom: returnAddress receiver: receiver arguments: arguments.
 
 	"These are pushed when activating the method"	
-	self pushAddress: unicorn framePointerRegisterValue.
-	unicorn framePointerRegisterValue: unicorn stackPointerRegisterValue.
+	self pushAddress: machineSimulator framePointerRegisterValue.
+	machineSimulator framePointerRegisterValue: machineSimulator stackPointerRegisterValue.
 
 	self pushAddress: (memory nilObject bitOr: 1). "method"
 	self pushAddress: memory nilObject. "context"
@@ -204,10 +205,10 @@ VMSimpleStackBasedCogitAbstractTest >> createFramelessCallFrom: returnAddress re
 
 	self pushAddress: returnAddress.
 
-	unicorn hasLinkRegister 
-		ifTrue: [ unicorn linkRegisterValue: returnAddress ].	
+	machineSimulator hasLinkRegister 
+		ifTrue: [ machineSimulator linkRegisterValue: returnAddress ].	
 
-	unicorn receiverRegisterValue: receiver.
+	machineSimulator receiverRegisterValue: receiver.
 
 	"We initialize the internal Cogit state by hand because we don't have a method to cog"	
 "	cogit methodOrBlockNumTemps: 0.
@@ -246,8 +247,8 @@ VMSimpleStackBasedCogitAbstractTest >> createInterpreterFramefulCallFrom: return
 	self createFramelessCallFrom: returnAddress receiver: receiver arguments: arguments.
 
 	"These are pushed when activating the method"	
-	self pushAddress: unicorn framePointerRegisterValue.
-	unicorn framePointerRegisterValue: unicorn stackPointerRegisterValue.
+	self pushAddress: machineSimulator framePointerRegisterValue.
+	machineSimulator framePointerRegisterValue: machineSimulator stackPointerRegisterValue.
 
 	self pushAddress: (memory nilObject bitOr: 1). "method"
 	self pushAddress: memory nilObject. "context"
@@ -293,7 +294,7 @@ VMSimpleStackBasedCogitAbstractTest >> disassembleFrom: anIndex [
 { #category : #helpers }
 VMSimpleStackBasedCogitAbstractTest >> disassembleFrom: anIndex opcodes: numberOfInstructions [
 	
-	^ unicorn disassembler
+	^ machineSimulator disassembler
 		printImmediatesInHexa;
 		disassembleNext: numberOfInstructions
 		instructionsIn: (memory memory memoryObject
@@ -337,7 +338,7 @@ VMSimpleStackBasedCogitAbstractTest >> generateCogMethod: aBlockClosure selector
 { #category : #accessing }
 VMSimpleStackBasedCogitAbstractTest >> getLastAddress [
 	
-	^ unicorn getLastAddress: self abstractInstructions.
+	^ machineSimulator getLastAddress: self abstractInstructions.
 ]
 
 { #category : #running }
@@ -364,8 +365,8 @@ VMSimpleStackBasedCogitAbstractTest >> initializeStackMemory [.
 	stackMemoryEndAddress := stackMemoryStartAddress + stackSpaceSize.
 
 	"The stack pointer is at the top of the stack"
-	unicorn stackPointerRegisterValue: stackMemoryEndAddress.
-	unicorn framePointerRegisterValue: stackMemoryEndAddress.
+	machineSimulator stackPointerRegisterValue: stackMemoryEndAddress.
+	machineSimulator framePointerRegisterValue: stackMemoryEndAddress.
 ]
 
 { #category : #'helpers - registers' }
@@ -430,14 +431,14 @@ VMSimpleStackBasedCogitAbstractTest >> openMachineDebugger [
 	
 	VMMachineCodeDebugger new
 		cogit: cogit;
-		machineSimulator: unicorn;
+		machineSimulator: machineSimulator;
 		openWithSpec.
 ]
 
 { #category : #helpers }
 VMSimpleStackBasedCogitAbstractTest >> openMachineDebuggerAt: anInteger [ 
 	
-	unicorn instructionPointerValue: anInteger.
+	machineSimulator instructionPointerValue: anInteger.
 	self openMachineDebugger
 ]
 
@@ -447,13 +448,13 @@ VMSimpleStackBasedCogitAbstractTest >> pop [
 	| stackAddressIntegerValue poppedByteArray |
 
 	"Getting address from stack register"
-	stackAddressIntegerValue := unicorn stackPointerRegisterValue.
+	stackAddressIntegerValue := machineSimulator stackPointerRegisterValue.
 
 	"Putting the value in the stack memory"
-	poppedByteArray := unicorn memoryAt: stackAddressIntegerValue readNext: self wordSize.
+	poppedByteArray := machineSimulator memoryAt: stackAddressIntegerValue readNext: self wordSize.
 
 	"Updating SP"
-	unicorn stackPointerRegisterValue: stackAddressIntegerValue + self wordSize.
+	machineSimulator stackPointerRegisterValue: stackAddressIntegerValue + self wordSize.
 	
 	^ poppedByteArray
 ]
@@ -477,14 +478,14 @@ VMSimpleStackBasedCogitAbstractTest >> push: aByteArray [
 	self assert: aByteArray size equals: self wordSize.
 
 	"Getting address from stack register"
-	stackAddressIntegerValue := unicorn stackPointerRegisterValue.
+	stackAddressIntegerValue := machineSimulator stackPointerRegisterValue.
 
 	"Updating SP"
 	stackAddressIntegerValue := stackAddressIntegerValue - self wordSize.
-	unicorn stackPointerRegisterValue: stackAddressIntegerValue.
+	machineSimulator stackPointerRegisterValue: stackAddressIntegerValue.
 	
 	"Putting the value in the stack memory"
-	unicorn
+	machineSimulator
 		memoryAt: stackAddressIntegerValue
 		write: aByteArray
 		size: self wordSize.
@@ -504,7 +505,7 @@ VMSimpleStackBasedCogitAbstractTest >> pushAddress: anInteger [
 VMSimpleStackBasedCogitAbstractTest >> readMemoryAt: anAddress [
 
 	| bytes |
-	bytes := unicorn memoryAt: anAddress readNext: self wordSize.
+	bytes := machineSimulator memoryAt: anAddress readNext: self wordSize.
 	^ bytes integerAt: 1 size: self wordSize signed: false
 ]
 
@@ -512,7 +513,7 @@ VMSimpleStackBasedCogitAbstractTest >> readMemoryAt: anAddress [
 VMSimpleStackBasedCogitAbstractTest >> readRegister: aRegisterID [
 
 	registerValue := ByteArray new: self wordSize.
-	unicorn register: aRegisterID value readInto: registerValue.
+	machineSimulator register: aRegisterID value readInto: registerValue.
 	^ registerValue integerAt: 1 size: self wordSize signed: false
 ]
 
@@ -536,7 +537,7 @@ VMSimpleStackBasedCogitAbstractTest >> readTemporaryValueAt: anIndex [
 	
 	self assert: cogit needsFrame.
 	
-	^ self readMemoryAt: unicorn framePointerRegisterValue  - ((3 + anIndex) * self wordSize)
+	^ self readMemoryAt: machineSimulator framePointerRegisterValue  - ((3 + anIndex) * self wordSize)
 ]
 
 { #category : #helpers }
@@ -560,7 +561,7 @@ VMSimpleStackBasedCogitAbstractTest >> runFrom: startAddress until: endAddress [
 { #category : #helpers }
 VMSimpleStackBasedCogitAbstractTest >> runFrom: startAddress until: endAddress timeout: microseconds [
 
-	unicorn startAt: startAddress
+	machineSimulator startAt: startAddress
 		until: endAddress
 		timeout: microseconds
 		count: 0.
@@ -570,7 +571,7 @@ VMSimpleStackBasedCogitAbstractTest >> runFrom: startAddress until: endAddress t
 VMSimpleStackBasedCogitAbstractTest >> runGeneratedCode [
 	"The different platforms generates code in a different way, so the number of opcodes can not be valid. Eg: ARM generates more instructions per opcode. It has to calculate the instructions to run differently"
 
-	unicorn
+	machineSimulator
 		doRunGeneratedCodeStartAt: initialAddress
 		instructions: self abstractInstructions
 ]
@@ -578,7 +579,7 @@ VMSimpleStackBasedCogitAbstractTest >> runGeneratedCode [
 { #category : #helpers }
 VMSimpleStackBasedCogitAbstractTest >> runUntilReturn [
 
-	unicorn startAt: 16r1000000
+	machineSimulator startAt: 16r1000000
 		until: callerAddress
 		timeout: 0
 		count: 3000.
@@ -588,7 +589,7 @@ VMSimpleStackBasedCogitAbstractTest >> runUntilReturn [
 { #category : #helpers }
 VMSimpleStackBasedCogitAbstractTest >> runUntilReturnFrom: anAddress [
 
-	unicorn startAt: anAddress
+	machineSimulator startAt: anAddress
 		until: callerAddress
 		timeout: 0
 		count: 0.
@@ -617,7 +618,7 @@ VMSimpleStackBasedCogitAbstractTest >> setUp [
 	self setUpCPUSimulator.
 	self initializeStackMemory.
 	
-	cogit processor machineSimulator: unicorn.
+	cogit processor machineSimulator: machineSimulator.
 	cogit setStackAlignment: 16 expectedSPOffset: 0 expectedFPOffset: 0.
 	cogit initializeBackend.
 	cogit methodZone manageFrom: initialAddress to: initialAddress + self initialCodeSize.
@@ -640,9 +641,10 @@ VMSimpleStackBasedCogitAbstractTest >> setUp [
 { #category : #running }
 VMSimpleStackBasedCogitAbstractTest >> setUpCPUSimulator [
 
-	unicorn := UnicornSimulator perform: isa asSymbol.
+	machineSimulator := UnicornSimulator perform: isa asSymbol.
+	machineSimulator memory: memory.
 	memory memory memoryObject pinInMemory.
-	unicorn mapMemory: memory memory memoryObject at: initialAddress.
+	machineSimulator mapMemory: memory memory memoryObject at: initialAddress.
 ]
 
 { #category : #'tests - PIC' }
@@ -651,6 +653,9 @@ VMSimpleStackBasedCogitAbstractTest >> setUpCogMethodEntry [
 	cogit ceCPICMissTrampoline: (self compile: [ cogit RetN: 0 ]).
 	cogit cePICAbortTrampoline: (self compile: [ cogit RetN: 0 ]).
 	cogit ceMethodAbortTrampoline: (self compile: [ cogit RetN: 0 ]).
+	
+	"This is the function a megamorphic PIC will jump when there is a miss"
+	inlineCacheMissTrampoline := cogit simulatedAddressFor: #ceSendFromInLineCacheMiss:.
 	
 	cogit computeEntryOffsets.
 ]
@@ -685,6 +690,6 @@ VMSimpleStackBasedCogitAbstractTest >> writeRegister: anUcX86Registers value: an
 	| value |
 	value := ByteArray new: self wordSize.
 	value integerAt: 1 put: anInteger size: self wordSize signed: false.
-	unicorn register: anUcX86Registers value write: value.
+	machineSimulator register: anUcX86Registers value write: value.
 
 ]

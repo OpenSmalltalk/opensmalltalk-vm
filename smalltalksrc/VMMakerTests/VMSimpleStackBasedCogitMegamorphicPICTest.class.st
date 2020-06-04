@@ -41,12 +41,43 @@ VMSimpleStackBasedCogitMegamorphicPICTest >> testLookupNonExistingMegamorphicPIC
 	self assert: (cogit methodZone openPICWithSelector: memory trueObject) equals: nil
 ]
 
-{ #category : #'tests - metadata' }
-VMSimpleStackBasedCogitMegamorphicPICTest >> testNewMegamorphicPICCallsPicAbortTrampoline [
+{ #category : #'tests - PIC' }
+VMSimpleStackBasedCogitMegamorphicPICTest >> testMiss [
 
 	"We have to call the pic and see if it reaches the abort trampoline"
-	self assert: false
-		
+	| selector createdPic numArgs finishedSimulation |	
+
+	selector := memory trueObject.
+	numArgs := 0.
+	createdPic := cogit cogOpenPICSelector: selector numArgs: numArgs.
+	
+	cogit setCFramePointer: machineSimulator framePointerRegisterValue.
+	cogit setCStackPointer: machineSimulator stackPointerRegisterValue.
+	
+	"Receiver is nil, class tag of the first entry is 1 (a small integer).
+	 - the receiver does not match with the class tag for case 0
+	 - the receiver does not match with the class tag for case 1
+	 - so it should call the closed pic miss trampoline"
+	machineSimulator baseRegisterValue: cogit varBaseAddress.
+	machineSimulator receiverRegisterValue: memory falseObject.
+
+	"We call to get to the abort trampoline. If this fails this will timeout"
+	finishedSimulation := false.
+	1halt.
+	machineSimulator instructionPointerValue: createdPic asInteger + cogit entryOffset.
+	[ finishedSimulation ] whileFalse: [
+		[ self runFrom: machineSimulator instructionPointerValue until: inlineCacheMissTrampoline ]
+			on: UnicornInvalidMemoryAccess do: [ :invalidAccess | 
+				1halt.
+				(invalidAccess isFetch and: [ invalidAccess address = inlineCacheMissTrampoline ])
+					ifTrue: [ finishedSimulation := true ]
+					ifFalse: [ cogit handleSimulationTrap: (UnicornSimulationTrap simulator: machineSimulator error: invalidAccess) ] ] ].
+
+	"Failing all two PIC cases calls the pic trampoline.
+	 - The instruction pointer is at the trampoline
+	 - The class register value contains the pic
+	 - the receiver register value contains the receiver"	
+	self assert: machineSimulator sendNumberOfArgumentsRegisterValue equals: createdPic address
 ]
 
 { #category : #'tests - metadata' }
@@ -167,9 +198,9 @@ VMSimpleStackBasedCogitMegamorphicPICTest >> testRelinkCallSiteToMegamorphicPICC
 	"We call to get to the send trampoline"
 	self runFrom: patchedCogMethod asInteger + cogit noCheckEntryOffset until: sendTrampolineAddress. 
 
-	returnAfterCallAddress := unicorn hasLinkRegister 
-		ifTrue: [ unicorn linkRegisterValue ] 
-		ifFalse: [ unicorn peekAddress ].
+	returnAfterCallAddress := machineSimulator hasLinkRegister 
+		ifTrue: [ machineSimulator linkRegisterValue ] 
+		ifFalse: [ machineSimulator peekAddress ].
 	
 	"Let's rewrite the call site"
 	cogit backEnd
@@ -184,5 +215,5 @@ VMSimpleStackBasedCogitMegamorphicPICTest >> testRelinkCallSiteToMegamorphicPICC
 		runFrom: patchedCogMethod address + cogit noCheckEntryOffset 
 		until: createdPic asInteger + cogit entryOffset. 
 	
-	self assert: unicorn instructionPointerValue equals: createdPic asInteger + cogit entryOffset
+	self assert: machineSimulator instructionPointerValue equals: createdPic asInteger + cogit entryOffset
 ]

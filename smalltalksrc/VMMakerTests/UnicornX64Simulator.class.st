@@ -4,6 +4,12 @@ Class {
 	#category : #VMMakerTests
 }
 
+{ #category : #'phisical-registers' }
+UnicornX64Simulator >> baseRegister [
+
+	^ self rbx
+]
+
 { #category : #'virtual-registers' }
 UnicornX64Simulator >> classRegister [
 	
@@ -83,9 +89,21 @@ UnicornX64Simulator >> rbp [
 ]
 
 { #category : #'phisical-registers' }
+UnicornX64Simulator >> rbp: anInteger [ 
+
+	^ self writeRegister: UcX86Registers rbp value: anInteger
+]
+
+{ #category : #'phisical-registers' }
 UnicornX64Simulator >> rbx [
 
 	^ self readRegister: UcX86Registers rbx
+]
+
+{ #category : #'phisical-registers' }
+UnicornX64Simulator >> rbx: aValue [
+
+	^ self writeRegister: UcX86Registers rbx value: aValue
 ]
 
 { #category : #'phisical-registers' }
@@ -138,6 +156,12 @@ UnicornX64Simulator >> rsi [
 UnicornX64Simulator >> rsp [
 
 	^ self readRegister: UcX86Registers rsp
+]
+
+{ #category : #'phisical-registers' }
+UnicornX64Simulator >> rsp: anInteger [ 
+	
+	^ self writeRegister: UcX86Registers rsp value: anInteger
 ]
 
 { #category : #'virtual-registers' }

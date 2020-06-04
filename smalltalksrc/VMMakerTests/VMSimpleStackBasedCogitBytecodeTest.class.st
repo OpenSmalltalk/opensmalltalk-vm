@@ -12,7 +12,7 @@ VMSimpleStackBasedCogitBytecodeTest >> doExtendedStoreStoresInstanceVariableInde
 	obj := self newObjectWithSlots: instanceVariableToWrite.
 	
 	"The receiver should be in a receiver register based on Cog's calling convention"
-	unicorn receiverRegisterValue: obj.
+	machineSimulator receiverRegisterValue: obj.
 
 	self doExtendedStoreStoresVariableType: 0 index: instanceVariableToWrite.
 ]
@@ -47,7 +47,7 @@ VMSimpleStackBasedCogitBytecodeTest >> doPopIntoReceiverVariableBytecodeStoresVa
 	obj := self newObjectWithSlots: instanceVariableToWrite.
 	
 	"The receiver should be in a receiver register based on Cog's calling convention"
-	unicorn receiverRegisterValue: obj.
+	machineSimulator receiverRegisterValue: obj.
 
 	"The object is filled with nils.
 	Push false into the stack and execute the store and pop bytecode."	
@@ -94,7 +94,7 @@ VMSimpleStackBasedCogitBytecodeTest >> doTestReturnReturnsObjectInReturnRegister
 	self compile: compilationBlock.	
 	self runUntilReturn.
 
-	self assert: unicorn returnRegisterValue equals: anAddress
+	self assert: machineSimulator returnRegisterValue equals: anAddress
 ]
 
 { #category : #'tests - single bytecode - return' }
@@ -107,7 +107,7 @@ VMSimpleStackBasedCogitBytecodeTest >> doTestReturnReturnsToCallerWithFrame: isF
 	self compile: compilationBlock.	
 	self runUntilReturn.
 
-	self assert: unicorn instructionPointerValue equals: callerAddress
+	self assert: machineSimulator instructionPointerValue equals: callerAddress
 ]
 
 { #category : #'tests - extended push bytecode - push inst var' }
@@ -160,7 +160,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testExtendedPushPushesVariableType: type 
 	memory storePointer: instanceVariableToWrite - 1 ofObject: obj withValue: memory falseObject.
 	
 	"The receiver should be in a receiver register based on Cog's calling convention"
-	unicorn receiverRegisterValue: obj.
+	machineSimulator receiverRegisterValue: obj.
 	
 	"The first byte of the push receiver instance variable bytecode family is used to identify which variable (0-based again)"
 	cogit byte1: type << 6 + instanceVariableToWrite - 1.
@@ -656,7 +656,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushConstantNilAndThenReturn [
 
 	self runGeneratedCode.
 	
-	self assert: unicorn receiverRegisterValue equals: memory nilObject
+	self assert: machineSimulator receiverRegisterValue equals: memory nilObject
 ]
 
 { #category : #'tests - single bytecode' }
@@ -745,7 +745,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushQuickIntegerZeroPushesAZero [
 { #category : #'tests - single bytecode' }
 VMSimpleStackBasedCogitBytecodeTest >> testPushReceiverBytecodePushesTheReceiver [
 
-	unicorn receiverRegisterValue: 75. 
+	machineSimulator receiverRegisterValue: 75. 
 	
 	self compile: [ cogit genPushReceiverBytecode ].	
 	self runGeneratedCode.
@@ -858,7 +858,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushReceiverVariableBytecodeZeroPushe
 	memory storePointer: instanceVariableToWrite - 1 ofObject: obj withValue: memory falseObject.
 	
 	"The receiver should be in a receiver register based on Cog's calling convention"
-	unicorn receiverRegisterValue: obj.
+	machineSimulator receiverRegisterValue: obj.
 	
 	"The first byte of the push receiver instance variable bytecode family is used to identify which variable (0-based again)"
 	cogit byte0: instanceVariableToWrite - 1.		
@@ -917,7 +917,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushTempVariablePushesVariableAt: tem
 		arguments: #() 
 		temporaries: temporaries.
 
-	self assert: (self readMemoryAt: unicorn stackPointerRegisterValue) equals: memory falseObject.
+	self assert: (self readMemoryAt: machineSimulator stackPointerRegisterValue) equals: memory falseObject.
 	
 	"The bytecode of the push temporary variable is used to identify the index (from 0 to 15) and it starts from 16 to 31"
 	cogit byte0: tempVariableUnderTest - 1 + 16.
@@ -1143,7 +1143,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendLiteralOneWithZeroArgsMovesSelect
 	self runFrom: sendAddress until: sendTrampolineAddress.
 	
 	self
-		assert: unicorn classRegisterValue
+		assert: machineSimulator classRegisterValue
 		equals: literalIndex
 ]
 
@@ -1170,7 +1170,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendLiteralOneWithZeroArgsMovesSelect
 	self runFrom: sendAddress until: sendTrampolineAddress.
 	
 	self
-		assert: unicorn classRegisterValue
+		assert: machineSimulator classRegisterValue
 		equals: selector
 ]
 
@@ -1190,7 +1190,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendLiteralZeroWithZeroArgsMovesRecei
 	self pushAddress: memory falseObject.
 	self runFrom: sendAddress until: sendTrampolineAddress.
 	
-	self assert: unicorn receiverRegisterValue equals: memory falseObject
+	self assert: machineSimulator receiverRegisterValue equals: memory falseObject
 ]
 
 { #category : #'tests - sends' }
@@ -1215,7 +1215,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendLiteralZeroWithZeroArgsMovesSelec
 	self runFrom: sendAddress until: sendTrampolineAddress.
 	
 	self
-		assert: unicorn classRegisterValue
+		assert: machineSimulator classRegisterValue
 		equals: literalIndex
 ]
 
@@ -1241,7 +1241,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendLiteralZeroWithZeroArgsMovesSelec
 	self runFrom: sendAddress until: sendTrampolineAddress.
 	
 	self
-		assert: unicorn classRegisterValue
+		assert: machineSimulator classRegisterValue
 		equals: selector
 ]
 
@@ -1263,8 +1263,8 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendLiteralZeroWithZeroArgsPushesRetu
 	self runFrom: sendAddress until: sendTrampolineAddress.
 		
 	"Now return from called function/method and execute until the end of the send instruction"
-	unicorn returnRegisterValue: (memory integerObjectOf: 42).
-	self runFrom: unicorn instructionPointerValue until: self getLastAddress.
+	machineSimulator returnRegisterValue: (memory integerObjectOf: 42).
+	self runFrom: machineSimulator instructionPointerValue until: self getLastAddress.
 	
 	self assert: self popAddress equals: (memory integerObjectOf: 42).
 ]
@@ -1307,7 +1307,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendOneArgSpecialMessageDoesNotMovesI
 	self createSpecialSelectorArray.
 	self compileSpecialSend.
 	
-	unicorn sendNumberOfArgumentsRegisterValue: (previousValue := 42).
+	machineSimulator sendNumberOfArgumentsRegisterValue: (previousValue := 42).
 	
 	"Push receiver, arg, then send"
 	self pushAddress: memory falseObject.
@@ -1315,7 +1315,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendOneArgSpecialMessageDoesNotMovesI
 	self runFrom: sendAddress until: sendTrampolineAddress.
 	
 	self
-		assert: unicorn sendNumberOfArgumentsRegisterValue
+		assert: machineSimulator sendNumberOfArgumentsRegisterValue
 		equals: previousValue
 ]
 
@@ -1337,7 +1337,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendOneArgSpecialMessageMovesNegatedS
 	
 	signed := (ByteArray new: self wordSize)
 		in: [ :a | 
-			a integerAt: 1 put: unicorn classRegisterValue size: self wordSize signed: false.
+			a integerAt: 1 put: machineSimulator classRegisterValue size: self wordSize signed: false.
 			a integerAt: 1 size: self wordSize signed: true ].
 	self
 		assert: signed
@@ -1356,7 +1356,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendOneArgSpecialMessageMovesReceiver
 	self pushAddress: memory trueObject.
 	self runFrom: sendAddress until: sendTrampolineAddress.
 	
-	self assert: unicorn receiverRegisterValue equals: memory falseObject
+	self assert: machineSimulator receiverRegisterValue equals: memory falseObject
 ]
 
 { #category : #'tests - special sends' }
@@ -1374,7 +1374,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendOneArgSpecialMessageMovesSelector
 	self runFrom: sendAddress until: sendTrampolineAddress.
 	
 	self
-		assert: unicorn classRegisterValue
+		assert: machineSimulator classRegisterValue
 		equals: selectorAtIndex
 ]
 
@@ -1391,8 +1391,8 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendOneArgSpecialMessagePushesReturnV
 	self runFrom: sendAddress until: sendTrampolineAddress.
 	
 	"Now return from called function/method and execute until the end of the send instruction"
-	unicorn returnRegisterValue: (memory integerObjectOf: 42).
-	self runFrom: unicorn instructionPointerValue until: self getLastAddress.
+	machineSimulator returnRegisterValue: (memory integerObjectOf: 42).
+	self runFrom: machineSimulator instructionPointerValue until: self getLastAddress.
 	
 	self assert: self popAddress equals: (memory integerObjectOf: 42).
 ]
@@ -1405,7 +1405,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendTwoArgSpecialMessageDoesNotMovesI
 	self createSpecialSelectorArray.
 	self compileSpecialSend.
 	
-	unicorn sendNumberOfArgumentsRegisterValue: (previousValue := 42).
+	machineSimulator sendNumberOfArgumentsRegisterValue: (previousValue := 42).
 	
 	"Push receiver, arg1, arg2 then send"
 	self pushAddress: memory falseObject.
@@ -1414,7 +1414,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendTwoArgSpecialMessageDoesNotMovesI
 	self runFrom: sendAddress until: sendTrampolineAddress.
 	
 	self
-		assert: unicorn sendNumberOfArgumentsRegisterValue
+		assert: machineSimulator sendNumberOfArgumentsRegisterValue
 		equals: previousValue
 ]
 
@@ -1437,7 +1437,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendTwoArgSpecialMessageMovesNegatedS
 	
 	signed := (ByteArray new: self wordSize)
 		in: [ :a | 
-			a integerAt: 1 put: unicorn classRegisterValue size: self wordSize signed: false.
+			a integerAt: 1 put: machineSimulator classRegisterValue size: self wordSize signed: false.
 			a integerAt: 1 size: self wordSize signed: true ].
 	self
 		assert: signed
@@ -1457,7 +1457,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendTwoArgSpecialMessageMovesReceiver
 	self pushAddress: (memory integerObjectOf: 7).
 	self runFrom: sendAddress until: sendTrampolineAddress.
 	
-	self assert: unicorn receiverRegisterValue equals: memory falseObject
+	self assert: machineSimulator receiverRegisterValue equals: memory falseObject
 ]
 
 { #category : #'tests - special sends' }
@@ -1479,7 +1479,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendTwoArgSpecialMessageMovesSelector
 	
 	signed := (ByteArray new: self wordSize)
 		in: [ :a | 
-			a integerAt: 1 put: unicorn classRegisterValue size: self wordSize signed: false.
+			a integerAt: 1 put: machineSimulator classRegisterValue size: self wordSize signed: false.
 			a integerAt: 1 size: self wordSize signed: true ].
 	self
 		assert: signed
@@ -1500,8 +1500,8 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendTwoArgSpecialMessagePushesReturnV
 	self runFrom: sendAddress until: sendTrampolineAddress.
 	
 	"Now return from called function/method and execute until the end of the send instruction"
-	unicorn returnRegisterValue: (memory integerObjectOf: 42).
-	self runFrom: unicorn instructionPointerValue until: self getLastAddress.
+	machineSimulator returnRegisterValue: (memory integerObjectOf: 42).
+	self runFrom: machineSimulator instructionPointerValue until: self getLastAddress.
 	
 	self assert: self popAddress equals: (memory integerObjectOf: 42).
 ]
@@ -1514,14 +1514,14 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendZeroArgSpecialMessageDoesNotMoves
 	self createSpecialSelectorArray.
 	self compileSpecialSend.
 	
-	unicorn sendNumberOfArgumentsRegisterValue: (previousValue := 42).
+	machineSimulator sendNumberOfArgumentsRegisterValue: (previousValue := 42).
 	
 	"Push receiver, then send"
 	self pushAddress: memory falseObject.
 	self runFrom: sendAddress until: sendTrampolineAddress.
 	
 	self
-		assert: unicorn sendNumberOfArgumentsRegisterValue
+		assert: machineSimulator sendNumberOfArgumentsRegisterValue
 		equals: previousValue
 ]
 
@@ -1542,7 +1542,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendZeroArgSpecialMessageMovesNegated
 	
 	signed := (ByteArray new: self wordSize)
 		in: [ :a | 
-			a integerAt: 1 put: unicorn classRegisterValue size: self wordSize signed: false.
+			a integerAt: 1 put: machineSimulator classRegisterValue size: self wordSize signed: false.
 			a integerAt: 1 size: self wordSize signed: true ].
 	self
 		assert: signed
@@ -1560,7 +1560,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendZeroArgSpecialMessageMovesReceive
 	self pushAddress: memory falseObject.
 	self runFrom: sendAddress until: sendTrampolineAddress.
 	
-	self assert: unicorn receiverRegisterValue equals: memory falseObject
+	self assert: machineSimulator receiverRegisterValue equals: memory falseObject
 ]
 
 { #category : #'tests - special sends' }
@@ -1577,7 +1577,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendZeroArgSpecialMessageMovesSelecto
 	self runFrom: sendAddress until: sendTrampolineAddress.
 	
 	self
-		assert: unicorn classRegisterValue
+		assert: machineSimulator classRegisterValue
 		equals: selectorAtIndex
 ]
 
@@ -1593,8 +1593,8 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendZeroArgSpecialMessagePushesReturn
 	self runFrom: sendAddress until: sendTrampolineAddress.
 	
 	"Now return from called function/method and execute until the end of the send instruction"
-	unicorn returnRegisterValue: (memory integerObjectOf: 42).
-	self runFrom: unicorn instructionPointerValue until: self getLastAddress.
+	machineSimulator returnRegisterValue: (memory integerObjectOf: 42).
+	self runFrom: machineSimulator instructionPointerValue until: self getLastAddress.
 	
 	self assert: self popAddress equals: (memory integerObjectOf: 42).
 ]
