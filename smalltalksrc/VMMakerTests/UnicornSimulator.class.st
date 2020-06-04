@@ -330,7 +330,7 @@ UnicornSimulator >> startAt: begin until: until timeout: timeout count: count [
 		error signal ].
 	
 	"If we did not stop for a known reason, verify the error code of the function"
-	self verifyErrorCode: result.
+	unicorn verifyErrorCode: result.
 	
 	"Verify we stopped because we arrived to the right end addres and not a timeout"
 	(until = 0 or: [self instructionPointerValue = until]) ifFalse: [
