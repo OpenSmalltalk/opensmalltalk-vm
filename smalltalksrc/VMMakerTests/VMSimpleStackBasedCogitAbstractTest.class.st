@@ -451,7 +451,7 @@ VMSimpleStackBasedCogitAbstractTest >> pop [
 	stackAddressIntegerValue := machineSimulator stackPointerRegisterValue.
 
 	"Putting the value in the stack memory"
-	poppedByteArray := machineSimulator memoryAt: stackAddressIntegerValue readNext: self wordSize.
+	poppedByteArray := self top.
 
 	"Updating SP"
 	machineSimulator stackPointerRegisterValue: stackAddressIntegerValue + self wordSize.
@@ -670,6 +670,22 @@ VMSimpleStackBasedCogitAbstractTest >> stackPointerRegisterValue [
 VMSimpleStackBasedCogitAbstractTest >> stackPointerRegisterValue: aValue [
 	
 	self writeRegister: UcX86Registers rsp value: aValue
+]
+
+{ #category : #'helpers - stack' }
+VMSimpleStackBasedCogitAbstractTest >> top [
+
+	| stackAddressIntegerValue |
+
+	"Getting address from stack register"
+	stackAddressIntegerValue := machineSimulator stackPointerRegisterValue.
+	^ machineSimulator memoryAt: stackAddressIntegerValue readNext: self wordSize.
+]
+
+{ #category : #'helpers - stack' }
+VMSimpleStackBasedCogitAbstractTest >> topAddress [
+	
+	^ self top integerAt: 1 size: self wordSize signed: false
 ]
 
 { #category : #helpers }

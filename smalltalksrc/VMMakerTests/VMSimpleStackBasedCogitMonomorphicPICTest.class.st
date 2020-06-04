@@ -70,6 +70,33 @@ VMSimpleStackBasedCogitMonomorphicPICTest >> testMissOffsetIsEqualsToEntryOffset
 { #category : #'tests - PIC' }
 VMSimpleStackBasedCogitMonomorphicPICTest >> testObtainInlineCacheFromLinkedCall [
 
-	self assert: false
-	"we should test inlineCacheTagAt:"
+	| sendingMethod targetCog selector executedTheTrampoline |
+	self setUpCogMethodEntry.
+	sendTrampolineAddress := self compile: [ cogit RetN: 0 ].
+	cogit ordinarySendTrampolineAt: 0 "num args" put: sendTrampolineAddress.
+
+	selector := memory falseObject.
+	targetCog := self generateCogMethod: [ cogit RetN: 0 ] selector: selector.
+	
+	self createFramefulCallFrom: callerAddress.
+	
+	cogit byte0: 0.
+	sendingMethod := self newMethodWithLiteral: selector at: 0.
+	cogit methodObj: sendingMethod.
+	sendAddress := self compile: [ cogit genSendLiteralSelector0ArgsBytecode ].
+
+	"Push receiver then send"
+	self pushAddress: memory falseObject.
+	self runFrom: sendAddress until: sendTrampolineAddress.
+	
+	cogit 
+		linkSendAt: machineSimulator getReturnAddress 
+		in: sendingMethod 
+		to: targetCog 
+		offset: cogit entryOffset 
+		receiver: memory falseObject.
+		
+	self
+		assert: (cogit backend inlineCacheTagAt: self topAddress)
+		equals: (cogit objectRepresentation inlineCacheTagForInstance: memory falseObject)
 ]
