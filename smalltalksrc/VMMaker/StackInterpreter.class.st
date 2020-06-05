@@ -16460,6 +16460,12 @@ StackInterpreter >> maybeTraceStackOverflow [
 	"nop in the stack interpreter"
 ]
 
+{ #category : #accessing }
+StackInterpreter >> messageSelector [
+	<doNotGenerate>
+	^ messageSelector
+]
+
 { #category : #simulation }
 StackInterpreter >> metaclassNumSlots [
 	<doNotGenerate>
