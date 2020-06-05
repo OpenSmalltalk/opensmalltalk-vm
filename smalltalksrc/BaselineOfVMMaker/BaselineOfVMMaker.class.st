@@ -10,7 +10,7 @@ BaselineOfVMMaker >> baseline: spec [
 	spec
 		for: #common
 		do: [
-			
+			"Initial VMMaker package for handling Pharo 6" 
 			spec baseline: 'Unicorn' with: [ 
 				spec repository: 'github://guillep/pharo-unicorn' ].
 			spec baseline: 'LLVMDisassembler' with: [ 
@@ -23,12 +23,10 @@ BaselineOfVMMaker >> baseline: spec [
 			spec package: 'VMMaker-Tools' with: [ 
 				spec requires: #( 'VMMakerCompatibilityForPharo6' 'VMMakerTests' ) ].
 			
-			"Initial VMMaker package for handling Pharo 6" 
 			spec
-				package: 'VMMakerTests' with: [
-					spec requires: 'VMMakerCompatibilityForPharo6' ].
-			spec
-				package: 'VMMakerCompatibilityForPharo6'.
+				package: 'VMMakerCompatibilityForPharo6'
+				with: [ spec requires: 'VMMaker' ];
+				package: 'VMMakerLoadingDependencies'.
 			
 			"Dependencies from other repositories"
 			spec
@@ -45,7 +43,7 @@ BaselineOfVMMaker >> baseline: spec [
 			spec
 				package: 'Balloon-Engine-Pools';
 				package: 'BytecodeSets';
-				package: 'VMMaker' with: [ spec requires: #( 'VMMakerCompatibilityForPharo6' 'Printf') ];
+				package: 'VMMaker' with: [ spec requires: #( 'VMMakerLoadingDependencies' 'Printf') ];
 				package: 'Cog';
 				package: 'CogTools';
 				package: 'ImageFormat'.

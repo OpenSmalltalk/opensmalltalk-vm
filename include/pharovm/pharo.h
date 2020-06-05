@@ -60,8 +60,6 @@ void aioInit(void);
 
 void ioInitTime(void);
 
-EXPORT(int) fileExists(const char *aPath);
-
 EXPORT(char*) getFullPath(char const *relativePath, char* fullPath, int fullPathSize);
 EXPORT(void) getBasePath(char const *path, char* basePath, int basePathSize);
 

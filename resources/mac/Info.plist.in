@@ -3,17 +3,17 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleExecutable</key>
-	<string>pharo</string>
+	<string>@VM_EXECUTABLE_NAME@</string>
 	<key>CFBundleGetInfoString</key>
-	<string>Pharo VM</string>
+	<string>@APPNAME@ VM</string>
 	<key>CFBundleIconFile</key>
-	<string>Pharo.icns</string>
+	<string>@APPNAME@.icns</string>
 	<key>CFBundleIdentifier</key>
 	<string>org.pharo.vm</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>Pharo</string>
+	<string>@APPNAME@</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -25,7 +25,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
 	<key>CFBundleDisplayName</key>
-	<string>Pharo</string>
+	<string>@APPNAME@</string>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
@@ -34,9 +34,9 @@
 				<string>image</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
-			<string>Pharo.icns</string>
+			<string>@APPNAME@.icns</string>
 			<key>CFBundleTypeName</key>
-			<string>Pharo Image File</string>
+			<string>@APPNAME@ Image File</string>
 			<key>CFBundleTypeOSTypes</key>
 			<array>
 				<string>STim</string>
@@ -50,9 +50,9 @@
 				<string>sources</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
-			<string>PharoSources.icns</string>
+			<string>@APPNAME@Sources.icns</string>
 			<key>CFBundleTypeName</key>
-			<string>Squeak Sources File</string>
+			<string>@APPNAME@ Sources File</string>
 			<key>CFBundleTypeOSTypes</key>
 			<array>
 				<string>STso</string>
@@ -66,9 +66,9 @@
 				<string>changes</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
-			<string>PharoChanges.icns</string>
+			<string>@APPNAME@Changes.icns</string>
 			<key>CFBundleTypeName</key>
-			<string>Squeak Changes File</string>
+			<string>@APPNAME@ Changes File</string>
 			<key>CFBundleTypeOSTypes</key>
 			<array>
 				<string>STch</string>
@@ -85,7 +85,7 @@
 				<string>public.data</string>
 			</array>
 			<key>UTTypeDescription</key>
-			<string>Pharo Image File</string>
+			<string>@APPNAME@ Image File</string>
 			<key>UTTypeIdentifier</key>
 			<string>org.pharo.image</string>
 			<key>UTTypeTagSpecification</key>
@@ -106,7 +106,7 @@
 				<string>public.utf8-plain-text</string>
 			</array>
 			<key>UTTypeDescription</key>
-			<string>Pharo Sources File</string>
+			<string>@APPNAME@ Sources File</string>
 			<key>UTTypeIdentifier</key>
 			<string>org.pharo.sources</string>
 			<key>UTTypeTagSpecification</key>
@@ -127,7 +127,7 @@
 				<string>public.utf8-plain-text</string>
 			</array>
 			<key>UTTypeDescription</key>
-			<string>Pharo Changes File</string>
+			<string>@APPNAME@ Changes File</string>
 			<key>UTTypeIdentifier</key>
 			<string>org.pharo.changes</string>
 			<key>UTTypeTagSpecification</key>

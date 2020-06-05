@@ -30,6 +30,7 @@ static char __buildInfo[] = "FilePlugin VMMaker.oscog-eem.2498 uuid: f4233232-2c
 # define EXPORT(returnType) static returnType
 #endif
 
+#include "pharovm/imageAccess.h"
 #include "FilePlugin.h"
 #include "sqMemoryAccess.h"
 

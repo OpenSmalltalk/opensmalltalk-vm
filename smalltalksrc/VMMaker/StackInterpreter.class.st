@@ -1862,9 +1862,9 @@ void
 warning(char *s) { /* Print an error message but don''t necessarily exit. */
 	if (erroronwarn) error(s);
 	if (warnpid)
-		printf("\n%s pid %ld\n", s, (long)warnpid);
+		vm_printf("\n%s pid %ld\n", s, (long)warnpid);
 	else
-		printf("\n%s\n", s);
+		vm_printf("\n%s\n", s);
 }
 void
 warningat(char *s, int l) { /* ditto with line number. */
@@ -1878,9 +1878,9 @@ warningat(char *s, int l) { /* ditto with line number. */
 void
 invalidCompactClassError(char *s) { /* Print a (compact) class index error message and exit. */
 #if SPURVM
-	printf("\nClass %s does not have the required class index\n", s);
+	vm_printf("\nClass %s does not have the required class index\n", s);
 #else
-	printf("\nClass %s does not have the required compact class index\n", s);
+	vm_printf("\nClass %s does not have the required compact class index\n", s);
 #endif
 	exit(-1);
 }
@@ -10201,10 +10201,10 @@ StackInterpreter >> longPrintOop: oop [
 			 startIP to: lastIndex do:
 				[:index| | byte |
 				column = 1 ifTrue:
-					[self cCode: 'printf("0x%08" PRIxSQPTR ": ", (usqIntptr_t)(oop+BaseHeaderSize+index-1))'
+					[self cCode: 'vm_printf("0x%08" PRIxSQPTR ": ", (usqIntptr_t)(oop+BaseHeaderSize+index-1))'
 						inSmalltalk: [self print: (oop+objectMemory baseHeaderSize+index-1) hex; print: ': ']].
 				byte := objectMemory fetchByte: index - 1 ofObject: oop.
-				self cCode: 'printf(" %02x/%-3d", (int)byte,(int)byte)'
+				self cCode: 'vm_printf(" %02x/%-3d", (int)byte,(int)byte)'
 					inSmalltalk: [self space; print: (byte radix: 16); printChar: $/; printNum: byte].
 				column := column + 1.
 				column > bytecodesPerLine ifTrue:
@@ -16484,7 +16484,7 @@ StackInterpreter >> methodArg: index [
 	<doNotGenerate> "Obsolete; was never used; replaced with methodReturnBool: in the VirtualMachine struct."
 	self deprecated.
 	index > argumentCount + 1 ifTrue:
-		[self cCode: 'fprintf(stderr,"[VM]: Attempt to access method args beyond range\n")'.
+		[self cCode: 'vm_printf("[VM]: Attempt to access method args beyond range\n")'.
 		self printCallStack.
 		self primitiveFail.
 		^0].
@@ -17612,9 +17612,12 @@ StackInterpreter >> primitiveObject: actualReceiver perform: selector withArgume
 { #category : #'debug printing' }
 StackInterpreter >> print: s [
 	"For testing in Smalltalk, this method should be overridden in a subclass."
+
 	<api>
 	<var: #s type: #'char *'>
-	self cCode: 'fputs(s, stdout)'
+	self
+		cCode: 'vm_printf(s)'
+		inSmalltalk: [ self subclassResponsibility ]
 ]
 
 { #category : #'debug printing' }
@@ -17908,7 +17911,7 @@ StackInterpreter >> printExternalHeadFrame [
 { #category : #'debug printing' }
 StackInterpreter >> printFloat: f [
 	"For testing in Smalltalk, this method should be overridden in a subclass."
-	<cmacro: '(f) printf("%g", f)'>
+	<cmacro: '(f) vm_printf("%g", f)'>
 	self print: f
 ]
 
@@ -18163,7 +18166,7 @@ StackInterpreter >> printHex: n [
 	<var: #buf declareC: 'char buf[37]'> "large enough for a 64-bit value in hex plus the null plus 16 spaces"
 	self cCode: 'memset(buf,'' '',36)' inSmalltalk: [buf := 'doh!'].
 	len := self cCode: 'sprintf(buf + 2 + 2 * BytesPerWord, "0x%" PRIxSQPTR, (usqIntptr_t)(n))'.
-	self cCode: 'printf("%s", buf + len)'.
+	self cCode: 'vm_printf("%s", buf + len)'.
 	len touch: buf
 ]
 
@@ -18244,7 +18247,7 @@ StackInterpreter >> printMethodCacheFor: thing [
 			[self cCode: [] inSmalltalk: [self transcript ensureCr].
 			 self printNum: i; space; printHexnp: i; cr; tab.
 			 (objectMemory isBytesNonImm: s)
-				ifTrue: [self cCode: 'printf("%" PRIxSQPTR " %.*s\n", s, (int)(numBytesOf(s)), (char *)firstIndexableField(s))'
+				ifTrue: [self cCode: 'vm_printf("%" PRIxSQPTR " %.*s\n", s, (int)(numBytesOf(s)), (char *)firstIndexableField(s))'
 						inSmalltalk: [self printHex: s; space; print: (self stringOf: s); cr]]
 				ifFalse: [self shortPrintOop: s].
 			 self tab.
@@ -18331,7 +18334,7 @@ StackInterpreter >> printNameOfClass: classOop count: cnt [
 StackInterpreter >> printNum: n [
 	"For testing in Smalltalk, this method should be overridden in a subclass."
 
-	self cCode: 'printf("%ld", (long) n)'.
+	self cCode: 'vm_printf("%ld", (long) n)'.
 ]
 
 { #category : #'debug printing' }
@@ -18415,10 +18418,10 @@ StackInterpreter >> printOop: oop [
 			 startIP to: lastIndex do:
 				[:index| | byte |
 				column = 1 ifTrue:
-					[self cCode: 'printf("0x%08" PRIxSQPTR ": ", (usqIntptr_t)(oop+BaseHeaderSize+index-1))'
+					[self cCode: 'vm_printf("0x%08" PRIxSQPTR ": ", (usqIntptr_t)(oop+BaseHeaderSize+index-1))'
 						inSmalltalk: [self print: (oop+objectMemory baseHeaderSize+index-1) hex; print: ': ']].
 				byte := objectMemory fetchByte: index - 1 ofObject: oop.
-				self cCode: 'printf(" %02x/%-3d", (int)byte,(int)byte)'
+				self cCode: 'vm_printf(" %02x/%-3d", (int)byte,(int)byte)'
 					inSmalltalk: [self space; print: (byte radix: 16); printChar: $/; printNum: byte].
 				column := column + 1.
 				column > bytecodesPerLine ifTrue:
@@ -20634,15 +20637,15 @@ StackInterpreter >> shortPrintOop: oop [
 	(objectMemory isImmediate: oop) ifTrue:
 		[(objectMemory isIntegerObject: oop) ifTrue:
 			[self
-				cCode: 'printf("=%ld\n", (long)integerValueOf(oop))'
+				cCode: 'vm_printf("=%ld\n", (long)integerValueOf(oop))'
 				inSmalltalk: [self print: (self shortPrint: oop); cr]].
 		 (objectMemory isImmediateCharacter: oop) ifTrue:
 			[self
-				cCode: 'printf("=$%ld ($%lc)\n", (long)characterValueOf(oop), (wint_t)characterValueOf(oop))'
+				cCode: 'vm_printf("=$%ld ($%lc)\n", (long)characterValueOf(oop), (wint_t)characterValueOf(oop))'
 				inSmalltalk: [self print: (self shortPrint: oop); cr]].
 		 (objectMemory isImmediateFloat: oop) ifTrue:
 			[self
-				cCode: 'printf("=%g\n", floatValueOf(oop))'
+				cCode: 'vm_printf("=%g\n", floatValueOf(oop))'
 				inSmalltalk: [self print: '='; printFloat: (objectMemory floatValueOf: oop); cr]].
 		 ^self].
 	(objectMemory addressCouldBeObj: oop) ifFalse:
