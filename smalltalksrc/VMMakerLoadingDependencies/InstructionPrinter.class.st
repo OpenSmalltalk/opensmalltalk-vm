@@ -14,7 +14,7 @@ Class {
 		'printPC',
 		'indentSpanOfFollowingJump'
 	],
-	#category : #'VMMakerCompatibilityForPharo6-Kernel-Methods'
+	#category : #VMMakerLoadingDependencies
 }
 
 { #category : #printing }

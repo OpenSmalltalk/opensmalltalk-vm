@@ -10842,7 +10842,7 @@ Cogit >> previousInstruction [
 
 { #category : #printing }
 Cogit >> print: aString [
-	<cmacro: '(aString) printf("%s", aString)'>
+	<cmacro: '(aString) vm_printf("%s", aString)'>
 	coInterpreter transcript print: aString
 ]
 
@@ -11015,7 +11015,7 @@ Cogit >> printMethodHeader: cogMethod on: aStream [
 
 { #category : #printing }
 Cogit >> printNum: n [
-	<cmacro: '(n) printf("%" PRIdSQINT, (sqInt) (n))'>
+	<cmacro: '(n) vm_printf("%" PRIdSQINT, (sqInt) (n))'>
 	coInterpreter transcript printNum: n
 ]
 

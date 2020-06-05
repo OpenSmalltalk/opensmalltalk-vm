@@ -127,7 +127,7 @@ vm_find_startup_image(const char *vmExecutablePath, VMParameters *parameters)
 
 	// Find the VM absolute directory.
 	vm_path_make_absolute_into(searchPathBuffer, FILENAME_MAX+1, vmExecutablePath);
-    if(fileExists(searchPathBuffer))
+    if(sqImageFileExists(searchPathBuffer))
 	{
 		vm_path_extract_dirname_into(vmPathBuffer, FILENAME_MAX+1, searchPathBuffer);
 	}
@@ -142,7 +142,7 @@ vm_find_startup_image(const char *vmExecutablePath, VMParameters *parameters)
 	{
 		const char *searchSuffix = vm_image_search_suffixes[i];
 		vm_path_join_into(imagePathBuffer, FILENAME_MAX+1, vmPathBuffer, searchSuffix);
-	    if(fileExists(imagePathBuffer))
+	    if(sqImageFileExists(imagePathBuffer))
 		{
 			parameters->imageFileName = imagePathBuffer;
 			parameters->isDefaultImage = true;
@@ -158,7 +158,7 @@ vm_find_startup_image(const char *vmExecutablePath, VMParameters *parameters)
 	vm_path_join_into(imagePathBuffer, FILENAME_MAX+1, searchPathBuffer, DEFAULT_IMAGE_NAME);
 	free(vmPathBuffer);
 	free(searchPathBuffer);
-	if(fileExists(imagePathBuffer))
+	if(sqImageFileExists(imagePathBuffer))
 	{
 		parameters->imageFileName = imagePathBuffer;
 		parameters->isDefaultImage = true;

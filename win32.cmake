@@ -1,5 +1,5 @@
 set(VM_EXECUTABLE_CONSOLE_NAME "${VM_EXECUTABLE_NAME}Console")
-set(VM_VERSION_FILEVERSION "PharoVM-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}-${GIT_COMMIT_HASH}")
+set(VM_VERSION_FILEVERSION "${APPNAME}VM-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}-${GIT_COMMIT_HASH}")
 
 set(Win32ResourcesFolder "${CMAKE_CURRENT_SOURCE_DIR}/resources/windows")
 if(NOT Win32VMExecutableIcon)
@@ -69,7 +69,7 @@ macro(add_third_party_dependencies_per_platform)
     add_third_party_dependency("gcc-runtime-3.4" "build/vm")
     add_third_party_dependency("zlib-1.2.11-fixLibGit" "build/vm")
     add_third_party_dependency("SDL2-2.0.5" "build/vm")
-    add_third_party_dependency("PThreadedFFI-1.1.2-win64" "build/vm")
+    add_third_party_dependency("PThreadedFFI-1.2.0-win64" "build/vm")
 endmacro()
 
 
@@ -92,6 +92,12 @@ macro(configure_installables INSTALL_COMPONENT)
           FILES_MATCHING
             PATTERN *
             PATTERN *.dll EXCLUDE)
+
+	install(
+	    DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/win/"
+	    DESTINATION include/pharovm
+	    COMPONENT include
+	    FILES_MATCHING PATTERN *.h)
 
 endmacro()
 

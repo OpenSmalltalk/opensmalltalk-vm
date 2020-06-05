@@ -21,7 +21,7 @@ Class {
 	#classVars : [
 		'InvalidReference'
 	],
-	#category : #'VMMakerCompatibilityForPharo6-System'
+	#category : #VMMakerLoadingDependencies
 }
 
 { #category : #'instance creation' }
