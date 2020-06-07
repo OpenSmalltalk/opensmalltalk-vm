@@ -803,7 +803,7 @@ dndInLaunchDrop(XClientMessageEvent *evt)
     return XdndStateIdle; /* Added by eem 2018/12/14 to remove a compiler warning; Is this correct? */
 }
 
-/* Send a XdndSqueakLaunchAck essage back to the launch dropper if the filename
+/* Send an XdndSqueakLaunchAck message back to the launch dropper if the filename
  * matches a dndInLaunchDrop event.
  */
 static sqInt
