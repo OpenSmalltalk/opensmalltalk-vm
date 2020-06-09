@@ -231,6 +231,34 @@ VMSimpleStackBasedCogitBytecodeTest >> testExtendedStoreStoresInstanceVariableIn
 	self assert: (memory fetchPointer: instanceVariableToWrite - 1 ofObject: obj) equals: memory falseObject
 ]
 
+{ #category : #'tests - jumps' }
+VMSimpleStackBasedCogitBytecodeTest >> testJumpForwardJumpsOverAPush [
+	
+	cogit methodObj: (self newMethodWithBytecodes: #[144 122 121]).
+	
+	self compile: [ | fixup nextOpcodeIndex |
+		cogit byte0: 144.
+		cogit bytecodePC: 8. "The method has a header so, the first bytecode is in offset 8"
+		cogit genShortUnconditionalJump.  
+		
+		cogit byte0: 122.
+		cogit bytecodePC: 9.
+		cogit genReturnFalse.
+		
+		cogit byte0: 121.
+		cogit bytecodePC: 10. 
+		"We need to store the value to know if the bytecode has generated instructions"
+		nextOpcodeIndex := cogit getOpcodeIndex.
+		cogit genReturnTrue.
+		"As the bytecode is the target of a jump it has a fixup. We need to process it"
+		fixup := cogit fixupAt: 10.
+		cogit patchFixupTargetIfNeeded: fixup nextOpcodeIndex: nextOpcodeIndex. ] bytecodes: 3.	
+
+	self runGeneratedCode.
+	
+	self assert: machineSimulator receiverRegisterValue equals: memory trueObject
+]
+
 { #category : #'tests - single bytecode - pop into temp' }
 VMSimpleStackBasedCogitBytecodeTest >> testPopInto3rdTempPopsValue [
 

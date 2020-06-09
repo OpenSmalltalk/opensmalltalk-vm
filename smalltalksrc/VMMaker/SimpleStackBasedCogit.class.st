@@ -856,6 +856,12 @@ SimpleStackBasedCogit >> bytecodeFixupClass [
 	^CogBytecodeFixup
 ]
 
+{ #category : #accessing }
+SimpleStackBasedCogit >> bytecodePC: anInteger [ 
+	<doNotGenerate>
+	bytecodePC := anInteger 
+]
+
 { #category : #trampolines }
 SimpleStackBasedCogit >> cPICMissTrampolineFor: numArgs [
 	^ceCPICMissTrampoline
