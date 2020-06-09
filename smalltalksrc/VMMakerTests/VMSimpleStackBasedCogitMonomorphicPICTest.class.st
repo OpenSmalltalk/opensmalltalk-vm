@@ -97,6 +97,6 @@ VMSimpleStackBasedCogitMonomorphicPICTest >> testObtainInlineCacheFromLinkedCall
 		receiver: memory falseObject.
 		
 	self
-		assert: (cogit backend inlineCacheTagAt: self topAddress)
+		assert: (cogit backend inlineCacheTagAt: machineSimulator getReturnAddress)
 		equals: (cogit objectRepresentation inlineCacheTagForInstance: memory falseObject)
 ]

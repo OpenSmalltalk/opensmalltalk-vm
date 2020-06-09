@@ -61,7 +61,7 @@ UnicornARMv5Simulator >> doStartAt: startAddress until: until timeout: timeout c
 				timeout: 0
 				count: 1.
 			actualCount := actualCount + 1.
-			
+			stopReason ifNotNil: [ ^ self ].
 			count = actualCount ifTrue: [ ^ self ].
 			self instructionPointerValue = until ifTrue: [ ^self ]]
 ]
