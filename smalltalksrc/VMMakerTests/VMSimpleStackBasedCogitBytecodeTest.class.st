@@ -232,7 +232,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testExtendedStoreStoresInstanceVariableIn
 ]
 
 { #category : #'tests - jumps' }
-VMSimpleStackBasedCogitBytecodeTest >> testJumpForwardJumpsOverAPush [
+VMSimpleStackBasedCogitBytecodeTest >> testJumpForwardJumpsOverAnInstruction [
 	
 	cogit methodObj: (self newMethodWithBytecodes: #[144 122 121]).
 	
