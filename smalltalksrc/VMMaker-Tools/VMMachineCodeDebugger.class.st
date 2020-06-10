@@ -6,7 +6,8 @@ Class {
 		'machineSimulator',
 		'instructions',
 		'stepButton',
-		'machineState'
+		'machineState',
+		'initialInstructionToDisassemble'
 	],
 	#category : #'VMMaker-Tools'
 }
@@ -54,10 +55,23 @@ VMMachineCodeDebugger >> initialDisassembly [
 		printImmediatesInHexa;
 		disassembleNext: 100
 		instructionsIn: (cogit objectMemory memory memoryObject
-			copyFrom: machineSimulator instructionPointerValue - cogit objectMemory memory initialAddress + 1
+			copyFrom: self initialInstructionToDisassemble - cogit objectMemory memory initialAddress + 1
 			to: cogit objectMemory memory memoryObject size)
-		startAddress: machineSimulator instructionPointerValue
+		startAddress: self initialInstructionToDisassemble
 		pc: machineSimulator instructionPointerValue 
+]
+
+{ #category : #showing }
+VMMachineCodeDebugger >> initialInstructionToDisassemble [
+
+	^ initialInstructionToDisassemble
+		ifNil: [ machineSimulator instructionPointerValue ]
+]
+
+{ #category : #showing }
+VMMachineCodeDebugger >> initialInstructionToDisassemble: anInstructionAddress [
+
+	initialInstructionToDisassemble := anInstructionAddress
 ]
 
 { #category : #initialization }

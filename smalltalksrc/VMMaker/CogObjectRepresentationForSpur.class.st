@@ -271,6 +271,12 @@ CogObjectRepresentationForSpur >> ceLargeActiveContextInMethodTrampoline: anInte
 ]
 
 { #category : #accessing }
+CogObjectRepresentationForSpur >> ceScheduleScavengeTrampoline: anAddress [
+	<doNotGenerate>
+	ceScheduleScavengeTrampoline := anAddress
+]
+
+{ #category : #accessing }
 CogObjectRepresentationForSpur >> ceSmallActiveContextInBlockTrampoline [
 	<doNotGenerate>
 	^ ceSmallActiveContextInBlockTrampoline

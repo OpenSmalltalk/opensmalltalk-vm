@@ -45,27 +45,6 @@ UnicornARMv5Simulator >> doRunGeneratedCodeStartAt: initialAddress instructions:
 		count: numberOfInstructions.
 ]
 
-{ #category : #executing }
-UnicornARMv5Simulator >> doStartAt: startAddress until: until timeout: timeout count: count [
-
-	| actualCount |
-
-	actualCount := 0.
-	self instructionPointerValue: startAddress.
-
-	[ true ]
-		whileTrue: [ 
-			unicorn
-				startAt: self instructionPointerValue
-				until: 0
-				timeout: 0
-				count: 1.
-			actualCount := actualCount + 1.
-			stopReason ifNotNil: [ ^ self ].
-			count = actualCount ifTrue: [ ^ self ].
-			self instructionPointerValue = until ifTrue: [ ^self ]]
-]
-
 { #category : #registers }
 UnicornARMv5Simulator >> fp [
 	^ self readRegister: UcARMRegisters fp
@@ -222,16 +201,19 @@ UnicornARMv5Simulator >> stackPointerRegister [
 { #category : #executing }
 UnicornARMv5Simulator >> startAt: begin until: until timeout: timeout count: count [ 
 
-	| error |
-	self doStartAt: begin until: until timeout: timeout count: count.
-	
+	| error result |
+	result := self doStartAt: begin until: until timeout: timeout count: count.
+
 	stopReason ifNotNil: [ 
 		error := stopReason.
 		stopReason := nil.
 		error signal ].
 	
+	"If we did not stop for a known reason, verify the error code of the function"
+	unicorn verifyErrorCode: result.
+	
 	"Verify we stopped because we arrived to the right end addres and not a timeout"
-	self instructionPointerValue = until ifFalse: [
+	(until = 0 or: [ self instructionPointerValue = until ]) ifFalse: [
 		UnicornTimeout new
 			target: until;
 			signal ]

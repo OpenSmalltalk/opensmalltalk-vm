@@ -23,7 +23,8 @@ Class {
 	],
 	#pools : [
 		'CogCompilationConstants',
-		'CogMethodConstants'
+		'CogMethodConstants',
+		'VMBytecodeConstants'
 	],
 	#category : #VMMakerTests
 }
@@ -74,6 +75,16 @@ VMSimpleStackBasedCogitAbstractTest >> assertStackRemainsUnchangedDuring: aBlock
 	self
 		assert: machineSimulator stackPointerRegisterValue
 		equals: before
+]
+
+{ #category : #accessing }
+VMSimpleStackBasedCogitAbstractTest >> callerAddress [
+	^ callerAddress
+]
+
+{ #category : #accessing }
+VMSimpleStackBasedCogitAbstractTest >> cogit [
+	^ cogit
 ]
 
 { #category : #helpers }
@@ -169,20 +180,14 @@ VMSimpleStackBasedCogitAbstractTest >> createFramefulCallFrom: returnAddress rec
 	sp->	Nth temp"
 	
 	"The first part is the same with or without frame, as it is pushed by the caller"
-	self createFramelessCallFrom: returnAddress receiver: receiver arguments: arguments.
-
-	"These are pushed when activating the method"	
-	self pushAddress: machineSimulator framePointerRegisterValue.
-	machineSimulator framePointerRegisterValue: machineSimulator stackPointerRegisterValue.
-
-	self pushAddress: (memory nilObject bitOr: 1). "method"
-	self pushAddress: memory nilObject. "context"
-
-	self pushAddress: receiver.
-
-	temps do: [ :aTemporary | self pushAddress: aTemporary ].
 	
-	cogit needsFrame: true.
+	| builder |
+	builder := self machineCodeFrameBuilder.
+	builder returnAddress: returnAddress.
+	builder receiver: receiver.
+	builder arguments: arguments.
+	builder temporaries: temps.
+	builder buildFrame
 ]
 
 { #category : #'helpers - frames' }
@@ -379,6 +384,20 @@ VMSimpleStackBasedCogitAbstractTest >> instructionPointer [
 	^ self readRegister: UcX86Registers rip
 ]
 
+{ #category : #'helpers - frames' }
+VMSimpleStackBasedCogitAbstractTest >> machineCodeFrameBuilder [
+
+	| builder |
+	builder := VMMachineCodeFrameBuilderForTest new.
+	builder initializeWithTest: self.
+	^ builder
+]
+
+{ #category : #accessing }
+VMSimpleStackBasedCogitAbstractTest >> machineSimulator [
+	^ machineSimulator
+]
+
 { #category : #helpers }
 VMSimpleStackBasedCogitAbstractTest >> newInterpreter [
 
@@ -483,10 +502,13 @@ VMSimpleStackBasedCogitAbstractTest >> openMachineDebugger [
 ]
 
 { #category : #helpers }
-VMSimpleStackBasedCogitAbstractTest >> openMachineDebuggerAt: anInteger [ 
+VMSimpleStackBasedCogitAbstractTest >> openMachineDebuggerAt: anAddress [
 	
-	machineSimulator instructionPointerValue: anInteger.
-	self openMachineDebugger
+	VMMachineCodeDebugger new
+		cogit: cogit;
+		machineSimulator: machineSimulator;
+		initialInstructionToDisassemble: anAddress;
+		openWithSpec.
 ]
 
 { #category : #'helpers - stack' }

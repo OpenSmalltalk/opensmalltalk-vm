@@ -25,19 +25,31 @@ UnicornProcessor >> machineSimulator: aMachineSimulator [
 	machineSimulator := aMachineSimulator
 ]
 
-{ #category : #accessing }
+{ #category : #registers }
 UnicornProcessor >> pc: anInteger [ 
 	
 	^ machineSimulator instructionPointerValue: anInteger
 ]
 
-{ #category : #accessing }
+{ #category : #registers }
 UnicornProcessor >> rbp: anInteger [ 
 	
 	machineSimulator rbp: anInteger
 ]
 
-{ #category : #accessing }
+{ #category : #registers }
+UnicornProcessor >> rcx: anInteger [ 
+	
+	machineSimulator rcx: anInteger
+]
+
+{ #category : #registers }
+UnicornProcessor >> rdx: anInteger [ 
+	
+	machineSimulator rdx: anInteger
+]
+
+{ #category : #registers }
 UnicornProcessor >> rsp: anInteger [ 
 	
 	machineSimulator rsp: anInteger

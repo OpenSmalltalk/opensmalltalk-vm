@@ -100,6 +100,27 @@ UnicornSimulator >> doRunGeneratedCodeStartAt: initialAddress instructions: inst
 		count: instructions size.
 ]
 
+{ #category : #executing }
+UnicornSimulator >> doStartAt: startAddress until: until timeout: timeout count: count [
+
+	| actualCount result |
+
+	actualCount := 0.
+	self instructionPointerValue: startAddress.
+
+	[ true ]
+		whileTrue: [ 
+			result :=  unicorn
+				startAt: self instructionPointerValue
+				until: 0
+				timeout: 0
+				count: 1.
+			actualCount := actualCount + 1.
+			stopReason ifNotNil: [ ^ result ].
+			count = actualCount ifTrue: [ ^ result ].
+			self instructionPointerValue = until ifTrue: [ ^ result ]]
+]
+
 { #category : #registers }
 UnicornSimulator >> framePointerRegister [
 	
@@ -322,7 +343,7 @@ UnicornSimulator >> stackPointerRegisterValue: aValue [
 UnicornSimulator >> startAt: begin until: until timeout: timeout count: count [ 
 
 	| error result |
-	result := unicorn startAt: begin until: until timeout: timeout count: count.
+	result := self doStartAt: begin until: until timeout: timeout count: count.
 	
 	stopReason ifNotNil: [ 
 		error := stopReason.

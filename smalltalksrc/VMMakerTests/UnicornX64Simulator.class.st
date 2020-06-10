@@ -90,7 +90,7 @@ UnicornX64Simulator >> rbp [
 
 { #category : #'phisical-registers' }
 UnicornX64Simulator >> rbp: anInteger [ 
-
+1halt.
 	^ self writeRegister: UcX86Registers rbp value: anInteger
 ]
 
@@ -113,6 +113,12 @@ UnicornX64Simulator >> rcx [
 ]
 
 { #category : #'phisical-registers' }
+UnicornX64Simulator >> rcx: anInteger [ 
+
+	^ self writeRegister: UcX86Registers rcx value: anInteger
+]
+
+{ #category : #'phisical-registers' }
 UnicornX64Simulator >> rdi [
 
 	^ self readRegister: UcX86Registers rdi
@@ -122,6 +128,12 @@ UnicornX64Simulator >> rdi [
 UnicornX64Simulator >> rdx [
 
 	^ self readRegister: UcX86Registers rdx
+]
+
+{ #category : #'phisical-registers' }
+UnicornX64Simulator >> rdx: anInteger [ 
+
+	^ self writeRegister: UcX86Registers rdx value: anInteger
 ]
 
 { #category : #'virtual-registers' }

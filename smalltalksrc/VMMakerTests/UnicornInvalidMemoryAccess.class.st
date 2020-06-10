@@ -27,6 +27,12 @@ UnicornInvalidMemoryAccess >> isFetch [
 ]
 
 { #category : #accessing }
+UnicornInvalidMemoryAccess >> messageText [
+
+	^ type item asString, ' at ', address hex
+]
+
+{ #category : #accessing }
 UnicornInvalidMemoryAccess >> size [
 	^ size
 ]
