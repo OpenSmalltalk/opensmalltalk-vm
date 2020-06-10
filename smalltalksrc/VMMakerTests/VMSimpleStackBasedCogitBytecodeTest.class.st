@@ -963,6 +963,58 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushThirdTempVariablePushesVariable [
 ]
 
 { #category : #'tests - thisContext' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushThisContextForFullBlockWithFullFrameCallsLargeFullBlockTrampoline [
+
+	| numberOfArguments methodObject method |
+	
+	cogit ceLargeActiveContextInFullBlockTrampoline: (self compile: [ cogit RetN: 0 ]).
+	
+	self 
+		createFramefulCallFrom: callerAddress 
+		receiver: memory nilObject
+		arguments: { memory falseObject . memory trueObject . memory falseObject }
+		temporaries: #().
+	numberOfArguments := 3.
+	methodObject := self newMethodWithSmallContext: false WithArguments: numberOfArguments.
+	method := self compile: [
+		cogit inBlock: InFullBlock.
+		cogit methodOrBlockNumArgs: numberOfArguments.
+		cogit methodObj: methodObject.
+		cogit genPushActiveContextBytecode ].
+	
+	self runFrom: method until: cogit ceLargeActiveContextInFullBlockTrampoline.
+	
+	self assert: machineSimulator instructionPointerValue equals: cogit ceLargeActiveContextInFullBlockTrampoline.
+	self assert: machineSimulator sendNumberOfArgumentsRegisterValue equals: numberOfArguments.
+]
+
+{ #category : #'tests - thisContext' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushThisContextForFullBlockWithSmallFrameCallsLargeFullBlockTrampoline [
+
+	| numberOfArguments methodObject method |
+	
+	cogit ceSmallActiveContextInFullBlockTrampoline: (self compile: [ cogit RetN: 0 ]).
+	
+	self 
+		createFramefulCallFrom: callerAddress 
+		receiver: memory nilObject
+		arguments: { memory falseObject . memory trueObject . memory falseObject }
+		temporaries: #().
+	numberOfArguments := 3.
+	methodObject := self newMethodWithSmallContext: true WithArguments: numberOfArguments.
+	method := self compile: [
+		cogit inBlock: InFullBlock.
+		cogit methodOrBlockNumArgs: numberOfArguments.
+		cogit methodObj: methodObject.
+		cogit genPushActiveContextBytecode ].
+	
+	self runFrom: method until: cogit ceSmallActiveContextInFullBlockTrampoline.
+	
+	self assert: machineSimulator instructionPointerValue equals: cogit ceSmallActiveContextInFullBlockTrampoline.
+	self assert: machineSimulator sendNumberOfArgumentsRegisterValue equals: numberOfArguments.
+]
+
+{ #category : #'tests - thisContext' }
 VMSimpleStackBasedCogitBytecodeTest >> testPushThisContextForMethodWithLargeFrameCallsLargeMethodTrampoline [
 
 	| numberOfArguments methodObject method |
