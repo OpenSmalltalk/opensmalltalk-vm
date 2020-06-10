@@ -21,6 +21,10 @@ Class {
 		'inlineCacheMissTrampoline',
 		'machineSimulator'
 	],
+	#pools : [
+		'CogCompilationConstants',
+		'CogMethodConstants'
+	],
 	#category : #VMMakerTests
 }
 
@@ -316,7 +320,7 @@ VMSimpleStackBasedCogitAbstractTest >> framePointerRegisterValue: aValue [
 	self writeRegister: UcX86Registers rbp value: aValue
 ]
 
-{ #category : #'helpers - methods' }
+{ #category : #'helpers - cog methods' }
 VMSimpleStackBasedCogitAbstractTest >> generateCogMethod: aBlockClosure selector: anSelectorOop [ 
 
 	| targetCog allocatedAddress |
@@ -402,7 +406,7 @@ VMSimpleStackBasedCogitAbstractTest >> newMemory [
 		ifFalse: [ Spur64BitCoMemoryManager simulatorClass new ]
 ]
 
-{ #category : #helpers }
+{ #category : #'helpers - methods' }
 VMSimpleStackBasedCogitAbstractTest >> newMethodWithBytecodes: bytes [
 	
 	| method methodHeader |
@@ -424,7 +428,7 @@ VMSimpleStackBasedCogitAbstractTest >> newMethodWithBytecodes: bytes [
 	^ method
 ]
 
-{ #category : #helpers }
+{ #category : #'helpers - methods' }
 VMSimpleStackBasedCogitAbstractTest >> newMethodWithLiteral: literalObject at: literalIndex [
 	
 	| method methodHeader |
@@ -445,6 +449,27 @@ VMSimpleStackBasedCogitAbstractTest >> newMethodWithLiteral: literalObject at: l
 		storePointer: literalIndex + 1
 		ofObject: method
 		withValue: literalObject.
+	^ method
+]
+
+{ #category : #'helpers - methods' }
+VMSimpleStackBasedCogitAbstractTest >> newMethodWithSmallContext: isSmall WithArguments: arguments [
+	
+	| method methodHeader |
+
+	"Create a bytecode compiled method object containing the given literal at the given index"
+	
+	method := self
+		newOldSpaceObjectWithSlots: 0 "# of literals" + 1 "one extra for the header"
+		format: (memory compiledMethodFormatForNumBytes: 0)
+		classIndex: 16r10.
+	methodHeader := (arguments bitShift: 24)
+						+ (0 "nTemps" bitShift: 18)
+						+ ((isSmall ifTrue: [ 0 "small frame" ] ifFalse: [ 1 "small frame" ]) bitShift: 17)
+						+ 0 "number of literaps"
+						+ 0 "primitive".
+	memory storePointer: 0 ofObject: method withValue: (memory integerObjectOf: methodHeader).
+
 	^ method
 ]
 

@@ -3958,6 +3958,47 @@ Cogit >> ceFree: pointer [
 	self free: pointer
 ]
 
+{ #category : #accessing }
+Cogit >> ceLargeActiveContextInBlockTrampoline [
+
+	<doNotGenerate>
+	^ objectRepresentation ceLargeActiveContextInBlockTrampoline
+]
+
+{ #category : #accessing }
+Cogit >> ceLargeActiveContextInBlockTrampoline: anAddress [
+
+	<doNotGenerate>
+	objectRepresentation ceLargeActiveContextInBlockTrampoline: anAddress
+]
+
+{ #category : #accessing }
+Cogit >> ceLargeActiveContextInFullBlockTrampoline [
+
+	<doNotGenerate>
+	^ objectRepresentation ceLargeActiveContextInFullBlockTrampoline
+]
+
+{ #category : #accessing }
+Cogit >> ceLargeActiveContextInFullBlockTrampoline: anAddress [
+
+	<doNotGenerate>
+	objectRepresentation ceLargeActiveContextInFullBlockTrampoline: anAddress
+]
+
+{ #category : #accessing }
+Cogit >> ceLargeActiveContextInMethodTrampoline [
+	<doNotGenerate>
+	^ objectRepresentation ceLargeActiveContextInMethodTrampoline
+]
+
+{ #category : #accessing }
+Cogit >> ceLargeActiveContextInMethodTrampoline: anAddress [
+
+	<doNotGenerate>
+	objectRepresentation ceLargeActiveContextInMethodTrampoline: anAddress
+]
+
 { #category : #'trampoline support' }
 Cogit >> ceMalloc: size [
 	<api>
@@ -4085,6 +4126,47 @@ Cogit >> ceSICMiss: receiver [
 		andCacheTag: (backEnd inlineCacheTagAt: outerReturn).
 	"NOTREACHED"
 	^nil
+]
+
+{ #category : #accessing }
+Cogit >> ceSmallActiveContextInBlockTrampoline [
+
+	<doNotGenerate>
+	^ objectRepresentation ceSmallActiveContextInBlockTrampoline
+]
+
+{ #category : #accessing }
+Cogit >> ceSmallActiveContextInBlockTrampoline: anAddress [
+
+	<doNotGenerate>
+	objectRepresentation ceSmallActiveContextInBlockTrampoline: anAddress
+]
+
+{ #category : #accessing }
+Cogit >> ceSmallActiveContextInFullBlockTrampoline [
+
+	<doNotGenerate>
+	^ objectRepresentation ceSmallActiveContextInFullBlockTrampoline
+]
+
+{ #category : #accessing }
+Cogit >> ceSmallActiveContextInFullBlockTrampoline: anAddress [
+
+	<doNotGenerate>
+	objectRepresentation ceSmallActiveContextInFullBlockTrampoline: anAddress
+]
+
+{ #category : #accessing }
+Cogit >> ceSmallActiveContextInMethodTrampoline [
+	<doNotGenerate>
+	^ objectRepresentation ceSmallActiveContextInMethodTrampoline
+]
+
+{ #category : #accessing }
+Cogit >> ceSmallActiveContextInMethodTrampoline: anAddress [
+
+	<doNotGenerate>
+	objectRepresentation ceSmallActiveContextInMethodTrampoline: anAddress
 ]
 
 { #category : #debugging }

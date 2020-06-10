@@ -234,6 +234,78 @@ CogObjectRepresentationForSpur >> canPinObjects [
 	^true
 ]
 
+{ #category : #accessing }
+CogObjectRepresentationForSpur >> ceLargeActiveContextInBlockTrampoline [
+	<doNotGenerate>
+	^ ceLargeActiveContextInBlockTrampoline
+]
+
+{ #category : #accessing }
+CogObjectRepresentationForSpur >> ceLargeActiveContextInBlockTrampoline: anInteger [ 
+	<doNotGenerate>
+	ceLargeActiveContextInBlockTrampoline := anInteger
+]
+
+{ #category : #accessing }
+CogObjectRepresentationForSpur >> ceLargeActiveContextInFullBlockTrampoline [
+	<doNotGenerate>
+	^ ceLargeActiveContextInFullBlockTrampoline
+]
+
+{ #category : #accessing }
+CogObjectRepresentationForSpur >> ceLargeActiveContextInFullBlockTrampoline: anInteger [ 
+	<doNotGenerate>
+	ceLargeActiveContextInFullBlockTrampoline := anInteger
+]
+
+{ #category : #accessing }
+CogObjectRepresentationForSpur >> ceLargeActiveContextInMethodTrampoline [
+	<doNotGenerate>
+	^ ceLargeActiveContextInMethodTrampoline
+]
+
+{ #category : #accessing }
+CogObjectRepresentationForSpur >> ceLargeActiveContextInMethodTrampoline: anInteger [ 
+	<doNotGenerate>
+	ceLargeActiveContextInMethodTrampoline := anInteger
+]
+
+{ #category : #accessing }
+CogObjectRepresentationForSpur >> ceSmallActiveContextInBlockTrampoline [
+	<doNotGenerate>
+	^ ceSmallActiveContextInBlockTrampoline
+]
+
+{ #category : #accessing }
+CogObjectRepresentationForSpur >> ceSmallActiveContextInBlockTrampoline: anInteger [ 
+	<doNotGenerate>
+	ceSmallActiveContextInBlockTrampoline := anInteger
+]
+
+{ #category : #accessing }
+CogObjectRepresentationForSpur >> ceSmallActiveContextInFullBlockTrampoline [
+	<doNotGenerate>
+	^ ceSmallActiveContextInFullBlockTrampoline
+]
+
+{ #category : #accessing }
+CogObjectRepresentationForSpur >> ceSmallActiveContextInFullBlockTrampoline: anInteger [ 
+	<doNotGenerate>
+	ceSmallActiveContextInFullBlockTrampoline := anInteger
+]
+
+{ #category : #accessing }
+CogObjectRepresentationForSpur >> ceSmallActiveContextInMethodTrampoline [
+	<doNotGenerate>
+	^ ceSmallActiveContextInMethodTrampoline
+]
+
+{ #category : #accessing }
+CogObjectRepresentationForSpur >> ceSmallActiveContextInMethodTrampoline: anInteger [ 
+	<doNotGenerate>
+	ceSmallActiveContextInMethodTrampoline := anInteger
+]
+
 { #category : #'sista support' }
 CogObjectRepresentationForSpur >> checkRememberedInTrampoline [
 	<inline: true>
