@@ -27,9 +27,10 @@ set(VM_FRONTEND_SOURCES
 
 
 macro(add_third_party_dependencies_per_platform)
-    add_third_party_dependency("PThreadedFFI-1.3.0-linux64" "build/vm")
+    add_third_party_dependency("PThreadedFFI-1.3.1-linux64" "build/vm")
     add_third_party_dependency("libffi-3.3-rc0" "build/vm")
     add_third_party_dependency("libgit2-0.25.1" "build/vm")
+    add_third_party_dependency_with_baseurl("libgit2-linux-1.0.0" "build/vm" "https://github.com/guillep/libgit_build/releases/download/v1.0.1")
     add_third_party_dependency("libssh2-1.7.0" "build/vm")
     add_third_party_dependency("openssl-1.0.2q" "build/vm")
     add_third_party_dependency("SDL2-2.0.7" "build/vm")

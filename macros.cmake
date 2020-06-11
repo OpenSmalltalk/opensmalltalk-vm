@@ -80,18 +80,25 @@ macro(do_decompress_thirdparty NAME TARGETPATH)
     add_dependencies(${VM_EXECUTABLE_NAME} ${NAME})
 endmacro()
 
-macro(add_third_party_dependency NAME TARGETPATH)
+# Add a third party dependency taken from the given URL
+macro(add_third_party_dependency_with_baseurl NAME TARGETPATH BASEURL)
 
     get_platform_name(PLATNAME)
-
     message("Adding third-party libraries for ${PLATNAME}: ${NAME}")
 
     add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/build/third-party/${NAME}.zip"
         COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/build/third-party
-        COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_CURRENT_BINARY_DIR}/build/third-party wget --no-check-certificate "https://files.pharo.org/vm/pharo-spur64/${PLATNAME}/third-party/${NAME}.zip"
+        COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_CURRENT_BINARY_DIR}/build/third-party wget --no-check-certificate "${BASEURL}/${NAME}.zip"
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
 	do_decompress_thirdparty(${NAME} ${TARGETPATH})
+endmacro()
+
+# Add a third party dependency taken from the files.pharo.org repository
+macro(add_third_party_dependency NAME TARGETPATH)
+    get_platform_name(PLATNAME)
+    set(BASE_URL "https://files.pharo.org/vm/pharo-spur64/${PLATNAME}/third-party/")
+    add_third_party_dependency_with_baseurl(${NAME} ${TARGETPATH} ${BASE_URL})
 endmacro()
 
 macro(add_third_party_dependency_from_jenkins LIBNAME TARGETPATH JOB BRANCH VERSION)
