@@ -3415,6 +3415,12 @@ SpurMemoryManager >> classExternalAddress [
 	^self splObj: ClassExternalAddress
 ]
 
+{ #category : #instantiation }
+SpurMemoryManager >> classExternalAddressIndex [
+	<api>
+	^ self ensureBehaviorHash: self classExternalAddress
+]
+
 { #category : #accessing }
 SpurMemoryManager >> classExternalData [
 	^self splObj: ClassExternalData
@@ -4809,6 +4815,17 @@ SpurMemoryManager >> firstByteFormat [
 	<api>
 	<cmacro>
 	^16
+]
+
+{ #category : #'object access' }
+SpurMemoryManager >> firstBytePointerOfDataObject: objOop [
+	<returnTypeC: #'void *'>
+	<api>
+	<inline: true>
+	| fmt |
+	fmt := self formatOf: objOop.
+	fmt < self firstLongFormat ifTrue: [ ^ 0 ].
+	^ self firstFixedField: objOop
 ]
 
 { #category : #'class table puns' }

@@ -1323,7 +1323,7 @@ StackInterpreter class >> initializePrimitiveTable [
 	"self initializePrimitiveTable"
 
 	"NOTE: The real limit here is 2047 because of the old method header layout but there is no point in going over the needed size"
-	MaxPrimitiveIndex := 575.	
+	MaxPrimitiveIndex := 660.	
 	MaxQuickPrimitiveIndex := 519.
 	PrimNumberExternalCall := 117.
 	PrimNumberDoPrimitive := 118.
@@ -1665,7 +1665,72 @@ StackInterpreter class >> initializePrimitiveTable [
 		(574 primitiveFail) "reserved for addl. external support prims"
 
 		"Unassigned Primitives"
-		(575 primitiveFail))
+		(575 599 primitiveFail)
+		
+		"Memory accessor primitives"
+		(600 primitiveLoadBoolean8FromBytes)
+		(601 primitiveLoadUInt8FromBytes)
+		(602 primitiveLoadInt8FromBytes)
+		(603 primitiveLoadUInt16FromBytes)
+		(604 primitiveLoadInt16FromBytes)
+		(605 primitiveLoadUInt32FromBytes)
+		(606 primitiveLoadInt32FromBytes)
+		(607 primitiveLoadUInt64FromBytes)
+		(608 primitiveLoadInt64FromBytes)
+		(609 primitiveLoadPointerFromBytes)
+		(610 primitiveLoadChar8FromBytes)
+		(611 primitiveLoadChar16FromBytes)
+		(612 primitiveLoadChar32FromBytes)
+		(613 primitiveLoadFloat32FromBytes)
+		(614 primitiveLoadFloat64FromBytes)
+		(615 primitiveStoreBoolean8IntoBytes)
+		(616 primitiveStoreUInt8IntoBytes)
+		(617 primitiveStoreInt8IntoBytes)
+		(618 primitiveStoreUInt16IntoBytes)
+		(619 primitiveStoreInt16IntoBytes)
+		(620 primitiveStoreUInt32IntoBytes)
+		(621 primitiveStoreInt32IntoBytes)
+		(622 primitiveStoreUInt64IntoBytes)
+		(623 primitiveStoreInt64IntoBytes)
+		(624 primitiveStorePointerIntoBytes)
+		(625 primitiveStoreChar8IntoBytes)
+		(626 primitiveStoreChar16IntoBytes)
+		(627 primitiveStoreChar32IntoBytes)
+		(628 primitiveStoreFloat32IntoBytes)
+		(629 primitiveStoreFloat64IntoBytes)
+		(630 primitiveLoadBoolean8FromExternalAddress)
+		(631 primitiveLoadUInt8FromExternalAddress)
+		(632 primitiveLoadInt8FromExternalAddress)
+		(633 primitiveLoadUInt16FromExternalAddress)
+		(634 primitiveLoadInt16FromExternalAddress)
+		(635 primitiveLoadUInt32FromExternalAddress)
+		(636 primitiveLoadInt32FromExternalAddress)
+		(637 primitiveLoadUInt64FromExternalAddress)
+		(638 primitiveLoadInt64FromExternalAddress)
+		(639 primitiveLoadPointerFromExternalAddress)
+		(640 primitiveLoadChar8FromExternalAddress)
+		(641 primitiveLoadChar16FromExternalAddress)
+		(642 primitiveLoadChar32FromExternalAddress)
+		(643 primitiveLoadFloat32FromExternalAddress)
+		(644 primitiveLoadFloat64FromExternalAddress)
+		(645 primitiveStoreBoolean8IntoExternalAddress)
+		(646 primitiveStoreUInt8IntoExternalAddress)
+		(647 primitiveStoreInt8IntoExternalAddress)
+		(648 primitiveStoreUInt16IntoExternalAddress)
+		(649 primitiveStoreInt16IntoExternalAddress)
+		(650 primitiveStoreUInt32IntoExternalAddress)
+		(651 primitiveStoreInt32IntoExternalAddress)
+		(652 primitiveStoreUInt64IntoExternalAddress)
+		(653 primitiveStoreInt64IntoExternalAddress)
+		(654 primitiveStorePointerIntoExternalAddress)
+		(655 primitiveStoreChar8IntoExternalAddress)
+		(656 primitiveStoreChar16IntoExternalAddress)
+		(657 primitiveStoreChar32IntoExternalAddress)
+		(658 primitiveStoreFloat32IntoExternalAddress)
+		(659 primitiveStoreFloat64IntoExternalAddress)
+		
+		(660 primitiveFail)
+		)
 ]
 
 { #category : #initialization }
@@ -2527,6 +2592,26 @@ StackInterpreter >> allocateMemory: heapSize minimum: minimumMemory imageFile: f
 							Minimum: minimumMemory
 							ImageFile: fileStream
 							HeaderSize: headerSize)
+]
+
+{ #category : #'image save/restore' }
+StackInterpreter >> allocateMemory: heapSize minimum: minimumMemory imageFile: fileStream headerSize: headerSize desiredPosition: desiredBaseAddress [
+	"Translate to C function call with (case sensitive) camelCase. The purpose of this
+	 method is to document the translation.
+	 The default implementation is sqAllocateMemory(minimumMemory, heapSize). This may
+	 be redefined to make use of the image file and header size parameters for efficient
+	 implementation with mmap().
+	 See CCodeGenerator>>writeDefaultMacrosOn: which specifies a default implementation."
+
+	<inline: true>
+	<returnTypeC: #'char *'>
+	<var: #fileStream type: #sqImageFile>
+	^self pointerForOop: (self
+							allocateMemory: heapSize
+							Minimum: minimumMemory
+							ImageFile: fileStream
+							HeaderSize: headerSize
+							BaseAddress: desiredBaseAddress)
 ]
 
 { #category : #'compiled methods' }
@@ -19361,7 +19446,8 @@ StackInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: i
 								allocateMemory: heapSize
 								minimum: minimumMemory
 								imageFile: f
-								headerSize: headerSize) asUnsignedInteger.
+								headerSize: headerSize
+								desiredPosition: oldBaseAddr) asUnsignedInteger.
 	objectMemory memory ifNil: [self insufficientMemoryAvailableError].
 
 	objectMemory

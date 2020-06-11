@@ -17,15 +17,12 @@
 
 /* Memory initialize-release */
 #undef sqAllocateMemory
-#undef sqGrowMemoryBy
-#undef sqShrinkMemoryBy
 #undef sqMemoryExtraBytesLeft
 
-void *sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize);
-#define allocateMemoryMinimumImageFileHeaderSize(heapSize, minimumMemory, fileStream, headerSize) \
-sqAllocateMemory(minimumMemory, heapSize)
-int sqGrowMemoryBy(int oldLimit, int delta);
-int sqShrinkMemoryBy(int oldLimit, int delta);
+extern usqInt sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize, usqInt baseAddress);
+#define allocateMemoryMinimumImageFileHeaderSizeBaseAddress(heapSize, minimumMemory, fileStream, headerSize, baseAddress) \
+sqAllocateMemory(minimumMemory, heapSize, baseAddress)
+
 int sqMemoryExtraBytesLeft(int includingSwap);
 
 #endif /* NO_VIRTUAL_MEMORY */

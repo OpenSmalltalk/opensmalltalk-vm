@@ -28,18 +28,11 @@
  * 
  */
 
-#undef sqAllocateMemory
-#undef sqGrowMemoryBy
-#undef sqShrinkMemoryBy
-#undef sqMemoryExtraBytesLeft
-
 #include "sqMemoryAccess.h"
 
-extern usqInt sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize);
-#define allocateMemoryMinimumImageFileHeaderSize(heapSize, minimumMemory, fileStream, headerSize) \
-sqAllocateMemory(minimumMemory, heapSize)
-extern sqInt sqGrowMemoryBy(sqInt oldLimit, sqInt delta);
-extern sqInt sqShrinkMemoryBy(sqInt oldLimit, sqInt delta);
+extern usqInt sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize, usqInt baseAddress);
+#define allocateMemoryMinimumImageFileHeaderSizeBaseAddress(heapSize, minimumMemory, fileStream, headerSize, baseAddress) \
+sqAllocateMemory(minimumMemory, heapSize, baseAddress)
 extern sqInt sqMemoryExtraBytesLeft(sqInt includingSwap);
 #if COGVM
 extern void sqMakeMemoryExecutableFromTo(unsigned long, unsigned long);

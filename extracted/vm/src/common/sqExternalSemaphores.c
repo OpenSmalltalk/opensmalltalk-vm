@@ -32,27 +32,7 @@
 #include "sqAssert.h"
 #include "sqAtomicOps.h"
 #include "sqMemoryFence.h"
-
-/* This implements "lock-free" signalling of external semaphores where there is
- * no lock between the signal responder (the VM) and signal requestors, but
- * there may be spin-locking between signal requestors, depending on the implem-
- * entation of atomicAddConst.
- *
- * Freedom from locks is very helpful in making the QAudioPlugin function on
- * linux, where the absence of thread priorities for non-setuid programs means
- * we cannot run the QAudioPlugin's ticker in a separate thread and must instead
- * derive it from the interval-timer based signal-driven (software interrupt)
- * heartbeat.  If the external semaphore state is locked while the VM is
- * responding to external semaphore signal requests and the heartbeat interrupts
- * causing a locking request for an external semaphore signal request then the
- * system will deadlock, since the interrupt occurs in the VM thread.
- *
- * Lock freedom is achieved by having an array of request counters, and an array
- * of response counters, one per external semaphore index.  To request a signal
- * the relevant request is incremented via a lock-free (test-and-set) increment.
- * To respond to a request the VM increments the corresponding response until it
- * matches the request, signalling the associated semaphore on each increment.
- */
+#include "pharovm/semaphores/platformSemaphore.h"
 
 #if !COGMTVM
 sqOSThread ioVMThread; /* initialized in the various <plat>/vm/sqFooMain.c */
@@ -60,16 +40,10 @@ sqOSThread ioVMThread; /* initialized in the various <plat>/vm/sqFooMain.c */
 extern void forceInterruptCheck(void);
 extern sqInt doSignalSemaphoreWithIndex(sqInt semaIndex);
 
-/* Use 16-bit counters if possible, otherwise 32-bit */
 typedef struct {
-# if ATOMICADD16
-		short requests;
-		short responses;
-# else
-		int requests;
-		int responses;
-# endif
-	} SignalRequest;
+	int requests;
+	int responses;
+} SignalRequest;
 
 /* We would like to use something like the following for the tides
 	typedef int semidx_t;
@@ -80,6 +54,8 @@ typedef struct {
 static SignalRequest *signalRequests = 0;
 static int numSignalRequests = 0;
 static volatile sqInt checkSignalRequests;
+
+Semaphore* requestMutex;
 
 /* The tide marks define the minimum range of indices into signalRequests that
  * the VM needs to scan.  With potentially thousands of indices to scan this can
@@ -93,6 +69,9 @@ static volatile sqInt checkSignalRequests;
 static volatile char useTideA = 1;
 static volatile int lowTideA = MaxTide, highTideA = MinTide;
 static volatile int lowTideB = MaxTide, highTideB = MinTide;
+
+#define max(a,b) (a > b ? a : b)
+#define min(a,b) (a < b ? a : b)
 
 int
 ioGetMaxExtSemTableSize(void) { return numSignalRequests; }
@@ -130,19 +109,24 @@ void
 ioInitExternalSemaphores(void)
 {
 	ioSetMaxExtSemTableSize(INITIAL_EXT_SEM_TABLE_SIZE);
+	requestMutex = platform_semaphore_new(1);
 }
+
+// This is defined here as there is no common interface for unix AIO and windows AIO
+void aioInterruptPoll();
+
 
 /* Signal the external semaphore with the given index.  Answer non-zero on
  * success, zero otherwise.  This function is (should be) thread-safe;
  * multiple threads may attempt to signal the same semaphore without error.
  * An index of zero should be and is silently ignored.
  */
+
 sqInt
 signalSemaphoreWithIndex(sqInt index)
 {
 	int i = index - 1;
 	int v;
-	SignalRequest b4;
 
 	/* An index of zero should be and is silently ignored. */
 	assert(index >= 0 && index <= numSignalRequests);
@@ -150,46 +134,32 @@ signalSemaphoreWithIndex(sqInt index)
 	if ((unsigned)i >= numSignalRequests)
 		return 0;
 
+	requestMutex->wait(requestMutex);
+
 	sqLowLevelMFence();
-	b4 = signalRequests[i];
-	sqAtomicAddConst(signalRequests[i].requests,1);
-	/* There's a possibility that the second arm will fail in normal operation,
-	 * but that chance is small; much better to deal with the false positive
-	 * than not notice that the atomic add intrinsic is overwriting responses.
-	 */
-	assert(b4.requests != signalRequests[i].requests
-		&& b4.responses ==  signalRequests[i].responses);
+	signalRequests[i].requests += 1;
+
 	if (useTideA) {
-		/* atomic if (lowTideA > i) lowTideA = i; */
-		while ((v = lowTideA) > i) {
-			sqLowLevelMFence();
-			sqCompareAndSwap(lowTideA, v, i);
-		}
-		/* atomic if (highTideA < i) highTideA = i; */
-		while ((v = highTideA) < i) {
-			sqLowLevelMFence();
-			sqCompareAndSwap(highTideA, v, i);
-		}
-		assert(i >= lowTideA && i <= highTideA);
-	}
-	else {
-		/* atomic if (lowTideB > i) lowTideB = i; */
-		while ((v = lowTideB) > i) {
-			sqLowLevelMFence();
-			sqCompareAndSwap(lowTideB, v, i);
-		}
-		/* atomic if (highTideB < i) highTideB = i; */
-		while ((v = highTideB) < i) {
-			sqLowLevelMFence();
-			sqCompareAndSwap(highTideB, v, i);
-		}
-		assert(i >= lowTideB && i <= highTideB);
+		if(lowTideA > i) lowTideA = i;
+		if (highTideA < i) highTideA = i;
+	} else {
+		if (lowTideB > i) lowTideB = i;
+		if (highTideB < i) highTideB = i;
 	}
 
 	checkSignalRequests = 1;
-
 	forceInterruptCheck();
+
+	requestMutex->signal(requestMutex);
+
+	aioInterruptPoll();
+
+
 	return 1;
+}
+
+int isPendingSemaphores(){
+	return checkSignalRequests;
 }
 
 /* Signal any external semaphores for which signal requests exist.
@@ -203,12 +173,16 @@ signalSemaphoreWithIndex(sqInt index)
 sqInt
 doSignalExternalSemaphores(sqInt externalSemaphoreTableSize)
 {
-	int i, lowTide, highTide;
+	volatile int i, lowTide, highTide;
 	char switched, signalled = 0;
 
+	requestMutex->wait(requestMutex);
+
 	sqLowLevelMFence();
-	if (!checkSignalRequests)
+	if (!checkSignalRequests){
+		requestMutex->signal(requestMutex);
 		return 0;
+	}
 
 	switched = 0;
 	checkSignalRequests = 0;
@@ -243,11 +217,7 @@ doSignalExternalSemaphores(sqInt externalSemaphoreTableSize)
 			signalled = 1;
 		}
 
-	/* If a signal came in while processing, check for signals again soon.
-	 */
-	sqLowLevelMFence();
-	if (checkSignalRequests)
-		forceInterruptCheck();
+	requestMutex->signal(requestMutex);
 
 	return switched;
 }
