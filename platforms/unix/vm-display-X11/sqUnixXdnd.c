@@ -743,7 +743,7 @@ enum XdndState dndInDrop(enum XdndState state, XClientMessageEvent *evt)
     }
 
   dndSendFinished();
-  recordDragEvent(SQDragLeave, 1);
+  //recordDragEvent(SQDragLeave, 1);
 
   return XdndStateIdle;
 }
