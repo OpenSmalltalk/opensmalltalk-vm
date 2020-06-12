@@ -75,6 +75,8 @@ override WindowsSdkDir:=$(subst \,/,$(WindowsSdkDir))
 endif
 ifeq ($(WindowsSDKVersion),)
 WindowsSDKVersion:=10.0.15063.0
+else
+WindowsSDKVersion:=$(subst \,,$(WindowsSDKVersion))
 endif
 ifeq ($(INCLUDE),)
 INCLUDE:=$(VCToolsInstallDir)/ATLMFC/include;$(VCToolsInstallDir)/include;$(WindowsSdkDir)/include/$(WindowsSDKVersion)/shared;$(WindowsSdkDir)/include/$(WindowsSDKVersion)/ucrt;$(WindowsSdkDir)/include/$(WindowsSDKVersion)/um;$(WindowsSdkDir)/include/$(WindowsSDKVersion)/winrt
