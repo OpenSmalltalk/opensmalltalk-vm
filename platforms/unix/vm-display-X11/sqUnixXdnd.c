@@ -732,12 +732,15 @@ enum XdndState dndInDrop(enum XdndState state, XClientMessageEvent *evt)
       Window owner;
       fdebugf((stderr, "  dndInDrop: converting selection\n"));
       if (!(owner= XGetSelectionOwner(stDisplay, XdndSelection)))
-	fprintf(stderr, "  dndInDrop: XGetSelectionOwner failed\n");
+	      fprintf(stderr, "  dndInDrop: XGetSelectionOwner failed\n");
       else
-	XConvertSelection(stDisplay, XdndSelection, XdndTextUriList, XdndSelectionAtom, stWindow, xdndDrop_time(evt));
+	      {
+          XConvertSelection(stDisplay, XdndSelection, XdndTextUriList, XdndSelectionAtom, stWindow, xdndDrop_time(evt));
+          initDropFileNames();
+          dndSendFinished();
+          return XdndStateIdle;
+        }
       initDropFileNames();
-      dndSendFinished();
-      return XdndStateIdle;
     }
   else
     {
