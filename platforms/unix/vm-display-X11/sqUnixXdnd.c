@@ -736,6 +736,8 @@ enum XdndState dndInDrop(enum XdndState state, XClientMessageEvent *evt)
       else
 	XConvertSelection(stDisplay, XdndSelection, XdndTextUriList, XdndSelectionAtom, stWindow, xdndDrop_time(evt));
       initDropFileNames();
+      dndSendFinished();
+      return XdndStateIdle;
     }
   else
     {
@@ -743,7 +745,7 @@ enum XdndState dndInDrop(enum XdndState state, XClientMessageEvent *evt)
     }
 
   dndSendFinished();
-  //recordDragEvent(SQDragLeave, 1);
+  recordDragEvent(SQDragLeave, 1);
 
   return XdndStateIdle;
 }
