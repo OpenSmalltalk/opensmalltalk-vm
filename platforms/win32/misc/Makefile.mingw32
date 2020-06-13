@@ -97,7 +97,6 @@ CFLAGS=		-g -mpentium -mwindows -O3 -fomit-frame-pointer -funroll-loops -fschedu
 CXXFLAGS= $(CFLAGS) -felide-constructors
 WFLAGS=		
 DEFS=		-DWIN32_FILE_SUPPORT -DNO_STD_FILE_SUPPORT -DNDEBUG -DLSB_FIRST -DX86 $(XDEFS)
-#-DUSE_DIB_SECTIONS
 #-DPROFILE
 XDEFS=		-DSQUEAK_BUILTIN_PLUGIN
 INCS=		-I. -I$(SRCDIR) -I$(SRCDIR)/plugins -I$(VMDIR) -I$(DXDIR) -I$(DLLDIR)/FilePlugin -I$(DLLDIR)/SocketPlugin $(XINC)
