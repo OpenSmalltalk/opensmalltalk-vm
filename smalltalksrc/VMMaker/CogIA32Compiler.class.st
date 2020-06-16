@@ -3824,16 +3824,6 @@ CogIA32Compiler >> mod: mod RM: regMode RO: regOpcode [
 	^mod << 6 + (regOpcode << 3) + regMode
 ]
 
-{ #category : #'inline cacheing' }
-CogIA32Compiler >> nsSendCacheAt: callSiteReturnAddress [
-	"Answer the NSSendCache for the return address of a Newspeak
-	 self, super, outer, or implicit receiver send."
-	<option: #NewspeakVM>
-	<var: #callSiteReturnAddress type: #'char *'>
-	<inline: false>
-	^self literalBeforeFollowingAddress: callSiteReturnAddress asUnsignedInteger - 5 "sizeofcall"
-]
-
 { #category : #'feature detection' }
 CogIA32Compiler >> numCheckFeaturesOpcodes [
 	"Answer the number of opcodes required to compile the CPUID call to extract the extended features information."

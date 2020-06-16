@@ -4133,16 +4133,6 @@ CogX64Compiler >> nameForRegister: reg [ "<Integer>"
 		ifFalse: [default]
 ]
 
-{ #category : #'inline cacheing' }
-CogX64Compiler >> nsSendCacheAt: callSiteReturnAddress [
-	"Answer the NSSendCache for the return address of a Newspeak
-	 self, super, outer, or implicit receiver send."
-	<option: #NewspeakVM>
-	<var: #callSiteReturnAddress type: #'char *'>
-	<inline: false>
-	^self literalBeforeFollowingAddress: callSiteReturnAddress asUnsignedInteger - 5 "sizeofcall"
-]
-
 { #category : #accessing }
 CogX64Compiler >> numIntRegArgs [
 	^SysV ifTrue: [6] ifFalse: [4]

@@ -40,9 +40,7 @@ VMClass class >> basicRemoveSelector: aSelector [
 
 { #category : #translation }
 VMClass class >> cogMethodClass: options [
-	^(options at: #NewspeakVM ifAbsent: [false])
-		ifTrue: [NewspeakCogMethod]
-		ifFalse: [CogMethod]
+	^ CogMethod
 ]
 
 { #category : #'accessing class hierarchy' }
@@ -99,21 +97,7 @@ VMClass class >> declareCVarsIn: aCCodeGenerator [
 ]
 
 { #category : #translation }
-VMClass class >> declareInterpreterVersionIn: aCCodeGenerator defaultName: defaultName [
-	NewspeakVM ifTrue:
-		["Newspeak as of mid 2011 derives SystemScope systemName from the interpreterVersion
-		  (via system attribute 1004) by copying up to but not including the last space, provided the
-		  string ends with a digit.  So spaces must be eliminated from the Monitcello version string,
-		  and we can't surround it with square brackets."
-		(aCCodeGenerator shortMonticelloDescriptionForClass: self) last isDigit ifFalse:
-			[self error: 'Newspeak expects interpreterVersion ends with a digit'].
-		aCCodeGenerator
-			var: #interpreterVersion
-			declareC: 'const char *interpreterVersion = "Newspeak Virtual Machine ',
-							((aCCodeGenerator shortMonticelloDescriptionForClass: self) copyReplaceAll: ' ' with: '_'),
-							'"'.
-		^self].
-	
+VMClass class >> declareInterpreterVersionIn: aCCodeGenerator defaultName: defaultName [	
 	aCCodeGenerator
 		var: #interpreterVersion
 		declareC: 'const char *interpreterVersion = "Croquet Closure ', defaultName, ' VM [',
@@ -201,7 +185,6 @@ VMClass class >> initializeMiscConstants [
 	"Use ifAbsentPut: so that they will get copied back to the
 	 VMMaker's options and dead code will likely be eliminated."
 	PharoVM := InitializationOptions at: #PharoVM ifAbsentPut: [false].
-	NewspeakVM := InitializationOptions at: #NewspeakVM ifAbsentPut: [false].
 	SistaVM := InitializationOptions at: #SistaVM ifAbsentPut: [false].
 	TempVectReadBarrier := InitializationOptions at: #TempVectReadBarrier ifAbsentPut: [false].
 	LowcodeVM := InitializationOptions at: #LowcodeVM ifAbsentPut: [false].

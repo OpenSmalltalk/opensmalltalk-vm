@@ -532,64 +532,6 @@ VMMaker class >> generateMainVM: interpreterClass and: cogitClass with: optionsP
 			generateCogitFiles"
 ]
 
-{ #category : #configurations }
-VMMaker class >> generateNewspeakSpurCog64VM [
-	"No primitives since we can use those for the Cog VM"
-	^VMMaker
-		generate: CoInterpreter
-		and: StackToRegisterMappingCogit
-		with: #(	ObjectMemory Spur64BitCoMemoryManager
-				MULTIPLEBYTECODESETS true
-				NewspeakVM true)
-		to: self sourceTree, '/nsspur64src'
-		platformDir: self sourceTree, '/platforms'
-		including:#()
-
-]
-
-{ #category : #configurations }
-VMMaker class >> generateNewspeakSpurCogVM [
-	"No primitives since we can use those for the Cog VM"
-	^VMMaker
-		generate: CoInterpreter
-		and: StackToRegisterMappingCogit
-		with: #(	ObjectMemory Spur32BitCoMemoryManager
-				MULTIPLEBYTECODESETS true
-				NewspeakVM true)
-		to: self sourceTree, '/nsspursrc'
-		platformDir: self sourceTree, '/platforms'
-		including:#()
-
-]
-
-{ #category : #configurations }
-VMMaker class >> generateNewspeakSpurStack64VM [
-	"No primitives since we can use those for the Cog VM"
-	^VMMaker
-		generate: StackInterpreter
-		with: #( ObjectMemory Spur64BitMemoryManager
-				MULTIPLEBYTECODESETS true
-				NewspeakVM true
-				FailImbalancedPrimitives false)
-		to: self sourceTree, '/nsspurstack64src'
-		platformDir: self sourceTree, '/platforms'
-		including: #()
-]
-
-{ #category : #configurations }
-VMMaker class >> generateNewspeakSpurStackVM [
-	"No primitives since we can use those for the Cog VM"
-	^VMMaker
-		generate: StackInterpreter
-		with: #(	ObjectMemory Spur32BitMemoryManager
-				MULTIPLEBYTECODESETS true
-				NewspeakVM true
-				FailImbalancedPrimitives false)
-		to: self sourceTree, '/nsspurstacksrc'
-		platformDir: self sourceTree, '/platforms'
-		including: #()
-]
-
 { #category : #utilities }
 VMMaker class >> generatePluginsTo: srcDirName options: optionsPairsArray platformDir: platDirName including: inclusions [
 	"Generate the plugins to the given target directory. Include only plugins in pluginList."
