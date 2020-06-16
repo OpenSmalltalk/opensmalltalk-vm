@@ -92,7 +92,7 @@ extraVMMemory
 	- in Spur, free heap to be allocated at startup.  In V3, C memory to reserve for malloc at startup (i.e. malloc extraVMMemory, alloc heap, free extraVMMemory)
 
 framePointer
-	- the pointer to the current frame when primitives (or in the CoInterpreter, when machine-code <-> interpreter transitions) are invoked (c.f. localFP)
+	- the pointer to the current frame when primitives (or in the CoInterpreter, when machine-code <-> CoInterpreter transitions) are invoked (c.f. localFP)
 
 fullScreenFlag
 	- true if the system is in full-screen mode
@@ -9415,7 +9415,7 @@ StackInterpreter >> interpret [
 	self internalizeIPandSP.
 	self initExtensions.
 	self fetchNextBytecode.
-	[true] whileTrue: [self interpretCurrentByteCode ].
+	[true] whileTrue: [self dispatchOn: currentBytecode in: BytecodeTable].
 	localIP := localIP - 1.  "undo the pre-increment of IP before returning"
 	self externalizeIPandSP.
 	^nil
