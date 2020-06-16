@@ -2746,6 +2746,7 @@ CoInterpreter >> cogCodeSize [
 
 { #category : #accessing }
 CoInterpreter >> cogCodeSize: anInteger [ 
+	<doNotGenerate>
 	cogCodeSize := anInteger
 ]
 
@@ -4116,6 +4117,7 @@ CoInterpreter >> heapBase [
 
 { #category : #accessing }
 CoInterpreter >> heapBase: anInteger [ 
+	<doNotGenerate>
 	heapBase := anInteger
 ]
 

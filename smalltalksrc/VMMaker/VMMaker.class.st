@@ -100,8 +100,7 @@ Class {
 		'is64BitVM',
 		'optionsDictionary',
 		'abortBlock',
-		'doCleanupOldFiles',
-		'silently'
+		'doCleanupOldFiles'
 	],
 	#classVars : [
 		'DirNames'
@@ -524,12 +523,10 @@ VMMaker class >> generateMainVM: interpreterClass and: cogitClass with: optionsP
 		with: optionsPairsArray
 		to: srcDirName
 		platformDir: platDirName
-		including: inclusions).
-		1halt.
-"		 buildCodeGeneratorForInterpreter
+		including: inclusions)
 			doCleanupOldFiles;
 			generateInterpreterFile;
-			generateCogitFiles"
+			generateCogitFiles
 ]
 
 { #category : #configurations }
@@ -1040,12 +1037,6 @@ VMMaker >> availablePlugins [
 	^allPlugins
 ]
 
-{ #category : #accessing }
-VMMaker >> beSilent [
-
-	silently := true
-]
-
 { #category : #'generate sources' }
 VMMaker >> buildCodeGeneratorForCogit [
 	"Answer the code generator for translating the cogit."
@@ -1153,11 +1144,9 @@ VMMaker >> buildCodeGeneratorForInterpreter: interpreterClass includeAPIMethods:
 		 (cg structClassesForTranslationClasses: interpreterClasses) do:
 			[:structClass| structClass initialize]].
 
-	cg
-		addStructClasses: (cg structClassesForTranslationClasses: interpreterClasses)
-		silently: self silently.
+	cg addStructClasses: (cg structClassesForTranslationClasses: interpreterClasses).
 
-	interpreterClasses do: [:ic| cg addClass: ic silently: self silently].
+	interpreterClasses do: [:ic| cg addClass: ic].
 
 	getAPIMethods ifTrue:
 		[interpreterClass cogitClass ifNotNil:
@@ -1673,9 +1662,7 @@ VMMaker >> initialize [
 	doCleanupOldFiles := false.
 	interpreterClassName := StackInterpreterPrimitives name.
 	optionsDictionary := Dictionary newFromPairs: {#BytesPerWord. 4}.
-	VMStructType voidStructTypeCache.
-	
-	silently := false
+	VMStructType voidStructTypeCache
 ]
 
 { #category : #initialize }
@@ -2187,12 +2174,6 @@ VMMaker >> saveConfigurationTo: aFile [
 VMMaker >> setPlatName: aString [
 	"private - just set the platform name string, nothing else. Go away...."
 	platformName := aString
-]
-
-{ #category : #accessing }
-VMMaker >> silently [
-
-	^ silently
 ]
 
 { #category : #'target directories' }

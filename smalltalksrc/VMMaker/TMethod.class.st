@@ -384,10 +384,11 @@ TMethod >> comment: aComment [
 TMethod >> compileTimeOptionPragmas [
 	"Answer the (possibly empty) sequence of option: or notOption: pragmas
 	 whose arguments are values to be defined at compile time."
-	^self compiledMethod pragmas select:
-		[:pragma|
-		 (#option: == pragma keyword or: [#notOption: == pragma keyword])
-		 and: [VMBasicConstants defineAtCompileTime: (pragma argumentAt: 1)]]
+
+	^ self compiledMethod pragmas
+		select: [ :pragma | 
+			(#option: == pragma selector or: [ #notOption: == pragma selector ])
+				and: [ VMBasicConstants defineAtCompileTime: (pragma argumentAt: 1) ] ]
 ]
 
 { #category : #accessing }
@@ -2049,12 +2050,12 @@ TMethod >> oopVariable: aString [
 TMethod >> outputConditionalDefineFor: compileTimeOptionPragmas on: aStream [
 	aStream nextPutAll: '#if '.
 	compileTimeOptionPragmas
-		do: [:pragma|
-			pragma keyword = #notOption: ifTrue:
-				[aStream nextPut: $!].
-			aStream nextPutAll: (pragma argumentAt: 1)]
-		separatedBy: [aStream nextPutAll: ' && '].
-	 aStream cr
+		do: [ :pragma | 
+			pragma selector = #notOption:
+				ifTrue: [ aStream nextPut: $! ].
+			aStream nextPutAll: (pragma argumentAt: 1) ]
+		separatedBy: [ aStream nextPutAll: ' && ' ].
+	aStream cr
 ]
 
 { #category : #accessing }
@@ -2332,47 +2333,56 @@ TMethod >> recordDeclarationsIn: aCCodeGen [
 	 and remove the declarations from the method body."
 
 	| newStatements |
-	properties pragmas notEmpty ifTrue:
-		[properties pragmas do:
-			[:pragma|
-			pragma keyword == #var:declareC: ifTrue:
-				[self checkedDeclarationAt: pragma arguments first asString
-					put: pragma arguments last
-					in: aCCodeGen].
-			pragma keyword == #var:type: ifTrue:
-				[| varName varType |
-				varName := pragma arguments first asString.
-				varType := aCCodeGen conventionalTypeForType: pragma arguments last.
-				varType last == $* ifFalse: [varType := varType, ' '].
-				self checkedDeclarationAt: varName
-					put: varType, varName
-					in: aCCodeGen].
-			pragma keyword = #returnTypeC: ifTrue:
-				[self returnType: pragma arguments last].
-			pragma keyword = #doNotGenerate: ifTrue:
-				[locals remove: pragma arguments last]].
-		^self].
+	properties pragmas notEmpty
+		ifTrue: [ properties pragmas
+				do: [ :pragma | 
+					pragma selector == #var:declareC:
+						ifTrue: [ self
+								checkedDeclarationAt: pragma arguments first asString
+								put: pragma arguments last
+								in: aCCodeGen ].
+					pragma selector == #var:type:
+						ifTrue: [ | varName varType |
+							varName := pragma arguments first asString.
+							varType := aCCodeGen
+								conventionalTypeForType: pragma arguments last.
+							varType last == $*
+								ifFalse: [ varType := varType , ' ' ].
+							self
+								checkedDeclarationAt: varName
+								put: varType , varName
+								in: aCCodeGen ].
+					pragma selector = #returnTypeC:
+						ifTrue: [ self returnType: pragma arguments last ].
+					pragma selector = #doNotGenerate:
+						ifTrue: [ locals remove: pragma arguments last ] ].
+			^ self ].
 	newStatements := OrderedCollection new: parseTree statements size.
-	parseTree statements do:
-		[ :stmt | | isDeclaration |
-		isDeclaration := false.
-		stmt isSend ifTrue:
-			[stmt selector == #var:declareC: ifTrue:
-				[isDeclaration := true.
-				self declarationAt: stmt args first value asString put: stmt args last value].
-			stmt selector == #var:type: ifTrue:
-				[| varName varType |
-				isDeclaration := true.
-				varName := stmt args first value asString.
-				varType := aCCodeGen conventionalTypeForType: stmt args last value.
-				varType last == $* ifFalse: [varType := varType, ' '].
-				self declarationAt: varName put: varType, varName].
-			stmt selector = #returnTypeC: ifTrue:
-				[isDeclaration := true.
-				returnType := stmt args last value]].
-		isDeclaration ifFalse:
-			[newStatements add: stmt]].
-	parseTree setStatements: newStatements asArray.
+	parseTree statements
+		do: [ :stmt | 
+			| isDeclaration |
+			isDeclaration := false.
+			stmt isSend
+				ifTrue: [ stmt selector == #var:declareC:
+						ifTrue: [ isDeclaration := true.
+							self
+								declarationAt: stmt args first value asString
+								put: stmt args last value ].
+					stmt selector == #var:type:
+						ifTrue: [ | varName varType |
+							isDeclaration := true.
+							varName := stmt args first value asString.
+							varType := aCCodeGen
+								conventionalTypeForType: stmt args last value.
+							varType last == $*
+								ifFalse: [ varType := varType , ' ' ].
+							self declarationAt: varName put: varType , varName ].
+					stmt selector = #returnTypeC:
+						ifTrue: [ isDeclaration := true.
+							returnType := stmt args last value ] ].
+			isDeclaration
+				ifFalse: [ newStatements add: stmt ] ].
+	parseTree setStatements: newStatements asArray
 ]
 
 { #category : #accessing }
@@ -2514,44 +2524,54 @@ TMethod >> renameVariablesUsing: aDictionary [
 	"Rename all variables according to old->new mappings of the given dictionary."
 
 	| newDecls newProperties |
-	aDictionary isEmpty ifTrue: [^self].
+	aDictionary isEmpty
+		ifTrue: [ ^ self ].
 
 	"map args and locals"
-	args := args collect: [ :arg | aDictionary at: arg ifAbsent: [ arg ]].
-	locals := locals collect: [ :v | aDictionary at: v ifAbsent: [ v ]].
+	args := args
+		collect: [ :arg | aDictionary at: arg ifAbsent: [ arg ] ].
+	locals := locals collect: [ :v | aDictionary at: v ifAbsent: [ v ] ].
 
 	"map declarations"
 	newDecls := declarations species new.
-	declarations keysAndValuesDo:
-		[:oldName :decl|
-		(aDictionary at: oldName ifAbsent: nil)
-			ifNotNil:
-				[:newName| | index |
-				index := decl indexOfWord: oldName.
-				 newDecls
-					at: newName
-					put: (index ~= 0
-							ifTrue: [decl copyReplaceFrom: index to: index + oldName size - 1 with: newName]
-							ifFalse: [decl])]
-			ifNil: [newDecls at: oldName put: decl]].
+	declarations
+		keysAndValuesDo: [ :oldName :decl | 
+			(aDictionary at: oldName ifAbsent: nil)
+				ifNotNil: [ :newName | 
+					| index |
+					index := decl indexOfWord: oldName.
+					newDecls
+						at: newName
+						put:
+							(index ~= 0
+								ifTrue: [ decl
+										copyReplaceFrom: index
+										to: index + oldName size - 1
+										with: newName ]
+								ifFalse: [ decl ]) ]
+				ifNil: [ newDecls at: oldName put: decl ] ].
 	self newDeclarations: newDecls.
-
 	newProperties := properties copy.
-	newProperties pragmas do:
-		[:pragma| | mappedArgs |
-		mappedArgs := pragma arguments collect: [:arg| arg isString ifTrue: [aDictionary at: arg ifAbsent: arg] ifFalse: [arg]].
-		mappedArgs ~= pragma arguments ifTrue:
-			[pragma setArguments: mappedArgs]].
+	newProperties pragmas
+		do: [ :pragma | 
+			| mappedArgs |
+			mappedArgs := pragma arguments
+				collect: [ :arg | 
+					arg isString
+						ifTrue: [ aDictionary at: arg ifAbsent: arg ]
+						ifFalse: [ arg ] ].
+			mappedArgs ~= pragma arguments
+				ifTrue: [ pragma arguments: mappedArgs ] ].
 	self properties: newProperties.
 
 	"map variable names in parse tree"
-	parseTree nodesDo:
-		[ :node |
-		(node isVariable
-		and: [aDictionary includesKey: node name]) ifTrue:
-			[node setName: (aDictionary at: node name)].
-		(node isStmtList and: [node args size > 0]) ifTrue:
-			[node setArguments: (node args collect: [ :arg | aDictionary at: arg ifAbsent: [ arg ]])]]
+	parseTree
+		nodesDo: [ :node | 
+			(node isVariable and: [ aDictionary includesKey: node name ])
+				ifTrue: [ node setName: (aDictionary at: node name) ].
+			(node isStmtList and: [ node args size > 0 ])
+				ifTrue: [ node
+						setArguments: (node args collect: [ :arg | aDictionary at: arg ifAbsent: [ arg ] ]) ] ]
 ]
 
 { #category : #'inlining support' }
@@ -2826,15 +2846,17 @@ TMethod >> superExpansionNodeFor: aSelector args: argumentNodes [
 
 { #category : #'C code generation' }
 TMethod >> terminateConditionalDefineFor: compileTimeOptionPragmas on: aStream [
-	compileTimeOptionPragmas ifEmpty: [^self].
+	compileTimeOptionPragmas ifEmpty: [ ^ self ].
 	aStream nextPutAll: '#endif /* '.
 	compileTimeOptionPragmas
-		do: [:pragma|
-			pragma keyword = #notOption: ifTrue:
-				[aStream nextPut: $!].
-			aStream nextPutAll: (pragma argumentAt: 1)]
-		separatedBy: [aStream nextPutAll: ' && '].
-	 aStream nextPutAll: ' */'; cr
+		do: [ :pragma | 
+			pragma selector = #notOption:
+				ifTrue: [ aStream nextPut: $! ].
+			aStream nextPutAll: (pragma argumentAt: 1) ]
+		separatedBy: [ aStream nextPutAll: ' && ' ].
+	aStream
+		nextPutAll: ' */';
+		cr
 ]
 
 { #category : #inlining }

@@ -3896,6 +3896,7 @@ Cogit >> ceCPICMiss: cPIC receiver: receiver [
 
 { #category : #accessing }
 Cogit >> ceCPICMissTrampoline [
+	<doNotGenerate>
 	^ ceCPICMissTrampoline
 ]
 
