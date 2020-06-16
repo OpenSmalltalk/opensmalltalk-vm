@@ -112,9 +112,6 @@
 #  define X86 i386
 # endif
 
-  /* Use console for warnings */
-# define warnPrintf printf
-# define warnPrintfW wprintf
 #endif /* _M_IX86 */
 
 /* We are stuck with Win32 as a misnomer for the Windows operating system for
@@ -134,9 +131,6 @@
 #	define WIN32_OS_NAME "NT"
 #	define WIN32_PROCESSOR_NAME "X64"
 
-  /* Use console for warnings */
-#	define warnPrintf printf
-#	define warnPrintfW wprintf
 #endif /* _M_X64 & al */
 
 #endif /* (_WIN32_WCE) */
@@ -354,20 +348,6 @@ extern BOOL fBufferMouse;    /* Should we buffer mouse input? */
 /******************************************************/
 #ifndef sqMessageBox
 int __cdecl sqMessageBox(DWORD dwFlags, const TCHAR *titleString, const TCHAR* fmt, ...);
-#endif
-
-#ifndef warnPrintf
-int __cdecl warnPrintf(char *fmt, ...);
-#endif
-
-#ifndef warnPrintfW
-int __cdecl warnPrintfW(WCHAR *fmt, ...);
-#endif
-
-#ifdef UNICODE
-#define warnPrintfT warnPrintfW
-#else
-#define warnPrintfT warnPrintf
 #endif
 
 #ifndef abortMessage

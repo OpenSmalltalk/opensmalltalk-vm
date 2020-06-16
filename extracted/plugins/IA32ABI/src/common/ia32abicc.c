@@ -32,13 +32,14 @@ void *getbaz() { return baz; }
 
 #include <string.h> /* for memcpy et al */
 #include <setjmp.h>
-#include <stdio.h> /* for fprintf(stderr,...) */
 
 #include "sqMemoryAccess.h"
 #include "vmCallback.h"
 #include "sqAssert.h"
 #include "sqVirtualMachine.h"
 #include "ia32abi.h"
+
+#include "pharovm/debug.h"
 
 #if !defined(min)
 # define min(a,b) ((a) < (b) ? (a) : (b))
@@ -204,7 +205,7 @@ thunkEntry(void *thunkp, sqIntptr_t *stackp)
 #endif /* STACK_ALIGN_HACK */
 
 	if ((flags = interpreterProxy->ownVM(0)) < 0) {
-		fprintf(stderr,"Warning; callback failed to own the VM\n");
+		logWarn("Warning; callback failed to own the VM\n");
 		return -1;
 	}
 
@@ -216,7 +217,7 @@ thunkEntry(void *thunkp, sqIntptr_t *stackp)
 		vmcc.intregargsp = 0;
 		vmcc.floatregargsp = 0;
 		interpreterProxy->sendInvokeCallbackContext(&vmcc);
-		fprintf(stderr,"Warning; callback failed to invoke\n");
+		logWarn("Warning; callback failed to invoke\n");
 		setMRCC(previousCallbackContext);
 		interpreterProxy->disownVM(flags);
 		return -1;
@@ -257,7 +258,7 @@ thunkEntry(void *thunkp, sqIntptr_t *stackp)
 							vmcc.rvs.valstruct.size);
 					return stackp[1];
 	}
-	fprintf(stderr,"Warning; invalid callback return type\n");
+	logWarn("Warning; invalid callback return type\n");
 	return 0;
 }
 

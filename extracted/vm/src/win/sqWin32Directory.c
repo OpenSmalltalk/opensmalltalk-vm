@@ -19,6 +19,8 @@
 # include <sys/types.h>
 # include <sys/stat.h>
 
+#include "pharovm/debug.h"
+
 /**
  * Posix permissions are not defined in Windows, except when using
  * Mingw or Cygwin. Since these constants are just standard, we define
@@ -120,7 +122,7 @@ int hasCaseSensitiveDuplicate(WCHAR *path) {
     while (*src != 0 && *src != L'\\') *dst++ = *src++;
   } else if (path[1] != L':' || path[2] != L'\\') {
     /* Oops??? What is this??? */
-    printf("hasCaseSensitiveDuplicate: Unrecognized path root\n");
+    logDebug("hasCaseSensitiveDuplicate: Unrecognized path root\n");
     return 0;
   }
   *dst = 0;

@@ -21,7 +21,7 @@
 #ifndef VM_PROXY_MINOR
 /* Increment the following number if you add functions at the end */
 # if SPURVM
-#	define VM_PROXY_MINOR 13
+#	define VM_PROXY_MINOR 15
 # else
 #	define VM_PROXY_MINOR 12
 # endif
@@ -372,6 +372,10 @@ typedef struct VirtualMachine {
   sqInt (*ptDisableCogIt)(void*);
 
   sqInt (*isNonImmediate)(sqInt oop);
+
+  sqInt (*platformSemaphoreNew)(int initialValue);
+
+  sqInt (*scheduleInMainThread)(sqInt (*closure)());
 
 } VirtualMachine;
 

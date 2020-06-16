@@ -562,7 +562,7 @@ SimpleStackBasedCogit class >> initializePrimitiveTableForSqueak [
 	 N.B. primitives that don't have an explicit arg count (the integer following the generator) may be variadic."
 	"SimpleStackBasedCogit initializePrimitiveTableForSqueak"
 	MaxCompiledPrimitiveIndex := self objectRepresentationClass wordSize = 8
-										ifTrue: [555]
+										ifTrue: [659]
 										ifFalse: [222].
 	primitiveTable := CArrayAccessor on: (Array new: MaxCompiledPrimitiveIndex + 1).
 	self table: primitiveTable from: 
@@ -779,6 +779,67 @@ SimpleStackBasedCogit class >> initializePrimitiveTableForSqueak [
 		"(557 genPrimitiveSmallFloatArctan				0)"
 		"(558 genPrimitiveSmallFloatLogN				0)"
 		"(559 genPrimitiveSmallFloatExp				0)"
+						
+		(600 genPrimitiveLoadBoolean8FromBytes)
+		(601 genPrimitiveLoadUInt8FromBytes)
+		(602 genPrimitiveLoadInt8FromBytes)
+		(603 genPrimitiveLoadUInt16FromBytes)
+		(604 genPrimitiveLoadInt16FromBytes)
+		(605 genPrimitiveLoadUInt32FromBytes)
+		(606 genPrimitiveLoadInt32FromBytes)
+		(607 genPrimitiveLoadUInt64FromBytes)
+		(608 genPrimitiveLoadInt64FromBytes)
+		(609 genPrimitiveLoadPointerFromBytes)
+		(610 genPrimitiveLoadChar8FromBytes)
+		(611 genPrimitiveLoadChar16FromBytes)
+		(612 genPrimitiveLoadChar32FromBytes)
+		(613 genPrimitiveLoadFloat32FromBytes)
+		(614 genPrimitiveLoadFloat64FromBytes)
+		(615 genPrimitiveStoreBoolean8IntoBytes)
+		(616 genPrimitiveStoreUInt8IntoBytes)
+		(617 genPrimitiveStoreInt8IntoBytes)
+		(618 genPrimitiveStoreUInt16IntoBytes)
+		(619 genPrimitiveStoreInt16IntoBytes)
+		(620 genPrimitiveStoreUInt32IntoBytes)
+		(621 genPrimitiveStoreInt32IntoBytes)
+		(622 genPrimitiveStoreUInt64IntoBytes)
+		(623 genPrimitiveStoreInt64IntoBytes)
+		(624 genPrimitiveStorePointerIntoBytes)
+		(625 genPrimitiveStoreChar8IntoBytes)
+		(626 genPrimitiveStoreChar16IntoBytes)
+		(627 genPrimitiveStoreChar32IntoBytes)
+		(628 genPrimitiveStoreFloat32IntoBytes)
+		(629 genPrimitiveStoreFloat64IntoBytes)
+		(630 genPrimitiveLoadBoolean8FromExternalAddress)
+		(631 genPrimitiveLoadUInt8FromExternalAddress)
+		(632 genPrimitiveLoadInt8FromExternalAddress)
+		(633 genPrimitiveLoadUInt16FromExternalAddress)
+		(634 genPrimitiveLoadInt16FromExternalAddress)
+		(635 genPrimitiveLoadUInt32FromExternalAddress)
+		(636 genPrimitiveLoadInt32FromExternalAddress)
+		(637 genPrimitiveLoadUInt64FromExternalAddress)
+		(638 genPrimitiveLoadInt64FromExternalAddress)
+		(639 genPrimitiveLoadPointerFromExternalAddress)
+		(640 genPrimitiveLoadChar8FromExternalAddress)
+		(641 genPrimitiveLoadChar16FromExternalAddress)
+		(642 genPrimitiveLoadChar32FromExternalAddress)
+		(643 genPrimitiveLoadFloat32FromExternalAddress)
+		(644 genPrimitiveLoadFloat64FromExternalAddress)
+		(645 genPrimitiveStoreBoolean8IntoExternalAddress)
+		(646 genPrimitiveStoreUInt8IntoExternalAddress)
+		(647 genPrimitiveStoreInt8IntoExternalAddress)
+		(648 genPrimitiveStoreUInt16IntoExternalAddress)
+		(649 genPrimitiveStoreInt16IntoExternalAddress)
+		(650 genPrimitiveStoreUInt32IntoExternalAddress)
+		(651 genPrimitiveStoreInt32IntoExternalAddress)
+		(652 genPrimitiveStoreUInt64IntoExternalAddress)
+		(653 genPrimitiveStoreInt64IntoExternalAddress)
+		(654 genPrimitiveStorePointerIntoExternalAddress)
+		(655 genPrimitiveStoreChar8IntoExternalAddress)
+		(656 genPrimitiveStoreChar16IntoExternalAddress)
+		(657 genPrimitiveStoreChar32IntoExternalAddress)
+		(658 genPrimitiveStoreFloat32IntoExternalAddress)
+		(659 genPrimitiveStoreFloat64IntoExternalAddress)
 	)
 ]
 

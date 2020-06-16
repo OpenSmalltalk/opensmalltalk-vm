@@ -40,6 +40,8 @@
 #include <ctype.h>
 #include <errno.h>
 
+#include "pharovm/debug.h"
+
 static inline int min(int x, int y) { return (x < y) ? x : y; }
 
 static int convertCopy(char *from, int fromLen, char *to, int toLen, int term)
@@ -115,8 +117,9 @@ void setEncoding(void **encoding, char *rawName)
       }
     else
       ++ap;
-  fprintf(stderr, "setEncoding: could not set encoding '%s'\n", name);
- done:
+  logError("setEncoding: could not set encoding '%s'\n", name);
+
+  done:
   free(name);
 }
 
@@ -257,7 +260,7 @@ static void iconvFail(char *toCode, char *fromCode)
     {
       char buf[256];
       snprintf(buf, sizeof(buf), "iconv_open(%s, %s)", toCode, fromCode);
-      perror(buf);
+      logErrorFromErrno(buf);
     }
 }
 
@@ -418,40 +421,6 @@ void sqFilenameFromString(char *uxName, sqInt sqNameIndex, int sqNameLength)
 #if defined(HAVE_LANGINFO_CODESET)
 # include <langinfo.h>
 #endif
-
-int main()
-{
-#if defined(HAVE_LANGINFO_CODESET)
-  if (0 == strcmp(nl_langinfo(CODESET), "UTF-8"))
-    printf("UTF-8 codeset selected\n");
-#else
-  {
-    char *s;
-    if (((   (s = getenv("LC_ALL"))   && *s)
-	 || ((s = getenv("LC_CTYPE")) && *s)
-	 || ((s = getenv("LANG"))     && *s))
-	&& strstr(s, "UTF-8"))
-      printf("UTF-8 locale selected\n");
-  }
-#endif
-
-  {
-    char *in, out[256];
-    int   n;
-    in= "tésté";		// UTF-8 composed Unicode
-    n= convertChars(in, strlen(in), uxPathEncoding, out, sizeof(out), uxTextEncoding, 0, 1);
-    printf("%d: %s -> %s\n", n, in, out);
-    in= "tésté";	// UTF-8 decomposed Unicode (libiconv fails on this one, MacOSX passes)
-    n= convertChars(in, strlen(in), uxPathEncoding, out, sizeof(out), uxTextEncoding, 0, 1);
-    printf("%d: %s -> %s\n", n, in, out);
-    in= "t�st�";		// ISO-8859-15
-    n= convertChars(in, strlen(in), uxTextEncoding, out, sizeof(out), uxPathEncoding, 0, 1);
-    printf("%d: %s -> %s\n", n, in, out); // default composition -- should yield "tésté"
-    n= convertChars(in, strlen(in), uxTextEncoding, out, sizeof(out), uxPathEncoding, 1, 1);
-    printf("%d: %s -> %s\n", n, in, out); // canonical decomposition -- should yield "tésté"
-  }
-  return 0;
-}
 
 /*
   cc -Wall -DCONV_TEST -g -o main sqUnixCharConv.c -framework CoreFoundation	# MacOSX

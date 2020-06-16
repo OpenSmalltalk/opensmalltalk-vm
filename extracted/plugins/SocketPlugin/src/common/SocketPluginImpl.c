@@ -42,11 +42,14 @@
  *	many of the connection-oriented functions should be removed and cremated.
  */
 
+#include "pharovm/pharo.h"
 #include "sq.h"
 #include "SocketPlugin.h"
 #include "sqaio.h"
+#include "pharovm/debug.h"
 
 #ifdef ACORN
+
 # include <time.h>
 # define __time_t
 # include <signal.h>
@@ -61,16 +64,35 @@
 # define socklen_t int
 # define strncpy(dst, src, len) copyNCharsFromTo(len, src, dst)
 
+
 #else /* !ACORN */
 
-# ifdef NEED_GETHOSTNAME_P
-    extern int gethostname();
-# endif
-# ifdef HAVE_SYS_TIME_H
-#   include <sys/time.h>
-# else
-#   include <time.h>
-# endif
+#ifdef WIN64
+
+#include "winsock2.h"
+#include "Windows.h"
+
+#include <sys/stat.h>
+
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <stdio.h>
+
+typedef unsigned int sa_family_t;
+
+struct sockaddr_un
+{
+        sa_family_t sun_family;      /* AF_UNIX */
+        char        sun_path[108];   /* pathname */
+};
+
+#define TCP_MAXSEG 536
+#define S_IFSOCK   0xC000
+
+#define socklen_t int
+
+#else
+
 # include <sys/param.h>
 # include <sys/stat.h>
 # include <sys/socket.h>
@@ -81,9 +103,24 @@
 # include <arpa/inet.h>
 # include <netdb.h>
 #include <ifaddrs.h>
+
+#define closesocket(x) close(x)
+#define SD_SEND 	SHUT_WR
+#define SD_RECEIVE 	SHUT_RD
+
+#endif
+
+# ifdef NEED_GETHOSTNAME_P
+    extern int gethostname();
+# endif
+# ifdef HAVE_SYS_TIME_H
+#   include <sys/time.h>
+# else
+#   include <time.h>
+# endif
 # include <errno.h>
 # include <unistd.h>
-  
+
 #endif /* !ACORN */
 
 /* Solaris sometimes fails to define this in netdb.h */
@@ -97,6 +134,15 @@
 # define SD_LISTEN_FDS_START 3
 # define sd_listen_fds(u) 0
 #endif
+
+#ifndef true
+# define true 1
+#endif
+
+#ifndef false
+# define false 0
+#endif
+
 
 /*** Socket types ***/
 
@@ -135,11 +181,24 @@
 
 #define LINGER_SECS		 1
 
-static int thisNetSession= 0;
+volatile static int thisNetSession = 0;
 static int one= 1;
 
 static char   localHostName[MAXHOSTNAMELEN];
 static u_long localHostAddress;	/* GROSS IPv4 ASSUMPTION! */
+
+/*
+ * The ERROR constants are different in Windows and in Unix.
+ * We have to use the correct ones if not, the errors are not correctly detected.
+ */
+
+#ifdef WIN64
+# define ERROR_IN_PROGRESS	WSAEINPROGRESS
+# define ERROR_WOULD_BLOCK	WSAEWOULDBLOCK
+#else
+# define ERROR_IN_PROGRESS	EINPROGRESS
+# define ERROR_WOULD_BLOCK	EWOULDBLOCK
+#endif
 
 union sockaddr_any
 {
@@ -163,6 +222,7 @@ typedef struct privateSocketStruct
   socklen_t senderSize;		/* dynamic sizeof(sender) */
   int multiListen;		/* whether to listen for multiple connections */
   int acceptedSock;		/* a connection that has been accepted */
+  int socketType;
 } privateSocketStruct;
 
 #define CONN_NOTIFY	(1<<0)
@@ -171,7 +231,7 @@ typedef struct privateSocketStruct
 
 #define PING(S,EVT)						\
 {								\
-  FPRINTF((stderr, "notify %d %s\n", (S)->s, #EVT));		\
+  logTrace("notify %d %s\n", (S)->s, #EVT);		\
   interpreterProxy->signalSemaphoreWithIndex((S)->EVT##Sema);	\
 }
 
@@ -216,6 +276,17 @@ static void connectHandler(int, void *, int);
 static void dataHandler(int, void *, int);
 static void closeHandler(int, void *, int);
 
+/**
+ * The Error reporting is different in Windows and in Unix, so we need to provide a function.
+ */
+
+int getLastSocketError(){
+#ifdef WIN64
+	return WSAGetLastError();
+#else
+	return errno;
+#endif
+}
 
 
 #ifdef AIO_DEBUG
@@ -232,9 +303,20 @@ char *socketHandlerName(aioHandler h)
 
 /*** module initialisation/shutdown ***/
 
+#ifdef WIN64
+static WSADATA wsaData;
+#endif
+
 
 sqInt socketInit(void)
 {
+
+#ifdef WIN64
+
+	if(WSAStartup( MAKEWORD(2,0), &wsaData ) != 0)
+		return -1;
+
+#endif
   return 1;
 }
 
@@ -275,13 +357,37 @@ static const char *addrToName(int netAddress)
 
 static int nameToAddr(char *hostName)
 {
-  struct hostent *he;
+	struct addrinfo* result;
+	struct addrinfo* anAddressInfo;
+	int error;
+	int address = 0;
+	struct sockaddr_in* addr;
 
-  lastError= 0;			/* ditto */
-  if ((he= gethostbyname(hostName)))
-    return ntohl(*(long *)(he->h_addr_list[0]));
-  lastError= h_errno;		/* and one more ditto */
-  return 0;
+	/* resolve the domain name into a list of addresses */
+   error = getaddrinfo(hostName, NULL, NULL, &result);
+   if (error != 0) {
+	   return 0;
+   }
+
+   anAddressInfo = result;
+
+   while(anAddressInfo && address == 0){
+
+	   if(anAddressInfo->ai_family == AF_INET){
+		   addr = (struct sockaddr_in *)anAddressInfo->ai_addr;
+#ifdef WIN64
+		   address = ntohl(addr->sin_addr.S_un.S_addr);
+#else
+		   address = ntohl(addr->sin_addr.s_addr);
+#endif
+	   }
+
+	   anAddressInfo = anAddressInfo->ai_next;
+   }
+
+   freeaddrinfo(result);
+
+   return address;
 }
 
 /* answer whether the given socket is valid in this net session */
@@ -298,12 +404,30 @@ static int socketValid(SocketPtr s)
           0 if read would block, or
          -1 if the socket is no longer connected */
 
-static int socketReadable(int s)
+static int socketReadable(int s, int type)
 {
-  char buf[1];
-  int n= recv(s, (void *)buf, 1, MSG_PEEK);
+  static char buf[100];
+  int error;
+  sqInt n;
+
+  if(type == UDPSocketType) {
+	  n = recvfrom(s, (void*)buf, 100, MSG_PEEK, NULL, NULL);
+  }else{
+	  n = recv(s, (void *)buf, 100, MSG_PEEK);
+  }
+
   if (n > 0) return 1;
-  if ((n < 0) && (errno == EWOULDBLOCK)) return 0;
+  if ((n < 0) && ((error = getLastSocketError()) == ERROR_WOULD_BLOCK)) return 0;
+
+#ifdef WIN64
+  /*
+   * In Windows we can receive an error that the buffer is
+   * not big enough. This situation leads to know that there is data to read.
+   */
+
+  if ((n < 0) && (error == WSAEMSGSIZE)) return 1;
+#endif
+
   return -1;	/* EOF */
 }
 
@@ -317,6 +441,7 @@ static int socketWritable(int s)
   
   FD_ZERO(&fds);
   FD_SET(s, &fds);
+
   return select(s+1, 0, &fds, 0, &tv) > 0;
 }
 
@@ -342,8 +467,10 @@ static int socketError(int s)
 */
 static void acceptHandler(int fd, void *data, int flags)
 {
+  int lastError;
+    
   privateSocketStruct *pss= (privateSocketStruct *)data;
-  FPRINTF((stderr, "acceptHandler(%d, %p ,%d)\n", fd, data, flags));
+  logTrace("acceptHandler(%d, %p ,%d)\n", fd, data, flags);
   if (flags & AIO_X) /* -- exception */
     {
       /* error during listen() */
@@ -351,27 +478,27 @@ static void acceptHandler(int fd, void *data, int flags)
       pss->sockError= socketError(fd);
       pss->sockState= Invalid;
       pss->s= -1;
-      close(fd);
-      fprintf(stderr, "acceptHandler: aborting server %d pss=%p\n", fd, pss);
+      closesocket(fd);
+      logTrace("acceptHandler: aborting server %d pss=%p\n", fd, pss);
     }
   else /* (flags & AIO_R) -- accept() is ready */
     {
       int newSock= accept(fd, 0, 0);
       if (newSock < 0)
 	{
-	  if (errno == ECONNABORTED)
+	  if ((lastError = getLastSocketError()) == ECONNABORTED)
 	    {
 	      /* let's just pretend this never happened */
 	      aioHandle(fd, acceptHandler, AIO_RX);
 	      return;
 	    }
 	  /* something really went wrong */
-	  pss->sockError= errno;
+	  pss->sockError= lastError;
 	  pss->sockState= Invalid;
-	  perror("acceptHandler");
+	  logWarnFromErrno("acceptHandler");
 	  aioDisable(fd);
-	  close(fd);
-	  fprintf(stderr, "acceptHandler: aborting server %d pss=%p\n", fd, pss);
+	  closesocket(fd);
+	  logTrace("acceptHandler: aborting server %d pss=%p\n", fd, pss);
 	}
       else /* newSock >= 0 -- connection accepted */
 	{
@@ -384,7 +511,7 @@ static void acceptHandler(int fd, void *data, int flags)
 	  else /* traditional listen -- replace server with client in-place */
 	    {
 	      aioDisable(fd);
-	      close(fd);
+	      closesocket(fd);
 	      pss->s= newSock;
 	      aioEnable(newSock, pss, 0);
 	    }
@@ -399,14 +526,14 @@ static void acceptHandler(int fd, void *data, int flags)
 static void connectHandler(int fd, void *data, int flags)
 {
   privateSocketStruct *pss= (privateSocketStruct *)data;
-  FPRINTF((stderr, "connectHandler(%d, %p, %d)\n", fd, data, flags));
+  logTrace("connectHandler(%d, %p, %d)\n", fd, data, flags);
   if (flags & AIO_X) /* -- exception */
     {
       /* error during asynchronous connect() */
       aioDisable(fd);
       pss->sockError= socketError(fd);
       pss->sockState= Unconnected;
-      perror("connectHandler");
+      logWarnFromErrno("connectHandler");
     }
   else /* (flags & AIO_W) -- connect completed */
     {
@@ -414,7 +541,7 @@ static void connectHandler(int fd, void *data, int flags)
       int error= socketError(fd);
       if (error)
 	{
-	  FPRINTF((stderr, "connectHandler: error %d (%s)\n", error, strerror(error)));
+	  logTrace("connectHandler: error %d (%s)\n", error, strerror(error));
 	  pss->sockError= error;
 	  pss->sockState= Unconnected;
 	}
@@ -433,20 +560,20 @@ static void connectHandler(int fd, void *data, int flags)
 static void dataHandler(int fd, void *data, int flags)
 {
   privateSocketStruct *pss= (privateSocketStruct *)data;
-  FPRINTF((stderr, "dataHandler(%d=%d, %p, %d)\n", fd, pss->s, data, flags));
+  logTrace("dataHandler(%d=%d, %p, %d)\n", fd, pss->s, data, flags);
 
   if (pss == NULL)
     {
-      fprintf(stderr, "dataHandler: pss is NULL fd=%d data=%p flags=0x%x\n", fd, data, flags);
+      logTrace("dataHandler: pss is NULL fd=%d data=%p flags=0x%x\n", fd, data, flags);
       return;
     }
 
   if (flags & AIO_R)
     {
-      int n= socketReadable(fd);
+      int n= socketReadable(fd, pss->socketType);
       if (n == 0)
 	{
-	  fprintf(stderr, "dataHandler: selected socket fd=%d flags=0x%x would block (why?)\n", fd, flags);
+	  logTrace("dataHandler: selected socket fd=%d flags=0x%x would block (why?)\n", fd, flags);
 	}
       if (n != 1)
 	{
@@ -461,7 +588,7 @@ static void dataHandler(int fd, void *data, int flags)
        *       OOB data.  We have no choice but to discard it.  Ho hum. */
       char buf[1];
       int n= recv(fd, (void *)buf, 1, MSG_OOB);
-      if (n == 1) fprintf(stderr, "socket: received OOB data: %02x\n", buf[0]);
+      if (n == 1) logTrace("socket: received OOB data: %02x\n", buf[0]);
     }
   if (flags & AIO_R) notify(pss, READ_NOTIFY);
   if (flags & AIO_W) notify(pss, WRITE_NOTIFY);
@@ -474,10 +601,10 @@ static void closeHandler(int fd, void *data, int flags)
 {
   privateSocketStruct *pss= (privateSocketStruct *)data;
   aioDisable(fd);
-  FPRINTF((stderr, "closeHandler(%d, %p, %d)\n", fd, data, flags));
+  logTrace("closeHandler(%d, %p, %d)\n", fd, data, flags);
   pss->sockState= Unconnected;
   pss->s= -1;
-  notify(pss, CONN_NOTIFY);
+  notify(pss, READ_NOTIFY | CONN_NOTIFY);
 }
 
 
@@ -570,7 +697,7 @@ void sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaI
   pss= (privateSocketStruct *)calloc(1, sizeof(privateSocketStruct));
   if (pss == NULL)
     {
-      fprintf(stderr, "acceptFrom: out of memory\n");
+      logTrace("acceptFrom: out of memory\n");
       success(false);
       return;
     }
@@ -578,6 +705,7 @@ void sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaI
   pss->connSema= semaIndex;
   pss->readSema= readSemaIndex;
   pss->writeSema= writeSemaIndex;
+  pss->socketType = socketType;
 
   /* UDP sockets are born "connected" */
   if (UDPSocketType == socketType)
@@ -599,7 +727,7 @@ void sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaI
   s->sessionID= thisNetSession;
   s->socketType= socketType;
   s->privateSocketPtr= pss;
-  FPRINTF((stderr, "create(%d) -> %lx\n", SOCKET(s), (unsigned long)PSP(s)));
+  logTrace("create(%d) -> %lx\n", SOCKET(s), (unsigned long)PSP(s));
   /* Note: socket is in BLOCKING mode until aioEnable is called for it! */
 }
 
@@ -615,7 +743,7 @@ void sqSocketCreateRawProtoTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(Soc
   if (-1 == newSocket)
     {
       /* socket() failed, or incorrect protocol type */
-      fprintf(stderr, "primSocketCreateRAW: socket() failed; protocol = %ld, errno = %d\n", protocol, errno);
+      logTrace("primSocketCreateRAW: socket() failed; protocol = %ld, errno = %d\n", protocol, errno);
       success(false);
       return;
     }
@@ -624,7 +752,7 @@ void sqSocketCreateRawProtoTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(Soc
   pss= (privateSocketStruct *)calloc(1, sizeof(privateSocketStruct));
   if (pss == NULL)
     {
-      fprintf(stderr, "acceptFrom: out of memory\n");
+      logTrace("acceptFrom: out of memory\n");
       success(false);
       return;
     }
@@ -632,6 +760,7 @@ void sqSocketCreateRawProtoTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(Soc
   pss->connSema= semaIndex;
   pss->readSema= readSemaIndex;
   pss->writeSema= writeSemaIndex;
+  pss->socketType=s->socketType;
 
   /* RAW sockets are born "connected" */
   pss->sockState= Connected;
@@ -646,7 +775,7 @@ void sqSocketCreateRawProtoTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(Soc
   s->sessionID= thisNetSession;
   s->socketType= RAWSocketType;
   s->privateSocketPtr= pss;
-  FPRINTF((stderr, "create(%d) -> %lx\n", SOCKET(s), (unsigned long)PSP(s)));
+  logTrace("create(%d) -> %lx\n", SOCKET(s), (unsigned long)PSP(s));
   /* Note: socket is in BLOCKING mode until aioEnable is called for it! */
 }
 
@@ -660,26 +789,13 @@ sqInt sqSocketConnectionStatus(SocketPtr s)
   /* we now know that the net session is valid, so if state is Invalid... */
   if (SOCKETSTATE(s) == Invalid)	/* see acceptHandler() */
     {
-      fprintf(stderr, "socketStatus: freeing invalidated pss=%p\n", PSP(s));
+      logTrace("socketStatus: freeing invalidated pss=%p\n", PSP(s));
       /*free(PSP(s));*/	/* this almost never happens -- safer not to free()?? */
       _PSP(s)= 0;
       success(false);
       return Invalid;
     }
-#if 0
-  /* check for connection closed by peer */
-  if (SOCKETSTATE(s) == Connected)
-    {
-      int fd= SOCKET(s);
-      int n=  socketReadable(fd);
-      if (n < 0)
-	{
-	  FPRINTF((stderr, "socketStatus(%d): detected other end closed\n", fd));
-	  SOCKETSTATE(s)= OtherEndClosed;
-	}
-    }
-#endif
-  FPRINTF((stderr, "socketStatus(%d) -> %d\n", SOCKET(s), SOCKETSTATE(s)));
+  logTrace("socketStatus(%d) -> %d\n", SOCKET(s), SOCKETSTATE(s));
   return SOCKETSTATE(s);
 }
 
@@ -708,7 +824,7 @@ void sqSocketListenOnPortBacklogSizeInterface(SocketPtr s, sqInt port, sqInt bac
     }
 
   PSP(s)->multiListen= (backlogSize > 1);
-  FPRINTF((stderr, "listenOnPortBacklogSize(%d, %ld)\n", SOCKET(s), backlogSize));
+  logTrace("listenOnPortBacklogSize(%d, %ld)\n", SOCKET(s), backlogSize);
   memset(&saddr, 0, sizeof(saddr));
   saddr.sin_family= AF_INET;
   saddr.sin_port= htons((short)port);
@@ -742,7 +858,7 @@ void sqSocketConnectToPort(SocketPtr s, sqInt addr, sqInt port)
 
   if (!socketValid(s))
     return;
-  FPRINTF((stderr, "connectTo(%d)\n", SOCKET(s)));
+  logTrace("connectTo(%d)\n", SOCKET(s));
   memset(&saddr, 0, sizeof(saddr));
   saddr.sin_family= AF_INET;
   saddr.sin_port= htons((short)port);
@@ -764,9 +880,14 @@ void sqSocketConnectToPort(SocketPtr s, sqInt addr, sqInt port)
     {
       /* --- TCP --- */
       int result;
+      int lastError;
+
       aioEnable(SOCKET(s), PSP(s), 0);
-      result= connect(SOCKET(s), (struct sockaddr *)&saddr, sizeof(saddr));
-      FPRINTF((stderr, "connect() => %d\n", result));
+      struct sockaddr_in * p = &saddr;
+      result= connect(SOCKET(s), (struct sockaddr *)p, sizeof(saddr));
+
+      lastError = getLastSocketError();
+
       if (result == 0)
 	{
 	  /* connection completed synchronously */
@@ -776,8 +897,7 @@ void sqSocketConnectToPort(SocketPtr s, sqInt addr, sqInt port)
 	}
       else
 	{
-	  if (errno == EINPROGRESS || errno == EWOULDBLOCK)
-	    {
+	  if (lastError == ERROR_IN_PROGRESS || lastError == ERROR_WOULD_BLOCK) {
 	      /* asynchronous connection in progress */
 	      SOCKETSTATE(s)= WaitingForConnection;
 	      aioHandle(SOCKET(s), connectHandler, AIO_WX);  /* W => connect() */
@@ -785,9 +905,11 @@ void sqSocketConnectToPort(SocketPtr s, sqInt addr, sqInt port)
 	  else
 	    {
 	      /* connection error */
-	      perror("sqConnectToPort");
+		  logWarnFromErrno("sqConnectToPort");
+	      logWarn("LastSocketError: %d", getLastSocketError());
+
 	      SOCKETSTATE(s)= Unconnected;
-	      SOCKETERROR(s)= errno;
+	      SOCKETERROR(s)= lastError;
 	      notify(PSP(s), CONN_NOTIFY);
 	    }
 	}
@@ -808,12 +930,12 @@ void sqSocketAcceptFromRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(SocketPtr s
 
   struct privateSocketStruct *pss;
 
-  FPRINTF((stderr, "acceptFrom(%p, %d)\n", s, SOCKET(serverSocket)));
+  logTrace("acceptFrom(%p, %d)\n", s, SOCKET(serverSocket));
 
   /* sanity checks */
   if (!socketValid(serverSocket) || !PSP(serverSocket)->multiListen)
     {
-      FPRINTF((stderr, "accept failed: (multi->%d)\n", PSP(serverSocket)->multiListen));
+      logTrace("accept failed: (multi->%d)\n", PSP(serverSocket)->multiListen);
       success(false);
       return;
     }
@@ -821,7 +943,7 @@ void sqSocketAcceptFromRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(SocketPtr s
   /* check that a connection is there */
   if (PSP(serverSocket)->acceptedSock < 0)
     {
-      fprintf(stderr, "acceptFrom: no socket available\n");
+      logTrace("acceptFrom: no socket available\n");
       success(false);
       return;
     }
@@ -831,7 +953,7 @@ void sqSocketAcceptFromRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(SocketPtr s
   pss= (privateSocketStruct *)calloc(1, sizeof(privateSocketStruct));
   if (pss == NULL)
     {
-      fprintf(stderr, "acceptFrom: out of memory\n");
+      logTrace("acceptFrom: out of memory\n");
       success(false);
       return;
     }
@@ -847,6 +969,9 @@ void sqSocketAcceptFromRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(SocketPtr s
   pss->writeSema= writeSemaIndex;
   pss->sockState= Connected;
   pss->sockError= 0;
+
+  pss->socketType = s->socketType;
+
   aioEnable(SOCKET(s), PSP(s), 0);
 }
 
@@ -860,35 +985,43 @@ void sqSocketCloseConnection(SocketPtr s)
   if (!socketValid(s))
     return;
 
-  FPRINTF((stderr, "closeConnection(%d)\n", SOCKET(s)));
+  logTrace("closeConnection(%d)\n", SOCKET(s));
 
   if (SOCKET(s) < 0)
     return;	/* already closed */
 
-  aioDisable(SOCKET(s));
   SOCKETSTATE(s)= ThisEndClosed;
-  result= close(SOCKET(s));
-  if ((result == -1) && (errno != EWOULDBLOCK))
+  result = closesocket(SOCKET(s));
+  int lastError = getLastSocketError();
+
+  if ((result == -1) && (lastError != ERROR_WOULD_BLOCK))
     {
       /* error */
       SOCKETSTATE(s)= Unconnected;
-      SOCKETERROR(s)= errno;
+      SOCKETERROR(s)= lastError;
+      aioDisable(SOCKET(s));
+
       notify(PSP(s), CONN_NOTIFY);
-      perror("closeConnection");
+      logWarnFromErrno("closeConnection");
     }
   else if (0 == result)
     {
       /* close completed synchronously */
       SOCKETSTATE(s)= Unconnected;
-      FPRINTF((stderr, "closeConnection: disconnected\n"));
+      aioDisable(SOCKET(s));
+
+      logTrace("closeConnection: disconnected\n");
       SOCKET(s)= -1;
     }
   else
     {
       /* asynchronous close in progress */
+
+	  shutdown(SOCKET(s), SD_SEND);
+
       SOCKETSTATE(s)= ThisEndClosed;
       aioHandle(SOCKET(s), closeHandler, AIO_RWX);  /* => close() done */
-      FPRINTF((stderr, "closeConnection: deferred [aioHandle is set]\n"));
+      logTrace("closeConnection: deferred [aioHandle is set]\n");
     }
 }
 
@@ -897,7 +1030,7 @@ void sqSocketCloseConnection(SocketPtr s)
 
 void sqSocketAbortConnection(SocketPtr s)
 {
-  FPRINTF((stderr, "abortConnection(%d)\n", SOCKET(s)));
+  logTrace("abortConnection(%d)\n", SOCKET(s));
   if (!socketValid(s))
     return;
   setLinger(SOCKET(s), 0);
@@ -913,7 +1046,7 @@ void sqSocketDestroy(SocketPtr s)
   if (!socketValid(s))
     return;
 
-  FPRINTF((stderr, "destroy(%d)\n", SOCKET(s)));
+  logTrace("destroy(%d)\n", SOCKET(s));
 
   if (SOCKET(s))
     sqSocketAbortConnection(s);		/* close if necessary */
@@ -1024,24 +1157,25 @@ sqInt sqSocketReceiveDataAvailable(SocketPtr s)
   if (SOCKETSTATE(s) == Connected)
     {
       int fd= SOCKET(s);
-      int n=  socketReadable(fd);
+      int n=  socketReadable(fd, s->socketType);
       if (n > 0)
 	{
-	  FPRINTF((stderr, "receiveDataAvailable(%d) -> true\n", fd));
+	  logTrace( "receiveDataAvailable(%d) -> true\n", fd);
 	  return true;
 	}
       else if (n < 0)
 	{
-	  FPRINTF((stderr, "receiveDataAvailable(%d): other end closed\n", fd));
+	  logTrace( "receiveDataAvailable(%d): other end closed\n", fd);
 	  SOCKETSTATE(s)= OtherEndClosed;
 	}
     }
   else /* (SOCKETSTATE(s) != Connected) */
     {
-      FPRINTF((stderr, "receiveDataAvailable(%d): socket not connected\n", SOCKET(s)));
+      logTrace( "receiveDataAvailable(%d): socket not connected\n", SOCKET(s));
     }
+
   aioHandle(SOCKET(s), dataHandler, AIO_RX);
-  FPRINTF((stderr, "receiveDataAvailable(%d) -> false [aioHandle is set]\n", SOCKET(s)));
+  logTrace( "receiveDataAvailable(%d) -> false [aioHandle is set]\n", SOCKET(s));
   return false;
 }
 
@@ -1068,6 +1202,7 @@ sqInt sqSocketSendDone(SocketPtr s)
 sqInt sqSocketReceiveDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
 {
   int nread= 0;
+  int lastError;
 
   if (!socketValid(s))
     return -1;
@@ -1078,15 +1213,16 @@ sqInt sqSocketReceiveDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
     {
       /* --- UDP/RAW --- */
       socklen_t addrSize= sizeof(SOCKETPEER(s));
-      if ((nread= recvfrom(SOCKET(s), buf, bufSize, 0, (struct sockaddr *)&SOCKETPEER(s), &addrSize)) <= 0)
-	{
-	  if ((nread == -1) && (errno == EWOULDBLOCK))
-	    {
-	      FPRINTF((stderr, "UDP receiveData(%d) < 1 [blocked]\n", SOCKET(s)));
+      if ((nread= recvfrom(SOCKET(s), buf, bufSize, 0, (struct sockaddr *)&SOCKETPEER(s), &addrSize)) <= 0) {
+
+      lastError = getLastSocketError();
+
+	  if ((nread == -1) && (lastError == ERROR_WOULD_BLOCK)) {
+	      logTrace("UDP receiveData(%d) < 1 [blocked]\n", SOCKET(s));
 	      return 0;
-	    }
-	  SOCKETERROR(s)= errno;
-	  FPRINTF((stderr, "UDP receiveData(%d) < 1 [a:%d]\n", SOCKET(s), errno));
+	  }
+	  SOCKETERROR(s) = lastError;
+	  logTrace("UDP receiveData(%d) < 1 [a:%d]\n", SOCKET(s), lastError);
 	  return 0;
 	}
       SOCKETPEERSIZE(s)= addrSize;
@@ -1094,23 +1230,24 @@ sqInt sqSocketReceiveDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
   else
     {
       /* --- TCP --- */
-      if ((nread= read(SOCKET(s), buf, bufSize)) <= 0)
-	{
-	  if ((nread == -1) && (errno == EWOULDBLOCK))
-	    {
-	      FPRINTF((stderr, "TCP receiveData(%d) < 1 [blocked]\n", SOCKET(s)));
-	      return 0;
-	    }
-	  /* connection reset */
-	  SOCKETSTATE(s)= OtherEndClosed;
-	  SOCKETERROR(s)= errno;
-	  FPRINTF((stderr, "TCP receiveData(%d) < 1 [b:%d]\n", SOCKET(s), errno));
-	  notify(PSP(s), CONN_NOTIFY);
-	  return 0;
-	}
+      if ((nread= recv(SOCKET(s), buf, bufSize, 0)) <= 0) {
+          lastError = getLastSocketError();
+
+		  if ((nread == -1) && (lastError == ERROR_WOULD_BLOCK))
+			{
+			  logTrace("TCP receiveData(%d) < 1 [blocked]\n", SOCKET(s));
+			  return 0;
+			}
+		  /* connection reset */
+		  SOCKETSTATE(s)= OtherEndClosed;
+		  SOCKETERROR(s)= lastError;
+		  logTrace("TCP receiveData(%d) < 1 [b:%d] return: %d", SOCKET(s), lastError, nread);
+		  notify(PSP(s), CONN_NOTIFY);
+		  return 0;
+      }
     }
   /* read completed synchronously */
-  FPRINTF((stderr, "receiveData(%d) done = %d\n", SOCKET(s), nread));
+  logTrace( "receiveData(%d) done = %d\n", SOCKET(s), nread);
   return nread;
 }
 
@@ -1121,6 +1258,7 @@ sqInt sqSocketReceiveDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
 sqInt sqSocketSendDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
 {
   int nsent= 0;
+  int lastError;
 
   if (!socketValid(s))
     return -1;
@@ -1128,13 +1266,14 @@ sqInt sqSocketSendDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
   if (TCPSocketType != s->socketType)
     {
       /* --- UDP/RAW --- */
-      FPRINTF((stderr, "UDP sendData(%d, %ld)\n", SOCKET(s), bufSize));
+      logTrace( "UDP sendData(%d, %ld)\n", SOCKET(s), bufSize);
       if ((nsent= sendto(SOCKET(s), buf, bufSize, 0, (struct sockaddr *)&SOCKETPEER(s), sizeof(SOCKETPEER(s)))) <= 0)
 	{
-      int err = errno;
-	  if (err == EWOULDBLOCK)	/* asynchronous write in progress */
+      lastError = getLastSocketError();
+      int err = lastError;
+	  if (err == ERROR_WOULD_BLOCK)	/* asynchronous write in progress */
 	    return 0;
-	  FPRINTF((stderr, "UDP send failed %d %s\n", err, strerror(err)));
+	  logTrace( "UDP send failed %d %s\n", err, strerror(err));
 	  SOCKETERROR(s)= err;
 	  return 0;
 	}
@@ -1142,27 +1281,30 @@ sqInt sqSocketSendDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
   else
     {
       /* --- TCP --- */
-      FPRINTF((stderr, "TCP sendData(%d, %ld)\n", SOCKET(s), bufSize));
-      if ((nsent= write(SOCKET(s), buf, bufSize)) <= 0)
+      logTrace( "TCP sendData(%d, %ld)\n", SOCKET(s), bufSize);
+      if ((nsent= send(SOCKET(s), buf, bufSize, 0)) <= 0)
 	{
-	  if ((nsent == -1) && (errno == EWOULDBLOCK))
+      lastError = getLastSocketError();
+	  if ((nsent == -1) && (lastError == ERROR_WOULD_BLOCK))
 	    {
-	      FPRINTF((stderr, "TCP sendData(%d, %ld) -> %d [blocked]",
-		       SOCKET(s), bufSize, nsent));
+	      logTrace( "TCP sendData(%d, %ld) -> %d [blocked]",
+		       SOCKET(s), bufSize, nsent);
 	      return 0;
 	    }
 	  else
 	    {
 	      /* error: most likely "connection closed by peer" */
 	      SOCKETSTATE(s)= OtherEndClosed;
-	      SOCKETERROR(s)= errno;
-	      FPRINTF((stderr, "TCP write failed -> %d", SOCKETERROR(s)));
+	      SOCKETERROR(s)= lastError;
+          logWarn("errno %d\n", lastError);
+          logWarnFromErrno("write");
+
 	      return 0;
 	    }
 	}
     }
   /* write completed synchronously */
-  FPRINTF((stderr, "sendData(%d) done = %d\n", SOCKET(s), nsent));
+  logTrace( "sendData(%d) done = %d\n", SOCKET(s), nsent);
   return nsent;
 }
 
@@ -1172,12 +1314,13 @@ sqInt sqSocketSendDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
 */ 
 sqInt sqSocketReceiveUDPDataBufCountaddressportmoreFlag(SocketPtr s, char *buf, sqInt bufSize,  sqInt *address,  sqInt *port, sqInt *moreFlag)
 {
+  int lastError;
   if (socketValid(s) && (TCPSocketType != s->socketType)) /* --- UDP/RAW --- */
     {
       struct sockaddr_in saddr;
       socklen_t addrSize= sizeof(saddr);
 
-      FPRINTF((stderr, "recvFrom(%d)\n", SOCKET(s)));
+      logTrace( "recvFrom(%d)\n", SOCKET(s));
       memset(&saddr, 0, sizeof(saddr));
       { 
 	int nread= recvfrom(SOCKET(s), buf, bufSize, 0, (struct sockaddr *)&saddr, &addrSize);
@@ -1187,10 +1330,11 @@ sqInt sqSocketReceiveUDPDataBufCountaddressportmoreFlag(SocketPtr s, char *buf, 
 	    *port= ntohs(saddr.sin_port);
 	    return nread;
 	  }
-	if (errno == EWOULDBLOCK)	/* asynchronous read in progress */
+	lastError = getLastSocketError();
+	if (lastError == ERROR_WOULD_BLOCK)	/* asynchronous read in progress */
 	  return 0;
-	SOCKETERROR(s)= errno;
-	FPRINTF((stderr, "receiveData(%d)= %da\n", SOCKET(s), 0));
+	SOCKETERROR(s)= lastError;
+	logTrace("receiveData(%d)= %da\n", SOCKET(s), 0);
       }
     }
   success(false);
@@ -1207,7 +1351,7 @@ sqInt sqSockettoHostportSendDataBufCount(SocketPtr s, sqInt address, sqInt port,
     {
       struct sockaddr_in saddr;
 
-      FPRINTF((stderr, "sendTo(%d)\n", SOCKET(s)));
+      logTrace( "sendTo(%d)\n", SOCKET(s));
       memset(&saddr, 0, sizeof(saddr));
       saddr.sin_family= AF_INET;
       saddr.sin_port= htons((short)port);
@@ -1217,10 +1361,12 @@ sqInt sqSockettoHostportSendDataBufCount(SocketPtr s, sqInt address, sqInt port,
 	if (nsent >= 0)
 	  return nsent;
 	
-	if (errno == EWOULDBLOCK)	/* asynchronous write in progress */
+	int lastError = getLastSocketError();
+
+	if (lastError == ERROR_WOULD_BLOCK)	/* asynchronous write in progress */
 	  return 0;
-	FPRINTF((stderr, "UDP send failed\n"));
-	SOCKETERROR(s)= errno;
+	logTrace( "UDP send failed\n");
+	SOCKETERROR(s)= lastError;
       }
     }
   success(false);
@@ -1320,7 +1466,7 @@ static socketOption *findOption(char *name, size_t nameSize)
       for (opt= socketOptions; opt->name != 0; ++opt)
 	if (!strcmp(buf, opt->name))
 	  return opt;
-      fprintf(stderr, "SocketPlugin: ignoring unknown option '%s'\n", buf);
+      logTrace("SocketPlugin: ignoring unknown option '%s'\n", buf);
     }
   return 0;
 }
@@ -1339,7 +1485,11 @@ sqInt sqSocketSetOptionsoptionNameStartoptionNameSizeoptionValueStartoptionValue
       socketOption *opt= findOption(optionName, (size_t)optionNameSize);
       if (opt != 0)
 	{
-	  int   val= 0;
+#ifdef WIN64
+	  ULONG   val= 0;
+#else
+	  int val=0;
+#endif
 	  char  buf[32];
 	  char *endptr;
 	  /* this is JUST PLAIN WRONG (I mean the design in the image rather
@@ -1361,7 +1511,7 @@ sqInt sqSocketSetOptionsoptionNameStartoptionNameSizeoptionValueStartoptionValue
 	  if ((setsockopt(PSP(s)->s, opt->optlevel, opt->optname,
 			  (const void *)buf, optionValueSize)) < 0)
 	    {
-	      perror("setsockopt");
+		  logWarnFromErrno("setsockopt");
 	      goto barf;
 	    }
 	  /* it isn't clear what we're supposed to return here, since
@@ -1391,24 +1541,26 @@ sqInt sqSocketSetOptionsoptionNameStartoptionNameSizeoptionValueStartoptionValue
 /* query the socket for the given option.  */
 sqInt sqSocketGetOptionsoptionNameStartoptionNameSizereturnedValue(SocketPtr s, char *optionName, sqInt optionNameSize, sqInt *result)
 {
-  if (socketValid(s))
-    {
-      socketOption *opt= findOption(optionName, (size_t)optionNameSize);
-      if (opt != 0)
-	{
-	  int optval;	/* NOT sqInt */
-	  socklen_t optlen= sizeof(optval);
-	  if ((getsockopt(PSP(s)->s, opt->optlevel, opt->optname, (void *)&optval, &optlen)) < 0)
-	    goto barf;
-	  if (optlen != sizeof(optval))
-	    goto barf;
-	  *result= optval;
-	  return 0;
-	}
-    }
- barf:
+  if (socketValid(s)) {
+	  socketOption *opt= findOption(optionName, (size_t)optionNameSize);
+
+	  if (opt != 0) {
+		  int optval;	/* NOT sqInt */
+		  socklen_t optlen= sizeof(optval);
+
+		  if (((getsockopt(PSP(s)->s, opt->optlevel, opt->optname, (void *)&optval, &optlen)) < 0) || optlen != sizeof(optval)){
+			  success(false);
+			  return getLastSocketError();
+		  }
+
+		  *result = optval;
+
+		  return 0;
+	  }
+  }
+
   success(false);
-  return errno;
+  return -1;
 }
 
 void sqSocketBindToPort(SocketPtr s, int addr, int port)
@@ -1416,7 +1568,8 @@ void sqSocketBindToPort(SocketPtr s, int addr, int port)
   struct sockaddr_in inaddr;
   privateSocketStruct *pss= PSP(s);
 
-  if (!socketValid(s)) return;
+  if (!socketValid(s))
+	  return;
 
   /* bind the socket */
   memset(&inaddr, 0, sizeof(inaddr));
@@ -1424,9 +1577,8 @@ void sqSocketBindToPort(SocketPtr s, int addr, int port)
   inaddr.sin_port= htons(port);
   inaddr.sin_addr.s_addr= htonl(addr);
 
-  if (bind(SOCKET(s), (struct sockaddr *)&inaddr, sizeof(struct sockaddr_in)) < 0)
-    {
-      pss->sockError= errno;
+  if (bind(SOCKET(s), (struct sockaddr *)&inaddr, sizeof(struct sockaddr_in)) < 0) {
+      pss->sockError= getLastSocketError();
       success(false);
       return;
     }
@@ -1435,15 +1587,15 @@ void sqSocketBindToPort(SocketPtr s, int addr, int port)
 void sqSocketSetReusable(SocketPtr s)
 {
   size_t bufSize;
-  unsigned char buf[4];
+  unsigned char buf[8];
 
   if (!socketValid(s)) return;
 
-  *(int *)buf= 1;
-  bufSize= 4;
+  *(sqInt *)buf= 1;
+  bufSize= 8;
   if (setsockopt(SOCKET(s), SOL_SOCKET, SO_REUSEADDR, buf, bufSize) < 0)
     {
-      PSP(s)->sockError= errno;
+      PSP(s)->sockError= getLastSocketError();
       success(false);
       return;
     }
@@ -1468,7 +1620,7 @@ void sqResolverStartAddrLookup(sqInt address)
   const char *res;
   res= addrToName(address);
   strncpy(lastName, res, MAXHOSTNAMELEN);
-  FPRINTF((stderr, "startAddrLookup %s\n", lastName));
+  logTrace( "startAddrLookup %s\n", lastName);
 }
 
 
@@ -1485,18 +1637,15 @@ sqInt sqResolverStatus(void)
 
 sqInt sqResolverAddrLookupResultSize(void)	{ return strlen(lastName); }
 sqInt sqResolverError(void)			{ return lastError; }
-sqInt sqResolverLocalAddress(void)
-#if 0 
-/* old code */
-{	sqInt localaddr = nameToAddr(localHostName);
-	if (!localaddr)
-		localaddr = nameToAddr("localhost");
-	return localaddr;
-}
-#else
-/* experimental new code */
-{
-    struct ifaddrs *ifaddr, *ifa;
+sqInt sqResolverLocalAddress(void) {
+
+#ifndef WIN64
+
+	/*
+	 * TODO: Check all this code, because is does not work if you have more than one network interface.
+	 */
+
+	struct ifaddrs *ifaddr, *ifa;
     int s;
     char host[NI_MAXHOST];
     sqInt localAddr = 0;
@@ -1521,8 +1670,8 @@ sqInt sqResolverLocalAddress(void)
                 success(false);
                 return 0;
             }
-            FPRINTF((stderr, "\tInterface : <%s>\n",ifa->ifa_name ));
-            FPRINTF((stderr, "\t IP       : <%s>\n", inet_ntoa(((struct sockaddr_in *)(ifa->ifa_addr))->sin_addr)));
+            logTrace( "\tInterface : <%s>\n",ifa->ifa_name );
+            logTrace( "\t IP       : <%s>\n", inet_ntoa(((struct sockaddr_in *)(ifa->ifa_addr))->sin_addr));
             if(localAddr == 0) { /* take the first plausible answer */
                 localAddr = ((struct sockaddr_in *)(ifa->ifa_addr))->sin_addr.s_addr;
             }
@@ -1532,24 +1681,35 @@ sqInt sqResolverLocalAddress(void)
 
     freeifaddrs(ifaddr);
     return ntohl(localAddr);
+#else
 
-}
+    static char localHostName[MAXHOSTNAMELEN];
+    static u_long localHostAddress;
+
+    sqInt address;
+
+    gethostname(localHostName,MAXHOSTNAMELEN);
+
+    return nameToAddr(localHostName);
+
 #endif
+}
+
 sqInt sqResolverNameLookupResult(void)		{ return lastAddr; }
 
-void sqResolverAddrLookupResult(char *nameForAddress, sqInt nameSize)
-{
+void
+sqResolverAddrLookupResult(char *nameForAddress, sqInt nameSize) {
   memcpy(nameForAddress, lastName, nameSize);
 }
 
 /*** name resolution ***/
 
-void sqResolverStartNameLookup(char *hostName, sqInt nameSize)
-{
+void
+sqResolverStartNameLookup(char *hostName, sqInt nameSize) {
   int len= (nameSize < MAXHOSTNAMELEN) ? nameSize : MAXHOSTNAMELEN;
   memcpy(lastName, hostName, len);
   lastName[len]= lastError= 0;
-  FPRINTF((stderr, "name lookup %s\n", lastName));
+  logTrace( "name lookup %s\n", lastName);
   lastAddr= nameToAddr(lastName);
   /* we're done before we even started */
   interpreterProxy->signalSemaphoreWithIndex(resolverSema);
@@ -1634,7 +1794,7 @@ void sqResolverGetAddressInfoHostSizeServiceSizeFlagsFamilyTypeProtocol(char *ho
   struct addrinfo request;
   int gaiError= 0;
 
-  FPRINTF((stderr, "GetAddressInfo %ld %ld %ld %ld %ld %ld\n", hostSize, servSize, flags, family, type, protocol));
+  logTrace( "GetAddressInfo %ld %ld %ld %ld %ld %ld\n", hostSize, servSize, flags, family, type, protocol);
 
   if (addrList)
     {
@@ -1665,7 +1825,7 @@ void sqResolverGetAddressInfoHostSizeServiceSizeFlagsFamilyTypeProtocol(char *ho
     memcpy(serv, servName, servSize);
   serv[servSize]= '\0';
 
-  FPRINTF((stderr, "  -> GetAddressInfo %s %s\n", host, serv));
+  logTrace( "  -> GetAddressInfo %s %s\n", host, serv);
 
   if (servSize && (family == SQ_SOCKET_FAMILY_LOCAL) && (servSize < sizeof(((struct sockaddr_un *)0)->sun_path)) && !(flags & SQ_SOCKET_NUMERIC))
     {
@@ -1722,12 +1882,12 @@ void sqResolverGetAddressInfoHostSizeServiceSizeFlagsFamilyTypeProtocol(char *ho
 #    if defined(EAI_BADHINTS)
       if (EAI_BADHINTS != gaiError)
 	{
-	  fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(gaiError));
+	  logTrace("getaddrinfo: %s\n", gai_strerror(gaiError));
 	  lastError= gaiError;
 	  goto fail;
 	}
 #    else
-      fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(gaiError));
+      logTrace("getaddrinfo: %s\n", gai_strerror(gaiError));
 #    endif
       addrList= 0;	/* succeed with zero results for impossible constraints */
     }
@@ -1762,14 +1922,14 @@ static void dumpAddr(struct sockaddr *addr, int addrSize)
 {
   int i;
   for (i= 0;  i < addrSize;  ++i)
-    fprintf(stderr, "%02x ", ((unsigned char *)addr)[i]);
-  fprintf(stderr, " ");
+    logTrace("%02x ", ((unsigned char *)addr)[i]);
+  logTrace(" ");
   switch (addr->sa_family)
     {
-    case AF_UNIX:	fprintf(stderr, "local\n"); break;
-    case AF_INET:	fprintf(stderr, "inet\n"); break;
-    case AF_INET6:	fprintf(stderr, "inet6\n"); break;
-    default:		fprintf(stderr, "?\n"); break;
+    case AF_UNIX:	logTrace("local\n"); break;
+    case AF_INET:	logTrace("inet\n"); break;
+    case AF_INET6:	logTrace("inet6\n"); break;
+    default:		logTrace("?\n"); break;
     }
 }
 #endif
@@ -1791,6 +1951,7 @@ void sqResolverGetAddressInfoResultSize(char *addr, sqInt addrSize)
     }
 
   addressHeader(addr)->sessionID= thisNetSession;
+
   addressHeader(addr)->size=      addrInfo->ai_addrlen;
   memcpy(socketAddress(addr), addrInfo->ai_addr, addrInfo->ai_addrlen);
   /*dumpAddr(socketAddress(addr), addrSize - AddressHeaderSize);*/
@@ -1902,7 +2063,7 @@ void sqResolverGetNameInfoSizeFlags(char *addr, sqInt addrSize, sqInt flags)
   int niFlags= 0;
   int gaiError= 0;
 
-  FPRINTF((stderr, "GetNameInfoSizeFlags %p %ld %ld\n", addr, addrSize, flags));
+  logTrace( "GetNameInfoSizeFlags %p %ld %ld\n", addr, addrSize, flags);
 
   nameInfoValid= 0;
 
@@ -1913,7 +2074,7 @@ void sqResolverGetNameInfoSizeFlags(char *addr, sqInt addrSize, sqInt flags)
 
   if (flags & SQ_SOCKET_NUMERIC) niFlags |= (NI_NUMERICHOST | NI_NUMERICSERV);
 
-  /*dumpAddr(socketAddress(addr), addrSize - AddressHeaderSize);  fprintf(stderr, "%02x\n", niFlags);*/
+  /*dumpAddr(socketAddress(addr), addrSize - AddressHeaderSize);  logTrace("%02x\n", niFlags);*/
 
   gaiError= getnameinfo(socketAddress(addr), addrSize - AddressHeaderSize,
 			hostNameInfo, sizeof(hostNameInfo),
@@ -1922,7 +2083,7 @@ void sqResolverGetNameInfoSizeFlags(char *addr, sqInt addrSize, sqInt flags)
 
   if (gaiError)
     {
-      fprintf(stderr, "getnameinfo: %s\n", gai_strerror(gaiError));
+      logTrace("getnameinfo: %s\n", gai_strerror(gaiError));
       lastError= gaiError;
       goto fail;
     }
@@ -2034,7 +2195,7 @@ void sqSocketBindToAddressSize(SocketPtr s, char *addr, sqInt addrSize)
   if (bind(SOCKET(s), socketAddress(addr), addressSize(addr)) == 0)
     return;
 
-  pss->sockError= errno;
+  pss->sockError= getLastSocketError();
 
  fail:
   success(false);
@@ -2051,7 +2212,7 @@ void sqSocketListenBacklog(SocketPtr s, sqInt backlogSize)
 
   PSP(s)->multiListen= (backlogSize > 1);
 
-  FPRINTF((stderr, "listenBacklog(%d, %ld)\n", SOCKET(s), backlogSize));
+  logTrace( "listenBacklog(%d, %ld)\n", SOCKET(s), backlogSize);
 
   if (TCPSocketType == s->socketType)
     {
@@ -2080,7 +2241,7 @@ void sqSocketConnectToAddressSize(SocketPtr s, char *addr, sqInt addrSize)
       return;
     }
 
-  FPRINTF((stderr, "connectToAddressSize(%d)\n", SOCKET(s)));
+  logTrace( "connectToAddressSize(%d)\n", SOCKET(s));
 
   if (TCPSocketType != s->socketType)	/* --- UDP/RAW --- */
     {
@@ -2099,7 +2260,7 @@ void sqSocketConnectToAddressSize(SocketPtr s, char *addr, sqInt addrSize)
       int result;
       aioEnable(SOCKET(s), PSP(s), 0);
       result= connect(SOCKET(s), socketAddress(addr), addressSize(addr));
-      FPRINTF((stderr, "connect() => %d\n", result));
+      logTrace( "connect() => %d\n", result);
       if (result == 0)
 	{
 	  /* connection completed synchronously */
@@ -2107,23 +2268,22 @@ void sqSocketConnectToAddressSize(SocketPtr s, char *addr, sqInt addrSize)
 	  notify(PSP(s), CONN_NOTIFY);
 	  setLinger(SOCKET(s), 1);
 	}
-      else
-	{
-	  if (errno == EINPROGRESS || errno == EWOULDBLOCK)
-	    {
-	      /* asynchronous connection in progress */
-	      SOCKETSTATE(s)= WaitingForConnection;
-	      aioHandle(SOCKET(s), connectHandler, AIO_WX);  /* W => connect() */
-	    }
-	  else
-	    {
-	      /* connection error */
-	      perror("sqConnectToAddressSize");
-	      SOCKETSTATE(s)= Unconnected;
-	      SOCKETERROR(s)= errno;
-	      notify(PSP(s), CONN_NOTIFY);
-	    }
-	}
+      else {
+		  int lastError = getLastSocketError();
+    	  if (lastError == ERROR_IN_PROGRESS || lastError == ERROR_WOULD_BLOCK) {
+			  /* asynchronous connection in progress */
+			  SOCKETSTATE(s)= WaitingForConnection;
+			  aioHandle(SOCKET(s), connectHandler, AIO_WX);  /* W => connect() */
+			}
+		  else
+			{
+			  /* connection error */
+			  logWarnFromErrno("sqConnectToAddressSize");
+			  SOCKETSTATE(s)= Unconnected;
+			  SOCKETERROR(s)= errno;
+			  notify(PSP(s), CONN_NOTIFY);
+			}
+      }
     }
 }
 
@@ -2158,6 +2318,7 @@ void sqSocketLocalAddressResultSize(SocketPtr s, char *addr, int addrSize)
     goto fail;
 
   addressHeader(addr)->sessionID= thisNetSession;
+
   addressHeader(addr)->size=      saddrSize;
   memcpy(socketAddress(addr), &saddr.sa, saddrSize);
   return;
@@ -2206,6 +2367,7 @@ void sqSocketRemoteAddressResultSize(SocketPtr s, char *addr, int addrSize)
   }
 
   addressHeader(addr)->sessionID= thisNetSession;
+
   addressHeader(addr)->size=      SOCKETPEERSIZE(s);
   memcpy(socketAddress(addr), &SOCKETPEER(s), SOCKETPEERSIZE(s));
   SOCKETPEERSIZE(s)= 0;
@@ -2217,18 +2379,20 @@ void sqSocketRemoteAddressResultSize(SocketPtr s, char *addr, int addrSize)
 
 sqInt sqSocketSendUDPToSizeDataBufCount(SocketPtr s, char *addr, sqInt addrSize, char *buf, sqInt bufSize)
 {
-  FPRINTF((stderr, "sendTo(%d)\n", SOCKET(s)));
+  logTrace( "sendTo(%d)\n", SOCKET(s));
   if (socketValid(s) && addressValid(addr, addrSize) && (TCPSocketType != s->socketType)) /* --- UDP/RAW --- */
     {
       int nsent= sendto(SOCKET(s), buf, bufSize, 0, socketAddress(addr), addrSize - AddressHeaderSize);
       if (nsent >= 0)
 	return nsent;
 	
-      if (errno == EWOULDBLOCK)	/* asynchronous write in progress */
+      int lastError = getLastSocketError();
+
+      if (lastError == ERROR_WOULD_BLOCK)	/* asynchronous write in progress */
 	return 0;
 
-      FPRINTF((stderr, "UDP send failed\n"));
-      SOCKETERROR(s)= errno;
+      logTrace("UDP send failed\n");
+      SOCKETERROR(s)= lastError;
     }
 
   success(false);
@@ -2238,21 +2402,28 @@ sqInt sqSocketSendUDPToSizeDataBufCount(SocketPtr s, char *addr, sqInt addrSize,
 
 sqInt sqSocketReceiveUDPDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
 {
-  FPRINTF((stderr, "recvFrom(%d)\n", SOCKET(s)));
-  if (socketValid(s) && (TCPSocketType != s->socketType)) /* --- UDP/RAW --- */
-    {
-      socklen_t saddrSize= sizeof(SOCKETPEER(s));
+  logTrace("recvFrom(%d)\n", SOCKET(s));
+  if (socketValid(s) && (TCPSocketType != s->socketType)){
+
+	  /* --- UDP/RAW --- */
+
+	  socklen_t saddrSize= sizeof(SOCKETPEER(s));
+
       int nread= recvfrom(SOCKET(s), buf, bufSize, 0, &SOCKETPEER(s).sa, &saddrSize);
-      if (nread >= 0)
-	{
-	  SOCKETPEERSIZE(s)= saddrSize;
-	  return nread;
-	}
+
+      lastError = getLastSocketError();
+
+      if (nread >= 0) {
+    	  SOCKETPEERSIZE(s)= saddrSize;
+	  	  return nread;
+      }
+
       SOCKETPEERSIZE(s)= 0;
-      if (errno == EWOULDBLOCK)	/* asynchronous read in progress */
-	return 0;
-      SOCKETERROR(s)= errno;
-      FPRINTF((stderr, "receiveData(%d)= %da\n", SOCKET(s), 0));
+      if (lastError == ERROR_WOULD_BLOCK)	/* asynchronous read in progress */
+    	  return 0;
+
+      SOCKETERROR(s)= lastError;
+      logTrace("receiveData(%d)= %da\n", SOCKET(s), 0);
     }
   success(false);
   return 0;

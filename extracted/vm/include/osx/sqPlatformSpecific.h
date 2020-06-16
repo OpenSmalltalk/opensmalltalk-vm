@@ -79,16 +79,11 @@ void		sqFilenameFromStringOpen(char *buffer,sqInt fileIndex, long fileLength);
 void		sqFilenameFromString(char *buffer,sqInt fileIndex, long fileLength);
 #undef allocateMemoryMinimumImageFileHeaderSize
 
-#if SPURVM
-extern usqInt sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize);
-# define allocateMemoryMinimumImageFileHeaderSize(heapSize, minimumMemory, fileStream, headerSize) \
-sqAllocateMemory(minimumMemory, heapSize)
+extern usqInt sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize, usqInt baseAddress);
+#define allocateMemoryMinimumImageFileHeaderSizeBaseAddress(heapSize, minimumMemory, fileStream, headerSize, baseAddress) \
+sqAllocateMemory(minimumMemory, heapSize, baseAddress)
+
 # define sqMacMemoryFree() 
-#else
-usqInt sqAllocateMemoryMac(usqInt desiredHeapSize,sqInt minHeapSize, FILE * f,usqInt headersize);
-#define allocateMemoryMinimumImageFileHeaderSize(heapSize, minimumMemory, fileStream, headerSize) \
-sqAllocateMemoryMac(heapSize, minimumMemory, fileStream, headerSize)
-#endif
 
 #include <dlfcn.h>
 
@@ -99,12 +94,8 @@ sqAllocateMemoryMac(heapSize, minimumMemory, fileStream, headerSize)
 #define ReturnFromInterpret() return 0
 
 /* undef the memory routines for our logic */
-#undef sqGrowMemoryBy
-#undef sqShrinkMemoryBy
 #undef sqMemoryExtraBytesLeft
 
-sqInt sqGrowMemoryBy(sqInt memoryLimit, sqInt delta);
-sqInt sqShrinkMemoryBy(sqInt memoryLimit, sqInt delta);
 sqInt sqMemoryExtraBytesLeft(sqInt includingSwap);
 
     #undef insufficientMemorySpecifiedError
@@ -157,11 +148,6 @@ extern const pthread_key_t tltiIndex;
 #  define ioMilliSleep(ms) usleep((ms) * 1000)
 # endif /* COGMTVM */
 #endif /* STACKVM */
-
-/* warnPrintf is provided (and needed) on the win32 platform.
- * But it may be mentioned elsewhere, so provide a suitable def.
- */
-#define warnPrintf printf
 
 // From Joshua Gargus, for XCode 3.1
 #ifdef __GNUC__

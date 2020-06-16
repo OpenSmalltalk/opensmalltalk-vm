@@ -15,13 +15,6 @@
 *
 *****************************************************************************/
 
-#if ITIMER_HEARTBEAT
-# if VM_TICKER
-#   include "sqUnixITimerTickerHeartbeat.c"
-# else
-#   include "sqUnixITimerHeartbeat.c"
-# endif
-#else /* ITIMER_HEARTBEAT */
 
 #include "sq.h"
 #include "sqAssert.h"
@@ -29,10 +22,11 @@
 //#include "sqSCCSVersion.h"
 #include <errno.h>
 #include <pthread.h>
-#include <stdio.h> /* for fprintf */
 #include <sys/types.h>
 #include <sys/time.h>
 #include "sqaio.h"
+
+#include "pharovm/debug.h"
 
 #define SecondsFrom1901To1970      2177452800LL
 #define MicrosecondsFrom1901To1970 2177452800000000LL
@@ -69,6 +63,20 @@ static unsigned int mlogidx = (unsigned int)-1;
 # define logmsecs(msecs) do { sqLowLevelMFence(); \
 							if (logClock) mseclog[++mlogidx % LOGSIZE] = (msecs); \
 						} while (0)
+
+
+void heartbeat_wait_if_polling();
+
+/*
+ * These semaphores are used to stop the heartbeat if we are in a poll
+ */
+
+Semaphore* heartbeatStopMutex;
+Semaphore* heartbeatSemaphore;
+static int polling = 0;
+static int stoppedHeartbeat = 0;
+
+
 void
 ioGetClockLogSizeUsecsIdxMsecsIdx(sqInt *runInNOutp, void **usecsp, sqInt *uip, void **msecsp, sqInt *mip)
 {
@@ -90,6 +98,7 @@ ioGetClockLogSizeUsecsIdxMsecsIdx(sqInt *np, void **usecsp, sqInt *uip, void **m
 	*usecsp = *msecsp = 0;
 }
 #endif /* LOG_CLOCK */
+
 
 /* Compute the current VM time basis, the number of microseconds from 1901. */
 
@@ -160,10 +169,20 @@ ioUpdateVMTimezone()
   extern time_t timezone, altzone;
   extern int daylight;
   vmGMTOffset = -1 * (daylight ? altzone : timezone) * MicrosecondsPerSecond;
-# else
-#  error: cannot determine timezone correction
 # endif
 #endif
+
+#ifdef WIN64
+  TIME_ZONE_INFORMATION timeZoneInformation;
+  if(GetTimeZoneInformation(&timeZoneInformation) == TIME_ZONE_ID_INVALID){
+	  logError("Unable to get timezone information");
+	  vmGMTOffset = 0;
+	  return;
+  }
+  //The Bias is in minutes
+  vmGMTOffset = timeZoneInformation.Bias * 60 * MicrosecondsPerSecond;
+#endif
+
 }
 
 sqLong
@@ -218,7 +237,7 @@ long
 ioMSecs() { return millisecondClock; }
 
 /* ioMicroMSecs answers the millisecondClock right now */
-long ioMicroMSecs(void) { return microToMilliseconds(currentUTCMicroseconds());}
+sqInt ioMicroMSecs(void) { return microToMilliseconds(currentUTCMicroseconds());}
 
 /* returns the local wall clock time */
 sqInt
@@ -233,11 +252,6 @@ ioUTCSeconds(void) { return get64(utcMicrosecondClock) / MicrosecondsPerSecond; 
 sqInt
 ioUTCSecondsNow(void) { return currentUTCMicroseconds() / MicrosecondsPerSecond; }
 
-/*
- * On Mac OS X use the following.
- * On Unix use dpy->ioRelinquishProcessorForMicroseconds
- */
-#if macintoshSqueak
 sqInt
 ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 {
@@ -260,11 +274,10 @@ ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 			realTimeToWait = microSeconds;
 	}
 
-	aioSleepForUsecs(realTimeToWait);
+    aioPoll(realTimeToWait);
 
 	return 0;
 }
-#endif /* !macintoshSqueak */
 
 void
 ioInitTime(void)
@@ -322,33 +335,7 @@ beatStateMachine(void *careLess)
 		 */
 		extern char *revisionAsString();
 		errno = er;
-		perror("pthread_setschedparam failed");
-#if PharoVM
-# define VMNAME "pharo"
-#elif NewspeakVM
-# define VMNAME "nsvm"
-#else
-# define VMNAME "squeak"
-#endif
-        fprintf(stderr, "This VM uses a separate heartbeat thread to update its internal clock\n");
-        fprintf(stderr, "and handle events.  For best operation, this thread should run at a\n");
-        fprintf(stderr, "higher priority, however the VM was unable to change the priority.  The\n");
-        fprintf(stderr, "effect is that heavily loaded systems may experience some latency\n");
-        fprintf(stderr, "issues.  If this occurs, please create the appropriate configuration\n");
-        fprintf(stderr, "file in /etc/security/limits.d/ as shown below:\n\n");
-        fprintf(stderr, "cat <<END | sudo tee /etc/security/limits.d/%s.conf\n", VMNAME);
-        fprintf(stderr, "*      hard    rtprio  2\n");
-        fprintf(stderr, "*      soft    rtprio  2\n");
-        fprintf(stderr, "END\n");
-        fprintf(stderr, "\nand report to the %s mailing list whether this improves behaviour.\n", VMNAME);
-        fprintf(stderr, "\nYou will need to log out and log back in for the limits to take effect.\n");
-        fprintf(stderr, "For more information please see\n");
-        fprintf(stderr, "https://github.com/OpenSmalltalk/opensmalltalk-vm/releases/tag/r3732#linux\n");
-        // exit(errno);
-		// The VM may have issues with clock jitter due to the heartbeat thread
-		// not running at elevated priority. An exit may be appropriate in some
-		// cases, but for most users the above warning is sufficient.
-		// exit(errno);
+		logWarnFromErrno("pthread_setschedparam failed");
 	}
 	beatState = active;
 	while (beatState != condemned) {
@@ -359,9 +346,11 @@ beatStateMachine(void *careLess)
 			&& naptime.tv_sec >= 0 /* oversleeps can return tv_sec < 0 */
 			&& (naptime.tv_sec > 0 || naptime.tv_nsec > MINSLEEPNS)) /*repeat*/
 			if (errno != EINTR) {
-				perror("nanosleep");
+				logErrorFromErrno("nanosleep");
 				exit(1);
 			}
+
+		heartbeat_wait_if_polling();
 		heartbeat();
 	}
 	beatState = dead;
@@ -375,6 +364,10 @@ ioInitHeartbeat()
 	struct timespec halfAMo;
 	pthread_t careLess;
 
+	heartbeatStopMutex = platform_semaphore_new(1);
+	heartbeatSemaphore = platform_semaphore_new(0);
+	polling = 0;
+
 	/* First time through choose a policy and priority for the heartbeat thread,
 	 * and install ioInitHeartbeat via pthread_atfork to be run again in a forked
 	 * child, restarting the heartbeat in a forked child.
@@ -384,7 +377,7 @@ ioInitHeartbeat()
 										&stateMachinePolicy,
 										&stateMachinePriority))) {
 			errno = er;
-			perror("pthread_getschedparam failed");
+			logErrorFromErrno("pthread_getschedparam failed");
 			exit(errno);
 		}
 		assert(stateMachinePolicy != UNDEFINED);
@@ -406,7 +399,7 @@ ioInitHeartbeat()
 							beatStateMachine,
 							0))) {
 		errno = er;
-		perror("beat thread creation failed");
+		logErrorFromErrno("beat thread creation failed");
 		exit(errno);
 	}
 	while (beatState == nascent)
@@ -440,9 +433,54 @@ ioHeartbeatFrequency(int resetStats)
 	}
 	return frequency;
 }
-#endif /* ITIMER_HEARTBEAT */
 
 
 EXPORT(long long) getVMGMTOffset(){
 	return vmGMTOffset;
 }
+
+/**
+ * The heartbeat should not run if we are in a poll
+ */
+
+
+void
+heartbeat_wait_if_polling(){
+	heartbeatStopMutex->wait(heartbeatStopMutex);
+	if(polling == 0){
+		heartbeatStopMutex->signal(heartbeatStopMutex);
+		return;
+	}
+
+	stoppedHeartbeat = 1;
+
+	heartbeatStopMutex->signal(heartbeatStopMutex);
+	heartbeatSemaphore->wait(heartbeatSemaphore);
+}
+
+void
+heartbeat_poll_enter(long microSeconds){
+	//I only care if waited time is bigger than a millisecond
+	if(microSeconds <= 1000)
+		return;
+
+	heartbeatStopMutex->wait(heartbeatStopMutex);
+	polling = 1;
+	heartbeatStopMutex->signal(heartbeatStopMutex);
+}
+
+void
+heartbeat_poll_exit(long microSeconds){
+	//I only care if waited time is bigger than a millisecond
+	if(microSeconds <= 1000 && polling == 0)
+		return;
+
+	heartbeatStopMutex->wait(heartbeatStopMutex);
+	polling = 0;
+
+	if(stoppedHeartbeat)
+		heartbeatSemaphore->signal(heartbeatSemaphore);
+
+	heartbeatStopMutex->signal(heartbeatStopMutex);
+}
+

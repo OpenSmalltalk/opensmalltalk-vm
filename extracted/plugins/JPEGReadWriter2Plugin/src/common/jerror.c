@@ -24,9 +24,7 @@
 #include "jversion.h"
 #include "jerror.h"
 
-#ifdef USE_WINDOWS_MESSAGEBOX
-#include <windows.h>
-#endif
+#include "pharovm/debug.h"
 
 #ifndef EXIT_FAILURE		/* define exit() codes if not provided */
 #define EXIT_FAILURE  1
@@ -102,14 +100,7 @@ output_message (j_common_ptr cinfo)
   /* Create the message */
   (*cinfo->err->format_message) (cinfo, buffer);
 
-#ifdef USE_WINDOWS_MESSAGEBOX
-  /* Display it in a message dialog box */
-  MessageBox(GetActiveWindow(), buffer, "JPEG Library Error",
-	     MB_OK | MB_ICONERROR);
-#else
-  /* Send it to stderr, adding a newline */
-  fprintf(stderr, "%s\n", buffer);
-#endif
+  logDebug("%s\n", buffer);
 }
 
 

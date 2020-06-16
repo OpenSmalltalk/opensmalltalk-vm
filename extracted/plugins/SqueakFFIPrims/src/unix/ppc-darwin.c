@@ -55,12 +55,6 @@
 # define LONGLONG long long
 #endif
 
-#if 0
-# define DPRINTF(ARGS)	printf ARGS; fflush(stdout)
-#else
-# define DPRINTF(ARGS)
-#endif
-
 extern struct VirtualMachine *interpreterProxy;
 
 #if defined(FFI_TEST)
@@ -112,7 +106,6 @@ extern int ffiCallAddressOf(void *addr, void *globals);
 
 int ffiInitialize(void)
 {
-  DPRINTF(("ffiInitialize\n"));
   stackIndex= gprCount= fprCount= 0;
 #if 0
   structCount= 0;
@@ -132,14 +125,12 @@ int ffiSupportsCallingConvention(int callType)
 int ffiAlloc(int byteSize)
 {
   int ptr= (int)malloc(byteSize);
-  DPRINTF(("ffiAlloc(%d) => %08x\n", byteSize, ptr));
   return ptr;
 }
 
 
 int ffiFree(sqIntptr_t ptr)
 {
-  DPRINTF(("ffiFree(%08x)\n", ptr));
   if (ptr) free((void *)ptr);
   return 1;
 }
@@ -166,7 +157,6 @@ int ffiFree(sqIntptr_t ptr)
 
 int ffiPushSignedChar(int value)
 { 
-  DPRINTF(("ffiPushSignedChar %d\n", value));
   pushGPR(value);
   return 1;
 }
@@ -174,7 +164,6 @@ int ffiPushSignedChar(int value)
 
 int ffiPushUnsignedChar(int value) 
 { 
-  DPRINTF(("ffiPushUnsignedChar %d\n", value));
   pushGPR(value);
   return 1;
 }
@@ -182,7 +171,6 @@ int ffiPushUnsignedChar(int value)
 
 int ffiPushSignedByte(int value) 
 { 
-  DPRINTF(("ffiPushSignedByte %d\n", value));
   pushGPR(value);
   return 1;
 }
@@ -190,7 +178,6 @@ int ffiPushSignedByte(int value)
 
 int ffiPushUnsignedByte(int value)
 { 
-  DPRINTF(("ffiPushUnsignedByte %d\n", value));
   pushGPR(value);
   return 1;
 }
@@ -198,7 +185,6 @@ int ffiPushUnsignedByte(int value)
 
 int ffiPushSignedShort(int value)
 { 
-  DPRINTF(("ffiPushSignedShort %d\n", value));
   pushGPR(value); 
   return 1; 
 }
@@ -206,7 +192,6 @@ int ffiPushSignedShort(int value)
 
 int ffiPushUnsignedShort(int value) 
 { 
-  DPRINTF(("ffiPushUnsignedShort %d\n", value));
   pushGPR(value); 
   return 1; 
 }
@@ -214,7 +199,6 @@ int ffiPushUnsignedShort(int value)
 
 int ffiPushSignedInt(int value) 
 { 
-  DPRINTF(("ffiPushSignedInt %d\n", value));
   pushGPR(value); 
   return 1; 
 }
@@ -222,7 +206,6 @@ int ffiPushSignedInt(int value)
 
 int ffiPushUnsignedInt(int value) 
 { 
-  DPRINTF(("ffiPushUnsignedInt %d\n", value));
   pushGPR(value);
   return 1;
 }
@@ -230,7 +213,6 @@ int ffiPushUnsignedInt(int value)
 
 int ffiPushSignedLongLong(int low, int high)
 {
-  DPRINTF(("ffiPushSignedLongLong %d %d\n", low, high));
   qalignGPR();
   qalignStack();
   pushGPR(high);
@@ -241,7 +223,6 @@ int ffiPushSignedLongLong(int low, int high)
 
 int ffiPushUnsignedLongLong(int low, int high)
 { 
-  DPRINTF(("ffiPushUnsignedLongLong %d %d\n", low, high));
   qalignGPR();
   qalignStack();
   pushGPR(high);
@@ -252,7 +233,6 @@ int ffiPushUnsignedLongLong(int low, int high)
 
 int ffiPushPointer(int pointer)
 {
-  DPRINTF(("ffiPushPointer %08x\n", pointer));
   pushGPR(pointer);
   return 1;
 }
@@ -260,7 +240,6 @@ int ffiPushPointer(int pointer)
 
 int ffiPushSingleFloat(double value)
 {
-  DPRINTF(("ffiPushSingleFloat %f\n", (float)value));
   if (fprCount < FPR_MAX)
     fprs[fprCount++]= value;
   {
@@ -273,7 +252,6 @@ int ffiPushSingleFloat(double value)
 
 int ffiPushDoubleFloat(double value)
 {
-  DPRINTF(("ffiPushDoubleFloat %f\n", (float)value));
   if (fprCount < FPR_MAX)
     fprs[fprCount++]= value;
   pushGPR(((int *)&value)[0]);
@@ -285,7 +263,6 @@ int ffiPushDoubleFloat(double value)
 int ffiPushStringOfLength(int srcIndex, int length)
 {
   char *ptr;
-  DPRINTF(("ffiPushStringOfLength %d\n", length));
   checkGPR();
   ptr= (char *)malloc(length + 1);
   if (!ptr)
@@ -311,8 +288,6 @@ int ffiPushStructureOfLength(int pointer, int *structSpec, int specSize)
   char *gprp	= (char *)&gprs[gprCount];
 #define gprl	  (char *)&gprs[GPR_MAX]
   int   gprSize	= min(argSize, gprl - gprp);
-
-  DPRINTF(("ffiPush %08x Structure %p OfLength %d\n", pointer, structSpec, specSize));
 
   if (gprSize < 4) gprp += (4 - gprSize);
   if (argSize < 4) argp += (4 - gprSize);
@@ -360,7 +335,6 @@ int ffiPushStructureOfLength(int pointer, int *structSpec, int specSize)
 int ffiCanReturn(int *structSpec, int specSize)
 {
   int header= *structSpec;
-  DPRINTF(("ffiCanReturn %p %d\n", structSpec, specSize));
   if (header & FFIFlagPointer)
     return 1;
   if (header & FFIFlagStructure)
@@ -383,7 +357,6 @@ int    ffiLongLongResultHigh(void)	{ return ((int *)&longReturnValue)[0]; }
 
 int ffiStoreStructure(int address, int structSize)
 {
-  DPRINTF(("ffiStoreStructure %08x %d\n", address, structSize));
   memcpy((void *)address,
 	 structReturnValue ? (void *)structReturnValue : (void *)&longReturnValue,
 	 structSize);
@@ -394,7 +367,6 @@ int ffiStoreStructure(int address, int structSize)
 int ffiCleanup(void)
 {
   int i;
-  DPRINTF(("ffiCleanup\n"));
   for (i= 0;  i < stringCount;  ++i)
     free(strings[i]);
   stringCount= 0;
@@ -409,22 +381,18 @@ int ffiCleanup(void)
 
 int ffiCallAddressOfWithPointerReturn(int fn, int callType)
 {
-  DPRINTF(("ffiCallAddressOfWithPointerReturn %08x %d\n", fn, callType));
   return ffiCallAddressOf((void *)fn, (void *)&global);
 }
 
 
 int ffiCallAddressOfWithStructReturn(int fn, int callType, int* structSpec, int specSize)
 {
-  DPRINTF(("ffiCallAddressOfWithStructReturn %08x %d %p %d\n",
-	   fn, callType, structSpec, specSize));
   return ffiCallAddressOf((void *)fn, (void *)&global);
 }
 
 
 int ffiCallAddressOfWithReturnType(int fn, int callType, int typeSpec)
 {
-  DPRINTF(("ffiCallAddressOfWithReturnType %08x %d %d\n", fn, callType, typeSpec));
   return ffiCallAddressOf((void *)fn, (void *)&global);
 }
 

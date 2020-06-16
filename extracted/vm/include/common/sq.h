@@ -30,6 +30,13 @@
 #define false	0
 #define null	0  /* using "null" because nil is predefined in Think C */
 
+#ifndef EXPORT
+#define EXPORT(returnType) returnType
+#endif
+
+#include "pharovm/semaphores/platformSemaphore.h"
+
+
 #if !defined(IMAGE_DIALECT_NAME)
 # if NewspeakVM
 #	define IMAGE_DIALECT_NAME "Newspeak"
@@ -57,27 +64,10 @@
    If the platform requires special declaration modifiers, the EXPORT and
    VM_EXPORT macros can be redefined.
 */
-#define EXPORT(returnType) returnType
 #define VM_EXPORT
 #define VM_FUNCTION_EXPORT(returnType) returnType
 
 /* Platform-dependent macros for handling object memory. */
-
-/* Note: The grow/shrink macros assume that the object memory can be extended
-   continuously at its prior end. The garbage collector cannot deal with
-   'holes' in the object memory so the support code needs to reserve the
-   virtual maximum of pages that can be allocated beforehand. The amount of
-   'extra' memory should describe the amount of memory that can be allocated
-   from the OS (including swap space if the flag is set to true) and must not
-   exceed the prior reserved memory.
-   In other words: don't you dare to report more free space then you can
-   actually allocate.
-   The default implementation assumes a fixed size memory allocated at startup.
-*/
-#define sqAllocateMemory(minHeapSize, desiredHeapSize)  malloc(desiredHeapSize)
-#define sqGrowMemoryBy(oldLimit, delta)			oldLimit
-#define sqShrinkMemoryBy(oldLimit, delta)		oldLimit
-#define sqMemoryExtraBytesLeft(includingSwap)		0
 
 #if SPURVM
 /* Allocate a region of memory of al least sz bytes, at or above minAddr.
@@ -255,6 +245,7 @@ sqInt ioSetWindowWidthHeight(sqInt w, sqInt h);
 sqInt ioIsWindowObscured(void);
 
 sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds);
+
 #if STACKVM || NewspeakVM
 /* thread subsystem support for e.g. sqExternalSemaphores.c */
 void ioInitThreads();
@@ -288,24 +279,6 @@ unsigned long ioHeartbeatFrequency(int);
 #endif /* STACKVM */
 
 #if COGMTVM
-#define THRLOGSZ 256
-extern int thrlogidx;
-extern char *thrlog[];
-
-/* Debug logging that defers printing.  Use like printf, e.g.
- * TLOG("tryLockVMToIndex vmOwner = %d\n", vmOwner);
- * Requires #include "sqAtomicOps.h"
- * N.B. The following still isn't safe.  If enough log entries are made by other
- * threads after myindex is obtained but before asprintf completes we can get
- * two threads using the same entry.  But this is good enough for now.
- */
-#define THRLOG(...) do { int myidx, nextidx; \
-	do { myidx = thrlogidx; \
-		 nextidx = (myidx+1)&(THRLOGSZ-1); \
-	} while (!sqCompareAndSwap(thrlogidx,myidx,nextidx)); \
-	if (thrlog[myidx]) free(thrlog[myidx]); \
-	asprintf(thrlog + myidx, __VA_ARGS__); \
-} while (0)
 
 extern sqOSThread getVMOSThread();
 /* Please read the comment for CogThreadManager in the VMMaker package for
@@ -532,14 +505,6 @@ typedef struct sqComplexEvent
 sqInt ioSetInputSemaphore(sqInt semaIndex);
 /* Retrieve the next input event from the OS. */
 sqInt ioGetNextEvent(sqInputEvent *evt);
-
-/* Log the event procesing chain. */
-#if defined(DEBUG_EVENT_CHAIN)
-# define LogEventChain(parms) fprintf parms
-# define dbgEvtChF stderr
-#else
-# define LogEventChain(parms) 0
-#endif
 
 /* Image file and VM path names. */
 extern char imageName[];

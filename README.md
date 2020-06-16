@@ -31,22 +31,33 @@ For building the VM it is required the following set of tools:
 - wget
 - unzip
 
+In Linux Fedora, it is needed to install libcurl and to create a symbolic link to alias such library with the name used by libGit.
+For doing so, it is required to do:
+
+```
+sudo ln -s /usr/lib64/libcurl.so.4 /usr/lib64/libcurl-gnutls.so.4
+```
+
 Building in OSX / Linux:
 
 ```bash
 $ cmake . 
 $ make install
 ```
+In some latest Ubuntu installations is required to install the package libssl-dev.
+We are working to solve this dependency as the others in the build.
 
 Building in Windows:
 
 The build in Windows, uses Cygwin. This tool should be installed, and the following Cygwin packages are needed:
 
-cmake
-mingw64-x86_64-clang
-zip
-unzip
-wget
+- cmake
+- mingw64-x86_64-clang
+- zip
+- unzip
+- wget
+- curl 
+- make
 
 ```bash
 $ cmake .

@@ -58,10 +58,10 @@ EXPORT(void) printCrashDebugInformation(LPEXCEPTION_POINTERS exp){
 
 	reportStackState(exp, date, crashDumpFile);
 
-	vm_setVMOutputStream(stdout);
+	vm_setVMOutputStream(stderr);
 	fclose(crashDumpFile);
 
-	reportStackState(exp, date, stdout);
+	reportStackState(exp, date, stderr);
 	fflush(stdout);
 }
 

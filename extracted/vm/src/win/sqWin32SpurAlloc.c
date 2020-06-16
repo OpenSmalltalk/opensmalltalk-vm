@@ -11,8 +11,7 @@
 #include <windows.h>
 #include <errno.h>
 #include "sq.h"
-
-#if SPURVM /* Non-spur uses sqWin32Alloc.c */
+#include "pharovm/debug.h"
 
 /* Why does this have to be *here*?? eem 6/24/2014 */
 #if !defined(NDEBUG)
@@ -40,8 +39,8 @@ static char  *maxAppAddr;	/* SYSTEM_INFO lpMaximumApplicationAddress */
 /************************************************************************/
 /* sqAllocateMemory: Initialize virtual memory                          */
 /************************************************************************/
-void *
-sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
+usqInt
+sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize, usqInt desiredBaseAddress)
 {
 	char *hint, *address, *alloc;
 	usqIntptr_t alignment;
@@ -49,8 +48,7 @@ sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
 	SYSTEM_INFO sysInfo;
 
 	if (pageSize) {
-		sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Error:"),
-					 TEXT("sqAllocateMemory already called"));
+		logError("sqAllocateMemory have already been called");
 		exit(1);
 	}
 
@@ -137,8 +135,8 @@ sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress
 # define printProbes 0
 # define printMaps 0
 	while ((usqIntptr_t)(address + bytes) > (usqIntptr_t)address) {
-		if (printProbes && fIsConsole)
-			printf("probing [%p,%p)\n", address, address + bytes);
+		if (printProbes)
+			logTrace("probing [%p,%p)\n", address, address + bytes);
 		if (address_space_used(address, bytes)) {
 			address += delta;
 			continue;
@@ -149,36 +147,29 @@ sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress
 		 * So accept allocs above minAddress rather than allocs above address
 		 */
 		if (alloc >= (char *)minAddress && alloc <= address + delta) {
-			if (printMaps && fIsConsole)
-				fprintf(stderr,
-						"VirtualAlloc [%p,%p) above %p)\n",
+			if (printMaps)
+				logWarn("VirtualAlloc [%p,%p) above %p)\n",
 						address, address+bytes, minAddress);
 			*allocatedSizePointer = bytes;
 			return alloc;
 		}
 		if (!alloc) {
 			DWORD lastError = GetLastError();
-#if 0 /* Can't report this without making the system unusable... */
-			sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Error:"),
-						TEXT("Unable to VirtualAlloc committed memory at desired address (%") TEXT(PRIuSQINT) TEXT(" bytes requested at %p, above %p), Error: %lu"),
+			logWarn("Unable to VirtualAlloc committed memory at desired address (%lld bytes requested at %p, above %p), Error: %lu\n",
 						bytes, address, minAddress, lastError);
-#else
-			if (fIsConsole)
-				fprintf(stderr,
-						"Unable to VirtualAlloc committed memory at desired address (%" PRIuSQINT " bytes requested at %p, above %p), Error: %lu\n",
-						bytes, address, minAddress, lastError);
-#endif
 			return 0;
 		}
 		/* VirtualAlloc answered a mapping well away from where Spur prefers.
 		 * Discard the mapping and try again delta higher.
 		 */
-		if (alloc && !VirtualFree(alloc, SizeForRelease(bytes), MEM_RELEASE))
-			sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Warning:"),
-						TEXT("Unable to VirtualFree committed memory (%") TEXT(PRIuSQINT) TEXT(" bytes requested), Error: %ul"),
-						bytes, GetLastError());
+		if (alloc && !VirtualFree(alloc, SizeForRelease(bytes), MEM_RELEASE)){
+			logWarn("Unable to VirtualFree committed memory at desired address (%lld bytes requested at %p, above %p), Error: %lu\n",
+						bytes, address, minAddress, GetLastError());
+		}
+
 		address += delta;
 	}
+	logWarn("Unable to VirtualAlloc committed memory at desired address");
 	return 0;
 }
 
@@ -206,7 +197,7 @@ sqMakeMemoryExecutableFromTo(usqIntptr_t startAddr, usqIntptr_t endAddr)
 						size,
 						PAGE_EXECUTE_READWRITE,
 						&previous))
-		perror("VirtualProtect(x,y,PAGE_EXECUTE_READWRITE)");
+		logErrorFromErrno("VirtualProtect(x,y,PAGE_EXECUTE_READWRITE)");
 }
 
 void
@@ -220,72 +211,7 @@ sqMakeMemoryNotExecutableFromTo(usqIntptr_t startAddr, usqIntptr_t endAddr)
 						size,
 						PAGE_READWRITE,
 						&previous))
-		perror("VirtualProtect(x,y,PAGE_EXECUTE_READWRITE)");
+		logErrorFromErrno("VirtualProtect(x,y,PAGE_EXECUTE_READWRITE)");
 }
 # endif /* COGVM */
 
-# if TEST_MEMORY
-
-#	define MBytes	*1024UL*1024UL
-
-BOOL fIsConsole = 1;
-
-int
-main()
-{
-	char *mem;
-	usqInt i, t = 16 MBytes;
-
-	mem= (char *)sqAllocateMemory(t, t);
-	printf("memory allocated at %p\n", mem);
-	*mem = 1;
-	/* create some roadbumps */
-	for (i = 80 MBytes; i < 2048UL MBytes; i += 80 MBytes) {
-		void *alloc = VirtualAlloc(mem + i, pageSize, MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE);
-		printf("roadbump created at %p (%p)\n", mem + i, alloc);
-		*(char *)alloc = 1;
-	}
-	for (;;) {
-		sqInt segsz = 0;
-		char *seg = sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(32 MBytes, mem + 16 MBytes, &segsz);
-		if (!seg)
-			return 0;
-		*seg = 1;
-		t += segsz;
-		printf("memory extended at %p (total %ld Mb)\n", seg, t / (1 MBytes));
-	}
-	return 0;
-}
-int __cdecl
-sqMessageBox(DWORD dwFlags, const TCHAR *titleString, const TCHAR* fmt, ...)
-{
-	va_list args;
-	int result;
-	char buf[1024];
-
-	strcpy(buf, titleString);
-	strcat(buf, fmt);
-	strcat(buf, "\n");
-	va_start(args, fmt);
-#if 0
-	result = vfprintf(stderr, buf, args);
-#else
-	result = vprintf(buf, args);
-#endif
-	va_end(args);
-	printLastError((char *)titleString);
-	return result;
-}
-void printLastError(TCHAR *prefix)
-{ LPVOID lpMsgBuf;
-  DWORD lastError;
-
-  lastError = GetLastError();
-  FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER |  FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-                NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                (LPTSTR) &lpMsgBuf, 0, NULL );
-  fprintf(stderr,TEXT("%s (%d) -- %s\n"), prefix, lastError, lpMsgBuf);
-  LocalFree( lpMsgBuf );
-}
-# endif /* TEST_MEMORY */
-#endif /* SPURVM */

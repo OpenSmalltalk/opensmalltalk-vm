@@ -60,6 +60,8 @@
 #include <sys/param.h>
 #include <sys/stat.h>
 
+#include "pharovm/debug.h"
+
 /***
 	The interface to the directory primitive is path based.
 	That is, the client supplies a Squeak string describing
@@ -349,5 +351,5 @@ void
 sqStdoutToDevTTY()
 {
 	if (!freopen("/dev/tty","w",stdout))
-		perror("sqStdoutToDevTTY freopen(\"/dev/tty\",\"w\",stdout):");
+		logErrorFromErrno("sqStdoutToDevTTY freopen(\"/dev/tty\",\"w\",stdout):");
 }
