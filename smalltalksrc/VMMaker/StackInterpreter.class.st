@@ -17436,6 +17436,12 @@ StackInterpreter >> preGCAction: gcModeArg [
 		[self flushMethodCache]
 ]
 
+{ #category : #accessing }
+StackInterpreter >> primFailCode [
+	<doNotGenerate>
+	^ primFailCode 
+]
+
 { #category : #'primitive support' }
 StackInterpreter >> primitiveAccessorDepthForExternalPrimitiveMethod: methodObj [
 	^objectMemory integerValueOf:

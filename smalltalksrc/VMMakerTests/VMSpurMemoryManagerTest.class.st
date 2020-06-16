@@ -162,6 +162,73 @@ VMSpurMemoryManagerTest >> newMemory [
 	^ Spur64BitMemoryManager simulatorClass new
 ]
 
+{ #category : #'helpers - methods' }
+VMSpurMemoryManagerTest >> newMethodWithBytecodes: bytes [
+	
+	| method methodHeader |
+
+	"Create a bytecode compiled method object containing the given literal at the given index"
+	
+	method := self
+		newOldSpaceObjectWithSlots: 0 "# of literals" + 1 "one extra for the header" + (bytes size // memory wordSize)
+		format: (memory compiledMethodFormatForNumBytes: bytes size)
+		classIndex: 16r10.
+	methodHeader := (0 "nArgs" bitShift: 24)
+						+ (0 "nTemps" bitShift: 18)
+						+ (0 "small frame")
+						+ 0 "number of literaps"
+						+ 0 "primitive".
+	memory storePointer: 0 ofObject: method withValue: (memory integerObjectOf: methodHeader).
+	memory storeByte: 8 ofObject: method withValue: (bytes at: 1).
+
+	^ method
+]
+
+{ #category : #'helpers - methods' }
+VMSpurMemoryManagerTest >> newMethodWithLiteral: literalObject at: literalIndex [
+	
+	| method methodHeader |
+
+	"Create a bytecode compiled method object containing the given literal at the given index"
+	
+	method := self
+		newOldSpaceObjectWithSlots: literalIndex + 1 "index is 0 based" + 1 "one extra for the header"
+		format: (memory compiledMethodFormatForNumBytes: 0)
+		classIndex: 16r10.
+	methodHeader := (0 "nArgs" bitShift: 24)
+						+ (0 "nTemps" bitShift: 18)
+						+ (0 "small frame")
+						+ literalIndex + 2 "number of literaps"
+						+ 0 "primitive".
+	memory storePointer: 0 ofObject: method withValue: (memory integerObjectOf: methodHeader).
+	memory
+		storePointer: literalIndex + 1
+		ofObject: method
+		withValue: literalObject.
+	^ method
+]
+
+{ #category : #'helpers - methods' }
+VMSpurMemoryManagerTest >> newMethodWithSmallContext: isSmall WithArguments: arguments [
+	
+	| method methodHeader |
+
+	"Create a bytecode compiled method object containing the given literal at the given index"
+	
+	method := self
+		newOldSpaceObjectWithSlots: 0 "# of literals" + 1 "one extra for the header"
+		format: (memory compiledMethodFormatForNumBytes: 0)
+		classIndex: 16r10.
+	methodHeader := (arguments bitShift: 24)
+						+ (0 "nTemps" bitShift: 18)
+						+ ((isSmall ifTrue: [ 0 "small frame" ] ifFalse: [ 1 "small frame" ]) bitShift: 17)
+						+ 0 "number of literaps"
+						+ 0 "primitive".
+	memory storePointer: 0 ofObject: method withValue: (memory integerObjectOf: methodHeader).
+
+	^ method
+]
+
 { #category : #helpers }
 VMSpurMemoryManagerTest >> newObjectWithSlots: slots [
 	
