@@ -672,7 +672,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushConstantFalseBytecodePushesFalse 
 	self compile: [ cogit genPushConstantFalseBytecode ].	
 	self runGeneratedCode.
 	
-	self assert: (self popAddress) equals: memory falseObject
+	self assert: self popAddress equals: memory falseObject
 ]
 
 { #category : #'tests - two bytecodes' }
@@ -693,16 +693,16 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushConstantNilBytecodePushesNil [
 	self compile: [ cogit genPushConstantNilBytecode ].	
 	self runGeneratedCode.
 	
-	self assert: (self popAddress) equals: memory nilObject
+	self assert: self popAddress equals: memory nilObject
 ]
 
 { #category : #'tests - single bytecode' }
 VMSimpleStackBasedCogitBytecodeTest >> testPushConstantTrueBytecodePushesTrue [
-	
-	self compile: [ cogit genPushConstantTrueBytecode ].	
+
+	self compile: [ cogit genPushConstantTrueBytecode ].
 	self runGeneratedCode.
-	
-	self assert: (self popAddress) equals: memory trueObject
+
+	self assert: self popAddress equals: memory trueObject
 ]
 
 { #category : #'tests - single bytecode' }
@@ -711,7 +711,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushConstantZeroBytecodePushesASmallI
 	self compile: [ cogit genPushConstantZeroBytecode ].	
 	self runGeneratedCode.
 	
-	self assert: (self popAddress) equals: (memory integerObjectOf: 0)
+	self assert: self popAddress equals: (memory integerObjectOf: 0)
 ]
 
 { #category : #'tests - single bytecode - push temp' }
@@ -734,7 +734,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushQuickIntegerMinusOnePushesAMinusO
 	self compile: [ cogit genPushQuickIntegerConstantBytecode ].	
 	self runGeneratedCode.
 	
-	self assert: (self popAddress) equals: (memory integerObjectOf: -1)
+	self assert: self popAddress equals: (memory integerObjectOf: -1)
 ]
 
 { #category : #'tests - single bytecode' }
@@ -745,7 +745,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushQuickIntegerOnePushesOne [
 	self compile: [ cogit genPushQuickIntegerConstantBytecode ].	
 	self runGeneratedCode.
 	
-	self assert: (self popAddress) equals: (memory integerObjectOf: 1)
+	self assert: self popAddress equals: (memory integerObjectOf: 1)
 ]
 
 { #category : #'tests - single bytecode' }
@@ -756,7 +756,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushQuickIntegerTwoPushesTwo [
 	self compile: [ cogit genPushQuickIntegerConstantBytecode ].	
 	self runGeneratedCode.
 	
-	self assert: (self popAddress) equals: (memory integerObjectOf: 2)
+	self assert: self popAddress equals: (memory integerObjectOf: 2)
 ]
 
 { #category : #'tests - single bytecode' }
@@ -767,7 +767,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushQuickIntegerZeroPushesAZero [
 	self compile: [ cogit genPushQuickIntegerConstantBytecode ].	
 	self runGeneratedCode.
 	
-	self assert: (self popAddress) equals: (memory integerObjectOf: 0)
+	self assert: self popAddress equals: (memory integerObjectOf: 0)
 ]
 
 { #category : #'tests - single bytecode' }
@@ -778,7 +778,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushReceiverBytecodePushesTheReceiver
 	self compile: [ cogit genPushReceiverBytecode ].	
 	self runGeneratedCode.
 	
-	self assert: (self popAddress) equals: 75
+	self assert: self popAddress equals: 75
 ]
 
 { #category : #'tests - single bytecode - push inst var' }
