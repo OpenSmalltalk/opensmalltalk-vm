@@ -313,6 +313,6 @@ FORCE:
 # Extra specific dependencies
 #
 sqNamedPrims.h: plugins.int
-	../common/mkNamedPrims.sh plugins.int > sqNamedPrims.h
+	$(PLATDIR)/Cross/util/mkNamedPrims.sh plugins.int > sqNamedPrims.h
 
 $(OBJDIR)/sqNamedPrims.o:	sqNamedPrims.c sqNamedPrims.h
