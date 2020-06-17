@@ -79,6 +79,8 @@ int pendingInterruption;
 int aio_in_sleep = 0;
 int aio_request_interrupt = 0;
 
+volatile int isPooling = 0;
+
 static void 
 undefinedHandler(int fd, void *clientData, int flags)
 {
@@ -238,6 +240,8 @@ aio_handle_events(long microSeconds){
 
 	maxFdToUse = maxFd > (signal_pipe_fd[0] + 1) ? maxFd : signal_pipe_fd[0] + 1;
 
+	sqLowLevelMFence();
+	isPooling = 1;
 	heartbeat_poll_enter(microSeconds);
 
 	for (;;) {
@@ -255,25 +259,35 @@ aio_handle_events(long microSeconds){
 		if (n == 0) {
 			if (remainingMicroSeconds)
 				addIdleUsecs(remainingMicroSeconds);
+
+			sqLowLevelMFence();
+			isPooling = 0;
 			heartbeat_poll_exit(microSeconds);
 			return 0;
 		}
 		if (errno && (EINTR != errno)) {
             logError("errno %d\n", errno);
             logErrorFromErrno("select");
-			heartbeat_poll_exit(microSeconds);
+
+            sqLowLevelMFence();
+			isPooling = 0;
+            heartbeat_poll_exit(microSeconds);
 			return 0;
 		}
 		now = ioUTCMicroseconds();
 		remainingMicroSeconds -= max(now - us, 1);
 
 		if (remainingMicroSeconds <= 0){
+			sqLowLevelMFence();
+			isPooling = 0;
 			heartbeat_poll_exit(microSeconds);
 			return 0;
 		}
 		us = now;
 	}
 
+	sqLowLevelMFence();
+	isPooling = 0;
 	heartbeat_poll_exit(microSeconds);
 	aio_flush_pipe(signal_pipe_fd[0]);
 
@@ -322,11 +336,15 @@ void
 aioInterruptPoll(){
 	int n;
 
-	n = write(signal_pipe_fd[1], "1", 1);
-	if(n != 1){
-		logErrorFromErrno("write to pipe");
+	sqLowLevelMFence();
+
+	if(isPooling){
+		n = write(signal_pipe_fd[1], "1", 1);
+		if(n != 1){
+			logErrorFromErrno("write to pipe");
+		}
+		fsync(signal_pipe_fd[1]);
 	}
-	fsync(signal_pipe_fd[1]);
 
 	interruptFIFOMutex->wait(interruptFIFOMutex);
 	pendingInterruption = true;

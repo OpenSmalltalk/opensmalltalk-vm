@@ -97,6 +97,7 @@ int isPendingSemaphores();
  */
 Semaphore * interruptFIFOMutex;
 volatile int pendingInterruption = 0;
+volatile int isPooling = 0;
 
 /*
  * I initialize the AIO infrastructure
@@ -151,10 +152,15 @@ aio_handle_events(struct kevent* changes, int numberOfChanges, long microSeconds
 	//I notify the heartbeat of a pause
 	heartbeat_poll_enter(microSecondsTimeout);
 
+	sqLowLevelMFence();
+	isPooling = 1;
 
 	timeout.tv_nsec = (microSecondsTimeout % 1000000) * 1000;
 	timeout.tv_sec = microSecondsTimeout / 1000000;
 	keventReturn = kevent(kqueueDescriptor, changes, numberOfChanges, incomingEvents, INCOMING_EVENTS_SIZE, &timeout);
+
+	sqLowLevelMFence();
+	isPooling = 0;
 
 	//I notify the heartbeat of the end of the pause
 	heartbeat_poll_exit(microSecondsTimeout);
@@ -289,11 +295,14 @@ EXPORT(void)
 aioInterruptPoll(){
 	int n;
 
-	n = write(signal_pipe_fd[1], "1", 1);
-	if(n != 1){
-		logErrorFromErrno("write to pipe");
+	sqLowLevelMFence();
+	if(isPooling){
+		n = write(signal_pipe_fd[1], "1", 1);
+		if(n != 1){
+			logErrorFromErrno("write to pipe");
+		}
+		fsync(signal_pipe_fd[1]);
 	}
-	fsync(signal_pipe_fd[1]);
 
 	interruptFIFOMutex->wait(interruptFIFOMutex);
 	pendingInterruption = true;
