@@ -151,6 +151,7 @@ jobs:
     dist: trusty
     group: edge
   allow_failures:
+  - env: FLAVOR="pharo.cog.spur"
   - env: FLAVOR="squeak.sista.spur"
   - env: FLAVOR="pharo.sista.spur"
   - env: FLAVOR="squeak.cog.spur.lowcode"
