@@ -3909,6 +3909,21 @@ InterpreterPrimitives >> primitiveNewMethod [
 ]
 
 { #category : #'object access primitives' }
+InterpreterPrimitives >> primitiveNewPinned [
+	
+	self assert: objectMemory hasSpurMemoryManagerAPI.
+		
+	"Allocate a new pinned fixed-size instance.  Fail if the allocation would leave
+			  less than lowSpaceThreshold bytes free. This *will not* cause a GC :-)"
+	(objectMemory instantiateClass: self stackTop isPinned: true)
+				ifNotNil: [:obj| self pop: argumentCount + 1 thenPush: obj]
+				ifNil: [self primitiveFailFor: ((objectMemory isFixedSizePointerFormat: (objectMemory instSpecOfClass: self stackTop))
+											ifTrue: [PrimErrNoMemory]
+											ifFalse: [PrimErrBadReceiver])]
+
+]
+
+{ #category : #'object access primitives' }
 InterpreterPrimitives >> primitiveNewWithArg [
 	"Allocate a new indexable instance. Fail if the allocation would leave less than lowSpaceThreshold bytes free. May cause a GC."
 	| size spaceOkay instSpec |
@@ -3937,6 +3952,27 @@ InterpreterPrimitives >> primitiveNewWithArg [
 						thenPush: (objectMemory instantiateClass: (self stackValue: 1) indexableSize: size)]
 				ifFalse:
 					[self primitiveFailFor: PrimErrNoMemory]]
+]
+
+{ #category : #'object access primitives' }
+InterpreterPrimitives >> primitiveNewWithArgPinned [
+	| size instSpec |
+	
+	self assert: objectMemory hasSpurMemoryManagerAPI.
+
+	size := self positiveMachineIntegerValueOf: self stackTop.
+
+	(objectMemory
+		instantiateClass: (self stackValue: 1)
+		indexableSize: size
+		isPinned: true)
+			ifNotNil: [ :obj | self pop: argumentCount + 1 thenPush: obj ]
+			ifNil: [ instSpec := objectMemory instSpecOfClass: (self stackValue: 1).
+			self primitiveFailFor:
+					(((objectMemory isIndexableFormat: instSpec)
+						and: [ (objectMemory isCompiledMethodFormat: instSpec) not ])
+						ifTrue: [ PrimErrNoMemory ]
+						ifFalse: [ PrimErrBadReceiver ]) ]
 ]
 
 { #category : #'object access primitives' }

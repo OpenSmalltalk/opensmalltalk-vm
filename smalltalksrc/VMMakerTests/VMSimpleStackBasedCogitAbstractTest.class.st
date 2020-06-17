@@ -11,7 +11,6 @@ Class {
 		'stackMemoryStartAddress',
 		'stackMemoryEndAddress',
 		'isa',
-		'wordSize',
 		'obj',
 		'selectorIndex',
 		'sendAddress',
@@ -420,7 +419,7 @@ VMSimpleStackBasedCogitAbstractTest >> newInterpreter [
 { #category : #running }
 VMSimpleStackBasedCogitAbstractTest >> newMemory [
 
-	^ wordSize = 4
+	^ self wordSize = 4
 		ifTrue: [ Spur32BitCoMemoryManager simulatorClass new ]
 		ifFalse: [ Spur64BitCoMemoryManager simulatorClass new ]
 ]
@@ -688,18 +687,6 @@ VMSimpleStackBasedCogitAbstractTest >> top [
 VMSimpleStackBasedCogitAbstractTest >> topAddress [
 	
 	^ self top integerAt: 1 size: self wordSize signed: false
-]
-
-{ #category : #helpers }
-VMSimpleStackBasedCogitAbstractTest >> wordSize [
-	
-	^ memory wordSize
-]
-
-{ #category : #running }
-VMSimpleStackBasedCogitAbstractTest >> wordSize: aWordSize [
-
-	wordSize := aWordSize
 ]
 
 { #category : #'helpers - registers' }

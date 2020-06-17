@@ -13,7 +13,8 @@ Class {
 		'initialAddress',
 		'stackSpaceSize',
 		'methodCacheSize',
-		'rumpCStackSize'
+		'rumpCStackSize',
+		'wordSize'
 	],
 	#category : #VMMakerTests
 }
@@ -146,20 +147,25 @@ VMSpurMemoryManagerTest >> memory [
 { #category : #helpers }
 VMSpurMemoryManagerTest >> newInterpreter [
 
+	memory := self newMemory.
+
 	StackInterpreterSimulatorLSB
 		initializeWithOptions: {
-			#BytesPerWord. 8.
-			#ObjectMemory. #Spur64BitMemoryManager}
-		objectMemoryClass: Spur64BitMemoryManager.
+			#BytesPerWord. self wordSize.
+			#ObjectMemory. memory class name}
+		objectMemoryClass: memory class.
+
 	^ StackInterpreterSimulatorLSB basicNew
-		objectMemory: self newMemory;
+		objectMemory: memory;
 		basicInitialize
 ]
 
-{ #category : #helpers }
+{ #category : #running }
 VMSpurMemoryManagerTest >> newMemory [
 
-	^ Spur64BitMemoryManager simulatorClass new
+	^ self wordSize = 4
+		ifTrue: [ Spur32BitMemoryManager simulatorClass new ]
+		ifFalse: [ Spur64BitMemoryManager simulatorClass new ]
 ]
 
 { #category : #'helpers - methods' }
@@ -361,6 +367,18 @@ VMSpurMemoryManagerTest >> setUp [
 VMSpurMemoryManagerTest >> sizeOfObjectWithSlots: slots [
 
 	^ objectHeaderSize + ((slots min: 1 "at least one for the forwarder pointer") * memory wordSize "bytes")
+]
+
+{ #category : #accessing }
+VMSpurMemoryManagerTest >> wordSize [
+	
+	^ wordSize ifNil: [ 8 ]
+]
+
+{ #category : #accessing }
+VMSpurMemoryManagerTest >> wordSize: aWordSize [
+
+	wordSize := aWordSize
 ]
 
 { #category : #helpers }

@@ -1665,7 +1665,11 @@ StackInterpreter class >> initializePrimitiveTable [
 		(574 primitiveFail) "reserved for addl. external support prims"
 
 		"Unassigned Primitives"
-		(575 599 primitiveFail)
+		(575 597 primitiveFail)
+
+		"Pinned object creation primitives"
+		(598 primitiveNewPinned)
+		(599 primitiveNewWithArgPinned)
 		
 		"Memory accessor primitives"
 		(600 primitiveLoadBoolean8FromBytes)

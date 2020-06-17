@@ -779,6 +779,10 @@ SimpleStackBasedCogit class >> initializePrimitiveTableForSqueak [
 		"(557 genPrimitiveSmallFloatArctan				0)"
 		"(558 genPrimitiveSmallFloatLogN				0)"
 		"(559 genPrimitiveSmallFloatExp				0)"
+
+		"Pinned object creation primitives"
+		"(598 primitiveNewPinned)"
+		"(599 primitiveNewWithArgPinned)"
 						
 		(600 genPrimitiveLoadBoolean8FromBytes)
 		(601 genPrimitiveLoadUInt8FromBytes)

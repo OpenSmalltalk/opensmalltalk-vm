@@ -2373,7 +2373,15 @@ SpurMemoryManager >> allocateSlots: numSlots format: formatField classIndex: cla
 	"Allocate an object with numSlots space.  If there is room beneath scavengeThreshold
 	 allocate in newSpace, otherwise alocate in oldSpace.  If there is not room in newSpace
 	 and a scavenge is not already scheduled, schedule a scavenge."
-	self subclassResponsibility
+	<api>
+	^ self allocateSlots: numSlots format: formatField classIndex: classIndex isPinned: false
+]
+
+{ #category : #allocation }
+SpurMemoryManager >> allocateSlots: numSlots format: formatField classIndex: classIndex isPinned: isPinned [
+
+	<api>
+	^ self subclassResponsibility
 ]
 
 { #category : #allocation }
@@ -2396,11 +2404,31 @@ SpurMemoryManager >> allocateSlotsInOldSpace: numSlots bytes: totalBytes format:
 { #category : #allocation }
 SpurMemoryManager >> allocateSlotsInOldSpace: numSlots format: formatField classIndex: classIndex [
 	<inline: true>
-	^self
+
+	^ self
 		allocateSlotsInOldSpace: numSlots
-		bytes: (self objectBytesForSlots: numSlots)
 		format: formatField
 		classIndex: classIndex
+		isPinned: false
+]
+
+{ #category : #allocation }
+SpurMemoryManager >> allocateSlotsInOldSpace: numSlots format: formatField classIndex: classIndex isPinned: isPinned [
+	<inline: true>
+
+	^ isPinned
+		ifTrue: [ 
+			self
+				allocateSlotsForPinningInOldSpace: numSlots
+				bytes: (self objectBytesForSlots: numSlots)
+				format: formatField
+				classIndex: classIndex ]
+		ifFalse: [ 
+			self
+				allocateSlotsInOldSpace: numSlots
+				bytes: (self objectBytesForSlots: numSlots)
+				format: formatField
+				classIndex: classIndex ]
 ]
 
 { #category : #allocation }
@@ -6645,6 +6673,26 @@ SpurMemoryManager >> instanceSizeOf: classObj [
 
 { #category : #instantiation }
 SpurMemoryManager >> instantiateClass: classObj [
+
+	^ self instantiateClass: classObj isPinned: false
+]
+
+{ #category : #instantiation }
+SpurMemoryManager >> instantiateClass: classObj indexableSize: nElements [
+	<api>
+
+	^ self instantiateClass: classObj indexableSize: nElements isPinned: false
+]
+
+{ #category : #instantiation }
+SpurMemoryManager >> instantiateClass: classObj indexableSize: nElements isPinned: isPinned [
+	<api>
+
+	^ self subclassResponsibility
+]
+
+{ #category : #instantiation }
+SpurMemoryManager >> instantiateClass: classObj isPinned: isPinned [
 	| instSpec classFormat numSlots classIndex newObj |
 	classFormat := self formatOfClass: classObj.
 	instSpec := self instSpecOfClassFormat: classFormat.
@@ -6655,17 +6703,10 @@ SpurMemoryManager >> instantiateClass: classObj [
 		[coInterpreter primitiveFailFor: classIndex negated.
 		 ^nil].
 	numSlots := self fixedFieldsOfClassFormat: classFormat.
-	newObj := self allocateSlots: numSlots format: instSpec classIndex: classIndex.
+	newObj := self allocateSlots: numSlots format: instSpec classIndex: classIndex isPinned: isPinned.
 	newObj ifNotNil:
 		[self fillObj: newObj numSlots: numSlots with: nilObj].
 	^newObj
-]
-
-{ #category : #instantiation }
-SpurMemoryManager >> instantiateClass: classObj indexableSize: nElements [
-	<var: #nElements type: #usqInt>
-	"Allocate an instance of a variable class, excepting CompiledMethod."
-	^self subclassResponsibility
 ]
 
 { #category : #instantiation }

@@ -9,6 +9,15 @@ Class {
 	#category : #VMMakerTests
 }
 
+{ #category : #'building suites' }
+VMPrimitiveTest class >> testParameters [ 
+
+	^ ParametrizedTestMatrix new
+			forSelector: #wordSize addOptions: { 4 . 8 };
+			yourself
+
+]
+
 { #category : #'helpers - classes' }
 VMPrimitiveTest >> newClassInOldSpaceWithSlots: numberOfSlots format: format [
 	| newClass formatWithSlots |
@@ -27,7 +36,7 @@ VMPrimitiveTest >> newClassInOldSpaceWithSlots: numberOfSlots format: format [
 	^ newClass	
 ]
 
-{ #category : #tests }
+{ #category : #'helpers - frames' }
 VMPrimitiveTest >> newSmallContextReceiver: anOop method: aMethodOop arguments: aCollectionOfArgumentsOop temporaries: aCollectionOfTemporariesOop ip: anIp [
 
 	| newCtx numArgs numTemps |
@@ -42,7 +51,7 @@ VMPrimitiveTest >> newSmallContextReceiver: anOop method: aMethodOop arguments: 
 		
 	memory storePointerUnchecked: InstructionPointerIndex
 		ofObject: newCtx
-		withValue: (interpreter withSmallIntegerTags: anIp << 3).
+		withValue: (memory integerObjectOf: anIp).
 
 	memory storePointerUnchecked: StackPointerIndex
 		ofObject: newCtx
@@ -94,34 +103,17 @@ VMPrimitiveTest >> setUp [
 	self initializeOldSpaceForScavenger.
 
 	"Create the root context with a valid method"
-	"A new method with a literal (8 bytes) and 2 bytecodes, so the IP can be 9 "
+	"Let's create a method with enough size. It should have at least a literal (4 or 8 bytes depending the word size) and some bytecodes, so we can put the IP inside the method"
 	newMethod := self newMethodWithBytecodes: #[ 1 2 3 4 5 6 7 8 9 0 ].
-	"The context has 9 as initial IP, as method has at least one literal"
-	ctx := self newSmallContextReceiver: memory nilObject method: newMethod arguments: #() temporaries: #() ip: 9.
+	
+	"The context has 5 (in 32 bits) or 9 (in 64 bits) as initial IP, as method has at least one literal"
+	ctx := self newSmallContextReceiver: memory nilObject method: newMethod arguments: #() temporaries: #() ip: self wordSize + 1.
+	
 	page := interpreter makeBaseFrameFor: ctx.
 	interpreter setStackPointersFromPage: page.
 ]
 
-{ #category : #tests }
-VMPrimitiveTest >> testPrimitiveNewAllocatesInOldSpaceIfNewSpaceIsFull [
-	| class |
-	"Allocate enough space to generate a full new space"
-	self assert: (memory
-				allocateSlots: (memory scavengeThreshold - memory freeStart) // 8 - 1
-				format: memory arrayFormat
-				classIndex: memory arrayClassIndexPun) isNotNil.
-
-	(memory newSpaceLimit - memory freeStart) // 8.
-
-	class := self newClassInOldSpaceWithSlots: 256 format: memory nonIndexablePointerFormat.
-	interpreter push: class.
-	interpreter primitiveNew.
-	
-	self deny: interpreter failed.
-	self deny: (memory isYoung: interpreter stackTop)
-]
-
-{ #category : #tests }
+{ #category : #'tests - primitiveNew' }
 VMPrimitiveTest >> testPrimitiveNewCreatesTheObjectInYoungSpace [
 	| class |
 	class := self newClassInOldSpaceWithSlots: 0 format: memory nonIndexablePointerFormat.
@@ -133,7 +125,7 @@ VMPrimitiveTest >> testPrimitiveNewCreatesTheObjectInYoungSpace [
 	self assert: (memory isYoung: interpreter stackTop)
 ]
 
-{ #category : #tests }
+{ #category : #'tests - primitiveNew' }
 VMPrimitiveTest >> testPrimitiveNewCreatesTheObjectWithCorrectSize [
 	| class |
 	class := self newClassInOldSpaceWithSlots: 4 format: memory nonIndexablePointerFormat.
@@ -144,16 +136,31 @@ VMPrimitiveTest >> testPrimitiveNewCreatesTheObjectWithCorrectSize [
 	self assert: (memory numSlotsOf: interpreter stackTop) equals: 4
 ]
 
-{ #category : #tests }
+{ #category : #'tests - primitiveNew' }
+VMPrimitiveTest >> testPrimitiveNewInFullNewSpaceAllocatesInOldSpace [
+	| class |
+	"Allocate enough space to generate a full new space"
+	self assert: (memory
+				allocateSlots: (memory scavengeThreshold - memory freeStart) // self wordSize - 1
+				format: memory arrayFormat
+				classIndex: memory arrayClassIndexPun) isNotNil.
+
+	class := self newClassInOldSpaceWithSlots: 256 format: memory nonIndexablePointerFormat.
+	interpreter push: class.
+	interpreter primitiveNew.
+	
+	self deny: interpreter failed.
+	self deny: (memory isYoung: interpreter stackTop)
+]
+
+{ #category : #'tests - primitiveNew' }
 VMPrimitiveTest >> testPrimitiveNewInFullNewSpaceScheduleGC [
 	| class |
 	"Allocate enough space to generate a full new space"
 	self assert: (memory
-				allocateSlots: (memory scavengeThreshold - memory freeStart) // 8 - 1
+				allocateSlots: (memory scavengeThreshold - memory freeStart) // self wordSize - 1
 				format: memory arrayFormat
 				classIndex: memory arrayClassIndexPun) isNotNil.
-	
-	(memory newSpaceLimit - memory freeStart) // 8.
 	
 	class := self newClassInOldSpaceWithSlots: 256 format: memory nonIndexablePointerFormat.
 	
@@ -163,7 +170,113 @@ VMPrimitiveTest >> testPrimitiveNewInFullNewSpaceScheduleGC [
 	self assert: memory needGCFlag
 ]
 
-{ #category : #tests }
+{ #category : #'tests - primitiveNewWithArgs' }
+VMPrimitiveTest >> testPrimitiveNewIsNotPinned [
+	| class |
+	class := self newClassInOldSpaceWithSlots: 0 format: memory nonIndexablePointerFormat.
+
+	interpreter push: class.
+	interpreter primitiveNew.
+
+	self deny: (memory isPinned: interpreter stackTop)
+]
+
+{ #category : #'tests - primitiveNewPinned' }
+VMPrimitiveTest >> testPrimitiveNewPinnedCreatesTheObjectInOldSpace [
+	| class |
+	class := self newClassInOldSpaceWithSlots: 0 format: memory nonIndexablePointerFormat.
+
+	interpreter push: class.
+	interpreter primitiveNewPinned.
+
+	self deny: interpreter failed.
+	self deny: (memory isYoung: interpreter stackTop)
+]
+
+{ #category : #'tests - primitiveNewPinned' }
+VMPrimitiveTest >> testPrimitiveNewPinnedObjectInFullNewSpaceIsSchedulingGC [
+	| class |
+	class := self newClassInOldSpaceWithSlots: 3 format: memory nonIndexablePointerFormat.
+
+	"Allocate enough space to generate a full new space"
+	self assert: (memory
+				allocateSlots: (memory scavengeThreshold - memory freeStart) // self wordSize - 3
+				format: memory arrayFormat
+				classIndex: memory arrayClassIndexPun) isNotNil.
+
+	self deny: memory needGCFlag.
+	
+	interpreter push: class.
+	interpreter primitiveNewPinned.
+
+	self deny: interpreter failed.
+	self assert: memory needGCFlag 
+]
+
+{ #category : #'tests - primitiveNewPinned' }
+VMPrimitiveTest >> testPrimitiveNewPinnedObjectIsNotSchedulingGC [
+	| class |
+	class := self newClassInOldSpaceWithSlots: 0 format: memory nonIndexablePointerFormat.
+
+	interpreter push: class.
+	interpreter primitiveNewPinned.
+
+	self deny: interpreter failed.
+	self deny: memory needGCFlag 
+]
+
+{ #category : #'tests - primitiveNewPinned' }
+VMPrimitiveTest >> testPrimitiveNewPinnedObjectIsPinned [
+	| class |
+	class := self newClassInOldSpaceWithSlots: 0 format: memory nonIndexablePointerFormat.
+
+	interpreter push: class.
+	interpreter primitiveNewPinned.
+
+	self deny: interpreter failed.
+	self assert: (memory isPinned: interpreter stackTop)
+]
+
+{ #category : #'tests - primitiveNewPinned' }
+VMPrimitiveTest >> testPrimitiveNewPinnedWithArgsCreatesTheObjectInOldSpace [
+	| class |
+	class := self newClassInOldSpaceWithSlots: 0 format: memory arrayFormat.
+
+	interpreter push: class.
+	interpreter push: (memory integerObjectOf: 7).
+	interpreter primitiveNewWithArgPinned.
+
+	self deny: interpreter failed.
+	self deny: (memory isYoung: interpreter stackTop)
+]
+
+{ #category : #'tests - primitiveNewPinned' }
+VMPrimitiveTest >> testPrimitiveNewPinnedWithArgsObjectIsNotSchedulingGC [
+	| class |
+	class := self newClassInOldSpaceWithSlots: 0 format: memory arrayFormat.
+
+	interpreter push: class.
+	interpreter push: (memory integerObjectOf: 7).
+	interpreter primitiveNewWithArgPinned.
+
+	self deny: interpreter failed.
+	self deny: memory needGCFlag 
+]
+
+{ #category : #'tests - primitiveNewPinned' }
+VMPrimitiveTest >> testPrimitiveNewPinnedWithArgsObjectIsPinned [
+	| class |
+	class := self newClassInOldSpaceWithSlots: 0 format: memory arrayFormat.
+
+	interpreter push: class.
+	interpreter push: (memory integerObjectOf: 7).
+	interpreter primitiveNewWithArgPinned.
+
+	self deny: interpreter failed.
+	self assert: (memory isPinned: interpreter stackTop)
+]
+
+{ #category : #'tests - primitiveNewWithArgs' }
 VMPrimitiveTest >> testPrimitiveNewWithArgCreatesTheObjectInYoungSpace [
 	| newObj class |
 
@@ -180,7 +293,7 @@ VMPrimitiveTest >> testPrimitiveNewWithArgCreatesTheObjectInYoungSpace [
 	self assert: (memory isYoung: newObj)
 ]
 
-{ #category : #tests }
+{ #category : #'tests - primitiveNewWithArgs' }
 VMPrimitiveTest >> testPrimitiveNewWithArgCreatesTheObjectWithCorrectSize [
 	| newObj class |
 
@@ -194,4 +307,85 @@ VMPrimitiveTest >> testPrimitiveNewWithArgCreatesTheObjectWithCorrectSize [
 	newObj := interpreter stackTop.
 
 	self assert: (memory numSlotsOf: newObj) equals: 7
+]
+
+{ #category : #'tests - primitiveNewWithArgs' }
+VMPrimitiveTest >> testPrimitiveNewWithArgInFullNewSpaceAllocatesInOldSpace [
+	| newObj class |
+
+	"Allocate enough space to generate a full new space"
+	self assert: (memory
+				allocateSlots: (memory scavengeThreshold - memory freeStart) // self wordSize - 1
+				format: memory arrayFormat
+				classIndex: memory arrayClassIndexPun) isNotNil.
+
+	class := self newClassInOldSpaceWithSlots: 0 format: memory arrayFormat.
+
+	interpreter push: class.
+	interpreter push: (memory integerObjectOf: 256).
+
+	interpreter primitiveNewWithArg.
+
+	newObj := interpreter stackTop.
+
+	self assert: (memory isOldObject: newObj)
+]
+
+{ #category : #'tests - primitiveNewWithArgs' }
+VMPrimitiveTest >> testPrimitiveNewWithArgInFullNewSpaceScheduleGC [
+	| class |
+
+	"Allocate enough space to generate a full new space"
+	self assert: (memory
+				allocateSlots: (memory scavengeThreshold - memory freeStart) // self wordSize - 1
+				format: memory arrayFormat
+				classIndex: memory arrayClassIndexPun) isNotNil.
+
+	class := self newClassInOldSpaceWithSlots: 0 format: memory arrayFormat.
+
+	interpreter push: class.
+	interpreter push: (memory integerObjectOf: 256).
+
+	interpreter primitiveNewWithArg.
+
+	self assert: memory needGCFlag
+]
+
+{ #category : #'tests - primitiveNewWithArgs' }
+VMPrimitiveTest >> testPrimitiveNewWithArgWithInvalidClassFails [
+	| class |
+
+	class := self newClassInOldSpaceWithSlots: 0 format: memory nonIndexablePointerFormat.
+
+	interpreter push: class.
+	interpreter push: (memory integerObjectOf: 256).
+
+	interpreter primitiveNewWithArg.
+
+	self assert: interpreter primFailCode equals: PrimErrBadReceiver
+]
+
+{ #category : #'tests - primitiveNewWithArgs' }
+VMPrimitiveTest >> testPrimitiveNewWithArgWithNegativeArgumentFails [
+	| class |
+
+	class := self newClassInOldSpaceWithSlots: 0 format: memory arrayFormat.
+
+	interpreter push: class.
+	interpreter push: (memory integerObjectOf: -256).
+
+	interpreter primitiveNewWithArg.
+
+	self assert: interpreter primFailCode equals: PrimErrBadArgument
+]
+
+{ #category : #'tests - primitiveNew' }
+VMPrimitiveTest >> testPrimitiveNewWithInvalidClassFails [
+	| class |
+	class := self newClassInOldSpaceWithSlots: 0 format: memory arrayFormat.
+
+	interpreter push: class.
+	interpreter primitiveNew.
+
+	self assert: interpreter primFailCode equals: PrimErrBadReceiver
 ]
