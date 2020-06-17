@@ -78,7 +78,7 @@ Spur32BitMemoryManager >> allocateSlots: numSlots format: formatField classIndex
 	
 	hasToScheduleScavenge := freeStart + numBytes > scavengeThreshold.
 	
-	(hasToScheduleScavenge or: isPinned) ifTrue:[ 
+	(hasToScheduleScavenge or: [isPinned]) ifTrue:[ 
 		hasToScheduleScavenge ifTrue: [needGCFlag 	ifFalse: [self scheduleScavenge]].
 		
 		isPinned 
