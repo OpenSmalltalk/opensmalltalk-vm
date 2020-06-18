@@ -5,6 +5,17 @@ Class {
 }
 
 { #category : #'helper-interpretation' }
+VMByteCodesTest >> assert: aBlock pop: anOop intoTemporary: anIndex [
+	| oldStackSize |
+	oldStackSize := interpreter stackPointer.
+	
+	aBlock value.
+	
+	self assert: interpreter stackPointer equals: oldStackSize + memory wordSize.
+	self assert: (interpreter temporary: anIndex in: interpreter framePointer) equals: anOop
+]
+
+{ #category : #'helper-interpretation' }
 VMByteCodesTest >> assert: aBlock pushed: anOop [
 	| oldStackSize |
 	oldStackSize := interpreter stackPointer.
@@ -33,6 +44,11 @@ VMByteCodesTest >> firstPushTemporaryVariableBytecode [
 	^ 16
 ]
 
+{ #category : #'helpers-bytecode-table' }
+VMByteCodesTest >> firstStoreAndPopTemporaryVariableBytecode [
+	^ 104
+]
+
 { #category : #'helper-interpret' }
 VMByteCodesTest >> interpret: aBlock [
 	interpreter internalizeIPandSP.
@@ -54,7 +70,7 @@ VMByteCodesTest >> pushTempTest: index [
 
 ]
 
-{ #category : #'test-push-simple' }
+{ #category : #'helpers-bytecode-table' }
 VMByteCodesTest >> pushTemporaryVariableBytecodeAt: offset [
 	^ self firstPushTemporaryVariableBytecode + offset.
 	
@@ -82,6 +98,26 @@ VMByteCodesTest >> setUp [
 	
 
 
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> storeAndPopTemporaryIntoTempTest: index [
+	
+	self frameBuilder 
+		tempAt: index put: (memory nilObject) ;
+		stack: { memory integerObjectOf: 42 } ;
+		buildFrame.
+	interpreter currentBytecode: (self storeAndPopTemporaryVariableBytecodeAt: index).
+	
+	"first we push something, so there is something to duplicate"
+	self assert: [ self interpret: [ interpreter storeAndPopTemporaryVariableBytecode ] ]
+		pop: (memory integerObjectOf: 42)
+		intoTemporary: index
+]
+
+{ #category : #'helpers-bytecode-table' }
+VMByteCodesTest >> storeAndPopTemporaryVariableBytecodeAt: anInteger [ 
+	^ self firstStoreAndPopTemporaryVariableBytecode + anInteger
 ]
 
 { #category : #'test-push-simple' }
@@ -247,4 +283,44 @@ VMByteCodesTest >> testPushTemp8 [
 { #category : #'test-push-simple' }
 VMByteCodesTest >> testPushTemp9 [
 	self pushTempTest: 9
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testStoreAndPopTemporary0 [
+	self storeAndPopTemporaryIntoTempTest: 0
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testStoreAndPopTemporary1 [
+	self storeAndPopTemporaryIntoTempTest: 1
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testStoreAndPopTemporary2 [
+	self storeAndPopTemporaryIntoTempTest: 2
+]
+
+{ #category : #'as yet unclassified' }
+VMByteCodesTest >> testStoreAndPopTemporary3 [
+	self storeAndPopTemporaryIntoTempTest: 3
+]
+
+{ #category : #'as yet unclassified' }
+VMByteCodesTest >> testStoreAndPopTemporary4 [
+	self storeAndPopTemporaryIntoTempTest: 4
+]
+
+{ #category : #'as yet unclassified' }
+VMByteCodesTest >> testStoreAndPopTemporary5 [
+	self storeAndPopTemporaryIntoTempTest: 5
+]
+
+{ #category : #'as yet unclassified' }
+VMByteCodesTest >> testStoreAndPopTemporary6 [
+	self storeAndPopTemporaryIntoTempTest: 6
+]
+
+{ #category : #'as yet unclassified' }
+VMByteCodesTest >> testStoreAndPopTemporary7 [
+	self storeAndPopTemporaryIntoTempTest: 7
 ]
