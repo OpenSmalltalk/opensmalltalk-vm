@@ -2415,6 +2415,11 @@ StackInterpreterSimulator >> space [
 	traceOn ifTrue: [ transcript space ]
 ]
 
+{ #category : #'special objects' }
+StackInterpreterSimulator >> splObj: anInteger [ 
+	^objectMemory splObj: anInteger 
+]
+
 { #category : #'plugin support' }
 StackInterpreterSimulator >> sqGetInterpreterProxy [
 	"I am basically my own proxy..."

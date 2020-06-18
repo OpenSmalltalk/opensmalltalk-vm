@@ -86,7 +86,7 @@ VMPrimitiveTest >> newSmallContextReceiver: anOop method: aMethodOop arguments: 
 VMPrimitiveTest >> setUp [
 	
 	"taken from VMSimpleStackBasedCogitBytecodeTest >> #setup"
-	| newMethod ctx page |
+	| newMethod ctx page processorOopAssociation processorOop processorList |
 	super setUp.
 	
 	memory nilObject: (self newObjectWithSlots: 0).
@@ -111,6 +111,52 @@ VMPrimitiveTest >> setUp [
 	
 	page := interpreter makeBaseFrameFor: ctx.
 	interpreter setStackPointersFromPage: page.
+	
+	
+	"The ScheduleAssocation should be initialized to a valid Processor object"
+	processorOopAssociation := self newObjectWithSlots: 2.
+	processorOop := self newObjectWithSlots: 2.
+	processorList := self newObjectWithSlots: 2.
+	
+	memory splObj: SchedulerAssociation put: processorOopAssociation.
+	memory storePointer: ValueIndex ofObject: processorOopAssociation withValue: processorOop.
+	memory storePointer: ProcessListsIndex ofObject: processorOop withValue: processorList.
+]
+
+{ #category : #'tests - primitiveImmutability' }
+VMPrimitiveTest >> testPrimitiveGetImmutabilityOfImmediateReturnsTrue [
+
+	interpreter push: (memory integerObjectOf: 1).
+	interpreter primitiveGetImmutability.
+	
+	self assert: interpreter stackTop equals: memory trueObject
+]
+
+{ #category : #'tests - primitiveImmutability' }
+VMPrimitiveTest >> testPrimitiveGetImmutabilityOnANewObjectIsFalse [
+	| class object |
+	class := self newClassInOldSpaceWithSlots: 0 format: memory nonIndexablePointerFormat.
+	
+	object := memory instantiateClass: class.
+
+	interpreter push: object.
+	interpreter primitiveGetImmutability.
+
+	self assert: interpreter stackTop equals: memory falseObject
+]
+
+{ #category : #'tests - primitiveImmutability' }
+VMPrimitiveTest >> testPrimitiveGetImmutabilityReturnsTrueIfObjectIsImmutable [
+	| class object |
+	class := self newClassInOldSpaceWithSlots: 0 format: memory nonIndexablePointerFormat.
+	
+	object := memory instantiateClass: class.
+	memory setIsImmutableOf: object to: true. 
+
+	interpreter push: object.
+	interpreter primitiveGetImmutability.
+	
+	self assert: interpreter stackTop equals: memory trueObject
 ]
 
 { #category : #'tests - primitiveNew' }
@@ -388,4 +434,29 @@ VMPrimitiveTest >> testPrimitiveNewWithInvalidClassFails [
 	interpreter primitiveNew.
 
 	self assert: interpreter primFailCode equals: PrimErrBadReceiver
+]
+
+{ #category : #'tests - primitiveImmutability' }
+VMPrimitiveTest >> testPrimitiveSetImmutabilityOfImmediateShouldFail [
+
+	interpreter push: (memory integerObjectOf: 1).
+	interpreter push: memory trueObject.
+	interpreter primitiveSetImmutability.
+	
+	self assert: interpreter failed
+]
+
+{ #category : #'tests - primitiveImmutability' }
+VMPrimitiveTest >> testPrimitiveSetImmutabilityOfObjectAsTrueSetsImmutability [
+
+	| class object |
+	class := self newClassInOldSpaceWithSlots: 0 format: memory nonIndexablePointerFormat.
+	
+	object := memory instantiateClass: class.
+
+	interpreter push: object.
+	interpreter push: memory trueObject.
+	interpreter primitiveSetImmutability.
+	
+	self assert: (memory isImmutable: object)
 ]
