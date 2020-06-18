@@ -123,6 +123,54 @@ VMPrimitiveTest >> setUp [
 	memory storePointer: ProcessListsIndex ofObject: processorOop withValue: processorList.
 ]
 
+{ #category : #'tests - primitiveAtPut' }
+VMPrimitiveTest >> testPrimitiveAtPutFailsForImmutableObject [
+	| class object |
+	class := self newClassInOldSpaceWithSlots: 0 format: memory arrayFormat.
+	
+	object := memory instantiateClass: class indexableSize: 1.
+
+	memory setIsImmutableOf: object to: true. 
+
+	interpreter push: object.
+	interpreter push: (memory integerObjectOf: 1).
+	interpreter push: memory falseObject.
+	interpreter primitiveAtPut.
+	
+	self assert: interpreter failed.
+]
+
+{ #category : #'tests - primitiveAtPut' }
+VMPrimitiveTest >> testPrimitiveAtPutFailsForNonIndexableObject [
+	| class object |
+	class := self newClassInOldSpaceWithSlots: 0 format: memory nonIndexablePointerFormat.
+	
+	object := memory instantiateClass: class.
+
+	interpreter push: object.
+	interpreter push: (memory integerObjectOf: 1).
+	interpreter push: memory falseObject.
+	interpreter primitiveAtPut.
+	
+	self assert: interpreter failed.
+]
+
+{ #category : #'tests - primitiveAtPut' }
+VMPrimitiveTest >> testPrimitiveAtPutPutsTheValueForAnIndexableObject [
+	| class object |
+	class := self newClassInOldSpaceWithSlots: 0 format: memory arrayFormat.
+	
+	object := memory instantiateClass: class indexableSize: 1.
+
+	interpreter push: object.
+	interpreter push: (memory integerObjectOf: 1).
+	interpreter push: memory falseObject.
+	interpreter primitiveAtPut.
+	
+	self deny: interpreter failed.
+	self assert: (memory fetchPointer: 0 ofObject: object) equals: memory falseObject.
+]
+
 { #category : #'tests - primitiveImmutability' }
 VMPrimitiveTest >> testPrimitiveGetImmutabilityOfImmediateReturnsTrue [
 
@@ -157,6 +205,52 @@ VMPrimitiveTest >> testPrimitiveGetImmutabilityReturnsTrueIfObjectIsImmutable [
 	interpreter primitiveGetImmutability.
 	
 	self assert: interpreter stackTop equals: memory trueObject
+]
+
+{ #category : #'tests - primitiveAtPut' }
+VMPrimitiveTest >> testPrimitiveInstVarAtPutOverBoundShouldFailForIndexable [
+	| class object |
+	class := self newClassInOldSpaceWithSlots: 1 format: memory arrayFormat .
+	
+	object := memory instantiateClass: class indexableSize: 1.
+
+	interpreter push: object.
+	interpreter push: (memory integerObjectOf: 2).
+	interpreter push: memory falseObject.
+	interpreter primitiveInstVarAtPut.
+	
+	self assert: interpreter failed.
+]
+
+{ #category : #'tests - primitiveAtPut' }
+VMPrimitiveTest >> testPrimitiveInstVarAtPutOverBoundShouldFailNonIndexable [
+	| class object |
+	class := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
+	
+	object := memory instantiateClass: class.
+
+	interpreter push: object.
+	interpreter push: (memory integerObjectOf: 2).
+	interpreter push: memory falseObject.
+	interpreter primitiveInstVarAtPut.
+	
+	self assert: interpreter failed.
+]
+
+{ #category : #'tests - primitiveAtPut' }
+VMPrimitiveTest >> testPrimitiveInstVarAtPutPutsTheValueForNonIndexable [
+	| class object |
+	class := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
+	
+	object := memory instantiateClass: class.
+
+	interpreter push: object.
+	interpreter push: (memory integerObjectOf: 1).
+	interpreter push: memory falseObject.
+	interpreter primitiveInstVarAtPut.
+	
+	self deny: interpreter failed.
+	self assert: (memory fetchPointer: 0 ofObject: object) equals: memory falseObject.
 ]
 
 { #category : #'tests - primitiveNew' }
