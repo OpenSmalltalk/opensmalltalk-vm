@@ -11,7 +11,8 @@ Class {
 		'memory',
 		'page',
 		'interpreter',
-		'senderContext'
+		'senderContext',
+		'previousFrame'
 	],
 	#category : #VMMakerTests
 }
@@ -29,6 +30,7 @@ VMFrameBuilderForTest >> args: anObject [
 { #category : #building }
 VMFrameBuilderForTest >> buildFrame [
 	self createStackPage.
+	self storePreviousFrame. 
 	self pushMethod.
 
 	"Flags: this stack frame is single. I.e., it has no context object.
@@ -60,7 +62,9 @@ VMFrameBuilderForTest >> buildFrame [
 		ifTrue: [ memory
 				storePointerUnchecked: 0
 				ofObject: context
-				withValue: (interpreter withSmallIntegerTags: page baseFP)	"SenderIndex" ]
+				withValue: (interpreter withSmallIntegerTags: page baseFP)	"SenderIndex" ].
+	
+	^ interpreter framePointer
 ]
 
 { #category : #accessing }
@@ -76,6 +80,7 @@ VMFrameBuilderForTest >> context: anObject [
 { #category : #building }
 VMFrameBuilderForTest >> createStackPage [
 	| pointer |
+	previousFrame ifNotNil:[ ^ self ].
 	page := interpreter stackPages newStackPage.
 	pointer := page baseAddress.
 	interpreter stackPointer: pointer + memory wordSize.
@@ -104,6 +109,16 @@ VMFrameBuilderForTest >> method [
 { #category : #accessing }
 VMFrameBuilderForTest >> method: anObject [
 	method := anObject
+]
+
+{ #category : #accessing }
+VMFrameBuilderForTest >> previousFrame [
+	^ previousFrame
+]
+
+{ #category : #accessing }
+VMFrameBuilderForTest >> previousFrame: aFrame [
+	previousFrame := aFrame
 ]
 
 { #category : #building }
@@ -152,6 +167,15 @@ VMFrameBuilderForTest >> stack [
 { #category : #accessing }
 VMFrameBuilderForTest >> stack: anObject [
 	stack := anObject
+]
+
+{ #category : #building }
+VMFrameBuilderForTest >> storePreviousFrame [
+	previousFrame ifNil: [ ^ self ].
+	
+	interpreter push: 0. " push caller Instruction Pointer "
+	interpreter push: previousFrame.
+	interpreter framePointer: interpreter stackPointer
 ]
 
 { #category : #accessing }

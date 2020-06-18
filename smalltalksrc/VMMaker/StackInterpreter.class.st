@@ -7717,6 +7717,13 @@ StackInterpreter >> frameOfMarriedContext: aContext [
 	^self withoutSmallIntegerTags: senderOop
 ]
 
+{ #category : #'cog jit support' }
+StackInterpreter >> framePointer: theFP [
+	"Simulation only"
+	<doNotGenerate>
+	framePointer := theFP
+]
+
 { #category : #'internal interpreter access' }
 StackInterpreter >> framePointerOfNativeArgument: offset in: theFP [
 	<inline: false>

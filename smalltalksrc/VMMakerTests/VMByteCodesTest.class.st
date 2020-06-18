@@ -286,6 +286,20 @@ VMByteCodesTest >> testPushTemp9 [
 ]
 
 { #category : #'test-push-simple' }
+VMByteCodesTest >> testReturnTrue [
+	| f1 f2 |
+	
+	f1 := self frameBuilder method: memory trueObject; buildFrame.
+	f2 := self frameBuilder method: memory falseObject; previousFrame: f1 ; buildFrame.
+	
+	self halt.
+	VMTStackFrame new memory: memory; framePointer: f1; inspect.
+	self
+		assert: [ self interpret: [ interpreter returnTrue ] ]
+		pushed: memory trueObject
+]
+
+{ #category : #'test-push-simple' }
 VMByteCodesTest >> testStoreAndPopTemporary0 [
 	self storeAndPopTemporaryIntoTempTest: 0
 ]
@@ -300,27 +314,27 @@ VMByteCodesTest >> testStoreAndPopTemporary2 [
 	self storeAndPopTemporaryIntoTempTest: 2
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'test-push-simple' }
 VMByteCodesTest >> testStoreAndPopTemporary3 [
 	self storeAndPopTemporaryIntoTempTest: 3
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'test-push-simple' }
 VMByteCodesTest >> testStoreAndPopTemporary4 [
 	self storeAndPopTemporaryIntoTempTest: 4
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'test-push-simple' }
 VMByteCodesTest >> testStoreAndPopTemporary5 [
 	self storeAndPopTemporaryIntoTempTest: 5
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'test-push-simple' }
 VMByteCodesTest >> testStoreAndPopTemporary6 [
 	self storeAndPopTemporaryIntoTempTest: 6
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'test-push-simple' }
 VMByteCodesTest >> testStoreAndPopTemporary7 [
 	self storeAndPopTemporaryIntoTempTest: 7
 ]
