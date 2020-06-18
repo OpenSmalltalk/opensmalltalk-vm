@@ -28,26 +28,39 @@ VMFrameBuilderForTest >> args: anObject [
 
 { #category : #building }
 VMFrameBuilderForTest >> buildFrame [
-
 	self createStackPage.
 	self pushMethod.
-	
+
 	"Flags: this stack frame is single. I.e., it has no context object.
 	Otherwise GC fails with an assertion looking for it in the heap"
-	interpreter push: (interpreter 
-		encodeFrameFieldHasContext: (context ~= memory nilObject)
-		isBlock: false
-		numArgs: args size).
-	self pushContext.
-		
-	"Mark context as married by setting its sender to the frame pointer plus SmallInteger
-	 tags and the InstructionPointer to the saved fp (which ensures correct alignment
-	 w.r.t. the frame when we check for validity) plus SmallInteger tags."
-	(context ~= memory nilObject) ifTrue: [ 
-		memory
-			storePointerUnchecked: 0 "SenderIndex"
-			ofObject: context
-			withValue: (interpreter withSmallIntegerTags: page baseFP) ]
+	interpreter
+		push:
+			(interpreter
+				encodeFrameFieldHasContext: context ~= memory nilObject
+				isBlock: false
+				numArgs: args size).
+				
+				
+	interpreter push: context.
+	interpreter push: receiver.
+	
+	temps do: [ :oop |  interpreter push: oop ].
+	
+	"push to the stack all objects in the frame stack"
+	stack do: [ :oop | interpreter push: oop ].	"ip"
+	
+	interpreter push: method + memory baseHeaderSize - 2.
+	page headSP: interpreter stackPointer.
+	interpreter setStackPageAndLimit: page.
+	interpreter setStackPointersFromPage: page.
+	interpreter popStack.
+	
+	
+	context ~= memory nilObject
+		ifTrue: [ memory
+				storePointerUnchecked: 0
+				ofObject: context
+				withValue: (interpreter withSmallIntegerTags: page baseFP)	"SenderIndex" ]
 ]
 
 { #category : #accessing }
@@ -76,6 +89,7 @@ VMFrameBuilderForTest >> initializeForTest: aVMByteCodesTest [
 	context := memory nilObject.
 	receiver := memory nilObject.
 	args := OrderedCollection new.
+	temps := OrderedCollection new.
 	stack := OrderedCollection new.
 	
 
@@ -138,6 +152,15 @@ VMFrameBuilderForTest >> stack [
 { #category : #accessing }
 VMFrameBuilderForTest >> stack: anObject [
 	stack := anObject
+]
+
+{ #category : #accessing }
+VMFrameBuilderForTest >> tempAt: anIndex put: anOop [
+	temps size > anIndex ifTrue: [ ^ temps at: anIndex + 1 put: anOop ].
+	
+	temps size to: anIndex do: [ :i | temps add: memory nilObject ].
+	temps at: anIndex + 1 put: anOop
+	
 ]
 
 { #category : #accessing }

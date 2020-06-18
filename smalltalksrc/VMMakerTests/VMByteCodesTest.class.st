@@ -27,12 +27,37 @@ VMByteCodesTest >> assertPopped: aBlock [
 	
 ]
 
+{ #category : #'helpers-bytecode-table' }
+VMByteCodesTest >> firstPushTemporaryVariableBytecode [
+	"in v3 bytecode table"
+	^ 16
+]
+
 { #category : #'helper-interpret' }
 VMByteCodesTest >> interpret: aBlock [
 	interpreter internalizeIPandSP.
 	aBlock value.
 	interpreter externalizeIPandSP.
 
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> pushTempTest: index [
+	
+	self frameBuilder tempAt: index put: (memory integerObjectOf: 42) ; buildFrame.
+	interpreter currentBytecode: (self pushTemporaryVariableBytecodeAt: index).
+	
+	"first we push something, so there is something to duplicate"
+	self
+		assert: [ self interpret: [ interpreter pushTemporaryVariableBytecode ] ]
+		pushed: (memory integerObjectOf: 42).
+
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> pushTemporaryVariableBytecodeAt: offset [
+	^ self firstPushTemporaryVariableBytecode + offset.
+	
 ]
 
 { #category : #running }
@@ -162,4 +187,64 @@ VMByteCodesTest >> testPushConstantZeroBytecode [
 	self
 		assert: [ self interpret: [ interpreter pushConstantZeroBytecode ] ]
 		pushed: (memory integerObjectOf: 0)
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testPushTemp0 [
+	self pushTempTest: 0
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testPushTemp1 [
+	self pushTempTest: 1
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testPushTemp10 [
+	self pushTempTest: 10
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testPushTemp11 [
+	self pushTempTest: 11
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testPushTemp2 [
+	self pushTempTest: 2
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testPushTemp3 [
+	self pushTempTest: 3
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testPushTemp4 [
+	self pushTempTest: 4
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testPushTemp5 [
+	self pushTempTest: 5
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testPushTemp6 [
+	self pushTempTest: 6
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testPushTemp7 [
+	self pushTempTest: 7
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testPushTemp8 [
+	self pushTempTest: 8
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testPushTemp9 [
+	self pushTempTest: 9
 ]
