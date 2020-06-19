@@ -205,6 +205,8 @@ sqInt isPositiveMachineIntegerObject(sqInt oop);
 
 void *ioLoadFunctionFrom(char *fnName, char *modName);
 
+void waitOnExternalSemaphoreIndex(sqInt semaphoreIndex);
+
 
 /* Proxy declarations for v1.8 */
 #if NewspeakVM
@@ -565,6 +567,8 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 
 	VM->platformSemaphoreNew = platform_semaphore_new;
 	VM->scheduleInMainThread = mainThread_schedule;
+
+	VM->waitOnExternalSemaphoreIndex = waitOnExternalSemaphoreIndex;
 
 	return VM;
 }

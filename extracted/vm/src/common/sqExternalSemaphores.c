@@ -221,3 +221,14 @@ doSignalExternalSemaphores(sqInt externalSemaphoreTableSize)
 
 	return switched;
 }
+
+#define ExcessSignalsIndex 2
+
+void waitOnExternalSemaphoreIndex(sqInt semaphoreIndex){
+
+    sqInt aSemaphoreOop;
+    sqInt xArray;
+
+    aSemaphoreOop = getExternalSemaphoreWithIndex(semaphoreIndex);
+    doWaitSemaphore(aSemaphoreOop);
+}

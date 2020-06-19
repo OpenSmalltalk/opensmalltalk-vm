@@ -377,6 +377,8 @@ typedef struct VirtualMachine {
 
   sqInt (*scheduleInMainThread)(sqInt (*closure)());
 
+  sqInt (*waitOnExternalSemaphoreIndex)(sqInt semaphoreIndex);
+
 } VirtualMachine;
 
 #endif /* _SqueakVM_H */
