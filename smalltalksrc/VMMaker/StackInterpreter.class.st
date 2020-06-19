@@ -21969,6 +21969,7 @@ StackInterpreter >> transferTo: newProc [
 	"Record a process to be awoken on the next interpreter cycle."
 	| activeContext sched oldProc |
 	<inline: false>
+	<api>
 	statProcessSwitch := statProcessSwitch + 1.
 	self push: instructionPointer.
 	self externalWriteBackHeadFramePointers.
