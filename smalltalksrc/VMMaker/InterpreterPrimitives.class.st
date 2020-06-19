@@ -230,6 +230,12 @@ InterpreterPrimitives >> doWaitSemaphore: aSemaphoreOop [
 			 self transferTo: self wakeHighestPriority. ^ true]
 ]
 
+{ #category : #'process primitive support' }
+InterpreterPrimitives >> doWaitSemaphore: sema reEnterInterpreter: hasToReenter [
+	<api>
+	self doWaitSemaphore: sema
+]
+
 { #category : #'primitive support' }
 InterpreterPrimitives >> failed [
 	<api>

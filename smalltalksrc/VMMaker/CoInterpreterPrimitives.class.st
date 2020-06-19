@@ -6,6 +6,12 @@ Class {
 
 { #category : #'process primitives' }
 CoInterpreterPrimitives >> doWaitSemaphore: sema [
+	
+	self doWaitSemaphore: sema reEnterInterpreter: true
+]
+
+{ #category : #'process primitives' }
+CoInterpreterPrimitives >> doWaitSemaphore: sema reEnterInterpreter: hasToReenter [
 	| excessSignals activeProc inInterpreter |
 	<api>
 	excessSignals := self fetchInteger: ExcessSignalsIndex ofObject: sema.
@@ -24,7 +30,7 @@ CoInterpreterPrimitives >> doWaitSemaphore: sema [
 			activeProc := self activeProcess.
 			self addLastLink: activeProc toList: sema.
 			self transferTo: self wakeHighestPriority from: CSWait.
-			self forProcessPrimitiveReturnToExecutivePostContextSwitch: inInterpreter]
+			hasToReenter ifTrue: [self forProcessPrimitiveReturnToExecutivePostContextSwitch: inInterpreter]]
 ]
 
 { #category : #'object access primitives' }
