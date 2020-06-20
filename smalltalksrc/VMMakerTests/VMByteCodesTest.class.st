@@ -60,7 +60,8 @@ VMByteCodesTest >> interpret: aBlock [
 { #category : #'test-push-simple' }
 VMByteCodesTest >> pushTempTest: index [
 	
-	self frameBuilder tempAt: index put: (memory integerObjectOf: 42) ; buildFrame.
+	self stackBuilder addNewFrame tempAt: index put: (memory integerObjectOf: 42).
+	self stackBuilder buildStack.
 	interpreter currentBytecode: (self pushTemporaryVariableBytecodeAt: index).
 	
 	"first we push something, so there is something to duplicate"
@@ -103,10 +104,11 @@ VMByteCodesTest >> setUp [
 { #category : #'test-push-simple' }
 VMByteCodesTest >> storeAndPopTemporaryIntoTempTest: index [
 	
-	self frameBuilder 
+	self stackBuilder addNewFrame
 		tempAt: index put: (memory nilObject) ;
-		stack: { memory integerObjectOf: 42 } ;
-		buildFrame.
+		stack: { memory integerObjectOf: 42 } .
+	stackBuilder buildStack.
+	
 	interpreter currentBytecode: (self storeAndPopTemporaryVariableBytecodeAt: index).
 	
 	"first we push something, so there is something to duplicate"
@@ -123,7 +125,7 @@ VMByteCodesTest >> storeAndPopTemporaryVariableBytecodeAt: anInteger [
 { #category : #'test-push-simple' }
 VMByteCodesTest >> testDuplicateStackTop [
 
-	self frameBuilder buildFrame.
+	self stackBuilder addNewFrame ; buildStack.
 	
 	"first we push something, so there is something to duplicate"
 	self
@@ -140,7 +142,7 @@ VMByteCodesTest >> testDuplicateStackTop [
 { #category : #'test-push-simple' }
 VMByteCodesTest >> testPopStackTopBytecode [
 
-	self frameBuilder buildFrame.
+	self stackBuilder addNewFrame ; buildStack..
 	
 	"first we push something"
 	self
@@ -155,7 +157,7 @@ VMByteCodesTest >> testPopStackTopBytecode [
 
 { #category : #'test-push-simple' }
 VMByteCodesTest >> testPushConstantFalseBytecode [
-	self frameBuilder buildFrame.
+	self stackBuilder addNewFrame ; buildStack.
 	self
 		assert: [ self interpret: [ interpreter pushConstantFalseBytecode ] ]
 		pushed: memory falseObject
@@ -163,8 +165,7 @@ VMByteCodesTest >> testPushConstantFalseBytecode [
 
 { #category : #'test-push-simple' }
 VMByteCodesTest >> testPushConstantMinusOneBytecode [
-
-	self frameBuilder buildFrame.
+	self stackBuilder addNewFrame ; buildStack.
 	self
 		assert: [ self interpret: [ interpreter pushConstantMinusOneBytecode ] ]
 		pushed: (memory integerObjectOf: -1)
@@ -172,7 +173,7 @@ VMByteCodesTest >> testPushConstantMinusOneBytecode [
 
 { #category : #'test-push-simple' }
 VMByteCodesTest >> testPushConstantNilBytecode [
-	self frameBuilder buildFrame.
+	self stackBuilder addNewFrame ; buildStack.
 	self
 		assert: [ self interpret: [ interpreter pushConstantNilBytecode ] ]
 		pushed: memory nilObject
@@ -180,8 +181,7 @@ VMByteCodesTest >> testPushConstantNilBytecode [
 
 { #category : #'test-push-simple' }
 VMByteCodesTest >> testPushConstantOneBytecode [
-
-	self frameBuilder buildFrame.
+	self stackBuilder addNewFrame ; buildStack.
 	self
 		assert: [ self interpret: [ interpreter pushConstantOneBytecode ] ]
 		pushed: (memory integerObjectOf: 1)
@@ -191,9 +191,10 @@ VMByteCodesTest >> testPushConstantOneBytecode [
 VMByteCodesTest >> testPushConstantReceiverBytecode [
 	| intReceiver |
 	intReceiver := memory integerObjectOf: 42.
-	self frameBuilder
-		receiver: intReceiver;
-		buildFrame.
+	
+	self stackBuilder addNewFrame receiver: intReceiver.
+	self stackBuilder buildStack.
+	
 	self
 		assert: [ self interpret: [ interpreter pushReceiverBytecode ] ]
 		pushed: intReceiver
@@ -201,7 +202,7 @@ VMByteCodesTest >> testPushConstantReceiverBytecode [
 
 { #category : #'test-push-simple' }
 VMByteCodesTest >> testPushConstantTrueBytecode [
-	self frameBuilder buildFrame.
+	self stackBuilder addNewFrame ; buildStack.
 	self
 		assert: [ self interpret: [ interpreter pushConstantTrueBytecode ] ]
 		pushed: memory trueObject
@@ -209,8 +210,7 @@ VMByteCodesTest >> testPushConstantTrueBytecode [
 
 { #category : #'test-push-simple' }
 VMByteCodesTest >> testPushConstantTwoBytecode [
-
-	self frameBuilder buildFrame.
+	self stackBuilder addNewFrame ; buildStack.
 	self
 		assert: [ self interpret: [ interpreter pushConstantTwoBytecode ] ]
 		pushed: (memory integerObjectOf: 2)
@@ -218,8 +218,7 @@ VMByteCodesTest >> testPushConstantTwoBytecode [
 
 { #category : #'test-push-simple' }
 VMByteCodesTest >> testPushConstantZeroBytecode [
-
-	self frameBuilder buildFrame.
+	self stackBuilder addNewFrame ; buildStack.
 	self
 		assert: [ self interpret: [ interpreter pushConstantZeroBytecode ] ]
 		pushed: (memory integerObjectOf: 0)
@@ -286,14 +285,12 @@ VMByteCodesTest >> testPushTemp9 [
 ]
 
 { #category : #'test-push-simple' }
-VMByteCodesTest >> testReturnTrue [
-	| f1 f2 |
-	
-	f1 := self frameBuilder method: memory trueObject; buildFrame.
-	f2 := self frameBuilder method: memory falseObject; previousFrame: f1 ; buildFrame.
-	
-	self halt.
-	VMTStackFrame new memory: memory; framePointer: f1; inspect.
+VMByteCodesTest >> testReturnTrue [	
+	self stackBuilder addNewFrame method: memory trueObject.
+	self stackBuilder addNewFrame method: memory falseObject.
+	self stackBuilder buildStack.
+
+"	VMTStackFrame new memory: memory; framePointer: f1; inspect."
 	self
 		assert: [ self interpret: [ interpreter returnTrue ] ]
 		pushed: memory trueObject

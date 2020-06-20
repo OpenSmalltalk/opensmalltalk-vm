@@ -77,7 +77,7 @@ VMSpurScavengerTest >> testArgumentInStackShouldSurviveScanvenge [
 	newObjectOop := self newZeroSizedObject.
 	newObjectHash := (memory hashBitsOf: newObjectOop).
 	
-	self frameBuilder args: { newObjectOop } ; buildFrame.
+	self frameBuilder args: { newObjectOop } ; pushYourself.
 
 	"Nil should survive, but newObjectOop should survive too.
 	Nil is referenced by the roots because many of their slots are nilled.
@@ -96,7 +96,7 @@ VMSpurScavengerTest >> testContextInStackShouldSurviveScanvenge [
 	newObjectOop := self newZeroSizedObject.
 	newObjectHash := (memory hashBitsOf: newObjectOop).
 	
-	self frameBuilder context: newObjectOop; buildFrame.
+	self frameBuilder context: newObjectOop; pushYourself.
 
 	"Nil should survive, but newObjectOop should survive too.
 	Nil is referenced by the roots because many of their slots are nilled.
@@ -211,7 +211,7 @@ VMSpurScavengerTest >> testMethodInStackShouldSurviveScanvenge [
 	newObjectHash := (memory hashBitsOf: newObjectOop).
 
 
-	self frameBuilder method: newObjectOop; buildFrame.
+	self frameBuilder method: newObjectOop; pushYourself.
 	
 	"Nil should survive, but newObjectOop should survive too.
 	Nil is referenced by the roots because many of their slots are nilled.
@@ -256,7 +256,7 @@ VMSpurScavengerTest >> testObjectInStackShouldSurviveScanvenge [
 	newObjectOop := self newZeroSizedObject.
 	newObjectHash := (memory hashBitsOf: newObjectOop).
 	
-	self frameBuilder stack: { newObjectOop } ; buildFrame. 
+	self frameBuilder stack: { newObjectOop } ; pushYourself. 
 
 	"Nil should survive, but newObjectOop should survive too.
 	Nil is referenced by the roots because many of their slots are nilled.
@@ -346,7 +346,7 @@ VMSpurScavengerTest >> testReceiverInStackShouldSurviveScanvenge [
 	newObjectOop := self newZeroSizedObject.
 	newObjectHash := (memory hashBitsOf: newObjectOop).
 	
-	self frameBuilder receiver: newObjectOop; buildFrame.
+	self frameBuilder receiver: newObjectOop; pushYourself.
 
 	"Nil should survive, but newObjectOop should survive too.
 	Nil is referenced by the roots because many of their slots are nilled.
@@ -462,7 +462,7 @@ VMSpurScavengerTest >> testScavengeObjectInRememberedSetShouldBeInvertedToBeBefo
 	objectInTheStack := self newZeroSizedObject.
 	objectInRememberedSet := self newZeroSizedObject.
 
-	self frameBuilder method: objectInTheStack ; buildFrame.
+	self frameBuilder method: objectInTheStack ; pushYourself.
 		
 	memory storePointer: 0 ofObject: oldObjectAddress withValue: objectInRememberedSet.
 	
@@ -486,7 +486,7 @@ VMSpurScavengerTest >> testScavengeObjectInRemembererdSetShouldBeBeforeObjectInS
 	objectInRememberedSet := self newZeroSizedObject.
 	objectInTheStack := self newZeroSizedObject.
 	
-	self frameBuilder method: objectInTheStack ; buildFrame.
+	self frameBuilder method: objectInTheStack ; pushYourself.
 		
 	memory storePointer: 0 ofObject: oldObjectAddress withValue: objectInRememberedSet.
 	
@@ -502,7 +502,7 @@ VMSpurScavengerTest >> testScavengeObjectInStackShouldBeBeforeObjectInSpecialVar
 	objectInTheStack := self newZeroSizedObject.
 	objectInSpecialVariable := self newZeroSizedObject.
 	
-	self frameBuilder method: objectInTheStack ; buildFrame.
+	self frameBuilder method: objectInTheStack ; pushYourself.
 
 	memory coInterpreter method: objectInSpecialVariable.
 	
@@ -518,7 +518,7 @@ VMSpurScavengerTest >> testScavengeObjectInStackShouldBeInvertedToBeBeforeObject
 	objectInSpecialVariable := self newZeroSizedObject.
 	objectInTheStack := self newZeroSizedObject.
 	
-	self frameBuilder method: objectInTheStack ; buildFrame.
+	self frameBuilder method: objectInTheStack ; pushYourself.
 		
 	memory coInterpreter method: objectInSpecialVariable.
 	

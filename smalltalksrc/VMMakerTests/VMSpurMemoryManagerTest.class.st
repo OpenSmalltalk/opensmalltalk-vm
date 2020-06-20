@@ -11,18 +11,11 @@ Class {
 		'zeroSizedObjectClassIndex',
 		'emptyObjectSize',
 		'initialAddress',
-		'stackSpaceSize'
+		'stackSpaceSize',
+		'stackBuilder'
 	],
 	#category : #VMMakerTests
 }
-
-{ #category : #'helper-frame' }
-VMSpurMemoryManagerTest >> frameBuilder [
-	^ VMFrameBuilderForTest new
-		initializeForTest: self;
-		yourself
-
-]
 
 { #category : #accessing }
 VMSpurMemoryManagerTest >> initialCodeSize [
@@ -221,6 +214,17 @@ VMSpurMemoryManagerTest >> setUp [
 VMSpurMemoryManagerTest >> sizeOfObjectWithSlots: slots [
 
 	^ objectHeaderSize + ((slots min: 1 "at least one for the forwarder pointer") * memory wordSize "bytes")
+]
+
+{ #category : #accessing }
+VMSpurMemoryManagerTest >> stackBuilder [
+	^ stackBuilder := stackBuilder ifNil: [ 
+		VMStackBuilder new
+			interpreter: interpreter;
+			memory: memory;
+			yourself 
+		]
+
 ]
 
 { #category : #helpers }
