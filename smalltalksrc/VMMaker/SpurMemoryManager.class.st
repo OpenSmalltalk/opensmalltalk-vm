@@ -3546,6 +3546,12 @@ SpurMemoryManager >> classExternalAddress [
 	^self splObj: ClassExternalAddress
 ]
 
+{ #category : #accessing }
+SpurMemoryManager >> classExternalAddress: aClass [
+	<doNotGenerate>
+	^self splObj: ClassExternalAddress put: aClass
+]
+
 { #category : #instantiation }
 SpurMemoryManager >> classExternalAddressIndex [
 	<api>
@@ -5139,6 +5145,14 @@ SpurMemoryManager >> fixedFieldsOfClassFormat: classFormat [
 SpurMemoryManager >> fixedFieldsOfClassFormatMask [
 	<api>
 	^1 << self fixedFieldsFieldWidth - 1
+]
+
+{ #category : #'ffi - helpers' }
+SpurMemoryManager >> float32AtPointer: aCArrayAccessor [ 
+	
+	| floatPtr |
+	floatPtr := self cCoerce: (aCArrayAccessor) to: #'float *'.
+	^ floatPtr at: 0
 ]
 
 { #category : #'interpreter access' }

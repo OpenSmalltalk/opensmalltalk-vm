@@ -91,8 +91,7 @@ Class {
 		'lastUncoggableInterpretedBlockMethod',
 		'flagInterpretedMethods',
 		'maxLiteralCountForCompile',
-		'minBackwardJumpCountForCompile',
-		'libFFI'
+		'minBackwardJumpCountForCompile'
 	],
 	#classVars : [
 		'CSCallbackEnter',
@@ -6310,68 +6309,6 @@ CoInterpreter >> primitivePropertyFlagsForV3: primIndex [
 		[baseFlags := baseFlags bitOr: PrimCallNeedsNewMethod + PrimCallNeedsPrimitiveFunction + PrimCallMayCallBack].
 
 	^baseFlags
-]
-
-{ #category : #ffi }
-CoInterpreter >> primitiveSameThreadCallout [
-	
-	| externalFunction cif PARAM_EXTERNALFUNCTION PARAM_ARGUMENTS argumentsArrayOop argumentSize parameters returnHolder |
-	PARAM_EXTERNALFUNCTION := 1.
-	PARAM_ARGUMENTS := 0.
-	
-	"1. Obtain externalFunction and extract the CIF"
-	
-	externalFunction := self getHandler: (self stackValue: PARAM_EXTERNALFUNCTION).
-	self failed ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument].
-
-	cif := self getHandler: (self fetchPointer: 1 ofObject: (self stackValue: PARAM_EXTERNALFUNCTION)).
-	self failed ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument].
-	
-" 2. Prepare Arguments:
-	- Verify Arguments is an Array
-	- Allocate space for all the arguments in the stack and a holder for the return, and the parameters' pointer C array
-	- Marshall arguments and store in the parameter array."
-
-	argumentsArrayOop := self stackValue: PARAM_ARGUMENTS.
-
-	(objectMemory isArray: argumentsArrayOop) ifFalse: [^ self primitiveFailFor: PrimErrBadArgument ]. 
-
-	argumentSize := cif numberArguments.
-	
-	(objectMemory slotSizeOf: argumentsArrayOop) = argumentSize 
-		ifFalse: [^ self primitiveFailFor: PrimErrBadArgument ]. 
-	
-	parameters := self alloca: (self sizeof: 'void*') * argumentSize.
-
-	0 to: argumentSize - 1 do: [ :i | | argType argHolder |
-		argType := cif argTypeAt: i.
-		argHolder := self alloca: argType size.
-		parameters at: i put: argHolder.
-	
-		[ argType type ] 
-			caseOf: { 
-			[libFFI FFI_TYPE_POINTER] -> [ self marshallPointerFrom: argumentsArrayOop at: i into: argHolder ].
-			[libFFI FFI_TYPE_FLOAT] -> [ self marshallFloatFrom: argumentsArrayOop at: i into: argHolder ].
-			[libFFI FFI_TYPE_DOUBLE] -> [ self marshallDoubleFrom: argumentsArrayOop at: i into: argHolder ] }
-			otherwise: [ ^ self primitiveFailFor: PrimErrBadArgument ]].
-
-	returnHolder := self alloca: cif returnType size.
-
-" 3. Call and then return
-	- Call
-	- Marshall Argument and push it to the stack
-	- Return"
-	
-	libFFI ffiCall: cif _: externalFunction _: returnHolder _: parameters.
-
-	self pop: (self methodArgumentCount + 1).
-
-	[ cif returnType type ] 
-		caseOf: { 
-		[libFFI FFI_TYPE_FLOAT] -> [ self pushFloat: (objectMemory float32AtPointer: returnHolder) ].
-		[libFFI FFI_TYPE_DOUBLE] -> [ self pushFloat: (objectMemory float64AtPointer: returnHolder) ] }
-		otherwise: [ ^ self primitiveFailFor: PrimErrBadArgument ].
-
 ]
 
 { #category : #'debug printing' }
