@@ -8,33 +8,6 @@ Class {
 }
 
 { #category : #'cog jit support' }
-CoInterpreterWithQueueFFI >> primitivePropertyFlagsForSpur: primIndex [
-	<inline: true>
-"This is a hack to avoid the primitive call to be converted in a CogMethod.
- The calling code of a CogMethod calling a primitive
- modifies the interpreter stack to store the return pointer.
- As in our impl the callout starts an interpreter that runs everything that is available
- the stack is modified without control, so if the primitive is cogged it produces a crash
- because it returns to any invalid place.
-" 
-	(primIndex = self primNumberExternalCall) ifTrue: [
-		(disabledFFIFunction notNil and: [ disabledFFIFunction = primitiveFunctionPointer ]) ifTrue: [ ^ PrimCallDoNotJIT ]
-	].
-
-	^ super primitivePropertyFlagsForSpur: primIndex	
-
-
-]
-
-{ #category : #'cog jit support' }
-CoInterpreterWithQueueFFI >> ptDisableCogIt: aFunction [
-	<api>
-	<var: #aFunction type: #'void*'>
-	
-	disabledFFIFunction := aFunction
-]
-
-{ #category : #'cog jit support' }
 CoInterpreterWithQueueFFI >> ptEnterInterpreterFromCallback: aPointer [
 	<api>
 	<var: #aPointer type: #'void *'>

@@ -1,6 +1,6 @@
 Class {
 	#name : #VMPrimitiveTest,
-	#superclass : #VMSpurMemoryManagerTest,
+	#superclass : #VMAbstractPrimitiveTest,
 	#pools : [
 		'VMBasicConstants',
 		'VMBytecodeConstants',
