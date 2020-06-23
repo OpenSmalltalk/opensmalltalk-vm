@@ -77,7 +77,7 @@ VMAbstractPrimitiveTest >> newSmallContextReceiver: anOop method: aMethodOop arg
 VMAbstractPrimitiveTest >> setUp [
 	
 	"taken from VMSimpleStackBasedCogitBytecodeTest >> #setup"
-	| newMethod ctx page processorOopAssociation processorOop processorList |
+	| newMethod ctx page processorOopAssociation processorOop processorListsArray priorities anotherProcess suspendedContext |
 	super setUp.
 	
 	memory nilObject: (self newObjectWithSlots: 0).
@@ -95,12 +95,13 @@ VMAbstractPrimitiveTest >> setUp [
 
 	"Create the root context with a valid method"
 	"Let's create a method with enough size. It should have at least a literal (4 or 8 bytes depending the word size) and some bytecodes, so we can put the IP inside the method"
-	newMethod := self newMethodWithBytecodes: #[ 1 2 3 4 5 6 7 8 9 0 ].
+	newMethod := self newMethodWithBytecodes: #[ 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 ].
 	
 	"The context has 5 (in 32 bits) or 9 (in 64 bits) as initial IP, as method has at least one literal"
 	ctx := self newSmallContextReceiver: memory nilObject method: newMethod arguments: #() temporaries: #() ip: self wordSize + 1.
 	
 	page := interpreter makeBaseFrameFor: ctx.
+	interpreter setStackPageAndLimit: page.
 	interpreter setStackPointersFromPage: page.
 	interpreter libFFI: LibFFI new.
 	interpreter libFFI interpreter: interpreter.
@@ -108,11 +109,34 @@ VMAbstractPrimitiveTest >> setUp [
 	"The ScheduleAssocation should be initialized to a valid Processor object"
 	processorOopAssociation := self newObjectWithSlots: 2.
 	processorOop := self newObjectWithSlots: 2.
-	processorList := self newObjectWithSlots: 2.
+	priorities := 2.
+	processorListsArray := self newObjectWithSlots: priorities.
+	1 to: priorities do: [ :index | 
+		"Put an empty linked list in each"
+		memory storePointer: index - 1 ofObject: processorListsArray withValue: (self newObjectWithSlots: 2) ].
 	
 	memory splObj: SchedulerAssociation put: processorOopAssociation.
 	memory storePointer: ValueIndex ofObject: processorOopAssociation withValue: processorOop.
-	memory storePointer: ProcessListsIndex ofObject: processorOop withValue: processorList.
+	memory storePointer: ProcessListsIndex ofObject: processorOop withValue: processorListsArray.
+
+	"Create a new process with the 4 mandatory instance variables and set it as active process"
+	memory storePointer: ActiveProcessIndex ofObject: processorOop withValue:  (self newObjectWithSlots: 4).
+	
+	"The current instruction pointer is an absolute address pointing to the current bytecode inside the method"
+	interpreter instructionPointer: newMethod + memory baseHeaderSize + memory wordSize + 1.
+	interpreter method: newMethod.
+	
+	"Create another process with priority 1 and put it to sleep"
+	suspendedContext := self
+		newSmallContextReceiver: memory nilObject
+		method: newMethod
+		arguments: #()
+		temporaries: #()
+		ip: self wordSize + 1.
+	anotherProcess := self newObjectWithSlots: 4.
+	memory storeInteger: PriorityIndex ofObject: anotherProcess withValue: 1.
+	memory storePointer: SuspendedContextIndex ofObject: anotherProcess withValue: suspendedContext.
+	interpreter putToSleep: anotherProcess yieldingIf: false.
 	
 	memory classExternalAddress: (self newClassInOldSpaceWithSlots: 0 format: (memory byteFormatForNumBytes: 0) )
 

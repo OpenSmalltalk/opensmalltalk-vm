@@ -29,6 +29,12 @@ VMFFIPrimitivesTest >> createReturnFloatExternalFunctionFor: aBlock [
 ]
 
 { #category : #helpers }
+VMFFIPrimitivesTest >> interpreterClass [
+	
+	^ VMTestMockInterpreter
+]
+
+{ #category : #helpers }
 VMFFIPrimitivesTest >> newExternalAddress: anInteger [
 
 	| anExternalAddress |
@@ -39,6 +45,48 @@ VMFFIPrimitivesTest >> newExternalAddress: anInteger [
 		
 	memory storePointer: 0 ofObject: anExternalAddress withValue: anInteger.
 	^ anExternalAddress
+]
+
+{ #category : #helpers }
+VMFFIPrimitivesTest >> readyProcesses [
+	
+	| collection |
+	collection := OrderedCollection new.
+	interpreter processesInProcessListDo: [ :e | collection add: e ].
+	^ collection
+]
+
+{ #category : #tests }
+VMFFIPrimitivesTest >> testPrimitiveSameThreadCallbackInCalloutSuspendsActiveProcess [
+
+	| parametersArray tfExternalFunction oldActiveProcess callbackContext |
+
+	callbackContext	:= VMCallbackContext new.
+
+	tfExternalFunction := self createReturnFloatExternalFunctionFor: [ 
+		interpreter ptEnterInterpreterFromCallback: callbackContext ].
+	
+	oldActiveProcess := interpreter activeProcess.
+
+	parametersArray := self newObjectWithSlots: 0.
+
+	interpreter push: memory nilObject.
+	interpreter push: tfExternalFunction.
+	interpreter push: parametersArray. 
+
+	interpreter interpreteBlock: [ | oldActiveProcessContext |
+		"The test will enter the callout primitive, call this callback, assert and then finish.
+		We do not return from the callback in this test"
+		
+		"Assert that at callback time:
+		 - the process doing the callout is suspended (has a valid instruction pointer)
+		 - not stored in the ready list
+		 - not stored as active process"
+		oldActiveProcessContext := memory fetchPointer: SuspendedContextIndex ofObject: oldActiveProcess.
+		self assert: (interpreter isLiveContext: oldActiveProcessContext).
+		self deny: (self readyProcesses includes: oldActiveProcess).
+		^ self deny: interpreter activeProcess equals: oldActiveProcess ].
+	interpreter primitiveSameThreadCallout.
 ]
 
 { #category : #tests }

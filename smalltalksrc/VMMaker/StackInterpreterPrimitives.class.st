@@ -2038,6 +2038,59 @@ StackInterpreterPrimitives >> pruneStack: stack stackp: stackp [
 	objectMemory popRemappableOop
 ]
 
+{ #category : #ffi }
+StackInterpreterPrimitives >> ptEnterInterpreterFromCallback: aPointer [
+
+	" Enter the interpreter from a callback in the VM thread.
+	The VM is suspended in a callout or primitive, which are not safe suspension points. 
+	The callback has been put in a queue for further processing from the image.
+	We first put the VM in a runnable state by putting it in a safe suspension point first
+	   => we suspend the active process and store it for further resuming
+	Then we enter the interpreter."
+	<api>
+	<var: #aPointer type: #'void *'>
+	<var: #vmCallbackContext type: #'VMCallbackContext *'>
+
+	| vmCallbackContext suspendedProcess |
+	
+	suspendedProcess := self supendActiveProcess.
+
+	vmCallbackContext := self 
+		cCode: [self cCoerce: aPointer to: #'VMCallbackContext *'] 
+		inSmalltalk: [aPointer].
+
+	"I am the entry point when arriving for a callback"
+	
+	vmCallbackContext savedPrimFunctionPointer: primitiveFunctionPointer.	
+	self saveCStackStateForCallbackContext: vmCallbackContext.		
+	
+	self enterSmalltalkExecutive.
+	
+	"NEVER REACHED"
+	^ 1
+]
+
+{ #category : #ffi }
+StackInterpreterPrimitives >> ptExitInterpreterToCallback: aPointer [
+	<api>
+	<var: #aPointer type: #'void *'>
+	<var: #vmCallbackContext type: #'VMCallbackContext *'>
+
+	| vmCallbackContext |
+
+	vmCallbackContext := self cCoerce: aPointer to: #'VMCallbackContext *'.
+	
+	self restoreCStackStateForCallbackContext: vmCallbackContext.	
+		
+	primitiveFunctionPointer := vmCallbackContext savedPrimFunctionPointer.
+	
+	self siglong: vmCallbackContext trampoline jmp: 1.
+
+	"NEVER REACHED"	
+	^ 1
+
+]
+
 { #category : #'ffi - helpers' }
 StackInterpreterPrimitives >> readAddress: anOop [ 
 

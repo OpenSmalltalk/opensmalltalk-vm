@@ -18871,6 +18871,38 @@ StackInterpreter >> printUnbalancedStack: primIdx [
 		
 ]
 
+{ #category : #'process primitive support' }
+StackInterpreter >> processesInProcessListDo: aBlock [
+	"Return the highest priority process that is ready to run.
+	 To save time looking at many empty lists before finding a
+	 runnable process the VM maintains a variable holding the
+	 highest priority runnable process.  If this variable is 0 then the
+	 VM does not know the highest priority and must search all lists.
+	 Note: It is a fatal VM error if there is no runnable process."
+	| schedLists p processList proc ctxt |
+	self externalWriteBackHeadFramePointers.
+	schedLists := objectMemory fetchPointer: ProcessListsIndex ofObject: self schedulerPointer.
+	p := highestRunnableProcessPriority = 0
+			ifTrue: [objectMemory numSlotsOf: schedLists]
+			ifFalse: [highestRunnableProcessPriority].
+	[(p := p - 1) >= 0] whileTrue:
+		[processList := objectMemory fetchPointer: p ofObject: schedLists.
+	 	 [self isEmptyList: processList] whileFalse:
+			["Only answer processes with a runnable suspendedContext.
+			  Discard those that aren't; the VM would crash otherwise."
+			 proc := self removeFirstLinkOfList: processList.
+			 ctxt := objectMemory fetchPointer: SuspendedContextIndex ofObject: proc.
+			 (self isLiveContext: ctxt) ifTrue:
+				[ aBlock value: proc ].
+			  self cppIf: SPURVM ifTrue: 
+				["This is uncommon, so we can deal with forwarders here instead of assuming there isn't."
+				 (self isOopForwarded: ctxt) ifTrue:
+					[ctxt := self fixFollowedField: SuspendedContextIndex ofObject: proc withInitialValue: ctxt].
+				  (self isLiveContext: ctxt) ifTrue:
+					[ aBlock value: proc ] ].
+			 self warning: 'evicted zombie process from run queue']].
+]
+
 { #category : #'internal interpreter access' }
 StackInterpreter >> push: object [
 	"In the StackInterpreter stacks grow down."
@@ -20089,9 +20121,14 @@ StackInterpreter >> saneMethodClassAssociationIn: methodObj numLiterals: numLite
 { #category : #'callback support' }
 StackInterpreter >> saveCStackStateForCallbackContext: vmCallbackContext [
 	<var: #vmCallbackContext type: #'VMCallbackContext *'>
-	self memcpy: vmCallbackContext savedReenterInterpreter asVoidPointer
-		_: reenterInterpreter
-		_: (self sizeof: #'jmp_buf')
+		
+	self cCode:
+			[self memcpy: vmCallbackContext savedReenterInterpreter asVoidPointer
+				_: reenterInterpreter
+				_: (self sizeof: #'jmp_buf')]
+		inSmalltalk:
+			[ vmCallbackContext savedReenterInterpreter: reenterInterpreter].
+	
 ]
 
 { #category : #'process primitive support' }
@@ -21810,6 +21847,16 @@ StackInterpreter >> subscript: array with: index storing: oopToStore format: fmt
 		[objectMemory storeLong32: index - 1 ofObject: array withValue: unsignedValueToStore]
 ]
 
+{ #category : #'process primitive support' }
+StackInterpreter >> supendActiveProcess [
+	<api>
+	
+	| activeProc |
+	activeProc := self activeProcess.
+	self transferTo: self wakeHighestPriority.
+	^ activeProc
+]
+
 { #category : #'message sending' }
 StackInterpreter >> superclassOf: classPointer [
 	"Using a read barrier here simplifies the become implementation and costs very
@@ -22658,7 +22705,7 @@ StackInterpreter >> wakeHighestPriority [
 				^proc].
 			  self cppIf: SPURVM ifTrue: 
 				["This is uncommon, so we can deal with forwarders here instead of assuming there isn't."
-				 (self isOopForwarded: ctxt) ifTrue:
+				 (objectMemory isOopForwarded: ctxt) ifTrue:
 					[ctxt := self fixFollowedField: SuspendedContextIndex ofObject: proc withInitialValue: ctxt].
 				  (self isLiveContext: ctxt) ifTrue:
 					[highestRunnableProcessPriority := p + 1.
