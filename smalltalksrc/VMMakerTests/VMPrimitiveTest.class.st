@@ -141,6 +141,27 @@ VMPrimitiveTest >> setUp [
 ]
 
 { #category : #'tests - become' }
+VMPrimitiveTest >> testPrimitiveArrayBecomeChangesTheClassOfTheObject [
+	| class1 class2 object1 object2 array1 array2 |
+	class1 := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
+	class2 := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
+	
+	object1 := memory instantiateClass: class1.
+	object2 := memory instantiateClass: class2.
+	
+	array1 := self newArrayWith: { object1 }.
+	array2 := self newArrayWith: { object2 }.
+	
+	interpreter push: array1.
+	interpreter push: array2.
+	
+	interpreter primitiveArrayBecome.
+	
+	self assert: (memory fetchClassOf: object1) equals: class2.
+	self assert: (memory fetchClassOf: object2) equals: class1
+]
+
+{ #category : #'tests - become' }
 VMPrimitiveTest >> testPrimitiveArrayBecomeChangesTheContentsOfTheObject [
 	| class object1 object2 array1 array2 |
 	class := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
