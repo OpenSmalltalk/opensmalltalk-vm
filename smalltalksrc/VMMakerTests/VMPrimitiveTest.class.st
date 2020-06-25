@@ -183,6 +183,27 @@ VMPrimitiveTest >> testPrimitiveArrayBecomeExchangesClass [
 ]
 
 { #category : #'tests - become' }
+VMPrimitiveTest >> testPrimitiveArrayBecomeExchangesClassForObjectsOfDifferentSize [
+	| class1 class2 object1 object2 array1 array2 |
+	class1 := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
+	class2 := self newClassInOldSpaceWithSlots: 2 format: memory nonIndexablePointerFormat.
+	
+	object1 := memory instantiateClass: class1.
+	object2 := memory instantiateClass: class2.
+	
+	array1 := self newArrayWith: { object1 }.
+	array2 := self newArrayWith: { object2 }.
+	
+	interpreter push: array1.
+	interpreter push: array2.
+	
+	interpreter primitiveArrayBecome.
+	
+	self assert: (memory fetchClassOf: (memory followForwarded: object1)) equals: class2.
+	self assert: (memory fetchClassOf: (memory followForwarded: object2)) equals: class1
+]
+
+{ #category : #'tests - become' }
 VMPrimitiveTest >> testPrimitiveArrayBecomeExchangesContents [
 	| class object1 object2 array1 array2 |
 	class := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
@@ -251,6 +272,30 @@ VMPrimitiveTest >> testPrimitiveArrayBecomeExchangesIdentityHash [
 	
 	self assert: (memory rawHashBitsOf: object1) equals: hash2.
 	self assert: (memory rawHashBitsOf: object2) equals: hash1
+]
+
+{ #category : #'tests - become' }
+VMPrimitiveTest >> testPrimitiveArrayBecomeExchangesIdentityHashForObjectsOfDifferentSize [
+	| class1 class2 object1 object2 hash1 hash2 array1 array2 |
+	class1 := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
+	class2 := self newClassInOldSpaceWithSlots: 2 format: memory nonIndexablePointerFormat.
+	
+	object1 := memory instantiateClass: class1.
+	hash1 := memory rawHashBitsOf: object1.
+	
+	object2 := memory instantiateClass: class2.
+	hash2 := memory rawHashBitsOf: object2.
+	
+	array1 := self newArrayWith: { object1 }.
+	array2 := self newArrayWith: { object2 }.
+	
+	interpreter push: array1.
+	interpreter push: array2.
+	
+	interpreter primitiveArrayBecome.
+	
+	self assert: (memory rawHashBitsOf: (memory followForwarded: object1)) equals: hash2.
+	self assert: (memory rawHashBitsOf: (memory followForwarded: object2)) equals: hash1
 ]
 
 { #category : #'tests - become' }
