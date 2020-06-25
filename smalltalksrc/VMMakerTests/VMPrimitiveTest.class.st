@@ -141,6 +141,27 @@ VMPrimitiveTest >> setUp [
 ]
 
 { #category : #'tests - become' }
+VMPrimitiveTest >> testPrimitiveArrayBecomeCreatesForwardersForObjectsOfDifferentSize [
+	| class1 class2 object1 object2 array1 array2 |
+	class1 := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
+	class2 := self newClassInOldSpaceWithSlots: 2 format: memory nonIndexablePointerFormat.
+	
+	object1 := memory instantiateClass: class1.
+	object2 := memory instantiateClass: class2.
+	
+	array1 := self newArrayWith: { object1 }.
+	array2 := self newArrayWith: { object2 }.
+	
+	interpreter push: array1.
+	interpreter push: array2.
+	
+	interpreter primitiveArrayBecome.
+	
+	self assert: (memory isForwarded: object1) equals: true.
+	self assert: (memory isForwarded: object2) equals: true
+]
+
+{ #category : #'tests - become' }
 VMPrimitiveTest >> testPrimitiveArrayBecomeExchangesClass [
 	| class1 class2 object1 object2 array1 array2 |
 	class1 := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
@@ -184,6 +205,32 @@ VMPrimitiveTest >> testPrimitiveArrayBecomeExchangesContents [
 ]
 
 { #category : #'tests - become' }
+VMPrimitiveTest >> testPrimitiveArrayBecomeExchangesContentsForObjectsOfDifferentSize [
+	| class1 class2 object1 object2 array1 array2 |
+	class1 := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
+	class2 := self newClassInOldSpaceWithSlots: 2 format: memory nonIndexablePointerFormat.
+	
+	object1 := memory instantiateClass: class1.
+	memory storeInteger: 0 ofObject: object1 withValue: 42.
+	
+	object2 := memory instantiateClass: class2.
+	memory storeInteger: 0 ofObject: object2 withValue: 75.
+	memory storeInteger: 1 ofObject: object2 withValue: 76.
+	
+	array1 := self newArrayWith: { object1 }.
+	array2 := self newArrayWith: { object2 }.
+	
+	interpreter push: array1.
+	interpreter push: array2.
+	
+	interpreter primitiveArrayBecome.
+	
+	self assert: (memory fetchInteger: 0 ofObject: (memory followForwarded: object1)) equals: 75.
+	self assert: (memory fetchInteger: 1 ofObject: (memory followForwarded: object1)) equals: 76.
+	self assert: (memory fetchInteger: 0 ofObject: (memory followForwarded: object2)) equals: 42
+]
+
+{ #category : #'tests - become' }
 VMPrimitiveTest >> testPrimitiveArrayBecomeExchangesIdentityHash [
 	| class object1 object2 hash1 hash2 array1 array2 |
 	class := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
@@ -223,6 +270,27 @@ VMPrimitiveTest >> testPrimitiveArrayBecomeFailsForImmediates [
 	self assert: interpreter failed.
 	self assert: interpreter primFailCode equals: PrimErrInappropriate.
 	
+]
+
+{ #category : #'tests - become' }
+VMPrimitiveTest >> testPrimitiveArrayBecomeFailsForImmutableObject [
+	| class object1 object2 array1 array2 |
+	class := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
+	
+	object1 := memory instantiateClass: class.
+	object2 := memory instantiateClass: class.
+	memory setIsImmutableOf: object2 to: true. 
+	
+	array1 := self newArrayWith: { object2 }.
+	array2 := self newArrayWith: { object1 }.
+	
+	interpreter push: array1.
+	interpreter push: array2.
+	
+	interpreter primitiveArrayBecome.
+	
+	self assert: interpreter failed.
+	self assert: interpreter primFailCode equals: PrimErrNoModification
 ]
 
 { #category : #'tests - become' }
