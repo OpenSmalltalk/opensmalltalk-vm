@@ -138,6 +138,7 @@ VMPrimitiveTest >> setUp [
 	memory splObj: SchedulerAssociation put: processorOopAssociation.
 	memory storePointer: ValueIndex ofObject: processorOopAssociation withValue: processorOop.
 	memory storePointer: ProcessListsIndex ofObject: processorOop withValue: processorListArray.
+	memory lastHash: 1
 ]
 
 { #category : #'tests - become' }
@@ -359,13 +360,37 @@ VMPrimitiveTest >> testPrimitiveArrayBecomeFailsForPinnedObject [
 ]
 
 { #category : #'tests - become' }
+VMPrimitiveTest >> testPrimitiveArrayBecomeOneWayCopyHashIfCopyHasIsFalseDoesNotCopyHash [
+	| class object1 object2 hash2BeforeBecome array1 array2 object2FromForwarder |
+	class := self
+		newClassInOldSpaceWithSlots: 1
+		format: memory nonIndexablePointerFormat.
+	object1 := memory instantiateClass: class.
+	object2 := memory instantiateClass: class.
+	hash2BeforeBecome := memory hashBitsOf: object2.
+	array1 := self newArrayWith: {object1}.
+	array2 := self newArrayWith: {object2}.
+	interpreter push: array1.
+	interpreter push: array2.
+	interpreter push: memory falseObject.
+	interpreter primitiveArrayBecomeOneWayCopyHash.
+	object2FromForwarder := memory followForwarded: object1.
+	
+	self
+		assert: (memory hashBitsOf: object2FromForwarder)
+		equals: hash2BeforeBecome.
+	self assert: (memory hashBitsOf: object2) equals: hash2BeforeBecome
+]
+
+{ #category : #'tests - become' }
 VMPrimitiveTest >> testPrimitiveArrayBecomeOneWayCopyHashIfCopyHasIsTrueCopiesHash [
-	| class object1 object2 hash2 array1 array2 |
+	| class object1 object2 hash1 hash2 array1 array2 |
 	class := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
 	
 	object1 := memory instantiateClass: class.
 	object2 := memory instantiateClass: class.
-	hash2 := memory rawHashBitsOf: object2.
+	hash1 := memory hashBitsOf: object1.
+	hash2 := memory hashBitsOf: object2.
 	
 	array1 := self newArrayWith: { object1 }.
 	array2 := self newArrayWith: { object2 }.
@@ -376,8 +401,28 @@ VMPrimitiveTest >> testPrimitiveArrayBecomeOneWayCopyHashIfCopyHasIsTrueCopiesHa
 	
 	interpreter primitiveArrayBecomeOneWayCopyHash.
 	
-	self assert: (memory rawHashBitsOf: (memory followForwarded: object1))  equals: hash2.
-	self assert: (memory rawHashBitsOf: object2) equals: hash2
+	self assert: (memory hashBitsOf: object2) equals: hash1.
+	self deny: (memory hashBitsOf: object2) equals: hash2
+]
+
+{ #category : #'tests - become' }
+VMPrimitiveTest >> testPrimitiveArrayBecomeOneWayCreatesForwardThatPointsToOriginalObject [
+	| class object1 object2 array1 array2 |
+	class := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
+	
+	object1 := memory instantiateClass: class.
+	object2 := memory instantiateClass: class.
+	
+	array1 := self newArrayWith: { object1 }.
+	array2 := self newArrayWith: { object2 }.
+	
+	interpreter push: array1.
+	interpreter push: array2.
+	interpreter push: memory trueObject.
+	
+	interpreter primitiveArrayBecomeOneWayCopyHash.
+	
+	self assert: (memory followForwarded: object1)  equals: object2
 ]
 
 { #category : #'tests - primitiveAtPut' }
