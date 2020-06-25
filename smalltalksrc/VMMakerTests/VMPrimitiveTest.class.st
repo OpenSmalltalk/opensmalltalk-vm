@@ -18,6 +18,17 @@ VMPrimitiveTest class >> testParameters [
 
 ]
 
+{ #category : #'as yet unclassified' }
+VMPrimitiveTest >> newArrayWith: aCollection [ 
+	| array |
+	array := self newObjectWithSlots: aCollection size format: memory arrayFormat classIndex: memory arrayClassIndexPun.
+	aCollection withIndexDo: [ :item :index | 
+		memory storePointer: index - 1 ofObject: array withValue: item	
+	].
+	^ array
+	
+]
+
 { #category : #'helpers - classes' }
 VMPrimitiveTest >> newClassInOldSpaceWithSlots: numberOfSlots format: format [
 	| newClass formatWithSlots |
@@ -86,7 +97,7 @@ VMPrimitiveTest >> newSmallContextReceiver: anOop method: aMethodOop arguments: 
 VMPrimitiveTest >> setUp [
 	
 	"taken from VMSimpleStackBasedCogitBytecodeTest >> #setup"
-	| newMethod ctx page processorOopAssociation processorOop processorList |
+	| newMethod ctx page processorOopAssociation processorOop processorListArray processorListPriority1 processorListPriority2 |
 	super setUp.
 	
 	memory nilObject: (self newObjectWithSlots: 0).
@@ -116,11 +127,39 @@ VMPrimitiveTest >> setUp [
 	"The ScheduleAssocation should be initialized to a valid Processor object"
 	processorOopAssociation := self newObjectWithSlots: 2.
 	processorOop := self newObjectWithSlots: 2.
-	processorList := self newObjectWithSlots: 2.
+	processorListArray := self newObjectWithSlots: 2.
+	
+	processorListPriority1 := self newObjectWithSlots: 2.
+	processorListPriority2 := self newObjectWithSlots: 2.
+	
+	memory storePointer: 0 ofObject: processorListArray withValue: processorListPriority1. 
+	memory storePointer: 1 ofObject: processorListArray withValue: processorListPriority2.
 	
 	memory splObj: SchedulerAssociation put: processorOopAssociation.
 	memory storePointer: ValueIndex ofObject: processorOopAssociation withValue: processorOop.
-	memory storePointer: ProcessListsIndex ofObject: processorOop withValue: processorList.
+	memory storePointer: ProcessListsIndex ofObject: processorOop withValue: processorListArray.
+]
+
+{ #category : #'tests - become' }
+VMPrimitiveTest >> testPrimitiveArrayBecomeChangesTheContentsOfTheObject [
+	| class object1 object2 array1 array2 |
+	class := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
+	object1 := memory instantiateClass: class.
+	memory storeInteger: 0 ofObject: object1 withValue: 42.
+	
+	object2 := memory instantiateClass: class.
+	memory storeInteger: 0 ofObject: object2 withValue: 75.
+	
+	array1 := self newArrayWith: { object1 }.
+	array2 := self newArrayWith: { object2 }.
+	
+	interpreter push: array1.
+	interpreter push: array2.
+	
+	interpreter primitiveArrayBecome.
+	
+	self assert: (memory fetchInteger: 0 ofObject: object1) equals: 75.
+	self assert: (memory fetchInteger: 0 ofObject: object2) equals: 42.
 ]
 
 { #category : #'tests - primitiveAtPut' }
