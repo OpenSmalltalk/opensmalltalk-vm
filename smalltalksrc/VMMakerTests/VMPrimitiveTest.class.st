@@ -358,6 +358,28 @@ VMPrimitiveTest >> testPrimitiveArrayBecomeFailsForPinnedObject [
 	self assert: interpreter primFailCode equals: PrimErrObjectIsPinned
 ]
 
+{ #category : #'tests - become' }
+VMPrimitiveTest >> testPrimitiveArrayBecomeOneWayCopyHashIfCopyHasIsTrueCopiesHash [
+	| class object1 object2 hash2 array1 array2 |
+	class := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
+	
+	object1 := memory instantiateClass: class.
+	object2 := memory instantiateClass: class.
+	hash2 := memory rawHashBitsOf: object2.
+	
+	array1 := self newArrayWith: { object1 }.
+	array2 := self newArrayWith: { object2 }.
+	
+	interpreter push: array1.
+	interpreter push: array2.
+	interpreter push: memory trueObject.
+	
+	interpreter primitiveArrayBecomeOneWayCopyHash.
+	
+	self assert: (memory rawHashBitsOf: (memory followForwarded: object1))  equals: hash2.
+	self assert: (memory rawHashBitsOf: object2) equals: hash2
+]
+
 { #category : #'tests - primitiveAtPut' }
 VMPrimitiveTest >> testPrimitiveAtPutFailsForImmutableObject [
 	| class object |
