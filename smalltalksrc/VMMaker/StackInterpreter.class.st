@@ -8778,6 +8778,12 @@ StackInterpreter >> install: rcvr inAtCache: cache at: atIx string: stringy [
 ]
 
 { #category : #accessing }
+StackInterpreter >> instructionPointer [
+	<doNotGenerate>
+	^ instructionPointer
+]
+
+{ #category : #accessing }
 StackInterpreter >> instructionPointer: anInteger [
 	<doNotGenerate>
 	instructionPointer := anInteger

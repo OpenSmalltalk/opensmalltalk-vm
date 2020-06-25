@@ -12,7 +12,8 @@ Class {
 		'interpreter',
 		'senderContext',
 		'previousFrame',
-		'page'
+		'page',
+		'instructionPointer'
 	],
 	#category : #'VMMakerTests-Frame'
 }
@@ -41,6 +42,11 @@ VMFrame >> args [
 { #category : #accessing }
 VMFrame >> args: anObject [
 	args := anObject
+]
+
+{ #category : #configuring }
+VMFrame >> beSuspendedAt: anInstructionPointer [
+	instructionPointer := anInstructionPointer 
 ]
 
 { #category : #accessing }
@@ -86,7 +92,7 @@ VMFrame >> gtInspectorItemsIn: composite [
 ]
 
 { #category : #initialization }
-VMFrame >> initializeWithInterepreter: anInterpreter andMemory: aMemory [
+VMFrame >> initializeWithInterpreter: anInterpreter andMemory: aMemory [
 	memory := aMemory.
 	interpreter := anInterpreter. "allow to not care if it's for a cog or stack interpreter"
 	method := memory nilObject.
@@ -100,6 +106,11 @@ VMFrame >> initializeWithInterepreter: anInterpreter andMemory: aMemory [
 	senderContext := memory nilObject.
 ]
 
+{ #category : #testing }
+VMFrame >> isSuspended [
+	^ instructionPointer = nil
+]
+
 { #category : #accessing }
 VMFrame >> method [
 	^ method
@@ -108,6 +119,11 @@ VMFrame >> method [
 { #category : #accessing }
 VMFrame >> method: anObject [
 	method := anObject
+]
+
+{ #category : #building }
+VMFrame >> page [
+	^ page
 ]
 
 { #category : #building }
@@ -135,12 +151,11 @@ VMFrame >> pushCurrentFramesStack [
 VMFrame >> pushFlags [
 	"Flags: this stack frame is single. I.e., it has no context object.
 	Otherwise GC fails with an assertion looking for it in the heap"
-	interpreter
-		push:
-			(interpreter
-				encodeFrameFieldHasContext: context ~= memory nilObject
-				isBlock: false
-				numArgs: args size).
+	interpreter push:
+		(interpreter
+			encodeFrameFieldHasContext: context ~= memory nilObject
+			isBlock: false
+			numArgs: args size).
 ]
 
 { #category : #building }
@@ -152,34 +167,20 @@ VMFrame >> pushFrame [
 ]
 
 { #category : #building }
-VMFrame >> pushMethod [
-	"page has to be created first"
-	
-	interpreter push: receiver. "looks weird from what we see in Eliot's blog"
-	args do: [ :anArg | interpreter push: anArg ].
-	interpreter push: senderContext.
-	"base frame's saved fp is null"
-	memory coInterpreter push: 0.
-	interpreter push: method.
-]
-
-{ #category : #building }
 VMFrame >> pushYourself [
-	self pushMethod.
+	interpreter push: method.
 	self pushFlags.
 	self pushFrame.
 	self pushCurrentFramesStack.
+		
 	
-	interpreter push: method + memory baseHeaderSize - 2.
-
-	interpreter popStack.
-	
-	
-	context ~= memory nilObject
+	"context ~= memory nilObject
 		ifTrue: [ memory
 				storePointerUnchecked: 0
 				ofObject: context
-				withValue: (interpreter withSmallIntegerTags: page baseFP)	"SenderIndex" ].
+				withValue: (interpreter withSmallIntegerTags: page baseFP)	""SenderIndex"" ]."
+				
+	instructionPointer ifNotNil: [ interpreter push: instructionPointer ].
 	
 	^ interpreter framePointer
 ]

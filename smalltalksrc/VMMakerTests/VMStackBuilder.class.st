@@ -18,8 +18,9 @@ VMStackBuilder >> addFrame: aFrame [
 { #category : #Frames }
 VMStackBuilder >> addNewFrame [
 	| frame |
-	frame := VMFrame new initializeWithInterepreter: interpreter andMemory: memory.
-	frame page: page.
+	"'add' a new frame in the sense of an OrderedCollection, which will be iterated with #do:
+	The last frame added, will be the stackTop"
+	frame := VMFrame new initializeWithInterpreter: interpreter andMemory: memory.
 	frames add: frame.
 	^ frame "the frame is then configured by the caller"
 ]
@@ -32,12 +33,20 @@ VMStackBuilder >> buildStack [
 
 	lastFrame := frames last.
 	
-	interpreter push: lastFrame method + memory baseHeaderSize - 2.
+"	interpreter push: lastFrame method + memory baseHeaderSize - 2.
 	interpreter setStackPageAndLimit: page.
 	interpreter setStackPointersFromPage: page.
-"	interpreter popStack."
+""	interpreter popStack."
 	"should return last frame in use" 
 	
+	"page
+		headFP: lastFrame temps size + 5 + interpreter stackPointer;
+		headSP: interpreter stackPointer.
+	"
+	"interpreter stackTop.
+	interpreter stackPages.
+	"
+	interpreter internalizeIPandSP.
 	^ lastFrame
 ]
 
@@ -49,11 +58,8 @@ VMStackBuilder >> createStackPage [
 
 	frames ifEmpty:[ self error ].
 	sp := page baseAddress - (memory wordSize * (frames first args size + 2)).
-	interpreter stackPointer: sp."is it useful?"
-	page
-		baseFP: sp;
-		headFP: sp;
-		headSP: sp.
+	interpreter stackPointer: sp.
+	interpreter framePointer: sp
 
 	
 ]
@@ -84,8 +90,23 @@ VMStackBuilder >> memory: aMemory [
 	memory := aMemory
 ]
 
+{ #category : #accessing }
+VMStackBuilder >> page [
+	^ page
+]
+
 { #category : #Frames }
 VMStackBuilder >> pushFrames [
-	frames do: [ :aFrame | aFrame pushYourself ] separatedBy: [ "put jump return" ].
-	
+	page
+		baseFP: interpreter stackPointer;
+		headSP: interpreter stackPointer;
+		headFP: interpreter stackPointer.
+	frames
+		do: [ :aFrame | 
+			interpreter push: interpreter instructionPointer.
+			interpreter push: interpreter framePointer.
+			interpreter framePointer: interpreter stackPointer.
+			page headFP: interpreter stackPointer.
+			aFrame pushYourself ]
+		separatedBy: [ "page headSP: interpreter stackPointer" ]
 ]

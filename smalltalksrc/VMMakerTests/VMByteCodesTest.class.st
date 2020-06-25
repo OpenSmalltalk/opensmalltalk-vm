@@ -28,6 +28,18 @@ VMByteCodesTest >> assert: aBlock pushed: anOop [
 ]
 
 { #category : #'helper-interpretation' }
+VMByteCodesTest >> assert: aBlock returned: anOop [
+	| callerSP |
+	callerSP := interpreter frameCallerSP: interpreter framePointer.
+	
+	aBlock value.
+	
+	self assert: interpreter stackPointer equals: callerSP - memory wordSize.
+	self assert: interpreter stackTop equals: anOop.
+	
+]
+
+{ #category : #'helper-interpretation' }
 VMByteCodesTest >> assertPopped: aBlock [
 	| oldStackSize |
 	oldStackSize := interpreter stackPointer.
@@ -189,12 +201,12 @@ VMByteCodesTest >> testPushConstantOneBytecode [
 
 { #category : #'test-push-simple' }
 VMByteCodesTest >> testPushConstantReceiverBytecode [
-	| intReceiver |
+	| intReceiver f1 |
 	intReceiver := memory integerObjectOf: 42.
 	
-	self stackBuilder addNewFrame receiver: intReceiver.
+	f1 := self stackBuilder addNewFrame receiver: intReceiver.
 	self stackBuilder buildStack.
-	
+
 	self
 		assert: [ self interpret: [ interpreter pushReceiverBytecode ] ]
 		pushed: intReceiver
@@ -285,15 +297,27 @@ VMByteCodesTest >> testPushTemp9 [
 ]
 
 { #category : #'test-push-simple' }
-VMByteCodesTest >> testReturnTrue [	
-	self stackBuilder addNewFrame method: memory trueObject.
-	self stackBuilder addNewFrame method: memory falseObject.
+VMByteCodesTest >> testReturnFalse [
+	self stackBuilder addNewFrame method: (self newMethodWithLiteral: memory trueObject at: 1).
+	self stackBuilder addNewFrame method: (self newMethodWithLiteral: memory falseObject at: 1).
 	self stackBuilder buildStack.
 
-"	VMTStackFrame new memory: memory; framePointer: f1; inspect."
+	self
+		assert: [ self interpret: [ interpreter returnFalse ] ]
+		returned: memory falseObject
+
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testReturnTrue [	
+	self stackBuilder addNewFrame method: (self newMethodWithLiteral: memory trueObject at: 1).
+	self stackBuilder addNewFrame method: (self newMethodWithLiteral: memory falseObject at: 1).
+	self stackBuilder buildStack.
+
 	self
 		assert: [ self interpret: [ interpreter returnTrue ] ]
-		pushed: memory trueObject
+		returned: memory trueObject
+
 ]
 
 { #category : #'test-push-simple' }
