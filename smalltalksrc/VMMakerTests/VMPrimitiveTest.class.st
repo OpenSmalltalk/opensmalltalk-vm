@@ -141,6 +141,49 @@ VMPrimitiveTest >> setUp [
 ]
 
 { #category : #'tests - become' }
+VMPrimitiveTest >> testPrimitiveArrayBecomeExchangesClass [
+	| class1 class2 object1 object2 array1 array2 |
+	class1 := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
+	class2 := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
+	
+	object1 := memory instantiateClass: class1.
+	object2 := memory instantiateClass: class2.
+	
+	array1 := self newArrayWith: { object1 }.
+	array2 := self newArrayWith: { object2 }.
+	
+	interpreter push: array1.
+	interpreter push: array2.
+	
+	interpreter primitiveArrayBecome.
+	
+	self assert: (memory fetchClassOf: object1) equals: class2.
+	self assert: (memory fetchClassOf: object2) equals: class1
+]
+
+{ #category : #'tests - become' }
+VMPrimitiveTest >> testPrimitiveArrayBecomeExchangesContents [
+	| class object1 object2 array1 array2 |
+	class := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
+	object1 := memory instantiateClass: class.
+	memory storeInteger: 0 ofObject: object1 withValue: 42.
+	
+	object2 := memory instantiateClass: class.
+	memory storeInteger: 0 ofObject: object2 withValue: 75.
+	
+	array1 := self newArrayWith: { object1 }.
+	array2 := self newArrayWith: { object2 }.
+	
+	interpreter push: array1.
+	interpreter push: array2.
+	
+	interpreter primitiveArrayBecome.
+	
+	self assert: (memory fetchInteger: 0 ofObject: object1) equals: 75.
+	self assert: (memory fetchInteger: 0 ofObject: object2) equals: 42.
+]
+
+{ #category : #'tests - become' }
 VMPrimitiveTest >> testPrimitiveArrayBecomeExchangesIdentityHash [
 	| class object1 object2 hash1 hash2 array1 array2 |
 	class := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
@@ -164,36 +207,32 @@ VMPrimitiveTest >> testPrimitiveArrayBecomeExchangesIdentityHash [
 ]
 
 { #category : #'tests - become' }
-VMPrimitiveTest >> testPrimitiveArrayBecomeExchangesTheClassOfTheObject [
-	| class1 class2 object1 object2 array1 array2 |
-	class1 := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
-	class2 := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
+VMPrimitiveTest >> testPrimitiveArrayBecomeFailsForImmediates [
+	| class immediate array1 array2 |
+	class := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
+	immediate := memory integerObjectOf: 42.
 	
-	object1 := memory instantiateClass: class1.
-	object2 := memory instantiateClass: class2.
-	
-	array1 := self newArrayWith: { object1 }.
-	array2 := self newArrayWith: { object2 }.
+	array1 := self newArrayWith: { class }.
+	array2 := self newArrayWith: { immediate }.
 	
 	interpreter push: array1.
 	interpreter push: array2.
 	
 	interpreter primitiveArrayBecome.
 	
-	self assert: (memory fetchClassOf: object1) equals: class2.
-	self assert: (memory fetchClassOf: object2) equals: class1
+	self assert: interpreter failed.
+	self assert: interpreter primFailCode equals: PrimErrInappropriate.
+	
 ]
 
 { #category : #'tests - become' }
-VMPrimitiveTest >> testPrimitiveArrayBecomeExchangesTheContentsOfTheObject [
+VMPrimitiveTest >> testPrimitiveArrayBecomeFailsForPinnedObject [
 	| class object1 object2 array1 array2 |
 	class := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
+	
 	object1 := memory instantiateClass: class.
-	memory storeInteger: 0 ofObject: object1 withValue: 42.
-	
-	object2 := memory instantiateClass: class.
-	memory storeInteger: 0 ofObject: object2 withValue: 75.
-	
+	object2 := memory instantiateClass: class isPinned: true.
+	 
 	array1 := self newArrayWith: { object1 }.
 	array2 := self newArrayWith: { object2 }.
 	
@@ -202,8 +241,8 @@ VMPrimitiveTest >> testPrimitiveArrayBecomeExchangesTheContentsOfTheObject [
 	
 	interpreter primitiveArrayBecome.
 	
-	self assert: (memory fetchInteger: 0 ofObject: object1) equals: 75.
-	self assert: (memory fetchInteger: 0 ofObject: object2) equals: 42.
+	self assert: interpreter failed.
+	self assert: interpreter primFailCode equals: PrimErrObjectIsPinned
 ]
 
 { #category : #'tests - primitiveAtPut' }
