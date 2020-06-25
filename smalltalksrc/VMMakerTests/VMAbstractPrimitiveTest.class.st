@@ -136,7 +136,9 @@ VMAbstractPrimitiveTest >> setUp [
 	anotherProcess := self newObjectWithSlots: 4.
 	memory storeInteger: PriorityIndex ofObject: anotherProcess withValue: 1.
 	memory storePointer: SuspendedContextIndex ofObject: anotherProcess withValue: suspendedContext.
-	interpreter putToSleep: anotherProcess yieldingIf: false.
+	
+	interpreter preemptionYields: false.
+	interpreter putToSleep: anotherProcess yieldingIf: interpreter preemptionYields.
 	
 	memory classExternalAddress: (self newClassInOldSpaceWithSlots: 0 format: (memory byteFormatForNumBytes: 0) )
 

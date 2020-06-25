@@ -90,6 +90,56 @@ VMFFIPrimitivesTest >> testPrimitiveSameThreadCallbackInCalloutSuspendsActivePro
 ]
 
 { #category : #tests }
+VMFFIPrimitivesTest >> testPrimitiveSameThreadCallbackReturnKeepsAllOtherProcessesInReady [
+
+	| parametersArray tfExternalFunction callbackContext processBefore |
+
+	callbackContext	:= VMCallbackContext new.
+	callbackContext trampoline: ExitInterpreter new.
+
+	processBefore := self readyProcesses.
+
+	tfExternalFunction := self createReturnFloatExternalFunctionFor: [ 
+		[interpreter ptEnterInterpreterFromCallback: callbackContext] on: ExitInterpreter do: [ 3.14 ] ].
+	
+	parametersArray := self newObjectWithSlots: 0.
+
+	interpreter push: memory nilObject.
+	interpreter push: tfExternalFunction.
+	interpreter push: parametersArray. 
+
+	interpreter interpreteBlock: [ interpreter ptExitInterpreterToCallback: callbackContext ].
+	interpreter primitiveSameThreadCallout.
+	
+	self assertCollection: self readyProcesses hasSameElements: processBefore
+]
+
+{ #category : #tests }
+VMFFIPrimitivesTest >> testPrimitiveSameThreadCallbackReturnResumesCalloutProcess [
+
+	| parametersArray tfExternalFunction oldActiveProcess callbackContext |
+
+	callbackContext	:= VMCallbackContext new.
+	callbackContext trampoline: ExitInterpreter new.
+
+	tfExternalFunction := self createReturnFloatExternalFunctionFor: [ 
+		[interpreter ptEnterInterpreterFromCallback: callbackContext] on: ExitInterpreter do: [ 3.14 ] ].
+	
+	oldActiveProcess := interpreter activeProcess.
+
+	parametersArray := self newObjectWithSlots: 0.
+
+	interpreter push: memory nilObject.
+	interpreter push: tfExternalFunction.
+	interpreter push: parametersArray. 
+
+	interpreter interpreteBlock: [ interpreter ptExitInterpreterToCallback: callbackContext ].
+	interpreter primitiveSameThreadCallout.
+	
+	self assert: interpreter activeProcess equals: oldActiveProcess.
+]
+
+{ #category : #tests }
 VMFFIPrimitivesTest >> testPrimitiveSameThreadCalloutMaintainsActiveProcess [
 
 	| parametersArray tfExternalFunction oldActiveProcess |

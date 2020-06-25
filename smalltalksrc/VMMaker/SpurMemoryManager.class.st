@@ -940,6 +940,8 @@ SpurMemoryManager class >> initializeSpecialObjectIndices [
 	ClassFloat := 9.
 	ClassMethodContext := 10.
 	"ClassBlockContext := 11. unused by the VM"
+	"Suspended processes in Callout (it is a list of linked processes or nil)"
+	SuspendedProcessInCallout := 11.
 	ClassPoint := 12.
 	ClassLargePositiveInteger := 13.
 	TheDisplay := 14.

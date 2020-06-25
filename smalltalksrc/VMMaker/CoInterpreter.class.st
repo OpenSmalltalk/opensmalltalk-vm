@@ -7020,9 +7020,8 @@ CoInterpreter >> restoreCStackStateForCallbackContext: vmCallbackContext [
 	cogit
 		setCStackPointer: vmCallbackContext savedCStackPointer;
 		setCFramePointer: vmCallbackContext savedCFramePointer.
-	self memcpy: reenterInterpreter
-		_: vmCallbackContext savedReenterInterpreter asVoidPointer
-		_: (self sizeof: #'jmp_buf')
+
+	super restoreCStackStateForCallbackContext: vmCallbackContext
 ]
 
 { #category : #'process primitive support' }

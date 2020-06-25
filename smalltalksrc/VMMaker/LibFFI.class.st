@@ -1,6 +1,6 @@
 Class {
 	#name : #LibFFI,
-	#superclass : #Object,
+	#superclass : #VMClass,
 	#instVars : [
 		'nextAddress',
 		'cifs',
@@ -13,21 +13,22 @@ Class {
 	#category : #'VMMaker-FFI'
 }
 
-{ #category : #types }
-LibFFI >> FFI_TYPE_FLOAT [
-	
-	^ FFI_TYPE_FLOAT
+{ #category : #translation }
+LibFFI class >> ancilliaryClasses [ 
+
+	^ { LibFFICIF }
 ]
 
-{ #category : #'accessing objects' }
-LibFFI >> cifAtAddress: anInteger [ 
-	
+{ #category : #'call simulations' }
+LibFFI >> cifAtAddress: anInteger [
+	<doNotGenerate>
 	^ cifs at: anInteger
 ]
 
 { #category : #'call simulations' }
 LibFFI >> ffiCall: aCif _: externalFunctionAddress _: returnHolder _: parameters [
 
+	<doNotGenerate>
 	| retValue |
 
 	retValue := (functions at: externalFunctionAddress)
@@ -36,8 +37,9 @@ LibFFI >> ffiCall: aCif _: externalFunctionAddress _: returnHolder _: parameters
 	^ aCif returnType fromSmalltalk: retValue putInto: returnHolder
 ]
 
-{ #category : #'instance creation' }
+{ #category : #'type constants' }
 LibFFI >> float [
+	<doNotGenerate>
 	
 	^ LibFFIType type: FFI_TYPE_FLOAT size: 4 on: self.
 ]
@@ -54,18 +56,20 @@ LibFFI >> initialize [
 
 { #category : #accessing }
 LibFFI >> interpreter [
+	<doNotGenerate>	
 	^ interpreter
 ]
 
 { #category : #accessing }
 LibFFI >> interpreter: anInterpreter [ 
-	
+	<doNotGenerate>	
 	interpreter := anInterpreter
 ]
 
 { #category : #'instance creation' }
 LibFFI >> newCif [
-	
+	<doNotGenerate>	
+
 	| cif |
 	cif := LibFFICIF new.
 	cif libFFI: self.
@@ -79,6 +83,7 @@ LibFFI >> newCif [
 
 { #category : #'registering functions' }
 LibFFI >> registerFunction: aBlockClosure [ 
+	<doNotGenerate>	
 	
 	| functionAddress |
 	
@@ -91,6 +96,8 @@ LibFFI >> registerFunction: aBlockClosure [
 
 { #category : #'type constants' }
 LibFFI >> void [
+
+	<doNotGenerate>
 
 	^ LibFFIType type: FFI_TYPE_VOID size: 0 on: self
 ]

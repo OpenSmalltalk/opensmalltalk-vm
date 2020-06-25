@@ -1,54 +1,115 @@
 Class {
 	#name : #LibFFICIF,
-	#superclass : #Object,
+	#superclass : #VMStructType,
 	#instVars : [
 		'address',
-		'argumentTypes',
-		'returnType',
-		'libFFI'
+		'libFFI',
+		'abi',
+		'nargs',
+		'arg_types',
+		'rtype',
+		'bytes',
+		'flags'
 	],
 	#category : #'VMMaker-FFI'
 }
 
+{ #category : #translation }
+LibFFICIF class >> filteredInstVarNames [
+	"Eliminate the obvious simulation-only inst vars"
+	^ self allInstVarNames copyWithoutAll: #(address libFFI)
+]
+
+{ #category : #translation }
+LibFFICIF class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [ 
+
+	self filteredInstVarNames do:
+		[:ivn|
+		aBinaryBlock
+			value: ivn
+			value: (ivn caseOf: {
+						['abi']		-> [#'ffi_abi'].
+						['nargs']		-> [#'unsigned int'].
+						['arg_types']		-> [#'ffi_type **'].
+						['rtype']		-> [#'ffi_type *'].
+						['bytes']		-> [#'unsigned int'].
+						['flags']		-> [#'unsigned int'].
+				} otherwise: [ self halt ])]
+]
+
+{ #category : #translation }
+LibFFICIF class >> printTypedefOn: aStream [
+
+	"This is already defined in ffi.h"
+]
+
+{ #category : #translation }
+LibFFICIF class >> structTypeName [
+	
+	^ 'ffi_cif'
+]
+
 { #category : #accessing }
 LibFFICIF >> address [
+	<doNotGenerate>	
 	^ address
 ]
 
 { #category : #accessing }
 LibFFICIF >> address: anInteger [ 
+	<doNotGenerate>	
 	address := anInteger
 ]
 
-{ #category : #accessing }
-LibFFICIF >> argumentTypes: aCollection [ 
-	argumentTypes := aCollection
+{ #category : #simulation }
+LibFFICIF >> argumentTypes: aCollectionOfTypes [ 
+	
+	nargs := aCollectionOfTypes size.
+	arg_types := CArrayAccessor on: aCollectionOfTypes
 ]
 
 { #category : #accessing }
 LibFFICIF >> libFFI: aLibFFI [ 
+	<doNotGenerate>	
 	libFFI := aLibFFI
 ]
 
 { #category : #accessing }
+LibFFICIF >> nargs [
+
+	^ nargs
+]
+
+{ #category : #accessing }
 LibFFICIF >> numberArguments [
-	
-	^ argumentTypes size
+
+	^ self nargs
 ]
 
 { #category : #testing }
 LibFFICIF >> parametersToSmalltalk: aCArrayAccessor [ 
-	
-	^ argumentTypes collect: [ :e | 1halt ].
+	<doNotGenerate>		
+	^ arg_types getObject collect: [ :e | 1halt ].
 ]
 
 { #category : #accessing }
 LibFFICIF >> returnType [
-
-	^ returnType
+	
+	^ self rtype
 ]
 
 { #category : #accessing }
 LibFFICIF >> returnType: aLibFFIType [ 
-	returnType := aLibFFIType
+	
+	self rtype: aLibFFIType
+]
+
+{ #category : #accessing }
+LibFFICIF >> rtype [
+	^ rtype
+]
+
+{ #category : #accessing }
+LibFFICIF >> rtype: aLibFFIType [ 
+	rtype := aLibFFIType
 ]

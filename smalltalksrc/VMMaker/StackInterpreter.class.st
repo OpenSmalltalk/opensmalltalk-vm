@@ -417,7 +417,8 @@ Class {
 		'debugCallbackInvokes',
 		'printedStackFrames',
 		'maxStacksToPrint',
-		'maxStackMessagePrinted'
+		'maxStackMessagePrinted',
+		'libFFI'
 	],
 	#classVars : [
 		'AccessModifierPrivate',
@@ -500,6 +501,7 @@ StackInterpreter class >> ancilliaryClasses [
 		VMCallbackContext.
 		CogStackPages.
 		InterpreterStackPages.
+		LibFFI.
 		CogStackPage }
 ]
 
@@ -619,6 +621,9 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator
 		var: #reenterInterpreter
 		declareC: 'jmp_buf reenterInterpreter; /* private export */'.
+		
+	aCCodeGenerator removeVariable: #'libFFI'.
+		
 	LowcodeVM
 		ifTrue:
 			[aCCodeGenerator
@@ -10138,6 +10143,18 @@ StackInterpreter >> lengthOfNameOfClass: classOop [
 	^objectMemory lengthOf: (objectMemory fetchPointer: classNameIndex ofObject: classOop)
 ]
 
+{ #category : #accessing }
+StackInterpreter >> libFFI [
+	<doNotGenerate>
+	^ libFFI
+]
+
+{ #category : #accessing }
+StackInterpreter >> libFFI: aLibFFI [ 
+	<doNotGenerate>
+	libFFI := aLibFFI
+]
+
 { #category : #'compiled methods' }
 StackInterpreter >> literal: offset [
 	self assert: method = (self iframeMethod: localFP).
@@ -17453,6 +17470,17 @@ StackInterpreter >> preGCAction: gcModeArg [
 ]
 
 { #category : #accessing }
+StackInterpreter >> preemptionYields [
+	
+	^ preemptionYields
+]
+
+{ #category : #accessing }
+StackInterpreter >> preemptionYields: aValue [ 
+	preemptionYields := aValue
+]
+
+{ #category : #accessing }
 StackInterpreter >> primFailCode [
 	<doNotGenerate>
 	^ primFailCode 
@@ -18887,20 +18915,19 @@ StackInterpreter >> processesInProcessListDo: aBlock [
 			ifFalse: [highestRunnableProcessPriority].
 	[(p := p - 1) >= 0] whileTrue:
 		[processList := objectMemory fetchPointer: p ofObject: schedLists.
-	 	 [self isEmptyList: processList] whileFalse:
-			["Only answer processes with a runnable suspendedContext.
+	 	 proc := objectMemory fetchPointer: FirstLinkIndex ofObject: processList. 
+		 [proc = objectMemory nilObject] 
+			whileFalse: ["Only answer processes with a runnable suspendedContext.
 			  Discard those that aren't; the VM would crash otherwise."
-			 proc := self removeFirstLinkOfList: processList.
 			 ctxt := objectMemory fetchPointer: SuspendedContextIndex ofObject: proc.
-			 (self isLiveContext: ctxt) ifTrue:
-				[ aBlock value: proc ].
 			  self cppIf: SPURVM ifTrue: 
 				["This is uncommon, so we can deal with forwarders here instead of assuming there isn't."
-				 (self isOopForwarded: ctxt) ifTrue:
-					[ctxt := self fixFollowedField: SuspendedContextIndex ofObject: proc withInitialValue: ctxt].
+				 (objectMemory isOopForwarded: ctxt) ifTrue:
+					[ctxt := self fixFollowedField: SuspendedContextIndex 
+									ofObject: proc withInitialValue: ctxt].
 				  (self isLiveContext: ctxt) ifTrue:
 					[ aBlock value: proc ] ].
-			 self warning: 'evicted zombie process from run queue']].
+			 proc := objectMemory fetchPointer: NextLinkIndex ofObject: proc ]].
 ]
 
 { #category : #'internal interpreter access' }
@@ -19760,9 +19787,14 @@ StackInterpreter >> respondToUnknownBytecode [
 { #category : #'callback support' }
 StackInterpreter >> restoreCStackStateForCallbackContext: vmCallbackContext [
 	<var: #vmCallbackContext type: #'VMCallbackContext *'>
-	self memcpy: reenterInterpreter
-		_: vmCallbackContext savedReenterInterpreter asVoidPointer
-		_: (self sizeof: #'jmp_buf')
+		
+	self cCode:
+			[self memcpy: reenterInterpreter
+				_: vmCallbackContext savedReenterInterpreter asVoidPointer
+				_: (self sizeof: #'jmp_buf')]
+		inSmalltalk:
+			[ reenterInterpreter := vmCallbackContext savedReenterInterpreter ].
+	
 ]
 
 { #category : #'stack pages' }

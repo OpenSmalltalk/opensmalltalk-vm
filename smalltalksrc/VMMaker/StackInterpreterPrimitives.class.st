@@ -1,8 +1,8 @@
 Class {
 	#name : #StackInterpreterPrimitives,
 	#superclass : #StackInterpreter,
-	#instVars : [
-		'libFFI'
+	#pools : [
+		'LibFFIConstants'
 	],
 	#category : #'VMMaker-Interpreter'
 }
@@ -135,18 +135,6 @@ StackInterpreterPrimitives >> isAppropriateForCopyObject: oop [
 	 because isPointersNonImm: excludes compiled methods and the
 	 copy loop in primitiveCopyObject cannot handle compiled methods."
 	^true
-]
-
-{ #category : #accessing }
-StackInterpreterPrimitives >> libFFI [
-	<doNotGenerate>
-	^ libFFI
-]
-
-{ #category : #accessing }
-StackInterpreterPrimitives >> libFFI: aLibFFI [ 
-	<doNotGenerate>
-	libFFI := aLibFFI
 ]
 
 { #category : #'object access primitives' }
@@ -1296,6 +1284,8 @@ StackInterpreterPrimitives >> primitivePin [
 { #category : #ffi }
 StackInterpreterPrimitives >> primitiveSameThreadCallout [
 	
+	<export: true>
+	
 	| externalFunction cif PARAM_EXTERNALFUNCTION PARAM_ARGUMENTS argumentsArrayOop argumentSize parameters returnHolder |
 	PARAM_EXTERNALFUNCTION := 1.
 	PARAM_ARGUMENTS := 0.
@@ -1312,12 +1302,12 @@ StackInterpreterPrimitives >> primitiveSameThreadCallout [
 	- Verify Arguments is an Array
 	- Allocate space for all the arguments in the stack and a holder for the return, and the parameters' pointer C array
 	- Marshall arguments and store in the parameter array."
-
+	
 	argumentsArrayOop := self stackValue: PARAM_ARGUMENTS.
-
+	
 	(objectMemory isArray: argumentsArrayOop) 
 		ifFalse: [^ self primitiveFailFor: PrimErrBadArgument ]. 
-
+		
 	argumentSize := cif numberArguments.
 	
 	(objectMemory slotSizeOf: argumentsArrayOop) = argumentSize 
@@ -1332,9 +1322,9 @@ StackInterpreterPrimitives >> primitiveSameThreadCallout [
 	
 		[ argType type ] 
 			caseOf: { 
-			[libFFI FFI_TYPE_POINTER] -> [ self marshallPointerFrom: argumentsArrayOop at: i into: argHolder ].
-			[libFFI FFI_TYPE_FLOAT] -> [ self marshallFloatFrom: argumentsArrayOop at: i into: argHolder ].
-			[libFFI FFI_TYPE_DOUBLE] -> [ self marshallDoubleFrom: argumentsArrayOop at: i into: argHolder ] }
+			[FFI_TYPE_POINTER] -> [ self marshallPointerFrom: argumentsArrayOop at: i into: argHolder ].
+			[FFI_TYPE_FLOAT] -> [ self marshallFloatFrom: argumentsArrayOop at: i into: argHolder ].
+			[FFI_TYPE_DOUBLE] -> [ self marshallDoubleFrom: argumentsArrayOop at: i into: argHolder ] }
 			otherwise: [ ^ self primitiveFailFor: PrimErrBadArgument ]].
 
 	returnHolder := self alloca: cif returnType size.
@@ -1350,8 +1340,8 @@ StackInterpreterPrimitives >> primitiveSameThreadCallout [
 
 	[ cif returnType type ] 
 		caseOf: { 
-		[libFFI FFI_TYPE_FLOAT] -> [ self pushFloat: (objectMemory float32AtPointer: returnHolder) ].
-		[libFFI FFI_TYPE_DOUBLE] -> [ self pushFloat: (objectMemory float64AtPointer: returnHolder) ] }
+		[FFI_TYPE_FLOAT] -> [ self pushFloat: (objectMemory float32AtPointer: returnHolder) ].
+		[FFI_TYPE_DOUBLE] -> [ self pushFloat: (objectMemory float64AtPointer: returnHolder) ] }
 		otherwise: [ ^ self primitiveFailFor: PrimErrBadArgument ].
 
 ]
@@ -2054,6 +2044,7 @@ StackInterpreterPrimitives >> ptEnterInterpreterFromCallback: aPointer [
 	| vmCallbackContext suspendedProcess |
 	
 	suspendedProcess := self supendActiveProcess.
+	objectMemory splObj: SuspendedProcessInCallout put: suspendedProcess. 
 
 	vmCallbackContext := self 
 		cCode: [self cCoerce: aPointer to: #'VMCallbackContext *'] 
@@ -2076,9 +2067,15 @@ StackInterpreterPrimitives >> ptExitInterpreterToCallback: aPointer [
 	<var: #aPointer type: #'void *'>
 	<var: #vmCallbackContext type: #'VMCallbackContext *'>
 
-	| vmCallbackContext |
+	| vmCallbackContext suspendedProcess |
 
-	vmCallbackContext := self cCoerce: aPointer to: #'VMCallbackContext *'.
+	vmCallbackContext := self 
+		cCode: [self cCoerce: aPointer to: #'VMCallbackContext *']
+		inSmalltalk: [ aPointer ].
+	
+	suspendedProcess := objectMemory splObj: 12 - 1.
+	self putToSleep: self activeProcess yieldingIf: preemptionYields.
+	self transferTo: suspendedProcess.
 	
 	self restoreCStackStateForCallbackContext: vmCallbackContext.	
 		
