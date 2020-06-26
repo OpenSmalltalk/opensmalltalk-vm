@@ -93,15 +93,17 @@ LibFFICIF >> parametersToSmalltalk: aCArrayAccessor [
 ]
 
 { #category : #accessing }
-LibFFICIF >> returnType [
+LibFFICIF >> returnType [ 
+	<inline: #always>
 	
 	^ self rtype
 ]
 
 { #category : #accessing }
-LibFFICIF >> returnType: aLibFFIType [ 
+LibFFICIF >> returnType: aType [ 
+	<inline: #always>
 	
-	self rtype: aLibFFIType
+	self rtype: aType
 ]
 
 { #category : #accessing }

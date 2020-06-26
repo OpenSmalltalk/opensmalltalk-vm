@@ -16,7 +16,7 @@ Class {
 { #category : #translation }
 LibFFI class >> ancilliaryClasses [ 
 
-	^ { LibFFICIF }
+	^ { LibFFICIF. LibFFIType }
 ]
 
 { #category : #'call simulations' }
@@ -29,11 +29,10 @@ LibFFI >> cifAtAddress: anInteger [
 LibFFI >> ffiCall: aCif _: externalFunctionAddress _: returnHolder _: parameters [
 
 	<doNotGenerate>
-	| retValue |
 
+	| retValue |
 	retValue := (functions at: externalFunctionAddress)
 		valueWithArguments: (aCif parametersToSmalltalk: parameters).
-
 	^ aCif returnType fromSmalltalk: retValue putInto: returnHolder
 ]
 

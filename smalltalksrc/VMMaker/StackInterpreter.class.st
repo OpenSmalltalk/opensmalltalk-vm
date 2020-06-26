@@ -469,6 +469,7 @@ Class {
 		'V3PrimitiveBitsMask'
 	],
 	#pools : [
+		'LibFFIConstants',
 		'VMBasicConstants',
 		'VMBytecodeConstants',
 		'VMMethodCacheConstants',
@@ -522,7 +523,9 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 		addHeaderFile:'<wchar.h> /* for wint_t */';
 		addHeaderFile:'"vmCallback.h"';
 		addHeaderFile:'"sqMemoryFence.h"';
-		addHeaderFile:'"dispdbg.h"'.
+		addHeaderFile:'"dispdbg.h"';
+		addHeaderFile:'"ffi.h"'.
+		
 	LowcodeVM ifTrue: [ aCCodeGenerator addHeaderFile:'"sqLowcodeFFI.h"'].
 
 	vmClass declareInterpreterVersionIn: aCCodeGenerator defaultName: 'Stack'.
@@ -623,6 +626,7 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 		declareC: 'jmp_buf reenterInterpreter; /* private export */'.
 		
 	aCCodeGenerator removeVariable: #'libFFI'.
+	LibFFIConstants classVariables do: [ :e | aCCodeGenerator removeConstant: e name ].
 		
 	LowcodeVM
 		ifTrue:
