@@ -1380,19 +1380,15 @@ StackInterpreterPrimitives >> primitiveSameThreadCallout [
 		_: returnHolder
 		_: parameters.
 	
-	"Pop the arguments"
-	self pop: 2.
-
 	[ cif returnType type ]
 		caseOf: {
 			[ FFI_TYPE_FLOAT ]
-				-> [self pop: 1.
-					self pushFloat: (objectMemory float32AtPointer: returnHolder) ].
+				-> [ self pop: 3 thenPushFloat: (objectMemory float32AtPointer: returnHolder) ].
 			[ FFI_TYPE_DOUBLE ]
-				-> [self pop: 1. 
-					self pushFloat: (objectMemory float64AtPointer: returnHolder) ].
-			[ FFI_TYPE_VOID ] -> [ ]}
-		otherwise: [ ^ self primitiveFailFor: PrimErrBadArgument ]
+				-> [ self pop: 3 thenPushFloat: (objectMemory float64AtPointer: returnHolder) ].
+			[ FFI_TYPE_VOID ] -> [ self pop: 2 "Pop the arguments leaving the receiver" ]}
+			otherwise: [ self primitiveFailFor: PrimErrBadArgument ]
+
 ]
 
 { #category : #'memory space primitives' }
