@@ -54,6 +54,7 @@ include(CheckLibraryExists)
 include(CheckTypeSize)
 include(CheckCSourceCompiles)
 include(CheckStructHasMember)
+include(ExternalProject)
 
 set(COMMON_FLAGS "")
 set(BUILD_I386_VERSION NO)
@@ -246,6 +247,7 @@ add_custom_command(
   WORKING_DIRECTORY ${VMMAKER_OUTPUT_PATH}
 COMMENT "Generating VMMaker image")
 
+
 #Custom command that generates the vm source code from VMMaker into ${VMMAKER_OUTPUT_PATH} and copies it to ${CMAKE_CURRENT_SOURCE_DIR}
 add_custom_command(
   OUTPUT ${VMSOURCEFILES}
@@ -267,6 +269,7 @@ include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}/build/include/
     ${CMAKE_CURRENT_BINARY_DIR}/build/include/pharovm/
     ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/include
+	${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/include
 )
 
 set(VM_FRONTEND_APPLICATION_TYPE)
@@ -277,6 +280,49 @@ elseif(OSX)
 elseif(UNIX)
     include(unix.cmake)
 endif()
+
+#
+# LibFFI
+#
+
+ExternalProject_Add(build_libFFI
+    PREFIX "${CMAKE_CURRENT_BINARY_DIR}/build/libffi"
+    SOURCE_DIR "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/src"
+    STAMP_DIR "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/stamp"
+    BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/src"
+
+    UPDATE_COMMAND ""
+
+    GIT_REPOSITORY "https://github.com/libffi/libffi.git"
+    GIT_TAG "v3.3"
+    CONFIGURE_COMMAND "./autogen.sh" COMMAND ./configure "--target=${LIBFFI_TARGET}" "--disable-docs" "--prefix=${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install" "CC=${CMAKE_C_COMPILER}" "CXX=${CMAKE_C_COMPILER}"
+)
+
+if(OSX)
+    add_custom_command(
+      OUTPUT  ${LIBFFI_OUTPUT}
+      DEPENDS build_libFFI
+      COMMAND install_name_tool -id "@executable_path/Plugins/libffi.7.dylib" "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/lib/libffi.7.dylib"
+      COMMAND install_name_tool -id "@executable_path/Plugins/libffi.dylib" "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/lib/libffi.dylib"
+      COMMAND cp "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/lib/${DYLIB_EXT}" "${CMAKE_CURRENT_BINARY_DIR}/build/dist/"
+      WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/build/dist"
+      COMMENT "Changing RPath of Libffi")
+else()
+    add_custom_command(
+      OUTPUT  ${LIBFFI_OUTPUT}
+      DEPENDS build_libFFI
+      COMMAND cp "${LIBFFI_FILES}" "${CMAKE_CURRENT_BINARY_DIR}/build/dist/"
+      WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/build/dist"
+      COMMENT "Copying of Libffi")
+endif()
+
+link_directories("${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/lib")
+
+add_custom_target(libFFI DEPENDS "${LIBFFI_OUTPUT}")
+
+#
+# End LibFFI
+#
 
 set(GENERATED_SOURCES ${VMSOURCEFILES})
 
@@ -305,6 +351,7 @@ set(VM_SOURCES
 
 add_executable(${VM_EXECUTABLE_NAME} ${VM_FRONTEND_APPLICATION_TYPE} ${VM_FRONTEND_SOURCES})
 addLibraryWithRPATH(${VM_LIBRARY_NAME} ${VM_SOURCES})
+add_dependencies(${VM_LIBRARY_NAME} libFFI)
 
 #If in OSX, configure creation of Bundle
 if(OSX)
@@ -317,6 +364,7 @@ if(OSX)
 endif()
 
 target_link_libraries(${VM_EXECUTABLE_NAME} ${VM_LIBRARY_NAME})
+target_link_libraries(${VM_LIBRARY_NAME} "ffi")
 
 add_required_libs_per_platform()
 
