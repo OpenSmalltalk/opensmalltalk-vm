@@ -5157,6 +5157,14 @@ SpurMemoryManager >> float32AtPointer: aCArrayAccessor [
 	^ floatPtr at: 0
 ]
 
+{ #category : #'ffi - helpers' }
+SpurMemoryManager >> float64AtPointer: aCArrayAccessor [ 
+	
+	| floatPtr |
+	floatPtr := self cCoerce: (aCArrayAccessor) to: #'double *'.
+	^ floatPtr at: 0
+]
+
 { #category : #'interpreter access' }
 SpurMemoryManager >> floatObjectOf: aFloat [
 	self subclassResponsibility

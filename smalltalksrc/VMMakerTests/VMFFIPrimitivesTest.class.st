@@ -5,7 +5,7 @@ Class {
 }
 
 { #category : #helpers }
-VMFFIPrimitivesTest >> createReturnFloatExternalFunctionFor: aBlock [ 
+VMFFIPrimitivesTest >> createExternalFunctionFor: aBlock withArgumentTypes: argumentTypes withReturnType: returnType [
 
 	| functionAddress tfExternalFunction functionExternalAddress tfFunctionDefinition cif cifExternalAddress |
 
@@ -16,8 +16,8 @@ VMFFIPrimitivesTest >> createReturnFloatExternalFunctionFor: aBlock [
 	tfFunctionDefinition := self newObjectWithSlots: 1.
 	
 	cif := interpreter libFFI newCif.
-	cif argumentTypes: #().
-	cif returnType: interpreter libFFI float.
+	cif argumentTypes: argumentTypes.
+	cif returnType: returnType.
 		
 	cifExternalAddress := self newExternalAddress: (cif address). 
 
@@ -26,6 +26,24 @@ VMFFIPrimitivesTest >> createReturnFloatExternalFunctionFor: aBlock [
 	memory storePointer: 0 ofObject: tfFunctionDefinition withValue: cifExternalAddress.	
 
 	^ tfExternalFunction
+]
+
+{ #category : #helpers }
+VMFFIPrimitivesTest >> createReturnFloatExternalFunctionFor: aBlock [
+
+	^ self
+		createExternalFunctionFor: aBlock
+		withArgumentTypes: #()
+		withReturnType: interpreter libFFI float
+]
+
+{ #category : #helpers }
+VMFFIPrimitivesTest >> createReturnFloatExternalFunctionFor: aBlock withArgumentTypes: argumentTypes [
+
+	^ self
+		createExternalFunctionFor: aBlock
+		withArgumentTypes: argumentTypes
+		withReturnType: interpreter libFFI float
 ]
 
 { #category : #helpers }
@@ -86,6 +104,8 @@ VMFFIPrimitivesTest >> testPrimitiveSameThreadCallbackInCalloutSuspendsActivePro
 		self assert: (interpreter isLiveContext: oldActiveProcessContext).
 		self deny: (self readyProcesses includes: oldActiveProcess).
 		^ self deny: interpreter activeProcess equals: oldActiveProcess ].
+	
+	interpreter argumentCount: 2.
 	interpreter primitiveSameThreadCallout.
 ]
 
@@ -109,6 +129,7 @@ VMFFIPrimitivesTest >> testPrimitiveSameThreadCallbackReturnKeepsAllOtherProcess
 	interpreter push: parametersArray. 
 
 	interpreter interpreteBlock: [ interpreter ptExitInterpreterToCallback: callbackContext ].
+	interpreter argumentCount: 2.
 	interpreter primitiveSameThreadCallout.
 	
 	self assertCollection: self readyProcesses hasSameElements: processBefore
@@ -123,7 +144,8 @@ VMFFIPrimitivesTest >> testPrimitiveSameThreadCallbackReturnResumesCalloutProces
 	callbackContext trampoline: ExitInterpreter new.
 
 	tfExternalFunction := self createReturnFloatExternalFunctionFor: [ 
-		[interpreter ptEnterInterpreterFromCallback: callbackContext] on: ExitInterpreter do: [ 3.14 ] ].
+		[interpreter ptEnterInterpreterFromCallback: callbackContext] 
+			on: ExitInterpreter do: [ 3.14 ] ].
 	
 	oldActiveProcess := interpreter activeProcess.
 
@@ -134,6 +156,7 @@ VMFFIPrimitivesTest >> testPrimitiveSameThreadCallbackReturnResumesCalloutProces
 	interpreter push: parametersArray. 
 
 	interpreter interpreteBlock: [ interpreter ptExitInterpreterToCallback: callbackContext ].
+	interpreter argumentCount: 2.
 	interpreter primitiveSameThreadCallout.
 	
 	self assert: interpreter activeProcess equals: oldActiveProcess.
@@ -153,9 +176,31 @@ VMFFIPrimitivesTest >> testPrimitiveSameThreadCalloutMaintainsActiveProcess [
 	interpreter push: tfExternalFunction.
 	interpreter push: parametersArray. 
 
+	interpreter argumentCount: 2.
 	interpreter primitiveSameThreadCallout.
 	
 	self assert: interpreter activeProcess equals: oldActiveProcess
+]
+
+{ #category : #tests }
+VMFFIPrimitivesTest >> testPrimitiveSameThreadCalloutReturningDoublePushSmallFloatInStack [
+	| parametersArray tfExternalFunction |
+
+	tfExternalFunction := self
+		createExternalFunctionFor: [ 7.0 ]
+		withArgumentTypes: #()
+		withReturnType: interpreter libFFI double.
+
+	parametersArray := self newObjectWithSlots: 0.
+
+	interpreter push: memory nilObject.
+	interpreter push: tfExternalFunction.
+	interpreter push: parametersArray.
+
+	interpreter argumentCount: 2.
+	interpreter primitiveSameThreadCallout.
+
+	self assert: interpreter stackTop equals: (memory floatObjectOf: 7.0)
 ]
 
 { #category : #tests }
@@ -170,9 +215,115 @@ VMFFIPrimitivesTest >> testPrimitiveSameThreadCalloutReturningFloatPushSmallFloa
 	interpreter push: tfExternalFunction.
 	interpreter push: parametersArray. 
 
+	interpreter argumentCount: 2.
 	interpreter primitiveSameThreadCallout.
 	
 	self assert: interpreter stackTop equals: (memory floatObjectOf: 7.0)
+]
+
+{ #category : #tests }
+VMFFIPrimitivesTest >> testPrimitiveSameThreadCalloutReturningVoidPushesTheReceiver [
+
+	| parametersArray tfExternalFunction |
+
+	tfExternalFunction := self createExternalFunctionFor: [ ] withArgumentTypes: #() withReturnType: interpreter libFFI void.
+	parametersArray := self newObjectWithSlots: 0.
+
+	interpreter push: memory trueObject.
+	interpreter push: tfExternalFunction.
+	interpreter push: parametersArray. 
+
+	interpreter argumentCount: 2.
+	interpreter primitiveSameThreadCallout.
+	
+	self assert: interpreter stackTop equals: memory trueObject
+]
+
+{ #category : #tests }
+VMFFIPrimitivesTest >> testPrimitiveSameThreadCalloutWithADoubleArgumentsPushesValueInTheStack [
+
+	| parametersArray tfExternalFunction |
+
+	tfExternalFunction := self 
+		createReturnFloatExternalFunctionFor: [ :aDouble | aDouble ] 
+		withArgumentTypes: { interpreter libFFI double }.
+
+	parametersArray := self newObjectWithSlots: 1.
+	memory storePointer: 0 ofObject: parametersArray withValue: (memory floatObjectOf: 14.0).
+
+	interpreter push: memory nilObject.
+	interpreter push: tfExternalFunction.
+	interpreter push: parametersArray. 
+
+	interpreter argumentCount: 2.
+	interpreter primitiveSameThreadCallout.
+	
+	self assert: interpreter stackTop equals: (memory floatObjectOf: 14.0)
+]
+
+{ #category : #tests }
+VMFFIPrimitivesTest >> testPrimitiveSameThreadCalloutWithAFloatArgumentsCallsCorrectFunction [
+
+	| parametersArray tfExternalFunction functionCalled |
+
+	functionCalled := false.
+	tfExternalFunction := self 
+		createReturnFloatExternalFunctionFor: [ :aFloat | functionCalled := true. aFloat ] 
+		withArgumentTypes: { interpreter libFFI float }.
+
+	parametersArray := self newObjectWithSlots: 1.
+	memory storePointer: 0 ofObject: parametersArray withValue: (memory floatObjectOf: 7.0).
+
+	interpreter push: memory nilObject.
+	interpreter push: tfExternalFunction.
+	interpreter push: parametersArray. 
+
+	interpreter argumentCount: 2.
+	interpreter primitiveSameThreadCallout.
+	
+	self assert: functionCalled.
+]
+
+{ #category : #tests }
+VMFFIPrimitivesTest >> testPrimitiveSameThreadCalloutWithAFloatArgumentsPushesValueInTheStack [
+
+	| parametersArray tfExternalFunction |
+
+	tfExternalFunction := self 
+		createReturnFloatExternalFunctionFor: [ :aFloat | aFloat ] 
+		withArgumentTypes: { interpreter libFFI float }.
+
+	parametersArray := self newObjectWithSlots: 1.
+	memory storePointer: 0 ofObject: parametersArray withValue: (memory floatObjectOf: 14.0).
+
+	interpreter push: memory nilObject.
+	interpreter push: tfExternalFunction.
+	interpreter push: parametersArray. 
+
+	interpreter argumentCount: 2.
+	interpreter primitiveSameThreadCallout.
+	
+	self assert: interpreter stackTop equals: (memory floatObjectOf: 14.0)
+]
+
+{ #category : #tests }
+VMFFIPrimitivesTest >> testPrimitiveSameThreadCalloutWithAPointerArgumentsGetsTheCorrectArgument [
+
+	| parametersArray tfExternalFunction |
+
+	tfExternalFunction := self 
+		createReturnFloatExternalFunctionFor: [ :aPointer | self assert: aPointer equals: 17. 7.0 ] 
+		withArgumentTypes: { interpreter libFFI pointer }.
+
+	parametersArray := self newObjectWithSlots: 1.
+	memory storePointer: 0 ofObject: parametersArray withValue: (self newExternalAddress: 17).
+
+	interpreter push: memory nilObject.
+	interpreter push: tfExternalFunction.
+	interpreter push: parametersArray. 
+
+	interpreter argumentCount: 2.
+	interpreter primitiveSameThreadCallout.
 ]
 
 { #category : #tests }
@@ -188,6 +339,7 @@ VMFFIPrimitivesTest >> testPrimitiveSameThreadCalloutWithoutArgumentsCallsCorrec
 	interpreter push: tfExternalFunction.
 	interpreter push: parametersArray. 
 
+	interpreter argumentCount: 2.
 	interpreter primitiveSameThreadCallout.
 	
 	self assert: functionCalled.

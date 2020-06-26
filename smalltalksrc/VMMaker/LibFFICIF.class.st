@@ -61,9 +61,21 @@ LibFFICIF >> address: anInteger [
 	address := anInteger
 ]
 
+{ #category : #accessing }
+LibFFICIF >> argTypeAt: anIndex [
+
+	^ self arg_types at: anIndex
+]
+
+{ #category : #accessing }
+LibFFICIF >> arg_types [
+
+	^ arg_types
+]
+
 { #category : #simulation }
 LibFFICIF >> argumentTypes: aCollectionOfTypes [ 
-	
+	<doNotGenerate>
 	nargs := aCollectionOfTypes size.
 	arg_types := CArrayAccessor on: aCollectionOfTypes
 ]
@@ -87,9 +99,10 @@ LibFFICIF >> numberArguments [
 ]
 
 { #category : #testing }
-LibFFICIF >> parametersToSmalltalk: aCArrayAccessor [ 
+LibFFICIF >> parametersToSmalltalk: parameters [ 
 	<doNotGenerate>		
-	^ arg_types getObject collect: [ :e | 1halt ].
+	^ arg_types getObject collectWithIndex: [ :type :index | 
+		type marshallToSmalltalk: (parameters at: index - 1) ].
 ]
 
 { #category : #accessing }

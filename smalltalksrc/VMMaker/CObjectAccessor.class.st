@@ -48,6 +48,14 @@ CObjectAccessor >> -= decrement [
 ]
 
 { #category : #converting }
+CObjectAccessor >> asDoubleAccessor [
+
+	^ self asPluggableAccessor
+		atBlock: [:obj :index | obj doubleAt: index]
+		atPutBlock: [:obj :index :value | obj doubleAt: index put: value]
+]
+
+{ #category : #converting }
 CObjectAccessor >> asFloatAccessor [
 
 	^ self asPluggableAccessor
@@ -89,6 +97,14 @@ CObjectAccessor >> asPluggableAccessor: accessorArray [
 		atPutBlock: accessorArray last
 ]
 
+{ #category : #converting }
+CObjectAccessor >> asPointerAccessor: wordSize [
+
+	^ self asPluggableAccessor
+		atBlock: [ :obj :index | obj integerAt: index size: wordSize signed: false ]
+		atPutBlock: [ :obj :index :value | obj integerAt: index put: value size: wordSize signed: false ]
+]
+
 { #category : #accessing }
 CObjectAccessor >> at: index [
 	^object instVarAt: index + offset + 1
@@ -104,7 +120,9 @@ CObjectAccessor >> coerceTo: cTypeString sim: interpreterSimulator [
 
 	cTypeString caseOf: {
 		[#'float *']			-> [^self asFloatAccessor].
+		[#'double *']		-> [^self asDoubleAccessor].
 		[#'int *']			-> [^self asIntAccessor].
+		[#'void **']			-> [^self asPointerAccessor: interpreterSimulator objectMemory wordSize].
 		['sqInputEvent*']	-> [^self] }
 		otherwise: [self halt].
 	^ self

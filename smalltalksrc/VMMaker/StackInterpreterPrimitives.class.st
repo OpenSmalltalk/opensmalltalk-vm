@@ -7,6 +7,15 @@ Class {
 	#category : #'VMMaker-Interpreter'
 }
 
+{ #category : #'ffi - helpers' }
+StackInterpreterPrimitives >> allocateParameters: anInteger [
+	<inline: #always>
+
+	^ self
+		cCode: [ self alloca: (self sizeof: #'void*') * anInteger ]
+		inSmalltalk: [ ^ CArrayAccessor on: (Array new: anInteger) ]
+]
+
 { #category : #'primitive support' }
 StackInterpreterPrimitives >> cloneContext: aContext [ 
 	| sz cloned spouseFP sp |
@@ -48,7 +57,7 @@ StackInterpreterPrimitives >> cloneContext: aContext [
 ]
 
 { #category : #'ffi - helpers' }
-StackInterpreterPrimitives >> ffiCall: aCif _: externalFunctionAddress _: returnHolder _: parameters [
+StackInterpreterPrimitives >> ffi_call: aCif _: externalFunctionAddress _: returnHolder _: parameters [
 
 	<doNotGenerate>
 	libFFI ffiCall: aCif _: externalFunctionAddress _: returnHolder _: parameters
@@ -149,6 +158,26 @@ StackInterpreterPrimitives >> markFrame: theFPInt [
 	stackPages
 		longAt: theFPInt + FoxFrameFlags
 		put: ((stackPages longAt: theFPInt + FoxFrameFlags) bitOr: 2)
+]
+
+{ #category : #'ffi - helpers' }
+StackInterpreterPrimitives >> marshallDoubleFrom: argumentArrayOop at: index into: holder [ 
+
+	| doubleHolder |
+	doubleHolder := self cCoerce: holder to: #'double *'.
+	
+	doubleHolder at: 0 put: (self fetchFloat: index ofObject: argumentArrayOop ).
+
+]
+
+{ #category : #'ffi - helpers' }
+StackInterpreterPrimitives >> marshallFloatFrom: argumentArrayOop at: index into: holder [ 
+	
+	| floatHolder |
+	floatHolder := self cCoerce: holder to: #'float *'.
+	
+	floatHolder at: 0 put: (self fetchFloat: index ofObject: argumentArrayOop ).
+	
 ]
 
 { #category : #'primitive support' }
@@ -1292,19 +1321,20 @@ StackInterpreterPrimitives >> primitivePin [
 StackInterpreterPrimitives >> primitiveSameThreadCallout [
 	<export: true>
 	| externalFunction cif PARAM_EXTERNALFUNCTION PARAM_ARGUMENTS argumentsArrayOop argumentSize parameters returnHolder |
+	<var: #parameters type: #'void **'>
+
 	PARAM_EXTERNALFUNCTION := 1.
 	PARAM_ARGUMENTS := 0.
 
 	"1. Obtain externalFunction and extract the CIF"
-	externalFunction := self
-		getHandler: (self stackValue: PARAM_EXTERNALFUNCTION).
-	self failed
+	externalFunction := self getHandler: (self stackValue: PARAM_EXTERNALFUNCTION).
+	self failed 
 		ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
-	cif := self
-		getHandlerAsCif:
-			(objectMemory
+
+	cif := self getHandlerAsCif:(objectMemory
 				fetchPointer: 1
 				ofObject: (self stackValue: PARAM_EXTERNALFUNCTION)).
+
 	self failed
 		ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
 
@@ -1313,12 +1343,17 @@ StackInterpreterPrimitives >> primitiveSameThreadCallout [
 	- Allocate space for all the arguments in the stack and a holder for the return, and the parameters' pointer C array
 	- Marshall arguments and store in the parameter array."
 	argumentsArrayOop := self stackValue: PARAM_ARGUMENTS.
+
 	(objectMemory isArray: argumentsArrayOop)
 		ifFalse: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+
 	argumentSize := cif numberArguments.
+
 	(objectMemory slotSizeOf: argumentsArrayOop) = argumentSize
 		ifFalse: [ ^ self primitiveFailFor: PrimErrBadArgument ].
-	parameters := self alloca: (self sizeof: #'void*') * argumentSize.
+		
+	parameters := self allocateParameters: argumentSize.
+
 	0 to: argumentSize - 1 do: [ :i | 
 		| argType argHolder |
 		argType := cif argTypeAt: i.
@@ -1340,18 +1375,23 @@ StackInterpreterPrimitives >> primitiveSameThreadCallout [
 	- Marshall Argument and push it to the stack
 	- Return"
 	self
-		ffiCall: cif
+		ffi_call: cif
 		_: externalFunction
 		_: returnHolder
 		_: parameters.
-		
-	self pop: self methodArgumentCount + 1.
+	
+	"Pop the arguments"
+	self pop: 2.
+
 	[ cif returnType type ]
-		caseOf:
-			{([ FFI_TYPE_FLOAT ]
-				-> [ self pushFloat: (objectMemory float32AtPointer: returnHolder) ]).
-			([ FFI_TYPE_DOUBLE ]
-				-> [ self pushFloat: (objectMemory float64AtPointer: returnHolder) ])}
+		caseOf: {
+			[ FFI_TYPE_FLOAT ]
+				-> [self pop: 1.
+					self pushFloat: (objectMemory float32AtPointer: returnHolder) ].
+			[ FFI_TYPE_DOUBLE ]
+				-> [self pop: 1. 
+					self pushFloat: (objectMemory float64AtPointer: returnHolder) ].
+			[ FFI_TYPE_VOID ] -> [ ]}
 		otherwise: [ ^ self primitiveFailFor: PrimErrBadArgument ]
 ]
 
@@ -2052,9 +2092,6 @@ StackInterpreterPrimitives >> ptEnterInterpreterFromCallback: aPointer [
 
 	| vmCallbackContext suspendedProcess |
 	
-	suspendedProcess := self supendActiveProcess.
-	objectMemory splObj: SuspendedProcessInCallout put: suspendedProcess. 
-
 	vmCallbackContext := self 
 		cCode: [self cCoerce: aPointer to: #'VMCallbackContext *'] 
 		inSmalltalk: [aPointer].
@@ -2064,7 +2101,16 @@ StackInterpreterPrimitives >> ptEnterInterpreterFromCallback: aPointer [
 	vmCallbackContext savedPrimFunctionPointer: primitiveFunctionPointer.	
 	self saveCStackStateForCallbackContext: vmCallbackContext.		
 	
-	self enterSmalltalkExecutive.
+	"We need to preserve newMethod explicitly since it is not activated yet
+	and therefore no context has been created for it. If the caller primitive
+	for any reason decides to fail we need to make sure we execute the correct
+	method and not the one 'last used' in the call back"	
+	self push: newMethod.
+	
+	suspendedProcess := self supendActiveProcess.
+	objectMemory splObj: SuspendedProcessInCallout put: suspendedProcess. 
+	
+	self enterSmalltalkExecutive.	
 	
 	"NEVER REACHED"
 	^ 1
@@ -2086,8 +2132,9 @@ StackInterpreterPrimitives >> ptExitInterpreterToCallback: aPointer [
 	self putToSleep: self activeProcess yieldingIf: preemptionYields.
 	self transferTo: suspendedProcess.
 	
-	self restoreCStackStateForCallbackContext: vmCallbackContext.	
-		
+	newMethod := self popStack.
+	
+	self restoreCStackStateForCallbackContext: vmCallbackContext.			
 	primitiveFunctionPointer := vmCallbackContext savedPrimFunctionPointer.
 	
 	self siglong: vmCallbackContext trampoline jmp: 1.

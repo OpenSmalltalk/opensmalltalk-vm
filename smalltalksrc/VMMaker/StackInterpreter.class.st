@@ -16449,6 +16449,16 @@ StackInterpreter >> marryFrame: theFP SP: theSP copyTemps: copyTemps [
 
 ]
 
+{ #category : #'ffi - helpers' }
+StackInterpreter >> marshallPointerFrom: argumentArrayOop at: index into: holder [ 
+	
+	| pointerHolder externalAddress |
+	pointerHolder := self cCoerce: holder to: #'void **'.
+	externalAddress := objectMemory fetchPointer: index ofObject: argumentArrayOop.
+	pointerHolder at: 0 put: (self readAddress: externalAddress).
+	
+]
+
 { #category : #'primitive support' }
 StackInterpreter >> maybeFailForLastObjectOverwrite [
 	<inline: true>

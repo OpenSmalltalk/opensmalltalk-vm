@@ -25,6 +25,13 @@ LibFFI >> cifAtAddress: anInteger [
 	^ cifs at: anInteger
 ]
 
+{ #category : #'type constants' }
+LibFFI >> double [
+	<doNotGenerate>
+	
+	^ LibFFIType type: FFI_TYPE_DOUBLE size: 8 on: self.
+]
+
 { #category : #'call simulations' }
 LibFFI >> ffiCall: aCif _: externalFunctionAddress _: returnHolder _: parameters [
 
@@ -78,6 +85,14 @@ LibFFI >> newCif [
 	nextAddress := nextAddress + 1.
 	
 	^ cif
+]
+
+{ #category : #'type constants' }
+LibFFI >> pointer [
+
+	<doNotGenerate>
+
+	^ LibFFIType type: FFI_TYPE_POINTER size: interpreter objectMemory wordSize on: self
 ]
 
 { #category : #'registering functions' }

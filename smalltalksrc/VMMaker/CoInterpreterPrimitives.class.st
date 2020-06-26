@@ -6,7 +6,7 @@ Class {
 
 { #category : #'process primitives' }
 CoInterpreterPrimitives >> doWaitSemaphore: sema [
-	
+	<api>
 	self doWaitSemaphore: sema reEnterInterpreter: true
 ]
 

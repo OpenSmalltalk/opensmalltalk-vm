@@ -7691,8 +7691,8 @@ CoInterpreter >> transcript [
 { #category : #'process primitive support' }
 CoInterpreter >> transferTo: newProc [
 	"replaced by transferTo:from: for better tracing (for debugging)"
-	<doNotGenerate>
-	self shouldNotImplement
+
+	^ self transferTo: newProc from: 0
 ]
 
 { #category : #'process primitive support' }

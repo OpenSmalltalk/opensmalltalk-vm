@@ -61,16 +61,32 @@ LibFFIType class >> type: aType size: aSize on: aLibFFI [
 LibFFIType >> fromSmalltalk: aNumber putInto: aCArrayAccessor [
 	<doNotGenerate>
 	[ type ]
-		caseOf: {([ FFI_TYPE_FLOAT ] -> [ |floatHolder| 
+		caseOf: {
+		[ FFI_TYPE_FLOAT ] -> [ |floatHolder| 
 			floatHolder := libFFI interpreter cCoerce: aCArrayAccessor to: #'float *'.
-			floatHolder at: 0 put: aNumber
-			])}
-		otherwise: [ self halt ]
+			floatHolder at: 0 put: aNumber].
+		[ FFI_TYPE_DOUBLE ] -> [ |dobuleHolder| 
+			dobuleHolder := libFFI interpreter cCoerce: aCArrayAccessor to: #'double *'.
+			dobuleHolder at: 0 put: aNumber].
+		[ FFI_TYPE_VOID ] -> []		
+		} otherwise: [ self halt ]
 ]
 
 { #category : #accessing }
 LibFFIType >> libFFI: aLibFFI [ 
 	libFFI := aLibFFI
+]
+
+{ #category : #simulating }
+LibFFIType >> marshallToSmalltalk: holder [ 
+		
+	^ [ type ] 
+		caseOf: { 
+			[ FFI_TYPE_FLOAT ] -> [ libFFI interpreter objectMemory float32AtPointer: holder ].
+			[ FFI_TYPE_DOUBLE ] -> [ libFFI interpreter objectMemory float64AtPointer: holder ].
+			[ FFI_TYPE_POINTER ] -> [ (holder asPointerAccessor: libFFI interpreter objectMemory wordSize) at: 0 ] } 
+		otherwise: [ self halt ]
+
 ]
 
 { #category : #accessing }
