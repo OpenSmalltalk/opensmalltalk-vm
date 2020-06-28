@@ -755,7 +755,7 @@ enum XdndState dndInDrop(enum XdndState state, XClientMessageEvent *evt)
 
 
 static void addDropFile(char *fileName);
-static void generateSqueakDropEventIfDroppedFiles(void);
+static Bool generateSqueakDropEventIfDroppedFiles(void);
 struct { char *fileName; Window sourceWindow; } *launchDrops = 0;
 static int numLaunchDrops = 0;
 
@@ -847,20 +847,21 @@ addDropFile(char *fileName)
 #endif
 }
 
-static void
-generateSqueakDropEventIfDroppedFiles()
+static Bool generateSqueakDropEventIfDroppedFiles()
 {
 	if (uxDropFileCount)
 		recordDragEvent(SQDragDrop, uxDropFileCount);
+  return uxDropFileCount;
 }
 
-static void dndGetSelection(Window owner, Atom property)
+static Bool dndGetSelection(Window owner, Atom property)
 {
   unsigned long remaining;
   unsigned char *data= 0;
   Atom actual;
   int format;
   unsigned long count;
+  Bool dropped = False;
 
   if (Success != XGetWindowProperty(stDisplay, owner, property, 0, 65536, 1, AnyPropertyType,
 				    &actual, &format, &count, &remaining, &data))
@@ -879,21 +880,25 @@ static void dndGetSelection(Window owner, Atom property)
 	    addDropFile(item);
 	  tokens= 0; /* strtok is weird.  this ensures more tokens, not less. */
 	}
-      generateSqueakDropEventIfDroppedFiles();
+      dropped = generateSqueakDropEventIfDroppedFiles();
       fdebugf((stderr, "  uxDropFileCount = %d\n", uxDropFileCount));
     }
   XFree(data);
+  return dropped;
 }
 
 
 static enum XdndState dndInSelectionNotify(enum XdndState state, XSelectionEvent *evt)
 {
+  Bool dropped;
+
   fdebugf((stderr, "Receive SelectionNotify (input)\n"));
   if (evt->property != XdndSelectionAtom) return state;
 
-  dndGetSelection(evt->requestor, evt->property);
+  dropped = dndGetSelection(evt->requestor, evt->property);
   dndSendFinished();
-  recordDragEvent(SQDragLeave, 1);
+  if (!dropped)
+    recordDragEvent(SQDragLeave, 1);
   return XdndStateIdle;
 }
 
