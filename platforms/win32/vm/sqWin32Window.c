@@ -1290,7 +1290,7 @@ int recordDragDropEvent(HWND wnd, int dragType, int x, int y, int numFiles)
 
   /* first the basics */
   evt->type = EventTypeDragDropFiles;
-  evt->timeStamp = ioMicroMSecs();
+  evt->timeStamp = ioMicroMSecs(); // TODO
   evt->dragType = dragType;
   evt->x = x;
   evt->y = y;
