@@ -46,12 +46,11 @@ struct VirtualMachine *sqGetInterpreterProxy(void);
 static void *
 findLoadedModule(char *pluginName)
 {
-	ModuleEntry *module;
+	ModuleEntry *module = firstModule;
 	if (!pluginName || !pluginName[0])
 		return squeakModule;
-	module = firstModule;
 	while (module) {
-		if (strcmp(module->name, pluginName) == 0)
+		if (!strcmp(module->name, pluginName))
 			return module;
 		module = module->next;
 	}
@@ -140,9 +139,7 @@ findInternalFunctionIn(char *functionName, char *pluginName
 #endif
 )
 {
-  char *function, *plugin;
   sqInt listIndex, index;
-  sqExport *exports;
 
   DPRINTF(("Looking (internally) for %s in %s ... ", functionName, (pluginName ? pluginName : "<intrinsic>")));
 
@@ -150,11 +147,11 @@ findInternalFunctionIn(char *functionName, char *pluginName
   if (functionName && !functionName[0]) functionName = NULL;
   if (pluginName && !pluginName[0]) pluginName = NULL;
   for (listIndex=0;; listIndex++) {
-    exports = pluginExports[listIndex];
+    sqExport *exports = pluginExports[listIndex];
     if (!exports) break;
     for (index=0;; index++) {
-      plugin = exports[index].pluginName;
-      function = exports[index].primitiveName;
+      char *plugin = exports[index].pluginName;
+      char *function = exports[index].primitiveName;
       /* canonicalize plugin and function to be NULL if not specified */
       if (plugin && !plugin[0]) plugin = NULL;
       if (function && !function[0]) function = NULL;
@@ -307,10 +304,9 @@ findAndLoadModule(char *pluginName, sqInt ffiLoad)
 	/* NOT ffiLoad */
 	if (!handle) {
 		/* might be internal, so go looking for setInterpreter() */
-		if (findInternalFunctionIn("setInterpreter", pluginName NADA))
-			handle = squeakModule->handle;
-		else
+		if (!findInternalFunctionIn("setInterpreter", pluginName NADA))
 			return NULL; /* PluginName_setInterpreter() not found */
+		handle = squeakModule->handle;
 	}
 	module = addToModuleList(pluginName, handle, ffiLoad);
 	if (!callInitializersIn(module)) {
@@ -593,17 +589,15 @@ char *
 ioListBuiltinModule(sqInt moduleIndex)
 {
   sqInt index, listIndex;
-  char *function, *plugin;
-  sqExport *exports;
 
   for (listIndex=0;; listIndex++) {
-    exports = pluginExports[listIndex];
+    sqExport * exports = pluginExports[listIndex];
     if (!exports) break;
     for (index=0;; index++) {
-      plugin = exports[index].pluginName;
-      function = exports[index].primitiveName;
+      char *plugin = exports[index].pluginName;
+      char *function = exports[index].primitiveName;
       if (!function && !plugin) break; /* no more plugins */
-      if (strcmp(function,"setInterpreter") == 0) {
+      if (!strcmp(function,"setInterpreter")) {
         /* new module */
         if (--moduleIndex == 0) {
           char *moduleName;
@@ -630,24 +624,20 @@ ioListLoadedModule(sqInt moduleIndex)
 	ModuleEntry *entry = firstModule;
 
 	if (moduleIndex < 1)
-		return (char*)NULL;
+		return NULL;
 	while (entry && index < moduleIndex) {
 		entry = entry->next;
 		index = index + 1;
 	}
-	if ( entry ) {
-		char *moduleName;
-		void * init0;
-
-		init0 = findFunctionIn("getModuleName", entry);
+	if (entry) {
+		void *init0 = findFunctionIn("getModuleName", entry);
 		if (init0) {
 			/* Check the compiled name of the module */
-			moduleName = ((char* (*) (void))init0)();
+			char *moduleName = ((char* (*) (void))init0)();
 			if (moduleName)
 				return moduleName;
 		}
 		return entry->name;
 	}
-	else
-		return (char*)NULL;
+	return NULL;
 }

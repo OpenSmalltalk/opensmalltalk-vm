@@ -90,7 +90,7 @@ LIBS:= $(addprefix $(OBJDIR)/, $(addsuffix .lib, $(INTERNAL_PLUGINS)))
 BUNDLES:= $(addprefix $(OBJDIR)/, $(addsuffix .bundle, $(EXTERNAL_PLUGINS)))
 
 ifdef BIT_IDENTICAL_FLOATING_POINT
-LIBS:=$(BLDDIR)/fdlibm/libm.a $(LIBS)
+LIBS:=$(LIBS) $(BLDDIR)/fdlibm/libm.a
 endif
 
 # VM config flags.
@@ -318,6 +318,6 @@ FORCE:
 # Extra specific dependencies
 #
 sqNamedPrims.h: plugins.int
-	../common/mkNamedPrims.sh plugins.int > sqNamedPrims.h
+	$(PLATDIR)/Cross/util/mkNamedPrims.sh plugins.int > sqNamedPrims.h
 
 $(OBJDIR)/sqNamedPrims.o:	sqNamedPrims.c sqNamedPrims.h

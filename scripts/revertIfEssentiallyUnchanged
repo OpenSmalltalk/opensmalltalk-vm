@@ -15,11 +15,12 @@ for f in "$@"; do
 		*M*)	;;
 		*)	continue
 		esac
-		RESULT="`git diff -- "$f" | grep '^[+-]' | egrep -v ' VMMaker[-.][a-z][a-z-]*\.[0-9][0-9]* uuid:| Cog[-.][a-z][a-z]*\.[0-9][0-9]* uuid:| Qwaq-Plugins[-.][a-z][a-z]*\.[0-9][0-9]* uuid:| VMMaker[-.][a-z][a-z-]*\.[0-9][0-9]* \([ie]\)|static const char \*moduleName.*" INT_EXT;| Cog[-.][a-z][a-z-]*\.[0-9][0-9]* \([ie]\)| Qwaq-Plugins[-.][a-z][a-z]*\.[0-9][0-9]* \([ie]\)| VMConstruction-Plugins-OSProcessPlugin[a-z.-][a-z.-]*\.[0-9][0-9]* | Sound[-.][a-z][a-z]*\.[0-9][0-9]* uuid:|^\-\-\-|^\+\+\+|^[+-]$'`"
+		RESULT="`git diff -- "$f" | grep '^[+-]' | egrep -v ' VMMaker[-.][a-z][a-z-]*\.[0-9][0-9]* uuid:| Cog[-.][a-z][a-z]*\.[0-9][0-9]* uuid:| Qwaq-Plugins[-.][a-z][a-z]*\.[0-9][0-9]* uuid:| VMMaker[-.][a-z][a-z-]*\.[0-9][0-9]*[ "]|static const char \*moduleName.*" INT_EXT;| Cog[-.][a-z][a-z-]*\.[0-9][0-9]* | Qwaq-Plugins[-.][a-z][a-z]*\.[0-9][0-9]* | VMConstruction-Plugins-OSProcessPlugin[a-z.-][a-z.-]*\.[0-9][0-9]* | Sound[-.][a-z][a-z]*\.[0-9][0-9]* uuid:|^\-\-\-|^\+\+\+|^[+-]$'`"
 		if [ -z "$TEST" ]; then
 			test -z "$RESULT" && (echo reverting "$f"; git checkout -- "$f")
 		else
-			git diff -- "$f" | grep '^[+-]' | egrep -v ' VMMaker[-.][a-z][a-z-]*\.[0-9][0-9]* uuid:| Cog[-.][a-z][a-z]*\.[0-9][0-9]* uuid:| Qwaq-Plugins[-.][a-z][a-z]*\.[0-9][0-9]* uuid:| VMMaker[-.][a-z][a-z-]*\.[0-9][0-9]* \([ie]\)|static const char \*moduleName.*" INT_EXT;| Cog[-.][a-z][a-z-]*\.[0-9][0-9]* \([ie]\)| Qwaq-Plugins[-.][a-z][a-z]*\.[0-9][0-9]* \([ie]\)| VMConstruction-Plugins-OSProcessPlugin[a-z.-][a-z.-]*\.[0-9][0-9]* | Sound[-.][a-z][a-z]*\.[0-9][0-9]* uuid:|^\-\-\-|^\+\+\+|^[+-]$'
+			echo "testing; no output implies this would be reverted"
+			git diff -- "$f" | grep '^[+-]' | egrep -v ' VMMaker[-.][a-z][a-z-]*\.[0-9][0-9]* uuid:| Cog[-.][a-z][a-z]*\.[0-9][0-9]* uuid:| Qwaq-Plugins[-.][a-z][a-z]*\.[0-9][0-9]* uuid:| VMMaker[-.][a-z][a-z-]*\.[0-9][0-9]*[ "]|static const char \*moduleName.*" INT_EXT;| Cog[-.][a-z][a-z-]*\.[0-9][0-9]* | Qwaq-Plugins[-.][a-z][a-z]*\.[0-9][0-9]* | VMConstruction-Plugins-OSProcessPlugin[a-z.-][a-z.-]*\.[0-9][0-9]* | Sound[-.][a-z][a-z]*\.[0-9][0-9]* uuid:|^\-\-\-|^\+\+\+|^[+-]$'
 		fi
 	fi
 done

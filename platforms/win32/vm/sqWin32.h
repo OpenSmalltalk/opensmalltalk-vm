@@ -48,7 +48,7 @@
  * historical reasons.  Images up to and including Squeak 5/Pharo 6 expect
  * getSystemAttribute: 1001 ("platform name") to answer 'Win32' on Windows.
  * Yes, this is regrettable.  No, it's not easy to fix without breaking existing
- * images :-(.  The NT vs CE distinction isn't particularly meaningful either.
+ * images :-(.
  * Further (see sqWin32Window.c) parameter 1005 (the windoing system name) also
  * answers Win32.  Perhaps this could be changed to "Windows", because at least
  * in a base Squeak 5.1 image as of mid 2017 there is no use of windowSystemName
@@ -225,7 +225,6 @@ extern HWND  consoleWindow;       /* console */
 
 
 extern HWND stWindow;	     	         /*	the squeak window */
-extern HWND browserWindow;	     	     /*	the browser window */
 extern HINSTANCE hInstance;	     /*	the instance of squeak running */
 extern HCURSOR currentCursor;	     /*	current cursor displayed by squeak */
 extern HPALETTE palette;	     /*	the palette (might be unused) */
@@ -240,7 +239,6 @@ extern BOOL fIsConsole;          /* Are we running as a console app? */
 /* Startup options */
 extern BOOL  fHeadlessImage; /* Do we run headless? */
 extern BOOL  fRunService;    /* Do we run as NT service? */
-extern BOOL  fBrowserMode;   /* Do we run in a web browser? */
 extern DWORD dwMemorySize;   /* How much memory do we use? */
 extern BOOL  fUseDirectSound;/* Do we use DirectSound?! */
 extern BOOL  fUseOpenGL;     /* Do we use OpenGL?! */
@@ -312,12 +310,6 @@ void vprintLastError(TCHAR *fmt, ...);
 /******************************************************/
 DWORD SqueakImageLength(WCHAR *fileName);
 int isLocalFileName(TCHAR *fileName);
-
-#ifndef NO_PLUGIN_SUPPORT
-void pluginInit(void);
-void pluginExit(void);
-void pluginHandleEvent(MSG* msg);
-#endif /* NO_PLUGIN_SUPPORT */
 
 #ifndef NO_DROP
 int recordDragDropEvent(HWND wnd, int dragType, int x, int y, int numFiles);

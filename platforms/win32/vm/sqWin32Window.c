@@ -106,7 +106,6 @@ int keyBufOverflows = 0;	/* number of characters dropped */
 
 /*** Win32-related Variables (declared in sqWin32.h) ***/
 HWND stWindow = NULL;      /*	the squeak window */
-HWND browserWindow = NULL; /* The browser window */
 HINSTANCE hInstance;	     /*	the instance of squeak running */
 HCURSOR currentCursor=0;	 /*	current cursor displayed by squeak */
 HPALETTE palette;	         /*	the palette (might be unused) */
@@ -143,7 +142,6 @@ BOOL f3ButtonMouse = 0;   /* Should we use a real 3 button mouse mapping? */
 BOOL  fHeadlessImage = 0;      /* Do we run headless? */
 BOOL  fRunService = 0;         /* Do we run as NT service? */
 DWORD dwMemorySize = 0;        /* How much memory do we use? */
-BOOL  fBrowserMode = 0;        /* Are we running in a web browser? */
 
 /* Misc preferences */
 BOOL  fEnableAltF4Quit = 1; /* can we quit using Alt-F4? */
@@ -910,11 +908,8 @@ sqInt ioSetWindowWidthHeight(sqInt w, sqInt h) {
 
   /* We may have to center the window to fit on screen,
      although if there is room, we retain the window's previous position. */
-  if (fBrowserMode) {
-    left = 0;
-    top = 0;
-  } else if ((old.left >= workArea.left) && (old.top >= workArea.top) &&
-		     (old.left + width < workArea.right) && (old.top + height < workArea.bottom)) {
+  if ((old.left >= workArea.left) && (old.top >= workArea.top) &&
+	  (old.left + width < workArea.right) && (old.top + height < workArea.bottom)) {
 	left = old.left; 
 	top = old.top;
   } else {
@@ -987,35 +982,19 @@ void SetupWindows()
   wc.lpszClassName = windowClassName;
   RegisterClass(&wc);
 
-  if(!browserWindow)
-    stWindow = CreateWindowEx(WS_EX_APPWINDOW /* | WS_EX_OVERLAPPEDWINDOW */,
-			      windowClassName,
-			      TEXT(VM_NAME) TEXT("!"),
-			      WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
-			      0,
-			      0,
-			      CW_USEDEFAULT,
-			      CW_USEDEFAULT,
-			      NULL,
-			      NULL,
-			      hInstance,
-			      NULL);
-  else {
-    /* Setup a browser window. */
-    fBrowserMode = 1;
-    stWindow = CreateWindowEx(0,
-			      windowClassName,
-			      TEXT(VM_NAME) TEXT("!"),
-			      WS_CHILD | WS_CLIPCHILDREN,
-			      0,
-			      0,
-			      GetSystemMetrics(SM_CXSCREEN),
-			      GetSystemMetrics(SM_CYSCREEN),
-			      browserWindow,
-			      NULL,
-			      hInstance,
-			      NULL);
-  }
+  stWindow = CreateWindowEx(WS_EX_APPWINDOW /* | WS_EX_OVERLAPPEDWINDOW */,
+				windowClassName,
+				TEXT(VM_NAME) TEXT("!"),
+				WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
+				0,
+				0,
+				CW_USEDEFAULT,
+				CW_USEDEFAULT,
+				NULL,
+				NULL,
+				hInstance,
+				NULL);
+
   /* Force Unicode WM_CHAR */
   SetWindowLongPtrW(stWindow,GWLP_WNDPROC,(LONG_PTR)MainWndProcW);
 
@@ -1057,7 +1036,6 @@ void SetWindowSize(void) {
   int deltaWidth, deltaHeight;
 
   if(!IsWindow(stWindow)) return; /* might happen if run as NT service */
-  if(browserWindow) return; /* Ignored if in browser */
 
   if (getSavedWindowSize() != 0) {
     width  = (unsigned) getSavedWindowSize() >> 16;
@@ -1694,10 +1672,6 @@ sqInt ioProcessEvents(void)
 	
 		while(PeekMessageW(&msg,NULL,0,0,PM_NOREMOVE)) {
 			GetMessageW(&msg,NULL,0,0);
-# ifndef NO_PLUGIN_SUPPORT
-			if (msg.hwnd == NULL)
-				pluginHandleEvent(&msg);
-# endif
 			TranslateMessage(&msg);
 			DispatchMessageW(&msg);
 
@@ -1706,10 +1680,6 @@ sqInt ioProcessEvents(void)
 #else
 	while(PeekMessage(&msg,NULL,0,0,PM_NOREMOVE)) {
 		GetMessage(&msg,NULL,0,0);
-# ifndef NO_PLUGIN_SUPPORT
-		if (msg.hwnd == NULL)
-			pluginHandleEvent(&msg);
-# endif
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
     	}
@@ -1719,12 +1689,6 @@ sqInt ioProcessEvents(void)
 	/* any buffered mouse input which hasn't been processed is obsolete */
 	DumpBufferedMouseTrail();
 # endif
-
-	/* If we're running in a browser check if the browser's still there */
-	if (fBrowserMode
-	 && browserWindow
-	 && !IsWindow(browserWindow))
-		ioExit();
 
 	if (inIOProcessEvents > 0)
 		inIOProcessEvents -= 1;
@@ -1748,11 +1712,6 @@ ioDrainEventQueue(void)
   while(PeekMessage(&msg,NULL,0,0,PM_NOREMOVE))
     {
       GetMessage(&msg,NULL,0,0);
-#ifndef NO_PLUGIN_SUPPORT
-      if(msg.hwnd == NULL) {
-	pluginHandleEvent(&msg);
-      } else
-#endif
 	if(msg.hwnd != stWindow) {
 	  /* Messages not sent to Squeak window */
 	  if(msg.hwnd != consoleWindow && GetParent(msg.hwnd) == stWindow) {
@@ -1782,10 +1741,6 @@ ioDrainEventQueue(void)
   DumpBufferedMouseTrail();
 #endif
 
-  /* If we're running in a browser check if the browser's still there */
-  if(fBrowserMode && browserWindow) {
-    if(!IsWindow(browserWindow)) ioExit();
-  }
   lastMessage = NULL;
   return 1;
 }
@@ -1802,12 +1757,9 @@ sqInt ioScreenSize(void)
   static RECT r;
 
   if(!IsWindow(stWindow)) return getSavedWindowSize();
-  if(browserWindow && GetParent(stWindow) == browserWindow) {
-    GetClientRect(browserWindow,&r);
-  } else {
-    if(!IsIconic(stWindow))
-      GetClientRect(stWindow,&r);
-  }
+  if(!IsIconic(stWindow))
+    GetClientRect(stWindow,&r);
+
   /* width is high 16 bits; height is low 16 bits */
   return MAKELONG(r.bottom,r.right);
 }
@@ -1939,21 +1891,6 @@ sqInt ioSetFullScreen(sqInt fullScreen) {
   }
   if(fullScreen)
     {
-      if(browserWindow) {
-	/* Jump out of the browser */
-	HWND oldBrowserWindow = browserWindow;
-	browserWindow = NULL;
-	DestroyWindow(stWindow);
-	SetupWindows();
-	/* I'm not exactly sure which one of the following three
-	   does the trick for IE - but using all three works,
-	   so hey, who cares ;-) */
-	SetForegroundWindow(stWindow);
-	SetActiveWindow(stWindow);
-	BringWindowToTop(stWindow);
-	/* SetWindowPos(stWindow, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW); */
-	browserWindow = oldBrowserWindow;
-      }
       SetWindowLongPtr(stWindow,GWL_STYLE, WS_POPUP | WS_CLIPCHILDREN);
       SetWindowLongPtr(stWindow,GWL_EXSTYLE, WS_EX_APPWINDOW);
       ShowWindow(stWindow, SW_SHOWMAXIMIZED);
@@ -1966,11 +1903,6 @@ sqInt ioSetFullScreen(sqInt fullScreen) {
       SetWindowLongPtr(stWindow,GWL_STYLE, WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN);
       SetWindowLongPtr(stWindow,GWL_EXSTYLE, WS_EX_APPWINDOW /* | WS_EX_OVERLAPPEDWINDOW */ );
       SetWindowPos(stWindow,0,0,0,0,0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED | SWP_NOREDRAW);
-      if(browserWindow) {
-	/* Jump back into the browser */
-	DestroyWindow(stWindow);
-	SetupWindows();
-      }
       ShowWindow(stWindow,SW_SHOWNORMAL);
       setFullScreenFlag(0);
     }
@@ -2144,7 +2076,6 @@ sqInt ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenF
   RECT r;
 #ifdef USE_DIRECT_X
   static int wasFullscreen = 0;
-  static HWND oldBrowserWindow = NULL;
 #endif
 
   if(!IsWindow(stWindow)) return 0;
@@ -2159,27 +2090,11 @@ sqInt ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenF
     ioSetFullScreen(0); /* Turn off fullscreen */
     DirectXSetDisplayMode(stWindow, width, height, depth, 0);
     DestroyWindow(stWindow);
-    browserWindow = oldBrowserWindow;
     SetupWindows();
     ShowWindow(stWindow, SW_SHOWNORMAL);
   }
   wasFullscreen = fullscreenFlag;
-  if(fullscreenFlag && browserWindow) {
-    /* Must get out of browser window */
-    oldBrowserWindow = browserWindow;
-    browserWindow = NULL;
-    DestroyWindow(stWindow);
-    SetupWindows();
-    ShowWindow(stWindow, SW_SHOWNORMAL);
-  }
   if(!DirectXSetDisplayMode(stWindow, width, height, depth, fullscreenFlag)) {
-    /* We must carefully restore the old window here */
-    if(oldBrowserWindow) {
-      DestroyWindow(stWindow);
-      browserWindow = oldBrowserWindow;
-      SetupWindows();
-      ShowWindow(stWindow, SW_SHOWNORMAL);
-    }
     return 0;
   }
   /* Note: Only go to full screen if DirectX is used */
@@ -2190,12 +2105,7 @@ sqInt ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenF
   r.top = 0;
   r.right = width;
   r.bottom = height;
-  if(browserWindow) {
-    r.right = GetSystemMetrics(SM_CXSCREEN);
-    r.bottom = GetSystemMetrics(SM_CYSCREEN);
-  } else {
-    AdjustWindowRect(&r, GetWindowLongPtr(stWindow, GWL_STYLE), 0);
-  }
+  AdjustWindowRect(&r, GetWindowLongPtr(stWindow, GWL_STYLE), 0);
   SetWindowPos(stWindow, NULL, 0, 0, r.right-r.left, r.bottom-r.top,
 	       SWP_NOMOVE | SWP_NOZORDER);
   SetFocus(stWindow);
@@ -2346,56 +2256,6 @@ sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth, double
 }
 
 
-#ifdef USE_DIB_SECTIONS
-
-/* CreateBitmapDC():
-   Create a device context for a DIB of the selected size.
-*/
-HDC CreateBitmapDC(HDC dc, int depth, int width, int height, void** pBitsOut)
-{
-  /* Cached DIBSection */
-  static HBITMAP hbm = NULL;
-  static int lastDepth = 0;
-  static int lastWidth = 0;
-  static int lastHeight = 0;
-  static void* pBits;
-  static HDC memDC;
-  BITMAPINFO *bmi;
-
-  bmi = BmiForDepth(depth);
-  if(!bmi)
-    abortMessage(TEXT("Fatal error: Color depth %d not supported"),depth);
-
-  if (depth != lastDepth || width != lastWidth || height != lastHeight)
-    {
-      lastDepth = depth;
-      lastHeight = height;
-      lastWidth = width;
-      bmi->bmiHeader.biWidth = width;
-      bmi->bmiHeader.biHeight = -height;
-      if (hbm)
-	DeleteObject(hbm);
-      hbm = CreateDIBSection(dc, bmi, DIB_RGB_COLORS, &pBits, NULL, 0);
-      if (!hbm)
-	abortMessage(TEXT("Fatal error: Cannot create device bitmap!"));
-    }
-
-  *pBitsOut = pBits;
-  memDC = CreateCompatibleDC(dc);
-  SelectObject(memDC, hbm);
-  return memDC;
-}
-
-/* ReleaseBitmapDC():
-   Clean up the given DC.
-*/
-void ReleaseBitmapDC(HDC memDC)
-{
-  DeleteDC(memDC);
-}
-
-#endif /* USE_DIB_SECTIONS */
-
 sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
 		  sqInt affectedL, sqInt affectedR, sqInt affectedT, sqInt affectedB)
 { HDC dc;
@@ -2464,53 +2324,6 @@ sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
   /* ----- EXPERIMENTAL ----- */
   lsbDisplay = depth < 0;
   if(lsbDisplay) depth = -depth;
-
-#if defined(USE_DIB_SECTIONS)
-	/******************************************************/
-	/* Windows CE version, using DIBSection               */
-	/* (does not support palettes or SetDIBitsToDevice()) */
-	/******************************************************/
-  {
-    void* pBits;
-    HDC memDC;
-
-    dc = GetDC(stWindow);
-    if (!dc)
-      error("GetDC() failed");
-
-    memDC = CreateBitmapDC(dc, depth, width, height, &pBits);
-    /* Reverse the affected area out of the squeak bitmap, into the DIBSection */
-
-    PROFILE_BEGIN(PROFILE_DISPLAY)
-      if( !lsbDisplay && depth < 32 ) {
-	if(depth == 16)
-	  reverse_image_words((unsigned int*) pBits, (unsigned int*) dispBits,
-			      depth, width, &updateRect);
-	else
-	  reverse_image_bytes((unsigned int*) pBits, (unsigned int*) dispBits,
-			      depth, width, &updateRect);
-      } else {
-	copy_image_words((int*)pBits, (int*) dispBits,
-			 depth, width, &updateRect);
-      }
-    PROFILE_END(ticksForReversal)
-
-      PROFILE_BEGIN(PROFILE_DISPLAY);
-    BitBlt(dc,
-	   updateRect.left,/* dst_x */
-	   updateRect.top, /* dst_y */
-	   (updateRect.right - updateRect.left),/* dst_w */
-	   (updateRect.bottom - updateRect.top),/* dst_h */
-	   memDC,
-	   updateRect.left, /* src_x */
-	   updateRect.top,  /* src_y */
-	   SRCCOPY);
-
-    ReleaseBitmapDC(memDC);
-    ReleaseDC(stWindow,dc);
-    PROFILE_END(ticksForBlitting);
-  }
-#else /* !defined(USE_DIB_SECTIONS) */
 
   bmi = BmiForDepth(depth);
   if(!bmi)
@@ -2616,7 +2429,6 @@ sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
   }
   PROFILE_END(ticksForReversal)
 #endif /* NO_BYTE_REVERSAL */
-#endif /* defined(USE_DIB_SECTIONS) */
   return 1;
 }
 
