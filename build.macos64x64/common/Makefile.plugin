@@ -12,7 +12,7 @@
 # EXTRALIBS  	 defines additional libraries to link into an external plugin bundle
 # INCDIRS    	 defines additonal directories in which to search for includes
 # LIBSRC     	 overrides the set of files to compile (if EXCLUDESRC inconvenient)
-# LINK_WITH_CPP  set to non-empty to link external plugin bundle with c++ runtime
+# LINK_WITH_CXX  set to non-empty to link external plugin bundle with c++ runtime
 # SRCDIRS    	 supplies additional directories containing files to compile.
 # PREREQUISITES  supplies names of files that must exist to make lib or bundle
 # THIRDPARTYLIBS supplies names for third-party libraries that needs to be built
@@ -182,13 +182,13 @@ $(PLUGINLIB): $(PLUGINREQS) $(VMDIR) $(OBJDIR) $(LIBOBJ) $(PLUGINFWKS)
 	-rm $(PLUGINLIB)
 	ar -rc $(PLUGINLIB) $(LIBOBJ)
 
-# Either link with normal compiler/linker or with cpp compiler/linker.  If
-# LINK_WITH_CPP is set, use e.g. clang++
+# Either link with normal compiler/linker or with CXX compiler/linker.  If
+# LINK_WITH_CXX is set, use e.g. clang++
 $(PLUGINBUNDLE): $(PLUGINREQS) $(PLUGINEXE) $(PLUGINICONS) $(PLUGINPLIST) $(PLUGINFWKS)
 
 $(PLUGINEXE): $(PLUGINREQS) $(VMDIR) $(OBJDIR) $(LIBOBJ) $(PLUGINFWKS)
 	mkdir -p $(PLUGINBUNDLE)/Contents/MacOS
-ifneq ($(LINK_WITH_CPP),)
+ifneq ($(LINK_WITH_CXX),)
 	$(LDCXX) \
 	$(BFLAGS) \
 	-Wl,-bundle_loader,$(VMDIR)/$(VM) \
@@ -221,7 +221,7 @@ $(PLUGINPLIST): $(PLATDIR)/iOS/plugins/Info.plist getversion
 	sed "s/\$$(LIBNAME)/$(LIBNAME)/" > $(PLUGINPLIST)
 
 $(PLUGINDYLIB): $(PLUGINREQS) $(VMDIR) $(OBJDIR) $(LIBOBJ)
-ifneq ($(LINK_WITH_CPP),)
+ifneq ($(LINK_WITH_CXX),)
 	$(LDCXX) \
 	$(DYFLAGS) \
 	-install_name @executable_path/Plugins/$(LIBNAME).dylib \

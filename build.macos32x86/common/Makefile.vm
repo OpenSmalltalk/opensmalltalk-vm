@@ -10,6 +10,14 @@
 #
 # COGDEFS supply any command-line defines to use, and may be null.
 #
+# SDK optional specific SDK instead of oldest suitable available version,
+#		e.g.  SDK:=MacOSX10.13.sdk
+#
+# TARGET_VERSION_MIN optional oldest supported target instead of defauld 10.7
+#		e.g.  TARGET_VERSION_MIN:=10.11
+#
+# LINK_WITH_CXX optional, use clang++ to link.  Simply set to non-empty
+#
 # The name of the VM to build, e.g. Squeak or "Newspeak Virtual Machine"
 # and its short name, e.g. Squeak or Newspeak, used to choose app icon files.
 
@@ -44,6 +52,7 @@ OBJDIR:= $(BLDDIR)/vm
 
 PLATDIR:=../../platforms
 CROSSDIR:=$(PLATDIR)/Cross/vm
+TPDIR:=$(PLATDIR)/Cross/third-party
 OSXDIR:=$(PLATDIR)/iOS/vm/OSX
 OSXCOMMONDIR:=$(PLATDIR)/iOS/vm/Common
 OSXCLASSESDIR:=$(PLATDIR)/iOS/vm/Common/Classes
@@ -112,11 +121,6 @@ DEFS:=	$(COGDEFS) -DUSE_GLOBAL_STRUCT=0 -DNO_ISNAN=1 \
 		-DUSE_INLINE_MEMORY_ACCESSORS -D'TZ="$(TZ)"' \
 		$(INTERPFLAGS)
 
-# DEFS:=	$(COGDEFS) -DUSE_GLOBAL_STRUCT=0 -DNO_ISNAN=1 \
-# 		-DUSE_CORE_GRAPHICS=1 \
-# 		-DUSE_INLINE_MEMORY_ACCESSORS -D'TZ="$(TZ)"' \
-# 		$(INTERPFLAGS)
-
 XDEFS:=	-DSQUEAK_BUILTIN_PLUGIN
 CFLAGS:= $(OFLAGS) $(COGDEFS) $(DEBUGVM) $(DEFS) $(XDEFS)
 INCLUDES:= $(addprefix -I,. $(SRCDIRS))
@@ -135,7 +139,7 @@ ifneq ($(shell grep 'GitRawRevisionString.*$$Rev$$.' $(SCCSVER)),)
 $(shell bash -c "cd ../../scripts; ./updateSCCSVersions")
 endif
 
-SVNREV:= $(shell sed -e "s/^static.*GitRawRevisionString.*Rev: \([0-9][0-9]*\).*/\\1/p" -e d $(PLATDIR)/Cross/vm/sqSCCSVersion.h)
+SVNREV:= $(shell sed -e "s/^static.*GitRawRevisionString.*Rev: \([0-9][0-9]*\).*/\\1/p" -e d $(SCCSVER))
 
 
 #############################################################################
@@ -218,9 +222,15 @@ ignore := $(addsuffix .%, $(basename $(wildcard $(BUILD)/vm/*.ignore)))
 
 $(OBJDIR)/$(VM): $(OBJDIR) $(VMOBJ) $(LIBS)
 	$(CC) -arch $(TARGET_ARCH) -o $(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -c $(OSXCOMMONDIR)/version.c
+ifneq ($(LINK_WITH_CXX),)
+	$(LDCXX) -arch $(TARGET_ARCH) -isysroot $(SDK) $(CXXVERFLAGS) $(LDFLAGS) $(FRAMEWORKS) \
+			-Wl,-headerpad_max_install_names \
+			-o $(OBJDIR)/$(VM) $(VMOBJ) $(filter-out $(call ignore), $(LIBS))
+else
 	$(CC) -arch $(TARGET_ARCH) -isysroot $(SDK) $(LDFLAGS) $(FRAMEWORKS) \
 			-Wl,-headerpad_max_install_names \
 			-o $(OBJDIR)/$(VM) $(VMOBJ) $(filter-out $(call ignore), $(LIBS))
+endif
 
 $(OBJDIR)/validImage: $(OBJDIR)/validImage.o $(OBJDIR)/sqUnixSpurMemory.o $(OBJDIR)/sqHeapMap.o
 	$(LD) -arch $(TARGET_ARCH) -o $@ $^
@@ -234,6 +244,8 @@ endif
 ifneq ($(EXTERNAL_PLUGINS),)
 	mkdir -p $(addprefix $(BLDDIR)/, $(EXTERNAL_PLUGINS))
 endif
+
+validImage:	$(OBJDIR) $(OBJDIR)/validImage
 
 #############################################################################
 # Building plugins

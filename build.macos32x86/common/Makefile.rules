@@ -9,6 +9,7 @@ CC := clang
 CXX := clang++
 LD := clang
 LDCXX := clang++ # For linking c++ bundles
+CXXVERFLAGS:=-std=c++11 -stdlib=libc++
 
 include ../common/Makefile.flags
 
@@ -25,11 +26,11 @@ $(OBJDIR)/%.o: %.m deps/%.d $(MAKEFILE)
 	$(POSTCOMPILE)
 
 $(OBJDIR)/%.o: %.cpp deps/%.d $(MAKEFILE)
-	$(CXX) -std=c++11 -stdlib=libc++ $(ALLFLAGS) $(INCLUDES) -c $< -o $@
+	$(CXX) $(CXXVERFLAGS) $(ALLFLAGS) $(INCLUDES) -c $< -o $@
 	$(POSTCOMPILE)
 
 $(OBJDIR)/%.o: %.mm deps/%.d $(MAKEFILE)
-	$(CXX) -std=c++11 -stdlib=libc++ $(ALLFLAGS) $(INCLUDES) -c $< -o $@
+	$(CXX) $(CXXVERFLAGS) $(ALLFLAGS) $(INCLUDES) -c $< -o $@
 	$(POSTCOMPILE)
 
 deps/%.d: ;
