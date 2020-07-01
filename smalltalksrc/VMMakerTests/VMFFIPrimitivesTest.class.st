@@ -240,6 +240,33 @@ VMFFIPrimitivesTest >> testPrimitiveSameThreadCalloutReturningVoidPushesTheRecei
 ]
 
 { #category : #tests }
+VMFFIPrimitivesTest >> testPrimitiveSameThreadCalloutShouldKeepTheNewMethodVariable [
+
+	| parametersArray tfExternalFunction oldActiveProcess callbackContext |
+
+	callbackContext	:= VMCallbackContext new.
+	callbackContext trampoline: ExitInterpreter new.
+
+	tfExternalFunction := self createReturnFloatExternalFunctionFor: [ 
+		[interpreter ptEnterInterpreterFromCallback: callbackContext] 
+			on: ExitInterpreter do: [ 3.14 ] ].
+	
+	oldActiveProcess := interpreter activeProcess.
+
+	parametersArray := self newObjectWithSlots: 0.
+
+	interpreter push: memory nilObject.
+	interpreter push: tfExternalFunction.
+	interpreter push: parametersArray. 
+
+	interpreter interpreteBlock: [ interpreter ptExitInterpreterToCallback: callbackContext ].
+	interpreter argumentCount: 2.
+	interpreter primitiveSameThreadCallout.
+	
+	self assert: interpreter activeProcess equals: oldActiveProcess.
+]
+
+{ #category : #tests }
 VMFFIPrimitivesTest >> testPrimitiveSameThreadCalloutWithADoubleArgumentsPushesValueInTheStack [
 
 	| parametersArray tfExternalFunction |
