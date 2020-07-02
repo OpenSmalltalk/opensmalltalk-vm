@@ -4,10 +4,46 @@ Class {
 	#pools : [
 		'VMBasicConstants',
 		'VMBytecodeConstants',
-		'VMObjectIndices'
+		'VMObjectIndices',
+		'VMSqueakClassIndices'
 	],
 	#category : #VMMakerTests
 }
+
+{ #category : #running }
+VMAbstractPrimitiveTest >> createProcessFor: newMethod priority: aPriority [
+
+	| aProcess |
+	
+	aProcess := self createSuspendedProcessFor: newMethod priority: aPriority.
+	
+	interpreter preemptionYields: false.
+	interpreter putToSleep: aProcess yieldingIf: interpreter preemptionYields.
+
+	^ aProcess
+]
+
+{ #category : #running }
+VMAbstractPrimitiveTest >> createSuspendedProcessFor: newMethod priority: aPriority [
+
+	| suspendedContext aProcess |
+	
+	"Create a new process with given priority and put it to sleep"
+
+	suspendedContext := self
+		newSmallContextReceiver: memory nilObject
+		method: newMethod
+		arguments: #()
+		temporaries: #()
+		ip: self wordSize + 1.
+
+	aProcess := self newObjectWithSlots: 4.
+
+	memory storeInteger: PriorityIndex ofObject: aProcess withValue: aPriority.
+	memory storePointer: SuspendedContextIndex ofObject: aProcess withValue: suspendedContext.
+
+	^ aProcess
+]
 
 { #category : #'helpers - classes' }
 VMAbstractPrimitiveTest >> newClassInOldSpaceWithSlots: numberOfSlots format: format [
@@ -31,7 +67,10 @@ VMAbstractPrimitiveTest >> newClassInOldSpaceWithSlots: numberOfSlots format: fo
 VMAbstractPrimitiveTest >> newSmallContextReceiver: anOop method: aMethodOop arguments: aCollectionOfArgumentsOop temporaries: aCollectionOfTemporariesOop ip: anIp [
 
 	| newCtx numArgs numTemps |
-	newCtx := memory eeInstantiateMethodContextSlots: SmallContextSlots.
+	newCtx := memory
+					allocateSlots: SmallContextSlots
+					format: memory indexablePointersFormat
+					classIndex: ClassMethodContextCompactIndex.
 
 	numArgs := aCollectionOfArgumentsOop size.
 	numTemps := aCollectionOfTemporariesOop size.
@@ -77,7 +116,7 @@ VMAbstractPrimitiveTest >> newSmallContextReceiver: anOop method: aMethodOop arg
 VMAbstractPrimitiveTest >> setUp [
 	
 	"taken from VMSimpleStackBasedCogitBytecodeTest >> #setup"
-	| newMethod ctx page processorOopAssociation processorOop processorListsArray priorities anotherProcess suspendedContext |
+	| newMethod ctx page processorOopAssociation processorOop processorListsArray priorities |
 	super setUp.
 	
 	memory nilObject: (self newObjectWithSlots: 0).
@@ -125,20 +164,11 @@ VMAbstractPrimitiveTest >> setUp [
 	"The current instruction pointer is an absolute address pointing to the current bytecode inside the method"
 	interpreter instructionPointer: newMethod + memory baseHeaderSize + memory wordSize + 1.
 	interpreter method: newMethod.
-	
-	"Create another process with priority 1 and put it to sleep"
-	suspendedContext := self
-		newSmallContextReceiver: memory nilObject
-		method: newMethod
-		arguments: #()
-		temporaries: #()
-		ip: self wordSize + 1.
-	anotherProcess := self newObjectWithSlots: 4.
-	memory storeInteger: PriorityIndex ofObject: anotherProcess withValue: 1.
-	memory storePointer: SuspendedContextIndex ofObject: anotherProcess withValue: suspendedContext.
-	
-	interpreter preemptionYields: false.
-	interpreter putToSleep: anotherProcess yieldingIf: interpreter preemptionYields.
+
+	memory flushNewSpace.
+
+	self createProcessFor: newMethod priority: 1.
+	self createProcessFor: newMethod priority: 1.
 	
 	memory classExternalAddress: (self newClassInOldSpaceWithSlots: 0 format: (memory byteFormatForNumBytes: 0) )
 

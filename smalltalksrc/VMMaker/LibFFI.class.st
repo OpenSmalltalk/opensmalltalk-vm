@@ -109,6 +109,70 @@ LibFFI >> registerFunction: aBlockClosure [
 ]
 
 { #category : #'type constants' }
+LibFFI >> sint16 [
+
+	<doNotGenerate>
+
+	^ LibFFIType type: FFI_TYPE_SINT16 size: 2 on: self
+]
+
+{ #category : #'type constants' }
+LibFFI >> sint32 [
+
+	<doNotGenerate>
+
+	^ LibFFIType type: FFI_TYPE_SINT32 size: 4 on: self
+]
+
+{ #category : #'type constants' }
+LibFFI >> sint64 [
+
+	<doNotGenerate>
+
+	^ LibFFIType type: FFI_TYPE_SINT64 size: 8 on: self
+]
+
+{ #category : #'type constants' }
+LibFFI >> sint8 [
+
+	<doNotGenerate>
+
+	^ LibFFIType type: FFI_TYPE_SINT8 size: 1 on: self
+]
+
+{ #category : #'type constants' }
+LibFFI >> uint16 [
+
+	<doNotGenerate>
+
+	^ LibFFIType type: FFI_TYPE_UINT16 size: 2 on: self
+]
+
+{ #category : #'type constants' }
+LibFFI >> uint32 [
+
+	<doNotGenerate>
+
+	^ LibFFIType type: FFI_TYPE_UINT32 size: 4 on: self
+]
+
+{ #category : #'type constants' }
+LibFFI >> uint64 [
+
+	<doNotGenerate>
+
+	^ LibFFIType type: FFI_TYPE_UINT64 size: 8 on: self
+]
+
+{ #category : #'type constants' }
+LibFFI >> uint8 [
+
+	<doNotGenerate>
+
+	^ LibFFIType type: FFI_TYPE_UINT8 size: 1 on: self
+]
+
+{ #category : #'type constants' }
 LibFFI >> void [
 
 	<doNotGenerate>

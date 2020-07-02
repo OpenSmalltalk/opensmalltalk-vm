@@ -84,7 +84,19 @@ LibFFIType >> marshallToSmalltalk: holder [
 		caseOf: { 
 			[ FFI_TYPE_FLOAT ] -> [ libFFI interpreter objectMemory float32AtPointer: holder ].
 			[ FFI_TYPE_DOUBLE ] -> [ libFFI interpreter objectMemory float64AtPointer: holder ].
-			[ FFI_TYPE_POINTER ] -> [ (holder asPointerAccessor: libFFI interpreter objectMemory wordSize) at: 0 ] } 
+			[ FFI_TYPE_POINTER ] -> [ (holder asPointerAccessor: libFFI interpreter objectMemory wordSize) at: 0 ]. 
+			[ FFI_TYPE_SINT8 ] -> [ (holder asIntAccessorOfSize: 1 signed: true) at: 0 ].
+			[ FFI_TYPE_UINT8 ] -> [ (holder asIntAccessorOfSize: 1 signed: false) at: 0 ].
+
+			[ FFI_TYPE_SINT16 ] -> [ (holder asIntAccessorOfSize: 2 signed: true) at: 0 ].
+			[ FFI_TYPE_UINT16 ] -> [ (holder asIntAccessorOfSize: 2 signed: false) at: 0 ].
+
+			[ FFI_TYPE_SINT32 ] -> [ (holder asIntAccessorOfSize: 4 signed: true) at: 0 ].
+			[ FFI_TYPE_UINT32 ] -> [ (holder asIntAccessorOfSize: 4 signed: false) at: 0 ].
+
+			[ FFI_TYPE_SINT64 ] -> [ (holder asIntAccessorOfSize: 8 signed: true) at: 0 ].
+			[ FFI_TYPE_UINT64 ] -> [ (holder asIntAccessorOfSize: 8 signed: false) at: 0 ].		
+		} 
 		otherwise: [ self halt ]
 
 ]

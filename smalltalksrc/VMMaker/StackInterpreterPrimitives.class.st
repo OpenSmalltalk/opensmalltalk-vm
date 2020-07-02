@@ -160,26 +160,6 @@ StackInterpreterPrimitives >> markFrame: theFPInt [
 		put: ((stackPages longAt: theFPInt + FoxFrameFlags) bitOr: 2)
 ]
 
-{ #category : #'ffi - helpers' }
-StackInterpreterPrimitives >> marshallDoubleFrom: argumentArrayOop at: index into: holder [ 
-
-	| doubleHolder |
-	doubleHolder := self cCoerce: holder to: #'double *'.
-	
-	doubleHolder at: 0 put: (self fetchFloat: index ofObject: argumentArrayOop ).
-
-]
-
-{ #category : #'ffi - helpers' }
-StackInterpreterPrimitives >> marshallFloatFrom: argumentArrayOop at: index into: holder [ 
-	
-	| floatHolder |
-	floatHolder := self cCoerce: holder to: #'float *'.
-	
-	floatHolder at: 0 put: (self fetchFloat: index ofObject: argumentArrayOop ).
-	
-]
-
 { #category : #'primitive support' }
 StackInterpreterPrimitives >> noInlineLoadFloatOrIntFrom: floatOrInt [
 	<inline: #never>
@@ -267,6 +247,24 @@ StackInterpreterPrimitives >> pathTo: goal using: stack followWeak: followWeak [
 		 index := objectMemory integerValueOf: (objectMemory fetchPointer: stackp - 1 ofObject: stack).
 		 current := objectMemory fetchPointer: stackp - 2 ofObject: stack.
 		 stackp := stackp - 2] repeat
+]
+
+{ #category : #'ffi - helpers' }
+StackInterpreterPrimitives >> popSameThreadCalloutSuspendedProcess [
+	
+	| aProcess |
+	aProcess := objectMemory splObj: SuspendedProcessInCallout.
+	
+	aProcess = objectMemory nilObject
+		ifTrue: [ self error: 'SameThreadCalloutSuspendedProcessStack is empty' ].	
+	
+	objectMemory 
+		splObj: SuspendedProcessInCallout 
+		put: (objectMemory fetchPointer: NextLinkIndex ofObject: aProcess).
+	
+	objectMemory storePointer: NextLinkIndex ofObject: aProcess withValue: objectMemory nilObject.
+	
+	^ aProcess
 ]
 
 { #category : #'system control primitives' }
@@ -1359,15 +1357,12 @@ StackInterpreterPrimitives >> primitiveSameThreadCallout [
 		argType := cif argTypeAt: i.
 		argHolder := self alloca: argType size.
 		parameters at: i put: argHolder.
-		[ argType type ]
-			caseOf:
-				{([ FFI_TYPE_POINTER ]
-					-> [ self marshallPointerFrom: argumentsArrayOop at: i into: argHolder ]).
-				([ FFI_TYPE_FLOAT ]
-					-> [ self marshallFloatFrom: argumentsArrayOop at: i into: argHolder ]).
-				([ FFI_TYPE_DOUBLE ]
-					-> [ self marshallDoubleFrom: argumentsArrayOop at: i into: argHolder ])}
-			otherwise: [ ^ self primitiveFailFor: PrimErrBadArgument ] ].
+	
+		self marshallArgumentFrom: argumentsArrayOop atIndex: i into: argHolder ofType: argType. 
+				
+		self failed 
+				ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ]].
+	
 	returnHolder := self alloca: cif returnType size.
 
 	" 3. Call and then return
@@ -2104,7 +2099,7 @@ StackInterpreterPrimitives >> ptEnterInterpreterFromCallback: aPointer [
 	self push: newMethod.
 	
 	suspendedProcess := self supendActiveProcess.
-	objectMemory splObj: SuspendedProcessInCallout put: suspendedProcess. 
+	self pushSameThreadCalloutSuspendedProcess: suspendedProcess. 
 	
 	self enterSmalltalkExecutive.	
 	
@@ -2124,7 +2119,7 @@ StackInterpreterPrimitives >> ptExitInterpreterToCallback: aPointer [
 		cCode: [self cCoerce: aPointer to: #'VMCallbackContext *']
 		inSmalltalk: [ aPointer ].
 	
-	suspendedProcess := objectMemory splObj: 12 - 1.
+	suspendedProcess := self popSameThreadCalloutSuspendedProcess.
 	self putToSleep: self activeProcess yieldingIf: preemptionYields.
 	self transferTo: suspendedProcess.
 	
@@ -2138,6 +2133,17 @@ StackInterpreterPrimitives >> ptExitInterpreterToCallback: aPointer [
 	"NEVER REACHED"	
 	^ 1
 
+]
+
+{ #category : #'ffi - helpers' }
+StackInterpreterPrimitives >> pushSameThreadCalloutSuspendedProcess: aSuspendedProcess [
+
+	objectMemory
+		storePointer: NextLinkIndex
+		ofObject: aSuspendedProcess
+		withValue: (objectMemory splObj: SuspendedProcessInCallout).
+
+	objectMemory splObj: SuspendedProcessInCallout put: aSuspendedProcess
 ]
 
 { #category : #'ffi - helpers' }

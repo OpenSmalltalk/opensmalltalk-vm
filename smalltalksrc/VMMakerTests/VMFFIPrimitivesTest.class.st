@@ -4,6 +4,17 @@ Class {
 	#category : #VMMakerTests
 }
 
+{ #category : #'tests - helpers' }
+VMFFIPrimitivesTest >> assertPopInEmptyStackFails [
+
+	[ interpreter popSameThreadCalloutSuspendedProcess.
+	self fail ]
+		onErrorDo: [ :anError | 
+			self
+				assert: anError messageText
+				equals: 'SameThreadCalloutSuspendedProcessStack is empty' ]
+]
+
 { #category : #helpers }
 VMFFIPrimitivesTest >> createExternalFunctionFor: aBlock withArgumentTypes: argumentTypes withReturnType: returnType [
 
@@ -46,6 +57,66 @@ VMFFIPrimitivesTest >> createReturnFloatExternalFunctionFor: aBlock withArgument
 		withReturnType: interpreter libFFI float
 ]
 
+{ #category : #'tests - callbacks' }
+VMFFIPrimitivesTest >> doCallout: tfExternalFunction with: parametersArray [
+	
+	interpreter push: memory nilObject.
+	interpreter push: tfExternalFunction.
+	interpreter push: parametersArray. 
+	
+	interpreter argumentCount: 2.
+	interpreter primitiveSameThreadCallout.
+
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIPrimitivesTest >> doTestFuntionWithArgumentType: argumentType smalltalkValue: smalltalkValue expectedValue: expectedValue [
+
+	| parametersArray tfExternalFunction savedValue |
+
+	tfExternalFunction := self 
+		createExternalFunctionFor:  [ :anArgument | savedValue := anArgument ] 
+		withArgumentTypes: { argumentType } 
+		withReturnType: interpreter libFFI void.
+	
+	parametersArray := self newObjectWithSlots: 1.
+	memory storePointer: 0 ofObject: parametersArray withValue: smalltalkValue.
+
+	interpreter push: memory nilObject.
+	interpreter push: tfExternalFunction.
+	interpreter push: parametersArray. 
+
+	interpreter argumentCount: 2.
+	interpreter primitiveSameThreadCallout.
+	
+	self deny: interpreter failed.
+	self assert: savedValue equals: expectedValue.
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIPrimitivesTest >> doTestFuntionWithArgumentType: argumentType smalltalkValue: smalltalkValue failsWith: expectedErrorCode [
+
+	| parametersArray tfExternalFunction savedValue |
+
+	tfExternalFunction := self 
+		createExternalFunctionFor:  [ :anArgument | savedValue := anArgument ] 
+		withArgumentTypes: { argumentType } 
+		withReturnType: interpreter libFFI void.
+	
+	parametersArray := self newObjectWithSlots: 1.
+	memory storePointer: 0 ofObject: parametersArray withValue: smalltalkValue.
+
+	interpreter push: memory nilObject.
+	interpreter push: tfExternalFunction.
+	interpreter push: parametersArray. 
+
+	interpreter argumentCount: 2.
+	interpreter primitiveSameThreadCallout.
+	
+	self assert: interpreter failed.
+	self assert: interpreter primFailCode equals: expectedErrorCode.
+]
+
 { #category : #helpers }
 VMFFIPrimitivesTest >> interpreterClass [
 	
@@ -74,7 +145,151 @@ VMFFIPrimitivesTest >> readyProcesses [
 	^ collection
 ]
 
-{ #category : #tests }
+{ #category : #'tests - parameters marshalling' }
+VMFFIPrimitivesTest >> testCalloutWithDoubleArgumentIsMarshalledCorrectly [
+
+	self
+		doTestFuntionWithArgumentType: interpreter libFFI double
+		smalltalkValue: (memory floatObjectOf: 17.0)
+		expectedValue: 17.0
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIPrimitivesTest >> testCalloutWithFloatArgumentIsMarshalledCorrectly [
+
+	self
+		doTestFuntionWithArgumentType: interpreter libFFI float
+		smalltalkValue: (memory floatObjectOf: 17.0)
+		expectedValue: 17.0
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIPrimitivesTest >> testCalloutWithPointerArgumentIsMarshalledCorrectly [
+
+	self
+		doTestFuntionWithArgumentType: interpreter libFFI pointer
+		smalltalkValue: (self newExternalAddress: 17)
+		expectedValue: 17
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIPrimitivesTest >> testCalloutWithSINT16ArgumentWithNegativeValueIsMarshalledCorrectly [
+
+	self
+		doTestFuntionWithArgumentType: interpreter libFFI sint16
+		smalltalkValue: (memory integerObjectOf: -42)
+		expectedValue: -42
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIPrimitivesTest >> testCalloutWithSINT16ArgumentWithPositiveValueIsMarshalledCorrectly [
+
+	self
+		doTestFuntionWithArgumentType: interpreter libFFI sint16
+		smalltalkValue: (memory integerObjectOf: 42)
+		expectedValue: 42
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIPrimitivesTest >> testCalloutWithSINT32ArgumentWithNegativeValueIsMarshalledCorrectly [
+
+	self
+		doTestFuntionWithArgumentType: interpreter libFFI sint32
+		smalltalkValue: (memory integerObjectOf: -42)
+		expectedValue: -42
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIPrimitivesTest >> testCalloutWithSINT32ArgumentWithPositiveValueIsMarshalledCorrectly [
+
+	self
+		doTestFuntionWithArgumentType: interpreter libFFI sint32
+		smalltalkValue: (memory integerObjectOf: 42)
+		expectedValue: 42
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIPrimitivesTest >> testCalloutWithSINT64ArgumentWithNegativeValueIsMarshalledCorrectly [
+
+	self
+		doTestFuntionWithArgumentType: interpreter libFFI sint64
+		smalltalkValue: (memory integerObjectOf: -42)
+		expectedValue: -42
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIPrimitivesTest >> testCalloutWithSINT64ArgumentWithPositiveValueIsMarshalledCorrectly [
+
+	self
+		doTestFuntionWithArgumentType: interpreter libFFI sint64
+		smalltalkValue: (memory integerObjectOf: 42)
+		expectedValue: 42
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIPrimitivesTest >> testCalloutWithSINT8ArgumentWithNegativeValueIsMarshalledCorrectly [
+
+	self
+		doTestFuntionWithArgumentType: interpreter libFFI sint8
+		smalltalkValue: (memory integerObjectOf: -42)
+		expectedValue: -42
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIPrimitivesTest >> testCalloutWithSINT8ArgumentWithPositiveValueIsMarshalledCorrectly [
+
+	self
+		doTestFuntionWithArgumentType: interpreter libFFI sint8
+		smalltalkValue: (memory integerObjectOf: 42)
+		expectedValue: 42
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIPrimitivesTest >> testCalloutWithUINT32ArgumentWithNegatieValueFails [
+
+	self
+		doTestFuntionWithArgumentType: interpreter libFFI uint32
+		smalltalkValue: (memory integerObjectOf: -42)
+		failsWith: PrimErrBadArgument
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIPrimitivesTest >> testCalloutWithUINT32ArgumentWithPositiveValueIsMarshalledCorrectly [
+
+	self
+		doTestFuntionWithArgumentType: interpreter libFFI uint32
+		smalltalkValue: (memory integerObjectOf: 42)
+		expectedValue: 42
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIPrimitivesTest >> testCalloutWithoutArgumentsMarshallsCorrectly [
+
+	| parametersArray tfExternalFunction functionCalled |
+
+	functionCalled := false.
+	tfExternalFunction := self createReturnFloatExternalFunctionFor: [ functionCalled := true. 7.0 ].
+	parametersArray := self newObjectWithSlots: 0.
+
+	interpreter push: memory nilObject.
+	interpreter push: tfExternalFunction.
+	interpreter push: parametersArray. 
+
+	interpreter argumentCount: 2.
+	interpreter primitiveSameThreadCallout.
+	
+	self assert: functionCalled.
+]
+
+{ #category : #'tests - helpers' }
+VMFFIPrimitivesTest >> testPopSameThreadCalloutSuspendedProcessInEmptyStackRaisesError [
+
+ 	self assert: (memory splObj: SuspendedProcessInCallout) equals: memory nilObject.	
+	
+	self assertPopInEmptyStackFails
+]
+
+{ #category : #'tests - callbacks' }
 VMFFIPrimitivesTest >> testPrimitiveSameThreadCallbackInCalloutSuspendsActiveProcess [
 
 	| parametersArray tfExternalFunction oldActiveProcess callbackContext |
@@ -109,7 +324,7 @@ VMFFIPrimitivesTest >> testPrimitiveSameThreadCallbackInCalloutSuspendsActivePro
 	interpreter primitiveSameThreadCallout.
 ]
 
-{ #category : #tests }
+{ #category : #'tests - callbacks' }
 VMFFIPrimitivesTest >> testPrimitiveSameThreadCallbackReturnKeepsAllOtherProcessesInReady [
 
 	| parametersArray tfExternalFunction callbackContext processBefore |
@@ -135,7 +350,7 @@ VMFFIPrimitivesTest >> testPrimitiveSameThreadCallbackReturnKeepsAllOtherProcess
 	self assertCollection: self readyProcesses hasSameElements: processBefore
 ]
 
-{ #category : #tests }
+{ #category : #'tests - callbacks' }
 VMFFIPrimitivesTest >> testPrimitiveSameThreadCallbackReturnResumesCalloutProcess [
 
 	| parametersArray tfExternalFunction oldActiveProcess callbackContext |
@@ -162,7 +377,7 @@ VMFFIPrimitivesTest >> testPrimitiveSameThreadCallbackReturnResumesCalloutProces
 	self assert: interpreter activeProcess equals: oldActiveProcess.
 ]
 
-{ #category : #tests }
+{ #category : #'tests - callouts' }
 VMFFIPrimitivesTest >> testPrimitiveSameThreadCalloutMaintainsActiveProcess [
 
 	| parametersArray tfExternalFunction oldActiveProcess |
@@ -182,7 +397,7 @@ VMFFIPrimitivesTest >> testPrimitiveSameThreadCalloutMaintainsActiveProcess [
 	self assert: interpreter activeProcess equals: oldActiveProcess
 ]
 
-{ #category : #tests }
+{ #category : #'tests - callouts' }
 VMFFIPrimitivesTest >> testPrimitiveSameThreadCalloutReturningDoublePushSmallFloatInStack [
 	| parametersArray tfExternalFunction |
 
@@ -203,7 +418,7 @@ VMFFIPrimitivesTest >> testPrimitiveSameThreadCalloutReturningDoublePushSmallFlo
 	self assert: interpreter stackTop equals: (memory floatObjectOf: 7.0)
 ]
 
-{ #category : #tests }
+{ #category : #'tests - callouts' }
 VMFFIPrimitivesTest >> testPrimitiveSameThreadCalloutReturningFloatPushSmallFloatInStack [
 
 	| parametersArray tfExternalFunction |
@@ -221,7 +436,7 @@ VMFFIPrimitivesTest >> testPrimitiveSameThreadCalloutReturningFloatPushSmallFloa
 	self assert: interpreter stackTop equals: (memory floatObjectOf: 7.0)
 ]
 
-{ #category : #tests }
+{ #category : #'tests - callouts' }
 VMFFIPrimitivesTest >> testPrimitiveSameThreadCalloutReturningVoidPushesTheReceiver [
 
 	| parametersArray tfExternalFunction |
@@ -239,7 +454,7 @@ VMFFIPrimitivesTest >> testPrimitiveSameThreadCalloutReturningVoidPushesTheRecei
 	self assert: interpreter stackTop equals: memory trueObject
 ]
 
-{ #category : #tests }
+{ #category : #'tests - callouts' }
 VMFFIPrimitivesTest >> testPrimitiveSameThreadCalloutShouldKeepTheNewMethodVariable [
 
 	| parametersArray tfExternalFunction oldActiveProcess callbackContext |
@@ -266,113 +481,179 @@ VMFFIPrimitivesTest >> testPrimitiveSameThreadCalloutShouldKeepTheNewMethodVaria
 	self assert: interpreter activeProcess equals: oldActiveProcess.
 ]
 
-{ #category : #tests }
-VMFFIPrimitivesTest >> testPrimitiveSameThreadCalloutWithADoubleArgumentsPushesValueInTheStack [
+{ #category : #'tests - callbacks' }
+VMFFIPrimitivesTest >> testPrimitiveSameThreadReentrantCallbackRestoresCalloutProcess [
 
-	| parametersArray tfExternalFunction |
+	| parametersArray tfExternalFunction oldActiveProcess callbackContext numberOfCallbacks innerCallbackContext tfExternalFunction2 |
 
-	tfExternalFunction := self 
-		createReturnFloatExternalFunctionFor: [ :aDouble | aDouble ] 
-		withArgumentTypes: { interpreter libFFI double }.
+	callbackContext	:= VMCallbackContext new.
+	callbackContext trampoline: ExitInterpreter new.
 
-	parametersArray := self newObjectWithSlots: 1.
-	memory storePointer: 0 ofObject: parametersArray withValue: (memory floatObjectOf: 14.0).
+	numberOfCallbacks := 0.
 
-	interpreter push: memory nilObject.
-	interpreter push: tfExternalFunction.
-	interpreter push: parametersArray. 
+	innerCallbackContext	:= VMCallbackContext new.
+	innerCallbackContext trampoline: ExitInterpreter new.
 
-	interpreter argumentCount: 2.
-	interpreter primitiveSameThreadCallout.
+	tfExternalFunction := self createReturnFloatExternalFunctionFor: [ 
+		[interpreter ptEnterInterpreterFromCallback: callbackContext] 
+			on: ExitInterpreter do: [ 3.14 ] ].
+
+	tfExternalFunction2 := self createReturnFloatExternalFunctionFor: [ 
+		[interpreter ptEnterInterpreterFromCallback: innerCallbackContext] 
+			on: ExitInterpreter do: [ 3.14 ] ].
 	
-	self assert: interpreter stackTop equals: (memory floatObjectOf: 14.0)
-]
+	oldActiveProcess := interpreter activeProcess.
 
-{ #category : #tests }
-VMFFIPrimitivesTest >> testPrimitiveSameThreadCalloutWithAFloatArgumentsCallsCorrectFunction [
-
-	| parametersArray tfExternalFunction functionCalled |
-
-	functionCalled := false.
-	tfExternalFunction := self 
-		createReturnFloatExternalFunctionFor: [ :aFloat | functionCalled := true. aFloat ] 
-		withArgumentTypes: { interpreter libFFI float }.
-
-	parametersArray := self newObjectWithSlots: 1.
-	memory storePointer: 0 ofObject: parametersArray withValue: (memory floatObjectOf: 7.0).
-
-	interpreter push: memory nilObject.
-	interpreter push: tfExternalFunction.
-	interpreter push: parametersArray. 
-
-	interpreter argumentCount: 2.
-	interpreter primitiveSameThreadCallout.
-	
-	self assert: functionCalled.
-]
-
-{ #category : #tests }
-VMFFIPrimitivesTest >> testPrimitiveSameThreadCalloutWithAFloatArgumentsPushesValueInTheStack [
-
-	| parametersArray tfExternalFunction |
-
-	tfExternalFunction := self 
-		createReturnFloatExternalFunctionFor: [ :aFloat | aFloat ] 
-		withArgumentTypes: { interpreter libFFI float }.
-
-	parametersArray := self newObjectWithSlots: 1.
-	memory storePointer: 0 ofObject: parametersArray withValue: (memory floatObjectOf: 14.0).
-
-	interpreter push: memory nilObject.
-	interpreter push: tfExternalFunction.
-	interpreter push: parametersArray. 
-
-	interpreter argumentCount: 2.
-	interpreter primitiveSameThreadCallout.
-	
-	self assert: interpreter stackTop equals: (memory floatObjectOf: 14.0)
-]
-
-{ #category : #tests }
-VMFFIPrimitivesTest >> testPrimitiveSameThreadCalloutWithAPointerArgumentsGetsTheCorrectArgument [
-
-	| parametersArray tfExternalFunction |
-
-	tfExternalFunction := self 
-		createReturnFloatExternalFunctionFor: [ :aPointer | self assert: aPointer equals: 17. 7.0 ] 
-		withArgumentTypes: { interpreter libFFI pointer }.
-
-	parametersArray := self newObjectWithSlots: 1.
-	memory storePointer: 0 ofObject: parametersArray withValue: (self newExternalAddress: 17).
-
-	interpreter push: memory nilObject.
-	interpreter push: tfExternalFunction.
-	interpreter push: parametersArray. 
-
-	interpreter argumentCount: 2.
-	interpreter primitiveSameThreadCallout.
-]
-
-{ #category : #tests }
-VMFFIPrimitivesTest >> testPrimitiveSameThreadCalloutWithoutArgumentsCallsCorrectFunction [
-
-	| parametersArray tfExternalFunction functionCalled |
-
-	functionCalled := false.
-	tfExternalFunction := self createReturnFloatExternalFunctionFor: [ functionCalled := true. 7.0 ].
 	parametersArray := self newObjectWithSlots: 0.
 
-	interpreter push: memory nilObject.
-	interpreter push: tfExternalFunction.
-	interpreter push: parametersArray. 
+	interpreter interpreteBlock: [ 
+		numberOfCallbacks := numberOfCallbacks + 1.
+		numberOfCallbacks = 1 ifTrue: [  
+				self doCallout: tfExternalFunction2 with: parametersArray ].
+			
+		interpreter ptExitInterpreterToCallback: callbackContext ].
 
-	interpreter argumentCount: 2.
-	interpreter primitiveSameThreadCallout.
+	self doCallout: tfExternalFunction with: parametersArray.
 	
-	self assert: functionCalled.
+	self assert: interpreter activeProcess equals: oldActiveProcess.
 ]
 
-{ #category : #tests }
+{ #category : #'tests - helpers' }
+VMFFIPrimitivesTest >> testPushPushThenPopPopSameThreadCalloutSuspendedProcessInEmptyStackReturnsFirstPushedProcess [
+
+ 	| aProcess anotherProcess |
+	self assert: (memory splObj: SuspendedProcessInCallout) equals: memory nilObject.	
+
+	aProcess := self createSuspendedProcessFor: memory nilObject priority: 1.
+	anotherProcess := self createSuspendedProcessFor: memory nilObject priority: 1.
+
+	interpreter pushSameThreadCalloutSuspendedProcess: aProcess. 
+	interpreter pushSameThreadCalloutSuspendedProcess: anotherProcess.
+	
+	interpreter popSameThreadCalloutSuspendedProcess.
+	
+	self assert: interpreter popSameThreadCalloutSuspendedProcess equals: aProcess.
+
+]
+
+{ #category : #'tests - helpers' }
+VMFFIPrimitivesTest >> testPushPushThenPopPopSameThreadCalloutSuspendedProcessInEmptyStackReturnsFirstPushedProcessWithNilNextLink [
+
+ 	| aProcess anotherProcess |
+	self assert: (memory splObj: SuspendedProcessInCallout) equals: memory nilObject.	
+
+	aProcess := self createSuspendedProcessFor: memory nilObject priority: 1.
+	anotherProcess := self createSuspendedProcessFor: memory nilObject priority: 1.
+
+	interpreter pushSameThreadCalloutSuspendedProcess: aProcess. 
+	interpreter pushSameThreadCalloutSuspendedProcess: anotherProcess.
+	
+	interpreter popSameThreadCalloutSuspendedProcess.
+	
+	self assert: (memory fetchPointer: NextLinkIndex ofObject: interpreter popSameThreadCalloutSuspendedProcess) equals: memory nilObject.
+
+]
+
+{ #category : #'tests - helpers' }
+VMFFIPrimitivesTest >> testPushPushThenPopSameThreadCalloutSuspendedProcessInEmptyStackReturnsLastPushedProcess [
+
+ 	| aProcess anotherProcess |
+	self assert: (memory splObj: SuspendedProcessInCallout) equals: memory nilObject.	
+
+	aProcess := self createSuspendedProcessFor: memory nilObject priority: 1.
+	anotherProcess := self createSuspendedProcessFor: memory nilObject priority: 1.
+
+	interpreter pushSameThreadCalloutSuspendedProcess: aProcess. 
+	interpreter pushSameThreadCalloutSuspendedProcess: anotherProcess.
+	
+	self assert: interpreter popSameThreadCalloutSuspendedProcess equals: anotherProcess.
+
+]
+
+{ #category : #'tests - helpers' }
+VMFFIPrimitivesTest >> testPushPushThenPopSameThreadCalloutSuspendedProcessInEmptyStackReturnsLastPushedProcessWithNilNextLink [
+
+ 	| aProcess anotherProcess |
+	self assert: (memory splObj: SuspendedProcessInCallout) equals: memory nilObject.	
+
+	aProcess := self createSuspendedProcessFor: memory nilObject priority: 1.
+	anotherProcess := self createSuspendedProcessFor: memory nilObject priority: 1.
+
+	interpreter pushSameThreadCalloutSuspendedProcess: aProcess. 
+	interpreter pushSameThreadCalloutSuspendedProcess: anotherProcess.
+	
+	self assert: (memory fetchPointer: NextLinkIndex ofObject: interpreter popSameThreadCalloutSuspendedProcess) equals: memory nilObject.
+
+]
+
+{ #category : #'tests - helpers' }
+VMFFIPrimitivesTest >> testPushSameThreadCalloutSuspendedProcessInEmptyStackStoresThePassedProcess [
+
+ 	| aProcess |
+	self assert: (memory splObj: SuspendedProcessInCallout) equals: memory nilObject.	
+
+	aProcess := self createProcessFor: memory nilObject priority: 2.
+	interpreter pushSameThreadCalloutSuspendedProcess: aProcess. 
+	
+	self assert: (memory splObj: SuspendedProcessInCallout) equals: aProcess.
+
+]
+
+{ #category : #'tests - helpers' }
+VMFFIPrimitivesTest >> testPushSameThreadCalloutSuspendedProcessInEmptyStackUpdatesNextLinkWithNil [
+
+ 	| aProcess |
+	self assert: (memory splObj: SuspendedProcessInCallout) equals: memory nilObject.	
+
+	aProcess := self createSuspendedProcessFor: memory nilObject priority: 1.
+	interpreter pushSameThreadCalloutSuspendedProcess: aProcess. 
+	
+	self assert: (memory fetchPointer: NextLinkIndex ofObject: aProcess) equals: memory nilObject.
+
+]
+
+{ #category : #'tests - helpers' }
+VMFFIPrimitivesTest >> testPushThenPopPopSameThreadCalloutSuspendedProcessInEmptyStackFails [
+
+ 	| aProcess |
+	self assert: (memory splObj: SuspendedProcessInCallout) equals: memory nilObject.	
+
+	aProcess := self createSuspendedProcessFor: memory nilObject priority: 1.
+	interpreter pushSameThreadCalloutSuspendedProcess: aProcess. 
+
+	interpreter popSameThreadCalloutSuspendedProcess.
+	
+	self assertPopInEmptyStackFails	
+
+]
+
+{ #category : #'tests - helpers' }
+VMFFIPrimitivesTest >> testPushThenPopSameThreadCalloutSuspendedProcessInEmptyStackReturnsProcessWithNilInNextLink [
+
+ 	| aProcess |
+	self assert: (memory splObj: SuspendedProcessInCallout) equals: memory nilObject.	
+
+	aProcess := self createSuspendedProcessFor: memory nilObject priority: 1.
+	interpreter pushSameThreadCalloutSuspendedProcess: aProcess. 
+	
+	self assert: (memory fetchPointer: NextLinkIndex ofObject: aProcess)  equals: memory nilObject.
+
+]
+
+{ #category : #'tests - helpers' }
+VMFFIPrimitivesTest >> testPushThenPopSameThreadCalloutSuspendedProcessInEmptyStackReturnsPushedProcess [
+
+ 	| aProcess |
+	self assert: (memory splObj: SuspendedProcessInCallout) equals: memory nilObject.	
+
+	aProcess := self createSuspendedProcessFor: memory nilObject priority: 1.
+	interpreter pushSameThreadCalloutSuspendedProcess: aProcess. 
+	
+	self assert: interpreter popSameThreadCalloutSuspendedProcess equals: aProcess.
+
+]
+
+{ #category : #'tests - helpers' }
 VMFFIPrimitivesTest >> testReadAddressReadsTheValidAddressValue [
 
 	| anExternalAddress |
