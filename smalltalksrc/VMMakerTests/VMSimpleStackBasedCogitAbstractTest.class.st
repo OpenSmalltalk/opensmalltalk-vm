@@ -397,6 +397,14 @@ VMSimpleStackBasedCogitAbstractTest >> machineSimulator [
 	^ machineSimulator
 ]
 
+{ #category : #running }
+VMSimpleStackBasedCogitAbstractTest >> memoryClass [
+
+	^ self wordSize = 4
+		ifTrue: [ Spur32BitCoMemoryManager ]
+		ifFalse: [ Spur64BitCoMemoryManager ]
+]
+
 { #category : #helpers }
 VMSimpleStackBasedCogitAbstractTest >> newInterpreter [
 
@@ -419,9 +427,7 @@ VMSimpleStackBasedCogitAbstractTest >> newInterpreter [
 { #category : #running }
 VMSimpleStackBasedCogitAbstractTest >> newMemory [
 
-	^ self wordSize = 4
-		ifTrue: [ Spur32BitCoMemoryManager simulatorClass new ]
-		ifFalse: [ Spur64BitCoMemoryManager simulatorClass new ]
+	^ self memoryClass simulatorClass new
 ]
 
 { #category : #helpers }
@@ -601,7 +607,10 @@ VMSimpleStackBasedCogitAbstractTest >> runUntilReturnFrom: anAddress [
 VMSimpleStackBasedCogitAbstractTest >> setUp [
 	super setUp.
 	
-	SimpleStackBasedCogit initializeWithOptions: (Cogit asOptionsDictionary: { #ISA . isa }).
+	SimpleStackBasedCogit initializeWithOptions: (Cogit asOptionsDictionary: { 
+		#ISA . isa.
+		#IMMUTABILITY. false.
+		#ObjectMemory. self memoryClass name }).
 	cogit := SimpleStackBasedCogit new setInterpreter: memory coInterpreter.
 	memory coInterpreter cogit: cogit.
 	memory cogit: cogit.
