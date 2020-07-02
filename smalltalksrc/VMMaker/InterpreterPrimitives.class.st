@@ -738,11 +738,6 @@ InterpreterPrimitives >> primitiveAllInstances [
 
 	<export: true>
 	| result |
-	NewspeakVM ifTrue: "For the mirror prims check that the class obj is actually a valid class."
-		[(argumentCount < 1
-		  or: [(objectMemory isNonImmediate: self stackTop)
-			  and: [self objCouldBeClassObj: self stackTop]]) ifFalse:
-			[^self primitiveFailFor: PrimErrBadArgument]].
 	result := objectMemory allInstancesOf: self stackTop.
 	(objectMemory isIntegerObject: result) ifTrue:
 		[objectMemory growToAccomodateContainerWithNumSlots: (objectMemory integerValueOf: result).
@@ -1006,11 +1001,6 @@ InterpreterPrimitives >> primitiveBeep [
 { #category : #'object access primitives' }
 InterpreterPrimitives >> primitiveBehaviorHash [
 	| hashOrError |
-	NewspeakVM ifTrue: "For the mirror prims check that the class obj is actually a valid class."
-		[argumentCount > 0 ifTrue:
-			[((objectMemory isNonImmediate: self stackTop)
-			  and: [self objCouldBeClassObj: self stackTop]) ifFalse:
-				[^self primitiveFailFor: PrimErrBadArgument]]].
 	self assert: ((objectMemory isNonImmediate: self stackTop)
 				  and: [self addressCouldBeClassObj: self stackTop]).
 	hashOrError := objectMemory ensureBehaviorHash: self stackTop.
@@ -3848,10 +3838,6 @@ InterpreterPrimitives >> primitiveMultiplyLargeIntegers [
 
 { #category : #'object access primitives' }
 InterpreterPrimitives >> primitiveNew [
-	NewspeakVM ifTrue: "For the mirror prims check that the class obj is actually a valid class."
-		[(argumentCount < 1
-		  or: [self objCouldBeClassObj: self stackTop]) ifFalse:
-			[^self primitiveFailFor: PrimErrBadArgument]].
 	objectMemory hasSpurMemoryManagerAPI
 		ifTrue:
 			["Allocate a new fixed-size instance.  Fail if the allocation would leave
@@ -3927,10 +3913,6 @@ InterpreterPrimitives >> primitiveNewPinned [
 InterpreterPrimitives >> primitiveNewWithArg [
 	"Allocate a new indexable instance. Fail if the allocation would leave less than lowSpaceThreshold bytes free. May cause a GC."
 	| size spaceOkay instSpec |
-	NewspeakVM ifTrue: "For the mirror prims check that the class obj is actually a valid class."
-		[(argumentCount < 2
-		  or: [self addressCouldBeClassObj: (self stackValue: 1)]) ifFalse:
-			[^self primitiveFailFor: PrimErrBadArgument]].
 	size := self positiveMachineIntegerValueOf: self stackTop.
 	self successful ifFalse:"positiveMachineIntegerValueOf: succeeds only for non-negative integers."
 		[^self primitiveFailFor: PrimErrBadArgument].
@@ -4802,13 +4784,8 @@ InterpreterPrimitives >> primitiveSizeInBytesOfInstance [
 	 size of an instance of the receiver with that many indexable elements."
 	<option: #SpurObjectMemory>
 	| byteSize err |
-	NewspeakVM
-		ifTrue: "Support VMMirror>>byteSizeOfInstanceOf:WithIndexableVariables:"
-			[argumentCount > 2 ifTrue:
-				[^self primitiveFailFor: PrimErrBadNumArgs]]
-		ifFalse:
-			[argumentCount > 1 ifTrue:
-				[^self primitiveFailFor: PrimErrBadNumArgs]].
+	argumentCount > 1 ifTrue:
+		[^self primitiveFailFor: PrimErrBadNumArgs].
 	err := -1.
 	argumentCount >= 1 ifTrue:
 		[(objectMemory isIntegerObject: self stackTop) ifFalse:
@@ -5242,11 +5219,6 @@ InterpreterPrimitives >> primitiveSnapshotEmbedded [
 InterpreterPrimitives >> primitiveSomeInstance [
 	| class instance |
 	class := self stackTop.
-	NewspeakVM ifTrue: "For the mirror prims check that the class obj is actually a valid class."
-		[(argumentCount < 1
-		  or: [(objectMemory isNonImmediate: class)
-			  and: [self objCouldBeClassObj: class]]) ifFalse:
-			[^self primitiveFailFor: PrimErrBadArgument]].
 	instance := objectMemory initialInstanceOf: class.
 	instance
 		ifNil: [self primitiveFail]

@@ -16,6 +16,12 @@ UnicornSimulator class >> ARMv5 [
 ]
 
 { #category : #'instance creation' }
+UnicornSimulator class >> ARMv8 [
+	
+	^ UnicornARMv8Simulator new
+]
+
+{ #category : #'instance creation' }
 UnicornSimulator class >> IA32 [
 
 	^ UnicornI386Simulator new

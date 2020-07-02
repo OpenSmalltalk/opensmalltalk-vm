@@ -122,14 +122,6 @@ CogInLineLiteralsARMCompiler >> moveCw: constant intoR: destReg [
 ]
 
 { #category : #'inline cacheing' }
-CogInLineLiteralsARMCompiler >> nsSendCacheAt: callSiteReturnAddress [
-	"Answer the NSSendCache for the return address of a Newspeak
-	 self, super, outer, or implicit receiver send."
-	self assert: (self instructionIsBL: (self instructionBeforeAddress: callSiteReturnAddress)).
-	^self extract32BitOperandFrom4InstructionsPreceding: callSiteReturnAddress - 4
-]
-
-{ #category : #'inline cacheing' }
 CogInLineLiteralsARMCompiler >> relocateMethodReferenceBeforeAddress: pc by: delta [
 	"If possible we generate the method address using pc-relative addressing.
 	 If so we don't need to relocate it in code.  So check if pc-relative code was

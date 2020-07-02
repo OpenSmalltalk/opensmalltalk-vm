@@ -256,7 +256,6 @@ Class {
 		'implicitReceiverSendTrampolines',
 		'cogMethodSurrogateClass',
 		'cogBlockMethodSurrogateClass',
-		'nsSendCacheSurrogateClass',
 		'CStackPointer',
 		'CFramePointer',
 		'cPICPrototype',
@@ -351,15 +350,6 @@ Cogit class >> additionalHeadersDo: aBinaryBlock [
 	"Evaluate aBinaryBlock with the names and contents of
 	 any additional header files that need to be generated."
 
-	NewspeakVM ifTrue:
-		[aBinaryBlock
-			value: 'cogmethod.h'
-			value: NewspeakCogMethod cogMethodHeader.
-		 aBinaryBlock
-			value: 'nssendcache.h'
-			value: NSSendCache typedef.
-		 ^self].
-
 	aBinaryBlock
 		value: 'cogmethod.h'
 		value: CogMethod cogMethodHeader
@@ -384,9 +374,6 @@ Cogit class >> ancilliaryClasses [
 		CogBlockMethod.
 		CogMethod.
 		self activeCompilerClass literalsManagerClass},
-	((InitializationOptions at: #NewspeakVM ifAbsent: [false])
-		ifTrue: [{NewspeakCogMethod. NSSendCache}]
-		ifFalse: [#()]),
 	((InitializationOptions at: #SistaVM ifAbsent: [false])
 		ifTrue: [{SistaMethodZone}]
 		ifFalse: [#()])
@@ -530,20 +517,17 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 		'printRegisters' 'printInstructions' 'clickConfirm' 'singleStep') do:
 			[:simulationVariableNotNeededForRealVM|
 			aCCodeGenerator removeVariable: simulationVariableNotNeededForRealVM].
-	NewspeakVM ifFalse:
-		[#(	'selfSendTrampolines' 'dynamicSuperSendTrampolines'
+	#(	'selfSendTrampolines' 'dynamicSuperSendTrampolines'
 			'implicitReceiverSendTrampolines' 'outerSendTrampolines'
 			'ceEnclosingObjectTrampoline' 'numIRCs' 'indexOfIRC' 'theIRCs') do:
 				[:variableNotNeededInNormalVM|
-				aCCodeGenerator removeVariable: variableNotNeededInNormalVM]].
+				aCCodeGenerator removeVariable: variableNotNeededInNormalVM].
 	aCCodeGenerator removeConstant: #COGMTVM. "this should be defined at compile time"
 	aCCodeGenerator
 		addHeaderFile:'<stddef.h>'; "for e.g. offsetof"
 		addHeaderFile:'"sqCogStackAlignment.h"';
 		addHeaderFile:'"dispdbg.h"'; "must precede cointerp.h & cogit.h otherwise NoDbgRegParms gets screwed up"
 		addHeaderFile:'"cogmethod.h"'.
-	NewspeakVM ifTrue:
-		[aCCodeGenerator addHeaderFile:'"nssendcache.h"'].
 	aCCodeGenerator
 		addHeaderFile:'#if COGMTVM';
 		addHeaderFile:'"cointerpmt.h"';
@@ -609,16 +593,6 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 				declareC: 'sqInt directedSuperSendTrampolines[NumSendTrampolines]';
 			var: #directedSuperBindingSendTrampolines
 				declareC: 'sqInt directedSuperBindingSendTrampolines[NumSendTrampolines]'].
-	NewspeakVM ifTrue:
-		[aCCodeGenerator
-			var: #selfSendTrampolines
-				declareC: 'sqInt selfSendTrampolines[NumSendTrampolines]';
-			var: #dynamicSuperSendTrampolines
-				declareC: 'sqInt dynamicSuperSendTrampolines[NumSendTrampolines]';
-			var: #implicitReceiverSendTrampolines
-				declareC: 'sqInt implicitReceiverSendTrampolines[NumSendTrampolines]';
-			var: #outerSendTrampolines
-				declareC: 'sqInt outerSendTrampolines[NumSendTrampolines]'].
 	aCCodeGenerator
 		var: #trampolineAddresses
 			declareC: 'static char *trampolineAddresses[NumTrampolines*2]';
@@ -800,11 +774,10 @@ Cogit class >> generatorTableFrom: anArray [
 						isExtension: (tuple includes: #extension);
 						isInstVarRef: (tuple includes: #isInstVarRef);	"for Spur"
 						is1ByteInstVarStore: (tuple includes: #is1ByteInstVarStore);	"for Spur"
-						hasIRC: (tuple includes: #hasIRC);			"for Newspeak"
 						yourself.
 		"As a hack to cut down on descriptor flags, use opcode to tag unusedBytecode for scanning.
-		 Currently descriptors are exactly 16 bytes with all 8 flag bits used (in Newspeak at least 17 bytes,
-		 9 flag bits).  As another hack to eliminate a test in scanMethod mark unknowns as extensions."
+		 Currently descriptors are exactly 16 bytes with all 8 flag bits used.
+		As another hack to eliminate a test in scanMethod mark unknowns as extensions."
 		descriptor generator == #unknownBytecode ifTrue:
 			[descriptor opcode: Nop; isExtension: true].
 		descriptor isBlockCreation ifTrue:
@@ -895,15 +868,11 @@ Cogit class >> initializeAnnotationConstants [
 	IsAbsPCReference := 3.
 	IsRelativeCall := 4.
 	HasBytecodePC := 5.
-	IsNSSendCall := NewspeakVM ifTrue: [6].
 	IsSendCall := 7.
 	"These are formed by combining IsSendCall and IsAnnotationExtension annotations."
 	IsSuperSend := 8.
 	IsDirectedSuperSend := BytecodeSetHasDirectedSuperSend ifTrue: [9].
 	IsDirectedSuperBindingSend := BytecodeSetHasDirectedSuperSend ifTrue: [10].
-	IsNSSelfSend := NewspeakVM ifTrue: [11].
-	IsNSDynamicSuperSend := NewspeakVM ifTrue: [12].
-	IsNSImplicitReceiverSend := NewspeakVM ifTrue: [13].
 
 	DisplacementMask := (1 << AnnotationShift) - 1.
 	DisplacementX2N := IsDisplacementX2N << AnnotationShift.
@@ -948,38 +917,13 @@ Cogit class >> initializeBytecodeTable [
 	initializer := InitializationOptions
 					at: #bytecodeTableInitializer
 					ifAbsent:
-						[NewspeakVM
-							ifTrue:
-								[MULTIPLEBYTECODESETS
-									ifTrue: [#initializeBytecodeTableForSqueakV3PlusClosuresNewspeakV4Hybrid]
-									ifFalse: [#initializeBytecodeTableForNewspeakV4]]
-							ifFalse:
-								[MULTIPLEBYTECODESETS
+						[MULTIPLEBYTECODESETS
 									ifTrue: [#initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid]
-									ifFalse: [#initializeBytecodeTableForSqueakV3PlusClosures]]].
+									ifFalse: [#initializeBytecodeTableForSqueakV3PlusClosures]].
 	"Now make sure all classes in the hierarchy have initialized to the same bytecode table."
 	(self withAllSuperclasses copyUpTo: Cogit) reverseDo: "i.e. exclude Cogit"
 		[:cogitClass|
 		 cogitClass perform: initializer]
-]
-
-{ #category : #'class initialization' }
-Cogit class >> initializeBytecodeTableForSqueakV3PlusClosuresNewspeakV4Hybrid [
-	"SimpleStackBasedCogit initializeBytecodeTableForSqueakV3PlusClosuresNewspeakV4Hybrid"
-	"StackToRegisterMappingCogit initializeBytecodeTableForSqueakV3PlusClosuresNewspeakV4Hybrid"
-
-	| v3Table v4Table |
-	"N.B. Must do it backwards to evaluate AltBlockCreationBytecodeSize & BlockCreationBytecodeSize et al correctly."
-	self initializeBytecodeTableForNewspeakV4.
-	v4Table := generatorTable.
-	AltBlockCreationBytecodeSize := BlockCreationBytecodeSize.
-	AltNSSendIsPCAnnotated := NSSendIsPCAnnotated.
-	AltFirstSpecialSelector := FirstSpecialSelector.
-	AltNumSpecialSelectors := NumSpecialSelectors.
-	self initializeBytecodeTableForSqueakV3PlusClosures.
-	BytecodeSetHasExtensions := true.
-	v3Table := generatorTable.
-	generatorTable := CArrayAccessor on: v3Table object, v4Table object
 ]
 
 { #category : #'class initialization' }
@@ -1053,13 +997,6 @@ Cogit class >> initializeMiscConstants [
 	InVanillaBlock := 1.
 	InFullBlock := 2.
 
-	NSCSelectorIndex := (NSSendCache instVarNames indexOf: #selector) - 1.
-	NSCNumArgsIndex := (NSSendCache instVarNames indexOf: #numArgs) - 1.
-	NSCClassTagIndex := (NSSendCache instVarNames indexOf: #classTag) - 1.
-	NSCEnclosingObjectIndex := (NSSendCache instVarNames indexOf: #enclosingObject) - 1.
-	NSCTargetIndex := (NSSendCache instVarNames indexOf: #target) - 1.
-	NumOopsPerNSC := NSSendCache instVarNames size.
-
 	"Max size to alloca when compiling.
 	 Mac OS X 10.6.8 segfaults approaching 8Mb.
 	 Linux 2.6.9 segfaults above 11Mb.
@@ -1071,15 +1008,12 @@ Cogit class >> initializeMiscConstants [
 Cogit class >> initializeNumTrampolines [
 	NumTrampolines := self numTrampolines
 						+ self objectRepresentationClass numTrampolines
-						+ (NewspeakVM ifTrue: [NumSendTrampolines * 4 + 2] ifFalse: [0])
 						+ (BytecodeSetHasDirectedSuperSend ifTrue: [NumSendTrampolines * 2] ifFalse: [0])
 ]
 
 { #category : #'class initialization' }
 Cogit class >> initializePrimitiveTable [
-	NewspeakVM
-		ifTrue: [self initializePrimitiveTableForNewsqueak]
-		ifFalse: [self initializePrimitiveTableForSqueak]
+	self initializePrimitiveTableForSqueak
 ]
 
 { #category : #'class initialization' }
@@ -1327,7 +1261,7 @@ Cogit class >> runtime [
 { #category : #translation }
 Cogit class >> shouldGenerateTypedefFor: aStructClass [
 	"Hack to work-around mutliple definitions.  Sometimes a type has been defined in an include."
-	^({ CogBlockMethod. CogMethod. SistaCogMethod. NewspeakCogMethod. NSSendCache } includes: aStructClass) not
+	^({ CogBlockMethod. CogMethod. SistaCogMethod } includes: aStructClass) not
 ]
 
 { #category : #translation }
@@ -1716,12 +1650,6 @@ Cogit >> CallFullRT: callTarget registersToBeSavedMask: registersToBeSaved [
 					[lastInst := self PopR: reg]].
 
 			 ^lastInst]
-]
-
-{ #category : #'method map' }
-Cogit >> CallNewspeakSend: callTarget [
-	<returnTypeC: #'AbstractInstruction *'>
-	^self annotateNewspeakSend: (self Call: callTarget)
 ]
 
 { #category : #'abstract instructions' }
@@ -3104,15 +3032,11 @@ Cogit >> allMachineCodeObjectReferencesValid [
 								 arg: cogMethod asInteger) = 0)) ifFalse:
 				[ok := false]].
 		(cogMethod cmType = CMMethod
-		 and: [(NewspeakVM or: [SistaVM])
+		 and: [SistaVM
 		 and: [objectRepresentation canPinObjects]]) ifTrue:
 			[(SistaVM and: [cogMethod counters ~= 0]) ifTrue:
 				[(self asserta: (objectRepresentation checkValidDerivedObjectReference: cogMethod counters)) ifFalse:
-					[ok := false]].
-			 (NewspeakVM and: [cogMethod nextMethodOrIRCs ~= 0]) ifTrue:
-				[(cogMethod nextMethodOrIRCs > methodZone zoneEnd) ifTrue:
-					[(self asserta: (objectRepresentation checkValidDerivedObjectReference: cogMethod nextMethodOrIRCs)) ifFalse:
-						[ok := false]]]].
+					[ok := false]]].
 		cogMethod cmType = CMClosedPIC ifTrue:
 			[(self asserta: (self noTargetsFreeInClosedPIC: cogMethod)) ifFalse:
 				[ok := false]].
@@ -3256,15 +3180,6 @@ Cogit >> annotateCall: abstractInstruction [
 	<returnTypeC: #'AbstractInstruction *'>
 	<inline: true>
 	abstractInstruction annotation: IsRelativeCall.
-	^abstractInstruction
-]
-
-{ #category : #'method map' }
-Cogit >> annotateNewspeakSend: abstractInstruction [
-	<var: #abstractInstruction type: #'AbstractInstruction *'>
-	<returnTypeC: #'AbstractInstruction *'>
-	<inline: true>
-	abstractInstruction annotation: IsNSSendCall.
 	^abstractInstruction
 ]
 
@@ -3649,8 +3564,6 @@ Cogit >> cCoerceSimple: value to: cTypeString [
 				ifFalse: [self cogMethodSurrogateAt: value asUnsignedInteger]].
 		cTypeString == #'CogBlockMethod *' ifTrue:
 			[^self cogBlockMethodSurrogateAt: value asUnsignedInteger].
-		cTypeString == #'NSSendCache *' ifTrue:
-			[^self nsSendCacheSurrogateAt: value asUnsignedInteger].
 		(cTypeString == #'AbstractInstruction *'
 		 and: [value isBehavior]) ifTrue:
 			[^CogCompilerClass].
@@ -4189,25 +4102,12 @@ Cogit >> checkEnoughOpcodes [
 Cogit >> checkIfValidOopRef: annotation pc: mcpc cogMethod: cogMethod [
 	"Check for a valid object reference, if any, at a map entry.  Answer a code unique to each error for debugging."
 	<var: #mcpc type: #'char *'>
-	<var: #nsSendCache type: #'NSSendCache *'>
 	annotation = IsObjectReference ifTrue:
 		[| literal |
 		 literal := literalsManager fetchLiteralAtAnnotatedAddress: mcpc asUnsignedInteger using: backEnd.
 		 (objectRepresentation checkValidOopReference: literal) ifFalse:
 			[coInterpreter print: 'object ref leak in CM '; printHex: cogMethod asInteger; print: ' @ '; printHex: mcpc asInteger; cr.
 			^1]].
-
-	NewspeakVM ifTrue:
-		[annotation = IsNSSendCall ifTrue:
-			[| nsSendCache enclosingObject |
-			nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
-			[(objectRepresentation checkValidOopReference: nsSendCache selector) ifFalse:
-				[coInterpreter print: 'selector leak in CM '; printHex: cogMethod asInteger; print: ' @ '; printHex: mcpc asInteger; cr.
-				^1]].
-			(enclosingObject := nsSendCache enclosingObject) ~= 0 ifTrue:
-				[[(objectRepresentation checkValidOopReference: enclosingObject) ifFalse:
-					[coInterpreter print: 'enclosing object leak in CM '; printHex: cogMethod asInteger; print: ' @ '; printHex: mcpc asInteger; cr.
-					^1]]]]].
 
 	(self isPureSendAnnotation: annotation) ifTrue:
 		[| entryPoint selectorOrCacheTag offset |
@@ -4240,7 +4140,6 @@ Cogit >> checkIfValidOopRef: annotation pc: mcpc cogMethod: cogMethod [
 Cogit >> checkIfValidOopRefAndTarget: annotation pc: mcpc cogMethod: cogMethod [
 	"Check for a valid object reference, if any, at a map entry.  Answer a code unique to each error for debugging."
 	<var: #mcpc type: #'char *'>
-	<var: #nsSendCache type: #'NSSendCache *'>
 	| literal entryPoint |
 	annotation = IsObjectReference ifTrue:
 		[literal := literalsManager fetchLiteralAtAnnotatedAddress: mcpc asUnsignedInteger using: backEnd.
@@ -4250,24 +4149,6 @@ Cogit >> checkIfValidOopRefAndTarget: annotation pc: mcpc cogMethod: cogMethod [
 		 and: [objectMemory isReallyYoungObject: literal]) ifTrue:
 			[(self asserta: (self cCoerceSimple: cogMethod to: #'CogMethod *') cmRefersToYoung) ifFalse:
 				[^2]]].
-
-	NewspeakVM ifTrue:
-		[annotation = IsNSSendCall ifTrue:
-			[| nsSendCache classTag enclosingObject nsTargetMethod |
-			nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
-			(self asserta: (objectRepresentation checkValidOopReference: nsSendCache selector)) ifFalse:
-				[^9].
-			classTag := nsSendCache classTag.
-			(self asserta: (classTag = 0 or: [objectRepresentation validInlineCacheTag: classTag])) ifFalse:
-				[^10].
-			enclosingObject := nsSendCache enclosingObject.
-			(self asserta: (enclosingObject = 0 or: [objectRepresentation checkValidOopReference: enclosingObject])) ifFalse:
-				[^11].
-			entryPoint := nsSendCache target.
-			entryPoint ~= 0 ifTrue: [
-				nsTargetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
-				(self asserta: (nsTargetMethod cmType = CMMethod)) ifFalse:
-					[^12]]]].
 
 	(self isPureSendAnnotation: annotation) ifTrue:
 		[(self asserta: (self cCoerceSimple: cogMethod to: #'CogMethod *') cmType = CMMethod) ifFalse:
@@ -4577,21 +4458,10 @@ Cogit >> cog: aMethodObj selector: aSelectorOop [
 	<var: #cogMethod type: #'CogMethod *'>
 	(self exclude: aMethodObj selector: aSelectorOop) ifTrue:
 		[^nil].
-	"In Newspeak we support anonymous accessors and hence tolerate the same
-	 method being cogged multiple times.  But only if the method class association is nil."
-	NewspeakVM
-		ifTrue:
-			[(coInterpreter methodHasCogMethod: aMethodObj) ifTrue:
-				[cogMethod := coInterpreter cogMethodOf: aMethodObj.
-				 self deny: cogMethod selector = aSelectorOop.
-				 cogMethod selector = aSelectorOop ifTrue:
-					[^cogMethod].
-				 (coInterpreter methodClassAssociationOf: aMethodObj) ~= objectMemory nilObject ifTrue:
-					[self cCode: 'extern void *firstIndexableField(sqInt)'. "Slang, au natural"
-					 self warnMultiple: cogMethod selectors: aSelectorOop.
-					^nil]]]
-		ifFalse: [self deny: (coInterpreter methodHasCogMethod: aMethodObj)].
+	
+	self deny: (coInterpreter methodHasCogMethod: aMethodObj).
 	self deny: (objectMemory isOopCompiledMethod: (coInterpreter ultimateLiteralOf: aMethodObj)).
+
 	selector := aSelectorOop = objectMemory nilObject
 					ifTrue: [coInterpreter maybeSelectorOfMethod: aMethodObj]
 					ifFalse: [aSelectorOop].
@@ -4602,14 +4472,7 @@ Cogit >> cog: aMethodObj selector: aSelectorOop [
 			point: (objectMemory lengthOf: selector)
 			isMNUCase: false].
 	aMethodObj = breakMethod ifTrue: [self halt: 'Compilation of breakMethod'].
-	NewspeakVM ifTrue:
-		[cogMethod := methodZone findPreviouslyCompiledVersionOf: aMethodObj with: aSelectorOop.
-		 cogMethod ifNotNil:
-			[(coInterpreter methodHasCogMethod: aMethodObj) not ifTrue:
-				[self assert: (coInterpreter rawHeaderOf: aMethodObj) = cogMethod methodHeader.
-				 cogMethod methodObject: aMethodObj.
-				 coInterpreter rawHeaderOf: aMethodObj put: cogMethod asInteger].
-			^cogMethod]].
+
 	"If the generators for the alternate bytecode set are missing then interpret."
 	(coInterpreter methodUsesAlternateBytecodeSet: aMethodObj)
 		ifTrue:
@@ -4911,17 +4774,6 @@ Cogit >> cogMethodDoesntLookKosher: cogMethod [
 		  and: [cogMethod counters ~= 0]]) ifTrue:
 			[(objectRepresentation couldBeDerivedObject: cogMethod counters) ifFalse:
 				[^14]].
-		 (NewspeakVM
-		  and: [objectRepresentation canPinObjects
-		  and: [cogMethod nextMethodOrIRCs ~= 0]]) ifTrue:
-			[(cogMethod nextMethodOrIRCs < methodZone zoneEnd)
-				ifTrue: "check the nextMethod (unpairedMethodList) unless we're compacting."
-					[(methodZone compactionInProgress
-					  or: [cogMethod nextMethodOrIRCs = (methodZone methodFor: cogMethod nextMethodOrIRCs) asUnsignedInteger]) ifFalse:
-						[^15]]
-				ifFalse:
-					[(objectRepresentation couldBeDerivedObject: cogMethod nextMethodOrIRCs) ifFalse:
-						[^16]]].
 		 ^0].
 
 	cogMethod cmType = CMOpenPIC ifTrue:
@@ -5576,8 +5428,7 @@ Cogit >> compileCogFullBlockMethod: numCopied [
 	blockCount := 0.
 	numCleanBlocks > 0 ifTrue:
 		[self addCleanBlockStarts].
-	(self maybeAllocAndInitCounters
-	 and: [self maybeAllocAndInitIRCs]) ifFalse: "Inaccurate error code, but it'll do.  This will likely never fail."
+	(self maybeAllocAndInitCounters) ifFalse: "Inaccurate error code, but it'll do.  This will likely never fail."
 		[^coInterpreter cCoerceSimple: InsufficientCodeSpace to: #'CogMethod *'].
 
 	blockEntryLabel := nil.
@@ -5619,8 +5470,7 @@ Cogit >> compileCogMethod: selector [
 	blockCount := 0.
 	numCleanBlocks > 0 ifTrue:
 		[self addCleanBlockStarts].
-	(self maybeAllocAndInitCounters
-	 and: [self maybeAllocAndInitIRCs]) ifFalse: "Inaccurate error code, but it'll do.  This will likely never fail."
+	(self maybeAllocAndInitCounters) ifFalse: "Inaccurate error code, but it'll do.  This will likely never fail."
 		[^coInterpreter cCoerceSimple: InsufficientCodeSpace to: #'CogMethod *'].
 	
 	blockEntryLabel := nil.
@@ -6106,17 +5956,6 @@ Cogit >> disassemble: targetmcpc from: startpc to: endpc arg: aStream [
 	^0
 ]
 
-{ #category : #'simulation only' }
-Cogit >> disassembleCachedOop: address [
-	<doNotGenerate>
-	| oopOrZero |
-	"Answer a disassembly string for an implicit receiver cache entry in a Newspeak send."
-	oopOrZero := objectMemory unalignedLongAt: address.
-	^(objectMemory addressCouldBeObj: oopOrZero)
-		ifTrue: [oopOrZero hex, ': ', (coInterpreter shortPrint: oopOrZero)]
-		ifFalse: [oopOrZero = 0 ifTrue: [oopOrZero printString] ifFalse: [oopOrZero hex]]
-]
-
 { #category : #disassembly }
 Cogit >> disassembleCodeAt: pc [
 	<doNotGenerate>
@@ -6197,17 +6036,6 @@ Cogit >> disassembleMethod: surrogateOrAddress on: aStream [
 			[self mapFor: cogMethod
 				performUntil: #collectMapEntry:address:into:
 				arg: mapEntries].
-
-	NewspeakVM ifTrue:
-		[objectRepresentation canPinObjects ifFalse:
-			[mapEntries keys do:
-				[:a|
-				(mapEntries at: a) = #IsNSSendCall ifTrue:
-					[mapEntries
-						at: a + backEnd jumpShortByteSize
-							put: {'Class'. #disassembleCachedOop:. (objectMemory wordSize)};
-						at: a + backEnd jumpShortByteSize + objectMemory bytesPerOop
-							put: {'ImplicitReceiver'. #disassembleCachedOop:. (objectMemory wordSize)}]]]].
 
 	"This would all be far more elegant and simple if we used blocks.
 	 But there are no blocks in C and the basic enumerators here need
@@ -6641,19 +6469,14 @@ Cogit >> fillInMethodHeader: method size: size selector: selector [
 	method blockSize: size.
 	method methodObject: methodObj.
 	rawHeader := coInterpreter rawHeaderOf: methodObj.
-	"If the method has already been cogged (e.g. Newspeak accessors) then
+	"If the method has already been cogged then
 	 leave the original method attached to its cog method, but get the right header."
 	(coInterpreter isCogMethodReference: rawHeader)
 		ifTrue:
 			[originalMethod := self cCoerceSimple: rawHeader to: #'CogMethod *'.
 			self assert: originalMethod blockSize = size.
-			self assert: methodHeader = originalMethod methodHeader.
-			NewspeakVM ifTrue:
-				[methodZone addToUnpairedMethodList: method]]
-		ifFalse:
-			[coInterpreter rawHeaderOf: methodObj put: method asInteger.
-			 NewspeakVM ifTrue:
-				[method nextMethodOrIRCs: theIRCs]].
+			self assert: methodHeader = originalMethod methodHeader ]
+		ifFalse: [ coInterpreter rawHeaderOf: methodObj put: method asInteger ].
 	method methodHeader: methodHeader.
 	method selector: selector.
 	method cmNumArgs: (coInterpreter argumentCountOfMethodHeader: methodHeader).
@@ -7467,68 +7290,6 @@ Cogit >> genMethodAbortTrampoline [
 ]
 
 { #category : #initialization }
-Cogit >> genNSSendTrampolineFor: aRoutine numArgs: numArgs enclosingObjectCheck: eoCheckFlag called: aString [
-	"ReceiverResultReg: method receiver
-	SendNumArgsReg: the NSSendCache cache"
-	<option: #NewspeakVM>
-	<var: #aRoutine type: #'void *'>
-	<var: #aString type: #'char *'>
-	| jumpMiss jumpItsTheReceiverStupid |
-	<var: #jumpMiss type: #'AbstractInstruction *'>
-	<var: #jumpItsTheReceiverStupid type: #'AbstractInstruction *'>
-	self zeroOpcodeIndex.
-	objectRepresentation
-		genGetInlineCacheClassTagFrom: ReceiverResultReg
-		into: ClassReg
-		forEntry: false.
-	self MoveMw: NSCClassTagIndex * objectMemory wordSize r: SendNumArgsReg R: TempReg.
-	self CmpR: ClassReg R: TempReg.
-	jumpMiss := self JumpNonZero: 0.
-
-	eoCheckFlag ifTrue:
-		[self MoveMw: NSCEnclosingObjectIndex * objectMemory wordSize r: SendNumArgsReg R: TempReg.
-		self CmpCq: 0 R: TempReg.
-		jumpItsTheReceiverStupid := self JumpZero: 0.
-		self MoveR: TempReg R: ReceiverResultReg.
-		"Now set the stacked receiver, if needed.  If there are reg args this is
-		 not required; see genPushRegisterArgsForNumArgs:numArgs: below."
-		(self numRegArgs = 0 or: [numArgs > self numRegArgs]) ifTrue:
-			[numArgs >= (NumSendTrampolines - 1)
-				ifTrue: "arbitrary argument count"
-					[self MoveMw: NSCNumArgsIndex * objectMemory wordSize r: SendNumArgsReg R: TempReg.
-					 backEnd hasLinkRegister ifFalse:
-						[self AddCq: 1 R: TempReg]..
-					 self MoveR: ReceiverResultReg Xwr: TempReg R: SPReg]
-				ifFalse: "Known argument count"
-					[self MoveR: TempReg Mw: (backEnd hasLinkRegister ifTrue: [0] ifFalse: [1]) + numArgs * objectMemory wordSize r: SPReg]].
-		jumpItsTheReceiverStupid jmpTarget: self Label].
-
-	self MoveMw: NSCTargetIndex * objectMemory wordSize r: SendNumArgsReg R: TempReg.
-	self JumpR: TempReg.
-
-	jumpMiss jmpTarget: self Label.
-	objectRepresentation
-		genEnsureOopInRegNotForwarded: ReceiverResultReg
-		scratchReg: TempReg
-		updatingMw: FoxMFReceiver
-		r: FPReg.
-	self numRegArgs > 0 ifTrue:
-		[backEnd genPushRegisterArgsForNumArgs: numArgs scratchReg: TempReg].
-	^self
-		genTrampolineFor: aRoutine
-		called: aString
-		numArgs: 2
-		arg: SendNumArgsReg "The NSSendCache"
-		arg: ReceiverResultReg
-		arg: nil
-		arg: nil
-		regsToSave: self emptyRegisterMask
-		pushLinkReg: true
-		resultReg: NoReg
-		appendOpcodes: true
-]
-
-{ #category : #initialization }
 Cogit >> genNonLocalReturnTrampoline [
 	self zeroOpcodeIndex.
 	"write the return address to the coInterpreter instructionPointerAddress;
@@ -8307,60 +8068,6 @@ Cogit >> generateMissAbortTrampolines [
 ]
 
 { #category : #initialization }
-Cogit >> generateNewspeakRuntime [
-	<option: #NewspeakVM>
-	"Generate the non-send runtime support for Newspeak: push enclosing object.
-	The dynamic frequency is so low we merely call an interpreter routine."
-	ceEnclosingObjectTrampoline := self genTrampolineFor: #ceEnclosingObjectAt:
-										called: 'ceEnclosingObjectTrampoline'
-										arg: SendNumArgsReg
-										result: ReceiverResultReg.
-]
-
-{ #category : #initialization }
-Cogit >> generateNewspeakSendTrampolines [
-	"Self send, dynamic super send, implicit receiver send, and outer send"
-	<option: #NewspeakVM>
-	0 to: NumSendTrampolines - 1 do:
-		[:numArgs|
-		selfSendTrampolines
-			at: numArgs
-			put: (self 
-				genNSSendTrampolineFor: #ceSelfSend:receiver:
-				numArgs: numArgs enclosingObjectCheck: false
-				called: (self trampolineName: 'ceSelfSend' numArgs: numArgs))].
-
-	0 to: NumSendTrampolines - 1 do:
-		[:numArgs|
-		dynamicSuperSendTrampolines
-			at: numArgs
-			put: (self 
-				genNSSendTrampolineFor: #ceDynamicSuperSend:receiver:
-				numArgs: numArgs enclosingObjectCheck: false
-				called: (self trampolineName: 'ceDynamicSuperSend' numArgs: numArgs))].
-
-	0 to: NumSendTrampolines - 1 do:
-		[:numArgs|
-		implicitReceiverSendTrampolines
-			at: numArgs
-			put: (self 
-				genNSSendTrampolineFor: #ceImplicitReceiverSend:receiver:
-				numArgs: numArgs enclosingObjectCheck: true
-				called: (self trampolineName: 'ceImplicitReceiverSend' numArgs: numArgs))].
-
-	0 to: NumSendTrampolines - 1 do:
-		[:numArgs|
-		outerSendTrampolines
-			at: numArgs
-			put: (self 
-				genNSSendTrampolineFor: #ceOuterSend:receiver:
-				numArgs: numArgs enclosingObjectCheck: true
-				called: (self trampolineName: 'ceOuterSend' numArgs: numArgs))].
-
-
-]
-
-{ #category : #initialization }
 Cogit >> generateOpenPICPrototype [
 	"Generate the prototype ClosedPIC to determine how much space as full PIC takes.
 	 When we first allocate a closed PIC it only has one or two cases and we want to grow it.
@@ -8449,8 +8156,6 @@ Cogit >> generateSendTrampolines [
 					  arg: (self numArgsOrSendNumArgsReg: numArgs))].
 
 	"Generate these in the middle so they are within [firstSend, lastSend]."
-	NewspeakVM ifTrue:
-		[self generateNewspeakSendTrampolines].
 	BytecodeSetHasDirectedSuperSend ifTrue:
 		[0 to: NumSendTrampolines - 1 do:
 			[:numArgs|
@@ -8519,7 +8224,6 @@ Cogit >> generateTrampolines [
 	self generateMissAbortTrampolines.
 	objectRepresentation generateObjectRepresentationTrampolines.
 	self generateRunTimeTrampolines.
-	NewspeakVM ifTrue: [self generateNewspeakRuntime].
 	SistaVM ifTrue: [self generateSistaRuntime].
 	self generateEnilopmarts.
 	self generateTracingTrampolines.
@@ -8775,20 +8479,7 @@ Cogit >> handleWriteSimulationTrap: aProcessorSimulationTrap [
 { #category : #compaction }
 Cogit >> incrementUsageOfTargetIfLinkedSend: annotation mcpc: mcpc ignored: superfluity [
 	<var: #mcpc type: #'char *'>
-	<var: #nsSendCache type: #'NSSendCache *'>
 	| entryPoint |
-
-	NewspeakVM ifTrue:
-		[annotation = IsNSSendCall ifTrue:
-			[| nsSendCache |
-			 nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
-			 nsSendCache classTag ~= objectRepresentation illegalClassTag ifTrue: "send is linked"
-				[ | targetMethod |
-				entryPoint := nsSendCache target.
-				targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
-				self assert: (self isPCWithinMethodZone: targetMethod).
-				targetMethod cmUsageCount < (CMMaxUsageCount // 2) ifTrue:
-					[targetMethod cmUsageCount: targetMethod cmUsageCount + 1]]]].
 
 	(self isPureSendAnnotation: annotation) ifTrue:
 		[self assert: annotation ~= IsNSSendCall.
@@ -8861,21 +8552,12 @@ Cogit >> initialize [
 	| wordSize |
 	initialPC := 0.
 	wordSize := self class objectMemoryClass wordSize.
-	cogMethodSurrogateClass := NewspeakVM
-									ifTrue:
-										[wordSize = 4
-											ifTrue: [NewspeakCogMethodSurrogate32]
-											ifFalse: [NewspeakCogMethodSurrogate64]]
-									ifFalse:
-										[wordSize = 4
+	cogMethodSurrogateClass := wordSize = 4
 											ifTrue: [CogMethodSurrogate32]
-											ifFalse: [CogMethodSurrogate64]].
+											ifFalse: [CogMethodSurrogate64].
 	cogBlockMethodSurrogateClass := wordSize = 4
 											ifTrue: [CogBlockMethodSurrogate32]
 											ifFalse: [CogBlockMethodSurrogate64].
-	nsSendCacheSurrogateClass := wordSize = 4
-											ifTrue: [NSSendCacheSurrogate32]
-											ifFalse: [NSSendCacheSurrogate64].
 ]
 
 { #category : #initialization }
@@ -8925,18 +8607,6 @@ Cogit >> initializeFixupAt: targetPC [
 	<returnTypeC: #'BytecodeFixup *'>
 	<inline: true>
 	(self fixupAt: targetPC) becomeFixup
-]
-
-{ #category : #'newspeak support' }
-Cogit >> initializeNSSendCache: cacheAddress selector: selector numArgs: numArgs depth: depth [
-	<inline: true>
-	| nsSendCache |
-	nsSendCache := self cCoerceSimple: cacheAddress to: #'NSSendCache *'.
-	nsSendCache selector: selector.
-	nsSendCache numArgs: numArgs.
-	nsSendCache depth: depth.
-	nsSendCache classTag: objectRepresentation illegalClassTag.
-
 ]
 
 { #category : #initialization }
@@ -9123,7 +8793,6 @@ Cogit >> isPureSendAnnotation: annotation [
 Cogit >> isSendAnnotation: annotation [
 	<inline: true>
 	^annotation >= IsSendCall
-	  or: [NewspeakVM and: [annotation = IsNSSendCall]]
 ]
 
 { #category : #'jit - api' }
@@ -9191,22 +8860,6 @@ Cogit >> latestContinuationPCFor: descriptor at: pc exts: nExts in: aMethodObj [
 	| distance |
 	distance := self spanFor: descriptor at: pc exts: nExts in: aMethodObj.
 	^pc + descriptor numBytes + (distance max: 0)
-]
-
-{ #category : #'newspeak support' }
-Cogit >> linkNSSendCache: nsSendCache classTag: classTag enclosingObject: enclosingObject target: targetMethod caller: callingMethod [
-	<api>
-	<option: #NewspeakVM>
-	<var: #nsSendCache type: #'NSSendCache *'>
-	<var: #targetMethod type: #'CogMethod *'>
-	<var: #callingMethod type: #'CogMethod *'>
-	nsSendCache classTag: classTag.
-	nsSendCache enclosingObject: enclosingObject.
-	nsSendCache target: targetMethod asInteger + cmNoCheckEntryOffset.
-	callingMethod cmRefersToYoung ifFalse:
-		[(enclosingObject ~= 0 and: [objectMemory isYoung: enclosingObject]) ifTrue:
-			[methodZone ensureInYoungReferrers: callingMethod]].
-
 ]
 
 { #category : #'in-line cacheing' }
@@ -9689,8 +9342,8 @@ Cogit >> mapObjectReferencesInMachineCodeForBecome [
 									with: cogMethod cmUsesPenultimateLit
 									sendToCogit: #method:hasSameCodeAs:checkPenultimate:) ifFalse:
 								[self error: 'attempt to become cogged method into different method'].
-							 "For non-Newspeak there should ne a one-to-one mapping between bytecoded and
-							  cog methods.  For Newspeak not necessarily, but only for anonymous accessors."
+							 "There should be a one-to-one mapping between bytecoded and
+							  cog methods."
 							 "Only reset the method object's header if it is referring to this CogMethod."
 							 (coInterpreter rawHeaderOf: cogMethod methodObject) = cogMethod asInteger
 								ifTrue:
@@ -9850,7 +9503,6 @@ Cogit >> markAndTraceLiteralsIn: cogMethod [
 		in: cogMethod
 		at: (self addressOf: cogMethod selector put: [:val| cogMethod selector: val]).
 	self maybeMarkCountersIn: cogMethod.
-	self maybeMarkIRCsIn: cogMethod.
 	self mapFor: cogMethod
 		 performUntil: #markLiterals:pc:method:
 		 arg: cogMethod asInteger
@@ -10011,10 +9663,8 @@ Cogit >> markAndTraceOrFreePICTarget: entryPoint in: cPIC [
 
 { #category : #'garbage collection' }
 Cogit >> markLiterals: annotation pc: mcpc method: cogMethod [
-	"Mark and trace literals.
-	 Additionally in Newspeak, void push implicits that have unmarked classes."
+	"Mark and trace literals."
 	<var: #mcpc type: #'char *'>
-	<var: #nsSendCache type: #'NSSendCache *'>
 	| literal |
 	annotation = IsObjectReference ifTrue:
 		[literal := literalsManager fetchLiteralAtAnnotatedAddress: mcpc asUnsignedInteger using: backEnd.
@@ -10023,24 +9673,6 @@ Cogit >> markLiterals: annotation pc: mcpc method: cogMethod [
 				in: (self cCoerceSimple: cogMethod to: #'CogMethod *')
 				atpc: mcpc asUnsignedInteger) ifTrue:
 			[codeModified := true]].
-
-	NewspeakVM ifTrue:
-		[annotation = IsNSSendCall ifTrue:
-			[| nsSendCache sel eo |
-			nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
-			sel := nsSendCache selector.
-				(objectMemory isForwarded: sel)
-					ifFalse: [objectMemory markAndTrace: sel]
-					ifTrue: [sel := objectMemory followForwarded: literal.
-							nsSendCache selector: sel.
-							self markAndTraceUpdatedLiteral: sel in: (self cCoerceSimple: cogMethod to: #'CogMethod *')].
-			eo := nsSendCache enclosingObject.
-			eo ~= 0 ifTrue:
-				[(objectMemory isForwarded: eo)
-					ifFalse: [objectMemory markAndTrace: eo]
-					ifTrue: [eo := objectMemory followForwarded: literal.
-							nsSendCache enclosingObject: eo.
-							self markAndTraceUpdatedLiteral: eo in: (self cCoerceSimple: cogMethod to: #'CogMethod *')]]]].
 
 	(self isPureSendAnnotation: annotation) ifTrue:
 		[self entryCacheTagAndCouldBeObjectAt: mcpc annotation: annotation into:
@@ -10059,7 +9691,6 @@ Cogit >> markLiterals: annotation pc: mcpc method: cogMethod [
 Cogit >> markLiteralsAndUnlinkIfUnmarkedSend: annotation pc: mcpc method: cogMethod [
 	"Mark and trace literals.  Unlink sends that have unmarked cache tags or targets."
 	<var: #mcpc type: #'char *'>
-	<var: #nsSendCache type: #'NSSendCache *'>
 	| literal |
 	annotation = IsObjectReference ifTrue:
 		[literal := literalsManager fetchLiteralAtAnnotatedAddress: mcpc asUnsignedInteger using: backEnd.
@@ -10068,30 +9699,6 @@ Cogit >> markLiteralsAndUnlinkIfUnmarkedSend: annotation pc: mcpc method: cogMet
 				in: (self cCoerceSimple: cogMethod to: #'CogMethod *')
 				atpc: mcpc asUnsignedInteger) ifTrue:
 			[codeModified := true]].
-
-	NewspeakVM ifTrue:
-		[annotation = IsNSSendCall ifTrue:
-			[| nsSendCache entryPoint targetMethod sel eo |
-			nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
-			entryPoint := nsSendCache target.
-			entryPoint ~= 0 ifTrue: "Send is linked"
-				[targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
-				 (self markAndTraceOrFreeCogMethod: targetMethod
-					firstVisit: targetMethod asUnsignedInteger > mcpc asUnsignedInteger) ifTrue:	
-						[self voidNSSendCache: nsSendCache]].
-			sel := nsSendCache selector.
-			(objectMemory isForwarded: sel)
-				ifFalse: [objectMemory markAndTrace: sel]
-				ifTrue: [sel := objectMemory followForwarded: literal.
-						nsSendCache selector: sel.
-						self markAndTraceUpdatedLiteral: sel in: (self cCoerceSimple: cogMethod to: #'CogMethod *')].
-			eo := nsSendCache enclosingObject.
-			eo ~= 0 ifTrue:
-				[(objectMemory isForwarded: eo)
-					ifFalse: [objectMemory markAndTrace: eo]
-					ifTrue: [eo := objectMemory followForwarded: literal.
-							nsSendCache enclosingObject: eo.
-							self markAndTraceUpdatedLiteral: eo in: (self cCoerceSimple: cogMethod to: #'CogMethod *')]]]].
 
 	(self isPureSendAnnotation: annotation) ifTrue:
 		[self entryCacheTagAndCouldBeObjectAt: mcpc annotation: annotation into:
@@ -10137,7 +9744,6 @@ Cogit >> markLiteralsAndUnlinkUnmarkedSendsIn: cogMethod [
 		in: cogMethod
 		at: (self addressOf: cogMethod selector put: [:val| cogMethod selector: val]).
 	self maybeMarkCountersIn: cogMethod.
-	self maybeMarkIRCsIn: cogMethod.
 	self mapFor: cogMethod
 		 performUntil: #markLiteralsAndUnlinkIfUnmarkedSend:pc:method:
 		 arg: cogMethod asInteger
@@ -10164,18 +9770,10 @@ Cogit >> markMethodAndReferents: aCogMethod [
 Cogit >> markYoungObjects: annotation pc: mcpc method: cogMethod [
 	"Mark and trace young literals."
 	<var: #mcpc type: #'char *'>
-	<var: #nsSendCache type: #'NSSendCache *'>
 	| literal |
 	annotation = IsObjectReference ifTrue:
 		[literal := literalsManager fetchLiteralAtAnnotatedAddress: mcpc asUnsignedInteger using: backEnd.
 		 objectRepresentation markAndTraceLiteralIfYoung: literal].
-
-	NewspeakVM ifTrue: [annotation = IsNSSendCall ifTrue:
-		[| nsSendCache |
-		 nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
-		 objectRepresentation markAndTraceLiteralIfYoung: nsSendCache selector.
-		 nsSendCache enclosingObject ~= 0 ifTrue:
-			[objectRepresentation markAndTraceLiteralIfYoung: nsSendCache enclosingObject]]].
 
 	(self isPureSendAnnotation: annotation) ifTrue:
 		[self entryCacheTagAndCouldBeObjectAt: mcpc annotation: annotation into:
@@ -10229,22 +9827,6 @@ Cogit >> maxLitIndex: anInteger [
 Cogit >> maybeAllocAndInitCounters [
 	"No-op in the non-Sista Cogits..."
 	^true
-]
-
-{ #category : #'newspeak support' }
-Cogit >> maybeAllocAndInitIRCs [
-	"If this is the Newspeak VM and the objectRepresentation supports pinning
-	 then allocate space for the implicit receiver caches on the heap."
-	NewspeakVM
-		ifTrue:
-			[indexOfIRC := theIRCs := 0.
-			 (objectRepresentation canPinObjects and: [numIRCs > 0]) ifTrue:
-				[self assert: (self noAssertMethodClassAssociationOf: methodObj) ~= objectMemory nilObject.
-				 theIRCs := objectRepresentation allocateNPinnedSlots: numIRCs * NumOopsPerNSC.
-				 ^theIRCs ~= 0].
-			 ^true]
-		ifFalse:
-			[^true]
 ]
 
 { #category : #'simulation only' }
@@ -10352,14 +9934,6 @@ Cogit >> maybeMarkCountersIn: cogMethod [
 	"In SIsta Spur counters are held on the heap in pinned objects which must be marked
 	 to avoid them being garbage collected.  This is the hook through which that happens."
 	<var: #cogMethod type: #'CogMethod *'>
-]
-
-{ #category : #'newspeak support' }
-Cogit >> maybeMarkIRCsIn: cogMethod [
-	<inline: true>
-	NewspeakVM ifTrue:
-		[objectRepresentation canPinObjects ifTrue:
-			[objectRepresentation markIfIRC: cogMethod nextMethodOrIRCs]]
 ]
 
 { #category : #disassembly }
@@ -10657,33 +10231,6 @@ Cogit >> notYetImplemented [
 	super notYetImplemented
 ]
 
-{ #category : #'newspeak support' }
-Cogit >> nsSendCacheFromReturnAddress: mcpc [
-	"Caller looks like
-			mov LcacheAddress, SendNumArgsReg
-			call ceImplicitReceiver"
-	<option: #NewspeakVM>
-	<var: #mcpc type: #'char *'>
-	<inline: true>
-	| entryPoint cacheAddress |
-	entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
-	self assert: entryPoint < methodZoneBase.
-	cacheAddress := (backEnd nsSendCacheAt: mcpc) asUnsignedInteger.
-	self assert: (objectMemory isInOldSpace: cacheAddress).
-	^self cCoerceSimple: cacheAddress to: #'NSSendCache *'
-
-]
-
-{ #category : #'simulation only' }
-Cogit >> nsSendCacheSurrogateAt: address [
-	<doNotGenerate>
-	self assert: (address < 0 or: [(address bitAnd: objectMemory wordSize - 1) = 0]).
-	^nsSendCacheSurrogateClass new
-		at: address
-		objectMemory: objectMemory
-		cogit: self
-]
-
 { #category : #initialization }
 Cogit >> numArgsOrSendNumArgsReg: numArgs [
 	"The send trampolines have different versions for different arg counts, with special
@@ -10716,37 +10263,6 @@ Cogit >> offset: aClass of: fieldSymbol [
 ]
 
 { #category : #'in-line cacheing' }
-Cogit >> offsetAndSendTableFoAnnotation: annotation into: binaryBlock [
-	"Find the relevant sendTable for a linked-send with the given annotation.
-	 c.f. annotationForSendTable:"
-	<inline: true>
-	| offset sendTable |
-	<var: #sendTable type: #'sqInt *'>
-	annotation = IsSendCall ifTrue:
-		[offset := cmEntryOffset.
-		 sendTable := ordinarySendTrampolines] ifFalse:
-	[(BytecodeSetHasDirectedSuperSend and: [annotation = IsDirectedSuperSend]) ifTrue:
-		[offset := cmNoCheckEntryOffset.
-		 sendTable := directedSuperSendTrampolines] ifFalse:
-	[(BytecodeSetHasDirectedSuperSend and: [annotation = IsDirectedSuperBindingSend]) ifTrue:
-		[offset := cmNoCheckEntryOffset.
-		 sendTable := directedSuperBindingSendTrampolines] ifFalse:
-	[(NewspeakVM and: [annotation = IsNSSelfSend]) ifTrue:
-		[offset := cmEntryOffset.
-		 sendTable := selfSendTrampolines] ifFalse:
-	[(NewspeakVM and: [annotation = IsNSDynamicSuperSend]) ifTrue:
-		[offset := cmEntryOffset.
-		 sendTable := dynamicSuperSendTrampolines] ifFalse:
-	[self assert: annotation = IsSuperSend.
-	 offset := cmNoCheckEntryOffset.
-	 sendTable := superSendTrampolines]]]]].
-
-	binaryBlock
-		value: offset
-		value: sendTable
-]
-
-{ #category : #'in-line cacheing' }
 Cogit >> offsetAndSendTableFor: entryPoint annotation: annotation into: binaryBlock [
 	"Find the relevant sendTable for a linked-send to entryPoint.  Do this based on the
 	 annotation.  c.f. annotationForSendTable:"
@@ -10762,15 +10278,9 @@ Cogit >> offsetAndSendTableFor: entryPoint annotation: annotation into: binaryBl
 	[(BytecodeSetHasDirectedSuperSend and: [annotation = IsDirectedSuperBindingSend]) ifTrue:
 		[offset := cmNoCheckEntryOffset.
 		 sendTable := directedSuperBindingSendTrampolines] ifFalse:
-	[(NewspeakVM and: [annotation = IsNSSelfSend]) ifTrue:
-		[offset := cmEntryOffset.
-		 sendTable := selfSendTrampolines] ifFalse:
-	[(NewspeakVM and: [annotation = IsNSDynamicSuperSend]) ifTrue:
-		[offset := cmEntryOffset.
-		 sendTable := dynamicSuperSendTrampolines] ifFalse:
 	[self assert: annotation = IsSuperSend.
 	 offset := cmNoCheckEntryOffset.
-	 sendTable := superSendTrampolines]]]]].
+	 sendTable := superSendTrampolines]]].
 
 	binaryBlock
 		value: offset
@@ -11142,16 +10652,7 @@ Cogit >> printPCMapPairsFor: cogMethod [
 		 	printChar: $ ;
 			printNum: annotation;
 			print: ' ('.
-		 (NewspeakVM
-		  and: [value = IsNSSendCall
-			     or: [value between: IsNSSendCall and: IsNSImplicitReceiverSend]]) ifTrue:
-			[value
-				caseOf: {
-					[IsNSSendCall]				->	[coInterpreter print: 'NSSendCall'].
-					[IsNSSelfSend]				->	[coInterpreter print: 'NSSelfSend'].
-					[IsNSDynamicSuperSend]	->	[coInterpreter print: 'NSDynamicSuperSend'].
-					[IsNSImplicitReceiverSend]	->	[coInterpreter print: 'NSImplicitReceiverSend'] }] ifFalse:
-		 [(BytecodeSetHasDirectedSuperSend
+		 (BytecodeSetHasDirectedSuperSend
 		    and: [value between: IsDirectedSuperSend and: IsDirectedSuperBindingSend]) ifTrue:
 			[value
 				caseOf: {
@@ -11167,7 +10668,7 @@ Cogit >> printPCMapPairsFor: cogMethod [
 				[IsRelativeCall]				->	[coInterpreter print: 'RelativeCall'].
 				[IsSendCall]				->	[coInterpreter print: 'SendCall'].
 				[IsSuperSend]				->	[coInterpreter print: 'SuperSend'] }
-			otherwise: [coInterpreter print: '??? '; printHexnp: value]]].
+			otherwise: [coInterpreter print: '??? '; printHexnp: value]].
 		 coInterpreter
 			print: ') ';
 			printHexnp: (mapByte bitAnd: DisplacementMask);
@@ -11587,35 +11088,11 @@ Cogit >> relocateCallsInClosedPIC: cPIC [
 { #category : #compaction }
 Cogit >> relocateIfCallOrMethodReference: annotation mcpc: mcpc delta: refDelta [
 	<var: #mcpc type: #'char *'>
-	| callDelta entryPoint targetMethod unlinkedRoutine |
 	<var: #targetMethod type: #'CogMethod *'>
-	<var: #nsSendCache type: #'NSSendCache *'>
+	
+	| callDelta entryPoint targetMethod unlinkedRoutine |
 
 	callDelta := backEnd zoneCallsAreRelative ifTrue: [refDelta] ifFalse: [0].
-	
-	NewspeakVM ifTrue:
-		[| nsSendCache |
-		 annotation = IsNSSendCall ifTrue:
-			["Retrieve the send cache before relocating the stub call. Fetching the send
-			  cache asserts the stub call points below all the cogged methods, but
-			  until this method is actually moved, the adjusted stub call may appear to
-			  point to somewhere in the method zone."
-			nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
-
-			"Fix call to trampoline. This method is moving [delta] bytes, and calls are
-			 relative, so adjust the call by -[delta] bytes"
-			backEnd relocateCallBeforeReturnPC: mcpc asInteger by: callDelta negated.
-
-			nsSendCache target ~= 0 ifTrue: "Send is linked"
-				[entryPoint := nsSendCache target.
-				targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
-				targetMethod cmType = CMMethod
-					ifTrue: "send target not freed; just relocate. The cache has an absolute
-							target, so only adjust by the target method's displacement."
-						[nsSendCache target: entryPoint + targetMethod objectHeader]
-					ifFalse: "send target was freed, unlink"
-						[self voidNSSendCache: nsSendCache]].
-			^0]].
 
 	(self isPureSendAnnotation: annotation) ifTrue:
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
@@ -11658,7 +11135,6 @@ Cogit >> relocateIfCallOrMethodReference: annotation mcpc: mcpc delta: refDelta 
 Cogit >> remapIfObjectRef: annotation pc: mcpc hasYoung: hasYoungPtr [
 	<var: #mcpc type: #'char *'>
 	<var: #targetMethod type: #'CogMethod *'>
-	<var: #nsSendCache type: #'NSSendCache *'>
 	annotation = IsObjectReference ifTrue:
 		[| literal mappedLiteral |
 		 literal := literalsManager fetchLiteralAtAnnotatedAddress: mcpc asUnsignedInteger using: backEnd.
@@ -11670,24 +11146,6 @@ Cogit >> remapIfObjectRef: annotation pc: mcpc hasYoung: hasYoungPtr [
 			 (hasYoungPtr ~= 0
 			  and: [objectMemory isYoung: mappedLiteral]) ifTrue:
 				[(self cCoerceSimple: hasYoungPtr to: #'sqInt *') at: 0 put: true]]].
-
-	NewspeakVM ifTrue: [annotation = IsNSSendCall ifTrue:
-		[| nsSendCache oop mappedOop |
-		nsSendCache := self nsSendCacheFromReturnAddress: mcpc.
-		oop := nsSendCache selector.	
-		mappedOop := objectRepresentation remapObject: oop.
-		oop ~= mappedOop ifTrue:
-			[nsSendCache selector: mappedOop.
-			(hasYoungPtr ~= 0 and: [objectMemory isYoung: mappedOop]) ifTrue:
-				[(self cCoerceSimple: hasYoungPtr to: #'sqInt *') at: 0 put: true]].
-		oop := nsSendCache enclosingObject.	
-		oop ~= 0 ifTrue: [
-			mappedOop := objectRepresentation remapObject: oop.
-			oop ~= mappedOop ifTrue:
-				[nsSendCache enclosingObject: mappedOop.
-				(hasYoungPtr ~= 0 and: [objectMemory isYoung: mappedOop]) ifTrue:
-					[(self cCoerceSimple: hasYoungPtr to: #'sqInt *') at: 0 put: true]]].
-		^0 "keep scanning"]].
 
 	(self isPureSendAnnotation: annotation) ifTrue:
 		[self entryCacheTagAndCouldBeObjectAt: mcpc annotation: annotation into:
@@ -11893,8 +11351,6 @@ Cogit >> scanMethod [
 	| latestContinuation nExts descriptor pc numBlocks distance targetPC framelessStackDelta |
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	needsFrame := false.
-	NewspeakVM ifTrue:
-		[numIRCs := 0].
 	(primitiveIndex > 0
 	 and: [coInterpreter isQuickPrimitiveIndex: primitiveIndex]) ifTrue:
 		[^0].
@@ -11927,16 +11383,6 @@ Cogit >> scanMethod [
 			 distance := self spanFor: descriptor at: pc exts: nExts in: methodObj.
 			 targetPC := pc + descriptor numBytes + distance.
 			 latestContinuation := latestContinuation max: targetPC].
-		 NewspeakVM 
-			ifTrue:
-				[descriptor hasIRC ifTrue:
-					[numIRCs := numIRCs + 1]]
-			ifFalse: 
-				[descriptor hasIRC ifTrue:
-					[ (objectMemory fetchByte: pc + 1 ofObject: methodObj) 
-						<< 8 
-						+ (objectMemory fetchByte: pc + 2 ofObject: methodObj)
-						= ((1 << 15) + 6000) ifTrue: [self initializeFixupAt: targetPC]	 ] ].
 		 pc := pc + descriptor numBytes.
 		 descriptor isExtension
 			ifTrue: [nExts := nExts + 1]
@@ -12010,7 +11456,7 @@ Cogit >> sendTrace: aBooleanOrInteger [
 	 8 => trace interpreter primitives
 	 16 => trace events (context switches, GCs, etc)
 	 32 => trace stack overflow
-	 64 => send breakpoint on implicit receiver (Newspeak VM only)
+	 64 => unused
 	128 => check stack depth on send (simulation only)
 	256 => trace linked sends "
 	traceFlags := aBooleanOrInteger isInteger
@@ -12133,11 +11579,6 @@ Cogit >> setInterpreter: aCoInterpreter [
 		[directedSuperSendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines).
 		 directedSuperBindingSendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines).
 		 directedSendUsesBinding := false].
-	NewspeakVM ifTrue:
-		[selfSendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines).
-		dynamicSuperSendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines).
-		implicitReceiverSendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines).
-		outerSendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines)].
 	"debug metadata"
 	objectReferencesInRuntime := CArrayAccessor on: (Array new: NumObjRefsInRuntime).
 	runtimeObjectRefIndex := 0.
@@ -12534,9 +11975,7 @@ Cogit >> subsequentPrototypeMethodOop [
 { #category : #'in-line cacheing' }
 Cogit >> targetMethodAndSendTableFor: entryPoint annotation: annotation into: binaryBlock [
 	"Evaluate binaryBlock with the targetMethod and relevant send table for a linked-send
-	 to entryPoint.  Do so based on the alignment of entryPoint.  N.B.  For Newspeak sends
-	 we don't need to distinguish between ceImplicitReceiver and the other sends since
-	 ceImplicitReceiver will never appear to be linked, so only three cases here."
+	 to entryPoint.  Do so based on the alignment of entryPoint."
 	<inline: true>
 	<var: #targetMethod type: #'CogMethod *'>
 
@@ -12763,19 +12202,7 @@ Cogit >> unlinkAllSends [
 { #category : #'in-line cacheing' }
 Cogit >> unlinkIfFreeOrLinkedSend: annotation pc: mcpc of: theSelector [
 	<var: #mcpc type: #'char *'>
-	<var: #nsSendCache type: #'NSSendCache *'>
 	| entryPoint |
-
-	NewspeakVM ifTrue:
-		[| nsSendCache |
-		 annotation = IsNSSendCall ifTrue:
-			[nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
-			 (entryPoint := nsSendCache target) ~= 0 ifTrue:
-				[ | targetMethod |
-				targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
-				(targetMethod cmType = CMFree or: [nsSendCache selector = theSelector]) ifTrue:
-					[self voidNSSendCache: nsSendCache]].
-			^0 "keep scanning"]].
 
 	(self isPureSendAnnotation: annotation) ifTrue:
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
@@ -12793,18 +12220,7 @@ Cogit >> unlinkIfFreeOrLinkedSend: annotation pc: mcpc of: theSelector [
 { #category : #'in-line cacheing' }
 Cogit >> unlinkIfInvalidClassSend: annotation pc: mcpc ignored: superfluity [
 	<var: #mcpc type: #'char *'>
-	<var: #nsSendCache type: #'NSSendCache *'>
 	| entryPoint |
-
-	NewspeakVM ifTrue:
-		[| nsSendCache |
-		 annotation = IsNSSendCall ifTrue:
-			[nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
-			 (nsSendCache classTag ~= objectRepresentation illegalClassTag
-			  and: [objectMemory isForwardedClassIndex: nsSendCache classTag]) ifTrue:
-				[self voidNSSendCache: nsSendCache]].
-			"Should we check if the enclosing object's class is forwarded as well?"
-			^0 "keep scanning"].
 
 	(self isPureSendAnnotation: annotation) ifTrue:
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
@@ -12822,16 +12238,7 @@ Cogit >> unlinkIfInvalidClassSend: annotation pc: mcpc ignored: superfluity [
 { #category : #'in-line cacheing' }
 Cogit >> unlinkIfLinkedSend: annotation pc: mcpc ignored: superfluity [
 	<var: #mcpc type: #'char *'>
-	<var: #nsSendCache type: #'NSSendCache *'>
 	| entryPoint |
-
-	NewspeakVM ifTrue:
-		[| nsSendCache |
-		 annotation = IsNSSendCall ifTrue:
-			[nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
-			nsSendCache classTag ~= objectRepresentation illegalClassTag ifTrue: "Send is linked"
-				[self voidNSSendCache: nsSendCache].
-			^0 "keep scanning"]].
 
 	(self isPureSendAnnotation: annotation) ifTrue:
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
@@ -12847,16 +12254,7 @@ Cogit >> unlinkIfLinkedSend: annotation pc: mcpc ignored: superfluity [
 { #category : #'in-line cacheing' }
 Cogit >> unlinkIfLinkedSend: annotation pc: mcpc of: theSelector [
 	<var: #mcpc type: #'char *'>
-	<var: #nsSendCache type: #'NSSendCache *'>
 	| entryPoint |
-
-	NewspeakVM ifTrue:
-		[| nsSendCache |
-		 annotation = IsNSSendCall ifTrue:
-			[nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
-			nsSendCache selector = theSelector ifTrue:
-				[self voidNSSendCache: nsSendCache].
-			^0 "keep scanning"]].
 
 	(self isPureSendAnnotation: annotation) ifTrue:
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
@@ -12873,19 +12271,7 @@ Cogit >> unlinkIfLinkedSend: annotation pc: mcpc of: theSelector [
 { #category : #'in-line cacheing' }
 Cogit >> unlinkIfLinkedSend: annotation pc: mcpc to: theCogMethod [
 	<var: #mcpc type: #'char *'>
-	<var: #nsSendCache type: #'NSSendCache *'>
 	| entryPoint |
-
-	NewspeakVM ifTrue:
-		[| nsSendCache |
-		 annotation = IsNSSendCall ifTrue:
-			[nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
-			(entryPoint := nsSendCache target) ~= 0 ifTrue:
-				[ | targetMethod |
-				targetMethod := entryPoint - cmNoCheckEntryOffset.
-				targetMethod = theCogMethod ifTrue:
-					[self voidNSSendCache: nsSendCache]].
-			^0 "keep scanning"]].
 
 	(self isPureSendAnnotation: annotation) ifTrue:
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
@@ -12902,19 +12288,7 @@ Cogit >> unlinkIfLinkedSend: annotation pc: mcpc to: theCogMethod [
 { #category : #'in-line cacheing' }
 Cogit >> unlinkIfLinkedSendToFree: annotation pc: mcpc ignored: superfluity [
 	<var: #mcpc type: #'char *'>
-	<var: #nsSendCache type: #'NSSendCache *'>
-	<var: #nsTargetMethod type: #'CogMethod *'>
 	| entryPoint |
-
-	NewspeakVM ifTrue:
-		[| nsSendCache nsTargetMethod |
-		 annotation = IsNSSendCall ifTrue:
-			[nsSendCache := self nsSendCacheFromReturnAddress: mcpc asInteger.
-			(entryPoint := nsSendCache target) ~= 0 ifTrue: "It's a linked send."
-				[nsTargetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
-				nsTargetMethod cmType = CMFree ifTrue:
-					[self voidNSSendCache: nsSendCache]].
-			^0 "keep scanning"]].
 
 	(self isPureSendAnnotation: annotation) ifTrue:
 		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.

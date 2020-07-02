@@ -77,18 +77,6 @@ CogObjectRepresentationForSpur >> allYoungObjectsAgeInFullGC [
 	^false
 ]
 
-{ #category : #'newspeak support' }
-CogObjectRepresentationForSpur >> allocateNPinnedSlots: nSlots [
-	"On Newspeak allocate the implicit receiver caches on the heap as pinned objects."
-	<inline: true>
-	<option: #NewspeakVM>
-	| objOop |
-	objOop := objectMemory allocatePinnedSlots: nSlots.
-	^objOop
-		ifNil: [0]
-		ifNotNil: [objOop + objectMemory baseHeaderSize]
-]
-
 { #category : #'sista support' }
 CogObjectRepresentationForSpur >> branchIf: reg instanceOfBehavior: classObj target: targetFixUp [
 	"Generate a branch if reg is an instance of classObj, otherwise fall-
@@ -370,15 +358,6 @@ CogObjectRepresentationForSpur >> freeCounters: theCounters [
 	<option: #SistaCogit>
 	theCounters ~= 0 ifTrue:
 		[objectMemory freeObject: theCounters - objectMemory baseHeaderSize]
-]
-
-{ #category : #'newspeak support' }
-CogObjectRepresentationForSpur >> freeIRCs: maybeIRCs [
-	<var: #maybeIRCs type: #usqInt>
-	<option: #NewspeakVM>
-	<inline: true>
-	(self oop: maybeIRCs isGreaterThan: objectMemory nilObject) ifTrue:
-		[objectMemory freeObject: maybeIRCs - objectMemory baseHeaderSize]
 ]
 
 { #category : #initialization }
@@ -3408,18 +3387,6 @@ CogObjectRepresentationForSpur >> markAndTraceUpdatedLiteral: objOop in: cogMeth
 		  and: [objectMemory isYoungObject: objOop]) ifTrue:
 			[methodZone ensureInYoungReferrers: cogMethodOrNil].
 		 objectMemory markAndTrace: objOop]
-]
-
-{ #category : #'newspeak support' }
-CogObjectRepresentationForSpur >> markIfIRC: maybeIRCs [
-	"If maybeIRCs (from some cogMehtod's nextMethodOrIRCs) is in old space it is
-	 a pointer to the first field of a pinned object in old space holding the implicit
-	 receiver caches for a method.  If so, map it back to an oop and mark it."
-	<var: #maybeIRCs type: #usqInt>
-	<option: #NewspeakVM>
-	<inline: true>
-	(self oop: maybeIRCs isGreaterThan: objectMemory nilObject) ifTrue:
-		[objectMemory markAndTrace: maybeIRCs - objectMemory baseHeaderSize]
 ]
 
 { #category : #'primitive generators' }

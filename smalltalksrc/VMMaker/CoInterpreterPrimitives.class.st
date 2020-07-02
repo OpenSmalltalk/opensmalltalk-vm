@@ -899,16 +899,8 @@ CoInterpreterPrimitives >> primitiveVoidVMStateForMethod [
 			 scanHeapForContexts := self booleanValueOf: self stackTop.
 			 self failed ifTrue:
 				[^self primitiveFailFor: PrimErrBadArgument]].
-	NewspeakVM
-		ifFalse:
-			[argumentCount > 1 ifTrue:
-				[^self primitiveFailFor: PrimErrBadNumArgs]]
-		 ifTrue: "In the NewspeakVM we allow VMMirror voidStateFor: method scanningIf: aBoolean as well as the Smalltalk forms."
-			[argumentCount >= 2 ifTrue:
-				[argumentCount > 2 ifTrue:
-					[^self primitiveFailFor: PrimErrBadNumArgs].
-				 (objectMemory isOopCompiledMethod: methodObj) ifFalse:
-					[^self primitiveFailFor: PrimErrBadArgument]]].
+	argumentCount > 1 ifTrue:
+		[^self primitiveFailFor: PrimErrBadNumArgs].
 	self flushMethodCacheForMethod: methodObj.
 	activeContext := self ensureFrameIsMarried: framePointer SP: stackPointer.
 	self ensurePushedInstructionPointer.
