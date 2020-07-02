@@ -2098,21 +2098,6 @@ VMMaker >> reinitializeWordSizeFrom: aCCodeGenerator [
 	is64BitVM := wordSize = 8
 ]
 
-{ #category : #'objects from disk' }
-VMMaker >> saveConfigurationTo: aFile [
-	"Write info about the current configuration to a file.
-	 Use a hack CrForSpaceWriteStream so that things
-	 appear on separate lines to be friendly to configuration
-	 management systems diffing facilities."
-	| stream |
-	stream := CrForSpaceWriteStream on: String new.
-	self configurationInfo storeOn: stream.
-	(MultiByteFileStream newFileNamed: aFile)
-		lineEndConvention: #lf;
-		nextPutAll: stream contents;
-		close
-]
-
 { #category : #initialize }
 VMMaker >> setPlatName: aString [
 	"private - just set the platform name string, nothing else. Go away...."
