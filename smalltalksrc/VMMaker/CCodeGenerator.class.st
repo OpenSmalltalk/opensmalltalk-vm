@@ -4504,8 +4504,7 @@ CCodeGenerator >> optionIsTrue: pragma in: aClass [
 				[^cogitClass includesBehavior: optionClass]].
 		 aClass objectMemoryClass ifNotNil:
 			[:objectMemoryClass|
-			 ((optionClass includesBehavior: ObjectMemory)
-			   or: [optionClass includesBehavior: SpurMemoryManager]) ifTrue:
+			 (optionClass includesBehavior: SpurMemoryManager) ifTrue:
 				[^objectMemoryClass includesBehavior: optionClass]]].
 	"Lookup options in options, class variables of the defining class, VMBasicConstants, the interpreterClass and the objectMemoryClass"
 	{aClass initializationOptions.

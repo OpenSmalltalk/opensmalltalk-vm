@@ -11,7 +11,6 @@ Class {
 		'stackMemoryStartAddress',
 		'stackMemoryEndAddress',
 		'isa',
-		'wordSize',
 		'obj',
 		'selectorIndex',
 		'sendAddress',
@@ -36,8 +35,7 @@ VMSimpleStackBasedCogitAbstractTest class >> testParameters [
 		addCase: { #ISA -> #'X64'. #wordSize -> 8};
 		addCase: { #ISA -> #'IA32'. #wordSize -> 4};
 		addCase: { #ISA -> #'ARMv5'. #wordSize -> 4};
-		addCase: { #ISA -> #'ARMv8'. #wordSize -> 8};
-		"forSelector: #ISA addOptions: #( X64 IA32 ARMv5 );"
+		"addCase: { #ISA -> #'ARMv8'. #wordSize -> 8};"
 		yourself
 ]
 

@@ -156,7 +156,7 @@ VMClass class >> initializeForPlugins: optionsDictionaryOrArray [
 	"Do a default initialization, suitable for generating plugin sources."
 	StackInterpreterSimulator
 		initializeWithOptions: optionsDictionaryOrArray
-		objectMemoryClass: ObjectMemory
+		objectMemoryClass: Spur32BitMemoryManager
 ]
 
 { #category : #initialization }
@@ -169,14 +169,9 @@ VMClass class >> initializeMiscConstants [
 	SPURVM := STACKVM := COGVM := COGMTVM := false.
 
 	InitializationOptions ifNil: [InitializationOptions := Dictionary new].
-	omc := InitializationOptions at: #ObjectMemory ifAbsent: nil.
-	(omc isNil and: [self defaultObjectMemoryClass notNil]) ifTrue:
-		[omc := InitializationOptions at: #ObjectMemory put: self defaultObjectMemoryClass name].
+	omc := InitializationOptions at: #ObjectMemory ifAbsent: [self error: 'Please specify an object memory'].
+
 	InitializationOptions
-		at: #SqueakV3ObjectMemory	"the good ole default"
-			ifAbsentPut: (omc
-					ifNil: [true]
-					ifNotNil: [(Smalltalk at: omc) includesBehavior: ObjectMemory]);
 		at: #SpurObjectMemory		"the new contender"
 			ifAbsentPut: (omc
 					ifNil: [false]
@@ -345,33 +340,15 @@ VMClass class >> noteCompilationOf: aSelector meta: isMeta [
 
 { #category : #'accessing class hierarchy' }
 VMClass class >> objectMemoryClass [
-	InitializationOptions ifNil:
-		[^self defaultObjectMemoryClass].
+
 	^Smalltalk at: (InitializationOptions
 					at: #ObjectMemory
-					ifAbsent: [^self defaultObjectMemoryClass])
+					ifAbsent: [^self error: 'Please specify an object memory'])
 ]
 
 { #category : #'accessing class hierarchy' }
 VMClass class >> objectRepresentationClass [
 	^self objectMemoryClass objectRepresentationClass
-]
-
-{ #category : #utilities }
-VMClass class >> openCogMultiWindowBrowser [
-	"Answer a new multi-window browser on the ObjectMemory classes, the Cog Interpreter classes, and the main JIT classes"
-	| b |
-	b := Browser open.
-	#(	ObjectMemory NewObjectMemory NewCoObjectMemory
-		InterpreterPrimitives StackInterpreter StackInterpreterPrimitives CoInterpreter CoInterpreterPrimitives CoInterpreterMT
-		Cogit SimpleStackBasedCogit StackToRegisterMappingCogit
-		VMStructType VMMaker CCodeGenerator TMethod)
-		do: [:className|
-			(Smalltalk classNamed: className) ifNotNil:
-				[:class| b selectCategoryForClass: class; selectClass: class]]
-		separatedBy:
-			[b multiWindowState addNewWindow].
-	b multiWindowState selectWindowIndex: 1
 ]
 
 { #category : #utilities }
@@ -425,22 +402,6 @@ VMClass class >> openCogitMultiWindowBrowser [
 	{VMStructType. VMMaker. CCodeGenerator. TMethod}
 		do: [:class|
 			b selectCategoryForClass: class; selectClass: class]
-		separatedBy:
-			[b multiWindowState addNewWindow].
-	b multiWindowState selectWindowIndex: 1
-]
-
-{ #category : #utilities }
-VMClass class >> openObjectMemoriesInterpretersBrowser [
-	"Answer a new multi-window browser on the ObjectMemory classes and the Cog Interpreter classes"
-	| b |
-	b := Browser open.
-	#(	ObjectMemory NewObjectMemory NewCoObjectMemory
-		InterpreterPrimitives StackInterpreter StackInterpreterPrimitives
-		CoInterpreter CoInterpreterPrimitives CoInterpreterMT)
-		do: [:className|
-			(Smalltalk classNamed: className) ifNotNil:
-				[:class| b selectCategoryForClass: class; selectClass: class]]
 		separatedBy:
 			[b multiWindowState addNewWindow].
 	b multiWindowState selectWindowIndex: 1

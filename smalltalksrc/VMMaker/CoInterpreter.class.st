@@ -188,11 +188,6 @@ CoInterpreter class >> declareCVarsIn: aCCodeGenerator [
 ]
 
 { #category : #'accessing class hierarchy' }
-CoInterpreter class >> defaultObjectMemoryClass [
-	^NewCoObjectMemory
-]
-
-{ #category : #'accessing class hierarchy' }
 CoInterpreter class >> hasCogit [
 	^true
 ]
@@ -1279,17 +1274,6 @@ CoInterpreter >> ceActivateFailingPrimitiveMethod: aPrimitiveMethod [
 ]
 
 { #category : #trampolines }
-CoInterpreter >> ceActiveContext [
-	<api>
-	<option: #SqueakV3ObjectMemory>
-	"Since the trampoline checks for marriage we should only be here for a single frame."
-	self assert: (self isMachineCodeFrame: framePointer).
-	self assert: (self frameHasContext: framePointer) not.
-	"Do *not* include the return pc in the stack contents; hence + BytesPerWord"
-	^self marryFrame: framePointer SP: stackPointer + objectMemory wordSize
-]
-
-{ #category : #trampolines }
 CoInterpreter >> ceBaseFrameReturn: returnValue [
 	"Return across a page boundary.  The context to return to (which may be married)
 	 is stored in the first word of the stack.  We get here when a return instruction jumps
@@ -1594,23 +1578,6 @@ CoInterpreter >> ceMNUFromPICMNUMethod: aMethodObj receiver: rcvr [
 		classForMessage: (lkupClass := objectMemory fetchClassOf: rcvr).
 	"NOTREACHED"
 	self assert: false
-]
-
-{ #category : #trampolines }
-CoInterpreter >> ceNewArraySlotSize: slotSize [
-	<api>
-	<option: #SqueakV3ObjectMemory>
-	objectMemory hasSpurMemoryManagerAPI ifTrue:
-		[| obj |
-		 obj := objectMemory
-					eeInstantiateSmallClassIndex: ClassArrayCompactIndex
-					format: objectMemory arrayFormat
-					numSlots: slotSize.
-		objectMemory fillObj: obj numSlots: slotSize with: objectMemory nilObject.
-		^obj].
-	^objectMemory
-		eeInstantiateAndInitializeClass: (objectMemory splObj: ClassArray)
-		indexableSize: slotSize
 ]
 
 { #category : #trampolines }
@@ -2662,36 +2629,6 @@ CoInterpreter >> convertToMachineCodeFrame: cogHomeMethod bcpc: bcpc [
 		stackPages longAt: p + FoxMFReceiver - FoxIFReceiver put: (stackPages longAt: p)].
 	stackPointer := stackPointer + FoxMFReceiver - FoxIFReceiver.
 	^pc
-]
-
-{ #category : #trampolines }
-CoInterpreter >> createClosureNumArgs: numArgs numCopied: numCopied startpc: initialIP [
-	<api>
-	<option: #SqueakV3ObjectMemory>
-	| context newClosure |
-	self assert: (self isMachineCodeFrame: framePointer).
-	"Do *not* include the return pc or copied values in the stack contents;
-	 hence + ((1 + numCopied) * BytesPerWord)"
-	context := self ensureFrameIsMarried: framePointer
-					SP: stackPointer + ((1 + numCopied) * objectMemory wordSize).
-	newClosure := self
-					closureIn: context
-					numArgs: numArgs
-					instructionPointer: initialIP
-					numCopiedValues: numCopied.
-	cogit recordSendTrace ifTrue:
-		[self recordTrace: TraceBlockCreation thing: newClosure source: TraceIsFromMachineCode].
-	numCopied > 0 ifTrue:
-		["N.B. the expression ((numCopied - i) * BytesPerWord)) skips the return address"
-		 0 to: numCopied - 1 do:
-			[:i|
-			"Assume: have just allocated a new BlockClosure; it must be young.
-			 Thus, can use unchecked stores."
-			 objectMemory storePointerUnchecked: i + ClosureFirstCopiedValueIndex
-				ofObject: newClosure
-				withValue: (stackPages longAt: stackPointer + ((numCopied - i) * objectMemory wordSize))]].
-	"Assume caller will pop stack"
-	^newClosure
 ]
 
 { #category : #'stack pages' }
@@ -4838,15 +4775,6 @@ CoInterpreter >> markAndTraceMachineCodeOfMarkedMethods [
 	 stack activations have already been marked and traced."
 	<doNotGenerate>
 	cogit markAndTraceMachineCodeOfMarkedMethods
-]
-
-{ #category : #'object memory support' }
-CoInterpreter >> markAndTraceOrFreeMachineCode: fullGCFlag [
-	"Deal with a fulGC's effects on machine code.  Either mark and trace
-	 oops in machine code or free machine-code methods that refer to freed
-	 oops.  The stack pages have already been traced so any methods
-	 of live stack activations have already been marked and traced."
-	cogit markAndTraceObjectsOrFreeMachineCode: fullGCFlag
 ]
 
 { #category : #'debug support' }

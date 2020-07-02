@@ -2131,15 +2131,6 @@ InterpreterPrimitives >> primitiveForceDisplayUpdate [
 ]
 
 { #category : #'I/O primitives' }
-InterpreterPrimitives >> primitiveForceTenure [
-	"Set force tenure flag to true, this forces a tenure operation on the next incremental GC"
-
-	<export: true>
-	<option: #SqueakV3ObjectMemory>
-	objectMemory forceTenureFlag: 1
-]
-
-{ #category : #'I/O primitives' }
 InterpreterPrimitives >> primitiveFormPrint [
 	"On platforms that support it, this primitive prints the receiver, assumed to be a Form, to the default printer."
 
@@ -2797,19 +2788,6 @@ InterpreterPrimitives >> primitiveIsPinned [
 		thenPushBool: (objectMemory isPinned: obj)
 ]
 
-{ #category : #'memory space primitives' }
-InterpreterPrimitives >> primitiveIsRoot [
-	"Primitive. Answer whether the argument to the primitive is a root for young space"
-	| oop |
-	<export: true>
-	<option: #SqueakV3ObjectMemory>
-	oop := self stackObjectValue: 0.
-	self successful ifTrue:
-		[self
-			pop: argumentCount + 1
-			thenPushBool: (objectMemory isYoungRoot: oop)]
-]
-
 { #category : #'I/O primitives' }
 InterpreterPrimitives >> primitiveIsWindowObscured [
 	"Primitive. Answer whether the OS window is currently partially or fully obscured."
@@ -2817,17 +2795,6 @@ InterpreterPrimitives >> primitiveIsWindowObscured [
 	self pop: self methodArgumentCount+1.
 	self pushBool: self ioIsWindowObscured.
 
-]
-
-{ #category : #'memory space primitives' }
-InterpreterPrimitives >> primitiveIsYoung [
-	"Primitive. Answer whether the argument to the primitive resides in young space."
-	| oop |
-	<export: true>
-	<option: #SqueakV3ObjectMemory> "for now..."
-	oop := self stackObjectValue: 0.
-	self successful ifTrue:
-		[self pop: argumentCount + 1 thenPushBool: (self oop: oop isGreaterThanOrEqualTo: objectMemory youngStart)]
 ]
 
 { #category : #'I/O primitives' }
@@ -4340,36 +4307,6 @@ InterpreterPrimitives >> primitiveResume [
 	self resume: proc preemptedYieldingIf: preemptionYields"
 ]
 
-{ #category : #'memory space primitives' }
-InterpreterPrimitives >> primitiveRootTable [
-	"Primitive. Answer a copy (snapshot) element of the root table.
-	The primitive can cause GC itself and if so the return value may
-	be inaccurate - in this case one should guard the read operation
-	by looking at the gc counter statistics."
-	<option: #SqueakV3ObjectMemory>
-	self pop: argumentCount + 1 thenPush: objectMemory rootTableObject
-]
-
-{ #category : #'memory space primitives' }
-InterpreterPrimitives >> primitiveRootTableAt [
-	"Primitive. Answer the nth element of the root table.
-	This primitive avoids the creation of an extra array;
-	it is intended for enumerations of the form:
-		index := 1.
-		[root := Smalltalk rootTableAt: index.
-		root == nil] whileFalse:[index := index + 1].
-	"
-	<export: true>
-	<option: #SqueakV3ObjectMemory>
-	| index |
-	index := self stackIntegerValue: 0.
-	self success: (index > 0 and:[index <= objectMemory rootTableCount]).
-	self successful ifTrue:[
-		self pop: argumentCount + 1.
-		self push: (objectMemory rootTable at: index).
-	]
-]
-
 { #category : #'I/O primitives' }
 InterpreterPrimitives >> primitiveScanCharacters [
 	"The character scanner primitive."
@@ -4518,32 +4455,6 @@ InterpreterPrimitives >> primitiveSetFullScreen [
 				ifTrue: [self ioSetFullScreen: false]
 				ifFalse: [self primitiveFail]].
 	self successful ifTrue: [self pop: 1]
-]
-
-{ #category : #'memory space primitives' }
-InterpreterPrimitives >> primitiveSetGCBiasToGrow [
-	"Primitive. Indicate if the GC logic should have bias to grow"
-	| flag |
-	<export: true>
-	<option: #SqueakV3ObjectMemory> "for now..."
-	flag := self stackIntegerValue: 0.
-	self successful ifTrue:[
-		objectMemory gcBiasToGrow: flag.
-		self pop: argumentCount.
-	]
-]
-
-{ #category : #'memory space primitives' }
-InterpreterPrimitives >> primitiveSetGCBiasToGrowGCLimit [
-	"Primitive. If the GC logic has  bias to grow, set growth limit"
-	| value |
-	<export: true>
-	<option: #SqueakV3ObjectMemory> "for now..."
-	value := self stackIntegerValue: 0.
-	self successful ifTrue:
-		[objectMemory gcBiasToGrowGCLimit: value.
-		 objectMemory gcBiasToGrowThreshold: objectMemory youngStart - objectMemory startOfMemory asInteger.
-		 self pop: argumentCount]
 ]
 
 { #category : #'object access primitives' }

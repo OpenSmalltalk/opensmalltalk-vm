@@ -90,7 +90,7 @@ UnicornX64Simulator >> rbp [
 
 { #category : #'phisical-registers' }
 UnicornX64Simulator >> rbp: anInteger [ 
-1halt.
+
 	^ self writeRegister: UcX86Registers rbp value: anInteger
 ]
 

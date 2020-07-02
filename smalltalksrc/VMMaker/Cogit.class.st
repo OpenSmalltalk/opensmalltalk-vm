@@ -638,11 +638,6 @@ Cogit class >> decomposeSchematicTemps: aString [
 						ifFalse: [rs upTo: Character space])]]
 ]
 
-{ #category : #'accessing class hierarchy' }
-Cogit class >> defaultObjectMemoryClass [
-	^NewCoObjectMemory
-]
-
 { #category : #'C translation' }
 Cogit class >> defineAtCompileTime: anObject [
 	"Override to define at translation time those variables that need to
@@ -9574,15 +9569,6 @@ Cogit >> markAndTraceObjectReferencesInGeneratedRuntime [
 			markAndTraceLiteral: literal
 			in: (self cCoerceSimple: nil to: #'CogMethod *')
 			atpc: mcpc asUnsignedInteger]
-]
-
-{ #category : #'jit - api' }
-Cogit >> markAndTraceObjectsOrFreeMachineCode: inFullGC [
-	<api>
-	<option: #SqueakV3ObjectMemory>
-	inFullGC
-		ifTrue: [self markAndTraceOrFreeMachineCodeForFullGC]
-		ifFalse: [self markAndTraceMachineCodeForNewSpaceGC]
 ]
 
 { #category : #'garbage collection' }

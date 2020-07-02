@@ -101,11 +101,6 @@ CogBlockMethod class >> alignedByteSizeOf: anObject forClient: aVMClass [
 	^aVMClass cogit cogBlockMethodSurrogateClass alignedByteSize
 ]
 
-{ #category : #'accessing class hierarchy' }
-CogBlockMethod class >> defaultObjectMemoryClass [
-	^NewObjectMemory
-]
-
 { #category : #'class initialization' }
 CogBlockMethod class >> initialize [
 	"CogBlockMethod initialize"

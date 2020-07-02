@@ -834,14 +834,6 @@ SimpleStackBasedCogit >> ceCPICMissTrampoline: anAddress [
 	ceCPICMissTrampoline := anAddress
 ]
 
-{ #category : #trampolines }
-SimpleStackBasedCogit >> ceClosureCopyDescriptor: descriptor [ "<Integer>" 
-	^coInterpreter
-		createClosureNumArgs: (descriptor bitAnd: 16r3F)
-		numCopied: ((descriptor >> 6) bitAnd: 16r3F)
-		startpc: descriptor >> 12
-]
-
 { #category : #'simulation only' }
 SimpleStackBasedCogit >> ceShortCutTraceBlockActivation: aProcessorSimulationTrap [
 	self shortcutTrampoline: aProcessorSimulationTrap

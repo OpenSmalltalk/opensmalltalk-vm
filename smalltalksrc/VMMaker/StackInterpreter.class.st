@@ -414,7 +414,10 @@ Class {
 		'statIdleUsecs',
 		'debugCallbackPath',
 		'debugCallbackReturns',
-		'debugCallbackInvokes'
+		'debugCallbackInvokes',
+		'maxStacksToPrint',
+		'maxStackMessagePrinted',
+		'printedStackFrames'
 	],
 	#classVars : [
 		'AccessModifierPrivate',
@@ -620,11 +623,6 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 		ifFalse:
 			[#(lowcodeCalloutState nativeSP nativeStackPointer shadowCallStackPointer) do:
 				[:var| aCCodeGenerator removeVariable: var]]
-]
-
-{ #category : #'accessing class hierarchy' }
-StackInterpreter class >> defaultObjectMemoryClass [
-	^NewObjectMemory
 ]
 
 { #category : #translation }
