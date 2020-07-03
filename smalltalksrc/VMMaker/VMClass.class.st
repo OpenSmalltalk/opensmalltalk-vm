@@ -343,7 +343,7 @@ VMClass class >> objectMemoryClass [
 
 	^Smalltalk at: (InitializationOptions
 					at: #ObjectMemory
-					ifAbsent: [^self error: 'Please specify an object memory'])
+					ifAbsent: [ Spur32BitMemoryManager ])
 ]
 
 { #category : #'accessing class hierarchy' }
