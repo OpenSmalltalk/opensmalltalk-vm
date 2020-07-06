@@ -298,6 +298,8 @@ ExternalProject_Add(build_libFFI
     CONFIGURE_COMMAND "./autogen.sh" COMMAND ./configure "--target=${LIBFFI_TARGET}" "--disable-docs" "--prefix=${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install" "CC=${CMAKE_C_COMPILER}" "CXX=${CMAKE_C_COMPILER}"
 )
 
+make_directory("${CMAKE_CURRENT_BINARY_DIR}/build/dist")
+
 if(OSX)
     add_custom_command(
       OUTPUT  ${LIBFFI_OUTPUT}
