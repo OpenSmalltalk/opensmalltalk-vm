@@ -1,0 +1,333 @@
+Class {
+	#name : #VMFFIMarshallingTest,
+	#superclass : #VMAbstractFFITest,
+	#pools : [
+		'LibFFIConstants'
+	],
+	#category : #VMMakerTests
+}
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIMarshallingTest >> doTestFuntionWithArgumentType: argumentType smalltalkValue: smalltalkValue expectedValue: expectedValue [
+
+	| parametersArray tfExternalFunction savedValue |
+
+	tfExternalFunction := self 
+		createExternalFunctionFor:  [ :anArgument | savedValue := anArgument ] 
+		withArgumentTypes: { argumentType } 
+		withReturnType: interpreter libFFI void.
+	
+	parametersArray := self newObjectWithSlots: 1.
+	memory storePointer: 0 ofObject: parametersArray withValue: smalltalkValue.
+
+	interpreter push: memory nilObject.
+	interpreter push: tfExternalFunction.
+	interpreter push: parametersArray. 
+
+	interpreter argumentCount: 2.
+	interpreter primitiveSameThreadCallout.
+	
+	self deny: interpreter failed.
+	self assert: savedValue equals: expectedValue.
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIMarshallingTest >> doTestFuntionWithArgumentType: argumentType smalltalkValue: smalltalkValue failsWith: expectedErrorCode [
+
+	| parametersArray tfExternalFunction savedValue |
+
+	tfExternalFunction := self 
+		createExternalFunctionFor:  [ :anArgument | savedValue := anArgument ] 
+		withArgumentTypes: { argumentType } 
+		withReturnType: interpreter libFFI void.
+	
+	parametersArray := self newObjectWithSlots: 1.
+	memory storePointer: 0 ofObject: parametersArray withValue: smalltalkValue.
+
+	interpreter push: memory nilObject.
+	interpreter push: tfExternalFunction.
+	interpreter push: parametersArray. 
+
+	interpreter argumentCount: 2.
+	interpreter primitiveSameThreadCallout.
+	
+	self assert: interpreter failed.
+	self assert: interpreter primFailCode equals: expectedErrorCode.
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIMarshallingTest >> testCalloutWithDoubleArgumentIsMarshalledCorrectly [
+
+	self
+		doTestFuntionWithArgumentType: interpreter libFFI double
+		smalltalkValue: (memory floatObjectOf: 17.0)
+		expectedValue: 17.0
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIMarshallingTest >> testCalloutWithFloatArgumentIsMarshalledCorrectly [
+
+	self
+		doTestFuntionWithArgumentType: interpreter libFFI float
+		smalltalkValue: (memory floatObjectOf: 17.0)
+		expectedValue: 17.0
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIMarshallingTest >> testCalloutWithPointerArgumentIsMarshalledCorrectly [
+
+	self
+		doTestFuntionWithArgumentType: interpreter libFFI pointer
+		smalltalkValue: (self newExternalAddress: 17)
+		expectedValue: 17
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIMarshallingTest >> testCalloutWithSINT16ArgumentWithNegativeValueIsMarshalledCorrectly [
+
+	self
+		doTestFuntionWithArgumentType: interpreter libFFI sint16
+		smalltalkValue: (memory integerObjectOf: -42)
+		expectedValue: -42
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIMarshallingTest >> testCalloutWithSINT16ArgumentWithPositiveValueIsMarshalledCorrectly [
+
+	self
+		doTestFuntionWithArgumentType: interpreter libFFI sint16
+		smalltalkValue: (memory integerObjectOf: 42)
+		expectedValue: 42
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIMarshallingTest >> testCalloutWithSINT16NegativeOutOfRangeProducesBadArgument [
+
+	self
+		doTestFuntionWithArgumentType:  interpreter libFFI sint16
+		smalltalkValue: (memory integerObjectOf: INT16_MIN - 1)
+		failsWith: PrimErrBadArgument
+
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIMarshallingTest >> testCalloutWithSINT16PositiveOutOfRangeProducesBadArgument [
+
+	self
+		doTestFuntionWithArgumentType:  interpreter libFFI sint16
+		smalltalkValue: (memory integerObjectOf: INT16_MAX + 1)
+		failsWith: PrimErrBadArgument
+
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIMarshallingTest >> testCalloutWithSINT32ArgumentWithNegativeValueIsMarshalledCorrectly [
+
+	self
+		doTestFuntionWithArgumentType: interpreter libFFI sint32
+		smalltalkValue: (memory integerObjectOf: -42)
+		expectedValue: -42
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIMarshallingTest >> testCalloutWithSINT32ArgumentWithPositiveValueIsMarshalledCorrectly [
+
+	self
+		doTestFuntionWithArgumentType: interpreter libFFI sint32
+		smalltalkValue: (memory integerObjectOf: 42)
+		expectedValue: 42
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIMarshallingTest >> testCalloutWithSINT32NegativeOutOfRangeProducesBadArgument [
+
+	self
+		doTestFuntionWithArgumentType:  interpreter libFFI sint32
+		smalltalkValue: (memory integerObjectOf: INT32_MIN - 1)
+		failsWith: PrimErrBadArgument
+
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIMarshallingTest >> testCalloutWithSINT32PositiveOutOfRangeProducesBadArgument [
+
+	self
+		doTestFuntionWithArgumentType:  interpreter libFFI sint32
+		smalltalkValue: (memory integerObjectOf: INT32_MAX + 1)
+		failsWith: PrimErrBadArgument
+
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIMarshallingTest >> testCalloutWithSINT64ArgumentWithNegativeValueIsMarshalledCorrectly [
+
+	self
+		doTestFuntionWithArgumentType: interpreter libFFI sint64
+		smalltalkValue: (memory integerObjectOf: -42)
+		expectedValue: -42
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIMarshallingTest >> testCalloutWithSINT64ArgumentWithPositiveValueIsMarshalledCorrectly [
+
+	self
+		doTestFuntionWithArgumentType: interpreter libFFI sint64
+		smalltalkValue: (memory integerObjectOf: 42)
+		expectedValue: 42
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIMarshallingTest >> testCalloutWithSINT8ArgumentWithNegativeValueIsMarshalledCorrectly [
+
+	self
+		doTestFuntionWithArgumentType: interpreter libFFI sint8
+		smalltalkValue: (memory integerObjectOf: -42)
+		expectedValue: -42
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIMarshallingTest >> testCalloutWithSINT8ArgumentWithPositiveValueIsMarshalledCorrectly [
+
+	self
+		doTestFuntionWithArgumentType: interpreter libFFI sint8
+		smalltalkValue: (memory integerObjectOf: 42)
+		expectedValue: 42
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIMarshallingTest >> testCalloutWithSINT8NegativeOutOfRangeProducesBadArgument [
+
+	self
+		doTestFuntionWithArgumentType:  interpreter libFFI sint8
+		smalltalkValue: (memory integerObjectOf: INT8_MIN - 1)
+		failsWith: PrimErrBadArgument
+
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIMarshallingTest >> testCalloutWithSINT8PositiveOutOfRangeProducesBadArgument [
+
+	self
+		doTestFuntionWithArgumentType:  interpreter libFFI sint8
+		smalltalkValue: (memory integerObjectOf: INT8_MAX + 1)
+		failsWith: PrimErrBadArgument
+
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIMarshallingTest >> testCalloutWithUINT16ArgumentWithNegatieValueFails [
+
+	self
+		doTestFuntionWithArgumentType: interpreter libFFI uint16
+		smalltalkValue: (memory integerObjectOf: -42)
+		failsWith: PrimErrBadArgument
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIMarshallingTest >> testCalloutWithUINT16ArgumentWithPositiveValueIsMarshalledCorrectly [
+
+	self
+		doTestFuntionWithArgumentType: interpreter libFFI uint16
+		smalltalkValue: (memory integerObjectOf: 8)
+		expectedValue: 8
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIMarshallingTest >> testCalloutWithUINT16WithPositiveOutOfRangeFailsWithPrimErrBadArgument [
+
+	self
+		doTestFuntionWithArgumentType: interpreter libFFI uint16
+		smalltalkValue: (memory integerObjectOf: UINT16_MAX + 1)
+		failsWith: PrimErrBadArgument
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIMarshallingTest >> testCalloutWithUINT32ArgumentWithNegatieValueFails [
+
+	self
+		doTestFuntionWithArgumentType: interpreter libFFI uint32
+		smalltalkValue: (memory integerObjectOf: -42)
+		failsWith: PrimErrBadArgument
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIMarshallingTest >> testCalloutWithUINT32ArgumentWithPositiveValueIsMarshalledCorrectly [
+
+	self
+		doTestFuntionWithArgumentType: interpreter libFFI uint32
+		smalltalkValue: (memory integerObjectOf: 42)
+		expectedValue: 42
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIMarshallingTest >> testCalloutWithUINT32WithPositiveOutOfRangeFailsWithPrimErrBadArgument [
+
+	self
+		doTestFuntionWithArgumentType: interpreter libFFI uint32
+		smalltalkValue: (memory integerObjectOf: UINT32_MAX + 1)
+		failsWith: PrimErrBadArgument
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIMarshallingTest >> testCalloutWithUINT64ArgumentWithNegatieValueFails [
+
+	self
+		doTestFuntionWithArgumentType: interpreter libFFI uint64
+		smalltalkValue: (memory integerObjectOf: -42)
+		failsWith: PrimErrBadArgument
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIMarshallingTest >> testCalloutWithUINT64ArgumentWithPositiveValueIsMarshalledCorrectly [
+
+	self
+		doTestFuntionWithArgumentType: interpreter libFFI uint64
+		smalltalkValue: (memory integerObjectOf: 42)
+		expectedValue: 42
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIMarshallingTest >> testCalloutWithUINT8ArgumentWithNegatieValueFails [
+
+	self
+		doTestFuntionWithArgumentType: interpreter libFFI uint8
+		smalltalkValue: (memory integerObjectOf: -42)
+		failsWith: PrimErrBadArgument
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIMarshallingTest >> testCalloutWithUINT8ArgumentWithPositiveValueIsMarshalledCorrectly [
+
+	self
+		doTestFuntionWithArgumentType: interpreter libFFI uint8
+		smalltalkValue: (memory integerObjectOf: 8)
+		expectedValue: 8
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIMarshallingTest >> testCalloutWithUINT8WithPositiveOutOfRangeFailsWithPrimErrBadArgument [
+
+	self
+		doTestFuntionWithArgumentType: interpreter libFFI uint8
+		smalltalkValue: (memory integerObjectOf: UINT8_MAX + 1)
+		failsWith: PrimErrBadArgument
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIMarshallingTest >> testCalloutWithoutArgumentsMarshallsCorrectly [
+
+	| parametersArray tfExternalFunction functionCalled |
+
+	functionCalled := false.
+	tfExternalFunction := self createReturnFloatExternalFunctionFor: [ functionCalled := true. 7.0 ].
+	parametersArray := self newObjectWithSlots: 0.
+
+	interpreter push: memory nilObject.
+	interpreter push: tfExternalFunction.
+	interpreter push: parametersArray. 
+
+	interpreter argumentCount: 2.
+	interpreter primitiveSameThreadCallout.
+	
+	self assert: functionCalled.
+]

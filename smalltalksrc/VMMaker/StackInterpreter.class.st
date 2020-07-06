@@ -519,6 +519,7 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 	vmClass := aCCodeGenerator vmClass. "Generate primitiveTable etc based on vmClass, not just StackInterpreter"
 	aCCodeGenerator
 		addHeaderFile:'<stddef.h> /* for e.g. alloca */';
+		addHeaderFile:'<stdint.h> /* for e.g. alloca */';
 		addHeaderFile:'<setjmp.h>';
 		addHeaderFile:'<wchar.h> /* for wint_t */';
 		addHeaderFile:'"vmCallback.h"';
@@ -15827,16 +15828,26 @@ StackInterpreter >> marshallPointerFrom: argumentArrayOop at: index into: holder
 { #category : #'ffi helpers' }
 StackInterpreter >> marshallSInt16From: argumentArrayOop at: index into: holder [
 
-	| intHolder |
+	| intHolder value |
+
+	value := self fetchInteger: index ofObject: argumentArrayOop.	
+	value > INT16_MAX ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+	value < INT16_MIN ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+
 	intHolder := self cCoerce: holder to: #'int16_t *'.
-	intHolder at: 0 put: (self fetchInteger: index ofObject: argumentArrayOop ).
+	intHolder at: 0 put: value.
 		
 ]
 
 { #category : #'ffi helpers' }
 StackInterpreter >> marshallSInt32From: argumentArrayOop at: index into: holder [
 
-	| intHolder |
+	| intHolder value |
+
+	value := self fetchInteger: index ofObject: argumentArrayOop.	
+	value > INT32_MAX ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+	value < INT32_MIN ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+
 	intHolder := self cCoerce: holder to: #'int32_t *'.
 	intHolder at: 0 put: (self fetchInteger: index ofObject: argumentArrayOop ).
 		
@@ -15854,9 +15865,28 @@ StackInterpreter >> marshallSInt64From: argumentArrayOop at: index into: holder 
 { #category : #'ffi helpers' }
 StackInterpreter >> marshallSInt8From: argumentArrayOop at: index into: holder [
 
-	| intHolder |
+	| intHolder value |
+
+	value := self fetchInteger: index ofObject: argumentArrayOop.	
+	value > INT8_MAX ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+	value < INT8_MIN ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+
 	intHolder := self cCoerce: holder to: #'int8_t *'.
 	intHolder at: 0 put: (self fetchInteger: index ofObject: argumentArrayOop ).
+		
+]
+
+{ #category : #'ffi helpers' }
+StackInterpreter >> marshallUInt16From: argumentArrayOop at: index into: holder [
+
+	| intHolder value |
+	
+	value := self fetchInteger: index ofObject: argumentArrayOop.
+	value < 0 ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+	value > UINT16_MAX ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+		
+	intHolder := self cCoerce: holder to: #'uint16_t *'.
+	intHolder at: 0 put: value.
 		
 ]
 
@@ -15867,8 +15897,36 @@ StackInterpreter >> marshallUInt32From: argumentArrayOop at: index into: holder 
 	
 	value := self fetchInteger: index ofObject: argumentArrayOop.
 	value < 0 ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
-	
+	value > UINT32_MAX ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+		
 	intHolder := self cCoerce: holder to: #'uint32_t *'.
+	intHolder at: 0 put: value.
+		
+]
+
+{ #category : #'ffi helpers' }
+StackInterpreter >> marshallUInt64From: argumentArrayOop at: index into: holder [
+
+	| intHolder value |
+	
+	value := self fetchInteger: index ofObject: argumentArrayOop.
+	value < 0 ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+		
+	intHolder := self cCoerce: holder to: #'uint64_t *'.
+	intHolder at: 0 put: value.
+		
+]
+
+{ #category : #'ffi helpers' }
+StackInterpreter >> marshallUInt8From: argumentArrayOop at: index into: holder [
+
+	| intHolder value |
+	
+	value := self fetchInteger: index ofObject: argumentArrayOop.
+	value < 0 ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+	value > UINT8_MAX ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+		
+	intHolder := self cCoerce: holder to: #'uint8_t *'.
 	intHolder at: 0 put: value.
 		
 ]
