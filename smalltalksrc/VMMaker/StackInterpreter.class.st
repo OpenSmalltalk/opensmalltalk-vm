@@ -15780,6 +15780,9 @@ StackInterpreter >> marshallAndPushReturnValueFrom: returnHolder ofType: type [
 			[ FFI_TYPE_UINT32 ] 	-> [ self pop: 3 thenPushInteger: (objectMemory readUINT32AtPointer: returnHolder) ].
 			[ FFI_TYPE_UINT64 ] 	-> [ self pop: 3 thenPushInteger: (objectMemory readUINT64AtPointer: returnHolder) ].
 
+			[ FFI_TYPE_POINTER ] 	-> [ self pop: 3 thenPush: (objectMemory newExternalAddressWithValue: 
+				(objectMemory readPointerAtPointer: returnHolder)) ].
+
 			[ FFI_TYPE_FLOAT ] 	-> [ self pop: 3 thenPushFloat: (objectMemory readFloat32AtPointer: returnHolder) ].
 			[ FFI_TYPE_DOUBLE ] 	-> [ self pop: 3 thenPushFloat: (objectMemory readFloat64AtPointer: returnHolder) ].
 			[ FFI_TYPE_VOID ] 		-> [ self pop: 2 "Pop the arguments leaving the receiver" ]}

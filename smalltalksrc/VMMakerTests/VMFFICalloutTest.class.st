@@ -66,6 +66,30 @@ VMFFICalloutTest >> testPrimitiveSameThreadCalloutReturningFloatPushSmallFloatIn
 ]
 
 { #category : #'tests - marshalling return' }
+VMFFICalloutTest >> testPrimitiveSameThreadCalloutReturningPointerPushesAnExternalAddress [
+
+	| parametersArray tfExternalFunction |
+
+	tfExternalFunction := self
+		createExternalFunctionFor: [ 17 ]
+		withArgumentTypes: #()
+		withReturnType: interpreter libFFI pointer.
+
+	parametersArray := self newObjectWithSlots: 0.
+
+	interpreter push: memory nilObject.
+	interpreter push: tfExternalFunction.
+	interpreter push: parametersArray.
+
+	interpreter argumentCount: 2.
+	interpreter primitiveSameThreadCallout.
+	
+	self assert: interpreter primFailCode equals: 0.
+	self assert: (memory fetchClassOfNonImm: interpreter stackTop) equals: memory classExternalAddress.
+	self assert: (interpreter readAddress: interpreter stackTop) equals: 17
+]
+
+{ #category : #'tests - marshalling return' }
 VMFFICalloutTest >> testPrimitiveSameThreadCalloutReturningSINT16PushSmallInteger [
 
 	self

@@ -9003,6 +9003,19 @@ SpurMemoryManager >> needGCFlag: anInteger [
 	needGCFlag := anInteger ~= 0
 ]
 
+{ #category : #'ffi - helpers' }
+SpurMemoryManager >> newExternalAddressWithValue: anInteger [
+	| ptr oop |
+
+	oop := self
+		       instantiateClass: self classExternalAddress
+		       indexableSize: (self sizeof: #'void*').
+
+	ptr := self firstIndexableField: oop.
+	ptr at: 0 put: anInteger.
+	^ oop
+]
+
 { #category : #'header access' }
 SpurMemoryManager >> newHashBitsOf: objOop [
 	| hash |
@@ -10823,6 +10836,14 @@ SpurMemoryManager >> readHeapFromImageFile: f dataBytes: numBytes [
 	 Answer the number of bytes written."
 	<doNotGenerate>
 	^segmentManager readHeapFromImageFile: f dataBytes: numBytes
+]
+
+{ #category : #'ffi - helpers' }
+SpurMemoryManager >> readPointerAtPointer: aCArrayAccessor [ 
+
+	| ptrPtr |
+	ptrPtr := self cCoerce: aCArrayAccessor to: #'void **'.
+	^ ptrPtr at: 0
 ]
 
 { #category : #'ffi - helpers' }

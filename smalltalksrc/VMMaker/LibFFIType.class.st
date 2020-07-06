@@ -88,6 +88,10 @@ LibFFIType >> fromSmalltalk: aNumber putInto: aCArrayAccessor [
 			intHolder := libFFI interpreter cCoerce: aCArrayAccessor to: #'uint64_t *'.
 			intHolder at: 0 put: aNumber].
 
+		[ FFI_TYPE_POINTER ] -> [ | ptrHolder | 
+			ptrHolder := libFFI interpreter cCoerce: aCArrayAccessor to: #'void **'.
+			ptrHolder at: 0 put: aNumber].
+
 		[ FFI_TYPE_FLOAT ] -> [ | floatHolder | 
 			floatHolder := libFFI interpreter cCoerce: aCArrayAccessor to: #'float *'.
 			floatHolder at: 0 put: aNumber].
