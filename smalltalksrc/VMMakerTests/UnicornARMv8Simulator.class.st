@@ -7,25 +7,25 @@ Class {
 { #category : #registers }
 UnicornARMv8Simulator >> baseRegister [
 
-	^ UcARMRegisters r10
+	^ UcARM64Registers r10
 ]
 
 { #category : #registers }
 UnicornARMv8Simulator >> classRegister [
 	
-	^ UcARMRegisters r2
+	^ UcARM64Registers r2
 ]
 
 { #category : #'as yet unclassified' }
 UnicornARMv8Simulator >> createUnicorn [
 
-	^ Unicorn arm
+	^ Unicorn arm64
 ]
 
 { #category : #disassembling }
 UnicornARMv8Simulator >> disassembler [
 	
-	^ LLVMDisassembler armv5
+	^ LLVMDisassembler aarch64
 ]
 
 { #category : #executing }
@@ -47,13 +47,13 @@ UnicornARMv8Simulator >> doRunGeneratedCodeStartAt: initialAddress instructions:
 
 { #category : #registers }
 UnicornARMv8Simulator >> fp [
-	^ self readRegister: UcARMRegisters fp
+	^ self readRegister: UcARM64Registers fp
 ]
 
 { #category : #registers }
 UnicornARMv8Simulator >> framePointerRegister [
 	
-	^ UcARMRegisters fp
+	^ UcARM64Registers fp
 ]
 
 { #category : #accessing }
@@ -78,13 +78,13 @@ UnicornARMv8Simulator >> hasLinkRegister [
 { #category : #registers }
 UnicornARMv8Simulator >> instructionPointerRegister [
 
-	^ UcARMRegisters pc
+	^ UcARM64Registers pc
 ]
 
 { #category : #registers }
 UnicornARMv8Simulator >> linkRegister [
 	
-	^ UcARMRegisters lr
+	^ UcARM64Registers lr
 ]
 
 { #category : #accessing }
@@ -101,79 +101,24 @@ UnicornARMv8Simulator >> linkRegisterValue: aValue [
 
 { #category : #registers }
 UnicornARMv8Simulator >> lr [
-	^ self readRegister: UcARMRegisters lr	
+	^ self readRegister: UcARM64Registers lr	
 ]
 
 { #category : #registers }
 UnicornARMv8Simulator >> pc [
-	^ self readRegister: UcARMRegisters pc
-]
-
-{ #category : #registers }
-UnicornARMv8Simulator >> r0 [
-	^ self readRegister: UcARMRegisters r0
-]
-
-{ #category : #registers }
-UnicornARMv8Simulator >> r1 [
-	^ self readRegister: UcARMRegisters r1
-]
-
-{ #category : #registers }
-UnicornARMv8Simulator >> r10 [
-	^ self readRegister: UcARMRegisters r10
-]
-
-{ #category : #registers }
-UnicornARMv8Simulator >> r2 [
-	^ self readRegister: UcARMRegisters r2
-]
-
-{ #category : #registers }
-UnicornARMv8Simulator >> r3 [
-	^ self readRegister: UcARMRegisters r3
-]
-
-{ #category : #registers }
-UnicornARMv8Simulator >> r4 [
-	^ self readRegister: UcARMRegisters r4
-]
-
-{ #category : #registers }
-UnicornARMv8Simulator >> r5 [
-	^ self readRegister: UcARMRegisters r5
-]
-
-{ #category : #registers }
-UnicornARMv8Simulator >> r6 [
-	^ self readRegister: UcARMRegisters r6
-]
-
-{ #category : #registers }
-UnicornARMv8Simulator >> r7 [
-	^ self readRegister: UcARMRegisters r7
-]
-
-{ #category : #registers }
-UnicornARMv8Simulator >> r8 [
-	^ self readRegister: UcARMRegisters r8
-]
-
-{ #category : #registers }
-UnicornARMv8Simulator >> r9 [
-	^ self readRegister: UcARMRegisters r9
+	^ self readRegister: UcARM64Registers pc
 ]
 
 { #category : #registers }
 UnicornARMv8Simulator >> receiverRegister [
 	
-	^ UcARMRegisters r5
+	^ UcARM64Registers x5
 ]
 
 { #category : #accessing }
 UnicornARMv8Simulator >> registerDescriptors [
 
-	^ #(lr pc sp fp r0 r1 r2 r3 r4 r5 r6 r7 r8 r9)
+	^ #(lr pc sp fp x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12)
 		collect: [ :e | 
 			UnicornRegisterDescriptor new
 				simulator: self;
@@ -184,18 +129,18 @@ UnicornARMv8Simulator >> registerDescriptors [
 { #category : #registers }
 UnicornARMv8Simulator >> sendNumberOfArgumentsRegister [
 	
-	^ UcARMRegisters r6
+	^ UcARM64Registers x6
 ]
 
 { #category : #registers }
 UnicornARMv8Simulator >> sp [
-	^ self readRegister: UcARMRegisters sp
+	^ self readRegister: UcARM64Registers sp
 ]
 
 { #category : #registers }
 UnicornARMv8Simulator >> stackPointerRegister [
 	
-	^ UcARMRegisters sp
+	^ UcARM64Registers sp
 ]
 
 { #category : #executing }
@@ -221,5 +166,83 @@ UnicornARMv8Simulator >> startAt: begin until: until timeout: timeout count: cou
 
 { #category : #accessing }
 UnicornARMv8Simulator >> wordSize [
-	^ 4
+	^ 8
+]
+
+{ #category : #accessing }
+UnicornARMv8Simulator >> x0 [
+
+	^ self readRegister: UcARM64Registers x0
+]
+
+{ #category : #accessing }
+UnicornARMv8Simulator >> x1 [
+
+	^ self readRegister: UcARM64Registers x1
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> x10 [
+
+	^ self readRegister: UcARM64Registers x10
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> x11 [
+
+	^ self readRegister: UcARM64Registers x11
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> x12 [
+
+	^ self readRegister: UcARM64Registers x12
+]
+
+{ #category : #accessing }
+UnicornARMv8Simulator >> x2 [
+
+	^ self readRegister: UcARM64Registers x2
+]
+
+{ #category : #accessing }
+UnicornARMv8Simulator >> x3 [
+
+	^ self readRegister: UcARM64Registers x3
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> x4 [
+
+	^ self readRegister: UcARM64Registers x4
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> x5 [
+
+	^ self readRegister: UcARM64Registers x5
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> x6 [
+
+	^ self readRegister: UcARM64Registers x6
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> x7 [
+
+	^ self readRegister: UcARM64Registers x7
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> x8 [
+
+	^ self readRegister: UcARM64Registers x8
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> x9 [
+
+	^ self readRegister: UcARM64Registers x9
 ]

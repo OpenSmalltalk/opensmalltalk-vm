@@ -35,7 +35,7 @@ VMSimpleStackBasedCogitAbstractTest class >> testParameters [
 		addCase: { #ISA -> #'X64'. #wordSize -> 8};
 		addCase: { #ISA -> #'IA32'. #wordSize -> 4};
 		addCase: { #ISA -> #'ARMv5'. #wordSize -> 4};
-		"addCase: { #ISA -> #'ARMv8'. #wordSize -> 8};"
+		addCase: { #ISA -> #'ARMv8'. #wordSize -> 8};
 		yourself
 ]
 
@@ -368,7 +368,6 @@ VMSimpleStackBasedCogitAbstractTest >> initializeInitialStackFrame [
 
 { #category : #running }
 VMSimpleStackBasedCogitAbstractTest >> initializeStackMemory [.
-
 	stackMemoryStartAddress := initialAddress + self initialCodeSize.
 	stackMemoryEndAddress := stackMemoryStartAddress + stackSpaceSize.
 
@@ -586,7 +585,7 @@ VMSimpleStackBasedCogitAbstractTest >> runGeneratedCode [
 { #category : #helpers }
 VMSimpleStackBasedCogitAbstractTest >> runUntilReturn [
 
-	machineSimulator startAt: 16r1000000
+	machineSimulator startAt: initialAddress
 		until: callerAddress
 		timeout: 0
 		count: 3000.

@@ -29,8 +29,18 @@ CogOutOfLineLiteralsARMv8Compiler >> concretizeLiteral [
 		 annotation := dependent annotation].
 	dependent address ifNotNil: [self assert: dependent address = address].
 	dependent address: address.
-	self machineCodeAt: 0 put: literal.
-	machineCodeSize := 4
+
+	self machineCodeAt: 0 put: (literal bitAnd: 16rFFFFFFFF).
+	self machineCodeAt: 4 put: (literal >> 32).
+	machineCodeSize := 8
+]
+
+{ #category : #'generate machine code' }
+CogOutOfLineLiteralsARMv8Compiler >> concretizeMoveC32R [
+	"Will get inlined into concretizeAt: switch."
+
+	<inline: true>
+	^ machineCodeSize := self loadCwInto: (operands at: 1)
 ]
 
 { #category : #accessing }
@@ -120,10 +130,9 @@ CogOutOfLineLiteralsARMv8Compiler >> moveCw: constant intoR: destReg [
 	self assert: (dependent address - (address + 8)) abs < (1<<12).
 	self machineCodeAt: 0
 		put: (self
-				ldr: destReg
-				rn: PC
-				plus: (dependent address >= (address + 8) ifTrue: [1] ifFalse: [0])
-				imm: (dependent address - (address + 8)) abs).
+			ldrSize: 1 "64 bits"
+			programCounterRelativeOffset: dependent address - address
+			destinationRegister: destReg).
 	^machineCodeSize := 4
 ]
 
@@ -134,7 +143,7 @@ CogOutOfLineLiteralsARMv8Compiler >> outOfLineLiteralOpcodeLimit [
 	 multiple hardware instructions so we assume a 2 to 1 worst case of
 	 hardware instructions to abstract opcodes.."
 	^1 << (12 "12-bit offset field"
-			- 2 "4 bytes per literal"
+			- 3 "8 bytes per literal, so 2^3?"
 			- 1 "2 hardware instructions to 1 abstract opcode") - 1
 ]
 
@@ -142,10 +151,9 @@ CogOutOfLineLiteralsARMv8Compiler >> outOfLineLiteralOpcodeLimit [
 CogOutOfLineLiteralsARMv8Compiler >> pcRelativeAddressAt: instrAddress [
 	"Extract the address of the ldr rX, [pc, #NNN] instruction at address"
 	| inst offset |
-	inst := objectMemory longAt: instrAddress.
-	self assert: (inst bitAnd: 16rFF5F0000) = (self ldr: 0 rn: PC plus: 0 imm: 0).
-	offset := inst bitAnd: 16rFFF.
-	^instrAddress + 8 + ((inst anyMask: 1 << 23)
+	inst := objectMemory long32At: instrAddress.
+	offset := (inst >> 10 bitAnd: 2r111111111111) * 8.
+	^instrAddress + 8 + ((inst anyMask: 1 << 22)
 							ifTrue: [offset]
 							ifFalse: [offset negated])
 ]
@@ -298,6 +306,7 @@ CogOutOfLineLiteralsARMv8Compiler >> usesOutOfLineLiteral [
 								ifTrue: [:r :i :n| false]
 								ifFalse: [1 << (operands at: 0) highBit ~= ((operands at: 0) + 1)]].
 		[CmpCqR]		-> [^self rotateable8bitSignedImmediate: (operands at: 0) ifTrue: [:r :i :n| false] ifFalse: [true]].
+		[CmpC32R]		-> [^self rotateable8bitSignedImmediate: (operands at: 0) ifTrue: [:r :i :n| false] ifFalse: [true]].
 		[OrCqR]			-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
 		[SubCqR]		-> [^self rotateable8bitSignedImmediate: (operands at: 0) ifTrue: [:r :i :n| false] ifFalse: [true]].
 		[TstCqR]		-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
@@ -313,6 +322,7 @@ CogOutOfLineLiteralsARMv8Compiler >> usesOutOfLineLiteral [
 		"Data Movement"						
 		[MoveCqR]		-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
 		[MoveCwR]		-> [^(self inCurrentCompilation: (operands at: 0)) not].
+		[MoveC32R]  -> [^(self inCurrentCompilation: (operands at: 0)) not].
 		[MoveAwR]		-> [^(self isAddressRelativeToVarBase: (operands at: 0)) ifTrue: [false] ifFalse: [true]].
 		[MoveRAw]		-> [^(self isAddressRelativeToVarBase: (operands at: 1)) ifTrue: [false] ifFalse: [true]].
 		[MoveAbR]		-> [^(self isAddressRelativeToVarBase: (operands at: 0)) ifTrue: [false] ifFalse: [true]].

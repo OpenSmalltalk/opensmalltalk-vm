@@ -78,6 +78,7 @@ VMSimpleStackBasedCogitBytecodeTest >> doTestReturnCleansStackWithFrame: isFrame
 		ifFalse: [self createFramelessCallFrom: callerAddress].		
 	
 	self compile: generationBlock.	
+		self openMachineDebuggerAt: initialAddress .
 	self runUntilReturn.
 
 	self assert: oldFP equals: self framePointerRegisterValue.
@@ -90,8 +91,8 @@ VMSimpleStackBasedCogitBytecodeTest >> doTestReturnReturnsObjectInReturnRegister
 	isFrameful 
 		ifTrue: [self createFramefulCallFrom: callerAddress]
 		ifFalse: [self createFramelessCallFrom: callerAddress].		
-	
-	self compile: compilationBlock.	
+
+	self compile: compilationBlock.
 	self runUntilReturn.
 
 	self assert: machineSimulator returnRegisterValue equals: anAddress
@@ -671,7 +672,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushConstantFalseBytecodePushesFalse 
 	
 	self compile: [ cogit genPushConstantFalseBytecode ].	
 	self runGeneratedCode.
-	
+
 	self assert: self popAddress equals: memory falseObject
 ]
 
@@ -690,9 +691,9 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushConstantNilAndThenReturn [
 { #category : #'tests - single bytecode' }
 VMSimpleStackBasedCogitBytecodeTest >> testPushConstantNilBytecodePushesNil [
 	
-	self compile: [ cogit genPushConstantNilBytecode ].	
+	self compile: [ cogit genPushConstantNilBytecode ].
 	self runGeneratedCode.
-	
+
 	self assert: self popAddress equals: memory nilObject
 ]
 
@@ -731,7 +732,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushQuickIntegerMinusOnePushesAMinusO
 	
 	cogit byte0: 116. 
 	
-	self compile: [ cogit genPushQuickIntegerConstantBytecode ].	
+	self compile: [ cogit genPushQuickIntegerConstantBytecode ].
 	self runGeneratedCode.
 	
 	self assert: self popAddress equals: (memory integerObjectOf: -1)
