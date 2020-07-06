@@ -35,7 +35,7 @@ VMSimpleStackBasedCogitAbstractTest class >> testParameters [
 		addCase: { #ISA -> #'X64'. #wordSize -> 8};
 		addCase: { #ISA -> #'IA32'. #wordSize -> 4};
 		addCase: { #ISA -> #'ARMv5'. #wordSize -> 4};
-		"forSelector: #ISA addOptions: #( X64 IA32 ARMv5 );"
+		"addCase: { #ISA -> #'ARMv8'. #wordSize -> 8};"
 		yourself
 ]
 
@@ -397,6 +397,14 @@ VMSimpleStackBasedCogitAbstractTest >> machineSimulator [
 	^ machineSimulator
 ]
 
+{ #category : #running }
+VMSimpleStackBasedCogitAbstractTest >> memoryClass [
+
+	^ self wordSize = 4
+		ifTrue: [ Spur32BitCoMemoryManager ]
+		ifFalse: [ Spur64BitCoMemoryManager ]
+]
+
 { #category : #helpers }
 VMSimpleStackBasedCogitAbstractTest >> newInterpreter [
 
@@ -419,9 +427,7 @@ VMSimpleStackBasedCogitAbstractTest >> newInterpreter [
 { #category : #running }
 VMSimpleStackBasedCogitAbstractTest >> newMemory [
 
-	^ self wordSize = 4
-		ifTrue: [ Spur32BitCoMemoryManager simulatorClass new ]
-		ifFalse: [ Spur64BitCoMemoryManager simulatorClass new ]
+	^ self memoryClass simulatorClass new
 ]
 
 { #category : #helpers }
@@ -601,7 +607,10 @@ VMSimpleStackBasedCogitAbstractTest >> runUntilReturnFrom: anAddress [
 VMSimpleStackBasedCogitAbstractTest >> setUp [
 	super setUp.
 	
-	SimpleStackBasedCogit initializeWithOptions: (Cogit asOptionsDictionary: { #ISA . isa }).
+	SimpleStackBasedCogit initializeWithOptions: (Cogit asOptionsDictionary: { 
+		#ISA . isa.
+		#IMMUTABILITY. false.
+		#ObjectMemory. self memoryClass name }).
 	cogit := SimpleStackBasedCogit new setInterpreter: memory coInterpreter.
 	memory coInterpreter cogit: cogit.
 	memory cogit: cogit.

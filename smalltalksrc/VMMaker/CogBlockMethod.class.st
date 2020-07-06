@@ -101,11 +101,6 @@ CogBlockMethod class >> alignedByteSizeOf: anObject forClient: aVMClass [
 	^aVMClass cogit cogBlockMethodSurrogateClass alignedByteSize
 ]
 
-{ #category : #'accessing class hierarchy' }
-CogBlockMethod class >> defaultObjectMemoryClass [
-	^NewObjectMemory
-]
-
 { #category : #'class initialization' }
 CogBlockMethod class >> initialize [
 	"CogBlockMethod initialize"
@@ -161,7 +156,6 @@ CogBlockMethod class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 								['homeOffset']				-> [#'unsigned short'].
 								['startpc']					-> [#'unsigned short'].
 								['padToWord']				-> [#(#BaseHeaderSize 8 'unsigned int')].
-								['nextMethodOrIRCs']		-> [#usqInt].				"See NewspeakCogMethod"
 								['counters']					-> [#usqInt]}				"See SistaCogMethod"
 							otherwise:
 								[#sqInt])]]

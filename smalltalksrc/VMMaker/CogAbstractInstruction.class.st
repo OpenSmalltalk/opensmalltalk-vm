@@ -1288,14 +1288,6 @@ CogAbstractInstruction >> noteFollowingConditionalBranch: branch [
 	^branch
 ]
 
-{ #category : #'inline cacheing' }
-CogAbstractInstruction >> nsSendCacheAt: callSiteReturnAddress [
-	"Answer the NSSendCache for the return address of a Newspeak
-	 self, super, outer, or implicit receiver send."
-	<option: #NewspeakVM>
-	^self subclassResponsibility
-]
-
 { #category : #initialization }
 CogAbstractInstruction >> numCheckFeaturesOpcodes [
 	"If the priocessor has a feature check facility answer the number

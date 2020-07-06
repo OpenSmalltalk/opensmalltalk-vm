@@ -128,18 +128,6 @@ CogMethodZone >> addToOpenPICList: anOpenPIC [
 	openPICList := anOpenPIC
 ]
 
-{ #category : #accessing }
-CogMethodZone >> addToUnpairedMethodList: aCogMethod [
-	<option: #NewspeakVM>
-	<var: #aCogMethod type: #'CogMethod *'>
-	self assert: aCogMethod cmType = CMMethod.
-	self assert: (cogit noAssertMethodClassAssociationOf: aCogMethod methodObject) = objectMemory nilObject.
-	self assert: (unpairedMethodList == nil
-				or: [(self cCoerceSimple: unpairedMethodList to: #'CogMethod *') cmType = CMMethod]).
-	aCogMethod nextMethodOrIRCs: unpairedMethodList.
-	unpairedMethodList := aCogMethod asUnsignedInteger
-]
-
 { #category : #'young referers' }
 CogMethodZone >> addToYoungReferrers: cogMethod [
 	<var: #cogMethod type: #'CogMethod *'>
@@ -181,7 +169,6 @@ CogMethodZone >> clearCogCompiledCode [
 	"Free all methods"
 	| cogMethod |
 	<var: #cogMethod type: #'CogMethod *'>
-	NewspeakVM ifTrue: [unpairedMethodList := nil].
 	cogMethod := coInterpreter cCoerceSimple: baseAddress to: #'CogMethod *'.
 	[cogMethod asUnsignedInteger < mzFreeStart] whileTrue:
 		[cogMethod cmType = CMMethod ifTrue:
@@ -234,18 +221,12 @@ CogMethodZone >> compactCompiledCode [
 	source := coInterpreter cCoerceSimple: baseAddress to: #'CogMethod *'.
 	self voidOpenPICList. "The list will be rebuilt with the current live set"
 	methodCount := 0.
-	NewspeakVM ifTrue: [unpairedMethodList := nil].
 	[source < self limitZony
 	 and: [source cmType ~= CMFree]] whileTrue:
 		[self assert: (cogit cogMethodDoesntLookKosher: source) = 0.
 		 source objectHeader: objectHeaderValue.
 		 source cmUsageCount > 0 ifTrue:
 			[source cmUsageCount: source cmUsageCount // 2].
-		 NewspeakVM ifTrue:
-				[(source cmType = CMMethod
-				  and: [(coInterpreter rawHeaderOf: source methodObject) asInteger ~= source asInteger]) ifTrue:
-					[source nextMethodOrIRCs: unpairedMethodList.
-					 unpairedMethodList := source asUnsignedInteger]].
 		 SistaVM ifTrue:
 			[self clearSavedPICUsageCount: source].
 		 source cmType = CMOpenPIC ifTrue:
@@ -264,17 +245,13 @@ CogMethodZone >> compactCompiledCode [
 			 dest objectHeader: objectHeaderValue.
 			 dest cmType = CMMethod
 				ifTrue:
-					["For non-Newspeak there should be a one-to-one mapping between bytecoded and
-					  cog methods.  For Newspeak not necessarily, but only for anonymous accessors."
+					["There should be a one-to-one mapping between bytecoded and cog methods."
 					"Only update the original method's header if it is referring to this CogMethod."
 					 (coInterpreter rawHeaderOf: dest methodObject) asInteger = source asInteger
 						ifTrue:
 							[coInterpreter rawHeaderOf: dest methodObject put: dest asInteger]
 						ifFalse:
-							[self assert: (cogit noAssertMethodClassAssociationOf: dest methodObject) = objectMemory nilObject.
-							 NewspeakVM ifTrue:
-								[dest nextMethodOrIRCs: unpairedMethodList.
-								 unpairedMethodList := dest asUnsignedInteger]]]
+							[self assert: (cogit noAssertMethodClassAssociationOf: dest methodObject) = objectMemory nilObject]]
 				ifFalse:
 					[SistaVM ifTrue:
 						[self clearSavedPICUsageCount: dest].
@@ -313,34 +290,6 @@ CogMethodZone >> ensureInYoungReferrers: cogMethod [
 		 self addToYoungReferrers: cogMethod]
 ]
 
-{ #category : #accessing }
-CogMethodZone >> findPreviouslyCompiledVersionOf: aMethodObj with: aSelectorOop [
-	"Newspeak uses a set of methods to implement accessors, a setter and a getter for
-	 each inst var offset (e.g. 0 to 255).  These accessors are installed under the relevant
-	 selectors in different method dictionaries as required.  These methods effectively
-	 have multiple selectors.  The current inline cache design stores the selector of a
-	 linked send in the header of the target method.  So this requires a one-to-many
-	 mapping of bytecoded method to cog method, with the bytecoded method referring
-	 directly to only one cog method, which will have a specific selector, not necessarily
-	 the right one.  It is therefore worth-while searching for a cog method on this bytecoded
-	 method that has the right selector.  To speed up the search we maintain all such unpaired
-	 methods on the unpairedMethodList, which is linked through nextMethodOrIRCs."
-	<returnTypeC: #'CogMethod *'>
-	<option: #NewspeakVM>
-	| cogMethod |
-	<var: #cogMethod type: #'CogMethod *'>
-	((coInterpreter methodHasCogMethod: aMethodObj)
-	 and: [(coInterpreter methodClassAssociationOf: aMethodObj) = objectMemory nilObject]) ifTrue:
-		[cogMethod := self cCoerceSimple: unpairedMethodList to: #'CogMethod *'.
-		[cogMethod notNil] whileTrue:
-			[self assert: cogMethod cmType = CMMethod.
-			 (cogMethod selector = aSelectorOop
-			  and: [cogMethod methodObject = aMethodObj]) ifTrue:
-				[^cogMethod].
-			 cogMethod := self cCoerceSimple: cogMethod nextMethodOrIRCs to: #'CogMethod *']].
-	^nil
-]
-
 { #category : #'jit - api' }
 CogMethodZone >> followForwardedLiteralsInOpenPICList [
 	<option: #SpurObjectMemory>
@@ -360,21 +309,15 @@ CogMethodZone >> freeMethod: cogMethod [
 	self assert: cogMethod cmType ~= CMFree.
 	self assert: (cogit cogMethodDoesntLookKosher: cogMethod) = 0.
 	cogMethod cmType = CMMethod ifTrue:
-		["For non-Newspeak there should ne a one-to-one mapping between bytecoded and
-		  cog methods.  For Newspeak not necessarily, but only for anonymous accessors."
+		["There should be a one-to-one mapping between bytecoded and cog methods."
 		"Only reset the original method's header if it is referring to this CogMethod."
 		 (coInterpreter rawHeaderOf: cogMethod methodObject) asInteger = cogMethod asInteger
 			ifTrue:
-				[coInterpreter rawHeaderOf: cogMethod methodObject put: cogMethod methodHeader.
-				 NewspeakVM ifTrue:
-					[(objectRepresentation canPinObjects and: [cogMethod nextMethodOrIRCs > self zoneEnd]) ifTrue:
-						[objectRepresentation freeIRCs: cogMethod nextMethodOrIRCs]]]
+				[ coInterpreter rawHeaderOf: cogMethod methodObject put: cogMethod methodHeader ]
 			ifFalse:
 				[self cCode: [self assert: (cogit noAssertMethodClassAssociationOf: cogMethod methodObject) = objectMemory nilObject]
 					inSmalltalk: [self assert: ((cogit noAssertMethodClassAssociationOf: cogMethod methodObject) = objectMemory nilObject
-											or: [coInterpreter isKindOf: CurrentImageCoInterpreterFacade])].
-				 NewspeakVM ifTrue:
-					[self removeFromUnpairedMethodList: cogMethod]].
+											or: [coInterpreter isKindOf: CurrentImageCoInterpreterFacade])] ].
 		 cogit maybeFreeCountersOf: cogMethod].
 	cogMethod cmType = CMOpenPIC ifTrue:
 		[self removeFromOpenPICList: cogMethod].
@@ -465,7 +408,6 @@ CogMethodZone >> manageFrom: theStartAddress to: theLimitAddress [
 	mzFreeStart := baseAddress := theStartAddress.
 	youngReferrers := limitAddress := theLimitAddress.
 	openPICList := nil.
-	NewspeakVM ifTrue: [unpairedMethodList := nil].
 	methodBytesFreedSinceLastCompaction := 0.
 	methodCount := 0
 ]
@@ -857,25 +799,6 @@ CogMethodZone >> removeFromOpenPICList: anOpenPIC [
 		 ^nil].
 	  prevPIC := self cCoerceSimple: prevPIC nextOpenPIC to: #'CogMethod *'.
 	  true] whileTrue
-]
-
-{ #category : #accessing }
-CogMethodZone >> removeFromUnpairedMethodList: aCogMethod [
-	<option: #NewspeakVM>
-	<var: #aCogMethod type: #'CogMethod *'>
-	| prevMethod |
-	<var: #prevMethod type: #'CogMethod *'>
-	self assert: aCogMethod cmType = CMMethod.
-	aCogMethod asUnsignedInteger = unpairedMethodList ifTrue:
-		[unpairedMethodList := aCogMethod nextMethodOrIRCs.
-		 ^nil].
-	prevMethod := self cCoerceSimple: unpairedMethodList to: #'CogMethod *'.
-	[prevMethod notNil] whileTrue:
-		[self assert: (prevMethod ~~ nil and: [prevMethod cmType = CMMethod]).
-		 prevMethod nextMethodOrIRCs = aCogMethod asUnsignedInteger ifTrue:
-			[prevMethod nextMethodOrIRCs: aCogMethod nextMethodOrIRCs.
-			 ^nil].
-		  prevMethod := self cCoerceSimple: prevMethod nextMethodOrIRCs to: #'CogMethod *']
 ]
 
 { #category : #compaction }

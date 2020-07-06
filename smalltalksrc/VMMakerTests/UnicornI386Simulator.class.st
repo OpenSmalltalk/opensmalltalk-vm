@@ -62,6 +62,12 @@ UnicornI386Simulator >> edx [
 ]
 
 { #category : #registers }
+UnicornI386Simulator >> edx: anInteger [ 
+	
+	^ self writeRegister: UcX86Registers edx value: anInteger
+]
+
+{ #category : #registers }
 UnicornI386Simulator >> eip [
 	
 	^ self readRegister: UcX86Registers eip

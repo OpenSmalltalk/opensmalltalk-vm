@@ -24,11 +24,6 @@ CogMethodSurrogate class >> baseHeaderSize [
 	^self objectMemoryClass baseHeaderSize
 ]
 
-{ #category : #'accessing class hierarchy' }
-CogMethodSurrogate class >> defaultObjectMemoryClass [
-	^NewCoObjectMemory
-]
-
 { #category : #arithmetic }
 CogMethodSurrogate >> + anInteger [
 	"N.B. Mimic C semantics so that aCogMethod + 1 is a pointer to the byte past the CogMethod header."

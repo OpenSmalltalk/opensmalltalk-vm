@@ -7,6 +7,12 @@ Class {
 	#category : #VMMakerTests
 }
 
+{ #category : #registers }
+UnicornProcessor >> edx: anInteger [ 
+	
+	^ machineSimulator edx: anInteger
+]
+
 { #category : #caching }
 UnicornProcessor >> flushICacheFrom: anInteger to: anInteger2 [ 
 

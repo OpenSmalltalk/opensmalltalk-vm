@@ -58,7 +58,7 @@ IA32ABIPlugin class >> shouldGenerateTypedefFor: aStructClass [
 
 { #category : #'simulation only' }
 IA32ABIPlugin class >> simulatorClass [
-	^NewspeakVM ifFalse: [IA32ABIPluginSimulator]
+	^ IA32ABIPluginSimulator
 ]
 
 { #category : #'private-support' }
@@ -392,13 +392,6 @@ IA32ABIPlugin >> primDoubleAtPut [
 	addr := startAddr + byteOffset.
 	self memcpy: addr _: (self addressOf: floatValue) _: (self sizeof: floatValue).
 	interpreterProxy methodReturnValue: valueOop
-]
-
-{ #category : #'primitives-Windows-VM-specific' }
-IA32ABIPlugin >> primDrainOSEventQueue [
-	<export: true>
-	self cppIf: #NewspeakVM
-		ifTrue: [self ioDrainEventQueue]
 ]
 
 { #category : #'primitives-accessing' }

@@ -1818,7 +1818,7 @@ StackInterpreterSimulator >> primitiveContextAt [
 
 { #category : #'debugging traps' }
 StackInterpreterSimulator >> primitiveDoPrimitiveWithArgs [
-	NewspeakVM ifFalse: [self halt].
+	self halt.
 	^super primitiveDoPrimitiveWithArgs
 ]
 
