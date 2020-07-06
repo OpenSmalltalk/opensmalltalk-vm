@@ -9006,6 +9006,7 @@ SpurMemoryManager >> needGCFlag: anInteger [
 { #category : #'ffi - helpers' }
 SpurMemoryManager >> newExternalAddressWithValue: anInteger [
 	| ptr oop |
+	<var: #ptr type:'void **'>
 
 	oop := self
 		       instantiateClass: self classExternalAddress
