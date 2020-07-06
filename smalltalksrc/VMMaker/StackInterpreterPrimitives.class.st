@@ -1374,15 +1374,8 @@ StackInterpreterPrimitives >> primitiveSameThreadCallout [
 		_: externalFunction
 		_: returnHolder
 		_: parameters.
-	
-	[ cif returnType type ]
-		caseOf: {
-			[ FFI_TYPE_FLOAT ]
-				-> [ self pop: 3 thenPushFloat: (objectMemory float32AtPointer: returnHolder) ].
-			[ FFI_TYPE_DOUBLE ]
-				-> [ self pop: 3 thenPushFloat: (objectMemory float64AtPointer: returnHolder) ].
-			[ FFI_TYPE_VOID ] -> [ self pop: 2 "Pop the arguments leaving the receiver" ]}
-			otherwise: [ self primitiveFailFor: PrimErrBadArgument ]
+
+	self marshallAndPushReturnValueFrom: returnHolder ofType: cif returnType type.	
 
 ]
 

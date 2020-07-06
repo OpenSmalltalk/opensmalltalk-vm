@@ -15765,6 +15765,28 @@ StackInterpreter >> marryFrame: theFP SP: theSP copyTemps: copyTemps [
 
 ]
 
+{ #category : #ffi }
+StackInterpreter >> marshallAndPushReturnValueFrom: returnHolder ofType: type [ 
+
+	[ type ]
+		caseOf: {
+			[ FFI_TYPE_SINT8 ] 	-> [ self pop: 3 thenPushInteger: (objectMemory readSINT8AtPointer: returnHolder) ].
+			[ FFI_TYPE_SINT16 ] 	-> [ self pop: 3 thenPushInteger: (objectMemory readSINT16AtPointer: returnHolder) ].
+			[ FFI_TYPE_SINT32 ] 	-> [ self pop: 3 thenPushInteger: (objectMemory readSINT32AtPointer: returnHolder) ].
+			[ FFI_TYPE_SINT64 ] 	-> [ self pop: 3 thenPushInteger: (objectMemory readSINT64AtPointer: returnHolder) ].
+
+			[ FFI_TYPE_UINT8 ] 	-> [ self pop: 3 thenPushInteger: (objectMemory readUINT8AtPointer: returnHolder) ].
+			[ FFI_TYPE_UINT16 ] 	-> [ self pop: 3 thenPushInteger: (objectMemory readUINT16AtPointer: returnHolder) ].
+			[ FFI_TYPE_UINT32 ] 	-> [ self pop: 3 thenPushInteger: (objectMemory readUINT32AtPointer: returnHolder) ].
+			[ FFI_TYPE_UINT64 ] 	-> [ self pop: 3 thenPushInteger: (objectMemory readUINT64AtPointer: returnHolder) ].
+
+			[ FFI_TYPE_FLOAT ] 	-> [ self pop: 3 thenPushFloat: (objectMemory readFloat32AtPointer: returnHolder) ].
+			[ FFI_TYPE_DOUBLE ] 	-> [ self pop: 3 thenPushFloat: (objectMemory readFloat64AtPointer: returnHolder) ].
+			[ FFI_TYPE_VOID ] 		-> [ self pop: 2 "Pop the arguments leaving the receiver" ]}
+			otherwise: [ self primitiveFailFor: PrimErrBadArgument ]
+
+]
+
 { #category : #'ffi - helpers' }
 StackInterpreter >> marshallArgumentFrom: argumentsArrayOop atIndex: i into: argHolder ofType: argType [
 

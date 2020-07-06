@@ -62,12 +62,38 @@ LibFFIType >> fromSmalltalk: aNumber putInto: aCArrayAccessor [
 	<doNotGenerate>
 	[ type ]
 		caseOf: {
-		[ FFI_TYPE_FLOAT ] -> [ |floatHolder| 
+		[ FFI_TYPE_SINT8 ] -> [ | intHolder | 
+			intHolder := libFFI interpreter cCoerce: aCArrayAccessor to: #'int8_t *'.
+			intHolder at: 0 put: aNumber].
+		[ FFI_TYPE_SINT16 ] -> [ | intHolder | 
+			intHolder := libFFI interpreter cCoerce: aCArrayAccessor to: #'int16_t *'.
+			intHolder at: 0 put: aNumber].
+		[ FFI_TYPE_SINT32 ] -> [ | intHolder | 
+			intHolder := libFFI interpreter cCoerce: aCArrayAccessor to: #'int32_t *'.
+			intHolder at: 0 put: aNumber].
+		[ FFI_TYPE_SINT64 ] -> [ | intHolder | 
+			intHolder := libFFI interpreter cCoerce: aCArrayAccessor to: #'int64_t *'.
+			intHolder at: 0 put: aNumber].
+
+		[ FFI_TYPE_UINT8 ] -> [ | intHolder | 
+			intHolder := libFFI interpreter cCoerce: aCArrayAccessor to: #'uint8_t *'.
+			intHolder at: 0 put: aNumber].
+		[ FFI_TYPE_UINT16 ] -> [ | intHolder | 
+			intHolder := libFFI interpreter cCoerce: aCArrayAccessor to: #'uint16_t *'.
+			intHolder at: 0 put: aNumber].
+		[ FFI_TYPE_UINT32 ] -> [ | intHolder | 
+			intHolder := libFFI interpreter cCoerce: aCArrayAccessor to: #'uint32_t *'.
+			intHolder at: 0 put: aNumber].
+		[ FFI_TYPE_UINT64 ] -> [ | intHolder | 
+			intHolder := libFFI interpreter cCoerce: aCArrayAccessor to: #'uint64_t *'.
+			intHolder at: 0 put: aNumber].
+
+		[ FFI_TYPE_FLOAT ] -> [ | floatHolder | 
 			floatHolder := libFFI interpreter cCoerce: aCArrayAccessor to: #'float *'.
 			floatHolder at: 0 put: aNumber].
-		[ FFI_TYPE_DOUBLE ] -> [ |dobuleHolder| 
-			dobuleHolder := libFFI interpreter cCoerce: aCArrayAccessor to: #'double *'.
-			dobuleHolder at: 0 put: aNumber].
+		[ FFI_TYPE_DOUBLE ] -> [ | doubleHolder | 
+			doubleHolder := libFFI interpreter cCoerce: aCArrayAccessor to: #'double *'.
+			doubleHolder at: 0 put: aNumber].
 		[ FFI_TYPE_VOID ] -> []		
 		} otherwise: [ self halt ]
 ]
@@ -82,8 +108,8 @@ LibFFIType >> marshallToSmalltalk: holder [
 		
 	^ [ type ] 
 		caseOf: { 
-			[ FFI_TYPE_FLOAT ] -> [ libFFI interpreter objectMemory float32AtPointer: holder ].
-			[ FFI_TYPE_DOUBLE ] -> [ libFFI interpreter objectMemory float64AtPointer: holder ].
+			[ FFI_TYPE_FLOAT ] -> [ libFFI interpreter objectMemory readFloat32AtPointer: holder ].
+			[ FFI_TYPE_DOUBLE ] -> [ libFFI interpreter objectMemory readFloat64AtPointer: holder ].
 			[ FFI_TYPE_POINTER ] -> [ (holder asPointerAccessor: libFFI interpreter objectMemory wordSize) at: 0 ]. 
 			[ FFI_TYPE_SINT8 ] -> [ (holder asIntAccessorOfSize: 1 signed: true) at: 0 ].
 			[ FFI_TYPE_UINT8 ] -> [ (holder asIntAccessorOfSize: 1 signed: false) at: 0 ].

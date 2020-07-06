@@ -1,14 +1,11 @@
 Class {
-	#name : #VMFFIMarshallingTest,
+	#name : #VMFFIArgumentMarshallingTest,
 	#superclass : #VMAbstractFFITest,
-	#pools : [
-		'LibFFIConstants'
-	],
 	#category : #VMMakerTests
 }
 
 { #category : #'tests - parameters marshalling' }
-VMFFIMarshallingTest >> doTestFuntionWithArgumentType: argumentType smalltalkValue: smalltalkValue expectedValue: expectedValue [
+VMFFIArgumentMarshallingTest >> doTestFuntionWithArgumentType: argumentType smalltalkValue: smalltalkValue expectedValue: expectedValue [
 
 	| parametersArray tfExternalFunction savedValue |
 
@@ -32,7 +29,7 @@ VMFFIMarshallingTest >> doTestFuntionWithArgumentType: argumentType smalltalkVal
 ]
 
 { #category : #'tests - parameters marshalling' }
-VMFFIMarshallingTest >> doTestFuntionWithArgumentType: argumentType smalltalkValue: smalltalkValue failsWith: expectedErrorCode [
+VMFFIArgumentMarshallingTest >> doTestFuntionWithArgumentType: argumentType smalltalkValue: smalltalkValue failsWith: expectedErrorCode [
 
 	| parametersArray tfExternalFunction savedValue |
 
@@ -56,7 +53,7 @@ VMFFIMarshallingTest >> doTestFuntionWithArgumentType: argumentType smalltalkVal
 ]
 
 { #category : #'tests - parameters marshalling' }
-VMFFIMarshallingTest >> testCalloutWithDoubleArgumentIsMarshalledCorrectly [
+VMFFIArgumentMarshallingTest >> testCalloutWithDoubleArgumentIsMarshalledCorrectly [
 
 	self
 		doTestFuntionWithArgumentType: interpreter libFFI double
@@ -65,7 +62,7 @@ VMFFIMarshallingTest >> testCalloutWithDoubleArgumentIsMarshalledCorrectly [
 ]
 
 { #category : #'tests - parameters marshalling' }
-VMFFIMarshallingTest >> testCalloutWithFloatArgumentIsMarshalledCorrectly [
+VMFFIArgumentMarshallingTest >> testCalloutWithFloatArgumentIsMarshalledCorrectly [
 
 	self
 		doTestFuntionWithArgumentType: interpreter libFFI float
@@ -74,7 +71,7 @@ VMFFIMarshallingTest >> testCalloutWithFloatArgumentIsMarshalledCorrectly [
 ]
 
 { #category : #'tests - parameters marshalling' }
-VMFFIMarshallingTest >> testCalloutWithPointerArgumentIsMarshalledCorrectly [
+VMFFIArgumentMarshallingTest >> testCalloutWithPointerArgumentIsMarshalledCorrectly [
 
 	self
 		doTestFuntionWithArgumentType: interpreter libFFI pointer
@@ -83,7 +80,7 @@ VMFFIMarshallingTest >> testCalloutWithPointerArgumentIsMarshalledCorrectly [
 ]
 
 { #category : #'tests - parameters marshalling' }
-VMFFIMarshallingTest >> testCalloutWithSINT16ArgumentWithNegativeValueIsMarshalledCorrectly [
+VMFFIArgumentMarshallingTest >> testCalloutWithSINT16ArgumentWithNegativeValueIsMarshalledCorrectly [
 
 	self
 		doTestFuntionWithArgumentType: interpreter libFFI sint16
@@ -92,7 +89,7 @@ VMFFIMarshallingTest >> testCalloutWithSINT16ArgumentWithNegativeValueIsMarshall
 ]
 
 { #category : #'tests - parameters marshalling' }
-VMFFIMarshallingTest >> testCalloutWithSINT16ArgumentWithPositiveValueIsMarshalledCorrectly [
+VMFFIArgumentMarshallingTest >> testCalloutWithSINT16ArgumentWithPositiveValueIsMarshalledCorrectly [
 
 	self
 		doTestFuntionWithArgumentType: interpreter libFFI sint16
@@ -101,7 +98,7 @@ VMFFIMarshallingTest >> testCalloutWithSINT16ArgumentWithPositiveValueIsMarshall
 ]
 
 { #category : #'tests - parameters marshalling' }
-VMFFIMarshallingTest >> testCalloutWithSINT16NegativeOutOfRangeProducesBadArgument [
+VMFFIArgumentMarshallingTest >> testCalloutWithSINT16NegativeOutOfRangeProducesBadArgument [
 
 	self
 		doTestFuntionWithArgumentType:  interpreter libFFI sint16
@@ -111,7 +108,7 @@ VMFFIMarshallingTest >> testCalloutWithSINT16NegativeOutOfRangeProducesBadArgume
 ]
 
 { #category : #'tests - parameters marshalling' }
-VMFFIMarshallingTest >> testCalloutWithSINT16PositiveOutOfRangeProducesBadArgument [
+VMFFIArgumentMarshallingTest >> testCalloutWithSINT16PositiveOutOfRangeProducesBadArgument [
 
 	self
 		doTestFuntionWithArgumentType:  interpreter libFFI sint16
@@ -121,7 +118,7 @@ VMFFIMarshallingTest >> testCalloutWithSINT16PositiveOutOfRangeProducesBadArgume
 ]
 
 { #category : #'tests - parameters marshalling' }
-VMFFIMarshallingTest >> testCalloutWithSINT32ArgumentWithNegativeValueIsMarshalledCorrectly [
+VMFFIArgumentMarshallingTest >> testCalloutWithSINT32ArgumentWithNegativeValueIsMarshalledCorrectly [
 
 	self
 		doTestFuntionWithArgumentType: interpreter libFFI sint32
@@ -130,7 +127,7 @@ VMFFIMarshallingTest >> testCalloutWithSINT32ArgumentWithNegativeValueIsMarshall
 ]
 
 { #category : #'tests - parameters marshalling' }
-VMFFIMarshallingTest >> testCalloutWithSINT32ArgumentWithPositiveValueIsMarshalledCorrectly [
+VMFFIArgumentMarshallingTest >> testCalloutWithSINT32ArgumentWithPositiveValueIsMarshalledCorrectly [
 
 	self
 		doTestFuntionWithArgumentType: interpreter libFFI sint32
@@ -139,7 +136,7 @@ VMFFIMarshallingTest >> testCalloutWithSINT32ArgumentWithPositiveValueIsMarshall
 ]
 
 { #category : #'tests - parameters marshalling' }
-VMFFIMarshallingTest >> testCalloutWithSINT32NegativeOutOfRangeProducesBadArgument [
+VMFFIArgumentMarshallingTest >> testCalloutWithSINT32NegativeOutOfRangeProducesBadArgument [
 
 	self
 		doTestFuntionWithArgumentType:  interpreter libFFI sint32
@@ -149,7 +146,7 @@ VMFFIMarshallingTest >> testCalloutWithSINT32NegativeOutOfRangeProducesBadArgume
 ]
 
 { #category : #'tests - parameters marshalling' }
-VMFFIMarshallingTest >> testCalloutWithSINT32PositiveOutOfRangeProducesBadArgument [
+VMFFIArgumentMarshallingTest >> testCalloutWithSINT32PositiveOutOfRangeProducesBadArgument [
 
 	self
 		doTestFuntionWithArgumentType:  interpreter libFFI sint32
@@ -159,7 +156,7 @@ VMFFIMarshallingTest >> testCalloutWithSINT32PositiveOutOfRangeProducesBadArgume
 ]
 
 { #category : #'tests - parameters marshalling' }
-VMFFIMarshallingTest >> testCalloutWithSINT64ArgumentWithNegativeValueIsMarshalledCorrectly [
+VMFFIArgumentMarshallingTest >> testCalloutWithSINT64ArgumentWithNegativeValueIsMarshalledCorrectly [
 
 	self
 		doTestFuntionWithArgumentType: interpreter libFFI sint64
@@ -168,7 +165,7 @@ VMFFIMarshallingTest >> testCalloutWithSINT64ArgumentWithNegativeValueIsMarshall
 ]
 
 { #category : #'tests - parameters marshalling' }
-VMFFIMarshallingTest >> testCalloutWithSINT64ArgumentWithPositiveValueIsMarshalledCorrectly [
+VMFFIArgumentMarshallingTest >> testCalloutWithSINT64ArgumentWithPositiveValueIsMarshalledCorrectly [
 
 	self
 		doTestFuntionWithArgumentType: interpreter libFFI sint64
@@ -177,7 +174,7 @@ VMFFIMarshallingTest >> testCalloutWithSINT64ArgumentWithPositiveValueIsMarshall
 ]
 
 { #category : #'tests - parameters marshalling' }
-VMFFIMarshallingTest >> testCalloutWithSINT8ArgumentWithNegativeValueIsMarshalledCorrectly [
+VMFFIArgumentMarshallingTest >> testCalloutWithSINT8ArgumentWithNegativeValueIsMarshalledCorrectly [
 
 	self
 		doTestFuntionWithArgumentType: interpreter libFFI sint8
@@ -186,7 +183,7 @@ VMFFIMarshallingTest >> testCalloutWithSINT8ArgumentWithNegativeValueIsMarshalle
 ]
 
 { #category : #'tests - parameters marshalling' }
-VMFFIMarshallingTest >> testCalloutWithSINT8ArgumentWithPositiveValueIsMarshalledCorrectly [
+VMFFIArgumentMarshallingTest >> testCalloutWithSINT8ArgumentWithPositiveValueIsMarshalledCorrectly [
 
 	self
 		doTestFuntionWithArgumentType: interpreter libFFI sint8
@@ -195,7 +192,7 @@ VMFFIMarshallingTest >> testCalloutWithSINT8ArgumentWithPositiveValueIsMarshalle
 ]
 
 { #category : #'tests - parameters marshalling' }
-VMFFIMarshallingTest >> testCalloutWithSINT8NegativeOutOfRangeProducesBadArgument [
+VMFFIArgumentMarshallingTest >> testCalloutWithSINT8NegativeOutOfRangeProducesBadArgument [
 
 	self
 		doTestFuntionWithArgumentType:  interpreter libFFI sint8
@@ -205,7 +202,7 @@ VMFFIMarshallingTest >> testCalloutWithSINT8NegativeOutOfRangeProducesBadArgumen
 ]
 
 { #category : #'tests - parameters marshalling' }
-VMFFIMarshallingTest >> testCalloutWithSINT8PositiveOutOfRangeProducesBadArgument [
+VMFFIArgumentMarshallingTest >> testCalloutWithSINT8PositiveOutOfRangeProducesBadArgument [
 
 	self
 		doTestFuntionWithArgumentType:  interpreter libFFI sint8
@@ -215,7 +212,7 @@ VMFFIMarshallingTest >> testCalloutWithSINT8PositiveOutOfRangeProducesBadArgumen
 ]
 
 { #category : #'tests - parameters marshalling' }
-VMFFIMarshallingTest >> testCalloutWithUINT16ArgumentWithNegatieValueFails [
+VMFFIArgumentMarshallingTest >> testCalloutWithUINT16ArgumentWithNegatieValueFails [
 
 	self
 		doTestFuntionWithArgumentType: interpreter libFFI uint16
@@ -224,7 +221,7 @@ VMFFIMarshallingTest >> testCalloutWithUINT16ArgumentWithNegatieValueFails [
 ]
 
 { #category : #'tests - parameters marshalling' }
-VMFFIMarshallingTest >> testCalloutWithUINT16ArgumentWithPositiveValueIsMarshalledCorrectly [
+VMFFIArgumentMarshallingTest >> testCalloutWithUINT16ArgumentWithPositiveValueIsMarshalledCorrectly [
 
 	self
 		doTestFuntionWithArgumentType: interpreter libFFI uint16
@@ -233,7 +230,7 @@ VMFFIMarshallingTest >> testCalloutWithUINT16ArgumentWithPositiveValueIsMarshall
 ]
 
 { #category : #'tests - parameters marshalling' }
-VMFFIMarshallingTest >> testCalloutWithUINT16WithPositiveOutOfRangeFailsWithPrimErrBadArgument [
+VMFFIArgumentMarshallingTest >> testCalloutWithUINT16WithPositiveOutOfRangeFailsWithPrimErrBadArgument [
 
 	self
 		doTestFuntionWithArgumentType: interpreter libFFI uint16
@@ -242,7 +239,7 @@ VMFFIMarshallingTest >> testCalloutWithUINT16WithPositiveOutOfRangeFailsWithPrim
 ]
 
 { #category : #'tests - parameters marshalling' }
-VMFFIMarshallingTest >> testCalloutWithUINT32ArgumentWithNegatieValueFails [
+VMFFIArgumentMarshallingTest >> testCalloutWithUINT32ArgumentWithNegatieValueFails [
 
 	self
 		doTestFuntionWithArgumentType: interpreter libFFI uint32
@@ -251,7 +248,7 @@ VMFFIMarshallingTest >> testCalloutWithUINT32ArgumentWithNegatieValueFails [
 ]
 
 { #category : #'tests - parameters marshalling' }
-VMFFIMarshallingTest >> testCalloutWithUINT32ArgumentWithPositiveValueIsMarshalledCorrectly [
+VMFFIArgumentMarshallingTest >> testCalloutWithUINT32ArgumentWithPositiveValueIsMarshalledCorrectly [
 
 	self
 		doTestFuntionWithArgumentType: interpreter libFFI uint32
@@ -260,7 +257,7 @@ VMFFIMarshallingTest >> testCalloutWithUINT32ArgumentWithPositiveValueIsMarshall
 ]
 
 { #category : #'tests - parameters marshalling' }
-VMFFIMarshallingTest >> testCalloutWithUINT32WithPositiveOutOfRangeFailsWithPrimErrBadArgument [
+VMFFIArgumentMarshallingTest >> testCalloutWithUINT32WithPositiveOutOfRangeFailsWithPrimErrBadArgument [
 
 	self
 		doTestFuntionWithArgumentType: interpreter libFFI uint32
@@ -269,7 +266,7 @@ VMFFIMarshallingTest >> testCalloutWithUINT32WithPositiveOutOfRangeFailsWithPrim
 ]
 
 { #category : #'tests - parameters marshalling' }
-VMFFIMarshallingTest >> testCalloutWithUINT64ArgumentWithNegatieValueFails [
+VMFFIArgumentMarshallingTest >> testCalloutWithUINT64ArgumentWithNegatieValueFails [
 
 	self
 		doTestFuntionWithArgumentType: interpreter libFFI uint64
@@ -278,7 +275,7 @@ VMFFIMarshallingTest >> testCalloutWithUINT64ArgumentWithNegatieValueFails [
 ]
 
 { #category : #'tests - parameters marshalling' }
-VMFFIMarshallingTest >> testCalloutWithUINT64ArgumentWithPositiveValueIsMarshalledCorrectly [
+VMFFIArgumentMarshallingTest >> testCalloutWithUINT64ArgumentWithPositiveValueIsMarshalledCorrectly [
 
 	self
 		doTestFuntionWithArgumentType: interpreter libFFI uint64
@@ -287,7 +284,7 @@ VMFFIMarshallingTest >> testCalloutWithUINT64ArgumentWithPositiveValueIsMarshall
 ]
 
 { #category : #'tests - parameters marshalling' }
-VMFFIMarshallingTest >> testCalloutWithUINT8ArgumentWithNegatieValueFails [
+VMFFIArgumentMarshallingTest >> testCalloutWithUINT8ArgumentWithNegatieValueFails [
 
 	self
 		doTestFuntionWithArgumentType: interpreter libFFI uint8
@@ -296,7 +293,7 @@ VMFFIMarshallingTest >> testCalloutWithUINT8ArgumentWithNegatieValueFails [
 ]
 
 { #category : #'tests - parameters marshalling' }
-VMFFIMarshallingTest >> testCalloutWithUINT8ArgumentWithPositiveValueIsMarshalledCorrectly [
+VMFFIArgumentMarshallingTest >> testCalloutWithUINT8ArgumentWithPositiveValueIsMarshalledCorrectly [
 
 	self
 		doTestFuntionWithArgumentType: interpreter libFFI uint8
@@ -305,7 +302,7 @@ VMFFIMarshallingTest >> testCalloutWithUINT8ArgumentWithPositiveValueIsMarshalle
 ]
 
 { #category : #'tests - parameters marshalling' }
-VMFFIMarshallingTest >> testCalloutWithUINT8WithPositiveOutOfRangeFailsWithPrimErrBadArgument [
+VMFFIArgumentMarshallingTest >> testCalloutWithUINT8WithPositiveOutOfRangeFailsWithPrimErrBadArgument [
 
 	self
 		doTestFuntionWithArgumentType: interpreter libFFI uint8
@@ -314,7 +311,7 @@ VMFFIMarshallingTest >> testCalloutWithUINT8WithPositiveOutOfRangeFailsWithPrimE
 ]
 
 { #category : #'tests - parameters marshalling' }
-VMFFIMarshallingTest >> testCalloutWithoutArgumentsMarshallsCorrectly [
+VMFFIArgumentMarshallingTest >> testCalloutWithoutArgumentsMarshallsCorrectly [
 
 	| parametersArray tfExternalFunction functionCalled |
 

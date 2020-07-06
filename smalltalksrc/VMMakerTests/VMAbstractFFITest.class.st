@@ -1,6 +1,9 @@
 Class {
 	#name : #VMAbstractFFITest,
 	#superclass : #VMAbstractPrimitiveTest,
+	#pools : [
+		'LibFFIConstants'
+	],
 	#category : #VMMakerTests
 }
 
