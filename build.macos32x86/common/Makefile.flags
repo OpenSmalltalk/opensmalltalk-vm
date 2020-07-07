@@ -21,6 +21,13 @@ ifeq ($(TARGET_VERSION_MIN),) # Allow Makefile to set TARGET_VERSION_MIN
 TARGET_VERSION_MIN:=10.7
 endif
 
+# Determine where to install plugins in the .app bundle using the Squeak
+# scheme (which tries to follow Apple's approach).  We would like this to
+# be Contents/PlugIns, but for reasons not yet understood, this breaks
+# Terf's libAgpu load.  So for now we keep it as Contents/Resources.
+APPPLUGINDIR:=PlugIns
+APPPLUGINDIR:=Resources
+
 print-sdks:
 	$(info ---------------- Makefile.flags settings ------------------)
 	$(info SDKs=$(realpath $(addprefix $(SDKsDIR)/, $(SDKs))))
@@ -49,6 +56,8 @@ CFLAGS:=$(CFLAGS) -DBUILD_FOR_OSX=1 -DUSE_OPENGL=1 -DUSE_CORE_GRAPHICS=1 \
 BFLAGS:=-arch $(TARGET_ARCH) \
 		-bundle \
 		-isysroot $(SDK) \
+		-Wl,-rpath,@executable_path/../Frameworks \
+		-Wl,-rpath,@executable_path/../$(APPPLUGINDIR) \
 		$(EXTRABFLAGS)
 
 DYFLAGS:=-arch $(TARGET_ARCH) \
