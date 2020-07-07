@@ -141,6 +141,21 @@ LibFFI >> sint8 [
 ]
 
 { #category : #'type constants' }
+LibFFI >> structWith: anArrayOfTypes [
+
+	| size |
+
+	size := anArrayOfTypes sumNumbers: [ :e | e size ].
+	
+	^ (LibFFIType type: FFI_TYPE_STRUCT size: size on: self)
+			elements: anArrayOfTypes;
+			yourself
+			
+	
+	
+]
+
+{ #category : #'type constants' }
 LibFFI >> uint16 [
 
 	<doNotGenerate>

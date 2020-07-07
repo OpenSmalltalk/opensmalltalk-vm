@@ -3493,6 +3493,12 @@ SpurMemoryManager >> classArray [
 	^self splObj: ClassArray
 ]
 
+{ #category : #accessing }
+SpurMemoryManager >> classArray: anOop [ 
+	<doNotGenerate>
+	self splObj: ClassArray put: anOop
+]
+
 { #category : #'class table' }
 SpurMemoryManager >> classAtIndex: classIndex [
 	<api>
@@ -3536,6 +3542,14 @@ SpurMemoryManager >> classBitmap [
 SpurMemoryManager >> classByteArray [
 	"a.k.a. self fetchPointer: ClassByteArrayCompactIndex ofObject: classTableFirstPage"
 	^self splObj: ClassByteArray
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> classByteArray: anOop [ 
+
+	<doNotGenerate>
+
+	self splObj: ClassByteArray put: anOop
 ]
 
 { #category : #'plugin support' }

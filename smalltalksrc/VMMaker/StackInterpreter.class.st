@@ -15766,9 +15766,11 @@ StackInterpreter >> marryFrame: theFP SP: theSP copyTemps: copyTemps [
 ]
 
 { #category : #ffi }
-StackInterpreter >> marshallAndPushReturnValueFrom: returnHolder ofType: type [ 
+StackInterpreter >> marshallAndPushReturnValueFrom: returnHolder ofType: ffiType [ 
 
-	[ type ]
+	<var: #ffiType type: #'ffi_type *'>
+
+	[ ffiType type ]
 		caseOf: {
 			[ FFI_TYPE_SINT8 ] 	-> [ self pop: 3 thenPushInteger: (objectMemory readSINT8AtPointer: returnHolder) ].
 			[ FFI_TYPE_SINT16 ] 	-> [ self pop: 3 thenPushInteger: (objectMemory readSINT16AtPointer: returnHolder) ].
@@ -15782,6 +15784,8 @@ StackInterpreter >> marshallAndPushReturnValueFrom: returnHolder ofType: type [
 
 			[ FFI_TYPE_POINTER ] 	-> [ self pop: 3 thenPush: (objectMemory newExternalAddressWithValue: 
 				(objectMemory readPointerAtPointer: returnHolder)) ].
+
+			[ FFI_TYPE_STRUCT ] 	-> [ self pop: 3 thenPush: (self newByteArrayWithStructContent: returnHolder size: ffiType size) ].
 
 			[ FFI_TYPE_FLOAT ] 	-> [ self pop: 3 thenPushFloat: (objectMemory readFloat32AtPointer: returnHolder) ].
 			[ FFI_TYPE_DOUBLE ] 	-> [ self pop: 3 thenPushFloat: (objectMemory readFloat64AtPointer: returnHolder) ].
@@ -15797,6 +15801,8 @@ StackInterpreter >> marshallArgumentFrom: argumentsArrayOop atIndex: i into: arg
 		caseOf:
 			{([ FFI_TYPE_POINTER ]
 				-> [ self marshallPointerFrom: argumentsArrayOop at: i into: argHolder ]).
+			([ FFI_TYPE_STRUCT ]
+				-> [ self marshallStructFrom: argumentsArrayOop at: i into: argHolder withSize: argType ]).
 			([ FFI_TYPE_FLOAT ]
 				-> [ self marshallFloatFrom: argumentsArrayOop at: i into: argHolder ]).
 			([ FFI_TYPE_DOUBLE ]
@@ -15850,7 +15856,7 @@ StackInterpreter >> marshallPointerFrom: argumentArrayOop at: index into: holder
 	
 ]
 
-{ #category : #'ffi helpers' }
+{ #category : #'ffi - helpers' }
 StackInterpreter >> marshallSInt16From: argumentArrayOop at: index into: holder [
 
 	| intHolder value |
@@ -15864,7 +15870,7 @@ StackInterpreter >> marshallSInt16From: argumentArrayOop at: index into: holder 
 		
 ]
 
-{ #category : #'ffi helpers' }
+{ #category : #'ffi - helpers' }
 StackInterpreter >> marshallSInt32From: argumentArrayOop at: index into: holder [
 
 	| intHolder value |
@@ -15878,7 +15884,7 @@ StackInterpreter >> marshallSInt32From: argumentArrayOop at: index into: holder 
 		
 ]
 
-{ #category : #'ffi helpers' }
+{ #category : #'ffi - helpers' }
 StackInterpreter >> marshallSInt64From: argumentArrayOop at: index into: holder [
 
 	| intHolder |
@@ -15887,7 +15893,7 @@ StackInterpreter >> marshallSInt64From: argumentArrayOop at: index into: holder 
 		
 ]
 
-{ #category : #'ffi helpers' }
+{ #category : #'ffi - helpers' }
 StackInterpreter >> marshallSInt8From: argumentArrayOop at: index into: holder [
 
 	| intHolder value |
@@ -15901,7 +15907,34 @@ StackInterpreter >> marshallSInt8From: argumentArrayOop at: index into: holder [
 		
 ]
 
-{ #category : #'ffi helpers' }
+{ #category : #'ffi - helpers' }
+StackInterpreter >> marshallStructFrom: argumentsArrayOop at: index into: holder withSize: type [ 
+
+
+	| address srcPtr oop |
+
+	oop := objectMemory fetchPointer: index ofObject: argumentsArrayOop.
+	
+	(objectMemory fetchClassOf: oop) = objectMemory classExternalAddress
+		ifTrue: [
+				address := self readAddress: oop.
+				address = 0 ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ]]
+		ifFalse: [  
+			(objectMemory fetchClassOf: oop) = objectMemory classByteArray 
+				ifFalse: [ ^ self primitiveFailFor: PrimErrBadArgument  ].
+				address := objectMemory firstIndexableField: oop ].
+	
+	srcPtr := objectMemory cCoerce: address to: 'void *'.
+	
+	self 
+		cCode:  [ objectMemory memcpy: holder _:  srcPtr _: type size ]
+		inSmalltalk: [ 
+			holder object 
+				replaceFrom: 1 to: type size 
+				with: (objectMemory cCoerce: srcPtr to: 'char *') startingAt: 0]
+]
+
+{ #category : #'ffi - helpers' }
 StackInterpreter >> marshallUInt16From: argumentArrayOop at: index into: holder [
 
 	| intHolder value |
@@ -15915,7 +15948,7 @@ StackInterpreter >> marshallUInt16From: argumentArrayOop at: index into: holder 
 		
 ]
 
-{ #category : #'ffi helpers' }
+{ #category : #'ffi - helpers' }
 StackInterpreter >> marshallUInt32From: argumentArrayOop at: index into: holder [
 
 	| intHolder value |
@@ -15929,7 +15962,7 @@ StackInterpreter >> marshallUInt32From: argumentArrayOop at: index into: holder 
 		
 ]
 
-{ #category : #'ffi helpers' }
+{ #category : #'ffi - helpers' }
 StackInterpreter >> marshallUInt64From: argumentArrayOop at: index into: holder [
 
 	| intHolder value |
@@ -15942,7 +15975,7 @@ StackInterpreter >> marshallUInt64From: argumentArrayOop at: index into: holder 
 		
 ]
 
-{ #category : #'ffi helpers' }
+{ #category : #'ffi - helpers' }
 StackInterpreter >> marshallUInt8From: argumentArrayOop at: index into: holder [
 
 	| intHolder value |
@@ -16480,6 +16513,16 @@ StackInterpreter >> nativeStackPointerIn: theFP put: valueOopPointer [
 StackInterpreter >> nativeStackSize [
 	"4 MB native stack size"
 	^ 4 *1024 * 1024
+]
+
+{ #category : #'ffi - helpers' }
+StackInterpreter >> newByteArrayWithStructContent: aPointer size: sizeToCopy [ 
+	
+	| oop targetPointer |
+	oop := objectMemory instantiateClass: objectMemory classByteArray indexableSize: sizeToCopy.
+	targetPointer := objectMemory firstIndexableField: oop.
+	self memcpy: targetPointer _: aPointer _: sizeToCopy.
+	^ oop
 ]
 
 { #category : #accessing }
@@ -18925,6 +18968,15 @@ StackInterpreter >> quinaryInlinePrimitive: primIndex [
 			    objectMemory storePointerUnchecked: destIndex + i ofObject: dest withValue: oop].
 		^ self].
 	self unknownInlinePrimitive
+]
+
+{ #category : #'ffi - helpers' }
+StackInterpreter >> readAddress: anOop [ 
+
+	(objectMemory is: anOop KindOfClass: objectMemory classExternalAddress)
+		ifFalse: [ self primitiveFail. ^ nil ].
+
+	^ objectMemory fetchPointer: 0 ofObject: anOop.
 ]
 
 { #category : #'image save/restore' }

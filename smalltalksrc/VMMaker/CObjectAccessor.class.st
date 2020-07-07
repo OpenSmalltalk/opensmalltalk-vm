@@ -133,6 +133,7 @@ CObjectAccessor >> coerceTo: cTypeString sim: interpreterSimulator [
 		[#'void **']			-> [^self asPointerAccessor: interpreterSimulator objectMemory wordSize].
 		[#'int8_t *']		-> [^self asIntAccessorOfSize: 1 signed: true ].
 		[#'uint8_t *']		-> [^self asIntAccessorOfSize: 1 signed: false ].
+		[#'char *']		-> [^self asIntAccessorOfSize: 1 signed: false ].
 		[#'int16_t *']		-> [^self asIntAccessorOfSize: 2 signed: true ].
 		[#'uint16_t *']		-> [^self asIntAccessorOfSize: 2 signed: false ].
 		[#'int32_t *']		-> [^self asIntAccessorOfSize: 4 signed: true ].

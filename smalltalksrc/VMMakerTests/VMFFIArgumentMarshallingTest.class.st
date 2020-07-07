@@ -212,6 +212,40 @@ VMFFIArgumentMarshallingTest >> testCalloutWithSINT8PositiveOutOfRangeProducesBa
 ]
 
 { #category : #'tests - parameters marshalling' }
+VMFFIArgumentMarshallingTest >> testCalloutWithStructByteArrayArgumentIsMarshalledCorrectly [
+
+	| oop ptr storedValue |
+
+	storedValue := #[1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16].
+
+	oop := memory instantiateClass: memory classByteArray indexableSize: 16.
+	ptr := memory cCoerce: (memory firstIndexableField: oop) to: #'char *'.
+	memory memcpy: ptr _: storedValue _: storedValue size. 
+	
+	self
+		doTestFuntionWithArgumentType: (interpreter libFFI structWith: { interpreter libFFI double. interpreter libFFI double })
+		smalltalkValue: oop
+		expectedValue: storedValue
+]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFIArgumentMarshallingTest >> testCalloutWithStructPointerArgumentIsMarshalledCorrectly [
+
+	| oop ptr storedValue |
+
+	storedValue := #[1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16].
+
+	oop := memory instantiateClass: memory classByteArray indexableSize: 16.
+	ptr := memory cCoerce: (memory firstIndexableField: oop) to: #'char *'.
+	memory memcpy: ptr _: storedValue _: storedValue size. 
+	
+	self
+		doTestFuntionWithArgumentType: (interpreter libFFI structWith: { interpreter libFFI double. interpreter libFFI double })
+		smalltalkValue: (self newExternalAddress: ptr asInteger)
+		expectedValue: storedValue
+]
+
+{ #category : #'tests - parameters marshalling' }
 VMFFIArgumentMarshallingTest >> testCalloutWithUINT16ArgumentWithNegatieValueFails [
 
 	self

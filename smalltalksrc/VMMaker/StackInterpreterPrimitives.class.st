@@ -1353,8 +1353,9 @@ StackInterpreterPrimitives >> primitiveSameThreadCallout [
 	parameters := self allocateParameters: argumentSize.
 
 	0 to: argumentSize - 1 do: [ :i | 
-		| argType argHolder |
+		| argType argHolder sizeToAlloc |
 		argType := cif argTypeAt: i.
+
 		argHolder := self alloca: argType size.
 		parameters at: i put: argHolder.
 	
@@ -1375,7 +1376,7 @@ StackInterpreterPrimitives >> primitiveSameThreadCallout [
 		_: returnHolder
 		_: parameters.
 
-	self marshallAndPushReturnValueFrom: returnHolder ofType: cif returnType type.	
+	self marshallAndPushReturnValueFrom: returnHolder ofType: cif returnType.	
 
 ]
 
@@ -2137,15 +2138,6 @@ StackInterpreterPrimitives >> pushSameThreadCalloutSuspendedProcess: aSuspendedP
 		withValue: (objectMemory splObj: SuspendedProcessInCallout).
 
 	objectMemory splObj: SuspendedProcessInCallout put: aSuspendedProcess
-]
-
-{ #category : #'ffi - helpers' }
-StackInterpreterPrimitives >> readAddress: anOop [ 
-
-	(objectMemory is: anOop KindOfClass: objectMemory classExternalAddress)
-		ifFalse: [ self primitiveFail. ^ nil ].
-
-	^ objectMemory fetchPointer: 0 ofObject: anOop.
 ]
 
 { #category : #'object access primitives' }

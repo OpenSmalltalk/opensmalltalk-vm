@@ -57,6 +57,11 @@ LibFFIType class >> type: aType size: aSize on: aLibFFI [
 		yourself
 ]
 
+{ #category : #accessing }
+LibFFIType >> elements: aCollection [ 
+	elements := aCollection
+]
+
 { #category : #testing }
 LibFFIType >> fromSmalltalk: aNumber putInto: aCArrayAccessor [
 	<doNotGenerate>
@@ -92,6 +97,10 @@ LibFFIType >> fromSmalltalk: aNumber putInto: aCArrayAccessor [
 			ptrHolder := libFFI interpreter cCoerce: aCArrayAccessor to: #'void **'.
 			ptrHolder at: 0 put: aNumber].
 
+		"Returning an Struct returns copy the value into the return buffer"
+		[ FFI_TYPE_STRUCT ] -> [ 
+			aCArrayAccessor object replaceFrom: 1 to: aNumber size with: aNumber startingAt: 1  ].
+
 		[ FFI_TYPE_FLOAT ] -> [ | floatHolder | 
 			floatHolder := libFFI interpreter cCoerce: aCArrayAccessor to: #'float *'.
 			floatHolder at: 0 put: aNumber].
@@ -115,6 +124,7 @@ LibFFIType >> marshallToSmalltalk: holder [
 			[ FFI_TYPE_FLOAT ] -> [ libFFI interpreter objectMemory readFloat32AtPointer: holder ].
 			[ FFI_TYPE_DOUBLE ] -> [ libFFI interpreter objectMemory readFloat64AtPointer: holder ].
 			[ FFI_TYPE_POINTER ] -> [ (holder asPointerAccessor: libFFI interpreter objectMemory wordSize) at: 0 ]. 
+			[ FFI_TYPE_STRUCT ] -> [ holder object ]. 
 			[ FFI_TYPE_SINT8 ] -> [ (holder asIntAccessorOfSize: 1 signed: true) at: 0 ].
 			[ FFI_TYPE_UINT8 ] -> [ (holder asIntAccessorOfSize: 1 signed: false) at: 0 ].
 

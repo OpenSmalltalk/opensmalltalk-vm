@@ -48,6 +48,40 @@ VMFFICalloutTest >> testPrimitiveSameThreadCalloutMaintainsActiveProcess [
 ]
 
 { #category : #'tests - marshalling return' }
+VMFFICalloutTest >> testPrimitiveSameThreadCalloutReturningAnStructPushesAByteArray [
+
+	| parametersArray tfExternalFunction content |
+
+	tfExternalFunction := self
+		createExternalFunctionFor: [ 
+			| returnValue |
+			returnValue := ByteArray new: 16. 
+			returnValue doubleAt: 1 put: 1.0.
+			returnValue doubleAt: 9 put: 2.0.
+			returnValue ]
+		withArgumentTypes: #()
+		withReturnType: (interpreter libFFI structWith: {interpreter libFFI double. interpreter libFFI double.}).
+
+	parametersArray := self newObjectWithSlots: 0.
+
+	interpreter push: memory nilObject.
+	interpreter push: tfExternalFunction.
+	interpreter push: parametersArray.
+
+	interpreter argumentCount: 2.
+	interpreter primitiveSameThreadCallout.
+	
+	self assert: interpreter primFailCode equals: 0.
+	self assert: (memory fetchClassOfNonImm: interpreter stackTop) equals: memory classByteArray.
+	self assert: (memory numBytesOf: interpreter stackTop) equals: 16.
+	
+	content := memory cCoerce: (memory firstIndexableField: interpreter stackTop) to: #'double *'. 
+	self assert: (content at: 0) equals: 1.0.
+	self assert: (content at: 1) equals: 2.0.
+	
+]
+
+{ #category : #'tests - marshalling return' }
 VMFFICalloutTest >> testPrimitiveSameThreadCalloutReturningDoublePushSmallFloatInStack [
 
 	self
