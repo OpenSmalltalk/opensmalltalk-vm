@@ -1,11 +1,11 @@
 Class {
-	#name : #VMFFICalloutTest,
+	#name : #VMFFISameThreadCalloutTest,
 	#superclass : #VMAbstractFFITest,
 	#category : #VMMakerTests
 }
 
 { #category : #'tests - marshalling return' }
-VMFFICalloutTest >> doTestCalloutWithReturnType: aLibFFIType returnValue: valueToReturn expectedSmalltalkValue: expectedValue [ 
+VMFFISameThreadCalloutTest >> doTestCalloutWithReturnType: aLibFFIType returnValue: valueToReturn expectedSmalltalkValue: expectedValue [ 
 
 	| parametersArray tfExternalFunction |
 
@@ -28,7 +28,7 @@ VMFFICalloutTest >> doTestCalloutWithReturnType: aLibFFIType returnValue: valueT
 ]
 
 { #category : #'tests - callouts' }
-VMFFICalloutTest >> testPrimitiveSameThreadCalloutMaintainsActiveProcess [
+VMFFISameThreadCalloutTest >> testPrimitiveSameThreadCalloutMaintainsActiveProcess [
 
 	| parametersArray tfExternalFunction oldActiveProcess |
 
@@ -48,7 +48,7 @@ VMFFICalloutTest >> testPrimitiveSameThreadCalloutMaintainsActiveProcess [
 ]
 
 { #category : #'tests - marshalling return' }
-VMFFICalloutTest >> testPrimitiveSameThreadCalloutReturningAnStructPushesAByteArray [
+VMFFISameThreadCalloutTest >> testPrimitiveSameThreadCalloutReturningAnStructPushesAByteArray [
 
 	| parametersArray tfExternalFunction content |
 
@@ -82,7 +82,7 @@ VMFFICalloutTest >> testPrimitiveSameThreadCalloutReturningAnStructPushesAByteAr
 ]
 
 { #category : #'tests - marshalling return' }
-VMFFICalloutTest >> testPrimitiveSameThreadCalloutReturningDoublePushSmallFloatInStack [
+VMFFISameThreadCalloutTest >> testPrimitiveSameThreadCalloutReturningDoublePushSmallFloatInStack [
 
 	self
 		doTestCalloutWithReturnType: interpreter libFFI double
@@ -91,7 +91,7 @@ VMFFICalloutTest >> testPrimitiveSameThreadCalloutReturningDoublePushSmallFloatI
 ]
 
 { #category : #'tests - marshalling return' }
-VMFFICalloutTest >> testPrimitiveSameThreadCalloutReturningFloatPushSmallFloatInStack [
+VMFFISameThreadCalloutTest >> testPrimitiveSameThreadCalloutReturningFloatPushSmallFloatInStack [
 
 	self
 		doTestCalloutWithReturnType: interpreter libFFI float
@@ -100,7 +100,7 @@ VMFFICalloutTest >> testPrimitiveSameThreadCalloutReturningFloatPushSmallFloatIn
 ]
 
 { #category : #'tests - marshalling return' }
-VMFFICalloutTest >> testPrimitiveSameThreadCalloutReturningPointerPushesAnExternalAddress [
+VMFFISameThreadCalloutTest >> testPrimitiveSameThreadCalloutReturningPointerPushesAnExternalAddress [
 
 	| parametersArray tfExternalFunction |
 
@@ -124,7 +124,7 @@ VMFFICalloutTest >> testPrimitiveSameThreadCalloutReturningPointerPushesAnExtern
 ]
 
 { #category : #'tests - marshalling return' }
-VMFFICalloutTest >> testPrimitiveSameThreadCalloutReturningSINT16PushSmallInteger [
+VMFFISameThreadCalloutTest >> testPrimitiveSameThreadCalloutReturningSINT16PushSmallInteger [
 
 	self
 		doTestCalloutWithReturnType: interpreter libFFI sint16
@@ -133,7 +133,7 @@ VMFFICalloutTest >> testPrimitiveSameThreadCalloutReturningSINT16PushSmallIntege
 ]
 
 { #category : #'tests - marshalling return' }
-VMFFICalloutTest >> testPrimitiveSameThreadCalloutReturningSINT32PushSmallInteger [
+VMFFISameThreadCalloutTest >> testPrimitiveSameThreadCalloutReturningSINT32PushSmallInteger [
 
 	self
 		doTestCalloutWithReturnType: interpreter libFFI sint32
@@ -142,7 +142,7 @@ VMFFICalloutTest >> testPrimitiveSameThreadCalloutReturningSINT32PushSmallIntege
 ]
 
 { #category : #'tests - marshalling return' }
-VMFFICalloutTest >> testPrimitiveSameThreadCalloutReturningSINT64PushSmallInteger [
+VMFFISameThreadCalloutTest >> testPrimitiveSameThreadCalloutReturningSINT64PushSmallInteger [
 
 	self
 		doTestCalloutWithReturnType: interpreter libFFI sint64
@@ -151,7 +151,7 @@ VMFFICalloutTest >> testPrimitiveSameThreadCalloutReturningSINT64PushSmallIntege
 ]
 
 { #category : #'tests - marshalling return' }
-VMFFICalloutTest >> testPrimitiveSameThreadCalloutReturningSINT8PushSmallInteger [
+VMFFISameThreadCalloutTest >> testPrimitiveSameThreadCalloutReturningSINT8PushSmallInteger [
 
 	self
 		doTestCalloutWithReturnType: interpreter libFFI sint8
@@ -160,7 +160,7 @@ VMFFICalloutTest >> testPrimitiveSameThreadCalloutReturningSINT8PushSmallInteger
 ]
 
 { #category : #'tests - marshalling return' }
-VMFFICalloutTest >> testPrimitiveSameThreadCalloutReturningUINT16PushSmallInteger [
+VMFFISameThreadCalloutTest >> testPrimitiveSameThreadCalloutReturningUINT16PushSmallInteger [
 
 	self
 		doTestCalloutWithReturnType: interpreter libFFI uint16
@@ -169,7 +169,7 @@ VMFFICalloutTest >> testPrimitiveSameThreadCalloutReturningUINT16PushSmallIntege
 ]
 
 { #category : #'tests - marshalling return' }
-VMFFICalloutTest >> testPrimitiveSameThreadCalloutReturningUINT32PushSmallInteger [
+VMFFISameThreadCalloutTest >> testPrimitiveSameThreadCalloutReturningUINT32PushSmallInteger [
 
 	self
 		doTestCalloutWithReturnType: interpreter libFFI uint32
@@ -178,7 +178,7 @@ VMFFICalloutTest >> testPrimitiveSameThreadCalloutReturningUINT32PushSmallIntege
 ]
 
 { #category : #'tests - marshalling return' }
-VMFFICalloutTest >> testPrimitiveSameThreadCalloutReturningUINT64PushSmallInteger [
+VMFFISameThreadCalloutTest >> testPrimitiveSameThreadCalloutReturningUINT64PushSmallInteger [
 
 	self
 		doTestCalloutWithReturnType: interpreter libFFI uint64
@@ -187,7 +187,7 @@ VMFFICalloutTest >> testPrimitiveSameThreadCalloutReturningUINT64PushSmallIntege
 ]
 
 { #category : #'tests - marshalling return' }
-VMFFICalloutTest >> testPrimitiveSameThreadCalloutReturningUINT8PushSmallInteger [
+VMFFISameThreadCalloutTest >> testPrimitiveSameThreadCalloutReturningUINT8PushSmallInteger [
 
 	self
 		doTestCalloutWithReturnType: interpreter libFFI uint8
@@ -196,7 +196,7 @@ VMFFICalloutTest >> testPrimitiveSameThreadCalloutReturningUINT8PushSmallInteger
 ]
 
 { #category : #'tests - marshalling return' }
-VMFFICalloutTest >> testPrimitiveSameThreadCalloutReturningVoidPushesTheReceiver [
+VMFFISameThreadCalloutTest >> testPrimitiveSameThreadCalloutReturningVoidPushesTheReceiver [
 
 	| parametersArray tfExternalFunction |
 
@@ -214,7 +214,7 @@ VMFFICalloutTest >> testPrimitiveSameThreadCalloutReturningVoidPushesTheReceiver
 ]
 
 { #category : #'tests - callouts' }
-VMFFICalloutTest >> testPrimitiveSameThreadCalloutShouldKeepTheNewMethodVariable [
+VMFFISameThreadCalloutTest >> testPrimitiveSameThreadCalloutShouldKeepTheNewMethodVariable [
 
 	| parametersArray tfExternalFunction oldActiveProcess callbackContext |
 

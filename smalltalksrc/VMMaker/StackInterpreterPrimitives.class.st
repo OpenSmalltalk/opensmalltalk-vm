@@ -12,9 +12,14 @@ Class {
 StackInterpreterPrimitives >> allocateParameters: anInteger using: allocationBlock [
 	<inline: #always>
 
+	anInteger = 0 ifTrue: [ ^ nil ].
+
 	^ self
-		cCode: [ allocationBlock value: (self sizeof: #'void*') * anInteger ]
-		inSmalltalk: [ ^ CArrayAccessor on: (Array new: anInteger) ]
+		cCode: [ allocationBlock value: anInteger ]
+		inSmalltalk: [ | ptr | 
+			ptr := allocationBlock value: anInteger.
+			ptr setObject: (Array new: anInteger).
+			ptr]
 ]
 
 { #category : #'primitive support' }
@@ -120,6 +125,18 @@ StackInterpreterPrimitives >> fieldsInFrame: theFP [
 { #category : #'object access primitives' }
 StackInterpreterPrimitives >> frameIsMarked: theFPInt [
 	^((stackPages longAt: theFPInt + FoxFrameFlags) bitAnd: 2) ~= 0
+]
+
+{ #category : #'ffi - helpers' }
+StackInterpreterPrimitives >> freeArgumentsArray: arguments count: count [
+
+	0 to: count - 1 do: [ :i |  
+		(arguments at: i) ifNotNil: [ :aPtr | 
+			arguments at: i put: nil.
+			self free: aPtr ]].
+	
+	self free: arguments.
+	
 ]
 
 { #category : #'ffi - helpers' }
@@ -1592,10 +1609,11 @@ StackInterpreterPrimitives >> primitiveSameThreadCallout [
 	(objectMemory slotSizeOf: argumentsArrayOop) = argumentSize
 		ifFalse: [ ^ self primitiveFailFor: PrimErrBadArgument ].
 		
-	parameters := self allocateParameters: argumentSize using: [:aSize | self alloca: aSize ].
+	parameters := self allocateParameters: argumentSize 
+		using: [:aSize | self alloca: (self sizeof: #'void*') * aSize ].
 
 	0 to: argumentSize - 1 do: [ :i | 
-		| argType argHolder sizeToAlloc |
+		| argType argHolder |
 		argType := cif argTypeAt: i.
 
 		argHolder := self alloca: argType size.
@@ -2307,7 +2325,8 @@ StackInterpreterPrimitives >> primitiveWorkerCallout [
 	(objectMemory slotSizeOf: argumentsArrayOop) = argumentSize
 		ifFalse: [ ^ self primitiveFailFor: PrimErrBadArgument ].
 		
-	parameters := self allocateParameters: argumentSize using: [ :aSize | self malloc: aSize ].
+	parameters := self allocateParameters: argumentSize using: [ :aSize | 
+		self calloc: aSize _: (self sizeof: #'void*')].
 
 	0 to: argumentSize - 1 do: [ :i | 
 		| argType argHolder |
@@ -2320,9 +2339,12 @@ StackInterpreterPrimitives >> primitiveWorkerCallout [
 				
 		self failed 
 				ifTrue: [ 
+					self freeArgumentsArray: parameters count: argumentSize.
 					^ self primitiveFailFor: PrimErrBadArgument ]].
 	
-	returnHolder := self malloc: cif returnType size.
+	cif returnType size > 0 
+		ifTrue: [returnHolder := self malloc: cif returnType size]
+		ifFalse: [returnHolder := nil].
 
 	" 5. Create the worker task and enqueue it"
 

@@ -45,6 +45,17 @@ VMAbstractPrimitiveTest >> createSuspendedProcessFor: newMethod priority: aPrior
 	^ aProcess
 ]
 
+{ #category : #'as yet unclassified' }
+VMAbstractPrimitiveTest >> newArrayWith: aCollection [ 
+	| array |
+	array := self newObjectWithSlots: aCollection size format: memory arrayFormat classIndex: memory arrayClassIndexPun.
+	aCollection withIndexDo: [ :item :index | 
+		memory storePointer: index - 1 ofObject: array withValue: item	
+	].
+	^ array
+	
+]
+
 { #category : #'helpers - classes' }
 VMAbstractPrimitiveTest >> newClassInOldSpaceWithSlots: numberOfSlots format: format [
 	| newClass formatWithSlots |

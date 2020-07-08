@@ -38,6 +38,11 @@ LibFFITestWorkerTask >> parameters: aCArrayAccessor [
 ]
 
 { #category : #accessing }
+LibFFITestWorkerTask >> returnHolder [
+	^ returnHolder
+]
+
+{ #category : #accessing }
 LibFFITestWorkerTask >> returnHolder: aCArrayAccessor [ 
 	returnHolder := aCArrayAccessor
 ]

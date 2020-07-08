@@ -694,6 +694,13 @@ VMClass >> cPreprocessorDirective: codeString [
 	<doNotGenerate>
 ]
 
+{ #category : #'C library simulation' }
+VMClass >> calloc: num _: size [ 
+
+	<doNotGenerate>
+	^ self malloc: num * size
+]
+
 { #category : #'translation support' }
 VMClass >> cppIf: conditionBlockOrValue ifTrue: trueExpressionOrBlock [
 	"When translated, produces #if (condition) #else #endif CPP directives.
