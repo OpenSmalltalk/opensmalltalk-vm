@@ -5,7 +5,8 @@ Class {
 		'nextAddress',
 		'cifs',
 		'functions',
-		'interpreter'
+		'interpreter',
+		'testWorker'
 	],
 	#pools : [
 		'LibFFIConstants'
@@ -153,6 +154,13 @@ LibFFI >> structWith: anArrayOfTypes [
 			
 	
 	
+]
+
+{ #category : #testing }
+LibFFI >> testWorker [
+	<doNotGenerate>
+	
+	^ testWorker ifNil: [ testWorker := LibFFITestWorker new ]
 ]
 
 { #category : #'type constants' }

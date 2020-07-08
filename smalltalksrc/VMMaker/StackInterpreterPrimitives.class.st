@@ -9,11 +9,11 @@ Class {
 }
 
 { #category : #'ffi - helpers' }
-StackInterpreterPrimitives >> allocateParameters: anInteger [
+StackInterpreterPrimitives >> allocateParameters: anInteger using: allocationBlock [
 	<inline: #always>
 
 	^ self
-		cCode: [ self alloca: (self sizeof: #'void*') * anInteger ]
+		cCode: [ allocationBlock value: (self sizeof: #'void*') * anInteger ]
 		inSmalltalk: [ ^ CArrayAccessor on: (Array new: anInteger) ]
 ]
 
@@ -140,6 +140,14 @@ StackInterpreterPrimitives >> getHandlerAsCif: anOop [
 		inSmalltalk: [ libFFI cifAtAddress: (self getHandler: anOop)]
 ]
 
+{ #category : #'ffi - helpers' }
+StackInterpreterPrimitives >> getWorkerFromAddress: anInteger [
+
+	^ self
+		  cCode: [ self cCoerce: anInteger to: #'Worker *' ]
+		  inSmalltalk: [ libFFI testWorker ]
+]
+
 { #category : #'object access primitives' }
 StackInterpreterPrimitives >> isAppropriateForCopyObject: oop [
 	(objectMemory isPointersNonImm: oop) ifFalse:
@@ -162,30 +170,29 @@ StackInterpreterPrimitives >> markFrame: theFPInt [
 ]
 
 { #category : #'ffi - helpers' }
-StackInterpreterPrimitives >> marshallAndPushReturnValueFrom: returnHolder ofType: ffiType [ 
+StackInterpreterPrimitives >> marshallAndPushReturnValueFrom: returnHolder ofType: ffiType poping: argumentsAndReceiverCount [
 
 	<var: #ffiType type: #'ffi_type *'>
 
 	[ ffiType type ]
 		caseOf: {
-			[ FFI_TYPE_SINT8 ] 	-> [ self pop: 3 thenPushInteger: (objectMemory readSINT8AtPointer: returnHolder) ].
-			[ FFI_TYPE_SINT16 ] 	-> [ self pop: 3 thenPushInteger: (objectMemory readSINT16AtPointer: returnHolder) ].
-			[ FFI_TYPE_SINT32 ] 	-> [ self pop: 3 thenPushInteger: (objectMemory readSINT32AtPointer: returnHolder) ].
-			[ FFI_TYPE_SINT64 ] 	-> [ self pop: 3 thenPushInteger: (objectMemory readSINT64AtPointer: returnHolder) ].
+			[ FFI_TYPE_SINT8 ] 	-> [ self pop: argumentsAndReceiverCount thenPushInteger: (objectMemory readSINT8AtPointer: returnHolder) ].
+			[ FFI_TYPE_SINT16 ] 	-> [ self pop: argumentsAndReceiverCount thenPushInteger: (objectMemory readSINT16AtPointer: returnHolder) ].
+			[ FFI_TYPE_SINT32 ] 	-> [ self pop: argumentsAndReceiverCount thenPushInteger: (objectMemory readSINT32AtPointer: returnHolder) ].
+			[ FFI_TYPE_SINT64 ] 	-> [ self pop: argumentsAndReceiverCount thenPushInteger: (objectMemory readSINT64AtPointer: returnHolder) ].
 
-			[ FFI_TYPE_UINT8 ] 	-> [ self pop: 3 thenPushInteger: (objectMemory readUINT8AtPointer: returnHolder) ].
-			[ FFI_TYPE_UINT16 ] 	-> [ self pop: 3 thenPushInteger: (objectMemory readUINT16AtPointer: returnHolder) ].
-			[ FFI_TYPE_UINT32 ] 	-> [ self pop: 3 thenPushInteger: (objectMemory readUINT32AtPointer: returnHolder) ].
-			[ FFI_TYPE_UINT64 ] 	-> [ self pop: 3 thenPushInteger: (objectMemory readUINT64AtPointer: returnHolder) ].
+			[ FFI_TYPE_UINT8 ] 	-> [ self pop: argumentsAndReceiverCount thenPushInteger: (objectMemory readUINT8AtPointer: returnHolder) ].
+			[ FFI_TYPE_UINT16 ] 	-> [ self pop: argumentsAndReceiverCount thenPushInteger: (objectMemory readUINT16AtPointer: returnHolder) ].
+			[ FFI_TYPE_UINT32 ] 	-> [ self pop: argumentsAndReceiverCount thenPushInteger: (objectMemory readUINT32AtPointer: returnHolder) ].
+			[ FFI_TYPE_UINT64 ] 	-> [ self pop: argumentsAndReceiverCount thenPushInteger: (objectMemory readUINT64AtPointer: returnHolder) ].
 
-			[ FFI_TYPE_POINTER ] 	-> [ self pop: 3 thenPush: (objectMemory newExternalAddressWithValue: 
-				(objectMemory readPointerAtPointer: returnHolder)) ].
+			[ FFI_TYPE_POINTER ] 	-> [ self pop: argumentsAndReceiverCount thenPush: (objectMemory newExternalAddressWithValue: (objectMemory readPointerAtPointer: returnHolder)) ].
 
-			[ FFI_TYPE_STRUCT ] 	-> [ self pop: 3 thenPush: (self newByteArrayWithStructContent: returnHolder size: ffiType size) ].
+			[ FFI_TYPE_STRUCT ] 	-> [ self pop: argumentsAndReceiverCount thenPush: (self newByteArrayWithStructContent: returnHolder size: ffiType size) ].
 
-			[ FFI_TYPE_FLOAT ] 	-> [ self pop: 3 thenPushFloat: (objectMemory readFloat32AtPointer: returnHolder) ].
-			[ FFI_TYPE_DOUBLE ] 	-> [ self pop: 3 thenPushFloat: (objectMemory readFloat64AtPointer: returnHolder) ].
-			[ FFI_TYPE_VOID ] 		-> [ self pop: 2 "Pop the arguments leaving the receiver" ]}
+			[ FFI_TYPE_FLOAT ] 	-> [ self pop: argumentsAndReceiverCount thenPushFloat: (objectMemory readFloat32AtPointer: returnHolder) ].
+			[ FFI_TYPE_DOUBLE ] 	-> [ self pop: argumentsAndReceiverCount thenPushFloat: (objectMemory readFloat64AtPointer: returnHolder) ].
+			[ FFI_TYPE_VOID ] 		-> [ self pop: argumentsAndReceiverCount - 1 "Pop the arguments leaving the receiver" ]}
 			otherwise: [ self primitiveFailFor: PrimErrBadArgument ]
 
 ]
@@ -1585,7 +1592,7 @@ StackInterpreterPrimitives >> primitiveSameThreadCallout [
 	(objectMemory slotSizeOf: argumentsArrayOop) = argumentSize
 		ifFalse: [ ^ self primitiveFailFor: PrimErrBadArgument ].
 		
-	parameters := self allocateParameters: argumentSize.
+	parameters := self allocateParameters: argumentSize using: [:aSize | self alloca: aSize ].
 
 	0 to: argumentSize - 1 do: [ :i | 
 		| argType argHolder sizeToAlloc |
@@ -1611,7 +1618,7 @@ StackInterpreterPrimitives >> primitiveSameThreadCallout [
 		_: returnHolder
 		_: parameters.
 
-	self marshallAndPushReturnValueFrom: returnHolder ofType: cif returnType.	
+	self marshallAndPushReturnValueFrom: returnHolder ofType: cif returnType poping: 3.	
 
 ]
 
@@ -2250,6 +2257,82 @@ StackInterpreterPrimitives >> primitiveVoidVMState [
 	self marryContextInNewStackPageAndInitializeInterpreterRegisters: activeContext
 ]
 
+{ #category : #ffi }
+StackInterpreterPrimitives >> primitiveWorkerCallout [
+	<export: true>
+	| externalFunction cif PARAM_EXTERNALFUNCTION PARAM_ARGUMENTS PARAM_SEMAPHORE_INDEX PARAM_RECEIVER argumentsArrayOop argumentSize parameters returnHolder receiver worker semaphoreIndex task |
+	<var: #parameters type: #'void **'>
+	<var: #parameters type: #'Worker *'>
+
+	PARAM_RECEIVER 				:= 3.
+	PARAM_EXTERNALFUNCTION 	:= 2.
+	PARAM_ARGUMENTS 			:= 1.
+	PARAM_SEMAPHORE_INDEX 	:= 0.
+
+	"1. Obtain externalFunction and extract the CIF"
+	externalFunction := self getHandler: (self stackValue: PARAM_EXTERNALFUNCTION).
+	self failed 
+		ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+
+	cif := self getHandlerAsCif:(objectMemory
+				fetchPointer: 1
+				ofObject: (self stackValue: PARAM_EXTERNALFUNCTION)).
+
+	self failed
+		ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+
+	" 2. Obtain the semaphore index"
+	semaphoreIndex := self stackIntegerValue: PARAM_SEMAPHORE_INDEX.
+	self failed
+		ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+
+	" 3. Obtain the receiver and extract the worker "
+	receiver := self stackValue: PARAM_RECEIVER.
+	worker := self getWorkerFromAddress: (self getHandler: receiver).
+
+	self failed
+		ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+
+	" 4. Prepare Arguments:
+	- Verify Arguments is an Array
+	- Allocate space for all the arguments in the stack and a holder for the return, and the parameters' pointer C array
+	- Marshall arguments and store in the parameter array."
+	argumentsArrayOop := self stackValue: PARAM_ARGUMENTS.
+
+	(objectMemory isArray: argumentsArrayOop)
+		ifFalse: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+
+	argumentSize := cif numberArguments.
+
+	(objectMemory slotSizeOf: argumentsArrayOop) = argumentSize
+		ifFalse: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+		
+	parameters := self allocateParameters: argumentSize using: [ :aSize | self malloc: aSize ].
+
+	0 to: argumentSize - 1 do: [ :i | 
+		| argType argHolder |
+		argType := cif argTypeAt: i.
+
+		argHolder := self malloc: argType size.
+		parameters at: i put: argHolder.
+	
+		self marshallArgumentFrom: argumentsArrayOop atIndex: i into: argHolder ofType: argType. 
+				
+		self failed 
+				ifTrue: [ 
+					^ self primitiveFailFor: PrimErrBadArgument ]].
+	
+	returnHolder := self malloc: cif returnType size.
+
+	" 5. Create the worker task and enqueue it"
+
+	task := self worker_task_new: externalFunction _: cif _: parameters _: returnHolder _: semaphoreIndex.
+
+	self worker_dispatch_callout: worker _: task.
+
+	self pop: 5 thenPush: (objectMemory newExternalAddressWithValue: task asInteger)
+]
+
 { #category : #'object access primitives' }
 StackInterpreterPrimitives >> pruneStack: stack stackp: stackp [
 	"Prune the stack to contain only the path, removing stacked indices
@@ -2406,4 +2489,26 @@ StackInterpreterPrimitives >> unmarkAllFrames [
 			  (flags bitAnd: 2) ~= 0 ifTrue:
 				[objectMemory longAt: theFP + FoxFrameFlags put: flags - 2].
 			  (theFP := self frameCallerFP: theFP) ~= 0] whileTrue]]
+]
+
+{ #category : #'ffi - helpers' }
+StackInterpreterPrimitives >> worker_dispatch_callout: worker _: task [ 
+	
+	<doNotGenerate>
+	worker dispatchCallout: task.
+
+]
+
+{ #category : #'ffi - helpers' }
+StackInterpreterPrimitives >> worker_task_new: externalFunction _: cif _: parameters _: returnHolder _: semaphoreIndex [
+	<doNotGenerate>
+	
+	^ LibFFITestWorkerTask new
+			externalFunction: externalFunction;
+			cif: cif;
+			parameters: parameters;
+			returnHolder: returnHolder;
+			semaphoreIndex: semaphoreIndex;
+			yourself
+	
 ]
