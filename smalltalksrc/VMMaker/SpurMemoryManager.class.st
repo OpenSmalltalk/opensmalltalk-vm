@@ -9018,7 +9018,7 @@ SpurMemoryManager >> needGCFlag: anInteger [
 ]
 
 { #category : #'ffi - helpers' }
-SpurMemoryManager >> newExternalAddressWithValue: anInteger [
+SpurMemoryManager >> newExternalAddressWithValue: aPointer [
 	| ptr oop |
 	<var: #ptr type:'void **'>
 
@@ -9027,7 +9027,7 @@ SpurMemoryManager >> newExternalAddressWithValue: anInteger [
 		       indexableSize: (self sizeof: #'void*').
 
 	ptr := self firstIndexableField: oop.
-	ptr at: 0 put: anInteger.
+	ptr at: 0 put: aPointer.
 	^ oop
 ]
 

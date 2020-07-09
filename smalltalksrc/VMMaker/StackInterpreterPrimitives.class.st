@@ -142,6 +142,9 @@ StackInterpreterPrimitives >> freeArgumentsArray: arguments count: count [
 { #category : #'ffi - helpers' }
 StackInterpreterPrimitives >> getHandler: anOop [ 
 
+	<api>
+	<returnTypeC: #'void *'>
+
 	((objectMemory isPointers: anOop) not or: [ (objectMemory slotSizeOf: anOop) < 1 ])
 		ifTrue: [ self primitiveFail. ^ nil ].
 		
@@ -215,14 +218,14 @@ StackInterpreterPrimitives >> marshallAndPushReturnValueFrom: returnHolder ofTyp
 ]
 
 { #category : #'ffi - helpers' }
-StackInterpreterPrimitives >> marshallArgumentFrom: argumentsArrayOop atIndex: i into: argHolder ofType: argType [
+StackInterpreterPrimitives >> marshallArgumentFrom: argumentsArrayOop atIndex: i into: argHolder ofType: argType withSize: argTypeSize [
 
-	[ argType type ]
+	[ argType ]
 		caseOf:
 			{([ FFI_TYPE_POINTER ]
 				-> [ self marshallPointerFrom: argumentsArrayOop at: i into: argHolder ]).
 			([ FFI_TYPE_STRUCT ]
-				-> [ self marshallStructFrom: argumentsArrayOop at: i into: argHolder withSize: argType ]).
+				-> [ self marshallStructFrom: argumentsArrayOop at: i into: argHolder withSize: argTypeSize ]).
 			([ FFI_TYPE_FLOAT ]
 				-> [ self marshallFloatFrom: argumentsArrayOop at: i into: argHolder ]).
 			([ FFI_TYPE_DOUBLE ]
@@ -328,7 +331,7 @@ StackInterpreterPrimitives >> marshallSInt8From: argumentArrayOop at: index into
 ]
 
 { #category : #'ffi - helpers' }
-StackInterpreterPrimitives >> marshallStructFrom: argumentsArrayOop at: index into: holder withSize: type [ 
+StackInterpreterPrimitives >> marshallStructFrom: argumentsArrayOop at: index into: holder withSize: typeSize [ 
 
 
 	| address srcPtr oop |
@@ -347,10 +350,10 @@ StackInterpreterPrimitives >> marshallStructFrom: argumentsArrayOop at: index in
 	srcPtr := objectMemory cCoerce: address to: 'void *'.
 	
 	self 
-		cCode:  [ objectMemory memcpy: holder _:  srcPtr _: type size ]
+		cCode:  [ objectMemory memcpy: holder _:  srcPtr _: typeSize ]
 		inSmalltalk: [ 
 			holder object 
-				replaceFrom: 1 to: type size 
+				replaceFrom: 1 to: typeSize 
 				with: (objectMemory cCoerce: srcPtr to: 'char *') startingAt: 0]
 ]
 
@@ -1579,6 +1582,8 @@ StackInterpreterPrimitives >> primitiveSameThreadCallout [
 	<export: true>
 	| externalFunction cif PARAM_EXTERNALFUNCTION PARAM_ARGUMENTS argumentsArrayOop argumentSize parameters returnHolder |
 	<var: #parameters type: #'void **'>
+	<var: #returnHolder type: #'void *'>
+	<var: #externalFunction type: #'void *'>
 
 	PARAM_EXTERNALFUNCTION := 1.
 	PARAM_ARGUMENTS := 0.
@@ -1619,7 +1624,7 @@ StackInterpreterPrimitives >> primitiveSameThreadCallout [
 		argHolder := self alloca: argType size.
 		parameters at: i put: argHolder.
 	
-		self marshallArgumentFrom: argumentsArrayOop atIndex: i into: argHolder ofType: argType. 
+		self marshallArgumentFrom: argumentsArrayOop atIndex: i into: argHolder ofType: argType type withSize: argType size. 
 				
 		self failed 
 				ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ]].
@@ -2280,7 +2285,9 @@ StackInterpreterPrimitives >> primitiveWorkerCallout [
 	<export: true>
 	| externalFunction cif PARAM_EXTERNALFUNCTION PARAM_ARGUMENTS PARAM_SEMAPHORE_INDEX PARAM_RECEIVER argumentsArrayOop argumentSize parameters returnHolder receiver worker semaphoreIndex task |
 	<var: #parameters type: #'void **'>
-	<var: #parameters type: #'Worker *'>
+	<var: #returnHolder type: #'void *'>
+	<var: #task type: #'WorkerTask *'>
+	<var: #externalFunction type: #'void *'>
 
 	PARAM_RECEIVER 				:= 3.
 	PARAM_EXTERNALFUNCTION 	:= 2.
@@ -2335,7 +2342,7 @@ StackInterpreterPrimitives >> primitiveWorkerCallout [
 		argHolder := self malloc: argType size.
 		parameters at: i put: argHolder.
 	
-		self marshallArgumentFrom: argumentsArrayOop atIndex: i into: argHolder ofType: argType. 
+		self marshallArgumentFrom: argumentsArrayOop atIndex: i into: argHolder ofType: argType type withSize: argType size.
 				
 		self failed 
 				ifTrue: [ 
@@ -2352,7 +2359,7 @@ StackInterpreterPrimitives >> primitiveWorkerCallout [
 
 	self worker_dispatch_callout: worker _: task.
 
-	self pop: 5 thenPush: (objectMemory newExternalAddressWithValue: task asInteger)
+	self pop: 5 thenPush: (objectMemory newExternalAddressWithValue: (self cCoerce: task asInteger to: 'void*'))
 ]
 
 { #category : #'object access primitives' }
@@ -2483,6 +2490,9 @@ StackInterpreterPrimitives >> pushSameThreadCalloutSuspendedProcess: aSuspendedP
 { #category : #'ffi - helpers' }
 StackInterpreterPrimitives >> readAddress: anOop [ 
 
+	<api>
+	<returnTypeC: #'void *'>
+
 	(objectMemory is: anOop KindOfClass: objectMemory classExternalAddress)
 		ifFalse: [ self primitiveFail. ^ nil ].
 
@@ -2524,6 +2534,8 @@ StackInterpreterPrimitives >> worker_dispatch_callout: worker _: task [
 { #category : #'ffi - helpers' }
 StackInterpreterPrimitives >> worker_task_new: externalFunction _: cif _: parameters _: returnHolder _: semaphoreIndex [
 	<doNotGenerate>
+	
+	<returnTypeC: #sqInt>
 	
 	^ LibFFITestWorkerTask new
 			externalFunction: externalFunction;

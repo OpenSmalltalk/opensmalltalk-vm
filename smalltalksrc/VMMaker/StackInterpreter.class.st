@@ -524,7 +524,8 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 		addHeaderFile:'"vmCallback.h"';
 		addHeaderFile:'"sqMemoryFence.h"';
 		addHeaderFile:'"dispdbg.h"';
-		addHeaderFile:'"ffi.h"'.
+		addHeaderFile:'<ffi.h>';
+		addHeaderFile:'"pharovm/pThreadedFFI/worker.h"'.
 		
 	LowcodeVM ifTrue: [ aCCodeGenerator addHeaderFile:'"sqLowcodeFFI.h"'].
 
