@@ -75,6 +75,9 @@ void * loadModuleHandle(const char *fileName);
 sqInt freeModuleHandle(void *module);
 void *getModuleSymbol(void *module, const char *symbol);
 
+void *getHandler(sqInt anExternalObject);
+void *readAddress(sqInt anExternalAddress);
+
 EXPORT(sqInt) mainThread_schedule(sqInt (*closure)());
 
 #endif //PHAROVM_PHARO_H

@@ -369,8 +369,6 @@ typedef struct VirtualMachine {
 
   sqInt (*ptEnterInterpreterFromCallback)(vmccp);
   sqInt (*ptExitInterpreterToCallback)(vmccp);
-  sqInt (*ptDisableCogIt)(void*);
-
   sqInt (*isNonImmediate)(sqInt oop);
 
   sqInt (*platformSemaphoreNew)(int initialValue);

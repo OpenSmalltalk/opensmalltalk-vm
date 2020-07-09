@@ -329,6 +329,23 @@ add_custom_target(libFFI DEPENDS "${LIBFFI_OUTPUT}")
 set(GENERATED_SOURCES ${VMSOURCEFILES})
 
 set(SUPPORT_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/functionDefinitionPrimitives.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/primitiveCalls.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/primitiveUtils.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/pThreadedFFI.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/types.c
+	${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/typesPrimitives.c
+	${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/utils.c
+    
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/callbacks/callbackPrimitives.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/callbacks/callbacks.c
+   
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/sameThread/sameThread.c
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/worker/worker.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/worker/workerPrimitives.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/worker/workerTask.c
+	
 	${CMAKE_CURRENT_SOURCE_DIR}/src/debug.c
 	${CMAKE_CURRENT_SOURCE_DIR}/src/utils.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/errorCode.c
@@ -341,7 +358,11 @@ set(SUPPORT_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/fileDialogCommon.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/stringUtilities.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/imageAccess.c
+    
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/threadSafeQueue/threadSafeQueue.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/semaphores/platformSemaphore.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/semaphores/pharoSemaphore.c
+
     ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/common/heartbeat.c
 )
 
