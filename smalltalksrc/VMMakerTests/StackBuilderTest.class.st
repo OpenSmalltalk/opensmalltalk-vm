@@ -18,10 +18,7 @@ Class {
 
 { #category : #'helper-frame' }
 StackBuilderTest >> addComplexFrame [
-	builder := VMStackBuilder new
-		interpreter: interpreter; 
-		memory: memory;
-		yourself.
+
 	frame := builder addNewFrame.
 	instructionPointer := 3.
 	frame beSuspendedAt: instructionPointer.
@@ -97,9 +94,14 @@ StackBuilderTest >> offsetTemp2 [
 { #category : #running }
 StackBuilderTest >> setUp [
 	super setUp.
-	
+	builder := VMStackBuilder new
+		interpreter: interpreter; 
+		memory: memory;
+		yourself.
+		
 	self addComplexFrame.
 	self addComplexFrame.	
+	self addComplexFrame.
 
 	builder buildStack.
 
@@ -113,9 +115,19 @@ StackBuilderTest >> testBaseFrameCallerSavedIPShouldBeZero [
 ]
 
 { #category : #'test-VMstate' }
-StackBuilderTest >> testNewFrameCallerFPisBaseFrame [
-	self assert: (interpreter frameCallerFP: interpreter framePointer) 
-		equals: (builder page baseFP)
+StackBuilderTest >> testHeadFramePointerCallerCallerIsBaseFramePointer [
+	"We have 3 frames. 
+	The caller of the caller of the top frame is the first one, which is the base"
+	self assert: (interpreter frameCallerFP: (interpreter frameCallerFP: interpreter framePointer))
+		equals: builder page baseFP
+]
+
+{ #category : #'test-VMstate' }
+StackBuilderTest >> testHeadFramePointerCallerIsNotBaseFramePointer [
+	"We have 3 frames. 
+	The caller of the top frame should be the middle one"
+	self deny: (interpreter frameCallerFP: interpreter framePointer) 
+		equals: builder page baseFP
 ]
 
 { #category : #'test-order' }

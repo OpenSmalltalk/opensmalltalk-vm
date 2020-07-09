@@ -97,16 +97,29 @@ VMStackBuilder >> page [
 
 { #category : #Frames }
 VMStackBuilder >> pushFrames [
+	| first |
+	first := true.
 	page
-		baseFP: interpreter stackPointer;
 		headSP: interpreter stackPointer;
 		headFP: interpreter stackPointer.
 	frames
-		do: [ :aFrame | 
-			interpreter push: interpreter instructionPointer.
-			interpreter push: interpreter framePointer.
+		do: [ :aFrame |
+			
+			first ifTrue:[ 
+					interpreter push: 0.
+					interpreter push: interpreter framePointer.
+					page baseFP: interpreter stackPointer.
+					first := false.
+				]
+				ifFalse:[ 
+					interpreter push: interpreter instructionPointer.
+					interpreter push: interpreter framePointer.
+				].
+			
+			aFrame callerFP: interpreter framePointer.
 			interpreter framePointer: interpreter stackPointer.
 			page headFP: interpreter stackPointer.
-			aFrame pushYourself ]
-		separatedBy: [ "page headSP: interpreter stackPointer" ]
+
+			aFrame pushYourself.
+			]
 ]

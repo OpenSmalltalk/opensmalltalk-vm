@@ -13,7 +13,8 @@ Class {
 		'senderContext',
 		'previousFrame',
 		'page',
-		'instructionPointer'
+		'instructionPointer',
+		'callerFP'
 	],
 	#category : #'VMMakerTests-Frame'
 }
@@ -50,6 +51,11 @@ VMFrame >> beSuspendedAt: anInstructionPointer [
 ]
 
 { #category : #accessing }
+VMFrame >> callerFP: anInteger [ 
+	callerFP := anInteger
+]
+
+{ #category : #accessing }
 VMFrame >> context [
 	^ context
 ]
@@ -72,6 +78,7 @@ VMFrame >> gtInspectorItemsIn: composite [
 		#flags ->  nil.
 		#method ->  method.
 		#'caller''s method ip' -> nil.
+		#'callerFP' -> callerFP.
 		#arguments -> args.
 		#receiver -> receiver.
 		 }.
