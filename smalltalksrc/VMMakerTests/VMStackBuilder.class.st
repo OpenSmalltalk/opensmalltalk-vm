@@ -46,6 +46,9 @@ VMStackBuilder >> buildStack [
 	"interpreter stackTop.
 	interpreter stackPages.
 	"
+	
+	interpreter setStackPageAndLimit: page.
+  interpreter setStackPointersFromPage: page.
 	interpreter internalizeIPandSP.
 	^ lastFrame
 ]
@@ -53,13 +56,13 @@ VMStackBuilder >> buildStack [
 { #category : #Frames }
 VMStackBuilder >> createStackPage [
 	| sp |
+	frames ifEmpty:[ self error ].
+
 	page := interpreter stackPages newStackPage.
 	"set base stackPointer"
-
-	frames ifEmpty:[ self error ].
 	sp := page baseAddress - (memory wordSize * (frames first args size + 2)).
 	interpreter stackPointer: sp.
-	interpreter framePointer: sp
+	interpreter framePointer: sp.
 
 	
 ]
@@ -102,6 +105,7 @@ VMStackBuilder >> pushFrames [
 	page
 		headSP: interpreter stackPointer;
 		headFP: interpreter stackPointer.
+
 	frames
 		do: [ :aFrame |
 			
@@ -121,5 +125,6 @@ VMStackBuilder >> pushFrames [
 			page headFP: interpreter stackPointer.
 
 			aFrame pushYourself.
+			page headSP: interpreter stackPointer.
 			]
 ]
