@@ -107,6 +107,8 @@ StackBuilderTest >> setUp [
 
 { #category : #'test-VMstate' }
 StackBuilderTest >> testBaseFrameCallerSavedIPShouldBeZero [
+	"This test shows that the bottom frame has no previous caller
+	so not caller saved instruction pointer."
 	self assert: (interpreter frameCallerSavedIP: builder page baseFP) equals: 0
 ]
 
@@ -144,6 +146,8 @@ StackBuilderTest >> testOrderStackElementIsReversed [
 
 { #category : #'test-order' }
 StackBuilderTest >> testOrderStackTopOfSuspendedProcessIsInstructionPointer [
+	"When a process is suspended, the Instruction pointer is pushed on the stack.
+	It should be the last thing pushed, and therefore, be at the top. "
 	self assert: (interpreter internalStackValue: self offsetInstructionPointer) 
 		equals: instructionPointer.
 ]
@@ -158,6 +162,7 @@ StackBuilderTest >> testOrderTempIsReversed [
 
 { #category : #'test-VMstate' }
 StackBuilderTest >> testPageHeadFPIsLastFrameFP [
+	"The FramePointer of the interpreter should be the FramePointer of the current process last pushed frame."
 	self assert: interpreter framePointer
 		equals: builder page headFP
 ]

@@ -4,7 +4,7 @@ Class {
 	#category : #VMMakerTests
 }
 
-{ #category : #'helper-interpretation' }
+{ #category : #'helper-assertions' }
 VMByteCodesTest >> assert: aBlock pop: anOop intoTemporary: anIndex [
 	| oldStackSize |
 	oldStackSize := interpreter stackPointer.
@@ -15,7 +15,7 @@ VMByteCodesTest >> assert: aBlock pop: anOop intoTemporary: anIndex [
 	self assert: (interpreter temporary: anIndex in: interpreter framePointer) equals: anOop
 ]
 
-{ #category : #'helper-interpretation' }
+{ #category : #'helper-assertions' }
 VMByteCodesTest >> assert: aBlock pushed: anOop [
 	| oldStackSize |
 	oldStackSize := interpreter stackPointer.
@@ -27,7 +27,7 @@ VMByteCodesTest >> assert: aBlock pushed: anOop [
 	
 ]
 
-{ #category : #'helper-interpretation' }
+{ #category : #'helper-assertions' }
 VMByteCodesTest >> assert: aBlock returned: anOop [
 	| callerSP |
 	callerSP := interpreter frameCallerSP: interpreter framePointer.
@@ -39,7 +39,7 @@ VMByteCodesTest >> assert: aBlock returned: anOop [
 	
 ]
 
-{ #category : #'helper-interpretation' }
+{ #category : #'helper-assertions' }
 VMByteCodesTest >> assertPopped: aBlock [
 	| oldStackSize |
 	oldStackSize := interpreter stackPointer.
@@ -297,9 +297,12 @@ VMByteCodesTest >> testPushTemp9 [
 ]
 
 { #category : #'test-push-simple' }
-VMByteCodesTest >> testReturnFalse [
+VMByteCodesTest >> testReturnFalse [	
+	"We need to return to a method.
+	So the method of the first stack should have a compiled method in the method field of the stack.
+	using memory trueObject simulates that behavior."
 	self stackBuilder addNewFrame method: (self newMethodWithLiteral: memory trueObject at: 1).
-	self stackBuilder addNewFrame method: (self newMethodWithLiteral: memory falseObject at: 1).
+	self stackBuilder addNewFrame.
 	self stackBuilder buildStack.
 
 	self
@@ -310,8 +313,11 @@ VMByteCodesTest >> testReturnFalse [
 
 { #category : #'test-push-simple' }
 VMByteCodesTest >> testReturnTrue [	
+	"We need to return to a method.
+	So the method of the first stack should have a compiled method in the method field of the stack.
+	using memory trueObject simulates that behavior."
 	self stackBuilder addNewFrame method: (self newMethodWithLiteral: memory trueObject at: 1).
-	self stackBuilder addNewFrame method: (self newMethodWithLiteral: memory falseObject at: 1).
+	self stackBuilder addNewFrame.
 	self stackBuilder buildStack.
 
 	self

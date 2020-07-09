@@ -8,17 +8,17 @@ Class {
 	#category : #'VMMaker-Tools'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 VMTStackFrame >> callerFP [
 	^ self interpreter frameCallerFP: framePointer
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 VMTStackFrame >> callerIP [
 	^ self interpreter frameCallerSavedIP: framePointer
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 VMTStackFrame >> descriptors [
 	^ OrderedCollection new 
 		add: #callerIP ->  self callerIP ;
@@ -37,7 +37,7 @@ VMTStackFrame >> framePointer: anObject [
 	framePointer := anObject
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #debugging }
 VMTStackFrame >> gtStackFrameInspector: composite [
 	<gtInspectorPresentationOrder: 0>
 	^ composite fastTable
@@ -47,7 +47,7 @@ VMTStackFrame >> gtStackFrameInspector: composite [
 		column: 'Value' evaluated: [ :descriptor | descriptor value ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 VMTStackFrame >> interpreter [
 	^ memory coInterpreter
 ]
@@ -62,7 +62,7 @@ VMTStackFrame >> memory: anObject [
 	memory := anObject
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 VMTStackFrame >> method [
 	^ self interpreter frameMethod: framePointer
 ]
