@@ -1345,6 +1345,15 @@ VMMaker >> for64BitVM [
 	self changed: #sourceDirectory.
 ]
 
+{ #category : #headers }
+VMMaker >> generateAdditionalHeadersFor: aClass withCodeGenerator: cg [
+
+	aClass additionalHeadersDo: [:headerName :headerContents| | filePath |
+		 filePath := self coreVMHeadersDirectory fullNameFor: headerName.
+		 (cg needToGenerateHeader: headerName file: filePath contents: headerContents) ifTrue:
+			 [cg storeHeaderOnFile: filePath contents: headerContents]].
+]
+
 { #category : #'generate sources' }
 VMMaker >> generateCogitFileFor: cogitClass [
 	"Translate the Smalltalk description of the Cogit into C, if required.  Ensure that
@@ -1377,11 +1386,9 @@ VMMaker >> generateCogitFiles [
 	cogitClass translateableInstructionSubclassesAndInstalledOptionsDo:
 		[:compilerClass|
 		cg := self generateCogitFileFor: cogitClass].
-	cg vmClass additionalHeadersDo:
-		[:headerName :headerContents| | filePath |
-		 filePath := self coreVMHeadersDirectory fullNameFor: headerName.
-		 (cg needToGenerateHeader: headerName file: filePath contents: headerContents) ifTrue:
-			 [cg storeHeaderOnFile: filePath contents: headerContents]].
+
+	self generateAdditionalHeadersFor: cg vmClass withCodeGenerator: cg.
+
 	cogitClass apiExportHeaderName ifNotNil:
 		[cg storeAPIExportHeader: cogitClass apiExportHeaderName
 			OnFile: (self includeFilePathFor: cogitClass apiExportHeaderName)]
@@ -1533,11 +1540,7 @@ VMMaker >> generateInterpreterFile [
 								ifFalse: [ex pass]]].
 	self reinitializeWordSizeFrom: cg.
 
-	self interpreterClass additionalHeadersDo:
-		[:headerName :headerContents| | filePath |
-		 filePath := self coreVMHeadersDirectory fullNameFor: headerName.
-		 (cg needToGenerateHeader: headerName file: filePath contents: headerContents) ifTrue:
-			 [cg storeHeaderOnFile: filePath contents: headerContents]].
+	self generateAdditionalHeadersFor: self interpreterClass withCodeGenerator: cg.
 
 	self needsToRegenerateInterpreterFile ifFalse: [^nil].
 

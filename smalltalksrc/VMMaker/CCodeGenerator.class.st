@@ -5325,12 +5325,21 @@ CCodeGenerator >> storeHeaderOnFile: fileName contents: contents [
 	"Store C header code on the given file. Evaluate
 	 aBlock with the stream to generate its contents."
 
-	| aStream |
+	| aStream fileNameGuard |
 	aStream := VMMaker forceNewFileNamed: fileName.
-	aStream ifNil: [Error signal: 'Could not open C header file: ', fileName].
+	
+	fileNameGuard := (fileName asFileReference basename asUppercase replaceAll: $. with: $_)  , '__'.
+	
+	aStream ifNil: [ self error: 'Could not open C header file: ', fileName].
+	
 	[(contents beginsWith: '/* Automatic') ifFalse:
-		[aStream nextPutAll: (self fileHeaderVersionStampForSourceClass: nil); cr].
-	 aStream nextPutAll: contents]
+		[
+		aStream nextPutAll: (self fileHeaderVersionStampForSourceClass: nil); cr].
+		aStream nextPutAll: ('#ifndef {1}
+#define {1}
+' format: {fileNameGuard}).
+	 	aStream nextPutAll: contents.
+		aStream nextPutAll: '#endif']
 		ensure: [aStream close]
 ]
 
