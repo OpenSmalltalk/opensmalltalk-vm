@@ -2,7 +2,6 @@
 I am a builder for Stack frames.
 
 I am configuring frames and building the stack frames.
-
 I am used by tests for the simulator.
 I am creating the page that I will put in the interpreter.
 I am using the VMFrameBuilder to prepare the frame objects that I will push on the stack.
@@ -93,7 +92,10 @@ VMStackBuilder >> createStackPage [
 	interpreter stackPointer: sp.
 	interpreter framePointer: sp.
 
-	
+	page
+		headSP: interpreter stackPointer;
+		headFP: interpreter stackPointer.
+
 ]
 
 { #category : #accessing }
@@ -144,11 +146,8 @@ VMStackBuilder >> pushFrame: aFrame [
 
 { #category : #build }
 VMStackBuilder >> pushFrames [
-	page
-		headSP: interpreter stackPointer;
-		headFP: interpreter stackPointer.
-	
-	interpreter push: 0.
+	"the first frame does not have a caller, so we push 0 as the first IP"
+	interpreter push: 0. 
 	interpreter push: interpreter framePointer.
 	page baseFP: interpreter stackPointer.
 	
@@ -160,7 +159,7 @@ VMStackBuilder >> pushFrames [
 
 			aFrame := frames at: anIndex.
 			self pushFrame: aFrame.
-			aFrame callerFrame: (frames at: anIndex - 1).
+			aFrame callerFrame: (frames at: anIndex - 1)."for better inspection"
 			]
 ]
 
