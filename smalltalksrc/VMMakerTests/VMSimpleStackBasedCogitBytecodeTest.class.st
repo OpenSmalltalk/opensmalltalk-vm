@@ -78,7 +78,6 @@ VMSimpleStackBasedCogitBytecodeTest >> doTestReturnCleansStackWithFrame: isFrame
 		ifFalse: [self createFramelessCallFrom: callerAddress].		
 	
 	self compile: generationBlock.	
-		self openMachineDebuggerAt: initialAddress .
 	self runUntilReturn.
 
 	self assert: oldFP equals: self framePointerRegisterValue.

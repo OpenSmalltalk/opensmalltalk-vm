@@ -345,6 +345,17 @@ UnicornSimulator >> stackPointerRegisterValue: aValue [
 	self writeRegister: self stackPointerRegister value: aValue
 ]
 
+{ #category : #accessing }
+UnicornSimulator >> stackValues [
+	
+	| initialValue |
+	initialValue := self stackPointerRegisterValue.
+	
+	^ (1 to: 20) collect: [ :anIndex |  
+		VMMachineCodeDebuggerStackItem address: initialValue + (memory wordSize * (anIndex - 1)) on: self.	
+	] 
+]
+
 { #category : #executing }
 UnicornSimulator >> startAt: begin until: until timeout: timeout count: count [ 
 
@@ -374,6 +385,12 @@ UnicornSimulator >> step [
 		until: 0
 		timeout: 0
 		count: 1
+]
+
+{ #category : #accessing }
+UnicornSimulator >> wordAt: anInteger [ 
+	
+	^ memory longAt: anInteger
 ]
 
 { #category : #accessing }
