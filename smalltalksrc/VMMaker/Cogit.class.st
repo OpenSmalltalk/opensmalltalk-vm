@@ -2382,12 +2382,18 @@ Cogit >> MoveUniqueC32: wordConstant R: reg [
 	 needless duplication in the 32-bit code generators.."
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self
-		gen: (objectMemory wordSize = 8
-				ifTrue: [MoveC32R]
-				ifFalse: [MoveCwR])
-		uniqueLiteral: wordConstant
-		operand: reg
+	"If we are in 64 bits, we use indexes, so are already encoded as unique literals in the instruction.
+	Otherwise, they will be selector references that must be stored as literals"
+	^ (objectMemory wordSize = 8) ifTrue: [ 
+		self
+			gen: MoveC32R
+			operand: wordConstant
+			operand: reg
+	] ifFalse: [ 
+		self
+			gen: MoveCwR
+			uniqueLiteral: wordConstant
+			operand: reg ]
 ]
 
 { #category : #'abstract instructions' }
@@ -5737,6 +5743,7 @@ Cogit >> computeEntryOffsets [
 	methodOrBlockNumArgs := 0.
 	sendMissCall := self compileAbort.
 	self compileEntry.
+	self haltIf: [backEnd class == CogOutOfLineLiteralsARMv8Compiler].
 	self computeMaximumSizes.
 	self generateInstructionsAt: methodZoneBase + (self sizeof: CogMethod).
 	cmEntryOffset := entry address - methodZoneBase.

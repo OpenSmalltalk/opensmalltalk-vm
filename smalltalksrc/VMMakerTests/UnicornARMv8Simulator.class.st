@@ -13,7 +13,7 @@ UnicornARMv8Simulator >> baseRegister [
 { #category : #registers }
 UnicornARMv8Simulator >> classRegister [
 	
-	^ UcARM64Registers r2
+	^ UcARM64Registers x2
 ]
 
 { #category : #'as yet unclassified' }

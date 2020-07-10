@@ -40,7 +40,26 @@ CogOutOfLineLiteralsARMv8Compiler >> concretizeMoveC32R [
 	"Will get inlined into concretizeAt: switch."
 
 	<inline: true>
-	^ machineCodeSize := self loadCwInto: (operands at: 1)
+	(operands at: 0) < 0 ifTrue: [ 
+		self shiftable16bitImmediate: (operands at: 0) negated - 1
+			ifTrue: [ :shift :value |
+					self machineCodeAt: 0 put: (self
+						movSize: 0
+						destinationRegister: (operands at: 1)
+						negatedImm: value
+						shift: shift).
+				^ machineCodeSize := 4 ]
+			ifFalse: [ self halt ]].
+
+	self shiftable16bitImmediate: (operands at: 0)
+		ifTrue: [ :shift :value |
+				self machineCodeAt: 0 put: (self
+					movSize: 0
+					destinationRegister: (operands at: 1)
+					imm: value
+					shift: shift).
+			^ machineCodeSize := 4 ]
+		ifFalse: [ self halt ]
 ]
 
 { #category : #accessing }
@@ -322,7 +341,8 @@ CogOutOfLineLiteralsARMv8Compiler >> usesOutOfLineLiteral [
 		"Data Movement"						
 		[MoveCqR]		-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
 		[MoveCwR]		-> [^(self inCurrentCompilation: (operands at: 0)) not].
-		[MoveC32R]  -> [^(self inCurrentCompilation: (operands at: 0)) not].
+		[MoveC32R]  -> [ ^ self shiftable16bitImmediate: (operands at: 0)
+			ifTrue: [ true ] ifFalse: [ self halt ] ].
 		[MoveAwR]		-> [^(self isAddressRelativeToVarBase: (operands at: 0)) ifTrue: [false] ifFalse: [true]].
 		[MoveRAw]		-> [^(self isAddressRelativeToVarBase: (operands at: 1)) ifTrue: [false] ifFalse: [true]].
 		[MoveAbR]		-> [^(self isAddressRelativeToVarBase: (operands at: 0)) ifTrue: [false] ifFalse: [true]].
