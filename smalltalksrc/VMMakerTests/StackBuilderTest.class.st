@@ -18,7 +18,6 @@ Class {
 	#name : #StackBuilderTest,
 	#superclass : #VMByteCodesTest,
 	#instVars : [
-		'builder',
 		'stackElement1',
 		'stackElement2',
 		'instructionPointer',
@@ -37,7 +36,7 @@ StackBuilderTest >> addFullFrame [
 
 	method := self newMethodWithBytecodes: #[1 2 3 4 5 6 7 8 ].
 
-	frame := builder addNewFrame.
+	frame := stackBuilder addNewFrame.
 	instructionPointer := method + 17.
 	frame beSuspendedAt: instructionPointer.
 
@@ -110,16 +109,12 @@ StackBuilderTest >> offsetTemp2 [
 { #category : #running }
 StackBuilderTest >> setUp [
 	super setUp.
-	builder := VMStackBuilder new
-		interpreter: interpreter; 
-		memory: memory;
-		yourself.
 		
 	self addFullFrame.
 	self addFullFrame.	
 	self addFullFrame.
 
-	builder buildStack.
+	stackBuilder buildStack.
 
 ]
 
@@ -127,14 +122,14 @@ StackBuilderTest >> setUp [
 StackBuilderTest >> testBaseFrameCallerSavedIPShouldBeZero [
 	"This test shows that the bottom frame has no previous caller
 	so not caller saved instruction pointer."
-	self assert: (interpreter frameCallerSavedIP: builder page baseFP) equals: 0
+	self assert: (interpreter frameCallerSavedIP: stackBuilder page baseFP) equals: 0
 ]
 
 { #category : #'test-VMstate' }
 StackBuilderTest >> testCallerFrameOfTopFrameShouldBeSecondFrameBuilderObject [
 	"For debug purpose, we added a link to the caller frame in the current frame."
-	self assert: (builder topFrame callerFrame) 
-		equals: (builder frames nextToLast)
+	self assert: (stackBuilder topFrame callerFrame) 
+		equals: (stackBuilder frames nextToLast)
 ]
 
 { #category : #'test-VMstate' }
@@ -142,7 +137,7 @@ StackBuilderTest >> testHeadFramePointerCallerCallerIsBaseFramePointer [
 	"We have 3 frames. 
 	The caller of the caller of the top frame is the first one, which is the base"
 	self assert: (interpreter frameCallerFP: (interpreter frameCallerFP: interpreter framePointer))
-		equals: builder page baseFP
+		equals: stackBuilder page baseFP
 ]
 
 { #category : #'test-VMstate' }
@@ -150,7 +145,49 @@ StackBuilderTest >> testHeadFramePointerCallerIsNotBaseFramePointer [
 	"We have 3 frames. 
 	The caller of the top frame should be the middle one"
 	self deny: (interpreter frameCallerFP: interpreter framePointer) 
-		equals: builder page baseFP
+		equals: stackBuilder page baseFP
+]
+
+{ #category : #'test-context-tomove' }
+StackBuilderTest >> testMarryThenDivorceMiddleFrame [
+	| aContext framePointerToMarry stackPointerToMarry |
+	"should be moved in VMStackMappingTest after merge."
+	framePointerToMarry := interpreter frameCallerFP: interpreter framePointer.
+	stackPointerToMarry := interpreter frameCallerSP: interpreter stackPointer.
+	aContext := interpreter ensureFrameIsMarried: framePointerToMarry SP: stackPointerToMarry.
+	interpreter externalDivorceFrame: framePointerToMarry andContext: aContext.
+	self assert: (interpreter isSingleContext: aContext).
+]
+
+{ #category : #'test-context-tomove' }
+StackBuilderTest >> testMarryThenDivorceTopFrame [
+	| aContext framePointerToMarry stackPointerToMarry |
+	"should be moved in VMStackMappingTest after merge."
+	framePointerToMarry := interpreter framePointer.
+	stackPointerToMarry := interpreter stackPointer.
+	aContext := interpreter ensureFrameIsMarried: framePointerToMarry SP: stackPointerToMarry.
+	interpreter externalDivorceFrame: framePointerToMarry andContext: aContext.
+	self assert: (interpreter isSingleContext: aContext).
+]
+
+{ #category : #'test-context-tomove' }
+StackBuilderTest >> testMarryThenDivorceTopFrameShouldNotSplitPage [
+	| aContext initialiNumberOfusedPages newNumberOfUsedPages |
+	"should be moved in VMStackMappingTest after merge."
+
+	initialiNumberOfusedPages := interpreter stackPages pages count:[ :aPage | aPage isFree not ].
+	aContext := interpreter ensureFrameIsMarried: interpreter framePointer SP: interpreter stackPointer.
+	interpreter externalDivorceFrame: interpreter framePointer andContext: aContext.
+	newNumberOfUsedPages := interpreter stackPages pages count:[ :aPage | aPage isFree not ].
+	self assert: initialiNumberOfusedPages equals: 	newNumberOfUsedPages
+]
+
+{ #category : #'test-context-tomove' }
+StackBuilderTest >> testMarryTopFrame [
+	| aContext |
+	"should be moved in VMStackMappingTest after merge."
+	aContext := interpreter ensureFrameIsMarried: interpreter framePointer SP: interpreter stackPointer.
+	self assert: (interpreter isStillMarriedContext: aContext).
 ]
 
 { #category : #'test-order' }
@@ -199,5 +236,5 @@ StackBuilderTest >> testOrderTempIsReversed [
 StackBuilderTest >> testPageHeadFPIsLastFrameFP [
 	"The FramePointer of the interpreter should be the FramePointer of the current process last pushed frame."
 	self assert: interpreter framePointer
-		equals: builder page headFP
+		equals: stackBuilder page headFP
 ]

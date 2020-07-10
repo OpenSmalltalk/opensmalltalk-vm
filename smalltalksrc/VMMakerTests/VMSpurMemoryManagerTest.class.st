@@ -253,23 +253,18 @@ VMSpurMemoryManagerTest >> setUp [
 	
 	"Schedule a GC, so it does not try to schedule one"
 	memory needGCFlag: 1.
+	
+	stackBuilder := VMStackBuilder new
+		interpreter: interpreter; 
+		memory: memory;
+		yourself.
+
 ]
 
 { #category : #accessing }
 VMSpurMemoryManagerTest >> sizeOfObjectWithSlots: slots [
 
 	^ objectHeaderSize + ((slots min: 1 "at least one for the forwarder pointer") * memory wordSize "bytes")
-]
-
-{ #category : #accessing }
-VMSpurMemoryManagerTest >> stackBuilder [
-	^ stackBuilder := stackBuilder ifNil: [ 
-		VMStackBuilder new
-			interpreter: interpreter;
-			memory: memory;
-			yourself 
-		]
-
 ]
 
 { #category : #helpers }
