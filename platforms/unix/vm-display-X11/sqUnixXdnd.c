@@ -756,7 +756,6 @@ enum XdndState dndInDrop(enum XdndState state, XClientMessageEvent *evt)
 
 
 static void addDropFile(char *fileName);
-static Bool generateSqueakDropEventIfDroppedFiles(void);
 struct { char *fileName; Window sourceWindow; } *launchDrops = 0;
 static int numLaunchDrops = 0;
 
@@ -794,7 +793,7 @@ dndInLaunchDrop(XClientMessageEvent *evt)
 		 */
 		initDropFileNames();
 		addDropFile(fileName);
-		generateSqueakDropEventIfDroppedFiles();
+		recordDragEvent(SQDragDrop, uxDropFileCount);
 		for (i = 0; i < numLaunchDrops; i++)
 			if (!launchDrops[i].fileName)
 				break;
@@ -848,21 +847,13 @@ addDropFile(char *fileName)
 #endif
 }
 
-static Bool generateSqueakDropEventIfDroppedFiles()
-{
-	if (uxDropFileCount)
-		recordDragEvent(SQDragDrop, uxDropFileCount);
-  return uxDropFileCount;
-}
-
-static Bool dndGetSelection(Window owner, Atom property)
+static void dndGetSelection(Window owner, Atom property)
 {
   unsigned long remaining;
   unsigned char *data= 0;
   Atom actual;
   int format;
   unsigned long count;
-  Bool dropped = False;
 
   if (Success != XGetWindowProperty(stDisplay, owner, property, 0, 65536, 1, AnyPropertyType,
 				    &actual, &format, &count, &remaining, &data))
@@ -881,11 +872,9 @@ static Bool dndGetSelection(Window owner, Atom property)
 	    addDropFile(item);
 	  tokens= 0; /* strtok is weird.  this ensures more tokens, not less. */
 	}
-      dropped = generateSqueakDropEventIfDroppedFiles();
       fdebugf((stderr, "  uxDropFileCount = %d\n", uxDropFileCount));
     }
   XFree(data);
-  return dropped;
 }
 
 
@@ -897,10 +886,13 @@ static enum XdndState dndInSelectionNotify(enum XdndState state, XSelectionEvent
   fdebugf((stderr, "Receive SelectionNotify (input)\n"));
   if (evt->property != XdndSelectionAtom) return state;
 
-  dropped = dndGetSelection(evt->requestor, evt->property);
+  if (state != XdndStateIdle) {
+    fprintf(stderr, "dndInSelectionNotify: Unexpected state\n");
+    return state;
+  }
+  dndGetSelection(evt->requestor, evt->property);
   dndSendFinished();
-  if (!dropped)
-    recordDragEvent(SQDragLeave, 1);
+  recordDragEvent(SQDragDrop, uxDropFileCount);
   return XdndStateIdle;
 }
 
