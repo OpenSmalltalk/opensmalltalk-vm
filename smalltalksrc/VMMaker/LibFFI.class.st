@@ -17,7 +17,7 @@ Class {
 { #category : #translation }
 LibFFI class >> ancilliaryClasses [ 
 
-	^ { LibFFICIF. LibFFIType }
+	^ { LibFFICIF. LibFFIType. LibFFIWorkerTask }
 ]
 
 { #category : #'call simulations' }

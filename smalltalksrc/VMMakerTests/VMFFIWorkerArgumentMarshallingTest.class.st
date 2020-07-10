@@ -26,7 +26,7 @@ VMFFIWorkerArgumentMarshallingTest >> doTestFuntionWithArgumentType: argumentTyp
 
 	"Extracting the value stored in the task"
 	task := worker tasks at: 1.
-	savedValue := argumentType marshallToSmalltalk: (task parameters at: 0).
+	savedValue := argumentType marshallToSmalltalk: (task parametersAddress at: 0).
 
 	"The stored value in the worker task should be the expected"
 	self assert: savedValue equals: expectedValue
@@ -82,4 +82,43 @@ VMFFIWorkerArgumentMarshallingTest >> setUp [
 
 	super setUp.
 	interpreter libFFI testWorker clear
+]
+
+{ #category : #tests }
+VMFFIWorkerArgumentMarshallingTest >> testCalloutWithoutArgumentsMarshallsCorrectly [
+
+	aFunctionBlock := [ :anArgument | self fail: 'It should enqueue it, not execute it' ].
+
+	tfExternalFunction := self
+		                      createExternalFunctionFor: aFunctionBlock
+		                      withArgumentTypes: {}
+		                      withReturnType: interpreter libFFI void.
+
+	parametersArray := self newObjectWithSlots: 0.
+
+	worker := interpreter libFFI testWorker.
+
+	workerOop := self newObjectWithSlots: 1.
+
+	memory
+		storePointer: 0
+		ofObject: workerOop
+		withValue: (self newExternalAddress: worker asInteger).
+
+	semaphoreIndex := 99.
+
+	interpreter push: workerOop.
+	interpreter push: tfExternalFunction.
+	interpreter push: parametersArray.
+	interpreter push: semaphoreIndex.
+	interpreter argumentCount: 4.
+	interpreter primitiveWorkerCallout.
+	
+	self deny: interpreter failed.
+	
+	"Extracting the value stored in the task"
+	task := worker tasks at: 1.
+
+	self assert: task returnHolderAddress equals: nil.
+	self assert: task parametersAddress equals: nil.	
 ]

@@ -161,11 +161,21 @@ StackInterpreterPrimitives >> getHandlerAsCif: anOop [
 ]
 
 { #category : #'ffi - helpers' }
+StackInterpreterPrimitives >> getTaskFromAddress: anInteger [
+
+	^ self
+		  cCode: [ self cCoerce: anInteger to: #'WorkerTask *' ]
+		  inSmalltalk: [ libFFI testWorker tasks detect: [ :e | e asInteger = anInteger ] ]
+]
+
+{ #category : #'ffi - helpers' }
 StackInterpreterPrimitives >> getWorkerFromAddress: anInteger [
 
 	^ self
 		  cCode: [ self cCoerce: anInteger to: #'Worker *' ]
-		  inSmalltalk: [ libFFI testWorker ]
+		  inSmalltalk: [ 
+			self assert: anInteger = libFFI testWorker asInteger.
+			libFFI testWorker ]
 ]
 
 { #category : #'object access primitives' }
@@ -2359,7 +2369,41 @@ StackInterpreterPrimitives >> primitiveWorkerCallout [
 
 	self worker_dispatch_callout: worker _: task.
 
-	self pop: 5 thenPush: (objectMemory newExternalAddressWithValue: (self cCoerce: task asInteger to: 'void*'))
+	self pop: 4 thenPush: (objectMemory newExternalAddressWithValue: (self cCoerce: task asInteger to: 'void*'))
+]
+
+{ #category : #ffi }
+StackInterpreterPrimitives >> primitiveWorkerExtractReturnValue [
+	<export: true>
+	| returnHolder task PARAM_RECEIVER PARAM_TASK_ADDRESS  worker taskAddress receiver |
+	<var: #returnHolder type: #'void *'>
+	<var: #task type: #'WorkerTask *'>
+	<var: #worker type: #'Worker *'>
+	<var: #externalFunction type: #'void *'>
+
+	PARAM_RECEIVER 				:= 1.
+	PARAM_TASK_ADDRESS			:= 0.
+
+	"1. Extract Task address and worker"
+	taskAddress := self readAddress: (self stackValue: PARAM_TASK_ADDRESS).
+	receiver := self stackValue: PARAM_RECEIVER.
+	worker := self getWorkerFromAddress: (self getHandler: receiver).
+
+	self failed
+		ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+
+	"2. Get the returnHolder from the task"
+	task := self getTaskFromAddress: taskAddress.
+	returnHolder := task returnHolderAddress.
+	
+	"3. Marshall the return value and push it in the stack"
+	self 
+		marshallAndPushReturnValueFrom: returnHolder 
+		ofType: task cif returnType 
+		poping: 2.
+
+	"4. Free the task."	
+	task freeTask.
 ]
 
 { #category : #'object access primitives' }
@@ -2537,11 +2581,11 @@ StackInterpreterPrimitives >> worker_task_new: externalFunction _: cif _: parame
 	
 	<returnTypeC: #sqInt>
 	
-	^ LibFFITestWorkerTask new
-			externalFunction: externalFunction;
+	^ LibFFIWorkerTask new
+			anExternalFunction: externalFunction;
 			cif: cif;
-			parameters: parameters;
-			returnHolder: returnHolder;
+			parametersAddress: parameters;
+			returnHolderAddress: returnHolder;
 			semaphoreIndex: semaphoreIndex;
 			yourself
 	

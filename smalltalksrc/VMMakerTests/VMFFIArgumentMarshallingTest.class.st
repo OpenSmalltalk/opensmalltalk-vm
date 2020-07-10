@@ -313,22 +313,3 @@ VMFFIArgumentMarshallingTest >> testCalloutWithUINT8WithPositiveOutOfRangeFailsW
 		smalltalkValue: (memory integerObjectOf: UINT8_MAX + 1)
 		failsWith: PrimErrBadArgument
 ]
-
-{ #category : #'tests - parameters marshalling' }
-VMFFIArgumentMarshallingTest >> testCalloutWithoutArgumentsMarshallsCorrectly [
-
-	| parametersArray tfExternalFunction functionCalled |
-
-	functionCalled := false.
-	tfExternalFunction := self createReturnFloatExternalFunctionFor: [ functionCalled := true. 7.0 ].
-	parametersArray := self newObjectWithSlots: 0.
-
-	interpreter push: memory nilObject.
-	interpreter push: tfExternalFunction.
-	interpreter push: parametersArray. 
-
-	interpreter argumentCount: 2.
-	interpreter primitiveSameThreadCallout.
-	
-	self assert: functionCalled.
-]

@@ -51,3 +51,22 @@ VMFFISameThreadArgumentMarshallingTest >> doTestFuntionWithArgumentType: argumen
 	self assert: interpreter failed.
 	self assert: interpreter primFailCode equals: expectedErrorCode.
 ]
+
+{ #category : #'tests - parameters marshalling' }
+VMFFISameThreadArgumentMarshallingTest >> testCalloutWithoutArgumentsMarshallsCorrectly [
+
+	| parametersArray tfExternalFunction functionCalled |
+
+	functionCalled := false.
+	tfExternalFunction := self createReturnFloatExternalFunctionFor: [ functionCalled := true. 7.0 ].
+	parametersArray := self newObjectWithSlots: 0.
+
+	interpreter push: memory nilObject.
+	interpreter push: tfExternalFunction.
+	interpreter push: parametersArray. 
+
+	interpreter argumentCount: 2.
+	interpreter primitiveSameThreadCallout.
+	
+	self assert: functionCalled.
+]

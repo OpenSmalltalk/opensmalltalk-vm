@@ -84,7 +84,7 @@ VMFFIWorkerCalloutTest >> testPrimitiveWorkerCalloutReturningVoidDoesNotAllocate
 
 	self doWorkerCallWithArguments: {} ofTypes: {}.
 
-	self assert: interpreter libFFI testWorker tasks first returnHolder isNil
+	self assert: interpreter libFFI testWorker tasks first returnHolderAddress isNil
 ]
 
 { #category : #tests }
@@ -136,5 +136,5 @@ VMFFIWorkerCalloutTest >> testPrimitiveWorkerCalloutWithoutParametersHasNilAsPar
 
 	self doWorkerCallWithArguments: {} ofTypes: {}.
 
-	self assert: interpreter libFFI testWorker tasks first parameters isNil
+	self assert: interpreter libFFI testWorker tasks first parametersAddress isNil
 ]
