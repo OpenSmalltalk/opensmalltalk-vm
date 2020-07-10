@@ -1,3 +1,32 @@
+"
+I am a builder for Stack frames.
+
+I am configuring frames and building the stack frames.
+
+I am used by tests for the simulator.
+I am creating the page that I will put in the interpreter.
+I am using the VMFrameBuilder to prepare the frame objects that I will push on the stack.
+
+You can either give me a frame ready to add with #addFrame:
+You can also use #addNewFrame:. This creates an frames, add it, then returns it to be configured.
+When all the frames have been added, use #buildStack to create the stack.
+I need a reference to an interpreter and memory to work.
+
+examples can be found in #VMByteCodetests
+for example: 
+self stackBuilder addNewFrame receiver: intReceiver.
+self stackBuilder buildStack.
+ 
+Internal Representation and Key Implementation Points.
+
+Types are not the exact types used.
+    Instance Variables
+	frames:		<OrderedCollection> collection of the frames to be added. First frame added in the collection, first frame pushed.
+	interpreter:		<Interpreter> an interpreter simulator.
+	memory:		<Memory> a memory simulator
+	page:		<StackPage> a new page containing the stack to be added
+
+"
 Class {
 	#name : #VMStackBuilder,
 	#superclass : #Object,
