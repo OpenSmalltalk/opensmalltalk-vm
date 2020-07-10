@@ -5743,7 +5743,6 @@ Cogit >> computeEntryOffsets [
 	methodOrBlockNumArgs := 0.
 	sendMissCall := self compileAbort.
 	self compileEntry.
-	self haltIf: [backEnd class == CogOutOfLineLiteralsARMv8Compiler].
 	self computeMaximumSizes.
 	self generateInstructionsAt: methodZoneBase + (self sizeof: CogMethod).
 	cmEntryOffset := entry address - methodZoneBase.
