@@ -892,7 +892,7 @@ static enum XdndState dndInSelectionNotify(enum XdndState state, XSelectionEvent
   }
   dndGetSelection(evt->requestor, evt->property);
   dndSendFinished();
-  recordDragEvent(SQDragDrop, 1);
+  recordDragEvent(SQDragDrop, uxDropFileCount);
   return XdndStateIdle;
 }
 
