@@ -134,7 +134,7 @@ StackBuilderTest >> testBaseFrameCallerSavedIPShouldBeZero [
 StackBuilderTest >> testCallerFrameOfTopFrameShouldBeSecondFrameBuilderObject [
 	"For debug purpose, we added a link to the caller frame in the current frame."
 	self assert: (builder topFrame callerFrame) 
-		equals: (builder frames at: builder frames size - 1)
+		equals: (builder frames nextToLast)
 ]
 
 { #category : #'test-VMstate' }
