@@ -736,6 +736,7 @@ enum XdndState dndInDrop(enum XdndState state, XClientMessageEvent *evt)
       else
 	      {
           XConvertSelection(stDisplay, XdndSelection, XdndTextUriList, XdndSelectionAtom, stWindow, xdndDrop_time(evt));
+          // XConvertSelection will be answered by an XdndSelectionNotify event. See dndInSelectionNotify().
           initDropFileNames();
           dndSendFinished();
           return XdndStateIdle;
@@ -888,6 +889,7 @@ static Bool dndGetSelection(Window owner, Atom property)
 }
 
 
+/* SelectionNotify wíll be received as an answer of a XConvertSelection request sent by us. */
 static enum XdndState dndInSelectionNotify(enum XdndState state, XSelectionEvent *evt)
 {
   Bool dropped;
