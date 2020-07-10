@@ -374,6 +374,47 @@ CogARMv8Compiler >> and: destReg rn: srcReg imm: immediate ror: rot [
 ]
 
 { #category : #assembler }
+CogARMv8Compiler >> andSetFlagsSize: is64Bits immediate13bitValue: logicalEncodedImmediate13BitValue sourceRegister: sourceRegister destinationRegister: destinationRegister [
+	
+	"C6.2.14 ANDS (immediate)
+	
+	Bitwise AND (immediate), setting flags, performs a bitwise AND of a register value and an immediate value, and writes the result to the destination
+	register. It updates the condition flags based on the result. This instruction is used by the alias TST (immediate). See Alias conditions for details of
+	when each alias is preferred.
+	
+	ANDS <Xd|SP>, <Xn>, #<imm>"
+	
+	^ is64Bits << 31
+		bitOr: (2r11100100 << 23
+		bitOr: ((logicalEncodedImmediate13BitValue bitAnd: 16r1fff)
+		bitOr: ((sourceRegister bitAnd: 16r1f) << 5
+		bitOr: (destinationRegister bitAnd: 16r1f))))
+]
+
+{ #category : #assembler }
+CogARMv8Compiler >> andSetFlagsSize: is64Bits shiftedRegister: shiftedRegister shiftType: shiftType shiftValue: immediate6bitValue withRegister: sourceRegister2 destinationRegister: destinationRegister [
+	
+	"C6.2.15 ANDS (shifted register)
+	
+	Bitwise AND (shifted register), setting flags, performs a bitwise AND of a register value and an optionally-shifted register value, and writes the
+	result to the destination register. It updates the condition flags based on the result.
+	This instruction is used by the alias TST (shifted register). See Alias conditions for details of when each alias is preferred.
+
+	ANDS <Xd>, <Xn>, <Xm>{, <shift> #<amount>}
+	
+	LSL when shift = 00 LSR when shift = 01 ASR when shift = 10 ROR when shift = 11"
+	
+	^ is64Bits << 31
+		bitOr: (2r1101010 << 24
+		bitOr: ((shiftType bitAnd: 2r11) << 22
+		bitOr: ((shiftedRegister bitAnd: 2r11111) << 16
+		bitOr: ((immediate6bitValue bitAnd: 2r111111) << 10
+		bitOr: ((sourceRegister2 bitAnd: 2r11111) << 5
+		bitOr: (destinationRegister bitAnd: 2r11111))))))
+		
+]
+
+{ #category : #assembler }
 CogARMv8Compiler >> andSize: is64Bits immediate13bitValue: logicalEncodedImmediate13BitValue sourceRegister: sourceRegister destinationRegister: destinationRegister [
 	
 	"C6.2.12 AND (immediate)
@@ -408,11 +449,6 @@ CogARMv8Compiler >> andSize: is64Bits shiftedRegister: shiftedRegister shiftType
 		bitOr: ((sourceRegister2 bitAnd: 2r11111) << 5
 		bitOr: (destinationRegister bitAnd: 2r11111))))))
 		
-]
-
-{ #category : #assembler }
-CogARMv8Compiler >> andSize: anInteger sourceRegister: anInteger2 destinationRegister: anInteger3 [ 
-	self shouldBeImplemented.
 ]
 
 { #category : #'ARM convenience instructions' }
@@ -489,7 +525,9 @@ CogARMv8Compiler >> branchCondition: condition offset: immediate19bitValue [
 	| multiplier twoComplement |
 	multiplier := immediate19bitValue / 4.
 	self assert: multiplier isInteger.
-	twoComplement := multiplier bitXor: 2r1111111111111111111.
+	twoComplement := multiplier < 0
+		ifTrue: [ 2r1111111111111111111 - multiplier abs + 1 ]
+		ifFalse: [ multiplier ].
 
 	^ 2r01010100 << 24
 		bitOr: ((twoComplement bitAnd: 2r1111111111111111111) << 5
@@ -861,7 +899,11 @@ CogARMv8Compiler >> concretizeAndCqR [
 		ifPossible: [ :encodedValue |
 			self
 				machineCodeAt: 0
-				put: (self andSize: 1 immediate13bitValue: encodedValue sourceRegister: rn destinationRegister: rd).
+				put: (self
+					andSetFlagsSize: 1
+					immediate13bitValue: encodedValue
+					sourceRegister: rn
+					destinationRegister: rd).
 			^ machineCodeSize := 4
 		] ifNotPossible: [
 			"If this does not fit in a logical immediate value => Try to move it to a register, then AND the registers"
@@ -869,7 +911,7 @@ CogARMv8Compiler >> concretizeAndCqR [
 			self
 				machineCodeAt: 4
 				put: (self
-					andSize: 1
+					andSetFlagsSize: 1
 					shiftedRegister: ConcreteIPReg
 					shiftType: 0
 					shiftValue: 0
@@ -898,7 +940,7 @@ CogARMv8Compiler >> concretizeAndCqRR [
 			self
 				machineCodeAt: 0
 				put: (self
-					andSize: 1
+					andSetFlagsSize: 1
 					shiftedRegister: srcReg
 					shiftType: 0
 					shiftValue: shift
@@ -1098,7 +1140,7 @@ CogARMv8Compiler >> concretizeConditionalJump: conditionCode [
 
 	<inline: true>
 	| offset |
-	offset := self computeJumpTargetOffsetPlus: 8.
+	offset := self computeJumpTargetOffsetPlus: 0.
 	self assert: (self isInImmediateJumpRange: offset).
 	self
 		machineCodeAt: 0
