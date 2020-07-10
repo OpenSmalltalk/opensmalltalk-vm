@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "pharovm/interpreter.h"
+
 /**
  * For compatibility only
  * Waiting a pharo semaphore should only be called from the pharo process

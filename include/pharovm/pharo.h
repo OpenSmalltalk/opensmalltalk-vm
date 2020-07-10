@@ -80,4 +80,7 @@ void *readAddress(sqInt anExternalAddress);
 
 EXPORT(sqInt) mainThread_schedule(sqInt (*closure)());
 
+EXPORT(int) isVMRunOnWorkerThread();
+void setMaxStacksToPrint(sqInt anInteger);
+
 #endif //PHAROVM_PHARO_H

@@ -33,12 +33,12 @@
 #include "sqAtomicOps.h"
 #include "sqMemoryFence.h"
 #include "pharovm/semaphores/platformSemaphore.h"
+#include "pharovm/interpreter.h"
 
 #if !COGMTVM
 sqOSThread ioVMThread; /* initialized in the various <plat>/vm/sqFooMain.c */
 #endif
-extern void forceInterruptCheck(void);
-extern sqInt doSignalSemaphoreWithIndex(sqInt semaIndex);
+
 
 typedef struct {
 	int requests;
@@ -94,7 +94,6 @@ ioSetMaxExtSemTableSize(int n)
 	if (numSignalRequests)
 		assert(ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread()));
 	if (numSignalRequests < n) {
-		extern sqInt highBit(sqInt);
 		int sz = 1 << highBit(n-1);
 		assert(sz >= n);
 		signalRequests = realloc(signalRequests, sz * sizeof(SignalRequest));

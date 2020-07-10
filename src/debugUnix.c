@@ -27,6 +27,7 @@ void reportStackState(const char *msg, char *date, int printAll, ucontext_t *uap
 
 char * getVersionInfo(int verbose);
 void getCrashDumpFilenameInto(char *buf);
+void dumpPrimTraceLog();
 
 void doReport(char* fault, ucontext_t *uap){
 	time_t now = time(NULL);

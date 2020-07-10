@@ -104,11 +104,9 @@ elseif(UNIX)
     set(CMAKE_CURRENT_SOURCE_DIR_TO_OUT ${CMAKE_CURRENT_SOURCE_DIR})
     set(CMAKE_CURRENT_BINARY_DIR_TO_OUT ${CMAKE_CURRENT_BINARY_DIR})
 
-    set(COMMON_FLAGS "-Wall")
+    set(COMMON_FLAGS "-O2 -Wall -Werror=implicit-function-declaration")
 
     add_definitions(-DLSB_FIRST=1)
-
-    set(COMMON_FLAGS "-O2")
 
     set(OS_TYPE "unix")
     if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")

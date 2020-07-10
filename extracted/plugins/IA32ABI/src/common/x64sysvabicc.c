@@ -46,6 +46,7 @@ void *getbaz() { return baz; }
 #include "sqVirtualMachine.h"
 #include "ia32abi.h"
 
+#include <unistd.h>
 #include "pharovm/debug.h"
 
 #if !defined(min)

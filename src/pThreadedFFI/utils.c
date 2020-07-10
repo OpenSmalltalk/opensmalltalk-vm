@@ -1,5 +1,6 @@
 #include "pharovm/pThreadedFFI/pThreadedFFI.h"
 
+
 void writeAddress(sqInt anExternalAddress, void* value){
 	if(!isKindOfClass(anExternalAddress, classExternalAddress())){
 		primitiveFail();
@@ -24,6 +25,7 @@ void setHandler(sqInt anExternalObject, void* value){
 	}
 	writeAddress(fetchPointerofObject(0, anExternalObject), value);
 }
+
 
 void* getAddressFromExternalAddressOrByteArray(sqInt anExternalAddressOrByteArray){
 	if(isKindOfClass(anExternalAddressOrByteArray, classExternalAddress())){

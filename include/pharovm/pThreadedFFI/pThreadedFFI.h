@@ -21,7 +21,8 @@
 
 #include "cogmethod.h"
 
-#include "cointerp.h"
+#include "pharovm/interpreter.h"
+
 #include "pThreadedFFIUtils.h"
 
 #ifndef FFI_OK
