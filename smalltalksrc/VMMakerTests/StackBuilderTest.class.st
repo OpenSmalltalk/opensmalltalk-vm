@@ -1,9 +1,24 @@
+"
+This class contains tests for the StackBuilder.
+
+builder <StackBuilder> stack builder used during the tests.
+
+The following IVs are used to test that the stack is ordered correctly in their tests.
+(see protocol #test-order)
+stackElement1
+stackElement2
+instructionPointer
+receiver
+context
+temp1
+temp2
+method
+"
 Class {
 	#name : #StackBuilderTest,
 	#superclass : #VMByteCodesTest,
 	#instVars : [
 		'builder',
-		'frame',
 		'stackElement1',
 		'stackElement2',
 		'instructionPointer',
@@ -17,10 +32,13 @@ Class {
 }
 
 { #category : #'helper-frame' }
-StackBuilderTest >> addComplexFrame [
+StackBuilderTest >> addFullFrame [
+	| frame |
+
+	method := self newMethodWithBytecodes: #[1 2 3 4 5 6 7 8 ].
 
 	frame := builder addNewFrame.
-	instructionPointer := 3.
+	instructionPointer := method + 17.
 	frame beSuspendedAt: instructionPointer.
 
 	stackElement1 := memory integerObjectOf: 4.
@@ -33,12 +51,10 @@ StackBuilderTest >> addComplexFrame [
 
 	receiver := memory integerObjectOf: 8.
 	frame receiver: receiver.
-	context := memory integerObjectOf: 9.
+	context := memory nilObject.
 	frame context: context.
 
-	method := memory integerObjectOf: 10.
 	frame method: method.
-		
 ]
 
 { #category : #offset }
@@ -99,9 +115,9 @@ StackBuilderTest >> setUp [
 		memory: memory;
 		yourself.
 		
-	self addComplexFrame.
-	self addComplexFrame.	
-	self addComplexFrame.
+	self addFullFrame.
+	self addFullFrame.	
+	self addFullFrame.
 
 	builder buildStack.
 
@@ -112,6 +128,13 @@ StackBuilderTest >> testBaseFrameCallerSavedIPShouldBeZero [
 	"This test shows that the bottom frame has no previous caller
 	so not caller saved instruction pointer."
 	self assert: (interpreter frameCallerSavedIP: builder page baseFP) equals: 0
+]
+
+{ #category : #'test-VMstate' }
+StackBuilderTest >> testCallerFrameOfTopFrameShouldBeSecondFrameBuilderObject [
+	"For debug purpose, we added a link to the caller frame in the current frame."
+	self assert: (builder topFrame callerFrame) 
+		equals: (builder frames at: builder frames size - 1)
 ]
 
 { #category : #'test-VMstate' }
@@ -158,7 +181,7 @@ StackBuilderTest >> testOrderStackElementIsReversed [
 
 { #category : #'test-order' }
 StackBuilderTest >> testOrderStackTopOfSuspendedProcessIsInstructionPointer [
-	"When a process is suspended, the Instruction pointer is pushed on the stack.
+	"When a process is suspended, the Instruction Pointer is pushed on the stack of the frame.
 	It should be the last thing pushed, and therefore, be at the top. "
 	self assert: (interpreter internalStackValue: self offsetInstructionPointer) 
 		equals: instructionPointer.

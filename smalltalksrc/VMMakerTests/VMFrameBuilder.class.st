@@ -1,5 +1,48 @@
+"
+I represent a frame in a stack which is in a page.
+
+I am representing a frame.
+I am able to push myself on the interpreter stack's provided when I'm asked to do so.
+I only know my own state.
+I have a specific inspector
+
+I am currently used only in the #VMStackBuilder, which configures my instances, and is asking me to push myself on the interpreter.
+
+
+API
+I required an interpreter/memory to be able to initialize myself, so initialization is done using #initializeWithInterpreter:.
+Configuring is done by using accessing protocol's methods.
+When ready, tell me to push myself with #pushYourself.
+
+
+ 
+Internal Representation and Key Implementation Points.
+
+Unfinished comment.
+
+    Instance Variables
+	interpreter:		<Interpreter> Stack or Cog, it shouldn't matter. Allows interaction with the current *simulation* interpreter
+	memory:		<SpurMemorySomething> Same as interpreter, but for memory *simulation* version
+
+Configuring of the frame.
+	args:		<Object>
+
+	context:		<Object>
+	instructionPointer:		<Object>
+	method:		<Object>
+	receiver:		<Object>
+	senderContext:		<Object>
+
+	temps:		<Object>
+	stack:		<Object>
+
+	This IVs are present solely for inspection purpose.	
+	flags: <SmallInteger?> This is calculated by the VM, and should not be set by hand.
+	callerFP:		<VMFrambeBuilder?> When the stack builder is pushing several frames, it links them.
+			When it links them, it gives the last frame the previous caller Frame, for debug purpose.
+"
 Class {
-	#name : #VMFrame,
+	#name : #VMFrameBuilder,
 	#superclass : #Object,
 	#instVars : [
 		'method',
@@ -11,16 +54,15 @@ Class {
 		'memory',
 		'interpreter',
 		'senderContext',
-		'previousFrame',
-		'page',
 		'instructionPointer',
-		'callerFP'
+		'callerFrame',
+		'flags'
 	],
 	#category : #'VMMakerTests-Frame'
 }
 
 { #category : #inspect }
-VMFrame >> adaptAddressToMemory: anInteger [
+VMFrameBuilder >> adaptAddressToMemory: anInteger [
 	anInteger = memory nilObject ifTrue: [ ^ #nilObject ].
 	anInteger = memory trueObject ifTrue: [ ^ #trueObject ].
 	anInteger = memory falseObject ifTrue: [ ^ #falseObject ].
@@ -29,44 +71,49 @@ VMFrame >> adaptAddressToMemory: anInteger [
 ]
 
 { #category : #inspect }
-VMFrame >> adaptAddressToMemoryIfInteger: anAssociation [	
+VMFrameBuilder >> adaptAddressToMemoryIfInteger: anAssociation [	
 	anAssociation value isInteger
 	ifTrue: [ anAssociation value: (self adaptAddressToMemory: anAssociation value) ]
 
 ]
 
 { #category : #accessing }
-VMFrame >> args [
+VMFrameBuilder >> args [
 	^ args
 ]
 
 { #category : #accessing }
-VMFrame >> args: anObject [
+VMFrameBuilder >> args: anObject [
 	args := anObject
 ]
 
 { #category : #configuring }
-VMFrame >> beSuspendedAt: anInstructionPointer [
+VMFrameBuilder >> beSuspendedAt: anInstructionPointer [
 	instructionPointer := anInstructionPointer 
 ]
 
 { #category : #accessing }
-VMFrame >> callerFP: anInteger [ 
-	callerFP := anInteger
+VMFrameBuilder >> callerFrame [
+	^ callerFrame
 ]
 
 { #category : #accessing }
-VMFrame >> context [
+VMFrameBuilder >> callerFrame: aFrame [ 
+	callerFrame := aFrame
+]
+
+{ #category : #accessing }
+VMFrameBuilder >> context [
 	^ context
 ]
 
 { #category : #accessing }
-VMFrame >> context: anObject [
+VMFrameBuilder >> context: anObject [
 	context := anObject
 ]
 
 { #category : #inspect }
-VMFrame >> gtInspectorItemsIn: composite [
+VMFrameBuilder >> gtInspectorItemsIn: composite [
 	<gtInspectorPresentationOrder: 1>
 
 	| values |
@@ -74,11 +121,11 @@ VMFrame >> gtInspectorItemsIn: composite [
 		#stack -> stack.
 		#temps -> temps.
 		#receiver -> receiver.
-		#context -> nil.
-		#flags ->  nil.
+		#context -> context.
+		#flags ->  flags.
 		#method ->  method.
 		#'caller''s method ip' -> nil.
-		#'callerFP' -> callerFP.
+		#'callerFP' -> callerFrame.
 		#arguments -> args.
 		#receiver -> receiver.
 		 }.
@@ -99,7 +146,7 @@ VMFrame >> gtInspectorItemsIn: composite [
 ]
 
 { #category : #initialization }
-VMFrame >> initializeWithInterpreter: anInterpreter andMemory: aMemory [
+VMFrameBuilder >> initializeWithInterpreter: anInterpreter andMemory: aMemory [
 	memory := aMemory.
 	interpreter := anInterpreter. "allow to not care if it's for a cog or stack interpreter"
 	method := memory nilObject.
@@ -114,59 +161,39 @@ VMFrame >> initializeWithInterpreter: anInterpreter andMemory: aMemory [
 ]
 
 { #category : #testing }
-VMFrame >> isSuspended [
-	^ instructionPointer = nil
+VMFrameBuilder >> isSuspended [
+	^ instructionPointer isNil
 ]
 
 { #category : #accessing }
-VMFrame >> method [
+VMFrameBuilder >> method [
 	^ method
 ]
 
 { #category : #accessing }
-VMFrame >> method: anObject [
+VMFrameBuilder >> method: anObject [
 	method := anObject
 ]
 
 { #category : #building }
-VMFrame >> page [
-	^ page
-]
-
-{ #category : #building }
-VMFrame >> page: aPageOop [
-	page := aPageOop
-]
-
-{ #category : #accessing }
-VMFrame >> previousFrame [
-	^ previousFrame
-]
-
-{ #category : #accessing }
-VMFrame >> previousFrame: aFrame [
-	previousFrame := aFrame
-]
-
-{ #category : #building }
-VMFrame >> pushCurrentFramesStack [
+VMFrameBuilder >> pushCurrentFramesStack [
 	"push to the stack all objects in the frame stack"
 	stack do: [ :oop | interpreter push: oop ].	
 ]
 
 { #category : #building }
-VMFrame >> pushFlags [
+VMFrameBuilder >> pushFlags [
 	"Flags: this stack frame is single. I.e., it has no context object.
 	Otherwise GC fails with an assertion looking for it in the heap"
-	interpreter push:
-		(interpreter
+	flags := (interpreter
 			encodeFrameFieldHasContext: context ~= memory nilObject
 			isBlock: false
 			numArgs: args size).
+	interpreter push: flags
 ]
 
 { #category : #building }
-VMFrame >> pushFrame [
+VMFrameBuilder >> pushFrame [
 	interpreter push: context.
 	interpreter push: receiver.
 	
@@ -174,7 +201,7 @@ VMFrame >> pushFrame [
 ]
 
 { #category : #building }
-VMFrame >> pushYourself [
+VMFrameBuilder >> pushYourself [
 	interpreter push: method.
 	self pushFlags.
 	self pushFrame.
@@ -193,36 +220,29 @@ VMFrame >> pushYourself [
 ]
 
 { #category : #accessing }
-VMFrame >> receiver [
+VMFrameBuilder >> receiver [
 	^ receiver
 ]
 
 { #category : #accessing }
-VMFrame >> receiver: anObject [
+VMFrameBuilder >> receiver: anObject [
 	receiver := anObject
 ]
 
 { #category : #accessing }
-VMFrame >> stack [
+VMFrameBuilder >> stack [
 	^ stack
 ]
 
 { #category : #accessing }
-VMFrame >> stack: anObject [
+VMFrameBuilder >> stack: anObject [
 	stack := anObject
 ]
 
-{ #category : #building }
-VMFrame >> storePreviousFrame [
-	previousFrame ifNil: [ ^ self ].
-	
-	interpreter push: 0. " push caller Instruction Pointer "
-	interpreter push: previousFrame.
-	interpreter framePointer: interpreter stackPointer
-]
-
 { #category : #accessing }
-VMFrame >> tempAt: anIndex put: anOop [
+VMFrameBuilder >> tempAt: anIndex put: anOop [
+	"convinience method to put a temporary at a specific place
+	No need to take care of the size of the collection, I'm taking care of it!"
 	temps size > anIndex ifTrue: [ ^ temps at: anIndex + 1 put: anOop ].
 	
 	temps size to: anIndex do: [ :i | temps add: memory nilObject ].
@@ -231,11 +251,11 @@ VMFrame >> tempAt: anIndex put: anOop [
 ]
 
 { #category : #accessing }
-VMFrame >> temps [
+VMFrameBuilder >> temps [
 	^ temps
 ]
 
 { #category : #accessing }
-VMFrame >> temps: anObject [
+VMFrameBuilder >> temps: anObject [
 	temps := anObject
 ]

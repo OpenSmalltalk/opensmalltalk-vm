@@ -106,6 +106,27 @@ VMSpurMemoryManagerTest >> newMemory [
 ]
 
 { #category : #helpers }
+VMSpurMemoryManagerTest >> newMethodWithBytecodes: bytes [
+    
+    | method methodHeader |
+
+    "Create a bytecode compiled method object containing the given literal at the given index"
+    method := self
+        newOldSpaceObjectWithSlots: 0 "# of literals" + 1 "one extra for the header" + (bytes size // memory wordSize)
+        format: (memory compiledMethodFormatForNumBytes: bytes size)
+        classIndex: 16r10.
+    methodHeader := (0 "nArgs" bitShift: 24)
+                        + (0 "nTemps" bitShift: 18)
+                        + (0 "small frame")
+                        + 0 "number of literaps"
+                        + 0 "primitive".
+    memory storePointer: 0 ofObject: method withValue: (memory integerObjectOf: methodHeader).
+    memory storeByte: 8 ofObject: method withValue: (bytes at: 1).
+
+    ^ method
+]
+
+{ #category : #helpers }
 VMSpurMemoryManagerTest >> newMethodWithLiteral: literalObject at: literalIndex [
 	
 	| method methodHeader |

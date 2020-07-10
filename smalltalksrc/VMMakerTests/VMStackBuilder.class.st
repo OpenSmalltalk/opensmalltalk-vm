@@ -10,22 +10,22 @@ Class {
 	#category : #'VMMakerTests-Frame'
 }
 
-{ #category : #Frames }
+{ #category : #frames }
 VMStackBuilder >> addFrame: aFrame [
 	frames add: aFrame
 ]
 
-{ #category : #Frames }
+{ #category : #frames }
 VMStackBuilder >> addNewFrame [
 	| frame |
 	"'add' a new frame in the sense of an OrderedCollection, which will be iterated with #do:
 	The last frame added, will be the stackTop"
-	frame := VMFrame new initializeWithInterpreter: interpreter andMemory: memory.
+	frame := VMFrameBuilder new initializeWithInterpreter: interpreter andMemory: memory.
 	frames add: frame.
 	^ frame "the frame is then configured by the caller"
 ]
 
-{ #category : #Frames }
+{ #category : #build }
 VMStackBuilder >> buildStack [
 	| lastFrame |
 	self createStackPage.
@@ -53,7 +53,7 @@ VMStackBuilder >> buildStack [
 	^ lastFrame
 ]
 
-{ #category : #Frames }
+{ #category : #stack }
 VMStackBuilder >> createStackPage [
 	| sp |
 	frames ifEmpty:[ self error ].
@@ -67,28 +67,33 @@ VMStackBuilder >> createStackPage [
 	
 ]
 
-{ #category : #Frames }
+{ #category : #accessing }
+VMStackBuilder >> frames [
+	^ frames
+]
+
+{ #category : #Initialization }
 VMStackBuilder >> initialize [
 	super initialize.
 	frames := OrderedCollection new. "will be treated in reverse"
 ]
 
-{ #category : #Frames }
+{ #category : #accessing }
 VMStackBuilder >> interpreter [
 	^ interpreter
 ]
 
-{ #category : #Frames }
+{ #category : #accessing }
 VMStackBuilder >> interpreter: anInterpreter [
 	interpreter := anInterpreter
 ]
 
-{ #category : #Frames }
+{ #category : #accessing }
 VMStackBuilder >> memory [
 	^ memory
 ]
 
-{ #category : #Frames }
+{ #category : #accessing }
 VMStackBuilder >> memory: aMemory [
 	memory := aMemory
 ]
@@ -98,14 +103,15 @@ VMStackBuilder >> page [
 	^ page
 ]
 
-{ #category : #Frames }
+{ #category : #build }
 VMStackBuilder >> pushFrames [
-	| first |
+	| first lastFrame |
 	first := true.
 	page
 		headSP: interpreter stackPointer;
 		headFP: interpreter stackPointer.
 
+	lastFrame := nil.
 	frames
 		do: [ :aFrame |
 			
@@ -120,11 +126,17 @@ VMStackBuilder >> pushFrames [
 					interpreter push: interpreter framePointer.
 				].
 			
-			aFrame callerFP: interpreter framePointer.
+			aFrame callerFrame: lastFrame.
+			lastFrame := aFrame.
 			interpreter framePointer: interpreter stackPointer.
 			page headFP: interpreter stackPointer.
 
 			aFrame pushYourself.
 			page headSP: interpreter stackPointer.
 			]
+]
+
+{ #category : #accessing }
+VMStackBuilder >> topFrame [
+	^ frames last
 ]
