@@ -2,10 +2,10 @@
 	CCodeGenerator VMMaker.oscog-eem.2773 uuid: 3c51054d-e839-4959-b3e1-562845a4fa54
    from
 	StackToRegisterMappingCogit VMMaker.oscog-eem.2773 uuid: 3c51054d-e839-4959-b3e1-562845a4fa54
-	CogARMv8Compiler ClosedVMMaker-eem.93 uuid: 6b76492f-7d98-4758-9c5d-3ffe9d5d6cce
+	CogARMv8Compiler ClosedVMMaker-eem.95 uuid: 3ad743c8-1af0-4b4e-b6d5-eb052af049cb
  */
 static char __buildInfo[] = "StackToRegisterMappingCogit VMMaker.oscog-eem.2773 uuid: 3c51054d-e839-4959-b3e1-562845a4fa54\n\
-CogARMv8Compiler ClosedVMMaker-eem.93 uuid: 6b76492f-7d98-4758-9c5d-3ffe9d5d6cce " __DATE__ ;
+CogARMv8Compiler ClosedVMMaker-eem.95 uuid: 3ad743c8-1af0-4b4e-b6d5-eb052af049cb " __DATE__ ;
 char *__cogitBuildInfo = __buildInfo;
 
 
@@ -661,7 +661,7 @@ static sqInt NoDbgRegParms loadPICLiteralByteSize(AbstractInstruction * self_in_
 static sqInt NoDbgRegParms machineCodeBytes(AbstractInstruction * self_in_machineCodeBytes);
 static sqInt NoDbgRegParms machineCodeWords(AbstractInstruction * self_in_machineCodeWords);
 static sqInt NoDbgRegParms movernrd(AbstractInstruction * self_in_movernrd, sqInt srcReg, sqInt destReg);
-static AbstractInstruction * NoDbgRegParms noteFollowingConditionalBranch(AbstractInstruction * self_in_noteFollowingConditionalBranch, sqInt branch);
+static AbstractInstruction * NoDbgRegParms noteFollowingConditionalBranch(AbstractInstruction * self_in_noteFollowingConditionalBranch, AbstractInstruction *branch);
 static sqInt NoDbgRegParms numCheckFeaturesOpcodes(AbstractInstruction * self_in_numCheckFeaturesOpcodes);
 static sqInt NoDbgRegParms numDCacheFlushOpcodes(AbstractInstruction * self_in_numDCacheFlushOpcodes);
 static sqInt NoDbgRegParms numICacheFlushOpcodes(AbstractInstruction * self_in_numICacheFlushOpcodes);
@@ -5138,9 +5138,11 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 		/* begin concretizeMulOverflowRRR */
 		reg12 = ((self_in_dispatchConcretize->operands))[0];
 		reg22 = ((self_in_dispatchConcretize->operands))[1];
+
+		/* RISCTempReg := high(reg1 * reg2) */
 		reg32 = ((self_in_dispatchConcretize->operands))[2];
-		((self_in_dispatchConcretize->machineCode))[0] = (((((2600468480U) + (reg12 << 16)) + (((sqInt)((usqInt)(XZR) << 10)))) + (reg22 << 5)) + reg32);
-		((self_in_dispatchConcretize->machineCode))[1] = (((((2604662784U) + (reg12 << 16)) + (((sqInt)((usqInt)(XZR) << 10)))) + (reg22 << 5)) + RISCTempReg);
+		((self_in_dispatchConcretize->machineCode))[0] = (((((2604662784U) + (reg12 << 16)) + (((sqInt)((usqInt)(XZR) << 10)))) + (reg22 << 5)) + RISCTempReg);
+		((self_in_dispatchConcretize->machineCode))[1] = (((((2600468480U) + (reg12 << 16)) + (((sqInt)((usqInt)(XZR) << 10)))) + (reg22 << 5)) + reg32);
 		((self_in_dispatchConcretize->machineCode))[2] = (((4043310080U) + (((sqInt)((usqInt)(RISCTempReg) << 5)))) + XZR);
 		return 12;
 
@@ -6748,12 +6750,12 @@ movernrd(AbstractInstruction * self_in_movernrd, sqInt srcReg, sqInt destReg)
 
 	/* CogARMv8Compiler>>#noteFollowingConditionalBranch: */
 static AbstractInstruction * NoDbgRegParms
-noteFollowingConditionalBranch(AbstractInstruction * self_in_noteFollowingConditionalBranch, sqInt branch)
+noteFollowingConditionalBranch(AbstractInstruction * self_in_noteFollowingConditionalBranch, AbstractInstruction *branch)
 {
 	if ((((self_in_noteFollowingConditionalBranch->opcode)) == MulOverflowRRR)
-	 && (((opcode(branch)) == JumpOverflow)
-	 || ((opcode(branch)) == JumpNoOverflow))) {
-		opcode(branch, ((opcode(branch)) == JumpOverflow
+	 && ((((branch->opcode)) == JumpOverflow)
+	 || (((branch->opcode)) == JumpNoOverflow))) {
+		(branch->opcode = (((branch->opcode)) == JumpOverflow
 			? JumpAbove
 			: JumpBelowOrEqual));
 	}
@@ -6963,7 +6965,7 @@ rewriteImm19JumpBeforetarget(AbstractInstruction * self_in_rewriteImm19JumpBefor
 static sqInt NoDbgRegParms
 rewriteImm26JumpBeforetarget(AbstractInstruction * self_in_rewriteImm26JumpBeforetarget, sqInt followingAddress, sqInt targetAddress)
 {
-    sqInt instrOpcode;
+    usqInt instrOpcode;
     sqInt mcpc;
     sqInt offset;
 
@@ -6973,7 +6975,7 @@ rewriteImm26JumpBeforetarget(AbstractInstruction * self_in_rewriteImm26JumpBefor
 	instrOpcode = ((instructionBeforeAddress(self_in_rewriteImm26JumpBeforetarget, followingAddress))) >> 26;
 	assert((instrOpcode == 5)
 	 || (instrOpcode == 37));
-	codeLong32Atput(mcpc, (((sqInt)((usqInt)(instrOpcode) << 26))) + (((offset) >> 2) & (0x3FFFFFF)));
+	codeLong32Atput(mcpc, (instrOpcode << 26) + (((offset) >> 2) & (0x3FFFFFF)));
 	return 4;
 }
 
