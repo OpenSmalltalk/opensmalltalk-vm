@@ -72,19 +72,13 @@ void AioOSXDescriptor_remove(int fd);
 int kqueueDescriptor;
 
 /*
- * This is the pipe used to notify of interruptions in the AIO process.
- */
-int signal_pipe_fd[2];
-
-/*
  * These functions are used to notify the heartbeat if we are entering and leaving a long pause.
  * Maybe the heartbeat want to stop if we are in a long pause.
  */
 void heartbeat_poll_enter(long microSeconds);
 void heartbeat_poll_exit(long microSeconds);
 
-static int aio_handle_events(struct kevent* changes, int numberOfChanges, long microSecondsTimeout, int flushingPipe);
-static void aio_flush_pipe(int fd);
+static int aio_handle_events(struct kevent* changes, int numberOfChanges, long microSecondsTimeout);
 
 /*
  * This is important, the AIO poll should only do a long pause if there is no pending signals for semaphores.
@@ -99,38 +93,25 @@ Semaphore * interruptFIFOMutex;
 volatile int pendingInterruption = 0;
 volatile int isPooling = 0;
 
+#define INTERRUPT_EVENT_ID 0
+
 /*
  * I initialize the AIO infrastructure
  */
 EXPORT(void)
 aioInit(void){
-	struct kevent pipeEvent;
+
+	struct kevent userEvent;
 
 	if((kqueueDescriptor = kqueue()) < 0) {
 		logErrorFromErrno("kqueue");
 	}
 
-	if (pipe(signal_pipe_fd) != 0) {
-	    logErrorFromErrno("pipe");
-	    exit(-1);
-	}
-
-	int arg;
-	if ((arg = fcntl(signal_pipe_fd[0], F_GETFL, 0)) < 0)
-		logErrorFromErrno("fcntl(F_GETFL)");
-	if (fcntl(signal_pipe_fd[0], F_SETFL, arg | O_NONBLOCK | O_ASYNC) < 0)
-		logErrorFromErrno("fcntl(F_SETFL, O_ASYNC)");
-
-	if ((arg = fcntl(signal_pipe_fd[1], F_GETFL, 0)) < 0)
-		logErrorFromErrno("fcntl(F_GETFL)");
-	if (fcntl(signal_pipe_fd[1], F_SETFL, arg | O_NONBLOCK | O_ASYNC | O_APPEND) < 0)
-		logErrorFromErrno("fcntl(F_SETFL, O_ASYNC)");
-
 
 	interruptFIFOMutex = platform_semaphore_new(1);
 
-	EV_SET(&pipeEvent, signal_pipe_fd[0], EVFILT_READ, EV_ADD | EV_POLL, 0, 0, NULL);
-	aio_handle_events(&pipeEvent, 1, 0, false);
+	EV_SET(&userEvent, INTERRUPT_EVENT_ID, EVFILT_USER, EV_ADD | EV_CLEAR, 0, 0, NULL);
+	kevent(kqueueDescriptor, &userEvent, 1, NULL, 0, NULL);
 }
 
 /*
@@ -142,7 +123,7 @@ aioInit(void){
  */
 
 static int
-aio_handle_events(struct kevent* changes, int numberOfChanges, long microSecondsTimeout, int flushingPipe){
+aio_handle_events(struct kevent* changes, int numberOfChanges, long microSecondsTimeout){
 
 	struct kevent incomingEvents[INCOMING_EVENTS_SIZE];
 	int keventReturn;
@@ -162,6 +143,10 @@ aio_handle_events(struct kevent* changes, int numberOfChanges, long microSeconds
 	sqLowLevelMFence();
 	isPooling = 0;
 
+	interruptFIFOMutex->wait(interruptFIFOMutex);
+	pendingInterruption = false;
+	interruptFIFOMutex->signal(interruptFIFOMutex);
+
 	//I notify the heartbeat of the end of the pause
 	heartbeat_poll_exit(microSecondsTimeout);
 
@@ -172,14 +157,7 @@ aio_handle_events(struct kevent* changes, int numberOfChanges, long microSeconds
 		return 0;
 	}
 
-	if(flushingPipe)
-		aio_flush_pipe(signal_pipe_fd[0]);
-
 	if(keventReturn == 0){
-		sqLowLevelMFence();
-		if(flushingPipe)
-			return 1;
-
 		return 0;
 	}
 
@@ -194,7 +172,7 @@ aio_handle_events(struct kevent* changes, int numberOfChanges, long microSeconds
 			errno = previousErrno;
 		}else{
 			//If the event is not of the signal pipe I process them
-			if(incomingEvents[index].ident != signal_pipe_fd[0]){
+			if(incomingEvents[index].filter != EVFILT_USER){
 				//If not is a regular registered FD
 				AioOSXDescriptor *descriptor = (AioOSXDescriptor*)incomingEvents[index].udata;
 
@@ -212,41 +190,6 @@ aio_handle_events(struct kevent* changes, int numberOfChanges, long microSeconds
 	}
 
 	return 1;
-}
-
-/*
- * A helper function to clean the signaling pipe.
- */
-static void
-aio_flush_pipe(int fd){
-
-	int bytesRead;
-	char buf[1024];
-
-	interruptFIFOMutex->wait(interruptFIFOMutex);
-	if(pendingInterruption){
-		pendingInterruption = false;
-	}
-
-	do {
-		bytesRead = read(fd, &buf, 1024);
-
-		if(bytesRead == -1){
-
-			if(errno == EAGAIN || errno == EWOULDBLOCK){
-				interruptFIFOMutex->signal(interruptFIFOMutex);
-				return;
-			}
-
-			logErrorFromErrno("pipe - read");
-
-			interruptFIFOMutex->signal(interruptFIFOMutex);
-			return;
-		}
-
-	} while(bytesRead > 0);
-
-	interruptFIFOMutex->signal(interruptFIFOMutex);
 }
 
 /*
@@ -284,7 +227,7 @@ aioPoll(long microSeconds){
 	interruptFIFOMutex->signal(interruptFIFOMutex);
 
 
-	return aio_handle_events(NULL, 0, timeout, true);
+	return aio_handle_events(NULL, 0, timeout);
 }
 
 /*
@@ -294,14 +237,12 @@ aioPoll(long microSeconds){
 EXPORT(void)
 aioInterruptPoll(){
 	int n;
+	struct kevent userEvent;
 
 	sqLowLevelMFence();
 	if(isPooling){
-		n = write(signal_pipe_fd[1], "1", 1);
-		if(n != 1){
-			logErrorFromErrno("write to pipe");
-		}
-		fsync(signal_pipe_fd[1]);
+		EV_SET(&userEvent, INTERRUPT_EVENT_ID, EVFILT_USER, 0, NOTE_TRIGGER, 0, NULL);
+		kevent(kqueueDescriptor, &userEvent, 1, NULL, 0, NULL);
 	}
 
 	interruptFIFOMutex->wait(interruptFIFOMutex);
@@ -388,7 +329,7 @@ aioSuspend(int fd, int mask){
 		cant++;
 	}
 
-	aio_handle_events(newEvents, cant, 0, false);
+	aio_handle_events(newEvents, cant, 0);
 }
 
 /*
@@ -432,7 +373,7 @@ aioHandle(int fd, aioHandler handlerFn, int mask){
 	descriptor->writeHandlerFn = hasWrite ? handlerFn : NULL;
 	EV_SET(&newEvents[1], fd, EVFILT_WRITE, hasWrite?(EV_ADD | EV_ONESHOT):EV_DELETE, 0, 0, descriptor);
 
-	aio_handle_events(newEvents, 2, 0, false);
+	aio_handle_events(newEvents, 2, 0);
 }
 
 AioOSXDescriptor* AioOSXDescriptor_find(int fd){
