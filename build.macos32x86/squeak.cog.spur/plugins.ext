@@ -10,4 +10,7 @@ Mpeg3Plugin \
 SqueakFFIPrims \
 Squeak3D \
 SqueakSSL \
-UnixOSProcessPlugin
+UnixOSProcessPlugin \
+DESPlugin \
+MD5Plugin \
+SHA2Plugin \

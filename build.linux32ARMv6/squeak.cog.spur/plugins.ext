@@ -16,3 +16,6 @@ XDisplayControlPlugin \
 #BochsIA32Plugin \
 #BochsX64Plugin \
 #GdbARMPlugin
+DESPlugin \
+MD5Plugin \
+SHA2Plugin \

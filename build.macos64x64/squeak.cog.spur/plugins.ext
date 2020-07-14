@@ -17,3 +17,6 @@ UnixOSProcessPlugin \
 # not working (because of Cocoa vs Carbon): \
 # QuicktimePlugin \
 # JoystickTabletPlugin
+DESPlugin \
+MD5Plugin \
+SHA2Plugin \
