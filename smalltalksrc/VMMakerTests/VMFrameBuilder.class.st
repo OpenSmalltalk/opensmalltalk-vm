@@ -53,7 +53,6 @@ Class {
 		'stack',
 		'memory',
 		'interpreter',
-		'senderContext',
 		'instructionPointer',
 		'callerFrame',
 		'flags'
@@ -155,9 +154,7 @@ VMFrameBuilder >> initializeWithInterpreter: anInterpreter andMemory: aMemory [
 	args := OrderedCollection new.
 	temps := OrderedCollection new.
 	stack := OrderedCollection new.
-	
 
-	senderContext := memory nilObject.
 ]
 
 { #category : #testing }
