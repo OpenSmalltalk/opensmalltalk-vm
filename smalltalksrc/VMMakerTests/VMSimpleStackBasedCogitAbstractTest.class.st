@@ -432,10 +432,7 @@ VMSimpleStackBasedCogitAbstractTest >> newMemory [
 { #category : #helpers }
 VMSimpleStackBasedCogitAbstractTest >> openMachineDebugger [
 	
-	VMMachineCodeDebugger new
-		cogit: cogit;
-		machineSimulator: machineSimulator;
-		openWithSpec.
+	self openMachineDebuggerAt: initialAddress
 ]
 
 { #category : #helpers }

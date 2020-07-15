@@ -10,6 +10,12 @@ UnicornARMv8Simulator >> baseRegister [
 	^ UcARM64Registers r10
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> carry [
+
+	^ (self nzcv bitAnd: (1<<29))~= 0
+]
+
 { #category : #registers }
 UnicornARMv8Simulator >> classRegister [
 	
@@ -104,6 +110,24 @@ UnicornARMv8Simulator >> lr [
 	^ self readRegister: UcARM64Registers lr	
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> negative [
+
+	^ (self nzcv bitAnd: (1<<31))~= 0
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> nzcv [
+
+	^ self readRegister: UcARM64Registers nzcv 
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> overflow [
+
+	^ (self nzcv bitAnd: (1<<28)) ~= 0
+]
+
 { #category : #registers }
 UnicornARMv8Simulator >> pc [
 	^ self readRegister: UcARM64Registers pc
@@ -118,7 +142,7 @@ UnicornARMv8Simulator >> receiverRegister [
 { #category : #accessing }
 UnicornARMv8Simulator >> registerDescriptors [
 
-	^ #(lr pc sp fp x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12)
+	^ #(lr pc sp fp x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 zero negative carry overflow)
 		collect: [ :e | 
 			UnicornRegisterDescriptor new
 				simulator: self;
@@ -245,4 +269,10 @@ UnicornARMv8Simulator >> x8 [
 UnicornARMv8Simulator >> x9 [
 
 	^ self readRegister: UcARM64Registers x9
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> zero [
+
+	^ (self nzcv bitAnd: (1<<30))~= 0
 ]

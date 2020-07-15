@@ -19,6 +19,16 @@ UnicornRegisterDescriptor >> name: anObject [
 ]
 
 { #category : #accessing }
+UnicornRegisterDescriptor >> printOn: aStream [
+
+	(self value isKindOf: Boolean )
+		ifTrue: [ ^ aStream print: self value ].
+		
+	aStream print: self value hex	
+
+]
+
+{ #category : #accessing }
 UnicornRegisterDescriptor >> simulator [
 	^ simulator
 ]
