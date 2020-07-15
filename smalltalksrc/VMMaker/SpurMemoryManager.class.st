@@ -1994,13 +1994,33 @@ SpurMemoryManager >> allocateMemoryOfSize: memoryBytes newSpaceSize: newSpaceByt
 	 to allocate in oldSpace.  Later on (in initializePostBootstrap) freeStart and scavengeThreshold
 	 will be set to sane values."
 	<doNotGenerate>
+	
+	self
+		allocateMemoryOfSize: memoryBytes
+		newSpaceSize: newSpaceBytes
+		stackSize: stackBytes
+		codeSize: codeBytes
+		methodCacheSize: 0
+		primitiveTraceLogSize: 0
+		rumpCStackSize: 0
+		initialAddress: initialAddress
+]
+
+{ #category : #asd }
+SpurMemoryManager >> allocateMemoryOfSize: memoryBytes newSpaceSize: newSpaceBytes stackSize: stackBytes codeSize: codeBytes methodCacheSize: methodCacheSize primitiveTraceLogSize: primitiveLogSize rumpCStackSize: rumpCStackSize initialAddress: initialAddress [
+
+		"Intialize the receiver for bootsraping an image.
+	 Set up a large oldSpace and an empty newSpace and set-up freeStart and scavengeThreshold
+	 to allocate in oldSpace.  Later on (in initializePostBootstrap) freeStart and scavengeThreshold
+	 will be set to sane values."
+	<doNotGenerate>
 	self assert: (memoryBytes \\ self allocationUnit = 0
 				and: [newSpaceBytes \\ self allocationUnit = 0
 				and: [codeBytes \\ self allocationUnit = 0
 				and: [initialAddress \\ self allocationUnit = 0 ]]]).
-	self allocateMemoryOfSize: memoryBytes + newSpaceBytes + codeBytes + stackBytes initialAddress: initialAddress.
-	newSpaceStart := initialAddress + codeBytes + stackBytes.
-	endOfMemory := freeOldSpaceStart := initialAddress + memoryBytes + newSpaceBytes + codeBytes + stackBytes.
+	self allocateMemoryOfSize: memoryBytes + newSpaceBytes + codeBytes + stackBytes + methodCacheSize + primitiveLogSize + rumpCStackSize initialAddress: initialAddress.
+	newSpaceStart := initialAddress + codeBytes + stackBytes + methodCacheSize + primitiveLogSize + rumpCStackSize.
+	endOfMemory := freeOldSpaceStart := initialAddress + memoryBytes + newSpaceBytes + codeBytes + stackBytes + methodCacheSize + primitiveLogSize + rumpCStackSize.
 	"leave newSpace empty for the bootstrap"
 	freeStart := newSpaceBytes + newSpaceStart.
 	oldSpaceStart := newSpaceLimit := newSpaceBytes + newSpaceStart.
@@ -2353,7 +2373,15 @@ SpurMemoryManager >> allocateSlots: numSlots format: formatField classIndex: cla
 	"Allocate an object with numSlots space.  If there is room beneath scavengeThreshold
 	 allocate in newSpace, otherwise alocate in oldSpace.  If there is not room in newSpace
 	 and a scavenge is not already scheduled, schedule a scavenge."
-	self subclassResponsibility
+	<api>
+	^ self allocateSlots: numSlots format: formatField classIndex: classIndex isPinned: false
+]
+
+{ #category : #allocation }
+SpurMemoryManager >> allocateSlots: numSlots format: formatField classIndex: classIndex isPinned: isPinned [
+
+	<api>
+	^ self subclassResponsibility
 ]
 
 { #category : #allocation }
@@ -2376,11 +2404,31 @@ SpurMemoryManager >> allocateSlotsInOldSpace: numSlots bytes: totalBytes format:
 { #category : #allocation }
 SpurMemoryManager >> allocateSlotsInOldSpace: numSlots format: formatField classIndex: classIndex [
 	<inline: true>
-	^self
+
+	^ self
 		allocateSlotsInOldSpace: numSlots
-		bytes: (self objectBytesForSlots: numSlots)
 		format: formatField
 		classIndex: classIndex
+		isPinned: false
+]
+
+{ #category : #allocation }
+SpurMemoryManager >> allocateSlotsInOldSpace: numSlots format: formatField classIndex: classIndex isPinned: isPinned [
+	<inline: true>
+
+	^ isPinned
+		ifTrue: [ 
+			self
+				allocateSlotsForPinningInOldSpace: numSlots
+				bytes: (self objectBytesForSlots: numSlots)
+				format: formatField
+				classIndex: classIndex ]
+		ifFalse: [ 
+			self
+				allocateSlotsInOldSpace: numSlots
+				bytes: (self objectBytesForSlots: numSlots)
+				format: formatField
+				classIndex: classIndex ]
 ]
 
 { #category : #allocation }
@@ -3496,6 +3544,12 @@ SpurMemoryManager >> classCharacter [
 { #category : #accessing }
 SpurMemoryManager >> classExternalAddress [
 	^self splObj: ClassExternalAddress
+]
+
+{ #category : #instantiation }
+SpurMemoryManager >> classExternalAddressIndex [
+	<api>
+	^ self ensureBehaviorHash: self classExternalAddress
 ]
 
 { #category : #accessing }
@@ -4904,6 +4958,17 @@ SpurMemoryManager >> firstByteFormat [
 	<api>
 	<cmacro>
 	^16
+]
+
+{ #category : #'object access' }
+SpurMemoryManager >> firstBytePointerOfDataObject: objOop [
+	<returnTypeC: #'void *'>
+	<api>
+	<inline: true>
+	| fmt |
+	fmt := self formatOf: objOop.
+	fmt < self firstLongFormat ifTrue: [ ^ 0 ].
+	^ self firstFixedField: objOop
 ]
 
 { #category : #'class table puns' }
@@ -6608,6 +6673,26 @@ SpurMemoryManager >> instanceSizeOf: classObj [
 
 { #category : #instantiation }
 SpurMemoryManager >> instantiateClass: classObj [
+
+	^ self instantiateClass: classObj isPinned: false
+]
+
+{ #category : #instantiation }
+SpurMemoryManager >> instantiateClass: classObj indexableSize: nElements [
+	<api>
+
+	^ self instantiateClass: classObj indexableSize: nElements isPinned: false
+]
+
+{ #category : #instantiation }
+SpurMemoryManager >> instantiateClass: classObj indexableSize: nElements isPinned: isPinned [
+	<api>
+
+	^ self subclassResponsibility
+]
+
+{ #category : #instantiation }
+SpurMemoryManager >> instantiateClass: classObj isPinned: isPinned [
 	| instSpec classFormat numSlots classIndex newObj |
 	classFormat := self formatOfClass: classObj.
 	instSpec := self instSpecOfClassFormat: classFormat.
@@ -6618,17 +6703,10 @@ SpurMemoryManager >> instantiateClass: classObj [
 		[coInterpreter primitiveFailFor: classIndex negated.
 		 ^nil].
 	numSlots := self fixedFieldsOfClassFormat: classFormat.
-	newObj := self allocateSlots: numSlots format: instSpec classIndex: classIndex.
+	newObj := self allocateSlots: numSlots format: instSpec classIndex: classIndex isPinned: isPinned.
 	newObj ifNotNil:
 		[self fillObj: newObj numSlots: numSlots with: nilObj].
 	^newObj
-]
-
-{ #category : #instantiation }
-SpurMemoryManager >> instantiateClass: classObj indexableSize: nElements [
-	<var: #nElements type: #usqInt>
-	"Allocate an instance of a variable class, excepting CompiledMethod."
-	^self subclassResponsibility
 ]
 
 { #category : #instantiation }
@@ -8028,9 +8106,8 @@ SpurMemoryManager >> lookupAddress: address [
 		[^address caseOf: { [nilObj] -> ['nil']. [trueObj] -> ['true']. [falseObj] -> ['false'] } otherwise: []].
 	((fmt between: self firstByteFormat and: self firstCompiledMethodFormat - 1) "indexable byte fields"
 	and: [(size between: 1 and: 64)
-	and: [(Scanner isLiteralSymbol: (string := (0 to: size - 1) collect: [:i| Character value: (self fetchByte: i ofObject: address)]))
-		or: [NewspeakVM and: [string noneSatisfy: [:c| c isSeparator or: [c asInteger > 126]]]]]]) ifTrue:
-		[^'#', (ByteString withAll: string)].
+	and: [(Scanner isLiteralSymbol: (string := (0 to: size - 1) collect: [:i| Character value: (self fetchByte: i ofObject: address)]))]])
+		ifTrue: [^'#', (ByteString withAll: string)].
 	class := self noCheckClassAtIndex: thisClassIndex.
 	(class isNil or: [class = nilObj]) ifTrue:
 		[^nil].

@@ -278,17 +278,9 @@ Spur32BitCoMemoryManager >> receiverTagBitsForMethod: aMethodObj [
 	<api>
 	| methodClassOrNil |
 	methodClassOrNil := coInterpreter methodClassOf: aMethodObj.
-	NewspeakVM "Mixins don't necessarily have a format inst var; filter out non-integer format."
-		ifTrue:
-			[| instSpec |
-			(methodClassOrNil = nilObj
-			 or: [(self isNonIntegerObject: (instSpec := self fetchPointer: InstanceSpecificationIndex ofObject: methodClassOrNil))
-			 or: [(self instSpecOfClassFormat: (self integerValueOf: instSpec)) ~= self forwardedFormat]]) ifTrue:
-				[^0]]
-		ifFalse:
-			[(methodClassOrNil = nilObj
+	(methodClassOrNil = nilObj
 			 or: [(self instSpecOfClass: methodClassOrNil) ~= self forwardedFormat]) ifTrue:
-				[^0]].
+				[^0].
 	^methodClassOrNil = (self fetchPointer: self smallIntegerTag ofObject: classTableFirstPage)
 		ifTrue: [self smallIntegerTag]
 		ifFalse: [self assert: methodClassOrNil = (self fetchPointer: self characterTag ofObject: classTableFirstPage).

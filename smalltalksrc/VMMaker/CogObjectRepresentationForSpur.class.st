@@ -77,18 +77,6 @@ CogObjectRepresentationForSpur >> allYoungObjectsAgeInFullGC [
 	^false
 ]
 
-{ #category : #'newspeak support' }
-CogObjectRepresentationForSpur >> allocateNPinnedSlots: nSlots [
-	"On Newspeak allocate the implicit receiver caches on the heap as pinned objects."
-	<inline: true>
-	<option: #NewspeakVM>
-	| objOop |
-	objOop := objectMemory allocatePinnedSlots: nSlots.
-	^objOop
-		ifNil: [0]
-		ifNotNil: [objOop + objectMemory baseHeaderSize]
-]
-
 { #category : #'sista support' }
 CogObjectRepresentationForSpur >> branchIf: reg instanceOfBehavior: classObj target: targetFixUp [
 	"Generate a branch if reg is an instance of classObj, otherwise fall-
@@ -234,6 +222,84 @@ CogObjectRepresentationForSpur >> canPinObjects [
 	^true
 ]
 
+{ #category : #accessing }
+CogObjectRepresentationForSpur >> ceLargeActiveContextInBlockTrampoline [
+	<doNotGenerate>
+	^ ceLargeActiveContextInBlockTrampoline
+]
+
+{ #category : #accessing }
+CogObjectRepresentationForSpur >> ceLargeActiveContextInBlockTrampoline: anInteger [ 
+	<doNotGenerate>
+	ceLargeActiveContextInBlockTrampoline := anInteger
+]
+
+{ #category : #accessing }
+CogObjectRepresentationForSpur >> ceLargeActiveContextInFullBlockTrampoline [
+	<doNotGenerate>
+	^ ceLargeActiveContextInFullBlockTrampoline
+]
+
+{ #category : #accessing }
+CogObjectRepresentationForSpur >> ceLargeActiveContextInFullBlockTrampoline: anInteger [ 
+	<doNotGenerate>
+	ceLargeActiveContextInFullBlockTrampoline := anInteger
+]
+
+{ #category : #accessing }
+CogObjectRepresentationForSpur >> ceLargeActiveContextInMethodTrampoline [
+	<doNotGenerate>
+	^ ceLargeActiveContextInMethodTrampoline
+]
+
+{ #category : #accessing }
+CogObjectRepresentationForSpur >> ceLargeActiveContextInMethodTrampoline: anInteger [ 
+	<doNotGenerate>
+	ceLargeActiveContextInMethodTrampoline := anInteger
+]
+
+{ #category : #accessing }
+CogObjectRepresentationForSpur >> ceScheduleScavengeTrampoline: anAddress [
+	<doNotGenerate>
+	ceScheduleScavengeTrampoline := anAddress
+]
+
+{ #category : #accessing }
+CogObjectRepresentationForSpur >> ceSmallActiveContextInBlockTrampoline [
+	<doNotGenerate>
+	^ ceSmallActiveContextInBlockTrampoline
+]
+
+{ #category : #accessing }
+CogObjectRepresentationForSpur >> ceSmallActiveContextInBlockTrampoline: anInteger [ 
+	<doNotGenerate>
+	ceSmallActiveContextInBlockTrampoline := anInteger
+]
+
+{ #category : #accessing }
+CogObjectRepresentationForSpur >> ceSmallActiveContextInFullBlockTrampoline [
+	<doNotGenerate>
+	^ ceSmallActiveContextInFullBlockTrampoline
+]
+
+{ #category : #accessing }
+CogObjectRepresentationForSpur >> ceSmallActiveContextInFullBlockTrampoline: anInteger [ 
+	<doNotGenerate>
+	ceSmallActiveContextInFullBlockTrampoline := anInteger
+]
+
+{ #category : #accessing }
+CogObjectRepresentationForSpur >> ceSmallActiveContextInMethodTrampoline [
+	<doNotGenerate>
+	^ ceSmallActiveContextInMethodTrampoline
+]
+
+{ #category : #accessing }
+CogObjectRepresentationForSpur >> ceSmallActiveContextInMethodTrampoline: anInteger [ 
+	<doNotGenerate>
+	ceSmallActiveContextInMethodTrampoline := anInteger
+]
+
 { #category : #'sista support' }
 CogObjectRepresentationForSpur >> checkRememberedInTrampoline [
 	<inline: true>
@@ -294,15 +360,6 @@ CogObjectRepresentationForSpur >> freeCounters: theCounters [
 		[objectMemory freeObject: theCounters - objectMemory baseHeaderSize]
 ]
 
-{ #category : #'newspeak support' }
-CogObjectRepresentationForSpur >> freeIRCs: maybeIRCs [
-	<var: #maybeIRCs type: #usqInt>
-	<option: #NewspeakVM>
-	<inline: true>
-	(self oop: maybeIRCs isGreaterThan: objectMemory nilObject) ifTrue:
-		[objectMemory freeObject: maybeIRCs - objectMemory baseHeaderSize]
-]
-
 { #category : #initialization }
 CogObjectRepresentationForSpur >> genActiveContextTrampolineLarge: isLarge inBlock: isInBlock called: aString [
 	<var: #aString type: #'char *'>
@@ -317,6 +374,25 @@ CogObjectRepresentationForSpur >> genActiveContextTrampolineLarge: isLarge inBlo
 	cogit recordGeneratedRunTime: aString address: startAddress.
 	cogit recordRunTimeObjectReferences.
 	^startAddress
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genAllocExternalAddressValue: valueReg into: resultReg scratchReg: scratch1 scratchReg: scratch2 [
+	<returnTypeC: #'AbstractInstruction *'>
+	| allocSize newExternalAddressHeader jumpFail |
+	allocSize := objectMemory baseHeaderSize + objectMemory wordSize.
+	newExternalAddressHeader := objectMemory
+							headerForSlots: 1
+							format: objectMemory firstByteFormat
+							classIndex: objectMemory classExternalAddressIndex.
+	cogit MoveAw: objectMemory freeStartAddress R: resultReg.
+	cogit LoadEffectiveAddressMw: allocSize r: resultReg R: scratch1.
+	cogit CmpCq: objectMemory getScavengeThreshold R: scratch1.
+	jumpFail := cogit JumpAboveOrEqual: 0.
+	cogit MoveR: scratch1 Aw: objectMemory freeStartAddress.
+	self genStoreHeader: newExternalAddressHeader intoNewInstance: resultReg using: scratch1.
+	cogit MoveR: valueReg Mw: objectMemory baseHeaderSize r: resultReg.
+	^jumpFail
 ]
 
 { #category : #'primitive generators' }
@@ -337,6 +413,33 @@ CogObjectRepresentationForSpur >> genAllocFloatValue: dpreg into: resultReg scra
 	self genStoreHeader: newFloatHeader intoNewInstance: resultReg using: scratch1.
 	cogit MoveRd: dpreg M64: objectMemory baseHeaderSize r: resultReg.
 	^jumpFail
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genBoxedOrSmallFloat: floatOopReg scratchReg: scratchReg into: destReg [
+	<returnTypeC: #'AbstractInstruction *'>
+	<var: #jumpImmediate type: #'AbstractInstruction *'>
+	<var: #jumpFail type: #'AbstractInstruction *'>
+	<var: #jumpFailClass type: #'AbstractInstruction *'>
+	<var: #jumpMerge type: #'AbstractInstruction *'>	
+	| jumpImmediate jumpFail jumpFailClass jumpMerge |
+	
+	"Must be pointer"
+	jumpImmediate := self genJumpImmediate: floatOopReg.
+	
+	"Compare with the boxed float clas."
+	self genGetCompactClassIndexNonImmOf: floatOopReg into: scratchReg.
+	self genCmpClassFloatCompactIndexR: scratchReg.
+	jumpFailClass := cogit JumpNonZero: 0.
+
+	"Fetch the double from the boxed float."	
+	self genGetDoubleValueOf: floatOopReg into: destReg.
+	jumpMerge := cogit Jump: 0.
+
+	jumpImmediate jmpTarget: (jumpFailClass jmpTarget: (jumpFail := cogit Jump: 0)).
+
+	jumpMerge jmpTarget: cogit Label.
+	^ jumpFail
 ]
 
 { #category : #'compile abstract instructions' }
@@ -1504,6 +1607,402 @@ CogObjectRepresentationForSpur >> genPrimitiveIntegerAtPut [
 ]
 
 { #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveLoad: accessedElementByteSize fromBytesWith: aBlock [
+	<inline: true>
+	^ self genPrimitiveLoad: accessedElementByteSize fromBytesWith: aBlock needsToTrap: false
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveLoad: accessedElementByteSize fromBytesWith: aBlock needsToTrap: needsToTrap [
+	<inline: true>
+	| nSlotsOrBytesReg jumpBadIndex formatReg jumpIsPointers jumpOutOfBounds jumpSmaller jumpImmediate |
+	nSlotsOrBytesReg := ClassReg.
+	
+	cogit genLoadArgAtDepth: 0 into: Arg0Reg.
+	cogit MoveR: Arg0Reg R: Arg1Reg.
+
+	jumpImmediate := self genJumpImmediate: ReceiverResultReg.
+	jumpBadIndex := self genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
+	self genConvertSmallIntegerToIntegerInReg: Arg1Reg.
+	
+	self genGetFormatOf: ReceiverResultReg
+		into: (formatReg := SendNumArgsReg)
+		leastSignificantHalfOfBaseHeaderIntoScratch: TempReg.
+
+	self genGetNumSlotsOf: ReceiverResultReg into: nSlotsOrBytesReg.
+	cogit CmpCq: objectMemory sixtyFourBitIndexableFormat R: formatReg.
+	jumpIsPointers := cogit JumpBelow: 0.
+	
+	self genConvertDataFormat: formatReg numSlots: nSlotsOrBytesReg intoBytes: nSlotsOrBytesReg.
+	
+	cogit CmpCq: accessedElementByteSize R: nSlotsOrBytesReg.
+	jumpSmaller := cogit JumpBelow: 0.
+
+	"Subtract the accessed element count to make the register into an upper bound."
+	accessedElementByteSize > 1 ifTrue: [ 
+		cogit SubCq: accessedElementByteSize - 1 R: nSlotsOrBytesReg.
+	].
+	cogit CmpR: nSlotsOrBytesReg R: Arg1Reg.
+	jumpOutOfBounds := cogit JumpAboveOrEqual: 0.
+	
+	"The index is in bounds, so compute the actual element pointer."
+	cogit AddR: ReceiverResultReg R: Arg1Reg.
+	cogit AddCq: objectMemory baseHeaderSize R: Arg1Reg.
+	aBlock value: Arg1Reg.
+	
+	jumpImmediate jmpTarget:
+	(jumpBadIndex jmpTarget:
+	(jumpIsPointers jmpTarget:
+	(jumpSmaller jmpTarget:
+	(jumpOutOfBounds jmpTarget: cogit Label)))).
+	^ needsToTrap ifTrue: [0] ifFalse: [CompletePrimitive]
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveLoadBoolean8FromBytes [
+	^ self genPrimitiveLoad: 1 fromBytesWith: [ :sourcePointer |
+		| trueResultJump inst |
+		cogit MoveMb: 0 r: sourcePointer R: ClassReg.
+		cogit TstCq: 16rff R: ClassReg.
+		trueResultJump := cogit JumpNonZero: 0.
+
+		"False result"
+		inst := cogit MoveCw: objectMemory falseObject R: ReceiverResultReg.
+		cogit annotate: inst objRef: objectMemory falseObject.	
+		cogit genPrimReturn.
+		
+		"True result"
+		inst := trueResultJump jmpTarget: (cogit MoveCw: objectMemory trueObject R: ReceiverResultReg).
+		cogit annotate: inst objRef: objectMemory trueObject.	
+		cogit genPrimReturn.
+	].
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveLoadBoolean8FromExternalAddress [
+	^ self genPrimitiveLoadFromExternalAddressWith: [ :sourcePointer |
+		| trueResultJump inst |
+		cogit MoveMb: 0 r: sourcePointer R: ClassReg.
+		cogit TstCq: 16rff R: ClassReg.
+		trueResultJump := cogit JumpNonZero: 0.
+
+		"False result"
+		inst := cogit MoveCw: objectMemory falseObject R: ReceiverResultReg.
+		cogit annotate: inst objRef: objectMemory falseObject.	
+		cogit genPrimReturn.
+		
+		"True result"
+		inst := trueResultJump jmpTarget: (cogit MoveCw: objectMemory trueObject R: ReceiverResultReg).
+		cogit annotate: inst objRef: objectMemory trueObject.	
+		cogit genPrimReturn.
+	].
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveLoadChar16FromBytes [
+	^ self genPrimitiveLoad: 2 fromBytesWith: [ :sourcePointer |
+		cogit MoveM16: 0 r: sourcePointer R: ReceiverResultReg.
+		cogit ZeroExtend16R: ReceiverResultReg R: ReceiverResultReg.
+	
+		self genConvertIntegerToCharacterInReg: ReceiverResultReg.
+		cogit genPrimReturn
+	].
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveLoadChar16FromExternalAddress [
+	^ self genPrimitiveLoadFromExternalAddressWith: [ :sourcePointer |
+		cogit MoveM16: 0 r: sourcePointer R: ReceiverResultReg.
+		cogit ZeroExtend16R: ReceiverResultReg R: ReceiverResultReg.
+	
+		self genConvertIntegerToCharacterInReg: ReceiverResultReg.
+		cogit genPrimReturn
+	].
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveLoadChar32FromBytes [
+	^ self genPrimitiveLoad: 4 fromBytesWith: [ :sourcePointer |
+		BytesPerWord  = 4 ifTrue: [ 
+			cogit MoveMw: 0 r: sourcePointer R: ReceiverResultReg.
+		] ifFalse: [ 
+			cogit MoveM32: 0 r: sourcePointer R: ReceiverResultReg.
+			cogit ZeroExtend32R: ReceiverResultReg R: ReceiverResultReg.
+		].
+	
+		self genConvertIntegerToCharacterInReg: ReceiverResultReg.
+		cogit genPrimReturn
+	].
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveLoadChar32FromExternalAddress [
+	^ self genPrimitiveLoadFromExternalAddressWith: [ :sourcePointer |
+		BytesPerWord  = 4 ifTrue: [ 
+			cogit MoveMw: 0 r: sourcePointer R: ReceiverResultReg.
+		] ifFalse: [ 
+			cogit MoveM32: 0 r: sourcePointer R: ReceiverResultReg.
+			cogit ZeroExtend32R: ReceiverResultReg R: ReceiverResultReg.
+		].
+	
+		self genConvertIntegerToCharacterInReg: ReceiverResultReg.
+		cogit genPrimReturn
+	].
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveLoadChar8FromBytes [
+	^ self genPrimitiveLoad: 1 fromBytesWith: [ :sourcePointer |
+		cogit MoveMb: 0 r: sourcePointer R: ReceiverResultReg .
+		cogit backEnd byteReadsZeroExtend ifFalse: [
+			cogit ZeroExtend8R: ReceiverResultReg R: ReceiverResultReg
+		].
+	
+		self genConvertIntegerToCharacterInReg: ReceiverResultReg.
+		cogit genPrimReturn
+	].
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveLoadChar8FromExternalAddress [
+	^ self genPrimitiveLoadFromExternalAddressWith: [ :sourcePointer |
+		cogit MoveMb: 0 r: sourcePointer R: ReceiverResultReg .
+		cogit backEnd byteReadsZeroExtend ifFalse: [
+			cogit ZeroExtend8R: ReceiverResultReg R: ReceiverResultReg
+		].
+	
+		self genConvertIntegerToCharacterInReg: ReceiverResultReg.
+		cogit genPrimReturn
+	].
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveLoadFloat32FromBytes [
+	^ self genPrimitiveLoad: 4 fromBytesWith: [ :sourcePointer |
+		| jumpFailAlloc |
+		cogit MoveM32: 0 r: sourcePointer Rs: DPFPReg0.
+		cogit ConvertRs: DPFPReg0 Rd: DPFPReg0.
+
+		jumpFailAlloc := self
+						genAllocFloatValue: DPFPReg0
+						into: SendNumArgsReg
+						scratchReg: ClassReg
+						scratchReg: TempReg.
+		cogit MoveR: SendNumArgsReg R: ReceiverResultReg.
+		cogit genPrimReturn.
+		
+		jumpFailAlloc jmpTarget: cogit Label
+	] needsToTrap: true.
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveLoadFloat32FromExternalAddress [
+	^ self genPrimitiveLoadFromExternalAddressWith: [ :sourcePointer |
+		| jumpFailAlloc |
+		cogit MoveM32: 0 r: sourcePointer Rs: DPFPReg0.
+		cogit ConvertRs: DPFPReg0 Rd: DPFPReg0.
+
+		jumpFailAlloc := self
+						genAllocFloatValue: DPFPReg0
+						into: SendNumArgsReg
+						scratchReg: ClassReg
+						scratchReg: TempReg.
+		cogit MoveR: SendNumArgsReg R: ReceiverResultReg.
+		cogit genPrimReturn.
+		
+		jumpFailAlloc jmpTarget: cogit Label
+	] needsToTrap: true.
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveLoadFloat64FromBytes [
+	^ self genPrimitiveLoad: 8 fromBytesWith: [ :sourcePointer |
+		| jumpFailAlloc |
+		cogit MoveM64: 0 r: sourcePointer Rd: DPFPReg0.
+		jumpFailAlloc := self
+						genAllocFloatValue: DPFPReg0
+						into: SendNumArgsReg
+						scratchReg: ClassReg
+						scratchReg: TempReg.
+		cogit MoveR: SendNumArgsReg R: ReceiverResultReg.
+		cogit genPrimReturn.
+		
+		jumpFailAlloc jmpTarget: cogit Label
+	] needsToTrap: true.
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveLoadFloat64FromExternalAddress [
+	^ self genPrimitiveLoadFromExternalAddressWith: [ :sourcePointer |
+		| jumpFailAlloc |
+		cogit MoveM64: 0 r: sourcePointer Rd: DPFPReg0.
+		jumpFailAlloc := self
+						genAllocFloatValue: DPFPReg0
+						into: SendNumArgsReg
+						scratchReg: ClassReg
+						scratchReg: TempReg.
+		cogit MoveR: SendNumArgsReg R: ReceiverResultReg.
+		cogit genPrimReturn.
+		
+		jumpFailAlloc jmpTarget: cogit Label
+	] needsToTrap: true.
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveLoadFromExternalAddressWith: aBlock [
+	<inline: true>
+	^ self genPrimitiveLoadFromExternalAddressWith: aBlock needsToTrap: false
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveLoadFromExternalAddressWith: aBlock needsToTrap: needsToTrap [
+	<inline: true>
+	| jumpBadIndex jumpImmediate jumpNonExternalAddress |
+
+	cogit genLoadArgAtDepth: 0 into: Arg0Reg.
+	cogit MoveR: Arg0Reg R: Arg1Reg.
+
+	jumpImmediate := self genJumpImmediate: ReceiverResultReg.
+	self genGetCompactClassIndexNonImmOf: ReceiverResultReg into: TempReg.
+	cogit CmpCq: objectMemory classExternalAddressIndex R: TempReg.
+	jumpNonExternalAddress := cogit JumpNonZero: 0.
+	jumpBadIndex := self genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
+	self genConvertSmallIntegerToIntegerInReg: Arg1Reg.
+	
+	"Fetch the pointer from the external address."
+	cogit MoveMw: objectMemory baseHeaderSize r: ReceiverResultReg R: TempReg.
+
+	"Add the pointer to the offfset"
+	cogit AddR: TempReg R: Arg1Reg.
+	aBlock value: Arg1Reg.
+	
+	jumpImmediate jmpTarget:
+	(jumpBadIndex jmpTarget:
+	(jumpNonExternalAddress jmpTarget: cogit Label)).
+	^ needsToTrap ifTrue: [0] ifFalse: [CompletePrimitive]
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveLoadInt16FromBytes [
+	^ self genPrimitiveLoad: 2 fromBytesWith: [ :sourcePointer |
+		cogit MoveM16: 0 r: sourcePointer R: ReceiverResultReg.
+		cogit SignExtend16R: ReceiverResultReg R: ReceiverResultReg.
+	
+		self genConvertIntegerToSmallIntegerInReg: ReceiverResultReg.
+		cogit genPrimReturn
+	].
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveLoadInt16FromExternalAddress [
+	^ self genPrimitiveLoadFromExternalAddressWith: [ :sourcePointer |
+		cogit MoveM16: 0 r: sourcePointer R: ReceiverResultReg.
+		cogit SignExtend16R: ReceiverResultReg R: ReceiverResultReg.
+	
+		self genConvertIntegerToSmallIntegerInReg: ReceiverResultReg.
+		cogit genPrimReturn
+	].
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveLoadInt8FromBytes [
+	^ self genPrimitiveLoad: 1 fromBytesWith: [ :sourcePointer |
+		cogit MoveMb: 0 r: sourcePointer R: ReceiverResultReg.
+		cogit SignExtend8R: ReceiverResultReg R: ReceiverResultReg.
+	
+		self genConvertIntegerToSmallIntegerInReg: ReceiverResultReg.
+		cogit genPrimReturn
+	].
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveLoadInt8FromExternalAddress [
+	^ self genPrimitiveLoadFromExternalAddressWith: [ :sourcePointer |
+		cogit MoveMb: 0 r: sourcePointer R: ReceiverResultReg.
+		cogit SignExtend8R: ReceiverResultReg R: ReceiverResultReg.
+	
+		self genConvertIntegerToSmallIntegerInReg: ReceiverResultReg.
+		cogit genPrimReturn
+	].
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveLoadPointerFromBytes [
+	^ self genPrimitiveLoad: BytesPerWord fromBytesWith: [ :sourcePointer |
+		| jumpFailAlloc |
+		cogit MoveMw: 0 r: sourcePointer R: ClassReg.
+		jumpFailAlloc := self genAllocExternalAddressValue: ClassReg into: SendNumArgsReg scratchReg: Extra0Reg scratchReg: TempReg.
+			 cogit MoveR: SendNumArgsReg R: ReceiverResultReg.
+			 cogit genPrimReturn.
+		cogit MoveR: SendNumArgsReg R: ReceiverResultReg.
+		cogit genPrimReturn.
+		jumpFailAlloc jmpTarget: cogit Label
+	] needsToTrap: true.
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveLoadPointerFromExternalAddress [
+	^ self genPrimitiveLoadFromExternalAddressWith: [ :sourcePointer |
+		| jumpFailAlloc |
+		cogit MoveMw: 0 r: sourcePointer R: ClassReg.
+		jumpFailAlloc := self genAllocExternalAddressValue: ClassReg into: SendNumArgsReg scratchReg: Extra0Reg scratchReg: TempReg.
+			 cogit MoveR: SendNumArgsReg R: ReceiverResultReg.
+			 cogit genPrimReturn.
+		cogit MoveR: SendNumArgsReg R: ReceiverResultReg.
+		cogit genPrimReturn.
+		jumpFailAlloc jmpTarget: cogit Label
+	] needsToTrap: true.
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveLoadUInt16FromBytes [
+	^ self genPrimitiveLoad: 2 fromBytesWith: [ :sourcePointer |
+		cogit MoveM16: 0 r: sourcePointer R: ReceiverResultReg.
+		cogit ZeroExtend16R: ReceiverResultReg R: ReceiverResultReg.
+	
+		self genConvertIntegerToSmallIntegerInReg: ReceiverResultReg.
+		cogit genPrimReturn
+	].
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveLoadUInt16FromExternalAddress [
+	^ self genPrimitiveLoadFromExternalAddressWith: [ :sourcePointer |
+		cogit MoveM16: 0 r: sourcePointer R: ReceiverResultReg.
+		cogit ZeroExtend16R: ReceiverResultReg R: ReceiverResultReg.
+	
+		self genConvertIntegerToSmallIntegerInReg: ReceiverResultReg.
+		cogit genPrimReturn
+	].
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveLoadUInt8FromBytes [
+	^ self genPrimitiveLoad: 1 fromBytesWith: [ :sourcePointer |
+		cogit MoveMb: 0 r: sourcePointer R: ReceiverResultReg .
+		cogit backEnd byteReadsZeroExtend ifFalse: [
+			cogit ZeroExtend8R: ReceiverResultReg R: ReceiverResultReg
+		].
+	
+		self genConvertIntegerToSmallIntegerInReg: ReceiverResultReg.
+		cogit genPrimReturn
+	].
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveLoadUInt8FromExternalAddress [
+	^ self genPrimitiveLoadFromExternalAddressWith: [ :sourcePointer |
+		cogit MoveMb: 0 r: sourcePointer R: ReceiverResultReg .
+		cogit backEnd byteReadsZeroExtend ifFalse: [
+			cogit ZeroExtend8R: ReceiverResultReg R: ReceiverResultReg
+		].
+	
+		self genConvertIntegerToSmallIntegerInReg: ReceiverResultReg.
+		cogit genPrimReturn
+	].
+]
+
+{ #category : #'primitive generators' }
 CogObjectRepresentationForSpur >> genPrimitiveObjectAt [
 	| headerReg jumpBadIndex jumpBounds jumpNotHeaderIndex |
 	<var: #jumpBounds type: #'AbstractInstruction *'>
@@ -1555,6 +2054,473 @@ CogObjectRepresentationForSpur >> genPrimitiveSize [
 	cogit genPrimReturn.
 	jumpImm jmpTarget: (jumpNotIndexable jmpTarget: (jumpIsContext jmpTarget: cogit Label)).
 	^CompletePrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveStore: accessedElementByteSize intoBytesWith: aBlock [
+	<inline: true>
+	^ self genPrimitiveStore: accessedElementByteSize intoBytesWith: aBlock needsToTrap: false
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveStore: accessedElementByteSize intoBytesWith: aBlock needsToTrap: needsToTrap [
+	<inline: true>
+	| nSlotsOrBytesReg jumpBadIndex formatReg jumpIsPointers jumpOutOfBounds jumpSmaller jumpImmediate destPointerRegister |
+	nSlotsOrBytesReg := ClassReg.
+	destPointerRegister := ClassReg.
+
+	cogit genLoadArgAtDepth: 1 into: Arg0Reg.
+	cogit genLoadArgAtDepth: 0 into: Arg1Reg.
+	
+	jumpImmediate := self genJumpImmediate: ReceiverResultReg.
+	jumpBadIndex := self genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
+	self genConvertSmallIntegerToIntegerInReg: Arg0Reg.
+	
+	self genGetFormatOf: ReceiverResultReg
+		into: (formatReg := SendNumArgsReg)
+		leastSignificantHalfOfBaseHeaderIntoScratch: TempReg.
+
+	self genGetNumSlotsOf: ReceiverResultReg into: nSlotsOrBytesReg.
+	cogit CmpCq: objectMemory sixtyFourBitIndexableFormat R: formatReg.
+	jumpIsPointers := cogit JumpBelow: 0.
+	
+	self genConvertDataFormat: formatReg numSlots: nSlotsOrBytesReg intoBytes: nSlotsOrBytesReg.
+	
+	cogit CmpCq: accessedElementByteSize R: nSlotsOrBytesReg.
+	jumpSmaller := cogit JumpBelow: 0.
+
+	"Subtract the accessed element count to make the register into an upper bound."
+	accessedElementByteSize > 1 ifTrue: [ 
+		cogit SubCq: accessedElementByteSize - 1 R: nSlotsOrBytesReg.
+	].
+	cogit CmpR: nSlotsOrBytesReg R: Arg0Reg.
+	jumpOutOfBounds := cogit JumpAboveOrEqual: 0.
+	
+	"The index is in bounds, so compute the actual element pointer."
+	cogit MoveR: Arg0Reg R: destPointerRegister.
+	cogit AddR: ReceiverResultReg R: ClassReg.
+	cogit AddCq: objectMemory baseHeaderSize R: ClassReg.
+	aBlock value: destPointerRegister value: Arg1Reg.
+	
+	jumpIsPointers jmpTarget:
+	(jumpSmaller jmpTarget:
+	(jumpOutOfBounds jmpTarget: cogit Label)).
+
+	"Restore the Arg0 into an oop."
+	self genConvertIntegerToSmallIntegerInReg: Arg0Reg.
+	
+	jumpBadIndex jmpTarget: (jumpImmediate jmpTarget: cogit Label).
+	^ needsToTrap ifTrue: [0] ifFalse: [CompletePrimitive]
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveStoreBoolean8IntoBytes [
+	^ self genPrimitiveStore: 1 intoBytesWith: [ :destPointer :valueOop |
+		| jumpNotTrueObject jumpNotBooleanObject |
+		cogit annotate: (cogit CmpCw: objectMemory trueObject R: valueOop) objRef: objectMemory trueObject.
+		jumpNotTrueObject := cogit JumpNonZero: 0.
+
+		"True object"
+		cogit MoveR: valueOop R: ReceiverResultReg.
+		cogit MoveCq: 1 R: TempReg.
+		cogit MoveR: TempReg M8: 0 r: destPointer.
+		cogit genPrimReturn.
+
+		"False or not a boolean"
+		jumpNotTrueObject jmpTarget: (cogit annotate: (cogit CmpCw: objectMemory falseObject R: valueOop) objRef: objectMemory falseObject).
+		jumpNotBooleanObject := cogit JumpNonZero: 0.
+
+		"False"
+		cogit MoveR: valueOop R: ReceiverResultReg.
+		cogit MoveCq: 0 R: TempReg.
+		cogit MoveR: TempReg M8: 0 r: destPointer.
+		cogit genPrimReturn.
+		
+		"Not boolean. Error."
+		(jumpNotBooleanObject jmpTarget: cogit Label).
+	].
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveStoreBoolean8IntoExternalAddress [
+	^ self genPrimitiveStoreIntoExternalAddressWith: [ :destPointer :valueOop |
+		| jumpNotTrueObject jumpNotBooleanObject |
+		cogit annotate: (cogit CmpCw: objectMemory trueObject R: valueOop) objRef: objectMemory trueObject.
+		jumpNotTrueObject := cogit JumpNonZero: 0.
+
+		"True object"
+		cogit MoveR: valueOop R: ReceiverResultReg.
+		cogit MoveCq: 1 R: TempReg.
+		cogit MoveR: TempReg M8: 0 r: destPointer.
+		cogit genPrimReturn.
+
+		"False or not a boolean"
+		jumpNotTrueObject jmpTarget: (cogit annotate: (cogit CmpCw: objectMemory falseObject R: valueOop) objRef: objectMemory falseObject).
+		jumpNotBooleanObject := cogit JumpNonZero: 0.
+
+		"False"
+		cogit MoveR: valueOop R: ReceiverResultReg.
+		cogit MoveCq: 0 R: TempReg.
+		cogit MoveR: TempReg M8: 0 r: destPointer.
+		cogit genPrimReturn.
+		
+		"Not boolean. Error."
+		(jumpNotBooleanObject jmpTarget: cogit Label).
+	].
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveStoreChar16IntoBytes [
+	^ self genPrimitiveStore: 2 intoBytesWith: [ :destPointer :valueOop |
+		| jumpNonCharacter |
+		cogit MoveR: valueOop R: TempReg.
+		jumpNonCharacter := self genJumpNotCharacterInScratchReg: TempReg.
+		cogit MoveR: valueOop R: ReceiverResultReg.
+	
+		self genConvertCharacterToCodeInReg: valueOop.
+		cogit MoveR: valueOop M16: 0 r: destPointer.
+		cogit genPrimReturn.
+		
+		jumpNonCharacter jmpTarget: cogit Label
+	].
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveStoreChar16IntoExternalAddress [
+	^ self genPrimitiveStoreIntoExternalAddressWith: [ :destPointer :valueOop |
+		| jumpNonCharacter |
+		cogit MoveR: valueOop R: TempReg.
+		jumpNonCharacter := self genJumpNotCharacterInScratchReg: TempReg.
+		cogit MoveR: valueOop R: ReceiverResultReg.
+	
+		self genConvertCharacterToCodeInReg: valueOop.
+		cogit MoveR: valueOop M16: 0 r: destPointer.
+		cogit genPrimReturn.
+		
+		jumpNonCharacter jmpTarget: cogit Label
+	].
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveStoreChar32IntoBytes [
+	^ self genPrimitiveStore: 4 intoBytesWith: [ :destPointer :valueOop |
+		| jumpNonCharacter |
+		cogit MoveR: valueOop R: TempReg.
+		jumpNonCharacter := self genJumpNotCharacterInScratchReg: TempReg.
+		cogit MoveR: valueOop R: ReceiverResultReg.
+	
+		self genConvertCharacterToCodeInReg: valueOop.
+		cogit MoveR: valueOop M32: 0 r: destPointer.
+		cogit genPrimReturn.
+		
+		jumpNonCharacter jmpTarget: cogit Label
+	].
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveStoreChar32IntoExternalAddress [
+	^ self genPrimitiveStoreIntoExternalAddressWith: [ :destPointer :valueOop |
+		| jumpNonCharacter |
+		cogit MoveR: valueOop R: TempReg.
+		jumpNonCharacter := self genJumpNotCharacterInScratchReg: TempReg.
+		cogit MoveR: valueOop R: ReceiverResultReg.
+	
+		self genConvertCharacterToCodeInReg: valueOop.
+		cogit MoveR: valueOop M32: 0 r: destPointer.
+		cogit genPrimReturn.
+		
+		jumpNonCharacter jmpTarget: cogit Label
+	].
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveStoreChar8IntoBytes [
+	^ self genPrimitiveStore: 1 intoBytesWith: [ :destPointer :valueOop |
+		| jumpNonCharacter |
+		cogit MoveR: valueOop R: TempReg.
+		jumpNonCharacter := self genJumpNotCharacterInScratchReg: TempReg.
+		cogit MoveR: valueOop R: ReceiverResultReg.
+	
+		self genConvertCharacterToCodeInReg: valueOop.
+		cogit MoveR: valueOop M8: 0 r: destPointer.
+		cogit genPrimReturn.
+		
+		jumpNonCharacter jmpTarget: cogit Label
+	].
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveStoreChar8IntoExternalAddress [
+	^ self genPrimitiveStoreIntoExternalAddressWith: [ :destPointer :valueOop |
+		| jumpNonCharacter |
+		cogit MoveR: valueOop R: TempReg.
+		jumpNonCharacter := self genJumpNotCharacterInScratchReg: TempReg.
+		cogit MoveR: valueOop R: ReceiverResultReg.
+	
+		self genConvertCharacterToCodeInReg: valueOop.
+		cogit MoveR: valueOop M8: 0 r: destPointer.
+		cogit genPrimReturn.
+		
+		jumpNonCharacter jmpTarget: cogit Label
+	].
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveStoreFloat32IntoBytes [
+	^ self genPrimitiveStore: 4 intoBytesWith: [ :destPointer :valueOop |
+		| jumpNonFloat |
+		jumpNonFloat := self genBoxedOrSmallFloat: valueOop scratchReg: TempReg into: DPFPReg0.
+		cogit ConvertRd: DPFPReg0 Rs: DPFPReg0.
+		cogit MoveRs: DPFPReg0 M32: 0 r: destPointer.
+
+		cogit MoveR: valueOop R: ReceiverResultReg.
+		cogit genPrimReturn.
+		
+		jumpNonFloat jmpTarget: cogit Label
+	].
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveStoreFloat32IntoExternalAddress [
+	^ self genPrimitiveStoreIntoExternalAddressWith: [ :destPointer :valueOop |
+		| jumpNonFloat |
+		jumpNonFloat := self genBoxedOrSmallFloat: valueOop scratchReg: TempReg into: DPFPReg0.
+		cogit ConvertRd: DPFPReg0 Rs: DPFPReg0.
+		cogit MoveRs: DPFPReg0 M32: 0 r: destPointer.
+
+		cogit MoveR: valueOop R: ReceiverResultReg.
+		cogit genPrimReturn.
+		
+		jumpNonFloat jmpTarget: cogit Label
+	].
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveStoreFloat64IntoBytes [
+	^ self genPrimitiveStore: 8 intoBytesWith: [ :destPointer :valueOop |
+		| jumpNonFloat |
+		jumpNonFloat := self genBoxedOrSmallFloat: valueOop scratchReg: TempReg into: DPFPReg0.
+		cogit MoveRd: DPFPReg0 M64: 0 r: destPointer.
+
+		cogit MoveR: valueOop R: ReceiverResultReg.
+		cogit genPrimReturn.
+		
+		jumpNonFloat jmpTarget: cogit Label
+	].
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveStoreFloat64IntoExternalAddress [
+	^ self genPrimitiveStoreIntoExternalAddressWith: [ :destPointer :valueOop |
+		| jumpNonFloat |
+		jumpNonFloat := self genBoxedOrSmallFloat: valueOop scratchReg: TempReg into: DPFPReg0.
+		cogit MoveRd: DPFPReg0 M64: 0 r: destPointer.
+
+		cogit MoveR: valueOop R: ReceiverResultReg.
+		cogit genPrimReturn.
+		
+		jumpNonFloat jmpTarget: cogit Label
+	].
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveStoreInt16IntoBytes [
+	^ self genPrimitiveStore: 2 intoBytesWith: [ :destPointer :valueOop |
+		| jumpNonSmallInteger |
+		jumpNonSmallInteger := self genJumpNotSmallInteger: valueOop scratchReg: TempReg.
+		cogit MoveR: valueOop R: ReceiverResultReg.
+	
+		self genConvertSmallIntegerToIntegerInReg: valueOop.
+		cogit MoveR: valueOop M16: 0 r: destPointer.
+		cogit genPrimReturn.
+		
+		jumpNonSmallInteger jmpTarget: cogit Label
+	].
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveStoreInt16IntoExternalAddress [
+	^ self genPrimitiveStoreIntoExternalAddressWith: [ :destPointer :valueOop |
+		| jumpNonSmallInteger |
+		jumpNonSmallInteger := self genJumpNotSmallInteger: valueOop scratchReg: TempReg.
+		cogit MoveR: valueOop R: ReceiverResultReg.
+	
+		self genConvertSmallIntegerToIntegerInReg: valueOop.
+		cogit MoveR: valueOop M16: 0 r: destPointer.
+		cogit genPrimReturn.
+		
+		jumpNonSmallInteger jmpTarget: cogit Label
+	].
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveStoreInt8IntoBytes [
+	^ self genPrimitiveStore: 1 intoBytesWith: [ :destPointer :valueOop |
+		| jumpNonSmallInteger |
+		jumpNonSmallInteger := self genJumpNotSmallInteger: valueOop scratchReg: TempReg.
+		cogit MoveR: valueOop R: ReceiverResultReg.
+	
+		self genConvertSmallIntegerToIntegerInReg: valueOop.
+		cogit MoveR: valueOop M8: 0 r: destPointer.
+		cogit genPrimReturn.
+		
+		jumpNonSmallInteger jmpTarget: cogit Label
+	].
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveStoreInt8IntoExternalAddress [
+	^ self genPrimitiveStoreIntoExternalAddressWith: [ :destPointer :valueOop |
+		| jumpNonSmallInteger |
+		jumpNonSmallInteger := self genJumpNotSmallInteger: valueOop scratchReg: TempReg.
+		cogit MoveR: valueOop R: ReceiverResultReg.
+	
+		self genConvertSmallIntegerToIntegerInReg: valueOop.
+		cogit MoveR: valueOop M8: 0 r: destPointer.
+		cogit genPrimReturn.
+		
+		jumpNonSmallInteger jmpTarget: cogit Label
+	].
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveStoreIntoExternalAddressWith: aBlock [
+	<inline: true>
+	^ self genPrimitiveStoreIntoExternalAddressWith: aBlock needsToTrap: false
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveStoreIntoExternalAddressWith: aBlock needsToTrap: needsToTrap [
+	<inline: true>
+	| jumpBadIndex jumpNonExternalAddress jumpImmediate destPointerRegister |
+	destPointerRegister := ClassReg.
+
+	cogit genLoadArgAtDepth: 1 into: Arg0Reg.
+	cogit genLoadArgAtDepth: 0 into: Arg1Reg.
+	
+	jumpImmediate := self genJumpImmediate: ReceiverResultReg.
+	self genGetCompactClassIndexNonImmOf: ReceiverResultReg into: TempReg.
+	cogit CmpCq: objectMemory classExternalAddressIndex R: TempReg.
+	jumpNonExternalAddress := cogit JumpNonZero: 0.
+	jumpBadIndex := self genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
+	self genConvertSmallIntegerToIntegerInReg: Arg0Reg.
+	
+	"Fetch the pointer from the external address."
+	cogit MoveMw: objectMemory baseHeaderSize r: ReceiverResultReg R: destPointerRegister.
+
+	"Add the offfset to the pointer"
+	cogit AddR: Arg0Reg R: destPointerRegister.
+	aBlock value: destPointerRegister value: Arg1Reg.
+
+	"Restore the Arg0 into an oop."
+	self genConvertIntegerToSmallIntegerInReg: Arg0Reg.
+	
+	jumpNonExternalAddress jmpTarget: (jumpBadIndex jmpTarget: (jumpImmediate jmpTarget: cogit Label)).
+	^ needsToTrap ifTrue: [0] ifFalse: [CompletePrimitive]
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveStorePointerIntoBytes [
+	^ self genPrimitiveStore: BytesPerWord intoBytesWith: [ :destPointer :valueOop |
+		| jumpImmediate jumpNonExternalAddress |
+		jumpImmediate := self genJumpImmediate: valueOop.
+		self genGetCompactClassIndexNonImmOf: valueOop into: TempReg.
+		cogit CmpCq: objectMemory classExternalAddressIndex R: TempReg.
+		jumpNonExternalAddress := cogit JumpNonZero: 0.
+
+		cogit MoveR: valueOop R: ReceiverResultReg.
+		cogit MoveMw: objectMemory baseHeaderSize r: valueOop R: TempReg.
+		cogit MoveR: TempReg Mw: 0 r: destPointer.
+		cogit genPrimReturn.
+		
+		jumpNonExternalAddress jmpTarget: (jumpImmediate jmpTarget: cogit Label)
+	].
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveStorePointerIntoExternalAddress [
+	^ self genPrimitiveStoreIntoExternalAddressWith: [ :destPointer :valueOop |
+		| jumpImmediate jumpNonExternalAddress |
+		jumpImmediate := self genJumpImmediate: valueOop.
+		self genGetCompactClassIndexNonImmOf: valueOop into: TempReg.
+		cogit CmpCq: objectMemory classExternalAddressIndex R: TempReg.
+		jumpNonExternalAddress := cogit JumpNonZero: 0.
+
+		cogit MoveR: valueOop R: ReceiverResultReg.
+		cogit MoveMw: objectMemory baseHeaderSize r: valueOop R: TempReg.
+		cogit MoveR: TempReg Mw: 0 r: destPointer.
+		cogit genPrimReturn.
+		
+		jumpNonExternalAddress jmpTarget: (jumpImmediate jmpTarget: cogit Label)
+	].
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveStoreUInt16IntoBytes [
+	^ self genPrimitiveStore: 2 intoBytesWith: [ :destPointer :valueOop |
+		| jumpNonSmallInteger jumpNegative |
+		jumpNonSmallInteger := self genJumpNotSmallInteger: valueOop scratchReg: TempReg.
+		cogit CmpCq: 0 R: valueOop.
+		jumpNegative := cogit JumpLess: 0.
+	
+		self genConvertSmallIntegerToIntegerInReg: valueOop.
+		cogit MoveR: valueOop M16: 0 r: destPointer.
+		cogit genPrimReturn.
+		
+		jumpNonSmallInteger jmpTarget: (jumpNegative jmpTarget: cogit Label)
+	].
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveStoreUInt16IntoExternalAddress [
+	^ self genPrimitiveStoreIntoExternalAddressWith: [ :destPointer :valueOop |
+		| jumpNonSmallInteger jumpNegative |
+		jumpNonSmallInteger := self genJumpNotSmallInteger: valueOop scratchReg: TempReg.
+		cogit CmpCq: 0 R: valueOop.
+		jumpNegative := cogit JumpLess: 0.
+	
+		self genConvertSmallIntegerToIntegerInReg: valueOop.
+		cogit MoveR: valueOop M16: 0 r: destPointer.
+		cogit genPrimReturn.
+		
+		jumpNonSmallInteger jmpTarget: (jumpNegative jmpTarget: cogit Label)
+	].
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveStoreUInt8IntoBytes [
+	^ self genPrimitiveStore: 1 intoBytesWith: [ :destPointer :valueOop |
+		| jumpNonSmallInteger jumpNegative |
+		jumpNonSmallInteger := self genJumpNotSmallInteger: valueOop scratchReg: TempReg.
+		cogit CmpCq: 0 R: valueOop.
+		jumpNegative := cogit JumpLess: 0.
+		
+		cogit MoveR: valueOop R: ReceiverResultReg.
+	
+		self genConvertSmallIntegerToIntegerInReg: valueOop.
+		cogit MoveR: valueOop M8: 0 r: destPointer.
+		cogit genPrimReturn.
+		
+		jumpNonSmallInteger jmpTarget: (jumpNegative jmpTarget: cogit Label)
+	].
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveStoreUInt8IntoExternalAddress [
+	^ self genPrimitiveStoreIntoExternalAddressWith: [ :destPointer :valueOop |
+		| jumpNonSmallInteger jumpNegative |
+		jumpNonSmallInteger := self genJumpNotSmallInteger: valueOop scratchReg: TempReg.
+		cogit CmpCq: 0 R: valueOop.
+		jumpNegative := cogit JumpLess: 0.
+		
+		cogit MoveR: valueOop R: ReceiverResultReg.
+	
+		self genConvertSmallIntegerToIntegerInReg: valueOop.
+		cogit MoveR: valueOop M8: 0 r: destPointer.
+		cogit genPrimReturn.
+		
+		jumpNonSmallInteger jmpTarget: (jumpNegative jmpTarget: cogit Label)
+	].
 ]
 
 { #category : #'primitive generators' }
@@ -2421,18 +3387,6 @@ CogObjectRepresentationForSpur >> markAndTraceUpdatedLiteral: objOop in: cogMeth
 		  and: [objectMemory isYoungObject: objOop]) ifTrue:
 			[methodZone ensureInYoungReferrers: cogMethodOrNil].
 		 objectMemory markAndTrace: objOop]
-]
-
-{ #category : #'newspeak support' }
-CogObjectRepresentationForSpur >> markIfIRC: maybeIRCs [
-	"If maybeIRCs (from some cogMehtod's nextMethodOrIRCs) is in old space it is
-	 a pointer to the first field of a pinned object in old space holding the implicit
-	 receiver caches for a method.  If so, map it back to an oop and mark it."
-	<var: #maybeIRCs type: #usqInt>
-	<option: #NewspeakVM>
-	<inline: true>
-	(self oop: maybeIRCs isGreaterThan: objectMemory nilObject) ifTrue:
-		[objectMemory markAndTrace: maybeIRCs - objectMemory baseHeaderSize]
 ]
 
 { #category : #'primitive generators' }

@@ -20,7 +20,6 @@
 #ifdef _WIN32
 
 #include <windows.h>
-#include "aioWin.h"
 
 #endif
 
@@ -60,8 +59,6 @@ void aioInit(void);
 
 void ioInitTime(void);
 
-EXPORT(int) fileExists(const char *aPath);
-
 EXPORT(char*) getFullPath(char const *relativePath, char* fullPath, int fullPathSize);
 EXPORT(void) getBasePath(char const *path, char* basePath, int basePathSize);
 
@@ -78,5 +75,6 @@ void * loadModuleHandle(const char *fileName);
 sqInt freeModuleHandle(void *module);
 void *getModuleSymbol(void *module, const char *symbol);
 
+EXPORT(sqInt) mainThread_schedule(sqInt (*closure)());
 
 #endif //PHAROVM_PHARO_H

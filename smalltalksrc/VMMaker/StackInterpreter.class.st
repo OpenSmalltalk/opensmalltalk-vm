@@ -414,7 +414,10 @@ Class {
 		'statIdleUsecs',
 		'debugCallbackPath',
 		'debugCallbackReturns',
-		'debugCallbackInvokes'
+		'debugCallbackInvokes',
+		'maxStacksToPrint',
+		'maxStackMessagePrinted',
+		'printedStackFrames'
 	],
 	#classVars : [
 		'AccessModifierPrivate',
@@ -554,16 +557,10 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator
 		var: #methodCache
 		declareC: 'sqIntptr_t methodCache[MethodCacheSize + 1 /* ', (MethodCacheSize + 1) printString, ' */]'.
-	NewspeakVM
-		ifTrue:
-			[aCCodeGenerator
-				var: #nsMethodCache
-				declareC: 'sqIntptr_t nsMethodCache[NSMethodCacheSize + 1 /* ', (NSMethodCacheSize + 1) printString, ' */]']
-		ifFalse:
-			[aCCodeGenerator
-				removeVariable: #nsMethodCache;
-				removeVariable: 'localAbsentReceiver';
-				removeVariable: 'localAbsentReceiverOrZero'].
+	aCCodeGenerator
+		removeVariable: #nsMethodCache;
+		removeVariable: 'localAbsentReceiver';
+		removeVariable: 'localAbsentReceiverOrZero'.
 	AtCacheTotalSize isInteger ifTrue:
 		[aCCodeGenerator
 			var: #atCache
@@ -628,11 +625,6 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 				[:var| aCCodeGenerator removeVariable: var]]
 ]
 
-{ #category : #'accessing class hierarchy' }
-StackInterpreter class >> defaultObjectMemoryClass [
-	^NewObjectMemory
-]
-
 { #category : #translation }
 StackInterpreter class >> implicitReturnTypeFor: aSelector [
 	"Answer the return type for methods that don't have an explicit return."
@@ -655,133 +647,9 @@ StackInterpreter class >> initializeBytecodeTable [
 	(InitializationOptions at: #bytecodeTableInitializer ifAbsent: nil) ifNotNil:
 		[:initalizer| ^self perform: initalizer].
 
-	NewspeakVM ifTrue:
-		[^MULTIPLEBYTECODESETS
-			ifTrue: [self initializeBytecodeTableForSqueakV3PlusClosuresNewspeakV4Hybrid]
-			ifFalse: [self initializeBytecodeTableForNewspeakV4]].
-
 	^MULTIPLEBYTECODESETS
 		ifTrue: [self initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid]
 		ifFalse: [self initializeBytecodeTableForSqueakV3PlusClosures]
-]
-
-{ #category : #initialization }
-StackInterpreter class >> initializeBytecodeTableForNewspeakV4 [
-	"StackInterpreter initializeBytecodeTableForNewspeakV4"
-	"Note: This table will be used to generate a C switch statement."
-
-	InitializationOptions at: #NewsqueakV4BytecodeSet put: (NewsqueakV4BytecodeSet := true).
-	BytecodeTable := Array new: 256.
-	BytecodeEncoderClassName := #EncoderForNewsqueakV4.
-	BytecodeSetHasExtensions := true.
-	LongStoreBytecode := 234.
-	self table: BytecodeTable from:
-	#(	"1 byte bytecodes"
-		(   0  15 pushReceiverVariableBytecode)
-		( 16  31 pushLiteralVariable16CasesBytecode)
-		( 32  63 pushLiteralConstantBytecode)
-		( 64  75 pushTemporaryVariableBytecode)
-		( 76	 pushReceiverBytecode)
-		( 77	 extPushPseudoVariableOrOuterBytecode)
-		( 78	 pushConstantZeroBytecode)
-		( 79	 pushConstantOneBytecode)
-
-		( 80	 bytecodePrimAdd)
-		( 81	 bytecodePrimSubtract)
-		( 82	 bytecodePrimLessThanV4) "for booleanCheatV4:"
-		( 83	 bytecodePrimGreaterThanV4) "for booleanCheatV4:"
-		( 84	 bytecodePrimLessOrEqualV4) "for booleanCheatV4:"
-		( 85	 bytecodePrimGreaterOrEqualV4) "for booleanCheatV4:"
-		( 86	 bytecodePrimEqualV4) "for booleanCheatV4:"
-		( 87	 bytecodePrimNotEqualV4) "for booleanCheatV4:"
-		( 88	 bytecodePrimMultiply)
-		( 89	 bytecodePrimDivide)
-		( 90	 bytecodePrimMod)
-		( 91	 bytecodePrimMakePoint)
-		( 92	 bytecodePrimBitShift)
-		( 93	 bytecodePrimDiv)
-		( 94	 bytecodePrimBitAnd)
-		( 95	 bytecodePrimBitOr)
-
-		( 96	 bytecodePrimAt)
-		( 97	 bytecodePrimAtPut)
-		( 98	 bytecodePrimSize)
-		( 99	 bytecodePrimNext)
-		(100	 bytecodePrimNextPut)
-		(101	 bytecodePrimAtEnd)
-		(102	 bytecodePrimIdenticalV4) "for booleanCheatV4:"
-		(103	 bytecodePrimClass)
-		(104	 bytecodePrimNotIdenticalV4) "was blockCopy:"
-		(105	 bytecodePrimValue)
-		(106	 bytecodePrimValueWithArg)
-		(107	 bytecodePrimDo)
-		(108	 bytecodePrimNew)
-		(109	 bytecodePrimNewWithArg)
-		(110	 bytecodePrimPointX)
-		(111	 bytecodePrimPointY)
-
-		(112 127	sendLiteralSelector0ArgsBytecode)
-		(128 143	sendLiteralSelector1ArgBytecode)
-		(144 159	sendLiteralSelector2ArgsBytecode)
-		(160 175	sendAbsentImplicit0ArgsBytecode)
-
-		(176 183	storeAndPopReceiverVariableBytecode)
-		(184 191	storeAndPopTemporaryVariableBytecode)
-
-		(192 199	shortUnconditionalJump)
-		(200 207	shortConditionalJumpTrue)
-		(208 215	shortConditionalJumpFalse)
-
-		(216		returnReceiver)
-		(217		returnTopFromMethod)
-		(218		extReturnTopFromBlock)
-
-		(219		duplicateTopBytecode)
-		(220		popStackBytecode)
-		(221		extNopBytecode)
-		(222 223	unknownBytecode)
-
-		"2 byte bytecodes"
-		(224		extABytecode)
-		(225		extBBytecode)
-
-		(226		extPushReceiverVariableBytecode)
-		(227		extPushLiteralVariableBytecode)
-		(228		extPushLiteralBytecode)
-		(229		extPushIntegerBytecode)
-		(230		longPushTemporaryVariableBytecode)
-		(231		pushNewArrayBytecode)
-		(232		extStoreReceiverVariableBytecode)
-		(233		extStoreLiteralVariableBytecode)
-		(234		longStoreTemporaryVariableBytecode)
-		(235		extStoreAndPopReceiverVariableBytecode)
-		(236		extStoreAndPopLiteralVariableBytecode)
-		(237		longStoreAndPopTemporaryVariableBytecode)
-
-		(238		extSendBytecode)
-		(239		extSendSuperBytecode)
-		(240		extSendAbsentImplicitBytecode)
-		(241		extSendAbsentDynamicSuperBytecode)
-
-		(242		extUnconditionalJump)
-		(243		extJumpIfTrue)
-		(244		extJumpIfFalse)
-
-		(245		extSendAbsentSelfBytecode)
-
-		(246 248	unknownBytecode)
-
-		"3 byte bytecodes"
-		(249		callPrimitiveBytecode)
-
-		(250		pushRemoteTempLongBytecode)
-		(251		storeRemoteTempLongBytecode)
-		(252		storeAndPopRemoteTempLongBytecode)
-		(253		extPushClosureBytecode)
-		(254		extSendAbsentOuterBytecode)
-
-		(255		unknownBytecode)
-	)
 ]
 
 { #category : #initialization }
@@ -1024,21 +892,6 @@ StackInterpreter class >> initializeBytecodeTableForSqueakV3PlusClosures [
 ]
 
 { #category : #initialization }
-StackInterpreter class >> initializeBytecodeTableForSqueakV3PlusClosuresNewspeakV4Hybrid [
-	"StackInterpreter initializeBytecodeTableForSqueakV3PlusClosuresNewspeakV4Hybrid"
-
-	| v3Table v4Table |
-	self initializeBytecodeTableForNewspeakV4.
-	v4Table := BytecodeTable.
-	AltBytecodeEncoderClassName := BytecodeEncoderClassName.
-	AltLongStoreBytecode := LongStoreBytecode.
-	self initializeBytecodeTableForSqueakV3PlusClosures.
-	BytecodeSetHasExtensions := true.
-	v3Table := BytecodeTable.
-	BytecodeTable := v3Table, v4Table
-]
-
-{ #category : #initialization }
 StackInterpreter class >> initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid [
 	"StackInterpreter initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid"
 
@@ -1057,9 +910,7 @@ StackInterpreter class >> initializeBytecodeTableForSqueakV3PlusClosuresSistaV1H
 StackInterpreter class >> initializeCaches [
 
 	| atCacheEntries atCacheEntrySize |
-	NewspeakVM
-		ifTrue: [MethodCacheEntries := 512]
-		ifFalse: [MethodCacheEntries := 1024].
+	MethodCacheEntries := 1024.
 	MethodCacheSelector := 1.
 	MethodCacheClass := 2.
 	MethodCacheMethod := 3.
@@ -1125,14 +976,6 @@ StackInterpreter class >> initializeClassIndices [
 	"Fields of a message dictionary"
 	MethodArrayIndex := 1. 
 	SelectorStart := 2.
-
-	"Newspeak extensions"
-	"Fields of a Mixin (also defined by Behavior)"
-	EnclosingMixinIndex := NewspeakVM ifTrue: [3].  "(Class instVarIndexFor: 'mixinSlot') - 1"
-	"Fields of a MixinApplication (also defined by Behavior)"
-	MixinIndex := NewspeakVM ifTrue: [3]. "(Class instVarIndexFor: 'mixinSlot') - 1"
-	EnclosingObjectIndex := NewspeakVM ifTrue: [4]. "(Class instVarIndexFor: 'enclosingObjectSlot') - 1"
-
 
 ]
 
@@ -1259,8 +1102,7 @@ StackInterpreter class >> initializeMethodIndices [
 	AlternateHeaderIsOptimizedFlag := 16r8000 << tagBits.
 	AlternateHeaderNumLiteralsMask := 16r7FFF. "N.B.  *not* shifted"
 	"The position of the unused flag bit in the method header, not including tag bit(s).
-	 Bits 28 & 29 are either used as an accessModifer code in Newspeak (public, private, protected)
-	 or are free for use as flag bits."
+	 Bits 28 & 29 are free for use as flag bits."
 	MethodHeaderFlagBitPosition := 28 + tagBits.
 	AccessModifierPublic := 2r00.
 	AccessModifierPrivate := 2r01.
@@ -1320,7 +1162,7 @@ StackInterpreter class >> initializePrimitiveTable [
 	"self initializePrimitiveTable"
 
 	"NOTE: The real limit here is 2047 because of the old method header layout but there is no point in going over the needed size"
-	MaxPrimitiveIndex := 575.	
+	MaxPrimitiveIndex := 660.	
 	MaxQuickPrimitiveIndex := 519.
 	PrimNumberExternalCall := 117.
 	PrimNumberDoPrimitive := 118.
@@ -1662,7 +1504,76 @@ StackInterpreter class >> initializePrimitiveTable [
 		(574 primitiveFail) "reserved for addl. external support prims"
 
 		"Unassigned Primitives"
-		(575 primitiveFail))
+		(575 597 primitiveFail)
+
+		"Pinned object creation primitives"
+		(598 primitiveNewPinned)
+		(599 primitiveNewWithArgPinned)
+		
+		"Memory accessor primitives"
+		(600 primitiveLoadBoolean8FromBytes)
+		(601 primitiveLoadUInt8FromBytes)
+		(602 primitiveLoadInt8FromBytes)
+		(603 primitiveLoadUInt16FromBytes)
+		(604 primitiveLoadInt16FromBytes)
+		(605 primitiveLoadUInt32FromBytes)
+		(606 primitiveLoadInt32FromBytes)
+		(607 primitiveLoadUInt64FromBytes)
+		(608 primitiveLoadInt64FromBytes)
+		(609 primitiveLoadPointerFromBytes)
+		(610 primitiveLoadChar8FromBytes)
+		(611 primitiveLoadChar16FromBytes)
+		(612 primitiveLoadChar32FromBytes)
+		(613 primitiveLoadFloat32FromBytes)
+		(614 primitiveLoadFloat64FromBytes)
+		(615 primitiveStoreBoolean8IntoBytes)
+		(616 primitiveStoreUInt8IntoBytes)
+		(617 primitiveStoreInt8IntoBytes)
+		(618 primitiveStoreUInt16IntoBytes)
+		(619 primitiveStoreInt16IntoBytes)
+		(620 primitiveStoreUInt32IntoBytes)
+		(621 primitiveStoreInt32IntoBytes)
+		(622 primitiveStoreUInt64IntoBytes)
+		(623 primitiveStoreInt64IntoBytes)
+		(624 primitiveStorePointerIntoBytes)
+		(625 primitiveStoreChar8IntoBytes)
+		(626 primitiveStoreChar16IntoBytes)
+		(627 primitiveStoreChar32IntoBytes)
+		(628 primitiveStoreFloat32IntoBytes)
+		(629 primitiveStoreFloat64IntoBytes)
+		(630 primitiveLoadBoolean8FromExternalAddress)
+		(631 primitiveLoadUInt8FromExternalAddress)
+		(632 primitiveLoadInt8FromExternalAddress)
+		(633 primitiveLoadUInt16FromExternalAddress)
+		(634 primitiveLoadInt16FromExternalAddress)
+		(635 primitiveLoadUInt32FromExternalAddress)
+		(636 primitiveLoadInt32FromExternalAddress)
+		(637 primitiveLoadUInt64FromExternalAddress)
+		(638 primitiveLoadInt64FromExternalAddress)
+		(639 primitiveLoadPointerFromExternalAddress)
+		(640 primitiveLoadChar8FromExternalAddress)
+		(641 primitiveLoadChar16FromExternalAddress)
+		(642 primitiveLoadChar32FromExternalAddress)
+		(643 primitiveLoadFloat32FromExternalAddress)
+		(644 primitiveLoadFloat64FromExternalAddress)
+		(645 primitiveStoreBoolean8IntoExternalAddress)
+		(646 primitiveStoreUInt8IntoExternalAddress)
+		(647 primitiveStoreInt8IntoExternalAddress)
+		(648 primitiveStoreUInt16IntoExternalAddress)
+		(649 primitiveStoreInt16IntoExternalAddress)
+		(650 primitiveStoreUInt32IntoExternalAddress)
+		(651 primitiveStoreInt32IntoExternalAddress)
+		(652 primitiveStoreUInt64IntoExternalAddress)
+		(653 primitiveStoreInt64IntoExternalAddress)
+		(654 primitiveStorePointerIntoExternalAddress)
+		(655 primitiveStoreChar8IntoExternalAddress)
+		(656 primitiveStoreChar16IntoExternalAddress)
+		(657 primitiveStoreChar32IntoExternalAddress)
+		(658 primitiveStoreFloat32IntoExternalAddress)
+		(659 primitiveStoreFloat64IntoExternalAddress)
+		
+		(660 primitiveFail)
+		)
 ]
 
 { #category : #initialization }
@@ -1862,9 +1773,9 @@ void
 warning(char *s) { /* Print an error message but don''t necessarily exit. */
 	if (erroronwarn) error(s);
 	if (warnpid)
-		printf("\n%s pid %ld\n", s, (long)warnpid);
+		vm_printf("\n%s pid %ld\n", s, (long)warnpid);
 	else
-		printf("\n%s\n", s);
+		vm_printf("\n%s\n", s);
 }
 void
 warningat(char *s, int l) { /* ditto with line number. */
@@ -1878,9 +1789,9 @@ warningat(char *s, int l) { /* ditto with line number. */
 void
 invalidCompactClassError(char *s) { /* Print a (compact) class index error message and exit. */
 #if SPURVM
-	printf("\nClass %s does not have the required class index\n", s);
+	vm_printf("\nClass %s does not have the required class index\n", s);
 #else
-	printf("\nClass %s does not have the required compact class index\n", s);
+	vm_printf("\nClass %s does not have the required compact class index\n", s);
 #endif
 	exit(-1);
 }
@@ -2122,8 +2033,6 @@ StackInterpreter class >> writeVMHeaderTo: aStream bytesPerWord: bytesPerWord ge
 	super writeVMHeaderTo: aStream bytesPerWord: bytesPerWord generator: aCCodeGenerator.
 	SistaVM ifTrue:
 		[aCCodeGenerator putDefineOf: #SistaVM as: 1 on: aStream].
-	NewspeakVM ifTrue:
-		[aCCodeGenerator putDefineOf: #NewspeakVM as: 1 on: aStream].
 	MULTIPLEBYTECODESETS ifTrue:
 		[aCCodeGenerator putDefineOf: #MULTIPLEBYTECODESETS as: 1 on: aStream].
 	IMMUTABILITY ifTrue:
@@ -2132,7 +2041,7 @@ StackInterpreter class >> writeVMHeaderTo: aStream bytesPerWord: bytesPerWord ge
 			as: 1
 			comment: 'Allow this to be overridden on the compiler command line'
 			on: aStream].
-	SistaVM | NewspeakVM | MULTIPLEBYTECODESETS | IMMUTABILITY ifTrue:
+	SistaVM | MULTIPLEBYTECODESETS | IMMUTABILITY ifTrue:
 		[aStream cr].
 	aCCodeGenerator putDefineOf: #STACKVM as: 1 on: aStream.
 	(InitializationOptions at: #SpurObjectMemory ifAbsent: false) ifTrue:
@@ -2173,27 +2082,6 @@ StackInterpreter >> abstractDetailedSymbolicMethod: aMethod [
 		indent: 0;
 		printInstructionsOn: ts.
 	ts flush
-]
-
-{ #category : #'compiled methods' }
-StackInterpreter >> accessModifierOfMethod: methodObj [
-	<option: #NewspeakVM>
-	<inline: true>
-	^self accessModifierOfMethodHeader: (objectMemory methodHeaderOf: methodObj)
-]
-
-{ #category : #'compiled methods' }
-StackInterpreter >> accessModifierOfMethodHeader: header [
-	<option: #NewspeakVM>
-	<inline: true>
-	"accessModifier bits:
-		 00 public
-		 01 private
-		 10 protected
-		 11 undefined"
-	^EnforceAccessControl
-		ifTrue: [header >> MethodHeaderFlagBitPosition bitAnd: 3]
-		ifFalse: [AccessModifierPublic]
 ]
 
 { #category : #'primitive support' }
@@ -2403,55 +2291,6 @@ StackInterpreter >> addNewMethodToCache: classObj [
 		methodCache at: probe + MethodCacheSelector put: 0]
 ]
 
-{ #category : #'method lookup cache' }
-StackInterpreter >> addNewMethodToNSCache: rule [
-	<option: #NewspeakVM>
-	<inline: false>
-	| classObj probe hash primitiveIndex |
-	classObj := lkupClass.
-	hash := (objectMemory methodCacheHashOf: messageSelector with: lkupClassTag) bitXor: (method bitXor: rule).
-	self deny: rule = LookupRuleOrdinary.
-
-	(objectMemory isOopCompiledMethod: newMethod)
-		ifTrue:
-			[primitiveIndex := self primitiveIndexOf: newMethod.
-			 primitiveFunctionPointer := self functionPointerFor: primitiveIndex inClass: classObj]
-		ifFalse:
-			[self assert: ((objectMemory isNonImmediate: newMethod)
-						  and: [objectMemory isForwarded: newMethod]) not.
-			 primitiveFunctionPointer := #primitiveInvokeObjectAsMethod].
-
-	0 to: CacheProbeMax-1 do:
-		[:p | probe := (hash >> p) bitAnd: NSMethodCacheMask.
-		(nsMethodCache at: probe + NSMethodCacheSelector) = 0 ifTrue:
-			["Found an empty entry -- use it"
-			nsMethodCache at: probe + NSMethodCacheSelector put: messageSelector.
-			nsMethodCache at: probe + NSMethodCacheClassTag put: lkupClassTag. "(objectMemory classTagForClass: classObj)."
-			nsMethodCache at: probe + NSMethodCacheCallingMethod put: method.
-			nsMethodCache at: probe + NSMethodCacheDepthOrLookupRule put: rule.
-			nsMethodCache at: probe + NSMethodCacheTargetMethod put: newMethod.
-			nsMethodCache at: probe + NSMethodCachePrimFunction put: (self cCoerce: primitiveFunctionPointer to: #'sqIntptr_t').
-			nsMethodCache at: probe + NSMethodCacheActualReceiver put: localAbsentReceiverOrZero.
-			"lastMethodCacheProbeWrite := probe." "this for primitiveExternalMethod"
-			^self]].
-
-	"OK, we failed to find an entry -- install at the first slot..."
-	probe := hash bitAnd: NSMethodCacheMask.  "first probe"
-	nsMethodCache at: probe + NSMethodCacheSelector put: messageSelector.
-	nsMethodCache at: probe + NSMethodCacheClassTag put: lkupClassTag. "(objectMemory classTagForClass: classObj)."
-	nsMethodCache at: probe + NSMethodCacheCallingMethod put: method.
-	nsMethodCache at: probe + NSMethodCacheDepthOrLookupRule put: rule.
-	nsMethodCache at: probe + NSMethodCacheTargetMethod put: newMethod.
-	nsMethodCache at: probe + NSMethodCachePrimFunction put: (self cCoerce: primitiveFunctionPointer to: #'sqIntptr_t').
-	nsMethodCache at: probe + NSMethodCacheActualReceiver put: localAbsentReceiverOrZero.
-	"lastMethodCacheProbeWrite := probe. ""this for primitiveExternalMethod"
-
-	"...and zap the following entries"
-	1 to: CacheProbeMax-1 do:
-		[:p | probe := (hash >> p) bitAnd: NSMethodCacheMask.
-		nsMethodCache at: probe + NSMethodCacheSelector put: 0]
-]
-
 { #category : #'plugin support' }
 StackInterpreter >> addToExternalPrimitiveTable: functionAddress [
 	"Add the given function address to the external primitive table and return the index where it's stored. This function doesn't need to be fast since it is only called when an external primitive has been looked up (which takes quite a bit of time itself). So there's nothing specifically complicated here.
@@ -2524,6 +2363,26 @@ StackInterpreter >> allocateMemory: heapSize minimum: minimumMemory imageFile: f
 							Minimum: minimumMemory
 							ImageFile: fileStream
 							HeaderSize: headerSize)
+]
+
+{ #category : #'image save/restore' }
+StackInterpreter >> allocateMemory: heapSize minimum: minimumMemory imageFile: fileStream headerSize: headerSize desiredPosition: desiredBaseAddress [
+	"Translate to C function call with (case sensitive) camelCase. The purpose of this
+	 method is to document the translation.
+	 The default implementation is sqAllocateMemory(minimumMemory, heapSize). This may
+	 be redefined to make use of the image file and header size parameters for efficient
+	 implementation with mmap().
+	 See CCodeGenerator>>writeDefaultMacrosOn: which specifies a default implementation."
+
+	<inline: true>
+	<returnTypeC: #'char *'>
+	<var: #fileStream type: #sqImageFile>
+	^self pointerForOop: (self
+							allocateMemory: heapSize
+							Minimum: minimumMemory
+							ImageFile: fileStream
+							HeaderSize: headerSize
+							BaseAddress: desiredBaseAddress)
 ]
 
 { #category : #'compiled methods' }
@@ -5004,7 +4863,6 @@ StackInterpreter >> closureIn: context numArgs: numArgs instructionPointer: init
 { #category : #'primitive support' }
 StackInterpreter >> codeGeneratorToComputeAccessorDepth [
 	^(VMMaker new
-		beSilent;
 		buildCodeGeneratorForInterpreter: self class primitivesClass
 		includeAPIMethods: false
 		initializeClasses: false)
@@ -5220,36 +5078,6 @@ StackInterpreter >> commonReturn [
 ]
 
 { #category : #'send bytecodes' }
-StackInterpreter >> commonSendDynamicSuper [
-	"Assume: messageSelector and argumentCount have been set, and that 
-	the receiver and arguments have been pushed onto the stack,"
-	"Note: This method is inlined into the interpreter dispatch loop."
-	<sharedCodeInCase: #extSendAbsentDynamicSuperBytecode>
-	self sendBreakpoint: messageSelector receiver: (self internalStackValue: argumentCount).
-	self printSends ifTrue:
-		[self printActivationNameForSelector: messageSelector startClass: (objectMemory classForClassTag: lkupClassTag); cr].
-	self internalFindNewMethodDynamicSuper.
-	self shuffleArgumentsAndStoreAbsentReceiver: localAbsentReceiver.
-	self internalExecuteNewMethod.
-	self fetchNextBytecode
-]
-
-{ #category : #'send bytecodes' }
-StackInterpreter >> commonSendImplicitReceiver [
-	"Assume: messageSelector and argumentCount have been set, and that 
-	the receiver and arguments have been pushed onto the stack,"
-	"Note: This method is inlined into the interpreter dispatch loop."
-	<sharedCodeInCase: #extSendAbsentImplicitBytecode>
-	self sendBreakpoint: messageSelector receiver: (self internalStackValue: argumentCount).
-	self printSends ifTrue:
-		[self printActivationNameForSelector: messageSelector startClass: (objectMemory classForClassTag: lkupClassTag); cr].
-	self internalFindNewMethodImplicitReceiver.
-	self shuffleArgumentsAndStoreAbsentReceiver: localAbsentReceiver.
-	self internalExecuteNewMethod.
-	self fetchNextBytecode
-]
-
-{ #category : #'send bytecodes' }
 StackInterpreter >> commonSendOrdinary [
 	"Send a message, starting lookup with the receiver's class."
 	"Assume: messageSelector and argumentCount have been set, and that 
@@ -5260,21 +5088,6 @@ StackInterpreter >> commonSendOrdinary [
 	self printSends ifTrue:
 		[self printActivationNameForSelector: messageSelector startClass: (objectMemory classForClassTag: lkupClassTag); cr].
 	self internalFindNewMethodOrdinary.
-	self internalExecuteNewMethod.
-	self fetchNextBytecode
-]
-
-{ #category : #'send bytecodes' }
-StackInterpreter >> commonSendOuter: depth [
-	"Assume: messageSelector and argumentCount have been set, and that 
-	the receiver and arguments have been pushed onto the stack,"
-	"Note: This method is inlined into the interpreter dispatch loop."
-	"<sharedCodeInCase: #extSendAbsentOuterBytecode>"
-	self sendBreakpoint: messageSelector receiver: (self internalStackValue: argumentCount).
-	self printSends ifTrue:
-		[self printActivationNameForSelector: messageSelector startClass: (objectMemory classForClassTag: lkupClassTag); cr].
-	self internalFindNewMethodOuter: depth.
-	self shuffleArgumentsAndStoreAbsentReceiver: localAbsentReceiver.
 	self internalExecuteNewMethod.
 	self fetchNextBytecode
 ]
@@ -5516,7 +5329,8 @@ StackInterpreter >> couldBeProcess: oop [
 StackInterpreter >> cr [
 	"For testing in Smalltalk, this method should be overridden in a subclass."
 	<inline: true>
-	self printf: '\n'
+	self print: '\n'.
+	^ 1.
 ]
 
 { #category : #'message sending' }
@@ -5912,27 +5726,6 @@ StackInterpreter >> elementsPerPrintOopLine [
 	^5
 ]
 
-{ #category : #'newspeak bytecode support' }
-StackInterpreter >> enclosingObjectAt: depth withObject: methodReceiver withMixin: methodMixin [ 
-	"This is used to implement outer sends and outer expressions in Newspeak."
-	| enclosingObject mixinApplication targetMixin count |
-	
-	enclosingObject := methodReceiver.
-	targetMixin := methodMixin.
-	count := 0.
-	[count < depth] whileTrue:
-		[count := count + 1.
-		self deny: (targetMixin = objectMemory nilObject).
-		mixinApplication := self
-							findApplicationOfTargetMixin: targetMixin
-							startingAtBehavior: (objectMemory fetchClassOf: enclosingObject).
-		self deny: (mixinApplication = objectMemory nilObject).
-		enclosingObject := objectMemory followObjField: EnclosingObjectIndex ofObject: mixinApplication.	
-		targetMixin := objectMemory followObjField: EnclosingMixinIndex ofObject: targetMixin].
-	
-	^enclosingObject
-]
-
 { #category : #'frame access' }
 StackInterpreter >> encodeFrameFieldHasContext: hasContext "<Boolean>" isBlock: isBlock "<Boolean>" numArgs: numArgs [
 	"For ``fast'' temporary access (ok, to mitigate slower temp access) we need
@@ -6133,7 +5926,6 @@ StackInterpreter >> extJumpIfTrue [
 { #category : #'miscellaneous bytecodes' }
 StackInterpreter >> extNopBytecode [
 	"SistaV1		94		01011111		Nop"
-	"NewspeakV4: 221		11011101		Nop"
 	self fetchNextBytecode.
 	numExtB := extA := extB := 0
 ]
@@ -6235,35 +6027,6 @@ StackInterpreter >> extPushPseudoVariable [
 ]
 
 { #category : #'stack bytecodes' }
-StackInterpreter >> extPushPseudoVariableOrOuterBytecode [
-	"77			01001101		Push false [* 1:true, 2:nil, 3:thisContext, ..., -N: pushExplicitOuter: N, N = Extend B]"
-	| thing |
-	self fetchNextBytecode.
-	thing := extB
-				caseOf: {
-					[0]	->	[^self internalPush: objectMemory falseObject].
-					[1]	->	[objectMemory trueObject].
-					[2]	->	[objectMemory nilObject].
-					[3]	->	[| context |
-							 context := self ensureFrameIsMarried: localFP SP: localSP.
-							 context]
-				}
-				otherwise:
-					[extB < 0
-						ifTrue:
-							[self 
-								enclosingObjectAt: 0 - extB 
-								withObject: self receiver 
-								withMixin: (self methodClassOf: method)]
-						ifFalse:
-							[self error: 'undefined extension for extPushPseudoVariableOrOuter'.
-							 objectMemory nilObject]].
-	extB := 0.
-	numExtB := 0.
-	self internalPush: thing
-]
-
-{ #category : #'stack bytecodes' }
 StackInterpreter >> extPushReceiverVariableBytecode [
 	"226		11100010	i i i i i i i i	Push Receiver Variable #iiiiiiii (+ Extend A * 256)"
 	| index |
@@ -6283,59 +6046,6 @@ StackInterpreter >> extReturnTopFromBlock [
 		 ^self commonCallerReturn].
 	self shouldBeImplemented.
 	extA := 0
-]
-
-{ #category : #'send bytecodes' }
-StackInterpreter >> extSendAbsentDynamicSuperBytecode [
-	"241		11110001	i i i i i j j j	Send To Dynamic Superclass Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments"
-	| byte |
-	byte := self fetchByte.
-	messageSelector := self literal: (byte >> 3) + (extA << 5).
-	extA := 0.
-	argumentCount := (byte bitAnd: 7) + (extB << 3).
-	extB := 0.
-	numExtB := 0.
-	self commonSendDynamicSuper
-]
-
-{ #category : #'send bytecodes' }
-StackInterpreter >> extSendAbsentImplicitBytecode [
-	"240		11110000	i i i i i j j j	Send To Absent Implicit Receiver Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments"
-	| byte |
-	byte := self fetchByte.
-	messageSelector := self literal: (byte >> 3) + (extA << 5).
-	extA := 0.
-	argumentCount := (byte bitAnd: 7) + (extB << 3).
-	extB := 0.
-	numExtB := 0.
-	self commonSendImplicitReceiver.
-]
-
-{ #category : #'send bytecodes' }
-StackInterpreter >> extSendAbsentOuterBytecode [
-	"254		  11111110 	i i i i i j j j	kkkkkkkk Send To Enclosing Object at Depth kkkkkkkk Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments"
-	| byte depth |
-	byte := self fetchByte.
-	messageSelector := self literal: (byte >> 3) + (extA << 5).
-	extA := 0.
-	argumentCount := (byte bitAnd: 7) + (extB << 3).
-	extB := 0.
-	numExtB := 0.
-	depth := self fetchByte.
-	self commonSendOuter: depth
-]
-
-{ #category : #'send bytecodes' }
-StackInterpreter >> extSendAbsentSelfBytecode [
-	"245		 11110101 	i i i i i j j j	Send To Self Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments"
-	| byte |
-	byte := self fetchByte.
-	messageSelector := self literal: (byte >> 3) + (extA << 5).
-	extA := 0.
-	argumentCount := (byte bitAnd: 7) + (extB << 3).
-	extB := 0.
-	numExtB := 0.
-	self commonSendOuter: 0
 ]
 
 { #category : #'send bytecodes' }
@@ -6817,31 +6527,6 @@ StackInterpreter >> fetchStackPointerOf: aContext [
 	^objectMemory integerValueOf: sp
 ]
 
-{ #category : #'newspeak bytecode support' }
-StackInterpreter >> findApplicationOfTargetMixin: targetMixin startingAtBehavior: aBehavior [
-	"This is used to implement implicit receiver and enclosing object lookup
-	 for Newspeak. Find the mixin applcation of which aClass is a subclass that
-	 is an application of targetMixin. This is an implementation derived from
-
-	<ContextPart> findApplicationOf: targetMixin startingAt: aBehavior
-	"
-	| mixinApplication mixin |
-	mixinApplication := aBehavior.
-	[mixinApplication = objectMemory nilObject
-	 or: [mixinApplication = targetMixin
-	 or: [(mixin := objectMemory followObjField: MixinIndex ofObject: mixinApplication) = targetMixin]]] whileFalse:
-		[mixinApplication := objectMemory followObjField: SuperclassIndex ofObject: mixinApplication].
-
-	mixinApplication = objectMemory nilObject ifTrue: [
-		self print: 'looking for '; cr.
-		self longPrintOop: targetMixin; cr.
-		self print: ' in behavior '; cr.
-		self longPrintOop: aBehavior; cr.
-	].
-
-	^mixinApplication
-]
-
 { #category : #'debug support' }
 StackInterpreter >> findClassContainingMethod: meth startingAt: classObj [
 	| currClass classDict classDictSize methodArray i |
@@ -7032,9 +6717,7 @@ StackInterpreter >> findNewMethodInClassTag: classTagArg [
 			ok ifTrue:
 				[^nil]].
  		 lkupClass := objectMemory classForClassTag: classTag.
-		 NewspeakVM
-				ifTrue: [self lookupOrdinarySend]
-				ifFalse: [self lookupMethodInClass: lkupClass].
+		 self lookupMethodInClass: lkupClass.
 		 self addNewMethodToCache: lkupClass]
 ]
 
@@ -7289,8 +6972,6 @@ StackInterpreter >> flushMethodCache [
 	"Flush the method cache. The method cache is flushed on every programming change and garbage collect."
 
 	1 to: MethodCacheSize do: [ :i | methodCache at: i put: 0 ].
-	NewspeakVM ifTrue:
-		[1 to: NSMethodCacheSize do: [ :i | nsMethodCache at: i put: 0 ]].
 	lastMethodCacheProbeWrite := 0. "this for primitiveExternalMethod"
 	self flushAtCache
 ]
@@ -7327,8 +7008,6 @@ StackInterpreter >> flushMethodCacheFrom: memStart to: memEnd [
 				 and: [self oop: (methodCache at: probe + MethodCacheMethod) isLessThan: memEnd]]) ifTrue:
 				[methodCache at: probe + MethodCacheSelector put: 0]].
 			probe := probe + MethodCacheEntrySize].
-	NewspeakVM ifTrue:
-		[1 to: NSMethodCacheSize do: [ :i | nsMethodCache at: i put: 0]].
 	self flushAtCache
 ]
 
@@ -8513,6 +8192,7 @@ StackInterpreter >> initialize [
 	nextWakeupUsecs := 0.
 	tempOop := tempOop2 := theUnknownShort := 0.
 	interruptPending := false.
+	maxStacksToPrint := 0.
 	inIOProcessEvents := 0.
 	fullScreenFlag := 0.
 	sendWheelEvents := deferDisplayUpdates := false.
@@ -8915,64 +8595,6 @@ StackInterpreter >> internalExecuteNewMethod [
 ]
 
 { #category : #'message sending' }
-StackInterpreter >> internalFindNewMethodDynamicSuper [
-	"Find the compiled method to be run when the current messageSelector is sent to the superclass of the class where the current method was looked up, setting the values of 'newMethod' and 'primitiveIndex'."
-	<inline: true>
-	localAbsentReceiver := self receiver.
-	self deny: (objectMemory isOopForwarded: localAbsentReceiver).
-	lkupClassTag := objectMemory fetchClassTagOf: localAbsentReceiver.
-
-	(self inlineLookupInNSMethodCacheSel: messageSelector classTag: lkupClassTag method: method lookupRule: LookupRuleDynamicSuper)
-	 ifFalse:
-		[ | actualLookupRule |
-		"entry was not found in the cache; look it up the hard way"
-		 self externalizeIPandSP.
-		 ((objectMemory isOopForwarded: messageSelector)
-		  or: [objectMemory isForwardedClassTag: lkupClassTag]) ifTrue:
-			[(objectMemory isOopForwarded: messageSelector) ifTrue:
-				[messageSelector := self handleForwardedSelectorFaultFor: messageSelector].
-			 (objectMemory isForwardedClassTag: lkupClassTag) ifTrue:
-				[lkupClassTag := self handleForwardedSendFaultForTag: lkupClassTag].
-			"(self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag) ifTrue:
-				[^nil]"].
-		 lkupClass := objectMemory classForClassTag: lkupClassTag.
-		 actualLookupRule := self lookupDynamicSuperSend.
-		 self internalizeIPandSP.
-		 self addNewMethodToNSCache: actualLookupRule].
-
-]
-
-{ #category : #'message sending' }
-StackInterpreter >> internalFindNewMethodImplicitReceiver [
-	"Find the compiled method to be run when the for an implicit receiver send of messageSelector, setting the values of 'newMethod' and 'primitiveIndex'."
-	<inline: true>
-	localAbsentReceiver := self receiver.
-	self deny: (objectMemory isOopForwarded: localAbsentReceiver).
-	lkupClassTag := objectMemory fetchClassTagOf: localAbsentReceiver.
-
-	(self inlineLookupInNSMethodCacheSel: messageSelector classTag: lkupClassTag method: method lookupRule: LookupRuleImplicit)
-	 ifTrue:
-		[localAbsentReceiverOrZero = 0 ifFalse: [localAbsentReceiver := localAbsentReceiverOrZero.]]
-	 ifFalse:
-		[ | actualLookupRule |
-		"entry was not found in the cache; look it up the hard way"
-		 self externalizeIPandSP.
-		 ((objectMemory isOopForwarded: messageSelector)
-		  or: [objectMemory isForwardedClassTag: lkupClassTag]) ifTrue:
-			[(objectMemory isOopForwarded: messageSelector) ifTrue:
-				[messageSelector := self handleForwardedSelectorFaultFor: messageSelector].
-			 (objectMemory isForwardedClassTag: lkupClassTag) ifTrue:
-				[lkupClassTag := self handleForwardedSendFaultForTag: lkupClassTag].
-			"(self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag) ifTrue:
-				[^nil]"].
-		 lkupClass := objectMemory classForClassTag: lkupClassTag.
-		 actualLookupRule := self lookupImplicitReceiverSend.
-		 self internalizeIPandSP.
-		 self addNewMethodToNSCache: actualLookupRule].
-
-]
-
-{ #category : #'message sending' }
 StackInterpreter >> internalFindNewMethodOrdinary [
 	"Find the compiled method to be run when the current messageSelector is sent to the class 'lkupClass', setting the values of 'newMethod' and 'primitiveIndex'."
 	<inline: true>
@@ -8988,41 +8610,9 @@ StackInterpreter >> internalFindNewMethodOrdinary [
 			(self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag) ifTrue:
 				[^nil]].
 		 lkupClass := objectMemory classForClassTag: lkupClassTag.
-		 NewspeakVM
-			ifTrue: [self lookupOrdinarySend]
-			ifFalse: [self lookupMethodInClass: lkupClass].
+		 self lookupMethodInClass: lkupClass.
 		 self internalizeIPandSP.
 		 self addNewMethodToCache: lkupClass].
-
-]
-
-{ #category : #'message sending' }
-StackInterpreter >> internalFindNewMethodOuter: depth [
-	"Find the compiled method to be run when the current messageSelector is sent to the depth'th enclosing object w/r/t the mixin of the current method, setting the values of 'newMethod' and 'primitiveIndex'."
-	<inline: true>
-	localAbsentReceiver := self receiver.
-	self deny: (objectMemory isOopForwarded: localAbsentReceiver).
-	lkupClassTag := objectMemory fetchClassTagOf: localAbsentReceiver.
-
-	(self inlineLookupInNSMethodCacheSel: messageSelector classTag: lkupClassTag method: method lookupRule: depth)
-	 ifTrue:
-		[localAbsentReceiverOrZero = 0 ifFalse: [localAbsentReceiver := localAbsentReceiverOrZero.]]
-	 ifFalse:
-		[ | actualLookupRule |
-		"entry was not found in the cache; look it up the hard way"
-		 self externalizeIPandSP.
-		 ((objectMemory isOopForwarded: messageSelector)
-		  or: [objectMemory isForwardedClassTag: lkupClassTag]) ifTrue:
-			[(objectMemory isOopForwarded: messageSelector) ifTrue:
-				[messageSelector := self handleForwardedSelectorFaultFor: messageSelector].
-			 (objectMemory isForwardedClassTag: lkupClassTag) ifTrue:
-				[lkupClassTag := self handleForwardedSendFaultForTag: lkupClassTag].
-			"(self lookupInMethodCacheSel: messageSelector classTag: lkupClassTag) ifTrue:
-				[^nil]"].
-		 lkupClass := objectMemory classForClassTag: lkupClassTag.
-		 actualLookupRule := self lookupOuterSend: depth.
-		 self internalizeIPandSP.
-		 self addNewMethodToNSCache: actualLookupRule].
 
 ]
 
@@ -9339,7 +8929,7 @@ StackInterpreter >> interpret [
 	self internalizeIPandSP.
 	self initExtensions.
 	self fetchNextBytecode.
-	[true] whileTrue: [self interpretCurrentByteCode ].
+	[true] whileTrue: [self dispatchOn: currentBytecode in: BytecodeTable].
 	localIP := localIP - 1.  "undo the pre-increment of IP before returning"
 	self externalizeIPandSP.
 	^nil
@@ -9688,27 +9278,6 @@ StackInterpreter >> isPrimitiveFunctionPointerAnIndex [
 	 quick primitive indices are small they can't be confused with function
 	 addresses. "
 	^(self cCoerce: primitiveFunctionPointer to: #'usqIntptr_t') <= MaxQuickPrimitiveIndex
-]
-
-{ #category : #'compiled methods' }
-StackInterpreter >> isPrivateMethod: methodObj [
-	<option: #NewspeakVM>
-	<inline: true>
-	^(self accessModifierOfMethod: methodObj) = AccessModifierPrivate
-]
-
-{ #category : #'compiled methods' }
-StackInterpreter >> isProtectedMethod: methodObj [
-	<option: #NewspeakVM>
-	<inline: true>
-	^(self accessModifierOfMethod: methodObj) = AccessModifierProtected
-]
-
-{ #category : #'compiled methods' }
-StackInterpreter >> isPublicMethod: methodObj [
-	<option: #NewspeakVM>
-	<inline: true>
-	^(self accessModifierOfMethod: methodObj) = AccessModifierPublic
 ]
 
 { #category : #'compiled methods' }
@@ -10214,10 +9783,10 @@ StackInterpreter >> longPrintOop: oop [
 			 startIP to: lastIndex do:
 				[:index| | byte |
 				column = 1 ifTrue:
-					[self cCode: 'printf("0x%08" PRIxSQPTR ": ", (usqIntptr_t)(oop+BaseHeaderSize+index-1))'
+					[self cCode: 'vm_printf("0x%08" PRIxSQPTR ": ", (usqIntptr_t)(oop+BaseHeaderSize+index-1))'
 						inSmalltalk: [self print: (oop+objectMemory baseHeaderSize+index-1) hex; print: ': ']].
 				byte := objectMemory fetchByte: index - 1 ofObject: oop.
-				self cCode: 'printf(" %02x/%-3d", (int)byte,(int)byte)'
+				self cCode: 'vm_printf(" %02x/%-3d", (int)byte,(int)byte)'
 					inSmalltalk: [self space; print: (byte radix: 16); printChar: $/; printNum: byte].
 				column := column + 1.
 				column > bytecodesPerLine ifTrue:
@@ -10283,71 +9852,6 @@ StackInterpreter >> lookupBreakFor: lookupClass [
 			inSmalltalk: [self halt: 'Lookup in class ', lookupClass hex]]
 ]
 
-{ #category : #'message sending' }
-StackInterpreter >> lookupDynamicSuperSend [
-	"Do the full lookup for a Newspeak super send.
-	IN: messageSelector
-	IN: argumentCount
-	OUT: localAbsentReceiver
-	OUT: newMethod
-	OUT: primitiveIndex
-	RESULT: LookupRuleDynamicSuper or LookupRuleMNU"
-
-	| methodMixin methodMixinApplication |
-	localAbsentReceiver := self receiver.
-	localAbsentReceiverOrZero := 0.
-	methodMixin := self methodClassOf: method.
-	methodMixinApplication := self
-		findApplicationOfTargetMixin: methodMixin
-		startingAtBehavior: (objectMemory fetchClassOf: localAbsentReceiver).
-	lkupClass := self superclassOf: methodMixinApplication. "MNU lookup starts here."
-	^self lookupProtected: messageSelector startingAt: lkupClass rule: LookupRuleDynamicSuper
-]
-
-{ #category : #'message sending' }
-StackInterpreter >> lookupImplicitReceiverSend [
-	"Do the full lookup for an implicit receiver send.
-	IN: messageSelector
-	IN: argumentCount
-	OUT: localAbsentReceiver
-	OUT: localAbsentReceiverOrZero
-	OUT: newMethod
-	OUT: primitiveIndex
-	RESULT: LookupRuleImplicit or LookupRuleMNU"
-
-	| methodReceiver candidateReceiver candidateMixin candidateMixinApplication dictionary found |
-	messageSelector := objectMemory followMaybeForwarded: messageSelector.
-	methodReceiver := self receiver.
-	candidateReceiver := methodReceiver.
-	self deny: (objectMemory isForwarded: method).
-	candidateMixin := self methodClassOf: method.
-	localAbsentReceiverOrZero := 0.
-	[self deny: (objectMemory isForwarded: candidateMixin).
-	self deny: (objectMemory isForwarded: candidateReceiver).
-	candidateMixinApplication := self
-		findApplicationOfTargetMixin: candidateMixin
-		startingAtBehavior: (objectMemory fetchClassOf: candidateReceiver).
-	self deny: (candidateMixinApplication = 0).
-	self deny: (candidateMixinApplication = objectMemory nilObject).
-	self deny: (objectMemory isForwarded: candidateMixinApplication).
-	self assert: (self addressCouldBeClassObj: candidateMixinApplication).
-	dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: candidateMixinApplication.
-	found := self lookupMethodInDictionary: dictionary.
-	found ifTrue:
-		[localAbsentReceiver := candidateReceiver.
-		^self lookupLexical: messageSelector from: candidateMixin rule: LookupRuleImplicit].
-	candidateMixin := objectMemory followObjField: EnclosingMixinIndex ofObject: candidateMixin.
-	self deny: (objectMemory isForwarded: candidateMixin).
-	candidateMixin = objectMemory nilObject]
-		whileFalse:
-			[localAbsentReceiverOrZero := candidateReceiver := objectMemory followObjField: EnclosingObjectIndex ofObject: candidateMixinApplication].
-	"There is no lexically visible method, so the implicit receiver is the method receiver."
-	localAbsentReceiverOrZero := 0.
-	localAbsentReceiver := methodReceiver.
-	lkupClass := objectMemory fetchClassOf: methodReceiver. "MNU lookup starts here."
-	^self lookupProtected: messageSelector startingAt: lkupClass rule: LookupRuleImplicit.
-]
-
 { #category : #'method lookup cache' }
 StackInterpreter >> lookupInMethodCacheSel: selector classTag: classTag [
 	"This method implements a simple method lookup cache.  If an entry for the given
@@ -10355,23 +9859,6 @@ StackInterpreter >> lookupInMethodCacheSel: selector classTag: classTag [
 	 'primitiveFunctionPointer' and answer true. Otherwise, answer false."
 	<inline: false>
 	^self inlineLookupInMethodCacheSel: selector classTag: classTag
-]
-
-{ #category : #'message sending' }
-StackInterpreter >> lookupLexical: selector from: mixin rule: rule [
-	"A shared part of the lookup for implicit receiver sends that found a lexically visible
-	method, and self and outer sends."
-	| receiverClass mixinApplication dictionary found |
-	receiverClass := objectMemory fetchClassOf: localAbsentReceiver.
-	self lookupBreakFor: receiverClass.
-	lkupClass := receiverClass. "MNU lookup starts here."
-	mixinApplication := self findApplicationOfTargetMixin: mixin startingAtBehavior: receiverClass.
-	dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: mixinApplication.
-	found := self lookupMethodInDictionary: dictionary.
-	(found and: [(self isPrivateMethod: newMethod)]) ifTrue:
-		[^rule].
-	^self lookupProtected: selector startingAt: receiverClass rule: rule
-
 ]
 
 { #category : #'message sending' }
@@ -10416,9 +9903,7 @@ StackInterpreter >> lookupMNUInClass: class [
 			[lkupClass := self superclassOf: currentClass.
 			 ^SelectorCannotInterpret].
 		found := self lookupMethodInDictionary: dictionary.
-		NewspeakVM
-			ifTrue: [found ifTrue: [lkupClass := class. self addNewMethodToNSCache: LookupRuleMNU. ^0]]
-			ifFalse: [found ifTrue: [self addNewMethodToCache: class. ^0]].
+		found ifTrue: [self addNewMethodToCache: class. ^0].
 		currentClass := self superclassOf: currentClass].
 	lkupClass := class.
 	^SelectorDoesNotUnderstand
@@ -10561,87 +10046,10 @@ StackInterpreter >> lookupOrdinaryNoMNUEtcInClass: class [
 			[lkupClass := self superclassOf: currentClass.
 			 ^SelectorCannotInterpret].
 		found := self lookupMethodInDictionary: dictionary.
-		NewspeakVM
-			ifTrue:
-				[found ifTrue:
-					[(self isPublicMethod: newMethod) ifTrue:
-						[self addNewMethodToCache: class. ^0].
-					(self isProtectedMethod: newMethod) ifTrue:
-						[lkupClass := class. ^SelectorDoesNotUnderstand]]]
-			ifFalse:
-				[found ifTrue:
-					[self addNewMethodToCache: class. ^0]].
+		found ifTrue: [self addNewMethodToCache: class. ^0].
 		currentClass := self superclassOf: currentClass].
 	lkupClass := class.
 	^SelectorDoesNotUnderstand
-]
-
-{ #category : #'message sending' }
-StackInterpreter >> lookupOrdinarySend [
-	"Do the full lookup for an ordinary send (i.e., a Newspeak or Smalltalk ordinary send or a Smalltalk super send).
-	IN: lkupClass
-	IN: messageSelector
-	IN: argumentCount
-	OUT: newMethod
-	OUT: primitiveIndex
-	RESULT: LookupRuleOrdinary or LookupRuleMNU"
-	<option: #NewspeakVM>
-	| currentClass dictionary found |
-	self assert: (self addressCouldBeClassObj: lkupClass).
-	self lookupBreakFor: lkupClass.
-	currentClass := lkupClass.
-	[currentClass ~= objectMemory nilObject] whileTrue:
-		[dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: currentClass.
-		found := self lookupMethodInDictionary: dictionary.
-		found ifTrue:
-			[(self isPublicMethod: newMethod) ifTrue:
-				[^LookupRuleOrdinary].
-			(self isProtectedMethod: newMethod) ifTrue:
-				[^self lookupMNU]].
-		currentClass := self superclassOf: currentClass].
-	^self lookupMNU
-]
-
-{ #category : #'message sending' }
-StackInterpreter >> lookupOuterSend: depth [
-	"Do the full lookup for a self or outer send.
-	IN: messageSelector
-	IN: argumentCount
-	OUT: localAbsentReceiver
-	OUT: localAbsentReceiverOrZero
-	OUT: newMethod
-	OUT: primitiveIndex
-	RESULT: [depth] or LookupRuleMNU"
-
-	| targetMixin count mixinApplication |
-	localAbsentReceiver := self receiver.
-	localAbsentReceiverOrZero := 0.
-	targetMixin := self methodClassOf: method.
-	count := 0.
-	[count < depth] whileTrue:
-		[count := count + 1.
-		mixinApplication := self
-			findApplicationOfTargetMixin: targetMixin
-			startingAtBehavior: (objectMemory fetchClassOf: localAbsentReceiver).
-		localAbsentReceiverOrZero := localAbsentReceiver := objectMemory followObjField: EnclosingObjectIndex ofObject: mixinApplication.
-		targetMixin := objectMemory followObjField: EnclosingMixinIndex ofObject: targetMixin].
-	^self lookupLexical: messageSelector from: targetMixin rule: depth
-]
-
-{ #category : #'message sending' }
-StackInterpreter >> lookupProtected: selector startingAt: mixinApplication rule: rule [
-	"A shared part of the lookup for self, outer or implicit receiver sends that did not find a
-	private lexically visible method, and (Newspeak) super sends."
-	| currentClass dictionary found |
-	self lookupBreakFor: mixinApplication.
-	currentClass := mixinApplication.
-	[currentClass = objectMemory nilObject] whileFalse:
-		[dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: currentClass.
-		found := self lookupMethodInDictionary: dictionary.
-		(found and: [(self isPrivateMethod: newMethod) not]) ifTrue:
-			[^rule].
-		currentClass := self superclassOf: currentClass].
-	^self lookupMNU
 ]
 
 { #category : #'debug support' }
@@ -16473,6 +15881,12 @@ StackInterpreter >> maybeTraceStackOverflow [
 	"nop in the stack interpreter"
 ]
 
+{ #category : #accessing }
+StackInterpreter >> messageSelector [
+	<doNotGenerate>
+	^ messageSelector
+]
+
 { #category : #simulation }
 StackInterpreter >> metaclassNumSlots [
 	<doNotGenerate>
@@ -16491,7 +15905,7 @@ StackInterpreter >> methodArg: index [
 	<doNotGenerate> "Obsolete; was never used; replaced with methodReturnBool: in the VirtualMachine struct."
 	self deprecated.
 	index > argumentCount + 1 ifTrue:
-		[self cCode: 'fprintf(stderr,"[VM]: Attempt to access method args beyond range\n")'.
+		[self cCode: 'vm_printf("[VM]: Attempt to access method args beyond range\n")'.
 		self printCallStack.
 		self primitiveFail.
 		^0].
@@ -17354,6 +16768,12 @@ StackInterpreter >> preGCAction: gcModeArg [
 		[self flushMethodCache]
 ]
 
+{ #category : #accessing }
+StackInterpreter >> primFailCode [
+	<doNotGenerate>
+	^ primFailCode 
+]
+
 { #category : #'primitive support' }
 StackInterpreter >> primitiveAccessorDepthForExternalPrimitiveMethod: methodObj [
 	^objectMemory integerValueOf:
@@ -17619,9 +17039,12 @@ StackInterpreter >> primitiveObject: actualReceiver perform: selector withArgume
 { #category : #'debug printing' }
 StackInterpreter >> print: s [
 	"For testing in Smalltalk, this method should be overridden in a subclass."
+
 	<api>
 	<var: #s type: #'char *'>
-	self cCode: 'fputs(s, stdout)'
+	self
+		cCode: 'vm_printf(s)'
+		inSmalltalk: [ self subclassResponsibility ]
 ]
 
 { #category : #'debug printing' }
@@ -17754,6 +17177,8 @@ StackInterpreter >> printAtCache [
 { #category : #'debug printing' }
 StackInterpreter >> printCallStack [
 	<inline: false>
+	
+	self resetStackPrintedCount.
 	framePointer = nil
 		ifTrue: [self printCallStackOf: (objectMemory fetchPointer: SuspendedContextIndex ofObject: self activeProcess)]
 		ifFalse: [self printCallStackFP: framePointer]
@@ -17764,6 +17189,8 @@ StackInterpreter >> printCallStackFP: theFP [
 	| context |
 	<inline: false>
 	<var: #theFP type: #'char *'>
+
+	self resetStackPrintedCount.
 	context := self shortReversePrintFrameAndCallers: theFP.
 	[context = objectMemory nilObject] whileFalse:
 		[(self isMarriedOrWidowedContext: context)
@@ -17781,6 +17208,9 @@ StackInterpreter >> printCallStackOf: aContextOrProcessOrFrame [
 	<api>
 	| context |
 	<inline: false>
+	
+	self resetStackPrintedCount.
+	
 	(stackPages couldBeFramePointer: aContextOrProcessOrFrame) ifTrue:
 		[^self printCallStackFP: (self cCoerceSimple: aContextOrProcessOrFrame to: #'char *')].
 	(self couldBeProcess: aContextOrProcessOrFrame) ifTrue:
@@ -17806,6 +17236,8 @@ StackInterpreter >> printCallStackOf: aContext currentFP: currFP [
 	<var: #currFP type: #'char *'>
 	<var: #theFP type: #'char *'>
 	<var: #thePage type: #'StackPage *'>
+
+	self resetStackPrintedCount.
 	ctxt := aContext.
 	[ctxt = objectMemory nilObject] whileFalse:
 		[(self isMarriedOrWidowedContext: ctxt)
@@ -17833,7 +17265,7 @@ StackInterpreter >> printCallStackOf: aContext currentFP: currFP [
 StackInterpreter >> printChar: aByte [
 	<api>
 	"For testing in Smalltalk, this method should be overridden in a subclass."
-	self putchar: aByte.
+	self cCode: 'vm_printf("%c", aByte)' inSmalltalk: [self putchar: aByte].
 ]
 
 { #category : #'debug printing' }
@@ -17893,14 +17325,7 @@ StackInterpreter >> printDecodeMethodHeaderOop: methodHeaderOop [
 		[self print: ' optimized'].
 	(MULTIPLEBYTECODESETS and: [(objectMemory integerValueOf: methodHeaderOop) < 0]) ifTrue:
 		[self print: ' altSet'].
-	NewspeakVM ifTrue:
-		[| s |
-		s := (self accessModifierOfMethodHeader: methodHeaderOop) caseOf: {
-						[0] -> [' public'].
-						[1] -> [' private'].
-						[2] -> [' protected'].
-						[3] -> [' access undefined'] }.
-		 self print: s].
+
 	self print: ' nLits '; printNum: (objectMemory literalCountOfMethodHeader: methodHeaderOop);
 		print: ' nArgs '; printNum: (self argumentCountOfMethodHeader: methodHeaderOop);
 		print: ' nTemps '; printNum: (self temporaryCountOfMethodHeader: methodHeaderOop)
@@ -17915,7 +17340,7 @@ StackInterpreter >> printExternalHeadFrame [
 { #category : #'debug printing' }
 StackInterpreter >> printFloat: f [
 	"For testing in Smalltalk, this method should be overridden in a subclass."
-	<cmacro: '(f) printf("%g", f)'>
+	<cmacro: '(f) vm_printf("%g", f)'>
 	self print: f
 ]
 
@@ -18170,7 +17595,7 @@ StackInterpreter >> printHex: n [
 	<var: #buf declareC: 'char buf[37]'> "large enough for a 64-bit value in hex plus the null plus 16 spaces"
 	self cCode: 'memset(buf,'' '',36)' inSmalltalk: [buf := 'doh!'].
 	len := self cCode: 'sprintf(buf + 2 + 2 * BytesPerWord, "0x%" PRIxSQPTR, (usqIntptr_t)(n))'.
-	self cCode: 'printf("%s", buf + len)'.
+	self cCode: 'vm_printf("%s", buf + len)'.
 	len touch: buf
 ]
 
@@ -18195,14 +17620,15 @@ StackInterpreter >> printHexnp: n [
 	<api>
 	<var: #n type: #usqInt>
 	"Print n in hex,  in the form '0x1234', unpadded"
-	^'0x%lx' printf: n
+	^ self cCode: 'vm_printf("0x%lx", n)'inSmalltalk: ['0x%lx' printf: n]
 ]
 
 { #category : #'debug printing' }
 StackInterpreter >> printHexnpnp: n [
 	<var: #n type: #usqInt>
 	"Print n in hex, in the form '1234', unpadded"
-	^'%lx' printf: n
+	^ self cCode: 'vm_printf("%lx", n)'inSmalltalk: ['%lx' printf: n]
+	
 ]
 
 { #category : #'debug printing' }
@@ -18251,7 +17677,7 @@ StackInterpreter >> printMethodCacheFor: thing [
 			[self cCode: [] inSmalltalk: [self transcript ensureCr].
 			 self printNum: i; space; printHexnp: i; cr; tab.
 			 (objectMemory isBytesNonImm: s)
-				ifTrue: [self cCode: 'printf("%" PRIxSQPTR " %.*s\n", s, (int)(numBytesOf(s)), (char *)firstIndexableField(s))'
+				ifTrue: [self cCode: 'vm_printf("%" PRIxSQPTR " %.*s\n", s, (int)(numBytesOf(s)), (char *)firstIndexableField(s))'
 						inSmalltalk: [self printHex: s; space; print: (self stringOf: s); cr]]
 				ifFalse: [self shortPrintOop: s].
 			 self tab.
@@ -18338,7 +17764,7 @@ StackInterpreter >> printNameOfClass: classOop count: cnt [
 StackInterpreter >> printNum: n [
 	"For testing in Smalltalk, this method should be overridden in a subclass."
 
-	self cCode: 'printf("%ld", (long) n)'.
+	self cCode: 'vm_printf("%ld", (long) n)'.
 ]
 
 { #category : #'debug printing' }
@@ -18346,28 +17772,30 @@ StackInterpreter >> printOop: oop [
 	| cls fmt lastIndex startIP bytecodesPerLine column |
 	<inline: false>
 	(objectMemory isImmediate: oop) ifTrue:
-		[^self shortPrintOop: oop].
+		[^ self shortPrintOop: oop].
 	self printHex: oop.
 	(objectMemory addressCouldBeObj: oop) ifFalse:
-		[^self print: ((oop bitAnd: objectMemory allocationUnit - 1) ~= 0
+		[self print: ((oop bitAnd: objectMemory allocationUnit - 1) ~= 0
 						ifTrue: [' is misaligned']
-						ifFalse: [self whereIs: oop]); cr].
+						ifFalse: [self whereIs: oop]); cr. ^self].
+					
 	(objectMemory isFreeObject: oop) ifTrue:
 		[self print: ' is a free chunk of size '; printNum: (objectMemory sizeOfFree: oop).
 		 objectMemory hasSpurMemoryManagerAPI ifTrue:
 			[self print: ' 0th: '; printHex: (objectMemory fetchPointer: 0 ofFreeChunk: oop).
 			 objectMemory printHeaderTypeOf: oop].
-		 ^self cr].
+		 self cr. 
+		^ self].
 	(objectMemory isForwarded: oop) ifTrue:
 		[self
 			print: ' is a forwarded object to '; printHex: (objectMemory followForwarded: oop);
 			print: ' of slot size '; printNum: (objectMemory numSlotsOfAny: oop).
 		 objectMemory printHeaderTypeOf: oop.
-		 ^self cr].
+		 self cr. ^ self].
 	self print: ': a(n) '.
 	self printNameOfClass: (cls := objectMemory fetchClassOfNonImm: oop) count: 5.
 	cls = (objectMemory splObj: ClassFloat) ifTrue:
-		[^self cr; printFloat: (objectMemory dbgFloatValueOf: oop); cr].
+		[self cr; printFloat: (objectMemory dbgFloatValueOf: oop); cr. ^ self].
 	fmt := objectMemory formatOf: oop.
 	fmt > objectMemory lastPointerFormat ifTrue:
 		[self print: ' nbytes '; printNum: (objectMemory numBytesOf: oop)].
@@ -18422,10 +17850,10 @@ StackInterpreter >> printOop: oop [
 			 startIP to: lastIndex do:
 				[:index| | byte |
 				column = 1 ifTrue:
-					[self cCode: 'printf("0x%08" PRIxSQPTR ": ", (usqIntptr_t)(oop+BaseHeaderSize+index-1))'
+					[self cCode: 'vm_printf("0x%08" PRIxSQPTR ": ", (usqIntptr_t)(oop+BaseHeaderSize+index-1))'
 						inSmalltalk: [self print: (oop+objectMemory baseHeaderSize+index-1) hex; print: ': ']].
 				byte := objectMemory fetchByte: index - 1 ofObject: oop.
-				self cCode: 'printf(" %02x/%-3d", (int)byte,(int)byte)'
+				self cCode: 'vm_printf(" %02x/%-3d", (int)byte,(int)byte)'
 					inSmalltalk: [self space; print: (byte radix: 16); printChar: $/; printNum: byte].
 				column := column + 1.
 				column > bytecodesPerLine ifTrue:
@@ -18873,23 +18301,6 @@ StackInterpreter >> pushConstantZeroBytecode [
 	self fetchNextBytecode.
 	self internalPush: ConstZero.
 
-]
-
-{ #category : #'stack bytecodes' }
-StackInterpreter >> pushEnclosingObjectBytecode [
-	"Find the enclosing object at level N"
-	| litIndex  n anIntOop |
-	<inline: true>
-	litIndex := self fetchByte.
-	anIntOop := self literal: litIndex.
-	n := (objectMemory isIntegerObject: anIntOop)
-			ifTrue: [objectMemory integerValueOf: anIntOop]
-			ifFalse: [0].
-	self fetchNextBytecode.
-	self internalPush:(self 
-						enclosingObjectAt: n 
-						withObject: self receiver 
-						withMixin: (self methodClassOf: method))
 ]
 
 { #category : #'primitive support' }
@@ -19373,7 +18784,8 @@ StackInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: i
 								allocateMemory: heapSize
 								minimum: minimumMemory
 								imageFile: f
-								headerSize: headerSize) asUnsignedInteger.
+								headerSize: headerSize
+								desiredPosition: oldBaseAddr) asUnsignedInteger.
 	objectMemory memory ifNil: [self insufficientMemoryAvailableError].
 
 	objectMemory
@@ -19569,6 +18981,12 @@ StackInterpreter >> removeProcess: aProcess fromList: aList [
 			 aProcess  = lastLink ifTrue:
 				[objectMemory storePointer: LastLinkIndex ofObject: aList withValue: tempLink]].
 	objectMemory storePointer: NextLinkIndex ofObject: aProcess withValue: objectMemory nilObject
+]
+
+{ #category : #'debug printing' }
+StackInterpreter >> resetStackPrintedCount [
+
+	printedStackFrames := maxStackMessagePrinted := 0
 ]
 
 { #category : #'sista bytecodes' }
@@ -19996,14 +19414,6 @@ StackInterpreter >> selectorOfContext: aContext [
 	^self findSelectorOfMethod: (objectMemory fetchPointer: MethodIndex ofObject: aContext)
 ]
 
-{ #category : #'send bytecodes' }
-StackInterpreter >> sendAbsentImplicit0ArgsBytecode [
-	"160-175	1010 i i i i		Send To Absent Implicit Receiver Literal Selector #iiii With 0 Arguments"
-	messageSelector := self literal: (currentBytecode bitAnd: 16rF).
-	argumentCount := 0.
-	self commonSendImplicitReceiver
-]
-
 { #category : #'debug support' }
 StackInterpreter >> sendBreak: selectorString point: selectorLength receiver: receiverOrNil [
 	<doNotGenerate> "C version is in platforms/Cross/vm/dispdbg.h"
@@ -20293,6 +19703,12 @@ StackInterpreter >> setMaxExtSemSizeTo: maxExtSemTabSize [
 	self ioSetMaxExtSemTableSize: maxExtSemTabSize
 ]
 
+{ #category : #'debug printing' }
+StackInterpreter >> setMaxStacksToPrint: anInteger [
+	<api>
+	maxStacksToPrint := anInteger
+]
+
 { #category : #'internal interpreter access' }
 StackInterpreter >> setMethod: aMethodObj [
 	"Set the method and determine the bytecode set based on the method header's sign.
@@ -20540,6 +19956,15 @@ StackInterpreter >> shortPrintContext: aContext [
 	(objectMemory isContext: aContext) ifFalse:
 		[self printHex: aContext; print: ' is not a context'; cr.
 		^nil].
+	
+	printedStackFrames := printedStackFrames + 1.
+	(maxStacksToPrint ~= 0 and:[ printedStackFrames > maxStacksToPrint])
+		ifTrue: [ 
+			maxStackMessagePrinted = 1 ifFalse: [  
+				self print: '    ... more contexts ...'; cr.
+				maxStackMessagePrinted := 1 ].
+			^ nil ].		
+	
 	self printHex: aContext.
 	(self isMarriedOrWidowedContext: aContext)
 		ifTrue: [(self checkIsStillMarriedContext: aContext currentFP: framePointer)
@@ -20572,6 +19997,15 @@ StackInterpreter >> shortPrintFrame: theFP [
 	<inline: false>
 	<var: #theFP type: #'char *'>
 	| rcvr |
+	
+	printedStackFrames := printedStackFrames + 1.
+	(maxStacksToPrint ~= 0 and:[ printedStackFrames > maxStacksToPrint])
+		ifTrue: [ 
+			maxStackMessagePrinted = 1 ifFalse: [  
+				self print: '    ... more contexts ...'; cr.
+				maxStackMessagePrinted := 1 ].
+			^ nil ].	
+	
 	(stackPages couldBeFramePointer: theFP) ifFalse:
 		[self print: 'invalid frame pointer'; cr.
 		 ^nil].
@@ -20591,6 +20025,7 @@ StackInterpreter >> shortPrintFrame: theFP AndNCallers: n [
 	<api>
 	<inline: false>
 	<var: #theFP type: #'char *'>
+	self resetStackPrintedCount.
 	(n ~= 0 and: [stackPages couldBeFramePointer: theFP]) ifTrue:
 		[self shortPrintFrame: theFP.
 		 self shortPrintFrame: (self frameCallerFP: theFP) AndNCallers: n - 1]
@@ -20609,6 +20044,7 @@ StackInterpreter >> shortPrintFrameAndCallers: theFP [
 { #category : #'debug printing' }
 StackInterpreter >> shortPrintFramesInCurrentPage [
 	<inline: false>
+	self resetStackPrintedCount.
 	self shortPrintFrameAndCallers: localFP
 ]
 
@@ -20641,15 +20077,15 @@ StackInterpreter >> shortPrintOop: oop [
 	(objectMemory isImmediate: oop) ifTrue:
 		[(objectMemory isIntegerObject: oop) ifTrue:
 			[self
-				cCode: 'printf("=%ld\n", (long)integerValueOf(oop))'
+				cCode: 'vm_printf("=%ld\n", (long)integerValueOf(oop))'
 				inSmalltalk: [self print: (self shortPrint: oop); cr]].
 		 (objectMemory isImmediateCharacter: oop) ifTrue:
 			[self
-				cCode: 'printf("=$%ld ($%lc)\n", (long)characterValueOf(oop), (wint_t)characterValueOf(oop))'
+				cCode: 'vm_printf("=$%ld ($%lc)\n", (long)characterValueOf(oop), (wint_t)characterValueOf(oop))'
 				inSmalltalk: [self print: (self shortPrint: oop); cr]].
 		 (objectMemory isImmediateFloat: oop) ifTrue:
 			[self
-				cCode: 'printf("=%g\n", floatValueOf(oop))'
+				cCode: 'vm_printf("=%g\n", floatValueOf(oop))'
 				inSmalltalk: [self print: '='; printFloat: (objectMemory floatValueOf: oop); cr]].
 		 ^self].
 	(objectMemory addressCouldBeObj: oop) ifFalse:
@@ -21083,6 +20519,21 @@ StackInterpreter >> space [
 StackInterpreter >> specialSelector: index [
 	<api>
 	^objectMemory fetchPointer: (index * 2) ofObject: (objectMemory splObj: SpecialSelectors)
+]
+
+{ #category : #'message sending' }
+StackInterpreter >> specialSelector: index put: aValue [
+	<doNotGenerate>
+	^objectMemory
+		storePointer: (index * 2)
+		ofObject: (objectMemory splObj: SpecialSelectors)
+		withValue: aValue
+]
+
+{ #category : #'message sending' }
+StackInterpreter >> specialSelectorArray: anOop [
+	<doNotGenerate>
+	objectMemory splObj: SpecialSelectors put: anOop
 ]
 
 { #category : #'message sending' }

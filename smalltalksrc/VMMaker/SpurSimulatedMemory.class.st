@@ -28,7 +28,7 @@ SpurSimulatedMemory >> at: address [
 { #category : #accessing }
 SpurSimulatedMemory >> at: address put: a32BitValue [
 
-	memoryObject
+	^ memoryObject
 		integerAt: (address - 1 * self bytesPerElement + 1) - initialAddress
 		put: a32BitValue
 		size: self bytesPerElement
@@ -39,6 +39,14 @@ SpurSimulatedMemory >> at: address put: a32BitValue [
 SpurSimulatedMemory >> bytesPerElement [
 	
 	^ 4
+]
+
+{ #category : #copying }
+SpurSimulatedMemory >> copyFrom: anAddress [
+
+	^ memoryObject
+		copyFrom: anAddress - initialAddress + 1
+		to: memoryObject size
 ]
 
 { #category : #accessing }

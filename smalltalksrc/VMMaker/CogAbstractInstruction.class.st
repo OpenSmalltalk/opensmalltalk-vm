@@ -1077,6 +1077,12 @@ CogAbstractInstruction >> isJump [
 ]
 
 { #category : #testing }
+CogAbstractInstruction >> isLiteral [
+
+	^ opcode = Literal
+]
+
+{ #category : #testing }
 CogAbstractInstruction >> isPCDependent [
 	"Answer if the receiver is a pc-dependent instruction, such as a relative jump."
 	^self subclassResponsibility
@@ -1280,14 +1286,6 @@ CogAbstractInstruction >> noteFollowingConditionalBranch: branch [
 	<var: #branch type: #'AbstractInstruction *'>
 	<inline: true>
 	^branch
-]
-
-{ #category : #'inline cacheing' }
-CogAbstractInstruction >> nsSendCacheAt: callSiteReturnAddress [
-	"Answer the NSSendCache for the return address of a Newspeak
-	 self, super, outer, or implicit receiver send."
-	<option: #NewspeakVM>
-	^self subclassResponsibility
 ]
 
 { #category : #initialization }

@@ -58,12 +58,12 @@ Spur32BitMemoryManager >> addressAfter: objOop [
 ]
 
 { #category : #allocation }
-Spur32BitMemoryManager >> allocateSlots: numSlots format: formatField classIndex: classIndex [
+Spur32BitMemoryManager >> allocateSlots: numSlots format: formatField classIndex: classIndex isPinned: isPinned [
 	"Allocate an object with numSlots space.  If there is room beneath scavengeThreshold
 	 allocate in newSpace, otherwise alocate in oldSpace.  If there is not room in newSpace
 	 and a scavenge is not already scheduled, schedule a scavenge."
 	<inline: true>
-	| numBytes newObj |
+	| numBytes newObj hasToScheduleScavenge |
 	"Object headers are 8 bytes in length if the slot size fits in the num slots field (max implies overflow),
 	 16 bytes otherwise (num slots in preceding word).
 	 Objects always have at least one slot, for the forwarding pointer,
@@ -76,9 +76,21 @@ Spur32BitMemoryManager >> allocateSlots: numSlots format: formatField classIndex
 			[newObj := freeStart.
 			 numBytes := self smallObjectBytesForSlots: numSlots].
 	
-	freeStart + numBytes > scavengeThreshold ifTrue:
-		[needGCFlag ifFalse: [self scheduleScavenge].
-		 ^self allocateSlotsInOldSpace: numSlots bytes: numBytes format: formatField classIndex: classIndex].
+	hasToScheduleScavenge := freeStart + numBytes > scavengeThreshold.
+	
+	(hasToScheduleScavenge or: [isPinned]) ifTrue:[ 
+		hasToScheduleScavenge ifTrue: [needGCFlag 	ifFalse: [self scheduleScavenge]].
+		
+		isPinned 
+			ifTrue: [ 
+				^self 
+					allocateSlotsForPinningInOldSpace: numSlots 
+					bytes: numBytes format: formatField classIndex: classIndex ]
+			ifFalse: [ 
+				^self 
+					allocateSlotsInOldSpace: numSlots 
+					bytes: numBytes format: formatField classIndex: classIndex ]].
+
 	numSlots >= self numSlotsMask
 		ifTrue: "for header parsing we put a saturated slot count in the prepended overflow size word"
 			[self flag: #endianness.
@@ -483,7 +495,7 @@ Spur32BitMemoryManager >> initSegmentBridgeWithBytes: numBytes at: address [
 ]
 
 { #category : #instantiation }
-Spur32BitMemoryManager >> instantiateClass: classObj indexableSize: nElements [
+Spur32BitMemoryManager >> instantiateClass: classObj indexableSize: nElements isPinned: isPinned [
 	<api>
 	<var: #nElements type: #usqInt>
 	"Allocate an instance of a variable class, excepting CompiledMethod."
@@ -533,12 +545,16 @@ Spur32BitMemoryManager >> instantiateClass: classObj indexableSize: nElements [
 		 classIndex < 0 ifTrue:
 			[coInterpreter primitiveFailFor: classIndex negated.
 			 ^nil]].
-	numSlots > self maxSlotsForNewSpaceAlloc
+	(numSlots > self maxSlotsForNewSpaceAlloc or: [isPinned])
 		ifTrue:
 			[numSlots > self maxSlotsForAlloc ifTrue:
 				[coInterpreter primitiveFailFor: PrimErrUnsupported.
 				 ^nil].
-			 newObj := self allocateSlotsInOldSpace: numSlots format: instSpec classIndex: classIndex]
+			 newObj := self 	
+				allocateSlotsInOldSpace: numSlots 
+				format: instSpec 
+				classIndex: classIndex 
+				isPinned: isPinned]
 		ifFalse:
 			[newObj := self allocateSlots: numSlots format: instSpec classIndex: classIndex].
 	newObj ifNotNil:

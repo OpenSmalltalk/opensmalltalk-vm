@@ -13,6 +13,9 @@ Class {
 		'initialAddress',
 		'stackSpaceSize',
 		'stackBuilder'
+		'methodCacheSize',
+		'rumpCStackSize',
+		'wordSize'
 	],
 	#category : #VMMakerTests
 }
@@ -69,8 +72,8 @@ VMSpurMemoryManagerTest >> initializeOldSpaceForScavenger [
 	
 	memory scavenger initializeRememberedSet.
 	memory scavenger remember: memory hiddenRootsObject.
-	memory scavenger remember: firstClassTablePage.
-	memory specialObjectsOop: (self newObjectWithSlots: 20).
+	memory scavenger remember: firstClassTablePage. 
+	memory specialObjectsOop: (self newObjectWithSlots: 60).
 	
 	memory scavengingGCTenuringIf: 1.
 	self deny: memory needGCFlag.
@@ -89,20 +92,92 @@ VMSpurMemoryManagerTest >> memory [
 { #category : #helpers }
 VMSpurMemoryManagerTest >> newInterpreter [
 
+	memory := self newMemory.
+
 	StackInterpreterSimulatorLSB
 		initializeWithOptions: {
-			#BytesPerWord. 8.
-			#ObjectMemory. #Spur64BitMemoryManager}
-		objectMemoryClass: Spur64BitMemoryManager.
+			#BytesPerWord. self wordSize.
+			#ObjectMemory. memory class name}
+		objectMemoryClass: memory class.
+
 	^ StackInterpreterSimulatorLSB basicNew
-		objectMemory: self newMemory;
+		objectMemory: memory;
 		basicInitialize
 ]
 
-{ #category : #helpers }
+{ #category : #running }
 VMSpurMemoryManagerTest >> newMemory [
 
-	^ Spur64BitMemoryManager simulatorClass new
+	^ self wordSize = 4
+		ifTrue: [ Spur32BitMemoryManager simulatorClass new ]
+		ifFalse: [ Spur64BitMemoryManager simulatorClass new ]
+]
+
+{ #category : #'helpers - methods' }
+VMSpurMemoryManagerTest >> newMethodWithBytecodes: bytes [
+	
+	| method methodHeader |
+
+	"Create a bytecode compiled method object containing the given literal at the given index"
+	
+	method := self
+		newOldSpaceObjectWithSlots: 0 "# of literals" + 1 "one extra for the header" + (bytes size // memory wordSize)
+		format: (memory compiledMethodFormatForNumBytes: bytes size)
+		classIndex: 16r10.
+	methodHeader := (0 "nArgs" bitShift: 24)
+						+ (0 "nTemps" bitShift: 18)
+						+ (0 "small frame")
+						+ 0 "number of literaps"
+						+ 0 "primitive".
+	memory storePointer: 0 ofObject: method withValue: (memory integerObjectOf: methodHeader).
+	memory storeByte: 8 ofObject: method withValue: (bytes at: 1).
+
+	^ method
+]
+
+{ #category : #'helpers - methods' }
+VMSpurMemoryManagerTest >> newMethodWithLiteral: literalObject at: literalIndex [
+	
+	| method methodHeader |
+
+	"Create a bytecode compiled method object containing the given literal at the given index"
+	
+	method := self
+		newOldSpaceObjectWithSlots: literalIndex + 1 "index is 0 based" + 1 "one extra for the header"
+		format: (memory compiledMethodFormatForNumBytes: 0)
+		classIndex: 16r10.
+	methodHeader := (0 "nArgs" bitShift: 24)
+						+ (0 "nTemps" bitShift: 18)
+						+ (0 "small frame")
+						+ literalIndex + 2 "number of literaps"
+						+ 0 "primitive".
+	memory storePointer: 0 ofObject: method withValue: (memory integerObjectOf: methodHeader).
+	memory
+		storePointer: literalIndex + 1
+		ofObject: method
+		withValue: literalObject.
+	^ method
+]
+
+{ #category : #'helpers - methods' }
+VMSpurMemoryManagerTest >> newMethodWithSmallContext: isSmall WithArguments: arguments [
+	
+	| method methodHeader |
+
+	"Create a bytecode compiled method object containing the given literal at the given index"
+	
+	method := self
+		newOldSpaceObjectWithSlots: 0 "# of literals" + 1 "one extra for the header"
+		format: (memory compiledMethodFormatForNumBytes: 0)
+		classIndex: 16r10.
+	methodHeader := (arguments bitShift: 24)
+						+ (0 "nTemps" bitShift: 18)
+						+ ((isSmall ifTrue: [ 0 "small frame" ] ifFalse: [ 1 "small frame" ]) bitShift: 17)
+						+ 0 "number of literaps"
+						+ 0 "primitive".
+	memory storePointer: 0 ofObject: method withValue: (memory integerObjectOf: methodHeader).
+
+	^ method
 ]
 
 { #category : #helpers }
@@ -218,6 +293,23 @@ VMSpurMemoryManagerTest >> nextOrdinaryClassIndex [
 		ifNotNil: [ nextIndex := nextIndex + 1 ]
 ]
 
+{ #category : #helpers }
+VMSpurMemoryManagerTest >> primitiveTraceLogSize [
+	^ 0
+]
+
+{ #category : #helpers }
+VMSpurMemoryManagerTest >> roundToPageSize: anInteger [ 
+
+	"Unicorn simulator requires mapped memory to be multiple of 4096"
+	| pageSize remainder |
+	pageSize := 4096.
+	remainder := anInteger \\ pageSize.
+	remainder = 0 ifTrue: [ ^ anInteger ].
+
+	^ anInteger + (pageSize - remainder)
+]
+
 { #category : #running }
 VMSpurMemoryManagerTest >> setUp [
 	super setUp.
@@ -227,9 +319,12 @@ VMSpurMemoryManagerTest >> setUp [
 	oldSpaceSize := 999 * 1024.
  	newSpaceSize := 1 * 1024.
 	stackSpaceSize := 9 * 4096.
+	methodCacheSize := 4096 * 8 "wordSize".
+	rumpCStackSize := 0.
+	
 	initialAddress := 16r1000000.
 	
-	objectHeaderSize := 8 "bytes".
+	objectHeaderSize := 8 "bytes. Always.".
 	emptyObjectSize := objectHeaderSize + 8 "minimum required single empty slot, to use for forwarders".
 	
 	"Set it to bootstrapping to allow smaller memories"
@@ -246,6 +341,9 @@ VMSpurMemoryManagerTest >> setUp [
 		newSpaceSize: newSpaceSize
 		stackSize: stackSpaceSize
 		codeSize: self initialCodeSize
+		methodCacheSize: methodCacheSize
+		primitiveTraceLogSize: (self roundToPageSize: self primitiveTraceLogSize)
+		rumpCStackSize: rumpCStackSize
 		initialAddress: initialAddress.
 	memory initializePostBootstrap.
 	memory setHeapSizeAtPreviousGC.
@@ -265,6 +363,18 @@ VMSpurMemoryManagerTest >> setUp [
 VMSpurMemoryManagerTest >> sizeOfObjectWithSlots: slots [
 
 	^ objectHeaderSize + ((slots min: 1 "at least one for the forwarder pointer") * memory wordSize "bytes")
+]
+
+{ #category : #accessing }
+VMSpurMemoryManagerTest >> wordSize [
+	
+	^ wordSize ifNil: [ 8 ]
+]
+
+{ #category : #accessing }
+VMSpurMemoryManagerTest >> wordSize: aWordSize [
+
+	wordSize := aWordSize
 ]
 
 { #category : #helpers }

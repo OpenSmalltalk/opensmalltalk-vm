@@ -367,8 +367,7 @@ CogVMSimulator >> cCoerceSimple: value to: cTypeString [
 	^cTypeString
 		caseOf:
 		   {	[#'CogMethod *']		->	[cogit cogMethodSurrogateAt: value asUnsignedInteger].
-			[#'CogBlockMethod *']	->	[cogit cogBlockMethodSurrogateAt: value asUnsignedInteger].
-			[#'NSSendCache *']		->	[cogit nsSendCacheSurrogateAt: value asUnsignedInteger] }
+			[#'CogBlockMethod *']	->	[cogit cogBlockMethodSurrogateAt: value asUnsignedInteger] }
 		otherwise: [value]
 ]
 
@@ -2389,11 +2388,7 @@ CogVMSimulator >> maybeCheckStackDepth: delta sp: sp pc: mcpc [
 		  Assumes trap bytecodes are 1 byte bytecodes."
 		 (SistaVM
 		  and: [cogit isTrapAt: mcpc]) ifTrue:
-			[csp := csp + 1].
-		"Compensate lazily for absent receiver sends (cuz mapping is slow, even though incrememting csp is a dodgy idea)."
-		(NewspeakVM
-		 and: [cogit isAbsentReceiverSendAt: mcpc in: cogHomeMethod]) ifTrue:
-			[csp := debugStackPointers at: bcpc put: csp + 1]].
+			[csp := csp + 1] ].
 	self assert: asp - delta + 1 = csp
 ]
 
@@ -2877,8 +2872,7 @@ CogVMSimulator >> primitiveContextAtPut [
 CogVMSimulator >> primitiveDoPrimitiveWithArgs [
 	| primIndex |
 	primIndex := objectMemory integerValueOf: (self stackValue: 1).
-	NewspeakVM ifFalse:
-		[transcript nextPutAll: 'DO PRIMITIVE: '; print: (self functionPointerFor: primIndex inClass: nil); cr; flush].
+	transcript nextPutAll: 'DO PRIMITIVE: '; print: (self functionPointerFor: primIndex inClass: nil); cr; flush.
 	(#(76 "primitiveStoreStackp" 188 189 "eval method") includes: primIndex) ifTrue:
 		[self halt].
 	^super primitiveDoPrimitiveWithArgs

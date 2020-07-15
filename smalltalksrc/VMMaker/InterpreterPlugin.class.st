@@ -127,12 +127,6 @@ InterpreterPlugin class >> hasHeaderFile [
 	^false
 ]
 
-{ #category : #initialization }
-InterpreterPlugin class >> initialize [
-	DisownVMForFFICall ifNil:
-		[StackInterpreter initializeMiscConstants]
-]
-
 { #category : #accessing }
 InterpreterPlugin class >> isCPP [
 	^ false

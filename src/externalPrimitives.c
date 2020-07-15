@@ -34,6 +34,10 @@
 
 int sqVMOptionTraceModuleLoading = 0;
 
+void *loadModuleHandle(const char *fileName);
+sqInt freeModuleHandle(void *module);
+void *getModuleSymbol(void *module, const char *symbol);
+
 const char *moduleNamePatterns[] = {
     "%s%s",
 #if defined(WIN64)
@@ -147,7 +151,8 @@ ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
 
 #if defined(WIN64)
 
-void * loadModuleHandle(const char *fileName)
+void *
+loadModuleHandle(const char *fileName)
 {
     WCHAR convertedPath[MAX_PATH + 1];
     CHAR copiedFileName[MAX_PATH + 1];
@@ -190,7 +195,7 @@ loadModuleHandle(const char *fileName)
     flags |= RTLD_DEEPBIND; /* Prefer local symbols in the shared object vs external symbols. */
 #endif
 
-    logDebug("Try loading  %s\n", fileName);
+    logTrace("Try loading  %s\n", fileName);
     return dlopen(fileName, flags);
 }
 
@@ -200,31 +205,35 @@ freeModuleHandle(void *module){
 }
 
 void *
-getModuleSymbol(void *module, const char *symbol){
+getModuleSymbol(void *module, const char *symbol)
+{
     return dlsym(module ? module: dlopen(NULL,0), symbol);
 }
 
 #else
 
 void *
-loadModuleHandle(const char *fileName){
+loadModuleHandle(const char *fileName)
+{
     return 0;
 }
 
 sqInt
-freeModuleHandle(void *module){
-	return 0;
+freeModuleHandle(void *module)
+{
+	return 1;
 }
 
 static void *
-getModuleSymbol(void *module, const char *symbol){
+getModuleSymbol(void *module, const char *symbol)
+{
     return 0;
 }
 
 void *
-getModuleSymbol(void *module, const char *symbol){
-    return 0;
+getModuleSymbol(void *module, const char *symbol)
+{
     return dlsym(module, symbol);
 }
 
- #endif
+#endif

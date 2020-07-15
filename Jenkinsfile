@@ -92,10 +92,12 @@ def runBuild(platform, configuration){
 	}
 }
 
-def runTests(platform, configuration, packages){
+def runTests(platform, configuration, packages, withWorker){
 	cleanWs()
 
-	stage("Tests-${platform}-${configuration}"){
+	def stageName = withWorker ? "Tests-${platform}-${configuration}-worker" : "Tests-${platform}-${configuration}"
+
+	stage(stageName){
 		
 		def vmDir = ''
 		
@@ -112,20 +114,32 @@ def runTests(platform, configuration, packages){
 
     	shell "mkdir runTests"
     	dir("runTests"){
-          shell "wget -O - get.pharo.org/64/80 | bash "
-          shell "echo 80 > pharo.version"
+          shell "wget -O - get.pharo.org/64/90 | bash "
+          shell "echo 90 > pharo.version"
           
           if(isWindows()){
             runInCygwin "cd runTests && unzip ../build/build/packages/PharoVM-*-${vmDir}64-bin.zip -d ."
-            runInCygwin "PHARO_CI_TESTING_ENVIRONMENT=true cd runTests && ./PharoConsole.exe Pharo.image test --junit-xml-output --stage-name=win64-${configuration} '${packages}'"
+			if(withWorker){
+	            runInCygwin "PHARO_CI_TESTING_ENVIRONMENT=true cd runTests && ./PharoConsole.exe  --logLevel=4 --worker Pharo.image test --junit-xml-output --stage-name=win64-${configuration}-worker '${packages}'"
+			}else{
+				runInCygwin "PHARO_CI_TESTING_ENVIRONMENT=true cd runTests && ./PharoConsole.exe  --logLevel=4 Pharo.image test --junit-xml-output --stage-name=win64-${configuration} '${packages}'"
+			}
     	  }else{
             shell "unzip ../build/build/packages/PharoVM-*-${vmDir}64-bin.zip -d ."
 
             if(platform == 'osx'){
-              shell "PHARO_CI_TESTING_ENVIRONMENT=true ./Pharo.app/Contents/MacOS/Pharo Pharo.image test --junit-xml-output --stage-name=osx64-${configuration} '${packages}'"
+				if(withWorker){
+					shell "PHARO_CI_TESTING_ENVIRONMENT=true ./Pharo.app/Contents/MacOS/Pharo --logLevel=4 --worker Pharo.image test --junit-xml-output --stage-name=osx64-${configuration}-worker '${packages}'"
+				} else {
+	                shell "PHARO_CI_TESTING_ENVIRONMENT=true ./Pharo.app/Contents/MacOS/Pharo --logLevel=4 Pharo.image test --junit-xml-output --stage-name=osx64-${configuration} '${packages}'"
+				}
     		}			
             if(platform == 'unix'){
-              shell "PHARO_CI_TESTING_ENVIRONMENT=true ./pharo Pharo.image test --junit-xml-output --stage-name=unix64-${configuration} '${packages}'" 
+				if(withWorker){
+	                shell "PHARO_CI_TESTING_ENVIRONMENT=true ./pharo --logLevel=4 --worker Pharo.image test --junit-xml-output --stage-name=unix64-${configuration}-worker '${packages}'" 
+				}else{
+	                shell "PHARO_CI_TESTING_ENVIRONMENT=true ./pharo --logLevel=4 Pharo.image test --junit-xml-output --stage-name=unix64-${configuration} '${packages}'" 
+				}
             }
     	  }
     		junit allowEmptyResults: true, testResults: "*.xml"
@@ -207,13 +221,16 @@ try{
 		
 		tests[platform] = {
 			node(platform){
-				timeout(30){
-					runTests(platform, "CoInterpreterWithQueueFFI", ".*")
+				timeout(45){
+					runTests(platform, "CoInterpreterWithQueueFFI", ".*", false)
 				}
+				timeout(45){
+					runTests(platform, "CoInterpreterWithQueueFFI", ".*", true)
+				}				
 			}
 		}
 	}
-  
+/*  
   builders["StackVM"] = {
     node('osx'){
       timeout(30){
@@ -228,7 +245,7 @@ try{
       }
     }
   }
-    
+*/    
 	parallel builders
 	
 	uploadPackages()

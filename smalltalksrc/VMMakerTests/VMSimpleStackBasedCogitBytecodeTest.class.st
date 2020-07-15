@@ -1,252 +1,8 @@
 Class {
 	#name : #VMSimpleStackBasedCogitBytecodeTest,
-	#superclass : #VMSpurMemoryManagerTest,
-	#instVars : [
-		'cogit',
-		'codeSize',
-		'lastAddress',
-		'unicorn',
-		'callerAddress',
-		'registerValue',
-		'opcodes',
-		'stackMemory',
-		'stackMemoryStartAddress',
-		'stackMemoryEndAddress',
-		'isa',
-		'wordSize',
-		'obj',
-		'selectorIndex',
-		'sendAddress',
-		'sendTrampolineAddress',
-		'sentSelector',
-		'selectorAtIndex'
-	],
+	#superclass : #VMSimpleStackBasedCogitAbstractTest,
 	#category : #VMMakerTests
 }
-
-{ #category : #'building suites' }
-VMSimpleStackBasedCogitBytecodeTest class >> testParameters [
-
-	^ ParametrizedTestMatrix new
-		addCase: { #ISA -> #'X64'. #wordSize -> 8};
-		addCase: { #ISA -> #'IA32'. #wordSize -> 4};
-		"forSelector: #ISA addOptions: #( X64 IA32 ARMv5 );"
-		yourself
-]
-
-{ #category : #running }
-VMSimpleStackBasedCogitBytecodeTest >> ISA: anISA [
-
-	isa := anISA
-]
-
-{ #category : #helpers }
-VMSimpleStackBasedCogitBytecodeTest >> assertPushed: anOop after: aBlockClosure [
-	
-	| before after |
-	before := unicorn stackPointerRegisterValue.
-	aBlockClosure value.
-	after := unicorn stackPointerRegisterValue.
-	
-	self assert: after equals: before - self wordSize.
-	self assert: (self readMemoryAt: after) equals: anOop
-]
-
-{ #category : #helpers }
-VMSimpleStackBasedCogitBytecodeTest >> assertStackRemainsUnchangedDuring: aBlockClosure [ 
-	
-	| before |
-	before := unicorn stackPointerRegisterValue.
-	aBlockClosure value.
-	
-	self
-		assert: unicorn stackPointerRegisterValue
-		equals: before
-]
-
-{ #category : #helpers }
-VMSimpleStackBasedCogitBytecodeTest >> compile: aBlockClosure [ 
-	"Compiles some native code using the code inside the block closure as builder.
-	This version assumes the block has a single 1-bytecode statement 
-	  => this is used to estimate the amount of memory to preallocate for the geneated code.
-	Return the address to the generated piece of code."
-	^ self compile: aBlockClosure bytecodes: 1
-]
-
-{ #category : #helpers }
-VMSimpleStackBasedCogitBytecodeTest >> compile: aBlockClosure bytecodes: bytecodes [
-	
-	"Compiles some native code using the code inside the block closure as builder.
-	The bytecodes variable contains an estimate of the number of bytecodes generated
-	  => this is used to estimate the amount of memory to preallocate for the geneated code.
-	Return the address to the generated piece of code."
-
-	"We estimate the same ammount of bytecode as the Cogit"
-	| allocatedAddress |
-	cogit allocateOpcodes: (bytecodes + 10) * 10 bytecodes: bytecodes ifFail: [ self fail ].
-	cogit zeroOpcodeIndex.
-	cogit maxLitIndex: -1.
-	
-	aBlockClosure value.
-
-	cogit methodLabel address: 0.
-	cogit computeMaximumSizes.
-	
-	"methodLabel address + headerSize?"
-	codeSize := cogit generateInstructionsAt: cogit methodZone freeStart.
-	allocatedAddress := cogit methodZone allocate: codeSize.
-	lastAddress := cogit outputInstructionsAt: allocatedAddress.
-
-	opcodes := cogit getOpcodeIndex.
-	
-	^ allocatedAddress
-]
-
-{ #category : #'tests - special sends' }
-VMSimpleStackBasedCogitBytecodeTest >> compileSpecialSend [
-	
-	"We will call to this address"
-	sendTrampolineAddress := self compile: [ cogit RetN: 0 ].
-	cogit ordinarySendTrampolineAt: sentSelector numArgs put: sendTrampolineAddress.
-	
-	self createFramefulCallFrom: callerAddress.
-	cogit byte0: 176 + (selectorIndex - 1 / 2).
-	sendAddress := self compile: [ cogit genSpecialSelectorSend ].
-]
-
-{ #category : #'helpers - frames' }
-VMSimpleStackBasedCogitBytecodeTest >> createFramefulCallFrom: anAddress [
-
-	self
-		createFramefulCallFrom: anAddress
-		receiver: memory nilObject
-		arguments: #()
-		temporaries: #()
-]
-
-{ #category : #'helpers - frames' }
-VMSimpleStackBasedCogitBytecodeTest >> createFramefulCallFrom: returnAddress receiver: receiver arguments: arguments [
-
-	self createFramefulCallFrom: returnAddress receiver: receiver arguments: arguments temporaries: #()
-]
-
-{ #category : #'helpers - frames' }
-VMSimpleStackBasedCogitBytecodeTest >> createFramefulCallFrom: returnAddress receiver: receiver arguments: arguments temporaries: temps [
-
-	"I create a frameful call for machine code. 
-
-			receiver for method activations/closure for block activations
-			arg0
-			...
-			argN
-			caller's saved ip/this stackPage (for a base frame)
-	fp->	saved fp
-			method
-			context (initialized to nil)
-			receiver
-			first temp
-			...
-	sp->	Nth temp	
-	"
-	
-	"The first part is the same with or without frame, as it is pushed by the caller"
-	self createFramelessCallFrom: returnAddress receiver: receiver arguments: arguments.
-
-	"
-		In a machine code frame
-		the flag indicating if the context is valid is the least significant bit of the method pointer
-		the flag for a block activation is the next most significant bit of the method pointer"
-	
-	"These are pushed when activating the method"	
-	self pushAddress: unicorn framePointerRegisterValue.
-	unicorn framePointerRegisterValue: unicorn stackPointerRegisterValue.
-
-	self pushAddress: (memory nilObject bitOr: 1). "method"
-	self pushAddress: memory nilObject. "context"
-
-	self pushAddress: receiver.
-	temps do: [ :aTemporary | self pushAddress: aTemporary ].
-	
-	cogit needsFrame: true.
-]
-
-{ #category : #'helpers - frames' }
-VMSimpleStackBasedCogitBytecodeTest >> createFramelessCallFrom: anAddress [
-
-	self
-		createFramelessCallFrom: anAddress
-		receiver: memory nilObject
-		arguments: #()
-]
-
-{ #category : #'helpers - frames' }
-VMSimpleStackBasedCogitBytecodeTest >> createFramelessCallFrom: returnAddress receiver: receiver arguments: arguments [.
-
-	"I create a frameless call
-	
-	Frameless method activation looks like
-			receiver
-			args
-	sp->	ret pc.
-	"
-	self pushAddress: receiver.
-	arguments do: [ :anArgument | self pushAddress: anArgument ].
-	self pushAddress: returnAddress.	
-
-	unicorn receiverRegisterValue: receiver.
-
-	"We initialize the internal Cogit state by hand because we don't have a method to cog"	
-"	cogit methodOrBlockNumTemps: 0.
-	cogit initSimStackForFramelessMethod: 1".
-	cogit methodOrBlockNumArgs: arguments size.
-	cogit needsFrame: false.
-	cogit inBlock: 0.
-"	cogit regArgsHaveBeenPushed: false".
-
-
-]
-
-{ #category : #'tests - special sends' }
-VMSimpleStackBasedCogitBytecodeTest >> createSpecialSelectorArray [
-
-	| specialObjectsOop  |
-	specialObjectsOop := self newObjectWithSlots: 24.
-	selectorIndex := Smalltalk specialSelectors indexOf: sentSelector.
-	obj := self newObjectWithSlots: selectorIndex + 1.
-	memory
-		storePointer: selectorIndex - 1
-		ofObject: obj withValue: (selectorAtIndex := memory integerObjectOf: 77 "Some object to test").
-	memory
-		storePointer: selectorIndex
-		ofObject: obj withValue: (memory integerObjectOf: sentSelector numArgs).
-	memory storePointer: 23 ofObject: specialObjectsOop withValue: obj.
-	memory specialObjectsOop: specialObjectsOop.
-]
-
-{ #category : #helpers }
-VMSimpleStackBasedCogitBytecodeTest >> disassemble [
-	
-	^ self disassembleFrom: 1
-]
-
-{ #category : #helpers }
-VMSimpleStackBasedCogitBytecodeTest >> disassembleFrom: anIndex [
-	
-	^ self disassembleFrom: anIndex opcodes: opcodes
-]
-
-{ #category : #helpers }
-VMSimpleStackBasedCogitBytecodeTest >> disassembleFrom: anIndex opcodes: numberOfInstructions [
-	
-	^ LLVMDisassembler amd64
-		printImmediatesInHexa;
-		disassembleNext: numberOfInstructions
-		instructionsIn: (memory memory memoryObject
-			copyFrom: anIndex - initialAddress + 1
-			to: memory memory memoryObject size)
-		startAddress: anIndex
-		pc: 0
-]
 
 { #category : #'tests - extended store bytecode - store inst var' }
 VMSimpleStackBasedCogitBytecodeTest >> doExtendedStoreStoresInstanceVariableIndex: instanceVariableToWrite [
@@ -256,7 +12,7 @@ VMSimpleStackBasedCogitBytecodeTest >> doExtendedStoreStoresInstanceVariableInde
 	obj := self newObjectWithSlots: instanceVariableToWrite.
 	
 	"The receiver should be in a receiver register based on Cog's calling convention"
-	unicorn receiverRegisterValue: obj.
+	machineSimulator receiverRegisterValue: obj.
 
 	self doExtendedStoreStoresVariableType: 0 index: instanceVariableToWrite.
 ]
@@ -291,7 +47,7 @@ VMSimpleStackBasedCogitBytecodeTest >> doPopIntoReceiverVariableBytecodeStoresVa
 	obj := self newObjectWithSlots: instanceVariableToWrite.
 	
 	"The receiver should be in a receiver register based on Cog's calling convention"
-	unicorn receiverRegisterValue: obj.
+	machineSimulator receiverRegisterValue: obj.
 
 	"The object is filled with nils.
 	Push false into the stack and execute the store and pop bytecode."	
@@ -338,7 +94,7 @@ VMSimpleStackBasedCogitBytecodeTest >> doTestReturnReturnsObjectInReturnRegister
 	self compile: compilationBlock.	
 	self runUntilReturn.
 
-	self assert: unicorn returnRegisterValue equals: anAddress
+	self assert: machineSimulator returnRegisterValue equals: anAddress
 ]
 
 { #category : #'tests - single bytecode - return' }
@@ -350,346 +106,6 @@ VMSimpleStackBasedCogitBytecodeTest >> doTestReturnReturnsToCallerWithFrame: isF
 	
 	self compile: compilationBlock.	
 	self runUntilReturn.
-
-	self assert: unicorn instructionPointerValue equals: callerAddress
-]
-
-{ #category : #'helpers - registers' }
-VMSimpleStackBasedCogitBytecodeTest >> framePointerRegisterValue [
-
-	^ self readRegister: UcX86Registers rbp
-]
-
-{ #category : #'helpers - registers' }
-VMSimpleStackBasedCogitBytecodeTest >> framePointerRegisterValue: aValue [
-	
-	self writeRegister: UcX86Registers rbp value: aValue
-]
-
-{ #category : #'helpers - methods' }
-VMSimpleStackBasedCogitBytecodeTest >> generateCogMethod: aBlockClosure selector: anSelectorOop [ 
-
-	| targetCog targetCogAddress |
-
-	targetCog := cogit cogMethodSurrogateAt: (cogit methodZone allocate: (cogit sizeof: CogMethod)).
-	targetCog selector: anSelectorOop.
-
-	targetCogAddress := self compile: [
-		cogit compileAbort.
-		cogit compileEntry.
-		aBlockClosure value
-	].
-	
-	^ targetCog
-
-]
-
-{ #category : #running }
-VMSimpleStackBasedCogitBytecodeTest >> initialCodeSize [
-	^ 4 * 1024
-]
-
-{ #category : #running }
-VMSimpleStackBasedCogitBytecodeTest >> initializeInitialStackFrame [
-
-	"I will create the initial stack with a well-known caller address so we know if the code comes back
-	correctly. The address should be in a valid space of the memory if not unicorn complains. 
-	So we just put it in the start of the stack"
-
-	callerAddress := stackMemoryStartAddress.
-	self createFramelessCallFrom: callerAddress receiver: memory nilObject arguments: #().
-	
-
-]
-
-{ #category : #running }
-VMSimpleStackBasedCogitBytecodeTest >> initializeStackMemory [.
-
-	stackMemoryStartAddress := initialAddress + self initialCodeSize.
-	stackMemoryEndAddress := stackMemoryStartAddress + stackSpaceSize.
-
-	"The stack pointer is at the top of the stack"
-	unicorn stackPointerRegisterValue: stackMemoryEndAddress.
-	
-
-]
-
-{ #category : #'helpers - registers' }
-VMSimpleStackBasedCogitBytecodeTest >> instructionPointer [
-
-	^ self readRegister: UcX86Registers rip
-]
-
-{ #category : #helpers }
-VMSimpleStackBasedCogitBytecodeTest >> newInterpreter [
-
-	| theMemory |
-	theMemory := self newMemory.
-
-	CogVMSimulatorLSB
-		initializeWithOptions: {
-			#BytesPerWord. 8.
-			#ObjectMemory. theMemory class name}
-		objectMemoryClass: theMemory class.
-		
-		
-	^ CogVMSimulatorLSB basicNew
-		objectMemory: theMemory;
-		basicInitialize
-]
-
-{ #category : #running }
-VMSimpleStackBasedCogitBytecodeTest >> newMemory [
-
-	^ wordSize = 4
-		ifTrue: [ Spur32BitCoMemoryManager simulatorClass new ]
-		ifFalse: [ Spur64BitCoMemoryManager simulatorClass new ]
-]
-
-{ #category : #helpers }
-VMSimpleStackBasedCogitBytecodeTest >> openMachineDebugger [
-	
-	VMMachineCodeDebugger new
-		cogit: cogit;
-		machineSimulator: unicorn;
-		openWithSpec.
-]
-
-{ #category : #helpers }
-VMSimpleStackBasedCogitBytecodeTest >> openMachineDebuggerAt: anInteger [ 
-	
-	unicorn instructionPointerValue: anInteger.
-	self openMachineDebugger
-]
-
-{ #category : #'helpers - stack' }
-VMSimpleStackBasedCogitBytecodeTest >> peek [
-
-	| stackAddressIntegerValue peekedByteArray |
-
-	"Getting address from stack register"
-	stackAddressIntegerValue := unicorn stackPointerRegisterValue.
-
-	"Putting the value in the stack memory"
-	peekedByteArray := unicorn memoryAt: stackAddressIntegerValue readNext: self wordSize.
-	
-	^ peekedByteArray
-]
-
-{ #category : #'helpers - stack' }
-VMSimpleStackBasedCogitBytecodeTest >> peekAddress [
-	
-	^ self peek integerAt: 1 size: self wordSize signed: false
-]
-
-{ #category : #'helpers - stack' }
-VMSimpleStackBasedCogitBytecodeTest >> pop [
-
-	| stackAddressIntegerValue poppedByteArray |
-
-	"Getting address from stack register"
-	stackAddressIntegerValue := unicorn stackPointerRegisterValue.
-
-	"Putting the value in the stack memory"
-	poppedByteArray := unicorn memoryAt: stackAddressIntegerValue readNext: self wordSize.
-
-	"Updating SP"
-	unicorn stackPointerRegisterValue: stackAddressIntegerValue + self wordSize.
-	
-	^ poppedByteArray
-]
-
-{ #category : #'helpers - stack' }
-VMSimpleStackBasedCogitBytecodeTest >> popAddress [
-	
-	^ self pop integerAt: 1 size: self wordSize signed: false
-]
-
-{ #category : #'helpers - stack' }
-VMSimpleStackBasedCogitBytecodeTest >> push: aByteArray [
-
-	| stackAddressIntegerValue |
-	self assert: aByteArray size equals: self wordSize.
-
-	"Getting address from stack register"
-	stackAddressIntegerValue := unicorn stackPointerRegisterValue.
-
-	"Updating SP"
-	stackAddressIntegerValue := stackAddressIntegerValue - self wordSize.
-	unicorn stackPointerRegisterValue: stackAddressIntegerValue.
-	
-	"Putting the value in the stack memory"
-	unicorn
-		memoryAt: stackAddressIntegerValue
-		write: aByteArray
-		size: self wordSize.
-
-]
-
-{ #category : #'helpers - stack' }
-VMSimpleStackBasedCogitBytecodeTest >> pushAddress: anInteger [
-
-	| aByteArray |
-	aByteArray := ByteArray new: self wordSize.
-	aByteArray integerAt: 1 put: anInteger size: self wordSize signed: false.
-	self push: aByteArray
-]
-
-{ #category : #helpers }
-VMSimpleStackBasedCogitBytecodeTest >> readMemoryAt: anAddress [
-
-	| bytes |
-	bytes := unicorn memoryAt: anAddress readNext: self wordSize.
-	^ bytes integerAt: 1 size: self wordSize signed: false
-]
-
-{ #category : #'helpers - registers' }
-VMSimpleStackBasedCogitBytecodeTest >> readRegister: aRegisterID [
-
-	registerValue := ByteArray new: self wordSize.
-	unicorn register: aRegisterID value readInto: registerValue.
-	^ registerValue integerAt: 1 size: self wordSize signed: false
-]
-
-{ #category : #'helpers - frames' }
-VMSimpleStackBasedCogitBytecodeTest >> readTemporaryValueAt: anIndex [
-
-	"
-	fp->	saved fp
-			method
-			context (initialized to nil)
-			receiver
-			first temp	
-			...
-	sp->	Nth temp
-	
-		The first temporary is the 6th value from the FP to the top of the stack.
-		It is negative because the stack begins from a high address and after each push the SP is goingDown
-	
-		THIS METHOD ONLY WORK IN FRAMEFUL MACHINE FRAMES
-	"
-	
-	self assert: cogit needsFrame.
-	
-	^ self readMemoryAt: unicorn framePointerRegisterValue  - ((3 + anIndex) * self wordSize)
-]
-
-{ #category : #helpers }
-VMSimpleStackBasedCogitBytecodeTest >> receiverRegister: anInteger [ 
-
-	self writeRegister: UcX86Registers rdx value: anInteger
-]
-
-{ #category : #'helpers - registers' }
-VMSimpleStackBasedCogitBytecodeTest >> returnValue [
-
-	^ self readRegister: UcX86Registers rdx
-]
-
-{ #category : #helpers }
-VMSimpleStackBasedCogitBytecodeTest >> runFrom: startAddress until: endAddress [
-
-	self runFrom: startAddress until: endAddress timeout: 300 "microseconds"
-]
-
-{ #category : #helpers }
-VMSimpleStackBasedCogitBytecodeTest >> runFrom: startAddress until: endAddress timeout: microseconds [
-
-	unicorn startAt: startAddress
-		until: endAddress
-		timeout: microseconds
-		count: 0.
-
-	"Verify we stopped because we arrived to the right end addres and not a timeout"
-	unicorn instructionPointerValue = endAddress ifFalse: [
-		UnicornTimeout new
-			target: endAddress;
-			signal ]
-]
-
-{ #category : #helpers }
-VMSimpleStackBasedCogitBytecodeTest >> runGeneratedCode [
-
-	unicorn startAt: initialAddress
-		until: 0
-		timeout: 0
-		count: opcodes.
-
-]
-
-{ #category : #helpers }
-VMSimpleStackBasedCogitBytecodeTest >> runUntilReturn [
-
-	unicorn startAt: 16r1000000
-		until: callerAddress
-		timeout: 0
-		count: 0.
-
-]
-
-{ #category : #helpers }
-VMSimpleStackBasedCogitBytecodeTest >> runUntilReturnFrom: anAddress [
-
-	unicorn startAt: anAddress
-		until: callerAddress
-		timeout: 0
-		count: 0.
-
-]
-
-{ #category : #running }
-VMSimpleStackBasedCogitBytecodeTest >> setUp [
-	super setUp.
-	
-	SimpleStackBasedCogit initializeWithOptions: (Cogit asOptionsDictionary: { #ISA . isa }).
-	cogit := SimpleStackBasedCogit new setInterpreter: memory coInterpreter.
-	memory coInterpreter cogit: cogit.
-	memory cogit: cogit.
-	cogit objectRepresentation class initializeMiscConstants.
-	cogit entryOffset: (cogit sizeof: CogMethod).
-	
-	memory nilObject: (self newObjectWithSlots: 0).
-	memory trueObject: (self newObjectWithSlots: 0).
-	memory falseObject: (self newObjectWithSlots: 0).
-	
-	"We don't access its contents, but we need it to be after nil, true and false"
-	memory hiddenRootsObject: (self newObjectWithSlots: 0).
-
-	"Initializing Unicorn processor"
-	self setUpCPUSimulator.
-	self initializeStackMemory.
-	self initializeInitialStackFrame.
-	
-	cogit methodZone manageFrom: initialAddress to: initialAddress + self initialCodeSize.
-	cogit methodZoneBase: initialAddress.
-	cogit minCallAddress: initialAddress.
-	cogit cogCodeBase: initialAddress.
-	memory coInterpreter cogCodeSize: self initialCodeSize.
-	memory coInterpreter heapBase: stackMemoryEndAddress.
-	
-	memory coInterpreter numStackPages: 8.
-
-	self initializeOldSpaceForScavenger.
-]
-
-{ #category : #running }
-VMSimpleStackBasedCogitBytecodeTest >> setUpCPUSimulator [
-
-	unicorn := UnicornSimulator perform: isa asSymbol.
-	memory memory memoryObject pinInMemory.
-	unicorn mapMemory: memory memory memoryObject at: initialAddress.
-]
-
-{ #category : #'helpers - registers' }
-VMSimpleStackBasedCogitBytecodeTest >> stackPointerRegisterValue [
-
-	^ self readRegister: UcX86Registers esp
-]
-
-{ #category : #'helpers - registers' }
-VMSimpleStackBasedCogitBytecodeTest >> stackPointerRegisterValue: aValue [
-	
-	self writeRegister: UcX86Registers rsp value: aValue
 ]
 
 { #category : #'tests - extended push bytecode - push inst var' }
@@ -742,7 +158,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testExtendedPushPushesVariableType: type 
 	memory storePointer: instanceVariableToWrite - 1 ofObject: obj withValue: memory falseObject.
 	
 	"The receiver should be in a receiver register based on Cog's calling convention"
-	unicorn receiverRegisterValue: obj.
+	machineSimulator receiverRegisterValue: obj.
 	
 	"The first byte of the push receiver instance variable bytecode family is used to identify which variable (0-based again)"
 	cogit byte1: type << 6 + instanceVariableToWrite - 1.
@@ -811,6 +227,34 @@ VMSimpleStackBasedCogitBytecodeTest >> testExtendedStoreStoresInstanceVariableIn
 
 	"After execution false should be popped from the stack and false should be stored in the object's variable (0-based)."
 	self assert: (memory fetchPointer: instanceVariableToWrite - 1 ofObject: obj) equals: memory falseObject
+]
+
+{ #category : #'tests - jumps' }
+VMSimpleStackBasedCogitBytecodeTest >> testJumpForwardJumpsOverAnInstruction [
+	
+	cogit methodObj: (self newMethodWithBytecodes: #[144 122 121]).
+	
+	self compile: [ | fixup nextOpcodeIndex |
+		cogit byte0: 144.
+		cogit bytecodePC: 8. "The method has a header so, the first bytecode is in offset 8"
+		cogit genShortUnconditionalJump.  
+		
+		cogit byte0: 122.
+		cogit bytecodePC: 9.
+		cogit genReturnFalse.
+		
+		cogit byte0: 121.
+		cogit bytecodePC: 10. 
+		"We need to store the value to know if the bytecode has generated instructions"
+		nextOpcodeIndex := cogit getOpcodeIndex.
+		cogit genReturnTrue.
+		"As the bytecode is the target of a jump it has a fixup. We need to process it"
+		fixup := cogit fixupAt: 10.
+		cogit patchFixupTargetIfNeeded: fixup nextOpcodeIndex: nextOpcodeIndex. ] bytecodes: 3.	
+
+	self runGeneratedCode.
+	
+	self assert: machineSimulator receiverRegisterValue equals: memory trueObject
 ]
 
 { #category : #'tests - single bytecode - pop into temp' }
@@ -1226,7 +670,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushConstantFalseBytecodePushesFalse 
 	self compile: [ cogit genPushConstantFalseBytecode ].	
 	self runGeneratedCode.
 	
-	self assert: (self popAddress) equals: memory falseObject
+	self assert: self popAddress equals: memory falseObject
 ]
 
 { #category : #'tests - two bytecodes' }
@@ -1238,7 +682,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushConstantNilAndThenReturn [
 
 	self runGeneratedCode.
 	
-	self assert: unicorn receiverRegisterValue equals: memory nilObject
+	self assert: machineSimulator receiverRegisterValue equals: memory nilObject
 ]
 
 { #category : #'tests - single bytecode' }
@@ -1247,16 +691,16 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushConstantNilBytecodePushesNil [
 	self compile: [ cogit genPushConstantNilBytecode ].	
 	self runGeneratedCode.
 	
-	self assert: (self popAddress) equals: memory nilObject
+	self assert: self popAddress equals: memory nilObject
 ]
 
 { #category : #'tests - single bytecode' }
 VMSimpleStackBasedCogitBytecodeTest >> testPushConstantTrueBytecodePushesTrue [
-	
-	self compile: [ cogit genPushConstantTrueBytecode ].	
+
+	self compile: [ cogit genPushConstantTrueBytecode ].
 	self runGeneratedCode.
-	
-	self assert: (self popAddress) equals: memory trueObject
+
+	self assert: self popAddress equals: memory trueObject
 ]
 
 { #category : #'tests - single bytecode' }
@@ -1265,7 +709,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushConstantZeroBytecodePushesASmallI
 	self compile: [ cogit genPushConstantZeroBytecode ].	
 	self runGeneratedCode.
 	
-	self assert: (self popAddress) equals: (memory integerObjectOf: 0)
+	self assert: self popAddress equals: (memory integerObjectOf: 0)
 ]
 
 { #category : #'tests - single bytecode - push temp' }
@@ -1288,7 +732,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushQuickIntegerMinusOnePushesAMinusO
 	self compile: [ cogit genPushQuickIntegerConstantBytecode ].	
 	self runGeneratedCode.
 	
-	self assert: (self popAddress) equals: (memory integerObjectOf: -1)
+	self assert: self popAddress equals: (memory integerObjectOf: -1)
 ]
 
 { #category : #'tests - single bytecode' }
@@ -1299,7 +743,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushQuickIntegerOnePushesOne [
 	self compile: [ cogit genPushQuickIntegerConstantBytecode ].	
 	self runGeneratedCode.
 	
-	self assert: (self popAddress) equals: (memory integerObjectOf: 1)
+	self assert: self popAddress equals: (memory integerObjectOf: 1)
 ]
 
 { #category : #'tests - single bytecode' }
@@ -1310,7 +754,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushQuickIntegerTwoPushesTwo [
 	self compile: [ cogit genPushQuickIntegerConstantBytecode ].	
 	self runGeneratedCode.
 	
-	self assert: (self popAddress) equals: (memory integerObjectOf: 2)
+	self assert: self popAddress equals: (memory integerObjectOf: 2)
 ]
 
 { #category : #'tests - single bytecode' }
@@ -1321,18 +765,18 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushQuickIntegerZeroPushesAZero [
 	self compile: [ cogit genPushQuickIntegerConstantBytecode ].	
 	self runGeneratedCode.
 	
-	self assert: (self popAddress) equals: (memory integerObjectOf: 0)
+	self assert: self popAddress equals: (memory integerObjectOf: 0)
 ]
 
 { #category : #'tests - single bytecode' }
 VMSimpleStackBasedCogitBytecodeTest >> testPushReceiverBytecodePushesTheReceiver [
 
-	unicorn receiverRegisterValue: 75. 
+	machineSimulator receiverRegisterValue: 75. 
 	
 	self compile: [ cogit genPushReceiverBytecode ].	
 	self runGeneratedCode.
 	
-	self assert: (self popAddress) equals: 75
+	self assert: self popAddress equals: 75
 ]
 
 { #category : #'tests - single bytecode - push inst var' }
@@ -1440,7 +884,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushReceiverVariableBytecodeZeroPushe
 	memory storePointer: instanceVariableToWrite - 1 ofObject: obj withValue: memory falseObject.
 	
 	"The receiver should be in a receiver register based on Cog's calling convention"
-	unicorn receiverRegisterValue: obj.
+	machineSimulator receiverRegisterValue: obj.
 	
 	"The first byte of the push receiver instance variable bytecode family is used to identify which variable (0-based again)"
 	cogit byte0: instanceVariableToWrite - 1.		
@@ -1499,7 +943,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushTempVariablePushesVariableAt: tem
 		arguments: #() 
 		temporaries: temporaries.
 
-	self assert: (self readMemoryAt: unicorn stackPointerRegisterValue) equals: memory falseObject.
+	self assert: (self readMemoryAt: machineSimulator stackPointerRegisterValue) equals: memory falseObject.
 	
 	"The bytecode of the push temporary variable is used to identify the index (from 0 to 15) and it starts from 16 to 31"
 	cogit byte0: tempVariableUnderTest - 1 + 16.
@@ -1514,6 +958,160 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushTempVariablePushesVariableAt: tem
 VMSimpleStackBasedCogitBytecodeTest >> testPushThirdTempVariablePushesVariable [
 
 	self testPushTempVariablePushesVariableAt: 3
+]
+
+{ #category : #'tests - thisContext' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushThisContextForFullBlockWithFullFrameCallsLargeFullBlockTrampoline [
+
+	| numberOfArguments methodObject method |
+	
+	cogit ceLargeActiveContextInFullBlockTrampoline: (self compile: [ cogit RetN: 0 ]).
+	
+	self 
+		createFramefulCallFrom: callerAddress 
+		receiver: memory nilObject
+		arguments: { memory falseObject . memory trueObject . memory falseObject }
+		temporaries: #().
+	numberOfArguments := 3.
+	methodObject := self newMethodWithSmallContext: false WithArguments: numberOfArguments.
+	method := self compile: [
+		cogit inBlock: InFullBlock.
+		cogit methodOrBlockNumArgs: numberOfArguments.
+		cogit methodObj: methodObject.
+		cogit genPushActiveContextBytecode ].
+	
+	self runFrom: method until: cogit ceLargeActiveContextInFullBlockTrampoline.
+	
+	self assert: machineSimulator instructionPointerValue equals: cogit ceLargeActiveContextInFullBlockTrampoline.
+	self assert: machineSimulator sendNumberOfArgumentsRegisterValue equals: numberOfArguments.
+]
+
+{ #category : #'tests - thisContext' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushThisContextForFullBlockWithSmallFrameCallsLargeFullBlockTrampoline [
+
+	| numberOfArguments methodObject method |
+	
+	cogit ceSmallActiveContextInFullBlockTrampoline: (self compile: [ cogit RetN: 0 ]).
+	
+	self 
+		createFramefulCallFrom: callerAddress 
+		receiver: memory nilObject
+		arguments: { memory falseObject . memory trueObject . memory falseObject }
+		temporaries: #().
+	numberOfArguments := 3.
+	methodObject := self newMethodWithSmallContext: true WithArguments: numberOfArguments.
+	method := self compile: [
+		cogit inBlock: InFullBlock.
+		cogit methodOrBlockNumArgs: numberOfArguments.
+		cogit methodObj: methodObject.
+		cogit genPushActiveContextBytecode ].
+	
+	self runFrom: method until: cogit ceSmallActiveContextInFullBlockTrampoline.
+	
+	self assert: machineSimulator instructionPointerValue equals: cogit ceSmallActiveContextInFullBlockTrampoline.
+	self assert: machineSimulator sendNumberOfArgumentsRegisterValue equals: numberOfArguments.
+]
+
+{ #category : #'tests - thisContext' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushThisContextForMethodWithLargeFrameCallsLargeMethodTrampoline [
+
+	| numberOfArguments methodObject method |
+	
+	cogit ceLargeActiveContextInMethodTrampoline: (self compile: [ cogit RetN: 0 ]).
+	
+	self 
+		createFramefulCallFrom: callerAddress 
+		receiver: memory nilObject
+		arguments: { memory falseObject . memory trueObject . memory falseObject }
+		temporaries: #().
+	numberOfArguments := 3.
+	methodObject := self newMethodWithSmallContext: false WithArguments: numberOfArguments.
+	method := self compile: [ 
+		cogit methodOrBlockNumArgs: numberOfArguments.
+		cogit methodObj: methodObject.
+		cogit genPushActiveContextBytecode ].
+	
+	self runFrom: method until: cogit ceLargeActiveContextInMethodTrampoline.
+	
+	self assert: machineSimulator instructionPointerValue equals: cogit ceLargeActiveContextInMethodTrampoline.
+	self assert: machineSimulator sendNumberOfArgumentsRegisterValue equals: numberOfArguments.
+]
+
+{ #category : #'tests - thisContext' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushThisContextForMethodWithSmallFrameCallsSmallMethodTrampoline [
+
+	| numberOfArguments methodObject method |
+	
+	cogit ceSmallActiveContextInMethodTrampoline: (self compile: [ cogit RetN: 0 ]).
+	
+	self 
+		createFramefulCallFrom: callerAddress 
+		receiver: memory nilObject
+		arguments: { memory falseObject . memory trueObject . memory falseObject }
+		temporaries: #().
+	numberOfArguments := 3.
+	methodObject := self newMethodWithSmallContext: true WithArguments: numberOfArguments.
+	method := self compile: [ 
+		cogit methodOrBlockNumArgs: numberOfArguments.
+		cogit methodObj: methodObject.
+		cogit genPushActiveContextBytecode ].
+	
+	self runFrom: method until: cogit ceSmallActiveContextInMethodTrampoline.
+	
+	self assert: machineSimulator instructionPointerValue equals: cogit ceSmallActiveContextInMethodTrampoline.
+	self assert: machineSimulator sendNumberOfArgumentsRegisterValue equals: numberOfArguments.
+]
+
+{ #category : #'tests - thisContext' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushThisContextForVanillaBlockWithLargeFrameCallsLargeVanillaBlockTrampoline [
+
+	| numberOfArguments methodObject method |
+	
+	cogit ceLargeActiveContextInBlockTrampoline: (self compile: [ cogit RetN: 0 ]).
+	
+	self 
+		createFramefulCallFrom: callerAddress 
+		receiver: memory nilObject
+		arguments: { memory falseObject . memory trueObject . memory falseObject }
+		temporaries: #().
+	numberOfArguments := 3.
+	methodObject := self newMethodWithSmallContext: false WithArguments: numberOfArguments.
+	method := self compile: [
+		cogit inBlock: InVanillaBlock.
+		cogit methodOrBlockNumArgs: numberOfArguments.
+		cogit methodObj: methodObject.
+		cogit genPushActiveContextBytecode ].
+	
+	self runFrom: method until: cogit ceLargeActiveContextInBlockTrampoline.
+	
+	self assert: machineSimulator instructionPointerValue equals: cogit ceLargeActiveContextInBlockTrampoline.
+	self assert: machineSimulator sendNumberOfArgumentsRegisterValue equals: numberOfArguments.
+]
+
+{ #category : #'tests - thisContext' }
+VMSimpleStackBasedCogitBytecodeTest >> testPushThisContextForVanillaBlockWithSmallFrameCallsLargeVanillaBlockTrampoline [
+
+	| numberOfArguments methodObject method |
+	
+	cogit ceSmallActiveContextInBlockTrampoline: (self compile: [ cogit RetN: 0 ]).
+	
+	self 
+		createFramefulCallFrom: callerAddress 
+		receiver: memory nilObject
+		arguments: { memory falseObject . memory trueObject . memory falseObject }
+		temporaries: #().
+	numberOfArguments := 3.
+	methodObject := self newMethodWithSmallContext: true WithArguments: numberOfArguments.
+	method := self compile: [
+		cogit inBlock: InVanillaBlock.
+		cogit methodOrBlockNumArgs: numberOfArguments.
+		cogit methodObj: methodObject.
+		cogit genPushActiveContextBytecode ].
+	
+	self runFrom: method until: cogit ceSmallActiveContextInBlockTrampoline.
+	
+	self assert: machineSimulator instructionPointerValue equals: cogit ceSmallActiveContextInBlockTrampoline.
+	self assert: machineSimulator sendNumberOfArgumentsRegisterValue equals: numberOfArguments.
 ]
 
 { #category : #'tests - single bytecode - return' }
@@ -1672,8 +1270,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendEqualsEqualsWithIdenticalObjectsP
 	"Push receiver, arg then send"
 	self pushAddress: memory nilObject.
 	self pushAddress: memory nilObject.
-	self runFrom: sendAddress until: lastAddress.
-	
+	self runFrom: sendAddress until: self getLastAddress.		
 	self
 		assert: self popAddress
 		equals: memory trueObject
@@ -1687,7 +1284,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendEqualsEqualsWithNonIdenticalObjec
 	"Push receiver, arg then send"
 	self pushAddress: memory nilObject.
 	self pushAddress: memory trueObject.
-	self runFrom: sendAddress until: lastAddress.
+	self runFrom: sendAddress until: self getLastAddress.
 	
 	self
 		assert: self popAddress
@@ -1726,7 +1323,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendLiteralOneWithZeroArgsMovesSelect
 	self runFrom: sendAddress until: sendTrampolineAddress.
 	
 	self
-		assert: unicorn classRegisterValue
+		assert: machineSimulator classRegisterValue
 		equals: literalIndex
 ]
 
@@ -1753,7 +1350,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendLiteralOneWithZeroArgsMovesSelect
 	self runFrom: sendAddress until: sendTrampolineAddress.
 	
 	self
-		assert: unicorn classRegisterValue
+		assert: machineSimulator classRegisterValue
 		equals: selector
 ]
 
@@ -1773,7 +1370,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendLiteralZeroWithZeroArgsMovesRecei
 	self pushAddress: memory falseObject.
 	self runFrom: sendAddress until: sendTrampolineAddress.
 	
-	self assert: unicorn receiverRegisterValue equals: memory falseObject
+	self assert: machineSimulator receiverRegisterValue equals: memory falseObject
 ]
 
 { #category : #'tests - sends' }
@@ -1798,7 +1395,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendLiteralZeroWithZeroArgsMovesSelec
 	self runFrom: sendAddress until: sendTrampolineAddress.
 	
 	self
-		assert: unicorn classRegisterValue
+		assert: machineSimulator classRegisterValue
 		equals: literalIndex
 ]
 
@@ -1824,7 +1421,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendLiteralZeroWithZeroArgsMovesSelec
 	self runFrom: sendAddress until: sendTrampolineAddress.
 	
 	self
-		assert: unicorn classRegisterValue
+		assert: machineSimulator classRegisterValue
 		equals: selector
 ]
 
@@ -1844,10 +1441,10 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendLiteralZeroWithZeroArgsPushesRetu
 	self pushAddress: memory falseObject.
 	self pushAddress: memory trueObject.
 	self runFrom: sendAddress until: sendTrampolineAddress.
-	
+		
 	"Now return from called function/method and execute until the end of the send instruction"
-	unicorn returnRegisterValue: (memory integerObjectOf: 42).
-	self runFrom: unicorn instructionPointerValue until: lastAddress.
+	machineSimulator returnRegisterValue: (memory integerObjectOf: 42).
+	self runFrom: machineSimulator instructionPointerValue until: self getLastAddress.
 	
 	self assert: self popAddress equals: (memory integerObjectOf: 42).
 ]
@@ -1860,7 +1457,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendNotEqualsEqualsWithIdenticalObjec
 	"Push receiver, arg then send"
 	self pushAddress: memory nilObject.
 	self pushAddress: memory nilObject.
-	self runFrom: sendAddress until: lastAddress.
+	self runFrom: sendAddress until: self getLastAddress.
 	
 	self
 		assert: self popAddress
@@ -1875,7 +1472,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendNotEqualsEqualsWithNonIdenticalOb
 	"Push receiver, arg then send"
 	self pushAddress: memory nilObject.
 	self pushAddress: memory falseObject.
-	self runFrom: sendAddress until: lastAddress.
+	self runFrom: sendAddress until: self getLastAddress.
 	
 	self
 		assert: self popAddress
@@ -1890,7 +1487,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendOneArgSpecialMessageDoesNotMovesI
 	self createSpecialSelectorArray.
 	self compileSpecialSend.
 	
-	unicorn sendNumberOfArgumentsRegisterValue: (previousValue := 42).
+	machineSimulator sendNumberOfArgumentsRegisterValue: (previousValue := 42).
 	
 	"Push receiver, arg, then send"
 	self pushAddress: memory falseObject.
@@ -1898,7 +1495,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendOneArgSpecialMessageDoesNotMovesI
 	self runFrom: sendAddress until: sendTrampolineAddress.
 	
 	self
-		assert: unicorn sendNumberOfArgumentsRegisterValue
+		assert: machineSimulator sendNumberOfArgumentsRegisterValue
 		equals: previousValue
 ]
 
@@ -1920,7 +1517,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendOneArgSpecialMessageMovesNegatedS
 	
 	signed := (ByteArray new: self wordSize)
 		in: [ :a | 
-			a integerAt: 1 put: unicorn classRegisterValue size: self wordSize signed: false.
+			a integerAt: 1 put: machineSimulator classRegisterValue size: self wordSize signed: false.
 			a integerAt: 1 size: self wordSize signed: true ].
 	self
 		assert: signed
@@ -1939,7 +1536,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendOneArgSpecialMessageMovesReceiver
 	self pushAddress: memory trueObject.
 	self runFrom: sendAddress until: sendTrampolineAddress.
 	
-	self assert: unicorn receiverRegisterValue equals: memory falseObject
+	self assert: machineSimulator receiverRegisterValue equals: memory falseObject
 ]
 
 { #category : #'tests - special sends' }
@@ -1957,7 +1554,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendOneArgSpecialMessageMovesSelector
 	self runFrom: sendAddress until: sendTrampolineAddress.
 	
 	self
-		assert: unicorn classRegisterValue
+		assert: machineSimulator classRegisterValue
 		equals: selectorAtIndex
 ]
 
@@ -1974,8 +1571,8 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendOneArgSpecialMessagePushesReturnV
 	self runFrom: sendAddress until: sendTrampolineAddress.
 	
 	"Now return from called function/method and execute until the end of the send instruction"
-	unicorn returnRegisterValue: (memory integerObjectOf: 42).
-	self runFrom: unicorn instructionPointerValue until: lastAddress.
+	machineSimulator returnRegisterValue: (memory integerObjectOf: 42).
+	self runFrom: machineSimulator instructionPointerValue until: self getLastAddress.
 	
 	self assert: self popAddress equals: (memory integerObjectOf: 42).
 ]
@@ -1988,7 +1585,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendTwoArgSpecialMessageDoesNotMovesI
 	self createSpecialSelectorArray.
 	self compileSpecialSend.
 	
-	unicorn sendNumberOfArgumentsRegisterValue: (previousValue := 42).
+	machineSimulator sendNumberOfArgumentsRegisterValue: (previousValue := 42).
 	
 	"Push receiver, arg1, arg2 then send"
 	self pushAddress: memory falseObject.
@@ -1997,7 +1594,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendTwoArgSpecialMessageDoesNotMovesI
 	self runFrom: sendAddress until: sendTrampolineAddress.
 	
 	self
-		assert: unicorn sendNumberOfArgumentsRegisterValue
+		assert: machineSimulator sendNumberOfArgumentsRegisterValue
 		equals: previousValue
 ]
 
@@ -2020,7 +1617,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendTwoArgSpecialMessageMovesNegatedS
 	
 	signed := (ByteArray new: self wordSize)
 		in: [ :a | 
-			a integerAt: 1 put: unicorn classRegisterValue size: self wordSize signed: false.
+			a integerAt: 1 put: machineSimulator classRegisterValue size: self wordSize signed: false.
 			a integerAt: 1 size: self wordSize signed: true ].
 	self
 		assert: signed
@@ -2040,7 +1637,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendTwoArgSpecialMessageMovesReceiver
 	self pushAddress: (memory integerObjectOf: 7).
 	self runFrom: sendAddress until: sendTrampolineAddress.
 	
-	self assert: unicorn receiverRegisterValue equals: memory falseObject
+	self assert: machineSimulator receiverRegisterValue equals: memory falseObject
 ]
 
 { #category : #'tests - special sends' }
@@ -2062,7 +1659,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendTwoArgSpecialMessageMovesSelector
 	
 	signed := (ByteArray new: self wordSize)
 		in: [ :a | 
-			a integerAt: 1 put: unicorn classRegisterValue size: self wordSize signed: false.
+			a integerAt: 1 put: machineSimulator classRegisterValue size: self wordSize signed: false.
 			a integerAt: 1 size: self wordSize signed: true ].
 	self
 		assert: signed
@@ -2083,8 +1680,8 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendTwoArgSpecialMessagePushesReturnV
 	self runFrom: sendAddress until: sendTrampolineAddress.
 	
 	"Now return from called function/method and execute until the end of the send instruction"
-	unicorn returnRegisterValue: (memory integerObjectOf: 42).
-	self runFrom: unicorn instructionPointerValue until: lastAddress.
+	machineSimulator returnRegisterValue: (memory integerObjectOf: 42).
+	self runFrom: machineSimulator instructionPointerValue until: self getLastAddress.
 	
 	self assert: self popAddress equals: (memory integerObjectOf: 42).
 ]
@@ -2097,14 +1694,14 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendZeroArgSpecialMessageDoesNotMoves
 	self createSpecialSelectorArray.
 	self compileSpecialSend.
 	
-	unicorn sendNumberOfArgumentsRegisterValue: (previousValue := 42).
+	machineSimulator sendNumberOfArgumentsRegisterValue: (previousValue := 42).
 	
 	"Push receiver, then send"
 	self pushAddress: memory falseObject.
 	self runFrom: sendAddress until: sendTrampolineAddress.
 	
 	self
-		assert: unicorn sendNumberOfArgumentsRegisterValue
+		assert: machineSimulator sendNumberOfArgumentsRegisterValue
 		equals: previousValue
 ]
 
@@ -2125,7 +1722,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendZeroArgSpecialMessageMovesNegated
 	
 	signed := (ByteArray new: self wordSize)
 		in: [ :a | 
-			a integerAt: 1 put: unicorn classRegisterValue size: self wordSize signed: false.
+			a integerAt: 1 put: machineSimulator classRegisterValue size: self wordSize signed: false.
 			a integerAt: 1 size: self wordSize signed: true ].
 	self
 		assert: signed
@@ -2143,7 +1740,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendZeroArgSpecialMessageMovesReceive
 	self pushAddress: memory falseObject.
 	self runFrom: sendAddress until: sendTrampolineAddress.
 	
-	self assert: unicorn receiverRegisterValue equals: memory falseObject
+	self assert: machineSimulator receiverRegisterValue equals: memory falseObject
 ]
 
 { #category : #'tests - special sends' }
@@ -2160,7 +1757,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendZeroArgSpecialMessageMovesSelecto
 	self runFrom: sendAddress until: sendTrampolineAddress.
 	
 	self
-		assert: unicorn classRegisterValue
+		assert: machineSimulator classRegisterValue
 		equals: selectorAtIndex
 ]
 
@@ -2176,30 +1773,8 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendZeroArgSpecialMessagePushesReturn
 	self runFrom: sendAddress until: sendTrampolineAddress.
 	
 	"Now return from called function/method and execute until the end of the send instruction"
-	unicorn returnRegisterValue: (memory integerObjectOf: 42).
-	self runFrom: unicorn instructionPointerValue until: lastAddress.
+	machineSimulator returnRegisterValue: (memory integerObjectOf: 42).
+	self runFrom: machineSimulator instructionPointerValue until: self getLastAddress.
 	
 	self assert: self popAddress equals: (memory integerObjectOf: 42).
-]
-
-{ #category : #helpers }
-VMSimpleStackBasedCogitBytecodeTest >> wordSize [
-	
-	^ memory wordSize
-]
-
-{ #category : #running }
-VMSimpleStackBasedCogitBytecodeTest >> wordSize: aWordSize [
-
-	wordSize := aWordSize
-]
-
-{ #category : #'helpers - registers' }
-VMSimpleStackBasedCogitBytecodeTest >> writeRegister: anUcX86Registers value: anInteger [ 
-
-	| value |
-	value := ByteArray new: self wordSize.
-	value integerAt: 1 put: anInteger size: self wordSize signed: false.
-	unicorn register: anUcX86Registers value write: value.
-
 ]

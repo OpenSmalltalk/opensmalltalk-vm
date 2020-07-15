@@ -4,7 +4,7 @@
 #include "pharovm/pathUtilities.h"
 #include <assert.h>
 
-typedef VMErrorCode (*vm_parameter_process_function)(const char *argument);
+typedef VMErrorCode (*vm_parameter_process_function)(const char *argument, VMParameters* params);
 
 typedef struct VMParameterSpec_
 {
@@ -14,19 +14,22 @@ typedef struct VMParameterSpec_
 } VMParameterSpec;
 
 void vm_printUsageTo(FILE *out);
-static VMErrorCode processHelpOption(const char *argument);
-static VMErrorCode processPrintVersionOption(const char *argument);
-static VMErrorCode processLogLevelOption(const char *argument);
+static VMErrorCode processHelpOption(const char *argument, VMParameters * params);
+static VMErrorCode processPrintVersionOption(const char *argument, VMParameters * params);
+static VMErrorCode processLogLevelOption(const char *argument, VMParameters * params);
+static VMErrorCode processMaxFramesToPrintOption(const char *argument, VMParameters * params);
 
 static const VMParameterSpec vm_parameters_spec[] =
 {
 	{.name = "headless", .hasArgument = false, .function = NULL},
+    {.name = "worker", .hasArgument = false, .function = NULL},
 	{.name = "interactive", .hasArgument = false, .function = NULL}, // For pharo-ui scripts.
 	{.name = "vm-display-null", .hasArgument = false, .function = NULL}, // For Smalltalk CI.
 	{.name = "help", .hasArgument = false, .function = processHelpOption},
 	{.name = "h", .hasArgument = false, .function = processHelpOption},
 	{.name = "version", .hasArgument = false, .function = processPrintVersionOption},
 	{.name = "logLevel", .hasArgument = true, .function = processLogLevelOption},
+	{.name = "maxFramesToLog", .hasArgument = true, .function = processMaxFramesToPrintOption},
 
 #ifdef __APPLE__
 	// This parameter is passed by the XCode debugger.
@@ -127,7 +130,7 @@ vm_find_startup_image(const char *vmExecutablePath, VMParameters *parameters)
 
 	// Find the VM absolute directory.
 	vm_path_make_absolute_into(searchPathBuffer, FILENAME_MAX+1, vmExecutablePath);
-    if(fileExists(searchPathBuffer))
+    if(sqImageFileExists(searchPathBuffer))
 	{
 		vm_path_extract_dirname_into(vmPathBuffer, FILENAME_MAX+1, searchPathBuffer);
 	}
@@ -142,7 +145,7 @@ vm_find_startup_image(const char *vmExecutablePath, VMParameters *parameters)
 	{
 		const char *searchSuffix = vm_image_search_suffixes[i];
 		vm_path_join_into(imagePathBuffer, FILENAME_MAX+1, vmPathBuffer, searchSuffix);
-	    if(fileExists(imagePathBuffer))
+	    if(sqImageFileExists(imagePathBuffer))
 		{
 			parameters->imageFileName = imagePathBuffer;
 			parameters->isDefaultImage = true;
@@ -158,7 +161,7 @@ vm_find_startup_image(const char *vmExecutablePath, VMParameters *parameters)
 	vm_path_join_into(imagePathBuffer, FILENAME_MAX+1, searchPathBuffer, DEFAULT_IMAGE_NAME);
 	free(vmPathBuffer);
 	free(searchPathBuffer);
-	if(fileExists(imagePathBuffer))
+	if(sqImageFileExists(imagePathBuffer))
 	{
 		parameters->imageFileName = imagePathBuffer;
 		parameters->isDefaultImage = true;
@@ -299,10 +302,12 @@ vm_printUsageTo(FILE *out)
 "       " VM_NAME " [<option>...] -- [<argument>...]\n"
 "\n"
 "Common <option>s:\n"
-"  --help                 print this help message, then exit\n"
-"  --headless             run in headless (no window) mode (default: true)\n"
-"  --logLevel=<level>     Sets the log level (ERROR, WARN, INFO or DEBUG)\n"
-"  --version              print version information, then exit\n"
+"  --help                 	Print this help message, then exit\n"
+"  --headless             	Run in headless (no window) mode (default: true)\n"
+"  --worker               run in worker thread (default: false)\n"
+"  --logLevel=<level>     	Sets the log level (ERROR, WARN, INFO or DEBUG)\n"
+"  --version              	Print version information, then exit\n"
+"  --maxFramesToLog=<cant>	Sets the max numbers of Smalltalk frames to log"
 "\n"
 "Notes:\n"
 "\n"
@@ -312,7 +317,7 @@ vm_printUsageTo(FILE *out)
 }
 
 static VMErrorCode
-processLogLevelOption(const char* value)
+processLogLevelOption(const char* value, VMParameters * params)
 {
 	int intValue = 0;
 
@@ -320,7 +325,7 @@ processLogLevelOption(const char* value)
 
 	if(intValue == 0)
 	{
-		fprintf(stderr, "Invalid option for logLevel: %s\n", value);
+		logError("Invalid option for logLevel: %s\n", value);
 		vm_printUsageTo(stderr);
 		return VM_ERROR_INVALID_PARAMETER_VALUE;
 	}
@@ -330,7 +335,26 @@ processLogLevelOption(const char* value)
 }
 
 static VMErrorCode
-processHelpOption(const char* argument)
+processMaxFramesToPrintOption(const char* value, VMParameters * params)
+{
+	int intValue = 0;
+
+	intValue = strtol(value, NULL, 10);
+
+	if(intValue < 0)
+	{
+		logError("Invalid option for maxFramesToLog: %s\n", value);
+		vm_printUsageTo(stderr);
+		return VM_ERROR_INVALID_PARAMETER_VALUE;
+	}
+
+	params->maxStackFramesToPrint = intValue;
+
+	return VM_SUCCESS;
+}
+
+static VMErrorCode
+processHelpOption(const char* argument, VMParameters * params)
 {
 	(void)argument;
 	vm_printUsageTo(stdout);
@@ -338,7 +362,7 @@ processHelpOption(const char* argument)
 }
 
 static VMErrorCode
-processPrintVersionOption(const char* argument)
+processPrintVersionOption(const char* argument, VMParameters * params)
 {
 	(void)argument;
 	printf("%s\n", getVMVersion());
@@ -392,7 +416,7 @@ processVMOptions(VMParameters* parameters)
 		const VMParameterSpec *paramSpec = findParameterWithName(argumentName, argumentNameSize);
 		if(!paramSpec)
 		{
-			fprintf(stderr, "Invalid or unknown VM parameter %s\n", param);
+			logError("Invalid or unknown VM parameter %s\n", param);
 			vm_printUsageTo(stderr);
 			return VM_ERROR_INVALID_PARAMETER;
 		}
@@ -412,7 +436,7 @@ processVMOptions(VMParameters* parameters)
 			// Make sure the argument value is present.
 			if(argumentValue == NULL)
 			{
-				fprintf(stderr, "VM parameter %s requires a value\n", param);
+				logError("VM parameter %s requires a value\n", param);
 				vm_printUsageTo(stderr);
 				return VM_ERROR_INVALID_PARAMETER_VALUE;
 			}
@@ -421,7 +445,7 @@ processVMOptions(VMParameters* parameters)
 		// Invoke the VM parameter processing function.
 		if(paramSpec->function)
 		{
-			VMErrorCode error = paramSpec->function(argumentValue);
+			VMErrorCode error = paramSpec->function(argumentValue, parameters);
 			if(error) return error;
 		}
 	}

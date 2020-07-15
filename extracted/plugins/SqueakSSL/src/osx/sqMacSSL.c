@@ -56,7 +56,9 @@ static char* emptyString = "";
 #pragma mark Forward Declarations
 /********************************************************************/
 
-static int printf_status(OSStatus status, const char* restrict format, ...);
+#include "pharovm/debug.h"
+
+static int logStatus(OSStatus status, const char* restrict format, ...);
 static OSStatus sqExtractPeerName(sqSSL* ssl);
 static OSStatus sqGetPeerCertificates(sqSSL* ssl);
 static sqSSL* sqSSLFromHandle(sqInt handle);
@@ -74,32 +76,40 @@ OSStatus SqueakSSLWrite(SSLConnectionRef connection, const void* data,
 #pragma mark Internal Helper
 /********************************************************************/
 
-static int printf_status(OSStatus status, const char* restrict format, ...)
+static int logStatus(OSStatus status, const char* restrict format, ...)
 {
     int ret = 0;
+    char buffer[1024];
+
+    memset(buffer, 0, sizeof(buffer));
+
     va_list args;
     va_start(args, format);
+
     CFErrorRef _e = CFErrorCreate(NULL, kCFErrorDomainOSStatus, status, NULL);
     CFStringRef _sdesc = CFErrorCopyDescription(_e);
     CFStringRef _sreas = CFErrorCopyFailureReason(_e);
     CFStringRef _sreco = CFErrorCopyRecoverySuggestion(_e);
-    ret += vprintf(format, args);
-    ret += printf("Status (%d): %s (%s): %s\n",
+
+    ret += vsprintf(buffer, format, args);
+
+    logTrace(buffer);
+
+    logTrace("Status (%d): %s (%s): %s\n",
                   (int)status,
                   CFStringGetCStringPtr(_sdesc, kCFStringEncodingUTF8),
                   CFStringGetCStringPtr(_sreas, kCFStringEncodingUTF8),
                   CFStringGetCStringPtr(_sreco, kCFStringEncodingUTF8));
+
     if (_sreco) CFRelease(_sreco);
     if (_sreas) CFRelease(_sreas);
     if (_sdesc) CFRelease(_sdesc);
     if (_e)     CFRelease(_e);
+
     va_end(args);
+
     return ret;
 }
-
-/* By convention, the sqSSL object is named ssl and has its logLevel >= 0 */
-#define logprintf if (ssl->loglevel) printf
-#define logprintf_status if (ssl->loglevel) printf_status
 
 /* sqSSLFromHandle: Maps a handle to an SSL */
 static sqSSL* sqSSLFromHandle(sqInt handle)
@@ -112,7 +122,7 @@ OSStatus sqSetupSSL(sqSSL* ssl, int isServer)
 {
     OSStatus status = noErr;
 
-    logprintf("sqSetupSSL: Setting up new context\n");
+    logTrace("sqSetupSSL: Setting up new context\n");
     /* Create the new context */
 #if MAC_OS_X_VERSION_MAX_ALLOWED >= 1080
     ssl->ctx = SSLCreateContext(NULL,
@@ -121,7 +131,7 @@ OSStatus sqSetupSSL(sqSSL* ssl, int isServer)
 #else
     status = SSLNewContext(isServer, &ssl->ctx);
     if (status != noErr) {
-        logprintf_status(status, "SSLNewContext failed");
+        logStatus(status, "SSLNewContext failed");
         return status;
     }
 #endif // MAC_OS_X_VERSION_MAX_ALLOWED >= 1080
@@ -129,14 +139,14 @@ OSStatus sqSetupSSL(sqSSL* ssl, int isServer)
     /* Set the connection ref */
     status = SSLSetConnection(ssl->ctx, ssl);
     if (status != noErr) {
-        logprintf_status(status, "SSLSetConnection failed");
+        logStatus(status, "SSLSetConnection failed");
         return status;
     }
 
     /* Set up the read/write functions */
     status = SSLSetIOFuncs(ssl->ctx, SqueakSSLRead, SqueakSSLWrite);
     if (status != noErr) {
-        logprintf_status(status, "SSLSetIOFuncs failed");
+        logStatus(status, "SSLSetIOFuncs failed");
         return status;
     }
 
@@ -148,7 +158,7 @@ OSStatus sqSetupSSL(sqSSL* ssl, int isServer)
     status = SSLSetProtocolVersionEnabled(ssl->ctx, kTLSProtocol1, true);
 #endif // MAC_OS_X_VERSION_MAX_ALLOWED >= 1080
     if (status != noErr) {
-        logprintf_status(status, "SSLSetProtocolVersion{Min,Enabled} failed");
+        logStatus(status, "SSLSetProtocolVersion{Min,Enabled} failed");
         return status;
     }
 
@@ -161,21 +171,21 @@ OSStatus sqSetupSSL(sqSSL* ssl, int isServer)
                                     : kSSLSessionOptionBreakOnServerAuth,
                                  true);
     if (status != noErr) {
-        logprintf_status(status, "kSSLSessionOptionBreakOn*Auth failed");
+        logStatus(status, "kSSLSessionOptionBreakOn*Auth failed");
         return status;
     }
 #else
     /* Disable cert verification since we do that ourselves */
     status = SSLSetEnableCertVerify(ssl->ctx, false);
     if (status != noErr) {
-        logprintf_status(status, "SSLSetEnableCertVerify failed");
+        logStatus(status, "SSLSetEnableCertVerify failed");
         return status;
     }
 #endif // MAC_OS_X_VERSION_MAX_ALLOWED >= 1080
     if (&SSLSetSessionOption != NULL) {
         status = SSLSetSessionOption(ssl->ctx, kSSLSessionOptionSendOneByteRecord,true);
         if (status != noErr) {
-            logprintf_status(status, "kSSLSessionOptionSendOneByteRecord*Auth failed");
+            logStatus(status, "kSSLSessionOptionSendOneByteRecord*Auth failed");
             return status;
         }
     }
@@ -190,7 +200,7 @@ OSStatus sqSetupSSL(sqSSL* ssl, int isServer)
                                       strnlen(ssl->serverName, MAX_HOSTNAME_LENGTH - 1));
 #endif // MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
         if (status != noErr) {
-            logprintf_status(status, "SSLSetPeerDomainName failed");
+            logStatus(status, "SSLSetPeerDomainName failed");
             return status;
         }
     }
@@ -290,7 +300,7 @@ static OSStatus sqVerifyCert(sqSSL *ssl, int isServer)
     ssl->certFlags = SQSSL_NO_CERTIFICATE;
     status = SSLCopyPeerTrust(ssl->ctx, &trust);
     if (trust == NULL || status != noErr){
-        logprintf_status(status, "sqConnectSSL: SSLCopyPeerTrust");
+        logStatus(status, "sqConnectSSL: SSLCopyPeerTrust");
         return SQSSL_GENERIC_ERROR;
     }
     /* <rant>
@@ -318,7 +328,7 @@ static OSStatus sqVerifyCert(sqSSL *ssl, int isServer)
     status = SecTrustEvaluate(trust, &trust_eval);
     CFRelease(trust);
     if(status != noErr) {
-        logprintf_status(status, "sqConnectSSL: SecTrustEvaluate");
+        logStatus(status, "sqConnectSSL: SecTrustEvaluate");
         return status;
     }
     switch (trust_eval) {
@@ -352,7 +362,7 @@ OSStatus SqueakSSLRead(SSLConnectionRef connection, void* data,
     sqSSL* ssl = (sqSSL*)connection;
     size_t sz = *dataLength;
 
-    logprintf("SqueakSSLRead: Requesting %d bytes, having %d bytes\n",
+    logTrace("SqueakSSLRead: Requesting %d bytes, having %d bytes\n",
               (int)sz, ssl->dataLen);
 
     if (ssl->dataLen < sz) {
@@ -381,7 +391,7 @@ OSStatus SqueakSSLWrite(SSLConnectionRef connection, const void* data,
     sqSSL* ssl = (sqSSL*)connection;
     size_t sz = ssl->outMax - ssl->outLen;
 
-    logprintf("SqueakSSLWrite: Writing %d bytes, having %d free\n",
+    logTrace("SqueakSSLWrite: Writing %d bytes, having %d free\n",
               (int)*dataLength, (int)sz);
     if (sz == 0) {
         *dataLength = 0;
@@ -489,7 +499,7 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char* dstBuf,
     OSStatus status;
     sqSSL* ssl = sqSSLFromHandle(handle);
 
-    logprintf("sqConnectSSL: %x\n", (int)ssl);
+    logTrace("sqConnectSSL: %x\n", (int)ssl);
 
     /* Verify state of session */
     if (ssl == NULL
@@ -510,14 +520,14 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char* dstBuf,
             return SQSSL_OUT_OF_MEMORY;
         }
     }
-    logprintf("sqConnectSSL: input token %" PRIdSQINT " bytes\n", srcLen);
+    logTrace("sqConnectSSL: input token %" PRIdSQINT " bytes\n", srcLen);
     memcpy(ssl->dataBuf + ssl->dataLen, srcBuf, srcLen);
     ssl->dataLen += srcLen;
 
     /* Establish initial connection */
     if (ssl->state == SQSSL_UNUSED) {
         ssl->state = SQSSL_CONNECTING;
-        logprintf("sqConnectSSL: Setting up SSL\n");
+        logTrace("sqConnectSSL: Setting up SSL\n");
         status = sqSetupSSL(ssl, 0);
         if (status != noErr) {
             return SQSSL_GENERIC_ERROR;
@@ -529,7 +539,7 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char* dstBuf,
     if (status == errSSLServerAuthCompleted) {
         OSStatus secStatus = sqVerifyCert(ssl, true);
         if(secStatus != noErr) {
-            logprintf_status(secStatus, "sqConnectSSL: sqVerifyCert");
+            logStatus(secStatus, "sqConnectSSL: sqVerifyCert");
             // we should but currently _cannot_ return here.
             // return SQSSL_GENERIC_ERROR;
         }
@@ -539,10 +549,10 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char* dstBuf,
 #endif // MAC_OS_X_VERSION_MAX_ALLOWED >= 1080
     if (status == errSSLWouldBlock) {
         /* Return token to caller */
-        logprintf("sqConnectSSL: Produced %d token bytes\n", ssl->outLen);
+        logTrace("sqConnectSSL: Produced %d token bytes\n", ssl->outLen);
         return ssl->outLen ? ssl->outLen : SQSSL_NEED_MORE_DATA;
     } else if (status != noErr) {
-        logprintf_status(status, "sqConnectSSL: SSLHandshake");
+        logStatus(status, "sqConnectSSL: SSLHandshake");
         return SQSSL_GENERIC_ERROR;
     }
     ssl->state = SQSSL_CONNECTED;
@@ -589,19 +599,19 @@ sqInt sqAcceptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char* dstBuf,
             return SQSSL_OUT_OF_MEMORY;
         }
     }
-    logprintf("sqConnectSSL: input token %" PRIdSQINT " bytes\n", srcLen);
+    logTrace("sqConnectSSL: input token %" PRIdSQINT " bytes\n", srcLen);
     memcpy(ssl->dataBuf + ssl->dataLen, srcBuf, srcLen);
     ssl->dataLen += srcLen;
 
     /* Establish initial connection */
     if (ssl->state == SQSSL_UNUSED) {
         ssl->state = SQSSL_ACCEPTING;
-        logprintf("sqAcceptSSL: Setting up SSL\n");
+        logTrace("sqAcceptSSL: Setting up SSL\n");
         status = sqSetupSSL(ssl, 1);
         if (status != noErr) {
             return SQSSL_GENERIC_ERROR;
         }
-        logprintf("sqAcceptSSL: setting accept state\n");
+        logTrace("sqAcceptSSL: setting accept state\n");
     }
 
     status = SSLHandshake(ssl->ctx);
@@ -610,7 +620,7 @@ sqInt sqAcceptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char* dstBuf,
         return ssl->outLen ? ssl->outLen : SQSSL_NEED_MORE_DATA;
     }
     if (status != noErr) {
-        logprintf("sqConnectSSL: SSLHandshake returned %d\n", (int)status);
+        logTrace("sqConnectSSL: SSLHandshake returned %d\n", (int)status);
         return SQSSL_GENERIC_ERROR;
     }
     /* We are connected. Verify the cert. */
@@ -643,7 +653,7 @@ sqInt sqEncryptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char* dstBuf,
     ssl->outLen = 0;
     ssl->outMax = dstLen;
 
-    logprintf("sqEncryptSSL: Encrypting %" PRIdSQINT " bytes\n", srcLen);
+    logTrace("sqEncryptSSL: Encrypting %" PRIdSQINT " bytes\n", srcLen);
 
     status = SSLWrite(ssl->ctx, srcBuf, srcLen, &nbytes);
     if (nbytes != srcLen) {
@@ -653,7 +663,7 @@ sqInt sqEncryptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char* dstBuf,
         || status == errSSLClosedGraceful) {
         return ssl->outLen;
     }
-    logprintf_status(status, "sqDecryptSSL: SSLWrite");
+    logStatus(status, "sqDecryptSSL: SSLWrite");
     return SQSSL_GENERIC_ERROR;
 }
 
@@ -685,18 +695,18 @@ sqInt sqDecryptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char* dstBuf,
             return SQSSL_OUT_OF_MEMORY;
         }
     }
-    logprintf("sqDecryptSSL: Input data %" PRIdSQINT " bytes\n", srcLen);
+    logTrace("sqDecryptSSL: Input data %" PRIdSQINT " bytes\n", srcLen);
     memcpy(ssl->dataBuf + ssl->dataLen, srcBuf, srcLen);
     ssl->dataLen += srcLen;
 
-    logprintf("sqDecryptSSL: Decrypting %d bytes\n", ssl->dataLen);
+    logTrace("sqDecryptSSL: Decrypting %d bytes\n", ssl->dataLen);
 
     status = SSLRead(ssl->ctx, dstBuf, dstLen, &nbytes);
     if (status == errSSLWouldBlock || status == noErr
         || status == errSSLClosedGraceful) {
         return nbytes;
     }
-    logprintf_status(status, "sqDecryptSSL: SSLRead");
+    logStatus(status, "sqDecryptSSL: SSLRead");
     return SQSSL_GENERIC_ERROR;
 }
 
@@ -719,7 +729,7 @@ char* sqGetStringPropertySSL(sqInt handle, int propID)
     case SQSSL_PROP_CERTNAME:   return ssl->certName;
     case SQSSL_PROP_SERVERNAME: return ssl->serverName;
     default:
-        logprintf("sqGetStringPropertySSL: Unknown property ID %d\n", propID);
+        logTrace("sqGetStringPropertySSL: Unknown property ID %d\n", propID);
         return NULL;
     }
     return NULL;
@@ -747,7 +757,7 @@ sqInt sqSetStringPropertySSL(sqInt handle, int propID, char* propName,
         property[propLen] = '\0';
     }
 
-    logprintf("sqSetStringPropertySSL(%d): %s\n",
+    logTrace("sqSetStringPropertySSL(%d): %s\n",
               propID, property ? property : "(null)");
 
     switch(propID) {
@@ -767,7 +777,7 @@ sqInt sqSetStringPropertySSL(sqInt handle, int propID, char* propName,
         if (property) {
             free(property);
         }
-        logprintf("sqSetStringPropertySSL: Unknown property ID %d\n", propID);
+        logTrace("sqSetStringPropertySSL: Unknown property ID %d\n", propID);
         return 0;
     }
     return 1;
@@ -793,7 +803,7 @@ sqInt sqGetIntPropertySSL(sqInt handle, sqInt propID)
     case SQSSL_PROP_VERSION:   return SQSSL_VERSION;
     case SQSSL_PROP_LOGLEVEL:  return ssl->loglevel;
     default:
-        logprintf("sqGetIntPropertySSL: Unknown property ID %" PRIdSQINT "\n", propID);
+        logTrace("sqGetIntPropertySSL: Unknown property ID %" PRIdSQINT "\n", propID);
         return 0;
     }
     return 0;
@@ -817,13 +827,13 @@ sqInt sqSetIntPropertySSL(sqInt handle, sqInt propID, sqInt propValue)
     case SQSSL_PROP_SSLSTATE:  // falltrough
     case SQSSL_PROP_CERTSTATE: // falltrough
     case SQSSL_PROP_VERSION:
-        logprintf("sqSetIntPropertySSL: property is readonly %" PRIdSQINT "\n", propID);
+        logTrace("sqSetIntPropertySSL: property is readonly %" PRIdSQINT "\n", propID);
         break;
     case SQSSL_PROP_LOGLEVEL:
         ssl->loglevel = (int)propValue;
         break;
     default:
-        logprintf("sqSetIntPropertySSL: Unknown property ID %" PRIdSQINT "\n", propID);
+        logTrace("sqSetIntPropertySSL: Unknown property ID %" PRIdSQINT "\n", propID);
         return 0;
     }
     return 1;

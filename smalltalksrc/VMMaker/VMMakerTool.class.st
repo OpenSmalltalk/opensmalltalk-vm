@@ -110,15 +110,15 @@ VMMakerTool >> addSecondButtonRowToWindow: sysWin startingAt: initialVerticalOff
 			 actionSelector: #generateExternal;
 			 hResizing: #spaceFill;
 			 setBalloonText: 'Generate the sources for all external plugins').
-	box addMorphBack: ((AlignmentMorph inARow: {StringMorph new contents: '64 bit VM?'. UpdatingThreePhaseButtonMorph checkBox target: self;
+	box addMorphBack: ((AlignmentMorph inARow: {StringMorph new contents: '64 bit VM?'. PluggableThreePhaseButtonMorph new target: self;
 				 actionSelector: #toggle64BitVM;
-				 getSelector: #isFor64BitVM}) layoutInset: 3;
+				 stateSelector: #isFor64BitVM}) layoutInset: 3;
 			 cellInset: 5;
 			 color: Color blue veryMuchLighter;
 			 setBalloonText: 'Set to build a 64 bit VM or a 32bit VM' yourself).
 	sysWin
 		addMorph: box
-		fullFrame: (LayoutFrame
+		fullFrame: (LayoutFrame identity
 				fractions: (0 @ 0 corner: 1 @ 0)
 				offsets: (0 @ verticalOffset corner: 0 @ (verticalOffset := verticalOffset + box height - 1))).
 
@@ -153,7 +153,7 @@ VMMakerTool >> addTopButtonRowToWindow: sysWin [
 			 setBalloonText: 'Save the current configuration').
 	sysWin
 		addMorph: box
-		fullFrame: (LayoutFrame
+		fullFrame: (LayoutFrame identity
 				fractions: (0 @ 0 corner: 1 @ 0)
 				offsets: (0 @ verticalOffset corner: 0 @ (verticalOffset := verticalOffset + box height - 1))).
 	^ verticalOffset
@@ -290,7 +290,7 @@ VMMakerTool >> buildWindow [
 	box := self buildCenterRows.
 	sysWin
 		addMorph: box
-		fullFrame: (LayoutFrame
+		fullFrame: (LayoutFrame identity
 				fractions: (0 @ 0 corner: 1 @ 0)
 				offsets: (0 @ verticalOffset corner: 0 @ (verticalOffset := verticalOffset + box height - 1))).
 	"Add the list of plugins that are available to build"
@@ -311,7 +311,7 @@ VMMakerTool >> buildWindow [
 	box addMorphBack: allPluginsList.
 	sysWin
 		addMorph: box
-		fullFrame: (LayoutFrame
+		fullFrame: (LayoutFrame identity
 				fractions: (0 @ 0 corner: 1 / 3 @ 1)
 				offsets: (0 @ verticalOffset corner: 0 @ -100)).
 	"make the list for plugins that will be built for internal linking"
@@ -332,7 +332,7 @@ VMMakerTool >> buildWindow [
 	box addMorphBack: internalPluginsList.
 	sysWin
 		addMorph: box
-		fullFrame: (LayoutFrame
+		fullFrame: (LayoutFrame identity
 				fractions: (1 / 3 @ 0 corner: 2 / 3 @ 1)
 				offsets: (0 @ verticalOffset corner: 0 @ -100)).
 	"make the list for plugins to be built externally (ie as DLLs, SO
@@ -355,17 +355,12 @@ VMMakerTool >> buildWindow [
 	box addMorphBack: externalPluginsList.
 	sysWin
 		addMorph: box
-		fullFrame: (LayoutFrame
+		fullFrame: (LayoutFrame identity
 				fractions: (2 / 3 @ 0 corner: 1 @ 1)
 				offsets: (0 @ verticalOffset corner: 0 @ -100)).
 	sysWin
-		addMorph: (PluggableTextMorph
-				on: logger
-				text: nil
-				accept: nil
-				readSelection: nil
-				menu: nil)
-		fullFrame: (LayoutFrame
+		addMorph: (Morph new)
+		fullFrame: (LayoutFrame identity
 				fractions: (0 @ 1 corner: 1 @ 1)
 				offsets: (0 @ -100 corner: 0 @ 0)).
 	^ sysWin
@@ -455,16 +450,17 @@ VMMakerTool >> entryRowWithLabel: label balloonText: balloonText getFieldText: g
 				 yourself.
 	row
 		addMorph: (TextMorph new contents: label translated asText allBold) lock
-		fullFrame: (LayoutFrame
+		fullFrame: (LayoutFrame identity
 				fractions: (0 @ 0 corner: 0 @ 1)
 				offsets: (3 @ 3 corner: lWidth @ -3)).
 	row
-		addMorph: ((PluggableTextMorph
+		addMorph: ((RubPluggableTextMorph
 				on: self
 				text: getTextSelector
-				accept: setTextSelector) vScrollBarPolicy: #never;
-				 acceptOnCR: true)
-		fullFrame: (LayoutFrame
+				accept: setTextSelector
+				readSelection: nil
+				menu: nil))
+		fullFrame: (LayoutFrame identity
 				fractions: (0 @ 0 corner: 1 @ 1)
 				offsets: (lWidth + 10 @ 0 corner: (lWidth / 1.8 + 10) negated @ 0)).
 	buttonAction
@@ -474,7 +470,7 @@ VMMakerTool >> entryRowWithLabel: label balloonText: balloonText getFieldText: g
 						 actionSelector: buttonAction;
 						 hResizing: #spaceFill;
 						 setBalloonText: buttonBalloonText translated)
-				fullFrame: (LayoutFrame
+				fullFrame: (LayoutFrame identity
 						fractions: (1 @ 0 corner: 1 @ 1)
 						offsets: ((lWidth / 1.8 + 5) negated @ 3 corner: -5 @ -3))].
 	^ row
@@ -833,21 +829,6 @@ VMMakerTool >> refreshAvailablePluginsList [
 VMMakerTool >> release [
 	vmMaker ifNotNil: [ vmMaker removeDependent: self ].
 	super release.
-]
-
-{ #category : #configurations }
-VMMakerTool >> saveConfig [
-
-	"write info about the current configuration to a file."
-	| fileResult file |
-	fileResult := (StandardFileMenu newFileMenu: FileDirectory default withPattern: '*.config')
-		startUpWithCaption: 'Save VMMaker configuration...'.
-	fileResult ifNotNil: [
-		('*.config' match: fileResult name)
-			ifFalse: [fileResult name: (fileResult name, '.config')].
-		file := fileResult directory fullNameFor: fileResult name.
-		vmMaker saveConfigurationTo: file].
-
 ]
 
 { #category : #'generate sources' }

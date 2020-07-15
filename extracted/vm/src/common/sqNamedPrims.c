@@ -20,15 +20,8 @@ typedef struct {
 } sqExport;
 
 #include "pharovm/sqNamedPrims.h"
+#include "pharovm/debug.h"
 
-#undef DEBUG
-
-#undef DPRINTF
-#ifdef DEBUG
-# define DPRINTF(what) printf what
-#else
-# define DPRINTF(what)
-#endif
 
 typedef struct ModuleEntry {
 	struct ModuleEntry *next;
@@ -109,7 +102,7 @@ findExternalFunctionIn(char *functionName, ModuleEntry *module
 {
 	void *result;
 
-	DPRINTF(("Looking (externally) for %s in %s... ", functionName,module->name));
+	logTrace("Looking (externally) for %s in %s... ", functionName,module->name);
 	if(module->handle)
 #if SPURVM
 		result = ioFindExternalFunctionInAccessorDepthInto(functionName, module->handle, accessorDepthPtr);
@@ -118,7 +111,7 @@ findExternalFunctionIn(char *functionName, ModuleEntry *module
 #endif
 	else
 		result = NULL;
-	DPRINTF(("%s\n", result ? "found" : "not found"));
+	logTrace("%s\n", result ? "found" : "not found");
 	return result;
 }
 
@@ -140,7 +133,7 @@ findInternalFunctionIn(char *functionName, char *pluginName
   sqInt listIndex, index;
   sqExport *exports;
 
-  DPRINTF(("Looking (internally) for %s in %s ... ", functionName, (pluginName ? pluginName : "<intrinsic>")));
+  logTrace("Looking (internally) for %s in %s ... ", functionName, (pluginName ? pluginName : "<intrinsic>"));
 
   /* canonicalize functionName and pluginName to be NULL if not specified */
   if(functionName && !functionName[0]) functionName = NULL;
@@ -163,7 +156,7 @@ findInternalFunctionIn(char *functionName, char *pluginName
       if(function && strcmp(functionName, function)) continue; /* name mismatch */
 
       /* match */
-      DPRINTF(("found\n"));
+      logTrace("found\n");
 #if SPURVM
 	  if (accessorDepthPtr)
 		*accessorDepthPtr = ((signed char *)function)[fnameLength+1];
@@ -171,7 +164,7 @@ findInternalFunctionIn(char *functionName, char *pluginName
       return exports[index].primitiveAddress;
     }
   }
-  DPRINTF(("not found\n"));
+  logTrace("not found\n");
   return NULL;
 }
 
@@ -222,35 +215,35 @@ callInitializersIn(ModuleEntry *module)
 		/* Check the compiled name of the module */
 		moduleName = ((char* (*) (void))init0)();
 		if(!moduleName) {
-			DPRINTF(("ERROR: getModuleName() returned NULL\n"));
+			logTrace("ERROR: getModuleName() returned NULL\n");
 			return 0;
 		}
 		if(strncmp(moduleName, module->name, strlen(module->name)) != 0) {
-			DPRINTF(("ERROR: getModuleName returned %s (expected: %s)\n", moduleName, module->name));
+			logTrace("ERROR: getModuleName returned %s (expected: %s)\n", moduleName, module->name);
 			return 0;
 		}
 	} else {
 		/* Note: older plugins may not export the compiled module name */
-		DPRINTF(("WARNING: getModuleName() not found in %s\n", module->name));
+		logTrace("WARNING: getModuleName() not found in %s\n", module->name);
 	}
 	if(!init1) {
-		DPRINTF(("ERROR: setInterpreter() not found\n"));
+		logTrace("ERROR: setInterpreter() not found\n");
 		return 0;
 	}
 	/* call setInterpreter */
 	okay = ((sqInt (*) (struct VirtualMachine*))init1)(sqGetInterpreterProxy());
 	if(!okay) {
-		DPRINTF(("ERROR: setInterpreter() returned false\n"));
+		logTrace("ERROR: setInterpreter() returned false\n");
 		return 0;
 	}
 	if(init2) {
 		okay = ((sqInt (*) (void)) init2)();
 		if(!okay) {
-			DPRINTF(("ERROR: initialiseModule() returned false\n"));
+			logTrace("ERROR: initialiseModule() returned false\n");
 			return 0;
 		}
 	}
-	DPRINTF(("SUCCESS: Module %s is now initialized\n", module->name));
+	logTrace("SUCCESS: Module %s is now initialized\n", module->name);
 	return 1;
 }
 
@@ -265,14 +258,12 @@ callInitializersIn(ModuleEntry *module)
 	(WITHOUT calling shutdownModule()) and return NULL.
 */
 
-#ifdef PharoVM
 static int moduleLoadingEnabled = 1;
 
 /* Disable module loading mechanism for the rest of current session. This operation should be not reversable! */
 void ioDisableModuleLoading() {
 	moduleLoadingEnabled = 0;
 }
-#endif
 
 static ModuleEntry *
 findAndLoadModule(char *pluginName, sqInt ffiLoad)
@@ -280,11 +271,10 @@ findAndLoadModule(char *pluginName, sqInt ffiLoad)
 	void *handle;
 	ModuleEntry *module;
 
-#ifdef PharoVM
 	if (!moduleLoadingEnabled)
 		return NULL;
-#endif
-	DPRINTF(("Looking for plugin %s\n", (pluginName ? pluginName : "<intrinsic>")));
+
+	logTrace("Looking for plugin %s\n", (pluginName ? pluginName : "<intrinsic>"));
 	/* Try to load the module externally */
 	handle = ioLoadModule(pluginName);
 	if(ffiLoad) {
@@ -351,7 +341,7 @@ ioLoadFunctionFrom(char *functionName, char *pluginName)
 	module = findOrLoadModule(pluginName, 0);
 	if(!module) {
 		/* no module */
-		DPRINTF(("Failed to find %s (module %s was not loaded)\n", functionName, pluginName));
+		logTrace("Failed to find %s (module %s was not loaded)\n", functionName, pluginName);
 		return 0;
 	}
 	if(!functionName) {
@@ -401,7 +391,7 @@ ioLoadFunctionFromAccessorDepthInto(char *functionName, char *pluginName,
 	module = findOrLoadModule(pluginName, 0);
 	if(!module) {
 		/* no module */
-		DPRINTF(("Failed to find %s (module %s was not loaded)\n", functionName, pluginName));
+		logTrace("Failed to find %s (module %s was not loaded)\n", functionName, pluginName);
 		return 0;
 	}
 	if(!functionName) {
@@ -452,7 +442,7 @@ ioLoadSymbolOfLengthFromModule(sqInt functionNameIndex, sqInt functionNameLength
 	functionName[functionNameLength] = 0;
 	return moduleHandle
 		? ioFindExternalFunctionIn(functionName, moduleHandle)
-		: getModuleSymbol(NULL, functionName);
+		:  getModuleSymbol(NULL, functionName);
 }
 
 /* ioLoadModuleOfLength

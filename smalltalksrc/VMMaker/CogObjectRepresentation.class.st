@@ -1135,6 +1135,186 @@ CogObjectRepresentation >> genPrimitiveLessThan [
 ]
 
 { #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveLoadBoolean8FromBytes [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveLoadBoolean8FromExternalAddress [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveLoadChar16FromBytes [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveLoadChar16FromExternalAddress [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveLoadChar32FromBytes [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveLoadChar32FromExternalAddress [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveLoadChar8FromBytes [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveLoadChar8FromExternalAddress [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveLoadFloat32FromBytes [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveLoadFloat32FromExternalAddress [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveLoadFloat64FromBytes [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveLoadFloat64FromExternalAddress [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveLoadInt16FromBytes [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveLoadInt16FromExternalAddress [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveLoadInt32FromBytes [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveLoadInt32FromExternalAddress [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveLoadInt64FromBytes [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveLoadInt64FromExternalAddress [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveLoadInt8FromBytes [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveLoadInt8FromExternalAddress [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveLoadPointerFromBytes [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveLoadPointerFromExternalAddress [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveLoadUInt16FromBytes [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveLoadUInt16FromExternalAddress [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveLoadUInt32FromBytes [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveLoadUInt32FromExternalAddress [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveLoadUInt64FromBytes [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveLoadUInt64FromExternalAddress [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveLoadUInt8FromBytes [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveLoadUInt8FromExternalAddress [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
 CogObjectRepresentation >> genPrimitiveMod [
 	| jumpNotSI jumpZero jumpExact jumpSameSign |
 	<var: #jumpNotSI type: #'AbstractInstruction *'>
@@ -1359,6 +1539,186 @@ CogObjectRepresentation >> genPrimitiveSmallFloatSquareRoot [
 CogObjectRepresentation >> genPrimitiveSmallFloatSubtract [
 	<option: #Spur64BitMemoryManager>
 	^self genSmallFloatArithmetic: SubRdRd preOpCheck: nil
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveStoreBoolean8IntoBytes [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveStoreBoolean8IntoExternalAddress [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveStoreChar16IntoBytes [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveStoreChar16IntoExternalAddress [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveStoreChar32IntoBytes [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveStoreChar32IntoExternalAddress [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveStoreChar8IntoBytes [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveStoreChar8IntoExternalAddress [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveStoreFloat32IntoBytes [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveStoreFloat32IntoExternalAddress [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveStoreFloat64IntoBytes [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveStoreFloat64IntoExternalAddress [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveStoreInt16IntoBytes [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveStoreInt16IntoExternalAddress [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveStoreInt32IntoBytes [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveStoreInt32IntoExternalAddress [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveStoreInt64IntoBytes [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveStoreInt64IntoExternalAddress [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveStoreInt8IntoBytes [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveStoreInt8IntoExternalAddress [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveStorePointerIntoBytes [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveStorePointerIntoExternalAddress [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveStoreUInt16IntoBytes [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveStoreUInt16IntoExternalAddress [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveStoreUInt32IntoBytes [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveStoreUInt32IntoExternalAddress [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveStoreUInt64IntoBytes [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveStoreUInt64IntoExternalAddress [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveStoreUInt8IntoBytes [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveStoreUInt8IntoExternalAddress [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
 ]
 
 { #category : #'primitive generators' }

@@ -524,70 +524,10 @@ VMMaker class >> generateMainVM: interpreterClass and: cogitClass with: optionsP
 		with: optionsPairsArray
 		to: srcDirName
 		platformDir: platDirName
-		including: inclusions).
-		1halt.
-"		 buildCodeGeneratorForInterpreter
+		including: inclusions)
 			doCleanupOldFiles;
 			generateInterpreterFile;
-			generateCogitFiles"
-]
-
-{ #category : #configurations }
-VMMaker class >> generateNewspeakSpurCog64VM [
-	"No primitives since we can use those for the Cog VM"
-	^VMMaker
-		generate: CoInterpreter
-		and: StackToRegisterMappingCogit
-		with: #(	ObjectMemory Spur64BitCoMemoryManager
-				MULTIPLEBYTECODESETS true
-				NewspeakVM true)
-		to: self sourceTree, '/nsspur64src'
-		platformDir: self sourceTree, '/platforms'
-		including:#()
-
-]
-
-{ #category : #configurations }
-VMMaker class >> generateNewspeakSpurCogVM [
-	"No primitives since we can use those for the Cog VM"
-	^VMMaker
-		generate: CoInterpreter
-		and: StackToRegisterMappingCogit
-		with: #(	ObjectMemory Spur32BitCoMemoryManager
-				MULTIPLEBYTECODESETS true
-				NewspeakVM true)
-		to: self sourceTree, '/nsspursrc'
-		platformDir: self sourceTree, '/platforms'
-		including:#()
-
-]
-
-{ #category : #configurations }
-VMMaker class >> generateNewspeakSpurStack64VM [
-	"No primitives since we can use those for the Cog VM"
-	^VMMaker
-		generate: StackInterpreter
-		with: #( ObjectMemory Spur64BitMemoryManager
-				MULTIPLEBYTECODESETS true
-				NewspeakVM true
-				FailImbalancedPrimitives false)
-		to: self sourceTree, '/nsspurstack64src'
-		platformDir: self sourceTree, '/platforms'
-		including: #()
-]
-
-{ #category : #configurations }
-VMMaker class >> generateNewspeakSpurStackVM [
-	"No primitives since we can use those for the Cog VM"
-	^VMMaker
-		generate: StackInterpreter
-		with: #(	ObjectMemory Spur32BitMemoryManager
-				MULTIPLEBYTECODESETS true
-				NewspeakVM true
-				FailImbalancedPrimitives false)
-		to: self sourceTree, '/nsspurstacksrc'
-		platformDir: self sourceTree, '/platforms'
-		including: #()
+			generateCogitFiles
 ]
 
 { #category : #utilities }
@@ -1040,12 +980,6 @@ VMMaker >> availablePlugins [
 	^allPlugins
 ]
 
-{ #category : #accessing }
-VMMaker >> beSilent [
-
-	silently := true
-]
-
 { #category : #'generate sources' }
 VMMaker >> buildCodeGeneratorForCogit [
 	"Answer the code generator for translating the cogit."
@@ -1153,11 +1087,9 @@ VMMaker >> buildCodeGeneratorForInterpreter: interpreterClass includeAPIMethods:
 		 (cg structClassesForTranslationClasses: interpreterClasses) do:
 			[:structClass| structClass initialize]].
 
-	cg
-		addStructClasses: (cg structClassesForTranslationClasses: interpreterClasses)
-		silently: self silently.
+	cg addStructClasses: (cg structClassesForTranslationClasses: interpreterClasses).
 
-	interpreterClasses do: [:ic| cg addClass: ic silently: self silently].
+	interpreterClasses do: [:ic| cg addClass: ic].
 
 	getAPIMethods ifTrue:
 		[interpreterClass cogitClass ifNotNil:
@@ -1673,9 +1605,7 @@ VMMaker >> initialize [
 	doCleanupOldFiles := false.
 	interpreterClassName := StackInterpreterPrimitives name.
 	optionsDictionary := Dictionary newFromPairs: {#BytesPerWord. 4}.
-	VMStructType voidStructTypeCache.
-	
-	silently := false
+	VMStructType voidStructTypeCache
 ]
 
 { #category : #initialize }
@@ -2168,31 +2098,10 @@ VMMaker >> reinitializeWordSizeFrom: aCCodeGenerator [
 	is64BitVM := wordSize = 8
 ]
 
-{ #category : #'objects from disk' }
-VMMaker >> saveConfigurationTo: aFile [
-	"Write info about the current configuration to a file.
-	 Use a hack CrForSpaceWriteStream so that things
-	 appear on separate lines to be friendly to configuration
-	 management systems diffing facilities."
-	| stream |
-	stream := CrForSpaceWriteStream on: String new.
-	self configurationInfo storeOn: stream.
-	(MultiByteFileStream newFileNamed: aFile)
-		lineEndConvention: #lf;
-		nextPutAll: stream contents;
-		close
-]
-
 { #category : #initialize }
 VMMaker >> setPlatName: aString [
 	"private - just set the platform name string, nothing else. Go away...."
 	platformName := aString
-]
-
-{ #category : #accessing }
-VMMaker >> silently [
-
-	^ silently
 ]
 
 { #category : #'target directories' }

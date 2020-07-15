@@ -28,18 +28,11 @@
  * 
  */
 
-#undef sqAllocateMemory
-#undef sqGrowMemoryBy
-#undef sqShrinkMemoryBy
-#undef sqMemoryExtraBytesLeft
-
 #include "sqMemoryAccess.h"
 
-extern usqInt sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize);
-#define allocateMemoryMinimumImageFileHeaderSize(heapSize, minimumMemory, fileStream, headerSize) \
-sqAllocateMemory(minimumMemory, heapSize)
-extern sqInt sqGrowMemoryBy(sqInt oldLimit, sqInt delta);
-extern sqInt sqShrinkMemoryBy(sqInt oldLimit, sqInt delta);
+extern usqInt sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize, usqInt baseAddress);
+#define allocateMemoryMinimumImageFileHeaderSizeBaseAddress(heapSize, minimumMemory, fileStream, headerSize, baseAddress) \
+sqAllocateMemory(minimumMemory, heapSize, baseAddress)
 extern sqInt sqMemoryExtraBytesLeft(sqInt includingSwap);
 #if COGVM
 extern void sqMakeMemoryExecutableFromTo(unsigned long, unsigned long);
@@ -49,11 +42,6 @@ extern int isCFramePointerInUse(void);
 extern int osCogStackPageHeadroom(void);
 extern void reportMinimumUnusedHeadroom(void);
 #endif
-
-/* warnPrintf is provided (and needed) on the win32 platform.
- * But it may be mentioned elsewhere, so provide a suitable def.
- */
-#define warnPrintf printf
 
 /* Thread support for thread-safe signalSemaphoreWithIndex and/or the COGMTVM */
 #if STACKVM || NewspeakVM
@@ -88,8 +76,6 @@ extern const pthread_key_t tltiIndex;
 #endif /* STACKVM || NewspeakVM */
 
 #include <sys/types.h>
-
-typedef off_t squeakFileOffsetType;
 
 #undef	sqFilenameFromString
 #undef	sqFilenameFromStringOpen

@@ -6,7 +6,8 @@ Class {
 		'machineSimulator',
 		'instructions',
 		'stepButton',
-		'machineState'
+		'machineState',
+		'initialInstructionToDisassemble'
 	],
 	#category : #'VMMaker-Tools'
 }
@@ -50,14 +51,27 @@ VMMachineCodeDebugger >> connectPresenters [
 { #category : #showing }
 VMMachineCodeDebugger >> initialDisassembly [
 
-	^ LLVMDisassembler amd64
+	^ machineSimulator disassembler
 		printImmediatesInHexa;
-		disassembleNext: 50
+		disassembleNext: 100
 		instructionsIn: (cogit objectMemory memory memoryObject
-			copyFrom: machineSimulator instructionPointerValue - cogit objectMemory memory initialAddress + 1
+			copyFrom: self initialInstructionToDisassemble - cogit objectMemory memory initialAddress + 1
 			to: cogit objectMemory memory memoryObject size)
-		startAddress: machineSimulator instructionPointerValue
+		startAddress: self initialInstructionToDisassemble
 		pc: machineSimulator instructionPointerValue 
+]
+
+{ #category : #showing }
+VMMachineCodeDebugger >> initialInstructionToDisassemble [
+
+	^ initialInstructionToDisassemble
+		ifNil: [ machineSimulator instructionPointerValue ]
+]
+
+{ #category : #showing }
+VMMachineCodeDebugger >> initialInstructionToDisassemble: anInstructionAddress [
+
+	initialInstructionToDisassemble := anInstructionAddress
 ]
 
 { #category : #initialization }
@@ -77,7 +91,8 @@ VMMachineCodeDebugger >> initializePresenters [
 					ifTrue: [ self iconNamed: #forward ] ])
 				width: 50;
 				yourself);
-		addColumn: (SpStringTableColumn evaluated: #assemblyCodeString).
+		addColumn: (SpStringTableColumn evaluated: #assemblyCodeString);
+		addColumn: (SpStringTableColumn evaluated: [:e | e codeBytesString: cogit objectMemory memory ]).
 	
 	stepButton := self newButton.
 	stepButton label: 'Step'

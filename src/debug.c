@@ -1,5 +1,6 @@
 #include "pharovm/pharo.h"
 #include <stdarg.h>
+#include <sys/time.h>
 
 char * GetAttributeString(sqInt id);
 
@@ -16,6 +17,7 @@ static int max_error_level = 1;
  * LOG_WARN 		2
  * LOG_INFO 		3
  * LOG_DEBUG		4
+ * LOG_TRACE		5
  *
  */
 EXPORT(void) logLevel(int value){
@@ -27,43 +29,76 @@ void error(char *errorMessage){
     abort();
 }
 
-static char* severityName[4] = {"ERROR", "WARN", "INFO", "DEBUG"};
+static char* severityName[5] = {"ERROR", "WARN", "INFO", "DEBUG", "TRACE"};
 
 EXPORT(void) logAssert(const char* fileName, const char* functionName, int line, char* msg){
 	logMessage(LOG_WARN, fileName, functionName, line, msg);
 }
 
+void logMessageFromErrno(int level, const char* msg, const char* fileName, const char* functionName, int line){
+	char buffer[1024+1];
+	int msgLength;
+
+#ifdef WIN32
+	strerror_s(buffer, 1024, errno);
+#else
+	strerror_r(errno, buffer, 1024);
+#endif
+
+	logMessage(level, fileName, functionName, line, "%s: %s", msg, buffer);
+}
+
+FILE* getStreamForLevel(int level){
+	if(level <= LOG_ERROR){
+		return stderr;
+	}else{
+		return stdout;
+	}
+}
+
+
 EXPORT(void) logMessage(int level, const char* fileName, const char* functionName, int line, ...){
 	char * format;
 	char timestamp[20];
+
+	FILE* outputStream;
+
+	outputStream = getStreamForLevel(level);
+
 
 	if(level > max_error_level){
 		return;
 	}
 
 	time_t now = time(NULL);
-	strftime(timestamp, 20, "%Y-%m-%d %H:%M:%S", localtime(&now));
+	struct tm* ltime = localtime(&now);
+
+	strftime(timestamp, 20, "%Y-%m-%d %H:%M:%S", ltime);
 
 	//Printing the header.
 	// Ex: [DEBUG] 2017-11-14 21:57:53,661 functionName (filename:line) - This is a debug log message.
-	printf("[%-5s] %s %s (%s:%d):", severityName[level - 1], timestamp, functionName, fileName, line);
+
+	struct timeval utcNow;
+	gettimeofday(&utcNow,0);
+
+	fprintf(outputStream, "[%-5s] %s.%03d %s (%s:%d):", severityName[level - 1], timestamp, utcNow.tv_usec / 1000 , functionName, fileName, line);
 
 	//Printint the message from the var_args.
 	va_list list;
 	va_start(list, line);
 
 	format = va_arg(list, char*);
-	vprintf(format, list);
+	vfprintf(outputStream, format, list);
 
 	va_end(list);
 
 	int formatLength = strlen(format);
 
 	if(formatLength == 0 || format[formatLength - 1] != '\n'){
-		printf("\n");
+		fprintf(outputStream,"\n");
 	}
 
-	fflush(stdout);
+	fflush(outputStream);
 }
 
 void getCrashDumpFilenameInto(char *buf)
@@ -131,29 +166,27 @@ char *getVersionInfo(int verbose)
  *  This SHOULD be rewritten passing the FILE* as a parameter.
  */
 
-#define STDOUT_STACK_SZ 5
-static int stdoutStackIdx = -1;
-static FILE stdoutStack[STDOUT_STACK_SZ];
+static FILE* outputStream = NULL;
 
 void
-pushOutputFile(FILE* aFile)
-{
-	if (stdoutStackIdx + 2 >= STDOUT_STACK_SZ) {
-		fprintf(stderr,"output file stack is full.\n");
-		return;
-	}
-	stdoutStack[++stdoutStackIdx] = *stdout;
-	*stdout = *aFile;
+vm_setVMOutputStream(FILE * stream){
+	fflush(outputStream);
+	outputStream = stream;
 }
 
-void
-popOutputFile()
-{
-	if (stdoutStackIdx < 0) {
-		fprintf(stderr,"output file stack is empty.\n");
-		return;
+int
+vm_printf(const char * format, ... ){
+
+	va_list list;
+	va_start(list, format);
+
+	if(outputStream == NULL){
+		outputStream = stdout;
 	}
 
-	fflush(stdout);
-	*stdout = stdoutStack[stdoutStackIdx--];
+	int returnValue = vfprintf(outputStream, format, list);
+
+	va_end(list);
+
+	return returnValue;
 }

@@ -584,17 +584,14 @@ VMPluginCodeGenerator >> prepareTranslatedPrimitives [
 { #category : #'C code generator' }
 VMPluginCodeGenerator >> referenceInterpreterClass [
 	"Define the class from which to take methods to define the interpreter proxy imports."
-	^(Smalltalk classNamed: #StackInterpreter) ifNil:
-		[(Smalltalk classNamed: #Interpreter) ifNil:
-			[InterpreterProxy]]
+	^(Smalltalk classNamed: #StackInterpreter) 
+		ifNil: [InterpreterProxy]
 ]
 
 { #category : #'C code generator' }
 VMPluginCodeGenerator >> referenceObjectMemoryClass [
 	"Define the class from which to take methods to define the interpreter proxy imports."
-	^(Smalltalk classNamed: #Spur32BitMemoryManager) ifNil:
-		[(Smalltalk classNamed: #NewObjectMemory) ifNil:
-			[ObjectMemory]]
+	^ Spur32BitMemoryManager
 ]
 
 { #category : #public }

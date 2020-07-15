@@ -2,9 +2,6 @@
 #include <Windows.h>
 #include <DbgHelp.h>
 
-void pushOutputFile(FILE* aFile);
-void popOutputFile();
-
 void ifValidWriteBackStackPointersSaveTo(void *theCFP, void *theCSP, char **savedFPP, char **savedSPP);
 
 void printAllStacks();
@@ -57,14 +54,14 @@ EXPORT(void) printCrashDebugInformation(LPEXCEPTION_POINTERS exp){
 	//This is awful but replace the stdout to print all the messages in the file.
 	getCrashDumpFilenameInto(crashdumpFileName);
 	crashDumpFile = fopen(crashdumpFileName, "a+");
-	pushOutputFile(crashDumpFile);
+	vm_setVMOutputStream(crashDumpFile);
 
 	reportStackState(exp, date, crashDumpFile);
 
-	popOutputFile();
+	vm_setVMOutputStream(stderr);
 	fclose(crashDumpFile);
 
-	reportStackState(exp, date, stdout);
+	reportStackState(exp, date, stderr);
 	fflush(stdout);
 }
 

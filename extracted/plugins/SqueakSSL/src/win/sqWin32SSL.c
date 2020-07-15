@@ -82,6 +82,8 @@ static sqInt handleMax = 0;
 
 static char* emptyString = "";
 
+#include "pharovm/debug.h"
+
 // Max lengh of a Certificate common name or DNS Host name
 #define MAX_HOSTNAME_LENGTH 253
 
@@ -99,10 +101,10 @@ static sqSSL *sslFromHandle(sqInt handle) {
 /* sqPrintSBD: Prints a SecurityBuffer for debugging */
 static void sqPrintSBD(char *title, SecBufferDesc sbd) {
 	unsigned int i;
-	printf("%s\n", title);
+	logTrace("%s\n", title);
 	for(i=0; i<sbd.cBuffers; i++) {
 		SecBuffer *buf = sbd.pBuffers + i;
-		printf("\tbuf[%d]: %d (%d bytes) ptr=%"PRIxSQPTR"\n", i,buf->BufferType, buf->cbBuffer, (sqIntptr_t)buf->pvBuffer);
+		logTrace("\tbuf[%d]: %d (%d bytes) ptr=%"PRIxSQPTR"\n", i,buf->BufferType, buf->cbBuffer, (sqIntptr_t)buf->pvBuffer);
 	}
 }
 
@@ -110,7 +112,7 @@ static void sqPrintSBD(char *title, SecBufferDesc sbd) {
 static void sqCopyExtraData(sqSSL *ssl, SecBufferDesc sbd) {
 	unsigned int i;
 	if(sbd.pBuffers[0].BufferType == SECBUFFER_MISSING) {
-		if(ssl->loglevel) printf("sqCopyExtra: Encountered SECBUFFER_MISSING; retaining %d bytes\n", ssl->dataLen);
+		logTrace("sqCopyExtra: Encountered SECBUFFER_MISSING; retaining %d bytes\n", ssl->dataLen);
 		return;
 	}
 	ssl->dataLen = 0;
@@ -120,11 +122,11 @@ static void sqCopyExtraData(sqSSL *ssl, SecBufferDesc sbd) {
 			int count = buf->cbBuffer;
 			char *srcPtr = buf->pvBuffer;
 			char *dstPtr = ssl->dataBuf + ssl->dataLen;
-			if(ssl->loglevel) printf("sqCopyExtraData: Retaining %d bytes\n", count);
+			logTrace("sqCopyExtraData: Retaining %d bytes\n", count);
 			/* I *think* the extra buffers are always in input range.
 			   Make sure that's the case or at least report it if not. */
 			if(srcPtr < dstPtr || (srcPtr + count) > (ssl->dataBuf + ssl->dataMax)) {
-				if(ssl->loglevel) printf("sqCopyExtraDataSSL: Encountered out-of-range extra buffer\n");
+				logTrace("sqCopyExtraDataSSL: Encountered out-of-range extra buffer\n");
 			}
 			if(srcPtr != dstPtr) {
 				/* memmove() not memcpy() since the memory mayoverlap */
@@ -140,10 +142,10 @@ static sqInt sqCopyDescToken(sqSSL *ssl, SecBufferDesc sbd, char *dstBuf, sqInt 
 	unsigned int i;
 	int result = 0;
 
-	if(ssl->loglevel) printf("sqCopyDescToken: \n");
+	logTrace("sqCopyDescToken: \n");
 	for(i = 0; i < sbd.cBuffers; i++) {
 		SecBuffer *buf = sbd.pBuffers + i;
-		if(ssl->loglevel) printf("\t type=%d, size=%d\n", buf->BufferType, buf->cbBuffer);
+		logTrace("\t type=%d, size=%d\n", buf->BufferType, buf->cbBuffer);
 		if(buf->BufferType == SECBUFFER_TOKEN) {
 			int count = buf->cbBuffer;
 			if(count > dstLen) return SQSSL_BUFFER_TOO_SMALL;
@@ -155,7 +157,7 @@ static sqInt sqCopyDescToken(sqSSL *ssl, SecBufferDesc sbd, char *dstBuf, sqInt 
 		}
 		if(buf->BufferType == SECBUFFER_EXTRA) {
 			/* XXXX: Preserve contents for the next round */
-			if(ssl->loglevel) printf("sqCopyDescToken: Unexpectedly encountered SECBUFFER_EXTRA\n");
+			logTrace("sqCopyDescToken: Unexpectedly encountered SECBUFFER_EXTRA\n");
 		}
 	}
 	return result;
@@ -175,24 +177,24 @@ static sqInt sqSetupCert(sqSSL *ssl, char *certName, int server) {
 	if(certName) {
 		hStore = CertOpenSystemStore(0, TEXT("MY"));
 		if(!hStore) {
-			if(ssl->loglevel) printf("sqSetupCert: CertOpenSystemStore failed\n");
+			logTrace("sqSetupCert: CertOpenSystemStore failed\n");
 			return 0;
 		}
 		pContext = NULL;
 
 		/* Enumerate the certificate store to find the cert with the given friendly name */
 		while(pContext = CertEnumCertificatesInStore(hStore, pContext)) {
-			if(ssl->loglevel) printf("Checking certificate: ");
+			logTrace("Checking certificate: ");
 			dwPropSize = MAX_NAME_SIZE * sizeof(WCHAR);
 			if(!CertGetCertificateContextProperty(pContext, CERT_FRIENDLY_NAME_PROP_ID, wFriendlyName, &dwPropSize)) {
-				if(ssl->loglevel) printf("<no friendly name>");
+				logTrace("<no friendly name>");
 				continue;
 			}
 			if(!WideCharToMultiByte(CP_UTF8, 0, wFriendlyName, -1, bFriendlyName, MAX_NAME_SIZE, NULL, NULL)) {
-				if(ssl->loglevel) printf("<utf-8 conversion failure>");
+				logTrace("<utf-8 conversion failure>");
 				continue;
 			}
-			if(ssl->loglevel) printf("%s\n", bFriendlyName);
+			logTrace("%s\n", bFriendlyName);
 			if(strcmp(certName, bFriendlyName) == 0) break;
 		}
 
@@ -203,7 +205,7 @@ static sqInt sqSetupCert(sqSSL *ssl, char *certName, int server) {
 		}
 
 		if(!pContext) {
-			if(ssl->loglevel) printf("sqSetupCert: No suitable certificate  found\n");
+			logTrace("sqSetupCert: No suitable certificate  found\n");
 			CertCloseStore(hStore, 0);
 			return 0;
 		}
@@ -227,7 +229,7 @@ static sqInt sqSetupCert(sqSSL *ssl, char *certName, int server) {
 	ret = AcquireCredentialsHandle(NULL, UNISP_NAME, 
 									server ? SECPKG_CRED_INBOUND : SECPKG_CRED_OUTBOUND, 
 									NULL, &sc_cred, NULL, NULL, &ssl->sslCred, NULL);
-	if(ssl->loglevel) printf("AquireCredentialsHandle returned: %x\n", ret);
+	logTrace("AquireCredentialsHandle returned: %x\n", ret);
 
 	if(pContext) {
 		CertCloseStore(hStore, 0);
@@ -235,7 +237,7 @@ static sqInt sqSetupCert(sqSSL *ssl, char *certName, int server) {
 	}
 
 	if (ret != SEC_E_OK) {
-		if(ssl->loglevel) printf("AquireCredentialsHandle error: %x\n", ret);
+		logTrace("AquireCredentialsHandle error: %x\n", ret);
 		return 0;
 	}
 	return 1;
@@ -261,7 +263,7 @@ static int sqExtractPeerName(sqSSL *ssl) {
 	if(ret == SEC_E_NO_CREDENTIALS) return 1;
 
 	if(ret != SEC_E_OK) {
-		if(ssl->loglevel) printf("sqExtractPeerName: QueryContextAttributes failed (code = %x)\n", ret);
+		logTrace("sqExtractPeerName: QueryContextAttributes failed (code = %x)\n", ret);
 		return 0;
 	}
 	if (ssl->certFlags == SQSSL_OK && ssl->serverName != NULL) {
@@ -293,7 +295,7 @@ static int sqExtractPeerName(sqSSL *ssl) {
 #endif
 	}
 
-	if(ssl->loglevel) printf("sqExtractPeerName: Peer name is %s\n", ssl->peerName);
+	logTrace("sqExtractPeerName: Peer name is %s\n", ssl->peerName);
 
 	CertFreeCertificateContext(certHandle);
 
@@ -504,8 +506,7 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 		ssl->dataBuf = realloc(ssl->dataBuf, ssl->dataMax);
 		if (!ssl->dataBuf) return SQSSL_OUT_OF_MEMORY;
 	}
-	if(ssl->loglevel) 
-		printf("sqConnectSSL: input token %" PRIdSQINT " bytes\n", srcLen);
+	logTrace("sqConnectSSL: input token %" PRIdSQINT " bytes\n", srcLen);
 	memcpy(ssl->dataBuf + ssl->dataLen, srcBuf, srcLen);
 	ssl->dataLen += srcLen;
 
@@ -538,7 +539,7 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 	ssl->outbuf[1].pvBuffer = NULL;
 	ssl->sbdOut.cBuffers = 2;
 
-	if(ssl->loglevel) printf("sqConnectSSL: Input to InitSecCtxt is %d bytes\n", ssl->dataLen);
+	logTrace("sqConnectSSL: Input to InitSecCtxt is %d bytes\n", ssl->dataLen);
 
 #ifdef _UNICODE
 	if(ssl->serverName) {
@@ -570,7 +571,7 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 										&ssl->sbdOut, &retFlags, NULL);
 	}
 
-	if(ssl->loglevel) printf("InitializeSecurityContext returned: %x\n", ret);
+	logTrace("InitializeSecurityContext returned: %x\n", ret);
 
 	if(ssl->loglevel) sqPrintSBD("Input Buffers:", ssl->sbdIn);
 	if(ssl->loglevel) sqPrintSBD("Output Buffers:", ssl->sbdOut);
@@ -587,16 +588,16 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 				count = sqCopyDescToken(ssl, ssl->sbdOut, dstBuf, dstLen);
 				/* Sanity checks for buffers */
 				if(ssl->inbuf[0].BufferType != SECBUFFER_TOKEN) {
-					if(ssl->loglevel) printf("sqConnectSSL: Unexpected buffer[0].BufferType -- %d\n", ssl->inbuf[0].BufferType);
+					logTrace("sqConnectSSL: Unexpected buffer[0].BufferType -- %d\n", ssl->inbuf[0].BufferType);
 				}
 				if(ssl->inbuf[2].BufferType != SECBUFFER_EMPTY) {
-					if(ssl->loglevel) printf("sqConnectSSL: Unexpected buffer[2].BufferType -- %d\n", ssl->inbuf[0].BufferType);
+					logTrace("sqConnectSSL: Unexpected buffer[2].BufferType -- %d\n", ssl->inbuf[0].BufferType);
 				}
 
 				/* If there is SECBUFFER_EXTRA in the input we need to retain it */
 				if(ssl->inbuf[1].BufferType == SECBUFFER_EXTRA) {
 					int extra = ssl->inbuf[1].cbBuffer;
-					if(ssl->loglevel) printf("sqConnectSSL: Retaining %d token bytes\n", extra);
+					logTrace("sqConnectSSL: Retaining %d token bytes\n", extra);
 					memmove(ssl->dataBuf, ssl->dataBuf + (ssl->dataLen - extra), extra);
 					ssl->dataLen = extra;
 				} else ssl->dataLen = 0;
@@ -604,7 +605,7 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 				/* Don't return zero (SQSSL_OK) when more data is needed */
 				return count ? count : SQSSL_NEED_MORE_DATA;
 			default:
-				if(ssl->loglevel) printf("Unexpected return code %lu\n", (unsigned long)ret);
+				logTrace("Unexpected return code %lu\n", (unsigned long)ret);
 				return SQSSL_GENERIC_ERROR;
 		}
 	}
@@ -614,14 +615,14 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 	/* If there is SECBUFFER_EXTRA in the input we need to retain it */
 	if(ssl->inbuf[1].BufferType == SECBUFFER_EXTRA) {
 		int extra = ssl->inbuf[1].cbBuffer;
-		if(ssl->loglevel) printf("sqConnectSSL: Retaining %d token bytes\n", extra);
+		logTrace("sqConnectSSL: Retaining %d token bytes\n", extra);
 		memmove(ssl->dataBuf, ssl->dataBuf + (ssl->dataLen - extra), extra);
 		ssl->dataLen = extra;
 	} else {
 		sqCopyExtraData(ssl, ssl->sbdOut);
 	}
 	ret = QueryContextAttributes(&ssl->sslCtxt, SECPKG_ATTR_STREAM_SIZES, &ssl->sslSizes);
-	if(ssl->loglevel) printf("sqConnectSSL: Maximum message size is %d bytes\n", ssl->sslSizes.cbMaximumMessage);
+	logTrace("sqConnectSSL: Maximum message size is %d bytes\n", ssl->sslSizes.cbMaximumMessage);
 
 	/* Verify the certificate (sets certFlags) */
 	sqVerifyCert(ssl, false);
@@ -690,7 +691,7 @@ sqInt sqAcceptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt 
 									&retFlags, NULL);
 	}
 
-	if(ssl->loglevel) printf("AcceptSecurityContext returned: %x\n", ret);
+	logTrace("AcceptSecurityContext returned: %x\n", ret);
 
 	if(ret != SEC_E_OK) {
 		/* Handle various failure conditions */
@@ -702,7 +703,7 @@ sqInt sqAcceptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt 
 				/* Send contents back to peer and come back with more data */
 				return sqCopyDescToken(ssl, ssl->sbdOut, dstBuf, dstLen);
 			default:
-				if(ssl->loglevel) printf("Unexpected return code %d\n", ret);
+				logTrace("Unexpected return code %d\n", ret);
 				return SQSSL_GENERIC_ERROR;
 		}
 	}
@@ -710,7 +711,7 @@ sqInt sqAcceptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt 
 	/* TODO: Look at retFlags */
 	ssl->state = SQSSL_CONNECTED;
 	ret = QueryContextAttributes(&ssl->sslCtxt, SECPKG_ATTR_STREAM_SIZES, &ssl->sslSizes);
-	if(ssl->loglevel) printf("sqAcceptSSL: Maximum message size is %d bytes\n", ssl->sslSizes.cbMaximumMessage);
+	logTrace("sqAcceptSSL: Maximum message size is %d bytes\n", ssl->sslSizes.cbMaximumMessage);
 
 	/* Verify the certificate (sets certFlags) */
 	sqVerifyCert(ssl, true);
@@ -737,7 +738,7 @@ sqInt sqEncryptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 
 	if(ssl == NULL || ssl->state != SQSSL_CONNECTED) return SQSSL_INVALID_STATE;
 
-	if(ssl->loglevel) printf("sqEncryptSSL: Encrypting %" PRIdSQINT " bytes\n", srcLen);
+	logTrace("sqEncryptSSL: Encrypting %" PRIdSQINT " bytes\n", srcLen);
 
 	if(srcLen > (int)ssl->sslSizes.cbMaximumMessage) 
 		return SQSSL_INPUT_TOO_LARGE;
@@ -767,13 +768,13 @@ sqInt sqEncryptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 
 	memcpy(ssl->inbuf[1].pvBuffer, srcBuf, srcLen);
 
-	if(ssl->loglevel) printf("Header: %d; Data: %d; Trailer: %d\n", 
+	logTrace("Header: %d; Data: %d; Trailer: %d\n",
 			ssl->inbuf[0].cbBuffer, ssl->inbuf[1].cbBuffer, ssl->inbuf[2].cbBuffer);
 
 	ret = EncryptMessage(&ssl->sslCtxt, 0, &ssl->sbdIn, 0);
 
 	if (ret != SEC_E_OK) {
-		if(ssl->loglevel) printf("EncryptMessage returned: %x\n", ret);
+		logTrace("EncryptMessage returned: %x\n", ret);
 		return SQSSL_GENERIC_ERROR;
 	}
 
@@ -810,11 +811,11 @@ sqInt sqDecryptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 		ssl->dataBuf = realloc(ssl->dataBuf, ssl->dataMax);
 		if(!ssl->dataBuf) return SQSSL_OUT_OF_MEMORY;
 	}
-	if(ssl->loglevel) printf("sqDecryptSSL: Input data %" PRIdSQINT " bytes\n", srcLen);
+	logTrace("sqDecryptSSL: Input data %" PRIdSQINT " bytes\n", srcLen);
 	memcpy(ssl->dataBuf + ssl->dataLen, srcBuf, srcLen);
 	ssl->dataLen += srcLen;
 
-	if(ssl->loglevel) printf("sqDecryptSSL: Decrypting %d bytes\n", ssl->dataLen);
+	logTrace("sqDecryptSSL: Decrypting %d bytes\n", ssl->dataLen);
 
 	ssl->inbuf[0].BufferType = SECBUFFER_DATA;
 	ssl->inbuf[0].cbBuffer = ssl->dataLen;
@@ -847,7 +848,7 @@ sqInt sqDecryptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 		int buftype = ssl->inbuf[i].BufferType;
 		int count = ssl->inbuf[i].cbBuffer;
 		char *buffer = ssl->inbuf[i].pvBuffer;
-		if(ssl->loglevel) printf("buf[%d]: %d (%d bytes) ptr=%"PRIxSQPTR"\n", i,buftype, count, (sqIntptr_t)buffer);
+		logTrace("buf[%d]: %d (%d bytes) ptr=%"PRIxSQPTR"\n", i,buftype, count, (sqIntptr_t)buffer);
 		if(buftype == SECBUFFER_DATA) {
 			if(count > dstLen) return SQSSL_BUFFER_TOO_SMALL;
 			memcpy(dstBuf, buffer, count);
@@ -866,7 +867,7 @@ sqInt sqDecryptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 		return total;		
 	}
 
-	if(ssl->loglevel) printf("DecryptMessage returned: %x\n", ret);
+	logTrace("DecryptMessage returned: %x\n", ret);
 	return SQSSL_GENERIC_ERROR;
 }
 
@@ -885,7 +886,7 @@ char* sqGetStringPropertySSL(sqInt handle, int propID) {
 		case SQSSL_PROP_CERTNAME:  return ssl->certName;
 		case SQSSL_PROP_SERVERNAME: return ssl->serverName;
 		default:
-			if(ssl->loglevel) printf("sqGetStringPropertySSL: Unknown property ID %d\n", propID);
+			logTrace("sqGetStringPropertySSL: Unknown property ID %d\n", propID);
 			return NULL;
 	}
 	return NULL;
@@ -953,7 +954,7 @@ sqInt sqSetStringPropertySSL(sqInt handle, int propID, char *propName, sqInt pro
 	  property[propLen] = '\0';
 	};
 
-	if(ssl->loglevel) printf("sqSetStringPropertySSL(%d): %s\n", propID, property ? property : "(null)");
+	logTrace("sqSetStringPropertySSL(%d): %s\n", propID, property ? property : "(null)");
 
 	switch(propID) {
 		case SQSSL_PROP_CERTNAME:
@@ -971,7 +972,7 @@ sqInt sqSetStringPropertySSL(sqInt handle, int propID, char *propName, sqInt pro
 			return sqAddPfxCertToStore(propName, propLen, NULL, 0);
 		default:
 			if(property) free(property);
-			if(ssl->loglevel) printf("sqSetStringPropertySSL: Unknown property ID %d\n", propID);
+			logTrace("sqSetStringPropertySSL: Unknown property ID %d\n", propID);
 			return 0;
 	}
 	return 1;
@@ -993,7 +994,7 @@ sqInt sqGetIntPropertySSL(sqInt handle, sqInt propID) {
 		case SQSSL_PROP_VERSION: return SQSSL_VERSION;
 		case SQSSL_PROP_LOGLEVEL: return ssl->loglevel;
 		default:
-			if(ssl->loglevel) printf("sqGetIntPropertySSL: Unknown property ID %" PRIdSQINT "\n", propID);
+			logTrace("sqGetIntPropertySSL: Unknown property ID %" PRIdSQINT "\n", propID);
 			return 0;
 	}
 	return 0;
@@ -1014,7 +1015,7 @@ sqInt sqSetIntPropertySSL(sqInt handle, sqInt propID, sqInt propValue) {
 	switch(propID) {
 		case SQSSL_PROP_LOGLEVEL: ssl->loglevel = propValue; break;
 		default:
-			if(ssl->loglevel) printf("sqSetIntPropertySSL: Unknown property ID %" PRIdSQINT "\n", propID);
+			logTrace("sqSetIntPropertySSL: Unknown property ID %" PRIdSQINT "\n", propID);
 			return 0;
 	}
 	return 1;
