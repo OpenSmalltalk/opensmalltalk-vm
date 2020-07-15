@@ -1775,10 +1775,10 @@ CogARMv8Compiler >> concretizeMoveMwrR [
 				machineCodeAt: 0
 				put:
 					(self
-						ldr: destReg
-						rn: srcReg
-						plus: u
-						imm: immediate).	"ldr destReg, [srcReg, #immediate]"
+						ldurSize: 1 "64bits"
+						baseRegister: srcReg
+						signedOffset: (u = 0 ifTrue: [ immediate negated ] ifFalse: [ immediate ])
+						destinationRegister: destReg).
 			^ machineCodeSize := 4 ]
 		ifFalse: [ instrOffset := self moveCw: offset intoR: ConcreteIPReg.
 			"ldr destReg, [srcReg, ConcreteIPReg]"
@@ -3344,7 +3344,7 @@ CogARMv8Compiler >> ldr: destReg rn: baseReg plus: u imm: immediate12bitValue [
 	^ self
 		ldrSize: 1 "64bits"
 		baseRegister: baseReg
-		signedOffset: immediate12bitValue
+		unsignedOffset: immediate12bitValue
 		destinationRegister: destReg
 ]
 
@@ -3359,22 +3359,6 @@ CogARMv8Compiler >> ldr: destReg rn: baseReg rm: offsetReg [
 "	LDR destReg, [baseReg, + offsetReg]  - ARM_ARM v7 DDI10406 pp. A8-124-5
 	The contents of offsetReg are assumed to be correctly signed"
 	^self memMxr: AL reg: destReg  base: baseReg p: 1 u: 1 b: 0 w: 0 l: 1 rm: offsetReg
-]
-
-{ #category : #assembler }
-CogARMv8Compiler >> ldrSize: is64Bits baseRegister: baseReg signedOffset: immediate12bitValue destinationRegister: destinationRegister [
-
-	"Encodes a Load Register (immediate) instruction of the form
-	
-	LDR <Xt>, [<Xn|SP>{, #<pimm>}]"
-	
-	self assert: immediate12bitValue >= 0.
-	^ 1 << 31
-		bitOr: ((is64Bits bitAnd: 1) << 30
-		bitOr: (2r11100101 << 22
-		bitOr: ((immediate12bitValue / 8 bitAnd: 2r111111111111) << 10
-		bitOr:((baseReg bitAnd: 2r11111) << 5
-		bitOr: (destinationRegister bitAnd: 2r11111)))))
 ]
 
 { #category : #assembler }
@@ -3393,6 +3377,22 @@ CogARMv8Compiler >> ldrSize: is64Bits baseRegister: baseReg signedOffset: immedi
 		bitOr:(2r1 << 10
 		bitOr:((baseReg bitAnd: 2r11111) << 5
 		bitOr: (destinationRegister bitAnd: 2r11111)))))))
+]
+
+{ #category : #assembler }
+CogARMv8Compiler >> ldrSize: is64Bits baseRegister: baseReg unsignedOffset: immediate12bitValue destinationRegister: destinationRegister [
+
+	"Encodes a Load Register (immediate) instruction of the form
+	
+	LDR <Xt>, [<Xn|SP>{, #<pimm>}]"
+	
+	self assert: immediate12bitValue >= 0.
+	^ 1 << 31
+		bitOr: ((is64Bits bitAnd: 1) << 30
+		bitOr: (2r11100101 << 22
+		bitOr: ((immediate12bitValue / 8 bitAnd: 2r111111111111) << 10
+		bitOr:((baseReg bitAnd: 2r11111) << 5
+		bitOr: (destinationRegister bitAnd: 2r11111)))))
 ]
 
 { #category : #'as yet unclassified' }
@@ -3455,6 +3455,30 @@ CogARMv8Compiler >> ldrh: destReg rn: baseReg rm: offsetReg [
 "	LDRH destReg, [baseReg, +offsetReg]  - ARM_ARM v7 DDI10406 pp. A8-156-7
 	The contents of offsetReg are assumed to be correctly signed"
 	^self memM16xr: AL reg: destReg  base: baseReg p: 1 u: 1  w: 0 l: 1 rm: offsetReg
+]
+
+{ #category : #assembler }
+CogARMv8Compiler >> ldurSize: is64Bits baseRegister: baseReg signedOffset: immediate9bitValue destinationRegister: destinationRegister [
+
+	"C6.2.167 LDUR
+	
+	Load Register (unscaled) calculates an address from a base register and an immediate offset, loads a 32-bit word or 64-bit doubleword from memory, zero-extends it, and writes it to a register.
+	
+	LDUR <Xt>, [<Xn|SP>{, #<simm>}]"
+	
+	| twoComplement |
+	twoComplement := immediate9bitValue > 0
+		ifTrue: [ immediate9bitValue ]
+		ifFalse: [ 2r111111111 - immediate9bitValue abs + 1 ].
+
+	self assert: twoComplement > 0.
+
+	^ 1 << 31
+		bitOr: ((is64Bits bitAnd: 1) << 30
+		bitOr: (2r111000010 << 21
+		bitOr: ((twoComplement bitAnd: 2r111111111) << 12
+		bitOr:((baseReg bitAnd: 2r11111) << 5
+		bitOr: (destinationRegister bitAnd: 2r11111)))))
 ]
 
 { #category : #'private-bit-manipulation' }
