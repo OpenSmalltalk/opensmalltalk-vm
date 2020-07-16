@@ -17,6 +17,11 @@ Class {
 		'rumpCStackSize',
 		'wordSize'
 	],
+	#pools : [
+		'VMBasicConstants',
+		'VMBytecodeConstants',
+		'VMObjectIndices'
+	],
 	#category : #VMMakerTests
 }
 
@@ -119,7 +124,6 @@ VMSpurMemoryManagerTest >> newMethodWithBytecodes: bytes [
 	| method methodHeader |
 
 	"Create a bytecode compiled method object containing the given literal at the given index"
-	
 	method := self
 		newOldSpaceObjectWithSlots: 0 "# of literals" + 1 "one extra for the header" + (bytes size // memory wordSize)
 		format: (memory compiledMethodFormatForNumBytes: bytes size)
