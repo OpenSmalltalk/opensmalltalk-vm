@@ -68,12 +68,12 @@ Spur64BitMemoryManager >> addressAfter: objOop [
 ]
 
 { #category : #allocation }
-Spur64BitMemoryManager >> allocateSlots: numSlots format: formatField classIndex: classIndex [
+Spur64BitMemoryManager >> allocateSlots: numSlots format: formatField classIndex: classIndex isPinned: isPinned [
 	"Allocate an object with numSlots space.  If there is room beneath scavengeThreshold
 	 allocate in newSpace, otherwise alocate in oldSpace.  If there is not room in newSpace
 	 and a scavenge is not already scheduled, schedule a scavenge."
 	<inline: true>
-	| numBytes newObj |
+	| numBytes newObj hasToScheduleScavenge |
 	"Object headers are 8 bytes in length if the slot size fits in the num slots field (max implies overflow),
 	 16 bytes otherwise (num slots in preceding word).
 	 Objects always have at least one slot, for the forwarding pointer,
@@ -88,9 +88,22 @@ Spur64BitMemoryManager >> allocateSlots: numSlots format: formatField classIndex
 			[newObj := freeStart.
 			 numBytes := self smallObjectBytesForSlots: numSlots].
 	
-	freeStart + numBytes > scavengeThreshold ifTrue:
-		[needGCFlag ifFalse: [self scheduleScavenge].
-		 ^self allocateSlotsInOldSpace: numSlots bytes: numBytes format: formatField classIndex: classIndex].
+	hasToScheduleScavenge := freeStart + numBytes > scavengeThreshold.
+	
+	(hasToScheduleScavenge or: [isPinned]) ifTrue:
+		[ hasToScheduleScavenge 
+			ifTrue: [needGCFlag 	ifFalse: [self scheduleScavenge]].
+		
+		  isPinned 
+			ifTrue: [ 
+				^self 
+					allocateSlotsForPinningInOldSpace: numSlots 
+					bytes: numBytes format: formatField classIndex: classIndex ]
+			ifFalse: [ 
+				^self 
+					allocateSlotsInOldSpace: numSlots 
+					bytes: numBytes format: formatField classIndex: classIndex ]].
+	
 	numSlots >= self numSlotsMask
 		ifTrue: "for header parsing we put a saturated slot count in the prepended overflow size word"
 			[self flag: #endianness.
@@ -388,13 +401,9 @@ Spur64BitMemoryManager >> fetchLong32: fieldIndex ofFloatObject: oop [
 	(self isImmediateFloat: oop) ifFalse:
 		[^self fetchLong32: fieldIndex ofObject: oop].
 	bits := self smallFloatBitsOf: oop.
-	^self
-		cCode: [(self cCoerceSimple: (self addressOf: bits) to: #'int *') at: fieldIndex]
-		inSmalltalk:
-			[self flag: #endian.
-			 fieldIndex = 0
-				ifTrue: [bits bitAnd: 16rFFFFFFFF]
-				ifFalse: [bits >> 32]]
+	^ fieldIndex = 0
+		ifTrue: [bits bitAnd: 16rFFFFFFFF]
+		ifFalse: [bits >> 32]
 ]
 
 { #category : #instantiation }
@@ -520,7 +529,7 @@ Spur64BitMemoryManager >> initSegmentBridgeWithBytes: numBytes at: address [
 ]
 
 { #category : #instantiation }
-Spur64BitMemoryManager >> instantiateClass: classObj indexableSize: nElements [
+Spur64BitMemoryManager >> instantiateClass: classObj indexableSize: nElements isPinned: isPinned [
 	<api>
 	<var: #nElements type: #usqInt>
 	"Allocate an instance of a variable class, excepting CompiledMethod."
@@ -568,12 +577,16 @@ Spur64BitMemoryManager >> instantiateClass: classObj indexableSize: nElements [
 		 classIndex < 0 ifTrue:
 			[coInterpreter primitiveFailFor: classIndex negated.
 			 ^nil]].
-	numSlots > self maxSlotsForNewSpaceAlloc
+	(numSlots > self maxSlotsForNewSpaceAlloc or: [isPinned])
 		ifTrue:
 			[numSlots > self maxSlotsForAlloc ifTrue:
 				[coInterpreter primitiveFailFor: PrimErrUnsupported.
 				 ^nil].
-			 newObj := self allocateSlotsInOldSpace: numSlots format: instSpec classIndex: classIndex]
+			 newObj := self 
+				allocateSlotsInOldSpace: numSlots 
+				format: instSpec 
+				classIndex: classIndex
+				isPinned: isPinned]
 		ifFalse:
 			[newObj := self allocateSlots: numSlots format: instSpec classIndex: classIndex].
 	newObj ifNotNil:
@@ -868,14 +881,16 @@ Spur64BitMemoryManager >> newInputEventAccessorOfSize: numElements [
 	<doNotGenerate>
 	self flag: #endianness.
 	^(CPluggableAccessor on: (WordArray new: 16))
-		atBlock: [:obj :idx| | v |
-				v := (obj at: idx - 1 * 2 + 1) + ((obj at: idx - 1 * 2 + 2) << 32).
+		atBlock: [:obj :idx| | v pidx2 |
+				pidx2 := (idx - 1) * 2.
+				v := (obj at: pidx2 + 1) + ((obj at: pidx2 + 2) << 32).
 				v >> 63 > 0 ifTrue:
 					[v := v - (1 << 64)].
 				v]
-		atPutBlock: [:obj :idx :val|
-					obj at: idx - 1 * 2 + 1 put: (val bitAnd: 16rFFFFFFFF).
-					obj at: idx - 1 * 2 + 2 put: (val >> 32 bitAnd: 16rFFFFFFFF).
+		atPutBlock: [:obj :idx :val| |pidx2|
+					pidx2 := (idx - 1) * 2.
+					obj at: pidx2 + 1 put: (val bitAnd: 16rFFFFFFFF).
+					obj at: pidx2 + 2 put: (val >> 32 bitAnd: 16rFFFFFFFF).
 					val];
 		objectSize: 8
 ]

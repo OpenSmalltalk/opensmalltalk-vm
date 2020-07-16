@@ -125,11 +125,11 @@ static uint32_t clz(uint32_t x)
 static void profile_atexit(void)
 {
 	size_t i;
-	fprintf(stderr, "BitBltDispatch profiling results:\n");
-	fprintf(stderr, "Rule,SrcBpp,SrcBE,DestBpp,DestBE,CM,HT,GC,Ov,Calls,Time\n");
+	logDebug("BitBltDispatch profiling results:\n");
+	logDebug("Rule,SrcBpp,SrcBE,DestBpp,DestBE,CM,HT,GC,Ov,Calls,Time\n");
 	profile_record_t *rec;
 	for (rec = profile_records; rec != NULL; rec = rec->next) {
-		fprintf(stderr,"%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n",
+		logDebug("%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n",
 				rec->combinationRule,
 				BPP_FLAG_TO_BPP(rec->flags, SRC),
 				!(rec->flags & FAST_PATH_SRC_LITTLE_ENDIAN),
@@ -147,13 +147,13 @@ static void profile_atexit(void)
 	}
 	const char *sep = "Unrecorded cases (hopefully should all be 0):\n";
 	for (i = 0; i < sizeof profile_unrecorded_cases / sizeof *profile_unrecorded_cases; i++) {
-		fprintf(stderr, "%s%u", sep, profile_unrecorded_cases[i]);
+		logDebug("%s%u", sep, profile_unrecorded_cases[i]);
 		sep = ",";
 	}
-	fprintf(stderr, "\n");
-	fprintf(stderr, "fast path list\n");
+	logDebug("\n");
+	logDebug("fast path list\n");
 	for (i = 0; i < numFastPaths; i++) {
-			fprintf(stderr, "entry %d %u %X\n",i,  fastPathTestList[i].combinationRule, fastPathTestList[i].flags);
+		logDebug("entry %d %u %X\n",i,  fastPathTestList[i].combinationRule, fastPathTestList[i].flags);
 	}
 
 }

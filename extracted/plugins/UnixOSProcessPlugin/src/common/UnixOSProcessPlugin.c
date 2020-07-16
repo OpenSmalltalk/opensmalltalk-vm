@@ -45,6 +45,8 @@ static char __buildInfo[] = "UnixOSProcessPlugin VMConstruction-Plugins-OSProces
 # undef EXPORT
 # define EXPORT(returnType) static returnType
 #endif
+#include "pharovm/imageAccess.h"
+#include "pharovm/debug.h"
 
 #include "FilePlugin.h"
 #include "SocketPlugin.h"
@@ -906,12 +908,12 @@ forkAndExecInDirectory(sqInt useSignalHandler)
 		if ((failed())
 		 || (pwdPtr == 0)) {
 			primitiveFailFor(PrimErrBadArgument);
-			fprintf(stderr, "bad workingDir parameter\n");
+			logError("bad workingDir parameter\n");
 			_exit(-1);
 		}
 		if ((chdir(pwdPtr)) != 0) {
 			primitiveFailFor(PrimErrNotFound);
-			perror("chdir");
+			logErrorFromErrno("chdir");
 			_exit(-1);
 		}
 	}
@@ -940,7 +942,7 @@ forkAndExecInDirectory(sqInt useSignalHandler)
 	args = ((char **) (fixPointersInArrayOfStringswithOffsets(argVecBuffer, argOffsets)));
 	if ((env == 0)
 	 || (args == 0)) {
-		perror("bad env or bad args");
+		logErrorFromErrno("bad env or bad args");
 		_exit(-1);
 	}
 	/* begin restoreDefaultSignalHandlers */
@@ -956,7 +958,7 @@ forkAndExecInDirectory(sqInt useSignalHandler)
 		}
 	}
 	execve(progNamePtr, args, env);
-	perror(progNamePtr);
+	logErrorFromErrno(progNamePtr);
 	_exit(-1);
 	return 0;
 }
@@ -1443,7 +1445,7 @@ moduleUnloaded(char *aModuleName)
 static sqInt
 msg(char *s)
 {
-	fprintf(stderr, "\n%s: %s", moduleName, s);
+	logTrace("\n%s: %s", moduleName, s);
 	return 0;
 }
 
@@ -1475,7 +1477,7 @@ needSigaltstack(void)
 	/* Now see if there's already a sigaltstack in place */
 	useSignalStack = 1;
 	if ((sigaltstack(0,&sigstack)) < 0) {
-		perror("sigaltstack");
+		logErrorFromErrno("sigaltstack");
 	}
 	
 #  if defined(SA_DISABLE)
@@ -4351,7 +4353,7 @@ realpathAsType(sqInt classIdentifier)
 	}
 	else {
 		if ((strlen(realpathResult)) >= 1024) {
-			perror("warning: statically allocated array exceeded in UnixOSProcessPlugin>>primitiveRealPath, object memory may have been corrupted");
+			logErrorFromErrno("warning: statically allocated array exceeded in UnixOSProcessPlugin>>primitiveRealPath, object memory may have been corrupted");
 			return primitiveFail();
 		}
 		/* begin cString:asCollection: */
@@ -4626,7 +4628,7 @@ setSigChldHandler(void)
 	}
 	sigemptyset(&sigchldHandlerAction.sa_mask);
 	if ((sigaction(SIGCHLD, &sigchldHandlerAction, 0)) == (sigErrorNumber())) {
-		perror("signal");
+		logErrorFromErrno("signal");
 	}
 #  else /* defined(SA_NOCLDSTOP) */
 	setSignalNumberhandler(SIGCHLD, reapChildProcess);
@@ -4669,7 +4671,7 @@ setSignalNumberhandler(sqInt signalNumber, void *signalHandlerAddress)
 	sigHandlerAction.sa_flags = SA_ONSTACK | SA_RESTART;
 	sigemptyset(&sigHandlerAction.sa_mask);
 	if ((sigaction(signalNumber, (&sigHandlerAction), (&oldHandlerAction))) == (sigErrorNumber())) {
-		perror("signal");
+		logErrorFromErrno("signal");
 	}
 	return oldHandlerAction.sa_sigaction;
 }

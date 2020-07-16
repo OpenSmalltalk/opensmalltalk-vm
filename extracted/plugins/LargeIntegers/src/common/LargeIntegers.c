@@ -74,7 +74,6 @@ EXPORT(const char*) getModuleName(void);
 static sqInt highBitOfLargeInt(sqInt anOop);
 static sqInt isNormalized(sqInt aLargeInteger);
 static sqInt largeIntgrowTo(sqInt aBytesObject, sqInt newByteLen);
-static sqInt msg(char *s);
 static sqInt normalizeNegative(sqInt aLargeNegativeInteger);
 static sqInt normalizePositive(sqInt aLargePositiveInteger);
 static sqInt normalize(sqInt aLargeInteger);
@@ -2186,14 +2185,6 @@ largeIntgrowTo(sqInt aBytesObject, sqInt newByteLen)
 		pTo[i] = (pFrom[i]);
 	}
 	return newBytes;
-}
-
-	/* InterpreterPlugin>>#msg: */
-static sqInt
-msg(char *s)
-{
-	fprintf(stderr, "\n%s: %s", moduleName, s);
-	return 0;
 }
 
 

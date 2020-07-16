@@ -1823,7 +1823,7 @@ StackInterpreterSimulator >> primitiveContextAt [
 
 { #category : #'debugging traps' }
 StackInterpreterSimulator >> primitiveDoPrimitiveWithArgs [
-	NewspeakVM ifFalse: [self halt].
+	self halt.
 	^super primitiveDoPrimitiveWithArgs
 ]
 
@@ -2418,6 +2418,11 @@ StackInterpreterSimulator >> slowPrimitiveResponse [
 StackInterpreterSimulator >> space [
 
 	traceOn ifTrue: [ transcript space ]
+]
+
+{ #category : #'special objects' }
+StackInterpreterSimulator >> splObj: anInteger [ 
+	^objectMemory splObj: anInteger 
 ]
 
 { #category : #'plugin support' }

@@ -31,6 +31,8 @@
 
 #include "sqWin32File.h"
 
+#include "pharovm/debug.h"
+
 extern struct VirtualMachine *interpreterProxy;
 
 #ifdef WIN32_FILE_SUPPORT
@@ -430,7 +432,7 @@ sqInt sqFileValid(SQFile *f) {
   if(NULL == f) return false;
   if(f->sessionID != thisSession) return false;
   if(!IsHandleInTable(win32Files, FILE_HANDLE(f))) {
-    printf("WARNING: Manufactured file handle detected!\n");
+    logWarn("WARNING: Manufactured file handle detected!\n");
     return false;
   }
   return true;
@@ -454,106 +456,6 @@ size_t sqFileWriteFromAt(SQFile *f, size_t count, char* byteArrayIndex, size_t s
   if (dwReallyWritten != count)
     FAIL();
   return dwReallyWritten;
-}
-
-/***************************************************************************/
-/* Image file functions                                                    */
-/***************************************************************************/
-sqInt sqImageFileClose(sqImageFile h)
-{
-  SetEndOfFile((HANDLE)(h-1));
-  return CloseHandle((HANDLE)(h-1));
-}
-
-sqImageFile sqImageFileOpen(const char *fileName, const char *mode)
-{ const char *modePtr;
-  int writeFlag = 0;
-  WCHAR *win32Path = NULL;
-  HANDLE h;
-
-  if(!mode) return 0;
-  modePtr = mode;
-  while(*modePtr)
-    {
-      if(*modePtr == 'w') writeFlag = 1;
-	  /* Note: We cannot append here */
-	  if(*modePtr == 'a') return 0;
-      modePtr++;
-    }
-  /* convert the file name into a null-terminated C string */
-  ALLOC_WIN32_PATH(win32Path, fileName, -1);
-
-  if(hasCaseSensitiveDuplicate(win32Path))
-    return 0;
-  
-  h = CreateFileW(win32Path,
-		  writeFlag ? (GENERIC_READ | GENERIC_WRITE) : GENERIC_READ,
-		  writeFlag ? FILE_SHARE_READ : (FILE_SHARE_READ | FILE_SHARE_WRITE),
-		  NULL, /* No security descriptor */
-		  writeFlag ? CREATE_ALWAYS : OPEN_EXISTING,
-		  FILE_ATTRIBUTE_NORMAL,
-		  NULL /* No template */);
-
-  if(h == INVALID_HANDLE_VALUE)
-    return 0;
- 
-  return (usqIntptr_t)h+1;
-}
-
-squeakFileOffsetType sqImageFilePosition(sqImageFile h)
-{
-  win32FileOffset ofs;
-  ofs.offset = 0;
-  ofs.dwLow = SetFilePointer((HANDLE)(h-1), 0, &ofs.dwHigh, FILE_CURRENT);
-  return ofs.offset;
-}
-
-size_t sqImageFileRead(void *ptr, size_t sz, size_t count, sqImageFile h)
-{
-  DWORD dwReallyRead;
-  squeakFileOffsetType position;
-	
-  position = sqImageFilePosition(h);
-  ReadFile((HANDLE)(h-1), (LPVOID) ptr, count*sz, &dwReallyRead, NULL);
-  while(dwReallyRead != (DWORD)(count*sz)) {
-    DWORD err = GetLastError();
-    if(sqMessageBox(MB_ABORTRETRYIGNORE, TEXT("Squeak Warning"),TEXT("Image file read problem (%d out of %d bytes read)"), dwReallyRead, count*sz)
-       == IDABORT) return (dwReallyRead / sz);
-    sqImageFileSeek(h, position);
-    ReadFile((HANDLE)(h-1), (LPVOID) ptr, count*sz, &dwReallyRead, NULL);
-  }
-  return (dwReallyRead / sz);
-}
-
-squeakFileOffsetType sqImageFileSeek(sqImageFile h, squeakFileOffsetType pos)
-{
-  win32FileOffset ofs;
-  ofs.offset = pos;
-  ofs.dwLow = SetFilePointer((HANDLE)(h-1), ofs.dwLow, &ofs.dwHigh, FILE_BEGIN);
-  return ofs.offset;
-}
-
-squeakFileOffsetType sqImageFileSeekEnd(sqImageFile h, squeakFileOffsetType pos)
-{
-    win32FileOffset ofs;
-    ofs.offset = pos;
-    ofs.dwLow = SetFilePointer((HANDLE)(h - 1), ofs.dwLow, &ofs.dwHigh, FILE_END);
-    return ofs.offset;
-}
-
-size_t sqImageFileWrite(const void *ptr, size_t sz, size_t count, sqImageFile h)
-{
-  DWORD dwReallyWritten;
-  WriteFile((HANDLE)(h-1), (LPVOID) ptr, count*sz, &dwReallyWritten, NULL);
-  return (size_t) (dwReallyWritten / sz);
-}
-
-squeakFileOffsetType sqImageFileSize(sqImageFile h)
-{
-  win32FileOffset ofs;
-  ofs.offset = 0;
-  ofs.dwLow = GetFileSize((HANDLE)(h-1), &ofs.dwHigh);
-  return ofs.offset;
 }
 
 #endif /* WIN32_FILE_SUPPORT */

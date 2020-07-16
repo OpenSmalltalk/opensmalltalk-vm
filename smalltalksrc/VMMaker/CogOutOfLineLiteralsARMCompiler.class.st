@@ -127,14 +127,6 @@ CogOutOfLineLiteralsARMCompiler >> moveCw: constant intoR: destReg [
 	^machineCodeSize := 4
 ]
 
-{ #category : #'inline cacheing' }
-CogOutOfLineLiteralsARMCompiler >> nsSendCacheAt: callSiteReturnAddress [
-	"Answer the NSSendCache for the return address of a Newspeak
-	 self, super, outer, or implicit receiver send."
-	<inline: true>
-	^objectMemory longAt: (self pcRelativeAddressAt: (callSiteReturnAddress - 8) asUnsignedInteger)
-]
-
 { #category : #'compile abstract instructions' }
 CogOutOfLineLiteralsARMCompiler >> outOfLineLiteralOpcodeLimit [
 	"The maximum offset in a LDR is (1<<12)-1, or (1<<10)-1 instructions.

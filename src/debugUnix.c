@@ -9,7 +9,9 @@
 
 #endif
 
-#include <execinfo.h>
+#ifdef HAVE_EXECINFO_H
+# include <execinfo.h>
+#endif
 
 #include <signal.h>
 
@@ -22,9 +24,6 @@ void printAllStacks();
 void printCallStack();
 char* GetAttributeString(int idx);
 void reportStackState(const char *msg, char *date, int printAll, ucontext_t *uap, FILE* output);
-
-void pushOutputFile(FILE* aFile);
-void popOutputFile();
 
 char * getVersionInfo(int verbose);
 void getCrashDumpFilenameInto(char *buf);
@@ -42,11 +41,11 @@ void doReport(char* fault, ucontext_t *uap){
 	//This is awful but replace the stdout to print all the messages in the file.
 	getCrashDumpFilenameInto(crashdumpFileName);
 	crashDumpFile = fopen(crashdumpFileName, "a+");
-	pushOutputFile(crashDumpFile);
+	vm_setVMOutputStream(crashDumpFile);
 
 	reportStackState(fault, ctimebuf, 1, uap, crashDumpFile);
 
-	popOutputFile();
+	vm_setVMOutputStream(stderr);
 	fclose(crashDumpFile);
 
 	reportStackState(fault, ctimebuf, 1, uap, stderr);
@@ -222,7 +221,7 @@ void reportStackState(const char *msg, char *date, int printAll, ucontext_t *uap
 		return;
 #endif
 
-#if !defined(NOEXECINFO)
+#ifdef HAVE_EXECINFO_H
 	fprintf(output,"C stack backtrace & registers:\n");
 	if (uap) {
 		addrs[0] = printRegisterState(uap, output);
@@ -298,7 +297,7 @@ void reportStackState(const char *msg, char *date, int printAll, ucontext_t *uap
 		}
 	}
 	else
-		printf("\nCan't dump Smalltalk stack(s). Not in VM thread\n");
+		fprintf(output,"\nCan't dump Smalltalk stack(s). Not in VM thread\n");
 #if STACKVM
 	fprintf(output, "\nMost recent primitives\n");
 	dumpPrimTraceLog();
@@ -307,6 +306,6 @@ void reportStackState(const char *msg, char *date, int printAll, ucontext_t *uap
 	reportMinimumUnusedHeadroom();
 # endif
 #endif
-	printf("\n\t(%s)\n", msg);
+	fprintf(output,"\n\t(%s)\n", msg);
 	fflush(output);
 }

@@ -26,29 +26,49 @@ void mtfsfi(unsigned long long fpscr)
 #endif
 
 static int loadPharoImage(const char* fileName);
+static void ensureSemaphoreInitialized();
+static int runVMThread(void* p);
+static int runOnMainThread(VMParameters *parameters);
+static int runOnWorkerThread(VMParameters *parameters);
 
-EXPORT(int) vm_init(const char* imageFileName, const VMParameterVector *vmParameters, const VMParameterVector *imageParameters) {
+static Semaphore* mainLoopSemaphore;
+static sqInt (*mainLoopClosure)();
+
+EXPORT(int) vmRunOnWorkerThread = 0;
+
+//TODO: All this should be concentrated in an unique vm parameters structure.
+EXPORT(int)
+isVMRunOnWorkerThread()
+{
+    return vmRunOnWorkerThread;
+}
+
+EXPORT(int) vm_init(VMParameters* parameters)
+{
 	initGlobalStructure();
 
 	//Unix Initialization specific
 	fldcw(0x12bf);	/* signed infinity, round to nearest, REAL8, disable intrs, disable signals */
     mtfsfi(0);		/* disable signals, IEEE mode, round to nearest */
 
+    ensureSemaphoreInitialized();
 
     ioInitTime();
 
     ioVMThread = ioCurrentOSThread();
 	ioInitExternalSemaphores();
+	setMaxStacksToPrint(parameters->maxStackFramesToPrint);
 
 	aioInit();
 
-	setPharoCommandLineParameters(vmParameters->parameters, vmParameters->count,
-			imageParameters->parameters, imageParameters->count);
+	setPharoCommandLineParameters(parameters->vmParameters.parameters, parameters->vmParameters.count,
+			parameters->imageParameters.parameters, parameters->imageParameters.count);
 
-	return loadPharoImage(imageFileName);
+	return loadPharoImage(parameters->imageFileName);
 }
 
-EXPORT(void) vm_run_interpreter()
+EXPORT(void)
+vm_run_interpreter()
 {
 	interpret();
 }
@@ -58,14 +78,13 @@ vm_main_with_parameters(VMParameters *parameters)
 {
 	// HACK: In some cases we need to add an explicit --interactive option to the image.
 	VMErrorCode error = vm_parameters_ensure_interactive_image_parameter(parameters);
-	if (error)
-	{
+	if (error) {
 		return 1;
 	}
 
 	if(parameters->isDefaultImage && !parameters->defaultImageFound)
 	{
-		printf("No image has been specified, and no default image has been found.\n");
+		logError("No image has been specified, and no default image has been found.\n");
 		vm_printUsageTo(stdout);
 		return 0;
 	}
@@ -76,18 +95,23 @@ vm_main_with_parameters(VMParameters *parameters)
 
 	logInfo("Opening Image: %s\n", parameters->imageFileName);
 
+    //This initialization is required because it makes awful, awful, awful code to calculate
+    //the location of the machine code.
+    //Luckily, it can be cached.
+    osCogStackPageHeadroom();
+
 	// Retrieve the working directory.
 	char *workingDirectoryBuffer = (char*)calloc(1, FILENAME_MAX+1);
 	if(!workingDirectoryBuffer)
 	{
-		fprintf(stderr, "Out of memory.\n");
+		logErrorFromErrno("Out of memory.\n");
 		return 1;
 	}
 
 	error = vm_path_get_current_working_dir_into(workingDirectoryBuffer, FILENAME_MAX+1);
 	if(error)
 	{
-		fprintf(stderr, "Failed to obtain the current working directory: %s\n", vm_error_code_to_string(error));
+		logError("Failed to obtain the current working directory: %s\n", vm_error_code_to_string(error));
 		return 1;
 	}
 
@@ -102,15 +126,11 @@ vm_main_with_parameters(VMParameters *parameters)
 	LOG_SIZEOF(float);
 	LOG_SIZEOF(double);
 
-	if(!vm_init(parameters->imageFileName, &parameters->vmParameters, &parameters->imageParameters))
-	{
-		logError("Error opening image file: %s\n", parameters->imageFileName);
-		return -1;
-	}
-
-	vm_run_interpreter();
-
-	return 0;
+    vmRunOnWorkerThread = vm_parameter_vector_has_element(&parameters->vmParameters, "--worker");
+    
+    return vmRunOnWorkerThread
+        ? runOnWorkerThread(parameters)
+        : runOnMainThread(parameters);
 }
 
 EXPORT(int)
@@ -157,31 +177,123 @@ vm_main(int argc, const char** argv, const char** env)
 	return exitCode;
 }
 
-static int loadPharoImage(const char* fileName)
+static int
+loadPharoImage(const char* fileName)
 {
     size_t imageSize = 0;
-    FILE* imageFile = NULL;
+    sqImageFile imageFile = NULL;
 
     /* Open the image file. */
-    imageFile = fopen(fileName, "rb");
+    imageFile = sqImageFileOpen(fileName, "rb");
     if(!imageFile)
 	{
-    	perror("Opening Image");
+    	logErrorFromErrno("Opening Image");
         return false;
     }
 
     /* Get the size of the image file*/
-    fseek(imageFile, 0, SEEK_END);
-    imageSize = ftell(imageFile);
-    fseek(imageFile, 0, SEEK_SET);
+    sqImageFileSeekEnd(imageFile, 0);
+    imageSize = sqImageFilePosition(imageFile);
+    sqImageFileSeek(imageFile, 0);
 
     readImageFromFileHeapSizeStartingAt(imageFile, 0, 0);
-    fclose(imageFile);
+    sqImageFileClose(imageFile);
 
     char* fullImageName = alloca(FILENAME_MAX);
 	fullImageName = getFullPath(fileName, fullImageName, FILENAME_MAX);
 
     setImageName(fullImageName);
 
-    return true;
+    return 1;
+}
+
+static void
+ensureSemaphoreInitialized()
+{
+    if(!mainLoopSemaphore) {
+        mainLoopSemaphore = platform_semaphore_new(0);
+    }
+}
+
+EXPORT(int)
+mainThreadLoop()
+{
+    ensureSemaphoreInitialized();
+    do {
+    	if(mainLoopClosure != NULL)mainLoopClosure();
+        mainLoopSemaphore->wait(mainLoopSemaphore);
+    } while(true);
+}
+
+EXPORT(sqInt)
+mainThread_schedule(sqInt (*closure)())
+{
+    mainLoopClosure = closure;
+    mainLoopSemaphore->signal(mainLoopSemaphore);
+}
+
+static int
+runVMThread(void* p)
+{
+    VMParameters *parameters = (VMParameters*)p;
+
+    if(!vm_init(parameters))
+    {
+        logError("Error opening image file: %s\n", parameters->imageFileName);
+        return -1;
+    }
+    //setFlagVMRunOnWorkerThread(flagVMRunOnWorkerThread);
+    
+    vm_run_interpreter();
+}
+
+static int
+runOnMainThread(VMParameters *parameters)
+{
+    logDebug("Running VM on main thread\n");
+    runVMThread((void *)parameters);
+    return 0;
+}
+
+static int
+runOnWorkerThread(VMParameters *parameters)
+{
+    pthread_attr_t tattr;
+    pthread_t thread_id;
+    size_t size;
+
+    logDebug("Running VM on worker thread\n");
+    
+    /*
+     * I have to get the attributes of the main thread
+     * to get the max stack size.
+     * We need to set this value to the newly created thread,
+     * as the created threads does not auto-grow.
+     */
+    pthread_attr_init(&tattr);
+    pthread_attr_getstacksize(&tattr, &size);
+
+    logDebug("Stack size: %ld\n", size);
+
+    ensureSemaphoreInitialized();
+
+    if(pthread_attr_setstacksize(&tattr, size * 4)){
+        perror("Setting thread stack size");
+        exit(-1);
+    }
+
+    if(pthread_create(&thread_id, &tattr, runVMThread, parameters)){
+        perror("Spawning the VM thread");
+        exit(-1);
+    }
+
+    pthread_detach(thread_id);
+
+    /*
+     * I will now wait if any plugin wants to run stuff in the main thread.
+     * This is used by the ThreadedFFI plugin to run a worker in the main thread.
+     * This runner is used to create and handle UI operations, required by OSX.
+     */
+
+    return mainThreadLoop();
 }

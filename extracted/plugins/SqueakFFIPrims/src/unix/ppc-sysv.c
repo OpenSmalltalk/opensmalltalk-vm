@@ -73,12 +73,6 @@
 # define LONGLONG long long
 #endif
 
-#if 0
-# define DPRINTF(ARGS)	printf ARGS
-#else
-# define DPRINTF(ARGS)
-#endif
-
 #if defined(FFI_TEST)
   static int primitiveFail(void) { puts("primitive fail"); exit(1); return 0; }
 #else
@@ -164,7 +158,6 @@ int ffiFree(sqIntptr_t ptr)
 
 int ffiPushSignedChar(int value)
 { 
-  DPRINTF(("ffiPushSignedChar %d\n", value));
   pushGPR(value);
   return 1;
 }
@@ -172,7 +165,6 @@ int ffiPushSignedChar(int value)
 
 int ffiPushUnsignedChar(int value) 
 { 
-  DPRINTF(("ffiPushUnsignedChar %d\n", value));
   pushGPR(value);
   return 1;
 }
@@ -180,7 +172,6 @@ int ffiPushUnsignedChar(int value)
 
 int ffiPushSignedByte(int value) 
 { 
-  DPRINTF(("ffiPushSignedByte %d\n", value));
   pushGPR(value);
   return 1;
 }
@@ -188,7 +179,6 @@ int ffiPushSignedByte(int value)
 
 int ffiPushUnsignedByte(int value)
 { 
-  DPRINTF(("ffiPushUnsignedByte %d\n", value));
   pushGPR(value);
   return 1;
 }
@@ -196,7 +186,6 @@ int ffiPushUnsignedByte(int value)
 
 int ffiPushSignedShort(int value)
 { 
-  DPRINTF(("ffiPushSignedShort %d\n", value));
   pushGPR(value); 
   return 1; 
 }
@@ -204,7 +193,6 @@ int ffiPushSignedShort(int value)
 
 int ffiPushUnsignedShort(int value) 
 { 
-  DPRINTF(("ffiPushUnsignedShort %d\n", value));
   pushGPR(value); 
   return 1; 
 }
@@ -212,7 +200,6 @@ int ffiPushUnsignedShort(int value)
 
 int ffiPushSignedInt(int value) 
 { 
-  DPRINTF(("ffiPushSignedInt %d\n", value));
   pushGPR(value); 
   return 1; 
 }
@@ -220,7 +207,6 @@ int ffiPushSignedInt(int value)
 
 int ffiPushUnsignedInt(int value) 
 { 
-  DPRINTF(("ffiPushUnsignedInt %d\n", value));
   pushGPR(value);
   return 1;
 }
@@ -228,7 +214,6 @@ int ffiPushUnsignedInt(int value)
 
 int ffiPushSignedLongLong(int low, int high)
 {
-  DPRINTF(("ffiPushSignedLongLong %d %d\n", low, high));
   qalignGPR();
   qalignStack();
   pushGPR(high);
@@ -239,7 +224,6 @@ int ffiPushSignedLongLong(int low, int high)
 
 int ffiPushUnsignedLongLong(int low, int high)
 { 
-  DPRINTF(("ffiPushUnsignedLongLong %d %d\n", low, high));
   qalignGPR();
   qalignStack();
   pushGPR(high);
@@ -250,7 +234,6 @@ int ffiPushUnsignedLongLong(int low, int high)
 
 int ffiPushPointer(int pointer)
 {
-  DPRINTF(("ffiPushPointer %d\n", pointer));
   pushGPR(pointer);
   return 1;
 }
@@ -265,7 +248,6 @@ int ffiPushPointer(int pointer)
 
 int ffiPushSingleFloat(double value)
 {
-  DPRINTF(("ffiPushSingleFloat %f\n", (float)value));
   if (fprCount < FPR_MAX)
     ffiFPRs[fprCount++]= value;
   else
@@ -280,7 +262,6 @@ int ffiPushSingleFloat(double value)
 
 int ffiPushDoubleFloat(double value)
 {
-  DPRINTF(("ffiPushDoubleFloat %f\n", (float)value));
   if (fprCount < FPR_MAX)
     ffiFPRs[fprCount++]= value;
   else
@@ -298,7 +279,6 @@ int ffiPushDoubleFloat(double value)
 int ffiPushStringOfLength(int srcIndex, int length)
 {
   char *ptr;
-  DPRINTF(("ffiPushStringOfLength %d\n", length));
   checkGPR();
   ptr= (char *)malloc(length + 1);
   if (!ptr)
@@ -316,7 +296,6 @@ int ffiPushStringOfLength(int srcIndex, int length)
 
 #define pushStruct(type, value)				\
 {							\
-  DPRINTF(("  ++ "#type"\n"));				\
   if ((structCount + sizeof(type)) > sizeof(structs))	\
     return primitiveFail();				\
   *(type *)(structs + structCount)= value;		\
@@ -327,7 +306,6 @@ int ffiPushStringOfLength(int srcIndex, int length)
 int ffiPushStructureOfLength(int pointer, int *structSpec, int specSize)
 {
   int size= *structSpec & FFIStructSizeMask;
-  DPRINTF(("ffiPushStructureOfLength %d (%db)\n", specSize, size));
   salign(16);
   if (structCount + size > sizeof(structs))
     return primitiveFail();

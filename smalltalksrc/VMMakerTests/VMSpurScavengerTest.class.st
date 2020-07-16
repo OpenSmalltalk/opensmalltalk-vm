@@ -77,7 +77,8 @@ VMSpurScavengerTest >> testArgumentInStackShouldSurviveScanvenge [
 	newObjectOop := self newZeroSizedObject.
 	newObjectHash := (memory hashBitsOf: newObjectOop).
 	
-	self frameBuilder args: { newObjectOop } ; buildFrame.
+	stackBuilder addNewFrame args: { newObjectOop }.
+	stackBuilder buildStack.
 
 	"Nil should survive, but newObjectOop should survive too.
 	Nil is referenced by the roots because many of their slots are nilled.
@@ -96,7 +97,8 @@ VMSpurScavengerTest >> testContextInStackShouldSurviveScanvenge [
 	newObjectOop := self newZeroSizedObject.
 	newObjectHash := (memory hashBitsOf: newObjectOop).
 	
-	self frameBuilder context: newObjectOop; buildFrame.
+	stackBuilder addNewFrame context: newObjectOop.
+	stackBuilder buildStack.
 
 	"Nil should survive, but newObjectOop should survive too.
 	Nil is referenced by the roots because many of their slots are nilled.
@@ -210,9 +212,9 @@ VMSpurScavengerTest >> testMethodInStackShouldSurviveScanvenge [
 	newObjectOop := self newZeroSizedObject.
 	newObjectHash := (memory hashBitsOf: newObjectOop).
 
+	stackBuilder addNewFrame method: newObjectOop.
+	stackBuilder buildStack.
 
-	self frameBuilder method: newObjectOop; buildFrame.
-	
 	"Nil should survive, but newObjectOop should survive too.
 	Nil is referenced by the roots because many of their slots are nilled.
 	newObjectOop is referenced by the stack"
@@ -256,7 +258,8 @@ VMSpurScavengerTest >> testObjectInStackShouldSurviveScanvenge [
 	newObjectOop := self newZeroSizedObject.
 	newObjectHash := (memory hashBitsOf: newObjectOop).
 	
-	self frameBuilder stack: { newObjectOop } ; buildFrame. 
+		stackBuilder addNewFrame stack: { newObjectOop }.
+	stackBuilder buildStack.
 
 	"Nil should survive, but newObjectOop should survive too.
 	Nil is referenced by the roots because many of their slots are nilled.
@@ -346,7 +349,8 @@ VMSpurScavengerTest >> testReceiverInStackShouldSurviveScanvenge [
 	newObjectOop := self newZeroSizedObject.
 	newObjectHash := (memory hashBitsOf: newObjectOop).
 	
-	self frameBuilder receiver: newObjectOop; buildFrame.
+	stackBuilder addNewFrame receiver: newObjectOop.
+	stackBuilder buildStack.
 
 	"Nil should survive, but newObjectOop should survive too.
 	Nil is referenced by the roots because many of their slots are nilled.
@@ -462,7 +466,8 @@ VMSpurScavengerTest >> testScavengeObjectInRememberedSetShouldBeInvertedToBeBefo
 	objectInTheStack := self newZeroSizedObject.
 	objectInRememberedSet := self newZeroSizedObject.
 
-	self frameBuilder method: objectInTheStack ; buildFrame.
+	stackBuilder addNewFrame method: objectInTheStack.
+	stackBuilder buildStack.
 		
 	memory storePointer: 0 ofObject: oldObjectAddress withValue: objectInRememberedSet.
 	
@@ -486,7 +491,8 @@ VMSpurScavengerTest >> testScavengeObjectInRemembererdSetShouldBeBeforeObjectInS
 	objectInRememberedSet := self newZeroSizedObject.
 	objectInTheStack := self newZeroSizedObject.
 	
-	self frameBuilder method: objectInTheStack ; buildFrame.
+	stackBuilder addNewFrame method: objectInTheStack.
+	stackBuilder buildStack.
 		
 	memory storePointer: 0 ofObject: oldObjectAddress withValue: objectInRememberedSet.
 	
@@ -502,7 +508,8 @@ VMSpurScavengerTest >> testScavengeObjectInStackShouldBeBeforeObjectInSpecialVar
 	objectInTheStack := self newZeroSizedObject.
 	objectInSpecialVariable := self newZeroSizedObject.
 	
-	self frameBuilder method: objectInTheStack ; buildFrame.
+	stackBuilder addNewFrame method: objectInTheStack.
+	stackBuilder buildStack.
 
 	memory coInterpreter method: objectInSpecialVariable.
 	
@@ -517,8 +524,9 @@ VMSpurScavengerTest >> testScavengeObjectInStackShouldBeInvertedToBeBeforeObject
 	| objectInTheStack objectInSpecialVariable |
 	objectInSpecialVariable := self newZeroSizedObject.
 	objectInTheStack := self newZeroSizedObject.
-	
-	self frameBuilder method: objectInTheStack ; buildFrame.
+
+	stackBuilder addNewFrame method: objectInTheStack.
+	stackBuilder buildStack.
 		
 	memory coInterpreter method: objectInSpecialVariable.
 	

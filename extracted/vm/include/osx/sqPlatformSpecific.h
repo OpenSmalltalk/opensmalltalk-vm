@@ -78,26 +78,14 @@
 void		sqFilenameFromStringOpen(char *buffer,sqInt fileIndex, long fileLength);
 void		sqFilenameFromString(char *buffer,sqInt fileIndex, long fileLength);
 #undef allocateMemoryMinimumImageFileHeaderSize
-#undef sqImageFileReadEntireImage
-#if SPURVM
-extern usqInt sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize);
-# define allocateMemoryMinimumImageFileHeaderSize(heapSize, minimumMemory, fileStream, headerSize) \
-sqAllocateMemory(minimumMemory, heapSize)
-# define sqMacMemoryFree() 
-#else
-usqInt sqAllocateMemoryMac(usqInt desiredHeapSize,sqInt minHeapSize, FILE * f,usqInt headersize);
-#define allocateMemoryMinimumImageFileHeaderSize(heapSize, minimumMemory, fileStream, headerSize) \
-sqAllocateMemoryMac(heapSize, minimumMemory, fileStream, headerSize)
-#endif
 
-#ifdef BUILD_FOR_OSX
-size_t sqImageFileReadEntireImage(void *ptr, size_t elementSize, size_t count, FILE * f);
-#define sqImageFileReadEntireImage(memoryAddress, elementSize,  length, fileStream) \
-sqImageFileReadEntireImage(memoryAddress, elementSize, length, fileStream)
-#else
+extern usqInt sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize, usqInt baseAddress);
+#define allocateMemoryMinimumImageFileHeaderSizeBaseAddress(heapSize, minimumMemory, fileStream, headerSize, baseAddress) \
+sqAllocateMemory(minimumMemory, heapSize, baseAddress)
+
+# define sqMacMemoryFree() 
+
 #include <dlfcn.h>
-#define sqImageFileReadEntireImage(memoryAddress, elementSize,  length, fileStream) length 
-#endif
 
 #undef ioMSecs
 #define ioUtcWithOffset ioUtcWithOffset
@@ -106,12 +94,8 @@ sqImageFileReadEntireImage(memoryAddress, elementSize, length, fileStream)
 #define ReturnFromInterpret() return 0
 
 /* undef the memory routines for our logic */
-#undef sqGrowMemoryBy
-#undef sqShrinkMemoryBy
 #undef sqMemoryExtraBytesLeft
 
-sqInt sqGrowMemoryBy(sqInt memoryLimit, sqInt delta);
-sqInt sqShrinkMemoryBy(sqInt memoryLimit, sqInt delta);
 sqInt sqMemoryExtraBytesLeft(sqInt includingSwap);
 
     #undef insufficientMemorySpecifiedError
@@ -164,11 +148,6 @@ extern const pthread_key_t tltiIndex;
 #  define ioMilliSleep(ms) usleep((ms) * 1000)
 # endif /* COGMTVM */
 #endif /* STACKVM */
-
-/* warnPrintf is provided (and needed) on the win32 platform.
- * But it may be mentioned elsewhere, so provide a suitable def.
- */
-#define warnPrintf printf
 
 // From Joshua Gargus, for XCode 3.1
 #ifdef __GNUC__

@@ -4,7 +4,8 @@ Class {
 	#instVars : [
 		'type',
 		'address',
-		'size'
+		'size',
+		'value'
 	],
 	#category : #VMMakerTests
 }
@@ -17,6 +18,18 @@ UnicornInvalidMemoryAccess >> address [
 { #category : #accessing }
 UnicornInvalidMemoryAccess >> address: anObject [
 	address := anObject
+]
+
+{ #category : #testing }
+UnicornInvalidMemoryAccess >> isFetch [
+	
+	^ self type value anyMask: UcMemoryAccessType UC_MEM_FETCH value
+]
+
+{ #category : #accessing }
+UnicornInvalidMemoryAccess >> messageText [
+
+	^ type item asString, ' at ', address hex
 ]
 
 { #category : #accessing }
@@ -37,4 +50,14 @@ UnicornInvalidMemoryAccess >> type [
 { #category : #accessing }
 UnicornInvalidMemoryAccess >> type: anObject [
 	type := anObject
+]
+
+{ #category : #accessing }
+UnicornInvalidMemoryAccess >> value [
+	^ value
+]
+
+{ #category : #accessing }
+UnicornInvalidMemoryAccess >> value: anObject [
+	value := anObject
 ]

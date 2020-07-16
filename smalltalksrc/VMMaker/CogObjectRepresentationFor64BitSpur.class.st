@@ -256,6 +256,25 @@ CogObjectRepresentationFor64BitSpur >> genAllocFloatValue: dpreg into: resultReg
 	^jumpFail
 ]
 
+{ #category : #'primitive generators' }
+CogObjectRepresentationFor64BitSpur >> genBoxedOrSmallFloat: floatOopReg scratchReg: scratchReg into: destReg [
+	<returnTypeC: #'AbstractInstruction *'>
+	<var: #jumpNonSmallFloat type: #'AbstractInstruction *'>
+	<var: #jumpMerge type: #'AbstractInstruction *'>
+	<var: #jumpFail type: #'AbstractInstruction *'>
+	| jumpNonSmallFloat jumpMerge jumpFail |
+	jumpNonSmallFloat := self genJumpNotSmallFloat: floatOopReg.
+	"Small float case"
+	self genGetSmallFloatValueOf: floatOopReg scratch: scratchReg into: destReg.
+	jumpMerge := cogit Jump: 0.	
+
+	jumpNonSmallFloat jmpTarget: cogit Label.
+	jumpFail := super genBoxedOrSmallFloat: floatOopReg scratchReg: scratchReg into: destReg.
+	
+	jumpMerge jmpTarget: cogit Label.
+	^ jumpFail
+]
+
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationFor64BitSpur >> genClearAndSetSmallIntegerTagsIn: scratchReg [
 	"Set the SmallInteger tag bits when the tag bits may be filled with garbage."
@@ -289,6 +308,54 @@ CogObjectRepresentationFor64BitSpur >> genConvertCharacterToSmallIntegerInReg: r
 	"Convert the Character in reg to a SmallInteger, assuming
 	 the Character's value is a valid character."
 	cogit SubCq: objectMemory characterTag - objectMemory smallIntegerTag R: reg
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationFor64BitSpur >> genConvertDataFormat: formatReg numSlots: slotsRegister intoBytes: destReg [
+	| jumpIsBytes jumpIsShorts jumpIsLongs jumpLongLongsDone jumpBytesDone jumpShortsDone jumpLongsDone |
+	slotsRegister ~= destReg ifTrue: [
+		cogit MoveR: slotsRegister R: destReg.
+	].
+
+	cogit CmpCq: objectMemory firstByteFormat R: formatReg.
+	jumpIsBytes := cogit JumpAboveOrEqual: 0.
+	
+	cogit CmpCq: objectMemory firstShortFormat R: formatReg.
+	jumpIsShorts := cogit JumpAboveOrEqual: 0.
+	
+	cogit CmpCq: objectMemory firstLongFormat R: formatReg.
+	jumpIsLongs := cogit JumpAboveOrEqual: 0.
+
+	"Long long"
+	cogit LogicalShiftLeftCq: objectMemory shiftForWord R: destReg.
+	jumpLongLongsDone := cogit Jump: 0.
+	
+	"Bytes"
+	jumpIsBytes jmpTarget:
+		(cogit LogicalShiftLeftCq: objectMemory shiftForWord R: destReg).
+		cogit AndCq: objectMemory wordSize - 1 R: formatReg.
+		cogit SubR: formatReg R: destReg.
+	jumpBytesDone := cogit Jump: 0.
+	
+	jumpIsShorts jmpTarget:
+		(cogit LogicalShiftLeftCq: objectMemory shiftForWord - 1 R: destReg).
+		cogit AndCq: (objectMemory wordSize >> 1) - 1 R: formatReg.
+		cogit SubR: formatReg R: destReg.
+		cogit LogicalShiftLeftCq: 1 R: destReg.
+	jumpShortsDone := cogit Jump: 0.
+	
+	jumpIsLongs jmpTarget:
+		(cogit LogicalShiftLeftCq: objectMemory shiftForWord - 2 R: destReg).
+		cogit AndCq: (objectMemory wordSize >> 2) - 1 R: formatReg.
+		cogit SubR: formatReg R: destReg.
+		cogit LogicalShiftLeftCq: 2 R: destReg.
+	jumpLongsDone := cogit Jump: 0.
+	
+	jumpLongLongsDone jmpTarget:
+	(jumpLongsDone jmpTarget:
+	(jumpShortsDone jmpTarget:
+	(jumpBytesDone jmpTarget:
+		cogit Label))).
 ]
 
 { #category : #'compile abstract instructions' }
@@ -619,6 +686,55 @@ CogObjectRepresentationFor64BitSpur >> genGetSmallFloatValueOf: oopReg scratch: 
 	jumpSFZero jmpTarget: (cogit RotateRightCq: 1 R: scratch).
 	cogit MoveR: scratch Rd: dpReg.
 	^0
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationFor64BitSpur >> genIntegerTo64BitPositiveIntegerValue: valueReg into: resultReg scratchReg: scratch1 scratchReg: scratch2 [
+	<var: #jumpFail type: #'AbstractInstruction *'>
+	<var: #jumpNotSmallInteger type: #'AbstractInstruction *'>
+	<var: #jumpMerge type: #'AbstractInstruction *'>
+	
+	| jumpNotSmallInteger jumpMerge jumpFail |
+	cogit MoveR: valueReg R: scratch1.
+	cogit LogicalShiftRightCq: self numSmallIntegerBits - 1 R: scratch1. "If in range this is now 0"
+	(cogit lastOpcode setsConditionCodesFor: JumpZero) ifFalse:
+		[cogit CmpCq: 0 R: scratch1]. "N.B. FLAGS := ClassReg - 0"
+	jumpNotSmallInteger := cogit JumpNonZero: 0.
+	
+	cogit MoveR: valueReg R: resultReg.
+	self genConvertIntegerToSmallIntegerInReg: resultReg.
+	jumpMerge := cogit Jump: 0.
+			
+	jumpNotSmallInteger jmpTarget: cogit Label.
+	jumpFail := self genAlloc64BitPositiveIntegerValue: valueReg into: resultReg scratchReg: scratch1 scratchReg: scratch2.
+
+	jumpMerge jmpTarget: cogit Label.
+	^ jumpFail.
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationFor64BitSpur >> genIntegerTo64BitSignedIntegerValue: valueReg into: resultReg scratchReg: scratch1 scratchReg: scratch2 [
+	<returnTypeC: #'AbstractInstruction *'>
+	<var: #jumpFail type: #'AbstractInstruction *'>
+	<var: #jumpNotSmallInteger type: #'AbstractInstruction *'>
+	<var: #jumpMerge type: #'AbstractInstruction *'>
+	
+	| jumpNotSmallInteger jumpMerge jumpFail |
+	cogit MoveR: valueReg R: scratch1.
+	cogit ArithmeticShiftRightCq: self numSmallIntegerBits R: scratch1. "If in range this is now 0 or -1"
+	cogit AddCq: 1 R: scratch1.
+	cogit CmpCq: 1 R: scratch1.
+	jumpNotSmallInteger := cogit JumpAbove: 0.
+	
+	cogit MoveR: valueReg R: resultReg.
+	self genConvertIntegerToSmallIntegerInReg: resultReg.
+	jumpMerge := cogit Jump: 0.
+			
+	jumpNotSmallInteger jmpTarget: cogit Label.
+	jumpFail := self genAlloc64BitSignedIntegerValue: valueReg into: resultReg scratchReg: scratch1 scratchReg: scratch2.
+
+	jumpMerge jmpTarget: cogit Label.
+	^ jumpFail
 ]
 
 { #category : #'compile abstract instructions' }
@@ -1309,300 +1425,95 @@ CogObjectRepresentationFor64BitSpur >> genPrimitiveImmediateAsInteger [
 ]
 
 { #category : #'primitive generators' }
-CogObjectRepresentationFor64BitSpur >> genPrimitiveMirrorNew [
-	"Implement 1-arg (instantiateFixedClass:) primitiveNew for convenient cases:
-	- the class argument has a hash
-	- the class argument is fixed size (excluding ephemerons to save instructions & miniscule time)
-	- single word header/num slots < numSlotsMask
-	- the result fits in eden (actually below scavengeThreshold)"
-
-	<option: #NewspeakVM>
-	| headerReg fillReg instSpecReg byteSizeReg
-	  jumpImmediate jumpUnhashed jumpNotFixedPointers jumpTooSmall jumpBadFormat
-	  jumpNoSpace jumpTooBig jumpHasSlots jumpVariableOrEphemeron
-	  fillLoop skip |
-	<var: 'skip' type: #'AbstractInstruction *'>
-	<var: 'fillLoop' type: #'AbstractInstruction *'>
-	<var: 'jumpTooBig' type: #'AbstractInstruction *'>
-	<var: 'jumpHasSlots' type: #'AbstractInstruction *'>
-	<var: 'jumpNoSpace' type: #'AbstractInstruction *'>
-	<var: 'jumpTooSmall' type: #'AbstractInstruction *'>
-	<var: 'jumpUnhashed' type: #'AbstractInstruction *'>
-	<var: 'jumpImmediate' type: #'AbstractInstruction *'>
-	<var: 'jumpBadFormat' type: #'AbstractInstruction *'>
-	<var: 'jumpNotFixedPointers' type: #'AbstractInstruction *'>
-	<var: 'jumpVariableOrEphemeron' type: #'AbstractInstruction *'>
-
-	self assert: cogit methodNumArgs = 1.
-	cogit genLoadArgAtDepth: 0 into: Arg0Reg.
-
-	"header will contain classIndex/class's hash & format & numSlots/fixed size and finally fill value (nilObject)."
-	headerReg := fillReg := SendNumArgsReg.
-	"inst spec will hold class's instance specification, then byte size and finally end of new object."
-	instSpecReg := byteSizeReg := ClassReg.
-
-	"get freeStart as early as possible so as not to wait later..."
-	cogit MoveAw: objectMemory freeStartAddress R: Arg1Reg.
-
-	"validate class arg; sigh, this mirror crap hobbles unfairly; there is a better way with selector namespaces..."
-	jumpImmediate := self genJumpImmediate: Arg0Reg.
-
-	"Is the class arg pointers with at least 3 fields?"
-	self genGetFormatOf: Arg0Reg
-		into: TempReg
-		leastSignificantHalfOfBaseHeaderIntoScratch: NoReg.
-	cogit CmpCq: objectMemory nonIndexablePointerFormat R: TempReg.
-	jumpNotFixedPointers := cogit JumpNonZero: 0.
+CogObjectRepresentationFor64BitSpur >> genPrimitiveLoadInt32FromBytes [
+	^ self genPrimitiveLoad: 4 fromBytesWith: [ :sourcePointer |
+		cogit MoveM32: 0 r: sourcePointer R: ReceiverResultReg.
+		cogit SignExtend32R: ReceiverResultReg R: ReceiverResultReg.
 	
-	self genGetRawSlotSizeOfNonImm: Arg0Reg into: TempReg.
-	cogit CmpCq: InstanceSpecificationIndex + 1 R: TempReg.
-	jumpTooSmall := cogit JumpLess: 0.
-
-	"get class's hash & fail if 0"
-	self genGetHashFieldNonImmOf: Arg0Reg into: headerReg.
-	jumpUnhashed := cogit JumpZero: 0.
-
-	"get class's format inst var for both inst spec (format field) and num fixed fields"
-	self genLoadSlot: InstanceSpecificationIndex sourceReg: Arg0Reg destReg: instSpecReg.
-	jumpBadFormat := self genJumpNotSmallInteger: instSpecReg scratchReg: TempReg.
-	self genConvertSmallIntegerToIntegerInReg: instSpecReg.
-	cogit MoveR: instSpecReg R: TempReg.
-	cogit LogicalShiftRightCq: objectMemory fixedFieldsFieldWidth R: TempReg.
-	cogit AndCq: objectMemory formatMask R: TempReg.
-	cogit AndCq: objectMemory fixedFieldsOfClassFormatMask R: instSpecReg.
-	"fail if not fixed or if ephemeron (rare beasts so save the cycles)"
-	cogit CmpCq: objectMemory nonIndexablePointerFormat R: TempReg.
-	jumpVariableOrEphemeron := cogit JumpAbove: 0.
-	cogit CmpCq: objectMemory numSlotsMask R: instSpecReg.
-	jumpTooBig := cogit JumpAboveOrEqual: 0.
-	"Add format to classIndex/format in header; then add in numSlots"
-	cogit LogicalShiftLeftCq: objectMemory formatShift R: TempReg.
-	cogit AddR: TempReg R: headerReg.
-	cogit MoveR: instSpecReg R: TempReg.
-	cogit LogicalShiftLeftCq: objectMemory numSlotsFullShift R: TempReg.
-	cogit AddR: TempReg R: headerReg.
-	"compute byte size; remember 0-sized objects still need 1 slot."
-	cogit CmpCq: 0 R: byteSizeReg. "a.k.a. instSpecReg"
-	jumpHasSlots := cogit JumpNonZero: 0.
-	cogit MoveCq: objectMemory baseHeaderSize * 2 R: byteSizeReg.
-	skip := cogit Jump: 0.
-	"round up to allocationUnit"
-	jumpHasSlots jmpTarget:
-	(cogit AddCq: objectMemory baseHeaderSize / objectMemory wordSize R: byteSizeReg).
-	cogit LogicalShiftLeftCq: objectMemory shiftForWord R: byteSizeReg.
-	skip jmpTarget:
-	"check if allocation fits (freeSize + byteSize < scavengeThreshold); scavengeThreshold is constant."
-	(cogit AddR: Arg1Reg R: byteSizeReg).
-	cogit CmpCq: objectMemory getScavengeThreshold R: byteSizeReg.
-	jumpNoSpace := cogit JumpAboveOrEqual: 0.
-	"write back new freeStart; get result. byteSizeReg holds new freeStart, the limit of the object"
-	cogit MoveR: byteSizeReg Aw: objectMemory freeStartAddress.
-	cogit MoveR: Arg1Reg R: ReceiverResultReg.
-	"write header"
-	cogit MoveR: headerReg Mw: 0 r: Arg1Reg.
-	"now fill"
-	cogit LoadEffectiveAddressMw: objectMemory baseHeaderSize r: ReceiverResultReg R: Arg1Reg.
-	cogit MoveCq: objectMemory nilObject R: fillReg.
-	fillLoop := 
-	cogit MoveR: fillReg Mw: 0 r: Arg1Reg.
-	cogit AddCq: 8 R: Arg1Reg.
-	cogit CmpR: Arg1Reg R: byteSizeReg.
-	cogit JumpAbove: fillLoop.
-	cogit genPrimReturn.
-
-	jumpNotFixedPointers jmpTarget:
-	(jumpBadFormat jmpTarget:
-	(jumpTooSmall jmpTarget:
-	(jumpImmediate jmpTarget:
-	(jumpUnhashed jmpTarget:
-	(jumpVariableOrEphemeron jmpTarget:
-	(jumpTooBig jmpTarget:
-	(jumpNoSpace jmpTarget: cogit Label))))))).
-
-	^0
+		self genConvertIntegerToSmallIntegerInReg: ReceiverResultReg.
+		cogit genPrimReturn
+	].
 ]
 
 { #category : #'primitive generators' }
-CogObjectRepresentationFor64BitSpur >> genPrimitiveMirrorNewWithArg [
-	"Implement instantiateVariableClass:withSize: for convenient cases:
-	- the class argument has a hash
-	- the class argument is variable and not compiled method
-	- single word header/num slots < numSlotsMask
-	- the result fits in eden
-	See superclass method for dynamic frequencies of formats.
-	For the moment we implement only arrayFormat, firstByteFormat & firstLongFormat"
+CogObjectRepresentationFor64BitSpur >> genPrimitiveLoadInt32FromExternalAddress [
+	^ self genPrimitiveLoadFromExternalAddressWith: [ :sourcePointer |
+		cogit MoveM32: 0 r: sourcePointer R: ReceiverResultReg.
+		cogit SignExtend32R: ReceiverResultReg R: ReceiverResultReg.
+	
+		self genConvertIntegerToSmallIntegerInReg: ReceiverResultReg.
+		cogit genPrimReturn
+	].
+]
 
-	<option: #NewspeakVM>
-	| headerReg fillReg instSpecReg byteSizeReg maxSlots
-	  jumpArrayTooBig jumpByteTooBig jumpLongTooBig
-	  jumpArrayFormat jumpByteFormat jumpBytePrepDone jumpLongPrepDone
-	  jumpUnhashed jumpTooSmall jumpImmediate
-	  jumpNElementsNonInt jumpFailCuzFixed jumpNoSpace jumpHasSlots fillLoop skip |
-	<var: 'skip' type: #'AbstractInstruction *'>
-	<var: 'fillLoop' type: #'AbstractInstruction *'>	
-	<var: 'jumpHasSlots' type: #'AbstractInstruction *'>
-	<var: 'jumpNoSpace' type: #'AbstractInstruction *'>
-	<var: 'jumpTooSmall' type: #'AbstractInstruction *'>
-	<var: 'jumpUnhashed' type: #'AbstractInstruction *'>
-	<var: 'jumpImmediate' type: #'AbstractInstruction *'>
-	<var: 'jumpByteFormat' type: #'AbstractInstruction *'>
-	<var: 'jumpByteTooBig' type: #'AbstractInstruction *'>
-	<var: 'jumpLongTooBig' type: #'AbstractInstruction *'>
-	<var: 'jumpArrayFormat' type: #'AbstractInstruction *'>
-	<var: 'jumpArrayTooBig' type: #'AbstractInstruction *'>
-	<var: 'jumpFailCuzFixed' type: #'AbstractInstruction *'>
-	<var: 'jumpBytePrepDone' type: #'AbstractInstruction *'>
-	<var: 'jumpLongPrepDone' type: #'AbstractInstruction *'>
-	<var: 'jumpNElementsNonInt' type: #'AbstractInstruction *'>
+{ #category : #'primitive generators' }
+CogObjectRepresentationFor64BitSpur >> genPrimitiveLoadInt64FromBytes [
+	^ self genPrimitiveLoad: 8 fromBytesWith: [ :sourcePointer |
+		| jumpFailAlloc |
+		cogit MoveM64: 0 r: sourcePointer R: ClassReg.
+		jumpFailAlloc := self genIntegerTo64BitSignedIntegerValue: ClassReg into: SendNumArgsReg scratchReg: Extra0Reg scratchReg: TempReg.
+		cogit MoveR: SendNumArgsReg R: ReceiverResultReg.
+		cogit genPrimReturn.
+		jumpFailAlloc jmpTarget: cogit Label
+	] needsToTrap: true.
+]
 
-	self assert: cogit methodNumArgs = 2.
-	cogit genLoadArgAtDepth: 1 into: Arg0Reg. "class arg"
-	cogit genLoadArgAtDepth: 0 into: Arg1Reg. "num indexable slots arg"
-	"header will contain classIndex/class's hash & format & numSlots/fixed size"
-	headerReg := SendNumArgsReg.
-	"Assume there's an available scratch register on 64-bit machines.  This holds the saved numFixedFields and then the value to fill with"
-	fillReg := Extra0Reg.
-	self assert: fillReg > 0.
-	"inst spec will hold class's instance specification and then byte size"
-	instSpecReg := byteSizeReg := ClassReg.
-	"The max slots we'll allocate here are those for a single header"
-	maxSlots := objectMemory numSlotsMask - 1.
+{ #category : #'primitive generators' }
+CogObjectRepresentationFor64BitSpur >> genPrimitiveLoadInt64FromExternalAddress [
+	^ self genPrimitiveLoadFromExternalAddressWith: [ :sourcePointer |
+		| jumpFailAlloc |
+		cogit MoveM64: 0 r: sourcePointer R: ClassReg.
+		jumpFailAlloc := self genIntegerTo64BitSignedIntegerValue: ClassReg into: SendNumArgsReg scratchReg: Extra0Reg scratchReg: TempReg.
+		cogit MoveR: SendNumArgsReg R: ReceiverResultReg.
+		cogit genPrimReturn.
+		jumpFailAlloc jmpTarget: cogit Label
+	] needsToTrap: true.
+]
 
-	"check size and fail if not a +ve integer"
-	jumpNElementsNonInt := self genJumpNotSmallInteger: Arg1Reg scratchReg: TempReg.
+{ #category : #'primitive generators' }
+CogObjectRepresentationFor64BitSpur >> genPrimitiveLoadUInt32FromBytes [
+	^ self genPrimitiveLoad: 4 fromBytesWith: [ :sourcePointer |
+		cogit MoveM32: 0 r: sourcePointer R: ReceiverResultReg.
+		cogit ZeroExtend32R: ReceiverResultReg R: ReceiverResultReg.
+	
+		self genConvertIntegerToSmallIntegerInReg: ReceiverResultReg.
+		cogit genPrimReturn
+	].
+]
 
-	"Is the class arg pointers with at least 3 fields?"
-	jumpImmediate := self genJumpImmediate: Arg0Reg.
-	self genGetRawSlotSizeOfNonImm: Arg0Reg into: TempReg.
-	cogit CmpCq: InstanceSpecificationIndex + 1 R: TempReg.
-	jumpTooSmall := cogit JumpLess: 0.
+{ #category : #'primitive generators' }
+CogObjectRepresentationFor64BitSpur >> genPrimitiveLoadUInt32FromExternalAddress [
+	^ self genPrimitiveLoadFromExternalAddressWith: [ :sourcePointer |
+		cogit MoveM32: 0 r: sourcePointer R: ReceiverResultReg.
+		cogit ZeroExtend32R: ReceiverResultReg R: ReceiverResultReg.
+	
+		self genConvertIntegerToSmallIntegerInReg: ReceiverResultReg.
+		cogit genPrimReturn
+	].
+]
 
-	"get freeStart as early as possible so as not to wait later..."
-	cogit MoveAw: objectMemory freeStartAddress R: Arg1Reg.
-	"get class's hash & fail if 0"
-	self genGetHashFieldNonImmOf: ReceiverResultReg into: headerReg.
-	jumpUnhashed := cogit JumpZero: 0.
+{ #category : #'primitive generators' }
+CogObjectRepresentationFor64BitSpur >> genPrimitiveLoadUInt64FromBytes [
+	^ self genPrimitiveLoad: 8 fromBytesWith: [ :sourcePointer |
+		| jumpFailAlloc |
+		cogit MoveM64: 0 r: sourcePointer R: ClassReg.
+		jumpFailAlloc := self genIntegerTo64BitPositiveIntegerValue: ClassReg into: SendNumArgsReg scratchReg: Extra0Reg scratchReg: TempReg.
+		cogit MoveR: SendNumArgsReg R: ReceiverResultReg.
+		cogit genPrimReturn.
+		jumpFailAlloc jmpTarget: cogit Label
+	] needsToTrap: true.
+]
 
-	"The basicNew: code below (copied from genPrimitiveNewWithArg) expects class
-	 in ReceiverResultReg and size in Arg0Reg.  Shuffle args to match, undoing on failure."
-	cogit
-		PushR: ReceiverResultReg;
-		MoveR: Arg0Reg R: ReceiverResultReg;
-		MoveR: Arg1Reg R: Arg0Reg.
-
-	"get class's format inst var for inst spec (format field)"
-	self genLoadSlot: InstanceSpecificationIndex sourceReg: ReceiverResultReg destReg: instSpecReg.
-	cogit LogicalShiftRightCq: objectMemory fixedFieldsFieldWidth + self numSmallIntegerTagBits R: instSpecReg.
-	cogit AndCq: objectMemory formatMask R: instSpecReg.
-	"Add format to classIndex/format header now"
-	cogit MoveR: instSpecReg R: TempReg.
-	cogit LogicalShiftLeftCq: objectMemory formatShift R: TempReg.
-	cogit AddR: TempReg R: headerReg.
-	"get integer value of num fields in fillReg now"
-	cogit MoveR: Arg0Reg R: fillReg.
-	self genConvertSmallIntegerToIntegerInReg: fillReg.
-	"dispatch on format, failing if not variable or if compiled method"
-	cogit CmpCq: objectMemory arrayFormat R: instSpecReg.
-	jumpArrayFormat := cogit JumpZero: 0.
-	cogit CmpCq: objectMemory firstByteFormat R: instSpecReg.
-	jumpByteFormat := cogit JumpZero: 0.
-	cogit CmpCq: objectMemory firstLongFormat R: instSpecReg.
-	jumpFailCuzFixed := cogit JumpNonZero: 0.
-
-	cogit CmpCq: (objectMemory integerObjectOf: maxSlots) R: Arg0Reg.
-	jumpLongTooBig := cogit JumpAbove: 0.
-	"save num elements/slot size to instSpecReg"
-	cogit MoveR: fillReg R: instSpecReg.
-	"compute odd bits and add into headerReg; oddBits := 2 - nElements bitAnd: 1"
-	cogit MoveCq: objectMemory wordSize / 4 R: TempReg.
-	cogit SubR: instSpecReg R: TempReg.
-	cogit AndCq: objectMemory wordSize / 4 - 1 R: TempReg.
-	cogit LogicalShiftLeftCq: objectMemory formatShift R: TempReg.
-	cogit AddR: TempReg R: headerReg.
-	"round up num elements to numSlots in instSpecReg"
-	cogit AddCq: objectMemory wordSize / 4 - 1 R: instSpecReg.
-	cogit LogicalShiftRightCq: objectMemory shiftForWord - 2 R: instSpecReg.
-	cogit MoveCq: 0 R: fillReg.
-	jumpLongPrepDone := cogit Jump: 0. "go allocate"
-
-	jumpByteFormat jmpTarget:
-	(cogit CmpCq: (objectMemory integerObjectOf: maxSlots * objectMemory wordSize) R: Arg0Reg).
-	jumpByteTooBig := cogit JumpAbove: 0.
-	"save num elements to instSpecReg"
-	cogit MoveR: fillReg R: instSpecReg.
-	"compute odd bits and add into headerReg; oddBits := 4 - nElements bitAnd: 3"
-	cogit MoveCq: objectMemory wordSize R: TempReg.
-	cogit SubR: instSpecReg R: TempReg.
-	cogit AndCq: objectMemory wordSize - 1 R: TempReg.
-	cogit LogicalShiftLeftCq: objectMemory formatShift R: TempReg.
-	cogit AddR: TempReg R: headerReg.
-	"round up num elements to numSlots in instSpecReg"
-	cogit AddCq: objectMemory wordSize - 1 R: instSpecReg.
-	cogit LogicalShiftRightCq: objectMemory shiftForWord R: instSpecReg.
-	cogit MoveCq: 0 R: fillReg.
-	jumpBytePrepDone := cogit Jump: 0. "go allocate"
-
-	jumpArrayFormat jmpTarget:
-		(cogit CmpCq: (objectMemory integerObjectOf: maxSlots) R: Arg0Reg).
-	jumpArrayTooBig := cogit JumpAbove: 0.
-	"save num elements/slot size to instSpecReg"
-	cogit MoveR: fillReg R: instSpecReg.
-	cogit MoveCq: objectMemory nilObject R: fillReg.
-	"fall through to allocate"
-
-	jumpBytePrepDone jmpTarget:
-	(jumpLongPrepDone jmpTarget: cogit Label).
-
-	"store numSlots to headerReg"
-	cogit MoveR: instSpecReg R: TempReg.
-	cogit LogicalShiftLeftCq: objectMemory numSlotsFullShift R: TempReg.
-	cogit AddR: TempReg R: headerReg.
-	"compute byte size; remember 0-sized objects still need 1 slot."
-	cogit CmpCq: 0 R: byteSizeReg. "a.k.a. instSpecReg"
-	jumpHasSlots := cogit JumpNonZero: 0.
-	cogit MoveCq: objectMemory baseHeaderSize * 2 R: byteSizeReg.
-	skip := cogit Jump: 0.
-	jumpHasSlots jmpTarget:
-	(cogit AddCq: objectMemory baseHeaderSize / objectMemory wordSize R: byteSizeReg).
-	cogit LogicalShiftLeftCq: objectMemory shiftForWord R: byteSizeReg.
-	skip jmpTarget:
-	"check if allocation fits"
-	(cogit AddR: Arg1Reg R: byteSizeReg).
-	cogit CmpCq: objectMemory getScavengeThreshold R: byteSizeReg.
-	jumpNoSpace := cogit JumpAboveOrEqual: 0.
-	"get result, increment freeStart and write it back. Arg1Reg holds new freeStart, the limit of the object"
-	cogit MoveR: Arg1Reg R: ReceiverResultReg.
-	cogit MoveR: byteSizeReg Aw: objectMemory freeStartAddress.
-	"write other half of header (numSlots/0 identityHash)"
-	cogit MoveR: headerReg Mw: 0 r: ReceiverResultReg.
-	"now fill"
-	cogit PopR: TempReg. "discard pushed receiver"
-	cogit LoadEffectiveAddressMw: objectMemory baseHeaderSize r: ReceiverResultReg R: Arg1Reg.
-	fillLoop := 
-	cogit MoveR: fillReg Mw: 0 r: Arg1Reg.
-	cogit AddCq: 8 R: Arg1Reg.
-	cogit CmpR: Arg1Reg R: byteSizeReg.
-	cogit JumpAbove: fillLoop.
-	cogit genPrimReturn.
-
-	jumpFailCuzFixed jmpTarget:
-	(jumpArrayTooBig jmpTarget:
-	(jumpByteTooBig jmpTarget:
-	(jumpLongTooBig jmpTarget:
-	(jumpNoSpace jmpTarget:  cogit Label)))).
-
-	"unshuffle arguments"
-	cogit
-		MoveR: Arg0Reg R: Arg1Reg;
-		MoveR: ReceiverResultReg R: Arg0Reg;
-		PopR: ReceiverResultReg.
-
-	jumpUnhashed jmpTarget:
-	(jumpImmediate jmpTarget:
-	(jumpTooSmall jmpTarget:
-	(jumpNElementsNonInt jmpTarget: cogit Label))).
-
-	^0
+{ #category : #'primitive generators' }
+CogObjectRepresentationFor64BitSpur >> genPrimitiveLoadUInt64FromExternalAddress [
+	^ self genPrimitiveLoadFromExternalAddressWith: [ :sourcePointer |
+		| jumpFailAlloc |
+		cogit MoveM64: 0 r: sourcePointer R: ClassReg.
+		jumpFailAlloc := self genIntegerTo64BitPositiveIntegerValue: ClassReg into: SendNumArgsReg scratchReg: Extra0Reg scratchReg: TempReg.
+		cogit MoveR: SendNumArgsReg R: ReceiverResultReg.
+		cogit genPrimReturn.
+		jumpFailAlloc jmpTarget: cogit Label
+	] needsToTrap: true.
 ]
 
 { #category : #'primitive generators' }
@@ -1624,9 +1535,6 @@ CogObjectRepresentationFor64BitSpur >> genPrimitiveNew [
 	<var: 'jumpUnhashed' type: #'AbstractInstruction *'>
 	<var: 'jumpVariableOrEphemeron' type: #'AbstractInstruction *'>
 
-	NewspeakVM ifTrue:
-		[cogit methodNumArgs = 1 ifTrue:
-			[^self genPrimitiveMirrorNew]].
 	cogit methodNumArgs ~= 0 ifTrue:
 		[^UnimplementedPrimitive].
 
@@ -1724,9 +1632,6 @@ CogObjectRepresentationFor64BitSpur >> genPrimitiveNewWithArg [
 	<var: 'jumpLongPrepDone' type: #'AbstractInstruction *'>
 	<var: 'jumpNElementsNonInt' type: #'AbstractInstruction *'>
 
-	NewspeakVM ifTrue:
-		[cogit methodNumArgs = 2 ifTrue:
-			[^self genPrimitiveMirrorNewWithArg]].
 	cogit methodNumArgs ~= 1 ifTrue:
 		[^UnimplementedPrimitive].
 	cogit genLoadArgAtDepth: 0 into: Arg0Reg.
@@ -1941,6 +1846,138 @@ CogObjectRepresentationFor64BitSpur >> genPrimitiveShallowCopy [
 	(jumpEmpty jmpTarget: cogit Label)))).
 
 	^0
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationFor64BitSpur >> genPrimitiveStoreInt32IntoBytes [
+	^ self genPrimitiveStore: 4 intoBytesWith: [ :destPointer :valueOop |
+		| jumpNonSmallInteger |
+		jumpNonSmallInteger := self genJumpNotSmallInteger: valueOop scratchReg: TempReg.
+		cogit MoveR: valueOop R: ReceiverResultReg.
+	
+		self genConvertSmallIntegerToIntegerInReg: valueOop.
+		cogit MoveR: valueOop M32: 0 r: destPointer.
+		cogit genPrimReturn.
+		
+		jumpNonSmallInteger jmpTarget: cogit Label
+	].
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationFor64BitSpur >> genPrimitiveStoreInt32IntoExternalAddress [
+	^ self genPrimitiveStoreIntoExternalAddressWith: [ :destPointer :valueOop |
+		| jumpNonSmallInteger |
+		jumpNonSmallInteger := self genJumpNotSmallInteger: valueOop scratchReg: TempReg.
+		cogit MoveR: valueOop R: ReceiverResultReg.
+	
+		self genConvertSmallIntegerToIntegerInReg: valueOop.
+		cogit MoveR: valueOop M32: 0 r: destPointer.
+		cogit genPrimReturn.
+		
+		jumpNonSmallInteger jmpTarget: cogit Label
+	].
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationFor64BitSpur >> genPrimitiveStoreInt64IntoBytes [
+	^ self genPrimitiveStore: 8 intoBytesWith: [ :destPointer :valueOop |
+		| jumpNonSmallInteger |
+		jumpNonSmallInteger := self genJumpNotSmallInteger: valueOop scratchReg: TempReg.
+		cogit MoveR: valueOop R: ReceiverResultReg.
+	
+		self genConvertSmallIntegerToIntegerInReg: valueOop.
+		cogit MoveR: valueOop M64: 0 r: destPointer.
+		cogit genPrimReturn.
+		
+		jumpNonSmallInteger jmpTarget: cogit Label
+	] needsToTrap: true.
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationFor64BitSpur >> genPrimitiveStoreInt64IntoExternalAddress [
+	^ self genPrimitiveStoreIntoExternalAddressWith: [ :destPointer :valueOop |
+		| jumpNonSmallInteger |
+		jumpNonSmallInteger := self genJumpNotSmallInteger: valueOop scratchReg: TempReg.
+		cogit MoveR: valueOop R: ReceiverResultReg.
+	
+		self genConvertSmallIntegerToIntegerInReg: valueOop.
+		cogit MoveR: valueOop M64: 0 r: destPointer.
+		cogit genPrimReturn.
+		
+		jumpNonSmallInteger jmpTarget: cogit Label
+	] needsToTrap: true.
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationFor64BitSpur >> genPrimitiveStoreUInt32IntoBytes [
+	^ self genPrimitiveStore: 4 intoBytesWith: [ :destPointer :valueOop |
+		| jumpNonSmallInteger jumpNegative |
+		jumpNonSmallInteger := self genJumpNotSmallInteger: valueOop scratchReg: TempReg.
+		cogit CmpCq: 0 R: valueOop.
+		jumpNegative := cogit JumpLess: 0.
+		
+		cogit MoveR: valueOop R: ReceiverResultReg.
+	
+		self genConvertSmallIntegerToIntegerInReg: valueOop.
+		cogit MoveR: valueOop M32: 0 r: destPointer.
+		cogit genPrimReturn.
+		
+		jumpNonSmallInteger jmpTarget: (jumpNegative jmpTarget: cogit Label)
+	].
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationFor64BitSpur >> genPrimitiveStoreUInt32IntoExternalAddress [
+	^ self genPrimitiveStoreIntoExternalAddressWith: [ :destPointer :valueOop |
+		| jumpNonSmallInteger jumpNegative |
+		jumpNonSmallInteger := self genJumpNotSmallInteger: valueOop scratchReg: TempReg.
+		cogit CmpCq: 0 R: valueOop.
+		jumpNegative := cogit JumpLess: 0.
+		
+		cogit MoveR: valueOop R: ReceiverResultReg.
+	
+		self genConvertSmallIntegerToIntegerInReg: valueOop.
+		cogit MoveR: valueOop M32: 0 r: destPointer.
+		cogit genPrimReturn.
+		
+		jumpNonSmallInteger jmpTarget: (jumpNegative jmpTarget: cogit Label)
+	].
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationFor64BitSpur >> genPrimitiveStoreUInt64IntoBytes [
+	^ self genPrimitiveStore: 8 intoBytesWith: [ :destPointer :valueOop |
+		| jumpNonSmallInteger jumpNegative |
+		jumpNonSmallInteger := self genJumpNotSmallInteger: valueOop scratchReg: TempReg.
+		cogit CmpCq: 0 R: valueOop.
+		jumpNegative := cogit JumpLess: 0.
+		
+		cogit MoveR: valueOop R: ReceiverResultReg.
+	
+		self genConvertSmallIntegerToIntegerInReg: valueOop.
+		cogit MoveR: valueOop M64: 0 r: destPointer.
+		cogit genPrimReturn.
+		
+		jumpNonSmallInteger jmpTarget: (jumpNegative jmpTarget: cogit Label)
+	] needsToTrap: true.
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationFor64BitSpur >> genPrimitiveStoreUInt64IntoExternalAddress [
+	^ self genPrimitiveStoreIntoExternalAddressWith: [ :destPointer :valueOop |
+		| jumpNonSmallInteger jumpNegative |
+		jumpNonSmallInteger := self genJumpNotSmallInteger: valueOop scratchReg: TempReg.
+		cogit CmpCq: 0 R: valueOop.
+		jumpNegative := cogit JumpLess: 0.
+		
+		cogit MoveR: valueOop R: ReceiverResultReg.
+	
+		self genConvertSmallIntegerToIntegerInReg: valueOop.
+		cogit MoveR: valueOop M64: 0 r: destPointer.
+		cogit genPrimReturn.
+		
+		jumpNonSmallInteger jmpTarget: (jumpNegative jmpTarget: cogit Label)
+	] needsToTrap: true.
 ]
 
 { #category : #'primitive generators' }

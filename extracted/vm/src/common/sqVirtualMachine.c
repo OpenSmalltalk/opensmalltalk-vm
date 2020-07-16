@@ -563,6 +563,9 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 
 	VM->isNonImmediate = isNonImmediate;
 
+	VM->platformSemaphoreNew = platform_semaphore_new;
+	VM->scheduleInMainThread = mainThread_schedule;
+
 	return VM;
 }
 

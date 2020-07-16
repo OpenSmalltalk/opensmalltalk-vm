@@ -37,16 +37,7 @@
 #include <openssl/err.h>
 #include <openssl/x509v3.h>
 
-
-
-/*
- * Debug helper
- */
-#if (defined(DEBUG) || (defined(DEBUGVM) && DEBUGVM==1)) && !defined(NDEBUG)
-#define DEBUG_PRINT(X, ...) fprintf(stderr, X, __VA_ARGS__)
-#else
-#define DEBUG_PRINT(X, ...)
-#endif
+#include "pharovm/debug.h"
 
 #define NULL_FUNC ((void*(*)())NULL)
 
@@ -479,7 +470,7 @@ static size_t _sqo_lib_paths(size_t const n, char (*libs[n]))
     (void)(n);
 
 #define _SQO_ADD_LIB(L) do {                                          \
-        DEBUG_PRINT("Library path %zu at %s\n", num_libs, L);        \
+        logTrace("Library path %zu at %s\n", num_libs, L);        \
         if (libs != NULL) libs[num_libs] = strdup(L);                \
         num_libs++;                                                     \
     } while (0)
@@ -619,7 +610,7 @@ void* _sqo_dlopen_any(const char* name, int mode)
 
     void* handle = NULL;
     for (size_t i = 0; handle == NULL && i < libname_count; i++) {
-        DEBUG_PRINT("Trying %s for %s\n", libnames[i], name);
+        logTrace("Trying %s for %s\n", libnames[i], name);
         handle = dlopen(libnames[i], mode);
     }
     for (size_t i = 0; i < libname_count; i++) { free(libnames[i]); }
@@ -648,7 +639,7 @@ void* _sqo_dlopen(const char* name, int mode)
     int written = asprintf(&newname, "%s." SHLIB_VERSION_NUMBER, name);
     if (written > 0) {
         if ((handle = dlopen(newname, mode)) != NULL) {
-            DEBUG_PRINT("Found %s at %s\n", name, newname);
+            logTrace("Found %s at %s\n", name, newname);
             free(newname);
             return handle;
         }
@@ -656,7 +647,7 @@ void* _sqo_dlopen(const char* name, int mode)
 #endif
     /* 2. */
     if ((handle = dlopen(name, mode)) != NULL) {
-        DEBUG_PRINT("Found %s proper\n", name);
+        logTrace("Found %s proper\n", name);
         return handle;
     }
     /* 3. */
@@ -673,7 +664,7 @@ void* _sqo_dlopen(const char* name, int mode)
 #define SQO_HAS_FOUND_SYM(s,n,h)                                \
     do {                                                        \
         if ((s = dlsym(h, n))) {                                \
-            DEBUG_PRINT("Found symbol %s in " #h "\n", n);      \
+            logTrace("Found symbol %s in " #h "\n", n);      \
             return s;                                           \
         }                                                       \
     } while (0)
@@ -686,7 +677,7 @@ void* _sqo_dlopen(const char* name, int mode)
 #define SQO_FIND_SYM(sym, name, where, dlname)                          \
     do {                                                                \
         if (!dlhandle_ ## where) {                                      \
-            DEBUG_PRINT("Loading %s\n",(dlname)?(dlname):"self");       \
+            logTrace("Loading %s\n",(dlname)?(dlname):"self");       \
             dlhandle_ ## where = _sqo_dlopen(dlname, SQO_DL_FLAGS);     \
         }                                                               \
         if (dlhandle_ ## where) {                                       \
@@ -710,7 +701,7 @@ static inline void* _sqo_find(const char* name)
   SQO_FIND_SYM(sym, name, self, NULL);
   SQO_FIND_SYM(sym, name, ssl, "libssl.so");
   SQO_FIND_SYM(sym, name, crypto, "libcrypto.so");
-  DEBUG_PRINT("Cannot find %s\n", name);
+  logTrace("Cannot find %s\n", name);
   return sym;
 }
 

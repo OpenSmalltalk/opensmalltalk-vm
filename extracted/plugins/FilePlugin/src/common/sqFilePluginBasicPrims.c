@@ -128,16 +128,6 @@ static squeakFileOffsetType getSize(SQFile *f)
   return size;
 }
 
-#if 0
-# define pentry(func) do { int fn = fileno(getFile(f)); if (f->isStdioStream) printf("\n"#func "(%s) %lld %d\n", fn == 0 ? "in" : fn == 1 ? "out" : "err", (long long)ftell(getFile(f)), f->lastChar); } while (0)
-# define pexit(expr) (f->isStdioStream && printf("\n\t^"#expr " %lld %d\n", (long long)(sqFileValid(f) ? ftell(getFile(f)) : -1), f->lastChar)), expr
-# define pfail() printf("\tFAIL\n");
-#else
-# define pentry(func) 0
-# define pexit(expr) expr
-# define pfail() 0
-#endif
-
 sqInt sqFileAtEnd(SQFile *f) {
 	/* Return true if the file's read/write head is at the end of the file.
 	 *
@@ -162,7 +152,6 @@ sqInt sqFileAtEnd(SQFile *f) {
 
 	if (!sqFileValid(f))
 		return interpreterProxy->success(false);
-	pentry(sqFileAtEnd);
 	fp = getFile(f);
 	fd = fileno(fp);
 	/* Can't peek write-only streams */
@@ -183,7 +172,7 @@ sqInt sqFileAtEnd(SQFile *f) {
 		}
 	else
 		status = true;
-	return pexit(status);
+	return status;
 }
 
 sqInt
@@ -237,10 +226,9 @@ sqFileGetPosition(SQFile *f) {
 
 	if (!sqFileValid(f))
 		return interpreterProxy->success(false);
-	pentry(sqFileGetPosition);
 	if (f->isStdioStream
 	 && !f->writable)
-		return pexit(f->lastChar == EOF ? 0 : 1);
+		return f->lastChar == EOF ? 0 : 1;
 	position = ftell(getFile(f));
 	if (position == -1)
 		return interpreterProxy->success(false);
@@ -631,7 +619,6 @@ sqFileReadIntoAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startInde
 
 	if (!sqFileValid(f))
 		return interpreterProxy->success(false);
-	pentry(sqFileReadIntoAt);
 	file = getFile(f);
 	if (f->writable) {
 		if (f->isStdioStream)
@@ -689,7 +676,7 @@ sqFileReadIntoAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startInde
 		if (bytesRead > 0)
 			f->lastChar = dst[bytesRead-1];
 	f->lastOp = READ_OP;
-	return pexit(bytesRead);
+	return bytesRead;
 }
 
 sqInt
@@ -718,20 +705,18 @@ sqFileSetPosition(SQFile *f, squeakFileOffsetType position) {
 	if (!sqFileValid(f))
 		return interpreterProxy->success(false);
 	if (f->isStdioStream) {
-		pentry(sqFileSetPosition);
 		/* support one character of pushback for stdio streams. */
 		if (!f->writable
 		 && f->lastChar != EOF) {
 			squeakFileOffsetType currentPos = f->lastChar == EOF ? 0 : 1;
 			if (currentPos == position)
-				return pexit(1);
+				return 1;
 			if (currentPos - 1 == position) {
 				ungetc(f->lastChar, getFile(f));
 				f->lastChar = EOF;
-				return pexit(1);
+				return 1;
 			}
 		}
-		pfail();
 		return interpreterProxy->success(false);
 	}
 	fseek(getFile(f), position, SEEK_SET);
@@ -756,7 +741,6 @@ sqFileFlush(SQFile *f) {
 
 	if (!sqFileValid(f))
 		return interpreterProxy->success(false);
-	pentry(sqFileFlush);
 
 	/*
 	 * fflush() can fail for the same reasons write() can so errors must be checked but
@@ -775,7 +759,6 @@ sqFileSync(SQFile *f) {
 
 	if (!sqFileValid(f))
 		return interpreterProxy->success(false);
-	pentry(sqFileSync);
 	if (fsync(fileno(getFile(f))) != 0)
 		return interpreterProxy->success(false);
 	return 1;
@@ -812,7 +795,7 @@ sqFileWriteFromAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startInd
 
 	if (!(sqFileValid(f) && f->writable))
 		return interpreterProxy->success(false);
-	pentry(sqFileWriteFromAt);
+
 	file = getFile(f);
 	if (f->lastOp == READ_OP) fseek(file, 0, SEEK_CUR);  /* seek between reading and writing */
 	src = byteArrayIndex + startIndex;
@@ -822,7 +805,7 @@ sqFileWriteFromAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startInd
 		interpreterProxy->success(false);
 	}
 	f->lastOp = WRITE_OP;
-	return pexit(bytesWritten);
+	return bytesWritten;
 }
 
 sqInt
