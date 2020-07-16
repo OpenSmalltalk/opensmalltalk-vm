@@ -16,6 +16,11 @@ Class {
 		'rumpCStackSize',
 		'wordSize'
 	],
+	#pools : [
+		'VMBasicConstants',
+		'VMBytecodeConstants',
+		'VMObjectIndices'
+	],
 	#category : #VMMakerTests
 }
 
@@ -284,6 +289,52 @@ VMSpurMemoryManagerTest >> newOldSpaceObjectWithSlots: slots format: aFormat cla
 			classIndex: anIndex.
 	oop ifNotNil: [ memory fillObj: oop numSlots: slots with: memory nilObject ].
 	^ oop
+]
+
+{ #category : #'helpers - frames' }
+VMSpurMemoryManagerTest >> newSmallContextReceiver: anOop method: aMethodOop arguments: aCollectionOfArgumentsOop temporaries: aCollectionOfTemporariesOop ip: anIp [
+
+	| newCtx numArgs numTemps |
+	newCtx := memory eeInstantiateMethodContextSlots: SmallContextSlots.
+
+	numArgs := aCollectionOfArgumentsOop size.
+	numTemps := aCollectionOfTemporariesOop size.
+
+	memory storePointerUnchecked: SenderIndex
+		ofObject: newCtx
+		withValue: memory nilObject.
+		
+	memory storePointerUnchecked: InstructionPointerIndex
+		ofObject: newCtx
+		withValue: (memory integerObjectOf: anIp).
+
+	memory storePointerUnchecked: StackPointerIndex
+		ofObject: newCtx
+		withValue: (memory integerObjectOf: numArgs + numTemps).
+		
+	memory storePointerUnchecked: MethodIndex
+		ofObject: newCtx
+		withValue: aMethodOop.
+
+	memory storePointerUnchecked: ClosureIndex ofObject: newCtx withValue: memory nilObject.
+
+	memory storePointerUnchecked: ReceiverIndex
+		ofObject: newCtx
+		withValue: anOop.
+	
+	1 to: numArgs do:
+		[:i|
+		memory storePointerUnchecked: ReceiverIndex + i
+			ofObject: newCtx
+			withValue: (aCollectionOfArgumentsOop at: i)].
+
+	1 to: numTemps do:
+			[:i|
+			memory storePointerUnchecked: ReceiverIndex + i + numArgs
+				ofObject: newCtx
+				withValue: (aCollectionOfTemporariesOop at: i)].
+	
+	^ newCtx
 ]
 
 { #category : #helpers }

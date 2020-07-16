@@ -47,52 +47,6 @@ VMPrimitiveTest >> newClassInOldSpaceWithSlots: numberOfSlots format: format [
 	^ newClass	
 ]
 
-{ #category : #'helpers - frames' }
-VMPrimitiveTest >> newSmallContextReceiver: anOop method: aMethodOop arguments: aCollectionOfArgumentsOop temporaries: aCollectionOfTemporariesOop ip: anIp [
-
-	| newCtx numArgs numTemps |
-	newCtx := memory eeInstantiateMethodContextSlots: SmallContextSlots.
-
-	numArgs := aCollectionOfArgumentsOop size.
-	numTemps := aCollectionOfTemporariesOop size.
-
-	memory storePointerUnchecked: SenderIndex
-		ofObject: newCtx
-		withValue: memory nilObject.
-		
-	memory storePointerUnchecked: InstructionPointerIndex
-		ofObject: newCtx
-		withValue: (memory integerObjectOf: anIp).
-
-	memory storePointerUnchecked: StackPointerIndex
-		ofObject: newCtx
-		withValue: (memory integerObjectOf: numArgs + numTemps).
-		
-	memory storePointerUnchecked: MethodIndex
-		ofObject: newCtx
-		withValue: aMethodOop.
-
-	memory storePointerUnchecked: ClosureIndex ofObject: newCtx withValue: memory nilObject.
-
-	memory storePointerUnchecked: ReceiverIndex
-		ofObject: newCtx
-		withValue: anOop.
-	
-	1 to: numArgs do:
-		[:i|
-		memory storePointerUnchecked: ReceiverIndex + i
-			ofObject: newCtx
-			withValue: (aCollectionOfArgumentsOop at: i)].
-
-	1 to: numTemps do:
-			[:i|
-			memory storePointerUnchecked: ReceiverIndex + i + numArgs
-				ofObject: newCtx
-				withValue: (aCollectionOfTemporariesOop at: i)].
-	
-	^ newCtx
-]
-
 { #category : #running }
 VMPrimitiveTest >> setUp [
 	
@@ -855,4 +809,50 @@ VMPrimitiveTest >> testPrimitiveSetImmutabilityOfObjectAsTrueSetsImmutability [
 	interpreter primitiveSetImmutability.
 	
 	self assert: (memory isImmutable: object)
+]
+
+{ #category : #'tests - primitiveAtPut' }
+VMPrimitiveTest >> testPrimitiveSlotAtPutOverBoundShouldFailForIndexable [
+	| class object |
+	class := self newClassInOldSpaceWithSlots: 1 format: memory arrayFormat .
+	
+	object := memory instantiateClass: class indexableSize: 1.
+
+	interpreter push: object.
+	interpreter push: (memory integerObjectOf: 2).
+	interpreter push: memory falseObject.
+	interpreter primitiveSlotAtPut.
+	
+	self assert: interpreter failed.
+]
+
+{ #category : #'tests - primitiveAtPut' }
+VMPrimitiveTest >> testPrimitiveSlotAtPutOverBoundShouldFailNonIndexable [
+	| class object |
+	class := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
+	
+	object := memory instantiateClass: class.
+
+	interpreter push: object.
+	interpreter push: (memory integerObjectOf: 2).
+	interpreter push: memory falseObject.
+	interpreter primitiveSlotAtPut.
+	
+	self assert: interpreter failed.
+]
+
+{ #category : #'tests - primitiveAtPut' }
+VMPrimitiveTest >> testPrimitiveSlotAtPutPutsTheValueForNonIndexable [
+	| class object |
+	class := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
+	
+	object := memory instantiateClass: class.
+
+	interpreter push: object.
+	interpreter push: (memory integerObjectOf: 1).
+	interpreter push: memory falseObject.
+	interpreter primitiveSlotAtPut.
+	
+	self deny: interpreter failed.
+	self assert: (memory fetchPointer: 0 ofObject: object) equals: memory falseObject.
 ]
