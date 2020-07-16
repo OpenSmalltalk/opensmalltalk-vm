@@ -12,7 +12,7 @@ Class {
 		'emptyObjectSize',
 		'initialAddress',
 		'stackSpaceSize',
-		'stackBuilder'
+		'stackBuilder',
 		'methodCacheSize',
 		'rumpCStackSize',
 		'wordSize'
