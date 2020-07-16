@@ -12,20 +12,13 @@ Class {
 		'emptyObjectSize',
 		'initialAddress',
 		'stackSpaceSize',
+		'stackBuilder'
 		'methodCacheSize',
 		'rumpCStackSize',
 		'wordSize'
 	],
 	#category : #VMMakerTests
 }
-
-{ #category : #'helper-frame' }
-VMSpurMemoryManagerTest >> frameBuilder [
-	^ VMFrameBuilderForTest new
-		initializeForTest: self;
-		yourself
-
-]
 
 { #category : #accessing }
 VMSpurMemoryManagerTest >> initialCodeSize [
@@ -89,54 +82,6 @@ VMSpurMemoryManagerTest >> initializeOldSpaceForScavenger [
 { #category : #accessor }
 VMSpurMemoryManagerTest >> interpreter [
 	^ interpreter
-]
-
-{ #category : #helpers }
-VMSpurMemoryManagerTest >> makeBaseFrameWithMethod: aMethodOop context: aContextOop receiver: aReceiverOop args: argsOops andStack: stackOops [
-	
-	| page pointer |
-	page := memory coInterpreter stackPages newStackPage.
-	pointer := page baseAddress.
-	memory coInterpreter stackPointer: pointer + memory wordSize.
-	"Receiver"
-	memory coInterpreter push: aReceiverOop.
-	argsOops do: [ :e | memory coInterpreter push: e ].
-	"sender context"
-	memory coInterpreter push: memory nilObject.
-	"base frame's saved fp is null"
-	memory coInterpreter push: 0.
-	page
-		baseFP: memory coInterpreter stackPointer;
-		headFP: memory coInterpreter stackPointer.
-	"method"
-	memory coInterpreter push: aMethodOop.
-	"Flags: this stack frame is single. I.e., it has no context object.
-	Otherwise GC fails with an assertion looking for it in the heap"
-	memory coInterpreter push: (memory coInterpreter 
-		encodeFrameFieldHasContext: (aContextOop ~= memory nilObject)
-		isBlock: false
-		numArgs: argsOops size).
-	"context"
-	memory coInterpreter push: aContextOop.
-	"rcvr"
-	memory coInterpreter push: aReceiverOop.
-	"frame stack => empty"
-	stackOops do: [ :e | memory coInterpreter push: e ].
-	"ip"
-	memory coInterpreter push: (aMethodOop + memory baseHeaderSize - 2).
-	page headSP: memory coInterpreter stackPointer.
-	memory coInterpreter setStackPageAndLimit: page.
-	memory coInterpreter setStackPointersFromPage: page.
-	memory coInterpreter popStack.
-	
-	"Mark context as married by setting its sender to the frame pointer plus SmallInteger
-	 tags and the InstructionPointer to the saved fp (which ensures correct alignment
-	 w.r.t. the frame when we check for validity) plus SmallInteger tags."
-	(aContextOop ~= memory nilObject) ifTrue: [ 
-		memory
-			storePointerUnchecked: 0 "SenderIndex"
-			ofObject: aContextOop
-			withValue: (memory coInterpreter withSmallIntegerTags: page baseFP) ]
 ]
 
 { #category : #accessor }
@@ -232,6 +177,51 @@ VMSpurMemoryManagerTest >> newMethodWithSmallContext: isSmall WithArguments: arg
 						+ 0 "primitive".
 	memory storePointer: 0 ofObject: method withValue: (memory integerObjectOf: methodHeader).
 
+	^ method
+]
+
+{ #category : #helpers }
+VMSpurMemoryManagerTest >> newMethodWithBytecodes: bytes [
+    
+    | method methodHeader |
+
+    "Create a bytecode compiled method object containing the given literal at the given index"
+    method := self
+        newOldSpaceObjectWithSlots: 0 "# of literals" + 1 "one extra for the header" + (bytes size // memory wordSize)
+        format: (memory compiledMethodFormatForNumBytes: bytes size)
+        classIndex: 16r10.
+    methodHeader := (0 "nArgs" bitShift: 24)
+                        + (0 "nTemps" bitShift: 18)
+                        + (0 "small frame")
+                        + 0 "number of literaps"
+                        + 0 "primitive".
+    memory storePointer: 0 ofObject: method withValue: (memory integerObjectOf: methodHeader).
+    memory storeByte: 8 ofObject: method withValue: (bytes at: 1).
+
+    ^ method
+]
+
+{ #category : #helpers }
+VMSpurMemoryManagerTest >> newMethodWithLiteral: literalObject at: literalIndex [
+	
+	| method methodHeader |
+
+	"Create a bytecode compiled method object containing the given literal at the given index"
+	
+	method := self
+		newOldSpaceObjectWithSlots: literalIndex + 1 "index is 0 based" + 1 "one extra for the header"
+		format: (memory compiledMethodFormatForNumBytes: 0)
+		classIndex: 16r10.
+	methodHeader := (0 "nArgs" bitShift: 24)
+						+ (0 "nTemps" bitShift: 18)
+						+ (0 "small frame")
+						+ literalIndex + 2 "number of literaps"
+						+ 0 "primitive".
+	memory storePointer: 0 ofObject: method withValue: (memory integerObjectOf: methodHeader).
+	memory
+		storePointer: literalIndex + 1
+		ofObject: method
+		withValue: literalObject.
 	^ method
 ]
 
@@ -361,6 +351,12 @@ VMSpurMemoryManagerTest >> setUp [
 	
 	"Schedule a GC, so it does not try to schedule one"
 	memory needGCFlag: 1.
+	
+	stackBuilder := VMStackBuilder new
+		interpreter: interpreter; 
+		memory: memory;
+		yourself.
+
 ]
 
 { #category : #accessing }

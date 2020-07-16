@@ -4,7 +4,18 @@ Class {
 	#category : #VMMakerTests
 }
 
-{ #category : #'helper-interpretation' }
+{ #category : #'helper-assertions' }
+VMByteCodesTest >> assert: aBlock pop: anOop intoTemporary: anIndex [
+	| oldStackSize |
+	oldStackSize := interpreter stackPointer.
+	
+	aBlock value.
+	
+	self assert: interpreter stackPointer equals: oldStackSize + memory wordSize.
+	self assert: (interpreter temporary: anIndex in: interpreter framePointer) equals: anOop
+]
+
+{ #category : #'helper-assertions' }
 VMByteCodesTest >> assert: aBlock pushed: anOop [
 	| oldStackSize |
 	oldStackSize := interpreter stackPointer.
@@ -16,8 +27,20 @@ VMByteCodesTest >> assert: aBlock pushed: anOop [
 	
 ]
 
-{ #category : #'helper-interpretation' }
-VMByteCodesTest >> assertPoped: aBlock [
+{ #category : #'helper-assertions' }
+VMByteCodesTest >> assert: aBlock returned: anOop [
+	| callerSP |
+	callerSP := interpreter frameCallerSP: interpreter framePointer.
+	
+	aBlock value.
+	
+	self assert: interpreter stackPointer equals: callerSP - memory wordSize.
+	self assert: interpreter stackTop equals: anOop.
+	
+]
+
+{ #category : #'helper-assertions' }
+VMByteCodesTest >> assertPopped: aBlock [
 	| oldStackSize |
 	oldStackSize := interpreter stackPointer.
 	
@@ -27,12 +50,43 @@ VMByteCodesTest >> assertPoped: aBlock [
 	
 ]
 
+{ #category : #'helpers-bytecode-table' }
+VMByteCodesTest >> firstPushTemporaryVariableBytecode [
+	"in v3 bytecode table"
+	^ 16
+]
+
+{ #category : #'helpers-bytecode-table' }
+VMByteCodesTest >> firstStoreAndPopTemporaryVariableBytecode [
+	^ 104
+]
+
 { #category : #'helper-interpret' }
 VMByteCodesTest >> interpret: aBlock [
 	interpreter internalizeIPandSP.
 	aBlock value.
 	interpreter externalizeIPandSP.
 
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> pushTempTest: index [
+	
+	stackBuilder addNewFrame tempAt: index put: (memory integerObjectOf: 42).
+	stackBuilder buildStack.
+	interpreter currentBytecode: (self pushTemporaryVariableBytecodeAt: index).
+	
+	"first we push something, so there is something to duplicate"
+	self
+		assert: [ self interpret: [ interpreter pushTemporaryVariableBytecode ] ]
+		pushed: (memory integerObjectOf: 42).
+
+]
+
+{ #category : #'helpers-bytecode-table' }
+VMByteCodesTest >> pushTemporaryVariableBytecodeAt: offset [
+	^ self firstPushTemporaryVariableBytecode + offset.
+	
 ]
 
 { #category : #running }
@@ -57,9 +111,30 @@ VMByteCodesTest >> setUp [
 ]
 
 { #category : #'test-push-simple' }
+VMByteCodesTest >> storeAndPopTemporaryIntoTempTest: index [
+	
+	stackBuilder addNewFrame
+		tempAt: index put: (memory nilObject) ;
+		stack: { memory integerObjectOf: 42 } .
+	stackBuilder buildStack.
+	
+	interpreter currentBytecode: (self storeAndPopTemporaryVariableBytecodeAt: index).
+	
+	"first we push something, so there is something to duplicate"
+	self assert: [ self interpret: [ interpreter storeAndPopTemporaryVariableBytecode ] ]
+		pop: (memory integerObjectOf: 42)
+		intoTemporary: index
+]
+
+{ #category : #'helpers-bytecode-table' }
+VMByteCodesTest >> storeAndPopTemporaryVariableBytecodeAt: anInteger [ 
+	^ self firstStoreAndPopTemporaryVariableBytecode + anInteger
+]
+
+{ #category : #'test-push-simple' }
 VMByteCodesTest >> testDuplicateStackTop [
 
-	self frameBuilder buildFrame.
+	stackBuilder addNewFrame ; buildStack.
 	
 	"first we push something, so there is something to duplicate"
 	self
@@ -76,7 +151,7 @@ VMByteCodesTest >> testDuplicateStackTop [
 { #category : #'test-push-simple' }
 VMByteCodesTest >> testPopStackTopBytecode [
 
-	self frameBuilder buildFrame.
+	stackBuilder addNewFrame ; buildStack..
 	
 	"first we push something"
 	self
@@ -85,13 +160,13 @@ VMByteCodesTest >> testPopStackTopBytecode [
 	
 	"then we pop it"
 	self
-		assertPoped: [ self interpret: [ interpreter popStackBytecode ] ]
+		assertPopped: [ self interpret: [ interpreter popStackBytecode ] ]
 	
 ]
 
 { #category : #'test-push-simple' }
 VMByteCodesTest >> testPushConstantFalseBytecode [
-	self frameBuilder buildFrame.
+	stackBuilder addNewFrame ; buildStack.
 	self
 		assert: [ self interpret: [ interpreter pushConstantFalseBytecode ] ]
 		pushed: memory falseObject
@@ -99,8 +174,7 @@ VMByteCodesTest >> testPushConstantFalseBytecode [
 
 { #category : #'test-push-simple' }
 VMByteCodesTest >> testPushConstantMinusOneBytecode [
-
-	self frameBuilder buildFrame.
+	stackBuilder addNewFrame ; buildStack.
 	self
 		assert: [ self interpret: [ interpreter pushConstantMinusOneBytecode ] ]
 		pushed: (memory integerObjectOf: -1)
@@ -108,7 +182,7 @@ VMByteCodesTest >> testPushConstantMinusOneBytecode [
 
 { #category : #'test-push-simple' }
 VMByteCodesTest >> testPushConstantNilBytecode [
-	self frameBuilder buildFrame.
+	stackBuilder addNewFrame ; buildStack.
 	self
 		assert: [ self interpret: [ interpreter pushConstantNilBytecode ] ]
 		pushed: memory nilObject
@@ -116,8 +190,7 @@ VMByteCodesTest >> testPushConstantNilBytecode [
 
 { #category : #'test-push-simple' }
 VMByteCodesTest >> testPushConstantOneBytecode [
-
-	self frameBuilder buildFrame.
+	stackBuilder addNewFrame ; buildStack.
 	self
 		assert: [ self interpret: [ interpreter pushConstantOneBytecode ] ]
 		pushed: (memory integerObjectOf: 1)
@@ -125,11 +198,12 @@ VMByteCodesTest >> testPushConstantOneBytecode [
 
 { #category : #'test-push-simple' }
 VMByteCodesTest >> testPushConstantReceiverBytecode [
-	| intReceiver |
+	| intReceiver f1 |
 	intReceiver := memory integerObjectOf: 42.
-	self frameBuilder
-		receiver: intReceiver;
-		buildFrame.
+	
+	f1 := stackBuilder addNewFrame receiver: intReceiver.
+	stackBuilder buildStack.
+
 	self
 		assert: [ self interpret: [ interpreter pushReceiverBytecode ] ]
 		pushed: intReceiver
@@ -137,7 +211,7 @@ VMByteCodesTest >> testPushConstantReceiverBytecode [
 
 { #category : #'test-push-simple' }
 VMByteCodesTest >> testPushConstantTrueBytecode [
-	self frameBuilder buildFrame.
+	stackBuilder addNewFrame ; buildStack.
 	self
 		assert: [ self interpret: [ interpreter pushConstantTrueBytecode ] ]
 		pushed: memory trueObject
@@ -145,8 +219,7 @@ VMByteCodesTest >> testPushConstantTrueBytecode [
 
 { #category : #'test-push-simple' }
 VMByteCodesTest >> testPushConstantTwoBytecode [
-
-	self frameBuilder buildFrame.
+	stackBuilder addNewFrame ; buildStack.
 	self
 		assert: [ self interpret: [ interpreter pushConstantTwoBytecode ] ]
 		pushed: (memory integerObjectOf: 2)
@@ -154,9 +227,138 @@ VMByteCodesTest >> testPushConstantTwoBytecode [
 
 { #category : #'test-push-simple' }
 VMByteCodesTest >> testPushConstantZeroBytecode [
-
-	self frameBuilder buildFrame.
+	stackBuilder addNewFrame ; buildStack.
 	self
 		assert: [ self interpret: [ interpreter pushConstantZeroBytecode ] ]
 		pushed: (memory integerObjectOf: 0)
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testPushTemp0 [
+	self pushTempTest: 0
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testPushTemp1 [
+	self pushTempTest: 1
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testPushTemp10 [
+	self pushTempTest: 10
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testPushTemp11 [
+	self pushTempTest: 11
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testPushTemp2 [
+	self pushTempTest: 2
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testPushTemp3 [
+	self pushTempTest: 3
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testPushTemp4 [
+	self pushTempTest: 4
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testPushTemp5 [
+	self pushTempTest: 5
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testPushTemp6 [
+	self pushTempTest: 6
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testPushTemp7 [
+	self pushTempTest: 7
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testPushTemp8 [
+	self pushTempTest: 8
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testPushTemp9 [
+	self pushTempTest: 9
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testReturnFalse [	
+	"We need to return to a method.
+	So the method of the first stack should have a compiled method in the method field of the stack.
+	using memory trueObject simulates that behavior."
+	stackBuilder addNewFrame method: (self newMethodWithLiteral: memory trueObject at: 1).
+	stackBuilder addNewFrame.
+	stackBuilder buildStack.
+
+	self
+		assert: [ self interpret: [ interpreter returnFalse ] ]
+		returned: memory falseObject
+
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testReturnTrue [	
+	"We need to return to a method.
+	So the method of the first stack should have a compiled method in the method field of the stack.
+	using memory trueObject simulates that behavior."
+	stackBuilder addNewFrame method: (self newMethodWithLiteral: memory trueObject at: 1).
+	stackBuilder addNewFrame.
+	stackBuilder buildStack.
+
+	self
+		assert: [ self interpret: [ interpreter returnTrue ] ]
+		returned: memory trueObject
+
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testStoreAndPopTemporary0 [
+	self storeAndPopTemporaryIntoTempTest: 0
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testStoreAndPopTemporary1 [
+	self storeAndPopTemporaryIntoTempTest: 1
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testStoreAndPopTemporary2 [
+	self storeAndPopTemporaryIntoTempTest: 2
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testStoreAndPopTemporary3 [
+	self storeAndPopTemporaryIntoTempTest: 3
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testStoreAndPopTemporary4 [
+	self storeAndPopTemporaryIntoTempTest: 4
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testStoreAndPopTemporary5 [
+	self storeAndPopTemporaryIntoTempTest: 5
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testStoreAndPopTemporary6 [
+	self storeAndPopTemporaryIntoTempTest: 6
+]
+
+{ #category : #'test-push-simple' }
+VMByteCodesTest >> testStoreAndPopTemporary7 [
+	self storeAndPopTemporaryIntoTempTest: 7
 ]
