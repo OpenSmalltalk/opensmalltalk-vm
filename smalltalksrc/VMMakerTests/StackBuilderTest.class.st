@@ -133,6 +133,14 @@ StackBuilderTest >> testCallerFrameOfTopFrameShouldBeSecondFrameBuilderObject [
 ]
 
 { #category : #'test-VMstate' }
+StackBuilderTest >> testCallerInstructionPointerIsPushedInStack [
+	"We have 3 frames. 
+	The caller of the caller of the top frame is the first one, which is the base"
+	self assert: (interpreter frameCallerSavedIP: interpreter framePointer)
+		equals: stackBuilder frames second instructionPointer.
+]
+
+{ #category : #'test-VMstate' }
 StackBuilderTest >> testHeadFramePointerCallerCallerIsBaseFramePointer [
 	"We have 3 frames. 
 	The caller of the caller of the top frame is the first one, which is the base"
@@ -153,7 +161,7 @@ StackBuilderTest >> testMarryThenDivorceMiddleFrame [
 	| aContext framePointerToMarry stackPointerToMarry |
 	"should be moved in VMStackMappingTest after merge."
 	framePointerToMarry := interpreter frameCallerFP: interpreter framePointer.
-	stackPointerToMarry := interpreter frameCallerSP: interpreter stackPointer.
+	stackPointerToMarry := interpreter frameCallerSP: interpreter framePointer.
 	aContext := interpreter ensureFrameIsMarried: framePointerToMarry SP: stackPointerToMarry.
 	interpreter externalDivorceFrame: framePointerToMarry andContext: aContext.
 	self assert: (interpreter isSingleContext: aContext).

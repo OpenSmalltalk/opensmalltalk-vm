@@ -94,11 +94,11 @@ VMSpurScavengerTest >> testArgumentInStackShouldSurviveScanvenge [
 VMSpurScavengerTest >> testContextInStackShouldSurviveScanvenge [
 
 	| newObjectOop newObjectHash newObjectAddress |	
-	newObjectOop := self newZeroSizedObject.
-	newObjectHash := (memory hashBitsOf: newObjectOop).
 	
-	stackBuilder addNewFrame context: newObjectOop.
+	stackBuilder addNewFrame method: (self newMethodWithBytecodes: #[1 2 3 4 5 6 7 8] ).
 	stackBuilder buildStack.
+	newObjectOop := interpreter ensureFrameIsMarried: interpreter framePointer  SP: interpreter stackPointer.
+	newObjectHash := (memory hashBitsOf: newObjectOop).
 
 	"Nil should survive, but newObjectOop should survive too.
 	Nil is referenced by the roots because many of their slots are nilled.

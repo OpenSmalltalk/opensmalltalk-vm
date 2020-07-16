@@ -157,6 +157,11 @@ VMFrameBuilder >> initializeWithInterpreter: anInterpreter andMemory: aMemory [
 
 ]
 
+{ #category : #accesing }
+VMFrameBuilder >> instructionPointer [
+	^ instructionPointer
+]
+
 { #category : #testing }
 VMFrameBuilder >> isSuspended [
 	^ instructionPointer isNil
