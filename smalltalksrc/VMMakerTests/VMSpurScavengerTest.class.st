@@ -149,13 +149,9 @@ VMSpurScavengerTest >> testContextInStackShouldSurviveScanvenge [
 	newObjectOop := self newZeroSizedObject.
 	newObjectHash := (memory hashBitsOf: newObjectOop).
 	
-	self
-		makeBaseFrameWithMethod: memory nilObject
-		context: newObjectOop
-		receiver: memory nilObject
-		args: #()
-		andStack: #().
-
+	stackBuilder addNewFrame context: newObjectOop.
+	stackBuilder buildStack.
+	
 	"Nil should survive, but newObjectOop should survive too.
 	Nil is referenced by the roots because many of their slots are nilled.
 	newObjectOop is referenced by the stack"
