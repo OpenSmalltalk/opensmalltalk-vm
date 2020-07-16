@@ -83,6 +83,12 @@ FileDirectory >> entryAt: aString ifAbsent: aBlockClosure [
 ]
 
 { #category : #testing }
+FileDirectory >> exists [
+	
+	^ fileReference exists
+]
+
+{ #category : #testing }
 FileDirectory >> fileExists: aString [ 
 	
 	^ (VMMakerFile on: (fileReference / aString)) exists

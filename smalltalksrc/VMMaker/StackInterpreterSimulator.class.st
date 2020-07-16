@@ -423,6 +423,11 @@ StackInterpreterSimulator >> createActualMessageTo: class [
 	^super createActualMessageTo: class
 ]
 
+{ #category : #accessing }
+StackInterpreterSimulator >> currentBytecode: anInteger [ 
+	currentBytecode := anInteger
+]
+
 { #category : #UI }
 StackInterpreterSimulator >> desiredDisplayExtent [
 	^(savedWindowSize
