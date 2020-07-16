@@ -90,10 +90,6 @@ VMStackBuilder >> createStackPage [
 	"set base stackPointer"
 	sp := page baseAddress + memory wordSize.
 	interpreter stackPointer: sp.
-	interpreter framePointer: sp.
-
-
-
 ]
 
 { #category : #accessing }
@@ -144,17 +140,15 @@ VMStackBuilder >> pushFrame: aFrame [
 
 { #category : #build }
 VMStackBuilder >> pushFrames [
-	"the first frame does not have a caller, so we push 0 as the first IP" 
+	"the first frame does not have a caller, so we push 0 as the first IP"
 	interpreter push: memory nilObject.
-	interpreter push: 0. 
-	interpreter push: memory nilObject.
-	page
-		baseFP: interpreter stackPointer.
+	interpreter push: 0.
+	interpreter push: memory nilObject. 
+	page baseFP: interpreter stackPointer.
 	
 	self pushFrame: frames first.
 
 	2 to: frames size do: [ :anIndex | | aFrame |
-
 			interpreter push: interpreter framePointer.			
 
 			aFrame := frames at: anIndex.
