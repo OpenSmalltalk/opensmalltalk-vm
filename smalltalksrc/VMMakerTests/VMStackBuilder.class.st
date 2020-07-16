@@ -140,12 +140,13 @@ VMStackBuilder >> pushFrame: aFrame [
 
 { #category : #build }
 VMStackBuilder >> pushFrames [
-	"the first frame does not have a caller, so we push 0 as the first IP"
-	interpreter push: memory nilObject.
-	interpreter push: 0.
-	interpreter push: memory nilObject. 
+	 "Page setup before the base frame"
+	interpreter push: memory nilObject.	"receiver"
+		"arguments we have none for now"
+	interpreter push: memory nilObject.  "senderContext"
+	interpreter push: 0. "savedFp"
 	page baseFP: interpreter stackPointer.
-	
+	"Push base frame"
 	self pushFrame: frames first.
 
 	2 to: frames size do: [ :anIndex | | aFrame |

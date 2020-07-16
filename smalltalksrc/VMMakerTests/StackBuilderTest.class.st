@@ -119,13 +119,6 @@ StackBuilderTest >> setUp [
 ]
 
 { #category : #'test-VMstate' }
-StackBuilderTest >> testBaseFrameCallerSavedIPShouldBeZero [
-	"This test shows that the bottom frame has no previous caller
-	so not caller saved instruction pointer."
-	self assert: (interpreter frameCallerSavedIP: stackBuilder page baseFP) equals: 0
-]
-
-{ #category : #'test-VMstate' }
 StackBuilderTest >> testCallerFrameOfTopFrameShouldBeSecondFrameBuilderObject [
 	"For debug purpose, we added a link to the caller frame in the current frame."
 	self assert: (stackBuilder topFrame callerFrame) 
