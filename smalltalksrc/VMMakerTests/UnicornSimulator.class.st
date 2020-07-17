@@ -4,7 +4,8 @@ Class {
 	#instVars : [
 		'unicorn',
 		'stopReason',
-		'memory'
+		'memory',
+		'registerAliases'
 	],
 	#category : #VMMakerTests
 }
@@ -31,6 +32,12 @@ UnicornSimulator class >> IA32 [
 UnicornSimulator class >> X64 [
 	
 	^ UnicornX64Simulator new
+]
+
+{ #category : #accessing }
+UnicornSimulator >> aliasForRegister: aRegisterName [
+
+	^ registerAliases at: aRegisterName ifAbsent: [ '' ]
 ]
 
 { #category : #registers }
@@ -127,6 +134,12 @@ UnicornSimulator >> doStartAt: startAddress until: until timeout: timeout count:
 			self instructionPointerValue = until ifTrue: [ ^ result ]]
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornSimulator >> extractDestinationRegisterFromAssembly: aLLVMInstruction [ 
+	
+	self subclassResponsibility
+]
+
 { #category : #registers }
 UnicornSimulator >> framePointerRegister [
 	
@@ -161,7 +174,16 @@ UnicornSimulator >> initialize [
 
 	super initialize.
 	unicorn := self createUnicorn.
-	self initializeUnicorn
+	self initializeUnicorn.
+	
+	registerAliases := Dictionary new.
+	self initializeRegisterAliases.
+]
+
+{ #category : #initialization }
+UnicornSimulator >> initializeRegisterAliases [
+
+	"Hook for subclasses"
 ]
 
 { #category : #initialization }
@@ -281,7 +303,12 @@ UnicornSimulator >> register: anIndex readInto: aByteArray [
 { #category : #accessing }
 UnicornSimulator >> registerDescriptors [
 	
-	self subclassResponsibility
+	^ self registerList collect: [ :e |
+		UnicornRegisterDescriptor new
+			simulator: self;
+			alias: (self aliasForRegister: e);
+			name: e;
+			yourself ]
 ]
 
 { #category : #initialization }

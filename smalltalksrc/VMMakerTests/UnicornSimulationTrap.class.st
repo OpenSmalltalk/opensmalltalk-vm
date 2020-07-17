@@ -40,9 +40,7 @@ UnicornSimulationTrap >> registerAccessor [
 	
 	"Get the register were we wanted to read the value into"
 	failingInstruction := self simulator disassembleCurrentInstruction.
-	registerName := (failingInstruction assemblyCodeString substrings: ',') last trimBoth.
-	(registerName beginsWith: '%')
-		ifTrue: [ registerName := registerName allButFirst ].
+	registerName := self simulator extractDestinationRegisterFromAssembly: failingInstruction.
 	^ (registerName , ':') asSymbol
 ]
 

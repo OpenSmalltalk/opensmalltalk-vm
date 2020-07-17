@@ -13,11 +13,12 @@ VMPushThisContextRoutineTest >> testMarriedContextReturnsSpouse [
 	callingAddress := self compile: [ cogit Stop ].
 	cogit objectRepresentation ceScheduleScavengeTrampoline: (self compile: [ cogit Stop ]).
 	routine := self compile: [ cogit objectRepresentation genGetActiveContextLarge: isLargeContext inBlock: isInBlock ].
-	
 	numberOfArguments := 3.
 	contextOop := memory integerObjectOf: 42.
 	methodObject := self newMethodWithSmallContext: false WithArguments: numberOfArguments.
+
 	self machineCodeFrameBuilder
+		returnAddress: callingAddress;
 		spouseContext: contextOop;
 		arguments: { 
 			memory integerObjectOf: 1.
@@ -29,9 +30,12 @@ VMPushThisContextRoutineTest >> testMarriedContextReturnsSpouse [
 			memory integerObjectOf: 6.
 			memory integerObjectOf: 7. };
 		buildFrame.
+		
+	"Push the address of the caller of the routine"
+	cogit backend hasLinkRegister
+		ifFalse: [ self pushAddress: callingAddress ].
 
 	machineSimulator sendNumberOfArgumentsRegisterValue: numberOfArguments.
-	self pushAddress: callingAddress.
 	self runFrom: routine until: callingAddress.
 	
 	self assert: machineSimulator receiverRegisterValue equals: contextOop
@@ -51,6 +55,7 @@ VMPushThisContextRoutineTest >> testNewMarriedContextHasLargeSize [
 	contextOop := memory integerObjectOf: 42.
 	methodObject := self newMethodWithSmallContext: false WithArguments: numberOfArguments.
 	self machineCodeFrameBuilder
+		returnAddress: callingAddress;
 		arguments: { 
 			memory integerObjectOf: 1.
 			memory integerObjectOf: 2.
@@ -61,12 +66,16 @@ VMPushThisContextRoutineTest >> testNewMarriedContextHasLargeSize [
 			memory integerObjectOf: 6.
 			memory integerObjectOf: 7. };
 		buildFrame.
+		
+	"Push the address of the caller of the routine"
+	cogit backend hasLinkRegister
+		ifFalse: [ self pushAddress: callingAddress ].
 
 	machineSimulator baseRegisterValue: cogit varBaseAddress.
 	machineSimulator sendNumberOfArgumentsRegisterValue: numberOfArguments.
-	self pushAddress: callingAddress.
 
 	machineSimulator instructionPointerValue: routine.
+
 	finishedSimulation := false.
 	[ finishedSimulation ] whileFalse: [
 		[ self runFrom: machineSimulator instructionPointerValue until: callingAddress.
@@ -91,6 +100,7 @@ VMPushThisContextRoutineTest >> testNewMarriedContextHasSmallSize [
 	contextOop := memory integerObjectOf: 42.
 	methodObject := self newMethodWithSmallContext: false WithArguments: numberOfArguments.
 	self machineCodeFrameBuilder
+		returnAddress: callingAddress;
 		arguments: { 
 			memory integerObjectOf: 1.
 			memory integerObjectOf: 2.
@@ -102,10 +112,13 @@ VMPushThisContextRoutineTest >> testNewMarriedContextHasSmallSize [
 			memory integerObjectOf: 7. };
 		buildFrame.
 
+	"Push the address of the caller of the routine"
+	cogit backend hasLinkRegister
+		ifFalse: [ self pushAddress: callingAddress ].
+
 	machineSimulator baseRegisterValue: cogit varBaseAddress.
 	machineSimulator sendNumberOfArgumentsRegisterValue: numberOfArguments.
-	self pushAddress: callingAddress.
-
+	
 	machineSimulator instructionPointerValue: routine.
 	finishedSimulation := false.
 	[ finishedSimulation ] whileFalse: [
@@ -131,6 +144,7 @@ VMPushThisContextRoutineTest >> testSingleContextReturnsNewSpouseInNewSpace [
 	contextOop := memory integerObjectOf: 42.
 	methodObject := self newMethodWithSmallContext: false WithArguments: numberOfArguments.
 	self machineCodeFrameBuilder
+		returnAddress: callingAddress;
 		arguments: { 
 			memory integerObjectOf: 1.
 			memory integerObjectOf: 2.
@@ -142,9 +156,12 @@ VMPushThisContextRoutineTest >> testSingleContextReturnsNewSpouseInNewSpace [
 			memory integerObjectOf: 7. };
 		buildFrame.
 
+	"Push the address of the caller of the routine"
+	cogit backend hasLinkRegister
+		ifFalse: [ self pushAddress: callingAddress ].
+
 	machineSimulator baseRegisterValue: cogit varBaseAddress.
 	machineSimulator sendNumberOfArgumentsRegisterValue: numberOfArguments.
-	self pushAddress: callingAddress.
 
 	machineSimulator instructionPointerValue: routine.
 	finishedSimulation := false.

@@ -33,6 +33,14 @@ VMMachineCodeDebuggerStackItem >> machineSimulator: anUnicornARMv8Simulator [
 ]
 
 { #category : #evaluating }
+VMMachineCodeDebuggerStackItem >> specialRegister [
+
+	machineSimulator sp = address ifTrue: [ ^ 'SP' ].
+	machineSimulator fp = address ifTrue: [ ^ 'FP' ].
+	^ ''
+]
+
+{ #category : #evaluating }
 VMMachineCodeDebuggerStackItem >> value [ 
 
 	^ machineSimulator wordAt: address

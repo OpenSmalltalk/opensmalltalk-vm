@@ -37,6 +37,12 @@ UnicornProcessor >> pc: anInteger [
 	^ machineSimulator instructionPointerValue: anInteger
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornProcessor >> r5: anInteger [ 
+
+	machineSimulator r5: anInteger 
+]
+
 { #category : #registers }
 UnicornProcessor >> rbp: anInteger [ 
 	
@@ -72,4 +78,10 @@ UnicornProcessor >> setFramePointer: framePointer stackPointer: stackPointer [
 UnicornProcessor >> sp [
 	
 	^ machineSimulator stackPointerRegisterValue
+]
+
+{ #category : #'as yet unclassified' }
+UnicornProcessor >> x5: anInteger [ 
+	
+	machineSimulator x5: anInteger
 ]

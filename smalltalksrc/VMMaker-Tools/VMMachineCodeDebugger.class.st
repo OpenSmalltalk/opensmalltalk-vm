@@ -47,6 +47,10 @@ VMMachineCodeDebugger >> connectPresenters [
 		item 
 			name: 'Set Intruction Pointer Here'; 
 			action: [ self setInstructionPointerToSelectedInstruction ] ].
+	instructionsContextMenu addItem: [ :item |
+		item 
+			name: 'Inspect'; 
+			action: [ instructions selection selectedItem inspect ] ].
 	instructions contextMenu: instructionsContextMenu
 ]
 
@@ -55,7 +59,7 @@ VMMachineCodeDebugger >> initialDisassembly [
 
 	^ machineSimulator disassembler
 		printImmediatesInHexa;
-		disassembleNext: 100
+		disassembleNext: 150
 		instructionsIn: (cogit objectMemory memory memoryObject
 			copyFrom: self initialInstructionToDisassemble - cogit objectMemory memory initialAddress + 1
 			to: cogit objectMemory memory memoryObject size)
@@ -82,6 +86,7 @@ VMMachineCodeDebugger >> initializePresenters [
 	machineState := self newTable.
 	machineState
 		addColumn: (SpStringTableColumn evaluated: #name);
+		addColumn: (SpStringTableColumn evaluated: #alias);
 		addColumn: (SpStringTableColumn evaluated: [ :register | register printString ]).
 
 	instructions := self newTable.
@@ -98,6 +103,7 @@ VMMachineCodeDebugger >> initializePresenters [
 	
 	stack := self newTable.
 	stack
+		addColumn: (SpStringTableColumn evaluated: [ :aPosition | aPosition specialRegister ] );
 		addColumn: (SpStringTableColumn evaluated: [ :aPosition | aPosition address hex ] );
 		addColumn: (SpStringTableColumn evaluated: [ :aPosition | aPosition value hex ]).
 	

@@ -7,7 +7,7 @@ Class {
 { #category : #registers }
 UnicornARMv8Simulator >> baseRegister [
 
-	^ UcARM64Registers r10
+	^ UcARM64Registers x10
 ]
 
 { #category : #'as yet unclassified' }
@@ -51,9 +51,20 @@ UnicornARMv8Simulator >> doRunGeneratedCodeStartAt: initialAddress instructions:
 		count: numberOfInstructions.
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> extractDestinationRegisterFromAssembly: aLLVMInstruction [ 
+	
+	"In ARM, instructions are usually encoded asSpotterCandidateLink 
+	
+	INST Destination, Source
+	"
+	
+	^ (aLLVMInstruction assemblyCodeString substrings: String tab, ',') second trimBoth.
+]
+
 { #category : #registers }
 UnicornARMv8Simulator >> fp [
-	^ self readRegister: UcARM64Registers fp
+	^ self readRegister: UcARM64Registers x29
 ]
 
 { #category : #registers }
@@ -81,6 +92,18 @@ UnicornARMv8Simulator >> hasLinkRegister [
 	^ true
 ]
 
+{ #category : #initialization }
+UnicornARMv8Simulator >> initializeRegisterAliases [
+
+	registerAliases
+		at: #x2 put: #classRegister;
+		at: #x5 put: #receiverRegister;
+		at: #x6 put: #sendNumberOfArgumentsRegister;
+		at: #x10 put: #baseRegister;
+		at: #x29 put: #framePointerRegister;
+		at: #x30 put: #linkRegister
+]
+
 { #category : #registers }
 UnicornARMv8Simulator >> instructionPointerRegister [
 
@@ -90,7 +113,7 @@ UnicornARMv8Simulator >> instructionPointerRegister [
 { #category : #registers }
 UnicornARMv8Simulator >> linkRegister [
 	
-	^ UcARM64Registers lr
+	^ UcARM64Registers x30
 ]
 
 { #category : #accessing }
@@ -107,7 +130,7 @@ UnicornARMv8Simulator >> linkRegisterValue: aValue [
 
 { #category : #registers }
 UnicornARMv8Simulator >> lr [
-	^ self readRegister: UcARM64Registers lr	
+	^ self readRegister: self linkRegister
 ]
 
 { #category : #'as yet unclassified' }
@@ -130,7 +153,7 @@ UnicornARMv8Simulator >> overflow [
 
 { #category : #registers }
 UnicornARMv8Simulator >> pc [
-	^ self readRegister: UcARM64Registers pc
+	^ self readRegister: self instructionPointerRegister
 ]
 
 { #category : #registers }
@@ -140,14 +163,9 @@ UnicornARMv8Simulator >> receiverRegister [
 ]
 
 { #category : #accessing }
-UnicornARMv8Simulator >> registerDescriptors [
+UnicornARMv8Simulator >> registerList [
 
 	^ #(lr pc sp fp x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 zero negative carry overflow)
-		collect: [ :e | 
-			UnicornRegisterDescriptor new
-				simulator: self;
-				name: e;
-				yourself ]
 ]
 
 { #category : #registers }
@@ -245,6 +263,12 @@ UnicornARMv8Simulator >> x4 [
 UnicornARMv8Simulator >> x5 [
 
 	^ self readRegister: UcARM64Registers x5
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> x5: anInteger [ 
+
+	^ self writeRegister: UcARM64Registers x5 value: anInteger
 ]
 
 { #category : #'as yet unclassified' }
