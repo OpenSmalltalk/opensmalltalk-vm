@@ -35,7 +35,7 @@ Class {
 		'interpreter',
 		'memory'
 	],
-	#category : #'VMMakerTests-Frame'
+	#category : #'VMMakerTests-Builders'
 }
 
 { #category : #frames }
