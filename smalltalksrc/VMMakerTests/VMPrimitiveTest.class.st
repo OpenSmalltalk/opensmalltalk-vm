@@ -1,6 +1,6 @@
 Class {
 	#name : #VMPrimitiveTest,
-	#superclass : #VMSpurMemoryManagerTest,
+	#superclass : #VMInterpreterTests,
 	#pools : [
 		'VMBasicConstants',
 		'VMBytecodeConstants',
@@ -53,19 +53,6 @@ VMPrimitiveTest >> setUp [
 	"taken from VMSimpleStackBasedCogitBytecodeTest >> #setup"
 	| newMethod ctx page processorOopAssociation processorOop processorListArray processorListPriority1 processorListPriority2 |
 	super setUp.
-	
-	memory nilObject: (self newObjectWithSlots: 0).
-	memory trueObject: (self newObjectWithSlots: 0).
-	memory falseObject: (self newObjectWithSlots: 0).
-	
-	"We don't access its contents, but we need it to be after nil, true and false"
-	memory hiddenRootsObject: (self newObjectWithSlots: 0).
-	interpreter := memory interpreter.
-	
-	"stackMemoryStartAddress := initialAddress + self initialCodeSize.
-	stackMemoryEndAddress := stackMemoryStartAddress + stackSpaceSize."
-	
-	self initializeOldSpaceForScavenger.
 
 	"Create the root context with a valid method"
 	"Let's create a method with enough size. It should have at least a literal (4 or 8 bytes depending the word size) and some bytecodes, so we can put the IP inside the method"

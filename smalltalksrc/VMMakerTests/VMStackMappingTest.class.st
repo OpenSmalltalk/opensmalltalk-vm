@@ -1,11 +1,6 @@
 Class {
 	#name : #VMStackMappingTest,
-	#superclass : #VMSpurInitializedOldSpaceTest,
-	#pools : [
-		'VMBasicConstants',
-		'VMBytecodeConstants',
-		'VMObjectIndices'
-	],
+	#superclass : #VMSpurMemoryManagerTest,
 	#category : #'VMMakerTests-MemoryTests'
 }
 

@@ -16,7 +16,7 @@ method
 "
 Class {
 	#name : #StackBuilderTest,
-	#superclass : #VMByteCodesTest,
+	#superclass : #VMInterpreterTests,
 	#instVars : [
 		'stackElement1',
 		'stackElement2',
