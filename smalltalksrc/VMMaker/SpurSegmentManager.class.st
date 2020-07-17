@@ -566,19 +566,12 @@ SpurSegmentManager >> printSegmentAddresses [
 { #category : #private }
 SpurSegmentManager >> readHeapFrom: f at: location dataBytes: numBytes [
 	"Read numBytes from f into mmory at location.  Answer the number of bytes read."
-	^self cCode:
-			[self
-				sq: (self pointerForOop: location)
-				Image: (self sizeof: #char)
-				File: numBytes
-				Read: f]
-		inSmalltalk:
-			[| bytesPerElement |
-			 bytesPerElement := manager memory bytesPerElement.
-			 (f	readInto: manager memory
-				startingAt: location // bytesPerElement + 1
-				count: numBytes // bytesPerElement)
-			  * bytesPerElement]
+
+	^ self
+		  sq: (self pointerForOop: location)
+		  Image: (self sizeof: #char)
+		  File: numBytes
+		  Read: f
 ]
 
 { #category : #snapshot }
@@ -718,6 +711,16 @@ SpurSegmentManager >> someSegmentContainsPinned [
 	0 to: numSegments - 1 do:
 		[:i| (segments at: i) containsPinned ifTrue: [^true]].
 	^false
+]
+
+{ #category : #'file functions' }
+SpurSegmentManager >> sq: startingAddress Image: byteSize File: bytesToRead Read: aMultiByteFileStream [ 
+
+	<doNotGenerate>
+	^ manager memory 
+		loadFrom: aMultiByteFileStream
+		size: bytesToRead
+		inPosition: startingAddress
 ]
 
 { #category : #snapshot }
