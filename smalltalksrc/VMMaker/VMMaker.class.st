@@ -1468,7 +1468,7 @@ VMMaker >> generateExternalPlugin: pluginName [
 			logger show: 'external plugin ' , plugin name , ' failed to validate: ' , ex messageText; cr.
 			^self].
 
-	VMClass initializeForPlugins: #().
+	VMClass initializeForPlugins: optionsDictionary.
 	[exports := plugin
 					translateInDirectory: (self externalPluginsDirectoryFor: plugin)
 					doInlining: inline]

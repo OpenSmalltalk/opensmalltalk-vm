@@ -156,7 +156,7 @@ VMClass class >> initializeForPlugins: optionsDictionaryOrArray [
 	"Do a default initialization, suitable for generating plugin sources."
 	StackInterpreterSimulator
 		initializeWithOptions: optionsDictionaryOrArray
-		objectMemoryClass: Spur32BitMemoryManager
+
 ]
 
 { #category : #initialization }
