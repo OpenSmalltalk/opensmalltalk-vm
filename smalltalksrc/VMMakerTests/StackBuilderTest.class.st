@@ -119,17 +119,18 @@ StackBuilderTest >> setUp [
 ]
 
 { #category : #'test-VMstate' }
-StackBuilderTest >> testBaseFrameCallerSavedIPShouldBeZero [
-	"This test shows that the bottom frame has no previous caller
-	so not caller saved instruction pointer."
-	self assert: (interpreter frameCallerSavedIP: stackBuilder page baseFP) equals: 0
-]
-
-{ #category : #'test-VMstate' }
 StackBuilderTest >> testCallerFrameOfTopFrameShouldBeSecondFrameBuilderObject [
 	"For debug purpose, we added a link to the caller frame in the current frame."
 	self assert: (stackBuilder topFrame callerFrame) 
 		equals: (stackBuilder frames nextToLast)
+]
+
+{ #category : #'test-VMstate' }
+StackBuilderTest >> testCallerInstructionPointerIsPushedInStack [
+	"We have 3 frames. 
+	The caller of the caller of the top frame is the first one, which is the base"
+	self assert: (interpreter frameCallerSavedIP: interpreter framePointer)
+		equals: stackBuilder frames second instructionPointer.
 ]
 
 { #category : #'test-VMstate' }
@@ -149,14 +150,87 @@ StackBuilderTest >> testHeadFramePointerCallerIsNotBaseFramePointer [
 ]
 
 { #category : #'test-context-tomove' }
+StackBuilderTest >> testMarryThenDivorceBaseFrameShouldFreeOldPage [
+	| aContext framePointerToMarry stackPointerToMarry oldPage |
+	"should be moved in VMStackMappingTest after merge."
+	oldPage := interpreter stackPage.
+	framePointerToMarry := interpreter stackPage baseFP.
+	stackPointerToMarry := interpreter frameCallerSP: (interpreter frameCallerFP: interpreter framePointer).
+	aContext := interpreter ensureFrameIsMarried: framePointerToMarry SP: stackPointerToMarry.
+	interpreter externalDivorceFrame: framePointerToMarry andContext: aContext.
+
+	self assert: oldPage isFree
+]
+
+{ #category : #'test-context-tomove' }
+StackBuilderTest >> testMarryThenDivorceBaseFrameShouldSetDivorcedContextAsSenderContextInNewPage [
+	| aContext framePointerToMarry stackPointerToMarry  expectedDivorcedContext |
+	"should be moved in VMStackMappingTest after merge."
+
+	framePointerToMarry := interpreter stackPage baseFP.
+	stackPointerToMarry := interpreter frameCallerSP: (interpreter frameCallerFP: interpreter framePointer).
+	aContext := interpreter ensureFrameIsMarried: framePointerToMarry SP: stackPointerToMarry.
+	interpreter externalDivorceFrame: framePointerToMarry andContext: aContext.
+	expectedDivorcedContext := interpreter frameCallerContext: interpreter stackPage baseFP.
+	
+	self assert: expectedDivorcedContext equals: aContext.
+]
+
+{ #category : #'test-context-tomove' }
+StackBuilderTest >> testMarryThenDivorceBaseFrameShouldSplitPage [
+	| aContext framePointerToMarry stackPointerToMarry oldPage newPage |
+	"should be moved in VMStackMappingTest after merge."
+	oldPage := interpreter stackPage.
+	framePointerToMarry := interpreter stackPage baseFP.
+	stackPointerToMarry := interpreter frameCallerSP: (interpreter frameCallerFP: interpreter framePointer).
+	aContext := interpreter ensureFrameIsMarried: framePointerToMarry SP: stackPointerToMarry.
+	interpreter externalDivorceFrame: framePointerToMarry andContext: aContext.
+	newPage := interpreter stackPage.
+	self deny: oldPage equals: newPage
+]
+
+{ #category : #'test-context-tomove' }
 StackBuilderTest >> testMarryThenDivorceMiddleFrame [
 	| aContext framePointerToMarry stackPointerToMarry |
 	"should be moved in VMStackMappingTest after merge."
 	framePointerToMarry := interpreter frameCallerFP: interpreter framePointer.
-	stackPointerToMarry := interpreter frameCallerSP: interpreter stackPointer.
+	stackPointerToMarry := interpreter frameCallerSP: interpreter framePointer.
 	aContext := interpreter ensureFrameIsMarried: framePointerToMarry SP: stackPointerToMarry.
 	interpreter externalDivorceFrame: framePointerToMarry andContext: aContext.
 	self assert: (interpreter isSingleContext: aContext).
+]
+
+{ #category : #'test-context-tomove' }
+StackBuilderTest >> testMarryThenDivorceMiddleFrameShouldSetDivorcedContextAsSenderContextInNewPage [
+	| aContext framePointerToMarry stackPointerToMarry  expectedDivorcedContext oldBaseFramePointer callerContext |
+	"should be moved in VMStackMappingTest after merge."
+
+	framePointerToMarry := interpreter frameCallerFP: interpreter framePointer.
+	stackPointerToMarry := interpreter frameCallerSP: interpreter framePointer.
+	aContext := interpreter ensureFrameIsMarried: framePointerToMarry SP: stackPointerToMarry.
+	oldBaseFramePointer := interpreter stackPage baseFP.
+	interpreter externalDivorceFrame: framePointerToMarry andContext: aContext.
+	expectedDivorcedContext := interpreter frameCallerContext: interpreter stackPage baseFP.
+	
+	self assert: (interpreter frameHasContext: oldBaseFramePointer).
+	self assert: expectedDivorcedContext equals: aContext.
+	callerContext := interpreter frameContext: oldBaseFramePointer.
+	
+	self assert: (memory fetchPointer: SenderIndex ofObject: expectedDivorcedContext) equals: callerContext.
+	
+]
+
+{ #category : #'test-context-tomove' }
+StackBuilderTest >> testMarryThenDivorceMiddleFrameShouldSplitPage [
+	| aContext framePointerToMarry stackPointerToMarry initialiNumberOfusedPages newNumberOfUsedPages |
+	"should be moved in VMStackMappingTest after merge."
+	initialiNumberOfusedPages := interpreter stackPages pages count:[ :aPage | aPage isFree not ].
+	framePointerToMarry := interpreter frameCallerFP: interpreter framePointer.
+	stackPointerToMarry := interpreter frameCallerSP: interpreter framePointer.
+	aContext := interpreter ensureFrameIsMarried: framePointerToMarry SP: stackPointerToMarry.
+	interpreter externalDivorceFrame: framePointerToMarry andContext: aContext.
+	newNumberOfUsedPages := interpreter stackPages pages count:[ :aPage | aPage isFree not ].
+	self assert: initialiNumberOfusedPages + 1 equals: newNumberOfUsedPages
 ]
 
 { #category : #'test-context-tomove' }
