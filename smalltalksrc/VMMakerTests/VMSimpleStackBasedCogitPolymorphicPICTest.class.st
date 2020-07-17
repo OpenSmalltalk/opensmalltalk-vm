@@ -14,7 +14,7 @@ Class {
 	#pools : [
 		'CogMethodConstants'
 	],
-	#category : #VMMakerTests
+	#category : #'VMMakerTests-JitTests'
 }
 
 { #category : #'building suites' }

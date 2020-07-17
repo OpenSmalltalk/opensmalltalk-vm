@@ -6,7 +6,7 @@ Class {
 		'VMBytecodeConstants',
 		'VMObjectIndices'
 	],
-	#category : #VMMakerTests
+	#category : #'VMMakerTests-InterpreterTests'
 }
 
 { #category : #'building suites' }

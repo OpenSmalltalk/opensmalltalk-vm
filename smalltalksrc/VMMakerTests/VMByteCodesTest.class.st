@@ -1,7 +1,7 @@
 Class {
 	#name : #VMByteCodesTest,
 	#superclass : #VMSpurMemoryManagerTest,
-	#category : #VMMakerTests
+	#category : #'VMMakerTests-InterpreterTests'
 }
 
 { #category : #'helper-assertions' }

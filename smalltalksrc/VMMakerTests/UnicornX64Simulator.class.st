@@ -1,7 +1,7 @@
 Class {
 	#name : #UnicornX64Simulator,
 	#superclass : #UnicornSimulator,
-	#category : #VMMakerTests
+	#category : #'VMMakerTests-Unicorn'
 }
 
 { #category : #'phisical-registers' }

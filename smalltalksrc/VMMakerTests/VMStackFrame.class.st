@@ -8,7 +8,7 @@ Class {
 	#pools : [
 		'VMStackFrameOffsets'
 	],
-	#category : #'VMMakerTests-Frame'
+	#category : #'VMMakerTests-Visualisation'
 }
 
 { #category : #'instance creation' }

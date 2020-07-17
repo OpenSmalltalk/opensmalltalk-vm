@@ -5,7 +5,7 @@ Class {
 		'unicornInvalidAccess',
 		'simulator'
 	],
-	#category : #VMMakerTests
+	#category : #'VMMakerTests-Unicorn'
 }
 
 { #category : #'instance creation' }

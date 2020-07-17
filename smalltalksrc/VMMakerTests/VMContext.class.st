@@ -5,7 +5,7 @@ Class {
 		'contextOop',
 		'interpreter'
 	],
-	#category : #'VMMakerTests-Frame'
+	#category : #'VMMakerTests-Visualisation'
 }
 
 { #category : #'instance creation' }

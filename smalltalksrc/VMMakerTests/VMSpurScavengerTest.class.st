@@ -1,7 +1,7 @@
 Class {
 	#name : #VMSpurScavengerTest,
 	#superclass : #VMSpurInitializedOldSpaceTest,
-	#category : #VMMakerTests
+	#category : #'VMMakerTests-MemoryTests'
 }
 
 { #category : #asserting }

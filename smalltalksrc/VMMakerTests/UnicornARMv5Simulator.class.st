@@ -1,7 +1,7 @@
 Class {
 	#name : #UnicornARMv5Simulator,
 	#superclass : #UnicornSimulator,
-	#category : #VMMakerTests
+	#category : #'VMMakerTests-Unicorn'
 }
 
 { #category : #registers }

@@ -27,7 +27,7 @@ Class {
 		'temp2',
 		'method'
 	],
-	#category : #VMMakerTests
+	#category : #'VMMakerTests-InterpreterTests'
 }
 
 { #category : #'helper-frame' }

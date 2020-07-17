@@ -4,7 +4,7 @@ Class {
 	#instVars : [
 		'ourWeakClass'
 	],
-	#category : #VMMakerTests
+	#category : #'VMMakerTests-MemoryTests'
 }
 
 { #category : #tests }
