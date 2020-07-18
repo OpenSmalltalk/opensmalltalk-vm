@@ -52,24 +52,19 @@ SqueakVideoGrabber *grabbers[8] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NUL
   didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
   fromConnection:(AVCaptureConnection *)connection
 {
-  CVImageBufferRef imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
-  if (firstTime) {
-	width = CVPixelBufferGetWidth(imageBuffer);
-	height = CVPixelBufferGetHeight(imageBuffer);
-
-    // We unlock the image buffer
-    CVPixelBufferUnlockBaseAddress(imageBuffer, 0);
-
-    pixels = malloc(width * height * 4);
-    firstTime = false;
-  }
-  else {
-    CVPixelBufferLockBaseAddress(imageBuffer, 0);
-    unsigned int *isrc4 = (unsigned int *)CVPixelBufferGetBaseAddress(imageBuffer);
-    memcpy(pixels, isrc4, height * width * 4);
-    CVPixelBufferUnlockBaseAddress(imageBuffer, 0);
-  }
-  frameCount++;
+	CVImageBufferRef imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
+	if (firstTime) {
+		width = CVPixelBufferGetWidth(imageBuffer);
+		height = CVPixelBufferGetHeight(imageBuffer);
+		pixels = malloc(width * height * 4);
+	}
+	CVPixelBufferLockBaseAddress(imageBuffer, 0);
+	memcpy(	pixels,
+			CVPixelBufferGetBaseAddress(imageBuffer),
+			width * height * 4);
+	firstTime = false;
+	CVPixelBufferUnlockBaseAddress(imageBuffer, 0);
+	frameCount++;
 }
 
 // If desiredWidth == 0 && desiredHeight == 0 then initialize
@@ -84,9 +79,8 @@ SqueakVideoGrabber *grabbers[8] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NUL
     }]];
 
   // NSLog(@"devices count %d\n", [devices count]);
-  if ([devices count] == 0) {
+  if ([devices count] == 0)
     return NULL;
-  }
 
   deviceID = deviceNum > ([devices count] - 1)
 				? ([devices count] - 1)
@@ -131,9 +125,8 @@ SqueakVideoGrabber *grabbers[8] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NUL
   [captureOutput setVideoSettings: videoSettings];
 
   // And we create a capture session
-  if (captureSession) {
+  if (captureSession)
     captureSession = NULL;
-  }
   captureSession = [[AVCaptureSession alloc] init];
 #if IOS
   [captureSession autorelease];
@@ -169,17 +162,14 @@ SqueakVideoGrabber *grabbers[8] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NUL
 
 #undef USEPRESETFOR
 
-  if (preset) {
+  if (preset)
     [captureSession setSessionPreset: preset];
-  }
 
   // We add input and output
-  if ([captureSession canAddInput: captureInput]) {
+  if ([captureSession canAddInput: captureInput])
     [captureSession addInput: captureInput];
-  }
-  if ([captureSession canAddOutput: captureOutput]) {
+  if ([captureSession canAddOutput: captureOutput])
     [captureSession addOutput: captureOutput];
-  }
 
   // We start the capture Session
   [captureSession commitConfiguration];
@@ -194,15 +184,15 @@ SqueakVideoGrabber *grabbers[8] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NUL
 
 -(void)startCapture: (sqInt)cameraNum {
   if (!bInitCalled) {
-    [self initCapture: cameraNum-1 desiredWidth: 640 desiredHeight: 480];
+    (void)[self initCapture: cameraNum-1 desiredWidth: 640 desiredHeight: 480];
   }
-  [captureSession startRunning];
+  //[captureSession startRunning];
   [captureInput.device lockForConfiguration: nil];
 
-  //if ( [captureInput.device isExposureModeSupported:AVCaptureExposureModeAutoExpose] ) [captureInput.device setExposureMode:AVCaptureExposureModeAutoExpose ];
-  if ([captureInput.device isFocusModeSupported: AVCaptureFocusModeAutoFocus]) {
+  //if ( [captureInput.device isExposureModeSupported:AVCaptureExposureModeAutoExpose] )
+	[captureInput.device setExposureMode:AVCaptureExposureModeAutoExpose ];
+  if ([captureInput.device isFocusModeSupported: AVCaptureFocusModeAutoFocus])
     [captureInput.device setFocusMode: AVCaptureFocusModeAutoFocus];
-  }
 }
 
 -(void)stopCapture: (sqInt)cameraNum {
@@ -238,10 +228,10 @@ SqueakVideoGrabber *grabbers[8] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NUL
 
 SqueakVideoGrabber *
 init(sqInt cameraNum, int desiredWidth, int desiredHeight) {
-  SqueakVideoGrabber *this = [SqueakVideoGrabber alloc];
-  return [this initCapture: cameraNum-1
-               desiredWidth: desiredWidth
-               desiredHeight: desiredHeight];
+  SqueakVideoGrabber *grabber = [SqueakVideoGrabber alloc];
+  return [grabber	initCapture: cameraNum-1
+					desiredWidth: desiredWidth
+					desiredHeight: desiredHeight];
 }
 
 void
@@ -264,56 +254,63 @@ getDeviceName(sqInt cameraNum) {
 
 sqInt
 CameraOpen(sqInt cameraNum, sqInt desiredWidth, sqInt desiredHeight) {
-  if (cameraNum<1 || cameraNum>8) return false;
-  SqueakVideoGrabber *this = grabbers[cameraNum-1];
+  if (cameraNum<1 || cameraNum>8)
+	return false;
+  SqueakVideoGrabber *grabber = grabbers[cameraNum-1];
 
-  if (this)
+  if (grabber)
 	return true;
 
-  this = init(cameraNum, desiredWidth, desiredHeight);
-  if (!this)
+  grabber = init(cameraNum, desiredWidth, desiredHeight);
+  if (!grabber)
 	return false;
-  [this startCapture: cameraNum];
+  [grabber startCapture: cameraNum];
   return true;
 }
 
 void 
 CameraClose(sqInt cameraNum)
 {
-  if (cameraNum<1 || cameraNum>8) return;
-  SqueakVideoGrabber *this = grabbers[cameraNum-1];
-  if (!this) return;
-  [this stopCapture: cameraNum];
+  if (cameraNum<1 || cameraNum>8)
+	return;
+  SqueakVideoGrabber *grabber = grabbers[cameraNum-1];
+  if (!grabber)
+	return;
+  [grabber stopCapture: cameraNum];
 }
 
 sqInt
 CameraExtent(sqInt cameraNum)
 {
-  SqueakVideoGrabber *this;
+  SqueakVideoGrabber *grabber;
 
   /* if the camera is already open answer its extent */
   if (cameraNum >= 1 && cameraNum <= 8
-	&& (this = grabbers[cameraNum-1]))
-	return this->width <<16 | this->height;
-  if (!getDeviceName(cameraNum)) return 0;
+	&& (grabber = grabbers[cameraNum-1]))
+	return grabber->width <<16 | grabber->height;
+  if (!getDeviceName(cameraNum))
+	return 0;
   /* if not yet open, open with default resolution and answer default extent */
-  this = grabbers[cameraNum-1];
-  if (!this)
-	this = init(cameraNum, 0, 0);
-  return this ? (this->width <<16 | this->height) : 0;
+  grabber = grabbers[cameraNum-1];
+  if (!grabber)
+	grabber = init(cameraNum, 0, 0);
+  return grabber ? (grabber->width <<16 | grabber->height) : 0;
 }
 
 sqInt
 CameraGetFrame(sqInt cameraNum, unsigned char *buf, sqInt pixelCount)
 {
-  if (cameraNum<1 || cameraNum>8) return -1;
-  SqueakVideoGrabber *this = grabbers[cameraNum-1];
-  if (!this)
+  if (cameraNum<1 || cameraNum>8)
 	return -1;
-  if (!this->firstTime) {
-    int ourFrames = this->frameCount;
-    this->frameCount = 0;
-    memcpy(buf, this->pixels, pixelCount * 4);
+  SqueakVideoGrabber *grabber = grabbers[cameraNum-1];
+  if (!grabber)
+	return -1;
+  if (!grabber->firstTime) {
+    int ourFrames = grabber->frameCount;
+#define min(a,b) ((a)<=(b)?(a):(b))
+	long actualPixelCount = grabber->width * grabber->height;
+    memcpy(buf, grabber->pixels, min(pixelCount,actualPixelCount) * 4);
+    grabber->frameCount = 0;
     return ourFrames;
   }
   return 0;
