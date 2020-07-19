@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 trap 'exit 2' HUP INT PIPE TERM
-for d in squeak.*
+for d in *.spur *.v3; do
 	if test -d "$d"; then
 		(cd ./$d;./makealldirty "$@")
 	else
