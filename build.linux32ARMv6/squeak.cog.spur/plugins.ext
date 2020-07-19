@@ -13,6 +13,9 @@ UUIDPlugin \
 WeDoPlugin \
 ImmX11Plugin \
 XDisplayControlPlugin \
+DESPlugin \
+MD5Plugin \
+SHA2Plugin \
 #BochsIA32Plugin \
 #BochsX64Plugin \
 #GdbARMPlugin
