@@ -73,7 +73,7 @@ CogOutOfLineLiteralsARMv8Compiler >> getDefaultCogCodeSize [
 { #category : #'inline cacheing' }
 CogOutOfLineLiteralsARMv8Compiler >> inlineCacheTagAt: callSiteReturnAddress [
 	<inline: true>
-	^objectMemory longAt: (self pcRelativeAddressAt: (callSiteReturnAddress - 8) asUnsignedInteger)
+	^objectMemory long32At: (self pcRelativeAddressAt: (callSiteReturnAddress - 8) asUnsignedInteger)
 ]
 
 { #category : #testing }
@@ -225,8 +225,8 @@ CogOutOfLineLiteralsARMv8Compiler >> rewriteInlineCacheAt: callSiteReturnAddress
 	self assert: (self isInImmediateJumpRange: callDistance). "we don't support long call updates here"
 	call := self bl: callDistance.
 	objectMemory
-		longAt: (self instructionAddressBefore: callSiteReturnAddress ) put: call;
-		longAt: (self pcRelativeAddressAt: callSiteReturnAddress - 8) put: cacheTag.
+		long32At: (self instructionAddressBefore: callSiteReturnAddress ) put: call;
+		long32At: (self pcRelativeAddressAt: callSiteReturnAddress - 8) put: cacheTag.
 	self assert: (self inlineCacheTagAt: callSiteReturnAddress) = cacheTag.
 	"self cCode: ''
 		inSmalltalk: [cogit disassembleFrom: callSiteReturnAddress - 8 to: (self pcRelativeAddressAt: callSiteReturnAddress - 8)]."
