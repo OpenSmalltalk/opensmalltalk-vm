@@ -106,8 +106,6 @@ VMSimpleStackBasedCogitBytecodeTest >> doTestReturnReturnsToCallerWithFrame: isF
 	
 	self compile: compilationBlock.	
 	self runUntilReturn.
-
-	self assert: machineSimulator instructionPointerValue equals: callerAddress
 ]
 
 { #category : #'tests - extended push bytecode - push inst var' }

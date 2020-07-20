@@ -12,20 +12,18 @@ Class {
 		'emptyObjectSize',
 		'initialAddress',
 		'stackSpaceSize',
+		'stackBuilder',
 		'methodCacheSize',
 		'rumpCStackSize',
 		'wordSize'
 	],
+	#pools : [
+		'VMBasicConstants',
+		'VMBytecodeConstants',
+		'VMObjectIndices'
+	],
 	#category : #VMMakerTests
 }
-
-{ #category : #'helper-frame' }
-VMSpurMemoryManagerTest >> frameBuilder [
-	^ VMFrameBuilderForTest new
-		initializeForTest: self;
-		yourself
-
-]
 
 { #category : #accessing }
 VMSpurMemoryManagerTest >> initialCodeSize [
@@ -91,54 +89,6 @@ VMSpurMemoryManagerTest >> interpreter [
 	^ interpreter
 ]
 
-{ #category : #helpers }
-VMSpurMemoryManagerTest >> makeBaseFrameWithMethod: aMethodOop context: aContextOop receiver: aReceiverOop args: argsOops andStack: stackOops [
-	
-	| page pointer |
-	page := memory coInterpreter stackPages newStackPage.
-	pointer := page baseAddress.
-	memory coInterpreter stackPointer: pointer + memory wordSize.
-	"Receiver"
-	memory coInterpreter push: aReceiverOop.
-	argsOops do: [ :e | memory coInterpreter push: e ].
-	"sender context"
-	memory coInterpreter push: memory nilObject.
-	"base frame's saved fp is null"
-	memory coInterpreter push: 0.
-	page
-		baseFP: memory coInterpreter stackPointer;
-		headFP: memory coInterpreter stackPointer.
-	"method"
-	memory coInterpreter push: aMethodOop.
-	"Flags: this stack frame is single. I.e., it has no context object.
-	Otherwise GC fails with an assertion looking for it in the heap"
-	memory coInterpreter push: (memory coInterpreter 
-		encodeFrameFieldHasContext: (aContextOop ~= memory nilObject)
-		isBlock: false
-		numArgs: argsOops size).
-	"context"
-	memory coInterpreter push: aContextOop.
-	"rcvr"
-	memory coInterpreter push: aReceiverOop.
-	"frame stack => empty"
-	stackOops do: [ :e | memory coInterpreter push: e ].
-	"ip"
-	memory coInterpreter push: (aMethodOop + memory baseHeaderSize - 2).
-	page headSP: memory coInterpreter stackPointer.
-	memory coInterpreter setStackPageAndLimit: page.
-	memory coInterpreter setStackPointersFromPage: page.
-	memory coInterpreter popStack.
-	
-	"Mark context as married by setting its sender to the frame pointer plus SmallInteger
-	 tags and the InstructionPointer to the saved fp (which ensures correct alignment
-	 w.r.t. the frame when we check for validity) plus SmallInteger tags."
-	(aContextOop ~= memory nilObject) ifTrue: [ 
-		memory
-			storePointerUnchecked: 0 "SenderIndex"
-			ofObject: aContextOop
-			withValue: (memory coInterpreter withSmallIntegerTags: page baseFP) ]
-]
-
 { #category : #accessor }
 VMSpurMemoryManagerTest >> memory [
 	^ memory
@@ -174,7 +124,6 @@ VMSpurMemoryManagerTest >> newMethodWithBytecodes: bytes [
 	| method methodHeader |
 
 	"Create a bytecode compiled method object containing the given literal at the given index"
-	
 	method := self
 		newOldSpaceObjectWithSlots: 0 "# of literals" + 1 "one extra for the header" + (bytes size // memory wordSize)
 		format: (memory compiledMethodFormatForNumBytes: bytes size)
@@ -286,6 +235,52 @@ VMSpurMemoryManagerTest >> newOldSpaceObjectWithSlots: slots format: aFormat cla
 	^ oop
 ]
 
+{ #category : #'helpers - frames' }
+VMSpurMemoryManagerTest >> newSmallContextReceiver: anOop method: aMethodOop arguments: aCollectionOfArgumentsOop temporaries: aCollectionOfTemporariesOop ip: anIp [
+
+	| newCtx numArgs numTemps |
+	newCtx := memory eeInstantiateMethodContextSlots: SmallContextSlots.
+
+	numArgs := aCollectionOfArgumentsOop size.
+	numTemps := aCollectionOfTemporariesOop size.
+
+	memory storePointerUnchecked: SenderIndex
+		ofObject: newCtx
+		withValue: memory nilObject.
+		
+	memory storePointerUnchecked: InstructionPointerIndex
+		ofObject: newCtx
+		withValue: (memory integerObjectOf: anIp).
+
+	memory storePointerUnchecked: StackPointerIndex
+		ofObject: newCtx
+		withValue: (memory integerObjectOf: numArgs + numTemps).
+		
+	memory storePointerUnchecked: MethodIndex
+		ofObject: newCtx
+		withValue: aMethodOop.
+
+	memory storePointerUnchecked: ClosureIndex ofObject: newCtx withValue: memory nilObject.
+
+	memory storePointerUnchecked: ReceiverIndex
+		ofObject: newCtx
+		withValue: anOop.
+	
+	1 to: numArgs do:
+		[:i|
+		memory storePointerUnchecked: ReceiverIndex + i
+			ofObject: newCtx
+			withValue: (aCollectionOfArgumentsOop at: i)].
+
+	1 to: numTemps do:
+			[:i|
+			memory storePointerUnchecked: ReceiverIndex + i + numArgs
+				ofObject: newCtx
+				withValue: (aCollectionOfTemporariesOop at: i)].
+	
+	^ newCtx
+]
+
 { #category : #helpers }
 VMSpurMemoryManagerTest >> newZeroSizedObject [
 	
@@ -361,6 +356,12 @@ VMSpurMemoryManagerTest >> setUp [
 	
 	"Schedule a GC, so it does not try to schedule one"
 	memory needGCFlag: 1.
+	
+	stackBuilder := VMStackBuilder new
+		interpreter: interpreter; 
+		memory: memory;
+		yourself.
+
 ]
 
 { #category : #accessing }
