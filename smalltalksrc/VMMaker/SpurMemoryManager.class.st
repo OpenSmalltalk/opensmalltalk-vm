@@ -6442,8 +6442,6 @@ SpurMemoryManager >> initializeMarkStack [
 SpurMemoryManager >> initializeNewSpaceVariables [
 	<inline: #never>
 	
-	1halt.
-	
 	freeStart := scavenger eden start.
 	pastSpaceStart := scavenger pastSpace start.
 	scavengeThreshold := scavenger eden limit

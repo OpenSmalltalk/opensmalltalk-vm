@@ -197,7 +197,6 @@ CCodeGenerator >> accessorDepthForMethod: method [
 		field := objectMemory fetchPointer: 1 ofObject: obj.
 		self storePointer: 1 ofObject: field withValue: (self stackValue: 1)
 	has depth 2, since field is accessed, and field is an element of obj."
-
 	^((method definingClass includesSelector: method selector) ifTrue:
 			[(method definingClass >> method selector) pragmaAt: #accessorDepth:])
 		ifNil:
