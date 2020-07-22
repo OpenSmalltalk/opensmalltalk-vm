@@ -81,6 +81,13 @@ LibFFICIF >> argumentTypes: aCollectionOfTypes [
 ]
 
 { #category : #accessing }
+LibFFICIF >> interpreter [
+	
+	<doNotGenerate>
+	^ libFFI interpreter
+]
+
+{ #category : #accessing }
 LibFFICIF >> libFFI: aLibFFI [ 
 	<doNotGenerate>	
 	libFFI := aLibFFI

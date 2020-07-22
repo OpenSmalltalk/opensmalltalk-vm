@@ -89,6 +89,11 @@ VMSpurMemoryManagerTest >> interpreter [
 	^ interpreter
 ]
 
+{ #category : #helpers }
+VMSpurMemoryManagerTest >> interpreterClass [ 
+	^ StackInterpreterSimulatorLSB
+]
+
 { #category : #accessor }
 VMSpurMemoryManagerTest >> memory [
 	^ memory
@@ -97,6 +102,7 @@ VMSpurMemoryManagerTest >> memory [
 { #category : #helpers }
 VMSpurMemoryManagerTest >> newInterpreter [
 	memory := self newMemory.
+
 	self interpreterClass
 		initializeWithOptions:
 			{#BytesPerWord.
@@ -104,6 +110,7 @@ VMSpurMemoryManagerTest >> newInterpreter [
 			#ObjectMemory.
 			memory class name}
 		objectMemoryClass: memory class.
+
 	^ self interpreterClass basicNew
 		objectMemory: memory;
 		basicInitialize

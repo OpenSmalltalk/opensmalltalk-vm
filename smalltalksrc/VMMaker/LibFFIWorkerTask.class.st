@@ -62,6 +62,16 @@ LibFFIWorkerTask >> asInteger [
 	^ address ifNil: [ address := (Random new nextInt: 1024) + 16rFF1FF ]
 ]
 
+{ #category : #'memory access' }
+LibFFIWorkerTask >> cCoerce: value to: cTypeString [
+
+	<doNotGenerate>
+
+	^value
+		ifNil: [value]
+		ifNotNil: [value coerceTo: cTypeString sim: cif interpreter]
+]
+
 { #category : #accessing }
 LibFFIWorkerTask >> cif [
 	^ cif
