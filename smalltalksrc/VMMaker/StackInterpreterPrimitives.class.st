@@ -936,7 +936,8 @@ StackInterpreterPrimitives >> primitiveGetCurrentWorkingDirectory [
 	
 	aCString := self cCoerce: (self alloca: 255 + 1) to: #'char *'.
 
-	self ioGetCurrentWorkingDirectory: aCString maxLength: 255 + 1.
+	(self ioGetCurrentWorkingDirectory: aCString maxLength: 255 + 1) = -1 
+		ifTrue: [ ^ self primitiveFail ].
 
 	self pop: argumentCount+1 thenPush: (objectMemory stringForCString: aCString).
 ]

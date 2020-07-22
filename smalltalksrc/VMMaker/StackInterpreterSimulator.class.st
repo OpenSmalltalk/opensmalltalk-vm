@@ -1015,7 +1015,10 @@ StackInterpreterSimulator >> ioGetCurrentWorkingDirectory: aCStringHolder maxLen
 		replaceFrom: 1
 		to: anEncodedString size
 		with: anEncodedString
-		startingAt: 1
+		startingAt: 1.
+	
+	"No Error"
+	^ 0
 ]
 
 { #category : #'process primitive support' }
