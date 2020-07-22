@@ -1,5 +1,6 @@
 #include "pharovm/pharo.h"
 #include <sys/stat.h>
+#include "pharovm/pathUtilities.h"
 
 #ifndef WIN64
 #include <libgen.h>
