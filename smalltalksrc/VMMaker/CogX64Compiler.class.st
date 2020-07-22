@@ -54,6 +54,7 @@ Class {
 		'SIB2',
 		'SIB4',
 		'SIB8',
+		'SysV',
 		'XCHGAwR',
 		'XCHGMwrR',
 		'XCHGRR',
