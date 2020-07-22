@@ -3483,13 +3483,6 @@ CoInterpreter >> frameNumTemps: theFP [
 	^0
 ]
 
-{ #category : #'cog jit support' }
-CoInterpreter >> framePointer: theFP [
-	"Simulation only"
-	<doNotGenerate>
-	framePointer := theFP
-]
-
 { #category : #'trampoline support' }
 CoInterpreter >> framePointerAddress [
 	<api>

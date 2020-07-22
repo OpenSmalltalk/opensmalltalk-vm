@@ -58,16 +58,6 @@ VMSimpleStackBasedCogitMonomorphicPICTest >> testLinkCallDuringSendInTrampolineR
 ]
 
 { #category : #'tests - PIC' }
-VMSimpleStackBasedCogitMonomorphicPICTest >> testMissOffsetIsEqualsToEntryOffset [
-
-	"Calculate the size of the Closed Pic"
-	self setUpCogMethodEntry.
-	cogit generateClosedPICPrototype.
-
-	self assert: cogit missOffset equals: cogit entryOffset
-]
-
-{ #category : #'tests - PIC' }
 VMSimpleStackBasedCogitMonomorphicPICTest >> testObtainInlineCacheFromLinkedCall [
 
 	| sendingMethod targetCog selector executedTheTrampoline |

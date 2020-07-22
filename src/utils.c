@@ -1,5 +1,6 @@
 #include "pharovm/pharo.h"
 #include <sys/stat.h>
+#include "pharovm/pathUtilities.h"
 
 #ifndef WIN64
 #include <libgen.h>
@@ -604,3 +605,8 @@ EXPORT(const char**) getProcessArgumentVector(){
 EXPORT(const char **) getProcessEnvironmentVector(){
 	return vmProcessEnvironmentVector;
 }
+EXPORT(int) ioGetCurrentWorkingDirectorymaxLength(char * aCString, size_t maxLength){
+	return vm_path_get_current_working_dir_into(aCString, maxLength) == VM_SUCCESS ? 0 : -1 ;
+}
+
+

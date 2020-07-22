@@ -4101,11 +4101,16 @@ StackInterpreter >> characterForAscii: ascii [  "Above ObjectMemory, arg must li
 StackInterpreter >> charsOfLong: long [
 	"N.B. This will need to be overridden in big-endian simulator subclasses."
 	<doNotGenerate>
-	^ (1 to: objectMemory wordSize) collect:
-		[:i | | d |
-		(d := long digitAt: i) >= 14
-			ifTrue: [d asCharacter]
-			ifFalse: [$?]]
+
+	| byteArray |
+
+	byteArray := ByteArray new: objectMemory wordSize.
+	byteArray integerAt: 1 put: long size: objectMemory wordSize signed: false.
+
+	^ byteArray collect: [:aByte | 
+		aByte >= 14
+			ifTrue: [aByte asCharacter]
+			ifFalse: [$?]] as: Array
 ]
 
 { #category : #'debug support' }
@@ -7405,6 +7410,13 @@ StackInterpreter >> frameOfMarriedContext: aContext [
 	^self withoutSmallIntegerTags: senderOop
 ]
 
+{ #category : #'cog jit support' }
+StackInterpreter >> framePointer: theFP [
+	"Simulation only"
+	<doNotGenerate>
+	framePointer := theFP
+]
+
 { #category : #'internal interpreter access' }
 StackInterpreter >> framePointerOfNativeArgument: offset in: theFP [
 	<inline: false>
@@ -8473,6 +8485,12 @@ StackInterpreter >> install: rcvr inAtCache: cache at: atIx string: stringy [
 ]
 
 { #category : #accessing }
+StackInterpreter >> instructionPointer [
+	<doNotGenerate>
+	^ instructionPointer
+]
+
+{ #category : #accessing }
 StackInterpreter >> instructionPointer: anInteger [
 	<doNotGenerate>
 	instructionPointer := anInteger
@@ -9016,6 +9034,7 @@ StackInterpreter >> ioLoadExternalFunction: functionName OfLength: functionLengt
 	(1 to: functionLength) do:[:i| functionString byteAt: i put: (objectMemory byteAt: functionName+i-1)].
 	"We used to ignore loads of the SqueakFFIPrims plugin, but that means doing without integerAt:[put:]size:signed:
 	 which is too much of a limitation (not that these simulate unaligned accesses yet)."
+	
 	^self ioLoadFunction: functionString From: pluginString AccessorDepthInto: accessorDepthPtr
 ]
 

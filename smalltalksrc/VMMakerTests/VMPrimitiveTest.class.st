@@ -77,6 +77,54 @@ VMPrimitiveTest >> newSmallContextReceiver: anOop method: aMethodOop arguments: 
 	^ newCtx
 ]
 
+{ #category : #running }
+VMPrimitiveTest >> setUp [
+	
+	"taken from VMSimpleStackBasedCogitBytecodeTest >> #setup"
+	| newMethod ctx page processorOopAssociation processorOop processorListArray processorListPriority1 processorListPriority2 |
+	super setUp.
+	
+	memory nilObject: (self newObjectWithSlots: 0).
+	memory trueObject: (self newObjectWithSlots: 0).
+	memory falseObject: (self newObjectWithSlots: 0).
+	
+	"We don't access its contents, but we need it to be after nil, true and false"
+	memory hiddenRootsObject: (self newObjectWithSlots: 0).
+	interpreter := memory interpreter.
+	
+	"stackMemoryStartAddress := initialAddress + self initialCodeSize.
+	stackMemoryEndAddress := stackMemoryStartAddress + stackSpaceSize."
+	
+	self initializeOldSpaceForScavenger.
+
+	"Create the root context with a valid method"
+	"Let's create a method with enough size. It should have at least a literal (4 or 8 bytes depending the word size) and some bytecodes, so we can put the IP inside the method"
+	newMethod := self newMethodWithBytecodes: #[ 1 2 3 4 5 6 7 8 9 0 ].
+	
+	"The context has 5 (in 32 bits) or 9 (in 64 bits) as initial IP, as method has at least one literal"
+	ctx := self newSmallContextReceiver: memory nilObject method: newMethod arguments: #() temporaries: #() ip: self wordSize + 1.
+	
+	page := interpreter makeBaseFrameFor: ctx.
+	interpreter setStackPointersFromPage: page.
+	
+	
+	"The ScheduleAssocation should be initialized to a valid Processor object"
+	processorOopAssociation := self newObjectWithSlots: 2.
+	processorOop := self newObjectWithSlots: 2.
+	processorListArray := self newObjectWithSlots: 2.
+	
+	processorListPriority1 := self newObjectWithSlots: 2.
+	processorListPriority2 := self newObjectWithSlots: 2.
+	
+	memory storePointer: 0 ofObject: processorListArray withValue: processorListPriority1. 
+	memory storePointer: 1 ofObject: processorListArray withValue: processorListPriority2.
+	
+	memory splObj: SchedulerAssociation put: processorOopAssociation.
+	memory storePointer: ValueIndex ofObject: processorOopAssociation withValue: processorOop.
+	memory storePointer: ProcessListsIndex ofObject: processorOop withValue: processorListArray.
+	memory lastHash: 1
+]
+
 { #category : #'tests - become' }
 VMPrimitiveTest >> testPrimitiveArrayBecomeCreatesForwardersForObjectsOfDifferentSize [
 	| class1 class2 object1 object2 array1 array2 |
@@ -791,4 +839,50 @@ VMPrimitiveTest >> testPrimitiveSetImmutabilityOfObjectAsTrueSetsImmutability [
 	interpreter primitiveSetImmutability.
 	
 	self assert: (memory isImmutable: object)
+]
+
+{ #category : #'tests - primitiveAtPut' }
+VMPrimitiveTest >> testPrimitiveSlotAtPutOverBoundShouldFailForIndexable [
+	| class object |
+	class := self newClassInOldSpaceWithSlots: 1 format: memory arrayFormat .
+	
+	object := memory instantiateClass: class indexableSize: 1.
+
+	interpreter push: object.
+	interpreter push: (memory integerObjectOf: 2).
+	interpreter push: memory falseObject.
+	interpreter primitiveSlotAtPut.
+	
+	self assert: interpreter failed.
+]
+
+{ #category : #'tests - primitiveAtPut' }
+VMPrimitiveTest >> testPrimitiveSlotAtPutOverBoundShouldFailNonIndexable [
+	| class object |
+	class := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
+	
+	object := memory instantiateClass: class.
+
+	interpreter push: object.
+	interpreter push: (memory integerObjectOf: 2).
+	interpreter push: memory falseObject.
+	interpreter primitiveSlotAtPut.
+	
+	self assert: interpreter failed.
+]
+
+{ #category : #'tests - primitiveAtPut' }
+VMPrimitiveTest >> testPrimitiveSlotAtPutPutsTheValueForNonIndexable [
+	| class object |
+	class := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
+	
+	object := memory instantiateClass: class.
+
+	interpreter push: object.
+	interpreter push: (memory integerObjectOf: 1).
+	interpreter push: memory falseObject.
+	interpreter primitiveSlotAtPut.
+	
+	self deny: interpreter failed.
+	self assert: (memory fetchPointer: 0 ofObject: object) equals: memory falseObject.
 ]

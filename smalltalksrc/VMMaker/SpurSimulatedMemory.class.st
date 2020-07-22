@@ -66,10 +66,26 @@ SpurSimulatedMemory >> initialAddress: anAddress [
 	initialAddress := anAddress
 ]
 
+{ #category : #accessing }
+SpurSimulatedMemory >> initialize [
+
+	super initialize.
+	initialAddress := 0.
+]
+
 { #category : #initialization }
 SpurSimulatedMemory >> initializeSlots: anInteger [ 
 	
 	memoryObject := ByteArray new: anInteger * self bytesPerElement
+]
+
+{ #category : #loading }
+SpurSimulatedMemory >> loadFrom: aMultiByteFileStream size: size inPosition: startingPosition [
+
+	^ aMultiByteFileStream
+		  readInto: memoryObject
+		  startingAt: startingPosition - initialAddress + 1
+		  count: size
 ]
 
 { #category : #accessing }

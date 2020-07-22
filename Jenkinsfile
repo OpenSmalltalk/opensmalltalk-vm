@@ -12,7 +12,7 @@ def shell(params){
 }
 
 def runInCygwin(command){
-    def c = """#!c:\\tools\\cygwin\\bin\\bash --login
+	def c = """#!c:\\tools\\cygwin\\bin\\bash --login
     cd `cygpath \"$WORKSPACE\"`
     set -ex
     ${command}
