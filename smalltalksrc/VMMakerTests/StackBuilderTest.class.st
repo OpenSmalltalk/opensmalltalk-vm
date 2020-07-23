@@ -25,7 +25,9 @@ Class {
 		'context',
 		'temp1',
 		'temp2',
-		'method'
+		'method',
+		'argument2',
+		'argument1'
 	],
 	#category : #'VMMakerTests-InterpreterTests'
 }
@@ -39,7 +41,7 @@ StackBuilderTest >> addFullFrame [
 	frame := stackBuilder addNewFrame.
 	instructionPointer := method + 17.
 	frame beSuspendedAt: instructionPointer.
-
+	
 	stackElement1 := memory integerObjectOf: 4.
 	stackElement2 := memory integerObjectOf: 5.
 	frame stack: { stackElement1. stackElement2 }.
@@ -54,6 +56,28 @@ StackBuilderTest >> addFullFrame [
 	frame context: context.
 
 	frame method: method.
+	^ frame 
+]
+
+{ #category : #offset }
+StackBuilderTest >> offsetArgument1 [
+	^ self offsetArgument2 + 1
+]
+
+{ #category : #offset }
+StackBuilderTest >> offsetArgument1FromBaseFP [
+	^ self offsetArgument2FromBaseFP + 1
+]
+
+{ #category : #offset }
+StackBuilderTest >> offsetArgument2 [
+	"we skip the frame pointer"
+	^ self offsetMethod + 2
+]
+
+{ #category : #offset }
+StackBuilderTest >> offsetArgument2FromBaseFP [
+	^ 2
 ]
 
 { #category : #offset }
@@ -109,13 +133,25 @@ StackBuilderTest >> offsetTemp2 [
 { #category : #running }
 StackBuilderTest >> setUp [
 	super setUp.
-		
+	
+	argument2 := memory integerObjectOf: 3.
+	argument1 := memory integerObjectOf: 2.
+	stackBuilder args: { argument1. argument2 }.
 	self addFullFrame.
 	self addFullFrame.	
 	self addFullFrame.
 
 	stackBuilder buildStack.
 
+]
+
+{ #category : #'test-VMstate' }
+StackBuilderTest >> testAddArgumentsOnOtherThanBaseFrameFails [
+
+	stackBuilder .
+	
+
+	stackBuilder buildStack.
 ]
 
 { #category : #'test-VMstate' }
@@ -147,6 +183,18 @@ StackBuilderTest >> testHeadFramePointerCallerIsNotBaseFramePointer [
 	The caller of the top frame should be the middle one"
 	self deny: (interpreter frameCallerFP: interpreter framePointer) 
 		equals: stackBuilder page baseFP
+]
+
+{ #category : #'test-order' }
+StackBuilderTest >> testOrderArgument1InBaseFrame [
+	self assert: (interpreter stackPages longAtPointer: interpreter stackPage baseFP + (self offsetArgument1FromBaseFP * memory bytesPerOop))
+		equals: argument1
+]
+
+{ #category : #'test-order' }
+StackBuilderTest >> testOrderArgument2InBaseFrame [
+	self assert: (interpreter stackPages longAtPointer: interpreter stackPage baseFP + (self offsetArgument2FromBaseFP * memory bytesPerOop))
+		equals: argument2
 ]
 
 { #category : #'test-order' }

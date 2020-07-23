@@ -48,14 +48,15 @@ Class {
 		'method',
 		'context',
 		'receiver',
-		'args',
 		'temps',
 		'stack',
 		'memory',
 		'interpreter',
 		'instructionPointer',
 		'callerFrame',
-		'flags'
+		'flags',
+		'previousFrameArgsSize',
+		'argumentSize'
 	],
 	#category : #'VMMakerTests-Builders'
 }
@@ -77,13 +78,13 @@ VMFrameBuilder >> adaptAddressToMemoryIfInteger: anAssociation [
 ]
 
 { #category : #accessing }
-VMFrameBuilder >> args [
-	^ args
+VMFrameBuilder >> argumentSize [
+	^ argumentSize
 ]
 
 { #category : #accessing }
-VMFrameBuilder >> args: anObject [
-	args := anObject
+VMFrameBuilder >> argumentSize: anObject [
+	argumentSize := anObject
 ]
 
 { #category : #configuring }
@@ -111,6 +112,16 @@ VMFrameBuilder >> context: anObject [
 	context := anObject
 ]
 
+{ #category : #accessing }
+VMFrameBuilder >> flags [
+	^ flags
+]
+
+{ #category : #accessing }
+VMFrameBuilder >> flags: anObject [
+	flags := anObject
+]
+
 { #category : #inspect }
 VMFrameBuilder >> gtInspectorItemsIn: composite [
 	<gtInspectorPresentationOrder: 1>
@@ -125,7 +136,7 @@ VMFrameBuilder >> gtInspectorItemsIn: composite [
 		#method ->  method.
 		#'caller''s method ip' -> nil.
 		#'callerFP' -> callerFrame.
-		#arguments -> args.
+"		#arguments -> args."
 		#receiver -> receiver.
 		 }.
 	^ composite fastTable
@@ -151,10 +162,11 @@ VMFrameBuilder >> initializeWithInterpreter: anInterpreter andMemory: aMemory [
 	method := memory nilObject.
 	context := memory nilObject.
 	receiver := memory nilObject.
-	args := OrderedCollection new.
 	temps := OrderedCollection new.
 	stack := OrderedCollection new.
 
+	previousFrameArgsSize := 0. " set by the StackBuilder"
+	argumentSize := 0.
 ]
 
 { #category : #accesing }
@@ -162,9 +174,29 @@ VMFrameBuilder >> instructionPointer [
 	^ instructionPointer
 ]
 
+{ #category : #accessing }
+VMFrameBuilder >> interpreter [
+	^ interpreter
+]
+
+{ #category : #accessing }
+VMFrameBuilder >> interpreter: anObject [
+	interpreter := anObject
+]
+
 { #category : #testing }
 VMFrameBuilder >> isSuspended [
 	^ instructionPointer isNil
+]
+
+{ #category : #accessing }
+VMFrameBuilder >> memory [
+	^ memory
+]
+
+{ #category : #accessing }
+VMFrameBuilder >> memory: anObject [
+	memory := anObject
 ]
 
 { #category : #accessing }
@@ -175,6 +207,16 @@ VMFrameBuilder >> method [
 { #category : #accessing }
 VMFrameBuilder >> method: anObject [
 	method := anObject
+]
+
+{ #category : #accessing }
+VMFrameBuilder >> previousFrameArgsSize [
+	^ previousFrameArgsSize
+]
+
+{ #category : #accessing }
+VMFrameBuilder >> previousFrameArgsSize: anObject [
+	previousFrameArgsSize := anObject
 ]
 
 { #category : #building }
@@ -190,7 +232,7 @@ VMFrameBuilder >> pushFlags [
 	flags := (interpreter
 			encodeFrameFieldHasContext: context ~= memory nilObject
 			isBlock: false
-			numArgs: args size).
+			numArgs: previousFrameArgsSize).
 	interpreter push: flags
 ]
 
