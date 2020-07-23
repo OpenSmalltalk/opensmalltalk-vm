@@ -156,7 +156,7 @@ VMClass class >> initializeForPlugins: optionsDictionaryOrArray [
 	"Do a default initialization, suitable for generating plugin sources."
 	StackInterpreterSimulator
 		initializeWithOptions: optionsDictionaryOrArray
-		objectMemoryClass: Spur32BitMemoryManager
+
 ]
 
 { #category : #initialization }
@@ -1429,9 +1429,9 @@ VMClass >> unreachable [
 { #category : #'hack compatibility' }
 VMClass >> vmPath [
 	<doNotGenerate>
-	^(Smalltalk classNamed: #VirtualMachine)
-		ifNotNil: [:project| Smalltalk vm path] "Squeak"
-		ifNil: [Smalltalk vmPath] "Pharo"
+	^ (Smalltalk classNamed: #VirtualMachine)
+		  ifNotNil: [ :project | "Squeak" Smalltalk vm directory ]
+		  ifNil: [ "Pharo" Smalltalk vmPath ]
 ]
 
 { #category : #'hack compatibility' }

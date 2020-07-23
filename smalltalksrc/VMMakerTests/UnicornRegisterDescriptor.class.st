@@ -5,7 +5,7 @@ Class {
 		'simulator',
 		'name'
 	],
-	#category : #VMMakerTests
+	#category : #'VMMakerTests-Unicorn'
 }
 
 { #category : #accessing }

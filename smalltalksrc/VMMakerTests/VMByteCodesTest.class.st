@@ -1,7 +1,12 @@
 Class {
 	#name : #VMByteCodesTest,
-	#superclass : #VMSpurMemoryManagerTest,
-	#category : #VMMakerTests
+	#superclass : #VMInterpreterTests,
+	#instVars : [
+		'frame',
+		'contextOop',
+		'context'
+	],
+	#category : #'VMMakerTests-InterpreterTests'
 }
 
 { #category : #'helper-assertions' }
@@ -89,25 +94,16 @@ VMByteCodesTest >> pushTemporaryVariableBytecodeAt: offset [
 	
 ]
 
-{ #category : #running }
-VMByteCodesTest >> setUp [
-	
-	"taken from VMSimpleStackBasedCogitBytecodeTest >> #setup"
-	super setUp.
-	
-	memory nilObject: (self newObjectWithSlots: 0).
-	memory trueObject: (self newObjectWithSlots: 0).
-	memory falseObject: (self newObjectWithSlots: 0).
-	
-	"We don't access its contents, but we need it to be after nil, true and false"
-	memory hiddenRootsObject: (self newObjectWithSlots: 0).
-	interpreter := memory interpreter.
-		
-	self initializeOldSpaceForScavenger.
-
-	
-
-
+{ #category : #tests }
+VMByteCodesTest >> pushThisContextTopFrame [
+	frame := stackBuilder addNewFrame
+		method: (self newMethodWithBytecodes: #[1 2 3 4 5 6 7 8]).
+	stackBuilder buildStack.
+	self interpret: [ interpreter pushActiveContextBytecode ].
+	contextOop := interpreter stackTop.
+	context := VMContext
+		newOnContext: contextOop
+		withInterpreter: interpreter
 ]
 
 { #category : #'test-push-simple' }
@@ -291,6 +287,48 @@ VMByteCodesTest >> testPushTemp8 [
 { #category : #'test-push-simple' }
 VMByteCodesTest >> testPushTemp9 [
 	self pushTempTest: 9
+]
+
+{ #category : #tests }
+VMByteCodesTest >> testPushThisContextPushesValidInstructionPointer [
+	self pushThisContextTopFrame.
+	self
+		assert: (interpreter objectMemory isIntegerObject: context instructionPointer).
+	self
+		assert: (interpreter withoutSmallIntegerTags: context instructionPointer)
+		equals: (interpreter frameCallerFP: interpreter framePointer)
+]
+
+{ #category : #tests }
+VMByteCodesTest >> testPushThisContextPushesValidPointerToTheFramePointer [
+	
+	self pushThisContextTopFrame.
+	self
+		assert: (interpreter objectMemory isIntegerObject: context sender).
+	self
+		assert: (interpreter withoutSmallIntegerTags: context sender)
+		equals: interpreter framePointer
+]
+
+{ #category : #tests }
+VMByteCodesTest >> testPushThisContextPushesValidReceiver [
+
+	self pushThisContextTopFrame.
+	self assert: frame receiver equals: context receiver
+]
+
+{ #category : #tests }
+VMByteCodesTest >> testPushThisContextSetContextToFrame [
+
+	self pushThisContextTopFrame.
+	self assert: (interpreter frameContext: interpreter framePointer) equals: interpreter stackTop.
+]
+
+{ #category : #tests }
+VMByteCodesTest >> testPushThisContextSetFlagContextToFrame [
+
+	self pushThisContextTopFrame.
+	self assert: (interpreter frameHasContext: interpreter framePointer).
 ]
 
 { #category : #'test-push-simple' }

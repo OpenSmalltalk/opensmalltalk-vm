@@ -58,6 +58,7 @@ The build in Windows, uses Cygwin. This tool should be installed, and the follow
 - wget
 - curl 
 - make
+- git
 
 ```bash
 $ cmake .

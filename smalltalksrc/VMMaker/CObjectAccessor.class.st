@@ -105,7 +105,8 @@ CObjectAccessor >> coerceTo: cTypeString sim: interpreterSimulator [
 	cTypeString caseOf: {
 		[#'float *']			-> [^self asFloatAccessor].
 		[#'int *']			-> [^self asIntAccessor].
-		['sqInputEvent*']	-> [^self] }
+		['sqInputEvent*']	-> [^self].
+		[#'char *' ] -> [ ^self ] }
 		otherwise: [self halt].
 	^ self
 ]

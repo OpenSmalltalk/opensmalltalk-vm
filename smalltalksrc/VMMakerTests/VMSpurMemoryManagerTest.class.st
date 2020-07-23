@@ -22,7 +22,7 @@ Class {
 		'VMBytecodeConstants',
 		'VMObjectIndices'
 	],
-	#category : #VMMakerTests
+	#category : #'VMMakerTests-MemoryTests'
 }
 
 { #category : #accessing }

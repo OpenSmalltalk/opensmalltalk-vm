@@ -35,7 +35,7 @@ Class {
 		'interpreter',
 		'memory'
 	],
-	#category : #'VMMakerTests-Frame'
+	#category : #'VMMakerTests-Builders'
 }
 
 { #category : #frames }
@@ -55,30 +55,12 @@ VMStackBuilder >> addNewFrame [
 
 { #category : #build }
 VMStackBuilder >> buildStack [
-	| lastFrame |
 	self createStackPage.
 	self pushFrames.
-
-	lastFrame := frames last.
-	
-"	interpreter push: lastFrame method + memory baseHeaderSize - 2.
 	interpreter setStackPageAndLimit: page.
 	interpreter setStackPointersFromPage: page.
-""	interpreter popStack."
-	"should return last frame in use" 
-	
-	"page
-		headFP: lastFrame temps size + 5 + interpreter stackPointer;
-		headSP: interpreter stackPointer.
-	"
-	"interpreter stackTop.
-	interpreter stackPages.
-	"
-	
-	interpreter setStackPageAndLimit: page.
-  interpreter setStackPointersFromPage: page.
 	interpreter internalizeIPandSP.
-	^ lastFrame
+	^ frames last
 ]
 
 { #category : #stack }
