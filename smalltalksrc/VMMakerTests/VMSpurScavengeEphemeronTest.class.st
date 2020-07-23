@@ -4,7 +4,7 @@ Class {
 	#instVars : [
 		'ourEphemeronClass'
 	],
-	#category : #VMMakerTests
+	#category : #'VMMakerTests-MemoryTests'
 }
 
 { #category : #helpers }

@@ -6,7 +6,7 @@ Class {
 		'stopReason',
 		'memory'
 	],
-	#category : #VMMakerTests
+	#category : #'VMMakerTests-Unicorn'
 }
 
 { #category : #'instance creation' }

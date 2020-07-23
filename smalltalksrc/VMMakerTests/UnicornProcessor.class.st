@@ -4,7 +4,7 @@ Class {
 	#instVars : [
 		'machineSimulator'
 	],
-	#category : #VMMakerTests
+	#category : #'VMMakerTests-Unicorn'
 }
 
 { #category : #registers }

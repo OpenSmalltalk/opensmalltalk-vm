@@ -5,7 +5,7 @@ Class {
 		'sizesInBreadthFirstOrder',
 		'chunkAddresses'
 	],
-	#category : #VMMakerTests
+	#category : #'VMMakerTests-MemoryTests'
 }
 
 { #category : #accessing }

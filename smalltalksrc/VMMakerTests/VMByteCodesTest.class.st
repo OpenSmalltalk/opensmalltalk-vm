@@ -1,7 +1,7 @@
 Class {
 	#name : #VMByteCodesTest,
-	#superclass : #VMSpurMemoryManagerTest,
-	#category : #VMMakerTests
+	#superclass : #VMInterpreterTests,
+	#category : #'VMMakerTests-InterpreterTests'
 }
 
 { #category : #'helper-assertions' }
@@ -87,27 +87,6 @@ VMByteCodesTest >> pushTempTest: index [
 VMByteCodesTest >> pushTemporaryVariableBytecodeAt: offset [
 	^ self firstPushTemporaryVariableBytecode + offset.
 	
-]
-
-{ #category : #running }
-VMByteCodesTest >> setUp [
-	
-	"taken from VMSimpleStackBasedCogitBytecodeTest >> #setup"
-	super setUp.
-	
-	memory nilObject: (self newObjectWithSlots: 0).
-	memory trueObject: (self newObjectWithSlots: 0).
-	memory falseObject: (self newObjectWithSlots: 0).
-	
-	"We don't access its contents, but we need it to be after nil, true and false"
-	memory hiddenRootsObject: (self newObjectWithSlots: 0).
-	interpreter := memory interpreter.
-		
-	self initializeOldSpaceForScavenger.
-
-	
-
-
 ]
 
 { #category : #'test-push-simple' }

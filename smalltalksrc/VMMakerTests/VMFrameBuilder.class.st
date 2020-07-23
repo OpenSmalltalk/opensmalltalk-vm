@@ -57,7 +57,7 @@ Class {
 		'callerFrame',
 		'flags'
 	],
-	#category : #'VMMakerTests-Frame'
+	#category : #'VMMakerTests-Builders'
 }
 
 { #category : #inspect }
