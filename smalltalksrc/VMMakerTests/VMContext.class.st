@@ -5,6 +5,9 @@ Class {
 		'contextOop',
 		'interpreter'
 	],
+	#pools : [
+		'VMObjectIndices'
+	],
 	#category : #'VMMakerTests-Visualisation'
 }
 
@@ -22,6 +25,11 @@ VMContext >> contextOop: anInteger [
 ]
 
 { #category : #accessing }
+VMContext >> instructionPointer [
+	^interpreter objectMemory fetchPointer: InstructionPointerIndex ofObject: contextOop.
+]
+
+{ #category : #accessing }
 VMContext >> interpreter: aStackInterpreterSimulatorLSB [ 
 	interpreter := aStackInterpreterSimulatorLSB
 ]
@@ -34,4 +42,14 @@ VMContext >> isMarried [
 { #category : #testing }
 VMContext >> isNilObject [
 	^interpreter objectMemory nilObject = contextOop.
+]
+
+{ #category : #accessing }
+VMContext >> receiver [
+	^interpreter objectMemory fetchPointer: ReceiverIndex ofObject: contextOop
+]
+
+{ #category : #accessing }
+VMContext >> sender [
+	^interpreter objectMemory fetchPointer: SenderIndex ofObject: contextOop.
 ]
