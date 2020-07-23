@@ -124,13 +124,10 @@ VMSpurScavengerTest >> testArgumentInStackShouldSurviveScanvenge [
 	| newObjectOop newObjectHash newObjectAddress |	
 	newObjectOop := self newZeroSizedObject.
 	newObjectHash := (memory hashBitsOf: newObjectOop).
-	
-	self
-		makeBaseFrameWithMethod: memory nilObject
-		context: memory nilObject
-		receiver: memory nilObject
-		args: { newObjectOop }
-		andStack: #().
+
+	stackBuilder args: { newObjectOop }.
+	stackBuilder addNewFrame.
+	stackBuilder buildStack.
 
 	"Nil should survive, but newObjectOop should survive too.
 	Nil is referenced by the roots because many of their slots are nilled.

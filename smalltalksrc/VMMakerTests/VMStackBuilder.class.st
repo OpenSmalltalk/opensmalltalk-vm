@@ -32,6 +32,7 @@ Class {
 	#instVars : [
 		'page',
 		'frames',
+		'args',
 		'interpreter',
 		'memory'
 	],
@@ -51,6 +52,16 @@ VMStackBuilder >> addNewFrame [
 	frame := VMFrameBuilder new initializeWithInterpreter: interpreter andMemory: memory.
 	frames add: frame.
 	^ frame "the frame is then configured by the caller"
+]
+
+{ #category : #accessing }
+VMStackBuilder >> args [
+	^ args
+]
+
+{ #category : #accessing }
+VMStackBuilder >> args: anObject [
+	args := anObject
 ]
 
 { #category : #build }
@@ -79,10 +90,16 @@ VMStackBuilder >> frames [
 	^ frames
 ]
 
-{ #category : #Initialization }
+{ #category : #accessing }
+VMStackBuilder >> frames: anObject [
+	frames := anObject
+]
+
+{ #category : #initialization }
 VMStackBuilder >> initialize [
 	super initialize.
 	frames := OrderedCollection new. "will be treated in reverse"
+	args := OrderedCollection new.
 ]
 
 { #category : #accessing }
@@ -110,6 +127,16 @@ VMStackBuilder >> page [
 	^ page
 ]
 
+{ #category : #accessing }
+VMStackBuilder >> page: anObject [
+	page := anObject
+]
+
+{ #category : #initialization }
+VMStackBuilder >> pushArgs [
+	args do: [ :anArg | interpreter push: anArg ]
+]
+
 { #category : #build }
 VMStackBuilder >> pushFrame: aFrame [
 	
@@ -124,17 +151,21 @@ VMStackBuilder >> pushFrame: aFrame [
 VMStackBuilder >> pushFrames [
 	 "Page setup before the base frame"
 	interpreter push: memory nilObject.	"receiver"
-		"arguments we have none for now"
+	self pushArgs. "arguments"
 	interpreter push: memory nilObject.  "senderContext"
 	interpreter push: 0. "savedFp"
 	page baseFP: interpreter stackPointer.
 	"Push base frame"
+	frames first previousFrameArgsSize: args size.
 	self pushFrame: frames first.
 
 	2 to: frames size do: [ :anIndex | | aFrame |
-			interpreter push: interpreter framePointer.			
-
 			aFrame := frames at: anIndex.
+			
+			aFrame previousFrameArgsSize: ((frames at: anIndex - 1) argumentSize).
+			
+			interpreter push: interpreter framePointer.	
+				
 			self pushFrame: aFrame.
 			aFrame callerFrame: (frames at: anIndex - 1)."for better inspection"
 			]
