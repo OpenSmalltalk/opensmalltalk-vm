@@ -159,8 +159,8 @@ SqueakVideoGrabber *grabbers[8] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NUL
   if (preset) {
   // Set the video output to store frame in BGRA (It is supposed to be faster)
 	NSDictionary *outputSettings = [NSDictionary dictionaryWithObjectsAndKeys:
-		[NSNumber numberWithDouble: width], (id)kCVPixelBufferWidthKey,
-		[NSNumber numberWithDouble: height], (id)kCVPixelBufferHeightKey,
+		[NSNumber numberWithInt: width], (id)kCVPixelBufferWidthKey,
+		[NSNumber numberWithInt: height], (id)kCVPixelBufferHeightKey,
 		[NSNumber numberWithInt: kCVPixelFormatType_32BGRA], (id)kCVPixelBufferPixelFormatTypeKey,
 		nil];
     [captureOutput setVideoSettings:outputSettings];
