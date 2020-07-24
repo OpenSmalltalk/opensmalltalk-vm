@@ -10797,6 +10797,11 @@ Cogit >> promptForBreakPC [
 	self breakPC: pc
 ]
 
+{ #category : #'as yet unclassified' }
+Cogit >> receiverTags: anInteger [ 
+	receiverTags := anInteger
+]
+
 { #category : #debugging }
 Cogit >> recordBlockTrace [
 	<api>

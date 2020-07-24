@@ -4,6 +4,12 @@ Class {
 	#category : #'VMMakerTests-Unicorn'
 }
 
+{ #category : #'as yet unclassified' }
+UnicornX64Simulator >> arg0Register [
+	
+	^ UcX86Registers rdi
+]
+
 { #category : #'phisical-registers' }
 UnicornX64Simulator >> baseRegister [
 

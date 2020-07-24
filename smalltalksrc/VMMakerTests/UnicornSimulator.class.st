@@ -33,6 +33,23 @@ UnicornSimulator class >> X64 [
 	^ UnicornX64Simulator new
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornSimulator >> arg0Register [
+	self subclassResponsibility
+]
+
+{ #category : #'as yet unclassified' }
+UnicornSimulator >> arg0RegisterValue [
+	
+	^ self readRegister: self arg0Register 
+]
+
+{ #category : #'as yet unclassified' }
+UnicornSimulator >> arg0RegisterValue: aValue [
+
+	^ self writeRegister: self arg0Register value: aValue
+]
+
 { #category : #registers }
 UnicornSimulator >> baseRegister [
 
