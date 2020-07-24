@@ -5,6 +5,7 @@
  *  https://github.com/openframeworks/openFrameworks/blob/master/addons/ofxiOS/src/video/AVFoundationVideoGrabber.mm
  *  which is released under the MIT license.  Subsequently, this code is also under the MIT license.
  *
+ * See https://developer.apple.com/documentation/avfoundation/cameras_and_media_capture/avcam_building_a_camera_app
  * Implementaion node:
  * variable cameraNum is 1-based in following code in order to fit Smalltalk expectations
  */
@@ -100,7 +101,7 @@ SqueakVideoGrabber *grabbers[8] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NUL
   }
   // We setup the output
   captureOutput = [[AVCaptureVideoDataOutput alloc] init];
-  // While a frame is processes in -captureOutput:didOutputSampleBuffer:fromConnection: delegate methods no other frames are added in the queue.
+  // While a frame is processed in -captureOutput:didOutputSampleBuffer:fromConnection: delegate methods no other frames are added in the queue.
   // If you don't want this behaviour set the property to NO
   captureOutput.alwaysDiscardsLateVideoFrames = YES;
 
