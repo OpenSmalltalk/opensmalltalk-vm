@@ -5,6 +5,12 @@ Class {
 }
 
 { #category : #registers }
+UnicornARMv5Simulator >> arg0Register [
+	
+	^ UcARMRegisters r3
+]
+
+{ #category : #registers }
 UnicornARMv5Simulator >> baseRegister [
 
 	^ UcARMRegisters r10

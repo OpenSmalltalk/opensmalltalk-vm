@@ -5,6 +5,12 @@ Class {
 }
 
 { #category : #registers }
+UnicornI386Simulator >> arg0Register [
+	
+	^ UcX86Registers esi
+]
+
+{ #category : #registers }
 UnicornI386Simulator >> baseRegister [
 
 	^ UcX86Registers ebx

@@ -4,7 +4,7 @@ Class {
 	#category : #'VMMakerTests-Unicorn'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #registers }
 UnicornX64Simulator >> arg0Register [
 	
 	^ UcX86Registers rdi

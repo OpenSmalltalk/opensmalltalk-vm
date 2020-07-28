@@ -33,9 +33,10 @@ UnicornSimulator class >> X64 [
 	^ UnicornX64Simulator new
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #registers }
 UnicornSimulator >> arg0Register [
-	self subclassResponsibility
+	
+	^ self subclassResponsibility 
 ]
 
 { #category : #'as yet unclassified' }
