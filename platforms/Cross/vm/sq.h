@@ -223,6 +223,15 @@ sqInt sqGetFilenameFromString(char * aCharBuffer, char * aFilenameString, sqInt 
 #define browserPluginReturnIfNeeded()
 #define browserPluginInitialiseIfNeeded()
 
+/* VM_TICKER enables facilities providing periodic invocation of functions
+ * on a high-priority thread in the VM, preempting Smalltalk execution.
+ */
+#if VM_TICKER
+extern usqInt ioVMTickerCount();
+extern usqInt ioVMTickeeCallCount();
+extern usqLong ioVMTickerStartUSecs();
+#endif
+
 /* Platform-specific header file may redefine earlier definitions and macros. */
 
 #include "sqPlatformSpecific.h"
