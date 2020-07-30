@@ -1,0 +1,20 @@
+# Copied, perhaps edited, from ../src/examplePlugins.ext
+EXTERNAL_PLUGINS = \
+BochsIA32Plugin \
+BochsX64Plugin \
+GdbARMPlugin \
+B3DAcceleratorPlugin \
+CroquetPlugin \
+Mpeg3Plugin \
+SqueakFFIPrims \
+Squeak3D \
+SqueakSSL \
+UnixOSProcessPlugin \
+DESPlugin \
+MD5Plugin \
+SHA2Plugin \
+# Not working because no 64-bit QuickTime \
+# MIDIPlugin \
+# not working (because of Cocoa vs Carbon): \
+# QuicktimePlugin \
+# JoystickTabletPlugin
