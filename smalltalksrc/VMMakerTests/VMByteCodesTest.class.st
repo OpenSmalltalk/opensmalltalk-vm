@@ -2,9 +2,10 @@ Class {
 	#name : #VMByteCodesTest,
 	#superclass : #VMInterpreterTests,
 	#instVars : [
-		'frame',
 		'contextOop',
-		'context'
+		'context',
+		'callingFrame',
+		'topFrame'
 	],
 	#category : #'VMMakerTests-InterpreterTests'
 }
@@ -74,6 +75,19 @@ VMByteCodesTest >> interpret: aBlock [
 
 ]
 
+{ #category : #'tests-pushThisContext' }
+VMByteCodesTest >> interpretWithFrame: aBlock [
+
+	callingFrame := stackBuilder addNewFrame
+		method: (self newMethodWithBytecodes: #[1 2 3 4 5 6 7 8]).
+	topFrame := stackBuilder addNewFrame
+		method: (self newMethodWithBytecodes: #[1 2 3 4 5 6 7 8]).
+	stackBuilder buildStack.
+	
+	self interpret: aBlock.
+
+]
+
 { #category : #'test-push-simple' }
 VMByteCodesTest >> pushTempTest: index [
 	
@@ -94,12 +108,11 @@ VMByteCodesTest >> pushTemporaryVariableBytecodeAt: offset [
 	
 ]
 
-{ #category : #tests }
+{ #category : #'tests-pushThisContext' }
 VMByteCodesTest >> pushThisContextTopFrame [
-	frame := stackBuilder addNewFrame
-		method: (self newMethodWithBytecodes: #[1 2 3 4 5 6 7 8]).
-	stackBuilder buildStack.
-	self interpret: [ interpreter pushActiveContextBytecode ].
+
+	self interpretWithFrame: [ interpreter pushActiveContextBytecode ].
+
 	contextOop := interpreter stackTop.
 	context := VMContext
 		newOnContext: contextOop
@@ -125,6 +138,17 @@ VMByteCodesTest >> storeAndPopTemporaryIntoTempTest: index [
 { #category : #'helpers-bytecode-table' }
 VMByteCodesTest >> storeAndPopTemporaryVariableBytecodeAt: anInteger [ 
 	^ self firstStoreAndPopTemporaryVariableBytecode + anInteger
+]
+
+{ #category : #'tests-pushThisContext' }
+VMByteCodesTest >> testAccessingSenderOfContextShouldReturnContextOfSender [
+
+	| oldMaybeSenderContext newMaybeSenderContext |
+	self interpretWithFrame: [ interpreter pushActiveContextBytecode. ].
+	oldMaybeSenderContext := interpreter instVar: SenderIndex ofContext: interpreter stackTop.
+	interpreter pushActiveContextBytecode.
+	newMaybeSenderContext := interpreter instVar: SenderIndex ofContext: interpreter stackTop.
+	self assert: oldMaybeSenderContext equals: newMaybeSenderContext
 ]
 
 { #category : #'test-push-simple' }
@@ -289,7 +313,14 @@ VMByteCodesTest >> testPushTemp9 [
 	self pushTempTest: 9
 ]
 
-{ #category : #tests }
+{ #category : #'tests-pushThisContext' }
+VMByteCodesTest >> testPushThisContextIsContext [
+
+	self pushThisContextTopFrame.
+	self assert: (memory isContext: interpreter stackTop).
+]
+
+{ #category : #'tests-pushThisContext' }
 VMByteCodesTest >> testPushThisContextPushesValidInstructionPointer [
 	self pushThisContextTopFrame.
 	self
@@ -299,7 +330,7 @@ VMByteCodesTest >> testPushThisContextPushesValidInstructionPointer [
 		equals: (interpreter frameCallerFP: interpreter framePointer)
 ]
 
-{ #category : #tests }
+{ #category : #'tests-pushThisContext' }
 VMByteCodesTest >> testPushThisContextPushesValidPointerToTheFramePointer [
 	
 	self pushThisContextTopFrame.
@@ -310,25 +341,38 @@ VMByteCodesTest >> testPushThisContextPushesValidPointerToTheFramePointer [
 		equals: interpreter framePointer
 ]
 
-{ #category : #tests }
+{ #category : #'tests-pushThisContext' }
 VMByteCodesTest >> testPushThisContextPushesValidReceiver [
 
 	self pushThisContextTopFrame.
-	self assert: frame receiver equals: context receiver
+	self assert: topFrame receiver equals: context receiver
 ]
 
-{ #category : #tests }
+{ #category : #'tests-pushThisContext' }
 VMByteCodesTest >> testPushThisContextSetContextToFrame [
 
 	self pushThisContextTopFrame.
 	self assert: (interpreter frameContext: interpreter framePointer) equals: interpreter stackTop.
 ]
 
-{ #category : #tests }
+{ #category : #'tests-pushThisContext' }
 VMByteCodesTest >> testPushThisContextSetFlagContextToFrame [
 
 	self pushThisContextTopFrame.
 	self assert: (interpreter frameHasContext: interpreter framePointer).
+]
+
+{ #category : #'tests-pushThisContext' }
+VMByteCodesTest >> testPushThisContextTwiceMarriesOnce [
+
+	| previousTop newTop |
+	self interpretWithFrame: [ 
+		interpreter pushActiveContextBytecode.
+		previousTop := interpreter stackTop.
+		interpreter pushActiveContextBytecode.
+		newTop := interpreter stackTop.
+		 ].
+	self assert: newTop equals: previousTop.
 ]
 
 { #category : #'test-push-simple' }
@@ -359,6 +403,21 @@ VMByteCodesTest >> testReturnTrue [
 		assert: [ self interpret: [ interpreter returnTrue ] ]
 		returned: memory trueObject
 
+]
+
+{ #category : #'tests-pushThisContext' }
+VMByteCodesTest >> testReturnsMarriedFrameWidowsContext [
+
+	|   topFrameContext |
+	self interpretWithFrame: [ 
+		interpreter pushActiveContextBytecode.
+		interpreter returnTopFromMethod.
+		 ].
+	topFrameContext := interpreter stackTop.
+	"The interpreter does not update the pages, they are updated on demand. 
+	Before checking a frame isWindowed we have to synchronize the interpreter variables with the stackPages"
+	interpreter externalWriteBackHeadFramePointers.
+	self assert: (interpreter isWidowedContext: topFrameContext)
 ]
 
 { #category : #'test-push-simple' }
