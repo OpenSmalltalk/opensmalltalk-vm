@@ -18,8 +18,9 @@ $(error could not find a valid SDK)
 endif
 TARGET_ARCH:=aarch64
 TARGET_CPU:=apple-a12
+TARGET_CPU:=apple-a12 -D__arm64__=1 # Hack; clang neglects to set __arm64__
 ifeq ($(TARGET_VERSION_MIN),) # Allow Makefile to set TARGET_VERSION_MIN
-TARGET_VERSION_MIN:=10.7
+TARGET_VERSION_MIN:=11.0
 endif
 
 # Determine where to install plugins in the .app bundle using the Squeak
@@ -41,14 +42,23 @@ OBJC_CODE_MODEL := -fobjc-arc
 ifdef BIT_IDENTICAL_FLOATING_POINT
 CFLAGS:=$(CFLAGS) -DBIT_IDENTICAL_FLOATING_POINT=1
 endif
+#CFLAGS:=$(CFLAGS) -DBUILD_FOR_OSX=1 -DUSE_METAL=1 -DUSE_OPENGL=1 -DUSE_CORE_GRAPHICS=1 \
+#		-target $(TARGET_ARCH) -mcpu=$(TARGET_CPU) \
+#		-mmacosx-version-min=$(TARGET_VERSION_MIN) \
+#		-fvisibility=default \
+#		-fmacro-backtrace-limit=0 -fdiagnostics-show-note-include-stack \
+#		-fmessage-length=0 -fpascal-strings -fasm-blocks -fstrict-aliasing \
+#		$(OBJC_CODE_MODEL) \
+#		$(XCFLAGS) \
+#		-isysroot $(SDK) \
+#		-include $(PLATDIR)/iOS/vm/SqueakPureObjc_Prefix.pch
+
 CFLAGS:=$(CFLAGS) -DBUILD_FOR_OSX=1 -DUSE_METAL=1 -DUSE_OPENGL=1 -DUSE_CORE_GRAPHICS=1 \
-		-arch $(TARGET_ARCH) -mcpu=$(TARGET_CPU) \
-		-mmacosx-version-min=$(TARGET_VERSION_MIN) -msse4.2 \
-			-fvisibility=default \
-			-fmacro-backtrace-limit=0 -fdiagnostics-show-note-include-stack \
-			-fmessage-length=0 -fpascal-strings -fasm-blocks -fstrict-aliasing \
-			$(OBJC_CODE_MODEL) \
-			$(XCFLAGS) \
+		-target $(TARGET_ARCH) -mcpu=$(TARGET_CPU) \
+		-fvisibility=default \
+		-fmacro-backtrace-limit=0 -fdiagnostics-show-note-include-stack \
+		-fmessage-length=0 -fpascal-strings -fasm-blocks -fstrict-aliasing \
+		$(XCFLAGS) \
 		-isysroot $(SDK) \
 		-include $(PLATDIR)/iOS/vm/SqueakPureObjc_Prefix.pch
 
