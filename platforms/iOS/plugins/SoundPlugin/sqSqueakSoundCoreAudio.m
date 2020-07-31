@@ -623,7 +623,7 @@ setVolumeOf(AudioDeviceID deviceID, char which, float volume)
 							kAudioObjectPropertyElementMaster },
 	setCallback = {				kAudioStreamPropertyAvailablePhysicalFormats,
 								kAudioObjectPropertyScopeGlobal,
-								0 },
+								kAudioObjectPropertyElementMaster },
     setRunLoop = {					kAudioHardwarePropertyRunLoop,
 									kAudioObjectPropertyScopeGlobal,
 									kAudioObjectPropertyElementMaster };
@@ -649,7 +649,7 @@ setVolumeOf(AudioDeviceID deviceID, char which, float volume)
 	// First get the device IDs and compute numDevices
 	UInt32 datasize = 0;
     if (AudioObjectGetPropertyDataSize(kAudioObjectSystemObject,
-										&getDevices, 0, 0, &datasize))
+										&getDevices, 0, nil, &datasize))
 		return;
 	numDevices = datasize / sizeof(AudioDeviceID);
 	if (numDevices == 0
@@ -658,7 +658,7 @@ setVolumeOf(AudioDeviceID deviceID, char which, float volume)
 		return;
 	}
 	if (AudioObjectGetPropertyData(kAudioObjectSystemObject, &getDevices,
-								   0, 0, &datasize, (AudioDeviceID *)deviceIDs)
+								   0, nil, &datasize, (AudioDeviceID *)deviceIDs)
 
 	 || !(deviceNames = calloc(numDevices, sizeof(char *)))
 	 || !(deviceTypes = calloc(numDevices, sizeof(char)))) {
@@ -676,9 +676,9 @@ setVolumeOf(AudioDeviceID deviceID, char which, float volume)
 		CFStringRef nameRef;
 
         if (AudioObjectGetPropertyDataSize(deviceIDs[i], &getName,
-											0, 0, &datasize)
+											0, nil, &datasize)
 		 || AudioObjectGetPropertyData    (deviceIDs[i], &getName,
-											0, 0, &datasize, &nameRef))
+											0, nil, &datasize, &nameRef))
 			error("could not get sound device name");
 
         CFIndex length = CFStringGetLength(nameRef) + 1;
@@ -687,6 +687,7 @@ setVolumeOf(AudioDeviceID deviceID, char which, float volume)
     	if (AudioObjectGetPropertyDataSize(deviceIDs[i], &getInputStreams,
 											0, NULL, &datasize))
 			error("could not get sound device Input stream info");
+		deviceNames[i][length - 1] = 0;
 		if (datasize > 0)
 			deviceTypes[i] = IsInput;
 
@@ -697,11 +698,11 @@ setVolumeOf(AudioDeviceID deviceID, char which, float volume)
 			deviceTypes[i] |= IsOutput;
 
 		// The claim on the internet is that each callback must have its own
-		// run loop for the calbacks to be called reliably.
+		// run loop for the callbacks to be called reliably.
 		// If these error what can we do?  Simply ignore errors for now.
 		CFRunLoopRef runLoop = 0;
 		(void)AudioObjectSetPropertyData(kAudioObjectSystemObject, &setRunLoop,
-										 0, 0, sizeof(runLoop), &runLoop);
+										 0, nil, sizeof(runLoop), &runLoop);
 		(void)AudioObjectAddPropertyListener(deviceIDs[i], &setCallback,
 											 MyAudioDevicesListener, (void *)0);
 	}
