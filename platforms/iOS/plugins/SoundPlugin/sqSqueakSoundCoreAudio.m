@@ -499,101 +499,73 @@ float
 getVolumeOf(AudioDeviceID deviceID, char which)
 {
 	AudioObjectPropertyAddress	address;
-	OSStatus					err;
-	Float32						volume0, volume1;
-	UInt32						size, channels[2];
-	Boolean						channelHasVolume[2];
+	OSStatus					err1, err2;
+	Boolean						hasVolume1, hasVolume2;
+	Float32						volume1, volume2;
+	UInt32						size = sizeof(Float32);
 
 	// get the input device stereo channels
-	address.mSelector = kAudioDevicePropertyPreferredChannelsForStereo;
+	address.mSelector = kAudioDevicePropertyVolumeScalar;
 	address.mScope = which == IsInput
 						? kAudioDevicePropertyScopeInput
 						: kAudioDevicePropertyScopeOutput;
-	address.mElement = kAudioObjectPropertyElementWildcard;
-	size = sizeof(channels);
-	if (deviceID == (AudioDeviceID)-1
-	 || AudioObjectGetPropertyData(deviceID, &address, 0, nil, &size, &channels))
-		return -1.0f;
-
-	size = sizeof(volume0);
-
-#if 0 /* Master always has volue of 0.0 (actually epsilon) */
 	address.mElement = kAudioObjectPropertyElementMaster;
-	if (AudioObjectHasProperty(deviceID, &address)) {
-		// See if the default channel has a volume.
-		err = AudioObjectGetPropertyData(deviceID, &address, 0, nil, &size, &volume0);
-		if (!err && volume0 > 0.000001f)
-			return volume0;
-	}
-#endif
 
-	address.mElement = kAudioObjectPropertyElementWildcard;
-	// Default channel didn't (doesn't) provide a volume.
-    // run some tests to see what other channels might respond to volume changes
+	// If there's a master volume, answer that...
+	if (AudioObjectHasProperty(deviceID, &address))
+		return AudioObjectGetPropertyData(deviceID, &address, 0, nil, &size, &volume1)
+			? -1.0f
+			: volume1;
 
-	address.mSelector = kAudioDevicePropertyVolumeScalar;
-	address.mElement = channels[0];
-	// returns true, channel 0 has a VolumeScalar property
-	channelHasVolume[0] = AudioObjectHasProperty(deviceID, &address);
+	// Otherwise get each channel individually (assuming stereo) and answer average
+	address.mElement = 1;
+	if ((hasVolume1 = AudioObjectHasProperty(deviceID, &address)))
+		err1 = AudioObjectGetPropertyData(deviceID, &address, 0, nil, &size, &volume1);
+	address.mElement = 2;
+	if ((hasVolume2 = AudioObjectHasProperty(deviceID, &address)))
+		err2 = AudioObjectGetPropertyData(deviceID, &address, 0, nil, &size, &volume2);
 
-	address.mElement = channels[1];
-	// returns true, channel 1 has a VolumeScalar property
-	channelHasVolume[1] = AudioObjectHasProperty(deviceID, &address);
+	if (hasVolume1 && hasVolume2)
+		return err1 || err2 ? -1.0f : (volume1 + volume2) / 2.0f;
 
-	size = sizeof(volume0);
-	address.mElement = channels[0];
-	// returns noErr, but says the volume is always zero (weird)
-	err = AudioObjectGetPropertyData(deviceID, &address, 0, nil, &size, &volume0);
+	if (hasVolume1 && !err1)
+		return volume1;
 
-	if (err || volume0 == 0.0f) {
-		size = sizeof(volume1);
-		address.mElement = channels[1];
-		// returns noErr, but returns the correct volume!
-		err = AudioObjectGetPropertyData(deviceID, &address, 0, nil, &size, &volume1);
-		if (!err)
-			return volume1;
-	}
+	if (hasVolume2 && !err2)
+		return volume2;
 
-	return err ? -1.0f : volume0;
+	return -1.0f;
 }
 
 float
 setVolumeOf(AudioDeviceID deviceID, char which, float volume)
 {
 	AudioObjectPropertyAddress	address;
-	OSStatus					err, atLeastOne;
-	Float32						volume0 = volume, volume1 = volume;
-	UInt32						size, channels[2];
+	OSStatus					err1, err2;
+	Float32						volume1 = volume, volume2 = volume;
+	Boolean						settable;
 
 	// get the input device stereo channels
-	address.mSelector = kAudioDevicePropertyPreferredChannelsForStereo;
+	address.mSelector = kAudioDevicePropertyVolumeScalar;
 	address.mScope = which == IsInput
 						? kAudioDevicePropertyScopeInput
 						: kAudioDevicePropertyScopeOutput;
-	address.mElement = kAudioObjectPropertyElementWildcard;
-	size = sizeof(channels);
-	if (deviceID == (AudioDeviceID)-1
-	 || AudioObjectGetPropertyData(deviceID, &address, 0, nil, &size, &channels))
-		return -1.0f;
+	address.mElement = kAudioObjectPropertyElementMaster;
 
-	err = 0;
-	size = sizeof(volume0);
-	address.mSelector = kAudioDevicePropertyVolumeScalar;
-	// returns true if channel 0 has a VolumeScalar property
-	if (AudioObjectHasProperty(deviceID, &address)) {
-		address.mElement = channels[0];
-		err = AudioObjectSetPropertyData(deviceID, &address, 0, nil, &size, &volume0);
-		atLeastOne = 1;
-	}
+	// If there's a master volume control use that...
+	if (!AudioObjectIsPropertySettable(deviceID, &address, &settable)
+	 && settable)
+		return AudioObjectSetPropertyData(deviceID, &address, 0, nil, sizeof(Float32), &volume1)
+			? -1.0f
+			: volume1;
 
-	// returns true if channel 1 has a VolumeScalar property
-	if (AudioObjectHasProperty(deviceID, &address)) {
-		address.mElement = channels[1];
-		err |= AudioObjectSetPropertyData(deviceID, &address, 0, nil, &size, &volume1);
-		atLeastOne = 1;
-	}
+	// Otherwise set each channel individually (assuming stereo)
+	address.mElement = 1;
+	err1 = AudioObjectSetPropertyData(deviceID, &address, 0, nil, sizeof(Float32), &volume1);
+	address.mElement = 2;
+	err2 = AudioObjectSetPropertyData(deviceID, &address, 0, nil, sizeof(Float32), &volume2);
 
-	return !err && atLeastOne ? (volume0 + volume1) / 2.0f : -1.0f;
+	return err1 || err2 ? -1.0f : (volume1 + volume2) / 2.0f;
 }
 
 
@@ -609,12 +581,8 @@ setVolumeOf(AudioDeviceID deviceID, char which, float volume)
 	Float32 volume;
 
 	if ((volume = getVolumeOf(defaultInputDevice(), IsInput)) < 0) {
-#if 1
 		interpreterProxy->primitiveFail();
 		return -1;
-#else
-		volume = 0.0f; // Terf expected this before we changed it.
-#endif
 	}
 
 	return (int)(volume * 1000.0f);
