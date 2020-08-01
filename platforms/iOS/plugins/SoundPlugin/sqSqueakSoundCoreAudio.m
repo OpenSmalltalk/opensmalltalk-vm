@@ -542,6 +542,7 @@ setVolumeOf(AudioDeviceID deviceID, char which, float volume)
 {
 	AudioObjectPropertyAddress	address;
 	OSStatus					err1, err2;
+	Boolean						hasVolume1, hasVolume2;
 	Float32						volume1 = volume, volume2 = volume;
 	Boolean						settable;
 
@@ -561,11 +562,22 @@ setVolumeOf(AudioDeviceID deviceID, char which, float volume)
 
 	// Otherwise set each channel individually (assuming stereo)
 	address.mElement = 1;
-	err1 = AudioObjectSetPropertyData(deviceID, &address, 0, nil, sizeof(Float32), &volume1);
+	if ((hasVolume1 = AudioObjectHasProperty(deviceID, &address)))
+		err1 = AudioObjectSetPropertyData(deviceID, &address, 0, nil, sizeof(Float32), &volume1);
 	address.mElement = 2;
-	err2 = AudioObjectSetPropertyData(deviceID, &address, 0, nil, sizeof(Float32), &volume2);
+	if ((hasVolume2 = AudioObjectHasProperty(deviceID, &address)))
+		err2 = AudioObjectSetPropertyData(deviceID, &address, 0, nil, sizeof(Float32), &volume2);
 
-	return err1 || err2 ? -1.0f : (volume1 + volume2) / 2.0f;
+	if (hasVolume1 && hasVolume2)
+		return err1 || err2 ? -1.0f : (volume1 + volume2) / 2.0f;
+
+	if (hasVolume1 && !err1)
+		return volume1;
+
+	if (hasVolume2 && !err2)
+		return volume2;
+
+	return -1.0f;
 }
 
 
@@ -729,7 +741,7 @@ setVolumeOf(AudioDeviceID deviceID, char which, float volume)
 - (char *) getDefaultSoundPlayer {
 
 	[self ensureDeviceList];
-	AudioObjectID deviceID = defaultInputDevice();
+	AudioObjectID deviceID = defaultOutputDevice();
 
 	for (int i = 0; i < numDevices; i++)
 		if (deviceIDs[i] == deviceID
@@ -742,7 +754,7 @@ setVolumeOf(AudioDeviceID deviceID, char which, float volume)
 - (char *) getDefaultSoundRecorder {
 
 	[self ensureDeviceList];
-	AudioObjectID deviceID = defaultOutputDevice();
+	AudioObjectID deviceID = defaultInputDevice();
 
 	for (int i = 0; i < numDevices; i++)
 		if (deviceIDs[i] == deviceID
