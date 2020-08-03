@@ -127,8 +127,14 @@ static struct kb *kb= 0;
 static struct fb *fb= 0;
 
 #include "sqUnixFBDevUtil.c"
+#ifdef USEEVDEV
+#include "sqUnixEvdevKeymap.c"
+#include "sqUnixEvdevMouse.c"
+#include "sqUnixEvdevKeyboard.c"
+#else
 #include "sqUnixFBDevMouse.c"
 #include "sqUnixFBDevKeyboard.c"
+#endif
 #include "sqUnixFBDevFramebuffer.c"
 
 static void openFramebuffer(void)
