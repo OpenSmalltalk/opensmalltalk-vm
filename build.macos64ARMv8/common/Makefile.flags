@@ -16,9 +16,9 @@ endif
 ifeq ($(strip $(SDK)),)
 $(error could not find a valid SDK)
 endif
-TARGET_ARCH:=aarch64
-TARGET_CPU:=apple-a12
-TARGET_CPU:=apple-a12 -D__arm64__=1 # Hack; clang neglects to set __arm64__
+TARGET_ARCH:=arm64
+#TARGET_CPU:=apple-a12
+#TARGET_CPU:=apple-a12 -D__arm64__=1 # Hack; clang neglects to set __arm64__
 ifeq ($(TARGET_VERSION_MIN),) # Allow Makefile to set TARGET_VERSION_MIN
 TARGET_VERSION_MIN:=11.0
 endif
@@ -54,7 +54,7 @@ endif
 #		-include $(PLATDIR)/iOS/vm/SqueakPureObjc_Prefix.pch
 
 CFLAGS:=$(CFLAGS) -DBUILD_FOR_OSX=1 -DUSE_METAL=1 -DUSE_OPENGL=1 -DUSE_CORE_GRAPHICS=1 \
-		-target $(TARGET_ARCH) -mcpu=$(TARGET_CPU) \
+		-arch $(TARGET_ARCH) \
 		-fvisibility=default \
 		-fmacro-backtrace-limit=0 -fdiagnostics-show-note-include-stack \
 		-fmessage-length=0 -fpascal-strings -fasm-blocks -fstrict-aliasing \
@@ -81,7 +81,7 @@ WARNINGS:= -Wno-missing-field-initializers -Wno-missing-prototypes \
 	-Wno-four-char-constants -Wno-conversion -Wno-constant-conversion \
 	-Wno-int-conversion -Wno-bool-conversion -Wno-enum-conversion \
 	-Wno-sign-conversion -Wno-shorten-64-to-32 -Wpointer-sign -Wno-newline-eof \
-	-Wno-trigraphs -Wdeprecated-declarations
+	-Wno-trigraphs -Wdeprecated-declarations -Wimplicit-function-declaration
 
 # N.B. No QuickTime framework; that is 32-bit only.
 FRAMEWORKS:=-fobjc-link-runtime \
