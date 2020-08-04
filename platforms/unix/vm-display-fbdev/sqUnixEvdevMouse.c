@@ -298,6 +298,20 @@ static void ms_delete(_mouse)
 
 /* Interactin with VM */
 
+static sqInputEvent *allocateInputEvent(int eventType)
+{
+  sqInputEvent *evt= &inputEventBuffer[iebIn];
+  iebAdvance(iebIn);
+  if (iebEmptyP())
+    {
+      /* overrun: discard oldest event */
+      iebAdvance(iebOut);
+    }
+  evt->type= eventType;
+  evt->timeStamp= ioMSecs() & MillisecondClockMask;
+  return evt;
+}
+
 #define allocateMouseEvent() ( \
   (sqMouseEvent *)allocateInputEvent(EventTypeMouse) \
 )
@@ -443,6 +457,49 @@ void updateMouseButtons(struct input_event* evt) {
 
 
 #undef _mouse
+
+
+/* retrieve the next input event from the queue */
+
+static sqInt display_ioGetNextEvent(sqInputEvent *evt)
+{
+  if (iebEmptyP())
+    ioProcessEvents();
+  LogEventChain((dbgEvtChF,"ioGNE%s",iebEmptyP()?"_":"!\n"));
+  if (iebEmptyP())
+       return false;
+  *evt= inputEventBuffer[iebOut];
+#if DEBUG_EVENTS
+  if (evt->type == EventTypeMouse) {
+   printf( "(ioGetNextEvent) MOUSE evt: time: %ld x: %ld y: %ld ", evt->timeStamp, evt->unused1, evt->unused2);
+   printButtons( evt->unused3 );
+   printf("\n");
+  }
+  if (evt->type == EventTypeKeyboard) {
+   printf( "(ioGetNextEvent) KEYBOARD evt: time: %ld char: %ld utf32: %ld ", evt->timeStamp, evt->unused1, evt->unused4);
+   printf("\n");
+  }
+  
+#endif
+  iebAdvance(iebOut);
+  return true;
+}
+
+
+static sqInt display_ioGetButtonState(void)
+{
+  ioProcessEvents();  /* process all pending events */
+  return getButtonState();
+}
+
+
+static sqInt display_ioMousePoint(void)
+{
+  ioProcessEvents();  /* process all pending events */
+  /* x is high 16 bits; y is low 16 bits */
+  return (mousePosition.x << 16) | (mousePosition.y);
+}
+
 
 
 /*			E O F			*/

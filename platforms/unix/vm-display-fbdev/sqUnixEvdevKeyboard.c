@@ -294,25 +294,26 @@ int iebOut= 0;	/* next IEB location to read  */
 #define iebEmptyP()	(iebIn == iebOut)
 #define iebAdvance(P)	(P= ((P + 1) & (IEB_SIZE - 1)))
 
-
+/* ==== in sqUnixEvdevMouse.c ==== 
 static sqInputEvent *allocateInputEvent(int eventType)
 {
   sqInputEvent *evt= &inputEventBuffer[iebIn];
   iebAdvance(iebIn);
   if (iebEmptyP())
     {
-      /* overrun: discard oldest event */
+      // overrun: discard oldest event
       iebAdvance(iebOut);
     }
   evt->type= eventType;
   evt->timeStamp= ioMSecs() & MillisecondClockMask;
   return evt;
 }
-
+* ==== */
 
 #define allocateKeyboardEvent() ( \
   (sqKeyboardEvent *)allocateInputEvent(EventTypeKeyboard) \
 )
+
 
 static sqInt getButtonState(void)
 {
