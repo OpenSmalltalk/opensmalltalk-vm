@@ -39,6 +39,7 @@
 #import "sqSqueakOSXScreenAndWindow.h"
 #import "SqueakOSXAppDelegate.h"
 #import "sqMacHostWindow.h"
+#import "sqMacV2Browser.h"
 #import "sqSqueakOSXInfoPlistInterface.h"
 #import "SqViewBitmapConversion.h"
 #import "sqSqueakOSXApplication+events.h"

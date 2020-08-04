@@ -29,16 +29,24 @@
 # undef __USE_GNU
 #endif
 
-#if __DARWIN_UNIX03 && __APPLE__ && __MACH__ && __i386__
-# define _PC_IN_UCONTEXT uc_mcontext->__ss.__eip
-#elif __APPLE__ && __MACH__ && __i386__
-# define _PC_IN_UCONTEXT uc_mcontext->ss.eip
-#elif __APPLE__ && __MACH__ && __ppc__
-# define _PC_IN_UCONTEXT uc_mcontext->ss.srr0
-#elif __DARWIN_UNIX03 && __APPLE__ && __MACH__ && __x86_64__
-# define _PC_IN_UCONTEXT uc_mcontext->__ss.__rip
-#elif __APPLE__ && __MACH__ && __x86_64__
-# define _PC_IN_UCONTEXT uc_mcontext->ss.rip
+#if __APPLE__ && __MACH__ && __DARWIN_UNIX03
+# if __i386__
+#	define _PC_IN_UCONTEXT uc_mcontext->__ss.__eip
+# elif __x86_64__
+#	define _PC_IN_UCONTEXT uc_mcontext->__ss.__rip
+# elif __arm64__
+#	define _PC_IN_UCONTEXT uc_mcontext->__ss.__pc
+# endif
+#elif __APPLE__ && __MACH__
+# if __ppc__
+#	define _PC_IN_UCONTEXT uc_mcontext->ss.srr0
+# elif __i386__
+#	define _PC_IN_UCONTEXT uc_mcontext->ss.eip
+# elif __x86_64__
+#	define _PC_IN_UCONTEXT uc_mcontext->ss.rip
+# elif __arm64__
+#	define _PC_IN_UCONTEXT uc_mcontext->ss.pc
+# endif
 #elif __sun && __amd64
 # define _PC_IN_UCONTEXT uc_mcontext.gregs[REG_RIP]
 #elif __sun && __i386__
@@ -61,6 +69,7 @@
 # define _PC_IN_UCONTEXT sc_eip
 #elif __OpenBSD__ && __amd64__
 # define _PC_IN_UCONTEXT sc_rip
-#else
+#endif
+# if !defined(_PC_IN_UCONTEXT)
 # error need to implement extracting pc from a ucontext_t on this system
 #endif
