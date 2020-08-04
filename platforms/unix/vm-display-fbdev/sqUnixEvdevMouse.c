@@ -104,7 +104,7 @@ struct ms
   struct libevdev *dev;
 };
 
-const char* mouseFile = "/dev/input/event0".
+const char* mouseFile = "/dev/input/event1". /*@@TEST: Alpine Linux@@*/
 
 static int ms_read(_mouse, unsigned char *out, int limit, int quant, int usecs)
 {
@@ -221,9 +221,15 @@ static int ms_open(_mouse, char *msDev, char *msProto)
   }
   else {
     rc = libevdev_new_from_fd( mouseSelf->fd, &mouseSelf->dev );
-    if (rc < 0)
-      fatal("Unable to initialize libevdev (%s)\n",
-	    strerror(-rc) );
+    if (rc < 0) {
+      fatal("Unable to initialize libevdev (%s)\n", strerror(-rc) );
+    } else {
+      DPRINTF("Opened for input: \"%s\" bus %#x vendor %#x product %#x\n",
+	      libevdev_get_name(      mouseSelf->dev),
+	      libevdev_get_id_bustype(mouseSelf->dev),
+	      libevdev_get_id_vendor( mouseSelf->dev),
+      	      libevdev_get_id_product(mouseSelf->dev) );
+    }
   }
   
   if (msProto)
@@ -267,6 +273,7 @@ static void ms_close(_mouse)
   if (mouseSelf->fd >= 0)
     {
       close(mouseSelf->fd);
+      libevdev_free(mouseSelf->dev);
       DPRINTF("%s (%d) closed\n", mouseSelf->msName, mouseSelf->fd);
       mouseSelf->fd= -1;
     }
@@ -286,6 +293,152 @@ static struct ms *ms_new(void)
 static void ms_delete(_mouse)
 {
   free(mouseSelf);
+}
+
+
+/* Interactin with VM */
+
+#define allocateMouseEvent() ( \
+  (sqMouseEvent *)allocateInputEvent(EventTypeMouse) \
+)
+
+#define allocateMouseWheelEvent() ( \
+  (sqKeyboardEvent *)allocateInputEvent(EventTypeMouseWheel) \
+)
+
+
+static void recordMouseEvent(void)
+{
+  int state= getButtonState();
+  sqMouseEvent *evt= allocateMouseEvent();
+  evt->x= mousePosition.x;
+  evt->y= mousePosition.y;
+  evt->buttons= (state & 0x7);
+  evt->modifiers= (state >> 3);
+  evt->nrClicks= 0; /*@@FIXME: Mouse Wheel?? @@*/
+/*@@@  signalInputEvent(); @@@*/
+#if DEBUG_MOUSE_EVENTS
+  DPRINTF( "EVENT (recordMouseEvent): time: %ld  mouse (%d,%d)",
+	   evt->timeStamp,
+	   mousePosition.x,
+	   mousePosition.y );
+  printModifiers( state >> 3 );
+  printButtons( state & 7 );
+  DPRINTF( "\n" );
+#endif
+}
+
+static void recordMouseWheelEvent(int dx, int dy)
+{
+  sqMouseEvent *evt= allocateMouseWheelEvent();
+  evt->x= dx;
+  evt->y= dy;
+  // VM reads fifth (4th 0-based) field for event's modifiers
+  evt->buttons= (getButtonState() >> 3);
+  signalInputEvent();
+#if DEBUG_MOUSE_EVENTS
+  DPRINTF("EVENT (recordMouseWheelEvent): time: %ld  mouse dx %d dy %d",
+	  evt->timeStamp, dx, dy);
+  printButtons(evt->buttons);
+  DPRINTF("\n");
+#endif
+}
+
+
+
+/*=====================
+ * Evdev  Mouse Tracking
+ ====================*/
+
+typedef struct {
+   int x, y;
+} SqPoint; 
+
+static int wheelDelta = 0;  /* reset in clearMouseButtons() */
+
+SqPoint mousePosition= { 0, 0 };	/* position at last motion event */
+int	swapBtn= 0;			/* 1 to swap yellow and blue buttons */
+
+void setMousePosition( int newX, int newY ) {
+  mousePosition.x = newX;
+  mousePosition.y = newY;
+}
+
+void copyMousePositionInto(SqPoint *mousePt) {
+  mousePt->x = mousePosition.x;
+  mousePt->y = mousePosition.y;
+}
+
+void updateMousePosition(struct input_event* evt) {
+/* Nota Bene: up => deltaY UP is negative; {0,0} at topLeft of screen */
+  if (evt->type == EV_REL) {
+    switch (evt->code) {
+      case REL_X:
+	/* no less than 0 */
+	mousePosition.x = max(0, mousePosition.x + evt->value) ;
+	break;
+      case REL_Y:
+	/* no less than 0 */
+	mousePosition.y = max(0, mousePosition.y + evt->value) ; 
+	break;
+      case REL_WHEEL:
+	wheelDelta += evt->value;
+	DPRINTF( "*** Wheel VALUE: %d; DELTA: %d ",
+		 mouseWheelDelta(),
+		 evt->value ) ;
+	break;
+      default:
+	break;
+    }
+  }
+}
+
+void printMouseState() {
+   if ( (mousePosition.x != 0) || (mousePosition.y != 0) ) {
+     DPRINTF( "*** Mouse at %4d,%4d ", mousePosition.x, mousePosition.y );
+     printButtons( mouseButtons() );
+     printModifiers( modifierState() );
+     if (mouseWheelDelta() != 0) {
+       	DPRINTF( " Mouse Wheel: %d", mouseWheelDelta() );
+     }
+     DPRINTF("\n");
+   }
+}
+
+void clearMouseWheel() {  wheelDelta = 0 ; }
+int mouseWheelDelta() { return ( wheelDelta ) ; }
+
+
+/*==================*/
+/* Mouse buttons    */
+/*==================*/
+
+int mouseButtonsDown = 0;  /* (left|mid|right) = (Red|Yellow|Blue) */
+
+int mouseButtons() { return ( mouseButtonsDown ) ; }
+int buttonState()  { return ( mouseButtonsDown ) ; } /* DEPRICATED */
+
+void clearMouseButtons() { mouseButtonsDown = 0 ; wheelDelta = 0; }
+
+void updateMouseButtons(struct input_event* evt) {
+  if (evt->type == EV_KEY) {
+    if (evt->value == 1) { /* button down */
+      switch (evt->code) {
+	case BTN_LEFT:   mouseButtonsDown |= LeftMouseButtonBit;  break;
+	case BTN_MIDDLE: mouseButtonsDown |= MidMouseButtonBit;   break;
+	case BTN_RIGHT:  mouseButtonsDown |= RightMouseButtonBit; break;
+	default: break;
+      }
+    } else if (evt->value == 0) { /* button up */
+      switch (evt->code) {
+	case BTN_LEFT:   mouseButtonsDown &= ~LeftMouseButtonBit;  break;
+	case BTN_MIDDLE: mouseButtonsDown &= ~MidMouseButtonBit;   break;
+	case BTN_RIGHT:  mouseButtonsDown &= ~RightMouseButtonBit; break;
+	default: break;
+      }
+    /* ignore repeats (evt->value == 2) */
+    }
+  }
 }
 
 
