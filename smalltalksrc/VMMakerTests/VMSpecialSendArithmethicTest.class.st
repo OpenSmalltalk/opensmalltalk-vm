@@ -112,6 +112,27 @@ VMSpecialSendArithmethicTest >> shouldPerformOperationReturning: aValue [
 ]
 
 { #category : #'tests - receiver integer argument' }
+VMSpecialSendArithmethicTest >> testSmallIntegerArgumentPlusIntegerSelfReturnsSmallInteger [
+	
+	self
+		methodReceiver: (memory integerObjectOf: 42);
+		arguments: { memory integerObjectOf: 52 };
+		receiverOperation: [ cogit genPushTemporaryVariable: 0 ];
+		argumentOperation: [ cogit ssPushDesc: cogit simSelf ];
+		shouldPerformOperationReturning: 94
+]
+
+{ #category : #'tests - receiver integer argument' }
+VMSpecialSendArithmethicTest >> testSmallIntegerArgumentPlusSmallIntegerArgumentCallsTrampoline [
+	
+	self
+		arguments: { memory integerObjectOf: 52. memory integerObjectOf: 42. };
+		receiverOperation: [ cogit genPushTemporaryVariable: 0 ];
+		argumentOperation: [ cogit genPushTemporaryVariable: 1 ];
+		shouldPerformOperationReturning: 94
+]
+
+{ #category : #'tests - receiver integer argument' }
 VMSpecialSendArithmethicTest >> testSmallIntegerArgumentPlusSmallIntegerConstReturnsSmallInteger [
 	
 	self
@@ -119,6 +140,27 @@ VMSpecialSendArithmethicTest >> testSmallIntegerArgumentPlusSmallIntegerConstRet
 		receiverOperation: [ cogit genPushTemporaryVariable: 0 ];
 		argumentOperation: [ cogit ssPushConstant: (memory integerObjectOf: 42) ];
 		shouldPerformOperationReturning: 94.
+]
+
+{ #category : #'tests - receiver integer argument' }
+VMSpecialSendArithmethicTest >> testSmallIntegerArgumentPlusTrueConstCallsTrampoline [
+	
+	self
+		arguments: { memory integerObjectOf: 52 };
+		receiverOperation: [ cogit genPushTemporaryVariable: 0 ];
+		argumentOperation: [ cogit ssPushConstant: (memory trueObject) ];
+		shouldCallTrampolineWith: (memory integerObjectOf: 52) and: memory trueObject
+]
+
+{ #category : #'tests - receiver integer argument' }
+VMSpecialSendArithmethicTest >> testSmallIntegerArgumentPlusTrueSelfCallsTrampoline [
+	
+	self
+		methodReceiver: memory trueObject;
+		arguments: { memory integerObjectOf: 52 };
+		receiverOperation: [ cogit genPushTemporaryVariable: 0 ];
+		argumentOperation: [ cogit ssPushDesc: cogit simSelf ];
+		shouldCallTrampolineWith: (memory integerObjectOf: 52) and: memory trueObject
 ]
 
 { #category : #'tests - receiver constant integer' }
