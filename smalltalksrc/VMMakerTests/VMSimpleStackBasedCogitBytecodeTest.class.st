@@ -162,7 +162,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testExtendedPushPushesVariableType: type 
 	
 	"The first byte of the push receiver instance variable bytecode family is used to identify which variable (0-based again)"
 	cogit byte1: type << 6 + instanceVariableToWrite - 1.
-	self compile: [ cogit extendedPushBytecode ].	
+	self compile: [cogit extendedPushBytecode ].	
 	self runGeneratedCode.
 
 	self assert: self popAddress equals: memory falseObject

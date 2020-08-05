@@ -1023,9 +1023,12 @@ CogARMv8Compiler >> computeMaximumSize [
 											ifTrue: [:r :i| 4]
 											ifFalse: [self literalLoadInstructionBytes + 4]].
 		[MoveM64rRd]			-> [^self literalLoadInstructionBytes + 4].
-		[MoveMwrR]			-> [^self is12BitValue: (operands at: 0)
-										ifTrue: [:u :i| 4]
-										ifFalse: [self literalLoadInstructionBytes + 4]].
+		[MoveMwrR]			-> [ | offset |
+			offset := operands at: 0.
+			^ ((offset >= 0 and: [(offset bitAnd: 16rFFF) = offset])
+				or: [offset < 0 and: [ (offset abs bitAnd: 16rFF) = offset abs ]])
+				ifTrue: [ 4 ]
+				ifFalse: [ 8 ]].
 		[MoveXbrRR]			-> [^4].
 		[MoveRXbrR]			-> [^4].
 		[MoveXwrRR]			-> [^4].
@@ -1862,19 +1865,35 @@ CogARMv8Compiler >> concretizeMoveMwrR [
 	offset := operands at: 0.
 	srcReg := operands at: 1.
 	destReg := operands at: 2.
+	
+	"If it is a positive 12 bit value this can be encoded as a LDR with a positive 12bit offset"
+	(offset >= 0 and: [ (offset bitAnd: 16rFFF) = offset ]) ifTrue: [
+		self
+			machineCodeAt: 0
+			put:
+				(self
+					ldrSize: 1"is64Bits"
+					baseRegister: srcReg
+					unsignedOffset: offset
+					destinationRegister: destReg).
+		^ machineCodeSize := 4
+	].
+	
+	"If it is negative, maybe we can encode it as a LDUR signed 9bit offset"
 	self
-		is12BitValue: offset
-		ifTrue: [ :u :immediate | 
+		is9BitValue: offset
+		ifTrue: [ :immediate | 
 			self
 				machineCodeAt: 0
 				put:
 					(self
 						ldurSize: 1 "64bits"
 						baseRegister: srcReg
-						signedOffset: (u = 0 ifTrue: [ immediate negated ] ifFalse: [ immediate ])
+						signedOffset: immediate
 						destinationRegister: destReg).
 			^ machineCodeSize := 4 ]
 		ifFalse: [
+			"Otherwise, this may be a literal"
 			self assert: dependent notNil.
 			instrOffset := self moveCw: offset intoR: ConcreteIPReg.
 			self
@@ -3374,17 +3393,17 @@ CogARMv8Compiler >> inverseOpcodeFor: armOpcode [
 			 -1]
 ]
 
-{ #category : #testing }
-CogARMv8Compiler >> is12BitValue: constant ifTrue: trueAlternativeBlock	ifFalse: falseAlternativeBlock [
-	"For LDR and STR, there is an instruction allowing for one instruction encoding if the offset is encodable in signed 12 bit form. pass the trueBlock the value and a 1-bit flag to tell it the sign.
-	The falseBlock can do whatever it needs to, typically building the constant as a full 32bit value and then ld/st with that as a register offset"
-	<inline: true>
-	constant abs <= 4095 "(2 raisedTo: 12)-1"
-		ifTrue:
-			[constant >= 0 
-				ifTrue: [^trueAlternativeBlock value: 1 value: constant]
-				ifFalse: [^trueAlternativeBlock value: 0 value: constant abs]]
-		ifFalse: [^falseAlternativeBlock value]
+{ #category : #'as yet unclassified' }
+CogARMv8Compiler >> is12BitValue: constant ifTrue: aTrueBlock ifFalse: aFalseBlock [ 
+	
+	^ constant abs <= 2047 "(2 raisedTo: 11) - 1"
+		ifTrue: [ | twoComplement |
+			"Two complement using 12 bits"
+			twoComplement := constant >= 0
+				ifTrue: [ constant ]
+				ifFalse: [ 16rfff - constant abs + 1 ].
+			aTrueBlock value: twoComplement ]
+		ifFalse: aFalseBlock
 ]
 
 { #category : #'private-bit-manipulation' }

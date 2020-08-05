@@ -73,9 +73,9 @@ CogOutOfLineLiteralsARMv8Compiler >> concretizeMovePatcheableC32R [
 	
 	self assert: (cogit addressIsInCurrentCompilation: dependent address).
 	self assert: (dependent address - (address + 8)) abs < (1<<12).
-	
+
 	self machineCodeAt: 0 put: (self
-		ldrSize: 0 "32 bits"
+		ldrSize: 1 "32 bits"
 		programCounterRelativeOffset: dependent address - address
 		destinationRegister: (operands at: 1)).
 	^ machineCodeSize := 4
@@ -372,14 +372,18 @@ CogOutOfLineLiteralsARMv8Compiler >> usesOutOfLineLiteral [
 		[MoveRAw]		-> [^(self isAddressRelativeToVarBase: (operands at: 1)) ifTrue: [false] ifFalse: [true]].
 		[MoveAbR]		-> [^(self isAddressRelativeToVarBase: (operands at: 0)) ifTrue: [false] ifFalse: [true]].
 		[MoveRAb]		-> [^(self isAddressRelativeToVarBase: (operands at: 1)) ifTrue: [false] ifFalse: [true]].
-		[MoveRMwr]	-> [^self is12BitValue: (operands at: 1) ifTrue: [:u :i| false] ifFalse: [true]].
-		[MoveRdM64r]	-> [^self is12BitValue: (operands at: 1) ifTrue: [:u :i| false] ifFalse: [true]]. 
-		[MoveMbrR]		-> [^self is12BitValue: (operands at: 0) ifTrue: [:u :i| false] ifFalse: [true]].
-		[MoveRMbr]		-> [^self is12BitValue: (operands at: 1) ifTrue: [:u :i| false] ifFalse: [true]].
+		[MoveRMwr]	-> [^self is12BitValue: (operands at: 1) ifTrue: [:v| false] ifFalse: [true]].
+		[MoveRdM64r]	-> [^self is12BitValue: (operands at: 1) ifTrue: [:v| false] ifFalse: [true]]. 
+		[MoveMbrR]		-> [^self is12BitValue: (operands at: 0) ifTrue: [:v| false] ifFalse: [true]].
+		[MoveRMbr]		-> [^self is12BitValue: (operands at: 1) ifTrue: [:v| false] ifFalse: [true]].
 		[MoveM16rR]	-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
-		[MoveRM16r]	-> [^self is12BitValue: (operands at: 1) ifTrue: [:u :i| false] ifFalse: [true]].
-		[MoveM64rRd]	-> [^self is12BitValue: (operands at: 0) ifTrue: [:u :i| false] ifFalse: [true]].
-		[MoveMwrR]	-> [^self is12BitValue: (operands at: 0) ifTrue: [:u :i| false] ifFalse: [true]].
+		[MoveRM16r]	-> [^self is12BitValue: (operands at: 1) ifTrue: [:v| false] ifFalse: [true]].
+		[MoveM64rRd]	-> [^self is12BitValue: (operands at: 0) ifTrue: [:v| false] ifFalse: [true]].
+		[MoveMwrR]	-> [ | offset |
+			offset := (operands at: 0).
+			((offset >= 0 and: [ (offset bitAnd: 16rFFF) = offset ])
+				or: [ offset < 0 and: [ (offset abs bitAnd: 16rff) = offset ] ]) ifTrue: [ ^ false ].
+			^ true ].
 		[PushCw]		-> [^(self inCurrentCompilation: (operands at: 0)) not].
 		[PushCq]		-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
 		[PrefetchAw] 	-> [^(self isAddressRelativeToVarBase: (operands at: 0)) ifTrue: [false] ifFalse: [true]].
