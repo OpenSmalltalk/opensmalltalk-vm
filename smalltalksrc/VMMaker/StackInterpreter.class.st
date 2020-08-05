@@ -15946,6 +15946,12 @@ StackInterpreter >> methodClassOf: methodPointer [
 			ifFalse: [objectMemory nilObject]
 ]
 
+{ #category : #accessing }
+StackInterpreter >> methodDictLinearSearchLimit: anInteger [ 
+<doNotGenerate>
+	methodDictLinearSearchLimit := anInteger
+]
+
 { #category : #'compiled methods' }
 StackInterpreter >> methodHeaderHasPrimitive: methodHeader [
 	"Note: We now have 10 bits of primitive index, but they are in two places
