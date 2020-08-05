@@ -5,6 +5,12 @@ Class {
 }
 
 { #category : #registers }
+UnicornARMv8Simulator >> arg0Register [
+	
+	^ UcARM64Registers x3
+]
+
+{ #category : #registers }
 UnicornARMv8Simulator >> baseRegister [
 
 	^ UcARM64Registers x10
