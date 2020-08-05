@@ -946,10 +946,10 @@ CogARMv8Compiler >> computeMaximumSize [
 		[XorCwR]				-> [^self literalLoadInstructionBytes + 4].
 		[AddRR]					-> [^4].
 		[AndRR]					-> [^4].
-		[CmpRR]				-> [^4].
+		[CmpRR]				-> [^(operands at:0) = SP ifTrue: [8] ifFalse: [4]].
 		[OrRR]					-> [^4].
 		[XorRR]					-> [^4].
-		[SubRR]					-> [^4].
+		[SubRR]					-> [ "When the operation includes the SP, we might need two instructions" ^(operands at: 0) = SP ifTrue: [ 8 ] ifFalse: [ 4 ]].
 		[NegateR]				-> [^4].
 		[LoadEffectiveAddressMwrR]
 									-> [^self rotateable8bitImmediate: (operands at: 0)
@@ -1375,12 +1375,22 @@ CogARMv8Compiler >> concretizeCmpRR [
 	| register1 register2 |
 	register1 := operands at: 0.
 	register2 := operands at: 1.
-	register1 = SP ifTrue: [ 
+	register1 = SP ifTrue: [ 		
 		self
 			machineCodeAt: 0
-			put: (self cmpExtendedRegisterSize: 1 leftRegisterMaybeSP: register1 option: 2r011 shiftOffset: 0 destinationRegister: register2).
-		^ machineCodeSize := 4
-	].
+			put: (self movToFromSP: ConcreteIPReg rn: SP ).
+		self
+			machineCodeAt: 4
+			put:
+				(self
+					cmpSize: 1
+					shiftedRegister: ConcreteIPReg
+					shiftType: 0
+					shiftValue: 0
+					secondRegister: register2).
+
+			^ machineCodeSize := 8].
+		
 	register2 = SP ifTrue: [ self halt ].
 	
 	self
@@ -1761,30 +1771,24 @@ CogARMv8Compiler >> concretizeMoveM16rR [
 
 	<var: #offset type: #sqInt>
 	<inline: true>
-	| srcReg offset destReg instrOffset |
-	self halt.
+	| baseRegister offset destReg |
 	offset := operands at: 0.
-	srcReg := operands at: 1.
+	baseRegister := operands at: 1.
 	destReg := operands at: 2.
-	self
-		is8BitValue: offset
-		ifTrue: [ :u :immediate | 
-			self
+
+	(offset >= 0 and: [ (offset / 2 bitAnd: 16rFFF) = (offset / 2)]) 
+		ifTrue: [ self
 				machineCodeAt: 0
 				put:
 					(self
-						ldrh: destReg
-						rn: srcReg
-						plus: u
-						imm: immediate).	"ldrh destReg, [srcReg, #immediate]"
-			^ machineCodeSize := 4 ]
-		ifFalse: [ instrOffset := self moveCw: offset intoR: ConcreteIPReg.
-			"ldrh destReg, [srcReg, ConcreteIPReg]"
-			self
-				machineCodeAt: instrOffset
-				put: (self ldrh: destReg rn: srcReg rm: ConcreteIPReg).
-			^ machineCodeSize := instrOffset + 4 ].
-	^ 0	"to keep Slang happy"
+						ldrhBaseRegister: baseRegister
+						offsetDividedBy2: offset / 2
+						destinationRegister: destReg).
+			^ machineCodeSize := 4  ].
+	
+	self halt.
+	
+	^0
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -2195,20 +2199,21 @@ CogARMv8Compiler >> concretizeMoveXwrRR [
 	"Will get inlined into concretizeAt: switch."
 
 	<inline: true>
-	| index base dest |
-	index := operands at: 0.
-	base := operands at: 1.
-	dest := operands at: 2.
+	| indexRegister baseRegister destinationRegister |
+	indexRegister := operands at: 0.
+	baseRegister := operands at: 1.
+	destinationRegister := operands at: 2.
+
 	self
 		machineCodeAt: 0
-		put:
-			(self
-				strSize: 1
-				baseRegister: base
-				offsetRegister: index
-				extension: 2r011 "LSL"
-				shift: 1
-				storedRegister: dest).
+		put: (
+			self
+				ldrSize: 1
+				indexRegister: indexRegister
+				option: 2r011 "LSL"
+				scale: 1
+				baseRegister: baseRegister
+				destinationRegister: destinationRegister).
 	^ machineCodeSize := 4
 ]
 
@@ -2481,11 +2486,26 @@ CogARMv8Compiler >> concretizeSubCqR [
 CogARMv8Compiler >> concretizeSubRR [
 
 	| instruction destReg leftReg rightReg |
-	leftReg := operands at: 0.
-	destReg := rightReg := operands at: 1.
+	
+	"In ARM destReg <- leftReg - rightReg"
+	
+	leftReg := operands at: 1.
+	rightReg := operands at: 0.
+	destReg := operands at: 1.
 
 	"If one of the operands is the stack pointer, we need to use the extended version"
-	rightReg = SP ifTrue: [ self halt ].
+	rightReg = SP ifTrue: [ 
+		self machineCodeAt: 0 put: (self movToFromSP: ConcreteIPReg rn: SP).
+		self machineCodeAt: 4 put: (self
+			subsSize: 1
+			leftRegister: leftReg
+			shiftedRightRegister: ConcreteIPReg
+			shiftType: 0
+			shiftOffset: 0
+			destinationRegister: destReg).
+
+		^ machineCodeSize := 8.		
+		 ].
 	
 	leftReg = SP ifFalse: [ 
 		instruction := 	self
@@ -2496,6 +2516,8 @@ CogARMv8Compiler >> concretizeSubRR [
 			shiftOffset: 0
 			destinationRegister: destReg
 	] ifTrue: [
+		1halt.
+		"Maybe this is the implementation.... ??"
 		instruction := self
 			subsExtendedSize: 1
 			leftRegisterMaybeSP: leftReg
@@ -3627,6 +3649,21 @@ CogARMv8Compiler >> ldrSize: is64Bits programCounterRelativeOffset: immediate19b
 		bitOr: (2r011000 << 24
 		bitOr: ((twoComplement bitAnd: 2r1111111111111111111) << 5
 		bitOr: (destinationRegister bitAnd: 2r11111))))
+]
+
+{ #category : #'as yet unclassified' }
+CogARMv8Compiler >> ldrhBaseRegister: baseRegister offsetDividedBy2: offset12Bits destinationRegister: destinationRegister [
+
+ 	"C6.2.137
+		LDRH (immediate)
+			Load Register Halfword (immediate) loads a halfword from memory, zero-extends it, and writes the result to a register. The address that is used for the load is calculated from a base register and an 			immediate offset. For information about memory accesses, see Load/Store addressing modes on page C1-189."
+						
+	"LDRH <Wt>, [<Xn|SP>{, #<pimm>}]"
+	
+	^ 2r111100101 << 22
+		bitOr: ((offset12Bits bitAnd: 16rfff) << 10
+		bitOr:((baseRegister bitAnd: 2r11111) << 5
+		bitOr: (destinationRegister bitAnd: 2r11111)))
 ]
 
 { #category : #assembler }

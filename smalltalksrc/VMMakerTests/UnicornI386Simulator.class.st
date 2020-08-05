@@ -101,6 +101,11 @@ UnicornI386Simulator >> extractDestinationRegisterFromAssembly: aLLVMInstruction
 	^ registerName
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornI386Simulator >> fp [
+	^ self readRegister: UcX86Registers ebp
+]
+
 { #category : #registers }
 UnicornI386Simulator >> framePointerRegister [
 	
@@ -135,6 +140,11 @@ UnicornI386Simulator >> registerList [
 UnicornI386Simulator >> sendNumberOfArgumentsRegister [
 
 	^ UcX86Registers ebx
+]
+
+{ #category : #'as yet unclassified' }
+UnicornI386Simulator >> sp [
+	^ self readRegister: UcX86Registers esp
 ]
 
 { #category : #registers }

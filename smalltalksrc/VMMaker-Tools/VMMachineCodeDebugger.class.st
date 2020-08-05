@@ -47,6 +47,12 @@ VMMachineCodeDebugger >> connectPresenters [
 		item 
 			name: 'Set Intruction Pointer Here'; 
 			action: [ self setInstructionPointerToSelectedInstruction ] ].
+
+	instructionsContextMenu addItem: [ :item |
+		item 
+			name: 'Run to Here'; 
+			action: [ self runToSelectedInstruction ] ].
+
 	instructionsContextMenu addItem: [ :item |
 		item 
 			name: 'Inspect'; 
@@ -59,12 +65,19 @@ VMMachineCodeDebugger >> initialDisassembly [
 
 	^ machineSimulator disassembler
 		printImmediatesInHexa;
+		useAlternatePrinterVariant;
 		disassembleNext: 150
 		instructionsIn: (cogit objectMemory memory memoryObject
 			copyFrom: self initialInstructionToDisassemble - cogit objectMemory memory initialAddress + 1
 			to: cogit objectMemory memory memoryObject size)
 		startAddress: self initialInstructionToDisassemble
 		pc: machineSimulator instructionPointerValue 
+]
+
+{ #category : #showing }
+VMMachineCodeDebugger >> initialExtent [ 
+
+	^ 1000@1000
 ]
 
 { #category : #showing }
@@ -135,6 +148,23 @@ VMMachineCodeDebugger >> openWithSpec [
 VMMachineCodeDebugger >> refreshStack [
 
 	stack items: machineSimulator stackValues
+]
+
+{ #category : #'as yet unclassified' }
+VMMachineCodeDebugger >> runToSelectedInstruction [
+	
+	| selectedInstruction |
+
+	selectedInstruction := self selectedInstruction.
+
+	machineSimulator startAt: machineSimulator instructionPointerValue until: selectedInstruction address timeout: 1000 count: 0.
+	self refreshStack.
+]
+
+{ #category : #'as yet unclassified' }
+VMMachineCodeDebugger >> selectedInstruction [
+
+	^ instructions selection selectedItem
 ]
 
 { #category : #actions }

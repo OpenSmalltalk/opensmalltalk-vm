@@ -62,6 +62,9 @@ UnicornSimulationTrap >> type [
 		ifTrue: [ ^ #write ].
 	unicornInvalidAccess type = UcMemoryAccessType UC_MEM_READ_UNMAPPED
 		ifTrue: [ ^ #read ].
+	unicornInvalidAccess type = UcMemoryAccessType UC_MEM_FETCH_UNMAPPED
+		ifTrue: [ ^ #jump ].	
+	
 	self halt
 ]
 

@@ -94,6 +94,12 @@ UnicornSimulator >> classRegisterValue: aValue [
 	^ self writeRegister: self classRegister value: aValue
 ]
 
+{ #category : #accessing }
+UnicornSimulator >> cogit [
+
+	^ memory interpreter cogit
+]
+
 { #category : #initialization }
 UnicornSimulator >> createUnicorn [
 
@@ -134,19 +140,29 @@ UnicornSimulator >> doRunGeneratedCodeStartAt: initialAddress instructions: inst
 { #category : #executing }
 UnicornSimulator >> doStartAt: startAddress until: until timeout: timeout count: count [
 
-	| actualCount result |
+	| actualCount result error |
 
 	actualCount := 0.
 	self instructionPointerValue: startAddress.
 
 	[ true ]
 		whileTrue: [ 
-			result :=  unicorn
+			[result :=  unicorn
 				startAt: self instructionPointerValue
 				until: 0
 				timeout: 0
 				count: 1.
-			actualCount := actualCount + 1.
+			
+				stopReason ifNotNil: [ 
+						error := stopReason.
+						stopReason := nil.
+						error signal ].
+			
+					actualCount := actualCount + 1] 
+				on: UnicornInvalidMemoryAccess do: [ :invalidAccess |
+					self instructionPointerValue = until ifTrue: [ ^ 0 ].
+					self cogit handleSimulationTrap: (UnicornSimulationTrap simulator: self error: invalidAccess). ].
+			
 			stopReason ifNotNil: [ ^ result ].
 			count = actualCount ifTrue: [ ^ result ].
 			self instructionPointerValue = until ifTrue: [ ^ result ]]
@@ -407,16 +423,11 @@ UnicornSimulator >> startAt: begin until: until timeout: timeout count: count [
 	| error result |
 	result := self doStartAt: begin until: until timeout: timeout count: count.
 	
-	stopReason ifNotNil: [ 
-		error := stopReason.
-		stopReason := nil.
-		error signal ].
-	
 	"If we did not stop for a known reason, verify the error code of the function"
 	unicorn verifyErrorCode: result.
 	
 	"Verify we stopped because we arrived to the right end addres and not a timeout"
-	(until = 0 or: [self instructionPointerValue = until]) ifFalse: [
+	(until = 0 or: [ self instructionPointerValue = until ]) ifFalse: [
 		UnicornTimeout new
 			target: until;
 			signal ]

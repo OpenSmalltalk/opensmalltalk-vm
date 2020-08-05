@@ -32,10 +32,10 @@ Class {
 VMSimpleStackBasedCogitAbstractTest class >> testParameters [
 
 	^ ParametrizedTestMatrix new
-		addCase: { #ISA -> #'X64'. #wordSize -> 8};
-		addCase: { #ISA -> #'IA32'. #wordSize -> 4};
-		addCase: { #ISA -> #'ARMv5'. #wordSize -> 4};
 		addCase: { #ISA -> #'ARMv8'. #wordSize -> 8};
+		addCase: { #ISA -> #'IA32'. #wordSize -> 4};
+		addCase: { #ISA -> #'X64'. #wordSize -> 8};
+		addCase: { #ISA -> #'ARMv5'. #wordSize -> 4};
 		yourself
 ]
 
@@ -579,7 +579,8 @@ VMSimpleStackBasedCogitAbstractTest >> returnValue [
 { #category : #helpers }
 VMSimpleStackBasedCogitAbstractTest >> runFrom: startAddress until: endAddress [
 
-	self runFrom: startAddress until: endAddress timeout: 1000 "microseconds"
+	^ self runFrom: startAddress until: endAddress timeout: 1000. "microseconds"
+
 ]
 
 { #category : #helpers }
@@ -618,6 +619,16 @@ VMSimpleStackBasedCogitAbstractTest >> runUntilReturnFrom: anAddress [
 		timeout: 0
 		count: 0.
 
+]
+
+{ #category : #accessing }
+VMSimpleStackBasedCogitAbstractTest >> sentSelector [
+	^ sentSelector
+]
+
+{ #category : #accessing }
+VMSimpleStackBasedCogitAbstractTest >> sentSelector: anObject [
+	sentSelector := anObject
 ]
 
 { #category : #running }
