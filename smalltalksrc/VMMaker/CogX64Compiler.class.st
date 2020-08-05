@@ -857,6 +857,9 @@ CogX64Compiler >> computeMaximumSize [
 		[ZeroExtend32RR] -> [^2 + ((((operands at: 1) > 7) or: [(operands at: 0) > 7])
 									ifTrue: [1]
 									ifFalse: [0])].
+								
+		"This is a fixed size instruction using a patcheable literal. This takes ALWAYS 7 bytes"
+		[MovePatcheableC32R] -> [ ^ 7 ]
 		}.
 	^0 "to keep C compiler quiet"
 ]
@@ -3206,6 +3209,9 @@ CogX64Compiler >> dispatchConcretize [
 		[ZeroExtend8RR]		-> [^self concretizeZeroExtend8RR].
 		[ZeroExtend16RR]	-> [^self concretizeZeroExtend16RR].
 		[ZeroExtend32RR]	-> [^self concretizeZeroExtend32RR].
+		
+		"This is a fixed size instruction using a patcheable literal."
+		[MovePatcheableC32R] -> [ ^ self concretizeMovePatcheableC32R ]
 		}
 ]
 

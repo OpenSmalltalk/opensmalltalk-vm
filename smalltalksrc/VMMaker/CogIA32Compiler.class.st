@@ -556,7 +556,11 @@ CogIA32Compiler >> computeMaximumSize [
 		[SignExtend8RR] -> [^3].
 		[SignExtend16RR] -> [^3].
 		[ZeroExtend8RR] -> [^3].
-		[ZeroExtend16RR] -> [^3]. }.
+		[ZeroExtend16RR] -> [^3].
+	
+		"This is a fixed size instruction using a patcheable literal. This takes ALWAYS 1 instruction of 5 bytes"
+		[MovePatcheableC32R] -> [ ^ 5 ]
+	 }.
 	^0 "to keep C compiler quiet"
 ]
 
@@ -1836,6 +1840,12 @@ CogIA32Compiler >> concretizeMoveMwrR [
 	^machineCodeSize := 7
 ]
 
+{ #category : #'as yet unclassified' }
+CogIA32Compiler >> concretizeMovePatcheableC32R [
+	
+	^ self concretizeMoveCwR
+]
+
 { #category : #'generate machine code' }
 CogIA32Compiler >> concretizeMoveRAb [
 	"Will get inlined into concretizeAt: switch."
@@ -2962,7 +2972,9 @@ CogIA32Compiler >> dispatchConcretize [
 		[SignExtend16RR]		-> [^self concretizeSignExtend16RR].
 		
 		[ZeroExtend8RR]		-> [^self concretizeZeroExtend8RR].
-		[ZeroExtend16RR]		-> [^self concretizeZeroExtend16RR].}
+		[ZeroExtend16RR]		-> [^self concretizeZeroExtend16RR].
+			
+		[ MovePatcheableC32R ] -> [ ^ self concretizeMovePatcheableC32R ] }
 ]
 
 { #category : #'generate machine code' }

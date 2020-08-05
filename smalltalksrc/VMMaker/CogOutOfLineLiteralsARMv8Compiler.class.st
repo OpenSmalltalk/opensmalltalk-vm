@@ -17,7 +17,7 @@ CogOutOfLineLiteralsARMv8Compiler >> cmpC32RTempByteSize [
 { #category : #'generate machine code' }
 CogOutOfLineLiteralsARMv8Compiler >> concretizeLiteral [
 	"Generate an out-of-line literal.  Copy the value and any annotation from the stand-in in the literals manager."
-	| literalAsInstruction literal |
+	| literalAsInstruction literal twoComplement |
 	literalAsInstruction := cogit cCoerceSimple: (operands at: 0) to: #'AbstractInstruction *'.
 	literal := (self isAnInstruction: literalAsInstruction)
 				ifTrue: [literalAsInstruction address]
@@ -30,8 +30,12 @@ CogOutOfLineLiteralsARMv8Compiler >> concretizeLiteral [
 	dependent address ifNotNil: [self assert: dependent address = address].
 	dependent address: address.
 
-	self machineCodeAt: 0 put: (literal bitAnd: 16rFFFFFFFF).
-	self machineCodeAt: 4 put: (literal >> 32).
+	twoComplement := literal < 0
+		ifTrue: [ 16rFFFFFFFFFFFFFFFF - literal abs + 1 ]
+		ifFalse: [ literal ].
+
+	self machineCodeAt: 0 put: (twoComplement bitAnd: 16rFFFFFFFF).
+	self machineCodeAt: 4 put: (twoComplement >> 32).
 	machineCodeSize := 8
 ]
 
@@ -59,7 +63,22 @@ CogOutOfLineLiteralsARMv8Compiler >> concretizeMoveC32R [
 					imm: value
 					shift: shift).
 			^ machineCodeSize := 4 ]
-		ifFalse: [ self halt ]
+		ifFalse: [ 
+			self loadCwInto: (operands at: 1).
+			^ machineCodeSize := 4 ]
+]
+
+{ #category : #'as yet unclassified' }
+CogOutOfLineLiteralsARMv8Compiler >> concretizeMovePatcheableC32R [
+	
+	self assert: (cogit addressIsInCurrentCompilation: dependent address).
+	self assert: (dependent address - (address + 8)) abs < (1<<12).
+	
+	self machineCodeAt: 0 put: (self
+		ldrSize: 0 "32 bits"
+		programCounterRelativeOffset: dependent address - address
+		destinationRegister: (operands at: 1)).
+	^ machineCodeSize := 4
 ]
 
 { #category : #accessing }
@@ -96,10 +115,10 @@ CogOutOfLineLiteralsARMv8Compiler >> isSharable [
 { #category : #'inline cacheing' }
 CogOutOfLineLiteralsARMv8Compiler >> literalBeforeFollowingAddress: followingAddress [
 	"Return the literal referenced by the instruction immediately preceding followingAddress."
-	^objectMemory longAt: (self pcRelativeAddressAt:
+	^objectMemory long64At: (self pcRelativeAddressAt:
 		((self instructionIsLDR: (self instructionBeforeAddress: followingAddress))
 			ifTrue: [self instructionAddressBefore: followingAddress]
-			ifFalse: [self instructionAddressBefore: followingAddress - 4]))
+			ifFalse: [ self instructionAddressBefore: followingAddress - 4]))
 ]
 
 { #category : #accessing }
@@ -168,13 +187,18 @@ CogOutOfLineLiteralsARMv8Compiler >> outOfLineLiteralOpcodeLimit [
 
 { #category : #'inline cacheing' }
 CogOutOfLineLiteralsARMv8Compiler >> pcRelativeAddressAt: instrAddress [
-	"Extract the address of the ldr rX, [pc, #NNN] instruction at address"
+	"Extract the address of the LDR (literal) instruction at address
+	
+	c.f. C6.2.132
+	"
+	
 	| inst offset |
+
 	inst := objectMemory long32At: instrAddress.
-	offset := (inst >> 10 bitAnd: 2r111111111111) * 8.
-	^instrAddress + 8 + ((inst anyMask: 1 << 22)
-							ifTrue: [offset]
-							ifFalse: [offset negated])
+	offset := inst >> 5 bitAnd: 16r7ffff.
+	^instrAddress + (((offset allMask: (1 << 18))
+							ifTrue: [offset negated]
+							ifFalse: [offset]) * 4 "because LDR includes the imm / 4")
 ]
 
 { #category : #'inline cacheing' }
@@ -190,9 +214,10 @@ CogOutOfLineLiteralsARMv8Compiler >> relocateMethodReferenceBeforeAddress: pc by
 							ifFalse: [pc].
 	"If the load is not done via pc-relative addressing we have to relocate."
 	(self isPCRelativeValueLoad: (self instructionBeforeAddress: pcPrecedingLoad)) ifFalse:
-		[litAddr := self pcRelativeAddressAt: pcPrecedingLoad.
-		 reference := objectMemory longAt: litAddr.
-		 objectMemory longAt: litAddr put: reference + delta]
+		[1halt: #maybebug. "literals are 64bits here!"
+		litAddr := self pcRelativeAddressAt: pcPrecedingLoad.
+		 reference := objectMemory long32At: litAddr.
+		 objectMemory long32At: litAddr put: reference + delta - 4]
 ]
 
 { #category : #'inline cacheing' }
@@ -221,13 +246,13 @@ CogOutOfLineLiteralsARMv8Compiler >> rewriteInlineCacheAt: callSiteReturnAddress
 	| call callDistance |
 	callTargetAddress >= cogit minCallAddress ifFalse:
 		[self error: 'linking callsite to invalid address'].
-	callDistance := (callTargetAddress - (callSiteReturnAddress + 8 "pc offset"- 4 "return offset")) signedIntToLong.
+	callDistance := (callTargetAddress - (callSiteReturnAddress - 4 "return offset")).
 	self assert: (self isInImmediateJumpRange: callDistance). "we don't support long call updates here"
 	call := self bl: callDistance.
 	objectMemory
 		long32At: (self instructionAddressBefore: callSiteReturnAddress ) put: call;
-		long32At: (self pcRelativeAddressAt: callSiteReturnAddress - 8) put: cacheTag.
-	self assert: (self inlineCacheTagAt: callSiteReturnAddress) = cacheTag.
+		longAt: (self pcRelativeAddressAt: callSiteReturnAddress - 8) put: cacheTag signedIntToLong.
+	self assert: (self inlineCacheTagAt: callSiteReturnAddress) = cacheTag  signedIntToLong.
 	"self cCode: ''
 		inSmalltalk: [cogit disassembleFrom: callSiteReturnAddress - 8 to: (self pcRelativeAddressAt: callSiteReturnAddress - 8)]."
 	^4
@@ -358,6 +383,9 @@ CogOutOfLineLiteralsARMv8Compiler >> usesOutOfLineLiteral [
 		[PushCw]		-> [^(self inCurrentCompilation: (operands at: 0)) not].
 		[PushCq]		-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
 		[PrefetchAw] 	-> [^(self isAddressRelativeToVarBase: (operands at: 0)) ifTrue: [false] ifFalse: [true]].
+
+		"Patcheable instruction. Moves a literal. Uses out of line literal."
+		[MovePatcheableC32R] -> [ ^ true ]
 		}
 		otherwise: [self assert: false].
 	^false "to keep C compiler quiet"

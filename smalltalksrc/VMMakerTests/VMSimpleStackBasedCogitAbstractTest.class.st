@@ -666,6 +666,25 @@ VMSimpleStackBasedCogitAbstractTest >> setUpCogMethodEntry [
 	cogit computeEntryOffsets.
 ]
 
+{ #category : #'helpers - stack' }
+VMSimpleStackBasedCogitAbstractTest >> stackAddressAt: index [
+
+	^ (self stackAt: index)
+		integerAt: 1
+		size: self wordSize 
+		signed: false
+]
+
+{ #category : #'helpers - stack' }
+VMSimpleStackBasedCogitAbstractTest >> stackAt: index [
+
+	| stackAddressIntegerValue |
+
+	"Getting address from stack register"
+	stackAddressIntegerValue := machineSimulator stackPointerRegisterValue + (index * self wordSize).
+	^ machineSimulator memoryAt: stackAddressIntegerValue readNext: self wordSize.
+]
+
 { #category : #'helpers - registers' }
 VMSimpleStackBasedCogitAbstractTest >> stackPointerRegisterValue [
 
@@ -681,11 +700,7 @@ VMSimpleStackBasedCogitAbstractTest >> stackPointerRegisterValue: aValue [
 { #category : #'helpers - stack' }
 VMSimpleStackBasedCogitAbstractTest >> top [
 
-	| stackAddressIntegerValue |
-
-	"Getting address from stack register"
-	stackAddressIntegerValue := machineSimulator stackPointerRegisterValue.
-	^ machineSimulator memoryAt: stackAddressIntegerValue readNext: self wordSize.
+	^ self stackAt: 0
 ]
 
 { #category : #'helpers - stack' }
