@@ -92,6 +92,7 @@ Class {
 		'MoveMbrR',
 		'MoveMs8rR',
 		'MoveMwrR',
+		'MovePatcheableC32R',
 		'MoveRA32',
 		'MoveRAb',
 		'MoveRAw',
@@ -286,6 +287,10 @@ CogRTLOpcodes class >> initialize [
 						MoveRsRs MoveM32rRs MoveRsM32r
 						PopR PushR PushCq PushCw
 						PrefetchAw
+						
+						"Patcheable instructions
+						These instructions require a specific layout so they can be patched"
+						MovePatcheableC32R
 
 						"Arithmetic; destination is always last operand except Cmp; CmpXR is SubRX with no update of result"
 						LoadEffectiveAddressMwrR "LoadEffectiveAddressXowrR" "Variants of add/multiply"

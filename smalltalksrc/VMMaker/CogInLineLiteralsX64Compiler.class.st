@@ -107,6 +107,12 @@ CogInLineLiteralsX64Compiler >> concretizeMoveCwR [
 	^machineCodeSize := 11
 ]
 
+{ #category : #'as yet unclassified' }
+CogInLineLiteralsX64Compiler >> concretizeMovePatcheableC32R [
+	
+	^ self concretizeMoveC32R
+]
+
 { #category : #'generate machine code' }
 CogInLineLiteralsX64Compiler >> concretizePushCw [
 	"Will get inlined into concretizeAt: switch."

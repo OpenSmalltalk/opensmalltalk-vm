@@ -7,7 +7,8 @@ Class {
 		'instructions',
 		'stepButton',
 		'machineState',
-		'initialInstructionToDisassemble'
+		'initialInstructionToDisassemble',
+		'stack'
 	],
 	#category : #'VMMaker-Tools'
 }
@@ -21,6 +22,7 @@ VMMachineCodeDebugger class >> defaultSpec [
 			add: #machineState;
 			add: #stepButton;
 			yourself);
+		add: #stack;
 		yourself
 ]
 
@@ -45,6 +47,10 @@ VMMachineCodeDebugger >> connectPresenters [
 		item 
 			name: 'Set Intruction Pointer Here'; 
 			action: [ self setInstructionPointerToSelectedInstruction ] ].
+	instructionsContextMenu addItem: [ :item |
+		item 
+			name: 'Inspect'; 
+			action: [ instructions selection selectedItem inspect ] ].
 	instructions contextMenu: instructionsContextMenu
 ]
 
@@ -53,7 +59,7 @@ VMMachineCodeDebugger >> initialDisassembly [
 
 	^ machineSimulator disassembler
 		printImmediatesInHexa;
-		disassembleNext: 100
+		disassembleNext: 150
 		instructionsIn: (cogit objectMemory memory memoryObject
 			copyFrom: self initialInstructionToDisassemble - cogit objectMemory memory initialAddress + 1
 			to: cogit objectMemory memory memoryObject size)
@@ -80,7 +86,8 @@ VMMachineCodeDebugger >> initializePresenters [
 	machineState := self newTable.
 	machineState
 		addColumn: (SpStringTableColumn evaluated: #name);
-		addColumn: (SpStringTableColumn evaluated: [ :register | register value hex ]).
+		addColumn: (SpStringTableColumn evaluated: #alias);
+		addColumn: (SpStringTableColumn evaluated: [ :register | register printString ]).
 
 	instructions := self newTable.
 	instructions
@@ -93,6 +100,12 @@ VMMachineCodeDebugger >> initializePresenters [
 				yourself);
 		addColumn: (SpStringTableColumn evaluated: #assemblyCodeString);
 		addColumn: (SpStringTableColumn evaluated: [:e | e codeBytesString: cogit objectMemory memory ]).
+	
+	stack := self newTable.
+	stack
+		addColumn: (SpStringTableColumn evaluated: [ :aPosition | aPosition specialRegister ] );
+		addColumn: (SpStringTableColumn evaluated: [ :aPosition | aPosition address hex ] );
+		addColumn: (SpStringTableColumn evaluated: [ :aPosition | aPosition value hex ]).
 	
 	stepButton := self newButton.
 	stepButton label: 'Step'
@@ -113,7 +126,15 @@ VMMachineCodeDebugger >> openWithSpec [
 
 	machineState items: machineSimulator registerDescriptors.
 	instructions items: self initialDisassembly.
+	self refreshStack.
+	
 	super openWithSpec.
+]
+
+{ #category : #initialization }
+VMMachineCodeDebugger >> refreshStack [
+
+	stack items: machineSimulator stackValues
 ]
 
 { #category : #actions }
@@ -125,5 +146,6 @@ VMMachineCodeDebugger >> setInstructionPointerToSelectedInstruction [
 { #category : #initialization }
 VMMachineCodeDebugger >> step [
 
-	machineSimulator step
+	machineSimulator step.
+	self refreshStack
 ]

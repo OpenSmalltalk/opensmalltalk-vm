@@ -91,6 +91,16 @@ UnicornI386Simulator >> esp [
 	^ self readRegister: UcX86Registers esp
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornI386Simulator >> extractDestinationRegisterFromAssembly: aLLVMInstruction [ 
+	
+	| registerName |
+	registerName := (aLLVMInstruction assemblyCodeString substrings: ',') last trimBoth.
+	(registerName beginsWith: '%')
+		ifTrue: [ registerName := registerName allButFirst ].
+	^ registerName
+]
+
 { #category : #registers }
 UnicornI386Simulator >> framePointerRegister [
 	
@@ -116,13 +126,9 @@ UnicornI386Simulator >> receiverRegister [
 ]
 
 { #category : #accessing }
-UnicornI386Simulator >> registerDescriptors [
+UnicornI386Simulator >> registerList [
 	
-	^ #(eip eax ebx ecx edx esp ebp esi edi) collect: [ :e |
-		UnicornRegisterDescriptor new
-			simulator: self;
-			name: e;
-			yourself ]
+	^ #(eip eax ebx ecx edx esp ebp esi edi)
 ]
 
 { #category : #registers }

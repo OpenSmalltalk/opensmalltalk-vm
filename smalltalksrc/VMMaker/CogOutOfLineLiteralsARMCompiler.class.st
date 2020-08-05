@@ -33,6 +33,12 @@ CogOutOfLineLiteralsARMCompiler >> concretizeLiteral [
 	machineCodeSize := 4
 ]
 
+{ #category : #'as yet unclassified' }
+CogOutOfLineLiteralsARMCompiler >> concretizeMovePatcheableC32R [
+	
+	^ self concretizeMoveCwR
+]
+
 { #category : #accessing }
 CogOutOfLineLiteralsARMCompiler >> getDefaultCogCodeSize [
 	"Return the default number of bytes to allocate for native code at startup.
@@ -328,6 +334,9 @@ CogOutOfLineLiteralsARMCompiler >> usesOutOfLineLiteral [
 		[PushCw]		-> [^(self inCurrentCompilation: (operands at: 0)) not].
 		[PushCq]		-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
 		[PrefetchAw] 	-> [^(self isAddressRelativeToVarBase: (operands at: 0)) ifTrue: [false] ifFalse: [true]].
+		
+		"Patcheable instruction. Moves a literal. Uses out of line literal."
+		[MovePatcheableC32R] -> [ ^ true ]
 		}
 		otherwise: [self assert: false].
 	^false "to keep C compiler quiet"

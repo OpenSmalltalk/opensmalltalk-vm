@@ -51,6 +51,17 @@ UnicornARMv5Simulator >> doRunGeneratedCodeStartAt: initialAddress instructions:
 		count: numberOfInstructions.
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornARMv5Simulator >> extractDestinationRegisterFromAssembly: aLLVMInstruction [ 
+	
+	"In ARM, instructions are usually encoded asSpotterCandidateLink 
+	
+	INST Destination, Source
+	"
+	
+	^ (aLLVMInstruction assemblyCodeString substrings: String tab, ',') second trimBoth.
+]
+
 { #category : #registers }
 UnicornARMv5Simulator >> fp [
 	^ self readRegister: UcARMRegisters fp
@@ -150,6 +161,12 @@ UnicornARMv5Simulator >> r5 [
 	^ self readRegister: UcARMRegisters r5
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornARMv5Simulator >> r5: anInteger [ 
+	
+	^ self writeRegister: UcARMRegisters r5 value: anInteger
+]
+
 { #category : #registers }
 UnicornARMv5Simulator >> r6 [
 	^ self readRegister: UcARMRegisters r6
@@ -177,14 +194,9 @@ UnicornARMv5Simulator >> receiverRegister [
 ]
 
 { #category : #accessing }
-UnicornARMv5Simulator >> registerDescriptors [
+UnicornARMv5Simulator >> registerList [
 
 	^ #(lr pc sp fp r0 r1 r2 r3 r4 r5 r6 r7 r8 r9)
-		collect: [ :e | 
-			UnicornRegisterDescriptor new
-				simulator: self;
-				name: e;
-				yourself ]
 ]
 
 { #category : #registers }

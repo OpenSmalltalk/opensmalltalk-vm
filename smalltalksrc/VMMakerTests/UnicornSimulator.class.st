@@ -4,7 +4,8 @@ Class {
 	#instVars : [
 		'unicorn',
 		'stopReason',
-		'memory'
+		'memory',
+		'registerAliases'
 	],
 	#category : #'VMMakerTests-Unicorn'
 }
@@ -33,19 +34,25 @@ UnicornSimulator class >> X64 [
 	^ UnicornX64Simulator new
 ]
 
+{ #category : #accessing }
+UnicornSimulator >> aliasForRegister: aRegisterName [
+
+	^ registerAliases at: aRegisterName ifAbsent: [ '' ]
+]
+
 { #category : #registers }
 UnicornSimulator >> arg0Register [
 	
 	^ self subclassResponsibility 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #registers }
 UnicornSimulator >> arg0RegisterValue [
 	
 	^ self readRegister: self arg0Register 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #registers }
 UnicornSimulator >> arg0RegisterValue: aValue [
 
 	^ self writeRegister: self arg0Register value: aValue
@@ -145,6 +152,12 @@ UnicornSimulator >> doStartAt: startAddress until: until timeout: timeout count:
 			self instructionPointerValue = until ifTrue: [ ^ result ]]
 ]
 
+{ #category : #disassembling }
+UnicornSimulator >> extractDestinationRegisterFromAssembly: aLLVMInstruction [ 
+	
+	self subclassResponsibility
+]
+
 { #category : #registers }
 UnicornSimulator >> framePointerRegister [
 	
@@ -179,7 +192,16 @@ UnicornSimulator >> initialize [
 
 	super initialize.
 	unicorn := self createUnicorn.
-	self initializeUnicorn
+	self initializeUnicorn.
+	
+	registerAliases := Dictionary new.
+	self initializeRegisterAliases.
+]
+
+{ #category : #initialization }
+UnicornSimulator >> initializeRegisterAliases [
+
+	"Hook for subclasses"
 ]
 
 { #category : #initialization }
@@ -299,7 +321,12 @@ UnicornSimulator >> register: anIndex readInto: aByteArray [
 { #category : #accessing }
 UnicornSimulator >> registerDescriptors [
 	
-	self subclassResponsibility
+	^ self registerList collect: [ :e |
+		UnicornRegisterDescriptor new
+			simulator: self;
+			alias: (self aliasForRegister: e);
+			name: e;
+			yourself ]
 ]
 
 { #category : #initialization }
@@ -363,6 +390,17 @@ UnicornSimulator >> stackPointerRegisterValue: aValue [
 	self writeRegister: self stackPointerRegister value: aValue
 ]
 
+{ #category : #accessing }
+UnicornSimulator >> stackValues [
+	
+	| initialValue |
+	initialValue := self stackPointerRegisterValue.
+	
+	^ (1 to: 20) collect: [ :anIndex |  
+		VMMachineCodeDebuggerStackItem address: initialValue + (memory wordSize * (anIndex - 1)) on: self.	
+	] 
+]
+
 { #category : #executing }
 UnicornSimulator >> startAt: begin until: until timeout: timeout count: count [ 
 
@@ -392,6 +430,12 @@ UnicornSimulator >> step [
 		until: 0
 		timeout: 0
 		count: 1
+]
+
+{ #category : #accessing }
+UnicornSimulator >> wordAt: anInteger [ 
+	
+	^ memory longAt: anInteger
 ]
 
 { #category : #accessing }

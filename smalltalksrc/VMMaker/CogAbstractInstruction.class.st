@@ -665,6 +665,17 @@ CogAbstractInstruction >> concretizeLabel [
 	^machineCodeSize := 0
 ]
 
+{ #category : #'as yet unclassified' }
+CogAbstractInstruction >> concretizeMovePatcheableC32R [
+	"Move a 32 bit literal to a register.
+	This is patcheable instruction so it needs to be a fixed size instruction.
+	Subclasses decide to store the literal in many instructions or use a literal, depending on the literal manager strategy.
+	
+	This instruction generator should never try to generate compact instructions, even if possible.
+	Or it should complete the size with NOPs"
+	self subclassResponsibility 
+]
+
 { #category : #accessing }
 CogAbstractInstruction >> dependent [
 	^dependent
@@ -1169,9 +1180,7 @@ CogAbstractInstruction >> labelOffset [
 CogAbstractInstruction >> literal32BeforeFollowingAddress: followingAddress [
 	"Answer the constant loaded by the instruction sequence just before this address:"
 	<inline: true>
-	^objectMemory wordSize = 8
-		ifTrue: [self subclassResponsibility]
-		ifFalse: [self literalBeforeFollowingAddress: followingAddress]
+	^ self literalBeforeFollowingAddress: followingAddress
 ]
 
 { #category : #'inline cacheing' }
@@ -1498,6 +1507,13 @@ CogAbstractInstruction >> saveAndRestoreLinkRegAround: aBlock [
 	self subclassResponsibility
 ]
 
+{ #category : #'as yet unclassified' }
+CogAbstractInstruction >> seeAlso: aString [ 
+	
+	<doNotGenerate>
+	"like a flag"
+]
+
 { #category : #'generate machine code' }
 CogAbstractInstruction >> setLabelOffset: aValue [
 	"Hack:  To arrange that the block method field pushed in a block entry has
@@ -1540,9 +1556,7 @@ CogAbstractInstruction >> stackPageInterruptHeadroomBytes [
 CogAbstractInstruction >> storeLiteral32: literal32 beforeFollowingAddress: followingAddress [
 	"Answer the constant loaded by the instruction sequence just before this address:"
 	<inline: true>
-	objectMemory wordSize = 8
-		ifTrue: [self subclassResponsibility]
-		ifFalse: [self storeLiteral: literal32 beforeFollowingAddress: followingAddress]
+	self storeLiteral: literal32 beforeFollowingAddress: followingAddress
 ]
 
 { #category : #printing }

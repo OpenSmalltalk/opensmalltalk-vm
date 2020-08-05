@@ -34,6 +34,22 @@ UnicornX64Simulator >> disassembler [
 	^ LLVMDisassembler amd64
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornX64Simulator >> extractDestinationRegisterFromAssembly: aLLVMInstruction [ 
+	
+	| registerName |
+	registerName := (aLLVMInstruction assemblyCodeString substrings: ',') last trimBoth.
+	(registerName beginsWith: '%')
+		ifTrue: [ registerName := registerName allButFirst ].
+	^ registerName
+]
+
+{ #category : #'phisical-registers' }
+UnicornX64Simulator >> fp [
+
+	^ self rbp
+]
+
 { #category : #'virtual-registers' }
 UnicornX64Simulator >> framePointerRegister [
 	
@@ -44,6 +60,17 @@ UnicornX64Simulator >> framePointerRegister [
 UnicornX64Simulator >> getReturnAddress [
 	
 	^ self peekAddress 
+]
+
+{ #category : #initialization }
+UnicornX64Simulator >> initializeRegisterAliases [
+
+	registerAliases
+		at: #rcx put: #classRegister;
+		at: #rdx put: #receiverRegister;
+		at: #r9 put: #sendNumberOfArgumentsRegister;
+		at: #rbx put: #baseRegister;
+		at: #rbp put: #framePointerRegister
 ]
 
 { #category : #'virtual-registers' }
@@ -149,13 +176,9 @@ UnicornX64Simulator >> receiverRegister [
 ]
 
 { #category : #accessing }
-UnicornX64Simulator >> registerDescriptors [
+UnicornX64Simulator >> registerList [
 	
-	^ #(rip rax rbx rcx rdx rsp rbp r8 r9 r10 r11 r12 rsi rdi) collect: [ :e |
-		UnicornRegisterDescriptor new
-			simulator: self;
-			name: e;
-			yourself ]
+	^ #(rip rax rbx rcx rdx rsp rbp r8 r9 r10 r11 r12 rsi rdi)
 ]
 
 { #category : #'phisical-registers' }
@@ -186,6 +209,12 @@ UnicornX64Simulator >> rsp: anInteger [
 UnicornX64Simulator >> sendNumberOfArgumentsRegister [
 	
 	^ UcX86Registers r9
+]
+
+{ #category : #'phisical-registers' }
+UnicornX64Simulator >> sp [
+
+	^ self rsp
 ]
 
 { #category : #'virtual-registers' }
