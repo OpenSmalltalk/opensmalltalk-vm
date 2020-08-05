@@ -129,7 +129,7 @@ VMSpecialSendArithmethicTest >> testSmallIntegerArgumentPlusSmallIntegerArgument
 		arguments: { memory integerObjectOf: 52. memory integerObjectOf: 42. };
 		receiverOperation: [ cogit genPushTemporaryVariable: 0 ];
 		argumentOperation: [ cogit genPushTemporaryVariable: 1 ];
-		shouldPerformOperationReturning: 94
+		shouldCallTrampolineWith: (memory integerObjectOf: 52) and: (memory integerObjectOf: 42)
 ]
 
 { #category : #'tests - receiver integer argument' }
