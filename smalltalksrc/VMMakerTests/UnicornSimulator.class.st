@@ -4,7 +4,8 @@ Class {
 	#instVars : [
 		'unicorn',
 		'stopReason',
-		'memory'
+		'memory',
+		'registerAliases'
 	],
 	#category : #'VMMakerTests-Unicorn'
 }
@@ -45,13 +46,13 @@ UnicornSimulator >> arg0Register [
 	^ self subclassResponsibility 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #registers }
 UnicornSimulator >> arg0RegisterValue [
 	
 	^ self readRegister: self arg0Register 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #registers }
 UnicornSimulator >> arg0RegisterValue: aValue [
 
 	^ self writeRegister: self arg0Register value: aValue
@@ -151,7 +152,7 @@ UnicornSimulator >> doStartAt: startAddress until: until timeout: timeout count:
 			self instructionPointerValue = until ifTrue: [ ^ result ]]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #disassembling }
 UnicornSimulator >> extractDestinationRegisterFromAssembly: aLLVMInstruction [ 
 	
 	self subclassResponsibility

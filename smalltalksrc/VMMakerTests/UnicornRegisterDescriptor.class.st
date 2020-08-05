@@ -3,17 +3,18 @@ Class {
 	#superclass : #Object,
 	#instVars : [
 		'simulator',
-		'name'
+		'name',
+		'alias'
 	],
 	#category : #'VMMakerTests-Unicorn'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 UnicornRegisterDescriptor >> alias [
 	^ alias
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 UnicornRegisterDescriptor >> alias: aString [ 
 	
 	alias := aString
