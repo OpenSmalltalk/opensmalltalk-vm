@@ -854,17 +854,23 @@ VMMaker class >> isActiveVMMakerClassFor: platformName [
 ]
 
 { #category : #'instance creation' }
-VMMaker class >> makerFor: interpreterClass and: cogitClassOrNil with: optionsPairsArrayArg to: srcDirName platformDir: platDirName [
+VMMaker class >> makerFor: interpreterClass and: cogitClassOrNil with: optionsPairsArray to: srcDirName platformDir: platDirName [
 	"Initialize a VMMaker to generate the VM to the given target directory."
-	| optionsPairsArray |
-	optionsPairsArray := (cogitClassOrNil isNil or: [optionsPairsArrayArg includes: #Cogit])
-							ifTrue: [optionsPairsArrayArg]
-							ifFalse: [optionsPairsArrayArg, { #Cogit. cogitClassOrNil name }].
-	VMClass initializeForPlugins: optionsPairsArray.
+	| options|
+	
+	options := Dictionary newFromPairs: optionsPairsArray.
+	
+	(cogitClassOrNil isNil or: [ options includes: #Cogit ])
+		ifFalse: [ options at: #Cogit put: cogitClassOrNil name ].
+		
+	(self environment at: (options at: #ObjectMemory)) initializeWithOptions: options.
+		
+	VMClass initializeForPlugins: options.
+	
 	^(self forPlatform: 'Cross')
 		sourceDirectoryName: (self fullNameForPath: srcDirName);
 		platformRootDirectoryName: (self fullNameForPath: platDirName);
-		options: optionsPairsArray;
+		options: options;
 		interpreterClass: interpreterClass;
 		yourself
 ]
@@ -1909,13 +1915,10 @@ VMMaker >> options [
 ]
 
 { #category : #initialize }
-VMMaker >> options: anArrayOfPairs [
-	self assert: anArrayOfPairs size even.
-	1 to: anArrayOfPairs size by: 2 do:
-		[:i| | key |
-		key := anArrayOfPairs at: i.
-		self assert: key isSymbol.
-		optionsDictionary at: key put: (anArrayOfPairs at: i + 1)]
+VMMaker >> options: aDictionary [
+	
+	optionsDictionary := aDictionary
+
 ]
 
 { #category : #'target directories' }

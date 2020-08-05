@@ -25,7 +25,7 @@ Class {
 		'CogMethodConstants',
 		'VMBytecodeConstants'
 	],
-	#category : #VMMakerTests
+	#category : #'VMMakerTests-JitTests'
 }
 
 { #category : #'building suites' }
@@ -382,6 +382,12 @@ VMSimpleStackBasedCogitAbstractTest >> instructionPointer [
 	^ self readRegister: UcX86Registers rip
 ]
 
+{ #category : #running }
+VMSimpleStackBasedCogitAbstractTest >> jitCompilerClass [
+
+	^ SimpleStackBasedCogit
+]
+
 { #category : #'helpers - frames' }
 VMSimpleStackBasedCogitAbstractTest >> machineCodeFrameBuilder [
 
@@ -421,6 +427,21 @@ VMSimpleStackBasedCogitAbstractTest >> newInterpreter [
 	^ CogVMSimulatorLSB basicNew
 		objectMemory: theMemory;
 		basicInitialize
+]
+
+{ #category : #running }
+VMSimpleStackBasedCogitAbstractTest >> newJitCompiler [
+
+	self jitCompilerClass initializeWithOptions: (Cogit asOptionsDictionary: { 
+		#ISA . isa.
+		#IMMUTABILITY. false.
+		#ObjectMemory. self memoryClass name }).
+
+	^ self jitCompilerClass new 
+		setInterpreter: memory coInterpreter;
+		yourself
+
+
 ]
 
 { #category : #running }
@@ -602,12 +623,8 @@ VMSimpleStackBasedCogitAbstractTest >> runUntilReturnFrom: anAddress [
 { #category : #running }
 VMSimpleStackBasedCogitAbstractTest >> setUp [
 	super setUp.
-	
-	SimpleStackBasedCogit initializeWithOptions: (Cogit asOptionsDictionary: { 
-		#ISA . isa.
-		#IMMUTABILITY. false.
-		#ObjectMemory. self memoryClass name }).
-	cogit := SimpleStackBasedCogit new setInterpreter: memory coInterpreter.
+
+	cogit := self newJitCompiler.
 	memory coInterpreter cogit: cogit.
 	memory cogit: cogit.
 	cogit objectRepresentation class initializeMiscConstants.

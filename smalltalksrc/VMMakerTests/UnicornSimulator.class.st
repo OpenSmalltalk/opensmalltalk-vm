@@ -4,10 +4,9 @@ Class {
 	#instVars : [
 		'unicorn',
 		'stopReason',
-		'memory',
-		'registerAliases'
+		'memory'
 	],
-	#category : #VMMakerTests
+	#category : #'VMMakerTests-Unicorn'
 }
 
 { #category : #'instance creation' }
@@ -38,6 +37,24 @@ UnicornSimulator class >> X64 [
 UnicornSimulator >> aliasForRegister: aRegisterName [
 
 	^ registerAliases at: aRegisterName ifAbsent: [ '' ]
+]
+
+{ #category : #registers }
+UnicornSimulator >> arg0Register [
+	
+	^ self subclassResponsibility 
+]
+
+{ #category : #'as yet unclassified' }
+UnicornSimulator >> arg0RegisterValue [
+	
+	^ self readRegister: self arg0Register 
+]
+
+{ #category : #'as yet unclassified' }
+UnicornSimulator >> arg0RegisterValue: aValue [
+
+	^ self writeRegister: self arg0Register value: aValue
 ]
 
 { #category : #registers }

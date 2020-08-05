@@ -76,6 +76,13 @@ StackInterpreterSimulator class >> initializeWithOptions: optionsDictionaryOrArr
 ]
 
 { #category : #'instance creation' }
+StackInterpreterSimulator class >> isNonArgumentImplicitReceiverVariableName: aName [
+
+	^ (self localSlots collect: [ :e | e name ]) includes: aName
+
+]
+
+{ #category : #'instance creation' }
 StackInterpreterSimulator class >> new [
 	^self onObjectMemory: nil options: #()
 ]
@@ -918,36 +925,6 @@ StackInterpreterSimulator >> internalCannotReturn: resultOop [
 	^super internalCannotReturn: resultOop
 ]
 
-{ #category : #testing }
-StackInterpreterSimulator >> internalFindNewMethodOrdinary [
-"
-	| cName |
-	traceOn ifTrue:
-		[cName := (self sizeBitsOf: class) = 16r20
-			ifTrue: ['class ' , (self nameOfClass: (self fetchPointer: 6 ofObject: class))]
-			ifFalse: [(self nameOfClass: class)].
-		self cr; print: cName , '>>' , (self stringOf: messageSelector)].
-"
-	messageSelector = (objectMemory splObj: SelectorDoesNotUnderstand) ifTrue: [self halt].
-
-	sendCount := sendCount + 1.
-
-"	printSends ifTrue:
-		[self print: byteCount; space; printStringOf: messageSelector; cr]."
-"
-	(sendCount > 1000 and: [sendCount\\10 = 0]) ifTrue:
-		[Transcript print: sendCount; space.
-		self validate].
-"
-"
-	(sendCount > 100150) ifTrue:
-		[self qvalidate.
-		messageQueue == nil ifTrue: [messageQueue := OrderedCollection new].
-		messageQueue addLast: (self stringOf: messageSelector)].
-"
-	super internalFindNewMethodOrdinary
-]
-
 { #category : #'debugging traps' }
 StackInterpreterSimulator >> internalMustBeBoolean [
 	self halt.
@@ -1025,6 +1002,23 @@ StackInterpreterSimulator >> ioExit [
 StackInterpreterSimulator >> ioExitWithErrorCode: ec [
 
 	quitBlock value  "Cause return from #test"
+]
+
+{ #category : #'I/O primitives support' }
+StackInterpreterSimulator >> ioGetCurrentWorkingDirectory: aCStringHolder maxLength: maxLength [
+
+	| anEncodedString |
+
+	anEncodedString := FileLocator workingDirectory fullName utf8Encoded.
+
+	aCStringHolder object
+		replaceFrom: 1
+		to: anEncodedString size
+		with: anEncodedString
+		startingAt: 1.
+	
+	"No Error"
+	^ 0
 ]
 
 { #category : #'process primitive support' }
@@ -1170,6 +1164,8 @@ StackInterpreterSimulator >> ioProcessEvents [
 { #category : #'I/O primitives support' }
 StackInterpreterSimulator >> ioRelinquishProcessorForMicroseconds: microseconds [
 	"In the simulator give an indication that we're idling and check for input."
+
+	1halt.
 	Display reverse: ((displayView
 						ifNil: [0@0]
 						ifNotNil: [displayView bounds origin]) extent: 16@16).
@@ -2422,6 +2418,7 @@ StackInterpreterSimulator >> space [
 
 { #category : #'special objects' }
 StackInterpreterSimulator >> splObj: anInteger [ 
+	<doNotGenerate>
 	^objectMemory splObj: anInteger 
 ]
 

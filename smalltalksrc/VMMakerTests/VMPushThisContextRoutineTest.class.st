@@ -1,7 +1,7 @@
 Class {
 	#name : #VMPushThisContextRoutineTest,
 	#superclass : #VMSimpleStackBasedCogitAbstractTest,
-	#category : #VMMakerTests
+	#category : #'VMMakerTests-JitTests'
 }
 
 { #category : #tests }

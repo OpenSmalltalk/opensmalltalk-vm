@@ -1,8 +1,14 @@
 Class {
 	#name : #UnicornX64Simulator,
 	#superclass : #UnicornSimulator,
-	#category : #VMMakerTests
+	#category : #'VMMakerTests-Unicorn'
 }
+
+{ #category : #registers }
+UnicornX64Simulator >> arg0Register [
+	
+	^ UcX86Registers rdi
+]
 
 { #category : #'phisical-registers' }
 UnicornX64Simulator >> baseRegister [

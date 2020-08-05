@@ -366,61 +366,72 @@ SmartSyntaxPluginTMethod >> recordDeclarationsIn: aCCodeGen [
 	 and remove the declarations from the method body."
 
 	| newStatements |
-	properties pragmas notEmpty ifTrue:
-		[properties pragmas do:
-			[:pragma|
-			pragma keyword == #var:declareC: ifTrue:
-				[self checkedDeclarationAt: pragma arguments first asString
+	properties pragmas notEmpty ifTrue: [ 
+		properties pragmas do: [ :pragma | 
+			pragma key == #var:declareC: ifTrue: [ 
+				self
+					checkedDeclarationAt: pragma arguments first asString
 					put: pragma arguments last
-					in: aCCodeGen].
-			pragma keyword == #var:type: ifTrue:
-				[| varName varType |
+					in: aCCodeGen ].
+			pragma key == #var:type: ifTrue: [ 
+				| varName varType |
 				varName := pragma arguments first asString.
-				varType := aCCodeGen conventionalTypeForType: pragma arguments last.
-				varType last == $* ifFalse: [varType := varType, ' '].
-				self checkedDeclarationAt: varName
-					put: varType, varName
-					in: aCCodeGen].
-			 pragma keyword == #var:as: ifTrue:
-				[| theClass |
-				 theClass := Smalltalk at: pragma arguments last name asSymbol ifAbsent: [nil].
-				 theClass isBehavior ifFalse:
-					[^self error: 'declarator must be a Behavior'].
-				 self checkedDeclarationAt: pragma arguments first value asString 
-					put: (theClass ccgDeclareCForVar: pragma arguments first asString)
-					in: aCCodeGen].
-			pragma keyword == #returnTypeC: ifTrue:
-				[self returnType: pragma arguments last].
-			pragma keyword = #doNotGenerate: ifTrue:
-				[locals removeKey: pragma arguments last]].
-		^self].
+				varType := aCCodeGen conventionalTypeForType:
+					           pragma arguments last.
+				varType last == $* ifFalse: [ varType := varType , ' ' ].
+				self
+					checkedDeclarationAt: varName
+					put: varType , varName
+					in: aCCodeGen ].
+			pragma key == #var:as: ifTrue: [ 
+				| theClass |
+				theClass := Smalltalk
+					            at: pragma arguments last name asSymbol
+					            ifAbsent: [ nil ].
+				theClass isBehavior ifFalse: [ 
+					^ self error: 'declarator must be a Behavior' ].
+				self
+					checkedDeclarationAt: pragma arguments first value asString
+					put:
+					(theClass ccgDeclareCForVar: pragma arguments first asString)
+					in: aCCodeGen ].
+			pragma key == #returnTypeC: ifTrue: [ 
+				self returnType: pragma arguments last ].
+			pragma key = #doNotGenerate: ifTrue: [ 
+				locals removeKey: pragma arguments last ] ].
+		^ self ].
 	newStatements := OrderedCollection new: parseTree statements size.
-	parseTree statements do: 
-		[:stmt | | isDeclaration |
-		 isDeclaration := false.
-		 stmt isSend ifTrue: 
-			[stmt selector == #var:declareC: ifTrue:
-				[isDeclaration := true.
-				self declarationAt: stmt args first value asString put: stmt args last value].
-			stmt selector = #var:type: ifTrue:
-				[| varName varType |
+	parseTree statements do: [ :stmt | 
+		| isDeclaration |
+		isDeclaration := false.
+		stmt isSend ifTrue: [ 
+			stmt selector == #var:declareC: ifTrue: [ 
+				isDeclaration := true.
+				self
+					declarationAt: stmt args first value asString
+					put: stmt args last value ].
+			stmt selector = #var:type: ifTrue: [ 
+				| varName varType |
 				isDeclaration := true.
 				varName := stmt args first value asString.
 				varType := aCCodeGen conventionalTypeForType: stmt args last value.
-				varType last == $* ifFalse: [varType := varType, ' '].
-				self declarationAt: varName put: varType, varName].
-			 stmt selector == #var:as: ifTrue:
-				[| theClass |
-				 isDeclaration := true.
-				 theClass := Smalltalk  at: stmt args last name asSymbol ifAbsent: [nil].
-				 theClass isBehavior ifFalse:
-					[^self error: 'declarator must be a Behavior'].
-				 self declarationAt: stmt args first value asString 
-					put: (theClass ccgDeclareCForVar: stmt args first value asString)].
-			 stmt selector == #returnTypeC: ifTrue: 
-				[isDeclaration := true.
-				 returnType := stmt args last value]].
-		 isDeclaration ifFalse: [newStatements add: stmt]].
+				varType last == $* ifFalse: [ varType := varType , ' ' ].
+				self declarationAt: varName put: varType , varName ].
+			stmt selector == #var:as: ifTrue: [ 
+				| theClass |
+				isDeclaration := true.
+				theClass := Smalltalk
+					            at: stmt args last name asSymbol
+					            ifAbsent: [ nil ].
+				theClass isBehavior ifFalse: [ 
+					^ self error: 'declarator must be a Behavior' ].
+				self
+					declarationAt: stmt args first value asString
+					put: (theClass ccgDeclareCForVar: stmt args first value asString) ].
+			stmt selector == #returnTypeC: ifTrue: [ 
+				isDeclaration := true.
+				returnType := stmt args last value ] ].
+		isDeclaration ifFalse: [ newStatements add: stmt ] ].
 	parseTree setStatements: newStatements asArray
 ]
 

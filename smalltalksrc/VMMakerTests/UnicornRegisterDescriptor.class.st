@@ -3,10 +3,9 @@ Class {
 	#superclass : #Object,
 	#instVars : [
 		'simulator',
-		'name',
-		'alias'
+		'name'
 	],
-	#category : #VMMakerTests
+	#category : #'VMMakerTests-Unicorn'
 }
 
 { #category : #'as yet unclassified' }

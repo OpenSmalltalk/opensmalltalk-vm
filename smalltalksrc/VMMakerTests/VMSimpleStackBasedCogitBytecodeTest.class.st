@@ -1,7 +1,7 @@
 Class {
 	#name : #VMSimpleStackBasedCogitBytecodeTest,
 	#superclass : #VMSimpleStackBasedCogitAbstractTest,
-	#category : #VMMakerTests
+	#category : #'VMMakerTests-JitTests'
 }
 
 { #category : #'tests - extended store bytecode - store inst var' }

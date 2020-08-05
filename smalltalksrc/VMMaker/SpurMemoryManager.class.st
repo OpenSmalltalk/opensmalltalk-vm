@@ -1960,6 +1960,7 @@ SpurMemoryManager >> allocateMemoryOfSize: memoryBytes [
 	| bytesPerElement |
 	bytesPerElement := (self memoryClass basicNew: 0) bytesPerElement.
 	memory := self memoryClass new: memoryBytes + bytesPerElement - 1 // bytesPerElement
+	
 ]
 
 { #category : #testing }
@@ -6440,8 +6441,6 @@ SpurMemoryManager >> initializeMarkStack [
 { #category : #'gc - scavenging' }
 SpurMemoryManager >> initializeNewSpaceVariables [
 	<inline: #never>
-	
-	1halt.
 	
 	freeStart := scavenger eden start.
 	pastSpaceStart := scavenger pastSpace start.

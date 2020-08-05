@@ -11610,13 +11610,16 @@ StackToRegisterMappingCogit >> genSpecialSelectorArithmetic [
 	<var: #primDescriptor type: #'BytecodeDescriptor *'>
 	<var: #jumpNotSmallInts type: #'AbstractInstruction *'>
 	primDescriptor := self generatorAt: byte0.
-	argIsInt := (argIsConst := self ssTop type = SSConstant)
-				 and: [objectMemory isIntegerObject: (argInt := self ssTop constant)].
+
+	argIsInt := ((argIsConst := self ssTop type = SSConstant)
+				 and: [objectMemory isIntegerObject: (argInt := self ssTop constant)])
+				 or: [self mclassIsSmallInteger and: [self ssTop isSameEntryAs: self simSelf]].
+
 	rcvrIsInt := ((rcvrIsConst := (self ssValue: 1) type = SSConstant)
 				  and: [objectMemory isIntegerObject: (rcvrInt := (self ssValue: 1) constant)])
 				or: [self mclassIsSmallInteger and: [(self ssValue: 1) isSameEntryAs: self simSelf]].
 
-	(argIsInt and: [rcvrIsInt and: [rcvrIsConst]]) ifTrue:
+	(argIsInt and: [argIsConst and: [rcvrIsInt and: [rcvrIsConst]]]) ifTrue:
 		[rcvrInt := objectMemory integerValueOf: rcvrInt.
 		 argInt := objectMemory integerValueOf: argInt.
 		 primDescriptor opcode caseOf: {
@@ -11639,7 +11642,7 @@ StackToRegisterMappingCogit >> genSpecialSelectorArithmetic [
 	(argIsInt or: [rcvrIsInt]) ifFalse:
 		[^self genSpecialSelectorSend].
 
-	argIsInt
+	argIsConst
 		ifTrue:
 			[self ssFlushTo: simStackPtr - 2.
 			 (self ssValue: 1) popToReg: ReceiverResultReg.
@@ -11654,7 +11657,7 @@ StackToRegisterMappingCogit >> genSpecialSelectorArithmetic [
 										ifTrue: [objectRepresentation genJumpNotSmallInteger: Arg0Reg]
 										ifFalse: [objectRepresentation genJumpNotSmallIntegersIn: ReceiverResultReg and: Arg0Reg scratch: TempReg]]].
 	primDescriptor opcode caseOf: {
-		[AddRR] -> [argIsInt
+		[AddRR] -> [argIsConst
 						ifTrue:
 							[self AddCq: argInt - ConstZero R: ReceiverResultReg.
 							 jumpContinue := self JumpNoOverflow: 0.
@@ -11670,7 +11673,7 @@ StackToRegisterMappingCogit >> genSpecialSelectorArithmetic [
 								ifFalse:
 									[self SubR: Arg0Reg R: ReceiverResultReg.
 									 objectRepresentation genSetSmallIntegerTagsIn: ReceiverResultReg]]].
-		[SubRR] -> [argIsInt
+		[SubRR] -> [argIsConst
 						ifTrue:
 							[self SubCq: argInt - ConstZero R: ReceiverResultReg.
 							 jumpContinue := self JumpNoOverflow: 0.
@@ -11683,11 +11686,11 @@ StackToRegisterMappingCogit >> genSpecialSelectorArithmetic [
 							 "overflow; must undo the damage before continuing"
 							 self AddR: Arg0Reg R: ReceiverResultReg.
 							 objectRepresentation genSetSmallIntegerTagsIn: Arg0Reg]].
-		[AndRR] -> [argIsInt
+		[AndRR] -> [argIsConst
 						ifTrue: [self AndCq: argInt R: ReceiverResultReg]
 						ifFalse: [self AndR: Arg0Reg R: ReceiverResultReg].
 					jumpContinue := jumpNotSmallInts ifNotNil: [self Jump: 0]].
-		[OrRR]	-> [argIsInt
+		[OrRR]	-> [argIsConst
 						ifTrue: [self OrCq: argInt R: ReceiverResultReg]
 						ifFalse: [self OrR: Arg0Reg R: ReceiverResultReg].
 					jumpContinue := jumpNotSmallInts ifNotNil: [self Jump: 0]] }.
@@ -11698,7 +11701,7 @@ StackToRegisterMappingCogit >> genSpecialSelectorArithmetic [
 				 ^0]]
 		ifNotNil:
 			[jumpNotSmallInts jmpTarget: self Label].
-	argIsInt ifTrue:
+	argIsConst ifTrue:
 		[self MoveCq: argInt R: Arg0Reg].
 	index := byte0 - self firstSpecialSelectorBytecodeOffset.
 	self genMarshalledSend: index negated - 1 numArgs: 1 sendTable: ordinarySendTrampolines.

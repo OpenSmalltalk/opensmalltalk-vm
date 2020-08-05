@@ -1,8 +1,14 @@
 Class {
 	#name : #UnicornARMv5Simulator,
 	#superclass : #UnicornSimulator,
-	#category : #VMMakerTests
+	#category : #'VMMakerTests-Unicorn'
 }
+
+{ #category : #registers }
+UnicornARMv5Simulator >> arg0Register [
+	
+	^ UcARMRegisters r3
+]
 
 { #category : #registers }
 UnicornARMv5Simulator >> baseRegister [

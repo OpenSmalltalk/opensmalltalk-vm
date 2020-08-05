@@ -1,7 +1,7 @@
 Class {
 	#name : #VMSimpleStackBasedCogitMegamorphicPICTest,
 	#superclass : #VMSimpleStackBasedCogitAbstractTest,
-	#category : #VMMakerTests
+	#category : #'VMMakerTests-JitTests'
 }
 
 { #category : #'tests - PIC' }

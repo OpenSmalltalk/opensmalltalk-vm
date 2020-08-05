@@ -8,7 +8,7 @@ CompiledMethod >> abstractDetailedSymbolic [
 { #category : #'*VMMaker-C translation' }
 CompiledMethod >> asTranslationMethodOfClass: aTMethodClass [
 
-	^self parseTree asTranslationMethodOfClass: aTMethodClass
+	^ self parseTree asTranslationMethodOfClass: aTMethodClass
 ]
 
 { #category : #'*VMMaker-support' }
