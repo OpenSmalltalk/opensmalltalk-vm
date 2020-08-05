@@ -111,6 +111,68 @@ VMSpecialSendArithmethicTest >> shouldPerformOperationReturning: aValue [
 	self assert: machineSimulator receiverRegisterValue equals: (memory integerObjectOf: aValue).
 ]
 
+{ #category : #'tests - receiver non integer argument' }
+VMSpecialSendArithmethicTest >> testNonIntegerArgumentPlusFalseArgumentCallsTrampoline [
+		
+	self
+		arguments: { memory trueObject. memory falseObject};
+		receiverOperation: [ cogit genPushTemporaryVariable: 0 ];
+		argumentOperation: [ cogit genPushTemporaryVariable: 1 ];
+		shouldCallTrampolineWith: [ memory trueObject ] and: [ memory falseObject ]
+]
+
+{ #category : #'tests - receiver non integer argument' }
+VMSpecialSendArithmethicTest >> testNonIntegerArgumentPlusFalseSelfCallsTrampoline [
+		
+	self
+		methodReceiver: (memory falseObject);
+		arguments: { memory trueObject };
+		receiverOperation: [ cogit genPushTemporaryVariable: 0 ];
+		argumentOperation: [ cogit ssPushDesc: cogit simSelf ];
+		shouldCallTrampolineWith: [ memory trueObject ] and: [ memory falseObject ]
+]
+
+{ #category : #'tests - receiver non integer argument' }
+VMSpecialSendArithmethicTest >> testNonIntegerArgumentPlusSmallIntegerArgumentCallsTrampoline [
+		
+	self
+		arguments: { memory trueObject. memory integerObjectOf: 42 };
+		receiverOperation: [ cogit genPushTemporaryVariable: 0 ];
+		argumentOperation: [ cogit genPushTemporaryVariable: 1 ];
+		shouldCallTrampolineWith: [ memory trueObject ] and: [ memory integerObjectOf: 42 ]
+]
+
+{ #category : #'tests - receiver non integer argument' }
+VMSpecialSendArithmethicTest >> testNonIntegerArgumentPlusSmallIntegerConstCallsTrampoline [
+		
+	self
+		arguments: { memory trueObject };
+		receiverOperation: [ cogit genPushTemporaryVariable: 0 ];
+		argumentOperation: [ cogit ssPushConstant: (memory integerObjectOf: 42)];
+		shouldCallTrampolineWith: [ memory trueObject ] and: [ memory integerObjectOf: 42 ]
+]
+
+{ #category : #'tests - receiver non integer argument' }
+VMSpecialSendArithmethicTest >> testNonIntegerArgumentPlusSmallIntegerSelfCallsTrampoline [
+		
+	self
+		methodReceiver: (memory integerObjectOf: 42);
+		arguments: { memory trueObject };
+		receiverOperation: [ cogit genPushTemporaryVariable: 0 ];
+		argumentOperation: [ cogit ssPushDesc: cogit simSelf ];
+		shouldCallTrampolineWith: [ memory trueObject ] and: [ (memory integerObjectOf: 42) ]
+]
+
+{ #category : #'tests - receiver non integer argument' }
+VMSpecialSendArithmethicTest >> testNonIntegerArgumentPlusTrueConstCallsTrampoline [
+		
+	self
+		arguments: { memory trueObject };
+		receiverOperation: [ cogit genPushTemporaryVariable: 0 ];
+		argumentOperation: [ cogit ssPushConstant: (memory falseObject)];
+		shouldCallTrampolineWith: [ memory trueObject ] and: [ memory falseObject ]
+]
+
 { #category : #'tests - receiver integer argument' }
 VMSpecialSendArithmethicTest >> testSmallIntegerArgumentPlusIntegerSelfReturnsSmallInteger [
 	
@@ -140,6 +202,16 @@ VMSpecialSendArithmethicTest >> testSmallIntegerArgumentPlusSmallIntegerConstRet
 		receiverOperation: [ cogit genPushTemporaryVariable: 0 ];
 		argumentOperation: [ cogit ssPushConstant: (memory integerObjectOf: 42) ];
 		shouldPerformOperationReturning: 94.
+]
+
+{ #category : #'tests - receiver integer argument' }
+VMSpecialSendArithmethicTest >> testSmallIntegerArgumentPlusTrueArgumentCallsTrampoline [
+	
+	self
+		arguments: { memory integerObjectOf: 52. memory trueObject };
+		receiverOperation: [ cogit genPushTemporaryVariable: 0 ];
+		argumentOperation: [ cogit genPushTemporaryVariable: 1 ];
+		shouldCallTrampolineWith: (memory integerObjectOf: 52) and: memory trueObject
 ]
 
 { #category : #'tests - receiver integer argument' }
