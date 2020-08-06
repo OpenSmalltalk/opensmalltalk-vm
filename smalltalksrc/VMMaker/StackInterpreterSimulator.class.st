@@ -416,20 +416,6 @@ StackInterpreterSimulator >> cr [
 	traceOn ifTrue: [ transcript cr; flush ].
 ]
 
-{ #category : #'debugging traps' }
-StackInterpreterSimulator >> createActualMessageTo: class [
-	objectMemory bootstrapping ifTrue:
-		[self halt].
-	"false
-		ifTrue:
-			[(self stringOf: messageSelector) = 'run:with:in:' ifTrue:
-				[self halt]]
-		ifFalse:
-			[self halt: (self stringOf: messageSelector)]."
-
-	^super createActualMessageTo: class
-]
-
 { #category : #accessing }
 StackInterpreterSimulator >> currentBytecode: anInteger [ 
 	currentBytecode := anInteger
