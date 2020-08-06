@@ -2233,6 +2233,34 @@ Cogit >> MoveMw: offset r: baseReg R: destReg [
 ]
 
 { #category : #'abstract instructions' }
+Cogit >> MovePatcheableC32: wordConstant R: reg [
+	"Generate a MoveC32R instruction to move a 32-bit constant into a register.
+	 If the backEnd is using out-of-line literals then those for inline caches cannot be shared,
+	 and this method ensures the instruction has its own unique label.  If the backEnd is using
+	 in-line literals then the literal is unique anyway and this is equivalent to MoveC32:R:.
+	 If this is a 32-bit platform, simply generate a MoveCwR instruction, to avoid
+	 needless duplication in the 32-bit code generators.."
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	"If we are in 64 bits, we use indexes, so are already encoded as unique literals in the instruction.
+	Otherwise, they will be selector references that must be stored as literals"
+	
+	^literalsManager
+		uniqueLiteral: wordConstant
+		forInstruction: (self gen: MovePatcheableC32R operand: wordConstant operand: reg)
+	"^ (objectMemory wordSize = 8) ifTrue: [ 
+		self
+			gen: MoveC32R
+			operand: wordConstant
+			operand: reg
+	] ifFalse: [ 
+		self
+			gen: MoveCwR
+			uniqueLiteral: wordConstant
+			operand: reg ]"
+]
+
+{ #category : #'abstract instructions' }
 Cogit >> MoveR: reg A32: address [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
@@ -2370,24 +2398,6 @@ Cogit >> MoveRs: dpreg1 Rs: dpreg2 [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	^self gen: MoveRsRs operand: dpreg1 operand: dpreg2
-]
-
-{ #category : #'abstract instructions' }
-Cogit >> MoveUniqueC32: wordConstant R: reg [
-	"Generate a MoveC32R instruction to move a 32-bit constant into a register.
-	 If the backEnd is using out-of-line literals then those for inline caches cannot be shared,
-	 and this method ensures the instruction has its own unique label.  If the backEnd is using
-	 in-line literals then the literal is unique anyway and this is equivalent to MoveC32:R:.
-	 If this is a 32-bit platform, simply generate a MoveCwR instruction, to avoid
-	 needless duplication in the 32-bit code generators.."
-	<inline: true>
-	<returnTypeC: #'AbstractInstruction *'>
-	^self
-		gen: (objectMemory wordSize = 8
-				ifTrue: [MoveC32R]
-				ifFalse: [MoveCwR])
-		uniqueLiteral: wordConstant
-		operand: reg
 ]
 
 { #category : #'abstract instructions' }
@@ -7240,7 +7250,7 @@ Cogit >> genLoadInlineCacheWithSelector: selectorIndex [
 				[hasYoungReferent := true].
 			 cacheValue := selector].
 
-	self MoveUniqueC32: cacheValue R: ClassReg
+	self MovePatcheableC32: cacheValue R: ClassReg
 ]
 
 { #category : #initialization }
@@ -11272,7 +11282,7 @@ Cogit >> rewriteCPICCaseAt: followingAddress tag: newTag objRef: newObjRef targe
 	backEnd storeLiteral32: newTag beforeFollowingAddress: classTagPC.
 
 	"write the jump address for the new target address"
-	backEnd rewriteConditionalJumpLongAt: followingAddress target: newTarget
+	backEnd rewriteJumpLongAt: followingAddress target: newTarget
 ]
 
 { #category : #'compile abstract instructions' }

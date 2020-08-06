@@ -138,6 +138,7 @@ OutOfLineLiteralsManager >> dumpLiterals: generateBranchAround [
 
 	generateBranchAround ifTrue:
 		[jump := cogit Jump: 0].
+	cogit AlignmentNops: cogit objectMemory wordSize.
 	lastDumpedLiteralIndex to: nextLiteralIndex - 1 do:
 		[:i|
 		litInst := self literalInstructionAt: i.

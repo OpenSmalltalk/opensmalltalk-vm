@@ -44,7 +44,7 @@ VMSimpleStackBasedCogitMonomorphicPICTest >> testLinkCallDuringSendInTrampolineR
 		to: targetCog 
 		offset: cogit entryOffset 
 		receiver: memory falseObject.
-
+		
 	self pushAddress: memory falseObject.
 
 	executedTheTrampoline := false.

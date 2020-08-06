@@ -4,7 +4,8 @@ Class {
 	#instVars : [
 		'unicorn',
 		'stopReason',
-		'memory'
+		'memory',
+		'registerAliases'
 	],
 	#category : #'VMMakerTests-Unicorn'
 }
@@ -33,19 +34,25 @@ UnicornSimulator class >> X64 [
 	^ UnicornX64Simulator new
 ]
 
+{ #category : #accessing }
+UnicornSimulator >> aliasForRegister: aRegisterName [
+
+	^ registerAliases at: aRegisterName ifAbsent: [ '' ]
+]
+
 { #category : #registers }
 UnicornSimulator >> arg0Register [
 	
 	^ self subclassResponsibility 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #registers }
 UnicornSimulator >> arg0RegisterValue [
 	
 	^ self readRegister: self arg0Register 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #registers }
 UnicornSimulator >> arg0RegisterValue: aValue [
 
 	^ self writeRegister: self arg0Register value: aValue
@@ -85,6 +92,12 @@ UnicornSimulator >> classRegisterValue [
 UnicornSimulator >> classRegisterValue: aValue [
 	
 	^ self writeRegister: self classRegister value: aValue
+]
+
+{ #category : #accessing }
+UnicornSimulator >> cogit [
+
+	^ memory interpreter cogit
 ]
 
 { #category : #initialization }
@@ -127,22 +140,38 @@ UnicornSimulator >> doRunGeneratedCodeStartAt: initialAddress instructions: inst
 { #category : #executing }
 UnicornSimulator >> doStartAt: startAddress until: until timeout: timeout count: count [
 
-	| actualCount result |
+	| actualCount result error |
 
 	actualCount := 0.
 	self instructionPointerValue: startAddress.
 
 	[ true ]
 		whileTrue: [ 
-			result :=  unicorn
+			[result :=  unicorn
 				startAt: self instructionPointerValue
 				until: 0
 				timeout: 0
 				count: 1.
-			actualCount := actualCount + 1.
+			
+				stopReason ifNotNil: [ 
+						error := stopReason.
+						stopReason := nil.
+						error signal ].
+			
+					actualCount := actualCount + 1] 
+				on: UnicornInvalidMemoryAccess do: [ :invalidAccess |
+					self instructionPointerValue = until ifTrue: [ ^ 0 ].
+					self cogit handleSimulationTrap: (UnicornSimulationTrap simulator: self error: invalidAccess). ].
+			
 			stopReason ifNotNil: [ ^ result ].
 			count = actualCount ifTrue: [ ^ result ].
 			self instructionPointerValue = until ifTrue: [ ^ result ]]
+]
+
+{ #category : #disassembling }
+UnicornSimulator >> extractDestinationRegisterFromAssembly: aLLVMInstruction [ 
+	
+	self subclassResponsibility
 ]
 
 { #category : #registers }
@@ -179,7 +208,16 @@ UnicornSimulator >> initialize [
 
 	super initialize.
 	unicorn := self createUnicorn.
-	self initializeUnicorn
+	self initializeUnicorn.
+	
+	registerAliases := Dictionary new.
+	self initializeRegisterAliases.
+]
+
+{ #category : #initialization }
+UnicornSimulator >> initializeRegisterAliases [
+
+	"Hook for subclasses"
 ]
 
 { #category : #initialization }
@@ -299,7 +337,12 @@ UnicornSimulator >> register: anIndex readInto: aByteArray [
 { #category : #accessing }
 UnicornSimulator >> registerDescriptors [
 	
-	self subclassResponsibility
+	^ self registerList collect: [ :e |
+		UnicornRegisterDescriptor new
+			simulator: self;
+			alias: (self aliasForRegister: e);
+			name: e;
+			yourself ]
 ]
 
 { #category : #initialization }
@@ -363,22 +406,28 @@ UnicornSimulator >> stackPointerRegisterValue: aValue [
 	self writeRegister: self stackPointerRegister value: aValue
 ]
 
+{ #category : #accessing }
+UnicornSimulator >> stackValues [
+	
+	| initialValue |
+	initialValue := self stackPointerRegisterValue.
+	
+	^ (1 to: 20) collect: [ :anIndex |  
+		VMMachineCodeDebuggerStackItem address: initialValue + (memory wordSize * (anIndex - 1)) on: self.	
+	] 
+]
+
 { #category : #executing }
 UnicornSimulator >> startAt: begin until: until timeout: timeout count: count [ 
 
 	| error result |
 	result := self doStartAt: begin until: until timeout: timeout count: count.
 	
-	stopReason ifNotNil: [ 
-		error := stopReason.
-		stopReason := nil.
-		error signal ].
-	
 	"If we did not stop for a known reason, verify the error code of the function"
 	unicorn verifyErrorCode: result.
 	
 	"Verify we stopped because we arrived to the right end addres and not a timeout"
-	(until = 0 or: [self instructionPointerValue = until]) ifFalse: [
+	(until = 0 or: [ self instructionPointerValue = until ]) ifFalse: [
 		UnicornTimeout new
 			target: until;
 			signal ]
@@ -392,6 +441,12 @@ UnicornSimulator >> step [
 		until: 0
 		timeout: 0
 		count: 1
+]
+
+{ #category : #accessing }
+UnicornSimulator >> wordAt: anInteger [ 
+	
+	^ memory longAt: anInteger
 ]
 
 { #category : #accessing }

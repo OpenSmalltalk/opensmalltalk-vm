@@ -32,10 +32,10 @@ Class {
 VMSimpleStackBasedCogitAbstractTest class >> testParameters [
 
 	^ ParametrizedTestMatrix new
-		addCase: { #ISA -> #'X64'. #wordSize -> 8};
+		addCase: { #ISA -> #'ARMv8'. #wordSize -> 8};
 		addCase: { #ISA -> #'IA32'. #wordSize -> 4};
+		addCase: { #ISA -> #'X64'. #wordSize -> 8};
 		addCase: { #ISA -> #'ARMv5'. #wordSize -> 4};
-		"addCase: { #ISA -> #'ARMv8'. #wordSize -> 8};"
 		yourself
 ]
 
@@ -368,7 +368,6 @@ VMSimpleStackBasedCogitAbstractTest >> initializeInitialStackFrame [
 
 { #category : #running }
 VMSimpleStackBasedCogitAbstractTest >> initializeStackMemory [.
-
 	stackMemoryStartAddress := initialAddress + self initialCodeSize.
 	stackMemoryEndAddress := stackMemoryStartAddress + stackSpaceSize.
 
@@ -454,10 +453,7 @@ VMSimpleStackBasedCogitAbstractTest >> newMemory [
 { #category : #helpers }
 VMSimpleStackBasedCogitAbstractTest >> openMachineDebugger [
 	
-	VMMachineCodeDebugger new
-		cogit: cogit;
-		machineSimulator: machineSimulator;
-		openWithSpec.
+	self openMachineDebuggerAt: initialAddress
 ]
 
 { #category : #helpers }
@@ -583,7 +579,8 @@ VMSimpleStackBasedCogitAbstractTest >> returnValue [
 { #category : #helpers }
 VMSimpleStackBasedCogitAbstractTest >> runFrom: startAddress until: endAddress [
 
-	self runFrom: startAddress until: endAddress timeout: 1000 "microseconds"
+	^ self runFrom: startAddress until: endAddress timeout: 1000. "microseconds"
+
 ]
 
 { #category : #helpers }
@@ -607,7 +604,7 @@ VMSimpleStackBasedCogitAbstractTest >> runGeneratedCode [
 { #category : #helpers }
 VMSimpleStackBasedCogitAbstractTest >> runUntilReturn [
 
-	machineSimulator startAt: 16r1000000
+	machineSimulator startAt: initialAddress
 		until: callerAddress
 		timeout: 0
 		count: 3000.
@@ -622,6 +619,16 @@ VMSimpleStackBasedCogitAbstractTest >> runUntilReturnFrom: anAddress [
 		timeout: 0
 		count: 0.
 
+]
+
+{ #category : #accessing }
+VMSimpleStackBasedCogitAbstractTest >> sentSelector [
+	^ sentSelector
+]
+
+{ #category : #accessing }
+VMSimpleStackBasedCogitAbstractTest >> sentSelector: anObject [
+	sentSelector := anObject
 ]
 
 { #category : #running }
@@ -687,6 +694,25 @@ VMSimpleStackBasedCogitAbstractTest >> setUpCogMethodEntry [
 	cogit computeEntryOffsets.
 ]
 
+{ #category : #'helpers - stack' }
+VMSimpleStackBasedCogitAbstractTest >> stackAddressAt: index [
+
+	^ (self stackAt: index)
+		integerAt: 1
+		size: self wordSize 
+		signed: false
+]
+
+{ #category : #'helpers - stack' }
+VMSimpleStackBasedCogitAbstractTest >> stackAt: index [
+
+	| stackAddressIntegerValue |
+
+	"Getting address from stack register"
+	stackAddressIntegerValue := machineSimulator stackPointerRegisterValue + (index * self wordSize).
+	^ machineSimulator memoryAt: stackAddressIntegerValue readNext: self wordSize.
+]
+
 { #category : #'helpers - registers' }
 VMSimpleStackBasedCogitAbstractTest >> stackPointerRegisterValue [
 
@@ -702,11 +728,7 @@ VMSimpleStackBasedCogitAbstractTest >> stackPointerRegisterValue: aValue [
 { #category : #'helpers - stack' }
 VMSimpleStackBasedCogitAbstractTest >> top [
 
-	| stackAddressIntegerValue |
-
-	"Getting address from stack register"
-	stackAddressIntegerValue := machineSimulator stackPointerRegisterValue.
-	^ machineSimulator memoryAt: stackAddressIntegerValue readNext: self wordSize.
+	^ self stackAt: 0
 ]
 
 { #category : #'helpers - stack' }
