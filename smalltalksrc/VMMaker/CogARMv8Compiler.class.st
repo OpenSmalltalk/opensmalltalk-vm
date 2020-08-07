@@ -2760,6 +2760,8 @@ CogARMv8Compiler >> encodeLogicalImmediate: immediate registerSize: registerSize
 	https://dinfuehr.github.io/blog/encoding-of-immediate-values-on-aarch64/
 	"
 
+	<inline: #always>
+
 	| size mask maskedImmediate trailingZeros trailingOnes leadingOnes immr nimms n |
 
 	(immediate = 0 or: [ 
@@ -3418,13 +3420,15 @@ CogARMv8Compiler >> inverseOpcodeFor: armOpcode [
 { #category : #'as yet unclassified' }
 CogARMv8Compiler >> is12BitValue: constant ifTrue: aTrueBlock ifFalse: aFalseBlock [ 
 	
+	<inline: #always>
+	
 	^ constant abs <= 2047 "(2 raisedTo: 11) - 1"
 		ifTrue: [ | twoComplement |
 			"Two complement using 12 bits"
 			twoComplement := constant >= 0
 				ifTrue: [ constant ]
 				ifFalse: [ 16rfff - constant abs + 1 ].
-			aTrueBlock value: twoComplement ]
+			aTrueBlock value: constant >= 0 value: twoComplement ]
 		ifFalse: aFalseBlock
 ]
 
@@ -3448,6 +3452,8 @@ CogARMv8Compiler >> is8BitValue: constant ifTrue: trueAlternativeBlock	ifFalse: 
 
 { #category : #'as yet unclassified' }
 CogARMv8Compiler >> is9BitValue: constant ifTrue: aTrueBlock ifFalse: aFalseBlock [ 
+	
+	<inline: #always>
 	
 	^ constant abs <= 255 "(2 raisedTo: 8) - 1"
 		ifTrue: [ | twoComplement |
