@@ -102,8 +102,6 @@ static void outOfMemory(void)
 }
 
 
-/*#define DEBUG_EVENTS	1*/
-
 #include "sqUnixEvent.c"
 
 static inline int min(int a, int b) { return a < b ? a : b; }
@@ -128,9 +126,8 @@ static struct fb *fb= 0;
 
 #include "sqUnixFBDevUtil.c"
 #ifdef USEEVDEV
-#include "sqUnixEvdevKeymap.c"
-#include "sqUnixEvdevMouse.c"
-#include "sqUnixEvdevKeyboard.c"
+#include "sqUnixEvdevKeycodeMap.c"
+#include "sqUnixEvdevKeyMouse.c"
 #else
 #include "sqUnixFBDevMouse.c"
 #include "sqUnixFBDevKeyboard.c"
@@ -238,7 +235,12 @@ static sqInt display_ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 
 static sqInt display_ioProcessEvents(void)
 {
+#ifdef USEEVDEV
+  processLibEvdevKeyEvents();
+  processLibEvdevMouseEvents();
+#else
   aioPoll(0);
+#endif
   return 0;
 }
 
