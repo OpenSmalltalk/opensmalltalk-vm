@@ -35,30 +35,33 @@ VMLookUpTest >> installSelector: aSelectorOop method: aMethodOop inMethodDiction
 
 { #category : #tests }
 VMLookUpTest >> setArrayClassIntoClassTable [
-	class := self
+	| aClass |
+	aClass := self
 		newClassInOldSpaceWithSlots: 0
 		format: Array instSpec.
-	memory setHashBitsOf: class to: ClassArrayCompactIndex.
+	memory setHashBitsOf: aClass to: ClassArrayCompactIndex.
 	memory
 		storePointer: ClassArrayCompactIndex
 		ofObject: memory classTableFirstPage
-		withValue: class
+		withValue: aClass
 ]
 
 { #category : #tests }
 VMLookUpTest >> setMessageClassIntoClassTable [
-	class := self
+	| aClass |
+	aClass := self
 		newClassInOldSpaceWithSlots: MessageSend allSlots size 
 		format: MessageSend instSpec.
-	memory setHashBitsOf: class to: ClassMessageCompactIndex.
+	memory setHashBitsOf: aClass to: ClassMessageCompactIndex.
 	memory
 		storePointer: ClassMessageCompactIndex
 		ofObject: memory classTableFirstPage
-		withValue: class
+		withValue: aClass
 ]
 
 { #category : #tests }
 VMLookUpTest >> setSmallIntegerClassIntoClassTable [
+
 	class := self
 		newClassInOldSpaceWithSlots: 0
 		format: memory forwardedFormat.
@@ -112,9 +115,6 @@ VMLookUpTest >> setUpClassAndMethod [
 	methodOop := self newMethodWithBytecodes: #[1 2 3 4 5 6 7 8 9].
 	selectorOop := memory integerObjectOf: 42.
 	receiver := memory integerObjectOf: 56.
-	class := self
-		newClassInOldSpaceWithSlots: 0
-		format: memory forwardedFormat.
 	self setSmallIntegerClassIntoClassTable
 ]
 
@@ -156,6 +156,21 @@ VMLookUpTest >> testInstallSmallIntegerClassIntoClassTable [
 ]
 
 { #category : #tests }
+VMLookUpTest >> testLookUpFindsMethodInClass [
+	
+	| aMethodDictionary |
+	self setUpClassAndMethod.	
+	self setUpMethodDictionaryIn: class.
+	aMethodDictionary := memory fetchPointer: MethodDictionaryIndex ofObject: class.
+	self installSelector: selectorOop method: methodOop  inMethodDictionary: aMethodDictionary.
+	
+	interpreter methodDictLinearSearchLimit: 3.
+	interpreter messageSelector: selectorOop.
+	interpreter lookupMethodInClass: class.
+	self assert: interpreter newMethod equals: methodOop
+]
+
+{ #category : #tests }
 VMLookUpTest >> testLookUpFindsMethodInSuperclass [
 
 	| superclass superclassMethodDictionary |
@@ -174,32 +189,15 @@ VMLookUpTest >> testLookUpFindsMethodInSuperclass [
 	self installSelector: selectorOop method: methodOop inMethodDictionary: superclassMethodDictionary.
 	
 	interpreter methodDictLinearSearchLimit: 3.
+	interpreter setBreakSelector: nil.
 	interpreter messageSelector: selectorOop.
 	interpreter lookupMethodInClass: class.
-	self assert: interpreter newMethod equals: methodOop .
+	self assert: interpreter newMethod equals: methodOop
 ]
 
 { #category : #tests }
 VMLookUpTest >> testLookUpInDefiningClassCreatesANewEntryInCache [
 
-	self setUpClassAndMethod.	
-	self setUpMethodDictionaryIn: class.
-	
-	methodDictionary := memory
-		fetchPointer: MethodDictionaryIndex
-		ofObject: class.
-		
-	self installSelector: selectorOop method: methodOop inMethodDictionary: methodDictionary.	
-	
-	interpreter methodDictLinearSearchLimit: 3.
-	interpreter messageSelector: selectorOop.
-	interpreter findNewMethodInClassTag: memory smallIntegerTag.
-	self assert: (interpreter lookupInMethodCacheSel: selectorOop classTag:memory smallIntegerTag).
-]
-
-{ #category : #tests }
-VMLookUpTest >> testLookUpInDefiningClassLeavesTheFoundMethodInNewMethodVariable [
-	
 	| aMethodDictionary |
 	self setUpClassAndMethod.	
 	self setUpMethodDictionaryIn: class.
@@ -208,12 +206,42 @@ VMLookUpTest >> testLookUpInDefiningClassLeavesTheFoundMethodInNewMethodVariable
 	
 	interpreter methodDictLinearSearchLimit: 3.
 	interpreter messageSelector: selectorOop.
-	interpreter lookupMethodInClass: class.
-	self assert: interpreter newMethod equals: methodOop
+	interpreter findNewMethodInClassTag: memory smallIntegerTag.
+	self assert: (interpreter lookupInMethodCacheSel: selectorOop classTag:memory smallIntegerTag).
 ]
 
 { #category : #tests }
-VMLookUpTest >> testLookUpNonExistingSelectorFindsDNUMethod [
+VMLookUpTest >> testLookUpInFindsCannotInterpretCreatesANewEntryInCache [
+
+	| nonExistingSelector cannotInterpretMethodOop cannotInterpretSelectorOop superclass superclassMethodDictionary |
+	self setUpClassAndMethod.
+	self setArrayClassIntoClassTable.
+	self setMessageClassIntoClassTable.
+	
+	superclass := self
+		newClassInOldSpaceWithSlots: 0
+		format: memory arrayFormat.
+	self setUpMethodDictionaryIn: superclass.	
+	superclassMethodDictionary := memory fetchPointer: MethodDictionaryIndex ofObject: superclass. 
+	memory storePointer: SuperclassIndex ofObject: class  withValue: superclass.	
+	
+	cannotInterpretMethodOop := self newMethodWithBytecodes: #[1 2 3 4 5 6 7 8 9].
+	cannotInterpretSelectorOop := self newString: 'CannotInterpret'. 
+	self installSelector: cannotInterpretSelectorOop method: cannotInterpretMethodOop inMethodDictionary: superclassMethodDictionary.
+	
+	memory splObj: SelectorCannotInterpret  put: cannotInterpretSelectorOop.
+	
+	nonExistingSelector:= memory integerObjectOf: 41.
+	
+	interpreter methodDictLinearSearchLimit: 3.
+	interpreter setBreakSelector: nil.
+	interpreter messageSelector: nonExistingSelector.
+	interpreter findNewMethodInClassTag: memory smallIntegerTag.
+	self assert: (interpreter lookupInMethodCacheSel: cannotInterpretSelectorOop classTag:memory smallIntegerTag).
+]
+
+{ #category : #tests }
+VMLookUpTest >> testLookUpInFindsDNUCreatesANewEntryInCache [
 
 	| nonExistingSelector dnuMethodOop dnuSelectorOop aMethodDictionary |
 	self setUpClassAndMethod.
@@ -232,13 +260,66 @@ VMLookUpTest >> testLookUpNonExistingSelectorFindsDNUMethod [
 	nonExistingSelector:= memory integerObjectOf: 41.
 	
 	interpreter methodDictLinearSearchLimit: 3.
+	interpreter setBreakSelector: nil.
+	interpreter messageSelector: nonExistingSelector.
+	interpreter findNewMethodInClassTag: memory smallIntegerTag.
+	self assert: (interpreter lookupInMethodCacheSel: dnuSelectorOop classTag:memory smallIntegerTag).
+]
+
+{ #category : #tests }
+VMLookUpTest >> testLookUpInSuperclassCreatesANewEntryInCache [
+
+	| superclass superclassMethodDictionary |
+	self setUpClassAndMethod.	
+	self setUpMethodDictionaryIn: class.
+	
+	superclass := self
+		newClassInOldSpaceWithSlots: 0
+		format: memory arrayFormat.
+	self setUpMethodDictionaryIn: superclass.	
+	superclassMethodDictionary := memory fetchPointer: MethodDictionaryIndex ofObject: superclass. 
+	memory storePointer: SuperclassIndex ofObject: class  withValue: superclass.	
+	
+	self installSelector: selectorOop method: methodOop inMethodDictionary: superclassMethodDictionary.
+	
+	interpreter methodDictLinearSearchLimit: 3.
+	interpreter messageSelector: selectorOop.
+	interpreter findNewMethodInClassTag: memory smallIntegerTag.
+	self assert: (interpreter lookupInMethodCacheSel: selectorOop classTag:memory smallIntegerTag).
+]
+
+{ #category : #tests }
+VMLookUpTest >> testLookUpNonExistingCannotInterpretAnswersDNUMethod [
+
+	| nonExistingSelector superclass superclassMethodDictionary dnuMethodOop dnuSelectorOop |
+	self setUpClassAndMethod.
+	self setArrayClassIntoClassTable.
+	self setMessageClassIntoClassTable.
+	
+	superclass := self
+		newClassInOldSpaceWithSlots: 0
+		format: memory arrayFormat.
+	self setUpMethodDictionaryIn: superclass.	
+	superclassMethodDictionary := memory fetchPointer: MethodDictionaryIndex ofObject: superclass. 
+	memory storePointer: SuperclassIndex ofObject: class withValue: superclass.	
+	
+	dnuMethodOop := self newMethodWithBytecodes: #[1 2 3 4 5 6 7 8 9].
+	dnuSelectorOop := self newString: 'DNU'. 
+	self installSelector: dnuSelectorOop method: dnuMethodOop inMethodDictionary: superclassMethodDictionary.
+	
+	memory splObj: SelectorDoesNotUnderstand  put: dnuSelectorOop.
+	
+	nonExistingSelector:= memory integerObjectOf: 41.
+	
+	interpreter methodDictLinearSearchLimit: 3.
+	interpreter setBreakSelector: nil.
 	interpreter messageSelector: nonExistingSelector.
 	interpreter lookupMethodInClass: class.
 	self assert: interpreter newMethod equals: dnuMethodOop.
 ]
 
 { #category : #tests }
-VMLookUpTest >> testLookUpNonExistingSelectorThrowsRecursivelyDoesNotUnderstand [
+VMLookUpTest >> testLookUpNonExistingDNUThrowsRecursivelyDoesNotUnderstand [
 
 	| nonExistingSelector aMethodDictionary |
 	self setUpClassAndMethod.
@@ -252,9 +333,36 @@ VMLookUpTest >> testLookUpNonExistingSelectorThrowsRecursivelyDoesNotUnderstand 
 	nonExistingSelector:= memory integerObjectOf: 41.
 	
 	interpreter methodDictLinearSearchLimit: 3.
+	interpreter setBreakSelector: nil.
 	interpreter messageSelector: nonExistingSelector.
 	"DoesNotUnderStand is no there so infinite recursion of DNU"
 	self should: [interpreter lookupMethodInClass: class] raise: Error.
+]
+
+{ #category : #tests }
+VMLookUpTest >> testLookUpNonExistingSelectorAnswersDNUMethod [
+
+	| nonExistingSelector dnuMethodOop dnuSelectorOop aMethodDictionary |
+	self setUpClassAndMethod.
+	self setArrayClassIntoClassTable.
+	self setMessageClassIntoClassTable.
+	self setUpMethodDictionaryIn: class.
+	aMethodDictionary := memory fetchPointer: MethodDictionaryIndex ofObject: class.
+	self installSelector: selectorOop method: methodOop  inMethodDictionary: aMethodDictionary.
+	
+	dnuMethodOop := self newMethodWithBytecodes: #[1 2 3 4 5 6 7 8 9].
+	dnuSelectorOop := self newString: 'DNU'. 
+	self installSelector: dnuSelectorOop method: dnuMethodOop inMethodDictionary: aMethodDictionary.
+	
+	memory splObj: SelectorDoesNotUnderstand  put: dnuSelectorOop.
+	
+	nonExistingSelector:= memory integerObjectOf: 41.
+	
+	interpreter methodDictLinearSearchLimit: 3.
+	interpreter setBreakSelector: nil.
+	interpreter messageSelector: nonExistingSelector.
+	interpreter lookupMethodInClass: class.
+	self assert: interpreter newMethod equals: dnuMethodOop.
 ]
 
 { #category : #tests }
@@ -276,11 +384,12 @@ VMLookUpTest >> testLookUpWithNilMethodDictionaryFindsCannotInterpret [
 	cannotInterpretSelectorOop := self newString: 'CannotInterpret'. 
 	self installSelector: cannotInterpretSelectorOop method: cannotInterpretMethodOop inMethodDictionary: superclassMethodDictionary.
 	
-	memory splObj: SelectorDoesNotUnderstand  put: cannotInterpretSelectorOop.
+	memory splObj: SelectorCannotInterpret  put: cannotInterpretSelectorOop.
 	
 	nonExistingSelector:= memory integerObjectOf: 41.
 	
 	interpreter methodDictLinearSearchLimit: 3.
+	interpreter setBreakSelector: nil.
 	interpreter messageSelector: nonExistingSelector.
 	interpreter lookupMethodInClass: class.
 	self assert: interpreter newMethod equals: cannotInterpretMethodOop.
