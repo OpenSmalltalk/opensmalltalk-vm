@@ -1157,7 +1157,7 @@ StackInterpreterSimulator >> ioRelinquishProcessorForMicroseconds: microseconds 
 						ifNotNil: [displayView bounds origin]) extent: 16@16).
 	Sensor peekEvent ifNotNil:
 		[self forceInterruptCheck].
-	Processor activeProcess == Project uiProcess ifTrue:
+	Processor activeProcess == UIManager default uiProcess ifTrue:
 		[World doOneCycle].
 	microseconds >= 1000
 		ifTrue: [(Delay forMilliseconds: microseconds + 999 // 1000) wait]

@@ -25,10 +25,10 @@ FilePluginSimulator >> close [  "close any files that ST may have opened"
 
 { #category : #simulation }
 FilePluginSimulator >> dir_Create: dirNameIndex _: dirNameSize [
-	^[FileDirectory default
-		primCreateDirectory: (interpreterProxy interpreter
+	^[
+		(interpreterProxy interpreter
 								asString: dirNameIndex
-								size: dirNameSize).
+								size: dirNameSize) asFileReference ensureCreateDirectory.
 	   true]
 		on: Error
 		do: [:ex| false]

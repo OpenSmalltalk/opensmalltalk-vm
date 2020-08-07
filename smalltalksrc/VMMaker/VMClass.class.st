@@ -850,9 +850,7 @@ VMClass >> isInterpreterProxy [
 { #category : #'hack compatibility' }
 VMClass >> localNameFor: aString [
 	<doNotGenerate>
-	^(Smalltalk classNamed: #FileSystem)
-		ifNotNil: [:fs| (fs disk pathFromString: aString) basename]
-		ifNil: [FileDirectory default localNameFor: aString]
+	^ aString asFileReference basename
 ]
 
 { #category : #'memory access' }
@@ -1300,9 +1298,7 @@ VMClass >> strncpy: dest _: src _: n [
 { #category : #'hack compatibility' }
 VMClass >> uiProcess [
 	<doNotGenerate>
-	^(Smalltalk classNamed: #Project)
-		ifNotNil: [:project| Project uiProcess] "Squeak"
-		ifNil: [UIManager default uiProcess] "Pharo"
+	^ UIManager default uiProcess
 ]
 
 { #category : #'memory access' }

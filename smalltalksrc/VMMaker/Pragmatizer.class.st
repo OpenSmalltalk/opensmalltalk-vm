@@ -207,7 +207,7 @@ Pragmatizer >> newPragmatizedSourceFrom: source nodes: pragmaNodes nodeRanges: r
 { #category : #'initialize-release' }
 Pragmatizer >> package: packageName selectors: selectorList [
 
-	package := PackageOrganizer default
+	package := RPackageOrganizer default
 		packageNamed: packageName
 		ifAbsent: [self error: 'package ', packageName, ' not found'].
 	selectors := selectorList

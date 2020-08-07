@@ -66,7 +66,7 @@ CCodeGenerator class >> isVarargsSelector: aSymbol [
 CCodeGenerator class >> monticelloDescriptionFor: aClass [
 	"Answer a suitable Monticello package stamp to include in the header."
 	| pkgInfo pkg uuid |
-	pkgInfo := PackageOrganizer default packageOfClass: aClass.
+	pkgInfo := aClass package.
 	pkg := MCWorkingCopy allManagers detect: [:ea| ea packageName = pkgInfo packageName].
 	pkg ancestry ancestors isEmpty ifFalse:
 		[uuid := pkg ancestry ancestors first id].
@@ -4255,11 +4255,14 @@ CCodeGenerator >> needToGenerateHeader: headerName file: interpHdrPath contents:
 	"Check if we need to regenerate a header file.  We always need to if the contents have changed.
 	 But if not we can avoid needless recompilations by not regenerating.  So only regenerate if the
 	 package stamp is dirty and the monticello stamp is clean."
+	
 	| newContents oldContents dirtyStamp |
-	(FileDirectory default fileExists: interpHdrPath) ifFalse:
-		[^true].
+	
+	interpHdrPath asFileReference exists 
+		ifFalse: [^true].
+		
 	newContents := newContentsArg.
-	oldContents := (FileDirectory default oldFileNamed: interpHdrPath) contentsOfEntireFile.
+	oldContents := interpHdrPath asFileReference contents.
 	oldContents := oldContents copyReplaceAll: {Character cr. Character lf} with: {Character cr}.
 	oldContents replaceAll: Character lf with: Character cr.
 	dirtyStamp := (oldContents indexOfSubCollection: '* VMMaker') ~= 0.

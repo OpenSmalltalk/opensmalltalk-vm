@@ -40,7 +40,7 @@ SpurPlanningCompactorTests >> checkForLeaksIn: om [
 
 { #category : #failures }
 SpurPlanningCompactorTests >> expectedFailures [
-	^(FileDirectory default fileExists: SpurImageTestResource imageNameForTests)
+	^(SpurImageTestResource imageNameForTests asFileReference exists)
 		ifTrue: [#()]
 		ifFalse: [self testSelectors]
 ]

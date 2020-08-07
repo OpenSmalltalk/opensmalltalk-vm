@@ -20,8 +20,9 @@ SpurImageTestResource class >> imageNameForTests [
 	baseImageName := self baseImageName.
 	#('.' 'oscogvm/image' '../oscogvm/image') do:
 		[:dirName|
-		 ((FileDirectory default directoryExists: dirName)
-		  and: [(FileDirectory on: dirName) fileExists: baseImageName]) ifTrue:
+		 (dirName asFileReference exists
+		  and: [
+			(dirName asFileReference / baseImageName) exists ]) ifTrue:
 			[^dirName, '/', baseImageName]].
 	self error: 'cannot find ', baseImageName
 ]
