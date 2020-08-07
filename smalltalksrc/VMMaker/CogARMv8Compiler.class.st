@@ -564,7 +564,7 @@ CogARMv8Compiler >> arithmeticShiftedRegisterSize: is64Bits isSubstraction: subs
 ]
 
 { #category : #'as yet unclassified' }
-CogARMv8Compiler >> assembleSubCq: quickValue R: register [
+CogARMv8Compiler >> assembleSubCq: quickValue R: registerToUse [
 
 	| fits12Bits |
 	fits12Bits := (quickValue bitAnd: 16rfff) = quickValue.
@@ -658,7 +658,7 @@ CogARMv8Compiler >> bl: immediate26bitValue [
 ]
 
 { #category : #assembler }
-CogARMv8Compiler >> blr: register [
+CogARMv8Compiler >> blr: registerToUse [
 
 	"C6.2.34 BLR
 	
@@ -666,7 +666,7 @@ CogARMv8Compiler >> blr: register [
 
 	BLR <Xn>"
 
-	^ self br: register withLink: 1
+	^ self br: registerToUse withLink: 1
 ]
 
 { #category : #'ARM convenience instructions' }
@@ -679,7 +679,7 @@ CogARMv8Compiler >> blx: targetReg [
 ]
 
 { #category : #assembler }
-CogARMv8Compiler >> br: register [
+CogARMv8Compiler >> br: registerToUse [
 
 	"C6.2.36 BR
 	
@@ -687,11 +687,11 @@ CogARMv8Compiler >> br: register [
 
 	BR <Xn>"
 
-	^ self br: register withLink: 0
+	^ self br: registerToUse withLink: 0
 ]
 
 { #category : #assembler }
-CogARMv8Compiler >> br: register withLink: withLink [
+CogARMv8Compiler >> br: registerToUse withLink: withLink [
 
 	"Branch optionally with Link branches to Register calls a subroutine at an address in a register, setting register X30 to PC+4.
 	
@@ -701,7 +701,7 @@ CogARMv8Compiler >> br: register withLink: withLink [
 	^ 2r110101100 << 23
 		bitOr: ((withLink bitAnd: 2r11) << 21
 		bitOr: (2r11111 << 16
-		bitOr: (register bitAnd: 16r1f) << 5))
+		bitOr: (registerToUse bitAnd: 16r1f) << 5))
 ]
 
 { #category : #assembler }
@@ -776,7 +776,7 @@ CogARMv8Compiler >> canMulRR [
 ]
 
 { #category : #assembler }
-CogARMv8Compiler >> cmpExtendedRegisterSize: is64Bits leftRegisterMaybeSP: leftRegister option: option shiftOffset: immediate3bitValue destinationRegister: register [
+CogARMv8Compiler >> cmpExtendedRegisterSize: is64Bits leftRegisterMaybeSP: leftRegister option: option shiftOffset: immediate3bitValue destinationRegister: destinationRegister [
 	
 	"C6.2.60 CMP (extended register)
 	
@@ -789,14 +789,14 @@ CogARMv8Compiler >> cmpExtendedRegisterSize: is64Bits leftRegisterMaybeSP: leftR
 	^ self
 		subsExtendedSize: is64Bits
 		leftRegisterMaybeSP: leftRegister
-		shiftedRightRegister: register
+		shiftedRightRegister: destinationRegister
 		option: option
 		shiftOffset: immediate3bitValue
 		destinationRegister: 2r11111
 ]
 
 { #category : #assembler }
-CogARMv8Compiler >> cmpSize: is64bits immediate12BitValue: immediate12BitValue shiftFlag: shiftFlag register: register [
+CogARMv8Compiler >> cmpSize: is64bits immediate12BitValue: immediate12BitValue shiftFlag: shiftFlag register: registerToUse [
 	
 	"C6.2.61 CMP (immediate)
 	
@@ -808,7 +808,7 @@ CogARMv8Compiler >> cmpSize: is64bits immediate12BitValue: immediate12BitValue s
 	
 	^ self
 		subsSize: is64bits
-		sourceRegister: register
+		sourceRegister: registerToUse
 		immediate12BitValue: immediate12BitValue
 		shifted: shiftFlag
 		destinationRegister: 2r11111
@@ -1313,16 +1313,16 @@ CogARMv8Compiler >> concretizeCmpC32R [
 CogARMv8Compiler >> concretizeCmpCqR [
 	
 	<inline: true>
-	| quickImmediate register fits12Bits fitsShifted12Bits |
+	| quickImmediate registerToUse fits12Bits fitsShifted12Bits |
 	quickImmediate := operands at: 0.
-	register := operands at: 1.
+	registerToUse := operands at: 1.
 	
 	fits12Bits := (quickImmediate bitAnd: 16rfff) = quickImmediate.
 	fits12Bits ifTrue: [
 		self
 			machineCodeAt: 0
 			put:
-				(self cmpSize: 1 immediate12BitValue: quickImmediate shiftFlag: 0 register: register).
+				(self cmpSize: 1 immediate12BitValue: quickImmediate shiftFlag: 0 register: registerToUse).
 		^ machineCodeSize := 4 ].
 	
 	fitsShifted12Bits := (quickImmediate >> 12 << 12) = quickImmediate.
@@ -1330,7 +1330,7 @@ CogARMv8Compiler >> concretizeCmpCqR [
 		self
 			machineCodeAt: 0
 			put:
-				(self cmpSize: 1 immediate12BitValue: quickImmediate >> 12 shiftFlag: 1 register: register).
+				(self cmpSize: 1 immediate12BitValue: quickImmediate >> 12 shiftFlag: 1 register: registerToUse).
 		^ machineCodeSize := 4
 	].
  
@@ -1344,7 +1344,7 @@ CogARMv8Compiler >> concretizeCmpCqR [
 				shiftedRegister: ConcreteIPReg
 				shiftType: 0
 				shiftValue: 0
-				secondRegister: register).
+				secondRegister: registerToUse).
 	^ machineCodeSize := machineCodeSize + 4
 ]
 
@@ -2760,6 +2760,8 @@ CogARMv8Compiler >> encodeLogicalImmediate: immediate registerSize: registerSize
 	https://dinfuehr.github.io/blog/encoding-of-immediate-values-on-aarch64/
 	"
 
+	<inline: #always>
+
 	| size mask maskedImmediate trailingZeros trailingOnes leadingOnes immr nimms n |
 
 	(immediate = 0 or: [ 
@@ -3418,13 +3420,15 @@ CogARMv8Compiler >> inverseOpcodeFor: armOpcode [
 { #category : #'as yet unclassified' }
 CogARMv8Compiler >> is12BitValue: constant ifTrue: aTrueBlock ifFalse: aFalseBlock [ 
 	
+	<inline: #always>
+	
 	^ constant abs <= 2047 "(2 raisedTo: 11) - 1"
 		ifTrue: [ | twoComplement |
 			"Two complement using 12 bits"
 			twoComplement := constant >= 0
 				ifTrue: [ constant ]
 				ifFalse: [ 16rfff - constant abs + 1 ].
-			aTrueBlock value: twoComplement ]
+			aTrueBlock value: constant >= 0 value: twoComplement ]
 		ifFalse: aFalseBlock
 ]
 
@@ -3448,6 +3452,8 @@ CogARMv8Compiler >> is8BitValue: constant ifTrue: trueAlternativeBlock	ifFalse: 
 
 { #category : #'as yet unclassified' }
 CogARMv8Compiler >> is9BitValue: constant ifTrue: aTrueBlock ifFalse: aFalseBlock [ 
+	
+	<inline: #always>
 	
 	^ constant abs <= 255 "(2 raisedTo: 8) - 1"
 		ifTrue: [ | twoComplement |
@@ -4773,7 +4779,7 @@ CogARMv8Compiler >> trailingZerosOf: aNumber [
 ]
 
 { #category : #assembler }
-CogARMv8Compiler >> tstSize: is64bits immediate13bitValue: immediate13bitValue register: register [
+CogARMv8Compiler >> tstSize: is64bits immediate13bitValue: immediate13bitValue register: registerToUse [
 
 	"C6.2.330 TST (immediate)
 	
@@ -4785,7 +4791,7 @@ CogARMv8Compiler >> tstSize: is64bits immediate13bitValue: immediate13bitValue r
 	^ is64bits << 31
 		bitOr: (2r11100100 << 23
 		bitOr: (immediate13bitValue << 10
-		bitOr: ((register bitAnd: 2r11111) << 5
+		bitOr: ((registerToUse bitAnd: 2r11111) << 5
 		bitOr: 2r11111)))
 ]
 

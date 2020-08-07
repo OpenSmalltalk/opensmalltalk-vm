@@ -104,7 +104,10 @@ VMLookUpTest >> setUp [
 	memory splObj: SchedulerAssociation put: processorOopAssociation.
 	memory storePointer: ValueIndex ofObject: processorOopAssociation withValue: processorOop.
 	memory storePointer: ProcessListsIndex ofObject: processorOop withValue: processorListArray.
-	memory lastHash: 1
+	memory lastHash: 1.
+
+	interpreter setBreakSelector: nil.
+
 ]
 
 { #category : #tests }
