@@ -101,7 +101,10 @@ VMLookUpTest >> setUp [
 	memory splObj: SchedulerAssociation put: processorOopAssociation.
 	memory storePointer: ValueIndex ofObject: processorOopAssociation withValue: processorOop.
 	memory storePointer: ProcessListsIndex ofObject: processorOop withValue: processorListArray.
-	memory lastHash: 1
+	memory lastHash: 1.
+
+	interpreter setBreakSelector: nil.
+
 ]
 
 { #category : #tests }
@@ -171,7 +174,6 @@ VMLookUpTest >> testLookUpFindsMethodInSuperclass [
 	self installSelector: selectorOop method: methodOop inMethodDictionary: superclassMethodDictionary.
 	
 	interpreter methodDictLinearSearchLimit: 3.
-	interpreter setBreakSelector: nil.
 	interpreter messageSelector: selectorOop.
 	interpreter lookupMethodInClass: class.
 	self assert: interpreter newMethod equals: methodOop .
@@ -182,6 +184,12 @@ VMLookUpTest >> testLookUpInDefiningClassCreatesANewEntryInCache [
 
 	self setUpClassAndMethod.	
 	self setUpMethodDictionaryIn: class.
+	
+	methodDictionary := memory
+		fetchPointer: MethodDictionaryIndex
+		ofObject: class.
+		
+	self installSelector: selectorOop method: methodOop inMethodDictionary: methodDictionary.	
 	
 	interpreter methodDictLinearSearchLimit: 3.
 	interpreter messageSelector: selectorOop.
@@ -224,7 +232,6 @@ VMLookUpTest >> testLookUpNonExistingSelectorFindsDNUMethod [
 	nonExistingSelector:= memory integerObjectOf: 41.
 	
 	interpreter methodDictLinearSearchLimit: 3.
-	interpreter setBreakSelector: nil.
 	interpreter messageSelector: nonExistingSelector.
 	interpreter lookupMethodInClass: class.
 	self assert: interpreter newMethod equals: dnuMethodOop.
@@ -245,7 +252,6 @@ VMLookUpTest >> testLookUpNonExistingSelectorThrowsRecursivelyDoesNotUnderstand 
 	nonExistingSelector:= memory integerObjectOf: 41.
 	
 	interpreter methodDictLinearSearchLimit: 3.
-	interpreter setBreakSelector: nil.
 	interpreter messageSelector: nonExistingSelector.
 	"DoesNotUnderStand is no there so infinite recursion of DNU"
 	self should: [interpreter lookupMethodInClass: class] raise: Error.
@@ -275,7 +281,6 @@ VMLookUpTest >> testLookUpWithNilMethodDictionaryFindsCannotInterpret [
 	nonExistingSelector:= memory integerObjectOf: 41.
 	
 	interpreter methodDictLinearSearchLimit: 3.
-	interpreter setBreakSelector: nil.
 	interpreter messageSelector: nonExistingSelector.
 	interpreter lookupMethodInClass: class.
 	self assert: interpreter newMethod equals: cannotInterpretMethodOop.
