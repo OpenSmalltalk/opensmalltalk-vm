@@ -173,17 +173,23 @@ static void enqueueKeyboardEvent(int key, int up, int modifiers)
 static void openKeyboard(void)
 {
   kb= kb_new();
+#ifndef USEEVDEV
   kb_open(kb, vtSwitch, vtLock);
   kb_setCallback(kb, enqueueKeyboardEvent);
+#endif
 }
 
 static void closeKeyboard(void)
 {
   if (kb)
     {
+#ifndef USEEVDEV
       kb_setCallback(kb, 0);
+#endif
       kb_close(kb);
+#ifndef USEEVDEV
       kb_delete(kb);
+#endif
       kb= 0;
     }
 }
@@ -204,16 +210,22 @@ static void openMouse(void)
 {
   ms= ms_new();
   ms_open(ms, msDev, msProto);
+#ifndef USEEVDEV
   ms_setCallback(ms, enqueueMouseEvent);
+#endif
 }
 
 static void closeMouse(void)
 {
   if (ms)
     {
+#ifndef USEEVDEV
       ms_setCallback(ms, 0);
+#endif
       ms_close(ms);
+#ifndef USEEVDEV
       ms_delete(ms);
+#endif
       ms= 0;
     }
 }
@@ -302,7 +314,9 @@ static void openDisplay(void)
   openFramebuffer();
   // init mouse after setting graf mode on tty avoids packets being
   // snarfed by gpm
+#ifndef USEEVDEV
   ms->init(ms);
+#endif
 }
 
 

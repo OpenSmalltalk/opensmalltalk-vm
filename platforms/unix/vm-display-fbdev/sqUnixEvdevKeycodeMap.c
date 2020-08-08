@@ -36,8 +36,8 @@
  * on Raspberry Pi 3B running Alpine Linux.
  */
 
-#include <input.h>   /* /usr/include/linux/input.h */
-#include <keysym.h>  /* /usr/include/X11/keysym.h */
+#include <linux/input.h>   /* /usr/include/linux/input.h */
+#include <X11/keysym.h>  /* /usr/include/X11/keysym.h */
 
 static int keyMapInitialized = 0;
 #define KMAPSIZE 256
@@ -50,7 +50,7 @@ int i;
 	
   if (keyMapInitialized) return; /* do this once */
  
-  for (i = 0; i < KMAPSIZE; i++) ( 
+  for (i = 0; i < KMAPSIZE; i++) {
 	baseKey[i]  = i;  /* default for debug @@?? use 0x00 ??@@ */
 	shiftKey[i] = i;
   }
@@ -313,10 +313,10 @@ int i;
     shiftKey[KEY_VOLUMEUP] = 0x;
     baseKey[KEY_POWER]  = 0x;
     shiftKey[KEY_POWER] = 0x;
-/*******************
-    baseKey[KEY_KPEQUAL]  = 0x3D; /* '=' *
+*******************/
+    baseKey[KEY_KPEQUAL]  = 0x3D;  /* '=' */
     shiftKey[KEY_KPEQUAL] = 0x3D;
-*******************
+/*******************
     baseKey[KEY_KPPLUSMINUS]  = 0x;
     shiftKey[KEY_KPPLUSMINUS] = 0x;
     baseKey[KEY_PAUSE]  = 0x;
@@ -588,7 +588,7 @@ int i;
 
 int keyCode2keyValue( int keyCode, int useCap ) {
   if (!keyMapInitialized) initKeyMaps();
-  if ((0 <= keycode) && (keycode < KMAPSIZE)) {
+  if ((0 <= keyCode) && (keyCode < KMAPSIZE)) {
     if (useCap) {
 	return( shiftKey[ keyCode ] );
     } else {

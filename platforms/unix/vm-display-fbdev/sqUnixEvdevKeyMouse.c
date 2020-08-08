@@ -47,8 +47,9 @@
 #include <ctype.h>
 #include <signal.h>
 #include <limits.h> /* PATH_MAX */
-#include <input.h>   /* /usr/include/linux/input.h */
-#include <keysym.h>  /* /usr/include/X11/keysym.h */
+#include <linux/input.h>   /* /usr/include/linux/input.h */
+#include <X11/keysym.h>  /* /usr/include/X11/keysym.h */
+#include <libevdev-1.0/libevdev/libevdev.h> /*  /usr/include/libevdev-1.0/libevdev/libevdev.h */
 
 #ifndef input_event_sec
 #define input_event_sec  time.tv_sec
@@ -61,6 +62,10 @@
 #define BIT(x)  (1UL<<OFF(x))
 #define LONG(x) ((x)/BITS_PER_LONG)
 #define test_bit(bit, array)	((array[LONG(bit)] >> OFF(bit)) & 1)
+
+/* C thinks these are booleans */
+#define FALSE 0
+#define TRUE (!FALSE)
 
 #ifndef EV_SYN
 #define EV_SYN 0
@@ -86,87 +91,46 @@
 #define MidMouseButtonBit   YellowButtonBit
 #define RightMouseButtonBit BlueButtonBit
 
+/* forward declarations */
+static int  getMouseButtonState();
+static int  getModifierState(); 
+static void printKeyState(int kind); 
+static void processLibEvdevKeyEvents();
 
-#define _mouse	struct ms *mouseSelf
-
-struct ms;
-
-typedef void (*ms_callback_t)(int buttons, int dx, int dy);
-typedef void (*ms_init_t)(_mouse);
-typedef void (*ms_handler_t)(_mouse);
+  
+/* Mouse */
 
 struct ms
 {
-  char		*msName;
-  int		 fd;
-  ms_init_t	 init;
-  ms_handler_t	 handleEvents;
-  ms_callback_t  callback;
-  unsigned char	 buf[3*64];
-  int		 bufSize;
+  char 		  *msName;
+  int		   fd;
   struct libevdev *dev;
 };
 
-static struct ms mouseDev; /* singleton */
+static struct ms mouseDev;
+
 
 /* NB: defaults on RPi3 Alpine Linux */
-const char* mousePathDefault=    "/dev/input/event1"; 
-const char* keyboardPathDefault= "/dev/input/event0";
+#define MOUSE_DEV_NAME    "/dev/input/event1"
+#define KEYBOARD_DEV_NAME "/dev/input/event0"
 
 
-
-static void ms_noCallback(int b, int x, int y) {}
-
-static void msHandler(int fd, void *data, int flags)
+static int ms_open(struct ms *mouseSelf, char *msDev, char *msProto)
 {
-  _mouse= (struct ms *)data;
-  mouseSelf->handleEvents(mouseSelf);
-  /* @@@FIXME@@@ */
-  /*  aioHandle(fd, msHandler, AIO_RX); */
-}
-
-
-static ms_callback_t ms_setCallback(_mouse, ms_callback_t callback)
-{
-  /* Dummy */
-  mouseSelf->callback= ms_noCallback;
-  return ms_noCallback
-}
-
-static int ms_open(_mouse, char *msDev, char *msProto)
-{
-  ms_init_t init= 0;
-  ms_handler_t handler= 0;
   int rc = 0;
 
   assert(mouseSelf->fd == -1);
 
-  if (msDev)
+  if (msDev) {
     mouseSelf->fd= open(mouseSelf->msName= msDev, O_RDONLY);
-  else
-    {
-      static struct _mstab {
-  	  char *dev;		char *proto;
-      } mice[]=	{
-	{ mousePathDefault,  "evdev" }, /* Alpine Linux RasPi3 */
-	{ 0, 0 }
-      };
-      int i;
-      for (i= 0;  mice[i].dev;  ++i)
-	if ((mouseSelf->fd= open(mouseSelf->msName= mice[i].dev,  O_RDWR)) >= 0)
-	  {
-	    if (!msProto)
-	      msProto= mice[i].proto;
-	    break;
-	  }
-	else
-	  perror(mice[i].dev);
-    }
+  } else {
+    mouseSelf->fd= open(mouseSelf->msName= MOUSE_DEV_NAME, O_RDWR);
+  }
+  
   if (mouseSelf->fd < 0) {
-    if (errno == EACCES && getuid() != 0)
-	fprintf(stderr, "You do not have access to %s. Try "
-			"running as root instead.\n",
-			mouseSelf->msName );
+    fprintf(stderr, "You do not have access to %s. Try "
+	             "running as root instead.\n",
+	    mouseSelf->msName );
     failPermissions("mouse");
   } else {
     rc = libevdev_new_from_fd( mouseSelf->fd, &mouseSelf->dev );
@@ -181,43 +145,11 @@ static int ms_open(_mouse, char *msDev, char *msProto)
     }
   }
   
-  if (msProto)
-    {
-      static struct _mptab {
-	char *name;	ms_init_t init;	ms_handler_t handler;
-      } protos[]= {
-	{ "evdev",	ms_evdev_init,	ms_evd_handleEvents,	},		
-	{ 0,	0,	0 }
-      };
-      int i;
-      for (i= 0;  protos[i].name;  ++i)
-	if (!strcmp(msProto, protos[i].name))
-	  {
-	    init=    protos[i].init;
-	    handler= protos[i].handler;
-	    break;
-	  }
-      if (!init)
-	{
-	  fprintf(stderr, "unknown mouse protocol: '%s'\n", msProto);
-	  fprintf(stderr, "supported protocols:");
-	  for (i= 0;  protos[i].name;  ++i)
-	    fprintf(stderr, " %s", protos[i].name);
-	  fprintf(stderr, "\n");
-	  exit(1);
-	}
-    }
-
-  DPRINTF("using: %s (%d), %s\n", mouseSelf->msName, mouseSelf->fd, msProto);
-
-  mouseSelf->init= init;
-  mouseSelf->handleEvents= handler;
-
-  return 1;
+  return 0;
 }
 
 
-static void ms_close(_mouse)
+static void ms_close(struct ms *mouseSelf)
 {
   if (mouseSelf->fd >= 0)
     {
@@ -231,16 +163,13 @@ static void ms_close(_mouse)
 
 static struct ms *ms_new(void)
 {
-  /*  _mouse= (struct ms *)calloc(1, sizeof(struct ms)); */
-  _mouse = &mouseDev;
-  mouseSelf->fd= -1;
-  mouseSelf->dev= 0;
-  mouseSelf->callback= ms_noCallback;
-  return mouseSelf;
+  mouseDev.fd= -1;
+  mouseDev.dev= 0;
+  return &mouseDev;
 }
 
 
-static void ms_delete(_mouse)
+static void ms_delete(struct ms *mouseSelf)
 {
   /*  free(mouseSelf); */
 }
@@ -249,6 +178,9 @@ static void ms_delete(_mouse)
 /* Interactin with VM */
 
 static int wheelDelta = 0;  /* reset in clearMouseButtons() */
+
+static void clearMouseWheel() {  wheelDelta = 0 ; }
+static int  mouseWheelDelta() { return ( wheelDelta ) ; }
 
 static void setSqueakMousePosition( int newX, int newY ) {
   mousePosition.x = newX;
@@ -287,8 +219,8 @@ static void updateSqueakMousePosition(struct input_event* evt) {
 static void printMouseState() {
    if ( (mousePosition.x != 0) || (mousePosition.y != 0) ) {
      DPRINTF( "*** Mouse at %4d,%4d ", mousePosition.x, mousePosition.y );
-     printButtons( mouseButtonState() );
-     printModifiers( modifierState() );
+     printButtons( getMouseButtonState() );
+     printModifiers( getModifierState() );
      if (mouseWheelDelta() != 0) {
        	DPRINTF( " Mouse Wheel: %d", mouseWheelDelta() );
      }
@@ -296,8 +228,6 @@ static void printMouseState() {
    }
 }
 
-static void clearMouseWheel() {  wheelDelta = 0 ; }
-static int mouseWheelDelta() { return ( wheelDelta ) ; }
 
 
 /*==========================*/
@@ -310,10 +240,10 @@ static int mouseButtonsDown = 0;  /* (left|mid|right) = (Red|Yellow|Blue) */
  *   which ORs mouse and key modifiers (mouse button bits are shifted)
  */
 
-static int mouseButtonState() { return ( mouseButtonsDown ) ; }
+static int getMouseButtonState() { return ( mouseButtonsDown ) ; }
 
-static int setSqueakButtonState() {
-  buttonState= mouseButtonState();
+static void setSqueakButtonState() {
+  buttonState= getMouseButtonState();
 }
 
 static void clearMouseButtons() { mouseButtonsDown = 0 ; wheelDelta = 0; }
@@ -339,12 +269,11 @@ static void updateMouseButtons(struct input_event* evt) {
   }
 }
 
-#undef _mouse
 
 
 
 
-/* Translate between libevdev and OpenSmalltalkVM view of keystrokes */
+/* Translate between libevdev and OpenSmalltalk/Squeak VM view of keystrokes */
 
 /*==================*/
 /* Keyboard Key     */
@@ -380,12 +309,13 @@ static int notModifier(int code) {
 static void updateModifierState(struct input_event* evt); /* forward */
 
 static void setKeyCode(struct input_event* evt) {
-  int squeakKeyCode, modifiers;
+  int squeakKeyCode, modifierBits;
   /* NB: possible to get a Key UP _withOUT_ a Key DOWN */
   if ( (evt->type == EV_KEY) && notModifier(evt->code) ) {
     lastKeyCode = evt->code;
-    modifiers = modifierState();
-    squeakKeyCode = keyCode2keyValue( lastKeyCode, (modifiers & ShiftKeyBit) )
+    modifierBits = getModifierState();
+    squeakKeyCode = keyCode2keyValue( lastKeyCode,
+				      (modifierBits & ShiftKeyBit) );
 #ifdef DEBUG_KEYBOARD_EVENTS
     DPRINTF("Setting key code: %d from raw: %d\n", squeakKeyCode, evt->code);
 #endif
@@ -394,7 +324,7 @@ static void setKeyCode(struct input_event* evt) {
       case 1: /* keydown */
         recordKeyboardEvent(squeakKeyCode,
 			    EventKeyDown,
-			    modifiers,
+			    modifierBits,
 			    squeakKeyCode);
 #ifdef DEBUG_KEYBOARD_EVENTS
 	printKeyState(1);
@@ -405,7 +335,7 @@ static void setKeyCode(struct input_event* evt) {
       case 2: /* repeat */
         recordKeyboardEvent(squeakKeyCode,
 			    EventKeyChar, /* Squeak lacks EventKeyRepeat */
-			    modifiers,
+			    modifierBits,
 			    squeakKeyCode);
 #ifdef DEBUG_KEYBOARD_EVENTS
 	if (keyRepeated < 2)
@@ -417,7 +347,7 @@ static void setKeyCode(struct input_event* evt) {
     default: /* 0 => keyUp */
         recordKeyboardEvent(squeakKeyCode,
 			    EventKeyUp,
-			    modifiers,
+			    modifierBits,
 			    squeakKeyCode);
 #ifdef DEBUG_KEYBOARD_EVENTS
 	printKeyState(0);
@@ -431,16 +361,19 @@ static void setKeyCode(struct input_event* evt) {
 }
 
 static void printKeyState(int kind) {
-  int squeakKeyCode;
-  if (keyCode() != 0) {
-    squeakKeyCode= keyCode2keyValue( keyCode(), (modifiers & ShiftKeyBit) );
-    DPRINTF("*** Key: ");
+  int evdevKeyCode, squeakKeyCode, mouseButtonBits, modifierBits;
+  if ((evdevKeyCode= keyCode()) != 0) {
+    mouseButtonBits = getMouseButtonState();
+    modifierBits    = getModifierState();
+    squeakKeyCode= keyCode2keyValue( keyCode(),
+				     (modifierBits & ShiftKeyBit) );
+    DPRINTF("*** Evdev Key: ");
     printKey( squeakKeyCode ) ;
     switch (kind) {
 	case 1: DPRINTF(" DOWN   "); 
-		printButtons(   mouseButtonState() );
-		printModifiers( modifierState() );
-		DPRINTF("\n*** Key: ");
+		printButtons(   mouseButtonBits );
+		printModifiers( modifierBits );
+		DPRINTF("\n*** Squeak Key: ");
    		printKey( squeakKeyCode ) ;
 	/* send both DOWN and KEY events */
 		DPRINTF(" KEY    ");
@@ -449,8 +382,8 @@ static void printKeyState(int kind) {
         case 2: DPRINTF(" REPEAT "); break;
 	default: break;
     }
-    printButtons(   mouseButtonState() );
-    printModifiers( modifierState() );
+    printButtons(   mouseButtonBits );
+    printModifiers( modifierBits );
     if (repeated()) {
       DPRINTF(" key repeated\n " );
     } else {
@@ -467,14 +400,14 @@ void printKey(int keyCode)
     DPRINTF("Raw KeyCode (%d = 0x%x) is Squeak key: 0x%x ",
 	    keyCode,
 	    keyCode,
-	    keyCode2keyValue( keyCode, (modifiers & ShiftKeyBit) ) );
+	    keyCode2keyValue( keyCode, (getModifierState() & ShiftKeyBit) ) );
   }
 }
 
 * === */
 
-static void printModifierKey(struct input_event* evt) {
-  DPRINTF( "*** %s ", codename(evt->type, evt->code) );
+static void printEvtModifierKey(struct input_event* evt) {
+  DPRINTF( "*** Modifier (type,code) = (%d,%d) ", evt->type, evt->code );
   switch (evt->value) {
 	case 1: DPRINTF("DOWN\n"); break;
 	case 2: DPRINTF("REPEAT\n"); break;
@@ -500,13 +433,13 @@ static int rightAdjuncts= 0;	/* right- ctl, alt, shift, meta */
  * is separate between libevdev and the VM.
  */
 
-static int modifierState() {
+static int getModifierState() {
   /* NB: Distinguish 'int modifierState' in sqUnixEvent.c */
   return ( leftAdjuncts | rightAdjuncts );
 }
 
-static int setSqueakModifierState() {
-  modifierState= ( leftAdjuncts | rightAdjuncts );
+static void setSqueakModifierState() {
+  modifierState= getModifierState();
 }
 
 static void clearModifierState() { 
@@ -519,7 +452,7 @@ static void updateModifierState(struct input_event* evt)
 {  /* harmless if not modifier key */
   if (evt->type == EV_KEY) {
     if (evt->value == 1) { /* button down */
-      printModifierKey(evt);
+      printEvtModifierKey(evt);
       switch (evt->code) {
 	case KEY_LEFTMETA:   leftAdjuncts  |= CommandKeyBit; break;
 	case KEY_LEFTALT:    leftAdjuncts  |= OptionKeyBit;  break;
@@ -532,7 +465,7 @@ static void updateModifierState(struct input_event* evt)
 	default: break;
 	}
      } else if (evt->value == 0) { /* button up */
-       printModifierKey(evt);
+       printEvtModifierKey(evt);
        switch (evt->code) {
 	case KEY_LEFTMETA:   leftAdjuncts  &= ~CommandKeyBit; break;
 	case KEY_LEFTALT:    leftAdjuncts  &= ~OptionKeyBit;  break;
@@ -549,39 +482,18 @@ static void updateModifierState(struct input_event* evt)
   } 
 }
 
-static void printModifierKey(struct input_event* evt) {
-  DPRINTF( "*** %s ", codename(evt->type, evt->code) );
-  switch (evt->value) {
-	case 1: DPRINTF("DOWN\n"); break;
-	case 2: DPRINTF("REPEAT\n"); break;
-	case 0: DPRINTF("UP\n"); break;
-	default: break;
-  }
-}
-
-
-
-#define _keyboard	struct kb *kbdSelf
-
-
-typedef void (*kb_callback_t)(int key, int up, int mod);
 
 struct kb
 {
   char			 *kbName;
   int			  fd;
   int			  kbMode;
-  struct termios	  tcAttr;
-  int			  vtActive;
-  int			  vtLock;
-  int			  vtSwitch;
   int			  state;
-  kb_callback_t		  callback;
-  unsigned short	**keyMaps;
   struct libevdev	 *dev;  
 };
 
-static struct ms kbdDev; /* singleton */
+static struct kb kbDev;
+
 
 /* NB: Distinguish (libevdev keycode) -> (squeak keycode)
  *     vs  unix key value substitution 'keymapping'
@@ -589,150 +501,14 @@ static struct ms kbdDev; /* singleton */
  *
  * Key mapping transform must be applied only AFTER 
  *  'raw' keycodes have been transformed to 'squeak' keycodes
+ *
+ *   @@  @@FIXME: elided for now. @@ 
  */
-#include "sqUnixFBDevKeymap.c"
+/* include "sqUnixFBDevKeymap.c" */
 
 
-static void updateModifiers(int kstate)
-{
-  modifierState= 0;
-  if (kstate & (1 << KG_SHIFT))	modifierState |= ShiftKeyBit;
-  if (kstate & (1 << KG_CTRL))	modifierState |= CtrlKeyBit;
-  if (kstate & (1 << KG_ALT))	modifierState |= CommandKeyBit;
-  if (kstate & (1 << KG_ALTGR))	modifierState |= OptionKeyBit;
-  DPRINTF("state %02x mod %02x\n", kstate, modifierState);
-}
 
-
-static void kb_chvt(_keyboard, int vt)
-{
-  if (ioctl(kbdSelf->fd, VT_ACTIVATE, vt))
-    perror("chvt: VT_ACTIVATE");
-  else
-    {
-      while (ioctl(kbdSelf->fd, VT_WAITACTIVE, vt))
-	{
-	  if (EINTR == errno)
-	    continue;
-	  perror("VT_WAITACTIVE");
-	  break;
-	}
-      updateModifiers(kbdSelf->state= 0);
-    }
-}
-
-
-static void kb_post(_keyboard, int code, int up)
-{
-  if (code == 127) code= 8;		//xxx OPTION!!!
-  kbdSelf->callback(code, up, modifierState);
-}
-
-
-static void kb_translate(_keyboard, int code, int up)
-{
-  static int prev= 0;
-  unsigned short *keyMap= kbdSelf->keyMaps[kbdSelf->state];
-  int rep= (!up) && (prev == code);
-  prev= up ? 0 : code;
-
-  DPRINTF("+++ code %d up %d prev %d rep %d map %p\n", code, up, prev, rep, keyMap);
-
-  if (keyMap)
-    {
-      int sym=  keyMap[code];
-      int type= KTYP(sym);
-      DPRINTF("+++ sym %x (%02x) type %d\n", sym, sym & 255, type);
-      sym &= 255;
-      if (type >= 0xf0)		// shiftable
-	type -= 0xf0;
-      if (KT_LETTER == type)	// lockable
-	type= KT_LATIN;
-      DPRINTF("+++ type %d\n", type);
-      switch (type)
-	{
-	case KT_LATIN:
-	case KT_META:
-	  kb_post(kbdSelf, sym, up);
-	  break;
-
-	case KT_SHIFT:
-	  if      (rep) break;
-	  else if (up)  kbdSelf->state &= ~(1 << sym);
-	  else          kbdSelf->state |=  (1 << sym);
-	  updateModifiers(kbdSelf->state);
-	  break;
-
-	case KT_FN:
-	case KT_SPEC:
-	case KT_CUR:
-	  switch (K(type,sym))
-	    {
-	      // FN
-	    case K_FIND:	kb_post(kbdSelf,  1, up);	break;	// home
-	    case K_INSERT:	kb_post(kbdSelf,  5, up);	break;
-	    case K_SELECT:	kb_post(kbdSelf,  4, up);	break;	// end
-	    case K_PGUP:	kb_post(kbdSelf, 11, up);	break;
-	    case K_PGDN:	kb_post(kbdSelf, 12, up);	break;
-	      // SPEC
-	    case K_ENTER:	kb_post(kbdSelf, 13, up);	break;
-	      // CUR
-	    case K_DOWN:	kb_post(kbdSelf, 31, up);	break;
-	    case K_LEFT:	kb_post(kbdSelf, 28, up);	break;
-	    case K_RIGHT:	kb_post(kbdSelf, 29, up);	break;
-	    case K_UP:		kb_post(kbdSelf, 30, up);	break;
-	    }
-	  break;
-
-	case KT_CONS:
-	  if (kbdSelf->vtSwitch && !kbdSelf->vtLock)
-	    kb_chvt(kbdSelf, sym + 1);
-	  break;
-
-	default:
-	  if (type > KT_SLOCK)
-	    DPRINTF("ignoring unknown scancode %d.%d\n", type, sym);
-	  break;
-	}
-    }
-}
-
-
-static void kb_noCallback(int k, int u, int s) {}
-
-
-static int kb_handleEvents(_keyboard)
-{
-  DPRINTF("+++ kb_handleEvents\n");
-  while (fdReadable(kbdSelf->fd, 0))
-    {
-      unsigned char buf;
-      if (1 == read(kbdSelf->fd, &buf, 1))
-	{
-	  DPRINTF("+++ kb_translate %3d %02x + %d\n", buf & 127, buf & 127, (buf >> 7) & 1);
-	  kb_translate(kbdSelf, buf & 127, (buf >> 7) & 1);
-	}
-    }
-  return 0;
-}
-
-
-static void kbHandler(int fd, void *kbdSelf, int flags)
-{
-  kb_handleEvents((struct kb *)kbdSelf);
-  aioHandle(fd, kbHandler, AIO_RX);
-}
-
-
-static kb_callback_t kb_setCallback(_keyboard, kb_callback_t callback)
-{
-  /* dummy */
-  kbdSelf->callback= kb_noCallback;
-  return kb_noCallback;
-}
-
-
-static void kb_bell(_keyboard)
+static void kb_bell(struct kb *kbdSelf)
 {
   /* NoOp @@FIXME: Squeak Sound @@ */
 }
@@ -741,28 +517,31 @@ static void kb_bell(_keyboard)
 static void sigusr1(int sig)
 {
   extern sqInt fullDisplayUpdate(void);
-  updateModifiers(kbdSelf->state= 0);
+
+  clearMouseButtons();
+  clearModifierState();
+  /* @@FIXME: other cleanouts? @@ */
   fullDisplayUpdate();
 }
 
 
-static void kb_initGraphics(_keyboard)
+static void kb_initGraphics(struct kb *kbdSelf)
 {
   /* NoOp */
 }
 
-static void kb_freeGraphics(_keyboard)
+static void kb_freeGraphics(struct kb *kbdSelf)
 {
   /* NoOp */
 }
 
 
-void kb_open(_keyboard, int vtSwitch, int vtLock)
+void kb_open(struct kb *kbdSelf, int vtSwitch, int vtLock)
 {
   int rc;
 
   assert(kbdSelf->fd == -1);
-  kbdSelf->fd= open(kbdSelf->kbName= keyboardPathDefault, O_RDONLY)
+  kbdSelf->fd= open(kbdSelf->kbName= KEYBOARD_DEV_NAME, O_RDONLY);
   if (kbdSelf->fd < 0)
     failPermissions("console");
 
@@ -777,17 +556,17 @@ void kb_open(_keyboard, int vtSwitch, int vtLock)
       	      libevdev_get_id_product(kbdSelf->dev) );
   }
 
-  kb_initKeyMap(kbdSelf, kmPath); /* squeak key mapping */
+  /*  kb_initKeyMap(kbdSelf, kmPath);   * squeak key mapping */
 }
 
 
-void kb_close(_keyboard)
+void kb_close(struct kb *kbdSelf)
 {
   if (kbdSelf->fd >= 0)
     {
       close(kbdSelf->fd);
       libevdev_free(kbdSelf->dev);
-      DPRINTF("%s (%d) closed\n", kbdSelf->msName, kbdSelf->fd);
+      DPRINTF("%s (%d) closed\n", kbdSelf->kbName, kbdSelf->fd);
       kbdSelf->fd= -1;
     }
 }
@@ -795,57 +574,41 @@ void kb_close(_keyboard)
 
 struct kb *kb_new(void)
 {
-  /*  _keyboard= (struct kb *)calloc(1, sizeof(struct kb)); */
-  _keyboard= &kbdDev;
-  kbdSelf->fd= -1;
-  kbdSelf->dev = 0;
-  kbdSelf->callback= kb_noCallback;
-  return kbdSelf;
+  /*  struct kb *kbdSelf= (struct kb *)calloc(1, sizeof(struct kb)); */
+  struct kb *kbdSelf= &kbDev;
+  kbDev.fd= -1;
+  kbDev.dev = 0;
+  return &kbDev;
 }
 
-
-void kb_delete(_keyboard)
-{
-  /*  free(kbdSelf); */
-}
-
-#undef _keyboard
 
 /* @@FIXME: only event polling for now @@ */
 
 static void processLibEvdevKeyEvents() {
   struct input_event ev[64];
-  int rd;
+  int i, rd;
 
-  rd = read(kbdDev->fd, ev, sizeof(ev));
+  rd = read(kbDev.fd, ev, sizeof(ev));
   if (rd < (int) sizeof(struct input_event)) {
     DPRINTF("expected %d bytes, got %d\n", (int) sizeof(struct input_event), rd);
     DPRINTF("\nevtest: error reading Keyboard");
-    return 1;
+    return; /* @@FIXME: resynch? @@ */
   }
 
   for (i = 0; i < rd / sizeof(struct input_event); i++) {
-    unsigned int type, code;
-
-    type = ev[i].type;
-    code = ev[i].code;
-
-    setKeyCode(ev[i]); /* invokes updateModifierState() */
-
-    enqueueKeyboardEvent(int key, int up, int modifiers);
-      
-    return EXIT_SUCCESS;
+    setKeyCode(&ev[i]); /* invokes recordKeyboardEvent() */
+  }
 }
 
 static void processLibEvdevMouseEvents() {
   struct input_event ev[64];
-  int rd;
+  int i, rd;
 
-  rd = read(mouseDev->fd, ev, sizeof(ev));
+  rd = read(mouseDev.fd, ev, sizeof(ev));
   if (rd < (int) sizeof(struct input_event)) {
     DPRINTF("expected %d bytes, got %d\n", (int) sizeof(struct input_event), rd);
     DPRINTF("\nevtest: error reading Mouse");
-    return 1;
+    return; /* @@FIXME: resynch @@ */
   }
 
   for (i = 0; i < rd / sizeof(struct input_event); i++) {
@@ -865,8 +628,8 @@ static void processLibEvdevMouseEvents() {
 	      ev[i].input_event_usec);
       DPRINTF("evdev Mouse type %d, code %d, value: %d\n ", type, code, value);
 #endif
-      updateMousePosition(ev[i]);
-      updateMouseButtons(ev[i]); 
+      updateSqueakMousePosition(&ev[i]);
+      updateMouseButtons(&ev[i]); 
 
       setSqueakButtonState();
       if (code == REL_WHEEL) {
@@ -876,7 +639,7 @@ static void processLibEvdevMouseEvents() {
 	recordMouseEvent();  /* Only current mouse pos tracked */
       }
     }
-    return EXIT_SUCCESS;
+  }
 }
 
 
