@@ -34,7 +34,7 @@ resultMaybeAlien = interpreterProxy->stackValue(resultOffset);
 if (objIsAlien(resultMaybeAlien)) {
 	if (!(size = sizeField(resultMaybeAlien)))
 		size = sizeof(void *);
-	long argByteSize = min(abs(size),8);
+	long argByteSize = min(labs(size),8);
 	switch (argByteSize) {
 		case (1):
 			memcpy(startOfDataWithSize(resultMaybeAlien,size), longReturnValueLocation+3, argByteSize);

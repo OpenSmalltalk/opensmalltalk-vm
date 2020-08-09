@@ -16,7 +16,7 @@
 # error Non windows should use the SystemV ABI, not the win64 ABI
 #endif
 
-# include <stdlib.h> /* for valloc */
+#include <stdlib.h> /* for valloc */
 #include <string.h> /* for memcpy et al */
 #include <setjmp.h>
 #include <stdio.h> /* for fprintf(stderr,...) */
