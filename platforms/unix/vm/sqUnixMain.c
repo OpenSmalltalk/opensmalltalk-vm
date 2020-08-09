@@ -919,42 +919,8 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 			 * dump machinery has of giving us an accurate report is if we set
 			 * stackPointer & framePointer to the native stack & frame pointers.
 			 */
-# if __APPLE__ && __MACH__ && __i386__
-			void *fp = (void *)(uap ? uap->uc_mcontext->ss.ebp : 0);
-			void *sp = (void *)(uap ? uap->uc_mcontext->ss.esp : 0);
-# elif __linux__ && __i386__
-			void *fp = (void *)(uap ? uap->uc_mcontext.gregs[REG_EBP] : 0);
-			void *sp = (void *)(uap ? uap->uc_mcontext.gregs[REG_ESP] : 0);
-#	elif __linux__ && __x86_64__
-			void *fp = (void *)(uap ? uap->uc_mcontext.gregs[REG_RBP] : 0);
-			void *sp = (void *)(uap ? uap->uc_mcontext.gregs[REG_RSP] : 0);
-# elif __FreeBSD__ && __i386__
-			void *fp = (void *)(uap ? uap->uc_mcontext.mc_ebp : 0);
-			void *sp = (void *)(uap ? uap->uc_mcontext.mc_esp : 0);
-# elif __FreeBSD__ && __amd64__
-			void *fp = (void *)(uap ? uap->uc_mcontext.mc_rbp : 0);
-			void *sp = (void *)(uap ? uap->uc_mcontext.mc_rsp : 0);
-# elif __OpenBSD__ && __i386__
-			void *fp = (void *)(uap ? uap->sc_ebp : 0);
-			void *sp = (void *)(uap ? uap->sc_esp : 0);
-# elif __OpenBSD__ && __amd64__
-			void *fp = (void *)(uap ? uap->sc_rbp : 0);
-			void *sp = (void *)(uap ? uap->sc_rsp : 0);
-# elif __sun__ && __i386__
-			void *fp = (void *)(uap ? uap->uc_mcontext.gregs[REG_FP] : 0);
-			void *sp = (void *)(uap ? uap->uc_mcontext.gregs[REG_SP] : 0);
-# elif __sun__ && __amd64
-			void *fp = (void *)(uap ? uap->uc_mcontext.gregs[REG_FP] : 0);
-			void *sp = (void *)(uap ? uap->uc_mcontext.gregs[REG_SP] : 0);
-# elif defined(__arm64__) || defined(__aarch64__) || defined(ARM64)
-			void *fp = (void *)(uap ? uap->uc_mcontext.regs[29] : 0);
-			void *sp = (void *)(uap ? uap->uc_mcontext.sp : 0);
-# elif defined(__arm__) || defined(__arm32__) || defined(ARM32)
-			void *fp = (void *)(uap ? uap->uc_mcontext.arm_fp : 0);
-			void *sp = (void *)(uap ? uap->uc_mcontext.arm_sp : 0);
-# else
-#	error need to implement extracting pc from a ucontext_t on this system
-# endif
+			void *fp = (void *)(uap ? uap->_FP_IN_UCONTEXT : 0);
+			void *sp = (void *)(uap ? uap->_SP_IN_UCONTEXT : 0);
 			char *savedSP, *savedFP;
 
 			ifValidWriteBackStackPointersSaveTo(fp,sp,&savedFP,&savedSP);
