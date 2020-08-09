@@ -76,8 +76,8 @@ CoInterpreterStackPages >> initializeStack: theStackPages numSlots: stackSlots p
 	<var: #pageStructBase type: #'char *'>
 	self cCode: []
 		inSmalltalk:
-			[self assert: objectMemory startOfMemory - coInterpreter cogCodeSize - Cogit guardPageSize - coInterpreter methodCacheSize - coInterpreter primTraceLogSize - coInterpreter rumpCStackSize
-					= (stackSlots * objectMemory wordSize roundUpTo: objectMemory allocationUnit)].
+			["self assert: objectMemory startOfMemory - coInterpreter cogCodeSize - Cogit guardPageSize - coInterpreter methodCacheSize - coInterpreter primTraceLogSize - coInterpreter rumpCStackSize
+					= (stackSlots * objectMemory wordSize roundUpTo: objectMemory allocationUnit)"].
 	structStackPageSize := coInterpreter sizeof: CogStackPage.
 	bytesPerPage := slotsPerPage * objectMemory wordSize.
 	numPages := coInterpreter numStkPages.

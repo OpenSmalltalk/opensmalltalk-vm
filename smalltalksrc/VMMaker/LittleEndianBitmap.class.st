@@ -10,7 +10,7 @@ LittleEndianBitmap >> asByteArray [
 	"Faster way to make a byte array from me.
 	copyFromByteArray: makes equal Bitmap."
 	| f bytes hack |
-	Smalltalk isLittleEndian ifTrue:
+	EndianDetector isLittleEndian ifTrue:
 		[bytes := self shallowCopy.
 		 ByteArray adoptInstance: bytes.
 		 ^bytes].

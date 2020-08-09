@@ -603,4 +603,6 @@ sqInt ioFreeModule(void *moduleHandle);
 /* The Squeak version from which this interpreter was generated. */
 extern const char *interpreterVersion;
 
+int ioGetCurrentWorkingDirectorymaxLength(char * aCString, size_t maxLength);
+
 #endif /* _SQ_H */

@@ -66,7 +66,7 @@ CCodeGenerator class >> isVarargsSelector: aSymbol [
 CCodeGenerator class >> monticelloDescriptionFor: aClass [
 	"Answer a suitable Monticello package stamp to include in the header."
 	| pkgInfo pkg uuid |
-	pkgInfo := PackageOrganizer default packageOfClass: aClass.
+	pkgInfo := aClass package.
 	pkg := MCWorkingCopy allManagers detect: [:ea| ea packageName = pkgInfo packageName].
 	pkg ancestry ancestors isEmpty ifFalse:
 		[uuid := pkg ancestry ancestors first id].
@@ -197,7 +197,6 @@ CCodeGenerator >> accessorDepthForMethod: method [
 		field := objectMemory fetchPointer: 1 ofObject: obj.
 		self storePointer: 1 ofObject: field withValue: (self stackValue: 1)
 	has depth 2, since field is accessed, and field is an element of obj."
-
 	^((method definingClass includesSelector: method selector) ifTrue:
 			[(method definingClass >> method selector) pragmaAt: #accessorDepth:])
 		ifNil:
@@ -292,6 +291,13 @@ CCodeGenerator >> addAllClassVarsFor: aClass [
 CCodeGenerator >> addClass: aClass [
 	"Add the variables and methods of the given class to the code base."
 
+	self addClass: aClass silently: false
+]
+
+{ #category : #public }
+CCodeGenerator >> addClass: aClass silently: silentlyBoolean [
+	"Add the variables and methods of the given class to the code base."
+
 	aClass prepareToBeAddedToCodeGenerator: self.
 	self checkClassForNameConflicts: aClass.
 	self addClassVarsFor: aClass.
@@ -301,6 +307,13 @@ CCodeGenerator >> addClass: aClass [
 		[variables addAll: (self instVarNamesForClass: aClass)].
 	self retainMethods: (aClass requiredMethodNames: self options).
 	
+	silentlyBoolean ifTrue: [ 
+		aClass selectors do: [:sel | self addMethodFor: aClass selector: sel ].
+		aClass declareCVarsIn: self.
+		^ self
+	].
+
+	"Not silent"
 	UIManager default
 		displayProgress: 'Adding Class ' , aClass name , '...'
 		from: 0
@@ -308,7 +321,7 @@ CCodeGenerator >> addClass: aClass [
 		during:
 			[:bar |
 			 aClass selectors doWithIndex:
-				[:sel :i | | source |
+				[:sel :i |
 				bar value: i.
 				self addMethodFor: aClass selector: sel]].
 	aClass declareCVarsIn: self
@@ -473,11 +486,26 @@ CCodeGenerator >> addSelectorTranslation: aSelector to: aString [
 CCodeGenerator >> addStructClass: aClass [
 	"Add the non-accessor methods of the given struct class to the code base."
 
+	^ self addStructClass: aClass silently: false
+]
+
+{ #category : #public }
+CCodeGenerator >> addStructClass: aClass silently: silentlyBoolean [
+	"Add the non-accessor methods of the given struct class to the code base."
+
 	aClass prepareToBeAddedToCodeGenerator: self.
 	self addClassVarsFor: aClass.
 	self addPoolVarsFor: aClass.
 	self retainMethods: (aClass requiredMethodNames: self options).
 	
+	"Silent version"
+	silentlyBoolean ifTrue: [
+		aClass selectors do: [:sel | self addStructMethodFor: aClass selector: sel ].
+		aClass declareCVarsIn: self.
+		^ self
+	].
+	
+	"Non silent version"
 	UIManager default
 		displayProgress: 'Adding Class ' , aClass name , '...'
 		from: 0
@@ -485,7 +513,7 @@ CCodeGenerator >> addStructClass: aClass [
 		during:
 			[:bar |
 			 aClass selectors doWithIndex:
-				[:sel :i | | source |
+				[:sel :i |
 				bar value: i.
 				self addStructMethodFor: aClass selector: sel]].
 	aClass declareCVarsIn: self
@@ -500,6 +528,17 @@ CCodeGenerator >> addStructClasses: classes [
 		 (structClass withAllSuperclasses copyUpTo: VMStructType) do:
 			[:structClassOrSuperclass|
 			 self addStructClass: structClassOrSuperclass]]
+]
+
+{ #category : #accessing }
+CCodeGenerator >> addStructClasses: classes silently: aSilentlyBoolean [
+	"Add the struct classes and save them for emitCTypesOn: later."
+	structClasses := classes.
+	structClasses do:
+		[:structClass|
+		 (structClass withAllSuperclasses copyUpTo: VMStructType) do:
+			[:structClassOrSuperclass|
+			 self addStructClass: structClassOrSuperclass silently: aSilentlyBoolean ]]
 ]
 
 { #category : #utilities }
@@ -714,16 +753,17 @@ CCodeGenerator >> cLiteralFor: anObject [
 CCodeGenerator >> cLiteralFor: anObject name: smalltalkName [
 	"Return a string representing the C literal value for the given object.
 	 This version may use hex for integers that are bit masks."
-	anObject isInteger ifTrue:
-		[| hex dec useHexa |
-		hex := anObject printStringBase: 16.
-		dec := anObject printStringBase: 10.
-		useHexa := ((smalltalkName endsWith: 'Mask')
-				or: [anObject digitLength > 1
-					and: [(hex asSet size * 3) <= (dec asSet size * 2)
-					and: [(smalltalkName endsWith: 'Size') not]]]).
-		^self cLiteralForInteger: anObject hex: useHexa].
-	^self cLiteralFor: anObject
+
+	anObject isInteger
+		ifTrue: [ | hex dec useHexa |
+			hex := anObject printStringBase: 16.
+			dec := anObject printStringBase: 10.
+			useHexa := (smalltalkName endsWith: 'Mask')
+				or: [ anObject bytesCount > 1
+						and: [ hex asSet size * 3 <= (dec asSet size * 2)
+								and: [ (smalltalkName endsWith: 'Size') not ] ] ].
+			^ self cLiteralForInteger: anObject hex: useHexa ].
+	^ self cLiteralFor: anObject
 ]
 
 { #category : #'C code generator' }
@@ -3865,14 +3905,16 @@ CCodeGenerator >> isNilConstantReceiverOf: sendNode [
 CCodeGenerator >> isNode: aNode constantValueWithinRangeOfType: aType [
 	"Answer if aNode is a constant value within the range of an integral type.
 	 If aNode isn't an integral constant or aType isn't an integral type then answer false."
+
 	| value |
-	^aNode expression isConstant
-	  and: [(self isIntegralCType: aType)
-	  and: [(value := aNode expression value) isInteger
-	  and: [value positive
-	  and: [(aType first = $u
-			ifTrue: [value digitLength]
-			ifFalse: [value highBit + 7 // 8]) <= (self sizeOfIntegralCType: aType)]]]]
+	^ aNode expression isConstant
+		and: [ (self isIntegralCType: aType)
+				and: [ (value := aNode expression value) isInteger
+						and: [ value positive
+								and: [ (aType first = $u
+										ifTrue: [ value bytesCount ]
+										ifFalse: [ (value highBit + 7) // 8 ])
+										<= (self sizeOfIntegralCType: aType) ] ] ] ]
 ]
 
 { #category : #'C code generator' }
@@ -4213,11 +4255,14 @@ CCodeGenerator >> needToGenerateHeader: headerName file: interpHdrPath contents:
 	"Check if we need to regenerate a header file.  We always need to if the contents have changed.
 	 But if not we can avoid needless recompilations by not regenerating.  So only regenerate if the
 	 package stamp is dirty and the monticello stamp is clean."
+	
 	| newContents oldContents dirtyStamp |
-	(FileDirectory default fileExists: interpHdrPath) ifFalse:
-		[^true].
+	
+	interpHdrPath asFileReference exists 
+		ifFalse: [^true].
+		
 	newContents := newContentsArg.
-	oldContents := (FileDirectory default oldFileNamed: interpHdrPath) contentsOfEntireFile.
+	oldContents := interpHdrPath asFileReference contents.
 	oldContents := oldContents copyReplaceAll: {Character cr. Character lf} with: {Character cr}.
 	oldContents replaceAll: Character lf with: Character cr.
 	dirtyStamp := (oldContents indexOfSubCollection: '* VMMaker') ~= 0.
@@ -4461,8 +4506,7 @@ CCodeGenerator >> optionIsTrue: pragma in: aClass [
 				[^cogitClass includesBehavior: optionClass]].
 		 aClass objectMemoryClass ifNotNil:
 			[:objectMemoryClass|
-			 ((optionClass includesBehavior: ObjectMemory)
-			   or: [optionClass includesBehavior: SpurMemoryManager]) ifTrue:
+			 (optionClass includesBehavior: SpurMemoryManager) ifTrue:
 				[^objectMemoryClass includesBehavior: optionClass]]].
 	"Lookup options in options, class variables of the defining class, VMBasicConstants, the interpreterClass and the objectMemoryClass"
 	{aClass initializationOptions.
@@ -5112,18 +5156,21 @@ CCodeGenerator >> shouldIncludeMethodFor: aClass selector: selector [
 	 interpreting the argument to the option: pragma as either a Cogit class name
 	 or a class variable name or a variable name in VMBasicConstants.  Exclude
 	 methods with the doNotGenerate pragma."
+
 	| optionPragmas notOptionPragmas |
-	(aClass >> selector pragmaAt: #doNotGenerate) ifNotNil:
-		[^false].
+	(aClass >> selector pragmaAt: #doNotGenerate) ifNotNil: [ ^ false ].
 
 	"where is pragmasAt: ??"
-	optionPragmas := (aClass >> selector) pragmas select: [:p| p keyword == #option:].
-	notOptionPragmas := (aClass >> selector) pragmas select: [:p| p keyword == #notOption:].
-	(optionPragmas notEmpty or: [notOptionPragmas notEmpty]) ifTrue:
-		[^(optionPragmas allSatisfy: [:pragma| self optionIsTrue: pragma in: aClass])
-		   and: [notOptionPragmas noneSatisfy: [:pragma| self optionIsTrue: pragma in: aClass]]].
-
-	^true
+	optionPragmas := (aClass >> selector) pragmas select: [ :p | 
+		                 p selector == #option: ].
+	notOptionPragmas := (aClass >> selector) pragmas select: [ :p | 
+		                    p selector == #notOption: ].
+	(optionPragmas notEmpty or: [ notOptionPragmas notEmpty ]) ifTrue: [ 
+		^ (optionPragmas allSatisfy: [ :pragma | 
+			   self optionIsTrue: pragma in: aClass ]) and: [ 
+			  notOptionPragmas noneSatisfy: [ :pragma | 
+				  self optionIsTrue: pragma in: aClass ] ] ].
+	^ true
 ]
 
 { #category : #'type inference' }

@@ -858,6 +858,9 @@ CogX64Compiler >> computeMaximumSize [
 		[ZeroExtend32RR] -> [^2 + ((((operands at: 1) > 7) or: [(operands at: 0) > 7])
 									ifTrue: [1]
 									ifFalse: [0])].
+								
+		"This is a fixed size instruction using a patcheable literal. This takes ALWAYS 7 bytes"
+		[MovePatcheableC32R] -> [ ^ 7 ]
 		}.
 	^0 "to keep C compiler quiet"
 ]
@@ -3207,6 +3210,9 @@ CogX64Compiler >> dispatchConcretize [
 		[ZeroExtend8RR]		-> [^self concretizeZeroExtend8RR].
 		[ZeroExtend16RR]	-> [^self concretizeZeroExtend16RR].
 		[ZeroExtend32RR]	-> [^self concretizeZeroExtend32RR].
+		
+		"This is a fixed size instruction using a patcheable literal."
+		[MovePatcheableC32R] -> [ ^ self concretizeMovePatcheableC32R ]
 		}
 ]
 
@@ -4132,16 +4138,6 @@ CogX64Compiler >> nameForRegister: reg [ "<Integer>"
 	  and: [reg between: 0 and: 15])
 		ifTrue: [#(RAX RCX RDX RBX RSP RBP RSI RDI R8 R9 R10 R11 R12 R13 R14 R15) at: reg + 1]
 		ifFalse: [default]
-]
-
-{ #category : #'inline cacheing' }
-CogX64Compiler >> nsSendCacheAt: callSiteReturnAddress [
-	"Answer the NSSendCache for the return address of a Newspeak
-	 self, super, outer, or implicit receiver send."
-	<option: #NewspeakVM>
-	<var: #callSiteReturnAddress type: #'char *'>
-	<inline: false>
-	^self literalBeforeFollowingAddress: callSiteReturnAddress asUnsignedInteger - 5 "sizeofcall"
 ]
 
 { #category : #accessing }

@@ -7,11 +7,8 @@ CompiledMethod >> abstractDetailedSymbolic [
 
 { #category : #'*VMMaker-C translation' }
 CompiledMethod >> asTranslationMethodOfClass: aTMethodClass [
- 	"Answer a TMethod (or subclass) derived from the receiver."
-	^((CompiledMethod includesSelector: #ast)
-			ifTrue: [self parseTree] "Pharo Opal Bytecode Compiler"
-			ifFalse: [self methodNode]) "Squeak Smalltalk-80 Bytecode Compiler"
-		asTranslationMethodOfClass: aTMethodClass
+
+	^ self parseTree asTranslationMethodOfClass: aTMethodClass
 ]
 
 { #category : #'*VMMaker-support' }

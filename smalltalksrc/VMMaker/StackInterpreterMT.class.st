@@ -1132,12 +1132,6 @@ StackInterpreterMT >> markAndTraceInterpreterOops: fullGCFlag [
 				objectMemory markAndTrace: (vmThread awolProcesses at: j)]]]
 ]
 
-{ #category : #accessing }
-StackInterpreterMT >> newMethod: anInteger [ 
-	
-	newMethod := anInteger
-]
-
 { #category : #'vm scheduling' }
 StackInterpreterMT >> ownVM: threadIndexAndFlags [
 	<api>

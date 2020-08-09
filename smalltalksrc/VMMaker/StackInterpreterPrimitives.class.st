@@ -744,7 +744,7 @@ StackInterpreterPrimitives >> primitiveExternalCall [
 	lookup), and the primitive fails with PrimErrNotFound."
 	| lit addr moduleName functionName moduleLength functionLength accessorDepth index |
 	<var: #addr declareC: 'void (*addr)()'>
-	
+		
 	"Check for it being a method for primitiveDoPrimitiveWithArgs.
 	 Fetch the first literal of the method; check its an Array of length 4.
 	 Look at the function index in case it has been loaded before"
@@ -759,6 +759,7 @@ StackInterpreterPrimitives >> primitiveExternalCall [
 
 	index := objectMemory integerValueOf: index.
 	"Check if we have already looked up the function and failed."
+		
 	index < 0 ifTrue:
 		["Function address was not found in this session, 
 		  Void the primitive function."
@@ -923,6 +924,22 @@ StackInterpreterPrimitives >> primitiveFullGC [
 
 	self externalWriteBackHeadFramePointers.
 	super primitiveFullGC
+]
+
+{ #category : #'I/O primitives' }
+StackInterpreterPrimitives >> primitiveGetCurrentWorkingDirectory [
+	
+	<export: true>
+	<var: #aCString type: #'char *'>
+	
+	| aCString |
+	
+	aCString := self cCoerce: (self alloca: 255 + 1) to: #'char *'.
+
+	(self ioGetCurrentWorkingDirectory: aCString maxLength: 255 + 1) = -1 
+		ifTrue: [ ^ self primitiveFail ].
+
+	self pop: argumentCount+1 thenPush: (objectMemory stringForCString: aCString).
 ]
 
 { #category : #'system control primitives' }

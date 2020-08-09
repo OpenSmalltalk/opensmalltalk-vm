@@ -1465,6 +1465,32 @@ SpurMemoryManager >> allExistingOldSpaceObjectsDo: aBlock [
 ]
 
 { #category : #'free space' }
+SpurMemoryManager >> allFreeHeads [
+	<doNotGenerate>
+	| freeObjects |
+	freeObjects := OrderedCollection new.
+	0 to: self numFreeLists - 1 do: [:i| | obj |
+		obj := freeLists at: i.
+		obj ~= 0 ifTrue: [ freeObjects add: obj ]].
+	^freeObjects
+]
+
+{ #category : #'free space' }
+SpurMemoryManager >> allFreeListHeads [
+	<doNotGenerate>
+	"Return all the head nodes of the free lists.
+	The free lists are all the entries in the freeLists array between 2 and numFreeLists - 1.
+	We skip indexes 0 and 1: index 0 is the free tree and index 1 unused"
+	
+	| freeObjects |
+	freeObjects := OrderedCollection new.
+	2 to: self numFreeLists - 1 do: [:i| | obj |
+		obj := freeLists at: i.
+		obj ~= 0 ifTrue: [ freeObjects add: obj ]].
+	^freeObjects
+]
+
+{ #category : #'free space' }
 SpurMemoryManager >> allFreeObjects [
 	<doNotGenerate>
 	| freeObjects |
@@ -1876,6 +1902,37 @@ SpurMemoryManager >> allocateBytes: numBytes classIndex: classIndex [
 		classIndex: classIndex
 ]
 
+{ #category : #bootstrap }
+SpurMemoryManager >> allocateClassTable [
+	<doNotGenerate>
+	"Create the class table root with enough slots for many class table pages and some hidden root slots.
+	Create only a first mandatory class table page here.
+	Others will be created on demand."	
+	| classTableRootOop pageOop |
+	classTableRootOop := self
+		allocateSlotsInOldSpace: self classTableRootSlots + self hiddenRootSlots
+		format: self arrayFormat
+		classIndex: self arrayClassIndexPun.
+
+	self nilFieldsOf: classTableRootOop.
+
+	"We don't know how many class table pages we need. Seeing an assert in #validateClassTable
+	we assume that it needs at least 2"
+	0 to: 1  do: [ :index |		
+		pageOop := self
+			allocateSlotsInOldSpace: self classTablePageSize
+			format: self arrayFormat
+			classIndex: self arrayClassIndexPun.
+		
+		self nilFieldsOf: pageOop.
+		self storePointer: index ofObject: classTableRootOop withValue: pageOop.
+	].
+
+	self setHiddenRootsObj: classTableRootOop.
+		
+	^ classTableRootOop
+]
+
 { #category : #'free space' }
 SpurMemoryManager >> allocateLargestFreeChunk [
 	"Answer the largest free chunk in the free lists."
@@ -1903,6 +1960,16 @@ SpurMemoryManager >> allocateMemoryOfSize: memoryBytes [
 	| bytesPerElement |
 	bytesPerElement := (self memoryClass basicNew: 0) bytesPerElement.
 	memory := self memoryClass new: memoryBytes + bytesPerElement - 1 // bytesPerElement
+	
+]
+
+{ #category : #testing }
+SpurMemoryManager >> allocateMemoryOfSize: memoryBytes initialAddress: initialAddress [
+	<doNotGenerate>
+	| bytesPerElement |
+	bytesPerElement := (self memoryClass basicNew: 0) bytesPerElement.
+	memory := self memoryClass new: memoryBytes + bytesPerElement - 1 // bytesPerElement.
+	memory initialAddress: initialAddress
 ]
 
 { #category : #'spur bootstrap' }
@@ -1912,12 +1979,49 @@ SpurMemoryManager >> allocateMemoryOfSize: memoryBytes newSpaceSize: newSpaceByt
 	 to allocate in oldSpace.  Later on (in initializePostBootstrap) freeStart and scavengeThreshold
 	 will be set to sane values."
 	<doNotGenerate>
+
+	self
+		allocateMemoryOfSize: memoryBytes
+		newSpaceSize: newSpaceBytes
+		stackSize: stackBytes
+		codeSize: codeBytes
+		initialAddress: 0
+]
+
+{ #category : #'spur bootstrap' }
+SpurMemoryManager >> allocateMemoryOfSize: memoryBytes newSpaceSize: newSpaceBytes stackSize: stackBytes codeSize: codeBytes initialAddress: initialAddress [
+	"Intialize the receiver for bootsraping an image.
+	 Set up a large oldSpace and an empty newSpace and set-up freeStart and scavengeThreshold
+	 to allocate in oldSpace.  Later on (in initializePostBootstrap) freeStart and scavengeThreshold
+	 will be set to sane values."
+	<doNotGenerate>
+	
+	self
+		allocateMemoryOfSize: memoryBytes
+		newSpaceSize: newSpaceBytes
+		stackSize: stackBytes
+		codeSize: codeBytes
+		methodCacheSize: 0
+		primitiveTraceLogSize: 0
+		rumpCStackSize: 0
+		initialAddress: initialAddress
+]
+
+{ #category : #asd }
+SpurMemoryManager >> allocateMemoryOfSize: memoryBytes newSpaceSize: newSpaceBytes stackSize: stackBytes codeSize: codeBytes methodCacheSize: methodCacheSize primitiveTraceLogSize: primitiveLogSize rumpCStackSize: rumpCStackSize initialAddress: initialAddress [
+
+		"Intialize the receiver for bootsraping an image.
+	 Set up a large oldSpace and an empty newSpace and set-up freeStart and scavengeThreshold
+	 to allocate in oldSpace.  Later on (in initializePostBootstrap) freeStart and scavengeThreshold
+	 will be set to sane values."
+	<doNotGenerate>
 	self assert: (memoryBytes \\ self allocationUnit = 0
 				and: [newSpaceBytes \\ self allocationUnit = 0
-				and: [codeBytes \\ self allocationUnit = 0]]).
-	self allocateMemoryOfSize: memoryBytes + newSpaceBytes + codeBytes + stackBytes.
-	newSpaceStart := codeBytes + stackBytes.
-	endOfMemory := freeOldSpaceStart := memoryBytes + newSpaceBytes + codeBytes + stackBytes.
+				and: [codeBytes \\ self allocationUnit = 0
+				and: [initialAddress \\ self allocationUnit = 0 ]]]).
+	self allocateMemoryOfSize: memoryBytes + newSpaceBytes + codeBytes + stackBytes + methodCacheSize + primitiveLogSize + rumpCStackSize initialAddress: initialAddress.
+	newSpaceStart := initialAddress + codeBytes + stackBytes + methodCacheSize + primitiveLogSize + rumpCStackSize.
+	endOfMemory := freeOldSpaceStart := initialAddress + memoryBytes + newSpaceBytes + codeBytes + stackBytes + methodCacheSize + primitiveLogSize + rumpCStackSize.
 	"leave newSpace empty for the bootstrap"
 	freeStart := newSpaceBytes + newSpaceStart.
 	oldSpaceStart := newSpaceLimit := newSpaceBytes + newSpaceStart.
@@ -2270,7 +2374,15 @@ SpurMemoryManager >> allocateSlots: numSlots format: formatField classIndex: cla
 	"Allocate an object with numSlots space.  If there is room beneath scavengeThreshold
 	 allocate in newSpace, otherwise alocate in oldSpace.  If there is not room in newSpace
 	 and a scavenge is not already scheduled, schedule a scavenge."
-	self subclassResponsibility
+	<api>
+	^ self allocateSlots: numSlots format: formatField classIndex: classIndex isPinned: false
+]
+
+{ #category : #allocation }
+SpurMemoryManager >> allocateSlots: numSlots format: formatField classIndex: classIndex isPinned: isPinned [
+
+	<api>
+	^ self subclassResponsibility
 ]
 
 { #category : #allocation }
@@ -2293,11 +2405,31 @@ SpurMemoryManager >> allocateSlotsInOldSpace: numSlots bytes: totalBytes format:
 { #category : #allocation }
 SpurMemoryManager >> allocateSlotsInOldSpace: numSlots format: formatField classIndex: classIndex [
 	<inline: true>
-	^self
+
+	^ self
 		allocateSlotsInOldSpace: numSlots
-		bytes: (self objectBytesForSlots: numSlots)
 		format: formatField
 		classIndex: classIndex
+		isPinned: false
+]
+
+{ #category : #allocation }
+SpurMemoryManager >> allocateSlotsInOldSpace: numSlots format: formatField classIndex: classIndex isPinned: isPinned [
+	<inline: true>
+
+	^ isPinned
+		ifTrue: [ 
+			self
+				allocateSlotsForPinningInOldSpace: numSlots
+				bytes: (self objectBytesForSlots: numSlots)
+				format: formatField
+				classIndex: classIndex ]
+		ifFalse: [ 
+			self
+				allocateSlotsInOldSpace: numSlots
+				bytes: (self objectBytesForSlots: numSlots)
+				format: formatField
+				classIndex: classIndex ]
 ]
 
 { #category : #allocation }
@@ -4361,9 +4493,21 @@ SpurMemoryManager >> endOfMemory [
 	^endOfMemory
 ]
 
+{ #category : #accessing }
+SpurMemoryManager >> endOfMemory: anInteger [ 
+	<doNotGenerate>
+	endOfMemory := anInteger
+]
+
 { #category : #'gc - scavenge/compact' }
 SpurMemoryManager >> endSlidingCompaction [
 	gcPhaseInProgress := 0
+]
+
+{ #category : #'memory access' }
+SpurMemoryManager >> endianness [
+	<doNotGenerate>
+	self subclassResponsibility
 ]
 
 { #category : #'class table' }
@@ -6231,6 +6375,47 @@ SpurMemoryManager >> initialize [
 							ifNil: [0]
 ]
 
+{ #category : #bootstrap }
+SpurMemoryManager >> initializeFreeList [
+
+	| freeListOop |
+	freeListOop := self objectMemory
+		allocateSlots: self numFreeLists
+		format: self wordIndexableFormat
+		classIndex: self wordSizeClassIndexPun.
+	0 to: self numFreeLists - 1 do: [ :i |
+		self
+			storePointerUnchecked: i
+			ofObject: freeListOop
+			withValue: 0].
+	self initializeFreeSpacePostLoad: freeListOop.
+	^ freeListOop
+]
+
+{ #category : #bootstrap }
+SpurMemoryManager >> initializeFreeListInOldSpace: inOldSpace [
+
+	| freeListOop |
+	
+	freeListOop := inOldSpace ifTrue: [
+		self objectMemory
+			allocateSlotsInOldSpace: self numFreeLists
+			format: self wordIndexableFormat
+			classIndex: self wordSizeClassIndexPun.
+	] ifFalse: [ 
+		self objectMemory
+			allocateSlots: self numFreeLists
+			format: self wordIndexableFormat
+			classIndex: self wordSizeClassIndexPun.
+	].
+	0 to: self numFreeLists - 1 do: [ :i |
+		self
+			storePointerUnchecked: i
+			ofObject: freeListOop
+			withValue: 0].
+	^ freeListOop
+]
+
 { #category : #snapshot }
 SpurMemoryManager >> initializeFreeSpacePostLoad: freeListObj [
 	"Reinitialize the free list info.  The freeLists object needs to be swizzled
@@ -6256,6 +6441,7 @@ SpurMemoryManager >> initializeMarkStack [
 { #category : #'gc - scavenging' }
 SpurMemoryManager >> initializeNewSpaceVariables [
 	<inline: #never>
+	
 	freeStart := scavenger eden start.
 	pastSpaceStart := scavenger pastSpace start.
 	scavengeThreshold := scavenger eden limit
@@ -6486,6 +6672,26 @@ SpurMemoryManager >> instanceSizeOf: classObj [
 
 { #category : #instantiation }
 SpurMemoryManager >> instantiateClass: classObj [
+
+	^ self instantiateClass: classObj isPinned: false
+]
+
+{ #category : #instantiation }
+SpurMemoryManager >> instantiateClass: classObj indexableSize: nElements [
+	<api>
+
+	^ self instantiateClass: classObj indexableSize: nElements isPinned: false
+]
+
+{ #category : #instantiation }
+SpurMemoryManager >> instantiateClass: classObj indexableSize: nElements isPinned: isPinned [
+	<api>
+
+	^ self subclassResponsibility
+]
+
+{ #category : #instantiation }
+SpurMemoryManager >> instantiateClass: classObj isPinned: isPinned [
 	| instSpec classFormat numSlots classIndex newObj |
 	classFormat := self formatOfClass: classObj.
 	instSpec := self instSpecOfClassFormat: classFormat.
@@ -6496,17 +6702,10 @@ SpurMemoryManager >> instantiateClass: classObj [
 		[coInterpreter primitiveFailFor: classIndex negated.
 		 ^nil].
 	numSlots := self fixedFieldsOfClassFormat: classFormat.
-	newObj := self allocateSlots: numSlots format: instSpec classIndex: classIndex.
+	newObj := self allocateSlots: numSlots format: instSpec classIndex: classIndex isPinned: isPinned.
 	newObj ifNotNil:
 		[self fillObj: newObj numSlots: numSlots with: nilObj].
 	^newObj
-]
-
-{ #category : #instantiation }
-SpurMemoryManager >> instantiateClass: classObj indexableSize: nElements [
-	<var: #nElements type: #usqInt>
-	"Allocate an instance of a variable class, excepting CompiledMethod."
-	^self subclassResponsibility
 ]
 
 { #category : #instantiation }
@@ -7906,9 +8105,8 @@ SpurMemoryManager >> lookupAddress: address [
 		[^address caseOf: { [nilObj] -> ['nil']. [trueObj] -> ['true']. [falseObj] -> ['false'] } otherwise: []].
 	((fmt between: self firstByteFormat and: self firstCompiledMethodFormat - 1) "indexable byte fields"
 	and: [(size between: 1 and: 64)
-	and: [(Scanner isLiteralSymbol: (string := (0 to: size - 1) collect: [:i| Character value: (self fetchByte: i ofObject: address)]))
-		or: [NewspeakVM and: [string noneSatisfy: [:c| c isSeparator or: [c asInteger > 126]]]]]]) ifTrue:
-		[^'#', (ByteString withAll: string)].
+	and: [(Scanner isLiteralSymbol: (string := (0 to: size - 1) collect: [:i| Character value: (self fetchByte: i ofObject: address)]))]])
+		ifTrue: [^'#', (ByteString withAll: string)].
 	class := self noCheckClassAtIndex: thisClassIndex.
 	(class isNil or: [class = nilObj]) ifTrue:
 		[^nil].
@@ -8453,6 +8651,12 @@ SpurMemoryManager >> markStack [
 	^markStack
 ]
 
+{ #category : #accessing }
+SpurMemoryManager >> markStack: anOop [ 
+	<doNotGenerate>
+	markStack := anOop
+]
+
 { #category : #'gc - global' }
 SpurMemoryManager >> markWeaklingsAndMarkAndFireEphemerons [
 	"After the initial scan-mark is complete ephemerons can be processed.
@@ -8725,6 +8929,12 @@ SpurMemoryManager >> mournQueue [
 	^mournQueue
 ]
 
+{ #category : #accessing }
+SpurMemoryManager >> mournQueue: anOop [ 
+	<doNotGenerate>
+	mournQueue := anOop
+]
+
 { #category : #'image segment in/out' }
 SpurMemoryManager >> moveClassesForwardsIn: arrayOfObjects [
 	"This is part of storeImageSegmentInto:outPointers:roots:.
@@ -8777,6 +8987,11 @@ SpurMemoryManager >> naiveSwapHeaders: obj1 and: obj2 copyHashFlag: copyHashFlag
 { #category : #accessing }
 SpurMemoryManager >> needGCFlag [
 	^needGCFlag
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> needGCFlag: anInteger [
+	needGCFlag := anInteger ~= 0
 ]
 
 { #category : #'header access' }
@@ -12947,6 +13162,12 @@ SpurMemoryManager >> weakArrayFormat [
 { #category : #'spur bootstrap' }
 SpurMemoryManager >> weaklingStack [
 	^weaklingStack
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> weaklingStack: anOop [ 
+	<doNotGenerate>
+	weaklingStack := anOop
 ]
 
 { #category : #'debug printing' }

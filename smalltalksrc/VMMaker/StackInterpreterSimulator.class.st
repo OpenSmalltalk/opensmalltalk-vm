@@ -76,6 +76,13 @@ StackInterpreterSimulator class >> initializeWithOptions: optionsDictionaryOrArr
 ]
 
 { #category : #'instance creation' }
+StackInterpreterSimulator class >> isNonArgumentImplicitReceiverVariableName: aName [
+
+	^ (self localSlots collect: [ :e | e name ]) includes: aName
+
+]
+
+{ #category : #'instance creation' }
 StackInterpreterSimulator class >> new [
 	^self onObjectMemory: nil options: #()
 ]
@@ -154,6 +161,55 @@ StackInterpreterSimulator >> baseFrameReturn [
 		[(self checkIsStillMarriedContext: contextToReturnTo currentFP: nil) ifFalse:
 			[self halt]].
 	^super baseFrameReturn
+]
+
+{ #category : #initialization }
+StackInterpreterSimulator >> basicInitialize [
+	"Initialize the StackInterpreterSimulator when running the interpreter
+	 inside Smalltalk. The primary responsibility of this method is to allocate
+	 Smalltalk Arrays for variables that will be declared as statically-allocated
+	 global arrays in the translated code."
+	super initialize.
+
+	bootstrapping := false.
+	transcript := Transcript.
+
+	objectMemory ifNil:
+		[objectMemory := self class objectMemoryClass simulatorClass new].
+	objectMemory coInterpreter: self.
+
+	self assert: ConstMinusOne = (objectMemory integerObjectOf: -1).
+
+	methodCache := Array new: MethodCacheSize.
+	nsMethodCache := Array new: NSMethodCacheSize.
+	atCache := Array new: AtCacheTotalSize.
+	self flushMethodCache.
+	gcSemaphoreIndex := 0.
+	externalSemaphoreSignalRequests := externalSemaphoreSignalResponses := #().
+	externalPrimitiveTable := CArrayAccessor on: (Array new: MaxExternalPrimitiveTableSize).
+	externalPrimitiveTableFirstFreeIndex := 0.
+	primitiveTable := self class primitiveTable copy.
+	desiredNumStackPages := desiredEdenBytes := 0.
+	"This is initialized on loading the image, but convenient for testing stack page values..."
+	numStackPages := self defaultNumStackPages. 
+	startMicroseconds := lastYieldMicroseconds := self ioUTCStartMicroseconds.
+
+	"initialize InterpreterSimulator variables used for debugging"
+	byteCount := sendCount := lookupCount := 0.
+	quitBlock := [^self close].
+	traceOn := true.
+	printSends := printReturns := printFrameAtEachStep := printBytecodeAtEachStep := false.
+	myBitBlt := BitBltSimulator new setInterpreter: self.
+	displayForm := fakeForm := 'Display has not yet been installed' asDisplayText form.
+	eventQueue := SharedQueue new.
+	suppressHeartbeatFlag := false.
+	systemAttributes := Dictionary new.
+	extSemTabSize := 256.
+	disableBooleanCheat := false.
+	assertVEPAES := false. "a flag so the assertValidExecutionPointers can be disabled for simulation speed and enabled when necessary."
+	
+	"This will be overriden when calling initializePluginEntries"
+	mappedPluginEntries := OrderedCollection new.
 ]
 
 { #category : #utilities }
@@ -360,18 +416,9 @@ StackInterpreterSimulator >> cr [
 	traceOn ifTrue: [ transcript cr; flush ].
 ]
 
-{ #category : #'debugging traps' }
-StackInterpreterSimulator >> createActualMessageTo: class [
-	objectMemory bootstrapping ifTrue:
-		[self halt].
-	"false
-		ifTrue:
-			[(self stringOf: messageSelector) = 'run:with:in:' ifTrue:
-				[self halt]]
-		ifFalse:
-			[self halt: (self stringOf: messageSelector)]."
-
-	^super createActualMessageTo: class
+{ #category : #accessing }
+StackInterpreterSimulator >> currentBytecode: anInteger [ 
+	currentBytecode := anInteger
 ]
 
 { #category : #UI }
@@ -610,36 +657,6 @@ StackInterpreterSimulator >> filterPerformOf: selector to: receiver [
 	^false
 ]
 
-{ #category : #testing }
-StackInterpreterSimulator >> findNewMethodInClassTag: classTag [
-"
-	| cName |
-	traceOn ifTrue:
-		[cName := (self sizeBitsOf: class) = 16r20
-			ifTrue: ['class ' , (self nameOfClass: (self fetchPointer: 6 ofObject: class))]
-			ifFalse: [(self nameOfClass: class)].
-		self cr; print: cName , '>>' , (self stringOf: messageSelector)].
-"
-	messageSelector = (objectMemory splObj: SelectorDoesNotUnderstand) ifTrue: [self halt].
-
-	sendCount := sendCount + 1.
-
-	(printSends or: [printBytecodeAtEachStep]) ifTrue:
-		[self cr; print: byteCount; space; printStringOf: messageSelector; cr].
-"
-	(sendCount > 1000 and: [sendCount\\10 = 0]) ifTrue:
-		[Transcript print: sendCount; space.
-		self validate].
-"
-"
-	(sendCount > 100150) ifTrue:
-		[self qvalidate.
-		messageQueue == nil ifTrue: [messageQueue := OrderedCollection new].
-		messageQueue addLast: (self stringOf: messageSelector)].
-"
-	^super findNewMethodInClassTag: classTag
-]
-
 { #category : #'memory access' }
 StackInterpreterSimulator >> firstIndexableField: oop [
 	"This is in ObjectMemory and overridden in the obj mem simulators"
@@ -812,45 +829,8 @@ StackInterpreterSimulator >> initialize [
 	 inside Smalltalk. The primary responsibility of this method is to allocate
 	 Smalltalk Arrays for variables that will be declared as statically-allocated
 	 global arrays in the translated code."
-	super initialize.
-
-	bootstrapping := false.
-	transcript := Transcript.
-
-	objectMemory ifNil:
-		[objectMemory := self class objectMemoryClass simulatorClass new].
-	objectMemory coInterpreter: self.
-
-	self assert: ConstMinusOne = (objectMemory integerObjectOf: -1).
-
-	methodCache := Array new: MethodCacheSize.
-	nsMethodCache := Array new: NSMethodCacheSize.
-	atCache := Array new: AtCacheTotalSize.
-	self flushMethodCache.
-	gcSemaphoreIndex := 0.
-	externalSemaphoreSignalRequests := externalSemaphoreSignalResponses := #().
-	externalPrimitiveTable := CArrayAccessor on: (Array new: MaxExternalPrimitiveTableSize).
-	externalPrimitiveTableFirstFreeIndex := 0.
-	primitiveTable := self class primitiveTable copy.
+	self basicInitialize.	
 	self initializePluginEntries.
-	desiredNumStackPages := desiredEdenBytes := 0.
-	"This is initialized on loading the image, but convenient for testing stack page values..."
-	numStackPages := self defaultNumStackPages. 
-	startMicroseconds := lastYieldMicroseconds := self ioUTCStartMicroseconds.
-
-	"initialize InterpreterSimulator variables used for debugging"
-	byteCount := sendCount := lookupCount := 0.
-	quitBlock := [^self close].
-	traceOn := true.
-	printSends := printReturns := printFrameAtEachStep := printBytecodeAtEachStep := false.
-	myBitBlt := BitBltSimulator new setInterpreter: self.
-	displayForm := fakeForm := 'Display has not yet been installed' asDisplayText form.
-	eventQueue := SharedQueue new.
-	suppressHeartbeatFlag := false.
-	systemAttributes := Dictionary new.
-	extSemTabSize := 256.
-	disableBooleanCheat := false.
-	assertVEPAES := false. "a flag so the assertValidExecutionPointers can be disabled for simulation speed and enabled when necessary."
 ]
 
 { #category : #'plugin support' }
@@ -899,36 +879,6 @@ StackInterpreterSimulator >> insufficientMemorySpecifiedError [
 StackInterpreterSimulator >> internalCannotReturn: resultOop [
 	self halt.
 	^super internalCannotReturn: resultOop
-]
-
-{ #category : #testing }
-StackInterpreterSimulator >> internalFindNewMethodOrdinary [
-"
-	| cName |
-	traceOn ifTrue:
-		[cName := (self sizeBitsOf: class) = 16r20
-			ifTrue: ['class ' , (self nameOfClass: (self fetchPointer: 6 ofObject: class))]
-			ifFalse: [(self nameOfClass: class)].
-		self cr; print: cName , '>>' , (self stringOf: messageSelector)].
-"
-	messageSelector = (objectMemory splObj: SelectorDoesNotUnderstand) ifTrue: [self halt].
-
-	sendCount := sendCount + 1.
-
-"	printSends ifTrue:
-		[self print: byteCount; space; printStringOf: messageSelector; cr]."
-"
-	(sendCount > 1000 and: [sendCount\\10 = 0]) ifTrue:
-		[Transcript print: sendCount; space.
-		self validate].
-"
-"
-	(sendCount > 100150) ifTrue:
-		[self qvalidate.
-		messageQueue == nil ifTrue: [messageQueue := OrderedCollection new].
-		messageQueue addLast: (self stringOf: messageSelector)].
-"
-	super internalFindNewMethodOrdinary
 ]
 
 { #category : #'debugging traps' }
@@ -1008,6 +958,23 @@ StackInterpreterSimulator >> ioExit [
 StackInterpreterSimulator >> ioExitWithErrorCode: ec [
 
 	quitBlock value  "Cause return from #test"
+]
+
+{ #category : #'I/O primitives support' }
+StackInterpreterSimulator >> ioGetCurrentWorkingDirectory: aCStringHolder maxLength: maxLength [
+
+	| anEncodedString |
+
+	anEncodedString := FileLocator workingDirectory fullName utf8Encoded.
+
+	aCStringHolder object
+		replaceFrom: 1
+		to: anEncodedString size
+		with: anEncodedString
+		startingAt: 1.
+	
+	"No Error"
+	^ 0
 ]
 
 { #category : #'process primitive support' }
@@ -1153,12 +1120,14 @@ StackInterpreterSimulator >> ioProcessEvents [
 { #category : #'I/O primitives support' }
 StackInterpreterSimulator >> ioRelinquishProcessorForMicroseconds: microseconds [
 	"In the simulator give an indication that we're idling and check for input."
+
+	1halt.
 	Display reverse: ((displayView
 						ifNil: [0@0]
 						ifNotNil: [displayView bounds origin]) extent: 16@16).
 	Sensor peekEvent ifNotNil:
 		[self forceInterruptCheck].
-	Processor activeProcess == Project uiProcess ifTrue:
+	Processor activeProcess == UIManager default uiProcess ifTrue:
 		[World doOneCycle].
 	microseconds >= 1000
 		ifTrue: [(Delay forMilliseconds: microseconds + 999 // 1000) wait]
@@ -1806,7 +1775,7 @@ StackInterpreterSimulator >> primitiveContextAt [
 
 { #category : #'debugging traps' }
 StackInterpreterSimulator >> primitiveDoPrimitiveWithArgs [
-	NewspeakVM ifFalse: [self halt].
+	self halt.
 	^super primitiveDoPrimitiveWithArgs
 ]
 
@@ -2401,6 +2370,12 @@ StackInterpreterSimulator >> slowPrimitiveResponse [
 StackInterpreterSimulator >> space [
 
 	traceOn ifTrue: [ transcript space ]
+]
+
+{ #category : #'special objects' }
+StackInterpreterSimulator >> splObj: anInteger [ 
+	<doNotGenerate>
+	^objectMemory splObj: anInteger 
 ]
 
 { #category : #'plugin support' }

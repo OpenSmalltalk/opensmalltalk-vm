@@ -273,114 +273,6 @@ StackToRegisterMappingCogit class >> declareCVarsIn: aCodeGen [
 ]
 
 { #category : #'class initialization' }
-StackToRegisterMappingCogit class >> initializeBytecodeTableForNewspeakV4 [
-	"StackToRegisterMappingCogit initializeBytecodeTableForNewspeakV4"
-
-	numPushNilsFunction := #v4:Num:Push:Nils:.
-	pushNilSizeFunction := #v4PushNilSize:numInitialNils:.
-	NSSendIsPCAnnotated := true. "IsNSSendCall used by SendAbsentImplicit"
-	FirstSpecialSelector := 80.
-	NumSpecialSelectors := 32.
-	self flag:
-'Special selector send class must be inlined to agree with the interpreter, which
- inlines class.  If class is sent to e.g. a general instance of ProtoObject then unless
- class is inlined there will be an MNU.  It must be that the Cointerpreter and Cogit
- have identical semantics.  We get away with not hardwiring the other special
- selectors either because in the Cointerpreter they are not inlined or because they
- are inlined only to instances of classes for which there will always be a method.'.
-	self generatorTableFrom: #(
-		"1 byte bytecodes"
-		(1    0   15 genPushReceiverVariableBytecode isInstVarRef needsFrameNever: 1)
-		(1  16   31 genPushLiteralVariable16CasesBytecode needsFrameNever: 1)
-		(1  32   63 genPushLiteralConstantBytecode needsFrameNever: 1)
-		(1  64   75 genPushTemporaryVariableBytecode needsFrameIfMod16GENumArgs: 1)
-		(1  76   76 genPushReceiverBytecode needsFrameNever: 1)
-		(1  77   77 genExtPushPseudoVariableOrOuterBytecode needsFrameIfExtBGT2: 1)
-		(1  78   78 genPushConstantZeroBytecode needsFrameNever: 1)
-		(1  79   79 genPushConstantOneBytecode needsFrameNever: 1)
-
-		(1   80   80 genSpecialSelectorArithmetic isMapped AddRR)
-		(1   81   81 genSpecialSelectorArithmetic isMapped SubRR)
-		(1   82   82 genSpecialSelectorComparison isMapped JumpLess)
-		(1   83   83 genSpecialSelectorComparison isMapped JumpGreater)
-		(1   84   84 genSpecialSelectorComparison isMapped JumpLessOrEqual)
-		(1   85   85 genSpecialSelectorComparison isMapped JumpGreaterOrEqual)
-		(1   86   86 genSpecialSelectorComparison isMapped JumpZero)
-		(1   87   87 genSpecialSelectorComparison isMapped JumpNonZero)
-		(1   88   93 genSpecialSelectorSend isMapped)	 " #* #/ #\\ #@ #bitShift: //"
-		(1   94   94 genSpecialSelectorArithmetic isMapped AndRR)
-		(1   95   95 genSpecialSelectorArithmetic isMapped OrRR)
-		(1   96 101 genSpecialSelectorSend isMapped) "#at: #at:put: #size #next #nextPut: #atEnd"
-		(1 102 102 genSpecialSelectorEqualsEquals needsFrameNever: notMapped -1) "not mapped because it is directly inlined (for now)"
-		(1 103 103 genSpecialSelectorClass needsFrameIfStackGreaterThanOne: notMapped 0) "not mapped because it is directly inlined (for now)"
-		(1 104 104 genSpecialSelectorNotEqualsEquals needsFrameNever: notMapped -1) "not mapped because it is directly inlined (for now)"
-		(1 105 111 genSpecialSelectorSend isMapped) " #value #value: #do: #new #new: #x #y"
-
-		(1 112 127 genSendLiteralSelector0ArgsBytecode isMapped)
-		(1 128 143 genSendLiteralSelector1ArgBytecode isMapped)
-		(1 144 159 genSendLiteralSelector2ArgsBytecode isMapped)
-		(1 160 175	genSendAbsentImplicit0ArgsBytecode isMapped hasIRC)
-			
-		(1 176 183 genStoreAndPopReceiverVariableBytecode isInstVarRef is1ByteInstVarStore isMappedIfImmutability needsFrameIfImmutability: -1)
-			
-		(1 184 191 genStoreAndPopTemporaryVariableBytecode)
-
-		(1 192 199 genShortUnconditionalJump	branch v3:ShortForward:Branch:Distance:)
-		(1 200 207 genShortJumpIfTrue			branch isBranchTrue isMapped "because of mustBeBoolean"
-													v3:ShortForward:Branch:Distance:)
-		(1 208 215 genShortJumpIfFalse			branch isBranchFalse isMapped "because of mustBeBoolean"
-													v3:ShortForward:Branch:Distance:)
-
-		(1 216 216 genReturnReceiver				return needsFrameIfInBlock: isMappedInBlock 0)
-		(1 217 217 genReturnTopFromMethod		return needsFrameIfInBlock: isMappedInBlock -1)
-		(1 218 218 genExtReturnTopFromBlock	return needsFrameNever: -1)
-
-		(1 219 219 duplicateTopBytecode			needsFrameNever: 1)
-		(1 220 220 genPopStackBytecode			needsFrameNever: -1)
-		(1 221 221 genExtNopBytecode			needsFrameNever: 0)
-		(1 222 223	unknownBytecode)
-
-		"2 byte bytecodes"
-		(2 224 224 extABytecode extension					needsFrameNever: 0)
-		(2 225 225 extBBytecode extension					needsFrameNever: 0)
-		(2 226 226 genExtPushReceiverVariableBytecode isInstVarRef)
-		(2 227 227 genExtPushLiteralVariableBytecode		needsFrameNever: 1)
-		(2 228 228 genExtPushLiteralBytecode					needsFrameNever: 1)
-		(2 229 229 genExtPushIntegerBytecode				needsFrameNever: 1)
-		(2 230 230 genLongPushTemporaryVariableBytecode)
-		(2 231 231 genPushNewArrayBytecode)
-		(2 232 232 genExtStoreReceiverVariableBytecode isInstVarRef isMappedIfImmutability)
-		(2 233 233 genExtStoreLiteralVariableBytecode isMappedIfImmutability)
-		(2 234 234 genLongStoreTemporaryVariableBytecode)
-		(2 235 235 genExtStoreAndPopReceiverVariableBytecode isInstVarRef isMappedIfImmutability)
-		(2 236 236 genExtStoreAndPopLiteralVariableBytecode isMappedIfImmutability)
-		(2 237 237 genLongStoreAndPopTemporaryVariableBytecode)
-
-		(2 238 238 genExtSendBytecode isMapped)
-		(2 239 239 genExtSendSuperBytecode isMapped)
-		(2 240 240 genExtSendAbsentImplicitBytecode isMapped hasIRC)
-		(2 241 241 genExtSendAbsentDynamicSuperBytecode isMapped hasIRC)
-
-		(2 242 242 genExtUnconditionalJump	branch isMapped "because of interrupt check" v4:Long:Branch:Distance:)
-		(2 243 243 genExtJumpIfTrue			branch isBranchTrue isMapped "because of mustBeBoolean" v4:Long:Branch:Distance:)
-		(2 244 244 genExtJumpIfFalse			branch isBranchFalse isMapped "because of mustBeBoolean" v4:Long:Branch:Distance:)
-
-		(2 245 245	genExtSendAbsentSelfBytecode isMapped hasIRC)
-
-		(2 246 248	unknownBytecode)
-
-		"3 byte bytecodes"
-		(3 249 249 genCallPrimitiveBytecode)
-		(3 250 250 genPushRemoteTempLongBytecode)
-		(3 251 251 genStoreRemoteTempLongBytecode)
-		(3 252 252 genStoreAndPopRemoteTempLongBytecode)
-		(3 253 253 genExtPushClosureBytecode block v4:Block:Code:Size:)
-		(3 254 254	genExtSendAbsentOuterBytecode isMapped hasIRC)
-
-		(3 255 255	unknownBytecode))
-]
-
-{ #category : #'class initialization' }
 StackToRegisterMappingCogit class >> initializeBytecodeTableForSistaV1 [
 	"StackToRegisterMappingCogit initializeBytecodeTableForSistaV1"
 
@@ -600,16 +492,6 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSqueakV3PlusClosu
 		(1 208 223 genSendLiteralSelector0ArgsBytecode isMapped)
 		(1 224 239 genSendLiteralSelector1ArgBytecode isMapped)
 		(1 240 255 genSendLiteralSelector2ArgsBytecode isMapped))
-]
-
-{ #category : #'class initialization' }
-StackToRegisterMappingCogit class >> initializeBytecodeTableForSqueakV3PlusClosuresNewspeakV4Hybrid [
-	"SimpleStackBasedCogit initializeBytecodeTableForSqueakV3PlusClosuresNewspeakV4Hybrid"
-	"StackToRegisterMappingCogit initializeBytecodeTableForSqueakV3PlusClosuresNewspeakV4Hybrid"
-
-	super initializeBytecodeTableForSqueakV3PlusClosuresNewspeakV4Hybrid.
-	numPushNilsFunction := #v3or4:Num:Push:Nils:.
-	pushNilSizeFunction := #v3or4PushNilSize:numInitialNils:
 ]
 
 { #category : #'class initialization' }
@@ -2499,8 +2381,6 @@ StackToRegisterMappingCogit >> compileBlockBodies [
 		 initialOpcodeIndex := opcodeIndex.
 		 initialCounterIndex := self maybeCounterIndex."for SistaCogit"
 		 literalsManager saveForRecompile.
-		 NewspeakVM ifTrue:
-			[initialIndexOfIRC := indexOfIRC].
 		 [self compileBlockEntry: blockStart.
 		  initialStackPtr := simStackPtr.
 		  (result := self compileAbstractInstructionsFrom: blockStart startpc + (self pushNilSize: methodObj numInitialNils: blockStart numInitialNils)
@@ -2525,9 +2405,7 @@ StackToRegisterMappingCogit >> compileBlockBodies [
 									[:i| abstractOpcodes at: i put: (CogCompilerClass for: self)]].
 				 opcodeIndex := initialOpcodeIndex.
 				 self maybeSetCounterIndex: initialCounterIndex. "For SistaCogit"
-				 literalsManager resetForRecompile.
-				 NewspeakVM ifTrue:
-					[indexOfIRC := initialIndexOfIRC]].
+				 literalsManager resetForRecompile ].
 		compiledBlocksCount := compiledBlocksCount + 1].
 	needsFrame := savedNeedsFrame.
 	methodOrBlockNumArgs := savedNumArgs.
@@ -11240,36 +11118,6 @@ StackToRegisterMappingCogit >> genMethodAbortTrampolineFor: numArgs [
 		appendOpcodes: true
 ]
 
-{ #category : #'bytecode generators' }
-StackToRegisterMappingCogit >> genNSSend: selectorIndex numArgs: numArgs depth: depth sendTable: sendTable [
-	<var: #sendTable type: #'sqInt *'>
-	| selector nsSendCache |
-	self assert: (selectorIndex between: 0 and: (objectMemory literalCountOf: methodObj) - 1).
-	selector := self getLiteral: selectorIndex.
-	self assert: (objectMemory addressCouldBeOop: selector).	
-	(objectMemory isYoung: selector) ifTrue:
-		[hasYoungReferent := true].
-
-	nsSendCache := theIRCs + (NumOopsPerNSC * objectMemory bytesPerOop * indexOfIRC).
-	indexOfIRC := indexOfIRC + 1.
-	self assert: (objectMemory isInOldSpace: nsSendCache).
-	self initializeNSSendCache: nsSendCache selector: selector numArgs: numArgs depth: depth.
-
-	self ssAllocateCallReg: SendNumArgsReg.
-
-	"This may leave the method receiver on the stack, which might not be the implicit receiver.
-	 But the lookup trampoline will establish an on-stack receiver once it locates it."
-	self marshallAbsentReceiverSendArguments: numArgs.
-
-	"Load the cache last so it is a fixed distance from the call."
-	self MoveUniqueCw: nsSendCache R: SendNumArgsReg.
-	self CallNewspeakSend: (sendTable at: (numArgs min: NumSendTrampolines - 1)).
-
-	self voidReceiverOptStatus.
-	self ssPushRegister: ReceiverResultReg.
-	^0
-]
-
 { #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genOutlineClosure: startpc numArgs: numArgs numCopied: numCopied [
 	<inline: true>
@@ -11762,13 +11610,16 @@ StackToRegisterMappingCogit >> genSpecialSelectorArithmetic [
 	<var: #primDescriptor type: #'BytecodeDescriptor *'>
 	<var: #jumpNotSmallInts type: #'AbstractInstruction *'>
 	primDescriptor := self generatorAt: byte0.
-	argIsInt := (argIsConst := self ssTop type = SSConstant)
-				 and: [objectMemory isIntegerObject: (argInt := self ssTop constant)].
+
+	argIsInt := ((argIsConst := self ssTop type = SSConstant)
+				 and: [objectMemory isIntegerObject: (argInt := self ssTop constant)])
+				 or: [self mclassIsSmallInteger and: [self ssTop isSameEntryAs: self simSelf]].
+
 	rcvrIsInt := ((rcvrIsConst := (self ssValue: 1) type = SSConstant)
 				  and: [objectMemory isIntegerObject: (rcvrInt := (self ssValue: 1) constant)])
 				or: [self mclassIsSmallInteger and: [(self ssValue: 1) isSameEntryAs: self simSelf]].
 
-	(argIsInt and: [rcvrIsInt and: [rcvrIsConst]]) ifTrue:
+	(argIsInt and: [argIsConst and: [rcvrIsInt and: [rcvrIsConst]]]) ifTrue:
 		[rcvrInt := objectMemory integerValueOf: rcvrInt.
 		 argInt := objectMemory integerValueOf: argInt.
 		 primDescriptor opcode caseOf: {
@@ -11791,7 +11642,7 @@ StackToRegisterMappingCogit >> genSpecialSelectorArithmetic [
 	(argIsInt or: [rcvrIsInt]) ifFalse:
 		[^self genSpecialSelectorSend].
 
-	argIsInt
+	argIsConst
 		ifTrue:
 			[self ssFlushTo: simStackPtr - 2.
 			 (self ssValue: 1) popToReg: ReceiverResultReg.
@@ -11806,7 +11657,7 @@ StackToRegisterMappingCogit >> genSpecialSelectorArithmetic [
 										ifTrue: [objectRepresentation genJumpNotSmallInteger: Arg0Reg]
 										ifFalse: [objectRepresentation genJumpNotSmallIntegersIn: ReceiverResultReg and: Arg0Reg scratch: TempReg]]].
 	primDescriptor opcode caseOf: {
-		[AddRR] -> [argIsInt
+		[AddRR] -> [argIsConst
 						ifTrue:
 							[self AddCq: argInt - ConstZero R: ReceiverResultReg.
 							 jumpContinue := self JumpNoOverflow: 0.
@@ -11822,7 +11673,7 @@ StackToRegisterMappingCogit >> genSpecialSelectorArithmetic [
 								ifFalse:
 									[self SubR: Arg0Reg R: ReceiverResultReg.
 									 objectRepresentation genSetSmallIntegerTagsIn: ReceiverResultReg]]].
-		[SubRR] -> [argIsInt
+		[SubRR] -> [argIsConst
 						ifTrue:
 							[self SubCq: argInt - ConstZero R: ReceiverResultReg.
 							 jumpContinue := self JumpNoOverflow: 0.
@@ -11835,11 +11686,11 @@ StackToRegisterMappingCogit >> genSpecialSelectorArithmetic [
 							 "overflow; must undo the damage before continuing"
 							 self AddR: Arg0Reg R: ReceiverResultReg.
 							 objectRepresentation genSetSmallIntegerTagsIn: Arg0Reg]].
-		[AndRR] -> [argIsInt
+		[AndRR] -> [argIsConst
 						ifTrue: [self AndCq: argInt R: ReceiverResultReg]
 						ifFalse: [self AndR: Arg0Reg R: ReceiverResultReg].
 					jumpContinue := jumpNotSmallInts ifNotNil: [self Jump: 0]].
-		[OrRR]	-> [argIsInt
+		[OrRR]	-> [argIsConst
 						ifTrue: [self OrCq: argInt R: ReceiverResultReg]
 						ifFalse: [self OrR: Arg0Reg R: ReceiverResultReg].
 					jumpContinue := jumpNotSmallInts ifNotNil: [self Jump: 0]] }.
@@ -11850,7 +11701,7 @@ StackToRegisterMappingCogit >> genSpecialSelectorArithmetic [
 				 ^0]]
 		ifNotNil:
 			[jumpNotSmallInts jmpTarget: self Label].
-	argIsInt ifTrue:
+	argIsConst ifTrue:
 		[self MoveCq: argInt R: Arg0Reg].
 	index := byte0 - self firstSpecialSelectorBytecodeOffset.
 	self genMarshalledSend: index negated - 1 numArgs: 1 sendTable: ordinarySendTrampolines.
@@ -12368,7 +12219,6 @@ StackToRegisterMappingCogit >> generateSendTrampolines [
 					  arg: (self numArgsOrSendNumArgsReg: numArgs))].
 
 	"Generate these in the middle so they are within [firstSend, lastSend]."
-	NewspeakVM ifTrue: [self generateNewspeakSendTrampolines].
 	BytecodeSetHasDirectedSuperSend ifTrue:
 		[0 to: NumSendTrampolines - 1 do:
 			[:numArgs|
@@ -13070,6 +12920,11 @@ StackToRegisterMappingCogit >> receiverIsInReceiverResultReg [
 	^self simSelf liveRegister = ReceiverResultReg
 ]
 
+{ #category : #accessing }
+StackToRegisterMappingCogit >> regArgsHaveBeenPushed: aBoolean [
+	regArgsHaveBeenPushed := aBoolean
+]
+
 { #category : #'compile abstract instructions' }
 StackToRegisterMappingCogit >> reinitializeFixupsFrom: start through: end [
 	"When a block must be recompiled due to overestimating the
@@ -13195,8 +13050,6 @@ StackToRegisterMappingCogit >> scanMethod [
 	self maybeInitNumFixups.
 	self maybeInitNumCounters.
 	prevBCDescriptor := nil.
-	NewspeakVM ifTrue:
-		[numIRCs := 0].
 	(primitiveIndex > 0
 	 and: [coInterpreter isQuickPrimitiveIndex: primitiveIndex]) ifTrue:
 		[^0].
@@ -13257,8 +13110,6 @@ StackToRegisterMappingCogit >> scanMethod [
 			 latestContinuation := latestContinuation max: targetPC.
 			 self maybeCountFixup: descriptor].
 
-		 NewspeakVM ifTrue:
-			[descriptor hasIRC ifTrue: [numIRCs := numIRCs + 1]].
 		 pc := pc + descriptor numBytes.
 		 nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [extA := numExtB := extB := 0].
 		 prevBCDescriptor := descriptor].

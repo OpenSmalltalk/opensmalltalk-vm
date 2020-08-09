@@ -164,8 +164,6 @@ RegisterAllocatingCogit >> compileBlockBodies [
 		 initialOpcodeIndex := opcodeIndex.
 		 initialCounterIndex := self maybeCounterIndex."for SistaCogit"
 		 literalsManager saveForRecompile.
-		 NewspeakVM ifTrue:
-			[initialIndexOfIRC := indexOfIRC].
 		 [recompileForLoopRegisterAssignments := false.
 		  self compileBlockEntry: blockStart.
 		  initialStackPtr := simStackPtr.
@@ -190,9 +188,7 @@ RegisterAllocatingCogit >> compileBlockBodies [
 				 self reinitializeOpcodesFrom: initialOpcodeIndex to: opcodeIndex - 1.
 				 opcodeIndex := initialOpcodeIndex.
 				 self maybeSetCounterIndex: initialCounterIndex. "For SistaCogit"
-				 literalsManager resetForRecompile.
-				 NewspeakVM ifTrue:
-					[indexOfIRC := initialIndexOfIRC]].
+				 literalsManager resetForRecompile ].
 		compiledBlocksCount := compiledBlocksCount + 1].
 	needsFrame := savedNeedsFrame.
 	methodOrBlockNumArgs := savedNumArgs.
@@ -227,8 +223,6 @@ RegisterAllocatingCogit >> compileMethodBody [
 	initialOpcodeIndex := opcodeIndex.
 	initialCounterIndex := self maybeCounterIndex."for SistaCogit"
 	literalsManager saveForRecompile.
-	NewspeakVM ifTrue:
-		[initialIndexOfIRC := indexOfIRC].
 	[recompileForLoopRegisterAssignments := false.
 	 start := initialPC + (self deltaToSkipPrimAndErrorStoreIn: methodObj header: methodHeader).
 	 result := self compileAbstractInstructionsFrom: start through: endPC.
@@ -243,9 +237,7 @@ RegisterAllocatingCogit >> compileMethodBody [
 			 nextFixup := 0.
 			 opcodeIndex := initialOpcodeIndex.
 			 self maybeSetCounterIndex: initialCounterIndex. "For SistaCogit"
-			 literalsManager resetForRecompile.
-			 NewspeakVM ifTrue:
-				[indexOfIRC := initialIndexOfIRC]].
+			 literalsManager resetForRecompile ].
 	^result
 ]
 

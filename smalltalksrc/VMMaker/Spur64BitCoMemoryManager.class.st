@@ -49,9 +49,7 @@ Spur64BitCoMemoryManager class >> objectRepresentationClass [
 
 { #category : #simulation }
 Spur64BitCoMemoryManager class >> simulatorClass [
-	^Spur64BitMMLECoSimulatorFor64Bits basicNew memoryClass
-		ifNil: [Spur64BitMMLECoSimulator]
-		ifNotNil: [Spur64BitMMLECoSimulatorFor64Bits]
+	^ Spur64BitMMLECoSimulator
 ]
 
 { #category : #'growing/shrinking memory' }
@@ -109,6 +107,13 @@ Spur64BitCoMemoryManager >> clearLeakMapAndMapAccessibleObjects [
 	 Override to set a bit at each Cog method"
 	super clearLeakMapAndMapAccessibleObjects.
 	cogit addCogMethodsToHeapMap
+]
+
+{ #category : #accessing }
+Spur64BitCoMemoryManager >> cogit: aCogit [ 
+	<doNotGenerate>
+
+	cogit := aCogit
 ]
 
 { #category : #'cog jit support' }
@@ -280,17 +285,9 @@ Spur64BitCoMemoryManager >> receiverTagBitsForMethod: aMethodObj [
 	<api>
 	| methodClassOrNil |
 	methodClassOrNil := coInterpreter methodClassOf: aMethodObj.
-	NewspeakVM "Mixins don't necessarily have a format inst var; filter out non-integer format."
-		ifTrue:
-			[| instSpec |
-			(methodClassOrNil = nilObj
-			 or: [(self isNonIntegerObject: (instSpec := self fetchPointer: InstanceSpecificationIndex ofObject: methodClassOrNil))
-			 or: [(self instSpecOfClassFormat: (self integerValueOf: instSpec)) ~= self forwardedFormat]]) ifTrue:
-				[^0]]
-		ifFalse:
-			[(methodClassOrNil = nilObj
-			 or: [(self instSpecOfClass: methodClassOrNil) ~= self forwardedFormat]) ifTrue:
-				[^0]].
+	(methodClassOrNil = nilObj
+		 or: [(self instSpecOfClass: methodClassOrNil) ~= self forwardedFormat]) ifTrue:
+			[^0].
 	methodClassOrNil = (self fetchPointer: self smallIntegerTag ofObject: classTableFirstPage) ifTrue:
 		[^self smallIntegerTag].
 	methodClassOrNil = (self fetchPointer: self characterTag ofObject: classTableFirstPage) ifTrue:

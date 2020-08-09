@@ -97,9 +97,7 @@ FilePlugin >> connectToFile: cfile write: writeFlag [
 { #category : #'directory primitives' }
 FilePlugin >> dir_Delimitor [
 	<doNotGenerate>
-	^(Smalltalk classNamed: #FileSystem)
-		ifNotNil: [:fileSystem| fileSystem disk delimiter asInteger]
-		ifNil: [FileDirectory pathNameDelimiter asInteger]
+	^FileSystem disk delimiter asInteger
 ]
 
 { #category : #'file primitives' }

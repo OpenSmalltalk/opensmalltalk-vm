@@ -556,7 +556,11 @@ CogIA32Compiler >> computeMaximumSize [
 		[SignExtend8RR] -> [^3].
 		[SignExtend16RR] -> [^3].
 		[ZeroExtend8RR] -> [^3].
-		[ZeroExtend16RR] -> [^3]. }.
+		[ZeroExtend16RR] -> [^3].
+	
+		"This is a fixed size instruction using a patcheable literal. This takes ALWAYS 1 instruction of 5 bytes"
+		[MovePatcheableC32R] -> [ ^ 5 ]
+	 }.
 	^0 "to keep C compiler quiet"
 ]
 
@@ -1836,6 +1840,12 @@ CogIA32Compiler >> concretizeMoveMwrR [
 	^machineCodeSize := 7
 ]
 
+{ #category : #'as yet unclassified' }
+CogIA32Compiler >> concretizeMovePatcheableC32R [
+	
+	^ self concretizeMoveCwR
+]
+
 { #category : #'generate machine code' }
 CogIA32Compiler >> concretizeMoveRAb [
 	"Will get inlined into concretizeAt: switch."
@@ -2962,7 +2972,9 @@ CogIA32Compiler >> dispatchConcretize [
 		[SignExtend16RR]		-> [^self concretizeSignExtend16RR].
 		
 		[ZeroExtend8RR]		-> [^self concretizeZeroExtend8RR].
-		[ZeroExtend16RR]		-> [^self concretizeZeroExtend16RR].}
+		[ZeroExtend16RR]		-> [^self concretizeZeroExtend16RR].
+			
+		[ MovePatcheableC32R ] -> [ ^ self concretizeMovePatcheableC32R ] }
 ]
 
 { #category : #'generate machine code' }
@@ -3822,16 +3834,6 @@ CogIA32Compiler >> mod: mod RM: regMode RO: regOpcode [
 				Valid digit values range from 0 to 7.
 		/r		Indicates that the ModRM byte specifies both a register operand and a reg/mem (register or memory) operand."
 	^mod << 6 + (regOpcode << 3) + regMode
-]
-
-{ #category : #'inline cacheing' }
-CogIA32Compiler >> nsSendCacheAt: callSiteReturnAddress [
-	"Answer the NSSendCache for the return address of a Newspeak
-	 self, super, outer, or implicit receiver send."
-	<option: #NewspeakVM>
-	<var: #callSiteReturnAddress type: #'char *'>
-	<inline: false>
-	^self literalBeforeFollowingAddress: callSiteReturnAddress asUnsignedInteger - 5 "sizeofcall"
 ]
 
 { #category : #'feature detection' }

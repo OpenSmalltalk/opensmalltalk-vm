@@ -180,7 +180,7 @@ InterpreterPrimitives >> canBeImmutable: oop [
 	
 	"Simple version of process management: we forbid Process and LinkedList instances to be immutable 
 	 as well as the Processor and the array of activeProcess"
-	scheduler := self fetchPointer: ValueIndex ofObject: (self splObj: SchedulerAssociation).
+	scheduler := objectMemory fetchPointer: ValueIndex ofObject: (objectMemory splObj: SchedulerAssociation).
 	processLists := objectMemory fetchPointer: ProcessListsIndex ofObject: scheduler.
 	oop = scheduler ifTrue: [ ^ false ].
 	oop = processLists ifTrue: [ ^ false ].
@@ -499,6 +499,12 @@ InterpreterPrimitives >> maybeInlinePositive32BitValueOf: oop [
 			^self cCoerceSimple: (objectMemory byteSwapped32IfBigEndian: (objectMemory fetchLong32: 0 ofObject: oop)) to: #'unsigned int']
 ]
 
+{ #category : #'simulation support' }
+InterpreterPrimitives >> newMethod: oop [
+	<doNotGenerate>
+	newMethod := oop
+]
+
 { #category : #'primitive support' }
 InterpreterPrimitives >> noInlineSigned32BitValueGutsOf: oop [
 	"Convert the given object into an integer value.
@@ -732,11 +738,6 @@ InterpreterPrimitives >> primitiveAllInstances [
 
 	<export: true>
 	| result |
-	NewspeakVM ifTrue: "For the mirror prims check that the class obj is actually a valid class."
-		[(argumentCount < 1
-		  or: [(objectMemory isNonImmediate: self stackTop)
-			  and: [self objCouldBeClassObj: self stackTop]]) ifFalse:
-			[^self primitiveFailFor: PrimErrBadArgument]].
 	result := objectMemory allInstancesOf: self stackTop.
 	(objectMemory isIntegerObject: result) ifTrue:
 		[objectMemory growToAccomodateContainerWithNumSlots: (objectMemory integerValueOf: result).
@@ -1000,11 +1001,6 @@ InterpreterPrimitives >> primitiveBeep [
 { #category : #'object access primitives' }
 InterpreterPrimitives >> primitiveBehaviorHash [
 	| hashOrError |
-	NewspeakVM ifTrue: "For the mirror prims check that the class obj is actually a valid class."
-		[argumentCount > 0 ifTrue:
-			[((objectMemory isNonImmediate: self stackTop)
-			  and: [self objCouldBeClassObj: self stackTop]) ifFalse:
-				[^self primitiveFailFor: PrimErrBadArgument]]].
 	self assert: ((objectMemory isNonImmediate: self stackTop)
 				  and: [self addressCouldBeClassObj: self stackTop]).
 	hashOrError := objectMemory ensureBehaviorHash: self stackTop.
@@ -2135,15 +2131,6 @@ InterpreterPrimitives >> primitiveForceDisplayUpdate [
 ]
 
 { #category : #'I/O primitives' }
-InterpreterPrimitives >> primitiveForceTenure [
-	"Set force tenure flag to true, this forces a tenure operation on the next incremental GC"
-
-	<export: true>
-	<option: #SqueakV3ObjectMemory>
-	objectMemory forceTenureFlag: 1
-]
-
-{ #category : #'I/O primitives' }
 InterpreterPrimitives >> primitiveFormPrint [
 	"On platforms that support it, this primitive prints the receiver, assumed to be a Form, to the default printer."
 
@@ -2801,19 +2788,6 @@ InterpreterPrimitives >> primitiveIsPinned [
 		thenPushBool: (objectMemory isPinned: obj)
 ]
 
-{ #category : #'memory space primitives' }
-InterpreterPrimitives >> primitiveIsRoot [
-	"Primitive. Answer whether the argument to the primitive is a root for young space"
-	| oop |
-	<export: true>
-	<option: #SqueakV3ObjectMemory>
-	oop := self stackObjectValue: 0.
-	self successful ifTrue:
-		[self
-			pop: argumentCount + 1
-			thenPushBool: (objectMemory isYoungRoot: oop)]
-]
-
 { #category : #'I/O primitives' }
 InterpreterPrimitives >> primitiveIsWindowObscured [
 	"Primitive. Answer whether the OS window is currently partially or fully obscured."
@@ -2821,17 +2795,6 @@ InterpreterPrimitives >> primitiveIsWindowObscured [
 	self pop: self methodArgumentCount+1.
 	self pushBool: self ioIsWindowObscured.
 
-]
-
-{ #category : #'memory space primitives' }
-InterpreterPrimitives >> primitiveIsYoung [
-	"Primitive. Answer whether the argument to the primitive resides in young space."
-	| oop |
-	<export: true>
-	<option: #SqueakV3ObjectMemory> "for now..."
-	oop := self stackObjectValue: 0.
-	self successful ifTrue:
-		[self pop: argumentCount + 1 thenPushBool: (self oop: oop isGreaterThanOrEqualTo: objectMemory youngStart)]
 ]
 
 { #category : #'I/O primitives' }
@@ -3842,10 +3805,6 @@ InterpreterPrimitives >> primitiveMultiplyLargeIntegers [
 
 { #category : #'object access primitives' }
 InterpreterPrimitives >> primitiveNew [
-	NewspeakVM ifTrue: "For the mirror prims check that the class obj is actually a valid class."
-		[(argumentCount < 1
-		  or: [self objCouldBeClassObj: self stackTop]) ifFalse:
-			[^self primitiveFailFor: PrimErrBadArgument]].
 	objectMemory hasSpurMemoryManagerAPI
 		ifTrue:
 			["Allocate a new fixed-size instance.  Fail if the allocation would leave
@@ -3903,13 +3862,24 @@ InterpreterPrimitives >> primitiveNewMethod [
 ]
 
 { #category : #'object access primitives' }
+InterpreterPrimitives >> primitiveNewPinned [
+	
+	self assert: objectMemory hasSpurMemoryManagerAPI.
+		
+	"Allocate a new pinned fixed-size instance.  Fail if the allocation would leave
+			  less than lowSpaceThreshold bytes free. This *will not* cause a GC :-)"
+	(objectMemory instantiateClass: self stackTop isPinned: true)
+				ifNotNil: [:obj| self pop: argumentCount + 1 thenPush: obj]
+				ifNil: [self primitiveFailFor: ((objectMemory isFixedSizePointerFormat: (objectMemory instSpecOfClass: self stackTop))
+											ifTrue: [PrimErrNoMemory]
+											ifFalse: [PrimErrBadReceiver])]
+
+]
+
+{ #category : #'object access primitives' }
 InterpreterPrimitives >> primitiveNewWithArg [
 	"Allocate a new indexable instance. Fail if the allocation would leave less than lowSpaceThreshold bytes free. May cause a GC."
 	| size spaceOkay instSpec |
-	NewspeakVM ifTrue: "For the mirror prims check that the class obj is actually a valid class."
-		[(argumentCount < 2
-		  or: [self addressCouldBeClassObj: (self stackValue: 1)]) ifFalse:
-			[^self primitiveFailFor: PrimErrBadArgument]].
 	size := self positiveMachineIntegerValueOf: self stackTop.
 	self successful ifFalse:"positiveMachineIntegerValueOf: succeeds only for non-negative integers."
 		[^self primitiveFailFor: PrimErrBadArgument].
@@ -3931,6 +3901,27 @@ InterpreterPrimitives >> primitiveNewWithArg [
 						thenPush: (objectMemory instantiateClass: (self stackValue: 1) indexableSize: size)]
 				ifFalse:
 					[self primitiveFailFor: PrimErrNoMemory]]
+]
+
+{ #category : #'object access primitives' }
+InterpreterPrimitives >> primitiveNewWithArgPinned [
+	| size instSpec |
+	
+	self assert: objectMemory hasSpurMemoryManagerAPI.
+
+	size := self positiveMachineIntegerValueOf: self stackTop.
+
+	(objectMemory
+		instantiateClass: (self stackValue: 1)
+		indexableSize: size
+		isPinned: true)
+			ifNotNil: [ :obj | self pop: argumentCount + 1 thenPush: obj ]
+			ifNil: [ instSpec := objectMemory instSpecOfClass: (self stackValue: 1).
+			self primitiveFailFor:
+					(((objectMemory isIndexableFormat: instSpec)
+						and: [ (objectMemory isCompiledMethodFormat: instSpec) not ])
+						ifTrue: [ PrimErrNoMemory ]
+						ifFalse: [ PrimErrBadReceiver ]) ]
 ]
 
 { #category : #'object access primitives' }
@@ -4316,36 +4307,6 @@ InterpreterPrimitives >> primitiveResume [
 	self resume: proc preemptedYieldingIf: preemptionYields"
 ]
 
-{ #category : #'memory space primitives' }
-InterpreterPrimitives >> primitiveRootTable [
-	"Primitive. Answer a copy (snapshot) element of the root table.
-	The primitive can cause GC itself and if so the return value may
-	be inaccurate - in this case one should guard the read operation
-	by looking at the gc counter statistics."
-	<option: #SqueakV3ObjectMemory>
-	self pop: argumentCount + 1 thenPush: objectMemory rootTableObject
-]
-
-{ #category : #'memory space primitives' }
-InterpreterPrimitives >> primitiveRootTableAt [
-	"Primitive. Answer the nth element of the root table.
-	This primitive avoids the creation of an extra array;
-	it is intended for enumerations of the form:
-		index := 1.
-		[root := Smalltalk rootTableAt: index.
-		root == nil] whileFalse:[index := index + 1].
-	"
-	<export: true>
-	<option: #SqueakV3ObjectMemory>
-	| index |
-	index := self stackIntegerValue: 0.
-	self success: (index > 0 and:[index <= objectMemory rootTableCount]).
-	self successful ifTrue:[
-		self pop: argumentCount + 1.
-		self push: (objectMemory rootTable at: index).
-	]
-]
-
 { #category : #'I/O primitives' }
 InterpreterPrimitives >> primitiveScanCharacters [
 	"The character scanner primitive."
@@ -4494,32 +4455,6 @@ InterpreterPrimitives >> primitiveSetFullScreen [
 				ifTrue: [self ioSetFullScreen: false]
 				ifFalse: [self primitiveFail]].
 	self successful ifTrue: [self pop: 1]
-]
-
-{ #category : #'memory space primitives' }
-InterpreterPrimitives >> primitiveSetGCBiasToGrow [
-	"Primitive. Indicate if the GC logic should have bias to grow"
-	| flag |
-	<export: true>
-	<option: #SqueakV3ObjectMemory> "for now..."
-	flag := self stackIntegerValue: 0.
-	self successful ifTrue:[
-		objectMemory gcBiasToGrow: flag.
-		self pop: argumentCount.
-	]
-]
-
-{ #category : #'memory space primitives' }
-InterpreterPrimitives >> primitiveSetGCBiasToGrowGCLimit [
-	"Primitive. If the GC logic has  bias to grow, set growth limit"
-	| value |
-	<export: true>
-	<option: #SqueakV3ObjectMemory> "for now..."
-	value := self stackIntegerValue: 0.
-	self successful ifTrue:
-		[objectMemory gcBiasToGrowGCLimit: value.
-		 objectMemory gcBiasToGrowThreshold: objectMemory youngStart - objectMemory startOfMemory asInteger.
-		 self pop: argumentCount]
 ]
 
 { #category : #'object access primitives' }
@@ -4760,13 +4695,8 @@ InterpreterPrimitives >> primitiveSizeInBytesOfInstance [
 	 size of an instance of the receiver with that many indexable elements."
 	<option: #SpurObjectMemory>
 	| byteSize err |
-	NewspeakVM
-		ifTrue: "Support VMMirror>>byteSizeOfInstanceOf:WithIndexableVariables:"
-			[argumentCount > 2 ifTrue:
-				[^self primitiveFailFor: PrimErrBadNumArgs]]
-		ifFalse:
-			[argumentCount > 1 ifTrue:
-				[^self primitiveFailFor: PrimErrBadNumArgs]].
+	argumentCount > 1 ifTrue:
+		[^self primitiveFailFor: PrimErrBadNumArgs].
 	err := -1.
 	argumentCount >= 1 ifTrue:
 		[(objectMemory isIntegerObject: self stackTop) ifFalse:
@@ -5200,11 +5130,6 @@ InterpreterPrimitives >> primitiveSnapshotEmbedded [
 InterpreterPrimitives >> primitiveSomeInstance [
 	| class instance |
 	class := self stackTop.
-	NewspeakVM ifTrue: "For the mirror prims check that the class obj is actually a valid class."
-		[(argumentCount < 1
-		  or: [(objectMemory isNonImmediate: class)
-			  and: [self objCouldBeClassObj: class]]) ifFalse:
-			[^self primitiveFailFor: PrimErrBadArgument]].
 	instance := objectMemory initialInstanceOf: class.
 	instance
 		ifNil: [self primitiveFail]
@@ -6822,6 +6747,27 @@ InterpreterPrimitives >> primitiveYield [
 	(self isEmptyList: processList) ifFalse:
 		[self addLastLink: activeProc toList: processList.
 		 self transferTo: self wakeHighestPriority]
+]
+
+{ #category : #accessing }
+InterpreterPrimitives >> profileMethod: anOop [
+
+	<doNotGenerate>
+	profileMethod := anOop
+]
+
+{ #category : #accessing }
+InterpreterPrimitives >> profileProcess: anOop [
+
+	<doNotGenerate>
+	profileProcess := anOop
+]
+
+{ #category : #accessing }
+InterpreterPrimitives >> profileSemaphore: anOop [
+
+	<doNotGenerate>
+	profileSemaphore := anOop
 ]
 
 { #category : #'arithmetic integer primitives' }

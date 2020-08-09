@@ -68,101 +68,6 @@ SimpleStackBasedCogit class >> declareCVarsIn: aCCodeGenerator [
 ]
 
 { #category : #'class initialization' }
-SimpleStackBasedCogit class >> initializeBytecodeTableForNewspeakV4 [
-	"SimpleStackBasedCogit initializeBytecodeTableForNewspeakV4"
-
-	NSSendIsPCAnnotated := false. "IsNSSendCall used by SendAbsentImplicit"
-	FirstSpecialSelector := 80.
-	NumSpecialSelectors := 32.
-	self flag:
-'Special selector send class must be inlined to agree with the interpreter, which
- inlines class.  If class is sent to e.g. a general instance of ProtoObject then unless
- class is inlined there will be an MNU.  It must be that the Cointerpreter and Cogit
- have identical semantics.  We get away with not hardwiring the other special
- selectors either because in the Cointerpreter they are not inlined or because they
- are inlined only to instances of classes for which there will always be a method.'.
-	self generatorTableFrom: #(
-		"1 byte bytecodes"
-		(1    0   15 genPushReceiverVariableBytecode isInstVarRef)
-		(1  16   31 genPushLiteralVariable16CasesBytecode needsFrameNever: 1)
-		(1  32   63 genPushLiteralConstantBytecode needsFrameNever: 1)
-		(1  64   75 genPushTemporaryVariableBytecode)
-		(1  76   76 genPushReceiverBytecode)
-		(1  77   77 genExtPushPseudoVariableOrOuterBytecode)
-		(1  78   78 genPushConstantZeroBytecode)
-		(1  79   79 genPushConstantOneBytecode)
-
-		(1   80 101 genSpecialSelectorSend isMapped) "#+ #- #< #> #<= #>= #= #~= #* #/ #\\ #@ #bitShift: #// #bitAnd: #bitOr: #at: #at:put: #size #next #nextPut: #atEnd"
-		(1 102 102 genSpecialSelectorEqualsEquals needsFrameNever: notMapped -1) "not mapped because it is directly inlined (for now)"
-		(1 103 103 genSpecialSelectorClass needsFrameNever: notMapped 0) "not mapped because it is directly inlined (for now)"
-		(1 104 104 genSpecialSelectorNotEqualsEquals needsFrameNever: notMapped -1) "not mapped because it is directly inlined (for now)"
-		(1 105 111 genSpecialSelectorSend isMapped) "#value #value: #do: #new #new: #x #y"
-
-		(1 112 127 genSendLiteralSelector0ArgsBytecode isMapped)
-		(1 128 143 genSendLiteralSelector1ArgBytecode isMapped)
-		(1 144 159 genSendLiteralSelector2ArgsBytecode isMapped)
-		(1 160 175	genSendAbsentImplicit0ArgsBytecode isMapped hasIRC)
-
-		(1 176 183 genStoreAndPopReceiverVariableBytecode isInstVarRef isMappedIfImmutability needsFrameIfImmutability: -1)
-
-		(1 184 191 genStoreAndPopTemporaryVariableBytecode)
-
-		(1 192 199 genShortUnconditionalJump	branch v3:ShortForward:Branch:Distance:)
-		(1 200 207 genShortJumpIfTrue			branch isBranchTrue isMapped "because of mustBeBoolean"
-													v3:ShortForward:Branch:Distance:)
-		(1 208 215 genShortJumpIfFalse			branch isBranchFalse isMapped "because of mustBeBoolean"
-													v3:ShortForward:Branch:Distance:)
-
-		(1 216 216 genReturnReceiver				return needsFrameIfInBlock: isMappedInBlock 0)
-		(1 217 217 genReturnTopFromMethod		return needsFrameIfInBlock: isMappedInBlock -1)
-		(1 218 218 genExtReturnTopFromBlock	return needsFrameNever: -1)
-
-		(1 219 219 duplicateTopBytecode			needsFrameNever: 1)
-		(1 220 220 genPopStackBytecode			needsFrameNever: -1)
-		(1 221 221 genExtNopBytecode			needsFrameNever: 0)
-		(1 222 223	unknownBytecode)
-
-		"2 byte bytecodes"
-		(2 224 224 extABytecode extension)
-		(2 225 225 extBBytecode extension)
-		(2 226 226 genExtPushReceiverVariableBytecode isInstVarRef)
-		(2 227 227 genExtPushLiteralVariableBytecode		needsFrameNever: 1)
-		(2 228 228 genExtPushLiteralBytecode					needsFrameNever: 1)
-		(2 229 229 genExtPushIntegerBytecode				needsFrameNever: 1)
-		(2 230 230 genLongPushTemporaryVariableBytecode)
-		(2 231 231 genPushNewArrayBytecode)
-		(2 232 232 genExtStoreReceiverVariableBytecode isInstVarRef isMappedIfImmutability)
-		(2 233 233 genExtStoreLiteralVariableBytecode isMappedIfImmutability)
-		(2 234 234 genLongStoreTemporaryVariableBytecode)
-		(2 235 235 genExtStoreAndPopReceiverVariableBytecode isInstVarRef isMappedIfImmutability)
-		(2 236 236 genExtStoreAndPopLiteralVariableBytecode isMappedIfImmutability)
-		(2 237 237 genLongStoreAndPopTemporaryVariableBytecode)
-
-		(2 238 238 genExtSendBytecode isMapped)
-		(2 239 239 genExtSendSuperBytecode isMapped)
-		(2 240 240 genExtSendAbsentImplicitBytecode isMapped hasIRC)
-		(2 241 241 genExtSendAbsentDynamicSuperBytecode isMapped hasIRC)
-
-		(2 242 242 genExtUnconditionalJump	branch isMapped "because of interrupt check" v4:Long:Branch:Distance:)
-		(2 243 243 genExtJumpIfTrue			branch isBranchTrue isMapped "because of mustBeBoolean" v4:Long:Branch:Distance:)
-		(2 244 244 genExtJumpIfFalse			branch isBranchFalse isMapped "because of mustBeBoolean" v4:Long:Branch:Distance:)
-
-		(2 245 245 genExtSendAbsentSelfBytecode isMapped hasIRC)
-
-		(2 246 248	unknownBytecode)
-
-		"3 byte bytecodes"
-		(3 249 249 genCallPrimitiveBytecode)
-		(3 250 250 genPushRemoteTempLongBytecode)
-		(3 251 251 genStoreRemoteTempLongBytecode)
-		(3 252 252 genStoreAndPopRemoteTempLongBytecode)
-		(3 253 253 genExtPushClosureBytecode block v4:Block:Code:Size:)
-		(3 254 254 genExtSendAbsentOuterBytecode isMapped hasIRC)
-
-		(3 255 255	unknownBytecode))
-]
-
-{ #category : #'class initialization' }
 SimpleStackBasedCogit class >> initializeBytecodeTableForSistaV1 [
 	"SimpleStackBasedCogit initializeBytecodeTableForSistaV1"
 
@@ -357,203 +262,6 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForSqueakV3PlusClosures [
 		(1 208 223 genSendLiteralSelector0ArgsBytecode isMapped)
 		(1 224 239 genSendLiteralSelector1ArgBytecode isMapped)
 		(1 240 255 genSendLiteralSelector2ArgsBytecode isMapped))
-]
-
-{ #category : #'class initialization' }
-SimpleStackBasedCogit class >> initializePrimitiveTableForNewsqueak [
-	"Initialize the table of primitive generators.  This does not include normal primitives implemented in the coInterpreter.
-	 N.B. primitives that don't have an explicit arg count (the integer following the generator) may be variadic."
-	"SimpleStackBasedCogit initializePrimitiveTableForNewsqueak"
-	MaxCompiledPrimitiveIndex := self objectRepresentationClass wordSize = 8
-										ifTrue: [555]
-										ifFalse: [222].
-	primitiveTable := CArrayAccessor on: (Array new: MaxCompiledPrimitiveIndex + 1).
-	self table: primitiveTable from: 
-	#(	"Integer Primitives (0-19)"
-		(1 genPrimitiveAdd				1)
-		(2 genPrimitiveSubtract			1)
-		(3 genPrimitiveLessThan		1)
-		(4 genPrimitiveGreaterThan		1)
-		(5 genPrimitiveLessOrEqual		1)
-		(6 genPrimitiveGreaterOrEqual	1)
-		(7 genPrimitiveEqual			1)
-		(8 genPrimitiveNotEqual		1)
-		(9 genPrimitiveMultiply			1)
-		(10 genPrimitiveDivide			1)
-		(11 genPrimitiveMod			1)
-		(12 genPrimitiveDiv				1)
-		(13 genPrimitiveQuo			1)
-		(14 genPrimitiveBitAnd			1)
-		(15 genPrimitiveBitOr			1)
-		(16 genPrimitiveBitXor			1)
-		(17 genPrimitiveBitShift			1)
-		"(18 primitiveMakePoint)"
-		"(19 primitiveFail)"					"Guard primitive for simulation -- *must* fail"
-
-		"LargeInteger Primitives (20-39)"
-		"(20 primitiveFail)"
-		"(21 primitiveAddLargeIntegers)"
-		"(22 primitiveSubtractLargeIntegers)"
-		"(23 primitiveLessThanLargeIntegers)"
-		"(24 primitiveGreaterThanLargeIntegers)"
-		"(25 primitiveLessOrEqualLargeIntegers)"
-		"(26 primitiveGreaterOrEqualLargeIntegers)"
-		"(27 primitiveEqualLargeIntegers)"
-		"(28 primitiveNotEqualLargeIntegers)"
-		"(29 primitiveMultiplyLargeIntegers)"
-		"(30 primitiveDivideLargeIntegers)"
-		"(31 primitiveModLargeIntegers)"
-		"(32 primitiveDivLargeIntegers)"
-		"(33 primitiveQuoLargeIntegers)"
-		"(34 primitiveBitAndLargeIntegers)"
-		"(35 primitiveBitOrLargeIntegers)"
-		"(36 primitiveBitXorLargeIntegers)"
-		"(37 primitiveBitShiftLargeIntegers)"
-
-		"Float Primitives (38-59)"
-		"(38 genPrimitiveFloatAt)"
-		"(39 genPrimitiveFloatAtPut)"
-		(40 genPrimitiveAsFloat					0)
-		(41 genPrimitiveFloatAdd				1)
-		(42 genPrimitiveFloatSubtract			1)
-		(43 genPrimitiveFloatLessThan			1)
-		(44 genPrimitiveFloatGreaterThan		1)
-		(45 genPrimitiveFloatLessOrEqual		1)
-		(46 genPrimitiveFloatGreaterOrEqual	1)
-		(47 genPrimitiveFloatEqual				1)
-		(48 genPrimitiveFloatNotEqual			1)
-		(49 genPrimitiveFloatMultiply			1)
-		(50 genPrimitiveFloatDivide				1)
-		"(51 genPrimitiveTruncated)"
-		"(52 genPrimitiveFractionalPart)"
-		"(53 genPrimitiveExponent)"
-		"(54 genPrimitiveTimesTwoPower)"
-		(55 genPrimitiveFloatSquareRoot		0)
-		"(56 genPrimitiveSine)"
-		"(57 genPrimitiveArctan)"
-		"(58 genPrimitiveLogN)"
-		"(59 genPrimitiveExp)"
-
-		"Subscript and Stream Primitives (60-67)"
-		(60 genPrimitiveAt				1)
-		(61 genPrimitiveAtPut			2)
-		(62 genPrimitiveSize			0)
-		(63 genPrimitiveStringAt		1)
-		(64 genPrimitiveStringAtPut		2)
-		"The stream primitives no longer pay their way; normal Smalltalk code is faster."
-		(65 genFastPrimFail)"was primitiveNext"
-		(66 genFastPrimFail) "was primitiveNextPut"
-		(67 genFastPrimFail) "was primitiveAtEnd"
-
-		"StorageManagement Primitives (68-79)"
-		(68 genPrimitiveObjectAt			1)	"Good for debugger/InstructionStream performance"
-		"(69 primitiveObjectAtPut)"
-		(70 genPrimitiveNew)				"For VMMirror support 1 argument instantiateFixedClass: as well as baiscNew"
-		(71 genPrimitiveNewWithArg)		"For VMMirror support 2 argument instantiateVariableClass:withSize: as well as baiscNew:"
-		"(72 primitiveArrayBecomeOneWay)"		"Blue Book: primitiveBecome"
-		"(73 primitiveInstVarAt)"
-		"(74 primitiveInstVarAtPut)"
-		(75 genPrimitiveIdentityHash	0)
-		"(76 primitiveStoreStackp)"					"Blue Book: primitiveAsObject"
-		"(77 primitiveSomeInstance)"
-		"(78 primitiveNextInstance)"
-		(79 genPrimitiveNewMethod	2)
-
-		"Control Primitives (80-89)"
-		"(80 primitiveFail)"							"Blue Book: primitiveBlockCopy"
-		"(81 primitiveFail)"							"Blue Book: primitiveValue"
-		"(82 primitiveFail)"							"Blue Book: primitiveValueWithArgs"
-		(83 genPrimitivePerform)
-		"(84 primitivePerformWithArgs)"
-		"(85 primitiveSignal)"
-		"(86 primitiveWait)"
-		"(87 primitiveResume)"
-		"(88 primitiveSuspend)"
-		"(89 primitiveFlushCache)"
-
-		"System Primitives (110-119)"
-		(110 genPrimitiveIdentical 1)
-		(111 genPrimitiveClass)			"For objectClass: and VMMirror support 1 argument classOf: as well as class"
-		"(112 primitiveBytesLeft)"
-		"(113 primitiveQuit)"
-		"(114 primitiveExitToDebugger)"
-		"(115 primitiveChangeClass)"					"Blue Book: primitiveOopsLeft"
-		"(116 primitiveFlushCacheByMethod)"
-		"(117 primitiveExternalCall)"
-		"(118 primitiveDoPrimitiveWithArgs)"
-		"(119 primitiveFlushCacheSelective)"
-
-		(148 genPrimitiveShallowCopy 0)			"a.k.a. clone"
-
-		(165 genPrimitiveIntegerAt			1)	"Signed version of genPrimitiveAt"
-		(166 genPrimitiveIntegerAtPut		2)	"Signed version of genPrimitiveAtPut"
-
-		(169 genPrimitiveNotIdentical 1)
-
-		(170 genPrimitiveAsCharacter)				"SmallInteger>>asCharacter, Character class>>value:"
-		(171 genPrimitiveImmediateAsInteger 0)	"Character>>value SmallFloat64>>asInteger"
-			
-		"(173 primitiveSlotAt 1)"
-		"(174 primitiveSlotAtPut 2)"
-		(175 genPrimitiveIdentityHash	0)		"Behavior>>identityHash"
-
-		"Old closure primitives"
-		"(186 primitiveFail)" "was primitiveClosureValue"
-		"(187 primitiveFail)" "was primitiveClosureValueWithArgs"
-
-		"Perform method directly"
-		"(188 primitiveExecuteMethodArgsArray)"
-		"(189 primitiveExecuteMethod)"
-
-		"Unwind primitives"
-		"(195 primitiveFindNextUnwindContext)"
-		"(196 primitiveTerminateTo)"
-		"(197 primitiveFindHandlerContext)"
-		(198 genFastPrimFail "primitiveMarkUnwindMethod")
-		(199 genFastPrimFail "primitiveMarkHandlerMethod")
-
-		"new closure primitives"
-		"(200 primitiveClosureCopyWithCopiedValues)"
-		(201 genPrimitiveClosureValue	0) "value"
-		(202 genPrimitiveClosureValue	1) "value:"
-		(203 genPrimitiveClosureValue	2) "value:value:"
-		(204 genPrimitiveClosureValue	3) "value:value:value:"
-		(205 genPrimitiveClosureValue	4) "value:value:value:value:"
-		"(206 genPrimitiveClosureValueWithArgs)" "valueWithArguments:"
-
-		"(210 primitiveContextAt)"
-		"(211 primitiveContextAtPut)"
-		"(212 primitiveContextSize)"
-
-		"(218 primitiveDoNamedPrimitiveWithArgs)"
-		"(219 primitiveFail)"	"reserved for Cog primitives"
-
-		"(220 primitiveFail)"		"reserved for Cog primitives"
-
-		(221 genPrimitiveClosureValue	0) "valueNoContextSwitch"
-		(222 genPrimitiveClosureValue	1) "valueNoContextSwitch:"
-
-		"SmallFloat primitives (540-559)"
-		(541 genPrimitiveSmallFloatAdd				1)
-		(542 genPrimitiveSmallFloatSubtract			1)
-		(543 genPrimitiveSmallFloatLessThan			1)
-		(544 genPrimitiveSmallFloatGreaterThan		1)
-		(545 genPrimitiveSmallFloatLessOrEqual		1)
-		(546 genPrimitiveSmallFloatGreaterOrEqual		1)
-		(547 genPrimitiveSmallFloatEqual				1)
-		(548 genPrimitiveSmallFloatNotEqual			1)
-		(549 genPrimitiveSmallFloatMultiply				1)
-		(550 genPrimitiveSmallFloatDivide				1)
-		"(551 genPrimitiveSmallFloatTruncated			0)"
-		"(552 genPrimitiveSmallFloatFractionalPart		0)"
-		"(553 genPrimitiveSmallFloatExponent			0)"
-		"(554 genPrimitiveSmallFloatTimesTwoPower	1)"
-		(555 genPrimitiveSmallFloatSquareRoot			0)
-		"(556 genPrimitiveSmallFloatSine				0)"
-		"(557 genPrimitiveSmallFloatArctan				0)"
-		"(558 genPrimitiveSmallFloatLogN				0)"
-		"(559 genPrimitiveSmallFloatExp				0)"
-	)
 ]
 
 { #category : #'class initialization' }
@@ -779,6 +487,10 @@ SimpleStackBasedCogit class >> initializePrimitiveTableForSqueak [
 		"(557 genPrimitiveSmallFloatArctan				0)"
 		"(558 genPrimitiveSmallFloatLogN				0)"
 		"(559 genPrimitiveSmallFloatExp				0)"
+
+		"Pinned object creation primitives"
+		"(598 primitiveNewPinned)"
+		"(599 primitiveNewWithArgPinned)"
 						
 		(600 genPrimitiveLoadBoolean8FromBytes)
 		(601 genPrimitiveLoadUInt8FromBytes)
@@ -898,15 +610,6 @@ SimpleStackBasedCogit >> annotationForSendTable: sendTable [
 			[^IsDirectedSuperSend].
 		 sendTable == directedSuperBindingSendTrampolines ifTrue:
 			[^IsDirectedSuperBindingSend]].
-	NewspeakVM ifTrue:
-		[sendTable == implicitReceiverSendTrampolines ifTrue:
-			[self error: 'Unexpected implicit receiver send using dirty send machinery'].
-		 sendTable == outerSendTrampolines ifTrue:
-			[self error: 'Unexpected outer send using dirty send machinery'].
-		sendTable == selfSendTrampolines ifTrue:
-			[^IsNSSelfSend].
-		sendTable == dynamicSuperSendTrampolines ifTrue:
-			[^IsNSDynamicSuperSend]].
 	self assert: sendTable == superSendTrampolines.
 	^IsSuperSend
 ]
@@ -917,17 +620,21 @@ SimpleStackBasedCogit >> bytecodeFixupClass [
 	^CogBytecodeFixup
 ]
 
+{ #category : #accessing }
+SimpleStackBasedCogit >> bytecodePC: anInteger [ 
+	<doNotGenerate>
+	bytecodePC := anInteger 
+]
+
 { #category : #trampolines }
 SimpleStackBasedCogit >> cPICMissTrampolineFor: numArgs [
 	^ceCPICMissTrampoline
 ]
 
-{ #category : #trampolines }
-SimpleStackBasedCogit >> ceClosureCopyDescriptor: descriptor [ "<Integer>" 
-	^coInterpreter
-		createClosureNumArgs: (descriptor bitAnd: 16r3F)
-		numCopied: ((descriptor >> 6) bitAnd: 16r3F)
-		startpc: descriptor >> 12
+{ #category : #accessing }
+SimpleStackBasedCogit >> ceCPICMissTrampoline: anAddress [ 
+	
+	ceCPICMissTrampoline := anAddress
 ]
 
 { #category : #'simulation only' }
@@ -1152,10 +859,7 @@ SimpleStackBasedCogit >> compileFrameBuild [
 			 self MoveCq: 0 R: SendNumArgsReg.
 			 self Jump: stackOverflowCall.
 			 jumpSkip jmpTarget: (stackCheckLabel := self Label)].
-	self annotateBytecode: stackCheckLabel.
-	NewspeakVM ifTrue:
-		[numIRCs > 0 ifTrue:
-		 	[self PrefetchAw: theIRCs]]
+	self annotateBytecode: stackCheckLabel
 ]
 
 { #category : #'compile abstract instructions' }
@@ -1704,6 +1408,12 @@ SimpleStackBasedCogit >> duplicateTopBytecode [
 	^0
 ]
 
+{ #category : #'*VMMaker-Tests' }
+SimpleStackBasedCogit >> entryOffset: anInteger [ 
+	<doNotGenerate>
+	cmEntryOffset := anInteger
+]
+
 { #category : #'trampoline support' }
 SimpleStackBasedCogit >> evaluateTrampolineCallBlock: block protectLinkRegIfNot: inFrame [
 	<inline: true>
@@ -1903,7 +1613,6 @@ SimpleStackBasedCogit >> genExtJumpIfTrue [
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genExtNopBytecode [
-	"NewspeakV4: 221		11011101		Nop"
 	"SistaV1:		 91		01011011'		Nop"
 	extA := numExtB := extB := 0.
 	^0
@@ -2090,56 +1799,6 @@ SimpleStackBasedCogit >> genExtReturnTopFromBlock [
 ]
 
 { #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genExtSendAbsentDynamicSuperBytecode [
-	"241		11110001	i i i i i j j j	Send To Absent Dynamic Superclass Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments"
-	| litIndex nArgs |
-	litIndex := (byte1 >> 3) + (extA << 5).
-	extA := 0.
-	nArgs := (byte1 bitAnd: 7) + (extB << 3).
-	extB := 0.
-	numExtB := 0.
-	^self genSendAbsentDynamicSuper: litIndex numArgs: nArgs
-]
-
-{ #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genExtSendAbsentImplicitBytecode [
-	"240		11110000	i i i i i j j j	Send To Absent Implicit Receiver Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments"
-	| litIndex nArgs |
-	litIndex := (byte1 >> 3) + (extA << 5).
-	extA := 0.
-	nArgs := (byte1 bitAnd: 7) + (extB << 3).
-	extB := 0.
-	numExtB := 0.
-	^self genSendAbsentImplicit: litIndex numArgs: nArgs
-]
-
-{ #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genExtSendAbsentOuterBytecode [
-	"254		 11111110	i i i i i j j j kkkkkkkk	Send To Absent Outer Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments at Depth kkkkkkkk "
-	| litIndex nArgs depth |
-	litIndex := (byte1 >> 3) + (extA << 5).
-	extA := 0.
-	nArgs := (byte1 bitAnd: 7) + (extB << 3).
-	extB := 0.
-	numExtB := 0.
-	depth := byte2.
-	^self genSendAbsentOuter: litIndex numArgs: nArgs depth: depth
-
-]
-
-{ #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genExtSendAbsentSelfBytecode [
-	"245		11110101	i i i i i j j j	Send To Absent Self Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments"
-	| litIndex nArgs |
-	litIndex := (byte1 >> 3) + (extA << 5).
-	extA := 0.
-	nArgs := (byte1 bitAnd: 7) + (extB << 3).
-	extB := 0.
-	numExtB := 0.
-	^self genSendAbsentSelf: litIndex numArgs: nArgs
-]
-
-{ #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genExtSendBytecode [
 	"238		11101110	i i i i i j j j	Send Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments"
 	| litIndex nArgs |
@@ -2319,7 +1978,7 @@ SimpleStackBasedCogit >> genInlinedIdenticalOrNotIf: orNot [
 		genEnsureOopInRegNotForwarded: ClassReg
 		scratchReg: TempReg.
 	self CmpR: Arg0Reg R: ClassReg.
-	jumpNotEqual := self genConditionalBranch: (orNot ifTrue: [JumpZero] ifFalse: [JumpZero]) operand: 0.
+	jumpNotEqual := self genConditionalBranch: (orNot ifTrue: [JumpZero] ifFalse: [JumpNonZero]) operand: 0.
 	self annotate: (self genMoveTrueR: Arg0Reg)
 		objRef: objectMemory trueObject.
 	jumpPush := self Jump: 0.
@@ -2540,33 +2199,6 @@ SimpleStackBasedCogit >> genMustBeBooleanTrampolineFor: boolean called: trampoli
 		pushLinkReg: true
 		resultReg: NoReg
 		appendOpcodes: true
-]
-
-{ #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genNSSend: selectorIndex numArgs: numArgs depth: depth sendTable: sendTable [
-	<var: #sendTable type: #'sqInt *'>
-	| selector nsSendCache |
-	self assert: (selectorIndex between: 0 and: (objectMemory literalCountOf: methodObj) - 1).
-	selector := self getLiteral: selectorIndex.
-	self assert: (objectMemory addressCouldBeOop: selector).	
-	(objectMemory isYoung: selector) ifTrue:
-		[hasYoungReferent := true].
-
-	nsSendCache := theIRCs + (NumOopsPerNSC * objectMemory bytesPerOop * indexOfIRC).
-	indexOfIRC := indexOfIRC + 1.
-	self assert: (objectMemory isInOldSpace: nsSendCache).
-	self initializeNSSendCache: nsSendCache selector: selector numArgs: numArgs depth: depth.
-
-	"This leaves the method receiver on the stack, which might not be the implicit receiver.
-	 But the lookup trampoline will establish the on-stack receiver once it locates it."
-	self marshallAbsentReceiverSendArguments: numArgs.
-
-	"Load the cache last so it is a fixed distance from the call."
-	self MoveUniqueCw: nsSendCache R: SendNumArgsReg.
-	self CallNewspeakSend: (sendTable at: (numArgs min: NumSendTrampolines - 1)).
-
-	self PushR: ReceiverResultReg.
-	^0
 ]
 
 { #category : #'bytecode generators' }
@@ -3266,55 +2898,10 @@ SimpleStackBasedCogit >> genSend: selectorIndex numArgs: numArgs sendTable: send
 			and: IsDirectedSuperBindingSend]) ifTrue:
 		[self genMoveConstant: tempOop R: TempReg].
 	self genLoadInlineCacheWithSelector: selectorIndex.
+
 	(self Call: (sendTable at: (numArgs min: NumSendTrampolines - 1))) annotation: annotation.
 	self PushR: ReceiverResultReg.
 	^0
-]
-
-{ #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genSendAbsentDynamicSuper: selectorIndex numArgs: numArgs [
-	<inline: false>
-	^self
-		genNSSend: selectorIndex
-		numArgs: numArgs
-		depth: LookupRuleDynamicSuper
-		sendTable: dynamicSuperSendTrampolines
-]
-
-{ #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genSendAbsentImplicit0ArgsBytecode [
-	"160-175	1010 i i i i		Send To Absent Implicit Receiver Literal Selector #iiii With 0 Arguments."
-	^self genSendAbsentImplicit: (byte0 bitAnd: 15) numArgs: 0
-]
-
-{ #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genSendAbsentImplicit: selectorIndex numArgs: numArgs [
-	<inline: false>
-	^self
-		genNSSend: selectorIndex
-		numArgs: numArgs
-		depth: LookupRuleImplicit
-		sendTable: implicitReceiverSendTrampolines
-]
-
-{ #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genSendAbsentOuter: selectorIndex numArgs: numArgs depth: depth [
-	<inline: false>
-	^self
-		genNSSend: selectorIndex
-		numArgs: numArgs
-		depth: depth
-		sendTable: outerSendTrampolines
-]
-
-{ #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genSendAbsentSelf: selectorIndex numArgs: numArgs [
-	<inline: false>
-	^self
-		genNSSend: selectorIndex
-		numArgs: numArgs
-		depth: LookupRuleSelf
-		sendTable: selfSendTrampolines
 ]
 
 { #category : #'bytecode generator support' }
@@ -3593,7 +3180,7 @@ SimpleStackBasedCogit >> genStorePop: popBoolean ReceiverVariable: slotIndex [
 	popBoolean
 		ifTrue: [self PopR: ClassReg]
 		ifFalse: [self MoveMw: 0 r: SPReg R: ClassReg].
-	self
+	objectRepresentation
 		genStoreSourceReg: ClassReg 
 		slotIndex: slotIndex 
 		destReg: ReceiverResultReg 
@@ -3885,6 +3472,13 @@ SimpleStackBasedCogit >> methodUsesPrimitiveErrorCode: aMethodObj header: aMetho
 			= (objectMemory
 				fetchByte: (coInterpreter startPCOfMethod: aMethodObj) + (coInterpreter sizeOfCallPrimitiveBytecode: aMethodHeader)
 				ofObject: aMethodObj)]
+]
+
+{ #category : #accessing }
+SimpleStackBasedCogit >> minCallAddress: anInteger [ 
+	<doNotGenerate>
+
+	minValidCallAddress:=anInteger
 ]
 
 { #category : #testing }

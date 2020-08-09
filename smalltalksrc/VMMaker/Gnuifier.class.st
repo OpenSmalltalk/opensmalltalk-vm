@@ -31,9 +31,7 @@ Class {
 { #category : #'as yet unclassified' }
 Gnuifier class >> on: aFilePathStringOrDirectory [
 
-	^self new setDirectory: (aFilePathStringOrDirectory isString
-								ifTrue: [FileDirectory on: aFilePathStringOrDirectory]
-								ifFalse: [aFilePathStringOrDirectory])
+	^self new setDirectory: aFilePathStringOrDirectory asFileReference
 ]
 
 { #category : #'as yet unclassified' }
@@ -73,25 +71,25 @@ Gnuifier >> gnuify [
 	 We label the gnuified VM so one can identify the valid gcc version.
 	 The script run on Wndows, platforms/win32/misc/gnuify, produces
 	 something compatible with gcc 2.95 (gack)."
-	(directory fileExists: 'gcc3x-', interpreterFilename) ifTrue:
-		[directory deleteFileNamed: 'gcc3x-', interpreterFilename].
+	(directory asFileReference / ('gcc3x-', interpreterFilename)) 
+		ensureDelete.
+
 	self
-		gnuifyFrom: (directory oldFileNamed: interpreterFilename)
-		to: 			(VMMaker forceNewFileNamed: (directory fullNameFor: 'gcc3x-', interpreterFilename)).
+		gnuifyFrom: (directory asFileReference / interpreterFilename)
+		to: 			(VMMaker forceNewFileNamed: directory / ('gcc3x-', interpreterFilename)).
 	
 	self shouldCleanupOldFile
-		ifTrue: [ (directory deleteFileNamed: interpreterFilename) ]
+		ifTrue: [ (directory / interpreterFilename) ensureDelete ]
 ]
 
 { #category : #'as yet unclassified' }
-Gnuifier >> gnuifyFrom: inFileStream to: outFileStream [
+Gnuifier >> gnuifyFrom: inputFile to: outFileStream [
 
 "convert interp.c to use GNU features"
 
 	| inData beforeInterpret inInterpret inInterpretVars beforePrimitiveResponse inPrimitiveResponse |
 
-	inData := inFileStream upToEnd withSqueakLineEndings.
-	inFileStream close.
+	inData := inputFile contents withSqueakLineEndings.
 
 	"print a header"
 	outFileStream

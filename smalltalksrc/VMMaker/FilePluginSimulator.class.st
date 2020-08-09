@@ -25,10 +25,10 @@ FilePluginSimulator >> close [  "close any files that ST may have opened"
 
 { #category : #simulation }
 FilePluginSimulator >> dir_Create: dirNameIndex _: dirNameSize [
-	^[FileDirectory default
-		primCreateDirectory: (interpreterProxy interpreter
+	^[
+		(interpreterProxy interpreter
 								asString: dirNameIndex
-								size: dirNameSize).
+								size: dirNameSize) asFileReference ensureCreateDirectory.
 	   true]
 		on: Error
 		do: [:ex| false]
@@ -367,9 +367,6 @@ FilePluginSimulator >> sqFileSize: file [
 
 { #category : #simulation }
 FilePluginSimulator >> sqFileStdioHandlesInto: anArray [
-	(interpreterProxy transcript ~~ Transcript
-	 or: [UIManager default confirm: 'clear transcript?']) ifTrue:
-		[interpreterProxy transcript clear].
 	"See FilePluginSimulator>>initialiseModule"
 	anArray
 		at: 1 put: 0;
