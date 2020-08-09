@@ -266,13 +266,13 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 										&deviceAddress,
 										MyAudioDevicesListener,
 										nil))
-		warning("failed to set output device notification");;
+		warning("failed to set output device notification");
 	deviceAddress.mSelector = kAudioHardwarePropertyDefaultInputDevice;
 	if (AudioObjectAddPropertyListener(kAudioObjectSystemObject, 
 									&deviceAddress,
 									MyAudioDevicesListener,
 									nil))
-		warning("failed to set input device notification");;
+		warning("failed to set input device notification");
 
 	self.bufferSizeForOutput = SqueakFrameSize * nChannels * frameCount * 2;
 	for (int i = 0; i < kNumberOfBuffers; ++i)
