@@ -72,6 +72,11 @@
 
 #undef	DEBUG_MODULES
 
+#ifdef MUSL
+void pushOutputFile(char *fileNameOrStdioIndex) {;}
+void popOutputFile() {;}
+#endif
+
 #undef	IMAGE_DUMP				/* define to enable SIGHUP and SIGQUIT handling */
 
 #define IMAGE_NAME_SIZE MAXPATHLEN
