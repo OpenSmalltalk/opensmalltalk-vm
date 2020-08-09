@@ -173,8 +173,8 @@ static void enqueueKeyboardEvent(int key, int up, int modifiers)
 static void openKeyboard(void)
 {
   kb= kb_new();
-#ifndef USEEVDEV
   kb_open(kb, vtSwitch, vtLock);
+#ifndef USEEVDEV
   kb_setCallback(kb, enqueueKeyboardEvent);
 #endif
 }

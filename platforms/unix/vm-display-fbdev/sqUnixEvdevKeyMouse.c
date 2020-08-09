@@ -115,34 +115,39 @@ static struct ms mouseDev;
 #define KEYBOARD_DEV_NAME "/dev/input/event0"
 
 
-static int ms_open(struct ms *mouseSelf, char *msDev, char *msProto)
+static int ms_open(struct ms *mouseSelf, char *msDevName, char *msProto)
 {
   int rc = 0;
 
-  assert(mouseSelf->fd == -1);
+  assert(mouseDev.fd == -1);
 
-  if (msDev) {
-    mouseSelf->fd= open(mouseSelf->msName= msDev, O_RDONLY);
+  if (msDevName) {
+    mouseDev.fd= open(mouseDev.msName= msDevName, O_RDONLY|O_NONBLOCK);
   } else {
-    mouseSelf->fd= open(mouseSelf->msName= MOUSE_DEV_NAME, O_RDWR);
+    mouseDev.fd= open(mouseDev.msName= MOUSE_DEV_NAME, O_RDONLY|O_NONBLOCK);
   }
   
-  if (mouseSelf->fd < 0) {
+  if (mouseDev.fd < 0) {
     fprintf(stderr, "You do not have access to %s. Try "
 	             "running as root instead.\n",
-	    mouseSelf->msName );
+	    mouseDev.msName );
     failPermissions("mouse");
-  } else {
-    rc = libevdev_new_from_fd( mouseSelf->fd, &mouseSelf->dev );
+  }
+  else {
+    DPRINTF("evdev opened Mouse device %s\n", mouseDev.msName);
+    rc = ioctl(mouseDev.fd, EVIOCGRAB, (void*)1);
+    /* @@FIXME: test rc @@*/
+
+    /*   rc = libevdev_new_from_fd( mouseDev.fd, &mouseDev.dev );
     if (rc < 0) {
       fatal("Unable to initialize libevdev mouse (%s)\n", strerror(-rc) );
     } else {
       DPRINTF("Opened for input: \"%s\" bus %#x vendor %#x product %#x\n",
-	      libevdev_get_name(      mouseSelf->dev),
-	      libevdev_get_id_bustype(mouseSelf->dev),
-	      libevdev_get_id_vendor( mouseSelf->dev),
-      	      libevdev_get_id_product(mouseSelf->dev) );
-    }
+	      libevdev_get_name(      mouseDev.dev),
+	      libevdev_get_id_bustype(mouseDev.dev),
+	      libevdev_get_id_vendor( mouseDev.dev),
+      	      libevdev_get_id_product(mouseDev.dev) );
+	      } */
   }
   
   return 0;
@@ -151,12 +156,13 @@ static int ms_open(struct ms *mouseSelf, char *msDev, char *msProto)
 
 static void ms_close(struct ms *mouseSelf)
 {
-  if (mouseSelf->fd >= 0)
+  if (mouseDev.fd >= 0)
     {
-      close(mouseSelf->fd);
-      libevdev_free(mouseSelf->dev);
-      DPRINTF("%s (%d) closed\n", mouseSelf->msName, mouseSelf->fd);
-      mouseSelf->fd= -1;
+      ioctl(mouseDev.fd, EVIOCGRAB, (void*)0); /* ungrab device */
+      close(mouseDev.fd);
+      /*      libevdev_free(mouseDev.dev); */
+      DPRINTF("%s (%d) closed\n", mouseDev.msName, mouseDev.fd);
+      mouseDev.fd= -1;
     }
 }
 
@@ -209,6 +215,7 @@ static void updateSqueakMousePosition(struct input_event* evt) {
 	DPRINTF( "*** Wheel VALUE: %d; DELTA: %d ",
 		 mouseWheelDelta(),
 		 evt->value ) ;
+	mousePosition.y = max(0, mousePosition.y + evt->value) ; 
 	break;
       default:
 	break;
@@ -540,21 +547,27 @@ void kb_open(struct kb *kbdSelf, int vtSwitch, int vtLock)
 {
   int rc;
 
-  assert(kbdSelf->fd == -1);
-  kbdSelf->fd= open(kbdSelf->kbName= KEYBOARD_DEV_NAME, O_RDONLY);
-  if (kbdSelf->fd < 0)
+  assert(kbDev.fd == -1);
+  kbDev.fd= open(kbDev.kbName= KEYBOARD_DEV_NAME, O_RDONLY|O_NONBLOCK);
+  if (kbDev.fd < 0) {
+    DPRINTF("FAILED TO OPEN: %s\n", KEYBOARD_DEV_NAME);
     failPermissions("console");
-
-  rc = libevdev_new_from_fd( kbdSelf->fd, &kbdSelf->dev );
+  } else {
+    DPRINTF("evdev opened Keyboard device %s\n", kbDev.kbName);
+    rc = ioctl(kbDev.fd, EVIOCGRAB, (void*)1);
+    /* @@FIXME: test rc @@*/
+  }
+  /*  rc = libevdev_new_from_fd( kbDev.fd, &kbDev.dev );
   if (rc < 0) {
       fatal("Unable to initialize libevdev keyboard (%s)\n", strerror(-rc) );
   } else {
       DPRINTF("Opened for input: \"%s\" bus %#x vendor %#x product %#x\n",
-	      libevdev_get_name(      kbdSelf->dev),
-	      libevdev_get_id_bustype(kbdSelf->dev),
-	      libevdev_get_id_vendor( kbdSelf->dev),
-      	      libevdev_get_id_product(kbdSelf->dev) );
+	      libevdev_get_name(      kbDev.dev),
+	      libevdev_get_id_bustype(kbDev.dev),
+	      libevdev_get_id_vendor( kbDev.dev),
+      	      libevdev_get_id_product(kbDev.dev) );
   }
+  */
 
   /*  kb_initKeyMap(kbdSelf, kmPath);   * squeak key mapping */
 }
@@ -562,12 +575,13 @@ void kb_open(struct kb *kbdSelf, int vtSwitch, int vtLock)
 
 void kb_close(struct kb *kbdSelf)
 {
-  if (kbdSelf->fd >= 0)
+  if (kbDev.fd >= 0)
     {
-      close(kbdSelf->fd);
-      libevdev_free(kbdSelf->dev);
-      DPRINTF("%s (%d) closed\n", kbdSelf->kbName, kbdSelf->fd);
-      kbdSelf->fd= -1;
+      ioctl(kbDev.fd, EVIOCGRAB, (void*)0); /* ungrab device */
+      close(kbDev.fd);
+      /*      libevdev_free(kbDev.dev); */
+      DPRINTF("%s (%d) closed\n", kbDev.kbName, kbDev.fd);
+      kbDev.fd= -1;
     }
 }
 
@@ -590,9 +604,7 @@ static void processLibEvdevKeyEvents() {
 
   rd = read(kbDev.fd, ev, sizeof(ev));
   if (rd < (int) sizeof(struct input_event)) {
-    DPRINTF("expected %d bytes, got %d\n", (int) sizeof(struct input_event), rd);
-    DPRINTF("\nevtest: error reading Keyboard");
-    return; /* @@FIXME: resynch? @@ */
+    return; /* asynch read */
   }
 
   for (i = 0; i < rd / sizeof(struct input_event); i++) {
@@ -606,9 +618,7 @@ static void processLibEvdevMouseEvents() {
 
   rd = read(mouseDev.fd, ev, sizeof(ev));
   if (rd < (int) sizeof(struct input_event)) {
-    DPRINTF("expected %d bytes, got %d\n", (int) sizeof(struct input_event), rd);
-    DPRINTF("\nevtest: error reading Mouse");
-    return; /* @@FIXME: resynch @@ */
+    return; /* asynch read */
   }
 
   for (i = 0; i < rd / sizeof(struct input_event); i++) {
