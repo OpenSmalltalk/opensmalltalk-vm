@@ -55,7 +55,7 @@ typedef struct {
 @implementation sqSqueakOSXApplication (attributes)
 
 - (char *) getAttribute:(sqInt)indexNumber {
-	//indexNumber is a postive/negative number
+	//indexNumber is a positive/negative number
 
 	switch (indexNumber) {
 	case 1001: /* OS type: "unix", "win32", "mac", ... */
@@ -84,6 +84,8 @@ typedef struct {
 #else
 			return "intel";
 #endif
+		if (myattr == gestaltArm) 
+			return "aarch64";
 
 		return "unknown";
 	}

@@ -42,6 +42,7 @@
 #	define _PC_IN_UCONTEXT uc_mcontext->__ss.__pc
 #	define _FP_IN_UCONTEXT uc_mcontext->__ss.__fp
 #	define _SP_IN_UCONTEXT uc_mcontext->__ss.__sp
+#	define _JIT_SP_IN_UCONTEXT uc_mcontext->__ss.__x[16]
 # endif
 #elif __APPLE__ && __MACH__
 # if __ppc__
@@ -58,15 +59,16 @@
 #	define _PC_IN_UCONTEXT uc_mcontext->ss.pc
 #	define _FP_IN_UCONTEXT uc_mcontext->ss.fp
 #	define _SP_IN_UCONTEXT uc_mcontext->ss.sp
+#	define _JIT_SP_IN_UCONTEXT uc_mcontext->ss.x[16]
 # endif
-#elif __sun && __amd64
+#elif __sun__ && __amd64
 # define _PC_IN_UCONTEXT uc_mcontext.gregs[REG_RIP]
-# define _FP_IN_UCONTEXT uc_mcontext.gregs[REG_RBP]
-# define _SP_IN_UCONTEXT uc_mcontext.gregs[REG_RSP]
-#elif __sun && __i386__
+# define _FP_IN_UCONTEXT uc_mcontext.gregs[REG_FP]
+# define _SP_IN_UCONTEXT uc_mcontext.gregs[REG_SP]
+#elif __sun__ && __i386__
 # define _PC_IN_UCONTEXT uc_mcontext.gregs[EIP]
-# define _FP_IN_UCONTEXT uc_mcontext.gregs[EBP]
-# define _SP_IN_UCONTEXT uc_mcontext.gregs[ESP]
+# define _FP_IN_UCONTEXT uc_mcontext.gregs[REG_FP]
+# define _SP_IN_UCONTEXT uc_mcontext.gregs[REG_SP]
 #elif __linux__ && __i386__
 # define _PC_IN_UCONTEXT uc_mcontext.gregs[REG_EIP]
 # define _FP_IN_UCONTEXT uc_mcontext.gregs[REG_EBP]
@@ -77,10 +79,18 @@
 # define _SP_IN_UCONTEXT uc_mcontext.gregs[REG_RSP]
 #elif __linux__ && __aarch64__
 # define _PC_IN_UCONTEXT uc_mcontext.pc
-#elif __linux__ && __arm64__
+# define _FP_IN_UCONTEXT uc_mcontext.sp
+# define _SP_IN_UCONTEXT uc_mcontext.regs[29]
+# define _JIT_SP_IN_UCONTEXT uc_mcontext.regs[16]
+#elif __linux__ && (__arm64__ || __aarch64__ || ARM64)
 # define _PC_IN_UCONTEXT uc_mcontext.pc
-#elif __linux__ && __arm__
+# define _FP_IN_UCONTEXT uc_mcontext.sp
+# define _SP_IN_UCONTEXT uc_mcontext.regs[29]
+# define _JIT_SP_IN_UCONTEXT uc_mcontext.regs[16]
+#elif __linux__ && (__arm__ || __arm32__)
 # define _PC_IN_UCONTEXT uc_mcontext.arm_pc
+# define _FP_IN_UCONTEXT uc_mcontext.arm_fp
+# define _SP_IN_UCONTEXT uc_mcontext.arm_sp
 #elif __FreeBSD__ && __i386__
 # define _PC_IN_UCONTEXT uc_mcontext.mc_eip
 # define _FP_IN_UCONTEXT uc_mcontext.mc_ebp
