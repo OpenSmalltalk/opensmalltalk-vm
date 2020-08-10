@@ -5,7 +5,7 @@ Class {
 		'key',
 		'value'
 	],
-	#category : #'VMMakerCompatibilityForPharo6-Tests'
+	#category : #'VMMaker-MT-Tests'
 }
 
 { #category : #'instance-creation' }

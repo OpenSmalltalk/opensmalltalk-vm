@@ -5,7 +5,7 @@ Class {
 		'firstLink',
 		'lastLink'
 	],
-	#category : #'VMMakerCompatibilityForPharo6-Tests'
+	#category : #'VMMaker-MT-Tests'
 }
 
 { #category : #accessing }

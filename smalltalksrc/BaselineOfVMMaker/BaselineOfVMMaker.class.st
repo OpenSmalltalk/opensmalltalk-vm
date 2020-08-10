@@ -19,7 +19,9 @@ BaselineOfVMMaker >> baseline: spec [
 			"Tests"			
 			spec
 				package: 'VMMakerTests' with: [
-					spec requires: #('VMMakerCompatibilityForPharo6' 'Unicorn' 'LLVMDisassembler') ].
+					spec requires: #('VMMakerCompatibilityForPharo6' 'Unicorn' 'LLVMDisassembler') ];
+				package: 'VMMaker-MT-Tests' with: [
+					spec requires: #('VMMakerTests') ].
 
 			spec
 				package: 'VMMaker-OriginalTests' with: [
@@ -47,6 +49,6 @@ BaselineOfVMMaker >> baseline: spec [
 			spec group: 'plugins' with: #('FileAttributesPlugin').
 			spec group: 'core' with: #('VMMaker').
 			spec group: 'tools' with: #('VMMaker-Tools').			
-			spec group: 'tests' with: #('VMMakerTests' 'VMMaker-OriginalTests').			
+			spec group: 'tests' with: #('VMMakerTests' 'VMMaker-OriginalTests' 'VMMaker-MT-Tests').			
 			spec group: 'default' with: #( 'core' 'plugins' 'tools' 'tests') ]
 ]
