@@ -109,6 +109,20 @@ static inline int fb_pitch(_self)	{ return self->pitch; }
 static inline int fb_height(_self)	{ return self->var.yres; }
 static inline int fb_depth(_self)	{ return self->var.bits_per_pixel; }
 
+static inline int fb_red_offset(_self)	{ return self->var.red.offset; }
+static inline int fb_green_offset(_self) { return self->var.green.offset; }
+static inline int fb_blue_offset(_self)	{ return self->var.blue.offset; }
+
+static inline unsigned long fb_pixel_position(_self, int x, int y) {
+  return (x + self->var.xoffset) * (self->var.bits_per_pixel / 8)
+      +  (y + self->var.yoffset) * self->fix.line_length ;
+}
+
+static inline unsigned long fb_pixel_color(_self, int red, int green, int blue) {
+  return (red   << fb_red_offset(self))
+       | (green << fb_green_offset(self))
+       | (blue  << fb_blue_offset(self)) ;
+}
 
 static inline unsigned long fb_getPixel_32(_self, int x, int y)
 {
@@ -318,8 +332,9 @@ static void fb_copyBits_16(_self, char *bits, int l, int r, int t, int b)
   hideCursorIn(self, l, r, t, b);
   for (y= t;  y < b;  ++y)
     {
-      unsigned short *in= (unsigned short *)(bits + ((l + (y * fb_width(self))) * 2));
-      unsigned short *out= (unsigned short *)(self->addr + ((l + (y * fb_pitch(self))) * 2));
+      unsigned short *in=  (unsigned short *)(bits + ((l + (y * fb_width(self))) * 2));
+      /*  unsigned short *out= (unsigned short *)(self->addr + ((l + (y * fb_pitch(self))) * 2)); */
+      unsigned short *out= (unsigned short *)(self->addr + fb_pixel_position(self, l, y));
       for (x= l;  x < r;  x += 2, in += 2, out += 2)
 	{
 #	 if defined(WORDS_BIGENDIAN)
@@ -506,7 +521,7 @@ static void fb_initVisual(_self)
   ioctl(self->fd, FBIOPAN_DISPLAY, &self->var);
 
   self->size= fb_height(self) * self->fix.line_length;
-  self->pitch= self->fix.line_length / self->var.bits_per_pixel * 8;
+  self->pitch= (self->fix.line_length) * (self->var.bits_per_pixel / 8); /* bytes-per-line */
 
   DPRINTF("%s: %dx%dx%d+%x+%x (%dx%d) %s, rgb %d+%d %d+%d %d+%d pitch %d(%d)\n", self->fbName,
 	  self->var.xres, self->var.yres, self->var.bits_per_pixel, self->var.xoffset, self->var.yoffset,
