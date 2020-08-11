@@ -11,7 +11,7 @@ Class {
 		'schedulerAssociation',
 		'processInExternalCodeTag'
 	],
-	#category : #VMMakerTests
+	#category : #'VMMaker-MT-Tests'
 }
 
 { #category : #testing }

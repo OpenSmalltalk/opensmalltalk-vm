@@ -41,7 +41,7 @@ elseif(UNIX)
         ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/FilePlugin/src/common/*.c
         ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/FilePlugin/src/unix/*.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/fileUtils.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/unix/sqUnixCharConv.c        
+        ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/unix/sqUnixCharConv.c
     )    
 else()
     include_directories(
@@ -50,14 +50,13 @@ else()
     )
     
     file(GLOB FilePlugin_SOURCES
-        ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/FilePlugin/src/common/FilePlugin.c
         ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/FilePlugin/src/win/*.c   
         ${CMAKE_CURRENT_SOURCE_DIR}/src/fileUtilsWin.c
         ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/win/sqWin32Directory.c        
     )    
 endif()
 
-addLibraryWithRPATH(FilePlugin ${FilePlugin_SOURCES})
+addLibraryWithRPATH(FilePlugin ${FilePlugin_SOURCES} 	${CMAKE_CURRENT_BINARY_DIR}/generated/plugins/src/FilePlugin/FilePlugin.c)
 
 if(OSX)
     target_link_libraries(FilePlugin "-framework CoreFoundation")

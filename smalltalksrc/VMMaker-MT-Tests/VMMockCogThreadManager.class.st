@@ -1,7 +1,7 @@
 Class {
 	#name : #VMMockCogThreadManager,
 	#superclass : #CogThreadManager,
-	#category : #VMMakerTests
+	#category : #'VMMaker-MT-Tests'
 }
 
 { #category : #simulation }

@@ -1,7 +1,7 @@
 Class {
 	#name : #StackMTInterpreterSimulatorForTest,
 	#superclass : #StackMTInterpreterSimulator,
-	#category : #VMMakerTests
+	#category : #'VMMaker-MT-Tests'
 }
 
 { #category : #'instance creation' }

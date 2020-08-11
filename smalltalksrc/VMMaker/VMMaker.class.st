@@ -150,9 +150,7 @@ VMMaker class >> coreVMHeadersDirName [
 { #category : #initialisation }
 VMMaker class >> default [
 	"return a VMMaker initialised to build a default no-internal-plugins, no-external-plugins vm codebase"
-	^self forPlatform: (true
-						ifTrue: ['Cross'] 
-						ifFalse: [SmalltalkImage current platformName])
+	^self forPlatform: 'Cross'
 ]
 
 { #category : #utilities }
@@ -1246,19 +1244,19 @@ VMMaker >> externalPluginListName [
 { #category : #'target directories' }
 VMMaker >> externalPluginsDirectory [
 	"return the target directory for the external plugins sources"
-	| fd |
-	fd := self sourceDirectory directoryNamed: self class pluginsDirName.
-	fd assureExistence.
-	^fd
+	^ (self sourceDirectory / self class pluginsDirName)
+		ensureCreateDirectory;
+		yourself. 
 ]
 
 { #category : #'target directories' }
 VMMaker >> externalPluginsDirectoryFor: plugin [
 	"return the directory for the external plugin sources"
-	|fd|
-	fd := self externalPluginsDirectory directoryNamed: plugin moduleName.
-	fd assureExistence.
-	^fd
+	
+	^ (self externalPluginsDirectory / plugin moduleName)
+		ensureCreateDirectory;
+		yourself
+
 ]
 
 { #category : #'plugin lists' }
@@ -2075,7 +2073,7 @@ VMMaker >> storeExternalPluginList [
 			[:cls|
 			s space; nextPut: $\; cr; nextPutAll: cls moduleName].
 		s cr].
-	filePath := self makefileDirectory fullNameFor: self externalPluginListName.
+	filePath := (self makefileDirectory / self externalPluginListName) fullName.
 	(CCodeGenerator basicNew needToGenerateHeader: filePath file: filePath contents: contents) ifTrue:
 		[[fileStream := VMMaker forceNewFileNamed: filePath] 
 			on: FileDoesNotExistException 

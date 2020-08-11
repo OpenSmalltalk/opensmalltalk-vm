@@ -48,6 +48,7 @@
 
 #include "sqMemoryAccess.h"
 #include "FilePlugin.h" /* must be included after sq.h */
+#include "sqaio.h"
 
 /***
 	The state of a file is kept in the following structure,
@@ -646,17 +647,32 @@ sqFileReadIntoAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startInde
 		}
 		myThreadIndex = interpreterProxy->disownVM(DisownVMLockOutFullGC);
 # endif
-#endif /* COGMTVM */
-		/* Line buffering in fread can't be relied upon, at least on Mac OS X
-		 * and mingw win32.  So do it the hard way.
-		 */
+#endif
+
 		bytesRead = 0;
 		do {
 			clearerr(file);
-			if (fread(dst, 1, 1, file) == 1)
-				bytesRead += 1;
+
+			/*
+			 * To emulate the behavior of fread on a file we need to
+			 * make the stdin non blocking.
+			 * As this can produce a problem in Unix systems once
+			 * Pharo ends (we are affecting the behavior of a shared FD)
+			 * we need to restore it back to the original flags.
+			 *
+			 * With this the reading of the STDIN will not block
+			 * until there is data.
+			 */
+
+			int originalFlags = fcntl(fileno(file), F_GETFL);
+			fcntl(fileno(file), F_SETFL, originalFlags | O_NONBLOCK);
+
+			bytesRead = fread(dst, 1, count, file);
+
+			fcntl(fileno(file), F_SETFL, originalFlags);
 		}
 		while (bytesRead <= 0 && ferror(file) && errno == EINTR);
+
 #if COGMTVM
 		interpreterProxy->ownVM(myThreadIndex);
 # if SPURVM
@@ -812,4 +828,21 @@ sqInt
 sqFileThisSession() {
 	return thisSession;
 }
+
+void
+signalOnDataArrival(int fd, void *clientData, int flag){
+	interpreterProxy->signalSemaphoreWithIndex((sqInt)clientData);
+	aioDisable(fd);
+}
+
+sqInt
+waitForDataonSemaphoreIndex(SQFile *file, sqInt semaphoreIndex){
+	if (!(sqFileValid(file)))
+		return interpreterProxy->success(false);
+
+	aioEnable(fileno(getFile(file)), (void*) semaphoreIndex, AIO_EXT);
+	typedef void (*aioHandler)(int fd, void *clientData, int flag);
+	aioHandle(fileno(getFile(file)), signalOnDataArrival, AIO_R);
+}
+
 #endif /* NO_STD_FILE_SUPPORT */

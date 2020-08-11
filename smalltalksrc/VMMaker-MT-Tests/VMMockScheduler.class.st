@@ -5,7 +5,7 @@ Class {
 		'quiescentProcessLists',
 		'activeProcess'
 	],
-	#category : #'VMMakerCompatibilityForPharo6-Tests'
+	#category : #'VMMaker-MT-Tests'
 }
 
 { #category : #accessing }

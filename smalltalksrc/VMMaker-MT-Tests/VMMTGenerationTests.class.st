@@ -4,7 +4,7 @@ Class {
 	#instVars : [
 		'vm'
 	],
-	#category : #VMMakerTests
+	#category : #'VMMaker-MT-Tests'
 }
 
 { #category : #tests }

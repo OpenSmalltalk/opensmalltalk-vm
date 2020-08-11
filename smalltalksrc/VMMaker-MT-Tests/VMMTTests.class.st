@@ -8,7 +8,7 @@ Class {
 		'VMBasicConstants',
 		'VMThreadingConstants'
 	],
-	#category : #VMMakerTests
+	#category : #'VMMaker-MT-Tests'
 }
 
 { #category : #running }
