@@ -919,6 +919,24 @@ FilePlugin >> primitiveFileWrite [
 ]
 
 { #category : #'file primitives' }
+FilePlugin >> primitiveWaitForDataWithSemaphore [
+	"This primitive set a semaphore passed as a semaphoreIndex to be signalled when there is data in the File / Pipe, and it will not block"
+
+	| semaphoreIndex file |
+	<var: 'file' type: 'SQFile *'>
+	<export: true>
+
+	semaphoreIndex := interpreterProxy integerValueOf: (interpreterProxy stackValue: 0).
+	file := self fileValueOf: (interpreterProxy stackValue: 1).
+
+	interpreterProxy failed ifFalse:
+		[self waitForData: file onSemaphoreIndex: semaphoreIndex ].
+
+	interpreterProxy failed ifFalse:
+		[interpreterProxy pop: 2] "pop position, file; leave rcvr on stack"
+]
+
+{ #category : #'file primitives' }
 FilePlugin >> setMacFile: fileName Type: typeString AndCreator: creatorString [
 	"Exported entry point for the VM. Needed for image saving only and no-op on anything but Macs."
 	<export: true>
