@@ -344,6 +344,62 @@ sqInt  sqFileDescriptorType(int fdNum) {
 	return fileHandleType(_get_osfhandle(fdNum));
 }
 
+/*
+ * Check if the following operation of readConsole will Block
+ * Returns 1 if it blocks, 0 if not.
+ *
+ * If the console is set with mode ENABLE_LINE_INPUT this function
+ * returns true if there is a VK_RETURN key down in the buffer of events.
+ * If the console is not set to ENABLE_LINE_INPUT, if the console has an event, this function returns true.
+ *
+ * On any error the function returns TRUE, as it it nos clear if the ReadConsole will not block.
+ */
+int checkIfReadConsoleWillBlock(HANDLE consoleHandle){
+	INPUT_RECORD *events = NULL;
+	DWORD numberOfEvents;
+	DWORD mode;
+
+	//Try to get the number of events in the queue. On error, I return as it the ReadConsole will block.
+	if(GetNumberOfConsoleInputEvents(consoleHandle, &numberOfEvents) == 0){
+		return true;
+	}
+
+	if(numberOfEvents == 0)
+		return true;
+
+	if(GetConsoleMode(consoleHandle, &mode) == 0){
+		return true;
+	}
+
+	/*
+	 * Having a single event in ENABLE_LINE_INPUT mode, we return that it will not block
+	 */
+	if(numberOfEvents > 0 && (mode & ENABLE_LINE_INPUT == 0)) {
+		return false;
+	}
+
+	events = malloc(sizeof(INPUT_RECORD) * numberOfEvents);
+	if(PeekConsoleInput(consoleHandle, events, numberOfEvents, &numberOfEvents) == 0){
+		free(events);
+		return true;
+	};
+
+	/*
+	 * Check for the keyDown of VK_RETURN, as this is used by ReadConsole in ENABLE_LINE_INPUT mode
+	 */
+	for(int i = 0; i < numberOfEvents; i++){
+		if( events[i].EventType == KEY_EVENT
+			&& events[i].Event.KeyEvent.bKeyDown
+			&& events[i].Event.KeyEvent.wVirtualKeyCode == VK_RETURN){
+				free(events);
+				return false;
+		}
+	}
+
+	free(events);
+	return true;
+}
+
 size_t sqFileReadIntoAt(SQFile *f, size_t count, char* byteArrayIndex, size_t startIndex) {
   /* Read count bytes from the given file into byteArray starting at
      startIndex. byteArray is the address of the first byte of a
@@ -355,12 +411,19 @@ size_t sqFileReadIntoAt(SQFile *f, size_t count, char* byteArrayIndex, size_t st
 
   if (!sqFileValid(f))
     FAIL();
-  if (f->isStdioStream)
-    ReadConsole(FILE_HANDLE(f), (LPVOID) (byteArrayIndex+startIndex), count,
+  if (f->isStdioStream){
+
+	if(checkIfReadConsoleWillBlock(FILE_HANDLE(f))){
+		return 0;
+	}
+
+	ReadConsole(FILE_HANDLE(f), (LPVOID) (byteArrayIndex+startIndex), count,
                 &dwReallyRead, NULL);
-  else
+
+  } else {
     ReadFile(FILE_HANDLE(f), (LPVOID) (byteArrayIndex+startIndex), count,
              &dwReallyRead, NULL);
+  }
   return dwReallyRead;
 }
 
