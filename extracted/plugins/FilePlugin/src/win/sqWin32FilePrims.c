@@ -32,6 +32,7 @@
 #include "sqWin32File.h"
 
 #include "pharovm/debug.h"
+#include "sqaio.h"
 
 extern struct VirtualMachine *interpreterProxy;
 
@@ -421,8 +422,29 @@ size_t sqFileReadIntoAt(SQFile *f, size_t count, char* byteArrayIndex, size_t st
                 &dwReallyRead, NULL);
 
   } else {
-    ReadFile(FILE_HANDLE(f), (LPVOID) (byteArrayIndex+startIndex), count,
-             &dwReallyRead, NULL);
+	  if (GetFileType(FILE_HANDLE(f)) == FILE_TYPE_PIPE ){
+		  DWORD maxDataAvailable;
+		  DWORD toRead;
+
+		  PeekNamedPipe(FILE_HANDLE(f),
+				  NULL,
+				  0,
+				  NULL,
+				  &maxDataAvailable,
+				  NULL);
+
+		  if(maxDataAvailable == 0)
+			 return 0;
+
+		  toRead = count < maxDataAvailable ? count : maxDataAvailable;
+
+	  	  ReadFile(FILE_HANDLE(f), (LPVOID) (byteArrayIndex+startIndex), toRead,
+			  &dwReallyRead, NULL);
+
+	  } else {
+	  	  ReadFile(FILE_HANDLE(f), (LPVOID) (byteArrayIndex+startIndex), count,
+			  &dwReallyRead, NULL);
+  	  }
   }
   return dwReallyRead;
 }
@@ -519,6 +541,19 @@ size_t sqFileWriteFromAt(SQFile *f, size_t count, char* byteArrayIndex, size_t s
   if (dwReallyWritten != count)
     FAIL();
   return dwReallyWritten;
+}
+
+EXPORT(void) aioEnableExternalHandler(int fd, HANDLE handle, void *clientData, aioHandler handlerFn, int mask);
+
+EXPORT(void)
+handleWaitOnStream(int fd, void *clientData, int flag){
+	interpreterProxy->signalSemaphoreWithIndex((sqInt)clientData);
+	aioDisable(fd);
+}
+
+EXPORT(sqInt)
+waitForDataonSemaphoreIndex(SQFile *file, sqInt semaphoreIndex){
+	aioEnableExternalHandler((int)FILE_HANDLE(file), FILE_HANDLE(file), (void*)semaphoreIndex, handleWaitOnStream, AIO_R);
 }
 
 #endif /* WIN32_FILE_SUPPORT */
