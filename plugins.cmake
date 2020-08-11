@@ -29,6 +29,7 @@ if(OSX)
         ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/FilePlugin/src/unix/*.c
         ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/unix/sqUnixCharConv.c        
         ${CMAKE_CURRENT_SOURCE_DIR}/src/fileUtils.c
+		${CMAKE_CURRENT_BINARY_DIR}/generated/plugins/src/FilePlugin/FilePlugin.c
     )
 elseif(UNIX)
     include_directories(
@@ -42,6 +43,7 @@ elseif(UNIX)
         ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/FilePlugin/src/unix/*.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/fileUtils.c
         ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/unix/sqUnixCharConv.c        
+		${CMAKE_CURRENT_BINARY_DIR}/generated/plugins/src/FilePlugin/FilePlugin.c
     )    
 else()
     include_directories(
@@ -54,6 +56,7 @@ else()
         ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/FilePlugin/src/win/*.c   
         ${CMAKE_CURRENT_SOURCE_DIR}/src/fileUtilsWin.c
         ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/win/sqWin32Directory.c        
+		${CMAKE_CURRENT_BINARY_DIR}/generated/plugins/src/FilePlugin/FilePlugin.c
     )    
 endif()
 

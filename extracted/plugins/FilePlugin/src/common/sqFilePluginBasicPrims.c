@@ -48,6 +48,7 @@
 
 #include "sqMemoryAccess.h"
 #include "FilePlugin.h" /* must be included after sq.h */
+#include "sqaio.h"
 
 /***
 	The state of a file is kept in the following structure,
@@ -827,4 +828,21 @@ sqInt
 sqFileThisSession() {
 	return thisSession;
 }
+
+void
+signalOnDataArrival(int fd, void *clientData, int flag){
+	interpreterProxy->signalSemaphoreWithIndex((sqInt)clientData);
+	aioDisable(fd);
+}
+
+sqInt
+waitForDataonSemaphoreIndex(SQFile *file, sqInt semaphoreIndex){
+	if (!(sqFileValid(file)))
+		return interpreterProxy->success(false);
+
+	aioEnable(fileno(getFile(file)), (void*) semaphoreIndex, AIO_EXT);
+	typedef void (*aioHandler)(int fd, void *clientData, int flag);
+	aioHandle(fileno(getFile(file)), signalOnDataArrival, AIO_R);
+}
+
 #endif /* NO_STD_FILE_SUPPORT */
