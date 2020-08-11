@@ -93,13 +93,16 @@
 
 /* forward declarations */
 static int  getMouseButtonState();
-static int  getModifierState(); 
+static int  getModifierState();
+static void updateModifierState(struct input_event* evt); 
 static void processLibEvdevKeyEvents();
 static void enqueueMouseEvent(int b, int dx, int dy);
+static void enqueueKeyboardEvent(int key, int up, int modifiers);
 #ifdef DEBUG_EVENTS
 static void printKeyState(int kind); 
 #endif
-
+static void setSqueakModifierState();
+static void setSqueakButtonState();
 
 /* Mouse */
 
@@ -191,10 +194,11 @@ static int wheelDelta = 0;  /* reset in clearMouseButtons() */
 static void clearMouseWheel() {  wheelDelta = 0 ; }
 static int  mouseWheelDelta() { return ( wheelDelta ) ; }
 
+/* this is done by enqueueMouseEvent() 
 static void setSqueakMousePosition( int newX, int newY ) {
   mousePosition.x = newX;
   mousePosition.y = newY;
-}
+  } */
 
 static void copyMousePositionInto(SqPoint *mousePt) {
   mousePt->x = mousePosition.x;
@@ -291,17 +295,14 @@ static void updateMouseButtons(struct input_event* evt) {
 /*==================*/
 
 static int  lastKeyCode = 0;
-static int  keyRepeated = 0; /*FALSE;*/
 
 static int keyCode()  { return ( lastKeyCode ) ; }
-static int repeated() { return ( keyRepeated ) ; }
 
 static void clearKeyCode() {
   lastKeyCode = 0 ; 
-  keyRepeated = 0;
 }
 
-static int notModifier(int code) {
+static int isModifier(int code) {
   switch (code) {
     case KEY_LEFTMETA:  
     case KEY_LEFTALT:   
@@ -311,63 +312,49 @@ static int notModifier(int code) {
     case KEY_RIGHTALT:  
     case KEY_RIGHTCTRL: 
     case KEY_RIGHTSHIFT:
-	return( FALSE );
+	return( TRUE );
 	break;
-    default: return( TRUE ); /* NOT a modifier/adjunct key */
+    default: return( FALSE ); /* NOT a modifier/adjunct key */
   }
 }
 
-static void updateModifierState(struct input_event* evt); /* forward */
 
 static void setKeyCode(struct input_event* evt) {
   int squeakKeyCode, modifierBits;
   /* NB: possible to get a Key UP _withOUT_ a Key DOWN */
-  if ( (evt->type == EV_KEY) && notModifier(evt->code) ) {
+  if (evt->type == EV_KEY) {
+
     lastKeyCode = evt->code;
     modifierBits = getModifierState();
     squeakKeyCode = keyCode2keyValue( lastKeyCode,
 				      (modifierBits & ShiftKeyBit) );
+    if (isModifier(evt->code)) {
+      /* Track, but do NOT report, modifier-key state. */
+      updateModifierState(evt); 
+      setSqueakModifierState();
+    } else {
 #ifdef DEBUG_KEYBOARD_EVENTS
-    DPRINTF("Setting key code: %d from raw: %d\n", squeakKeyCode, evt->code);
+	DPRINTF("Setting key code: %d from raw: %d\n", squeakKeyCode, evt->code);
+	printKeyState(evt->value);
 #endif
-    switch (evt->value) {
-
-      case 1: /* keydown */
-        recordKeyboardEvent(squeakKeyCode,
-			    EventKeyDown,
-			    modifierBits,
-			    squeakKeyCode);
-#ifdef DEBUG_KEYBOARD_EVENTS
-	printKeyState(1);
-#endif
-	keyRepeated = 0;
-	break;
-      
-      case 2: /* repeat */
-        recordKeyboardEvent(squeakKeyCode,
-			    EventKeyChar, /* Squeak lacks EventKeyRepeat */
-			    modifierBits,
-			    squeakKeyCode);
-#ifdef DEBUG_KEYBOARD_EVENTS
-	if (keyRepeated < 2)
-	  printKeyState(2);
-#endif
-	keyRepeated = keyRepeated + 1;
-	break;
-
-    default: /* 0 => keyUp */
-        recordKeyboardEvent(squeakKeyCode,
-			    EventKeyUp,
-			    modifierBits,
-			    squeakKeyCode);
-#ifdef DEBUG_KEYBOARD_EVENTS
-	printKeyState(0);
-#endif
-	clearKeyCode();
-	break;
+	switch (evt->value) {
+	case 0: /* keyUp */
+	  enqueueKeyboardEvent(squeakKeyCode,
+			       1, /* keyUp: C TRUE */
+			       modifierBits);
+	  clearKeyCode();
+	  break;
+	case 1: /* keydown */
+	case 2: /* repeat */
+	  enqueueKeyboardEvent(squeakKeyCode,
+			       0, /* keyUp: C FALSE */
+			       modifierBits);
+	  break;
+	default:
+	  DPRINTF("Key code: %d with UNKNOWN STATE: (%d) ? (0=up|1=down|2=repeat)\n", squeakKeyCode, evt->value);
+	  break;
+	}
     }
-  } else {
-    updateModifierState(evt);
   }
 }
 
@@ -396,11 +383,7 @@ static void printKeyState(int kind) {
     }
     printButtons(   mouseButtonBits );
     printModifiers( modifierBits );
-    if (repeated()) {
-      DPRINTF(" key repeated\n " );
-    } else {
-      DPRINTF("\n");
-    }
+    DPRINTF("\n");
   }
 }
 
@@ -619,7 +602,7 @@ static void processLibEvdevKeyEvents() {
   }
 
   for (i = 0; i < rd / sizeof(struct input_event); i++) {
-    setKeyCode(&ev[i]); /* invokes recordKeyboardEvent() */
+    setKeyCode(&ev[i]); /* invokes enqueueKeyboardEvent() */
   }
 }
 
@@ -639,32 +622,41 @@ static void processLibEvdevMouseEvents() {
     code=  ev[i].code;
     value= ev[i].value;
 
-    if ( (type == EV_SYN) | (type == EV_MSC) ) {
-      clearMouseWheel();
-      /* NB: does NOT clear modifierState */
+    if (type == EV_KEY) { /* (l|m|r)=(r|y|b) mouse keys */
+      updateMouseButtons(&ev[i]); 
+      setSqueakButtonState();
+      setSqueakModifierState();
+      setKeyCode(&ev[i]);
+#ifdef MOUSE_EVENTS
+      printKeyState(value);
+#endif
+      enqueueMouseEvent( mouseButtonsDown, 0, 0 );
+    } else if ( (type == EV_SYN) | (type == EV_MSC) ) {
+      return;
     } else {
 #ifdef DEBUG_MOUSE_EVENTS
-      DPRINTF("Event: time %ld.%06ld, ",
+      DPRINTF("evdev Mouse type %d, code %d, value: %d\n ", type, code, value);
+      DPRINTF("Mouse Event time %ld.%06ld, ",
 	      ev[i].input_event_sec,
 	      ev[i].input_event_usec);
-      DPRINTF("evdev Mouse type %d, code %d, value: %d\n ", type, code, value);
 #endif
       updateMouseButtons(&ev[i]); 
       setSqueakButtonState();
+      setSqueakModifierState();
      
       if (type == EV_REL) {
 	switch (code) {
 	case REL_X:
-	  enqueueMouseEvent( getMouseButtonState(), value, 0 );
+	  enqueueMouseEvent( mouseButtonsDown, value, 0 );
 	  break;
 	case REL_Y:
-	  enqueueMouseEvent( getMouseButtonState(), 0, value );
+	  enqueueMouseEvent( mouseButtonsDown, 0, value );
 	  break;
 	case REL_WHEEL:
-	  recordMouseWheelEvent( 0, -value ); /* dy only */
+	  recordMouseWheelEvent( 0, value ); /* delta-y only */
 	break;
-      default:
-	break;
+	default:
+	  break;
 	}
       }
     }

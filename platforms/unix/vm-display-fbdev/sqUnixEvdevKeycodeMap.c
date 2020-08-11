@@ -51,8 +51,8 @@ int i;
   if (keyMapInitialized) return; /* do this once */
  
   for (i = 0; i < KMAPSIZE; i++) {
-	baseKey[i]  = i;  /* default for debug @@?? use 0x00 ??@@ */
-	shiftKey[i] = i;
+	baseKey[i]  = KEY_RESERVED;  /* default for debug @@??@@ */
+	shiftKey[i] = KEY_RESERVED;
   }
    /* Note: add 0x40 to keys less than 0x30 to get ctrl letter
     * e.g. FF = 0x0C; so 0x4C = L => '^L' (Ctrl-L) for Form Feed
@@ -595,7 +595,19 @@ int keyCode2keyValue( int keyCode, int useCap ) {
 	return( baseKey[ keyCode ] ) ;
     }
   }
-  return( 0 );
+  switch (keyCode) { /* KeyCodes above 256 */
+  case BTN_LEFT:
+    return(0); /* @@??@@ */
+    break;
+  case BTN_MIDDLE:
+    return(0); /* @@??@@ */
+    break;
+  case BTN_RIGHT:
+    return(0); /* @@??@@ */
+    break;
+  default:
+    return( 0 );
+  }
 }
 
 /*			--- E O F --- 			*/
