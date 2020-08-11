@@ -94,10 +94,13 @@
 /* forward declarations */
 static int  getMouseButtonState();
 static int  getModifierState(); 
-static void printKeyState(int kind); 
 static void processLibEvdevKeyEvents();
+static void enqueueMouseEvent(int b, int dx, int dy);
+#ifdef DEBUG_EVENTS
+static void printKeyState(int kind); 
+#endif
 
-  
+
 /* Mouse */
 
 struct ms
@@ -223,6 +226,7 @@ static void updateSqueakMousePosition(struct input_event* evt) {
   }
 }
 
+#ifdef DEBUG_EVENTS
 static void printMouseState() {
    if ( (mousePosition.x != 0) || (mousePosition.y != 0) ) {
      DPRINTF( "*** Mouse at %4d,%4d ", mousePosition.x, mousePosition.y );
@@ -234,7 +238,7 @@ static void printMouseState() {
      DPRINTF("\n");
    }
 }
-
+#endif
 
 
 /*==========================*/
@@ -367,6 +371,7 @@ static void setKeyCode(struct input_event* evt) {
   }
 }
 
+#ifdef DEBUG_EVENTS
 static void printKeyState(int kind) {
   int evdevKeyCode, squeakKeyCode, mouseButtonBits, modifierBits;
   if ((evdevKeyCode= keyCode()) != 0) {
@@ -423,6 +428,8 @@ static void printEvtModifierKey(struct input_event* evt) {
   }
 }
 
+#endif
+
 /*=======================*/
 /* Modifier/Adjunct Keys */
 /*=======================*/
@@ -459,7 +466,9 @@ static void updateModifierState(struct input_event* evt)
 {  /* harmless if not modifier key */
   if (evt->type == EV_KEY) {
     if (evt->value == 1) { /* button down */
+#ifdef DEBUG_EVENTS
       printEvtModifierKey(evt);
+#endif
       switch (evt->code) {
 	case KEY_LEFTMETA:   leftAdjuncts  |= CommandKeyBit; break;
 	case KEY_LEFTALT:    leftAdjuncts  |= OptionKeyBit;  break;
@@ -472,7 +481,9 @@ static void updateModifierState(struct input_event* evt)
 	default: break;
 	}
      } else if (evt->value == 0) { /* button up */
+#ifdef DEBUG_EVENTS
        printEvtModifierKey(evt);
+#endif
        switch (evt->code) {
 	case KEY_LEFTMETA:   leftAdjuncts  &= ~CommandKeyBit; break;
 	case KEY_LEFTALT:    leftAdjuncts  &= ~OptionKeyBit;  break;
@@ -638,19 +649,28 @@ static void processLibEvdevMouseEvents() {
 	      ev[i].input_event_usec);
       DPRINTF("evdev Mouse type %d, code %d, value: %d\n ", type, code, value);
 #endif
-      updateSqueakMousePosition(&ev[i]);
       updateMouseButtons(&ev[i]); 
-
       setSqueakButtonState();
-      if (code == REL_WHEEL) {
-	recordMouseWheelEvent( 0, value ); /* only up & down => delta-y */
-	clearMouseWheel();
-      } else {
-	recordMouseEvent();  /* Only current mouse pos tracked */
+     
+      if (type == EV_REL) {
+	switch (code) {
+	case REL_X:
+	  enqueueMouseEvent( getMouseButtonState(), value, 0 );
+	  break;
+	case REL_Y:
+	  enqueueMouseEvent( getMouseButtonState(), 0, value );
+	  break;
+	case REL_WHEEL:
+	  recordMouseWheelEvent( 0, -value ); /* dy only */
+	break;
+      default:
+	break;
+	}
       }
     }
   }
 }
+
 
 
 
