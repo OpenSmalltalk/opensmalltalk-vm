@@ -677,6 +677,9 @@ CogARMCompiler >> computeMaximumSize [
 										ifFalse: [self literalLoadInstructionBytes + 4]].
 		"Conversion"
 		[ConvertRRd]			-> [^8].
+				
+		"This is a fixed size instruction using a literal. We need exactly 1 instructions to move a literal from a PC relative position, so this takes ALWAYS 1 instruction of 4 bytes"
+		[MovePatcheableC32R] -> [ ^ 4 ]
 		}.
 	^0 "to keep C compiler quiet"
 
@@ -1969,7 +1972,10 @@ CogARMCompiler >> dispatchConcretize [
 		[PushCw]			-> [^self concretizePushCw].
 		[PrefetchAw]		-> [^self concretizePrefetchAw].
 		"Conversion"
-		[ConvertRRd]		-> [^self concretizeConvertRRd]}
+		[ConvertRRd]		-> [^self concretizeConvertRRd].
+			
+		"Patcheable literal instruction"
+		[ MovePatcheableC32R ] -> [ ^ self concretizeMovePatcheableC32R ]}
 ]
 
 { #category : #testing }

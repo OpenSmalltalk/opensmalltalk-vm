@@ -25,10 +25,10 @@ FilePluginSimulator >> close [  "close any files that ST may have opened"
 
 { #category : #simulation }
 FilePluginSimulator >> dir_Create: dirNameIndex _: dirNameSize [
-	^[FileDirectory default
-		primCreateDirectory: (interpreterProxy interpreter
+	^[
+		(interpreterProxy interpreter
 								asString: dirNameIndex
-								size: dirNameSize).
+								size: dirNameSize) asFileReference ensureCreateDirectory.
 	   true]
 		on: Error
 		do: [:ex| false]
@@ -84,7 +84,7 @@ FilePluginSimulator >> dir_Lookup: pathString _: pathStringLength _: index _: na
 ]
 
 { #category : #'file primitives' }
-FilePluginSimulator >> fileOpenName: nameIndex size: nameSize write: writeFlag secure: secureFlag [
+FilePluginSimulator >> fileOpenName: nameIndex size: nameSize write: writeFlag [
 	"Open the named file, possibly checking security. Answer the file oop."
 	| path f index |
 	openFiles size >= maxOpenFiles ifTrue:
@@ -103,8 +103,8 @@ FilePluginSimulator >> fileOpenName: nameIndex size: nameSize write: writeFlag s
 ]
 
 { #category : #'file primitives' }
-FilePluginSimulator >> fileOpenNewName: nameIndex size: nameSize secure: secureFlag [
-	"Open the new named file, possibly checking security. Answer the file oop."
+FilePluginSimulator >> fileOpenNewName: nameIndex size: nameSize [
+	"Open the new named file. Answer the file oop."
 	| path f index |
 	openFiles size >= maxOpenFiles ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrLimitExceeded].

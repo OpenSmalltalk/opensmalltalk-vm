@@ -1,8 +1,14 @@
 Class {
 	#name : #UnicornI386Simulator,
 	#superclass : #UnicornSimulator,
-	#category : #VMMakerTests
+	#category : #'VMMakerTests-Unicorn'
 }
+
+{ #category : #registers }
+UnicornI386Simulator >> arg0Register [
+	
+	^ UcX86Registers esi
+]
 
 { #category : #registers }
 UnicornI386Simulator >> baseRegister [
@@ -85,6 +91,21 @@ UnicornI386Simulator >> esp [
 	^ self readRegister: UcX86Registers esp
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornI386Simulator >> extractDestinationRegisterFromAssembly: aLLVMInstruction [ 
+	
+	| registerName |
+	registerName := (aLLVMInstruction assemblyCodeString substrings: ',') last trimBoth.
+	(registerName beginsWith: '%')
+		ifTrue: [ registerName := registerName allButFirst ].
+	^ registerName
+]
+
+{ #category : #'as yet unclassified' }
+UnicornI386Simulator >> fp [
+	^ self readRegister: UcX86Registers ebp
+]
+
 { #category : #registers }
 UnicornI386Simulator >> framePointerRegister [
 	
@@ -110,19 +131,20 @@ UnicornI386Simulator >> receiverRegister [
 ]
 
 { #category : #accessing }
-UnicornI386Simulator >> registerDescriptors [
+UnicornI386Simulator >> registerList [
 	
-	^ #(eip eax ebx ecx edx esp ebp esi edi) collect: [ :e |
-		UnicornRegisterDescriptor new
-			simulator: self;
-			name: e;
-			yourself ]
+	^ #(eip eax ebx ecx edx esp ebp esi edi)
 ]
 
 { #category : #registers }
 UnicornI386Simulator >> sendNumberOfArgumentsRegister [
 
 	^ UcX86Registers ebx
+]
+
+{ #category : #'as yet unclassified' }
+UnicornI386Simulator >> sp [
+	^ self readRegister: UcX86Registers esp
 ]
 
 { #category : #registers }

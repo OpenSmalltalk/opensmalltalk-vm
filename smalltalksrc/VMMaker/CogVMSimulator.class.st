@@ -1902,7 +1902,7 @@ CogVMSimulator >> ioRelinquishProcessorForMicroseconds: microseconds [
 						ifNotNil: [displayView bounds origin]) extent: 16@16).
 	Sensor peekEvent ifNotNil:
 		[self forceInterruptCheck].
-	Processor activeProcess == Project uiProcess ifTrue:
+	Processor activeProcess == UIManager default uiProcess ifTrue:
 		[World doOneCycle].
 	microseconds >= 1000
 		ifTrue: [self isThreadedVM ifTrue:

@@ -139,9 +139,8 @@ CogAbstractInstruction class >> initializeAbstractRegisters [
 { #category : #'class initialization' }
 CogAbstractInstruction class >> initializeSpecificOpcodes: opcodeSymbolSequence in: initializeMethod [
 	"Declare as class variables, the opcodes in opcodeSymbolSequence.
-	 Assign values to them from LastRTLOpcode on.  Undeclare any obsolete
-	 class vars.  The assumption is that initializeMethod defines all class vars
-	 in the class. This method should be used by subclasses wishing to declare
+	 Assign values to them from LastRTLOpcode on.  
+	This method should be used by subclasses wishing to declare
 	 their own specific opcodes."
 	| pool classVariablesDefinedInMethod |
 	self assert: self ~~ CogAbstractInstruction.
@@ -150,10 +149,7 @@ CogAbstractInstruction class >> initializeSpecificOpcodes: opcodeSymbolSequence 
 		[CogRTLOpcodes initialize].
 	classVariablesDefinedInMethod := (initializeMethod allLiterals select: [:l| l isVariableBinding and: [pool includesKey: l key]]) collect:
 											[:ea| ea key].
-	"Undeclare any class var not defined in opcodeSymbolSequence or by the method."
-	(pool keys reject: [:k| (opcodeSymbolSequence includes: k) or: [classVariablesDefinedInMethod includes: k]]) do:
-		[:k|
-		Undeclared declare: k from: pool].
+
 	"Declare opcodeSymbolSequence's elements from LastRTLCode on up."
 	opcodeSymbolSequence withIndexDo:
 		[:classVarName :value|
@@ -665,6 +661,17 @@ CogAbstractInstruction >> concretizeLabel [
 	^machineCodeSize := 0
 ]
 
+{ #category : #'as yet unclassified' }
+CogAbstractInstruction >> concretizeMovePatcheableC32R [
+	"Move a 32 bit literal to a register.
+	This is patcheable instruction so it needs to be a fixed size instruction.
+	Subclasses decide to store the literal in many instructions or use a literal, depending on the literal manager strategy.
+	
+	This instruction generator should never try to generate compact instructions, even if possible.
+	Or it should complete the size with NOPs"
+	self subclassResponsibility 
+]
+
 { #category : #accessing }
 CogAbstractInstruction >> dependent [
 	^dependent
@@ -1169,9 +1176,7 @@ CogAbstractInstruction >> labelOffset [
 CogAbstractInstruction >> literal32BeforeFollowingAddress: followingAddress [
 	"Answer the constant loaded by the instruction sequence just before this address:"
 	<inline: true>
-	^objectMemory wordSize = 8
-		ifTrue: [self subclassResponsibility]
-		ifFalse: [self literalBeforeFollowingAddress: followingAddress]
+	^ self literalBeforeFollowingAddress: followingAddress
 ]
 
 { #category : #'inline cacheing' }
@@ -1498,6 +1503,13 @@ CogAbstractInstruction >> saveAndRestoreLinkRegAround: aBlock [
 	self subclassResponsibility
 ]
 
+{ #category : #'as yet unclassified' }
+CogAbstractInstruction >> seeAlso: aString [ 
+	
+	<doNotGenerate>
+	"like a flag"
+]
+
 { #category : #'generate machine code' }
 CogAbstractInstruction >> setLabelOffset: aValue [
 	"Hack:  To arrange that the block method field pushed in a block entry has
@@ -1540,9 +1552,7 @@ CogAbstractInstruction >> stackPageInterruptHeadroomBytes [
 CogAbstractInstruction >> storeLiteral32: literal32 beforeFollowingAddress: followingAddress [
 	"Answer the constant loaded by the instruction sequence just before this address:"
 	<inline: true>
-	objectMemory wordSize = 8
-		ifTrue: [self subclassResponsibility]
-		ifFalse: [self storeLiteral: literal32 beforeFollowingAddress: followingAddress]
+	self storeLiteral: literal32 beforeFollowingAddress: followingAddress
 ]
 
 { #category : #printing }

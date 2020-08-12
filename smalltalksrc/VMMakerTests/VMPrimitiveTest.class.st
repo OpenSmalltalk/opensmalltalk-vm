@@ -1,7 +1,12 @@
 Class {
 	#name : #VMPrimitiveTest,
-	#superclass : #VMAbstractPrimitiveTest,
-	#category : #VMMakerTests
+	#superclass : #VMInterpreterTests,
+	#pools : [
+		'VMBasicConstants',
+		'VMBytecodeConstants',
+		'VMObjectIndices'
+	],
+	#category : #'VMMakerTests-InterpreterTests'
 }
 
 { #category : #'building suites' }
@@ -13,68 +18,50 @@ VMPrimitiveTest class >> testParameters [
 
 ]
 
-{ #category : #'helpers - classes' }
-VMPrimitiveTest >> newClassInOldSpaceWithSlots: numberOfSlots format: format [
-	| newClass formatWithSlots |
-
-	newClass := memory
-		allocateSlotsInOldSpace: 3
-		format: memory nonIndexablePointerFormat
-		classIndex: memory arrayClassIndexPun.
+{ #category : #'as yet unclassified' }
+VMPrimitiveTest >> newArrayWith: aCollection [ 
+	| array |
+	array := self newObjectWithSlots: aCollection size format: memory arrayFormat classIndex: memory arrayClassIndexPun.
+	aCollection withIndexDo: [ :item :index | 
+		memory storePointer: index - 1 ofObject: array withValue: item	
+	].
+	^ array
 	
-	memory storePointer: 0 ofObject: newClass withValue: memory nilObject.
-	memory storePointer: 1 ofObject: newClass withValue: memory nilObject.
-	
-	formatWithSlots := format << 16 + numberOfSlots. 
-	memory storePointer: 2 ofObject: newClass withValue: (memory integerObjectOf: formatWithSlots ).
-		
-	^ newClass	
 ]
 
-{ #category : #'helpers - frames' }
-VMPrimitiveTest >> newSmallContextReceiver: anOop method: aMethodOop arguments: aCollectionOfArgumentsOop temporaries: aCollectionOfTemporariesOop ip: anIp [
-
-	| newCtx numArgs numTemps |
-	newCtx := memory eeInstantiateMethodContextSlots: SmallContextSlots.
-
-	numArgs := aCollectionOfArgumentsOop size.
-	numTemps := aCollectionOfTemporariesOop size.
-
-	memory storePointerUnchecked: SenderIndex
-		ofObject: newCtx
-		withValue: memory nilObject.
-		
-	memory storePointerUnchecked: InstructionPointerIndex
-		ofObject: newCtx
-		withValue: (memory integerObjectOf: anIp).
-
-	memory storePointerUnchecked: StackPointerIndex
-		ofObject: newCtx
-		withValue: (memory integerObjectOf: numArgs + numTemps).
-		
-	memory storePointerUnchecked: MethodIndex
-		ofObject: newCtx
-		withValue: aMethodOop.
-
-	memory storePointerUnchecked: ClosureIndex ofObject: newCtx withValue: memory nilObject.
-
-	memory storePointerUnchecked: ReceiverIndex
-		ofObject: newCtx
-		withValue: anOop.
+{ #category : #running }
+VMPrimitiveTest >> setUp [
 	
-	1 to: numArgs do:
-		[:i|
-		memory storePointerUnchecked: ReceiverIndex + i
-			ofObject: newCtx
-			withValue: (aCollectionOfArgumentsOop at: i)].
+	"taken from VMSimpleStackBasedCogitBytecodeTest >> #setup"
+	| newMethod ctx page processorOopAssociation processorOop processorListArray processorListPriority1 processorListPriority2 |
+	super setUp.
 
-	1 to: numTemps do:
-			[:i|
-			memory storePointerUnchecked: ReceiverIndex + i + numArgs
-				ofObject: newCtx
-				withValue: (aCollectionOfTemporariesOop at: i)].
+	"Create the root context with a valid method"
+	"Let's create a method with enough size. It should have at least a literal (4 or 8 bytes depending the word size) and some bytecodes, so we can put the IP inside the method"
+	newMethod := self newMethodWithBytecodes: #[ 1 2 3 4 5 6 7 8 9 0 ].
 	
-	^ newCtx
+	"The context has 5 (in 32 bits) or 9 (in 64 bits) as initial IP, as method has at least one literal"
+	ctx := self newSmallContextReceiver: memory nilObject method: newMethod arguments: #() temporaries: #() ip: self wordSize + 1.
+	
+	page := interpreter makeBaseFrameFor: ctx.
+	interpreter setStackPointersFromPage: page.
+	
+	
+	"The ScheduleAssocation should be initialized to a valid Processor object"
+	processorOopAssociation := self newObjectWithSlots: 2.
+	processorOop := self newObjectWithSlots: 2.
+	processorListArray := self newObjectWithSlots: 2.
+	
+	processorListPriority1 := self newObjectWithSlots: 2.
+	processorListPriority2 := self newObjectWithSlots: 2.
+	
+	memory storePointer: 0 ofObject: processorListArray withValue: processorListPriority1. 
+	memory storePointer: 1 ofObject: processorListArray withValue: processorListPriority2.
+	
+	memory splObj: SchedulerAssociation put: processorOopAssociation.
+	memory storePointer: ValueIndex ofObject: processorOopAssociation withValue: processorOop.
+	memory storePointer: ProcessListsIndex ofObject: processorOop withValue: processorListArray.
+	memory lastHash: 1
 ]
 
 { #category : #'tests - become' }

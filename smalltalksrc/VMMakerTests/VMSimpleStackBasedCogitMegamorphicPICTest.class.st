@@ -1,7 +1,7 @@
 Class {
 	#name : #VMSimpleStackBasedCogitMegamorphicPICTest,
 	#superclass : #VMSimpleStackBasedCogitAbstractTest,
-	#category : #VMMakerTests
+	#category : #'VMMakerTests-JitTests'
 }
 
 { #category : #'tests - PIC' }
@@ -61,13 +61,7 @@ VMSimpleStackBasedCogitMegamorphicPICTest >> testMiss [
 	"We call to get to the abort trampoline. If this fails this will timeout"
 	finishedSimulation := false.
 
-	machineSimulator instructionPointerValue: createdPic asInteger + cogit entryOffset.
-	[ finishedSimulation ] whileFalse: [
-		[ self runFrom: machineSimulator instructionPointerValue until: inlineCacheMissTrampoline ]
-			on: UnicornInvalidMemoryAccess do: [ :invalidAccess | 
-				(invalidAccess isFetch and: [ invalidAccess address = inlineCacheMissTrampoline ])
-					ifTrue: [ finishedSimulation := true ]
-					ifFalse: [ cogit handleSimulationTrap: (UnicornSimulationTrap simulator: machineSimulator error: invalidAccess) ] ] ].
+	self runFrom: createdPic asInteger + cogit entryOffset until: inlineCacheMissTrampoline.
 
 	"Failing all two PIC cases calls the pic trampoline.
 	 - The instruction pointer is at the trampoline

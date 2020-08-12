@@ -1678,26 +1678,6 @@ StackInterpreter class >> isStackAccessor: selector [
 	^(StackInterpreter whichCategoryIncludesSelector: selector) = #'stack access'
 ]
 
-{ #category : #benchmarks }
-StackInterpreter class >> macroBenchmark [  "StackInterpreter macroBenchmark"
-	| dir |
-	dir := 'benchmark2.dir'.
-	(FileDirectory default directoryExists: dir)
-		ifTrue: [(FileDirectory default directoryNamed: dir) recursiveDeleteContents]
-		ifFalse: [(FileDirectory default directoryNamed: dir) assureExistence].
-	([VMMaker
-			makerFor: StackInterpreter
-			and: nil
-			with: #()
-			to: (FileDirectory default pathFromURI: dir)
-			platformDir: 'none'
-			excluding:  (InterpreterPlugin withAllSubclasses collect: [:ea| ea name])]
-		on: VMMakerException "suppress bleats about non-existent platforms dir"
-		do: [:ex| ex resume: nil])
-			generateInterpreterFile.
-	(FileDirectory default directoryNamed: dir) recursiveDeleteContents; recursiveDelete
-]
-
 { #category : #translation }
 StackInterpreter class >> mustBeGlobal: var [
 	"Answer if a variable must be global and exported.  Used for inst vars that are accessed from VM support code."
@@ -9006,7 +8986,7 @@ Note the resolveAliases flag - this is an awful artefact of OSX and Apples demen
 StackInterpreter >> ioForceDisplayUpdate [
 	"Make sure the display is updated.  Simulation only"
 	<doNotGenerate>
-	Project current restore
+	UIManager default restoreDisplay
 ]
 
 { #category : #'primitive support' }
@@ -15980,6 +15960,12 @@ StackInterpreter >> methodClassOf: methodPointer [
 			ifFalse: [objectMemory nilObject]
 ]
 
+{ #category : #accessing }
+StackInterpreter >> methodDictLinearSearchLimit: anInteger [ 
+<doNotGenerate>
+	methodDictLinearSearchLimit := anInteger
+]
+
 { #category : #'compiled methods' }
 StackInterpreter >> methodHeaderHasPrimitive: methodHeader [
 	"Note: We now have 10 bits of primitive index, but they are in two places
@@ -16539,7 +16525,7 @@ StackInterpreter >> openImageFileNamed: fileName [
 			on: FileDoesNotExistException
 			do: [:ex|
 				 ((fileName endsWith: '.image') not
-				  and: [FileDirectory default fileExists: fileName, '.image']) ifFalse:
+				  and: [(fileName, '.image') asFileReference exists]) ifFalse:
 					[ex pass].
 				 FileStream readOnlyFileNamed: fileName, '.image'].
 	^f ifNil: [self error: 'no image found'. nil].

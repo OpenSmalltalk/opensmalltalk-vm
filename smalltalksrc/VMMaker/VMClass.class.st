@@ -352,26 +352,6 @@ VMClass class >> objectRepresentationClass [
 ]
 
 { #category : #utilities }
-VMClass class >> openCogSpurMultiWindowBrowser [
-	"Answer a new multi-window browser on the ObjectMemory classes, the Cog Interpreter classes, and the main JIT classes"
-	| b |
-	b := Browser open.
-	#(	SpurMemoryManager Spur32BitMemoryManager Spur32BitCoMemoryManager
-		 Spur64BitMemoryManager Spur64BitCoMemoryManager SpurGenerationScavenger
-		InterpreterPrimitives StackInterpreter StackInterpreterPrimitives CoInterpreter CoInterpreterPrimitives CoInterpreterMT
-		Cogit SimpleStackBasedCogit StackToRegisterMappingCogit
-		CogObjectRepresentation CogObjectRepresentationForSpur
-		CogObjectRepresentationFor32BitSpur CogObjectRepresentationFor64BitSpur
-		VMStructType VMMaker CCodeGenerator TMethod)
-		do: [:className|
-			(Smalltalk classNamed: className) ifNotNil:
-				[:class| b selectCategoryForClass: class; selectClass: class]]
-		separatedBy:
-			[b multiWindowState addNewWindow].
-	b multiWindowState selectWindowIndex: 1
-]
-
-{ #category : #utilities }
 VMClass class >> openCogTestsMultiWindowBrowser [
 	"Answer a new multi-window browser on the test classes in VMMaker"
 	"self openCogTestsMultiWindowBrowser"
@@ -402,24 +382,6 @@ VMClass class >> openCogitMultiWindowBrowser [
 	{VMStructType. VMMaker. CCodeGenerator. TMethod}
 		do: [:class|
 			b selectCategoryForClass: class; selectClass: class]
-		separatedBy:
-			[b multiWindowState addNewWindow].
-	b multiWindowState selectWindowIndex: 1
-]
-
-{ #category : #utilities }
-VMClass class >> openSpurMultiWindowBrowser [
-	"Answer a new multi-window browser on the Spur classes, the Cog StackInterpreter classes, and the support classes"
-	| b |
-	b := Browser open.
-	#(	SpurMemoryManager Spur32BitMemoryManager Spur64BitMemoryManager
-		SpurGenerationScavenger SpurSegmentManager
-		Spur32BitMMLESimulator SpurGenerationScavengerSimulator
-		InterpreterPrimitives StackInterpreter StackInterpreterPrimitives
-		VMStructType VMMaker CCodeGenerator TMethod)
-		do: [:className|
-			(Smalltalk classNamed: className) ifNotNil:
-				[:class| b selectCategoryForClass: class; selectClass: class]]
 		separatedBy:
 			[b multiWindowState addNewWindow].
 	b multiWindowState selectWindowIndex: 1
@@ -895,9 +857,7 @@ VMClass >> isInterpreterProxy [
 { #category : #'hack compatibility' }
 VMClass >> localNameFor: aString [
 	<doNotGenerate>
-	^(Smalltalk classNamed: #FileSystem)
-		ifNotNil: [:fs| (fs disk pathFromString: aString) basename]
-		ifNil: [FileDirectory default localNameFor: aString]
+	^ aString asFileReference basename
 ]
 
 { #category : #'memory access' }
@@ -1345,9 +1305,7 @@ VMClass >> strncpy: dest _: src _: n [
 { #category : #'hack compatibility' }
 VMClass >> uiProcess [
 	<doNotGenerate>
-	^(Smalltalk classNamed: #Project)
-		ifNotNil: [:project| Project uiProcess] "Squeak"
-		ifNil: [UIManager default uiProcess] "Pharo"
+	^ UIManager default uiProcess
 ]
 
 { #category : #'memory access' }

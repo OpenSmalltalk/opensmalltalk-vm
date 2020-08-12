@@ -7,7 +7,7 @@ Class {
 		'size',
 		'value'
 	],
-	#category : #VMMakerTests
+	#category : #'VMMakerTests-Unicorn'
 }
 
 { #category : #accessing }

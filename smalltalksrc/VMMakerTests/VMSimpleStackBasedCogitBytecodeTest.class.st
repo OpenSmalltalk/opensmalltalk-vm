@@ -1,7 +1,7 @@
 Class {
 	#name : #VMSimpleStackBasedCogitBytecodeTest,
 	#superclass : #VMSimpleStackBasedCogitAbstractTest,
-	#category : #VMMakerTests
+	#category : #'VMMakerTests-JitTests'
 }
 
 { #category : #'tests - extended store bytecode - store inst var' }
@@ -77,7 +77,7 @@ VMSimpleStackBasedCogitBytecodeTest >> doTestReturnCleansStackWithFrame: isFrame
 		ifTrue: [self createFramefulCallFrom: callerAddress]
 		ifFalse: [self createFramelessCallFrom: callerAddress].		
 	
-	self compile: generationBlock.	
+	self compile: generationBlock.
 	self runUntilReturn.
 
 	self assert: oldFP equals: self framePointerRegisterValue.
@@ -90,8 +90,8 @@ VMSimpleStackBasedCogitBytecodeTest >> doTestReturnReturnsObjectInReturnRegister
 	isFrameful 
 		ifTrue: [self createFramefulCallFrom: callerAddress]
 		ifFalse: [self createFramelessCallFrom: callerAddress].		
-	
-	self compile: compilationBlock.	
+
+	self compile: compilationBlock.
 	self runUntilReturn.
 
 	self assert: machineSimulator returnRegisterValue equals: anAddress
@@ -162,7 +162,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testExtendedPushPushesVariableType: type 
 	
 	"The first byte of the push receiver instance variable bytecode family is used to identify which variable (0-based again)"
 	cogit byte1: type << 6 + instanceVariableToWrite - 1.
-	self compile: [ cogit extendedPushBytecode ].	
+	self compile: [cogit extendedPushBytecode ].	
 	self runGeneratedCode.
 
 	self assert: self popAddress equals: memory falseObject
@@ -669,7 +669,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushConstantFalseBytecodePushesFalse 
 	
 	self compile: [ cogit genPushConstantFalseBytecode ].	
 	self runGeneratedCode.
-	
+
 	self assert: self popAddress equals: memory falseObject
 ]
 
@@ -688,9 +688,9 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushConstantNilAndThenReturn [
 { #category : #'tests - single bytecode' }
 VMSimpleStackBasedCogitBytecodeTest >> testPushConstantNilBytecodePushesNil [
 	
-	self compile: [ cogit genPushConstantNilBytecode ].	
+	self compile: [ cogit genPushConstantNilBytecode ].
 	self runGeneratedCode.
-	
+
 	self assert: self popAddress equals: memory nilObject
 ]
 
@@ -729,7 +729,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushQuickIntegerMinusOnePushesAMinusO
 	
 	cogit byte0: 116. 
 	
-	self compile: [ cogit genPushQuickIntegerConstantBytecode ].	
+	self compile: [ cogit genPushQuickIntegerConstantBytecode ].
 	self runGeneratedCode.
 	
 	self assert: self popAddress equals: (memory integerObjectOf: -1)

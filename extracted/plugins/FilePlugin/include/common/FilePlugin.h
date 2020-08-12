@@ -69,6 +69,8 @@ sqInt   sqFileThisSession(void);
 sqInt   sqFileStdioHandlesInto(SQFile files[3]);
 sqInt   sqFileDescriptorType(int fdNum);
 
+sqInt 	waitForDataonSemaphoreIndex(SQFile *file, sqInt semaphoreIndex);
+
 /* directories */
 
 sqInt dir_Create(char *pathString, sqInt pathStringLength);

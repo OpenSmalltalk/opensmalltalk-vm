@@ -54,8 +54,8 @@ sqInt nilObject(void);
 
 long long getVMGMTOffset();
 
-long aioPoll(long microSeconds);
-void aioInit(void);
+EXPORT(long) aioPoll(long microSeconds);
+EXPORT(void) aioInit(void);
 
 void ioInitTime(void);
 

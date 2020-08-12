@@ -40,6 +40,8 @@ if(FLAVOUR MATCHES "StackVM")
   set(VMSOURCEFILES ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/src/gcc3x-interp.c)
 else()
   set(VMSOURCEFILES ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/src/cogit.c ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/src/gcc3x-cointerp.c)
+  set(PLUGIN_GENERATED_FILES 
+  	${CMAKE_CURRENT_BINARY_DIR}/generated/plugins/src/FilePlugin/FilePlugin.c)
 endif()
 
 if(FLAVOUR MATCHES "CoInterpreterWithQueueFFI")
@@ -232,10 +234,10 @@ check_library_exists(uuid uuid_generate "" HAVE_UUID_GENERATE)
 #Custom command that downloads a Pharo image and VM in ${VMMAKER_OUTPUT_PATH}
 add_custom_command(
   OUTPUT ${VMMAKER_OUTPUT_PATH}/Pharo.image ${VMMAKER_OUTPUT_PATH}/pharo
-  COMMAND wget -O - https://get.pharo.org/64/80 | bash
-  COMMAND wget -O - https://get.pharo.org/64/vm80 | bash
+  COMMAND wget -O - https://get.pharo.org/64/90 | bash
+  COMMAND wget -O - https://get.pharo.org/64/vm90 | bash
   WORKING_DIRECTORY ${VMMAKER_OUTPUT_PATH}
-  COMMENT "Downloading Pharo 80")
+  COMMENT "Downloading Pharo 90")
 
 add_custom_command(
   OUTPUT ${VMMAKER_OUTPUT_PATH}/VMMaker.image
@@ -248,7 +250,7 @@ COMMENT "Generating VMMaker image")
 
 #Custom command that generates the vm source code from VMMaker into ${VMMAKER_OUTPUT_PATH} and copies it to ${CMAKE_CURRENT_SOURCE_DIR}
 add_custom_command(
-  OUTPUT ${VMSOURCEFILES}
+  OUTPUT ${VMSOURCEFILES} ${PLUGIN_GENERATED_FILES}
   COMMAND ${VMMAKER_OUTPUT_PATH}/pharo ${VMMAKER_OUTPUT_PATH}/VMMaker.image eval \"PharoVMMaker generate: \#\'${FLAVOUR}\' outputDirectory: \'${CMAKE_CURRENT_BINARY_DIR_TO_OUT}\'\"
   DEPENDS ${VMMAKER_OUTPUT_PATH}/VMMaker.image
   COMMENT "Generating VM files for flavour: ${FLAVOUR}")

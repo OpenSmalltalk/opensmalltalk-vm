@@ -416,20 +416,6 @@ StackInterpreterSimulator >> cr [
 	traceOn ifTrue: [ transcript cr; flush ].
 ]
 
-{ #category : #'debugging traps' }
-StackInterpreterSimulator >> createActualMessageTo: class [
-	objectMemory bootstrapping ifTrue:
-		[self halt].
-	"false
-		ifTrue:
-			[(self stringOf: messageSelector) = 'run:with:in:' ifTrue:
-				[self halt]]
-		ifFalse:
-			[self halt: (self stringOf: messageSelector)]."
-
-	^super createActualMessageTo: class
-]
-
 { #category : #accessing }
 StackInterpreterSimulator >> currentBytecode: anInteger [ 
 	currentBytecode := anInteger
@@ -669,36 +655,6 @@ StackInterpreterSimulator >> filterPerformOf: selector to: receiver [
 		[:messages|
 		^messages includes: (self stringOf: selector)].
 	^false
-]
-
-{ #category : #testing }
-StackInterpreterSimulator >> findNewMethodInClassTag: classTag [
-"
-	| cName |
-	traceOn ifTrue:
-		[cName := (self sizeBitsOf: class) = 16r20
-			ifTrue: ['class ' , (self nameOfClass: (self fetchPointer: 6 ofObject: class))]
-			ifFalse: [(self nameOfClass: class)].
-		self cr; print: cName , '>>' , (self stringOf: messageSelector)].
-"
-	messageSelector = (objectMemory splObj: SelectorDoesNotUnderstand) ifTrue: [self halt].
-
-	sendCount := sendCount + 1.
-
-	(printSends or: [printBytecodeAtEachStep]) ifTrue:
-		[self cr; print: byteCount; space; printStringOf: messageSelector; cr].
-"
-	(sendCount > 1000 and: [sendCount\\10 = 0]) ifTrue:
-		[Transcript print: sendCount; space.
-		self validate].
-"
-"
-	(sendCount > 100150) ifTrue:
-		[self qvalidate.
-		messageQueue == nil ifTrue: [messageQueue := OrderedCollection new].
-		messageQueue addLast: (self stringOf: messageSelector)].
-"
-	^super findNewMethodInClassTag: classTag
 ]
 
 { #category : #'memory access' }
@@ -1171,7 +1127,7 @@ StackInterpreterSimulator >> ioRelinquishProcessorForMicroseconds: microseconds 
 						ifNotNil: [displayView bounds origin]) extent: 16@16).
 	Sensor peekEvent ifNotNil:
 		[self forceInterruptCheck].
-	Processor activeProcess == Project uiProcess ifTrue:
+	Processor activeProcess == UIManager default uiProcess ifTrue:
 		[World doOneCycle].
 	microseconds >= 1000
 		ifTrue: [(Delay forMilliseconds: microseconds + 999 // 1000) wait]

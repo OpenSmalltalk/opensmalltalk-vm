@@ -1,7 +1,7 @@
 Class {
 	#name : #VMSpurTreeAllocationStrategyForLargeTreeTest,
 	#superclass : #VMSpurTreeAllocationStrategyForSmallTreeTest,
-	#category : #VMMakerTests
+	#category : #'VMMakerTests-MemoryTests'
 }
 
 { #category : #'tests-10-bestfit-liliputian-leftovers' }

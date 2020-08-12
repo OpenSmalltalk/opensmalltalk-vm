@@ -22,7 +22,7 @@ Class {
 		'VMBytecodeConstants',
 		'VMObjectIndices'
 	],
-	#category : #VMMakerTests
+	#category : #'VMMakerTests-MemoryTests'
 }
 
 { #category : #accessing }
@@ -97,6 +97,24 @@ VMSpurMemoryManagerTest >> interpreterClass [
 { #category : #accessor }
 VMSpurMemoryManagerTest >> memory [
 	^ memory
+]
+
+{ #category : #'helpers - classes' }
+VMSpurMemoryManagerTest >> newClassInOldSpaceWithSlots: numberOfSlots format: format [
+	| newClass formatWithSlots |
+
+	newClass := memory
+		allocateSlotsInOldSpace: 3
+		format: memory nonIndexablePointerFormat
+		classIndex: memory arrayClassIndexPun.
+	
+	memory storePointer: 0 ofObject: newClass withValue: memory nilObject.
+	memory storePointer: 1 ofObject: newClass withValue: memory nilObject.
+	
+	formatWithSlots := format << 16 + numberOfSlots. 
+	memory storePointer: 2 ofObject: newClass withValue: (memory integerObjectOf: formatWithSlots ).
+		
+	^ newClass	
 ]
 
 { #category : #helpers }
@@ -285,6 +303,24 @@ VMSpurMemoryManagerTest >> newSmallContextReceiver: anOop method: aMethodOop arg
 				withValue: (aCollectionOfTemporariesOop at: i)].
 	
 	^ newCtx
+]
+
+{ #category : #helpers }
+VMSpurMemoryManagerTest >> newString: aString [
+	| vmString |
+	vmString := self
+		newOldSpaceObjectWithSlots: aString size
+		format: memory firstByteFormat
+		classIndex: ByteString hash.
+
+	aString
+		doWithIndex: [ :char :index | 
+			memory
+				storeByte: index - 1
+				ofObject: vmString
+				withValue: char asInteger ].
+
+	^ vmString
 ]
 
 { #category : #helpers }

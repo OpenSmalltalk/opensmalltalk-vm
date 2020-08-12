@@ -76,8 +76,10 @@ PharoVMMaker >> generateCoInterpreterWithQueueFFI [
 	interpreterClass := CoInterpreterWithQueueFFI.
 	(interpreterClass bindingOf: #COGMTVM) value: false.
 
-	[ VMMaker
-		generateMainVM: interpreterClass
+	[ 
+	
+	(VMMaker
+		makerFor: interpreterClass
 		and: StackToRegisterMappingCogit
 		with: #(COGMTVM false
 				ObjectMemory Spur64BitCoMemoryManager
@@ -85,7 +87,12 @@ PharoVMMaker >> generateCoInterpreterWithQueueFFI [
 				bytecodeTableInitializer initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid)
 		to: self outputDirectory / 'generated'
 		platformDir: self outputDirectory / 'generated'
-		including: #() ] valueSupplyingAnswer:true.
+		including: #())
+			internal: #() external: #(FilePlugin);
+			doCleanupOldFiles;
+			generateInterpreterFile;
+			generateCogitFiles;
+			generateExternalPlugins] valueSupplyingAnswer:true.
 ]
 
 { #category : #generation }

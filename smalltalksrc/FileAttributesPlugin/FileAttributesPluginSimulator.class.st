@@ -382,8 +382,8 @@ FileAttributesPluginSimulator >> faSetStDirOop: faPath _: dirOop [
 	"Simulate setting the dir name in the supplied faPath."
 
 	self faSetStPathOop: faPath _: dirOop.
-	faPath second last = FileDirectory pathNameDelimiter asciiValue ifFalse:
-		[faPath at: 2 put: (faPath second copyWith: FileDirectory pathNameDelimiter asciiValue)].
+	faPath second last = FileSystem disk delimiter asciiValue ifFalse:
+		[faPath at: 2 put: (faPath second copyWith: FileSystem disk delimiter asciiValue)].
 	faPath at: 3 put: nil.
 ]
 
