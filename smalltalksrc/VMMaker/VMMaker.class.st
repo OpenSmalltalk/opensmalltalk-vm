@@ -1283,7 +1283,7 @@ VMMaker >> for64BitVM [
 VMMaker >> generateAdditionalHeadersFor: aClass withCodeGenerator: cg [
 
 	aClass additionalHeadersDo: [:headerName :headerContents| | filePath |
-		 filePath := self coreVMHeadersDirectory fullNameFor: headerName.
+		 filePath := (self coreVMHeadersDirectory / headerName) fullName.
 		 (cg needToGenerateHeader: headerName file: filePath contents: headerContents) ifTrue:
 			 [cg storeHeaderOnFile: filePath contents: headerContents]].
 ]
