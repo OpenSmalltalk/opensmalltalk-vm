@@ -45,6 +45,9 @@
 #include <linux/vt.h>
 #include <linux/kd.h>
 
+/* Eye Candy: Because white pixels are boring.. */
+#include "Balloon.h"
+
 
 #define _self	struct fb *self
 
@@ -616,6 +619,27 @@ static void fb_initVisual(_self)
     }
 }
 
+static void showBalloonAt(_self, int left, int top)
+{
+  int x, y;
+  char *data = balloon_data, pixel[4];
+  unsigned long myPixel;
+  int balloon_bytes_per_pixel = 4; /* 32 bits */
+
+  /* Center Balloon on x,y point */
+  left -= balloon_width_pixels  / 2;
+  top  -= balloon_height_pixels / 2;
+  for (y = 0; y < balloon_height_pixels; y++) {
+    for (x = 0; x < balloon_width_pixels; x++) {
+      /* extract RGB values from Balloon data */
+      BALLOON_PIXEL( data, pixel );
+      /* above side effect: data += balloon_bytes_per_pixel */
+      /*      myPixel = fb_pixel_color(self, pixel[0], pixel[1], pixel[2]);
+	      self->putPixel(self, left + x, top + y, myPixel); */
+      self->drawPixel(self, left + x, top + y, pixel[0], pixel[1], pixel[2]);
+    }
+  }
+}
 
 static void fb_initBuffer(_self)
 {
@@ -645,6 +669,15 @@ static void fb_initGraphics(_self)
   for (y= 0;  y < fb_height(self);  ++y)
     for (x= 0;  x < fb_width(self);  ++x)
       self->putPixel(self, x, y, self->whitePixel);
+  /* add eye candy */
+  x = fb_width(self)  / 2;
+  y = fb_height(self) / 2;
+  showBalloonAt(self,x,y) ;
+  showBalloonAt(self,x+(x/2),y-(y/2)) ;
+  showBalloonAt(self,x+(x/2),y+(y/2)) ;
+  showBalloonAt(self,x-(x/2),y-(y/2)) ;
+  showBalloonAt(self,x-(x/2),y+(y/2)) ;
+  aioSleepForUsecs( 6000000 ) ; /* 6 seconds: let the user notice */
 }
 
 
