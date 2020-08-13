@@ -45,6 +45,7 @@ VMPrimitiveTest >> setUp [
 	
 	page := interpreter makeBaseFrameFor: ctx.
 	interpreter setStackPointersFromPage: page.
+	interpreter setStackPageAndLimit: page.
 	
 	
 	"The ScheduleAssocation should be initialized to a valid Processor object"

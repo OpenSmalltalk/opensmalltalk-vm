@@ -19,6 +19,29 @@ Class {
 }
 
 { #category : #tests }
+VMLookUpTest >> etestPrimitivePerformSetsIPBeforeFirstBytecode [
+	| aMethodDictionary receiverOop |	
+	"Primitive perform sets everything up (frame, instruction pointer..) so next interpret loop will execute the first bytecode."
+	"(1) the Instruction Pointer is set to be just before the bytecode to execute, so fetchNextBytecode will fetch the first bytecode ( #justActivateNewMethod: )"
+
+	self setUpClassAndMethod.	
+	self setUpMethodDictionaryIn: class.
+	aMethodDictionary := memory fetchPointer: MethodDictionaryIndex ofObject: class.
+	self installSelector: selectorOop method: methodOop  inMethodDictionary: aMethodDictionary.
+	interpreter methodDictLinearSearchLimit: 3.
+
+	receiverOop := memory integerObjectOf: 41."random number"	
+	interpreter push: receiverOop.
+	interpreter push: selectorOop.
+	interpreter argumentCount: 1.
+	interpreter primitivePerform.
+	
+	self assert: interpreter instructionPointer equals: methodOop + 8 + 8 - 1 "+ header object + header of compiledMethod - (1)"
+ 	
+
+]
+
+{ #category : #tests }
 VMLookUpTest >> installSelector: aSelectorOop method: aMethodOop inMethodDictionary: aMethodDictionary [
 	
 	| anArrayOfMethods |
@@ -88,7 +111,7 @@ VMLookUpTest >> setUp [
 	
 	page := interpreter makeBaseFrameFor: ctx.
 	interpreter setStackPointersFromPage: page.
-	
+	interpreter setStackPageAndLimit: page.
 	
 	"The ScheduleAssocation should be initialized to a valid Processor object"
 	processorOopAssociation := self newObjectWithSlots: 2.
@@ -393,4 +416,69 @@ VMLookUpTest >> testLookUpWithNilMethodDictionaryFindsCannotInterpret [
 	interpreter messageSelector: nonExistingSelector.
 	interpreter lookupMethodInClass: class.
 	self assert: interpreter newMethod equals: cannotInterpretMethodOop.
+]
+
+{ #category : #tests }
+VMLookUpTest >> testPrimitivePerformCreatesCorrectFrame [
+	| aMethodDictionary receiverOop frame |	
+	"Primitive perform sets everything up (frame, instruction pointer..) so next interpret loop will execute the first bytecode."
+	"(1) the Instruction Pointer is set to be just before the bytecode to execute, so fetchNextBytecode will fetch the first bytecode ( #justActivateNewMethod: )"
+
+	self setUpClassAndMethod.	
+	self setUpMethodDictionaryIn: class.
+	aMethodDictionary := memory fetchPointer: MethodDictionaryIndex ofObject: class.
+	self installSelector: selectorOop method: methodOop  inMethodDictionary: aMethodDictionary.
+	interpreter methodDictLinearSearchLimit: 3.
+
+	receiverOop := memory integerObjectOf: 41."random number"	
+	interpreter push: receiverOop.
+	interpreter push: selectorOop.
+	interpreter argumentCount: 1.
+	interpreter primitivePerform.
+	
+	interpreter internalizeIPandSP.
+	frame := VMStackFrame newFramePointer: (interpreter framePointer) withInterpreter: interpreter.
+	self assert: frame receiver equals: receiverOop.
+ 	self assert: frame method equals: methodOop.
+	"self assert: frame arguments equals: 0." "<- we could add it when implemented in VMFrame"
+
+]
+
+{ #category : #tests }
+VMLookUpTest >> testPrimitivePerformExecutes [
+	| aMethodDictionary receiverOop |
+	self setUpClassAndMethod.	
+	self setUpMethodDictionaryIn: class.
+	aMethodDictionary := memory fetchPointer: MethodDictionaryIndex ofObject: class.
+	self installSelector: selectorOop method: methodOop  inMethodDictionary: aMethodDictionary.
+	interpreter methodDictLinearSearchLimit: 3.
+
+	receiverOop := memory integerObjectOf: 41."random number"	
+	interpreter push: receiverOop.
+	interpreter push: selectorOop.
+	interpreter argumentCount: 1." seems to be the offset from the stack top."
+	interpreter primitivePerform.
+	
+	self assert: interpreter stackTop equals: receiverOop
+]
+
+{ #category : #tests }
+VMLookUpTest >> testPrimitivePerformFindsMethodOop [
+	| aMethodDictionary receiverOop |
+	self setUpClassAndMethod.	
+	self setUpMethodDictionaryIn: class.
+	aMethodDictionary := memory fetchPointer: MethodDictionaryIndex ofObject: class.
+	self installSelector: selectorOop method: methodOop  inMethodDictionary: aMethodDictionary.
+	interpreter methodDictLinearSearchLimit: 3.
+
+	receiverOop := memory integerObjectOf: 41."random number"	
+	interpreter push: receiverOop.
+	interpreter push: selectorOop.
+	interpreter argumentCount: 1.
+	interpreter primitivePerform.
+	
+	self assert: interpreter newMethod equals: methodOop.
+	self assert: interpreter instructionPointer equals: methodOop + 8 + 8 - 1 "+ header object + header of compiledMethod - (1)"
+ 	
+	"(1) the Instruction Pointer is set to be just before the bytecode to execute, so fetchNextBytecode will fetch the first bytecode ( #justActivateNewMethod: )"
 ]

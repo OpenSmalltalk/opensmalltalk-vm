@@ -9557,6 +9557,7 @@ StackInterpreter >> jumplfTrueBy: offset [
 StackInterpreter >> justActivateNewMethod: mustBeInterpreterFrame [
 	| methodHeader numArgs numTemps rcvr |
 	<inline: true>
+	"Create the frame for the method activation"
 	methodHeader := objectMemory methodHeaderOf: newMethod.
 	numTemps := self temporaryCountOfMethodHeader: methodHeader.
 	numArgs := self argumentCountOfMethodHeader: methodHeader.
@@ -16541,6 +16542,11 @@ StackInterpreter >> ownVM: threadIndexAndFlags [
 	^objectMemory integerObjectOf: argumentCount
 ]
 
+{ #category : #'as yet unclassified' }
+StackInterpreter >> page: aCogStackPage [ 
+	self shouldBeImplemented.
+]
+
 { #category : #accessing }
 StackInterpreter >> pendingFinalizationSignals [
 	<doNotGenerate>
@@ -20691,6 +20697,11 @@ StackInterpreter >> stackObjectValue: offset [
 	(objectMemory isImmediate: oop) ifTrue:
 		[self primitiveFail. ^ nil].
 	^oop
+]
+
+{ #category : #'as yet unclassified' }
+StackInterpreter >> stackPage: aCogStackPage [ 
+	stackPage := aCogStackPage
 ]
 
 { #category : #'stack pages' }
