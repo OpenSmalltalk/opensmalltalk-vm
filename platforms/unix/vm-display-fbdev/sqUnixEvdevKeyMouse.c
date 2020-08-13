@@ -142,7 +142,7 @@ static int ms_open(struct ms *mouseSelf, char *msDevName, char *msProto)
     rc = ioctl(mouseDev.fd, EVIOCGRAB, (void*)1);
     /* @@FIXME: test rc @@*/
 
-    /*   rc = libevdev_new_from_fd( mouseDev.fd, &mouseDev.dev );
+   rc = libevdev_new_from_fd( mouseDev.fd, &mouseDev.dev );
     if (rc < 0) {
       fatal("Unable to initialize libevdev mouse (%s)\n", strerror(-rc) );
     } else {
@@ -151,7 +151,7 @@ static int ms_open(struct ms *mouseSelf, char *msDevName, char *msProto)
 	      libevdev_get_id_bustype(mouseDev.dev),
 	      libevdev_get_id_vendor( mouseDev.dev),
       	      libevdev_get_id_product(mouseDev.dev) );
-	      } */
+    } 
   }
   
   return 0;
@@ -164,7 +164,7 @@ static void ms_close(struct ms *mouseSelf)
     {
       ioctl(mouseDev.fd, EVIOCGRAB, (void*)0); /* ungrab device */
       close(mouseDev.fd);
-      /*      libevdev_free(mouseDev.dev); */
+      libevdev_free(mouseDev.dev);
       DPRINTF("%s (%d) closed\n", mouseDev.msName, mouseDev.fd);
       mouseDev.fd= -1;
     }
@@ -535,7 +535,7 @@ void kb_open(struct kb *kbdSelf, int vtSwitch, int vtLock)
     rc = ioctl(kbDev.fd, EVIOCGRAB, (void*)1);
     /* @@FIXME: test rc @@*/
   }
-  /*  rc = libevdev_new_from_fd( kbDev.fd, &kbDev.dev );
+  rc = libevdev_new_from_fd( kbDev.fd, &kbDev.dev );
   if (rc < 0) {
       fatal("Unable to initialize libevdev keyboard (%s)\n", strerror(-rc) );
   } else {
@@ -545,7 +545,6 @@ void kb_open(struct kb *kbdSelf, int vtSwitch, int vtLock)
 	      libevdev_get_id_vendor( kbDev.dev),
       	      libevdev_get_id_product(kbDev.dev) );
   }
-  */
 
   /*  kb_initKeyMap(kbdSelf, kmPath);   * squeak key mapping */
 }
@@ -557,7 +556,7 @@ void kb_close(struct kb *kbdSelf)
     {
       ioctl(kbDev.fd, EVIOCGRAB, (void*)0); /* ungrab device */
       close(kbDev.fd);
-      /*      libevdev_free(kbDev.dev); */
+      libevdev_free(kbDev.dev); 
       DPRINTF("%s (%d) closed\n", kbDev.kbName, kbDev.fd);
       kbDev.fd= -1;
     }
@@ -590,30 +589,30 @@ static void processLibEvdevKeyEvents() {
 }
 
 static void processLibEvdevMouseEvents() {
-  struct input_event ev[64];
-  int i, rd;
+  struct input_event evt[64];
+  int i, read_size;
 
-  rd = read(mouseDev.fd, ev, sizeof(ev));
-  if (rd < (int) sizeof(struct input_event)) {
+  read_size = read(mouseDev.fd, evt, sizeof(evt));
+  if (read_size < (int) sizeof(struct input_event)) {
     return; /* asynch read */
   }
 
-  for (i = 0; i < rd / sizeof(struct input_event); i++) {
+  for (i = 0; i < read_size / sizeof(struct input_event); i++) {
     unsigned int type, code, value;
 
-    type=  ev[i].type;
-    code=  ev[i].code;
-    value= ev[i].value;
+    type=  evt[i].type;
+    code=  evt[i].code;
+    value= evt[i].value;
 #ifdef DEBUG_MOUSE_EVENTS
       DPRINTF("EVDEV Mouse Event type %d, code %d, value: %d\n ", type, code, value);
       DPRINTF("      Mouse Event time %ld.%06ld \n",
-	      ev[i].input_event_sec,
-	      ev[i].input_event_usec);
+	      evt[i].input_event_sec,
+	      evt[i].input_event_usec);
 #endif
     if (type == EV_KEY) { /* (l|m|r)=(r|y|b) mouse keys */
-      updateMouseButtons(&ev[i]); 
+      updateMouseButtons(&evt[i]); 
       setSqueakModifierState();
-      setKeyCode(&ev[i]);
+      setKeyCode(&evt[i]);
 #ifdef DEBUG_EVENTS
       printKeyState(value);
 #endif
@@ -623,9 +622,9 @@ static void processLibEvdevMouseEvents() {
       printMouseState();
 #endif
     } else if ( (type == EV_SYN) | (type == EV_MSC) ) {
-      return;
+      continue; /* skip me, keep looking */
     } else {
-      updateMouseButtons(&ev[i]); 
+      updateMouseButtons(&evt[i]); 
       setSqueakModifierState();
      
       if (type == EV_REL) {
@@ -638,7 +637,7 @@ static void processLibEvdevMouseEvents() {
 	  break;
 	case REL_WHEEL:
 	  recordMouseWheelEvent( 0, value ); /* delta-y only */
-	break;
+	  break;
 	default:
 	  break;
 	}
