@@ -92,7 +92,6 @@
 #define RightMouseButtonBit BlueButtonBit
 
 /* forward declarations */
-static int  getMouseButtonState();
 static int  getModifierState();
 static void updateModifierState(struct input_event* evt); 
 static void processLibEvdevKeyEvents();
@@ -102,7 +101,6 @@ static void enqueueKeyboardEvent(int key, int up, int modifiers);
 static void printKeyState(int kind); 
 #endif
 static void setSqueakModifierState();
-static void setSqueakButtonState();
 
 /* Mouse */
 
@@ -234,7 +232,7 @@ static void updateSqueakMousePosition(struct input_event* evt) {
 static void printMouseState() {
    if ( (mousePosition.x != 0) || (mousePosition.y != 0) ) {
      DPRINTF( "*** Mouse at %4d,%4d ", mousePosition.x, mousePosition.y );
-     printButtons( getMouseButtonState() );
+     printButtons( buttonState );
      printModifiers( getModifierState() );
      if (mouseWheelDelta() != 0) {
        	DPRINTF( " Mouse Wheel: %d", mouseWheelDelta() );
@@ -249,44 +247,31 @@ static void printMouseState() {
 /* Track Mouse Button State */
 /*==========================*/
 
-static int mouseButtonsDown = 0;  /* (left|mid|right) = (Red|Yellow|Blue) */
-
 /* Distinguish 'sqInt getButtonState(void)' in sqUnixEvent.c 
  *   which ORs mouse and key modifiers (mouse button bits are shifted)
  */
 
-static int getMouseButtonState() { return ( mouseButtonsDown ) ; }
-
-static void setSqueakButtonState() {
-  buttonState= getMouseButtonState();
-}
-
-static void clearMouseButtons() { mouseButtonsDown = 0 ; wheelDelta = 0; }
+static void clearMouseButtons() { buttonState = 0 ; wheelDelta = 0; }
 
 static void updateMouseButtons(struct input_event* evt) {
   if (evt->type == EV_KEY) {
-    if (evt->value == 1) { /* button down */
+    if ((evt->value == 1) || (evt->value == 2)) { /* button down|repeat */
       switch (evt->code) {
-	case BTN_LEFT:   mouseButtonsDown |= LeftMouseButtonBit;  break;
-	case BTN_MIDDLE: mouseButtonsDown |= MidMouseButtonBit;   break;
-	case BTN_RIGHT:  mouseButtonsDown |= RightMouseButtonBit; break;
+	case BTN_LEFT:   buttonState |= LeftMouseButtonBit;  break;
+	case BTN_MIDDLE: buttonState |= MidMouseButtonBit;   break;
+	case BTN_RIGHT:  buttonState |= RightMouseButtonBit; break;
 	default: break;
       }
     } else if (evt->value == 0) { /* button up */
       switch (evt->code) {
-	case BTN_LEFT:   mouseButtonsDown &= ~LeftMouseButtonBit;  break;
-	case BTN_MIDDLE: mouseButtonsDown &= ~MidMouseButtonBit;   break;
-	case BTN_RIGHT:  mouseButtonsDown &= ~RightMouseButtonBit; break;
+	case BTN_LEFT:   buttonState &= ~LeftMouseButtonBit;  break;
+	case BTN_MIDDLE: buttonState &= ~MidMouseButtonBit;   break;
+	case BTN_RIGHT:  buttonState &= ~RightMouseButtonBit; break;
 	default: break;
       }
-    /* ignore repeats (evt->value == 2) */
     }
   }
 }
-
-
-
-
 
 /* Translate between libevdev and OpenSmalltalk/Squeak VM view of keystrokes */
 
@@ -362,7 +347,7 @@ static void setKeyCode(struct input_event* evt) {
 static void printKeyState(int kind) {
   int evdevKeyCode, squeakKeyCode, mouseButtonBits, modifierBits;
   if ((evdevKeyCode= keyCode()) != 0) {
-    mouseButtonBits = getMouseButtonState();
+    mouseButtonBits = buttonState;
     modifierBits    = getModifierState();
     squeakKeyCode= keyCode2keyValue( keyCode(),
 				     (modifierBits & ShiftKeyBit) );
@@ -448,7 +433,7 @@ static void updateModifierState(struct input_event* evt)
 /* left and right keys down and up must be tracked separately */
 {  /* harmless if not modifier key */
   if (evt->type == EV_KEY) {
-    if (evt->value == 1) { /* button down */
+    if ((evt->value == 1) || (evt->value == 2)) { /* button down|repeat */
 #ifdef DEBUG_EVENTS
       printEvtModifierKey(evt);
 #endif
@@ -479,7 +464,6 @@ static void updateModifierState(struct input_event* evt)
 	default: break;
         }
      }
-    /* ignore repeats (evt->value == 2) */
   } 
 }
 
@@ -583,7 +567,6 @@ void kb_close(struct kb *kbdSelf)
 struct kb *kb_new(void)
 {
   /*  struct kb *kbdSelf= (struct kb *)calloc(1, sizeof(struct kb)); */
-  struct kb *kbdSelf= &kbDev;
   kbDev.fd= -1;
   kbDev.dev = 0;
   return &kbDev;
@@ -621,36 +604,37 @@ static void processLibEvdevMouseEvents() {
     type=  ev[i].type;
     code=  ev[i].code;
     value= ev[i].value;
-
-    if (type == EV_KEY) { /* (l|m|r)=(r|y|b) mouse keys */
-      updateMouseButtons(&ev[i]); 
-      setSqueakButtonState();
-      setSqueakModifierState();
-      setKeyCode(&ev[i]);
-#ifdef MOUSE_EVENTS
-      printKeyState(value);
-#endif
-      enqueueMouseEvent( mouseButtonsDown, 0, 0 );
-    } else if ( (type == EV_SYN) | (type == EV_MSC) ) {
-      return;
-    } else {
 #ifdef DEBUG_MOUSE_EVENTS
-      DPRINTF("evdev Mouse type %d, code %d, value: %d\n ", type, code, value);
-      DPRINTF("Mouse Event time %ld.%06ld, ",
+      DPRINTF("EVDEV Mouse Event type %d, code %d, value: %d\n ", type, code, value);
+      DPRINTF("      Mouse Event time %ld.%06ld \n",
 	      ev[i].input_event_sec,
 	      ev[i].input_event_usec);
 #endif
+    if (type == EV_KEY) { /* (l|m|r)=(r|y|b) mouse keys */
       updateMouseButtons(&ev[i]); 
-      setSqueakButtonState();
+      setSqueakModifierState();
+      setKeyCode(&ev[i]);
+#ifdef DEBUG_EVENTS
+      printKeyState(value);
+#endif
+      /* enqueueMouseEvent( buttonState, 0, 0 ); */
+      recordMouseEvent();  /* should see mouse buttons.. */
+#ifdef DEBUG_EVENTS
+      printMouseState();
+#endif
+    } else if ( (type == EV_SYN) | (type == EV_MSC) ) {
+      return;
+    } else {
+      updateMouseButtons(&ev[i]); 
       setSqueakModifierState();
      
       if (type == EV_REL) {
 	switch (code) {
 	case REL_X:
-	  enqueueMouseEvent( mouseButtonsDown, value, 0 );
+	  enqueueMouseEvent( buttonState, value, 0 );
 	  break;
 	case REL_Y:
-	  enqueueMouseEvent( mouseButtonsDown, 0, value );
+	  enqueueMouseEvent( buttonState, 0, value );
 	  break;
 	case REL_WHEEL:
 	  recordMouseWheelEvent( 0, value ); /* delta-y only */

@@ -248,7 +248,8 @@ static sqInt display_ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 static sqInt display_ioProcessEvents(void)
 {
 #ifdef USEEVDEV
-  processLibEvdevKeyEvents();
+  processLibEvdevMouseEvents();
+  processLibEvdevKeyEvents(); /* sets modifier bits */
   processLibEvdevMouseEvents();
 #else
   aioPoll(0);
