@@ -31,6 +31,7 @@
 
 /* input.h defines libevdev key codes which get 
  *  mapped to keysum (X11) codes or ASCII.
+ * @@ Elided X11 keycodes based on vm-dev-X11/sqUnixX11.c @@
  *
  * Based on emperical testing w logitech USB keyboard & mouse 
  * on Raspberry Pi 3B running Alpine Linux.
@@ -176,6 +177,7 @@ int i;
     shiftKey[KEY_LEFTALT]   = XK_Alt_L;
     baseKey[KEY_SPACE]      = 0x20; /* ' ' */
     shiftKey[KEY_SPACE]     = 0x20;
+    /*
     baseKey[KEY_CAPSLOCK]   = XK_Caps_Lock;
     shiftKey[KEY_CAPSLOCK]  = XK_Caps_Lock;
     baseKey[KEY_F1]      = XK_F1;
@@ -205,12 +207,13 @@ int i;
    * Note: VM seems to not know, e.g., XK_KP_Page_Up
    *       so need to use XK_Page_Up here.
    */
+    /*
     baseKey[KEY_NUMLOCK]     = XK_Num_Lock;
     shiftKey[KEY_NUMLOCK]    = XK_Num_Lock;
     baseKey[KEY_SCROLLLOCK]  = XK_Scroll_Lock;
     shiftKey[KEY_SCROLLLOCK] = XK_Scroll_Lock;
     baseKey[KEY_KP7]      = XK_Home;
-    shiftKey[KEY_KP7]     = XK_7; /* XK_KP_7 .. */
+    shiftKey[KEY_KP7]     = XK_7; /* XK_KP_7 .. *
     baseKey[KEY_KP8]      = XK_Up;
     shiftKey[KEY_KP8]     = XK_8;
     baseKey[KEY_KP9]      = XK_Page_Up;
@@ -219,7 +222,7 @@ int i;
     shiftKey[KEY_KPMINUS] = XK_minus;
     baseKey[KEY_KP4]      = XK_Left;
     shiftKey[KEY_KP4]     = XK_4;
-    baseKey[KEY_KP5]      = XK_Begin; /* 0xFFB5 */
+    baseKey[KEY_KP5]      = XK_Begin; /* 0xFFB5 *
     shiftKey[KEY_KP5]     = XK_5;
     baseKey[KEY_KP6]      = XK_Right;
     shiftKey[KEY_KP6]     = XK_6;
@@ -235,19 +238,19 @@ int i;
     shiftKey[KEY_KP0]     = XK_0;
     baseKey[KEY_KPDOT]    = XK_period; 
     shiftKey[KEY_KPDOT]   = XK_period;
-
+*/
 /*******************
     baseKey[KEY_ZENKAKUHANKAKU]  = 0x;
     shiftKey[KEY_ZENKAKUHANKAKU] = 0x;
     baseKey[KEY_102ND]      = 0x;
     shiftKey[KEY_102ND]     = 0x;
 *******************/
-
+/*
     baseKey[KEY_F11]      = XK_F11;
     shiftKey[KEY_F11]     = XK_F11;
     baseKey[KEY_F12]      = XK_F12;
     shiftKey[KEY_F12]     = XK_F12;
-
+*/
 /*******************
     baseKey[KEY_RO]      = 0x;
     shiftKey[KEY_RO]     = 0x;
@@ -273,35 +276,36 @@ int i;
     shiftKey[KEY_KPENTER]   = 0x0D; /* CR */
     baseKey[KEY_RIGHTCTRL]  = XK_Control_R; 
     shiftKey[KEY_RIGHTCTRL] = XK_Control_R;
-    baseKey[KEY_KPSLASH]    = XK_slash;  /* XK_KP_Divide */
-    shiftKey[KEY_KPSLASH]   = XK_slash;
-    baseKey[KEY_SYSRQ]     = XK_Sys_Req; /* Print Screen */
+    baseKey[KEY_KPSLASH]    = 0x2f ; /*XK_slash;  /* XK_KP_Divide */
+    shiftKey[KEY_KPSLASH]   = 0x2f ; /*XK_slash; *
+    baseKey[KEY_SYSRQ]     = XK_Sys_Req; /* Print Screen *
     shiftKey[KEY_SYSRQ]    = XK_Sys_Req;
+				     */
     baseKey[KEY_RIGHTALT]  = XK_Alt_R;
     shiftKey[KEY_RIGHTALT] = XK_Alt_R;
     baseKey[KEY_LINEFEED]  = 0x0A; /* LF: LineFeed; ^J; NB: XK_Linefeed = 0xFF0A */ 
     shiftKey[KEY_LINEFEED] = 0x0A;
-    baseKey[KEY_HOME]    = XK_Home;
-    shiftKey[KEY_HOME]   = XK_Home;
-    baseKey[KEY_UP]      = XK_Up;
-    shiftKey[KEY_UP]     = XK_Up;
-    baseKey[KEY_PAGEUP]  = XK_Page_Up;
-    shiftKey[KEY_PAGEUP] = XK_Page_Up;
-    baseKey[KEY_LEFT]    = XK_Left;
-    shiftKey[KEY_LEFT]   = XK_Left;
-    baseKey[KEY_RIGHT]   = XK_Right;
-    shiftKey[KEY_RIGHT]  = XK_Right;
-    baseKey[KEY_END]     = XK_End;
-    shiftKey[KEY_END]    = XK_End;
-    baseKey[KEY_DOWN]    = XK_Down;
-    shiftKey[KEY_DOWN]   = XK_Down;
-    baseKey[KEY_PAGEDOWN]  = XK_Page_Down;
-    shiftKey[KEY_PAGEDOWN] = XK_Page_Down;
-    baseKey[KEY_INSERT]  = XK_Insert;
+    baseKey[KEY_HOME]    =  1; /*XK_Home;*/
+    shiftKey[KEY_HOME]   =  1; /*XK_Home;*/
+    baseKey[KEY_UP]      = 30; /*XK_Up;*/
+    shiftKey[KEY_UP]     = 30; /*XK_Up;*/
+    baseKey[KEY_PAGEUP]  = 11 ; /*XK_Page_Up;*/
+    shiftKey[KEY_PAGEUP] = 11 ; /*XK_Page_Up;*/
+    baseKey[KEY_LEFT]    = 11 ; /*XK_Left;*/
+    shiftKey[KEY_LEFT]   = 11 ; /*XK_Left;*/
+    baseKey[KEY_RIGHT]   = 29 ; /*XK_Right;*/
+    shiftKey[KEY_RIGHT]  = 29; /*XK_Right;*/
+    baseKey[KEY_END]     =  4; /*XK_End;*/
+    shiftKey[KEY_END]    =  4; /* XK_End;*/
+    baseKey[KEY_DOWN]    = 31; /*XK_Down;*/
+    shiftKey[KEY_DOWN]   = 31;
+    baseKey[KEY_PAGEDOWN]  = 12; /*XK_Page_Down;*/
+    shiftKey[KEY_PAGEDOWN] = 12; /*XK_Page_Down;*/
+    /*    baseKey[KEY_INSERT]  = XK_Insert;
     shiftKey[KEY_INSERT] = XK_Insert;
     baseKey[KEY_DELETE]  = XK_Delete;
     shiftKey[KEY_DELETE] = XK_Delete;
-
+    */
 /*******************
     baseKey[KEY_MACRO]  = 0x;
     shiftKey[KEY_MACRO] = 0x;
@@ -334,12 +338,12 @@ int i;
     baseKey[KEY_YEN]  = 0x;
     shiftKey[KEY_YEN] = 0x;
 *******************/
-
-    baseKey[KEY_LEFTMETA]  = XK_Super_L; /* NB: NOT XK_Meta_L ! */
+/*
+    baseKey[KEY_LEFTMETA]  = XK_Super_L; /* NB: NOT XK_Meta_L ! *
     shiftKey[KEY_LEFTMETA] = XK_Super_L;
     baseKey[KEY_COMPOSE]   = XK_Menu;
     shiftKey[KEY_COMPOSE]  = XK_Menu;
-
+*/
 /*******************
     baseKey[KEY_STOP]  = 0x;
     shiftKey[KEY_STOP] = 0x;

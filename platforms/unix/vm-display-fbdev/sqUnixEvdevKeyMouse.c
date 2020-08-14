@@ -142,7 +142,7 @@ static int ms_open(struct ms *mouseSelf, char *msDevName, char *msProto)
     rc = ioctl(mouseDev.fd, EVIOCGRAB, (void*)1);
     /* @@FIXME: test rc @@*/
 
-   rc = libevdev_new_from_fd( mouseDev.fd, &mouseDev.dev );
+    /*   rc = libevdev_new_from_fd( mouseDev.fd, &mouseDev.dev );
     if (rc < 0) {
       fatal("Unable to initialize libevdev mouse (%s)\n", strerror(-rc) );
     } else {
@@ -151,7 +151,7 @@ static int ms_open(struct ms *mouseSelf, char *msDevName, char *msProto)
 	      libevdev_get_id_bustype(mouseDev.dev),
 	      libevdev_get_id_vendor( mouseDev.dev),
       	      libevdev_get_id_product(mouseDev.dev) );
-    } 
+	      } */
   }
   
   return 0;
@@ -164,7 +164,7 @@ static void ms_close(struct ms *mouseSelf)
     {
       ioctl(mouseDev.fd, EVIOCGRAB, (void*)0); /* ungrab device */
       close(mouseDev.fd);
-      libevdev_free(mouseDev.dev);
+      /*      libevdev_free(mouseDev.dev); */
       DPRINTF("%s (%d) closed\n", mouseDev.msName, mouseDev.fd);
       mouseDev.fd= -1;
     }
@@ -313,6 +313,7 @@ static void setKeyCode(struct input_event* evt) {
     modifierBits = getModifierState();
     squeakKeyCode = keyCode2keyValue( lastKeyCode,
 				      (modifierBits & ShiftKeyBit) );
+
     if (isModifier(evt->code)) {
       /* Track, but do NOT report, modifier-key state. */
       updateModifierState(evt); 
@@ -322,6 +323,8 @@ static void setKeyCode(struct input_event* evt) {
 	DPRINTF("Setting key code: %d from raw: %d\n", squeakKeyCode, evt->code);
 	printKeyState(evt->value);
 #endif
+	if (squeakKeyCode == 0) return; /* no mapping for key */
+	
 	switch (evt->value) {
 	case 0: /* keyUp */
 	  enqueueKeyboardEvent(squeakKeyCode,
@@ -535,7 +538,7 @@ void kb_open(struct kb *kbdSelf, int vtSwitch, int vtLock)
     rc = ioctl(kbDev.fd, EVIOCGRAB, (void*)1);
     /* @@FIXME: test rc @@*/
   }
-  rc = libevdev_new_from_fd( kbDev.fd, &kbDev.dev );
+  /*  rc = libevdev_new_from_fd( kbDev.fd, &kbDev.dev );
   if (rc < 0) {
       fatal("Unable to initialize libevdev keyboard (%s)\n", strerror(-rc) );
   } else {
@@ -544,7 +547,7 @@ void kb_open(struct kb *kbdSelf, int vtSwitch, int vtLock)
 	      libevdev_get_id_bustype(kbDev.dev),
 	      libevdev_get_id_vendor( kbDev.dev),
       	      libevdev_get_id_product(kbDev.dev) );
-  }
+	      }*/
 
   /*  kb_initKeyMap(kbdSelf, kmPath);   * squeak key mapping */
 }
@@ -556,7 +559,7 @@ void kb_close(struct kb *kbdSelf)
     {
       ioctl(kbDev.fd, EVIOCGRAB, (void*)0); /* ungrab device */
       close(kbDev.fd);
-      libevdev_free(kbDev.dev); 
+      /*      libevdev_free(kbDev.dev);  */
       DPRINTF("%s (%d) closed\n", kbDev.kbName, kbDev.fd);
       kbDev.fd= -1;
     }
