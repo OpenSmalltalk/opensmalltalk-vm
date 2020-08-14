@@ -52,7 +52,7 @@ int i;
   if (keyMapInitialized) return; /* do this once */
  
   for (i = 0; i < KMAPSIZE; i++) {
-	baseKey[i]  = KEY_RESERVED;  /* default for debug @@??@@ */
+	baseKey[i]  = KEY_RESERVED;  /* NB: default is ignored */
 	shiftKey[i] = KEY_RESERVED;
   }
    /* Note: add 0x40 to keys less than 0x30 to get ctrl letter
@@ -200,6 +200,7 @@ int i;
     shiftKey[KEY_F9]     = XK_F9;
     baseKey[KEY_F10]     = XK_F10;
     shiftKey[KEY_F10]    = XK_F10;
+    */
   /* NB: NumLock swaps to/from 4/left, 1/end, etc.
    *  NumLock OFF => Left, End, ..  [UNshifted]
    *  NumLock ON  =>    4,   1, ..  [  SHIFTED]
@@ -207,38 +208,38 @@ int i;
    * Note: VM seems to not know, e.g., XK_KP_Page_Up
    *       so need to use XK_Page_Up here.
    */
-    /*
+    /* @@FIXME: track NumLock @@ *
     baseKey[KEY_NUMLOCK]     = XK_Num_Lock;
     shiftKey[KEY_NUMLOCK]    = XK_Num_Lock;
     baseKey[KEY_SCROLLLOCK]  = XK_Scroll_Lock;
-    shiftKey[KEY_SCROLLLOCK] = XK_Scroll_Lock;
-    baseKey[KEY_KP7]      = XK_Home;
-    shiftKey[KEY_KP7]     = XK_7; /* XK_KP_7 .. *
-    baseKey[KEY_KP8]      = XK_Up;
-    shiftKey[KEY_KP8]     = XK_8;
-    baseKey[KEY_KP9]      = XK_Page_Up;
-    shiftKey[KEY_KP9]     = XK_9;
-    baseKey[KEY_KPMINUS]  = XK_minus;
-    shiftKey[KEY_KPMINUS] = XK_minus;
-    baseKey[KEY_KP4]      = XK_Left;
-    shiftKey[KEY_KP4]     = XK_4;
-    baseKey[KEY_KP5]      = XK_Begin; /* 0xFFB5 *
-    shiftKey[KEY_KP5]     = XK_5;
-    baseKey[KEY_KP6]      = XK_Right;
-    shiftKey[KEY_KP6]     = XK_6;
-    baseKey[KEY_KPPLUS]   = XK_plus;
-    shiftKey[KEY_KPPLUS]  = XK_plus;
-    baseKey[KEY_KP1]      = XK_End;
-    shiftKey[KEY_KP1]     = XK_1;
-    baseKey[KEY_KP2]      = XK_Down;
-    shiftKey[KEY_KP2]     = XK_2;
-    baseKey[KEY_KP3]      = XK_Page_Down;
-    shiftKey[KEY_KP3]     = XK_3;
-    baseKey[KEY_KP0]      = XK_Insert;
-    shiftKey[KEY_KP0]     = XK_0;
-    baseKey[KEY_KPDOT]    = XK_period; 
-    shiftKey[KEY_KPDOT]   = XK_period;
-*/
+    shiftKey[KEY_SCROLLLOCK] = XK_Scroll_Lock; */
+    baseKey[KEY_KP7]      = 0x37; /* '7' */
+    shiftKey[KEY_KP7]     =  1; /*XK_Home;*/
+    baseKey[KEY_KP8]      = 0x38; /* '8' */
+    shiftKey[KEY_KP8]     = 30; /*XK_Up;*/
+    baseKey[KEY_KP9] 	  = 0x39; /* '9' */
+    shiftKey[KEY_KP9]     = 11; /*XK_Page_Up;*/
+    baseKey[KEY_KPMINUS]  = 0x2D; /*XK_minus;*/
+    shiftKey[KEY_KPMINUS] = 0x2D; /*XK_minus;*/
+    baseKey[KEY_KP4]      = 0x34; /* '4' */
+    shiftKey[KEY_KP4]     = 28; /*XK_Left;*/
+    baseKey[KEY_KP5]      = 0x35; /* '5' */
+    shiftKey[KEY_KP5]     =  1; /* XK_Begin*/
+    baseKey[KEY_KP6]      = 0x36; /* '6' */
+    shiftKey[KEY_KP6]     = 29; /*XK_Right;*/
+    baseKey[KEY_KPPLUS]   = 0x2B; /*XK_plus;*/
+    shiftKey[KEY_KPPLUS]  = 0x2B; /*XK_plus;*/
+    baseKey[KEY_KP1]      = 0x31; /* '1' */
+    shiftKey[KEY_KP1]     =  4; /*XK_End;*/
+    baseKey[KEY_KP2]      = 0x32; /* '2' */
+    shiftKey[KEY_KP2]     = 31; /*XK_Down;*/
+    baseKey[KEY_KP3]      = 0x33; /* '3' */
+    shiftKey[KEY_KP3]     = 11; /*XK_Page_Down;*/
+    baseKey[KEY_KP0]      = 0x30; /* '0' */
+    shiftKey[KEY_KP0]     =  5; /*XK_Insert;*/
+    baseKey[KEY_KPDOT]    = 0x2E; /*XK_period; */
+    shiftKey[KEY_KPDOT]   = 0x2E; /*XK_period; ??delete?? */
+
 /*******************
     baseKey[KEY_ZENKAKUHANKAKU]  = 0x;
     shiftKey[KEY_ZENKAKUHANKAKU] = 0x;
@@ -291,8 +292,8 @@ int i;
     shiftKey[KEY_UP]     = 30; /*XK_Up;*/
     baseKey[KEY_PAGEUP]  = 11 ; /*XK_Page_Up;*/
     shiftKey[KEY_PAGEUP] = 11 ; /*XK_Page_Up;*/
-    baseKey[KEY_LEFT]    = 11 ; /*XK_Left;*/
-    shiftKey[KEY_LEFT]   = 11 ; /*XK_Left;*/
+    baseKey[KEY_LEFT]    = 28 ; /*XK_Left;*/
+    shiftKey[KEY_LEFT]   = 28 ; /*XK_Left;*/
     baseKey[KEY_RIGHT]   = 29 ; /*XK_Right;*/
     shiftKey[KEY_RIGHT]  = 29; /*XK_Right;*/
     baseKey[KEY_END]     =  4; /*XK_End;*/
@@ -301,9 +302,9 @@ int i;
     shiftKey[KEY_DOWN]   = 31;
     baseKey[KEY_PAGEDOWN]  = 12; /*XK_Page_Down;*/
     shiftKey[KEY_PAGEDOWN] = 12; /*XK_Page_Down;*/
-    /*    baseKey[KEY_INSERT]  = XK_Insert;
-    shiftKey[KEY_INSERT] = XK_Insert;
-    baseKey[KEY_DELETE]  = XK_Delete;
+    baseKey[KEY_INSERT]  =  5; /*XK_Insert;*/
+    shiftKey[KEY_INSERT] =  5;
+    /*    baseKey[KEY_DELETE]  = XK_Delete;
     shiftKey[KEY_DELETE] = XK_Delete;
     */
 /*******************

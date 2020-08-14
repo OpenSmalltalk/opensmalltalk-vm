@@ -324,7 +324,7 @@ static void setKeyCode(struct input_event* evt) {
 	printKeyState(evt->value);
 #endif
 	if (squeakKeyCode == 0) return; /* no mapping for key */
-	
+
 	switch (evt->value) {
 	case 0: /* keyUp */
 	  enqueueKeyboardEvent(squeakKeyCode,
