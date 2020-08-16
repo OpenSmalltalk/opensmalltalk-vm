@@ -84,6 +84,7 @@ struct fb
   unsigned long			  cursorBack[16][16];
 };
 
+static struct fb fbSelf;
 
 #define swab32(X)     ({ __u32 __x= (X);						\
                          ((__u32)((((__u32)(__x) & (__u32)0x000000ffUL) << 24)		\
@@ -749,10 +750,10 @@ static void fb_close(_self)
 
 static struct fb *fb_new(void)
 {
-  _self= (struct fb *)calloc(1, sizeof(struct fb));
-  if (!self) outOfMemory();
-  self->fd=  -1;
-  return self;
+  /*  _self= (struct fb *)calloc(1, sizeof(struct fb)); */
+
+  fbSelf.fd=  -1;
+  return &fbSelf;
 }
 
 
@@ -760,7 +761,7 @@ static void fb_delete(_self)
 {
   assert(self->addr ==  0);
   assert(self->fd   == -1);
-  free(self);
+/*  free(self);*/
 }
 
 
