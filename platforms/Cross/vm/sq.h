@@ -403,8 +403,6 @@ void ioTransferTimeslice(void);
 #endif /* COGMTVM */
 
 /* Profiling. */
-void  ioProfileStatus(sqInt *running, void **exestartpc, void **exelimitpc,
-					  void **vmhst, long *nvmhbin, void **eahst, long *neahbin);
 void  ioControlProfile(int on, void **vhp, long *nvb, void **ehp, long *neb);
 long  ioControlNewProfile(int on, unsigned long buffer_size);
 void  ioNewProfileStatus(sqInt *running, long *buffersize);
