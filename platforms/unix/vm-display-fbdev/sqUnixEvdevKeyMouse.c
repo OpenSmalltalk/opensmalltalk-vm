@@ -48,7 +48,7 @@
 #include <signal.h>
 #include <limits.h> /* PATH_MAX */
 #include <linux/input.h>   /* /usr/include/linux/input.h */
-#include <X11/keysym.h>  /* /usr/include/X11/keysym.h */
+/* #include <X11/keysym.h>  * /usr/include/X11/keysym.h */
 #include <libevdev-1.0/libevdev/libevdev.h> /*  /usr/include/libevdev-1.0/libevdev/libevdev.h */
 
 #ifndef input_event_sec

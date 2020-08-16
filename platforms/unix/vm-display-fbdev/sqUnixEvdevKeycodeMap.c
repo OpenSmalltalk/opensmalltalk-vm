@@ -38,7 +38,7 @@
  */
 
 #include <linux/input.h>   /* /usr/include/linux/input.h */
-#include <X11/keysym.h>  /* /usr/include/X11/keysym.h */
+/* #include <X11/keysym.h>  * /usr/include/X11/keysym.h */
 
 static int keyMapInitialized = 0;
 #define KMAPSIZE 256
@@ -119,8 +119,8 @@ int i;
     shiftKey[KEY_RIGHTBRACE] = 0x7D; /* '}' */
     baseKey[KEY_ENTER]       = 0x0D; /* CR: Carriage Return */
     shiftKey[KEY_ENTER]      = 0x0D;
-    baseKey[KEY_LEFTCTRL]    = XK_Control_L;
-    shiftKey[KEY_LEFTCTRL]   = XK_Control_L;
+    baseKey[KEY_LEFTCTRL]    = KEY_LEFTCTRL; /* XK_Control_L;*/
+    shiftKey[KEY_LEFTCTRL]   = KEY_LEFTCTRL; /* XK_Control_L;*/
     baseKey[KEY_A]      = 0x61; /* 'a' */
     shiftKey[KEY_A]     = 0x41; /* 'A' */
     baseKey[KEY_S]      = 0x73; /* 's' */
@@ -145,8 +145,8 @@ int i;
     shiftKey[KEY_APOSTROPHE] = 0x22; /* '"' */
     baseKey[KEY_GRAVE]       = 0x60; /* '`' */
     shiftKey[KEY_GRAVE]      = 0x7E; /* '~' */
-    baseKey[KEY_LEFTSHIFT]   = XK_Shift_L;
-    shiftKey[KEY_LEFTSHIFT]  = XK_Shift_L;
+    baseKey[KEY_LEFTSHIFT]   = KEY_LEFTSHIFT; /*XK_Shift_L;*/
+    shiftKey[KEY_LEFTSHIFT]  = KEY_LEFTSHIFT; /*XK_Shift_L; */
     baseKey[KEY_BACKSLASH]   = 0x5C; /* '\' */
     shiftKey[KEY_BACKSLASH]  = 0x7C; /* '|' */
     baseKey[KEY_Z]      = 0x7A; /* 'z' */
@@ -169,12 +169,12 @@ int i;
     shiftKey[KEY_DOT]   = 0x3E; /* '>' */
     baseKey[KEY_SLASH]  = 0x2F; /* '/' */
     shiftKey[KEY_SLASH] = 0x3F; /* '?' */
-    baseKey[KEY_RIGHTSHIFT]  = XK_Shift_R;
-    shiftKey[KEY_RIGHTSHIFT] = XK_Shift_R;
-    baseKey[KEY_KPASTERISK]  = XK_asterisk;
-    shiftKey[KEY_KPASTERISK] = XK_asterisk;
-    baseKey[KEY_LEFTALT]    = XK_Alt_L;
-    shiftKey[KEY_LEFTALT]   = XK_Alt_L;
+    baseKey[KEY_RIGHTSHIFT]  = KEY_RIGHTSHIFT; /* XK_Shift_R;*/
+    shiftKey[KEY_RIGHTSHIFT] = KEY_RIGHTSHIFT; /* XK_Shift_R;*/
+    baseKey[KEY_KPASTERISK]  = 0x2A; /* '*' */
+    shiftKey[KEY_KPASTERISK] = 0x2A; /* '*' */
+    baseKey[KEY_LEFTALT]    = KEY_LEFTALT; /* XK_Alt_L;*/
+    shiftKey[KEY_LEFTALT]   = KEY_LEFTALT; /* XK_Alt_L;*/
     baseKey[KEY_SPACE]      = 0x20; /* ' ' */
     shiftKey[KEY_SPACE]     = 0x20;
     /*
@@ -208,11 +208,12 @@ int i;
    * Note: VM seems to not know, e.g., XK_KP_Page_Up
    *       so need to use XK_Page_Up here.
    */
-    /* @@FIXME: track NumLock @@ *
-    baseKey[KEY_NUMLOCK]     = XK_Num_Lock;
-    shiftKey[KEY_NUMLOCK]    = XK_Num_Lock;
-    baseKey[KEY_SCROLLLOCK]  = XK_Scroll_Lock;
-    shiftKey[KEY_SCROLLLOCK] = XK_Scroll_Lock; */
+/* @@FIXME: track NumLock @@ *
+    baseKey[KEY_NUMLOCK]     = KEY_NUMLOCK; * XK_Num_Lock;*
+    shiftKey[KEY_NUMLOCK]    = KEY_NUMLOCK; * XK_Num_Lock;*
+    baseKey[KEY_SCROLLLOCK]  = KEY_SCROLLLOCK; * XK_Scroll_Lock;*
+    shiftKey[KEY_SCROLLLOCK] = KEY_SCROLLLOCK; * XK_Scroll_Lock; *
+*/
     baseKey[KEY_KP7]      = 0x37; /* '7' */
     shiftKey[KEY_KP7]     =  1; /*XK_Home;*/
     baseKey[KEY_KP8]      = 0x38; /* '8' */
@@ -275,15 +276,16 @@ int i;
  */
     baseKey[KEY_KPENTER]    = 0x0D; /* ?XK_Return?  ?XK_KP_Enter? */
     shiftKey[KEY_KPENTER]   = 0x0D; /* CR */
-    baseKey[KEY_RIGHTCTRL]  = XK_Control_R; 
-    shiftKey[KEY_RIGHTCTRL] = XK_Control_R;
+    baseKey[KEY_RIGHTCTRL]  = KEY_RIGHTCTRL; /* XK_Control_R; */
+    shiftKey[KEY_RIGHTCTRL] = KEY_RIGHTCTRL; /* XK_Control_R;*/
     baseKey[KEY_KPSLASH]    = 0x2f ; /*XK_slash;  /* XK_KP_Divide */
     shiftKey[KEY_KPSLASH]   = 0x2f ; /*XK_slash; *
-    baseKey[KEY_SYSRQ]     = XK_Sys_Req; /* Print Screen *
-    shiftKey[KEY_SYSRQ]    = XK_Sys_Req;
-				     */
-    baseKey[KEY_RIGHTALT]  = XK_Alt_R;
-    shiftKey[KEY_RIGHTALT] = XK_Alt_R;
+/*
+    baseKey[KEY_SYSRQ]     = KEY_SYSRQ; * XK_Sys_Req; /* Print Screen **
+    shiftKey[KEY_SYSRQ]    = KEY_SYSRQ; * XK_Sys_Req; *
+*/
+    baseKey[KEY_RIGHTALT]  = KEY_RIGHTALT; /* XK_Alt_R;*/
+    shiftKey[KEY_RIGHTALT] = KEY_RIGHTALT; /* XK_Alt_R;*/
     baseKey[KEY_LINEFEED]  = 0x0A; /* LF: LineFeed; ^J; NB: XK_Linefeed = 0xFF0A */ 
     shiftKey[KEY_LINEFEED] = 0x0A;
     baseKey[KEY_HOME]    =  1; /*XK_Home;*/
