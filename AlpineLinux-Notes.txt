@@ -1,0 +1,36 @@
+Download raspi aa4ch64 from
+  https://alpinelinux.org/downloads/
+file:
+  http://dl-cdn.alpinelinux.org/alpine/v3.12/releases/aarch64/alpine-rpi-3.12.0-aarch64.tar.gz
+Instructions at
+  https://wiki.alpinelinux.org/wiki/Classic_install_or_sys_mode_on_Raspberry_Pi
+-------------------
+===================
+While easy to use, Alpine Linux packages are needed.  Here is what I added:
+-------------------
+sudo apk add mg bash git binutils build-base perl lsblk sudo htop gdb
+sudo apk add mandoc mandoc-apropos man-pages
+sudo apk add xf86-input-evdev xf86-input-evdev-doc xf86-input-evdev-dev
+sudo apk add xf86-video-fbdev xf86-video-fbdev-doc
+sudo apk add linux-rpi-dev linux-rpi4-dev linux-headers
+sudo apk add libevdev-dev glib-dev glu-dev
+
+===================
+group ownership:
+/dev/shm mem
+/dev/input/event0 input
+/dev/input/event0 input
+/dev/input/fb0 video
+
+adduser <you> mem
+chgrp mem /dev/shm
+...
+===================
+VM works in 16 bit mode, but not yet in 32 bit mode
+
+Check with 'fbset'
+
+>> sudo fbset -depth 16
+>> fbset
+
+===================
