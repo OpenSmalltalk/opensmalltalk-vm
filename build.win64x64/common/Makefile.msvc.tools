@@ -59,10 +59,7 @@ MEMACCESS:=-DUSE_INLINE_MEMORY_ACCESSORS=1
 endif
 
 # Set minimum version to Windows 8 (see /cygwin/usr/include/w32api/w32api.h)
-#but if so, sqWin32AEC.cpp includes DeviceTopology.h & barfs
-#WINVER:=-D_WIN32_WINNT=0x0801 -DWINVER=0x0801
-# Set minimum version to Windows 10
-WINVER:=-D_WIN64=1 -D_WIN32_WINNT=0x1001 -DWINVER=0x1001
+WINVER:=-D_WIN32_WINNT=0x0602 -DWINVER=0x0602
 
 # define _MT to eliminate the inline versions of printf et al in mingw/stdio.h
 #NOBUILTIN:= -fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf
@@ -70,7 +67,8 @@ NOBUILTIN:=-D_MT
 MACHINE:=x64
 
 DEFS:=	-D$(VM)VM=1 $(COGDEFS) $(MEMACCESS) $(WINVER) \
-		-DWIN32=1 -DUNICODE=1 -DWIN32_FILE_SUPPORT -DNO_ISNAN -DNO_SERVICE \
+		-DWIN32=1 -DWIN64=1 -D_WIN32=1 -D_WIN64=1 -DUNICODE=1 \
+		-DWIN32_FILE_SUPPORT -DNO_ISNAN -DNO_SERVICE \
 		$(NDEBUG) -DLSB_FIRST -DVM_NAME='"$(VM_NAME)"' $(XDEFS) $(CROQUET)
 
 #############################################################################

@@ -49,8 +49,8 @@ ifeq ($(COMPILER_TO_USE),clang)
 COGDEFS:=$(COGDEFS) -mno-stack-arg-probe
 endif
 
-# Set minimum version to WindowsXP (see /cygwin/usr/include/w32api/w32api.h)
-WINVER:=-D_WIN32_WINNT=0x0501 -DWINVER=0x0501
+# Set minimum version to Windows Vista (see /cygwin/usr/include/w32api/w32api.h)
+WINVER:=-D_WIN32_WINNT=0x0600 -DWINVER=0x0600
 
 # define _MT to eliminate the inline versions of printf et al in mingw/stdio.h
 NOBUILTIN:= -D_MT -fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf
@@ -59,7 +59,8 @@ CFLAGS:= -fdeclspec -msse2 -ggdb2 -m64 \
 
 TZ:=$(shell date +%Z)
 DEFS:=	-D$(VM)VM=1 $(COGDEFS) $(WINVER) \
-		-DWIN64=1 -DWIN32_FILE_SUPPORT -DNO_ISNAN -DNO_SERVICE \
+		-DWIN32=1 -DWIN64=1 -D_WIN32=1 -D_WIN64=1 \
+		-DWIN32_FILE_SUPPORT -DNO_ISNAN -DNO_SERVICE \
 		$(NDEBUG) -DLSB_FIRST -D'VM_NAME="$(VM_NAME)"' $(XDEFS) $(CROQUET)
 
 #############################################################################

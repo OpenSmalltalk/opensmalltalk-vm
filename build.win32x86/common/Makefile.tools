@@ -42,8 +42,8 @@ else
 COGDEFS:= $(COGDEFS) -DCOGMTVM=0 -DDEBUGVM=$(DEBUGVM)
 endif
 
-# Set minimum version to WindowsXP (see /cygwin/usr/include/w32api/w32api.h)
-WINVER:=-D_WIN32_WINNT=0x0501 -DWINVER=0x0501
+# Set minimum version to Windows Vista (see /cygwin/usr/include/w32api/w32api.h)
+WINVER:=-D_WIN32_WINNT=0x0600 -DWINVER=0x0600
 
 # define _MT to eliminate the inline versions of printf et al in mingw/stdio.h
 NOBUILTIN:= -D_MT -fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf
@@ -51,8 +51,9 @@ CFLAGS:= -msse2 -ggdb2 -m32 \
 	-mno-rtd -mms-bitfields $(OFLAGS) $(NOBUILTIN) $(WARNINGS)
 
 TZ:=$(shell date +%Z)
-DEFS:=	$(COGDEFS) $(WINVER) -DWIN32=1 -DWIN32_FILE_SUPPORT -DNO_ISNAN \
-		-DNO_SERVICE -D'TZ="$(TZ)"' \
+DEFS:=	$(COGDEFS) $(WINVER) \
+		-DWIN32=1 -D_WIN32=1 \
+		-DWIN32_FILE_SUPPORT -DNO_ISNAN -DNO_SERVICE -D'TZ="$(TZ)"' \
 		$(NDEBUG) -DLSB_FIRST -D'VM_NAME="$(VM_NAME)"' $(XDEFS) $(CROQUET)
 
 #############################################################################
