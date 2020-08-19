@@ -113,19 +113,9 @@ static inline int fb_pitch(_self)	{ return self->pitch; }
 static inline int fb_height(_self)	{ return self->var.yres; }
 static inline int fb_depth(_self)	{ return self->var.bits_per_pixel; }
 
-static inline int fb_red_offset(_self)	{ return self->var.red.offset; }
-static inline int fb_green_offset(_self) { return self->var.green.offset; }
-static inline int fb_blue_offset(_self)	{ return self->var.blue.offset; }
-
 static inline unsigned long fb_pixel_position(_self, int x, int y) {
   return (x + self->var.xoffset) * (self->var.bits_per_pixel / 8)
       +  (y + self->var.yoffset) * self->fix.line_length ;
-}
-
-static inline unsigned long fb_pixel_color(_self, int red, int green, int blue) {
-  return (red   << fb_red_offset(self))
-       | (green << fb_green_offset(self))
-       | (blue  << fb_blue_offset(self)) ;
 }
 
 static inline unsigned long fb_getPixel_32(_self, int x, int y)
@@ -635,8 +625,6 @@ static void showBalloonAt(_self, int left, int top)
       /* extract RGB values from Balloon data */
       BALLOON_PIXEL( data, pixel );
       /* above side effect: data += balloon_bytes_per_pixel */
-      /*      myPixel = fb_pixel_color(self, pixel[0], pixel[1], pixel[2]);
-	      self->putPixel(self, left + x, top + y, myPixel); */
       self->drawPixel(self, left + x, top + y, pixel[0], pixel[1], pixel[2]);
     }
   }
