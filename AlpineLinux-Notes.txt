@@ -34,3 +34,27 @@ Check with 'fbset'
 >> fbset
 
 ===================
+If your HDMI display remains black, you may need to
+play with boot options in 'usercfg.txt'
+Following is for RasPi4
+vvvv----vvvv----vvvv
+# usercfg.txt
+enable_uart=1
+dtparam=audio=on
+gpu_mem=256
+#dtoverlay=vc4-kms-v3d-pi4
+
+#KenD# for my old SAMSUNG HDMI TV
+# https://www.raspberrypi.org/documentation/configuration/config-txt/video.md
+hdmi_force_hotplug=1
+hdmi_ignore_edid=0xa5000080
+framebuffer_width=1024
+framebuffer_height=768
+framebuffer_depth=16
+hdmi_drive=2
+# as above fb 1024x768
+hdmi_group=2
+hdmi_mode=16
+config_hdmi_boost=9
+#eof#
+^^^^----^^^^----^^^^
