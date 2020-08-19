@@ -13,7 +13,7 @@ sudo apk add mandoc mandoc-apropos man-pages
 sudo apk add xf86-input-evdev xf86-input-evdev-doc xf86-input-evdev-dev
 sudo apk add xf86-video-fbdev xf86-video-fbdev-doc
 sudo apk add linux-rpi-dev linux-rpi4-dev linux-headers
-sudo apk add libevdev-dev glib-dev glu-dev
+sudo apk add libevdev-dev glib-dev glu-dev openssl-dev
 
 ===================
 group ownership:
