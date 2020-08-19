@@ -21,6 +21,7 @@
 /nsvm*linux*
 /nsvm*win*
 /.thirdparty-cache*
+/.vs
 
 platforms/unix/config/autom4te.cache/
 

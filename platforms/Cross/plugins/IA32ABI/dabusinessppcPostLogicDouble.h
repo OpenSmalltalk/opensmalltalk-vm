@@ -35,7 +35,7 @@ if (objIsAlien(resultMaybeAlien)) {
 	if (!(size = sizeField(resultMaybeAlien)))
 		size = sizeof(void *);
 		
-	long argByteSize = min(abs(size),sizeof(double));
+	long argByteSize = min(labs(size),sizeof(double));
 		
 	if (argByteSize < sizeof(double)) {
 		interpreterProxy->success(0);

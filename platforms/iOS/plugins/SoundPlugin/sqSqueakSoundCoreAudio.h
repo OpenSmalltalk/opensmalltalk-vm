@@ -52,7 +52,7 @@ static const int kNumberOfBuffers=4;
 	AudioStreamBasicDescription *inputFormat;
 	AudioQueueBufferRef *inputBuffers;
 	AudioQueueRef	outputAudioQueue;
-	Queue*			soundInQueue;
+	Queue			*soundInQueue;
 	sqInt			semaIndexForOutput;
 	UInt32			bufferSizeForOutput;
 	BOOL			outputIsRunning;

@@ -11,6 +11,7 @@
  */
 #if defined(__ARM_ARCH_ISA_A64) || defined(__arm64__) || defined(__aarch64__) || defined(ARM64)
 
+#include <unistd.h> /* for getpagesize/sysconf */
 #include <stdlib.h> /* for valloc */
 #include <sys/mman.h> /* for mprotect */
 
@@ -295,7 +296,11 @@ allocateExecutablePage(sqIntptr_t *size)
 	if (mem)
 		*size = pagesize;
 #else
+# if !defined(_POSIX_C_SOURCE) || _POSIX_C_SOURCE < 200112L
 	long pagesize = getpagesize();
+# else
+	long pagesize = sysconf(_SC_PAGESIZE);
+# endif
 
 	if (!(mem = valloc(pagesize)))
 		return 0;

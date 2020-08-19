@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 # assert Stack Spur VM with VM profiler and threaded heartbeat
-INSTALLDIR=assert/sqstkspur64ARMv8linuxhtAssert
+INSTALLDIR=assert/sqstkspur64ARMv8linuxht
 OPT="-g3 -O1 -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -DDEBUGVM=0"
 
 if [ $# -ge 1 ]; then

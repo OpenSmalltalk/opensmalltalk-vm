@@ -1,0 +1,94 @@
+#############################################################################
+# Compilation flags & paths for Mac OS X
+#
+# These are derived from Xcode v 6.2 for Apple LLVM version 6.0 (clang-600.0.57)
+
+XCODE:=$(shell /usr/bin/xcode-select -p)
+XCUB:=$(XCODE)/usr/bin
+SDKsDIR:=$(XCODE)/Platforms/MacOSX.platform/Developer/SDKs
+#Build oldest installed SDK
+SDKs:=MacOSX11.0.sdk
+ifeq ($(SDK),)
+SDK:=$(firstword $(realpath $(addprefix $(SDKsDIR)/, $(SDKs))))
+else # Allow Makefile to set specific SDK
+override SDK:=$(realpath $(addprefix $(SDKsDIR)/, $(SDK)))
+endif
+ifeq ($(strip $(SDK)),)
+$(error could not find a valid SDK)
+endif
+TARGET_ARCH:=arm64
+#TARGET_CPU:=apple-a12
+#TARGET_CPU:=apple-a12 -D__arm64__=1 # Hack; clang neglects to set __arm64__
+ifeq ($(TARGET_VERSION_MIN),) # Allow Makefile to set TARGET_VERSION_MIN
+TARGET_VERSION_MIN:=11.0
+endif
+
+# Determine where to install plugins in the .app bundle using the Squeak
+# scheme (which tries to follow Apple's approach).  We would like this to
+# be Contents/PlugIns, but for reasons not yet understood, this breaks
+# Terf's libAgpu load.  So for now we keep it as Contents/Resources.
+APPPLUGINDIR:=PlugIns
+APPPLUGINDIR:=Resources
+
+print-sdks:
+	$(info ---------------- Makefile.flags settings ------------------)
+	$(info SDKs=$(realpath $(addprefix $(SDKsDIR)/, $(SDKs))))
+	$(info SDK=$(SDK))
+	$(info -----------------------------------------------------)
+
+# N.B. ARC isn't supported by the os-x 32-bit legacy Objective-C runtime kernel.
+# ARC is supported only on 64-bits, and then only for the 10.7 SDK and later.
+OBJC_CODE_MODEL := -fobjc-arc
+ifdef BIT_IDENTICAL_FLOATING_POINT
+CFLAGS:=$(CFLAGS) -DBIT_IDENTICAL_FLOATING_POINT=1
+endif
+#CFLAGS:=$(CFLAGS) -DBUILD_FOR_OSX=1 -DUSE_METAL=1 -DUSE_OPENGL=1 -DUSE_CORE_GRAPHICS=1 \
+#		-target $(TARGET_ARCH) -mcpu=$(TARGET_CPU) \
+#		-mmacosx-version-min=$(TARGET_VERSION_MIN) \
+#		-fvisibility=default \
+#		-fmacro-backtrace-limit=0 -fdiagnostics-show-note-include-stack \
+#		-fmessage-length=0 -fpascal-strings -fasm-blocks -fstrict-aliasing \
+#		$(OBJC_CODE_MODEL) \
+#		$(XCFLAGS) \
+#		-isysroot $(SDK) \
+#		-include $(PLATDIR)/iOS/vm/SqueakPureObjc_Prefix.pch
+
+CFLAGS:=$(CFLAGS) -DBUILD_FOR_OSX=1 -DUSE_METAL=1 -DUSE_OPENGL=1 -DUSE_CORE_GRAPHICS=1 \
+		-arch $(TARGET_ARCH) \
+		-fvisibility=default \
+		-fmacro-backtrace-limit=0 -fdiagnostics-show-note-include-stack \
+		-fmessage-length=0 -fpascal-strings -fasm-blocks -fstrict-aliasing \
+		$(OBJC_CODE_MODEL) \
+		$(XCFLAGS) \
+		-isysroot $(SDK) \
+		-include $(PLATDIR)/iOS/vm/SqueakPureObjc_Prefix.pch
+
+BFLAGS:=-arch $(TARGET_ARCH) \
+		-bundle \
+		-isysroot $(SDK) \
+		-Wl,-rpath,@executable_path/../Frameworks \
+		-Wl,-rpath,@executable_path/../$(APPPLUGINDIR) \
+		$(EXTRABFLAGS)
+
+DYFLAGS:=-arch $(TARGET_ARCH) \
+		-shared \
+		-isysroot $(SDK) \
+		$(EXTRADYFLAGS)
+
+WARNINGS:= -Wno-missing-field-initializers -Wno-missing-prototypes \
+	-Wno-missing-braces -Wparentheses -Wswitch -Wno-unused-function \
+	-Wno-unused-label -Wno-unused-parameter -Wunused-variable -Wunused-value \
+	-Wno-empty-body -Wno-uninitialized -Wno-unknown-pragmas -Wno-shadow \
+	-Wno-four-char-constants -Wno-conversion -Wno-constant-conversion \
+	-Wno-int-conversion -Wno-bool-conversion -Wno-enum-conversion \
+	-Wno-sign-conversion -Wno-shorten-64-to-32 -Wpointer-sign -Wno-newline-eof \
+	-Wno-trigraphs -Wdeprecated-declarations -Wimplicit-function-declaration
+
+# N.B. No QuickTime framework; that is 32-bit only.
+FRAMEWORKS:=-fobjc-link-runtime \
+			-framework Foundation -framework OpenGL -framework Cocoa \
+			-framework AudioToolbox -framework CoreAudio \
+			-framework SystemConfiguration \
+			-framework ApplicationServices -framework Security \
+			-framework QuartzCore \
+			-framework Metal -framework MetalKit

@@ -15,9 +15,11 @@
 
 #pragma auto_inline(off)
 #if defined(EXPORT) && !defined(SQUEAK_BUILTIN_PLUGIN)
+EXPORT(void) error(char *);
 EXPORT(void) warning(char *);
 EXPORT(void) warningat(char *,int);
 #else
+extern void error(char *);
 extern void warning(char *);
 extern void warningat(char *,int);
 #endif

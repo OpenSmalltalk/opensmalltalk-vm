@@ -21,7 +21,7 @@
 	for (i = size = 0; --i >= numArgs;) {
 		sqInt arg = argVector[i+1];
 		if (objIsAlien(arg) && sizeField(arg))
-			size += moduloPOT(sizeof(long),abs(sizeField(arg)));
+			size += moduloPOT(sizeof(long),labs(sizeField(arg)));
 		else if (interpreterProxy->isFloatObject(arg))
 			size += sizeof(double);
 		else /* assume an integer or pointer.  check below. */
@@ -32,7 +32,7 @@
 	for (i = numArgs, size = 0; --i >= 0;) {
 		sqInt arg = argVector[i];
 		if (objIsAlien(arg) && sizeField(arg))
-			size += moduloPOT(sizeof(long),abs(sizeField(arg)));
+			size += moduloPOT(sizeof(long),labs(sizeField(arg)));
 		else if (interpreterProxy->isFloatObject(arg))
 			size += sizeof(double);
 		else /* assume an integer or pointer.  check below. */
@@ -73,7 +73,7 @@
 			if (!(size = sizeField(arg)))
 				size = argByteSize = sizeof(void *);
 			else
-				argByteSize = abs(size);
+				argByteSize = labs(size);
 			memcpy(argvec, startOfDataWithSize(arg,size), argByteSize);
 			argvec += moduloPOT(sizeof(long), argByteSize);
 		}
@@ -114,7 +114,7 @@
 			if (!(size = sizeField(arg)))
 				size = argByteSize = sizeof(void *);
 			else
-				argByteSize = abs(size);
+				argByteSize = labs(size);
 			memcpy(argvec, startOfDataWithSize(arg,size), argByteSize);
 			argvec += moduloPOT(sizeof(long), argByteSize);
 		}
@@ -156,7 +156,7 @@
 			size = sizeof(void *);
 		memcpy(startOfDataWithSize(resultMaybeAlien,size),
 				&r,
-				min((unsigned)abs(size), sizeof(r)));
+				min((unsigned long)labs(size), sizeof(r)));
 	}
 
 	return PrimNoErr;

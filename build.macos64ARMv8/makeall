@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -e
+trap 'exit 2' HUP INT PIPE TERM
+for d in *.spur*; do
+	if test -d "$d"; then
+		(cd ./$d;./mvm -A)
+	else
+		echo no $d directory found
+	fi
+done
+echo no news is good news...
+grep -w error: *.spur/LOG*

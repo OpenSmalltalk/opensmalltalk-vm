@@ -162,9 +162,14 @@ ioControlProfile(int on,
 	machine_state desiredState = on ? active : quiescent;
 	DWORD_PTR     desiredAffinity = on ? 1 : defaultAffinity;
 
-	ioProfileStatus(0, 0, 0,
-					vmHistogramPtr, vmHistogramBins,
-					easHistogramPtr, easHistogramBins);
+	if (vmHistogramBins)
+		*vmHistogramBins = VM_BYTES(first_vm_pc,limit_vm_pc) / sizeof(*vm_bins);
+	if (vmHistogramPtr)
+		*vmHistogramPtr = vm_bins;
+	if (easHistogramBins)
+		*easHistogramBins = EAS_BYTES / sizeof(*eas_bins);
+	if (easHistogramPtr)
+		*easHistogramPtr = eas_bins;
 
 	if (profileState == desiredState)
 		return;
@@ -174,29 +179,6 @@ ioControlProfile(int on,
     profileState = desiredState;
 	if (!ReleaseSemaphore(profileSemaphore,1 /* 1 signal */,NULL))
 		abortMessage(TEXT("ReleaseSemaphore(profileSemaphore... error"));
-}
-
-void 
-ioProfileStatus(sqInt *running, void **exestartpc, void **exelimitpc,
-				void **vmHistogramPtr, long *vmHistogramBins,
-				void **easHistogramPtr, long *easHistogramBins)
-{
-	if (!vm_bins)
-		initProfile();
-	if (running)
-		*running = profileState == active;
-	if (exestartpc)
-		*exestartpc = first_vm_pc;
-	if (exelimitpc)
-		*exelimitpc = limit_vm_pc;
-	if (vmHistogramBins)
-		*vmHistogramBins = VM_BYTES(first_vm_pc,limit_vm_pc) / sizeof(*vm_bins);
-	if (vmHistogramPtr)
-		*vmHistogramPtr = vm_bins;
-	if (easHistogramBins)
-		*easHistogramBins = EAS_BYTES / sizeof(*eas_bins);
-	if (easHistogramPtr)
-		*easHistogramPtr = eas_bins;
 }
 
 void

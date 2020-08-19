@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 # assert Cog Spur VM with VM profiler and threaded heartbeat
-INSTALLDIR=assert/sqspur64ARMv8linuxht
+INSTALLDIR=assert/sqcogspur64ARMv8linuxht
 # armv8.N-a all fail in signalSemaphoreWithIndex for N in 1,2,3,4,5
 MACHINE="-march=armv8-a -mtune=cortex-a72"
 OPT="-g3 -O1 -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -DDEBUGVM=0"

@@ -37,7 +37,7 @@ if (objIsAlien(resultMaybeAlien)) {
 		size = sizeof(void *);
 		memcpy(startOfDataWithSize(resultMaybeAlien,size),
 			   &r,
-			   min(abs(size), sizeof(r)));
+			   min(labs(size), sizeof(r)));
 		}
 
 return PrimErrNoErr;
