@@ -34,6 +34,15 @@ Check with 'fbset'
 >> fbset
 
 ===================
+# in .bashrc
+# to allow    'squeak <image>"
+# rather than 'squeak -vm-display-fbdev -fbdev /dev/fb0 <image>'
+SQUEAK_KBDEV=/dev/input/event0
+SQUEAK_VM=display-fbdev
+SQUEAK_FBDEV=/dev/fb0
+SQUEAK_MSDEV=/dev/input/event1
+
+===================
 If your HDMI display remains black, you may need to
 play with boot options in 'usercfg.txt'
 Following is for RasPi4
