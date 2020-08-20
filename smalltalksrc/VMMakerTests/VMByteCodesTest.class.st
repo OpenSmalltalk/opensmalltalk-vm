@@ -88,7 +88,7 @@ VMByteCodesTest >> interpretWithFrame: aBlock [
 
 ]
 
-{ #category : #'test-push-simple' }
+{ #category : #'tests-push-simple' }
 VMByteCodesTest >> pushTempTest: index [
 	
 	stackBuilder addNewFrame tempAt: index put: (memory integerObjectOf: 42).
@@ -119,7 +119,7 @@ VMByteCodesTest >> pushThisContextTopFrame [
 		withInterpreter: interpreter
 ]
 
-{ #category : #'test-push-simple' }
+{ #category : #'tests-push-simple' }
 VMByteCodesTest >> storeAndPopTemporaryIntoTempTest: index [
 	
 	stackBuilder addNewFrame
@@ -142,7 +142,6 @@ VMByteCodesTest >> storeAndPopTemporaryVariableBytecodeAt: anInteger [
 
 { #category : #'tests-pushThisContext' }
 VMByteCodesTest >> testAccessingSenderOfContextShouldReturnContextOfSender [
-
 	| oldMaybeSenderContext newMaybeSenderContext |
 	self interpretWithFrame: [ interpreter pushActiveContextBytecode. ].
 	oldMaybeSenderContext := interpreter instVar: SenderIndex ofContext: interpreter stackTop.
@@ -151,10 +150,10 @@ VMByteCodesTest >> testAccessingSenderOfContextShouldReturnContextOfSender [
 	self assert: oldMaybeSenderContext equals: newMaybeSenderContext
 ]
 
-{ #category : #tests }
+{ #category : #'tests-complex' }
 VMByteCodesTest >> testBytecodePopIntoReceiverWithReadOnlySendsAttemptToAssignMethod [
 
-	| class object slotIndex objectToPutInSlot attemptToAssignMethod attemptToAssignSelector aMethodDictionary |
+	| class object objectToPutInSlot attemptToAssignMethod attemptToAssignSelector aMethodDictionary |
 	
 	class := self newClassInOldSpaceWithSlots: 0 format: memory arrayFormat.	
 	object := memory instantiateClass: class indexableSize: 1.
@@ -168,26 +167,25 @@ VMByteCodesTest >> testBytecodePopIntoReceiverWithReadOnlySendsAttemptToAssignMe
 
 	memory setIsImmutableOf: object to: true. 
 	
-	slotIndex := memory integerObjectOf: 1.
 	objectToPutInSlot := memory instantiateClass: class indexableSize: 1.
 	
 	stackBuilder addNewFrame
-	receiver: object;
-	stack:  { objectToPutInSlot }.
+		receiver: object;
+		stack:  { objectToPutInSlot }.
 	stackBuilder buildStack.
 	
 	interpreter methodDictLinearSearchLimit: 3.
 	interpreter setBreakSelector: nil.
 	interpreter currentBytecode: 200.
-	interpreter storeAndPopReceiverVariableBytecode.
-	interpreter externalizeIPandSP.
-	
+
+	self interpret:[ interpreter storeAndPopReceiverVariableBytecode ].
+
 	topFrame := VMStackFrame newFramePointer: (interpreter framePointer) withInterpreter: interpreter.
 	self assert: topFrame method equals: attemptToAssignMethod.
 
 ]
 
-{ #category : #'test-push-simple' }
+{ #category : #'tests-push-simple' }
 VMByteCodesTest >> testDuplicateStackTop [
 
 	stackBuilder addNewFrame ; buildStack.
@@ -204,7 +202,7 @@ VMByteCodesTest >> testDuplicateStackTop [
 	
 ]
 
-{ #category : #'test-push-simple' }
+{ #category : #'tests-push-simple' }
 VMByteCodesTest >> testPopStackTopBytecode [
 
 	stackBuilder addNewFrame ; buildStack..
@@ -220,7 +218,7 @@ VMByteCodesTest >> testPopStackTopBytecode [
 	
 ]
 
-{ #category : #'test-push-simple' }
+{ #category : #'tests-push-simple' }
 VMByteCodesTest >> testPushConstantFalseBytecode [
 	stackBuilder addNewFrame ; buildStack.
 	self
@@ -228,7 +226,7 @@ VMByteCodesTest >> testPushConstantFalseBytecode [
 		pushed: memory falseObject
 ]
 
-{ #category : #'test-push-simple' }
+{ #category : #'tests-push-simple' }
 VMByteCodesTest >> testPushConstantMinusOneBytecode [
 	stackBuilder addNewFrame ; buildStack.
 	self
@@ -236,7 +234,7 @@ VMByteCodesTest >> testPushConstantMinusOneBytecode [
 		pushed: (memory integerObjectOf: -1)
 ]
 
-{ #category : #'test-push-simple' }
+{ #category : #'tests-push-simple' }
 VMByteCodesTest >> testPushConstantNilBytecode [
 	stackBuilder addNewFrame ; buildStack.
 	self
@@ -244,7 +242,7 @@ VMByteCodesTest >> testPushConstantNilBytecode [
 		pushed: memory nilObject
 ]
 
-{ #category : #'test-push-simple' }
+{ #category : #'tests-push-simple' }
 VMByteCodesTest >> testPushConstantOneBytecode [
 	stackBuilder addNewFrame ; buildStack.
 	self
@@ -252,12 +250,12 @@ VMByteCodesTest >> testPushConstantOneBytecode [
 		pushed: (memory integerObjectOf: 1)
 ]
 
-{ #category : #'test-push-simple' }
+{ #category : #'tests-push-simple' }
 VMByteCodesTest >> testPushConstantReceiverBytecode [
-	| intReceiver f1 |
+	| intReceiver |
 	intReceiver := memory integerObjectOf: 42.
 	
-	f1 := stackBuilder addNewFrame receiver: intReceiver.
+	stackBuilder addNewFrame receiver: intReceiver.
 	stackBuilder buildStack.
 
 	self
@@ -265,7 +263,7 @@ VMByteCodesTest >> testPushConstantReceiverBytecode [
 		pushed: intReceiver
 ]
 
-{ #category : #'test-push-simple' }
+{ #category : #'tests-push-simple' }
 VMByteCodesTest >> testPushConstantTrueBytecode [
 	stackBuilder addNewFrame ; buildStack.
 	self
@@ -273,7 +271,7 @@ VMByteCodesTest >> testPushConstantTrueBytecode [
 		pushed: memory trueObject
 ]
 
-{ #category : #'test-push-simple' }
+{ #category : #'tests-push-simple' }
 VMByteCodesTest >> testPushConstantTwoBytecode [
 	stackBuilder addNewFrame ; buildStack.
 	self
@@ -281,7 +279,7 @@ VMByteCodesTest >> testPushConstantTwoBytecode [
 		pushed: (memory integerObjectOf: 2)
 ]
 
-{ #category : #'test-push-simple' }
+{ #category : #'tests-push-simple' }
 VMByteCodesTest >> testPushConstantZeroBytecode [
 	stackBuilder addNewFrame ; buildStack.
 	self
@@ -289,62 +287,62 @@ VMByteCodesTest >> testPushConstantZeroBytecode [
 		pushed: (memory integerObjectOf: 0)
 ]
 
-{ #category : #'test-push-simple' }
+{ #category : #'tests-push-simple' }
 VMByteCodesTest >> testPushTemp0 [
 	self pushTempTest: 0
 ]
 
-{ #category : #'test-push-simple' }
+{ #category : #'tests-push-simple' }
 VMByteCodesTest >> testPushTemp1 [
 	self pushTempTest: 1
 ]
 
-{ #category : #'test-push-simple' }
+{ #category : #'tests-push-simple' }
 VMByteCodesTest >> testPushTemp10 [
 	self pushTempTest: 10
 ]
 
-{ #category : #'test-push-simple' }
+{ #category : #'tests-push-simple' }
 VMByteCodesTest >> testPushTemp11 [
 	self pushTempTest: 11
 ]
 
-{ #category : #'test-push-simple' }
+{ #category : #'tests-push-simple' }
 VMByteCodesTest >> testPushTemp2 [
 	self pushTempTest: 2
 ]
 
-{ #category : #'test-push-simple' }
+{ #category : #'tests-push-simple' }
 VMByteCodesTest >> testPushTemp3 [
 	self pushTempTest: 3
 ]
 
-{ #category : #'test-push-simple' }
+{ #category : #'tests-push-simple' }
 VMByteCodesTest >> testPushTemp4 [
 	self pushTempTest: 4
 ]
 
-{ #category : #'test-push-simple' }
+{ #category : #'tests-push-simple' }
 VMByteCodesTest >> testPushTemp5 [
 	self pushTempTest: 5
 ]
 
-{ #category : #'test-push-simple' }
+{ #category : #'tests-push-simple' }
 VMByteCodesTest >> testPushTemp6 [
 	self pushTempTest: 6
 ]
 
-{ #category : #'test-push-simple' }
+{ #category : #'tests-push-simple' }
 VMByteCodesTest >> testPushTemp7 [
 	self pushTempTest: 7
 ]
 
-{ #category : #'test-push-simple' }
+{ #category : #'tests-push-simple' }
 VMByteCodesTest >> testPushTemp8 [
 	self pushTempTest: 8
 ]
 
-{ #category : #'test-push-simple' }
+{ #category : #'tests-push-simple' }
 VMByteCodesTest >> testPushTemp9 [
 	self pushTempTest: 9
 ]
@@ -358,9 +356,9 @@ VMByteCodesTest >> testPushThisContextIsContext [
 
 { #category : #'tests-pushThisContext' }
 VMByteCodesTest >> testPushThisContextPushesValidInstructionPointer [
+
 	self pushThisContextTopFrame.
-	self
-		assert: (interpreter objectMemory isIntegerObject: context instructionPointer).
+	self assert: (interpreter objectMemory isIntegerObject: context instructionPointer).
 	self
 		assert: (interpreter withoutSmallIntegerTags: context instructionPointer)
 		equals: (interpreter frameCallerFP: interpreter framePointer)
@@ -400,7 +398,6 @@ VMByteCodesTest >> testPushThisContextSetFlagContextToFrame [
 
 { #category : #'tests-pushThisContext' }
 VMByteCodesTest >> testPushThisContextTwiceMarriesOnce [
-
 	| previousTop newTop |
 	self interpretWithFrame: [ 
 		interpreter pushActiveContextBytecode.
@@ -411,7 +408,7 @@ VMByteCodesTest >> testPushThisContextTwiceMarriesOnce [
 	self assert: newTop equals: previousTop.
 ]
 
-{ #category : #'test-push-simple' }
+{ #category : #'tests-push-simple' }
 VMByteCodesTest >> testReturnFalse [	
 	"We need to return to a method.
 	So the method of the first stack should have a compiled method in the method field of the stack.
@@ -426,7 +423,7 @@ VMByteCodesTest >> testReturnFalse [
 
 ]
 
-{ #category : #'test-push-simple' }
+{ #category : #'tests-push-simple' }
 VMByteCodesTest >> testReturnTrue [	
 	"We need to return to a method.
 	So the method of the first stack should have a compiled method in the method field of the stack.
@@ -443,12 +440,11 @@ VMByteCodesTest >> testReturnTrue [
 
 { #category : #'tests-pushThisContext' }
 VMByteCodesTest >> testReturnsMarriedFrameWidowsContext [
-
-	|   topFrameContext |
+	| topFrameContext |
 	self interpretWithFrame: [ 
 		interpreter pushActiveContextBytecode.
 		interpreter returnTopFromMethod.
-		 ].
+		].
 	topFrameContext := interpreter stackTop.
 	"The interpreter does not update the pages, they are updated on demand. 
 	Before checking a frame isWindowed we have to synchronize the interpreter variables with the stackPages"
@@ -480,10 +476,9 @@ VMByteCodesTest >> testSendMessageWithTwoArgumentsMakeAFrame [
 	interpreter setBreakSelector: nil.
 	interpreter method: aMethod.
 	interpreter currentBytecode: 240.
-	interpreter sendLiteralSelector2ArgsBytecode.
-	"The framePointer is not updated then and points to the previous frame so we get the arguments
-	To update it we =>"
-	interpreter externalizeIPandSP. 
+
+	self interpret:[	interpreter sendLiteralSelector2ArgsBytecode ].
+
 	
 	self assert: (VMStackFrame newFramePointer: (interpreter framePointer) withInterpreter: interpreter) receiver equals: receiver.
 	self assert: interpreter stackTop equals: receiver.
@@ -495,42 +490,42 @@ VMByteCodesTest >> testSendMessageWithTwoArgumentsMakeAFrame [
 	
 ]
 
-{ #category : #'test-push-simple' }
+{ #category : #'tests-push-simple' }
 VMByteCodesTest >> testStoreAndPopTemporary0 [
 	self storeAndPopTemporaryIntoTempTest: 0
 ]
 
-{ #category : #'test-push-simple' }
+{ #category : #'tests-push-simple' }
 VMByteCodesTest >> testStoreAndPopTemporary1 [
 	self storeAndPopTemporaryIntoTempTest: 1
 ]
 
-{ #category : #'test-push-simple' }
+{ #category : #'tests-push-simple' }
 VMByteCodesTest >> testStoreAndPopTemporary2 [
 	self storeAndPopTemporaryIntoTempTest: 2
 ]
 
-{ #category : #'test-push-simple' }
+{ #category : #'tests-push-simple' }
 VMByteCodesTest >> testStoreAndPopTemporary3 [
 	self storeAndPopTemporaryIntoTempTest: 3
 ]
 
-{ #category : #'test-push-simple' }
+{ #category : #'tests-push-simple' }
 VMByteCodesTest >> testStoreAndPopTemporary4 [
 	self storeAndPopTemporaryIntoTempTest: 4
 ]
 
-{ #category : #'test-push-simple' }
+{ #category : #'tests-push-simple' }
 VMByteCodesTest >> testStoreAndPopTemporary5 [
 	self storeAndPopTemporaryIntoTempTest: 5
 ]
 
-{ #category : #'test-push-simple' }
+{ #category : #'tests-push-simple' }
 VMByteCodesTest >> testStoreAndPopTemporary6 [
 	self storeAndPopTemporaryIntoTempTest: 6
 ]
 
-{ #category : #'test-push-simple' }
+{ #category : #'tests-push-simple' }
 VMByteCodesTest >> testStoreAndPopTemporary7 [
 	self storeAndPopTemporaryIntoTempTest: 7
 ]
