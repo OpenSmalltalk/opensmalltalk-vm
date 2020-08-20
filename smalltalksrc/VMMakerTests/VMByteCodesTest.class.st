@@ -152,13 +152,19 @@ VMByteCodesTest >> testAccessingSenderOfContextShouldReturnContextOfSender [
 ]
 
 { #category : #tests }
-VMByteCodesTest >> testBytecodePopIntoReceiverWithReadOnlyRaiseException [
+VMByteCodesTest >> testBytecodePopIntoReceiverWithReadOnlySendsAttemptToAssignMethod [
 
-	| class object slotIndex objectToPutInSlot |
+	| class object slotIndex objectToPutInSlot attemptToAssignMethod attemptToAssignSelector aMethodDictionary |
 	
-	class := self newClassInOldSpaceWithSlots: 0 format: memory arrayFormat.
-	
+	class := self newClassInOldSpaceWithSlots: 0 format: memory arrayFormat.	
 	object := memory instantiateClass: class indexableSize: 1.
+	attemptToAssignSelector := memory integerObjectOf: 2.
+	attemptToAssignMethod := self newMethodWithArguments: 2.
+	self setUpMethodDictionaryIn: class.
+	aMethodDictionary := memory fetchPointer: MethodDictionaryIndex ofObject: class.
+	self installSelector: attemptToAssignSelector method: attemptToAssignMethod inMethodDictionary: aMethodDictionary.
+	
+	memory splObj: SelectorAttemptToAssign put: attemptToAssignSelector.
 
 	memory setIsImmutableOf: object to: true. 
 	
@@ -170,11 +176,14 @@ VMByteCodesTest >> testBytecodePopIntoReceiverWithReadOnlyRaiseException [
 	stack:  { objectToPutInSlot }.
 	stackBuilder buildStack.
 	
-	self halt.
+	interpreter methodDictLinearSearchLimit: 3.
+	interpreter setBreakSelector: nil.
 	interpreter currentBytecode: 200.
 	interpreter storeAndPopReceiverVariableBytecode.
+	interpreter externalizeIPandSP.
 	
-	self assert: interpreter failed.
+	topFrame := VMStackFrame newFramePointer: (interpreter framePointer) withInterpreter: interpreter.
+	self assert: topFrame method equals: attemptToAssignMethod.
 
 ]
 
