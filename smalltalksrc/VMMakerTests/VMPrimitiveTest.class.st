@@ -381,6 +381,31 @@ VMPrimitiveTest >> testPrimitiveAtPutFailsForNonIndexableObject [
 	self assert: interpreter failed.
 ]
 
+{ #category : #'tests - primitiveImmutability' }
+VMPrimitiveTest >> testPrimitiveAtPutFailsIfObjectIsImmutable [
+
+	| class object slotIndex objectToPutInSlot |
+	class := self newClassInOldSpaceWithSlots: 0 format: memory arrayFormat.
+	
+	object := memory instantiateClass: class indexableSize: 1.
+
+	interpreter push: object.
+	interpreter push: memory trueObject.
+	interpreter primitiveSetImmutability.
+	
+	slotIndex := memory integerObjectOf: 1.
+	objectToPutInSlot := memory instantiateClass: class indexableSize: 1.
+	interpreter push: object.
+	interpreter push: slotIndex.
+	interpreter push: objectToPutInSlot.
+	
+	interpreter primitiveAtPut.
+	
+	self assert: interpreter failed.
+	"8 is the no modification exception in the special object array for the primFailCode"
+	self assert: interpreter primFailCode equals: 8. 
+]
+
 { #category : #'tests - primitiveAtPut' }
 VMPrimitiveTest >> testPrimitiveAtPutPutsTheValueForAnIndexableObject [
 	| class object |

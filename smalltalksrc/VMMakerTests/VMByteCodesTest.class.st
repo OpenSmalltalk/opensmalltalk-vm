@@ -151,6 +151,33 @@ VMByteCodesTest >> testAccessingSenderOfContextShouldReturnContextOfSender [
 	self assert: oldMaybeSenderContext equals: newMaybeSenderContext
 ]
 
+{ #category : #tests }
+VMByteCodesTest >> testBytecodePopIntoReceiverWithReadOnlyRaiseException [
+
+	| class object slotIndex objectToPutInSlot |
+	
+	class := self newClassInOldSpaceWithSlots: 0 format: memory arrayFormat.
+	
+	object := memory instantiateClass: class indexableSize: 1.
+
+	memory setIsImmutableOf: object to: true. 
+	
+	slotIndex := memory integerObjectOf: 1.
+	objectToPutInSlot := memory instantiateClass: class indexableSize: 1.
+	
+	stackBuilder addNewFrame
+	receiver: object;
+	stack:  { objectToPutInSlot }.
+	stackBuilder buildStack.
+	
+	self halt.
+	interpreter currentBytecode: 200.
+	interpreter storeAndPopReceiverVariableBytecode.
+	
+	self assert: interpreter failed.
+
+]
+
 { #category : #'test-push-simple' }
 VMByteCodesTest >> testDuplicateStackTop [
 
@@ -418,6 +445,45 @@ VMByteCodesTest >> testReturnsMarriedFrameWidowsContext [
 	Before checking a frame isWindowed we have to synchronize the interpreter variables with the stackPages"
 	interpreter externalWriteBackHeadFramePointers.
 	self assert: (interpreter isWidowedContext: topFrameContext)
+]
+
+{ #category : #'helpers-bytecode-table' }
+VMByteCodesTest >> testSendMessageWithTwoArgumentsMakeAFrame [
+	
+	| selectorOop aMethod aMethodToActivate receiver receiverClass aMethodDictionary arg1 arg2 |
+	selectorOop := memory integerObjectOf: 42.
+	aMethod := self newMethodWithLiteral: selectorOop at: 0.	
+	aMethodToActivate := self newMethodWithArguments: 2.
+	receiver := memory integerObjectOf: 41.
+	receiverClass := self setSmallIntegerClassIntoClassTable.
+	self setUpMethodDictionaryIn: receiverClass.
+	aMethodDictionary := memory fetchPointer: MethodDictionaryIndex ofObject: receiverClass.  
+	
+	self installSelector: selectorOop method: aMethodToActivate  inMethodDictionary: aMethodDictionary.
+	arg1 :=memory integerObjectOf: 1.
+	arg2 :=memory integerObjectOf: 2.
+	stackBuilder addNewFrame 
+	method: aMethod;
+	stack: {receiver . arg1 . arg2}.
+	stackBuilder buildStack.
+	
+	interpreter methodDictLinearSearchLimit: 3.
+	interpreter setBreakSelector: nil.
+	interpreter method: aMethod.
+	interpreter currentBytecode: 240.
+	interpreter sendLiteralSelector2ArgsBytecode.
+	"The framePointer is not updated then and points to the previous frame so we get the arguments
+	To update it we =>"
+	interpreter externalizeIPandSP. 
+	
+	self assert: (VMStackFrame newFramePointer: (interpreter framePointer) withInterpreter: interpreter) receiver equals: receiver.
+	self assert: interpreter stackTop equals: receiver.
+
+
+	
+	
+	
+	
 ]
 
 { #category : #'test-push-simple' }
