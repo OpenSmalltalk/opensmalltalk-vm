@@ -180,7 +180,6 @@ VMStackBuilder >> pushFrame: aFrame [
 
 { #category : #build }
 VMStackBuilder >> pushFrames [
-	self preparePage.
 	self pushBaseFrame.
 	self pushAllButFirstFrames.
 ]
