@@ -278,10 +278,10 @@ int i;
     shiftKey[KEY_KPENTER]   = 0x0D; /* CR */
     baseKey[KEY_RIGHTCTRL]  = KEY_RIGHTCTRL; /* XK_Control_R; */
     shiftKey[KEY_RIGHTCTRL] = KEY_RIGHTCTRL; /* XK_Control_R;*/
-    baseKey[KEY_KPSLASH]    = 0x2f ; /*XK_slash;  /* XK_KP_Divide */
+    baseKey[KEY_KPSLASH]    = 0x2f ; /*XK_slash;  * XK_KP_Divide */
     shiftKey[KEY_KPSLASH]   = 0x2f ; /*XK_slash; *
-/*
-    baseKey[KEY_SYSRQ]     = KEY_SYSRQ; * XK_Sys_Req; /* Print Screen **
+*
+    baseKey[KEY_SYSRQ]     = KEY_SYSRQ; * XK_Sys_Req; * Print Screen **
     shiftKey[KEY_SYSRQ]    = KEY_SYSRQ; * XK_Sys_Req; *
 */
     baseKey[KEY_RIGHTALT]  = KEY_RIGHTALT; /* XK_Alt_R;*/
@@ -342,7 +342,7 @@ int i;
     shiftKey[KEY_YEN] = 0x;
 *******************/
 /*
-    baseKey[KEY_LEFTMETA]  = XK_Super_L; /* NB: NOT XK_Meta_L ! *
+    baseKey[KEY_LEFTMETA]  = XK_Super_L; * NB: NOT XK_Meta_L ! *
     shiftKey[KEY_LEFTMETA] = XK_Super_L;
     baseKey[KEY_COMPOSE]   = XK_Menu;
     shiftKey[KEY_COMPOSE]  = XK_Menu;

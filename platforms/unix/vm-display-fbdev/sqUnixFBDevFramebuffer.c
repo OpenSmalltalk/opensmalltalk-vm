@@ -214,8 +214,8 @@ static void hideCursor(_self)
       int xo= self->cursorPosition.x + self->cursorOffset.x;
       int yo= self->cursorPosition.y + self->cursorOffset.y;
       int x, y;
-      for (y= 0;  y < 16;  ++y)
-	for (x= 0;  x < 16;  ++x)
+      for (y= 0;  y < 16; y++)
+	for (x= 0;  x < 16; x++)
 	  self->putPixel(self, xo + x, yo + y, self->cursorBack[y][x]);
       self->cursorVisible= 0;
     }
@@ -229,13 +229,14 @@ static void showCursor(_self)
       int xo= self->cursorPosition.x + self->cursorOffset.x;
       int yo= self->cursorPosition.y + self->cursorOffset.y;
       int y;
-      for (y= 0;  y < 16;  ++y)
+      for (y= 0; y < 16; y = y + 1)
 	{
 	  unsigned short bits= self->cursorBits[y];
 	  unsigned short mask= self->cursorMask[y];
 	  int x;
-	  for (x= 0;  x < 16;  ++x)
+	  for (x= 0; x < 16; x = x + 1)
 	    {
+	      /* Look at top bit, then shift & look at next bit.. */
 	      self->cursorBack[y][x]= self->getPixel(self, xo + x, yo + y);
 	      if      (bits & 0x8000) self->putPixel(self, xo + x, yo + y, self->blackPixel);
 	      else if (mask & 0x8000) self->putPixel(self, xo + x, yo + y, self->whitePixel);
@@ -276,10 +277,17 @@ static void fb_setCursor(_self, char *bits, char *mask, int xoff, int yoff)
   hideCursor(self);
   self->cursorOffset.x= xoff;
   self->cursorOffset.y= yoff;
-  for (y= 0;  y < 16;  ++y)
+  for (y= 0;  y < 16; y = y+1)
     {
-      self->cursorBits[y]= (((unsigned long *)bits)[y]) >> 16;
-      self->cursorMask[y]= (((unsigned long *)mask)[y]) >> 16;
+      /* Pick off top 16 bits of 32 bit elements; lower 16 unused */
+      /* @@FIXME: bits & mask were (unsigned long *) -- bas for 64 bits
+         need to spec portably !! @@ */
+      self->cursorBits[y]= (((unsigned int *)bits)[y]) >> 16;
+      if (mask) {
+        self->cursorMask[y]= (((unsigned int *)mask)[y]) >> 16;
+      } else {  /* unmasked cursor */
+        self->cursorMask[y]= self->cursorBits[y]; /* Black Bits matter */
+      }
     }
   showCursor(self);
 }
