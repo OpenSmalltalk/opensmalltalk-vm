@@ -8,7 +8,8 @@ Instructions at
 ===================
 While easy to use, Alpine Linux packages are needed.  Here is what I added:
 -------------------
-sudo apk add mg bash git binutils build-base perl lsblk sudo htop gdb
+sudo apk add mg bash git lsblk sudo htop
+sudo apk add binutils build-base perl gdb libtool
 sudo apk add mandoc mandoc-apropos man-pages
 sudo apk add xf86-input-evdev xf86-input-evdev-doc xf86-input-evdev-dev
 sudo apk add xf86-video-fbdev xf86-video-fbdev-doc
@@ -67,3 +68,12 @@ hdmi_mode=16
 config_hdmi_boost=9
 #eof#
 ^^^^----^^^^----^^^^
+========
+'bin/setup' fix reboot lossage:
+vvv---vvv
+#!/bin/bash
+sudo umount /dev/shm
+sudo chmod 777 /dev/shm
+sudo mount /dev/shm
+sudo chgrp input /dev/input/*
+^^^---^^^
