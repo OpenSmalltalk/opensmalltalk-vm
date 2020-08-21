@@ -27,12 +27,13 @@ adduser <you> mem
 chgrp mem /dev/shm
 ...
 ===================
-VM works in 16 bit mode, but not yet in 32 bit mode
+VM works in 16 bit mode and in 32 bit mode
 
 Check with 'fbset'
 
->> sudo fbset -depth 16
 >> fbset
+>> sudo fbset -depth 16
+>> sudo fbset -depth 32
 
 ===================
 # in .bashrc
