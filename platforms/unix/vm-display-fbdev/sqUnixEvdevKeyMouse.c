@@ -337,6 +337,10 @@ static void setKeyCode(struct input_event* evt) {
 	  enqueueKeyboardEvent(squeakKeyCode,
 			       0, /* keyUp: C FALSE */
 			       modifierBits);
+	/* initially cmd-. (command+period) */
+	if ((squeakKeyCode && (modifierBits << 8)) == getInterruptKeycode())	
+	  setInterruptPending(true);
+
 	  break;
 	default:
 	  DPRINTF("Key code: %d with UNKNOWN STATE: (%d) ? (0=up|1=down|2=repeat)\n", squeakKeyCode, evt->value);
