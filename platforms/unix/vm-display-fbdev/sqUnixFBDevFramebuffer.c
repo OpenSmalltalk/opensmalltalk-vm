@@ -682,7 +682,8 @@ static void fb_initGraphics(_self)
   showBalloonAt(self,x+(x/2),y+(y/2)) ;
   showBalloonAt(self,x-(x/2),y-(y/2)) ;
   showBalloonAt(self,x-(x/2),y+(y/2)) ;
-  aioSleepForUsecs( 3000000 ) ; /* 3 seconds: let the user notice */
+  /* let the user notice the balloons */
+  aioSleepForUsecs( 1000000 ) ; 
 }
 
 
