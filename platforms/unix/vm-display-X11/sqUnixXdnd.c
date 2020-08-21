@@ -732,9 +732,17 @@ enum XdndState dndInDrop(enum XdndState state, XClientMessageEvent *evt)
       Window owner;
       fdebugf((stderr, "  dndInDrop: converting selection\n"));
       if (!(owner= XGetSelectionOwner(stDisplay, XdndSelection)))
-	fprintf(stderr, "  dndInDrop: XGetSelectionOwner failed\n");
+	      fprintf(stderr, "  dndInDrop: XGetSelectionOwner failed\n");
       else
-	XConvertSelection(stDisplay, XdndSelection, XdndTextUriList, XdndSelectionAtom, stWindow, xdndDrop_time(evt));
+	      {
+          XConvertSelection(stDisplay, XdndSelection, XdndTextUriList, XdndSelectionAtom, stWindow, xdndDrop_time(evt));
+          /* XConvertSelection will be answered by an XdndSelectionNotify event.
+           * We will record the drop event in dndInSelectionNotify().
+           */
+          initDropFileNames();
+          dndSendFinished();
+          return XdndStateIdle;
+        }
       initDropFileNames();
     }
   else
@@ -750,7 +758,6 @@ enum XdndState dndInDrop(enum XdndState state, XClientMessageEvent *evt)
 
 
 static void addDropFile(char *fileName);
-static void generateSqueakDropEventIfDroppedFiles(void);
 struct { char *fileName; Window sourceWindow; } *launchDrops = 0;
 static int numLaunchDrops = 0;
 
@@ -788,7 +795,7 @@ dndInLaunchDrop(XClientMessageEvent *evt)
 		 */
 		initDropFileNames();
 		addDropFile(fileName);
-		generateSqueakDropEventIfDroppedFiles();
+		recordDragEvent(SQDragDrop, uxDropFileCount);
 		for (i = 0; i < numLaunchDrops; i++)
 			if (!launchDrops[i].fileName)
 				break;
@@ -803,7 +810,7 @@ dndInLaunchDrop(XClientMessageEvent *evt)
     return XdndStateIdle; /* Added by eem 2018/12/14 to remove a compiler warning; Is this correct? */
 }
 
-/* Send a XdndSqueakLaunchAck essage back to the launch dropper if the filename
+/* Send an XdndSqueakLaunchAck message back to the launch dropper if the filename
  * matches a dndInLaunchDrop event.
  */
 static sqInt
@@ -842,13 +849,6 @@ addDropFile(char *fileName)
 #endif
 }
 
-static void
-generateSqueakDropEventIfDroppedFiles()
-{
-	if (uxDropFileCount)
-		recordDragEvent(SQDragDrop, uxDropFileCount);
-}
-
 static void dndGetSelection(Window owner, Atom property)
 {
   unsigned long remaining;
@@ -874,21 +874,25 @@ static void dndGetSelection(Window owner, Atom property)
 	    addDropFile(item);
 	  tokens= 0; /* strtok is weird.  this ensures more tokens, not less. */
 	}
-      generateSqueakDropEventIfDroppedFiles();
       fdebugf((stderr, "  uxDropFileCount = %d\n", uxDropFileCount));
     }
   XFree(data);
 }
 
 
+/* SelectionNotify wíll be received as an answer of an XConvertSelection request sent by us. */
 static enum XdndState dndInSelectionNotify(enum XdndState state, XSelectionEvent *evt)
 {
   fdebugf((stderr, "Receive SelectionNotify (input)\n"));
   if (evt->property != XdndSelectionAtom) return state;
 
+  if (state != XdndStateIdle) {
+    fprintf(stderr, "dndInSelectionNotify: Unexpected state\n");
+    return state;
+  }
   dndGetSelection(evt->requestor, evt->property);
   dndSendFinished();
-  recordDragEvent(SQDragLeave, 1);
+  recordDragEvent(SQDragDrop, uxDropFileCount);
   return XdndStateIdle;
 }
 
