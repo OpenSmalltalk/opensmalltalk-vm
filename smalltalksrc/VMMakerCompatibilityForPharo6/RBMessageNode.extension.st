@@ -11,7 +11,7 @@ RBMessageNode >> asTranslatorNodeIn: aTMethod [
 	 Expand super nodes in place. Elide sends of halt so that halts can be
 	 sprinkled through the simulator but will be eliminated from the generated C."
 	| usedSelector rcvrOrNil args |
-	usedSelector := selector.
+	usedSelector := selector value.
 	rcvrOrNil := receiver ifNotNil: [receiver asTranslatorNodeIn: aTMethod].
 	(rcvrOrNil notNil
 	and: [rcvrOrNil isVariable
