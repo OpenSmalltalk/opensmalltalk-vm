@@ -51,6 +51,8 @@
 /* #include <X11/keysym.h>  * /usr/include/X11/keysym.h */
 #include <libevdev-1.0/libevdev/libevdev.h> /*  /usr/include/libevdev-1.0/libevdev/libevdev.h */
 
+extern sqInt sendWheelEvents; /* If true deliver EventTypeMouseWheel else kybd */
+
 #ifndef input_event_sec
 #define input_event_sec  time.tv_sec
 #define input_event_usec time.tv_usec
@@ -220,7 +222,7 @@ static void updateSqueakMousePosition(struct input_event* evt) {
 	DPRINTF( "*** Wheel VALUE: %d; DELTA: %d ",
 		 mouseWheelDelta(),
 		 evt->value ) ;
-	mousePosition.y = max(0, mousePosition.y + evt->value) ; 
+		mousePosition.y = max(0, mousePosition.y + evt->value) ;  
 	break;
       default:
 	break;
@@ -598,6 +600,7 @@ static void processLibEvdevKeyEvents() {
 static void processLibEvdevMouseEvents() {
   struct input_event evt[64];
   int i, read_size;
+  int arrowCode, modifierBits; /* for Wheel delta sent as arrow keys */
 
   read_size = read(mouseDev.fd, evt, sizeof(evt));
   if (read_size < (int) sizeof(struct input_event)) {
@@ -605,7 +608,8 @@ static void processLibEvdevMouseEvents() {
   }
 
   for (i = 0; i < read_size / sizeof(struct input_event); i++) {
-    unsigned int type, code, value;
+    unsigned int type, code;
+    int value;
 
     type=  evt[i].type;
     code=  evt[i].code;
@@ -623,10 +627,10 @@ static void processLibEvdevMouseEvents() {
 #ifdef DEBUG_EVENTS
       printKeyState(value);
 #endif
-      /* enqueueMouseEvent( buttonState, 0, 0 ); */
+      /* enqueueMouseEvent( buttonState, 0, 0 );  */
       recordMouseEvent();  /* should see mouse buttons.. */
 #ifdef DEBUG_EVENTS
-      printMouseState();
+      /*      printMouseState(); */
 #endif
     } else if ( (type == EV_SYN) | (type == EV_MSC) ) {
       continue; /* skip me, keep looking */
@@ -643,7 +647,25 @@ static void processLibEvdevMouseEvents() {
 	  enqueueMouseEvent( buttonState, 0, value );
 	  break;
 	case REL_WHEEL:
-	  recordMouseWheelEvent( 0, value ); /* delta-y only */
+#ifdef DEBUG_EVENTS
+	  DPRINTF("EVDEV  Wheel value: %d\n", value);
+#endif
+	  if (sendWheelEvents) {
+	    recordMouseWheelEvent( 0, value ); /* delta-y only */
+	  } else { /* Send wheel events as arrow up/down */
+	    if (value > -1) {
+	      arrowCode = 30; /* arrow ^ up  */
+	    } else {
+	      arrowCode = 31; /* arrow v down */
+	    }
+	    /* Use OR of modifier bits to signal synthesized arrow keys */
+	    enqueueKeyboardEvent(arrowCode,
+				 0, /* key down */
+			     (CtrlKeyBit|OptionKeyBit|CommandKeyBit|ShiftKeyBit)); 
+	    enqueueKeyboardEvent(arrowCode,
+				 1, /* key up */
+			     (CtrlKeyBit|OptionKeyBit|CommandKeyBit|ShiftKeyBit)); 
+	  }
 	  break;
 	default:
 	  break;
