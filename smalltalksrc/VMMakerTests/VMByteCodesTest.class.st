@@ -413,7 +413,7 @@ VMByteCodesTest >> testReturnFalse [
 	"We need to return to a method.
 	So the method of the first stack should have a compiled method in the method field of the stack.
 	using memory trueObject simulates that behavior."
-	stackBuilder addNewFrame method: (self newMethodWithLiteral: memory trueObject at: 1).
+	stackBuilder addNewFrame method: methodBuilder newMethod buildMethod.
 	stackBuilder addNewFrame.
 	stackBuilder buildStack.
 
@@ -428,7 +428,7 @@ VMByteCodesTest >> testReturnTrue [
 	"We need to return to a method.
 	So the method of the first stack should have a compiled method in the method field of the stack.
 	using memory trueObject simulates that behavior."
-	stackBuilder addNewFrame method: (self newMethodWithLiteral: memory trueObject at: 1).
+	stackBuilder addNewFrame method: methodBuilder newMethod buildMethod.
 	stackBuilder addNewFrame.
 	stackBuilder buildStack.
 

@@ -58,7 +58,7 @@ VMMethodBuilder >> fillMethod [
 
 { #category : #initialization }
 VMMethodBuilder >> initialize [
-	bytecodes := #[ 1 2 3 4 5 6 7 8 9 10 ].
+	bytecodes := #[1 2 3 4 5 6 7 8 9 0].
 	literals := OrderedCollection new. 
 	isSmall := false.
 	isPrimitive := false.
@@ -172,7 +172,11 @@ VMMethodBuilder >> numberOfTemporaries: anObject [
 { #category : #filling }
 VMMethodBuilder >> putBytecodesInMethod [
 	bytecodes doWithIndex:[ :aBytecode :anIndex | 
-		memory storeByte: (literals size + anIndex) 
+		memory storeByte: 
+			(memory wordSize "First word is the header"
+			+ (literals size * memory wordSize) "bytecodes are stored after literals"
+			+ anIndex
+			- 1) "0 based"
 			ofObject: method 
 			withValue: aBytecode
 		]
