@@ -15,7 +15,8 @@ Class {
 		'stackBuilder',
 		'methodCacheSize',
 		'rumpCStackSize',
-		'wordSize'
+		'wordSize',
+		'methodBuilder'
 	],
 	#pools : [
 		'VMBasicConstants',
@@ -394,6 +395,11 @@ VMSpurMemoryManagerTest >> setUp [
 	memory needGCFlag: 1.
 	
 	stackBuilder := VMStackBuilder new
+		interpreter: interpreter; 
+		memory: memory;
+		yourself.
+				
+	methodBuilder := VMMethodBuilder new
 		interpreter: interpreter; 
 		memory: memory;
 		yourself.
