@@ -25,46 +25,25 @@
 
 platforms/unix/config/autom4te.cache/
 
-# Don't track build directories 
+# Don't track build directory contents (with exceptions)
 /build*/**/*
 # except do track these files
-!branding.gmk
-!branding-sed-rules.gmk
-!common
-!conf.COG
-!conf.COG.dbg
-!Croquet.def.in
-!Croquet.exe.manifest
-!Croquet.ico
-!Croquet.rc
-!GreenCogSqueak.ico
-!HowToBuild
-!makeall
-!makeallclean
-!makealldirty
-!makeclean
-!makeem
-!Makefile
-!Makefile.app*
-!Makefile.plugin
-!Makefile.rules
-!Makefile.tools
-!makeproduct
-!makeproductclean
-!mkNamedPrims.sh
-!mvm
-!NotYetImplemented
-!plugins.ext
-!plugins.int
-!Squeak.def.in
-!Squeak.exe.manifest
-!squeak.ico
-!Squeak.rc
-!editnewspeakinstall.sh
-!/build.linux32ARMv6/asasm
-
-# Ignore special Cadence-only build directories
-/build*/glue*
+!/build*/common*/*
+!/build*/**/Makefile
+!/build*/**/NotYetImplemented
+!/build*/**/mvm
+!/build*/**/plugins.*
+!/build*/**/*.gmk
+!/build*/**/*.ico
+!/build*/**/*.in
+!/build*/**/*.manifest
+!/build*/**/*.rc
+!/build*/HowToBuild
+!/build*/edit*.sh
+!/build*/make*
+!/build/**/conf.COG*
+!/build/**/make*
+!/build.*/asasm
 
 # Track installer directories
 !installer
@@ -87,10 +66,6 @@ platforms/unix/config/autom4te.cache/
 /build.macos32x86/xcode/*/Template.xcodeproj/*.mode1v3
 /build.macos32x86/xcode/*/Template.xcodeproj/*.pbxuser
 
-# Not sure what to do with nsvm files/directories. Track to be conservative.
-!nsvm*
-
-
 # /history/
 /history/README.*
 
@@ -100,20 +75,19 @@ platforms/unix/config/autom4te.cache/
 /image/*.st
 /image/coglinux*
 /image/cogwin
-/image/Cog.app
 /image/cogspurlinux*
-/image/crash.dmp
+/image/*.dmp
+/image/*.png
 /image/sqlinux*
 /image/sqwin*
 /image/cogspurwin
-/image/CogSpur.app
 /image/github-cache/
 /image/package-cache
 /image/pharo-local/
 /image/prefs
 /image/special-dirs
-/image/Squeak*.app
-/image/[sS]queak*.dmg
+/image/*.app
+/image/*.dmg
 /image/Squeak-*-All-in-One.*
 /image/__MACOSX
 /image/*.log
