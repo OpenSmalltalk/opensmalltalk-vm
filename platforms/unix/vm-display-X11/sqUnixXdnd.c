@@ -880,7 +880,7 @@ static void dndGetSelection(Window owner, Atom property)
 }
 
 
-/* SelectionNotify wíll be received as an answer of an XConvertSelection request sent by us. */
+/* SelectionNotify will be received as an answer of an XConvertSelection request sent by us. */
 static enum XdndState dndInSelectionNotify(enum XdndState state, XSelectionEvent *evt)
 {
   fdebugf((stderr, "Receive SelectionNotify (input)\n"));
