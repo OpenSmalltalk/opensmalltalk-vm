@@ -144,7 +144,7 @@ VMSpurScavengerTest >> testContextInStackShouldSurviveScanvenge [
 
 	| newObjectOop newObjectHash newObjectAddress |	
 	
-	stackBuilder addNewFrame method: (self newMethodWithBytecodes: #[1 2 3 4 5 6 7 8] ).
+	stackBuilder addNewFrame method: methodBuilder newMethod buildMethod.
 	stackBuilder buildStack.
 	newObjectOop := interpreter ensureFrameIsMarried: interpreter framePointer  SP: interpreter stackPointer.
 	newObjectHash := (memory hashBitsOf: newObjectOop).

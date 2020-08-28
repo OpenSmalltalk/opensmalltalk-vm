@@ -79,9 +79,9 @@ VMByteCodesTest >> interpret: aBlock [
 VMByteCodesTest >> interpretWithFrame: aBlock [
 
 	callingFrame := stackBuilder addNewFrame
-		method: (self newMethodWithBytecodes: #[1 2 3 4 5 6 7 8]).
+		method: methodBuilder newMethod buildMethod.
 	topFrame := stackBuilder addNewFrame
-		method: (self newMethodWithBytecodes: #[1 2 3 4 5 6 7 8]).
+		method: methodBuilder newMethod buildMethod.
 	stackBuilder buildStack.
 	
 	self interpret: aBlock.
@@ -158,7 +158,7 @@ VMByteCodesTest >> testBytecodePopIntoReceiverWithReadOnlySendsAttemptToAssignMe
 	class := self newClassInOldSpaceWithSlots: 0 format: memory arrayFormat.	
 	object := memory instantiateClass: class indexableSize: 1.
 	attemptToAssignSelector := memory integerObjectOf: 2.
-	attemptToAssignMethod := self newMethodWithArguments: 2.
+	attemptToAssignMethod := methodBuilder newMethod numberOfArguments: 2 ; buildMethod.
 	self setUpMethodDictionaryIn: class.
 	aMethodDictionary := memory fetchPointer: MethodDictionaryIndex ofObject: class.
 	self installSelector: attemptToAssignSelector method: attemptToAssignMethod inMethodDictionary: aMethodDictionary.
@@ -457,8 +457,9 @@ VMByteCodesTest >> testSendMessageWithTwoArgumentsMakeAFrame [
 	
 	| selectorOop aMethod aMethodToActivate receiver receiverClass aMethodDictionary arg1 arg2 |
 	selectorOop := memory integerObjectOf: 42.
-	aMethod := self newMethodWithLiteral: selectorOop at: 0.	
-	aMethodToActivate := self newMethodWithArguments: 2.
+	methodBuilder newMethod literals: { selectorOop }.
+	aMethod := methodBuilder buildMethod.
+	aMethodToActivate := 	methodBuilder newMethod numberOfArguments: 2 ; buildMethod.
 	receiver := memory integerObjectOf: 41.
 	receiverClass := self setSmallIntegerClassIntoClassTable.
 	self setUpMethodDictionaryIn: receiverClass.
