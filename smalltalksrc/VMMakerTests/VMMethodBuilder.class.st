@@ -60,7 +60,7 @@ VMMethodBuilder >> fillMethod [
 VMMethodBuilder >> initialize [
 	bytecodes := #[1 2 3 4 5 6 7 8 9 0].
 	literals := OrderedCollection new. 
-	isSmall := false.
+	isSmall := true.
 	isPrimitive := false.
 	numberOfArguments := 0.
 	numberOfTemporaries := 0.
