@@ -1673,6 +1673,7 @@ static void vm_printUsage(void)
   printf("  "VMOPTION("breaksel")" selector    set breakpoint on send of selector\n");
 #endif
 #if STACKVM
+  printf("  "VMOPTION("failonffiexception")"   when in an FFI callout primitive catch exceptions and fail the primitive\n");
   printf("  "VMOPTION("breakmnu")" selector    set breakpoint on MNU of selector\n");
   printf("  "VMOPTION("eden")" <size>[mk]      use given eden size\n");
   printf("  "VMOPTION("leakcheck")" num        check for leaks in the heap\n");
