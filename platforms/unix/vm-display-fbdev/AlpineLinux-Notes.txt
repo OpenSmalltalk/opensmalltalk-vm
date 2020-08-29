@@ -8,7 +8,7 @@ Instructions at
 ===================
 While easy to use, Alpine Linux packages are needed.  Here is what I added:
 -------------------
-sudo apk add mg bash git lsblk sudo htop
+sudo apk add mg bash git lsblk sudo htop 
 sudo apk add binutils build-base perl gdb libtool
 sudo apk add mandoc mandoc-apropos man-pages
 sudo apk add xf86-input-evdev xf86-input-evdev-doc xf86-input-evdev-dev
@@ -20,12 +20,13 @@ sudo apk add libevdev-dev glib-dev glu-dev openssl-dev
 group ownership:
 /dev/shm mem
 /dev/input/event0 input
-/dev/input/event0 input
+/dev/input/event1 input
 /dev/input/fb0 video
 
-adduser <you> mem
-chgrp mem /dev/shm
+chgrp input /dev/input/*
 ...
+Your user account should include groups
+  wheel video input
 ===================
 VM works in 16 bit mode and in 32 bit mode
 
