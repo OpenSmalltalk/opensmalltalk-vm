@@ -1,6 +1,6 @@
 Class {
 	#name : #VMMethodBuilder,
-	#superclass : #Object,
+	#superclass : #VMAbstractBuilder,
 	#instVars : [
 		'literals',
 		'numberOfArguments',
@@ -8,8 +8,6 @@ Class {
 		'bytecodes',
 		'isSmall',
 		'isPrimitive',
-		'memory',
-		'interpreter',
 		'methodHeader',
 		'method',
 		'slotSize'
@@ -85,16 +83,6 @@ VMMethodBuilder >> instantiateMethod [
 ]
 
 { #category : #accessing }
-VMMethodBuilder >> interpreter [
-	^ interpreter
-]
-
-{ #category : #accessing }
-VMMethodBuilder >> interpreter: anObject [
-	interpreter := anObject
-]
-
-{ #category : #accessing }
 VMMethodBuilder >> isPrimitive [
 	^ isPrimitive
 ]
@@ -114,6 +102,11 @@ VMMethodBuilder >> isSmall: anObject [
 	isSmall := anObject
 ]
 
+{ #category : #constants }
+VMMethodBuilder >> literalAt: anIndex put: anOop [
+	self collection: literals at: anIndex put: anOop
+]
+
 { #category : #accessing }
 VMMethodBuilder >> literals [
 	^ literals
@@ -122,16 +115,6 @@ VMMethodBuilder >> literals [
 { #category : #accessing }
 VMMethodBuilder >> literals: anObject [
 	literals := anObject
-]
-
-{ #category : #accessing }
-VMMethodBuilder >> memory [
-	^ memory
-]
-
-{ #category : #accessing }
-VMMethodBuilder >> memory: anObject [
-	memory := anObject
 ]
 
 { #category : #accessing }

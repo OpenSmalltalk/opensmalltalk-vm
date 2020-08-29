@@ -28,13 +28,11 @@ Types are not the exact types used.
 "
 Class {
 	#name : #VMStackBuilder,
-	#superclass : #Object,
+	#superclass : #VMAbstractBuilder,
 	#instVars : [
 		'page',
 		'frames',
-		'args',
-		'interpreter',
-		'memory'
+		'args'
 	],
 	#category : #'VMMakerTests-Builders'
 }
@@ -99,26 +97,6 @@ VMStackBuilder >> initialize [
 	super initialize.
 	frames := OrderedCollection new. "will be treated in reverse"
 	args := OrderedCollection new.
-]
-
-{ #category : #accessing }
-VMStackBuilder >> interpreter [
-	^ interpreter
-]
-
-{ #category : #accessing }
-VMStackBuilder >> interpreter: anInterpreter [
-	interpreter := anInterpreter
-]
-
-{ #category : #accessing }
-VMStackBuilder >> memory [
-	^ memory
-]
-
-{ #category : #accessing }
-VMStackBuilder >> memory: aMemory [
-	memory := aMemory
 ]
 
 { #category : #accessing }

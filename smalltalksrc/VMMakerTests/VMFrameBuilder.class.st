@@ -43,15 +43,13 @@ Configuring of the frame.
 "
 Class {
 	#name : #VMFrameBuilder,
-	#superclass : #Object,
+	#superclass : #VMAbstractBuilder,
 	#instVars : [
 		'method',
 		'context',
 		'receiver',
 		'temps',
 		'stack',
-		'memory',
-		'interpreter',
 		'instructionPointer',
 		'callerFrame',
 		'flags',
@@ -174,29 +172,9 @@ VMFrameBuilder >> instructionPointer [
 	^ instructionPointer
 ]
 
-{ #category : #accessing }
-VMFrameBuilder >> interpreter [
-	^ interpreter
-]
-
-{ #category : #accessing }
-VMFrameBuilder >> interpreter: anObject [
-	interpreter := anObject
-]
-
 { #category : #testing }
 VMFrameBuilder >> isSuspended [
 	^ instructionPointer isNil
-]
-
-{ #category : #accessing }
-VMFrameBuilder >> memory [
-	^ memory
-]
-
-{ #category : #accessing }
-VMFrameBuilder >> memory: anObject [
-	memory := anObject
 ]
 
 { #category : #accessing }
@@ -285,13 +263,7 @@ VMFrameBuilder >> stack: anObject [
 
 { #category : #accessing }
 VMFrameBuilder >> tempAt: anIndex put: anOop [
-	"convinience method to put a temporary at a specific place
-	No need to take care of the size of the collection, I'm taking care of it!"
-	temps size > anIndex ifTrue: [ ^ temps at: anIndex + 1 put: anOop ].
-	
-	temps size to: anIndex do: [ :i | temps add: memory nilObject ].
-	temps at: anIndex + 1 put: anOop
-	
+	self collection: temps at: anIndex put: anOop
 ]
 
 { #category : #accessing }
