@@ -973,7 +973,11 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushThisContextForFullBlockWithFullFr
 		arguments: { memory falseObject . memory trueObject . memory falseObject }
 		temporaries: #().
 	numberOfArguments := 3.
-	methodObject := self newMethodWithSmallContext: false WithArguments: numberOfArguments.
+	methodObject := methodBuilder newMethod 
+		isSmall: false;
+		numberOfArguments: numberOfArguments;
+		buildMethod.
+		
 	method := self compile: [
 		cogit inBlock: InFullBlock.
 		cogit methodOrBlockNumArgs: numberOfArguments.
@@ -999,7 +1003,10 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushThisContextForFullBlockWithSmallF
 		arguments: { memory falseObject . memory trueObject . memory falseObject }
 		temporaries: #().
 	numberOfArguments := 3.
-	methodObject := self newMethodWithSmallContext: true WithArguments: numberOfArguments.
+	methodObject := methodBuilder newMethod 
+		isSmall: true;
+		numberOfArguments: numberOfArguments;
+		buildMethod.
 	method := self compile: [
 		cogit inBlock: InFullBlock.
 		cogit methodOrBlockNumArgs: numberOfArguments.
@@ -1025,7 +1032,10 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushThisContextForMethodWithLargeFram
 		arguments: { memory falseObject . memory trueObject . memory falseObject }
 		temporaries: #().
 	numberOfArguments := 3.
-	methodObject := self newMethodWithSmallContext: false WithArguments: numberOfArguments.
+	methodObject := methodBuilder newMethod 
+		isSmall: false;
+		numberOfArguments: numberOfArguments;
+		buildMethod.
 	method := self compile: [ 
 		cogit methodOrBlockNumArgs: numberOfArguments.
 		cogit methodObj: methodObject.
@@ -1050,7 +1060,10 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushThisContextForMethodWithSmallFram
 		arguments: { memory falseObject . memory trueObject . memory falseObject }
 		temporaries: #().
 	numberOfArguments := 3.
-	methodObject := self newMethodWithSmallContext: true WithArguments: numberOfArguments.
+	methodObject := methodBuilder newMethod 
+		isSmall: true;
+		numberOfArguments: numberOfArguments;
+		buildMethod.
 	method := self compile: [ 
 		cogit methodOrBlockNumArgs: numberOfArguments.
 		cogit methodObj: methodObject.
@@ -1075,7 +1088,10 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushThisContextForVanillaBlockWithLar
 		arguments: { memory falseObject . memory trueObject . memory falseObject }
 		temporaries: #().
 	numberOfArguments := 3.
-	methodObject := self newMethodWithSmallContext: false WithArguments: numberOfArguments.
+	methodObject := methodBuilder newMethod 
+		isSmall: false;
+		numberOfArguments: numberOfArguments;
+		buildMethod.
 	method := self compile: [
 		cogit inBlock: InVanillaBlock.
 		cogit methodOrBlockNumArgs: numberOfArguments.
@@ -1101,7 +1117,10 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushThisContextForVanillaBlockWithSma
 		arguments: { memory falseObject . memory trueObject . memory falseObject }
 		temporaries: #().
 	numberOfArguments := 3.
-	methodObject := self newMethodWithSmallContext: true WithArguments: numberOfArguments.
+	methodObject := methodBuilder newMethod 
+		isSmall: true;
+		numberOfArguments: numberOfArguments;
+		buildMethod.
 	method := self compile: [
 		cogit inBlock: InVanillaBlock.
 		cogit methodOrBlockNumArgs: numberOfArguments.

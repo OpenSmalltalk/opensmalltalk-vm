@@ -22,28 +22,6 @@ VMInterpreterTests >> installSelector: aSelectorOop method: aMethodOop inMethodD
 		withValue: aMethodOop
 ]
 
-{ #category : #creating }
-VMInterpreterTests >> newMethodWithArguments: anInteger [ 
-		
-	| method methodHeader bytes |
-
-	"Create a bytecode compiled method object containing the given literal at the given index"
- 	bytes := #[1 2 3 4 5 6 7 8 9 0].
-	method := self
-		newOldSpaceObjectWithSlots: 0 "# of literals" + 1 "one extra for the header" + (bytes size // memory wordSize)
-		format: (memory compiledMethodFormatForNumBytes: bytes size)
-		classIndex: 16r10.
-	methodHeader := (anInteger "nArgs" bitShift: 24)
-						+ (0 "nTemps" bitShift: 18)
-						+ (0 "small frame")
-						+ 0 "number of literaps"
-						+ 0 "primitive".
-	memory storePointer: 0 ofObject: method withValue: (memory integerObjectOf: methodHeader).
-	memory storeByte: 8 ofObject: method withValue: (bytes at: 1).
-
-	^ method
-]
-
 { #category : #tests }
 VMInterpreterTests >> setSmallIntegerClassIntoClassTable [
 
