@@ -273,7 +273,7 @@ using MUSL in place of libc.  Note: https://musl.libc.org
 You should check your Linux distro for libc development support
 libraries or include files needed.
 
-The following has been tested on aarch64 Alpine Linux
+The following has been tested on both aarch64 and amd64 Alpine Linux
 (MUSL+busybox).
 
 install musl-dev [e.g. sudo apk add musl-dev ].
@@ -284,7 +284,7 @@ to be made are simple to describe.
 
 Basically, building works fine but one needs to
 
-[A] add "-DMUSL -D_GNU_SOURCES" to CFLAGS so that include
+[A] add "-DMUSL -D_GNU_SOURCE" to CFLAGS so that include
 expansion is not confused between libc and MUSL definitions.
 
 [B] elide (remove) some definitions which use 'FILE'.
