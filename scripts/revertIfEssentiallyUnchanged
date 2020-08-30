@@ -3,8 +3,8 @@
 # such as date generated, VMMaker version etc.
 
 TEST=
-if [ "$1" = "-t" ]; then
-	TEST=-t
+if [ "$1" = "-t" -o \( "$1" = "-T" \) ]; then
+	TEST=$1
 	shift
 fi
 for f in "$@"; do
@@ -18,6 +18,8 @@ for f in "$@"; do
 		RESULT="`git diff -- "$f" | grep '^[+-]' | egrep -v ' VMMaker[-.][a-z][a-z-]*\.[0-9][0-9]* uuid:| Cog[-.][a-z][a-z]*\.[0-9][0-9]* uuid:| Qwaq-Plugins[-.][a-z][a-z]*\.[0-9][0-9]* uuid:| VMMaker[-.][a-z][a-z-]*\.[0-9][0-9]*[ "]|static const char \*moduleName.*" INT_EXT;| Cog[-.][a-z][a-z-]*\.[0-9][0-9]* | Qwaq-Plugins[-.][a-z][a-z]*\.[0-9][0-9]* | VMConstruction-Plugins-OSProcessPlugin[a-z.-][a-z.-]*\.[0-9][0-9]* | Sound[-.][a-z][a-z]*\.[0-9][0-9]* uuid:|^\-\-\-|^\+\+\+|^[+-]$'`"
 		if [ -z "$TEST" ]; then
 			test -z "$RESULT" && (echo reverting "$f"; git checkout -- "$f")
+		elif [ "$TEST" = "-T" ]; then
+			test -z "$RESULT" && echo $f essentially unchanged || echo $f changed
 		else
 			echo "testing; no output implies this would be reverted"
 			git diff -- "$f" | grep '^[+-]' | egrep -v ' VMMaker[-.][a-z][a-z-]*\.[0-9][0-9]* uuid:| Cog[-.][a-z][a-z]*\.[0-9][0-9]* uuid:| Qwaq-Plugins[-.][a-z][a-z]*\.[0-9][0-9]* uuid:| VMMaker[-.][a-z][a-z-]*\.[0-9][0-9]*[ "]|static const char \*moduleName.*" INT_EXT;| Cog[-.][a-z][a-z-]*\.[0-9][0-9]* | Qwaq-Plugins[-.][a-z][a-z]*\.[0-9][0-9]* | VMConstruction-Plugins-OSProcessPlugin[a-z.-][a-z.-]*\.[0-9][0-9]* | Sound[-.][a-z][a-z]*\.[0-9][0-9]* uuid:|^\-\-\-|^\+\+\+|^[+-]$'

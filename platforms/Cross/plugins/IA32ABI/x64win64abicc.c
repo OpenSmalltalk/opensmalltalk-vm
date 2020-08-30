@@ -74,8 +74,6 @@ struct VirtualMachine* interpreterProxy;
 #define isSmallInt(oop) (((oop)&7)==1)
 #define intVal(oop) (((long long)(oop))>>3)
 
-extern void loadFloatRegs(double,double,double,double);
-
 typedef union {
     long long i;
     double    d;
