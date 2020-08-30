@@ -1,0 +1,37 @@
+LePotato/AML-s905x-cc
+ 
+Download:
+ https://www.armbian.com/lepotato/
+
+Update: (may need to set date&time via 'date')
+  sudo apt-get update && sudo apt-get upgrade
+
+Packages added [probably far from minimal..]:
+ (sudo apt-get install <pkg>..)
+  fbset mg git binutils gdb libtool make libevdev2 libevdev-dev
+  libcurl4-openssl-dev libssl-dev pkg-config zlib1g-dev libtiff-opengl
+  libgl-dev libgl1-mesa-dev libgles2-mesa-dev libglade2-dev libglapi-mesa
+  armbian-config
+
+Permissions:
+  sudo chgrp input /dev/input/*
+
+Hint:
+  If you don't want to mess up the splash screen, ssh into your LePotato
+and invoke squeak from there..  ;^)
+
+
+==== in .bashrc -- adjust as needed
+
+# to allow    'squeak <image>"
+# rather than 'squeak -vm-display-fbdev -fbdev /dev/fb0 <image>'
+export SQUEAK_KBDEV=/dev/input/event0
+export SQUEAK_VM=display-fbdev
+export SQUEAK_FBDEV=/dev/fb0
+export SQUEAK_MSDEV=/dev/input/event1
+
+export CUIS=/home/kend/Cuis-Smalltalk/Cuis-Smalltalk-Dev
+export WORK=/home/kend/fbdev-vm/platforms/unix/vm-display-fbdev
+export SQUEAK=/home/kend/fbdev-vm/products/sqcogspur64ARMv8linuxht/lib/squeak/5*/squeak
+
+====

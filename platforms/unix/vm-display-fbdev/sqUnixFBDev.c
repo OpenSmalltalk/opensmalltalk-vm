@@ -102,8 +102,6 @@ static void outOfMemory(void)
 }
 
 
-/*#define DEBUG_EVENTS	1*/
-
 #include "sqUnixEvent.c"
 
 static inline int min(int a, int b) { return a < b ? a : b; }
@@ -127,8 +125,13 @@ static struct kb *kb= 0;
 static struct fb *fb= 0;
 
 #include "sqUnixFBDevUtil.c"
+#ifdef USEEVDEV
+#include "sqUnixEvdevKeycodeMap.c"
+#include "sqUnixEvdevKeyMouse.c"
+#else
 #include "sqUnixFBDevMouse.c"
 #include "sqUnixFBDevKeyboard.c"
+#endif
 #include "sqUnixFBDevFramebuffer.c"
 
 static void openFramebuffer(void)
@@ -171,16 +174,22 @@ static void openKeyboard(void)
 {
   kb= kb_new();
   kb_open(kb, vtSwitch, vtLock);
+#ifndef USEEVDEV
   kb_setCallback(kb, enqueueKeyboardEvent);
+#endif
 }
 
 static void closeKeyboard(void)
 {
   if (kb)
     {
+#ifndef USEEVDEV
       kb_setCallback(kb, 0);
+#endif
       kb_close(kb);
+#ifndef USEEVDEV
       kb_delete(kb);
+#endif
       kb= 0;
     }
 }
@@ -201,16 +210,22 @@ static void openMouse(void)
 {
   ms= ms_new();
   ms_open(ms, msDev, msProto);
+#ifndef USEEVDEV
   ms_setCallback(ms, enqueueMouseEvent);
+#endif
 }
 
 static void closeMouse(void)
 {
   if (ms)
     {
+#ifndef USEEVDEV
       ms_setCallback(ms, 0);
+#endif
       ms_close(ms);
+#ifndef USEEVDEV
       ms_delete(ms);
+#endif
       ms= 0;
     }
 }
@@ -232,7 +247,13 @@ static sqInt display_ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 
 static sqInt display_ioProcessEvents(void)
 {
+#ifdef USEEVDEV
+  processLibEvdevMouseEvents();
+  processLibEvdevKeyEvents(); /* sets modifier bits */
+  processLibEvdevMouseEvents();
+#else
   aioPoll(0);
+#endif
   return 0;
 }
 
@@ -294,7 +315,9 @@ static void openDisplay(void)
   openFramebuffer();
   // init mouse after setting graf mode on tty avoids packets being
   // snarfed by gpm
+#ifndef USEEVDEV
   ms->init(ms);
+#endif
 }
 
 

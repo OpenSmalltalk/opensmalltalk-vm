@@ -1,0 +1,81 @@
+Download raspi aa4ch64 from
+  https://alpinelinux.org/downloads/
+file:
+  http://dl-cdn.alpinelinux.org/alpine/v3.12/releases/aarch64/alpine-rpi-3.12.0-aarch64.tar.gz
+Instructions at
+  https://wiki.alpinelinux.org/wiki/Classic_install_or_sys_mode_on_Raspberry_Pi
+-------------------
+===================
+While easy to use, Alpine Linux packages are needed.  Here is what I added:
+-------------------
+sudo apk add mg bash git lsblk sudo htop 
+sudo apk add binutils build-base perl gdb libtool
+sudo apk add mandoc mandoc-apropos man-pages
+sudo apk add xf86-input-evdev xf86-input-evdev-doc xf86-input-evdev-dev
+sudo apk add xf86-video-fbdev xf86-video-fbdev-doc
+sudo apk add linux-rpi-dev linux-rpi4-dev linux-headers
+sudo apk add libevdev-dev glib-dev glu-dev openssl-dev
+
+===================
+group ownership:
+/dev/shm mem
+/dev/input/event0 input
+/dev/input/event1 input
+/dev/input/fb0 video
+
+chgrp input /dev/input/*
+...
+Your user account should include groups
+  wheel video input
+===================
+VM works in 16 bit mode and in 32 bit mode
+
+Check with 'fbset'
+
+>> fbset
+>> sudo fbset -depth 16
+>> sudo fbset -depth 32
+
+===================
+# in .bashrc
+# to allow    'squeak <image>"
+# rather than 'squeak -vm-display-fbdev -fbdev /dev/fb0 <image>'
+SQUEAK_KBDEV=/dev/input/event0
+SQUEAK_VM=display-fbdev
+SQUEAK_FBDEV=/dev/fb0
+SQUEAK_MSDEV=/dev/input/event1
+
+===================
+If your HDMI display remains black, you may need to
+play with boot options in 'usercfg.txt'
+Following is for RasPi4
+vvvv----vvvv----vvvv
+# usercfg.txt
+enable_uart=1
+dtparam=audio=on
+gpu_mem=256
+#dtoverlay=vc4-kms-v3d-pi4
+
+#KenD# for my old SAMSUNG HDMI TV
+# https://www.raspberrypi.org/documentation/configuration/config-txt/video.md
+hdmi_force_hotplug=1
+hdmi_ignore_edid=0xa5000080
+framebuffer_width=1024
+framebuffer_height=768
+framebuffer_depth=16
+hdmi_drive=2
+# as above fb 1024x768
+hdmi_group=2
+hdmi_mode=16
+config_hdmi_boost=9
+#eof#
+^^^^----^^^^----^^^^
+========
+'bin/setup' fix reboot lossage:
+vvv---vvv
+#!/bin/bash
+sudo umount /dev/shm
+sudo chmod 777 /dev/shm
+sudo mount /dev/shm
+sudo chgrp input /dev/input/*
+^^^---^^^

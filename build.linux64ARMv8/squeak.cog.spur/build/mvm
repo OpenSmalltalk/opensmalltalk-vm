@@ -4,7 +4,8 @@ set -e
 INSTALLDIR=sqcogspur64ARMv8linuxht
 # armv8.N-a all fail in signalSemaphoreWithIndex for N in 1,2,3,4,5
 MACHINE="-march=armv8-a -mtune=cortex-a72"
-OPT="-g -O3 -DNDEBUG -DDEBUGVM=0"
+OPT="-g -O2 -DNDEBUG -DDEBUGVM=0 -DMUSL -D_GNU_SOURCE -DUSEEVDEV"
+##OPT="-g -O3 -DNDEBUG -DDEBUGVM=0"
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
@@ -20,10 +21,10 @@ test -f plugins.int || (test -f ../plugins.int && cp -p ../plugins.int . || cp -
 test -f plugins.ext || (test -f ../plugins.ext && cp -p ../plugins.ext . || cp -p ../../plugins.ext .)
 test -f config.h || ../../../platforms/unix/config/configure \
 	--with-vmversion=5.0 --with-src=spur64src \
-	--without-vm-display-fbdev --without-npsqueak \
+	--without-npsqueak \
 	CFLAGS="$MACHINE $OPT -DCOGMTVM=0 -DDUAL_MAPPED_CODE_ZONE=1" \
 	LIBS="-lrt"
-
+##	--without-vm-display-fbdev --without-npsqueak \
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../products/$INSTALLDIR
 # prefer make install prefix=`readlink -f \`pwd\`/../../../products/$INSTALLDIR`
