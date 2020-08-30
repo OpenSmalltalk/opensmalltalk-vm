@@ -194,7 +194,8 @@ signapp:
 else
 signapp:
 	rm -rf $(APP)/Contents/MacOS/*.cstemp
-	codesign -f --deep -s "$(SIGNING_IDENTITY)" $(APP)
+	codesign -f --deep -s "$(SIGNING_IDENTITY)" \
+			--entitlements ../common/entitlements.plist $(APP)
 endif
 
 touchapp:

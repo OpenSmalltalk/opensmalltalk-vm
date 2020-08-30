@@ -43,20 +43,19 @@
  *
  */
 
-# include <sys/mman.h> /* for mprotect */
-# if OBJC_DEBUG /* define this to get debug info for struct objc_class et al */
-#  include <objc/objc.h>
-#  include <objc/objc-class.h>
+#include <sys/mman.h> /* for mprotect */
+#if OBJC_DEBUG /* define this to get debug info for struct objc_class et al */
+# include <objc/objc.h>
+# include <objc/objc-class.h>
 
 struct objc_class *baz;
 
 void setbaz(void *p) { baz = p; }
 void *getbaz() { return baz; }
-# endif
-
-# include <sys/mman.h> /* for mprotect */
+#endif
 
 #include <stdio.h>
+#include <unistd.h> /* for getpagesize/sysconf */
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>

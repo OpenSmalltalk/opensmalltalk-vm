@@ -302,12 +302,6 @@ ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 }
 
 void
-ioProfileStatus(sqInt *running, void **exestartpc, void **exelimitpc,
-					  void **vmhst, long *nvmhbin, void **eahst, long *neahbin)
-{
-}
-
-void
 ioControlProfile(int on, void **vhp, long *nvb, void **ehp, long *neb)
 {
 }

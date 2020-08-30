@@ -13,7 +13,7 @@
 # SDK optional specific SDK instead of oldest suitable available version,
 #		e.g.  SDK:=MacOSX10.13.sdk
 #
-# TARGET_VERSION_MIN optional oldest supported target instead of defauld 10.7
+# TARGET_VERSION_MIN optional oldest supported target instead of default 10.7
 #		e.g.  TARGET_VERSION_MIN:=10.11
 #
 # LINK_WITH_CXX optional, use clang++ to link.  Simply set to non-empty
@@ -321,7 +321,7 @@ $(OBJDIR)/%.dylib: FORCE
 
 $(BLDDIR)/fdlibm/libm.a:
 	@-mkdir -p $(@D)
-	$(MAKE) CFLAGS="$(OFLAGS) -D_IEEE_LIBM -isysroot $(SDK)" -C $(@D) \
+	$(MAKE) CFLAGS="$(OFLAGS) -arch $(TARGET_ARCH) -D_IEEE_LIBM -isysroot $(SDK)" -C $(@D) \
 		TP=../../$(TPDIR) -f ../../$(TPDIR)/fdlibm/Makefile.remote
 
 FORCE:

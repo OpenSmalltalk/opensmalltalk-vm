@@ -46,7 +46,7 @@ extern struct VirtualMachine* interpreterProxy;
 @implementation sqSqueakIPhoneApplication (attributes) 
 
 - (const char *) getAttribute:(sqInt)indexNumber {
-	//indexNumber is a postive/negative number
+	//indexNumber is a positive/negative number
 	
 	switch (indexNumber) {
 		case 1001: /* OS type: "unix", "win32", "mac", ... */
@@ -56,8 +56,13 @@ extern struct VirtualMachine* interpreterProxy;
 			return "iPhone";
 			
 		case 1003: /* processor architecture: "68k", "x86", "PowerPC", ...  */
+#if 0
 			return "iPhone";
-			
+#else
+			return "aarch64";
+#endif
+
+#if 0
 		case 1006: /* vm build string */
 			return "iPhone 2.2.4b1 20-Mar-10 >432619D7-FA70-4449-BEDF-68A74B3E4EF5<";
 /*			return "iPhone 2.2.3b2 05-Mar-10 >9E99B1C2-0B6B-4944-8B6F-74030D14F3C6<";
@@ -85,6 +90,12 @@ extern struct VirtualMachine* interpreterProxy;
 			return "iPhone 1.0.1b1 18-May-08 >1B1BAAE0-F4CA-4192-B3E5-4FE51E5BB820<";
 			return "iPhone 1.0.2b1 02-Sep-08 >08F8D709-6867-4272-B18C-DBA704CB3C62<";
 */			
+#else
+		case 1006:  {/* vm build string also info.plist */
+			extern char vmBuildString[];
+			return vmBuildString;
+		}
+#endif
 		case 1007: { /* vm build string also info.plist */
 #if STACKVM
 			extern char *__interpBuildInfo;

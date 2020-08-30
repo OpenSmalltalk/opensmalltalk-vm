@@ -55,11 +55,11 @@ typedef struct {
 @implementation sqSqueakOSXApplication (attributes)
 
 - (char *) getAttribute:(sqInt)indexNumber {
-	//indexNumber is a postive/negative number
+	//indexNumber is a positive/negative number
 
 	switch (indexNumber) {
 	case 1001: /* OS type: "unix", "win32", "mac", ... */
-		return "Mac OS";
+		return "Mac OS"; // Should be "Mac OS X", sigh...
 
 	case 1002:  { /* OS name: "solaris2.5" on unix, "win95" on win32, ... */
         static char data[32] = { 0 };
@@ -71,21 +71,40 @@ typedef struct {
 		return data;
 	}
 	case 1003: { /* processor architecture: "68k", "x86", "PowerPC", ...  */
+#if __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ >= 101000
+# if __ppc__
+		return "powerpc";
+# elif __x86_64__
+		return "x64";
+# elif __i386__
+		return "intel";
+# elif __arm64__
+		return "aarch64";
+# else
+		return "unknown";
+# endif
+#else
 		SInt32 myattr;
 
 		Gestalt(gestaltSysArchitecture, &myattr);
+# if 0
 		if (myattr == gestalt68k) 
 			return "68K";
+# elif __ppc__
 		if (myattr == gestaltPowerPC) 
 			return "powerpc";
+# elif __x86_64__
 		if (myattr == gestaltIntel) 
-#if defined(x86_64) || defined(__amd64) || defined(__x86_64) || defined(__amd64__) || defined(__x86_64__) || defined(_M_AMD64) || defined(_M_X64)
 			return "x64";
-#else
+# elif __i386__
+		if (myattr == gestaltIntel) 
 			return "intel";
-#endif
-
+# elif __arm64__
+		if (myattr == gestaltArm) 
+			return "aarch64";
+# endif
 		return "unknown";
+#endif
 	}
 
 #if 0 /* see iOS/vm/Common/Classes/sqSqueakMainApplication+attributes.m */
@@ -105,9 +124,8 @@ typedef struct {
 	}
 #endif
 
-	case 1005: {
+	case 1005:
 		return "Aqua";
-	}
 
 	case 1006:  {/* vm build string also info.plist */
 		extern char vmBuildString[];
@@ -136,15 +154,17 @@ typedef struct {
 - (NSOperatingSystemVersion) getOperatingSystemVersion
 {
     static NSOperatingSystemVersion osv = { 0 };
-    if (osv.majorVersion != 0) {
-        // fast path
+    if (osv.majorVersion != 0) // fast cached path
         return osv;
-    }
 
-    // This is officially true since 10.10 but inofficially since 10.9, hence the invocation
+#if __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ >= 101000
+	osv = [self getNSOperatingSystemVersion];
+#else
+    // This is officially true since 10.10 but unofficially since 10.9, hence the invocation
     if ([[NSProcessInfo processInfo] respondsToSelector: @selector(operatingSystemVersion)]) {
         osv = [self getNSOperatingSystemVersion];
-    } else {
+    }
+	else {
         SInt32 versionMajor=0, versionMinor=0, versionBugFix=0;
         Gestalt(gestaltSystemVersionMajor, &versionMajor);
         Gestalt(gestaltSystemVersionMinor, &versionMinor);
@@ -153,6 +173,7 @@ typedef struct {
         osv.minorVersion = versionMinor;
         osv.patchVersion = versionBugFix;
     }
+#endif /* __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ >= 101000 */
     return osv;
 }
 

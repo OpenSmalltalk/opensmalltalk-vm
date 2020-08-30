@@ -3085,6 +3085,7 @@ int printUsage(int level)
                    TEXT("\n\t") TVMOPTION("breaksel:") TEXT(" string \t(call warning on send of sel for debug)")
 #endif /* STACKVM || NewspeakVM */
 #if STACKVM
+                   TEXT("\n\t") TVMOPTION("failonffiexception") TEXT("\t(when in an FFI callout primitive catch exceptions and fail the primitive)")
                    TEXT("\n\t") TVMOPTION("breakmnu:") TEXT(" string \t(call warning on MNU of sel for debug)")
                    TEXT("\n\t") TVMOPTION("leakcheck:") TEXT(" n \t\t(leak check on GC (1=full,2=incr,3=both))")
                    TEXT("\n\t") TVMOPTION("eden:") TEXT(" bytes \t\t(set eden memory size to bytes)")

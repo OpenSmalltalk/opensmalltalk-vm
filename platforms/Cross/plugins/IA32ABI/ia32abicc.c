@@ -23,9 +23,11 @@ struct objc_class *baz;
 void setbaz(void *p) { baz = p; }
 void *getbaz() { return baz; }
 # endif
+# include <unistd.h> /* for getpagesize/sysconf */
 # include <stdlib.h> /* for valloc */
 # include <sys/mman.h> /* for mprotect */
 #else
+# include <unistd.h> /* for getpagesize/sysconf */
 # include <stdlib.h> /* for valloc */
 # include <sys/mman.h> /* for mprotect */
 #endif
@@ -300,7 +302,11 @@ allocateExecutablePage(sqIntptr_t *size)
 	if (mem)
 		*size = pagesize;
 #else
+# if !defined(_POSIX_C_SOURCE) || _POSIX_C_SOURCE < 200112L
 	long pagesize = getpagesize();
+# else
+	long pagesize = sysconf(_SC_PAGESIZE);
+# endif
 
 	/* This is equivalent to valloc(pagesize) but at least on some versions of
 	 * SELinux valloc fails to yield an wexecutable page, whereas this mmap
