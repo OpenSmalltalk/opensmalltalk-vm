@@ -22,7 +22,7 @@ $(OBJDIR)/%.o: %.c deps/%.d $(MAKEFILE)
 	$(POSTCOMPILE)
 
 $(OBJDIR)/%.o: %.m deps/%.d $(MAKEFILE)
-	$(CC) -x objective-c $(ALLFLAGS) $(INCLUDES) -c $< -o $@
+	$(CC) -x objective-c $(OBJC_CODE_MODEL) $(ALLFLAGS) $(INCLUDES) -c $< -o $@
 	$(POSTCOMPILE)
 
 $(OBJDIR)/%.o: %.cpp deps/%.d $(MAKEFILE)
@@ -30,7 +30,7 @@ $(OBJDIR)/%.o: %.cpp deps/%.d $(MAKEFILE)
 	$(POSTCOMPILE)
 
 $(OBJDIR)/%.o: %.mm deps/%.d $(MAKEFILE)
-	$(CXX) $(CXXVERFLAGS) $(ALLFLAGS) $(INCLUDES) -c $< -o $@
+	$(CXX) $(CXXVERFLAGS) $(OBJC_CODE_MODEL) $(ALLFLAGS) $(INCLUDES) -c $< -o $@
 	$(POSTCOMPILE)
 
 deps/%.d: ;
