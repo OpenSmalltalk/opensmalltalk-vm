@@ -117,6 +117,8 @@ VMRES:=	$(VM).res
 VMDEFIN:=$(VM).def.in
 BTOBJ:= $(OBJDIR)/btext.o
 ETOBJ:= $(OBJDIR)/etext.o
+JMPASM:=_setjmp-x64.asm
+JMPOBJ:=$(OBJDIR)/_setjmp-x64.o
 
 .PRECIOUS: mkNamedPrims.exe
 
@@ -209,19 +211,22 @@ $(BTOBJ):	$(WIN32MISCDIR)/btext.c
 $(ETOBJ):	$(WIN32MISCDIR)/etext.c
 	$(CC) -c $< -Oy -Os $(DASH_O)$@
 
+$(JMPOBJ):	$(WIN32MISCDIR)/$(JMPASM)
+	$(CC) -c $< $(DASH_O)$@
+
 vm:	$(VMEXE)
 
 TZ:=$(shell $(CBD)/date +%Z)
 
-$(VMEXE): $(OBJDIR) $(THIRDPARTYLIBS) $(VMOBJ) $(LIBS) resource.o $(BTOBJ) $(ETOBJ)
+$(VMEXE): $(OBJDIR) $(THIRDPARTYLIBS) $(VMOBJ) $(LIBS) resource.o $(BTOBJ) $(ETOBJ) $(JMPOBJ)
 	$(CC) $(DASH_O)$(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -D'TZ="$(TZ)"' -c $(WIN32DIR)/version.c
 	$(LD) $(LDFLAGS) -OUT:$(VMEXE) -MAP:$(VMMAP) \
-			$(BTOBJ) $(VMOBJ) $(OBJDIR)/resource.o $(filter-out $(call ignore), $(LIBS)) $(STDLIBS) $(ETOBJ)
+			$(BTOBJ) $(VMOBJ) $(JMPOBJ) $(OBJDIR)/resource.o $(filter-out $(call ignore), $(LIBS)) $(STDLIBS) $(ETOBJ)
 
-$(CONSOLEVMEXE): $(VMOBJ) $(LIBS) resource.o $(BTOBJ) $(ETOBJ)
+$(CONSOLEVMEXE): $(VMOBJ) $(LIBS) resource.o $(BTOBJ) $(ETOBJ) $(JMPOBJ)
 	$(CC) $(DASH_O)$(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -D'TZ="$(TZ)"' -c $(WIN32DIR)/version.c
 	$(LD) $(CONSOLELDFLAGS) -OUT:$(CONSOLEVMEXE) -MAP:$(CONSOLEVMMAP) \
-			$(BTOBJ) $(VMOBJ) $(OBJDIR)/resource.o $(filter-out $(call ignore), $(LIBS)) $(STDLIBS) $(ETOBJ)
+			$(BTOBJ) $(VMOBJ) $(JMPOBJ) $(OBJDIR)/resource.o $(filter-out $(call ignore), $(LIBS)) $(STDLIBS) $(ETOBJ)
 
 $(OBJDIR):
 	@-$(MKDIR) $(BUILD)
@@ -258,7 +263,7 @@ $(OBJDIR)/%.lib: $(call plugin-makefile,$(*F))
 		CONFIGURATION=$(CONFIGURATION) ARCH=$(ARCH) TOOLPREFIX=$(TOOLPREFIX) \
 		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
 		THIRDPARTYOUTDIR=$(THIRDPARTYOUTDIR) \
-		COGDEFS="$(COGDEFS) -DSQUEAK_BUILTIN_PLUGIN" LIBNAME=$(*F) $(OBJDIR)/$(*F).lib
+		COGDEFS="$(COGDEFS) -DSQUEAK_BUILTIN_PLUGIN=$(*F)" LIBNAME=$(*F) $(OBJDIR)/$(*F).lib
 
 # External plugin.  Build as dll and copy to vm dir ($(OBJDIR)).
 $(OBJDIR)/%.dll: $(call plugin-makefile,$(*F))
@@ -269,7 +274,7 @@ $(OBJDIR)/%.dll: $(call plugin-makefile,$(*F))
 		"VM=$(VM)" "VM_NAME=$(VM_NAME)" EXTERNAL_PLUGIN=1 TPDIR=$(TPDIR) \
 		CONFIGURATION=$(CONFIGURATION) ARCH=$(ARCH) TOOLPREFIX=$(TOOLPREFIX) \
 		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
-		THIRDPARTYOUTDIR=$(THIRDPARTYOUTDIR) \
+		THIRDPARTYOUTDIR=$(THIRDPARTYOUTDIR) JMPOBJ=$(JMPOBJ) \
 		COGDEFS="$(COGDEFS)" LIBNAME=$(*F) VMLIB=$(VMLIB) $(OBJDIR)/$(*F).dll
 
 $(BUILD)/fdlibm/libm.a:

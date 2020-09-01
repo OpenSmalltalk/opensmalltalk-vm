@@ -227,9 +227,9 @@ sqInt sqGetFilenameFromString(char * aCharBuffer, char * aFilenameString, sqInt 
  * on a high-priority thread in the VM, preempting Smalltalk execution.
  */
 #if VM_TICKER
-extern usqInt ioVMTickerCount();
-extern usqInt ioVMTickeeCallCount();
-extern usqLong ioVMTickerStartUSecs();
+extern usqInt ioVMTickerCount(void);
+extern usqInt ioVMTickeeCallCount(void);
+extern usqLong ioVMTickerStartUSecs(void);
 #endif
 
 /* Platform-specific header file may redefine earlier definitions and macros. */

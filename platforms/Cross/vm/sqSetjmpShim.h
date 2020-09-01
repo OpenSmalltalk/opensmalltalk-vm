@@ -4,7 +4,7 @@
  *	available on the platform to avoid issues with stack unwinding.
  *
  *	Author: Eliot Miranda
- *			eliot.miranda@gmil.com
+ *			eliot.miranda@gmail.com
  *
  *   This file is part of Squeak.
  * 
@@ -28,23 +28,12 @@
  */
 
 /* Use the most minimal setjmp/longjmp pair available; no signal handling
- * wanted or necessary.
+ * wanted or necessary. On win64 to avoid crashes when unwinding the stack in
+ * Kernel32's longjmp we use the pair in platforms/win32/misc/_setjmp-x64.asm.
  */
 #if !defined(_WIN32)
 # undef setjmp
 # undef longjmp
 # define setjmp _setjmp
 # define longjmp _longjmp
-#endif
-/*  N.B. on windows 64 via mingw-w64, the 2nd argument NULL to _setjmp
- *  prevents stack unwinding
- */
-#if defined(_WIN64)
-# undef setjmp
-# undef longjmp
-# if defined(__GNUC__)
-#  define setjmp(jb) _setjmp(jb,NULL)
-# elif defined(_MSC_VER)
-#  define setjmp(jb) _setjmp(jb)
-# endif
 #endif

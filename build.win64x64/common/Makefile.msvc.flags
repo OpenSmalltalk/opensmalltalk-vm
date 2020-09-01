@@ -31,7 +31,6 @@ override VCINSTALLDIRSH:=$(shell echo "$(VCINSTALLDIR)" | sed 's/[()]/\\&/g')
 #
 # Try and choose a compiler.  In order try:
 # If LLVM is installed in C:\Program FIles\LLVM use clang-cl.exe from there.
-# If ClangC2 is installed in Microsoft Visual Studio use that (a mistake)
 # Otherwise use MSVC
 #
 
@@ -39,29 +38,17 @@ $(info VCINSTALLDIR=$(VCINSTALLDIR))
 $(info VCINSTALLDIRSH=$(VCINSTALLDIRSH))
 #$(info wildcard VCINSTALLDIR $(wildcard $(VCINSTALLDIR)/.*))
 $(info wildcard  C:/Program\ Files/LLVM/bin/.* $(wildcard C:/Program\ Files/LLVM/bin/.*))
-#$(info wildcard VCINSTALLDIR/Tools/ClangC2 $(wildcard $(VCINSTALLDIR)/Tools/ClangC2/.*))
-#$(info wildcard VCINSTALLDIR/Tools/ClangC3 $(wildcard $(VCINSTALLDIR)/Tools/ClangC3/.*))
 
 ifneq ($(wildcard C:/Program\ Files/LLVM/bin/.*),)
 $(info LLVM/Clang detected)
 CC:="C:/Program Files/LLVM/bin/clang-cl.exe"
 Clang:=Clang
-undefine ClangC2
 undefine MSVC
-else ifneq ($(wildcard $(VCINSTALLDIR)/Tools/ClangC2/.*),)
-$(info Clang/C2 detected)
-#$(info shell echo VCINST...SH/./clang.exe $(shell echo $(VCINSTALLDIRSH)Tools/ClangC2/*/bin/HostX64/clang.exe))
-CC:="$(shell echo $(VCINSTALLDIRSH)Tools/ClangC2/*/bin/HostX64/clang.exe)"
-ClangC2:=ClangC2
-undefine Clang
-undefine MSVC
-CLANG_ADAPT:=-fmsc-version=1916 # as reported by boost for MSVC Community 2017
 else
-$(info neither Clang nor Clang/C2 found using MSVC)
+$(info Clang not found; using MSVC)
 override TOOLPREFIX:="$(VCToolsInstallDir)bin/HostX64/x64/"
 MSVC:=MSVC
 undefine Clang
-undefine ClangC2
 CC:=$(TOOLPREFIX)cl.exe -nologo
 endif
 $(info CC=$(CC))
@@ -89,41 +76,33 @@ MSVCINCLUDES:=-I"$(subst \,/,$(subst ;," -I",$(INCLUDE)))"
 
 # DO NOT USE := FOR OFLAGS BECAUSE SOME PLUGINS REDEFINE THIS!!
 # -Z7 debug info in files; -Zi debug info in PDB
+# Turn off BUFFER_SECURITY for functional setjmp/longjmp
+BUFFER_SECURITY:=-GS-
 ifdef MSVC
-PRODUCTION_OFLAGS:=-Ox -Ob1 -Oi -Oy
-ASSERT_OFLAGS:=-Os -Oi- -Oy-
-DEBUG_OFLAGS:=-Od
+PRODUCTION_OFLAGS:=-Ox -Ob1 -Oi -Oy $(BUFFER_SECURITY)
+ASSERT_OFLAGS:=-Os -Oi- -Oy- $(BUFFER_SECURITY)
+DEBUG_OFLAGS:=-Od $(BUFFER_SECURITY)
 DASH_O:=-Fo
-OFLAGS= -Ot
+OFLAGS= -Ot $(BUFFER_SECURITY)
 CFLAGS=	-MD -DLLP64=1 -DWIN64=1 -Z7 $(OFLAGS) \
 	-Dalloca=_alloca -Dhuge=my_huge \
 	-EHsc $(NOBUILTIN) $(WARNINGS)
 else ifdef Clang
-PRODUCTION_OFLAGS:=-Ox -Ob1 -Oi -Oy
-ASSERT_OFLAGS:=-Os -Oi- -Oy-
-DEBUG_OFLAGS:=-Od
+PRODUCTION_OFLAGS:=-Ox -Ob1 -Oi -Oy $(BUFFER_SECURITY)
+ASSERT_OFLAGS:=-Os -Oi- -Oy- $(BUFFER_SECURITY)
+DEBUG_OFLAGS:=-Od $(BUFFER_SECURITY)
 DASH_O:=-o
-OFLAGS= -Ot
+OFLAGS= -Ot $(BUFFER_SECURITY)
 CFLAGS=	-MD -DLLP64=1 -DWIN64=1 -Z7 $(OFLAGS) \
 	-Dalloca=_alloca -Dhuge=my_huge \
 	-EHsc $(NOBUILTIN) $(WARNINGS)
-else ifdef ClangC2
-PRODUCTION_OFLAGS:=-Os
-ASSERT_OFLAGS:=-Od
-DEBUG_OFLAGS:=-O0
-DASH_O:=-o
-OFLAGS=-O3
-CFLAGS=	-MD -DLLP64=1 -DWIN64=1 -gcodeview $(OFLAGS) \
-	-Dalloca=_alloca -Dhuge=my_huge \
-	$(NOBUILTIN) $(WARNINGS)
 endif
+# Make all setjmp/longjmp varieties to our _setjmp/_longjmp in _setjmp-x86.asm
+JMPDEFS:=-Dsetjmp=_setjmp -Dlongjmp=_longjmp -D_siglongjmp=_longjmp
 
 # Do _not_ define NDEBUG.  The entire point of the msvc build is to debug with
 # MSVC and defining NDEBUG installs a default catch-everything exception handler
 # that effectively disables debugging.
-#DEFS:=	-DWIN32_FILE_SUPPORT -DNO_SERVICE -DNO_STD_FILE_SUPPORT -DNDEBUG \
-#	-DLSB_FIRST -DVM_NAME=\"$(VM)\" -DX86 $(XDEFS) $(CROQUET)
-DEFS:=	-DWIN32_FILE_SUPPORT -DNO_SERVICE -DLSB_FIRST -DX64 $(XDEFS) $(CROQUET)
 # XDEFS=	-DSQUEAK_BUILTIN_PLUGIN
 # Include the Microsoft headers and any extras.
 # Put -I. last because boost includes bizarreness such as

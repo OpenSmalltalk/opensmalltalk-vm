@@ -22,8 +22,6 @@ ifdef MSVC
 WARNINGS:= -W4 -wd4100 -wd4668 -wd4255 -wd4555 -wd4706
 else ifdef Clang
 WARNINGS:= -Wall -Wno-unused-variable -Wno-unknown-pragmas -Wno-unused-value -Wno-unused-function -Wno-missing-variable-declarations -Wno-unused-macros -Wno-sign-compare -Wno-sign-conversion -Wno-pedantic -Wno-reserved-id-macro -Wno-undef
-else ifdef ClangC2
-WARNINGS:= -Wall -Wno-unused-variable -Wno-unknown-pragmas -Wno-unused-value -Wno-unused-function
 endif
 
 # VM config flags.
@@ -69,7 +67,7 @@ WINVER:=-D_WIN64=1 -D_WIN32_WINNT=0x1001 -DWINVER=0x1001
 NOBUILTIN:=-D_MT
 MACHINE:=x64
 
-DEFS:=	-D$(VM)VM=1 $(COGDEFS) $(MEMACCESS) $(WINVER) \
+DEFS:=	-D$(VM)VM=1 $(COGDEFS) $(MEMACCESS) $(WINVER) $(JMPDEFS) \
 		-DWIN32=1 -DUNICODE=1 -DWIN32_FILE_SUPPORT -DNO_ISNAN -DNO_SERVICE \
 		$(NDEBUG) -DLSB_FIRST -DVM_NAME='"$(VM_NAME)"' $(XDEFS) $(CROQUET)
 
