@@ -452,7 +452,7 @@ static enum XdndState dndOutSelectionRequest(enum XdndState state, XSelectionReq
       return state;
     }
   memcpy(&xdndOutRequestEvent, req, sizeof(xdndOutRequestEvent));
-  recordDragEvent(SQDragRequest, 1);
+  recordDragEvent(SQDragRequest, 0);
   return state;
 }
 
@@ -645,7 +645,7 @@ static enum XdndState dndInEnter(enum XdndState state, XClientMessageEvent *evt)
 static enum XdndState dndInLeave(enum XdndState state)
 {
   fdebugf((stderr, "Receive XdndLeave (input)\n"));
-  recordDragEvent(SQDragLeave, 1);
+  recordDragEvent(SQDragLeave, 0);
   return XdndStateIdle;
 }
 
@@ -669,7 +669,7 @@ static enum XdndState dndInPosition(enum XdndState state, XClientMessageEvent *e
     }
   
   if ((state == XdndStateEntered) && xdndWillAccept)
-    recordDragEvent(SQDragEnter, 1);
+    recordDragEvent(SQDragEnter, 0);
   
   if (xdndWillAccept)
     {
@@ -683,7 +683,7 @@ static enum XdndState dndInPosition(enum XdndState state, XClientMessageEvent *e
     {
       /*fdebugf((stderr, "  dndInPosition: accepting\n"));*/
       dndSendStatus(1, XdndActionCopy);
-      recordDragEvent(SQDragMove, 1);
+      recordDragEvent(SQDragMove, 0);
     }
   else /* won't accept */
     {
@@ -751,7 +751,7 @@ enum XdndState dndInDrop(enum XdndState state, XClientMessageEvent *evt)
     }
 
   dndSendFinished();
-  recordDragEvent(SQDragLeave, 1);
+  recordDragEvent(SQDragLeave, 0);
 
   return XdndStateIdle;
 }
@@ -901,7 +901,7 @@ static enum XdndState dndInFinished(enum XdndState state)
 {
   fdebugf((stderr, "Internal signal DndInFinished (input)\n"));
   dndSendFinished();
-  recordDragEvent(SQDragLeave, 1);
+  recordDragEvent(SQDragLeave, 0);
   dndInDestroyTypes();
   return XdndStateIdle;
 }
