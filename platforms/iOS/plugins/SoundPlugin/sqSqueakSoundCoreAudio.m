@@ -4,6 +4,7 @@
 //
 //  Created by John M McIntosh on 11/10/08.
 //	Extended with the Terf additions in May 2017 by Eliot Miranda
+//	Corrected for device addition/removal issues Aug 2020 by Eliot Miranda
 /*
  Some of this code was funded via a grant from the European Smalltalk User Group (ESUG)
  Copyright (c) 2008 Corporate Smalltalk Consulting Ltd. All rights reserved.
@@ -28,12 +29,17 @@
  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  OTHER DEALINGS IN THE SOFTWARE.
 
- The end-user documentation included with the redistribution, if any, must include the following acknowledgment: 
- "This product includes software developed by Corporate Smalltalk Consulting Ltd (http://www.smalltalkconsulting.com) 
- and its contributors", in the same place and form as other third-party acknowledgments. 
- Alternately, this acknowledgment may appear in the software itself, in the same form and location as other 
- such third-party acknowledgments.
+ The end-user documentation included with the redistribution, if any, must
+ include the following acknowledgment: 
+ "This product includes software developed by Corporate Smalltalk Consulting Ltd
+  (http://www.smalltalkconsulting.com) and its contributors",
+ in the same place and form as other third-party acknowledgments.  Alternately,
+ this acknowledgment may appear in the software itself, in the same form and
+ location as other such third-party acknowledgments.
  */
+
+#include "sqMemoryFence.h"
+#include "sqAssert.h"
 
 #import <CoreAudio/CoreAudio.h>
 
@@ -54,24 +60,24 @@ MyAudioQueueOutputCallback (sqSqueakSoundCoreAudio *myInstance,
 	if (!atom) {
 		inBuffer->mAudioDataByteSize   = MIN(inBuffer->mAudioDataBytesCapacity,2644);
 		memset(inBuffer->mAudioData,0,inBuffer->mAudioDataByteSize);
-//NSLog(@"%i Fill sound buffer with zero %i bytes",ioMSecs(),inBuffer->mAudioDataByteSize);
-	} else {
-		if (inBuffer->mAudioDataBytesCapacity >= atom.byteCount) {
-			atom = [myInstance.soundOutQueue returnAndRemoveOldest];
-			inBuffer->mAudioDataByteSize = (int) atom.byteCount;
-			memcpy(inBuffer->mAudioData,atom.data,atom.byteCount);
-            RELEASEOBJ(atom);
-//NSLog(@"%i Fill sound buffer with %i bytesA",ioMSecs(),inBuffer->mAudioDataByteSize);
-		} else {
-			inBuffer->mAudioDataByteSize = (int) MIN(atom.byteCount - atom.startOffset,inBuffer->mAudioDataBytesCapacity);
-			memcpy(inBuffer->mAudioData,atom.data+atom.startOffset,inBuffer->mAudioDataByteSize);
-			atom.startOffset = atom.startOffset + inBuffer->mAudioDataByteSize;
-			if (atom.startOffset == atom.byteCount) {
-				atom = [myInstance.soundOutQueue returnAndRemoveOldest]; //ignore now it's empty
-                RELEASEOBJ(atom);
-			}
-//NSLog(@"%i Fill sound buffer with %i bytesB",ioMSecs(),inBuffer->mAudioDataByteSize);
+		//NSLog(@"%i Fill sound buffer with zero %i bytes",ioMSecs(),inBuffer->mAudioDataByteSize);
+	}
+	else if (inBuffer->mAudioDataBytesCapacity >= atom.byteCount) {
+		atom = [myInstance.soundOutQueue returnAndRemoveOldest];
+		inBuffer->mAudioDataByteSize = atom.byteCount;
+		memcpy(inBuffer->mAudioData,atom.data,atom.byteCount);
+		RELEASEOBJ(atom);
+		//NSLog(@"%i Fill sound buffer with %i bytesA",ioMSecs(),inBuffer->mAudioDataByteSize);
+	}
+	else {
+		inBuffer->mAudioDataByteSize = MIN(atom.byteCount - atom.startOffset,inBuffer->mAudioDataBytesCapacity);
+		memcpy(inBuffer->mAudioData,atom.data+atom.startOffset,inBuffer->mAudioDataByteSize);
+		atom.startOffset = atom.startOffset + inBuffer->mAudioDataByteSize;
+		if (atom.startOffset == atom.byteCount) {
+			atom = [myInstance.soundOutQueue returnAndRemoveOldest]; //ignore now it's empty
+			RELEASEOBJ(atom);
 		}
+//NSLog(@"%i Fill sound buffer with %i bytesB",ioMSecs(),inBuffer->mAudioDataByteSize);
 	}
 	AudioQueueEnqueueBuffer(inAQ,inBuffer,0,nil);			
 	interpreterProxy->signalSemaphoreWithIndex(myInstance.semaIndexForOutput);	
@@ -98,7 +104,6 @@ MyAudioQueueInputCallback ( void                  *inUserData,
 							const AudioTimeStamp  *inStartTime,
 							UInt32                 inNumberPacketDescriptions,
 							const AudioStreamPacketDescription  *inPacketDescs) {
-
 	sqSqueakSoundCoreAudio * myInstance = (__bridge  sqSqueakSoundCoreAudio *)inUserData;
 
 	if (!myInstance.inputIsRunning) 
@@ -127,6 +132,7 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 						void *inClientData)
 {
     ++rebuildRequest;
+	sqLowLevelMFence();
     return noErr;
 }
 
@@ -180,8 +186,8 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 	self.semaIndexForInput = 0;
 	self.outputFormat = calloc(1,sizeof(AudioStreamBasicDescription));
 	self.inputFormat = calloc(1,sizeof(AudioStreamBasicDescription));
-	self.outputBuffers = calloc((unsigned)kNumberOfBuffers,sizeof(AudioQueueBufferRef));
-	self.inputBuffers = calloc((unsigned) kNumberOfBuffers,sizeof(AudioQueueBufferRef));
+	self.outputBuffers = calloc(kNumberOfBuffers,sizeof(AudioQueueBufferRef));
+	self.inputBuffers = calloc(kNumberOfBuffers,sizeof(AudioQueueBufferRef));
 	soundOutQueue = [[Queue alloc] init];
 	soundInQueue = [[Queue alloc] init];
 	numDevices = 0;
@@ -193,12 +199,10 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 
 - (sqInt) soundShutdown {
 	//NSLog(@"%i sound shutdown",ioMSecs());
-	if (self.outputAudioQueue) {
+	if (self.outputAudioQueue)
 		[self snd_StopAndDispose];
-	}
-	if (self.inputAudioQueue) {
+	if (self.inputAudioQueue)
 		[self snd_StopRecording];
-	}
 	return 1;
 }
 
@@ -240,12 +244,37 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 		return 0; /* Causes primitive failure in primitiveSoundStart[WithSemaphore] */
 	self.outputAudioQueue = newQueue;
 
-	AudioQueueAddPropertyListener(self.outputAudioQueue,
-								  kAudioQueueProperty_IsRunning,
-								  MyAudioQueuePropertyListener,
-								  (__bridge void *)self);
+	// The claim on the internet is that each callback must have its own
+	// run loop for the callbacks to be called reliably.
+	// If these error what can we do?  Simply ignore errors for now.
+	AudioObjectPropertyAddress setRunLoop = {
+									kAudioHardwarePropertyRunLoop,
+									kAudioObjectPropertyScopeGlobal,
+									kAudioObjectPropertyElementMaster };
+	CFRunLoopRef runLoop = 0;
+	if (AudioObjectSetPropertyData(kAudioObjectSystemObject, &setRunLoop,
+									 0, nil, sizeof(runLoop), &runLoop))
+		warning("SoundPlugin: error setting run loop property");
 
-	self.bufferSizeForOutput = (unsigned) (SqueakFrameSize * nChannels * frameCount * 2);
+	// See https://stackoverflow.com/questions/26070058/how-to-get-notification-if-system-preferences-default-sound-changed
+	AudioObjectPropertyAddress deviceAddress = {
+		kAudioHardwarePropertyDefaultOutputDevice,
+		kAudioObjectPropertyScopeGlobal,
+		kAudioObjectPropertyElementMaster
+	};
+	if (AudioObjectAddPropertyListener(kAudioObjectSystemObject, 
+										&deviceAddress,
+										MyAudioDevicesListener,
+										nil))
+		warning("failed to set output device notification");
+	deviceAddress.mSelector = kAudioHardwarePropertyDefaultInputDevice;
+	if (AudioObjectAddPropertyListener(kAudioObjectSystemObject, 
+									&deviceAddress,
+									MyAudioDevicesListener,
+									nil))
+		warning("failed to set input device notification");
+
+	self.bufferSizeForOutput = SqueakFrameSize * nChannels * frameCount * 2;
 	for (int i = 0; i < kNumberOfBuffers; ++i)
 		if (AudioQueueAllocateBuffer(self.outputAudioQueue,
 									 self.bufferSizeForOutput/16,
@@ -255,7 +284,7 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 	return 1;
 }
 
-- (sqInt)	snd_Stop {
+- (sqInt) snd_Stop {
 	if (!self.outputIsRunning)
 		return 1;
 	//NSLog(@"%i sound stop",ioMSecs());
@@ -276,7 +305,6 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 #pragma unused(result)
 }
 
-
 - (sqInt)	snd_StopAndDispose {
 	//NSLog(@"%i sound stopAndDispose",ioMSecs());
 	if (!self.outputAudioQueue) 
@@ -292,7 +320,6 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 
 - (sqInt)	snd_PlaySilence {
 	return -1; /* Causes primitive failure in primitiveSoundPlaySilence */
-
 }
 
 - (sqInt)	snd_AvailableSpace {
@@ -334,9 +361,8 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 	if (desiredSamplesPerSec <= 0 || stereo < 0 || stereo > 1) 
 		return interpreterProxy->primitiveFail();
 
-	if (self.inputAudioQueue) {
+	if (self.inputAudioQueue)
 		[self snd_StopRecording];
-	}
 
 	self.semaIndexForInput = semaIndex;
 	self.inputSampleRate = (float) desiredSamplesPerSec;
@@ -344,16 +370,15 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 	self.inputChannels = 1 + stereo;
 	self.inputFormat->mSampleRate = (Float64)desiredSamplesPerSec;
 	self.inputFormat->mFormatID = kAudioFormatLinearPCM;
-	self.inputFormat->mFormatFlags = kAudioFormatFlagsNativeEndian | kLinearPCMFormatFlagIsSignedInteger 
-		| kAudioFormatFlagIsPacked ;
+	self.inputFormat->mFormatFlags = kAudioFormatFlagsNativeEndian | kLinearPCMFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked ;
 
-	self.inputFormat->mBytesPerPacket   = (int) SqueakFrameSize / (3 - (int)self.inputChannels);
+	self.inputFormat->mBytesPerPacket   = SqueakFrameSize / (3 - self.inputChannels);
 	self.inputFormat->mFramesPerPacket  = 1;
-	self.inputFormat->mBytesPerFrame    =(int)  SqueakFrameSize / (3 - (int)self.inputChannels);
-	self.inputFormat->mChannelsPerFrame =(int) self.inputChannels;
+	self.inputFormat->mBytesPerFrame    = SqueakFrameSize / (3 - self.inputChannels);
+	self.inputFormat->mChannelsPerFrame = self.inputChannels;
 	self.inputFormat->mBitsPerChannel   = 16;
 
-	self.bufferSizeForInput = (unsigned) (SqueakFrameSize * self.inputChannels * frameCount * 2/4);   
+	self.bufferSizeForInput = SqueakFrameSize * self.inputChannels * frameCount * 2 / 4;   
 	//Currently squeak does this thing where it stops yet leaves data in queue, this causes us to loose data if the buffer is too big
 
 	AudioQueueRef newQueue;
@@ -364,11 +389,11 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 
 	self.inputAudioQueue = newQueue;
 
-	for (int i = 0; i < kNumberOfBuffers; ++i) {
+	for (int i = 0; i < kNumberOfBuffers; ++i)
 		if (AudioQueueAllocateBuffer(self.inputAudioQueue, self.bufferSizeForInput, &self.inputBuffers[i])
 		 || AudioQueueEnqueueBuffer(self.inputAudioQueue,self.inputBuffers[i],0,NULL))
 			return interpreterProxy->primitiveFail();
-	}
+
 	inputIsRunning = 1;
 	return AudioQueueStart(self.inputAudioQueue,NULL)
 			? interpreterProxy->primitiveFail()
@@ -405,25 +430,24 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 
 	usqInt    start= startSliceIndex * SqueakFrameSize / 2;
 	soundAtom	*atom = [self.soundInQueue returnOldest];
-	if (atom == nil) 
+	if (!atom) 
 		return 0;
-	if (bufferSizeInBytes-start >= atom.byteCount && atom.startOffset == 0) {
+	if (bufferSizeInBytes-start >= atom.byteCount
+	 && atom.startOffset == 0) {
 		atom = [self.soundInQueue returnAndRemoveOldest];
 		memcpy(arrayIndex+start,atom.data,atom.byteCount);
 		count= MIN(atom.byteCount, bufferSizeInBytes - start);
         RELEASEOBJ(atom);
 		return count / (SqueakFrameSize / 2) / self.inputChannels;
-	} else {
-		count= MIN(atom.byteCount-atom.startOffset, bufferSizeInBytes - start);
-		memcpy(arrayIndex+start,atom.data+atom.startOffset,count);
-		atom.startOffset = atom.startOffset + (count);
-		if (atom.startOffset == atom.byteCount) {
-			atom = [self.soundInQueue returnAndRemoveOldest]; //ignore now it's empty
-            RELEASEOBJ(atom);
-		}
-		return count / (SqueakFrameSize / 2) / self.inputChannels;
 	}
-
+	count= MIN(atom.byteCount-atom.startOffset, bufferSizeInBytes - start);
+	memcpy(arrayIndex+start,atom.data+atom.startOffset,count);
+	atom.startOffset = atom.startOffset + (count);
+	if (atom.startOffset == atom.byteCount) {
+		atom = [self.soundInQueue returnAndRemoveOldest]; //ignore now it's empty
+		RELEASEOBJ(atom);
+	}
+	return count / (SqueakFrameSize / 2) / self.inputChannels;
 }
 
 // Terf SqSoundVersion 1.2 improvements
@@ -499,101 +523,85 @@ float
 getVolumeOf(AudioDeviceID deviceID, char which)
 {
 	AudioObjectPropertyAddress	address;
-	OSStatus					err;
-	Float32						volume0, volume1;
-	UInt32						size, channels[2];
-	Boolean						channelHasVolume[2];
+	OSStatus					err1, err2;
+	Boolean						hasVolume1, hasVolume2;
+	Float32						volume1, volume2;
+	UInt32						size = sizeof(Float32);
 
 	// get the input device stereo channels
-	address.mSelector = kAudioDevicePropertyPreferredChannelsForStereo;
+	address.mSelector = kAudioDevicePropertyVolumeScalar;
 	address.mScope = which == IsInput
 						? kAudioDevicePropertyScopeInput
 						: kAudioDevicePropertyScopeOutput;
-	address.mElement = kAudioObjectPropertyElementWildcard;
-	size = sizeof(channels);
-	if (deviceID == (AudioDeviceID)-1
-	 || AudioObjectGetPropertyData(deviceID, &address, 0, nil, &size, &channels))
-		return -1.0f;
-
-	size = sizeof(volume0);
-
-#if 0 /* Master always has volue of 0.0 (actually epsilon) */
 	address.mElement = kAudioObjectPropertyElementMaster;
-	if (AudioObjectHasProperty(deviceID, &address)) {
-		// See if the default channel has a volume.
-		err = AudioObjectGetPropertyData(deviceID, &address, 0, nil, &size, &volume0);
-		if (!err && volume0 > 0.000001f)
-			return volume0;
-	}
-#endif
 
-	address.mElement = kAudioObjectPropertyElementWildcard;
-	// Default channel didn't (doesn't) provide a volume.
-    // run some tests to see what other channels might respond to volume changes
+	// If there's a master volume, answer that...
+	if (AudioObjectHasProperty(deviceID, &address))
+		return AudioObjectGetPropertyData(deviceID, &address, 0, nil, &size, &volume1)
+			? -1.0f
+			: volume1;
 
-	address.mSelector = kAudioDevicePropertyVolumeScalar;
-	address.mElement = channels[0];
-	// returns true, channel 0 has a VolumeScalar property
-	channelHasVolume[0] = AudioObjectHasProperty(deviceID, &address);
+	// Otherwise get each channel individually (assuming stereo) and answer average
+	address.mElement = 1;
+	if ((hasVolume1 = AudioObjectHasProperty(deviceID, &address)))
+		err1 = AudioObjectGetPropertyData(deviceID, &address, 0, nil, &size, &volume1);
+	address.mElement = 2;
+	if ((hasVolume2 = AudioObjectHasProperty(deviceID, &address)))
+		err2 = AudioObjectGetPropertyData(deviceID, &address, 0, nil, &size, &volume2);
 
-	address.mElement = channels[1];
-	// returns true, channel 1 has a VolumeScalar property
-	channelHasVolume[1] = AudioObjectHasProperty(deviceID, &address);
+	if (hasVolume1 && hasVolume2)
+		return err1 || err2 ? -1.0f : (volume1 + volume2) / 2.0f;
 
-	size = sizeof(volume0);
-	address.mElement = channels[0];
-	// returns noErr, but says the volume is always zero (weird)
-	err = AudioObjectGetPropertyData(deviceID, &address, 0, nil, &size, &volume0);
+	if (hasVolume1 && !err1)
+		return volume1;
 
-	if (err || volume0 == 0.0f) {
-		size = sizeof(volume1);
-		address.mElement = channels[1];
-		// returns noErr, but returns the correct volume!
-		err = AudioObjectGetPropertyData(deviceID, &address, 0, nil, &size, &volume1);
-		if (!err)
-			return volume1;
-	}
+	if (hasVolume2 && !err2)
+		return volume2;
 
-	return err ? -1.0f : volume0;
+	return -1.0f;
 }
 
 float
 setVolumeOf(AudioDeviceID deviceID, char which, float volume)
 {
 	AudioObjectPropertyAddress	address;
-	OSStatus					err, atLeastOne;
-	Float32						volume0 = volume, volume1 = volume;
-	UInt32						size, channels[2];
+	OSStatus					err1, err2;
+	Boolean						hasVolume1, hasVolume2;
+	Float32						volume1 = volume, volume2 = volume;
+	Boolean						settable;
 
 	// get the input device stereo channels
-	address.mSelector = kAudioDevicePropertyPreferredChannelsForStereo;
+	address.mSelector = kAudioDevicePropertyVolumeScalar;
 	address.mScope = which == IsInput
 						? kAudioDevicePropertyScopeInput
 						: kAudioDevicePropertyScopeOutput;
-	address.mElement = kAudioObjectPropertyElementWildcard;
-	size = sizeof(channels);
-	if (deviceID == (AudioDeviceID)-1
-	 || AudioObjectGetPropertyData(deviceID, &address, 0, nil, &size, &channels))
-		return -1.0f;
+	address.mElement = kAudioObjectPropertyElementMaster;
 
-	err = 0;
-	size = sizeof(volume0);
-	address.mSelector = kAudioDevicePropertyVolumeScalar;
-	// returns true if channel 0 has a VolumeScalar property
-	if (AudioObjectHasProperty(deviceID, &address)) {
-		address.mElement = channels[0];
-		err = AudioObjectSetPropertyData(deviceID, &address, 0, nil, &size, &volume0);
-		atLeastOne = 1;
-	}
+	// If there's a master volume control use that...
+	if (!AudioObjectIsPropertySettable(deviceID, &address, &settable)
+	 && settable)
+		return AudioObjectSetPropertyData(deviceID, &address, 0, nil, sizeof(Float32), &volume1)
+			? -1.0f
+			: volume1;
 
-	// returns true if channel 1 has a VolumeScalar property
-	if (AudioObjectHasProperty(deviceID, &address)) {
-		address.mElement = channels[1];
-		err |= AudioObjectSetPropertyData(deviceID, &address, 0, nil, &size, &volume1);
-		atLeastOne = 1;
-	}
+	// Otherwise set each channel individually (assuming stereo)
+	address.mElement = 1;
+	if ((hasVolume1 = AudioObjectHasProperty(deviceID, &address)))
+		err1 = AudioObjectSetPropertyData(deviceID, &address, 0, nil, sizeof(Float32), &volume1);
+	address.mElement = 2;
+	if ((hasVolume2 = AudioObjectHasProperty(deviceID, &address)))
+		err2 = AudioObjectSetPropertyData(deviceID, &address, 0, nil, sizeof(Float32), &volume2);
 
-	return !err && atLeastOne ? (volume0 + volume1) / 2.0f : -1.0f;
+	if (hasVolume1 && hasVolume2)
+		return err1 || err2 ? -1.0f : (volume1 + volume2) / 2.0f;
+
+	if (hasVolume1 && !err1)
+		return volume1;
+
+	if (hasVolume2 && !err2)
+		return volume2;
+
+	return -1.0f;
 }
 
 
@@ -609,12 +617,8 @@ setVolumeOf(AudioDeviceID deviceID, char which, float volume)
 	Float32 volume;
 
 	if ((volume = getVolumeOf(defaultInputDevice(), IsInput)) < 0) {
-#if 1
 		interpreterProxy->primitiveFail();
 		return -1;
-#else
-		volume = 0.0f; // Terf expected this before we changed it.
-#endif
 	}
 
 	return (int)(volume * 1000.0f);
@@ -653,10 +657,7 @@ setVolumeOf(AudioDeviceID deviceID, char which, float volume)
 	getOutputStreams = {	kAudioDevicePropertyStreams,
 							kAudioDevicePropertyScopeOutput,
 							kAudioObjectPropertyElementMaster },
-	setCallback = {				kAudioStreamPropertyAvailablePhysicalFormats,
-								kAudioObjectPropertyScopeGlobal,
-								0 },
-    setRunLoop = {					kAudioHardwarePropertyRunLoop,
+	setCallback = {					kAudioStreamPropertyAvailablePhysicalFormats,
 									kAudioObjectPropertyScopeGlobal,
 									kAudioObjectPropertyElementMaster };
 	int i;
@@ -681,7 +682,7 @@ setVolumeOf(AudioDeviceID deviceID, char which, float volume)
 	// First get the device IDs and compute numDevices
 	UInt32 datasize = 0;
     if (AudioObjectGetPropertyDataSize(kAudioObjectSystemObject,
-										&getDevices, 0, 0, &datasize))
+										&getDevices, 0, nil, &datasize))
 		return;
 	numDevices = datasize / sizeof(AudioDeviceID);
 	if (numDevices == 0
@@ -690,7 +691,7 @@ setVolumeOf(AudioDeviceID deviceID, char which, float volume)
 		return;
 	}
 	if (AudioObjectGetPropertyData(kAudioObjectSystemObject, &getDevices,
-								   0, 0, &datasize, (AudioDeviceID *)deviceIDs)
+								   0, nil, &datasize, (AudioDeviceID *)deviceIDs)
 
 	 || !(deviceNames = calloc(numDevices, sizeof(char *)))
 	 || !(deviceTypes = calloc(numDevices, sizeof(char)))) {
@@ -708,9 +709,9 @@ setVolumeOf(AudioDeviceID deviceID, char which, float volume)
 		CFStringRef nameRef;
 
         if (AudioObjectGetPropertyDataSize(deviceIDs[i], &getName,
-											0, 0, &datasize)
+											0, nil, &datasize)
 		 || AudioObjectGetPropertyData    (deviceIDs[i], &getName,
-											0, 0, &datasize, &nameRef))
+											0, nil, &datasize, &nameRef))
 			error("could not get sound device name");
 
         CFIndex length = CFStringGetLength(nameRef) + 1;
@@ -719,6 +720,7 @@ setVolumeOf(AudioDeviceID deviceID, char which, float volume)
     	if (AudioObjectGetPropertyDataSize(deviceIDs[i], &getInputStreams,
 											0, NULL, &datasize))
 			error("could not get sound device Input stream info");
+		deviceNames[i][length - 1] = 0;
 		if (datasize > 0)
 			deviceTypes[i] = IsInput;
 
@@ -728,14 +730,12 @@ setVolumeOf(AudioDeviceID deviceID, char which, float volume)
 		if (datasize > 0)
 			deviceTypes[i] |= IsOutput;
 
-		// The claim on the internet is that each callback must have its own
-		// run loop for the calbacks to be called reliably.
-		// If these error what can we do?  Simply ignore errors for now.
-		CFRunLoopRef runLoop = 0;
-		(void)AudioObjectSetPropertyData(kAudioObjectSystemObject, &setRunLoop,
-										 0, 0, sizeof(runLoop), &runLoop);
+		// Since this is done every time the device list is rebuilt, and since it
+		// errors if done more than once, we ignore errors.  If anyone knows how
+		// to query the existing listener then please modify this to check if a
+		// listener needs to be added.
 		(void)AudioObjectAddPropertyListener(deviceIDs[i], &setCallback,
-											 MyAudioDevicesListener, (void *)0);
+											 MyAudioDevicesListener, 0);
 	}
 }
 
@@ -760,7 +760,7 @@ setVolumeOf(AudioDeviceID deviceID, char which, float volume)
 - (char *) getDefaultSoundPlayer {
 
 	[self ensureDeviceList];
-	AudioObjectID deviceID = defaultInputDevice();
+	AudioObjectID deviceID = defaultOutputDevice();
 
 	for (int i = 0; i < numDevices; i++)
 		if (deviceIDs[i] == deviceID
@@ -773,7 +773,7 @@ setVolumeOf(AudioDeviceID deviceID, char which, float volume)
 - (char *) getDefaultSoundRecorder {
 
 	[self ensureDeviceList];
-	AudioObjectID deviceID = defaultOutputDevice();
+	AudioObjectID deviceID = defaultInputDevice();
 
 	for (int i = 0; i < numDevices; i++)
 		if (deviceIDs[i] == deviceID

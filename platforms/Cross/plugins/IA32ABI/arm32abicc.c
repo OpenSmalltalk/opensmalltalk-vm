@@ -16,6 +16,7 @@
 #endif
 #if defined(__ARM_ARCH__) || (defined(__arm__) && !defined(ARM64)) || defined(__arm32__) || defined(ARM32)
 
+#include <unistd.h> /* for getpagesize/sysconf */
 #include <stdlib.h> /* for valloc */
 #include <sys/mman.h> /* for mprotect */
 

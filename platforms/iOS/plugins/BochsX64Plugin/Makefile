@@ -1,7 +1,7 @@
 BOX:=../bochsx64
 PREREQUISITES:=$(BOX)/cpu/libcpu.a $(BOX)/disasm/libdisasm.a $(BOX)/fpu/libfpu.a
 
-LINK_WITH_CPP:=1
+LINK_WITH_CXX:=1
 INCDIRS:=$(BOX) \
          ../../processors/IA32/bochs \
 		 ../../processors/IA32/bochs/instrument/stubs

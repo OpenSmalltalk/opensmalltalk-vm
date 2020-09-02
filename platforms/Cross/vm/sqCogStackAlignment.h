@@ -20,6 +20,9 @@
 #	define STACK_ALIGN_BYTES 4
 #	define STACK_FP_ALIGNMENT 0
 # endif
+# if _MSC_VER
+#	define STACK_SP_ALIGNMENT 4
+# endif
 #endif
 
 #if defined(__arm64__) || defined(__aarch64__) || defined(ARM64)
@@ -115,19 +118,7 @@
 # else /* !(__i386__ || __arm__ || __x86_64__) */
 #  error define code for your processor here
 # endif
-# if !defined(getfp)
-# define getfp() ceGetFP() /* provided by Cogit */
-# endif
-# if !defined(getsp)
-# define getsp() ceGetSP() /* provided by Cogit */
-# endif
-# define STACK_ALIGN_MASK (STACK_ALIGN_BYTES-1)
-#	define assertCStackWellAligned() do {									\
-	extern sqInt cFramePointerInUse;										\
-	if (cFramePointerInUse)													\
-		assert((getfp() & STACK_ALIGN_MASK) == STACK_FP_ALIGNMENT);		\
-	assert((getsp() & STACK_ALIGN_MASK) == 0);	\
-} while (0)
+
 #else /* defined(STACK_ALIGN_BYTES) */
 #  if defined(powerpc) || defined(__powerpc__) || defined(_POWER) || defined(__POWERPC__) || defined(__PPC__)
 #    define STACK_ALIGN_BYTES 16
@@ -140,3 +131,22 @@
 #  endif
 #  define assertCStackWellAligned() 0
 #endif /* defined(STACK_ALIGN_BYTES) */
+
+#if !defined(getfp)
+# define getfp() ceGetFP() /* provided by Cogit */
+#endif
+#if !defined(getsp)
+# define getsp() ceGetSP() /* provided by Cogit */
+#endif
+#define STACK_ALIGN_MASK (STACK_ALIGN_BYTES-1)
+#if !defined(STACK_SP_ALIGNMENT)
+#	define STACK_SP_ALIGNMENT 0
+#endif
+#if !defined(assertCStackWellAligned)
+# define assertCStackWellAligned() do {								\
+	extern sqInt cFramePointerInUse;								\
+	if (cFramePointerInUse)											\
+		assert((getfp() & STACK_ALIGN_MASK) == STACK_FP_ALIGNMENT);	\
+	assert((getsp() & STACK_ALIGN_MASK) == STACK_SP_ALIGNMENT);		\
+} while (0)
+#endif

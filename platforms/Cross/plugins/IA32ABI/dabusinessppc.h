@@ -24,7 +24,7 @@
 	for (i = numArgs, size = 0; --i >= 0;) {
 		sqInt arg = argVector[i];
 		if (objIsAlien(arg) && sizeField(arg))
-			size += moduloPOT(sizeof(long),abs(sizeField(arg)));
+			size += moduloPOT(sizeof(long),labs(sizeField(arg)));
 		else if (interpreterProxy->isFloatObject(arg)) {
 				if (hasTypeArray) 
 					size += figureOutFloatSize(typeSignatureArray,i);
@@ -60,7 +60,7 @@
 			if (!(size = sizeField(arg)))
 				size = argByteSize = sizeof(void *);
 			else
-				argByteSize = abs(size);
+				argByteSize = labs(size);
 			switch (argByteSize) {
 				case (1):
 					memcpy(argvec+3, startOfDataWithSize(arg,size), argByteSize);

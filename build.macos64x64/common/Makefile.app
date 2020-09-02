@@ -68,7 +68,7 @@ VMEXE:=$(APP)/Contents/MacOS/$(VM)
 VMPLIST:=$(APP)/Contents/Info.plist
 
 ifeq ($(USEPLUGINASDYLIB),FALSE)
-VMBUNDLES:=$(addprefix $(APP)/Contents/Resources/, $(addsuffix .bundle, $(EXTERNAL_PLUGINS)))
+VMBUNDLES:=$(addprefix $(APP)/Contents/$(APPPLUGINDIR)/, $(addsuffix .bundle, $(EXTERNAL_PLUGINS)))
 else ifeq ($(USEPLUGINASDYLIB),TRUE)
 VMPLUGINDYLIBS:=$(addprefix $(APP)/Contents/MacOS/Plugins/lib, $(addsuffix .dylib, $(EXTERNAL_PLUGINS)))
 else 
@@ -102,7 +102,7 @@ $(APP):	cleanbundles $(THIRDPARTYPREREQS) $(VMEXE) $(VMBUNDLES) $(VMPLUGINDYLIBS
 # to do this we must both delete the bundles and touch any ignore files, upon
 # which the bundle build depends.
 cleanbundles:
-	-rm -rf $(wildcard $(APP)/Contents/Resources/*.bundle)
+	-rm -rf $(wildcard $(APP)/Contents/$(APPPLUGINDIR)/*.bundle)
 ifneq ($(wildcard $(OBJDIR)/*.ignore),)
 	-touch $(wildcard $(OBJDIR)/*.ignore)
 endif
@@ -111,14 +111,14 @@ $(VMEXE): $(OBJDIR)/$(VM)
 	@mkdir -p $(APP)/Contents/MacOS
 	cp -p $(OBJDIR)/$(VM) $(APP)/Contents/MacOS
 
-$(APP)/Contents/Resources/%.bundle: $(BLDDIR)/vm/%.bundle
-	@mkdir -p $(APP)/Contents/Resources
+$(APP)/Contents/$(APPPLUGINDIR)/%.bundle: $(BLDDIR)/vm/%.bundle
+	@mkdir -p $(APP)/Contents/$(APPPLUGINDIR)
 	@if [ -f $(basename $<).ignore ]; then \
 		echo $(notdir $<) is being ignored; \
 		rm -rf $^; \
 	else \
-		echo cp -pR $< $(APP)/Contents/Resources; \
-		cp -pR $< $(APP)/Contents/Resources; \
+		echo cp -pR $< $(APP)/Contents/$(APPPLUGINDIR); \
+		cp -pR $< $(APP)/Contents/$(APPPLUGINDIR); \
 		if [ -d $(BLDDIR)/`basename $< .bundle`/Frameworks ]; then \
 			echo copying frameworks for `basename $< .bundle` from $(BLDDIR)/`basename $< .bundle`/Frameworks; \
 			mkdir -p $(APP)/Contents/Frameworks; \
@@ -167,18 +167,22 @@ $(APP)/Contents/Resources/%.icns: $(OSXDIR)/%.icns
 	@mkdir -p $(APP)/Contents/Resources
 	cp -p $< $(APP)/Contents/Resources
 
-# Make sure that the executable contains a loader_path for Frameworks and all
-# its subdirectories. If Frameworks does not exist still add an rpath for it.
+# Make sure that the executable has an executable_path for any subdirectories
+# of Frameworks, and an executable_path for $(APPPLUGINDIR).
+# If Frameworks does not exist still add an rpath for it, allowing someone to
+# repackage the VM at a later date.
 pathapp:
-	install_name_tool -add_rpath @executable_path/../Frameworks $(VMEXE)
+	install_name_tool -add_rpath @executable_path/../$(APPPLUGINDIR) $(VMEXE)
+	install_name_tool -add_rpath @executable_path/Contents/$(APPPLUGINDIR) $(VMEXE)
+	install_name_tool -add_rpath @executable_path/Contents/Frameworks $(VMEXE)
 	if [ -d "$(APP)/Contents/Frameworks" ]; then \
 		for d in `cd "$(APP)/Contents" >/dev/null; find Frameworks -type d`; do \
-			echo install_name_tool -add_rpath @loader_path/../$$d $(VMEXE); \
-			install_name_tool -add_rpath @loader_path/../$$d $(VMEXE); \
+			echo install_name_tool -add_rpath @executable_path/../$$d $(VMEXE); \
+			install_name_tool -add_rpath @executable_path/../$$d $(VMEXE); \
 		done \
 	else \
-		echo install_name_tool -add_rpath @loader_path/../Frameworks $(VMEXE); \
-		install_name_tool -add_rpath @loader_path/../Frameworks $(VMEXE); \
+		echo install_name_tool -add_rpath @executable_path/../Frameworks $(VMEXE); \
+		install_name_tool -add_rpath @executable_path/../Frameworks $(VMEXE); \
 	fi
 
 # To sign the app, set SIGNING_IDENTITY in the environment, e.g.

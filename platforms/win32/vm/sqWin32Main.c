@@ -1395,9 +1395,6 @@ void __cdecl Cleanup(void)
     dumpStackIfInMainThread(0);
   }
   ioShutdownAllModules();
-#ifndef NO_PLUGIN_SUPPORT
-  pluginExit();
-#endif
   ioReleaseTime();
   /* tricky ... we have no systray icon when running
      headfull or when running as service on NT */
@@ -1773,9 +1770,6 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
   /* get us the instance handle */
   hInstance = hInst;
 
-#ifndef NO_PLUGIN_SUPPORT
-  pluginInit();
-#endif
 #ifndef NO_SERVICE
   /* Find out if we're running from a service.
      That's a bit tricky since there is no difference between
@@ -1833,9 +1827,6 @@ main(int argc, char *argv[])
   /* open all streams in binary mode */
   _fmode  = _O_BINARY;
 
-#ifndef NO_PLUGIN_SUPPORT
-  pluginInit();
-#endif
 #ifndef NO_SERVICE
   /* Find out if we're running from a service.
      That's a bit tricky since there is no difference between
@@ -2063,22 +2054,6 @@ parseVMArgument(int argc, char *argv[])
 		return 1;
 	}
 #endif
-
-  /* NOTE: the following flags are "undocumented" */
-	else if (argc > 1 && !strcmp(argv[0], VMOPTION("browserWindow"))) {
-#if SQ_HOST32
-		browserWindow = (HWND)atoi(argv[1]);
-#else
-		browserWindow = (HWND)atoll(argv[1]);
-#endif
-		return 2; }
-	else if (!strncmp(argv[0], VMOPTION("browserWindow:"), strlen(VMOPTION("browserWindow:")))) {
-#if SQ_HOST32
-		browserWindow = (HWND)atoi(argv[0]+strlen(VMOPTION("browserWindow:")));
-#else
-		browserWindow = (HWND)atoll(argv[0]+strlen(VMOPTION("browserWindow:")));
-#endif
-		return 1; }
 
 	return 0;	/* option not recognised */
 }

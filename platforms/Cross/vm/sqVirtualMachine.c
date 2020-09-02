@@ -581,9 +581,11 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 /* This lives here for now but belongs somewhere else.
  * platforms/Cross/vm/sqStuff.c??
  */
+#ifndef MUSL
 #define STDOUT_STACK_SZ 5
 static int stdoutStackIdx = -1;
 static FILE stdoutStack[STDOUT_STACK_SZ];
+#endif
 
 /* N.B. As of cygwin 1.5.25 fopen("crash.dmp","a") DOES NOT WORK!  crash.dmp
  * contains garbled output as if the file pointer gets set to the start of the
@@ -607,6 +609,7 @@ fopen_for_append(char *filename)
 # define fopen_for_append(filename) fopen(filename,"a+")
 #endif
 
+#ifndef MUSL
 void
 pushOutputFile(char *filenameOrStdioIndex)
 {
@@ -656,6 +659,7 @@ popOutputFile()
 	}
 	*stdout = stdoutStack[stdoutStackIdx--];
 }
+#endif
 
 void
 printPhaseTime(int phase)

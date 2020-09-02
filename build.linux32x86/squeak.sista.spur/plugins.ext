@@ -12,4 +12,7 @@ UnicodePlugin \
 UnixOSProcessPlugin \
 UUIDPlugin \
 ImmX11Plugin \
-XDisplayControlPlugin
+XDisplayControlPlugin \
+DESPlugin \
+MD5Plugin \
+SHA2Plugin \

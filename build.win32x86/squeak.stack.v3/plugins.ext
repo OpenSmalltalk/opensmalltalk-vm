@@ -5,4 +5,7 @@ FileAttributesPlugin \
 Squeak3D \
 SqueakFFIPrims \
 SqueakSSL \
-Win32OSProcessPlugin
+Win32OSProcessPlugin \
+DESPlugin \
+MD5Plugin \
+SHA2Plugin \

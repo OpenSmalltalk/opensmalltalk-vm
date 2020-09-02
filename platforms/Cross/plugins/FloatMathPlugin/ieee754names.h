@@ -20,9 +20,23 @@
 
 #define rint __ieee754_rint
 
+#define sqrt __ieee754_sqrt
+
 #define sin __ieee754_sin
 
 #define tan __ieee754_tan
 
 #define tanh __ieee754_tanh
 
+/* external declarations */
+extern double __ieee754_atan(double);
+extern double __ieee754_expm1(double);
+extern int    __ieee754_finite(double);
+extern double __ieee754_log1p(double);
+extern double __ieee754_scalbn(double,int);
+extern double __ieee754_sinh(double);
+extern double copysign(double,double);
+extern double fabs(double);
+extern double floor(double);
+extern int    isnan(double);
+extern double rint(double);

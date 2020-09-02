@@ -16,7 +16,7 @@
 # error Non windows should use the SystemV ABI, not the win64 ABI
 #endif
 
-# include <stdlib.h> /* for valloc */
+#include <stdlib.h> /* for valloc */
 #include <string.h> /* for memcpy et al */
 #include <setjmp.h>
 #include <stdio.h> /* for fprintf(stderr,...) */
@@ -73,8 +73,6 @@ struct VirtualMachine* interpreterProxy;
 
 #define isSmallInt(oop) (((oop)&7)==1)
 #define intVal(oop) (((long long)(oop))>>3)
-
-extern void loadFloatRegs(double,double,double,double);
 
 typedef union {
     long long i;

@@ -95,6 +95,7 @@
 #include "sqaio.h"
 #include "sqMacNSPluginUILogic2.h"
 #include "sqUnixCharConv.h"
+#include "include_ucontext.h"
 #include "sqSCCSVersion.h"
 
 #include <unistd.h>
@@ -109,7 +110,6 @@
 # define BACKTRACE_DEPTH 64
 #endif
 #include <signal.h>
-#include <sys/ucontext.h>
 
 extern pthread_mutex_t gEventQueueLock,gSleepLock;
 extern pthread_cond_t  gSleepLockCondition;
@@ -203,21 +203,8 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 			 * dump machinery has of giving us an accurate report is if we set
 			 * stackPointer & framePointer to the native stack & frame pointers.
 			 */
-# if __APPLE__ && __MACH__ && __i386__
-	/* see sys/ucontext.h; two different namings */
-#	if __GNUC__ && !__INTEL_COMPILER /* icc pretends to be gcc */
-			void *fp = (void *)(uap ? uap->uc_mcontext->__ss.__ebp: 0);
-			void *sp = (void *)(uap ? uap->uc_mcontext->__ss.__esp: 0);
-#	else
-			void *fp = (void *)(uap ? uap->uc_mcontext->ss.ebp: 0);
-			void *sp = (void *)(uap ? uap->uc_mcontext->ss.esp: 0);
-#	endif
-# elif __linux__ && __i386__
-			void *fp = (void *)(uap ? uap->uc_mcontext.gregs[REG_EBP]: 0);
-			void *sp = (void *)(uap ? uap->uc_mcontext.gregs[REG_ESP]: 0);
-# else
-#	error need to implement extracting pc from a ucontext_t on this system
-# endif
+			void *fp = (void *)(uap ? uap->_FP_IN_UCONTEXT : 0);
+			void *sp = (void *)(uap ? uap->_SP_IN_UCONTEXT : 0);
 			char *savedSP, *savedFP;
 
 			ifValidWriteBackStackPointersSaveTo(fp,sp,&savedFP,&savedSP);

@@ -200,6 +200,13 @@ tryLoadingLinked(char *libName)
     if(handle != 0)
         printf("%s: loaded plugin `%s'\n", exeName, libName);
 #endif
+	if (!handle) {
+		const char *why = dlerror();
+		if (thePListInterface.SqueakDebug)
+			fprintf(stderr, "tryLoadingLinked(%s):\n  %s\n", libName, why);
+		else if (strstr(why,"undefined symbol"))
+			fprintf(stderr, "tryLoadingLinked: dlopen: %s\n", why);
+	}
     return handle;
 }
 
