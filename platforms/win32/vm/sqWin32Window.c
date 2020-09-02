@@ -1268,7 +1268,8 @@ int recordDragDropEvent(HWND wnd, int dragType, int x, int y, int numFiles)
 
   /* first the basics */
   evt->type = EventTypeDragDropFiles;
-  evt->timeStamp = ioMicroMSecs(); // TODO
+  // Be consistent with tagMSG.time source which is recorded for mouse events
+  evt->timeStamp = GetMessageTime();
   evt->dragType = dragType;
   evt->x = x;
   evt->y = y;
