@@ -164,7 +164,7 @@
 #define sqo_SSL_library_init SSL_library_init
 #define sqo_SSL_load_error_strings SSL_load_error_strings
 
-#define sk_GENERAL_NAME_freefunc void(*)(void*)
+#define sk_GENERAL_NAME_freefunc void(*)(GENERAL_NAME*)
 
 #endif
 
@@ -188,7 +188,7 @@
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 #  define OPENSSL_STACK _STACK
-#  define sk_GENERAL_NAME_freefunc void(*)(void*)
+#  define sk_GENERAL_NAME_freefunc void(*)(GENERAL_NAME*)
 #  define OPENSSL_INIT_SETTINGS struct ossl_init_settings_st
 OPENSSL_INIT_SETTINGS;
 
