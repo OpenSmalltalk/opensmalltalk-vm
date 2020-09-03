@@ -33,7 +33,7 @@ VMPrimitiveTest >> newArrayWith: aCollection [
 VMPrimitiveTest >> setUp [
 	
 	"taken from VMSimpleStackBasedCogitBytecodeTest >> #setup"
-	| newMethod ctx page processorOopAssociation processorOop processorListArray processorListPriority1 processorListPriority2 |
+	| newMethod ctx page |
 	super setUp.
 
 	"Create the root context with a valid method"
@@ -47,22 +47,7 @@ VMPrimitiveTest >> setUp [
 	interpreter setStackPointersFromPage: page.
 	interpreter setStackPageAndLimit: page.
 	
-	
-	"The ScheduleAssocation should be initialized to a valid Processor object"
-	processorOopAssociation := self newObjectWithSlots: 2.
-	processorOop := self newObjectWithSlots: 2.
-	processorListArray := self newObjectWithSlots: 2.
-	
-	processorListPriority1 := self newObjectWithSlots: 2.
-	processorListPriority2 := self newObjectWithSlots: 2.
-	
-	memory storePointer: 0 ofObject: processorListArray withValue: processorListPriority1. 
-	memory storePointer: 1 ofObject: processorListArray withValue: processorListPriority2.
-	
-	memory splObj: SchedulerAssociation put: processorOopAssociation.
-	memory storePointer: ValueIndex ofObject: processorOopAssociation withValue: processorOop.
-	memory storePointer: ProcessListsIndex ofObject: processorOop withValue: processorListArray.
-	memory lastHash: 1
+	self setUpScheduler.
 ]
 
 { #category : #'tests - become' }
