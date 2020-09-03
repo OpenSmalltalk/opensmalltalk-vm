@@ -108,6 +108,16 @@ VMSpurInitializedOldSpaceTest >> keptObjectInVMVariable1 [
 	^ memory coInterpreter newMethod
 ]
 
+{ #category : #tests }
+VMSpurInitializedOldSpaceTest >> keptObjectInVMVariable2 [
+	^ interpreter profileSemaphore
+]
+
+{ #category : #tests }
+VMSpurInitializedOldSpaceTest >> keptObjectInVMVariable3 [
+	^ interpreter profileMethod
+]
+
 { #category : #helpers }
 VMSpurInitializedOldSpaceTest >> largerNodeOf: aNode [
 

@@ -18178,6 +18178,18 @@ StackInterpreter >> printUnbalancedStack: primIdx [
 		
 ]
 
+{ #category : #'as yet unclassified' }
+StackInterpreter >> profileMethod [
+	<doNotGenerate>
+	^ profileMethod
+]
+
+{ #category : #'as yet unclassified' }
+StackInterpreter >> profileSemaphore [
+	<doNotGenerate>
+	^ profileSemaphore
+]
+
 { #category : #'internal interpreter access' }
 StackInterpreter >> push: object [
 	"In the StackInterpreter stacks grow down."
