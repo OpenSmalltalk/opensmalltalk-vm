@@ -89,23 +89,23 @@ VMSpurInitializedOldSpaceTest >> initializeOldSpaceForFullGC [
 ]
 
 { #category : #tests }
-VMSpurInitializedOldSpaceTest >> keepObjectInVMVariable1: ephemeronObjectOop [
-	memory coInterpreter newMethod: ephemeronObjectOop
+VMSpurInitializedOldSpaceTest >> keepObjectInVMVariable1: anOop [
+	interpreter newMethod: anOop
 ]
 
 { #category : #tests }
-VMSpurInitializedOldSpaceTest >> keepObjectInVMVariable2: nonEphemeronObjectOop [
-	memory coInterpreter profileSemaphore: nonEphemeronObjectOop
+VMSpurInitializedOldSpaceTest >> keepObjectInVMVariable2: anOop [
+	interpreter profileSemaphore: anOop
 ]
 
 { #category : #tests }
-VMSpurInitializedOldSpaceTest >> keepObjectInVMVariable3: ephemeronObjectOop [
-	memory coInterpreter profileMethod: ephemeronObjectOop
+VMSpurInitializedOldSpaceTest >> keepObjectInVMVariable3: anOop [
+	interpreter profileMethod: anOop
 ]
 
 { #category : #tests }
 VMSpurInitializedOldSpaceTest >> keptObjectInVMVariable1 [
-	^ memory coInterpreter newMethod
+	^ interpreter newMethod
 ]
 
 { #category : #tests }
