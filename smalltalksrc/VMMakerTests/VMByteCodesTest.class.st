@@ -452,7 +452,7 @@ VMByteCodesTest >> testReturnsMarriedFrameWidowsContext [
 	self assert: (interpreter isWidowedContext: topFrameContext)
 ]
 
-{ #category : #'helpers-bytecode-table' }
+{ #category : #'tests-send' }
 VMByteCodesTest >> testSendMessageWithTwoArgumentsMakeAFrame [
 	
 	| selectorOop aMethod aMethodToActivate receiver receiverClass aMethodDictionary arg1 arg2 |
