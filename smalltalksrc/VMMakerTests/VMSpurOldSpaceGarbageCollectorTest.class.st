@@ -4,12 +4,12 @@ Class {
 	#category : #'VMMakerTests-MemoryTests'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #assertion }
 VMSpurOldSpaceGarbageCollectorTest >> assertHashOf: anOop equals: aHash [ 
 	self assert: (memory hashBitsOf: anOop) equals: aHash
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #assertion }
 VMSpurOldSpaceGarbageCollectorTest >> assertObjectWereReclaimed: aBlock [ 
 	| initialSpace firstObjectToBeRemembered sizeOfObject |
 	"The planning compactor frees object by sliding, and therefore does not reclaim memory if there is only dead objects in the oldspace."
