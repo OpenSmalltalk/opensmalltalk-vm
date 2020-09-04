@@ -145,15 +145,6 @@ StackBuilderTest >> setUp [
 ]
 
 { #category : #'test-VMstate' }
-StackBuilderTest >> testAddArgumentsOnOtherThanBaseFrameFails [
-
-	stackBuilder .
-	
-
-	stackBuilder buildStack.
-]
-
-{ #category : #'test-VMstate' }
 StackBuilderTest >> testCallerFrameOfTopFrameShouldBeSecondFrameBuilderObject [
 	"For debug purpose, we added a link to the caller frame in the current frame."
 	self assert: (stackBuilder topFrame callerFrame) 
