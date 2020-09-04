@@ -205,7 +205,7 @@ VMByteCodesTest >> testDuplicateStackTop [
 { #category : #'tests-push-simple' }
 VMByteCodesTest >> testPopStackTopBytecode [
 
-	stackBuilder addNewFrame ; buildStack..
+	stackBuilder addNewFrame ; buildStack.
 	
 	"first we push something"
 	self
