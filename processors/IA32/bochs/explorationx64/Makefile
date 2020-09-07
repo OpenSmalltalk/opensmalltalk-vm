@@ -1,37 +1,33 @@
-#LIBDEPS=../../bochs/cpu/libcpu.a
-#BOCHS=../../bochs
-#BOCHSEXP=../../bochs/exploration
-#BOCHS=../../../processors/IA32/bochs
-#BOCHSEX64=$(BOCHS)/explorationx64
 BOCHS=../../../processors/IA32/bochs
-BOCHSEX64=.
+BOCHSEXP=$(BOCHS)/explorationx64
 LIBDEPS=../../cpu/libcpu.a
-CFLAGS=-m32 -I.. -I$(BOCHS) -I$(BOCHS)/cpu -I$(BOCHS)/instrument/stubs -L../cpu -lcpu
-FULLLIBS=-L../fpu -lfpu -L../disasm -ldisasm
+CFLAGS=-m32 -DCOG=1 -I.. -I$(BOCHS) -I$(BOCHS)/cpu -I$(BOCHS)/instrument/stubs -L../cpu -lcpu
 
 .PHONY:	$(LIBDEPS)
 
-all: BochsX64Alien-regs.st BochsX64Alien-cr.st BochsX64Alien-xmm.st
+CLASS=BochsX64Alien
 
-BochsX64Alien-regs.st: printcpu
-	./printcpu >BochsX64Alien-regs.st
+all: $(CLASS)-regs.st $(CLASS)-cr.st $(CLASS)-xmm.st
 
-BochsX64Alien-cr.st: printcpucr
-	./printcpucr >BochsX64Alien-cr.st
+$(CLASS)-regs.st: printcpu
+	./printcpu >$(CLASS)-regs.st
 
-BochsX64Alien-xmm.st: printcpuxmm
-	./printcpuxmm >BochsX64Alien-xmm.st
+$(CLASS)-cr.st: printcpucr
+	./printcpucr >$(CLASS)-cr.st
+
+$(CLASS)-xmm.st: printcpuxmm
+	./printcpuxmm >$(CLASS)-xmm.st
 
 clean:
-	rm -f BochsX64Alien-regs.st BochsX64Alien-cr.st BochsX64Alien-xmm.st
+	rm -f $(CLASS)-regs.st $(CLASS)-cr.st $(CLASS)-xmm.st
 	rm -f printcpu printcpucr printcpuxmm
 	rm -f printcpu.exe printcpucr.exe printcpuxmm.exe
 
-printcpu: $(BOCHSEX64)/printcpu.c $(LIBDEPS)
+printcpu: $(BOCHSEXP)/printcpu.c $(LIBDEPS)
 	g++ -o $@ $< $(CFLAGS)
 
-printcpucr: $(BOCHSEX64)/printcpucr.c $(LIBDEPS)
+printcpucr: $(BOCHSEXP)/printcpucr.c $(LIBDEPS)
 	g++ -o $@ $< $(CFLAGS)
 
-printcpuxmm: $(BOCHSEX64)/printcpuxmm.c $(LIBDEPS)
+printcpuxmm: $(BOCHSEXP)/printcpuxmm.c $(LIBDEPS)
 	g++ -o $@ $< $(CFLAGS)

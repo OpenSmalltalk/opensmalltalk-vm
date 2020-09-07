@@ -1,8 +1,14 @@
 This directory contains scripts that can build various VMMaker and Spur images.
-As of late 2015 the default VMMaker build script is
+As of 2018 the default VMMaker build scripts are
+	buildspurtrunkvmmaker64image.sh
 	buildspurtrunkvmmakerimage.sh
-and it builds a Spur VMMaker image, called SpurVMMaker.image.
-The buildspurtrunkreader.sh script builds a Spur image containing a simple REPL
-that is convenient for testing in the simulator, called spurreader.image.
+which build Spur64VMMaker.image or SpurVMMaker.image respectively.
 
-buildspurtrunk64image.sh takes a Spur 32-bit image and morphs it into a 64-bit image.
+The buildspurtrunkreader64image.sh & buildspurtrunkreader.sh scripts build a
+Spur image containing a simple REPL that is convenient for testing in the
+simulator, called spurreader-64.image or spurreader.image respectively.
+
+The scripts take a -vm argument.  If there is no -vm argument they try and
+download a VM from bintray.  If this process fails you can build your own
+vm (see the build directories in trhe parent directory, and the HowToBuild
+files within them) and supply the executable as the argument to -vm.

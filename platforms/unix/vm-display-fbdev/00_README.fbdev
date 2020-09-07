@@ -58,13 +58,14 @@ You MUST have WRITE PERMISSION for the following devices:
 	this is usually /dev/fb0
 
   - the mouse
-	this is either /dev/psaux (if you have a real PS/2 mouse) or
+	Yhis may be either /dev/psaux (if you have a real PS/2 mouse) or
 	/dev/input/mice (which emulates PS/2 when you have some other
-	kind of mouse)
+	kind of mouse).
+	If using libevdev (required -DUSEEVDEV) then /dev/input/event?
 
 In case of difficulty, the following might help:
 
-	chmod a+rw /dev/tty* /dev/fb* /dev/psaux /dev/input/mice
+	chmod a+rw /dev/tty* /dev/fb* /dev/psaux /dev/input/mice /dev/input/event*
 
 although this will somewhat compromise the security of your machine.
 
@@ -115,6 +116,6 @@ If this driver breaks your machine, you get to keep all the pieces.
 
 8. CONTACTS
 
-Please report bugs (and success stories) by email to: ian.piumarta@squeakland.org
+Please report bugs (and success stories) by email to: ken.dickey(at)whidbey.com
 
 Thanks!

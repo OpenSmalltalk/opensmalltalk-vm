@@ -1,0 +1,3 @@
+LIBOBJ:= SerialPlugin.o sqWin32SerialPort.o
+
+include ../common/Makefile.plugin

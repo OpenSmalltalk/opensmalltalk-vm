@@ -8,8 +8,15 @@
 /* null if compiled on other than arm32, to get around gnu make bugs or
  * misunderstandings on our part.
  */
-#if defined(__ARM_ARCH__) || defined(__arm__) || defined(__arm32__) || defined(ARM32)
+#if defined(__ARM_ARCH_ISA_A64) || defined(__arm64__) || defined(__aarch64__) || defined(ARM64)
+# undef ARM64
+# define ARM64 1
+#else
+# undef ARM64
+#endif
+#if defined(__ARM_ARCH__) || (defined(__arm__) && !defined(ARM64)) || defined(__arm32__) || defined(ARM32)
 
+#include <unistd.h> /* for getpagesize/sysconf */
 #include <stdlib.h> /* for valloc */
 #include <sys/mman.h> /* for mprotect */
 
@@ -130,8 +137,8 @@ static VMCallbackContext *mostRecentCallbackContext = 0;
 VMCallbackContext *
 getMostRecentCallbackContext() { return mostRecentCallbackContext; }
 
-#define getRMCC(t) mostRecentCallbackContext
-#define setRMCC(t) (mostRecentCallbackContext = (void *)(t))
+#define getMRCC()   mostRecentCallbackContext
+#define setMRCC(t) (mostRecentCallbackContext = (void *)(t))
 
 extern void error(char *s);
 
@@ -181,20 +188,20 @@ thunkEntry(long r0, long r1, long r2, long r3,
   }
 
   if ((returnType = setjmp(vmcc.trampoline)) == 0) {
-    previousCallbackContext = getRMCC();
-    setRMCC(&vmcc);
+    previousCallbackContext = getMRCC();
+    setMRCC(&vmcc);
     vmcc.thunkp = (void *)((char *)thunkpPlus16 - 16);
     vmcc.stackp = stackp;
     vmcc.intregargsp = regArgs;
     vmcc.floatregargsp = dregArgs;
     interpreterProxy->sendInvokeCallbackContext(&vmcc);
     fprintf(stderr,"Warning; callback failed to invoke\n");
-    setRMCC(previousCallbackContext);
+    setMRCC(previousCallbackContext);
     interpreterProxy->disownVM(flags);
     return -1;
   }
 
-  setRMCC(previousCallbackContext);
+  setMRCC(previousCallbackContext);
   interpreterProxy->disownVM(flags);
 
   switch (returnType) {
@@ -228,7 +235,7 @@ static unsigned long pagesize = 0;
 #endif
 
 void *
-allocateExecutablePage(long *size)
+allocateExecutablePage(sqIntptr_t *size)
 {
 	void *mem;
 

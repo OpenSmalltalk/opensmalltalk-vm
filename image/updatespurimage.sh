@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 # Update the latest Spur image, or fetch the latest available and update that.
 . ./envvars.sh
 

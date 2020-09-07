@@ -1,11 +1,15 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 
 BASE=trunk6
+BASE64=trunk6-64
+BASESISTA64=trunk6-sista-64
 
 # N.B. uname -r (OSREL) is not to be trusted on Mac OS X;
 
 if test -x /usr/bin/uname; then
 	OS=`/usr/bin/uname -s`
+	CPU=`/usr/bin/uname -m`
 	OSREL=`/usr/bin/uname -r | sed 's/\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\).*$/\1.\2.\3/'`
 elif test -x /bin/uname; then
 	OS=`/bin/uname -s`

@@ -15,6 +15,12 @@
 #ifndef __B3D_H
 #define __B3D_H
 
+/* we need sqInt definition, but we MUST not have interpreter function definitions */
+#ifndef SQ_CONFIG_DONE
+#include "sqConfig.h"
+#endif
+#include "sqMemoryAccess.h"
+
 #ifdef DEBUG
 #define b3dDebug 1
 #else
@@ -25,10 +31,46 @@
 
 /* primary include file */
 
+#include "sqMemoryAccess.h" /* for sqInt */
+#include "sqAssert.h"
 #include "b3dTypes.h"
-#include "b3dAlloc.h"
 
-typedef int (*b3dDrawBufferFunction) (int leftX, int rightX, int yValue);
+/************************ Allocator definitions ************************/
+#define B3D_EDGE_ALLOC_MAGIC 0x45443341
+typedef struct B3DEdgeAllocList {
+	int magic;
+	void *This;
+	int max; /* Note: size is ALWAYS less than max */
+	int size;
+ 	int nFree;
+	B3DPrimitiveEdge *firstFree; /* pointer to the first free edge (< max) */
+	B3DPrimitiveEdge data[1];
+} B3DEdgeAllocList;
+
+#define B3D_FACE_ALLOC_MAGIC 0x46443341
+typedef struct B3DFaceAllocList {
+	int magic;
+	void *This;
+	int max; /* Note: size is ALWAYS less than max */
+	int size;
+	int nFree;
+	B3DPrimitiveFace *firstFree; /* pointer to the first free face (< max) */
+	B3DPrimitiveFace data[1];
+} B3DFaceAllocList;
+
+#define B3D_ATTR_ALLOC_MAGIC  0x41443341
+typedef struct B3DAttrAllocList {
+	int magic;
+	void *This;
+	int max; /* Note: size is ALWAYS less than max */
+	int size;
+	int nFree;
+	B3DPrimitiveAttribute *firstFree; /* pointer to the first free attribute (< max) */
+	B3DPrimitiveAttribute data[1];
+} B3DAttrAllocList;
+/************************ End Allocator definitions ************************/
+
+typedef int (*b3dDrawBufferFunction) (sqInt leftX, sqInt rightX, sqInt yValue);
 
 typedef struct B3DRasterizerState {
 

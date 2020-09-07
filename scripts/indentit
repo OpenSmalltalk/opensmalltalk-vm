@@ -1,2 +1,3 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 exec indent -bad -bap -br -nce -cli0 -di8 -brs $@

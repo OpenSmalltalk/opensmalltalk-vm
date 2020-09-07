@@ -18,7 +18,7 @@
 	Remap all allocated faces using the given offsets
 */
 /* INLINE b3dRemapFaces(list, attrOffset, edgeOffset) */
-void b3dRemapFaces(B3DFaceAllocList *list, int attrOffset, int edgeOffset)
+void b3dRemapFaces(B3DFaceAllocList *list, sqInt attrOffset, sqInt edgeOffset)
 {
 	int i;
 
@@ -40,7 +40,7 @@ void b3dRemapFaces(B3DFaceAllocList *list, int attrOffset, int edgeOffset)
 	Remap all allocated edges using the given offset
 */
 /* INLINE b3dRemapEdges(list, faceOffset) */
-void b3dRemapEdges(B3DEdgeAllocList *list, int faceOffset)
+void b3dRemapEdges(B3DEdgeAllocList *list, sqInt faceOffset)
 {
 	int i;
 	for(i=0; i<list->size;i++) {
@@ -59,7 +59,7 @@ void b3dRemapEdges(B3DEdgeAllocList *list, int faceOffset)
 	Remap the fill list using the given offset
 */
 /* INLINE b3dRemapFills(fillList, offset) */
-void b3dRemapFills(B3DFillList *fillList, int offset)
+void b3dRemapFills(B3DFillList *fillList, sqInt offset)
 {
 	B3DPrimitiveFace *temp;
 	if(fillList->firstFace)
@@ -81,7 +81,7 @@ void b3dRemapFills(B3DFillList *fillList, int offset)
 	Remap all edge pointers using the given offset
 */
 /* INLINE b3dRemapEdgeList(list, edgeOffset) */
-void b3dRemapEdgeList(B3DPrimitiveEdgeList *list, int edgeOffset)
+void b3dRemapEdgeList(B3DPrimitiveEdgeList *list, sqInt edgeOffset)
 {
 	int i;
 	for(i=0; i<list->size;i++) {
@@ -94,7 +94,7 @@ void b3dRemapEdgeList(B3DPrimitiveEdgeList *list, int edgeOffset)
 	Remap all edge pointers using the given offset
 */
 /* INLINE b3dRemapAET(list, edgeOffset, aetOffset, firstEdge, lastEdge) */
-void b3dRemapAET(B3DActiveEdgeTable *list, int edgeOffset, int aetOffset, void *firstEdge, void *lastEdge)
+void b3dRemapAET(B3DActiveEdgeTable *list, sqInt edgeOffset, sqInt aetOffset, void *firstEdge, void *lastEdge)
 {
 	int i;
 	if(edgeOffset)
@@ -122,7 +122,7 @@ void b3dRemapAET(B3DActiveEdgeTable *list, int edgeOffset, int aetOffset, void *
 	Remap all vertices in the specified range using the given offset
 */
 /* INLINE b3dRemapEdgeVertices(list, vtxOffset, firstVtx, lastVtx) */
-void b3dRemapEdgeVertices(B3DEdgeAllocList *list, int vtxOffset, void *firstVtx, void *lastVtx)
+void b3dRemapEdgeVertices(B3DEdgeAllocList *list, sqInt vtxOffset, void *firstVtx, void *lastVtx)
 {
 	int i;
 	for(i=0; i<list->size; i++) {
@@ -139,7 +139,7 @@ void b3dRemapEdgeVertices(B3DEdgeAllocList *list, int vtxOffset, void *firstVtx,
 	Remap all vertices in the specified range using the given offset
 */
 /* INLINE b3dRemapFaceVertices(list, vtxOffset, firstVtx, lastVtx) */
-void b3dRemapFaceVertices(B3DFaceAllocList *list, int vtxOffset, void *firstVtx, void *lastVtx)
+void b3dRemapFaceVertices(B3DFaceAllocList *list, sqInt vtxOffset, void *firstVtx, void *lastVtx)
 {
 	int i;
 	for(i=0; i<list->size; i++) {
@@ -157,7 +157,7 @@ void b3dRemapFaceVertices(B3DFaceAllocList *list, int vtxOffset, void *firstVtx,
 	Remap all free faces using the given offset
 */
 /* INLINE b3dRemapFaceFree(list, faceOffset) */
-void b3dRemapFaceFree(B3DFaceAllocList *list, int faceOffset)
+void b3dRemapFaceFree(B3DFaceAllocList *list, sqInt faceOffset)
 {
 	B3DPrimitiveFace *freeObj;
 	if(list->firstFree) {
@@ -175,7 +175,7 @@ void b3dRemapFaceFree(B3DFaceAllocList *list, int faceOffset)
 	Remap all free edges using the given offset
 */
 /* INLINE b3dRemapEdgeFree(list, edgeOffset) */
-void b3dRemapEdgeFree(B3DEdgeAllocList *list, int edgeOffset)
+void b3dRemapEdgeFree(B3DEdgeAllocList *list, sqInt edgeOffset)
 {
 	B3DPrimitiveEdge *freeObj;
 	if(list->firstFree) {
@@ -193,7 +193,7 @@ void b3dRemapEdgeFree(B3DEdgeAllocList *list, int edgeOffset)
 	Remap all free attributes using the given offset
 */
 /* INLINE b3dRemapAttrFree(list, attrOffset) */
-void b3dRemapAttributes(B3DAttrAllocList *list, int attrOffset)
+void b3dRemapAttributes(B3DAttrAllocList *list, sqInt attrOffset)
 {
 	int i;
 	for(i=0; i < list->size; i++) {
@@ -209,7 +209,8 @@ void b3dRemapAttributes(B3DAttrAllocList *list, int attrOffset)
 */
 int b3dValidateAndRemapState(B3DRasterizerState *state)
 {
-	int faceOffset, edgeOffset, attrOffset, aetOffset, objOffset, i;
+	sqInt faceOffset, edgeOffset, attrOffset, aetOffset, objOffset;
+	int i;
 	B3DPrimitiveObject *obj;
 
 	if(!state) return B3D_GENERIC_ERROR;

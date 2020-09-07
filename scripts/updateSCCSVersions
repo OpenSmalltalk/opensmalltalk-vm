@@ -1,17 +1,12 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
 # checkin script for Git that serves to cause
 # platforms/Cross/vm/sqSCCSVersion.h to be checked-in so that its version
 # info reflects that of the current check-in.
+set -e
 
-if [ -d `dirname $0`/../.git ]; then
-	hooks_dir="`git rev-parse --git-dir`/hooks"
-    mkdir -p $hooks_dir
-    cp -f $0 $hooks_dir/post-commit
-    cp -f $0 $hooks_dir/post-merge
-    cp -f $0 $hooks_dir/post-checkout
-    cd `dirname $0`/..
-else
-    cd `dirname $0`/../..
+hooks_dir=$(git rev-parse --git-dir)/hooks
+# check if we run as hook
+if [[ "$(dirname $0)" == *"$hooks_dir" ]]; then
     if [[ "$(basename $0)" == "post-checkout" ]]; then
         prevHEAD=$1
         newHEAD=$2
@@ -22,12 +17,26 @@ else
             exit 0
         fi
     fi
+# else install the hooks
+else
+    mkdir -p "$hooks_dir"
+    cp -f "$0" "$hooks_dir/post-commit"
+    cp -f "$0" "$hooks_dir/post-merge"
+    cp -f "$0" "$hooks_dir/post-checkout"
 fi
 
+if [[ -n "$(git rev-parse --show-toplevel)" ]]; then
+    cd "$(git rev-parse --show-toplevel)"
+fi
+versionfiles="platforms/Cross/vm/sqSCCSVersion.h platforms/Cross/plugins/sqPluginsSCCSVersion.h"
 git config --local include.path ../.gitconfig
-git stash -q || true
-echo "//" >> platforms/Cross/vm/sqSCCSVersion.h
-echo "//" >> platforms/Cross/plugins/sqPluginsSCCSVersion.h
-git checkout HEAD -- platforms/Cross/vm/sqSCCSVersion.h
-git checkout HEAD -- platforms/Cross/plugins/sqPluginsSCCSVersion.h
-git stash pop -q || true
+stagedVersionFileChanges=$(git diff --cached $versionfiles)
+unstagedVersionFileChanges=$(git diff $versionfiles)
+touch $versionfiles
+git checkout HEAD -- $versionfiles
+if [[ -n "$stagedVersionFileChanges" ]]; then
+    echo "$stagedVersionFileChanges" | git apply && git add $versionfiles
+fi
+if [[ -n "$unstagedVersionFileChanges" ]]; then
+    echo "$unstagedVersionFileChanges" | git apply
+fi

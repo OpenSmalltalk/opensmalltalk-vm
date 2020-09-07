@@ -6,6 +6,7 @@
 #ifdef USE_PTHREADS
 #include <pthread.h>
 #endif
+
 /* Array of these feeds the slice decoders */
 typedef struct
 {
@@ -77,40 +78,37 @@ static inline unsigned int mpeg3slice_getbit(mpeg3_slice_buffer_t *buffer)
 {
 	if(buffer->bits_size)
 		return (buffer->bits >> (--buffer->bits_size)) & 0x1;
-	else
-	if(buffer->current_position < buffer->buffer_size)
-	{
+	if(buffer->current_position < buffer->buffer_size) {
 		buffer->bits = buffer->data[buffer->current_position++];
 		buffer->bits_size = 7;
 		return (buffer->bits >> 7) & 0x1;
 	}
+	return 0; /* eem '19/7/30 */
 }
 
 static inline unsigned int mpeg3slice_getbits2(mpeg3_slice_buffer_t *buffer)
 {
 	if(buffer->bits_size >= 2)
 		return (buffer->bits >> (buffer->bits_size -= 2)) & 0x3;
-	else
-	if(buffer->current_position < buffer->buffer_size)
-	{
+	if(buffer->current_position < buffer->buffer_size) {
 		buffer->bits <<= 8;
 		buffer->bits |= buffer->data[buffer->current_position++];
 		buffer->bits_size += 6;
 		return (buffer->bits >> buffer->bits_size)  & 0x3;
 	}
+	return 0; /* eem '19/7/30 */
 }
 
 static inline unsigned int mpeg3slice_getbyte(mpeg3_slice_buffer_t *buffer)
 {
 	if(buffer->bits_size >= 8)
 		return (buffer->bits >> (buffer->bits_size -= 8)) & 0xff;
-	else
-	if(buffer->current_position < buffer->buffer_size)
-	{
+	if(buffer->current_position < buffer->buffer_size) {
 		buffer->bits <<= 8;
 		buffer->bits |= buffer->data[buffer->current_position++];
 		return (buffer->bits >> buffer->bits_size) & 0xff;
 	}
+	return 0; /* eem '19/7/30 */
 }
 
 
@@ -125,44 +123,41 @@ static inline unsigned int mpeg3slice_showbits16(mpeg3_slice_buffer_t *buffer)
 {
 	if(buffer->bits_size >= 16)
 		return (buffer->bits >> (buffer->bits_size - 16)) & 0xffff;
-	else
-	if(buffer->current_position < buffer->buffer_size)
-	{
+	if(buffer->current_position < buffer->buffer_size) {
 		buffer->bits <<= 16;
 		buffer->bits_size += 16;
 		buffer->bits |= (unsigned int)buffer->data[buffer->current_position++] << 8;
 		buffer->bits |= buffer->data[buffer->current_position++];
 		return (buffer->bits >> (buffer->bits_size - 16)) & 0xffff;
 	}
+	return 0; /* eem '19/7/30 */
 }
 
 static inline unsigned int mpeg3slice_showbits9(mpeg3_slice_buffer_t *buffer)
 {
 	if(buffer->bits_size >= 9)
 		return (buffer->bits >> (buffer->bits_size - 9)) & 0x1ff;
-	else
-	if(buffer->current_position < buffer->buffer_size)
-	{
+	if(buffer->current_position < buffer->buffer_size) {
 		buffer->bits <<= 16;
 		buffer->bits_size += 16;
 		buffer->bits |= (unsigned int)buffer->data[buffer->current_position++] << 8;
 		buffer->bits |= buffer->data[buffer->current_position++];
 		return (buffer->bits >> (buffer->bits_size - 9)) & 0x1ff;
 	}
+	return 0; /* eem '19/7/30 */
 }
 
 static inline unsigned int mpeg3slice_showbits5(mpeg3_slice_buffer_t *buffer)
 {
 	if(buffer->bits_size >= 5)
 		return (buffer->bits >> (buffer->bits_size - 5)) & 0x1f;
-	else
-	if(buffer->current_position < buffer->buffer_size)
-	{
+	if(buffer->current_position < buffer->buffer_size) {
 		buffer->bits <<= 8;
 		buffer->bits_size += 8;
 		buffer->bits |= buffer->data[buffer->current_position++];
 		return (buffer->bits >> (buffer->bits_size - 5)) & 0x1f;
 	}
+	return 0; /* eem '19/7/30 */
 }
 
 static inline unsigned int mpeg3slice_showbits(mpeg3_slice_buffer_t *slice_buffer, int bits)

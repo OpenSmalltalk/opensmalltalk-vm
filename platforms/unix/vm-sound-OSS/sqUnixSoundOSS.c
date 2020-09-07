@@ -64,7 +64,13 @@
 #include <string.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
+#if defined(HAVE_SYS_SOUNDCARD_H)
 #include <sys/soundcard.h>
+#elif defined(HAVE_SOUNDCARD_H)
+#include <soundcard.h>
+#else
+#error no soundcard.h to use
+#endif
 #include <assert.h>
 #include <errno.h>
 

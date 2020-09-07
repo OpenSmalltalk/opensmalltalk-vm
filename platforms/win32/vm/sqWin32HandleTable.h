@@ -20,8 +20,9 @@
 *****************************************************************************/
 
 #ifndef SQ_WIN32_HANDLE_TABLE
-#define SQ_WIN32_HANDLE_TABLE
+# define SQ_WIN32_HANDLE_TABLE
 
+# if !NO_HANDLE_TABLES
 typedef struct {
   int count;    /* number of elements in table */
   int size;     /* size of data array */
@@ -123,5 +124,8 @@ static int  IsHandleInTable(HandleTable *table, HANDLE item) {
   if(index == -1) return 0;
   return table->data[index] == item;
 }
-
+# else /* !NO_HANDLE_TABLES */
+#	define AddHandleToTable(a,b) 0
+#	define IsHandleInTable(a,b)  1
+# endif /* !NO_HANDLE_TABLES */
 #endif /* SQ_WIN32_HANDLE_TABLE */

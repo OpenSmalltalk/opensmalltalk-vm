@@ -68,7 +68,3 @@
 @property (nonatomic,assign) NSRect	savedScreenBoundsAtTimeOfFullScreen;
 
 @end
-
-#ifndef ContentViewClass
-#  define ContentViewClass sqSqueakOSXCGView
-#endif

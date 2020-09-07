@@ -1,5 +1,5 @@
 #############################################################################
-# Compilation rules for Cygwin/mingw compiler on Microsoft Windows
+# Compilation rules for 64-bit Cygwin/mingw compiler on Microsoft Windows
 #
 
 TOOLPREFIX:=x86_64-w64-mingw32-
@@ -7,8 +7,17 @@ TOOLPREFIX:=x86_64-w64-mingw32-
 #############################################################################
 # C compiler settings (Use clang for having a working FFI)
 #
+ifeq ($(COMPILER_TO_USE),)
+COMPILER_TO_USE:=clang
+endif
+
+ifeq ($(COMPILER_TO_USE),clang)
 CC:= $(TOOLPREFIX)clang
 CXX:= $(TOOLPREFIX)clang++
+else
+CC:= $(TOOLPREFIX)gcc
+CXX:= $(TOOLPREFIX)g++
+endif
 
 WARNINGS:= -Wall -Wno-unused-variable -Wno-unknown-pragmas -Wno-unused-label -Wno-unused-function 
 
@@ -32,8 +41,15 @@ COGDEFS:= $(COGDEFS) -DCOGMTVM=1 -DDEBUGVM=$(DEBUGVM)
 else
 COGDEFS:= $(COGDEFS) -DCOGMTVM=0 -DDEBUGVM=$(DEBUGVM)
 endif
+ifdef BIT_IDENTICAL_FLOATING_POINT
+COGDEFS:= $(COGDEFS) -DBIT_IDENTICAL_FLOATING_POINT=1
+endif
 
-# Set minimum version to WindowsXP (see /cygwin/usr/include//w32api/w32api.h)
+ifeq ($(COMPILER_TO_USE),clang)
+COGDEFS:=$(COGDEFS) -mno-stack-arg-probe
+endif
+
+# Set minimum version to WindowsXP (see /cygwin/usr/include/w32api/w32api.h)
 WINVER:=-D_WIN32_WINNT=0x0501 -DWINVER=0x0501
 
 # define _MT to eliminate the inline versions of printf et al in mingw/stdio.h
@@ -42,9 +58,8 @@ CFLAGS:= -fdeclspec -msse2 -ggdb2 -m64 \
 	-mno-rtd -mms-bitfields $(OFLAGS) $(NOBUILTIN) $(WARNINGS)
 
 TZ:=$(shell date +%Z)
-XDEFS:=	-DSQUEAK_BUILTIN_PLUGIN
-DEFS:=	$(COGDEFS) $(WINVER) -DWIN64=1 -DWIN32_FILE_SUPPORT -DNO_ISNAN \
-		-DNO_SERVICE -DNO_STD_FILE_SUPPORT -D'TZ="$(TZ)"' \
+DEFS:=	-D$(VM)VM=1 $(COGDEFS) $(WINVER) \
+		-DWIN64=1 -DWIN32_FILE_SUPPORT -DNO_ISNAN -DNO_SERVICE \
 		$(NDEBUG) -DLSB_FIRST -D'VM_NAME="$(VM_NAME)"' $(XDEFS) $(CROQUET)
 
 #############################################################################
@@ -71,6 +86,7 @@ STDLIBS:= -lddraw -ldinput -lopengl32 -lws2_32 -lcomdlg32 -lole32 -lwinmm \
 AR:= $(TOOLPREFIX)ar rc
 CP:= cp
 RM:= rm
+SED:=sed
 NM:= $(TOOLPREFIX)nm
 DLLTOOL:=	$(TOOLPREFIX)dlltool
 DLLWRAP:=	$(TOOLPREFIX)dllwrap
@@ -83,8 +99,14 @@ OBJCOPY:=	$(TOOLPREFIX)objcopy
 # Note: RC compiles the .rc files into linkable .o files
 #
 RC:=	 $(TOOLPREFIX)windres
-SVNMAJOR := $(shell sed -e "s/^static.*GitRawRevisionString.*Rev: \([0-9][0-9][0-9][0-9]\).*/\\1/p" -e d $(PLATDIR)/Cross/vm/sqSCCSVersion.h | sed -e 's/^0*//')
-SVNMINOR := $(shell sed -e "s/^static.*GitRawRevisionString.*Rev: [0-9][0-9][0-9][0-9]\([0-9][0-9]\).*/\\1/p" -e "s/^0*//" -e d $(PLATDIR)/Cross/vm/sqSCCSVersion.h | sed -e 's/^0*//')
-SVNREV := $(shell sed -e "s/^static.*GitRawRevisionString.*Rev: [0-9][0-9][0-9][0-9][0-9][0-9]\([0-9][0-9]\).*/\\1/p" -e "s/^0*//" -e d $(PLATDIR)/Cross/vm/sqSCCSVersion.h | sed -e 's/^0*//')
-SVNBUILD := $(shell sed -e "s/^static.*GitRawRevisionString.*Rev: [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]\([0-9][0-9]*\).*/\\1/p" -e "s/^0*//" -e d $(PLATDIR)/Cross/vm/sqSCCSVersion.h | sed -e 's/^0*//')
+SCCSVER:=$(PLATDIR)/Cross/vm/sqSCCSVersion.h
+
+ifneq ($(shell grep 'GitRawRevisionString.*$$Rev$$.' $(SCCSVER)),)
+$(shell bash -c "cd ../../scripts; ./updateSCCSVersions")
+endif
+SVNMAJOR := $(shell $(SED) -e "s/^static.*GitRawRevisionString.*Rev: \([0-9][0-9][0-9][0-9]\).*/\\1/p" -e d $(SCCSVER) | $(SED) -e 's/^0*//')
+SVNMINOR := $(shell $(SED) -e "s/^static.*GitRawRevisionString.*Rev: [0-9][0-9][0-9][0-9]\([0-9][0-9]\).*/\\1/p" -e "s/^0*//" -e d $(SCCSVER) | $(SED) -e 's/^0*//')
+SVNREV := $(shell $(SED) -e "s/^static.*GitRawRevisionString.*Rev: [0-9][0-9][0-9][0-9][0-9][0-9]\([0-9][0-9]\).*/\\1/p" -e "s/^0*//" -e d $(SCCSVER) | $(SED) -e 's/^0*//')
+SVNBUILD := $(shell $(SED) -e "s/^static.*GitRawRevisionString.*Rev: [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]\([0-9][0-9]*\).*/\\1/p" -e "s/^0*//" -e d $(SCCSVER) | $(SED) -e 's/^0*//')
+
 RCFLAGS:= --include-dir $(PLATDIR)/win32/misc -D_WIN32 -DFILEVERSIONVALUES=$(SVNMAJOR),$(SVNMINOR),$(SVNREV),$(SVNBUILD) '-DFILEVERSIONSTRING=\"$(SVNMAJOR).$(SVNMINOR).$(SVNREV).$(SVNBUILD)\\0\"'

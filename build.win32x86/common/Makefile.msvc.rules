@@ -1,0 +1,15 @@
+#############################################################################
+# Common Makefile for Win32 VM using MSVC, e.g. 2017 Community, and gnu make
+# Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
+#
+# Compilation rules for Microsoft Visual C++ Toolchain
+#
+#############################################################################
+
+ifdef MSVC
+include ../common/Makefile.msvc.msvc.rules
+else ifdef Clang
+include ../common/Makefile.msvc.msvc.rules
+else ifdef ClangC2
+include ../common/Makefile.msvc.clangc2.rules
+endif

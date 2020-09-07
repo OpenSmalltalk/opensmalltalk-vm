@@ -45,6 +45,7 @@
 #import "sqSqueakSoundCoreAudioAPI.h"
 #import "sqSqueakOSXApplication+imageReadWrite.h"
 #import "sqSqueakOSXApplication+attributes.h"
+#import "sqSqueakOSXViewFactory.h"
 
 #if !defined(IMAGE_DIALECT_NAME)
 # if NewspeakVM
@@ -65,9 +66,11 @@
 #ifdef PharoVM
 # define VMOPTION(arg) "--"arg
 # define VMOPTIONOBJ(arg) @"--"arg
+# define VMOPTIONLEN(n) (1+n)
 #else
 # define VMOPTION(arg) "-"arg
 # define VMOPTIONOBJ(arg) @"-"arg
+# define VMOPTIONLEN(n) (n)
 #endif
 
 usqInt gMaxHeapSize = 512*1024*1024;
@@ -204,11 +207,13 @@ static char *getVersionInfo(int verbose);
 	if ([argData isEqualToString: VMOPTIONOBJ("headless")]) {
 		extern BOOL gSqueakHeadless;
 		gSqueakHeadless = YES;
+		sqCurrentOSXRequestedViewType = SQ_OSX_REQUESTED_VIEW_TYPE_NONE;
 		return 1;
 	}
 	if ([argData isEqualToString: VMOPTIONOBJ("headfull")]) {
 		extern BOOL gSqueakHeadless;
 		gSqueakHeadless = NO;
+		sqCurrentOSXRequestedViewType = SQ_OSX_REQUESTED_VIEW_TYPE_ANY;
 		return 1;
 	}
     if ([argData isEqualToString: VMOPTIONOBJ("nohandlers")]) {
@@ -221,20 +226,40 @@ static char *getVersionInfo(int verbose);
 		printPhaseTime(1);
 		return 1;
 	}
+
+#ifdef USE_OPENGL
+	if ([argData isEqualToString: VMOPTIONOBJ("opengl")]) {
+		sqCurrentOSXRequestedViewType = SQ_OSX_REQUESTED_VIEW_TYPE_OPENGL;
+		return 1;
+	}
+#endif
+#ifdef USE_CORE_GRAPHICS
+	if ([argData isEqualToString: VMOPTIONOBJ("core-graphics")]) {
+		sqCurrentOSXRequestedViewType = SQ_OSX_REQUESTED_VIEW_TYPE_CORE_GRAPHICS;
+		return 1;
+	}
+#endif
+#ifdef USE_METAL
+	if ([argData isEqualToString: VMOPTIONOBJ("metal")]) {
+		sqCurrentOSXRequestedViewType = SQ_OSX_REQUESTED_VIEW_TYPE_METAL;
+		return 1;
+	}
+#endif
+
 #if COGVM
-	if ([argData compare:  VMOPTIONOBJ("trace") options: NSLiteralSearch range: NSMakeRange(0,6)] == NSOrderedSame) {
+	if ([argData compare: VMOPTIONOBJ("trace") options: NSLiteralSearch range: NSMakeRange(0,VMOPTIONLEN(6))] == NSOrderedSame) {
 		extern int traceFlags;
 
-		if ([argData length] == 6) {
+		if ([argData length] == VMOPTIONLEN(6)) {
 			traceFlags = 1;
 			return 1;
 		}
-		if ([argData length] <= 7
-		 || [argData characterAtIndex: 6] != '='
-		 || !isdigit([argData characterAtIndex: 7]))
+		if ([argData length] <= VMOPTIONLEN(7)
+		 || [argData characterAtIndex: VMOPTIONLEN(6)] != '='
+		 || !isdigit([argData characterAtIndex: VMOPTIONLEN(7)]))
 			return 0;
 
-		traceFlags = atoi([argData UTF8String] + 7);
+		traceFlags = atoi([argData UTF8String] + VMOPTIONLEN(7));
 		return 1;
 	}
 	if ([argData isEqualToString: VMOPTIONOBJ("tracestores")]) {
@@ -244,11 +269,6 @@ static char *getVersionInfo(int verbose);
 	}
 #endif
 #if STACKVM
-	if ([argData isEqualToString: VMOPTIONOBJ("checkpluginwrites")]) {
-		extern sqInt checkAllocFiller;
-		checkAllocFiller = 1;
-		return 1;
-	}
 	if ([argData isEqualToString: VMOPTIONOBJ("noheartbeat")]) {
 		extern sqInt suppressHeartbeatFlag;
 		suppressHeartbeatFlag = 1;
@@ -263,6 +283,13 @@ static char *getVersionInfo(int verbose);
 	 || [argData isEqualToString: VMOPTIONOBJ("rh")]) {
 		extern sqInt reportStackHeadroom;
 		reportStackHeadroom = 1;
+		return 1;
+	}
+#endif
+#if SPURVM
+	if ([argData isEqualToString: VMOPTIONOBJ("logscavenge")]) {
+		extern void openScavengeLog(void);
+		openScavengeLog();
 		return 1;
 	}
 #endif
@@ -317,16 +344,21 @@ static char *getVersionInfo(int verbose);
 		pollpip = atoi(peek);		 
 		return 2;
 	}
+	if ([argData isEqualToString: VMOPTIONOBJ("failonffiexception")]) {
+		extern sqInt ffiExceptionResponse;
+		ffiExceptionResponse = 1;
+		return 1;
+	}
+	if ([argData isEqualToString: VMOPTIONOBJ("nofailonffiexception")]) {
+		extern sqInt ffiExceptionResponse;
+		ffiExceptionResponse = -1;
+		return 1;
+	}
 #endif /* STACKVM */
 #if COGVM
 	if ([argData isEqualToString: VMOPTIONOBJ("codesize")]) {
 		extern sqInt desiredCogCodeSize;
 		desiredCogCodeSize = [self strtobkm: peek];		 
-		return 2;
-	}
-	if ([argData isEqualToString: VMOPTIONOBJ("dpcso")]) {
-		extern unsigned long debugPrimCallStackOffset;
-		debugPrimCallStackOffset = (unsigned long)[self strtobkm: peek];		 
 		return 2;
 	}
 	if ([argData isEqualToString: VMOPTIONOBJ("cogmaxlits")]) {
@@ -461,14 +493,14 @@ static char *getVersionInfo(int verbose);
 	printf("  "VMOPTION("breaksel")" selector    set breakpoint on send of selector\n");
 #endif
 #if STACKVM
+	printf("  "VMOPTION("failonffiexception")"   when in an FFI callout primitive catch exceptions and fail the primitive\n");
 	printf("  "VMOPTION("breakmnu")" selector    set breakpoint on MNU of selector\n");
 	printf("  "VMOPTION("eden")" <size>[mk]      set eden memory to bytes\n");
 	printf("  "VMOPTION("leakcheck")" num        check for leaks in the heap\n");
 	printf("  "VMOPTION("stackpages")" num       use n stack pages\n");
 	printf("  "VMOPTION("numextsems")" num       make the external semaphore table num in size\n");
 	printf("  "VMOPTION("noheartbeat")"          disable the heartbeat for VM debugging. disables input\n");
-	printf("  "VMOPTION("pollpip")"              output . on each poll for input\n");
-	printf("  "VMOPTION("checkpluginwrites")"    check for writes past end of object in plugins\n");
+	printf("  "VMOPTION("pollpip")" (0|1)        output on each poll for input\n");
 #endif
 #if STACKVM || NewspeakVM
 # if COGVM
@@ -487,6 +519,7 @@ static char *getVersionInfo(int verbose);
 #endif
 #if SPURVM
 	printf("  "VMOPTION("maxoldspace")" <size>[mk]      set max size of old space memory to bytes\n");
+	printf("  "VMOPTION("logscavenge")"          log scavenging to scavenge.log\n");
 #endif
 #if 0 /* Not sure if encoding is an issue with the Cocoa VM. eem 2015-11-30 */
 	printf("  "VMOPTION("pathenc")" <enc>        set encoding for pathnames (default: %s)\n",
@@ -494,6 +527,17 @@ static char *getVersionInfo(int verbose);
 #endif
 	printf("  "VMOPTION("headless")"             run in headless (no window) mode (default: false)\n");
 	printf("  "VMOPTION("headfull")"             run in headful (window) mode (default: true)\n");
+
+#ifdef USE_OPENGL
+	printf("  "VMOPTION("opengl")"               use OpenGL for drawing the VM window. Must be the first argument.\n");
+#endif
+#ifdef USE_CORE_GRAPHICS
+	printf("  "VMOPTION("core-graphics")"        use CoreGraphics for drawing the VM window. Must be the first argument.\n");
+#endif
+#ifdef USE_METAL
+	printf("  "VMOPTION("metal")"                use Metal for drawing the VM window. Must be the first argument.\n");
+#endif
+
 	printf("  "VMOPTION("version")"              print version information, then exit\n");
 
 	printf("  "VMOPTION("blockonerror")"         on error or segv block, not exit.  useful for attaching gdb\n");

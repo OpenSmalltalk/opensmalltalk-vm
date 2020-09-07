@@ -45,6 +45,16 @@
 #include "sq.h"
 #include "SocketPlugin.h"
 #include "sqaio.h"
+#include <string.h>
+#ifdef HAVE_STDINT_H
+#  include <stdint.h> /* uint64_t uint32_t uint8_t (C99) */
+#else
+#ifdef HAVE_INTTYPES_H
+#  include <inttypes.h>
+#else
+#  include <sys/types.h> /* we could test HAVE_SYS_TYPES_H here, but else what?... */
+#endif
+#endif
 
 #ifdef ACORN
 # include <time.h>
@@ -74,6 +84,8 @@
 # include <sys/param.h>
 # include <sys/stat.h>
 # include <sys/socket.h>
+# include <sys/ioctl.h>
+# include <net/if.h>
 # include <sys/un.h>
 # include <netinet/in.h>
 # include <netinet/udp.h>
@@ -139,7 +151,7 @@ static int thisNetSession= 0;
 static int one= 1;
 
 static char   localHostName[MAXHOSTNAMELEN];
-static u_long localHostAddress;	/* GROSS IPv4 ASSUMPTION! */
+static uint32_t localHostAddress;	/* GROSS IPv4 ASSUMPTION! */
 
 union sockaddr_any
 {
@@ -205,6 +217,9 @@ static int  resolverSema= 0;
 /*** Variables ***/
 
 extern struct VirtualMachine *interpreterProxy;
+#if !defined(SQUEAK_BUILTIN_PLUGIN)
+# define success(bool) interpreterProxy->success(bool)
+#endif
 int setHookFn;
 
 
@@ -257,7 +272,7 @@ static void setLinger(int fd, int flag)
 
 static const char *addrToName(int netAddress)
 {
-  u_long nAddr;
+  uint32_t nAddr;
   struct hostent *he;
 
   lastError= 0;			/* for the resolver */
@@ -276,7 +291,7 @@ static int nameToAddr(char *hostName)
 
   lastError= 0;			/* ditto */
   if ((he= gethostbyname(hostName)))
-    return ntohl(*(long *)(he->h_addr_list[0]));
+    return ntohl(*(uint32_t *)(he->h_addr_list[0]));
   lastError= h_errno;		/* and one more ditto */
   return 0;
 }
@@ -287,7 +302,7 @@ static int socketValid(SocketPtr s)
 {
   if (s && s->privateSocketPtr && thisNetSession && (s->sessionID == thisNetSession))
     return true;
-  interpreterProxy->success(false);
+  success(false);
   return false;
 }
 
@@ -552,14 +567,14 @@ void sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaI
         }
       else
         {
-          interpreterProxy->success(false);
+          success(false);
           return;
         }
     }
   if (-1 == newSocket)
     {
       /* socket() failed, or incorrect socketType */
-      interpreterProxy->success(false);
+      success(false);
       return;
     }
   setsockopt(newSocket, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one));
@@ -568,7 +583,7 @@ void sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaI
   if (pss == NULL)
     {
       fprintf(stderr, "acceptFrom: out of memory\n");
-      interpreterProxy->success(false);
+      success(false);
       return;
     }
   pss->s= newSocket;
@@ -596,7 +611,7 @@ void sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaI
   s->sessionID= thisNetSession;
   s->socketType= socketType;
   s->privateSocketPtr= pss;
-  FPRINTF((stderr, "create(%d) -> %lx\n", SOCKET(s), (unsigned long)PSP(s)));
+  FPRINTF((stderr, "create(%d) -> %p\n", SOCKET(s), PSP(s)));
   /* Note: socket is in BLOCKING mode until aioEnable is called for it! */
 }
 
@@ -613,7 +628,7 @@ void sqSocketCreateRawProtoTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(Soc
     {
       /* socket() failed, or incorrect protocol type */
       fprintf(stderr, "primSocketCreateRAW: socket() failed; protocol = %ld, errno = %d\n", protocol, errno);
-      interpreterProxy->success(false);
+      success(false);
       return;
     }
 
@@ -622,7 +637,7 @@ void sqSocketCreateRawProtoTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(Soc
   if (pss == NULL)
     {
       fprintf(stderr, "acceptFrom: out of memory\n");
-      interpreterProxy->success(false);
+      success(false);
       return;
     }
   pss->s= newSocket;
@@ -643,7 +658,7 @@ void sqSocketCreateRawProtoTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(Soc
   s->sessionID= thisNetSession;
   s->socketType= RAWSocketType;
   s->privateSocketPtr= pss;
-  FPRINTF((stderr, "create(%d) -> %lx\n", SOCKET(s), (unsigned long)PSP(s)));
+  FPRINTF((stderr, "create(%d) -> %p\n", SOCKET(s), PSP(s)));
   /* Note: socket is in BLOCKING mode until aioEnable is called for it! */
 }
 
@@ -660,7 +675,7 @@ sqInt sqSocketConnectionStatus(SocketPtr s)
       fprintf(stderr, "socketStatus: freeing invalidated pss=%p\n", PSP(s));
       /*free(PSP(s));*/	/* this almost never happens -- safer not to free()?? */
       _PSP(s)= 0;
-      interpreterProxy->success(false);
+      success(false);
       return Invalid;
     }
 #if 0
@@ -700,7 +715,7 @@ void sqSocketListenOnPortBacklogSizeInterface(SocketPtr s, sqInt port, sqInt bac
   /* only TCP sockets have a backlog */
   if ((backlogSize > 1) && (s->socketType != TCPSocketType))
     {
-      interpreterProxy->success(false);
+      success(false);
       return;
     }
 
@@ -811,7 +826,7 @@ void sqSocketAcceptFromRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(SocketPtr s
   if (!socketValid(serverSocket) || !PSP(serverSocket)->multiListen)
     {
       FPRINTF((stderr, "accept failed: (multi->%d)\n", PSP(serverSocket)->multiListen));
-      interpreterProxy->success(false);
+      success(false);
       return;
     }
 
@@ -819,7 +834,7 @@ void sqSocketAcceptFromRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(SocketPtr s
   if (PSP(serverSocket)->acceptedSock < 0)
     {
       fprintf(stderr, "acceptFrom: no socket available\n");
-      interpreterProxy->success(false);
+      success(false);
       return;
     }
 
@@ -829,7 +844,7 @@ void sqSocketAcceptFromRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(SocketPtr s
   if (pss == NULL)
     {
       fprintf(stderr, "acceptFrom: out of memory\n");
-      interpreterProxy->success(false);
+      success(false);
       return;
     }
 
@@ -1190,7 +1205,7 @@ sqInt sqSocketReceiveUDPDataBufCountaddressportmoreFlag(SocketPtr s, char *buf, 
 	FPRINTF((stderr, "receiveData(%d)= %da\n", SOCKET(s), 0));
       }
     }
-  interpreterProxy->success(false);
+  success(false);
   return 0;
 }
 
@@ -1220,7 +1235,7 @@ sqInt sqSockettoHostportSendDataBufCount(SocketPtr s, sqInt address, sqInt port,
 	SOCKETERROR(s)= errno;
       }
     }
-  interpreterProxy->success(false);
+  success(false);
   return 0;
 }
 
@@ -1380,7 +1395,7 @@ sqInt sqSocketSetOptionsoptionNameStartoptionNameSizeoptionValueStartoptionValue
 	}
     }
  barf:
-  interpreterProxy->success(false);
+  success(false);
   return false;
 }
 
@@ -1404,7 +1419,7 @@ sqInt sqSocketGetOptionsoptionNameStartoptionNameSizereturnedValue(SocketPtr s, 
 	}
     }
  barf:
-  interpreterProxy->success(false);
+  success(false);
   return errno;
 }
 
@@ -1424,7 +1439,7 @@ void sqSocketBindToPort(SocketPtr s, int addr, int port)
   if (bind(SOCKET(s), (struct sockaddr *)&inaddr, sizeof(struct sockaddr_in)) < 0)
     {
       pss->sockError= errno;
-      interpreterProxy->success(false);
+      success(false);
       return;
     }
 }
@@ -1433,15 +1448,16 @@ void sqSocketSetReusable(SocketPtr s)
 {
   size_t bufSize;
   unsigned char buf[4];
+  int one=1;
 
   if (!socketValid(s)) return;
 
-  *(int *)buf= 1;
+  memcpy(buf,&one,4);
   bufSize= 4;
   if (setsockopt(SOCKET(s), SOL_SOCKET, SO_REUSEADDR, buf, bufSize) < 0)
     {
       PSP(s)->sockError= errno;
-      interpreterProxy->success(false);
+      success(false);
       return;
     }
 }
@@ -1499,7 +1515,7 @@ sqInt sqResolverLocalAddress(void)
     sqInt localAddr = 0;
 
     if (getifaddrs(&ifaddr) == -1) {
-        interpreterProxy->success(false);
+        success(false);
         return 0;
     }
 
@@ -1509,22 +1525,31 @@ sqInt sqResolverLocalAddress(void)
         if (ifa->ifa_addr == NULL)
             continue;  
 
-        s=getnameinfo(ifa->ifa_addr,sizeof(struct sockaddr_in),host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
-
-        if(((strcmp(ifa->ifa_name,"eth0")==0)||(strcmp(ifa->ifa_name,"wlan0")==0))&&(ifa->ifa_addr->sa_family==AF_INET))
-        {
-            if (s != 0)
-            {
-                interpreterProxy->success(false);
-                return 0;
-            }
-            FPRINTF((stderr, "\tInterface : <%s>\n",ifa->ifa_name ));
-            FPRINTF((stderr, "\t IP       : <%s>\n", inet_ntoa(((struct sockaddr_in *)(ifa->ifa_addr))->sin_addr)));
-            if(localAddr == 0) { /* take the first plausible answer */
-                localAddr = ((struct sockaddr_in *)(ifa->ifa_addr))->sin_addr.s_addr;
-            }
-           
+        // Skip interfaces which
+        //  - are not running (IFF_UP),
+        //  - don't have a valid broadcast address set (IFF_BROADCAST),
+        //  - don't have resources allocated (IFF_RUNNING),
+        //  - are loopback interfaces (IFF_LOOPBACK)
+        //  - or do not have AF_INET address family (no IPv6 support here)
+        if (
+            !(ifa->ifa_flags & (IFF_UP | IFF_BROADCAST | IFF_RUNNING))
+                || (ifa->ifa_flags & IFF_LOOPBACK)
+                || ifa->ifa_addr->sa_family != AF_INET
+        ) {
+            continue;
         }
+
+        FPRINTF((stderr, "\tInterface : <%s>\n", ifa->ifa_name));
+        s=getnameinfo(ifa->ifa_addr,sizeof(struct sockaddr_in),host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
+        if (s == 0) {
+            FPRINTF((stderr, "\t IP       : <%s>\n", inet_ntoa(((struct sockaddr_in *) (ifa->ifa_addr))->sin_addr)));
+            if (localAddr == 0) { /* take the first plausible answer */
+                localAddr = ((struct sockaddr_in *) (ifa->ifa_addr))->sin_addr.s_addr;
+            }
+        } else {
+            FPRINTF((stderr, "\t No address defined for this interface\n"));
+        }
+
     }
 
     freeifaddrs(ifaddr);
@@ -1734,7 +1759,7 @@ void sqResolverGetAddressInfoHostSizeServiceSizeFlagsFamilyTypeProtocol(char *ho
   return;
 
  fail:
-  interpreterProxy->success(false);
+  success(false);
   return;
 }
 
@@ -1783,7 +1808,7 @@ void sqResolverGetAddressInfoResultSize(char *addr, sqInt addrSize)
 {
   if ((!addrInfo) || (addrSize < (AddressHeaderSize + addrInfo->ai_addrlen)))
     {
-      interpreterProxy->success(false);
+      success(false);
       return;
     }
 
@@ -1798,7 +1823,7 @@ sqInt sqResolverGetAddressInfoFamily(void)
 {
   if (!addrInfo)
     {
-      interpreterProxy->success(false);
+      success(false);
       return 0;
     }
 
@@ -1817,7 +1842,7 @@ sqInt sqResolverGetAddressInfoType(void)
 {
   if (!addrInfo)
     {
-      interpreterProxy->success(false);
+      success(false);
       return 0;
     }
 
@@ -1835,7 +1860,7 @@ sqInt sqResolverGetAddressInfoProtocol(void)
 {
   if (!addrInfo)
     {
-      interpreterProxy->success(false);
+      success(false);
       return 0;
     }
 
@@ -1867,7 +1892,7 @@ sqInt sqSocketAddressSizeGetPort(char *addr, sqInt addrSize)
       case AF_INET6:	return ntohs(((struct sockaddr_in6 *)socketAddress(addr))->sin6_port);
       }
 
-  interpreterProxy->success(false);
+  success(false);
   return 0;
 }
 
@@ -1881,7 +1906,7 @@ void sqSocketAddressSizeSetPort(char *addr, sqInt addrSize, sqInt port)
       case AF_INET6:	((struct sockaddr_in6 *)socketAddress(addr))->sin6_port= htons(port);	return;
       }
 
-  interpreterProxy->success(false);
+  success(false);
 }
 
 
@@ -1929,7 +1954,7 @@ void sqResolverGetNameInfoSizeFlags(char *addr, sqInt addrSize, sqInt flags)
   return;
 
  fail:
-  interpreterProxy->success(false);
+  success(false);
 }
 
 
@@ -1937,7 +1962,7 @@ sqInt sqResolverGetNameInfoHostSize(void)
 {
   if (!nameInfoValid)
     {
-      interpreterProxy->success(false);
+      success(false);
       return 0;
     }
   return strlen(hostNameInfo);
@@ -1959,7 +1984,7 @@ void sqResolverGetNameInfoHostResultSize(char *name, sqInt nameSize)
   return;
 
  fail:
-  interpreterProxy->success(false);
+  success(false);
 }
 
 
@@ -1967,7 +1992,7 @@ sqInt sqResolverGetNameInfoServiceSize(void)
 {
   if (!nameInfoValid)
     {
-      interpreterProxy->success(false);
+      success(false);
       return 0;
     }
   return strlen(servNameInfo);
@@ -1989,7 +2014,7 @@ void sqResolverGetNameInfoServiceResultSize(char *name, sqInt nameSize)
   return;
 
  fail:
-  interpreterProxy->success(false);
+  success(false);
 }
 
 
@@ -1998,7 +2023,7 @@ sqInt sqResolverHostNameSize(void)
   char buf[MAXHOSTNAMELEN+1];
   if (gethostname(buf, sizeof(buf)))
     {
-      interpreterProxy->success(false);
+      success(false);
       return 0;
     }
   return strlen(buf);
@@ -2011,7 +2036,7 @@ void sqResolverHostNameResultSize(char *name, sqInt nameSize)
   int len;
   if (gethostname(buf, sizeof(buf)) || (nameSize < (len= strlen(buf))))
     {
-      interpreterProxy->success(false);
+      success(false);
       return;
     }
   memcpy(name, buf, len);
@@ -2034,7 +2059,7 @@ void sqSocketBindToAddressSize(SocketPtr s, char *addr, sqInt addrSize)
   pss->sockError= errno;
 
  fail:
-  interpreterProxy->success(false);
+  success(false);
 }
 
 
@@ -2061,7 +2086,7 @@ void sqSocketListenBacklog(SocketPtr s, sqInt backlogSize)
   return;
 
  fail:
-  interpreterProxy->success(false);
+  success(false);
   return;
 }
 
@@ -2073,7 +2098,7 @@ void sqSocketConnectToAddressSize(SocketPtr s, char *addr, sqInt addrSize)
    */
   if (!(socketValid(s) && addressValid(addr, addrSize)))
     {
-      interpreterProxy->success(false);
+      success(false);
       return;
     }
 
@@ -2160,7 +2185,7 @@ void sqSocketLocalAddressResultSize(SocketPtr s, char *addr, int addrSize)
   return;
 
  fail:
-  interpreterProxy->success(false);
+  success(false);
   return;
 }
 
@@ -2198,7 +2223,7 @@ void sqSocketRemoteAddressResultSize(SocketPtr s, char *addr, int addrSize)
   if (!socketValid(s)
    || !SOCKETPEERSIZE(s)
    || (addrSize != (AddressHeaderSize + SOCKETPEERSIZE(s)))) {
-    interpreterProxy->success(false);
+    success(false);
     return;
   }
 
@@ -2228,7 +2253,7 @@ sqInt sqSocketSendUDPToSizeDataBufCount(SocketPtr s, char *addr, sqInt addrSize,
       SOCKETERROR(s)= errno;
     }
 
-  interpreterProxy->success(false);
+  success(false);
   return 0;
 }
 
@@ -2251,6 +2276,6 @@ sqInt sqSocketReceiveUDPDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
       SOCKETERROR(s)= errno;
       FPRINTF((stderr, "receiveData(%d)= %da\n", SOCKET(s), 0));
     }
-  interpreterProxy->success(false);
+  success(false);
   return 0;
 }

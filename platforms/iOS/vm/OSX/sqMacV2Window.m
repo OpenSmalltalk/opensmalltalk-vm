@@ -53,11 +53,9 @@ void makeMainWindow(void) {
 	width  = (unsigned) getSavedWindowSize() >> 16;
 	height = getSavedWindowSize() & 0xFFFF;
 	windowBlock = AddWindowBlock();
-	windowBlock-> handle = gDelegateApp.window;
+	windowBlock->handle = gDelegateApp.window;
 	windowBlock->context = nil;
 	windowBlock->updateArea = CGRectZero;
-	width  = (usqInt) ioScreenSize() >> 16;
-	height = ioScreenSize() & 0xFFFF;
 	
 	setSavedWindowSize( (width << 16) |(height & 0xFFFF));
 	windowBlock->width = width;

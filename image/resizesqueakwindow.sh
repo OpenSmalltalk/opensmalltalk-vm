@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 if [ $# -ne 3 ]; then
 	echo "Usage: `basename $0` <image> <width> <height>"
 	exit 1

@@ -952,7 +952,7 @@ int d3dGetRendererSurfaceDepth(int handle) {
   return desc->ddpfPixelFormat.dwRGBBitCount;
 }
 
-int d3dGetRendererColorMasks(int handle, int *masks) {
+int d3dGetRendererColorMasks(int handle, unsigned int *masks) {
   DDSURFACEDESC2 *desc = d3dGetRendererDesc(handle);
   if(!desc) return 0;
 
@@ -1077,9 +1077,12 @@ int d3dSetIntProperty(int handle, int prop, int value)
     ERROR_CHECK;
     return 1;
   case 2: /* polygon mode */
-    if(value == 0) dwState = D3DFILL_SOLID;
-    if(value == 1) dwState = D3DFILL_WIREFRAME;
-    if(value == 2) dwState = D3DFILL_POINT;
+    switch (value) {
+      case 0: dwState = D3DFILL_SOLID; break;
+      case 1: dwState = D3DFILL_WIREFRAME; break;
+      case 2: dwState = D3DFILL_POINT; break;
+      default: return 0;
+    }
     hRes = lpDevice->lpVtbl->
       SetRenderState(lpDevice, D3DRENDERSTATE_FILLMODE, dwState);
     ERROR_CHECK;
@@ -1219,7 +1222,7 @@ int d3dActualTextureDepth(int rendererHandle, int handle) /* return depth or <0 
   return desc.ddpfPixelFormat.dwRGBBitCount;
 }
 
-int d3dTextureColorMasks(int rendererHandle, int handle, int masks[4])  /* return true on success, false on error */
+int d3dTextureColorMasks(int rendererHandle, int handle, unsigned int masks[4])  /* return true on success, false on error */
 {
   LPDIRECTDRAWSURFACE7 lpdsTexture;
   DDSURFACEDESC2 desc;

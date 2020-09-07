@@ -1,12 +1,14 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 # assert VM with VM profiler and threaded heartbeat
 INSTALLDIR=assert/sqcogspur64linuxht
-OPT="-g3 -O1 -fwrapv -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -DDEBUGVM=0"
+OPT="-g3 -O1 -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -DDEBUGVM=0"
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
 fi
 
+if ../../../scripts/checkSCCSversion ; then exit 1; fi
 echo -n "clean? "
 read a
 case $a in
@@ -18,11 +20,9 @@ test -f plugins.ext || (test -f ../plugins.ext && cp -p ../plugins.ext . || cp -
 test -f config.h || ../../../platforms/unix/config/configure --without-npsqueak \
 		--with-vmversion=5.0 \
 		--with-src=spur64src \
-	CC="gcc -m64" \
-	CXX="g++ -m64" \
-	CFLAGS="$OPT -msse2 -D_GNU_SOURCE -DCOGMTVM=0" \
-	LIBS="-lpthread -luuid" \
-	LDFLAGS=-Wl,-z,now
+	TARGET_ARCH="-m64" \
+	CC=clang \
+	CFLAGS="$OPT -msse2 -DCOGMTVM=0"
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../products/$INSTALLDIR
 # prefer make install prefix=`readlink -f \`pwd\`/../../../products/$INSTALLDIR`

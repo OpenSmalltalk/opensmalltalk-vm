@@ -1,0 +1,21 @@
+Source: pharo6-sources-files
+Section: interpreters
+Priority: optional
+Maintainer: Damien Cassou <damien.cassou@gmail.com>
+Build-Depends: debhelper (>= 7.0.50~)
+Standards-Version: 3.9.5
+Homepage: http://www.pharo.org
+
+Package: pharo6-sources-files
+Architecture: all
+Depends: ${misc:Depends}
+Description: Support sources files for Pharo.
+ Pharo's goal is to deliver a clean, innovative, free open-source
+ Smalltalk-inspired environment. By providing a stable and small core
+ system, excellent dev tools, and maintained releases, Pharo is an
+ attractive platform to build and deploy mission critical applications.
+ .
+ This package provides the Pharo60 sources file.
+ .
+ Please fill bug reports on http://bugs.pharo.org under the 'Ubuntu
+ packaging (ppa:cassou/pharo)' project.

@@ -1,6 +1,6 @@
-INCDIRS:=../../platforms/Cross/plugins/FilePlugin \
-         ../../platforms/Cross/plugins/SocketPlugin \
-         ../../platforms/unix/vm
+INCDIRS:=$(PLATDIR)/Cross/plugins/FilePlugin \
+         $(PLATDIR)/Cross/plugins/SocketPlugin \
+         $(PLATDIR)/unix/vm
 
 EXTRALIBS:=-undefined dynamic_lookup
 

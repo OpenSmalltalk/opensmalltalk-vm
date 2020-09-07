@@ -144,10 +144,6 @@ sqInt sqGrowMemoryBy(sqInt memoryLimit, sqInt delta);
 sqInt sqShrinkMemoryBy(sqInt memoryLimit, sqInt delta);
 sqInt sqMemoryExtraBytesLeft(int flag);
 #if COGVM
-extern void sqMakeMemoryExecutableFromTo(unsigned long, unsigned long);
-extern void sqMakeMemoryNotExecutableFromTo(unsigned long, unsigned long);
-
-extern int isCFramePointerInUse(void);
 extern int osCogStackPageHeadroom(void);
 extern void reportMinimumUnusedHeadroom(void);
 #endif
@@ -213,6 +209,6 @@ extern const pthread_key_t tltiIndex;
 
 #if !defined(VM_LABEL) || COGVM
 # undef VM_LABEL
-# define VM_LABEL(foo) 0
+# define VM_LABEL(foo) ((void)0)
 #endif
 #endif /* macintoshSqueak */

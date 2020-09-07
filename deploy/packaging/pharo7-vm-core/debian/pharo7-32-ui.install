@@ -1,0 +1,8 @@
+debian/pharo7-vm-core-resources/usr/bin/pharo7-32-ui	usr/bin
+debian/pharo7-vm-core-resources/usr/share/applications/pharo7-32-ui.desktop usr/share/applications
+results/lib/pharo/*/B3DAcceleratorPlugin.so		usr/lib/i386-linux-gnu/pharo7-vm
+results/lib/pharo/*/vm-display-fbdev.so			usr/lib/i386-linux-gnu/pharo7-vm
+results/lib/pharo/*/vm-display-X11.so			usr/lib/i386-linux-gnu/pharo7-vm
+results/lib/pharo/*/vm-sound-ALSA.so			usr/lib/i386-linux-gnu/pharo7-vm
+results/lib/pharo/*/vm-sound-OSS.so			usr/lib/i386-linux-gnu/pharo7-vm
+results/lib/pharo/*/vm-sound-pulse.so			usr/lib/i386-linux-gnu/pharo7-vm

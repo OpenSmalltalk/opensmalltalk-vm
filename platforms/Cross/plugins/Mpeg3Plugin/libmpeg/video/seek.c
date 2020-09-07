@@ -32,6 +32,7 @@
 #include "mpeg3private.h"
 #include "mpeg3protos.h"
 #include "mpeg3video.h"
+#include "mpeg3videoprotos.h"
 #include <stdlib.h>
 #include <string.h>
 

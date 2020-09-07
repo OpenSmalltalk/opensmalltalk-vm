@@ -20,11 +20,17 @@
 *       Option  -> Right ALT
 *
 *****************************************************************************/
-#include <windows.h>
+#include <Windows.h>
+#include <windowsx.h>
 #include <shellapi.h>
 #include <commdlg.h>
 #include <excpt.h>
 #include <float.h>
+
+/* only supported since Vista, and absent from some cygwin/mingw header */
+#ifndef WM_MOUSEHWHEEL
+#define WM_MOUSEHWHEEL                  0x020E
+#endif
 
 #if defined(__MINGW32_VERSION) && (__MINGW32_MAJOR_VERSION < 3)
 /** Kludge to get multimonitor API's to compile in the mingw/directx7 mix. **/
@@ -55,23 +61,35 @@ void setFullScreenFlag(sqInt);
 sqInt getSavedWindowSize(void);
 extern sqInt deferDisplayUpdates;
 
+extern sqInt sendWheelEvents; /* If true deliver EventTypeMouseWheel else kybd */
+/* if sendWheelEvents is false this maps wheel events to arrow keys */
 
 /*** Variables -- image and path names ***/
-#define IMAGE_NAME_SIZE MAX_PATH
+#define IMAGE_NAME_SIZE MAX_PATH_UTF8 
 
-char imageName[MAX_PATH+1];		  /* full path and name to image */
-TCHAR imagePath[MAX_PATH+1];	  /* full path to image */
-TCHAR vmPath[MAX_PATH+1];		    /* full path to interpreter's directory */
-TCHAR vmName[MAX_PATH+1];		    /* name of the interpreter's executable */
-TCHAR windowTitle[MAX_PATH];        /* what should we display in the title? */
-TCHAR squeakIniName[MAX_PATH+1];    /* full path and name to ini file */
-TCHAR windowClassName[MAX_PATH+1];        /* Window class name */
+/* IMPLEMENTATION NOTE:
+- both UTF8 and UTF16 versions are maintained in parallel
+- UTF8 version is for interaction with image
+- UTF16 version is for interaction with WIN32 API
+whichever code modifies one version is responsible for updating the other
+*/
+char  imageName [MAX_PATH_UTF8 + 1];     /* full path and name to image */
+WCHAR imageNameW[MAX_PATH      + 1];     /* full path and name to image */
+char  imagePathA[MAX_PATH_UTF8 + 1];     /* full path to image */
+WCHAR imagePathW[MAX_PATH      + 1];     /* full path to image */
+char  vmPathA[MAX_PATH_UTF8 + 1];        /* full path to interpreter's directory */
+WCHAR vmPathW[MAX_PATH      + 1];        /* full path to interpreter's directory */
+char  vmNameA[MAX_PATH_UTF8 + 1];        /* name of the interpreter's executable UTF8 */
+WCHAR vmNameW[MAX_PATH      + 1];        /* name of the interpreter's executable UTF16 */
+char windowTitle[MAX_PATH+1];            /* what should we display in the title? */
+WCHAR squeakIniNameW[MAX_PATH      + 1]; /* full path and name to ini file */
+char  squeakIniNameA[MAX_PATH_UTF8 + 1]; /* full path and name to ini file */
+TCHAR windowClassName[MAX_PATH+1];       /* Window class name */
 
 const TCHAR U_ON[]  = TEXT("1");
 const TCHAR U_OFF[] = TEXT("0");
 const TCHAR U_GLOBAL[] = TEXT("Global");
-const TCHAR U_SLASH[] = TEXT("/");
-const TCHAR U_BACKSLASH[] = TEXT("\\");
+const WCHAR W_BACKSLASH[] = L"\\";
 
 /*** Variables -- Event Recording ***/
 int inputSemaphoreIndex = 0;/* if non-zero the event semaphore index */
@@ -89,7 +107,6 @@ int keyBufOverflows = 0;	/* number of characters dropped */
 
 /*** Win32-related Variables (declared in sqWin32.h) ***/
 HWND stWindow = NULL;      /*	the squeak window */
-HWND browserWindow = NULL; /* The browser window */
 HINSTANCE hInstance;	     /*	the instance of squeak running */
 HCURSOR currentCursor=0;	 /*	current cursor displayed by squeak */
 HPALETTE palette;	         /*	the palette (might be unused) */
@@ -99,7 +116,6 @@ BITMAPINFO *bmi4;	         /*	4 bit depth bitmap info */
 BITMAPINFO *bmi8;	         /*	8 bit depth bitmap info */
 BITMAPINFO *bmi16;	       /*	16 bit depth bitmap info */
 BITMAPINFO *bmi32;	       /*	32 bit depth bitmap info */
-BOOL fWindows95;           /* Are we running on Win95 or NT? */
 BOOL fHasFocus = 0;        /* if Squeak has the input focus */
 
 /* Preference values */
@@ -127,7 +143,6 @@ BOOL f3ButtonMouse = 0;   /* Should we use a real 3 button mouse mapping? */
 BOOL  fHeadlessImage = 0;      /* Do we run headless? */
 BOOL  fRunService = 0;         /* Do we run as NT service? */
 DWORD dwMemorySize = 0;        /* How much memory do we use? */
-BOOL  fBrowserMode = 0;        /* Are we running in a web browser? */
 
 /* Misc preferences */
 BOOL  fEnableAltF4Quit = 1; /* can we quit using Alt-F4? */
@@ -153,14 +168,15 @@ PRINTDLG printValues;
 static int printerSetup = FALSE;
 #endif
 
-#ifndef NO_WHEEL_MOUSE
-UINT g_WM_MOUSEWHEEL = 0;	/* RvL: 1999-04-19 The message we receive from wheel mices */
-#endif
 
-/* misc declarations */
+/* misc forward declarations */
 int recordMouseEvent(MSG *msg, UINT nrClicks);
+int recordMouseWheelEvent(MSG *msg, int dx, int dy);
 int recordKeyboardEvent(MSG *msg);
 int recordWindowEvent(int action, RECT *r);
+#if NewspeakVM
+int ioDrainEventQueue(void);
+#endif
 
 extern sqInt byteSwapped(sqInt);
 extern int convertToSqueakTime(SYSTEMTIME);
@@ -185,6 +201,16 @@ EXPORT(void) setIoProcessEventsHandler(void * handler) {
     ioCheckForEventsHooks = (void (*)())handler;
 }
 #endif
+
+extern int sqAskSecurityYesNoQuestion(const char *question)
+{
+    return MessageBoxA(stWindow, question, "Squeak Security Alert", MB_YESNO | MB_ICONSTOP) == IDYES;
+}
+
+extern const char *sqGetCurrentImagePath(void)
+{
+    return imagePathA;
+}
 
 /****************************************************************************/
 /*                      Synchronization functions                           */
@@ -230,6 +256,7 @@ LRESULT CALLBACK MainWndProcA(HWND hwnd,
                               UINT message,
                               WPARAM wParam,
                               LPARAM lParam) {
+
   return DefWindowProc(hwnd, message, wParam, lParam);
 }
 
@@ -243,6 +270,35 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
   static UINT nrClicks = 0;
   UINT timeNow = 0;
   UINT timeDelta = 0;
+  /* variables for accumulating mouse wheel deltas if too small */
+  static int hWheelDelta = 0;
+  static int vWheelDelta = 0;
+  static int prevHWheelTime = 0;
+  static int prevVWheelTime = 0;
+
+  MSG localMessage;
+  LPMSG messageTouse = NULL;
+
+  /*
+   * Newspeak uses the lastMessage pointer.
+   */
+#if NewspeakVM
+  messageTouse = lastMessage;
+#else
+  messageTouse = &localMessage;
+
+  localMessage.hwnd = hwnd;
+  localMessage.message = message;
+  localMessage.wParam = wParam;
+  localMessage.lParam = lParam;
+  localMessage.time = GetMessageTime();
+
+  DWORD point = GetMessagePos();
+
+  localMessage.pt.x = MAKEPOINTS(point).x;
+  localMessage.pt.y = MAKEPOINTS(point).y;
+#endif /*NewspeakVM */
+
 
   /* Intercept any messages if wanted */
   if(preMessageHook)
@@ -252,38 +308,6 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
   if(message == SQ_LAUNCH_DROP) 
     return sqLaunchDrop();
 
-#ifndef NO_WHEEL_MOUSE
-  /* RvL 1999-04-19 00:23
-     MOUSE WHEELING START */
-  if( WM_MOUSEWHEEL == message || g_WM_MOUSEWHEEL == message ) {
-    /* Record mouse wheel msgs as CTRL-Up/Down */
-    short zDelta = (short) HIWORD(wParam);
-    if(inputSemaphoreIndex) {
-      sqKeyboardEvent *evt = (sqKeyboardEvent*) sqNextEventPut();
-      evt->type = EventTypeKeyboard;
-      evt->timeStamp = lastMessage->time;
-      evt->charCode = (zDelta > 0) ? 30 : 31;
-      evt->pressCode = EventKeyChar;
-      evt->modifiers = CtrlKeyBit;
-#ifdef PharoVM
-     evt->utf32Code = evt->charCode;
-#else
-      evt->utf32Code = 0;
-#endif
-      evt->reserved1 = 0;
-    } else {
-      buttonState = 64;
-      if (zDelta < 0) {
-	recordVirtualKey(message,VK_DOWN,lParam);
-      } else {
-	recordVirtualKey(message,VK_UP,lParam);
-      }
-    }
-    return 1;
-  }
-  /* MOUSE WHEELING END */
-#endif
-
   switch(message) {
   case WM_SYSCOMMAND:
   case WM_COMMAND: {
@@ -292,16 +316,14 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
       HandlePrefsMenu(cmd);
       break;
     }
-#if !defined(_WIN32_WCE)
     if(cmd == SC_MINIMIZE) {
       if(fHeadlessImage) ShowWindow(stWindow, SW_HIDE);
       else return DefWindowProcW(hwnd, message, wParam, lParam);
       break;
     }
-#endif /* defined(_WIN32_WCE) */
     if(cmd == SC_CLOSE) {
 #if NewspeakVM
-		/* Newspeak doesn't easnt to quit if the main window is closed.  Only
+		/* Newspeak doesn't want to quit if the main window is closed.  Only
 		 * when the last native window is closed.
 		 */
 		if(fEnableAltF4Quit)
@@ -338,13 +360,72 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
       nrClicks = 0;
 
     if(inputSemaphoreIndex) {
-      recordMouseEvent(lastMessage, nrClicks);
+      recordMouseEvent(messageTouse, nrClicks);
       break;
     }
     /* state based stuff */
-    mousePosition.x = LOWORD(lParam);
-    mousePosition.y = HIWORD(lParam);
+    mousePosition.x = GET_X_LPARAM(lParam);
+    mousePosition.y = GET_Y_LPARAM(lParam);
     break;
+  case WM_MOUSEHWHEEL: {
+    if(inputSemaphoreIndex && sendWheelEvents) {
+      int zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
+      /* accumulate enough delta before sending the event to the image */
+      int limit = WHEEL_DELTA / 6; /* threshold for delivering events */
+      timeNow = GetMessageTime(); /* Win32 - gets time of last GetMessage() */
+      hWheelDelta = (timeNow - prevHWheelTime < 500 /* milliseconds */) ? hWheelDelta + zDelta : zDelta;
+      prevHWheelTime = timeNow;
+      if( - limit < hWheelDelta && hWheelDelta < limit ) break;
+      zDelta = hWheelDelta;
+      hWheelDelta = 0;
+      recordMouseWheelEvent(messageTouse,zDelta,0);
+      break;   
+    } else {
+      /* Note: do not generate left/right arrow, images are not prepared to it */
+      return DefWindowProcW(hwnd,message,wParam,lParam);
+    }
+  }
+  case WM_MOUSEWHEEL: {
+    /* Record mouse wheel msgs as Up/Down arrow keypress + meta bits.
+     */
+    int zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
+    /* accumulate enough delta before sending the event to the image */
+    int limit = WHEEL_DELTA / 6; /* threshold for delivering events */
+    timeNow = GetMessageTime(); /* Win32 - gets time of last GetMessage() */
+    vWheelDelta = (timeNow - prevVWheelTime < 500 /* milliseconds */) ? vWheelDelta + zDelta : zDelta;
+    prevVWheelTime = timeNow;
+    if( - limit < vWheelDelta && vWheelDelta < limit ) break;
+    zDelta = vWheelDelta;
+    vWheelDelta = 0;
+    if(inputSemaphoreIndex) {
+      if(sendWheelEvents) {
+        recordMouseWheelEvent(messageTouse,0,zDelta);
+        break;   
+      } else {
+        sqKeyboardEvent *evt = (sqKeyboardEvent*) sqNextEventPut();
+        evt->type = EventTypeKeyboard;
+        evt->timeStamp = messageTouse->time;
+        evt->charCode = (zDelta > 0) ? 30 : 31;
+        evt->pressCode = EventKeyChar;
+        /* Set every meta bit to distinguish the fake event from a real arrow keypress
+         */
+        evt->modifiers = CtrlKeyBit|OptionKeyBit|CommandKeyBit|ShiftKeyBit;
+        evt->utf32Code = evt->charCode;
+        evt->reserved1 = 0;
+      }
+    } else {
+      buttonState = 64;
+      if (zDelta < 0) {
+        recordVirtualKey(message,VK_DOWN,lParam);
+      } else {
+        recordVirtualKey(message,VK_UP,lParam);
+      }
+      /* state based stuff */
+      mousePosition.x = GET_X_LPARAM(lParam);
+      mousePosition.y = GET_Y_LPARAM(lParam);
+    }
+    break;
+  }
   case WM_LBUTTONDOWN:
   case WM_RBUTTONDOWN:
   case WM_MBUTTONDOWN:
@@ -365,12 +446,12 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
 	lastClickTime = timeNow;
 
     if(inputSemaphoreIndex) {
-      recordMouseEvent(lastMessage, nrClicks);
+      recordMouseEvent(messageTouse, nrClicks);
       break;
     }
     /* state based stuff */
-    mousePosition.x = LOWORD(lParam);
-    mousePosition.y = HIWORD(lParam);
+    mousePosition.x = GET_X_LPARAM(lParam);
+    mousePosition.y = GET_Y_LPARAM(lParam);
     /* check for console focus */
     recordMouseDown(wParam, lParam);
     recordModifierButtons();
@@ -397,12 +478,12 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
     if(GetFocus() != stWindow) SetFocus(stWindow);
     ReleaseCapture(); /* release mouse capture */
     if(inputSemaphoreIndex) {
-      recordMouseEvent(lastMessage, nrClicks);
+      recordMouseEvent(messageTouse, nrClicks);
       break;
     }
     /* state based stuff */
-    mousePosition.x = LOWORD(lParam);
-    mousePosition.y = HIWORD(lParam);
+    mousePosition.x = GET_X_LPARAM(lParam);
+    mousePosition.y = GET_Y_LPARAM(lParam);
     /* check for console focus */
     if(GetFocus() != stWindow) SetFocus(stWindow);
     recordMouseDown(wParam,lParam);
@@ -417,7 +498,7 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
     if(GetFocus() == consoleWindow)
       return DefWindowProcW(hwnd, message, wParam, lParam);
     if(inputSemaphoreIndex) {
-      recordKeyboardEvent(lastMessage);
+      recordKeyboardEvent(messageTouse);
       if(wParam == VK_F2 && prefsEnableF2Menu()) {
 	TrackPrefsMenu();
       }
@@ -437,7 +518,7 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
     if(GetFocus() == consoleWindow)
       return DefWindowProcW(hwnd, message, wParam, lParam);
     if(inputSemaphoreIndex) {
-      recordKeyboardEvent(lastMessage);
+      recordKeyboardEvent(messageTouse);
       break;
     }
     /* state based stuff */
@@ -447,11 +528,13 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
   case WM_CHAR:
   case WM_SYSCHAR:
     if(GetFocus() == consoleWindow)
-      return DefWindowProcW(hwnd, message, wParam, lParam);
+    	return DefWindowProcW(hwnd, message, wParam, lParam);
+
     if(inputSemaphoreIndex) {
-      recordKeyboardEvent(lastMessage);
+      recordKeyboardEvent(messageTouse);
       break;
     }
+
     /* state based stuff */
     recordModifierButtons();
     recordKeystroke(message,wParam,lParam);
@@ -503,8 +586,6 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
     }
     break;
 
-#if !defined(_WIN32_WCE)
-    /* Don't change the cursor or system tray on WinCE */
     /* cursor redraw */
   case WM_SETCURSOR:
     /* keep currentCursor */
@@ -526,7 +607,7 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
       BringWindowToTop(stWindow);
     }
     return 0;
-#endif /* !defined(_WIN32_WCE) */
+
     /* Focus handling */
   case WM_SETFOCUS:
     fHasFocus = 1;
@@ -828,11 +909,8 @@ sqInt ioSetWindowWidthHeight(sqInt w, sqInt h) {
 
   /* We may have to center the window to fit on screen,
      although if there is room, we retain the window's previous position. */
-  if (fBrowserMode) {
-    left = 0;
-    top = 0;
-  } else if ((old.left >= workArea.left) && (old.top >= workArea.top) &&
-		     (old.left + width < workArea.right) && (old.top + height < workArea.bottom)) {
+  if ((old.left >= workArea.left) && (old.top >= workArea.top) &&
+	  (old.left + width < workArea.right) && (old.top + height < workArea.bottom)) {
 	left = old.left; 
 	top = old.top;
   } else {
@@ -871,7 +949,7 @@ sqInt ioIsWindowObscured(void) {
 
   /* Check whether any windows in front of this window overlap */
   hwnd = stWindow;
-  while(hwnd = GetNextWindow(hwnd, GW_HWNDPREV)) {
+  while ((hwnd = GetNextWindow(hwnd, GW_HWNDPREV))) {
 
     if(!IsWindowVisible(hwnd)) continue; /* skip invisible windows */
 
@@ -891,7 +969,7 @@ void SetupWindows()
   updateRgn = CreateRectRgn(0,0,1,1);
 
   /* No windows at all when running as NT service */
-  if(fRunService && !fWindows95) return;
+  if(fRunService) return;
 
   wc.style = CS_OWNDC; /* don't waste resources ;-) */
   wc.lpfnWndProc = (WNDPROC)MainWndProcA;
@@ -905,52 +983,21 @@ void SetupWindows()
   wc.lpszClassName = windowClassName;
   RegisterClass(&wc);
 
-  if(!browserWindow)
-    stWindow = CreateWindowEx(WS_EX_APPWINDOW /* | WS_EX_OVERLAPPEDWINDOW */,
-			      windowClassName,
-			      TEXT(VM_NAME) TEXT("!"),
-			      WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
-			      0,
-			      0,
-			      CW_USEDEFAULT,
-			      CW_USEDEFAULT,
-			      NULL,
-			      NULL,
-			      hInstance,
-			      NULL);
-  else {
-    /* Setup a browser window. */
-    fBrowserMode = 1;
-    stWindow = CreateWindowEx(0,
-			      windowClassName,
-			      TEXT(VM_NAME) TEXT("!"),
-			      WS_CHILD | WS_CLIPCHILDREN,
-			      0,
-			      0,
-			      GetSystemMetrics(SM_CXSCREEN),
-			      GetSystemMetrics(SM_CYSCREEN),
-			      browserWindow,
-			      NULL,
-			      hInstance,
-			      NULL);
-  }
+  stWindow = CreateWindowEx(WS_EX_APPWINDOW /* | WS_EX_OVERLAPPEDWINDOW */,
+				windowClassName,
+				TEXT(VM_NAME) TEXT("!"),
+				WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
+				0,
+				0,
+				CW_USEDEFAULT,
+				CW_USEDEFAULT,
+				NULL,
+				NULL,
+				hInstance,
+				NULL);
+
   /* Force Unicode WM_CHAR */
   SetWindowLongPtrW(stWindow,GWLP_WNDPROC,(LONG_PTR)MainWndProcW);
-
-#ifndef NO_WHEEL_MOUSE
-  g_WM_MOUSEWHEEL = RegisterWindowMessage( TEXT("MSWHEEL_ROLLMSG") ); /* RvL 1999-04-19 00:23 */
-#endif
-
-#if defined(_WIN32_WCE)
-  /* WinCE does not support RegisterClassEx(), so we must set
-     the small icon after creating the window. */
-  SendMessage(stWindow,WM_SETICON, FALSE,
-	      (LPARAM)LoadImage(hInstance, MAKEINTRESOURCE(1),
-				IMAGE_ICON, 16, 16, 0));
-
-  consoleWindow = NULL; /* We do not use console under WinCE */
-
-#else /* defined(_WIN32_WCE) */
 
   consoleWindow = CreateWindowEx(0,
 				 TEXT("EDIT"),
@@ -965,7 +1012,6 @@ void SetupWindows()
 				 NULL,
 				 hInstance,
 				 NULL);
-#endif /* defined(_WIN32_WCE) */
 
   /* Modify the system menu for any VM options */
   CreatePrefsMenu();
@@ -985,15 +1031,12 @@ void SetupWindows()
 }
 
 
-#if !defined(_WIN32_WCE)  /* Unused under WinCE */
-
 void SetWindowSize(void) {
   RECT r, workArea;
   int width, height, maxWidth, maxHeight, actualWidth, actualHeight;
   int deltaWidth, deltaHeight;
 
   if(!IsWindow(stWindow)) return; /* might happen if run as NT service */
-  if(browserWindow) return; /* Ignored if in browser */
 
   if (getSavedWindowSize() != 0) {
     width  = (unsigned) getSavedWindowSize() >> 16;
@@ -1036,47 +1079,11 @@ void SetWindowSize(void) {
 
 }
 
-#endif /* !defined(_WIN32_WCE) */
-
 /****************************************************************************/
 /*              Keyboard and Mouse                                          */
 /****************************************************************************/
 
-/* The following is a mapping to Mac Roman glyphs.
-   It is not entirely correct since a number of glyphs are
-   different but should be good enough for Squeak.
-   More significantly, we can now map in both directions. */
-static unsigned char keymap[256] =
-{
-  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
- 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
- 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
- 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63,
- 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79,
- 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95,
- 96, 97, 98, 99,100,101,102,103,104,105,106,107,108,109,110,111,
-112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,
-173,176,226,196,227,201,160,224,246,228,178,220,206,179,182,183,
-184,212,213,210,211,165,208,209,247,170,185,221,207,186,189,217,
-202,193,162,163,219,180,195,164,172,169,187,199,194,197,168,248,
-161,177,198,215,171,181,166,225,252,218,188,200,222,223,240,192,
-203,231,229,204,128,129,174,130,233,131,230,232,237,234,235,236,
-245,132,241,238,239,205,133,249,175,244,242,243,134,250,251,167,
-136,135,137,139,138,140,190,141,143,142,144,145,147,146,148,149,
-253,150,152,151,153,155,154,214,191,157,156,158,159,254,255,216
-};
-
-/* The following is the inverse keymap */
-static unsigned char iKeymap[256];
-
-void SetupKeymap()
-{ int i;
-  for(i=0;i<256;i++)
-    iKeymap[keymap[i]] = i;
-}
-
-
-/* Map a virtual key into something the Mac understands */
+/* Map a virtual key into some encoding shared by all platforms and known at image side */
 static int mapVirtualKey(int virtKey)
 {
   switch (virtKey) {
@@ -1149,7 +1156,6 @@ int recordMouseEvent(MSG *msg, UINT nrClicks) {
 
   /* printf("HWND: %x MSG: %x WPARAM: %x LPARAM: %x\n", msg->hwnd, msg->message, wParam, msg->lParam); */
 
-
   alt = GetKeyState(VK_MENU) & 0x8000;
   shift = wParam & MK_SHIFT;
   ctrl  = wParam & MK_CONTROL;
@@ -1169,8 +1175,8 @@ int recordMouseEvent(MSG *msg, UINT nrClicks) {
   /* first the basics */
   proto.type = EventTypeMouse;
   proto.timeStamp = msg->time;
-  proto.x = (int)(short)LOWORD(msg->lParam);
-  proto.y = (int)(short)HIWORD(msg->lParam);
+  proto.x = GET_X_LPARAM(msg->lParam);
+  proto.y = GET_Y_LPARAM(msg->lParam);
   /* then the buttons */
   proto.buttons = 0;
   proto.buttons |= red ? RedButtonBit : 0;
@@ -1190,6 +1196,60 @@ int recordMouseEvent(MSG *msg, UINT nrClicks) {
   }
   firstEventTime = msg->time;
 #endif
+  /* and lastly, fill in the event itself */
+  event = (sqMouseEvent*) sqNextEventPut();
+  *event = proto;
+  return 1;
+}
+
+int recordMouseWheelEvent(MSG *msg,int dx,int dy) {
+#ifndef NO_DIRECTINPUT
+  static DWORD firstEventTime = 0;
+#endif
+  DWORD wParam;
+  sqMouseEvent proto, *event;
+  int alt, shift, ctrl, red, blue, yellow;
+  if(!msg) return 0;
+  
+  /* clear out the button state for events we haven't seen */
+  wParam = msg->wParam & 
+    ~(MK_LBUTTON + MK_MBUTTON + MK_RBUTTON - winButtonState);
+
+  /* printf("HWND: %x MSG: %x WPARAM: %x LPARAM: %x\n", msg->hwnd, msg->message, wParam, msg->lParam); */
+
+  alt = GetKeyState(VK_MENU) & 0x8000;
+  shift = wParam & MK_SHIFT;
+  ctrl  = wParam & MK_CONTROL;
+  red   = wParam & MK_LBUTTON;
+  if(f1ButtonMouse) {
+    /* there's just a single button y'know */
+    red |= wParam & MK_MBUTTON;
+    red |= wParam & MK_RBUTTON;
+    blue = yellow = 0;
+  } else if(!f3ButtonMouse) {
+    blue   = wParam & MK_MBUTTON;
+    yellow = wParam & MK_RBUTTON;
+  } else {
+    blue   = wParam & MK_RBUTTON;
+    yellow = wParam & MK_MBUTTON;
+  }
+  /* first the basics */
+  proto.type = EventTypeMouseWheel;
+  proto.timeStamp = msg->time;
+  proto.x = dx;   /* Almost like other mouse events ... */
+  proto.y = dy;   /* except that we store the scroll delta here rather than mouse position */
+  /* then the buttons */
+  proto.buttons = 0;
+  proto.buttons |= red ? RedButtonBit : 0;
+  proto.buttons |= blue ? BlueButtonBit : 0;
+  proto.buttons |= yellow ? YellowButtonBit : 0;
+  /* then the modifiers */
+  proto.modifiers = 0;
+  proto.modifiers |= shift ? ShiftKeyBit : 0;
+  proto.modifiers |= ctrl ? CtrlKeyBit : 0;
+  proto.modifiers |= alt ? CommandKeyBit : 0;
+  proto.nrClicks = 0;
+  proto.windowIndex = msg->hwnd == stWindow ? 0 : (sqIntptr_t) msg->hwnd;
   /* and lastly, fill in the event itself */
   event = (sqMouseEvent*) sqNextEventPut();
   *event = proto;
@@ -1279,7 +1339,7 @@ int recordKeyboardEvent(MSG *msg) {
   evt = (sqKeyboardEvent*) sqNextEventPut();
   evt->type = EventTypeKeyboard;
   evt->timeStamp = msg->time;
-  evt->charCode = keymap[keyCode & 0xff];
+  evt->charCode = keyCode & 0xff;
   evt->pressCode = pressCode;
   evt->modifiers = 0;
   evt->modifiers |= alt ? CommandKeyBit : 0;
@@ -1440,8 +1500,8 @@ int recordKeystroke(UINT msg, WPARAM wParam, LPARAM lParam)
   /* Special case: VK_RETURN is handled as virtual key *only* */
   if(wParam == 13) return 1;
 
-  /* Map from Win32 to Mac */
-  keystate = keymap[wParam];
+  /* Set low 8 bits to the key code - this is internationalization unfriendly, but we cannot compact key code and modifier state into single sqInt without such sacrifice */
+  keystate = wParam & 0xff;
   /* add the modifiers */
   keystate = keystate | ((buttonState >> 3) << 8);
   /* check for interrupt key */
@@ -1460,17 +1520,6 @@ int recordMouseDown(WPARAM wParam, LPARAM lParam)
 {
   int stButtons= 0;
 
-#if defined(_WIN32_WCE)
-
-  if (wParam & MK_LBUTTON) stButtons |= 4;
-  if (stButtons == 4)	/* red button honours the modifiers */
-    {
-      if (wParam & MK_CONTROL) stButtons = 1;	/* blue button if CTRL down */
-      else if (GetKeyState(VK_LMENU) & 0x8000) stButtons = 2;	/* yellow button if META down */
-    }
-
-#else /* defined(_WIN32_WCE) */
-
   if(GetKeyState(VK_LBUTTON) & 0x8000) stButtons |= 4;
   if(GetKeyState(VK_MBUTTON) & 0x8000) {
     if(f1ButtonMouse) stButtons |= 4;
@@ -1480,16 +1529,6 @@ int recordMouseDown(WPARAM wParam, LPARAM lParam)
     if(f1ButtonMouse) stButtons |= 4;
     else stButtons |= f3ButtonMouse ? 1 : 2;
   }
-
-  if (stButtons == 4)	/* red button honours the modifiers */
-    {
-      if (GetKeyState(VK_CONTROL) & 0x8000)
-        stButtons= 2;	/* blue button if CTRL down */
-      else if (GetKeyState(VK_MENU) & 0x8000)
-        stButtons= 1;	/* yellow button if META down */
-    }
-
-#endif /* defined(_WIN32_WCE) */
 
   buttonState = stButtons & 0x7;
   return 1;
@@ -1595,12 +1634,13 @@ sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 	return microSeconds;
 	}
 
+
 sqInt ioProcessEvents(void)
 {	static MSG msg;
 	int result;
 	extern sqInt inIOProcessEvents;
 
-	if (fRunService && !fWindows95) return 1;
+	if (fRunService) return 1;
 
 #if NewspeakVM
 	/* inIOProcessEvents controls ioProcessEvents.  If negative then
@@ -1624,11 +1664,6 @@ sqInt ioProcessEvents(void)
 	if (inIOProcessEvents) return -1;
 	inIOProcessEvents += 1;
 
-  /* WinCE doesn't retrieve WM_PAINTs from the queue with PeekMessage,
-     so we won't get anything painted unless we use GetMessage() if there
-     is a dirty rect. */
-	lastMessage = &msg;
-
 #ifdef PharoVM
 	if(ioCheckForEventsHooks) {
 		/* HACK for SDL 2 */
@@ -1636,24 +1671,16 @@ sqInt ioProcessEvents(void)
 	}
 	else {
 	
-		while(PeekMessage(&msg,NULL,0,0,PM_NOREMOVE)) {
-			GetMessage(&msg,NULL,0,0);
-# ifndef NO_PLUGIN_SUPPORT
-			if (msg.hwnd == NULL)
-				pluginHandleEvent(&msg);
-# endif
+		while(PeekMessageW(&msg,NULL,0,0,PM_NOREMOVE)) {
+			GetMessageW(&msg,NULL,0,0);
 			TranslateMessage(&msg);
-			DispatchMessage(&msg);
+			DispatchMessageW(&msg);
 
 		}
 	}
 #else
 	while(PeekMessage(&msg,NULL,0,0,PM_NOREMOVE)) {
 		GetMessage(&msg,NULL,0,0);
-# ifndef NO_PLUGIN_SUPPORT
-		if (msg.hwnd == NULL)
-			pluginHandleEvent(&msg);
-# endif
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
     	}
@@ -1664,14 +1691,6 @@ sqInt ioProcessEvents(void)
 	DumpBufferedMouseTrail();
 # endif
 
-	/* If we're running in a browser check if the browser's still there */
-	if (fBrowserMode
-	 && browserWindow
-	 && !IsWindow(browserWindow))
-		ioExit();
-
-	lastMessage = NULL;
-
 	if (inIOProcessEvents > 0)
 		inIOProcessEvents -= 1;
 
@@ -1680,12 +1699,12 @@ sqInt ioProcessEvents(void)
 }
 
 #if NewspeakVM
-sqInt
+int
 ioDrainEventQueue(void)
 { static MSG msg;
   POINT mousePt;
 
-  if(fRunService && !fWindows95) return 1;
+  if(fRunService) return 1;
 
   /* WinCE doesn't retrieve WM_PAINTs from the queue with PeekMessage,
      so we won't get anything painted unless we use GetMessage() if there
@@ -1694,11 +1713,6 @@ ioDrainEventQueue(void)
   while(PeekMessage(&msg,NULL,0,0,PM_NOREMOVE))
     {
       GetMessage(&msg,NULL,0,0);
-#ifndef NO_PLUGIN_SUPPORT
-      if(msg.hwnd == NULL) {
-	pluginHandleEvent(&msg);
-      } else
-#endif
 	if(msg.hwnd != stWindow) {
 	  /* Messages not sent to Squeak window */
 	  if(msg.hwnd != consoleWindow && GetParent(msg.hwnd) == stWindow) {
@@ -1728,10 +1742,6 @@ ioDrainEventQueue(void)
   DumpBufferedMouseTrail();
 #endif
 
-  /* If we're running in a browser check if the browser's still there */
-  if(fBrowserMode && browserWindow) {
-    if(!IsWindow(browserWindow)) ioExit();
-  }
   lastMessage = NULL;
   return 1;
 }
@@ -1853,12 +1863,9 @@ sqInt ioScreenSize(void)
   static RECT r;
 
   if(!IsWindow(stWindow)) return getSavedWindowSize();
-  if(browserWindow && GetParent(stWindow) == browserWindow) {
-    GetClientRect(browserWindow,&r);
-  } else {
-    if(!IsIconic(stWindow))
-      GetClientRect(stWindow,&r);
-  }
+  if(!IsIconic(stWindow))
+    GetClientRect(stWindow,&r);
+
   /* width is high 16 bits; height is low 16 bits */
   return MAKELONG(r.bottom,r.right);
 }
@@ -1876,11 +1883,6 @@ sqInt ioScreenDepth(void) {
 
 sqInt ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt offsetX, sqInt offsetY)
 {
-#if !defined(_WIN32_WCE)
-	/****************************************************/
-	/* Only one cursor is defined under CE...           */
-	/* (the wait cursor)                         :-(    */
-	/****************************************************/
   static unsigned char *andMask=0,*xorMask=0;
   static int cx=0,cy=0,cursorSize=0;
   int i;
@@ -1939,7 +1941,7 @@ sqInt ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt of
     {
       printLastError(TEXT("CreateCursor failed"));
     }
-#endif /* !defined(_WIN32_WCE) */
+
   return 1;
 }
 
@@ -1947,7 +1949,7 @@ sqInt ioSetCursor(sqInt cursorBitsIndex, sqInt offsetX, sqInt offsetY) {
   return ioSetCursorWithMask(cursorBitsIndex, 0, offsetX, offsetY);
 }
 
-int ioSetCursorARGB(sqInt bitsIndex, sqInt w, sqInt h, sqInt x, sqInt y) {
+sqInt ioSetCursorARGB(sqInt bitsIndex, sqInt w, sqInt h, sqInt x, sqInt y) {
   ICONINFO info;
   HBITMAP hbmMask = NULL;
   HBITMAP hbmColor = NULL;
@@ -1995,44 +1997,18 @@ sqInt ioSetFullScreen(sqInt fullScreen) {
   }
   if(fullScreen)
     {
-#if !defined(_WIN32_WCE)
-      if(browserWindow) {
-	/* Jump out of the browser */
-	HWND oldBrowserWindow = browserWindow;
-	browserWindow = NULL;
-	DestroyWindow(stWindow);
-	SetupWindows();
-	/* I'm not exactly sure which one of the following three
-	   does the trick for IE - but using all three works,
-	   so hey, who cares ;-) */
-	SetForegroundWindow(stWindow);
-	SetActiveWindow(stWindow);
-	BringWindowToTop(stWindow);
-	/* SetWindowPos(stWindow, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW); */
-	browserWindow = oldBrowserWindow;
-      }
       SetWindowLongPtr(stWindow,GWL_STYLE, WS_POPUP | WS_CLIPCHILDREN);
       SetWindowLongPtr(stWindow,GWL_EXSTYLE, WS_EX_APPWINDOW);
       ShowWindow(stWindow, SW_SHOWMAXIMIZED);
-#else /* !defined(_WIN32_WCE) */
-      ShowWindow(stWindow,SW_SHOWNORMAL);
-#endif /* !defined(_WIN32_WCE) */
       setFullScreenFlag(1);
     }
   else
     {
-#if !defined(_WIN32_WCE)
       ShowWindow(stWindow, SW_RESTORE);
       ShowWindow(stWindow, SW_HIDE);
       SetWindowLongPtr(stWindow,GWL_STYLE, WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN);
       SetWindowLongPtr(stWindow,GWL_EXSTYLE, WS_EX_APPWINDOW /* | WS_EX_OVERLAPPEDWINDOW */ );
       SetWindowPos(stWindow,0,0,0,0,0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED | SWP_NOREDRAW);
-      if(browserWindow) {
-	/* Jump back into the browser */
-	DestroyWindow(stWindow);
-	SetupWindows();
-      }
-#endif /* !defined(_WIN32_WCE) */
       ShowWindow(stWindow,SW_SHOWNORMAL);
       setFullScreenFlag(0);
     }
@@ -2071,15 +2047,8 @@ int reverse_image_bytes(unsigned int* dst, unsigned int *src,
 {
   int pitch, first, last, nWords, delta, yy;
 
-  /* --- SPECIAL HACK FOR WINDOWS CE --- */
-#ifdef _WIN32_WCE
-  int reverseBits = 0;
-  if(depth == 1)
-    reverseBits = 1;
-#else
   /* compiler will optimize it away */
   static const int reverseBits = 0;
-#endif
 
   /* note: all  of the below are in DWORDs not BYTEs */
   pitch = ((width * depth) + 31) / 32;
@@ -2210,13 +2179,9 @@ sqInt ioHasDisplayDepth(sqInt depth) {
 
 sqInt ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenFlag)
 {
-#ifdef _WIN32_WCE
-  return 0; /* Not implemented on CE */
-#else
   RECT r;
 #ifdef USE_DIRECT_X
   static int wasFullscreen = 0;
-  static HWND oldBrowserWindow = NULL;
 #endif
 
   if(!IsWindow(stWindow)) return 0;
@@ -2231,27 +2196,11 @@ sqInt ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenF
     ioSetFullScreen(0); /* Turn off fullscreen */
     DirectXSetDisplayMode(stWindow, width, height, depth, 0);
     DestroyWindow(stWindow);
-    browserWindow = oldBrowserWindow;
     SetupWindows();
     ShowWindow(stWindow, SW_SHOWNORMAL);
   }
   wasFullscreen = fullscreenFlag;
-  if(fullscreenFlag && browserWindow) {
-    /* Must get out of browser window */
-    oldBrowserWindow = browserWindow;
-    browserWindow = NULL;
-    DestroyWindow(stWindow);
-    SetupWindows();
-    ShowWindow(stWindow, SW_SHOWNORMAL);
-  }
   if(!DirectXSetDisplayMode(stWindow, width, height, depth, fullscreenFlag)) {
-    /* We must carefully restore the old window here */
-    if(oldBrowserWindow) {
-      DestroyWindow(stWindow);
-      browserWindow = oldBrowserWindow;
-      SetupWindows();
-      ShowWindow(stWindow, SW_SHOWNORMAL);
-    }
     return 0;
   }
   /* Note: Only go to full screen if DirectX is used */
@@ -2262,17 +2211,11 @@ sqInt ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenF
   r.top = 0;
   r.right = width;
   r.bottom = height;
-  if(browserWindow) {
-    r.right = GetSystemMetrics(SM_CXSCREEN);
-    r.bottom = GetSystemMetrics(SM_CYSCREEN);
-  } else {
-    AdjustWindowRect(&r, GetWindowLongPtr(stWindow, GWL_STYLE), 0);
-  }
+  AdjustWindowRect(&r, GetWindowLongPtr(stWindow, GWL_STYLE), 0);
   SetWindowPos(stWindow, NULL, 0, 0, r.right-r.left, r.bottom-r.top,
 	       SWP_NOMOVE | SWP_NOZORDER);
   SetFocus(stWindow);
   return 1;
-#endif /* _WIN32_WCE */
 }
 
 /* force an update of the squeak window if using deferred updates */
@@ -2305,7 +2248,7 @@ sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth, double
 	   the given horizontal and vertical scales in the given orientation */
 {
 #ifdef NO_PRINTER
-  warnPrintf(TEXT("This VM does not support printing.\n"));
+  warnPrintf("This VM does not support printing.\n");
   return success(false);
 #else /* !defined(NO_PRINTER) */
   DEVMODE *dmPtr;
@@ -2322,7 +2265,7 @@ sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth, double
   devNames = GlobalLock(printValues.hDevNames);
   if(!devNames)
     {
-      warnPrintf(TEXT("No printer configured\n"));
+      warnPrintf("No printer configured\n");
       return false;
     }
   dmPtr = GlobalLock(printValues.hDevMode);
@@ -2341,14 +2284,14 @@ sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth, double
 
   if(!dc)
     {
-      warnPrintf(TEXT("Unable to open printer.\n"));
+      warnPrintf("Unable to open printer.\n");
       return false;
     }
 
   bmi = BmiForDepth(depth);
   if(!bmi)
     {
-      warnPrintf(TEXT("Color depth %") TEXT(PRIdSQINT) TEXT(" not supported"), depth);
+      warnPrintf("Color depth %" PRIdSQINT " not supported", depth);
       return false;
     }
 
@@ -2419,56 +2362,6 @@ sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth, double
 }
 
 
-#ifdef USE_DIB_SECTIONS
-
-/* CreateBitmapDC():
-   Create a device context for a DIB of the selected size.
-*/
-HDC CreateBitmapDC(HDC dc, int depth, int width, int height, void** pBitsOut)
-{
-  /* Cached DIBSection */
-  static HBITMAP hbm = NULL;
-  static int lastDepth = 0;
-  static int lastWidth = 0;
-  static int lastHeight = 0;
-  static void* pBits;
-  static HDC memDC;
-  BITMAPINFO *bmi;
-
-  bmi = BmiForDepth(depth);
-  if(!bmi)
-    abortMessage(TEXT("Fatal error: Color depth %d not supported"),depth);
-
-  if (depth != lastDepth || width != lastWidth || height != lastHeight)
-    {
-      lastDepth = depth;
-      lastHeight = height;
-      lastWidth = width;
-      bmi->bmiHeader.biWidth = width;
-      bmi->bmiHeader.biHeight = -height;
-      if (hbm)
-	DeleteObject(hbm);
-      hbm = CreateDIBSection(dc, bmi, DIB_RGB_COLORS, &pBits, NULL, 0);
-      if (!hbm)
-	abortMessage(TEXT("Fatal error: Cannot create device bitmap!"));
-    }
-
-  *pBitsOut = pBits;
-  memDC = CreateCompatibleDC(dc);
-  SelectObject(memDC, hbm);
-  return memDC;
-}
-
-/* ReleaseBitmapDC():
-   Clean up the given DC.
-*/
-void ReleaseBitmapDC(HDC memDC)
-{
-  DeleteDC(memDC);
-}
-
-#endif /* USE_DIB_SECTIONS */
-
 sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
 		  sqInt affectedL, sqInt affectedR, sqInt affectedT, sqInt affectedB)
 { HDC dc;
@@ -2537,53 +2430,6 @@ sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
   /* ----- EXPERIMENTAL ----- */
   lsbDisplay = depth < 0;
   if(lsbDisplay) depth = -depth;
-
-#if defined(USE_DIB_SECTIONS)
-	/******************************************************/
-	/* Windows CE version, using DIBSection               */
-	/* (does not support palettes or SetDIBitsToDevice()) */
-	/******************************************************/
-  {
-    void* pBits;
-    HDC memDC;
-
-    dc = GetDC(stWindow);
-    if (!dc)
-      error("GetDC() failed");
-
-    memDC = CreateBitmapDC(dc, depth, width, height, &pBits);
-    /* Reverse the affected area out of the squeak bitmap, into the DIBSection */
-
-    PROFILE_BEGIN(PROFILE_DISPLAY)
-      if( !lsbDisplay && depth < 32 ) {
-	if(depth == 16)
-	  reverse_image_words((unsigned int*) pBits, (unsigned int*) dispBits,
-			      depth, width, &updateRect);
-	else
-	  reverse_image_bytes((unsigned int*) pBits, (unsigned int*) dispBits,
-			      depth, width, &updateRect);
-      } else {
-	copy_image_words((int*)pBits, (int*) dispBits,
-			 depth, width, &updateRect);
-      }
-    PROFILE_END(ticksForReversal)
-
-      PROFILE_BEGIN(PROFILE_DISPLAY);
-    BitBlt(dc,
-	   updateRect.left,/* dst_x */
-	   updateRect.top, /* dst_y */
-	   (updateRect.right - updateRect.left),/* dst_w */
-	   (updateRect.bottom - updateRect.top),/* dst_h */
-	   memDC,
-	   updateRect.left, /* src_x */
-	   updateRect.top,  /* src_y */
-	   SRCCOPY);
-
-    ReleaseBitmapDC(memDC);
-    ReleaseDC(stWindow,dc);
-    PROFILE_END(ticksForBlitting);
-  }
-#else /* !defined(USE_DIB_SECTIONS) */
 
   bmi = BmiForDepth(depth);
   if(!bmi)
@@ -2673,7 +2519,7 @@ sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
 
   if(lines == 0) {
     printLastError(TEXT("SetDIBitsToDevice failed"));
-    warnPrintf(TEXT("width=%") TEXT(PRIdSQINT) TEXT(",height=%") TEXT(PRIdSQINT) TEXT(",bits=%") TEXT(PRIXSQINT) TEXT(",dc=%") TEXT(PRIXSQINT) TEXT("\n"),
+    warnPrintf("width=%" PRIdSQINT ",height=%" PRIdSQINT ",bits=%" PRIXSQINT ",dc=%" PRIXSQPTR "\n",
 	       width, height, dispBits,(usqIntptr_t)dc);
   }
   /* reverse the image bits if necessary */
@@ -2689,7 +2535,6 @@ sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
   }
   PROFILE_END(ticksForReversal)
 #endif /* NO_BYTE_REVERSAL */
-#endif /* defined(_WIN32_WCE) */
   return 1;
 }
 
@@ -2839,7 +2684,7 @@ sqInt clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex) {
 
 sqInt vmPathSize(void)
 {
-  return lstrlen(vmPath);
+  return strlen(vmPathA);
 }
 
 sqInt vmPathGetLength(sqInt sqVMPathIndex, sqInt length)
@@ -2847,12 +2692,12 @@ sqInt vmPathGetLength(sqInt sqVMPathIndex, sqInt length)
   char *stVMPath= (char *)sqVMPathIndex;
   int count, i;
 
-  count= lstrlen(vmPath);
+  count= strlen(vmPathA);
   count= (length < count) ? length : count;
 
   /* copy the file name into the Squeak string */
   for (i= 0; i < count; i++)
-    stVMPath[i]= (char) vmPath[i]; /* will remove leading zeros from unicode */
+    stVMPath[i]= vmPathA[i];
 
   return count;
 }
@@ -2885,7 +2730,7 @@ sqInt imageNameGetLength(sqInt sqImageNameIndex, sqInt length)
 sqInt imageNamePutLength(sqInt sqImageNameIndex, sqInt length)
 {
   char *sqImageName= (char *)sqImageNameIndex;
-  char tmpImageName[MAX_PATH+1];
+  char tmpImageName[IMAGE_NAME_SIZE +1];
   char *tmp;
   int count, i;
 
@@ -2917,6 +2762,7 @@ sqInt imageNamePutLength(sqInt sqImageNameIndex, sqInt length)
           strcat(imageName,tmpImageName);
         }
     }
+  MultiByteToWideChar(CP_UTF8, 0, imageName, -1, imageNameW, MAX_PATH);
   SetWindowTitle();
   return 1;
 }
@@ -2942,7 +2788,7 @@ char * GetAttributeString(sqInt id) {
 	   could be reported this way as well.
 	*/
   /* id == 0 : return the full name of the VM */
-  if(id == 0) return fromUnicode(vmName);
+  if(id == 0) return vmNameA;
   /* 0 < id <= 1000 : return options of the image (e.g. given *after* the image name) */
   if(id > 0 && id <= 1000)
     return GetImageOption(id-1);
@@ -3039,7 +2885,7 @@ int sqLaunchDrop(void) {
      Work around it for now. */
   static LPWSTR* (WINAPI *sqCommandLineToArgvW)(LPCWSTR,int*) = NULL;
   if(!sqCommandLineToArgvW) {
-    HANDLE hShell32 = LoadLibrary("shell32.dll");
+    HANDLE hShell32 = LoadLibraryA("shell32.dll");
     sqCommandLineToArgvW=(void*)GetProcAddress(hShell32, "CommandLineToArgvW");
     if(!sqCommandLineToArgvW) return 0;
   }
@@ -3076,101 +2922,35 @@ int isLocalFileName(TCHAR *fileName)
   return 1;
 }
 
-#if defined(_WIN32_WCE)
-	/* WinCE does not support short file names, and has
-	   no concept of a current directory. Space is at a
-	   premium, the file system is small, and we are unlikely
-	   to have a full sources file anyway (too big). All these
-	   factors means that we stick with a simpler scheme, of
-	   either requiring the image name to be fully pathed, or
-	   if not, popping up a file open dialog */
-
-void SetupFilesAndPath(){ 
-  char *tmp;
-  lstrcpy(imagePath, imageName);
-  tmp = lstrrchr(imagePath,'\\');
-  if(tmp) tmp[1] = 0;
-}
-
-#else /* defined(_WIN32_WCE) */
-
-void
-LongFileNameFromPossiblyShortName(TCHAR *nameBuffer)
-{ TCHAR oldDir[MAX_PATH+1];
-  TCHAR testName[13];
-  TCHAR nameBuf[MAX_PATH+1];
-  TCHAR *shortName;
-  WIN32_FIND_DATA findData;
-  HANDLE findHandle;
-
-  GetCurrentDirectory(MAX_PATH,oldDir);
-  shortName = lstrrchr(nameBuffer,U_BACKSLASH[0]);
-  if(!shortName) shortName = lstrrchr(nameBuffer,U_SLASH[0]);
-  if(!shortName) return;
-  /* if the file name is longer than 8.3
-     this can't be a short name */
-  *(shortName++) = 0;
-  if(lstrlen(shortName) > 12)
-    goto notFound;
-
-  /* back up the old and change to the given directory,
-     this makes searching easier */
-  lstrcpy(nameBuf, nameBuffer);
-  lstrcat(nameBuf,TEXT("\\"));
-  SetCurrentDirectory(nameBuf);
-
-  /* now search the directory */
-  findHandle = FindFirstFile(TEXT("*.*"),&findData);
-  if(findHandle == INVALID_HANDLE_VALUE) goto notFound; /* nothing found */
-  do {
-    if(lstrcmp(findData.cFileName,TEXT("..")) && lstrcmp(findData.cFileName,TEXT(".")))
-      lstrcpy(testName,findData.cAlternateFileName);
-    else
-      *testName = 0;
-    if(lstrcmp(testName,shortName) == 0) /* gotcha! */
-      {
-        FindClose(findHandle);
-        /* recurse down */
-        lstrcpy(nameBuf, findData.cFileName);
-        goto recurseDown;
-      }
-  } while(FindNextFile(findHandle,&findData) != 0);
-  /* nothing appropriate found */
-  FindClose(findHandle);
-notFound:
-  lstrcpy(nameBuf, shortName);
-recurseDown:
-  /* recurse down */
-  LongFileNameFromPossiblyShortName(nameBuffer);
-  lstrcat(nameBuffer,TEXT("\\"));
-  lstrcat(nameBuffer,nameBuf);
-  SetCurrentDirectory(oldDir);
-}
-
 void SetupFilesAndPath() {
   char *tmp;
-  WCHAR tmpName[MAX_PATH];
-  WCHAR imageNameW[MAX_PATH];
+  WCHAR *wtmp;
+  WCHAR tmpName[MAX_PATH+1];
 
   /* get the full path for the image */
-  MultiByteToWideChar(CP_UTF8, 0, imageName, -1, tmpName, MAX_PATH);
+  MultiByteToWideChar(CP_UTF8, 0, imageName , -1, tmpName, MAX_PATH);
   GetFullPathNameW(tmpName, MAX_PATH, imageNameW, NULL);
 
   /* and copy back to a UTF-8 string */
-  WideCharToMultiByte(CP_UTF8, 0, imageNameW,-1,imageName,MAX_PATH,NULL,NULL);
+  WideCharToMultiByte(CP_UTF8, 0, imageNameW,-1,imageName ,MAX_PATH_UTF8,NULL,NULL);
 
   /* get the VM directory */
-  lstrcpy(vmPath, vmName);
-  tmp = lstrrchr(vmPath,U_BACKSLASH[0]);
+  strcpy(vmPathA, vmNameA);
+  wcscpy(vmPathW, vmNameW);
+  tmp  = strrchr(vmPathA, '\\');
+  wtmp = wcsrchr(vmPathW, W_BACKSLASH[0]);
   if(tmp) *tmp = 0;
-  lstrcat(vmPath,U_BACKSLASH);
+  if (wtmp) *wtmp = 0;
+  strcat(vmPathA,"\\");
+  wcscat(vmPathW, W_BACKSLASH);
 
-  lstrcpy(imagePath, imageName);
-  tmp = lstrrchr(imagePath,U_BACKSLASH[0]);
+  strcpy(imagePathA, imageName );
+  wcscpy(imagePathW, imageNameW);
+  tmp  = strrchr(imagePathA,'\\');
+  wtmp = wcsrchr(imagePathW, W_BACKSLASH[0]);
   if(tmp) tmp[1] = 0;
+  if (wtmp) wtmp[1] = 0;
 }
-
-#endif /* !defined(_WIN32_WCE) */
 
 /* SqueakImageLength():
    Return the length of the image if it is a valid Squeak image file.
@@ -3195,16 +2975,14 @@ DWORD SqueakImageLengthFromHandle(HANDLE hFile) {
   return 0;
 }
 
-DWORD SqueakImageLength(char *fileName) {
+DWORD SqueakImageLength(WCHAR *fileName) {
   DWORD dwSize;
-  WCHAR wideName[MAX_PATH];
   HANDLE hFile;
 
   /* open image file */
-  MultiByteToWideChar(CP_UTF8, 0, fileName, -1, wideName, MAX_PATH);
-  hFile = CreateFileW(wideName, GENERIC_READ, FILE_SHARE_READ,
+  hFile = CreateFileW(fileName, GENERIC_READ, FILE_SHARE_READ,
 		      NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-  if(hFile == INVALID_HANDLE_VALUE) return 0;
+  if (hFile == INVALID_HANDLE_VALUE) return 0;
   dwSize = SqueakImageLengthFromHandle(hFile);
   CloseHandle(hFile);
   return dwSize;
@@ -3228,8 +3006,9 @@ int findImageFile(void) {
   nextFound = FindNextFileW(findHandle,&findData);
   FindClose(findHandle);
   if(nextFound) return 0; /* more than one entry */
-  WideCharToMultiByte(CP_UTF8, 0, findData.cFileName, -1, 
-		      imageName, MAX_PATH, NULL, NULL);
+  wcsncpy(imageNameW,findData.cFileName,MAX_PATH);
+  WideCharToMultiByte(CP_UTF8, 0, imageNameW, -1,
+		      imageName, MAX_PATH_UTF8, NULL, NULL);
   return 1;
 }
 
@@ -3255,7 +3034,8 @@ int openImageFile(void) {
   ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
   ofn.lpstrDefExt = L"image";
   if (!GetOpenFileNameW(&ofn)) return 0;
-  WideCharToMultiByte(CP_UTF8, 0, path, -1, 
+  wcsncpy(imageNameW,path,  MAX_PATH);
+  WideCharToMultiByte(CP_UTF8, 0, imageNameW, -1, 
 		      imageName, MAX_PATH, NULL, NULL);
   return 1;
 }
@@ -3302,21 +3082,21 @@ static LRESULT CALLBACK SplashWndProcA(HWND hwnd,
 
 void ShowSplashScreen(void) {
   WNDCLASS wc;
-  char splashFile[1024];
-  char splashTitle[1024];
+  TCHAR splashFile[1024];
+  TCHAR splashTitle[1024];
   BITMAP bm;
   RECT wa, rSplash;
 
   /* Look if we have a splash file somewhere */
-  GetPrivateProfileString("Global", "SplashScreen", "Splash.bmp", 
+  GetPrivateProfileString(TEXT("Global"), TEXT("SplashScreen"), TEXT("Splash.bmp"), 
 			  splashFile, 1024, squeakIniName);
 
   /* Also get the title for the splash window */
-  GetPrivateProfileString("Global", "SplashTitle", VM_NAME"!",
+  GetPrivateProfileString(TEXT("Global"), TEXT("SplashTitle"), TEXT(VM_NAME) TEXT("!"),
 			  splashTitle, 1024, squeakIniName);
 
   /* Look for the mimimum splash time to use */
-  splashTime = GetPrivateProfileInt("Global", "SplashTime", 
+  splashTime = GetPrivateProfileInt(TEXT("Global"), TEXT("SplashTime"), 
 				    1000, squeakIniName);
 
   if(!splashFile[0]) return; /* no splash file */
@@ -3327,7 +3107,7 @@ void ShowSplashScreen(void) {
   if(!hSplashDIB) {
     /* ignore the common case but print failures for the others */
     if(GetLastError() != ERROR_FILE_NOT_FOUND)
-      printLastError("LoadImage failed");
+      printLastError(TEXT("LoadImage failed"));
     return;
   }
   GetObject(hSplashDIB, sizeof(bm), &bm);
@@ -3385,62 +3165,62 @@ void HideSplashScreen(void) {
 }
 
 /****************************************************************************/
-/*                      Usage of Squeak                                     */
+/*                      Usage of Open Smalltalk VM                          */
 /****************************************************************************/
 
-#ifdef PharoVM
-# define VMOPTION(arg) "--"arg
-#else
 # define VMOPTION(arg) "-"arg
-#endif
+# define TVMOPTION(arg) TEXT("-") TEXT(arg)
 
 /* print usage with different output levels */
 int printUsage(int level)
 {
   switch(level) {
     case 0: /* No command line given */
-      abortMessage(TEXT("Usage: ") TEXT(VM_NAME) TEXT(" [options] <imageFile>"));
+      abortMessage(TEXT("Usage: ") TEXT(VM_NAME) TEXT(" [options] <imageFile>\n"));
       break;
     case 1: /* full usage */
-      abortMessage(TEXT("%s"),
+      abortMessage(TEXT("%s\n"),
                    TEXT("Usage: ") TEXT(VM_NAME) TEXT(" [vmOptions] imageFile [imageOptions]\n\n")
                    TEXT("vmOptions:")
-		   /* TEXT("\n\t-service: ServiceName \t(install Squeak as NT service)") */
-                   TEXT("\n\t") TEXT(VMOPTION("headless")) TEXT(" \t\t(force Squeak to run headless)")
-                   TEXT("\n\t") TEXT(VMOPTION("timephases")) TEXT(" (print start load and run times)")
-                   TEXT("\n\t") TEXT(VMOPTION("log:")) TEXT(" LogFile \t\t(use LogFile for VM messages)")
-                   TEXT("\n\t") TEXT(VMOPTION("memory:")) TEXT(" megaByte \t(set memory to megaByte MB)")
+                   TEXT("\n\t") TVMOPTION("service:") TEXT(" ServiceName \t(install VM as NT service)")
+                   TEXT("\n\t") TVMOPTION("headless") TEXT(" \t\t(force VM to run headless)")
+                   TEXT("\n\t") TVMOPTION("timephases") TEXT(" \t\t(print start load and run times)")
+                   TEXT("\n\t") TVMOPTION("log:") TEXT(" LogFile \t\t(use LogFile for VM messages)")
+                   TEXT("\n\t") TVMOPTION("memory:") TEXT(" megaByte \t(set memory to megaByte MB)")
 #if STACKVM || NewspeakVM
-                   TEXT("\n\t") TEXT(VMOPTION("breaksel:")) TEXT(" string \t(call warning on send of sel for debug)")
+                   TEXT("\n\t") TVMOPTION("breaksel:") TEXT(" string \t(call warning on send of sel for debug)")
 #endif /* STACKVM || NewspeakVM */
 #if STACKVM
-                   TEXT("\n\t") TEXT(VMOPTION("breakmnu:")) TEXT(" string \t(call warning on MNU of sel for debug)")
-                   TEXT("\n\t") TEXT(VMOPTION("leakcheck:")) TEXT(" n \t(leak check on GC (1=full,2=incr,3=both))")
-                   TEXT("\n\t") TEXT(VMOPTION("eden:")) TEXT(" bytes \t(set eden memory size to bytes)")
-				   TEXT("\n\t") TEXT(VMOPTION("stackpages:")) TEXT(" n \t(use n stack pages)")
-                   TEXT("\n\t") TEXT(VMOPTION("numextsems:")) TEXT(" n \t(allow up to n external semaphores)")
-                   TEXT("\n\t") TEXT(VMOPTION("checkpluginwrites")) TEXT(" \t(check for writes past end of object in plugins")
-                   TEXT("\n\t") TEXT(VMOPTION("noheartbeat")) TEXT(" \t(no heartbeat for debug)")
+                   TEXT("\n\t") TVMOPTION("failonffiexception") TEXT("\t(when in an FFI callout primitive catch exceptions and fail the primitive)")
+                   TEXT("\n\t") TVMOPTION("breakmnu:") TEXT(" string \t(call warning on MNU of sel for debug)")
+                   TEXT("\n\t") TVMOPTION("leakcheck:") TEXT(" n \t\t(leak check on GC (1=full,2=incr,3=both))")
+                   TEXT("\n\t") TVMOPTION("eden:") TEXT(" bytes \t\t(set eden memory size to bytes)")
+                   TEXT("\n\t") TVMOPTION("stackpages:") TEXT(" n \t\t(use n stack pages)")
+                   TEXT("\n\t") TVMOPTION("numextsems:") TEXT(" n \t\t(allow up to n external semaphores)")
+                   TEXT("\n\t") TVMOPTION("noheartbeat") TEXT(" \t\t(no heartbeat for debug)")
 #endif /* STACKVM */
 #if STACKVM || NewspeakVM
 # if COGVM
-					TEXT("\n\t") TEXT(VMOPTION("trace")) TEXT("[=num]\tenable tracing (optionally to a specific value)\n")
+                   TEXT("\n\t") TVMOPTION("trace") TEXT("[=num]\t\tenable tracing (optionally to a specific value)")
 # else
-                   TEXT("\n\t") TEXT(VMOPTION("sendtrace")) TEXT(" \t(trace sends to stdout for debug)")
+                   TEXT("\n\t") TVMOPTION("sendtrace") TEXT(" \t\t(trace sends to stdout for debug)")
 # endif
-                   TEXT("\n\t") TEXT(VMOPTION("warnpid")) TEXT("   \t(print pid in warnings)")
+                   TEXT("\n\t") TVMOPTION("warnpid") TEXT("   \t\t(print pid in warnings)")
+                   TEXT("\n\t") TVMOPTION("[no]failonffiexception") TEXT("   \t\t([never]always catch exceptions in FFI calls)")
 #endif
 #if COGVM
-                   TEXT("\n\t") TEXT(VMOPTION("codesize:")) TEXT(" bytes \t(set machine-code memory size to bytes)")
-                   TEXT("\n\t") TEXT(VMOPTION("cogmaxlits:")) TEXT(" n \t(set max number of literals for methods to be compiled to machine code)")
-                   TEXT("\n\t") TEXT(VMOPTION("cogminjumps:")) TEXT(" n \t(set min number of backward jumps for interpreted methods to be considered for compilation to machine code)")
-                   TEXT("\n\t") TEXT(VMOPTION("tracestores")) TEXT(" \t(assert-check stores for debug)")
-                   TEXT("\n\t") TEXT(VMOPTION("reportheadroom")) TEXT("\t(report unused stack headroom on exit)")
-                   TEXT("\n\t") TEXT(VMOPTION("dpcso:")) TEXT(" bytes \t(stack offset for prim calls for debug)")
+                   TEXT("\n\t") TVMOPTION("codesize:") TEXT(" bytes \t(set machine-code memory size to bytes)")
+                   TEXT("\n\t") TVMOPTION("cogmaxlits:") TEXT(" n \t\t(set max number of literals for methods to be compiled to machine code)")
+                   TEXT("\n\t") TVMOPTION("cogminjumps:") TEXT(" n \t(set min number of backward jumps for interpreted methods to be considered for compilation to machine code)")
+                   TEXT("\n\t") TVMOPTION("tracestores") TEXT(" \t\t(assert-check stores for debug)")
+                   TEXT("\n\t") TVMOPTION("reportheadroom") TEXT(" \t(report unused stack headroom on exit)")
 #endif /* COGVM */
 #if SPURVM
-                   TEXT("\n\t") TEXT(VMOPTION("maxoldspace:")) TEXT(" bytes \t(set max size of old space memory to bytes)")
+                   TEXT("\n\t") TVMOPTION("maxoldspace:") TEXT(" bytes \t(set max size of old space memory to bytes)")
+                   TEXT("\n\t") TVMOPTION("logscavenge") TEXT(" \t\t(log scavenging to scavenge.log)")
 #endif
+                   TEXT("\n") TEXT("Options begin with single -, but -- prefix is silently accepted")
+                   TEXT("\n") TEXT("Options with arguments -opt:n are also accepted with separators -opt n")
                    );
       break;
     case 2: /* No image found */
@@ -3450,8 +3230,7 @@ int printUsage(int level)
         TEXT("There are several ways to open an image file. You can:\n")
         TEXT("  1. Double-click on the desired image file.\n")
         TEXT("  2. Drop the image file onto the application.\n")
-        TEXT("Aborting...\n"), toUnicode(imageName));
+        TEXT("Aborting...\n"), imageNameT);
   }
   return -1;
 }
-

@@ -52,7 +52,6 @@
 //
 
 #ifdef macintoshSqueak
-//#define SQUEAK_BUILTIN_PLUGIN
 #define ENABLE_URL_FETCH
 /* replace the image file manipulation macros with functions */
 
@@ -128,10 +127,6 @@ int plugInNotifyUser(char *msg);
 sqInt ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt extentY, sqInt offsetX, sqInt offsetY);
 
 #if COGVM
-extern void sqMakeMemoryExecutableFromTo(unsigned long, unsigned long);
-extern void sqMakeMemoryNotExecutableFromTo(unsigned long, unsigned long);
-
-extern int isCFramePointerInUse(void);
 extern int osCogStackPageHeadroom(void);
 extern void reportMinimumUnusedHeadroom(void);
 #endif
@@ -181,7 +176,7 @@ extern const pthread_key_t tltiIndex;
 
 #if !defined(VM_LABEL) || COGVM
 # undef VM_LABEL
-# define VM_LABEL(foo) 0
+# define VM_LABEL(foo) ((void)0)
 #endif
 
 #endif /* macintoshSqueak */

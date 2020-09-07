@@ -1,7 +1,7 @@
 # -*- sh -*-
 
-AC_ARG_WITH(quartz,
-[  --without-quartz        disable MacOSX Window System support [default=enabled]],
+AC_ARG_WITH([quartz],
+  AS_HELP_STRING([--without-quartz], [disable MacOSX Window System support (default=enabled)]),
   [have_quartz="$withval"],
   [have_quartz="yes"])
 

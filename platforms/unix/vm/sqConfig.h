@@ -33,3 +33,12 @@
 #if defined( __clang__)
 # define NeverInline __attribute__ ((noinline))
 #endif
+
+/* Make the gcc/clang asm keyword available, even when running
+ * in standard C mode.
+ */
+#if __GNUC__ >= 9
+# define asm __asm
+#else
+# define asm __asm__
+#endif

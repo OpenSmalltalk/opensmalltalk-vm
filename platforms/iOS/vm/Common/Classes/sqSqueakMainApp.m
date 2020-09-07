@@ -46,12 +46,13 @@ such third-party acknowledgments.
 #import "sq.h"
 #import "sqSqueakMainApp.h"
 #import <limits.h>
+#import "include_ucontext.h"
 #import "sqPlatformSpecific.h"
 
 #if STACKVM || COGVM
-#import "sqSCCSVersion.h"
+# import "sqSCCSVersion.h"
 #else
-#import "sqMacV2Memory.h"
+# import "sqMacV2Memory.h"
 #endif
 
 #if !defined(NOEXECINFO)
@@ -173,24 +174,8 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 		 * set to the native stack & frame pointers.
 		 */
 			extern void ifValidWriteBackStackPointersSaveTo(void*,void*,char**,char**);
-#	if __i386__
-	/* see sys/ucontext.h; two different namings */
-#	  if __GNUC__ && !__INTEL_COMPILER /* icc pretends to be gcc */
-			void *fp = (void *)(uap ? uap->uc_mcontext->__ss.__ebp: 0);
-			void *sp = (void *)(uap ? uap->uc_mcontext->__ss.__esp: 0);
-#	  else
-			void *fp = (void *)(uap ? uap->uc_mcontext->ss.ebp: 0);
-			void *sp = (void *)(uap ? uap->uc_mcontext->ss.esp: 0);
-#	  endif
-#	elif __x86_64__
-			void *fp = (void *)(uap ? uap->uc_mcontext->__ss.__rbp: 0);
-			void *sp = (void *)(uap ? uap->uc_mcontext->__ss.__rsp: 0);
-#	elif __linux__ && __i386__
-			void *fp = (void *)(uap ? uap->uc_mcontext.gregs[REG_EBP]: 0);
-			void *sp = (void *)(uap ? uap->uc_mcontext.gregs[REG_ESP]: 0);
-#	else
-#	  error need to implement extracting pc from a ucontext_t on this system
-#	endif
+			void *fp = (void *)(uap ? uap->_FP_IN_UCONTEXT : 0);
+			void *sp = (void *)(uap ? uap->_SP_IN_UCONTEXT : 0);
 			char *savedSP, *savedFP;
 
 			ifValidWriteBackStackPointersSaveTo(fp,sp,&savedFP,&savedSP);
@@ -250,13 +235,13 @@ printRegisterState(ucontext_t *uap)
 	return (void *)(regs->eip);
 #elif __x86_64__
 	_STRUCT_X86_THREAD_STATE64 *regs = &uap->uc_mcontext->__ss;
-	printf(	"\trax 0x%016lx rbx 0x%016lx rcx 0x%016lx rdx 0x%016lx\n"
-			"\trdi 0x%016lx rsi 0x%016lx rbp 0x%016lx rsp 0x%016lx\n"
-			"\tr8  0x%016lx r9  0x%016lx r10 0x%016lx r11 0x%016lx\n"
-			"\tr12 0x%016lx r13 0x%016lx r14 0x%016lx r15 0x%016lx\n"
-			"\trip 0x%016lx\n",
+	printf(	"\trax 0x%016llx rbx 0x%016llx rcx 0x%016llx rdx 0x%016llx\n"
+			"\trdi 0x%016llx rsi 0x%016llx rbp 0x%016llx rsp 0x%016llx\n"
+			"\tr8  0x%016llx r9  0x%016llx r10 0x%016llx r11 0x%016llx\n"
+			"\tr12 0x%016llx r13 0x%016llx r14 0x%016llx r15 0x%016llx\n"
+			"\trip 0x%016llx\n",
 			regs->__rax, regs->__rbx, regs->__rcx, regs->__rdx,
-			regs->__rdi, regs->__rdi, regs->__rbp, regs->__rsp,
+			regs->__rdi, regs->__rsi, regs->__rbp, regs->__rsp,
 			regs->__r8 , regs->__r9 , regs->__r10, regs->__r11,
 			regs->__r12, regs->__r13, regs->__r14, regs->__r15,
 			regs->__rip);
@@ -334,6 +319,8 @@ sigsegv(int sig, siginfo_t *info, void *uap)
 							: "Unknown signal"));
 
 	if (!inFault) {
+		extern sqInt primitiveFailForFFIExceptionat(usqLong exceptionCode, usqInt pc);
+		primitiveFailForFFIExceptionat(sig, ((ucontext_t *)uap)->_PC_IN_UCONTEXT);
 		inFault = 1;
 		getCrashDumpFilenameInto(crashdump);
 		ctime_r(&now,ctimebuf);
@@ -416,28 +403,20 @@ sqInt reportStackHeadroom;
  * Support code for Cog.
  * a) Answer whether the C frame pointer is in use, for capture of the C stack
  *    pointers.
+ * b) answer the amount of stack room to ensure in a Cog stack page, including
+ *    the size of the redzone, if any.
  */
 
-/*
- * Cog has already captured CStackPointer before calling this routine.  Record
- * the original value, capture the pointers again and see if CFramePointer
- * lies between the two stack pointers and hence is likely in use.  This is
- * necessary since optimizing C compilers for x86, x64 et al may use the frame
- * pointer register (%ebp, %rbp et al) as a general-purpose register, in which
- * case it must not be captured.  Assumes stacks descend.
- */
 int
-isCFramePointerInUse()
+isCFramePointerInUse(usqIntptr_t *cFrmPtrPtr, usqIntptr_t *cStkPtrPtr)
 {
-	extern unsigned long CStackPointer, CFramePointer;
 	extern void (*ceCaptureCStackPointers)(void);
-	unsigned long currentCSP = CStackPointer;
+	usqIntptr_t currentCSP = *cStkPtrPtr;
 
 	ceCaptureCStackPointers();
-	assert(CStackPointer < currentCSP);
-	return CFramePointer >= CStackPointer && CFramePointer <= currentCSP;
+	assert(*cStkPtrPtr < currentCSP);
+	return *cFrmPtrPtr >= *cStkPtrPtr && *cFrmPtrPtr <= currentCSP;
 }
-
 
 /* Answer an approximation of the size of the redzone (if any).  Do so by
  * sending a signal to the process and computing the difference between the

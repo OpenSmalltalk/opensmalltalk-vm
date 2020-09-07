@@ -32,5 +32,5 @@
 
 int mpeg3audio_dolayer1(mpeg3audio_t *audio)
 {
-	;
+	return 0;
 }

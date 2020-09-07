@@ -2,6 +2,8 @@
 #define CROQUET_PLUGIN_H
 /* CroquetPlugin.h include file */
 
+#include "sqMemoryAccess.h"
+
 /* Include MD5 code for primitives */
 #include "md5.h"
 
@@ -18,7 +20,7 @@
    Return value:
      Non-zero if successful, zero otherwise.
 */
-int ioGatherEntropy(char *bufPtr, int bufSize);
+sqInt ioGatherEntropy(char *bufPtr, sqInt bufSize);
 
 /* Imported from tribox.c */
 int triBoxOverlap(float minCorner[3],float maxCorner[3],

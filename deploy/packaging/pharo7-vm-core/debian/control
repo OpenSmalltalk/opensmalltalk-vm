@@ -1,0 +1,61 @@
+Source: pharo7-vm-core
+Maintainer: Norbert Hartl <norbert@hartl.name>
+Section: interpreters
+Priority: optional
+Standards-Version: 3.9.5
+Homepage: http://www.pharo.org
+Build-Depends: debhelper (>= 7.0.50~), libssl-dev, libfreetype6-dev, libsm-dev, libice-dev, libasound2-dev, cmake, mesa-common-dev, libgl1-mesa-dev, libpulse-dev, libmpeg3-dev, libsdl2-dev
+Build-Conflicts: libroar-dev
+
+Package: pharo7-ui-common
+Architecture: all
+Depends: ${misc:Depends}
+Multi-Arch: foreign
+Description: Common UI files for Pharo 32bit and 64bit VMs
+ .
+
+Package: pharo7-32
+Architecture: i386
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Multi-Arch: foreign
+Description: Clean and innovative Smalltalk-inspired environment.
+ Pharo's goal is to deliver a clean, innovative, free open-source
+ Smalltalk-inspired environment. By providing a stable and small core
+ system, excellent dev tools, and maintained releases, Pharo is an
+ attractive platform to build and deploy mission critical applications.
+ .
+
+Package: pharo7-32-ui
+Architecture: i386
+Depends: pharo7-ui-common, pharo7-32, ${shlibs:Depends}, ${misc:Depends}
+Multi-Arch: foreign
+Description: Clean and innovative Smalltalk-inspired environment.
+ Pharo's goal is to deliver a clean, innovative, free open-source
+ Smalltalk-inspired environment. By providing a stable and small core
+ system, excellent dev tools, and maintained releases, Pharo is an
+ attractive platform to build and deploy mission critical applications.
+ .
+ Installs the 32bit pharo7 VM with GUI support.
+
+Package: pharo7-64
+Architecture: amd64
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Multi-Arch: foreign
+Description: Clean and innovative Smalltalk-inspired environment.
+ Pharo's goal is to deliver a clean, innovative, free open-source
+ Smalltalk-inspired environment. By providing a stable and small core
+ system, excellent dev tools, and maintained releases, Pharo is an
+ attractive platform to build and deploy mission critical applications.
+ .
+
+Package: pharo7-64-ui
+Architecture: amd64
+Depends: pharo7-ui-common, pharo7-64, ${shlibs:Depends}, ${misc:Depends}
+Multi-Arch: foreign
+Description: Clean and innovative Smalltalk-inspired environment.
+ Pharo's goal is to deliver a clean, innovative, free open-source
+ Smalltalk-inspired environment. By providing a stable and small core
+ system, excellent dev tools, and maintained releases, Pharo is an
+ attractive platform to build and deploy mission critical applications.
+ .
+ Installs the 32bit pharo7 VM with GUI support.

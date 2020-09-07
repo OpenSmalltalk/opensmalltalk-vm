@@ -163,22 +163,33 @@ ioHighResClock(void)
 {
   /* return the value of the high performance counter */
   sqLong value = 0;
-#if defined(__GNUC__) && ( defined(i386) || defined(__i386) || defined(__i386__)  \
-			|| defined(i486) || defined(__i486) || defined (__i486__) \
-			|| defined(intel) || defined(x86) || defined(i86pc) )
+
+#if defined(__GNUC__) && (defined(i386) || defined(__i386) || defined(__i386__))
     __asm__ __volatile__ ("rdtsc" : "=A"(value));
+#elif defined(__GNUC__) && (defined(x86_64) || defined(__x86_64) || defined (__x86_64__))
+    __asm__ __volatile__ ("rdtsc\n\t"			// Returns the time in EDX:EAX.
+						"shl $32, %%rdx\n\t"	// Shift the upper bits left.
+						"or %%rdx, %0"			// 'Or' in the lower bits.
+						: "=a" (value)
+						: 
+						: "rdx");
+#elif defined(__ARM_ARCH_ISA_A64) || defined(__arm64__) || defined(__aarch64__) || defined(ARM64)
+    __asm__ __volatile__ ("MRS  X0, CNTVCT_EL0");
 #elif defined(__arm__) && (defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7A__))
 	/* tpr - do nothing for now; needs input from eliot to decide further */
+	/* Tim, not sure I have input beyond:
+		Is there a 64-bit clock on ARM?  If so, access it here :-)
+	 */
 #else
 # error "no high res clock defined"
 #endif
   return value;
 }
 
-unsigned volatile long long
+unsigned long long
 ioUTCMicroseconds() { return get64(utcMicrosecondClock); }
 
-unsigned volatile long long
+unsigned long long
 ioLocalMicroseconds() { return get64(localMicrosecondClock); }
 
 sqInt
@@ -187,13 +198,13 @@ ioLocalSecondsOffset() { return vmGMTOffset / MicrosecondsPerSecond; }
 /* This is an expensive interface for use by Smalltalk or vm profiling code that
  * wants the time now rather than as of the last heartbeat.
  */
-unsigned volatile long long
+unsigned long long
 ioUTCMicrosecondsNow() { return currentUTCMicroseconds(); }
 
 unsigned long long
 ioUTCStartMicroseconds() { return utcStartMicroseconds; }
 
-unsigned volatile long long
+unsigned long long
 ioLocalMicrosecondsNow() { return currentUTCMicroseconds() + vmGMTOffset; };
 
 /* ioMSecs answers the millisecondClock as of the last tick. */
@@ -222,9 +233,9 @@ ioUTCSecondsNow(void) { return currentUTCMicroseconds() / MicrosecondsPerSecond;
  */
 #if macintoshSqueak
 sqInt
-ioRelinquishProcessorForMicroseconds(int microSeconds)
+ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 {
-    long	realTimeToWait;
+    usqLong	realTimeToWait;
 	extern usqLong getNextWakeupUsecs();
 	usqLong nextWakeupUsecs = getNextWakeupUsecs();
 	usqLong utcNow = get64(utcMicrosecondClock);
@@ -459,19 +470,6 @@ heartbeat_handler(int sig, struct siginfo *sig_info, void *context)
 #endif
 }
 
-/* Especially useful on linux when LD_BIND_NOW is not in effect and the
- * dynamic linker happens to run in a signal handler.
- */
-#define NEED_SIGALTSTACK 1
-#if NEED_SIGALTSTACK
-/* If the ticker is run from the heartbeat signal handler one needs to use an
- * alternative stack to avoid overflowing the VM's stack pages.  Keep
- * the structure around for reference during debugging.
- */
-# define SIGNAL_STACK_SIZE (1024 * sizeof(void *) * 16)
-static stack_t signal_stack;
-#endif /* NEED_SIGALTSTACK */
-
 static void
 setIntervalTimer(long milliseconds)
 {
@@ -497,22 +495,6 @@ extern sqInt suppressHeartbeatFlag;
 
 	if (suppressHeartbeatFlag) return;
 
-#if NEED_SIGALTSTACK
-# define max(x,y) (((x)>(y))?(x):(y))
-	if (!signal_stack.ss_size) {
-		signal_stack.ss_flags = 0;
-		signal_stack.ss_size = max(SIGNAL_STACK_SIZE,MINSIGSTKSZ);
-		if (!(signal_stack.ss_sp = malloc(signal_stack.ss_size))) {
-			perror("ioInitHeartbeat malloc");
-			exit(1);
-		}
-		if (sigaltstack(&signal_stack, 0) < 0) {
-			perror("ioInitHeartbeat sigaltstack");
-			exit(1);
-		}
-	}
-#endif /* NEED_SIGALTSTACK */
-
 	halfAMo.tv_sec  = 0;
 	halfAMo.tv_nsec = 1000 * 100;
 	if ((er= pthread_create(&tickerThread,
@@ -531,11 +513,7 @@ extern sqInt suppressHeartbeatFlag;
 	 * during the heartbeat. We /must/ include SA_RESTART to avoid issues with
      * e.g. ODBC connections.
 	 */
-#if NEED_SIGALTSTACK
 	ticker_handler_action.sa_flags = SA_RESTART | SA_ONSTACK;
-#else
-	ticker_handler_action.sa_flags = SA_RESTART;
-#endif
 	sigemptyset(&ticker_handler_action.sa_mask);
 	if (sigaction(TICKER_SIGNAL, &ticker_handler_action, 0)) {
 		perror("ioInitHeartbeat sigaction");
@@ -547,11 +525,7 @@ extern sqInt suppressHeartbeatFlag;
 	 * during the heartbeat.  We *must* include SA_RESTART to avoid breaking
 	 * lots of external code (e.g. the mysql odbc connect).
 	 */
-#if NEED_SIGALTSTACK
 	heartbeat_handler_action.sa_flags = SA_RESTART | SA_ONSTACK;
-#else
-	heartbeat_handler_action.sa_flags = SA_RESTART;
-#endif
 	sigemptyset(&heartbeat_handler_action.sa_mask);
 	if (sigaction(ITIMER_SIGNAL, &heartbeat_handler_action, 0)) {
 		perror("ioInitHeartbeat sigaction");

@@ -50,4 +50,7 @@ export LDFLAGS
 echo cp config.h bochsconfig.h
 cp config.h bochsconfig.h
 
-echo "and don't forget to run ../../processors/IA32/bochs/makeem"
+rm -f THIS_IS_A_*
+echo >THIS_IS_A_FAST_CONFIG
+
+echo "and don't forget to run ./makeem"

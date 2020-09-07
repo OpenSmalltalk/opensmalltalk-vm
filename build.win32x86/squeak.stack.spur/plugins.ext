@@ -1,7 +1,12 @@
 # Copied, perhaps edited, from ../../src/examplePlugins.ext
-# N.B. SqueakSSL is not ready for prime time.  Compiles but does not link fully.
-# See platforms/win32/plugins/SqueakSSL/Makefile
 EXTERNAL_PLUGINS = \
+B3DAcceleratorPlugin \
+FileAttributesPlugin \
+Squeak3D \
 SqueakFFIPrims \
+SqueakSSL \
 UUIDPlugin \
-Win32OSProcessPlugin
+Win32OSProcessPlugin \
+DESPlugin \
+MD5Plugin \
+SHA2Plugin \

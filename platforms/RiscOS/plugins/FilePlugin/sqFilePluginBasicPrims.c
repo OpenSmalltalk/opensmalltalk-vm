@@ -403,8 +403,23 @@ int extent;
 	return true;
 }
 
+/*
+ * Fill-in files with handles for stdin, stdout and seterr as available and
+ * answer a bit-mask of the availability:
+ *
+ * <0 - Error.  The value will be returned to the image using primitiveFailForOSError().
+ * 0  - no stdio available
+ * 1  - stdin available
+ * 2  - stdout available
+ * 4  - stderr available
+ */
 sqInt sqFileStdioHandlesInto(SQFile files[3]) {
 	return 0;
+}
+
+sqInt sqFileDescriptorType(int fdNum) {
+	//Not implemented
+	return -1;
 }
 
 size_t sqFileReadIntoAt(SQFile *f, size_t count, char* byteArrayIndex, size_t startIndex) {

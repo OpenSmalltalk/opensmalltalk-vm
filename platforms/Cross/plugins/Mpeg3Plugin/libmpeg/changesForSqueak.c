@@ -36,6 +36,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "mpeg3private.h"
+#include "mpeg3protos.h"
 #include "changesForSqueak.h"
 
 #if defined(TARGET_OS_MAC) && !defined ( __APPLE__ ) && !defined ( __MACH__ )
@@ -94,9 +95,12 @@ void memoryFree(void *stuff) {
 #endif
 
 #ifdef NEEDSTRFUNCS
+#ifndef _MSC_VER
 void perror(const char * string) {
 
 }
+#endif
+
 int			strncasecmp(const char *str1, const char *str2, size_t nchars);
 int			strcasecmp (const char *str1, const char *str2);
 

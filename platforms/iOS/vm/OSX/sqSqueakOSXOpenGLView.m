@@ -40,6 +40,8 @@
  such third-party acknowledgments.
  */
 //
+
+#ifdef USE_OPENGL
 #import <QuartzCore/QuartzCore.h>
 
 #import "sqSqueakOSXOpenGLView.h"
@@ -154,16 +156,17 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 + (NSOpenGLPixelFormat *)defaultPixelFormat {
 	NSOpenGLPixelFormatAttribute attrs[] =
     {
-		NSOpenGLPFAAccelerated,
+		// NSOpenGLPFAOpenGLProfile,
+		// 	NSAppKitVersionNumber < NSAppKitVersionNumber10_9 ? NSOpenGLProfileVersionLegacy : NSOpenGLProfileVersion3_2Core,
 		NSOpenGLPFANoRecovery,
 		NSOpenGLPFABackingStore,
 		NSOpenGLPFADoubleBuffer,
 		NSOpenGLPFAAllowOfflineRenderers, // Enables automatic graphics card switching
-		NSOpenGLPFADepthSize, 0,
-		NSOpenGLPFAStencilSize, 0,
+		NSOpenGLPFADepthSize, (NSOpenGLPixelFormatAttribute)0,
+		NSOpenGLPFAStencilSize, (NSOpenGLPixelFormatAttribute)0,
 		0
-    };
-    return AUTORELEASEOBJ([[NSOpenGLPixelFormat alloc] initWithAttributes:attrs]);
+	};
+	return AUTORELEASEOBJ([[NSOpenGLPixelFormat alloc] initWithAttributes:attrs]);
 }
 
 #pragma mark Initialization / Release
@@ -327,7 +330,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	if(openglInitialized)
 		return;
 	openglInitialized = YES;
-
+	
 //	CGL_MACRO_DECLARE_VARIABLES();
 // Enable the multithreading
     //NSLog(@"setupOpenGL runs");
@@ -338,12 +341,21 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	
 	CGLContextObj ctx = [[self openGLContext] CGLContextObj];
 	CGLEnable( ctx, kCGLCEMPEngine);
+	// from gl3.h
+#ifndef GL_MAJOR_VERSION
+#define GL_MAJOR_VERSION 0x821B
+#endif
+	GLint maj = 0;
+	glGetIntegerv(GL_MAJOR_VERSION, &maj);
+	if (maj > 3) {
+		hasVertexArrayObject = YES;
+	} else {
+		const char* oldExtensions = (const char*)glGetString(GL_EXTENSIONS);
+		hasVertexArrayObject = oldExtensions && (strstr(oldExtensions, "GL_APPLE_vertex_array_object") != NULL);
+	}
 	
-	const char *extensions = (const char*)glGetString(GL_EXTENSIONS);
-	hasVertexArrayObject = strstr(extensions, "GL_APPLE_vertex_array_object") != NULL;
-	
-	//printf("Opengl version: %s\n", glGetString(GL_VERSION));
-	//printf("Opengl extensions: %s\n", glGetString(GL_EXTENSIONS));
+	// printf("Opengl version: %s\n", glGetString(GL_VERSION));
+	// printf("Opengl extensions: %s\n", glGetString(GL_EXTENSIONS));
 	
 	[self buildGPUPrograms];
 	[self buildScreenQuad];
@@ -391,8 +403,13 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	// This should never fail.
 	glGetShaderiv(handle, GL_COMPILE_STATUS, &status);
 	if(status != GL_TRUE) {
-		fprintf(stderr, "Failed to compile shader with source: %s\n", shaderSource);
-		abort();
+		GLint logSize = 0;
+		glGetShaderiv(handle, GL_INFO_LOG_LENGTH, &logSize);
+		char errorLog[logSize];
+		glGetShaderInfoLog(handle, logSize, &logSize, &errorLog[0]);
+		
+		fprintf(stderr, "Failed to compile shader with source: \n%s\nError: %s", shaderSource, errorLog);
+		return NULL;
 	}
 	
 	return handle;
@@ -417,8 +434,13 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	// This should never fail.
 	glGetProgramiv(program, GL_LINK_STATUS, &status);
 	if(status != GL_TRUE) {
-		fprintf(stderr, "Failed to link the screen quad shader.\n");
-		abort();
+		GLint logSize = 0;
+		glGetProgramiv(program, GL_INFO_LOG_LENGTH, &logSize);
+		char errorLog[logSize];
+		glGetProgramInfoLog(program, logSize, &logSize, &errorLog[0]);
+		fprintf(stderr, "Failed to link the screen quad shader.\nError: %s", errorLog);
+
+		return NULL;
 	}
 	
 	// Bind the screen texture to the first texture binding point.
@@ -545,7 +567,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 
 -(void)drawRect:(NSRect)rect flush:(BOOL)flush
 {
-    if (self.fullScreenInProgress) {
+    if (self.fullScreenInProgress && openglInitialized) {
         if (self.fullScreendispBitsIndex == displayBits) {
             [self clearScreen];
             //NSLog(@"drawRect but fullScreenInProgress %f %f %f %f",rect.origin.x,rect.origin.y,rect.size.width,rect.size.height);
@@ -704,6 +726,10 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordMouseEvent: theEvent fromView: self];
 }
 
+- (void)scrollWheel:(NSEvent *)theEvent {
+	[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordWheelEvent: theEvent fromView: self];
+}
+
 - (void)mouseUp:(NSEvent *)theEvent {
 	[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordMouseEvent: theEvent fromView: self];
 }
@@ -727,9 +753,6 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordMouseEvent: theEvent fromView: self];
 }
 
-- (void)scrollWheel:(NSEvent *)theEvent {
-	[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordWheelEvent: theEvent fromView: self];
-}
 #pragma mark Events - Keyboard
 
 
@@ -774,7 +797,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 
 	NSArray *down = @[theEvent];
 	@synchronized(self) {
-		lastSeenKeyBoardStrokeDetails = aKeyBoardStrokeDetails;
+		self.lastSeenKeyBoardStrokeDetails = aKeyBoardStrokeDetails;
 		[self interpretKeyEvents: down];
 		self.lastSeenKeyBoardStrokeDetails = NULL;
 	}
@@ -901,7 +924,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 		keyBoardStrokeDetails *aKeyBoardStrokeDetails = AUTORELEASEOBJ([[keyBoardStrokeDetails alloc] init]);
 		aKeyBoardStrokeDetails.keyCode = keyCode;
 		aKeyBoardStrokeDetails.modifierFlags = self.lastSeenKeyBoardModifierDetails.modifierFlags;
-		lastSeenKeyBoardStrokeDetails = aKeyBoardStrokeDetails;
+		self.lastSeenKeyBoardStrokeDetails = aKeyBoardStrokeDetails;
 
 		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordCharEvent: unicodeString fromView: self];
 		self.lastSeenKeyBoardStrokeDetails = NULL;
@@ -925,7 +948,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
         keyBoardStrokeDetails *aKeyBoardStrokeDetails = AUTORELEASEOBJ([[keyBoardStrokeDetails alloc] init]);
         aKeyBoardStrokeDetails.keyCode = [theEvent keyCode];
         aKeyBoardStrokeDetails.modifierFlags = [theEvent modifierFlags];
-        lastSeenKeyBoardStrokeDetails = aKeyBoardStrokeDetails;
+        self.lastSeenKeyBoardStrokeDetails = aKeyBoardStrokeDetails;
 
         [(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordCharEvent: unicodeString fromView: self];
         self.lastSeenKeyBoardStrokeDetails = NULL;
@@ -1113,32 +1136,14 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	}
 }
 
-- (void)  ioSetFullScreen: (sqInt) fullScreen {
-
-	if ([self isInFullScreenMode] == YES && (fullScreen == 1))
-		return;
-	if ([self isInFullScreenMode] == NO && (fullScreen == 0))
-		return;
-
-	if ([self isInFullScreenMode] == NO && (fullScreen == 1)) {
-       self.fullScreenInProgress = YES;
-		NSDictionary* options = [NSDictionary dictionaryWithObjectsAndKeys:
-			[NSNumber numberWithBool:NO],
-			NSFullScreenModeAllScreens,
-			[NSNumber numberWithInt:
-				NSApplicationPresentationHideDock |
-				NSApplicationPresentationHideMenuBar ],
-			NSFullScreenModeApplicationPresentationOptions, nil];
-		[self enterFullScreenMode:[NSScreen mainScreen] withOptions:options];
+- (void) ioSetFullScreen: (sqInt) fullScreen {
+	if ((self.window.styleMask & NSFullScreenWindowMask) != (fullScreen == 1)) {
+		self.fullScreenInProgress = YES;
+        [self.window toggleFullScreen: nil];
 	}
+}
 
-	if ([self isInFullScreenMode] == YES && (fullScreen == 0)) {
-        self.fullScreenInProgress = YES;
-		[self exitFullScreenModeWithOptions: NULL];
-		if ([self.window isKeyWindow] == NO) {
-			[self.window makeKeyAndOrderFront: self];
-		}
-	}
+- (void) preDrawThelayers {
 }
 
 @end

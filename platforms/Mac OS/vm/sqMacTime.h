@@ -16,4 +16,4 @@
 
 void SetUpTimers(void);
 time_t convertToSqueakTime(time_t unixTime);
-time_t convertToSqueakTime(time_t unixTime);
+sqLong convertToLongSqueakTime(time_t unixTime);

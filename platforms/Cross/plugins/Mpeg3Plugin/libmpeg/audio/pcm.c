@@ -32,6 +32,7 @@
  */
 
 #include "mpeg3audio.h"
+#include "mpeg3protos.h"
 #include "mpeg3private.inc"
 
 int mpeg3audio_read_pcm_header(mpeg3audio_t *audio)

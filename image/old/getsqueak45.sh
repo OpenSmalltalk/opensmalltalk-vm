@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 . ./envvars.sh
 
 IMAGEHASH=1d0d4320224b741da1f56c6871963702

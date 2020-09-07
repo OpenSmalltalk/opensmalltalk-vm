@@ -241,7 +241,7 @@ static MIDIHDR *midiHeaderList = NULL;
 
 
 #ifndef NDEBUG
-#define DBGPRINTF warnPrintf
+#define DBGPRINTF warnPrintfT
 #else
 #define DBGPRINTF
 #endif
@@ -364,7 +364,7 @@ static void CALLBACK midiInCallback(HMIDIIN  hMidiIn,UINT  uMsg, DWORD_PTR  dwUs
     { /* Cache controller values in the driver */
       switch(cmd) {
         case ControlCmd: /* Read a control command */
-          channel = (dwParam1 >> 8) & 0xFF;
+          channel = (dwParam1 >> 8) & 0x7F;
           value =  (dwParam1 >> 16) & 0xFF;
           port->cache.sqControllers[channel] = value;
           return;
@@ -375,7 +375,7 @@ static void CALLBACK midiInCallback(HMIDIIN  hMidiIn,UINT  uMsg, DWORD_PTR  dwUs
           port->cache.sqPitchBend[channel] = (value2 << 7) + value;
           return;
         case PolyPressCmd: /* Read polyphonic key pressure */
-          channel = (dwParam1 >> 8) & 0xFF;
+          channel = (dwParam1 >> 8) & 0x7F;
           value =  (dwParam1 >> 16) & 0xFF;
           port->cache.sqKeyPressures[channel] = value;
           return;
@@ -470,7 +470,7 @@ int scheduleShortMessage(sqMidiPort *port, DWORD data, DWORD stamp)
   if(WaitForSingleObject(port->outBufferMutex, 5000) == WAIT_TIMEOUT)
     {
 #ifndef NO_WARNINGS
-      warnPrintf(TEXT("MIDI: Output busy for more than 5 seconds.\n"));
+      warnPrintfT(TEXT("MIDI: Output busy for more than 5 seconds.\n"));
 #endif
       return 0;
     }
@@ -605,7 +605,7 @@ int finishSysExCommand(sqMidiPort *port, char *bufferPtr, int count)
 /* Return the port with the given number or NULL */
 static sqMidiPort* GetPort(int portNum)
 {
-  if(portNum > MAX_DEVICES || portNum < 0)
+  if(portNum >= MAX_DEVICES || portNum < 0)
     {
       success(false);
       return NULL;
@@ -783,7 +783,7 @@ int sqMIDIOpenPort(int portNum, int readSemaIndex, int interfaceClockRate) {
 #ifndef NO_WARNINGS
           TCHAR errorText[256];
           midiOutGetErrorText(err,errorText,255);
-          warnPrintf(TEXT("Failed to open MIDI output device %s:\n%s\n"),
+          warnPrintfT(TEXT("Failed to open MIDI output device %s:\n%s\n"),
                   caps.szPname, errorText);
 #endif
           FreePort(portNum);
@@ -813,7 +813,7 @@ int sqMIDIOpenPort(int portNum, int readSemaIndex, int interfaceClockRate) {
 #ifndef NO_WARNINGS
           TCHAR errorText[256];
           midiInGetErrorText(err,errorText,255);
-          warnPrintf(TEXT("Failed to open MIDI input device %s:\n%s\n"),
+          warnPrintfT(TEXT("Failed to open MIDI input device %s:\n%s\n"),
                   caps.szPname, errorText);
 #endif
           FreePort(portNum);

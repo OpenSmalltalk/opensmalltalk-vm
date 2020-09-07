@@ -120,6 +120,10 @@ static sqInputEvent *allocateInputEvent(int eventType)
   (sqKeyboardEvent *)allocateInputEvent(EventTypeKeyboard) \
 )
 
+#define allocateMouseWheelEvent() ( \
+  (sqKeyboardEvent *)allocateInputEvent(EventTypeMouseWheel) \
+)
+
 #define allocateDragEvent() ( \
   (sqDragDropFilesEvent *)allocateInputEvent(EventTypeDragDropFiles) \
 )
@@ -137,16 +141,7 @@ static sqInt getButtonState(void)
    */
   int buttons= buttonState;
   int modifiers= modifierState;
-  if ((buttons == RedButtonBit) && modifiers)
-    {
-      int yellow= swapBtn ? BlueButtonBit   : YellowButtonBit;
-      int blue=   swapBtn ? YellowButtonBit : BlueButtonBit;
-      switch (modifiers)
-	{
-	case CtrlKeyBit:    buttons= yellow; modifiers &= ~CtrlKeyBit;    break;
-	case CommandKeyBit: buttons= blue;   modifiers &= ~CommandKeyBit; break;
-	}
-    }
+
 #if DEBUG_MOUSE_EVENTS
   printf("BUTTONS (getButtonState)");
   printModifiers(modifiers);
@@ -182,6 +177,24 @@ static void recordMouseEvent(void)
   printf("EVENT (recordMouseEvent): time: %d  mouse (%d,%d)", evt->timeStamp, mousePosition.x, mousePosition.y);
   printModifiers(state >> 3);
   printButtons(state & 7);
+  printf("\n");
+#endif
+}
+
+static void recordMouseWheelEvent(int dx, int dy)
+{
+  int state= getButtonState();
+  sqMouseEvent *evt= allocateMouseWheelEvent();
+  evt->x= dx;
+  evt->y= dy;
+  evt->buttons= (state & 0x7);
+  evt->modifiers= (state >> 3);
+  evt->nrClicks=
+    evt->windowIndex= 0;
+  signalInputEvent();
+#if DEBUG_MOUSE_EVENTS
+  printf("EVENT (recordMouseWheelEvent): time: %d  mouse dx %d dy %d", evt->timeStamp, dx, dy);
+  printButtons(evt->buttons);
   printf("\n");
 #endif
 }

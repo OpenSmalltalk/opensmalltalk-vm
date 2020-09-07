@@ -32,6 +32,8 @@
 #include "mpeg3demux.h"
 #include "mpeg3private.h"
 #include "mpeg3video.h"
+#include "mpeg3videoprotos.h"
+#include "mpeg3protos.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -92,7 +94,7 @@ int mpeg3video_getseqhdr(mpeg3video_t *video)
 
 /* decode sequence extension */
 
-int mpeg3video_sequence_extension(mpeg3video_t *video)
+void mpeg3video_sequence_extension(mpeg3video_t *video)
 {
 	int prof_lev;
 	int horizontal_size_extension, vertical_size_extension;
@@ -120,7 +122,7 @@ int mpeg3video_sequence_extension(mpeg3video_t *video)
 
 /* decode sequence display extension */
 
-int mpeg3video_sequence_display_extension(mpeg3video_t *video)
+void mpeg3video_sequence_display_extension(mpeg3video_t *video)
 {
 	int colour_primaries = 0, transfer_characteristics = 0;
 	int display_horizontal_size, display_vertical_size;
@@ -143,7 +145,7 @@ int mpeg3video_sequence_display_extension(mpeg3video_t *video)
 
 /* decode quant matrix entension */
 
-int mpeg3video_quant_matrix_extension(mpeg3video_t *video)
+void mpeg3video_quant_matrix_extension(mpeg3video_t *video)
 {
 	int i;
 	int load_intra_quantiser_matrix, load_non_intra_quantiser_matrix;
@@ -187,7 +189,7 @@ int mpeg3video_quant_matrix_extension(mpeg3video_t *video)
 
 /* decode sequence scalable extension */
 
-int mpeg3video_sequence_scalable_extension(mpeg3video_t *video)
+void mpeg3video_sequence_scalable_extension(mpeg3video_t *video)
 {
 	int layer_id;
 
@@ -212,7 +214,7 @@ int mpeg3video_sequence_scalable_extension(mpeg3video_t *video)
 
 /* decode picture display extension */
 
-int mpeg3video_picture_display_extension(mpeg3video_t *video)
+void mpeg3video_picture_display_extension(mpeg3video_t *video)
 {
 	int n, i;
 	short frame_centre_horizontal_offset[3];
@@ -235,7 +237,7 @@ int mpeg3video_picture_display_extension(mpeg3video_t *video)
 
 /* decode picture coding extension */
 
-int mpeg3video_picture_coding_extension(mpeg3video_t *video)
+void mpeg3video_picture_coding_extension(mpeg3video_t *video)
 {
 	int chroma_420_type, composite_display_flag;
 	int v_axis = 0, field_sequence = 0, sub_carrier = 0, burst_amplitude = 0, sub_carrier_phase = 0;
@@ -297,7 +299,7 @@ int mpeg3video_picture_coding_extension(mpeg3video_t *video)
 
 /* decode picture spatial scalable extension */
 
-int mpeg3video_picture_spatial_scalable_extension(mpeg3video_t *video)
+void mpeg3video_picture_spatial_scalable_extension(mpeg3video_t *video)
 {
 	video->pict_scal = 1; /* use spatial scalability in this picture */
 
@@ -320,7 +322,7 @@ int mpeg3video_picture_spatial_scalable_extension(mpeg3video_t *video)
  *
  */
 
-int mpeg3video_picture_temporal_scalable_extension(mpeg3video_t *video)
+void mpeg3video_picture_temporal_scalable_extension(mpeg3video_t *video)
 {
   	fprintf(stderr, "mpeg3video_picture_temporal_scalable_extension: temporal scalability not supported\n");
 }
@@ -328,7 +330,7 @@ int mpeg3video_picture_temporal_scalable_extension(mpeg3video_t *video)
 
 /* decode extension and user data */
 
-int mpeg3video_ext_user_data(mpeg3video_t *video)
+void mpeg3video_ext_user_data(mpeg3video_t *video)
 {
   	int code = mpeg3bits_next_startcode(video->vstream);
 

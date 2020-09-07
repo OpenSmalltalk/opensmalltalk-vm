@@ -193,7 +193,7 @@ int asyncFileClose(AsyncFile *f) {
   SetEvent(state->hEvent);
   WaitForSingleObject(state->hThread, 5000);
   if(state->hThread) {
-    warnPrintf(TEXT("Terminating async thread"));
+    warnPrintf("Terminating async thread");
     TerminateThread(state->hThread,0);
   }
   CloseHandle(state->hEvent);

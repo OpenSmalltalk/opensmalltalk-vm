@@ -8,7 +8,7 @@
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
 *
 *****************************************************************************/
-#include <windows.h>
+#include <Windows.h>
 #include "sq.h"
 
 #if !defined(NO_VIRTUAL_MEMORY) && !SPURVM /* Spur uses sqWin32SpurAlloc.c */
@@ -76,7 +76,7 @@ void *sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
   } while(!pageBase);
   if(!pageBase) {
     sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Error:"),
-		 "Unable to allocate memory (%d bytes requested)",
+		 TEXT("Unable to allocate memory (%d bytes requested)"),
 		 maxReserved);
     return pageBase;
   }
@@ -84,7 +84,7 @@ void *sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
   commit = nowReserved;
   if(!VirtualAlloc(pageBase, commit, MEM_COMMIT, PAGE_READWRITE)) {
     sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Error:"),
-		 "Unable to commit memory (%d bytes requested)",
+		 TEXT("Unable to commit memory (%d bytes requested)"),
 		 commit);
     return NULL;
   }
@@ -176,7 +176,9 @@ int sqMemoryExtraBytesLeft(int includingSwap) {
 
 # if COGVM
 void
-sqMakeMemoryExecutableFromTo(usqIntptr_t startAddr, usqIntptr_t endAddr)
+sqMakeMemoryExecutableFromToCodeToDataDelta(usqInt startAddr,
+											usqInt endAddr,
+											sqInt *codeToDataDelta)
 {
 	DWORD previous;
 
@@ -185,10 +187,12 @@ sqMakeMemoryExecutableFromTo(usqIntptr_t startAddr, usqIntptr_t endAddr)
 						PAGE_EXECUTE_READWRITE,
 						&previous))
 		perror("VirtualProtect(x,y,PAGE_EXECUTE_READWRITE)");
+	if (codeToDataDelta)
+		*codeToDataDelta = 0;
 }
 
 void
-sqMakeMemoryNotExecutableFromTo(usqIntptr_t startAddr, usqIntptr_t endAddr)
+sqMakeMemoryNotExecutableFromTo(usqInt startAddr, usqInt endAddr)
 {
 	DWORD previous;
 

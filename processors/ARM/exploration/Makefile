@@ -1,20 +1,23 @@
 LIBDEPS=../cpu/libcpu.a
-GDBARM=../../../processors/ARM/gdb-7.10
+GDBARM=../../../processors/ARM/gdb-8.3.1
 GDBARMEXP=.
 INCLUDES := -I$(GDBARM)/include \
 			-I$(GDBARM)/sim/arm \
 			-I$(GDBARM)/bfd \
 			-I../bfd
-LIBS:=-L../bfd -L../libiberty -L../opcodes -L../sim/arm -L../zlib \
+LIBS:=-L../bfd -L../libiberty -L../opcodes -L../sim/arm \
            -lbfd -liberty -lopcodes -lopcodes -lsim -lz
 CFLAGS=-m32 -DMODET $(INCLUDES) $(LIBS)
 
 .PHONY:	$(LIBDEPS)
 
-all: GdbARMAlien-regs.st GdbARMAlien-vfp.st
+all: GdbARMAlien-regs.st GdbARMAlien-ctrl.st GdbARMAlien-vfp.st
 
 GdbARMAlien-regs.st: printcpu
 	./printcpu >GdbARMAlien-regs.st
+
+GdbARMAlien-ctrl.st: printcpuctrl
+	./printcpuctrl >GdbARMAlien-ctrl.st
 
 GdbARMAlien-vfp.st: printcpuvfp
 	./printcpuvfp >GdbARMAlien-vfp.st
@@ -25,6 +28,9 @@ clean:
 	rm -f printcpu.exe printcpuvfp.exe
 
 printcpu: $(GDBARMEXP)/printcpu.c $(LIBDEPS)
+	$(CC) -o $@ $< $(CFLAGS)
+
+printcpuctrl: $(GDBARMEXP)/printcpuctrl.c $(LIBDEPS)
 	$(CC) -o $@ $< $(CFLAGS)
 
 printcpuvfp: $(GDBARMEXP)/printcpuvfp.c $(LIBDEPS)

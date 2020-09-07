@@ -17,40 +17,6 @@
 
 #include "b3dTypes.h"
 
-/************************ Allocator definitions ************************/
-#define B3D_EDGE_ALLOC_MAGIC 0x45443341
-typedef struct B3DEdgeAllocList {
-	int magic;
-	void *This;
-	int max; /* Note: size is ALWAYS less than max */
-	int size;
- 	int nFree;
-	B3DPrimitiveEdge *firstFree; /* pointer to the first free edge (< max) */
-	B3DPrimitiveEdge data[1];
-} B3DEdgeAllocList;
-
-#define B3D_FACE_ALLOC_MAGIC 0x46443341
-typedef struct B3DFaceAllocList {
-	int magic;
-	void *This;
-	int max; /* Note: size is ALWAYS less than max */
-	int size;
-	int nFree;
-	B3DPrimitiveFace *firstFree; /* pointer to the first free face (< max) */
-	B3DPrimitiveFace data[1];
-} B3DFaceAllocList;
-
-#define B3D_ATTR_ALLOC_MAGIC  0x41443341
-typedef struct B3DAttrAllocList {
-	int magic;
-	void *This;
-	int max; /* Note: size is ALWAYS less than max */
-	int size;
-	int nFree;
-	B3DPrimitiveAttribute *firstFree; /* pointer to the first free attribute (< max) */
-	B3DPrimitiveAttribute data[1];
-} B3DAttrAllocList;
-
 /* The mapping from face flags to the number of attributes needed */
 extern int B3D_ATTRIBUTE_SIZES[B3D_MAX_ATTRIBUTES];
 #define B3D_FACE_ATTRIB_SIZE(face) (B3D_ATTRIBUTE_SIZES[(face->flags >> B3D_ATTR_SHIFT) & B3D_ATTR_MASK])
@@ -75,6 +41,7 @@ void dbg_b3dFreeAttrib(B3DAttrAllocList *list, B3DPrimitiveFace *face);
 
 #define b3dAlloc(list,object) \
 {\
+	assert(list->size <= list->max); \
 	if(list->firstFree) { \
 		object = list->firstFree; \
 		list->firstFree = object->nextFree; \
@@ -105,6 +72,7 @@ void dbg_b3dFreeAttrib(B3DAttrAllocList *list, B3DPrimitiveFace *face);
 
 #define b3dAllocSingleAttr(list,object) \
 {\
+	assert(list->size <= list->max); \
 	if(list->firstFree) { \
 		object = list->firstFree; \
 		list->firstFree = object->next; \

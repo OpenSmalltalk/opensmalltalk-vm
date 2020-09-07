@@ -1,1 +1,0 @@
-XLDFLAGS=	-lcrypto -lssl

@@ -11,6 +11,8 @@ DropPlugin \
 DSAPrims \
 FFTPlugin \
 FilePlugin \
+FileAttributesPlugin \
+Float64ArrayPlugin \
 FloatArrayPlugin \
 FloatMathPlugin \
 HostWindowPlugin \

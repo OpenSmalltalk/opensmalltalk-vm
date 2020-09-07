@@ -42,10 +42,6 @@ extern sqInt sqGrowMemoryBy(sqInt oldLimit, sqInt delta);
 extern sqInt sqShrinkMemoryBy(sqInt oldLimit, sqInt delta);
 extern sqInt sqMemoryExtraBytesLeft(sqInt includingSwap);
 #if COGVM
-extern void sqMakeMemoryExecutableFromTo(unsigned long, unsigned long);
-extern void sqMakeMemoryNotExecutableFromTo(unsigned long, unsigned long);
-
-extern int isCFramePointerInUse(void);
 extern int osCogStackPageHeadroom(void);
 extern void reportMinimumUnusedHeadroom(void);
 #endif
@@ -129,5 +125,5 @@ extern void sqFilenameFromString(char *uxName, sqInt stNameIndex, int sqNameLeng
 
 #if !defined(VM_LABEL) || COGVM
 # undef VM_LABEL
-# define VM_LABEL(foo) 0
+# define VM_LABEL(foo) ((void)0)
 #endif

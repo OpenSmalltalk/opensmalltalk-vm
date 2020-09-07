@@ -1,3 +1,4 @@
+/* vim: set ts=8 : */
 /* sqUnixX11.c -- support for display via the X Window System.
  * 
  *   Copyright (C) 1996-2008 by Ian Piumarta and other authors/contributors
@@ -61,6 +62,7 @@
 #include "sqaio.h"
 
 #undef HAVE_OPENGL_GL_H		/* don't include Quartz OpenGL if configured */
+#define REALIZE_OPENGL_H 1
 #include "SqDisplay.h"
 
 #if defined(ENABLE_FAST_BLT)
@@ -160,11 +162,7 @@
 # define xResName	"squeak"
 #endif
 
-#ifdef PharoVM
-# define VMOPTION(arg) "--"arg
-#else
 # define VMOPTION(arg) "-"arg
-#endif
 
 char		*displayName= 0;	/* name of display, or 0 for $DISPLAY */
 Display		*stDisplay= null;	/* Squeak display */
@@ -463,78 +461,6 @@ void   browserProcessCommand(void);       /* see sqUnixMozilla.c */
 
 
 static inline int min(int x, int y) { return (x < y) ? x : y; }
-
-
-#if 0
-
-/* Conversion table from X to Squeak (reversible) */
-
-static unsigned char X_to_Squeak[256] =
-{
-  0,   1,   2,   3,   4,   5,   6,   7,       /*   0 -   7 */
-  8,   9,   13,  11,  12,  10,  14,  15,      /*   8 -  15 */
-  16,  17,  18,  19,  20,  21,  22,  23,      /*  16 -  23 */
-  24,  25,  26,  27,  28,  29,  30,  31,      /*  24 -  31 */
-  32,  33,  34,  35,  36,  37,  38,  39,      /*  32 -  39 */
-  40,  41,  42,  43,  44,  45,  46,  47,      /*  40 -  47 */
-  48,  49,  50,  51,  52,  53,  54,  55,      /*  48 -  55 */
-  56,  57,  58,  59,  60,  61,  62,  63,      /*  56 -  63 */
-  64,  65,  66,  67,  68,  69,  70,  71,      /*  64 -  71 */
-  72,  73,  74,  75,  76,  77,  78,  79,      /*  72 -  79 */
-  80,  81,  82,  83,  84,  85,  86,  87,      /*  80 -  87 */
-  88,  89,  90,  91,  92,  93,  94,  95,      /*  88 -  95 */
-  96,  97,  98,  99, 100, 101, 102, 103,      /*  96 - 103 */
-  104, 105, 106, 107, 108, 109, 110, 111,     /* 104 - 111 */
-  112, 113, 114, 115, 116, 117, 118, 119,     /* 112 - 119 */
-  120, 121, 122, 123, 124, 125, 126, 127,     /* 120 - 127 */
-  196, 197, 165, 201, 209, 247, 220, 225,     /* 128 - 135 */
-  224, 226, 228, 227, 198, 176, 170, 248,     /* 136 - 143 */
-  213, 206, 195, 207, 211, 212, 210, 219,     /* 144 - 151 */
-  218, 221, 246, 245, 250, 249, 251, 252,     /* 152 - 159 */
-  160, 193, 162, 163, 223, 180, 182, 164,     /* 160 - 167 */
-  172, 169, 187, 199, 194, 173, 168, 255,     /* 168 - 175 */
-  161, 177, 178, 179, 171, 181, 166, 183,     /* 176 - 183 */
-  184, 185, 188, 200, 186, 189, 202, 192,     /* 184 - 191 */
-  203, 231, 229, 204, 128, 129, 174, 130,     /* 192 - 199 */
-  233, 131, 230, 232, 237, 234, 235, 236,     /* 200 - 207 */
-  208, 132, 241, 238, 239, 205, 133, 215,     /* 208 - 215 */
-  175, 244, 242, 243, 134, 217, 222, 167,     /* 216 - 223 */
-  136, 135, 137, 139, 138, 140, 190, 141,     /* 224 - 231 */
-  143, 142, 144, 145, 147, 146, 148, 149,     /* 232 - 239 */
-  240, 150, 152, 151, 153, 155, 154, 214,     /* 240 - 247 */
-  191, 157, 156, 158, 159, 253, 254, 216,     /* 248 - 255 */
-};
-
-unsigned char Squeak_to_X[256];
-
-void initCharmap(void)
-{
-  int i;
-  for(i= 0; i < 256; i++)
-    Squeak_to_X[X_to_Squeak[i]]= i;
-}
-
-void st2ux(unsigned char *string)
-{
-  if (!string) return;
-  while (*string)
-    {
-     *string= Squeak_to_X[*string];
-      string++;
-    }
-}
-
-void ux2st(unsigned char *string)
-{
-  if (!string) return;
-  while (*string)
-    {
-      *string= X_to_Squeak[*string];
-      string++;
-    }
-}
-
-#endif
 
 /*** X-related Functions ***/
 
@@ -1265,7 +1191,7 @@ static Atom stringToAtom(char *target, size_t size)
 {
   char *formatString;
   Atom  result;
- 
+
   formatString= (char *) malloc(size + 1);
   memcpy(formatString, target, size);
   formatString[size]= 0;
@@ -1311,7 +1237,7 @@ static sqInt display_clipboardSize(void)
 
 static sqInt display_clipboardWriteFromAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex)
 {
-  display_clipboardWriteWithType(pointerForOop(byteArrayIndex + startIndex), count, NULL, 0, 0, 1);
+  display_clipboardWriteWithType(pointerForOop(byteArrayIndex + startIndex), count, "", 0, 0, 1);
   return 0;
 }
 
@@ -1359,25 +1285,6 @@ static void getMousePosition(void)
     }
 }
 
-
-int recode(int charCode)
-{
-  if (charCode >= 128)
-    {
-      unsigned char buf[32];
-      unsigned char out[32];
-      buf[0]= charCode;
-      if (convertChars((char *)buf, 1, uxXWinEncoding,
-		       (char *)out, sizeof(out),
-		       sqTextEncoding, 0, 1))
-	charCode= out[0];
-#    if DEBUG_KEYBOARD_EVENTS
-      fprintf(stderr, "  8-bit: %d=%02x [%c->%c]\n", charCode, charCode,
-	      (char *)uxXWinEncoding, (char *)sqTextEncoding);
-#    endif
-    }
-  return charCode;
-}
 
 char *setLocale(char *localeName, size_t len)
 {
@@ -1868,7 +1775,7 @@ static int x2sqKeyInput(XKeyEvent *xevt, KeySym *symbolic)
 	DCONV_FPRINTF(stderr, "x2sqKey XLookupChars count %d\n", count);
       case XLookupBoth:
 	DCONV_FPRINTF(stderr, "x2sqKey XLookupBoth count %d\n", count);
-	lastKey= (count ? recode(string[0]) : -1);
+	lastKey= (count ? string[0] : -1);
 	DCONV_FPRINTF(stderr, "x2sqKey == %d\n", lastKey);
 	return lastKey;
 
@@ -1973,7 +1880,7 @@ static int x2sqKeyCompositionInput(XKeyEvent *xevt, KeySym *symbolic)
 	else if (inputCount == 1)
 	  {
 	    inputCount= 0;
-	    return lastKey= recode(inputBuf[0]);
+	    return lastKey= inputBuf[0];
 	  }
 	else
 	  {
@@ -2042,16 +1949,24 @@ static int x2sqKeyPlain(XKeyEvent *xevt, KeySym *symbolic)
 	if (!i) fprintf(stderr, " [");
 	fprintf(stderr, "%d(%02x)%c", buf[i], buf[i], i + 1 < nConv ? ',' : ']');
   }
-  fprintf(stderr, " %d(%02x) -> %d(%02x) (keysym %p %s)\n",
-	 xevt->keycode, xevt->keycode, charCode, charCode, symbolic, nameForKeycode(*symbolic));
+  fprintf(stderr, " %d(%02x) -> %d(%02x) (keysym %04x %s)\n",
+	 xevt->keycode, xevt->keycode, charCode, charCode, *symbolic, nameForKeycode(*symbolic));
 #endif
   if (!nConv && (charCode= translateCode(*symbolic, &modifierState, xevt)) < 0)
       return -1;	/* unknown key */
   if ((charCode == 127) && mapDelBs)
     charCode= 8;
-  return nConv == 0 && (modifierState & (CommandKeyBit+CtrlKeyBit+OptionKeyBit))
-			? charCode
-			: recode(charCode);
+#ifdef PharoVM
+  if (charCode >= 1 && charCode <= 26) {
+    /* check for Ctrl-letter that gets translated into charCode 1-26 instead of letters a-z */
+    KeySym keysym = *symbolic;
+    if (keysym >= XK_a && keysym <= XK_z)
+      return (int)'a' + (keysym - XK_a);
+    if (keysym >= XK_A && keysym <= XK_Z)
+      return (int)'A' + (keysym - XK_A);
+  }
+#endif
+  return charCode;
 }
 
 
@@ -2393,7 +2308,10 @@ static int xkeysym2ucs4(KeySym keysym)
  	return keysym & 0x007f;
   if (keysym == XK_KP_Equal)
     return XK_equal;
-
+# if defined(XK_ISO_Left_Tab)
+  if (keysym == XK_ISO_Left_Tab) /* make shift-tab work */
+    return 9;
+#endif
 
   /* explicitly mapped */
 #define map(lo, hi) if (keysym >= 0x##lo && keysym <= 0x##hi) return ucs4_##lo##_##hi[keysym - 0x##lo];
@@ -3554,7 +3472,15 @@ static const char *
 nameForKeyboardEvent(XEvent *evt) { return nameForKeycode(evt->xkey.keycode); }
 #endif /* DEBUG_EVENTS */
 
-static void handleEvent(XEvent *evt)
+extern sqInt sendWheelEvents; /* If true deliver EventTypeMouseWheel else kybd */
+/* if sendWheelEvents is false this maps wheel events to arrow keys */
+static int mouseWheel2Squeak[4] = {30, 31, 28, 29};
+/* if sendWheelEvents is true this determines how much x & y are incremented */
+static int mouseWheelXDelta[4] = {0, 0, -120, 120};
+static int mouseWheelYDelta[4] = {120, -120, 0, 0};
+
+static void
+handleEvent(XEvent *evt)
 {
 #if DEBUG_EVENTS
   switch (evt->type)
@@ -3678,25 +3604,28 @@ static void handleEvent(XEvent *evt)
 
     case ButtonPress:
       noteEventState(evt->xbutton);
-      switch (evt->xbutton.button)
-	{
-	case 1: case 2: case 3:
-	  buttonState |= x2sqButton(evt->xbutton.button);
-	  recordMouseEvent();
-	  break;
-	case 4: case 5:	/* mouse wheel */
-	  {
-	    int keyCode= evt->xbutton.button + 26;	/* up/down */
-	    int modifiers= modifierState ^ CtrlKeyBit;
-	    recordKeyboardEvent(keyCode, EventKeyDown, modifiers, keyCode);
-	    recordKeyboardEvent(keyCode, EventKeyChar, modifiers, keyCode);
-	    recordKeyboardEvent(keyCode, EventKeyUp,   modifiers, keyCode);
+      if (evt->xbutton.button <= 3) { /* mouse button */
+		buttonState |= x2sqButton(evt->xbutton.button);
+		recordMouseEvent();
 	  }
-	  break;
-	default:
-	  ioBeep();
-	  break;
-	}
+	  else if (evt->xbutton.button <= 7) { /* mouse wheel */
+		if (sendWheelEvents)
+			recordMouseWheelEvent(mouseWheelXDelta[evt->xbutton.button - 4],
+								  mouseWheelYDelta[evt->xbutton.button - 4]);
+		else if (evt->xbutton.button <= 5) { /* only emulate up/down, as left/right
+												is used for text editing */
+		  int keyCode = mouseWheel2Squeak[evt->xbutton.button - 4];
+		  /* Set every meta bit to distinguish the fake event from a real
+		   * right/left arrow.
+		   */
+		  int modifiers = modifierState | (CtrlKeyBit|OptionKeyBit|CommandKeyBit|ShiftKeyBit);
+		  recordKeyboardEvent(keyCode, EventKeyDown, modifiers, keyCode);
+		  recordKeyboardEvent(keyCode, EventKeyChar, modifiers, keyCode);
+		  recordKeyboardEvent(keyCode, EventKeyUp,   modifiers, keyCode);
+		}
+	  }
+	  else
+		  ioBeep();
       break;
 
     case ButtonRelease:
@@ -3707,7 +3636,7 @@ static void handleEvent(XEvent *evt)
 	  buttonState &= ~x2sqButton(evt->xbutton.button);
 	  recordMouseEvent();
 	  break;
-	case 4: case 5:	/* mouse wheel */
+	case 4: case 5:	case 6: case 7: /* mouse wheel */
 	  break;
 	default:
 	  ioBeep();
@@ -4246,11 +4175,10 @@ void initWindow(char *displayName)
   XRectangle windowBounds= { 0, 0, 640, 480 };  /* default window bounds */
   int right, bottom;
 
-#ifdef PharoVM
-  // Some libraries require Xlib multi-threading support. When using
-  // multi-threading XInitThreads() has to be first Xlib function called.
+  // Some libraries such as OpenGL and Vulkan drivers, require Xlib
+  // multi-threading support. When using multi-threading XInitThreads() has to
+  // be first Xlib function called.
   XInitThreads();
-#endif
 
   XSetErrorHandler(xError);
 
@@ -4705,6 +4633,13 @@ translateCode(KeySym symbolic, int *modp, XKeyEvent *evt)
 		return withMetaSet(249,OptionKeyBit,0,modp,evt);
 	case XK_Meta_R:
 		return withMetaSet(248,OptionKeyBit,0,modp,evt);
+	/* John Brandt notes on 2018/11/28:
+	 * This doesn't match the above; here OptionKeyBit is used for the notmeta
+	 * parameter but in the preceding cases we use the bit other than the
+	 * OptionKeyBit.  Which is right?
+	 * The underlying issue here is the lack of a key event on pressing the
+	 * shift key; a feature that GT depends upon.
+	 */
 	case XK_Alt_L:
 		return withMetaSet(247,OptionKeyBit+CommandKeyBit,OptionKeyBit,modp,evt);
 	case XK_Alt_R:
@@ -4762,7 +4697,7 @@ static sqInt display_ioFormPrint(sqInt bitsIndex, sqInt width, sqInt height, sqI
   copyFn copy= ((depth > 0) && (depth <= 32)) ? copyFns[depth] : 0;
   if (!copy)
     {
-      fprintf(stderr, "ioFormPrint: depth %d not supported\n", depth);
+      fprintf(stderr, "ioFormPrint: depth %ld not supported\n", depth);
       return false;
     }
 
@@ -4804,7 +4739,7 @@ static sqInt display_ioFormPrint(sqInt bitsIndex, sqInt width, sqInt height, sqI
     }
 
   /* print the PPM magic number */
-  fprintf(ppm, "P3\n%d %d 255\n", width, height);
+  fprintf(ppm, "P3\n%ld %ld 255\n", width, height);
 
   /* write the pixmap */
   {
@@ -5065,6 +5000,7 @@ static sqInt display_ioSetCursorWithMaskBig(sqInt cursorBitsIndex, sqInt cursorM
   if (cursorMaskIndex == null)
     cursorMask= cursorBits;
 
+  d=m=0; /* Note: this is not strictly necessary since all 32 bits will be shifted away, but it avoids compiler warning */
   for (i= 0; i < 32; i++)
     {
       for (j= 0; j < 32; j++)
@@ -5455,7 +5391,7 @@ static sqInt display_ioShowDisplay(sqInt dispBitsIndex, sqInt width, sqInt heigh
   if (!(depth == 1 || depth == 2 || depth == 4
 	|| depth == 8 || depth == 16 || depth == 32))
     {
-      fprintf(stderr, "depth %d is not supported\n", depth);
+      fprintf(stderr, "depth %ld is not supported\n", depth);
       exit(1);
       return 0;
     }
@@ -5788,7 +5724,7 @@ static sqInt display_ioHasDisplayDepth(sqInt i)
 
 static sqInt display_ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenFlag)
 {
-  fprintf(stderr, "ioSetDisplayMode(%d, %d, %d, %d)\n",
+  fprintf(stderr, "ioSetDisplayMode(%ld, %ld, %ld, %ld)\n",
 	  width, height, depth, fullscreenFlag);
   setSavedWindowSize((width << 16) + (height & 0xFFFF));
   setFullScreenFlag(fullScreen);
@@ -6895,6 +6831,7 @@ closelog(void)
 static int
 myPrint3Dlog(char *fmt, ...)
 {	va_list args;
+	int n;
 
 	if (!logfile) {
 		char *slash;
@@ -6919,10 +6856,11 @@ myPrint3Dlog(char *fmt, ...)
 		atexit(closelog);
 	}
 	va_start(args,fmt);
-	vfprintf(logfile, fmt, args);
+	n = vfprintf(logfile, fmt, args);
 	va_end(args);
 	if (forceFlush) /* from sqOpenGLRenderer.h */
 		fflush(logfile);
+	return n;
 }
 
 # include <GL/gl.h>
@@ -7161,7 +7099,7 @@ static long display_hostWindowCreate(long w, long h, long x, long y, char *list,
 static long display_hostWindowClose(long index)                                               { return 0; }
 static long display_hostWindowCloseAll(void)                                                 { return 0; }
 static long display_hostWindowShowDisplay(unsigned *dispBitsIndex, long width, long height, long depth,
-					 int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex)
+					 long affectedL, long affectedR, long affectedT, long affectedB, sqIntptr_t windowIndex)
 											    { return 0; }
 
 /* By convention for HostWindowPlugin, handle 1 refers to the display window */
@@ -7231,7 +7169,7 @@ static long display_hostWindowSetTitle(long windowIndex, char *newTitle, long si
   XChangeProperty(stDisplay, stParent,
 		  XInternAtom(stDisplay, "_NET_WM_NAME", False),
 		  XInternAtom(stDisplay, "UTF8_STRING",  False),
-		  8, PropModeReplace, newTitle, sizeOfTitle);
+		  8, PropModeReplace, (unsigned char *)newTitle, sizeOfTitle);
 
   return 0;
 }
@@ -7249,7 +7187,7 @@ static long display_ioSizeOfNativeWindow(void *windowHandle)
    * width.
    */
   real_border_width= attrs.border_width ? attrs.border_width : attrs.x;
-  return (attrs.width + 2 * real_border_width << 16)
+  return ((attrs.width + 2 * real_border_width) << 16)
     | (attrs.height + attrs.y + real_border_width);
 }
 
@@ -7265,7 +7203,7 @@ static long display_ioPositionOfNativeWindow(void *windowHandle)
 				&rootx, &rooty, &neglected_child))
     return -1;
 
-  return (rootx - attrs.x << 16) | (rooty - attrs.y);
+  return ((rootx - attrs.x) << 16) | (rooty - attrs.y);
 }
 
 #endif /* (SqDisplayVersionMajor >= 1 && SqDisplayVersionMinor >= 2) */
@@ -7325,7 +7263,7 @@ static void display_winExit(void)
 }
 
 
-static long  display_winImageFind(char *buf, long len)	{ return 0; }
+static long  display_winImageFind(char *buf, int len)	{ return 0; }
 static void display_winImageNotFound(void)		{}
 
 #if SqDisplayVersionMajor >= 1 && SqDisplayVersionMinor >= 3

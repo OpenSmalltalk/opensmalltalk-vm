@@ -101,11 +101,7 @@
 // 
 #undef	FULLSCREEN_FADE	 0.02
 
-#ifdef PharoVM
-# define VMOPTION(arg) "--"arg
-#else
 # define VMOPTION(arg) "-"arg
-#endif
 
 /// 
 /// No more user-serviceable parts in this file.  Stop Tweaking Now!
@@ -361,7 +357,7 @@ static int display_ioBeep(void)
 }
 
 
-static int display_ioRelinquishProcessorForMicroseconds(int microSeconds)
+static sqInt display_ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 {
   return aioPoll(microSeconds);
 }
@@ -2382,13 +2378,13 @@ static int display_winImageFind(char *buf, int len)
 }
 
 
-static int display_primitivePluginBrowserReady()	{ return primitiveFail(); }
-static int display_primitivePluginRequestURLStream()	{ return primitiveFail(); }
-static int display_primitivePluginRequestURL()		{ return primitiveFail(); }
-static int display_primitivePluginPostURL()		{ return primitiveFail(); }
-static int display_primitivePluginRequestFileHandle()	{ return primitiveFail(); }
-static int display_primitivePluginDestroyRequest()	{ return primitiveFail(); }
-static int display_primitivePluginRequestState()	{ return primitiveFail(); }
+static sqInt display_primitivePluginBrowserReady()	{ return primitiveFail(); }
+static sqInt display_primitivePluginRequestURLStream()	{ return primitiveFail(); }
+static sqInt display_primitivePluginRequestURL()		{ return primitiveFail(); }
+static sqInt display_primitivePluginPostURL()		{ return primitiveFail(); }
+static sqInt display_primitivePluginRequestFileHandle()	{ return primitiveFail(); }
+static sqInt display_primitivePluginDestroyRequest()	{ return primitiveFail(); }
+static sqInt display_primitivePluginRequestState()	{ return primitiveFail(); }
 
 
 /// 

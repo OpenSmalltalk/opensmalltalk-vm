@@ -1,5 +1,5 @@
 #############################################################################
-# COmmon Makefile for Win32 VM using gcc, cygwin and gnu make
+# Common Makefile for Win32 VM using gcc, cygwin and gnu make
 # Do make init to allow make -n to function.
 #############################################################################
 
@@ -49,6 +49,7 @@ OBJDIR:= $(BUILD)/vm
 
 PLATDIR:=../../platforms
 CROSSDIR:=$(PLATDIR)/Cross/vm
+TPDIR:=$(PLATDIR)/Cross/third-party
 WIN32DIR:=$(PLATDIR)/win32/vm
 WIN32PLUGINSDIR:=$(PLATDIR)/win32/plugins
 WIN32MISCDIR:=$(PLATDIR)/win32/misc
@@ -73,6 +74,10 @@ include plugins.int
 
 LIBS:= $(addprefix $(OBJDIR)/, $(addsuffix .lib, $(INTERNAL_PLUGINS)))
 DLLS:= $(addprefix $(OBJDIR)/, $(addsuffix .dll, $(EXTERNAL_PLUGINS)))
+
+ifdef BIT_IDENTICAL_FLOATING_POINT
+LIBS:=$(BUILD)/fdlibm/libm.a $(LIBS)
+endif
 
 #############################################################################
 # The third-party libraries
@@ -115,15 +120,10 @@ ETOBJ:= $(OBJDIR)/etext.o
 .PRECIOUS: mkNamedPrims.exe
 
 #############################################################################
-# DirectX definitions - NOT USED - superseded by mingw provided files
-#
-DXDIR:=     $(PLATDIR)/win32/third-party/dx9sdk/Include
-
-#############################################################################
 # Toolchain
 #
 include ../common/Makefile.tools
- 
+
 INCLUDES:= -I. -I$(VMSRCDIR) -I$(WIN32DIR) -I$(CROSSDIR) $(XINC)
 
 .SUFFIXES:
@@ -132,7 +132,8 @@ INCLUDES:= -I. -I$(VMSRCDIR) -I$(WIN32DIR) -I$(CROSSDIR) $(XINC)
 #############################################################################
 # Common build rules
 #
-default: print-settings init $(VMEXE) $(CONSOLEVMEXE) $(DLLS) $(STRIPEXE) $(STRIPCONSOLEEXE) nukelibs
+
+default: print-settings init $(VMEXE) $(CONSOLEVMEXE) $(DLLS) $(STRIPEXE) $(STRIPCONSOLEEXE) nukelibs $(APPPOST)
 
 svnver:
 	echo $(RC) $(RCFLAGS)
@@ -182,23 +183,23 @@ nukelibs:
 	rm $(LIBS)
 
 print-settings:
-	@echo ---------------- Makefile settings ------------------
-	@echo CONFIGURATION=$(CONFIGURATION)
-	@echo THREADING=$(THREADING)
-	@echo VPATH=$(VPATH)
-	@echo INCLUDES=$(INCLUDES)
-	@echo CFLAGS=$(CFLAGS)
-	@echo INTERNAL_PLUGINS=$(INTERNAL_PLUGINS)
-	@echo EXTERNAL_PLUGINS=$(EXTERNAL_PLUGINS)
-	@echo OBJDIR=$(OBJDIR)
-	@echo LIBS=$(LIBS)
-	@echo DLLS=$(DLLS)
-	@echo -----------------------------------------------------
+	$(info ---------------- Makefile settings ------------------)
+	$(info CONFIGURATION=$(CONFIGURATION))
+	$(info THREADING=$(THREADING))
+	$(info VPATH=$(VPATH))
+	$(info INCLUDES=$(INCLUDES))
+	$(info CFLAGS=$(CFLAGS))
+	$(info INTERNAL_PLUGINS=$(INTERNAL_PLUGINS))
+	$(info EXTERNAL_PLUGINS=$(EXTERNAL_PLUGINS))
+	$(info OBJDIR=$(OBJDIR))
+	$(info LIBS=$(LIBS))
+	$(info DLLS=$(DLLS))
+	$(info -----------------------------------------------------)
 
 print-objects:
-	@echo ---------------- Makefile objects ------------------
-	@echo VMOBJ=$(VMOBJ)
-	@echo -----------------------------------------------------
+	$(info ---------------- Makefile objects ------------------)
+	$(info VMOBJ=$(VMOBJ))
+	$(info -----------------------------------------------------)
 
 ignore := $(addsuffix .%, $(basename $(wildcard $(BUILD)/vm/*.ignore)))
 
@@ -269,10 +270,11 @@ $(OBJDIR)/%.lib: $(call plugin-makefile,$(*F))
 	rm -f $(BUILD)/vm/$(*F).ignore
 	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) \
+		"VM=$(VM)" "VM_NAME=$(VM_NAME)" \
 		CONFIGURATION=$(CONFIGURATION) TOOLPREFIX=$(TOOLPREFIX) \
 		THIRDPARTYOUTDIR=$(THIRDPARTYOUTDIR) \
 		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
-		LIBNAME=$(*F) COGDEFS="$(COGDEFS)" XDEFS=-DSQUEAK_BUILTIN_PLUGIN \
+		LIBNAME=$(*F) COGDEFS="$(COGDEFS) -DSQUEAK_BUILTIN_PLUGIN" \
 		$(OBJDIR)/$(*F).lib
 
 # External plugin.  Build as dll and copy to vm dir ($(OBJDIR)).
@@ -281,10 +283,17 @@ $(OBJDIR)/%.dll: $(call plugin-makefile,$(*F))
 	rm -f $(BUILD)/$(*F).ignore
 	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) \
+		"VM=$(VM)" "VM_NAME=$(VM_NAME)" \
 		CONFIGURATION=$(CONFIGURATION) TOOLPREFIX=$(TOOLPREFIX) \
 		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
 		THIRDPARTYOUTDIR=$(THIRDPARTYOUTDIR) \
 		COGDEFS="$(COGDEFS)" LIBNAME=$(*F) $(OBJDIR)/$(*F).dll
+
+$(BUILD)/fdlibm/libm.a:
+	@-mkdir -p $(@D)
+	$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS) -D_IEEE_LIBM" -C $(@D) \
+		TP=../../$(TPDIR) -f ../../$(TPDIR)/fdlibm/Makefile.remote
+
 
 #############################################################################
 # Basic rules

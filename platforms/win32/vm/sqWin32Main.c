@@ -11,10 +11,12 @@
 *    1) When using this module the virtual machine MUST NOT be compiled
 *       with Unicode support.
 *****************************************************************************/
-#include <windows.h>
+#include <Windows.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <tchar.h>
 #include <fcntl.h> /* _O_BINARY */
 #include <float.h>
 #include <ole2.h>
@@ -36,6 +38,42 @@
 #  endif
 #endif
 
+
+/************************************************************************************************************/
+/* few addtional definitions for those having older include files especially #include <fileextd.h>          */
+/************************************************************************************************************/
+#if (WINVER < 0x0600)
+	 /*Copied from winbase.h*/
+	 typedef struct _FILE_NAME_INFO {
+		 DWORD FileNameLength;
+		 WCHAR FileName[1];
+	 } FILE_NAME_INFO, *PFILE_NAME_INFO;
+	 typedef enum _FILE_INFO_BY_HANDLE_CLASS {
+		 FileBasicInfo = 0,
+		 FileStandardInfo = 1,
+		 FileNameInfo = 2,
+		 FileRenameInfo = 3,
+		 FileDispositionInfo = 4,
+		 FileAllocationInfo = 5,
+		 FileEndOfFileInfo = 6,
+		 FileStreamInfo = 7,
+		 FileCompressionInfo = 8,
+		 FileAttributeTagInfo = 9,
+		 FileIdBothDirectoryInfo = 10, // 0xA
+		 FileIdBothDirectoryRestartInfo = 11, // 0xB
+		 FileIoPriorityHintInfo = 12, // 0xC
+		 FileRemoteProtocolInfo = 13, // 0xD
+		 FileFullDirectoryInfo = 14, // 0xE
+		 FileFullDirectoryRestartInfo = 15, // 0xF
+		 FileStorageInfo = 16, // 0x10
+		 FileAlignmentInfo = 17, // 0x11
+		 FileIdInfo = 18, // 0x12
+		 FileIdExtdDirectoryInfo = 19, // 0x13
+		 FileIdExtdDirectoryRestartInfo = 20, // 0x14
+		 MaximumFileInfoByHandlesClass
+	 } FILE_INFO_BY_HANDLE_CLASS, *PFILE_INFO_BY_HANDLE_CLASS;
+#endif //(WINVER < 0x0600)
+
 #if !defined(IMAGE_SIZEOF_NT_OPTIONAL_HEADER)
 #include <winnt.h>
 #define  IMAGE_SIZEOF_NT_OPTIONAL_HEADER  sizeof(IMAGE_OPTIONAL_HEADER)
@@ -49,25 +87,20 @@
  */
 #define VISTA_SECURITY 1 /* IE7/Vista protected mode support */
 
-#ifdef PharoVM
-# define VMOPTION(arg) "--"arg
-#else
 # define VMOPTION(arg) "-"arg
-#endif
 
 /*** Crash debug -- Imported from Virtual Machine ***/
 int getFullScreenFlag(void);
 sqInt methodPrimitiveIndex(void);
 int getCurrentBytecode(void);
 
-extern TCHAR squeakIniName[];
 extern void printPhaseTime(int);
 
 /* Import from sqWin32Alloc.c */
 LONG CALLBACK sqExceptionFilter(LPEXCEPTION_POINTERS exp);
 
 /* Import from sqWin32Window.c */
-char * GetAttributeString(int id);
+char * GetAttributeString(sqInt id);
 void ShowSplashScreen(void);
 void HideSplashScreen(void);
 
@@ -91,26 +124,25 @@ static char **clargv;
 
 /* console buffer */
 BOOL fIsConsole = 0;
-TCHAR consoleBuffer[4096];
+char consoleBuffer[4096];
 
 /* stderr and stdout names */
-char stderrName[MAX_PATH+1];
-char stdoutName[MAX_PATH+1];
+WCHAR stderrName[MAX_PATH+1];
+WCHAR stdoutName[MAX_PATH+1];
 
-static  char vmLogDirA[MAX_PATH];
+static  char vmLogDirA[MAX_PATH_UTF8];
 static WCHAR vmLogDirW[MAX_PATH];
 
-TCHAR *logName = TEXT("");             /* full path and name to log file */
+WCHAR *logName = L"";             /* full path and name to log file */
 
 #ifdef VISTA_SECURITY 
-BOOL fLowRights = 0;  /* started as low integiry process, 
+BOOL fLowRights = 0;  /* started as low integiry process,
 			need to use alternate untrustedUserDirectory */
 #endif /* VISTA_SECURITY */
 
 /* Service stuff */
-TCHAR  serviceName[MAX_PATH+1];   /* The name of the NT service */
-TCHAR *installServiceName = NULL; /* the name under which the service is to install */
-BOOL  fBroadcastService95 = 0;   /* Do we need a broadcast when a user has logged on? */
+WCHAR  serviceName[MAX_PATH+1];   /* The name of the NT service */
+WCHAR *installServiceName = NULL; /* the name under which the service is to install */
 UINT  WM_BROADCAST_SERVICE = 0;  /* The broadcast message we send */
 TCHAR *msgBroadcastService = TEXT("SQUEAK_SERVICE_BROADCAST_MESSAGE"); /* The name of the broadcast message */
 
@@ -126,8 +158,17 @@ void SetSystemTrayIcon(BOOL on);
    _RC_NEAR: round to nearest
    _PC_53 :  double precision arithmetic (instead of extended)
    _EM_XXX: silent operations (no signals please)
+   NOTE:  precision control and infinity control are not defined on ARM or X64 (SSE oblige), only X86
 */
+# if defined(_M_IX86) || defined(X86) || defined(_M_I386) || defined(_X86_) \
+  || defined(i386) || defined(i486) || defined(i586) || defined(i686) \
+  || defined(__i386__) || defined(__386__) || defined(I386)
 #define FPU_DEFAULT (_RC_NEAR + _PC_53 + _EM_INVALID + _EM_ZERODIVIDE + _EM_OVERFLOW + _EM_UNDERFLOW + _EM_INEXACT + _EM_DENORMAL)
+#define FPU_MASK    (_MCW_EM | _MCW_RC | _MCW_PC | _MCW_IC)
+#else
+#define FPU_DEFAULT (_RC_NEAR + _EM_INVALID + _EM_ZERODIVIDE + _EM_OVERFLOW + _EM_UNDERFLOW + _EM_INEXACT + _EM_DENORMAL)
+#define FPU_MASK    (_MCW_EM | _MCW_RC)
+#endif
 
 /****************************************************************************/
 /*                     Exception handling                                   */
@@ -142,6 +183,7 @@ static LPTOP_LEVEL_EXCEPTION_FILTER TopLevelFilter = NULL;
 static LONG CALLBACK
 squeakExceptionHandler(LPEXCEPTION_POINTERS exp)
 {
+extern sqInt primitiveFailForFFIExceptionat(usqLong exceptionCode, usqInt pc);
   DWORD result;
 
   /* #1: Try to handle exception in the regular (memory access)
@@ -153,29 +195,32 @@ squeakExceptionHandler(LPEXCEPTION_POINTERS exp)
 #endif
 
   /* #2: If that didn't work, try to handle any FP problems */
-  if(result != EXCEPTION_CONTINUE_EXECUTION) {
+  if (result != EXCEPTION_CONTINUE_EXECUTION) {
     DWORD code = exp->ExceptionRecord->ExceptionCode;
-    if((code >= EXCEPTION_FLT_DENORMAL_OPERAND) && (code <= EXCEPTION_FLT_UNDERFLOW)) {
+    if ((code >= EXCEPTION_FLT_DENORMAL_OPERAND) && (code <= EXCEPTION_FLT_UNDERFLOW)) {
       /* turn on the default masking of exceptions in the FPU and proceed */
-      _controlfp(FPU_DEFAULT, _MCW_EM | _MCW_RC | _MCW_PC | _MCW_IC);
+      _controlfp(FPU_DEFAULT, FPU_MASK);
       result = EXCEPTION_CONTINUE_EXECUTION;
     }
   }
 
   /* #3: If that didn't work either try passing it on to the old
      top-level filter */
-  if(result != EXCEPTION_CONTINUE_EXECUTION) {
-    if(TopLevelFilter) {
+  if (result != EXCEPTION_CONTINUE_EXECUTION) {
+    if (TopLevelFilter) {
       result = TopLevelFilter(exp);
     }
   }
+  if (result != EXCEPTION_CONTINUE_EXECUTION) {
+	  /* #4: Allow the VM to fail an FFI call in which an exception occurred. */
+	  primitiveFailForFFIExceptionat(exp->ExceptionRecord->ExceptionCode,
+									 exp->ContextRecord->CONTEXT_PC);
 #ifdef NDEBUG
-  /* #4: If that didn't work either give up and print a crash debug information */
-  if(result != EXCEPTION_CONTINUE_EXECUTION) {
+	/* #5: If that didn't work either give up and print a crash debug information */
     printCrashDebugInformation(exp);
     result = EXCEPTION_EXECUTE_HANDLER;
-  }
 #endif
+  }
   return result;
 }
 
@@ -197,17 +242,17 @@ void UninstallExceptionHandler(void)
 #if __MINGW32__
 # include <io.h>
 static FILE *
-fopen_for_append(char *filename)
+fopen_for_append(WCHAR *filename)
 {
-	FILE *f = !access(filename, F_OK) /* access is bass ackwards */
-		? fopen(filename,"r+")
-		: fopen(filename,"w+");
+	FILE *f = !_waccess(filename, F_OK) /* access is bass ackwards */
+		? _wfopen(filename,L"r+")
+		: _wfopen(filename,L"w+");
 	if (f)
 		fseek(f,0,SEEK_END);
 	return f;
 }
 #else
-# define fopen_for_append(filename) fopen(filename,"a+t")
+# define fopen_for_append(filename) _wfopen(filename,L"a+t")
 #endif
 
 /****************************************************************************/
@@ -217,9 +262,9 @@ static int
 OutputLogMessage(char *string)
 { FILE *fp;
 
-  if(!*logName) return 1;
+  if (!*logName) return 1;
   fp = fopen_for_append(logName);
-  if(!fp) return 1;
+  if (!fp) return 1;
   fprintf(fp, "%s", string);
   fflush(fp);
   fclose(fp);
@@ -227,11 +272,24 @@ OutputLogMessage(char *string)
 }
 
 static int
+OutputLogMessageW(WCHAR *string)
+{
+  int len = WideCharToMultiByte(CP_UTF8, 0, string, -1, NULL, 0, NULL, NULL);
+  char *utf8 = malloc(len);
+  if (!utf8) return 1;
+  WideCharToMultiByte(CP_UTF8, 0, string, -1, utf8, len, NULL, NULL);
+  OutputLogMessage(utf8);
+  free(utf8);
+  return 1;
+}
+
+
+static int
 OutputConsoleString(char *string)
 { 
   int pos;
 
-  if(fDynamicConsole && !fShowConsole) {
+  if (fDynamicConsole && !fShowConsole) {
     /* show console window */
     ShowWindow(consoleWindow, SW_SHOW);
     fShowConsole = TRUE;
@@ -244,11 +302,11 @@ OutputConsoleString(char *string)
       "# To disable: F2 -> 'debug options' -> 'show console on errors'\n"
       );
   }
-  pos = SendMessage(consoleWindow,WM_GETTEXTLENGTH, 0,0);
-  SendMessage(consoleWindow, EM_SETSEL, pos, pos);
+  pos = SendMessageA(consoleWindow,WM_GETTEXTLENGTH, 0,0);
+  SendMessageA(consoleWindow, EM_SETSEL, pos, pos);
   while(*string)
     {
-      SendMessage( consoleWindow, WM_CHAR, *string, 1);
+      SendMessageA( consoleWindow, WM_CHAR, *string, 1);
       string++;
     }
   return 1;
@@ -260,8 +318,8 @@ int __cdecl DPRINTF(const char *fmt, ...)
 
   va_start(al, fmt);
   if (!fIsConsole) {
-	wvsprintf(consoleBuffer, fmt, al);
-	OutputDebugString(consoleBuffer);
+	vsprintf(consoleBuffer, fmt, al);
+	OutputDebugStringA(consoleBuffer);
   }
   vfprintf(stdout, fmt, al);
   va_end(al);
@@ -279,9 +337,9 @@ printf(const char *fmt, ...)
 
   va_start(al, fmt);
   if (!fIsConsole) {
-	wvsprintf(consoleBuffer, fmt, al);
+	vsprintf(consoleBuffer, fmt, al);
 	OutputLogMessage(consoleBuffer);
-	if(IsWindow(stWindow)) /* not running as service? */
+	if (IsWindow(stWindow)) /* not running as service? */
 	  OutputConsoleString(consoleBuffer);
   }
   result = vfprintf(stdout, fmt, al);
@@ -295,11 +353,11 @@ fprintf(FILE *fp, const char *fmt, ...)
   int result;
 
   va_start(al, fmt);
-  if(!fIsConsole && (fp == stdout || fp == stderr))
+  if (!fIsConsole && (fp == stdout || fp == stderr))
     {
-      wvsprintf(consoleBuffer, fmt, al);
+      vsprintf(consoleBuffer, fmt, al);
       OutputLogMessage(consoleBuffer);
-      if(IsWindow(stWindow)) /* not running as service? */
+      if (IsWindow(stWindow)) /* not running as service? */
         OutputConsoleString(consoleBuffer);
     }
   result = vfprintf(fp, fmt, al);
@@ -321,18 +379,12 @@ static messageHook nextMessageHook = NULL;
 
 int ServiceMessageHook(void * hwnd, unsigned int message, unsigned int wParam, long lParam)
 {
-  if(fRunService && fWindows95 && message == WM_BROADCAST_SERVICE && hwnd == stWindow)
-    {
-      /* broadcast notification - install the running Win95 service in the system tray */
-      SetSystemTrayIcon(1);
-      return 1;
-    }
-   if(message == WM_USERCHANGED)
+   if (message == WM_USERCHANGED)
       {
         SetSystemTrayIcon(1);
         return 1;
       }
-  if(nextMessageHook)
+  if (nextMessageHook)
     return(*nextMessageHook)(hwnd, message,wParam, lParam);
   else
     return 0;
@@ -353,52 +405,25 @@ void SetSystemTrayIcon(BOOL on)
            Win95 has _serious_ problems with the module counter and
            may just unload the shell32.dll even if it is referenced
            by other processes */
-  if(!hShell) hShell = LoadLibrary(TEXT("shell32.dll"));
-  if(!hShell) return; /* should not happen */
+  if (!hShell) hShell = LoadLibrary(TEXT("shell32.dll"));
+  if (!hShell) return; /* should not happen */
   /* On WinNT 3.* the following will just return NULL */
   ShellNotifyIcon = (FARPROC)GetProcAddress(hShell, "Shell_NotifyIconA");
 
-  if(!ShellNotifyIcon) return;  /* ok, we don't have it */
+  if (!ShellNotifyIcon) return;  /* ok, we don't have it */
   nid.cbSize = sizeof(nid);
   nid.hWnd   = stWindow;
   nid.uID    = (usqIntptr_t)hInstance;
   nid.uFlags = NIF_MESSAGE | NIF_TIP | NIF_ICON;
   nid.uCallbackMessage = WM_USER+42;
   nid.hIcon  = LoadIcon(hInstance, MAKEINTRESOURCE(1));
-  strcpy(nid.szTip, VM_NAME "!");
-  if(on)
+  _tcscpy(nid.szTip, TEXT(VM_NAME) TEXT("!"));
+  if (on)
     (*ShellNotifyIcon)(NIM_ADD, &nid);
   else
     (*ShellNotifyIcon)(NIM_DELETE, &nid);
 }
 
-void SetupService95()
-{
-#ifndef NO_SERVICE
-#ifndef RSP_SIMPLE_SERVICE
-#define RSP_SIMPLE_SERVICE 1
-#endif
-  BOOL (WINAPI *RegisterServiceProcess)(DWORD,DWORD);
-  static HMODULE hKernel32 = NULL;
-
-  /* Inform Windows95 that we're running as a service process */
-  if(!fRunService || !fWindows95) return;
-  hKernel32 = LoadLibrary(TEXT("kernel32.dll"));
-  if(!hKernel32)
-    {
-      printLastError(TEXT("Unable to load kernel32.dll"));
-      return;
-    }
-  (FARPROC) RegisterServiceProcess = GetProcAddress(hKernel32, "RegisterServiceProcess");
-  if(!RegisterServiceProcess)
-    {
-      printLastError(TEXT("Unable to find RegisterServiceProcess"));
-      return;
-    }
-  if( !(*RegisterServiceProcess)(GetCurrentProcessId(), RSP_SIMPLE_SERVICE ) )
-    printLastError(TEXT("RegisterServiceProcess failed"));
-#endif /* NO_SERVICE */
-}
 
 /****************************************************************************/
 /*                      System Attributes                                   */
@@ -406,7 +431,7 @@ void SetupService95()
 
 char *GetVMOption(int id)
 {
-  if(id < numOptionsVM)
+  if (id < numOptionsVM)
     return vmOptions[id];
   else
     return NULL;
@@ -414,7 +439,7 @@ char *GetVMOption(int id)
 
 char *GetImageOption(int id)
 {
-  if(id < numOptionsImage)
+  if (id < numOptionsImage)
     return imageOptions[id];
   else
     return NULL;
@@ -425,7 +450,7 @@ char *ioGetLogDirectory(void) {
 }
 
 sqInt ioSetLogDirectoryOfSize(void* lblIndex, sqInt sz) {
-  if(sz >= MAX_PATH) return 0;
+  if (sz >= MAX_PATH_UTF8) return 0;
   strncpy(vmLogDirA, lblIndex, sz);
   vmLogDirA[sz] = 0;
   MultiByteToWideChar(CP_UTF8, 0, vmLogDirA, -1, vmLogDirW, MAX_PATH);
@@ -472,6 +497,18 @@ char *hwInfoString = "";
 char *gdInfoString = "";
 char *win32VersionName = "";
 
+void RegLookupUTF8String(HKEY hk, WCHAR *name, char *utf8, size_t utf8_len)
+{
+  WCHAR bufferW[MAX_PATH];
+  DWORD dwSize = MAX_PATH * sizeof(WCHAR);
+  LSTATUS ok = RegQueryValueExW(hk, name, NULL, NULL,(LPBYTE)bufferW, &dwSize);
+  if (ok != ERROR_SUCCESS) strncpy(utf8, "???",utf8_len);
+  else {
+    int len = WideCharToMultiByte(CP_UTF8, 0, bufferW, -1, utf8, utf8_len, NULL, NULL);
+    if (len <= 0) strncpy(utf8, "???", utf8_len);
+  }
+}
+
 void gatherSystemInfo(void) {
   OSVERSIONINFOEX osInfo;
   MEMORYSTATUS memStat;
@@ -480,7 +517,7 @@ void gatherSystemInfo(void) {
   int proc, screenX, screenY;
   char tmpString[2048];
 
-  char keyName[256];
+  WCHAR keyName[256];
   DWORD ok, dwSize;
   HKEY hk;
 
@@ -503,29 +540,34 @@ void gatherSystemInfo(void) {
 
 
   {
-    HANDLE hUser = LoadLibrary( "user32.dll" );
-    pfnEnumDisplayDevices pEnumDisplayDevices = (pfnEnumDisplayDevices)
-      GetProcAddress(hUser, "EnumDisplayDevicesA");
+    HANDLE hUser = LoadLibraryA( "user32.dll" );
     ZeroMemory(&gDev, sizeof(gDev));
     gDev.cb = sizeof(gDev);
-    if(pEnumDisplayDevices) pEnumDisplayDevices(NULL, 0, &gDev, 0);
+	if(hUser) {
+      pfnEnumDisplayDevices pEnumDisplayDevices = (pfnEnumDisplayDevices)
+              GetProcAddress(hUser, "EnumDisplayDevicesA");
+      if (pEnumDisplayDevices) pEnumDisplayDevices(NULL, 0, &gDev, 0);
+    }
   }
 
   { /* Figure out make and model from OEMINFO.ini */
-    char iniName[256];
-    char manufacturer[256];
-    char model[256];
+    WCHAR iniName[MAX_PATH];
+	WCHAR bufferW[MAX_PATH];
+    char manufacturer[MAX_PATH_UTF8];
+    char model[MAX_PATH_UTF8];
 
-    GetSystemDirectory(iniName, 256);
-    strcat(iniName,"\\OEMINFO.INI");
+    GetSystemDirectoryW(iniName, MAX_PATH);
+    wcsncat(iniName,L"\\OEMINFO.INI",MAX_PATH-1-wcslen(iniName));
 
-    GetPrivateProfileString("General", "Manufacturer", "Unknown", 
-			    manufacturer, 256, iniName);
+    GetPrivateProfileStringW(L"General", L"Manufacturer", L"Unknown",
+			    bufferW, MAX_PATH, iniName);
+	if (WideCharToMultiByte(CP_UTF8, 0, bufferW, -1, manufacturer, MAX_PATH_UTF8, NULL, NULL) == 0) strcpy(manufacturer, "???");
 
-    GetPrivateProfileString("General", "Model", "Unknown", 
-			    model, 256, iniName);
+    GetPrivateProfileStringW(L"General", L"Model", L"Unknown",
+			    bufferW, MAX_PATH, iniName);
+	if (WideCharToMultiByte(CP_UTF8, 0, bufferW, -1, model, MAX_PATH_UTF8, NULL, NULL) == 0) strcpy(model, "???");
 
-    sprintf(tmpString, 
+    sprintf(tmpString,
 	    "Hardware information: \n"
 	    "\tManufacturer: %s\n"
 	    "\tModel: %s\n"
@@ -556,30 +598,23 @@ void gatherSystemInfo(void) {
 
     char *tmp = tmpString + strlen(tmpString);
 
-    strcpy(keyName, "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0");
-    keyName[strlen(keyName)-1] = 48+proc; /* 0, 1, 2 etc. */
+    wcscpy(keyName, L"HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0");
+    keyName[wcslen(keyName)-1] = 48+proc; /* 0, 1, 2 etc. */
 
-    ok = RegOpenKey(HKEY_LOCAL_MACHINE, keyName, &hk);
-    if(ok == 0) {
-      char nameString[256];
-      char identifier[256];
+    ok = RegOpenKeyW(HKEY_LOCAL_MACHINE, keyName, &hk);
+    if (!ok) {
+      char nameString[MAX_PATH_UTF8];
+      char identifier[MAX_PATH_UTF8];
       DWORD mhz;
 
-      dwSize = 256;
-      ok = RegQueryValueEx(hk, "ProcessorNameString", NULL, NULL, 
-			   (LPBYTE)nameString, &dwSize);
-      if(ok != 0) strcpy(nameString, "???");
-
-      dwSize = 256;
-      ok = RegQueryValueEx(hk, "Identifier", NULL, NULL, 
-			   (LPBYTE)identifier, &dwSize);
-      if(ok != 0) strcpy(identifier, "???");
+	  RegLookupUTF8String(hk, L"ProcessorNameString", nameString, MAX_PATH_UTF8);
+	  RegLookupUTF8String(hk, L"Identifier", identifier, MAX_PATH_UTF8);
 
       dwSize = sizeof(DWORD);
-      ok = RegQueryValueEx(hk, "~MHz", NULL, NULL, 
+      ok = RegQueryValueExW(hk, L"~MHz", NULL, NULL,
 			   (LPBYTE)&mhz, &dwSize);
-      if(ok != 0) mhz = -1;
-      sprintf(tmp,
+      if (ok) mhz = -1;
+	  snprintf(tmp, sizeof(tmpString)-strlen(tmpString),
 	      "\nProcessor %d: %s\n"
 	      "\tIdentifier: %s\n"
 	      "\t~MHZ: %lu\n",
@@ -591,30 +626,50 @@ void gatherSystemInfo(void) {
   hwInfoString = _strdup(tmpString);
 
   {
-    char owner[256];
-    char company[256];
-    char product[256];
+    char owner[MAX_PATH_UTF8];
+    char company[MAX_PATH_UTF8];
+    char product[MAX_PATH_UTF8];
 
-    if(osInfo.dwPlatformId == VER_PLATFORM_WIN32_NT) {
-      strcpy(keyName, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion");
+    if (osInfo.dwPlatformId == VER_PLATFORM_WIN32_NT) {
+      wcscpy(keyName, L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion");
     } else {
-      strcpy(keyName, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion");
+      wcscpy(keyName, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion");
     }
-    ok = RegOpenKey(HKEY_LOCAL_MACHINE, keyName, &hk);
-    if(ok == 0) {
-      dwSize = 256;
-      if(RegQueryValueEx(hk, "RegisteredOwner", NULL, NULL, 
-			  (LPBYTE)owner, &dwSize)) strcpy(owner, "???");
-      dwSize = 256;
-      if(RegQueryValueEx(hk, "RegisteredOrganization", NULL, NULL, 
-			  (LPBYTE)company, &dwSize)) strcpy(company, "???");
-      dwSize = 256;
-      if(RegQueryValueEx(hk, "ProductName", NULL, NULL, 
-			  (LPBYTE)product, &dwSize)) strcpy(product, "???");
-      RegCloseKey(hk);
-    }
+    ok = RegOpenKeyW(HKEY_LOCAL_MACHINE, keyName, &hk);
+    if (!ok) {
+      RegLookupUTF8String(hk, L"RegisteredOwner", owner, MAX_PATH_UTF8);
+      RegLookupUTF8String(hk, L"RegisteredOrganization", company, MAX_PATH_UTF8);
+      RegLookupUTF8String(hk, L"ProductName", product, MAX_PATH_UTF8);
+    } else {
+      strcpy(owner, "???");
+      strcpy(company, "???");
+      strcpy(product, "???");
+	}
 
-    sprintf(tmpString,
+#if defined(_MSC_VER) && _MSC_VER < 1300
+# define wSuiteMask wReserved[0]
+# define wProductType wReserved[1] & 0xFF
+#endif
+#ifdef UNICODE
+	{
+		char buf[128 * 3];
+		if(WideCharToMultiByte(CP_UTF8,0, osInfo.szCSDVersion,-1,buf,sizeof(buf),NULL,NULL))
+		  snprintf(tmpString, sizeof(tmpString),
+            "Operating System: %s (Build %lu %s)\n"
+            "\tRegistered Owner: %s\n"
+            "\tRegistered Company: %s\n"
+            "\tSP major version: %d\n"
+            "\tSP minor version: %d\n"
+            "\tSuite mask: %x\n"
+            "\tProduct type: %x\n",
+            product,
+            osInfo.dwBuildNumber, buf,
+            owner, company,
+            osInfo.wServicePackMajor, osInfo.wServicePackMinor,
+            osInfo.wSuiteMask, osInfo.wProductType);
+	}
+#else
+    snprintf(tmpString,sizeof(tmpString),
 	    "Operating System: %s (Build %lu %s)\n"
 	    "\tRegistered Owner: %s\n"
 	    "\tRegistered Company: %s\n"
@@ -622,45 +677,54 @@ void gatherSystemInfo(void) {
 	    "\tSP minor version: %d\n"
 	    "\tSuite mask: %x\n"
 	    "\tProduct type: %x\n",
-	    product, 
+	    product,
 	    osInfo.dwBuildNumber, osInfo.szCSDVersion,
 	    owner, company,
 	    osInfo.wServicePackMajor, osInfo.wServicePackMinor,
-#if defined(_MSC_VER) && _MSC_VER < 1300
-# define wSuiteMask wReserved[0]
-# define wProductType wReserved[1] & 0xFF
-#endif
 	    osInfo.wSuiteMask, osInfo.wProductType);
+#endif
     osInfoString = _strdup(tmpString);
   }
 
-  sprintf(tmpString,
+#ifdef UNICODE
+  {
+	  char buf[128*3];
+	  if(WideCharToMultiByte(CP_UTF8,0,gDev.DeviceString,-1,buf,sizeof(buf),NULL,NULL)) snprintf(tmpString, sizeof(tmpString),
+		  "Display Information: \n"
+		  "\tGraphics adapter name: %s\n"
+		  "\tPrimary monitor resolution: %d x %d\n",
+		  buf,
+		  screenX, screenY);
+  }
+#else
+  snprintf(tmpString, sizeof(tmpString),
 	  "Display Information: \n"
-	  "\tGraphics adapter name: %s\n"
-	  "\tPrimary monitor resolution: %d x %d\n",
+      "\tGraphics adapter name: %s\n"
+      "\tPrimary monitor resolution: %d x %d\n",
 	  gDev.DeviceString,
 	  screenX, screenY);
+#endif
 
   /* Find the driver key in the registry */
   keyName[0] = 0;
-  ok = RegOpenKey(HKEY_LOCAL_MACHINE, 
-		  "HARDWARE\\DEVICEMAP\\VIDEO", 
+  ok = RegOpenKeyW(HKEY_LOCAL_MACHINE,
+		  L"HARDWARE\\DEVICEMAP\\VIDEO",
 		  &hk);
-  if(ok == 0) {
-    dwSize = 256;
-    RegQueryValueEx(hk,"\\Device\\Video0", NULL, NULL, 
+  if (!ok) {
+    dwSize = 256*sizeof(WCHAR);
+    RegQueryValueExW(hk,L"\\Device\\Video0", NULL, NULL,
 		    (LPBYTE)keyName, &dwSize);
     RegCloseKey(hk);
   }
-  if(*keyName) {
+  if (*keyName) {
     /* Got the key name; open it and get the info out of there */
     char *tmp = tmpString + strlen(tmpString);
-    char deviceDesc[256];
-    char adapterString[256];
-    char biosString[256];
-    char chipType[256];
-    char dacType[256];
-    char *drivers, *drv;
+    char deviceDesc[MAX_PATH_UTF8];
+    char adapterString[MAX_PATH_UTF8];
+    char biosString[MAX_PATH_UTF8];
+    char chipType[MAX_PATH_UTF8];
+    char dacType[MAX_PATH_UTF8];
+    WCHAR *drivers, *drv;
     WCHAR buffer[256];
     DWORD memSize;
 
@@ -668,50 +732,22 @@ void gatherSystemInfo(void) {
        with \Registry\Machine\ which doesn't work with RegOpenKey below.
        I have no idea why but for now I'll just truncate that part if
        we recognize it... */
-    if(_strnicmp(keyName, "\\registry\\machine\\", 18) == 0) {
-      memcpy(keyName, keyName+18, strlen(keyName)-17);
+    if (_wcsnicmp(keyName, L"\\registry\\machine\\", 18) == 0) {
+      memmove(keyName, keyName+18, (wcslen(keyName)+1-18)*sizeof(WCHAR)); /* +1 for terminating NULL */
     }
 
-    ok = RegOpenKey(HKEY_LOCAL_MACHINE, keyName, &hk);
-    if(ok != 0) MessageBox(0, keyName, "Cannot open:", MB_OK);
-    if(ok == 0) {
-      dwSize = 256;
-      ok = RegQueryValueEx(hk,"Device Description", NULL, NULL, 
-		      (LPBYTE)deviceDesc, &dwSize);
-      if(ok != 0) strcpy(deviceDesc, "???");
-
-      dwSize = 256*sizeof(WCHAR);
-      ok = RegQueryValueEx(hk,"HardwareInformation.AdapterString", NULL, NULL, 
-		      (LPBYTE)buffer, &dwSize);
-      if(ok == 0) {
-	WideCharToMultiByte(CP_UTF8,0,buffer,-1,adapterString,256,NULL,NULL);
-      } else strcpy(adapterString, "???");
-
-      dwSize = 256*sizeof(WCHAR);
-      ok = RegQueryValueEx(hk,"HardwareInformation.BiosString", NULL, NULL, 
-		      (LPBYTE)buffer, &dwSize);
-      if(ok == 0) {
-	WideCharToMultiByte(CP_UTF8,0,buffer,-1,biosString,256,NULL,NULL);
-      } else strcpy(biosString, "???");
-
-      dwSize = 256*sizeof(WCHAR);
-      ok = RegQueryValueEx(hk,"HardwareInformation.ChipType", NULL, NULL, 
-		      (LPBYTE)buffer, &dwSize);
-      if(ok == 0) {
-	WideCharToMultiByte(CP_UTF8,0,buffer,-1,chipType,256,NULL,NULL);
-      } else strcpy(chipType, "???");
-
-      dwSize = 256*sizeof(WCHAR);
-      ok = RegQueryValueEx(hk,"HardwareInformation.DacType", NULL, NULL, 
-		      (LPBYTE)buffer, &dwSize);
-      if(ok == 0) {
-	WideCharToMultiByte(CP_UTF8,0,buffer,-1,dacType,256,NULL,NULL);
-      } else strcpy(dacType, "???");
-
+    ok = RegOpenKeyW(HKEY_LOCAL_MACHINE, keyName, &hk);
+    if (ok) MessageBoxW(0, keyName, L"Cannot open:", MB_OK);
+    if (!ok) {
+	  RegLookupUTF8String(hk, L"Device Description", deviceDesc, MAX_PATH_UTF8);
+	  RegLookupUTF8String(hk, L"HardwareInformation.AdapterString", adapterString, MAX_PATH_UTF8);
+	  RegLookupUTF8String(hk, L"HardwareInformation.BiosString", biosString, MAX_PATH_UTF8);
+	  RegLookupUTF8String(hk, L"HardwareInformation.ChipType", chipType, MAX_PATH_UTF8);
+      RegLookupUTF8String(hk, L"HardwareInformation.DacType", dacType, MAX_PATH_UTF8);
       dwSize = sizeof(DWORD);
-      ok = RegQueryValueEx(hk,"HardwareInformation.MemorySize", NULL, NULL, 
+      ok = RegQueryValueExW(hk,L"HardwareInformation.MemorySize", NULL, NULL,
 		      (LPBYTE)&memSize, &dwSize);
-      if(ok != 0) memSize = -1;
+      if (ok) memSize = -1;
 
       sprintf(tmp,
 	      "\nDevice: %s\n"
@@ -728,55 +764,70 @@ void gatherSystemInfo(void) {
 	      memSize);
 
       /* Now process the installed drivers */
-      ok = RegQueryValueEx(hk,"InstalledDisplayDrivers", 
+      ok = RegQueryValueExW(hk,L"InstalledDisplayDrivers",
 			   NULL, NULL, NULL, &dwSize);
-      if(ok == 0) {
-	drivers = malloc(dwSize);
-	ok = RegQueryValueEx(hk,"InstalledDisplayDrivers",
-			     NULL, NULL, drivers, &dwSize);
+      if (!ok) {
+		drivers = malloc(dwSize);
+		ok = RegQueryValueExW(hk,L"InstalledDisplayDrivers",
+					 NULL, NULL, (LPBYTE)drivers, &dwSize);
       }
-      if(ok == 0) {
-	strcat(tmpString,"\nDriver Versions:");
-	/* InstalledDrivers is REG_MULTI_SZ (extra terminating zero) */
-	for(drv = drivers; drv[0]; drv +=strlen(drv)) {
-	  DWORD verSize, hh;
-	  UINT vLen;
-	  LPVOID verInfo = NULL, vInfo;
+      if (!ok) {
+		strncat(tmpString,"\nDriver Versions:",sizeof(tmpString) - 1 - strlen(tmpString));
+		/* InstalledDrivers is REG_MULTI_SZ (extra terminating zero) */
+		for(drv = drivers; drv[0]; drv +=wcslen(drv)) {
+		  DWORD verSize, hh;
+		  UINT vLen;
+		  LPVOID verInfo = NULL, vInfo;
+		  char drvA[MAX_PATH_UTF8];
 
-	  /* Concat driver name */
-	  strcat(tmpString,"\n\t"); 
-	  strcat(tmpString, drv);
-	  strcat(tmpString,": ");
+		  /* Concat driver name */
+		  if (WideCharToMultiByte(CP_UTF8,0,drv,-1,drvA,MAX_PATH_UTF8,NULL,NULL)>0) {
+            strncat(tmpString, "\n\t", sizeof(tmpString) - 1 - strlen(tmpString));
+            strncat(tmpString, drvA  , sizeof(tmpString) - 1 - strlen(tmpString));
+            strncat(tmpString, ": "  , sizeof(tmpString) - 1 - strlen(tmpString));
+		  }
 
-	  verSize = GetFileVersionInfoSize(drv, &hh);
-	  if(!verSize) goto done;
+		  verSize = GetFileVersionInfoSizeW(drv, &hh);
+		  if (!verSize) goto done;
 
-	  verInfo = malloc(verSize);
-	  if(!GetFileVersionInfo(drv, 0, verSize, verInfo)) goto done;
+		  verInfo = malloc(verSize);
+		  if (!GetFileVersionInfoW(drv, 0, verSize, verInfo)) goto done;
 
-	  /* Try Unicode first */
-	  if(VerQueryValue(verInfo,"\\StringFileInfo\\040904B0\\FileVersion", 
-			   &vInfo, &vLen)) {
-	    strcat(tmpString, vInfo);
-	    goto done;
-	  }
+		  /* Try Unicode first */
+		  if (VerQueryValueW(verInfo,L"\\StringFileInfo\\040904B0\\FileVersion",
+				   &vInfo, &vLen)) {
+            int utf8_len = WideCharToMultiByte(CP_UTF8, 0, vInfo, -1, NULL, 0, NULL, NULL);
+			char *utf8 = (char *)malloc(utf8_len);
+			if(utf8) {
+              WideCharToMultiByte(CP_UTF8, 0, vInfo, -1, utf8, utf8_len, NULL, NULL);
+              strncat(tmpString, utf8,sizeof(tmpString) - 1 - strlen(tmpString));
+              free(utf8);
+              goto done;
+            }
+		  }
 
-	  /* Try US/English next */
-	  if(VerQueryValue(verInfo,"\\StringFileInfo\\040904E4\\FileVersion", 
-			   &vInfo, &vLen)) {
-	    strcat(tmpString, vInfo);
-	    goto done;
-	  }
+		  /* Try US/English next */
+		  if (VerQueryValueW(verInfo,L"\\StringFileInfo\\040904E4\\FileVersion",
+				   &vInfo, &vLen)) {
+            int utf8_len = WideCharToMultiByte(CP_UTF8, 0, vInfo, -1, NULL, 0, NULL, NULL);
+            char *utf8 = (char *)malloc(utf8_len);
+            if (utf8) {
+              WideCharToMultiByte(CP_UTF8, 0, vInfo, -1, utf8, utf8_len, NULL, NULL);
+              strncat(tmpString, utf8, sizeof(tmpString) - 1 - strlen(tmpString));
+              free(utf8);
+              goto done;
+            }
+		  }
 
-	  strcat(tmpString, "???");
+		  strncat(tmpString, "???", sizeof(tmpString) - 1 - strlen(tmpString));
 
-	done:
-	  if(verInfo) {
-	    free(verInfo);
-	    verInfo = NULL;
-	  }
-	}
-	strcat(tmpString,"\n");
+		done:
+		  if (verInfo) {
+			free(verInfo);
+			verInfo = NULL;
+		  }
+		}
+		strncat(tmpString,"\n",sizeof(tmpString) - 1 - strlen(tmpString));
       }
       RegCloseKey(hk);
     }
@@ -837,6 +888,99 @@ getVersionInfo(int verbose)
  */
 #define exit(ec) do { _cexit(ec); ExitProcess(ec); } while (0)
 
+ /*
+ * Allow to test if the standard input/output files are from a console or not
+ * Inspired of: https://fossies.org/linux/misc/vim-8.0.tar.bz2/vim80/src/iscygpty.c?m=t
+ * Return values:
+ * -1 - Error
+ * 0 - no console (windows only)
+ * 1 - normal terminal (unix terminal / windows console)
+ * 2 - pipe
+ * 3 - file
+ * 4 - cygwin terminal (windows only)
+ */
+sqInt  fileHandleType(HANDLE fdHandle) {
+	if (fdHandle == INVALID_HANDLE_VALUE) {
+		return -1;
+	}
+	
+	/* In case of Windows Shell case */
+	DWORD fileType = GetFileType(fdHandle);
+	if (fileType == FILE_TYPE_CHAR)
+		/* The specified file is a character file, typically an LPT device or a console. */
+		/* https://msdn.microsoft.com/en-us/library/windows/desktop/aa364960(v=vs.85).aspx */
+		return 1;
+
+	/* In case of Unix emulator, we need to parse the name of the pipe */
+	
+	/* Cygwin/msys's pty is a pipe. */
+	if (fileType != FILE_TYPE_PIPE) {
+		if (fileType == FILE_TYPE_DISK)
+			return 3; //We have a file here
+		if (fileType == FILE_TYPE_UNKNOWN && GetLastError() == ERROR_INVALID_HANDLE)
+			return  0; //No stdio allocated
+		return  -1;
+	}
+	
+	int size = sizeof(FILE_NAME_INFO) + sizeof(WCHAR) * MAX_PATH;
+	FILE_NAME_INFO *nameinfo;
+	WCHAR *p = NULL;
+
+	typedef BOOL(WINAPI *pfnGetFileInformationByHandleEx)(
+		HANDLE                    hFile,
+		FILE_INFO_BY_HANDLE_CLASS FileInformationClass,
+		LPVOID                    lpFileInformation,
+		DWORD                     dwBufferSize
+		);
+	static pfnGetFileInformationByHandleEx pGetFileInformationByHandleEx = NULL;
+	if (!pGetFileInformationByHandleEx) {
+		pGetFileInformationByHandleEx = (pfnGetFileInformationByHandleEx)
+			GetProcAddress(GetModuleHandle(TEXT("kernel32.dll")), "GetFileInformationByHandleEx");
+		if (!pGetFileInformationByHandleEx)
+			return -1;
+	}
+
+	nameinfo = malloc(size);
+	if (nameinfo == NULL) {
+		return -1;
+	}
+	/* Check the name of the pipe: '\{cygwin,msys}-XXXXXXXXXXXXXXXX-ptyN-{from,to}-master' */
+	if (pGetFileInformationByHandleEx(fdHandle, FileNameInfo, nameinfo, size)) {
+		nameinfo->FileName[nameinfo->FileNameLength / sizeof(WCHAR)] = L'\0';
+		p = nameinfo->FileName;
+		//Check that the pipe name contains msys or cygwin
+		if ((((wcsstr(p, L"msys-") || wcsstr(p, L"cygwin-"))) &&
+			(wcsstr(p, L"-pty") && wcsstr(p, L"-master")))) {
+			//The openned pipe is a msys xor cygwin pipe to pty
+			free(nameinfo);
+			return 4;
+		}
+		else
+			free(nameinfo);
+			return 2; //else it is just a standard pipe
+	}
+	free(nameinfo);
+	return -1;
+}
+
+/*
+* Allow to test whether the file handle is from a console or not
+* 1 if one of the stdio is redirected to a console pipe, else 0 (and in this case, a file should be created)
+*/
+sqInt  isFileHandleATTY(HANDLE fdHandle) {
+	sqInt res = fileHandleType(fdHandle) ;
+	return res == 1 || res == 4;
+}
+
+/*
+* Allow to test whether one of the standard input/output files is from a console or not
+* 1 if one of the stdio is redirected to a console pipe, else 0 (and in this case, a file should be created)
+*/
+sqInt  isOneStdioDescriptorATTY() {
+	return isFileHandleATTY(GetStdHandle(STD_INPUT_HANDLE)) || 
+		isFileHandleATTY(GetStdHandle(STD_OUTPUT_HANDLE)) || isFileHandleATTY(GetStdHandle(STD_ERROR_HANDLE));
+}
+
 static void
 versionInfo(void)
 {
@@ -862,22 +1006,22 @@ versionInfo(void)
 /*                      Error handling                                      */
 /****************************************************************************/
 void SetupStderr()
-{ TCHAR tmpName[MAX_PATH+1];
+{ WCHAR tmpName[MAX_PATH+1];
 
   *stderrName = *stdoutName = 0;
   /* re-open stdout && stderr */
-  GetTempPath(MAX_PATH,tmpName);
+  GetTempPathW(MAX_PATH,tmpName);
   if(GetStdHandle(STD_ERROR_HANDLE) == INVALID_HANDLE_VALUE)
     {
-      GetTempFileName(tmpName,TEXT("sq"),0,stderrName);
-      freopen(stderrName,"w+t",stderr);
+      GetTempFileNameW(tmpName,L"sq",0,stderrName);
+      _wfreopen(stderrName,L"w+t",stderr);
     }
   else *stderrName = 0;
 
   if(GetStdHandle(STD_OUTPUT_HANDLE) == INVALID_HANDLE_VALUE)
     {
-      GetTempFileName(tmpName,TEXT("sq"),0,stdoutName);
-      freopen(stdoutName,"w+t",stdout);
+      GetTempFileNameW(tmpName,L"sq",0,stdoutName);
+      _wfreopen(stdoutName,L"w+t",stdout);
     }
   else *stdoutName = 0;
 }
@@ -950,7 +1094,7 @@ extern char *__cogitBuildInfo;
     fprintf(f,"\n%s", gdInfoString);
 
     /* print VM version information */
-    fprintf(f,"\nVM Version: %s\n", VM_VERSION_TEXT);
+    fprintf(f,"\nVM Version: %s\n", VM_VERSION_VERBOSE);
 #if STACKVM
     fprintf(f,"Interpreter Build: %s\n", __interpBuildInfo);
 # if COGVM
@@ -991,41 +1135,52 @@ static int inError = 0;
 void
 error(char *msg) {
   FILE *f;
-  TCHAR crashInfo[1024];
+  WCHAR crashInfo[1024];
   void *callstack[MAXFRAMES];
   symbolic_pc symbolic_pcs[MAXFRAMES];
   int nframes;
   int inVMThread = ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread());
+  int len;
+  WCHAR *msgW;
 
   if (inError)
 	exit(-2);
 
   inError = 1;
-	nframes = backtrace(callstack, MAXFRAMES);
-	symbolic_backtrace(++nframes, callstack, symbolic_pcs);
-
-    wsprintf(crashInfo,
-	   TEXT("Sorry but the VM has crashed.\n\n")
-	   TEXT("Reason: %s\n\n")
-	   TEXT("Current byte code: %d\n")
-	   TEXT("Primitive index: %d\n\n")
-	   TEXT("This information will be stored in the file\n")
-	   TEXT("%s\\%s\n")
-	   TEXT("with a complete stack dump"),
-	   msg,
-	   getCurrentBytecode(),
-	   methodPrimitiveIndex(),
-	   vmLogDirA,
-	   TEXT("crash.dmp"));
+  nframes = backtrace(callstack, MAXFRAMES);
+  symbolic_backtrace(++nframes, callstack, symbolic_pcs);
+  
+  len = MultiByteToWideChar(CP_UTF8, 0, msg, -1, NULL, 0);
+  if (len > 0) {
+    msgW = alloca(len * sizeof(WCHAR));
+    MultiByteToWideChar(CP_UTF8, 0, msg, -1, msgW, len);
+  }
+  else {
+    msgW = alloca(4 * sizeof(WCHAR));
+    wcscpy(msgW, L"???");
+  }
+  _snwprintf(crashInfo,1024,
+      L"Sorry but the VM has crashed.\n\n"
+      L"Reason: %s\n\n"
+      L"Current byte code: %d\n"
+      L"Primitive index: %" _UNICODE_TEXT(PRIdSQINT) L"\n\n"
+      L"This information will be stored in the file\n"
+      L"%s\\%s\n"
+      L"with a complete stack dump",
+      msgW,
+      getCurrentBytecode(),
+      methodPrimitiveIndex(),
+      vmLogDirW,
+      L"crash.dmp");
   if(!fHeadlessImage)
-    MessageBox(stWindow,crashInfo,TEXT("Fatal VM error"),
+    MessageBoxW(stWindow,crashInfo,L"Fatal VM error",
                  MB_OK | MB_APPLMODAL | MB_ICONSTOP);
 
 #if !NewspeakVM
   SetCurrentDirectoryW(vmLogDirW);
 #endif
   /* print the above information */
-  f = fopen_for_append("crash.dmp");
+  f = fopen_for_append(L"crash.dmp");
   if(f){  
     time_t crashTime = time(NULL);
     fprintf(f,"---------------------------------------------------------------------\n");
@@ -1080,7 +1235,7 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
   void *callstack[MAXFRAMES];
   symbolic_pc symbolic_pcs[MAXFRAMES];
   int nframes, inVMThread;
-  TCHAR crashInfo[1024];
+  WCHAR crashInfo[1024];
   FILE *f;
   int byteCode = -2;
 
@@ -1097,56 +1252,46 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
 
 
   TRY {
-#if defined(_M_IX86) || defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__)
   if (inVMThread)
-	ifValidWriteBackStackPointersSaveTo((void *)exp->ContextRecord->Ebp,
-										(void *)exp->ContextRecord->Esp,
+	ifValidWriteBackStackPointersSaveTo((void *)exp->ContextRecord->CONTEXT_FP,
+										(void *)exp->ContextRecord->CONTEXT_SP,
 										0,
 										0);
-  callstack[0] = (void *)exp->ContextRecord->Eip;
-  nframes = backtrace_from_fp((void*)exp->ContextRecord->Ebp,
+  callstack[0] = (void *)exp->ContextRecord->CONTEXT_PC;
+  nframes = backtrace_from_fp((void*)exp->ContextRecord->CONTEXT_FP,
 							callstack+1,
 							MAXFRAMES-1);
-#elif defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
-  if (inVMThread)
-	ifValidWriteBackStackPointersSaveTo((void *)exp->ContextRecord->Rbp,
-										(void *)exp->ContextRecord->Rsp,
-										0,
-										0);
-  callstack[0] = (void *)exp->ContextRecord->Rip;
-  nframes = backtrace_from_fp((void*)exp->ContextRecord->Rbp,
-							callstack+1,
-							MAXFRAMES-1);
-#else
-#error "unknown architecture, cannot dump stack"
-#endif
   symbolic_backtrace(++nframes, callstack, symbolic_pcs);
-  wsprintf(crashInfo,
-	   TEXT("Sorry but the VM has crashed.\n\n")
-	   TEXT("Exception code: %08X\n")
-	   TEXT("Exception address: %08X\n")
-	   TEXT("Current byte code: %d\n")
-	   TEXT("Primitive index: %d\n\n")
-	   TEXT("Crashed in %s thread\n\n")
-	   TEXT("This information will be stored in the file\n")
-	   TEXT("%s\\%s\n")
-	   TEXT("with a complete stack dump"),
+  _snwprintf(crashInfo,1024,
+	   L"Sorry but the VM has crashed.\n\n"
+	   L"Exception code:    %08x\n"
+#ifdef _WIN64
+	   L"Exception address: %016" _UNICODE_TEXT(PRIxSQPTR) L"\n"
+#else
+	   L"Exception address: %08" _UNICODE_TEXT(PRIxSQPTR) L"\n"
+#endif
+	   L"Current byte code: %d\n"
+	   L"Primitive index:   %" _UNICODE_TEXT(PRIdSQINT) L"\n\n"
+	   L"Crashed in %s thread\n\n"
+	   L"This information will be stored in the file\n"
+	   L"%s\\%s\n"
+	   L"with a complete stack dump",
 	   exp->ExceptionRecord->ExceptionCode,
-	   exp->ExceptionRecord->ExceptionAddress,
+	   (sqIntptr_t) (exp->ExceptionRecord->ExceptionAddress),
 	   byteCode,
 	   methodPrimitiveIndex(),
-	   inVMThread ? "the VM" : "some other",
-	   vmLogDirA,
-	   TEXT("crash.dmp"));
+	   inVMThread ? L"the VM" : L"some other",
+	   vmLogDirW,
+	   L"crash.dmp");
   if(!fHeadlessImage)
-    MessageBox(stWindow,crashInfo,TEXT("Fatal VM error"),
+    MessageBoxW(stWindow,crashInfo,L"Fatal VM error",
                  MB_OK | MB_APPLMODAL | MB_ICONSTOP);
 
 #if !NewspeakVM
   SetCurrentDirectoryW(vmLogDirW);
 #endif
   /* print the above information */
-  f = fopen_for_append("crash.dmp");
+  f = fopen_for_append(L"crash.dmp");
   if(f){  
     time_t crashTime = time(NULL);
     fprintf(f,"---------------------------------------------------------------------\n");
@@ -1250,13 +1395,10 @@ void __cdecl Cleanup(void)
     dumpStackIfInMainThread(0);
   }
   ioShutdownAllModules();
-#ifndef NO_PLUGIN_SUPPORT
-  pluginExit();
-#endif
   ioReleaseTime();
   /* tricky ... we have no systray icon when running
      headfull or when running as service on NT */
-  if(fHeadlessImage && (!fRunService || fWindows95))
+  if(fHeadlessImage && (!fRunService))
     SetSystemTrayIcon(0);
   if(palette) DeleteObject(palette);
   PROFILE_SHOW(ticksForReversal);
@@ -1264,12 +1406,12 @@ void __cdecl Cleanup(void)
   if(*stderrName)
     {
       fclose(stderr);
-      remove(stderrName);
+      _wremove(stderrName);
     }
   if(*stdoutName)
     {
       fclose(stdout);
-      remove(stdoutName);
+      _wremove(stdoutName);
     }
   OleUninitialize();
 }
@@ -1289,7 +1431,7 @@ sqImageFile findEmbeddedImage(void) {
 	int start;
 	int length;
 
-	f = sqImageFileOpen(vmName, "rb");
+	f = sqImageFileOpen(vmNameA, "rb");
 	if(!f) {
 		MessageBox(0,"Error opening VM",VM_NAME,MB_OK);
 		return 0;
@@ -1299,7 +1441,7 @@ sqImageFile findEmbeddedImage(void) {
 	sqImageFileSeek(f, endMarker);
     sqImageFileRead(&magic, 1, 4, f);
 	sqImageFileRead(&start, 1, 4, f);
-	sqMessageBox(MB_OK, "Magic number", "Expected:\t%x\nFound:\t\t%x", SQ_IMAGE_MAGIC, magic);
+	sqMessageBox(MB_OK, TEXT("Magic number", "Expected:\t%x\nFound:\t\t%x"), SQ_IMAGE_MAGIC, magic);
 	/* Magic number must be okay and start must be within executable boundaries */
 	if(magic != SQ_IMAGE_MAGIC || start < 0 || start >= endMarker) {
 		/* nope */
@@ -1309,7 +1451,7 @@ sqImageFile findEmbeddedImage(void) {
 	/* Might have an embedded image; seek back and double check */
 	sqImageFileSeek(f,start);
 	sqImageFileRead(&magic, 1, 4, f);
-	sqMessageBox(MB_OK, "Magic number", "Expected:\t%x\nFound:\t\t%x", SQ_IMAGE_MAGIC, magic);
+	sqMessageBox(MB_OK, TEXT("Magic number", "Expected:\t%x\nFound:\t\t%x"), SQ_IMAGE_MAGIC, magic);
 	if(magic != SQ_IMAGE_MAGIC) {
 		/* nope */
 		sqImageFileClose(f);
@@ -1325,6 +1467,7 @@ sqImageFile findEmbeddedImage(void) {
 	/* Gotcha! */
 	sqImageFileSeek(f, sqImageFilePosition(f) - 4);
 	strcpy(imageName, name);
+	MultiByteToWideChar(CP_UTF8,0,imageName,-1,imageNameW,MAX_PATH,NULL,NULL);
 	imageSize = endMarker - sqImageFilePosition(f);
 	return f;
 }
@@ -1374,7 +1517,7 @@ sqMain(int argc, char *argv[])
   int virtualMemory;
 
   /* set default fpu control word */
-  _controlfp(FPU_DEFAULT, _MCW_EM | _MCW_RC | _MCW_PC | _MCW_IC);
+  _controlfp(FPU_DEFAULT, FPU_MASK);
 
   LoadPreferences();
 
@@ -1382,9 +1525,9 @@ sqMain(int argc, char *argv[])
   if(fRunSingleApp) {
     HWND win = GetTopWindow(0);
     while (win != NULL) {
-      char buf[MAX_PATH];
-      GetClassName(win, buf, 80);
-      if(strcmp(windowClassName, buf) == 0) break;
+      TCHAR buf[MAX_PATH];
+      GetClassName(win, buf, MAX_PATH);
+      if(_tcscmp(windowClassName, buf) == 0) break;
       win = GetNextWindow(win, GW_HWNDNEXT);
     }
 
@@ -1431,11 +1574,6 @@ sqMain(int argc, char *argv[])
   fRunService = 0;
 #endif
 
-  /* look for a few things easy to handle */
-  if(fWindows95 && fBroadcastService95) {
-    PostMessage(HWND_BROADCAST, WM_BROADCAST_SERVICE, 0, 0);
-    return 0;
-  }
 
   /* set time zone accordingly */
   _tzset();
@@ -1451,17 +1589,14 @@ sqMain(int argc, char *argv[])
     svcStart = time(NULL);
     OutputLogMessage("\n\n");
     OutputLogMessage(ctime(&svcStart));
-    if(fWindows95) /* don't have a service name */
-      OutputLogMessage("The service");
-    else
-      OutputLogMessage(serviceName);
+    OutputLogMessageW(serviceName);
     OutputLogMessage(" started with the following command line\n");
     OutputLogMessage(initialCmdLine);
     OutputLogMessage("\n");
   }
 
   SetupFilesAndPath();
-  ioSetLogDirectoryOfSize(vmPath, strlen(vmPath));
+  ioSetLogDirectoryOfSize(vmPathA, strlen(vmPathA));
 
   /* release resources on exit */
   atexit(Cleanup);
@@ -1469,7 +1604,7 @@ sqMain(int argc, char *argv[])
 #ifndef NO_SERVICE
   /* if service installing is requested, do so */
   if(installServiceName && *installServiceName) {
-    strcpy(serviceName, installServiceName);
+    wcscpy(serviceName, installServiceName);
     sqServiceInstall();
     /* When installing was successful we won't come
        to this point. Otherwise ... */
@@ -1478,10 +1613,8 @@ sqMain(int argc, char *argv[])
 #endif
 
   /* initialisation */
-  SetupKeymap();
   SetupWindows();
   SetupPixmaps();
-  SetupService95();
   { extern void ioInitTime(void);
 	extern void ioInitThreads(void);
 	ioInitTime();
@@ -1504,7 +1637,7 @@ sqMain(int argc, char *argv[])
 
 
   if(!imageFile) {
-    imageSize = SqueakImageLength(toUnicode(imageName));
+    imageSize = SqueakImageLength(imageNameW);
     if(imageSize == 0) printUsage(2);
   }
 
@@ -1534,13 +1667,14 @@ sqMain(int argc, char *argv[])
 
 #if !NewspeakVM
     /* set the CWD to the image location */
-    if(*imageName) {
-      char path[MAX_PATH+1], *ptr;
-      strcpy(path,imageName);
-      ptr = strrchr(path, '\\');
+    if(*imageNameW) {
+      WCHAR path[MAX_PATH+1], *ptr;
+      wcsncpy(path,imageNameW,MAX_PATH);
+	  path[MAX_PATH] = 0;
+      ptr = wcsrchr(path, '\\');
       if(ptr) {
-	*ptr = 0;
-	SetCurrentDirectory(path);
+        *ptr = 0;
+        SetCurrentDirectoryW(path);
       }
     }
 #endif /* !NewspeakVM */
@@ -1550,7 +1684,7 @@ sqMain(int argc, char *argv[])
 
     /* if headless running is requested, try to to create an icon
        in the Win95/NT system tray */
-    if(fHeadlessImage && (!fRunService || fWindows95))
+    if(fHeadlessImage && (!fRunService))
       SetSystemTrayIcon(1);
     
     /* read the image file */
@@ -1590,27 +1724,22 @@ sqMain(int argc, char *argv[])
 int WINAPI
 WinMain(HINSTANCE hInst, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
-  DWORD mode;
-
-  /* a few things which need to be done first */
-  gatherSystemInfo();
-
-  /* check if we're running NT or 95 */
-  fWindows95 = (GetVersion() & 0x80000000) != 0;
   /* Determine if we're running as a console application  We can't report
    * allocation failures unless running as a console app because doing so
    * via a MessageBox will make the system unusable.
    */
-  fIsConsole = GetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), &mode);
+  fIsConsole = isOneStdioDescriptorATTY();
+
+  /* a few things which need to be done first */
+  gatherSystemInfo();
 
   /* fetch us a copy of the command line */
   initialCmdLine = _strdup(lpCmdLine);
 
   /* fetch us the name of the executable */
   {
-    WCHAR vmNameW[MAX_PATH];
     GetModuleFileNameW(hInst, vmNameW, MAX_PATH);
-    WideCharToMultiByte(CP_UTF8, 0, vmNameW, -1, vmName, MAX_PATH, NULL, NULL);
+    WideCharToMultiByte(CP_UTF8, 0, vmNameW, -1, vmNameA, MAX_PATH_UTF8, NULL, NULL);
   }
 	/* parse the command line into the unix-style argc, argv, converting to
 	 * UTF-8 on the way. */
@@ -1641,9 +1770,6 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
   /* get us the instance handle */
   hInstance = hInst;
 
-#ifndef NO_PLUGIN_SUPPORT
-  pluginInit();
-#endif
 #ifndef NO_SERVICE
   /* Find out if we're running from a service.
      That's a bit tricky since there is no difference between
@@ -1659,26 +1785,77 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
      if somebody out there knows how to find out when we're starting
      as a service - LET ME KNOW!
   */
-  if(!fWindows95)                      /* 1) running NT */
-    if(!*lpCmdLine)                  /* 2) No command line */
-      if(sqServiceMain())          /* try starting the service */
-	return 0;                /* service was run - exit */
-
+  if(!*lpCmdLine)          /* No command line */
+    if(sqServiceMain())    /* try starting the service */
+      return 0;            /* service was run - exit */
 #endif
 
-  SQ_LAUNCH_DROP = RegisterWindowMessage("SQUEAK_LAUNCH_DROP");
-
-  /* Special startup stuff for windows 95 */
-  if(fWindows95) {
-    /* The message we use for notifying services of user logon */
-    WM_BROADCAST_SERVICE = RegisterWindowMessage(msgBroadcastService);
-  }
+  SQ_LAUNCH_DROP = RegisterWindowMessage(TEXT("SQUEAK_LAUNCH_DROP"));
 
   /* start the non-service version */
   sqMain(clargc, clargv);
   return 0;
 }
 
+
+/* Mingw32 automatically adds a main routine for -mconsole links.  MSVC's LINK
+ * does not.  So define a main routine for the console VM, but only if not on
+ * mingw.
+ */
+#if (!defined(__MINGW32__) && !defined(__MINGW64__))
+int
+main(int argc, char *argv[])
+{
+  /* Determine if we're running as a console application  We can't report
+   * allocation failures unless running as a console app because doing so
+   * via a MessageBox will make the system unusable.
+   */
+  fIsConsole = isOneStdioDescriptorATTY();
+
+  /* a few things which need to be done first */
+  gatherSystemInfo();
+
+  /* get us the instance handle */
+  hInstance = GetModuleHandle(0);
+
+  /* fetch us the name of the executable */
+  {
+    GetModuleFileNameW(hInstance, vmNameW, MAX_PATH);
+    WideCharToMultiByte(CP_UTF8, 0, vmNameW, -1, vmNameA, MAX_PATH_UTF8, NULL, NULL);
+  }
+
+  /* open all streams in binary mode */
+  _fmode  = _O_BINARY;
+
+#ifndef NO_SERVICE
+  /* Find out if we're running from a service.
+     That's a bit tricky since there is no difference between
+     usual startup and service startup. We do two assumptions here:
+     1) If we're NOT running on NT we can't be service
+     2) If there is a command line we can't be service
+     Still, there is a chance that a user just double clicks on
+     the Squeak executable in NT. Therefore we _try_ to connect
+     to the service control manager in the sqServiceMain function.
+     If this fails, we try the usual startup. It might take a bit
+     longer than the normal startup but this only happens if there
+     is no image name given - and that's not our fault. Anyways,
+     if somebody out there knows how to find out when we're starting
+     as a service - LET ME KNOW!
+  */
+  if(!*lpCmdLine)          /* No command line */
+    if(sqServiceMain())    /* try starting the service */
+      return 0;            /* service was run - exit */
+#endif
+
+  SQ_LAUNCH_DROP = RegisterWindowMessage(TEXT("SQUEAK_LAUNCH_DROP"));
+
+  vmOptions = calloc(argc + 1, sizeof(char *));
+  imageOptions = calloc(argc + 1, sizeof(char *));
+  /* start the non-service version */
+  sqMain(argc, argv);
+  return 0;
+}
+#endif /* (!defined(__MINGW32__) && !defined(__MINGW64__)) */
 static sqIntptr_t	
 strtobkm(const char *str)	
 {
@@ -1721,19 +1898,27 @@ parseVMArgument(int argc, char *argv[])
 
 	/* parameters */
 	else if (argc > 1 && !strcmp(argv[0], VMOPTION("service"))) {
-		installServiceName = argv[1];
+		int len = MultiByteToWideChar(CP_UTF8, 0, argv[1], -1, installServiceName, 0);
+		installServiceName = malloc(len * sizeof(WCHAR)); /* note: we will never free installServiceName - it's a global for lifetime of the VM */
+		MultiByteToWideChar(CP_UTF8, 0, argv[1], -1, installServiceName, len);
 		return 2;
 	}
 	else if (!strncmp(argv[0], VMOPTION("service:"), strlen(VMOPTION("service:")))) {
-		installServiceName = argv[0] + 9;
+		int len = MultiByteToWideChar(CP_UTF8, 0, argv[0] + strlen(VMOPTION("log:")), -1, installServiceName, 0);
+		logName = malloc(len * sizeof(WCHAR));
+		MultiByteToWideChar(CP_UTF8, 0, argv[0] + strlen(VMOPTION("log:")), -1, installServiceName, len);
 		return 1;
 	}
 	else if (argc > 1 && !strcmp(argv[0], VMOPTION("log"))) {
-		logName = argv[1];
+		int len=MultiByteToWideChar(CP_UTF8, 0, argv[1], -1, logName, 0);
+		logName = malloc(len * sizeof(WCHAR)); /* note: we will never free logName - it's a global for lifetime of the VM */
+		MultiByteToWideChar(CP_UTF8, 0, argv[1], -1, logName, len);
 		return 2;
 	}
 	else if (!strncmp(argv[0], VMOPTION("log:"), strlen(VMOPTION("log:")))) {
-		logName = argv[0] + 5;
+		int len = MultiByteToWideChar(CP_UTF8, 0, argv[0] + strlen(VMOPTION("log:")), -1, logName, 0);
+		logName = malloc(len * sizeof(WCHAR));
+		MultiByteToWideChar(CP_UTF8, 0, argv[0] + strlen(VMOPTION("log:")), -1, logName, len);
 		return 1;
 	}
 	else if (argc > 1 && !strcmp(argv[0], VMOPTION("memory"))) {
@@ -1741,7 +1926,7 @@ parseVMArgument(int argc, char *argv[])
 		return 2;
 	}
 	else if (!strncmp(argv[0], VMOPTION("memory:"), strlen(VMOPTION("memory:")))) {
-		dwMemorySize = strtobkm(argv[0] + 8);
+		dwMemorySize = strtobkm(argv[0] + strlen(VMOPTION("memory:")));
 		return 1;
 	}
 #if STACKVM || NewspeakVM
@@ -1751,23 +1936,23 @@ parseVMArgument(int argc, char *argv[])
 		return 2; }
 	else if (!strncmp(argv[0], VMOPTION("breaksel:"), strlen(VMOPTION("breaksel:")))) {
 		extern void setBreakSelector(char *);
-		setBreakSelector(argv[0] + 10);
+		setBreakSelector(argv[0] + strlen(VMOPTION("breaksel:")));
 		return 1; }
 	else if (argc > 1 && !strcmp(argv[0], VMOPTION("numextsems"))) {
 		ioSetMaxExtSemTableSize(atoi(argv[1]));
 		return 2; }
 	else if (!strncmp(argv[0], VMOPTION("numextsems:"), strlen(VMOPTION("numextsems:")))) {
-		ioSetMaxExtSemTableSize(atoi(argv[1]+12));
+		ioSetMaxExtSemTableSize(atoi(argv[0]+strlen(VMOPTION("numextsems:"))));
 		return 1; }
 #endif /* STACKVM || NewspeakVM */
 #if STACKVM
-      else if (!strcmp(argv[0], VMOPTION("breakmnu"))) {
+      else if (argc > 1 && !strcmp(argv[0], VMOPTION("breakmnu"))) {
 		extern void setBreakMNUSelector(char *);
 		setBreakMNUSelector(argv[1]);
 		return 2; }
 	else if (!strncmp(argv[0], VMOPTION("breakmnu:"), strlen(VMOPTION("breakmnu:")))) {
 		extern void setBreakMNUSelector(char *);
-		setBreakMNUSelector(argv[0] + 10);
+		setBreakMNUSelector(argv[0] + strlen(VMOPTION("breakmnu:")));
 		return 1; }
 	else if (argc > 1 && !strcmp(argv[0], VMOPTION("eden"))) {
 		extern sqInt desiredEdenBytes;
@@ -1775,27 +1960,23 @@ parseVMArgument(int argc, char *argv[])
 		return 2; }
 	else if (!strncmp(argv[0], VMOPTION("eden:"), strlen(VMOPTION("eden:")))) {
 		extern sqInt desiredEdenBytes;
-		desiredEdenBytes = strtobkm(argv[0]+6);	 
-		return 2; }
+		desiredEdenBytes = strtobkm(argv[0]+strlen(VMOPTION("eden:")));	 
+		return 1; }
 	else if (argc > 1 && !strcmp(argv[0], VMOPTION("leakcheck"))) {
 		extern sqInt checkForLeaks;
 		checkForLeaks = atoi(argv[1]);	 
 		return 2; }
 	else if (!strncmp(argv[0], VMOPTION("leakcheck:"), strlen(VMOPTION("leakcheck:")))) {
 		extern sqInt checkForLeaks;
-		checkForLeaks = atoi(argv[0]+11);	 
-		return 2; }
+		checkForLeaks = atoi(argv[0]+strlen(VMOPTION("leakcheck:")));	 
+		return 1; }
 	else if (argc > 1 && !strcmp(argv[0], VMOPTION("stackpages"))) {
 		extern sqInt desiredNumStackPages;
 		desiredNumStackPages = atoi(argv[1]);	 
 		return 2; }
 	else if (!strncmp(argv[0], VMOPTION("stackpages:"), strlen(VMOPTION("stackpages:")))) {
 		extern sqInt desiredNumStackPages;
-		desiredNumStackPages = atoi(argv[0]+12);	 
-		return 2; }
-	else if (!strcmp(argv[0], VMOPTION("checkpluginwrites"))) {
-		extern sqInt checkAllocFiller;
-		checkAllocFiller = 1;
+		desiredNumStackPages = atoi(argv[0]+strlen(VMOPTION("stackpages:")));	 
 		return 1; }
 	else if (!strcmp(argv[0], VMOPTION("noheartbeat"))) {
 		extern sqInt suppressHeartbeatFlag;
@@ -1805,9 +1986,17 @@ parseVMArgument(int argc, char *argv[])
 		extern sqInt warnpid;
 		warnpid = getpid();
 		return 1; }
+	else if (!strcmp(argv[0], VMOPTION("failonffiexception"))) {
+		extern sqInt ffiExceptionResponse;
+		ffiExceptionResponse = 1;
+		return 1; }
+	else if (!strcmp(argv[0], VMOPTION("nofailonffiexception"))) {
+		extern sqInt ffiExceptionResponse;
+		ffiExceptionResponse = -1;
+		return 1; }
 #endif /* STACKVM */
 #if COGVM
-	else if (!strcmp(argv[0], VMOPTION("codesize"))) {
+	else if (argc > 1 && !strcmp(argv[0], VMOPTION("codesize"))) {
 		extern sqInt desiredCogCodeSize;
 		desiredCogCodeSize = strtobkm(argv[1]);	 
 		return 2; }
@@ -1830,18 +2019,14 @@ parseVMArgument(int argc, char *argv[])
 		extern sqInt traceStores;
 		traceStores = 1;
 		return 1; }
-	else if (!strcmp(argv[0], VMOPTION("dpcso"))) {
-		extern usqIntptr_t debugPrimCallStackOffset;
-		debugPrimCallStackOffset = (usqIntptr_t) strtobkm(argv[1]);	 
-		return 2; }
 	else if (argc > 1 && !strcmp(argv[0], VMOPTION("cogmaxlits"))) {
 		extern sqInt maxLiteralCountForCompile;
 		maxLiteralCountForCompile = strtobkm(argv[1]);	 
 		return 2; }
 	else if (!strncmp(argv[0], VMOPTION("cogmaxlits:"), strlen(VMOPTION("cogmaxlits:")))) {
 		extern sqInt maxLiteralCountForCompile;
-		maxLiteralCountForCompile = strtobkm(argv[0]+12); 
-		return 2; }
+		maxLiteralCountForCompile = strtobkm(argv[0]+strlen(VMOPTION("cogmaxlits:")));
+		return 1; }
 	else if (argc > 1 && !strcmp(argv[0], VMOPTION("cogminjumps"))) {
 		extern sqInt minBackwardJumpCountForCompile;
 		minBackwardJumpCountForCompile = strtobkm(argv[1]); 
@@ -1849,7 +2034,7 @@ parseVMArgument(int argc, char *argv[])
 	else if (!strncmp(argv[0], VMOPTION("cogminjumps:"),strlen(VMOPTION("cogminjumps:")))) {
 		extern sqInt minBackwardJumpCountForCompile;
 		minBackwardJumpCountForCompile = strtobkm(argv[0]+strlen(VMOPTION("cogminjumps:")));
-		return 2; }
+		return 1; }
     else if (!strcmp(argv[0], VMOPTION("reportheadroom"))
           || !strcmp(argv[0], VMOPTION("rh"))) {
 		extern sqInt reportStackHeadroom;
@@ -1857,33 +2042,18 @@ parseVMArgument(int argc, char *argv[])
 		return 1; }
 #endif /* COGVM */
 #if SPURVM
-    else if (!strcmp(argv[0], VMOPTION("maxoldspace"))) {
+    else if (argc > 1 && !strcmp(argv[0], VMOPTION("maxoldspace"))) {
 		maxOldSpaceSize = (usqInt) strtobkm(argv[1]);	 
 		return 2; }
     else if (!strncmp(argv[0], VMOPTION("maxoldspace:"), strlen(VMOPTION("maxoldspace:")))) {
 		maxOldSpaceSize = (usqInt) strtobkm(argv[0]+strlen(VMOPTION("maxoldspace:")));
 		return 2; }
+	else if (!strcmp(argv[0], VMOPTION("logscavenge"))) {
+		extern void openScavengeLog(void);
+		openScavengeLog();
+		return 1;
+	}
 #endif
-
-  /* NOTE: the following flags are "undocumented" */
-	else if (argc > 1 && !strcmp(argv[0], VMOPTION("browserWindow"))) {
-#if SQ_HOST32
-		browserWindow = (HWND)atoi(argv[1]);
-#else
-		browserWindow = (HWND)atoll(argv[1]);
-#endif
-		return 2; }
-	else if (!strncmp(argv[0], VMOPTION("browserWindow:"), strlen(VMOPTION("browserWindow:")))) {
-#if SQ_HOST32
-		browserWindow = (HWND)atoi(argv[0]+strlen(VMOPTION("browserWindow:")));
-#else
-		browserWindow = (HWND)atoll(argv[0]+strlen(VMOPTION("browserWindow:")));
-#endif
-		return 1; }
-
-	/* service support on 95 */
-	else if (!strcmp(argv[0], VMOPTION("service95"))) { fRunService = true; return 1; }
-	else if (!strcmp(argv[0], VMOPTION("broadcast95"))) { fBroadcastService95 = true; return 1; }
 
 	return 0;	/* option not recognised */
 }
@@ -1891,10 +2061,15 @@ parseVMArgument(int argc, char *argv[])
 /* parse all arguments meaningful to the VM; answer index of last VM arg + 1 */
 static int
 parseVMArgs(int argc, char *argv[])
-{ int n, i = 0, j;
+{
+    int n,j,ddash,i = 0;
 
 	while (++i < argc && *argv[i] == '-' && strcmp(argv[i],"--")) {
-        if ((n = parseVMArgument(argc - i, argv + i))) {
+        ddash= (argv[i][1] == '-');
+        if(ddash) argv[i]++;
+        n = parseVMArgument(argc - i, argv + i);
+        if(ddash) argv[i]--;
+        if (n > 0) {
 			for (j = 0; j < n; j++)
 				vmOptions[numOptionsVM++] = argv[i+j];
 			i += n - 1;
@@ -1949,7 +2124,7 @@ SubsystemType()
     IMAGE_OPTIONAL_HEADER image_optional_header;
 
     /* Open the reference file. */ 
-    hImage = CreateFile(vmName,
+    hImage = CreateFileW(vmNameW,
                         GENERIC_READ,
                         FILE_SHARE_READ,
                         NULL,
@@ -2008,12 +2183,16 @@ parseGenericArgs(int argc, char *argv[])
 		case IMAGE_SUBSYSTEM_WINDOWS_CE_GUI:
 			return 1; /* ok not to have an image since user can choose one. */
 		default:
-			return 0;
+			/* It is OK to run the console VM provided an image has been
+			 * provided by the ini file.
+			 */
+			return imageName != 0;
 		}
 
 	if (*imageName == 0) { /* only try to use image name if none is provided */
 		if (*argv[0] && IsImage(argv[0])) {
-			strcpy(imageName, argv[0]);
+			strncpy(imageName, argv[0],MAX_PATH_UTF8);
+			MultiByteToWideChar(CP_UTF8, 0, imageName, -1, imageNameW, MAX_PATH);
 			/* if provided, the image is a vm argument. */
 			vmOptions[numOptionsVM++] = argv[0];
 		}
@@ -2053,26 +2232,19 @@ parseArguments(int argc, char *argv[])
  */
 # if defined(_M_IX86) || defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386) || defined(__i386__) \
 	|| defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
-/*
- * Cog has already captured CStackPointer  before calling this routine.  Record
- * the original value, capture the pointers again and determine if CFramePointer
- * lies between the two stack pointers and hence is likely in use.  This is
- * necessary since optimizing C compilers for x86 may use %ebp as a general-
- * purpose register, in which case it must not be captured.
- */
 int
-isCFramePointerInUse()
+isCFramePointerInUse(usqIntptr_t *cFrmPtrPtr, usqIntptr_t *cStkPtrPtr)
 {
-	extern usqIntptr_t CStackPointer, CFramePointer;
 	extern void (*ceCaptureCStackPointers)(void);
-	usqIntptr_t currentCSP = CStackPointer;
+	usqIntptr_t currentCSP = *cStkPtrPtr;
 
-	currentCSP = CStackPointer;
 	ceCaptureCStackPointers();
-	assert(CStackPointer < currentCSP);
-	return CFramePointer >= CStackPointer && CFramePointer <= currentCSP;
+	assert(*cStkPtrPtr < currentCSP);
+	return *cFrmPtrPtr >= *cStkPtrPtr && *cFrmPtrPtr <= currentCSP;
 }
-# endif /* defined(i386) || defined(__i386) || defined(__i386__) */
+# else
+#	error please provide a deifnition of isCFramePointerInUse for this platform
+# endif /* defined(_M_IX86) et al */
 
 /* Answer an approximation of the size of the redzone (if any).  Do so by
  * sending a signal to the process and computing the difference between the

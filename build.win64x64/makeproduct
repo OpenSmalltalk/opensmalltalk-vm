@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 trap 'exit 2' HUP INT PIPE TERM
 PRODUCTDIRS="newspeak.cog.spur pharo.cog.spur squeak.cog.spur"
 for d in $PRODUCTDIRS; do

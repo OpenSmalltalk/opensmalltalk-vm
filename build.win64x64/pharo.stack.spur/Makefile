@@ -7,7 +7,7 @@ VM:=Pharo
 VM_NAME:=Pharo Virtual Machine
 
 VMSRCDIR:=../../spurstack64src/vm
-COGDEFS:= -DPharoVM=1 -DIMMUTABILITY=1
+COGDEFS:= -DPharoVM=1
 
 THIRDPARTYLIBS:=pkgconfig openssl libssh2 libgit2 libsdl2 zlib libpng freetype2 pixman cairo libgcc
 
@@ -17,7 +17,7 @@ include ../common/Makefile
 #
 include ../third-party/Makefile.pkgconfig
 include ../third-party/Makefile.freetype2
-include ../third-party/Makefile.openssl
+include ../third-party/Makefile.openssl.win64
 include ../third-party/Makefile.libssh2
 include ../third-party/Makefile.libgit2
 include ../third-party/Makefile.libsdl2

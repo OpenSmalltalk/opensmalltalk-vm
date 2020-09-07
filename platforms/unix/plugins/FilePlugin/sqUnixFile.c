@@ -88,12 +88,24 @@ DIR *openDir= 0;
 extern time_t convertToSqueakTime(time_t unixTime);
 
 
+void 
+sqCloseDir()
+{
+  /* Ensure that the cached open directory is closed */
+  if (lastPathValid)
+    closedir(openDir);
+  lastPathValid= false;
+  lastIndex= -1;
+  lastPath[0]= '\0';
+}
+
+
+
 sqInt dir_Create(char *pathString, sqInt pathStringLength)
 {
   /* Create a new directory with the given path. By default, this
      directory is created relative to the cwd. */
   char name[MAXPATHLEN+1];
-  int i;
   if (pathStringLength >= MAXPATHLEN)
     return false;
   if (!sq2uxPath(pathString, pathStringLength, name, MAXPATHLEN, 1))
@@ -106,18 +118,12 @@ sqInt dir_Delete(char *pathString, sqInt pathStringLength)
 {
   /* Delete the existing directory with the given path. */
   char name[MAXPATHLEN+1];
-  int i;
   if (pathStringLength >= MAXPATHLEN)
     return false;
   if (!sq2uxPath(pathString, pathStringLength, name, MAXPATHLEN, 1))
     return false;
   if (lastPathValid && !strcmp(lastPath, name))
-    {
-      closedir(openDir);
-      lastPathValid= false;
-      lastIndex= -1;
-      lastPath[0]= '\0';
-    }
+    sqCloseDir();
   return rmdir(name) == 0;
 }
 
@@ -149,15 +155,9 @@ static int maybeOpenDir(char *unixPath)
   return true;
 }
 
-#if PharoVM
 sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
 /* outputs: */  char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
 		sqInt *isDirectory, squeakFileOffsetType *sizeIfFile, sqInt * posixPermissions, sqInt *isSymlink)
-#else 
-sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
-/* outputs: */  char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
-		sqInt *isDirectory, squeakFileOffsetType *sizeIfFile)
-#endif
 {
   /* Lookup the index-th entry of the directory with the given path, starting
      at the root of the file system. Set the name, name length, creation date,
@@ -180,25 +180,29 @@ sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
   *modificationDate = 0;
   *isDirectory      = false;
   *sizeIfFile       = 0;
-#if PharoVM
   *posixPermissions = 0;
   *isSymlink        = false;
-#endif
 
-  if ((pathStringLength == 0))
+  if (pathStringLength == 0)
     strcpy(unixPath, ".");
   else if (!sq2uxPath(pathString, pathStringLength, unixPath, MAXPATHLEN, 1))
     return BAD_PATH;
 
-  /* get file or directory info */
-  if (!maybeOpenDir(unixPath))
-    return BAD_PATH;
-
-  if (++lastIndex == index)
-    index= 1;		/* fake that the dir is rewound and we want the first entry */
+  /* (Re)open the directory if required */
+  if (lastPathValid && 
+      ++lastIndex == index &&
+      !strcmp(lastPath, unixPath))
+    /* We can re-use the cached open directory.
+     * We want the next entry, so reset index */
+    index= 1;
   else
-    {
-      rewinddir(openDir);	/* really rewind it, and read to the index */
+    { /* The directory must be opened or reopened.
+       * We can't just rewind the directory as entries appear to be cached on
+       * CIFS mounted file systems, and files may have been deleted between 
+       * calls. */
+      sqCloseDir();
+      if (!maybeOpenDir(unixPath))
+        return BAD_PATH;
       lastIndex= index;
     }
 
@@ -253,24 +257,16 @@ sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
   else
     *sizeIfFile= statBuf.st_size;
 
-#if PharoVM
   *isSymlink = S_ISLNK(statBuf.st_mode);
   *posixPermissions = statBuf.st_mode & 0777;
-#endif
 
   return ENTRY_FOUND;
 }
 
 
-#if PharoVM
 sqInt dir_EntryLookup(char *pathString, sqInt pathStringLength, char* nameString, sqInt nameStringLength,
 /* outputs: */  char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
 		sqInt *isDirectory, squeakFileOffsetType *sizeIfFile, sqInt *posixPermissions, sqInt *isSymlink)
-#else
-sqInt dir_EntryLookup(char *pathString, sqInt pathStringLength, char* nameString, sqInt nameStringLength,
-/* outputs: */  char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
-		sqInt *isDirectory, squeakFileOffsetType *sizeIfFile)
-#endif
 {
   /* Lookup the given name in the given directory,
      Set the name, name length, creation date,
@@ -290,12 +286,10 @@ sqInt dir_EntryLookup(char *pathString, sqInt pathStringLength, char* nameString
   *modificationDate = 0;
   *isDirectory      = false;
   *sizeIfFile       = 0;
-#if PharoVM
   *posixPermissions = 0;
   *isSymlink        = false;
-#endif
 
-  if ((pathStringLength == 0))
+  if (pathStringLength == 0)
     strcpy(unixPath, ".");
   else if (!sq2uxPath(pathString, pathStringLength, unixPath, MAXPATHLEN, 1))
     return BAD_PATH;
@@ -326,10 +320,8 @@ sqInt dir_EntryLookup(char *pathString, sqInt pathStringLength, char* nameString
   else
     *sizeIfFile= statBuf.st_size;
   
-#if PharoVM
   *isSymlink = S_ISLNK(statBuf.st_mode);
   *posixPermissions = statBuf.st_mode & 0777;
-#endif
 
   return ENTRY_FOUND;
 }

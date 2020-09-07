@@ -1,0 +1,16 @@
+#!/bin/sh
+# 2019-01-02:Ben-Coman: Created script
+# Generate plugin data for spreadsheet matrix Build x Dialect x Plugin
+# at https://docs.google.com/spreadsheets/d/15L-c7ws41TXOIwUhfd-zTAkbKhpyLn45BimeMrKwrQY/edit?usp=sharing
+#
+# Usage: pluginReport [DIRECTORY]
+# where to copy-paste into spreadsheet above DIRECTORY must be the opensmalltalk-vm root directory e.g. `scripts/pluginReport .`
+# but for other purposes can be any build.* directory.
+ 
+cd $1
+find . \( -name "*plugins.int" -o -name "*plugins.ext" \) -exec sh -c "cat {} | sed -r '/^(\s*#|\s*$|.*=)/d;' | sed -e 's%^%{}/%' | cut -d' ' -f1 " \; 
+# Disected...
+#   Process both int and ext plugin files:  \( -name "*plugins.int" -o -name "*plugins.ext" \) -exec sh -c "cat {} 
+#   Strip out comments and blank lines:  sed -r '/^(\s*#|\s*$|.*=)/d;' 
+#   Prefix filename to each plugin line:  sed -e 's%^%{}/%' 
+#   Trim line continuation slash:  cut -d' ' -f1 " 

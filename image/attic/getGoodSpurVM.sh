@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 # Sets the VM env var to the r3692 Cog Spur VM for the current platform.
 # will download and install the VM in this directory if necessary.
 

@@ -51,6 +51,7 @@ exec_prefix=	@exec_prefix@
 
 bindir=		@bindir@
 libdir=		@libdir@
+datarootdir=	@datarootdir@
 datadir=	@datadir@
 mandir=		@mandir@
 imgdir=		@imgdir@
@@ -87,16 +88,13 @@ VM_DISPX11_BITBLT_FLAGS= @VM_DISPX11_BITBLT_FLAGS@
 ARM_ARCH= @ARM_ARCH@
 LIBM_CFLAGS=	@LIBM_CFLAGS@
 
-LIBS=		@LIBS@
+LIBS=		@LIBS@ @LIBADD_DLOPEN@
+
 
 X_CFLAGS=	@X_CFLAGS@
 X_INCLUDES=	@X_INCLUDES@
 X_LIBS=		@X_LIBS@
 
-LIB_UUID=	@LIB_UUID@
-
-PYLIBPATH=	@PYLIBPATH@
-PYINCLUDES=	@PYINCLUDES@
 
 INTERP=		@INTERP@
 

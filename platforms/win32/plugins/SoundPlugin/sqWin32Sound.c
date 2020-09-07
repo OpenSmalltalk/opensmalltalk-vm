@@ -279,7 +279,7 @@ snd_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sqInt semaIndex)
     DPRINTF(("# Creating playback thread\n"));
     hPlayThread = CreateThread(NULL, 0, playCallback, NULL, 0, &threadID);
     if(hPlayThread == 0) {
-      printLastError("sndStart: CreateThread failed");
+      printLastError(TEXT("sndStart: CreateThread failed"));
       snd_StopPlaying();
       return 0;
     }
@@ -408,7 +408,7 @@ snd_StartRecording(sqInt samplesPerSec, sqInt stereo, sqInt semaIndex) {
   recSemaphore = semaIndex;
   hRecThread = CreateThread(NULL, 0, recCallback, NULL, 0, &threadID);
   if(hRecThread == 0) {
-    printLastError("snd_StartRec: CreateThread failed");
+    printLastError(TEXT("snd_StartRec: CreateThread failed"));
     snd_StopRecording();
     return 0;
   }

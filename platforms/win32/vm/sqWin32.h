@@ -25,86 +25,13 @@
 
 #define NO_TABLET
 
-
-#ifdef _WIN32_WCE
-/*************************************************************/
-/*                          Windows CE                       */
-/*************************************************************/
-#ifndef WIN32_FILE_SUPPORT
-# error "You must define WIN32_FILE_SUPPORT for compiling on WINCE"
-#endif
-
-/* OS/Processor definitions */
-#define WIN32_NAME "Win32"
-#define WIN32_OS_NAME "CE"
-#if defined (_SH3_)
-#	define WIN32_PROCESSOR_NAME "SH3"
-#elif defined(_MIPS_)
-#	define WIN32_PROCESSOR_NAME "MIPS"
-#else
-#	error "Unknown Windows CE configuration"
-#endif
-
-/* Remove subsystems we don't support on CE based devices */
-#define NO_JOYSTICK
-#define NO_PRINTER
-#define NO_MIDI
-#define WCE_PREFERENCES
-#define NO_ASYNC_FILES
-#define NO_PLUGIN_SUPPORT
-
-#define USE_DIB_SECTIONS
-
-#define GMEM_MOVEABLE 0
-#define GMEM_DDESHARE 0
-#define GMEM_ZEROINIT 0
-
-#define MB_TASKMODAL	0
-#define CS_OWNDC	0
-#define WS_EX_APPWINDOW	WS_VISIBLE
-#define WS_OVERLAPPEDWINDOW	WS_VISIBLE
-#define SW_SHOWMAXIMIZED SW_SHOW
-#define SW_RESTORE SW_SHOW
-
-#ifndef SEEK_SET
-#	define SEEK_SET	0
-#endif
-#ifndef SEEK_CUR
-#	define SEEK_CUR	1
-#endif
-#ifndef SEEK_END
-#	define SEEK_END	2
-#endif
-
-#define EXCEPTION_ACCESS_VIOLATION	STATUS_ACCESS_VIOLATION
-
-#define LPEXCEPTION_POINTERS EXCEPTION_POINTERS*
-
-#define MF_DISABLED MF_GRAYED
-
-#ifndef FPOS_T_DEFINED
-	typedef unsigned long fpos_t; /* Could be 64 bits for Win32 */
-#	define FPOS_T_DEFINED
-#endif
-
-#define isdigit(src) ((src <= '9') && (src >= '0'))
-#define MoveMemory(_Destination, _Source, _Length) memmove(_Destination, _Source, _Length)
-#define ZeroMemory(_Destination, _Length) memset(_Destination, 0, _Length)
-#define timeGetTime() 0 // no multimedia timers
-
-
-#else /* !(_WIN32_WCE) */
-/*************************************************************/
-/*                      Windows 95/98/NT/Blablabla           */
-/*************************************************************/
-
 /* #define USE_DIRECT_X */
 #define NO_DIRECTINPUT
 
 /* Definition for Intel Processors */
 #if defined(_M_IX86) || defined(i386)
 # define WIN32_NAME "Win32"
-# define WIN32_OS_NAME (fWindows95 ? "95" : "NT")
+# define WIN32_OS_NAME "NT"
 # define WIN32_PROCESSOR_NAME "IX86"
 
 # if defined(X86)
@@ -112,18 +39,17 @@
 #  define X86 i386
 # endif
 
-  /* Use console for warnings if possible */
-# ifndef UNICODE
-#	define warnPrintf printf
-# endif
+  /* Use console for warnings */
+# define warnPrintf printf
+# define warnPrintfW wprintf
 #endif /* _M_IX86 */
 
 /* We are stuck with Win32 as a misnomer for the Windows operating system for
  * historical reasons.  Images up to and including Squeak 5/Pharo 6 expect
  * getSystemAttribute: 1001 ("platform name") to answer 'Win32' on Windows.
  * Yes, this is regrettable.  No, it's not easy to fix without breaking existing
- * images :-(.  The NT vs CE distinction isn't particularly meaningful either.
- * Further (see sqWin32Window.c) parameter 1005 (the windoing sytsem name) also
+ * images :-(.
+ * Further (see sqWin32Window.c) parameter 1005 (the windoing system name) also
  * answers Win32.  Perhaps this could be changed to "Windows", because at least
  * in a base Squeak 5.1 image as of mid 2017 there is no use of windowSystemName
  * that depends on its result being 'Win32' (see e.g. HandMorph class>>
@@ -135,23 +61,10 @@
 #	define WIN32_OS_NAME "NT"
 #	define WIN32_PROCESSOR_NAME "X64"
 
-  /* Use console for warnings if possible */
-#	ifndef UNICODE
-#		define warnPrintf printf
-#	endif
+  /* Use console for warnings */
+#	define warnPrintf printf
+#	define warnPrintfW wprintf
 #endif /* _M_X64 & al */
-
-#endif /* (_WIN32_WCE) */
-
-/* THE FOLLOWING IS WRONG (& HENCE I'VE IF 0'ed IT OUT.  WE CAN'T MERELY DEFINE
- * WIN32 BECAUSE WE MAY BE ON WIN64. eem 2017/05/16
- */
-#if 0
-/* due to weird include orders, make sure WIN32 is defined */
-# if !defined(WIN32)
-#  define WIN32 1
-# endif
-#endif
 
 /* Experimental */
 #ifdef MINIMAL
@@ -162,7 +75,6 @@
 #	define NO_SERVICE
 #	define NO_PREFERENCES
 #	define NO_PRINTER
-#	define NO_WHEEL_MOUSE
   /* Use stub definitions from sqWin32Stubs.c */
 #	define NO_SOUND
 #	define NO_SERIAL_PORT
@@ -184,19 +96,17 @@ typedef int (*messageHook)(void *, unsigned int, unsigned int, long);
 /********************************************************/
 /* Several setup functions                              */
 /********************************************************/
-void SetupFilesAndPath();
-void SetupKeymap();
-void SetupWindows();
-void SetupPixmaps();
-void SetupPrinter();
-void SetupPreferences();
-void SetupMIDI();
+void SetupFilesAndPath(void);
+void SetupWindows(void);
+void SetupPixmaps(void);
+void SetupPrinter(void);
+void SetupMIDI(void);
 
 /********************************************************/
 /* Startup helper functions                             */
 /********************************************************/
-int findImageFile();
-int openImageFile();
+int findImageFile(void);
+int openImageFile(void);
 
 /********************************************************/
 /* external SYNCHRONIZED signaling of semaphores        */
@@ -212,7 +122,7 @@ char *GetVMOption(int id);
 /********************************************************/
 /* Misc functions                                       */
 /********************************************************/
-void SetWindowSize();
+void SetWindowSize(void);
 int printUsage(int level);
 
 /********************************************************/
@@ -259,21 +169,53 @@ int reverse_image_words(unsigned int *dst, unsigned int *src,int depth, int widt
 /********************************************************/
 /* Declarations we may need by other modules            */
 /********************************************************/
-extern char imageName[];		/* full path and name to image */
-extern TCHAR imagePath[];		/* full path to image */
-extern TCHAR vmPath[];		    /* full path to interpreter's directory */
-extern TCHAR vmName[];		    /* name of the interpreter's executable */
-extern TCHAR windowTitle[];             /* window title string */
-extern char vmBuildString[];            /* the vm build string */
-extern TCHAR windowClassName[];    /* class name for the window */
+
+/* Note: a character can require up to 4 bytes in UTF8 encoding
+   But the expansion from UTF16 -> UTF8 is never more than 3 bytes for 1 short
+   U+ 0000-U+  007F - 1byte in utf8, 1 short in utf16.
+   U+ 0080-U+  07FF - 2byte in utf8, 1 short in utf16.
+   U+ 0800-U+  FFFF - 3byte in utf8, 1 short in utf16.
+   U+10000-U+10FFFF - 4byte in utf8, 2 short in utf16.
+*/
+#define MAX_PATH_UTF8 (MAX_PATH*3)
+
+extern char  imageName [];       /* full path and name to image - UTF8 */
+extern WCHAR imageNameW[];       /* full path and name to image - UTF16 */
+extern char  imagePathA[];       /* full path to image - UTF8 */
+extern WCHAR imagePathW[];       /* full path to image - UTF16 */
+extern char  vmPathA[];          /* full path to interpreter's directory - UTF8 */
+extern WCHAR vmPathW[];          /* full path to interpreter's directory - UTF16 */
+extern char  vmNameA[];          /* name of the interpreter's executable - UTF8 */
+extern WCHAR vmNameW[];          /* name of the interpreter's executable - UTF16 */
+extern char windowTitle[];       /* window title string - UTF8 */
+extern char vmBuildString[];     /* the vm build string */
+extern TCHAR windowClassName[];  /* class name for the window */
+extern char  squeakIniNameA[];   /* full path to ini file - UTF8 */
+extern WCHAR squeakIniNameW[];   /* full path to ini file - UTF16 */
+
+#ifdef UNICODE
+# define imageNameT imageNameW /* define the generic TCHAR* version */
+# define imagePath  imagePathW
+# define vmName vmNameW
+# define vmPath vmPathW
+# define squeakIniName squeakIniNameW
+#else
+# define imageNameT imageName
+# define imagePath  imagePathA
+# define vmName vmNameA
+# define vmPath vmPathA
+# define squeakIniName squeakIniNameA
+#endif
+
+#define __UNICODE_TEXT(x) L##x
+#define _UNICODE_TEXT(x) __UNICODE_TEXT(x)
 
 extern UINT SQ_LAUNCH_DROP;
 
 extern const TCHAR U_ON[];
 extern const TCHAR U_OFF[];
 extern const TCHAR U_GLOBAL[];
-extern const TCHAR U_SLASH[];
-extern const TCHAR U_BACKSLASH[];
+extern const WCHAR W_BACKSLASH[];
 
 #ifndef NO_PREFERENCES
 extern HMENU vmPrefsMenu;         /* preferences menu */
@@ -283,7 +225,6 @@ extern HWND  consoleWindow;       /* console */
 
 
 extern HWND stWindow;	     	         /*	the squeak window */
-extern HWND browserWindow;	     	     /*	the browser window */
 extern HINSTANCE hInstance;	     /*	the instance of squeak running */
 extern HCURSOR currentCursor;	     /*	current cursor displayed by squeak */
 extern HPALETTE palette;	     /*	the palette (might be unused) */
@@ -293,13 +234,11 @@ extern BITMAPINFO *bmi4;	     /*	4 bit depth bitmap info */
 extern BITMAPINFO *bmi8;	     /*	8 bit depth bitmap info */
 extern BITMAPINFO *bmi16;	     /*	16 bit depth bitmap info */
 extern BITMAPINFO *bmi32;	     /*	32 bit depth bitmap info */
-extern BOOL fWindows95;          /* Are we running on Win95 or NT? */
 extern BOOL fIsConsole;          /* Are we running as a console app? */
 
 /* Startup options */
 extern BOOL  fHeadlessImage; /* Do we run headless? */
 extern BOOL  fRunService;    /* Do we run as NT service? */
-extern BOOL  fBrowserMode;   /* Do we run in a web browser? */
 extern DWORD dwMemorySize;   /* How much memory do we use? */
 extern BOOL  fUseDirectSound;/* Do we use DirectSound?! */
 extern BOOL  fUseOpenGL;     /* Do we use OpenGL?! */
@@ -333,39 +272,28 @@ extern BOOL fBufferMouse;    /* Should we buffer mouse input? */
 
 
 /******************************************************/
-/* String conversions between Unicode / Ansi / Squeak */
-/******************************************************/
-/* Note: fromSqueak() and fromSqueak2() are inline conversions
-         but operate on two different buffers. The maximum length
-         of strings that can be converted is MAX_PATH */
-TCHAR*  fromSqueak(const char *sqPtr, int sqLen);   /* Inline Squeak -> C */
-TCHAR*  fromSqueak2(const char *sqPtr, int sqLen);  /* 2nd inline conversion */
-/* Note: toUnicode() and fromUnicode() are inline conversions
-         with for at most MAX_PATH sized strings. If the VM
-         is not compiled with UNICODE defined they just return
-         the input strings. Also, toUnicode operates on the
-         same buffer as fromSqueak() */
-TCHAR*  toUnicode(const char *ptr);                 /* Inline Ansi -> Unicode */
-char*   fromUnicode(const TCHAR *ptr);              /* Inline Unicode -> Ansi */
-/* Note: toUnicodeNew and fromUnicodeNew malloc() new strings.
-         It is up to the caller to free these! */
-TCHAR*  toUnicodeNew(const char *ptr);                 /* Inline Ansi -> Unicode */
-char*   fromUnicodeNew(const TCHAR *ptr);              /* Inline Unicode -> Ansi */
-TCHAR *lstrrchr(TCHAR *source, TCHAR c);
-
-/******************************************************/
 /* Output stuff                                       */
 /******************************************************/
 #ifndef sqMessageBox
-int __cdecl sqMessageBox(DWORD dwFlags, const TCHAR *titleString, const char* fmt, ...);
+int __cdecl sqMessageBox(DWORD dwFlags, const TCHAR *titleString, const TCHAR* fmt, ...);
 #endif
 
 #ifndef warnPrintf
-int __cdecl warnPrintf(const TCHAR *fmt, ...);
+int __cdecl warnPrintf(char *fmt, ...);
+#endif
+
+#ifndef warnPrintfW
+int __cdecl warnPrintfW(WCHAR *fmt, ...);
+#endif
+
+#ifdef UNICODE
+#define warnPrintfT warnPrintfW
+#else
+#define warnPrintfT warnPrintf
 #endif
 
 #ifndef abortMessage
-int __cdecl abortMessage(const TCHAR *fmt,...);
+int __cdecl abortMessage(TCHAR *fmt, ...);
 #endif
 
 /* neat little helpers - print prefix and the GetLastError() meaning */
@@ -380,14 +308,8 @@ void vprintLastError(TCHAR *fmt, ...);
 /******************************************************/
 /* Misc functions                                     */
 /******************************************************/
-DWORD SqueakImageLength(TCHAR *fileName);
+DWORD SqueakImageLength(WCHAR *fileName);
 int isLocalFileName(TCHAR *fileName);
-
-#ifndef NO_PLUGIN_SUPPORT
-void pluginInit(void);
-void pluginExit(void);
-void pluginHandleEvent(MSG* msg);
-#endif /* NO_PLUGIN_SUPPORT */
 
 #ifndef NO_DROP
 int recordDragDropEvent(HWND wnd, int dragType, int x, int y, int numFiles);

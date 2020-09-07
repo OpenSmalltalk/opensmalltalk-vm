@@ -1,7 +1,7 @@
 ifndef THIRDPARTYDIR
 	include ../common/Makefile.lib.extra
 endif
-include ../../third-party/openssl.spec
+include ../../third-party/openssl.spec.win64
 
 # plugin definitions
 OPENSSLURL:=$(openssl_spec_download_url)
@@ -21,12 +21,17 @@ $(OPENSSLARCHIVE):
 
 $(THIRDPARTYLIBDIR)/$(OPENSSLLIBNAME): $(OPENSSLARCHIVE)
 	tar x -f $(OPENSSLARCHIVE) -C $(THIRDPARTYDIR)
-	sed -i 's/symlink/copy/g'  $(OPENSSLDIR)/util/mklink.pl
-	sed -i 's/ln -s/cp/g'  $(OPENSSLDIR)/util/point.sh
 	cd $(OPENSSLDIR) \
-		&& CC=x86_64-w64-mingw32-gcc LD='$(LD)' NM='$(NM)' RC='$(RC)' DLLTOOL='$(DLLTOOL)' DLLWRAP='$(DLLWRAP)' ./Configure mingw64 --prefix='$(THIRDPARTYOUTDIR)' shared $(THIRDPARTY_CFLAGS) \
+		&&  CC=x86_64-w64-mingw32-gcc \
+			AR=x86_64-w64-mingw32-ar \
+			LD='$(LD)' \
+			NM='$(NM)' \
+			RC='$(RC)' \
+			DLLTOOL='$(DLLTOOL)' \
+			DLLWRAP='$(DLLWRAP)' \
+			./Configure mingw64 --prefix='$(THIRDPARTYOUTDIR)' shared $(THIRDPARTY_CFLAGS) \
 		&& make \
-		&& make install
+		&& make install_sw
 
 # Assuming building ssleay32.dll will also build libeay32.dll
 $(OPENSSLLIB): $(THIRDPARTYLIBDIR)/$(OPENSSLLIBNAME)

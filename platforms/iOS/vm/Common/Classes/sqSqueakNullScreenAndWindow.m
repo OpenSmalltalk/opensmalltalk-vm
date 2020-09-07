@@ -67,7 +67,9 @@
 }
 
 - (sqInt) ioScreenSize {
-    return (10 << 16) | (10 & 0xFFFF);  /* w is high 16 bits; h is low 16 bits */
+    extern sqInt getSavedWindowSize(void); //This is VM Callback
+    sqInt savedSize = getSavedWindowSize();
+    return savedSize ?  savedSize : (64 << 16) | (64 & 0xFFFF);  /* w is high 16 bits; h is low 16 bits */
 }
 
 - (sqInt) ioScreenDepth {

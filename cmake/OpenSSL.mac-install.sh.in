@@ -1,0 +1,10 @@
+#!/bin/sh
+OpenSSL_LibrariesToAddPermission="@OpenSSL_LibrariesToAddPermission@"
+ThirdPartyCacheInstallLib="@ThirdPartyCacheInstallLib@"
+
+make install || exit 1
+
+# Fixing permission
+for library in $OpenSSL_LibrariesToAddPermission; do
+    chmod u+w "${ThirdPartyCacheInstallLib}/${library}"
+done

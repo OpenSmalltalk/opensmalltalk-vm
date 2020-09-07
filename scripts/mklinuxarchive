@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 # Create one or more linux archives from VM trees in products.
 # Output a check of version numbers etc to products/MLALOG
 IFS="	

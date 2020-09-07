@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 # Print REV and TAG as defined in platforms/Cross/vm/sqSCCSVersion.h
 
 # cd `dirname $0`/../products

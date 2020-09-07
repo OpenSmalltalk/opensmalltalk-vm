@@ -40,6 +40,7 @@
 
 	
  */
+#include "mpeg3io.h"
 #include "mpeg3private.h"
 #include "mpeg3protos.h"
 
@@ -47,11 +48,7 @@
 #include <mntent.h>
 #endif
 
-#if defined( TARGET_OS_MAC) && !defined ( __APPLE__ ) && !defined ( __MACH__ )
-#include <stat.h>
-#else
 #include <sys/stat.h>
-#endif
 
 #include <stdlib.h>
 #include <string.h>
@@ -331,18 +328,3 @@ int mpeg3io_end_of_file(mpeg3_fs_t *fs ) {
 	
 	return ( ! fs->fd ) || feof(fs->fd);
 }
-
-inline int mpeg3io_fgetc(mpeg3_fs_t *fs) {
-	if (fs->mpeg_is_in_buffer) {
-		unsigned int value;
-		fs->mpeg_is_in_buffer_file_position++;
-		if (fs->mpeg_is_in_buffer_file_position >= fs->mpeg_buffer_size) {
-			fs->mpeg_is_in_buffer_file_position = fs->mpeg_buffer_size;
-			return 0;
-		}
-		value = (unsigned int) fs->mpeg_is_in_buffer[fs->mpeg_is_in_buffer_file_position-1];
-		return value;
-	}
-	return (fs->fd ? fgetc(fs->fd) : 0);
-}
-

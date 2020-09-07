@@ -44,7 +44,7 @@ such third-party acknowledgments.
 
 #ifdef BUILD_FOR_OSX
 #include "sqMacHostWindow.h"
-extern wHandleType windowHandleFromIndex(sqInt windowIndex);
+extern wHandleType windowHandleFromIndex(sqIntptr_t windowIndex);
 #else
 #include "SqueakNoOGLIPhoneAppDelegate.h"
 extern SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
@@ -97,10 +97,6 @@ sqInt ioSetFullScreen(sqInt fullScreen) {
 }
 
 
-sqInt ioShowDisplayOnWindow(unsigned char * dispBitsIndex, sqInt width, 
-						  sqInt height, sqInt depth, sqInt affectedL, sqInt affectedR, sqInt affectedT, sqInt affectedB, 
-						  sqInt windowIndex);
-
 sqInt ioShowDisplay(
 				  sqInt dispBitsIndex, sqInt width, sqInt height, sqInt depth,
 				  sqInt affectedL, sqInt affectedR, sqInt affectedT, sqInt affectedB) {
@@ -112,9 +108,10 @@ sqInt ioShowDisplay(
 }
 
 
-sqInt ioShowDisplayOnWindow(unsigned char* dispBitsIndex, sqInt width, 
+sqInt
+ioShowDisplayOnWindow(unsigned char* dispBitsIndex, sqInt width, 
 						  sqInt height, sqInt depth, sqInt affectedL, sqInt affectedR, sqInt affectedT, sqInt affectedB, 
-						  sqInt windowIndex) {
+						  sqIntptr_t windowIndex) {
 	//API Documented
 	return [getMainWindowDelegate()  
 	 ioShowDisplayOnWindow: dispBitsIndex

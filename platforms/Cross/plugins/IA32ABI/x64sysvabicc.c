@@ -30,9 +30,11 @@ struct objc_class *baz;
 void setbaz(void *p) { baz = p; }
 void *getbaz() { return baz; }
 # endif
+# include <unistd.h> /* for getpagesize/sysconf */
 # include <stdlib.h> /* for valloc */
 # include <sys/mman.h> /* for mprotect */
 #else
+# include <unistd.h> /* for getpagesize/sysconf */
 # include <stdlib.h> /* for valloc */
 # include <sys/mman.h> /* for mprotect */
 #endif
@@ -60,8 +62,8 @@ extern
 struct VirtualMachine* interpreterProxy;
 
 #if __GNUC__
-# define setsp(sp) asm volatile ("movq %0,%%rsp" : : "m"(sp))
-# define getsp() ({ void *sp; asm volatile ("movq %%rsp,%0" : "=r"(sp) : ); sp;})
+# define setsp(sp) __asm__ volatile ("movq %0,%%rsp" : : "m"(sp))
+# define getsp() ({ void *sp; __asm__ volatile ("movq %%rsp,%0" : "=r"(sp) : ); sp;})
 #endif
 #define STACK_ALIGN_BYTES 32 /* 32 if a 256-bit argument is passed; 16 otherwise */
 
@@ -139,30 +141,29 @@ static VMCallbackContext *mostRecentCallbackContext = 0;
 VMCallbackContext *
 getMostRecentCallbackContext() { return mostRecentCallbackContext; }
 
-#define getRMCC(t) mostRecentCallbackContext
-#define setRMCC(t) (mostRecentCallbackContext = (void *)(t))
+#define getMRCC()   mostRecentCallbackContext
+#define setMRCC(t) (mostRecentCallbackContext = (void *)(t))
 
 /*
- * Entry-point for call-back thunks.  Args are thunk address and stack pointer,
- * where the stack pointer is pointing one word below the return address of the
- * thunk's callee, 4 bytes below the thunk's first argument.  The stack is:
- *		callback
- *		arguments
+ * Entry-point for call-back thunks.  Args are the integer register args, the
+ * floating-point register arguments, the thunk address and stack pointer, where
+ * the stack pointer is pointing one word below the return address of the thunk's
+ * callee, 8 bytes below the thunk's first stacked argument.  The stack is:
+ *		callback stack arguments
  *		retpc (thunk) <--\
  *		address of retpc-/        <--\
  *		address of address of ret pc-/
  *		thunkp
- * esp->retpc (thunkEntry)
+ * rsp->retpc (thunkEntry)
  *
  * This function's roles are to use setjmp/longjmp to save the call point
  * and return to it, and to return any of the various values from the callback.
  *
- * To support x86-64, which has 6 integer register arguments, and 8 floating-
- * point register arguments, the function takes 16 arguments, the 6 register
- * args as longs, folowed by 8 floating-point arguments as doubles, followed
- * by the thunkp and stackp passed on the stack.  The register args get copied
- * into a struct on the stack. A pointer to the struct is then passed as an
- * element of the VMCallbackContext.
+ * To support x86-64, which when using the SysV ABI has 6 integer register arguments, and 8
+ * floating-point register arguments, the function takes 16 arguments, the 6 register args
+ * as longs, folowed by 8 floating-point arguments as doubles, followed by the thunkp and
+ * stackp passed on the stack.  The register args get copied into a struct on the stack.
+ * A pointer to the struct is then passed as an element of the VMCallbackContext.
  */
 
 long
@@ -200,19 +201,19 @@ thunkEntry(long a0, long a1, long a2, long a3, long a4, long a5,
 	}
 
 	if (!(returnType = setjmp(vmcc.trampoline))) {
-		previousCallbackContext = getRMCC();
-		setRMCC(&vmcc);
+		previousCallbackContext = getMRCC();
+		setMRCC(&vmcc);
 		vmcc.thunkp = thunkp;
 		vmcc.stackp = stackp + 2; /* skip address of retpc & retpc (thunk) */
 		vmcc.intregargsp = intargs;
 		vmcc.floatregargsp = fpargs;
 		interpreterProxy->sendInvokeCallbackContext(&vmcc);
 		fprintf(stderr,"Warning; callback failed to invoke\n");
-		setRMCC(previousCallbackContext);
+		setMRCC(previousCallbackContext);
 		interpreterProxy->disownVM(flags);
 		return -1;
 	}
-	setRMCC(previousCallbackContext);
+	setMRCC(previousCallbackContext);
 	interpreterProxy->disownVM(flags);
 
 	switch (returnType) {
@@ -225,8 +226,8 @@ thunkEntry(long a0, long a1, long a2, long a3, long a4, long a5,
 		double valflt64 = vmcc.rvs.valflt64;
 #if _MSC_VER
 				_asm mov qword ptr valflt64, xmm0;
-#elif __GNUC__
-				asm("movq %0, %%xmm0" : : "m"(valflt64));
+#elif __GNUC__ || __SUNPRO_C
+				__asm__("movq %0, %%xmm0" : : "m"(valflt64));
 #else
 # error need to load %xmm0 with vmcc.rvs.valflt64 on this compiler
 #endif
@@ -258,7 +259,7 @@ static unsigned long pagesize = 0;
 #endif
 
 void *
-allocateExecutablePage(long *size)
+allocateExecutablePage(sqIntptr_t *size)
 {
 	void *mem;
 
@@ -281,16 +282,22 @@ allocateExecutablePage(long *size)
 	if (mem)
 		*size = pagesize;
 #else
+# if !defined(_POSIX_C_SOURCE) || _POSIX_C_SOURCE < 200112L
 	long pagesize = getpagesize();
+# else
+	long pagesize = sysconf(_SC_PAGESIZE);
+# endif
 
-	if (!(mem = valloc(pagesize)))
+	/* This is equivalent to valloc(pagesize) but at least on some versions of
+	 * SELinux valloc fails to yield an wexecutable page, whereas this mmap
+	 * call works everywhere we've tested so far.  See
+	 * http://lists.squeakfoundation.org/pipermail/vm-dev/2018-October/029102.html
+	 */
+	if (!(mem = mmap(0, pagesize, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANON | MAP_PRIVATE, -1, 0)))
 		return 0;
 
+	// MAP_ANON should zero out the allocated page, but explicitly doing it shouldn't hurt
 	memset(mem, 0, pagesize);
-	if (mprotect(mem, pagesize, PROT_READ | PROT_WRITE | PROT_EXEC) < 0) {
-		free(mem);
-		return 0;
-	}
 	*size = pagesize;
 #endif
 	return mem;

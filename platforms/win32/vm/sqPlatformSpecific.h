@@ -17,7 +17,7 @@
 
 
 #ifdef _MSC_VER
-#include <windows.h>
+#include <Windows.h>
 #define HAVE_BOOLEAN 1 /* for jpegReaderWriter plugin compatibility */
 #endif
 
@@ -30,21 +30,24 @@
 
 #ifdef WIN32_FILE_SUPPORT
 
+#define NO_STD_FILE_SUPPORT /* STD_FILE or WIN32_FILE are mutually exclusive options */
 #undef sqImageFile
 #undef sqImageFileClose
 #undef sqImageFileOpen
 #undef sqImageFilePosition
 #undef sqImageFileRead
 #undef sqImageFileSeek
+#undef sqImageFileSeekEnd
 #undef sqImageFileWrite
 
 #define sqImageFile usqIntptr_t
 sqInt sqImageFileClose(sqImageFile h);
-sqImageFile sqImageFileOpen(char *fileName, char *mode);
+sqImageFile sqImageFileOpen(const char *fileName, const char *mode);
 squeakFileOffsetType sqImageFilePosition(sqImageFile h);
 size_t sqImageFileRead(void *ptr, size_t sz, size_t count, sqImageFile h);
 squeakFileOffsetType sqImageFileSeek(sqImageFile h, squeakFileOffsetType pos);
-size_t sqImageFileWrite(void *ptr, size_t sz, size_t count, sqImageFile h);
+squeakFileOffsetType sqImageFileSeekEnd(sqImageFile h, squeakFileOffsetType pos);
+size_t sqImageFileWrite(const void *ptr, size_t sz, size_t count, sqImageFile h);
 #else /* when no WIN32_FILE_SUPPORT, add necessary stub for using regular Cross/plugins/FilePlugin functions */
 #include <stdlib.h>
 #include <io.h> /* _get_osfhandle */
@@ -98,7 +101,7 @@ size_t sqImageFileWrite(void *ptr, size_t sz, size_t count, sqImageFile h);
 error "Not Win32 or Win64!"
 #endif /* _WIN32 || _WIN64 */
 
-int ioSetCursorARGB(sqInt bitsIndex, sqInt w, sqInt h, sqInt x, sqInt y);
+sqInt ioSetCursorARGB(sqInt bitsIndex, sqInt w, sqInt h, sqInt x, sqInt y);
 
 /* poll and profile thread priorities.  The stack vm uses a thread to cause the
  * VM to poll for I/O, check for delay expiry et al at regular intervals.  Both
@@ -118,10 +121,6 @@ int ioSetCursorARGB(sqInt bitsIndex, sqInt w, sqInt h, sqInt x, sqInt y);
 #define PROF_THREAD_PRIORITY THREAD_PRIORITY_TIME_CRITICAL
 
 #if COGVM
-extern void sqMakeMemoryExecutableFromTo(usqIntptr_t, usqIntptr_t);
-extern void sqMakeMemoryNotExecutableFromTo(usqIntptr_t, usqIntptr_t);
-
-extern int isCFramePointerInUse(void);
 extern int osCogStackPageHeadroom(void);
 extern void reportMinimumUnusedHeadroom(void);
 #endif
@@ -154,5 +153,20 @@ extern const unsigned long tltiIndex;
 #endif
 #if !defined(VM_LABEL) || COGVM
 # undef VM_LABEL
-# define VM_LABEL(foo) 0
+# define VM_LABEL(foo) ((void)0)
+#endif
+
+/* Define the fields in a struct _CONTEXT as returned by GetThreadContext that
+ * represent the program counter and frame pointer on the current architecture.
+ */
+#if defined(_M_IX86) || defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__)
+#	define CONTEXT_PC Eip
+#	define CONTEXT_FP Ebp
+#	define CONTEXT_SP Esp
+#elif defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
+#	define CONTEXT_PC Rip
+#	define CONTEXT_FP Rbp
+#	define CONTEXT_SP Rsp
+#else
+# error "unknown architecture, program counter field undefined"
 #endif

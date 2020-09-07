@@ -84,6 +84,10 @@ closelog(void)
 # endif
 #endif
 
+#if defined(SQUEAK_BUILTIN_PLUGIN)
+extern char *getImageName(void);
+#endif
+
 int
 print3Dlog(char *fmt, ...)
 {	va_list args;
@@ -115,6 +119,7 @@ print3Dlog(char *fmt, ...)
 	va_end(args);
 	if (forceFlush) /* from sqOpenGLRenderer.h */
 		fflush(logfile);
+	return 0;
 }
 
 /*****************************************************************************/
@@ -142,7 +147,7 @@ int glGetRendererSurfaceHandle(int handle) {
   return -1; /* e.g., fail */
 }
 
-int glGetRendererColorMasks(int handle, int *masks) {
+int glGetRendererColorMasks(int handle, unsigned int *masks) {
   /* If a surface is provided, this is the place to fill
      in the color masks for the surface. Since we don't
      provide any, we just bail out.
@@ -248,7 +253,7 @@ int glActualTextureDepth(int rendererHandle, int handle) /* return depth or <0 o
 	return 32;
 }
 
-int glTextureColorMasks(int rendererHandle, int handle, int masks[4])  /* return true on success, false on error */
+int glTextureColorMasks(int rendererHandle, int handle, unsigned int masks[4])  /* return true on success, false on error */
 {
 	struct glRenderer *renderer = glRendererFromHandle(rendererHandle);
 	if(!renderer) return 0;

@@ -670,7 +670,7 @@ mixer_default_volume_get_set(int captureFlag, double *get, double set)
 
 	if (mixer.error) {
 		mixer_close(&mixer);
-		return;
+		return -1;
 	}
 
 	/* Iterate over all mixer controls */

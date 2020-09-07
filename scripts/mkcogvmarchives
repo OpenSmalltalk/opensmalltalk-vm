@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 # Create the Cog VM archives in products.  Output a check of version numbers
 # etc to products/MCVALOG
 IFS="	

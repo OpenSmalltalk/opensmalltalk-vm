@@ -156,19 +156,10 @@ void asyncFileInitPB(AsyncFileState *state, int fPosition) {
 }
 
 int asyncFileValid(AsyncFile *f) {
-	void* ithisSessionfn;
-	int thisSession;
-
-	ithisSessionfn = interpreterProxy->ioLoadFunctionFrom("getThisSession", "FilePlugin");
-	if (ithisSessionfn != 0)
-		thisSession =  ((int (*) (void)) ithisSessionfn)();
-	else 
-		thisSession = 0;
-	return (
-		(f != NULL) &&
-		(f->sessionID == thisSession) &&
-		(f->state != NULL) &&
-		(((AsyncFileState *) f->state)->refNum != 0));
+	return f
+		&& f->sessionID == interpreterProxy->getThisSessionID()
+		&& f->state
+		&& ((AsyncFileState *)f->state)->refNum;
 }
 
 /*** Exported Functions ***/

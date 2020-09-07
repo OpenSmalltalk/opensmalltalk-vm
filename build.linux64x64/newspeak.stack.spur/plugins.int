@@ -9,9 +9,10 @@ DSAPrims \
 DropPlugin \
 FileCopyPlugin \
 FilePlugin \
+Float64ArrayPlugin \
 FloatArrayPlugin \
 FloatMathPlugin \
-# HostWindowPlugin \
+HostWindowPlugin \
 ZipPlugin \
 JPEGReadWriter2Plugin \
 JPEGReaderPlugin \

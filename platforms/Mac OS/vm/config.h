@@ -101,6 +101,7 @@
 
 #define	AT_EXIT atexit
 
+#define	HAVE_EXECINFO_H 1
 #define	HAVE_TZSET 1
 
 #define	HAVE_OPENPTY 1

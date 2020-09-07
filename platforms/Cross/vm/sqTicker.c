@@ -45,6 +45,12 @@ checkHighPriorityTickees(usqLong utcMicrosecondClock) {}
 
 void
 ioSynchronousCheckForEvents() {}
+
+usqInt ioVMTickerCount() { return 0; }
+
+usqInt ioVMTickeeCallCount() { return 0; }
+
+sqLong ioVMTickerStartUSecs() { return 0; }
 #else /* VM_TICKER */
 /* High-priority and synchronous tickee function support.
  *
@@ -81,7 +87,6 @@ ioSynchronousCheckForEvents() {}
 
 typedef struct {
 	void (*tickee)(void);
-	long	inProgress;	/* used only in high-priority ticker */
 	usqLong tickeeDeadlineUsecs;
 	usqLong tickeePeriodUsecs;
 } Tickee;
@@ -160,6 +165,16 @@ static					/* prodHighPriorityThread unless necessary */
 # endif					/* see platforms/unix/vm/sqUnixHeartbeat.c */
 int numAsyncTickees = 0;
 static Tickee async[NUM_ASYNCHRONOUS_TICKEES];
+static usqInt vmTickerCount = 0;
+static usqInt vmTickerTickeeCalls = 0;
+static usqLong vmTickerStartUSecs = 0;
+
+usqInt ioVMTickerCount() { return vmTickerCount; }
+
+usqInt ioVMTickeeCallCount() { return vmTickerTickeeCalls; }
+
+usqLong ioVMTickerStartUSecs() { return vmTickerStartUSecs; }
+
 
 /* Add or remove an asynchronous tickee.  If periodms is non zero add the
  * tickee, calling it every periodms.
@@ -201,13 +216,15 @@ addHighPriorityTickee(void (*tickee)(void), unsigned periodms)
 	if (i >= NUM_ASYNCHRONOUS_TICKEES)
 		error("ran out of asyncronous tickee slots");
 
+	if (!vmTickerStartUSecs)
+		vmTickerStartUSecs = ioUTCMicrosecondsNow();
+
 	/* first disable the tickee while updating the entry. */
 	async[i].tickee = 0;
 	sqLowLevelMFence();
 	async[i].tickeePeriodUsecs = periodms * MicrosecondsPerMillisecond;
 	async[i].tickeeDeadlineUsecs = async[i].tickeePeriodUsecs
 								+ ioUTCMicroseconds();
-	async[i].inProgress = 0;
 	async[i].tickee = tickee;
 	if (i >= numAsyncTickees)
 		++numAsyncTickees;
@@ -215,7 +232,7 @@ addHighPriorityTickee(void (*tickee)(void), unsigned periodms)
 }
 
 /* If the heartbeat fails to invoke checkHighPriorityTickees in a timely manner
- * for wahtever reason (e.g. the user has put the machine to sleep) we need to
+ * for whatever reason (e.g. the user has put the machine to sleep) we need to
  * readjust the deadline, moving it forward to a delta from the current time.
  * If we don't then the heartbeat will spin calling checkHighPriorityTickees as
  * it inches forward at tickeePeriodUsecs.  But if we always base the deadline
@@ -226,6 +243,9 @@ addHighPriorityTickee(void (*tickee)(void), unsigned periodms)
  */
 #define HiccupThreshold 10000000ULL /* 10 seconds */
 
+/* Avoid any reentrancy problems with checkHighPriorityTickees */
+static	char checkingHighPriorityTickees = 0;
+
 void
 checkHighPriorityTickees(usqLong utcMicrosecondClock)
 {
@@ -235,28 +255,28 @@ checkHighPriorityTickees(usqLong utcMicrosecondClock)
 	extern void unblockVMThreadAfterYieldToHighPriorityTickerThread(void);
 	shouldYieldToHighPriorityTickerThread = 1;
 #endif
-	/* Since this runs either in a high-priority thread or in an interrupt only
+	/* Since this runs either in a high-priority thread or in an interrupt, only
 	 * one fence is needed.  Since the VM thread will not disturb any non-zero
 	 * entry (except for changing the period) we can read the entry without
-	 * locking.  But we need to lock the attempt to run the tickee in case for
-	 * any reason checkHighPriorityTickees is miscalled reentrantly.
+	 * locking.
 	 */
 	sqLowLevelMFence();
+	if (!vmTickerStartUSecs || checkingHighPriorityTickees)
+		return;
+	checkingHighPriorityTickees = 1;
+	sqLowLevelMFence();
+	++vmTickerCount;
 	for (i = 0; i < numAsyncTickees; i++)
-		if (async[i].tickee
-		 && !async[i].inProgress
-		 && utcMicrosecondClock >= async[i].tickeeDeadlineUsecs) {
-			if (sqCompareAndSwap(async[i].inProgress,0,1)) {
-				assert(async[i].inProgress);
+		if (async[i].tickee) {
+			if (utcMicrosecondClock >= async[i].tickeeDeadlineUsecs) {
 				if (async[i].tickeeDeadlineUsecs + HiccupThreshold
 					< utcMicrosecondClock)
 					async[i].tickeeDeadlineUsecs
 						= utcMicrosecondClock + async[i].tickeePeriodUsecs;
 				else
-					async[i].tickeeDeadlineUsecs
-						+= async[i].tickeePeriodUsecs;
+					async[i].tickeeDeadlineUsecs += async[i].tickeePeriodUsecs;
+				++vmTickerTickeeCalls;
 				async[i].tickee();
-				async[i].inProgress = 0;
 			}
 		}
 #if ITIMER_HEARTBEAT
@@ -264,5 +284,7 @@ checkHighPriorityTickees(usqLong utcMicrosecondClock)
 	sqLowLevelMFence();
 	unblockVMThreadAfterYieldToHighPriorityTickerThread();
 #endif
+	checkingHighPriorityTickees = 0;
+	sqLowLevelMFence();
 }
 #endif /* VM_TICKER */

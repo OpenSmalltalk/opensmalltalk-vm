@@ -1,5 +1,6 @@
 # Copied, perhaps edited, from ../src/examplePlugins.ext
 EXTERNAL_PLUGINS = \
+MIDIPlugin \
 B3DAcceleratorPlugin \
 FT2Plugin \
 JPEGReaderPlugin \
@@ -9,6 +10,9 @@ InternetConfigPlugin \
 SurfacePlugin \
 EventsHandlerPlugin \
 SqueakSSL \
+FileAttributesPlugin \
 AioPlugin \
-#SDL2DisplayPlugin \
-
+BochsIA32Plugin \
+BochsX64Plugin \
+GdbARMPlugin \
+#SDL2DisplayPlugin

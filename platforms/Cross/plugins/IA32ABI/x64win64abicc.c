@@ -8,7 +8,7 @@
 /* null if compiled on other than x64, to get around gnu make bugs or
  * misunderstandings on our part.
  */
-#if x86_64|x64|__x86_64|__x86_64__|_M_AMD64|_M_X64
+#if defined(x86_64) || defined(__amd64) || defined(__x86_64) || defined(__amd64__) || defined(__x86_64__) || defined(_M_AMD64) || defined(_M_X64)
 
 #if defined(_MSC_VER) || defined(__MINGW32__)
 # include "windows.h" /* for GetSystemInfo & VirtualAlloc */
@@ -16,7 +16,7 @@
 # error Non windows should use the SystemV ABI, not the win64 ABI
 #endif
 
-# include <stdlib.h> /* for valloc */
+#include <stdlib.h> /* for valloc */
 #include <string.h> /* for memcpy et al */
 #include <setjmp.h>
 #include <stdio.h> /* for fprintf(stderr,...) */
@@ -35,12 +35,15 @@
 
 #ifdef SQUEAK_BUILTIN_PLUGIN
 extern
-#endif 
+#endif
 struct VirtualMachine* interpreterProxy;
 
+#ifdef _MSC_VER
+# define alloca _alloca
+#endif
 #if __GNUC__
-# define setsp(sp) asm volatile ("movq %0,%%rsp" : : "m"(sp))
-# define getsp() ({ void *sp; asm volatile ("movq %%rsp,%0" : "=r"(sp) : ); sp;})
+# define setsp(sp) __asm__ volatile ("movq %0,%%rsp" : : "m"(sp))
+# define getsp() ({ void *sp; __asm__ volatile ("movq %%rsp,%0" : "=r"(sp) : ); sp;})
 #endif
 #define STACK_ALIGN_BYTES 32 /* 32 if a 256-bit argument is passed; 16 otherwise */
 
@@ -71,15 +74,13 @@ struct VirtualMachine* interpreterProxy;
 #define isSmallInt(oop) (((oop)&7)==1)
 #define intVal(oop) (((long long)(oop))>>3)
 
-extern void loadFloatRegs(double,double,double,double);
-
 typedef union {
     long long i;
     double    d;
 } int64_or_double;
 
 /*
- * Call a foreign function that answers an integral result in %rax 
+ * Call a foreign function that answers an integral result in %rax
  * according to x64-ish ABI rules.
  */
 sqInt callIA32IntegralReturn(SIGNATURE) {
@@ -164,15 +165,15 @@ static VMCallbackContext *mostRecentCallbackContext = 0;
 VMCallbackContext *
 getMostRecentCallbackContext() { return mostRecentCallbackContext; }
 
-#define getRMCC(t) mostRecentCallbackContext
-#define setRMCC(t) (mostRecentCallbackContext = (void *)(t))
+#define getMRCC()   mostRecentCallbackContext
+#define setMRCC(t) (mostRecentCallbackContext = (void *)(t))
 
 /*
- * Entry-point for call-back thunks.  Args are thunk address and stack pointer,
- * where the stack pointer is pointing one word below the return address of the
- * thunk's callee, 4 bytes below the thunk's first argument.  The stack is:
- *		callback
- *		arguments
+ * Entry-point for call-back thunks.  Args are the integer register args, the
+ * floating-point register arguments, the thunk address and stack pointer, where
+ * the stack pointer is pointing one word below the return address of the thunk's
+ * callee, 8 bytes below the thunk's first stacked argument.  The stack is:
+ *		callback stack arguments
  *		retpc (thunk) <--\
  *		address of retpc-/        <--\
  *		address of address of ret pc-/
@@ -183,7 +184,7 @@ getMostRecentCallbackContext() { return mostRecentCallbackContext; }
  * This function's roles are to use setjmp/longjmp to save the call point
  * and return to it, and to return any of the various values from the callback.
  *
- * To support x86-64, which has 4 register arguments (int or floating-point)
+ * To support x86-64, which on WIN^$ has 4 register arguments (int or floating-point)
  * the function takes 6 arguments, the 4 register args as long longs,
  * followed by the thunkp and stackp passed on the stack.  The register
  * args get copied into a struct on the stack. A pointer to the struct is then
@@ -205,7 +206,7 @@ thunkEntry(long long rcx, long long rdx,
 	intargs[1] = rdx;
 	intargs[2] = r8;
 	intargs[3] = r9;
-	
+
 extern void saveFloatRegsWin64(long long xmm0,long long xmm1,long long xmm2, long long xmm3,double *fpargs); /* fake passing long long args */
     saveFloatRegsWin64(rcx,rdx,r8,r9,fpargs); /* the callee expects double parameters that it will retrieve thru registers */
 
@@ -215,19 +216,19 @@ extern void saveFloatRegsWin64(long long xmm0,long long xmm1,long long xmm2, lon
 	}
 
 	if (!(returnType = setjmp(vmcc.trampoline))) {
-		previousCallbackContext = getRMCC();
-		setRMCC(&vmcc);
+		previousCallbackContext = getMRCC();
+		setMRCC(&vmcc);
 		vmcc.thunkp = thunkp;
 		vmcc.stackp = stackp + 2; /* skip address of retpc & retpc (thunk) */
 		vmcc.intregargsp = intargs;
 		vmcc.floatregargsp = fpargs;
 		interpreterProxy->sendInvokeCallbackContext(&vmcc);
 		fprintf(stderr,"Warning; callback failed to invoke\n");
-		setRMCC(previousCallbackContext);
+		setMRCC(previousCallbackContext);
 		interpreterProxy->disownVM(flags);
 		return -1;
 	}
-	setRMCC(previousCallbackContext);
+	setMRCC(previousCallbackContext);
 	interpreterProxy->disownVM(flags);
 
 	switch (returnType) {
@@ -265,7 +266,7 @@ static unsigned long pagesize = 0;
 #endif
 
 void *
-allocateExecutablePage(long *size)
+allocateExecutablePage(sqIntptr_t *size)
 {
 	void *mem;
 

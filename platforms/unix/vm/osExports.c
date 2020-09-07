@@ -1,15 +1,17 @@
+#include "sqMemoryAccess.h"
+
 #define XFN(export) {"", #export, (void*)export},
 #define XFND(export,depth) {"", #export "\000" depth, (void*)export},
 
-char * GetAttributeString(int id);
+char * GetAttributeString(sqInt id);
 #if !defined(HEADLESS)
-int   primitivePluginBrowserReady(void);
-int   primitivePluginRequestURLStream(void);
-int   primitivePluginRequestURL(void);
-int   primitivePluginPostURL(void);
-int   primitivePluginRequestFileHandle(void);
-int   primitivePluginDestroyRequest(void);
-int   primitivePluginRequestState(void);
+sqInt   primitivePluginBrowserReady(void);
+sqInt   primitivePluginRequestURLStream(void);
+sqInt   primitivePluginRequestURL(void);
+sqInt   primitivePluginPostURL(void);
+sqInt   primitivePluginRequestFileHandle(void);
+sqInt   primitivePluginDestroyRequest(void);
+sqInt   primitivePluginRequestState(void);
 void *ioGetDisplay(void);
 void *ioGetWindow(void);
 #endif

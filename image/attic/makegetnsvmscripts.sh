@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 # Create the getGoodSpurNsvm.sh script.
 GetSpurScript=getGoodSpurNsvm.sh
 

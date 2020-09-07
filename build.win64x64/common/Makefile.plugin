@@ -6,6 +6,7 @@
 # platforms/win32/plugins/BochsIA32Plugin/Makefile.  Look at
 # platforms/win32/plugins/*/Makefile for examples.
 #
+# EXCLUDESRC 	 defines patterns of source files to not compile, e.g. %/dump.c
 # PREREQUISITES  supplies names of files that must exist to make lib or bundle
 
 # The following are the four key locations (set via invocation):
@@ -30,11 +31,6 @@ BUILDDIR:=	$(BUILD)/$(LIBNAME)
 CROSSVMDIR:=$(PLATDIR)/Cross/vm
 WIN32VMDIR:=$(PLATDIR)/win32/vm
 
-#############################################################################
-# DirectX definitions - NOT USED - superseded by mingw provided files
-#
-DXDIR:=     $(PLATDIR)/win32/third-party/dx9sdk/Include
-
 INCLUDES:= -I. \
 			-I$(VMSRCDIR) -I$(WIN32VMDIR) -I$(CROSSVMDIR) \
 			-I$(MAKERDIR) -I$(WIN32DIR) -I$(CROSSDIR)
@@ -47,6 +43,9 @@ CROSSSRC:= $(wildcard $(CROSSDIR)/*.c) $(wildcard $(CROSSDIR)/*.cpp)
 WIN32SRC:= $(wildcard $(WIN32DIR)/*.c) $(wildcard $(WIN32DIR)/*.cpp)
 MAKERSRC:= $(wildcard $(MAKERDIR)/*.c)
 LIBSRC:= $(notdir $(MAKERSRC) $(WIN32SRC) $(CROSSSRC))
+ifneq ($(EXCLUDESRC),)
+LIBSRC:=$(filter-out $(EXCLUDESRC),$(LIBSRC))
+endif
 
 #############################################################################
 # C compiler settings (gcc 4.x)
@@ -71,10 +70,10 @@ endif
 
 XDEFS:=	
 DEFS:=	$(WINVER) -DWIN64=1 -DWIN32_FILE_SUPPORT -DNO_ISNAN \
-		-DNO_SERVICE -DNO_STD_FILE_SUPPORT \
+		-DNO_SERVICE \
 		$(NDEBUG) -DLSB_FIRST -DVM_NAME=\"$(VM)\" $(XDEFS)
 
-CFLAGS:= -fdeclspec -msse2 -ggdb2 -m64 -mdll \
+CFLAGS:= -fdeclspec -msse2 -ggdb2 -m64 \
 	-mno-rtd -mms-bitfields $(OFLAGS) $(NOBUILTIN) $(WARNINGS) $(COGDEFS)
 
 
@@ -105,26 +104,27 @@ VPATH:= $(MAKERDIR) $(WIN32DIR) $(CROSSDIR) $(OBJDIR)
 all:	$(PLUGINLIB) $(PLUGINDLL)
 
 print-settings:
-	@echo ---------------- Makefile settings ------------------
-	@echo VPATH=$(VPATH)
-	@echo INCLUDES=$(INCLUDES)
-	@echo CFLAGS=$(CFLAGS)
-	@echo ALLFLAGS=$(ALLFLAGS)
-	@echo PLUGINSRCDIR=$(PLUGINSRCDIR)
-	@echo VMSRCDIR=$(VMSRCDIR)
-	@echo CROSSDIR=$(CROSSDIR)
-	@echo WIN32DIR=$(WIN32DIR)
-	@echo MAKERDIR=$(MAKERDIR)
-	@echo CROSSSRC=$(CROSSSRC)
-	@echo WIN32SRC=$(WIN32SRC)
-	@echo MAKERSRC=$(MAKERSRC)
-	@echo LIBSRC=$(LIBSRC)
-	@echo LIBOBJ=$(LIBOBJ)
-	@echo OBJDIR=$(OBJDIR)
-	@echo VMDIR=$(VMDIR)
-	@echo PLUGINLIB=$(PLUGINLIB)
-	@echo PLUGINDLL=$(PLUGINDLL)
-	@echo -----------------------------------------------------
+	$(info ---------------- Makefile settings ------------------)
+	$(info VPATH=$(VPATH))
+	$(info INCLUDES=$(INCLUDES))
+	$(info CFLAGS=$(CFLAGS))
+	$(info ALLFLAGS=$(ALLFLAGS))
+	$(info PLUGINSRCDIR=$(PLUGINSRCDIR))
+	$(info VMSRCDIR=$(VMSRCDIR))
+	$(info CROSSDIR=$(CROSSDIR))
+	$(info WIN32DIR=$(WIN32DIR))
+	$(info MAKERDIR=$(MAKERDIR))
+	$(info CROSSSRC=$(CROSSSRC))
+	$(info WIN32SRC=$(WIN32SRC))
+	$(info MAKERSRC=$(MAKERSRC))
+	$(info LIBSRC=$(LIBSRC))
+	$(info EXCLUDESRC=$(EXCLUDESRC))
+	$(info LIBOBJ=$(LIBOBJ))
+	$(info OBJDIR=$(OBJDIR))
+	$(info VMDIR=$(VMDIR))
+	$(info PLUGINLIB=$(PLUGINLIB))
+	$(info PLUGINDLL=$(PLUGINDLL))
+	$(info -----------------------------------------------------)
 
 $(OBJDIR):
 	mkdir $(OBJDIR)

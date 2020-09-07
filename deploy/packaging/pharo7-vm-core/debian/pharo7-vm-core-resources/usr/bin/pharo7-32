@@ -1,0 +1,6 @@
+#!/bin/bash
+
+# disable parameter expansion to forward all arguments unprocessed to the VM
+set -f
+
+exec /usr/lib/i386-linux-gnu/pharo7-vm/pharo -vm-display-null "$@"

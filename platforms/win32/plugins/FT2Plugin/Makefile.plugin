@@ -2,11 +2,11 @@ include ../common/Makefile.plugin
 
 ifeq ($(THIRDPARTYOUTDIR),)
 # This seems broken, but in the generated FT2Plugin.c there is an
-# include<tttables.h> which should be include<freetype/tttables.h>
+# include <tttables.h> which should be include <freetype/tttables.h>
 # so we simply add it to the include path. Eeek.
-INCLUDES+= -I$(WIN32DIR)/freetype
+INCLUDES+= -I$(WIN32PLUGINSDIR)/FT2Plugin/freetype
 # Add the freetype libs to the build
-EXTRALIBS=$(WIN32DIR)/freetype.a
+EXTRALIBS= -L$(WIN32PLUGINSDIR) -lfreetype
 else
 INCLUDES+= -I$(THIRDPARTYOUTDIR)/include/freetype2 -I$(THIRDPARTYOUTDIR)/include/freetype2/freetype
 EXTRALIBS= -L$(THIRDPARTYOUTDIR)/lib -lfreetype

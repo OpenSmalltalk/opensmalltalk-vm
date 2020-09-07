@@ -1,0 +1,8 @@
+#############################################################################
+# Plugin Makefile for Win32/64 VM using MSVC, e.g. 2017 Community, and gnu make
+# Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
+#############################################################################
+
+EXTRALIBS:=opengl32.lib ddraw.lib dxguid.lib gdi32.lib
+
+include ../common/Makefile.msvc.plugin

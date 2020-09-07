@@ -75,7 +75,8 @@ snd_Stop(void)
 
 /* sound input */
 void
-snd_SetRecordLevel(sqInt level){}
+snd_SetRecordLevel(sqInt level)
+{ [gDelegateApp.squeakApplication.soundInterfaceLogic snd_SetRecordLevel: level]; }
 
 sqInt
 snd_StartRecording(sqInt desiredSamplesPerSec, sqInt stereo, sqInt semaIndex)
@@ -94,10 +95,14 @@ snd_RecordSamplesIntoAtLength(void * buf, sqInt startSliceIndex, sqInt bufferSiz
 { return [gDelegateApp.squeakApplication.soundInterfaceLogic snd_RecordSamplesIntoAtLength:(char *) buf startSliceIndex: (usqInt) startSliceIndex bufferSizeInBytes: (usqInt) bufferSizeInBytes]; }
 
 void
-snd_Volume(double *left, double *right) {} 
+snd_Volume(double *left, double *right)
+{ double volume = [gDelegateApp.squeakApplication.soundInterfaceLogic snd_GetOutputLevel];
+	*left = *right = volume;
+}
 
 void
-snd_SetVolume(double left, double right) {}
+snd_SetVolume(double left, double right)
+{ [gDelegateApp.squeakApplication.soundInterfaceLogic snd_SetOutputLevel: (left + right) / 2.0]; }
 
 /* Terf SqSoundVersion 1.2 improvements */
 sqInt

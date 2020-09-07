@@ -1,11 +1,13 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 # Stack Spur VM with VM profiler and threaded heartbeat
 INSTALLDIR=sqstkspur64linuxht
-OPT="-g -O1 -fwrapv -DNDEBUG -DDEBUGVM=0"
+OPT="-g -O1 -DNDEBUG -DDEBUGVM=0"
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
 fi
+if ../../../scripts/checkSCCSversion ; then exit 1; fi
 echo -n "clean? "
 read a
 case $a in
@@ -18,11 +20,9 @@ test -f config.h || ../../../platforms/unix/config/configure \
 		--with-vmversion=5.0 \
 	--with-src=spurstack64src --disable-cogit \
 	--without-vm-display-fbdev --without-npsqueak \
-	CC="gcc -m64" \
-	CXX="g++ -m64" \
-	CFLAGS="$OPT -msse2 -D_GNU_SOURCE" \
-	LIBS="-lpthread -luuid" \
-	LDFLAGS=-Wl,-z,now
+	TARGET_ARCH="-m64" \
+	CC=clang \
+	CFLAGS="$OPT -msse2"
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../products/$INSTALLDIR
 # prefer make install prefix=`readlink -f \`pwd\`/../../../products/$INSTALLDIR`

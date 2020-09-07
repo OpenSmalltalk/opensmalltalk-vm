@@ -6,7 +6,7 @@
 <assemblyIdentity
 	version="1.0.0.0"
 	processorArchitecture="*"
-	name="www.mirandabanda.org.Cog.Croquet"
+	name="www.opensmalltalk.org.Cog.Croquet"
 	type="win32"
 />
 <description>Croquet Smalltalk Virtual Machine</description>

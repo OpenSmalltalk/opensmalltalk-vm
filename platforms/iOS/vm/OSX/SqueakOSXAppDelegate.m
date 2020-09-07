@@ -41,20 +41,19 @@
 #import "sqSqueakOSXScreenAndWindow.h"
 #import "sqMacHostWindow.h"
 #import "sqSqueakOSXInfoPlistInterface.h"
-#if defined(i386) || defined(__i386) || defined(__i386__)
-#else
+//Crashlytics code commented out; usefuil to those that use it...
 //#import <Fabric/Fabric.h>
 //#import <Crashlytics/Crashlytics.h>
+
+#ifdef USE_METAL
+#  import "sqSqueakOSXMetalView.h"
 #endif
 
-#ifndef USE_CORE_GRAPHICS
-#  import "sqSqueakOSXOpenGLView.h"
-#  define ContentViewClass sqSqueakOSXOpenGLView
-#else 
+#ifdef USE_CORE_GRAPHICS
 #  import "sqSqueakOSXCGView.h"
-#  define ContentViewClass sqSqueakOSXCGView
 #endif
 
+#import "sqSqueakOSXOpenGLView.h"
 
 SqueakOSXAppDelegate *gDelegateApp;
 
@@ -71,13 +70,11 @@ SqueakOSXAppDelegate *gDelegateApp;
 }
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
-   
-#if defined(i386) || defined(__i386) || defined(__i386__)
-#else
+
+	//Crashlytics code commented out; usefuil to those that use it...
     //   [Crashlytics startWithAPIKey:@"add501476623fc20212a60334cd537d16dfd566f"];
     //[Fabric with:@[[Crashlytics class]]];
-#endif
-	
+
     @autoreleasepool {
 		gDelegateApp = self;	
 		self.squeakApplication = [self makeApplicationInstance];
@@ -172,6 +169,18 @@ SqueakOSXAppDelegate *gDelegateApp;
     [self setupWindow];
     [self setupMainView];
     return [self window];
+}
+
+- (void) placeMainWindowOnLargerScreenGivenWidth: (sqInt) width height: (sqInt) height {
+#if SQ_HOST64 /* This API is 64-bits only :-( */
+        for (NSScreen *screen in [NSScreen screens]) {
+                CGSize screenSize = screen.visibleFrame.size;
+                if ((height <= screenSize.height) && (width <= screenSize.width)) {
+                    self.window.frameOrigin = screen.visibleFrame.origin;
+                    break;
+                }
+        }
+#endif
 }
 
 - (BOOL)application:(NSApplication *)theApplication openFile:(NSString *)fileName {

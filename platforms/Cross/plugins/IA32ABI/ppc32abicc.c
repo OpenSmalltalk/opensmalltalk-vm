@@ -43,20 +43,19 @@
  *
  */
 
-# include <sys/mman.h> /* for mprotect */
-# if OBJC_DEBUG /* define this to get debug info for struct objc_class et al */
-#  include <objc/objc.h>
-#  include <objc/objc-class.h>
+#include <sys/mman.h> /* for mprotect */
+#if OBJC_DEBUG /* define this to get debug info for struct objc_class et al */
+# include <objc/objc.h>
+# include <objc/objc-class.h>
 
 struct objc_class *baz;
 
 void setbaz(void *p) { baz = p; }
 void *getbaz() { return baz; }
-# endif
-
-# include <sys/mman.h> /* for mprotect */
+#endif
 
 #include <stdio.h>
+#include <unistd.h> /* for getpagesize/sysconf */
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -92,13 +91,13 @@ struct VirtualMachine* interpreterProxy;
 # define alloca _alloca
 #endif
 #if __GNUC__
-//# define setsp(sp) asm volatile ("movl %0,%%esp" : : "memory"(sp))
-//# define getsp(sp) asm volatile ("movl %%esp,%0" : "=r"(sp) : )
+//# define setsp(sp) __asm__ volatile ("movl %0,%%esp" : : "memory"(sp))
+//# define getsp(sp) __asm__ volatile ("movl %%esp,%0" : "=r"(sp) : )
 #endif
 # define STACK_ALIGN_BYTES 16
 
 #if !defined(setsp)
-# define setsp(ignored)  asm volatile ("stwu r1,12(r1)\n")
+# define setsp(ignored)  __asm__ volatile ("stwu r1,12(r1)\n")
 #endif
 
 #define moduloPOT(m,v) ((v)+(m)-1 & ~((m)-1))
@@ -245,7 +244,7 @@ thunkEntry(void *thunkp, sqIntptr_t *stackp)
 				_asm mov edx, dword ptr vhigh;
 #elif __GNUC__
 #warning ASSEMBLER
-//asm("mov %0,%%edx" : : "m"(vhigh));
+//__asm__("mov %0,%%edx" : : "m"(vhigh));
 #else
 # error need to load edx with rs->rvs.valint64.high on this compiler
 #endif
@@ -258,7 +257,7 @@ thunkEntry(void *thunkp, sqIntptr_t *stackp)
 				_asm fld qword ptr valflt64;
 #elif __GNUC__
 #warning ASSEMBLER
-//				asm("fldl %0" : : "m"(valflt64));
+//				__asm__("fldl %0" : : "m"(valflt64));
 #else
 # error need to load %f0 with rs->rvs.valflt64 on this compiler
 #endif
@@ -290,7 +289,7 @@ static unsigned long pagesize = 0;
 #endif
 
 void *
-allocateExecutablePage(long *size)
+allocateExecutablePage(sqIntptr_t *size)
 {
 	void *mem;
 

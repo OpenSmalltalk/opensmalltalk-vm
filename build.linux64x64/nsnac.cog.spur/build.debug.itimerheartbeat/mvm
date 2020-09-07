@@ -1,7 +1,8 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 # debug Spur VM with VM profiler and itimer heartbeat
 INSTALLDIR=debug/nsnaccogspur64linux
-OPT="-g3 -O0 -fwrapv -DDEBUGVM=1"
+OPT="-g3 -O0 -DDEBUGVM=1"
 
 if [ $# -ge 1 ]; then
 	case "$1" in
@@ -10,6 +11,7 @@ if [ $# -ge 1 ]; then
 	esac
 fi
 
+if ../../../scripts/checkSCCSversion ; then exit 1; fi
 echo -n "clean? "
 read a
 case $a in
@@ -22,11 +24,9 @@ test -f config.h || ../../../platforms/unix/config/configure \
 		--with-vmversion=5.0 \
 		--with-src=nsspur64src \
 		--without-vm-display-fbdev --without-npsqueak \
-	CC="gcc -m64" \
-	CXX="g++ -m64" \
-	CFLAGS="$OPT -DEnforceAccessControl=0 -msse2 -D_GNU_SOURCE -DITIMER_HEARTBEAT=1" \
-	LIBS="-lpthread -luuid" \
-	LDFLAGS=-Wl,-z,now
+	TARGET_ARCH="-m64" \
+	CC=clang \
+	CFLAGS="$OPT -DEnforceAccessControl=0 -msse2 -DITIMER_HEARTBEAT=1"
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../products/$INSTALLDIR
 make install-squeak install-plugins prefix=`(cd ../../../;pwd)`/products/$INSTALLDIR 2>&1 | tee LOG

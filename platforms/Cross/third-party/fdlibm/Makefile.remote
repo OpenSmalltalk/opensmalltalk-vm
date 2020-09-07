@@ -1,0 +1,6 @@
+# Makefile for building Nicolas Cellier's development of fdlibm in a remote
+# directory.
+TP:=../../platforms/Cross/third-party
+FDLIBM:=fdlibm
+VPATH=$(TP)/$(FDLIBM):.
+include $(TP)/$(FDLIBM)/Makefile

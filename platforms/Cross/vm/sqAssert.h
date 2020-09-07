@@ -14,9 +14,15 @@
  */
 
 #pragma auto_inline(off)
+#if defined(EXPORT) && !defined(SQUEAK_BUILTIN_PLUGIN)
+EXPORT(void) error(char *);
+EXPORT(void) warning(char *);
+EXPORT(void) warningat(char *,int);
+#else
+extern void error(char *);
 extern void warning(char *);
 extern void warningat(char *,int);
-void error(char *s);
+#endif
 #pragma auto_inline(on)
 
 #undef assert
@@ -31,7 +37,31 @@ void error(char *s);
 # define assertfl(msg,line) 0
 # define eassert(expr) 0 /* hack disabling of asserts.  Better in makefile? */
 # define PRODUCTION 1
-#elif 1
+#elif defined(_MSC_VER)
+static inline sqInt warningIfNot(sqInt condition, char *message)
+{
+    if (!condition)
+		warning(message);
+	return condition;
+}
+
+static inline sqInt warningIfNotAt(sqInt condition, char *message, int line)
+{
+    if (!condition)
+		warningat(message, line);
+	return condition;
+}
+
+# define assert(expr)  warningIfNot(expr, #expr " " __stringifyNum(__LINE__))
+# define asserta(expr) warningIfNot(expr, #expr " " __stringifyNum(__LINE__))
+# define assertf(msg)  (warning(#msg " " __stringifyNum(__LINE__)),0)
+# define assertl(expr,line)  warningIfNotAt(expr, #expr, line)
+# define assertal(expr,line) warningIfNotAt(expr, #expr, line)
+# define assertfl(msg,line)  (warningat(#msg,line),0)
+extern char expensiveAsserts;
+# define eassert(expr)  warningIfNot(!expensiveAsserts || !(expr), #expr " " __stringifyNum(__LINE__))
+# define PRODUCTION 0
+#else
 # define assert(expr)  ((expr)||(warning(#expr " " __stringifyNum(__LINE__)),0))
 # define asserta(expr) ((expr)||(warning(#expr " " __stringifyNum(__LINE__)),0))
 # define assertf(msg)  (warning(#msg " " __stringifyNum(__LINE__)),0)

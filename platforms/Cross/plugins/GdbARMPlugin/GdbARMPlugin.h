@@ -1,32 +1,30 @@
+/* Include file for the ARMv6/ARM32 processor simulator plugin, GdbARMPlugin */
 /* heavily based on BochsIA32Plugin.h */
-/* Bochs seems to use error code 1 for execution errors.
- * So we use > 1 for various errors
- */
 
-/* TPR - added MemoryWriteBoundsError */
+#define NumIntegerRegisterStateFields 17 /* the 16 registers plus the flags */
+
 #define NoError 0
 #define ExecutionError 1
 #define BadCPUInstance 2
-#define MemoryLoadBoundsError 3
-#define MemoryWriteBoundsError 4
-#define InstructionPrefetchError 5
-#define PanicError 6
-#define UnsupportedOperationError 7
-#define SomethingLoggedError 8
+#define MemoryBoundsError 3
+#define PanicError 4
+#define UnsupportedOperationError 5
+#define SomethingLoggedError 6
+#define InstructionPrefetchError 7
 
 // TPR - The library is compiled with TFlag, therefore, we also need to set it.
-#define MODET
+#define MODET 1
 
 #if !defined(ulong)
 typedef unsigned long ulong;
 #endif
 
 extern ulong	minReadAddress, minWriteAddress;
-extern long gdb_log_printf(void* stream, const char * format, ...);
+extern int gdb_log_printf(void* stream, const char * format, ...);
 
 
 /*
- * Answer a polonger to a new ARMulator CPU (an instance of typedef ARMul_State)
+ * Answer a pointer to a new ARMulator CPU (an instance of typedef ARMul_State)
  */
 extern void *newCPU();
 /*
@@ -35,14 +33,14 @@ extern void *newCPU();
 extern long   resetCPU(void *cpu);
 /*
  * Single-step *cpu (an ARMul_state instance) using memory as its memory.
- * Answer 0 on success, or an longeger error code if something went awry.
+ * Answer 0 on success, or an integer error code if something went awry.
  */
 extern long  singleStepCPUInSizeMinAddressReadWrite(void *cpu, void *memory,
 					ulong byteSize, ulong minReadAddr, ulong minWriteAddr);
 /*
  * Run *cpu (an ARMul_state instance) using memory as its memory.
- * Answer an longeger error code when the processor hits some exception.
- * Answer 0 when it is longerrupted.
+ * Answer an integer error code when the processor hits some exception.
+ * Answer 0 when it is interrupted.
  */
 extern long	runCPUInSizeMinAddressReadWrite(void *cpu, void *memory,
 					ulong byteSize, ulong minReadAddr, ulong minWriteAddr);
@@ -51,11 +49,11 @@ extern long	runCPUInSizeMinAddressReadWrite(void *cpu, void *memory,
  */
 extern void	flushICacheFromTo(void *cpu, ulong strt, ulong nd);
 /*
- * force runCPUInSize to exit asap.  Used by longerrupts.
+ * force runCPUInSize to exit asap.  Used by interrupts.
  */
 extern void	forceStopRunning();
 /*
- * The previous entry in the longerruptCheckChain so forceStopRunning can chain.
+ * The previous entry in the interruptCheckChain so forceStopRunning can chain.
  */
 extern void (*prevInterruptCheckChain)();
 /*
@@ -72,3 +70,9 @@ extern long   errorAcorn();
  * The current log (if singleStep failed with SomethingLoggedError).
  */
 extern char *getlog(long *len);
+
+/*
+ * Fill an integer array with the register state, including the pc and, if
+ * appropriate, the condition code flags, etc.
+ */
+extern void storeIntegerRegisterStateOfinto(void *cpu, int *registerState);

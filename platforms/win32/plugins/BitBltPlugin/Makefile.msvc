@@ -1,0 +1,15 @@
+#############################################################################
+# Plugin Makefile for Win32/64 VM using MSVC, e.g. 2017 Community, and gnu make
+# Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
+#############################################################################
+
+# Override to avoid files in platforms/Cross/plugins/BitBltPlugin.
+# Fails if one redefines VPATH and then includes ../common/Makefile.msvc.plugin.  Grrr...
+
+WIN32DIR:=	$(PLATDIR)/win32/plugins/$(LIBNAME)
+MAKERDIR:=	$(PLUGINSRCDIR)/plugins/$(LIBNAME)
+OBJDIR:=    $(BASEDIR)/$(BUILD)/$(LIBNAME)
+
+%:
+	$(MAKE) -f ../common/Makefile.msvc.plugin VPATH="$(MAKERDIR) $(WIN32DIR) $(OBJDIR)" \
+				CROSSSRC="" $@

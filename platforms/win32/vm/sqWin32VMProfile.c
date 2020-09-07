@@ -11,7 +11,7 @@
 *
 *****************************************************************************/
  
-#include <windows.h>
+#include <Windows.h>
 /* MSVC v6 == 1200 */
 #if defined(_MSC_VER) && _MSC_VER > 0 && _MSC_VER < 1300
 typedef DWORD *DWORD_PTR; /* ULONGLONG on 64-bit systems */
@@ -33,7 +33,11 @@ typedef DWORD *DWORD_PTR; /* ULONGLONG on 64-bit systems */
  * the buffer technique.
  */
 
+#if defined(__x86_64)
+typedef unsigned long long pctype;
+#else
 typedef unsigned long pctype;
+#endif
 
 typedef enum { dead, nascent, quiescent, active } machine_state;
 machine_state profileState = nascent;
@@ -68,10 +72,10 @@ ioProfileTextRange(void **startpc, void **endpc)
  */
 #define EAS_SCALE 14 /* (16384 log: 2) asInteger */
 #define EAS_BYTES (sizeof(*eas_bins) * (1 << (32 - EAS_SCALE)))
-static unsigned long *eas_bins; /* eas = entire address space */
-static unsigned long *vm_bins;
-static unsigned long first_vm_pc;
-static unsigned long limit_vm_pc;
+static pctype *eas_bins; /* eas = entire address space */
+static pctype *vm_bins;
+static pctype first_vm_pc;
+static pctype limit_vm_pc;
 #define VM_BYTES(firstpc,limitpc) (sizeof(*vm_bins) * ((limitpc) - (firstpc)))
 
 /*
@@ -95,10 +99,10 @@ profileStateMachine(void *ignored)
 		if (res == WAIT_TIMEOUT
 		 && profileState == active) {
 			CONTEXT VMContext;
-			unsigned long pc;
+			pctype pc;
 			VMContext.ContextFlags = CONTEXT_CONTROL | THREAD_GET_CONTEXT;
 			GetThreadContext(VMThread, &VMContext);
-			pc = VMContext.Eip;
+			pc = VMContext.CONTEXT_PC;
 			if (pc >= first_vm_pc && pc < limit_vm_pc)
 				++vm_bins[pc - first_vm_pc];
 			else
@@ -158,9 +162,14 @@ ioControlProfile(int on,
 	machine_state desiredState = on ? active : quiescent;
 	DWORD_PTR     desiredAffinity = on ? 1 : defaultAffinity;
 
-	ioProfileStatus(0, 0, 0,
-					vmHistogramPtr, vmHistogramBins,
-					easHistogramPtr, easHistogramBins);
+	if (vmHistogramBins)
+		*vmHistogramBins = VM_BYTES(first_vm_pc,limit_vm_pc) / sizeof(*vm_bins);
+	if (vmHistogramPtr)
+		*vmHistogramPtr = vm_bins;
+	if (easHistogramBins)
+		*easHistogramBins = EAS_BYTES / sizeof(*eas_bins);
+	if (easHistogramPtr)
+		*easHistogramPtr = eas_bins;
 
 	if (profileState == desiredState)
 		return;
@@ -170,29 +179,6 @@ ioControlProfile(int on,
     profileState = desiredState;
 	if (!ReleaseSemaphore(profileSemaphore,1 /* 1 signal */,NULL))
 		abortMessage(TEXT("ReleaseSemaphore(profileSemaphore... error"));
-}
-
-void 
-ioProfileStatus(sqInt *running, void **exestartpc, void **exelimitpc,
-				void **vmHistogramPtr, long *vmHistogramBins,
-				void **easHistogramPtr, long *easHistogramBins)
-{
-	if (!vm_bins)
-		initProfile();
-	if (running)
-		*running = profileState == active;
-	if (exestartpc)
-		*exestartpc = first_vm_pc;
-	if (exelimitpc)
-		*exelimitpc = limit_vm_pc;
-	if (vmHistogramBins)
-		*vmHistogramBins = VM_BYTES(first_vm_pc,limit_vm_pc) / sizeof(*vm_bins);
-	if (vmHistogramPtr)
-		*vmHistogramPtr = vm_bins;
-	if (easHistogramBins)
-		*easHistogramBins = EAS_BYTES / sizeof(*eas_bins);
-	if (easHistogramPtr)
-		*easHistogramPtr = eas_bins;
 }
 
 void
@@ -239,17 +225,9 @@ profileStateMachine(void *ignored)
 		if (res == WAIT_TIMEOUT
 		 && profileState == active) {
 			CONTEXT VMContext;
-			pctype pc;
 			VMContext.ContextFlags = CONTEXT_CONTROL | THREAD_GET_CONTEXT;
 			GetThreadContext(VMThread, &VMContext);
-#if defined(_M_IX86) || defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__)
-			pc = VMContext.Eip;
-#elif defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
-			pc = VMContext.Rip;
-#else
-#error "unknown architecture, cannot pick program counter"
-#endif
-			pc_buffer[pc_buffer_index] = pc;
+			pc_buffer[pc_buffer_index] = VMContext.CONTEXT_PC;
 			if (++pc_buffer_index >= pc_buffer_size) {
 				pc_buffer_index = 0;
 				pc_buffer_wrapped = 1;

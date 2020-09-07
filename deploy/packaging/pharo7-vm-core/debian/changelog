@@ -1,0 +1,11 @@
+pharo7-vm-core (2019.01.22) xenial; urgency=medium
+
+  * Migrate to opensmalltalk-vm and initial pharo7 release.
+
+ -- Holger Freyther <automatic+pharo@freyther.de>  Tue, 22 Jan 2019 04:56:07 +0100
+
+pharo6-vm-core (2017.05.02) xenial; urgency=medium
+
+  * Initial release.
+
+ -- Norbert Hartl <norbert@hartl.name>  Sat, 11 Jun 2016 17:01:07 +0200
