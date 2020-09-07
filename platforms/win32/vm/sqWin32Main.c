@@ -1133,7 +1133,7 @@ extern char *__cogitBuildInfo;
 static int inError = 0;
 
 void
-error(char *msg) {
+error(const char *msg) {
   FILE *f;
   WCHAR crashInfo[1024];
   void *callstack[MAXFRAMES];

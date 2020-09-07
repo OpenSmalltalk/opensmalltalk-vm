@@ -85,7 +85,7 @@ extern BOOL NSApplicationLoad(void);
 extern void pushOutputFile(char *);
 extern void popOutputFile(void);
 
-static void reportStackState(char *, char *, int, ucontext_t *);
+static void reportStackState(const char *, char *, int, ucontext_t *);
 static void block();
 static void *printRegisterState(ucontext_t *);
 
@@ -94,7 +94,7 @@ static void *printRegisterState(ucontext_t *);
 #pragma auto_inline(off)
 #if COGVM || STACKVM
 void
-error(char *msg)
+error(const char *msg)
 {
 	reportStackState(msg,0,0,0);
 	if (blockOnError) block();
@@ -120,7 +120,7 @@ block()
  * Allows e.g. writing to a log file and stderr.
  */
 static void
-reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
+reportStackState(const char *msg, char *date, int printAll, ucontext_t *uap)
 {
 # if !defined(NOEXECINFO)
 	void *addrs[BACKTRACE_DEPTH];
@@ -310,13 +310,13 @@ sigsegv(int sig, siginfo_t *info, void *uap)
 	time_t now = time(NULL);
 	char ctimebuf[32];
 	char crashdump[PATH_MAX+1];
-	char *fault = sig == SIGSEGV
-					? "Segmentation fault"
-					: (sig == SIGBUS
-						? "Bus error"
-						: (sig == SIGILL
-							? "Illegal instruction"
-							: "Unknown signal"));
+	const char *fault = sig == SIGSEGV
+						? "Segmentation fault"
+						: (sig == SIGBUS
+							? "Bus error"
+							: (sig == SIGILL
+								? "Illegal instruction"
+								: "Unknown signal"));
 
 	if (!inFault) {
 		extern sqInt primitiveFailForFFIExceptionat(usqLong exceptionCode, usqInt pc);

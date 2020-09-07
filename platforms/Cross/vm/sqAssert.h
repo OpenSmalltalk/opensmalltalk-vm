@@ -15,13 +15,13 @@
 
 #pragma auto_inline(off)
 #if defined(EXPORT) && !defined(SQUEAK_BUILTIN_PLUGIN)
-EXPORT(void) error(char *);
-EXPORT(void) warning(char *);
-EXPORT(void) warningat(char *,int);
+EXPORT(void) error(const char *);
+EXPORT(void) warning(const char *);
+EXPORT(void) warningat(const char *,int);
 #else
-extern void error(char *);
-extern void warning(char *);
-extern void warningat(char *,int);
+extern void error(const char *);
+extern void warning(const char *);
+extern void warningat(const char *,int);
 #endif
 #pragma auto_inline(on)
 
@@ -38,17 +38,17 @@ extern void warningat(char *,int);
 # define eassert(expr) 0 /* hack disabling of asserts.  Better in makefile? */
 # define PRODUCTION 1
 #elif defined(_MSC_VER)
-static inline sqInt warningIfNot(sqInt condition, char *message)
+static inline sqInt warningIfNot(sqInt condition, const char *msg)
 {
     if (!condition)
-		warning(message);
+		warning(msg);
 	return condition;
 }
 
-static inline sqInt warningIfNotAt(sqInt condition, char *message, int line)
+static inline sqInt warningIfNotAt(sqInt condition, const char *msg, int line)
 {
     if (!condition)
-		warningat(message, line);
+		warningat(msg, line);
 	return condition;
 }
 
