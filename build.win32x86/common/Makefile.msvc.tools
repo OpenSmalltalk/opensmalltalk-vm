@@ -86,11 +86,10 @@ CONSOLELDFLAGS:= /subsystem:console $(BASELDFLAGS)
 DL:=/DEFAULTLIB:
 NDL:=/NODEFAULTLIB:
 
-STDLIBS:=$(NDL)libc $(NDL)libcmt $(DL)msvcrt \
-         $(DL)ddraw $(DL)dinput8 $(DL)opengl32 $(DL)ws2_32 $(DL)comdlg32 \
-         $(DL)ole32 $(DL)winmm $(DL)version $(DL)wininet $(DL)user32 $(DL)gdi32\
-         $(DL)psapi $(DL)advapi32 $(DL)kernel32 $(DL)dsound $(DL)secur32 \
-		 $(DL)shell32 $(DL)shfolder
+STDLIBS:=$(STDLIBS) $(NDL)libc $(NDL)libcmt $(DL)msvcrt \
+         dinput8.lib ws2_32.lib comdlg32.lib ole32.lib winmm.lib \
+         version.lib wininet.lib user32.lib gdi32.lib psapi.lib \
+         advapi32.lib kernel32.lib secur32.lib shell32.lib shfolder.lib
 
 #############################################################################
 # Tools to use

@@ -27,37 +27,23 @@ override VCINSTALLDIR:=$(shell echo "$(VCINSTALLDIR)" | sed 's/ /\\ /g')
 override VCINSTALLDIRSH:=$(shell echo "$(VCINSTALLDIR)" | sed 's/[()]/\\&/g')
 
 #############################################################################
-# C compiler settings Visual C++ 2017 Community Edition
+# C compiler settings assuming Visual C++ 2017 Community Edition
 #
-# Now choose the compiler.  If Clang/C2 has been installed use it, otherwise
-# use MSVC
+# Try and choose a compiler.  Alas clang-cl does not appear to support x86.
+# And ClangC2 is broken.  So just use MSVC
+#
 
 $(info VCINSTALLDIR=$(VCINSTALLDIR))
 $(info VCINSTALLDIRSH=$(VCINSTALLDIRSH))
 #$(info wildcard VCINSTALLDIR $(wildcard $(VCINSTALLDIR)/.*))
-#$(info wildcard VCINSTALLDIR/Tools/ClangC2 $(wildcard $(VCINSTALLDIR)/Tools/ClangC2/.*))
-#$(info wildcard VCINSTALLDIR/Tools/ClangC3 $(wildcard $(VCINSTALLDIR)/Tools/ClangC3/.*))
-ifneq ($(wildcard $(VCINSTALLDIR)/Tools/ClangC2/.*),)
-$(info Clang/C2 detected)
-#$(info shell echo VCINST...SH/./clang.exe $(shell echo $(VCINSTALLDIRSH)Tools/ClangC2/*/bin/HostX64/clang.exe))
-CC:="$(shell echo $(VCINSTALLDIRSH)Tools/ClangC2/*/bin/HostX64/clang.exe)"
-ClangC2:=ClangC2
-undefine MSVC
-LINKERARGS=-Xlinker
-CLANG_ADAPT:=-fmsc-version=1916 # as reported by boost for MSVC Community 2017
-CLANG_LINK_ADAPT:=-defaultlib:libcmt
-CLANG_VERSION:=$(basename $(dir $(dir $(dir $(CC)))))
-$(info CLANG_VERSION=$(CLANG_VERSION))
-PATH:=$(PATH):$(dir $(shell echo $(VCINSTALLDIRSH)Tools/ClangC2/*/bin/HostX64/clang.exe))x86
-$(info $$PATH=$(PATH))
-else
-$(info Clang/C2 not found)
+$(info wildcard  C:/Program\ Files/LLVM/bin/.* $(wildcard C:/Program\ Files/LLVM/bin/.*))
+
 override TOOLPREFIX:="$(VCToolsInstallDir)bin/HostX64/x86/"
 MSVC:=MSVC
+undefine Clang
 undefine ClangC2
-LINKERARGS=/link
 CC:=$(TOOLPREFIX)cl.exe -nologo
-endif
+
 $(info CC=$(CC))
 
 
