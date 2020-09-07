@@ -258,7 +258,7 @@ extern usqLong ioVMTickerStartUSecs(void);
 #ifdef __INTEL_COMPILER 
 #   pragma auto_inline(off)
 #endif
-extern void error(const char *s);
+extern void error(const char *);
 #ifdef __INTEL_COMPILER 
 #   pragma auto_inline(on)
 #endif
