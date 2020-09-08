@@ -172,7 +172,7 @@ VMSimpleStackBasedCogitMegamorphicPICTest >> testRelinkCallSiteToMegamorphicPICC
 	The literal taken starts from zero in 208, one in 209... and so on"
 	cogit byte0: 208 + literalIndex.
 	selector := memory falseObject.
-	method := methodBuilder newMethod literalAt: literalIndex put: selector.
+	method := methodBuilder newMethod literalAt: literalIndex put: selector ; buildMethod.
 	cogit methodObj: method.
 
 	"The method will have 3 literals.

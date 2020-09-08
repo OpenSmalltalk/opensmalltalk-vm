@@ -122,7 +122,7 @@ VMMethodBuilder >> method [
 	^ method
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 VMMethodBuilder >> methodHeader [
 	^ methodHeader
 ]
