@@ -122,3 +122,6 @@ macro(add_required_libs_per_platform)
    set_target_properties(${VM_EXECUTABLE_NAME} PROPERTIES LINK_FLAGS "-mwindows")
    set_target_properties(${VM_EXECUTABLE_CONSOLE_NAME} PROPERTIES LINK_FLAGS "-mconsole")
 endmacro()
+
+set(LIBFFI_TARGET "x86_64-unknown-cygwin")
+set(LIBFFI_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/bin/ffi-7.dll")

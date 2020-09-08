@@ -66,3 +66,6 @@ macro(add_required_libs_per_platform)
   target_link_libraries(${VM_LIBRARY_NAME} m)
   target_link_libraries(${VM_LIBRARY_NAME} pthread)
 endmacro()
+
+set(LIBFFI_TARGET "x86_64-pc-linux-gnu")
+set(LIBFFI_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/build/bin/libffi.so" "${CMAKE_CURRENT_BINARY_DIR}/build/bin/libffi.7.so")
