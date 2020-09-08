@@ -58,8 +58,8 @@ CCodeGenerator class >> initialize [
 ]
 
 { #category : #testing }
-CCodeGenerator class >> isVarargsSelector: aSymbol [
-	^aSymbol endsWith: 'printf:'
+CCodeGenerator class >> isVarargsSelector: aRBSelectorNode [
+	^aRBSelectorNode value endsWith: 'printf:'
 ]
 
 { #category : #'C code generator' }
