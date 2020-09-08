@@ -40,12 +40,6 @@ For doing so, it is required to do:
 sudo ln -s /usr/lib64/libcurl.so.4 /usr/lib64/libcurl-gnutls.so.4
 ```
 
-In OSX since Catalina, it is need to export the following environment variable to look up the SDK:
-
-```
-export CPATH=`xcrun --show-sdk-path`/usr/include
-```
-
 Building in OSX / Linux:
 
 ```bash
