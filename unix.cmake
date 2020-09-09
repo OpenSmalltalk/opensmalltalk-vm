@@ -69,3 +69,5 @@ endmacro()
 
 set(LIBFFI_TARGET "x86_64-pc-linux-gnu")
 set(LIBFFI_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/build/bin/libffi.so" "${CMAKE_CURRENT_BINARY_DIR}/build/bin/libffi.7.so")
+set(DYLIB_EXT "*.so*")
+set(LIBFFI_FILES "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/lib/${DYLIB_EXT}")
