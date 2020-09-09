@@ -124,5 +124,6 @@ macro(add_required_libs_per_platform)
 endmacro()
 
 set(LIBFFI_TARGET "x86_64-unknown-cygwin")
-set(LIBFFI_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/bin/ffi-7.dll")
-set(LIBFFI_FILES "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/bin/ffi-7.dll")
+set(LIBFFI_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/bin/cygffi-7.dll")
+set(LIBFFI_FILES "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/bin/cygffi-7.dll")
+set(LIBFFI_ADDITIONAL "AR=${CMAKE_TOOLCHAIN_PREFIX}-ar.exe" "DLLTOOL=${CMAKE_TOOLCHAIN_PREFIX}-dlltool.exe")
