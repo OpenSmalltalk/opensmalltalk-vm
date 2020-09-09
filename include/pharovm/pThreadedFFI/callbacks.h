@@ -12,12 +12,12 @@ typedef struct _Callback Callback;
 typedef struct _Runner Runner;
 typedef struct _CallbackInvocation CallbackInvocation;
 
-typedef void (*CALLBACK_FUNCTION)(Runner* runner, CallbackInvocation* callback);
+typedef void (*WORKER_CALLBACK_FUNCTION)(Runner* runner, CallbackInvocation* callback);
 
 struct _Runner {
-	CALLBACK_FUNCTION callbackEnterFunction;
-	CALLBACK_FUNCTION callbackExitFunction;
-	CALLBACK_FUNCTION callbackPrepareInvocation;
+	WORKER_CALLBACK_FUNCTION callbackEnterFunction;
+	WORKER_CALLBACK_FUNCTION callbackExitFunction;
+	WORKER_CALLBACK_FUNCTION callbackPrepareInvocation;
     CallbackInvocation *callbackStack;
 };
 
