@@ -92,6 +92,13 @@ macro(configure_installables INSTALL_COMPONENT)
             PATTERN *.dll EXCLUDE)
 
 	install(
+		DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/bin/"
+		DESTINATION "./"
+		COMPONENT ${INSTALL_COMPONENT}
+		FILES_MATCHING PATTERN *.dll
+		PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+
+	install(
 	    DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/win/"
 	    DESTINATION include/pharovm
 	    COMPONENT include

@@ -307,16 +307,8 @@ if(OSX)
       DEPENDS build_libFFI
       COMMAND install_name_tool -id "@executable_path/Plugins/libffi.7.dylib" "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/lib/libffi.7.dylib"
       COMMAND install_name_tool -id "@executable_path/Plugins/libffi.dylib" "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/lib/libffi.dylib"
-      COMMAND cp "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/lib/${DYLIB_EXT}" "${CMAKE_CURRENT_BINARY_DIR}/build/dist/"
-      WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/build/dist"
+      WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/lib/"
       COMMENT "Changing RPath of Libffi")
-else()
-    add_custom_command(
-      OUTPUT  ${LIBFFI_OUTPUT}
-      DEPENDS build_libFFI
-      COMMAND cp "${LIBFFI_FILES}" "${CMAKE_CURRENT_BINARY_DIR}/build/dist/"
-      WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/build/dist"
-      COMMENT "Copying of Libffi")
 endif()
 
 link_directories("${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/lib")
