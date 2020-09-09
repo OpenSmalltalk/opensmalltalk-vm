@@ -83,6 +83,8 @@ extern const pthread_key_t tltiIndex;
 
 extern void sqFilenameFromString(char *uxName, sqInt stNameIndex, int sqNameLength);
 
+sqInt ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt extentY, sqInt offsetX, sqInt offsetY);
+
 #undef dispatchFunctionPointer
 #undef dispatchFunctionPointerOnin
 /* we'd like to untypedef fptr too, but such is life */
