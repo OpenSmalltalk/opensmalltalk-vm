@@ -27,11 +27,16 @@ sqWindowSystem *sqAllWindowSystems[] = {
 
 static sqWindowSystem *currentWindowSystem = 0;
 extern void ioAddInternalPluginPrimitives(void *primitiveList);
-
-void (*ioProcessEventsHandler) (void) = 0;
+extern void vmIOProcessEvents(void);
+void (*ioProcessEventsHandler) (void) = vmIOProcessEvents;
 
 extern void setIoProcessEventsHandler(void * handler) {
     ioProcessEventsHandler = (void(*)()) handler;
+}
+
+void
+vmIOProcessEvents(void)
+{
 }
 
 void

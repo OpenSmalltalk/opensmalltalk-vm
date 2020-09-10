@@ -1,5 +1,6 @@
 # Copied, perhaps edited, from ../../src/examplePlugins.ext
 EXTERNAL_PLUGINS = \
+B3DAcceleratorPlugin \
 SurfacePlugin \
 FT2Plugin \
 SqueakSSL \

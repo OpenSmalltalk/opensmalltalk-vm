@@ -25,8 +25,6 @@
  *   SOFTWARE.
  */
 
-#define AVOID_OPENGL_H	1
-
 #include "sq.h"
 #include "SqDisplay.h"
 #include "HostWindowPlugin.h"
@@ -37,15 +35,15 @@ static struct SqDisplay	*dpy= 0;
 
 #define noDisplay ( (!dpy && !(dpy= ioGetDisplayModule())) || (dpy->version < 0x10002) )
  
-/* closeWindow: arg is sqInt windowIndex. Fail (return 0) if anything goes wrong
+/* closeWindow: arg is sqIntptr_t windowIndex. Fail (return 0) if anything goes wrong
  * - typically the windowIndex invalid or similar
  */
-sqInt closeWindow(sqInt index)
+sqInt
+closeWindow(sqIntptr_t index)
 {
   if (noDisplay)
     return 0;
-  else
-    return dpy->hostWindowClose(index); 
+  return dpy->hostWindowClose(index); 
 }
 
 
@@ -60,99 +58,98 @@ sqInt createWindowWidthheightoriginXyattrlength(
 {
   if (noDisplay)
     return 0;
-  else
-    return dpy->hostWindowCreate(w, h, x, y, list, attributeListLength);
+  return dpy->hostWindowCreate(w, h, x, y, list, attributeListLength);
 }
 
 
-/* ioShowDisplayOnWindow: similar to ioShowDisplay but adds the sqInt windowIndex
+/* ioShowDisplayOnWindow: similar to ioShowDisplay but adds the sqIntptr_t windowIndex
  * Return true if ok, false if not, but not currently checked
  */
 sqInt ioShowDisplayOnWindow(
 	unsigned char *dispBitsIndex, 
 	sqInt width, sqInt height, sqInt depth, 
 	sqInt affectedL, sqInt affectedR, sqInt affectedT, sqInt affectedB,
-	sqInt windowIndex)
+	sqIntptr_t windowIndex)
 {
   if (noDisplay)
     return 0;
-  else
-    return dpy->hostWindowShowDisplay(
+  return dpy->hostWindowShowDisplay(
       dispBitsIndex, width, height, depth, affectedL, affectedR, affectedT, affectedB, windowIndex);
 }
 
 
-/* ioSizeOfWindow: arg is sqInt windowIndex. Return the size of the specified
+/* ioSizeOfWindow: arg is sqIntptr_t windowIndex. Return the size of the specified
  * window in (width<<16 || height) format like ioScreenSize.
  * Return -1 for failure - typically invalid windowIndex
  * -1 is chosen since itwould correspond to a window size of 64k@64k which
  * I hope is unlikely for some time to come
  */
-sqInt ioSizeOfWindow(sqInt windowIndex)
+sqInt
+ioSizeOfWindow(sqIntptr_t windowIndex)
 {
   if (noDisplay)
     return -1;
-  else
-    return dpy->hostWindowGetSize(windowIndex);
+  return dpy->hostWindowGetSize(windowIndex);
 }
 
 
-/* ioSizeOfWindowSetxy: args are sqInt windowIndex, sqInt w & h for the
+/* ioSizeOfWindowSetxy: args are sqIntptr_t windowIndex, sqInt w & h for the
  * width / height to make the window. Return the actual size the OS
  * produced in (width<<16 || height) format or -1 for failure as above.
  */
-sqInt ioSizeOfWindowSetxy(sqInt windowIndex, sqInt w, sqInt h)
+sqInt
+ioSizeOfWindowSetxy(sqIntptr_t windowIndex, sqInt w, sqInt h)
 {
   if (noDisplay)
     return -1;
-  else
-    return dpy->hostWindowSetSize(windowIndex, w, h);
+  return dpy->hostWindowSetSize(windowIndex, w, h);
 }
 
 
-/* ioPositionOfWindow: arg is sqInt windowIndex. Return the pos of the specified
+/* ioPositionOfWindow: arg is sqIntptr_t windowIndex. Return the pos of the specified
  * window in (left<<16 || top) format like ioScreenSize.
  * Return -1 (as above) for failure - typically invalid windowIndex
  */
-sqInt ioPositionOfWindow(sqInt windowIndex)
+sqInt
+ioPositionOfWindow(sqIntptr_t windowIndex)
 {
   if (noDisplay)
     return -1;
-  else
-    return dpy->hostWindowGetPosition(windowIndex);
+  return dpy->hostWindowGetPosition(windowIndex);
 }
 
 
-/* ioPositionOfWindowSetxy: args are sqInt windowIndex, sqInt x & y for the
+/* ioPositionOfWindowSetxy: args are sqIntptr_t windowIndex, sqInt x & y for the
  * origin x/y for the window. Return the actual origin the OS
  * produced in (left<<16 || top) format or -1 for failure, as above
  */
-sqInt ioPositionOfWindowSetxy(sqInt windowIndex, sqInt x, sqInt y)
+sqInt
+ioPositionOfWindowSetxy(sqIntptr_t windowIndex, sqInt x, sqInt y)
 {
   if (noDisplay)
     return -1;
-  else
-    return dpy->hostWindowSetPosition(windowIndex, x, y);
+  return dpy->hostWindowSetPosition(windowIndex, x, y);
 }
 
 
-/* ioSetTitleOfWindow: args are sqInt windowIndex, char* newTitle and
+/* ioSetTitleOfWindow: args are sqIntptr_t windowIndex, char* newTitle and
  * sqInt size of new title. Fail with -1 if windowIndex is invalid, string is too
  * long for platform etc. Leave previous title in place on failure
  */
-sqInt ioSetTitleOfWindow(sqInt windowIndex, char *newTitle, sqInt sizeOfTitle)
+sqInt
+ioSetTitleOfWindow(sqIntptr_t windowIndex, char *newTitle, sqInt sizeOfTitle)
 {
   if (noDisplay)
     return -1;
-  else
-    return dpy->hostWindowSetTitle(windowIndex, newTitle, sizeOfTitle);
+  return dpy->hostWindowSetTitle(windowIndex, newTitle, sizeOfTitle);
 }
 
 
-/* ioSetIconOfWindow: args are sqInt windowIndex, char* iconPath and
+/* ioSetIconOfWindow: args are sqIntptr_t windowIndex, char* iconPath and
  * sqInt size of new logo path. If one of the function is failing, the logo is not set.
  */
-sqInt ioSetIconOfWindow(sqInt windowIndex, char * iconPath, sqInt sizeOfPath) {
+sqInt
+ioSetIconOfWindow(sqIntptr_t windowIndex, char * iconPath, sqInt sizeOfPath) {
   //Not implemented
   return -1;
 }
@@ -161,11 +158,42 @@ sqInt ioSetIconOfWindow(sqInt windowIndex, char * iconPath, sqInt sizeOfPath) {
  * Close all the windows that appear to be open.
  * No useful return value since we're getting out of Dodge anyway.
  */
-sqInt ioCloseAllWindows(void)
+sqInt
+ioCloseAllWindows(void)
 {
   if (noDisplay)
     return 0;
-  else
-    return dpy->hostWindowCloseAll();
+  return dpy->hostWindowCloseAll();
 }
 
+sqInt
+ioSizeOfNativeWindow(usqIntptr_t windowHandle)
+{
+	if (noDisplay)
+		return -1;
+	return dpy->ioSizeOfNativeWindow((void *)windowHandle);
+}
+
+sqInt
+ioSizeOfNativeDisplay(usqIntptr_t windowHandle)
+{
+	if (noDisplay)
+		return -1;
+	return dpy->ioSizeOfNativeDisplay((void *)windowHandle);
+}
+
+sqInt
+ioPositionOfNativeWindow(usqIntptr_t windowHandle)
+{
+	if (noDisplay)
+		return -1;
+	return dpy->ioPositionOfNativeWindow((void *)windowHandle);
+}
+
+sqInt
+ioPositionOfNativeDisplay(usqIntptr_t windowHandle)
+{
+	if (noDisplay)
+		return -1;
+	return dpy->ioPositionOfNativeDisplay((void *)windowHandle);
+}

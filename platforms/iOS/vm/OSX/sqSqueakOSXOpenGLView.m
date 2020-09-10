@@ -40,6 +40,8 @@
  such third-party acknowledgments.
  */
 //
+
+#ifdef USE_OPENGL
 #import <QuartzCore/QuartzCore.h>
 
 #import "sqSqueakOSXOpenGLView.h"
@@ -1112,22 +1114,10 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	}
 }
 
-- (void)  ioSetFullScreen: (sqInt) fullScreen {
-
-	if ((self.window.styleMask & NSFullScreenWindowMask) && (fullScreen == 1))
-		return;
-	if (!(self.window.styleMask & NSFullScreenWindowMask) && (fullScreen == 0))
-		return;
-
-	if (!(self.window.styleMask & NSFullScreenWindowMask) && (fullScreen == 1)) {
-         self.fullScreenInProgress = YES;
-
+- (void) ioSetFullScreen: (sqInt) fullScreen {
+	if ((self.window.styleMask & NSFullScreenWindowMask) != (fullScreen == 1)) {
+		self.fullScreenInProgress = YES;
         [self.window toggleFullScreen: nil];
-	}
-
-	if ((self.window.styleMask & NSFullScreenWindowMask) && (fullScreen == 0)) {
-        self.fullScreenInProgress = YES;
-        [self.window toggleFullScreen: nil];        
 	}
 }
 
@@ -1184,3 +1174,5 @@ setOpenGLTextureLayerContent(unsigned int handle, GLuint texture, int x, int y, 
 			[mainOpenGLView clearScreen];
 	}
 }
+
+#endif // USE_OPENGL

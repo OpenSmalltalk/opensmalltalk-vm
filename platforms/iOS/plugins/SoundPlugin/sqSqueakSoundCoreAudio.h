@@ -52,7 +52,7 @@ static const int kNumberOfBuffers=4;
 	AudioStreamBasicDescription *inputFormat;
 	AudioQueueBufferRef *inputBuffers;
 	AudioQueueRef	outputAudioQueue;
-	Queue*			soundInQueue;
+	Queue			*soundInQueue;
 	sqInt			semaIndexForOutput;
 	UInt32			bufferSizeForOutput;
 	BOOL			outputIsRunning;
@@ -82,6 +82,9 @@ static const int kNumberOfBuffers=4;
 // Terf SqSoundVersion 1.2 improvements
 - (sqInt)	snd_SetRecordBufferFrameCount: (sqInt) frameCount;
 - (int)		snd_GetRecordLevel;
+- (void)	snd_SetRecordLevel: (sqInt) level;
+- (float)	snd_GetOutputLevel;
+- (void)	snd_SetOutputLevel: (float) level;
 - (sqInt)	getNumberOfSoundPlayerDevices;
 - (sqInt)	getNumberOfSoundRecorderDevices;
 - (char *)	getDefaultSoundPlayer;

@@ -170,6 +170,11 @@
 #       define WIN32 1
 #   endif
 #endif
+#ifdef _WIN64
+#   ifndef WIN64
+#       define WIN64 1
+#   endif
+#endif
 
 #ifdef NEED_SUNOS_H
 # include "sunos.h"
@@ -188,5 +193,13 @@
 #if defined(HAVE_FEATURES_H)
 # include "glibc.h"
 #endif
+
+/* Used by the UUID plugin */
+#cmakedefine HAVE_SYS_UUID_H 1
+#cmakedefine HAVE_UUID_UUID_H 1
+#cmakedefine HAVE_UUID_H 1
+
+#cmakedefine HAVE_UUIDGEN 1
+#cmakedefine HAVE_UUID_GENERATE 1
 
 #endif /* __sq_config_h */

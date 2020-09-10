@@ -28,7 +28,7 @@
 			sqInt arg = argVector[i + 1];
 			if (objIsAlien(arg) && (sizeField(arg) != 0))
 				/* Direct or indirect Alien. */
-				size += RoundUpPowerOfTwo(abs(sizeField(arg)), sizeof(long));
+				size += RoundUpPowerOfTwo(labs(sizeField(arg)), sizeof(long));
 			else if (interpreterProxy->isFloatObject(arg))
 				size += sizeof(double);
 			else 
@@ -42,7 +42,7 @@
 			sqInt arg = argVector[i];
 			if (objIsAlien(arg) && (sizeField(arg) != 0))
 				/* Direct or indirect Alien. */
-				size += RoundUpPowerOfTwo(abs(sizeField(arg)), sizeof(long));
+				size += RoundUpPowerOfTwo(labs(sizeField(arg)), sizeof(long));
 			else if (interpreterProxy->isFloatObject(arg))
 				size += sizeof(double);
 			else
@@ -87,7 +87,7 @@
 				if ((size = sizeField(arg)) == 0) /* Pointer Alien. */
 					size = argByteSize = sizeof(void *);
 				else /* Direct or indirect Alien. */
-					argByteSize = abs(size);
+					argByteSize = labs(size);
 				/* TODO(rmacnak): Structs larger than word size should be split
 				 * between remaining registers and the stack.
 				 */
@@ -132,7 +132,7 @@
 				if ((size = sizeField(arg)) == 0) /* Pointer Alien. */
 					size = argByteSize = sizeof(void *);
 				else /* Direct or indirect Alien. */
-					argByteSize = abs(size);
+					argByteSize = labs(size);
 				/* TODO(rmacnak): Structs larger than word size should be split between
 					 remaining registers and the stack. */
 				if ((argByteSize <= sizeof(long)) && (nextReg < NUM_REG_ARGS)) {
@@ -185,7 +185,7 @@
 			size = sizeof(long);
 		memcpy(startOfDataWithSize(resultMaybeAlien, size),
 			   &r,
-			   min((unsigned)abs(size), sizeof(r)));
+			   min((unsigned long)labs(size), sizeof(r)));
 	}
 
 	return PrimNoErr;

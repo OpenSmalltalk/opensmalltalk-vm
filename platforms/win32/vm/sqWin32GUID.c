@@ -1,6 +1,6 @@
 #define INITGUID
 
-#include <windows.h>
+#include <Windows.h>
 
 #ifdef __MINGW32__
 #define HMONITOR_DECLARED

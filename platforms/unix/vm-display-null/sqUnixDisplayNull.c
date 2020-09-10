@@ -6,9 +6,9 @@
 
 static char *display_winSystemName(void) { return "none"; }
 static void  display_winInit(void) {}
-static void  display_winOpen(void) {}
+static void  display_winOpen(int ignored,char **ignored2) {}
 static void  display_winSetName(char *title) {}
-static long  display_winImageFind(char *imageName, long size) { return 0; }
+static long  display_winImageFind(char *imageName, int size) { return 0; }
 static void  display_winImageNotFound(void) {}
 static void  display_winExit(void) {}
 
@@ -149,7 +149,7 @@ static long display_hostWindowClose(long index)             { return 0; }
 static long display_hostWindowCreate(long w, long h, long x, long y,
   char *list, long attributeListLength)                     { return 0; }
 static long display_hostWindowShowDisplay(unsigned *dispBitsIndex, long width, long height, long depth,
-  long affectedL, long affectedR, long affectedT, long affectedB, long windowIndex)              { return 0; }
+  long affectedL, long affectedR, long affectedT, long affectedB, sqIntptr_t windowIndex)              { return 0; }
 static long display_hostWindowGetSize(long windowIndex)     { return -1; }
 static long display_hostWindowSetSize(long windowIndex, long w, long h) { return -1; }
 static long display_hostWindowGetPosition(long windowIndex) { return -1; }
@@ -160,7 +160,7 @@ static long display_hostWindowCloseAll(void)                { return 0; }
 
 #if (SqDisplayVersionMajor >= 1 && SqDisplayVersionMinor >= 3)
 
-long display_ioSetCursorPositionXY(long x, long y) { return 0; }
+long display_ioSetCursorPositionXY(long x, long y) { return -1; }
 
 long display_ioPositionOfScreenWorkArea (long windowIndex) { return -1; }
 

@@ -1,0 +1,8 @@
+#############################################################################
+# Plugin Makefile for Win32/64 VM using MSVC, e.g. 2017 Community, and gnu make
+# Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
+#############################################################################
+
+EXCLUDESRC:=sqNullSerialPort.c
+
+include ../common/Makefile.msvc.plugin

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 trap 'exit 2' HUP INT PIPE TERM
-PRODUCTDIRS="newspeak.cog.spur pharo.cog.spur squeak.cog.spur squeak.cog.v3 squeak.cog.spur+immutability"
+PRODUCTDIRS="newspeak.cog.spur squeak.cog.spur squeak.cog.v3 squeak.cog.spur+immutability pharo.cog.spur"
 for d in $PRODUCTDIRS; do
 	if test -d "$d"; then
 		(cd ./$d;./mvm -A)

@@ -31,7 +31,7 @@ amInVMThread(void)
 }
 
 int
-isCFramePointerInUse(void)
+isCFramePointerInUse(usqIntptr_t *cFrmPtrPtr, usqIntptr_t *cStkPtrPtr)
 {
     return true;
 }
@@ -54,25 +54,25 @@ ioMicroMSecs(void)
     return 0;
 }
 
-unsigned volatile long long
+unsigned long long
 ioUTCMicrosecondsNow()
 {
     return 0;
 }
 
-unsigned volatile long long
+unsigned long long
 ioUTCMicroseconds()
 {
     return 0;
 }
 
-unsigned volatile long long
+unsigned long long
 ioLocalMicrosecondsNow()
 {
     return 0;
 }
 
-unsigned volatile long long
+unsigned long long
 ioLocalMicroseconds()
 {
     return 0;
@@ -186,12 +186,6 @@ unsigned long
 ioHeartbeatFrequency(int frequency)
 {
     return 0;
-}
-
-void
-ioProfileStatus(sqInt *running, void **exestartpc, void **exelimitpc,
-					  void **vmhst, long *nvmhbin, void **eahst, long *neahbin)
-{
 }
 
 void

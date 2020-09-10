@@ -37,7 +37,12 @@ AC_INIT([OpenSmalltalk VM],[devel],
         [],
         [http://opensmalltalk.org/])
 
+
 AC_CONFIG_SRCDIR([config.h.in])
+AC_USE_SYSTEM_EXTENSIONS
+LT_INIT([dlopen disable-static])
+AC_SUBST([LIBTOOL_DEPS])
+
 
 SVNREV=`grep '\$Rev: ' ${srcdir}/../../../platforms/Cross/vm/sqSCCSVersion.h \
 	        | sed 's/.*$Rev: \([0-9][0-9]*\).*";/\1/' \
@@ -207,13 +212,15 @@ CFLAGS="$CFLAGS_32 $CFLAGS"
 CPPFLAGS="$CPPFLAGS $TARGET_ARCH"
 LDFLAGS="$TARGET_ARCH $LDFLAGS"
 
+AC_LANG([C])
+
+AX_COMPILER_VENDOR
+
 AC_PROG_MAKE_SET
-AC_PROG_CC
+AC_PROG_CC([clang icc gcc cc])
 AC_PROG_CC_C99
-AC_USE_SYSTEM_EXTENSIONS
 AX_CFLAGS_WARN_ALL
 AC_PROG_AS_GNU
-LT_INIT
 AC_PROG_INSTALL
 AC_PROG_NM
 
@@ -255,7 +262,7 @@ INCLUDES="-I${blddir} -I${vmmcfg} -I${topdir}/platforms/unix/vm -I${topdir}/plat
 
 # these are not always added
 case $host_os in
-  cygwin*)
+  cygwin*|freebsd*)
     : #noop
     ;;
   *)
@@ -335,7 +342,7 @@ AC_SYS_LARGEFILE
 
 AC_CHECK_FUNC(_dyld_image_count, [AC_DEFINE(HAVE_DYLD,[1], [dyld linker present])])
 AC_CHECK_HEADERS([dlfcn.h])
-AC_SEARCH_LIBS([dlopen], [dl dld], [AC_DEFINE(HAVE_LIBDL,[1], [dl linker present])])
+LT_LIB_DLLOAD
 
 AC_CHECK_FUNCS([snprintf __snprintf],[break])
 AC_CHECK_FUNCS_ONCE([mmap nanosleep])

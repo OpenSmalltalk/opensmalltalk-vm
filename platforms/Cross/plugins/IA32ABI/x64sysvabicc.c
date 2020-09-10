@@ -30,9 +30,11 @@ struct objc_class *baz;
 void setbaz(void *p) { baz = p; }
 void *getbaz() { return baz; }
 # endif
+# include <unistd.h> /* for getpagesize/sysconf */
 # include <stdlib.h> /* for valloc */
 # include <sys/mman.h> /* for mprotect */
 #else
+# include <unistd.h> /* for getpagesize/sysconf */
 # include <stdlib.h> /* for valloc */
 # include <sys/mman.h> /* for mprotect */
 #endif
@@ -224,7 +226,7 @@ thunkEntry(long a0, long a1, long a2, long a3, long a4, long a5,
 		double valflt64 = vmcc.rvs.valflt64;
 #if _MSC_VER
 				_asm mov qword ptr valflt64, xmm0;
-#elif __GNUC__
+#elif __GNUC__ || __SUNPRO_C
 				__asm__("movq %0, %%xmm0" : : "m"(valflt64));
 #else
 # error need to load %xmm0 with vmcc.rvs.valflt64 on this compiler
@@ -257,7 +259,7 @@ static unsigned long pagesize = 0;
 #endif
 
 void *
-allocateExecutablePage(long *size)
+allocateExecutablePage(sqIntptr_t *size)
 {
 	void *mem;
 
@@ -280,7 +282,11 @@ allocateExecutablePage(long *size)
 	if (mem)
 		*size = pagesize;
 #else
+# if !defined(_POSIX_C_SOURCE) || _POSIX_C_SOURCE < 200112L
 	long pagesize = getpagesize();
+# else
+	long pagesize = sysconf(_SC_PAGESIZE);
+# endif
 
 	/* This is equivalent to valloc(pagesize) but at least on some versions of
 	 * SELinux valloc fails to yield an wexecutable page, whereas this mmap

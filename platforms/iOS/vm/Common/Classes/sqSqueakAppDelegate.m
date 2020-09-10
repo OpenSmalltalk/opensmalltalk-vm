@@ -64,6 +64,12 @@ such third-party acknowledgments.
 	/* get old window size */
 	width  = ((unsigned) getSavedWindowSize()) >> 16;
 	height = getSavedWindowSize() & 0xFFFF;
+    
+    extern sqInt getFullScreenFlag(void);
+    if (!getFullScreenFlag()) {
+        [self placeMainWindowOnLargerScreenGivenWidth: width height: height];
+    }
+    
 	windowBlock = AddWindowBlock();
 	windowBlock->handle =   (__bridge void*) createdWindow;
 	windowBlock->context = nil;
@@ -72,7 +78,7 @@ such third-party acknowledgments.
 	setSavedWindowSize( (width << 16) |(height & 0xFFFF));
 	windowBlock->width = width;
 	windowBlock->height = height; 	
-	extern sqInt getFullScreenFlag(void);
+
 	ioSetFullScreen(getFullScreenFlag());
 
 }
@@ -88,6 +94,8 @@ such third-party acknowledgments.
 - (void) makeMainWindowOnMainThread {};
 
 - (id) createPossibleWindow { return NULL;};
+
+- (void) placeMainWindowOnLargerScreenWidth: (sqInt) width height: (sqInt) height {};
 
 - (void) workerThreadStart {
 	// Run the squeak process in a worker thread

@@ -1,2 +1,6 @@
+#if !BIT_IDENTICAL_FLOATING_POINT
 #include "ieee754names.h"
-#include "fdlibm/s_expm1.c"
+
+#include "../../third-party/fdlibm/s_expm1.c"
+
+#endif

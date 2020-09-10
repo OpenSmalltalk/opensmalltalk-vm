@@ -74,9 +74,10 @@ Building out of the box
 -----------------------
 0. The build system is based on Gnu Make for makefiles, and Xcode.app for
 compilers and libraries.  You will need a Mac OS X machine running at least
-10.7.x (the author is currently using 10.9) and Xcode v6 or later.  The system
-builds only the new Cocoa based VMs that use the platforms/iOS tree.  The old
-Carbon-based VMs using platforms/Mac OS are unsupported.
+10.7.x and Xcode v6 or later; the 64-bit builds require Xcode 10.1 and MacOS
+10.13.x.  The system builds only the new Cocoa based VMs that use the
+platforms/iOS tree.  The old Carbon-based VMs using platforms/Mac OS are
+unsupported.
 
 1. Install the tools (Xcode etc).  If you want to sign the application make sure
 you have installed a suitable certificate via Keychain Access and that the

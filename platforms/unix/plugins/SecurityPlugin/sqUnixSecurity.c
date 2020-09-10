@@ -17,13 +17,13 @@
 
 #include <sys/param.h>
 
-static char secureUserDirectory[MAXPATHLEN];     /* imagepath/secure/    */
-static char untrustedUserDirectory[MAXPATHLEN];  /* imagepath/untrusted/ */
+static char secureUserDirectory[MAXPATHLEN+1];     /* imagepath/secure/    */
+static char untrustedUserDirectory[MAXPATHLEN+1];  /* imagepath/untrusted/ */
 static int  untrustedUserDirectoryLen;
 
 static char* fromSqueak(char* string, int len)
 {
-  static char buf[MAXPATHLEN];
+  static char buf[MAXPATHLEN+1];
   strncpy(buf, string, len);
   buf[len] = '\0';
   return buf;
@@ -42,7 +42,7 @@ static sqInt allowFileAccess = 1;  /* full access to files */
 static int
 isAccessiblePathName(char *pathName)
 {
-   char realPathName[MAXPATHLEN];
+   char realPathName[MAXPATHLEN+1];
    int  realPathLen;
 
    realpath(pathName, realPathName);
@@ -56,7 +56,7 @@ isAccessiblePathName(char *pathName)
 static int
 isAccessibleFileName(char *fileName)
 {
-  char pathName[MAXPATHLEN];
+  char pathName[MAXPATHLEN+1];
   int pathLen = strrchr(fileName, '/') - fileName;
 
   strncpy(pathName, fileName, pathLen);
@@ -213,7 +213,7 @@ ioInitSecurity(void)
   if (imagePathLen)
     strncpy(secureUserDirectory, imageName, imagePathLen);
   else {
-    getwd(secureUserDirectory);
+    getcwd(secureUserDirectory,MAXPATHLEN);
 	imagePathLen = strlen(secureUserDirectory);
   }
 

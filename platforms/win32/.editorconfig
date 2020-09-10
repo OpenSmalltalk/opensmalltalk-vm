@@ -1,0 +1,11 @@
+# See https://editorconfig.org
+
+# a specific style has been used for win32 sources
+# This config works for Notepad++ & VisualStudio
+# Unfortunately, this does not work in VSCode
+# See https://github.com/editorconfig/editorconfig-vscode/issues/190
+[*.{c,h}]
+indent_style = space
+tab_width = 8
+indent_size = 2
+

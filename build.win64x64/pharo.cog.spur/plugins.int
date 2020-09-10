@@ -2,7 +2,6 @@
 INTERNAL_PLUGINS = \
 ADPCMCodecPlugin \
 AsynchFilePlugin \
-B3DAcceleratorPlugin \
 B2DPlugin \
 BitBltPlugin \
 BMPReadWriterPlugin \
@@ -12,6 +11,7 @@ DropPlugin \
 DSAPrims \
 FFTPlugin \
 FilePlugin \
+Float64ArrayPlugin \
 FloatArrayPlugin \
 FloatMathPlugin \
 HostWindowPlugin \

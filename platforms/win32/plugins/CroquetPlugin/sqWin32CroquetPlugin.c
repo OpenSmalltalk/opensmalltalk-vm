@@ -5,7 +5,7 @@ static int loaded = 0;
 static HMODULE hAdvApi32 = NULL;
 static BOOLEAN (__stdcall *RtlGenRandom)(PVOID, ULONG) = NULL;
 
-int ioGatherEntropy(char *bufPtr, int bufSize) {
+sqInt ioGatherEntropy(char *bufPtr, sqInt bufSize) {
   if(!loaded) {
     loaded = 1;
     hAdvApi32 = LoadLibraryA("advapi32.dll");

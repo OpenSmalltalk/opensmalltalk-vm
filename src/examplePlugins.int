@@ -24,7 +24,6 @@ LargeIntegers \
 LocalePlugin \
 MacMenubarPlugin \
 Matrix2x3Plugin \
-MIDIPlugin \
 MiscPrimitivePlugin \
 RePlugin \
 SecurityPlugin \

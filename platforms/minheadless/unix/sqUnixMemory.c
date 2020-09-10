@@ -322,17 +322,21 @@ sqInt sqMemoryExtraBytesLeft(sqInt includingSwap)			{ return uxMemoryExtraBytesL
 #define roundUpToPage(v) (((v)+pageSize-1)&pageMask)
 #if COGVM
 void
-sqMakeMemoryExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
+sqMakeMemoryExecutableFromToCodeToDataDelta(usqInt startAddr,
+											usqInt endAddr,
+											sqInt *codeToDataDelta)
 {
-	unsigned long firstPage = roundDownToPage(startAddr);
+	usqInt firstPage = roundDownToPage(startAddr);
 	if (mprotect((void *)firstPage,
 				 endAddr - firstPage + 1,
 				 PROT_READ | PROT_WRITE | PROT_EXEC) < 0)
 		perror("mprotect(x,y,PROT_READ | PROT_WRITE | PROT_EXEC)");
+	if( codeToDataDelta )
+		*codeToDataDelta = 0;
 }
 
 void
-sqMakeMemoryNotExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
+sqMakeMemoryNotExecutableFromTo(usqInt startAddr, usqInt endAddr)
 {
 # if 0
 	unsigned long firstPage = roundDownToPage(startAddr);

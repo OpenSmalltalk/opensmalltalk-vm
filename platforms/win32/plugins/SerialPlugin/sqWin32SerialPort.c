@@ -10,8 +10,11 @@
 *****************************************************************************/
 #include <windows.h>
 #include "sq.h"
+#include "sqWin32.h"
 
 #ifndef NO_SERIAL_PORT
+extern struct VirtualMachine *interpreterProxy;
+#define FAIL() interpreterProxy->primitiveFail()
 
 /* Maximum number of serial ports supported */
 #define MAX_SERIAL_PORTS 256
@@ -27,7 +30,7 @@ static int isValidComm(int portNum)
   if(portNum <= 0 || portNum > MAX_SERIAL_PORTS || 
      serialPorts[portNum-1] == INVALID_HANDLE_VALUE)
        {
-         success(false);
+         FAIL();
          return 0;
        }
   return 1;
@@ -50,12 +53,12 @@ int portNumberForName(const char *portName)
 /*****************************************************************************
  Squeak Serial Port functions
  *****************************************************************************/
-int serialPortClose(int portNum)
+EXPORT(int) serialPortClose(int portNum)
 { HANDLE port;
   /* Allow ports that aren't open to be closed		20nov98 jfb */
   if(portNum <= 0 || portNum > MAX_SERIAL_PORTS)
     { /* port number out of range */
-      success(false);
+      FAIL();
       return 0;
     }
   if ((port = serialPorts[portNum-1]) != INVALID_HANDLE_VALUE)
@@ -68,22 +71,22 @@ int serialPortClose(int portNum)
   return 1;
 }
 
-int serialPortCloseByName(const char *portName)
+EXPORT(int) serialPortCloseByName(const char *portName)
 {
   int portNum = portNumberForName(portName);
   if (portNum < 0)
-  { success(false);
+  { FAIL();
     return 0;
   }
   return serialPortClose(portNum);
 }
 
-int serialPortMidiClockRate(int portNum, int interfaceClockRate)
+EXPORT(int) serialPortMidiClockRate(int portNum, int interfaceClockRate)
 { /* ignored for now */
   return 1;
 }
 
-int serialPortOpen(int portNum, int baudRate, int stopBitsType, 
+EXPORT(int) serialPortOpen(int portNum, int baudRate, int stopBitsType, 
                    int parityType, int dataBits, int inFlowCtrl, 
                    int outFlowCtrl, int xOnChar, int xOffChar)
 { TCHAR name[12];
@@ -93,12 +96,12 @@ int serialPortOpen(int portNum, int baudRate, int stopBitsType,
 
   if(portNum <= 0 || portNum > MAX_SERIAL_PORTS)
     { /* port number out of range */
-      success(false);
+      FAIL();
       return 0;
     }
   if(serialPorts[portNum-1] != INVALID_HANDLE_VALUE)
     { /* port already open */
-      success(false);
+      FAIL();
       return 0;
     }
   wsprintf(name,TEXT("\\\\.\\COM%d"),portNum);
@@ -113,7 +116,7 @@ int serialPortOpen(int portNum, int baudRate, int stopBitsType,
   if(port == INVALID_HANDLE_VALUE)
     {
       printLastError(TEXT("OpenComm failed"));
-      success(false);
+      FAIL();
       return 0;
     }
   /* Flush the driver */
@@ -175,17 +178,17 @@ int serialPortOpen(int portNum, int baudRate, int stopBitsType,
   return 1;
 errExit:
   CloseHandle(port);
-  success(false);
+  FAIL();
   return 0;
 }
 
-int serialPortOpenByName(char *portName, int baudRate, int stopBitsType,
+EXPORT(int) serialPortOpenByName(char *portName, int baudRate, int stopBitsType,
                    int parityType, int dataBits, int inFlowCtrl,
                    int outFlowCtrl, int xOnChar, int xOffChar)
 {
   int portNum = portNumberForName(portName);
   if (portNum < 0) {
-    success(false);
+    FAIL();
     return 0;
   }
   return serialPortOpen(portNum, baudRate, stopBitsType, parityType,
@@ -196,7 +199,7 @@ int serialPortOpenByName(char *portName, int baudRate, int stopBitsType,
    Read only up to the number of bytes in the port's input buffer; if fewer bytes
    than count have been received, do not wait for additional data to arrive.
    Return zero if no data is available. */
-int serialPortReadInto(int portNum, int count, void *startPtr)
+EXPORT(int) serialPortReadInto(int portNum, int count, void *startPtr)
 { DWORD cbReallyRead;
 
   if(!isValidComm(portNum)) return 0;
@@ -204,7 +207,7 @@ int serialPortReadInto(int portNum, int count, void *startPtr)
   if(!ReadFile(serialPorts[portNum-1],startPtr,count,&cbReallyRead,NULL))
     {
       printLastError(TEXT("ReadComm failed"));
-      success(false);
+      FAIL();
       return 0;
     }
   return cbReallyRead;
@@ -214,11 +217,11 @@ int serialPortReadInto(int portNum, int count, void *startPtr)
    Read only up to the number of bytes in the port's input buffer; if fewer bytes
    than count have been received, do not wait for additional data to arrive.
    Return zero if no data is available. */
-int serialPortReadIntoByName(const char *portName, int count, void *startPtr)
+EXPORT(int) serialPortReadIntoByName(const char *portName, int count, void *startPtr)
 {
   int portNum = portNumberForName(portName);
   if (portNum < 0)
-  { success(false);
+  { FAIL();
     return 0;
   }
   return serialPortReadInto(portNum, count, startPtr);
@@ -227,14 +230,14 @@ int serialPortReadIntoByName(const char *portName, int count, void *startPtr)
 /* Write count bytes from the given byte array to the given serial port's
    output buffer. Return the number of bytes written. This implementation is
    asynchronous: it may return before the entire packet has been sent. */
-int serialPortWriteFrom(int portNum, int count, void *startPtr)
+EXPORT(int) serialPortWriteFrom(int portNum, int count, void *startPtr)
 { DWORD cbReallyWritten;
 
   if(!isValidComm(portNum)) return 0;
   if(!WriteFile(serialPorts[portNum-1],startPtr,count,&cbReallyWritten,NULL))
     {
       printLastError(TEXT("WriteComm failed"));
-      success(false);
+      FAIL();
       return 0;
     }
   return cbReallyWritten;
@@ -243,17 +246,17 @@ int serialPortWriteFrom(int portNum, int count, void *startPtr)
 /* Write count bytes from the named byte array to the given serial port's
    output buffer. Return the number of bytes written. This implementation is
    asynchronous: it may return before the entire packet has been sent. */
-int serialPortWriteFromByName(const char *portName, int count, void *startPtr)
+EXPORT(int) serialPortWriteFromByName(const char *portName, int count, void *startPtr)
 {
   int portNum = portNumberForName(portName);
   if (portNum < 0)
-  { success(false);
+  { FAIL();
     return 0;
   }
   return serialPortWriteFrom(portNum, count, startPtr);
 }
 
-int serialPortInit(void)
+EXPORT(int) serialPortInit(void)
 {
 	int i;
 	for(i=0; i < MAX_SERIAL_PORTS; i++)
@@ -261,7 +264,7 @@ int serialPortInit(void)
 	return 1;
 }
 
-int serialPortShutdown(void)
+EXPORT(int) serialPortShutdown(void)
 {
 	int i;
 	for(i=0; i < MAX_SERIAL_PORTS; i++)

@@ -165,24 +165,15 @@ time_t convertToSqueakTime(time_t unixTime)
  *    the size of the redzone, if any.
  */
 
-/*
- * Cog has already captured CStackPointer  before calling this routine.  Record
- * the original value, capture the pointers again and determine if CFramePointer
- * lies between the two stack pointers and hence is likely in use.  This is
- * necessary since optimizing C compilers for x86 may use %ebp as a general-
- * purpose register, in which case it must not be captured.
- */
 int
-isCFramePointerInUse()
+isCFramePointerInUse(usqIntptr_t *cFrmPtrPtr, usqIntptr_t *cStkPtrPtr)
 {
-	extern unsigned long CStackPointer, CFramePointer;
 	extern void (*ceCaptureCStackPointers)(void);
-	unsigned long currentCSP = CStackPointer;
+	usqIntptr_t currentCSP = *cStkPtrPtr;
 
-	currentCSP = CStackPointer;
 	ceCaptureCStackPointers();
-	assert(CStackPointer < currentCSP);
-	return CFramePointer >= CStackPointer && CFramePointer <= currentCSP;
+	assert(*cStkPtrPtr < currentCSP);
+	return *cFrmPtrPtr >= *cStkPtrPtr && *cFrmPtrPtr <= currentCSP;
 }
 
 /* Answer an approximation of the size of the redzone (if any).  Do so by
@@ -308,12 +299,6 @@ ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 {
     aioSleepForUsecs(microSeconds);
     return 0;
-}
-
-void
-ioProfileStatus(sqInt *running, void **exestartpc, void **exelimitpc,
-					  void **vmhst, long *nvmhbin, void **eahst, long *neahbin)
-{
 }
 
 void
@@ -543,7 +528,7 @@ printRegisterState(ucontext_t *uap)
 			"\tr12 0x%016llx r13 0x%016llx r14 0x%016llx r15 0x%016llx\n"
 			"\trip 0x%016llx\n",
 			regs->__rax, regs->__rbx, regs->__rcx, regs->__rdx,
-			regs->__rdi, regs->__rdi, regs->__rbp, regs->__rsp,
+			regs->__rdi, regs->__rsi, regs->__rbp, regs->__rsp,
 			regs->__r8 , regs->__r9 , regs->__r10, regs->__r11,
 			regs->__r12, regs->__r13, regs->__r14, regs->__r15,
 			regs->__rip);
@@ -577,7 +562,7 @@ printRegisterState(ucontext_t *uap)
 			"\tr12 0x%08x r13 0x%08x r14 0x%08x r15 0x%08x\n"
 			"\trip 0x%08x\n",
 			regs[REG_RAX], regs[REG_RBX], regs[REG_RCX], regs[REG_RDX],
-			regs[REG_RDI], regs[REG_RDI], regs[REG_RBP], regs[REG_RSP],
+			regs[REG_RDI], regs[REG_RSI], regs[REG_RBP], regs[REG_RSP],
 			regs[REG_R8 ], regs[REG_R9 ], regs[REG_R10], regs[REG_R11],
 			regs[REG_R12], regs[REG_R13], regs[REG_R14], regs[REG_R15],
 			regs[REG_RIP]);

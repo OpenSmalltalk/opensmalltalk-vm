@@ -7,8 +7,8 @@ INCDIRS:=$(PLATDIR)/Cross/plugins/FilePlugin \
 INCDIRS:=$(PLATDIR)/unix/vm
 
 EXTRADYFLAGS=-Wl,-U,_getImageName,-U,_getSTWindow,-U,_setWindowChangedHook,-U,_warning \
-	-Wl,-U,_getMainWindowOpenGLContext,-U,_createOpenGLTextureLayerHandle,-U,_destroyOpenGLTextureLayerHandle,-U,_setOpenGLTextureLayerContent
-EXTRALIBS:= -framework CoreFoundation -framework OpenGL -framework Cocoa
-#EXTRALIBS:= -framework OpenGL -framework AGL
+	-Wl,-U,_getMainWindowOpenGLContext,-U,_createOpenGLTextureLayerHandle,-U,_destroyOpenGLTextureLayerHandle,-U,_setOpenGLTextureLayerContent \
+	-Wl,-U,_getMainWindowMetalDevice,-U,_getMainWindowMetalCommandQueue,-U,_createMetalTextureLayerHandle,-U,_destroyMetalTextureLayerHandle,-U,_setMetalTextureLayerContent
+EXTRALIBS:= -framework CoreFoundation -framework OpenGL -framework Metal -framework Cocoa
 
 include ../common/Makefile.plugin

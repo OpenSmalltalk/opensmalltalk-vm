@@ -8,8 +8,15 @@
 /* null if compiled on other than arm32, to get around gnu make bugs or
  * misunderstandings on our part.
  */
-#if defined(__ARM_ARCH__) || defined(__arm__) || defined(__arm32__) || defined(ARM32)
+#if defined(__ARM_ARCH_ISA_A64) || defined(__arm64__) || defined(__aarch64__) || defined(ARM64)
+# undef ARM64
+# define ARM64 1
+#else
+# undef ARM64
+#endif
+#if defined(__ARM_ARCH__) || (defined(__arm__) && !defined(ARM64)) || defined(__arm32__) || defined(ARM32)
 
+#include <unistd.h> /* for getpagesize/sysconf */
 #include <stdlib.h> /* for valloc */
 #include <sys/mman.h> /* for mprotect */
 
@@ -228,7 +235,7 @@ static unsigned long pagesize = 0;
 #endif
 
 void *
-allocateExecutablePage(long *size)
+allocateExecutablePage(sqIntptr_t *size)
 {
 	void *mem;
 

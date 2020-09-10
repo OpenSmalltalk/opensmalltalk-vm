@@ -2,7 +2,7 @@
  * Break-pointer debugging facilities for the StackInterpreter VM.
  * Edit this to install various debugging traps.  In a production
  * VM this header should define only the assert macros and empty
- * sendBreakpointreceiver and bytecodeDispatchDebugHook macros.
+ * sendBreakpointclassTag and bytecodeDispatchDebugHook macros.
  */
 
 #include "sqAssert.h"
@@ -14,7 +14,7 @@
 #endif
 
 /*
- * various definitions of the sendBreakpointreceiver macro for break-pointing at
+ * various definitions of the sendBreakpointclassTag macro for break-pointing at
  * specific sends.
  */
 #if STACKVM
@@ -32,25 +32,25 @@
 #endif
 
 #if PRODUCTION && !SENDTRACE /* default for no send breakpoint. */
-# define sendBreakpointreceiver(sel, len, rcvr) 0
+# define sendBreakpointclassTag(sel, len, classTag) 0
 # define mnuBreakpointreceiver(sel, len, rcvr) 0
 
 #elif SENDTRACE /* send tracing.  */
-# define sendBreakpointreceiver(sel, len, rcvr) do { \
+# define sendBreakpointclassTag(sel, len, classTag) do { \
 	if (sendTrace) \
 		printf("%.*s\n", (int)(len), (char *)(sel)); \
 } while (0)
 # define mnuBreakpointreceiver(sel, len, rcvr) 0
 
 #elif 0 /* send trace/byte count.  */
-# define sendBreakpointreceiver(sel, len, rcvr) do { \
+# define sendBreakpointclassTag(sel, len, classTag) do { \
 	if (sendTrace) \
 		printf("%u %.*s\n", GIV(byteCount), (int)(len), (char *)(sel)); \
 } while (0)
 # define mnuBreakpointreceiver(sel, len, rcvr) 0
 
 #else /* breakpoint for assert and debug configurations. */
-# define sendBreakpointreceiver(sel, len, rcvr) do { \
+# define sendBreakpointclassTag(sel, len, classTag) do { \
 	if ((len) == breakSelectorLength \
 	 && !strncmp((char *)(sel), breakSelector, breakSelectorLength)) { \
 		warnSendBreak(); \

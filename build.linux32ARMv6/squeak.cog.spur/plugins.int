@@ -15,6 +15,7 @@ DSAPrims \
 FFTPlugin \
 FileCopyPlugin \
 FilePlugin \
+Float64ArrayPlugin \
 FloatArrayPlugin \
 #FloatMathPlugin \
 HostWindowPlugin \
@@ -25,7 +26,6 @@ JPEGReadWriter2Plugin \
 Klatt \
 LargeIntegers \
 Matrix2x3Plugin \
-MIDIPlugin \
 MiscPrimitivePlugin \
 Mpeg3Plugin \
 RePlugin \

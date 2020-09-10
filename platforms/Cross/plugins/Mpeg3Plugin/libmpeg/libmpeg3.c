@@ -35,6 +35,7 @@
 
 #include "libmpeg3.h"
 #include "mpeg3protos.h"
+#include "video/mpeg3videoprotos.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -52,7 +53,7 @@ mpeg3_t* mpeg3_new(char *path,int size)
 	return file;
 }
 
-int mpeg3_delete(mpeg3_t *file)
+void mpeg3_delete(mpeg3_t *file)
 {
 	int i;
 

@@ -34,6 +34,7 @@ sqInt  fetchClassOf(sqInt oop);
 double fetchFloatofObject(sqInt fieldIndex, sqInt objectPointer);
 sqInt  fetchIntegerofObject(sqInt fieldIndex, sqInt objectPointer);
 sqInt  fetchPointerofObject(sqInt index, sqInt oop);
+#if OLD_FOR_REFERENCE /* slot repurposed for error */
 /* sqInt  fetchWordofObject(sqInt fieldIndex, sqInt oop);     *
  * has been rescinded as of VMMaker 3.8 and the 64bitclean VM *
  * work. To support old plugins we keep a valid function in   *
@@ -42,6 +43,7 @@ sqInt  fetchPointerofObject(sqInt index, sqInt oop);
  * equivalent but 64 bit valid function is added as           *
  * 'fetchLong32OfObject'                                      */
 sqInt  obsoleteDontUseThisFetchWordofObject(sqInt index, sqInt oop);
+#endif
 sqInt  fetchLong32ofObject(sqInt index, sqInt oop); 
 void  *firstFixedField(sqInt oop);
 void  *firstIndexableField(sqInt oop);
@@ -148,13 +150,14 @@ sqInt signalSemaphoreWithIndex(sqInt semaIndex);
 sqInt success(sqInt aBoolean);
 sqInt superclassOf(sqInt classPointer);
 sqInt ioMicroMSecs(void);
-unsigned volatile long long  ioUTCMicroseconds(void);
-unsigned volatile long long  ioUTCMicrosecondsNow(void);
+unsigned long long  ioUTCMicroseconds(void);
+unsigned long long  ioUTCMicrosecondsNow(void);
 void forceInterruptCheck(void);
 sqInt getThisSessionID(void);
 sqInt ioFilenamefromStringofLengthresolveAliases(char* aCharBuffer, char* filenameIndex, sqInt filenameLength, sqInt resolveFlag);
 sqInt vmEndianness(void);	
 sqInt getInterruptPending(void);
+void  error(const char *);
 
 /* InterpreterProxy methodsFor: 'BitBlt support' */
 sqInt loadBitBltFrom(sqInt bbOop);
@@ -203,6 +206,18 @@ sqInt primitiveFailForFFIExceptionat(usqLong exceptionCode, usqInt pc);
 #if VM_PROXY_MINOR > 14 /* SmartSyntaxPlugin validation rewrite support */
 sqInt isBooleanObject(sqInt oop);
 sqInt isPositiveMachineIntegerObject(sqInt oop);
+#endif
+#if VM_PROXY_MINOR > 15 /* Spur integer and float array classes */
+sqInt classDoubleByteArray(void);
+sqInt classWordArray(void);
+sqInt classDoubleWordArray(void);
+sqInt classFloat32Array(void);
+sqInt classFloat64Array(void);
+#endif
+#if VM_PROXY_MINOR > 16 /* Spur isShorts and isLong64s testing support, hash */
+sqInt isShorts(sqInt);
+sqInt isLong64s(sqInt);
+sqInt identityHashOf(sqInt);
 #endif
 
 void *ioLoadFunctionFrom(char *fnName, char *modName);
@@ -255,7 +270,7 @@ static sqInt isNonIntegerObject(sqInt objectPointer)
 #endif
 
 #if STACKVM
-extern void (*setInterruptCheckChain(void (*aFunction)(void)))();
+extern void *setInterruptCheckChain(void (*aFunction)(void));
 #else
 void (*setInterruptCheckChain(void (*aFunction)(void)))() { return 0; }
 #endif
@@ -316,7 +331,11 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->fetchIntegerofObject = fetchIntegerofObject;
 #endif
 	VM->fetchPointerofObject = fetchPointerofObject;
+#if OLD_FOR_REFERENCE /* slot repurposed for error */
 	VM->obsoleteDontUseThisFetchWordofObject = obsoleteDontUseThisFetchWordofObject;
+#else
+	VM->error = error;
+#endif
 	VM->firstFixedField = firstFixedField;
 	VM->firstIndexableField = firstIndexableField;
 	VM->literalofMethod = literalofMethod;
@@ -543,6 +562,18 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->isBooleanObject = isBooleanObject ;
 	VM->isPositiveMachineIntegerObject = isPositiveMachineIntegerObject;
 #endif
+#if VM_PROXY_MINOR > 15 /* Spur integer and float array classes */
+	VM->classDoubleByteArray = classDoubleByteArray;
+	VM->classWordArray = classWordArray;
+	VM->classDoubleWordArray = classDoubleWordArray;
+	VM->classFloat32Array = classFloat32Array;
+	VM->classFloat64Array = classFloat64Array;
+#endif
+#if VM_PROXY_MINOR > 16 /* Spur isShorts and isLong64s testing support, hash */
+	VM->isShorts = isShorts;
+	VM->isLong64s = isLong64s;
+	VM->identityHashOf = identityHashOf;
+#endif
 	return VM;
 }
 
@@ -550,9 +581,11 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 /* This lives here for now but belongs somewhere else.
  * platforms/Cross/vm/sqStuff.c??
  */
+#ifndef MUSL
 #define STDOUT_STACK_SZ 5
 static int stdoutStackIdx = -1;
 static FILE stdoutStack[STDOUT_STACK_SZ];
+#endif
 
 /* N.B. As of cygwin 1.5.25 fopen("crash.dmp","a") DOES NOT WORK!  crash.dmp
  * contains garbled output as if the file pointer gets set to the start of the
@@ -576,6 +609,7 @@ fopen_for_append(char *filename)
 # define fopen_for_append(filename) fopen(filename,"a+")
 #endif
 
+#ifndef MUSL
 void
 pushOutputFile(char *filenameOrStdioIndex)
 {
@@ -625,6 +659,7 @@ popOutputFile()
 	}
 	*stdout = stdoutStack[stdoutStackIdx--];
 }
+#endif
 
 void
 printPhaseTime(int phase)

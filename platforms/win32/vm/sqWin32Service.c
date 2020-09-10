@@ -13,7 +13,7 @@
 *    HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\\RunServices
 *
 *****************************************************************************/
-#include <windows.h>
+#include <Windows.h>
 #include "sq.h"
 
 #ifndef NO_SERVICE

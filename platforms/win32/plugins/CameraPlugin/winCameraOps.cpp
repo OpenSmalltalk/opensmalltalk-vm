@@ -68,6 +68,8 @@ public:
 	}
 };
 
+extern "C" {
+//
 //////////////////////////////////////////////
 // Data
 //////////////////////////////////////////////
@@ -91,7 +93,7 @@ Camera theCamera;
 // Local functions and macros
 //////////////////////////////////////////////
 
-int CameraIsOpen();
+static sqInt CameraIsOpen();
 void FindBestWidth(IAMStreamConfig *pCameraStream, int desiredWidth);
 HRESULT FindCamera(IBaseFilter ** ppSrcFilter, int num);
 void FreeMediaType(AM_MEDIA_TYPE *pMediaType);
@@ -108,14 +110,16 @@ void SetOutputToRGB(void);
 // Entry Points
 //////////////////////////////////////////////
 
-int CameraOpen(int cameraNum, int desiredWidth, int desiredHeight)
+sqInt
+CameraOpen(sqInt cameraNum, sqInt desiredWidth, sqInt desiredHeight)
 {
 	CameraClose(cameraNum);
 	int hr = InitCamera(cameraNum, desiredWidth);
 	return SUCCEEDED(hr);
 }
 
-void CameraClose(int cameraNum)
+void
+CameraClose(sqInt cameraNum)
 {
 	if (!CameraIsOpen()) return;
 
@@ -132,14 +136,16 @@ void CameraClose(int cameraNum)
 	theCamera.width = theCamera.height = 0;
 }
 
-int CameraExtent(int cameraNum)
+sqInt
+CameraExtent(sqInt cameraNum)
 {
 	if (!CameraIsOpen()) return 0;
 
 	return (theCamera.width << 16) + theCamera.height;
 }
 
-int CameraGetFrame(int cameraNum, unsigned char* buf, int pixelCount)
+sqInt
+CameraGetFrame(sqInt cameraNum, unsigned char* buf, sqInt pixelCount)
 {
 	if (!CameraIsOpen()) return -1;
 
@@ -164,13 +170,15 @@ int CameraGetFrame(int cameraNum, unsigned char* buf, int pixelCount)
 	return framesSinceLastCall;
 }
 
-char* CameraName(int cameraNum)
+char *
+CameraName(sqInt cameraNum)
 {
 	if ((cameraNum < 1) || (cameraNum > CAMERA_COUNT)) return NULL;
 	return GetCameraName(cameraNum);
 }
 
-int CameraGetParam(int cameraNum, int paramNum)  // for debugging and testing
+sqInt
+CameraGetParam(sqInt cameraNum, sqInt paramNum)  // for debugging and testing
 {
 	if (!CameraIsOpen()) return -1;
 	if (paramNum == 1) return theCamera.mCB.frameCount;
@@ -183,10 +191,8 @@ int CameraGetParam(int cameraNum, int paramNum)  // for debugging and testing
 // Local functions
 //////////////////////////////////////////////
 
-int CameraIsOpen()
-{
-	return theCamera.mCB.pFrameBuf != NULL;
-}
+static sqInt
+CameraIsOpen() { return theCamera.mCB.pFrameBuf != NULL; }
 
 HRESULT FindCamera(IBaseFilter ** ppSrcFilter, int cameraNum)
 {
@@ -475,3 +481,5 @@ void Msg(TCHAR *szFormat, ...)
 
 	MessageBox(NULL, szBuffer, TEXT("Debug"), 0);
 }
+
+} /* extern "C" { */

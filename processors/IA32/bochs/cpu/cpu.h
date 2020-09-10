@@ -645,12 +645,14 @@ struct cpuid_function_t {
 
 typedef bx_ptr_equiv_t bx_hostpageaddr_t;
 
+#if !COG
 typedef struct {
   bx_address lpf;     // linear page frame
   bx_phy_address ppf; // physical page frame
   Bit32u accessBits;
   bx_hostpageaddr_t hostPageAddr;
 } bx_TLB_entry;
+#endif
 
 // general purpose register
 #if BX_SUPPORT_X86_64
@@ -961,12 +963,13 @@ public: // for now...
 #endif
 #if COG	// jmp_buf_env moved here to make the member offsets as platform
   jmp_buf jmp_buf_env;
-#endif	// independent as possible since Windows and Mac jmp_buf sizes differ.
 
+#else // we don't need no steenkin paging
   // for paging
   struct {
     bx_TLB_entry entry[BX_TLB_SIZE] BX_CPP_AlignN(16);
   } TLB;
+#endif	// independent as possible since Windows and Mac jmp_buf sizes differ.
 
 #if BX_SUPPORT_PAE
   struct {

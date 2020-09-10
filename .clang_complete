@@ -7,3 +7,6 @@
 -Iplatforms/minheadless/windows
 -I/usr/include/SDL2
 -DSPURVM
+-DUSE_OPENGL
+-DUSE_CORE_GRAPHICS
+-DUSE_METAL

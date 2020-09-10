@@ -1,5 +1,5 @@
 /* sqWin32DnsInfo.c: Gathers DNS information on Windows */
-#include <windows.h>
+#include <Windows.h>
 #include "sq.h"
 
 extern struct VirtualMachine *interpreterProxy;

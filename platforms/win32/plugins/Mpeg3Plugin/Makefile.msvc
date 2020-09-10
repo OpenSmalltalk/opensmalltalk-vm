@@ -1,4 +1,9 @@
-include $(BASEDIR)/Makefile.plugin
+#############################################################################
+# Plugin Makefile for Win32/64 VM using MSVC, e.g. 2017 Community, and gnu make
+# Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
+#############################################################################
+
+include ../common/Makefile.msvc.plugin
 
 # additional CFLAGS
 CFLAGS += -DNOPTHREADS
@@ -22,6 +27,10 @@ VIDOBJ=  $(VIDSRC:.c=.o)
 LIBSRC += $(MP3SRC) $(AUDSRC) $(VIDSRC)
 LIBSRC=   $(notdir $(MAKERSRC) $(WIN32SRC) $(CROSSSRC) $(MP3SRC) $(AUDSRC) $(VIDSRC))
 LIBOBJ += $(MP3OBJ) $(AUDOBJ) $(VIDOBJ)
+#$(info filter is $(filter $(OBJDIR)/%,$(LIBOBJ)))
+#$(info filter-out is $(filter-out $(OBJDIR)/%,$(LIBOBJ)))
+LIBOBJ:=$(filter $(OBJDIR)/%, $(LIBOBJ)) \
+		$(addprefix $(OBJDIR)/, $(filter-out $(OBJDIR)/%, $(LIBOBJ)))
 
 # Restate the dependency.  Don't ask me why, but it appears necessary :/
 $(PLUGINLIB): $(LIBOBJ)

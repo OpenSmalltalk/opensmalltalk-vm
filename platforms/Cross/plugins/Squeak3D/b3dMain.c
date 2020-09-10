@@ -14,6 +14,7 @@
 *****************************************************************************/
 #include <stdio.h>  /* printf() */
 #include <stdlib.h> /* exit()   */
+#include <limits.h> /* INT_MIN INT_MAX */
 #if 0
 # include <assert.h> /* assert() */
 #endif
@@ -22,23 +23,6 @@
 
 #ifndef NULL
 # define NULL ((void*)0)
-#endif
-
-#if !defined(SQUEAK_BUILTIN_PLUGIN) && !defined(NDEBUG)
-/* A warning for sqAssert.h.  Ideally we would use the one in the interpreter.
- * This is written crappily because we don't yet have warning exported properly
- * to dlls on Windows.  Do we export warning via __declspec or not?
- */
-void
-warning(char *s) { /* Print an error message but don't necessarily exit. */
-# if 0
-	if (erroronwarn) error(s);
-	if (warnpid)
-		printf("\n%s pid %ld\n", s, (long)warnpid);
-	else
-# endif
-		printf("\n%s\n", s);
-}
 #endif
 
 #ifdef B3D_PROFILE
@@ -772,7 +756,9 @@ int b3dComputeIntersection(B3DPrimitiveFace *frontFace,
 	if(det == 0.0) return errorValue;
 	{ 
 		double det2 = ((px * dz2) - (pz * dx2)) / det;
-		return frontFace->leftEdge->xValue + (int)(dx1 * det2);
+		double res = frontFace->leftEdge->xValue + dx1 * det2;
+		if(res < INT_MIN || INT_MAX < res) return errorValue;
+		return (int)(res);
 	}
 	/* not reached */
 }
@@ -823,7 +809,7 @@ int b3dCheckIntersectionOfFaces(B3DPrimitiveFace *frontFace,
 		if(xValue > rightX) xValue = rightX;
 		/* Ignore intersections at or before the leftEdge's x value. Important. */
 		if((xValue >> B3D_FixedToIntShift) <= (leftEdge->xValue >> B3D_FixedToIntShift))
-			xValue = ((leftEdge->xValue >> B3D_FixedToIntShift) + 1) << B3D_IntToFixedShift;
+			xValue = (unsigned)((leftEdge->xValue >> B3D_FixedToIntShift) + 1) << B3D_IntToFixedShift;
 		if(xValue < nextIntersection->xValue) {
 			nextIntersection->xValue = xValue;
 			nextIntersection->leftFace = frontFace;
@@ -859,6 +845,16 @@ void b3dAdjustIntersections(B3DFillList *fillList,
 /*************************************************************/
 /*************************************************************/
 
+int b3dIsInFillList( B3DFillList *fillList, B3DPrimitiveFace *aFace)
+{
+	B3DPrimitiveFace *face = fillList->firstFace;
+	while( face ) {
+		if( face == aFace ) return 1;
+		face = face->nextFace;
+	}
+	return 0;
+}
+
 void b3dValidateFillList(B3DFillList *list)
 {
 	B3DPrimitiveFace *firstFace = list->firstFace;
@@ -867,12 +863,15 @@ void b3dValidateFillList(B3DFillList *list)
 
 	if(!firstFace && !lastFace) return;
 	if(firstFace->prevFace)
-		b3dAbort("Bad fill list");
+		b3dAbort("Bad fill list firstFace is not first");
 	if(lastFace->nextFace)
-		b3dAbort("Bad fill list");
+		b3dAbort("Bad fill list lastFace is not last");
 	face = firstFace;
-	while(face != lastFace)
+	while(face != lastFace) {
+		if( face == NULL )
+			b3dAbort("Bad fill list lastFace is not in the face chain");
 		face = face->nextFace;
+	}
 	/* Validate sort order */
 	if(firstFace == lastFace)
 		return; /* 0 or 1 element */
@@ -888,6 +887,7 @@ void b3dValidateFillList(B3DFillList *list)
 void b3dAddFirstFill(B3DFillList *fillList, B3DPrimitiveFace *aFace)
 {
 	B3DPrimitiveFace *firstFace = fillList->firstFace;
+	if(b3dDebug) if( b3dIsInFillList(fillList,aFace )) b3dAbort("Trying to add first a face already in fillList");
 	if(firstFace)
 		firstFace->prevFace = aFace;
 	else
@@ -903,6 +903,7 @@ void b3dAddFirstFill(B3DFillList *fillList, B3DPrimitiveFace *aFace)
 void b3dAddLastFill(B3DFillList *fillList, B3DPrimitiveFace *aFace)
 {
 	B3DPrimitiveFace *lastFace = fillList->lastFace;
+	if(b3dDebug) if( b3dIsInFillList(fillList,aFace )) b3dAbort("Trying to add last a face already in fillList");
 	if(lastFace)
 		lastFace->nextFace = aFace;
 	else
@@ -917,6 +918,7 @@ void b3dAddLastFill(B3DFillList *fillList, B3DPrimitiveFace *aFace)
 /* INLINE b3dRemoveFill(fillList, aFace) */
 void b3dRemoveFill(B3DFillList *fillList, B3DPrimitiveFace *aFace)
 {
+	if(b3dDebug) if(! b3dIsInFillList(fillList,aFace )) b3dAbort("Trying to remove a face not in fillList");
 	if(b3dDebug) b3dValidateFillList(fillList);
 	if(aFace->prevFace)
 		aFace->prevFace->nextFace = aFace->nextFace;
@@ -926,6 +928,8 @@ void b3dRemoveFill(B3DFillList *fillList, B3DPrimitiveFace *aFace)
 		aFace->nextFace->prevFace = aFace->prevFace;
 	else
 		fillList->lastFace = aFace->prevFace;
+	aFace->prevFace = NULL;
+	aFace->nextFace = NULL;
 }
 /* --INLINE-- */
 
@@ -1138,7 +1142,7 @@ void b3dClearSpanBuffer(B3DActiveEdgeTable *aet)
 void b3dDrawSpanBuffer(B3DActiveEdgeTable *aet, int yValue)
 {
 	int leftX, rightX;
-	if(aet->size && currentState->spanDrawer) {
+	if(aet->size && currentState->spanDrawer && yValue >= 0) {
 		leftX = aet->data[0]->xValue >> B3D_FixedToIntShift;
 		rightX = aet->data[aet->size-1]->xValue >> B3D_FixedToIntShift;
 		if(leftX < 0) leftX = 0;
@@ -1246,9 +1250,9 @@ RESUME_ADDING:
 		/* STEP 2: Add new edges if necessary */
 		if(yValue == nextEdgeY) {
 			B3DPrimitiveObject *obj = activeStart;
-			int scaledY = (yValue+1) << B3D_IntToFixedShift;
+			int scaledY = (unsigned)(yValue+1) << B3D_IntToFixedShift;
 
-			nextEdgeY = nextObjY << B3D_IntToFixedShift;
+			nextEdgeY = (unsigned)nextObjY << B3D_IntToFixedShift;
 			while(obj != passiveStart) {
 				B3DInputFace *objFaces = obj->faces;
 				B3DPrimitiveVertex *objVtx = obj->vertices;
@@ -1353,9 +1357,12 @@ RESUME_MERGING:
 
 					/*-- Toggle the faces of the top edge (the left edge is always on top) --*/
 					if(leftEdge == lastIntersection) {
-						/* Special case if this is a intersection edge */
+						/* Special case if this is an intersection edge */
 						assert(fillList->firstFace == leftEdge->leftFace);
-						b3dRemoveFill(fillList, leftEdge->rightFace);
+						if(b3dIsInFillList(fillList,leftEdge->rightFace))
+							b3dRemoveFill(fillList, leftEdge->rightFace);
+						 else
+							leftEdge->rightFace->flags ^= B3D_FACE_ACTIVE;
 						b3dAddFrontFill(fillList, leftEdge->rightFace);
 					} else {
 						b3dToggleTopFills(fillList, leftEdge, yValue);
@@ -1393,14 +1400,19 @@ RESUME_MERGING:
 					}
 					/*-- end of search for next top edge --*/
 
-					/*-- Now do the drawing from leftEdge to rightEdge --*/
-#if 1 /* This assert fails in rare cases; the fix is not understood. eem */
+					/* If the "edge is not on top toggle its (back) fills" guard
+					 * above nilled rightEdge then presumably we're done.  So
+					 * arrange that we quit the main loop (see BEGIN MAINLOOP at
+					 * about line 1227 above). eem 2019/12/29
+					 */
+					if (!rightEdge) {
+						aet->size = 0;
+						b3dCleanupFill(fillList);
+						break;
+					}
 					assert(leftEdge && rightEdge);
-#else
-					if(!leftEdge || !rightEdge)
-						FAIL_UPDATING(B3D_NO_MORE_EDGES); // another segfault
-						//FAIL_PAINTING(B3D_NO_MORE_EDGES); // blow up in allocating edges
-#endif
+
+					/*-- Now do the drawing from leftEdge to rightEdge --*/
 					if(fillList->firstFace) {
 						/* Note: We fill *including* leftX and rightX */
 						int leftX = (leftEdge->xValue >> B3D_FixedToIntShift) + 1;

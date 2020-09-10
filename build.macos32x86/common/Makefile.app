@@ -68,7 +68,7 @@ VMEXE:=$(APP)/Contents/MacOS/$(VM)
 VMPLIST:=$(APP)/Contents/Info.plist
 
 ifeq ($(USEPLUGINASDYLIB),FALSE)
-VMBUNDLES:=$(addprefix $(APP)/Contents/Resources/, $(addsuffix .bundle, $(EXTERNAL_PLUGINS)))
+VMBUNDLES:=$(addprefix $(APP)/Contents/$(APPPLUGINDIR)/, $(addsuffix .bundle, $(EXTERNAL_PLUGINS)))
 else ifeq ($(USEPLUGINASDYLIB),TRUE)
 VMPLUGINDYLIBS:=$(addprefix $(APP)/Contents/MacOS/Plugins/lib, $(addsuffix .dylib, $(EXTERNAL_PLUGINS)))
 else 
@@ -95,14 +95,14 @@ endif
 
 $(APP):	cleanbundles $(THIRDPARTYPREREQS) $(VMEXE) $(VMBUNDLES) $(VMPLUGINDYLIBS) \
 		$(VMPLIST) $(VMLOCALIZATION) $(VMMENUNIB) $(VMICONS) \
- 		$(SOURCES) $(THIRDPARTYLIBS) $(APPPOST) signapp touchapp
+ 		$(SOURCES) $(THIRDPARTYLIBS) pathapp $(APPPOST) signapp touchapp
 
 # Bundles with missing prerequisites won't be built. But we need to force the
 # attempt to make them every time in case the prerequisites /have/ been built.
 # to do this we must both delete the bundles and touch any ignore files, upon
 # which the bundle build depends.
 cleanbundles:
-	-rm -rf $(wildcard $(APP)/Contents/Resources/*.bundle)
+	-rm -rf $(wildcard $(APP)/Contents/$(APPPLUGINDIR)/*.bundle)
 ifneq ($(wildcard $(OBJDIR)/*.ignore),)
 	-touch $(wildcard $(OBJDIR)/*.ignore)
 endif
@@ -111,14 +111,20 @@ $(VMEXE): $(OBJDIR)/$(VM)
 	@mkdir -p $(APP)/Contents/MacOS
 	cp -p $(OBJDIR)/$(VM) $(APP)/Contents/MacOS
 
-$(APP)/Contents/Resources/%.bundle: $(BLDDIR)/vm/%.bundle
-	@mkdir -p $(APP)/Contents/Resources
+$(APP)/Contents/$(APPPLUGINDIR)/%.bundle: $(BLDDIR)/vm/%.bundle
+	@mkdir -p $(APP)/Contents/$(APPPLUGINDIR)
 	@if [ -f $(basename $<).ignore ]; then \
 		echo $(notdir $<) is being ignored; \
 		rm -rf $^; \
 	else \
-		echo cp -pR $< $(APP)/Contents/Resources; \
-		cp -pR $< $(APP)/Contents/Resources; \
+		echo cp -pR $< $(APP)/Contents/$(APPPLUGINDIR); \
+		cp -pR $< $(APP)/Contents/$(APPPLUGINDIR); \
+		if [ -d $(BLDDIR)/`basename $< .bundle`/Frameworks ]; then \
+			echo copying frameworks for `basename $< .bundle` from $(BLDDIR)/`basename $< .bundle`/Frameworks; \
+			mkdir -p $(APP)/Contents/Frameworks; \
+			(cd $(BLDDIR)/`basename $< .bundle`/Frameworks >/dev/null; COPYFILE_DISABLE=1 tar cf - *) \
+			| (cd $(APP)/Contents/Frameworks >/dev/null; tar xf -); \
+		fi; \
 	fi
 
 $(APP)/Contents/MacOS/Plugins/%.dylib: $(BLDDIR)/vm/%.dylib
@@ -149,17 +155,35 @@ $(VMLOCALIZATION): $(OSXCOMMONDIR)/English.lproj/$(SYSTEM)-Localizable.strings
 	@mkdir -p $(dir $@)
 	cp -p $< $@
 
-$(VMMENUNIB): $(PLATDIR)/iOS/vm/English.lproj/MainMenu-opengl.xib
+$(VMMENUNIB): $(PLATDIR)/iOS/vm/English.lproj/MainMenu.xib
 	@mkdir -p $(dir $@)
 	$(XCUB)/ibtool --errors --warnings --notices --module $(VM) \
 	--minimum-deployment-target $(TARGET_VERSION_MIN) \
 	--auto-activate-custom-fonts --output-format human-readable-text \
 	--compile $(VMMENUNIB) \
-	$(PLATDIR)/iOS/vm/English.lproj/MainMenu-opengl.xib
+	$(PLATDIR)/iOS/vm/English.lproj/MainMenu.xib
 
 $(APP)/Contents/Resources/%.icns: $(OSXDIR)/%.icns
 	@mkdir -p $(APP)/Contents/Resources
 	cp -p $< $(APP)/Contents/Resources
+
+# Make sure that the executable has an executable_path for any subdirectories
+# of Frameworks, and an executable_path for $(APPPLUGINDIR).
+# If Frameworks does not exist still add an rpath for it, allowing someone to
+# repackage the VM at a later date.
+pathapp:
+	install_name_tool -add_rpath @executable_path/../$(APPPLUGINDIR) $(VMEXE)
+	install_name_tool -add_rpath @executable_path/Contents/$(APPPLUGINDIR) $(VMEXE)
+	install_name_tool -add_rpath @executable_path/Contents/Frameworks $(VMEXE)
+	if [ -d "$(APP)/Contents/Frameworks" ]; then \
+		for d in `cd "$(APP)/Contents" >/dev/null; find Frameworks -type d`; do \
+			echo install_name_tool -add_rpath @executable_path/../$$d $(VMEXE); \
+			install_name_tool -add_rpath @executable_path/../$$d $(VMEXE); \
+		done \
+	else \
+		echo install_name_tool -add_rpath @executable_path/../Frameworks $(VMEXE); \
+		install_name_tool -add_rpath @executable_path/../Frameworks $(VMEXE); \
+	fi
 
 # To sign the app, set SIGNING_IDENTITY in the environment, e.g.
 # export SIGNING_IDENTITY="Developer ID Application: Eliot Miranda"
@@ -169,6 +193,7 @@ signapp:
 	echo "No signing identity found (SIGNING_IDENTITY unset). Not signing app."
 else
 signapp:
+	rm -rf $(APP)/Contents/MacOS/*.cstemp
 	codesign -f --deep -s "$(SIGNING_IDENTITY)" $(APP)
 endif
 
@@ -183,15 +208,15 @@ $(APP)/Contents/Resources/%.sources: ../../sources/%.sources
 	ln $< $@
 
 print-app-settings:
-	@echo ---------------- Makefile.app settings ------------------
-	@echo APP=$(APP)
-	@echo VMEXE=$(VMEXE)
-	@echo VMBUNDLES=$(VMBUNDLES)
-	@echo VMPLUGINDYLIBS=$(VMPLUGINDYLIBS)
-	@echo VMPLIST=$(VMPLIST)
-	@echo VMICONS=$(VMICONS)
-	@echo SIGNING_IDENTITY=$(SIGNING_IDENTITY)
-	@echo SOURCEFILE=$(SOURCEFILE)
-	@echo APPSOURCE=$(APPSOURCE)
-	@echo SOURCES=$(SOURCES)
-	@echo -----------------------------------------------------
+	$(info ---------------- Makefile.app settings ------------------)
+	$(info APP=$(APP))
+	$(info VMEXE=$(VMEXE))
+	$(info VMBUNDLES=$(VMBUNDLES))
+	$(info VMPLUGINDYLIBS=$(VMPLUGINDYLIBS))
+	$(info VMPLIST=$(VMPLIST))
+	$(info VMICONS=$(VMICONS))
+	$(info SIGNING_IDENTITY=$(SIGNING_IDENTITY))
+	$(info SOURCEFILE=$(SOURCEFILE))
+	$(info APPSOURCE=$(APPSOURCE))
+	$(info SOURCES=$(SOURCES))
+	$(info -----------------------------------------------------)

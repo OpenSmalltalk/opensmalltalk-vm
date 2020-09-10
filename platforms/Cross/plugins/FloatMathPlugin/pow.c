@@ -1,2 +1,6 @@
+#if !BIT_IDENTICAL_FLOATING_POINT
 #include "ieee754names.h"
-#include "fdlibm/e_pow.c"
+
+#include "../../third-party/fdlibm/e_pow.c"
+
+#endif

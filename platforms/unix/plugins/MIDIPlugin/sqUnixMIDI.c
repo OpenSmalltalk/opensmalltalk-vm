@@ -36,17 +36,9 @@
 #include "config.h"
 #include "debug.h"
 
-/*
- * After an autoreconf this worked but the buildsystem is not prepared
- * to pass the right libraries to the linker. There was no interest in
- * the pull request for more than three month so let's move on.
- */
 #if defined(USE_MIDI_ALSA)
-#warning "We could have real MIDI support but..."
-//# include "sqUnixMIDIALSA.inc"
-# include "sqUnixMIDINone.inc"
+# include "sqUnixMIDIALSA.inc"
 #else
-
 # include "sqUnixMIDINone.inc"
 #endif
 

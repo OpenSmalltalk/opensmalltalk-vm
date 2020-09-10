@@ -60,6 +60,11 @@ if test "$have_x" = "yes"; then
     else
         AC_DEFINE([USE_X11_GLX], [0], [Use X11 GLX])
     fi
+    AC_CHECK_HEADER([X11/extensions/Xrender.h], [
+          AC_DEFINE([HAVE_LIBXRENDER], [1], [Have Xrender library])
+          AC_SEARCH_LIBS([XRenderCreateCursor],[Xrender])
+          break
+        ])
   ],[
     AC_PLUGIN_DISABLE
   ])

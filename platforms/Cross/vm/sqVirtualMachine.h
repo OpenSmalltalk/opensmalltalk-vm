@@ -45,12 +45,22 @@
 # define PrimErrBadMethod 12
 # define PrimErrNamedInternal 13
 # define PrimErrObjectMayMove 14
+# define PrimErrLimitExceeded 15
+# define PrimErrObjectIsPinned 16
+# define PrimErrWritePastObject 17
+# define PrimErrObjectMoved 18
+# define PrimErrObjectNotPinned 19
+# define PrimErrCallbackError 20
+# define PrimErrOSError 21
+# define PrimErrFFIException 22
+# define PrimErrNeedCompaction 23
+# define PrimErrOperationFailed 24
 
 /* VMCallbackContext opaque type avoids all including setjmp.h & vmCallback.h */
 typedef struct _VMCallbackContext *vmccp;
 #endif
 
-typedef sqInt (*CompilerHook)();
+typedef sqInt (*CompilerHook)(void);
 
 struct VirtualMachine* sqGetInterpreterProxy(void);
 
@@ -81,6 +91,7 @@ typedef struct VirtualMachine {
 	double (*fetchFloatofObject)(sqInt fieldIndex, sqInt objectPointer);
 	sqInt  (*fetchIntegerofObject)(sqInt fieldIndex, sqInt objectPointer);
 	sqInt  (*fetchPointerofObject)(sqInt fieldIndex, sqInt oop);
+#if OLD_FOR_REFERENCE
 /*  sqInt  (*fetchWordofObject)(sqInt fieldFieldIndex, sqInt oop); *
  * has been rescinded as of VMMaker 3.8 and the 64bitclean VM      *
  * work. To support old plugins we keep a valid function in        *
@@ -89,6 +100,9 @@ typedef struct VirtualMachine {
  * equivalent but 64 bit valid function is added as                *
  * 'fetchLong32OfObject'                                           */
 	sqInt  (*obsoleteDontUseThisFetchWordofObject)(sqInt fieldFieldIndex, sqInt oop);
+#else /* since there is no legacy plugin problem back to 3.8 we repurpose... */
+	void   (*error)(char *);
+#endif
 	void  *(*firstFixedField)(sqInt oop);
 	void  *(*firstIndexableField)(sqInt oop);
 	sqInt  (*literalofMethod)(sqInt offset, sqInt methodPointer);
@@ -286,7 +300,7 @@ typedef struct VirtualMachine {
 #if VM_PROXY_MINOR > 8
 	/* See interp.h and above for standard error codes. */
 	sqInt  (*primitiveFailFor)(sqInt code);
-	void (*(*setInterruptCheckChain)(void (*aFunction)(void)))();
+	void  *(*setInterruptCheckChain)(void (*aFunction)(void));
 	sqInt  (*classAlien)(void);
 	sqInt  (*classUnsafeAlien)(void);
 	sqInt  (*sendInvokeCallbackStackRegistersJmpbuf)(sqInt thunkPtrAsInt, sqInt stackPtrAsInt, sqInt regsPtrAsInt, sqInt jmpBufPtrAsInt);
@@ -321,7 +335,7 @@ typedef struct VirtualMachine {
   sqInt	(*ownVM)   (sqInt threadIdAndFlags);
   void  (*addHighPriorityTickee)(void (*ticker)(void), unsigned periodms);
   void  (*addSynchronousTickee)(void (*ticker)(void), unsigned periodms, unsigned roundms);
-  volatile usqLong (*utcMicroseconds)(void);
+  usqLong (*utcMicroseconds)(void);
   void (*tenuringIncrementalGC)(void);
   sqInt (*isYoung) (sqInt anOop);
   sqInt (*isKindOfClass)(sqInt oop, sqInt aClass);
@@ -365,6 +379,18 @@ typedef struct VirtualMachine {
 #if VM_PROXY_MINOR > 14 /* SmartSyntaxPlugin validation rewrite support */
   sqInt  (*isBooleanObject)(sqInt oop);
   sqInt  (*isPositiveMachineIntegerObject)(sqInt);
+#endif
+#if VM_PROXY_MINOR > 15 /* Spur integer and float array classes */
+  sqInt (*classDoubleByteArray)(void);
+  sqInt (*classWordArray)(void);
+  sqInt (*classDoubleWordArray)(void);
+  sqInt (*classFloat32Array)(void);
+  sqInt (*classFloat64Array)(void);
+#endif
+#if VM_PROXY_MINOR > 16 /* Spur isShorts and isLong64s testing support, hash */
+  sqInt (*isShorts)(sqInt oop);
+  sqInt (*isLong64s)(sqInt oop);
+  sqInt (*identityHashOf)(sqInt oop);
 #endif
 } VirtualMachine;
 

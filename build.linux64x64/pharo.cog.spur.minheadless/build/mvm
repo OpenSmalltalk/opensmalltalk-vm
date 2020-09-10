@@ -1,13 +1,13 @@
 #!/bin/bash -e
 # PharoVM with VM profiler and threaded heartbeat
 THIRDPARTYLIBS="libsdl2 openssl libssh2 libgit2"
-INSTALLDIR=ph64mincogspurlinuxht
+INSTALLDIR=ph64mincogspur64linuxht
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
 fi
 
-if ../../scripts/checkSCCSversion ; then exit 1; fi
+if ../../../scripts/checkSCCSversion ; then exit 1; fi
 echo -n "clean? "
 read a
 case $a in
@@ -24,6 +24,7 @@ for lib in ${THIRDPARTYLIBS}; do
 done
 
 LDFLAGS="-L../../../.thirdparty-cache/linux/x86_64/lib" \
+CC=clang \
 CFLAGS="-I../../../.thirdparty-cache/linux/x86_64/include -I../../.thirdparty-cache/linux/x86_64/include/SDL2" \
 	cmake \
 		-DCMAKE_BUILD_TYPE=Release \

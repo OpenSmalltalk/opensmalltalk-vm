@@ -197,7 +197,9 @@ sqDeallocateMemorySegmentAtOfSize(void *addr, sqInt sz)
 
 # if COGVM
 void
-sqMakeMemoryExecutableFromTo(usqIntptr_t startAddr, usqIntptr_t endAddr)
+sqMakeMemoryExecutableFromToCodeToDataDelta(usqInt startAddr,
+											usqInt endAddr,
+											sqInt *codeToDataDelta)
 {
 	DWORD previous;
     SIZE_T size;
@@ -208,10 +210,12 @@ sqMakeMemoryExecutableFromTo(usqIntptr_t startAddr, usqIntptr_t endAddr)
 						PAGE_EXECUTE_READWRITE,
 						&previous))
 		sqWin32PrintLastError("VirtualProtect(x,y,PAGE_EXECUTE_READWRITE)");
+    if (codeToDataDelta)
+        *codeToDataDelta = 0;
 }
 
 void
-sqMakeMemoryNotExecutableFromTo(usqIntptr_t startAddr, usqIntptr_t endAddr)
+sqMakeMemoryNotExecutableFromTo(usqInt startAddr, usqInt endAddr)
 {
 	DWORD previous;
     SIZE_T size;

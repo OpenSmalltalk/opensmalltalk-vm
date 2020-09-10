@@ -45,17 +45,15 @@
 //#import <Fabric/Fabric.h>
 //#import <Crashlytics/Crashlytics.h>
 
-#if defined(USE_METAL)
+#ifdef USE_METAL
 #  import "sqSqueakOSXMetalView.h"
-#  define ContentViewClass sqSqueakOSXMetalView
-#elif !defined(USE_CORE_GRAPHICS)
-#  import "sqSqueakOSXOpenGLView.h"
-#  define ContentViewClass sqSqueakOSXOpenGLView
-#else 
-#  import "sqSqueakOSXCGView.h"
-#  define ContentViewClass sqSqueakOSXCGView
 #endif
 
+#ifdef USE_CORE_GRAPHICS
+#  import "sqSqueakOSXCGView.h"
+#endif
+
+#import "sqSqueakOSXOpenGLView.h"
 
 SqueakOSXAppDelegate *gDelegateApp;
 
@@ -171,6 +169,18 @@ SqueakOSXAppDelegate *gDelegateApp;
     [self setupWindow];
     [self setupMainView];
     return [self window];
+}
+
+- (void) placeMainWindowOnLargerScreenGivenWidth: (sqInt) width height: (sqInt) height {
+#if SQ_HOST64 /* This API is 64-bits only :-( */
+        for (NSScreen *screen in [NSScreen screens]) {
+                CGSize screenSize = screen.visibleFrame.size;
+                if ((height <= screenSize.height) && (width <= screenSize.width)) {
+                    self.window.frameOrigin = screen.visibleFrame.origin;
+                    break;
+                }
+        }
+#endif
 }
 
 - (BOOL)application:(NSApplication *)theApplication openFile:(NSString *)fileName {

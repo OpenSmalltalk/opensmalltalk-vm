@@ -1,0 +1,19 @@
+# See https://editorconfig.org
+# top-most editorconfig file
+root = true
+
+[Makefile]
+indent_style = tab
+
+[*.{c,h,m,st}]
+indent_style = tab
+indent_size = 4
+
+[*.{yml,ston}]
+indent_style = space
+indent_size = 2
+
+[*.{xml}]
+indent_style = space
+indent_size = 4
+

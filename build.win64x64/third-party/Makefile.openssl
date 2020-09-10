@@ -1,7 +1,7 @@
 ifndef THIRDPARTYDIR
 	include ../common/Makefile.lib.extra
 endif
-include ../../third-party/openssl.spec
+include ../../third-party/openssl.spec.win64
 
 # plugin definitions
 OPENSSLURL:=$(openssl_spec_download_url)
@@ -20,10 +20,7 @@ $(OPENSSLARCHIVE):
 	$(WGET) -O $(OPENSSLARCHIVE) $(OPENSSLURL) 
 
 $(THIRDPARTYLIBDIR)/$(OPENSSLLIBNAME): $(OPENSSLARCHIVE)
-	@echo "ESTEBAN: ENTER"
 	tar x -f $(OPENSSLARCHIVE) -C $(THIRDPARTYDIR)
-	sed -i 's/symlink/copy/g'  $(OPENSSLDIR)/util/mklink.pl
-	sed -i 's/ln -s/cp/g'  $(OPENSSLDIR)/util/point.sh
 	cd $(OPENSSLDIR) \
 		&&  CC=x86_64-w64-mingw32-gcc \
 			AR=x86_64-w64-mingw32-ar \
@@ -33,7 +30,7 @@ $(THIRDPARTYLIBDIR)/$(OPENSSLLIBNAME): $(OPENSSLARCHIVE)
 			DLLTOOL='$(DLLTOOL)' \
 			DLLWRAP='$(DLLWRAP)' \
 			./Configure mingw64 --prefix='$(THIRDPARTYOUTDIR)' shared $(THIRDPARTY_CFLAGS) \
-		&& make build_libs build_apps build_tools \
+		&& make \
 		&& make install_sw
 
 # Assuming building ssleay32.dll will also build libeay32.dll

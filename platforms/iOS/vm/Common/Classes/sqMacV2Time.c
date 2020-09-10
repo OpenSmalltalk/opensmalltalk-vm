@@ -141,26 +141,29 @@ sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds) {
 	/* This operation is platform dependent. 	 */
 	#pragma unused(microSeconds)
 
-	sqInt	   realTimeToWait,now,next;
-	extern sqInt getNextWakeupTick(void);				//This is a VM Callback
-	extern sqInt setInterruptCheckCounter(sqInt value);  //This is a VM Callback
+	usqLong	   realTimeToWait,now,next;
+	extern usqLong getNextWakeupUsecs(void);				//This is a VM Callback
+	extern sqInt setInterruptCheckCounter(sqInt value); //This is a VM Callback
 
 	setInterruptCheckCounter(0);
 	now = ioMicroMSecs();
-	next = getNextWakeupTick();
+	next = getNextWakeupUsecs();
 	
 	/*BUG??? what if clock wraps? */
 	
-	if (next <= now)
+	if (next <= now) {
 		if (next == 0)
-				realTimeToWait = 16;
-			else {
-				return 0;
-			}
+			realTimeToWait = 16000;
 		else
-			realTimeToWait = next - now; 
+			return 0;
+		}
+	else {
+		realTimeToWait = next - now;
+		if (realTimToWait > 16000)
+			realTimeToWait = 16000;
+	}
 
-	aioSleep((int) realTimeToWait*1000);
+	aioSleepForUsecs((long) realTimeToWait);
 	return 0;
 }
 #endif /* STACKVM */

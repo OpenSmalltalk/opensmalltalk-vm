@@ -6,11 +6,14 @@
 //
 
 #ifdef __OBJC__
+# ifdef __cplusplus
+#   define __ASSERTMACROS__ 1 // AssertMacros.h defines check, breaks boost
+# endif
 # import <Cocoa/Cocoa.h>
 #endif
 
 #if __has_feature(objc_arc)
-# define RELEASEOBJ(o) o
+# define RELEASEOBJ(o) (void)o
 # define RETAINOBJ(o) o
 # define AUTORELEASEOBJ(o) o
 # define SUPERDEALLOC

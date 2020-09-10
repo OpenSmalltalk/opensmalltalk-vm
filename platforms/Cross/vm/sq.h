@@ -16,6 +16,7 @@
 #include "sqConfig.h"
 
 #include <math.h>
+#include "sqMathShim.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -100,6 +101,11 @@
 extern void *sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt sz, void *minAddr, sqInt *asp);
 extern void sqDeallocateMemorySegmentAtOfSize(void *addr, sqInt sz);
 #endif /* SPURVM */
+#if COGVM
+extern void sqMakeMemoryExecutableFromToCodeToDataDelta(usqInt, usqInt, sqInt*);
+extern void sqMakeMemoryNotExecutableFromTo(usqInt, usqInt);
+#endif
+
 /* Platform-dependent memory size adjustment macro. */
 
 /* Note: This macro can be redefined to allows platforms with a
@@ -164,21 +170,31 @@ long ioMicroMSecs(void);
 
 #if STACKVM
 extern void forceInterruptCheckFromHeartbeat(void);
-unsigned volatile long long  ioUTCMicrosecondsNow();
-unsigned volatile long long  ioUTCMicroseconds();
-unsigned volatile long long  ioLocalMicrosecondsNow();
-unsigned volatile long long  ioLocalMicroseconds();
-unsigned          long long  ioUTCStartMicroseconds();
-sqInt	ioLocalSecondsOffset();
-void	ioUpdateVMTimezone();
-void	ioSynchronousCheckForEvents();
+unsigned long long ioUTCMicrosecondsNow(void);
+unsigned long long ioUTCMicroseconds(void);
+unsigned long long ioLocalMicrosecondsNow(void);
+unsigned long long ioLocalMicroseconds(void);
+unsigned long long ioUTCStartMicroseconds(void);
+sqInt	ioLocalSecondsOffset(void);
+void	ioUpdateVMTimezone(void);
+void	ioSynchronousCheckForEvents(void);
 void	checkHighPriorityTickees(usqLong);
 # if ITIMER_HEARTBEAT		/* Hack; allow heartbeat to avoid */
 extern int numAsyncTickees; /* prodHighPriorityThread unless necessary */
 # endif						/* see platforms/unix/vm/sqUnixHeartbeat.c */
 void	ioGetClockLogSizeUsecsIdxMsecsIdx(sqInt*,void**,sqInt*,void**,sqInt*);
 void	addIdleUsecs(sqInt);
-#endif
+
+# if COGVM
+/* Cog has already captured CStackPointer before calling this routine.  Record
+ * the original value, capture the pointers again and determine if CFramePointer
+ * lies between the two stack pointers and hence is likely in use.  This is
+ * necessary since optimizing C compilers may allocate the frame pointer as a
+ * purpose register, in which case it need not and should not be captured.
+ */
+extern int isCFramePointerInUse(usqIntptr_t *cFpPtr, usqIntptr_t *cSpPtr);
+# endif
+#endif /* STACKVM */
 
 /* this function should return the value of the high performance
    counter if there is such a thing on this platform (otherwise return 0) */
@@ -188,7 +204,7 @@ sqLong ioHighResClock(void);
   ioFilenamefromStringofLengthresolveAliases. Most platforms can ignore the
   resolveAlias boolean - it seems to only be of use by OSX but is crucial there.
 */
-sqInt sqGetFilenameFromString(char * aCharBuffer, char * aFilenameString, sqInt filenameLength, sqInt aBoolean);
+sqInt sqGetFilenameFromString(char *aCharBuffer, char *aFilenameString, sqInt filenameLength, sqInt aBoolean);
 
 /* Macro to provide default null behaviour for ftruncate - a non-ansi call
    used in FilePlugin.
@@ -207,9 +223,34 @@ sqInt sqGetFilenameFromString(char * aCharBuffer, char * aFilenameString, sqInt 
 #define browserPluginReturnIfNeeded()
 #define browserPluginInitialiseIfNeeded()
 
+/* VM_TICKER enables facilities providing periodic invocation of functions
+ * on a high-priority thread in the VM, preempting Smalltalk execution.
+ */
+#if VM_TICKER
+extern usqInt ioVMTickerCount(void);
+extern usqInt ioVMTickeeCallCount(void);
+extern usqLong ioVMTickerStartUSecs(void);
+#endif
+
 /* Platform-specific header file may redefine earlier definitions and macros. */
 
 #include "sqPlatformSpecific.h"
+
+/* getReturnAddress optionally defined here rather than in sqPlatformSpecific.h
+ * to reduce duplication. The GCC intrinics are provided by other compilers too.
+ */
+#if COGVM && !defined(getReturnAddress)
+# if _MSC_VER
+#	define getReturnAddress() _ReturnAddress()
+#	include <intrin.h>
+#	pragma intrinsic(_ReturnAddress)
+# elif defined(__GNUC__) /* gcc, clang, icc etc */
+#	define getReturnAddress() __builtin_extract_return_addr(__builtin_return_address(0))
+# else
+#	error "Cog requires getReturnAddress defining for the current platform."
+# endif
+#endif /* COG && !defined(getReturnAddress */
+
 
 /* Interpreter entry points. */
 
@@ -217,7 +258,7 @@ sqInt sqGetFilenameFromString(char * aCharBuffer, char * aFilenameString, sqInt 
 #ifdef __INTEL_COMPILER 
 #   pragma auto_inline(off)
 #endif
-extern void error(char *s);
+extern void error(const char *);
 #ifdef __INTEL_COMPILER 
 #   pragma auto_inline(on)
 #endif
@@ -254,6 +295,7 @@ sqInt ioSeconds(void);
 sqInt ioSecondsNow(void);
 sqInt ioSetCursor(sqInt cursorBitsIndex, sqInt offsetX, sqInt offsetY);
 sqInt ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt offsetX, sqInt offsetY);
+sqInt ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt extentY, sqInt offsetX, sqInt offsetY);
 sqInt ioShowDisplay(sqInt dispBitsIndex, sqInt width, sqInt height, sqInt depth,
 		    sqInt affectedL, sqInt affectedR, sqInt affectedT, sqInt affectedB);
 sqInt ioHasDisplayDepth(sqInt depth);
@@ -270,7 +312,7 @@ sqInt ioIsWindowObscured(void);
 sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds);
 #if STACKVM || NewspeakVM
 /* thread subsystem support for e.g. sqExternalSemaphores.c */
-void ioInitThreads();
+void ioInitThreads(void);
 
 /* Management of the external semaphore table (max size set at startup) */
 #if !defined(INITIAL_EXT_SEM_TABLE_SIZE)
@@ -320,7 +362,7 @@ extern char *thrlog[];
 	asprintf(thrlog + myidx, __VA_ARGS__); \
 } while (0)
 
-extern sqOSThread getVMOSThread();
+extern sqOSThread getVMOSThread(void);
 /* Please read the comment for CogThreadManager in the VMMaker package for
  * documentation of this API.  N.B. code is included from sqPlatformSpecific.h
  * before the code here.  e.g.
@@ -361,8 +403,6 @@ void ioTransferTimeslice(void);
 #endif /* COGMTVM */
 
 /* Profiling. */
-void  ioProfileStatus(sqInt *running, void **exestartpc, void **exelimitpc,
-					  void **vmhst, long *nvmhbin, void **eahst, long *neahbin);
 void  ioControlProfile(int on, void **vhp, long *nvb, void **ehp, long *neb);
 long  ioControlNewProfile(int on, unsigned long buffer_size);
 void  ioNewProfileStatus(sqInt *running, long *buffersize);

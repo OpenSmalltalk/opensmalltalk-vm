@@ -7,6 +7,7 @@ BitBltPlugin \
 DSAPrims \
 DropPlugin \
 FilePlugin \
+Float64ArrayPlugin \
 FloatArrayPlugin \
 FloatMathPlugin \
 ZipPlugin \

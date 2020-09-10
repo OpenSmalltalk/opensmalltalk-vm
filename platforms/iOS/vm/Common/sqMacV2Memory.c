@@ -188,19 +188,21 @@ sqImageFileReadEntireImage(void *ptr, size_t elementSize, size_t count, sqImageF
 # define roundUpToPage(v) (((v)+pageSize-1)&pageMask)
 #if COGVM || defined(HAVE_NATIVEBOOST) 
 void
-sqMakeMemoryExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
+sqMakeMemoryExecutableFromToCodeToDataDelta(usqInt startAddr, usqInt endAddr, sqInt *codeToDataDelta)
 {
-	unsigned long firstPage = roundDownToPage(startAddr);
+	usqInt firstPage = roundDownToPage(startAddr);
 	if (mprotect((void *)firstPage,
 				 roundUpToPage(endAddr - firstPage),
 				 PROT_READ | PROT_WRITE | PROT_EXEC) < 0)
 		perror("mprotect(x,y,PROT_READ | PROT_WRITE | PROT_EXEC)");
+	if( codeToDataDelta )
+		*codeToDataDelta = 0;
 }
 
 void
-sqMakeMemoryNotExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
+sqMakeMemoryNotExecutableFromTo(usqInt startAddr, usqInt endAddr)
 {
-	unsigned long firstPage = roundDownToPage(startAddr);
+	usqInt firstPage = roundDownToPage(startAddr);
 	if (mprotect((void *)firstPage,
 				 roundUpToPage(endAddr - firstPage),
 				 PROT_READ | PROT_WRITE) < 0)

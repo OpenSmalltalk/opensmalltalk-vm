@@ -1,0 +1,10 @@
+#############################################################################
+# Plugin Makefile for Win32/64 VM using MSVC, e.g. 2017 Community, and gnu make
+# Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
+#############################################################################
+
+LIBSRC:=SqueakFFIPrims.c sqFFIPlugin.c sqFFITestFuncs.c sqManualSurface.c
+
+include ../common/Makefile.msvc.plugin
+
+VPATH:= $(MAKERDIR) $(CROSSDIR) $(OBJDIR)
