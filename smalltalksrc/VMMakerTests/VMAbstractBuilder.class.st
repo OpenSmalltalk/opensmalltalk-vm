@@ -10,7 +10,7 @@ Class {
 
 { #category : #accessing }
 VMAbstractBuilder >> collection: aCollection at: anIndex put: anOop [
-	"convinience method to put a temporary at a specific place
+	"convinience method to put an oop at a specific place
 	No need to take care of the size of the collection, I'm taking care of it!"
 	aCollection size > anIndex 
 		ifTrue: [ ^ aCollection at: anIndex + 1 put: anOop ].
