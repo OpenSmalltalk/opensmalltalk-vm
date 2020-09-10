@@ -26,6 +26,7 @@ $(THIRDPARTYLIBDIR)/$(LIBSSH2LIBNAME): $(LIBSSH2ARCHIVE)
 			--prefix='$(THIRDPARTYOUTDIR)' \
 			CFLAGS='-m64' \
 			LDFLAGS='-m64' \
+			CPPFLAGS='-I$(THIRDPARTYINCLUDEDIR)' \
 		&& make \
 		&& make install
 
