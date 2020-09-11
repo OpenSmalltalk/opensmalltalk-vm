@@ -13,6 +13,7 @@
 #include "config.h"
 
 #include "sqPlatformSpecific.h"
+#include "interpreter.h"
 
 #include "debug.h"
 #include "sqAssert.h"

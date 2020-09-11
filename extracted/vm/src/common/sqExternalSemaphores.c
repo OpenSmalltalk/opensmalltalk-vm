@@ -76,6 +76,8 @@ static volatile int lowTideB = MaxTide, highTideB = MinTide;
 int
 ioGetMaxExtSemTableSize(void) { return numSignalRequests; }
 
+int highBit(int);
+
 /* Setting this at any time other than start-up can potentially lose requests.
  * i.e. during the realloc new storage is allocated, the old contents are copied
  * and then pointersd are switched.  Requests occurring during copying won't

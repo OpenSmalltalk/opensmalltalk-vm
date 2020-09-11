@@ -19,7 +19,7 @@
 #include "pharovm/semaphores/platformSemaphore.h"
 #include "pharovm/macros.h"
 
-#include "cogmethod.h"
+//#include "cogmethod.h"
 
 #include "pharovm/interpreter.h"
 

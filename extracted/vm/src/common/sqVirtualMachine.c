@@ -12,9 +12,9 @@
 /* InterpreterProxy methodsFor: 'stack access' */
 sqInt  pop(sqInt nItems);
 sqInt  popthenPush(sqInt nItems, sqInt oop);
-sqInt  push(sqInt object);
+void   push(sqInt object);
 sqInt  pushBool(sqInt trueOrFalse);
-sqInt  pushFloat(double f);
+void   pushFloat(double f);
 sqInt  pushInteger(sqInt integerValue);
 double stackFloatValue(sqInt offset);
 sqInt  stackIntegerValue(sqInt offset);
@@ -148,7 +148,7 @@ sqInt superclassOf(sqInt classPointer);
 sqInt ioMicroMSecs(void);
 unsigned volatile long long  ioUTCMicroseconds(void);
 unsigned volatile long long  ioUTCMicrosecondsNow(void);
-void forceInterruptCheck(void);
+sqInt forceInterruptCheck(void);
 sqInt getThisSessionID(void);
 sqInt ioFilenamefromStringofLengthresolveAliases(char* aCharBuffer, char* filenameIndex, sqInt filenameLength, sqInt resolveFlag);
 sqInt vmEndianness(void);	
@@ -194,7 +194,7 @@ char *cStringOrNullFor(sqInt);
 #endif
 #if VM_PROXY_MINOR > 13 /* More Spur + OS Errors available via prim error code */
 sqInt statNumGCs(void);
-sqInt stringForCString(char *);
+sqInt stringForCString(const char *);
 sqInt primitiveFailForOSError(sqLong);
 sqInt primitiveFailForFFIExceptionat(usqLong exceptionCode, usqInt pc);
 #endif

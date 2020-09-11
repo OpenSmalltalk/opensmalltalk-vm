@@ -94,7 +94,6 @@ int signal_pipe_fd[2];
 void 
 aioInit(void)
 {
-	extern void forceInterruptCheck(int);	/* not really, but hey */
 	int arg;
 
 	interruptFIFOMutex = platform_semaphore_new(1);
