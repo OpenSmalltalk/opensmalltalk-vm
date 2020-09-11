@@ -49,8 +49,8 @@ sqInt primitiveFailFor(sqInt);
 sqInt forceInterruptCheck(void);
 sqInt doSignalSemaphoreWithIndex(sqInt semaIndex);
 sqInt getExternalSemaphoreWithIndex(sqInt index);
-sqInt doWaitSemaphore(sqInt sema);
-sqInt doWaitSemaphorereEnterInterpreter(sqInt sema, sqInt hasToReenter);
+void  doWaitSemaphore(sqInt sema);
+void  doWaitSemaphorereEnterInterpreter(sqInt sema, sqInt hasToReenter);
 
 sqInt fetchPointerofObject(sqInt, sqInt);
 

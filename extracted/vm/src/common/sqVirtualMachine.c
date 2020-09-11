@@ -239,8 +239,8 @@ sqInt topRemappableOop(void);
 
 #if ASYNC_FFI_QUEUE
 
-sqInt ptExitInterpreterToCallback(vmccp);
-sqInt ptEnterInterpreterFromCallback(vmccp);
+sqInt ptExitInterpreterToCallback(void*);
+sqInt ptEnterInterpreterFromCallback(void*);
 
 #endif //ASYNC_FFI_QUEUE
 
