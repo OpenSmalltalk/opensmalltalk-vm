@@ -38,16 +38,12 @@
 
 
 #include <unistd.h>
+#include <stdint.h>
 #include <sys/mman.h>
 #include <sys/ioctl.h>
 
-/* be less dependent on architecture defs */
-#include <sys/types.h>
-#define uint8   u_int8_t
-#define uint16  u_int16_t
-#define uint32  u_int32_t
-/* Pixels are kept as 32 bits: uint32 */
-#define pixel_t u_int32_t
+/* Pixels are kept as 32 bits: uint32_t */
+typedef uint32_t pixel_t;
 
 #include <linux/fb.h>
 #include <linux/vt.h>
@@ -88,8 +84,8 @@ struct fb
   SqPoint			  cursorPosition;
   SqPoint			  cursorOffset;
   int				  cursorVisible;
-  uint16			  cursorBits[16]; 
-  uint16			  cursorMask[16];
+  uint16_t			  cursorBits[16];
+  uint16_t			  cursorMask[16];
   pixel_t			  cursorBack[16][16];
 };
 
@@ -151,7 +147,7 @@ static inline void fb_putPixel_32(_self, int x, int y, pixel_t pix)
 static inline pixel_t fb_getPixel_16(_self, int x, int y)
 {
   return ((x >= 0) && (y >= 0) && (x < fb_width(self)) && (y < fb_height(self)))
-    ? *((uint16 *)(self->addr
+    ? *((uint16_t *)(self->addr
 		   + (x + self->var.xoffset) * (16 / 8)
 		   + (y + self->var.yoffset) * (self->fix.line_length)))
     : 0;
@@ -161,7 +157,7 @@ static inline void fb_putPixel_16(_self, int x, int y, pixel_t pix)
 {
   if ((x >= 0) && (y >= 0) && (x < fb_width(self)) && (y < fb_height(self)))
     {
-      *((uint16 *)(self->addr
+      *((uint16_t *)(self->addr
 		   + (x + self->var.xoffset) * (16 / 8) 
 		   + (y + self->var.yoffset) * (self->fix.line_length)))
 	= pix;
@@ -172,7 +168,7 @@ static inline void fb_putPixel_16(_self, int x, int y, pixel_t pix)
 static inline pixel_t fb_getPixel_8(_self, int x, int y)
 {
   return ((x >= 0) && (y >= 0) && (x < fb_width(self)) && (y < fb_height(self)))
-    ? *((uint16 *)(self->addr
+    ? *((uint16_t *)(self->addr
 			  + (x + self->var.xoffset)
 			  + (y + self->var.yoffset) * (self->fix.line_length)))
     : 0;
@@ -342,9 +338,9 @@ static void fb_copyBits_16(_self, char *bits, int left, int right, int top, int 
   hideCursorIn(self, left, right, top, bottom);
   for (y= top; y < bottom; y += 1)
     {
-      uint16 *in=  (uint16 *)(bits + ((left + (y * fb_width(self))) * 2));
+      uint16_t *in=  (uint16_t *)(bits + ((left + (y * fb_width(self))) * 2));
       /*  unsigned short *out= (unsigned short *)(self->addr + ((left + (y * fb_pitch(self))) * 2)); */
-      uint16 *out= (uint16 *)(self->addr + fb_pixel_position(self, left, y));
+      uint16_t *out= (uint16_t *)(self->addr + fb_pixel_position(self, left, y));
       for (x= left;  x < right;  x += 2, in += 2, out += 2)
 	{
 #	 if defined(WORDS_BIGENDIAN)
