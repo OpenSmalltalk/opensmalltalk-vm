@@ -170,7 +170,7 @@ VMPinnedObjectTest >> testAllocatingObjectAfterTwoPinObjectShouldSlideAtStartOfO
 ]
 
 { #category : #testCompactor }
-VMPinnedObjectTest >> testAllocatingObjectThatDoesNotMoveRetainsPreviousDead [
+VMPinnedObjectTest >> testAllocatingObjectRightAfterPinnedShouldMoveItOnFirstDead [
 	| destination aliveObject aliveObjectHash |
 	"D = Dead
 	P = Pinned
