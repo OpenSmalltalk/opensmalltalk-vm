@@ -242,3 +242,7 @@ platforms/unix/config/autom4te.cache/
 /products/debug/*
 *.cer
 *.p12
+
+# Editors
+.vs/*
+.vscode/*
