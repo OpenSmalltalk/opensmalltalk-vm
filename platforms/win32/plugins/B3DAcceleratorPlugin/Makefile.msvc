@@ -3,6 +3,6 @@
 # Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
 #############################################################################
 
-EXTRALIBS:=opengl32.lib ddraw.lib dxguid.lib gdi32.lib
+EXTRALIBS:=opengl32.lib ddraw.lib dxguid.lib gdi32.lib user32.lib
 
 include ../common/Makefile.msvc.plugin

@@ -204,7 +204,7 @@ sqLong ioHighResClock(void);
   ioFilenamefromStringofLengthresolveAliases. Most platforms can ignore the
   resolveAlias boolean - it seems to only be of use by OSX but is crucial there.
 */
-sqInt sqGetFilenameFromString(char * aCharBuffer, char * aFilenameString, sqInt filenameLength, sqInt aBoolean);
+sqInt sqGetFilenameFromString(char *aCharBuffer, char *aFilenameString, sqInt filenameLength, sqInt aBoolean);
 
 /* Macro to provide default null behaviour for ftruncate - a non-ansi call
    used in FilePlugin.
@@ -258,7 +258,7 @@ extern usqLong ioVMTickerStartUSecs(void);
 #ifdef __INTEL_COMPILER 
 #   pragma auto_inline(off)
 #endif
-extern void error(char *s);
+extern void error(const char *);
 #ifdef __INTEL_COMPILER 
 #   pragma auto_inline(on)
 #endif
