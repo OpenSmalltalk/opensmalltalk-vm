@@ -222,12 +222,11 @@ InterpreterPrimitives >> doWaitSemaphore: aSemaphoreOop [
 	excessSignals := self fetchInteger: ExcessSignalsIndex ofObject: aSemaphoreOop.
 	excessSignals > 0
 		ifTrue:
-			[self storeInteger: ExcessSignalsIndex ofObject: aSemaphoreOop withValue: excessSignals - 1.
-				^ false]
+			[self storeInteger: ExcessSignalsIndex ofObject: aSemaphoreOop withValue: excessSignals - 1 ]
 		ifFalse:
 			[activeProc := self activeProcess.
 			 self addLastLink: activeProc toList: aSemaphoreOop.
-			 self transferTo: self wakeHighestPriority. ^ true]
+			 self transferTo: self wakeHighestPriority ]
 ]
 
 { #category : #'process primitive support' }
