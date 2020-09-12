@@ -218,6 +218,7 @@ sqInt classFloat64Array(void);
 sqInt isShorts(sqInt);
 sqInt isLong64s(sqInt);
 sqInt identityHashOf(sqInt);
+sqInt isWordsOrShorts(sqInt);
 #endif
 
 void *ioLoadFunctionFrom(char *fnName, char *modName);
@@ -573,6 +574,7 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->isShorts = isShorts;
 	VM->isLong64s = isLong64s;
 	VM->identityHashOf = identityHashOf;
+	VM->isWordsOrShorts = isWordsOrShorts;
 #endif
 	return VM;
 }

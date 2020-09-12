@@ -391,6 +391,7 @@ typedef struct VirtualMachine {
   sqInt (*isShorts)(sqInt oop);
   sqInt (*isLong64s)(sqInt oop);
   sqInt (*identityHashOf)(sqInt oop);
+  sqInt (*isWordsOrShorts)(sqInt oop); /* for SoundPlugin et al */
 #endif
 } VirtualMachine;
 

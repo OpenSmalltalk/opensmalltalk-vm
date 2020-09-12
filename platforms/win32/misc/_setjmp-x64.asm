@@ -4,8 +4,10 @@
 // Code adapted from Julia, whose license is MIT: https://julialang.org/license
 	.text
 	.globl _setjmp
+	.globl _setjmp0
 	.p2align	4, 0x90
 _setjmp:
+_setjmp0:
     movq   (%rsp), %rdx // rta
     xor    %rax, %rax # return 0
     movq   %rax,    0(%rcx)
