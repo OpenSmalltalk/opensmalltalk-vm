@@ -167,8 +167,6 @@ getMostRecentCallbackContext() { return mostRecentCallbackContext; }
 #define getRMCC(t) mostRecentCallbackContext
 #define setRMCC(t) (mostRecentCallbackContext = (void *)(t))
 
-extern void error(char *s);
-
 /*
  * Entry-point for call-back thunks.  Args are register args, thunk address
  * and stack pointer.

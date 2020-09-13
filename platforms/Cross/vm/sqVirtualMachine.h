@@ -6,6 +6,14 @@
  */
 #include "interp.h"
 
+#pragma auto_inline(off)
+#if defined(EXPORT) && !defined(SQUEAK_BUILTIN_PLUGIN)
+EXPORT(void) error(const char *);
+#else
+extern void error(const char *);
+#endif
+
+#pragma auto_inline(on)
 #if SPURVM
 # define VM_VERSION "5.0"
 #else
