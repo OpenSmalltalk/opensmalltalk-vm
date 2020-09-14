@@ -43,6 +43,7 @@ macro(configure_installables INSTALL_COMPONENT)
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/packaging/linux/bin/launch.sh.in
         ${CMAKE_CURRENT_BINARY_DIR}/build/packaging/linux/bin/${VM_EXECUTABLE_NAME} @ONLY)
 
+
     install(
       DIRECTORY "${CMAKE_BINARY_DIR}/build/packaging/linux/"
       DESTINATION "./"
@@ -53,6 +54,13 @@ macro(configure_installables INSTALL_COMPONENT)
       DESTINATION "lib"
       USE_SOURCE_PERMISSIONS
       COMPONENT ${INSTALL_COMPONENT})
+	install(
+		DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/lib/"
+		DESTINATION "lib"
+		USE_SOURCE_PERMISSIONS
+		COMPONENT ${INSTALL_COMPONENT}
+		FILES_MATCHING PATTERN ${DYLIB_EXT})
+
 
 	install(
 	    DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/unix/"

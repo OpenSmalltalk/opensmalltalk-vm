@@ -92,6 +92,13 @@ macro(configure_installables INSTALL_COMPONENT)
             PATTERN *.dll EXCLUDE)
 
 	install(
+		DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/bin/"
+		DESTINATION "./"
+		COMPONENT ${INSTALL_COMPONENT}
+		FILES_MATCHING PATTERN *.dll
+		PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+
+	install(
 	    DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/win/"
 	    DESTINATION include/pharovm
 	    COMPONENT include
@@ -124,5 +131,6 @@ macro(add_required_libs_per_platform)
 endmacro()
 
 set(LIBFFI_TARGET "x86_64-unknown-cygwin")
-set(LIBFFI_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/bin/ffi-7.dll")
-set(LIBFFI_FILES "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/bin/ffi-7.dll")
+set(LIBFFI_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/bin/cygffi-7.dll")
+set(LIBFFI_FILES "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/bin/cygffi-7.dll")
+set(LIBFFI_ADDITIONAL "AR=${CMAKE_TOOLCHAIN_PREFIX}-ar.exe" "DLLTOOL=${CMAKE_TOOLCHAIN_PREFIX}-dlltool.exe")

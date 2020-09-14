@@ -57,7 +57,14 @@ endmacro()
 
 macro(configure_installables INSTALL_COMPONENT)
   set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/build/dist")
-    
+  
+	install(
+		DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/lib/"
+		DESTINATION "${VM_EXECUTABLE_NAME}.app/Contents/MacOS/Plugins"
+		COMPONENT ${INSTALL_COMPONENT}
+		FILES_MATCHING PATTERN ${DYLIB_EXT})
+  
+  
   install(
     DIRECTORY "${CMAKE_BINARY_DIR}/build/vm/"
     DESTINATION "./"
