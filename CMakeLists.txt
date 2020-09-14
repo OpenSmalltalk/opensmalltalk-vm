@@ -259,6 +259,7 @@ add_custom_command(
   COMMENT "Generating VM files for flavour: ${FLAVOUR}")
   
 add_custom_target(vmmaker DEPENDS ${VMMAKER_OUTPUT_PATH}/VMMaker.image)
+add_custom_target(generate-sources DEPENDS ${VMSOURCEFILES} ${PLUGIN_GENERATED_FILES})
   
 endif()
 
