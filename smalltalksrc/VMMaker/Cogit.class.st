@@ -11936,6 +11936,12 @@ Cogit >> stackPointerAddress [
 	^coInterpreter stackPointerAddress
 ]
 
+{ #category : #'as yet unclassified' }
+Cogit >> stackPointerAlignment [
+	<doNotGenerate>
+	^ backEnd stackPointerAlignment
+]
+
 { #category : #disassembly }
 Cogit >> startMcpcAndCogMethodForMcpc: mcpc in: cogMethod do: aBinaryBlock [
 	"Evaluate aBinaryBlock with the startmcpc and method containing mcpc in cogMethod."

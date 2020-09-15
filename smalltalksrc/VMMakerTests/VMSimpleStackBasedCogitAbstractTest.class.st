@@ -315,13 +315,13 @@ VMSimpleStackBasedCogitAbstractTest >> disassembleFrom: anIndex opcodes: numberO
 { #category : #'helpers - registers' }
 VMSimpleStackBasedCogitAbstractTest >> framePointerRegisterValue [
 
-	^ self readRegister: UcX86Registers rbp
+	^ self readRegister: machineSimulator framePointerRegister
 ]
 
 { #category : #'helpers - registers' }
 VMSimpleStackBasedCogitAbstractTest >> framePointerRegisterValue: aValue [
 	
-	self writeRegister: UcX86Registers rbp value: aValue
+	self writeRegister: machineSimulator framePointerRegister value: aValue
 ]
 
 { #category : #'helpers - cog methods' }
@@ -379,7 +379,7 @@ VMSimpleStackBasedCogitAbstractTest >> initializeStackMemory [.
 { #category : #'helpers - registers' }
 VMSimpleStackBasedCogitAbstractTest >> instructionPointer [
 
-	^ self readRegister: UcX86Registers rip
+	^ self readRegister: machineSimulator instructionPointerRegister
 ]
 
 { #category : #running }
@@ -573,7 +573,7 @@ VMSimpleStackBasedCogitAbstractTest >> receiverRegister: anInteger [
 { #category : #'helpers - registers' }
 VMSimpleStackBasedCogitAbstractTest >> returnValue [
 
-	^ self readRegister: UcX86Registers rdx
+	^ self readRegister:  machineSimulator receiverRegister
 ]
 
 { #category : #helpers }
@@ -716,13 +716,13 @@ VMSimpleStackBasedCogitAbstractTest >> stackAt: index [
 { #category : #'helpers - registers' }
 VMSimpleStackBasedCogitAbstractTest >> stackPointerRegisterValue [
 
-	^ self readRegister: UcX86Registers esp
+	^ self readRegister: machineSimulator stackPointerRegister
 ]
 
 { #category : #'helpers - registers' }
 VMSimpleStackBasedCogitAbstractTest >> stackPointerRegisterValue: aValue [
 	
-	self writeRegister: UcX86Registers rsp value: aValue
+	self writeRegister: machineSimulator stackPointerRegister value: aValue
 ]
 
 { #category : #'helpers - stack' }
@@ -738,11 +738,11 @@ VMSimpleStackBasedCogitAbstractTest >> topAddress [
 ]
 
 { #category : #'helpers - registers' }
-VMSimpleStackBasedCogitAbstractTest >> writeRegister: anUcX86Registers value: anInteger [ 
+VMSimpleStackBasedCogitAbstractTest >> writeRegister: aRegister value: anInteger [ 
 
 	| value |
 	value := ByteArray new: self wordSize.
 	value integerAt: 1 put: anInteger size: self wordSize signed: false.
-	machineSimulator register: anUcX86Registers value write: value.
+	machineSimulator register: aRegister value write: value.
 
 ]

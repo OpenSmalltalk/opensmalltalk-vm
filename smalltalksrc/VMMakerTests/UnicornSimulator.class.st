@@ -340,6 +340,12 @@ UnicornSimulator >> register: anIndex readInto: aByteArray [
 	unicorn register: anIndex readInto: aByteArray 
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornSimulator >> register: aRegisterIndex write: aByteArray [
+
+	unicorn register: aRegisterIndex readInto: aByteArray 
+]
+
 { #category : #accessing }
 UnicornSimulator >> registerDescriptors [
 	

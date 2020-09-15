@@ -3214,8 +3214,21 @@ CogARMv8Compiler >> genSaveRegForCCall [
 CogARMv8Compiler >> genSaveRegs: regMask [
 	"Save the registers in regMask for a call into the C run-time from a trampoline"
 	<inline: true>
+	| registerCount |
 	self assert: (R12 > R1 and: [R12 - R1 + 1 = 12]).
 	self deny: (regMask anyMask: (cogit registerMaskFor: SPReg and: FPReg)).
+	
+	registerCount := 0.
+	R12 to: R1 by: -1 do:
+		[:reg|
+		 (regMask anyMask: (cogit registerMaskFor: reg)) ifTrue:
+			[registerCount := registerCount + 1]].
+	
+	"If we are saving an odd number of registers, this would unalign the stack.
+	Then, lets save an extra thing to force the stack alignment"
+	registerCount \\ 2 == 0
+		ifFalse: [ cogit PushCq: 16rBEEF "Marker smallinteger to generate a valid stack" ].
+	
 	R12 to: R1 by: -1 do:
 		[:reg|
 		 (regMask anyMask: (cogit registerMaskFor: reg)) ifTrue:
@@ -4530,6 +4543,20 @@ CogARMv8Compiler >> stackPageInterruptHeadroomBytes [
 	 JIT the stack has to have room for interrupt handlers which will run on the stack.
 	According to ARM architecture v5 reference manual chapter A2.6, the basic interrupt procedure does not push anything onto the stack. It uses SPSR_err and R14_err to preserve state. Afterwards, it calls an interrupt procedure. So leave some room."
 	^128 "32 words"
+]
+
+{ #category : #'as yet unclassified' }
+CogARMv8Compiler >> stackPointerAlignment [
+	
+	<doNotGenerate>
+	"As for the ARMv8 Arm® Architecture Reference Manual
+	
+	D1.8.2 SP alignment checking
+	A misaligned stack pointer is where bits[3:0] of the stack pointer are not 0b0000, when the stack pointer is used as the base address of the calculation, regardless of any offset applied by the instruction.
+	
+	Meaning that the stack should be aligned to 16 bytes"
+
+	^ 16
 ]
 
 { #category : #encoding }
