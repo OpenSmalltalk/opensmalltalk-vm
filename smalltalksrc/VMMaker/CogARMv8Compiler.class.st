@@ -85,7 +85,7 @@ CogARMv8Compiler class >> IPReg [
 { #category : #translation }
 CogARMv8Compiler class >> ISA [
 	"Answer the name of the ISA the receiver implements."
-	^#ARMv8
+	^#aarch64
 ]
 
 { #category : #accessing }
@@ -2237,19 +2237,12 @@ CogARMv8Compiler >> concretizeNegateR [
 	"Will get inlined into concretizeAt: switch."
 
 	<inline: true>
-	| reg |
-	self halt.
-	reg := operands at: 0.
-	"RSB destReg, srcReg, #0"
-	self
-		machineCodeAt: 0
-		put:
-			(self
-				type: 1
-				op: RsbOpcode
-				set: 0
-				rn: reg
-				rd: reg).
+	self machineCodeAt: 0 put: 
+		(self negateSize: 1
+			sourceRegister: (operands at: 0)
+			sourceRegisterShiftType: 0 "LSL"
+			sourceRegisterShift: 0 "no shift"
+			destinationRegister: (operands at: 0)).
 	^ machineCodeSize := 4
 ]
 
@@ -4071,6 +4064,30 @@ CogARMv8Compiler >> nameForRegister: reg [ "<Integer>"
 ]
 
 { #category : #assembler }
+CogARMv8Compiler >> negateSize: is64Bits sourceRegister: sourceRegister sourceRegisterShiftType: immediate2bitShiftType sourceRegisterShift: immediate6bitsShiftValue destinationRegister: destinationRegister [
+	
+	"C6.2.199 NEG (shifted register)
+	
+	Negate (shifted register) negates an optionally-shifted register value, and writes the result to the destination register.
+	
+	NEG <Xd>, <Xm>{, <shift> #<amount>}
+	
+	shiftType is the optional shift type to be applied to the second source operand, defaulting to LSL and encoded in the shift field. It can have the following values:
+		LSL when shift = 00
+		LSR when shift = 01
+		ASR when shift = 10
+	"
+	
+	^ is64Bits << 31
+		bitOr: (2r1001011 << 24
+		bitOr: ((immediate2bitShiftType bitAnd: 2r11) << 22
+		bitOr: ((sourceRegister bitAnd: 16r1f) << 16
+		bitOr: ((immediate6bitsShiftValue bitAnd: 16r3f) << 10
+		bitOr: (16r1f << 5
+		bitOr: (destinationRegister bitAnd: 16r1f))))))
+]
+
+{ #category : #assembler }
 CogARMv8Compiler >> nop [
 
 	"C6.2.203 NOP
@@ -4524,8 +4541,8 @@ CogARMv8Compiler >> stop [
 
 { #category : #'generate machine code - support' }
 CogARMv8Compiler >> stopsFrom: startAddr to: endAddr [
-	self assert: endAddr - startAddr + 1 \\ 4 = 0.
-	startAddr to: endAddr by: 4 do: 
+	self assert: endAddr - startAddr + 1 \\ 8 = 0.
+	startAddr to: endAddr by: 8 do: 
 		[:addr | objectMemory longAt: addr put: self stop].
 ]
 

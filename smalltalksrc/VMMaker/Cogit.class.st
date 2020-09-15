@@ -3862,6 +3862,13 @@ Cogit >> ceCheckFeatures [
 	^self simulateLeafCallOf: ceCheckFeaturesFunction
 ]
 
+{ #category : #'as yet unclassified' }
+Cogit >> ceDereferenceSelectorIndex [
+	
+	<doNotGenerate>
+	^ objectRepresentation selectorIndexDereferenceRoutine
+]
+
 { #category : #'simulation only' }
 Cogit >> ceEnterCogCodePopReceiverReg [
 	<api: 'extern void (*ceEnterCogCodePopReceiverReg)()'>

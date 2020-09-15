@@ -269,6 +269,12 @@ UnicornARMv8Simulator >> x7 [
 ]
 
 { #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> x7: anInteger [ 
+
+	^ self writeRegister: UcARM64Registers x7 value: anInteger
+]
+
+{ #category : #'as yet unclassified' }
 UnicornARMv8Simulator >> x8 [
 
 	^ self readRegister: UcARM64Registers x8

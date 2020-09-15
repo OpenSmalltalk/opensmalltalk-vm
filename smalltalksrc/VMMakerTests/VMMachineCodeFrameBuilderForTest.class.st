@@ -7,7 +7,8 @@ Class {
 		'receiver',
 		'arguments',
 		'temporaries',
-		'spouseContext'
+		'spouseContext',
+		'method'
 	],
 	#category : #VMMakerTests
 }
@@ -31,7 +32,7 @@ VMMachineCodeFrameBuilderForTest >> buildFrame [
 	test pushAddress: test machineSimulator framePointerRegisterValue.
 	test machineSimulator framePointerRegisterValue: test machineSimulator stackPointerRegisterValue.
 
-	test pushAddress: (test memory nilObject bitOr: (self hasSpouseContext ifTrue: [1] ifFalse: [0])). "method"
+	test pushAddress: (method address bitOr: (self hasSpouseContext ifTrue: [1] ifFalse: [0])). "method"
 	test pushAddress: (self hasSpouseContext
 		ifTrue: [ spouseContext ]
 		ifFalse: [ test memory nilObject ]). "context"
@@ -53,10 +54,21 @@ VMMachineCodeFrameBuilderForTest >> hasSpouseContext [
 VMMachineCodeFrameBuilderForTest >> initializeWithTest: aTest [
 	
 	self test: aTest.
+	method := test memory nilObject.
 	receiver := test memory nilObject.
 	returnAddress := test callerAddress.
 	arguments := #().
 	temporaries := #().
+]
+
+{ #category : #accessing }
+VMMachineCodeFrameBuilderForTest >> method [
+	^ method
+]
+
+{ #category : #accessing }
+VMMachineCodeFrameBuilderForTest >> method: anObject [
+	method := anObject
 ]
 
 { #category : #accessing }
@@ -77,6 +89,11 @@ VMMachineCodeFrameBuilderForTest >> returnAddress [
 { #category : #accessing }
 VMMachineCodeFrameBuilderForTest >> returnAddress: anObject [
 	returnAddress := anObject
+]
+
+{ #category : #accessing }
+VMMachineCodeFrameBuilderForTest >> spouseContext [
+	^ spouseContext
 ]
 
 { #category : #accessing }

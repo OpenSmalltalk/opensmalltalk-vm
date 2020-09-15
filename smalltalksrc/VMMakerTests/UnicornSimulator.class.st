@@ -34,6 +34,12 @@ UnicornSimulator class >> X64 [
 	^ UnicornX64Simulator new
 ]
 
+{ #category : #'instance creation' }
+UnicornSimulator class >> aarch64 [
+	
+	^ UnicornARMv8Simulator new
+]
+
 { #category : #accessing }
 UnicornSimulator >> aliasForRegister: aRegisterName [
 
