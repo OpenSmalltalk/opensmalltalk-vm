@@ -716,13 +716,13 @@ VMSimpleStackBasedCogitAbstractTest >> stackAt: index [
 { #category : #'helpers - registers' }
 VMSimpleStackBasedCogitAbstractTest >> stackPointerRegisterValue [
 
-	^ self readRegister: machineSimulator stackPointerRegister
+	^ machineSimulator stackPointerRegisterValue
 ]
 
 { #category : #'helpers - registers' }
 VMSimpleStackBasedCogitAbstractTest >> stackPointerRegisterValue: aValue [
-	
-	self writeRegister: machineSimulator stackPointerRegister value: aValue
+
+	machineSimulator stackPointerRegisterValue: aValue
 ]
 
 { #category : #'helpers - stack' }

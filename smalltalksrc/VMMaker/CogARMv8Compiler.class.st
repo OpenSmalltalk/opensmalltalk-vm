@@ -3132,14 +3132,6 @@ CogARMv8Compiler >> genMulR: regSource R: regDest [
 	^first
 ]
 
-{ #category : #'generate machine code' }
-CogARMv8Compiler >> genPopRegisterMask: registersToBeSavedMask [
-	<inline: true>
-	^registersToBeSavedMask = 0
-		ifTrue: [cogit Label]
-		ifFalse: [cogit gen: PopLDM operand: registersToBeSavedMask]
-]
-
 { #category : #'smalltalk calling convention' }
 CogARMv8Compiler >> genPushRegisterArgsForAbortMissNumArgs: numArgs [
 	"Ensure that the register args are pushed before the outer and
@@ -3200,7 +3192,28 @@ CogARMv8Compiler >> genRemoveNArgsFromStack: n [
 CogARMv8Compiler >> genRestoreRegs: regMask [
 	"Restore the registers in regMask as saved by genSaveRegs:."
 	<inline: true>
-	^self genPopRegisterMask: regMask
+	| registerCount |
+	self assert: (R12 > R1 and: [R12 - R1 + 1 = 12]).
+	self deny: (regMask anyMask: (cogit registerMaskFor: SPReg and: FPReg)).
+	
+	registerCount := 0.
+	R1 to: R12 do:
+		[:reg|
+		 (regMask anyMask: (cogit registerMaskFor: reg)) ifTrue:
+			[registerCount := registerCount + 1]].
+	
+	R1 to: R12 do:
+		[:reg|
+		 (regMask anyMask: (cogit registerMaskFor: reg)) ifTrue:
+			[cogit PopR: reg]].
+	
+	"If we are restoring an odd number of registers, this would unalign the stack.
+	Then, lets pop the extra thing to force the stack alignment"
+	registerCount \\ 2 == 0
+		ifFalse: [ 
+			cogit PopR: R0  ].
+	
+	^0
 ]
 
 { #category : #abi }

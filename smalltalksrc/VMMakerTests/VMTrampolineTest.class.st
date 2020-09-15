@@ -8,7 +8,64 @@ Class {
 }
 
 { #category : #tests }
-VMTrampolineTest >> testAlignedNumberOfRegistersProducesAlignedStackPointer [
+VMTrampolineTest >> setUp [
+
+	super setUp.
+	
+	"Precondition for all tests"
+	self assert: self stackPointerRegisterValue \\ cogit stackPointerAlignment equals: 0
+]
+
+{ #category : #tests }
+VMTrampolineTest >> testRestoreAlignedNumberOfRegistersProducesAlignedStackPointer [
+
+	| registerMask bytesAlignment registerIndex initialStackPointer |
+	registerMask := 0.
+	bytesAlignment := cogit stackPointerAlignment.
+
+	self wordSize to: bytesAlignment by: self wordSize do: [ :i |
+		registerIndex := i / self wordSize.
+		registerMask := registerMask bitOr: (cogit registerMaskFor: registerIndex).
+	].
+
+	initialStackPointer := self stackPointerRegisterValue.
+	self stackPointerRegisterValue: initialStackPointer.
+	self compile: [ 
+		cogit backend genSaveRegs: registerMask.
+		cogit backend genRestoreRegs: registerMask.
+	].	
+
+	self runGeneratedCode.
+
+	self assert: self stackPointerRegisterValue equals: initialStackPointer
+]
+
+{ #category : #tests }
+VMTrampolineTest >> testRestoreUnalignedNumberOfRegistersProducesAlignedStackPointer [
+
+	| registerMask bytesAlignment registerIndex initialStackPointer |
+	registerMask := 0.
+	bytesAlignment := cogit stackPointerAlignment.
+
+	self wordSize to: bytesAlignment + self wordSize by: self wordSize do: [ :i |
+		registerIndex := i / self wordSize.
+		registerMask := registerMask bitOr: (cogit registerMaskFor: registerIndex).
+	].
+
+	initialStackPointer := self stackPointerRegisterValue.
+	self stackPointerRegisterValue: initialStackPointer.
+	self compile: [ 
+		cogit backend genSaveRegs: registerMask.
+		cogit backend genRestoreRegs: registerMask.
+	].	
+
+	self runGeneratedCode.
+
+	self assert: self stackPointerRegisterValue equals: initialStackPointer
+]
+
+{ #category : #tests }
+VMTrampolineTest >> testStoreAlignedNumberOfRegistersProducesAlignedStackPointer [
 
 	| registerMask bytesAlignment registerIndex |
 	registerMask := 0.
@@ -20,14 +77,34 @@ VMTrampolineTest >> testAlignedNumberOfRegistersProducesAlignedStackPointer [
 	].
 
 	self compile: [ cogit backend genSaveRegs: registerMask ].	
-	self stackPointerRegisterValue: cogit stackPointerAlignment * 200.
 	self runGeneratedCode.
 
 	self assert: self stackPointerRegisterValue \\ cogit stackPointerAlignment equals: 0
 ]
 
 { #category : #tests }
-VMTrampolineTest >> testUnalignedNumberOfRegistersProducesAlignedStackPointer [
+VMTrampolineTest >> testStoreAlignedNumberOfRegistersPushesValuesToStack [
+
+	| registerMask bytesAlignment registerIndex initialStackPointer |
+	registerMask := 0.
+	bytesAlignment := cogit stackPointerAlignment.
+
+	self wordSize to: bytesAlignment by: self wordSize do: [ :i |
+		registerIndex := i / self wordSize.
+		registerMask := registerMask bitOr: (cogit registerMaskFor: registerIndex).
+	].
+
+	self compile: [ cogit backend genSaveRegs: registerMask ].	
+	initialStackPointer := self stackPointerRegisterValue.
+	self runGeneratedCode.
+
+	self
+		assert: self stackPointerRegisterValue
+		equals: initialStackPointer - cogit stackPointerAlignment
+]
+
+{ #category : #tests }
+VMTrampolineTest >> testStoreUnalignedNumberOfRegistersProducesAlignedStackPointer [
 
 	| registerMask bytesAlignment registerIndex |
 	
@@ -46,7 +123,6 @@ VMTrampolineTest >> testUnalignedNumberOfRegistersProducesAlignedStackPointer [
 
 	self compile: [ cogit backend genSaveRegs: registerMask ].	
 
-	self stackPointerRegisterValue: cogit stackPointerAlignment * 200.
 	self runGeneratedCode.
 	self assert: self stackPointerRegisterValue \\ cogit stackPointerAlignment equals: 0
 ]
