@@ -218,7 +218,7 @@ $(ETOBJ):	$(WIN32MISCDIR)/etext.c
 	$(CC) -c -o $@ -fomit-frame-pointer -O2 $<
 
 $(JMPOBJ):	$(WIN32MISCDIR)/$(JMPASM)
-	$(CC) -c $< -o $@
+	$(AS) -o $@ $<
 
 vm:	$(VMEXE)
 

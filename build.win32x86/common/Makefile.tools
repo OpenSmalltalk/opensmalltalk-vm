@@ -12,9 +12,11 @@ COMPILER_TO_USE:=gcc
 endif
 
 ifeq ($(COMPILER_TO_USE),clang)
+AS:= $(TOOLPREFIX)clang -c
 CC:= $(TOOLPREFIX)clang
 CXX:= $(TOOLPREFIX)clang++
 else
+AS:= $(TOOLPREFIX)as
 CC:= $(TOOLPREFIX)gcc
 CXX:= $(TOOLPREFIX)g++
 endif
