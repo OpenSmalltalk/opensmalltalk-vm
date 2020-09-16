@@ -155,6 +155,41 @@ UnicornARMv8Simulator >> pc: aValue [
 	^ self writeRegister: self instructionPointerRegister value: aValue
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> postCallArgumentsNumArgs: numArgs "<Integer>" in: aMemory [ "<ByteArray|Bitmap>"
+	"Answer an argument vector of the requested size after a vanilla
+	 ABI call. For ARM the Procedure Calling Specification can be found in IHI0042D_aapcs.pdf.
+	On ARM this typically means accessing r0 through r3 and fetching additional arguments from the stack, acording to pages 20f. aapcs.
+	We assume that all arguments are single word arguments, which can not be supplied on co-processor-registers.
+	 For compatibility with Cog/Slang we answer unsigned values."
+	^(1 to: numArgs) collect: [:i |
+		i < 5 
+			ifTrue: [self perform: (self registerStateGetters at: i)]
+			"ARM uses a full descending stack. Directly after calling a procedure, nothing but the arguments are pushed."
+			ifFalse: [memory unsignedLongAt: self sp + (i-5)*4 bigEndian: false]].
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> pushBytes: aByteArray [ 
+
+	| stackAddressIntegerValue |
+	self assert: aByteArray size = self wordSize.
+
+	"Getting address from stack register"
+	stackAddressIntegerValue := self stackPointerRegisterValue.
+
+	"Updating SP"
+	stackAddressIntegerValue := stackAddressIntegerValue - self wordSize.
+	self stackPointerRegisterValue: stackAddressIntegerValue.
+	
+	"Putting the value in the stack memory"
+	self
+		memoryAt: stackAddressIntegerValue
+		write: aByteArray
+		size: self wordSize
+
+]
+
 { #category : #registers }
 UnicornARMv8Simulator >> receiverRegister [
 	
@@ -167,10 +202,33 @@ UnicornARMv8Simulator >> registerList [
 	^ #(lr pc sp fp x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 zero negative carry overflow)
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> registerStateGetters [
+
+	^#(	x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x12 sp lr pc)
+]
+
 { #category : #registers }
 UnicornARMv8Simulator >> sendNumberOfArgumentsRegister [
 	
 	^ UcARM64Registers x6
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> simulateJumpCallOf: address memory: aMemory [
+	"Simulate a frame-building jump of address.  Build a frame since
+	a) this is used for calls into the run-time which are unlikely to be leaf-calls"
+	"This method builds a stack frame as expected by the simulator, not as defined by ARM aapcs-abi.
+	In ARM aapcs, every method can define for itself, wether it wants to push lr (nextpc), and wether it 
+	uses a frame pointer. The standard never mentions a fp. It merely defines r4-r11 to be callee-saved."
+	
+	self assert: self sp \\ 8 = 0. "This check ensures, that we conform with ARM abi. Before doing anything to the stack, we ensure 2-word alignment."
+
+	self pushWord: self linkRegisterValue.
+	self pushWord: self fp.
+	self framePointerRegisterValue: self stackPointerRegisterValue.
+
+	self instructionPointerValue: address
 ]
 
 { #category : #'as yet unclassified' }

@@ -303,6 +303,15 @@ UnicornSimulator >> peekAddress [
 	^ self peek integerAt: 1 size: self wordSize signed: false
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornSimulator >> pushWord: anInteger [ 
+
+	| aByteArray |
+	aByteArray := ByteArray new: self wordSize.
+	aByteArray integerAt: 1 put: anInteger size: self wordSize signed: false.
+	self pushBytes: aByteArray
+]
+
 { #category : #registers }
 UnicornSimulator >> readRegister: aRegisterID [
 
