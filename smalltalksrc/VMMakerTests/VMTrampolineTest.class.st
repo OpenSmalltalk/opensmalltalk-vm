@@ -54,6 +54,42 @@ VMTrampolineTest >> setUp [
 ]
 
 { #category : #tests }
+VMTrampolineTest >> testLoadStackPointersShouldLoadFramePointer [
+	
+	self compile: [ cogit backend genLoadStackPointers ].
+	
+	"We reset the stack pointer and run our code"
+	
+	machineSimulator baseRegisterValue: cogit varBaseAddress.
+	self interpreter stackPointer: 0.
+	self interpreter framePointer: 42.
+	self framePointerRegisterValue: 0.
+
+	self runFrom: initialAddress until: self getLastAddress.
+
+	"The generated code should load in FP the value stored in `framePointer`"
+	self assert: self framePointerRegisterValue equals: 42
+]
+
+{ #category : #tests }
+VMTrampolineTest >> testLoadStackPointersShouldLoadStackPointer [
+	
+	self compile: [ cogit backend genLoadStackPointers ].
+	
+	"We reset the stack pointer and run our code"
+	
+	machineSimulator baseRegisterValue: cogit varBaseAddress.
+	self interpreter stackPointer: 17.
+	self interpreter framePointer: 0.
+	self stackPointerRegisterValue: 0.
+	
+	self runFrom: initialAddress until: self getLastAddress.
+
+	"The generated code should load in SP the value stored in `stackPointer`"
+	self assert: self stackPointerRegisterValue equals: 17
+]
+
+{ #category : #tests }
 VMTrampolineTest >> testRestoreRegistersProducesAlignedStackPointer [
 
 	| initialStackPointer |

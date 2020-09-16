@@ -315,13 +315,13 @@ VMSimpleStackBasedCogitAbstractTest >> disassembleFrom: anIndex opcodes: numberO
 { #category : #'helpers - registers' }
 VMSimpleStackBasedCogitAbstractTest >> framePointerRegisterValue [
 
-	^ self readRegister: machineSimulator framePointerRegister
+	^ machineSimulator framePointerRegisterValue
 ]
 
 { #category : #'helpers - registers' }
 VMSimpleStackBasedCogitAbstractTest >> framePointerRegisterValue: aValue [
 	
-	self writeRegister: machineSimulator framePointerRegister value: aValue
+	machineSimulator framePointerRegisterValue: aValue
 ]
 
 { #category : #'helpers - cog methods' }
@@ -597,8 +597,10 @@ VMSimpleStackBasedCogitAbstractTest >> runGeneratedCode [
 	"The different platforms generates code in a different way, so the number of opcodes can not be valid. Eg: ARM generates more instructions per opcode. It has to calculate the instructions to run differently"
 
 	machineSimulator
-		doRunGeneratedCodeStartAt: initialAddress
-		instructions: self abstractInstructions
+		startAt: initialAddress
+		until: callerAddress
+		timeout: 0
+		count: self abstractInstructions size.
 ]
 
 { #category : #helpers }
