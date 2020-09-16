@@ -39,7 +39,8 @@ VMTrampolineTest >> setUp [
 	super setUp.
 	
 	"Precondition for all tests. SP should be aligned to the stack alignment required by the platform"
-	self assert: self stackPointerRegisterValue \\ cogit stackPointerAlignment equals: 0.
+	[isAligned := self stackPointerRegisterValue \\ cogit stackPointerAlignment = 0]
+		whileFalse: [ self pushAddress: 16rBEEF "a small integer to mark..." ].
 	
 	pushedBytes := cogit stackPointerAlignment.
 	self isAligned ifFalse: [
