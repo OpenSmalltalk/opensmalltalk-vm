@@ -26,13 +26,23 @@ VMMachineCodeFrameBuilderForTest >> arguments: anObject [
 { #category : #building }
 VMMachineCodeFrameBuilderForTest >> buildFrame [
 
+	| methodAddress |
 	test createFramelessCallFrom: returnAddress receiver: receiver arguments: arguments.
+	test machineSimulator hasLinkRegister 
+		ifTrue: [ test pushAddress: returnAddress ].
 
 	"These are pushed when activating the method"	
 	test pushAddress: test machineSimulator framePointerRegisterValue.
 	test machineSimulator framePointerRegisterValue: test machineSimulator stackPointerRegisterValue.
 
-	test pushAddress: (method address bitOr: (self hasSpouseContext ifTrue: [1] ifFalse: [0])). "method"
+	"Method can be nil or a cog method.
+	If nil, put a nil address.
+	Otherwise, use the address of the cog method"
+	methodAddress := method
+		ifNil: [ test memory nilObject ]
+		ifNotNil: [ method address ].
+		
+	test pushAddress: (methodAddress bitOr: (self hasSpouseContext ifTrue: [1] ifFalse: [0])). "method"
 	test pushAddress: (self hasSpouseContext
 		ifTrue: [ spouseContext ]
 		ifFalse: [ test memory nilObject ]). "context"
@@ -54,7 +64,6 @@ VMMachineCodeFrameBuilderForTest >> hasSpouseContext [
 VMMachineCodeFrameBuilderForTest >> initializeWithTest: aTest [
 	
 	self test: aTest.
-	method := test memory nilObject.
 	receiver := test memory nilObject.
 	returnAddress := test callerAddress.
 	arguments := #().

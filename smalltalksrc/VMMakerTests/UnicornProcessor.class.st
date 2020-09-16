@@ -7,10 +7,22 @@ Class {
 	#category : #'VMMakerTests-Unicorn'
 }
 
+{ #category : #'as yet unclassified' }
+UnicornProcessor >> ebp: anInteger [ 
+	
+	machineSimulator ebp: anInteger
+]
+
 { #category : #registers }
 UnicornProcessor >> edx: anInteger [ 
 	
 	^ machineSimulator edx: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornProcessor >> esp: anInteger [ 
+	
+	machineSimulator esp: anInteger
 ]
 
 { #category : #caching }
@@ -53,6 +65,18 @@ UnicornProcessor >> machineSimulator: aMachineSimulator [
 UnicornProcessor >> pc: anInteger [ 
 	
 	^ machineSimulator instructionPointerValue: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornProcessor >> r10: anInteger [ 
+	
+	machineSimulator r10: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornProcessor >> r11: anInteger [ 
+	
+	machineSimulator r11: anInteger
 ]
 
 { #category : #'as yet unclassified' }
@@ -118,6 +142,12 @@ UnicornProcessor >> smashRegistersWithValuesFrom: base by: step [
 UnicornProcessor >> sp [
 	
 	^ machineSimulator stackPointerRegisterValue
+]
+
+{ #category : #'as yet unclassified' }
+UnicornProcessor >> sp: anInteger [ 
+	
+	machineSimulator stackPointerRegisterValue: anInteger
 ]
 
 { #category : #'as yet unclassified' }
