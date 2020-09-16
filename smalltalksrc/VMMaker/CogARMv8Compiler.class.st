@@ -224,7 +224,7 @@ CogARMv8Compiler class >> initializeAbstractRegisters [
 
 	CallerSavedRegisterMask := self registerMaskFor: "0 and: 1 and:" 2 and: 3 and: 9 and: 12.
 
-	TempReg			:= R0.
+	TempReg			:= R1.
 	ClassReg			:= R2.
 	ReceiverResultReg	:= R5.
 	SendNumArgsReg	:= R6.
@@ -946,7 +946,7 @@ CogARMv8Compiler >> computeMaximumSize [
 		[XorCwR]				-> [^self literalLoadInstructionBytes + 4].
 		[AddRR]					-> [^4].
 		[AndRR]					-> [^4].
-		[CmpRR]				-> [^(operands at:0) = SP ifTrue: [8] ifFalse: [4]].
+		[CmpRR]				-> [^((operands at:0) = SP or: (operands at: 1) = SP) ifTrue: [8] ifFalse: [4]].
 		[OrRR]					-> [^4].
 		[XorRR]					-> [^4].
 		[SubRR]					-> [ "When the operation includes the SP, we might need two instructions" ^(operands at: 0) = SP ifTrue: [ 8 ] ifFalse: [ 4 ]].
@@ -993,10 +993,13 @@ CogARMv8Compiler >> computeMaximumSize [
 												ifFalse: [self literalLoadInstructionBytes]]].
 		[MoveRR]				-> [^4].
 		[MoveRdRd]				-> [^4].
-		[MoveAwR]				-> [^(self isAddressRelativeToVarBase: (operands at: 0))
-													ifTrue: [4]
-													ifFalse: [self literalLoadInstructionBytes + 8 
-														"if register is SP we need an extra move"]].
+		[MoveAwR]				-> [
+			"if register is SP we need an extra move"
+			^(self isAddressRelativeToVarBase: (operands at: 0))
+					ifTrue: [(operands at: 1) = SP
+						ifTrue: [ 8 ]
+						ifFalse: [ 4 ]  ]
+					ifFalse: [self literalLoadInstructionBytes + 8 ]].
 		[MoveRAw]				-> [^(self isAddressRelativeToVarBase: (operands at: 1))
 													ifTrue: [4]
 													ifFalse: [self literalLoadInstructionBytes + 4]].
@@ -1109,8 +1112,26 @@ CogARMv8Compiler >> concretizeAddCqR [
 					destinationRegister: reg).
 		^ machineCodeSize := 4
 	].
-	1halt.
-	^ 0
+	
+	^ self concretizeAddCwR.
+]
+
+{ #category : #'as yet unclassified' }
+CogARMv8Compiler >> concretizeAddCwR [
+	
+	self assert: dependent notNil.
+	
+	self loadCwInto: ConcreteIPReg.
+	self
+		machineCodeAt: machineCodeSize
+		put: ( self
+			addsSize: 1
+			leftRegister: ConcreteIPReg
+			shiftedRightRegister: (operands at: 1)
+			shiftType: 0
+			shiftOffset: 0
+			destinationRegister: (operands at: 1)).
+	^ machineCodeSize := machineCodeSize + 4
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -1391,7 +1412,19 @@ CogARMv8Compiler >> concretizeCmpRR [
 
 			^ machineCodeSize := 8].
 		
-	register2 = SP ifTrue: [ self halt ].
+	register2 = SP ifTrue: [ 
+		self machineCodeAt: 0 put: (self movSize: 1 sourceRegisterMaybeSP: SP destinationRegisterMaybeSP: ConcreteIPReg).
+		self
+			machineCodeAt: 4
+			put:
+				(self
+					cmpSize: 1
+					shiftedRegister: register1
+					shiftType: 0
+					shiftValue: 0
+					secondRegister: ConcreteIPReg).
+
+			^ machineCodeSize := 8 ].
 	
 	self
 		machineCodeAt: 0
@@ -1709,15 +1742,26 @@ CogARMv8Compiler >> concretizeMoveAwR [
 	| srcAddr destReg instrOffset |
 	srcAddr := operands at: 0.
 	destReg := operands at: 1.
-	(self isAddressRelativeToVarBase: srcAddr)
-		ifTrue: [ self
-				machineCodeAt: 0
-				put: (self
-					ldrSize: 1
-					baseRegister: ConcreteVarBaseReg
-					unsignedOffset: srcAddr - cogit varBaseAddress
-					destinationRegister: destReg).
-			^ machineCodeSize := 4 ].
+	(self isAddressRelativeToVarBase: srcAddr) ifTrue: [ | actualDestination |
+		actualDestination := destReg = SP
+			ifTrue: [ ConcreteIPReg ]
+			ifFalse: [ destReg ].
+		self
+			machineCodeAt: 0
+			put: (self
+				ldrSize: 1
+				baseRegister: ConcreteVarBaseReg
+				unsignedOffset: srcAddr - cogit varBaseAddress
+				destinationRegister: actualDestination).
+		machineCodeSize := 4.
+			
+		destReg = SP ifTrue: [ 
+			self machineCodeAt: 4 put: (self movToFromSP: SP rn: actualDestination).
+			machineCodeSize := machineCodeSize + 4.
+		].
+
+		^ machineCodeSize ].
+	
 	"load the address into ConcreteIPReg"
 	instrOffset := self moveCw: srcAddr intoR: ConcreteIPReg.
 	self
@@ -4581,9 +4625,9 @@ CogARMv8Compiler >> stop [
 
 { #category : #'generate machine code - support' }
 CogARMv8Compiler >> stopsFrom: startAddr to: endAddr [
-	self assert: endAddr - startAddr + 1 \\ 8 = 0.
-	startAddr to: endAddr by: 8 do: 
-		[:addr | objectMemory longAt: addr put: self stop].
+	self assert: endAddr - startAddr + 1 \\ 4 = 0.
+	startAddr to: endAddr by: 4 do: 
+		[:addr | objectMemory long32At: addr put: self stop].
 ]
 
 { #category : #'inline cacheing' }

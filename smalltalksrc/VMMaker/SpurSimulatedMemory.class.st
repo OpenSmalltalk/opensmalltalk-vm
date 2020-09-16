@@ -35,6 +35,12 @@ SpurSimulatedMemory >> at: address put: a32BitValue [
 		signed: false
 ]
 
+{ #category : #'as yet unclassified' }
+SpurSimulatedMemory >> byteSize [
+	
+	^ self size
+]
+
 { #category : #accessing }
 SpurSimulatedMemory >> bytesPerElement [
 	
