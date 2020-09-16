@@ -34,14 +34,14 @@
 #undef error
 
 void
-error(char *errorMessage)
+error(const char *errorMessage)
 {
     sqError(errorMessage);
 }
 #endif
 
 void
-sqError(char *errorMessage)
+sqError(const char *errorMessage)
 {
     fprintf(stderr, "%s\n", errorMessage);
     abort();

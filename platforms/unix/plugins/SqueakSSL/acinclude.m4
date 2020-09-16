@@ -28,14 +28,11 @@ case $host in
             AS_IF([test "x$with_libtls" = "xyes"], [AC_MSG_ERROR([libtls requested but not found])])
             AS_IF([test "x$enable_dynamicopenssl" != "xno"], [
                 AC_CHECK_HEADERS([openssl/ssl.h],[
-                    AC_PLUGIN_SEARCH_LIBS([dlopen], [dl dld], [], [
-                        AC_MSG_FAILURE([unable to find the dlopen() function])
-                    ])
                     AC_MSG_CHECKING([for SSL support])
                     AC_MSG_RESULT([OpenSSL (dynamic)])
                 ],[
                     AC_MSG_CHECKING([for SSL support])
-                    AC_MSG_FAILURE([Headers Missing])
+                    AC_MSG_RESULT([Headers Missing])
                     AC_PLUGIN_DISABLE()
                 ])
             ],[

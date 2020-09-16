@@ -111,8 +111,6 @@
 
 #define	HAVE_MMAP 1
 
-#define	HAVE_DYLD 1
-
 #define	HAVE_LANGINFO_CODESET 1
 
 #define	HAVE_ALLOCA 1
@@ -127,6 +125,7 @@
 # define SIZEOF_LONG 8
 # define SIZEOF_LONG_LONG 8
 # define SIZEOF_VOID_P 8
+# define squeakInt64 long
 #endif
 
 #if (i386 || __i386 || __i386__) || (ppc || __ppc || __ppc__)
@@ -134,6 +133,7 @@
 # define SIZEOF_LONG 4
 # define SIZEOF_LONG_LONG 8
 # define SIZEOF_VOID_P 4
+# define squeakInt64 long long
 #endif
 
 /* structures */
@@ -171,7 +171,7 @@
 
 #define VM_MODULE_PREFIX ""
 /* #undef VM_DLSYM_PREFIX */
-#define VM_X11DIR "/usr/X11R6/lib"
+#define VM_X11DIR "/usr/X11/lib"
 
 /* avoid dependencies on glibc2.3 */
 
@@ -180,5 +180,33 @@
 #if defined(HAVE_FEATURES_H)
 # include "glibc.h"
 #endif
+
+/* picked up in 2020 */
+#define DOUBLE_WORD_ALIGNMENT /**/
+#define HAVE_DLERROR 1
+#define HAVE_EXECINFO_H 1
+#define HAVE_FCNTL_H 1
+#define HAVE_INTERP_H 1
+#define HAVE_INTTYPES_H 1
+#define HAVE_LIBDLLOADER 1
+#define HAVE_MEMORY_H 1
+#define HAVE_NANOSLEEP 1
+#define HAVE_PTHREAD_PRIO_INHERIT 1
+#define HAVE_STDINT_H 1
+#define HAVE_STDLIB_H 1
+#define HAVE_STRINGS_H 1
+#define HAVE_STRING_H 1
+#define HAVE_STRUCT_STAT_ST_BLKSIZE 1
+#define HAVE_STRUCT_TM_TM_ZONE 1
+#define HAVE_ST_BLKSIZE 1
+#define HAVE_SYS_FILE_H 1
+#define HAVE_SYS_PARAM_H 1
+#define HAVE_SYS_SELECT_H 1
+#define HAVE_SYS_STAT_H 1
+#define HAVE_SYS_TYPES_H 1
+#define HAVE_TM_ZONE 1
+#define HAVE_UUID_GENERATE 1
+#define HAVE_UUID_UUID_H 1
+#define STDC_HEADERS 1
 
 #endif /* __sq_config_h */
