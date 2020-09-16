@@ -4,10 +4,12 @@
 // Code adapted from Julia, whose license is MIT: https://julialang.org/license
 	.text
 	.globl _setjmp
+	.globl _setjmp0
 	.p2align	4, 0x90
 _setjmp:
-    movq   (%rsp), %rdx // rta
-    xor    %rax, %rax # return 0
+_setjmp0:
+    movq   (%rsp), %rdx		# rta
+    movq   %gs:0,  %rax		# SEH registration
     movq   %rax,    0(%rcx)
     movq   %rbx,    8(%rcx)
     movq   %rsp,   16(%rcx)
@@ -18,7 +20,7 @@ _setjmp:
     movq   %r13,   56(%rcx)
     movq   %r14,   64(%rcx)
     movq   %r15,   72(%rcx)
-    movq   %rdx,   80(%rcx) // %rip
+    movq   %rdx,   80(%rcx) # %rip
     movq   %rax,   88(%rcx)
     movaps %xmm6,  96(%rcx)
     movaps %xmm7, 112(%rcx)
@@ -30,6 +32,7 @@ _setjmp:
     movaps %xmm13,208(%rcx)
     movaps %xmm14,224(%rcx)
     movaps %xmm15,240(%rcx)
+    xor    %rax, %rax		# return 0
     ret
 
 	.globl _longjmp
@@ -56,6 +59,7 @@ _longjmp:
     movaps 208(%rcx), %xmm13
     movaps 224(%rcx), %xmm14
     movaps 240(%rcx), %xmm15
+    movq   %rax, %gs:0		# SEH registration
     movl   %edx, %eax
     test   %eax, %eax
     jne    a

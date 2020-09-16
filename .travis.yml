@@ -35,11 +35,11 @@ jobs:
   - env: ARCH="macos64x64" FLAVOR="squeak.cog.spur"
     <<: *mac-build
   - env: ARCH="linux32x86" FLAVOR="pharo.cog.spur" HEARTBEAT="threaded"
-  - env: ARCH="macos32x86" FLAVOR="pharo.cog.spur"
-    <<: *mac-build
+  # - env: ARCH="macos32x86" FLAVOR="pharo.cog.spur"
+  #   <<: *mac-build
   - env: ARCH="linux64x64" FLAVOR="pharo.cog.spur" HEARTBEAT="threaded"
-  - env: ARCH="macos64x64" FLAVOR="pharo.cog.spur"
-    <<: *mac-build
+  # - env: ARCH="macos64x64" FLAVOR="pharo.cog.spur"
+  #   <<: *mac-build
 
   - stage: "Minheadless CMake builds"
     env: ARCH="linux32x86" FLAVOR="squeak.cog.spur" CPU_ARCH="x86" BUILD_WITH_CMAKE="yes"

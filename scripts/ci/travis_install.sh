@@ -46,6 +46,7 @@ elif [[ "${ARCH}" = "linux32x86" ]]; then
             libglapi-mesa:i386 \
             libcairo2-dev:i386 \
             libpango1.0-dev:i386 \
+              libglib2.0-dev:i386 \
               libxft-dev:i386 \
               gir1.2-pango-1.0:i386 \
               gir1.2-freedesktop:i386 \
@@ -57,7 +58,7 @@ elif [[ "${ARCH}" = "linux32x86" ]]; then
             gcc-multilib \
             uuid-dev:i386 \
             libcurl4-openssl-dev:i386 \
-			libssh2-1-dev:i386
+            libssh2-1-dev:i386
 fi
 
 [[ "${ARCH}" != "linux32ARMv6" ]] && exit 0

@@ -37,3 +37,9 @@
 # define setjmp _setjmp
 # define longjmp _longjmp
 #endif
+/* clang on mingw redeclares _setjmp so we have to provide an alternative */
+#if __MINGW32__ || __MINGW64__ /* clang on cygwin/mingw */
+int __attribute__((__nothrow__,__returns_twice__)) _setjmp0(jmp_buf);
+# undef _setjmp
+# define _setjmp(b) _setjmp0(b)
+#endif

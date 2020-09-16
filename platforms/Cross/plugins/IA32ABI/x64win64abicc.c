@@ -198,7 +198,8 @@ thunkEntry(long long rcx, long long rdx,
 {
 	VMCallbackContext vmcc;
 	VMCallbackContext *previousCallbackContext;
-	long long flags, returnType;
+	int returnType;
+	long long flags;
 	long long intargs[4];
 	double fpargs[4];
 
@@ -215,7 +216,7 @@ extern void saveFloatRegsWin64(long long xmm0,long long xmm1,long long xmm2, lon
 		return -1;
 	}
 
-	if (!(returnType = setjmp(vmcc.trampoline))) {
+	if (!(returnType = _setjmp(vmcc.trampoline))) {
 		previousCallbackContext = getMRCC();
 		setMRCC(&vmcc);
 		vmcc.thunkp = thunkp;

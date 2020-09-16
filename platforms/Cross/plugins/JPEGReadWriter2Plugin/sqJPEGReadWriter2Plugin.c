@@ -63,7 +63,7 @@ primJPEGWriteImageonByteArrayformqualityprogressiveJPEGerrorMgrWriteScanlines(
 	pjerr->setjmp_buffer = &jb;
 	pjerr->pub.error_exit = error_exit;
 
-	if (!setjmp(jb)) {
+	if (!_setjmp(jb)) {
 		jpeg_create_compress(pcinfo);
 		jpeg_mem_dest(pcinfo, destination, destinationSizePtr);
 
@@ -157,7 +157,7 @@ primJPEGReadImagefromByteArrayonFormdoDitheringerrorMgrReadScanlines(
 	pjerr->setjmp_buffer = &jb;
 	pjerr->pub.error_exit = error_exit;
 
-	if (setjmp(jb)) {
+	if (_setjmp(jb)) {
 		jpeg_destroy_decompress(pcinfo);
 		ok = 0;
 	}
@@ -304,7 +304,7 @@ primJPEGReadHeaderfromByteArraysizeerrorMgrReadHeader(
 	pjerr->setjmp_buffer = &jb;
 	pjerr->pub.error_exit = error_exit;
 
-	if (setjmp(jb)) {
+	if (_setjmp(jb)) {
 		jpeg_destroy_decompress(pcinfo);
 		return;
 	}

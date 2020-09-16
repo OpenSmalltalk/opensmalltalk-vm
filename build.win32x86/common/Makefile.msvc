@@ -51,6 +51,7 @@ OBJDIR:= $(BUILD)/vm
 
 PLATDIR:=../../platforms
 CROSSDIR:=$(PLATDIR)/Cross/vm
+TPDIR:=$(PLATDIR)/Cross/third-party
 WIN32DIR:=$(PLATDIR)/win32/vm
 WIN32PLUGINSDIR:=$(PLATDIR)/win32/plugins
 WIN32MISCDIR:=$(PLATDIR)/win32/misc
@@ -85,6 +86,10 @@ include plugins.int
 LIBS:= $(addprefix $(OBJDIR)/, $(addsuffix .lib, $(INTERNAL_PLUGINS)))
 DLLS:= $(addprefix $(OBJDIR)/, $(addsuffix .dll, $(EXTERNAL_PLUGINS)))
 
+ifdef BIT_IDENTICAL_FLOATING_POINT
+LIBS:=$(BUILD)/fdlibm/libm.a $(LIBS)
+endif
+
 #############################################################################
 # The third-party libraries
 #
@@ -112,6 +117,8 @@ VMRES:=	$(VM).res
 VMDEFIN:=$(VM).def.in
 BTOBJ:= $(OBJDIR)/btext.o
 ETOBJ:= $(OBJDIR)/etext.o
+JMPASM:=_setjmp-x86.asm
+JMPOBJ:=$(OBJDIR)/_setjmp-x86.o
 
 .PRECIOUS: mkNamedPrims.exe
 
@@ -204,21 +211,24 @@ $(BTOBJ):	$(WIN32MISCDIR)/btext.c
 $(ETOBJ):	$(WIN32MISCDIR)/etext.c
 	$(CC) -c $< -Oy -Os $(DASH_O)$@
 
+$(JMPOBJ):	$(WIN32MISCDIR)/$(JMPASM)
+	$(CC) -c $< $(DASH_O)$@
+
 vm:	$(VMEXE)
 
 TZ:=$(shell $(CBD)/date +%Z)
 
-$(VMEXE): $(OBJDIR) $(THIRDPARTYLIBS) $(VMOBJ) $(LIBS) resource.o $(BTOBJ) $(ETOBJ)
+$(VMEXE): $(OBJDIR) $(THIRDPARTYLIBS) $(VMOBJ) $(LIBS) resource.o $(BTOBJ) $(ETOBJ) $(JMPOBJ)
 	$(CC) $(DASH_O)$(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -D'TZ="$(TZ)"' -c $(WIN32DIR)/version.c
-	$(LD) $(LDFLAGS) /OUT:$(VMEXE) \
-			$(BTOBJ) $(VMOBJ) $(OBJDIR)/resource.o $(filter-out $(call ignore), $(LIBS)) $(STDLIBS) $(ETOBJ)
-	$(NM) --numeric-sort --defined-only -f bsd $(VMEXE) >$(VMMAP)
+	$(LD) $(LDFLAGS) -OUT:$(VMEXE) -MAP:$(VMMAP) \
+			$(BTOBJ) $(VMOBJ) $(JMPOBJ) $(OBJDIR)/resource.o $(filter-out $(call ignore), $(LIBS)) $(STDLIBS) $(ETOBJ)
+	$(NM) --numeric-sort --defined-only -f bsd $(VMEXE) >$(VMMAP).bsd
 
-$(CONSOLEVMEXE): $(VMOBJ) $(LIBS) resource.o $(BTOBJ) $(ETOBJ)
+$(CONSOLEVMEXE): $(VMOBJ) $(LIBS) resource.o $(BTOBJ) $(ETOBJ) $(JMPOBJ)
 	$(CC) $(DASH_O)$(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -D'TZ="$(TZ)"' -c $(WIN32DIR)/version.c
-	$(LD) $(CONSOLELDFLAGS) /OUT:$(CONSOLEVMEXE) \
-			$(BTOBJ) $(VMOBJ) $(OBJDIR)/resource.o $(filter-out $(call ignore), $(LIBS)) $(STDLIBS) $(ETOBJ)
-	$(NM) --numeric-sort --defined-only -f bsd $(CONSOLEVMEXE) >$(CONSOLEVMMAP)
+	$(LD) $(CONSOLELDFLAGS) -OUT:$(CONSOLEVMEXE) -MAP:$(CONSOLEVMMAP) \
+			$(BTOBJ) $(VMOBJ) $(JMPOBJ) $(OBJDIR)/resource.o $(filter-out $(call ignore), $(LIBS)) $(STDLIBS) $(ETOBJ)
+	$(NM) --numeric-sort --defined-only -f bsd $(CONSOLEVMEXE) >$(CONSOLEVMMAP).bsd
 
 $(OBJDIR):
 	@-$(MKDIR) $(BUILD)
@@ -251,11 +261,11 @@ $(OBJDIR)/%.lib: $(call plugin-makefile,$(*F))
 	$(RM) -f $(BUILD)/vm/$(*F).ignore
 	$(MAKE) $(MFLAGS) -I../common BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) \
-		"VM=$(VM)" "VM_NAME=$(VM_NAME)" \
+		"VM=$(VM)" "VM_NAME=$(VM_NAME)" TPDIR=$(TPDIR) \
 		CONFIGURATION=$(CONFIGURATION) ARCH=$(ARCH) TOOLPREFIX=$(TOOLPREFIX) \
 		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
 		THIRDPARTYOUTDIR=$(THIRDPARTYOUTDIR) \
-		COGDEFS="$(COGDEFS) -DSQUEAK_BUILTIN_PLUGIN" LIBNAME=$(*F) $(OBJDIR)/$(*F).lib
+		COGDEFS="$(COGDEFS) -DSQUEAK_BUILTIN_PLUGIN=$(*F)" LIBNAME=$(*F) $(OBJDIR)/$(*F).lib
 
 # External plugin.  Build as dll and copy to vm dir ($(OBJDIR)).
 $(OBJDIR)/%.dll: $(call plugin-makefile,$(*F))
@@ -263,11 +273,17 @@ $(OBJDIR)/%.dll: $(call plugin-makefile,$(*F))
 	$(RM) -f $(BUILD)/$(*F).ignore
 	$(MAKE) $(MFLAGS) -I../common BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) \
-		"VM=$(VM)" "VM_NAME=$(VM_NAME)" \
+		"VM=$(VM)" "VM_NAME=$(VM_NAME)" TPDIR=$(TPDIR) \
 		CONFIGURATION=$(CONFIGURATION) ARCH=$(ARCH) TOOLPREFIX=$(TOOLPREFIX) \
 		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
-		THIRDPARTYOUTDIR=$(THIRDPARTYOUTDIR) \
+		THIRDPARTYOUTDIR=$(THIRDPARTYOUTDIR) JMPOBJ=$(JMPOBJ) \
 		COGDEFS="$(COGDEFS)" LIBNAME=$(*F) VMLIB=$(VMLIB) $(OBJDIR)/$(*F).dll
+
+$(BUILD)/fdlibm/libm.a:
+	@-mkdir -p $(@D)
+	$(MAKE) CC='$(CC)' CFLAGS="$(CFLAGS) -D_IEEE_LIBM" -C $(@D) \
+		TP=../../$(TPDIR) -f ../../$(TPDIR)/fdlibm/Makefile.remote
+
 
 #############################################################################
 # Basic rules
