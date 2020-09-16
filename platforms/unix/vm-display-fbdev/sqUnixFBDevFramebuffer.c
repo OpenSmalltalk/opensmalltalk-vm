@@ -52,6 +52,7 @@ typedef uint32_t pixel_t;
 /* Eye Candy: Because white pixels are boring.. */
 #include "Balloon.h"
 
+#include "sqUnixDisplayHelpers.h"
 
 #define _self	struct fb *self
 
@@ -117,6 +118,25 @@ static inline int fb_width(_self)	{ return self->var.xres; }
 static inline int fb_pitch(_self)	{ return self->pitch; }
 static inline int fb_height(_self)	{ return self->var.yres; }
 static inline int fb_depth(_self)	{ return self->var.bits_per_pixel; }
+static inline double fb_scale(_self)
+{
+  double scale = sqDefaultScale();
+  /* respect users' choice */
+  if (sqUseEnvironmentScale()) {
+    DPRINTF("Using environment-provided scale factor\n");
+    scale = sqEnvironmentScale();
+  } else {
+    int x = fb_width(self);
+    int y = fb_height(self);
+    double w = (double_t)self->var.width / 25.4;
+    double h = (double_t)self->var.height / 25.4;
+    DPRINTF("Determining factor from px: %dx%d, inch: %fx%f\n",
+            x, y,w ,h);
+    scale = sqScaleFromPhysical(x, y, w, h);
+  }
+  DPRINTF("Scale factor: %f\n", scale);
+  return scale;
+}
 
 static inline unsigned long fb_pixel_position(_self, int x, int y) {
   return (x + self->var.xoffset) * (self->var.bits_per_pixel / 8)

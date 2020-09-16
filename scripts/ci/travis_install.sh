@@ -12,6 +12,7 @@ if [[ "${ARCH}" = "linux64x64" ]]; then
             libx11-dev \
             libxext-dev \
             libxrender-dev \
+            libxrandr-dev \
             libpango1.0-dev \
             libpulse-dev \
             libaudio-dev \
@@ -37,6 +38,7 @@ elif [[ "${ARCH}" = "linux32x86" ]]; then
             libpng-dev:i386 \
             libfreetype6-dev:i386 \
             libx11-dev:i386 \
+            libxrandr-dev:i386 \
             libsm-dev:i386 \
             libice-dev:i386 \
             libgl1-mesa-glx:i386 \
@@ -128,7 +130,7 @@ if [ ! -e "$ARMCHROOT/etc/debian_chroot" ]; then
     schroot -c rpi -u root -- apt-get --allow-unauthenticated install -y \
 	    build-essential libcairo2-dev libpango1.0-dev libssl-dev uuid-dev uuid-runtime libasound2-dev \
 	    debhelper devscripts libssl-dev libfreetype6-dev libx11-dev libxext-dev libxrender-dev \
-	    libx11-dev libsm-dev libice-dev libgl1-mesa-dev libgl1-mesa-glx git \
+	    libx11-dev libsm-dev libice-dev libgl1-mesa-dev libgl1-mesa-glx libxrandr-dev git \
 	    libtool automake autoconf
     #needed for third-party libraries
     schroot -c rpi -u root -- apt-get --allow-unauthenticated install -y cmake curl

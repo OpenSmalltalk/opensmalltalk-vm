@@ -13,7 +13,7 @@
   ** the preprocessor just to implement precomp?  good _grief_.
   */
   extern void __sq_DPRINTF(const char *fmt, ...);
-# define DPRINTF(ARGS) __sq_DPRINTF( ARGS )
+# define DPRINTF(ARGS) __sq_DPRINTF ARGS 
 #else
 # define DPRINTF(ARGS)	((void)0)
 #endif

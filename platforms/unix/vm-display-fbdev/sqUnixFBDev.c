@@ -321,9 +321,10 @@ static sqInt display_ioScreenDepth(void)
   return fb_depth(fb);
 }
 
+
 static double display_ioScreenScaleFactor(void)
 {
-  return 1.0;
+  return fb_scale(fb);
 }
 
 static sqInt display_ioScreenSize(void)
