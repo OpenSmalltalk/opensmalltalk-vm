@@ -211,10 +211,9 @@ VMSimpleStackBasedCogitAbstractTest >> createFramelessCallFrom: returnAddress re
 	self pushAddress: receiver.
 	arguments do: [ :anArgument | self pushAddress: anArgument ].
 
-	self pushAddress: returnAddress.
-
 	machineSimulator hasLinkRegister 
-		ifTrue: [ machineSimulator linkRegisterValue: returnAddress ].	
+		ifTrue: [ machineSimulator linkRegisterValue: returnAddress ]
+		ifFalse: [ self pushAddress: returnAddress  ].
 
 	machineSimulator receiverRegisterValue: receiver.
 
