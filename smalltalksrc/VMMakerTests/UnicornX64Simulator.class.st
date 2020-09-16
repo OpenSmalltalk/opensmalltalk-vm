@@ -85,10 +85,22 @@ UnicornX64Simulator >> r10 [
 	^ self readRegister: UcX86Registers r10
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornX64Simulator >> r10: anInteger [ 
+	
+	^ self writeRegister: UcX86Registers r10 value: anInteger
+]
+
 { #category : #'phisical-registers' }
 UnicornX64Simulator >> r11 [
 
 	^ self readRegister: UcX86Registers r11
+]
+
+{ #category : #'as yet unclassified' }
+UnicornX64Simulator >> r11: anInteger [ 
+	
+	^ self writeRegister: UcX86Registers r11 value: anInteger
 ]
 
 { #category : #'phisical-registers' }
@@ -97,16 +109,76 @@ UnicornX64Simulator >> r12 [
 	^ self readRegister: UcX86Registers r12
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornX64Simulator >> r12: anInteger [ 
+	
+	^ self writeRegister: UcX86Registers r12 value: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornX64Simulator >> r1: anInteger [ 
+	
+	^ self writeRegister: UcX86Registers r1 value: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornX64Simulator >> r2: anInteger [ 
+	
+	^ self writeRegister: UcX86Registers r2 value: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornX64Simulator >> r3: anInteger [ 
+	
+	^ self writeRegister: UcX86Registers r3 value: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornX64Simulator >> r4: anInteger [ 
+	
+	^ self writeRegister: UcX86Registers r4 value: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornX64Simulator >> r5: anInteger [ 
+	
+	^ self writeRegister: UcX86Registers r5 value: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornX64Simulator >> r6: anInteger [ 
+	
+	^ self writeRegister: UcX86Registers r6 value: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornX64Simulator >> r7: anInteger [ 
+	
+	^ self writeRegister: UcX86Registers r7 value: anInteger
+]
+
 { #category : #'phisical-registers' }
 UnicornX64Simulator >> r8 [
 
 	^ self readRegister: UcX86Registers r8
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornX64Simulator >> r8: anInteger [ 
+	
+	^ self writeRegister: UcX86Registers r8 value: anInteger
+]
+
 { #category : #'phisical-registers' }
 UnicornX64Simulator >> r9 [
 
 	^ self readRegister: UcX86Registers r9
+]
+
+{ #category : #'as yet unclassified' }
+UnicornX64Simulator >> r9: anInteger [ 
+	
+	^ self writeRegister: UcX86Registers r9 value: anInteger
 ]
 
 { #category : #'phisical-registers' }
