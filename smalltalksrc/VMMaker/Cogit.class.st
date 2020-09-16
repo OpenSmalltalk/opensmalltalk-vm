@@ -8342,6 +8342,13 @@ Cogit >> halt: aString [
 	Halt new signal: aString
 ]
 
+{ #category : #'translation support' }
+Cogit >> haltIf: aBlock [
+
+	aBlock ifTrue: [ self halt ]
+
+]
+
 { #category : #'simulation only' }
 Cogit >> handleABICallOrJumpSimulationTrap: aProcessorSimulationTrap evaluable: evaluable [
 	<doNotGenerate>
@@ -10225,12 +10232,6 @@ Cogit >> noTargetsFreeInClosedPIC: cPIC [
 	"Answer if all targets in the PIC are in-use methods."
 	<var: #cPIC type: #'CogMethod *'>
 	^(self cPICHasFreedTargets: cPIC) not
-]
-
-{ #category : #'translation support' }
-Cogit >> notYetImplemented [
-	<cmacro: '() warning("not yet implemented")'>
-	super notYetImplemented
 ]
 
 { #category : #initialization }

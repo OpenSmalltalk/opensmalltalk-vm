@@ -214,7 +214,7 @@ CogOutOfLineLiteralsARMv8Compiler >> relocateMethodReferenceBeforeAddress: pc by
 							ifFalse: [pc].
 	"If the load is not done via pc-relative addressing we have to relocate."
 	(self isPCRelativeValueLoad: (self instructionBeforeAddress: pcPrecedingLoad)) ifFalse:
-		[1halt: #maybebug. "literals are 64bits here!"
+		[self halt: 'maybebug'. "literals are 64bits here!"
 		litAddr := self pcRelativeAddressAt: pcPrecedingLoad.
 		 reference := objectMemory long32At: litAddr.
 		 objectMemory long32At: litAddr put: reference + delta - 4]

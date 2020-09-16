@@ -303,6 +303,13 @@ CogARMv8Compiler >> add: destReg rn: srcReg imm: immediate ror: rot [
 		destinationRegister: destReg
 ]
 
+{ #category : #'ARM convenience instructions' }
+CogARMv8Compiler >> add: destReg rn: srcReg rm: addReg [
+
+	self notYetImplemented.
+	^0
+]
+
 { #category : #assembler }
 CogARMv8Compiler >> addSize: is64Bits sourceRegister: sourceRegister shift: shift immediate12: immediate12bitValue destinationRegister: destinationRegister [
 	
@@ -407,31 +414,6 @@ CogARMv8Compiler >> adrSignedImmediate21BitsValue: signedImmediate21bitValue des
 		bitOr: (2r10000 << 24
 		bitOr: (immhi << 5
 		bitOr: (destinationRegister bitAnd: 16r1f)))
-]
-
-{ #category : #simulation }
-CogARMv8Compiler >> aeabiDiv: dividend Mod: divisor [
-"simulate the __aeabi_idivmod call"
-	<doNotGenerate>
-	| proc result top bottom|
-	proc := cogit processor.
-	top := proc convertInternalToInteger: dividend.
-	bottom := proc convertInternalToInteger: divisor.
-	
-	proc r0: (result := proc convertIntegerToInternal: (top quo: bottom)).
-	proc r1: (proc convertIntegerToInternal: (top rem: bottom)).
-	^result
-]
-
-{ #category : #'ARM convenience instructions' }
-CogARMv8Compiler >> aeabiDivModFunctionAddr [
-	"Answer the address of the __aeabi_idivmod() call provided by the ARM low level libs to do an integer divide that returns the quo in R0 and rem in R1.
-	 A word on the somewhat strange usage of idivmod herein; we need a declaration for the _aeabi_idivmod helper function, despite the fact that in a simple C program test, you don't.
-	 To get that declaration we need a variable to hang it off; thus the non-existent var idivmod, and in simulation we need to simulate it, which is what aeabiDiv:Mod: does."
-	<returnTypeC: #usqInt>
-	<var: #idivmod declareC: 'extern void __aeabi_idivmod(int dividend, int divisor)'>
-PushSTM.
-	^self cCode: '(usqInt)__aeabi_idivmod' inSmalltalk:[#aeabiDiv:Mod:]
 ]
 
 { #category : #assembler }
@@ -947,7 +929,7 @@ CogARMv8Compiler >> computeMaximumSize [
 		[XorCwR]				-> [^self literalLoadInstructionBytes + 4].
 		[AddRR]					-> [^4].
 		[AndRR]					-> [^4].
-		[CmpRR]				-> [^((operands at:0) = SP or: (operands at: 1) = SP) ifTrue: [8] ifFalse: [4]].
+		[CmpRR]				-> [^(((operands at:0) = SP) or: [(operands at: 1) = SP]) ifTrue: [8] ifFalse: [4]].
 		[OrRR]					-> [^4].
 		[XorRR]					-> [^4].
 		[SubRR]					-> [ "When the operation includes the SP, we might need two instructions" ^(operands at: 0) = SP ifTrue: [ 8 ] ifFalse: [ 4 ]].
@@ -1012,11 +994,11 @@ CogARMv8Compiler >> computeMaximumSize [
 													ifFalse: [self literalLoadInstructionBytes + 4]].
 		[MoveRMwr]			-> [^self is9BitValue: (operands at: 1)
 										ifTrue: [ :value | 4 ]
-										ifFalse: [ self shiftable16bitImmediate: (operands at: 1) ifTrue: [ :value :shift | 8 ] ifFalse: [ self halt ] ]].
+										ifFalse: [ self shiftable16bitImmediate: (operands at: 1) ifTrue: [ :value :shift | 8 ] ifFalse: [ self notYetImplemented ] ]].
 		[MoveRdM64r]			-> [^self literalLoadInstructionBytes + 4]. 
 		[MoveMbrR]				-> [^self is9BitValue: (operands at: 0)
-										ifTrue: [:value | ^ 8 "2 instrutions" ]
-										ifFalse: [ self halt ]].
+										ifTrue: [:value | 8 "2 instrutions" ]
+										ifFalse: [ self notYetImplemented ]].
 		[MoveRMbr]				-> [^self is12BitValue: (operands at: 1)
 										ifTrue: [:u :i| 4]
 										ifFalse: [self literalLoadInstructionBytes + 4]].
@@ -1257,6 +1239,20 @@ CogARMv8Compiler >> concretizeAndCqRR [
 		ifNotPossible: [ self halt ].
 ]
 
+{ #category : #'generate machine code - concretize' }
+CogARMv8Compiler >> concretizeArithmeticShiftRightCqR [
+
+	self notYetImplemented.
+	^ 0
+]
+
+{ #category : #'generate machine code - concretize' }
+CogARMv8Compiler >> concretizeArithmeticShiftRightRR [
+
+	self notYetImplemented.
+	^ 0
+]
+
 { #category : #'generate machine code' }
 CogARMv8Compiler >> concretizeAt: actualAddress [
 	"Generate concrete machine code for the instruction at actualAddress,
@@ -1271,8 +1267,8 @@ CogARMv8Compiler >> concretizeCMPSMULL [
 	"Generate a CMP a, b, ASR #31 instruction, specifically for comparing the resutls of SMULLs in genMulR:R:"
 
 	| hiReg loReg |
-	self halt.
-	1 halt.
+	self notYetImplemented.
+
 	hiReg := operands at: 0.
 	loReg := operands at: 1.
 	self
@@ -1511,6 +1507,20 @@ CogARMv8Compiler >> concretizeConvertRRd [
 ]
 
 { #category : #'generate machine code - concretize' }
+CogARMv8Compiler >> concretizeDataOperationCwR: armOpcode [
+
+	self notYetImplemented.
+	^ 0
+]
+
+{ #category : #'generate machine code - concretize' }
+CogARMv8Compiler >> concretizeDataOperationRR: armOpcode [
+
+	self notYetImplemented.
+	^ 0
+]
+
+{ #category : #'generate machine code - concretize' }
 CogARMv8Compiler >> concretizeDivRdRd [
 	"Will get inlined into concretizeAt: switch."
 
@@ -1555,6 +1565,13 @@ CogARMv8Compiler >> concretizeFill32 [
 ]
 
 { #category : #'generate machine code - concretize' }
+CogARMv8Compiler >> concretizeInvertibleDataOperationCqR: armOpcode [
+
+	self notYetImplemented.
+	^ 0
+]
+
+{ #category : #'generate machine code - concretize' }
 CogARMv8Compiler >> concretizeJumpFull [
 
 	| offset |
@@ -1574,6 +1591,13 @@ CogARMv8Compiler >> concretizeJumpLong [
 	self assert: (self isInImmediateJumpRange: offset).	"+- 24Mb is plenty of range in code space"
 	self machineCodeAt: 0 put: (self b: offset). 
 	^ machineCodeSize := 4
+]
+
+{ #category : #'generate machine code - concretize' }
+CogARMv8Compiler >> concretizeJumpLongNonZero [
+
+	self notYetImplemented.
+	^ 0
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -1610,6 +1634,13 @@ CogARMv8Compiler >> concretizeJumpR [
 	reg := operands at: 0.
 	self machineCodeAt: 0 put: (self br: reg).
 	^ machineCodeSize := 4
+]
+
+{ #category : #'generate machine code - concretize' }
+CogARMv8Compiler >> concretizeLiteral [
+
+	<doNotGenerate>
+	self subclassResponsibility 
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -1667,6 +1698,13 @@ CogARMv8Compiler >> concretizeLogicalShiftLeftCqR [
 ]
 
 { #category : #'generate machine code - concretize' }
+CogARMv8Compiler >> concretizeLogicalShiftLeftRR [
+
+	self notYetImplemented.
+	^ 0
+]
+
+{ #category : #'generate machine code - concretize' }
 CogARMv8Compiler >> concretizeLogicalShiftRightCqR [
 	"Will get inlined into concretizeAt: switch."
 
@@ -1682,6 +1720,13 @@ CogARMv8Compiler >> concretizeLogicalShiftRightCqR [
 			shiftValue: distance
 			destinationRegister: reg).
 	^ machineCodeSize := 4
+]
+
+{ #category : #'generate machine code - concretize' }
+CogARMv8Compiler >> concretizeLogicalShiftRightRR [
+
+	self notYetImplemented.
+	^ 0
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -1775,6 +1820,13 @@ CogARMv8Compiler >> concretizeMoveAwR [
 		machineCodeAt: instrOffset + 4
 		put: (self movSize: 1 sourceRegisterMaybeSP: ConcreteIPReg destinationRegisterMaybeSP: destReg).
 	^ machineCodeSize := instrOffset + 8
+]
+
+{ #category : #'generate machine code - concretize' }
+CogARMv8Compiler >> concretizeMoveC32R [
+
+	<doNotGenerate>
+	self subclassResponsibility 
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -2818,8 +2870,8 @@ CogARMv8Compiler >> encodeLogicalImmediate: immediate registerSize: registerSize
 		trailingZeros := self trailingZerosOf: maskedImmediate.
 		trailingOnes := self trailingOnesOf: (maskedImmediate >> trailingZeros).
 	] ifFalse: [
-	   maskedImmediate := maskedImmediate bitOr: mask bitInvert.
-		(self isShiftedMask: maskedImmediate bitInvert)
+	   maskedImmediate := maskedImmediate bitOr: mask bitInvert64.
+		(self isShiftedMask: maskedImmediate bitInvert64)
 			ifFalse: [ ^ aNotPossibleBlock value ].
 
 		leadingOnes := self leadingOnesOf: maskedImmediate.
@@ -3069,40 +3121,9 @@ CogARMv8Compiler >> fullCallsAreRelative [
 
 { #category : #'abstract instructions' }
 CogARMv8Compiler >> genDivR: abstractRegDivisor R: abstractRegDividend Quo: abstractRegQuotient Rem: abstractRegRemainder [
-"Currently no instruction level support for divide on ARM. See also #canDivQuoRem"
-	| rDividend rDivisor rQuotient rRemainder divRemFunctionAddr |
-	<var: #divRemFunctionAddr type: #usqInt>
-	self assert: abstractRegDividend ~= abstractRegDivisor.
-	self assert: abstractRegQuotient ~= abstractRegRemainder.
-	rDividend := abstractRegDividend.
-	rDivisor := abstractRegDivisor.
-	rDividend = CArg0Reg ifFalse:
-		["we need to move the value in rDividend to CArg0Reg. Best to double check if rDivisor is already using it first"
-		rDivisor = CArg0Reg ifTrue: "oh dear; we also need to move rDivisor's value out of the way first.. I'll move it to CArg1Reg and if some nitwit has managed to put rDividend there they deserve the crash"
-			[rDividend = CArg1Reg ifTrue:
-				[self error: 'register choices in genDivR:R:Quo:Rem: made life impossible'].
-			cogit MoveR: rDivisor R: CArg1Reg.
-			"and update rDivisor or we get buggerd by the next clause"
-			rDivisor := CArg1Reg].
-		cogit MoveR: rDividend R: CArg0Reg].
-	rDivisor = CArg1Reg ifFalse:
-		[cogit MoveR: rDivisor R: CArg1Reg].
-	divRemFunctionAddr := self aeabiDivModFunctionAddr.
-	self saveAndRestoreLinkRegAround:
-		[cogit CallFullRT: (self cCode: [divRemFunctionAddr asUnsignedInteger]
-							   inSmalltalk: [cogit simulatedTrampolineFor: divRemFunctionAddr])
-			registersToBeSavedMask: (cogit registerMaskFor: CArg2Reg and: CArg3Reg)].
-	"Now we need to move the r0/1 results back to rQuotient & rRemainder"
-	rQuotient := abstractRegQuotient.
-	rRemainder := abstractRegRemainder.
-	rQuotient = CArg0Reg ifFalse: "oh good grief, not again"
-		[cogit MoveR: CArg0Reg R: rQuotient.
-		 rQuotient = CArg1Reg ifTrue:
-			[self error: 'register choices in genDivR:R:Quo:Rem: made life impossible'] ].
-	rRemainder = CArg1Reg  ifFalse:
-		[cogit MoveR: CArg1Reg R: rRemainder]
-				
 
+	self notYetImplemented.
+	^ 0
 ]
 
 { #category : #'smalltalk calling convention' }
@@ -3721,6 +3742,20 @@ CogARMv8Compiler >> ldrSize: is64Bits programCounterRelativeOffset: immediate19b
 		bitOr: (destinationRegister bitAnd: 2r11111))))
 ]
 
+{ #category : #'ARM convenience instructions' }
+CogARMv8Compiler >> ldrb: destReg rn: baseReg plus: u imm: immediate12bitValue [
+
+	self notYetImplemented.
+	^0
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMv8Compiler >> ldrb: destReg rn: baseReg rm: offsetReg [
+
+	self notYetImplemented.
+	^0
+]
+
 { #category : #'as yet unclassified' }
 CogARMv8Compiler >> ldrhBaseRegister: baseRegister offsetDividedBy2: offset12Bits destinationRegister: destinationRegister [
 
@@ -3966,7 +4001,7 @@ CogARMv8Compiler >> machineCodeAt: anOffset [
 CogARMv8Compiler >> machineCodeAt: anOffset put: aWord [
 	"add aWord to machineCode, with little endian"
 	<inline: true>
-	1haltIf: [ aWord highBit > 32 ].
+	self haltIf: [ aWord highBit > 32 ].
 	machineCode at: anOffset // 4 put: aWord
 ]
 
@@ -4198,6 +4233,13 @@ CogARMv8Compiler >> orSize: is64Bits immediate13bitValue: logicalEncodedImmediat
 		immediate13bitValue: logicalEncodedImmediate13BitValue
 		sourceRegister: sourceRegister
 		destinationRegister: destinationRegister
+]
+
+{ #category : #assembler }
+CogARMv8Compiler >> orSize: is64Bits shiftedRegister: shiftedRegister shiftType: shiftType shiftValue: immediate6bitValue withRegister: sourceRegister2 destinationRegister: destinationRegister [
+	
+	self notYetImplemented.
+	^ 0
 ]
 
 { #category : #'generate machine code' }
@@ -4571,8 +4613,8 @@ CogARMv8Compiler >> shiftable16bitImmediate: constant ifTrue: trueAlternativeBlo
 	(constant bitAnd: 16rFFFF) = constant ifTrue:
 		[^trueAlternativeBlock value: 0 value: constant].
 	0 to: 2 do: [:i | | shiftedValue shiftMagnitude |
-		shiftMagnitude := (2 raisedTo: i) * 16.
-		shiftedValue := constant >> (2 raisedTo: i) * 16.
+		shiftMagnitude := (1 << i) * 16.
+		shiftedValue := constant >> (1 << i) * 16.
 		shiftedValue << shiftMagnitude = constant
 			ifTrue: [ [ ^ trueAlternativeBlock
 					value: shiftMagnitude
@@ -4587,11 +4629,12 @@ CogARMv8Compiler >> sizeOf: immediate registerSize: registerSize [
 	| size |
 	size := registerSize.
 	[ | mask |
-	size := size / 2.
-	mask := 1 << size - 1.
-	(immediate bitAnd: mask) ~= ((immediate >> size) bitAnd: mask)
-		ifTrue: [ ^ size * 2 ]
-	] doWhileTrue: [ size > 2 ].
+		size := size / 2.
+		mask := 1 << size - 1.
+		(immediate bitAnd: mask) ~= ((immediate >> size) bitAnd: mask)
+			ifTrue: [ ^ size * 2 ].
+		size > 2 ] whileTrue.
+	
 	^ size
 ]
 
@@ -4720,6 +4763,27 @@ CogARMv8Compiler >> strSize: is64Bits baseRegister: baseRegister signedOffset: i
 		bitOr: (sourceRegister bitAnd: 2r11111)))))))
 ]
 
+{ #category : #'ARM convenience instructions' }
+CogARMv8Compiler >> strb: destinationRegister rn: baseReg plus: u imm: immediate9bitValue [
+
+	self notYetImplemented.
+	^ 0
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMv8Compiler >> strb: srcReg rn: baseReg rm: offsetReg [
+
+	self notYetImplemented.
+	^0
+]
+
+{ #category : #'ARM convenience instructions' }
+CogARMv8Compiler >> strh: destReg rn: baseReg plus: u imm: immediate8bitValue [
+
+	self notYetImplemented.
+	^0
+]
+
 { #category : #assembler }
 CogARMv8Compiler >> sturSize: is64Bits baseRegister: baseReg signedOffset: immediate9bitValue destinationRegister: destinationRegister [
 
@@ -4834,7 +4898,7 @@ CogARMv8Compiler >> trailingOnesOf: aNumber [
 	For example, the 64bit binary number 2r10101000110001111 has 4 trailing ones"
 	
 	"Calculate it by calculating the trailing zeros of the bit-inverted number"
-	^ self trailingZerosOf: aNumber bitInvert
+	^ self trailingZerosOf: aNumber bitInvert64
 ]
 
 { #category : #'private-bit-manipulation' }
@@ -4895,6 +4959,16 @@ CogARMv8Compiler >> tstSize: is64bits immediate13bitValue: immediate13bitValue r
 		bitOr: (immediate13bitValue << 10
 		bitOr: ((registerToUse bitAnd: 2r11111) << 5
 		bitOr: 2r11111)))
+]
+
+{ #category : #encoding }
+CogARMv8Compiler >> type: type op: flagsOrOpcode set: doUpdateStatusRegister rn:  sourceRegister rd: targetRegister [
+	<inline: true>
+
+	"(self cond: AL type: type op: flagsOrOpcode set: doUpdateStatusRegister) 
+		bitOr: (sourceRegister << 16 bitOr: targetRegister << 12)"
+		self notYetImplemented.
+		^ 0
 ]
 
 { #category : #'as yet unclassified' }

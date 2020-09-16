@@ -1506,7 +1506,7 @@ CogAbstractInstruction >> saveAndRestoreLinkRegAround: aBlock [
 { #category : #'as yet unclassified' }
 CogAbstractInstruction >> seeAlso: aString [ 
 	
-	<doNotGenerate>
+	<cmacro: '(self, msg) '>
 	"like a flag"
 ]
 
