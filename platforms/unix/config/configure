@@ -18917,74 +18917,6 @@ if test "x$ac_cv_header_openssl_ssl_h" = xyes; then :
 #define HAVE_OPENSSL_SSL_H 1
 _ACEOF
 
-
-  # Do not put into LIBS because plibs should get it.
-  save_LIBS="$LIBS"
-  LIBS=""
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing dlopen" >&5
-$as_echo_n "checking for library containing dlopen... " >&6; }
-if ${ac_cv_search_dlopen+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_func_search_save_LIBS=$LIBS
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char dlopen ();
-int
-main ()
-{
-return dlopen ();
-  ;
-  return 0;
-}
-_ACEOF
-for ac_lib in '' dl dld; do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_dlopen=$ac_res
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext
-  if ${ac_cv_search_dlopen+:} false; then :
-  break
-fi
-done
-if ${ac_cv_search_dlopen+:} false; then :
-
-else
-  ac_cv_search_dlopen=no
-fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_dlopen" >&5
-$as_echo "$ac_cv_search_dlopen" >&6; }
-ac_res=$ac_cv_search_dlopen
-if test "$ac_res" != no; then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-          plib=`echo "${LIBS}" | cut -c3-`
-
-  plibs="${plibs} ${plib}"
-else
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: ******** disabling ${plugin} due to missing libraries" >&5
-$as_echo "******** disabling ${plugin} due to missing libraries" >&6; }
-  disabled_plugins="${disabled_plugins} ${plugin}"
-fi
-
-  LIBS="$save_LIBS"
                     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for SSL support" >&5
 $as_echo_n "checking for SSL support... " >&6; }
                     { $as_echo "$as_me:${as_lineno-$LINENO}: result: OpenSSL (dynamic)" >&5
@@ -18994,10 +18926,8 @@ else
 
                     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for SSL support" >&5
 $as_echo_n "checking for SSL support... " >&6; }
-                    { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
-$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "Headers Missing
-See \`config.log' for more details" "$LINENO" 5; }
+                    { $as_echo "$as_me:${as_lineno-$LINENO}: result: Headers Missing" >&5
+$as_echo "Headers Missing" >&6; }
 
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: ******** disabling ${plugin}" >&5
