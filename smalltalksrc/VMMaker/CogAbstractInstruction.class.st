@@ -1548,6 +1548,13 @@ CogAbstractInstruction >> stackPageInterruptHeadroomBytes [
 	self subclassResponsibility
 ]
 
+{ #category : #'as yet unclassified' }
+CogAbstractInstruction >> stackPointerAlignment [
+	
+	<doNotGenerate>
+	^ cogit objectMemory wordSize 
+]
+
 { #category : #'inline cacheing' }
 CogAbstractInstruction >> storeLiteral32: literal32 beforeFollowingAddress: followingAddress [
 	"Answer the constant loaded by the instruction sequence just before this address:"

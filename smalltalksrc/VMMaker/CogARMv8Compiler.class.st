@@ -85,7 +85,7 @@ CogARMv8Compiler class >> IPReg [
 { #category : #translation }
 CogARMv8Compiler class >> ISA [
 	"Answer the name of the ISA the receiver implements."
-	^#ARMv8
+	^#aarch64
 ]
 
 { #category : #accessing }
@@ -225,7 +225,7 @@ CogARMv8Compiler class >> initializeAbstractRegisters [
 
 	CallerSavedRegisterMask := self registerMaskFor: "0 and: 1 and:" 2 and: 3 and: 9 and: 12.
 
-	TempReg			:= R0.
+	TempReg			:= R1.
 	ClassReg			:= R2.
 	ReceiverResultReg	:= R5.
 	SendNumArgsReg	:= R6.
@@ -947,7 +947,7 @@ CogARMv8Compiler >> computeMaximumSize [
 		[XorCwR]				-> [^self literalLoadInstructionBytes + 4].
 		[AddRR]					-> [^4].
 		[AndRR]					-> [^4].
-		[CmpRR]				-> [^(operands at:0) = SP ifTrue: [8] ifFalse: [4]].
+		[CmpRR]				-> [^((operands at:0) = SP or: (operands at: 1) = SP) ifTrue: [8] ifFalse: [4]].
 		[OrRR]					-> [^4].
 		[XorRR]					-> [^4].
 		[SubRR]					-> [ "When the operation includes the SP, we might need two instructions" ^(operands at: 0) = SP ifTrue: [ 8 ] ifFalse: [ 4 ]].
@@ -994,10 +994,13 @@ CogARMv8Compiler >> computeMaximumSize [
 												ifFalse: [self literalLoadInstructionBytes]]].
 		[MoveRR]				-> [^4].
 		[MoveRdRd]				-> [^4].
-		[MoveAwR]				-> [^(self isAddressRelativeToVarBase: (operands at: 0))
-													ifTrue: [4]
-													ifFalse: [self literalLoadInstructionBytes + 8 
-														"if register is SP we need an extra move"]].
+		[MoveAwR]				-> [
+			"if register is SP we need an extra move"
+			^(self isAddressRelativeToVarBase: (operands at: 0))
+					ifTrue: [(operands at: 1) = SP
+						ifTrue: [ 8 ]
+						ifFalse: [ 4 ]  ]
+					ifFalse: [self literalLoadInstructionBytes + 8 ]].
 		[MoveRAw]				-> [^(self isAddressRelativeToVarBase: (operands at: 1))
 													ifTrue: [4]
 													ifFalse: [self literalLoadInstructionBytes + 4]].
@@ -1110,8 +1113,26 @@ CogARMv8Compiler >> concretizeAddCqR [
 					destinationRegister: reg).
 		^ machineCodeSize := 4
 	].
-	1halt.
-	^ 0
+	
+	^ self concretizeAddCwR.
+]
+
+{ #category : #'as yet unclassified' }
+CogARMv8Compiler >> concretizeAddCwR [
+	
+	self assert: dependent notNil.
+	
+	self loadCwInto: ConcreteIPReg.
+	self
+		machineCodeAt: machineCodeSize
+		put: ( self
+			addsSize: 1
+			leftRegister: ConcreteIPReg
+			shiftedRightRegister: (operands at: 1)
+			shiftType: 0
+			shiftOffset: 0
+			destinationRegister: (operands at: 1)).
+	^ machineCodeSize := machineCodeSize + 4
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -1392,7 +1413,19 @@ CogARMv8Compiler >> concretizeCmpRR [
 
 			^ machineCodeSize := 8].
 		
-	register2 = SP ifTrue: [ self halt ].
+	register2 = SP ifTrue: [ 
+		self machineCodeAt: 0 put: (self movSize: 1 sourceRegisterMaybeSP: SP destinationRegisterMaybeSP: ConcreteIPReg).
+		self
+			machineCodeAt: 4
+			put:
+				(self
+					cmpSize: 1
+					shiftedRegister: register1
+					shiftType: 0
+					shiftValue: 0
+					secondRegister: ConcreteIPReg).
+
+			^ machineCodeSize := 8 ].
 	
 	self
 		machineCodeAt: 0
@@ -1710,15 +1743,26 @@ CogARMv8Compiler >> concretizeMoveAwR [
 	| srcAddr destReg instrOffset |
 	srcAddr := operands at: 0.
 	destReg := operands at: 1.
-	(self isAddressRelativeToVarBase: srcAddr)
-		ifTrue: [ self
-				machineCodeAt: 0
-				put: (self
-					ldrSize: 1
-					baseRegister: ConcreteVarBaseReg
-					unsignedOffset: srcAddr - cogit varBaseAddress
-					destinationRegister: destReg).
-			^ machineCodeSize := 4 ].
+	(self isAddressRelativeToVarBase: srcAddr) ifTrue: [ | actualDestination |
+		actualDestination := destReg = SP
+			ifTrue: [ ConcreteIPReg ]
+			ifFalse: [ destReg ].
+		self
+			machineCodeAt: 0
+			put: (self
+				ldrSize: 1
+				baseRegister: ConcreteVarBaseReg
+				unsignedOffset: srcAddr - cogit varBaseAddress
+				destinationRegister: actualDestination).
+		machineCodeSize := 4.
+			
+		destReg = SP ifTrue: [ 
+			self machineCodeAt: 4 put: (self movToFromSP: SP rn: actualDestination).
+			machineCodeSize := machineCodeSize + 4.
+		].
+
+		^ machineCodeSize ].
+	
 	"load the address into ConcreteIPReg"
 	instrOffset := self moveCw: srcAddr intoR: ConcreteIPReg.
 	self
@@ -2238,19 +2282,12 @@ CogARMv8Compiler >> concretizeNegateR [
 	"Will get inlined into concretizeAt: switch."
 
 	<inline: true>
-	| reg |
-	self halt.
-	reg := operands at: 0.
-	"RSB destReg, srcReg, #0"
-	self
-		machineCodeAt: 0
-		put:
-			(self
-				type: 1
-				op: RsbOpcode
-				set: 0
-				rn: reg
-				rd: reg).
+	self machineCodeAt: 0 put: 
+		(self negateSize: 1
+			sourceRegister: (operands at: 0)
+			sourceRegisterShiftType: 0 "LSL"
+			sourceRegisterShift: 0 "no shift"
+			destinationRegister: (operands at: 0)).
 	^ machineCodeSize := 4
 ]
 
@@ -3140,14 +3177,6 @@ CogARMv8Compiler >> genMulR: regSource R: regDest [
 	^first
 ]
 
-{ #category : #'generate machine code' }
-CogARMv8Compiler >> genPopRegisterMask: registersToBeSavedMask [
-	<inline: true>
-	^registersToBeSavedMask = 0
-		ifTrue: [cogit Label]
-		ifFalse: [cogit gen: PopLDM operand: registersToBeSavedMask]
-]
-
 { #category : #'smalltalk calling convention' }
 CogARMv8Compiler >> genPushRegisterArgsForAbortMissNumArgs: numArgs [
 	"Ensure that the register args are pushed before the outer and
@@ -3208,7 +3237,28 @@ CogARMv8Compiler >> genRemoveNArgsFromStack: n [
 CogARMv8Compiler >> genRestoreRegs: regMask [
 	"Restore the registers in regMask as saved by genSaveRegs:."
 	<inline: true>
-	^self genPopRegisterMask: regMask
+	| registerCount |
+	self assert: (R12 > R1 and: [R12 - R1 + 1 = 12]).
+	self deny: (regMask anyMask: (cogit registerMaskFor: SPReg and: FPReg)).
+	
+	registerCount := 0.
+	R1 to: R12 do:
+		[:reg|
+		 (regMask anyMask: (cogit registerMaskFor: reg)) ifTrue:
+			[registerCount := registerCount + 1]].
+	
+	R1 to: R12 do:
+		[:reg|
+		 (regMask anyMask: (cogit registerMaskFor: reg)) ifTrue:
+			[cogit PopR: reg]].
+	
+	"If we are restoring an odd number of registers, this would unalign the stack.
+	Then, lets pop the extra thing to force the stack alignment"
+	registerCount \\ 2 == 0
+		ifFalse: [ 
+			cogit PopR: R0  ].
+	
+	^0
 ]
 
 { #category : #abi }
@@ -3222,8 +3272,21 @@ CogARMv8Compiler >> genSaveRegForCCall [
 CogARMv8Compiler >> genSaveRegs: regMask [
 	"Save the registers in regMask for a call into the C run-time from a trampoline"
 	<inline: true>
+	| registerCount |
 	self assert: (R12 > R1 and: [R12 - R1 + 1 = 12]).
 	self deny: (regMask anyMask: (cogit registerMaskFor: SPReg and: FPReg)).
+	
+	registerCount := 0.
+	R12 to: R1 by: -1 do:
+		[:reg|
+		 (regMask anyMask: (cogit registerMaskFor: reg)) ifTrue:
+			[registerCount := registerCount + 1]].
+	
+	"If we are saving an odd number of registers, this would unalign the stack.
+	Then, lets save an extra thing to force the stack alignment"
+	registerCount \\ 2 == 0
+		ifFalse: [ cogit PushCq: 16rBEEF "Marker smallinteger to generate a valid stack" ].
+	
 	R12 to: R1 by: -1 do:
 		[:reg|
 		 (regMask anyMask: (cogit registerMaskFor: reg)) ifTrue:
@@ -4072,6 +4135,30 @@ CogARMv8Compiler >> nameForRegister: reg [ "<Integer>"
 ]
 
 { #category : #assembler }
+CogARMv8Compiler >> negateSize: is64Bits sourceRegister: sourceRegister sourceRegisterShiftType: immediate2bitShiftType sourceRegisterShift: immediate6bitsShiftValue destinationRegister: destinationRegister [
+	
+	"C6.2.199 NEG (shifted register)
+	
+	Negate (shifted register) negates an optionally-shifted register value, and writes the result to the destination register.
+	
+	NEG <Xd>, <Xm>{, <shift> #<amount>}
+	
+	shiftType is the optional shift type to be applied to the second source operand, defaulting to LSL and encoded in the shift field. It can have the following values:
+		LSL when shift = 00
+		LSR when shift = 01
+		ASR when shift = 10
+	"
+	
+	^ is64Bits << 31
+		bitOr: (2r1001011 << 24
+		bitOr: ((immediate2bitShiftType bitAnd: 2r11) << 22
+		bitOr: ((sourceRegister bitAnd: 16r1f) << 16
+		bitOr: ((immediate6bitsShiftValue bitAnd: 16r3f) << 10
+		bitOr: (16r1f << 5
+		bitOr: (destinationRegister bitAnd: 16r1f))))))
+]
+
+{ #category : #assembler }
 CogARMv8Compiler >> nop [
 
 	"C6.2.203 NOP
@@ -4516,6 +4603,20 @@ CogARMv8Compiler >> stackPageInterruptHeadroomBytes [
 	^128 "32 words"
 ]
 
+{ #category : #'as yet unclassified' }
+CogARMv8Compiler >> stackPointerAlignment [
+	
+	<doNotGenerate>
+	"As for the ARMv8 Arm® Architecture Reference Manual
+	
+	D1.8.2 SP alignment checking
+	A misaligned stack pointer is where bits[3:0] of the stack pointer are not 0b0000, when the stack pointer is used as the base address of the calculation, regardless of any offset applied by the instruction.
+	
+	Meaning that the stack should be aligned to 16 bytes"
+
+	^ 16
+]
+
 { #category : #encoding }
 CogARMv8Compiler >> stop [
 "generate a BKPT ( - ARM_ARM v7 DDI10406 pp. A8-56) instruction. We could, given a good enough creative impulse and an over-active sense of humour, add some numerically encoded witticism to this instruction in bits 8-19 & 0-3. It has no effect on the execution but can be a way to specify which breakpoint has been hit etc."
@@ -4527,7 +4628,7 @@ CogARMv8Compiler >> stop [
 CogARMv8Compiler >> stopsFrom: startAddr to: endAddr [
 	self assert: endAddr - startAddr + 1 \\ 4 = 0.
 	startAddr to: endAddr by: 4 do: 
-		[:addr | objectMemory longAt: addr put: self stop].
+		[:addr | objectMemory long32At: addr put: self stop].
 ]
 
 { #category : #'inline cacheing' }

@@ -34,23 +34,6 @@ UnicornARMv5Simulator >> disassembler [
 	^ LLVMDisassembler armv5
 ]
 
-{ #category : #executing }
-UnicornARMv5Simulator >> doRunGeneratedCodeStartAt: initialAddress instructions: instructions [
-
-	"The Cogit for ARM generates more instructions per abstract opcode.
-	So, it is using the fact that all the instructions are 4 bytes to calculate the number of instructions.
-	The number of instructions should be affected by the amount of literals that have been generated.
-	As the literals are generated in the code, we have to skip their execution"
-
-	| numberOfInstructions |
-	numberOfInstructions := ((self getLastAddress: instructions) - initialAddress) / 4.
-
-	^ unicorn startAt: initialAddress
-		until: 0
-		timeout: 0
-		count: numberOfInstructions.
-]
-
 { #category : #'as yet unclassified' }
 UnicornARMv5Simulator >> extractDestinationRegisterFromAssembly: aLLVMInstruction [ 
 	
