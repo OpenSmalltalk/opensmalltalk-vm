@@ -22,22 +22,31 @@
  *   FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  *   DEALINGS IN THE SOFTWARE.
  */
+#include "sq.h"
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
+#ifdef HAVE_UNISTD_H
+#  include <unistd.h>
+#endif
 #include <errno.h>
-#include <sys/types.h>
-#include <sys/mman.h>
+#ifdef HAVE_SYS_TYPES_H
+#  include <sys/types.h>
+#endif
+#ifdef HAVE_MMAP
+#  include <sys/mman.h>
+#endif
 #if DUAL_MAPPED_CODE_ZONE
 # include <sys/prctl.h>
-# include <sys/stat.h>        /* For mode constants */
-# include <fcntl.h>           /* For O_* constants */
+#ifdef HAVE_SYS_STAT_H
+#  include <sys/stat.h> /* For mode constants */
+#endif
+#ifdef HAVE_FCNTL_H
+#  include <fcntl.h>   /* For O_* constants */
+#endif
 #endif
 
-#include "sq.h"
 #include "sqMemoryAccess.h"
-#include "config.h"
 #include "debug.h"
 
 #if SPURVM

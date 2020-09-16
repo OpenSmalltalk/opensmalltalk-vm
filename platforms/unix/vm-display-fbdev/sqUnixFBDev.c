@@ -39,7 +39,6 @@
  */
 
 
-#include "config.h"
 #include "sq.h"
 #include "sqUnixMain.h"
 #include "sqUnixGlobals.h"

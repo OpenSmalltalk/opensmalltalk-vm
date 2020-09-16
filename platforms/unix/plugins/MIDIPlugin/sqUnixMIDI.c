@@ -33,7 +33,6 @@
 #include "sq.h"
 #include "MIDIPlugin.h"
 
-#include "config.h"
 #include "debug.h"
 
 #if defined(USE_MIDI_ALSA)
