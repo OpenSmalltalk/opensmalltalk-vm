@@ -91,7 +91,7 @@ execute_process(
 
 
 set(DYLIB_EXT "*.dylib")
-set(LIBFFI_TARGET "x86_64-apple-darwin")
+set(LIBFFI_TARGET "--target=x86_64-apple-darwin")
 set(LIBFFI_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/build/bin/libffi.dylib" "${CMAKE_CURRENT_BINARY_DIR}/build/bin/libffi.7.dylib")
 set(LIBFFI_ADDITIONAL "CPATH=${OSX_SDK_PATH}/usr/include")
 
