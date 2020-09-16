@@ -26,17 +26,23 @@
  *   FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  *   DEALINGS IN THE SOFTWARE.
  */
+#include "sq.h"
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
+#ifdef HAVE_UNISTD_H
+#  include <unistd.h>
+#endif
 #include <errno.h>
-#include <sys/types.h>
-#include <sys/mman.h>
+#ifdef HAVE_SYS_TYPES_H
+#  include <sys/types.h>
+#endif
+#ifdef HAVE_MMAP
+#  include <sys/mman.h>
+#endif
+#include <errno.h>
 
-#include "sq.h"
 #include "sqMemoryAccess.h"
-#include "config.h"
 #include "debug.h"
 
 #if !SPURVM /* Spur uses sqUnixSpurMemory.c */
