@@ -40,23 +40,6 @@ UnicornARMv8Simulator >> disassembler [
 	^ LLVMDisassembler aarch64
 ]
 
-{ #category : #executing }
-UnicornARMv8Simulator >> doRunGeneratedCodeStartAt: initialAddress instructions: instructions [
-
-	"The Cogit for ARM generates more instructions per abstract opcode.
-	So, it is using the fact that all the instructions are 4 bytes to calculate the number of instructions.
-	The number of instructions should be affected by the amount of literals that have been generated.
-	As the literals are generated in the code, we have to skip their execution"
-
-	| numberOfInstructions |
-	numberOfInstructions := ((self getLastAddress: instructions) - initialAddress) / 4.
-
-	^ unicorn startAt: initialAddress
-		until: 0
-		timeout: 0
-		count: numberOfInstructions.
-]
-
 { #category : #'as yet unclassified' }
 UnicornARMv8Simulator >> extractDestinationRegisterFromAssembly: aLLVMInstruction [ 
 	
@@ -139,6 +122,11 @@ UnicornARMv8Simulator >> lr [
 	^ self readRegister: self linkRegister
 ]
 
+{ #category : #registers }
+UnicornARMv8Simulator >> lr: aValue [
+	^ self writeRegister: self linkRegister value: aValue
+]
+
 { #category : #'as yet unclassified' }
 UnicornARMv8Simulator >> negative [
 
@@ -163,6 +151,11 @@ UnicornARMv8Simulator >> pc [
 ]
 
 { #category : #registers }
+UnicornARMv8Simulator >> pc: aValue [
+	^ self writeRegister: self instructionPointerRegister value: aValue
+]
+
+{ #category : #registers }
 UnicornARMv8Simulator >> receiverRegister [
 	
 	^ UcARM64Registers x5
@@ -178,6 +171,26 @@ UnicornARMv8Simulator >> registerList [
 UnicornARMv8Simulator >> sendNumberOfArgumentsRegister [
 	
 	^ UcARM64Registers x6
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> simulateLeafCallOf: address nextpc: nextpc memory: aMemory [
+	
+	self lr: nextpc.
+	self pc: address
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> smashRegisterAccessors [
+	
+	^#( x1: x2: x3: x4: x5: x6: x7: x8: x9: x10: x11: x12: )
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> smashRegistersWithValuesFrom: base by: step [ 
+	
+	self smashRegisterAccessors withIndexDo: [:accessor :index|
+		self perform: accessor with: index - 1 * step + base]
 ]
 
 { #category : #registers }
@@ -214,10 +227,22 @@ UnicornARMv8Simulator >> x10 [
 	^ self readRegister: UcARM64Registers x10
 ]
 
+{ #category : #registers }
+UnicornARMv8Simulator >> x10: anInteger [ 
+
+	^ self writeRegister: UcARM64Registers x10 value: anInteger
+]
+
 { #category : #'as yet unclassified' }
 UnicornARMv8Simulator >> x11 [
 
 	^ self readRegister: UcARM64Registers x11
+]
+
+{ #category : #registers }
+UnicornARMv8Simulator >> x11: anInteger [ 
+
+	^ self writeRegister: UcARM64Registers x11 value: anInteger
 ]
 
 { #category : #'as yet unclassified' }
@@ -226,10 +251,34 @@ UnicornARMv8Simulator >> x12 [
 	^ self readRegister: UcARM64Registers x12
 ]
 
+{ #category : #registers }
+UnicornARMv8Simulator >> x12: anInteger [ 
+
+	^ self writeRegister: UcARM64Registers x12 value: anInteger
+]
+
+{ #category : #registers }
+UnicornARMv8Simulator >> x1: anInteger [ 
+
+	^ self writeRegister: UcARM64Registers x1 value: anInteger
+]
+
 { #category : #accessing }
 UnicornARMv8Simulator >> x2 [
 
 	^ self readRegister: UcARM64Registers x2
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> x29: anInteger [ 
+	
+	^ self writeRegister: UcARM64Registers x29 value: anInteger
+]
+
+{ #category : #registers }
+UnicornARMv8Simulator >> x2: anInteger [ 
+
+	^ self writeRegister: UcARM64Registers x2 value: anInteger
 ]
 
 { #category : #accessing }
@@ -238,10 +287,22 @@ UnicornARMv8Simulator >> x3 [
 	^ self readRegister: UcARM64Registers x3
 ]
 
+{ #category : #registers }
+UnicornARMv8Simulator >> x3: anInteger [ 
+
+	^ self writeRegister: UcARM64Registers x3 value: anInteger
+]
+
 { #category : #'as yet unclassified' }
 UnicornARMv8Simulator >> x4 [
 
 	^ self readRegister: UcARM64Registers x4
+]
+
+{ #category : #registers }
+UnicornARMv8Simulator >> x4: anInteger [ 
+
+	^ self writeRegister: UcARM64Registers x4 value: anInteger
 ]
 
 { #category : #'as yet unclassified' }
@@ -250,7 +311,7 @@ UnicornARMv8Simulator >> x5 [
 	^ self readRegister: UcARM64Registers x5
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #registers }
 UnicornARMv8Simulator >> x5: anInteger [ 
 
 	^ self writeRegister: UcARM64Registers x5 value: anInteger
@@ -262,13 +323,19 @@ UnicornARMv8Simulator >> x6 [
 	^ self readRegister: UcARM64Registers x6
 ]
 
+{ #category : #registers }
+UnicornARMv8Simulator >> x6: anInteger [ 
+
+	^ self writeRegister: UcARM64Registers x6 value: anInteger
+]
+
 { #category : #'as yet unclassified' }
 UnicornARMv8Simulator >> x7 [
 
 	^ self readRegister: UcARM64Registers x7
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #registers }
 UnicornARMv8Simulator >> x7: anInteger [ 
 
 	^ self writeRegister: UcARM64Registers x7 value: anInteger
@@ -280,10 +347,34 @@ UnicornARMv8Simulator >> x8 [
 	^ self readRegister: UcARM64Registers x8
 ]
 
+{ #category : #registers }
+UnicornARMv8Simulator >> x8: anInteger [ 
+
+	^ self writeRegister: UcARM64Registers x8 value: anInteger
+]
+
 { #category : #'as yet unclassified' }
 UnicornARMv8Simulator >> x9 [
 
 	^ self readRegister: UcARM64Registers x9
+]
+
+{ #category : #registers }
+UnicornARMv8Simulator >> x9: anInteger [ 
+
+	^ self writeRegister: UcARM64Registers x9 value: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> xzr [
+	
+	^ self readRegister: UcARM64Registers xzr
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> xzr: anInteger [ 
+
+	^ self writeRegister: UcARM64Registers xzr value: anInteger
 ]
 
 { #category : #'as yet unclassified' }

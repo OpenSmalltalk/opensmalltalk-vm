@@ -135,15 +135,6 @@ UnicornSimulator >> disassembler [
 ]
 
 { #category : #executing }
-UnicornSimulator >> doRunGeneratedCodeStartAt: initialAddress instructions: instructions [
-
-	^ unicorn startAt: initialAddress
-		until: 0
-		timeout: 0
-		count: instructions size.
-]
-
-{ #category : #executing }
 UnicornSimulator >> doStartAt: startAddress until: until timeout: timeout count: count [
 
 	| actualCount result error |
@@ -158,16 +149,21 @@ UnicornSimulator >> doStartAt: startAddress until: until timeout: timeout count:
 				until: 0
 				timeout: 0
 				count: 1.
-			
+					
 				stopReason ifNotNil: [ 
 						error := stopReason.
 						stopReason := nil.
 						error signal ].
+		
+			"If execution did not stop because of a stop reason, verify the error code"
+			unicorn verifyErrorCode: result.
+
 			
 					actualCount := actualCount + 1] 
 				on: UnicornInvalidMemoryAccess do: [ :invalidAccess |
 					self instructionPointerValue = until ifTrue: [ ^ 0 ].
-					self cogit handleSimulationTrap: (UnicornSimulationTrap simulator: self error: invalidAccess). ].
+					self cogit handleSimulationTrap: (UnicornSimulationTrap simulator: self error: invalidAccess).
+					actualCount := actualCount + 1 ].
 			
 			stopReason ifNotNil: [ ^ result ].
 			count = actualCount ifTrue: [ ^ result ].
@@ -398,6 +394,18 @@ UnicornSimulator >> sendNumberOfArgumentsRegisterValue [
 UnicornSimulator >> sendNumberOfArgumentsRegisterValue: aValue [
 
 	^ self writeRegister: self sendNumberOfArgumentsRegister value: aValue
+]
+
+{ #category : #'as yet unclassified' }
+UnicornSimulator >> simulateLeafCallOf: anInteger nextpc: anInteger2 memory: aSpurSimulatedMemory [ 
+	
+	self subclassResponsibility
+]
+
+{ #category : #'as yet unclassified' }
+UnicornSimulator >> smashRegistersWithValuesFrom: base by: step [
+	
+	self subclassResponsibility
 ]
 
 { #category : #registers }

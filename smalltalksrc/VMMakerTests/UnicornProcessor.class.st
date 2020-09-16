@@ -32,7 +32,7 @@ UnicornProcessor >> initializeStackFor: aCompiler [
 	machineSimulator := UnicornSimulator perform: aCompiler backend class ISA asSymbol.
 	machineSimulator memory: aCompiler objectMemory.
 	aCompiler objectMemory memory memoryObject pinInMemory.
-	machineSimulator mapMemory: aCompiler objectMemory memory memoryObject at: 16r1000000 "just some address not 0".
+	machineSimulator mapMemory: aCompiler objectMemory memory memoryObject at: aCompiler objectMemory memory initialAddress "just some address not 0".
 	
 	"As for the ARMv8 Arm® Architecture Reference Manual
 	
@@ -85,6 +85,16 @@ UnicornProcessor >> rsp: anInteger [
 	machineSimulator rsp: anInteger
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornProcessor >> runInMemory: aMemory minimumAddress: minimumAddress readOnlyBelow: minimumWritableAddress [
+
+
+	^ machineSimulator startAt: machineSimulator instructionPointerValue
+		until: 0
+		timeout: 0
+		count: 0
+]
+
 { #category : #initialization }
 UnicornProcessor >> setFramePointer: framePointer stackPointer: stackPointer [
 	
@@ -92,10 +102,34 @@ UnicornProcessor >> setFramePointer: framePointer stackPointer: stackPointer [
 	machineSimulator stackPointerRegisterValue: stackPointer
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornProcessor >> simulateLeafCallOf: address nextpc: nextpc memory: aMemory [
+
+	machineSimulator simulateLeafCallOf: address nextpc: nextpc memory: aMemory
+]
+
+{ #category : #'as yet unclassified' }
+UnicornProcessor >> smashRegistersWithValuesFrom: base by: step [
+	
+	machineSimulator smashRegistersWithValuesFrom: base by: step
+]
+
 { #category : #registers }
 UnicornProcessor >> sp [
 	
 	^ machineSimulator stackPointerRegisterValue
+]
+
+{ #category : #'as yet unclassified' }
+UnicornProcessor >> x12: anInteger [ 
+	
+	machineSimulator x12: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornProcessor >> x29: anInteger [ 
+	
+	machineSimulator x29: anInteger
 ]
 
 { #category : #'as yet unclassified' }
@@ -108,4 +142,16 @@ UnicornProcessor >> x5: anInteger [
 UnicornProcessor >> x7: anInteger [ 
 	
 	machineSimulator x7: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornProcessor >> xzr [
+	
+	^ machineSimulator xzr
+]
+
+{ #category : #'as yet unclassified' }
+UnicornProcessor >> xzr: anInteger [ 
+	
+	machineSimulator xzr: anInteger
 ]
