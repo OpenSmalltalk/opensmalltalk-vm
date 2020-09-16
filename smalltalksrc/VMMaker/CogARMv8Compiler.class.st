@@ -113,7 +113,8 @@ CogARMv8Compiler class >> filteredInstVarNames [
 
 { #category : #translation }
 CogARMv8Compiler class >> identifyingPredefinedMacros [
-	^#('__ARM_ARCH_5__' '__ARM_ARCH_6__' '__ARM_ARCH_7__' '__arm__' '__arm32__' 'ARM32' '_M_ARM')
+
+	^#('__aarch64__')
 ]
 
 { #category : #'class initialization' }
@@ -256,7 +257,7 @@ CogARMv8Compiler class >> initializeAbstractRegisters [
 
 { #category : #testing }
 CogARMv8Compiler class >> isAbstract [
-	^self == CogARMCompiler
+	^self == CogARMv8Compiler
 ]
 
 { #category : #testing }
