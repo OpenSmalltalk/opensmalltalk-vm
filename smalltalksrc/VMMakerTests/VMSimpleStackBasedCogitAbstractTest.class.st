@@ -597,9 +597,9 @@ VMSimpleStackBasedCogitAbstractTest >> runGeneratedCode [
 
 	machineSimulator
 		startAt: initialAddress
-		until: callerAddress
+		until: self getLastAddress
 		timeout: 0
-		count: self abstractInstructions size.
+		count: 0
 ]
 
 { #category : #helpers }
