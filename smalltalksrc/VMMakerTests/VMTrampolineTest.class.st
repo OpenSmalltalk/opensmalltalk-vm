@@ -109,6 +109,34 @@ VMTrampolineTest >> testRestoreRegistersProducesAlignedStackPointer [
 ]
 
 { #category : #tests }
+VMTrampolineTest >> testSmalltalkToCStackSwitchShouldUpdateInterpreterFramePointer [
+	
+	self compile: [ cogit genSmalltalkToCStackSwitch: false "do not push link register" ].
+	
+	machineSimulator baseRegisterValue: cogit varBaseAddress.
+	self framePointerRegisterValue: 42.
+
+	self runFrom: initialAddress until: self getLastAddress.
+
+	"The generated code should load in the interpreter stackPointer the value stored in the SP register"
+	self assert: self interpreter framePointer equals: 42
+]
+
+{ #category : #tests }
+VMTrampolineTest >> testSmalltalkToCStackSwitchShouldUpdateInterpreterStackPointer [
+	
+	self compile: [ cogit genSmalltalkToCStackSwitch: false "do not push link register" ].
+	
+	machineSimulator baseRegisterValue: cogit varBaseAddress.
+	self stackPointerRegisterValue: 42.
+
+	self runFrom: initialAddress until: self getLastAddress.
+
+	"The generated code should load in the interpreter stackPointer the value stored in the SP register"
+	self assert: self interpreter stackPointer equals: 42
+]
+
+{ #category : #tests }
 VMTrampolineTest >> testStoreRegistersProducesAlignedStackPointer [
 
 	"Some architectures such as ARMv8 require that the SP is always aligned to some value even in between calls.

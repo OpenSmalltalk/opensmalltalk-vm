@@ -2044,23 +2044,31 @@ CogARMv8Compiler >> concretizeMoveRAb [
 CogARMv8Compiler >> concretizeMoveRAw [
 	"Will get inlined into concretizeAt: switch."
 
-	"LEA ConcreteIPReg
-	str srcReg, [ConcreteIPReg]"
-
 	<inline: true>
 	| srcReg destAddr instrOffset |
 	srcReg := operands at: 0.
 	destAddr := operands at: 1.
-	(self isAddressRelativeToVarBase: destAddr)
-		ifTrue: [ self
-				machineCodeAt: 0
-				put:
-					(self
-						strSize: 1
-						baseRegister: ConcreteVarBaseReg
-						positiveOffset: destAddr - cogit varBaseAddress
-						destinationRegister: srcReg).
-			^ machineCodeSize := 4 ].
+	(self isAddressRelativeToVarBase: destAddr) ifTrue: [ | actualSourceRegister |
+		machineCodeSize := 0.
+		actualSourceRegister := srcReg = SP
+			ifTrue: [ 
+				self
+					machineCodeAt: 0
+					put: (self movToFromSP: ConcreteIPReg rn: SP).
+				machineCodeSize := 4.
+				ConcreteIPReg ]
+			ifFalse: [ srcReg ].
+
+		self
+			machineCodeAt: machineCodeSize
+			put:
+				(self
+					strSize: 1
+					baseRegister: ConcreteVarBaseReg
+					positiveOffset: destAddr - cogit varBaseAddress
+					destinationRegister: actualSourceRegister).
+		^ machineCodeSize := machineCodeSize + 4 ].
+
 	"load the address into ConcreteIPReg"
 	instrOffset := self moveCw: destAddr intoR: ConcreteIPReg.
 	"We *could* overwrite the last instruction above with a LDR a, b, last-byte-of-srcAddr BUT that would break if we change to loading literals instead of forming long constants"
@@ -3372,12 +3380,6 @@ CogARMv8Compiler >> hasLinkRegister [
 { #category : #testing }
 CogARMv8Compiler >> hasPCDependentInstruction [
 	"e.g. B, BL: Branch, Branch and Link"
-	^true
-]
-
-{ #category : #testing }
-CogARMv8Compiler >> hasPCRegister [
-	"Answer if the processor has a generally addressable pc register, which ARM does."
 	^true
 ]
 
