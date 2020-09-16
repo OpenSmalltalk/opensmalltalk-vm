@@ -362,6 +362,36 @@ VMMASTTranslationTest >> testMethodWithLoopDeclaresLoopIndexVariable [
 ]
 
 { #category : #tests }
+VMMASTTranslationTest >> testMethodWithoutExplicitReturnInOtherMethodReturnsVoid [
+
+	| translation codeGenerator |
+	translation := (CoInterpreterPrimitives >> #doWaitSemaphore:reEnterInterpreter: ) asTranslationMethodOfClass: TMethod.
+	
+	codeGenerator := CCodeGeneratorGlobalStructure new.
+	codeGenerator addMethod: translation.
+	codeGenerator doInlining: true.
+
+	codeGenerator inferTypesForImplicitlyTypedVariablesAndMethods.
+
+	self assert: translation returnType equals: #void
+]
+
+{ #category : #tests }
+VMMASTTranslationTest >> testMethodWithoutExplicitReturnReturnsVoid [
+
+	| translation codeGenerator |
+	translation := (InterpreterPrimitives >> #doWaitSemaphore: ) asTranslationMethodOfClass: TMethod.
+	
+	codeGenerator := CCodeGeneratorGlobalStructure new.
+	codeGenerator addMethod: translation.
+	codeGenerator doInlining: true.
+
+	codeGenerator inferTypesForImplicitlyTypedVariablesAndMethods.
+
+	self assert: translation returnType equals: #void
+]
+
+{ #category : #tests }
 VMMASTTranslationTest >> testTranslateBinaryMethodHasSameName [
 
 	| translation |

@@ -23,6 +23,15 @@ VMFFIArgumentMarshallingTest >> doTestFuntionWithArgumentType: argumentType smal
 ]
 
 { #category : #'tests - parameters marshalling' }
+VMFFIArgumentMarshallingTest >> testCalloutWithCharacterArgumentIsMarshalledCorrectly [
+
+	self
+		doTestFuntionWithArgumentType: interpreter libFFI char
+		smalltalkValue: (memory characterObjectOf: 17)
+		expectedValue: 17
+]
+
+{ #category : #'tests - parameters marshalling' }
 VMFFIArgumentMarshallingTest >> testCalloutWithDoubleArgumentIsMarshalledCorrectly [
 
 	self

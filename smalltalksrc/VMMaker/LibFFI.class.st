@@ -20,6 +20,13 @@ LibFFI class >> ancilliaryClasses [
 	^ { LibFFICIF. LibFFIType. LibFFIWorkerTask }
 ]
 
+{ #category : #'type constants' }
+LibFFI >> char [
+	<doNotGenerate>
+	
+	^ self uint8
+]
+
 { #category : #'call simulations' }
 LibFFI >> cifAtAddress: anInteger [
 	<doNotGenerate>

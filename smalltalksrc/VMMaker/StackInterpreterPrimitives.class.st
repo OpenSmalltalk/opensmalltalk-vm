@@ -192,6 +192,22 @@ StackInterpreterPrimitives >> isAppropriateForCopyObject: oop [
 	^true
 ]
 
+{ #category : #logging }
+StackInterpreterPrimitives >> logDebug: aString [
+
+	<doNotGenerate>
+
+	aString traceCr.
+]
+
+{ #category : #logging }
+StackInterpreterPrimitives >> logDebug: aFormat _: aParameter [
+
+	<doNotGenerate>
+
+	(aFormat printf: { aParameter }) traceCr
+]
+
 { #category : #'object access primitives' }
 StackInterpreterPrimitives >> markFrame: theFPInt [
 	stackPages
@@ -411,9 +427,13 @@ StackInterpreterPrimitives >> marshallUInt64From: argumentArrayOop at: index int
 { #category : #'ffi - helpers' }
 StackInterpreterPrimitives >> marshallUInt8From: argumentArrayOop at: index into: holder [
 
-	| intHolder value |
+	| intHolder value oop |
 	
-	value := self fetchInteger: index ofObject: argumentArrayOop.
+	oop := objectMemory fetchPointer: index ofObject: argumentArrayOop.
+	value := (objectMemory isCharacterObject: oop) 
+		ifTrue: [ objectMemory characterValueOf: oop ]	
+		ifFalse: [ objectMemory integerValueOf: oop ].
+	
 	value < 0 ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
 	value > UINT8_MAX ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
 		
@@ -1618,14 +1638,18 @@ StackInterpreterPrimitives >> primitiveSameThreadCallout [
 	"1. Obtain externalFunction and extract the CIF"
 	externalFunction := self getHandler: (self stackValue: PARAM_EXTERNALFUNCTION).
 	self failed 
-		ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+		ifTrue: [ 
+			self logDebug: 'Invalid External Function Argument'.
+			^ self primitiveFailFor: PrimErrBadArgument ].
 
 	cif := self getHandlerAsCif:(objectMemory
 				fetchPointer: 1
 				ofObject: (self stackValue: PARAM_EXTERNALFUNCTION)).
 
 	self failed
-		ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+		ifTrue: [ 
+			self logDebug: 'Invalid CIF in ExternalFunction'.
+			^ self primitiveFailFor: PrimErrBadArgument ].
 
 	" 2. Prepare Arguments:
 	- Verify Arguments is an Array
@@ -1634,12 +1658,16 @@ StackInterpreterPrimitives >> primitiveSameThreadCallout [
 	argumentsArrayOop := self stackValue: PARAM_ARGUMENTS.
 
 	(objectMemory isArray: argumentsArrayOop)
-		ifFalse: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+		ifFalse: [ 
+			self logDebug: 'Argument Array is not an Array'.
+			^ self primitiveFailFor: PrimErrBadArgument ].
 
 	argumentSize := cif numberArguments.
 
 	(objectMemory slotSizeOf: argumentsArrayOop) = argumentSize
-		ifFalse: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+		ifFalse: [ 
+			self logDebug: 'Argument Array size mismatch'.
+			^ self primitiveFailFor: PrimErrBadArgument ].
 		
 	parameters := self allocateParameters: argumentSize 
 		using: [:aSize | self alloca: (self sizeof: #'void*') * aSize ].
@@ -1654,7 +1682,9 @@ StackInterpreterPrimitives >> primitiveSameThreadCallout [
 		self marshallArgumentFrom: argumentsArrayOop atIndex: i into: argHolder ofType: argType type withSize: argType size. 
 				
 		self failed 
-				ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ]].
+				ifTrue: [ 
+					self logDebug: 'Could not convert argument index: %d' _: i + 1.
+					^ self primitiveFailFor: PrimErrBadArgument ]].
 	
 	returnHolder := self alloca: cif returnType size.
 
