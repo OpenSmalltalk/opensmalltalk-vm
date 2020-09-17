@@ -286,7 +286,9 @@ aioPoll(long microSeconds)
 	fd_set	rd, wr, ex;
 	unsigned long long us;
 
+#if defined(AIO_DEBUG) && AIO_DEBUG >= 2
 	FPRINTF((stderr, "aioPoll(%ld)\n", microSeconds));
+#endif
 	DO_TICK(SHOULD_TICK());
 
 	/*
