@@ -88,23 +88,7 @@ AC_DEFUN([AC_REQUIRE_SIZEOF],[
     AC_MSG_RESULT("okay"),
     AC_MSG_RESULT("bad")
     AC_MSG_ERROR("one or more basic data types has an incompatible size: giving up"))])
-
-# Try to find a 64-bit integer data type.
-# NOTE: `long long' is 64 bits in ANSI C99 [ISO/IEC 9899:1999 (E)].
-
-AC_DEFUN([AC_CHECK_INT64_T],[
-  AC_CACHE_CHECK([for 64-bit integer type],ac_cv_int64_t,
-    AC_TRY_RUN([int main(){return(sizeof(long) == 8)?0:1;}],
-      ac_cv_int64_t="long",
-      AC_TRY_RUN([int main(){return(sizeof(long long) == 8)?0:1;}],
-        ac_cv_int64_t="long long",
-        ac_cv_int64_t="no")))
-  if test "$ac_cv_int64_t" = ""; then
-    AC_MSG_ERROR([could not find a 64-bit integer type])
-  fi
-  SQUEAK_INT64_T="$ac_cv_int64_t"
-  AC_DEFINE_UNQUOTED(squeakInt64, $ac_cv_int64_t, [64bit signed integer])])
-  
+ 
 
 AC_DEFUN([AC_NEED_SUNOS_H],
 [case "$host" in
@@ -217,13 +201,6 @@ if test $ac_cv_c_bigendian != yes
 then CFLAGS="$CFLAGS -DLSB_FIRST=1"
 fi])
 
-
-AC_DEFUN([AC_C_DOUBLE_ALIGNMENT],
-[AC_CACHE_CHECK([whether unaligned access to doubles is ok], ac_cv_double_align,
-  AC_TRY_RUN([f(int i){*(double *)i=*(double *)(i+4);}
-              int main(){char b[[12]];f(b);return 0;}],
-    ac_cv_double_align="yes", ac_cv_double_align="no"))
-test "$ac_cv_double_align" = "no" && AC_DEFINE(DOUBLE_WORD_ALIGNMENT, [], [Unaligned double access])])
 
 # this assumes that libtool has already been configured and built --
 # if not then err on the side of conservatism.

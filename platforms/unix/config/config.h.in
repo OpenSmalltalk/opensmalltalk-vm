@@ -53,9 +53,6 @@
 /* Defined when building on Darwin */
 #undef DARWIN
 
-/* Unaligned double access */
-#undef DOUBLE_WORD_ALIGNMENT
-
 /* Define to 1 if you have `alloca', as a function or macro. */
 #undef HAVE_ALLOCA
 
@@ -486,8 +483,5 @@
 
 /* socklen size */
 #undef socklen_t
-
-/* 64bit signed integer */
-#undef squeakInt64
 
 #endif /* __sq_config_h */

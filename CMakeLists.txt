@@ -421,14 +421,6 @@ else()
 	check_type_size("void*" SIZEOF_VOID_P)
 endif()
 
-if("${SIZEOF_LONG}" STREQUAL "8")
-	set(SQUEAK_INT64_TYPEDEF "long")
-elseif("${SIZEOF_LONG_LONG}" STREQUAL "8")
-	set(SQUEAK_INT64_TYPEDEF "long long")
-else()
-	message(FATAL_ERROR "Failed to find a 64 bits integer type.")
-endif()
-
 if(HAVE_LIBDL)
 	set(VM_DEPENDENCIES_LIBRARIES dl ${VM_DEPENDENCIES_LIBRARIES})
 endif()
@@ -464,15 +456,6 @@ set(HAVE_VALID_UUID_LIBRARY False)
 if(UUID_LIBRARY AND (HAVE_SYS_UUID_H OR HAVE_UUID_UUID_H OR HAVE_UUID_H) AND (HAVE_UUIDGEN OR HAVE_UUID_GENERATE))
 	set(HAVE_VALID_UUID_LIBRARY True)
 endif()
-
-# misc
-check_c_source_runs("
-void f(int i){*(double *)i=*(double *)(i+4);}
-int main(){char b[12];f(b);return 0;}" NO_DOUBLE_WORD_ALIGNMENT)
-if(NOT NO_DOUBLE_WORD_ALIGNMENT)
-  set(DOUBLE_WORD_ALIGNMENT TRUE)
-endif()
- 
 
 # Add the current directory.
 include_directories(
