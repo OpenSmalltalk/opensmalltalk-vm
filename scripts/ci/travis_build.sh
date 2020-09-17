@@ -17,6 +17,10 @@ if [[ "${APPVEYOR}" ]]; then
     echo
     test -d /usr/i686-w64-mingw32/sys-root/mingw/lib || echo "No lib dir"
     test -d /usr/i686-w64-mingw32/sys-root/mingw/include || echo "No inc dir"
+
+    # Mingw has a default embedded manifest now, which is poisonous.
+    # Absence of the file is ok tho.
+    rm -f /usr/i686-w64-mingw32/sys-root/mingw/lib/default-manifest.o || true
 else
     PLATFORM="${TRAVIS_OS_NAME}"
 fi
