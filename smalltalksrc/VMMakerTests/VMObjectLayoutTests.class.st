@@ -32,7 +32,6 @@ VMObjectLayoutTests >> testCharacterIsImmediate [
 { #category : #tests }
 VMObjectLayoutTests >> testHeaderOfObjectEncodesTheCorrectAmountOfSlots [
 	| class objOop |
-	"objects always are allocated with at least one slots for forwarding"
 	0 to: 254 do: [ :slots | 
 		| objSize |
 		class := self
@@ -97,6 +96,22 @@ VMObjectLayoutTests >> testObjectWithMoreThan254SlotsHasTheCorrectSize [
 		assert: (memory bytesInObject: objOop)
 		equals: (slots + 2 "headers") * memory wordSize.
 	
+]
+
+{ #category : #tests }
+VMObjectLayoutTests >> testObjectWithMoreThan254SlotsHasTwoHeaders [
+	| class objOop header2 mask numSlots |
+	mask := memory wordSize = 8
+		ifTrue: [ 16rFFFFFFFFFFFFFF ]
+		ifFalse: [ 16rFFFFFF ].
+	255 to: 265 do: [ :slots | 
+		class := self
+			installClassIntoClassTableWithInstSpec: 1
+			instSize: slots.
+		objOop := memory instantiateClass: class.
+		header2 := memory longAt: objOop - self wordSize.	"header before the main header"
+		numSlots := header2 bitAnd: mask.
+		self assert: numSlots equals: slots ]
 ]
 
 { #category : #tests }
