@@ -1,1 +1,20 @@
-In order to build the Unicode plugin on Linux, you'll need a collection of Pango, Cairo, and glib header and library files. These can often be found in the GTK+ development package in the package repository for your version of Linux.
+In order to build the Unicode plugin, you'll need a collection of Pango, Cairo, and glib header and library files. These can often be found in the GTK+ development package in the package repository for your operating system.
+
+The location of the header files can be a problem. 
+
+A possible approach is to use 'pkg-config' reducing the problem
+
+ # pkg-config --cflags glib-2.0
+
+For example a system may have:
+
+ -I/usr/include/glib-2.0 -I/usr/lib/glib-2.0/include  
+
+while a different system (or a 64bit version of the same system) may have:
+
+ -I/usr/include/glib-2.0 -I/usr/lib/amd64/glib-2.0/include  
+
+Unfortunately pkg-config could perhaps have its own problems ...
+
+In that case configure can be ran with "UNICODE_PLUGIN_CFLAGS" manually set.
+
