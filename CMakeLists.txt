@@ -293,6 +293,8 @@ endif()
 # LibFFI
 #
 
+if (NOT WITHOUT_DEPENDENCIES)
+
 ExternalProject_Add(build_libFFI
     PREFIX "${CMAKE_CURRENT_BINARY_DIR}/build/libffi"
     SOURCE_DIR "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/src"
@@ -324,6 +326,8 @@ else()
 endif()
 
 link_directories("${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/lib")
+
+endif()
 
 #
 # End LibFFI
@@ -398,7 +402,9 @@ include(plugins.cmake)
 
 # Handling Third party dependencies
 
-add_third_party_dependencies_per_platform()
+if (NOT WITHOUT_DEPENDENCIES)
+	add_third_party_dependencies_per_platform()
+endif()
 
 # Selecting files to include in the package
 
