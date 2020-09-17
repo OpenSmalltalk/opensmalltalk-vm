@@ -1143,9 +1143,6 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	}
 }
 
-- (void) preDrawThelayers {
-}
-
 @end
 
 NSOpenGLContext *
@@ -1196,3 +1193,5 @@ setOpenGLTextureLayerContent(unsigned int handle, GLuint texture, int x, int y, 
 			[mainOpenGLView clearScreen];
 	}
 }
+
+#endif // USE_OPENGL
