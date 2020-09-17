@@ -152,17 +152,6 @@ cache:
   - .thirdparty-cache
 
 install:
-<<<<<<< HEAD
-  - ps: 'Start-FileDownload "http://cygwin.com/setup-x86.exe" -FileName "setup-x86.exe"'
-  - ps: 'Start-FileDownload "http://cygwin.com/setup-x86_64.exe" -FileName "setup-x86_64.exe"'
-  - '%CYG_SETUP% -dgnqNO -R "%CYG_ROOT%" -s "%CYG_MIRROR%" -l "%CYG_ROOT%\var\cache\setup" -P mingw64-%MINGW_ARCH%-gcc-core,mingw64-%MINGW_ARCH%-gcc-g++,mingw64-%MINGW_ARCH%-headers,mingw64-%MINGW_ARCH%-runtime,zip,mingw64-%MINGW_ARCH%-clang,libiconv-devel,libglib2.0-devel,perl,mingw64-%MINGW_ARCH%-zlib,cmake,mingw64-%MINGW_ARCH%-win-iconv'
-
-# Mingw has a default embedded manifest now, which is poisonous, but we cannot uninstall because the package is a hard dependency.
-# Absence of the file is ok tho.
-#  - '%CYG_SETUP% -dgnqNO -R "%CYG_ROOT%" -s "%CYG_MIRROR%" -l "%CYG_ROOT%\var\cache\setup" -x mingw64-%MINGW_ARCH%-windows-default-manifest'
-
-build: false
-=======
   # Search for [appveyor skip], [skip appveyor], [skip ci] or [ci skip] and exit if found in full commit message
   - ps: $commit=$env:APPVEYOR_REPO_COMMIT_MESSAGE + $env:APPVEYOR_REPO_COMMIT_MESSAGE_EXTENDED
   - ps: If ($commit.Contains("[skip appveyor]") -Or $commit.Contains("[appveyor skip]")) { Exit-AppVeyorBuild }
@@ -171,7 +160,10 @@ build: false
   - 'curl -fsSL --retry 4 -m 600 -o "setup-x86.exe" "http://cygwin.com/setup-x86.exe" '
   - 'curl -fsSL --retry 4 -m 600 -o "setup-x86_64.exe" "http://cygwin.com/setup-x86_64.exe" '
   - 'call scripts/installCygwin.bat %MINGW_ARCH% "%CYG_ROOT%"'
->>>>>>> origin/Cog
+
+# Mingw has a default embedded manifest now, which is poisonous, but we cannot uninstall because the package is a hard dependency.
+# Absence of the file is ok tho.
+#  - '%CYG_SETUP% -dgnqNO -R "%CYG_ROOT%" -s "%CYG_MIRROR%" -l "%CYG_ROOT%\var\cache\setup" -x mingw64-%MINGW_ARCH%-windows-default-manifest'
 
 # Cygwin build script
 #
