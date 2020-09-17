@@ -231,12 +231,9 @@ ldpi_from_physical(int hpx, int vpx, double hinches, double vinches)
 {
   unsigned int stops = _sqEnvironmentStops();
   double pdpi = pdpi_from_physical(hpx, vpx, hinches, vinches);
-  double pscale = pdpi / base_dpi;
-  double lscale = floor(pscale * stops) / stops;
-  if (lscale < 1.0) {
-    /* don't autodetect below scale of 1 */
-    lscale = 1.0;
-  }
+  /* determine scale, round towards default_scale */
+  double pscale = (pdpi / base_dpi) - default_scale;
+  double lscale = (trunc(pscale * stops) / stops) + default_scale;
   double ldpi= lscale * base_dpi;
   DPRINTF(("Displayscale: pdi: %f, pscale: %f, lscale: %f, ldpi: %f\n",
            pdpi, pscale, lscale, ldpi));
