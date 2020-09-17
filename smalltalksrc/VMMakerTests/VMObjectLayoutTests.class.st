@@ -121,3 +121,15 @@ VMObjectLayoutTests >> testSmallIntegerIsImmediate [
 	self assert: (memory isImmediate: int).
 	self assert: (memory fetchClassTagOf: int) equals: 1
 ]
+
+{ #category : #tests }
+VMObjectLayoutTests >> testVariableObjectWithInstVarsHasTheRightSize [
+	| class objOop fixedFieldsSize indexableSize |
+	indexableSize := 12.
+	fixedFieldsSize := 5.
+	class := self
+		installClassIntoClassTableWithInstSpec: 3
+		instSize: fixedFieldsSize.
+	objOop := memory instantiateClass: class indexableSize: indexableSize.
+	self assert: (memory slotSizeOf: objOop) equals: fixedFieldsSize + indexableSize
+]
