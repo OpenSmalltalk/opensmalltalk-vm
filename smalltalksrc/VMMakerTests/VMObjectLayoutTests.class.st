@@ -11,7 +11,7 @@ VMObjectLayoutTests >> formatFromInstSpec: instSpecInt instSize: instSizeInt [
 	^ instSpecInt << 16 + instSizeInt
 ]
 
-{ #category : #tests }
+{ #category : #helpers }
 VMObjectLayoutTests >> installClassIntoClassTableWithInstSpec: aFormatInt instSize: aSizeInt [ 
 	| class |
 	class := self
@@ -44,6 +44,30 @@ VMObjectLayoutTests >> testHeaderOfObjectEncodesTheCorrectAmountOfSlots [
 		self
 			assert: (memory bytesInObject: objOop)
 			equals: objSize * memory wordSize ]
+]
+
+{ #category : #tests }
+VMObjectLayoutTests >> testObjectHeaderEncodesAmountOfSlots [
+	| class objOop header |
+	0 to: 254 do: [ :slots |
+		class := self installClassIntoClassTableWithInstSpec: 1 instSize: slots.
+		objOop := memory instantiateClass: class.
+		header := memory longAt: objOop.
+		self assert: (header >> 56 bitAnd: 16rFF) equals: slots
+	]
+]
+
+{ #category : #tests }
+VMObjectLayoutTests >> testObjectHeaderEncodesClassIndex [
+	| class objOop header classIndex |
+	0 to: 10 do: [ :slots |
+		class := self installClassIntoClassTableWithInstSpec: 1 instSize: 0.
+		objOop := memory instantiateClass: class.
+		classIndex := memory rawHashBitsOf: class.
+		header := memory longAt:objOop.
+		memory fetchClassTagOf: objOop.
+		self assert: (header bitAnd: 16r3FFFFF) equals: classIndex
+	]
 ]
 
 { #category : #tests }
