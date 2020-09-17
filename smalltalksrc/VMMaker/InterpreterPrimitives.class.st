@@ -218,6 +218,7 @@ InterpreterPrimitives >> canBeImmutable: oop [
 InterpreterPrimitives >> doWaitSemaphore: aSemaphoreOop [
 	| excessSignals activeProc |
 	<api>
+	<returnTypeC: #void>
 	
 	excessSignals := self fetchInteger: ExcessSignalsIndex ofObject: aSemaphoreOop.
 	excessSignals > 0
@@ -232,6 +233,8 @@ InterpreterPrimitives >> doWaitSemaphore: aSemaphoreOop [
 { #category : #'process primitive support' }
 InterpreterPrimitives >> doWaitSemaphore: sema reEnterInterpreter: hasToReenter [
 	<api>
+	<returnTypeC: #void>
+	
 	self doWaitSemaphore: sema
 ]
 

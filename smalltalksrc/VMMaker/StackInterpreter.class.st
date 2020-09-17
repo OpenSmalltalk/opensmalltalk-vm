@@ -20822,6 +20822,7 @@ StackInterpreter >> stackPageHeadroom [
 { #category : #accessing }
 StackInterpreter >> stackPages: anInterpreterStackPages [
 	<doNotGenerate>
+	1halt.
 	stackPages := anInterpreterStackPages
 ]
 

@@ -2819,6 +2819,16 @@ CCodeGenerator >> generatePlus: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
+CCodeGenerator >> generatePowerTo: msgNode on: aStream indent: level [ 
+
+	aStream nextPutAll:'(sqInt)pow('.
+	self emitCExpression: msgNode receiver on: aStream.
+	aStream nextPutAll: ','.
+	self emitCExpression: msgNode args first on: aStream.
+	aStream nextPutAll:')'.
+]
+
+{ #category : #'C translation' }
 CCodeGenerator >> generatePreDecrement: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
@@ -3520,11 +3530,12 @@ CCodeGenerator >> initializeCTranslationDictionary [
 	#-				#generateMinus:on:indent:
 	#negated		#generateNegated:on:indent:
 	#*				#generateTimes:on:indent:
+	#**				#generatePowerTo:on:indent:
 	#/				#generateDivide:on:indent:
 	#//				#generateDivide:on:indent:
 	#\\				#generateModulo:on:indent:
-	#<<			#generateShiftLeft:on:indent:
-	#>>			#generateShiftRight:on:indent:
+	#<<				#generateShiftLeft:on:indent:
+	#>>				#generateShiftRight:on:indent:
 	#>>>			#generateSignedShiftRight:on:indent:
 	#min:			#generateMin:on:indent:
 	#max:			#generateMax:on:indent:

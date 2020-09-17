@@ -731,6 +731,12 @@ VMClass >> eassert: aBooleanExpressionOrBlock [
 			[AssertionFailure signal: 'Assertion failed']]
 ]
 
+{ #category : #'translation support' }
+VMClass >> error [
+
+	<cmacro: ''>
+]
+
 { #category : #'printf logging' }
 VMClass >> f: logFilename open: mode [
 	"Simulate a FILE stream by answering a transcript.
@@ -981,6 +987,12 @@ VMClass >> minorVersion [
 	"This is implemented in sqVirtualMachine.c, so this form is for simulation only."
 	<doNotGenerate>
 	^self class vmProxyMinorVersion
+]
+
+{ #category : #'translation support' }
+VMClass >> notYetImplemented [
+	<cmacro: '() logError("not yet implemented")'>
+	super notYetImplemented
 ]
 
 { #category : #'translation support' }

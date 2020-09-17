@@ -45,6 +45,12 @@ UnicornI386Simulator >> ebp [
 	^ self readRegister: UcX86Registers ebp
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornI386Simulator >> ebp: anInteger [ 
+	
+	self framePointerRegisterValue: anInteger
+]
+
 { #category : #accessing }
 UnicornI386Simulator >> ebx [
 	
@@ -89,6 +95,12 @@ UnicornI386Simulator >> esi [
 UnicornI386Simulator >> esp [
 	
 	^ self readRegister: UcX86Registers esp
+]
+
+{ #category : #'as yet unclassified' }
+UnicornI386Simulator >> esp: anInteger [ 
+	
+	self stackPointerRegisterValue: anInteger
 ]
 
 { #category : #'as yet unclassified' }

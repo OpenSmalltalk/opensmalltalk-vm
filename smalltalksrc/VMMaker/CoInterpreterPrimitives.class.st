@@ -6,7 +6,10 @@ Class {
 
 { #category : #'process primitives' }
 CoInterpreterPrimitives >> doWaitSemaphore: sema [
+
 	<api>
+	<returnTypeC: #void>
+	
 	self doWaitSemaphore: sema reEnterInterpreter: true
 ]
 
@@ -14,6 +17,8 @@ CoInterpreterPrimitives >> doWaitSemaphore: sema [
 CoInterpreterPrimitives >> doWaitSemaphore: sema reEnterInterpreter: hasToReenter [
 	| excessSignals activeProc inInterpreter |
 	<api>
+	<returnTypeC: #void>	
+
 	excessSignals := self fetchInteger: ExcessSignalsIndex ofObject: sema.
 	excessSignals > 0
 		ifTrue:

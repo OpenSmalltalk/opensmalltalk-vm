@@ -118,7 +118,8 @@ VMMachineCodeDebugger >> initializePresenters [
 	stack
 		addColumn: (SpStringTableColumn evaluated: [ :aPosition | aPosition specialRegister ] );
 		addColumn: (SpStringTableColumn evaluated: [ :aPosition | aPosition address hex ] );
-		addColumn: (SpStringTableColumn evaluated: [ :aPosition | aPosition value hex ]).
+		addColumn: (SpStringTableColumn evaluated: [ :aPosition | 
+			[aPosition value hex] on: Error do: [ 'Error' ] ]).
 	
 	stepButton := self newButton.
 	stepButton label: 'Step'
