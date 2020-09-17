@@ -236,7 +236,7 @@ ldpi_from_physical(int hpx, int vpx, double hinches, double vinches)
   double lscale = (trunc(pscale * stops) / stops) + default_scale;
   double ldpi= lscale * base_dpi;
   DPRINTF(("Displayscale: pdi: %f, pscale: %f, lscale: %f, ldpi: %f\n",
-           pdpi, pscale, lscale, ldpi));
+           pdpi, pscale+default_scale, lscale, ldpi));
   return ldpi;
 }
 

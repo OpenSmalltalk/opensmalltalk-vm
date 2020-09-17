@@ -161,6 +161,74 @@ USING_SYM(Xrandr, void, XRRFreeCrtcInfo, XRRCrtcInfo *crtcInfo)
 USING_SYM(Xrandr, XRRScreenResources *, XRRGetScreenResourcesCurrent, Display *dpy, Window window)
 USING_SYM(Xrandr, void, XRRFreeOutputInfo, XRROutputInfo *outputInfo)
 
+typedef int px_pos;
+typedef unsigned int px_len;
+typedef double inch_len;
+
+
+enum scale_govenor {
+  GOV_UNSET = -1,
+  center,
+  topleft,
+  topright,
+  bottomleft,
+  bottomright,
+  primary
+};
+static enum scale_govenor
+_scale_govenor(void)
+{
+  const char* val = getenv("_SQUEAK_DISPLAY_SCALE_GOVERNOR");
+  if (val) {
+    if (strcasecmp("center",      val) == 0) return center;
+    if (strcasecmp("c",           val) == 0) return center;
+    if (strcasecmp("topleft",     val) == 0) return topleft;
+    if (strcasecmp("tl",          val) == 0) return topleft;
+    if (strcasecmp("topright",    val) == 0) return topright;
+    if (strcasecmp("tr",          val) == 0) return topright;
+    if (strcasecmp("bottomleft",  val) == 0) return bottomleft;
+    if (strcasecmp("bl",          val) == 0) return bottomleft;
+    if (strcasecmp("bottomright", val) == 0) return bottomright;
+    if (strcasecmp("br",          val) == 0) return bottomright;
+    if (strcasecmp("primary",     val) == 0) return primary;
+    if (strcasecmp("p",           val) == 0) return primary;
+  }
+  return center;
+}
+
+static bool
+should_use_for_scale(px_pos wx, px_pos wy, px_len ww, px_len wh,
+                     px_pos ox, px_pos oy, px_len owp, px_len ohp,
+                     inch_len owi, inch_len ohi, int outs_count)
+{
+  if (!sqDefaultScale() || outs_count == 1) {
+    /* there's only one out or we don't care about monitor-specifics.
+       so any out will do */
+    return true;
+  }
+  static enum scale_govenor gov = GOV_UNSET;
+  if (gov == GOV_UNSET) { gov = _scale_govenor(); };
+  px_pos
+    wcx = wx + ww, wcy = wy + wh,         /* corners */
+    ocx = ox + owp, ocy = oy + ohp,
+    wmx = wx + (ww/2), wmy = wy + (wh/2); /* center (Middle) */
+  switch (gov) {
+  case center:
+    return wmx >= ox && wmx <= ocx && wmy >= oy && wmy <= ocy;
+  case topleft:
+    return wx  >= ox && wx  <= ocx && wy  >= oy && wy  <= ocy;
+  case topright:
+    return wcx >= ox && wcx <= ocx && wy  >= oy && wy  <= ocy;
+  case bottomleft:
+    return wx  >= ox && wx  <= ocx && wcy >= oy && wcy <= ocy;
+  case bottomright:
+    return wcx >= ox && wcx <= ocx && wcy >= oy && wcy <= ocy;
+  case primary: /* fallthrough */
+  default: return true;
+  }
+  return true; /* never reached */
+}
+
 
 bool scale_xrandr_usable(void)
 {
@@ -176,21 +244,25 @@ bool scale_xrandr_usable(void)
 double scale_xrandr(void)
 {
   double scale = sqDefaultScale();
-  int x, y;
-  { /* find position of our window */
+  px_pos win_x, win_y;
+  px_len win_w_px, win_h_px;
+  { /* find position and extent of our window */
     Window root, child;
-    unsigned int _; /* not interesting */
-    int wx,wy,rx,ry;
+    px_len _; /* not interesting */
+    px_pos wx,wy,rx,ry;
     /* where are we relative to our root */
-    XGetGeometry(stDisplay, stWindow, &root, &wx, &wy, &_, &_, &_, &_);
+    XGetGeometry(stDisplay, stWindow, &root,
+                 &wx, &wy, &win_w_px, &win_h_px, &_, &_);
     /* where is our root */
-    XTranslateCoordinates(stDisplay, stWindow, root, 0, 0, &rx, &ry, &child);
+    XTranslateCoordinates(stDisplay, stWindow, root,
+                          0, 0, &rx, &ry, &child);
     /* where are we absolute */
-    x = rx-wx;
-    y = ry-wy;
+    win_x = rx - wx;
+    win_y = ry - wy;
   }
-  
-  XRRScreenResources* res = Xrandr_XRRGetScreenResourcesCurrent(stDisplay, stWindow);
+
+  XRRScreenResources* res =
+    Xrandr_XRRGetScreenResourcesCurrent(stDisplay, stWindow);
   if (!res || res->noutput == 0) {
     if (res) {
       Xrandr_XRRFreeScreenResources(res);
@@ -200,37 +272,44 @@ double scale_xrandr(void)
   }
   if (res) {
     for (int output = 0; output < res->noutput; output++) {
-      XRROutputInfo* output_info = Xrandr_XRRGetOutputInfo(stDisplay, res, res->outputs[output]);
+      XRROutputInfo* output_info =
+        Xrandr_XRRGetOutputInfo(stDisplay, res, res->outputs[output]);
       if (!output_info || !output_info->crtc ||
           output_info->connection == RR_Disconnected) {
         Xrandr_XRRFreeOutputInfo(output_info);
         continue;
       }
 
-      double x_inch = (double)output_info->mm_width / 25.4;
-      double y_inch = (double)output_info->mm_height / 25.4;
+      inch_len out_w_inch = (double)output_info->mm_width / 25.4;
+      inch_len out_h_inch = (double)output_info->mm_height / 25.4;
       RRCrtc output_crtc = output_info->crtc;
       Xrandr_XRRFreeOutputInfo(output_info);
 
-      XRRCrtcInfo *crtc = Xrandr_XRRGetCrtcInfo(stDisplay, res, output_crtc);
+      XRRCrtcInfo *crtc =
+        Xrandr_XRRGetCrtcInfo(stDisplay, res, output_crtc);
       if (!crtc) {
         continue;
       }
+
+      px_pos out_x = crtc->x;
+      px_pos out_y = crtc->y;
+      px_len out_w_px = crtc->width;
+      px_len out_h_px = crtc->height;
+      Xrandr_XRRFreeCrtcInfo(crtc);
+
       /*
        * Use the first output if _not_ in per-monitor mode, otherwise
-       * Look whether we are on _this_ output 
+       * Look whether we are on _this_ output
        */
-      if (!sqPerMonitorScale() ||
-          (x >= crtc->x && x <= (crtc->x + crtc->width) &&
-           y >= crtc->y && y <= (crtc->y + crtc->height))) {
-
-        unsigned int x_px = crtc->width;
-        unsigned int y_px = crtc->height;
-        Xrandr_XRRFreeCrtcInfo(crtc);
+      bool use_this =
+        should_use_for_scale(win_x, win_y, win_w_px, win_h_px,
+                             out_x, out_y, out_w_px, out_h_px,
+                             out_w_inch, out_h_inch, res->noutput);
+      if (use_this) {
         DPRINTF(("Determining factor from px: %dx%d, inch: %fx%f\n",
-                 x_px, y_px, x_inch, y_inch));
-
-        scale = sqScaleFromPhysical(x_px, y_px, x_inch, y_inch);
+                 out_w_px, out_h_px, out_w_inch, out_h_inch));
+        scale = sqScaleFromPhysical(out_w_px, out_h_px,
+                                    out_w_inch, out_h_inch);
         break;
       }
     }
@@ -238,4 +317,3 @@ double scale_xrandr(void)
   Xrandr_XRRFreeScreenResources(res);
   return scale;
 }
-
