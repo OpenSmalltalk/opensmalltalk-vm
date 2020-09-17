@@ -27,7 +27,7 @@ if [[ -n "${PR_SHA}" ]]; then
   exit
 fi
 
-if [[ "${BRANCH_NAME}" != "Cog" ]] && [[ -z "${TAG_NAME}" ]] && [[ "${BRANCH_NAME}" != "krono/highdpi-v2" ]]; then
+if [[ "${BRANCH_NAME}" != "Cog" ]] && [[ -z "${TAG_NAME}" ]]; then
   echo "Skipping a deployment with the script provider because this branch is not permitted."
   exit
 fi

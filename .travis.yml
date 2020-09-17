@@ -204,9 +204,7 @@ deploy:
     skip_cleanup: true
     on:
       repo: OpenSmalltalk/opensmalltalk-vm
-      # branch: Cog
-      all_branches: true
-      condition: $TRAVIS_BRANCH ~= ^(Cog|krono/highdpi-v2)$
+      branch: Cog
   - provider: script # Deploy to files.pharo.org
     script: (cd deploy/pharo && ./filter-exec.sh ./deploy.sh)
     skip_cleanup: true
