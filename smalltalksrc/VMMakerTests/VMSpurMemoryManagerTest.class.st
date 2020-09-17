@@ -96,7 +96,7 @@ VMSpurMemoryManagerTest >> memory [
 ]
 
 { #category : #'helpers - classes' }
-VMSpurMemoryManagerTest >> newClassInOldSpaceWithSlots: numberOfSlots format: format [
+VMSpurMemoryManagerTest >> newClassInOldSpaceWithSlots: numberOfSlots instSpec: format [
 	| newClass formatWithSlots |
 
 	newClass := memory

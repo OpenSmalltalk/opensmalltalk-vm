@@ -23,7 +23,7 @@ VMLookUpTest >> setArrayClassIntoClassTable [
 	| aClass |
 	aClass := self
 		newClassInOldSpaceWithSlots: 0
-		format: Array instSpec.
+		instSpec: Array instSpec.
 	memory setHashBitsOf: aClass to: ClassArrayCompactIndex.
 	memory
 		storePointer: ClassArrayCompactIndex
@@ -36,7 +36,7 @@ VMLookUpTest >> setMessageClassIntoClassTable [
 	| aClass |
 	aClass := self
 		newClassInOldSpaceWithSlots: MessageSend allSlots size 
-		format: MessageSend instSpec.
+		instSpec: MessageSend instSpec.
 	memory setHashBitsOf: aClass to: ClassMessageCompactIndex.
 	memory
 		storePointer: ClassMessageCompactIndex
@@ -126,7 +126,7 @@ VMLookUpTest >> testLookUpFindsMethodInSuperclass [
 	
 	superclass := self
 		newClassInOldSpaceWithSlots: 0
-		format: memory arrayFormat.
+		instSpec: memory arrayFormat.
 	self setUpMethodDictionaryIn: superclass.	
 	superclassMethodDictionary := memory fetchPointer: MethodDictionaryIndex ofObject: superclass. 
 	memory storePointer: SuperclassIndex ofObject: receiverClass  withValue: superclass.	
@@ -165,7 +165,7 @@ VMLookUpTest >> testLookUpInFindsCannotInterpretCreatesANewEntryInCache [
 	
 	superclass := self
 		newClassInOldSpaceWithSlots: 0
-		format: memory arrayFormat.
+		instSpec: memory arrayFormat.
 	self setUpMethodDictionaryIn: superclass.	
 	superclassMethodDictionary := memory fetchPointer: MethodDictionaryIndex ofObject: superclass. 
 	memory storePointer: SuperclassIndex ofObject: receiverClass  withValue: superclass.	
@@ -220,7 +220,7 @@ VMLookUpTest >> testLookUpInSuperclassCreatesANewEntryInCache [
 	
 	superclass := self
 		newClassInOldSpaceWithSlots: 0
-		format: memory arrayFormat.
+		instSpec: memory arrayFormat.
 	self setUpMethodDictionaryIn: superclass.	
 	superclassMethodDictionary := memory fetchPointer: MethodDictionaryIndex ofObject: superclass. 
 	memory storePointer: SuperclassIndex ofObject: receiverClass  withValue: superclass.	
@@ -243,7 +243,7 @@ VMLookUpTest >> testLookUpNonExistingCannotInterpretAnswersDNUMethod [
 	
 	superclass := self
 		newClassInOldSpaceWithSlots: 0
-		format: memory arrayFormat.
+		instSpec: memory arrayFormat.
 	self setUpMethodDictionaryIn: superclass.	
 	superclassMethodDictionary := memory fetchPointer: MethodDictionaryIndex ofObject: superclass. 
 	memory storePointer: SuperclassIndex ofObject: receiverClass withValue: superclass.	
@@ -320,7 +320,7 @@ VMLookUpTest >> testLookUpWithNilMethodDictionaryFindsCannotInterpret [
 	
 	superclass := self
 		newClassInOldSpaceWithSlots: 0
-		format: memory arrayFormat.
+		instSpec: memory arrayFormat.
 	self setUpMethodDictionaryIn: superclass.	
 	superclassMethodDictionary := memory fetchPointer: MethodDictionaryIndex ofObject: superclass. 
 	memory storePointer: SuperclassIndex ofObject: receiverClass  withValue: superclass.	

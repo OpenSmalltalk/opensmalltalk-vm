@@ -28,7 +28,7 @@ VMInterpreterTests >> setSmallIntegerClassIntoClassTable [
 	| class |
 	class := self
 		newClassInOldSpaceWithSlots: 0
-		format: memory forwardedFormat.
+		instSpec: memory forwardedFormat.
 	memory setHashBitsOf: class to: memory smallIntegerTag.
 	memory
 		storePointer: memory smallIntegerTag

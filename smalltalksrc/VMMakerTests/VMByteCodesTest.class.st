@@ -155,7 +155,7 @@ VMByteCodesTest >> testBytecodePopIntoReceiverWithReadOnlySendsAttemptToAssignMe
 
 	| class object objectToPutInSlot attemptToAssignMethod attemptToAssignSelector aMethodDictionary |
 	
-	class := self newClassInOldSpaceWithSlots: 0 format: memory arrayFormat.	
+	class := self newClassInOldSpaceWithSlots: 0 instSpec: memory arrayFormat.	
 	object := memory instantiateClass: class indexableSize: 1.
 	attemptToAssignSelector := memory integerObjectOf: 2.
 	attemptToAssignMethod := methodBuilder newMethod numberOfArguments: 2 ; buildMethod.

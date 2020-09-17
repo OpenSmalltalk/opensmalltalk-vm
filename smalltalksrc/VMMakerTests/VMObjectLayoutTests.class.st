@@ -16,7 +16,7 @@ VMObjectLayoutTests >> installClassIntoClassTableWithInstSpec: aFormatInt instSi
 	| class |
 	class := self
 		newClassInOldSpaceWithSlots: aSizeInt
-		format: aFormatInt.
+		instSpec: aFormatInt.
 	memory ensureBehaviorHash: class.	
 	^class	
 ]

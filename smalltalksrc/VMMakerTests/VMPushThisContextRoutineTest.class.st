@@ -16,7 +16,7 @@ VMPushThisContextRoutineTest >> setUp [
 
 	contextClass := self
 		newClassInOldSpaceWithSlots: Context allSlots size
-		format: Context instSpec.
+		instSpec: Context instSpec.
 		
 	memory setHashBitsOf: contextClass to: ClassMethodContextCompactIndex.
 		

@@ -53,8 +53,8 @@ VMPrimitiveTest >> setUp [
 { #category : #'tests - become' }
 VMPrimitiveTest >> testPrimitiveArrayBecomeCreatesForwardersForObjectsOfDifferentSize [
 	| class1 class2 object1 object2 array1 array2 |
-	class1 := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
-	class2 := self newClassInOldSpaceWithSlots: 2 format: memory nonIndexablePointerFormat.
+	class1 := self newClassInOldSpaceWithSlots: 1 instSpec: memory nonIndexablePointerFormat.
+	class2 := self newClassInOldSpaceWithSlots: 2 instSpec: memory nonIndexablePointerFormat.
 	
 	object1 := memory instantiateClass: class1.
 	object2 := memory instantiateClass: class2.
@@ -74,8 +74,8 @@ VMPrimitiveTest >> testPrimitiveArrayBecomeCreatesForwardersForObjectsOfDifferen
 { #category : #'tests - become' }
 VMPrimitiveTest >> testPrimitiveArrayBecomeExchangesClass [
 	| class1 class2 object1 object2 array1 array2 |
-	class1 := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
-	class2 := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
+	class1 := self newClassInOldSpaceWithSlots: 1 instSpec: memory nonIndexablePointerFormat.
+	class2 := self newClassInOldSpaceWithSlots: 1 instSpec: memory nonIndexablePointerFormat.
 	
 	object1 := memory instantiateClass: class1.
 	object2 := memory instantiateClass: class2.
@@ -95,8 +95,8 @@ VMPrimitiveTest >> testPrimitiveArrayBecomeExchangesClass [
 { #category : #'tests - become' }
 VMPrimitiveTest >> testPrimitiveArrayBecomeExchangesClassForObjectsOfDifferentSize [
 	| class1 class2 object1 object2 array1 array2 |
-	class1 := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
-	class2 := self newClassInOldSpaceWithSlots: 2 format: memory nonIndexablePointerFormat.
+	class1 := self newClassInOldSpaceWithSlots: 1 instSpec: memory nonIndexablePointerFormat.
+	class2 := self newClassInOldSpaceWithSlots: 2 instSpec: memory nonIndexablePointerFormat.
 	
 	object1 := memory instantiateClass: class1.
 	object2 := memory instantiateClass: class2.
@@ -116,7 +116,7 @@ VMPrimitiveTest >> testPrimitiveArrayBecomeExchangesClassForObjectsOfDifferentSi
 { #category : #'tests - become' }
 VMPrimitiveTest >> testPrimitiveArrayBecomeExchangesContents [
 	| class object1 object2 array1 array2 |
-	class := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
+	class := self newClassInOldSpaceWithSlots: 1 instSpec: memory nonIndexablePointerFormat.
 	object1 := memory instantiateClass: class.
 	memory storeInteger: 0 ofObject: object1 withValue: 42.
 	
@@ -138,8 +138,8 @@ VMPrimitiveTest >> testPrimitiveArrayBecomeExchangesContents [
 { #category : #'tests - become' }
 VMPrimitiveTest >> testPrimitiveArrayBecomeExchangesContentsForObjectsOfDifferentSize [
 	| class1 class2 object1 object2 array1 array2 |
-	class1 := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
-	class2 := self newClassInOldSpaceWithSlots: 2 format: memory nonIndexablePointerFormat.
+	class1 := self newClassInOldSpaceWithSlots: 1 instSpec: memory nonIndexablePointerFormat.
+	class2 := self newClassInOldSpaceWithSlots: 2 instSpec: memory nonIndexablePointerFormat.
 	
 	object1 := memory instantiateClass: class1.
 	memory storeInteger: 0 ofObject: object1 withValue: 42.
@@ -164,7 +164,7 @@ VMPrimitiveTest >> testPrimitiveArrayBecomeExchangesContentsForObjectsOfDifferen
 { #category : #'tests - become' }
 VMPrimitiveTest >> testPrimitiveArrayBecomeExchangesIdentityHash [
 	| class object1 object2 hash1 hash2 array1 array2 |
-	class := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
+	class := self newClassInOldSpaceWithSlots: 1 instSpec: memory nonIndexablePointerFormat.
 	
 	object1 := memory instantiateClass: class.
 	object2 := memory instantiateClass: class.
@@ -187,8 +187,8 @@ VMPrimitiveTest >> testPrimitiveArrayBecomeExchangesIdentityHash [
 { #category : #'tests - become' }
 VMPrimitiveTest >> testPrimitiveArrayBecomeExchangesIdentityHashForObjectsOfDifferentSize [
 	| class1 class2 object1 object2 hash1 hash2 array1 array2 |
-	class1 := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
-	class2 := self newClassInOldSpaceWithSlots: 2 format: memory nonIndexablePointerFormat.
+	class1 := self newClassInOldSpaceWithSlots: 1 instSpec: memory nonIndexablePointerFormat.
+	class2 := self newClassInOldSpaceWithSlots: 2 instSpec: memory nonIndexablePointerFormat.
 	
 	object1 := memory instantiateClass: class1.
 	hash1 := memory rawHashBitsOf: object1.
@@ -211,7 +211,7 @@ VMPrimitiveTest >> testPrimitiveArrayBecomeExchangesIdentityHashForObjectsOfDiff
 { #category : #'tests - become' }
 VMPrimitiveTest >> testPrimitiveArrayBecomeFailsForImmediates [
 	| class immediate array1 array2 |
-	class := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
+	class := self newClassInOldSpaceWithSlots: 1 instSpec: memory nonIndexablePointerFormat.
 	immediate := memory integerObjectOf: 42.
 	
 	array1 := self newArrayWith: { class }.
@@ -230,7 +230,7 @@ VMPrimitiveTest >> testPrimitiveArrayBecomeFailsForImmediates [
 { #category : #'tests - become' }
 VMPrimitiveTest >> testPrimitiveArrayBecomeFailsForImmutableObject [
 	| class object1 object2 array1 array2 |
-	class := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
+	class := self newClassInOldSpaceWithSlots: 1 instSpec: memory nonIndexablePointerFormat.
 	
 	object1 := memory instantiateClass: class.
 	object2 := memory instantiateClass: class.
@@ -251,7 +251,7 @@ VMPrimitiveTest >> testPrimitiveArrayBecomeFailsForImmutableObject [
 { #category : #'tests - become' }
 VMPrimitiveTest >> testPrimitiveArrayBecomeFailsForPinnedObject [
 	| class object1 object2 array1 array2 |
-	class := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
+	class := self newClassInOldSpaceWithSlots: 1 instSpec: memory nonIndexablePointerFormat.
 	
 	object1 := memory instantiateClass: class.
 	object2 := memory instantiateClass: class isPinned: true.
@@ -273,7 +273,7 @@ VMPrimitiveTest >> testPrimitiveArrayBecomeOneWayCopyHashIfCopyHasIsFalseDoesNot
 	| class object1 object2 hash2BeforeBecome array1 array2 object2FromForwarder |
 	class := self
 		newClassInOldSpaceWithSlots: 1
-		format: memory nonIndexablePointerFormat.
+		instSpec: memory nonIndexablePointerFormat.
 	object1 := memory instantiateClass: class.
 	object2 := memory instantiateClass: class.
 	hash2BeforeBecome := memory hashBitsOf: object2.
@@ -294,7 +294,7 @@ VMPrimitiveTest >> testPrimitiveArrayBecomeOneWayCopyHashIfCopyHasIsFalseDoesNot
 { #category : #'tests - become' }
 VMPrimitiveTest >> testPrimitiveArrayBecomeOneWayCopyHashIfCopyHasIsTrueCopiesHash [
 	| class object1 object2 hash1 hash2 array1 array2 |
-	class := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
+	class := self newClassInOldSpaceWithSlots: 1 instSpec: memory nonIndexablePointerFormat.
 	
 	object1 := memory instantiateClass: class.
 	object2 := memory instantiateClass: class.
@@ -317,7 +317,7 @@ VMPrimitiveTest >> testPrimitiveArrayBecomeOneWayCopyHashIfCopyHasIsTrueCopiesHa
 { #category : #'tests - become' }
 VMPrimitiveTest >> testPrimitiveArrayBecomeOneWayCreatesForwardThatPointsToOriginalObject [
 	| class object1 object2 array1 array2 |
-	class := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
+	class := self newClassInOldSpaceWithSlots: 1 instSpec: memory nonIndexablePointerFormat.
 	
 	object1 := memory instantiateClass: class.
 	object2 := memory instantiateClass: class.
@@ -337,7 +337,7 @@ VMPrimitiveTest >> testPrimitiveArrayBecomeOneWayCreatesForwardThatPointsToOrigi
 { #category : #'tests - primitiveAtPut' }
 VMPrimitiveTest >> testPrimitiveAtPutFailsForImmutableObject [
 	| class object |
-	class := self newClassInOldSpaceWithSlots: 0 format: memory arrayFormat.
+	class := self newClassInOldSpaceWithSlots: 0 instSpec: memory arrayFormat.
 	
 	object := memory instantiateClass: class indexableSize: 1.
 
@@ -354,7 +354,7 @@ VMPrimitiveTest >> testPrimitiveAtPutFailsForImmutableObject [
 { #category : #'tests - primitiveAtPut' }
 VMPrimitiveTest >> testPrimitiveAtPutFailsForNonIndexableObject [
 	| class object |
-	class := self newClassInOldSpaceWithSlots: 0 format: memory nonIndexablePointerFormat.
+	class := self newClassInOldSpaceWithSlots: 0 instSpec: memory nonIndexablePointerFormat.
 	
 	object := memory instantiateClass: class.
 
@@ -370,7 +370,7 @@ VMPrimitiveTest >> testPrimitiveAtPutFailsForNonIndexableObject [
 VMPrimitiveTest >> testPrimitiveAtPutFailsIfObjectIsImmutable [
 
 	| class object slotIndex objectToPutInSlot |
-	class := self newClassInOldSpaceWithSlots: 0 format: memory arrayFormat.
+	class := self newClassInOldSpaceWithSlots: 0 instSpec: memory arrayFormat.
 	
 	object := memory instantiateClass: class indexableSize: 1.
 
@@ -394,7 +394,7 @@ VMPrimitiveTest >> testPrimitiveAtPutFailsIfObjectIsImmutable [
 { #category : #'tests - primitiveAtPut' }
 VMPrimitiveTest >> testPrimitiveAtPutPutsTheValueForAnIndexableObject [
 	| class object |
-	class := self newClassInOldSpaceWithSlots: 0 format: memory arrayFormat.
+	class := self newClassInOldSpaceWithSlots: 0 instSpec: memory arrayFormat.
 	
 	object := memory instantiateClass: class indexableSize: 1.
 
@@ -419,7 +419,7 @@ VMPrimitiveTest >> testPrimitiveGetImmutabilityOfImmediateReturnsTrue [
 { #category : #'tests - primitiveImmutability' }
 VMPrimitiveTest >> testPrimitiveGetImmutabilityOnANewObjectIsFalse [
 	| class object |
-	class := self newClassInOldSpaceWithSlots: 0 format: memory nonIndexablePointerFormat.
+	class := self newClassInOldSpaceWithSlots: 0 instSpec: memory nonIndexablePointerFormat.
 	
 	object := memory instantiateClass: class.
 
@@ -432,7 +432,7 @@ VMPrimitiveTest >> testPrimitiveGetImmutabilityOnANewObjectIsFalse [
 { #category : #'tests - primitiveImmutability' }
 VMPrimitiveTest >> testPrimitiveGetImmutabilityReturnsTrueIfObjectIsImmutable [
 	| class object |
-	class := self newClassInOldSpaceWithSlots: 0 format: memory nonIndexablePointerFormat.
+	class := self newClassInOldSpaceWithSlots: 0 instSpec: memory nonIndexablePointerFormat.
 	
 	object := memory instantiateClass: class.
 	memory setIsImmutableOf: object to: true. 
@@ -446,7 +446,7 @@ VMPrimitiveTest >> testPrimitiveGetImmutabilityReturnsTrueIfObjectIsImmutable [
 { #category : #'tests - primitiveAtPut' }
 VMPrimitiveTest >> testPrimitiveInstVarAtPutOverBoundShouldFailForIndexable [
 	| class object |
-	class := self newClassInOldSpaceWithSlots: 1 format: memory arrayFormat .
+	class := self newClassInOldSpaceWithSlots: 1 instSpec: memory arrayFormat .
 	
 	object := memory instantiateClass: class indexableSize: 1.
 
@@ -461,7 +461,7 @@ VMPrimitiveTest >> testPrimitiveInstVarAtPutOverBoundShouldFailForIndexable [
 { #category : #'tests - primitiveAtPut' }
 VMPrimitiveTest >> testPrimitiveInstVarAtPutOverBoundShouldFailNonIndexable [
 	| class object |
-	class := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
+	class := self newClassInOldSpaceWithSlots: 1 instSpec: memory nonIndexablePointerFormat.
 	
 	object := memory instantiateClass: class.
 
@@ -476,7 +476,7 @@ VMPrimitiveTest >> testPrimitiveInstVarAtPutOverBoundShouldFailNonIndexable [
 { #category : #'tests - primitiveAtPut' }
 VMPrimitiveTest >> testPrimitiveInstVarAtPutPutsTheValueForNonIndexable [
 	| class object |
-	class := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
+	class := self newClassInOldSpaceWithSlots: 1 instSpec: memory nonIndexablePointerFormat.
 	
 	object := memory instantiateClass: class.
 
@@ -492,7 +492,7 @@ VMPrimitiveTest >> testPrimitiveInstVarAtPutPutsTheValueForNonIndexable [
 { #category : #'tests - primitiveNew' }
 VMPrimitiveTest >> testPrimitiveNewCreatesTheObjectInYoungSpace [
 	| class |
-	class := self newClassInOldSpaceWithSlots: 0 format: memory nonIndexablePointerFormat.
+	class := self newClassInOldSpaceWithSlots: 0 instSpec: memory nonIndexablePointerFormat.
 
 	interpreter push: class.
 	interpreter primitiveNew.
@@ -504,7 +504,7 @@ VMPrimitiveTest >> testPrimitiveNewCreatesTheObjectInYoungSpace [
 { #category : #'tests - primitiveNew' }
 VMPrimitiveTest >> testPrimitiveNewCreatesTheObjectWithCorrectSize [
 	| class |
-	class := self newClassInOldSpaceWithSlots: 4 format: memory nonIndexablePointerFormat.
+	class := self newClassInOldSpaceWithSlots: 4 instSpec: memory nonIndexablePointerFormat.
 
 	interpreter push: class.
 	interpreter primitiveNew.
@@ -521,7 +521,7 @@ VMPrimitiveTest >> testPrimitiveNewInFullNewSpaceAllocatesInOldSpace [
 				format: memory arrayFormat
 				classIndex: memory arrayClassIndexPun) isNotNil.
 
-	class := self newClassInOldSpaceWithSlots: 256 format: memory nonIndexablePointerFormat.
+	class := self newClassInOldSpaceWithSlots: 256 instSpec: memory nonIndexablePointerFormat.
 	interpreter push: class.
 	interpreter primitiveNew.
 	
@@ -538,7 +538,7 @@ VMPrimitiveTest >> testPrimitiveNewInFullNewSpaceScheduleGC [
 				format: memory arrayFormat
 				classIndex: memory arrayClassIndexPun) isNotNil.
 	
-	class := self newClassInOldSpaceWithSlots: 256 format: memory nonIndexablePointerFormat.
+	class := self newClassInOldSpaceWithSlots: 256 instSpec: memory nonIndexablePointerFormat.
 	
 	interpreter push: class.
 	interpreter primitiveNew.
@@ -549,7 +549,7 @@ VMPrimitiveTest >> testPrimitiveNewInFullNewSpaceScheduleGC [
 { #category : #'tests - primitiveNewWithArgs' }
 VMPrimitiveTest >> testPrimitiveNewIsNotPinned [
 	| class |
-	class := self newClassInOldSpaceWithSlots: 0 format: memory nonIndexablePointerFormat.
+	class := self newClassInOldSpaceWithSlots: 0 instSpec: memory nonIndexablePointerFormat.
 
 	interpreter push: class.
 	interpreter primitiveNew.
@@ -560,7 +560,7 @@ VMPrimitiveTest >> testPrimitiveNewIsNotPinned [
 { #category : #'tests - primitiveNewPinned' }
 VMPrimitiveTest >> testPrimitiveNewPinnedCreatesTheObjectInOldSpace [
 	| class |
-	class := self newClassInOldSpaceWithSlots: 0 format: memory nonIndexablePointerFormat.
+	class := self newClassInOldSpaceWithSlots: 0 instSpec: memory nonIndexablePointerFormat.
 
 	interpreter push: class.
 	interpreter primitiveNewPinned.
@@ -572,7 +572,7 @@ VMPrimitiveTest >> testPrimitiveNewPinnedCreatesTheObjectInOldSpace [
 { #category : #'tests - primitiveNewPinned' }
 VMPrimitiveTest >> testPrimitiveNewPinnedObjectInFullNewSpaceIsSchedulingGC [
 	| class |
-	class := self newClassInOldSpaceWithSlots: 3 format: memory nonIndexablePointerFormat.
+	class := self newClassInOldSpaceWithSlots: 3 instSpec: memory nonIndexablePointerFormat.
 
 	"Allocate enough space to generate a full new space"
 	self assert: (memory
@@ -592,7 +592,7 @@ VMPrimitiveTest >> testPrimitiveNewPinnedObjectInFullNewSpaceIsSchedulingGC [
 { #category : #'tests - primitiveNewPinned' }
 VMPrimitiveTest >> testPrimitiveNewPinnedObjectIsNotSchedulingGC [
 	| class |
-	class := self newClassInOldSpaceWithSlots: 0 format: memory nonIndexablePointerFormat.
+	class := self newClassInOldSpaceWithSlots: 0 instSpec: memory nonIndexablePointerFormat.
 
 	interpreter push: class.
 	interpreter primitiveNewPinned.
@@ -604,7 +604,7 @@ VMPrimitiveTest >> testPrimitiveNewPinnedObjectIsNotSchedulingGC [
 { #category : #'tests - primitiveNewPinned' }
 VMPrimitiveTest >> testPrimitiveNewPinnedObjectIsPinned [
 	| class |
-	class := self newClassInOldSpaceWithSlots: 0 format: memory nonIndexablePointerFormat.
+	class := self newClassInOldSpaceWithSlots: 0 instSpec: memory nonIndexablePointerFormat.
 
 	interpreter push: class.
 	interpreter primitiveNewPinned.
@@ -616,7 +616,7 @@ VMPrimitiveTest >> testPrimitiveNewPinnedObjectIsPinned [
 { #category : #'tests - primitiveNewPinned' }
 VMPrimitiveTest >> testPrimitiveNewPinnedWithArgsCreatesTheObjectInOldSpace [
 	| class |
-	class := self newClassInOldSpaceWithSlots: 0 format: memory arrayFormat.
+	class := self newClassInOldSpaceWithSlots: 0 instSpec: memory arrayFormat.
 
 	interpreter push: class.
 	interpreter push: (memory integerObjectOf: 7).
@@ -629,7 +629,7 @@ VMPrimitiveTest >> testPrimitiveNewPinnedWithArgsCreatesTheObjectInOldSpace [
 { #category : #'tests - primitiveNewPinned' }
 VMPrimitiveTest >> testPrimitiveNewPinnedWithArgsObjectIsNotSchedulingGC [
 	| class |
-	class := self newClassInOldSpaceWithSlots: 0 format: memory arrayFormat.
+	class := self newClassInOldSpaceWithSlots: 0 instSpec: memory arrayFormat.
 
 	interpreter push: class.
 	interpreter push: (memory integerObjectOf: 7).
@@ -642,7 +642,7 @@ VMPrimitiveTest >> testPrimitiveNewPinnedWithArgsObjectIsNotSchedulingGC [
 { #category : #'tests - primitiveNewPinned' }
 VMPrimitiveTest >> testPrimitiveNewPinnedWithArgsObjectIsPinned [
 	| class |
-	class := self newClassInOldSpaceWithSlots: 0 format: memory arrayFormat.
+	class := self newClassInOldSpaceWithSlots: 0 instSpec: memory arrayFormat.
 
 	interpreter push: class.
 	interpreter push: (memory integerObjectOf: 7).
@@ -656,7 +656,7 @@ VMPrimitiveTest >> testPrimitiveNewPinnedWithArgsObjectIsPinned [
 VMPrimitiveTest >> testPrimitiveNewWithArgCreatesTheObjectInYoungSpace [
 	| newObj class |
 
-	class := self newClassInOldSpaceWithSlots: 0 format: memory arrayFormat.
+	class := self newClassInOldSpaceWithSlots: 0 instSpec: memory arrayFormat.
 
 	interpreter push: class.
 	interpreter push: (memory integerObjectOf: 7).
@@ -673,7 +673,7 @@ VMPrimitiveTest >> testPrimitiveNewWithArgCreatesTheObjectInYoungSpace [
 VMPrimitiveTest >> testPrimitiveNewWithArgCreatesTheObjectWithCorrectSize [
 	| newObj class |
 
-	class := self newClassInOldSpaceWithSlots: 0 format: memory arrayFormat.
+	class := self newClassInOldSpaceWithSlots: 0 instSpec: memory arrayFormat.
 
 	interpreter push: class.
 	interpreter push: (memory integerObjectOf: 7).
@@ -695,7 +695,7 @@ VMPrimitiveTest >> testPrimitiveNewWithArgInFullNewSpaceAllocatesInOldSpace [
 				format: memory arrayFormat
 				classIndex: memory arrayClassIndexPun) isNotNil.
 
-	class := self newClassInOldSpaceWithSlots: 0 format: memory arrayFormat.
+	class := self newClassInOldSpaceWithSlots: 0 instSpec: memory arrayFormat.
 
 	interpreter push: class.
 	interpreter push: (memory integerObjectOf: 256).
@@ -717,7 +717,7 @@ VMPrimitiveTest >> testPrimitiveNewWithArgInFullNewSpaceScheduleGC [
 				format: memory arrayFormat
 				classIndex: memory arrayClassIndexPun) isNotNil.
 
-	class := self newClassInOldSpaceWithSlots: 0 format: memory arrayFormat.
+	class := self newClassInOldSpaceWithSlots: 0 instSpec: memory arrayFormat.
 
 	interpreter push: class.
 	interpreter push: (memory integerObjectOf: 256).
@@ -731,7 +731,7 @@ VMPrimitiveTest >> testPrimitiveNewWithArgInFullNewSpaceScheduleGC [
 VMPrimitiveTest >> testPrimitiveNewWithArgWithInvalidClassFails [
 	| class |
 
-	class := self newClassInOldSpaceWithSlots: 0 format: memory nonIndexablePointerFormat.
+	class := self newClassInOldSpaceWithSlots: 0 instSpec: memory nonIndexablePointerFormat.
 
 	interpreter push: class.
 	interpreter push: (memory integerObjectOf: 256).
@@ -745,7 +745,7 @@ VMPrimitiveTest >> testPrimitiveNewWithArgWithInvalidClassFails [
 VMPrimitiveTest >> testPrimitiveNewWithArgWithNegativeArgumentFails [
 	| class |
 
-	class := self newClassInOldSpaceWithSlots: 0 format: memory arrayFormat.
+	class := self newClassInOldSpaceWithSlots: 0 instSpec: memory arrayFormat.
 
 	interpreter push: class.
 	interpreter push: (memory integerObjectOf: -256).
@@ -758,7 +758,7 @@ VMPrimitiveTest >> testPrimitiveNewWithArgWithNegativeArgumentFails [
 { #category : #'tests - primitiveNew' }
 VMPrimitiveTest >> testPrimitiveNewWithInvalidClassFails [
 	| class |
-	class := self newClassInOldSpaceWithSlots: 0 format: memory arrayFormat.
+	class := self newClassInOldSpaceWithSlots: 0 instSpec: memory arrayFormat.
 
 	interpreter push: class.
 	interpreter primitiveNew.
@@ -780,7 +780,7 @@ VMPrimitiveTest >> testPrimitiveSetImmutabilityOfImmediateShouldFail [
 VMPrimitiveTest >> testPrimitiveSetImmutabilityOfObjectAsTrueSetsImmutability [
 
 	| class object |
-	class := self newClassInOldSpaceWithSlots: 0 format: memory nonIndexablePointerFormat.
+	class := self newClassInOldSpaceWithSlots: 0 instSpec: memory nonIndexablePointerFormat.
 	
 	object := memory instantiateClass: class.
 
@@ -794,7 +794,7 @@ VMPrimitiveTest >> testPrimitiveSetImmutabilityOfObjectAsTrueSetsImmutability [
 { #category : #'tests - primitiveAtPut' }
 VMPrimitiveTest >> testPrimitiveSlotAtPutOverBoundShouldFailForIndexable [
 	| class object |
-	class := self newClassInOldSpaceWithSlots: 1 format: memory arrayFormat .
+	class := self newClassInOldSpaceWithSlots: 1 instSpec: memory arrayFormat .
 	
 	object := memory instantiateClass: class indexableSize: 1.
 
@@ -809,7 +809,7 @@ VMPrimitiveTest >> testPrimitiveSlotAtPutOverBoundShouldFailForIndexable [
 { #category : #'tests - primitiveAtPut' }
 VMPrimitiveTest >> testPrimitiveSlotAtPutOverBoundShouldFailNonIndexable [
 	| class object |
-	class := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
+	class := self newClassInOldSpaceWithSlots: 1 instSpec: memory nonIndexablePointerFormat.
 	
 	object := memory instantiateClass: class.
 
@@ -824,7 +824,7 @@ VMPrimitiveTest >> testPrimitiveSlotAtPutOverBoundShouldFailNonIndexable [
 { #category : #'tests - primitiveAtPut' }
 VMPrimitiveTest >> testPrimitiveSlotAtPutPutsTheValueForNonIndexable [
 	| class object |
-	class := self newClassInOldSpaceWithSlots: 1 format: memory nonIndexablePointerFormat.
+	class := self newClassInOldSpaceWithSlots: 1 instSpec: memory nonIndexablePointerFormat.
 	
 	object := memory instantiateClass: class.
 
