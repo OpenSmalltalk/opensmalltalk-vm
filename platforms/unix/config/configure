@@ -13195,62 +13195,6 @@ rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
 fi
 
 
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for 64-bit integer type" >&5
-$as_echo_n "checking for 64-bit integer type... " >&6; }
-if ${ac_cv_int64_t+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  if test "$cross_compiling" = yes; then :
-  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
-$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "cannot run test program while cross compiling
-See \`config.log' for more details" "$LINENO" 5; }
-else
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-int main(){return(sizeof(long) == 8)?0:1;}
-_ACEOF
-if ac_fn_c_try_run "$LINENO"; then :
-  ac_cv_int64_t="long"
-else
-  if test "$cross_compiling" = yes; then :
-  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
-$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "cannot run test program while cross compiling
-See \`config.log' for more details" "$LINENO" 5; }
-else
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-int main(){return(sizeof(long long) == 8)?0:1;}
-_ACEOF
-if ac_fn_c_try_run "$LINENO"; then :
-  ac_cv_int64_t="long long"
-else
-  ac_cv_int64_t="no"
-fi
-rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
-  conftest.$ac_objext conftest.beam conftest.$ac_ext
-fi
-
-fi
-rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
-  conftest.$ac_objext conftest.beam conftest.$ac_ext
-fi
-
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_int64_t" >&5
-$as_echo "$ac_cv_int64_t" >&6; }
-  if test "$ac_cv_int64_t" = ""; then
-    as_fn_error $? "could not find a 64-bit integer type" "$LINENO" 5
-  fi
-  SQUEAK_INT64_T="$ac_cv_int64_t"
-
-cat >>confdefs.h <<_ACEOF
-#define squeakInt64 $ac_cv_int64_t
-_ACEOF
-
-
 # The cast to long int works around a bug in the HP C Compiler
 # version HP92453-01 B.11.11.23709.GP, which incorrectly rejects
 # declarations like `int a3[[(sizeof (unsigned char)) >= 0]];'.
@@ -16254,37 +16198,6 @@ $as_echo "#define AC_APPLE_UNIVERSAL_BUILD 1" >>confdefs.h
 if test $ac_cv_c_bigendian != yes
 then CFLAGS="$CFLAGS -DLSB_FIRST=1"
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether unaligned access to doubles is ok" >&5
-$as_echo_n "checking whether unaligned access to doubles is ok... " >&6; }
-if ${ac_cv_double_align+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  if test "$cross_compiling" = yes; then :
-  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
-$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "cannot run test program while cross compiling
-See \`config.log' for more details" "$LINENO" 5; }
-else
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-f(int i){*(double *)i=*(double *)(i+4);}
-              int main(){char b[12];f(b);return 0;}
-_ACEOF
-if ac_fn_c_try_run "$LINENO"; then :
-  ac_cv_double_align="yes"
-else
-  ac_cv_double_align="no"
-fi
-rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
-  conftest.$ac_objext conftest.beam conftest.$ac_ext
-fi
-
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_double_align" >&5
-$as_echo "$ac_cv_double_align" >&6; }
-test "$ac_cv_double_align" = "no" &&
-$as_echo "#define DOUBLE_WORD_ALIGNMENT /**/" >>confdefs.h
-
 
 case $host_os in
   darwin*)

@@ -160,10 +160,6 @@
 #cmakedefine SUPPORT_TRADITIONAL_DISPLAY
 #cmakedefine HAVE_SDL2
 
-/* typedefs */
-
-#define	squeakInt64 @SQUEAK_INT64_TYPEDEF@
-
 /* architecture */
 
 #define	OS_TYPE "@OS_TYPE@"
@@ -182,7 +178,6 @@
 #endif
 
 #cmakedefine	WORDS_BIGENDIAN
-#cmakedefine	DOUBLE_WORD_ALIGNMENT
 
 /* damage containment */
 

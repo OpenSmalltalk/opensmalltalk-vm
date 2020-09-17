@@ -125,7 +125,6 @@
 # define SIZEOF_LONG 8
 # define SIZEOF_LONG_LONG 8
 # define SIZEOF_VOID_P 8
-# define squeakInt64 long
 #endif
 
 #if (i386 || __i386 || __i386__) || (ppc || __ppc || __ppc__)
@@ -133,7 +132,6 @@
 # define SIZEOF_LONG 4
 # define SIZEOF_LONG_LONG 8
 # define SIZEOF_VOID_P 4
-# define squeakInt64 long long
 #endif
 
 /* structures */
@@ -182,7 +180,6 @@
 #endif
 
 /* picked up in 2020 */
-#define DOUBLE_WORD_ALIGNMENT /**/
 #define HAVE_DLERROR 1
 #define HAVE_EXECINFO_H 1
 #define HAVE_FCNTL_H 1

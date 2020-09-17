@@ -168,16 +168,10 @@
 #define VMBIGENDIAN 0
 #define	VM_HOST "intel-apple-darwin8.5.0"
 #define	VM_HOST_CPU "intel"
-#if COGVM
-#else
-#define	DOUBLE_WORD_ORDER 1
-#endif
 #define LSB_FIRST 1
 #endif
 
 #define HAVE_LIBDL 1
-/* #undef	DOUBLE_WORD_ALIGNMENT */
-/* #undef	DOUBLE_WORD_ORDER */
 
 /* damage containment */
 
@@ -202,7 +196,6 @@
 #endif
 
 /* picked up in 2020 */
-#define DOUBLE_WORD_ALIGNMENT /**/
 #define HAVE_DLERROR 1
 #define HAVE_EXECINFO_H 1
 #define HAVE_FCNTL_H 1
