@@ -1538,7 +1538,7 @@ CCodeGenerator >> emitGlobalCVariablesOn: aStream [
 				[aStream nextPutAll: decl; cr]
 			ifFalse:
 				[(decl includesSubstring: ' private ') ifFalse: "work-around hack to prevent localization of variables only referenced once."
-					[(decl beginsWith: 'static') ifFalse: [aStream nextPutAll: 'VM_EXPORT '].
+					[(decl beginsWith: 'static') ifFalse: [aStream nextPutAll: 'VM_EXPORT extern '].
 					(decl includes: $=) ifTrue:
 						[decl := decl copyFrom: 1 to: (decl indexOf: $=) - 1].
 					aStream
