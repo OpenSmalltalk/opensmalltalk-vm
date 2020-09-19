@@ -1,14 +1,39 @@
 /****************************************************************************
  *   FILE:    sqCogUnixStackAlignment.h
- *   CONTENT: Answer & check stack alignment for current plaform
+ *   CONTENT: Answer & check stack alignment for current plaform, plus
+ *            getReturnAddress which is part of the fly-weight setjmp/longjmp
+ *            alternative ceInvokeInterpreter which is used to enter the
+ *            interpreter from machine code.
  *
  *   AUTHOR:   Eliot Miranda
  *   DATE:     February 2009
  *
- * Changes: eem Tue 28 Apr 2015 Add ARM32 support.
- *			eem Wed Jul 14 2010 make 16 bytes the default alignment for all x86.
+ * Changes: eem September 2020 move getReturnAddress here from sq.h
+ *          eem Jan 2020 add support for ARMv8
+ *          eem Apr 2015 Add ARM32 support.
+ *			eem Jul 2010 make 16 bytes the default alignment for all x86.
  */
  
+/* getReturnAddress optionally defined here rather than in sqPlatformSpecific.h
+ * to reduce duplication. The GCC intrinics are provided by other compilers too.
+ */
+#if !defined(getReturnAddress)
+# if _MSC_VER
+#	define getReturnAddress() _ReturnAddress()
+#	include <intrin.h>
+#	pragma intrinsic(_ReturnAddress)
+# elif defined(__GNUC__) /* gcc, clang, icc etc */
+#	define getReturnAddress() __builtin_extract_return_addr(__builtin_return_address(0))
+# else
+#	error "Cog requires getReturnAddress defining for the current platform."
+# endif
+#endif
+
+/* Support for stack alignment checking, used to ensure that when C is invoked
+ * from machine code, the stack alignment meets the ABI's constraints.  If the
+ * stack is not correctly aligned bad things happen, especially involving the
+ * use of high-performance multi-media instructions, vector arithmetic etc.
+ */
 #if __i386__ || _M_IX86
 # if __SSE2__ || (__APPLE__ && __MACH__) || __linux__ || _M_IX86_FP==2
 /* 16 byte stack alignment on x86 is required for SSE instructions which
