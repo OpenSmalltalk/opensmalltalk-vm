@@ -127,3 +127,21 @@ extern void sqFilenameFromString(char *uxName, sqInt stNameIndex, int sqNameLeng
 # undef VM_LABEL
 # define VM_LABEL(foo) ((void)0)
 #endif
+
+/*
+ * platforms/Cross/vm/sq.h defines getReturnAddress if not defined
+ *
+ * following code posted by Eliot Miranda
+ * http://forum.world.st/builtin-extract-return-addr-td5122085.html
+ *
+ */
+
+# if COGVM && defined(__SUNPRO_C)
+# if defined(_X86_) || defined(i386) || defined(__i386) || defined(__i386__)
+#   define getReturnAddress() ({ register usqIntptr_t retpc; asm volatile ("movl 4(%%ebp),%0" : "=r"(retpc) : ); retpc; })
+# elif defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
+#   define getReturnAddress() ({ register usqIntptr_t retpc; asm volatile ("movq 8(%%rbp),%0" : "=r"(retpc) : ); retpc; })
+# else
+#       error "Cog requires getReturnAddress defining for the current platform."
+# endif /* defined(i386) */
+# endif /* COGVM && defined(__SUNPRO_C) */
