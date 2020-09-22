@@ -11542,8 +11542,10 @@ StackToRegisterMappingCogit >> genSendTrampolineFor: aRoutine numArgs: numArgs c
 	startAddress := methodZoneBase.
 	self zeroOpcodeIndex.
 	backEnd genPushRegisterArgsForNumArgs: numArgs scratchReg: SendNumArgsReg.
-	objectRepresentation selectorIndexDereferenceRoutine ifNotNil:
-		[:routine| self Call: routine].
+	objectRepresentation selectorIndexDereferenceRoutine ifNotNil: [:routine| 
+		backEnd hasLinkRegister ifTrue: [self PushR: LinkReg].
+		self Call: routine.
+		backEnd hasLinkRegister ifTrue: [self PopR: LinkReg]. ].
 	self genTrampolineFor: aRoutine
 		called: aString
 		numArgs: 4

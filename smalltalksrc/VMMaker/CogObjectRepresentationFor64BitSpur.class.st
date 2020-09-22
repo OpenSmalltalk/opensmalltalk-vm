@@ -2407,6 +2407,12 @@ CogObjectRepresentationFor64BitSpur >> selectorIndexDereferenceRoutine [
 	^ceDereferenceSelectorIndex
 ]
 
+{ #category : #'as yet unclassified' }
+CogObjectRepresentationFor64BitSpur >> selectorIndexDereferenceRoutine: anInteger [ 
+	
+	ceDereferenceSelectorIndex := anInteger
+]
+
 { #category : #'debug support' }
 CogObjectRepresentationFor64BitSpur >> validInlineCacheTag: classIndexOrTagPattern [
 	"The three valid tag patterns are 1 (SmallInteger), 2 (Character) and 3 (SmallFloat64)."
