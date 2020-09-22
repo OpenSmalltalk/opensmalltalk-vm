@@ -8,6 +8,12 @@ Class {
 }
 
 { #category : #'as yet unclassified' }
+UnicornProcessor >> cResultRegister: anInteger [ 
+	
+	machineSimulator returnRegisterValue: anInteger
+]
+
+{ #category : #'as yet unclassified' }
 UnicornProcessor >> ebp: anInteger [ 
 	
 	machineSimulator ebp: anInteger
@@ -55,6 +61,11 @@ UnicornProcessor >> initializeStackFor: aCompiler [
 	aCompiler setStackAlignment: 16 expectedSPOffset: 0 expectedFPOffset: 0.
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornProcessor >> machineSimulator [
+	^ machineSimulator
+]
+
 { #category : #accessing }
 UnicornProcessor >> machineSimulator: aMachineSimulator [
 	
@@ -65,6 +76,12 @@ UnicornProcessor >> machineSimulator: aMachineSimulator [
 UnicornProcessor >> pc: anInteger [ 
 	
 	^ machineSimulator instructionPointerValue: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornProcessor >> postCallArgumentsNumArgs: anInteger in: aSpurSimulatedMemory [ 
+	
+	^ machineSimulator postCallArgumentsNumArgs: anInteger in: aSpurSimulatedMemory
 ]
 
 { #category : #'as yet unclassified' }
@@ -127,6 +144,12 @@ UnicornProcessor >> setFramePointer: framePointer stackPointer: stackPointer [
 ]
 
 { #category : #'as yet unclassified' }
+UnicornProcessor >> simulateJumpCallOf: anInteger memory: aSpurSimulatedMemory [
+
+	machineSimulator simulateJumpCallOf: anInteger memory: aSpurSimulatedMemory
+]
+
+{ #category : #'as yet unclassified' }
 UnicornProcessor >> simulateLeafCallOf: address nextpc: nextpc memory: aMemory [
 
 	machineSimulator simulateLeafCallOf: address nextpc: nextpc memory: aMemory
@@ -154,6 +177,12 @@ UnicornProcessor >> sp: anInteger [
 UnicornProcessor >> x12: anInteger [ 
 	
 	machineSimulator x12: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornProcessor >> x1: anInteger [ 
+
+	machineSimulator x1: anInteger
 ]
 
 { #category : #'as yet unclassified' }

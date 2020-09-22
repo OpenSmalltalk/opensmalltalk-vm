@@ -22,12 +22,13 @@ VMMethodBytecodeToIRMapping >> computeIR [
 
 	| coggedResult cogit |
 	coggedResult := StackToRegisterMappingCogit
-		cog: method
-		selectorOrNumCopied: method selector
+		computeIRForMethod: method
+		selectorOrNumCopied: (method isCompiledBlock ifFalse: [ method selector ] ifTrue: [ method numTemps ])
 		options: #(
 			COGMTVM false
 			ObjectMemory Spur64BitCoMemoryManager
-			ISA X64
+			ISA aarch64
+			#bytecodeTableInitializer initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid
 			MULTIPLEBYTECODESETS true).
 			
 	cogit := coggedResult second.

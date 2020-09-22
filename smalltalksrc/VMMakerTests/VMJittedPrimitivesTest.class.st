@@ -1,6 +1,9 @@
 Class {
 	#name : #VMJittedPrimitivesTest,
 	#superclass : #VMSimpleStackBasedCogitAbstractTest,
+	#pools : [
+		'CogRTLOpcodes'
+	],
 	#category : #'VMMakerTests-JitTests'
 }
 
@@ -15,6 +18,19 @@ VMJittedPrimitivesTest >> prepareStackForSendReceiver: aReceiver arguments: argu
 		ifTrue: [ machineSimulator linkRegisterValue: callerAddress "The caller IP in ARM is in the linkRegister"]
 		ifFalse: [ self pushAddress:  callerAddress. " I need to push the caller IP, as this is a message send" ]
 
+]
+
+{ #category : #'tests - support' }
+VMJittedPrimitivesTest >> testConvertSmallIntegerToInteger [
+	
+	| result |
+	
+	self compile: [ result := cogit objectRepresentation genConvertSmallIntegerToIntegerInReg: ReceiverResultReg ].
+	
+	machineSimulator receiverRegisterValue: (self memory integerObjectOf: 42).
+	self runGeneratedCode.
+	
+	self assert: machineSimulator receiverRegisterValue equals: 42.
 ]
 
 { #category : #'tests - primitiveAdd' }
@@ -125,4 +141,68 @@ VMJittedPrimitivesTest >> testPrimitiveAddReturnsAnSmallIntegerWhenNegativeNumbe
 	
 	self runFrom: primitiveAddress until: callerAddress.
 	self assert: self machineSimulator receiverRegisterValue equals: (memory integerObjectOf: -94).
+]
+
+{ #category : #'tests - support' }
+VMJittedPrimitivesTest >> testSmallIntegerLessShouldNotCompileForNonSmallIntegers [
+		
+	| result |
+	self compile: [ 
+		"Compile this code in the context != of a small integer class"
+		cogit receiverTags: memory smallIntegerTag + 1.
+		result := cogit objectRepresentation genSmallIntegerComparison: JumpLess ].
+	
+	self assert: result equals: UnimplementedPrimitive.
+]
+
+{ #category : #'tests - support' }
+VMJittedPrimitivesTest >> testSmallIntegerLessThanNonSmallIntegerArgumentDoesNotReturn [
+	
+	"If the argument is not an small integer, flow jumps and return does not (yet) happen"
+	
+	self compile: [ 
+		"Compile this code in the context ot a small integer class"
+		cogit receiverTags: memory smallIntegerTag.
+		cogit objectRepresentation genSmallIntegerComparison: JumpLess ].
+	
+	"Simulate 42 < false"
+	self pushAddress: self memory falseObject.
+	machineSimulator receiverRegisterValue: (self memory integerObjectOf: 42).
+	self runGeneratedCode.
+	
+	"Receiver and argument should stay untouched"
+	self assert: machineSimulator receiverRegisterValue equals: (self memory integerObjectOf: 42).
+	self assert: machineSimulator argument0RegisterValue equals: self memory falseObject.
+]
+
+{ #category : #'tests - support' }
+VMJittedPrimitivesTest >> testSmallIntegerLessThanReturnsFalse [
+	
+	self compile: [ 
+		"Compile this code in the context ot a small integer class"
+		cogit receiverTags: memory smallIntegerTag.
+		cogit objectRepresentation genSmallIntegerComparison: JumpLess ].
+	
+	"Simulate 42 < 32"
+	self pushAddress: (self memory integerObjectOf: 32).
+	machineSimulator receiverRegisterValue: (self memory integerObjectOf: 42).
+	self runUntilReturn.
+	
+	self assert: machineSimulator receiverRegisterValue equals: memory falseObject.
+]
+
+{ #category : #'tests - support' }
+VMJittedPrimitivesTest >> testSmallIntegerLessThanReturnsTrue [
+	
+	self compile: [ 
+		"Compile this code in the context ot a small integer class"
+		cogit receiverTags: memory smallIntegerTag.
+		cogit objectRepresentation genSmallIntegerComparison: JumpLess ].
+	
+	"Simulate 42 < 32"
+	self pushAddress: (self memory integerObjectOf: 32).
+	machineSimulator receiverRegisterValue: (self memory integerObjectOf: 42).
+	self runUntilReturn.
+	
+	self assert: machineSimulator receiverRegisterValue equals: memory falseObject.
 ]

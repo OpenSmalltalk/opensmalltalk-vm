@@ -21,6 +21,7 @@ Class {
 		'machineSimulator'
 	],
 	#pools : [
+		'CogAbstractRegisters',
 		'CogCompilationConstants',
 		'CogMethodConstants',
 		'VMBytecodeConstants'

@@ -7,6 +7,7 @@ Class {
 		'pushedBytes'
 	],
 	#pools : [
+		'CogAbstractRegisters',
 		'VMSqueakClassIndices'
 	],
 	#category : #'VMMakerTests-JitTests'
@@ -31,6 +32,12 @@ VMTrampolineTest >> isAligned [
 VMTrampolineTest >> isAligned: aBoolean [
 
 	isAligned := aBoolean
+]
+
+{ #category : #tests }
+VMTrampolineTest >> jitCompilerClass [
+
+	^ StackToRegisterMappingCogit
 ]
 
 { #category : #tests }
@@ -106,6 +113,79 @@ VMTrampolineTest >> testRestoreRegistersProducesAlignedStackPointer [
 	self runGeneratedCode.
 
 	self assert: self stackPointerRegisterValue equals: initialStackPointer
+]
+
+{ #category : #tests }
+VMTrampolineTest >> testSendTrampolineShouldNotOverrideLinkRegisterWhenCallDereferenceSelectorRoutine [
+	
+	| dereferenceRoutine previousLinkRegister trampoline |
+	
+	cogit hasLinkRegister ifFalse: [ ^ self skip ].
+	
+	dereferenceRoutine := self compile: [ cogit RetN: 0 ].
+	cogit ceDereferenceSelectorIndex: dereferenceRoutine.
+	
+	[trampoline := self compile: [ cogit
+			genSendTrampolineFor: #ceSend:super:to:numArgs:
+			numArgs: 4
+			called: 'test'
+			arg: ClassReg
+			arg: (cogit trampolineArgConstant: true)
+			arg: ReceiverResultReg
+			arg: (cogit numArgsOrSendNumArgsReg: 1) ].]
+	on: AssertionFailure do: [ :e | e resumeUnchecked: nil ].
+	
+	machineSimulator baseRegisterValue: cogit varBaseAddress.
+	machineSimulator linkRegisterValue: (previousLinkRegister := 42).
+
+	self runFrom: trampoline until: cogit ceDereferenceSelectorIndex.
+
+	"The generated code should load in FP the value stored in `framePointer`"
+	self assert: machineSimulator linkRegisterValue equals: previousLinkRegister
+]
+
+{ #category : #tests }
+VMTrampolineTest >> testSmalltalkToCStackShouldPushLinkRegister [
+
+	cogit backend hasLinkRegister ifFalse: [ ^ self skip ].
+	
+	self compile: [ cogit genSmalltalkToCStackSwitch: true "do not push link register" ].
+	
+	machineSimulator baseRegisterValue: cogit varBaseAddress.
+	machineSimulator linkRegisterValue: 42.
+
+	self runFrom: initialAddress until: self getLastAddress.
+
+	"The generated code should push the link register in the interpreter stack"
+	self assert: self interpreter stackTop equals: 42
+]
+
+{ #category : #tests }
+VMTrampolineTest >> testSmalltalkToCStackSwitchShouldUpdateInterpreterFramePointer [
+	
+	self compile: [ cogit genSmalltalkToCStackSwitch: false "do not push link register" ].
+	
+	machineSimulator baseRegisterValue: cogit varBaseAddress.
+	self framePointerRegisterValue: 42.
+
+	self runFrom: initialAddress until: self getLastAddress.
+
+	"The generated code should load in the interpreter stackPointer the value stored in the SP register"
+	self assert: self interpreter framePointer equals: 42
+]
+
+{ #category : #tests }
+VMTrampolineTest >> testSmalltalkToCStackSwitchShouldUpdateInterpreterStackPointer [
+	
+	self compile: [ cogit genSmalltalkToCStackSwitch: false "do not push link register" ].
+	
+	machineSimulator baseRegisterValue: cogit varBaseAddress.
+	self stackPointerRegisterValue: 42.
+
+	self runFrom: initialAddress until: self getLastAddress.
+
+	"The generated code should load in the interpreter stackPointer the value stored in the SP register"
+	self assert: self interpreter stackPointer equals: 42
 ]
 
 { #category : #tests }

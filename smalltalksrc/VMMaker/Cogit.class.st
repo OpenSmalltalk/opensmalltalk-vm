@@ -3869,6 +3869,13 @@ Cogit >> ceDereferenceSelectorIndex [
 	^ objectRepresentation selectorIndexDereferenceRoutine
 ]
 
+{ #category : #'as yet unclassified' }
+Cogit >> ceDereferenceSelectorIndex: anInteger [ 
+	
+	<doNotGenerate>
+	objectRepresentation selectorIndexDereferenceRoutine: anInteger
+]
+
 { #category : #'simulation only' }
 Cogit >> ceEnterCogCodePopReceiverReg [
 	<api: 'extern void (*ceEnterCogCodePopReceiverReg)()'>
