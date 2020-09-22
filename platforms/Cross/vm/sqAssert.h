@@ -13,6 +13,8 @@
  * assertl, assertal & assertfl take a line number as an argument.
  */
 
+#include "sqPlatformSpecific.h" // for EXPORT()
+
 #pragma auto_inline(off)
 #if defined(EXPORT) && !defined(SQUEAK_BUILTIN_PLUGIN)
 EXPORT(void) error(const char *);

@@ -28,6 +28,9 @@
    Define plugin for Netscape Plugin building, needed for CodeWarrior
 */
 
+#ifndef _SQ_PLATFORM_SPECIFIC_H
+#define _SQ_PLATFORM_SPECIFIC_H
+
 #ifdef macintoshSqueak
 #if defined(TARGET_API_MAC_CARBON)
 # include <Types.h>
@@ -212,3 +215,5 @@ extern const pthread_key_t tltiIndex;
 # define VM_LABEL(foo) ((void)0)
 #endif
 #endif /* macintoshSqueak */
+
+#endif /* _SQ_PLATFORM_SPECIFIC_H */

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -e
 trap 'exit 2' HUP INT PIPE TERM
-PRODUCTDIRS="newspeak.cog.spur squeak.cog.spur squeak.cog.v3 squeak.cog.spur+immutability pharo.cog.spur"
+PRODUCTDIRS="newspeak.cog.spur squeak.cog.spur squeak.cog.v3 pharo.cog.spur"
 for d in $PRODUCTDIRS; do
 	if test -d "$d"; then
-		(cd ./$d;./mvm -A)
+		(echo $d;cd ./$d;./mvm -A)
 	else
 		echo no $d directory found
 	fi

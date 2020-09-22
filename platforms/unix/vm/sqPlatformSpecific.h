@@ -28,6 +28,9 @@
  * 
  */
 
+#ifndef _SQ_PLATFORM_SPECIFIC_H
+#define _SQ_PLATFORM_SPECIFIC_H
+
 #undef sqAllocateMemory
 #undef sqGrowMemoryBy
 #undef sqShrinkMemoryBy
@@ -145,3 +148,5 @@ extern void sqFilenameFromString(char *uxName, sqInt stNameIndex, int sqNameLeng
 #       error "Cog requires getReturnAddress defining for the current platform."
 # endif /* defined(i386) */
 # endif /* COGVM && defined(__SUNPRO_C) */
+
+#endif /* _SQ_PLATFORM_SPECIFIC_H */

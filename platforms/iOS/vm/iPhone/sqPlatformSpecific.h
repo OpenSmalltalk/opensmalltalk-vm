@@ -19,6 +19,10 @@
    
    Define plugin for Netscape Plugin building, needed for CodeWarrior
 */
+
+#ifndef _SQ_PLATFORM_SPECIFIC_H
+#define _SQ_PLATFORM_SPECIFIC_H
+
 /*
  Copyright (c) 2000-2008 Corporate Smalltalk Consulting Ltd. All rights reserved.
  MIT License
@@ -179,4 +183,4 @@ extern const pthread_key_t tltiIndex;
 
 #endif /* macintoshSqueak */
 
-
+#endif /* _SQ_PLATFORM_SPECIFIC_H */

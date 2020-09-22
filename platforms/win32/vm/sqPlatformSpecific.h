@@ -8,7 +8,8 @@
 
 */
 
-
+#ifndef _SQ_PLATFORM_SPECIFIC_H
+#define _SQ_PLATFORM_SPECIFIC_H
 
 #if _WIN32 || _WIN64
 /* Override necessary definitions */
@@ -170,3 +171,5 @@ extern const unsigned long tltiIndex;
 #else
 # error "unknown architecture, program counter field undefined"
 #endif
+
+#endif /* _SQ_PLATFORM_SPECIFIC_H */
