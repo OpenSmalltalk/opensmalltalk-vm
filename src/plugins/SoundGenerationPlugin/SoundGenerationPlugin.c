@@ -2,10 +2,10 @@
 	VMPluginCodeGenerator VMMaker.oscog-eem.2811 uuid: fa96b358-e3c8-4591-8595-20003329c559
    from
 	SoundGenerationPlugin VMMaker.oscog-eem.2811 uuid: fa96b358-e3c8-4591-8595-20003329c559
-	AbstractSound Sound-eem.74 uuid: 42a3c2d9-0bed-4310-bcf1-cbe0f3d0653b
+	AbstractSound Sound-eem.75 uuid: a4d7e0e8-269c-432f-ac18-25d2d7d1ff44
  */
 static char __buildInfo[] = "SoundGenerationPlugin VMMaker.oscog-eem.2811 uuid: fa96b358-e3c8-4591-8595-20003329c559\n\
-AbstractSound Sound-eem.74 uuid: 42a3c2d9-0bed-4310-bcf1-cbe0f3d0653b " __DATE__ ;
+AbstractSound Sound-eem.75 uuid: a4d7e0e8-269c-432f-ac18-25d2d7d1ff44 " __DATE__ ;
 
 
 
@@ -588,23 +588,17 @@ primitiveMixSampledSound(void)
     short int *aSoundBuffer;
     sqInt count;
     sqInt i;
-    sqInt i1;
     sqInt indexHighBits;
     sqInt lastIndex;
-    sqInt lastIndex1;
     sqInt leftVol;
     sqInt n;
     sqInt outIndex;
-    sqInt outIndex1;
     sqInt overflow;
     sqInt rcvr;
     sqInt rightVol;
     sqInt s;
-    sqInt s1;
     sqInt sample;
-    sqInt sample1;
     sqInt sampleIndex;
-    sqInt sampleIndex1;
     short int *samples;
     sqInt samplesSize;
     sqInt scaledIncrement;
@@ -634,67 +628,6 @@ primitiveMixSampledSound(void)
 	if (failed()) {
 		return null;
 	}
-	if (MaxSmallInteger > 0x3FFFFFFF) {
-
-		/* In 64-bits we don't have to worry about 2^15 * 2^15 overflow */
-		/* begin _64bitMixSampleCount:into:startingAt:leftVol:rightVol: */
-		lastIndex1 = (startIndex + n) - 1;
-
-		/* index of next stereo output sample pair */
-		outIndex1 = startIndex;
-		sampleIndex1 = indexHighBits + (((usqInt)(scaledIndex)) >> IncrementFractionBits);
-		while ((sampleIndex1 <= samplesSize)
-		 && (outIndex1 <= lastIndex1)) {
-			sample1 = ((samples[sampleIndex1]) * scaledVol) / ScaleFactor;
-			if (leftVol > 0) {
-				i1 = (2 * outIndex1) - 1;
-				s1 = (aSoundBuffer[i1]) + ((sample1 * leftVol) / ScaleFactor);
-				if (s1 > 0x7FFF) {
-					s1 = 0x7FFF;
-				}
-				if (s1 < -32767) {
-					s1 = -32767;
-				}
-				aSoundBuffer[i1] = s1;
-			}
-			if (rightVol > 0) {
-				i1 = 2 * outIndex1;
-				s1 = (aSoundBuffer[i1]) + ((sample1 * rightVol) / ScaleFactor);
-				if (s1 > 0x7FFF) {
-					s1 = 0x7FFF;
-				}
-				if (s1 < -32767) {
-					s1 = -32767;
-				}
-				aSoundBuffer[i1] = s1;
-			}
-			if (scaledVolIncr != 0) {
-				scaledVol += scaledVolIncr;
-				if (((scaledVolIncr > 0)
-				 && (scaledVol >= scaledVolLimit))
-				 || ((scaledVolIncr < 0)
-				 && (scaledVol <= scaledVolLimit))) {
-
-					/* reached the limit; stop incrementing */
-					scaledVol = scaledVolLimit;
-					scaledVolIncr = 0;
-				}
-			}
-			scaledIndex += scaledIncrement;
-			sampleIndex1 = indexHighBits + (((usqInt)(scaledIndex)) >> IncrementFractionBits);
-			outIndex1 += 1;
-		}
-		count -= n;
-		if (failed()) {
-			return null;
-		}
-		storeIntegerofObjectwithValue(3, rcvr, scaledVol);
-		storeIntegerofObjectwithValue(4, rcvr, scaledVolIncr);
-		storeIntegerofObjectwithValue(7, rcvr, count);
-		storeIntegerofObjectwithValue(11, rcvr, scaledIndex);
-		storeIntegerofObjectwithValue(12, rcvr, indexHighBits);
-		return methodReturnReceiver();
-	}
 	lastIndex = (startIndex + n) - 1;
 
 	/* index of next stereo output sample pair */
@@ -705,46 +638,54 @@ primitiveMixSampledSound(void)
 		sample = ((samples[sampleIndex]) * scaledVol) / ScaleFactor;
 		if (leftVol > 0) {
 			i = (2 * outIndex) - 1;
+
+			/* clip the result!! */
 			s = (aSoundBuffer[i]) + ((sample * leftVol) / ScaleFactor);
-			if (s > 0x7FFF) {
-				s = 0x7FFF;
-			}
-			if (s < -32767) {
-				s = -32767;
-			}
-			aSoundBuffer[i] = s;
+			aSoundBuffer[i] = ((s > 0x7FFF
+	? 0x7FFF
+	: (s < -32767
+			? -32767
+			: s)));
 		}
 		if (rightVol > 0) {
 			i = 2 * outIndex;
+
+			/* clip the result!! */
 			s = (aSoundBuffer[i]) + ((sample * rightVol) / ScaleFactor);
-			if (s > 0x7FFF) {
-				s = 0x7FFF;
-			}
-			if (s < -32767) {
-				s = -32767;
-			}
-			aSoundBuffer[i] = s;
+			aSoundBuffer[i] = ((s > 0x7FFF
+	? 0x7FFF
+	: (s < -32767
+			? -32767
+			: s)));
 		}
 		if (scaledVolIncr != 0) {
 			scaledVol += scaledVolIncr;
-			if (((scaledVolIncr > 0)
-			 && (scaledVol >= scaledVolLimit))
-			 || ((scaledVolIncr < 0)
-			 && (scaledVol <= scaledVolLimit))) {
+			if ((scaledVolIncr > 0
+				? scaledVol >= scaledVolLimit
+				: scaledVol <= scaledVolLimit)) {
 
 				/* reached the limit; stop incrementing */
 				scaledVol = scaledVolLimit;
 				scaledVolIncr = 0;
 			}
 		}
+
+		/* In 64-bits we don't have to worry about scaled indexes overflowing,
+		   and in the primitive this is guard evaluated at compile time. */
 		scaledIndex += scaledIncrement;
-		if (scaledIndex >= ScaledIndexOverflow) {
+		if ((MaxSmallInteger <= 0x3FFFFFFF)
+		 && (scaledIndex >= ScaledIndexOverflow)) {
 			overflow = ((usqInt)(scaledIndex)) >> IncrementFractionBits;
 			indexHighBits += overflow;
 			scaledIndex -= ((sqInt)((usqInt)(overflow) << IncrementFractionBits));
 		}
 		sampleIndex = indexHighBits + (((usqInt)(scaledIndex)) >> IncrementFractionBits);
 		outIndex += 1;
+	}
+	if (MaxSmallInteger > 0x3FFFFFFF) {
+		overflow = ((usqInt)(scaledIndex)) >> IncrementFractionBits;
+		indexHighBits += overflow;
+		scaledIndex -= ((sqInt)((usqInt)(overflow) << IncrementFractionBits));
 	}
 	count -= n;
 	if (failed()) {
