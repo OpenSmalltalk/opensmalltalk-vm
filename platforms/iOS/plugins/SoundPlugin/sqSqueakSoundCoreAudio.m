@@ -38,14 +38,14 @@
  location as other such third-party acknowledgments.
  */
 
-#include "sqMemoryFence.h"
-#include "sqAssert.h"
-
 #import <CoreAudio/CoreAudio.h>
 
 //typedef struct _device { AudioDeviceID id; } DeviceID;
 
 #import "sqSqueakSoundCoreAudio.h"
+
+#import "sqMemoryFence.h"
+#import "sqAssert.h"
 
 #define SqueakFrameSize	4	// guaranteed (see class SoundPlayer)
 extern struct VirtualMachine* interpreterProxy;

@@ -28,6 +28,8 @@
 #ifndef _SQ_PLATFORM_SPECIFIC_H
 #define _SQ_PLATFORM_SPECIFIC_H
 
+#include <stdio.h> // For FILE
+
 /* How to use this file:
    This file is for general platform-specific macros and declarations.
    The goal is to keep most of the other header files generic across platforms.
