@@ -229,7 +229,7 @@ CogARMv8Compiler class >> initializeAbstractRegisters [
 	ClassReg			:= R2.
 	ReceiverResultReg	:= R5.
 	SendNumArgsReg	:= R6.
-	SPReg				:= SP. "a.k.a. R31" self assert: SP = 31.
+	SPReg				:= 28. "a.k.a. X28".
 	FPReg				:= 29 "X29".
 	Arg0Reg			:= R3. "overlaps with last C arg reg"
 	Arg1Reg			:= R4.
@@ -2494,8 +2494,8 @@ CogARMv8Compiler >> concretizeRetN [
 		machineCodeAt: 0
 		put: 
 			(self
-				add: SP
-				rn: SP
+				add: SPReg
+				rn: SPReg
 				imm: offset
 				ror: 0).
 	self machineCodeAt: 4 put: self ret.
@@ -4274,7 +4274,7 @@ CogARMv8Compiler >> popR: dstReg [
 	LDR srcReg, [sp] #4 - ARM_ARM v7 DDI10406 pp. A8-120-1"
 	^ self
 		ldrSize: 1
-		baseRegister: SP
+		baseRegister: SPReg
 		signedOffset: 8
 		destinationRegister: dstReg
 		preIndex: 0
@@ -4289,7 +4289,7 @@ CogARMv8Compiler >> pushLinkRegisterByteSize [
 CogARMv8Compiler >> pushR: srcReg [
 	
 	^ self strSize: 1
-		baseRegister: SP
+		baseRegister: SPReg
 		signedOffset: -8 "word size, size of the elements in the stack"
 		sourceRegister: srcReg
 		preIndex: 1 "Access before incrementing"

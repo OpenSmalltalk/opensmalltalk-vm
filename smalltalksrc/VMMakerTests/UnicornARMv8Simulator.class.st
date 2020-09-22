@@ -89,6 +89,7 @@ UnicornARMv8Simulator >> initializeRegisterAliases [
 		at: #x5 put: #receiverRegister;
 		at: #x6 put: #sendNumberOfArgumentsRegister;
 		at: #x10 put: #baseRegister;
+		at: #x28 put: #vmStackPointer;
 		at: #x29 put: #framePointerRegister;
 		at: #x30 put: #linkRegister
 ]
@@ -164,7 +165,7 @@ UnicornARMv8Simulator >> receiverRegister [
 { #category : #accessing }
 UnicornARMv8Simulator >> registerList [
 
-	^ #(lr pc sp fp x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 zero negative carry overflow)
+	^ #(lr pc sp fp x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x28 zero negative carry overflow)
 ]
 
 { #category : #registers }
@@ -201,7 +202,7 @@ UnicornARMv8Simulator >> sp [
 { #category : #registers }
 UnicornARMv8Simulator >> stackPointerRegister [
 	
-	^ UcARM64Registers sp
+	^ UcARM64Registers x28
 ]
 
 { #category : #accessing }
@@ -267,6 +268,18 @@ UnicornARMv8Simulator >> x1: anInteger [
 UnicornARMv8Simulator >> x2 [
 
 	^ self readRegister: UcARM64Registers x2
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> x28 [
+
+	^ self readRegister: UcARM64Registers x28
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> x28: anInteger [ 
+	
+	self writeRegister: UcARM64Registers x28 value: anInteger
 ]
 
 { #category : #'as yet unclassified' }
