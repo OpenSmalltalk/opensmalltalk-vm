@@ -8,6 +8,12 @@ Class {
 }
 
 { #category : #'as yet unclassified' }
+UnicornProcessor >> cResultRegister: anInteger [ 
+	
+	machineSimulator returnRegisterValue: anInteger
+]
+
+{ #category : #'as yet unclassified' }
 UnicornProcessor >> ebp: anInteger [ 
 	
 	machineSimulator ebp: anInteger
@@ -171,6 +177,12 @@ UnicornProcessor >> sp: anInteger [
 UnicornProcessor >> x12: anInteger [ 
 	
 	machineSimulator x12: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornProcessor >> x1: anInteger [ 
+
+	machineSimulator x1: anInteger
 ]
 
 { #category : #'as yet unclassified' }

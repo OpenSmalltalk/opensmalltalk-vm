@@ -64,6 +64,12 @@ UnicornSimulator >> arg0RegisterValue: aValue [
 	^ self writeRegister: self arg0Register value: aValue
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornSimulator >> argument0RegisterValue [
+	
+	self subclassResponsibility
+]
+
 { #category : #registers }
 UnicornSimulator >> baseRegister [
 
@@ -124,7 +130,7 @@ UnicornSimulator >> disassembleFrom: anIndex opcodes: numberOfInstructions [
 	^ self disassembler
 		printImmediatesInHexa;
 		disassembleNext: numberOfInstructions
-		instructionsIn: (memory memory copyFrom: anIndex)
+		instructionsIn: (memory memory copyFrom: anIndex to: anIndex + (numberOfInstructions * 50) "rough estimate")
 		startAddress: anIndex
 		pc: self instructionPointerValue
 ]

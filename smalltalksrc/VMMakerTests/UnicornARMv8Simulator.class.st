@@ -10,6 +10,12 @@ UnicornARMv8Simulator >> arg0Register [
 	^ UcARM64Registers x3
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> argument0RegisterValue [
+	
+	^ self x3
+]
+
 { #category : #registers }
 UnicornARMv8Simulator >> baseRegister [
 
