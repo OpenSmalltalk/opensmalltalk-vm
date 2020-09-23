@@ -165,9 +165,15 @@ VMJittedPrimitivesTest >> testSmallIntegerLessThanNonSmallIntegerArgumentDoesNot
 		cogit receiverTags: memory smallIntegerTag.
 		cogit objectRepresentation genSmallIntegerComparison: JumpLess ].
 	
-	"Simulate 42 < false"
+	"Simulate 42 < false.
+	  - 42 is the receiver and goes to the receiver register
+	  - false is the argument and should go to the stack
+	If we are in a system without a link register, we need to push the caller IP to the stack to simulate a call"
 	self pushAddress: self memory falseObject.
+	cogit backEnd hasLinkRegister ifFalse: [ 
+		self pushAddress: callerAddress ].
 	machineSimulator receiverRegisterValue: (self memory integerObjectOf: 42).
+	
 	self runGeneratedCode.
 	
 	"Receiver and argument should stay untouched"
@@ -183,9 +189,15 @@ VMJittedPrimitivesTest >> testSmallIntegerLessThanReturnsFalse [
 		cogit receiverTags: memory smallIntegerTag.
 		cogit objectRepresentation genSmallIntegerComparison: JumpLess ].
 	
-	"Simulate 42 < 32"
+	"Simulate 42 < 32.
+	  - 42 is the receiver and goes to the receiver register
+	  - 32 is the argument and should go to the stack
+	If we are in a system without a link register, we need to push the caller IP to the stack to simulate a call"
 	self pushAddress: (self memory integerObjectOf: 32).
+	cogit backEnd hasLinkRegister ifFalse: [ 
+		self pushAddress: callerAddress ].
 	machineSimulator receiverRegisterValue: (self memory integerObjectOf: 42).
+	
 	self runUntilReturn.
 	
 	self assert: machineSimulator receiverRegisterValue equals: memory falseObject.
@@ -199,10 +211,16 @@ VMJittedPrimitivesTest >> testSmallIntegerLessThanReturnsTrue [
 		cogit receiverTags: memory smallIntegerTag.
 		cogit objectRepresentation genSmallIntegerComparison: JumpLess ].
 	
-	"Simulate 42 < 32"
-	self pushAddress: (self memory integerObjectOf: 32).
-	machineSimulator receiverRegisterValue: (self memory integerObjectOf: 42).
+	"Simulate 32 < 42.
+	  - 32 is the receiver and goes to the receiver register
+	  - 42 is the argument and should go to the stack
+	If we are in a system without a link register, we need to push the caller IP to the stack to simulate a call"
+	self pushAddress: (self memory integerObjectOf: 42).
+	cogit backEnd hasLinkRegister ifFalse: [ 
+		self pushAddress: callerAddress ].
+	machineSimulator receiverRegisterValue: (self memory integerObjectOf: 32).
+
 	self runUntilReturn.
 	
-	self assert: machineSimulator receiverRegisterValue equals: memory falseObject.
+	self assert: machineSimulator receiverRegisterValue equals: memory trueObject.
 ]
