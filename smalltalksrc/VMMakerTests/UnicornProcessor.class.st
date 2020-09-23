@@ -14,6 +14,18 @@ UnicornProcessor >> cResultRegister: anInteger [
 ]
 
 { #category : #'as yet unclassified' }
+UnicornProcessor >> convertIntegerToInternal: anInteger [ 
+	
+	^ machineSimulator convertIntegerToInternal: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornProcessor >> convertInternalToInteger: anInteger [ 
+
+	^ machineSimulator convertInternalToInteger: anInteger 
+]
+
+{ #category : #'as yet unclassified' }
 UnicornProcessor >> ebp: anInteger [ 
 	
 	machineSimulator ebp: anInteger
@@ -44,6 +56,12 @@ UnicornProcessor >> fp [
 ]
 
 { #category : #'as yet unclassified' }
+UnicornProcessor >> hasLinkRegister [
+	
+	^ machineSimulator hasLinkRegister 
+]
+
+{ #category : #'as yet unclassified' }
 UnicornProcessor >> initializeStackFor: aCompiler [
 	
 	"Initialize the machine code simulator"
@@ -59,6 +77,12 @@ UnicornProcessor >> initializeStackFor: aCompiler [
 	
 	Meaning that the stack should be aligned to 16 bytes"
 	aCompiler setStackAlignment: 16 expectedSPOffset: 0 expectedFPOffset: 0.
+]
+
+{ #category : #'as yet unclassified' }
+UnicornProcessor >> linkRegisterValue [
+	
+	^ machineSimulator linkRegisterValue 
 ]
 
 { #category : #'as yet unclassified' }
@@ -85,6 +109,12 @@ UnicornProcessor >> postCallArgumentsNumArgs: anInteger in: aSpurSimulatedMemory
 ]
 
 { #category : #'as yet unclassified' }
+UnicornProcessor >> r0: anInteger [ 
+
+	^ machineSimulator r0: anInteger
+]
+
+{ #category : #'as yet unclassified' }
 UnicornProcessor >> r10: anInteger [ 
 	
 	machineSimulator r10: anInteger
@@ -94,6 +124,12 @@ UnicornProcessor >> r10: anInteger [
 UnicornProcessor >> r11: anInteger [ 
 	
 	machineSimulator r11: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornProcessor >> r1: anInteger [ 
+	
+	^ machineSimulator r1: anInteger 
 ]
 
 { #category : #'as yet unclassified' }

@@ -23,6 +23,23 @@ UnicornARMv5Simulator >> classRegister [
 ]
 
 { #category : #'as yet unclassified' }
+UnicornARMv5Simulator >> convertIntegerToInternal: anInteger [ 
+
+	anInteger < 0 ifFalse: [ ^ anInteger ].
+	
+	^ 16rFFFFFFFF - anInteger abs + 1
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv5Simulator >> convertInternalToInteger: aTwoComplementNumber [
+
+	(aTwoComplementNumber bitAnd: 1 << 31) = 0 ifTrue: [ 
+		^ aTwoComplementNumber ].
+	
+	^ aTwoComplementNumber - 16rFFFFFFFF - 1
+]
+
+{ #category : #'as yet unclassified' }
 UnicornARMv5Simulator >> createUnicorn [
 
 	^ Unicorn arm
@@ -109,9 +126,30 @@ UnicornARMv5Simulator >> pc [
 	^ self readRegister: UcARMRegisters pc
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornARMv5Simulator >> postCallArgumentsNumArgs: numArgs in: aMemory [ 
+	"Answer an argument vector of the requested size after a vanilla
+	 ABI call. For ARM the Procedure Calling Specification can be found in IHI0042D_aapcs.pdf.
+	On ARM this typically means accessing r0 through r3 and fetching additional arguments from the stack, acording to pages 20f. aapcs.
+	We assume that all arguments are single word arguments, which can not be supplied on co-processor-registers.
+	 For compatibility with Cog/Slang we answer unsigned values."
+	
+	^(1 to: numArgs) collect: [:i |
+		i < 5 
+			ifTrue: [self perform: (self registerStateGetters at: i)]
+			"ARM uses a full descending stack. Directly after calling a procedure, nothing but the arguments are pushed."
+			ifFalse: [memory unsignedLongAt: self sp + (i-5)*4 bigEndian: false]].	
+]
+
 { #category : #registers }
 UnicornARMv5Simulator >> r0 [
 	^ self readRegister: UcARMRegisters r0
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv5Simulator >> r0: anInteger [ 
+	
+	^ self writeRegister: UcARMRegisters r0 value: anInteger
 ]
 
 { #category : #registers }
@@ -242,10 +280,22 @@ UnicornARMv5Simulator >> registerList [
 	^ #(lr pc sp fp r0 r1 r2 r3 r4 r5 r6 r7 r8 r9)
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornARMv5Simulator >> registerStateGetters [
+	
+	^#(r0 r1 r2 r3 r4)
+]
+
 { #category : #registers }
 UnicornARMv5Simulator >> sendNumberOfArgumentsRegister [
 	
 	^ UcARMRegisters r6
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv5Simulator >> simulateLeafCallOf: anInteger nextpc: anInteger2 memory: aSpurSimulatedMemory [ 
+
+	
 ]
 
 { #category : #registers }
