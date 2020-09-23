@@ -367,13 +367,16 @@ VMSimpleStackBasedCogitAbstractTest >> initializeInitialStackFrame [
 ]
 
 { #category : #running }
-VMSimpleStackBasedCogitAbstractTest >> initializeStackMemory [.
-	stackMemoryStartAddress := initialAddress + self initialCodeSize.
-	stackMemoryEndAddress := stackMemoryStartAddress + stackSpaceSize.
+VMSimpleStackBasedCogitAbstractTest >> initializeStackMemory [
+	
+	| page |
+	stackMemoryStartAddress := self interpreter stackPages minStackAddress.
+
+	page := memory coInterpreter stackPages newStackPage.
 
 	"The stack pointer is at the top of the stack"
-	machineSimulator stackPointerRegisterValue: stackMemoryEndAddress.
-	machineSimulator framePointerRegisterValue: stackMemoryEndAddress.
+	machineSimulator stackPointerRegisterValue: page baseAddress.
+	machineSimulator framePointerRegisterValue: page baseAddress.
 ]
 
 { #category : #'helpers - registers' }
@@ -652,7 +655,6 @@ VMSimpleStackBasedCogitAbstractTest >> setUp [
 
 	"Initializing Unicorn processor"
 	self setUpCPUSimulator.
-	self initializeStackMemory.
 	
 	cogit processor machineSimulator: machineSimulator.
 	cogit setStackAlignment: 16 expectedSPOffset: 0 expectedFPOffset: 0.
@@ -666,12 +668,11 @@ VMSimpleStackBasedCogitAbstractTest >> setUp [
 	cogit generateStackPointerCapture.
 	cogit methodZone manageFrom: cogit cogCodeBase to: initialAddress + self initialCodeSize.
 
-
-	self initializeInitialStackFrame.
-	
 	memory coInterpreter numStackPages: 8.
 
 	self initializeOldSpaceForScavenger.
+	self initializeStackMemory.
+	self initializeInitialStackFrame.	
 ]
 
 { #category : #running }
