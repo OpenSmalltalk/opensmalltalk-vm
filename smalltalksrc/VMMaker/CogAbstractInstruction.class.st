@@ -123,7 +123,7 @@ CogAbstractInstruction class >> ifTranslateableAddWithOptionsTo: aCollection [
 
 { #category : #'class initialization' }
 CogAbstractInstruction class >> initialize [
-	NumOperands := 3
+	NumOperands := 4
 ]
 
 { #category : #'class initialization' }

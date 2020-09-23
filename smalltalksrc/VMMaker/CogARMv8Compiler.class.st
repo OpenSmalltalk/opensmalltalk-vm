@@ -42,6 +42,7 @@ Class {
 		'MI',
 		'MRS',
 		'MSR',
+		'MSUB',
 		'MoveNotOpcode',
 		'MoveOpcode',
 		'NE',
@@ -63,6 +64,7 @@ Class {
 		'R8',
 		'R9',
 		'RsbOpcode',
+		'SDIV',
 		'SMLALOpcode',
 		'SMULL',
 		'SP',
@@ -204,7 +206,7 @@ CogARMv8Compiler class >> initialize [
 
 	"Specific instructions"
 	self
-		initializeSpecificOpcodes: #(SMULL MSR MRS LDMFD STMFD CMPSMULL)
+		initializeSpecificOpcodes: #(SMULL MSR MRS LDMFD STMFD CMPSMULL SDIV MSUB)
 		in: thisContext method
 ]
 
@@ -999,6 +1001,9 @@ CogARMv8Compiler >> computeMaximumSize [
 		[SMULL]				-> [^4].
 		[MSR]					-> [^4].
 		[CMPSMULL]			-> [^4]. "special compare for genMulR:R: usage"
+		[SDIV]					-> [^4].
+		[MSUB]					-> [^4].
+				
 		"Data Movement"						
 		[MoveCqR]				-> [^self literalLoadInstructionBytes = 4
 										ifTrue: [self literalLoadInstructionBytes]
@@ -1841,6 +1846,32 @@ You don't want to mess with this too much."
 ]
 
 { #category : #'generate machine code - concretize' }
+CogARMv8Compiler >> concretizeMSUB [
+
+	<inline: true>
+
+	| minuendReg factor1Reg factor2Reg destinationReg |
+
+	minuendReg := operands at: 0.
+	factor1Reg := operands at: 1.
+	factor2Reg := operands at: 2.
+	destinationReg := operands at: 3.
+		
+	self
+		machineCodeAt: 0
+		put:(
+			self
+				msubSize: 1
+				minuendReg: minuendReg
+				factor1Reg: factor1Reg
+				factor2Reg: factor2Reg
+				destinationRegister: destinationReg).
+	
+	^ machineCodeSize := 4	
+
+]
+
+{ #category : #'generate machine code - concretize' }
 CogARMv8Compiler >> concretizeMoveAbR [
 	"Will get inlined into concretizeAt: switch."
 
@@ -2633,6 +2664,26 @@ CogARMv8Compiler >> concretizeRetN [
 ]
 
 { #category : #'generate machine code - concretize' }
+CogARMv8Compiler >> concretizeSDIV [
+	<inline: true>
+
+	| regNumerator regDenominator regDestination |
+	regNumerator := operands at: 0.
+	regDenominator := operands at: 1. 
+	regDestination := operands at: 2.
+
+	self 
+		machineCodeAt: 0 
+		put: (self
+			 sdivSize: 1
+			 numeratorReg: regNumerator
+			 denominatorReg: regDenominator
+			 destinationRegister: regDestination).
+
+	^ machineCodeSize := 4
+]
+
+{ #category : #'generate machine code - concretize' }
 CogARMv8Compiler >> concretizeSMULL [
 	| srcA srcB hiResultReg loResultReg |
 	"Generate an SMULL loResultReg, hiResultReg, srcA, srcB instruction"
@@ -2945,6 +2996,8 @@ CogARMv8Compiler >> dispatchConcretize [
 		[SMULL]			-> [^self concretizeSMULL]	.
 		[CMPSMULL]		-> [^self concretizeCMPSMULL].
 		[MSR]				-> [^self concretizeMSR].
+		[SDIV]				-> [^self concretizeSDIV].
+		[MSUB]				-> [^self concretizeMSUB].
 		"Data Movement"
 		[MoveCqR]			-> [^self concretizeMoveCqR].
 		[MoveCwR]			-> [^self concretizeMoveCwR].
@@ -3300,10 +3353,12 @@ CogARMv8Compiler >> fullCallsAreRelative [
 ]
 
 { #category : #'abstract instructions' }
-CogARMv8Compiler >> genDivR: abstractRegDivisor R: abstractRegDividend Quo: abstractRegQuotient Rem: abstractRegRemainder [
+CogARMv8Compiler >> genDivR: abstractRegDenominator R: abstractRegNumerator Quo: abstractRegQuotient Rem: abstractRegRemainder [
 
-	self notYetImplemented.
-	^ 0
+	cogit gen: SDIV operand: abstractRegNumerator operand: abstractRegDenominator operand: ConcreteIPReg.
+	cogit gen: MSUB operand: abstractRegNumerator operand: ConcreteIPReg operand: abstractRegDenominator operand: abstractRegRemainder.
+	cogit MoveR: ConcreteIPReg R: abstractRegQuotient
+
 ]
 
 { #category : #'smalltalk calling convention' }
@@ -4453,6 +4508,24 @@ b) We only have business with the NZCV flags so the generated instruction shifts
 	+ (flags bitAnd: 16rF) " to make sure we don't have silly values here"
 ]
 
+{ #category : #assembler }
+CogARMv8Compiler >> msubSize: is64Bits minuendReg: minuendReg factor1Reg: factor1Reg factor2Reg: factor2Reg destinationRegister: destinationReg [ 
+
+	"C6.2.196 MSUB
+
+	Multiply-Subtract multiplies two register values, subtracts the product from a third register value, and writes the result to the destination register.
+	
+	MSUB <Xd>, <Xn>, <Xm>, <Xa> "
+	
+	^ is64Bits << 31
+		bitOr: (2r11011 << 24
+		bitOr: ((factor2Reg bitAnd: 16r1f) << 16
+		bitOr: (1 << 15
+		bitOr: ((minuendReg bitAnd: 16r1f) << 10
+		bitOr: ((factor1Reg bitAnd: 16r1f) << 5
+		bitOr: (destinationReg bitAnd: 16r1f))))))
+]
+
 { #category : #printing }
 CogARMv8Compiler >> nameForFPRegister: reg [ "<Integer>"
 	<doNotGenerate>
@@ -4896,6 +4969,23 @@ CogARMv8Compiler >> saveAndRestoreLinkRegAround: aBlock [
 	aBlock value.
 	cogit PopR: LinkReg.
 	^inst
+]
+
+{ #category : #assembler }
+CogARMv8Compiler >> sdivSize: is64Bits numeratorReg: numeratorReg denominatorReg: denominatorReg destinationRegister: destinationReg [ 
+
+	"C6.2.235 SDIV
+		A64 Base Instruction Descriptions C6.2 Alphabetical list of A64 base instructions
+		Signed Divide divides a signed integer register value by another signed integer register value, and writes the result to the destination register. The condition flags are not affected.
+		
+		SDIV <Xd>, <Xn>, <Xm>"
+		
+	^ is64Bits << 31
+		bitOr: (2r11010110 << 21
+		bitOr: ((denominatorReg bitAnd: 16r1f) << 16
+		bitOr: (2r11 << 10
+		bitOr: ((numeratorReg bitAnd: 16r1f) << 5
+		bitOr: (destinationReg bitAnd: 16r1f)))))
 ]
 
 { #category : #testing }

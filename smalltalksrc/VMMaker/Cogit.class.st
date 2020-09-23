@@ -6919,6 +6919,24 @@ Cogit >> gen: opcode "<Integer>" operand: operandOne "<Integer|CogAbstractInstru
 ]
 
 { #category : #'compile abstract instructions' }
+Cogit >> gen: opcode "<Integer>" operand: operandOne "<Integer|CogAbstractInstruction>" operand: operandTwo "<Integer|CogAbstractInstruction>" operand: operandThree "<Integer|CogAbstractInstruction>" operand: operandFour [ "<Integer|CogAbstractInstruction>"
+	| abstractInstruction |
+	<inline: false>
+	<returnTypeC: #'AbstractInstruction *'>
+	<var: #abstractInstruction type: #'AbstractInstruction *'>
+	self assert: opcodeIndex < numAbstractOpcodes.
+	abstractInstruction := self abstractInstructionAt: opcodeIndex.
+	opcodeIndex := opcodeIndex + 1.
+	abstractInstruction opcode: opcode.
+	abstractInstruction operands at: 0 put: operandOne.
+	abstractInstruction operands at: 1 put: operandTwo.
+	abstractInstruction operands at: 2 put: operandThree.
+	abstractInstruction operands at: 3 put: operandFour.
+	self cCode: '' inSmalltalk: [abstractInstruction bcpc: bytecodePC].
+	^abstractInstruction
+]
+
+{ #category : #'compile abstract instructions' }
 Cogit >> gen: opcode "<Integer>" operand: operandOne "<Integer|CogAbstractInstruction>" quickConstant: operandTwo [ "Integer>"
 	"Quick constants are those the back end is free to encode as compactly as possible."
 	<inline: true>
@@ -8360,22 +8378,26 @@ Cogit >> haltIf: aBlock [
 Cogit >> handleABICallOrJumpSimulationTrap: aProcessorSimulationTrap evaluable: evaluable [
 	<doNotGenerate>
 
-	self assert: aProcessorSimulationTrap type = #call.
+	| addressToReturn |
+	self assert: (aProcessorSimulationTrap type = #call or: [ aProcessorSimulationTrap type = #jump]).
+
 	processor
 		simulateLeafCallOf: aProcessorSimulationTrap address
-		nextpc: aProcessorSimulationTrap nextpc
+		nextpc: 16rBADF00D
 		memory: coInterpreter memory.
-	self recordInstruction: {'(simulated call of '. aProcessorSimulationTrap address. '/'. evaluable selector. ')'}.
-	((printRegisters or: [printInstructions]) and: [clickConfirm]) ifTrue:
- 		[(self confirm: 'skip run-time call?') ifFalse:
-			[clickConfirm := false. self halt]].
+
 	evaluable valueWithArguments: (processor
 										postCallArgumentsNumArgs: evaluable numArgs
 										in: coInterpreter memory).
-	self recordInstruction: {'(simulated return to '. processor retpcIn: coInterpreter memory. ')'}.
-	processor
-		smashABICallerSavedRegistersWithValuesFrom: 16r80000000 by: objectMemory wordSize;
-		simulateLeafReturnIn: coInterpreter memory
+
+	evaluable numArgs < 4 ifFalse: [ 1 halt  "If we have more parameters than the ones that fit in the registers"].
+
+	"I am implemented for ARMv5 only"
+	addressToReturn := processor hasLinkRegister 
+		ifTrue: [ processor linkRegisterValue ] 
+		ifFalse: [ 1halt. ].
+
+	processor pc: addressToReturn
 ]
 
 { #category : #'simulation only' }
