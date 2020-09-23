@@ -85,26 +85,50 @@ VMObjectLayoutTests >> testObjectHeaderEncodesObjecFormatForFixedLayout [
 ]
 
 { #category : #tests }
-VMObjectLayoutTests >> testObjectHeaderEncodesObjecFormatForIndexableOpaqueLayout32Bit [
-	| class objOop header classInstSpec instSpec |
-	 "instSpec: 	10-11	= 32-bit indexable
-			10 -> padding  0-bits
-			11 -> padding  32-bits"
-	instSpec := 10.
+VMObjectLayoutTests >> testObjectHeaderEncodesObjecFormatForIndexableOpaqueLayout16Bit [
+	| class objOop header classInstSpec instSpec bits maxSize |
+	 "instSpec: 	12-15	= 16-bit indexable
+			12 -> padding  0-bits
+			13 -> padding  16-bits
+			14 -> padding  32-bits
+			15 -> padding  48-bits"
+	bits := 16.
+	instSpec := 12.
 	class := self installClassIntoClassTableWithInstSpec: instSpec instSize: 0.
-	1 to: 2 do: [ :size |
+	maxSize := 64 / bits.
+	1 to: maxSize do: [ :size |
 		| padding |
-		padding := 64 - (size * 32).
+		padding := 64 - (size * bits).
 		objOop := memory instantiateClass: class indexableSize: size.
 		classInstSpec := memory instSpecOfClass: class.
 		header := memory longAt:objOop.
-		self assert: (header >> 24 bitAnd: 16r1F) equals: classInstSpec + (padding % 32)
+		self assert: (header >> 24 bitAnd: 16r1F) equals: classInstSpec + (padding / bits)
+		] 
+]
+
+{ #category : #tests }
+VMObjectLayoutTests >> testObjectHeaderEncodesObjecFormatForIndexableOpaqueLayout32Bit [
+	| class objOop header classInstSpec instSpec bits maxSize |
+	 "instSpec: 	10-11	= 32-bit indexable
+			10 -> padding  0-bits
+			11 -> padding  32-bits"
+	bits := 32.
+	instSpec := 10.
+	class := self installClassIntoClassTableWithInstSpec: instSpec instSize: 0.
+	maxSize := 64 / bits.
+	1 to: maxSize do: [ :size |
+		| padding |
+		padding := 64 - (size * bits).
+		objOop := memory instantiateClass: class indexableSize: size.
+		classInstSpec := memory instSpecOfClass: class.
+		header := memory longAt:objOop.
+		self assert: (header >> 24 bitAnd: 16r1F) equals: classInstSpec + (padding / bits)
 		] 
 ]
 
 { #category : #tests }
 VMObjectLayoutTests >> testObjectHeaderEncodesObjecFormatForIndexableOpaqueLayout8Bit [
-	| class objOop header classInstSpec instSpec |
+	| class objOop header classInstSpec instSpec bits maxSize |
 	 "instSpec: 	16-23	= 8-bit indexable
 			16 -> padding  0-bits
 			17 -> padding  8-bits
@@ -114,15 +138,17 @@ VMObjectLayoutTests >> testObjectHeaderEncodesObjecFormatForIndexableOpaqueLayou
 			21 -> padding 40-bits
 			22 -> padding 48-bits
 			23 -> padding 56-bits"
+	bits := 8.
 	instSpec := 16.
 	class := self installClassIntoClassTableWithInstSpec: instSpec instSize: 0.
-	1 to: 8 do: [ :size |
+	maxSize := 64 / bits.
+	1 to: maxSize do: [ :size |
 		| padding |
-		padding := 64 - (size * 8).
+		padding := 64 - (size * bits).
 		objOop := memory instantiateClass: class indexableSize: size.
 		classInstSpec := memory instSpecOfClass: class.
 		header := memory longAt:objOop.
-		self assert: (header >> 24 bitAnd: 16r1F) equals: classInstSpec + (padding / 8)
+		self assert: (header >> 24 bitAnd: 16r1F) equals: classInstSpec + (padding / bits)
 		] 
 	
 ]
