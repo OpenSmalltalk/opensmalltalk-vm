@@ -10,6 +10,12 @@ UnicornI386Simulator >> arg0Register [
 	^ UcX86Registers esi
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornI386Simulator >> argument0RegisterValue [
+	
+	^ self esi
+]
+
 { #category : #registers }
 UnicornI386Simulator >> baseRegister [
 

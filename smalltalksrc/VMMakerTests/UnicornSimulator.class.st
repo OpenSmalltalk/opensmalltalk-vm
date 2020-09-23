@@ -67,7 +67,7 @@ UnicornSimulator >> arg0RegisterValue: aValue [
 { #category : #'as yet unclassified' }
 UnicornSimulator >> argument0RegisterValue [
 	
-	self subclassResponsibility
+	^ self r3
 ]
 
 { #category : #registers }
