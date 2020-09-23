@@ -10,6 +10,16 @@ UnicornX64Simulator >> arg0Register [
 	^ UcX86Registers rdi
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornX64Simulator >> argument0RegisterValue [
+	
+	"System V value.
+	
+	This does not (yet) handle Win64 ABI which uses RCX"
+	
+	^ self rdi
+]
+
 { #category : #'phisical-registers' }
 UnicornX64Simulator >> baseRegister [
 
