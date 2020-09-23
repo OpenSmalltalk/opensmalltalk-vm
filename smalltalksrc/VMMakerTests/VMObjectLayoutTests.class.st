@@ -85,6 +85,24 @@ VMObjectLayoutTests >> testObjectHeaderEncodesObjecFormatForFixedLayout [
 ]
 
 { #category : #tests }
+VMObjectLayoutTests >> testObjectHeaderEncodesObjecFormatForIndexableOpaqueLayout32Bit [
+	| class objOop header classInstSpec instSpec |
+	 "instSpec: 	10-11	= 32-bit indexable
+			10 -> padding  0-bits
+			11 -> padding  32-bits"
+	instSpec := 10.
+	class := self installClassIntoClassTableWithInstSpec: instSpec instSize: 0.
+	1 to: 2 do: [ :size |
+		| padding |
+		padding := 64 - (size * 32).
+		objOop := memory instantiateClass: class indexableSize: size.
+		classInstSpec := memory instSpecOfClass: class.
+		header := memory longAt:objOop.
+		self assert: (header >> 24 bitAnd: 16r1F) equals: classInstSpec + (padding % 32)
+		] 
+]
+
+{ #category : #tests }
 VMObjectLayoutTests >> testObjectHeaderEncodesObjecFormatForIndexableOpaqueLayout8Bit [
 	| class objOop header classInstSpec instSpec |
 	 "instSpec: 	16-23	= 8-bit indexable
@@ -98,13 +116,13 @@ VMObjectLayoutTests >> testObjectHeaderEncodesObjecFormatForIndexableOpaqueLayou
 			23 -> padding 56-bits"
 	instSpec := 16.
 	class := self installClassIntoClassTableWithInstSpec: instSpec instSize: 0.
-	8 to: 15 do: [ :size |
+	1 to: 8 do: [ :size |
 		| padding |
-		padding := (64 - size).
+		padding := 64 - (size * 8).
 		objOop := memory instantiateClass: class indexableSize: size.
 		classInstSpec := memory instSpecOfClass: class.
 		header := memory longAt:objOop.
-		self assert: (header >> 24 bitAnd: 16r1F) equals: classInstSpec + (padding % 8)
+		self assert: (header >> 24 bitAnd: 16r1F) equals: classInstSpec + (padding / 8)
 		] 
 	
 ]
