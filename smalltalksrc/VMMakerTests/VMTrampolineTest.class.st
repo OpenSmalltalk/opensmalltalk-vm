@@ -165,7 +165,10 @@ VMTrampolineTest >> testSmalltalkToCStackSwitchShouldUpdateInterpreterFramePoint
 	
 	self compile: [ cogit genSmalltalkToCStackSwitch: false "do not push link register" ].
 	
+	"Initialize the state of the interpreter"
 	machineSimulator baseRegisterValue: cogit varBaseAddress.
+	self cogit setCStackPointer: 108.
+	self cogit setCFramePointer: 116.
 	self framePointerRegisterValue: 42.
 
 	self runFrom: initialAddress until: self getLastAddress.
@@ -179,7 +182,10 @@ VMTrampolineTest >> testSmalltalkToCStackSwitchShouldUpdateInterpreterStackPoint
 	
 	self compile: [ cogit genSmalltalkToCStackSwitch: false "do not push link register" ].
 	
+	"Initialize the state of the interpreter"
 	machineSimulator baseRegisterValue: cogit varBaseAddress.
+	self cogit setCStackPointer: 108.
+	self cogit setCFramePointer: 116.
 	self stackPointerRegisterValue: 42.
 
 	self runFrom: initialAddress until: self getLastAddress.
