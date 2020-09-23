@@ -110,15 +110,12 @@ VMSimpleStackBasedCogitAbstractTest >> compile: aBlockClosure bytecodes: bytecod
 	  => this is used to estimate the amount of memory to preallocate for the geneated code.
 	Return the address to the generated piece of code."
 
-	"We estimate the same ammount of bytecode as the Cogit"
 	| allocatedAddress |
-	cogit allocateOpcodes: (bytecodes + 10) * 10 bytecodes: bytecodes ifFail: [ self fail ].
-	cogit zeroOpcodeIndex.
-	cogit maxLitIndex: -1.
-	cogit methodLabel address: cogit methodZone freeStart.
-	
-	aBlockClosure value.
 
+	"Generate the IR"
+	self compileWithoutOutput: aBlockClosure bytecodes: bytecodes.
+
+	"Then output the machine code"
 	cogit computeMaximumSizes.
 	
 	"methodLabel address + headerSize?"
@@ -140,6 +137,24 @@ VMSimpleStackBasedCogitAbstractTest >> compileSpecialSend [
 	self createFramefulCallFrom: callerAddress.
 	cogit byte0: 176 + (selectorIndex - 1 / 2).
 	sendAddress := self compile: [ cogit genSpecialSelectorSend ].
+]
+
+{ #category : #helpers }
+VMSimpleStackBasedCogitAbstractTest >> compileWithoutOutput: aBlockClosure bytecodes: bytecodes [
+	
+	"Call a compilation block initializing the compiler before.
+	This method does not generate the machine code, just the IR.
+	
+	This is useful in two cases:
+	  - compiler intrinsics (routines and trampolines) are written to output the machine code directly
+	  - this is used as the first part of the #compile:bytecodes:header: to initialize the compiler"
+
+	cogit allocateOpcodes: (bytecodes + 10) * 10 bytecodes: bytecodes ifFail: [ self fail ].
+	cogit zeroOpcodeIndex.
+	cogit maxLitIndex: -1.
+	cogit methodLabel address: cogit methodZone freeStart.
+	
+	^ aBlockClosure value
 ]
 
 { #category : #'helpers - frames' }
