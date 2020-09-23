@@ -777,6 +777,25 @@ CogARMv8Compiler >> canMulRR [
 ]
 
 { #category : #assembler }
+CogARMv8Compiler >> cmnSize: is64bits immediate12BitValue: immediate12BitValue shiftFlag: shiftFlag register: registerToUse [
+	
+	"C6.2.58 CMN (immediate)
+	
+	Compare Negative (immediate) adds a register value and an optionally-shifted immediate value. It updates the condition flags based on the result, and discards the result.
+	
+	CMN <Xn|SP>, #<imm>{, <shift>}
+	
+	- shiftFlag: single bit indicating if the immediate value should be shifted 12 bits or not"
+	
+	^ self
+		addsSize: is64bits
+		sourceRegister: registerToUse
+		immediate12BitValue: immediate12BitValue
+		shifted: shiftFlag
+		destinationRegister: 2r11111
+]
+
+{ #category : #assembler }
 CogARMv8Compiler >> cmpExtendedRegisterSize: is64Bits leftRegisterMaybeSP: leftRegister option: option shiftOffset: immediate3bitValue destinationRegister: destinationRegister [
 	
 	"C6.2.60 CMP (extended register)
@@ -1044,6 +1063,7 @@ CogARMv8Compiler >> computeMaximumSize [
 				ifFalse: [ 8 ]].
 		[MoveXbrRR]			-> [^4].
 		[MoveX32rRR]			-> [^4].
+		[MoveRX32rR]			-> [^4].
 		[MoveRXbrR]			-> [^4].
 		[MoveXwrRR]			-> [^4].
 		[MoveRXwrR]			-> [^4].
@@ -1410,24 +1430,42 @@ CogARMv8Compiler >> concretizeCmpCqR [
 	| quickImmediate registerToUse fits12Bits fitsShifted12Bits |
 	quickImmediate := operands at: 0.
 	registerToUse := operands at: 1.
-	
-	fits12Bits := (quickImmediate bitAnd: 16rfff) = quickImmediate.
-	fits12Bits ifTrue: [
-		self
-			machineCodeAt: 0
-			put:
-				(self cmpSize: 1 immediate12BitValue: quickImmediate shiftFlag: 0 register: registerToUse).
-		^ machineCodeSize := 4 ].
-	
-	fitsShifted12Bits := (quickImmediate >> 12 << 12) = quickImmediate.
-	fitsShifted12Bits ifTrue: [ 
-		self
-			machineCodeAt: 0
-			put:
-				(self cmpSize: 1 immediate12BitValue: quickImmediate >> 12 shiftFlag: 1 register: registerToUse).
-		^ machineCodeSize := 4
-	].
- 
+
+	quickImmediate > 0 ifTrue: [  
+		fits12Bits := (quickImmediate bitAnd: 16rfff) = quickImmediate.
+		fits12Bits ifTrue: [
+			self
+				machineCodeAt: 0
+				put:
+					(self cmpSize: 1 immediate12BitValue: quickImmediate shiftFlag: 0 register: registerToUse).
+			^ machineCodeSize := 4 ].
+		
+		fitsShifted12Bits := (quickImmediate >> 12 << 12) = quickImmediate.
+		fitsShifted12Bits ifTrue: [ 
+			self
+				machineCodeAt: 0
+				put:
+					(self cmpSize: 1 immediate12BitValue: quickImmediate >> 12 shiftFlag: 1 register: registerToUse).
+			^ machineCodeSize := 4
+		]]
+	ifFalse: [
+		quickImmediate := quickImmediate abs.
+		fits12Bits := (quickImmediate bitAnd: 16rfff) = quickImmediate.
+		fits12Bits ifTrue: [
+			self
+				machineCodeAt: 0
+				put:
+					(self cmnSize: 1 immediate12BitValue: quickImmediate shiftFlag: 0 register: registerToUse).
+			^ machineCodeSize := 4 ].
+		
+		fitsShifted12Bits := (quickImmediate >> 12 << 12) = quickImmediate.
+		fitsShifted12Bits ifTrue: [ 
+			self
+				machineCodeAt: 0
+				put:
+					(self cmnSize: 1 immediate12BitValue: quickImmediate >> 12 shiftFlag: 1 register: registerToUse).
+			^ machineCodeSize := 4 ]].
+	 
 	"If the value does not fit in 12 bits, not even shifted, then use two instructions"
 	self moveCw: quickImmediate intoR: ConcreteIPReg.
 	self
@@ -2127,28 +2165,27 @@ CogARMv8Compiler >> concretizeMoveRAw [
 
 { #category : #'generate machine code - concretize' }
 CogARMv8Compiler >> concretizeMoveRM16r [
-	"Will get inlined into concretizeAt: switch."
 
 	<var: #offset type: #sqInt>
 	<inline: true>
 	| srcReg offset baseReg instrOffset |
-	self halt.
 	srcReg := operands at: 0.
 	offset := operands at: 1.
 	baseReg := operands at: 2.
+
+	self assert: offset > 0.
+	self assert: offset \\ 2 = 0.
+
 	self
-		is12BitValue: offset
+		is12BitValue: offset / 2 
 		ifTrue: [ :u :immediate | 
 			self
 				machineCodeAt: 0
-				put:
-					(self
-						strh: srcReg
-						rn: baseReg
-						plus: u
-						imm: immediate).	"strh 	srcReg, [baseReg, #immediate]"
+				put: (self strhSourceRegister: srcReg destinationRegister: baseReg offset: offset / 2).
 			^ machineCodeSize := 4 ]
-		ifFalse: [ (self isAddressRelativeToVarBase: offset)
+		ifFalse: [ 
+			self halt.
+			(self isAddressRelativeToVarBase: offset)
 				ifTrue: [ self
 						machineCodeAt: 0
 						put:
@@ -2261,6 +2298,28 @@ CogARMv8Compiler >> concretizeMoveRR [
 	^ machineCodeSize := 4
 ]
 
+{ #category : #'as yet unclassified' }
+CogARMv8Compiler >> concretizeMoveRX32rR [
+
+	"Write the word in R(src) into memory at address (base+4*index)"
+
+	<inline: true>
+	| index base src |
+	src := operands at: 0.
+	index := operands at: 1.	"index is number of *words* = 4* bytes"
+	base := operands at: 2.
+	
+	self
+		machineCodeAt: 0
+		put: (self
+			strSize: 0
+			baseRegister: base
+			offsetRegister: index
+			extension: 3 shift: 1
+			storedRegister: src).
+	^ machineCodeSize := 4
+]
+
 { #category : #'generate machine code - concretize' }
 CogARMv8Compiler >> concretizeMoveRXbrR [
 	"Will get inlined into concretizeAt: switch."
@@ -2269,13 +2328,11 @@ CogARMv8Compiler >> concretizeMoveRXbrR [
 
 	<inline: true>
 	| index base src |
-	self halt.
 	src := operands at: 0.
 	index := operands at: 1.
 	base := operands at: 2.
-	"str	b	src, [base, +index, LSL #0]"
-	"cond 011 1100 0 base srcR 00000 00 0 index"
-	self machineCodeAt: 0 put: (self strb: src rn: base rm: index).
+
+	self machineCodeAt: 0 put: (self strbBaseRegister: base offsetRegister: index extension: 3 shift: 1 srcRegister: src).
 	^ machineCodeSize := 4
 ]
 
@@ -2283,7 +2340,7 @@ CogARMv8Compiler >> concretizeMoveRXbrR [
 CogARMv8Compiler >> concretizeMoveRXwrR [
 	"Will get inlined into concretizeAt: switch."
 
-	"Write the word in R(src) into memory at address (base+4*index)"
+	"Write the word in R(src) into memory at address (base+8*index)"
 
 	<inline: true>
 	| index base src |
@@ -2906,6 +2963,7 @@ CogARMv8Compiler >> dispatchConcretize [
 		[MoveXbrRR]		-> [^self concretizeMoveXbrRR].
 		[MoveRXbrR]		-> [^self concretizeMoveRXbrR].
 		[MoveX32rRR]		-> [^self concretizeMoveX32rRR].
+		[MoveRX32rR]		-> [^self concretizeMoveRX32rR].
 		[MoveXwrRR]		-> [^self concretizeMoveXwrRR].
 		[MoveRXwrR]		-> [^self concretizeMoveRXwrR].
 		[MoveRMwr]		-> [^self concretizeMoveRMwr].
@@ -5041,6 +5099,27 @@ CogARMv8Compiler >> strb: srcReg rn: baseReg rm: offsetReg [
 	^0
 ]
 
+{ #category : #assembler }
+CogARMv8Compiler >> strbBaseRegister: baseRegister offsetRegister: offsetRegister extension: extensionType shift: shiftFlag srcRegister: srcRegister [
+
+		"C6.2.277 STRB (register)
+		
+		Store Register Byte (register) calculates an address from a base register value and an offset register value, and stores a byte from a 
+		32-bit register to the calculated address. For information about memory accesses, see Load/Store addressing modes on page C1-189.
+		The instruction uses an offset addressing mode, that calculates the address used for the memory access from a base register value and 
+		an offset register value. The offset can be optionally shifted and extended.
+		
+	STRB <Wt>, [<Xn|SP>, <Xm>{, LSL <amount>}]"
+
+	^ 2r00111000001 << 21
+		bitOr: ((offsetRegister bitAnd: 16r1F) << 16
+		bitOr:((extensionType bitAnd: 2r111) << 13
+		bitOr: ((shiftFlag bitAnd: 1) << 12
+		bitOr: (2r10 << 10
+		bitOr: ((baseRegister bitAnd: 16r1F) << 5
+		bitOr: (srcRegister bitAnd: 16r1F))))))
+]
+
 { #category : #'as yet unclassified' }
 CogARMv8Compiler >> strbSourceRegister: sourceRegister destinationRegister: destinationRegister [
 	
@@ -5077,6 +5156,23 @@ CogARMv8Compiler >> strh: destReg rn: baseReg plus: u imm: immediate8bitValue [
 
 	self notYetImplemented.
 	^0
+]
+
+{ #category : #'as yet unclassified' }
+CogARMv8Compiler >> strhSourceRegister: sourceRegister destinationRegister: destinationRegister offset: immediate12BitValue [
+	
+	"C6.2.278 STRH (immediate)
+
+	Store Register Halfword (immediate) stores the least significant halfword of a 32-bit register to memory. The address that is used for the store is calculated from a base register and an immediate offset.
+		
+	Unsigned offset variant
+	STRH <Wt>, [<Xn|SP>{, #<pimm>}]"
+	
+	^ 2r1111 << 27
+		bitOr: (1 << 24
+		bitOr: ((immediate12BitValue bitAnd: 16rfff) << 10
+		bitOr: ((sourceRegister bitAnd: 16r1f) << 5
+		bitOr: (destinationRegister bitAnd: 16r1f))))
 ]
 
 { #category : #assembler }
