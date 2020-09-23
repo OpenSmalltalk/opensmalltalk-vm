@@ -46,6 +46,17 @@ VMObjectLayoutTests >> testHeaderOfObjectEncodesTheCorrectAmountOfSlots [
 ]
 
 { #category : #tests }
+VMObjectLayoutTests >> testObjectAlignment [
+	| class objOop1 objOop2 instSpec |
+	instSpec := 0.
+	class := self installClassIntoClassTableWithInstSpec: instSpec instSize: 0.
+	objOop1 := memory instantiateClass: class.
+	objOop2 := memory instantiateClass: class.
+	self assert: objOop1 \\ 8 equals: 0.
+	self assert: objOop2 \\ 8 equals: 0
+]
+
+{ #category : #tests }
 VMObjectLayoutTests >> testObjectHeaderEncodesAmountOfSlots [
 	| class objOop header |
 	0 to: 254 do: [ :slots |
@@ -165,6 +176,16 @@ VMObjectLayoutTests >> testObjectHeaderEncodesObjecFormatForIndexablePointerLayo
 		self assert: (header >> 24 bitAnd: 16r1F) equals: classInstSpec
 	]
 	
+]
+
+{ #category : #tests }
+VMObjectLayoutTests >> testObjectMinimumSize [
+	| class objOop1 objOop2 instSpec |
+	instSpec := 0.
+	class := self installClassIntoClassTableWithInstSpec: instSpec instSize: 0.
+	objOop1 := memory instantiateClass: class.
+	objOop2 := memory instantiateClass: class.
+	self assert: objOop2 - objOop1 equals: 16
 ]
 
 { #category : #tests }
