@@ -45,39 +45,53 @@ VMARMStackAlignmentTest >> setUp [
 
 { #category : #tests }
 VMARMStackAlignmentTest >> testUnAlignedStackWriteShouldGenerateError [
+	"To start the stack pointer should be aligned"
 
-	"To start the stack pointer should be aligned"	
 	"Precondition for all tests. SP should be aligned to the stack alignment required by the platform"
-	[self stackPointerRegisterValue \\ cogit stackPointerAlignment = 0]
-		whileFalse: [ self pushAddress: 16rBEEF "a small integer to mark..." ].
 
-	self assert: machineSimulator stackPointerRegisterValue \\ cogit stackPointerAlignment equals: 0.
+	[ self stackPointerRegisterValue \\ cogit stackPointerAlignment = 0 ] 
+		whileFalse: [ 
+		self pushAddress: 16rBEEF "a small integer to mark..." ].
 
-	self addInstruction: 
-		(cogit backend 
-			movSize: 1 
-			destinationRegister: ReceiverResultReg 
-			imm: 12345 shift: 0).
+	self
+		assert: machineSimulator stackPointerRegisterValue
+			\\ cogit stackPointerAlignment
+		equals: 0.
 
-	self addInstruction: 
-		(cogit backend strSize: 1
-			baseRegister: 31
-			signedOffset: -8 "word size, size of the elements in the stack"
-			sourceRegister: ReceiverResultReg
-			preIndex: 1 "Access before incrementing").
+	machineSimulator
+		writeRegister: UcARM64Registers sp
+		value: machineSimulator stackPointerRegisterValue.
 
-	self addInstruction: 
-		(cogit backend strSize: 1
-			baseRegister: 31
-			signedOffset: -8 "word size, size of the elements in the stack"
-			sourceRegister: ReceiverResultReg
-			preIndex: 1 "Access before incrementing").
+
+	self addInstruction: (cogit backend
+			 movSize: 1
+			 destinationRegister: ReceiverResultReg
+			 imm: 12345
+			 shift: 0).
+
+	self addInstruction: (cogit backend
+			 strSize: 1
+			 baseRegister: 31
+			 signedOffset: -8
+			 sourceRegister: ReceiverResultReg
+			 preIndex: 1). "word size, size of the elements in the stack" "Access before incrementing"
+
+	self addInstruction: (cogit backend
+			 strSize: 1
+			 baseRegister: 31
+			 signedOffset: -8
+			 sourceRegister: ReceiverResultReg
+			 preIndex: 1). "word size, size of the elements in the stack" "Access before incrementing"
 
 	self writeInstructions.
 
-	self should: [self runInstructions] raise: Error description: 'Unhandled CPU exception (UC_ERR_EXCEPTION)' 
-	
-
+	[	self runInstructions.
+		self fail ]
+		on: UnicornError
+		do: [ :e | 
+			self
+				assert: e messageText
+				equals: 'Unhandled CPU exception (UC_ERR_EXCEPTION)' ]
 ]
 
 { #category : #tests }
@@ -89,6 +103,8 @@ VMARMStackAlignmentTest >> testUnAlignedStackWriteShouldPass [
 		whileFalse: [ self pushAddress: 16rBEEF "a small integer to mark..." ].
 
 	self assert: machineSimulator stackPointerRegisterValue \\ cogit stackPointerAlignment equals: 0.
+
+	machineSimulator writeRegister: UcARM64Registers sp value: machineSimulator stackPointerRegisterValue.
 
 	self addInstruction: 
 		(cogit backend 
