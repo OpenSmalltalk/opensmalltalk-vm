@@ -70,6 +70,60 @@ VMObjectLayoutTests >> testObjectHeaderEncodesClassIndex [
 ]
 
 { #category : #tests }
+VMObjectLayoutTests >> testObjectHeaderEncodesObjecFormatForFixedLayout [
+	| class objOop header classInstSpec |
+	 "instSpec: 
+		0 = 0 sized objects (UndefinedObject True False et al)
+		1 = non-indexable objects with inst vars (Point et al)"	
+	0 to: 1 do: [ :instSpec |
+		class := self installClassIntoClassTableWithInstSpec: instSpec instSize: 0.
+		objOop := memory instantiateClass: class.
+		classInstSpec := memory instSpecOfClass: class.
+		header := memory longAt:objOop.
+		self assert: (header >> 24 bitAnd: 16r1F) equals: classInstSpec
+	]
+]
+
+{ #category : #tests }
+VMObjectLayoutTests >> testObjectHeaderEncodesObjecFormatForIndexableOpaqueLayout8Bit [
+	| class objOop header classInstSpec instSpec |
+	 "instSpec: 	16-23	= 8-bit indexable
+			16 -> padding  0-bits
+			17 -> padding  8-bits
+			18 -> padding 16-bits
+			19 -> padding 24-bits
+			20 -> padding 32-bits
+			21 -> padding 40-bits
+			22 -> padding 48-bits
+			23 -> padding 56-bits"
+	instSpec := 16.
+	class := self installClassIntoClassTableWithInstSpec: instSpec instSize: 0.
+	8 to: 15 do: [ :size |
+		| padding |
+		padding := (64 - size).
+		objOop := memory instantiateClass: class indexableSize: size.
+		classInstSpec := memory instSpecOfClass: class.
+		header := memory longAt:objOop.
+		self assert: (header >> 24 bitAnd: 16r1F) equals: classInstSpec + (padding % 8)
+		] 
+	
+]
+
+{ #category : #tests }
+VMObjectLayoutTests >> testObjectHeaderEncodesObjecFormatForIndexablePointerLayout [
+	| class objOop header classInstSpec instSpec |
+	instSpec := 2. "instSpec for indexable objects with no inst vars (Array et al)"	
+	class := self installClassIntoClassTableWithInstSpec: instSpec instSize: 0.
+	1 to: 10 do: [ :size |
+		objOop := memory instantiateClass: class indexableSize: size.
+		classInstSpec := memory instSpecOfClass: class.
+		header := memory longAt:objOop.
+		self assert: (header >> 24 bitAnd: 16r1F) equals: classInstSpec
+	]
+	
+]
+
+{ #category : #tests }
 VMObjectLayoutTests >> testObjectWith0SlotsIsSavedIn2Words [
 	| class slots obj1oop obj2oop |
 	"objects always are allocated with at least one slots for forwarding"
