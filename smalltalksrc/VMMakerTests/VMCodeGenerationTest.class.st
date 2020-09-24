@@ -1,13 +1,25 @@
 Class {
 	#name : #VMCodeGenerationTest,
 	#superclass : #TestCase,
-	#category : #VMMakerTests
+	#category : #'VMMakerTests-CodeGeneration'
 }
 
 { #category : #'generation-targets' }
 VMCodeGenerationTest >> methodWithCommentInBlock [
 
 	self something ifNil: [ "comment" 1 ]
+]
+
+{ #category : #'generation-targets' }
+VMCodeGenerationTest >> methodWithCppIf [
+
+	self cppIf: #Toto ifTrue: [ ^ 2 ]
+]
+
+{ #category : #'generation-targets' }
+VMCodeGenerationTest >> methodWithCppIfDefined [
+
+	self cppIf: (self defined: #Toto) ifTrue: [ ^ 2 ]
 ]
 
 { #category : #'generation-targets' }
@@ -126,6 +138,46 @@ else {
 	temp += 5;
 	variable = temp * 3;
 }'
+]
+
+{ #category : #tests }
+VMCodeGenerationTest >> testCppIfDefinedTranslation [
+
+	| translation method codeGenerator result |
+	method := self class >> #methodWithCppIfDefined.
+	translation := method asTranslationMethodOfClass: TMethod.
+	codeGenerator := CCodeGeneratorGlobalStructure new.
+	codeGenerator addMethod: translation.
+	codeGenerator doInlining: true.
+		
+	result := String streamContents: [ :stream |
+		translation parseTree statements first emitCCodeOn: stream level: 0 generator: codeGenerator.
+	].
+	
+	self assert: result equals: '#if defined(Toto)
+return 2;
+#endif /* defined(Toto) */
+'
+]
+
+{ #category : #tests }
+VMCodeGenerationTest >> testCppIfTranslation [
+
+	| translation method codeGenerator result |
+	method := self class >> #methodWithCppIf.
+	translation := method asTranslationMethodOfClass: TMethod.
+	codeGenerator := CCodeGeneratorGlobalStructure new.
+	codeGenerator addMethod: translation.
+	codeGenerator doInlining: true.
+		
+	result := String streamContents: [ :stream |
+		translation parseTree statements first emitCCodeOn: stream level: 0 generator: codeGenerator.
+	].
+	
+	self assert: result equals: '#if Toto
+return 2;
+#endif /* Toto */
+'
 ]
 
 { #category : #tests }

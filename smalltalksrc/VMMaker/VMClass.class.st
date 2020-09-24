@@ -699,6 +699,15 @@ VMClass >> cppIf: conditionBlockOrSymbolValue ifTrue: trueExpressionOrBlock ifFa
 		ifFalse: falseExpressionOrBlockOrNil
 ]
 
+{ #category : #'C pre-processor extensions' }
+VMClass >> defined: aSymbol [
+	"Simulated version of the C pre-processor defined()"
+	<doNotGenerate>
+	^(self class bindingOf: self)
+		ifNil: [false]
+		ifNotNil: [:binding| binding value ~~ #undefined]
+]
+
 { #category : #'simulation support' }
 VMClass >> deny: aBooleanOrBlock [
 	<doNotGenerate>
