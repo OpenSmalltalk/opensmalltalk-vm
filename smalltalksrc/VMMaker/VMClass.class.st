@@ -142,13 +142,7 @@ VMClass class >> initializationOptions [
 { #category : #initialization }
 VMClass class >> initialize [
 	InitializationOptions ifNil: [InitializationOptions := Dictionary new].
-	ExpensiveAsserts := false.
-	(Smalltalk classNamed: #Utilities) ifNotNil:
-		[:utilitiesClass|
-		 (utilitiesClass classPool at: #CommonRequestStrings ifAbsent: []) ifNotNil:
-			[:commonRequestStringHolder|
-			(commonRequestStringHolder contents asString includesSubstring: 'VMClass open') ifFalse:
-				[Utilities appendToCommonRequests: '-\VMMaker generateConfiguration\VMMaker generateAllConfigurationsUnderVersionControl\VMMaker generateAllSpurConfigurations\VMClass openCogMultiWindowBrowser\VMClass openObjectMemoriesInterpretersBrowser\VMClass openSpurMultiWindowBrowser\VMClass openCogSpurMultiWindowBrowser\VMClass openCogitMultiWindowBrowser' withCRs]]]
+	ExpensiveAsserts := false
 ]
 
 { #category : #initialization }
