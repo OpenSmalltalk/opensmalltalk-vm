@@ -293,21 +293,19 @@ UnicornARMv8Simulator >> simulateReturnIn: aSpurSimulatedMemory [
 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'calling convention' }
 UnicornARMv8Simulator >> smashCallerSavedRegistersWithValuesFrom: base by: step in: aMemory [
 
-	#(x0: x1: x2: x3: x4: x5: lr:) withIndexDo:
-		[:accessor :index|
-		self perform: accessor with: index - 1 * step + base]
+	self smashRegistersWithValuesFrom: base by: step
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'calling convention' }
 UnicornARMv8Simulator >> smashRegisterAccessors [
 	
-	^#( x1: x2: x3: x4: x5: x6: x7: x8: x9: x10: x11: x12: )
+	^ #(x0: x1: x2: x3: x4: x5: x6: x7: x8: x9: x10: x11: x12: x13: x14: x15: x16: x17: x18:)
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'calling convention' }
 UnicornARMv8Simulator >> smashRegistersWithValuesFrom: base by: step [ 
 	
 	self smashRegisterAccessors withIndexDo: [:accessor :index|
@@ -388,6 +386,42 @@ UnicornARMv8Simulator >> x12 [
 UnicornARMv8Simulator >> x12: anInteger [ 
 
 	^ self writeRegister: UcARM64Registers x12 value: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> x13: anInteger [ 
+	
+	self writeRegister: UcARM64Registers x13 value: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> x14: anInteger [ 
+
+	self writeRegister: UcARM64Registers x14 value: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> x15: anInteger [ 
+
+	self writeRegister: UcARM64Registers x15 value: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> x16: anInteger [ 
+
+	self writeRegister: UcARM64Registers x16 value: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> x17: anInteger [ 
+
+	self writeRegister: UcARM64Registers x17 value: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> x18: anInteger [ 
+
+	self writeRegister: UcARM64Registers x18 value: anInteger
 ]
 
 { #category : #registers }
