@@ -216,17 +216,12 @@ CogARMv8Compiler class >> initializeAbstractRegisters [
 
 	super initializeAbstractRegisters.
 
-	"According to IHI0042E ARM Architecture Procedure Calling Standard, in section 5.1.1:
-		A subroutine must preserve the contents of the registers r4-r8, r10, r11 and SP (and r9 in PCS variants that designate r9 as v6).
-	 SP = r13, so the callee-saved regs are r4-r8 & r10-r12.
-	 The caller-saved registers are those that are not callee-saved and not reserved for hardware/abi uses,
-	 i..e r0-r3, r9 & r12.
-	 We exclude registers 0 & 1 (TempReg/CArg0Reg & CArg1Reg) from the CallerSavedRegisterMask because we only
-	 use them for argument passing and so never want to save and restore them.  In fact restoring TempReg/CArg0Reg
-	 would overwrite function results, so it shouldn't be included under any circumstances."
+	"Folowing IHI0055C: Procedure Standard for AARCH64 
 
-	CallerSavedRegisterMask := self registerMaskFor: "0 and: 1 and:" 2 and: 3 and: 9 and: 12.
+	Caller should save registers x0 to x18."
 
+	CallerSavedRegisterMask := self registerMaskFor: R2 and: R5 and: R6.
+	
 	TempReg			:= R1.
 	ClassReg			:= R2.
 	ReceiverResultReg	:= R5.
@@ -238,10 +233,10 @@ CogARMv8Compiler class >> initializeAbstractRegisters [
 	Extra0Reg			:= R7.
 	Extra1Reg			:= R8.
 	Extra2Reg			:= R9.
-	VarBaseReg		:= R10.	"Must be callee saved" self assert: ConcreteVarBaseReg = R10.
-	RISCTempReg		:= R12.	"a.k.a. IP" self assert: ConcreteIPReg = R12.
+	VarBaseReg		:= R10.	 self assert: ConcreteVarBaseReg = R10.
+	RISCTempReg		:= R12.	self assert: ConcreteIPReg = R12.
 	LinkReg				:= LR. "X30"
-	PCReg				:= PC. "R15"	
+	PCReg				:= PC. 	
 
 	NumRegisters := 16.
 
