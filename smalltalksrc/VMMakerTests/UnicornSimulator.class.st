@@ -310,6 +310,14 @@ UnicornSimulator >> peekAddress [
 ]
 
 { #category : #'as yet unclassified' }
+UnicornSimulator >> popWord [
+
+	| aByteArray |
+	aByteArray := self popBytes.
+	^ aByteArray integerAt: 1 size: self wordSize signed: false.
+]
+
+{ #category : #'as yet unclassified' }
 UnicornSimulator >> pushWord: anInteger [ 
 
 	| aByteArray |

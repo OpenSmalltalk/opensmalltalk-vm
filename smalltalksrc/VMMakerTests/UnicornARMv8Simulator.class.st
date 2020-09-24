@@ -163,6 +163,23 @@ UnicornARMv8Simulator >> pc: aValue [
 ]
 
 { #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> popBytes [
+
+	| stackAddressIntegerValue aByteArray |
+
+	"Getting address from stack register"
+	stackAddressIntegerValue := self stackPointerRegisterValue.
+	"Putting the value from the stack memory"
+	aByteArray := self memoryAt: stackAddressIntegerValue readNext: self wordSize.
+	
+	"Updating SP"
+	stackAddressIntegerValue := stackAddressIntegerValue + self wordSize.
+	self stackPointerRegisterValue: stackAddressIntegerValue.
+	
+	^ aByteArray
+]
+
+{ #category : #'as yet unclassified' }
 UnicornARMv8Simulator >> postCallArgumentsNumArgs: numArgs "<Integer>" in: aMemory [ "<ByteArray|Bitmap>"
 	"Answer an argument vector of the requested size after a vanilla
 	 ABI call. For ARM the Procedure Calling Specification can be found in IHI0042D_aapcs.pdf.
@@ -215,6 +232,12 @@ UnicornARMv8Simulator >> registerStateGetters [
 	^#(	x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x12 sp lr pc)
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> retpcIn: aMemory [ 
+
+	^ aMemory unsignedLongAt: self fp + 9 
+]
+
 { #category : #registers }
 UnicornARMv8Simulator >> sendNumberOfArgumentsRegister [
 	
@@ -246,6 +269,24 @@ UnicornARMv8Simulator >> simulateLeafCallOf: address nextpc: nextpc memory: aMem
 ]
 
 { #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> simulateReturnIn: aSpurSimulatedMemory [ 
+
+	self framePointerRegisterValue: self popWord.
+	self linkRegisterValue: self popWord.
+
+	self instructionPointerValue: self linkRegisterValue
+
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> smashCallerSavedRegistersWithValuesFrom: base by: step in: aMemory [
+
+	#(x0: x1: x2: x3: x4: x5: lr:) withIndexDo:
+		[:accessor :index|
+		self perform: accessor with: index - 1 * step + base]
+]
+
+{ #category : #'as yet unclassified' }
 UnicornARMv8Simulator >> smashRegisterAccessors [
 	
 	^#( x1: x2: x3: x4: x5: x6: x7: x8: x9: x10: x11: x12: )
@@ -269,6 +310,12 @@ UnicornARMv8Simulator >> stackPointerRegister [
 	^ UcARM64Registers x28
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> w6: anInteger [ 
+
+	self writeRegister: UcARM64Registers w6 value: anInteger
+]
+
 { #category : #accessing }
 UnicornARMv8Simulator >> wordSize [
 	^ 8
@@ -278,6 +325,12 @@ UnicornARMv8Simulator >> wordSize [
 UnicornARMv8Simulator >> x0 [
 
 	^ self readRegister: UcARM64Registers x0
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> x0: anInteger [ 
+	
+	self writeRegister: UcARM64Registers x0 value: anInteger 
 ]
 
 { #category : #accessing }
@@ -362,6 +415,12 @@ UnicornARMv8Simulator >> x2: anInteger [
 UnicornARMv8Simulator >> x3 [
 
 	^ self readRegister: UcARM64Registers x3
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> x30: anInteger [ 
+	
+	self writeRegister: UcARM64Registers x30 value: anInteger
 ]
 
 { #category : #registers }

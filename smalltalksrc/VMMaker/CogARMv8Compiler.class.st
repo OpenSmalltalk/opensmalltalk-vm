@@ -524,6 +524,26 @@ The Arithmetic (immediate) instructions that do not set Condition flags can read
 		bitOr: (destinationRegister bitAnd: 2r11111)))))))
 ]
 
+{ #category : #assembler }
+CogARMv8Compiler >> arithmeticShiftRightSize: is64bits sourceRegister: sourceRegister shiftRegister: shiftRegister destinationRegister: destinationRegister [ 
+
+	"C6.2.16 ASR (register)
+	
+	Arithmetic Shift Right (register) shifts a register value right by a variable number of bits, shifting in copies of its sign bit, and writes the result to the destination register. The remainder obtained by dividing the second source register by the data size defines the number of bits by which the first source register is right-shifted.
+	
+	ASR <Xd>, <Xn>, <Xm>
+	"
+
+	
+	^ is64bits << 31
+		bitOr: (2r11010110 << 21
+		bitOr: ((shiftRegister bitAnd: 16r1f) << 16
+		bitOr: (2r1010 << 10
+		bitOr: ((sourceRegister bitAnd: 16r1f) << 5
+		bitOr: (destinationRegister bitAnd: 16r1f)))))
+	
+]
+
 { #category : #'as yet unclassified' }
 CogARMv8Compiler >> arithmeticShiftRightSize: is64Bits sourceRegister: sourceRegister shiftValue: shiftValue destinationRegister: destinationRegister [
 	
@@ -1350,8 +1370,15 @@ CogARMv8Compiler >> concretizeArithmeticShiftRightCqR [
 { #category : #'generate machine code - concretize' }
 CogARMv8Compiler >> concretizeArithmeticShiftRightRR [
 
-	self notYetImplemented.
-	^ 0
+	self 
+		machineCodeAt: 0 
+		put: (self
+			 arithmeticShiftRightSize: 1
+			 sourceRegister: (operands at: 1)
+			 shiftRegister: (operands at: 0)
+			 destinationRegister: (operands at: 1)).
+
+	^ machineCodeSize := 4
 ]
 
 { #category : #'generate machine code' }
@@ -1797,9 +1824,16 @@ CogARMv8Compiler >> concretizeLogicalShiftLeftCqR [
 
 { #category : #'generate machine code - concretize' }
 CogARMv8Compiler >> concretizeLogicalShiftLeftRR [
-
-	self notYetImplemented.
-	^ 0
+	self 
+		machineCodeAt: 0 
+		put: (self
+			 logicalShiftLeftSize: 1
+			 sourceRegister: (operands at: 1)
+			 shiftRegister: (operands at: 0)
+			 destinationRegister: (operands at: 1)).
+			
+		
+	^ machineCodeSize := 4
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -2548,6 +2582,18 @@ CogARMv8Compiler >> concretizeOrCqR [
 	^ 0	"to keep Slang happy"
 ]
 
+{ #category : #'as yet unclassified' }
+CogARMv8Compiler >> concretizeOrRR [
+
+	self machineCodeAt: 0 put: (self
+			 inclusiveOrSize: 1
+			 firstRegister: (operands at: 0)
+			 secondRegister: (operands at: 1)
+			 destinationRegister: (operands at: 1)).
+			
+	^ machineCodeSize := 4
+]
+
 { #category : #'generate machine code - concretize' }
 CogARMv8Compiler >> concretizePopR [
 	"Will get inlined into concretizeAt: switch."
@@ -2854,6 +2900,22 @@ CogARMv8Compiler >> concretizeXorCwR [
 	^ machineCodeSize := machineCodeSize + 4
 ]
 
+{ #category : #'as yet unclassified' }
+CogARMv8Compiler >> concretizeXorRR [
+
+	| registerOne registerTwo |
+	registerOne := operands at: 0.
+	registerTwo := operands at: 1.
+
+	self machineCodeAt: 0 put: (self
+			 exclusiveOrSize: 1
+			 firstRegister: registerOne
+			 secondRegister: registerTwo
+			 destinationRegister: registerTwo).
+			
+	^ machineCodeSize := 4
+]
+
 { #category : #encoding }
 CogARMv8Compiler >> cond: c br: link offset: offset [
 	"c : 4 bit, opcode = 10 bitOr: link, offset >>2, limited to 24 bits (which are sign-extended, shifted left 2 and added to 8 + pc to make the resulting address)"
@@ -2975,9 +3037,9 @@ CogARMv8Compiler >> dispatchConcretize [
 		[AddRR]						-> [^self concretizeAddRR].
 		[AndRR]						-> [^self concretizeAndRR].
 		[CmpRR]					-> [^self concretizeCmpRR].
-		[OrRR]						-> [^self concretizeDataOperationRR: OrOpcode].
+		[OrRR]						-> [^self concretizeOrRR].
 		[SubRR]						-> [^self concretizeSubRR].
-		[XorRR]						-> [^self concretizeDataOperationRR: XorOpcode].
+		[XorRR]						-> [^self concretizeXorRR].
 		[AddRdRd]					-> [^self concretizeAddRdRd].
 		[CmpRdRd]					-> [^self concretizeCmpRdRd].
 		[DivRdRd]					-> [^self concretizeDivRdRd].
@@ -3091,7 +3153,7 @@ CogARMv8Compiler >> exclusiveOrSize: is64Bits firstRegister: firstRegister secon
 	
 	^ self
 		logicalShiftedRegisterSize: is64Bits
-		opcode: 2r01
+		opcode: 2r10
 		firstRegister: firstRegister
 		shiftedRegister: secondRegister
 		shiftOption: 0 "LSL"
@@ -3621,6 +3683,26 @@ CogARMv8Compiler >> hasVarBaseRegister [
 	"Answer if the processor has a dedicated callee-saved register to point to
 	 the base of commonly-accessed variables. On ARM we use R10 for this."
 	^true "r10/sl"
+]
+
+{ #category : #'as yet unclassified' }
+CogARMv8Compiler >> inclusiveOrSize: is64Bits firstRegister: firstRegister secondRegister: secondRegister destinationRegister: destinationRegister [
+	
+	"C6.2.206 OOR (shifted register)
+	
+	Bitwise inclusive OR (shifted register) performs a bitwise inclusive OR of a register value and an optionally-shifted register value, and writes the result to the destination register.
+	
+	OOR <Xd>, <Xn>, <Xm>{, <shift> #<amount>}"
+	
+	^ self
+		logicalShiftedRegisterSize: is64Bits
+		opcode: 2r01
+		firstRegister: firstRegister
+		shiftedRegister: secondRegister
+		shiftOption: 0 "LSL"
+		shiftValue: 0
+		negated: 0
+		destinationRegister: destinationRegister
 ]
 
 { #category : #'generate machine code' }
@@ -4294,6 +4376,24 @@ CogARMv8Compiler >> logicalImmediate: is64Bits opcode: instructionOpcode immedia
 		bitOr: ((logicalEncodedImmediate13BitValue bitAnd: 16r1fff) << 10
 		bitOr: ((sourceRegister bitAnd: 16r1f) << 5
 		bitOr: (destinationRegister bitAnd: 16r1f)))))
+]
+
+{ #category : #assembler }
+CogARMv8Compiler >> logicalShiftLeftSize: is64bits sourceRegister: sourceRegister shiftRegister: shiftRegister destinationRegister: destinationRegister [ 
+	
+	"C6.2.177 LSL (register)
+	
+	Logical Shift Left (register) shifts a register value left by a variable number of bits, shifting in zeros, and writes the result to the destination register. The remainder obtained by dividing the second source register by the data size defines the number of bits by which the first source register is left-shifted.
+	
+	LSL <Xd>, <Xn>, <Xm>"
+	
+	^ is64bits << 31
+		bitOr: (2r11010110 << 21
+		bitOr: ((shiftRegister bitAnd: 16r1f) << 16
+		bitOr: (1 << 13
+		bitOr: ((sourceRegister bitAnd: 16r1f) << 5
+		bitOr: (destinationRegister bitAnd: 16r1f)))))
+	
 ]
 
 { #category : #'as yet unclassified' }
@@ -4994,12 +5094,12 @@ CogARMv8Compiler >> setsConditionCodesFor: aConditionalJumpOpcode [
 	"Answer if the receiver's opcode sets the condition codes correctly for the given conditional jump opcode.
 	ARM has to check carefully since the V flag is not affected by non-comparison instructions"
 	^opcode caseOf:
-		{	[ArithmeticShiftRightCqR]	->	[self shiftSetsConditionCodesFor: aConditionalJumpOpcode].
-			[ArithmeticShiftRightRR]	->	[self shiftSetsConditionCodesFor: aConditionalJumpOpcode].
-			[LogicalShiftLeftCqR]		->	[self shiftSetsConditionCodesFor: aConditionalJumpOpcode].
-			[LogicalShiftLeftRR]		->	[self shiftSetsConditionCodesFor: aConditionalJumpOpcode].
+		{	[ArithmeticShiftRightCqR]	->	[false].
+			[ArithmeticShiftRightRR]		->	[false].
+			[LogicalShiftLeftCqR]			->	[false].
+			[LogicalShiftLeftRR]			->	[false].
 			[LogicalShiftRightCqR]		->	[false].
-			[XorRR]					->	[true]
+			[XorRR]							->	[false]
 		}
 		otherwise: [self halt: 'unhandled opcode in setsConditionCodesFor:'. false]
 ]

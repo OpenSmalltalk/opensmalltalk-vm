@@ -156,6 +156,12 @@ UnicornProcessor >> rdx: anInteger [
 	machineSimulator rdx: anInteger
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornProcessor >> retpcIn: aSpurSimulatedMemory [ 
+
+	^ machineSimulator retpcIn: aSpurSimulatedMemory 
+]
+
 { #category : #registers }
 UnicornProcessor >> rsp: anInteger [ 
 	
@@ -192,6 +198,19 @@ UnicornProcessor >> simulateLeafCallOf: address nextpc: nextpc memory: aMemory [
 ]
 
 { #category : #'as yet unclassified' }
+UnicornProcessor >> simulateReturnIn: aSpurSimulatedMemory [ 
+
+	^ machineSimulator simulateReturnIn: aSpurSimulatedMemory 
+
+]
+
+{ #category : #'as yet unclassified' }
+UnicornProcessor >> smashCallerSavedRegistersWithValuesFrom: anInteger by: anInteger2 in: aSpurSimulatedMemory [ 
+	
+	machineSimulator smashCallerSavedRegistersWithValuesFrom: anInteger by: anInteger2 in: aSpurSimulatedMemory 
+]
+
+{ #category : #'as yet unclassified' }
 UnicornProcessor >> smashRegistersWithValuesFrom: base by: step [
 	
 	machineSimulator smashRegistersWithValuesFrom: base by: step
@@ -207,6 +226,12 @@ UnicornProcessor >> sp [
 UnicornProcessor >> sp: anInteger [ 
 	
 	machineSimulator stackPointerRegisterValue: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornProcessor >> w6: anInteger [ 
+	
+	machineSimulator w6: anInteger 
 ]
 
 { #category : #'as yet unclassified' }
@@ -231,6 +256,24 @@ UnicornProcessor >> x28: anInteger [
 UnicornProcessor >> x29: anInteger [ 
 	
 	machineSimulator x29: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornProcessor >> x30: anInteger [ 
+
+	machineSimulator x30: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornProcessor >> x3: anInteger [ 
+	
+	machineSimulator x3: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornProcessor >> x4: anInteger [ 
+
+	machineSimulator x4: anInteger
 ]
 
 { #category : #'as yet unclassified' }
