@@ -373,6 +373,42 @@ UnicornARMv8Simulator >> x12: anInteger [
 	^ self writeRegister: UcARM64Registers x12 value: anInteger
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> x13: anInteger [ 
+	
+	self writeRegister: UcARM64Registers x13 value: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> x14: anInteger [ 
+
+	self writeRegister: UcARM64Registers x14 value: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> x15: anInteger [ 
+
+	self writeRegister: UcARM64Registers x15 value: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> x16: anInteger [ 
+
+	self writeRegister: UcARM64Registers x16 value: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> x17: anInteger [ 
+
+	self writeRegister: UcARM64Registers x17 value: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> x18: anInteger [ 
+
+	self writeRegister: UcARM64Registers x18 value: anInteger
+]
+
 { #category : #registers }
 UnicornARMv8Simulator >> x1: anInteger [ 
 
