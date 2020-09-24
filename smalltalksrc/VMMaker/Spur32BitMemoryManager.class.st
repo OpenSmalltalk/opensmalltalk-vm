@@ -682,6 +682,13 @@ Spur32BitMemoryManager >> isNonIntegerObject: oop [
 	^(oop bitAnd: 1) = 0
 ]
 
+{ #category : #'as yet unclassified' }
+Spur32BitMemoryManager >> isSmallFloatValue: aNumber [ 
+	
+	"32 bits images does not have small float"
+	^ false.
+]
+
 { #category : #'object testing' }
 Spur32BitMemoryManager >> isWordsNonImm: objOop [
 	"Answer if the argument contains only indexable words (no oops). See comment in formatOf:"

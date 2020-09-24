@@ -22,6 +22,10 @@ VMJittedPrimitivesTest >> prepareStackForSendReceiver: aReceiver arguments: argu
 
 { #category : #'tests - support' }
 VMJittedPrimitivesTest >> testCheckImmediateWhenImmediateFloat [
+
+	"32 bits images does not have SmallFloats"
+	self wordSize = 4 
+		ifTrue: [ ^ self skip ].
 		
 	self compile: [ | jump | 
 		jump := cogit objectRepresentation genJumpImmediate: Arg0Reg.
@@ -120,7 +124,7 @@ VMJittedPrimitivesTest >> testMoveFloatToFloatPointRegister [
 	
 	self compile: [ | jump | 
 		jump := cogit objectRepresentation genGetDoubleValueOf: ReceiverResultReg into: DPFPReg0.
-	].
+	]. 
 
 	self deny: (memory isSmallFloatValue: Float fmax).
 	machineSimulator receiverRegisterValue: (memory floatObjectOf: Float fmax).

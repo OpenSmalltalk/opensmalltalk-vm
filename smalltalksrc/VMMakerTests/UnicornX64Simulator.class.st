@@ -45,6 +45,12 @@ UnicornX64Simulator >> disassembler [
 ]
 
 { #category : #'as yet unclassified' }
+UnicornX64Simulator >> doublePrecisionFloatingPointRegister0Value [
+
+	^ self readFloat64Register: UcX86Registers xmm0
+]
+
+{ #category : #'as yet unclassified' }
 UnicornX64Simulator >> extractDestinationRegisterFromAssembly: aLLVMInstruction [ 
 	
 	| registerName |

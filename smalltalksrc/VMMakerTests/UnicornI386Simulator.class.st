@@ -40,6 +40,12 @@ UnicornI386Simulator >> disassembler [
 	^ LLVMDisassembler i386
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornI386Simulator >> doublePrecisionFloatingPointRegister0Value [
+
+	^ self readFloat64Register: UcX86Registers xmm0
+]
+
 { #category : #accessing }
 UnicornI386Simulator >> eax [
 	

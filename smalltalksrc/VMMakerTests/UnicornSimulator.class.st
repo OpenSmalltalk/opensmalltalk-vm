@@ -326,6 +326,16 @@ UnicornSimulator >> pushWord: anInteger [
 	self pushBytes: aByteArray
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornSimulator >> readFloat64Register: aRegisterID [ 
+
+	| registerValue |
+	registerValue := ByteArray new: 8.
+	unicorn register: aRegisterID value readInto: registerValue.
+	
+	^ registerValue doubleAt: 1
+]
+
 { #category : #registers }
 UnicornSimulator >> readRegister: aRegisterID [
 

@@ -62,6 +62,12 @@ UnicornARMv8Simulator >> disassembler [
 ]
 
 { #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> doublePrecisionFloatingPointRegister0Value [
+
+	^ self readFloat64Register: UcARM64Registers d0 
+]
+
+{ #category : #'as yet unclassified' }
 UnicornARMv8Simulator >> extractDestinationRegisterFromAssembly: aLLVMInstruction [ 
 	
 	"In ARM, instructions are usually encoded asSpotterCandidateLink 
