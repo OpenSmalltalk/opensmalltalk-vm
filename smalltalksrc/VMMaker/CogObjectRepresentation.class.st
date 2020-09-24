@@ -1812,7 +1812,7 @@ CogObjectRepresentation >> genSmallIntegerComparison: jumpOpcode orDoubleCompari
 	r := self genSmallIntegerComparison: jumpOpcode.
 	r < 0 ifTrue:
 		[^r].
-	self cppIf: #DPFPReg0 defined ifTrue:
+	self cppIf: (self defined: #DPFPReg0) ifTrue:
 	"Fall through on non-SmallInteger argument.  Argument may be a Float : let us check or fail"
 	[self smallIntegerIsOnlyImmediateType ifFalse:
 		[jumpNonInt := self genJumpImmediate: Arg0Reg].

@@ -660,7 +660,7 @@ FileAttributesPlugin >> primitiveFileMasks [
 		storePointer: 0
 		ofObject: masks
 		withValue: (interpreterProxy positive32BitIntegerFor: (self cCode: [#S_IFMT] inSmalltalk: [16rF000])).
-	self cppIf: #_WIN32 defined not
+	self cppIf: (self defined: #_WIN32) not
 		ifTrue: [
 			interpreterProxy
 				storePointer: 1
@@ -700,7 +700,7 @@ FileAttributesPlugin >> primitiveLogicalDrives [
 	| mask |
 	<export: true>
 	<var: 'mask' type: #'unsigned int'>
-	self cppIf: #_WIN32 defined
+	self cppIf: (self defined: #_WIN32)
 		ifTrue:
 			[
 			 mask := self GetLogicalDrives.
@@ -971,11 +971,11 @@ FileAttributesPlugin >> readLink: cPathName into: cLinkPtr maxLength: maxLength 
 	<var: 'maxLength' type: #'size_t'>
 	<var: 'len' type: #sqInt> "len must be signed so that -1 can be communicated as an error."
 
-	len := self cppIf: #_WIN32 defined
+	len := self cppIf: (self defined: #_WIN32)
 				ifTrue: [-1]
 				ifFalse: [self read: cPathName li: cLinkPtr nk: maxLength].
 	len < 0 ifTrue:
-		[self cppIf: #'INDEBUG' defined ifTrue: 
+		[self cppIf: (self defined: #'INDEBUG') ifTrue: 
 			[self cCode: 'fprintf(stderr, "FileAttributesPlugin: unable to readlink(): %d, errno=%d\n", len, errno)'].
 		^self cantReadlink].
 	cLinkPtr at: len put: 0.
