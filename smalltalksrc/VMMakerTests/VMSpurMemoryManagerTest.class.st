@@ -316,7 +316,7 @@ VMSpurMemoryManagerTest >> setUp [
 	oldSpaceSize := 999 * 1024.
  	newSpaceSize := 1 * 1024.
 	stackSpaceSize := 9 * 4096.
-	methodCacheSize := 4096 * 8 "wordSize".
+	methodCacheSize := 4096 * self wordSize.
 	rumpCStackSize := 0.
 	
 	initialAddress := 16r1000000.
