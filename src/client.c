@@ -3,6 +3,8 @@
 #include "pharovm/fileDialog.h"
 #include "pharovm/pathUtilities.h"
 
+extern void setMaxStacksToPrint(sqInt anInteger);
+
 #if defined(__GNUC__) && ( defined(i386) || defined(__i386) || defined(__i386__)  \
 			|| defined(i486) || defined(__i486) || defined (__i486__) \
 			|| defined(intel) || defined(x86) || defined(i86pc) )
@@ -27,7 +29,7 @@ void mtfsfi(unsigned long long fpscr)
 
 static int loadPharoImage(const char* fileName);
 static void ensureSemaphoreInitialized();
-static int runVMThread(void* p);
+static void* runVMThread(void* p);
 static int runOnMainThread(VMParameters *parameters);
 static int runOnWorkerThread(VMParameters *parameters);
 
@@ -38,7 +40,7 @@ EXPORT(int) vmRunOnWorkerThread = 0;
 
 //TODO: All this should be concentrated in an unique vm parameters structure.
 EXPORT(int)
-isVMRunOnWorkerThread()
+isVMRunOnWorkerThread(void)
 {
     return vmRunOnWorkerThread;
 }
@@ -127,7 +129,7 @@ vm_main_with_parameters(VMParameters *parameters)
 	LOG_SIZEOF(double);
 
     vmRunOnWorkerThread = vm_parameter_vector_has_element(&parameters->vmParameters, "--worker");
-    
+
     return vmRunOnWorkerThread
         ? runOnWorkerThread(parameters)
         : runOnMainThread(parameters);
@@ -232,7 +234,7 @@ mainThread_schedule(sqInt (*closure)())
     mainLoopSemaphore->signal(mainLoopSemaphore);
 }
 
-static int
+static void*
 runVMThread(void* p)
 {
     VMParameters *parameters = (VMParameters*)p;
@@ -240,11 +242,12 @@ runVMThread(void* p)
     if(!vm_init(parameters))
     {
         logError("Error opening image file: %s\n", parameters->imageFileName);
-        return -1;
+        return (void*)-1;
     }
     //setFlagVMRunOnWorkerThread(flagVMRunOnWorkerThread);
-    
+
     vm_run_interpreter();
+	return NULL;
 }
 
 static int
@@ -263,7 +266,7 @@ runOnWorkerThread(VMParameters *parameters)
     size_t size;
 
     logDebug("Running VM on worker thread\n");
-    
+
     /*
      * I have to get the attributes of the main thread
      * to get the max stack size.

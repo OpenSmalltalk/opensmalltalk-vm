@@ -14,6 +14,16 @@
  */
 
 #include "pharovm/debug.h"
+/* Include assert to ensure our macros do not get redefined by the standard ones.*/
+#include <assert.h>
+
+#undef assert
+#undef asserta
+#undef assertf
+#undef assertl
+#undef assertal
+#undef assertfl
+#undef eassert
 
 #ifdef NDEBUG /* compatible with Mac OS X (FreeBSD) /usr/include/assert.h */
 # define assert(expr) 0 /* hack disabling of asserts.  Better in makefile? */
