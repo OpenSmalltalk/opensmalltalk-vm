@@ -703,7 +703,7 @@ VMClass >> cppIf: conditionBlockOrSymbolValue ifTrue: trueExpressionOrBlock ifFa
 VMClass >> defined: aSymbol [
 	"Simulated version of the C pre-processor defined()"
 	<doNotGenerate>
-	^(self class bindingOf: self)
+	^(self class bindingOf: aSymbol)
 		ifNil: [false]
 		ifNotNil: [:binding| binding value ~~ #undefined]
 ]
