@@ -34,10 +34,25 @@ UnicornARMv8Simulator >> classRegister [
 	^ UcARM64Registers x2
 ]
 
+{ #category : #registers }
+UnicornARMv8Simulator >> cpacr_el1 [
+	
+	^ self readRegister: UcARM64Registers cpacr_el1
+]
+
+{ #category : #registers }
+UnicornARMv8Simulator >> cpacr_el1: anInteger [ 
+	
+	self writeRegister: UcARM64Registers cpacr_el1 value: anInteger
+]
+
 { #category : #'as yet unclassified' }
 UnicornARMv8Simulator >> createUnicorn [
 
-	^ Unicorn arm64
+	unicorn := Unicorn arm64.
+	"Enable floating point..."
+	self cpacr_el1: (self cpacr_el1 bitOr: 2r11 << 20).
+	^ unicorn
 ]
 
 { #category : #disassembling }

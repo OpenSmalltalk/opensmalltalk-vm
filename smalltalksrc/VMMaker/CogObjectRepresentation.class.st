@@ -1814,6 +1814,8 @@ CogObjectRepresentation >> genSmallIntegerComparison: jumpOpcode orDoubleCompari
 		[^r].
 	self cppIf: (self defined: #DPFPReg0) ifTrue:
 	"Fall through on non-SmallInteger argument.  Argument may be a Float : let us check or fail"
+	"If we are compiling in a platform where the only immediate values are smallintegers, then at this point we know we have a non-immediate (since it was tested before).
+	Otherwise, check if this is an immediate value or not. If it is immediate (e.g., a character) then just jump to the end."
 	[self smallIntegerIsOnlyImmediateType ifFalse:
 		[jumpNonInt := self genJumpImmediate: Arg0Reg].
 	self genGetCompactClassIndexNonImmOf: Arg0Reg into: SendNumArgsReg.

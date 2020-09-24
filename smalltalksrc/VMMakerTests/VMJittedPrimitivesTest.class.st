@@ -21,16 +21,113 @@ VMJittedPrimitivesTest >> prepareStackForSendReceiver: aReceiver arguments: argu
 ]
 
 { #category : #'tests - support' }
+VMJittedPrimitivesTest >> testCheckImmediateWhenImmediateFloat [
+		
+	self compile: [ | jump | 
+		jump := cogit objectRepresentation genJumpImmediate: Arg0Reg.
+		"Non-Immediate => 0"
+		cogit MoveCq: 0 R: ReceiverResultReg.
+		cogit RetN: 0.
+		jump jmpTarget: cogit Label.
+		"Immediate => 1"
+		cogit MoveCq: 1  R: ReceiverResultReg.
+		cogit RetN: 0.
+	].
+
+	self assert: (memory isSmallFloatValue: 1.0).
+	machineSimulator arg0RegisterValue: (memory floatObjectOf: 1.0).
+	self runUntilReturn.
+	
+	self assert: machineSimulator receiverRegisterValue equals: 1
+]
+
+{ #category : #'tests - support' }
+VMJittedPrimitivesTest >> testCheckImmediateWhenImmediateSmallInteger [
+		
+	self compile: [ | jump | 
+		jump := cogit objectRepresentation genJumpImmediate: Arg0Reg.
+		"Non-Immediate => 0"
+		cogit MoveCq: 0 R: ReceiverResultReg.
+		cogit RetN: 0.
+		jump jmpTarget: cogit Label.
+		"Immediate => 1"
+		cogit MoveCq: 1  R: ReceiverResultReg.
+		cogit RetN: 0.
+	].
+
+	machineSimulator arg0RegisterValue: (memory integerObjectOf: 17).
+	self runUntilReturn.
+	
+	self assert: machineSimulator receiverRegisterValue equals: 1
+]
+
+{ #category : #'tests - support' }
+VMJittedPrimitivesTest >> testCheckImmediateWhenNonImmediate [
+		
+	self compile: [ | jump | 
+		jump := cogit objectRepresentation genJumpImmediate: Arg0Reg.
+		"Non-Immediate => 0"
+		cogit MoveCq: 0 R: ReceiverResultReg.
+		cogit RetN: 0.
+		jump jmpTarget: cogit Label.
+		"Immediate => 1"
+		cogit MoveCq: 1  R: ReceiverResultReg.
+		cogit RetN: 0.
+	].
+
+	machineSimulator arg0RegisterValue: memory falseObject.
+	self runUntilReturn.
+	
+	self assert: machineSimulator receiverRegisterValue equals: 0
+]
+
+{ #category : #'tests - support' }
 VMJittedPrimitivesTest >> testConvertSmallIntegerToInteger [
-	
-	| result |
-	
-	self compile: [ result := cogit objectRepresentation genConvertSmallIntegerToIntegerInReg: ReceiverResultReg ].
-	
-	machineSimulator receiverRegisterValue: (self memory integerObjectOf: 42).
+
+	self compile: [ | jump | 
+		jump := cogit objectRepresentation genConvertSmallIntegerToIntegerInReg: ReceiverResultReg.
+	].
+
+	machineSimulator receiverRegisterValue: (memory integerObjectOf: 17).
 	self runGeneratedCode.
 	
-	self assert: machineSimulator receiverRegisterValue equals: 42.
+	self assert: machineSimulator receiverRegisterValue equals: 17.
+]
+
+{ #category : #'tests - support' }
+VMJittedPrimitivesTest >> testGetClassIndexOfObjectObtainsClassIndex [
+
+	self compile: [ | jump | 
+		jump := cogit objectRepresentation genGetCompactClassIndexNonImmOf: Arg0Reg into: ReceiverResultReg.
+	].
+
+	machineSimulator arg0RegisterValue: memory falseObject.
+	self runGeneratedCode.
+	
+	self assert: machineSimulator receiverRegisterValue equals: (memory classIndexOf: memory falseObject)
+]
+
+{ #category : #'tests - support' }
+VMJittedPrimitivesTest >> testMoveFloatToFloatPointRegister [
+
+	| classFloat |
+	classFloat := self newClassInOldSpaceWithSlots: 0 format: memory firstLongFormat.
+	memory setHashBitsOf: classFloat to: ClassFloatCompactIndex.
+	memory
+		storePointer: ClassFloatCompactIndex
+		ofObject: memory classTableFirstPage
+		withValue: classFloat.
+	
+	self compile: [ | jump | 
+		jump := cogit objectRepresentation genGetDoubleValueOf: ReceiverResultReg into: DPFPReg0.
+	].
+
+	self deny: (memory isSmallFloatValue: Float fmax).
+	machineSimulator receiverRegisterValue: (memory floatObjectOf: Float fmax).
+
+	self runGeneratedCode.
+	
+	self assert: machineSimulator doublePrecisionFloatingPointRegister0Value equals: Float fmax.
 ]
 
 { #category : #'tests - primitiveAdd' }

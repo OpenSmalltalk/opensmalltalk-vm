@@ -3600,6 +3600,14 @@ SpurMemoryManager >> classFloat [
 	^self splObj: ClassFloat
 ]
 
+{ #category : #accessing }
+SpurMemoryManager >> classFloat: anOop [ 
+
+	"Boxed Float"
+	<doNotGenerate>
+	self splObj: ClassFloat put: anOop
+]
+
 { #category : #'interpreter access' }
 SpurMemoryManager >> classForClassTag: classIndex [
 	<inline: true>
