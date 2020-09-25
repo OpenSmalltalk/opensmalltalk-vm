@@ -1,1 +1,27 @@
 In order to build the Unicode plugin on Linux, you'll need a collection of Pango, Cairo, and glib header and library files. These can often be found in the GTK+ development package in the package repository for your version of Linux.
+
+NOTE: on Solaris 11.4 there is an issue that the UnicodePlugin is disabled,
+because the XCPPFLAGS are incorrect.
+
+XCPPFLAGS includes -I/usr/lib/glib-2.0/include -I/usr/lib/arm-linux-gnueabihf/glib-2.0/include -I/usr/lib/i386-linux-gnu/glib-2.0/include
+
+The acinclude.m4 macro could be (but this may have other problems):
+
+PKG_CHECK_MODULES(UNICODE_PLUGIN,[glib-2.0 pangocairo],,AC_PLUGIN_DISABLE)
+
+AC_SUBST(UNICODE_PLUGIN_CFLAGS)
+AC_SUBST(UNICODE_PLUGIN_LIBS)
+
+The issue is that in the 32bit case
+
+ # pkg-config --cflags glib-2.0
+ -I/usr/include/glib-2.0 -I/usr/lib/glib-2.0/include  
+
+and in the 64bit (amd64 case)
+
+ # PKG_CONFIG_PATH=/usr/lib/64/pkgconfig pkg-config --cflags glib-2.0
+ -I/usr/include/glib-2.0 -I/usr/lib/amd64/glib-2.0/include  
+
+There are workarounds such as disabling the Plugin (which is the case now),
+or just patch the include path, and then it builds fine.
+

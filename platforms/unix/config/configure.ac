@@ -292,6 +292,7 @@ AC_HEADER_STDC
 AC_CHECK_HEADERS_ONCE([unistd.h string.h fcntl.h sys/file.h sys/param.h])
 AC_CHECK_HEADERS_ONCE([sys/time.h sys/filio.h sys/select.h])
 AC_CHECK_HEADERS_ONCE([features.h])
+AC_CHECK_HEADERS_ONCE([ifaddrs.h]) # sqUnixSocket.c
 AC_CHECK_HEADERS_ONCE([alloca.h]) # SunOS5
 AC_HEADER_TIME
 AC_HEADER_DIRENT
