@@ -54,7 +54,9 @@ Class {
 		'callerFrame',
 		'flags',
 		'previousFrameArgsSize',
-		'argumentSize'
+		'argumentSize',
+		'myFramePointer',
+		'myStackPointer'
 	],
 	#category : #'VMMakerTests-Builders'
 }
@@ -120,6 +122,11 @@ VMFrameBuilder >> flags: anObject [
 	flags := anObject
 ]
 
+{ #category : #accessing }
+VMFrameBuilder >> framePointer [
+	^ myFramePointer
+]
+
 { #category : #inspect }
 VMFrameBuilder >> gtInspectorItemsIn: composite [
 	<gtInspectorPresentationOrder: 1>
@@ -172,9 +179,34 @@ VMFrameBuilder >> instructionPointer [
 	^ instructionPointer
 ]
 
+{ #category : #context }
+VMFrameBuilder >> isMarried [
+	| contextOop |
+	contextOop := interpreter frameContext: myFramePointer.
+	^ contextOop = memory nilObject 
+		ifTrue: [ false ]
+		ifFalse: [ interpreter isStillMarriedContext: contextOop ]
+]
+
+{ #category : #context }
+VMFrameBuilder >> isSingle [
+	| contextOop |
+	contextOop := interpreter frameContext: myFramePointer.
+	^ contextOop = memory nilObject 
+		ifTrue: [ true ]
+		ifFalse: [ 
+			"this means that it was married, and that the context stack entry wasn't cleared"
+			interpreter isSingleContext: contextOop ]
+]
+
 { #category : #testing }
 VMFrameBuilder >> isSuspended [
 	^ instructionPointer isNil
+]
+
+{ #category : #context }
+VMFrameBuilder >> marryToContext [
+	interpreter ensureFrameIsMarried: myFramePointer SP: myStackPointer
 ]
 
 { #category : #accessing }
@@ -183,8 +215,8 @@ VMFrameBuilder >> method [
 ]
 
 { #category : #accessing }
-VMFrameBuilder >> method: anObject [
-	method := anObject
+VMFrameBuilder >> method: anOop [
+	method := anOop
 ]
 
 { #category : #accessing }
@@ -238,7 +270,9 @@ VMFrameBuilder >> pushYourself [
 				
 	instructionPointer ifNotNil: [ interpreter push: instructionPointer ].
 	
-	^ interpreter framePointer
+	myStackPointer:= interpreter stackPointer.
+	myFramePointer := interpreter framePointer.
+	^ myFramePointer
 ]
 
 { #category : #accessing }
@@ -259,6 +293,11 @@ VMFrameBuilder >> stack [
 { #category : #accessing }
 VMFrameBuilder >> stack: anObject [
 	stack := anObject
+]
+
+{ #category : #accesing }
+VMFrameBuilder >> stackPointer [
+	^ myStackPointer
 ]
 
 { #category : #accessing }
