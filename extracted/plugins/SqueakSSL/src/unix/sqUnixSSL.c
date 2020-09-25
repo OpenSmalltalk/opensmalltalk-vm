@@ -33,6 +33,7 @@ typedef struct sqSSL {
 	BIO *bioWrite;
 } sqSSL;
 
+const unsigned char * ASN1_STRING_get0_data(const ASN1_STRING *x);
 
 #include "pharovm/debug.h"
 
