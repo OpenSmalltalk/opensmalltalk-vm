@@ -415,9 +415,10 @@ Class {
 		'debugCallbackPath',
 		'debugCallbackReturns',
 		'debugCallbackInvokes',
+		'printedStackFrames',
 		'maxStacksToPrint',
 		'maxStackMessagePrinted',
-		'printedStackFrames'
+		'libFFI'
 	],
 	#classVars : [
 		'AccessModifierPrivate',
@@ -500,6 +501,7 @@ StackInterpreter class >> ancilliaryClasses [
 		VMCallbackContext.
 		CogStackPages.
 		InterpreterStackPages.
+		LibFFI.
 		CogStackPage }
 ]
 
@@ -516,11 +518,15 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 	vmClass := aCCodeGenerator vmClass. "Generate primitiveTable etc based on vmClass, not just StackInterpreter"
 	aCCodeGenerator
 		addHeaderFile:'<stddef.h> /* for e.g. alloca */';
+		addHeaderFile:'<stdint.h> /* for e.g. alloca */';
 		addHeaderFile:'<setjmp.h>';
 		addHeaderFile:'<wchar.h> /* for wint_t */';
 		addHeaderFile:'"vmCallback.h"';
 		addHeaderFile:'"sqMemoryFence.h"';
-		addHeaderFile:'"dispdbg.h"'.
+		addHeaderFile:'"dispdbg.h"';
+		addHeaderFile:'<ffi.h>';
+		addHeaderFile:'"pharovm/pThreadedFFI/worker.h"'.
+		
 	LowcodeVM ifTrue: [ aCCodeGenerator addHeaderFile:'"sqLowcodeFFI.h"'].
 
 	vmClass declareInterpreterVersionIn: aCCodeGenerator defaultName: 'Stack'.
@@ -613,6 +619,10 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator
 		var: #reenterInterpreter
 		declareC: 'jmp_buf reenterInterpreter; /* private export */'.
+		
+	aCCodeGenerator removeVariable: #'libFFI'.
+	LibFFIConstants classVariables do: [ :e | aCCodeGenerator removeConstant: e name ].
+		
 	LowcodeVM
 		ifTrue:
 			[aCCodeGenerator
@@ -5628,11 +5638,10 @@ StackInterpreter >> doSignalSemaphoreWithIndex: index [
 	"Signal the external semaphore with the given index.  Answer if a context switch
 	 occurs as a result.  Do not bounds check.  This has been done in the caller."
 	<api>
-	| xArray sema |
-	xArray := objectMemory splObj: ExternalObjectsArray.
-	self assert: (objectMemory isArray: xArray).
-	sema := objectMemory fetchPointer: index - 1 ofObject: xArray. "Note: semaphore indices are 1-based"
-	self assert: (objectMemory isOopForwarded: sema) not.
+	| sema |
+	
+	sema := self getExternalSemaphoreWithIndex: index.
+	
 	^(objectMemory isSemaphoreOop: sema)
 	  and: [self synchronousSignal: sema]
 ]
@@ -7618,6 +7627,19 @@ StackInterpreter >> getErrorObjectFromPrimFailCode [
 	^objectMemory integerObjectOf: primFailCode
 ]
 
+{ #category : #'process primitive support' }
+StackInterpreter >> getExternalSemaphoreWithIndex: index [
+	<api>
+	| xArray sema |
+	xArray := objectMemory splObj: ExternalObjectsArray.
+	self assert: (objectMemory isArray: xArray).
+	sema := objectMemory fetchPointer: index - 1 ofObject: xArray. "Note: semaphore indices are 1-based"
+	self assert: (objectMemory isOopForwarded: sema) not.
+	self assert: (objectMemory isSemaphoreOop: sema).
+	
+	^ sema
+]
+
 { #category : #'plugin primitive support' }
 StackInterpreter >> getFullScreenFlag [
 	^fullScreenFlag
@@ -9599,6 +9621,18 @@ StackInterpreter >> lengthOfNameOfClass: classOop [
 	numSlots <= classNameIndex ifTrue:
 		[^0].
 	^objectMemory lengthOf: (objectMemory fetchPointer: classNameIndex ofObject: classOop)
+]
+
+{ #category : #accessing }
+StackInterpreter >> libFFI [
+	<doNotGenerate>
+	^ libFFI
+]
+
+{ #category : #accessing }
+StackInterpreter >> libFFI: aLibFFI [ 
+	<doNotGenerate>
+	libFFI := aLibFFI
 ]
 
 { #category : #'compiled methods' }
@@ -16761,6 +16795,17 @@ StackInterpreter >> preGCAction: gcModeArg [
 ]
 
 { #category : #accessing }
+StackInterpreter >> preemptionYields [
+	
+	^ preemptionYields
+]
+
+{ #category : #accessing }
+StackInterpreter >> preemptionYields: aValue [ 
+	preemptionYields := aValue
+]
+
+{ #category : #accessing }
 StackInterpreter >> primFailCode [
 	<doNotGenerate>
 	^ primFailCode 
@@ -18172,6 +18217,37 @@ StackInterpreter >> printUnbalancedStack: primIdx [
 		
 ]
 
+{ #category : #'process primitive support' }
+StackInterpreter >> processesInProcessListDo: aBlock [
+	"Return the highest priority process that is ready to run.
+	 To save time looking at many empty lists before finding a
+	 runnable process the VM maintains a variable holding the
+	 highest priority runnable process.  If this variable is 0 then the
+	 VM does not know the highest priority and must search all lists.
+	 Note: It is a fatal VM error if there is no runnable process."
+	| schedLists p processList proc ctxt |
+	self externalWriteBackHeadFramePointers.
+	schedLists := objectMemory fetchPointer: ProcessListsIndex ofObject: self schedulerPointer.
+	p := highestRunnableProcessPriority = 0
+			ifTrue: [objectMemory numSlotsOf: schedLists]
+			ifFalse: [highestRunnableProcessPriority].
+	[(p := p - 1) >= 0] whileTrue:
+		[processList := objectMemory fetchPointer: p ofObject: schedLists.
+	 	 proc := objectMemory fetchPointer: FirstLinkIndex ofObject: processList. 
+		 [proc = objectMemory nilObject] 
+			whileFalse: ["Only answer processes with a runnable suspendedContext.
+			  Discard those that aren't; the VM would crash otherwise."
+			 ctxt := objectMemory fetchPointer: SuspendedContextIndex ofObject: proc.
+			  self cppIf: SPURVM ifTrue: 
+				["This is uncommon, so we can deal with forwarders here instead of assuming there isn't."
+				 (objectMemory isOopForwarded: ctxt) ifTrue:
+					[ctxt := self fixFollowedField: SuspendedContextIndex 
+									ofObject: proc withInitialValue: ctxt].
+				  (self isLiveContext: ctxt) ifTrue:
+					[ aBlock value: proc ] ].
+			 proc := objectMemory fetchPointer: NextLinkIndex ofObject: proc ]].
+]
+
 { #category : #'internal interpreter access' }
 StackInterpreter >> push: object [
 	"In the StackInterpreter stacks grow down."
@@ -19012,9 +19088,14 @@ StackInterpreter >> respondToUnknownBytecode [
 { #category : #'callback support' }
 StackInterpreter >> restoreCStackStateForCallbackContext: vmCallbackContext [
 	<var: #vmCallbackContext type: #'VMCallbackContext *'>
-	self memcpy: reenterInterpreter
-		_: vmCallbackContext savedReenterInterpreter asVoidPointer
-		_: (self sizeof: #'jmp_buf')
+		
+	self cCode:
+			[self memcpy: reenterInterpreter
+				_: vmCallbackContext savedReenterInterpreter asVoidPointer
+				_: (self sizeof: #'jmp_buf')]
+		inSmalltalk:
+			[ reenterInterpreter := vmCallbackContext savedReenterInterpreter ].
+	
 ]
 
 { #category : #'stack pages' }
@@ -19373,9 +19454,14 @@ StackInterpreter >> saneMethodClassAssociationIn: methodObj numLiterals: numLite
 { #category : #'callback support' }
 StackInterpreter >> saveCStackStateForCallbackContext: vmCallbackContext [
 	<var: #vmCallbackContext type: #'VMCallbackContext *'>
-	self memcpy: vmCallbackContext savedReenterInterpreter asVoidPointer
-		_: reenterInterpreter
-		_: (self sizeof: #'jmp_buf')
+		
+	self cCode:
+			[self memcpy: vmCallbackContext savedReenterInterpreter asVoidPointer
+				_: reenterInterpreter
+				_: (self sizeof: #'jmp_buf')]
+		inSmalltalk:
+			[ vmCallbackContext savedReenterInterpreter: reenterInterpreter].
+	
 ]
 
 { #category : #'process primitive support' }
@@ -20736,6 +20822,7 @@ StackInterpreter >> stackPageHeadroom [
 { #category : #accessing }
 StackInterpreter >> stackPages: anInterpreterStackPages [
 	<doNotGenerate>
+	1halt.
 	stackPages := anInterpreterStackPages
 ]
 
@@ -21084,6 +21171,16 @@ StackInterpreter >> subscript: array with: index storing: oopToStore format: fmt
 	unsignedValueToStore := self positive32BitValueOf: oopToStore.
 	self successful ifTrue:
 		[objectMemory storeLong32: index - 1 ofObject: array withValue: unsignedValueToStore]
+]
+
+{ #category : #'process primitive support' }
+StackInterpreter >> supendActiveProcess [
+	<api>
+	
+	| activeProc |
+	activeProc := self activeProcess.
+	self transferTo: self wakeHighestPriority.
+	^ activeProc
 ]
 
 { #category : #'message sending' }
@@ -21934,7 +22031,7 @@ StackInterpreter >> wakeHighestPriority [
 				^proc].
 			  self cppIf: SPURVM ifTrue: 
 				["This is uncommon, so we can deal with forwarders here instead of assuming there isn't."
-				 (self isOopForwarded: ctxt) ifTrue:
+				 (objectMemory isOopForwarded: ctxt) ifTrue:
 					[ctxt := self fixFollowedField: SuspendedContextIndex ofObject: proc withInitialValue: ctxt].
 				  (self isLiveContext: ctxt) ifTrue:
 					[highestRunnableProcessPriority := p + 1.

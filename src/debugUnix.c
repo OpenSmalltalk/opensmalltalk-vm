@@ -28,6 +28,7 @@ void reportStackState(const char *msg, char *date, int printAll, ucontext_t *uap
 
 char * getVersionInfo(int verbose);
 void getCrashDumpFilenameInto(char *buf);
+void dumpPrimTraceLog();
 
 void doReport(char* fault, ucontext_t *uap){
 	time_t now = time(NULL);
@@ -192,6 +193,54 @@ void * printRegisterState(ucontext_t *uap, FILE* output)
 	        regs->arm_r4,regs->arm_r5,regs->arm_r6,regs->arm_r7,
 	        regs->arm_r8,regs->arm_r9,regs->arm_r10,regs->arm_fp,
 	        regs->arm_ip, regs->arm_sp, regs->arm_lr, regs->arm_pc);
+	return regs->arm_pc;
+# elif __linux__ && defined(__aarch64__)
+	fprintf(output,
+			"\t x00 0x%016llx x01 0x%016llx x02 0x%016llx x03 0x%016llx\n"
+			"\t x04 0x%016llx x05 0x%016llx x06 0x%016llx x07 0x%016llx\n"
+			"\t x08 0x%016llx x09 0x%016llx x10 0x%016llx x11 0x%016llx\n"
+			"\t x12 0x%016llx x13 0x%016llx x14 0x%016llx x15 0x%016llx\n"
+			"\t x16 0x%016llx x17 0x%016llx x18 0x%016llx x19 0x%016llx\n"
+			"\t x20 0x%016llx x21 0x%016llx x22 0x%016llx x23 0x%016llx\n"
+			"\t x24 0x%016llx x25 0x%016llx x26 0x%016llx x27 0x%016llx\n"
+			"\t x28 0x%016llx  FP 0x%016llx  LR 0x%016llx  SP 0x%016llx\n"
+			"\t  PC 0x%016llx  STATE 0x%016llx\n",
+
+            uap->uc_mcontext.regs[0],
+            uap->uc_mcontext.regs[1],
+            uap->uc_mcontext.regs[2],
+            uap->uc_mcontext.regs[3],
+            uap->uc_mcontext.regs[4],
+            uap->uc_mcontext.regs[5],
+            uap->uc_mcontext.regs[6],
+            uap->uc_mcontext.regs[7],
+            uap->uc_mcontext.regs[8],
+            uap->uc_mcontext.regs[9],
+            uap->uc_mcontext.regs[10],
+            uap->uc_mcontext.regs[11],
+            uap->uc_mcontext.regs[12],
+            uap->uc_mcontext.regs[13],
+            uap->uc_mcontext.regs[14],
+            uap->uc_mcontext.regs[15],
+            uap->uc_mcontext.regs[16],
+            uap->uc_mcontext.regs[17],
+            uap->uc_mcontext.regs[18],
+            uap->uc_mcontext.regs[19],
+            uap->uc_mcontext.regs[20],
+            uap->uc_mcontext.regs[21],
+            uap->uc_mcontext.regs[22],
+            uap->uc_mcontext.regs[23],
+            uap->uc_mcontext.regs[24],
+            uap->uc_mcontext.regs[25],
+            uap->uc_mcontext.regs[26],
+            uap->uc_mcontext.regs[27],
+            uap->uc_mcontext.regs[28],
+            uap->uc_mcontext.regs[29],
+            uap->uc_mcontext.regs[30],
+            uap->uc_mcontext.sp,
+            uap->uc_mcontext.pc,
+            uap->uc_mcontext.pstate);
+    return (void*)uap->uc_mcontext.pc; 
 #else
 	fprintf(output,"don't know how to derive register state from a ucontext_t on this platform\n");
 	return 0;
@@ -268,11 +317,14 @@ void reportStackState(const char *msg, char *date, int printAll, ucontext_t *uap
 			void *fp = (void *)(uap ? uap->sc_rbp: 0);
 			void *sp = (void *)(uap ? uap->sc_rsp: 0);
 # elif __sun__ && __i386__
-      void *fp = (void *)(uap ? uap->uc_mcontext.gregs[REG_FP]: 0);
-      void *sp = (void *)(uap ? uap->uc_mcontext.gregs[REG_SP]: 0);
+            void *fp = (void *)(uap ? uap->uc_mcontext.gregs[REG_FP]: 0);
+            void *sp = (void *)(uap ? uap->uc_mcontext.gregs[REG_SP]: 0);
 # elif defined(__arm__) || defined(__arm32__) || defined(ARM32)
 			void *fp = (void *)(uap ? uap->uc_mcontext.arm_fp: 0);
 			void *sp = (void *)(uap ? uap->uc_mcontext.arm_sp: 0);
+# elif defined(__aarch64__)
+			void *fp = (void *)(uap ? uap->uc_mcontext.regs[29]: 0); // This is the Register that we are using for the FramePointer
+			void *sp = (void *)(uap ? uap->uc_mcontext.sp: 0);
 # else
 #	error need to implement extracting pc from a ucontext_t on this system
 # endif

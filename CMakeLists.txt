@@ -35,17 +35,26 @@ endif()
 project(PharoVM)
 
 set(FLAVOUR CoInterpreterWithQueueFFI CACHE STRING "The kind of VM to generate. Possible values: StackVM, CogVM, CoInterpreterWithQueueFFI")
+set(GENERATE_SOURCES 1 CACHE BOOL "If it generates the sources")
 
 if(FLAVOUR MATCHES "StackVM")
   set(VMSOURCEFILES ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/src/gcc3x-interp.c)
 else()
   set(VMSOURCEFILES ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/src/cogit.c ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/src/gcc3x-cointerp.c)
-  set(PLUGIN_GENERATED_FILES 
-  	${CMAKE_CURRENT_BINARY_DIR}/generated/plugins/src/FilePlugin/FilePlugin.c)
 endif()
+
+set(PLUGIN_GENERATED_FILES 
+  	${CMAKE_CURRENT_BINARY_DIR}/generated/plugins/src/FilePlugin/FilePlugin.c)
+
 
 if(FLAVOUR MATCHES "CoInterpreterWithQueueFFI")
   add_definitions(-DASYNC_FFI_QUEUE=1)
+endif()
+
+if (GENERATE_PHARO_VM) 
+	set(VMMAKER_PHARO_VM ${GENERATE_PHARO_VM})
+else()
+	set(VMMAKER_PHARO_VM ./pharo)
 endif()
 
 # Configuration
@@ -56,6 +65,7 @@ include(CheckLibraryExists)
 include(CheckTypeSize)
 include(CheckCSourceCompiles)
 include(CheckStructHasMember)
+include(ExternalProject)
 
 set(COMMON_FLAGS "")
 set(BUILD_I386_VERSION NO)
@@ -105,11 +115,9 @@ elseif(UNIX)
     set(CMAKE_CURRENT_SOURCE_DIR_TO_OUT ${CMAKE_CURRENT_SOURCE_DIR})
     set(CMAKE_CURRENT_BINARY_DIR_TO_OUT ${CMAKE_CURRENT_BINARY_DIR})
 
-    set(COMMON_FLAGS "-Wall")
+    set(COMMON_FLAGS "-O2 -Wall -Werror=implicit-function-declaration")
 
     add_definitions(-DLSB_FIRST=1)
-
-    set(COMMON_FLAGS "-O2")
 
     set(OS_TYPE "unix")
     if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -232,28 +240,51 @@ check_include_files(uuid.h HAVE_UUID_H)
 check_library_exists(uuid uuidgen "" HAVE_UUIDGEN)
 check_library_exists(uuid uuid_generate "" HAVE_UUID_GENERATE)
 
+if(GENERATE_SOURCES)
 #Custom command that downloads a Pharo image and VM in ${VMMAKER_OUTPUT_PATH}
+if(NOT GENERATE_PHARO_VM) 
 add_custom_command(
   OUTPUT ${VMMAKER_OUTPUT_PATH}/Pharo.image ${VMMAKER_OUTPUT_PATH}/pharo
   COMMAND wget -O - https://get.pharo.org/64/90 | bash
   COMMAND wget -O - https://get.pharo.org/64/vm90 | bash
   WORKING_DIRECTORY ${VMMAKER_OUTPUT_PATH}
   COMMENT "Downloading Pharo 90")
+else()
+add_custom_command(
+  OUTPUT ${VMMAKER_OUTPUT_PATH}/Pharo.image ${VMMAKER_OUTPUT_PATH}/pharo
+  COMMAND wget -O - https://get.pharo.org/64/90 | bash
+  WORKING_DIRECTORY ${VMMAKER_OUTPUT_PATH}
+  COMMENT "Downloading Pharo 90")
+endif()
+
 
 add_custom_command(
   OUTPUT ${VMMAKER_OUTPUT_PATH}/VMMaker.image
-  COMMAND ./pharo Pharo.image --save --quit ${CMAKE_CURRENT_SOURCE_DIR_TO_OUT}/scripts/installVMMaker.st ${CMAKE_CURRENT_SOURCE_DIR_TO_OUT}
-  COMMAND ./pharo Pharo.image save VMMaker --delete-old
+  COMMAND ${VMMAKER_PHARO_VM} Pharo.image --save --quit ${CMAKE_CURRENT_SOURCE_DIR_TO_OUT}/scripts/installVMMaker.st ${CMAKE_CURRENT_SOURCE_DIR_TO_OUT}
+  COMMAND ${VMMAKER_PHARO_VM} Pharo.image save VMMaker
   DEPENDS ${VMMAKER_OUTPUT_PATH}/Pharo.image
   WORKING_DIRECTORY ${VMMAKER_OUTPUT_PATH}
 COMMENT "Generating VMMaker image")
 
 #Custom command that generates the vm source code from VMMaker into ${VMMAKER_OUTPUT_PATH} and copies it to ${CMAKE_CURRENT_SOURCE_DIR}
+if (NOT GENERATE_PHARO_VM)
 add_custom_command(
   OUTPUT ${VMSOURCEFILES} ${PLUGIN_GENERATED_FILES}
   COMMAND ${VMMAKER_OUTPUT_PATH}/pharo ${VMMAKER_OUTPUT_PATH}/VMMaker.image eval \"PharoVMMaker generate: \#\'${FLAVOUR}\' outputDirectory: \'${CMAKE_CURRENT_BINARY_DIR_TO_OUT}\'\"
   DEPENDS ${VMMAKER_OUTPUT_PATH}/VMMaker.image
   COMMENT "Generating VM files for flavour: ${FLAVOUR}")
+else()
+add_custom_command(
+  OUTPUT ${VMSOURCEFILES} ${PLUGIN_GENERATED_FILES}
+  COMMAND ${VMMAKER_PHARO_VM} ${VMMAKER_OUTPUT_PATH}/VMMaker.image eval \"PharoVMMaker generate: \#\'${FLAVOUR}\' outputDirectory: \'${CMAKE_CURRENT_BINARY_DIR_TO_OUT}\'\"
+  DEPENDS ${VMMAKER_OUTPUT_PATH}/VMMaker.image
+  COMMENT "Generating VM files for flavour: ${FLAVOUR}")
+endif()
+
+add_custom_target(vmmaker DEPENDS ${VMMAKER_OUTPUT_PATH}/VMMaker.image)
+add_custom_target(generate-sources DEPENDS ${VMSOURCEFILES} ${PLUGIN_GENERATED_FILES})
+  
+endif()
 
 #Generating config file
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/pharovm/config.h.in build/include/pharovm/config.h)
@@ -269,6 +300,7 @@ include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}/build/include/
     ${CMAKE_CURRENT_BINARY_DIR}/build/include/pharovm/
     ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/include
+	${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/include
 )
 
 set(VM_FRONTEND_APPLICATION_TYPE)
@@ -280,9 +312,70 @@ elseif(UNIX)
     include(unix.cmake)
 endif()
 
+#
+# LibFFI
+#
+
+if (NOT WITHOUT_DEPENDENCIES)
+
+ExternalProject_Add(build_libFFI
+    PREFIX "${CMAKE_CURRENT_BINARY_DIR}/build/libffi"
+    SOURCE_DIR "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/src"
+    STAMP_DIR "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/stamp"
+    BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/src"
+
+    UPDATE_COMMAND ""
+
+    GIT_REPOSITORY "https://github.com/libffi/libffi.git"
+    GIT_TAG "v3.3"
+    CONFIGURE_COMMAND "./autogen.sh" COMMAND ./configure "${LIBFFI_TARGET}" "--disable-docs" "--prefix=${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install" "CC=${CMAKE_C_COMPILER}" "CXX=${CMAKE_C_COMPILER}" ${LIBFFI_ADDITIONAL}
+	BUILD_COMMAND "${CMAKE_MAKE_PROGRAM}" ${LIBFFI_ADDITIONAL}
+)
+
+make_directory("${CMAKE_CURRENT_BINARY_DIR}/build/dist")
+
+if(OSX)
+    add_custom_command(
+      OUTPUT  ${LIBFFI_OUTPUT}
+      DEPENDS build_libFFI
+      COMMAND install_name_tool -id "@executable_path/Plugins/libffi.7.dylib" "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/lib/libffi.7.dylib"
+      COMMAND install_name_tool -id "@executable_path/Plugins/libffi.dylib" "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/lib/libffi.dylib"
+      WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/lib/"
+      COMMENT "Changing RPath of Libffi")
+
+	add_custom_target(libFFI DEPENDS "${LIBFFI_OUTPUT}")
+else()
+	add_custom_target(libFFI DEPENDS build_libFFI)
+endif()
+
+link_directories("${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/lib")
+
+endif()
+
+#
+# End LibFFI
+#
+
 set(GENERATED_SOURCES ${VMSOURCEFILES})
 
 set(SUPPORT_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/functionDefinitionPrimitives.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/primitiveCalls.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/primitiveUtils.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/pThreadedFFI.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/types.c
+	${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/typesPrimitives.c
+	${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/utils.c
+    
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/callbacks/callbackPrimitives.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/callbacks/callbacks.c
+   
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/sameThread/sameThread.c
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/worker/worker.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/worker/workerPrimitives.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/worker/workerTask.c
+	
 	${CMAKE_CURRENT_SOURCE_DIR}/src/debug.c
 	${CMAKE_CURRENT_SOURCE_DIR}/src/utils.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/errorCode.c
@@ -295,7 +388,11 @@ set(SUPPORT_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/fileDialogCommon.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/stringUtilities.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/imageAccess.c
+    
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/threadSafeQueue/threadSafeQueue.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/semaphores/platformSemaphore.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/semaphores/pharoSemaphore.c
+
     ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/common/heartbeat.c
 )
 
@@ -307,6 +404,7 @@ set(VM_SOURCES
 
 add_executable(${VM_EXECUTABLE_NAME} ${VM_FRONTEND_APPLICATION_TYPE} ${VM_FRONTEND_SOURCES})
 addLibraryWithRPATH(${VM_LIBRARY_NAME} ${VM_SOURCES})
+add_dependencies(${VM_LIBRARY_NAME} libFFI)
 
 #If in OSX, configure creation of Bundle
 if(OSX)
@@ -319,6 +417,7 @@ if(OSX)
 endif()
 
 target_link_libraries(${VM_EXECUTABLE_NAME} ${VM_LIBRARY_NAME})
+target_link_libraries(${VM_LIBRARY_NAME} "ffi")
 
 add_required_libs_per_platform()
 
@@ -326,7 +425,9 @@ include(plugins.cmake)
 
 # Handling Third party dependencies
 
-add_third_party_dependencies_per_platform()
+if (NOT WITHOUT_DEPENDENCIES)
+	add_third_party_dependencies_per_platform()
+endif()
 
 # Selecting files to include in the package
 

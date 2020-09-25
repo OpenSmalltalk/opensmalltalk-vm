@@ -47,7 +47,6 @@ macro(add_third_party_dependencies_per_platform)
     add_third_party_dependency("pixman-0.34.0" ${LIBRARY_OUTPUT_DIRECTORY})
     add_third_party_dependency("cairo-1.15.4" ${LIBRARY_OUTPUT_DIRECTORY})
     add_third_party_dependency("freetype-2.9.1" ${LIBRARY_OUTPUT_DIRECTORY})
-    add_third_party_dependency("libffi-3.3-rc0" ${LIBRARY_OUTPUT_DIRECTORY})
     add_third_party_dependency("libgit2-0.25.1" ${LIBRARY_OUTPUT_DIRECTORY})
     add_third_party_dependency("libgit2-mac-1.0.0" ${LIBRARY_OUTPUT_DIRECTORY})
     add_third_party_dependency("libpng-1.2.49" ${LIBRARY_OUTPUT_DIRECTORY})
@@ -59,7 +58,14 @@ endmacro()
 
 macro(configure_installables INSTALL_COMPONENT)
   set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/build/dist")
-    
+  
+	install(
+		DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/lib/"
+		DESTINATION "${VM_EXECUTABLE_NAME}.app/Contents/MacOS/Plugins"
+		COMPONENT ${INSTALL_COMPONENT}
+		FILES_MATCHING PATTERN ${DYLIB_EXT})
+  
+  
   install(
     DIRECTORY "${CMAKE_BINARY_DIR}/build/vm/"
     DESTINATION "./"
@@ -77,3 +83,16 @@ macro(add_required_libs_per_platform)
    target_link_libraries(${VM_LIBRARY_NAME} "-framework AppKit")
    target_link_libraries(${VM_LIBRARY_NAME} "-framework CoreGraphics")
 endmacro()
+
+execute_process(
+    COMMAND xcrun --show-sdk-path
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE OSX_SDK_PATH
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+
+set(DYLIB_EXT "*.dylib")
+set(LIBFFI_TARGET "--target=x86_64-apple-darwin")
+set(LIBFFI_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/build/bin/libffi.dylib" "${CMAKE_CURRENT_BINARY_DIR}/build/bin/libffi.7.dylib")
+set(LIBFFI_ADDITIONAL "CPATH=${OSX_SDK_PATH}/usr/include")
+

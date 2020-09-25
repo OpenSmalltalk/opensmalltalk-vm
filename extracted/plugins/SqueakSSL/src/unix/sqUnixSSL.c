@@ -6,6 +6,7 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/x509v3.h>
+#include <openssl/asn1.h>
 
 #include <strings.h>
 #include <string.h>
@@ -32,6 +33,7 @@ typedef struct sqSSL {
 	BIO *bioWrite;
 } sqSSL;
 
+const unsigned char * ASN1_STRING_get0_data(const ASN1_STRING *x);
 
 #include "pharovm/debug.h"
 

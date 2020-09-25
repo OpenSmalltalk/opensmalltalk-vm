@@ -28,7 +28,6 @@ set(VM_FRONTEND_SOURCES
 
 macro(add_third_party_dependencies_per_platform)
     add_third_party_dependency("PThreadedFFI-1.4.0-linux64" "build/vm")
-    add_third_party_dependency("libffi-3.3-rc0" "build/vm")
     add_third_party_dependency("libgit2-0.25.1" "build/vm")
     add_third_party_dependency_with_baseurl("libgit2-linux-1.0.0" "build/vm" "https://github.com/guillep/libgit_build/releases/download/v1.0.1")
     add_third_party_dependency("libssh2-1.7.0" "build/vm")
@@ -44,6 +43,7 @@ macro(configure_installables INSTALL_COMPONENT)
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/packaging/linux/bin/launch.sh.in
         ${CMAKE_CURRENT_BINARY_DIR}/build/packaging/linux/bin/${VM_EXECUTABLE_NAME} @ONLY)
 
+
     install(
       DIRECTORY "${CMAKE_BINARY_DIR}/build/packaging/linux/"
       DESTINATION "./"
@@ -54,6 +54,13 @@ macro(configure_installables INSTALL_COMPONENT)
       DESTINATION "lib"
       USE_SOURCE_PERMISSIONS
       COMPONENT ${INSTALL_COMPONENT})
+	install(
+		DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/lib/"
+		DESTINATION "lib"
+		USE_SOURCE_PERMISSIONS
+		COMPONENT ${INSTALL_COMPONENT}
+		FILES_MATCHING PATTERN ${DYLIB_EXT})
+
 
 	install(
 	    DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/unix/"
@@ -67,3 +74,9 @@ macro(add_required_libs_per_platform)
   target_link_libraries(${VM_LIBRARY_NAME} m)
   target_link_libraries(${VM_LIBRARY_NAME} pthread)
 endmacro()
+
+set(LIBFFI_TARGET "")
+
+set(LIBFFI_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/build/bin/libffi.so" "${CMAKE_CURRENT_BINARY_DIR}/build/bin/libffi.7.so")
+set(DYLIB_EXT "*.so*")
+set(LIBFFI_FILES "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/lib/${DYLIB_EXT}")

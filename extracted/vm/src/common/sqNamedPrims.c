@@ -91,24 +91,13 @@ removeFromList(ModuleEntry *entry)
 	primitive table.
 */
 static void *
-findExternalFunctionIn(char *functionName, ModuleEntry *module
-#if SPURVM
-# define NADA , 0, 0
-					,  sqInt fnameLength, sqInt *accessorDepthPtr
-#else
-# define NADA /* nada */
-#endif
-)
+findExternalFunctionIn(char *functionName, ModuleEntry *module,  sqInt fnameLength, sqInt *accessorDepthPtr)
 {
 	void *result;
 
 	logTrace("Looking (externally) for %s in %s... ", functionName,module->name);
 	if(module->handle)
-#if SPURVM
 		result = ioFindExternalFunctionInAccessorDepthInto(functionName, module->handle, accessorDepthPtr);
-#else
-		result = ioFindExternalFunctionIn(functionName, module->handle);
-#endif
 	else
 		result = NULL;
 	logTrace("%s\n", result ? "found" : "not found");
@@ -123,11 +112,7 @@ findExternalFunctionIn(char *functionName, ModuleEntry *module
 	On SPUR also get accessorDepth, hidden in functionName, if asked for.
 */
 static void *
-findInternalFunctionIn(char *functionName, char *pluginName
-#if SPURVM
-					,  sqInt fnameLength, sqInt *accessorDepthPtr
-#endif
-)
+findInternalFunctionIn(char *functionName, char *pluginName,  sqInt fnameLength, sqInt *accessorDepthPtr)
 {
   char *function, *plugin;
   sqInt listIndex, index;
@@ -157,19 +142,17 @@ findInternalFunctionIn(char *functionName, char *pluginName
 
       /* match */
       logTrace("found\n");
-#if SPURVM
 	  if (accessorDepthPtr)
 		*accessorDepthPtr = ((signed char *)function)[fnameLength+1];
-#endif
-      return exports[index].primitiveAddress;
+
+	  return exports[index].primitiveAddress;
     }
   }
-  logTrace("not found\n");
-  return NULL;
+
+  return ioFindExternalFunctionInAccessorDepthInto(functionName, NULL, accessorDepthPtr);
 }
 
 
-#if SPURVM
 static void *
 findFunctionAndAccessorDepthIn(char *functionName, ModuleEntry *module,
 								sqInt fnameLength, sqInt *accessorDepthPtr)
@@ -180,14 +163,13 @@ findFunctionAndAccessorDepthIn(char *functionName, ModuleEntry *module,
 		: findExternalFunctionIn(functionName, module,
 								fnameLength, accessorDepthPtr);
 }
-#endif /* SPURVM */
 
 static void *
 findFunctionIn(char *functionName, ModuleEntry *module)
 {
 	return module->handle == squeakModule->handle
-		? findInternalFunctionIn(functionName, module->name NADA)
-		: findExternalFunctionIn(functionName, module NADA);
+		? findInternalFunctionIn(functionName, module->name, 0, 0)
+		: findExternalFunctionIn(functionName, module, 0, 0);
 }
 
 /*
@@ -285,7 +267,7 @@ findAndLoadModule(char *pluginName, sqInt ffiLoad)
 	/* NOT ffiLoad */
 	if(!handle) {
 		/* might be internal, so go looking for setInterpreter() */
-		if(findInternalFunctionIn("setInterpreter", pluginName NADA))
+		if(findInternalFunctionIn("setInterpreter", pluginName, 0, 0))
 			handle = squeakModule->handle;
 		else
 			return NULL; /* PluginName_setInterpreter() not found */
@@ -374,7 +356,6 @@ ioLoadExternalFunctionOfLengthFromModuleOfLength
 	return ioLoadFunctionFrom(functionName, moduleName);
 }
 
-#if SPURVM
 /* ioLoadFunctionFromAccessorDepthInto
 	Load and return the given function from the specified plugin.
 	Answer the function address if successful, otherwise 0.
@@ -425,7 +406,6 @@ ioLoadExternalFunctionOfLengthFromModuleOfLengthAccessorDepthInto
 	return ioLoadFunctionFromAccessorDepthInto
 			(functionName, moduleName, functionNameLength, accessorDepthPtr);
 }
-#endif /* SPURVM */
 
 /* ioLoadSymbolOfLengthFromModule
 	This entry point is exclusively for the FFI.
@@ -581,7 +561,7 @@ ioListBuiltinModule(sqInt moduleIndex)
 	if(--moduleIndex == 0) {
 	  char *moduleName;
 	  void * init0;
-	  init0 = findInternalFunctionIn("getModuleName", plugin NADA);
+	  init0 = findInternalFunctionIn("getModuleName", plugin, 0, 0);
 	  if(init0) {
 	    /* Check the compiled name of the module */
 	    moduleName = ((char* (*) (void))init0)();

@@ -535,7 +535,7 @@ VMPrimitiveTest >> testPrimitiveNewInFullNewSpaceScheduleGC [
 	self assert: memory needGCFlag
 ]
 
-{ #category : #'tests - primitiveNewWithArgs' }
+{ #category : #'tests - primitiveNew' }
 VMPrimitiveTest >> testPrimitiveNewIsNotPinned [
 	| class |
 	class := self newClassInOldSpaceWithSlots: 0 format: memory nonIndexablePointerFormat.
