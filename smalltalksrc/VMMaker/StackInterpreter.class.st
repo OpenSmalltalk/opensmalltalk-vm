@@ -8894,7 +8894,6 @@ StackInterpreter >> internalStackValue: offset put: aValue [
 { #category : #utilities }
 StackInterpreter >> internalizeIPandSP [
 	"Copy the instruction, stack and frame pointers to local variables for rapid access within the interpret loop."
-
 	localIP := self pointerForOop: instructionPointer.
 	localSP := self pointerForOop: stackPointer.
 	localFP := self pointerForOop: framePointer.
@@ -22099,16 +22098,13 @@ StackInterpreter >> writeImageFileIOSimulation [
 	 c.f. writeImageFileIO.  The game below is to maintain 64-bit alignment
 	 for all putLong:toFile: occurrences."
 	<doNotGenerate>
-	| headerSize file |
+	| headerSize |
 	headerSize := objectMemory wordSize = 4 ifTrue: [64] ifFalse: [128].
 
-	(file := FileStream fileNamed: self imageName) ifNil:
-		[self primitiveFail.
-		 ^nil].
-	[file binary.
-	 self putWord32: self imageFormatVersion toFile: file.
-	 self putWord32: headerSize toFile: file.
-	 {
+	self imageName asFileReference binaryWriteStreamDo: [ :file |
+			 self putWord32: self imageFormatVersion toFile: file.
+			 self putWord32: headerSize toFile: file.
+			{
 		objectMemory imageSizeToWrite.
 		objectMemory baseAddressOfImage.
 		objectMemory specialObjectsOop.
@@ -22116,7 +22112,7 @@ StackInterpreter >> writeImageFileIOSimulation [
 		self ioScreenSize.
 		self getImageHeaderFlags
 	 }
-		do: [:long | self putLong: long toFile: file].
+		do: [:long | self putLong: long toFile: file].		
 
 	 self putWord32: (extraVMMemory ifNil: [0]) toFile: file.
 	 {	desiredNumStackPages. self unknownShortOrCodeSizeInKs } do:
@@ -22159,8 +22155,8 @@ StackInterpreter >> writeImageFileIOSimulation [
 						putLong: (objectMemory memory at: index)
 						toFile: file]].
 	
-	 self success: true]
-		 ensure: [file ifNotNil: [file close]]
+	 self success: true
+	]
 ]
 
 { #category : #'stack pages' }

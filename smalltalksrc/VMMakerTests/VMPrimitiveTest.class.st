@@ -30,6 +30,19 @@ VMPrimitiveTest >> newArrayWith: aCollection [
 ]
 
 { #category : #running }
+VMPrimitiveTest >> setContextClassIntoClassTable [
+	| aClass |
+	aClass := self
+		newClassInOldSpaceWithSlots: 0
+		instSpec: Array instSpec.
+	memory setHashBitsOf: aClass to: ClassMethodContextCompactIndex.
+	memory
+		storePointer: ClassMethodContextCompactIndex
+		ofObject: memory classTableFirstPage
+		withValue: aClass
+]
+
+{ #category : #running }
 VMPrimitiveTest >> setUp [
 	
 	"taken from VMSimpleStackBasedCogitBytecodeTest >> #setup"
@@ -835,4 +848,72 @@ VMPrimitiveTest >> testPrimitiveSlotAtPutPutsTheValueForNonIndexable [
 	
 	self deny: interpreter failed.
 	self assert: (memory fetchPointer: 0 ofObject: object) equals: memory falseObject.
+]
+
+{ #category : #'tests - become' }
+VMPrimitiveTest >> testPrimitiveSnapshotContextsShouldBeTenured [
+	| method imageName frame contextOop |
+	interpreter pluginList: #(). 
+	self initializeOldSpaceForFullGC.
+	self setContextClassIntoClassTable.
+	method := methodBuilder newMethod buildMethod.
+	frame := stackBuilder addNewFrame method: method ; yourself.
+	stackBuilder buildStack.
+	contextOop := interpreter ensureFrameIsMarried: frame framePointer SP: frame stackPointer.
+	interpreter instructionPointer: method + 17.
+	imageName := UUID new asString.
+	interpreter imageName: imageName.
+	interpreter setImageHeaderFlagsFrom: 0.
+	
+	interpreter primitiveSnapshot.
+	self assert: (memory isOldObject: (memory remapObj: contextOop)).
+	
+	imageName asFileReference delete.
+]
+
+{ #category : #'tests - become' }
+VMPrimitiveTest >> testPrimitiveSnapshotCreateImage [
+	| method imageName file |
+	interpreter pluginList: #(). 
+	self initializeOldSpaceForFullGC.
+	self setContextClassIntoClassTable.
+	method := methodBuilder newMethod buildMethod.
+	stackBuilder addNewFrame method: method.
+	stackBuilder buildStack.
+	interpreter instructionPointer: method + 17.
+	imageName := UUID new asString.
+	interpreter imageName: imageName.
+	interpreter setImageHeaderFlagsFrom: 0.
+	interpreter primitiveSnapshot.
+	
+	file := imageName asFileReference.
+	self assert: file exists.
+	self assert: file size > 0.
+	file delete.
+]
+
+{ #category : #'tests - become' }
+VMPrimitiveTest >> testPrimitiveSnapshotNewKeptObjectShouldBeTenured [
+	| method imageName object |
+	interpreter pluginList: #(). 
+	self initializeOldSpaceForFullGC.
+	self setContextClassIntoClassTable.
+	method := methodBuilder newMethod buildMethod.
+	stackBuilder addNewFrame method: method.
+	stackBuilder buildStack.
+	interpreter instructionPointer: method + 17.
+	imageName := UUID new asString.
+	interpreter imageName: imageName.
+	interpreter setImageHeaderFlagsFrom: 0.
+	
+	object := self newObjectWithSlots: 0.
+	self keepObjectInVMVariable1: object.
+	
+	interpreter primitiveSnapshot.
+"
+contexts are put in the old space
+"
+	self assert: (memory isOldObject: (memory remapObj: object)).
+	
+	imageName asFileReference delete.
 ]
