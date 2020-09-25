@@ -434,6 +434,42 @@ VMSpurMemoryManagerTest >> setUpScheduler [
 	memory lastHash: 1
 ]
 
+{ #category : #running }
+VMSpurMemoryManagerTest >> setUpUsingImage [
+
+	"This is an alternate setUp using an image to correctly initialize memory/interpreter.
+	Currently not used by default, as some tests still fails, but is usable.
+	For example, we could test that all test are working on both a specific setup, and image load one.
+	Or we could design tests using the image setUp, which should have everything ready to use, and do the specific on after, to refine the requirements of a setUp for a test."
+	super setUp.
+	interpreter := self newInterpreter 
+		pluginList: { }.
+		
+	"You currently have to setup the path by hand, I do not rememeber/know how to get the directory from a repository, to do a correct relative path
+	Sorry :3"
+	self halt.
+	interpreter openOn: 'fileToPath'.
+	interpreter initStackPages.
+	interpreter loadInitialContext.
+	
+	objectHeaderSize := 8 "bytes. Always.".
+	emptyObjectSize := objectHeaderSize + 8 "minimum required single empty slot, to use for forwarders".
+	
+	newSpaceSize := memory oldSpaceStart -memory newSpaceStart.
+	oldSpaceSize := memory oldSpaceSize.
+	
+	stackBuilder := VMStackBuilder new
+		interpreter: interpreter; 
+		memory: memory;
+		yourself.
+				
+	methodBuilder := VMMethodBuilder new
+		interpreter: interpreter; 
+		memory: memory;
+		yourself.
+		
+]
+
 { #category : #accessing }
 VMSpurMemoryManagerTest >> sizeOfObjectWithSlots: slots [
 
