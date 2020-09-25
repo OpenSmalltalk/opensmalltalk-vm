@@ -17,7 +17,7 @@
 /* getReturnAddress optionally defined here rather than in sqPlatformSpecific.h
  * to reduce duplication. The GCC intrinics are provided by other compilers too.
  */
-#if !defined(getReturnAddress)
+#if COGVM && !defined(getReturnAddress)
 # if _MSC_VER
 #	define getReturnAddress() _ReturnAddress()
 #	include <intrin.h>

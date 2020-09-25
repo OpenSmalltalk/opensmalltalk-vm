@@ -92,7 +92,9 @@
 # include <netinet/tcp.h>
 # include <arpa/inet.h>
 # include <netdb.h>
-#include <ifaddrs.h>
+#ifdef HAVE_IFADDRS_H
+# include <ifaddrs.h>
+#endif
 # include <errno.h>
 # include <unistd.h>
   
@@ -1499,7 +1501,7 @@ sqInt sqResolverStatus(void)
 sqInt sqResolverAddrLookupResultSize(void)	{ return strlen(lastName); }
 sqInt sqResolverError(void)			{ return lastError; }
 sqInt sqResolverLocalAddress(void)
-#if 0 
+#ifndef HAVE_IFADDRS_H
 /* old code */
 {	sqInt localaddr = nameToAddr(localHostName);
 	if (!localaddr)
