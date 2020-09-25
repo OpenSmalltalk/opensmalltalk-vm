@@ -1,4 +1,4 @@
-#include "config.h"
+#include "sq.h"
 
 #if defined(HAVE_SYS_UUID_H)
 # include <sys/types.h>
@@ -11,7 +11,6 @@
 # error cannot find a uuid.h to include
 #endif
 
-#include "sq.h"
 
 
 int MakeUUID(char *location)

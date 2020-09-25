@@ -211,10 +211,6 @@ static int parseArgument(int argc, char **argv)
   else if (argc > 1 && !strcmp(argv[0], VMOPTION("numextsems"))) { 
 	ioSetMaxExtSemTableSize(atoi(argv[1]));
 	return 2; }
-  else if (!strcmp(argv[0], VMOPTION("checkpluginwrites"))) { 
-	extern sqInt checkAllocFiller;
-	checkAllocFiller = 1;
-	return 1; }
   else if (!strcmp(argv[0], VMOPTION("noheartbeat"))) { 
 	extern sqInt suppressHeartbeatFlag;
 	suppressHeartbeatFlag = 1;
@@ -252,10 +248,6 @@ static int parseArgument(int argc, char **argv)
 	extern sqInt traceStores;
 	traceStores = 1;
 	return 1; }
-  else if (argc > 1 && !strcmp(argv[0], VMOPTION("dpcso"))) { 
-	extern unsigned long debugPrimCallStackOffset;
-	debugPrimCallStackOffset = (unsigned long)strtobkm(argv[1]);	 
-	return 2; }
   else if (argc > 1 && !strcmp(argv[0], VMOPTION("cogmaxlits"))) { 
 	extern sqInt maxLiteralCountForCompile;
 	maxLiteralCountForCompile = strtobkm(argv[1]);	 
@@ -319,7 +311,6 @@ static void printUsage(void)
   printf("  "VMOPTION("numextsems")" num       make the external semaphore table num in size\n");
   printf("  "VMOPTION("noheartbeat")"          disable the heartbeat for VM debugging. disables input\n");
   printf("  "VMOPTION("pollpip")"              output . on each poll for input\n");
-  printf("  "VMOPTION("checkpluginwrites")"    check for writes past end of object in plugins\n");
 #endif
 #if STACKVM || NewspeakVM
 # if COGVM

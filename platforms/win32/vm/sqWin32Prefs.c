@@ -15,7 +15,7 @@ void TrackPrefsMenu(void) {}
 void HandlePrefsMenu(int) {}
 #else
 
-#include <windows.h>
+#include <Windows.h>
 #include "sq.h"
 #include "sqWin32Prefs.h"
 
@@ -43,11 +43,6 @@ extern int caseSensitiveFileMode;
 /****************************************************************************/
 /*                   Preference functions                                   */
 /****************************************************************************/
-#ifdef WCE_PREFERENCES
-#define GetCursorPos(pt) *(pt) = mousePosition;
-#define WritePrivateProfileString(a1,a2,a3,a4);
-#endif
-
 void SetDeferredUpdate() {
   CheckMenuItem(vmPrefsMenu, ID_DEFERUPDATES, MF_BYCOMMAND | 
 		(fDeferredUpdate ? MF_CHECKED : MF_UNCHECKED));
@@ -183,7 +178,6 @@ void SetEnableAltF4Quit() {
 void LoadPreferences()
 {
   /* Set preferences */
-#ifndef WCE_PREFERENCES
   int size;
 
   /* make ini file name based on executable file name */
@@ -297,7 +291,6 @@ void LoadPreferences()
 	}
   }
 # endif
-#endif
 }
 
 void SetAllPreferences() {

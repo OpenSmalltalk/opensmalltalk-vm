@@ -87,7 +87,7 @@ static alias encodings[]=
 // defaults
 
 void *localeEncoding=   0;
-void *sqTextEncoding=	((void *)kCFStringEncodingMacRoman);	// xxxFIXME -> kCFStringEncodingISOLatin9
+void *sqTextEncoding=	((void *)kCFStringEncodingISOLatin1);
 void *uxTextEncoding=	((void *)kCFStringEncodingISOLatin9);
 void *sqPathEncoding=	((void *)kCFStringEncodingUTF8);
 void *uxPathEncoding=	((void *)kCFStringEncodingUTF8);
@@ -169,7 +169,7 @@ static char *preDefinedEncodings[]=
   };
 
 void *localeEncoding=   0;
-void *sqTextEncoding=   (void *)macEncoding;
+void *sqTextEncoding=   (void *)iso1Encoding;
 void *uxTextEncoding=   (void *)iso15Encoding;
 void *sqPathEncoding=	(void *)utf8Encoding;
 void *uxPathEncoding=   (void *)utf8Encoding;

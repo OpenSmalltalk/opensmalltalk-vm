@@ -1,18 +1,43 @@
 /****************************************************************************
  *   FILE:    sqCogUnixStackAlignment.h
- *   CONTENT: Answer & check stack alignment for current plaform
+ *   CONTENT: Answer & check stack alignment for current plaform, plus
+ *            getReturnAddress which is part of the fly-weight setjmp/longjmp
+ *            alternative ceInvokeInterpreter which is used to enter the
+ *            interpreter from machine code.
  *
  *   AUTHOR:   Eliot Miranda
  *   DATE:     February 2009
  *
- * Changes: eem Tue 28 Apr 2015 Add ARM32 support.
- *			eem Wed Jul 14 2010 make 16 bytes the default alignment for all x86.
+ * Changes: eem September 2020 move getReturnAddress here from sq.h
+ *          eem Jan 2020 add support for ARMv8
+ *          eem Apr 2015 Add ARM32 support.
+ *			eem Jul 2010 make 16 bytes the default alignment for all x86.
  */
  
+/* getReturnAddress optionally defined here rather than in sqPlatformSpecific.h
+ * to reduce duplication. The GCC intrinics are provided by other compilers too.
+ */
+#if !defined(getReturnAddress)
+# if _MSC_VER
+#	define getReturnAddress() _ReturnAddress()
+#	include <intrin.h>
+#	pragma intrinsic(_ReturnAddress)
+# elif defined(__GNUC__) /* gcc, clang, icc etc */
+#	define getReturnAddress() __builtin_extract_return_addr(__builtin_return_address(0))
+# else
+#	error "Cog requires getReturnAddress defining for the current platform."
+# endif
+#endif
+
+/* Support for stack alignment checking, used to ensure that when C is invoked
+ * from machine code, the stack alignment meets the ABI's constraints.  If the
+ * stack is not correctly aligned bad things happen, especially involving the
+ * use of high-performance multi-media instructions, vector arithmetic etc.
+ */
 #if __i386__ || _M_IX86
 # if __SSE2__ || (__APPLE__ && __MACH__) || __linux__ || _M_IX86_FP==2
-/* 16-byte stack alignment on x86 is required for SSE instructions which
- * require 16-byte aligned addresses to access 64 or 128 bit values in memory.
+/* 16 byte stack alignment on x86 is required for SSE instructions which
+ * require 16 byte aligned addresses to access 64 or 128 bit values in memory.
  */
 #	define STACK_ALIGN_BYTES 16
 #	define STACK_FP_ALIGNMENT 8 /* aligned sp - retpc - saved fp */
@@ -20,17 +45,18 @@
 #	define STACK_ALIGN_BYTES 4
 #	define STACK_FP_ALIGNMENT 0
 # endif
+# if _MSC_VER
+#	define STACK_SP_ALIGNMENT 4
+# endif
 #endif
 
 #if defined(__arm64__) || defined(__aarch64__) || defined(ARM64)
-/* Quad-byte stack alignment on ARM64 is required.
-   (SP mod 16) == 0
- */
+/* 16 byte stack alignment on ARM64 is required always. (SP mod 16) == 0 */
 # define STACK_ALIGN_BYTES 16
-# define STACK_FP_ALIGNMENT 8
+# define STACK_FP_ALIGNMENT 0
 #elif defined(__arm__) || defined(__arm32__) || defined(ARM32)
-/* 8-byte stack alignment on ARM32 is required for instructions which
- * require 8-byte aligned addresses to access doubles in memory.
+/* 8 byte stack alignment on ARM32 is required for instructions which
+ * require 8 byte aligned addresses to access doubles in memory.
  */
 # define STACK_ALIGN_BYTES 8
 # define STACK_FP_ALIGNMENT 4
@@ -82,14 +108,14 @@
 	 * http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.den0024a/index.html
 	 */
 #  if __GNUC__
-#   define getfp() ({ usqIntptr_t fp;								\
-					  asm volatile ("mov x0, x29" : "=r"(x29) : );	\
-					  fp; })
-#   define getsp() ({ usqIntptr_t sp;								\
-					  asm volatile ("mov x0, sp" : "=r"(sp) : );	\
-					  sp; })
+#   define getfp() ({ usqIntptr_t fpval;							\
+					  __asm volatile ("mov %0, fp" : "=r"(fpval) );	\
+					  fpval; })
+#   define getsp() ({ usqIntptr_t spval;							\
+					  __asm volatile ("mov %0, sp" : "=r"(spval) );	\
+					  spval; })
 
-# define setsp(sp) asm volatile ("ldr x16, %0 \n\t" "mov sp, x16"  : : "m"(sp) )
+#	define setsp(spval) __asm volatile ("mov sp, %0"  : : "r"(spval))
 
 #  endif
 # elif defined(__arm__) || defined(__arm32__) || defined(ARM32)
@@ -98,7 +124,7 @@
 	 */
 #  if __GNUC__
 #   define getfp() ({ usqIntptr_t fp;								\
-					  asm volatile ("mov %0, %%fp" : "=r"(fp) : );	\
+					 asm volatile ("mov %0, %%fp" : "=r"(fp) : );	\
 					  fp; })
 #   define getsp() ({ usqIntptr_t sp;								\
 					  asm volatile ("mov %0, %%sp" : "=r"(sp) : );	\
@@ -106,10 +132,10 @@
 #  endif
 # elif defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
 #  if __GNUC__ || __clang__
-#   define getfp() ({ register usqIntptr_t fp;					\
+#	define getfp() ({ register usqIntptr_t fp;						\
 					  asm volatile ("movq %%rbp,%0" : "=r"(fp) : );	\
 					  fp; })
-#   define getsp() ({ register usqIntptr_t sp;					\
+#	define getsp() ({ register usqIntptr_t sp;						\
 					  asm volatile ("movq %%rsp,%0" : "=r"(sp) : );	\
 					  sp; })
 #  else /* MSVC for example: use ceGetFP ceGetSP */
@@ -117,19 +143,7 @@
 # else /* !(__i386__ || __arm__ || __x86_64__) */
 #  error define code for your processor here
 # endif
-# if !defined(getfp)
-# define getfp() ceGetFP() /* provided by Cogit */
-# endif
-# if !defined(getsp)
-# define getsp() ceGetSP() /* provided by Cogit */
-# endif
-# define STACK_ALIGN_MASK (STACK_ALIGN_BYTES-1)
-#	define assertCStackWellAligned() do {									\
-	extern sqInt cFramePointerInUse;										\
-	if (cFramePointerInUse)													\
-		assert((getfp() & STACK_ALIGN_MASK) == STACK_FP_ALIGNMENT);		\
-	assert((getsp() & STACK_ALIGN_MASK) == 0);	\
-} while (0)
+
 #else /* defined(STACK_ALIGN_BYTES) */
 #  if defined(powerpc) || defined(__powerpc__) || defined(_POWER) || defined(__POWERPC__) || defined(__PPC__)
 #    define STACK_ALIGN_BYTES 16
@@ -142,3 +156,22 @@
 #  endif
 #  define assertCStackWellAligned() 0
 #endif /* defined(STACK_ALIGN_BYTES) */
+
+#if !defined(getfp)
+# define getfp() ceGetFP() /* provided by Cogit */
+#endif
+#if !defined(getsp)
+# define getsp() ceGetSP() /* provided by Cogit */
+#endif
+#define STACK_ALIGN_MASK (STACK_ALIGN_BYTES-1)
+#if !defined(STACK_SP_ALIGNMENT)
+#	define STACK_SP_ALIGNMENT 0
+#endif
+#if !defined(assertCStackWellAligned)
+# define assertCStackWellAligned() do {								\
+	extern sqInt cFramePointerInUse;								\
+	if (cFramePointerInUse)											\
+		assert((getfp() & STACK_ALIGN_MASK) == STACK_FP_ALIGNMENT);	\
+	assert((getsp() & STACK_ALIGN_MASK) == STACK_SP_ALIGNMENT);		\
+} while (0)
+#endif

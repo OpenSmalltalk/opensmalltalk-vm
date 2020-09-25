@@ -688,7 +688,6 @@ char * endChar;
 
 int main(int argc,  char  *argv[]) {
 FILE *f;
-extern void initGlobalStructure(void);
 extern void setMetaKeyOptions(int swap);
 	parseArguments( argv, argc, args);
 
@@ -698,7 +697,6 @@ extern void setMetaKeyOptions(int swap);
 	atexit(exit_function);   // setup a clean exit function
 
 	InitRiscOS();
-	initGlobalStructure();
 
 	dummyWimpPoll();
 

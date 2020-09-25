@@ -124,7 +124,7 @@ static sqStreamRequest *requests[MAX_REQUESTS];
   has been established. Only necessary if some
   sort of asynchronous communications are used.
 */
-int display_primitivePluginBrowserReady()
+sqInt display_primitivePluginBrowserReady()
 {
   if (inBrowser)
     {
@@ -145,7 +145,7 @@ int display_primitivePluginBrowserReady()
   stream functions.
   Note: A request id is the index into requests[].
 */
-int display_primitivePluginRequestURLStream()
+sqInt display_primitivePluginRequestURLStream()
 {
   sqStreamRequest *req;
   int id, url, length, semaIndex;
@@ -185,7 +185,7 @@ int display_primitivePluginRequestURLStream()
   primitivePluginRequestURL: url target: target semaIndex: semaIndex
   Request a URL into the given target.
 */
-int display_primitivePluginRequestURL()
+sqInt display_primitivePluginRequestURL()
 {
   sqStreamRequest *req;
   int url, urlLength;
@@ -227,7 +227,7 @@ int display_primitivePluginRequestURL()
   primitivePluginPostURL: url target: target data: data semaIndex: semaIndex
   Post data to a URL into the given target.
 */
-int display_primitivePluginPostURL()
+sqInt display_primitivePluginPostURL()
 {
   sqStreamRequest *req;
   int url, urlLength;
@@ -277,7 +277,7 @@ int display_primitivePluginPostURL()
   data. Note: The file handle must be read-only for
   security reasons.
 */
-int display_primitivePluginRequestFileHandle()
+sqInt display_primitivePluginRequestFileHandle()
 {
   sqStreamRequest *req;
   int id, fileOop;

@@ -9,6 +9,7 @@ DSAPrims \
 DropPlugin \
 FileCopyPlugin \
 FilePlugin \
+Float64ArrayPlugin \
 FloatArrayPlugin \
 FloatMathPlugin \
 HostWindowPlugin \

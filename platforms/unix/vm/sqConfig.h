@@ -1,8 +1,9 @@
 /* Unix sqConfig.h -- platform identification and configuration */
 
-/* This file has been superseded by autoconf for Unix variants. */
-
+#ifdef HAVE_CONFIG_H
+/* Use automatically generated config values (viz. autoconf) */
 #include "config.h"
+#endif
 
 #ifndef UNIX
 # define UNIX
@@ -37,4 +38,8 @@
 /* Make the gcc/clang asm keyword available, even when running
  * in standard C mode.
  */
-#define asm __asm__
+#if __GNUC__ >= 9
+# define asm __asm
+#else
+# define asm __asm__
+#endif

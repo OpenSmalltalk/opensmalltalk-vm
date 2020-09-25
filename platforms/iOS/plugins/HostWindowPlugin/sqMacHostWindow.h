@@ -49,7 +49,7 @@
 #endif
 /* window handle type */
 #define wHandleType void *
-#define wIndexType sqInt 
+#define wIndexType sqIntptr_t
 
 typedef struct windowDescriptorBlock {
 	struct windowDescriptorBlock * next;
@@ -63,9 +63,9 @@ typedef struct windowDescriptorBlock {
 } windowDescriptorBlock;
 
 windowDescriptorBlock *windowBlockFromHandle(wHandleType windowHandle);
-sqInt windowIndexFromBlock( windowDescriptorBlock * thisWindow);
-sqInt windowIndexFromHandle(wHandleType windowHandle);
+wIndexType windowIndexFromBlock( windowDescriptorBlock * thisWindow);
+wIndexType windowIndexFromHandle(wHandleType windowHandle);
 wHandleType windowHandleFromIndex(wIndexType windowIndex);
 windowDescriptorBlock *AddWindowBlock(void);
-windowDescriptorBlock *windowBlockFromIndex(sqInt windowIndex);
+windowDescriptorBlock *windowBlockFromIndex(wIndexType windowIndex);
 sqInt getCurrentIndexInUse(void);

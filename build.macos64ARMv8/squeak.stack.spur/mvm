@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+set -e
+A=;D=;F=
+if [ $# = 0 ]; then
+	A=1;D=1;F=1
+else
+	while getopts 'ASTadf?' opt "$@"; do
+		case $opt in
+		A)	A=1;D=1;F=1;;
+		S) echo -S not yet implemented\; use -A for now 1>&1; exit 1;;
+		T) echo -T not yet implemented\; use -A for now 1>&1; exit 1;;
+		a)	A=1;;
+		d)	D=1;;
+		f)	F=1;;
+		*)	echo usage $0 [-A] [-a\ [-d] [-f]; exit 0;;
+		esac
+	done
+	if [ "$1" = -- ]; then
+		if [ "$A$D$F" = "" ]; then
+			A=1;D=1;F=1
+		fi
+	fi
+	shift `expr $OPTIND - 1`
+fi
+if ../../scripts/checkSCCSversion ; then exit 1; fi
+if [ -n "$D" ]; then
+	make $@ debug 2>&1 | tee LOGD ; test ${PIPESTATUS[0]} -eq 0
+fi
+if [ -n "$A" ]; then
+	make $@ assert 2>&1 | tee LOGA ; test ${PIPESTATUS[0]} -eq 0
+fi
+if [ -n "$F" ]; then
+	make $@ 2>&1 | tee LOGF ; test ${PIPESTATUS[0]} -eq 0
+fi

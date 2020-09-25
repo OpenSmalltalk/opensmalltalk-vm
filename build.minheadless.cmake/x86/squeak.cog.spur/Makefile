@@ -1,9 +1,9 @@
 all:
-	$(MAKE) -C debug all
-	$(MAKE) -C assert all
-	$(MAKE) -C relwithdebinfo all
-	$(MAKE) -C release all
-	
+	$(MAKE) -C debug all install
+	$(MAKE) -C assert all install
+	$(MAKE) -C relwithdebinfo all install
+	$(MAKE) -C release all install
+
 clean:
 	$(MAKE) -C debug clean
 	$(MAKE) -C assert clean

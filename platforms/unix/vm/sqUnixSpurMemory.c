@@ -22,17 +22,31 @@
  *   FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  *   DEALINGS IN THE SOFTWARE.
  */
+#include "sq.h"
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
+#ifdef HAVE_UNISTD_H
+#  include <unistd.h>
+#endif
 #include <errno.h>
-#include <sys/types.h>
-#include <sys/mman.h>
+#ifdef HAVE_SYS_TYPES_H
+#  include <sys/types.h>
+#endif
+#ifdef HAVE_MMAP
+#  include <sys/mman.h>
+#endif
+#if DUAL_MAPPED_CODE_ZONE
+# include <sys/prctl.h>
+#ifdef HAVE_SYS_STAT_H
+#  include <sys/stat.h> /* For mode constants */
+#endif
+#ifdef HAVE_FCNTL_H
+#  include <fcntl.h>   /* For O_* constants */
+#endif
+#endif
 
-#include "sq.h"
 #include "sqMemoryAccess.h"
-#include "config.h"
 #include "debug.h"
 
 #if SPURVM
@@ -129,7 +143,7 @@ sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress
 	delta = max(pageSize,1024*1024);
 
 	while ((unsigned long)(address + bytes) > (unsigned long)address) {
-		alloc = mmap(address, bytes, PROT_READ | PROT_WRITE,
+		alloc = mmap(address, bytes, PROT_READ | PROT_WRITE /*| PROT_EXEC*/,
 					 MAP_ANON | MAP_PRIVATE, -1, 0);
 		if (alloc == MAP_FAILED) {
 			mmapErrno = errno;
@@ -161,19 +175,81 @@ sqDeallocateMemorySegmentAtOfSize(void *addr, sqInt sz)
 }
 
 # if COGVM
-void
-sqMakeMemoryExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
+#   if DUAL_MAPPED_CODE_ZONE
+/* We are indebted to Chris Wellons who designed this elegant API for dual
+ * mapping which we depend on for fine-grained code modification (classical
+ * Deutsch/Schiffman style inline cacheing and derivatives).  Chris's code is:
+	https://nullprogram.com/blog/2016/04/10/
+ *
+ * To cope with modern OSs that disallow executing code in writable memory we
+ * dual-map the code zone, one mapping with read/write permissions and the other
+ * with read/execute permissions. In such a configuration the code zone has
+ * already been alloated and is not included in (what is no longer) the initial
+ * alloc.
+ */
+static void
+memory_alias_map(size_t size, size_t naddr, void **addrs)
 {
-	unsigned long firstPage = roundDownToPage(startAddr);
-	unsigned long size = endAddr - firstPage;
+extern char  *exeName;
+	char path[128];
+	snprintf(path, sizeof(path), "/%s(%lu,%p)",
+			 exeName ? exeName : __FUNCTION__, (long)getpid(), addrs);
+	int fd = shm_open(path, O_RDWR | O_CREAT | O_EXCL, 0600);
+	if (fd == -1) {
+		perror("memory_alias_map: shm_open");
+		exit(0666);
+	}
+	shm_unlink(path);
+	ftruncate(fd, size);
+	for (size_t i = 0; i < naddr; i++) {
+		addrs[i] = mmap(addrs[i], size, PROT_READ | PROT_WRITE,
+								addrs[i] ? MAP_FIXED | MAP_SHARED : MAP_SHARED,
+								fd, 0);
+		if (addrs[i] == MAP_FAILED) {
+			perror("memory_alias_map: mmap(addrs[i]...");
+			exit(0667);
+		}
+	}
+	close(fd);
+	return;
+}
+#   endif /* DUAL_MAPPED_CODE_ZONE */
+void
+sqMakeMemoryExecutableFromToCodeToDataDelta(usqInt startAddr,
+											usqInt endAddr,
+											sqInt *codeToDataDelta)
+{
+	usqInt firstPage = roundDownToPage(startAddr);
+	usqInt size = endAddr - firstPage;
+
+#  if DUAL_MAPPED_CODE_ZONE
+	usqInt mappings[2];
+
+	mappings[0] = firstPage;
+	mappings[1] = 0;
+
+	memory_alias_map(size, 2, (void **)mappings);
+	assert(mappings[0] == firstPage);
+	*codeToDataDelta = mappings[1] - startAddr;
+
+	if (mprotect((void *)firstPage,
+				 size,
+				 PROT_READ | PROT_EXEC) < 0)
+		perror("mprotect(x,y,PROT_READ | PROT_EXEC)");
+
+#  else /* DUAL_MAPPED_CODE_ZONE */
+
 	if (mprotect((void *)firstPage,
 				 size,
 				 PROT_READ | PROT_WRITE | PROT_EXEC) < 0)
 		perror("mprotect(x,y,PROT_READ | PROT_WRITE | PROT_EXEC)");
+
+	assert(!codeToDataDelta);
+#  endif
 }
 
 void
-sqMakeMemoryNotExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
+sqMakeMemoryNotExecutableFromTo(usqInt startAddr, usqInt endAddr)
 {
 	unsigned long firstPage = roundDownToPage(startAddr);
 	unsigned long size = endAddr - firstPage;

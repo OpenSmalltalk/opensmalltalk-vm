@@ -64,12 +64,12 @@
 			color map indices. This color cube spans indices 40 through 255.
 		*/
 		{
-			int r,g,b;
+			unsigned int r,g,b;
 		
 			for(r=0;r<6;r++){
 				for(g=0;g<6;g++){
 					for(b=0;b<6;b++){
-						int i=40+((36*r)+(6*b)+g);
+						unsigned int i=40+((36*r)+(6*b)+g);
 						if(i>255){
 							fprintf(stderr,"index out of range "
 									"in color table compuation\n");
@@ -82,7 +82,7 @@
 	}//initializeSqueakColorMap;
 
 
--(void)setColorEntry:(int)i red:(int)r green:(int)g blue:(int)b
+-(void)setColorEntry:(unsigned int)i red:(unsigned int)r green:(unsigned int)g blue:(unsigned int)b
 {
      colorMap32[i]=NSSwapHostIntToBig((((r)&0xff00)<<16)|(((g)&0xff00)<<8)|((b)&0xff00)|0xff);
 }

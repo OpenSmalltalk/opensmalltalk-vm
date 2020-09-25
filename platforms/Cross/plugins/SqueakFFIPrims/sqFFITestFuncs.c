@@ -38,8 +38,118 @@ typedef struct ffiTestBiggerStruct {
   	long long t;
   	long long u;
 } ffiTestBiggerStruct;
+/*
+ * test returning struct by value
+ * clang --shared -Os -o libalientest.dylib alientest.c
+ * objdump --disassemble libalientest.dylib
+ */
+
+typedef struct Sd2 {double a,b;} ffiTestSd2;
+typedef struct Sf2 {float a,b;} ffiTestSf2;
+typedef struct Sl2 {long long a,b;} ffiTestSl2;
+typedef struct Si2 {int a,b;} ffiTestSi2;
+typedef struct Ss2 {short a,b;} ffiTestSs2;
+typedef struct Ssi {short a; int b;} ffiTestSsi;
+typedef struct Sfi {float a; int b;} ffiTestSfi;
+typedef struct Sfd {float a; double b;} ffiTestSfd;
+typedef struct Sdi {double a; int b;} ffiTestSdi;
+typedef struct Ssf {short a; float b;} ffiTestSsf;
+typedef struct SsSsi {short a; struct Ssi b;} ffiTestSsSsi;
+typedef struct SsSsf {short a; struct Ssf b;} ffiTestSsSsf;
+typedef struct Sf2d {float a,b; double c;} ffiTestSf2d;
+typedef struct Sfdf {float a; double b; float c;} ffiTestSfdf;
+typedef struct Ss2i {short a,b; int c;} ffiTestSs2i;
+typedef struct Ssis {short a; int b; short c;} ffiTestSsis;
+typedef struct Ssls {short a; long long b; short c;} ffiTestSsls;
+typedef struct Sslf {short a; long long b; float c;} ffiTestSslf;
+typedef struct Sf4 {float a,b,c,d;} ffiTestSf4;
+typedef struct Ss4 {short a,b,c,d;} ffiTestSs4;
+typedef struct SSdi5 {struct Sdi a,b,c,d,e;} ffiTestSSdi5; /* a structure longer than 8 eightBytes */
+
+typedef union  Ufi {float a; int b;} ffiTestUfi;
+typedef union  Ufd {float a; double b;} ffiTestUfd;
+typedef union  UdSi2 {double a; struct Si2 b;} ffiTestUdSi2;
+
+typedef struct SUfdUfi {union Ufd a; union Ufi b;} ffiTestSUfdUfi;
+typedef struct SUfdUdSi2 {union Ufd a; union UdSi2 b;} ffiTestSUfdUdSi2;
 
 #pragma export on
+
+EXPORT(ffiTestSd2)  ffiTestInitSd2  (double    a,double    b) { ffiTestSd2 v = {a,b}; return v; }
+EXPORT(ffiTestSf2)  ffiTestInitSf2  (float     a,float     b) { ffiTestSf2 v = {a,b}; return v; }
+EXPORT(ffiTestSl2)  ffiTestInitSl2  (long long a,long long b) { ffiTestSl2 v = {a,b}; return v; }
+EXPORT(ffiTestSi2)  ffiTestInitSi2  (int       a,int       b) { ffiTestSi2 v = {a,b}; return v; }
+EXPORT(ffiTestSs2)  ffiTestInitSs2  (short     a,short     b) { ffiTestSs2 v = {a,b}; return v; }
+EXPORT(ffiTestSsi)  ffiTestInitSsi  (short     a,int       b) { ffiTestSsi v = {a,b}; return v; }
+EXPORT(ffiTestSfi)  ffiTestInitSfi  (float     a,int       b) { ffiTestSfi v = {a,b}; return v; }
+EXPORT(ffiTestSfd)  ffiTestInitSfd  (float     a,double    b) { ffiTestSfd v = {a,b}; return v; }
+EXPORT(ffiTestSdi)  ffiTestInitSdi  (double    a,int       b) { ffiTestSdi v = {a,b}; return v; }
+EXPORT(ffiTestSsf)  ffiTestInitSsf  (short     a,float     b) { ffiTestSsf v = {a,b}; return v; }
+EXPORT(ffiTestSsSsi)ffiTestInitSsSsi(short     a,struct Ssi b) { ffiTestSsSsi v = {a,b}; return v; }
+EXPORT(ffiTestSsSsf)ffiTestInitSsSsf(short     a,struct Ssf b) { ffiTestSsSsf v = {a,b}; return v; }
+EXPORT(ffiTestSslf) ffiTestInitSslf (short     a,long long b, float  c) { ffiTestSslf v = {a,b,c}; return v; }
+EXPORT(ffiTestSf2d) ffiTestInitSf2d (float     a,float     b, double c) { ffiTestSf2d v = {a,b,c}; return v; }
+EXPORT(ffiTestSfdf) ffiTestInitSfdf (float     a,double    b, float  c) { ffiTestSfdf v = {a,b,c}; return v; }
+EXPORT(ffiTestSs2i) ffiTestInitSs2i (short     a,short     b, int    c) { ffiTestSs2i v = {a,b,c}; return v; }
+EXPORT(ffiTestSsis) ffiTestInitSsis (short     a,int       b, short  c) { ffiTestSsis v = {a,b,c}; return v; }
+EXPORT(ffiTestSsls) ffiTestInitSsls (short     a,long long b, short  c) { ffiTestSsls v = {a,b,c}; return v; }
+EXPORT(ffiTestSf4)  ffiTestInitSf4  (float     a,float     b, float  c,float d) { ffiTestSf4 v = {a,b,c,d}; return v; }
+EXPORT(ffiTestSs4)  ffiTestInitSs4  (short     a,short     b, short  c,short d) { ffiTestSs4 v = {a,b,c,d}; return v; }
+EXPORT(ffiTestSSdi5)ffiTestInitSSdi5(struct Sdi a,struct Sdi b,struct Sdi c, struct Sdi d,struct Sdi e) { ffiTestSSdi5 v = {a,b,c,d,e}; return v; }
+
+EXPORT(ffiTestUfi)  ffiTestInitUfi_f(float  a) { ffiTestUfi v; v.a=a; return v; }
+EXPORT(ffiTestUfi)  ffiTestInitUfi_i(int    b) { ffiTestUfi v; v.b=b; return v; }
+EXPORT(ffiTestUfd)  ffiTestInitUfd_f(float  a) { ffiTestUfd v; v.a=a; return v; }
+EXPORT(ffiTestUfd)  ffiTestInitUfd_d(double b) { ffiTestUfd v; v.b=b; return v; }
+EXPORT(ffiTestUdSi2) ffiTestInitUdSi2_d(double a) { ffiTestUdSi2 v; v.a=a; return v; }
+EXPORT(ffiTestUdSi2) ffiTestInitUdSi2_ii(int a,int b) { ffiTestUdSi2 v; v.b.a=a; v.b.b=b; return v; }
+EXPORT(ffiTestSUfdUfi)  ffiTestInitSUfdUfi  (union Ufd a,union Ufi b) { ffiTestSUfdUfi v = {a,b}; return v; }
+EXPORT(ffiTestSUfdUdSi2)  ffiTestInitSUfdUdSi2  (union Ufd a,union UdSi2 b) { ffiTestSUfdUdSi2 v = {a,b}; return v; }
+
+EXPORT(ffiTestSd2)  ffiTestReturnSd2  () { return ffiTestInitSd2(1.0 ,2.0 ); }
+EXPORT(ffiTestSf2)  ffiTestReturnSf2  () { return ffiTestInitSf2(1.0f,2.0f); }
+EXPORT(ffiTestSl2)  ffiTestReturnSl2  () { return ffiTestInitSl2(1LL,2LL); }
+EXPORT(ffiTestSi2)  ffiTestReturnSi2  () { return ffiTestInitSi2(1,2); }
+EXPORT(ffiTestSs2)  ffiTestReturnSs2  () { return ffiTestInitSs2(1,2); }
+EXPORT(ffiTestSfi)  ffiTestReturnSfi  () { return ffiTestInitSfi(1.0f,2); }
+EXPORT(ffiTestSfd)  ffiTestReturnSfd  () { return ffiTestInitSfd(1.0f,2.0); }
+EXPORT(ffiTestSdi)  ffiTestReturnSdi  () { return ffiTestInitSdi(1.0,2); }
+EXPORT(ffiTestSsf)  ffiTestReturnSsf  () { return ffiTestInitSsf(1,2.0); }
+EXPORT(ffiTestSsi)  ffiTestReturnSsi  () { return ffiTestInitSsi(1,2); }
+EXPORT(ffiTestSsSsi)ffiTestReturnSsSsi() { return ffiTestInitSsSsi(1,ffiTestInitSsi(2,3)); }
+EXPORT(ffiTestSsSsf)ffiTestReturnSsSsf() { return ffiTestInitSsSsf(1,ffiTestInitSsf(2,3.0f)); }
+EXPORT(ffiTestSf2d) ffiTestReturnSf2d () { return ffiTestInitSf2d(1.0f,2.0f,3.0); }
+EXPORT(ffiTestSfdf) ffiTestReturnSfdf () { return ffiTestInitSfdf(1.0f,2.0,3.0f); }
+EXPORT(ffiTestSs2i) ffiTestReturnSs2i () { return ffiTestInitSs2i(1,2,3); }
+EXPORT(ffiTestSsis) ffiTestReturnSsis () { return ffiTestInitSsis(1,2,3); }
+EXPORT(ffiTestSsls) ffiTestReturnSsls () { return ffiTestInitSsls(1,2LL,3); }
+EXPORT(ffiTestSslf) ffiTestReturnSslf () { return ffiTestInitSslf(1,2LL,3.0f); }
+EXPORT(ffiTestSf4)  ffiTestReturnSf4  () { return ffiTestInitSf4(1.0f,2.0f,3.0f,4.0f); }
+EXPORT(ffiTestSs4)  ffiTestReturnSs4  () { return ffiTestInitSs4(1,2,3,4); }
+EXPORT(ffiTestSSdi5)ffiTestReturnSSdi5() { return ffiTestInitSSdi5(
+                                                      ffiTestInitSdi(1.0,1),ffiTestInitSdi(2.0,2),
+                                                      ffiTestInitSdi(3.0,3),ffiTestInitSdi(4.0,4),
+                                                      ffiTestInitSdi(5.0,5)); }
+
+EXPORT(double) ffiTestSumSfd(ffiTestSfd x) { return (double) x.a + (double) x.b ; }
+EXPORT(double) ffiTestSumSfd_2(ffiTestSfd x,ffiTestSfd y) { return ffiTestSumSfd(x) + ffiTestSumSfd(y); }
+EXPORT(double) ffiTestSumSfd_4(ffiTestSfd x,ffiTestSfd y,ffiTestSfd z,ffiTestSfd t) { return ffiTestSumSfd_2(x,y) + ffiTestSumSfd_2(z,t); }
+EXPORT(double) ffiTestSumfWithSfd_4(float f,ffiTestSfd x,ffiTestSfd y,ffiTestSfd z,ffiTestSfd t) { return ((double) f) + ffiTestSumSfd_2(x,y) + ffiTestSumSfd_2(z,t); } /* consume 1 float register with first argument */
+EXPORT(double) ffiTestSumSdi(ffiTestSdi x) { return (double) x.a + (double) x.b ; }
+EXPORT(double) ffiTestSumSdi_2(ffiTestSdi x,ffiTestSdi y) { return ffiTestSumSdi(x) + ffiTestSumSdi(y); }
+EXPORT(double) ffiTestSumSdi_4(ffiTestSdi x,ffiTestSdi y,ffiTestSdi z,ffiTestSdi t) { return ffiTestSumSdi_2(x,y) + ffiTestSumSdi_2(z,t); }
+EXPORT(double) ffiTestSumdiWithSdi_4(double a,int b,ffiTestSdi x,ffiTestSdi y,ffiTestSdi z,ffiTestSdi t) { return a + ((double) b) + ffiTestSumSdi_2(x,y) + ffiTestSumSdi_2(z,t); } /* consume one int and 1 float register with 1st two arguments */
+EXPORT(double) ffiTestSumdWithSdi_4(double a,ffiTestSdi x,ffiTestSdi y,ffiTestSdi z,ffiTestSdi t) { return a + ffiTestSumSdi_2(x,y) + ffiTestSumSdi_2(z,t); } /* consume one float register with 1st argument */
+EXPORT(double) ffiTestSumiWithSdi_4(int b,ffiTestSdi x,ffiTestSdi y,ffiTestSdi z,ffiTestSdi t) { return ((double) b) + ffiTestSumSdi_2(x,y) + ffiTestSumSdi_2(z,t); } /* consume one int register with 1st argument */
+EXPORT(double) ffiTestSumSSdi5(ffiTestSSdi5 x) { return ffiTestSumSdi_4(x.a,x.b,x.c,x.d) + ffiTestSumSdi(x.e) ; }
+
+EXPORT(double) ffiTestSumSslf(ffiTestSslf x) { return (double) x.a + (double) x.b + (double) x.c ; }
+EXPORT(double) ffiTestSumSslf_2(ffiTestSslf x,ffiTestSslf y) { return ffiTestSumSslf(x) + ffiTestSumSslf(y); }
+EXPORT(double) ffiTestSumSslf_4(ffiTestSslf x,ffiTestSslf y,ffiTestSslf z,ffiTestSslf t) { return ffiTestSumSslf_2(x,y) + ffiTestSumSslf_2(z,t); }
+
+EXPORT(double) ffiTestSumSUfdUfi_f(ffiTestSUfdUfi x) {return (double) x.a.a + (double) x.b.a; }; /* sum the float parts */
+EXPORT(double) ffiTestSumSUfdUdSi2_d(ffiTestSUfdUdSi2 x) {return x.a.b + x.b.a; }; /* sum the double parts */
+
 EXPORT(char) ffiTestChars(char c1, char c2, char c3, char c4);
 EXPORT(short) ffiTestShorts(short c1, short c2, short c3, short c4);
 EXPORT(int) ffiTestInts(int c1, int c2, int c3, int c4);

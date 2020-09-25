@@ -4,7 +4,7 @@
 *	trunk sqWin32Window.c
 *****************************************************************************/
 
-#include <windows.h>
+#include <Windows.h>
 
 #include "sq.h"
 
@@ -52,11 +52,7 @@ int ioSeconds(void)
 int ioMSecs()
 {
   /* Make sure the value fits into Squeak SmallIntegers */
-#ifndef _WIN32_WCE
   return timeGetTime() & MillisecondClockMask;
-#else
-  return GetTickCount() & MillisecondClockMask;
-#endif
 }
 
 /* Note: ioMicroMSecs returns *milli*seconds */
@@ -97,10 +93,11 @@ currentUTCMicroseconds(unsigned __int64 *utcTickBaseUsecsp, DWORD *lastTickp, DW
 	 * resync to the system time.  
 	 */
 	if (currentTick < prevTick) {
-
+		unsigned __int64 now;
 		*baseTickp = currentTick;
 		GetSystemTimeAsFileTime(&utcNow);
-		*utcTickBaseUsecsp = *(unsigned __int64 *)&utcNow
+		now = ((unsigned __int64) utcNow.dwHighDateTime) << 32 | utcNow.dwLowDateTime;
+		*utcTickBaseUsecsp = now
 							/ TocksPerMicrosecond
 							- MicrosecondsFrom1601To1901;
 		return *utcTickBaseUsecsp;
@@ -109,13 +106,13 @@ currentUTCMicroseconds(unsigned __int64 *utcTickBaseUsecsp, DWORD *lastTickp, DW
 		  + (currentTick - *baseTickp) * MicrosecondsPerMillisecond;
 }
 
-unsigned volatile long long
+unsigned long long
 ioUTCMicroseconds() { return currentUTCMicroseconds(&utcTickBaseMicroseconds, &lastTick, &baseTick); }
 
 /* This is an expensive interface for use by profiling code that wants the time
  * now rather than as of the last heartbeat.
  */
-unsigned volatile long long
+unsigned long long
 ioUTCMicrosecondsNow() { return currentUTCMicroseconds(&utcTickBaseMicroseconds, &lastTick, &baseTick); }
 
 static DWORD dwTimerPeriod;
@@ -123,7 +120,6 @@ static DWORD dwTimerPeriod;
 void
 ioInitTime()
 {
-# if !defined(_WIN32_WCE)
 	TIMECAPS tCaps;
 
 	dwTimerPeriod = 0;
@@ -132,15 +128,12 @@ ioInitTime()
 	dwTimerPeriod = tCaps.wPeriodMin;
 	if (timeBeginPeriod(dwTimerPeriod) != 0)
 		return;
-# endif
 }
 
 void
 ioReleaseTime(void)
 {
-# if !defined(_WIN32_WCE)
 	if (dwTimerPeriod)
 		timeEndPeriod(dwTimerPeriod);
-# endif /* !defined(_WIN32_WCE) */
 }
 #endif /* STACKVM */

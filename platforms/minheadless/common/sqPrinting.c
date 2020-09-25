@@ -34,14 +34,14 @@
 #undef error
 
 void
-error(char *errorMessage)
+error(const char *errorMessage)
 {
     sqError(errorMessage);
 }
 #endif
 
 void
-sqError(char *errorMessage)
+sqError(const char *errorMessage)
 {
     fprintf(stderr, "%s\n", errorMessage);
     abort();
@@ -221,7 +221,7 @@ sqMessageBox(DWORD dwFlags, const TCHAR *titleString, const char* fmt, ...)
     va_list args;
     DWORD result;
 
-    ptr = sqUTF8toUTF16New(fmt);
+    ptr = sqUTF8ToUTF16New(fmt);
     buf = (TCHAR*)calloc(sizeof(TCHAR), 4096);
     va_start(args, fmt);
     wvsprintf(buf, ptr, args);

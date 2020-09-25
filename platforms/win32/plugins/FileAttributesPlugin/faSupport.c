@@ -3,7 +3,21 @@
  */
 #include <errno.h>
 #include <sys/types.h>
-#include <unistd.h>
+#if _MSC_VER
+# include <sys/stat.h>
+# define  S_IRUSR S_IREAD
+# define  S_IWUSR S_IWRITE
+# define  S_IXUSR S_IEXEC
+# define  S_IRGRP (S_IREAD >> 3)
+# define  S_IWGRP (S_IWRITE >> 3)
+# define  S_IXGRP (S_IEXEC >> 3)
+# define  S_IROTH (S_IREAD >> 6)
+# define  S_IWOTH (S_IWRITE >> 6)
+# define  S_IXOTH (S_IEXEC >> 6)
+# define S_ISDIR(m)  (((m) & S_IFMT) == S_IFDIR)
+#else
+# include <unistd.h>
+#endif
 #include <assert.h>
 
 #include "sq.h"
@@ -26,6 +40,7 @@ sqInt	status;
 		aFaPath->path[len++] = PATH_SEPARATOR;
 	aFaPath->path[len] = 0;
 	aFaPath->path_len = len;
+	aFaPath->path_dirlen = len;
 	aFaPath->path_file = aFaPath->path + len;
 	aFaPath->max_file_len = FA_PATH_MAX - len;
 
@@ -44,6 +59,7 @@ sqInt	status;
 	/* Set aFaPath->uxpath_file and max_file_len to the buffer after the directory */
 	aFaPath->winpathLPP_len = wcslen(aFaPath->winpathLPP);
 	aFaPath->winpath_len = aFaPath->winpathLPP_len - 4;
+	aFaPath->winpath_dirlen = aFaPath->winpath_len;
 	aFaPath->winpath_file = aFaPath->winpathLPP + aFaPath->winpathLPP_len;
 	aFaPath->winmax_file_len = FA_PATH_MAX - aFaPath->winpath_len;
 
@@ -62,6 +78,7 @@ sqInt	status;
 	memcpy(aFaPath->path, pathName, len);
 	aFaPath->path[len] = 0;
 	aFaPath->path_len = len;
+	aFaPath->path_dirlen = 0;
 	aFaPath->path_file = 0;
 	aFaPath->max_file_len = 0;
 
@@ -80,6 +97,7 @@ sqInt	status;
 	/* Set aFaPath->uxpath_file and max_file_len to the buffer after the directory */
 	aFaPath->winpathLPP_len = wcslen(aFaPath->winpathLPP);
 	aFaPath->winpath_len = aFaPath->winpathLPP_len - 4;
+	aFaPath->winpath_dirlen = 0;
 	aFaPath->winpath_file = 0;
 	aFaPath->winmax_file_len = 0;
 
@@ -99,6 +117,7 @@ sqInt	status;
 	if (len >= aFaPath->max_file_len)
 		return interpreterProxy->primitiveFailForOSError(FA_STRING_TOO_LONG);
 	strcpy(aFaPath->path_file, pathName);
+	aFaPath->path_len = strlen(aFaPath->path);
 
 	/* Convert to platform specific form */
 	status = MultiByteToWideChar(CP_UTF8, 0, 
@@ -106,6 +125,7 @@ sqInt	status;
 				aFaPath->winpath_file, aFaPath->winmax_file_len);
 	if (!status)
 		return interpreterProxy->primitiveFailForOSError(FA_STRING_TOO_LONG);
+	aFaPath->winpath_len = wcslen(aFaPath->winpath);
 
 	return 0;
 }
@@ -133,6 +153,7 @@ int		len;
 	wcscpy(aFaPath->winpath, pathName);
 	aFaPath->winpath[len] = 0;
 	aFaPath->winpath_len = len;
+	aFaPath->winpath_dirlen = 0;
 	aFaPath->winpath_file = 0;
 	aFaPath->winmax_file_len = 0;
 	aFaPath->winpathLPP_len = aFaPath->winpath_len + 4;
@@ -150,6 +171,7 @@ int		len;
 		return interpreterProxy->primitiveFailForOSError(FA_STRING_TOO_LONG);
 	/* Set aFaPath->uxpath_file and max_file_len to the buffer after the directory */
 	aFaPath->path_len = strlen(aFaPath->path);
+	aFaPath->path_dirlen = 0;
 	aFaPath->path_file = 0;
 	aFaPath->max_file_len = 0;
 
@@ -178,6 +200,7 @@ int	len;
 	memcpy(aFaPath->winpath, bytePtr, byteCount);
 	aFaPath->winpath[len] = 0;
 	aFaPath->winpath_len = len;
+	aFaPath->winpath_dirlen = 0;
 	aFaPath->winpathLPP_len = len + 4;
 	aFaPath->winpath_file = 0;
 	aFaPath->winmax_file_len = 0;
@@ -195,6 +218,7 @@ int	len;
 		return interpreterProxy->primitiveFailForOSError(FA_STRING_TOO_LONG);
 	/* Set aFaPath->uxpath_file and max_file_len to the buffer after the directory */
 	aFaPath->path_len = strlen(aFaPath->path);
+	aFaPath->path_dirlen = 0;
 	aFaPath->path_file = 0;
 	aFaPath->max_file_len = 0;
 
@@ -213,6 +237,7 @@ int		len;
 	if (len >= aFaPath->winmax_file_len)
 		return interpreterProxy->primitiveFailForOSError(FA_STRING_TOO_LONG);
 	wcscpy(aFaPath->winpath_file, pathName);
+	aFaPath->winpath_dirlen = wcslen(aFaPath->winpath);
 
 	/* Convert to St specific form */
 	len = WideCharToMultiByte(CP_UTF8, 
@@ -225,6 +250,7 @@ int		len;
 		NULL);
 	if (!len)
 		return interpreterProxy->primitiveFailForOSError(FA_STRING_TOO_LONG);
+	aFaPath->path_dirlen = strlen(aFaPath->path);
 
 	return 0;
 }
@@ -242,8 +268,8 @@ int		len;
  */
 void faClearFile(fapath *aFaPath)
 {
-	aFaPath->path[aFaPath->path_len] = 0;
-	aFaPath->winpath[aFaPath->winpath_len] = 0;
+	aFaPath->path[aFaPath->path_dirlen] = 0;
+	aFaPath->winpath[aFaPath->winpath_dirlen] = 0;
 }
 
 
@@ -271,8 +297,10 @@ int	i;
 	printf("PlatPath wcslen: %d\n", wcslen(aFaPath->winpath));
 	printf("PathLPP: 0x%p, Path: 0x%p, File: 0x%p\n",
 		(void *)aFaPath->winpathLPP, (void *)aFaPath->winpath, (void *)aFaPath->winpath_file);
-	printf("Max File Len:	%d\n", aFaPath->winmax_file_len);
+	printf("Max File Len:	%d (%d)\n", aFaPath->winmax_file_len, MAX_PATH);
 	printf("faGetPlatPathCPP(): 0x%p\n", faGetPlatPathCPP(aFaPath));
+	wprintf(L"faGetPlatPathCPP(): %s\n", faGetPlatPathCPP(aFaPath));
+	wprintf(L"faGetPlatPathLPP(): %s\n", faGetPlatPathLPP(aFaPath));
 	fflush(stdout);
 }
 
@@ -289,25 +317,24 @@ int	i;
  */
 sqInt faCheckFindData(fapath *aFaPath, sqInt closeFind)
 {
-sqInt	sz;
 sqInt	status;
 sqInt	haveEntry;
 
-haveEntry = FALSE;
-do {
-	if ((!(aFaPath->findData.cFileName[0] == L'.' && 
-		aFaPath->findData.cFileName[1] == 0)) 
-		&& wcscmp(aFaPath->findData.cFileName, L".."))
-			haveEntry = TRUE;
-	else {
-		status = FindNextFileW(aFaPath->directoryHandle, &aFaPath->findData);
-		if (status == 0) {
-			if (closeFind == 1)
-				FindClose(aFaPath->directoryHandle);
-			return FA_NO_MORE_DATA;
+	haveEntry = FALSE;
+	do {
+		if ((!(aFaPath->findData.cFileName[0] == L'.' && 
+			aFaPath->findData.cFileName[1] == 0)) 
+			&& wcscmp(aFaPath->findData.cFileName, L".."))
+				haveEntry = TRUE;
+		else {
+			status = FindNextFileW(aFaPath->directoryHandle, &aFaPath->findData);
+			if (status == 0) {
+				if (closeFind == 1)
+					FindClose(aFaPath->directoryHandle);
+				return FA_NO_MORE_DATA;
+			}
 		}
-	}
-} while (!haveEntry);
+	} while (!haveEntry);
 
 	status = faSetPlatFile(aFaPath, aFaPath->findData.cFileName);
 	if (status) return status;
@@ -548,6 +575,54 @@ sqInt	status;
 }
 
 
+/*
+ * winFileAttributes
+ *
+ * Populate the supplied WIN32_FILE_ATTRIBUTE_DATA structure.
+ *
+ * First attempt to use GetFileAttributesExW().
+ * However this fails sometimes and MS requires us to fall back to search
+ * for the file with FindFirstFileW() and copying the attributes across.
+ */
+sqInt winFileAttributes(fapath *aFaPath, WIN32_FILE_ATTRIBUTE_DATA *wfa)
+{
+int			status;
+HANDLE			findHandle;
+WIN32_FIND_DATAW	wfd;
+BOOL			closeStatus;
+DWORD			lastError;
+
+	status = GetFileAttributesExW(faGetPlatPathCPP(aFaPath), 
+			GetFileExInfoStandard, wfa);
+	if (status) 
+		/* Call succeeded and wfa is populated */
+		return status;
+
+	lastError = GetLastError();
+	/* For anything but a sharing violation, return the error */
+	if (lastError != ERROR_SHARING_VIOLATION) {
+		return 0; }
+
+	/* Try again using FindFirstFileW() */
+	findHandle = FindFirstFileW(faGetPlatPathCPP(aFaPath), &wfd);
+	if (findHandle == INVALID_HANDLE_VALUE) {
+		return 0; }
+
+	wfa->dwFileAttributes = wfd.dwFileAttributes;
+	wfa->ftCreationTime = wfd.ftCreationTime;
+	wfa->ftLastAccessTime = wfd.ftLastAccessTime;
+	wfa->ftLastWriteTime = wfd.ftLastWriteTime;
+	wfa->nFileSizeHigh = wfd.nFileSizeHigh;
+	wfa->nFileSizeLow = wfd.nFileSizeLow;
+
+	closeStatus = FindClose(findHandle);
+	if (!closeStatus) {
+		return 0; }
+
+	return 1;
+}
+
+
 
 /*
  * faFileAttribute
@@ -572,9 +647,10 @@ SYSTEMTIME	sysTime;
 faStatStruct	statBuf;
 WIN32_FILE_ATTRIBUTE_DATA winAttrs;
 sqLong		fileSize;
+DWORD		lastError;
 
-	status = GetFileAttributesExW(faGetPlatPathCPP(aFaPath), 
-			GetFileExInfoStandard, &winAttrs);
+
+	status = winFileAttributes(aFaPath, &winAttrs);
 	if (!status) {
 		interpreterProxy->primitiveFailForOSError(FA_CANT_STAT_PATH);
 		return 0; }
@@ -707,10 +783,10 @@ sqLong		fileSize;
 	if (lStat)
 		return FA_UNSUPPORTED_OPERATION;
 
-	status = GetFileAttributesExW(faGetPlatPathCPP(aFaPath), 
-			GetFileExInfoStandard, &winAttrs);
-	if (!status)
-		return FA_CANT_STAT_PATH;
+	status = winFileAttributes(aFaPath, &winAttrs);
+	if (!status) {
+		interpreterProxy->primitiveFailForOSError(FA_CANT_STAT_PATH);
+		return FA_CANT_STAT_PATH; }
 	faSetStMode(aFaPath, &st_mode, winAttrs.dwFileAttributes);
 
 	interpreterProxy->storePointerofObjectwithValue(
@@ -806,11 +882,11 @@ sqLong		fileSize;
  * Answer a boolean indicating whether the supplied path name exists.
  */
 sqInt faExists(fapath *aFaPath)
-{ WIN32_FILE_ATTRIBUTE_DATA winAttrs;
+{
+WIN32_FILE_ATTRIBUTE_DATA	winAttrs;
+int				status;
 
-	return GetFileAttributesExW(faGetPlatPathCPP(aFaPath), 
-								GetFileExInfoStandard,
-								&winAttrs);
+	return winFileAttributes(aFaPath, &winAttrs);
 }
 
 
@@ -833,9 +909,7 @@ sqInt	falseOop;
 sqInt	accessOop;
 WIN32_FILE_ATTRIBUTE_DATA winAttrs;
 
-
-	status = GetFileAttributesExW(faGetPlatPathCPP(aFaPath), 
-			GetFileExInfoStandard, &winAttrs);
+	status = winFileAttributes(aFaPath, &winAttrs);
 	if (!status) {
 		interpreterProxy->primitiveFailForOSError(FA_CANT_STAT_PATH);
 		return FA_CANT_STAT_PATH; }

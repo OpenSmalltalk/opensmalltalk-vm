@@ -98,22 +98,36 @@ void BX_CPU_C::cpu_loop(Bit32u max_instr_count)
   BX_CPU_THIS_PTR stop_reason = STOP_NO_REASON;
 #endif
 
+#if COG
+  int longjmparg;
+  if ((longjmparg = setjmp(BX_CPU_THIS_PTR jmp_buf_env))) {
+    // only from exception function we can get here ...
+    BX_INSTR_NEW_INSTRUCTION(BX_CPU_ID);
+    BX_TICK1_IF_SINGLE_PROCESSOR();
+# if BX_DEBUGGER || BX_EXTERNAL_DEBUGGER || BX_GDBSTUB
+    if (dbg_instruction_epilog()) return;
+# endif
+    CHECK_MAX_INSTRUCTIONS(max_instr_count);
+# if BX_GDBSTUB
+    if (bx_dbg.gdbstub_enabled) return;
+# endif
+	BX_CPU_THIS_PTR stop_reason = longjmparg;
+	return;
+  }
+#else /* COG */
   if (setjmp(BX_CPU_THIS_PTR jmp_buf_env)) {
     // only from exception function we can get here ...
     BX_INSTR_NEW_INSTRUCTION(BX_CPU_ID);
     BX_TICK1_IF_SINGLE_PROCESSOR();
-#if BX_DEBUGGER || BX_EXTERNAL_DEBUGGER || BX_GDBSTUB
+# if BX_DEBUGGER || BX_EXTERNAL_DEBUGGER || BX_GDBSTUB
     if (dbg_instruction_epilog()) return;
-#endif
+# endif
     CHECK_MAX_INSTRUCTIONS(max_instr_count);
-#if BX_GDBSTUB
+# if BX_GDBSTUB
     if (bx_dbg.gdbstub_enabled) return;
-#endif
-#if COG
-	BX_CPU_THIS_PTR stop_reason = STOP_CPU_HALTED;
-	return;
-#endif
+# endif
   }
+#endif /* COG */
 
   // If the exception() routine has encountered a nasty fault scenario,
   // the debugger may request that control is returned to it so that

@@ -55,7 +55,7 @@ sqInt createWindowWidthheightoriginXyattrlength(sqInt w,sqInt h,sqInt x,sqInt y,
 	return -1;
 }
 
-sqInt closeWindow(sqInt windowIndex) {
+sqInt closeWindow(wIndexType windowIndex) {
 	NSWindow	*windowHandle;
 	windowHandle = (__bridge NSWindow*) windowHandleFromIndex(windowIndex);
 	if(windowHandle == NULL) 
@@ -84,7 +84,7 @@ sqInt ioSizeOfWindow(wIndexType windowIndex)
 	return (w << 16) | (h & 0xFFFF);  /* w is high 16 bits; h is low 16 bits */
 }
 
-sqInt ioPositionOfNativeDisplay(unsigned long windowHandle)
+sqInt ioPositionOfNativeDisplay(usqIntptr_t windowHandle)
 {
 	sqInt w=0, h=0;
 	return (w << 16) | (h & 0xFFFF);  /* w is high 16 bits; h is low 16 bits */
@@ -101,7 +101,7 @@ sqInt ioSizeOfWindowSetxy(wIndexType windowIndex, sqInt x, sqInt y)
 	return 0;  /* w is high 16 bits; h is low 16 bits */
 }
 
-sqInt ioSetTitleOfWindow(sqInt windowIndex, char * newTitle, sqInt sizeOfTitle) {
+sqInt ioSetTitleOfWindow(wIndexType windowIndex, char * newTitle, sqInt sizeOfTitle) {
     NSString *title = [[NSString alloc] initWithBytes:newTitle length:sizeOfTitle encoding:NSUTF8StringEncoding];
     [[[NSApplication sharedApplication] mainWindow] setTitle:title];
     RELEASEOBJ(title);
@@ -112,7 +112,7 @@ sqInt ioSetTitleOfWindow(sqInt windowIndex, char * newTitle, sqInt sizeOfTitle) 
 /* ioSetIconOfWindow: args are int windowIndex, char* iconPath and
  * int size of new logo path. If one of the function is failing, the logo is not set.
  */
-sqInt ioSetIconOfWindow(sqInt windowIndex, char * iconPath, sqInt sizeOfPath) {
+sqInt ioSetIconOfWindow(wIndexType windowIndex, char * iconPath, sqInt sizeOfPath) {
 	//Not implemented
 	return -1;
 }
@@ -133,7 +133,7 @@ static windowDescriptorBlock *windowListRoot = NULL;
 /* simple linked list management code */
 /* window list management */
 
-windowDescriptorBlock *windowBlockFromIndex(sqInt windowIndex) {
+windowDescriptorBlock *windowBlockFromIndex(wIndexType windowIndex) {
 windowDescriptorBlock *entry;
 	entry = windowListRoot;
 	while(entry) {
@@ -156,7 +156,7 @@ windowDescriptorBlock *entry;
 }
 
 
-wHandleType windowHandleFromIndex(sqInt windowIndex)  {
+wHandleType windowHandleFromIndex(wIndexType windowIndex)  {
 windowDescriptorBlock *entry;
 	entry = windowListRoot;
 	while(entry) {
@@ -167,7 +167,7 @@ windowDescriptorBlock *entry;
 	return NULL;
 }
 
-sqInt windowIndexFromHandle(wHandleType windowHandle) {
+wIndexType windowIndexFromHandle(wHandleType windowHandle) {
 windowDescriptorBlock *entry;
 	entry = windowListRoot;
 	while(entry) {
@@ -178,7 +178,7 @@ windowDescriptorBlock *entry;
 	return 0;
 }
 
-sqInt windowIndexFromBlock( windowDescriptorBlock * thisWindow) {
+wIndexType windowIndexFromBlock( windowDescriptorBlock * thisWindow) {
 windowDescriptorBlock *entry;
 	entry = windowListRoot;
 	while(entry) {
@@ -249,22 +249,22 @@ void *ioGetWindowHandle(void)
 	return getSTWindow();
 }
 sqInt
-ioPositionOfNativeWindow(unsigned long windowHandle)
+ioPositionOfNativeWindow(usqIntptr_t windowHandle)
 {	return -1; }
 
 sqInt
-ioSizeOfNativeWindow(unsigned long windowHandle)
+ioSizeOfNativeWindow(usqIntptr_t windowHandle)
 {	return -1; }
 
 sqInt
-ioSizeOfNativeDisplay(unsigned long windowHandle)
+ioSizeOfNativeDisplay(usqIntptr_t windowHandle)
 {	return -1; }
 
 /* Return the pixel origin (topleft) of the platform-defined working area
    for the screen containing the given window. */
 /* copied from platforms/unix/vm-display-X11/sqUnixX11.c */
 sqInt
-ioPositionOfScreenWorkArea(long windowIndex)
+ioPositionOfScreenWorkArea(sqIntptr_t windowIndex)
 {
 /* We simply hard-code this.  There's no obvious window-manager independent way
  * to discover this that doesn't involve creating a window.
@@ -279,7 +279,7 @@ ioPositionOfScreenWorkArea(long windowIndex)
 /* Return the pixel extent of the platform-defined working area
    for the screen containing the given window. */
 sqInt
-ioSizeOfScreenWorkArea(long windowIndex)
+ioSizeOfScreenWorkArea(sqIntptr_t windowIndex)
 {	return -1; }
 
 /* eem Mar 22 2010 - new code to come up to level of Qwaq host window support

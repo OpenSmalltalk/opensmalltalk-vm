@@ -28,6 +28,9 @@
    Define plugin for Netscape Plugin building, needed for CodeWarrior
 */
 
+#ifndef _SQ_PLATFORM_SPECIFIC_H
+#define _SQ_PLATFORM_SPECIFIC_H
+
 #ifdef macintoshSqueak
 #if defined(TARGET_API_MAC_CARBON)
 # include <Types.h>
@@ -144,10 +147,6 @@ sqInt sqGrowMemoryBy(sqInt memoryLimit, sqInt delta);
 sqInt sqShrinkMemoryBy(sqInt memoryLimit, sqInt delta);
 sqInt sqMemoryExtraBytesLeft(int flag);
 #if COGVM
-extern void sqMakeMemoryExecutableFromTo(unsigned long, unsigned long);
-extern void sqMakeMemoryNotExecutableFromTo(unsigned long, unsigned long);
-
-extern int isCFramePointerInUse(void);
 extern int osCogStackPageHeadroom(void);
 extern void reportMinimumUnusedHeadroom(void);
 #endif
@@ -216,3 +215,5 @@ extern const pthread_key_t tltiIndex;
 # define VM_LABEL(foo) ((void)0)
 #endif
 #endif /* macintoshSqueak */
+
+#endif /* _SQ_PLATFORM_SPECIFIC_H */

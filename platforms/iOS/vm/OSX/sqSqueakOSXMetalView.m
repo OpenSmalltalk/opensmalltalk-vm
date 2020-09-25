@@ -127,7 +127,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 #pragma mark Initialization / Release
 
 - (id)initWithFrame:(NSRect)frameRect {
-    self = [self initWithFrame: NSRectToCGRect(frameRect) device: MTLCreateSystemDefaultDevice()];
+	self = [super initWithFrame:frameRect];
 
     [self setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
     [self setAutoresizesSubviews:YES];
@@ -138,6 +138,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 }
 
 - (void)awakeFromNib {
+	[super awakeFromNib];
     [self initialize];
 }
 
@@ -230,7 +231,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	
 	if (!firstDrawCompleted) {
 		firstDrawCompleted = YES;
-        extern sqInt getFullScreenFlag(void);
+		extern sqInt getFullScreenFlag(void);
 		if (getFullScreenFlag() == 0) {
 			[self.window makeKeyAndOrderFront: self];
         }
@@ -323,7 +324,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	[self setupMetal];
     [self setupFullScreendispBitsIndex];
 
-	// Alawys try to fill the texture with the pixels.
+	// Always try to fill the texture with the pixels.
 	if ( fullScreendispBitsIndex ) {
 		[self loadTexturesFrom: fullScreendispBitsIndex subRectangle: (clippyIsEmpty ? rect : NSRectFromCGRect(clippy))];
 		//[self loadTexturesFrom: fullScreendispBitsIndex subRectangle: rect];
@@ -338,7 +339,8 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 		currentRenderEncoder = [currentCommandBuffer renderCommandEncoderWithDescriptor: renderPassDescriptor];
 		
 		// Set the viewport.
-		[currentRenderEncoder setViewport: (MTLViewport){0.0, 0.0, lastFrameSize.width, lastFrameSize.height}];
+		CGSize drawableSize = self.drawableSize;
+		[currentRenderEncoder setViewport: (MTLViewport){0.0, 0.0, drawableSize.width, drawableSize.height}];
 
 		// Draw the screen rectangle.
 		[self drawScreenRect: rect];
@@ -360,9 +362,16 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	}
 }
 
+- (CGSize) screenSizeForTexture {
+	CGRect screenRect = [self bounds];
+	CGSize screenSize;
+	screenSize.width = (sqInt)screenRect.size.width;
+	screenSize.height = (sqInt)screenRect.size.height;
+	return screenSize;
+}
+ 
 - (void)loadTexturesFrom: (void*) displayStorage subRectangle: (NSRect) subRect {
-	
-	CGSize drawableSize = self.drawableSize;
+	CGSize drawableSize = [self screenSizeForTexture];
     if (!CGSizeEqualToSize(lastFrameSize,drawableSize) || !displayTexture ||
 		currentDisplayStorage != displayStorage) {
 		//NSLog(@"old %f %f %f %f new %f %f %f %f",lastFrameSize.origin.x,lastFrameSize.origin.y,lastFrameSize.size.width,lastFrameSize.size.height,self.frame.origin.x,r.origin.y,r.size.width,r.size.height);
@@ -371,16 +380,26 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 		[self updateDisplayTextureStorage];
     }
 	
+	// Clip the subrect against the texture bounds, to avoid an edge condition
+	// that ends crashing the VM.
+	subRect = NSIntersectionRect(subRect, NSMakeRect(0, 0, displayTextureWidth, displayTextureHeight));
+	if(NSIsEmptyRect(subRect))
+	{
+		// Discard the update of empty texture regions.
+		return;
+	}
+	
 	MTLRegion region = MTLRegionMake2D(subRect.origin.x, displayTextureHeight - subRect.origin.y - subRect.size.height, subRect.size.width, subRect.size.height);
 	
 	unsigned int sourcePitch = displayTextureWidth*4;
+
 	//char *source = ((char*)displayStorage) + (unsigned int)(subRect.origin.x + subRect.origin.y*displayTextureWidth)*4;
 	char *source = ((char*)displayStorage) + (unsigned int)(subRect.origin.x + (displayTextureHeight-subRect.origin.y-subRect.size.height)*displayTextureWidth)*4;
 	[displayTexture replaceRegion: region mipmapLevel: 0 withBytes: source bytesPerRow: sourcePitch];
 }
 
 -(void) updateDisplayTextureStorage {
-	CGSize drawableSize = self.drawableSize;
+	CGSize drawableSize = [self screenSizeForTexture];
 	displayTextureWidth = drawableSize.width;
 	displayTextureHeight = drawableSize.height;
 	displayTexturePitch = displayTextureWidth*4;
@@ -706,15 +725,15 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	inputSelection= NSMakeRange(NSNotFound, 0);
 }
 
-- (void)		 unmarkText {
+- (void)unmarkText {
 	inputMark= NSMakeRange(NSNotFound, 0);
 }
 
-- (BOOL)		 hasMarkedText {
+- (BOOL)hasMarkedText {
 	return inputMark.location != NSNotFound;
 }
 
-- (NSInteger)		 conversationIdentifier	{
+- (NSInteger)conversationIdentifier	{
 	return (NSInteger )self;
 }
 
@@ -722,11 +741,11 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	return nil;
 }
 
-- (NSRange)		 markedRange {
+- (NSRange)markedRange {
 	return inputMark;
 }
 
-- (NSRange)		 selectedRange {
+- (NSRange)selectedRange {
 	return inputSelection;
 }
 
@@ -734,11 +753,11 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	return NSMakeRect(0,0, 0,0);
 }
 
-- (NSUInteger) characterIndexForPoint: (NSPoint)thePoint {
+- (NSUInteger)characterIndexForPoint: (NSPoint)thePoint {
 	return 0;
 }
 
-- (NSArray *) validAttributesForMarkedText {
+- (NSArray *)validAttributesForMarkedText {
 	return nil;
 }
 
@@ -857,29 +876,10 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 
 #pragma mark Fullscreen
 
-- (void)  ioSetFullScreen: (sqInt) fullScreen {
-
-	if ([self isInFullScreenMode] == YES && (fullScreen == 1))
-		return;
-	if ([self isInFullScreenMode] == NO && (fullScreen == 0))
-		return;
-
-	if ([self isInFullScreenMode] == NO && (fullScreen == 1)) {
-       self.fullScreenInProgress = YES;
-		NSDictionary* options = [NSDictionary dictionaryWithObjectsAndKeys:
-			[NSNumber numberWithInt:
-				NSApplicationPresentationHideDock |
-				NSApplicationPresentationHideMenuBar ],
-			NSFullScreenModeApplicationPresentationOptions, nil];
-		[self enterFullScreenMode:[NSScreen mainScreen] withOptions:options];
-	}
-
-	if ([self isInFullScreenMode] == YES && (fullScreen == 0)) {
-        self.fullScreenInProgress = YES;
-		[self exitFullScreenModeWithOptions: NULL];
-		if ([self.window isKeyWindow] == NO) {
-			[self.window makeKeyAndOrderFront: self];
-		}
+- (void) ioSetFullScreen: (sqInt) fullScreen {
+	if ((self.window.styleMask & NSFullScreenWindowMask) != (fullScreen == 1)) {
+		self.fullScreenInProgress = YES;
+        [self.window toggleFullScreen: nil];
 	}
 }
 
@@ -940,7 +940,6 @@ id<MTLDevice>
 getMainWindowMetalDevice(void) {
 	return mainMetalView ? mainMetalView.device : nil;
 }
-
 
 id<MTLCommandQueue>
 getMainWindowMetalCommandQueue(void) {

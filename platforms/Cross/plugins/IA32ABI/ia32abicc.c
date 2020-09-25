@@ -8,7 +8,7 @@
 /* null if compiled on other than x86, to get around gnu make bugs or
  * misunderstandings on our part.
  */
-#if defined(_M_I386) || defined(_X86_) || defined(i386) || defined(i486) || defined(i586) || defined(i686) || defined(__i386__) || defined(__386__) || defined(X86) || defined(I386)
+#if defined(_M_I386) || defined(_M_IX86) || defined(_X86_) || defined(i386) || defined(i486) || defined(i586) || defined(i686) || defined(__i386__) || defined(__386__) || defined(X86) || defined(I386)
 
 #if defined(_MSC_VER) || defined(__MINGW32__)
 # include "windows.h" /* for GetSystemInfo & VirtualAlloc */
@@ -23,9 +23,11 @@ struct objc_class *baz;
 void setbaz(void *p) { baz = p; }
 void *getbaz() { return baz; }
 # endif
+# include <unistd.h> /* for getpagesize/sysconf */
 # include <stdlib.h> /* for valloc */
 # include <sys/mman.h> /* for mprotect */
 #else
+# include <unistd.h> /* for getpagesize/sysconf */
 # include <stdlib.h> /* for valloc */
 # include <sys/mman.h> /* for mprotect */
 #endif
@@ -232,7 +234,7 @@ thunkEntry(void *thunkp, sqIntptr_t *stackp)
 		long vhigh = vmcc.rvs.valleint64.high;
 #if _MSC_VER
 				_asm mov edx, dword ptr vhigh;
-#elif __GNUC__
+#elif __GNUC__  || __SUNPRO_C
 				__asm__ ("mov %0,%%edx" : : "m"(vhigh));
 #else
 # error need to load edx with vmcc.rvs.valleint64.high on this compiler
@@ -244,7 +246,7 @@ thunkEntry(void *thunkp, sqIntptr_t *stackp)
 		double valflt64 = vmcc.rvs.valflt64;
 #if _MSC_VER
 				_asm fld qword ptr valflt64;
-#elif __GNUC__
+#elif __GNUC__ || __SUNPRO_C
 				__asm__ ("fldl %0" : : "m"(valflt64));
 #else
 # error need to load %f0 with vmcc.rvs.valflt64 on this compiler
@@ -277,7 +279,7 @@ static unsigned long pagesize = 0;
 #endif
 
 void *
-allocateExecutablePage(long *size)
+allocateExecutablePage(sqIntptr_t *size)
 {
 	void *mem;
 
@@ -300,7 +302,11 @@ allocateExecutablePage(long *size)
 	if (mem)
 		*size = pagesize;
 #else
+# if !defined(_POSIX_C_SOURCE) || _POSIX_C_SOURCE < 200112L
 	long pagesize = getpagesize();
+# else
+	long pagesize = sysconf(_SC_PAGESIZE);
+# endif
 
 	/* This is equivalent to valloc(pagesize) but at least on some versions of
 	 * SELinux valloc fails to yield an wexecutable page, whereas this mmap

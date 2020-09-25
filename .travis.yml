@@ -18,7 +18,7 @@ notifications:
 aliases:
   - &mac-build
     os: osx
-    osx_image: xcode7.3
+    osx_image: xcode8.3
 
 notifications:
   email:
@@ -35,10 +35,38 @@ jobs:
   - env: ARCH="macos64x64" FLAVOR="squeak.cog.spur"
     <<: *mac-build
   - env: ARCH="linux32x86" FLAVOR="pharo.cog.spur" HEARTBEAT="threaded"
-  - env: ARCH="macos32x86" FLAVOR="pharo.cog.spur"
-    <<: *mac-build
+  # - env: ARCH="macos32x86" FLAVOR="pharo.cog.spur"
+  #   <<: *mac-build
   - env: ARCH="linux64x64" FLAVOR="pharo.cog.spur" HEARTBEAT="threaded"
-  - env: ARCH="macos64x64" FLAVOR="pharo.cog.spur"
+  # - env: ARCH="macos64x64" FLAVOR="pharo.cog.spur"
+  #   <<: *mac-build
+
+  - stage: "Minheadless CMake builds"
+    env: ARCH="linux32x86" FLAVOR="squeak.cog.spur" CPU_ARCH="x86" BUILD_WITH_CMAKE="yes"
+  - env: ARCH="macos32x86" FLAVOR="squeak.cog.spur" CPU_ARCH="x86" BUILD_WITH_CMAKE="yes"
+    <<: *mac-build
+  - env: ARCH="linux64x64" FLAVOR="squeak.cog.spur" CPU_ARCH="x64" BUILD_WITH_CMAKE="yes"
+  - env: ARCH="macos64x64" FLAVOR="squeak.cog.spur" CPU_ARCH="x64" BUILD_WITH_CMAKE="yes"
+    <<: *mac-build
+  - env: ARCH="linux32x86" FLAVOR="pharo.cog.spur" CPU_ARCH="x86" HEARTBEAT="threaded" BUILD_WITH_CMAKE="yes"
+  - env: ARCH="macos32x86" FLAVOR="pharo.cog.spur" CPU_ARCH="x86" BUILD_WITH_CMAKE="yes"
+    <<: *mac-build
+  - env: ARCH="linux64x64" FLAVOR="pharo.cog.spur" CPU_ARCH="x64" HEARTBEAT="threaded" BUILD_WITH_CMAKE="yes"
+  - env: ARCH="macos64x64" FLAVOR="pharo.cog.spur" CPU_ARCH="x64" BUILD_WITH_CMAKE="yes"
+    <<: *mac-build
+
+    # Minheadless CMake builds with SDL2 traditional display
+  - env: ARCH="linux32x86" FLAVOR="squeak.cog.spur+sdl2" CPU_ARCH="x86" BUILD_WITH_CMAKE="yes"
+  - env: ARCH="macos32x86" FLAVOR="squeak.cog.spur+sdl2" CPU_ARCH="x86" BUILD_WITH_CMAKE="yes"
+    <<: *mac-build
+  - env: ARCH="linux64x64" FLAVOR="squeak.cog.spur+sdl2" CPU_ARCH="x64" BUILD_WITH_CMAKE="yes"
+  - env: ARCH="macos64x64" FLAVOR="squeak.cog.spur+sdl2" CPU_ARCH="x64" BUILD_WITH_CMAKE="yes"
+    <<: *mac-build
+  - env: ARCH="linux32x86" FLAVOR="pharo.cog.spur+sdl2" CPU_ARCH="x86" HEARTBEAT="threaded" BUILD_WITH_CMAKE="yes"
+  - env: ARCH="macos32x86" FLAVOR="pharo.cog.spur+sdl2" CPU_ARCH="x86" BUILD_WITH_CMAKE="yes"
+    <<: *mac-build
+  - env: ARCH="linux64x64" FLAVOR="pharo.cog.spur+sdl2" CPU_ARCH="x64" HEARTBEAT="threaded" BUILD_WITH_CMAKE="yes"
+  - env: ARCH="macos64x64" FLAVOR="pharo.cog.spur+sdl2" CPU_ARCH="x64" BUILD_WITH_CMAKE="yes"
     <<: *mac-build
 
   - stage: "Other Linux builds"
@@ -51,7 +79,7 @@ jobs:
   - env: ARCH="linux32x86" FLAVOR="pharo.cog.spur" HEARTBEAT="itimer"
   - env: ARCH="linux32x86" FLAVOR="pharo.sista.spur" HEARTBEAT="threaded"
     compiler: clang
-  - env: ARCH="linux32x86" FLAVOR="pharo.sista.spur" HEARTBEAT="itimer" 
+  - env: ARCH="linux32x86" FLAVOR="pharo.sista.spur" HEARTBEAT="itimer"
     compiler: clang
 
   - stage: "Other Mac builds"
@@ -127,6 +155,40 @@ jobs:
   - env: FLAVOR="pharo.sista.spur"
   - env: FLAVOR="squeak.cog.spur.lowcode"
   - env: FLAVOR="pharo.cog.spur.lowcode"
+  - env: ARCH="linux64x64" FLAVOR="newspeak.cog.spur"
+  - env: ARCH="linux32x86" FLAVOR="newspeak.cog.spur"
+  - env: ARCH="macos64x64" FLAVOR="newspeak.cog.spur"
+  - env: ARCH="macos32x86" FLAVOR="newspeak.cog.spur"
+  - env: ARCH="linux64x64" FLAVOR="newspeak.stack.spur"
+  - env: ARCH="linux32x86" FLAVOR="newspeak.stack.spur"
+  - env: ARCH="macos64x64" FLAVOR="newspeak.stack.spur"
+  - env: ARCH="macos32x86" FLAVOR="newspeak.stack.spur"
+  - env: ARCH="linux32ARMv6" FLAVOR="newspeak.cog.spur"
+  - env: ARCH="linux32ARMv6" FLAVOR="newspeak.stack.spur"
+  - env: ARCH="linux64x64" FLAVOR="pharo.cog.spur" HEARTBEAT="threaded"
+  - env: ARCH="linux32x86" FLAVOR="pharo.cog.spur" HEARTBEAT="threaded"
+  - env: ARCH="linux64x64" FLAVOR="pharo.cog.spur" HEARTBEAT="itimer"
+  - env: ARCH="linux32x86" FLAVOR="pharo.cog.spur" HEARTBEAT="itimer"
+  - env: ARCH="macos64x64" FLAVOR="pharo.cog.spur"
+  - env: ARCH="macos32x86" FLAVOR="pharo.cog.spur"
+  - env: ARCH="macos64x64" FLAVOR="pharo.cog.spur.lowcode"
+  - env: ARCH="macos32x86" FLAVOR="pharo.cog.spur.lowcode"
+  - env: ARCH="linux64x64" FLAVOR="pharo.sista.spur" HEARTBEAT="threaded"
+  - env: ARCH="linux32x86" FLAVOR="pharo.sista.spur" HEARTBEAT="threaded"
+  - env: ARCH="linux64x64" FLAVOR="pharo.sista.spur" HEARTBEAT="itimer"
+  - env: ARCH="linux32x86" FLAVOR="pharo.sista.spur" HEARTBEAT="itimer"
+  - env: ARCH="macos64x64" FLAVOR="pharo.sista.spur"
+  - env: ARCH="macos32x86" FLAVOR="pharo.sista.spur"
+  - env: ARCH="linux64x64" FLAVOR="pharo.stack.spur"
+  - env: ARCH="linux32x86" FLAVOR="pharo.stack.spur"
+  - env: ARCH="macos64x64" FLAVOR="pharo.stack.spur"
+  - env: ARCH="macos32x86" FLAVOR="pharo.stack.spur"
+  - env: ARCH="linux64x64" FLAVOR="pharo.stack.spur.lowcode"
+  - env: ARCH="linux32x86" FLAVOR="pharo.stack.spur.lowcode"
+  - env: ARCH="macos64x64" FLAVOR="pharo.stack.spur.lowcode"
+  - env: ARCH="macos32x86" FLAVOR="pharo.stack.spur.lowcode"
+  - env: ARCH="linux32ARMv6" FLAVOR="pharo.cog.spur"
+  - env: ARCH="linux32ARMv6" FLAVOR="pharo.stack.spur"
 
 install: ./scripts/ci/travis_install.sh
 
@@ -138,7 +200,7 @@ after_success: (cd deploy && ./filter-exec.sh pack-vm.sh)
 
 deploy:
   - provider: script # Deploy bleeding edge to Bintray
-    script: (cd deploy && ./bintray.sh)
+    script: (cd deploy && ./filter-exec.sh ./bintray.sh)
     skip_cleanup: true
     on:
       repo: OpenSmalltalk/opensmalltalk-vm

@@ -1,0 +1,14 @@
+#############################################################################
+# Plugin Makefile for Win32/64 VM using MSVC, e.g. 2017 Community, and gnu make
+# Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
+#############################################################################
+
+# CameraPlugin build assumes it's external.
+# Further it must be built using the MSVC++ toolchain because of lack of COM
+# support in the mingw toolchain.
+
+EXTRALIBS:=strmbase.lib strmiids.lib
+
+include ../common/Makefile.msvc.plugin
+
+INCLUDES:=-I$(WIN32MISCDIR) $(INCLUDES)

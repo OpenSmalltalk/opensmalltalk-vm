@@ -32,7 +32,7 @@ else
 				while [ ! -d "/Volumes/$VOLUME/Squeak.app" ]; do sleep 1; done
 				rm -rf $VM
 				cp -Rp "/Volumes/$VOLUME/Squeak.app" $VM
-				eject "/Volumes/$VOLUME"
+				diskutil eject "/Volumes/$VOLUME"
 			fi
 		fi
 		VM=$VM/Contents/MacOS/Squeak;;
@@ -68,5 +68,9 @@ else
 		echo "If you've built your own VM you can substitute that using the -vm myvm argument to this script." 1>&2
 		exit 1
 	esac
+fi
+if [ "$1" = -vmargs ]; then
+	VM="$VM $2"
+	shift;shift
 fi
 echo latest 64-bit VM on $OS is $VM

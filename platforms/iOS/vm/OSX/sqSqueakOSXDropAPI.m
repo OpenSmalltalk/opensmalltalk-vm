@@ -40,7 +40,7 @@
 #include "sq.h"
 #import "sqSqueakOSXView.h"
 
-extern wHandleType windowHandleFromIndex(sqInt windowIndex);
+extern wHandleType windowHandleFromIndex(sqIntptr_t windowIndex);
 extern struct VirtualMachine* interpreterProxy;
 
 sqInt dropInit(void) {

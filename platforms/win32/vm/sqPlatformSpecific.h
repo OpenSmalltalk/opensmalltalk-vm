@@ -8,7 +8,8 @@
 
 */
 
-
+#ifndef _SQ_PLATFORM_SPECIFIC_H
+#define _SQ_PLATFORM_SPECIFIC_H
 
 #if _WIN32 || _WIN64
 /* Override necessary definitions */
@@ -17,7 +18,7 @@
 
 
 #ifdef _MSC_VER
-#include <windows.h>
+#include <Windows.h>
 #define HAVE_BOOLEAN 1 /* for jpegReaderWriter plugin compatibility */
 #endif
 
@@ -58,9 +59,11 @@ size_t sqImageFileWrite(const void *ptr, size_t sz, size_t count, sqImageFile h)
 /* pluggable primitive support */
 #if defined(_MSC_VER) || defined(__MINGW32__)
 #  undef EXPORT
-#  define EXPORT(returnType) __declspec( dllexport ) returnType
+#  define EXPORT(returnType) __declspec(dllexport) returnType
+#  undef IMPORT
+#  define IMPORT(returnType) __declspec(dllimport) returnType
 #  undef VM_EXPORT
-#  define VM_EXPORT __declspec( dllexport ) 
+#  define VM_EXPORT __declspec(dllexport) 
 #endif 
 
 
@@ -101,7 +104,7 @@ size_t sqImageFileWrite(const void *ptr, size_t sz, size_t count, sqImageFile h)
 error "Not Win32 or Win64!"
 #endif /* _WIN32 || _WIN64 */
 
-int ioSetCursorARGB(sqInt bitsIndex, sqInt w, sqInt h, sqInt x, sqInt y);
+sqInt ioSetCursorARGB(sqInt bitsIndex, sqInt w, sqInt h, sqInt x, sqInt y);
 
 /* poll and profile thread priorities.  The stack vm uses a thread to cause the
  * VM to poll for I/O, check for delay expiry et al at regular intervals.  Both
@@ -121,10 +124,6 @@ int ioSetCursorARGB(sqInt bitsIndex, sqInt w, sqInt h, sqInt x, sqInt y);
 #define PROF_THREAD_PRIORITY THREAD_PRIORITY_TIME_CRITICAL
 
 #if COGVM
-extern void sqMakeMemoryExecutableFromTo(usqIntptr_t, usqIntptr_t);
-extern void sqMakeMemoryNotExecutableFromTo(usqIntptr_t, usqIntptr_t);
-
-extern int isCFramePointerInUse(void);
 extern int osCogStackPageHeadroom(void);
 extern void reportMinimumUnusedHeadroom(void);
 #endif
@@ -174,3 +173,5 @@ extern const unsigned long tltiIndex;
 #else
 # error "unknown architecture, program counter field undefined"
 #endif
+
+#endif /* _SQ_PLATFORM_SPECIFIC_H */

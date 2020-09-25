@@ -63,6 +63,8 @@ printf(CLASS " methodsFor: 'accessing' stamp: 'eem %d/%d/%d %d:%02d'!\r"\
 	print(SFlag,sflag);
 	print(TFlag,tflag);
 	print(temp,priorPc);
+	print(instr,instr);
+	print(NextInstr,NextInstr);
 
 	return 0;
 }

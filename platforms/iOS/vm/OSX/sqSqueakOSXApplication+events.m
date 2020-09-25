@@ -81,12 +81,15 @@ static int buttonState=0;
         && event.window != [sqApplication aboutWindow];
 }
 
-// Consume all pending events in the NSApp
-// Events may come from the window open by the VM or windows open by other windowing systems
-// We need to consume all events in the queue, otherwise this may produce lockups when e.g., switching resolutions
-// If the event does not correspond to this window, we take it from the event queue anyways and re-post it afterwards
-// This gives other windows the opportunity to consume their events
 - (void) pumpRunLoopEventSendAndSignal:(BOOL)signal {
+
+#ifdef PharoVM
+	// Consume all pending events in the NSApp
+	// Events may come from the window open by the VM or windows open by other windowing systems
+	// We need to consume all events in the queue, otherwise this may produce lockups when e.g., switching resolutions
+	// If the event does not correspond to this window, we take it from the event queue anyways and re-post it afterwards
+	// This gives other windows the opportunity to consume their events
+	@autoreleasepool {
        NSEvent *event;
        NSMutableArray *alienEventQueue = [[NSMutableArray alloc] init];
        while ((event = [NSApp nextEventMatchingMask:NSEventMaskAny
@@ -103,15 +106,30 @@ static int buttonState=0;
                interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
            }
          }
+       }
+       // Put back in the queue all events that did not belong to this window
+       // They will be managed by other windowing systems
+       // (or by a subsequent invocation to this function)
+       while ((event = [alienEventQueue firstObject])) {
+         [NSApp postEvent: event atStart: NO];
+         [alienEventQueue removeObject: event];
+       }
      }
+#else
+	NSEvent *event;
 
-     // Put back in the queue all events that did not belong to this window
-     // They will be managed by other windowing systems
-     // (or by a subsequent invocation to this function)
-     while ((event = [alienEventQueue firstObject])) {
-       [NSApp postEvent: event atStart: NO];
-       [alienEventQueue removeObject: event];
-     }
+    while ((event = [NSApp
+                        nextEventMatchingMask:NSAnyEventMask
+                        untilDate:nil 
+                        inMode:NSEventTrackingRunLoopMode 
+                        dequeue:YES])) {
+
+        [NSApp sendEvent: event];
+        if (signal) {
+            interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
+        }
+    }
+#endif
 }
 
 - (void) pumpRunLoop {	
@@ -154,7 +172,7 @@ static int buttonState=0;
 - (void) recordCharEvent:(NSString *) unicodeString fromView: (NSView <sqSqueakOSXView> *) mainView {
 	sqKeyboardEvent evt;
 	unichar unicode;
-	unsigned char macRomanCharacter;
+	unsigned char isoCharacter;
 	NSInteger	i;
 	NSRange picker;
 	NSUInteger totaLength;
@@ -185,7 +203,7 @@ static int buttonState=0;
 		}
 
 		NSString *lookupString = AUTORELEASEOBJ([[NSString alloc] initWithCharacters: &unicode length: 1]);
-		[lookupString getBytes: &macRomanCharacter maxLength: 1 usedLength: NULL encoding: NSMacOSRomanStringEncoding
+		[lookupString getBytes: &isoCharacter maxLength: 1 usedLength: NULL encoding: NSISOLatin1StringEncoding
 					   options: 0 range: picker remainingRange: NULL];
 
 		evt.pressCode = EventKeyDown;
@@ -195,7 +213,7 @@ static int buttonState=0;
 		evt.windowIndex =   mainView.windowLogic.windowIndex;
 		[self pushEventToQueue: (sqInputEvent *)&evt];
 
-		evt.charCode =	macRomanCharacter;
+		evt.charCode =	isoCharacter;
 		evt.pressCode = EventKeyChar;
 		evt.modifiers = evt.modifiers;		
 		evt.utf32Code = unicode;
@@ -275,32 +293,76 @@ static int buttonState=0;
 - (void) recordWheelEvent:(NSEvent *) theEvent fromView: (NSView <sqSqueakOSXView> *) aView{
 
 	[self recordMouseEvent: theEvent fromView: aView];
+	static float prevXDelta = 0;
+	static float prevYDelta = 0;
+	static int prevXTime = 0;
+	static int prevYTime = 0;
+#if (MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_7)
+	CGFloat x = [theEvent scrollingDeltaX];
+	CGFloat y = [theEvent scrollingDeltaY];
+	/* Convert event units into scrolling units
+	   Assume that 1 event unit corresponds to a single wheel mouse notch
+	   A single notch evaluates to 120 scrolling units */
+	float xDelta = x * 120;
+	float yDelta = y * 120;
+	if ([theEvent respondsToSelector:@selector(hasPreciseScrollingDeltas)]) {
+		if ([theEvent hasPreciseScrollingDeltas]) {
+			/* Note: in case of precise scrolling x,y are given in points
+			   Assume that 120 scrolling units corresponds to 3 lines delta 
+			   that is 40 points for a 13.3 point line grid
+			   hence the factor 3 */
+			xDelta = x * 3;
+			yDelta = y * 3;
+		}
+	}
+#else
 	CGFloat x = [theEvent deltaX];
 	CGFloat y = [theEvent deltaY];
-
+	float xDelta = x * 120;
+	float yDelta = y * 120;
+#endif
+	/* accumulate enough delta before sending the event to the image */
+	int now = ioMSecs();
+	if( xDelta != 0 ) {
+		prevXDelta = ( now - prevXTime < 500) ? prevXDelta + xDelta : xDelta;
+		prevXTime = now;
+	}
+	if( yDelta != 0 ) {
+		prevYDelta = ( now - prevYTime < 500) ? prevYDelta + yDelta : yDelta;
+		prevYTime = now;
+	}
 	if (sendWheelEvents) {
+		float limit = 20;
+		if (-limit < prevXDelta && prevXDelta < limit && -limit < prevYDelta && prevYDelta < limit ) return;
 		sqMouseEvent evt;
 		memset(&evt,0,sizeof(evt));
 
 		evt.type = EventTypeMouseWheel;
 		evt.timeStamp = ioMSecs();
 
-		evt.x =  x * 32;
-		evt.y =  y * 32;
+		/* Note: if natural scrolling preference is enabled, the VM should generate a positive x for motion from left to right
+		 * and a positive y for a motion from bottom to up */
+		evt.x = - prevXDelta; /* we have to change the x convention, presumably because natural is inverted */
+		evt.y = + prevYDelta; /* but not that of y presumably because the view isFlipped (see implementation of isFlipped) */
 
-		//printf("x:%f y:%f ex:%ld ey:%ld\n", x, y, evt.x, evt.y);
+		prevXDelta = 0;
+		prevYDelta = 0;
 
 		int buttonAndModifiers = [self mapMouseAndModifierStateToSqueakBits: theEvent];
-		evt.buttons = buttonAndModifiers >> 3;
+		evt.buttons = buttonAndModifiers & 7;
+		evt.modifiers = buttonAndModifiers >> 3;
 		evt.windowIndex =  aView.windowLogic.windowIndex;
 		[self pushEventToQueue:(sqInputEvent *) &evt];
 	}
 	else {
-		if (x != 0.0f) {
-			[self fakeMouseWheelKeyboardEventsKeyCode: (x < 0 ? 124 : 123) ascii: (x < 0 ? 29 : 28) windowIndex:   aView.windowLogic.windowIndex];
+		float limit = 120;
+		if (prevXDelta <= -limit || limit <= prevXDelta) {
+			[self fakeMouseWheelKeyboardEventsKeyCode: (prevXDelta < 0 ? 124 : 123) ascii: (prevXDelta < 0 ? 29 : 28) windowIndex: aView.windowLogic.windowIndex];
+			prevXDelta = 0;
 		}
-		if (y != 0.0f) {
-			[self fakeMouseWheelKeyboardEventsKeyCode: (y < 0 ? 125 : 126) ascii: (y < 0 ? 31 : 30) windowIndex:  aView.windowLogic.windowIndex];
+		if (prevYDelta <= -limit || limit <= prevYDelta) {
+			[self fakeMouseWheelKeyboardEventsKeyCode: (prevYDelta < 0 ? 125 : 126) ascii: (prevYDelta < 0 ? 31 : 30) windowIndex: aView.windowLogic.windowIndex];
+			prevYDelta = 0;
 		}
 	}
 }

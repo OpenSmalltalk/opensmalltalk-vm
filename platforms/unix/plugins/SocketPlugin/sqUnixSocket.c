@@ -45,6 +45,16 @@
 #include "sq.h"
 #include "SocketPlugin.h"
 #include "sqaio.h"
+#include <string.h>
+#ifdef HAVE_STDINT_H
+#  include <stdint.h> /* uint64_t uint32_t uint8_t (C99) */
+#else
+#ifdef HAVE_INTTYPES_H
+#  include <inttypes.h>
+#else
+#  include <sys/types.h> /* we could test HAVE_SYS_TYPES_H here, but else what?... */
+#endif
+#endif
 
 #ifdef ACORN
 # include <time.h>
@@ -74,6 +84,8 @@
 # include <sys/param.h>
 # include <sys/stat.h>
 # include <sys/socket.h>
+# include <sys/ioctl.h>
+# include <net/if.h>
 # include <sys/un.h>
 # include <netinet/in.h>
 # include <netinet/udp.h>
@@ -139,7 +151,7 @@ static int thisNetSession= 0;
 static int one= 1;
 
 static char   localHostName[MAXHOSTNAMELEN];
-static u_long localHostAddress;	/* GROSS IPv4 ASSUMPTION! */
+static uint32_t localHostAddress;	/* GROSS IPv4 ASSUMPTION! */
 
 union sockaddr_any
 {
@@ -260,7 +272,7 @@ static void setLinger(int fd, int flag)
 
 static const char *addrToName(int netAddress)
 {
-  u_long nAddr;
+  uint32_t nAddr;
   struct hostent *he;
 
   lastError= 0;			/* for the resolver */
@@ -279,7 +291,7 @@ static int nameToAddr(char *hostName)
 
   lastError= 0;			/* ditto */
   if ((he= gethostbyname(hostName)))
-    return ntohl(*(long *)(he->h_addr_list[0]));
+    return ntohl(*(uint32_t *)(he->h_addr_list[0]));
   lastError= h_errno;		/* and one more ditto */
   return 0;
 }
@@ -599,7 +611,7 @@ void sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaI
   s->sessionID= thisNetSession;
   s->socketType= socketType;
   s->privateSocketPtr= pss;
-  FPRINTF((stderr, "create(%d) -> %lx\n", SOCKET(s), (unsigned long)PSP(s)));
+  FPRINTF((stderr, "create(%d) -> %p\n", SOCKET(s), PSP(s)));
   /* Note: socket is in BLOCKING mode until aioEnable is called for it! */
 }
 
@@ -646,7 +658,7 @@ void sqSocketCreateRawProtoTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(Soc
   s->sessionID= thisNetSession;
   s->socketType= RAWSocketType;
   s->privateSocketPtr= pss;
-  FPRINTF((stderr, "create(%d) -> %lx\n", SOCKET(s), (unsigned long)PSP(s)));
+  FPRINTF((stderr, "create(%d) -> %p\n", SOCKET(s), PSP(s)));
   /* Note: socket is in BLOCKING mode until aioEnable is called for it! */
 }
 
@@ -1436,10 +1448,11 @@ void sqSocketSetReusable(SocketPtr s)
 {
   size_t bufSize;
   unsigned char buf[4];
+  int one=1;
 
   if (!socketValid(s)) return;
 
-  *(int *)buf= 1;
+  memcpy(buf,&one,4);
   bufSize= 4;
   if (setsockopt(SOCKET(s), SOL_SOCKET, SO_REUSEADDR, buf, bufSize) < 0)
     {
@@ -1512,22 +1525,31 @@ sqInt sqResolverLocalAddress(void)
         if (ifa->ifa_addr == NULL)
             continue;  
 
-        s=getnameinfo(ifa->ifa_addr,sizeof(struct sockaddr_in),host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
-
-        if(((strcmp(ifa->ifa_name,"eth0")==0)||(strcmp(ifa->ifa_name,"wlan0")==0))&&(ifa->ifa_addr->sa_family==AF_INET))
-        {
-            if (s != 0)
-            {
-                success(false);
-                return 0;
-            }
-            FPRINTF((stderr, "\tInterface : <%s>\n",ifa->ifa_name ));
-            FPRINTF((stderr, "\t IP       : <%s>\n", inet_ntoa(((struct sockaddr_in *)(ifa->ifa_addr))->sin_addr)));
-            if(localAddr == 0) { /* take the first plausible answer */
-                localAddr = ((struct sockaddr_in *)(ifa->ifa_addr))->sin_addr.s_addr;
-            }
-           
+        // Skip interfaces which
+        //  - are not running (IFF_UP),
+        //  - don't have a valid broadcast address set (IFF_BROADCAST),
+        //  - don't have resources allocated (IFF_RUNNING),
+        //  - are loopback interfaces (IFF_LOOPBACK)
+        //  - or do not have AF_INET address family (no IPv6 support here)
+        if (
+            !(ifa->ifa_flags & (IFF_UP | IFF_BROADCAST | IFF_RUNNING))
+                || (ifa->ifa_flags & IFF_LOOPBACK)
+                || ifa->ifa_addr->sa_family != AF_INET
+        ) {
+            continue;
         }
+
+        FPRINTF((stderr, "\tInterface : <%s>\n", ifa->ifa_name));
+        s=getnameinfo(ifa->ifa_addr,sizeof(struct sockaddr_in),host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
+        if (s == 0) {
+            FPRINTF((stderr, "\t IP       : <%s>\n", inet_ntoa(((struct sockaddr_in *) (ifa->ifa_addr))->sin_addr)));
+            if (localAddr == 0) { /* take the first plausible answer */
+                localAddr = ((struct sockaddr_in *) (ifa->ifa_addr))->sin_addr.s_addr;
+            }
+        } else {
+            FPRINTF((stderr, "\t No address defined for this interface\n"));
+        }
+
     }
 
     freeifaddrs(ifaddr);

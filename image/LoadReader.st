@@ -8,9 +8,8 @@ package := 'CogTools-Listener'.
 latestVersion := (repository versionNamesForPackageNamed: package) detect:
 					[:versionName| (versionName at: package size + 1) = $-].
 [| version |
-version := ((MCCacheRepository default includesVersionNamed: latestVersion)
-			ifTrue: [MCCacheRepository default]
-			ifFalse: [repository]) versionNamed: latestVersion.
+version := (MCCacheRepository default versionNamed: latestVersion)
+		ifNil: [repository versionNamed: latestVersion].
  version load.
  version workingCopy repositoryGroup addRepository: repository]
 	on: Warning

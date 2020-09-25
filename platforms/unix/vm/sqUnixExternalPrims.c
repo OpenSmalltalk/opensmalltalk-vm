@@ -168,8 +168,10 @@ tryLoadModule(char *in, char *name)
   DPRINTF((stderr, __FILE__ " %d tryLoading dlopen(%s) = %p\n", __LINE__, path, handle));
   if (!handle) {
     struct stat buf;
-    if ((0 == stat(path, &buf)) && ! S_ISDIR(buf.st_mode))
-      fprintf(stderr, "%s\n", dlerror());
+    if ((0 == stat(path, &buf)) && ! S_ISDIR(buf.st_mode)) {
+      fprintf(stderr, "failed loading module %s due to %s\n", path, dlerror());
+      fflush(stderr);
+    }
   }
   return handle;
 }
@@ -186,6 +188,7 @@ void *ioLoadModule(char *pluginName)
     handle= dlopen(0, RTLD_NOW | RTLD_GLOBAL);
     if (handle == 0) {
       fprintf(stderr, __FILE__ " %d ioLoadModule dlopen(<intrinsic>): %s\n", __LINE__, dlerror());
+      fflush(stderr);
     }
     else {
       DPRINTF((stderr, __FILE__ " %d ioLoadModule loaded: <intrinsic>\n", __LINE__));
@@ -232,10 +235,12 @@ tryLoading(char *dirName, char *moduleName)
   DPRINTF((stderr, __FILE__ " %d tryLoadModule(%s,%s)\n", __LINE__, dirName, moduleName));
   /* If dirName does not exist it is pointless searching for libraries in it. */
   if (stat(dirName,&buf)) {
-	if (errno != ENOENT)
+	if (errno != ENOENT) {
 		fprintf(stderr,
 				"tryLoading(%s,%s): stat(%s) %s\n",
 				dirName, moduleName, dirName, strerror(errno));
+		fflush(stderr);
+	}
 	return 0;
   }
   for (prefix= prefixes;  *prefix;  ++prefix)
@@ -248,21 +253,11 @@ tryLoading(char *dirName, char *moduleName)
 			if (S_ISDIR(buf.st_mode))
 				DPRINTF((stderr, __FILE__ " %d ignoring directory: %s\n", __LINE__, libName));
 			else {
-				char *why;
 				handle = dlopen(libName, RTLD_NOW | RTLD_GLOBAL);
-				if (!handle) {
-					why = dlerror();
-					if (strstr(why,"undefined symbol")) {
-						fprintf(stderr,
-								"tryLoading(%s,%s): dlopen: %s\n",
-								dirName, moduleName, why);
-						continue;
-					}
-				}
 				DPRINTF((stderr, __FILE__ " %d tryLoading dlopen(%s) = %p\n", __LINE__, libName, handle));
 				if (handle == 0) {
-					if (!sqIgnorePluginErrors)
-						fprintf(stderr, "ioLoadModule(%s):\n  %s\n", libName, why);
+					fprintf(stderr,"%s tryLoading %s: dlopen: %s\n", moduleName, libName, dlerror());
+					fflush(stderr);
 				}
 				else {
 # if DEBUG
@@ -329,6 +324,7 @@ ioLoadModule(char *pluginName)
 	if (!pluginName || !*pluginName) {
 		if (!(handle= dlopen(0, RTLD_NOW | RTLD_GLOBAL))) {
 			fprintf(stderr, __FILE__ " %d ioLoadModule(<intrinsic>): %s\n", __LINE__, dlerror());
+			fflush(stderr);
 			return 0;
 		}
 		DPRINTF((stderr, __FILE__ " %d ioLoadModule loaded: <intrinsic>\n", __LINE__));
@@ -417,6 +413,7 @@ ioLoadModule(char *pluginName)
 
 #if DEBUG
   fprintf(stderr, "%s: could not load plugin `%s'\n", exeName, pluginName);
+  fflush(stderr);
 #endif
   return 0;
 }
@@ -452,9 +449,11 @@ ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
       && strcmp(lookupName, "shutdownModule")
       && strcmp(lookupName, "moduleUnloaded")
       && strcmp(lookupName, "setInterpreter")
-      && strcmp(lookupName, "getModuleName"))
+      && strcmp(lookupName, "getModuleName")) {
     fprintf(stderr, "ioFindExternalFunctionIn(%s, %p):\n  %s\n",
 	    lookupName, moduleHandle, dlerror());
+    fflush(stderr);
+  }
 
 #if SPURVM
   if (fn && accessorDepthPtr) {

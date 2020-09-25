@@ -11,6 +11,7 @@
  */
 #if defined(__ARM_ARCH_ISA_A64) || defined(__arm64__) || defined(__aarch64__) || defined(ARM64)
 
+#include <unistd.h> /* for getpagesize/sysconf */
 #include <stdlib.h> /* for valloc */
 #include <sys/mman.h> /* for mprotect */
 
@@ -166,8 +167,6 @@ getMostRecentCallbackContext() { return mostRecentCallbackContext; }
 #define getRMCC(t) mostRecentCallbackContext
 #define setRMCC(t) (mostRecentCallbackContext = (void *)(t))
 
-extern void error(char *s);
-
 /*
  * Entry-point for call-back thunks.  Args are register args, thunk address
  * and stack pointer.
@@ -272,7 +271,7 @@ static unsigned long pagesize = 0;
 #endif
 
 void *
-allocateExecutablePage(long *size)
+allocateExecutablePage(sqIntptr_t *size)
 {
 	void *mem;
 
@@ -295,7 +294,11 @@ allocateExecutablePage(long *size)
 	if (mem)
 		*size = pagesize;
 #else
+# if !defined(_POSIX_C_SOURCE) || _POSIX_C_SOURCE < 200112L
 	long pagesize = getpagesize();
+# else
+	long pagesize = sysconf(_SC_PAGESIZE);
+# endif
 
 	if (!(mem = valloc(pagesize)))
 		return 0;

@@ -25,79 +25,6 @@
 
 #define NO_TABLET
 
-
-#ifdef _WIN32_WCE
-/*************************************************************/
-/*                          Windows CE                       */
-/*************************************************************/
-#ifndef WIN32_FILE_SUPPORT
-# error "You must define WIN32_FILE_SUPPORT for compiling on WINCE"
-#endif
-
-/* OS/Processor definitions */
-#define WIN32_NAME "Win32"
-#define WIN32_OS_NAME "CE"
-#if defined (_SH3_)
-#	define WIN32_PROCESSOR_NAME "SH3"
-#elif defined(_MIPS_)
-#	define WIN32_PROCESSOR_NAME "MIPS"
-#else
-#	error "Unknown Windows CE configuration"
-#endif
-
-/* Remove subsystems we don't support on CE based devices */
-#define NO_JOYSTICK
-#define NO_PRINTER
-#define NO_MIDI
-#define WCE_PREFERENCES
-#define NO_ASYNC_FILES
-#define NO_PLUGIN_SUPPORT
-
-#define USE_DIB_SECTIONS
-
-#define GMEM_MOVEABLE 0
-#define GMEM_DDESHARE 0
-#define GMEM_ZEROINIT 0
-
-#define MB_TASKMODAL	0
-#define CS_OWNDC	0
-#define WS_EX_APPWINDOW	WS_VISIBLE
-#define WS_OVERLAPPEDWINDOW	WS_VISIBLE
-#define SW_SHOWMAXIMIZED SW_SHOW
-#define SW_RESTORE SW_SHOW
-
-#ifndef SEEK_SET
-#	define SEEK_SET	0
-#endif
-#ifndef SEEK_CUR
-#	define SEEK_CUR	1
-#endif
-#ifndef SEEK_END
-#	define SEEK_END	2
-#endif
-
-#define EXCEPTION_ACCESS_VIOLATION	STATUS_ACCESS_VIOLATION
-
-#define LPEXCEPTION_POINTERS EXCEPTION_POINTERS*
-
-#define MF_DISABLED MF_GRAYED
-
-#ifndef FPOS_T_DEFINED
-	typedef unsigned long fpos_t; /* Could be 64 bits for Win32 */
-#	define FPOS_T_DEFINED
-#endif
-
-#define isdigit(src) ((src <= '9') && (src >= '0'))
-#define MoveMemory(_Destination, _Source, _Length) memmove(_Destination, _Source, _Length)
-#define ZeroMemory(_Destination, _Length) memset(_Destination, 0, _Length)
-#define timeGetTime() 0 // no multimedia timers
-
-
-#else /* !(_WIN32_WCE) */
-/*************************************************************/
-/*                      Windows 95/98/NT/Blablabla           */
-/*************************************************************/
-
 /* #define USE_DIRECT_X */
 #define NO_DIRECTINPUT
 
@@ -121,7 +48,7 @@
  * historical reasons.  Images up to and including Squeak 5/Pharo 6 expect
  * getSystemAttribute: 1001 ("platform name") to answer 'Win32' on Windows.
  * Yes, this is regrettable.  No, it's not easy to fix without breaking existing
- * images :-(.  The NT vs CE distinction isn't particularly meaningful either.
+ * images :-(.
  * Further (see sqWin32Window.c) parameter 1005 (the windoing system name) also
  * answers Win32.  Perhaps this could be changed to "Windows", because at least
  * in a base Squeak 5.1 image as of mid 2017 there is no use of windowSystemName
@@ -139,8 +66,6 @@
 #	define warnPrintfW wprintf
 #endif /* _M_X64 & al */
 
-#endif /* (_WIN32_WCE) */
-
 /* Experimental */
 #ifdef MINIMAL
   /* The hardcoded defs:
@@ -150,7 +75,6 @@
 #	define NO_SERVICE
 #	define NO_PREFERENCES
 #	define NO_PRINTER
-#	define NO_WHEEL_MOUSE
   /* Use stub definitions from sqWin32Stubs.c */
 #	define NO_SOUND
 #	define NO_SERIAL_PORT
@@ -172,18 +96,17 @@ typedef int (*messageHook)(void *, unsigned int, unsigned int, long);
 /********************************************************/
 /* Several setup functions                              */
 /********************************************************/
-void SetupFilesAndPath();
-void SetupKeymap();
-void SetupWindows();
-void SetupPixmaps();
-void SetupPrinter();
-void SetupMIDI();
+void SetupFilesAndPath(void);
+void SetupWindows(void);
+void SetupPixmaps(void);
+void SetupPrinter(void);
+void SetupMIDI(void);
 
 /********************************************************/
 /* Startup helper functions                             */
 /********************************************************/
-int findImageFile();
-int openImageFile();
+int findImageFile(void);
+int openImageFile(void);
 
 /********************************************************/
 /* external SYNCHRONIZED signaling of semaphores        */
@@ -199,7 +122,7 @@ char *GetVMOption(int id);
 /********************************************************/
 /* Misc functions                                       */
 /********************************************************/
-void SetWindowSize();
+void SetWindowSize(void);
 int printUsage(int level);
 
 /********************************************************/
@@ -271,17 +194,17 @@ extern char  squeakIniNameA[];   /* full path to ini file - UTF8 */
 extern WCHAR squeakIniNameW[];   /* full path to ini file - UTF16 */
 
 #ifdef UNICODE
-#define imageNameT imageNameW /* define the generic TCHAR* version */
-#define imagePath  imagePathW
-#define vmName vmNameW
-#define vmPath vmPathW
-#define squeakIniName squeakIniNameW
+# define imageNameT imageNameW /* define the generic TCHAR* version */
+# define imagePath  imagePathW
+# define vmName vmNameW
+# define vmPath vmPathW
+# define squeakIniName squeakIniNameW
 #else
-#define imageNameT imageName
-#define imagePath  imagePathA
-#define vmName vmNameA
-#define vmPath vmPathA
-#define squeakIniName squeakIniNameA
+# define imageNameT imageName
+# define imagePath  imagePathA
+# define vmName vmNameA
+# define vmPath vmPathA
+# define squeakIniName squeakIniNameA
 #endif
 
 #define __UNICODE_TEXT(x) L##x
@@ -302,7 +225,6 @@ extern HWND  consoleWindow;       /* console */
 
 
 extern HWND stWindow;	     	         /*	the squeak window */
-extern HWND browserWindow;	     	     /*	the browser window */
 extern HINSTANCE hInstance;	     /*	the instance of squeak running */
 extern HCURSOR currentCursor;	     /*	current cursor displayed by squeak */
 extern HPALETTE palette;	     /*	the palette (might be unused) */
@@ -317,7 +239,6 @@ extern BOOL fIsConsole;          /* Are we running as a console app? */
 /* Startup options */
 extern BOOL  fHeadlessImage; /* Do we run headless? */
 extern BOOL  fRunService;    /* Do we run as NT service? */
-extern BOOL  fBrowserMode;   /* Do we run in a web browser? */
 extern DWORD dwMemorySize;   /* How much memory do we use? */
 extern BOOL  fUseDirectSound;/* Do we use DirectSound?! */
 extern BOOL  fUseOpenGL;     /* Do we use OpenGL?! */
@@ -389,12 +310,6 @@ void vprintLastError(TCHAR *fmt, ...);
 /******************************************************/
 DWORD SqueakImageLength(WCHAR *fileName);
 int isLocalFileName(TCHAR *fileName);
-
-#ifndef NO_PLUGIN_SUPPORT
-void pluginInit(void);
-void pluginExit(void);
-void pluginHandleEvent(MSG* msg);
-#endif /* NO_PLUGIN_SUPPORT */
 
 #ifndef NO_DROP
 int recordDragDropEvent(HWND wnd, int dragType, int x, int y, int numFiles);

@@ -1,0 +1,11 @@
+openssl_spec_download_url:=https://www.openssl.org/source/openssl-1.1.1f.tar.gz
+openssl_spec_archive_name:=openssl-1.1.1f.tar.gz
+openssl_spec_unpack_dir_name:=openssl-1.1.1f
+openssl_spec_product1_name_macOS:=libssl.1.1.dylib
+openssl_spec_product2_name_macOS:=libcrypto.1.1.dylib
+openssl_spec_product1_name_linux:=libssl.so.1.1
+openssl_spec_product2_name_linux:=libcrypto.so.1.1
+openssl_spec_product1_name_windows:=libssl-1_1-x64.dll
+openssl_spec_product2_name_windows:=libcrypto-1_1-x64.dll
+openssl_spec_symlinks_macOS:=libssl*.dylib libcrypto*.dylib
+openssl_spec_symlinks_linux:=libssl.so* libcrypto.so*

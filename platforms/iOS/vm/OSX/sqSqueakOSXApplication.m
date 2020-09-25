@@ -270,11 +270,6 @@ static char *getVersionInfo(int verbose);
 	}
 #endif
 #if STACKVM
-	if ([argData isEqualToString: VMOPTIONOBJ("checkpluginwrites")]) {
-		extern sqInt checkAllocFiller;
-		checkAllocFiller = 1;
-		return 1;
-	}
 	if ([argData isEqualToString: VMOPTIONOBJ("noheartbeat")]) {
 		extern sqInt suppressHeartbeatFlag;
 		suppressHeartbeatFlag = 1;
@@ -365,11 +360,6 @@ static char *getVersionInfo(int verbose);
 	if ([argData isEqualToString: VMOPTIONOBJ("codesize")]) {
 		extern sqInt desiredCogCodeSize;
 		desiredCogCodeSize = [self strtobkm: peek];		 
-		return 2;
-	}
-	if ([argData isEqualToString: VMOPTIONOBJ("dpcso")]) {
-		extern unsigned long debugPrimCallStackOffset;
-		debugPrimCallStackOffset = (unsigned long)[self strtobkm: peek];		 
 		return 2;
 	}
 	if ([argData isEqualToString: VMOPTIONOBJ("cogmaxlits")]) {
@@ -504,14 +494,14 @@ static char *getVersionInfo(int verbose);
 	printf("  "VMOPTION("breaksel")" selector    set breakpoint on send of selector\n");
 #endif
 #if STACKVM
+	printf("  "VMOPTION("failonffiexception")"   when in an FFI callout primitive catch exceptions and fail the primitive\n");
 	printf("  "VMOPTION("breakmnu")" selector    set breakpoint on MNU of selector\n");
 	printf("  "VMOPTION("eden")" <size>[mk]      set eden memory to bytes\n");
 	printf("  "VMOPTION("leakcheck")" num        check for leaks in the heap\n");
 	printf("  "VMOPTION("stackpages")" num       use n stack pages\n");
 	printf("  "VMOPTION("numextsems")" num       make the external semaphore table num in size\n");
 	printf("  "VMOPTION("noheartbeat")"          disable the heartbeat for VM debugging. disables input\n");
-	printf("  "VMOPTION("pollpip")"              output . on each poll for input\n");
-	printf("  "VMOPTION("checkpluginwrites")"    check for writes past end of object in plugins\n");
+	printf("  "VMOPTION("pollpip")" (0|1)        output on each poll for input\n");
 #endif
 #if STACKVM || NewspeakVM
 # if COGVM

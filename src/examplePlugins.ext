@@ -3,6 +3,7 @@
 EXTERNAL_PLUGINS = \
 BochsIA32Plugin \
 CroquetPlugin \
+MIDIPlugin \
 SqueakFFIPrims \
 SqueakSSL \
 FloatArrayPlugin \

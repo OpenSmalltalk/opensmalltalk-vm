@@ -1,0 +1,2 @@
+#!/bin/sh
+grep "return __ieee" w* | sed 's/^.*__ieee/__ieee/' | sed 's/(.*//' | sed 's/__ieee754_\(.*\)/#define \1 __ieee754_\1/' | sort -u

@@ -1,6 +1,8 @@
 /* Bochs seems to use error code 1 for execution errors.
  * So we use > 1 for various errors
  */
+#define NumIntegerRegisterStateFields 10 /* the 8 registers plus pc & flags */
+
 #define NoError 0
 #define ExecutionError 1
 #define BadCPUInstance 2
@@ -60,3 +62,9 @@ extern long   errorAcorn();
  * The current log (if singleStep failed with SomethingLoggedError).
  */
 extern char *getlog(long *len);
+
+/*
+ * Fill an integer array with the register state, including the pc and, if
+ * appropriate, the condition code flags, etc.
+ */
+extern void storeIntegerRegisterStateOfinto(void *cpu, int *registerState);

@@ -31,6 +31,7 @@
  */
 #include "mpeg3private.h"
 #include "mpeg3video.h"
+#include "mpeg3videoprotos.h"
 #include "vlc.h"
 
 #include <stdio.h>

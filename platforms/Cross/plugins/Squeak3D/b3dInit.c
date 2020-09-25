@@ -14,6 +14,7 @@
 *****************************************************************************/
 #include <string.h>
 #include <stdlib.h>
+#include <limits.h>
 #include "b3d.h"
 
 #define b3dCompensateWindowPos 1
@@ -154,8 +155,8 @@ void b3dMapObjectVertices(B3DPrimitiveObject *obj, B3DPrimitiveViewport *vp)
 		vtx->rasterPosZ = (float)z;
 		vtx->rasterPosW = (float)w;
 
-		scaledX = (int) (x * B3D_FloatToFixed);
-		scaledY = (int) (y * B3D_FloatToFixed);
+        scaledX = (x * B3D_FloatToFixed < INT_MIN) ? INT_MIN : (x * B3D_FloatToFixed > INT_MAX) ? INT_MAX : (int) (x * B3D_FloatToFixed);
+		scaledY = (y * B3D_FloatToFixed < INT_MIN) ? INT_MIN : (y * B3D_FloatToFixed > INT_MAX) ? INT_MAX : (int) (y * B3D_FloatToFixed);
 
 		vtx->windowPosX = scaledX;
 		vtx->windowPosY = scaledY;
@@ -315,6 +316,8 @@ int b3dQuickSortInitialFaces(B3DPrimitiveObject *obj, int i, int j)
   int ij, k, l, n;
   B3DPrimitiveVertex *di, *dj, *dij, *tt, *vtx = obj->vertices;
 
+  if( i >= j ) return B3D_NO_ERROR;
+
   /* Keep us enough headroom */
   INIT((j-i)*2);
   PUSH(i,j);
@@ -378,7 +381,9 @@ int b3dQuickSortObjects(B3DPrimitiveObject **array, int i, int j)
 {
   int ij, k, l, n;
   B3DPrimitiveObject *di, *dj, *dij, *tmp;
-	
+
+  if( i >= j ) return B3D_NO_ERROR;
+
   /* Keep us enough headroom */
   INIT((j-i)*2);
   PUSH(i,j);

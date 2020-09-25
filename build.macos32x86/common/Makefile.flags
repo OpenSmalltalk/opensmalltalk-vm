@@ -8,18 +8,31 @@ XCUB:=$(XCODE)/usr/bin
 SDKsDIR:=$(XCODE)/Platforms/MacOSX.platform/Developer/SDKs
 #Build the oldest SDK installed
 SDKs:=MacOSX10.9.sdk MacOSX10.10.sdk MacOSX10.11.sdk MacOSX10.12.sdk MacOSX10.13.sdk
+ifeq ($(SDK),)
 SDK:=$(firstword $(realpath $(addprefix $(SDKsDIR)/, $(SDKs))))
+else # Allow Makefile to set specific SDK
+override SDK:=$(realpath $(addprefix $(SDKsDIR)/, $(SDK)))
+endif
 ifeq ($(strip $(SDK)),)
 $(error could not find a valid SDK)
 endif
 TARGET_ARCH:=i386
+ifeq ($(TARGET_VERSION_MIN),) # Allow Makefile to set TARGET_VERSION_MIN
 TARGET_VERSION_MIN:=10.7
+endif
+
+# Determine where to install plugins in the .app bundle using the Squeak
+# scheme (which tries to follow Apple's approach).  We would like this to
+# be Contents/PlugIns, but for reasons not yet understood, this breaks
+# Terf's libAgpu load.  So for now we keep it as Contents/Resources.
+APPPLUGINDIR:=PlugIns
+APPPLUGINDIR:=Resources
 
 print-sdks:
-	@echo ---------------- Makefile.flags settings ------------------
-	@echo SDKs=$(realpath $(addprefix $(SDKsDIR)/, $(SDKs)))
-	@echo SDK=$(SDK)
-	@echo -----------------------------------------------------
+	$(info ---------------- Makefile.flags settings ------------------)
+	$(info SDKs=$(realpath $(addprefix $(SDKsDIR)/, $(SDKs))))
+	$(info SDK=$(SDK))
+	$(info -----------------------------------------------------)
 
 # N.B. ARC isn't supported by the os-x 32-bit legacy Objective-C runtime kernel.
 # ARC is supported only on 64-bits, and then only for the 10.7 SDK and later.
@@ -32,16 +45,24 @@ endif
 CFLAGS:=$(CFLAGS) -DBUILD_FOR_OSX=1 -DUSE_OPENGL=1 -DUSE_CORE_GRAPHICS=1 \
 		-arch $(TARGET_ARCH) \
 		-mmacosx-version-min=$(TARGET_VERSION_MIN) -msse4.2 \
-			-fvisibility=default -fwrapv \
+			-fvisibility=default \
 			-fmacro-backtrace-limit=0 -fdiagnostics-show-note-include-stack \
 			-fmessage-length=0 -fpascal-strings -fasm-blocks -fstrict-aliasing \
-			$(OBJC_CODE_MODEL) \
 			$(XCFLAGS) \
 		-isysroot $(SDK) \
 		-include $(PLATDIR)/iOS/vm/SqueakPureObjc_Prefix.pch
 
-BFLAGS:=-arch $(TARGET_ARCH) -bundle -isysroot $(SDK) $(EXTRABFLAGS)
-DYFLAGS:=-arch $(TARGET_ARCH) -shared -isysroot $(SDK) $(EXTRADYFLAGS)
+BFLAGS:=-arch $(TARGET_ARCH) \
+		-bundle \
+		-isysroot $(SDK) \
+		-Wl,-rpath,@executable_path/../Frameworks \
+		-Wl,-rpath,@executable_path/../$(APPPLUGINDIR) \
+		$(EXTRABFLAGS)
+
+DYFLAGS:=-arch $(TARGET_ARCH) \
+		-shared \
+		-isysroot $(SDK) \
+		$(EXTRADYFLAGS)
 
 WARNINGS:= -Wno-missing-field-initializers -Wno-missing-prototypes \
 	-Wno-missing-braces -Wparentheses -Wswitch -Wno-unused-function \

@@ -8,15 +8,9 @@
 #include <cpu/cpu.h>
 #include <iodev/iodev.h>
 
+#include "sqSetjmpShim.h"
+
 #define min(a,b) ((a)<=(b)?(a):(b))
-/*
- * Define setjmp and longjmp to be the most minimal setjmp/longjmp available
- * on the platform.
- */
-#if !_WIN32
-# define setjmp(jb) _setjmp(jb)
-# define longjmp(jb,v) _longjmp(jb,v)
-#endif
 
 BOCHSAPI BX_CPU_C bx_cpu;
 
@@ -91,6 +85,11 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 		return 0;
 	}
 
+#define initEipFetchPtr(cpup) ((cpup)->eipFetchPtr = theMemory)
+#define resetInstructionFetch(cpup) do { \
+		(cpup)->eipPageBias = (bx_address)0; \
+		(cpup)->eipPageWindowSize = minWriteMaxExecAddr; } while (0)
+
 	long
 	singleStepCPUInSizeMinAddressReadWrite(void *cpu,
 									void *memory, ulong byteSize,
@@ -117,8 +116,9 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.limit = minWriteMaxExecAddr >> 16;
 		bx_cpu.sregs[BX_SEG_REG_DS].cache.u.segment.limit =
 		bx_cpu.sregs[BX_SEG_REG_SS].cache.u.segment.limit = byteSize >> 16;
-		anx86->eipFetchPtr = theMemory;
-		anx86->eipPageWindowSize = minWriteMaxExecAddr;
+		initEipFetchPtr(anx86);
+		resetInstructionFetch(anx86);
+
 		anx86->cpu_single_step();
 
 		return blidx == 0 ? 0 : SomethingLoggedError;
@@ -136,10 +136,6 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 		theMemorySize = byteSize;
 		minReadAddress = minAddr;
 		minWriteAddress = minWriteMaxExecAddr;
-		if ((theErrorAcorn = setjmp(anx86->jmp_buf_env)) != 0) {
-			anx86->gen_reg[BX_32BIT_REG_EIP].dword.erx = anx86->prev_rip;
-			return theErrorAcorn;
-		}
 
 		blidx = 0;
 		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.limit_scaled
@@ -149,8 +145,9 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.limit = minWriteMaxExecAddr >> 16;
 		bx_cpu.sregs[BX_SEG_REG_DS].cache.u.segment.limit =
 		bx_cpu.sregs[BX_SEG_REG_SS].cache.u.segment.limit = byteSize >> 16;
-		anx86->eipFetchPtr = theMemory;
-		anx86->eipPageWindowSize = minWriteMaxExecAddr;
+		initEipFetchPtr(anx86);
+		resetInstructionFetch(anx86);
+
 		bx_pc_system.kill_bochs_request = 0;
 		anx86->cpu_loop(0 /* = "run forever" until exception or interupt */);
 		if (anx86->stop_reason != STOP_NO_REASON) {
@@ -232,6 +229,22 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 	{
 		*len = blidx;
 		return bochs_log;
+	}
+
+	void
+	storeIntegerRegisterStateOfinto(void *cpu, int *registerState)
+	{
+		/* N.B. EAX=0,ECX=1,EDX=2,EBX=3,ESP=4,EBP=5,ESI=6,EDI=7 */
+		registerState[0] = bx_cpu.gen_reg[BX_32BIT_REG_EAX].dword.erx;
+		registerState[1] = bx_cpu.gen_reg[BX_32BIT_REG_EBX].dword.erx;
+		registerState[2] = bx_cpu.gen_reg[BX_32BIT_REG_ECX].dword.erx;
+		registerState[3] = bx_cpu.gen_reg[BX_32BIT_REG_EDX].dword.erx;
+		registerState[4] = bx_cpu.gen_reg[BX_32BIT_REG_ESP].dword.erx;
+		registerState[5] = bx_cpu.gen_reg[BX_32BIT_REG_EBP].dword.erx;
+		registerState[6] = bx_cpu.gen_reg[BX_32BIT_REG_EDI].dword.erx;
+		registerState[7] = bx_cpu.gen_reg[BX_32BIT_REG_ESI].dword.erx;
+		registerState[8] = bx_cpu.gen_reg[BX_32BIT_REG_EIP].dword.erx;
+		registerState[9] = bx_cpu.eflags;
 	}
 } // extern "C"
 
@@ -545,7 +558,7 @@ logfunctions::logfunctions(void) {}
 
 logfunctions::~logfunctions() {}
 
-#define sprintlog(fmt, ap) \
+#define sprintlog(fmt,ap) \
 do { \
 	va_list ap; \
 	va_start(ap, fmt); \

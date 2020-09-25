@@ -7,9 +7,15 @@ if [[ ! -d "${PRODUCTS_DIR}" ]]; then
   echo "No products directory found."
   exit 10
 fi
+
+BUILD_SYSTEM_SUFFIX=""
+if [ "${BUILD_WITH_CMAKE}" = "yes" ]; then
+    BUILD_SYSTEM_SUFFIX="-cmake-minhdls"
+fi
+readonly BUILD_SYSTEM_SUFFIX
 readonly REV=$(grep -m1 "SvnRawRevisionString" "${BUILD_DIR}/platforms/Cross/vm/sqSCCSVersion.h" | sed 's/[^0-9.]*\([0-9.]*\).*/\1/')
-readonly IDENTIFIER="${FLAVOR}_${ARCH}_${REV}"
-readonly IDENTIFIER_ITIMER="${FLAVOR}_${ARCH}_itimer_${REV}"
+readonly IDENTIFIER="${FLAVOR}${BUILD_SYSTEM_SUFFIX}_${ARCH}_${REV}"
+readonly IDENTIFIER_ITIMER="${FLAVOR}${BUILD_SYSTEM_SUFFIX}_${ARCH}_itimer_${REV}"
 readonly KEY_CHAIN=macos-build.keychain
 
 macos_codesign() {
@@ -27,6 +33,7 @@ macos_codesign() {
   security set-keychain-settings -t 3600 -u "${KEY_CHAIN}"
   security import "${path_cer}" -k ~/Library/Keychains/"${KEY_CHAIN}" -T /usr/bin/codesign
   security import "${path_p12}" -k ~/Library/Keychains/"${KEY_CHAIN}" -P "${cert_pass}" -T /usr/bin/codesign
+  security set-key-partition-list -S apple-tool:,apple: -s -k travis "${KEY_CHAIN}"
   # Invoke codesign
   if [[ -d "${app_dir}/Contents/MacOS/Plugins" ]]; then # Pharo.app does not (yet) have its plugins in Resources dir
     codesign -s "${sign_identity}" --force --deep "${app_dir}/Contents/MacOS/Plugins/"*

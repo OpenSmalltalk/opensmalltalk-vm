@@ -42,7 +42,7 @@
 #   and this notice are preserved. This file is offered as-is, without any
 #   warranty.
 
-#serial 11
+#serial 12
 
 AC_DEFUN([AX_HAVE_EPOLL], [dnl
   ax_have_epoll_cppflags="${CPPFLAGS}"
@@ -59,10 +59,10 @@ AC_DEFUN([AX_HAVE_EPOLL], [dnl
 #  endif
 #endif
 ], [dnl
-int fd, rc;
+int fd;
 struct epoll_event ev;
 fd = epoll_create(128);
-rc = epoll_wait(fd, &ev, 1, 0);])],
+epoll_wait(fd, &ev, 1, 0);])],
       [ax_cv_have_epoll=yes],
       [ax_cv_have_epoll=no])])
   CPPFLAGS="${ax_have_epoll_cppflags}"
@@ -89,11 +89,11 @@ AC_DEFUN([AX_HAVE_EPOLL_PWAIT], [dnl
 #include <sys/epoll.h>
 #include <signal.h>
 ], [dnl
-int fd, rc;
+int fd;
 struct epoll_event ev;
 fd = epoll_create(128);
-rc = epoll_wait(fd, &ev, 1, 0);
-rc = epoll_pwait(fd, &ev, 1, 0, (sigset_t const *)(0));])],
+epoll_wait(fd, &ev, 1, 0);
+epoll_pwait(fd, &ev, 1, 0, (sigset_t const *)(0));])],
       [ax_cv_have_epoll_pwait=yes],
       [ax_cv_have_epoll_pwait=no])])
   CPPFLAGS="${ax_have_epoll_cppflags}"

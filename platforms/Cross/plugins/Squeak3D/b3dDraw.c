@@ -313,9 +313,9 @@ void b3dDrawRGB(int leftX, int rightX, int yValue, B3DPrimitiveFace *face)
 		   we have dealt with huge polys above */
 		while(deltaX >= nPixels) {	
 			{	/* Compute right most values of color interpolation */
-				int maxR = rValue + (deltaR << pixelShift);
-				int maxG = gValue + (deltaG << pixelShift);
-				int maxB = bValue + (deltaB << pixelShift);
+				int maxR = rValue + ((unsigned)deltaR << pixelShift);
+				int maxG = gValue + ((unsigned)deltaG << pixelShift);
+				int maxB = bValue + ((unsigned)deltaB << pixelShift);
 				/* Clamp those guys */
 				CLAMP_RGB(maxR, maxG, maxB);
 				/* And compute the actual delta */
@@ -401,9 +401,9 @@ void b3dDrawSTWRGB(int leftX, int rightX, int yValue, B3DPrimitiveFace *face)
 		int nPixels = 1 << pixelShift;
 		while(deltaX >= nPixels) {
 			{	/* Compute right most values of color interpolation */
-				int maxR = rValue + (deltaR << pixelShift);
-				int maxG = gValue + (deltaG << pixelShift);
-				int maxB = bValue + (deltaB << pixelShift);
+				int maxR = rValue + ((unsigned)deltaR << pixelShift);
+				int maxG = gValue + ((unsigned)deltaG << pixelShift);
+				int maxB = bValue + ((unsigned)deltaB << pixelShift);
 				/* Clamp those guys */
 				CLAMP_RGB(maxR, maxG, maxB);
 				/* And compute the actual delta */

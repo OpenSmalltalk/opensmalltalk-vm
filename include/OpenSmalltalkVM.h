@@ -34,6 +34,7 @@
 #define OPEN_SMALLTALK_VM_H
 
 #include <stdint.h>
+#include <stddef.h>
 
 #ifdef _WIN32
 #   ifdef BUILD_OSVM_STATIC
@@ -60,12 +61,21 @@
 typedef intptr_t osvmInt;
 typedef uintptr_t osvmUInt;
 
-/**/
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**
+ * OpenSmalltalk VM Error codes.
+ */
 typedef enum
 {
     OSVM_SUCCESS = 0,
     OSVM_ERROR,
     OSVM_ERROR_INVALID_PARAMETER,
+    OSVM_ERROR_INVALID_VM_INSTANCE_HANDLE,
+    OSVM_ERROR_VM_IMPLEMENTATION_NON_REENTRANT,
+    OSVM_ERROR_NULL_POINTER,
     OSVM_ERROR_NOT_YET_IMPLEMENTED,
     OSVM_ERROR_OUT_OF_BOUNDS,
     OSVM_ERROR_OUT_OF_MEMORY,
@@ -73,7 +83,17 @@ typedef enum
     OSVM_ERROR_UNSUPPORTED_PARAMETER,
     OSVM_ERROR_FAILED_TO_OPEN_FILE,
     OSVM_ERROR_FAILED_TO_LOAD_IMAGE,
+    OSVM_ERROR_FAILED_TO_FIND_IMAGE,
 } OSVMError;
+
+/**
+ * OpenSmalltalk VM Instance handle.
+ * Note: even though the current VM version is not reentrant, this handle is
+ * provided with forward compatibility purposes.
+ */
+typedef struct OSVMInstance *OSVMInstanceHandle;
+
+#define OSVMInstanceInvalidHandle 0
 
 /**
  * Get the virtual machine embedding interface version
@@ -81,68 +101,112 @@ typedef enum
 OSVM_VM_CORE_PUBLIC int osvm_getInterfaceVersion(void);
 
 /**
- * Simple all mighty main entry point for running a Squeak VM.
+ * This function finds a default startup image for a given VM executable path.
+ * \param startupImagePathResult A pointer to store the startup image path.
+ *        Must be freed with osvm_free(). This can be NULL.
+ * \return 1 for found, 0 for not found.
+ */
+OSVM_VM_CORE_PUBLIC int osvm_findStartupImage(const char *vmExecutablePath, char **startupImagePathResult);
+
+/**
+ * Simple all mighty main entry point for running an OpenSmalltalk VM
  */
 OSVM_VM_CORE_PUBLIC OSVMError osvm_main(int argc, const char **argv);
 
 /**
- * Global initialization of Squeak
+ * VM instance initialization.
  */
-OSVM_VM_CORE_PUBLIC OSVMError osvm_initialize(void);
+OSVM_VM_CORE_PUBLIC OSVMError osvm_initialize(OSVMInstanceHandle *resultVMHandle);
 
 /**
  * Global shutting down of Squeak VM
  */
-OSVM_VM_CORE_PUBLIC OSVMError osvm_shutdown(void);
+OSVM_VM_CORE_PUBLIC OSVMError osvm_shutdown(OSVMInstanceHandle vmHandle);
 
 /**
  * Initialize the Squeak VM
  */
-OSVM_VM_CORE_PUBLIC OSVMError osvm_initializeVM(void);
+OSVM_VM_CORE_PUBLIC OSVMError osvm_initializeVM(OSVMInstanceHandle vmHandle);
 
 /**
  * Shutdown the Squeak VM
  */
-OSVM_VM_CORE_PUBLIC OSVMError osvm_shutdownVM(void);
+OSVM_VM_CORE_PUBLIC OSVMError osvm_shutdownVM(OSVMInstanceHandle vmHandle);
 
 /**
  * Parse command line arguments
  */
-OSVM_VM_CORE_PUBLIC OSVMError osvm_parseCommandLineArguments(int argc, const char **argv);
+OSVM_VM_CORE_PUBLIC OSVMError osvm_parseCommandLineArguments(OSVMInstanceHandle vmHandle, int argc, const char **argv);
 
 /**
  * Parse the VM command line arguments
  */
-OSVM_VM_CORE_PUBLIC OSVMError osvm_parseVMCommandLineArguments(int argc, const char **argv);
+OSVM_VM_CORE_PUBLIC OSVMError osvm_parseVMCommandLineArguments(OSVMInstanceHandle vmHandle, int argc, const char **argv);
+
+/**
+ * This gets the number of parameters associated with a VM command line argument
+ */
+OSVM_VM_CORE_PUBLIC int osvm_getVMCommandLineArgumentParameterCount(const char *argument);
 
 /**
  * Set a string VM parameter
  */
-OSVM_VM_CORE_PUBLIC OSVMError osvm_setVMStringParameter(const char *name, const char *value);
+OSVM_VM_CORE_PUBLIC OSVMError osvm_setVMStringParameter(OSVMInstanceHandle vmHandle, const char *name, const char *value);
 
 /**
  * Set an integer VM parameter
  */
-OSVM_VM_CORE_PUBLIC OSVMError osvm_setVMIntegerParameter(const char *name, const char *value);
+OSVM_VM_CORE_PUBLIC OSVMError osvm_setVMIntegerParameter(OSVMInstanceHandle vmHandle, const char *name, const char *value);
 
 /**
  * Pass the image command line arguments
  */
-OSVM_VM_CORE_PUBLIC OSVMError osvm_passImageCommandLineArguments(int argc, const char **argv);
+OSVM_VM_CORE_PUBLIC OSVMError osvm_passImageCommandLineArguments(OSVMInstanceHandle vmHandle, int argc, const char **argv);
 
 /**
  * Load the image
  */
-OSVM_VM_CORE_PUBLIC OSVMError osvm_loadImage(const char *fileName);
+OSVM_VM_CORE_PUBLIC OSVMError osvm_loadImage(OSVMInstanceHandle vmHandle, const char *fileName);
 
 /**
  * Load the default image or the one provided on the command line
  */
-OSVM_VM_CORE_PUBLIC OSVMError osvm_loadDefaultImage(void);
+OSVM_VM_CORE_PUBLIC OSVMError osvm_loadDefaultImage(OSVMInstanceHandle vmHandle);
 
 /**
  * Run indefinetely the previously loaded image.
  */
-OSVM_VM_CORE_PUBLIC OSVMError osvm_run(void);
+OSVM_VM_CORE_PUBLIC OSVMError osvm_run(OSVMInstanceHandle vmHandle);
+
+/**
+ * Malloc wrapper.
+ */
+OSVM_VM_CORE_PUBLIC void *osvm_malloc(size_t size);
+
+/**
+ * Calloc wrapper.
+ */
+OSVM_VM_CORE_PUBLIC void *osvm_calloc(size_t nmemb, size_t size);
+
+/**
+ * Free wrapper.
+ */
+OSVM_VM_CORE_PUBLIC void osvm_free(void*);
+
+/**
+ * Method for converting utf-8 string to utf-16 string. This method is for
+ * interfacing in platforms such as Windows. The result is allocated with osvm_malloc.
+ */
+OSVM_VM_CORE_PUBLIC uint16_t *osvm_utf8ToUtf16(const char *string);
+
+/**
+ * Method for converting utf-16 string to utf-8 string. This method is for
+ * interfacing in platforms such as Windows. The result is allocated with osvm_malloc
+ */
+OSVM_VM_CORE_PUBLIC char *osvm_utf16ToUt8(const uint16_t *wstring);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* OPEN_SMALLTALK_VM_H */

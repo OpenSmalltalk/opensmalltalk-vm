@@ -20,10 +20,16 @@
 *       Option  -> Right ALT
 *
 *****************************************************************************/
-#include <windows.h>
+#include <Windows.h>
+#include <windowsx.h>
 #include <shellapi.h>
 #include <commdlg.h>
 #include <excpt.h>
+
+/* only supported since Vista, and absent from some cygwin/mingw header */
+#ifndef WM_MOUSEHWHEEL
+#define WM_MOUSEHWHEEL                  0x020E
+#endif
 
 #if defined(__MINGW32_VERSION) && (__MINGW32_MAJOR_VERSION < 3)
 /** Kludge to get multimonitor API's to compile in the mingw/directx7 mix. **/
@@ -54,6 +60,8 @@ void setFullScreenFlag(sqInt);
 sqInt getSavedWindowSize(void);
 extern sqInt deferDisplayUpdates;
 
+extern sqInt sendWheelEvents; /* If true deliver EventTypeMouseWheel else kybd */
+/* if sendWheelEvents is false this maps wheel events to arrow keys */
 
 /*** Variables -- image and path names ***/
 #define IMAGE_NAME_SIZE MAX_PATH_UTF8 
@@ -98,7 +106,6 @@ int keyBufOverflows = 0;	/* number of characters dropped */
 
 /*** Win32-related Variables (declared in sqWin32.h) ***/
 HWND stWindow = NULL;      /*	the squeak window */
-HWND browserWindow = NULL; /* The browser window */
 HINSTANCE hInstance;	     /*	the instance of squeak running */
 HCURSOR currentCursor=0;	 /*	current cursor displayed by squeak */
 HPALETTE palette;	         /*	the palette (might be unused) */
@@ -135,7 +142,6 @@ BOOL f3ButtonMouse = 0;   /* Should we use a real 3 button mouse mapping? */
 BOOL  fHeadlessImage = 0;      /* Do we run headless? */
 BOOL  fRunService = 0;         /* Do we run as NT service? */
 DWORD dwMemorySize = 0;        /* How much memory do we use? */
-BOOL  fBrowserMode = 0;        /* Are we running in a web browser? */
 
 /* Misc preferences */
 BOOL  fEnableAltF4Quit = 1; /* can we quit using Alt-F4? */
@@ -161,12 +167,10 @@ PRINTDLG printValues;
 static int printerSetup = FALSE;
 #endif
 
-#ifndef NO_WHEEL_MOUSE
-UINT g_WM_MOUSEWHEEL = 0;	/* RvL: 1999-04-19 The message we receive from wheel mices */
-#endif
 
 /* misc forward declarations */
 int recordMouseEvent(MSG *msg, UINT nrClicks);
+int recordMouseWheelEvent(MSG *msg, int dx, int dy);
 int recordKeyboardEvent(MSG *msg);
 int recordWindowEvent(int action, RECT *r);
 #if NewspeakVM
@@ -265,6 +269,11 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
   static UINT nrClicks = 0;
   UINT timeNow = 0;
   UINT timeDelta = 0;
+  /* variables for accumulating mouse wheel deltas if too small */
+  static int hWheelDelta = 0;
+  static int vWheelDelta = 0;
+  static int prevHWheelTime = 0;
+  static int prevVWheelTime = 0;
 
   MSG localMessage;
   LPMSG messageTouse = NULL;
@@ -298,45 +307,6 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
   if(message == SQ_LAUNCH_DROP) 
     return sqLaunchDrop();
 
-#ifndef NO_WHEEL_MOUSE
-  /* RvL 1999-04-19 00:23
-     MOUSE WHEELING START */
-  if( WM_MOUSEWHEEL == message || g_WM_MOUSEWHEEL == message ) {
-    /* Record mouse wheel msgs as CTRL-Up/Down.
-     * N.B. On iOS & X11 we also handle horizonal mouse wheel events.
-     * Should the same happen here?
-     */
-    short zDelta = (short) HIWORD(wParam);
-    if(inputSemaphoreIndex) {
-      sqKeyboardEvent *evt = (sqKeyboardEvent*) sqNextEventPut();
-      evt->type = EventTypeKeyboard;
-      evt->timeStamp = messageTouse->time;
-      evt->charCode = (zDelta > 0) ? 30 : 31;
-      evt->pressCode = EventKeyChar;
-      /* N.B. on iOS & X11 all meta bits are set to distinguish mouse wheel
-       * events from real arrow key events.  Should the same happen here?
-       */
-      evt->modifiers = CtrlKeyBit;
-      /* It would be good if this were set in the SqueakVM also, no? */
-#ifdef PharoVM
-     evt->utf32Code = evt->charCode;
-#else
-      evt->utf32Code = 0;
-#endif
-      evt->reserved1 = 0;
-    } else {
-      buttonState = 64;
-      if (zDelta < 0) {
-	recordVirtualKey(message,VK_DOWN,lParam);
-      } else {
-	recordVirtualKey(message,VK_UP,lParam);
-      }
-    }
-    return 1;
-  }
-  /* MOUSE WHEELING END */
-#endif
-
   switch(message) {
   case WM_SYSCOMMAND:
   case WM_COMMAND: {
@@ -345,16 +315,14 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
       HandlePrefsMenu(cmd);
       break;
     }
-#if !defined(_WIN32_WCE)
     if(cmd == SC_MINIMIZE) {
       if(fHeadlessImage) ShowWindow(stWindow, SW_HIDE);
       else return DefWindowProcW(hwnd, message, wParam, lParam);
       break;
     }
-#endif /* defined(_WIN32_WCE) */
     if(cmd == SC_CLOSE) {
 #if NewspeakVM
-		/* Newspeak doesn't easnt to quit if the main window is closed.  Only
+		/* Newspeak doesn't want to quit if the main window is closed.  Only
 		 * when the last native window is closed.
 		 */
 		if(fEnableAltF4Quit)
@@ -395,9 +363,68 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
       break;
     }
     /* state based stuff */
-    mousePosition.x = LOWORD(lParam);
-    mousePosition.y = HIWORD(lParam);
+    mousePosition.x = GET_X_LPARAM(lParam);
+    mousePosition.y = GET_Y_LPARAM(lParam);
     break;
+  case WM_MOUSEHWHEEL: {
+    if(inputSemaphoreIndex && sendWheelEvents) {
+      int zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
+      /* accumulate enough delta before sending the event to the image */
+      int limit = WHEEL_DELTA / 6; /* threshold for delivering events */
+      timeNow = GetMessageTime(); /* Win32 - gets time of last GetMessage() */
+      hWheelDelta = (timeNow - prevHWheelTime < 500 /* milliseconds */) ? hWheelDelta + zDelta : zDelta;
+      prevHWheelTime = timeNow;
+      if( - limit < hWheelDelta && hWheelDelta < limit ) break;
+      zDelta = hWheelDelta;
+      hWheelDelta = 0;
+      recordMouseWheelEvent(messageTouse,zDelta,0);
+      break;   
+    } else {
+      /* Note: do not generate left/right arrow, images are not prepared to it */
+      return DefWindowProcW(hwnd,message,wParam,lParam);
+    }
+  }
+  case WM_MOUSEWHEEL: {
+    /* Record mouse wheel msgs as Up/Down arrow keypress + meta bits.
+     */
+    int zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
+    /* accumulate enough delta before sending the event to the image */
+    int limit = WHEEL_DELTA / 6; /* threshold for delivering events */
+    timeNow = GetMessageTime(); /* Win32 - gets time of last GetMessage() */
+    vWheelDelta = (timeNow - prevVWheelTime < 500 /* milliseconds */) ? vWheelDelta + zDelta : zDelta;
+    prevVWheelTime = timeNow;
+    if( - limit < vWheelDelta && vWheelDelta < limit ) break;
+    zDelta = vWheelDelta;
+    vWheelDelta = 0;
+    if(inputSemaphoreIndex) {
+      if(sendWheelEvents) {
+        recordMouseWheelEvent(messageTouse,0,zDelta);
+        break;   
+      } else {
+        sqKeyboardEvent *evt = (sqKeyboardEvent*) sqNextEventPut();
+        evt->type = EventTypeKeyboard;
+        evt->timeStamp = messageTouse->time;
+        evt->charCode = (zDelta > 0) ? 30 : 31;
+        evt->pressCode = EventKeyChar;
+        /* Set every meta bit to distinguish the fake event from a real arrow keypress
+         */
+        evt->modifiers = CtrlKeyBit|OptionKeyBit|CommandKeyBit|ShiftKeyBit;
+        evt->utf32Code = evt->charCode;
+        evt->reserved1 = 0;
+      }
+    } else {
+      buttonState = 64;
+      if (zDelta < 0) {
+        recordVirtualKey(message,VK_DOWN,lParam);
+      } else {
+        recordVirtualKey(message,VK_UP,lParam);
+      }
+      /* state based stuff */
+      mousePosition.x = GET_X_LPARAM(lParam);
+      mousePosition.y = GET_Y_LPARAM(lParam);
+    }
+    break;
+  }
   case WM_LBUTTONDOWN:
   case WM_RBUTTONDOWN:
   case WM_MBUTTONDOWN:
@@ -422,8 +449,8 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
       break;
     }
     /* state based stuff */
-    mousePosition.x = LOWORD(lParam);
-    mousePosition.y = HIWORD(lParam);
+    mousePosition.x = GET_X_LPARAM(lParam);
+    mousePosition.y = GET_Y_LPARAM(lParam);
     /* check for console focus */
     recordMouseDown(wParam, lParam);
     recordModifierButtons();
@@ -454,8 +481,8 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
       break;
     }
     /* state based stuff */
-    mousePosition.x = LOWORD(lParam);
-    mousePosition.y = HIWORD(lParam);
+    mousePosition.x = GET_X_LPARAM(lParam);
+    mousePosition.y = GET_Y_LPARAM(lParam);
     /* check for console focus */
     if(GetFocus() != stWindow) SetFocus(stWindow);
     recordMouseDown(wParam,lParam);
@@ -558,8 +585,6 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
     }
     break;
 
-#if !defined(_WIN32_WCE)
-    /* Don't change the cursor or system tray on WinCE */
     /* cursor redraw */
   case WM_SETCURSOR:
     /* keep currentCursor */
@@ -581,7 +606,7 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
       BringWindowToTop(stWindow);
     }
     return 0;
-#endif /* !defined(_WIN32_WCE) */
+
     /* Focus handling */
   case WM_SETFOCUS:
     fHasFocus = 1;
@@ -883,11 +908,8 @@ sqInt ioSetWindowWidthHeight(sqInt w, sqInt h) {
 
   /* We may have to center the window to fit on screen,
      although if there is room, we retain the window's previous position. */
-  if (fBrowserMode) {
-    left = 0;
-    top = 0;
-  } else if ((old.left >= workArea.left) && (old.top >= workArea.top) &&
-		     (old.left + width < workArea.right) && (old.top + height < workArea.bottom)) {
+  if ((old.left >= workArea.left) && (old.top >= workArea.top) &&
+	  (old.left + width < workArea.right) && (old.top + height < workArea.bottom)) {
 	left = old.left; 
 	top = old.top;
   } else {
@@ -960,52 +982,21 @@ void SetupWindows()
   wc.lpszClassName = windowClassName;
   RegisterClass(&wc);
 
-  if(!browserWindow)
-    stWindow = CreateWindowEx(WS_EX_APPWINDOW /* | WS_EX_OVERLAPPEDWINDOW */,
-			      windowClassName,
-			      TEXT(VM_NAME) TEXT("!"),
-			      WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
-			      0,
-			      0,
-			      CW_USEDEFAULT,
-			      CW_USEDEFAULT,
-			      NULL,
-			      NULL,
-			      hInstance,
-			      NULL);
-  else {
-    /* Setup a browser window. */
-    fBrowserMode = 1;
-    stWindow = CreateWindowEx(0,
-			      windowClassName,
-			      TEXT(VM_NAME) TEXT("!"),
-			      WS_CHILD | WS_CLIPCHILDREN,
-			      0,
-			      0,
-			      GetSystemMetrics(SM_CXSCREEN),
-			      GetSystemMetrics(SM_CYSCREEN),
-			      browserWindow,
-			      NULL,
-			      hInstance,
-			      NULL);
-  }
+  stWindow = CreateWindowEx(WS_EX_APPWINDOW /* | WS_EX_OVERLAPPEDWINDOW */,
+				windowClassName,
+				TEXT(VM_NAME) TEXT("!"),
+				WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
+				0,
+				0,
+				CW_USEDEFAULT,
+				CW_USEDEFAULT,
+				NULL,
+				NULL,
+				hInstance,
+				NULL);
+
   /* Force Unicode WM_CHAR */
   SetWindowLongPtrW(stWindow,GWLP_WNDPROC,(LONG_PTR)MainWndProcW);
-
-#ifndef NO_WHEEL_MOUSE
-  g_WM_MOUSEWHEEL = RegisterWindowMessage( TEXT("MSWHEEL_ROLLMSG") ); /* RvL 1999-04-19 00:23 */
-#endif
-
-#if defined(_WIN32_WCE)
-  /* WinCE does not support RegisterClassEx(), so we must set
-     the small icon after creating the window. */
-  SendMessage(stWindow,WM_SETICON, FALSE,
-	      (LPARAM)LoadImage(hInstance, MAKEINTRESOURCE(1),
-				IMAGE_ICON, 16, 16, 0));
-
-  consoleWindow = NULL; /* We do not use console under WinCE */
-
-#else /* defined(_WIN32_WCE) */
 
   consoleWindow = CreateWindowEx(0,
 				 TEXT("EDIT"),
@@ -1020,7 +1011,6 @@ void SetupWindows()
 				 NULL,
 				 hInstance,
 				 NULL);
-#endif /* defined(_WIN32_WCE) */
 
   /* Modify the system menu for any VM options */
   CreatePrefsMenu();
@@ -1040,15 +1030,12 @@ void SetupWindows()
 }
 
 
-#if !defined(_WIN32_WCE)  /* Unused under WinCE */
-
 void SetWindowSize(void) {
   RECT r, workArea;
   int width, height, maxWidth, maxHeight, actualWidth, actualHeight;
   int deltaWidth, deltaHeight;
 
   if(!IsWindow(stWindow)) return; /* might happen if run as NT service */
-  if(browserWindow) return; /* Ignored if in browser */
 
   if (getSavedWindowSize() != 0) {
     width  = (unsigned) getSavedWindowSize() >> 16;
@@ -1091,47 +1078,11 @@ void SetWindowSize(void) {
 
 }
 
-#endif /* !defined(_WIN32_WCE) */
-
 /****************************************************************************/
 /*              Keyboard and Mouse                                          */
 /****************************************************************************/
 
-/* The following is a mapping to Mac Roman glyphs.
-   It is not entirely correct since a number of glyphs are
-   different but should be good enough for Squeak.
-   More significantly, we can now map in both directions. */
-static unsigned char keymap[256] =
-{
-  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
- 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
- 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
- 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63,
- 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79,
- 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95,
- 96, 97, 98, 99,100,101,102,103,104,105,106,107,108,109,110,111,
-112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,
-173,176,226,196,227,201,160,224,246,228,178,220,206,179,182,183,
-184,212,213,210,211,165,208,209,247,170,185,221,207,186,189,217,
-202,193,162,163,219,180,195,164,172,169,187,199,194,197,168,248,
-161,177,198,215,171,181,166,225,252,218,188,200,222,223,240,192,
-203,231,229,204,128,129,174,130,233,131,230,232,237,234,235,236,
-245,132,241,238,239,205,133,249,175,244,242,243,134,250,251,167,
-136,135,137,139,138,140,190,141,143,142,144,145,147,146,148,149,
-253,150,152,151,153,155,154,214,191,157,156,158,159,254,255,216
-};
-
-/* The following is the inverse keymap */
-static unsigned char iKeymap[256];
-
-void SetupKeymap()
-{ int i;
-  for(i=0;i<256;i++)
-    iKeymap[keymap[i]] = i;
-}
-
-
-/* Map a virtual key into something the Mac understands */
+/* Map a virtual key into some encoding shared by all platforms and known at image side */
 static int mapVirtualKey(int virtKey)
 {
   switch (virtKey) {
@@ -1204,7 +1155,6 @@ int recordMouseEvent(MSG *msg, UINT nrClicks) {
 
   /* printf("HWND: %x MSG: %x WPARAM: %x LPARAM: %x\n", msg->hwnd, msg->message, wParam, msg->lParam); */
 
-
   alt = GetKeyState(VK_MENU) & 0x8000;
   shift = wParam & MK_SHIFT;
   ctrl  = wParam & MK_CONTROL;
@@ -1224,8 +1174,8 @@ int recordMouseEvent(MSG *msg, UINT nrClicks) {
   /* first the basics */
   proto.type = EventTypeMouse;
   proto.timeStamp = msg->time;
-  proto.x = (int)(short)LOWORD(msg->lParam);
-  proto.y = (int)(short)HIWORD(msg->lParam);
+  proto.x = GET_X_LPARAM(msg->lParam);
+  proto.y = GET_Y_LPARAM(msg->lParam);
   /* then the buttons */
   proto.buttons = 0;
   proto.buttons |= red ? RedButtonBit : 0;
@@ -1251,6 +1201,60 @@ int recordMouseEvent(MSG *msg, UINT nrClicks) {
   return 1;
 }
 
+int recordMouseWheelEvent(MSG *msg,int dx,int dy) {
+#ifndef NO_DIRECTINPUT
+  static DWORD firstEventTime = 0;
+#endif
+  DWORD wParam;
+  sqMouseEvent proto, *event;
+  int alt, shift, ctrl, red, blue, yellow;
+  if(!msg) return 0;
+  
+  /* clear out the button state for events we haven't seen */
+  wParam = msg->wParam & 
+    ~(MK_LBUTTON + MK_MBUTTON + MK_RBUTTON - winButtonState);
+
+  /* printf("HWND: %x MSG: %x WPARAM: %x LPARAM: %x\n", msg->hwnd, msg->message, wParam, msg->lParam); */
+
+  alt = GetKeyState(VK_MENU) & 0x8000;
+  shift = wParam & MK_SHIFT;
+  ctrl  = wParam & MK_CONTROL;
+  red   = wParam & MK_LBUTTON;
+  if(f1ButtonMouse) {
+    /* there's just a single button y'know */
+    red |= wParam & MK_MBUTTON;
+    red |= wParam & MK_RBUTTON;
+    blue = yellow = 0;
+  } else if(!f3ButtonMouse) {
+    blue   = wParam & MK_MBUTTON;
+    yellow = wParam & MK_RBUTTON;
+  } else {
+    blue   = wParam & MK_RBUTTON;
+    yellow = wParam & MK_MBUTTON;
+  }
+  /* first the basics */
+  proto.type = EventTypeMouseWheel;
+  proto.timeStamp = msg->time;
+  proto.x = dx;   /* Almost like other mouse events ... */
+  proto.y = dy;   /* except that we store the scroll delta here rather than mouse position */
+  /* then the buttons */
+  proto.buttons = 0;
+  proto.buttons |= red ? RedButtonBit : 0;
+  proto.buttons |= blue ? BlueButtonBit : 0;
+  proto.buttons |= yellow ? YellowButtonBit : 0;
+  /* then the modifiers */
+  proto.modifiers = 0;
+  proto.modifiers |= shift ? ShiftKeyBit : 0;
+  proto.modifiers |= ctrl ? CtrlKeyBit : 0;
+  proto.modifiers |= alt ? CommandKeyBit : 0;
+  proto.nrClicks = 0;
+  proto.windowIndex = msg->hwnd == stWindow ? 0 : (sqIntptr_t) msg->hwnd;
+  /* and lastly, fill in the event itself */
+  event = (sqMouseEvent*) sqNextEventPut();
+  *event = proto;
+  return 1;
+}
+
 int recordDragDropEvent(HWND wnd, int dragType, int x, int y, int numFiles)
 {
   sqDragDropFilesEvent *evt;
@@ -1264,7 +1268,8 @@ int recordDragDropEvent(HWND wnd, int dragType, int x, int y, int numFiles)
 
   /* first the basics */
   evt->type = EventTypeDragDropFiles;
-  evt->timeStamp = ioMicroMSecs();
+  // Be consistent with MSG.time source which is recorded for regular mouse events
+  evt->timeStamp = GetTickCount();
   evt->dragType = dragType;
   evt->x = x;
   evt->y = y;
@@ -1334,7 +1339,7 @@ int recordKeyboardEvent(MSG *msg) {
   evt = (sqKeyboardEvent*) sqNextEventPut();
   evt->type = EventTypeKeyboard;
   evt->timeStamp = msg->time;
-  evt->charCode = keymap[keyCode & 0xff];
+  evt->charCode = keyCode & 0xff;
   evt->pressCode = pressCode;
   evt->modifiers = 0;
   evt->modifiers |= alt ? CommandKeyBit : 0;
@@ -1495,8 +1500,8 @@ int recordKeystroke(UINT msg, WPARAM wParam, LPARAM lParam)
   /* Special case: VK_RETURN is handled as virtual key *only* */
   if(wParam == 13) return 1;
 
-  /* Map from Win32 to Mac */
-  keystate = keymap[wParam];
+  /* Set low 8 bits to the key code - this is internationalization unfriendly, but we cannot compact key code and modifier state into single sqInt without such sacrifice */
+  keystate = wParam & 0xff;
   /* add the modifiers */
   keystate = keystate | ((buttonState >> 3) << 8);
   /* check for interrupt key */
@@ -1515,17 +1520,6 @@ int recordMouseDown(WPARAM wParam, LPARAM lParam)
 {
   int stButtons= 0;
 
-#if defined(_WIN32_WCE)
-
-  if (wParam & MK_LBUTTON) stButtons |= 4;
-  if (stButtons == 4)	/* red button honours the modifiers */
-    {
-      if (wParam & MK_CONTROL) stButtons = 1;	/* blue button if CTRL down */
-      else if (GetKeyState(VK_LMENU) & 0x8000) stButtons = 2;	/* yellow button if META down */
-    }
-
-#else /* defined(_WIN32_WCE) */
-
   if(GetKeyState(VK_LBUTTON) & 0x8000) stButtons |= 4;
   if(GetKeyState(VK_MBUTTON) & 0x8000) {
     if(f1ButtonMouse) stButtons |= 4;
@@ -1535,8 +1529,6 @@ int recordMouseDown(WPARAM wParam, LPARAM lParam)
     if(f1ButtonMouse) stButtons |= 4;
     else stButtons |= f3ButtonMouse ? 1 : 2;
   }
-
-#endif /* defined(_WIN32_WCE) */
 
   buttonState = stButtons & 0x7;
   return 1;
@@ -1681,10 +1673,6 @@ sqInt ioProcessEvents(void)
 	
 		while(PeekMessageW(&msg,NULL,0,0,PM_NOREMOVE)) {
 			GetMessageW(&msg,NULL,0,0);
-# ifndef NO_PLUGIN_SUPPORT
-			if (msg.hwnd == NULL)
-				pluginHandleEvent(&msg);
-# endif
 			TranslateMessage(&msg);
 			DispatchMessageW(&msg);
 
@@ -1693,10 +1681,6 @@ sqInt ioProcessEvents(void)
 #else
 	while(PeekMessage(&msg,NULL,0,0,PM_NOREMOVE)) {
 		GetMessage(&msg,NULL,0,0);
-# ifndef NO_PLUGIN_SUPPORT
-		if (msg.hwnd == NULL)
-			pluginHandleEvent(&msg);
-# endif
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
     	}
@@ -1706,12 +1690,6 @@ sqInt ioProcessEvents(void)
 	/* any buffered mouse input which hasn't been processed is obsolete */
 	DumpBufferedMouseTrail();
 # endif
-
-	/* If we're running in a browser check if the browser's still there */
-	if (fBrowserMode
-	 && browserWindow
-	 && !IsWindow(browserWindow))
-		ioExit();
 
 	if (inIOProcessEvents > 0)
 		inIOProcessEvents -= 1;
@@ -1735,11 +1713,6 @@ ioDrainEventQueue(void)
   while(PeekMessage(&msg,NULL,0,0,PM_NOREMOVE))
     {
       GetMessage(&msg,NULL,0,0);
-#ifndef NO_PLUGIN_SUPPORT
-      if(msg.hwnd == NULL) {
-	pluginHandleEvent(&msg);
-      } else
-#endif
 	if(msg.hwnd != stWindow) {
 	  /* Messages not sent to Squeak window */
 	  if(msg.hwnd != consoleWindow && GetParent(msg.hwnd) == stWindow) {
@@ -1769,10 +1742,6 @@ ioDrainEventQueue(void)
   DumpBufferedMouseTrail();
 #endif
 
-  /* If we're running in a browser check if the browser's still there */
-  if(fBrowserMode && browserWindow) {
-    if(!IsWindow(browserWindow)) ioExit();
-  }
   lastMessage = NULL;
   return 1;
 }
@@ -1789,12 +1758,9 @@ sqInt ioScreenSize(void)
   static RECT r;
 
   if(!IsWindow(stWindow)) return getSavedWindowSize();
-  if(browserWindow && GetParent(stWindow) == browserWindow) {
-    GetClientRect(browserWindow,&r);
-  } else {
-    if(!IsIconic(stWindow))
-      GetClientRect(stWindow,&r);
-  }
+  if(!IsIconic(stWindow))
+    GetClientRect(stWindow,&r);
+
   /* width is high 16 bits; height is low 16 bits */
   return MAKELONG(r.bottom,r.right);
 }
@@ -1812,11 +1778,6 @@ sqInt ioScreenDepth(void) {
 
 sqInt ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt offsetX, sqInt offsetY)
 {
-#if !defined(_WIN32_WCE)
-	/****************************************************/
-	/* Only one cursor is defined under CE...           */
-	/* (the wait cursor)                         :-(    */
-	/****************************************************/
   static unsigned char *andMask=0,*xorMask=0;
   static int cx=0,cy=0,cursorSize=0;
   int i;
@@ -1875,7 +1836,7 @@ sqInt ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt of
     {
       printLastError(TEXT("CreateCursor failed"));
     }
-#endif /* !defined(_WIN32_WCE) */
+
   return 1;
 }
 
@@ -1883,7 +1844,7 @@ sqInt ioSetCursor(sqInt cursorBitsIndex, sqInt offsetX, sqInt offsetY) {
   return ioSetCursorWithMask(cursorBitsIndex, 0, offsetX, offsetY);
 }
 
-int ioSetCursorARGB(sqInt bitsIndex, sqInt w, sqInt h, sqInt x, sqInt y) {
+sqInt ioSetCursorARGB(sqInt bitsIndex, sqInt w, sqInt h, sqInt x, sqInt y) {
   ICONINFO info;
   HBITMAP hbmMask = NULL;
   HBITMAP hbmColor = NULL;
@@ -1931,44 +1892,18 @@ sqInt ioSetFullScreen(sqInt fullScreen) {
   }
   if(fullScreen)
     {
-#if !defined(_WIN32_WCE)
-      if(browserWindow) {
-	/* Jump out of the browser */
-	HWND oldBrowserWindow = browserWindow;
-	browserWindow = NULL;
-	DestroyWindow(stWindow);
-	SetupWindows();
-	/* I'm not exactly sure which one of the following three
-	   does the trick for IE - but using all three works,
-	   so hey, who cares ;-) */
-	SetForegroundWindow(stWindow);
-	SetActiveWindow(stWindow);
-	BringWindowToTop(stWindow);
-	/* SetWindowPos(stWindow, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW); */
-	browserWindow = oldBrowserWindow;
-      }
       SetWindowLongPtr(stWindow,GWL_STYLE, WS_POPUP | WS_CLIPCHILDREN);
       SetWindowLongPtr(stWindow,GWL_EXSTYLE, WS_EX_APPWINDOW);
       ShowWindow(stWindow, SW_SHOWMAXIMIZED);
-#else /* !defined(_WIN32_WCE) */
-      ShowWindow(stWindow,SW_SHOWNORMAL);
-#endif /* !defined(_WIN32_WCE) */
       setFullScreenFlag(1);
     }
   else
     {
-#if !defined(_WIN32_WCE)
       ShowWindow(stWindow, SW_RESTORE);
       ShowWindow(stWindow, SW_HIDE);
       SetWindowLongPtr(stWindow,GWL_STYLE, WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN);
       SetWindowLongPtr(stWindow,GWL_EXSTYLE, WS_EX_APPWINDOW /* | WS_EX_OVERLAPPEDWINDOW */ );
       SetWindowPos(stWindow,0,0,0,0,0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED | SWP_NOREDRAW);
-      if(browserWindow) {
-	/* Jump back into the browser */
-	DestroyWindow(stWindow);
-	SetupWindows();
-      }
-#endif /* !defined(_WIN32_WCE) */
       ShowWindow(stWindow,SW_SHOWNORMAL);
       setFullScreenFlag(0);
     }
@@ -2007,15 +1942,8 @@ int reverse_image_bytes(unsigned int* dst, unsigned int *src,
 {
   int pitch, first, last, nWords, delta, yy;
 
-  /* --- SPECIAL HACK FOR WINDOWS CE --- */
-#ifdef _WIN32_WCE
-  int reverseBits = 0;
-  if(depth == 1)
-    reverseBits = 1;
-#else
   /* compiler will optimize it away */
   static const int reverseBits = 0;
-#endif
 
   /* note: all  of the below are in DWORDs not BYTEs */
   pitch = ((width * depth) + 31) / 32;
@@ -2146,13 +2074,9 @@ sqInt ioHasDisplayDepth(sqInt depth) {
 
 sqInt ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenFlag)
 {
-#ifdef _WIN32_WCE
-  return 0; /* Not implemented on CE */
-#else
   RECT r;
 #ifdef USE_DIRECT_X
   static int wasFullscreen = 0;
-  static HWND oldBrowserWindow = NULL;
 #endif
 
   if(!IsWindow(stWindow)) return 0;
@@ -2167,27 +2091,11 @@ sqInt ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenF
     ioSetFullScreen(0); /* Turn off fullscreen */
     DirectXSetDisplayMode(stWindow, width, height, depth, 0);
     DestroyWindow(stWindow);
-    browserWindow = oldBrowserWindow;
     SetupWindows();
     ShowWindow(stWindow, SW_SHOWNORMAL);
   }
   wasFullscreen = fullscreenFlag;
-  if(fullscreenFlag && browserWindow) {
-    /* Must get out of browser window */
-    oldBrowserWindow = browserWindow;
-    browserWindow = NULL;
-    DestroyWindow(stWindow);
-    SetupWindows();
-    ShowWindow(stWindow, SW_SHOWNORMAL);
-  }
   if(!DirectXSetDisplayMode(stWindow, width, height, depth, fullscreenFlag)) {
-    /* We must carefully restore the old window here */
-    if(oldBrowserWindow) {
-      DestroyWindow(stWindow);
-      browserWindow = oldBrowserWindow;
-      SetupWindows();
-      ShowWindow(stWindow, SW_SHOWNORMAL);
-    }
     return 0;
   }
   /* Note: Only go to full screen if DirectX is used */
@@ -2198,17 +2106,11 @@ sqInt ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenF
   r.top = 0;
   r.right = width;
   r.bottom = height;
-  if(browserWindow) {
-    r.right = GetSystemMetrics(SM_CXSCREEN);
-    r.bottom = GetSystemMetrics(SM_CYSCREEN);
-  } else {
-    AdjustWindowRect(&r, GetWindowLongPtr(stWindow, GWL_STYLE), 0);
-  }
+  AdjustWindowRect(&r, GetWindowLongPtr(stWindow, GWL_STYLE), 0);
   SetWindowPos(stWindow, NULL, 0, 0, r.right-r.left, r.bottom-r.top,
 	       SWP_NOMOVE | SWP_NOZORDER);
   SetFocus(stWindow);
   return 1;
-#endif /* _WIN32_WCE */
 }
 
 /* force an update of the squeak window if using deferred updates */
@@ -2355,56 +2257,6 @@ sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth, double
 }
 
 
-#ifdef USE_DIB_SECTIONS
-
-/* CreateBitmapDC():
-   Create a device context for a DIB of the selected size.
-*/
-HDC CreateBitmapDC(HDC dc, int depth, int width, int height, void** pBitsOut)
-{
-  /* Cached DIBSection */
-  static HBITMAP hbm = NULL;
-  static int lastDepth = 0;
-  static int lastWidth = 0;
-  static int lastHeight = 0;
-  static void* pBits;
-  static HDC memDC;
-  BITMAPINFO *bmi;
-
-  bmi = BmiForDepth(depth);
-  if(!bmi)
-    abortMessage(TEXT("Fatal error: Color depth %d not supported"),depth);
-
-  if (depth != lastDepth || width != lastWidth || height != lastHeight)
-    {
-      lastDepth = depth;
-      lastHeight = height;
-      lastWidth = width;
-      bmi->bmiHeader.biWidth = width;
-      bmi->bmiHeader.biHeight = -height;
-      if (hbm)
-	DeleteObject(hbm);
-      hbm = CreateDIBSection(dc, bmi, DIB_RGB_COLORS, &pBits, NULL, 0);
-      if (!hbm)
-	abortMessage(TEXT("Fatal error: Cannot create device bitmap!"));
-    }
-
-  *pBitsOut = pBits;
-  memDC = CreateCompatibleDC(dc);
-  SelectObject(memDC, hbm);
-  return memDC;
-}
-
-/* ReleaseBitmapDC():
-   Clean up the given DC.
-*/
-void ReleaseBitmapDC(HDC memDC)
-{
-  DeleteDC(memDC);
-}
-
-#endif /* USE_DIB_SECTIONS */
-
 sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
 		  sqInt affectedL, sqInt affectedR, sqInt affectedT, sqInt affectedB)
 { HDC dc;
@@ -2473,53 +2325,6 @@ sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
   /* ----- EXPERIMENTAL ----- */
   lsbDisplay = depth < 0;
   if(lsbDisplay) depth = -depth;
-
-#if defined(USE_DIB_SECTIONS)
-	/******************************************************/
-	/* Windows CE version, using DIBSection               */
-	/* (does not support palettes or SetDIBitsToDevice()) */
-	/******************************************************/
-  {
-    void* pBits;
-    HDC memDC;
-
-    dc = GetDC(stWindow);
-    if (!dc)
-      error("GetDC() failed");
-
-    memDC = CreateBitmapDC(dc, depth, width, height, &pBits);
-    /* Reverse the affected area out of the squeak bitmap, into the DIBSection */
-
-    PROFILE_BEGIN(PROFILE_DISPLAY)
-      if( !lsbDisplay && depth < 32 ) {
-	if(depth == 16)
-	  reverse_image_words((unsigned int*) pBits, (unsigned int*) dispBits,
-			      depth, width, &updateRect);
-	else
-	  reverse_image_bytes((unsigned int*) pBits, (unsigned int*) dispBits,
-			      depth, width, &updateRect);
-      } else {
-	copy_image_words((int*)pBits, (int*) dispBits,
-			 depth, width, &updateRect);
-      }
-    PROFILE_END(ticksForReversal)
-
-      PROFILE_BEGIN(PROFILE_DISPLAY);
-    BitBlt(dc,
-	   updateRect.left,/* dst_x */
-	   updateRect.top, /* dst_y */
-	   (updateRect.right - updateRect.left),/* dst_w */
-	   (updateRect.bottom - updateRect.top),/* dst_h */
-	   memDC,
-	   updateRect.left, /* src_x */
-	   updateRect.top,  /* src_y */
-	   SRCCOPY);
-
-    ReleaseBitmapDC(memDC);
-    ReleaseDC(stWindow,dc);
-    PROFILE_END(ticksForBlitting);
-  }
-#else /* !defined(USE_DIB_SECTIONS) */
 
   bmi = BmiForDepth(depth);
   if(!bmi)
@@ -2625,7 +2430,6 @@ sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
   }
   PROFILE_END(ticksForReversal)
 #endif /* NO_BYTE_REVERSAL */
-#endif /* defined(_WIN32_WCE) */
   return 1;
 }
 
@@ -3013,28 +2817,6 @@ int isLocalFileName(TCHAR *fileName)
   return 1;
 }
 
-#if defined(_WIN32_WCE)
-	/* WinCE does not support short file names, and has
-	   no concept of a current directory. Space is at a
-	   premium, the file system is small, and we are unlikely
-	   to have a full sources file anyway (too big). All these
-	   factors means that we stick with a simpler scheme, of
-	   either requiring the image name to be fully pathed, or
-	   if not, popping up a file open dialog */
-
-void SetupFilesAndPath(){ 
-  char *tmp;
-  WCHAR *wtmp;
-  strcpy(imagePathA, imageNameA);
-  wcscpy(imagePathW, imageNameW);
-  tmp = strrchr(imagePathA,'\\');
-  if(tmp) tmp[1] = 0;
-  wtmp = wcsrchr(imagePathW, '\\');
-  if (wtmp) wtmp[1] = 0;
-}
-
-#else /* defined(_WIN32_WCE) */
-
 void SetupFilesAndPath() {
   char *tmp;
   WCHAR *wtmp;
@@ -3064,8 +2846,6 @@ void SetupFilesAndPath() {
   if(tmp) tmp[1] = 0;
   if (wtmp) wtmp[1] = 0;
 }
-
-#endif /* !defined(_WIN32_WCE) */
 
 /* SqueakImageLength():
    Return the length of the image if it is a valid Squeak image file.
@@ -3306,12 +3086,12 @@ int printUsage(int level)
                    TEXT("\n\t") TVMOPTION("breaksel:") TEXT(" string \t(call warning on send of sel for debug)")
 #endif /* STACKVM || NewspeakVM */
 #if STACKVM
+                   TEXT("\n\t") TVMOPTION("failonffiexception") TEXT("\t(when in an FFI callout primitive catch exceptions and fail the primitive)")
                    TEXT("\n\t") TVMOPTION("breakmnu:") TEXT(" string \t(call warning on MNU of sel for debug)")
                    TEXT("\n\t") TVMOPTION("leakcheck:") TEXT(" n \t\t(leak check on GC (1=full,2=incr,3=both))")
                    TEXT("\n\t") TVMOPTION("eden:") TEXT(" bytes \t\t(set eden memory size to bytes)")
                    TEXT("\n\t") TVMOPTION("stackpages:") TEXT(" n \t\t(use n stack pages)")
                    TEXT("\n\t") TVMOPTION("numextsems:") TEXT(" n \t\t(allow up to n external semaphores)")
-                   TEXT("\n\t") TVMOPTION("checkpluginwrites") TEXT(" \t(check for writes past end of object in plugins")
                    TEXT("\n\t") TVMOPTION("noheartbeat") TEXT(" \t\t(no heartbeat for debug)")
 #endif /* STACKVM */
 #if STACKVM || NewspeakVM
@@ -3329,7 +3109,6 @@ int printUsage(int level)
                    TEXT("\n\t") TVMOPTION("cogminjumps:") TEXT(" n \t(set min number of backward jumps for interpreted methods to be considered for compilation to machine code)")
                    TEXT("\n\t") TVMOPTION("tracestores") TEXT(" \t\t(assert-check stores for debug)")
                    TEXT("\n\t") TVMOPTION("reportheadroom") TEXT(" \t(report unused stack headroom on exit)")
-                   TEXT("\n\t") TVMOPTION("dpcso:") TEXT(" bytes \t\t(stack offset for prim calls for debug)")
 #endif /* COGVM */
 #if SPURVM
                    TEXT("\n\t") TVMOPTION("maxoldspace:") TEXT(" bytes \t(set max size of old space memory to bytes)")

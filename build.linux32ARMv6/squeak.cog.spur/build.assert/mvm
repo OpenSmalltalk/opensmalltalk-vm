@@ -2,13 +2,13 @@
 set -e
 # assert VM with VM profiler and threaded heartbeat
 INSTALLDIR=assert/sqcogspurlinuxhtRPi
-OPT="-g3 -O1 -fwrapv -DDEBUGVM=0"
+OPT="-g3 -O1 -DDEBUGVM=0"
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
 fi
 
-if ../../scripts/checkSCCSversion ; then exit 1; fi
+if ../../../scripts/checkSCCSversion ; then exit 1; fi
 echo -n "clean? "
 read a
 case $a in

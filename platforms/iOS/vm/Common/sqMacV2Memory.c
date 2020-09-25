@@ -80,8 +80,10 @@ usqInt	sqGetAvailableMemory() {
  
 static size_t pageSize, pageMask;
 
+// N.B. we declare f as void * not FILE * so that sqPlatformSpecific.h
+// does not need to include stdio.h
 usqInt 
-sqAllocateMemoryMac(usqInt desiredHeapSize, sqInt minHeapSize, FILE * f,usqInt headersize) {
+sqAllocateMemoryMac(usqInt desiredHeapSize, sqInt minHeapSize, void *f, usqInt headersize) {
 	 void  *possibleLocation,*startOfAnonymousMemory;
 	 off_t fileSize;
 	 struct stat sb;
@@ -176,8 +178,10 @@ sqMacMemoryFree() {
 }
 
 #ifdef BUILD_FOR_OSX
+// N.B. we declare f as void * not FILE * so that sqPlatformSpecific.h
+// does not need to include stdio.h
 size_t 
-sqImageFileReadEntireImage(void *ptr, size_t elementSize, size_t count, sqImageFile f) {
+sqImageFileReadEntireImage(void *ptr, size_t elementSize, size_t count, void *f) {
 	if (gSqueakUseFileMappedMMAP) 
 		return count;
 	return sqImageFileRead(ptr, elementSize, count, f); 
@@ -188,19 +192,21 @@ sqImageFileReadEntireImage(void *ptr, size_t elementSize, size_t count, sqImageF
 # define roundUpToPage(v) (((v)+pageSize-1)&pageMask)
 #if COGVM || defined(HAVE_NATIVEBOOST) 
 void
-sqMakeMemoryExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
+sqMakeMemoryExecutableFromToCodeToDataDelta(usqInt startAddr, usqInt endAddr, sqInt *codeToDataDelta)
 {
-	unsigned long firstPage = roundDownToPage(startAddr);
+	usqInt firstPage = roundDownToPage(startAddr);
 	if (mprotect((void *)firstPage,
 				 roundUpToPage(endAddr - firstPage),
 				 PROT_READ | PROT_WRITE | PROT_EXEC) < 0)
 		perror("mprotect(x,y,PROT_READ | PROT_WRITE | PROT_EXEC)");
+	if( codeToDataDelta )
+		*codeToDataDelta = 0;
 }
 
 void
-sqMakeMemoryNotExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
+sqMakeMemoryNotExecutableFromTo(usqInt startAddr, usqInt endAddr)
 {
-	unsigned long firstPage = roundDownToPage(startAddr);
+	usqInt firstPage = roundDownToPage(startAddr);
 	if (mprotect((void *)firstPage,
 				 roundUpToPage(endAddr - firstPage),
 				 PROT_READ | PROT_WRITE) < 0)

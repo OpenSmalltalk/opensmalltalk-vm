@@ -18,10 +18,6 @@
 
 ARMul_State*	lastCPU = NULL;
 
-/* When compiling armulator, it generally sets NEED_UI_LOOP_HOOK, which 
-	makes the main emulation step require this symbol to be set. */
-extern int (*deprecated_ui_loop_hook) (int) = NULL;
-
 // These two variables exist, in case there are library-functions which write to a stream.
 // In that case, we would write functions which print to that stream instead of stderr or similar
 #define LOGSIZE 4096
@@ -30,14 +26,18 @@ static int	gdblog_index = 0;
 
 ulong	minReadAddress, minWriteAddress;
 
-// what is that for?
-	   void			(*prevInterruptCheckChain)() = 0;
+/* The interrupt check chain is a convention wherein functions wanting to be
+ * called on interrupt check chain themselves together by remembering the head
+ * of the interruptCheckChain when they register to be informed. See the source
+ * of the plugin itself, src/plugins/GdbARMPlugin/GdbARMPlugin.c
+ */
+void	(*prevInterruptCheckChain)() = 0;
 
 void
-print_state(ARMul_State* state)
+print_state(ARMul_State *state)
 {
-	printf("NextInstr: %i\ttheMemory: 0x%p\tNumInstrs: 0x%p\tPC: 0x%p\tmode: %i\tEndCondition: %i\tprog32Sig: %s\tEmulate: %i\n", 
-		state->NextInstr, state->MemDataPtr, 
+	printf("ErorCode: %u\tNextInstr: %u\ttheMemory: %p\tNumInstrs: %ld\tPC: 0x%u\tmode: %u\tEndCondition: %u\tprog32Sig: %s\tEmulate: %u\n", 
+		state->ErrorCode, state->NextInstr, state->MemDataPtr, 
 		state->NumInstrs, state->Reg[15], 
 		state->Mode, state->EndCondition, 
 		state->prog32Sig == LOW ? "LOW" : (state->prog32Sig == HIGH ? "HIGH" :
@@ -47,7 +47,7 @@ print_state(ARMul_State* state)
 void*
 newCPU()
 {
-	if(lastCPU == NULL) ARMul_EmulateInit();
+	if (lastCPU == NULL) ARMul_EmulateInit();
 	lastCPU = ARMul_NewState();
 #if 0 /* XScale seems to disable floating point */
 	ARMul_SelectProcessor (lastCPU, ARM_v5_Prop | ARM_v5e_Prop | ARM_XScale_Prop | ARM_v6_Prop);
@@ -58,10 +58,10 @@ newCPU()
 }
 
 long
-resetCPU(void* cpu)
+resetCPU(void *cpu)
 {
 	unsigned int i, j;
-	ARMul_State* state = (ARMul_State*) cpu;
+	ARMul_State *state = (ARMul_State*) cpu;
 	// test whether the supplied instance is an ARMul type?
 
 	gdblog_index = 0;
@@ -84,34 +84,41 @@ resetCPU(void* cpu)
 }
 
 static inline long
-runOnCPU(void *cpu, void *memory, 
-		ulong byteSize, ulong minAddr, ulong minWriteMaxExecAddr, ARMword (*run)(ARMul_State*))
+runOnCPU(ARMul_State *cpu, void *memory, 
+		ulong byteSize, ulong minAddr, ulong minWriteMaxExecAddr, ARMword (*runOrStep)(ARMul_State*))
 {
-	ARMul_State* state = (ARMul_State*) cpu;
-	lastCPU = state;
+	assert(lastCPU == cpu);
 
-	assert(state->prog32Sig == HIGH || state->prog32Sig == HIGHLOW);
+	assert(cpu->prog32Sig == HIGH || cpu->prog32Sig == HIGHLOW);
 	// test whether the supplied instance is an ARMul type?
-	state->MemDataPtr = (unsigned char*) memory;
-	state->MemSize = byteSize;
+	cpu->MemDataPtr = (unsigned char *)memory;
+	cpu->MemSize = byteSize;
 	minReadAddress = minAddr;
 	minWriteAddress = minWriteMaxExecAddr;
 
 	gdblog_index = 0;
 
-	state->EndCondition = NoError;
-	state->NextInstr = RESUME;
+	cpu->EndCondition = NoError;
+	cpu->NextInstr = RESUME;
 
-	state->Reg[15] = run(state);
+	cpu->Reg[15] = runOrStep(cpu);
 
 	// collect the PSR from their dedicated flags to have easy access from the image.
-	ARMul_SetCPSR(state, ARMul_GetCPSR(state));
+	ARMul_SetCPSR(cpu, ARMul_GetCPSR(cpu));
 
-	if(state->EndCondition != NoError){
-		return state->EndCondition;
-	}
+	if (cpu->EndCondition != NoError)
+		return cpu->EndCondition;
 
 	return gdblog_index == 0 ? 0 : SomethingLoggedError;
+}
+
+ARMword
+ARMul_Emulate26 (ARMul_State * state)
+{
+	assertf("GdbARMPlugin is in Thumb mode.  This should not happen!");
+	/* i.e. we *should never* switch to Thumb mode */
+	state->EndCondition = PanicError;
+	return state->Reg[15];
 }
 
 long
@@ -139,14 +146,14 @@ flushICacheFromTo(void *cpu, ulong saddr, ulong eaddr)
 #endif
 }
 
-long
-gdb_log_printf(void* stream, const char * format, ...)
+int
+gdb_log_printf(void *stream, const char *format, ...)
 {
 	va_list arg;
 	int n;
 	va_start(arg,format);
 
-	if(stream == NULL){
+	if (stream == NULL){
 		n = vsnprintf((char*) (&gdb_log) + gdblog_index, LOGSIZE-gdblog_index, format, arg);
 		gdblog_index = gdblog_index + n;
 	} else {
@@ -164,7 +171,7 @@ disassembleForAtInSize(void *cpu, ulong laddr,
 	// start disassembling at laddr relative to memory
 	// stop disassembling at memory+byteSize
 
-	disassemble_info* dis = (disassemble_info*) calloc(1, sizeof(disassemble_info));
+	disassemble_info *dis = (disassemble_info*) calloc(1, sizeof(disassemble_info));
 	// void init_disassemble_info (struct disassemble_info *dinfo, void *stream, fprintf_ftype fprintf_func)
 	init_disassemble_info ( dis, NULL, gdb_log_printf);
 
@@ -205,3 +212,18 @@ getlog(long *len)
 	return gdb_log;
 }
 
+void
+storeIntegerRegisterStateOfinto(void *cpu, int *registerState)
+{
+	for (int n = -1; ++n < 16;)
+		registerState[n] = ((ARMul_State *)cpu)->Reg[n];
+#if 1
+	registerState[16] = ((ARMul_State *)cpu)->Cpsr;
+#else
+	registerState[16] = ((((ARMul_State *)cpu)->NFlag & 1) << 5)
+					  + ((((ARMul_State *)cpu)->ZFlag & 1) << 4)
+					  + ((((ARMul_State *)cpu)->CFlag & 1) << 3)
+					  + ((((ARMul_State *)cpu)->VFlag & 1) << 2)
+					  +  (((ARMul_State *)cpu)->IFFlags & 3);
+#endif
+}

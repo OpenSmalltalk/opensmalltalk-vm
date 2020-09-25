@@ -72,6 +72,11 @@
 
 #undef	DEBUG_MODULES
 
+#ifdef MUSL
+void pushOutputFile(char *fileNameOrStdioIndex) {;}
+void popOutputFile() {;}
+#endif
+
 #undef	IMAGE_DUMP				/* define to enable SIGHUP and SIGQUIT handling */
 
 #define IMAGE_NAME_SIZE MAXPATHLEN
@@ -130,6 +135,7 @@ int inModalLoop= 0;
 
 int sqIgnorePluginErrors	= 0;
 int runInterpreter		= 1;
+
 
 #include "SqDisplay.h"
 #include "SqSound.h"
@@ -874,7 +880,7 @@ static void outOfMemory(void)
 static void *printRegisterState(ucontext_t *uap);
 
 static void
-reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
+reportStackState(const char *msg, char *date, int printAll, ucontext_t *uap)
 {
 #if !defined(NOEXECINFO) && defined(HAVE_EXECINFO_H)
 	void *addrs[BACKTRACE_DEPTH];
@@ -918,36 +924,8 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 			 * dump machinery has of giving us an accurate report is if we set
 			 * stackPointer & framePointer to the native stack & frame pointers.
 			 */
-# if __APPLE__ && __MACH__ && __i386__
-			void *fp = (void *)(uap ? uap->uc_mcontext->ss.ebp: 0);
-			void *sp = (void *)(uap ? uap->uc_mcontext->ss.esp: 0);
-# elif __linux__ && __i386__
-			void *fp = (void *)(uap ? uap->uc_mcontext.gregs[REG_EBP]: 0);
-			void *sp = (void *)(uap ? uap->uc_mcontext.gregs[REG_ESP]: 0);
-#	elif __linux__ && __x86_64__
-			void *fp = (void *)(uap ? uap->uc_mcontext.gregs[REG_RBP]: 0);
-			void *sp = (void *)(uap ? uap->uc_mcontext.gregs[REG_RSP]: 0);
-# elif __FreeBSD__ && __i386__
-			void *fp = (void *)(uap ? uap->uc_mcontext.mc_ebp: 0);
-			void *sp = (void *)(uap ? uap->uc_mcontext.mc_esp: 0);
-# elif __FreeBSD__ && __amd64__
-			void *fp = (void *)(uap ? uap->uc_mcontext.mc_rbp: 0);
-			void *sp = (void *)(uap ? uap->uc_mcontext.mc_rsp: 0);
-# elif __OpenBSD__ && __i386__
-			void *fp = (void *)(uap ? uap->sc_ebp: 0);
-			void *sp = (void *)(uap ? uap->sc_esp: 0);
-# elif __OpenBSD__ && __amd64__
-			void *fp = (void *)(uap ? uap->sc_rbp: 0);
-			void *sp = (void *)(uap ? uap->sc_rsp: 0);
-# elif __sun__ && __i386__
-			void *fp = (void *)(uap ? uap->uc_mcontext.gregs[REG_FP]: 0);
-			void *sp = (void *)(uap ? uap->uc_mcontext.gregs[REG_SP]: 0);
-# elif defined(__arm__) || defined(__arm32__) || defined(ARM32)
-			void *fp = (void *)(uap ? uap->uc_mcontext.arm_fp: 0);
-			void *sp = (void *)(uap ? uap->uc_mcontext.arm_sp: 0);
-# else
-#	error need to implement extracting pc from a ucontext_t on this system
-# endif
+			void *fp = (void *)(uap ? uap->_FP_IN_UCONTEXT : 0);
+			void *sp = (void *)(uap ? uap->_SP_IN_UCONTEXT : 0);
 			char *savedSP, *savedFP;
 
 			ifValidWriteBackStackPointersSaveTo(fp,sp,&savedFP,&savedSP);
@@ -1013,14 +991,42 @@ printRegisterState(ucontext_t *uap)
 			"\tr12 0x%08lx r13 0x%08lx r14 0x%08lx r15 0x%08lx\n"
 			"\trip 0x%08lx\n",
 			regs[REG_RAX], regs[REG_RBX], regs[REG_RCX], regs[REG_RDX],
-			regs[REG_RDI], regs[REG_RDI], regs[REG_RBP], regs[REG_RSP],
+			regs[REG_RDI], regs[REG_RSI], regs[REG_RBP], regs[REG_RSP],
 			regs[REG_R8 ], regs[REG_R9 ], regs[REG_R10], regs[REG_R11],
 			regs[REG_R12], regs[REG_R13], regs[REG_R14], regs[REG_R15],
 			regs[REG_RIP]);
 	return (void *)regs[REG_RIP];
-# elif __linux__ && (defined(__arm64__))
- 	printf("@@FIXME@@: derive register state from a ucontext_t on aarch64 \n");
-	return 0;
+# elif __OpenBSD__ && __x86_64__
+	printf(	"\trax 0x%08lx rbx 0x%08lx rcx 0x%08lx rdx 0x%08lx\n"
+			"\trdi 0x%08lx rsi 0x%08lx rbp 0x%08lx rsp 0x%08lx\n"
+			"\tr8  0x%08lx r9  0x%08lx r10 0x%08lx r11 0x%08lx\n"
+			"\tr12 0x%08lx r13 0x%08lx r14 0x%08lx r15 0x%08lx\n"
+			"\trip 0x%08lx\n",
+			uap->sc_rax, uap->sc_rbx, uap->sc_rcx, uap->sc_rdx,
+			uap->sc_rdi, uap->sc_rsi, uap->sc_rbp, uap->sc_rsp,
+			uap->sc_r8, uap->sc_r9, uap->sc_r10, uap->sc_r11,
+			uap->sc_r12, uap->sc_r13, uap->sc_r14, uap->sc_r15,
+			uap->sc_rip);
+	return (void*)uap->sc_rip;
+# elif __linux__ && (defined(__arm64__) || defined(__aarch64__))
+	void **regs = (void **)&uap->uc_mcontext.regs[0];
+	printf(	"\tx0 %p x1 %p x2 %p x3 %p\n"
+			"\tx4 %p x5 %p x6 %p x7 %p\n"
+			"\tx8 %p x9 %p x10 %p x11 %p\n"
+			"\tx12 %p x13 %p x14 %p x15 %p\n"
+			"\tx16 %p x17 %p x18 %p x19 %p\n"
+			"\tx20 %p x21 %p x22 %p x23 %p\n"
+			"\tx24 %p x25 %p x26 %p x27 %p\n"
+			"\tx29 %p  fp %p  lr %p  sp %p\n",
+			regs[0], regs[1], regs[2], regs[3],
+			regs[4], regs[5], regs[6], regs[7],
+			regs[8], regs[9], regs[10], regs[11],
+			regs[12], regs[13], regs[14], regs[15],
+			regs[16], regs[17], regs[18], regs[19],
+			regs[20], regs[21], regs[22], regs[23],
+			regs[24], regs[25], regs[26], regs[27],
+			regs[28], regs[29], regs[30], (void *)(uap->uc_mcontext.sp));
+	return uap->uc_mcontext.pc;
 # elif __linux__ && (defined(__arm__) || defined(__arm32__) || defined(ARM32))
 	struct sigcontext *regs = &uap->uc_mcontext;
 	printf(	"\t r0 0x%08x r1 0x%08x r2 0x%08x r3 0x%08x\n"
@@ -1058,7 +1064,7 @@ block()
 /* Disable Intel compiler inlining of error which is used for breakpoints */
 #pragma auto_inline(off)
 void
-error(char *msg)
+error(const char *msg)
 {
 	reportStackState(msg,0,0,0);
 	if (blockOnError) block();
@@ -1106,13 +1112,13 @@ sigsegv(int sig, siginfo_t *info, ucontext_t *uap)
 	time_t now = time(NULL);
 	char ctimebuf[32];
 	char crashdump[MAXPATHLEN+1];
-	char *fault = sig == SIGSEGV
-					? "Segmentation fault"
-					: (sig == SIGBUS
-						? "Bus error"
-						: (sig == SIGILL
-							? "Illegal instruction"
-							: "Unknown signal"));
+	const char *fault = sig == SIGSEGV
+						? "Segmentation fault"
+						: (sig == SIGBUS
+							? "Bus error"
+							: (sig == SIGILL
+								? "Illegal instruction"
+								: "Unknown signal"));
 
 	if (!inFault) {
 		extern sqInt primitiveFailForFFIExceptionat(usqLong exceptionCode, usqInt pc);
@@ -1160,24 +1166,25 @@ struct moduleDescription
 
 static struct moduleDescription moduleDescriptions[]=
 {
-  { &displayModule, "display", "X11"    },	/*** NO DEFAULT ***/
-  { &displayModule, "display", "fbdev"  },	/*** NO DEFAULT ***/
-  { &displayModule, "display", "null"   },	/*** NO DEFAULT ***/
+  { &displayModule, "display", "X11"    },      /*** Implicit   ***/
   { &displayModule, "display", "custom" },	/*** NO DEFAULT ***/
-  { &soundModule,   "sound",   "NAS"    },	/*** NO DEFAULT ***/
+  { &soundModule,   "sound",   "NAS"    },	/*** Implicit   ***/
   { &soundModule,   "sound",   "custom" },	/*** NO DEFAULT ***/
   /* when adding an entry above be sure to change the defaultModules offset below */
   { &displayModule, "display", "Quartz" },	/* defaults... */
+  { &displayModule, "display", "fbdev"  },
+  { &displayModule, "display", "null"   },
+  { &soundModule,   "sound",   "pulse"  },
   { &soundModule,   "sound",   "OSS"    },
   { &soundModule,   "sound",   "MacOSX" },
   { &soundModule,   "sound",   "Sun"    },
-  { &soundModule,   "sound",   "pulse"  },
   { &soundModule,   "sound",   "ALSA"   },
+  { &soundModule,   "sound",   "sndio"  },
   { &soundModule,   "sound",   "null"   },
   { 0,              0,         0	}
 };
 
-static struct moduleDescription *defaultModules= moduleDescriptions + 6;
+static struct moduleDescription *defaultModules= moduleDescriptions + 4;
 
 
 struct SqModule *queryLoadModule(char *type, char *name, int query)
@@ -1572,10 +1579,6 @@ static int vm_parseArgument(int argc, char **argv)
   else if (argc > 1 && !strcmp(argv[0], VMOPTION("numextsems"))) { 
     ioSetMaxExtSemTableSize(atoi(argv[1]));
     return 2; }
-  else if (!strcmp(argv[0], VMOPTION("checkpluginwrites"))) { 
-    extern sqInt checkAllocFiller;
-    checkAllocFiller = 1;
-    return 1; }
   else if (!strcmp(argv[0], VMOPTION("noheartbeat"))) { 
     extern sqInt suppressHeartbeatFlag;
     suppressHeartbeatFlag = 1;
@@ -1675,6 +1678,7 @@ static void vm_printUsage(void)
   printf("  "VMOPTION("breaksel")" selector    set breakpoint on send of selector\n");
 #endif
 #if STACKVM
+  printf("  "VMOPTION("failonffiexception")"   when in an FFI callout primitive catch exceptions and fail the primitive\n");
   printf("  "VMOPTION("breakmnu")" selector    set breakpoint on MNU of selector\n");
   printf("  "VMOPTION("eden")" <size>[mk]      use given eden size\n");
   printf("  "VMOPTION("leakcheck")" num        check for leaks in the heap\n");
@@ -1682,7 +1686,7 @@ static void vm_printUsage(void)
 #endif
   printf("  "VMOPTION("noevents")"             disable event-driven input support\n");
   printf("  "VMOPTION("nohandlers")"           disable sigsegv & sigusr1 handlers\n");
-  printf("  "VMOPTION("pollpip")"              output . on each poll for input\n");
+  printf("  "VMOPTION("pollpip")" (0|1)        output on each poll for input\n");
   printf("  "VMOPTION("checkpluginwrites")"    check for writes past end of object in plugins\n");
   printf("  "VMOPTION("pathenc")" <enc>        set encoding for pathnames (default: UTF-8)\n");
   printf("  "VMOPTION("plugins")" <path>       specify alternative plugin location (see manpage)\n");
@@ -2000,8 +2004,6 @@ void imgInit(void)
 # define mtfsfi(fpscr)
 #endif
 
-extern void initGlobalStructure(void); // this is effectively null if a global register is not being used
-
 int
 main(int argc, char **argv, char **envp)
 {
@@ -2031,8 +2033,6 @@ main(int argc, char **argv, char **envp)
   }
 #endif
 
-	initGlobalStructure();
- 
  /* Allocate arrays to store copies of pointers to command line
      arguments.  Used by getAttributeIntoLength(). */
 
@@ -2267,24 +2267,15 @@ sqInt ioGatherEntropy(char *buffer, sqInt bufSize)
  *    the size of the redzone, if any.
  */
 
-/*
- * Cog has already captured CStackPointer  before calling this routine.  Record
- * the original value, capture the pointers again and determine if CFramePointer
- * lies between the two stack pointers and hence is likely in use.  This is
- * necessary since optimizing C compilers for x86 may use %ebp as a general-
- * purpose register, in which case it must not be captured.
- */
 int
-isCFramePointerInUse()
+isCFramePointerInUse(usqIntptr_t *cFrmPtrPtr, usqIntptr_t *cStkPtrPtr)
 {
-	extern unsigned long CStackPointer, CFramePointer;
 	extern void (*ceCaptureCStackPointers)(void);
-	unsigned long currentCSP = CStackPointer;
+	usqIntptr_t currentCSP = *cStkPtrPtr;
 
-	currentCSP = CStackPointer;
 	ceCaptureCStackPointers();
-	assert(CStackPointer < currentCSP);
-	return CFramePointer >= CStackPointer && CFramePointer <= currentCSP;
+	assert(*cStkPtrPtr < currentCSP);
+	return *cFrmPtrPtr >= *cStkPtrPtr && *cFrmPtrPtr <= currentCSP;
 }
 
 /* Answer an approximation of the size of the redzone (if any).  Do so by

@@ -1,6 +1,6 @@
 #############################################################################
 # Generic Makefile for Mac OS VM 
-# Do make getversion to get makwe -n to work
+# Do make getversion to get make -n to work
 #
 # This is designed to be invoked by Makefile in a specific build directory via
 # include ../common/Makefile.app
@@ -9,6 +9,14 @@
 # VMSRCDIR defines the locaton of the VM source to build.  Required.
 #
 # COGDEFS supply any command-line defines to use, and may be null.
+#
+# SDK optional specific SDK instead of oldest suitable available version,
+#		e.g.  SDK:=MacOSX10.13.sdk
+#
+# TARGET_VERSION_MIN optional oldest supported target instead of default 10.7
+#		e.g.  TARGET_VERSION_MIN:=10.11
+#
+# LINK_WITH_CXX optional, use clang++ to link.  Simply set to non-empty
 #
 # The name of the VM to build, e.g. Squeak or "Newspeak Virtual Machine"
 # and its short name, e.g. Squeak or Newspeak, used to choose app icon files.
@@ -44,6 +52,7 @@ OBJDIR:= $(BLDDIR)/vm
 
 PLATDIR:=../../platforms
 CROSSDIR:=$(PLATDIR)/Cross/vm
+TPDIR:=$(PLATDIR)/Cross/third-party
 OSXDIR:=$(PLATDIR)/iOS/vm/OSX
 OSXCOMMONDIR:=$(PLATDIR)/iOS/vm/Common
 OSXCLASSESDIR:=$(PLATDIR)/iOS/vm/Common/Classes
@@ -88,6 +97,10 @@ include plugins.ext
 LIBS:= $(addprefix $(OBJDIR)/, $(addsuffix .lib, $(INTERNAL_PLUGINS)))
 BUNDLES:= $(addprefix $(OBJDIR)/, $(addsuffix .bundle, $(EXTERNAL_PLUGINS)))
 
+ifdef BIT_IDENTICAL_FLOATING_POINT
+LIBS:=$(LIBS) $(BLDDIR)/fdlibm/libm.a
+endif
+
 # VM config flags.
 ifeq ($(CONFIGURATION),debug)
 OFLAGS:= -g -O0 -fno-omit-frame-pointer
@@ -118,8 +131,15 @@ INCLUDES:= $(addprefix -I,. $(SRCDIRS))
 LD:=	 gcc
 
 #############################################################################
+# Ensure version control info is up-to-date, and extract it from the file.
 #
-SVNREV:= $(shell sed -e "s/^static.*GitRawRevisionString.*Rev: \([0-9][0-9]*\).*/\\1/p" -e d $(PLATDIR)/Cross/vm/sqSCCSVersion.h)
+SCCSVER:=$(PLATDIR)/Cross/vm/sqSCCSVersion.h
+
+ifneq ($(shell grep 'GitRawRevisionString.*$$Rev$$.' $(SCCSVER)),)
+$(shell bash -c "cd ../../scripts; ./updateSCCSVersions")
+endif
+
+SVNREV:= $(shell sed -e "s/^static.*GitRawRevisionString.*Rev: \([0-9][0-9]*\).*/\\1/p" -e d $(SCCSVER))
 
 
 #############################################################################
@@ -145,6 +165,15 @@ assert:
 debug:
 	$(MAKE) -f $(MAKEFILE_LIST) CONFIGURATION=debug $(@,debug=) default
 
+productilc:
+	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) CONFIGURATION=product build/vm/validImage
+
+assertilc:
+	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) CONFIGURATION=assert buildast/vm/validImage
+
+debugilc:
+	$(MAKE) -f $(firstword $(MAKEFILE_LIST)) CONFIGURATION=debug builddbg/vm/validImage
+
 cleanallvm:	cleandeps cleanvm cleanvmast cleanvmdbg cleangv
 
 cleandeps:
@@ -163,38 +192,48 @@ cleangv:
 	rm -rf getversion getversion.*
 
 print-source:
-	@echo ---------------- Makefile.vm sources ------------------
-	@echo CROSSSRC=$(CROSSSRC)
-	@echo OSXSRC=$(OSXSRC)
-	@echo MAKERSRC=$(MAKERSRC)
-	@echo UNIXSRC=$(UNIXSRC)
-	@echo VMSRC=$(VMSRC)
+	$(info ---------------- Makefile.vm sources ------------------)
+	$(info CROSSSRC=$(CROSSSRC))
+	$(info OSXSRC=$(OSXSRC))
+	$(info MAKERSRC=$(MAKERSRC))
+	$(info UNIXSRC=$(UNIXSRC))
+	$(info VMSRC=$(VMSRC))
 
 print-settings:
-	@echo ---------------- Makefile.vm settings ------------------
-	@echo CONFIGURATION=$(CONFIGURATION)
-	@echo VPATH=$(VPATH)
-	@echo INCLUDES=$(INCLUDES)
-	@echo CFLAGS=$(CFLAGS)
-	@echo INTERNAL_PLUGINS=$(INTERNAL_PLUGINS)
-	@echo EXTERNAL_PLUGINS=$(EXTERNAL_PLUGINS)
-	@echo OBJDIR=$(OBJDIR)
-	@echo LIBS=$(LIBS)
-	@echo BUNDLES=$(BUNDLES)
-	@echo deps=$(patsubst %,deps/%.d,$(notdir $(basename $(VMSRC))))
-	@echo -----------------------------------------------------
+	$(info ---------------- Makefile.vm settings ------------------)
+	$(info CONFIGURATION=$(CONFIGURATION))
+	$(info VPATH=$(VPATH))
+	$(info INCLUDES=$(INCLUDES))
+	$(info CFLAGS=$(CFLAGS))
+	$(info INTERNAL_PLUGINS=$(INTERNAL_PLUGINS))
+	$(info EXTERNAL_PLUGINS=$(EXTERNAL_PLUGINS))
+	$(info OBJDIR=$(OBJDIR))
+	$(info LIBS=$(LIBS))
+	$(info BUNDLES=$(BUNDLES))
+	$(info deps=$(patsubst %,deps/%.d,$(notdir $(basename $(VMSRC)))))
+	$(info -----------------------------------------------------)
 
 print-objects:
-	@echo ---------------- Makefile.vm objects ------------------
-	@echo VMOBJ=$(VMOBJ)
-	@echo -----------------------------------------------------
+	$(info ---------------- Makefile.vm objects ------------------)
+	$(info VMOBJ=$(VMOBJ))
+	$(info -----------------------------------------------------)
 
 ignore := $(addsuffix .%, $(basename $(wildcard $(BUILD)/vm/*.ignore)))
 
 $(OBJDIR)/$(VM): $(OBJDIR) $(VMOBJ) $(LIBS)
 	$(CC) -arch $(TARGET_ARCH) -o $(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -c $(OSXCOMMONDIR)/version.c
-	$(CC) -arch $(TARGET_ARCH) -isysroot $(SDK) $(LDFLAGS) $(FRAMEWORKS) \
+ifneq ($(LINK_WITH_CXX),)
+	$(LDCXX) -arch $(TARGET_ARCH) -isysroot $(SDK) $(CXXVERFLAGS) $(LDFLAGS) $(FRAMEWORKS) \
+			-Wl,-headerpad_max_install_names \
 			-o $(OBJDIR)/$(VM) $(VMOBJ) $(filter-out $(call ignore), $(LIBS))
+else
+	$(CC) -arch $(TARGET_ARCH) -isysroot $(SDK) $(LDFLAGS) $(FRAMEWORKS) \
+			-Wl,-headerpad_max_install_names \
+			-o $(OBJDIR)/$(VM) $(VMOBJ) $(filter-out $(call ignore), $(LIBS))
+endif
+
+$(OBJDIR)/validImage: $(OBJDIR)/validImage.o $(OBJDIR)/sqUnixSpurMemory.o $(OBJDIR)/sqHeapMap.o
+	$(LD) -arch $(TARGET_ARCH) -o $@ $^
 
 $(OBJDIR):
 	@-mkdir -p $(BLDDIR)
@@ -205,6 +244,8 @@ endif
 ifneq ($(EXTERNAL_PLUGINS),)
 	mkdir -p $(addprefix $(BLDDIR)/, $(EXTERNAL_PLUGINS))
 endif
+
+validImage:	$(OBJDIR) $(OBJDIR)/validImage
 
 #############################################################################
 # Building plugins
@@ -278,6 +319,11 @@ $(OBJDIR)/%.dylib: FORCE
 #%.bundle: $(OBJDIR)/%.bundle
 #	make $(MAKEFLAGS) $<
 
+$(BLDDIR)/fdlibm/libm.a:
+	@-mkdir -p $(@D)
+	$(MAKE) CFLAGS="$(OFLAGS) -D_IEEE_LIBM -isysroot $(SDK)" -C $(@D) \
+		TP=../../$(TPDIR) -f ../../$(TPDIR)/fdlibm/Makefile.remote
+
 FORCE:
 
 .PRECIOUS: $(OBJDIR)/%.lib $(OBJDIR)/%.bundle
@@ -286,6 +332,6 @@ FORCE:
 # Extra specific dependencies
 #
 sqNamedPrims.h: plugins.int
-	../common/mkNamedPrims.sh plugins.int > sqNamedPrims.h
+	$(PLATDIR)/Cross/util/mkNamedPrims.sh plugins.int > sqNamedPrims.h
 
 $(OBJDIR)/sqNamedPrims.o:	sqNamedPrims.c sqNamedPrims.h

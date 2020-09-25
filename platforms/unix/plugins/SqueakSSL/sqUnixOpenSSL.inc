@@ -7,9 +7,16 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+#include <sys/socket.h>
+#include <netinet/in.h>
 #include <arpa/inet.h>
 
 #include <sys/param.h>
+
+#ifdef __sun
+/* MIN is not C stdlib - perhaps <sys/param.h> is defining it on Linux */
+static int MIN(int a,int b) { return (a<b)?a:b; }
+#endif
 
 typedef struct sqSSL {
 	int state;

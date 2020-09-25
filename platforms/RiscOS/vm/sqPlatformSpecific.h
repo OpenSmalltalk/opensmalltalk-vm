@@ -25,6 +25,10 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
+#ifndef _SQ_PLATFORM_SPECIFIC_H
+#define _SQ_PLATFORM_SPECIFIC_H
+
+#include <stdio.h> // For FILE
 
 /* How to use this file:
    This file is for general platform-specific macros and declarations.
@@ -142,7 +146,6 @@ extern int windowIndexFromHandle(wimp_w windowHandle);
 #define Pix2OSX(val) ((val)<<scalingFactor.x)
 #define Pix2OSY(val) ((val)<<scalingFactor.y)
 
-
-#else
-
 #endif /* ACORN */
+
+#endif /* _SQ_PLATFORM_SPECIFIC_H */

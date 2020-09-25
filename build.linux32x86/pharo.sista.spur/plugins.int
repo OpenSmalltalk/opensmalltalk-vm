@@ -12,6 +12,7 @@ DSAPrims \
 FFTPlugin \
 FileCopyPlugin \
 FilePlugin \
+Float64ArrayPlugin \
 FloatArrayPlugin \
 FloatMathPlugin \
 SqueakFFIPrims \
@@ -19,7 +20,6 @@ IA32ABI \
 JoystickTabletPlugin \
 LargeIntegers \
 Matrix2x3Plugin \
-MIDIPlugin \
 MiscPrimitivePlugin \
 Mpeg3Plugin \
 SecurityPlugin \

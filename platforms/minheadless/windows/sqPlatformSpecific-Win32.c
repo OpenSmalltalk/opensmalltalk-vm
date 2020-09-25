@@ -48,7 +48,7 @@
 
 # define fopen_for_append(filename) fopen(filename,"a+t")
 
-/* default fpu control word and mask: 
+/* default fpu control word and mask:
    _MCW_RC: Rounding control
        _RC_NEAR: round to nearest
    _MCW_PC: Precision control
@@ -58,12 +58,12 @@
    https://docs.microsoft.com/en-us/previous-versions/e9b52ceh%28v%3dvs.140%29
 */
 
-#if !defined(_MCW_PC) 
+#if !defined(_MCW_PC)
 // x64 does not support _MCW_PC
-// The x64 CPU hardware default is 64-bit precision mode (80-bit long double); 
-// Microsoft expects software to set 53-bit mode before any user mode x87 instructions 
-// are reached. Microsoft made a change in responsibility for initializing precision mode 
-// in the X64 OS. The X64 OS sets 53-bit mode prior to starting your .exe, where the 32-bit OS 
+// The x64 CPU hardware default is 64-bit precision mode (80-bit long double);
+// Microsoft expects software to set 53-bit mode before any user mode x87 instructions
+// are reached. Microsoft made a change in responsibility for initializing precision mode
+// in the X64 OS. The X64 OS sets 53-bit mode prior to starting your .exe, where the 32-bit OS
 // expected the program to make that initialization.
 # define _MCW_PC 0
 #endif
@@ -230,12 +230,6 @@ synchronizedSignalSemaphoreWithIndex(int semaIndex)
 }
 
 void
-ioProfileStatus(sqInt *running, void **exestartpc, void **exelimitpc,
-    void **vmhst, long *nvmhbin, void **eahst, long *neahbin)
-{
-}
-
-void
 ioControlProfile(int on, void **vhp, long *nvb, void **ehp, long *neb)
 {
 }
@@ -283,6 +277,10 @@ findExecutablePath(const char *localVmName, char *dest, size_t destSize)
         /* TODO: Get the current working directory*/
         strcpy(dest, "./");
     }
+	else
+	{
+		*dest = 0;
+	}
 
     if (lastSeparator)
         strncat(dest, localVmName, lastSeparator - localVmName + 1);
@@ -300,26 +298,19 @@ findExecutablePath(const char *localVmName, char *dest, size_t destSize)
 */
 # if defined(_M_IX86) || defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386) || defined(__i386__) \
 	|| defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
-/*
-* Cog has already captured CStackPointer  before calling this routine.  Record
-* the original value, capture the pointers again and determine if CFramePointer
-* lies between the two stack pointers and hence is likely in use.  This is
-* necessary since optimizing C compilers for x86 may use %ebp as a general-
-* purpose register, in which case it must not be captured.
-*/
 int
-isCFramePointerInUse()
+isCFramePointerInUse(usqIntptr_t *cFrmPtrPtr, usqIntptr_t *cStkPtrPtr)
 {
-    extern usqIntptr_t CStackPointer, CFramePointer;
-    extern void(*ceCaptureCStackPointers)(void);
-    usqIntptr_t currentCSP = CStackPointer;
+	extern void (*ceCaptureCStackPointers)(void);
+	usqIntptr_t currentCSP = *cStkPtrPtr;
 
-    currentCSP = CStackPointer;
-    ceCaptureCStackPointers();
-    assert(CStackPointer < currentCSP);
-    return CFramePointer >= CStackPointer && CFramePointer <= currentCSP;
+	ceCaptureCStackPointers();
+	assert(*cStkPtrPtr < currentCSP);
+	return *cFrmPtrPtr >= *cStkPtrPtr && *cFrmPtrPtr <= currentCSP;
 }
-# endif /* defined(i386) || defined(__i386) || defined(__i386__) */
+# else
+#	error please provide a definition of isCFramePointerInUse for this platform
+# endif /* defined(_M_IX86) et al... */
 
 /* Answer an approximation of the size of the redzone (if any).  Do so by
 * sending a signal to the process and computing the difference between the
@@ -829,4 +820,3 @@ void *os_exports[][3] =
 {
     { 0, 0, 0 }
 };
-

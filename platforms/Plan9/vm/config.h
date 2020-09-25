@@ -91,10 +91,6 @@
 #undef	HAVE_TM_GMTOFF
 #undef	HAVE_TIMEZONE
 
-/* typedefs */
-
-#define	squeakInt64 long long
-
 /* architecture */
 
 #define	OS_TYPE "plan9"
@@ -112,12 +108,10 @@
 #define VMENDIANNESS 0
 #define	VM_HOST "plan9"
 #define	VM_HOST_CPU "intel"
-#define	DOUBLE_WORD_ORDER 1
 #define LSB_FIRST 1
 #endif
 
 #undef HAVE_LIBDL
-/* #undef	DOUBLE_WORD_ORDER */
 
 /* other configured variables */
 

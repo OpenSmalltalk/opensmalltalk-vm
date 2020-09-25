@@ -47,7 +47,7 @@ createWindowWidthheightoriginXyattrlength(sqInt w, sqInt h, sqInt x, sqInt y, ch
 }
 
 void
-setWindowTrackingRgn(sqInt windowIndex) {
+setWindowTrackingRgn(sqIntptr_t windowIndex) {
 
 	Rect rgnRect;
 	RgnHandle rgn = NewRgn();
@@ -167,7 +167,7 @@ ioSizeOfWindowSetxy(wIndexType windowIndex, sqInt x, sqInt y)
 }
 
 sqInt
-ioSetTitleOfWindow(sqInt windowIndex, char *newTitle, sqInt sizeOfTitle) {
+ioSetTitleOfWindow(sqIntptr_t windowIndex, char *newTitle, sqInt sizeOfTitle) {
 	char string[256];
 	if (sizeOfTitle > 255) 
 		return -1;
@@ -186,7 +186,7 @@ ioSetTitleOfWindow(sqInt windowIndex, char *newTitle, sqInt sizeOfTitle) {
 /* ioSetIconOfWindow: args are int windowIndex, char* iconPath and
  * int size of new logo path. If one of the function is failing, the logo is not set.
  */
-sqInt ioSetIconOfWindow(sqInt windowIndex, char * iconPath, sqInt sizeOfPath) {
+sqInt ioSetIconOfWindow(sqIntptr_t windowIndex, char * iconPath, sqInt sizeOfPath) {
 	//No implemented
 	return -1;
 }

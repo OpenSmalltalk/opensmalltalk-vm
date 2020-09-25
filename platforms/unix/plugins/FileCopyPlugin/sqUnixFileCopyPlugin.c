@@ -44,10 +44,6 @@
  * BUGS:
  *   - some of the system calls should handle EAGAIN and/or EINTR (this
  *     will cause problems on Solaris)
- * (the following could be fixed if we had a real "config.h":)
- *   - we assume <unistd.h> but not everyone has this
- *   - we assume alloca() but not everyone has this (ANSI does not define it)
- *   - use of stat.st_blksize is extremely non-portable
  *
  * COMPILE:
  *   gcc -Wall -W -pedantic -o copy copy.c
@@ -55,20 +51,30 @@
 
 #include "sq.h"
 #include "FileCopyPlugin.h"
-#include "config.h"
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
+#ifdef HAVE_SYS_TYPES_H
+#  include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_STAT_H
+#  include <sys/stat.h>
+#endif
+#ifdef HAVE_FCNTL_H
+#  include <fcntl.h>
+#endif
 #ifdef HAVE_UNISTD_H
 #  include <unistd.h>
 #endif
 #ifdef HAVE_MMAP
-# include <sys/mman.h>
+#  include <sys/mman.h>
 #endif
-
+#ifdef HAVE_ALLOCA_H
+# include <alloca.h>
+#endif
+#ifndef HAVE_STRUCT_STAT_ST_BLKSIZE
+# error We need stat.st_blksize for these operations.
+#endif
 
 static int copy(char *from, char *to)
 {
@@ -101,13 +107,20 @@ static int copy(char *from, char *to)
 	  close(zero);
 	}
 #    else /* !HAVE_MMAP */
+#    ifdef HAVE_ALLOCA
       char *buf= (char *)alloca(stat.st_blksize);
+#    else /* HAVE_ALLOCA */
+      char *buf= (char *)malloc(stat.st_blksize);
+#    endif /* HAVE_ALLOCA */
       int n;
       while ((  ((n= read(in, buf, stat.st_blksize)) > 0))
 	     && (n == write(out, buf, n)))
 	;
       if (n == 0)
 	status= 0;    /* success */
+#    ifndef HAVE_ALLOCA
+      free(buf);
+#    endif /* !HAVAE_ALLOCA */
 #    endif /* !HAVE_MMAP */
       close(out);
     }
@@ -120,9 +133,19 @@ static int copy(char *from, char *to)
 int sqCopyFilesizetosize(char *srcName, int srcNameSize, char *dstName, int dstNameSize)
 {
   int status= 0;
+#ifdef HAVE_ALLOCA
   char *from= (char *)alloca(srcNameSize + 1);
   char *to= (char *)alloca(dstNameSize + 1);
+#else  /* HAVE_ALLOCA */
+  char *from= (char *)malloc(srcNameSize + 1);
+  char *to= (char *)malloc(dstNameSize + 1);
+#endif
   sqFilenameFromString(from, (sqInt)srcName, srcNameSize);
   sqFilenameFromString(to, (sqInt)dstName, dstNameSize);
-  return copy(from, to);
+  status =copy(from, to);
+#ifndef HAVE_ALLOCA
+  free(from);
+  free(to);
+#endif
+  return status;
 }
