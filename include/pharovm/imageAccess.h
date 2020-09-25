@@ -9,7 +9,7 @@
 typedef struct {
 	sqInt (*imageFileClose)(sqImageFile f);
 
-	sqImageFile (*imageFileOpen)(char* fileName, char *mode);
+	sqImageFile (*imageFileOpen)(const char* fileName, char *mode);
 	long int (*imageFilePosition)(sqImageFile f);
 	size_t (*imageFileRead)(void * ptr, size_t sz, size_t count, sqImageFile f);
 

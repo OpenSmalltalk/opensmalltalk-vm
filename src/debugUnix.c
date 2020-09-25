@@ -17,6 +17,7 @@
 
 #define BACKTRACE_DEPTH 64
 
+extern void dumpPrimTraceLog(void);
 
 void ifValidWriteBackStackPointersSaveTo(void *theCFP, void *theCSP, char **savedFPP, char **savedSPP);
 
@@ -85,14 +86,14 @@ void sigsegv(int sig, siginfo_t *info, ucontext_t *uap)
 EXPORT(void) installErrorHandlers(){
 	struct sigaction sigusr1_handler_action, sigsegv_handler_action;
 
-	sigsegv_handler_action.sa_sigaction = (void (*)(int, struct __siginfo *, void *))sigsegv;
+	sigsegv_handler_action.sa_sigaction = (void (*)(int, siginfo_t *, void *))sigsegv;
 	sigsegv_handler_action.sa_flags = SA_NODEFER | SA_SIGINFO;
 	sigemptyset(&sigsegv_handler_action.sa_mask);
     (void)sigaction(SIGBUS, &sigsegv_handler_action, 0);
     (void)sigaction(SIGILL, &sigsegv_handler_action, 0);
     (void)sigaction(SIGSEGV, &sigsegv_handler_action, 0);
 
-	sigusr1_handler_action.sa_sigaction = (void (*)(int, struct __siginfo *, void *))sigusr1;
+	sigusr1_handler_action.sa_sigaction = (void (*)(int, siginfo_t *, void *))sigusr1;
 	sigusr1_handler_action.sa_flags = SA_NODEFER | SA_SIGINFO;
 	sigemptyset(&sigusr1_handler_action.sa_mask);
     (void)sigaction(SIGUSR1, &sigusr1_handler_action, 0);
@@ -170,17 +171,17 @@ void * printRegisterState(ucontext_t *uap, FILE* output)
 #elif __linux__ && __x86_64__
 	greg_t *regs = uap->uc_mcontext.gregs;
 	fprintf(output,
-			"\trax 0x%08x rbx 0x%08x rcx 0x%08x rdx 0x%08x\n"
-			"\trdi 0x%08x rsi 0x%08x rbp 0x%08x rsp 0x%08x\n"
-			"\tr8  0x%08x r9  0x%08x r10 0x%08x r11 0x%08x\n"
-			"\tr12 0x%08x r13 0x%08x r14 0x%08x r15 0x%08x\n"
-			"\trip 0x%08x\n",
+			"\trax 0x%08llx rbx 0x%08llx rcx 0x%08llx rdx 0x%08llx\n"
+			"\trdi 0x%08llx rsi 0x%08llx rbp 0x%08llx rsp 0x%08llx\n"
+			"\tr8  0x%08llx r9  0x%08llx r10 0x%08llx r11 0x%08llx\n"
+			"\tr12 0x%08llx r13 0x%08llx r14 0x%08llx r15 0x%08llx\n"
+			"\trip 0x%08llx\n",
 			regs[REG_RAX], regs[REG_RBX], regs[REG_RCX], regs[REG_RDX],
 			regs[REG_RDI], regs[REG_RDI], regs[REG_RBP], regs[REG_RSP],
 			regs[REG_R8 ], regs[REG_R9 ], regs[REG_R10], regs[REG_R11],
 			regs[REG_R12], regs[REG_R13], regs[REG_R14], regs[REG_R15],
 			regs[REG_RIP]);
-	return regs[REG_RIP];
+	return (void*)regs[REG_RIP];
 # elif __linux__ && (defined(__arm__) || defined(__arm32__) || defined(ARM32))
 	struct sigcontext *regs = &uap->uc_mcontext;
 	fprintf(output,
