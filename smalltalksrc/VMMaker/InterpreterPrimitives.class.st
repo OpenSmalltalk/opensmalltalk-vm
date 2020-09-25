@@ -214,6 +214,30 @@ InterpreterPrimitives >> canBeImmutable: oop [
 	^ true
 ]
 
+{ #category : #'process primitive support' }
+InterpreterPrimitives >> doWaitSemaphore: aSemaphoreOop [
+	| excessSignals activeProc |
+	<api>
+	<returnTypeC: #void>
+	
+	excessSignals := self fetchInteger: ExcessSignalsIndex ofObject: aSemaphoreOop.
+	excessSignals > 0
+		ifTrue:
+			[self storeInteger: ExcessSignalsIndex ofObject: aSemaphoreOop withValue: excessSignals - 1 ]
+		ifFalse:
+			[activeProc := self activeProcess.
+			 self addLastLink: activeProc toList: aSemaphoreOop.
+			 self transferTo: self wakeHighestPriority ]
+]
+
+{ #category : #'process primitive support' }
+InterpreterPrimitives >> doWaitSemaphore: sema reEnterInterpreter: hasToReenter [
+	<api>
+	<returnTypeC: #void>
+	
+	self doWaitSemaphore: sema
+]
+
 { #category : #'primitive support' }
 InterpreterPrimitives >> failed [
 	<api>
@@ -6722,16 +6746,9 @@ InterpreterPrimitives >> primitiveVMProfileSamplesInto [
 
 { #category : #'process primitives' }
 InterpreterPrimitives >> primitiveWait [
-	| sema excessSignals activeProc |
+	| sema |
 	sema := self stackTop.  "rcvr"
-	excessSignals := self fetchInteger: ExcessSignalsIndex ofObject: sema.
-	excessSignals > 0
-		ifTrue:
-			[self storeInteger: ExcessSignalsIndex ofObject: sema withValue: excessSignals - 1]
-		ifFalse:
-			[activeProc := self activeProcess.
-			 self addLastLink: activeProc toList: sema.
-			 self transferTo: self wakeHighestPriority]
+	self doWaitSemaphore: sema
 ]
 
 { #category : #'process primitives' }

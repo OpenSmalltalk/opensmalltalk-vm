@@ -13,6 +13,7 @@
 #include "config.h"
 
 #include "sqPlatformSpecific.h"
+#include "interpreter.h"
 
 #include "debug.h"
 #include "sqAssert.h"
@@ -75,6 +76,12 @@ void * loadModuleHandle(const char *fileName);
 sqInt freeModuleHandle(void *module);
 void *getModuleSymbol(void *module, const char *symbol);
 
+void *getHandler(sqInt anExternalObject);
+void *readAddress(sqInt anExternalAddress);
+
 EXPORT(sqInt) mainThread_schedule(sqInt (*closure)());
+
+EXPORT(int) isVMRunOnWorkerThread();
+void setMaxStacksToPrint(sqInt anInteger);
 
 #endif //PHAROVM_PHARO_H

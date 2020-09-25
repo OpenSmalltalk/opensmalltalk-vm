@@ -34,6 +34,31 @@ PharoVMMaker class >> generate: aClassName outputDirectory: aDirectory [
 ]
 
 { #category : #generation }
+PharoVMMaker >> generate: interpreterClass memoryManager: memoryManager [
+
+	VMMaker initializeForPharo.
+	(interpreterClass bindingOf: #COGMTVM) value: false.
+
+	[ 
+	
+	(VMMaker
+		makerFor: interpreterClass
+		and: StackToRegisterMappingCogit
+		with: {#COGMTVM. false.
+				#ObjectMemory. memoryManager.
+				#MULTIPLEBYTECODESETS. true.
+				#bytecodeTableInitializer. #initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid}
+		to: self outputDirectory / 'generated'
+		platformDir: self outputDirectory / 'generated'
+		including: #())
+			internal: #() external: #(FilePlugin);
+			doCleanupOldFiles;
+			generateInterpreterFile;
+			generateCogitFiles;
+			generateExternalPlugins] valueSupplyingAnswer:true.
+]
+
+{ #category : #generation }
 PharoVMMaker >> generateCoInterpreter [
 
 	VMMaker initializeForPharo.
@@ -70,50 +95,15 @@ PharoVMMaker >> generateCoInterpreterMT [
 { #category : #generation }
 PharoVMMaker >> generateCoInterpreterWithQueueFFI [
 
-	| interpreterClass | 
-
-	VMMaker initializeForPharo.
-	interpreterClass := CoInterpreterWithQueueFFI.
-	(interpreterClass bindingOf: #COGMTVM) value: false.
-
-	[ 
-	
-	(VMMaker
-		makerFor: interpreterClass
-		and: StackToRegisterMappingCogit
-		with: #(COGMTVM false
-				ObjectMemory Spur64BitCoMemoryManager
-				MULTIPLEBYTECODESETS true
-				bytecodeTableInitializer initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid)
-		to: self outputDirectory / 'generated'
-		platformDir: self outputDirectory / 'generated'
-		including: #())
-			internal: #() external: #(FilePlugin);
-			doCleanupOldFiles;
-			generateInterpreterFile;
-			generateCogitFiles;
-			generateExternalPlugins] valueSupplyingAnswer:true.
+	self generate: CoInterpreterWithQueueFFI memoryManager: #Spur64BitCoMemoryManager.
 ]
 
 { #category : #generation }
 PharoVMMaker >> generateStackVM [
 
-	| interpreterClass | 
+	self generate: StackInterpreter memoryManager: #Spur64BitMemoryManager.
 
-	VMMaker initializeForPharo.
-	interpreterClass := StackInterpreter.
-	(interpreterClass bindingOf: #COGMTVM) value: false.
 
-	[ VMMaker
-		generateMainVM: interpreterClass
-		and: StackToRegisterMappingCogit
-		with: #(COGMTVM false
-				ObjectMemory Spur64BitMemoryManager
-				MULTIPLEBYTECODESETS true
-				bytecodeTableInitializer initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid)
-		to: self outputDirectory / 'generated'
-		platformDir: self outputDirectory / 'generated'
-		including: #() ] valueSupplyingAnswer:true.
 ]
 
 { #category : #accessing }

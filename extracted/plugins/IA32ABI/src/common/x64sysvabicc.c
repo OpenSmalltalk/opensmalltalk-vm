@@ -46,6 +46,7 @@ void *getbaz() { return baz; }
 #include "sqVirtualMachine.h"
 #include "ia32abi.h"
 
+#include <unistd.h>
 #include "pharovm/debug.h"
 
 #if !defined(min)
@@ -55,7 +56,7 @@ void *getbaz() { return baz; }
 #define NUM_REG_ARGS 6
 #define NUM_DREG_ARGS 8
 
-#ifdef SQUEAK_BUILTIN_PLUGIN
+#ifndef SQUEAK_BUILTIN_PLUGIN
 extern
 #endif
 struct VirtualMachine* interpreterProxy;

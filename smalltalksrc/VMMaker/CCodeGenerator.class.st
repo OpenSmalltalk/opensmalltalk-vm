@@ -58,8 +58,8 @@ CCodeGenerator class >> initialize [
 ]
 
 { #category : #testing }
-CCodeGenerator class >> isVarargsSelector: aSymbol [
-	^aSymbol endsWith: 'printf:'
+CCodeGenerator class >> isVarargsSelector: aRBSelectorNode [
+	^aRBSelectorNode value endsWith: 'printf:'
 ]
 
 { #category : #'C code generator' }
@@ -1538,7 +1538,7 @@ CCodeGenerator >> emitGlobalCVariablesOn: aStream [
 				[aStream nextPutAll: decl; cr]
 			ifFalse:
 				[(decl includesSubstring: ' private ') ifFalse: "work-around hack to prevent localization of variables only referenced once."
-					[(decl beginsWith: 'static') ifFalse: [aStream nextPutAll: 'VM_EXPORT '].
+					[(decl beginsWith: 'static') ifFalse: [aStream nextPutAll: 'VM_EXPORT extern '].
 					(decl includes: $=) ifTrue:
 						[decl := decl copyFrom: 1 to: (decl indexOf: $=) - 1].
 					aStream
@@ -2819,6 +2819,16 @@ CCodeGenerator >> generatePlus: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
+CCodeGenerator >> generatePowerTo: msgNode on: aStream indent: level [ 
+
+	aStream nextPutAll:'(sqInt)pow('.
+	self emitCExpression: msgNode receiver on: aStream.
+	aStream nextPutAll: ','.
+	self emitCExpression: msgNode args first on: aStream.
+	aStream nextPutAll:')'.
+]
+
+{ #category : #'C translation' }
 CCodeGenerator >> generatePreDecrement: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
@@ -3520,11 +3530,12 @@ CCodeGenerator >> initializeCTranslationDictionary [
 	#-				#generateMinus:on:indent:
 	#negated		#generateNegated:on:indent:
 	#*				#generateTimes:on:indent:
+	#**				#generatePowerTo:on:indent:
 	#/				#generateDivide:on:indent:
 	#//				#generateDivide:on:indent:
 	#\\				#generateModulo:on:indent:
-	#<<			#generateShiftLeft:on:indent:
-	#>>			#generateShiftRight:on:indent:
+	#<<				#generateShiftLeft:on:indent:
+	#>>				#generateShiftRight:on:indent:
 	#>>>			#generateSignedShiftRight:on:indent:
 	#min:			#generateMin:on:indent:
 	#max:			#generateMax:on:indent:
@@ -5327,12 +5338,21 @@ CCodeGenerator >> storeHeaderOnFile: fileName contents: contents [
 	"Store C header code on the given file. Evaluate
 	 aBlock with the stream to generate its contents."
 
-	| aStream |
+	| aStream fileNameGuard |
 	aStream := VMMaker forceNewFileNamed: fileName.
-	aStream ifNil: [Error signal: 'Could not open C header file: ', fileName].
+	
+	fileNameGuard := (fileName asFileReference basename asUppercase replaceAll: $. with: $_)  , '__'.
+	
+	aStream ifNil: [ self error: 'Could not open C header file: ', fileName].
+	
 	[(contents beginsWith: '/* Automatic') ifFalse:
-		[aStream nextPutAll: (self fileHeaderVersionStampForSourceClass: nil); cr].
-	 aStream nextPutAll: contents]
+		[
+		aStream nextPutAll: (self fileHeaderVersionStampForSourceClass: nil); cr].
+		aStream nextPutAll: ('#ifndef {1}
+#define {1}
+' format: {fileNameGuard}).
+	 	aStream nextPutAll: contents.
+		aStream nextPutAll: '#endif']
 		ensure: [aStream close]
 ]
 

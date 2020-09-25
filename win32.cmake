@@ -60,7 +60,6 @@ macro(add_third_party_dependencies_per_platform)
     add_third_party_dependency("pixman-0.34.0" "build/vm")
     add_third_party_dependency("cairo-1.15.4" "build/vm")
     add_third_party_dependency("freetype-2.9.1" "build/vm")
-    add_third_party_dependency("libffi-3.3-rc0" "build/vm")
     add_third_party_dependency("libgit2-0.25.1-fixLibGit" "build/vm")
     add_third_party_dependency("libgit2-win-1.0.0" "build/vm")
     add_third_party_dependency("libpng-1.6.34" "build/vm")
@@ -69,7 +68,6 @@ macro(add_third_party_dependencies_per_platform)
     add_third_party_dependency("gcc-runtime-3.4" "build/vm")
     add_third_party_dependency("zlib-1.2.11-fixLibGit" "build/vm")
     add_third_party_dependency("SDL2-2.0.5" "build/vm")
-    add_third_party_dependency("PThreadedFFI-1.3.1-win64" "build/vm")
 endmacro()
 
 
@@ -92,6 +90,13 @@ macro(configure_installables INSTALL_COMPONENT)
           FILES_MATCHING
             PATTERN *
             PATTERN *.dll EXCLUDE)
+
+	install(
+		DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/bin/"
+		DESTINATION "./"
+		COMPONENT ${INSTALL_COMPONENT}
+		FILES_MATCHING PATTERN *.dll
+		PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
 	install(
 	    DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/win/"
@@ -124,3 +129,8 @@ macro(add_required_libs_per_platform)
    set_target_properties(${VM_EXECUTABLE_NAME} PROPERTIES LINK_FLAGS "-mwindows")
    set_target_properties(${VM_EXECUTABLE_CONSOLE_NAME} PROPERTIES LINK_FLAGS "-mconsole")
 endmacro()
+
+set(LIBFFI_TARGET "--target=x86_64-unknown-cygwin")
+set(LIBFFI_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/bin/cygffi-7.dll")
+set(LIBFFI_FILES "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/bin/cygffi-7.dll")
+set(LIBFFI_ADDITIONAL "AR=${CMAKE_TOOLCHAIN_PREFIX}-ar.exe" "DLLTOOL=${CMAKE_TOOLCHAIN_PREFIX}-dlltool.exe")

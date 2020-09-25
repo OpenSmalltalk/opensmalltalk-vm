@@ -109,14 +109,9 @@ ioFreeModule(void *moduleHandle)
     return freeModuleHandle(moduleHandle);
 }
 
-#if SPURVM
 void *
 ioFindExternalFunctionInAccessorDepthInto(char *lookupName, void *moduleHandle,
 											sqInt *accessorDepthPtr)
-#else
-void *
-ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
-#endif
 {
     void *function;
 
@@ -125,7 +120,6 @@ ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
 
     function = getModuleSymbol(moduleHandle, lookupName);
 
-#if SPURVM
     if (function && accessorDepthPtr)
     {
         char buf[256];
@@ -145,7 +139,7 @@ ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
     	if(accessorDepthVarPtr == NULL)
     		logWarn("Missing Accessor Depth: %s", lookupName);
     }
-#endif /* SPURVM */
+
     return function;
 }
 

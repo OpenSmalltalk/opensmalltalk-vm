@@ -33,12 +33,12 @@
 #include "sqAtomicOps.h"
 #include "sqMemoryFence.h"
 #include "pharovm/semaphores/platformSemaphore.h"
+#include "pharovm/interpreter.h"
 
 #if !COGMTVM
 sqOSThread ioVMThread; /* initialized in the various <plat>/vm/sqFooMain.c */
 #endif
-extern void forceInterruptCheck(void);
-extern sqInt doSignalSemaphoreWithIndex(sqInt semaIndex);
+
 
 typedef struct {
 	int requests;
@@ -76,6 +76,8 @@ static volatile int lowTideB = MaxTide, highTideB = MinTide;
 int
 ioGetMaxExtSemTableSize(void) { return numSignalRequests; }
 
+int highBit(int);
+
 /* Setting this at any time other than start-up can potentially lose requests.
  * i.e. during the realloc new storage is allocated, the old contents are copied
  * and then pointersd are switched.  Requests occurring during copying won't
@@ -94,7 +96,6 @@ ioSetMaxExtSemTableSize(int n)
 	if (numSignalRequests)
 		assert(ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread()));
 	if (numSignalRequests < n) {
-		extern sqInt highBit(sqInt);
 		int sz = 1 << highBit(n-1);
 		assert(sz >= n);
 		signalRequests = realloc(signalRequests, sz * sizeof(SignalRequest));
@@ -220,4 +221,15 @@ doSignalExternalSemaphores(sqInt externalSemaphoreTableSize)
 	requestMutex->signal(requestMutex);
 
 	return switched;
+}
+
+#define ExcessSignalsIndex 2
+
+void waitOnExternalSemaphoreIndex(sqInt semaphoreIndex){
+
+    sqInt aSemaphoreOop;
+    sqInt xArray;
+
+    aSemaphoreOop = getExternalSemaphoreWithIndex(semaphoreIndex);
+    doWaitSemaphore(aSemaphoreOop);
 }

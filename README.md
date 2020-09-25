@@ -30,6 +30,8 @@ For building the VM it is required the following set of tools:
 - Binutils (make and friends) 
 - wget
 - unzip
+- automake
+- libtool
 
 In Linux Fedora, it is needed to install libcurl and to create a symbolic link to alias such library with the name used by libGit.
 For doing so, it is required to do:
