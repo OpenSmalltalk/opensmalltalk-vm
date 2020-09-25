@@ -2,7 +2,8 @@ Class {
 	#name : #VMInterpreterTests,
 	#superclass : #VMSpurMemoryManagerTest,
 	#pools : [
-		'VMObjectIndices'
+		'VMObjectIndices',
+		'VMSqueakClassIndices'
 	],
 	#category : #'VMMakerTests-InterpreterTests'
 }

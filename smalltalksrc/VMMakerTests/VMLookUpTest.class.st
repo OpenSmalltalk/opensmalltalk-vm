@@ -11,9 +11,7 @@ Class {
 	],
 	#pools : [
 		'VMBasicConstants',
-		'VMBytecodeConstants',
-		'VMObjectIndices',
-		'VMSqueakClassIndices'
+		'VMBytecodeConstants'
 	],
 	#category : #'VMMakerTests-InterpreterTests'
 }
