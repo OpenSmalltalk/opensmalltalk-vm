@@ -32,6 +32,28 @@ VMSpurMemoryManagerTest >> initialCodeSize [
 ]
 
 { #category : #helpers }
+VMSpurMemoryManagerTest >> initializeOldSpaceForFullGC [
+
+	| ourArrayClass |
+
+	memory markStack: memory nilObject.
+	memory weaklingStack: memory nilObject.
+	
+	ourArrayClass := self newObjectWithSlots: 3.
+	memory
+		storePointer: "InstanceSpecificationIndex" 2
+		ofObject: ourArrayClass
+		withValue: (memory integerObjectOf: Array format).
+	memory ensureBehaviorHash: ourArrayClass.
+	
+	memory storePointer: 16 ofObject: memory classTableFirstPage withValue: ourArrayClass.
+	memory shrinkThreshold: 0.
+	memory growHeadroom: 10*1024*1024.
+	
+	memory flushNewSpace.
+]
+
+{ #category : #helpers }
 VMSpurMemoryManagerTest >> initializeOldSpaceForScavenger [
 
 	| freeListOop firstClassTablePage |
@@ -88,6 +110,36 @@ VMSpurMemoryManagerTest >> initializeOldSpaceForScavenger [
 { #category : #accessor }
 VMSpurMemoryManagerTest >> interpreter [
 	^ interpreter
+]
+
+{ #category : #tests }
+VMSpurMemoryManagerTest >> keepObjectInVMVariable1: anOop [
+	interpreter newMethod: anOop
+]
+
+{ #category : #tests }
+VMSpurMemoryManagerTest >> keepObjectInVMVariable2: anOop [
+	interpreter profileSemaphore: anOop
+]
+
+{ #category : #tests }
+VMSpurMemoryManagerTest >> keepObjectInVMVariable3: anOop [
+	interpreter profileMethod: anOop
+]
+
+{ #category : #tests }
+VMSpurMemoryManagerTest >> keptObjectInVMVariable1 [
+	^ interpreter newMethod
+]
+
+{ #category : #tests }
+VMSpurMemoryManagerTest >> keptObjectInVMVariable2 [
+	^ interpreter profileSemaphore
+]
+
+{ #category : #tests }
+VMSpurMemoryManagerTest >> keptObjectInVMVariable3 [
+	^ interpreter profileMethod
 ]
 
 { #category : #accessor }
