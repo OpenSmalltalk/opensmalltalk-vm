@@ -2590,6 +2590,7 @@ as_fn_append ac_header_list " sys/time.h"
 as_fn_append ac_header_list " sys/filio.h"
 as_fn_append ac_header_list " sys/select.h"
 as_fn_append ac_header_list " features.h"
+as_fn_append ac_header_list " ifaddrs.h"
 as_fn_append ac_header_list " alloca.h"
 as_fn_append ac_header_list " execinfo.h"
 as_fn_append ac_func_list " mmap"
@@ -13548,6 +13549,9 @@ done
 
 
 
+
+
+ # sqUnixSocket.c
 
 
  # SunOS5
