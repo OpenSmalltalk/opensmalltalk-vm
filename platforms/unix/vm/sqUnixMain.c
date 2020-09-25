@@ -1355,13 +1355,11 @@ static void loadModules(void)
 	    ;
   }
 
-  if (!displayModule)
-    {
+  if (!displayModule) {
       fprintf(stderr, "%s: could not find any display driver\n", exeName);
       abort();
     }
-  if (!soundModule)
-    {
+  if (!soundModule) {
       fprintf(stderr, "%s: could not find any sound driver\n", exeName);
       abort();
     }
@@ -1377,16 +1375,29 @@ static long
 strtobkm(const char *str)
 {
   char *suffix;
-  long value= strtol(str, &suffix, 10);
-  switch (*suffix)
-    {
+  long value = strtol(str, &suffix, 10);
+  switch (*suffix) {
     case 'k': case 'K':
-      value*= 1024;
-      break;
+      return value * 1024;
     case 'm': case 'M':
-      value*= 1024*1024;
-      break;
-    }
+      return value * 1024*1024;
+  }
+  return value;
+}
+
+static unsigned long
+strtobkmg(const char *str)
+{
+  char *suffix;
+  long value = strtol(str, &suffix, 10);
+  switch (*suffix) {
+    case 'k': case 'K':
+      return value * 1024UL;
+    case 'm': case 'M':
+      return value * 1024UL*1024UL;
+    case 'g': case 'G':
+      return value * 1024UL*1024UL*1024UL;
+  }
   return value;
 }
 
@@ -1424,7 +1435,9 @@ static void vm_parseEnvironment(void)
     strcpy(shortImageName, DEFAULT_IMAGE_NAME);
 
   if ((ev= getenv("SQUEAK_MEMORY")))	extraMemory= strtobkm(ev);
+#if !SPURVM
   if ((ev= getenv("SQUEAK_MMAP")))	useMmap= strtobkm(ev);
+#endif
   if ((ev= getenv("SQUEAK_PLUGINS")))	squeakPlugins= strdup(ev);
   if ((ev= getenv("SQUEAK_NOEVENTS")))	noEvents= 1;
   if ((ev= getenv("SQUEAK_NOTIMER")))	useItimer= 0;
@@ -1544,12 +1557,14 @@ static int vm_parseArgument(int argc, char **argv)
 #endif
   else if (!strcmp(argv[0], VMOPTION("single")))    { runAsSingleInstance=1; return 1; }
   /* option requires an argument */
-  else if (argc > 1 && !strcmp(argv[0], VMOPTION("memory")))   { extraMemory  = strtobkm(argv[1]); return 2; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("memory")))   { extraMemory  = strtobkmg(argv[1]); return 2; }
 #if !STACKVM && !COGVM
   else if (argc > 1 && !strcmp(argv[0], VMOPTION("procs")))    { jitProcs     = atoi(argv[1]);     return 2; }
   else if (argc > 1 && !strcmp(argv[0], VMOPTION("maxpic")))   { jitMaxPIC    = atoi(argv[1]);     return 2; }
 #endif /* !STACKVM && !COGVM */
-  else if (argc > 1 && !strcmp(argv[0], VMOPTION("mmap")))     { useMmap      = strtobkm(argv[1]); return 2; }
+#if !SPURVM
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("mmap")))     { useMmap      = strtobkmg(argv[1]); return 2; }
+#endif
   else if (argc > 1 && !strcmp(argv[0], VMOPTION("plugins")))  { squeakPlugins= strdup(argv[1]);   return 2; }
   else if (argc > 1 && !strcmp(argv[0], VMOPTION("encoding"))) { setEncoding(&sqTextEncoding, argv[1]); return 2; }
   else if (argc > 1 && !strcmp(argv[0], VMOPTION("pathenc")))  { setEncoding(&uxPathEncoding, argv[1]); return 2; }
@@ -1566,7 +1581,7 @@ static int vm_parseArgument(int argc, char **argv)
     return 2; }
   else if (argc > 1 && !strcmp(argv[0], VMOPTION("eden"))) {
     extern sqInt desiredEdenBytes;
-    desiredEdenBytes = strtobkm(argv[1]);
+    desiredEdenBytes = strtobkmg(argv[1]);
     return 2; }
   else if (argc > 1 && !strcmp(argv[0], VMOPTION("leakcheck"))) { 
     extern sqInt checkForLeaks;
@@ -1641,7 +1656,7 @@ static int vm_parseArgument(int argc, char **argv)
 #if SPURVM
   else if (argc > 1 && !strcmp(argv[0], VMOPTION("maxoldspace"))) { 
     extern unsigned long maxOldSpaceSize;
-    maxOldSpaceSize = (unsigned long)strtobkm(argv[1]);	 
+    maxOldSpaceSize = (unsigned long)strtobkmg(argv[1]);	 
     return 2; }
   else if (!strcmp(argv[0], VMOPTION("logscavenge"))) {
     extern void openScavengeLog(void);
@@ -1671,8 +1686,10 @@ static void vm_printUsage(void)
   printf("\nCommon <option>s:\n");
   printf("  "VMOPTION("encoding")" <enc>       set the internal character encoding (default: MacRoman)\n");
   printf("  "VMOPTION("help")"                 print this help message, then exit\n");
-  printf("  "VMOPTION("memory")" <size>[mk]    use fixed heap size (added to image size)\n");
-  printf("  "VMOPTION("mmap")" <size>[mk]      limit dynamic heap size (default: %dm)\n", DefaultMmapSize);
+  printf("  "VMOPTION("memory")" <size>[kmg]   use fixed heap size (added to image size)\n");
+#if !SPURVM
+  printf("  "VMOPTION("mmap")" <size>[kmg]     limit dynamic heap size (default: %dm)\n", DefaultMmapSize);
+#endif
   printf("  "VMOPTION("timephases")"           print start load and run times\n");
 #if STACKVM || NewspeakVM
   printf("  "VMOPTION("breaksel")" selector    set breakpoint on send of selector\n");
@@ -1680,7 +1697,7 @@ static void vm_printUsage(void)
 #if STACKVM
   printf("  "VMOPTION("failonffiexception")"   when in an FFI callout primitive catch exceptions and fail the primitive\n");
   printf("  "VMOPTION("breakmnu")" selector    set breakpoint on MNU of selector\n");
-  printf("  "VMOPTION("eden")" <size>[mk]      use given eden size\n");
+  printf("  "VMOPTION("eden")" <size>[kmg]     use given eden size\n");
   printf("  "VMOPTION("leakcheck")" num        check for leaks in the heap\n");
   printf("  "VMOPTION("stackpages")" <num>     use given number of stack pages\n");
 #endif
@@ -1709,7 +1726,7 @@ static void vm_printUsage(void)
   printf("  "VMOPTION("reportheadroom")"       report unused stack headroom on exit\n");
 #endif
 #if SPURVM
-  printf("  "VMOPTION("maxoldspace")" <size>[mk]    set max size of old space memory to bytes\n");
+  printf("  "VMOPTION("maxoldspace")" <size>[kmg] set max size of old space memory to bytes\n");
   printf("  "VMOPTION("logscavenge")"          log scavenging to scavenge.log\n");
 #endif
   printf("  "VMOPTION("blockonerror")"         on error or segv block, not exit.  useful for attaching gdb\n");

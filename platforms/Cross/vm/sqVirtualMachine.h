@@ -400,6 +400,7 @@ typedef struct VirtualMachine {
   sqInt (*isLong64s)(sqInt oop);
   sqInt (*identityHashOf)(sqInt oop);
   sqInt (*isWordsOrShorts)(sqInt oop); /* for SoundPlugin et al */
+  sqInt (*bytesPerElement)(sqInt oop); /* for SocketPugin et al */
 #endif
 } VirtualMachine;
 

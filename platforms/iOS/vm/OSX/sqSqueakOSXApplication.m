@@ -299,7 +299,7 @@ static char *getVersionInfo(int verbose);
 		return 0;
 
 	if ([argData isEqualToString: VMOPTIONOBJ("memory")]) {
-		gMaxHeapSize = (usqInt) [self strtobkm: peek];
+		gMaxHeapSize = (usqInt) [self strtobkmg: peek];
 		return 2;
 	}
 
@@ -322,7 +322,7 @@ static char *getVersionInfo(int verbose);
 	}
 	if ([argData isEqualToString: VMOPTIONOBJ("eden")]) {
 		extern sqInt desiredEdenBytes;
-		desiredEdenBytes = [self strtobkm: peek]; 
+		desiredEdenBytes = [self strtobkmg: peek]; 
 		return 2;
 	}
 	if ([argData isEqualToString: VMOPTIONOBJ("leakcheck")]) {
@@ -374,8 +374,8 @@ static char *getVersionInfo(int verbose);
 #endif /* COGVM */
 #if SPURVM
 	if ([argData isEqualToString: VMOPTIONOBJ("maxoldspace")]) {
-		extern unsigned long maxOldSpaceSize;
-		maxOldSpaceSize = (unsigned long)[self strtobkm: peek];		 
+		extern usqInt maxOldSpaceSize;
+		maxOldSpaceSize = (usqInt)[self strtobkmg: peek];		 
 		return 2;
 	}
 #endif
@@ -447,15 +447,26 @@ static char *getVersionInfo(int verbose);
 
 - (long long) strtobkm: (const char *) str {
 	char *suffix;
-	long long value= strtoll(str, &suffix, 10);
-	switch (*suffix)
-    {
+	long long value = strtoll(str, &suffix, 10);
+	switch (*suffix) {
 		case 'k': case 'K':
-			value*= 1024LL;
-			break;
+		return value * 1024LL;
 		case 'm': case 'M':
-			value*= 1024LL*1024LL;
-			break;
+		return value * 1024LL*1024LL;
+    }
+	return value;
+}
+
+- (usqLong) strtobkmg: (const char *) str {
+	char *suffix;
+	usqLong value = strtoull(str, &suffix, 10);
+	switch (*suffix) {
+		case 'k': case 'K':
+		return value * 1024ULL;
+		case 'm': case 'M':
+		return value * 1024ULL*1024ULL;
+		case 'g': case 'G':
+		return value * 1024ULL*1024ULL*1024ULL;
     }
 	return value;
 }
@@ -467,7 +478,7 @@ static char *getVersionInfo(int verbose);
 	}
 	NSString *memoryString = env[@"SQUEAK_MEMORY"];
 	if (memoryString) {
-		gMaxHeapSize = (usqInt) [self strtobkm: [memoryString UTF8String]];
+		gMaxHeapSize = (usqInt) [self strtobkmg: [memoryString UTF8String]];
 	}
 }
 
@@ -486,7 +497,7 @@ static char *getVersionInfo(int verbose);
 - (void) printUsage {
 	printf("\nCommon <option>s:\n");
 	printf("  "VMOPTION("help")"                 print this help message, then exit\n");
-	printf("  "VMOPTION("memory")" <size>[mk]    use fixed heap size (added to image size)\n");
+	printf("  "VMOPTION("memory")" <size>[kmg]  use fixed heap size (added to image size)\n");
     printf("  "VMOPTION("nohandlers")"           disable sigsegv & sigusr1 handlers\n");
 	printf("  "VMOPTION("timephases")"           print start load and run times\n");
 #if STACKVM || NewspeakVM
@@ -495,7 +506,7 @@ static char *getVersionInfo(int verbose);
 #if STACKVM
 	printf("  "VMOPTION("failonffiexception")"   when in an FFI callout primitive catch exceptions and fail the primitive\n");
 	printf("  "VMOPTION("breakmnu")" selector    set breakpoint on MNU of selector\n");
-	printf("  "VMOPTION("eden")" <size>[mk]      set eden memory to bytes\n");
+	printf("  "VMOPTION("eden")" <size>[kmg]     set eden memory to bytes\n");
 	printf("  "VMOPTION("leakcheck")" num        check for leaks in the heap\n");
 	printf("  "VMOPTION("stackpages")" num       use n stack pages\n");
 	printf("  "VMOPTION("numextsems")" num       make the external semaphore table num in size\n");
@@ -518,7 +529,7 @@ static char *getVersionInfo(int verbose);
 	printf("  "VMOPTION("reportheadroom")"       report unused stack headroom on exit\n");
 #endif
 #if SPURVM
-	printf("  "VMOPTION("maxoldspace")" <size>[mk]      set max size of old space memory to bytes\n");
+	printf("  "VMOPTION("maxoldspace")" <size>[kmg]  set max size of old space memory to bytes\n");
 	printf("  "VMOPTION("logscavenge")"          log scavenging to scavenge.log\n");
 #endif
 #if 0 /* Not sure if encoding is an issue with the Cocoa VM. eem 2015-11-30 */

@@ -183,7 +183,7 @@ static int parseArgument(int argc, char **argv)
   else if (!strcmp(argv[0], VMOPTION("sendtrace"))) { extern sqInt sendTrace; sendTrace = 1; return 1; }
 #endif
   else if (argc > 1 && !strcmp(argv[0], VMOPTION("memory")))	{ 
-	gMaxHeapSize = strtolbkm(argv[1]);	 
+	gMaxHeapSize = strtolbkmg(argv[1]);	 
 	return 2; }
 #if STACKVM || NewspeakVM
   else if (argc > 1 && !strcmp(argv[0], VMOPTION("breaksel"))) { 
@@ -198,7 +198,7 @@ static int parseArgument(int argc, char **argv)
 	return 2; }
   else if (argc > 1 && !strcmp(argv[0], VMOPTION("eden"))) { 
 	extern sqInt desiredEdenBytes;
-	desiredEdenBytes = strtobkm(argv[1]);	 
+	desiredEdenBytes = (sqInt)strtolbkmg(argv[1]);	 
 	return 2; }
   else if (argc > 1 && !strcmp(argv[0], VMOPTION("leakcheck"))) { 
 	extern sqInt checkForLeaks;
@@ -264,8 +264,8 @@ static int parseArgument(int argc, char **argv)
 #endif /* COGVM */
 #if SPURVM
   else if (argc > 1 && !strcmp(argv[0], VMOPTION("maxoldspace"))) { 
-	extern unsigned long maxOldSpaceSize;
-	maxOldSpaceSize = (unsigned long)strtobkm(argv[1]);	 
+	extern usqInt maxOldSpaceSize;
+	maxOldSpaceSize = (usqInt)strtolbkmg(argv[1]);	 
 	return 2; }
 #endif
   else if (argc > 1 && !strcmp(argv[0], VMOPTION("pathenc"))) { 
@@ -298,14 +298,14 @@ static void printUsage(void)
 {
   printf("\nCommon <option>s:\n");
   printf("  "VMOPTION("help")"                 print this help message, then exit\n");
-  printf("  "VMOPTION("memory")" <size>[mk]    use fixed heap size (added to image size)\n");
+  printf("  "VMOPTION("memory")" <size>[kmg]   use fixed heap size (added to image size)\n");
   printf("  "VMOPTION("timephases")"           print start load and run times\n");
 #if STACKVM || NewspeakVM
   printf("  "VMOPTION("breaksel")" selector    set breakpoint on send of selector\n");
 #endif
 #if STACKVM
   printf("  "VMOPTION("breakmnu")" selector    set breakpoint on MNU of selector\n");
-  printf("  "VMOPTION("eden")" <size>[mk]      set eden memory to bytes\n");
+  printf("  "VMOPTION("eden")" <size>[kmg]     set eden memory to bytes\n");
   printf("  "VMOPTION("leakcheck")" num        check for leaks in the heap\n");
   printf("  "VMOPTION("stackpages")" num       use n stack pages\n");
   printf("  "VMOPTION("numextsems")" num       make the external semaphore table num in size\n");
@@ -321,14 +321,14 @@ static void printUsage(void)
   printf("  "VMOPTION("warnpid")"              print pid in warnings\n");
 #endif
 #if COGVM
-  printf("  "VMOPTION("codesize")" <size>[mk]  set machine code memory to bytes\n");
+  printf("  "VMOPTION("codesize")" <size>[km]  set machine code memory to bytes\n");
   printf("  "VMOPTION("tracestores")"          enable store tracing (assert check stores)\n");
   printf("  "VMOPTION("cogmaxlits")" <n>       set max number of literals for methods to be compiled to machine code\n");
   printf("  "VMOPTION("cogminjumps")" <n>      set min number of backward jumps for interpreted methods to be considered for compilation to machine code\n");
   printf("  "VMOPTION("reportheadroom")"       report unused stack headroom on exit\n");
 #endif
 #if SPURVM
-  printf("  "VMOPTION("maxoldspace")" <size>[mk]      set max size of old space memory to bytes\n");
+  printf("  "VMOPTION("maxoldspace")" <size>[kmg]   set max size of old space memory to bytes\n");
 #endif
   printf("  "VMOPTION("pathenc")" <enc>        set encoding for pathnames (default: %s)\n",
 		getEncodingType(gCurrentVMEncoding));
@@ -365,14 +365,11 @@ strtobkm(const char *str)
 {
   char *suffix;
   long value= strtol(str, &suffix, 10);
-  switch (*suffix)
-    {
+  switch (*suffix) {
     case 'k': case 'K':
-      value*= 1024;
-      break;
+      return value * 1024;
     case 'm': case 'M':
-      value*= 1024*1024;
-      break;
+      return value * 1024*1024;
     }
   return value;
 }
@@ -385,11 +382,26 @@ strtolbkm(const char *str)
   switch (*suffix)
     {
     case 'k': case 'K':
-      value*= 1024ULL;
-      break;
+      return value * 1024ULL;
     case 'm': case 'M':
-      value*= 1024ULL*1024ULL;
-      break;
+      return value * 1024ULL*1024ULL;
+    }
+  return value;
+}
+
+static usqLong
+strtolbkmg(const char *str)
+{
+  char *suffix;
+  usqLong value= strtol(str, &suffix, 10);
+  switch (*suffix)
+    {
+    case 'k': case 'K':
+      return value * 1024ULL;
+    case 'm': case 'M':
+      return value * 1024ULL*1024ULL;
+    case 'g': case 'G':
+      return value * 1024ULL*1024ULL*1024ULL;
     }
   return value;
 }

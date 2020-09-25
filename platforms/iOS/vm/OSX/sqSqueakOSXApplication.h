@@ -49,6 +49,7 @@
 - (void) parseArgs: (NSArray *) args;
 - (void) parseEnv: (NSDictionary *) env;
 - (long long) strtobkm: (const char *) chr;
+- (usqLong) strtobkmg: (const char *) chr;
 - (void) usage;
 - (void) printUsage;
 - (void) printUsageNotes;

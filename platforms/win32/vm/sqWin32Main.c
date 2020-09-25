@@ -1856,6 +1856,7 @@ main(int argc, char *argv[])
   return 0;
 }
 #endif /* (!defined(__MINGW32__) && !defined(__MINGW64__)) */
+
 static sqIntptr_t	
 strtobkm(const char *str)	
 {
@@ -1866,8 +1867,25 @@ strtobkm(const char *str)
 	sqIntptr_t value = strtol(str, &suffix, 10);
 #endif
 	switch (*suffix) {
-	case 'k': case 'K': value *= 1024; break;
-	case 'm': case 'M': value *= 1024*1024; break;
+	case 'k': case 'K': return value * 1024ULL;
+	case 'm': case 'M': return value * 1024ULL*1024ULL;
+	}
+	return value;
+}
+
+static usqIntptr_t	
+strtobkmg(const char *str)	
+{
+	char *suffix;
+#if SQ_HOST64
+	sqIntptr_t value = strtoll(str, &suffix, 10);
+#else
+	sqIntptr_t value = strtol(str, &suffix, 10);
+#endif
+	switch (*suffix) {
+	case 'k': case 'K': return value * 1024ULL;
+	case 'm': case 'M': return value * 1024ULL*1024ULL;
+	case 'g': case 'G': return value * 1024ULL*1024ULL*1024ULL;
 	}
 	return value;
 }
@@ -1922,11 +1940,11 @@ parseVMArgument(int argc, char *argv[])
 		return 1;
 	}
 	else if (argc > 1 && !strcmp(argv[0], VMOPTION("memory"))) {
-		dwMemorySize = strtobkm(argv[1]);
+		dwMemorySize = strtobkmg(argv[1]);
 		return 2;
 	}
 	else if (!strncmp(argv[0], VMOPTION("memory:"), strlen(VMOPTION("memory:")))) {
-		dwMemorySize = strtobkm(argv[0] + strlen(VMOPTION("memory:")));
+		dwMemorySize = strtobkmg(argv[0] + strlen(VMOPTION("memory:")));
 		return 1;
 	}
 #if STACKVM || NewspeakVM
@@ -1956,11 +1974,11 @@ parseVMArgument(int argc, char *argv[])
 		return 1; }
 	else if (argc > 1 && !strcmp(argv[0], VMOPTION("eden"))) {
 		extern sqInt desiredEdenBytes;
-		desiredEdenBytes = strtobkm(argv[1]);	 
+		desiredEdenBytes = strtobkmg(argv[1]);	 
 		return 2; }
 	else if (!strncmp(argv[0], VMOPTION("eden:"), strlen(VMOPTION("eden:")))) {
 		extern sqInt desiredEdenBytes;
-		desiredEdenBytes = strtobkm(argv[0]+strlen(VMOPTION("eden:")));	 
+		desiredEdenBytes = strtobkmg(argv[0]+strlen(VMOPTION("eden:")));	 
 		return 1; }
 	else if (argc > 1 && !strcmp(argv[0], VMOPTION("leakcheck"))) {
 		extern sqInt checkForLeaks;
@@ -2043,10 +2061,10 @@ parseVMArgument(int argc, char *argv[])
 #endif /* COGVM */
 #if SPURVM
     else if (argc > 1 && !strcmp(argv[0], VMOPTION("maxoldspace"))) {
-		maxOldSpaceSize = (usqInt) strtobkm(argv[1]);	 
+		maxOldSpaceSize = (usqInt) strtobkmg(argv[1]);	 
 		return 2; }
     else if (!strncmp(argv[0], VMOPTION("maxoldspace:"), strlen(VMOPTION("maxoldspace:")))) {
-		maxOldSpaceSize = (usqInt) strtobkm(argv[0]+strlen(VMOPTION("maxoldspace:")));
+		maxOldSpaceSize = (usqInt) strtobkmg(argv[0]+strlen(VMOPTION("maxoldspace:")));
 		return 2; }
 	else if (!strcmp(argv[0], VMOPTION("logscavenge"))) {
 		extern void openScavengeLog(void);
