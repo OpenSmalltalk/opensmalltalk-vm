@@ -326,7 +326,7 @@ int __cdecl DPRINTF(const char *fmt, ...)
   return 1;
 }
 
-#if !defined(_MSC_VER) && !defined(NODBGPRINT)
+#if defined(DBGPRINT)
 
 // redefining printf doesn't seem like a good idea to me...
 
@@ -369,7 +369,7 @@ fprintf(FILE *fp, const char *fmt, ...)
 int __cdecl
 putchar(int c) { return printf("%c",c); }
 
-#endif /* !defined(_MSC_VER) && !defined(NODBGPRINT) */
+#endif /* defined(DBGPRINT) */
 
 /****************************************************************************/
 /*                   Message Processing                                     */
