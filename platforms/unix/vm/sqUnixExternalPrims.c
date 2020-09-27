@@ -441,7 +441,7 @@ ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
 
   fn= dlsym(moduleHandle, buf);
 
-  DPRINTF((stderr, "ioFindExternalFunctionIn(%s, %d)\n",
+  DPRINTF((stderr, "ioFindExternalFunctionIn(%s, %p)\n",
 	   lookupName, moduleHandle));
 
   if ((fn == 0) && (!sqIgnorePluginErrors)

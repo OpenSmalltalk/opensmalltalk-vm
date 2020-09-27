@@ -376,7 +376,7 @@ ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
   snprintf(buf, sizeof(buf), "%s", lookupName); 
   void *fn = dlsym(moduleHandle, buf);
 
-  dprintf((stderr, "ioFindExternalFunctionIn(%s, %ld)\n",lookupName, (long) moduleHandle));
+  dprintf((stderr, "ioFindExternalFunctionIn(%s, %p)\n",lookupName, moduleHandle));
 
   if ((fn == NULL) && (thePListInterface.SqueakDebug)
       && strcmp(lookupName, "initialiseModule")
