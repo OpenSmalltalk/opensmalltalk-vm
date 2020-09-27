@@ -152,21 +152,21 @@ ifneq ($(LINK_WITH_GCC),)
 		-def $(OBJDIR)/$(LIBNAME).def \
 		-o   $(VMDIR)/$(LIBNAME).dll \
 		$(GCCLINKEXTRAS) \
-		$(LIBOBJ) $(JMPOBJ) $(EXTRALIBS)
+		$(LIBOBJ) $(JMPOBJ) $(VMLIB) $(EXTRALIBS)
 else ifneq ($(LINK_WITH_GPP),)
 	$(CXX) -shared \
 		-m64 \
 		-def $(OBJDIR)/$(LIBNAME).def \
 		-o   $(VMDIR)/$(LIBNAME).dll \
 		$(GPPLINKEXTRAS) \
-		$(LIBOBJ) $(JMPOBJ) $(EXTRALIBS)
+		$(LIBOBJ) $(JMPOBJ) $(VMLIB) $(EXTRALIBS)
 else
 	$(DLLWRAP) -mwindows -m64 \
 		-def $(OBJDIR)/$(LIBNAME).def \
 		-o   $(VMDIR)/$(LIBNAME).dll \
 		$(DLLWRAPEXTRAS) \
 		$(OBJDIR)/$(LIBNAME).exp \
-		$(LIBOBJ) $(JMPOBJ) $(EXTRALIBS)
+		$(LIBOBJ) $(JMPOBJ) $(VMLIB) $(EXTRALIBS)
 endif
 	$(OPTSTRIP) --strip-all $(VMDIR)/$(LIBNAME).dll
 	-$(RM) $(OBJDIR)/$(LIBNAME).lib

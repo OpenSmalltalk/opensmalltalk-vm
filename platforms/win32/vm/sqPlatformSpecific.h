@@ -22,6 +22,10 @@
 #define HAVE_BOOLEAN 1 /* for jpegReaderWriter plugin compatibility */
 #endif
 
+#if defined(__MINGW32__) || defined(__MINGW64__)
+// vcruntime.h defines size_t for MSVC builds, but not for mingw builds.
+# include <corecrt.h> // for size_t
+#endif
 
 #ifdef _MSC_VER
 #define squeakFileOffsetType __int64
