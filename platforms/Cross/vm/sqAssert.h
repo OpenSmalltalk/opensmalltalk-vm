@@ -43,20 +43,31 @@ void warningat(const char *,int);
 # define assertfl(msg,line) 0
 # define eassert(expr) 0 /* hack disabling of asserts.  Better in makefile? */
 # define PRODUCTION 1
-#elif defined(_MSC_VER)
-static inline sqInt warningIfNot(sqInt condition, const char *msg)
+#elif defined(_MSC_VER) && !defined(__clang__)
+// MSVC generates incorrect code for assertions using the macro forms. To help
+// it hang with the grown-up compilers we use these inline functions. But WIN64
+// doesn't make it easy to choose a natural machine word type; sigh...
+# if _WIN64
+#	define  __word __int64
+# else
+#	define  __word __int32
+# endif
+static inline __word
+warningIfNot(__word condition, const char *msg)
 {
     if (!condition)
 		warning(msg);
 	return condition;
 }
 
-static inline sqInt warningIfNotAt(sqInt condition, const char *msg, int line)
+static inline __word
+warningIfNotAt(__word condition, const char *msg, int line)
 {
     if (!condition)
 		warningat(msg, line);
 	return condition;
 }
+# undef __word
 
 # define assert(expr)  warningIfNot(expr, #expr " " __stringifyNum(__LINE__))
 # define asserta(expr) warningIfNot(expr, #expr " " __stringifyNum(__LINE__))

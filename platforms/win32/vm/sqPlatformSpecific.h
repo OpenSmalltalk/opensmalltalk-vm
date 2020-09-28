@@ -45,8 +45,12 @@
 #undef sqImageFileSeekEnd
 #undef sqImageFileWrite
 
-#define sqImageFile usqIntptr_t
-sqInt sqImageFileClose(sqImageFile h);
+#if _WIN64
+# define sqImageFile unsigned __int64
+#else
+# define sqImageFile unsigned __int32
+#endif
+int sqImageFileClose(sqImageFile h);
 sqImageFile sqImageFileOpen(const char *fileName, const char *mode);
 squeakFileOffsetType sqImageFilePosition(sqImageFile h);
 size_t sqImageFileRead(void *ptr, size_t sz, size_t count, sqImageFile h);
@@ -107,8 +111,6 @@ size_t sqImageFileWrite(const void *ptr, size_t sz, size_t count, sqImageFile h)
 #else 
 error "Not Win32 or Win64!"
 #endif /* _WIN32 || _WIN64 */
-
-sqInt ioSetCursorARGB(sqInt bitsIndex, sqInt w, sqInt h, sqInt x, sqInt y);
 
 /* poll and profile thread priorities.  The stack vm uses a thread to cause the
  * VM to poll for I/O, check for delay expiry et al at regular intervals.  Both

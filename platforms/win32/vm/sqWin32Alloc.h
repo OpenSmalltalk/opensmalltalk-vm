@@ -21,6 +21,8 @@
 #undef sqShrinkMemoryBy
 #undef sqMemoryExtraBytesLeft
 
+#include "sqMemoryAccess.h" /* for sqInt et al */
+
 void *sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize);
 #define allocateMemoryMinimumImageFileHeaderSize(heapSize, minimumMemory, fileStream, headerSize) \
 sqAllocateMemory(minimumMemory, heapSize)
