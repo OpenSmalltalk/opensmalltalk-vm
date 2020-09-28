@@ -5,6 +5,7 @@
 #include <time.h>
 #include <setjmp.h>
 
+#include "sqMemoryAccess.h"
 #include "sqAssert.h"
 #include "sqVirtualMachine.h"
 
