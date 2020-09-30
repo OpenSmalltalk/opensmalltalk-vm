@@ -172,7 +172,7 @@ MIPSSimulator >> call: entryPC [
 ]
 
 { #category : #'as yet unclassified' }
-MIPSSimulator >> call: entryPC with: arg0 with: arg1 with: arg2 with: arg3. [
+MIPSSimulator >> call: entryPC with: arg0 with: arg1 with: arg2 with: arg3 [.
 	
 	pc := entryPC.
 	self unsignedRegister: RA put: EndSimulationPC.
