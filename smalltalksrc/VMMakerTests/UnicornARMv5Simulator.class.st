@@ -42,13 +42,50 @@ UnicornARMv5Simulator >> convertInternalToInteger: aTwoComplementNumber [
 { #category : #'as yet unclassified' }
 UnicornARMv5Simulator >> createUnicorn [
 
-	^ Unicorn arm
+	"Enable Floating Point...
+	https://github.com/unicorn-engine/unicorn/pull/447/files"
+
+"
+'00000000':	mov	r3, #15728640
+'00000004':	mcr	p15, #0x0, r3, c1, c0, #0x2
+'00000008':	isb	sy
+'0000000C':	mov	r3, #1073741824
+'00000010':	vmsr	fpexc, r3
+"
+
+	| bytes mappedMemory |
+	bytes := #[ 
+	16r0f 16r36 16ra0 16re3
+	16r50 16r3f 16r01 16ree
+	16r6f 16rf0 16r7f 16rf5
+	16r01 16r31 16ra0 16re3
+	16r10 16r3a 16re8 16ree ].
+
+	"Put the instructions in a memory region of 4KB.
+	Unicorn requires that memory regions are multiple of 4KB.
+	Create a region of 4KB and map it also at a multiple of 4KB."
+	mappedMemory := ByteArray new: 4096.
+	mappedMemory replaceFrom: 1 to: bytes size with: bytes.
+	unicorn := Unicorn arm.
+	unicorn mapHostMemory: mappedMemory atAddress: 4096 withPermissions: UnicornConstants permissionAll.
+
+	unicorn doStartAt: 4096 until: 0 timeout: 0 count: 5 "instructions".
+
+	"Cleanup: unmap the memory so the ByteArray can be safely get garbage collected and that memory region can be reused"
+	unicorn unmapMemoryAt: 4096 size: 4096.
+	^ unicorn
 ]
 
 { #category : #disassembling }
 UnicornARMv5Simulator >> disassembler [
 	
-	^ LLVMDisassembler armv5
+	^ LLVMDisassembler armv7
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv5Simulator >> doublePrecisionFloatingPointRegister0Value [
+
+	^ self readFloat64Register: UcARMRegisters d0
 ]
 
 { #category : #'as yet unclassified' }
