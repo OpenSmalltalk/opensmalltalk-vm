@@ -2806,6 +2806,20 @@ SpurMemoryManager >> bootstrapping [
 	^false
 ]
 
+{ #category : #'interpreter access' }
+SpurMemoryManager >> boxedFloatObjectOf: aFloat [
+	| newFloatObj |
+	<inline: false>
+	<var: #aFloat type: #double>
+	<api>
+	newFloatObj := self
+						eeInstantiateSmallClassIndex: ClassFloatCompactIndex
+						format: self firstLongFormat
+						numSlots: (self sizeof: #double) / self bytesPerOop.
+	self storeFloatAt: newFloatObj + self baseHeaderSize from: aFloat.
+	^newFloatObj
+]
+
 { #category : #segments }
 SpurMemoryManager >> bridgeSize [
 	^2 * self baseHeaderSize

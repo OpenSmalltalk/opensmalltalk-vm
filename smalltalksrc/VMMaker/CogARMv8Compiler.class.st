@@ -1588,8 +1588,8 @@ CogARMv8Compiler >> concretizeCmpRdRd [
 	regB := operands at: 1.
 	machineCode at: 0 put: (self
 		fcmpFType: 2r01 "64bit variant"
-		leftRegister: regA
-		rightRegister: regB).
+		leftRegister: regB
+		rightRegister: regA).
 	^ machineCodeSize := 4
 ]
 
@@ -1641,7 +1641,7 @@ CogARMv8Compiler >> concretizeConvertRRd [
 	| srcReg destReg |
 	srcReg := operands at: 0.
 	destReg := operands at: 1.
-	machineCode at: 0 put: (self fMoveSize: 1 fromScalarRegister: srcReg toDoublePrecisionFloatRegister: destReg).
+	machineCode at: 0 put: (self scalarConvertSize: 1 fromScalarRegister: srcReg toDoublePrecisionFloatRegister: destReg).
 	^ machineCodeSize := 4
 ]
 
@@ -3278,7 +3278,7 @@ CogARMv8Compiler >> fcmpFType: ftype leftRegister: firstRegister rightRegister: 
 		bitOr: (1 << 21
 		bitOr: ((secondRegister bitAnd: 16r1f) << 16
 		bitOr: (1 << 13
-		bitOr: (firstRegister bitAnd: 16r1f)))))
+		bitOr: ((firstRegister bitAnd: 16r1f) << 5)))))
 ]
 
 { #category : #'ARM convenience instructions' }
@@ -5064,6 +5064,25 @@ CogARMv8Compiler >> saveAndRestoreLinkRegAround: aBlock [
 	aBlock value.
 	cogit PopR: LinkReg.
 	^inst
+]
+
+{ #category : #assembler }
+CogARMv8Compiler >> scalarConvertSize: is64Bits fromScalarRegister: scalarRegister toDoublePrecisionFloatRegister: doublePrecisionFloatingPointRegister [
+
+	"C7.2.236 SCVTF (scalar, integer)
+	
+	Signed integer Convert to Floating-point (scalar). This instruction converts the signed integer value in the general-purpose source register to a floating-point value using the rounding mode that is specified by the FPCR, and writes the result to the SIMD&FP destination register.
+	
+	64-bit to double-precision variant
+	
+	SCVTF <Dd>, <Xn>"
+	
+	^ (is64Bits bitAnd: 1 << 31)
+		bitOr: (2r1111 << 25
+		bitOr: (2r01 "double precision" << 22
+		bitOr: (2r10001 << 17
+		bitOr: ((scalarRegister bitAnd: 16r1f) << 5
+		bitOr: (doublePrecisionFloatingPointRegister bitAnd: 16r1f)))))
 ]
 
 { #category : #assembler }

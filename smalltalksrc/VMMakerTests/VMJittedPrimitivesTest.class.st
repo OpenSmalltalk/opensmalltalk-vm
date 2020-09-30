@@ -1,11 +1,31 @@
 Class {
 	#name : #VMJittedPrimitivesTest,
 	#superclass : #VMSimpleStackBasedCogitAbstractTest,
+	#instVars : [
+		'classFloat'
+	],
 	#pools : [
 		'CogRTLOpcodes'
 	],
 	#category : #'VMMakerTests-JitTests'
 }
+
+{ #category : #helpers }
+VMJittedPrimitivesTest >> executePrimitiveWithReceiver: receiverOop withArgument: argumentOop [
+	
+	"Simulate a primitive execution having an object as receiver and a single argument
+	  - the receiver goes to the receiver register
+	  - the argument should be pushed to the stack
+	If we are in a system without a link register, we need to push the caller IP to the stack to simulate a call"
+	
+	self pushAddress: argumentOop.
+	cogit backEnd hasLinkRegister ifFalse: [ 
+		self pushAddress: callerAddress ].
+	machineSimulator receiverRegisterValue: receiverOop.
+	
+	self runUntilReturn.
+
+]
 
 { #category : #helpers }
 VMJittedPrimitivesTest >> prepareStackForSendReceiver: aReceiver arguments: arguments [ 	
@@ -18,6 +38,19 @@ VMJittedPrimitivesTest >> prepareStackForSendReceiver: aReceiver arguments: argu
 		ifTrue: [ machineSimulator linkRegisterValue: callerAddress "The caller IP in ARM is in the linkRegister"]
 		ifFalse: [ self pushAddress:  callerAddress. " I need to push the caller IP, as this is a message send" ]
 
+]
+
+{ #category : #helpers }
+VMJittedPrimitivesTest >> setUp [
+
+	super setUp.
+	
+	classFloat := self newClassInOldSpaceWithSlots: 0 format: memory firstLongFormat.
+	memory setHashBitsOf: classFloat to: ClassFloatCompactIndex.
+	memory
+		storePointer: ClassFloatCompactIndex
+		ofObject: memory classTableFirstPage
+		withValue: classFloat.
 ]
 
 { #category : #'tests - support' }
@@ -85,6 +118,230 @@ VMJittedPrimitivesTest >> testCheckImmediateWhenNonImmediate [
 	self assert: machineSimulator receiverRegisterValue equals: 0
 ]
 
+{ #category : #'tests - equals comparison' }
+VMJittedPrimitivesTest >> testCompareSmallIntegerEqualsToBoxedFloat [
+
+	self compile: [ | jump | 
+		"Compile this code in the context != of a small integer class"
+		cogit receiverTags: memory smallIntegerTag.
+		jump := cogit objectRepresentation genPrimitiveEqual.
+	].
+	
+	self 
+		executePrimitiveWithReceiver: (self memory integerObjectOf: 42)
+		withArgument: (self memory boxedFloatObjectOf: 42.0).
+
+	self assert: machineSimulator receiverRegisterValue equals: self memory trueObject
+]
+
+{ #category : #'tests - equals comparison' }
+VMJittedPrimitivesTest >> testCompareSmallIntegerEqualsToSmallInteger [
+
+	self compile: [ | jump | 
+		"Compile this code in the context != of a small integer class"
+		cogit receiverTags: memory smallIntegerTag.
+		jump := cogit objectRepresentation genPrimitiveEqual.
+	].
+	
+	self
+		executePrimitiveWithReceiver: (self memory integerObjectOf: 42)
+		withArgument: (self memory integerObjectOf: 42).
+		
+	self assert: machineSimulator receiverRegisterValue equals: self memory trueObject
+]
+
+{ #category : #'tests - greater or equal than comparison' }
+VMJittedPrimitivesTest >> testCompareSmallIntegerGreaterOrEqualThanEqualBoxedFloat [
+
+	self compile: [ | jump | 
+		"Compile this code in the context != of a small integer class"
+		cogit receiverTags: memory smallIntegerTag.
+		jump := cogit objectRepresentation genPrimitiveGreaterOrEqual.
+	].
+
+	self 
+		executePrimitiveWithReceiver: (self memory integerObjectOf: 43)
+		withArgument: (self memory boxedFloatObjectOf: 43.0).
+	
+	self assert: machineSimulator receiverRegisterValue equals: self memory trueObject
+]
+
+{ #category : #'tests - greater or equal than comparison' }
+VMJittedPrimitivesTest >> testCompareSmallIntegerGreaterOrEqualThanEqualSmallInteger [
+
+	self compile: [ | jump | 
+		"Compile this code in the context != of a small integer class"
+		cogit receiverTags: memory smallIntegerTag.
+		jump := cogit objectRepresentation genPrimitiveGreaterOrEqual.
+	].
+
+	self 
+		executePrimitiveWithReceiver: (self memory integerObjectOf: 43)
+		withArgument: (self memory integerObjectOf: 43).
+	
+	self assert: machineSimulator receiverRegisterValue equals: self memory trueObject
+]
+
+{ #category : #'tests - greater or equal than comparison' }
+VMJittedPrimitivesTest >> testCompareSmallIntegerGreaterOrEqualThanGreaterBoxedFloat [
+
+	self compile: [ | jump | 
+		"Compile this code in the context != of a small integer class"
+		cogit receiverTags: memory smallIntegerTag.
+		jump := cogit objectRepresentation genPrimitiveGreaterOrEqual.
+	].
+
+	self 
+		executePrimitiveWithReceiver: (self memory integerObjectOf: 43)
+		withArgument: (self memory boxedFloatObjectOf: 44.0).
+	
+	self assert: machineSimulator receiverRegisterValue equals: self memory falseObject
+]
+
+{ #category : #'tests - greater or equal than comparison' }
+VMJittedPrimitivesTest >> testCompareSmallIntegerGreaterOrEqualThanGreaterSmallInteger [
+
+	self compile: [ | jump | 
+		"Compile this code in the context != of a small integer class"
+		cogit receiverTags: memory smallIntegerTag.
+		jump := cogit objectRepresentation genPrimitiveGreaterOrEqual.
+	].
+
+	self 
+		executePrimitiveWithReceiver: (self memory integerObjectOf: 43)
+		withArgument: (self memory integerObjectOf: 44).
+	
+	self assert: machineSimulator receiverRegisterValue equals: self memory falseObject
+]
+
+{ #category : #'tests - greater or equal than comparison' }
+VMJittedPrimitivesTest >> testCompareSmallIntegerGreaterOrEqualThanSmallerBoxedFloat [
+
+	self compile: [ | jump | 
+		"Compile this code in the context != of a small integer class"
+		cogit receiverTags: memory smallIntegerTag.
+		jump := cogit objectRepresentation genPrimitiveGreaterOrEqual.
+	].
+
+	self 
+		executePrimitiveWithReceiver: (self memory integerObjectOf: 43)
+		withArgument: (self memory boxedFloatObjectOf: 42.0).
+	
+	self assert: machineSimulator receiverRegisterValue equals: self memory trueObject
+]
+
+{ #category : #'tests - greater or equal than comparison' }
+VMJittedPrimitivesTest >> testCompareSmallIntegerGreaterOrEqualThanSmallerSmallInteger [
+
+	self compile: [ | jump | 
+		"Compile this code in the context != of a small integer class"
+		cogit receiverTags: memory smallIntegerTag.
+		jump := cogit objectRepresentation genPrimitiveGreaterOrEqual.
+	].
+
+	self 
+		executePrimitiveWithReceiver: (self memory integerObjectOf: 43)
+		withArgument: (self memory integerObjectOf: 42).
+	
+	self assert: machineSimulator receiverRegisterValue equals: self memory trueObject
+]
+
+{ #category : #'tests - greater than comparison' }
+VMJittedPrimitivesTest >> testCompareSmallIntegerGreaterThanBoxedFloat [
+
+	self compile: [ | jump | 
+		"Compile this code in the context != of a small integer class"
+		cogit receiverTags: memory smallIntegerTag.
+		jump := cogit objectRepresentation genPrimitiveGreaterThan.
+	].
+
+	self 
+		executePrimitiveWithReceiver: (self memory integerObjectOf: 43)
+		withArgument: (self memory boxedFloatObjectOf: 42.0).
+	
+	self assert: machineSimulator receiverRegisterValue equals: self memory trueObject
+]
+
+{ #category : #'tests - greater than comparison' }
+VMJittedPrimitivesTest >> testCompareSmallIntegerGreaterThanSmallInteger [
+
+	self compile: [ | jump | 
+		"Compile this code in the context != of a small integer class"
+		cogit receiverTags: memory smallIntegerTag.
+		jump := cogit objectRepresentation genPrimitiveGreaterThan.
+	].
+	
+	self 
+		executePrimitiveWithReceiver: (self memory integerObjectOf: 43)
+		withArgument: (self memory integerObjectOf: 42).
+	
+	self assert: machineSimulator receiverRegisterValue equals: self memory trueObject
+]
+
+{ #category : #'tests - equals comparison' }
+VMJittedPrimitivesTest >> testCompareSmallIntegerNotEqualsToBoxedFloat [
+
+	self compile: [ | jump | 
+		"Compile this code in the context != of a small integer class"
+		cogit receiverTags: memory smallIntegerTag.
+		jump := cogit objectRepresentation genPrimitiveEqual.
+	].
+	
+	self 
+		executePrimitiveWithReceiver: (self memory integerObjectOf: 43)
+		withArgument: (self memory boxedFloatObjectOf: 42.0).
+
+	self assert: machineSimulator receiverRegisterValue equals: self memory falseObject
+]
+
+{ #category : #'tests - equals comparison' }
+VMJittedPrimitivesTest >> testCompareSmallIntegerNotEqualsToSmallInteger [
+
+	self compile: [ | jump | 
+		"Compile this code in the context != of a small integer class"
+		cogit receiverTags: memory smallIntegerTag.
+		jump := cogit objectRepresentation genPrimitiveEqual.
+	].
+	
+	self 
+		executePrimitiveWithReceiver: (self memory integerObjectOf: 43)
+		withArgument: (self memory integerObjectOf: 42).
+	
+	self assert: machineSimulator receiverRegisterValue equals: self memory falseObject
+]
+
+{ #category : #'tests - greater than comparison' }
+VMJittedPrimitivesTest >> testCompareSmallIntegerNotGreaterThanBoxedFloat [
+
+	self compile: [ | jump | 
+		"Compile this code in the context != of a small integer class"
+		cogit receiverTags: memory smallIntegerTag.
+		jump := cogit objectRepresentation genPrimitiveGreaterThan.
+	].
+	
+	self 
+		executePrimitiveWithReceiver: (self memory integerObjectOf: 43)
+		withArgument: (self memory boxedFloatObjectOf: 44.0).
+	
+	self assert: machineSimulator receiverRegisterValue equals: self memory falseObject
+]
+
+{ #category : #'tests - greater than comparison' }
+VMJittedPrimitivesTest >> testCompareSmallIntegerNotGreaterThanSmallInteger [
+
+	self compile: [ | jump | 
+		"Compile this code in the context != of a small integer class"
+		cogit receiverTags: memory smallIntegerTag.
+		jump := cogit objectRepresentation genPrimitiveGreaterThan.
+	].
+	
+	self 
+		executePrimitiveWithReceiver: (self memory integerObjectOf: 43)
+		withArgument: (self memory integerObjectOf: 44).
+	
+	self assert: machineSimulator receiverRegisterValue equals: self memory falseObject
+]
+
 { #category : #'tests - support' }
 VMJittedPrimitivesTest >> testConvertSmallIntegerToInteger [
 
@@ -114,14 +371,6 @@ VMJittedPrimitivesTest >> testGetClassIndexOfObjectObtainsClassIndex [
 { #category : #'tests - support' }
 VMJittedPrimitivesTest >> testMoveFloatToFloatPointRegister [
 
-	| classFloat |
-	classFloat := self newClassInOldSpaceWithSlots: 0 format: memory firstLongFormat.
-	memory setHashBitsOf: classFloat to: ClassFloatCompactIndex.
-	memory
-		storePointer: ClassFloatCompactIndex
-		ofObject: memory classTableFirstPage
-		withValue: classFloat.
-	
 	self compile: [ | jump | 
 		jump := cogit objectRepresentation genGetDoubleValueOf: ReceiverResultReg into: DPFPReg0.
 	]. 

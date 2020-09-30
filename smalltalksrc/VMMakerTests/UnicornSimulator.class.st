@@ -176,6 +176,12 @@ UnicornSimulator >> doStartAt: startAddress until: until timeout: timeout count:
 			self instructionPointerValue = until ifTrue: [ ^ result ]]
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornSimulator >> doublePrecisionFloatingPointRegister1Value [
+	
+	self subclassResponsibility
+]
+
 { #category : #disassembling }
 UnicornSimulator >> extractDestinationRegisterFromAssembly: aLLVMInstruction [ 
 	

@@ -391,16 +391,10 @@ Spur32BitMemoryManager >> fillObj: objOop numSlots: numSlots with: fillValue [
 
 { #category : #'interpreter access' }
 Spur32BitMemoryManager >> floatObjectOf: aFloat [
-	| newFloatObj |
 	<inline: false>
 	<var: #aFloat type: #double>
 	<api>
-	newFloatObj := self
-						eeInstantiateSmallClassIndex: ClassFloatCompactIndex
-						format: self firstLongFormat
-						numSlots: (self sizeof: #double) / self bytesPerOop.
-	self storeFloatAt: newFloatObj + self baseHeaderSize from: aFloat.
-	^newFloatObj
+	^ self boxedFloatObjectOf: aFloat
 ]
 
 { #category : #'interpreter access' }
