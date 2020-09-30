@@ -23,6 +23,12 @@ UnicornARMv8Simulator >> baseRegister [
 ]
 
 { #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> cReturnRegisterValue: anInteger [ 
+	
+	self x0: anInteger
+]
+
+{ #category : #'as yet unclassified' }
 UnicornARMv8Simulator >> carry [
 
 	^ (self nzcv bitAnd: (1<<29))~= 0

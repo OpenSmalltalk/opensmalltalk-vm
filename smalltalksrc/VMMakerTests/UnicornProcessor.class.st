@@ -10,7 +10,7 @@ Class {
 { #category : #'as yet unclassified' }
 UnicornProcessor >> cResultRegister: anInteger [ 
 	
-	machineSimulator returnRegisterValue: anInteger
+	machineSimulator cReturnRegisterValue: anInteger
 ]
 
 { #category : #'as yet unclassified' }
@@ -94,6 +94,12 @@ UnicornProcessor >> machineSimulator [
 UnicornProcessor >> machineSimulator: aMachineSimulator [
 	
 	machineSimulator := aMachineSimulator
+]
+
+{ #category : #'as yet unclassified' }
+UnicornProcessor >> pc [
+	
+	^ machineSimulator instructionPointerValue
 ]
 
 { #category : #registers }

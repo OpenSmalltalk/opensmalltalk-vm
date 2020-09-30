@@ -88,6 +88,12 @@ UnicornSimulator >> baseRegisterValue: aValue [
 	^ self writeRegister: self baseRegister value: aValue
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornSimulator >> cReturnRegisterValue: anInteger [ 
+	
+	self subclassResponsibility
+]
+
 { #category : #registers }
 UnicornSimulator >> classRegister [
 	
