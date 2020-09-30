@@ -33,19 +33,6 @@ VMPrimitiveTest >> newArrayWith: aCollection [
 ]
 
 { #category : #running }
-VMPrimitiveTest >> setContextClassIntoClassTable [
-	| aClass |
-	aClass := self
-		newClassInOldSpaceWithSlots: 0
-		instSpec: Array instSpec.
-	memory setHashBitsOf: aClass to: ClassMethodContextCompactIndex.
-	memory
-		storePointer: ClassMethodContextCompactIndex
-		ofObject: memory classTableFirstPage
-		withValue: aClass
-]
-
-{ #category : #running }
 VMPrimitiveTest >> setUp [
 	
 	"taken from VMSimpleStackBasedCogitBytecodeTest >> #setup"

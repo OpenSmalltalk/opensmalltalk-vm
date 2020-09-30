@@ -21,7 +21,8 @@ Class {
 	#pools : [
 		'VMBasicConstants',
 		'VMBytecodeConstants',
-		'VMObjectIndices'
+		'VMObjectIndices',
+		'VMSqueakClassIndices'
 	],
 	#category : #'VMMakerTests-MemoryTests'
 }
@@ -357,6 +358,19 @@ VMSpurMemoryManagerTest >> roundToPageSize: anInteger [
 	remainder = 0 ifTrue: [ ^ anInteger ].
 
 	^ anInteger + (pageSize - remainder)
+]
+
+{ #category : #running }
+VMSpurMemoryManagerTest >> setContextClassIntoClassTable [
+	| aClass |
+	aClass := self
+		newClassInOldSpaceWithSlots: 0
+		instSpec: Array instSpec.
+	memory setHashBitsOf: aClass to: ClassMethodContextCompactIndex.
+	memory
+		storePointer: ClassMethodContextCompactIndex
+		ofObject: memory classTableFirstPage
+		withValue: aClass
 ]
 
 { #category : #running }

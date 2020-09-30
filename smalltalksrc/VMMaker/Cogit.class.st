@@ -3755,6 +3755,14 @@ Cogit >> ceBaseFrameReturnPC [
 	^ceBaseFrameReturnTrampoline
 ]
 
+{ #category : #accessing }
+Cogit >> ceBaseFrameReturnTrampoline: anInteger [ 
+
+	<doNotGenerate>
+	
+	ceBaseFrameReturnTrampoline := anInteger
+]
+
 { #category : #'in-line cacheing' }
 Cogit >> ceCPICMiss: cPIC receiver: receiver [
 	"Code entry closed PIC miss.  A send has fallen
