@@ -146,6 +146,7 @@ SqueakVideoGrabber *grabbers[8] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NUL
   USEPRESETFOR(AVCaptureSessionPreset1280x720,  1280,  720,  960);
   USEPRESETFOR(AVCaptureSessionPreset640x480,    640,  480,  360);
   USEPRESETFOR(AVCaptureSessionPresetMedium,     480,  360,  270);
+  USEPRESETFOR(AVCaptureSessionPreset352x288,    352,  288,  216);
   USEPRESETFOR(AVCaptureSessionPreset320x240,    320,  240,  180);
   USEPRESETFOR(AVCaptureSessionPresetLow,        192,  108,  144);
   USEPRESETFOR(AVCaptureSessionPresetLow,        160,  120,   90);

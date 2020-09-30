@@ -194,7 +194,8 @@ CameraGetParam(sqInt cameraNum, sqInt paramNum)  // for debugging and testing
 static sqInt
 CameraIsOpen() { return theCamera.mCB.pFrameBuf != NULL; }
 
-HRESULT FindCamera(IBaseFilter ** ppSrcFilter, int cameraNum)
+HRESULT
+FindCamera(IBaseFilter ** ppSrcFilter, int cameraNum)
 {
 	HRESULT hr;
 	IBaseFilter *pSrc = NULL;
@@ -225,9 +226,9 @@ HRESULT FindCamera(IBaseFilter ** ppSrcFilter, int cameraNum)
 	// Note that if the Next() call succeeds but there are no monikers,
 	// it will return S_FALSE (which is not a failure). Therefore, we
 	// check that the return code is S_OK instead of using SUCCEEDED() macro
-	for (int i = 1; i <= cameraNum; i++) {
-		if (S_OK != pClassEnum->Next (1, &pMoniker, &cFetched)) return E_FAIL;
-	}
+	for (int i = 1; i <= cameraNum; i++)
+		if (S_OK != pClassEnum->Next (1, &pMoniker, &cFetched))
+			return E_FAIL;
 
 	// Bind Moniker to a filter object
 	hr = pMoniker->BindToObject(0, 0, IID_IBaseFilter, (void**) &pSrc);
@@ -240,14 +241,16 @@ HRESULT FindCamera(IBaseFilter ** ppSrcFilter, int cameraNum)
 	return hr;
 }
 
-void FreeMediaType(AM_MEDIA_TYPE *pMediaType)  // free fields and structure
+void
+FreeMediaType(AM_MEDIA_TYPE *pMediaType)  // free fields and structure
 {
 	if (!pMediaType) return;
 	FreeMediaTypeFields(pMediaType);
 	CoTaskMemFree((void *) pMediaType);
 }
 
-void FreeMediaTypeFields(AM_MEDIA_TYPE *pMediaType)  // free format and pUnk fields
+void
+FreeMediaTypeFields(AM_MEDIA_TYPE *pMediaType)  // free format and pUnk fields
 {
 	if (pMediaType->cbFormat != 0) {
 		CoTaskMemFree((PVOID) pMediaType->pbFormat);
@@ -261,7 +264,8 @@ void FreeMediaTypeFields(AM_MEDIA_TYPE *pMediaType)  // free format and pUnk fie
 	}
 }
 
-char* GetCameraName(int cameraNum)
+char *
+GetCameraName(int cameraNum)
 {
 	CComPtr <ICreateDevEnum> pDevEnum = NULL;
 	CComPtr <IEnumMoniker> pClassEnum = NULL;
@@ -317,7 +321,8 @@ char* GetCameraName(int cameraNum)
 	return result;
 }
 
-HRESULT InitCamera(int num, int desiredWidth)
+HRESULT
+InitCamera(int num, int desiredWidth)
 {
 	HRESULT hr;
 
@@ -389,7 +394,9 @@ HRESULT InitCamera(int num, int desiredWidth)
 	return S_OK;
 }
 
-void SetOutputToRGB() {
+void
+SetOutputToRGB()
+{
 	AM_MEDIA_TYPE mediaType;
 	mediaType.majortype = MEDIATYPE_Video;
 	mediaType.subtype = MEDIASUBTYPE_RGB24;
