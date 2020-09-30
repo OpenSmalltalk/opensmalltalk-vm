@@ -1433,7 +1433,6 @@ CoInterpreter >> ceCheckProfileTick [
 CoInterpreter >> ceContext: maybeContext instVar: slotIndex [
 	<api>
 	| result |
-	1halt.
 	(objectMemory isContextNonImm: maybeContext)
 		ifTrue:
 			[instructionPointer := self popStack.
