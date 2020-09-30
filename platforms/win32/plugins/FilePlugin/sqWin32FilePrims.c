@@ -459,7 +459,7 @@ size_t sqFileWriteFromAt(SQFile *f, size_t count, char* byteArrayIndex, size_t s
 /***************************************************************************/
 /* Image file functions                                                    */
 /***************************************************************************/
-sqInt sqImageFileClose(sqImageFile h)
+int sqImageFileClose(sqImageFile h)
 {
   SetEndOfFile((HANDLE)(h-1));
   return CloseHandle((HANDLE)(h-1));
