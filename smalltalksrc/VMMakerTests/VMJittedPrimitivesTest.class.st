@@ -18,10 +18,7 @@ VMJittedPrimitivesTest >> executePrimitiveWithReceiver: receiverOop withArgument
 	  - the argument should be pushed to the stack
 	If we are in a system without a link register, we need to push the caller IP to the stack to simulate a call"
 	
-	self pushAddress: argumentOop.
-	cogit backEnd hasLinkRegister ifFalse: [ 
-		self pushAddress: callerAddress ].
-	machineSimulator receiverRegisterValue: receiverOop.
+	self prepareStackForSendReceiver: receiverOop arguments: { argumentOop }.
 	
 	self runUntilReturn.
 
@@ -491,6 +488,60 @@ VMJittedPrimitivesTest >> testPrimitiveAddReturnsAnSmallIntegerWhenNegativeNumbe
 	
 	self runFrom: primitiveAddress until: callerAddress.
 	self assert: self machineSimulator receiverRegisterValue equals: (memory integerObjectOf: -94).
+]
+
+{ #category : #'tests - primitiveAt' }
+VMJittedPrimitivesTest >> testPrimitiveAtArrayOutOfBoundsShouldFallThrough [
+	
+	| stop offset array |
+	
+	self compile: [ 
+		cogit objectRepresentation genPrimitiveAt.
+		stop := cogit Stop ]
+		bytecodes: 10.
+		
+	offset := 11.
+	array := self newObjectWithSlots: 10.
+	
+	self prepareStackForSendReceiver: array arguments: { memory integerObjectOf: offset }.
+	self runFrom: initialAddress until: stop address.
+
+	self assert: machineSimulator instructionPointerValue equals: stop address
+]
+
+{ #category : #'tests - primitiveAt' }
+VMJittedPrimitivesTest >> testPrimitiveAtArrayShouldAccessValue [
+	
+	| stop offset array |
+	
+	self compile: [ 
+		cogit objectRepresentation genPrimitiveAt.
+		stop := cogit Stop ]
+		bytecodes: 10.
+	
+	offset := 5.
+	array := self newObjectWithSlots: 10.
+	memory storePointer: offset - 1 ofObject: array withValue: memory falseObject.
+	
+	self executePrimitiveWithReceiver: array withArgument: (memory integerObjectOf: offset).
+	
+	self assert: machineSimulator receiverRegisterValue equals: memory falseObject
+]
+
+{ #category : #'tests - primitiveAt' }
+VMJittedPrimitivesTest >> testPrimitiveAtSmallIntegerShouldFallThrough [
+	
+	| stop |
+	
+	self compile: [ 
+		cogit objectRepresentation genPrimitiveAt.
+		stop := cogit Stop ]
+		bytecodes: 10.
+	
+	machineSimulator receiverRegisterValue: (memory integerObjectOf: 17).
+	self runFrom: initialAddress until: stop address.
+
+	self assert: machineSimulator instructionPointerValue equals: stop address
 ]
 
 { #category : #'tests - support' }
