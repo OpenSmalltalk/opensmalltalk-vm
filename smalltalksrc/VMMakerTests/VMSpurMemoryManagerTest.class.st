@@ -21,7 +21,8 @@ Class {
 	#pools : [
 		'VMBasicConstants',
 		'VMBytecodeConstants',
-		'VMObjectIndices'
+		'VMObjectIndices',
+		'VMSqueakClassIndices'
 	],
 	#category : #'VMMakerTests-MemoryTests'
 }
@@ -360,6 +361,19 @@ VMSpurMemoryManagerTest >> roundToPageSize: anInteger [
 ]
 
 { #category : #running }
+VMSpurMemoryManagerTest >> setContextClassIntoClassTable [
+	| aClass |
+	aClass := self
+		newClassInOldSpaceWithSlots: 0
+		instSpec: Array instSpec.
+	memory setHashBitsOf: aClass to: ClassMethodContextCompactIndex.
+	memory
+		storePointer: ClassMethodContextCompactIndex
+		ofObject: memory classTableFirstPage
+		withValue: aClass
+]
+
+{ #category : #running }
 VMSpurMemoryManagerTest >> setUp [
 	super setUp.
 
@@ -417,7 +431,7 @@ VMSpurMemoryManagerTest >> setUp [
 VMSpurMemoryManagerTest >> setUpScheduler [
 	
 	"The ScheduleAssocation should be initialized to a valid Processor object"
-	| processorOopAssociation processorOop processorListArray processorListPriority1 processorListPriority2 |
+	| processorOopAssociation processorOop processorListArray processorListPriority1 processorListPriority2 activeProcessOop |
 	processorOopAssociation := self newObjectWithSlots: 2.
 	processorOop := self newObjectWithSlots: 2.
 	processorListArray := self newObjectWithSlots: 2.
@@ -431,7 +445,15 @@ VMSpurMemoryManagerTest >> setUpScheduler [
 	memory splObj: SchedulerAssociation put: processorOopAssociation.
 	memory storePointer: ValueIndex ofObject: processorOopAssociation withValue: processorOop.
 	memory storePointer: ProcessListsIndex ofObject: processorOop withValue: processorListArray.
-	memory lastHash: 1
+	memory lastHash: 1.
+	
+	activeProcessOop := self newObjectWithSlots: 4 "Creates the active process".
+	memory 
+		storePointer: PriorityIndex 
+		ofObject: activeProcessOop 
+		withValue: (memory integerObjectOf: 0).
+	
+	memory memoryActiveProcess: activeProcessOop.
 ]
 
 { #category : #running }
