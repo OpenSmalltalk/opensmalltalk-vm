@@ -21,6 +21,22 @@ VMObjectLayoutTests >> installClassIntoClassTableWithInstSpec: aFormatInt instSi
 	^class	
 ]
 
+{ #category : #helper }
+VMObjectLayoutTests >> objSizeWithNumberOfSlots: numberOfSlots [ 
+	| objSize |
+	"always have at least one slot for forwarders"
+	numberOfSlots = 0 ifTrue: [ ^ objectHeaderSize + 8 ].
+	
+	objSize := numberOfSlots * wordSize.
+	"we align to 8 bytes"
+	objSize % 8 = 0 ifFalse: [ objSize := objSize + wordSize ].
+
+	"extra header for big objects"	
+	numberOfSlots > 254 ifTrue: [ objSize := objSize + objectHeaderSize ].
+	^ objectHeaderSize + objSize
+	
+]
+
 { #category : #tests }
 VMObjectLayoutTests >> testCharacterIsImmediate [
 	| char |
@@ -38,11 +54,11 @@ VMObjectLayoutTests >> testHeaderOfObjectEncodesTheCorrectAmountOfSlots [
 			installClassIntoClassTableWithInstSpec: 1
 			instSize: slots.
 		objOop := memory instantiateClass: class.
-		objSize := slots + 1 max: 2 "header".
+		objSize := self objSizeWithNumberOfSlots: slots.
 		self assert: (memory slotSizeOf: objOop) equals: slots.
 		self
 			assert: (memory bytesInObject: objOop)
-			equals: objSize * memory wordSize ]
+			equals: objSize ]
 ]
 
 { #category : #tests }
@@ -150,12 +166,12 @@ VMObjectLayoutTests >> testObjectHeaderEncodesObjecFormatForIndexableOpaqueLayou
 			22 -> padding 48-bits
 			23 -> padding 56-bits"
 	bits := 8.
-	instSpec := 16.
+	instSpec := 16. "8-bit indexable"
 	class := self installClassIntoClassTableWithInstSpec: instSpec instSize: 0.
-	maxSize := 64 / bits.
+	maxSize := wordSize .
 	1 to: maxSize do: [ :size |
 		| padding |
-		padding := 64 - (size * bits).
+		padding := (wordSize * bits) - (size * bits).
 		objOop := memory instantiateClass: class indexableSize: size.
 		classInstSpec := memory instSpecOfClass: class.
 		header := memory longAt:objOop.
@@ -196,10 +212,10 @@ VMObjectLayoutTests >> testObjectWith0SlotsIsSavedIn2Words [
 	class := self installClassIntoClassTableWithInstSpec: 1 instSize: slots.
 	obj1oop := memory instantiateClass: class.
 	obj2oop := memory instantiateClass: class.
-	self assert: (memory bytesInObject: obj1oop) equals: memory wordSize * 2.
+	self assert: (memory bytesInObject: obj1oop) equals: objectHeaderSize + wordSize.
 	self assert: (memory slotSizeOf: obj1oop) equals: slots.
 	self assert: (memory slotSizeOf: obj2oop) equals: slots.
-	self assert: obj2oop - obj1oop equals: memory wordSize * 2
+	self assert: obj2oop - obj1oop equals: wordSize * 2
 ]
 
 { #category : #tests }
@@ -213,7 +229,7 @@ VMObjectLayoutTests >> testObjectWithMoreThan254SlotsHasTheCorrectSize [
 	self assert: (memory slotSizeOf: objOop) equals: slots.
 	self
 		assert: (memory bytesInObject: objOop)
-		equals: (slots + 2 "headers") * memory wordSize.
+		equals: (self objSizeWithNumberOfSlots: slots).
 	
 ]
 
