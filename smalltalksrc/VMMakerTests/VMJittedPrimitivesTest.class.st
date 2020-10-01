@@ -491,6 +491,38 @@ VMJittedPrimitivesTest >> testPrimitiveAddReturnsAnSmallIntegerWhenNegativeNumbe
 ]
 
 { #category : #'tests - primitiveAt' }
+VMJittedPrimitivesTest >> testPrimitiveAt64bitIndexableWithSmallIntegerShouldReturnValue [
+
+	| stop integerArray offset |
+	self
+		compile: [ 
+			cogit objectRepresentation genPrimitiveAt.
+			stop := cogit Stop ]
+		bytecodes: 10.
+
+	integerArray := memory
+		allocateNewSpaceSlots: 3
+		format: 9 "object with 64bit indexable values"
+		classIndex: self nextOrdinaryClassIndex.
+	offset := 2.
+
+	memory
+		storeLong64: offset - 1
+		ofObject: integerArray
+		withValue: 17.
+
+	self
+		prepareStackForSendReceiver: integerArray
+		arguments: { (memory integerObjectOf: offset) }.
+	
+	self runUntilReturn.
+
+	self
+		assert: machineSimulator receiverRegisterValue
+		equals: (memory integerObjectOf: 17)
+]
+
+{ #category : #'tests - primitiveAt' }
 VMJittedPrimitivesTest >> testPrimitiveAtArrayOutOfBoundsShouldFallThrough [
 	
 	| stop offset array |
@@ -526,6 +558,49 @@ VMJittedPrimitivesTest >> testPrimitiveAtArrayShouldAccessValue [
 	self executePrimitiveWithReceiver: array withArgument: (memory integerObjectOf: offset).
 	
 	self assert: machineSimulator receiverRegisterValue equals: memory falseObject
+]
+
+{ #category : #'tests - primitiveAt' }
+VMJittedPrimitivesTest >> testPrimitiveAtFixedObjectWithInstanceVariablesShouldFallThrough [
+	
+	| stop objectWithInstanceVariables |
+	
+	self compile: [ 
+		cogit objectRepresentation genPrimitiveAt.
+		stop := cogit Stop ]
+		bytecodes: 10.
+		
+	objectWithInstanceVariables := memory
+		allocateNewSpaceSlots: 3 "It has slots, but we should not access them"
+		format: 1 "object with instance variables"
+		classIndex: self nextOrdinaryClassIndex.
+	
+	self
+		prepareStackForSendReceiver: objectWithInstanceVariables
+		arguments: { memory integerObjectOf: 1 }.
+	self runFrom: initialAddress until: stop address.
+
+	self assert: machineSimulator instructionPointerValue equals: stop address
+]
+
+{ #category : #'tests - primitiveAt' }
+VMJittedPrimitivesTest >> testPrimitiveAtFixedObjectWithNoInstanceVariablesShouldFallThrough [
+	
+	| stop objectWithNoInstanceVariables |
+	
+	self compile: [ 
+		cogit objectRepresentation genPrimitiveAt.
+		stop := cogit Stop ]
+		bytecodes: 10.
+		
+	objectWithNoInstanceVariables := self newZeroSizedObject.
+	
+	self
+		prepareStackForSendReceiver: objectWithNoInstanceVariables
+		arguments: { memory integerObjectOf: 1 }.
+	self runFrom: initialAddress until: stop address.
+
+	self assert: machineSimulator instructionPointerValue equals: stop address
 ]
 
 { #category : #'tests - primitiveAt' }
