@@ -8860,6 +8860,15 @@ SpurMemoryManager >> memoryActiveProcess [
 	^ self fetchPointer: ActiveProcessIndex ofObject: self memorySchedulerPointer
 ]
 
+{ #category : #'as yet unclassified' }
+SpurMemoryManager >> memoryActiveProcess: anOop [ 
+
+	<doNotGenerate>
+
+	self storePointer: ActiveProcessIndex ofObject: self memorySchedulerPointer withValue: anOop
+	
+]
+
 { #category : #snapshot }
 SpurMemoryManager >> memoryBaseForImageRead [
 	"Answer the address to read the image into."

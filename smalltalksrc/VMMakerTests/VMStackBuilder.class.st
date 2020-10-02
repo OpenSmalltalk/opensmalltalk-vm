@@ -28,13 +28,11 @@ Types are not the exact types used.
 "
 Class {
 	#name : #VMStackBuilder,
-	#superclass : #Object,
+	#superclass : #VMAbstractBuilder,
 	#instVars : [
 		'page',
 		'frames',
-		'args',
-		'interpreter',
-		'memory'
+		'args'
 	],
 	#category : #'VMMakerTests-Builders'
 }
@@ -67,10 +65,9 @@ VMStackBuilder >> args: anObject [
 { #category : #build }
 VMStackBuilder >> buildStack [
 	self createStackPage.
+	self preparePage.
 	self pushFrames.
-	interpreter setStackPageAndLimit: page.
-	interpreter setStackPointersFromPage: page.
-	interpreter internalizeIPandSP.
+	self setInterpreterVariables.
 	^ frames last
 ]
 
@@ -103,26 +100,6 @@ VMStackBuilder >> initialize [
 ]
 
 { #category : #accessing }
-VMStackBuilder >> interpreter [
-	^ interpreter
-]
-
-{ #category : #accessing }
-VMStackBuilder >> interpreter: anInterpreter [
-	interpreter := anInterpreter
-]
-
-{ #category : #accessing }
-VMStackBuilder >> memory [
-	^ memory
-]
-
-{ #category : #accessing }
-VMStackBuilder >> memory: aMemory [
-	memory := aMemory
-]
-
-{ #category : #accessing }
 VMStackBuilder >> page [
 	^ page
 ]
@@ -132,9 +109,41 @@ VMStackBuilder >> page: anObject [
 	page := anObject
 ]
 
+{ #category : #build }
+VMStackBuilder >> preparePage [
+	"Page setup before the base frame"
+	interpreter push: memory nilObject.	"receiver"
+	self pushArgs. "arguments"
+	interpreter push: memory nilObject.  "senderContext"
+	interpreter push: 0. "savedFp"
+	page baseFP: interpreter stackPointer.
+
+]
+
+{ #category : #build }
+VMStackBuilder >> pushAllButFirstFrames [
+	2 to: frames size do: [ :anIndex | | aFrame |
+			aFrame := frames at: anIndex.
+			
+			aFrame previousFrameArgsSize: ((frames at: anIndex - 1) argumentSize).
+			
+			interpreter push: interpreter framePointer.	
+				
+			self pushFrame: aFrame.
+			aFrame callerFrame: (frames at: anIndex - 1)."for better inspection"
+			]
+]
+
 { #category : #initialization }
 VMStackBuilder >> pushArgs [
 	args do: [ :anArg | interpreter push: anArg ]
+]
+
+{ #category : #build }
+VMStackBuilder >> pushBaseFrame [
+	frames first previousFrameArgsSize: args size.
+	self pushFrame: frames first.
+
 ]
 
 { #category : #build }
@@ -149,26 +158,19 @@ VMStackBuilder >> pushFrame: aFrame [
 
 { #category : #build }
 VMStackBuilder >> pushFrames [
-	 "Page setup before the base frame"
-	interpreter push: memory nilObject.	"receiver"
-	self pushArgs. "arguments"
-	interpreter push: memory nilObject.  "senderContext"
-	interpreter push: 0. "savedFp"
-	page baseFP: interpreter stackPointer.
-	"Push base frame"
-	frames first previousFrameArgsSize: args size.
-	self pushFrame: frames first.
+	self pushBaseFrame.
+	self pushAllButFirstFrames.
+]
 
-	2 to: frames size do: [ :anIndex | | aFrame |
-			aFrame := frames at: anIndex.
-			
-			aFrame previousFrameArgsSize: ((frames at: anIndex - 1) argumentSize).
-			
-			interpreter push: interpreter framePointer.	
-				
-			self pushFrame: aFrame.
-			aFrame callerFrame: (frames at: anIndex - 1)."for better inspection"
-			]
+{ #category : #build }
+VMStackBuilder >> setInterpreterVariables [
+	| lastFrame |
+	interpreter setStackPageAndLimit: page.
+	interpreter setStackPointersFromPage: page.
+	interpreter internalizeIPandSP.
+
+	lastFrame := frames last.
+	interpreter method: lastFrame method.
 ]
 
 { #category : #accessing }

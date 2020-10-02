@@ -53,8 +53,15 @@ VMStackFrame >> method [
 ]
 
 { #category : #accessing }
+VMStackFrame >> receiver [
+	^ interpreter framePointer = framePointer
+		ifTrue: [ interpreter receiver ]
+		ifFalse: [ self halt. interpreter frameCallerSavedIP: ( interpreter findFrameAbove: framePointer inPage: self stackPage) ]
+]
+
+{ #category : #accessing }
 VMStackFrame >> sender [
-	^VMStackFrame newFramePointer:(interpreter frameCallerFP: framePointer) withInterpreter: interpreter.
+	^ VMStackFrame newFramePointer:(interpreter frameCallerFP: framePointer) withInterpreter: interpreter
 	 
 ]
 

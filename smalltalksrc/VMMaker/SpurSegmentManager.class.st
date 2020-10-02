@@ -815,9 +815,9 @@ SpurSegmentManager >> writeSegment: segment nextSegment: nextSegment toFile: aBi
 						[| bytesPerElement |
 						 bytesPerElement := manager memory bytesPerElement.
 						 aBinaryStream
-							next: segment segSize / bytesPerElement
-							putAll: manager memory
-							startingAt: segment segStart / bytesPerElement + 1.
+							next: segment segSize
+							putAll: manager memory memoryObject
+							startingAt: segment segStart - manager memory initialAddress + 1.
 						 segment segSize].
 	manager
 		long64At: pier1 put: firstSavedBridgeWord;
