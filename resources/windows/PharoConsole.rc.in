@@ -2,7 +2,7 @@
 1                       ICON    DISCARDABLE     "@Win32VMExecutableIcon@"
 2                       ICON    DISCARDABLE     "@Win32VMExecutableIcon@"
 3                       ICON    DISCARDABLE     "@Win32VMExecutableIcon@"
-1                       RT_MANIFEST "@Win32Manifest@"
+1                       RT_MANIFEST "@Win32ConsoleManifest@"
 
 1 VERSIONINFO
  FILEVERSION @VERSION_MAJOR@,@VERSION_MINOR@,@VERSION_PATCH@,0
