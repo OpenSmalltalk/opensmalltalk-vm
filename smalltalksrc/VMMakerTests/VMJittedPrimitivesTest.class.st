@@ -32,6 +32,7 @@ VMJittedPrimitivesTest >> executePrimitiveWithReceiver: receiverOop withArgument
 { #category : #helpers }
 VMJittedPrimitivesTest >> prepareStackForSendReceiver: aReceiver arguments: arguments [ 	
 
+	machineSimulator baseRegisterValue: cogit varBaseAddress.
 	self pushAddress: aReceiver.
 	arguments do: [ :anArgument | self pushAddress: anArgument ].
 	self machineSimulator receiverRegisterValue: aReceiver.

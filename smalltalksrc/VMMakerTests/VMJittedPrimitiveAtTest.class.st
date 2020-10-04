@@ -7,7 +7,7 @@ Class {
 	#category : #'VMMakerTests-JitTests'
 }
 
-{ #category : #'tests - primitiveAt' }
+{ #category : #helpers }
 VMJittedPrimitiveAtTest >> assertFallsThrough [
 
 	self runFrom: initialAddress until: stop address.
@@ -15,15 +15,46 @@ VMJittedPrimitiveAtTest >> assertFallsThrough [
 ]
 
 { #category : #'tests - primitiveAt' }
+VMJittedPrimitiveAtTest >> new16BitIndexableOfSize: aSize [
+
+	^ self newBitIndexableOfSize: aSize bytesPerSlot: 2 format: memory firstShortFormat
+]
+
+{ #category : #'tests - primitiveAt' }
+VMJittedPrimitiveAtTest >> new32BitIndexableOfSize: aSize [
+
+	^ self newBitIndexableOfSize: aSize bytesPerSlot: 4 format: memory firstLongFormat
+]
+
+{ #category : #'tests - primitiveAt' }
 VMJittedPrimitiveAtTest >> new64BitIndexableOfSize: aSize [
 
 	^ memory
 		allocateNewSpaceSlots: aSize
-		format: 9 "object with 64bit indexable values"
+		format: memory sixtyFourBitIndexableFormat
 		classIndex: self nextOrdinaryClassIndex.
 ]
 
 { #category : #'tests - primitiveAt' }
+VMJittedPrimitiveAtTest >> new8BitIndexableOfSize: aSize [
+
+	^ self newBitIndexableOfSize: aSize bytesPerSlot: 1 format: memory firstByteFormat
+]
+
+{ #category : #'tests - primitiveAt' }
+VMJittedPrimitiveAtTest >> newBitIndexableOfSize: aSize bytesPerSlot: bytesPerSlot format: format [
+
+	| padding numberOfWordSizeSlots desiredByteSize |
+	desiredByteSize := aSize * bytesPerSlot roundUpTo: memory allocationUnit.
+	numberOfWordSizeSlots := desiredByteSize / self wordSize.
+	padding := desiredByteSize / bytesPerSlot - aSize.
+	^ memory
+		  allocateNewSpaceSlots: numberOfWordSizeSlots
+		  format: format + padding
+		  classIndex: self nextOrdinaryClassIndex "object with 32bit indexable values"
+]
+
+{ #category : #running }
 VMJittedPrimitiveAtTest >> setUp [
 
 	super setUp.
@@ -32,6 +63,154 @@ VMJittedPrimitiveAtTest >> setUp [
 			cogit objectRepresentation genPrimitiveAt.
 			stop := cogit Stop ]
 		bytecodes: 10.
+]
+
+{ #category : #'tests - primitiveAt' }
+VMJittedPrimitiveAtTest >> testPrimitiveAt16bitIndexableFirstPaddingOutOfBoundsShouldFallThrough [
+
+	| integerArray offset |
+
+	"A 1 slot-long 16-bit indexable object has 1 64 bits slot with 4 16-bit slots inside.
+	1 16-bit slot is used, others are padding to fit 64bits.
+	2th is then in bounds of the object but padding => fail"
+	offset := 2.
+	integerArray := self new16BitIndexableOfSize: 1.
+
+	self prepareStackForSendReceiver: integerArray arguments: { memory integerObjectOf: offset }.
+
+	self assertFallsThrough
+]
+
+{ #category : #'tests - primitiveAt' }
+VMJittedPrimitiveAtTest >> testPrimitiveAt16bitIndexableOutOfBoundsShouldFallThrough [
+
+	| integerArray offset |
+
+	"A 1 slot-long 16-bit indexable object has 1 64 bits slot with 4 16-bit slots inside.
+	1 16-bit slot is used, others are padding to fit 64bits.
+	5th is then out of bounds => fail"
+	offset := 5.
+	integerArray := self new16BitIndexableOfSize: 4.
+
+	self prepareStackForSendReceiver: integerArray arguments: { memory integerObjectOf: offset }.
+
+	self assertFallsThrough
+]
+
+{ #category : #'tests - primitiveAt' }
+VMJittedPrimitiveAtTest >> testPrimitiveAt16bitIndexableSecondPaddingOutOfBoundsShouldFallThrough [
+
+	| integerArray offset |
+
+	"A 1 slot-long 16-bit indexable object has 1 64 bits slot with 4 16-bit slots inside.
+	1 16-bit slot is used, others are padding to fit 64bits.
+	3rd is then in bounds of the object but padding => fail"
+	offset := 3.
+	integerArray := self new16BitIndexableOfSize: 1.
+
+	self prepareStackForSendReceiver: integerArray arguments: { memory integerObjectOf: offset }.
+
+	self assertFallsThrough
+]
+
+{ #category : #'tests - primitiveAt' }
+VMJittedPrimitiveAtTest >> testPrimitiveAt16bitIndexableShouldReturnValue [
+
+	| integerArray offset |
+
+	"A 1 slot-long 16-bit indexable object has 1 64 bits slot with 4 16-bit slots inside.
+	1 16-bit slot is used, others are padding to fit 64bits.
+	5th is then out of bounds => fail"
+	offset := 1.
+	integerArray := self new16BitIndexableOfSize: 1.
+
+	memory
+		storeByte: offset - 1
+		ofObject: integerArray
+		withValue: 17.
+
+	self
+		prepareStackForSendReceiver: integerArray
+		arguments: { memory integerObjectOf: offset }.
+	machineSimulator baseRegisterValue: cogit varBaseAddress.
+	self runUntilReturn.
+
+	self
+		assert: (memory integerValueOf: machineSimulator receiverRegisterValue)
+		equals: 17
+]
+
+{ #category : #'tests - primitiveAt' }
+VMJittedPrimitiveAtTest >> testPrimitiveAt16bitIndexableThirdPaddingOutOfBoundsShouldFallThrough [
+
+	| integerArray offset |
+
+	"A 1 slot-long 16-bit indexable object has 1 64 bits slot with 4 16-bit slots inside.
+	1 16-bit slot is used, others are padding to fit 64bits.
+	4th is then in bounds of the object but padding => fail"
+	offset := 4.
+	integerArray := self new16BitIndexableOfSize: 1.
+
+	self prepareStackForSendReceiver: integerArray arguments: { memory integerObjectOf: offset }.
+
+	self assertFallsThrough
+]
+
+{ #category : #'tests - primitiveAt' }
+VMJittedPrimitiveAtTest >> testPrimitiveAt32bitIndexableOutOfBoundsAtPaddingShouldFallThrough [
+
+	| integerArray offset |
+
+	"A 32-bit indexable object has 4 slots in 32 bits.
+	3 slots are used, last one is padding to fit 64bits.
+	4th is then in bounds of the object but unused => fail"
+	offset := 4.
+	integerArray := self new32BitIndexableOfSize: 3.
+
+	self prepareStackForSendReceiver: integerArray arguments: { memory integerObjectOf: offset }.
+
+	self assertFallsThrough
+]
+
+{ #category : #'tests - primitiveAt' }
+VMJittedPrimitiveAtTest >> testPrimitiveAt32bitIndexableOutOfBoundsShouldFallThrough [
+
+	| integerArray offset |
+
+	"A 32-bit indexable object has 4 slots in 32 bits.
+	3 slots are used, last one is padding to fit 64bits.
+	5th is out of object bounds"
+	offset := 5.
+	integerArray := self new32BitIndexableOfSize: 3.
+
+	self prepareStackForSendReceiver: integerArray arguments: { memory integerObjectOf: offset }.
+
+	self assertFallsThrough
+]
+
+{ #category : #'tests - primitiveAt' }
+VMJittedPrimitiveAtTest >> testPrimitiveAt32bitIndexableShouldReturnValue [
+
+	| integerArray offset |
+	
+	integerArray := self new32BitIndexableOfSize: 3.
+	offset := 2.
+
+	memory
+		storeLong32: offset - 1
+		ofObject: integerArray
+		withValue: 17.
+
+	self
+		prepareStackForSendReceiver: integerArray
+		arguments: { memory integerObjectOf: offset }.
+	machineSimulator baseRegisterValue: cogit varBaseAddress.
+
+	self runUntilReturn.
+
+	self
+		assert: (memory integerValueOf: machineSimulator receiverRegisterValue)
+		equals: 17
 ]
 
 { #category : #'tests - primitiveAt' }
@@ -119,6 +298,152 @@ VMJittedPrimitiveAtTest >> testPrimitiveAt64bitIndexableWithSmallIntegerShouldRe
 	self
 		assert: machineSimulator receiverRegisterValue
 		equals: (memory integerObjectOf: 17)
+]
+
+{ #category : #'tests - primitiveAt' }
+VMJittedPrimitiveAtTest >> testPrimitiveAt8bitIndexableFifthPaddingOutOfBoundsShouldFallThrough [
+
+	| integerArray offset |
+
+	"A 1 slot-long 8-bit indexable object has 1 64 bits slot with 8 8-bit slots inside.
+	1 8-bit slot is used, others are padding to fit 64bits."
+	offset := 6.
+	integerArray := self new8BitIndexableOfSize: 1.
+
+	self prepareStackForSendReceiver: integerArray arguments: { memory integerObjectOf: offset }.
+
+	self assertFallsThrough
+]
+
+{ #category : #'tests - primitiveAt' }
+VMJittedPrimitiveAtTest >> testPrimitiveAt8bitIndexableFirstPaddingOutOfBoundsShouldFallThrough [
+
+	| integerArray offset |
+
+	"A 1 slot-long 8-bit indexable object has 1 64 bits slot with 8 8-bit slots inside.
+	1 8-bit slot is used, others are padding to fit 64bits."
+	offset := 2.
+	integerArray := self new8BitIndexableOfSize: 1.
+
+	self prepareStackForSendReceiver: integerArray arguments: { memory integerObjectOf: offset }.
+
+	self assertFallsThrough
+]
+
+{ #category : #'tests - primitiveAt' }
+VMJittedPrimitiveAtTest >> testPrimitiveAt8bitIndexableFourthPaddingOutOfBoundsShouldFallThrough [
+
+	| integerArray offset |
+
+	"A 1 slot-long 8-bit indexable object has 1 64 bits slot with 8 8-bit slots inside.
+	1 8-bit slot is used, others are padding to fit 64bits."
+	offset := 5.
+	integerArray := self new8BitIndexableOfSize: 1.
+
+	self prepareStackForSendReceiver: integerArray arguments: { memory integerObjectOf: offset }.
+
+	self assertFallsThrough
+]
+
+{ #category : #'tests - primitiveAt' }
+VMJittedPrimitiveAtTest >> testPrimitiveAt8bitIndexableOutOfBoundsShouldFallThrough [
+
+	| integerArray offset |
+
+	"A 1 slot-long 8-bit indexable object has 1 64 bits slot with 8 8-bit slots inside.
+	1 8-bit slot is used, others are padding to fit 64bits."
+	offset := 9.
+	integerArray := self new8BitIndexableOfSize: 4.
+
+	self prepareStackForSendReceiver: integerArray arguments: { memory integerObjectOf: offset }.
+
+	self assertFallsThrough
+]
+
+{ #category : #'tests - primitiveAt' }
+VMJittedPrimitiveAtTest >> testPrimitiveAt8bitIndexableSecondPaddingOutOfBoundsShouldFallThrough [
+
+	| integerArray offset |
+
+	"A 1 slot-long 8-bit indexable object has 1 64 bits slot with 8 8-bit slots inside.
+	1 8-bit slot is used, others are padding to fit 64bits."
+	offset := 3.
+	integerArray := self new8BitIndexableOfSize: 1.
+
+	self prepareStackForSendReceiver: integerArray arguments: { memory integerObjectOf: offset }.
+
+	self assertFallsThrough
+]
+
+{ #category : #'tests - primitiveAt' }
+VMJittedPrimitiveAtTest >> testPrimitiveAt8bitIndexableSeventhPaddingOutOfBoundsShouldFallThrough [
+
+	| integerArray offset |
+
+	"A 1 slot-long 8-bit indexable object has 1 64 bits slot with 8 8-bit slots inside.
+	1 8-bit slot is used, others are padding to fit 64bits."
+	offset := 8.
+	integerArray := self new8BitIndexableOfSize: 1.
+
+	self prepareStackForSendReceiver: integerArray arguments: { memory integerObjectOf: offset }.
+
+	self assertFallsThrough
+]
+
+{ #category : #'tests - primitiveAt' }
+VMJittedPrimitiveAtTest >> testPrimitiveAt8bitIndexableShouldReturnValue [
+
+	| integerArray offset |
+
+	"A 1 slot-long 8-bit indexable object has 1 64 bits slot with 8 8-bit slots inside.
+	1 8-bit slot is used, others are padding to fit 64bits."
+	offset := 1.
+	integerArray := self new8BitIndexableOfSize: 1.
+
+	memory
+		storeByte: offset - 1
+		ofObject: integerArray
+		withValue: 17.
+
+	self
+		prepareStackForSendReceiver: integerArray
+		arguments: { memory integerObjectOf: offset }.
+	machineSimulator baseRegisterValue: cogit varBaseAddress.
+	self runUntilReturn.
+
+	self
+		assert: (memory integerValueOf: machineSimulator receiverRegisterValue)
+		equals: 17
+]
+
+{ #category : #'tests - primitiveAt' }
+VMJittedPrimitiveAtTest >> testPrimitiveAt8bitIndexableSixthPaddingOutOfBoundsShouldFallThrough [
+
+	| integerArray offset |
+
+	"A 1 slot-long 8-bit indexable object has 1 64 bits slot with 8 8-bit slots inside.
+	1 8-bit slot is used, others are padding to fit 64bits."
+	offset := 7.
+	integerArray := self new8BitIndexableOfSize: 1.
+
+	self prepareStackForSendReceiver: integerArray arguments: { memory integerObjectOf: offset }.
+
+	self assertFallsThrough
+]
+
+{ #category : #'tests - primitiveAt' }
+VMJittedPrimitiveAtTest >> testPrimitiveAt8bitIndexableThirdPaddingOutOfBoundsShouldFallThrough [
+
+	| integerArray offset |
+
+	"A 1 slot-long 8-bit indexable object has 1 64 bits slot with 8 8-bit slots inside.
+	1 8-bit slot is used, others are padding to fit 64bits."
+	offset := 4.
+	integerArray := self new8BitIndexableOfSize: 1.
+
+	self prepareStackForSendReceiver: integerArray arguments: { memory integerObjectOf: offset }.
+
+	self assertFallsThrough
 ]
 
 { #category : #'tests - primitiveAt' }
