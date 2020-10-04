@@ -2462,7 +2462,7 @@ CogARMv8Compiler >> concretizeMoveX32rRR [
 	base := operands at: 1.
 	dest := operands at: 2.
 	self machineCodeAt: 0 put: (self
-		ldrhSourceRegister: base
+		ldrswSourceRegister: base
 		offsetRegister: index
 		destinationRegister: dest).
 	^ machineCodeSize := 4
@@ -4209,9 +4209,25 @@ CogARMv8Compiler >> ldrhSourceRegister: sourceRegister offsetRegister: offsetReg
 	^ 2r1111 << 27
 		bitOr: (2r11 << 21
 		bitOr: ((offsetRegister bitAnd: 16r1f) << 16
-		bitOr: (2r01101 "LSL" << 11
+		bitOr: (2r01111 "LSL" << 11
 		bitOr: ((sourceRegister bitAnd: 16r1f) << 5
 		bitOr: (destinationRegister bitAnd: 16r1f)))))
+]
+
+{ #category : #'as yet unclassified' }
+CogARMv8Compiler >> ldrswSourceRegister: sourceRegister offsetRegister: offsetRegister destinationRegister: destinationRegister [ 
+	
+	"C6.2.145 LDRSW (register)
+
+	Load Register Signed Word (register) calculates an address from a base register value and an offset register value, loads a word from memory, sign-extends it to form a 64-bit value, and writes it to a register. The offset register value can be shifted left by 0 or 2 bits.
+	
+	LDRSW <Xt>, [<Xn|SP>, (<Wm>|<Xm>){, <extend> {<amount>}}]"
+	
+	^ 2r10111000101 << 21
+		bitOr: ((offsetRegister bitAnd: 16r1f) << 16
+		bitOr: (2r01111 "LSL" << 11
+		bitOr: ((sourceRegister bitAnd: 16r1f) << 5
+		bitOr: (destinationRegister bitAnd: 16r1f))))
 ]
 
 { #category : #assembler }
