@@ -63,7 +63,7 @@ typedef struct windowDescriptorBlock {
 } windowDescriptorBlock;
 
 windowDescriptorBlock *windowBlockFromHandle(wHandleType windowHandle);
-wIndexType windowIndexFromBlock( windowDescriptorBlock * thisWindow);
+wIndexType windowIndexFromBlock(windowDescriptorBlock * thisWindow);
 wIndexType windowIndexFromHandle(wHandleType windowHandle);
 wHandleType windowHandleFromIndex(wIndexType windowIndex);
 windowDescriptorBlock *AddWindowBlock(void);

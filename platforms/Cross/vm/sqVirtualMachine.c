@@ -383,7 +383,7 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->falseObject = falseObject;
 	VM->nilObject = nilObject;
 	VM->trueObject = trueObject;
-	
+
 	/* InterpreterProxy methodsFor: 'special classes' */
 	VM->classArray = classArray;
 	VM->classBitmap = classBitmap;

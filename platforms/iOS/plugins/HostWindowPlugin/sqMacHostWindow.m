@@ -219,7 +219,6 @@ windowDescriptorBlock *thisWindow;
 sqInt RemoveWindowBlock(windowDescriptorBlock * thisWindow) {
 windowDescriptorBlock *prevEntry;
 
-
 	/* Unlink the entry from the module chain */
 	if(thisWindow == windowListRoot) {
 		windowListRoot = thisWindow->next;
@@ -290,4 +289,4 @@ ioSizeOfScreenWorkArea(sqIntptr_t windowIndex)
 sqInt
 ioSetCursorPositionXY(long x, long y)
 {	return -1; }
-#endif
+#endif // TerfVM

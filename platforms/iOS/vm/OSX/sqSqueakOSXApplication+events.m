@@ -420,7 +420,6 @@ static int buttonState=0;
         (modifiers & NSEventModifierFlagControl ? CtrlKeyBit    : 0) |
         (modifiers & NSEventModifierFlagOption  ? OptionKeyBit  : 0) |
         (modifiers & NSEventModifierFlagCommand ? CommandKeyBit : 0);
-
 }
 
 

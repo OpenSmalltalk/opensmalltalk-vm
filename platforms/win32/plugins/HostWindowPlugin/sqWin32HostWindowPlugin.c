@@ -139,12 +139,14 @@ static LRESULT CALLBACK HostWndProcW (HWND hwnd,
  return DefWindowProcW(hwnd,message,wParam,lParam);
 }
 
+#define handleForIndex(winIndex) ((winIndex) == 1 ? stWindow : (HWND)(winIndex))
+
 /* closeWindow: arg is int windowIndex. Fail (return 0) if anything goes wrong
  * - typically the windowIndex invalid or similar */
 sqInt
 closeWindow(sqIntptr_t windowIndex)
 {
-  HWND hwnd = windowIndex == 1 ? stWindow : (HWND)windowIndex;
+  HWND hwnd = handleForIndex(windowIndex);
   if (!IsWindow(hwnd))
 	return 0;
   DestroyWindow(hwnd);
@@ -208,7 +210,7 @@ ioShowDisplayOnWindow(unsigned char* dispBits, sqInt width,
 			    sqInt affectedR, sqInt affectedT, sqInt affectedB, 
 			    sqIntptr_t windowIndex)
 {
-  HWND hwnd = windowIndex == 1 ? stWindow : (HWND)windowIndex;
+  HWND hwnd = handleForIndex(windowIndex);
   HDC dc;
   BITMAPINFO *bmi;
   int lines;
@@ -264,7 +266,6 @@ ioShowDisplayOnWindow(unsigned char* dispBits, sqInt width,
     printLastError(TEXT("ioShowDisplayBits: GetDC() failed"));
     return 0;
   }
-
 
 
   lines = SetDIBitsToDevice(dc,
@@ -334,7 +335,6 @@ ioShowDisplayOnWindow(unsigned char* dispBits, sqInt width,
 }
 
 
-
 /* ioSizeOfWindow: arg is int windowIndex. Return the size of the specified
  * window in (width<<16 | height) format like ioScreenSize.
  * Return -1 for failure - typically invalid windowIndex
@@ -343,7 +343,7 @@ ioShowDisplayOnWindow(unsigned char* dispBits, sqInt width,
 sqInt
 ioSizeOfWindow(sqIntptr_t windowIndex)
 {
-  HWND hwnd = windowIndex == 1 ? stWindow : (HWND)windowIndex;
+  HWND hwnd = handleForIndex(windowIndex);
   RECT boundingRect;
   int wsize;
 
@@ -391,7 +391,7 @@ ioSizeOfNativeDisplay(usqIntptr_t windowHandle)
 sqInt
 ioSizeOfWindowSetxy(sqIntptr_t windowIndex, sqInt w, sqInt h)
 {
-  HWND hwnd = windowIndex == 1 ? stWindow : (HWND)windowIndex;
+  HWND hwnd = handleForIndex(windowIndex);
   RECT boundingRect;
  
   if (!GetWindowRect(hwnd, &boundingRect)
@@ -409,7 +409,7 @@ ioSizeOfWindowSetxy(sqIntptr_t windowIndex, sqInt w, sqInt h)
 sqInt
 ioPositionOfWindow(sqIntptr_t windowIndex)
 {
-  HWND hwnd = windowIndex == 1 ? stWindow : (HWND)windowIndex;
+  HWND hwnd = handleForIndex(windowIndex);
   RECT boundingRect;
 
 	return GetWindowRect(hwnd, &boundingRect)
@@ -467,7 +467,7 @@ ioPositionOfNativeDisplay(usqIntptr_t windowHandle)
 sqInt
 ioPositionOfWindowSetxy(sqIntptr_t windowIndex, sqInt x, sqInt y)
 {
-  HWND hwnd = windowIndex == 1 ? stWindow : (HWND)windowIndex;
+  HWND hwnd = handleForIndex(windowIndex);
   RECT boundingRect;
 
   if (!GetWindowRect(hwnd, &boundingRect)
@@ -484,7 +484,7 @@ ioPositionOfWindowSetxy(sqIntptr_t windowIndex, sqInt x, sqInt y)
 sqInt
 ioSetTitleOfWindow(sqIntptr_t windowIndex, char * newTitle, sqInt sizeOfTitle)
 {
-  HWND hwnd = windowIndex == 1 ? stWindow : (HWND)windowIndex;
+  HWND hwnd = handleForIndex(windowIndex);
   char titleString[1024];
   WCHAR wideTitle[1024];
 
@@ -504,7 +504,7 @@ sqInt
 ioSetIconOfWindow(sqIntptr_t windowIndex, char * iconPath, sqInt sizeOfPath)
 {
 	WCHAR iconPathW[MAX_PATH + 1];
-	HWND hwnd = windowIndex == 1 ? stWindow : (HWND)windowIndex;
+	HWND hwnd = handleForIndex(windowIndex);
 	int len;
 	if (!IsWindow(hwnd)) return 0;
 	len = MultiByteToWideChar(CP_UTF8, 0, iconPath, sizeOfPath, iconPathW, MAX_PATH);

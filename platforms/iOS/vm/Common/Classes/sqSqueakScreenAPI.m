@@ -43,10 +43,9 @@ such third-party acknowledgments.
 #import "sqSqueakScreenAndWindow.h"
 
 #ifdef BUILD_FOR_OSX
-#include "sqMacHostWindow.h"
-extern wHandleType windowHandleFromIndex(sqIntptr_t windowIndex);
+# include "sqMacHostWindow.h"
 #else
-#include "SqueakNoOGLIPhoneAppDelegate.h"
+# include "SqueakNoOGLIPhoneAppDelegate.h"
 extern SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 #endif
 
