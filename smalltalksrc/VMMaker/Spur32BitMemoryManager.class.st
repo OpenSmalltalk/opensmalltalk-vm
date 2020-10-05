@@ -54,6 +54,8 @@ Spur32BitMemoryManager >> addressAfter: objOop [
 	numSlots = 0 ifTrue: [^objOop + self allocationUnit + self baseHeaderSize].
 	numSlots = self numSlotsMask ifTrue:
 		[numSlots := self rawOverflowSlotsOf: objOop].
+	"If the number of slots is odd (bitand 1), add 1 to it to make it even.
+	This makes that the number of slots in words is always aligned"
 	^objOop + self baseHeaderSize + (numSlots + (numSlots bitAnd: 1) bitShift: self shiftForWord)
 ]
 

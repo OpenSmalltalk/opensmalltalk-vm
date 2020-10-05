@@ -10,20 +10,10 @@ Class {
 { #category : #'tests - support' }
 VMJittedGeneralPrimitiveTest >> testCheckImmediateWhenImmediateFloat [
 
-	"32 bits images does not have SmallFloats"
-	self wordSize = 4 
-		ifTrue: [ ^ self skip ].
-		
-	self compile: [ | jump | 
-		jump := cogit objectRepresentation genJumpImmediate: Arg0Reg.
-		"Non-Immediate => 0"
-		cogit MoveCq: 0 R: ReceiverResultReg.
-		cogit RetN: 0.
-		jump jmpTarget: cogit Label.
-		"Immediate => 1"
-		cogit MoveCq: 1  R: ReceiverResultReg.
-		cogit RetN: 0.
-	].
+	self compile: [
+		cogit objectRepresentation
+			genGetNumSlotsOf: ReceiverResultReg
+			into: ReceiverResultReg ].
 
 	self assert: (memory isSmallFloatValue: 1.0).
 	machineSimulator arg0RegisterValue: (memory floatObjectOf: 1.0).
@@ -320,6 +310,104 @@ VMJittedGeneralPrimitiveTest >> testGetClassIndexOfObjectObtainsClassIndex [
 	self runGeneratedCode.
 	
 	self assert: machineSimulator receiverRegisterValue equals: (memory classIndexOf: memory falseObject)
+]
+
+{ #category : #'tests - support' }
+VMJittedGeneralPrimitiveTest >> testGetNumberOfSlotsOf16BitIndexable [
+
+	self compile: [
+		cogit objectRepresentation
+			genGetNumSlotsOf: ReceiverResultReg
+			into: Arg0Reg ].
+
+	machineSimulator receiverRegisterValue: (self new16BitIndexableOfSize: 8).
+	self runGeneratedCode.
+
+	self assert: machineSimulator argument0RegisterValue equals: 8 * 2 "bytes" / self wordSize
+]
+
+{ #category : #'tests - support' }
+VMJittedGeneralPrimitiveTest >> testGetNumberOfSlotsOf16BitIndexableWithPadding [
+
+	self compile: [
+		cogit objectRepresentation
+			genGetNumSlotsOf: ReceiverResultReg
+			into: Arg0Reg ].
+
+	machineSimulator receiverRegisterValue: (self new16BitIndexableOfSize: 7).
+	self runGeneratedCode.
+
+	self assert: machineSimulator argument0RegisterValue equals: 8 * 2 "bytes" / self wordSize
+]
+
+{ #category : #'tests - support' }
+VMJittedGeneralPrimitiveTest >> testGetNumberOfSlotsOf32BitIndexable [
+
+	self compile: [
+		cogit objectRepresentation
+			genGetNumSlotsOf: ReceiverResultReg
+			into: Arg0Reg ].
+
+	machineSimulator receiverRegisterValue: (self new32BitIndexableOfSize: 8).
+	self runGeneratedCode.
+
+	self assert: machineSimulator argument0RegisterValue equals: 8 * 4 "bytes" / self wordSize
+]
+
+{ #category : #'tests - support' }
+VMJittedGeneralPrimitiveTest >> testGetNumberOfSlotsOf32BitIndexableWithPadding [
+
+	self compile: [
+		cogit objectRepresentation
+			genGetNumSlotsOf: ReceiverResultReg
+			into: Arg0Reg ].
+
+	machineSimulator receiverRegisterValue: (self new32BitIndexableOfSize: 7).
+	self runGeneratedCode.
+
+	self assert: machineSimulator argument0RegisterValue equals: 7 * 4 "bytes" / self wordSize
+]
+
+{ #category : #'tests - support' }
+VMJittedGeneralPrimitiveTest >> testGetNumberOfSlotsOf64BitIndexable [
+
+	self compile: [
+		cogit objectRepresentation
+			genGetNumSlotsOf: ReceiverResultReg
+			into: Arg0Reg ].
+
+	machineSimulator receiverRegisterValue: (self new64BitIndexableOfSize: 7).
+	self runGeneratedCode.
+
+	self assert: machineSimulator argument0RegisterValue equals: 7
+]
+
+{ #category : #'tests - support' }
+VMJittedGeneralPrimitiveTest >> testGetNumberOfSlotsOf8BitIndexable [
+
+	self compile: [
+		cogit objectRepresentation
+			genGetNumSlotsOf: ReceiverResultReg
+			into: Arg0Reg ].
+
+	machineSimulator receiverRegisterValue: (self new8BitIndexableOfSize: 8).
+	self runGeneratedCode.
+
+	self assert: machineSimulator argument0RegisterValue equals: 8 "bytes" / self wordSize
+]
+
+{ #category : #'tests - support' }
+VMJittedGeneralPrimitiveTest >> testGetNumberOfSlotsOf8BitIndexableWithPadding [
+
+	self compile: [
+		cogit objectRepresentation
+			genGetNumSlotsOf: ReceiverResultReg
+			into: Arg0Reg ].
+
+	machineSimulator receiverRegisterValue: (self new8BitIndexableOfSize: 7).
+	self runGeneratedCode.
+
+	self assert: machineSimulator argument0RegisterValue equals: 8 "bytes" / self wordSize
 ]
 
 { #category : #'tests - support' }

@@ -14,46 +14,6 @@ VMJittedPrimitiveAtTest >> assertFallsThrough [
 	self assert: machineSimulator instructionPointerValue equals: stop address
 ]
 
-{ #category : #'tests - primitiveAt' }
-VMJittedPrimitiveAtTest >> new16BitIndexableOfSize: aSize [
-
-	^ self newBitIndexableOfSize: aSize bytesPerSlot: 2 format: memory firstShortFormat
-]
-
-{ #category : #'tests - primitiveAt' }
-VMJittedPrimitiveAtTest >> new32BitIndexableOfSize: aSize [
-
-	^ self newBitIndexableOfSize: aSize bytesPerSlot: 4 format: memory firstLongFormat
-]
-
-{ #category : #'tests - primitiveAt' }
-VMJittedPrimitiveAtTest >> new64BitIndexableOfSize: aSize [
-
-	^ memory
-		allocateNewSpaceSlots: aSize
-		format: memory sixtyFourBitIndexableFormat
-		classIndex: self nextOrdinaryClassIndex.
-]
-
-{ #category : #'tests - primitiveAt' }
-VMJittedPrimitiveAtTest >> new8BitIndexableOfSize: aSize [
-
-	^ self newBitIndexableOfSize: aSize bytesPerSlot: 1 format: memory firstByteFormat
-]
-
-{ #category : #'tests - primitiveAt' }
-VMJittedPrimitiveAtTest >> newBitIndexableOfSize: aSize bytesPerSlot: bytesPerSlot format: format [
-
-	| padding numberOfWordSizeSlots desiredByteSize |
-	desiredByteSize := aSize * bytesPerSlot roundUpTo: memory allocationUnit.
-	numberOfWordSizeSlots := desiredByteSize / self wordSize.
-	padding := desiredByteSize / bytesPerSlot - aSize.
-	^ memory
-		  allocateNewSpaceSlots: numberOfWordSizeSlots
-		  format: format + padding
-		  classIndex: self nextOrdinaryClassIndex "object with 32bit indexable values"
-]
-
 { #category : #running }
 VMJittedPrimitiveAtTest >> setUp [
 
