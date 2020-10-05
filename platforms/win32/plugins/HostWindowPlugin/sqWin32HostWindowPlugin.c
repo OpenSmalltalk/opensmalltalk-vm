@@ -529,7 +529,6 @@ ioSetIconOfWindow(sqIntptr_t windowIndex, char * iconPath, sqInt sizeOfPath)
 sqInt
 ioCloseAllWindows(void){ return 0; }
 
-#if TerfVM
 sqInt
 ioSetCursorPositionXY(long x, long y)
 {
@@ -538,6 +537,7 @@ ioSetCursorPositionXY(long x, long y)
 		: -1;
 }
 
+#if TerfVM
 /* Return the pixel origin (topleft) of the platform-defined working area
    for the screen containing the given window. */
 sqInt

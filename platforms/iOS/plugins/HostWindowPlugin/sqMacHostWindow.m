@@ -22,10 +22,10 @@
  copies of the Software, and to permit persons to whom the
  Software is furnished to do so, subject to the following
  conditions:
- 
+
  The above copyright notice and this permission notice shall be
  included in all copies or substantial portions of the Software.
- 
+
  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -34,7 +34,7 @@
  WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  OTHER DEALINGS IN THE SOFTWARE.
- 
+
  The end-user documentation included with the redistribution, if any, must include the following acknowledgment: 
  "This product includes software developed by Corporate Smalltalk Consulting Ltd (http://www.smalltalkconsulting.com) 
  and its contributors", in the same place and form as other third-party acknowledgments. 
@@ -42,68 +42,118 @@
  such third-party acknowledgments.
  */
 
-//
+#if !defined(SQUEAK_BUILTIN_PLUGIN)
+# error "HostWindowPlugin can only be compiled as an internal plugin"
+#endif
+
+#include <stdlib.h>
 #include <Cocoa/Cocoa.h>
 #include "sqVirtualMachine.h"
 #include "sqMacHostWindow.h"
-#include <stdlib.h>
+#import "sqSqueakScreenAPI.h"
+#import "sqSqueakScreenAndWindow.h"
 
 extern struct VirtualMachine *interpreterProxy;
-sqInt RemoveWindowBlock(windowDescriptorBlock * thisWindow);
 
-sqInt createWindowWidthheightoriginXyattrlength(sqInt w,sqInt h,sqInt x,sqInt y,  char * list, sqInt listLength) {
+/* WARNING, WARNING, WARNING, Will Robertson!! This is a partial implementation
+ * that cannot create new windows.  It simply answers or operates on the main
+ * Squeak window, which is all that Terf needs.
+ */
+
+#define nsWindowFromIndex(wix) ((__bridge NSWindow *)windowHandleFromIndex(wix))
+
+#define packedDoubleXY(x,y) packedXY((int)(x),(int)(y))
+
+static sqInt
+RemoveWindowBlock(windowDescriptorBlock *thisWindow);
+
+sqInt
+createWindowWidthheightoriginXyattrlength(sqInt w,sqInt h,sqInt x,sqInt y, char * list, sqInt listLength)
+{
+	// I *think* in Terf we just resize the main Squeak window, so this doesn't
+	// need to be implemented. eem 2020/10/4
 	return -1;
 }
 
-sqInt closeWindow(wIndexType windowIndex) {
-	NSWindow	*windowHandle;
-	windowHandle = (__bridge NSWindow*) windowHandleFromIndex(windowIndex);
-	if(windowHandle == NULL) 
+sqInt
+closeWindow(wIndexType windowIndex)
+{
+	NSWindow *window = nsWindowFromIndex(windowIndex);
+
+	if (!window) 
 		return 0;
 	windowBlockFromIndex(windowIndex)->context = NULL;
 	RemoveWindowBlock(windowBlockFromIndex(windowIndex));	
-	[windowHandle close];
+	[window close];
 	return 1;
 }
 
-sqInt ioPositionOfWindow(wIndexType windowIndex)
+sqInt
+ioPositionOfWindow(wIndexType windowIndex)
 {
-	if (windowHandleFromIndex(windowIndex) == NULL)
+	NSWindow *window = nsWindowFromIndex(windowIndex);
+
+	if (!window)
 		return -1;
-	return (0 << 16) | (0 & 0xFFFF);  /* left is high 16 bits; top is low 16 bits */
+
+    NSRect win = [window frame];
+	NSRect screen = [[window screen] frame];
+	return packedDoubleXY(win.origin.x,
+						  screen.size.height-(win.size.height+win.origin.y));
 }
 
-sqInt ioPositionOfWindowSetxy(wIndexType windowIndex, sqInt x, sqInt y)
+sqInt
+ioPositionOfWindowSetxy(wIndexType windowIndex, sqInt x, sqInt y)
 {
-	return -1;
+	if (windowIndex != 1)
+		return 0;
+	NSWindow *window = nsWindowFromIndex(windowIndex);
+    NSRect frame = [window frame];
+	NSRect screen = [[window screen] frame];
+    frame.origin.x = x;
+    frame.origin.y = screen.size.height - (frame.size.height + y);
+    [window setFrame: frame display: YES];    
+
+	return 0;
 }
 
-sqInt ioSizeOfWindow(wIndexType windowIndex)
+sqInt
+ioSizeOfWindow(wIndexType windowIndex)
 {
-	sqInt w=0, h=0;
-	return (w << 16) | (h & 0xFFFF);  /* w is high 16 bits; h is low 16 bits */
+	NSWindow *window = nsWindowFromIndex(windowIndex);
+
+	if (!window)
+		return -1;
+
+	NSRect win = [window frame];
+
+	return packedDoubleXY(win.size.width, win.size.height);
 }
 
-sqInt ioPositionOfNativeDisplay(usqIntptr_t windowHandle)
+sqInt
+ioSizeOfWindowSetxy(wIndexType windowIndex, sqInt x, sqInt y)
 {
-	sqInt w=0, h=0;
-	return (w << 16) | (h & 0xFFFF);  /* w is high 16 bits; h is low 16 bits */
+	if (windowIndex != 1)
+		return 0;
+
+	NSWindow *window = nsWindowFromIndex(windowIndex);
+    NSRect frame = [window frame];
+    frame.size.width = x;
+    frame.size.height = y;
+    [window setFrame: frame display: YES];    
+
+	return 0;
 }
 
-sqInt ioSizeOfWindowSetxy(wIndexType windowIndex, sqInt x, sqInt y)
+sqInt
+ioSetTitleOfWindow(wIndexType windowIndex, char * newTitle, sqInt sizeOfTitle)
 {
-    NSWindow *window = [[NSApplication sharedApplication] mainWindow];
-    NSRect rect = [window frame];
-    rect.size.width = x;
-    rect.size.height = y;
-    [window setFrame:rect display:YES];    
-    
-	return 0;  /* w is high 16 bits; h is low 16 bits */
-}
+	if (windowIndex != 1)
+		return 0;
 
-sqInt ioSetTitleOfWindow(wIndexType windowIndex, char * newTitle, sqInt sizeOfTitle) {
     NSString *title = [[NSString alloc] initWithBytes:newTitle length:sizeOfTitle encoding:NSUTF8StringEncoding];
-    [[[NSApplication sharedApplication] mainWindow] setTitle:title];
+
+    [[[NSApplication sharedApplication] mainWindow] setTitle: title];
     RELEASEOBJ(title);
 
 	return 1;
@@ -112,14 +162,15 @@ sqInt ioSetTitleOfWindow(wIndexType windowIndex, char * newTitle, sqInt sizeOfTi
 /* ioSetIconOfWindow: args are int windowIndex, char* iconPath and
  * int size of new logo path. If one of the function is failing, the logo is not set.
  */
-sqInt ioSetIconOfWindow(wIndexType windowIndex, char * iconPath, sqInt sizeOfPath) {
+sqInt
+ioSetIconOfWindow(wIndexType windowIndex, char * iconPath, sqInt sizeOfPath)
+{
 	//Not implemented
 	return -1;
 }
 
-sqInt ioCloseAllWindows(void) {
-	return 1;
-}
+sqInt
+ioCloseAllWindows(void) { return 1; }
 
 
 
@@ -133,11 +184,12 @@ static windowDescriptorBlock *windowListRoot = NULL;
 /* simple linked list management code */
 /* window list management */
 
-windowDescriptorBlock *windowBlockFromIndex(wIndexType windowIndex) {
+windowDescriptorBlock *
+windowBlockFromIndex(wIndexType windowIndex) {
 windowDescriptorBlock *entry;
 	entry = windowListRoot;
-	while(entry) {
-		if(entry->windowIndex == windowIndex)
+	while (entry) {
+		if (entry->windowIndex == windowIndex)
 			return entry;
 		entry = entry->next;
 	}
@@ -147,8 +199,8 @@ windowDescriptorBlock *entry;
 windowDescriptorBlock *windowBlockFromHandle(wHandleType windowHandle) {
 windowDescriptorBlock *entry;
 	entry = windowListRoot;
-	while(entry) {
-		if(entry->handle == windowHandle)
+	while (entry) {
+		if (entry->handle == windowHandle)
 			return entry;
 		entry = entry->next;
 	}
@@ -159,30 +211,34 @@ windowDescriptorBlock *entry;
 wHandleType windowHandleFromIndex(wIndexType windowIndex)  {
 windowDescriptorBlock *entry;
 	entry = windowListRoot;
-	while(entry) {
-		if(entry->windowIndex == windowIndex)
+	while (entry) {
+		if (entry->windowIndex == windowIndex)
 			return entry->handle;
 		entry = entry->next;
 	}
 	return NULL;
 }
 
-wIndexType windowIndexFromHandle(wHandleType windowHandle) {
+wIndexType
+windowIndexFromHandle(wHandleType windowHandle)
+{
 windowDescriptorBlock *entry;
 	entry = windowListRoot;
-	while(entry) {
-		if(entry->handle == windowHandle)
+	while (entry) {
+		if (entry->handle == windowHandle)
 			return entry->windowIndex;
 		entry = entry->next;
 	}
 	return 0;
 }
 
-wIndexType windowIndexFromBlock( windowDescriptorBlock * thisWindow) {
+wIndexType
+windowIndexFromBlock( windowDescriptorBlock * thisWindow)
+{
 windowDescriptorBlock *entry;
 	entry = windowListRoot;
-	while(entry) {
-		if(entry == thisWindow)
+	while (entry) {
+		if (entry == thisWindow)
 			return entry->windowIndex;
 		entry = entry->next;
 	}
@@ -191,18 +247,19 @@ windowDescriptorBlock *entry;
 
 static sqInt nextIndex = 1; 
 
-windowDescriptorBlock *AddWindowBlock(void) {
-/* create a new entry in the linkedlist of windows.
+/* Create a new entry in the linkedlist of windows.
  * If the calloc fails, return NULL which will then go back to the
  * prim and fail it cleanly.
  * Initialize the block to a sensible state
  */
+windowDescriptorBlock *
+AddWindowBlock(void)
+{
 windowDescriptorBlock *thisWindow;
 
 	thisWindow = (windowDescriptorBlock*) calloc(1, sizeof(windowDescriptorBlock));
-	if ( thisWindow == NULL) {
+	if (!thisWindow)
 		return NULL;
-	}
 	thisWindow->next = windowListRoot;
 	thisWindow->windowIndex = nextIndex++;
 	thisWindow->handle = NULL;
@@ -211,24 +268,23 @@ windowDescriptorBlock *thisWindow;
 	return windowListRoot;
 }
 
-/*
- * RemoveWindowBlock:
- * Remove the given entry from the list of windows.
- * free it, if found.
+/* Remove the given entry from the list of windows. Free it, if found.
  */
-sqInt RemoveWindowBlock(windowDescriptorBlock * thisWindow) {
+static sqInt
+RemoveWindowBlock(windowDescriptorBlock * thisWindow)
+{
 windowDescriptorBlock *prevEntry;
 
 	/* Unlink the entry from the module chain */
-	if(thisWindow == windowListRoot) {
+	if (thisWindow == windowListRoot) {
 		windowListRoot = thisWindow->next;
-	} else {
+	}
+	else {
 		prevEntry = windowListRoot;
-		while(prevEntry->next != thisWindow) {
+		while (prevEntry->next != thisWindow) {
 			prevEntry = prevEntry->next;
-			if (prevEntry == NULL) {
+			if (!prevEntry)
 				return 0;
-			}
 		}
 		prevEntry->next = thisWindow->next;
 	}
@@ -236,28 +292,65 @@ windowDescriptorBlock *prevEntry;
 	return 1;
 }
 
-sqInt getCurrentIndexInUse(void) {
-	return nextIndex-1;
-}
+sqInt
+getCurrentIndexInUse(void) { return nextIndex - 1; }
 
-/* Temporary stubs */
 #if TerfVM
 void *ioGetWindowHandle(void)
 {
 	extern void *getSTWindow();
 	return getSTWindow();
 }
+
 sqInt
 ioPositionOfNativeWindow(usqIntptr_t windowHandle)
-{	return -1; }
+{
+	if (!windowHandle)
+		return -1;
+
+	NSWindow *window = (__bridge NSWindow *)(void *)windowHandle;
+    NSRect win = [window frame];
+	NSRect screen = [[window screen] frame];
+
+	return packedDoubleXY(win.origin.x,
+						  screen.size.height-(win.size.height+win.origin.y));
+}
 
 sqInt
 ioSizeOfNativeWindow(usqIntptr_t windowHandle)
-{	return -1; }
+{
+	if (!windowHandle)
+		return -1;
+
+	NSWindow *window = (__bridge NSWindow *)(void *)windowHandle;
+	NSRect win = [window frame];
+
+	return packedDoubleXY(win.size.width, win.size.height);
+}
+
+sqInt
+ioPositionOfNativeDisplay(usqIntptr_t windowHandle)
+{
+	if (!windowHandle)
+		return -1;
+
+	NSScreen *screen = (__bridge NSScreen *)(void *)windowHandle;
+    NSRect frame = [screen frame];
+
+	return packedDoubleXY(frame.origin.x,frame.origin.y);
+}
 
 sqInt
 ioSizeOfNativeDisplay(usqIntptr_t windowHandle)
-{	return -1; }
+{
+	if (!windowHandle)
+		return -1;
+
+	NSScreen *screen = (__bridge NSScreen *)(void *)windowHandle;
+    NSRect frame = [screen frame];
+
+	return packedDoubleXY(frame.origin.x,frame.origin.y);
+}
 
 /* Return the pixel origin (topleft) of the platform-defined working area
    for the screen containing the given window. */
@@ -265,28 +358,33 @@ ioSizeOfNativeDisplay(usqIntptr_t windowHandle)
 sqInt
 ioPositionOfScreenWorkArea(sqIntptr_t windowIndex)
 {
-/* We simply hard-code this.  There's no obvious window-manager independent way
- * to discover this that doesn't involve creating a window.
- * We're also not attempting multi-monitor support; attempting to configure a
- * laptop with a second monitor via ATI's "control center" resulted in no
- * cursor and no ATI control center once the multi-monitor mode was enabled.
- */
-#define NominalMenubarHeight 24 /* e.g. Gnome default */
-	return (0 << 16) | NominalMenubarHeight;
+    NSScreen *screen = [[[NSApplication sharedApplication] mainWindow] screen];
+    NSRect frame = [screen visibleFrame];
+	// 0@36 last we looked...
+	return packedDoubleXY(frame.origin.x,frame.origin.y);
 }
 
 /* Return the pixel extent of the platform-defined working area
    for the screen containing the given window. */
 sqInt
 ioSizeOfScreenWorkArea(sqIntptr_t windowIndex)
-{	return -1; }
+{
+    NSScreen *screen = [[[NSApplication sharedApplication] mainWindow] screen];
+    NSRect frame = [screen visibleFrame];
+	return packedDoubleXY(frame.size.width,frame.size.height);
+}
+#endif // TerfVM
 
-/* eem Mar 22 2010 - new code to come up to level of Qwaq host window support
- * on Mac & Win32.
- * In the following functions "Display" refers to the user area of a window and
- * "Window" refers to the entire window including border & title bar.
+/* eem Oct 2020 what happens with multiple monitors? Presumably there's a
+ * unified address space that covers all displays.
  */
 sqInt
 ioSetCursorPositionXY(long x, long y)
-{	return -1; }
-#endif // TerfVM
+{
+	CGPoint point;
+	point.x = x; point.y = y;
+	CGError err = CGWarpMouseCursorPosition(point);
+	if (err != kCGErrorSuccess)
+		err = CGDisplayMoveCursorToPoint(CGMainDisplayID(),point);
+	return err == kCGErrorSuccess ? 0 : -1;
+}

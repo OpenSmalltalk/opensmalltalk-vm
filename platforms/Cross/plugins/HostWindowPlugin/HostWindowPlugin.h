@@ -4,6 +4,8 @@
  * windowHandles etc are expected to be SmallInteger valid values
  * windowHandle 1 is the traditional main window */
 
+#define packedXY(x,y) (((x) << 16) | ((y)&0xFFFF))
+
 /* closeWindow: arg is sqIntptr_t windowIndex. Fail (return 0) if anything
  * goes wrong - typically the windowIndex invalid or similar */
 extern sqInt closeWindow(sqIntptr_t index);

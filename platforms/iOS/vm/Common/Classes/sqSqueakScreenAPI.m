@@ -43,7 +43,7 @@ such third-party acknowledgments.
 #import "sqSqueakScreenAndWindow.h"
 
 #ifdef BUILD_FOR_OSX
-# include "sqMacHostWindow.h"
+# import "sqMacHostWindow.h"
 #else
 # include "SqueakNoOGLIPhoneAppDelegate.h"
 extern SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
