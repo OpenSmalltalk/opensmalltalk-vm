@@ -466,6 +466,27 @@ VMJittedPrimitiveAtTest >> testPrimitiveAtFixedObjectWithNoInstanceVariablesShou
 ]
 
 { #category : #'tests - immediate' }
+VMJittedPrimitiveAtTest >> testPrimitiveAtImmediateCharacterShouldFallThrough [
+	
+	machineSimulator receiverRegisterValue: (memory characterObjectOf: $a codePoint).
+	self runFrom: initialAddress until: stop address.
+
+	self assert: machineSimulator instructionPointerValue equals: stop address
+]
+
+{ #category : #'tests - immediate' }
+VMJittedPrimitiveAtTest >> testPrimitiveAtImmediateFloatShouldFallThrough [
+	
+	"Floats are not immediate in 32 bits"
+	self wordSize = 4 ifTrue: [ ^self skip ].
+
+	machineSimulator receiverRegisterValue: (memory smallFloatObjectOf: 1.0).
+	self runFrom: initialAddress until: stop address.
+
+	self assert: machineSimulator instructionPointerValue equals: stop address
+]
+
+{ #category : #'tests - immediate' }
 VMJittedPrimitiveAtTest >> testPrimitiveAtSmallIntegerShouldFallThrough [
 		
 	machineSimulator receiverRegisterValue: (memory integerObjectOf: 17).
