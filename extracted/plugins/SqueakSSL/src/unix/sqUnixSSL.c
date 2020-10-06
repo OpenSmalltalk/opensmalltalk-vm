@@ -6,6 +6,7 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/x509v3.h>
+#include <openssl/asn1.h>
 
 #include <strings.h>
 #include <string.h>
@@ -32,6 +33,7 @@ typedef struct sqSSL {
 	BIO *bioWrite;
 } sqSSL;
 
+const unsigned char * ASN1_STRING_get0_data(const ASN1_STRING *x);
 
 #include "pharovm/debug.h"
 
@@ -73,7 +75,7 @@ sqInt sqCopyBioSSL(sqSSL *ssl, BIO *bio, char *dstBuf, sqInt dstLen) {
 enum sqMatchResult sqVerifyIP(sqSSL* ssl, X509* cert, const char* serverName, const size_t serverNameLength);
 enum sqMatchResult sqVerifyDNS(sqSSL* ssl, X509* cert, const char* serverName, const size_t serverNameLength);
 enum sqMatchResult sqVerifyNameInner(sqSSL* ssl, X509* cert, const void* serverName, const size_t serverNameLength, const int matchType);
-char* sqVerifyFindStar(char* sANData, size_t sANDataSize);
+const char* sqVerifyFindStar(const char* sANData, size_t sANDataSize);
 sqInt sqVerifySAN(sqSSL* ssl, const GENERAL_NAME* sAN, const void* data, const size_t dataSizeIn, const int matchType);
 
 enum sqMatchResult sqVerifyIP(sqSSL* ssl, X509* cert, const char* serverName, const size_t serverNameLength) {
@@ -117,12 +119,12 @@ enum sqMatchResult sqVerifyNameInner(sqSSL* ssl, X509* cert, const void* serverN
 				break;
 			}
 		}
-		sk_pop_free(sANs, sk_free);
+		sk_GENERAL_NAME_pop_free(sANs, GENERAL_NAME_free);
 	}
 	return matchFound;
 }
 
-char* sqVerifyFindStar(char* sANData, size_t sANDataSize) {
+const char* sqVerifyFindStar(const char* sANData, size_t sANDataSize) {
 	ptrdiff_t starPosition = 0;
 	char* safeptr = NULL;
 	char* label = NULL;
@@ -163,7 +165,7 @@ char* sqVerifyFindStar(char* sANData, size_t sANDataSize) {
 
 sqInt sqVerifySAN(sqSSL* ssl, const GENERAL_NAME* sAN, const void* data, const size_t dataSizeIn, const int matchType) {
 
-	char* sANData = ASN1_STRING_data(sAN->d.ia5);
+	const char* sANData = ASN1_STRING_get0_data(sAN->d.ia5);
 	size_t sANDataSize = (size_t) ASN1_STRING_length(sAN->d.ia5);
 	size_t dataSize = dataSizeIn;
 
@@ -191,9 +193,9 @@ sqInt sqVerifySAN(sqSSL* ssl, const GENERAL_NAME* sAN, const void* data, const s
 	{
 		char* serverName = (char*) data;
 		size_t serverNameSize = dataSize;
-		char* starPosition = NULL;
-		char* sANDataSuffix = NULL;
-		char* serverNameSuffix = NULL;
+		const char* starPosition = NULL;
+		const char* sANDataSuffix = NULL;
+		const char* serverNameSuffix = NULL;
 		ptrdiff_t prefixLength = 0;
 		ptrdiff_t suffixLength = 0;
 		ptrdiff_t matchLength = 0;

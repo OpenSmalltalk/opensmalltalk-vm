@@ -117,11 +117,11 @@ sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize, usqInt desiredBaseA
  * To avoid it, we force to use the required base address
  */
 #ifndef __APPLE__
-		if(heap != MAP_FAILED && heap != desiredBaseAddressAligned){
+		if(heap != MAP_FAILED && (usqInt)heap != desiredBaseAddressAligned){
 
 			desiredBaseAddressAligned = valign(desiredBaseAddressAligned + pageSize);
 
-			if(heap < desiredBaseAddress){
+			if((usqInt)heap < desiredBaseAddress){
 				logError("I cannot find a good memory address starting from: %p", (void*)desiredBaseAddress);
 				exit(-1);
 			}
@@ -186,7 +186,7 @@ sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress
 	}
 	*allocatedSizePointer = bytes;
 	while ((char *)minAddress + bytes > (char *)minAddress) {
-		startAddress = roundUpToPage((long long)minAddress);
+		startAddress = (void*)roundUpToPage((sqInt)minAddress);
 
 		alloc = mmap(startAddress, bytes,
 					PROT_READ | PROT_WRITE, MAP_ANON | MAP_SHARED, -1, 0);
@@ -213,4 +213,3 @@ sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress
 	}
 	return 0;
 }
-
