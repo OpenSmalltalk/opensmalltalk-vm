@@ -95,7 +95,7 @@ VMMachineCodeDebugger >> initialDisassembly [
 		disassembleNext: 150
 		instructionsIn: (cogit objectMemory memory memoryObject
 			copyFrom: self initialInstructionToDisassemble - cogit objectMemory memory initialAddress + 1
-			to: self initialInstructionToDisassemble - cogit objectMemory memory initialAddress + 500)
+			to: self initialInstructionToDisassemble - cogit objectMemory memory initialAddress + 600)
 		startAddress: self initialInstructionToDisassemble
 		pc: machineSimulator instructionPointerValue 
 ]

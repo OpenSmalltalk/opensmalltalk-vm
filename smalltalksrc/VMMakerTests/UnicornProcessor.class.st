@@ -144,6 +144,12 @@ UnicornProcessor >> r5: anInteger [
 	machineSimulator r5: anInteger 
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornProcessor >> r9: anInteger [
+	
+	machineSimulator r9: anInteger
+]
+
 { #category : #registers }
 UnicornProcessor >> rbp: anInteger [ 
 	
@@ -286,6 +292,12 @@ UnicornProcessor >> x4: anInteger [
 UnicornProcessor >> x5: anInteger [ 
 	
 	machineSimulator x5: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornProcessor >> x6: anInteger [ 
+	
+	machineSimulator x6: anInteger
 ]
 
 { #category : #'as yet unclassified' }

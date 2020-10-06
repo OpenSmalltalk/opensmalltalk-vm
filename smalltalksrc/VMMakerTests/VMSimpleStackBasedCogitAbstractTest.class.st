@@ -94,7 +94,7 @@ VMSimpleStackBasedCogitAbstractTest >> compile: aBlockClosure [
 	This version assumes the block has a single 1-bytecode statement 
 	  => this is used to estimate the amount of memory to preallocate for the geneated code.
 	Return the address to the generated piece of code."
-	^ self compile: aBlockClosure bytecodes: 1
+	^ self compile: aBlockClosure bytecodes: 2
 ]
 
 { #category : #helpers }

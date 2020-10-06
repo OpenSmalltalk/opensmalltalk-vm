@@ -2462,7 +2462,7 @@ CogARMv8Compiler >> concretizeMoveX32rRR [
 	base := operands at: 1.
 	dest := operands at: 2.
 	self machineCodeAt: 0 put: (self
-		ldrhSourceRegister: base
+		ldrswSourceRegister: base
 		offsetRegister: index
 		destinationRegister: dest).
 	^ machineCodeSize := 4
@@ -4209,9 +4209,25 @@ CogARMv8Compiler >> ldrhSourceRegister: sourceRegister offsetRegister: offsetReg
 	^ 2r1111 << 27
 		bitOr: (2r11 << 21
 		bitOr: ((offsetRegister bitAnd: 16r1f) << 16
-		bitOr: (2r01101 "LSL" << 11
+		bitOr: (2r01111 "LSL" << 11
 		bitOr: ((sourceRegister bitAnd: 16r1f) << 5
 		bitOr: (destinationRegister bitAnd: 16r1f)))))
+]
+
+{ #category : #'as yet unclassified' }
+CogARMv8Compiler >> ldrswSourceRegister: sourceRegister offsetRegister: offsetRegister destinationRegister: destinationRegister [ 
+	
+	"C6.2.145 LDRSW (register)
+
+	Load Register Signed Word (register) calculates an address from a base register value and an offset register value, loads a word from memory, sign-extends it to form a 64-bit value, and writes it to a register. The offset register value can be shifted left by 0 or 2 bits.
+	
+	LDRSW <Xt>, [<Xn|SP>, (<Wm>|<Xm>){, <extend> {<amount>}}]"
+	
+	^ 2r10111000101 << 21
+		bitOr: ((offsetRegister bitAnd: 16r1f) << 16
+		bitOr: (2r01111 "LSL" << 11
+		bitOr: ((sourceRegister bitAnd: 16r1f) << 5
+		bitOr: (destinationRegister bitAnd: 16r1f))))
 ]
 
 { #category : #assembler }
@@ -5193,9 +5209,15 @@ CogARMv8Compiler >> stackPointerAlignment [
 
 { #category : #encoding }
 CogARMv8Compiler >> stop [
-"generate a BKPT ( - ARM_ARM v7 DDI10406 pp. A8-56) instruction. We could, given a good enough creative impulse and an over-active sense of humour, add some numerically encoded witticism to this instruction in bits 8-19 & 0-3. It has no effect on the execution but can be a way to specify which breakpoint has been hit etc."
-	<inline: true>
-	^AL << 28 bitOr: (16r42 << 20 bitOr: (7 << 4))
+
+	"C6.2.38 BRK
+	
+	Breakpoint instruction. A BRK instruction generates a Breakpoint Instruction exception.
+	
+	BRK #<imm>"
+	
+	"This is a BRK 0..."
+	^ 2r11010100001 << 21
 ]
 
 { #category : #'generate machine code - support' }

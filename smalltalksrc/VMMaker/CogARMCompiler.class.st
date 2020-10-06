@@ -1552,8 +1552,7 @@ CogARMCompiler >> concretizeNegateableDataOperationCqR: armOpcode [
 	rn := operands at: 1.
 	"Extra note - if ever a version of this code wants to NOT set the Set flag
 	 - Cmp must always have it set or it will pretend to be a SMALALBT and Very Bad Things might happen."
-	rd := opcode = CmpOpcode ifTrue: [0] ifFalse: [rn].
-
+	rd := armOpcode = CmpOpcode ifTrue: [0] ifFalse: [rn].
 	self rotateable8bitSignedImmediate: val 
 		ifTrue:
 			[:rot :immediate : negate|
