@@ -10,10 +10,20 @@ Class {
 { #category : #'tests - support' }
 VMJittedGeneralPrimitiveTest >> testCheckImmediateWhenImmediateFloat [
 
-	self compile: [
-		cogit objectRepresentation
-			genGetNumSlotsOf: ReceiverResultReg
-			into: ReceiverResultReg ].
+	"32 bits images does not have SmallFloats"
+	self wordSize = 4 
+		ifTrue: [ ^ self skip ].
+		
+	self compile: [ | jump | 
+		jump := cogit objectRepresentation genJumpImmediate: Arg0Reg.
+		"Non-Immediate => 0"
+		cogit MoveCq: 0 R: ReceiverResultReg.
+		cogit RetN: 0.
+		jump jmpTarget: cogit Label.
+		"Immediate => 1"
+		cogit MoveCq: 1  R: ReceiverResultReg.
+		cogit RetN: 0.
+	].
 
 	self assert: (memory isSmallFloatValue: 1.0).
 	machineSimulator arg0RegisterValue: (memory floatObjectOf: 1.0).
@@ -365,7 +375,7 @@ VMJittedGeneralPrimitiveTest >> testGetNumberOfSlotsOf32BitIndexableWithPadding 
 	machineSimulator receiverRegisterValue: (self new32BitIndexableOfSize: 7).
 	self runGeneratedCode.
 
-	self assert: machineSimulator argument0RegisterValue equals: 7 * 4 "bytes" / self wordSize
+	self assert: machineSimulator argument0RegisterValue equals: (7 * 4 roundUpTo: self wordSize) "bytes" / self wordSize
 ]
 
 { #category : #'tests - support' }
