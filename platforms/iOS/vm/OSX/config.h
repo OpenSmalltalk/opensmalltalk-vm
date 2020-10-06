@@ -183,6 +183,7 @@
 #define HAVE_DLERROR 1
 #define HAVE_EXECINFO_H 1
 #define HAVE_FCNTL_H 1
+#define HAVE_IFADDRS_H 1
 #define HAVE_INTERP_H 1
 #define HAVE_INTTYPES_H 1
 #define HAVE_LIBDLLOADER 1
