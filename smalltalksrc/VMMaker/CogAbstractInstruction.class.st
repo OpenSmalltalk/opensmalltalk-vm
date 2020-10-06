@@ -774,6 +774,14 @@ CogAbstractInstruction >> genJumpFPNotEqual: jumpTarget [
 	^cogit gen: JumpFPNotEqual operand: jumpTarget asInteger
 ]
 
+{ #category : #'abstract instructions' }
+CogAbstractInstruction >> genJumpMultiplyOverflow: jumpTarget [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	<var: #jumpTarget type: #'void *'>
+	^cogit JumpOverflow: jumpTarget
+]
+
 { #category : #'smalltalk calling convention' }
 CogAbstractInstruction >> genLoadCStackPointer [
 	"Load the stack pointer register with that of the C stack, effecting

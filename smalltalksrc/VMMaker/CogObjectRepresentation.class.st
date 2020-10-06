@@ -922,12 +922,12 @@ CogObjectRepresentation >> genPrimitiveDiv [
 	jumpNotSI := self genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
 	"We must shift away the tags, not just subtract them, so that the
 	 overflow case doesn't actually overflow the machine instruction."
-	self genShiftAwaySmallIntegerTagsInScratchReg: ClassReg.
+	self genConvertSmallIntegerToIntegerInReg: ClassReg.
 	(cogit lastOpcode setsConditionCodesFor: JumpZero) ifFalse:
 		[cogit CmpCq: 0 R: ClassReg].
 	jumpZero := cogit JumpZero: 0.
 	cogit MoveR: ReceiverResultReg R: TempReg.
-	self genShiftAwaySmallIntegerTagsInScratchReg: TempReg.
+	self genConvertSmallIntegerToIntegerInReg: TempReg.
 	cogit DivR: ClassReg R: TempReg Quo: TempReg Rem: ClassReg.
 	"If remainder is zero we must check for overflow."
 	cogit CmpCq: 0 R: ClassReg.
@@ -964,10 +964,10 @@ CogObjectRepresentation >> genPrimitiveDivide [
 	jumpNotSI := self genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
 	"We must shift away the tags, not just subtract them, so that the
 	 overflow case doesn't actually overflow the machine instruction."
-	self genShiftAwaySmallIntegerTagsInScratchReg: ClassReg.
+	self genConvertSmallIntegerToIntegerInReg: ClassReg.
 	jumpZero := cogit JumpZero: 0.
 	cogit MoveR: ReceiverResultReg R: TempReg.
-	self genShiftAwaySmallIntegerTagsInScratchReg: TempReg.
+	self genConvertSmallIntegerToIntegerInReg: TempReg.
 	cogit DivR: ClassReg R: TempReg Quo: TempReg Rem: ClassReg.
 	"If remainder is non-zero fail."
 	cogit CmpCq: 0 R: ClassReg.
@@ -1367,10 +1367,10 @@ CogObjectRepresentation >> genPrimitiveMultiply [
 	cogit MoveR: Arg0Reg R: ClassReg.
 	cogit MoveR: ReceiverResultReg R: Arg1Reg.
 	jumpNotSI := self genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
-	self genShiftAwaySmallIntegerTagsInScratchReg: ClassReg.
+	self genConvertSmallIntegerToIntegerInReg: ClassReg.
 	self genRemoveSmallIntegerTagsInScratchReg: Arg1Reg.
 	cogit MulR: Arg1Reg R: ClassReg.
-	jumpOvfl := cogit JumpOverflow: 0.
+	jumpOvfl := cogit JumpMultiplyOverflow: 0.
 	self genSetSmallIntegerTagsIn: ClassReg.
 	cogit MoveR: ClassReg R: ReceiverResultReg.
 	cogit genPrimReturn.
@@ -1437,12 +1437,12 @@ CogObjectRepresentation >> genPrimitiveQuo [
 	jumpNotSI := self genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
 	"We must shift away the tags, not just subtract them, so that the
 	 overflow case doesn't actually overflow the machine instruction."
-	self genShiftAwaySmallIntegerTagsInScratchReg: ClassReg.
+	self genConvertSmallIntegerToIntegerInReg: ClassReg.
 	(cogit lastOpcode setsConditionCodesFor: JumpZero) ifFalse:
 		[cogit CmpCq: 0 R: ClassReg].
 	jumpZero := cogit JumpZero: 0.
 	cogit MoveR: ReceiverResultReg R: TempReg.
-	self genShiftAwaySmallIntegerTagsInScratchReg: TempReg.
+	self genConvertSmallIntegerToIntegerInReg: TempReg.
 	cogit DivR: ClassReg R: TempReg Quo: TempReg Rem: ClassReg.
 	"If remainder is zero we must check for overflow."
 	cogit CmpCq: 0 R: ClassReg.

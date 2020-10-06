@@ -14,6 +14,7 @@ Class {
 		'CArg2Reg',
 		'CArg3Reg',
 		'CC',
+		'CMPMULOverflow',
 		'CMPSMULL',
 		'CPSRReg',
 		'CS',
@@ -43,6 +44,7 @@ Class {
 		'MRS',
 		'MSR',
 		'MSUB',
+		'MUL',
 		'MoveNotOpcode',
 		'MoveOpcode',
 		'NE',
@@ -66,6 +68,7 @@ Class {
 		'RsbOpcode',
 		'SDIV',
 		'SMLALOpcode',
+		'SMULH',
 		'SMULL',
 		'SP',
 		'STMFD',
@@ -206,7 +209,7 @@ CogARMv8Compiler class >> initialize [
 
 	"Specific instructions"
 	self
-		initializeSpecificOpcodes: #(SMULL MSR MRS LDMFD STMFD CMPSMULL SDIV MSUB)
+		initializeSpecificOpcodes: #(MUL SMULH CMPMULOverflow SMULL MSR MRS LDMFD STMFD CMPSMULL SDIV MSUB)
 		in: thisContext method
 ]
 
@@ -1018,9 +1021,9 @@ CogARMv8Compiler >> computeMaximumSize [
 		[DivRdRd]					-> [^4].
 		[SqrtRd]					-> [^4].
 		"ARM Specific Arithmetic"
-		[SMULL]				-> [^4].
-		[MSR]					-> [^4].
-		[CMPSMULL]			-> [^4]. "special compare for genMulR:R: usage"
+		[MUL]			-> [^4].
+		[SMULH] 		-> 	[^4].
+		[CMPMULOverflow]				-> [^4].
 		[SDIV]					-> [^4].
 		[MSUB]					-> [^4].
 				
@@ -1388,6 +1391,24 @@ CogARMv8Compiler >> concretizeAt: actualAddress [
 
 	self assert: actualAddress \\ 4 = 0.
 	^ super concretizeAt: actualAddress
+]
+
+{ #category : #'as yet unclassified' }
+CogARMv8Compiler >> concretizeCMPMULOverflow [
+	
+	| registerA destinationRegister registerB |
+	registerA := operands at: 0.
+	registerB := destinationRegister := operands at: 1.
+	
+	self
+		machineCodeAt: 0
+		put: (self
+			cmpSize: 1
+			shiftedRegister: registerA
+			shiftType: 2r10 "Arithmetic Shift Right so the sign is extended and kept"
+			shiftValue: 63 "Shift all but sign"
+			secondRegister: registerB).
+	^ machineCodeSize := 4
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -1903,6 +1924,23 @@ CogARMv8Compiler >> concretizeMSUB [
 	
 	^ machineCodeSize := 4	
 
+]
+
+{ #category : #'as yet unclassified' }
+CogARMv8Compiler >> concretizeMUL [
+	
+	| registerA destinationRegister registerB |
+	registerA := operands at: 0.
+	registerB := destinationRegister := operands at: 1.
+	
+	self
+		machineCodeAt: 0
+		put: (self
+			mulSize: 1
+			firstRegister: registerA
+			secondRegister: registerB
+			destinationRegister: destinationRegister).
+	^ machineCodeSize := 4
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -2729,6 +2767,24 @@ CogARMv8Compiler >> concretizeSDIV [
 	^ machineCodeSize := 4
 ]
 
+{ #category : #'as yet unclassified' }
+CogARMv8Compiler >> concretizeSMULH [
+	
+	| registerA destinationRegister registerB |
+	registerA := operands at: 0.
+	registerB := operands at: 1.
+	destinationRegister := operands at: 2.
+	
+	self
+		machineCodeAt: 0
+		put: (self
+			smulhSize: 1
+			firstRegister: registerA
+			secondRegister: registerB
+			destinationRegister: destinationRegister).
+	^ machineCodeSize := 4
+]
+
 { #category : #'generate machine code - concretize' }
 CogARMv8Compiler >> concretizeSMULL [
 	| srcA srcB hiResultReg loResultReg |
@@ -3055,9 +3111,9 @@ CogARMv8Compiler >> dispatchConcretize [
 		[LogicalShiftLeftRR]				-> [^self concretizeLogicalShiftLeftRR].
 		[LogicalShiftRightRR]			-> [^self concretizeLogicalShiftRightRR].
 		"ARM Specific Arithmetic" 
-		[SMULL]			-> [^self concretizeSMULL]	.
-		[CMPSMULL]		-> [^self concretizeCMPSMULL].
-		[MSR]				-> [^self concretizeMSR].
+		[MUL]			-> [^self concretizeMUL].
+		[SMULH]			-> [^self concretizeSMULH].
+		[CMPMULOverflow]		-> [^self concretizeCMPMULOverflow].
 		[SDIV]				-> [^self concretizeSDIV].
 		[MSUB]				-> [^self concretizeMSUB].
 		"Data Movement"
@@ -3423,6 +3479,14 @@ CogARMv8Compiler >> genDivR: abstractRegDenominator R: abstractRegNumerator Quo:
 
 ]
 
+{ #category : #'abstract instructions' }
+CogARMv8Compiler >> genJumpMultiplyOverflow: jumpTarget [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	<var: #jumpTarget type: #'void *'>
+	^cogit JumpNonZero: jumpTarget
+]
+
 { #category : #'smalltalk calling convention' }
 CogARMv8Compiler >> genLoadCStackPointer [
 	"Load the stack pointer register with that of the C stack, effecting
@@ -3485,14 +3549,26 @@ CogARMv8Compiler >> genMarshallNArgs: numArgs arg: regOrConst0 arg: regOrConst1 
 
 { #category : #'abstract instructions' }
 CogARMv8Compiler >> genMulR: regSource R: regDest [
-	"Use SMULL to produce a 64-bit result, explicitly in RISCTempReg,regDest. - ARM_ARM v7 DDI10406 pp. A8-354-5
-	 By comparing RISCTempReg with regDest ASR 31(which effectively makes it 0 or -1) we know that the result being EQ means the hi reg and the top bit of the lo reg are the same - ie no overflow. The condition code can then be forced to oVerflow by use of MSR APSR_nzcvq, #1, lsl 28"
-	| first |
+	"In ARMv8 the multiplication operation (MUL) does not set the overflow flag.
+	MUL multiplies two 64bit registers and produces the lower 64bit part of the 128bit result into a register.
+	SMULH multiplies two 64bit registers and produces the higher 64bit part of the 128bit result into a register, sign-extended.
+	An overflow happens in the higher part is just an extension of the sign of the lower part.
+	In other words, an overflow does NOT happen if:
+		=> the number lower part is positive (sign = 0) and the higher part is all 0s or
+		=> the number lower part is negative (sign = 1) and the higher part is all 1s"
+	
+
 	<var: 'first' type: #'AbstractInstruction *'>
-	first := cogit gen: SMULL operand: regSource operand: regDest. "result in RISCTempReg,regDest"
-	cogit gen: CMPSMULL operand: RISCTempReg operand: regDest.
-	cogit gen: MSR operand: 1.
-	^first
+	| first |
+	"First get the high part in a temporary register"
+	cogit gen: SMULH operand: regSource operand: regDest operand: RISCTempReg.
+	"Then get the low part on the destination register.
+	Since this is a two-address code, destination register is the second operand too.
+	Thus, writing to the destination register will override the operand:
+	This is why we do this SMULH first and then MUL because both need the operands, and in this order we avoid an extra move..."
+	first := cogit gen: MUL operand: regSource operand: regDest operand: regDest.
+	cogit gen: CMPMULOverflow operand: regDest operand: RISCTempReg.
+	^ first
 ]
 
 { #category : #'smalltalk calling convention' }
@@ -4642,6 +4718,23 @@ CogARMv8Compiler >> msubSize: is64Bits minuendReg: minuendReg factor1Reg: factor
 		bitOr: (destinationReg bitAnd: 16r1f))))))
 ]
 
+{ #category : #'as yet unclassified' }
+CogARMv8Compiler >> mulSize: is64bits firstRegister: registerA secondRegister: registerB destinationRegister: destinationRegister [
+
+	"C6.2.197 MUL
+	
+	Multiply : Rd = Rn * Rm
+	
+	MUL <Xd>, <Xn>, <Xm>"
+	
+	^ (is64bits bitAnd: 1) << 31
+		bitOr: (2r11011 << 24
+		bitOr: (((registerB bitAnd: 16r1f) << 16)
+		bitOr: (16r1f << 10
+		bitOr: (((registerA bitAnd: 16r1f) << 5)
+		bitOr: (destinationRegister bitAnd: 16r1f)))))
+]
+
 { #category : #printing }
 CogARMv8Compiler >> nameForFPRegister: reg [ "<Integer>"
 	<doNotGenerate>
@@ -5183,6 +5276,22 @@ CogARMv8Compiler >> sizeOf: immediate registerSize: registerSize [
 		size > 2 ] whileTrue.
 	
 	^ size
+]
+
+{ #category : #'as yet unclassified' }
+CogARMv8Compiler >> smulhSize: is64bits firstRegister: registerA secondRegister: registerB destinationRegister: destinationRegister [
+
+	"C6.2.243 SMULH
+	
+	Signed Multiply High multiplies two 64-bit register values, and writes bits[127:64] of the 128-bit result to the 64-bit destination register.
+	
+	SMULH <Xd>, <Xn>, <Xm>"
+	
+	^ 2r1001101101 << 22
+		bitOr: (((registerB bitAnd: 16r1f) << 16)
+		bitOr: (16r1f << 10
+		bitOr: (((registerA bitAnd: 16r1f) << 5)
+		bitOr: (destinationRegister bitAnd: 16r1f))))
 ]
 
 { #category : #accessing }
