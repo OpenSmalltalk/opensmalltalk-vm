@@ -1,3 +1,5 @@
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wl,-rpath=.")
+
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/unix
     ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/common
