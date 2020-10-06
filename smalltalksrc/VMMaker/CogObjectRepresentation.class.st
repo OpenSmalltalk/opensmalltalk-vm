@@ -148,6 +148,12 @@ CogObjectRepresentation >> genConvertSmallFloatToSmallFloatHashAsIntegerInReg: r
 	^EncounteredUnknownBytecode
 ]
 
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genConvertSmallIntegerToIntegerInReg: aRegister [
+
+	self subclassResponsibility
+]
+
 { #category : #'bytecode generator support' }
 CogObjectRepresentation >> genCreateClosureAt: bcpc numArgs: numArgs numCopied: numCopied contextNumArgs: ctxtNumArgs large: isLargeCtxt inBlock: isInBlock [
 	"Create a closure with the given startpc, numArgs and numCopied
@@ -1774,6 +1780,11 @@ CogObjectRepresentation >> genQuickReturnInstVar [
 CogObjectRepresentation >> genQuickReturnSelf [
 	<doNotGenerate>
 	^cogit genQuickReturnSelf
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentation >> genRemoveSmallIntegerTagsInScratchReg: scratchReg [
+	self subclassResponsibility
 ]
 
 { #category : #'compile abstract instructions' }

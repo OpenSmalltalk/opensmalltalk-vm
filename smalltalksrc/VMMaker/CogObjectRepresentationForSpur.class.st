@@ -2854,11 +2854,6 @@ CogObjectRepresentationForSpur >> genRemoveCharacterTagsInScratchReg: scratchReg
 ]
 
 { #category : #'compile abstract instructions' }
-CogObjectRepresentationForSpur >> genRemoveSmallIntegerTagsInScratchReg: scratchReg [
-	self subclassResponsibility
-]
-
-{ #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> genSetCharacterTagsIn: reg [
 	cogit OrCq: objectMemory characterTag R: reg
 ]

@@ -2234,12 +2234,6 @@ CogObjectRepresentationFor64BitSpur >> genRemoveSmallIntegerTagsInScratchReg: sc
 	^0
 ]
 
-{ #category : #'compile abstract instructions' }
-CogObjectRepresentationFor64BitSpur >> genShiftAwaySmallIntegerTagsInScratchReg: scratchReg [
-	cogit ArithmeticShiftRightCq: objectMemory numTagBits R: scratchReg.
-	^0
-]
-
 { #category : #'primitive generators' }
 CogObjectRepresentationFor64BitSpur >> genSmallFloatArithmetic: arithmeticOperator preOpCheck: preOpCheckOrNil [
 	<inline: true>
