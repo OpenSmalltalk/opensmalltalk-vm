@@ -246,6 +246,13 @@ static char *getVersionInfo(int verbose);
 	}
 #endif
 
+#if defined(AIO_DEBUG)
+	if ([argData isEqualToString: VMOPTIONOBJ("aiolog")]) {
+		extern long aioDebugLogging;
+		aioDebugLogging = 1;
+		return 1;
+	}
+#endif
 #if COGVM
 	if ([argData compare: VMOPTIONOBJ("trace") options: NSLiteralSearch range: NSMakeRange(0,VMOPTIONLEN(6))] == NSOrderedSame) {
 		extern int traceFlags;
@@ -554,6 +561,9 @@ static char *getVersionInfo(int verbose);
 	printf("  "VMOPTION("blockonerror")"         on error or segv block, not exit.  useful for attaching gdb\n");
 	printf("  "VMOPTION("blockonwarn")"          on warning block, don't warn.  useful for attaching gdb\n");
 	printf("  "VMOPTION("exitonwarn")"           treat warnings as errors, exiting on warn\n");
+#if defined(AIO_DEBUG)
+	printf("  "VMOPTION("aiolog")"               print async io logging info\n");
+#endif
 }
 
 - (void) printUsageNotes

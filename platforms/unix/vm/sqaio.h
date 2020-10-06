@@ -109,16 +109,17 @@ extern unsigned long long ioUTCMicrosecondsNow(void);
       platReportError((os_error *)&privateErr); \
     } while (0)
 # else /* !ACORN */
-    extern long aioLastTick, aioThisTick, ioMSecs(void);
+    extern long aioLastTick, aioThisTick, aioDebugLogging, ioMSecs(void);
 	extern const char *__shortFileName(const char *);
-#   define FPRINTF(X) do { \
+#   define FPRINTF(X) do { if (aioDebugLogging) { \
 	aioThisTick = ioMSecs(); \
-	fprintf(stderr, "%8ld %4ld %s:%d ", aioThisTick, aioThisTick - aioLastTick,\
+	fprintf(stderr, "%8ld %4ld %s:%d ", \
+			aioThisTick, aioThisTick - aioLastTick, \
 			__shortFileName(__FILE__),__LINE__); \
 	aioLastTick = aioThisTick; \
-	fprintf X; } while (0)
+	fprintf X; } } while (0)
 # endif /* ACORN */
-#else /* !DEBUG */
+#else /* !AIO_DEBUG */
 # define FPRINTF(X)
 #endif
 

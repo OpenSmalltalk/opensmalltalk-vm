@@ -106,7 +106,11 @@ extern void addIdleUsecs(long idleUsecs);
 #if defined(AIO_DEBUG)
 long	aioLastTick = 0;
 long	aioThisTick = 0;
-
+# if AIO_DEBUG
+long	aioDebugLogging = 1;
+# else
+long	aioDebugLogging = 0;
+# endif
 #endif
 
 #define _DO_FLAG_TYPE()	do { _DO(AIO_R, rd) _DO(AIO_W, wr) _DO(AIO_X, ex) } while (0)

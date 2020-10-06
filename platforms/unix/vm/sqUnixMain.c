@@ -1552,6 +1552,9 @@ static int vm_parseArgument(int argc, char **argv)
   else if (!strcmp(argv[0], VMOPTION("nojit")))     { useJit  = 0; return 1; }
   else if (!strcmp(argv[0], VMOPTION("spy")))       { withSpy = 1; return 1; }
 #endif /* !STACKVM && !COGVM */
+#if defined(AIO_DEBUG)
+  else if (!strcmp(argv[0], VMOPTION("aiolog")))	{ aioDebugLogging = 1; return 1; }
+#endif
 #if (STACKVM || NewspeakVM) && !COGVM
   else if (!strcmp(argv[0], VMOPTION("sendtrace"))) { extern sqInt sendTrace; sendTrace = 1; return 1; }
 #endif
@@ -1703,9 +1706,8 @@ static void vm_printUsage(void)
 #endif
   printf("  "VMOPTION("noevents")"             disable event-driven input support\n");
   printf("  "VMOPTION("nohandlers")"           disable sigsegv & sigusr1 handlers\n");
-  printf("  "VMOPTION("pollpip")" (0|1)        output on each poll for input\n");
-  printf("  "VMOPTION("checkpluginwrites")"    check for writes past end of object in plugins\n");
-  printf("  "VMOPTION("pathenc")" <enc>        set encoding for pathnames (default: UTF-8)\n");
+#if defined(AIO_DEBUG)
+  printf("  "VMOPTION("aiolog")"               output async io logging info\n");
   printf("  "VMOPTION("plugins")" <path>       specify alternative plugin location (see manpage)\n");
   printf("  "VMOPTION("textenc")" <enc>        set encoding for external text (default: UTF-8)\n");
   printf("  "VMOPTION("version")"              print version information, then exit\n");

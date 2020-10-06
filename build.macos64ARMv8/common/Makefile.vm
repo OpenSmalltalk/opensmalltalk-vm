@@ -104,7 +104,7 @@ endif
 # VM config flags.
 ifeq ($(CONFIGURATION),debug)
 OFLAGS:= -g -O0 -fno-omit-frame-pointer
-DEBUGVM=-DDEBUGVM=1
+DEBUGVM=-DDEBUGVM=1 -DAIO_DEBUG
 INTERPFLAGS:=-DAllocationCheckFiller=0xADD4E55 -D'VM_LABEL(foo)=0'
 else ifeq ($(CONFIGURATION),assert)
 OFLAGS:= -g -O1 -fno-omit-frame-pointer

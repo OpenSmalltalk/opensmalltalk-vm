@@ -98,8 +98,8 @@ static int printf_status(OSStatus status, const char* restrict format, ...)
 }
 
 /* By convention, the sqSSL object is named ssl and has its logLevel >= 0 */
-#define logprintf if (ssl->loglevel) printf
-#define logprintf_status if (ssl->loglevel) printf_status
+#define logprintf if (ssl && ssl->loglevel) printf
+#define logprintf_status if (ssl && ssl->loglevel) printf_status
 
 /* sqSSLFromHandle: Maps a handle to an SSL */
 static sqSSL* sqSSLFromHandle(sqInt handle)

@@ -33,7 +33,7 @@ BUILD:=buildast
 else
 OFLAGS:= -g -O0 -fno-omit-frame-pointer
 AT_MOST_OPT_LEVEL_ONE:=-O0
-DEBUGVM=-DDEBUGVM=1
+DEBUGVM=-DDEBUGVM=1 -DAIO_DEBUG
 BUILD:=builddbg
 endif
 
