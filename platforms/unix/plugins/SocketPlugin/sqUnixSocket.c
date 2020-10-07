@@ -180,21 +180,21 @@ typedef struct privateSocketStruct
   int acceptedSock;		/* a connection that has been accepted */
 } privateSocketStruct;
 
-#define CONN_NOTIFY	(1<<0)
-#define READ_NOTIFY	(1<<1)
+#define CONN_NOTIFY		(1<<0)
+#define READ_NOTIFY		(1<<1)
 #define WRITE_NOTIFY	(1<<2)
 
-#define PING(S,EVT)						\
-{								\
-  FPRINTF((stderr, "notify %d %s\n", (S)->s, #EVT));		\
+#define PING(S,EVT)	\
+{																\
+  FPRINTF((stderr, "notify %d %s\n", (S)->s, #EVT));			\
   interpreterProxy->signalSemaphoreWithIndex((S)->EVT##Sema);	\
 }
 
 #define notify(SOCK,MASK)						\
-{									\
-  if ((MASK) & CONN_NOTIFY)  PING(SOCK,conn);				\
-  if ((MASK) & READ_NOTIFY)  PING(SOCK,read);				\
-  if ((MASK) & WRITE_NOTIFY) PING(SOCK,write);				\
+{												\
+  if ((MASK) & CONN_NOTIFY)  PING(SOCK,conn);	\
+  if ((MASK) & READ_NOTIFY)  PING(SOCK,read);	\
+  if ((MASK) & WRITE_NOTIFY) PING(SOCK,write);	\
 }
 
 
@@ -203,7 +203,7 @@ typedef struct privateSocketStruct
 #define _PSP(S)		(((S)->privateSocketPtr))
 #define PSP(S)		((privateSocketStruct *)((S)->privateSocketPtr))
 
-#define SOCKET(S)		(PSP(S)->s)
+#define SOCKET(S)			(PSP(S)->s)
 #define SOCKETSTATE(S)		(PSP(S)->sockState)
 #define SOCKETERROR(S)		(PSP(S)->sockError)
 #define SOCKETPEER(S)		(PSP(S)->peer)
@@ -1419,9 +1419,11 @@ sqSocketSetOptionsoptionNameStartoptionNameSizeoptionValueStartoptionValueSizere
 			   endptr - buf == optionValueSize)) /* are all option chars digits? */
 			{
 			  val= strtol(buf, &endptr, 0);
-				  memcpy((void *)buf, (void *)&val, sizeof(val));
-				  optionValueSize= sizeof(val);
+			  memcpy((void *)buf, (void *)&val, sizeof(val));
+			  optionValueSize= sizeof(val);
 			}
+		  FPRINTF((stderr,"setsockopt(%d,%.*s)\n",
+					SOCKET(s), optionNameSize, optionName));
 		  if ((setsockopt(PSP(s)->s, opt->optlevel, opt->optname,
 						  (const void *)buf, optionValueSize)) < 0)
 			{

@@ -187,6 +187,8 @@ static stack_t signal_stack;
 
 /* initialise asynchronous i/o */
 
+static int stderrIsAFile = 0; // for pollpip to avoid cluttering logs
+
 void 
 aioInit(void)
 {
@@ -198,6 +200,8 @@ aioInit(void)
 	FD_ZERO(&exMask);
 	FD_ZERO(&xdMask);
 	maxFd = 0;
+
+	stderrIsAFile = !isatty(fileno(stderr));
 
 	signal(SIGPIPE, SIG_IGN);
 #if !USE_SIGALTSTACK
@@ -275,12 +279,14 @@ extern long disownCount;
 static char *ticks = "-\\|/";
 static char *ticker = "";
 static int tickCount = 0;
+long pollpipOutput = 0;
 
 #define TICKS_PER_CHAR 10
-#define DO_TICK(bool)				\
-do if ((bool) && !(++tickCount % TICKS_PER_CHAR)) {		\
-	fprintf(stderr, "\r%c\r", *ticker);		\
-	if (!*ticker++) ticker= ticks;			\
+#define DO_TICK(bool)											\
+do if ((bool) && !(++tickCount % TICKS_PER_CHAR)) {				\
+	if (!*ticker) ticker = ticks;								\
+	fprintf(stderr, stderrIsAFile ? "%c" : "\r%c\r", *ticker++);\
+	pollpipOutput = 1;											\
 } while (0)
 
 long 
@@ -294,18 +300,17 @@ aioPoll(long microSeconds)
 	extern void forceInterruptCheck(int);	/* not really, but hey */
 #endif
 
-#if defined(AIO_DEBUG) && AIO_DEBUG >= 2
-	FPRINTF((stderr, "aioPoll(%ld)\n", microSeconds));
-#endif
+	DO_TICK(SHOULD_TICK());
 
+#if defined(AIO_DEBUG)
+# if AIO_DEBUG >= 2
+	FPRINTF((stderr, "aioPoll(%ld)\n", microSeconds));
+# endif
 	// check that our signal handler is in place.
 	// If it isn't, things aren't right.
-#if AIO_DEBUG
 	sigaction(SIGIO, NULL, &current_sigio_action);
 	assert(current_sigio_action.sa_handler == forceInterruptCheck);
 #endif
-	DO_TICK(SHOULD_TICK());
-
 	/*
 	 * get out early if there is no pending i/o and no need to relinquish
 	 * cpu
@@ -315,7 +320,7 @@ aioPoll(long microSeconds)
 	if (maxFd == 0)
 		return 0;
 #else
-	if ((maxFd == 0) && (microSeconds == 0))
+	if (maxFd == 0 && microSeconds == 0)
 		return 0;
 #endif
 
@@ -403,7 +408,6 @@ aioSleepForUsecs(long microSeconds)
 void 
 aioEnable(int fd, void *data, int flags)
 {
-	FPRINTF((stderr, "aioEnable(%d)\n", fd));
 	if (fd < 0) {
 		FPRINTF((stderr, "aioEnable(%d): IGNORED\n", fd));
 		return;
@@ -423,6 +427,7 @@ aioEnable(int fd, void *data, int flags)
 	if (flags & AIO_EXT) {
 		FD_SET(fd, &xdMask);
 		/* we should not set NBIO ourselves on external descriptors! */
+		FPRINTF((stderr, "aioEnable(%d): external\n", fd));
 	}
 	else {
 		/*
@@ -440,6 +445,7 @@ aioEnable(int fd, void *data, int flags)
 			perror("fcntl(F_GETFL)");
 		if (fcntl(fd, F_SETFL, arg | O_NONBLOCK | O_ASYNC) < 0)
 			perror("fcntl(F_SETFL, O_ASYNC)");
+		FPRINTF((stderr, "aioEnable(%d): Elicit SIGIO via O_ASYNC/fcntl\n", fd));
 
 #elif defined(FASYNC)
 		if (fcntl(fd, F_SETOWN, getpid()) < 0)
@@ -448,6 +454,7 @@ aioEnable(int fd, void *data, int flags)
 			perror("fcntl(F_GETFL)");
 		if (fcntl(fd, F_SETFL, arg | O_NONBLOCK | FASYNC) < 0)
 			perror("fcntl(F_SETFL, FASYNC)");
+		FPRINTF((stderr, "aioEnable(%d): Elicit SIGIO via FASYNC/fcntl\n", fd));
 
 #elif defined(FIOASYNC)
 		arg = getpid();
@@ -456,6 +463,9 @@ aioEnable(int fd, void *data, int flags)
 		arg = 1;
 		if (ioctl(fd, FIOASYNC, &arg) < 0)
 			perror("ioctl(FIOASYNC, 1)");
+		FPRINTF((stderr, "aioEnable(%d): Elicit SIGIO via FIOASYNC/fcntl\n", fd));
+#else
+		FPRINTF((stderr, "aioEnable(%d): UNABLE TO ELICIT SIGIO!!\n", fd));
 #endif
 	}
 }

@@ -111,15 +111,17 @@ extern char *(*handlerNameChain)(aioHandler h);
       platReportError((os_error *)&privateErr); \
     } while (0)
 # else /* !ACORN */
-    extern long aioLastTick, aioThisTick, aioDebugLogging, ioMSecs(void);
+    extern long aioLastTick, aioThisTick, aioDebugLogging, pollpipOutput;
+    extern long ioMSecs(void);
 	extern const char *__shortFileName(const char *);
-#   define FPRINTF(X) do { if (aioDebugLogging) { \
-	aioThisTick = ioMSecs(); \
-	fprintf(stderr, "%8ld %4ld %s:%d ", \
-			aioThisTick, aioThisTick - aioLastTick, \
-			__shortFileName(__FILE__),__LINE__); \
-	aioLastTick = aioThisTick; \
-	fprintf X; } } while (0)
+#   define FPRINTF(X) do if (aioDebugLogging) {		\
+	aioThisTick = ioMSecs();						\
+	if (pollpipOutput) fputc('\n',stderr);			\
+	fprintf(stderr, "%8ld %4ld %s:%d ",				\
+			aioThisTick, aioThisTick - aioLastTick,	\
+			__shortFileName(__FILE__),__LINE__);	\
+	aioLastTick = aioThisTick;						\
+	fprintf X; pollpipOutput = 0; } while (0)
 # endif /* ACORN */
 #else /* !AIO_DEBUG */
 # define FPRINTF(X)
