@@ -99,6 +99,8 @@ extern unsigned long long ioUTCMicrosecondsNow(void);
 
 /* debugging stuff. */
 #ifdef AIO_DEBUG
+extern char *(*handlerNameChain)(aioHandler h);
+
 # ifdef ACORN
 #   define FPRINTF(s) \
     do { \

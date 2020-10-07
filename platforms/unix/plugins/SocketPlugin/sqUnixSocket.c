@@ -43,6 +43,7 @@
  */
 
 #include "sq.h"
+#include "sqAssert.h"
 #include "SocketPlugin.h"
 #include "sqaio.h"
 #include <string.h>
@@ -233,7 +234,8 @@ static void closeHandler(int, void *, int);
 
 
 #ifdef AIO_DEBUG
-char *socketHandlerName(aioHandler h)
+char *
+socketHandlerName(aioHandler h)
 {
   if (h == acceptHandler)     return "acceptHandler";
   if (h == connectHandler)    return "connectHandler";
@@ -249,13 +251,22 @@ char *socketHandlerName(aioHandler h)
 
 sqInt socketInit(void)
 {
+#ifdef AIO_DEBUG
+  assert(handlerNameChain != 0);
+  handlerNameChain = socketHandlerName;
+#endif
   return 1;
 }
 
-sqInt socketShutdown(void)
+sqInt
+socketShutdown(void)
 {
   /* shutdown the network */
   sqNetworkShutdown();
+#ifdef AIO_DEBUG
+  if (handlerNameChain == socketHandlerName)
+	handlerNameChain = 0;
+#endif
   return 1;
 }
 
@@ -264,7 +275,8 @@ sqInt socketShutdown(void)
 
 /* set linger on a connected stream */
 
-static void setLinger(int fd, int flag)
+static void
+setLinger(int fd, int flag)
 {
   struct linger linger= { flag, flag * LINGER_SECS };
   setsockopt(fd, SOL_SOCKET, SO_LINGER, (char *)&linger, sizeof(linger));
@@ -272,7 +284,8 @@ static void setLinger(int fd, int flag)
 
 /* answer the hostname for the given IP address */
 
-static const char *addrToName(int netAddress)
+static const char *
+addrToName(int netAddress)
 {
   uint32_t nAddr;
   struct hostent *he;
@@ -287,7 +300,8 @@ static const char *addrToName(int netAddress)
 
 /* answer the IP address for the given hostname */
 
-static int nameToAddr(char *hostName)
+static int
+nameToAddr(char *hostName)
 {
   struct hostent *he;
 
@@ -300,7 +314,8 @@ static int nameToAddr(char *hostName)
 
 /* answer whether the given socket is valid in this net session */
 
-static int socketValid(SocketPtr s)
+static int
+socketValid(SocketPtr s)
 {
   if (s && s->privateSocketPtr && thisNetSession && (s->sessionID == thisNetSession))
 	return true;
@@ -312,10 +327,11 @@ static int socketValid(SocketPtr s)
 		  0 if read would block, or
 		 -1 if the socket is no longer connected */
 
-static int socketReadable(int s)
+static int
+socketReadable(int s)
 {
   char buf[1];
-  int n= recv(s, (void *)buf, 1, MSG_PEEK);
+  int n = recv(s, (void *)buf, 1, MSG_PEEK);
   if (n > 0) return 1;
   if ((n < 0) && (errno == EWOULDBLOCK)) return 0;
   return -1;	/* EOF */
@@ -324,7 +340,8 @@ static int socketReadable(int s)
 
 /* answer whether the socket can be written without blocking */
 
-static int socketWritable(int s)
+static int
+socketWritable(int s)
 {
   struct timeval tv= { 0, 0 };
   fd_set fds;
@@ -336,7 +353,8 @@ static int socketWritable(int s)
 
 /* answer the error condition on the given socket */
 
-static int socketError(int s)
+static int
+socketError(int s)
 {
   int error= 0;
   socklen_t errsz= sizeof(error);
@@ -354,7 +372,8 @@ static int socketError(int s)
    and replace the server socket with the new client socket
    leaving the client socket unhandled
 */
-static void acceptHandler(int fd, void *data, int flags)
+static void
+acceptHandler(int fd, void *data, int flags)
 {
   privateSocketStruct *pss= (privateSocketStruct *)data;
   FPRINTF((stderr, "acceptHandler(%d, %p ,%d)\n", fd, data, flags));
@@ -410,7 +429,8 @@ static void acceptHandler(int fd, void *data, int flags)
 
 /* connect() has completed: check errors, leaving the socket unhandled */
 
-static void connectHandler(int fd, void *data, int flags)
+static void
+connectHandler(int fd, void *data, int flags)
 {
   privateSocketStruct *pss= (privateSocketStruct *)data;
   FPRINTF((stderr, "connectHandler(%d, %p, %d)\n", fd, data, flags));
@@ -444,7 +464,8 @@ static void connectHandler(int fd, void *data, int flags)
 
 /* read or write data transfer is now possible for the socket. */
 
-static void dataHandler(int fd, void *data, int flags)
+static void
+dataHandler(int fd, void *data, int flags)
 {
   privateSocketStruct *pss= (privateSocketStruct *)data;
   FPRINTF((stderr, "dataHandler(%d=%d, %p, %d)\n", fd, pss->s, data, flags));
@@ -484,7 +505,8 @@ static void dataHandler(int fd, void *data, int flags)
 
 /* a non-blocking close() has completed -- finish tidying up */
 
-static void closeHandler(int fd, void *data, int flags)
+static void
+closeHandler(int fd, void *data, int flags)
 {
   privateSocketStruct *pss= (privateSocketStruct *)data;
   aioDisable(fd);

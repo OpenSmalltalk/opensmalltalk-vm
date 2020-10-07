@@ -143,18 +143,19 @@ __shortFileName(const char *full__FILE__name)
 
 	return p ? p + 1 : full__FILE__name;
 }
+
+char *(*handlerNameChain)(aioHandler h) = 0;
+
 static char *
 handlerName(aioHandler h)
 {
+	char *name;
+
 	if (h == undefinedHandler)
 		return "undefinedHandler";
-# ifdef DEBUG_SOCKETS
-	{
-		extern char *socketHandlerName(aioHandler);
-
-		return socketHandlerName(h);
-	}
-# endif
+	if (handlerNameChain
+	 && (name = handlerNameChain(h)))
+		return name;
 	return "***unknown***";
 }
 #endif /* AIO_DEBUG */
