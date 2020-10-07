@@ -105,21 +105,18 @@ endif
 ifeq ($(CONFIGURATION),debug)
 OFLAGS:= -g -O0 -fno-omit-frame-pointer
 DEBUGVM=-DDEBUGVM=1 -DAIO_DEBUG
-INTERPFLAGS:=-DAllocationCheckFiller=0xADD4E55 -D'VM_LABEL(foo)=0'
 else ifeq ($(CONFIGURATION),assert)
 OFLAGS:= -g -O1 -fno-omit-frame-pointer
 DEBUGVM=-DDEBUGVM=0
-INTERPFLAGS:=-DAllocationCheckFiller=0xADD4E55 -D'VM_LABEL(foo)=0'
 else # default CONFIGURATION=product
 OFLAGS:= -g -Os
 DEBUGVM=-DDEBUGVM=0 -DNDEBUG=1 # Define NDEBUG for production to exclude asserts
-INTERPFLAGS:=-D'VM_LABEL(foo)=0'
 endif
 
 TZ:=$(shell date +%Z)
 DEFS:=	$(COGDEFS) -DUSE_GLOBAL_STRUCT=0 -DNO_ISNAN=1 \
 		-DUSE_INLINE_MEMORY_ACCESSORS -D'TZ="$(TZ)"' \
-		$(INTERPFLAGS)
+		-DHAVE_CONFIG_H=1
 
 XDEFS:=	-DSQUEAK_BUILTIN_PLUGIN
 CFLAGS:= $(OFLAGS) $(COGDEFS) $(DEBUGVM) $(DEFS) $(XDEFS)

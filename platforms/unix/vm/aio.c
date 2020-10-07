@@ -32,6 +32,7 @@
 
 #include "interp.h" /* For COGVM define */
 #include "sqaio.h"
+#include "sqAssert.h"
 
 #ifdef HAVE_CONFIG_H
 
@@ -46,8 +47,9 @@
     extern int gethostname();
 # endif
 
-# include <stdio.h>
 # include <signal.h>
+# include <stdio.h>
+# include <string.h>
 # include <errno.h>
 # include <fcntl.h>
 # include <sys/ioctl.h>
@@ -87,11 +89,12 @@
 
 #else /* !HAVE_CONFIG_H -- assume lowest common demoninator */
 
-# include <stdio.h>
-# include <stdlib.h>
-# include <unistd.h>
 # include <errno.h>
 # include <signal.h>
+# include <stdio.h>
+# include <stdlib.h>
+# include <string.h>
+# include <unistd.h>
 # include <sys/types.h>
 # include <sys/time.h>
 # include <sys/select.h>
@@ -106,11 +109,7 @@ extern void addIdleUsecs(long idleUsecs);
 #if defined(AIO_DEBUG)
 long	aioLastTick = 0;
 long	aioThisTick = 0;
-# if AIO_DEBUG
-long	aioDebugLogging = 1;
-# else
 long	aioDebugLogging = 0;
-# endif
 #endif
 
 #define _DO_FLAG_TYPE()	do { _DO(AIO_R, rd) _DO(AIO_W, wr) _DO(AIO_X, ex) } while (0)
@@ -290,9 +289,20 @@ aioPoll(long microSeconds)
 	int	fd;
 	fd_set	rd, wr, ex;
 	unsigned long long us;
+#if AIO_DEBUG
+	struct  sigaction current_sigio_action;
+	extern void forceInterruptCheck(int);	/* not really, but hey */
+#endif
 
 #if defined(AIO_DEBUG) && AIO_DEBUG >= 2
 	FPRINTF((stderr, "aioPoll(%ld)\n", microSeconds));
+#endif
+
+	// check that our signal handler is in place.
+	// If it isn't, things aren't right.
+#if AIO_DEBUG
+	sigaction(SIGIO, NULL, &current_sigio_action);
+	assert(current_sigio_action.sa_handler == forceInterruptCheck);
 #endif
 	DO_TICK(SHOULD_TICK());
 

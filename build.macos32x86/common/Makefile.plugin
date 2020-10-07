@@ -37,7 +37,7 @@ DEBUGVM=-DDEBUGVM=1 -DAIO_DEBUG
 BUILD:=builddbg
 endif
 
-CFLAGS:= $(CFLAGS) $(OFLAGS) $(COGDEFS) $(DEBUGVM) $(XDEFS)
+CFLAGS:= -DHAVE_CONFIG_H=1 $(CFLAGS) $(OFLAGS) $(COGDEFS) $(DEBUGVM) $(XDEFS)
 
 # The following are the four key locations (set via invocation):
 # PLUGINSRCDIR: Where is the root of the src/plugins source tree?
