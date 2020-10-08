@@ -4057,7 +4057,7 @@ StackInterpreter >> cannotAssign: resultObj to: targetObj withIndex: index [
 	<inline: true> "because of use of normalSend..."
 	self internalPush: targetObj.
 	self internalPush: resultObj.
-	self internalPush: (self integerObjectOf: index + 1).
+	self internalPush: (objectMemory integerObjectOf: index + 1).
 	messageSelector := self splObj: SelectorAttemptToAssign.
 	argumentCount := 2.
 	^ self normalSend
@@ -8916,7 +8916,6 @@ StackInterpreter >> internalStackValue: offset put: aValue [
 { #category : #utilities }
 StackInterpreter >> internalizeIPandSP [
 	"Copy the instruction, stack and frame pointers to local variables for rapid access within the interpret loop."
-
 	localIP := self pointerForOop: instructionPointer.
 	localSP := self pointerForOop: stackPointer.
 	localFP := self pointerForOop: framePointer.
@@ -9579,6 +9578,7 @@ StackInterpreter >> jumplfTrueBy: offset [
 StackInterpreter >> justActivateNewMethod: mustBeInterpreterFrame [
 	| methodHeader numArgs numTemps rcvr |
 	<inline: true>
+	"Create the frame for the method activation"
 	methodHeader := objectMemory methodHeaderOf: newMethod.
 	numTemps := self temporaryCountOfMethodHeader: methodHeader.
 	numArgs := self argumentCountOfMethodHeader: methodHeader.
@@ -16575,6 +16575,11 @@ StackInterpreter >> ownVM: threadIndexAndFlags [
 	^objectMemory integerObjectOf: argumentCount
 ]
 
+{ #category : #'as yet unclassified' }
+StackInterpreter >> page: aCogStackPage [ 
+	self shouldBeImplemented.
+]
+
 { #category : #accessing }
 StackInterpreter >> pendingFinalizationSignals [
 	<doNotGenerate>
@@ -18246,6 +18251,18 @@ StackInterpreter >> processesInProcessListDo: aBlock [
 				  (self isLiveContext: ctxt) ifTrue:
 					[ aBlock value: proc ] ].
 			 proc := objectMemory fetchPointer: NextLinkIndex ofObject: proc ]].
+]
+
+{ #category : #'as yet unclassified' }
+StackInterpreter >> profileMethod [
+	<doNotGenerate>
+	^ profileMethod
+]
+
+{ #category : #'as yet unclassified' }
+StackInterpreter >> profileSemaphore [
+	<doNotGenerate>
+	^ profileSemaphore
 ]
 
 { #category : #'internal interpreter access' }
@@ -20779,6 +20796,11 @@ StackInterpreter >> stackObjectValue: offset [
 	^oop
 ]
 
+{ #category : #'as yet unclassified' }
+StackInterpreter >> stackPage: aCogStackPage [ 
+	stackPage := aCogStackPage
+]
+
 { #category : #'stack pages' }
 StackInterpreter >> stackPageByteSize [
 	"Answer a page size that is a power-of-two and contains a useful number of frames.
@@ -22173,16 +22195,13 @@ StackInterpreter >> writeImageFileIOSimulation [
 	 c.f. writeImageFileIO.  The game below is to maintain 64-bit alignment
 	 for all putLong:toFile: occurrences."
 	<doNotGenerate>
-	| headerSize file |
+	| headerSize |
 	headerSize := objectMemory wordSize = 4 ifTrue: [64] ifFalse: [128].
 
-	(file := FileStream fileNamed: self imageName) ifNil:
-		[self primitiveFail.
-		 ^nil].
-	[file binary.
-	 self putWord32: self imageFormatVersion toFile: file.
-	 self putWord32: headerSize toFile: file.
-	 {
+	self imageName asFileReference binaryWriteStreamDo: [ :file |
+			 self putWord32: self imageFormatVersion toFile: file.
+			 self putWord32: headerSize toFile: file.
+			{
 		objectMemory imageSizeToWrite.
 		objectMemory baseAddressOfImage.
 		objectMemory specialObjectsOop.
@@ -22190,7 +22209,7 @@ StackInterpreter >> writeImageFileIOSimulation [
 		self ioScreenSize.
 		self getImageHeaderFlags
 	 }
-		do: [:long | self putLong: long toFile: file].
+		do: [:long | self putLong: long toFile: file].		
 
 	 self putWord32: (extraVMMemory ifNil: [0]) toFile: file.
 	 {	desiredNumStackPages. self unknownShortOrCodeSizeInKs } do:
@@ -22233,8 +22252,8 @@ StackInterpreter >> writeImageFileIOSimulation [
 						putLong: (objectMemory memory at: index)
 						toFile: file]].
 	
-	 self success: true]
-		 ensure: [file ifNotNil: [file close]]
+	 self success: true
+	]
 ]
 
 { #category : #'stack pages' }

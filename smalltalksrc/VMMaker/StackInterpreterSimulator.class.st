@@ -1727,6 +1727,11 @@ StackInterpreterSimulator >> pluginEntryFor: mapIndex [
 								ifFalse: [mapIndex])
 ]
 
+{ #category : #'as yet unclassified' }
+StackInterpreterSimulator >> pluginList: aCollection [ 
+	pluginList := aCollection
+]
+
 { #category : #'object memory support' }
 StackInterpreterSimulator >> preBecomeAction [
 	"((objectMemory instVarNamed: 'becomeEffectsFlags') anyMask: BecameCompiledMethodFlag) ifTrue:

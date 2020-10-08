@@ -43,20 +43,20 @@ Configuring of the frame.
 "
 Class {
 	#name : #VMFrameBuilder,
-	#superclass : #Object,
+	#superclass : #VMAbstractBuilder,
 	#instVars : [
 		'method',
 		'context',
 		'receiver',
 		'temps',
 		'stack',
-		'memory',
-		'interpreter',
 		'instructionPointer',
 		'callerFrame',
 		'flags',
 		'previousFrameArgsSize',
-		'argumentSize'
+		'argumentSize',
+		'myFramePointer',
+		'myStackPointer'
 	],
 	#category : #'VMMakerTests-Builders'
 }
@@ -122,6 +122,11 @@ VMFrameBuilder >> flags: anObject [
 	flags := anObject
 ]
 
+{ #category : #accessing }
+VMFrameBuilder >> framePointer [
+	^ myFramePointer
+]
+
 { #category : #inspect }
 VMFrameBuilder >> gtInspectorItemsIn: composite [
 	<gtInspectorPresentationOrder: 1>
@@ -174,14 +179,24 @@ VMFrameBuilder >> instructionPointer [
 	^ instructionPointer
 ]
 
-{ #category : #accessing }
-VMFrameBuilder >> interpreter [
-	^ interpreter
+{ #category : #context }
+VMFrameBuilder >> isMarried [
+	| contextOop |
+	contextOop := interpreter frameContext: myFramePointer.
+	^ contextOop = memory nilObject 
+		ifTrue: [ false ]
+		ifFalse: [ interpreter isStillMarriedContext: contextOop ]
 ]
 
-{ #category : #accessing }
-VMFrameBuilder >> interpreter: anObject [
-	interpreter := anObject
+{ #category : #context }
+VMFrameBuilder >> isSingle [
+	| contextOop |
+	contextOop := interpreter frameContext: myFramePointer.
+	^ contextOop = memory nilObject 
+		ifTrue: [ true ]
+		ifFalse: [ 
+			"this means that it was married, and that the context stack entry wasn't cleared"
+			interpreter isSingleContext: contextOop ]
 ]
 
 { #category : #testing }
@@ -189,14 +204,9 @@ VMFrameBuilder >> isSuspended [
 	^ instructionPointer isNil
 ]
 
-{ #category : #accessing }
-VMFrameBuilder >> memory [
-	^ memory
-]
-
-{ #category : #accessing }
-VMFrameBuilder >> memory: anObject [
-	memory := anObject
+{ #category : #context }
+VMFrameBuilder >> marryToContext [
+	interpreter ensureFrameIsMarried: myFramePointer SP: myStackPointer
 ]
 
 { #category : #accessing }
@@ -205,8 +215,8 @@ VMFrameBuilder >> method [
 ]
 
 { #category : #accessing }
-VMFrameBuilder >> method: anObject [
-	method := anObject
+VMFrameBuilder >> method: anOop [
+	method := anOop
 ]
 
 { #category : #accessing }
@@ -260,7 +270,9 @@ VMFrameBuilder >> pushYourself [
 				
 	instructionPointer ifNotNil: [ interpreter push: instructionPointer ].
 	
-	^ interpreter framePointer
+	myStackPointer:= interpreter stackPointer.
+	myFramePointer := interpreter framePointer.
+	^ myFramePointer
 ]
 
 { #category : #accessing }
@@ -283,15 +295,14 @@ VMFrameBuilder >> stack: anObject [
 	stack := anObject
 ]
 
+{ #category : #accesing }
+VMFrameBuilder >> stackPointer [
+	^ myStackPointer
+]
+
 { #category : #accessing }
 VMFrameBuilder >> tempAt: anIndex put: anOop [
-	"convinience method to put a temporary at a specific place
-	No need to take care of the size of the collection, I'm taking care of it!"
-	temps size > anIndex ifTrue: [ ^ temps at: anIndex + 1 put: anOop ].
-	
-	temps size to: anIndex do: [ :i | temps add: memory nilObject ].
-	temps at: anIndex + 1 put: anOop
-	
+	self collection: temps at: anIndex put: anOop
 ]
 
 { #category : #accessing }
