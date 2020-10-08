@@ -614,7 +614,7 @@ VMJittedGeneralPrimitiveTest >> testPrimitiveMultiplyFailsWhenNegativeOverflow [
 		endInstruction := cogit Stop ].
 
 	self
-		prepareStackForSendReceiver: (memory integerObjectOf: SmallInteger maxVal)
+		prepareStackForSendReceiver:  (memory integerObjectOf: memory minSmallInteger)
 		arguments: { (memory integerObjectOf: -2) }.
 	
 	self runFrom: primitiveAddress until: endInstruction address.
@@ -633,7 +633,7 @@ VMJittedGeneralPrimitiveTest >> testPrimitiveMultiplyFailsWhenPositiveOverflow [
 		endInstruction := cogit Stop ].
 
 	self
-		prepareStackForSendReceiver: (memory integerObjectOf: SmallInteger maxVal)
+		prepareStackForSendReceiver: (memory integerObjectOf: memory maxSmallInteger)
 		arguments: { (memory integerObjectOf: 2) }.
 	
 	self runFrom: primitiveAddress until: endInstruction address.
