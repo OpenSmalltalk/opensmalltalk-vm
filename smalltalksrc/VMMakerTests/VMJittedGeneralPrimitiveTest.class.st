@@ -571,6 +571,126 @@ VMJittedGeneralPrimitiveTest >> testPrimitiveAddReturnsAnSmallIntegerWhenNegativ
 	self assert: self machineSimulator receiverRegisterValue equals: (memory integerObjectOf: -94).
 ]
 
+{ #category : #'tests - primitiveBitAnd/Or' }
+VMJittedGeneralPrimitiveTest >> testPrimitiveBitAndDoesCompileForSmallIntegerReceiver [
+	
+	| result |
+	
+	cogit receiverTags: memory smallIntegerTag.
+	
+	self compile: [ 
+		result := cogit objectRepresentation genPrimitiveBitAnd ].
+
+	self assert: result equals: CompletePrimitive
+]
+
+{ #category : #'tests - primitiveBitAnd/Or' }
+VMJittedGeneralPrimitiveTest >> testPrimitiveBitAndDoesNotCompileForNonSmallIntegerReceiver [
+	
+	| result |
+	
+	cogit receiverTags: memory smallIntegerTag + 1.
+	
+	self compile: [ 
+		result := cogit objectRepresentation genPrimitiveBitAnd ].
+
+	self assert: result equals: UnimplementedPrimitive
+]
+
+{ #category : #'tests - primitiveBitAnd/Or' }
+VMJittedGeneralPrimitiveTest >> testPrimitiveBitAndShouldFailWithNonSmallIntegerArgument [
+	
+	| primitiveAddress endInstruction |
+	
+	cogit receiverTags: memory smallIntegerTag.
+	
+	primitiveAddress := self compile: [ 
+		cogit objectRepresentation genPrimitiveBitAnd.
+		"If the primitive fails it continues, so we need to have an instruction to detect the end"
+		endInstruction := cogit Stop ].
+
+	self prepareStackForSendReceiver: (memory integerObjectOf: 1) arguments: {memory nilObject}.
+	self runFrom: primitiveAddress until: endInstruction address.
+]
+
+{ #category : #'tests - primitiveBitAnd/Or' }
+VMJittedGeneralPrimitiveTest >> testPrimitiveBitAndShouldPreserveSmallIntegerTag [
+	
+	| primitiveAddress endInstruction |
+	
+	cogit receiverTags: memory smallIntegerTag.
+	
+	primitiveAddress := self compile: [ 
+		cogit objectRepresentation genPrimitiveBitAnd.
+		"If the primitive fails it continues, so we need to have an instruction to detect the end"
+		endInstruction := cogit Stop ].
+
+	self prepareStackForSendReceiver: (memory integerObjectOf: 1) arguments: {(memory integerObjectOf: 3)}.
+	self runUntilReturn.
+	
+	self assert: machineSimulator receiverRegisterValue equals: (memory integerObjectOf: 1)
+]
+
+{ #category : #'tests - primitiveBitAnd/Or' }
+VMJittedGeneralPrimitiveTest >> testPrimitiveBitOrDoesCompileForSmallIntegerReceiver [
+	
+	| result |
+	
+	cogit receiverTags: memory smallIntegerTag.
+	
+	self compile: [ 
+		result := cogit objectRepresentation genPrimitiveBitOr ].
+
+	self assert: result equals: CompletePrimitive
+]
+
+{ #category : #'tests - primitiveBitAnd/Or' }
+VMJittedGeneralPrimitiveTest >> testPrimitiveBitOrDoesNotCompileForNonSmallIntegerReceiver [
+	
+	| result |
+	
+	cogit receiverTags: memory smallIntegerTag + 1.
+	
+	self compile: [ 
+		result := cogit objectRepresentation genPrimitiveBitOr ].
+
+	self assert: result equals: UnimplementedPrimitive
+]
+
+{ #category : #'tests - primitiveBitAnd/Or' }
+VMJittedGeneralPrimitiveTest >> testPrimitiveBitOrShouldFailWithNonSmallIntegerArgument [
+	
+	| primitiveAddress endInstruction |
+	
+	cogit receiverTags: memory smallIntegerTag.
+	
+	primitiveAddress := self compile: [ 
+		cogit objectRepresentation genPrimitiveBitOr.
+		"If the primitive fails it continues, so we need to have an instruction to detect the end"
+		endInstruction := cogit Stop ].
+
+	self prepareStackForSendReceiver: (memory integerObjectOf: 1) arguments: {memory nilObject}.
+	self runFrom: primitiveAddress until: endInstruction address.
+]
+
+{ #category : #'tests - primitiveBitAnd/Or' }
+VMJittedGeneralPrimitiveTest >> testPrimitiveBitOrShouldPreserveSmallIntegerTag [
+	
+	| primitiveAddress endInstruction |
+	
+	cogit receiverTags: memory smallIntegerTag.
+	
+	primitiveAddress := self compile: [ 
+		cogit objectRepresentation genPrimitiveBitOr.
+		"If the primitive fails it continues, so we need to have an instruction to detect the end"
+		endInstruction := cogit Stop ].
+
+	self prepareStackForSendReceiver: (memory integerObjectOf: 1) arguments: {(memory integerObjectOf: 3)}.
+	self runUntilReturn.
+	
+	self assert: machineSimulator receiverRegisterValue equals: (memory integerObjectOf: 3)
+]
+
 { #category : #'tests - primitiveMultiply' }
 VMJittedGeneralPrimitiveTest >> testPrimitiveMultiplyDoesNotCompileIfReceiverTagIsNotSmallInteger [
 	
