@@ -3,19 +3,19 @@
  *   Copyright (C) 1996-2004 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
  *   All rights reserved.
- *   
+ *
  *   This file is part of Unix Squeak.
- * 
+ *
  *   Permission is hereby granted, free of charge, to any person obtaining a
  *   copy of this software and associated documentation files (the "Software"),
  *   to deal in the Software without restriction, including without limitation
  *   the rights to use, copy, modify, merge, publish, distribute, sublicense,
  *   and/or sell copies of the Software, and to permit persons to whom the
  *   Software is furnished to do so, subject to the following conditions:
- * 
+ *
  *   The above copyright notice and this permission notice shall be included in
  *   all copies or substantial portions of the Software.
- * 
+ *
  *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -101,6 +101,9 @@ extern unsigned long long ioUTCMicrosecondsNow(void);
 #ifdef AIO_DEBUG
 extern char *(*handlerNameChain)(aioHandler h);
 extern const char *aioEnableStatusName(int fd);
+extern const char *aioMaskNames[8];
+# define aioMaskName(mask) (aioMaskNames[(mask) & AIO_RWX])
+
 
 # ifdef ACORN
 #   define FPRINTF(s) \

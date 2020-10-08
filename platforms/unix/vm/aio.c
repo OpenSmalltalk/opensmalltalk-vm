@@ -1,21 +1,21 @@
 /* aio.c -- asynchronous file i/o
- * 
+ *
  *   Copyright (C) 1996-2006 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
  *   All rights reserved.
- *   
+ *
  *   This file is part of Unix Squeak.
- * 
+ *
  *   Permission is hereby granted, free of charge, to any person obtaining a
  *   copy of this software and associated documentation files (the "Software"),
  *   to deal in the Software without restriction, including without limitation
  *   the rights to use, copy, modify, merge, publish, distribute, sublicense,
  *   and/or sell copies of the Software, and to permit persons to whom the
  *   Software is furnished to do so, subject to the following conditions:
- * 
+ *
  *   The above copyright notice and this permission notice shall be included in
  *   all copies or substantial portions of the Software.
- * 
+ *
  *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -26,7 +26,7 @@
  */
 
 /* Authors: Ian.Piumarta@squeakland.org, eliot.miranda@gmail.com
- * 
+ *
  * Last edited: Tue Mar 29 13:06:00 PDT 2016
  */
 
@@ -128,7 +128,7 @@ static fd_set exMask;		/* handle exception	 */
 static fd_set xdMask;		/* external descriptor	 */
 
 
-static void 
+static void
 undefinedHandler(int fd, void *clientData, int flags)
 {
 	fprintf(stderr, "undefined handler called (fd %d, flags %x)\n", fd, flags);
@@ -189,7 +189,7 @@ static stack_t signal_stack;
 
 static int stderrIsAFile = 0; // for pollpip to avoid cluttering logs
 
-void 
+void
 aioInit(void)
 {
 	extern void forceInterruptCheck(int);	/* not really, but hey */
@@ -236,7 +236,7 @@ aioInit(void)
 
 /* disable handlers and close all handled non-exteral descriptors */
 
-void 
+void
 aioFini(void)
 {
 	int	fd;
@@ -289,7 +289,7 @@ do if ((bool) && !(++tickCount % TICKS_PER_CHAR)) {				\
 	pollpipOutput = 1;											\
 } while (0)
 
-long 
+long
 aioPoll(long microSeconds)
 {
 	int	fd;
@@ -376,7 +376,7 @@ aioPoll(long microSeconds)
  * select() if timeout too small
  */
 
-long 
+long
 aioSleepForUsecs(long microSeconds)
 {
 	/* This makes no sense at all.  This simply increases latency.  It calls
@@ -405,7 +405,7 @@ aioSleepForUsecs(long microSeconds)
 
 /* enable asynchronous notification for a descriptor */
 
-void 
+void
 aioEnable(int fd, void *data, int flags)
 {
 	if (fd < 0) {
@@ -506,15 +506,19 @@ aioEnableStatusName(int fd)
 	return "!fcntl(fd,F_GETFL,0) !!";
 # endif
 }
+
+const char *aioMaskNames[]
+= { "0", "AIO_X", "AIO_R", "AIO_RX", "AIO_W", "AIO_WX", "AIO_RW", "AIO_RWX" };
+
 #endif // AIO_DEBUG
 
 
 /* install/change the handler for a descriptor */
 
-void 
+void
 aioHandle(int fd, aioHandler handlerFn, int mask)
 {
-	FPRINTF((stderr, "aioHandle(%d, %s, %d)\n", fd, handlerName(handlerFn), mask));
+	FPRINTF((stderr, "aioHandle(%d, %s, %d/%s)\n", fd, handlerName(handlerFn), mask, aioMaskName(mask)));
 	if (fd < 0) {
 		FPRINTF((stderr, "aioHandle(%d): IGNORED\n", fd));
 		return;
@@ -531,7 +535,7 @@ aioHandle(int fd, aioHandler handlerFn, int mask)
 
 /* temporarily suspend asynchronous notification for a descriptor */
 
-void 
+void
 aioSuspend(int fd, int mask)
 {
 	if (fd < 0) {
@@ -551,7 +555,7 @@ aioSuspend(int fd, int mask)
 
 /* definitively disable asynchronous notification for a descriptor */
 
-void 
+void
 aioDisable(int fd)
 {
 	if (fd < 0) {

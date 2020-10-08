@@ -1,21 +1,21 @@
 /* sqUnixSocket.c -- Unix socket support
- * 
+ *
  *   Copyright (C) 1996-2007 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
  *   All rights reserved.
- *   
+ *
  *   This file is part of Unix Squeak.
- * 
+ *
  *   Permission is hereby granted, free of charge, to any person obtaining a copy
  *   of this software and associated documentation files (the "Software"), to deal
  *   in the Software without restriction, including without limitation the rights
  *   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  *   copies of the Software, and to permit persons to whom the Software is
  *   furnished to do so, subject to the following conditions:
- * 
+ *
  *   The above copyright notice and this permission notice shall be included in
  *   all copies or substantial portions of the Software.
- * 
+ *
  *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -26,17 +26,17 @@
  */
 
 /* Author: Ian.Piumarta@inria.fr
- * 
+ *
  * Support for BSD-style "accept" primitives contributed by:
  *	Lex Spoon <lex@cc.gatech.edu>
  *
  * Raw Socket Support by Andreas Raab, RIP.
  *
  * Fix to option parsing in sqSocketSetOptions... by Eliot Miranda, 2013/4/12
- * 
+ *
  * Notes:
  * 	Sockets are completely asynchronous, but the resolver is still synchronous.
- * 
+ *
  * BUGS:
  *	Now that the image has real UDP primitives, the TCP/UDP duality in
  *	many of the connection-oriented functions should be removed and cremated.
@@ -98,7 +98,7 @@
 #endif
 # include <errno.h>
 # include <unistd.h>
-  
+
 #endif /* !ACORN */
 
 /* Solaris sometimes fails to define this in netdb.h */
@@ -345,7 +345,7 @@ socketWritable(int s)
 {
   struct timeval tv= { 0, 0 };
   fd_set fds;
-  
+
   FD_ZERO(&fds);
   FD_SET(s, &fds);
   return select(s+1, 0, &fds, 0, &tv) > 0;
@@ -468,7 +468,8 @@ static void
 dataHandler(int fd, void *data, int flags)
 {
   privateSocketStruct *pss= (privateSocketStruct *)data;
-  FPRINTF((stderr, "dataHandler(%d=%d, %p, %d)\n", fd, pss->s, data, flags));
+  FPRINTF((stderr, "dataHandler(%d=%d, %p, %d/%s)\n",
+			fd, pss->s, data, flags, aioMaskName(flags)));
 
   if (!pss)
 	{
@@ -480,15 +481,14 @@ dataHandler(int fd, void *data, int flags)
 	{
 	  int n= socketReadable(fd);
 	  if (n == 0)
-		{
 		  fprintf(stderr, "dataHandler: selected socket fd=%d flags=0x%x would block (why?)\n", fd, flags);
-		}
-	  if (n != 1)
-		{
+	  if (n < 0) {
 		  pss->sockError= socketError(fd);
 		  pss->sockState= OtherEndClosed;
-		}
+	  }
+	  notify(pss, READ_NOTIFY);
 	}
+  if (flags & AIO_W) notify(pss, WRITE_NOTIFY);
   if (flags & AIO_X)
 	{
 	  /* assume out-of-band data has arrived */
@@ -498,8 +498,6 @@ dataHandler(int fd, void *data, int flags)
 	  int n= recv(fd, (void *)buf, 1, MSG_OOB);
 	  if (n == 1) fprintf(stderr, "socket: received OOB data: %02x\n", buf[0]);
 	}
-  if (flags & AIO_R) notify(pss, READ_NOTIFY);
-  if (flags & AIO_W) notify(pss, WRITE_NOTIFY);
 }
 
 
@@ -603,7 +601,7 @@ sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(Soc
 	}
   setsockopt(newSocket, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one));
 #if defined(SO_NOSIGPIPE)
-  setsockopt(newSocket, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one));
+  setsockopt(newSocket, SOL_SOCKET, SO_NOSIGPIPE, (char *)&one, sizeof(one));
 #endif
   /* private socket structure */
   pss= (privateSocketStruct *)calloc(1, sizeof(privateSocketStruct));
@@ -974,7 +972,7 @@ sqSocketAbortConnection(SocketPtr s)
 }
 
 
-/* Release the resources associated with this socket. 
+/* Release the resources associated with this socket.
    If a connection is open, abort it. */
 
 void
@@ -1195,7 +1193,7 @@ sqSocketReceiveDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
 
 /* write data to the socket s from buf for at most bufSize bytes.
    answer the number of bytes actually written.
-*/ 
+*/
 sqInt
 sqSocketSendDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
 {
@@ -1248,7 +1246,7 @@ sqSocketSendDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
 
 /* read data from the UDP socket s into buf for at most bufSize bytes.
    answer the number of bytes actually read.
-*/ 
+*/
 sqInt
 sqSocketReceiveUDPDataBufCountaddressportmoreFlag(SocketPtr s, char *buf, sqInt bufSize,  sqInt *address,  sqInt *port, sqInt *moreFlag)
 {
@@ -1259,7 +1257,7 @@ sqSocketReceiveUDPDataBufCountaddressportmoreFlag(SocketPtr s, char *buf, sqInt 
 
 	  FPRINTF((stderr, "recvFrom(%d)\n", SOCKET(s)));
 	  memset(&saddr, 0, sizeof(saddr));
-	  { 
+	  {
 		int nread= recvfrom(SOCKET(s), buf, bufSize, 0, (struct sockaddr *)&saddr, &addrSize);
 		if (nread >= 0)
 		  {
@@ -1280,7 +1278,7 @@ sqSocketReceiveUDPDataBufCountaddressportmoreFlag(SocketPtr s, char *buf, sqInt 
 
 /* write data to the UDP socket s from buf for at most bufSize bytes.
  * answer the number of bytes actually written.
- */ 
+ */
 sqInt
 sqSockettoHostportSendDataBufCount(SocketPtr s, sqInt address, sqInt port, char *buf, sqInt bufSize)
 {
@@ -1297,7 +1295,7 @@ sqSockettoHostportSendDataBufCount(SocketPtr s, sqInt address, sqInt port, char 
 		int nsent= sendto(SOCKET(s), buf, bufSize, 0, (struct sockaddr *)&saddr, sizeof(saddr));
 		if (nsent >= 0)
 		  return nsent;
-		
+
 		if (errno == EWOULDBLOCK)	/* asynchronous write in progress */
 		  return 0;
 		FPRINTF((stderr, "UDP send failed\n"));
@@ -1368,7 +1366,13 @@ static socketOption socketOptions[]= {
   { "TCP_MAXSEG",			SOL_TCP,	TCP_MAXSEG },
   { "TCP_NODELAY",			SOL_TCP,	TCP_NODELAY },
 #ifdef TCP_CORK
-  { "TCP_CORK",		        SOL_TCP,	TCP_CORK },
+  { "TCP_CORK",				SOL_TCP,	TCP_CORK },
+#endif
+#ifdef TCP_NOPUSH
+  { "TCP_NOPUSH",			SOL_TCP,	TCP_NOPUSH },
+# ifndef TCP_CORK
+  { "TCP_CORK",				SOL_TCP,	TCP_NOPUSH },
+# endif
 #endif
 #ifdef SO_REUSEPORT
   { "SO_REUSEPORT",			SOL_SOCKET,	SO_REUSEPORT },
@@ -1390,20 +1394,17 @@ static socketOption socketOptions[]= {
 };
 
 
-static socketOption *findOption(char *name, size_t nameSize)
+static inline socketOption *
+findOption(char *name, size_t nameSize)
 {
-  if (nameSize < 32)
-	{
-	  socketOption *opt= 0;
-	  char buf[32];
-	  buf[nameSize]= '\0';
-	  strncpy(buf, name, nameSize);
-	  for (opt= socketOptions; opt->name != 0; ++opt)
-		if (!strcmp(buf, opt->name))
-		  return opt;
-	  fprintf(stderr, "SocketPlugin: ignoring unknown option '%s'\n", buf);
-	}
-  return 0;
+	socketOption *opt;
+	for (opt = socketOptions; opt->name; ++opt)
+		if (!strncmp(name, opt->name, nameSize)
+		 && !opt->name[nameSize])
+			return opt;
+	fprintf(stderr, "SocketPlugin: ignoring unknown option '%.*s'\n",
+			(int)nameSize, name);
+	return 0;
 }
 
 
@@ -1441,7 +1442,7 @@ sqSocketSetOptionsoptionNameStartoptionNameSizeoptionValueStartoptionValueSizere
 			  optionValueSize= sizeof(val);
 			}
 		  FPRINTF((stderr,"setsockopt(%d,%.*s)\n",
-					SOCKET(s), optionNameSize, optionName));
+					SOCKET(s), (int)optionNameSize, optionName));
 		  if ((setsockopt(PSP(s)->s, opt->optlevel, opt->optname,
 						  (const void *)buf, optionValueSize)) < 0)
 			{
@@ -1601,10 +1602,10 @@ sqResolverLocalAddress(void)
 	}
 
 
-	for (ifa = ifaddr; ifa; ifa = ifa->ifa_next) 
+	for (ifa = ifaddr; ifa; ifa = ifa->ifa_next)
 	{
 		if (!ifa->ifa_addr)
-			continue;  
+			continue;
 
 		// Skip interfaces which
 		//  - are not running (IFF_UP),
@@ -2349,7 +2350,7 @@ sqSocketSendUDPToSizeDataBufCount(SocketPtr s, char *addr, sqInt addrSize, char 
 	  int nsent= sendto(SOCKET(s), buf, bufSize, 0, socketAddress(addr), addrSize - AddressHeaderSize);
 	  if (nsent >= 0)
 		return nsent;
-		
+
 	  if (errno == EWOULDBLOCK)	/* asynchronous write in progress */
 		return 0;
 
