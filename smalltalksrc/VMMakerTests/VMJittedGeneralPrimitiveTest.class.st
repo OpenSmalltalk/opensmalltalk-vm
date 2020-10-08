@@ -691,6 +691,150 @@ VMJittedGeneralPrimitiveTest >> testPrimitiveBitOrShouldPreserveSmallIntegerTag 
 	self assert: machineSimulator receiverRegisterValue equals: (memory integerObjectOf: 3)
 ]
 
+{ #category : #'tests - primitiveBitShift' }
+VMJittedGeneralPrimitiveTest >> testPrimitiveBitShiftDoesCompileForSmallIntegerReceiver [
+	
+	| result |
+	
+	cogit receiverTags: memory smallIntegerTag.
+	
+	self compile: [ 
+		result := cogit objectRepresentation genPrimitiveBitShift ].
+
+	self assert: result equals: CompletePrimitive
+]
+
+{ #category : #'tests - primitiveBitShift' }
+VMJittedGeneralPrimitiveTest >> testPrimitiveBitShiftDoesNotCompileForNonSmallIntegerReceiver [
+	
+	| result |
+	
+	cogit receiverTags: memory smallIntegerTag + 1.
+	
+	self compile: [ 
+		result := cogit objectRepresentation genPrimitiveBitShift ].
+
+	self assert: result equals: UnimplementedPrimitive
+]
+
+{ #category : #'tests - primitiveBitShift' }
+VMJittedGeneralPrimitiveTest >> testPrimitiveBitShiftShouldFailWithArgumentBiggerThanSmallIntegerBits [
+	
+	| primitiveAddress endInstruction |
+	
+	cogit receiverTags: memory smallIntegerTag.
+	
+	primitiveAddress := self compile: [ 
+		cogit objectRepresentation genPrimitiveBitShift.
+		"If the primitive fails it continues, so we need to have an instruction to detect the end"
+		endInstruction := cogit Stop ].
+
+	self
+		prepareStackForSendReceiver: (memory integerObjectOf: 1)
+		arguments: {memory integerObjectOf: memory numSmallIntegerBits + 1}.
+	self runFrom: primitiveAddress until: endInstruction address.
+]
+
+{ #category : #'tests - primitiveBitShift' }
+VMJittedGeneralPrimitiveTest >> testPrimitiveBitShiftShouldFailWithNonSmallIntegerArgument [
+	
+	| primitiveAddress endInstruction |
+	
+	cogit receiverTags: memory smallIntegerTag.
+	
+	primitiveAddress := self compile: [ 
+		cogit objectRepresentation genPrimitiveBitShift.
+		"If the primitive fails it continues, so we need to have an instruction to detect the end"
+		endInstruction := cogit Stop ].
+
+	self prepareStackForSendReceiver: (memory integerObjectOf: 1) arguments: {memory nilObject}.
+	self runFrom: primitiveAddress until: endInstruction address.
+]
+
+{ #category : #'tests - primitiveBitShift' }
+VMJittedGeneralPrimitiveTest >> testPrimitiveBitShiftShouldFailWithOverflow [
+	
+	| primitiveAddress endInstruction |
+	
+	cogit receiverTags: memory smallIntegerTag.
+	
+	primitiveAddress := self compile: [ 
+		cogit objectRepresentation genPrimitiveBitShift.
+		"If the primitive fails it continues, so we need to have an instruction to detect the end"
+		endInstruction := cogit Stop ].
+
+	self
+		prepareStackForSendReceiver: (memory integerObjectOf: memory maxSmallInteger)
+		arguments: {memory integerObjectOf: 1}.
+	self runFrom: primitiveAddress until: endInstruction address.
+]
+
+{ #category : #'tests - primitiveBitShift' }
+VMJittedGeneralPrimitiveTest >> testPrimitiveBitShiftShouldReturnSmallInteger [
+	
+	| primitiveAddress endInstruction |
+	
+	cogit receiverTags: memory smallIntegerTag.
+	
+	primitiveAddress := self compile: [ 
+		cogit objectRepresentation genPrimitiveBitShift.
+		"If the primitive fails it continues, so we need to have an instruction to detect the end"
+		endInstruction := cogit Stop ].
+
+	self
+		prepareStackForSendReceiver: (memory integerObjectOf: memory maxSmallInteger >> 1)
+		arguments: {memory integerObjectOf: 1}.
+	self runUntilReturn.
+	
+	self
+		assert: machineSimulator receiverRegisterValue
+		equals: (memory integerObjectOf: memory maxSmallInteger >> 1 << 1)
+]
+
+{ #category : #'tests - primitiveBitShift' }
+VMJittedGeneralPrimitiveTest >> testPrimitiveBitShiftShouldReturnSmallIntegerWithShiftRight [
+	
+	| primitiveAddress endInstruction |
+	
+	cogit receiverTags: memory smallIntegerTag.
+	
+	primitiveAddress := self compile: [ 
+		cogit objectRepresentation genPrimitiveBitShift.
+		"If the primitive fails it continues, so we need to have an instruction to detect the end"
+		endInstruction := cogit Stop ].
+
+	self
+		prepareStackForSendReceiver: (memory integerObjectOf: 17 << 22)
+		arguments: {memory integerObjectOf: -22}.
+	self runUntilReturn.
+	
+	self
+		assert: machineSimulator receiverRegisterValue
+		equals: (memory integerObjectOf: 17)
+]
+
+{ #category : #'tests - primitiveBitShift' }
+VMJittedGeneralPrimitiveTest >> testPrimitiveBitShiftShouldReturnZeroIfShiftIsBiggerThanNumSmallIntegerBits [
+	
+	| primitiveAddress endInstruction |
+	
+	cogit receiverTags: memory smallIntegerTag.
+	
+	primitiveAddress := self compile: [ 
+		cogit objectRepresentation genPrimitiveBitShift.
+		"If the primitive fails it continues, so we need to have an instruction to detect the end"
+		endInstruction := cogit Stop ].
+
+	self
+		prepareStackForSendReceiver: (memory integerObjectOf: memory maxSmallInteger >> 1)
+		arguments: {memory integerObjectOf: (memory numSmallIntegerBits + 1) negated}.
+	self runUntilReturn.
+	
+	self
+		assert: machineSimulator receiverRegisterValue
+		equals: (memory integerObjectOf: 0)
+]
+
 { #category : #'tests - primitiveMultiply' }
 VMJittedGeneralPrimitiveTest >> testPrimitiveMultiplyDoesNotCompileIfReceiverTagIsNotSmallInteger [
 	
