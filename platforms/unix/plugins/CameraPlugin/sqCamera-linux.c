@@ -466,8 +466,7 @@ read_frame (camPtr cam)
 }
 
 
-static 
-int 
+static int 
 getFrame(camPtr cam) 
 {
 	int fd = cam->fileDesc;
@@ -486,7 +485,7 @@ getFrame(camPtr cam)
 		tv.tv_usec = 20000;
 
 		errno = 0;
-		if (-1 == (r = select (fd + 1, &fds, NULL, NULL, &tv))) {
+		if (-1 == (r = select(fd + 1, &fds, NULL, NULL, &tv))) {
 			/* try again on EINTR */
 			if ((EINTR == errno) | (EAGAIN == errno))
 				continue;
@@ -898,3 +897,12 @@ CameraOpen(sqInt camNum, sqInt frameWidth, sqInt frameHeight)
 	return true;
 }
 
+// A word to the energetic: implementing this is likely trivial.
+// Use the aioHandle/aioEnable mechanism provided by aio.c (see e.g.
+// sqUnixSocket.c) to provide a callback when SIGIO causes aio.c to call
+// aioPoll. That would replace or augment the select call in getFrame above.
+sqInt
+CameraSetSemaphore(sqInt cameraNum, sqInt semaphoreIndex)
+{
+	return PrimErrUnsupported;
+}

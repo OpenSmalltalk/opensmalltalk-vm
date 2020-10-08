@@ -12,6 +12,7 @@
 
 #include "sqVirtualMachine.h"
 #include "CameraPlugin.h"
+extern struct VirtualMachine *interpreterProxy;
 
 #include <TargetConditionals.h>
 
@@ -26,16 +27,17 @@ void printDevices();
   @public
   AVCaptureDeviceInput		*captureInput;
   AVCaptureVideoDataOutput	*captureOutput;
-  AVCaptureDevice		*device;
-  AVCaptureSession		*captureSession;
-  dispatch_queue_t		queue;
-  int				deviceID;
-  int				width;
-  int				height;
-  bool				bInitCalled;
-  unsigned int			*pixels;
-  bool				firstTime;
-  sqInt			frameCount;
+  AVCaptureDevice			*device;
+  AVCaptureSession			*captureSession;
+  dispatch_queue_t			 queue;
+  unsigned int				*pixels;
+  sqInt						 frameCount;
+  int						 deviceID;
+  int						 width;
+  int						 height;
+  int						 semaphoreIndex;
+  bool						 bInitCalled;
+  bool						 firstTime;
 }
 @end
 
@@ -66,6 +68,8 @@ SqueakVideoGrabber *grabbers[8] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NUL
 	firstTime = false;
 	CVPixelBufferUnlockBaseAddress(imageBuffer, 0);
 	frameCount++;
+	if (semaphoreIndex > 0)
+		interpreterProxy->signalSemaphoreWithIndex(semaphoreIndex);
 }
 
 // If desiredWidth == 0 && desiredHeight == 0 then initialize
@@ -189,6 +193,7 @@ SqueakVideoGrabber *grabbers[8] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NUL
   bInitCalled = YES;
   firstTime = true;
   frameCount = 0;
+  semaphoreIndex = -1;
   grabbers[deviceID] = self;
   return self;
 }
@@ -262,10 +267,10 @@ CameraOpen(sqInt cameraNum, sqInt desiredWidth, sqInt desiredHeight)
 void 
 CameraClose(sqInt cameraNum)
 {
-  if (cameraNum<1 || cameraNum>8)
-	return;
-  SqueakVideoGrabber *grabber = grabbers[cameraNum-1];
-  if (grabber)
+  SqueakVideoGrabber *grabber;
+
+  if (cameraNum >= 1 && cameraNum <= 8
+	&& (grabber = grabbers[cameraNum-1]))
 	  [grabber stopCapture: cameraNum];
 }
 
@@ -324,6 +329,19 @@ CameraIsOpen(sqInt cameraNum)
 		cameraNum >= 1 && cameraNum <= 8
 		&& grabbers[cameraNum-1]
 		&& grabbers[cameraNum-1]->pixels != (unsigned int *)0;
+}
+
+sqInt
+CameraSetSemaphore(sqInt cameraNum, sqInt semaphoreIndex)
+{
+  SqueakVideoGrabber *grabber;
+
+  if (cameraNum >= 1 && cameraNum <= 8
+	&& (grabber = grabbers[cameraNum-1])) {
+		grabber->semaphoreIndex = semaphoreIndex;
+		return 0;
+	}
+	return PrimErrNotFound;
 }
 
 sqInt

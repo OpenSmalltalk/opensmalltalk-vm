@@ -10,6 +10,11 @@ extern "C" {
 #include "CameraPlugin.h"
 }
 
+
+// N.B. This pretends to support ,ultiple cameras but in fact only supports
+// a single camera.  Volunteers are most welcome to correct this deficiency.
+// You'll need a Windows box with multiple cameras to do so though.
+
 //////////////////////////////////////////////
 // Sample Grabber Class
 //////////////////////////////////////////////
@@ -44,7 +49,8 @@ public:
 
 	STDMETHODIMP BufferCB(double dblThisSampleTime, BYTE * pThisBuf, long lThisBufSize)
 	{
-		if ((pThisBuf == NULL) || (lThisBufSize == 0)) return E_POINTER;
+		if (!pThisBuf || !lThisBufSize )
+			return E_POINTER;
 
 		// if the buffer sizes don't match, discard ours to force creating a new one
 		if (lFrameBufSize != lThisBufSize) {
@@ -61,7 +67,11 @@ public:
 		}
 
 		// Copy the bitmap data into our global buffer
-		if (pFrameBuf) memcpy(pFrameBuf, pThisBuf, lFrameBufSize);
+		if (pFrameBuf) {
+			memcpy(pFrameBuf, pThisBuf, lFrameBufSize);
+			if (semaphoreIndex > 0)
+				interpreterProxy->signalSemaphoreWithIndex(semaphoreIndex);
+		}
 		frameCount++;
 
 		return 0;
@@ -75,18 +85,23 @@ extern "C" {
 //////////////////////////////////////////////
 
 typedef struct Camera {
-	IBaseFilter *pCamera;
-	IGraphBuilder *pGraph;
-	ICaptureGraphBuilder2 *pCapture;
-	IMediaControl *pMediaControl;
-	IBaseFilter *ppf;
-	ISampleGrabber *pGrabber;
-	CSampleGrabberCB mCB;
+	IBaseFilter				*pCamera;
+	IGraphBuilder			*pGraph;
+	ICaptureGraphBuilder2	*pCapture;
+	IMediaControl			*pMediaControl;
+	IBaseFilter				*ppf;
+	ISampleGrabber			*pGrabber;
+	CSampleGrabberCB		 mCB;
 	int width;
 	int height;
+	int semaphoreIndex;
 } Camera;
 
-#define CAMERA_COUNT 8
+#if 0
+# define CAMERA_COUNT 8
+#else
+# define CAMERA_COUNT 1
+#endif
 Camera theCamera;
 
 //////////////////////////////////////////////
@@ -121,7 +136,8 @@ CameraOpen(sqInt cameraNum, sqInt desiredWidth, sqInt desiredHeight)
 void
 CameraClose(sqInt cameraNum)
 {
-	if (!CameraIsOpen()) return;
+	if (!CameraIsOpen())
+		return;
 
 	// stop getting video
 	if (theCamera.pMediaControl) theCamera.pMediaControl->StopWhenReady();
@@ -139,7 +155,8 @@ CameraClose(sqInt cameraNum)
 sqInt
 CameraExtent(sqInt cameraNum)
 {
-	if (!CameraIsOpen()) return 0;
+	if (!CameraIsOpen())
+		return 0;
 
 	return (theCamera.width << 16) + theCamera.height;
 }
@@ -147,16 +164,21 @@ CameraExtent(sqInt cameraNum)
 sqInt
 CameraGetFrame(sqInt cameraNum, unsigned char* buf, sqInt pixelCount)
 {
-	if (!CameraIsOpen()) return -1;
+	if (!CameraIsOpen())
+		return -1;
 
 	int framesSinceLastCall = theCamera.mCB.frameCount;
-	if (framesSinceLastCall == 0) return 0;  // no frame available
+	if (framesSinceLastCall == 0)
+		return 0;  // no frame available
 	theCamera.mCB.frameCount = 0;  // clear frame count
 
-	if (pixelCount > (theCamera.mCB.lFrameBufSize / 3)) pixelCount = (theCamera.mCB.lFrameBufSize / 3);
+	if (pixelCount > (theCamera.mCB.lFrameBufSize / 3))
+		pixelCount = (theCamera.mCB.lFrameBufSize / 3);
 
 	// flip image vertically while copying to Squeak buf
-	unsigned char* pSrc = theCamera.mCB.pFrameBuf;
+	// N.B. For certain cameras this is unnecessary, see
+	// https://social.msdn.microsoft.com/Forums/windowsdesktop/en-US/bee4f7c0-5938-43ce-9db5-59a60b5f80bb/flip-webcam-vertically?forum=windowsdirectshowdevelopment
+	unsigned char *pSrc = theCamera.mCB.pFrameBuf;
 	for (int y = theCamera.height - 1; y >= 0; y--) {
 		unsigned char* pDst = &buf[4 * y * theCamera.width];
 		for (int x = 0; x < theCamera.width; x++) {
@@ -173,16 +195,30 @@ CameraGetFrame(sqInt cameraNum, unsigned char* buf, sqInt pixelCount)
 char *
 CameraName(sqInt cameraNum)
 {
-	if ((cameraNum < 1) || (cameraNum > CAMERA_COUNT)) return NULL;
+	if ((cameraNum < 1) || (cameraNum > CAMERA_COUNT))
+		return NULL;
 	return GetCameraName(cameraNum);
+}
+
+sqInt
+CameraSetSemaphore(sqInt cameraNum, sqInt semaphoreIndex)
+{
+	if (cameraNum >= 1 && cameraNum <= CAMERA_COUNT) {
+		theCamera.semaphoreIndex = semaphoreIndex;
+		return 0;
+	}
+	return PrimErrNotFound;
 }
 
 sqInt
 CameraGetParam(sqInt cameraNum, sqInt paramNum)  // for debugging and testing
 {
-	if (!CameraIsOpen()) return -1;
-	if (paramNum == 1) return theCamera.mCB.frameCount;
-	if (paramNum == 2) return theCamera.mCB.lFrameBufSize;
+	if (!CameraIsOpen())
+		return -1;
+	if (paramNum == 1)
+		return theCamera.mCB.frameCount;
+	if (paramNum == 2)
+		return theCamera.mCB.lFrameBufSize;
 
 	return -2;
 }
@@ -202,7 +238,8 @@ FindCamera(IBaseFilter ** ppSrcFilter, int cameraNum)
 	CComPtr <IMoniker> pMoniker = NULL;
 	ULONG cFetched;
 
-	if (!ppSrcFilter) return E_POINTER;
+	if (!ppSrcFilter)
+		return E_POINTER;
 
 	*ppSrcFilter = NULL;  // clear output in case we return early with an error
 
@@ -211,16 +248,19 @@ FindCamera(IBaseFilter ** ppSrcFilter, int cameraNum)
 	hr = CoCreateInstance(
 		CLSID_SystemDeviceEnum, NULL, CLSCTX_INPROC,
 		IID_ICreateDevEnum, (void **) &pDevEnum);
-	if (FAILED(hr)) return hr;
+	if (FAILED(hr))
+		return hr;
 
 	// Create enumerator for the video capture devices
 	CComPtr <IEnumMoniker> pClassEnum = NULL;
 	hr = pDevEnum->CreateClassEnumerator (CLSID_VideoInputDeviceCategory, &pClassEnum, 0);
-	if (FAILED(hr)) return hr;
+	if (FAILED(hr))
+		return hr;
 
 	// If there are no enumerators for the requested type, then
 	// CreateClassEnumerator will succeed, but pClassEnum will be NULL.
-	if (pClassEnum == NULL) return E_FAIL;
+	if (pClassEnum == NULL)
+		return E_FAIL;
 
 	// Find the nth video capture device on the device list.
 	// Note that if the Next() call succeeds but there are no monikers,
@@ -232,7 +272,8 @@ FindCamera(IBaseFilter ** ppSrcFilter, int cameraNum)
 
 	// Bind Moniker to a filter object
 	hr = pMoniker->BindToObject(0, 0, IID_IBaseFilter, (void**) &pSrc);
-	if (FAILED(hr)) return hr;
+	if (FAILED(hr))
+		return hr;
 
 	// Copy the found filter pointer to the output parameter.
 	// Do NOT Release() the reference, since it will still be used
@@ -244,7 +285,8 @@ FindCamera(IBaseFilter ** ppSrcFilter, int cameraNum)
 void
 FreeMediaType(AM_MEDIA_TYPE *pMediaType)  // free fields and structure
 {
-	if (!pMediaType) return;
+	if (!pMediaType)
+		return;
 	FreeMediaTypeFields(pMediaType);
 	CoTaskMemFree((void *) pMediaType);
 }
@@ -280,22 +322,26 @@ GetCameraName(int cameraNum)
 	hr = CoCreateInstance(
 		CLSID_SystemDeviceEnum, NULL, CLSCTX_INPROC,
 		IID_ICreateDevEnum, (void **) &pDevEnum);
-	if (FAILED(hr)) return NULL;
+	if (FAILED(hr))
+		return NULL;
 
 	// Create an enumerator for the video capture devices
 	hr = pDevEnum->CreateClassEnumerator(CLSID_VideoInputDeviceCategory, &pClassEnum, 0);
-	if (FAILED(hr)) return NULL;
+	if (FAILED(hr))
+		return NULL;
 
 	// If there are no enumerators for the requested type, then
 	// CreateClassEnumerator will succeed, but pClassEnum will be NULL.
-	if (pClassEnum == NULL) return NULL;
+	if (pClassEnum == NULL)
+		return NULL;
 
 	// Note that if the Next() call succeeds but there are no monikers,
 	// it will return S_FALSE, which is not a failure. Therefore, we check
 	// that the return code is S_OK instead of using the SUCCEEDED() macro.
 	for (int i = 0; i < cameraNum; i++) {
 		hr = pClassEnum->Next(1, &pMoniker, &cFetched);
-		if (hr != S_OK) return NULL;
+		if (hr != S_OK)
+			return NULL;
 	}
 
 	hr = pMoniker->BindToStorage(0, 0, IID_IPropertyBag, (void**)(&pPropBag));
@@ -328,42 +374,50 @@ InitCamera(int num, int desiredWidth)
 
 	// get USB camera or other video capture device
 	hr = FindCamera(&theCamera.pCamera, num);
-	if (FAILED(hr)) return hr;
+	if (FAILED(hr))
+		return hr;
 
 	// create filter graph
 	hr = CoCreateInstance (
 		CLSID_FilterGraph, NULL, CLSCTX_INPROC,
 		IID_IGraphBuilder, (void **) &theCamera.pGraph);
-	if (FAILED(hr)) return hr;
+	if (FAILED(hr))
+		return hr;
 
 	// create capture graph builder
 	hr = CoCreateInstance (
 		CLSID_CaptureGraphBuilder2 , NULL, CLSCTX_INPROC,
 		IID_ICaptureGraphBuilder2, (void **) &theCamera.pCapture);
-	if (FAILED(hr)) return hr;
+	if (FAILED(hr))
+		return hr;
 
 	// get media control interface
 	hr = theCamera.pGraph->QueryInterface(IID_IMediaControl,(LPVOID *) &theCamera.pMediaControl);
-	if (FAILED(hr)) return hr;
+	if (FAILED(hr))
+		return hr;
 
 	// create SampleGrabber
 	hr = CoCreateInstance(
 		CLSID_SampleGrabber, NULL, CLSCTX_INPROC_SERVER,
 		IID_IBaseFilter, (void**) &theCamera.ppf);
-	if (FAILED(hr)) return hr;
+	if (FAILED(hr))
+		return hr;
 
 	theCamera.ppf->QueryInterface(IID_ISampleGrabber, (void**) &theCamera.pGrabber);
 
 	// attach the filter graph to the capture graph
 	hr = theCamera.pCapture->SetFiltergraph(theCamera.pGraph);
-	if (FAILED(hr)) return hr;
+	if (FAILED(hr))
+		return hr;
 
 	hr = theCamera.pGraph->AddFilter(theCamera.ppf, L"Scratch Frame Grabber");
-	if (FAILED(hr)) return hr;
+	if (FAILED(hr))
+		return hr;
 
 	// add the camera
 	hr = theCamera.pGraph->AddFilter(theCamera.pCamera, L"Camera");
-	if (FAILED(hr)) return hr;
+	if (FAILED(hr))
+		return hr;
 
 	// set the desired framesize and image format
 	SetCameraWidth(theCamera.pCapture, theCamera.pCamera, desiredWidth);
@@ -377,10 +431,12 @@ InitCamera(int num, int desiredWidth)
 	// record the actual camera frame dimensions
 	AM_MEDIA_TYPE mt;
 	hr = theCamera.pGrabber->GetConnectedMediaType(&mt);
-	if (FAILED(hr)) return hr;
+	if (FAILED(hr))
+		return hr;
 
 	theCamera.width  = ((VIDEOINFOHEADER*) mt.pbFormat)->bmiHeader.biWidth;
 	theCamera.height = ((VIDEOINFOHEADER*) mt.pbFormat)->bmiHeader.biHeight;
+	theCamera.semaphoreIndex = -1;
 	FreeMediaTypeFields(&mt);
 
 	hr = theCamera.pGrabber->SetOneShot(FALSE);
@@ -389,7 +445,8 @@ InitCamera(int num, int desiredWidth)
 
 	// start getting video
 	hr = theCamera.pMediaControl->Run();
-	if (FAILED(hr)) return hr;
+	if (FAILED(hr))
+		return hr;
 
 	return S_OK;
 }
@@ -415,7 +472,8 @@ void SetCameraWidth(ICaptureGraphBuilder2 *pCaptureGraphBuilder, IBaseFilter *pS
 	hr = pCaptureGraphBuilder->FindInterface(
 		&PIN_CATEGORY_CAPTURE, 0, pSrcFilter,
 		IID_IAMStreamConfig, (void**) &pCameraStream);
-	if (FAILED(hr)) return;
+	if (FAILED(hr))
+		return;
 
 	FindBestWidth(pCameraStream, desiredWidth);
 
