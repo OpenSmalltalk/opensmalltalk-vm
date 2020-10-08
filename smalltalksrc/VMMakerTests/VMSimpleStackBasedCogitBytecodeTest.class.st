@@ -252,7 +252,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testJumpForwardJumpsOverAnInstruction [
 		fixup := cogit fixupAt: 10.
 		cogit patchFixupTargetIfNeeded: fixup nextOpcodeIndex: nextOpcodeIndex. ] bytecodes: 3.	
 
-	self runGeneratedCode.
+	self runUntilReturn.
 	
 	self assert: machineSimulator receiverRegisterValue equals: memory trueObject
 ]
