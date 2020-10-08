@@ -445,6 +445,10 @@ aioEnable(int fd, void *data, int flags)
 			perror("fcntl(F_GETFL)");
 		if (fcntl(fd, F_SETFL, arg | O_NONBLOCK | O_ASYNC) < 0)
 			perror("fcntl(F_SETFL, O_ASYNC)");
+# if defined(F_SETNOSIGPIPE)
+		if ((arg = fcntl(fd, F_SETNOSIGPIPE, 1)) < 0)
+			perror("fcntl(F_GETFL)");
+# endif
 		FPRINTF((stderr, "aioEnable(%d): Elicit SIGIO via O_ASYNC/fcntl\n", fd));
 
 #elif defined(FASYNC)
@@ -454,6 +458,10 @@ aioEnable(int fd, void *data, int flags)
 			perror("fcntl(F_GETFL)");
 		if (fcntl(fd, F_SETFL, arg | O_NONBLOCK | FASYNC) < 0)
 			perror("fcntl(F_SETFL, FASYNC)");
+# if defined(F_SETNOSIGPIPE)
+		if ((arg = fcntl(fd, F_SETNOSIGPIPE, 1)) < 0)
+			perror("fcntl(F_GETFL)");
+# endif
 		FPRINTF((stderr, "aioEnable(%d): Elicit SIGIO via FASYNC/fcntl\n", fd));
 
 #elif defined(FIOASYNC)
@@ -469,6 +477,36 @@ aioEnable(int fd, void *data, int flags)
 #endif
 	}
 }
+
+#if defined(AIO_DEBUG)
+const char *
+aioEnableStatusName(int fd)
+{
+# if defined(O_ASYNC)
+#	define FCNTL_ASYNC_FLAG O_ASYNC
+# elif defined(FASYNC)
+#	define FCNTL_ASYNC_FLAG FASYNC
+# endif
+
+# if !defined(FCNTL_ASYNC_FLAG)
+	return "";
+# else
+	int flags = fcntl(fd,F_GETFL,0);
+	if (flags < 0)
+		return "fcntl(fd,F_GETFL,0) < 0";
+
+	if ((flags & FCNTL_ASYNC_FLAG))
+		if ((flags & O_NONBLOCK))
+			return "O_ASYNC|O_NONBLOCK";
+		else
+			return "O_ASYNC";
+	else if ((flags & O_NONBLOCK))
+		return "O_NONBLOCK";
+
+	return "!fcntl(fd,F_GETFL,0) !!";
+# endif
+}
+#endif // AIO_DEBUG
 
 
 /* install/change the handler for a descriptor */

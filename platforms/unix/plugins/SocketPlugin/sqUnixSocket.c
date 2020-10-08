@@ -151,14 +151,13 @@
 #define LINGER_SECS		 1
 
 static int thisNetSession= 0;
-static int one= 1;
 
 static char   localHostName[MAXHOSTNAMELEN];
 static uint32_t localHostAddress;	/* GROSS IPv4 ASSUMPTION! */
 
 union sockaddr_any
 {
-  struct sockaddr	sa;
+  struct sockaddr		sa;
   struct sockaddr_un	saun;
   struct sockaddr_in	sin;
   struct sockaddr_in6	sin6;
@@ -471,7 +470,7 @@ dataHandler(int fd, void *data, int flags)
   privateSocketStruct *pss= (privateSocketStruct *)data;
   FPRINTF((stderr, "dataHandler(%d=%d, %p, %d)\n", fd, pss->s, data, flags));
 
-  if (pss == NULL)
+  if (!pss)
 	{
 	  fprintf(stderr, "dataHandler: pss is NULL fd=%d data=%p flags=0x%x\n", fd, data, flags);
 	  return;
@@ -564,7 +563,7 @@ sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaID(SocketPtr s, sqInt domai
 void
 sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(SocketPtr s, sqInt domain, sqInt socketType, sqInt recvBufSize, sqInt sendBufSize, sqInt semaIndex, sqInt readSemaIndex, sqInt writeSemaIndex)
 {
-  int newSocket= -1;
+  int newSocket = -1, one = 1;
   privateSocketStruct *pss;
 
   switch (domain)
@@ -577,15 +576,11 @@ sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(Soc
 
   s->sessionID= 0;
   if (TCPSocketType == socketType)
-	{
 	  /* --- TCP --- */
 	  newSocket= socket(domain, SOCK_STREAM, 0);
-	}
   else if (UDPSocketType == socketType)
-	{
 	  /* --- UDP --- */
 	  newSocket= socket(domain, SOCK_DGRAM, 0);
-	}
   else if (ProvidedTCPSocketType == socketType)
 	{
 	  /* --- Existing socket --- */
@@ -607,9 +602,12 @@ sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(Soc
 	  return;
 	}
   setsockopt(newSocket, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one));
+#if defined(SO_NOSIGPIPE)
+  setsockopt(newSocket, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one));
+#endif
   /* private socket structure */
   pss= (privateSocketStruct *)calloc(1, sizeof(privateSocketStruct));
-  if (pss == NULL)
+  if (!pss)
 	{
 	  fprintf(stderr, "acceptFrom: out of memory\n");
 	  success(false);
@@ -664,7 +662,7 @@ sqSocketCreateRawProtoTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(SocketPt
 
   /* private socket structure */
   pss= (privateSocketStruct *)calloc(1, sizeof(privateSocketStruct));
-  if (pss == NULL)
+  if (!pss)
 	{
 	  fprintf(stderr, "acceptFrom: out of memory\n");
 	  success(false);
@@ -693,8 +691,27 @@ sqSocketCreateRawProtoTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(SocketPt
 }
 
 
-/* return the state of a socket */
+#if defined(AIO_DEBUG)
+static const char *
+socketStateName(int state)
+{
+	if (state == Connected)
+		return "Connected";
+	if (state == Invalid)
+		return "Invalid";
+	if (state == OtherEndClosed)
+		return "OtherEndClosed";
+	if (state == ThisEndClosed)
+		return "ThisEndClosed";
+	if (state == Unconnected)
+		return "Unconnected";
+	if (state == WaitingForConnection)
+		return "WaitingForConnection";
+	return "UNKNOWN SOCKETSTATE";
+}
+#endif
 
+/* return the state of a socket */
 sqInt
 sqSocketConnectionStatus(SocketPtr s)
 {
@@ -722,7 +739,8 @@ sqSocketConnectionStatus(SocketPtr s)
 		}
 	}
 #endif
-  FPRINTF((stderr, "socketStatus(%d) -> %d\n", SOCKET(s), SOCKETSTATE(s)));
+  FPRINTF((stderr, "socketStatus %d: %s %s\n", SOCKET(s),
+		   socketStateName(SOCKETSTATE(s)), aioEnableStatusName(SOCKET(s))));
   return SOCKETSTATE(s);
 }
 
@@ -878,7 +896,7 @@ sqSocketAcceptFromRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(SocketPtr s, Soc
   /* got connection -- fill in the structure */
   s->sessionID= 0;
   pss= (privateSocketStruct *)calloc(1, sizeof(privateSocketStruct));
-  if (pss == NULL)
+  if (!pss)
 	{
 	  fprintf(stderr, "acceptFrom: out of memory\n");
 	  success(false);
@@ -1562,12 +1580,12 @@ sqInt
 sqResolverError(void)					{ return lastError; }
 sqInt
 sqResolverLocalAddress(void)
-#ifndef HAVE_IFADDRS_H
+#if !defined(HAVE_IFADDRS_H)
 /* old code */
 {	sqInt localaddr = nameToAddr(localHostName);
-		if (!localaddr)
-				localaddr = nameToAddr("localhost");
-		return localaddr;
+	if (!localaddr)
+		localaddr = nameToAddr("localhost");
+	return localaddr;
 }
 #else // HAVE_IFADDRS_H
 /* experimental new code */
@@ -1583,9 +1601,9 @@ sqResolverLocalAddress(void)
 	}
 
 
-	for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) 
+	for (ifa = ifaddr; ifa; ifa = ifa->ifa_next) 
 	{
-		if (ifa->ifa_addr == NULL)
+		if (!ifa->ifa_addr)
 			continue;  
 
 		// Skip interfaces which
@@ -1593,31 +1611,25 @@ sqResolverLocalAddress(void)
 		//  - don't have a valid broadcast address set (IFF_BROADCAST),
 		//  - don't have resources allocated (IFF_RUNNING),
 		//  - are loopback interfaces (IFF_LOOPBACK)
-		//  - or do not have AF_INET address family (no IPv6 support here)
-		if (
-			!(ifa->ifa_flags & (IFF_UP | IFF_BROADCAST | IFF_RUNNING))
-				|| (ifa->ifa_flags & IFF_LOOPBACK)
-				|| ifa->ifa_addr->sa_family != AF_INET
-		) {
+		//  - or do not have AF_INET address family (no AF_INET6 support here)
+		if (!(ifa->ifa_flags & (IFF_UP | IFF_BROADCAST | IFF_RUNNING))
+		  || (ifa->ifa_flags & IFF_LOOPBACK)
+		  || ifa->ifa_addr->sa_family != AF_INET)
 			continue;
-		}
 
 		FPRINTF((stderr, "\tInterface : <%s>\n", ifa->ifa_name));
 		s=getnameinfo(ifa->ifa_addr,sizeof(struct sockaddr_in),host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
-		if (s == 0) {
+		if (!s) {
 			FPRINTF((stderr, "\t IP       : <%s>\n", inet_ntoa(((struct sockaddr_in *) (ifa->ifa_addr))->sin_addr)));
-			if (localAddr == 0) { /* take the first plausible answer */
+			if (!localAddr) /* take the first plausible answer */
 				localAddr = ((struct sockaddr_in *) (ifa->ifa_addr))->sin_addr.s_addr;
-			}
-		} else {
-			FPRINTF((stderr, "\t No address defined for this interface\n"));
 		}
-
+		else
+			FPRINTF((stderr, "\t No address defined for this interface\n"));
 	}
 
 	freeifaddrs(ifaddr);
 	return ntohl(localAddr);
-
 }
 #endif // HAVE_IFADDRS_H
 sqInt

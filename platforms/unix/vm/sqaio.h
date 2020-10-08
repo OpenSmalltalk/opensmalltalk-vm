@@ -100,6 +100,7 @@ extern unsigned long long ioUTCMicrosecondsNow(void);
 /* debugging stuff. */
 #ifdef AIO_DEBUG
 extern char *(*handlerNameChain)(aioHandler h);
+extern const char *aioEnableStatusName(int fd);
 
 # ifdef ACORN
 #   define FPRINTF(s) \
