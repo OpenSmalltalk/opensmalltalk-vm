@@ -22,6 +22,11 @@ echo "Installing Cygwin packages"
     -P unzip `
     -P wget `
     -P git `
+    -P autoconf2.5 `
+    -P autoconf `
+    -P automake1.16 `
+    -P automake `
+    -P libtool `
     -P patch | Out-Null
 
 echo "Cygwin installed under $cygwinRoot"
