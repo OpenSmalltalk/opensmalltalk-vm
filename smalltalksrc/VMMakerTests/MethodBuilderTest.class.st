@@ -18,7 +18,7 @@ Class {
 MethodBuilderTest >> testAddingBytecodesDoesntOverrideHeader [
 	method := methodBuilder newMethod buildMethod.
 	
-	self assert: methodBuilder methodHeader equals: (memory integerValueOf: (memory fetchPointer: 0 ofObject: method)).
+	self assert: methodBuilder buildMethodHeader equals: (memory integerValueOf: (memory fetchPointer: 0 ofObject: method)).
 ]
 
 { #category : #running }

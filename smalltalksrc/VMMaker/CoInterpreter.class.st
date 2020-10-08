@@ -2403,6 +2403,18 @@ CoInterpreter >> cogMethodOf: aMethodOop [
 	^self cCoerceSimple: methodHeader to: #'CogMethod *'
 ]
 
+{ #category : #'as yet unclassified' }
+CoInterpreter >> cogMethodZone [
+	<doNotGenerate>
+	^ cogMethodZone
+]
+
+{ #category : #'as yet unclassified' }
+CoInterpreter >> cogMethodZone: aCogMethodZone [ 
+	<doNotGenerate>
+	cogMethodZone := aCogMethodZone
+]
+
 { #category : #accessing }
 CoInterpreter >> cogit: aCogit [
 	<doNotGenerate>
@@ -5668,11 +5680,24 @@ CoInterpreter >> primNumberExternalCall [
 	^PrimNumberExternalCall
 ]
 
+{ #category : #'as yet unclassified' }
+CoInterpreter >> primTraceLog [
+	<doNotGenerate>
+	^ primTraceLog
+]
+
 { #category : #'cog jit support' }
 CoInterpreter >> primTraceLogAddress [
 	<api>
 	<returnTypeC: #'void *'>
 	^self cCode: [primTraceLog] inSmalltalk: [primTraceLog offset * objectMemory wordSize]
+]
+
+{ #category : #'as yet unclassified' }
+CoInterpreter >> primTraceLogEntries [
+	<doNotGenerate>
+	
+	^ PrimTraceLogSize
 ]
 
 { #category : #'cog jit support' }
@@ -5695,6 +5720,14 @@ CoInterpreter >> primTraceLogIndexAddress [
 	"N.B. primTraceLogIndex is 8-bits"
 	^self cCode: [(self addressOf: primTraceLogIndex) asUnsignedInteger]
 		inSmalltalk: [cogit simulatedReadWriteVariableAddress: #primTraceLogIndex in: self]
+]
+
+{ #category : #'as yet unclassified' }
+CoInterpreter >> primitiveAccessorDepthTable: aCollection [ 
+	
+	<doNotGenerate>
+	
+	primitiveAccessorDepthTable := aCollection
 ]
 
 { #category : #'trampoline support' }

@@ -72,7 +72,7 @@ VMSelectorIndexDereferenceRoutineTest >> testPositiveSelectorIndexIsLookedUpInMe
 	index := 3.
 
 	"Create a compiled bytecode method with a marker object at a given index, and a machine code method linked to it."	
-	method := self newMethodWithLiteral: memory falseObject at: index.
+	method := methodBuilder literalAt: index put: memory falseObject; buildMethod.
 	cogMethod := self generateCogMethod: [ cogit RetN: 0 ] selector: memory nilObject.
 	cogit coInterpreter rawHeaderOf: method put: cogMethod asInteger.
 	cogMethod methodObject: method.
