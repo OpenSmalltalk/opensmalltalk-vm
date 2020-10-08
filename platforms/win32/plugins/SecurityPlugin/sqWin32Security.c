@@ -5,7 +5,7 @@
  *      in INI file if command line option "-lowRights" is specified.
  */
 
-#include <windows.h>
+#include <Windows.h>
 #include <shlobj.h> /* CSIDL_XXX */
 #include "sq.h"
 #include "sqWin32.h"

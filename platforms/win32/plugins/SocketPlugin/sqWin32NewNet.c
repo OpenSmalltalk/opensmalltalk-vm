@@ -23,7 +23,7 @@
 
 #include <ws2tcpip.h>
 #include <winsock2.h>
-#include <windows.h>
+#include <Windows.h>
 
 #include "sq.h"
 #include "SocketPlugin.h"

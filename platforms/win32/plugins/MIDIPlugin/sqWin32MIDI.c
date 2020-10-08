@@ -13,7 +13,7 @@
 *     2) The VM level scheduler uses a heap as output buffer.
 *
 *****************************************************************************/
-#include <windows.h>
+#include <Windows.h>
 #include <mmsystem.h>
 #include "sq.h"
 #include "MIDIPlugin.h"

@@ -11,7 +11,7 @@
 *     1) Only buttons 1-4 are supported
 *     2) No z,r,u,v-Values are supported
 *****************************************************************************/
-#include <windows.h>
+#include <Windows.h>
 #include "sq.h"
 #include <mmsystem.h>
 

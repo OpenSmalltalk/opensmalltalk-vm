@@ -11,7 +11,7 @@
 *               Hasso Plattner Institute, Postdam, Germany
 *****************************************************************************/
 
-#include <windows.h>
+#include <Windows.h>
 #include <errno.h>
 #include <malloc.h>
 

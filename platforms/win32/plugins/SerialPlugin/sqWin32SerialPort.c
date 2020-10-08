@@ -8,7 +8,7 @@
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
 *
 *****************************************************************************/
-#include <windows.h>
+#include <Windows.h>
 #include "sq.h"
 #include "sqWin32.h"
 

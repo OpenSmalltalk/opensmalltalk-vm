@@ -1,4 +1,4 @@
-#include <windows.h>
+#include <Windows.h>
 #include "CroquetPlugin.h"
 
 static int loaded = 0;

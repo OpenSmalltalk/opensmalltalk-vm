@@ -8,7 +8,7 @@
 *   EMAIL:   andreasr@wdi.disney.com
 *
 *****************************************************************************/
-#include <windows.h>
+#include <Windows.h>
 #include "sq.h"
 #include "sqFFI.h"
 

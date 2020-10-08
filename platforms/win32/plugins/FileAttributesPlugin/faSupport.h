@@ -1,7 +1,7 @@
 /*
  * faSupport.h - Windows macro and type definitions for FileAttributesPlugin
  */
-#include <windows.h>
+#include <Windows.h>
 #include <sys/stat.h>
 
 /* Maximum path length allowed on this platform */

@@ -8,7 +8,7 @@
 *   EMAIL:   andreas.raab@gmx.de, bernd.eckardt@impara.de
 *****************************************************************************/
 
-#include <windows.h>
+#include <Windows.h>
 
 #include "sq.h"
 #include "HostWindowPlugin.h"

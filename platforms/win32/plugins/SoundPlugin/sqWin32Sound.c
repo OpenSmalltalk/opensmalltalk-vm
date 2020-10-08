@@ -11,7 +11,7 @@
 *            based interface. In the future we'll switch to DSound exclusively.
 *
 *****************************************************************************/
-#include <windows.h>
+#include <Windows.h>
 #include <mmsystem.h>
 #include "sq.h"
 #include "SoundPlugin.h"

@@ -1,4 +1,4 @@
-#include <windows.h>
+#include <Windows.h>
 #include "sqVirtualMachine.h"
 #include "sqConfig.h"
 #include "sqPlatformSpecific.h"

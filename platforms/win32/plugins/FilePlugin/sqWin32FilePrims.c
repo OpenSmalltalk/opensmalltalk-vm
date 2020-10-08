@@ -24,7 +24,7 @@
 *
 *****************************************************************************/
 
-#include <windows.h>
+#include <Windows.h>
 #include <malloc.h>
 #include "sq.h"
 #include "FilePlugin.h"

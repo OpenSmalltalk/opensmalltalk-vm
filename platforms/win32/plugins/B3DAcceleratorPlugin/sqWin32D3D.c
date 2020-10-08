@@ -9,7 +9,7 @@
 *
 *****************************************************************************/
 #define DIRECTDRAW_VERSION 0x700 /* restrict to DX7 */
-#include <windows.h>
+#include <Windows.h>
 #include <ole2.h>
 #ifdef __MINGW32__
 #ifndef HMONITOR_DECLARED
