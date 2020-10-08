@@ -88,7 +88,7 @@ VMJittedPrimitivesTest >> setUp [
 
 	super setUp.
 	
-	classFloat := self newClassInOldSpaceWithSlots: 0 format: memory firstLongFormat.
+	classFloat := self newClassInOldSpaceWithSlots: 0 instSpec: memory firstLongFormat.
 	memory setHashBitsOf: classFloat to: ClassFloatCompactIndex.
 	memory
 		storePointer: ClassFloatCompactIndex
