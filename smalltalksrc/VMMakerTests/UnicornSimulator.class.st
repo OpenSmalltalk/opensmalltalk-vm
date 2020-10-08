@@ -89,9 +89,15 @@ UnicornSimulator >> baseRegisterValue: aValue [
 ]
 
 { #category : #'as yet unclassified' }
+UnicornSimulator >> cResultRegister [
+
+	^ self subclassResponsibility
+]
+
+{ #category : #'as yet unclassified' }
 UnicornSimulator >> cReturnRegisterValue: anInteger [ 
 	
-	self subclassResponsibility
+	self eax: anInteger
 ]
 
 { #category : #registers }
@@ -274,6 +280,12 @@ UnicornSimulator >> instructionPointerValue: aValue [
 	^ self writeRegister: self instructionPointerRegister value: aValue
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornSimulator >> integerRegisterState [
+	
+	self subclassResponsibility 
+]
+
 { #category : #memory }
 UnicornSimulator >> mapMemory: aMemory at: anAddress [
 
@@ -322,11 +334,49 @@ UnicornSimulator >> peekAddress [
 ]
 
 { #category : #'as yet unclassified' }
+UnicornSimulator >> popBytes [
+
+	| stackAddressIntegerValue aByteArray |
+
+	"Getting address from stack register"
+	stackAddressIntegerValue := self stackPointerRegisterValue.
+	"Putting the value from the stack memory"
+	aByteArray := self memoryAt: stackAddressIntegerValue readNext: self wordSize.
+	
+	"Updating SP"
+	stackAddressIntegerValue := stackAddressIntegerValue + self wordSize.
+	self stackPointerRegisterValue: stackAddressIntegerValue.
+	
+	^ aByteArray
+]
+
+{ #category : #'as yet unclassified' }
 UnicornSimulator >> popWord [
 
 	| aByteArray |
 	aByteArray := self popBytes.
 	^ aByteArray integerAt: 1 size: self wordSize signed: false.
+]
+
+{ #category : #'as yet unclassified' }
+UnicornSimulator >> pushBytes: aByteArray [ 
+
+	| stackAddressIntegerValue |
+	self assert: aByteArray size = self wordSize.
+
+	"Getting address from stack register"
+	stackAddressIntegerValue := self stackPointerRegisterValue.
+
+	"Updating SP"
+	stackAddressIntegerValue := stackAddressIntegerValue - self wordSize.
+	self stackPointerRegisterValue: stackAddressIntegerValue.
+	
+	"Putting the value in the stack memory"
+	self
+		memoryAt: stackAddressIntegerValue
+		write: aByteArray
+		size: self wordSize
+
 ]
 
 { #category : #'as yet unclassified' }

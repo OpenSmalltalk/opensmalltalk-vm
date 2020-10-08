@@ -26,6 +26,12 @@ UnicornX64Simulator >> baseRegister [
 	^ UcX86Registers rbx
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornX64Simulator >> cReturnRegisterValue: anInteger [ 
+	
+	self rax: anInteger
+]
+
 { #category : #'virtual-registers' }
 UnicornX64Simulator >> classRegister [
 	
@@ -93,6 +99,26 @@ UnicornX64Simulator >> initializeRegisterAliases [
 UnicornX64Simulator >> instructionPointerRegister [
 	
 	^ UcX86Registers rip
+]
+
+{ #category : #'as yet unclassified' }
+UnicornX64Simulator >> pc [
+	^ self rip
+]
+
+{ #category : #'as yet unclassified' }
+UnicornX64Simulator >> postCallArgumentsNumArgs: numArgs in: aMemory [
+	"Answer an argument vector of the requested size after a Win64 or SysV
+	 ABI call.  On X64 this simply means accessing register arguments.
+	 For compatibility with Cog/Slang we answer unsigned values."
+	
+	self assert: numArgs <= 4.
+	
+	^((CogX64Compiler isSysV
+				ifTrue: [#(rdi rsi rdx rcx r8 r9)]
+				ifFalse: [#(rcx rdx r8 r9)]) copyFrom: 1 to: numArgs) collect:
+		[:getter|
+		self perform: getter]
 ]
 
 { #category : #'phisical-registers' }
@@ -197,10 +223,22 @@ UnicornX64Simulator >> r9: anInteger [
 	^ self writeRegister: UcX86Registers r9 value: anInteger
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornX64Simulator >> r9b: anInteger [ 
+
+	self writeRegister: UcX86Registers r9b value: anInteger 
+]
+
 { #category : #'phisical-registers' }
 UnicornX64Simulator >> rax [
 
 	^ self readRegister: UcX86Registers rax
+]
+
+{ #category : #'as yet unclassified' }
+UnicornX64Simulator >> rax: anInteger [ 
+	
+	self writeRegister: UcX86Registers rax value: anInteger
 ]
 
 { #category : #'phisical-registers' }
@@ -245,6 +283,12 @@ UnicornX64Simulator >> rdi [
 	^ self readRegister: UcX86Registers rdi
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornX64Simulator >> rdi: anInteger [ 
+	
+	self writeRegister: UcX86Registers rdi value: anInteger
+]
+
 { #category : #'phisical-registers' }
 UnicornX64Simulator >> rdx [
 
@@ -269,16 +313,35 @@ UnicornX64Simulator >> registerList [
 	^ #(rip rax rbx rcx rdx rsp rbp r8 r9 r10 r11 r12 rsi rdi)
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornX64Simulator >> retpcIn: aSpurSimulatedMemory [ 
+
+	^ memory long64At: self rbp + 8	
+
+]
+
 { #category : #'phisical-registers' }
 UnicornX64Simulator >> rip [
 
 	^ self readRegister: UcX86Registers rip
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornX64Simulator >> rip: anInteger [ 
+	
+	self writeRegister: UcX86Registers rip value: anInteger
+]
+
 { #category : #'phisical-registers' }
 UnicornX64Simulator >> rsi [
 
 	^ self readRegister: UcX86Registers rsi
+]
+
+{ #category : #'as yet unclassified' }
+UnicornX64Simulator >> rsi: anInteger [ 
+	
+	self writeRegister: UcX86Registers rsi value: anInteger
 ]
 
 { #category : #'phisical-registers' }
@@ -297,6 +360,51 @@ UnicornX64Simulator >> rsp: anInteger [
 UnicornX64Simulator >> sendNumberOfArgumentsRegister [
 	
 	^ UcX86Registers r9
+]
+
+{ #category : #'as yet unclassified' }
+UnicornX64Simulator >> simulateJumpCallOf: address memory: aMemory [
+	"Simulate a frame-building jump call of address (i.e. do not push the return pc
+	 as this has already been done).  Build a frame since
+	a) this is used for calls into the run-time which are unlikely to be leaf-calls, and
+	b) stack alignment needs to be realistic for assert checking for platforms such as Mac OS X"
+
+	"From the System V ABI:
+	 3.2.2 The Stack Frame
+	 ...	The end of the input argument area shall be aligned on a 16 (32, if __m256 is
+		passed on stack) byte boundary. In other words, the value (%rsp + 8) is always
+		a multiple of 16 (32) when control is transferred to the function entry point."
+
+
+	self pushWord: self rbp.
+	self rbp: self rsp.
+
+	self rip: address
+]
+
+{ #category : #'as yet unclassified' }
+UnicornX64Simulator >> simulateReturnIn: aMemory [
+
+	self rbp: (self popWord).
+	self rip: (self popWord)
+]
+
+{ #category : #'as yet unclassified' }
+UnicornX64Simulator >> smashCallerSavedRegistersWithValuesFrom: base by: step in: aMemory [
+	| volatileRegisters |
+	CogX64Compiler isSysV
+		ifTrue:
+			[volatileRegisters := #(rax: rcx: rdx: rsi: rdi: r8: r9: r10: r11:)]
+		ifFalse: "We should also save the registers to the shadow parameter space."
+			[volatileRegisters := #(rax: rcx: rdx: r8: r9: r10: r11:).
+			 #(rcx rdx r8 r9) withIndexDo:
+				[:getter :index|
+				 aMemory
+					unsignedLong64At: self rbp + 9 + (index * 8) "skip saved fp and retpc; aMemory is 1-relative"
+					put: (self perform: getter)]].
+	volatileRegisters withIndexDo:
+		[:setter :index|
+		self perform: setter with: index - 1 * step + base]
 ]
 
 { #category : #'phisical-registers' }

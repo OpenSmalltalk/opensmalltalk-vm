@@ -8,6 +8,12 @@ Class {
 }
 
 { #category : #'as yet unclassified' }
+UnicornProcessor >> cResultRegister [
+	
+	^ machineSimulator cResultRegister
+]
+
+{ #category : #'as yet unclassified' }
 UnicornProcessor >> cResultRegister: anInteger [ 
 	
 	machineSimulator cReturnRegisterValue: anInteger
@@ -26,9 +32,27 @@ UnicornProcessor >> convertInternalToInteger: anInteger [
 ]
 
 { #category : #'as yet unclassified' }
+UnicornProcessor >> eax: anInteger [ 
+	
+	machineSimulator eax: anInteger
+]
+
+{ #category : #'as yet unclassified' }
 UnicornProcessor >> ebp: anInteger [ 
 	
 	machineSimulator ebp: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornProcessor >> ebx: anInteger [ 
+
+	machineSimulator ebx: anInteger 
+]
+
+{ #category : #'as yet unclassified' }
+UnicornProcessor >> ecx: anInteger [ 
+
+	machineSimulator ecx: anInteger
 ]
 
 { #category : #registers }
@@ -80,9 +104,21 @@ UnicornProcessor >> initializeStackFor: aCompiler [
 ]
 
 { #category : #'as yet unclassified' }
+UnicornProcessor >> integerRegisterState [
+	
+	^ machineSimulator integerRegisterState 
+]
+
+{ #category : #'as yet unclassified' }
 UnicornProcessor >> linkRegisterValue [
 	
 	^ machineSimulator linkRegisterValue 
+]
+
+{ #category : #'as yet unclassified' }
+UnicornProcessor >> lr: anInteger [ 
+
+	machineSimulator lr: anInteger
 ]
 
 { #category : #'as yet unclassified' }
@@ -145,9 +181,27 @@ UnicornProcessor >> r5: anInteger [
 ]
 
 { #category : #'as yet unclassified' }
+UnicornProcessor >> r6: anInteger [ 
+	
+	machineSimulator r6: anInteger
+]
+
+{ #category : #'as yet unclassified' }
 UnicornProcessor >> r9: anInteger [
 	
 	machineSimulator r9: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornProcessor >> r9b: anInteger [ 
+
+	machineSimulator r9b: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornProcessor >> rax: anInteger [ 
+	
+	machineSimulator rax: anInteger
 ]
 
 { #category : #registers }
@@ -187,6 +241,15 @@ UnicornProcessor >> runInMemory: aMemory minimumAddress: minimumAddress readOnly
 	^ machineSimulator startAt: machineSimulator instructionPointerValue
 		until: 0
 		timeout: 0
+		count: 0
+]
+
+{ #category : #'as yet unclassified' }
+UnicornProcessor >> runUntil: anAddress [
+
+	^ machineSimulator startAt: machineSimulator instructionPointerValue
+		until: anAddress
+		timeout: 1000
 		count: 0
 ]
 

@@ -17078,6 +17078,12 @@ StackInterpreter >> primitiveObject: actualReceiver perform: selector withArgume
 	^nil
 ]
 
+{ #category : #'as yet unclassified' }
+StackInterpreter >> primitiveTable [
+	<doNotGenerate>
+	^ primitiveTable
+]
+
 { #category : #'debug printing' }
 StackInterpreter >> print: s [
 	"For testing in Smalltalk, this method should be overridden in a subclass."

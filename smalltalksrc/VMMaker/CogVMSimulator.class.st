@@ -2889,6 +2889,14 @@ CogVMSimulator >> primitiveExecuteMethodArgsArray [
 	^super primitiveExecuteMethodArgsArray
 ]
 
+{ #category : #'as yet unclassified' }
+CogVMSimulator >> primitiveForceMachineCodeCompaction [
+	
+	self commenceCogCompiledCodeCompaction.
+	self pop: 2 thenPushBool: true.
+
+]
+
 { #category : #'other primitives' }
 CogVMSimulator >> primitiveGetAttribute [
 	"Fetch the system attribute with the given integer ID. The result is a string, which will be empty if the attribute is not defined."

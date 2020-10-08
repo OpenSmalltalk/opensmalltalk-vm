@@ -16,6 +16,12 @@ UnicornARMv5Simulator >> baseRegister [
 	^ UcARMRegisters r10
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornARMv5Simulator >> cReturnRegisterValue: anInteger [ 
+
+	self r0: anInteger 
+]
+
 { #category : #registers }
 UnicornARMv5Simulator >> classRegister [
 	
@@ -104,6 +110,12 @@ UnicornARMv5Simulator >> fp [
 	^ self readRegister: UcARMRegisters fp
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornARMv5Simulator >> fp: anInteger [ 
+	
+	self writeRegister: UcARMRegisters fp value: anInteger
+]
+
 { #category : #registers }
 UnicornARMv5Simulator >> framePointerRegister [
 	
@@ -158,9 +170,21 @@ UnicornARMv5Simulator >> lr [
 	^ self readRegister: UcARMRegisters lr	
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornARMv5Simulator >> lr: anInteger [ 
+	
+	self writeRegister: UcARMRegisters lr value: anInteger
+]
+
 { #category : #registers }
 UnicornARMv5Simulator >> pc [
 	^ self readRegister: UcARMRegisters pc
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv5Simulator >> pc: anInteger [ 
+	
+	self writeRegister: UcARMRegisters pc value: anInteger
 ]
 
 { #category : #'as yet unclassified' }
@@ -209,6 +233,12 @@ UnicornARMv5Simulator >> r10: anInteger [
 UnicornARMv5Simulator >> r11: anInteger [ 
 	
 	^ self writeRegister: UcARMRegisters r11 value: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv5Simulator >> r12: anInteger [ 
+
+	self writeRegister: UcARMRegisters r12 value: anInteger
 ]
 
 { #category : #'as yet unclassified' }
@@ -323,6 +353,13 @@ UnicornARMv5Simulator >> registerStateGetters [
 	^#(r0 r1 r2 r3 r4)
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornARMv5Simulator >> retpcIn: aMemory [ 
+	"The return address is on the stack, having been pushed by either
+	 simulateCallOf:nextpc:memory: or simulateJumpCallOf:memory:"
+	^aMemory unsignedLongAt: self fp + 5
+]
+
 { #category : #registers }
 UnicornARMv5Simulator >> sendNumberOfArgumentsRegister [
 	
@@ -330,9 +367,38 @@ UnicornARMv5Simulator >> sendNumberOfArgumentsRegister [
 ]
 
 { #category : #'as yet unclassified' }
+UnicornARMv5Simulator >> simulateJumpCallOf: address memory: aMemory [
+	"Simulate a frame-building jump of address.  Build a frame since
+	a) this is used for calls into the run-time which are unlikely to be leaf-calls"
+	"This method builds a stack frame as expected by the simulator, not as defined by ARM aapcs-abi.
+	In ARM aapcs, every method can define for itself, wether it wants to push lr (nextpc), and wether it 
+	uses a frame pointer. The standard never mentions a fp. It merely defines r4-r11 to be callee-saved."
+
+	self assert: self sp \\ 8 = 0. "This check ensures, that we conform with ARM abi. Before doing anything to the stack, we ensure 2-word alignment."
+	self pushWord: self lr.
+	self pushWord: self fp.
+	self fp: self sp.
+	self pc: address
+]
+
+{ #category : #'as yet unclassified' }
 UnicornARMv5Simulator >> simulateLeafCallOf: anInteger nextpc: anInteger2 memory: aSpurSimulatedMemory [ 
 
 	
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv5Simulator >> simulateReturnIn: aSpurSimulatedMemory [
+
+	self fp: self popWord.
+	self pc: self popWord
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv5Simulator >> smashCallerSavedRegistersWithValuesFrom: base by: step in: aMemory [
+	#(r0: r1: r2: r3: r9: r12: lr:) withIndexDo:
+		[:accessor :index|
+		self perform: accessor with: index - 1 * step + base]
 ]
 
 { #category : #registers }

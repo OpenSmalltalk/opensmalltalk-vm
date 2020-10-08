@@ -141,6 +141,24 @@ VMSimpleStackBasedCogitAbstractTest >> compileSpecialSend [
 ]
 
 { #category : #helpers }
+VMSimpleStackBasedCogitAbstractTest >> compileTrampoline: aBlock named: aTrampolineName [
+
+	| startAddress | 
+
+	cogit methodZone freeStart: cogit methodZoneBase.
+
+	startAddress := self compile: aBlock.
+
+	cogit outputInstructionsForGeneratedRuntimeAt: startAddress.
+	cogit recordGeneratedRunTime: aTrampolineName address: startAddress.
+	cogit recordRunTimeObjectReferences.
+
+	cogit methodZoneBase: cogit methodZone freeStart.
+
+	^ startAddress
+]
+
+{ #category : #helpers }
 VMSimpleStackBasedCogitAbstractTest >> compileWithoutOutput: aBlockClosure bytecodes: bytecodes [
 	
 	"Call a compilation block initializing the compiler before.
@@ -451,15 +469,18 @@ VMSimpleStackBasedCogitAbstractTest >> newInterpreter [
 { #category : #running }
 VMSimpleStackBasedCogitAbstractTest >> newJitCompiler [
 
+	| compiler |
 	self jitCompilerClass initializeWithOptions: (Cogit asOptionsDictionary: { 
 		#ISA . isa.
 		#IMMUTABILITY. false.
 		#ObjectMemory. self memoryClass name }).
 
-	^ self jitCompilerClass new 
+	compiler := self jitCompilerClass new 
 		setInterpreter: memory coInterpreter;
-		yourself
+		yourself.
 
+	interpreter cogMethodZone: compiler methodZone.
+	^ compiler
 
 ]
 
@@ -506,6 +527,19 @@ VMSimpleStackBasedCogitAbstractTest >> pop [
 VMSimpleStackBasedCogitAbstractTest >> popAddress [
 	
 	^ self pop integerAt: 1 size: self wordSize signed: false
+]
+
+{ #category : #helpers }
+VMSimpleStackBasedCogitAbstractTest >> prepareStackForSendReceiver: aReceiver arguments: arguments [ 	
+
+	self pushAddress: aReceiver.
+	arguments do: [ :anArgument | self pushAddress: anArgument ].
+	self machineSimulator receiverRegisterValue: aReceiver.
+
+	machineSimulator hasLinkRegister 
+		ifTrue: [ machineSimulator linkRegisterValue: callerAddress "The caller IP in ARM is in the linkRegister"]
+		ifFalse: [ self pushAddress:  callerAddress. " I need to push the caller IP, as this is a message send" ]
+
 ]
 
 { #category : #helpers }
@@ -703,14 +737,20 @@ VMSimpleStackBasedCogitAbstractTest >> setUpCPUSimulator [
 { #category : #'tests - PIC' }
 VMSimpleStackBasedCogitAbstractTest >> setUpCogMethodEntry [
 	
-	cogit ceCPICMissTrampoline: (self compile: [ cogit RetN: 0 ]).
-	cogit cePICAbortTrampoline: (self compile: [ cogit RetN: 0 ]).
-	cogit ceMethodAbortTrampoline: (self compile: [ cogit RetN: 0 ]).
+	cogit allocateOpcodes: 80 bytecodes: 0 ifFail: [ self error: 'Could not allocate opcodes' ].
+	cogit generateEnilopmarts.
+	cogit maybeGenerateCheckFeatures.
+			
+	cogit ceCPICMissTrampoline: (self compileTrampoline: [ cogit RetN: 0 ] named:#ceCPICMissTrampoline).
+	cogit cePICAbortTrampoline: (self compileTrampoline: [ cogit RetN: 0 ] named:#cePICAbortTrampoline).
+	cogit ceMethodAbortTrampoline: (self compileTrampoline: [ cogit RetN: 0 ] named:#ceMethodAbortTrampoline).
 	
 	"This is the function a megamorphic PIC will jump when there is a miss"
 	inlineCacheMissTrampoline := cogit simulatedAddressFor: #ceSendFromInLineCacheMiss:.
 	
 	cogit computeEntryOffsets.
+	
+	cogit methodZone manageFrom: cogit methodZoneBase to: cogit methodZoneBase + self initialCodeSize.
 ]
 
 { #category : #'helpers - stack' }

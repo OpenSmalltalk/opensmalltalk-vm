@@ -196,23 +196,6 @@ UnicornARMv8Simulator >> pc: aValue [
 ]
 
 { #category : #'as yet unclassified' }
-UnicornARMv8Simulator >> popBytes [
-
-	| stackAddressIntegerValue aByteArray |
-
-	"Getting address from stack register"
-	stackAddressIntegerValue := self stackPointerRegisterValue.
-	"Putting the value from the stack memory"
-	aByteArray := self memoryAt: stackAddressIntegerValue readNext: self wordSize.
-	
-	"Updating SP"
-	stackAddressIntegerValue := stackAddressIntegerValue + self wordSize.
-	self stackPointerRegisterValue: stackAddressIntegerValue.
-	
-	^ aByteArray
-]
-
-{ #category : #'as yet unclassified' }
 UnicornARMv8Simulator >> postCallArgumentsNumArgs: numArgs "<Integer>" in: aMemory [ "<ByteArray|Bitmap>"
 	"Answer an argument vector of the requested size after a vanilla
 	 ABI call. For ARM the Procedure Calling Specification can be found in IHI0042D_aapcs.pdf.
@@ -224,27 +207,6 @@ UnicornARMv8Simulator >> postCallArgumentsNumArgs: numArgs "<Integer>" in: aMemo
 			ifTrue: [self perform: (self registerStateGetters at: i)]
 			"ARM uses a full descending stack. Directly after calling a procedure, nothing but the arguments are pushed."
 			ifFalse: [memory unsignedLongAt: self sp + (i-5)*4 bigEndian: false]].
-]
-
-{ #category : #'as yet unclassified' }
-UnicornARMv8Simulator >> pushBytes: aByteArray [ 
-
-	| stackAddressIntegerValue |
-	self assert: aByteArray size = self wordSize.
-
-	"Getting address from stack register"
-	stackAddressIntegerValue := self stackPointerRegisterValue.
-
-	"Updating SP"
-	stackAddressIntegerValue := stackAddressIntegerValue - self wordSize.
-	self stackPointerRegisterValue: stackAddressIntegerValue.
-	
-	"Putting the value in the stack memory"
-	self
-		memoryAt: stackAddressIntegerValue
-		write: aByteArray
-		size: self wordSize
-
 ]
 
 { #category : #registers }
@@ -340,7 +302,7 @@ UnicornARMv8Simulator >> sp [
 { #category : #registers }
 UnicornARMv8Simulator >> stackPointerRegister [
 	
-	^ UcARM64Registers x28
+	^ UcARM64Registers sp
 ]
 
 { #category : #'as yet unclassified' }

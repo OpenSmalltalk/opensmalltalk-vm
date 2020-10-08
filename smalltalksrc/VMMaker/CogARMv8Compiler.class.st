@@ -234,7 +234,7 @@ CogARMv8Compiler class >> initializeAbstractRegisters [
 	ClassReg			:= R2.
 	ReceiverResultReg	:= R5.
 	SendNumArgsReg	:= R6.
-	SPReg				:= 28. "a.k.a. X28".
+	SPReg				:= SP. "a.k.a. X28".
 	FPReg				:= 29 "X29".
 	Arg0Reg			:= R3. "overlaps with last C arg reg"
 	Arg1Reg			:= R4.
@@ -5487,8 +5487,8 @@ CogARMv8Compiler >> strbSourceRegister: sourceRegister destinationRegister: dest
 	^ 2r111 << 27
 		bitOr: (1 << 24
 		bitOr: ((immediate12BitValue bitAnd: 16rfff) << 10
-		bitOr: ((sourceRegister bitAnd: 16r1f) << 5
-		bitOr: (destinationRegister bitAnd: 16r1f))))
+		bitOr: ((destinationRegister bitAnd: 16r1f) << 5
+		bitOr: (sourceRegister bitAnd: 16r1f))))
 ]
 
 { #category : #'ARM convenience instructions' }
