@@ -28,13 +28,11 @@ void mtfsfi(unsigned long long fpscr)
 #endif
 
 static int loadPharoImage(const char* fileName);
-static void ensureSemaphoreInitialized();
 static void* runVMThread(void* p);
 static int runOnMainThread(VMParameters *parameters);
 static int runOnWorkerThread(VMParameters *parameters);
 
-static Semaphore* mainLoopSemaphore;
-static sqInt (*mainLoopClosure)();
+EXPORT(sqInt) runMainThreadWorker();
 
 EXPORT(int) vmRunOnWorkerThread = 0;
 
@@ -52,8 +50,6 @@ EXPORT(int) vm_init(VMParameters* parameters)
 	//Unix Initialization specific
 	fldcw(0x12bf);	/* signed infinity, round to nearest, REAL8, disable intrs, disable signals */
     mtfsfi(0);		/* disable signals, IEEE mode, round to nearest */
-
-    ensureSemaphoreInitialized();
 
     ioInitTime();
 
@@ -209,31 +205,6 @@ loadPharoImage(const char* fileName)
     return 1;
 }
 
-static void
-ensureSemaphoreInitialized()
-{
-    if(!mainLoopSemaphore) {
-        mainLoopSemaphore = platform_semaphore_new(0);
-    }
-}
-
-EXPORT(int)
-mainThreadLoop()
-{
-    ensureSemaphoreInitialized();
-    do {
-    	if(mainLoopClosure != NULL)mainLoopClosure();
-        mainLoopSemaphore->wait(mainLoopSemaphore);
-    } while(true);
-}
-
-EXPORT(sqInt)
-mainThread_schedule(sqInt (*closure)())
-{
-    mainLoopClosure = closure;
-    mainLoopSemaphore->signal(mainLoopSemaphore);
-}
-
 static void*
 runVMThread(void* p)
 {
@@ -278,8 +249,6 @@ runOnWorkerThread(VMParameters *parameters)
 
     logDebug("Stack size: %ld\n", size);
 
-    ensureSemaphoreInitialized();
-
     if(pthread_attr_setstacksize(&tattr, size * 4)){
         perror("Setting thread stack size");
         exit(-1);
@@ -292,11 +261,5 @@ runOnWorkerThread(VMParameters *parameters)
 
     pthread_detach(thread_id);
 
-    /*
-     * I will now wait if any plugin wants to run stuff in the main thread.
-     * This is used by the ThreadedFFI plugin to run a worker in the main thread.
-     * This runner is used to create and handle UI operations, required by OSX.
-     */
-
-    return mainThreadLoop();
+    return runMainThreadWorker();
 }
