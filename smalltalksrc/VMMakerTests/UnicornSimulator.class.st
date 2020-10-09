@@ -148,6 +148,17 @@ UnicornSimulator >> disassembleFrom: anIndex opcodes: numberOfInstructions [
 ]
 
 { #category : #disassembling }
+UnicornSimulator >> disassembleFrom: start to: stop [ 
+
+	^ self disassembler
+		printImmediatesInHexa;
+		disassembleNext: 1000
+		instructionsIn: (memory memory copyFrom: start to: stop)
+		startAddress: start
+		pc: self instructionPointerValue
+]
+
+{ #category : #disassembling }
 UnicornSimulator >> disassembler [
 	self subclassResponsibility
 ]
