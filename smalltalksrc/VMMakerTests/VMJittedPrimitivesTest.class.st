@@ -87,7 +87,7 @@ VMJittedPrimitivesTest >> prepareStackForSendReceiver: aReceiver arguments: argu
 VMJittedPrimitivesTest >> setUp [
 
 	super setUp.
-	
+
 	classFloat := self newClassInOldSpaceWithSlots: 0 instSpec: memory firstLongFormat.
 	memory setHashBitsOf: classFloat to: ClassFloatCompactIndex.
 	memory

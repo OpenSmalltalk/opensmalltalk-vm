@@ -33,7 +33,7 @@ VMMachineCodeFrameBuilderForTest >> buildFrame [
 
 	"These are pushed when activating the method"	
 	test pushAddress: test machineSimulator framePointerRegisterValue.
-	test machineSimulator framePointerRegisterValue: test machineSimulator stackPointerRegisterValue.
+	test machineSimulator framePointerRegisterValue: test machineSimulator smalltalkStackPointerRegisterValue.
 
 	"Method can be nil or a cog method.
 	If nil, put a nil address.

@@ -508,6 +508,18 @@ UnicornSimulator >> simulateLeafCallOf: anInteger nextpc: anInteger2 memory: aSp
 	self subclassResponsibility
 ]
 
+{ #category : #registers }
+UnicornSimulator >> smalltalkStackPointerRegisterValue [
+
+	^ self readRegister: self smalltalkStackPointerRegister
+]
+
+{ #category : #registers }
+UnicornSimulator >> smalltalkStackPointerRegisterValue: aValue [
+	
+	self writeRegister: self smalltalkStackPointerRegister value: aValue
+]
+
 { #category : #'as yet unclassified' }
 UnicornSimulator >> smashRegistersWithValuesFrom: base by: step [
 	

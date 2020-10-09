@@ -3899,6 +3899,12 @@ Cogit >> ceEnterCogCodePopReceiverReg [
 	self simulateEnilopmart: ceEnterCogCodePopReceiverReg numArgs: 1
 ]
 
+{ #category : #'simulation only' }
+Cogit >> ceEnterCogCodePopReceiverRegEnilopmart [
+	<doNotGenerate>
+	^ ceEnterCogCodePopReceiverReg
+]
+
 { #category : #'trampoline support' }
 Cogit >> ceFree: pointer [
 	<api>
@@ -7850,12 +7856,12 @@ Cogit >> generateCaptureCStackPointers: captureFramePointer [
 	(backEnd leafCallStackPointerDelta ~= 0
 	 or: [backEnd hasVarBaseRegister])
 		ifTrue:
-			[self MoveR: SPReg R: TempReg.
+			[self MoveR: backEnd cStackPointer R: TempReg.
 			 self AddCq: (backEnd hasVarBaseRegister
 							ifTrue: [backEnd leafCallStackPointerDelta + objectMemory wordSize]
 							ifFalse: [backEnd leafCallStackPointerDelta]) R: TempReg.
 			 self MoveR: TempReg Aw: self cStackPointerAddress]
-		ifFalse: [self MoveR: SPReg Aw: self cStackPointerAddress].
+		ifFalse: [self MoveR: backEnd cStackPointer Aw: self cStackPointerAddress].
 	backEnd hasVarBaseRegister ifTrue:
 		[self PopR: VarBaseReg].
 	self RetN: 0.
@@ -8420,6 +8426,9 @@ Cogit >> handleABICallOrJumpSimulationTrap: aProcessorSimulationTrap evaluable: 
 Cogit >> handleCallOrJumpSimulationTrap: aProcessorSimulationTrap [
 	<doNotGenerate>
 	| evaluable function memory result savedFramePointer savedStackPointer savedArgumentCount rpc |
+	
+	self assert: (coInterpreter isOnRumpCStack: processor sp).
+	
 	evaluable := simulatedTrampolines at: aProcessorSimulationTrap address.
 	function := evaluable isBlock
 					ifTrue: ['aBlock; probably some plugin primitive']
@@ -8446,16 +8455,20 @@ Cogit >> handleCallOrJumpSimulationTrap: aProcessorSimulationTrap [
 	savedFramePointer := coInterpreter framePointer.
 	savedStackPointer := coInterpreter stackPointer.
 	savedArgumentCount := coInterpreter argumentCount.
+	
 	result := ["self halt: evaluable selector."
 		   	   ((printRegisters or: [printInstructions]) and: [clickConfirm]) ifTrue:
 			 	[(self confirm: 'skip run-time call?') ifFalse:
 					[clickConfirm := false. self halt]].
 			   evaluable valueWithArguments: (processor
 												postCallArgumentsNumArgs: evaluable numArgs
-												in: memory)]
+												in: memory) ]
 				on: ReenterMachineCode
-				do: [:ex| ex return: ex returnValue].
-			
+				do: [:ex| 
+					self assert: (coInterpreter isOnRumpCStack: processor sp).
+					ex return: ex returnValue].
+
+	self assert: (coInterpreter isOnRumpCStack: processor sp).
 	coInterpreter assertValidExternalStackPointers.
 	"Verify the stack layout assumption compileInterpreterPrimitive: makes, provided we've
 	 not called something that has built a frame, such as closure value or evaluate method, or

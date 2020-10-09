@@ -943,7 +943,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushTempVariablePushesVariableAt: tem
 		arguments: #() 
 		temporaries: temporaries.
 
-	self assert: (self readMemoryAt: machineSimulator stackPointerRegisterValue) equals: memory falseObject.
+	self assert: (self readMemoryAt: machineSimulator smalltalkStackPointerRegisterValue) equals: memory falseObject.
 	
 	"The bytecode of the push temporary variable is used to identify the index (from 0 to 15) and it starts from 16 to 31"
 	cogit byte0: tempVariableUnderTest - 1 + 16.

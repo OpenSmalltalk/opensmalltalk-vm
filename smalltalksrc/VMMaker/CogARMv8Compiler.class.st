@@ -234,7 +234,7 @@ CogARMv8Compiler class >> initializeAbstractRegisters [
 	ClassReg			:= R2.
 	ReceiverResultReg	:= R5.
 	SendNumArgsReg	:= R6.
-	SPReg				:= SP. "a.k.a. X28".
+	SPReg				:= 28. "a.k.a. X28".
 	FPReg				:= 29 "X29".
 	Arg0Reg			:= R3. "overlaps with last C arg reg"
 	Arg1Reg			:= R4.
@@ -770,6 +770,12 @@ CogARMv8Compiler >> cResultRegister [
 ]
 
 { #category : #accessing }
+CogARMv8Compiler >> cStackPointer [
+	
+	^ SP
+]
+
+{ #category : #accessing }
 CogARMv8Compiler >> callInstructionByteSize [
 	"ARM calls and jumps span +/- 32 mb, more than enough for intra-zone calls and jumps."
 	^4
@@ -1154,6 +1160,7 @@ CogARMv8Compiler >> concretizeAddCqR [
 	word := operands at: 0.
 	
 	((operands at: 1) = SP) ifTrue: [
+			1halt.
 		"This only works if Cq fits in 12 bits..."
 		self assert: (word bitAnd: 16rfff) = word.
 		self
@@ -1232,6 +1239,7 @@ CogARMv8Compiler >> concretizeAddRR [
 			shiftOffset: 0
 			destinationRegister: destinationRegister
 	] ifTrue: [
+	1halt.
 		self
 			addsExtendedSize: 1
 			leftRegisterMaybeSP: leftRegister

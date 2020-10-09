@@ -58,9 +58,9 @@ VMSimpleStackBasedCogitAbstractTest >> abstractInstructions [
 VMSimpleStackBasedCogitAbstractTest >> assertPushed: anOop after: aBlockClosure [
 	
 	| before after |
-	before := machineSimulator stackPointerRegisterValue.
+	before := machineSimulator smalltalkStackPointerRegisterValue.
 	aBlockClosure value.
-	after := machineSimulator stackPointerRegisterValue.
+	after := machineSimulator smalltalkStackPointerRegisterValue.
 	
 	self assert: after equals: before - self wordSize.
 	self assert: (self readMemoryAt: after) equals: anOop
@@ -409,7 +409,7 @@ VMSimpleStackBasedCogitAbstractTest >> initializeStackMemory [
 	page := memory coInterpreter stackPages newStackPage.
 
 	"The stack pointer is at the top of the stack"
-	machineSimulator stackPointerRegisterValue: page baseAddress.
+	machineSimulator smalltalkStackPointerRegisterValue: page baseAddress.
 	machineSimulator framePointerRegisterValue: page baseAddress.
 ]
 
@@ -512,13 +512,13 @@ VMSimpleStackBasedCogitAbstractTest >> pop [
 	| stackAddressIntegerValue poppedByteArray |
 
 	"Getting address from stack register"
-	stackAddressIntegerValue := machineSimulator stackPointerRegisterValue.
+	stackAddressIntegerValue := machineSimulator smalltalkStackPointerRegisterValue.
 
 	"Putting the value in the stack memory"
 	poppedByteArray := self top.
 
 	"Updating SP"
-	machineSimulator stackPointerRegisterValue: stackAddressIntegerValue + self wordSize.
+	machineSimulator smalltalkStackPointerRegisterValue: stackAddressIntegerValue + self wordSize.
 	
 	^ poppedByteArray
 ]
@@ -555,11 +555,11 @@ VMSimpleStackBasedCogitAbstractTest >> push: aByteArray [
 	self assert: aByteArray size equals: self wordSize.
 
 	"Getting address from stack register"
-	stackAddressIntegerValue := machineSimulator stackPointerRegisterValue.
+	stackAddressIntegerValue := machineSimulator smalltalkStackPointerRegisterValue.
 
 	"Updating SP"
 	stackAddressIntegerValue := stackAddressIntegerValue - self wordSize.
-	machineSimulator stackPointerRegisterValue: stackAddressIntegerValue.
+	machineSimulator smalltalkStackPointerRegisterValue: stackAddressIntegerValue.
 	
 	"Putting the value in the stack memory"
 	machineSimulator
@@ -768,7 +768,7 @@ VMSimpleStackBasedCogitAbstractTest >> stackAt: index [
 	| stackAddressIntegerValue |
 
 	"Getting address from stack register"
-	stackAddressIntegerValue := machineSimulator stackPointerRegisterValue + (index * self wordSize).
+	stackAddressIntegerValue := machineSimulator smalltalkStackPointerRegisterValue + (index * self wordSize).
 	^ machineSimulator memoryAt: stackAddressIntegerValue readNext: self wordSize.
 ]
 

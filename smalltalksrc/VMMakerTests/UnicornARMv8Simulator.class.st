@@ -273,6 +273,12 @@ UnicornARMv8Simulator >> simulateReturnIn: aSpurSimulatedMemory [
 
 ]
 
+{ #category : #registers }
+UnicornARMv8Simulator >> smalltalkStackPointerRegister [
+	"Internally to execute Smalltalk code we use X28 as the stack pointer register"
+	^ UcARM64Registers x28
+]
+
 { #category : #'as yet unclassified' }
 UnicornARMv8Simulator >> smashCallerSavedRegistersWithValuesFrom: base by: step in: aMemory [
 

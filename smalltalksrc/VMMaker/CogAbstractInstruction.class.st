@@ -551,6 +551,13 @@ CogAbstractInstruction >> cResultRegister [
 ]
 
 { #category : #accessing }
+CogAbstractInstruction >> cStackPointer [
+	
+	"Return the SP register for the current platform used by C code"
+	self subclassResponsibility
+]
+
+{ #category : #accessing }
 CogAbstractInstruction >> callInstructionByteSize [
 	self subclassResponsibility
 ]
