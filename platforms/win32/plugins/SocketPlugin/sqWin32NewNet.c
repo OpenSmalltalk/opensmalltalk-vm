@@ -186,12 +186,12 @@ static int socketReadable(SOCKET s)
 
 static int socketWritable(SOCKET s)
 {
-  struct timeval tv= { 0, 0 };
+  struct timeval tv = { 0, 0 }; // i.e. poll
   fd_set fds;
 
   FD_ZERO(&fds);
   FD_SET(s, &fds);
-  return select(1, NULL, &fds, NULL, &tv) == 1;
+  return select(1, NULL, &fds, NULL, &tv) > 0;
 }
 
 static int socketError(SOCKET s)

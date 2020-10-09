@@ -165,18 +165,19 @@ union sockaddr_any
 
 typedef struct privateSocketStruct
 {
-  int s;			/* Unix socket */
-  int connSema;			/* connection io notification semaphore */
-  int readSema;			/* read io notification semaphore */
-  int writeSema;		/* write io notification semaphore */
-  int sockState;		/* connection + data state */
-  int sockError;		/* errno after socket error */
+  int s;					/* Unix socket */
+  int connSema;				/* connection io notification semaphore */
+  int readSema;				/* read io notification semaphore */
+  int writeSema;			/* write io notification semaphore */
+  int sockState;			/* connection + data state */
+  int sockError;			/* errno after socket error */
   union sockaddr_any peer;	/* default send/recv address for UDP */
   socklen_t peerSize;		/* dynamic sizeof(peer) */
-  union sockaddr_any sender;	/* sender address for last UDP receive */
+  union sockaddr_any sender;/* sender address for last UDP receive */
   socklen_t senderSize;		/* dynamic sizeof(sender) */
-  int multiListen;		/* whether to listen for multiple connections */
-  int acceptedSock;		/* a connection that has been accepted */
+  int multiListen;			/* whether to listen for multiple connections */
+  int acceptedSock;			/* a connection that has been accepted */
+  int notifiedOfWritability; /* flag compensates for select denying writable */
 } privateSocketStruct;
 
 #define CONN_NOTIFY		(1<<0)
@@ -343,12 +344,20 @@ socketReadable(int s)
 static int
 socketWritable(int s)
 {
-  struct timeval tv= { 0, 0 };
+  struct timeval tv = { 0, 0 }; // i.e. poll
   fd_set fds;
 
   FD_ZERO(&fds);
   FD_SET(s, &fds);
-  return select(s+1, 0, &fds, 0, &tv) > 0;
+#ifdef AIO_DEBUG
+  { int r = select(1, 0, &fds, 0, &tv);
+	if (r < 0)
+		perror("socketWritable: select(1,0,&fd,0,&poll)");
+	return r > 0;
+  }
+#else
+  return select(1, 0, &fds, 0, &tv) > 0;
+#endif
 }
 
 /* answer the error condition on the given socket */
@@ -488,7 +497,14 @@ dataHandler(int fd, void *data, int flags)
 	  }
 	  notify(pss, READ_NOTIFY);
 	}
-  if (flags & AIO_W) notify(pss, WRITE_NOTIFY);
+  if (flags & AIO_W) {
+	notify(pss, WRITE_NOTIFY);
+	/* in socketWritable select may answer zero for writable sockets, resulting
+	 * in sqSocketSendDone answering false for new sockets. So we subvert select
+	 * by setting the notifiedOfWritability flag, tested in sqSocketSendDone.
+	 */
+	pss->notifiedOfWritability = true;
+  }
   if (flags & AIO_X)
 	{
 	  /* assume out-of-band data has arrived */
@@ -1120,16 +1136,23 @@ sqSocketReceiveDataAvailable(SocketPtr s)
 }
 
 
-/* answer whether the socket has space to receive more data */
+/* answer whether the socket has space to send more data */
 
 sqInt
 sqSocketSendDone(SocketPtr s)
 {
-  if (!socketValid(s))
-	return false;
-  if (SOCKETSTATE(s) == Connected)
+  if (socketValid(s)
+   && SOCKETSTATE(s) == Connected)
 	{
-	  if (socketWritable(SOCKET(s))) return true;
+	/* in socketWritable select may answer zero for writable sockets, resulting
+	 * in sqSocketSendDone answering false for new sockets. So we subvert select
+	 * by testing the notifiedOfWritability flag, set in dataHandler.
+	 */
+	  if (PSP(s)->notifiedOfWritability)
+		return true;
+	  if (socketWritable(SOCKET(s)))
+		return true;
+	  FPRINTF((stderr, "sqSocketSendDone(%d) !socketWritable\n", SOCKET(s)));
 	  aioHandle(SOCKET(s), dataHandler, AIO_WX);
 	}
   return false;
@@ -1202,6 +1225,7 @@ sqSocketSendDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
   if (!socketValid(s))
 	return -1;
 
+  PSP(s)->notifiedOfWritability = false;
   if (TCPSocketType != s->socketType)
 	{
 	  /* --- UDP/RAW --- */
@@ -1291,6 +1315,7 @@ sqSockettoHostportSendDataBufCount(SocketPtr s, sqInt address, sqInt port, char 
 	  saddr.sin_family= AF_INET;
 	  saddr.sin_port= htons((short)port);
 	  saddr.sin_addr.s_addr= htonl(address);
+	  PSP(s)->notifiedOfWritability = false;
 	  {
 		int nsent= sendto(SOCKET(s), buf, bufSize, 0, (struct sockaddr *)&saddr, sizeof(saddr));
 		if (nsent >= 0)
@@ -2348,6 +2373,7 @@ sqSocketSendUDPToSizeDataBufCount(SocketPtr s, char *addr, sqInt addrSize, char 
   if (socketValid(s) && addressValid(addr, addrSize) && (TCPSocketType != s->socketType)) /* --- UDP/RAW --- */
 	{
 	  int nsent= sendto(SOCKET(s), buf, bufSize, 0, socketAddress(addr), addrSize - AddressHeaderSize);
+	  PSP(s)->notifiedOfWritability = false;
 	  if (nsent >= 0)
 		return nsent;
 
