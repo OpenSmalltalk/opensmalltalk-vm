@@ -342,12 +342,16 @@ CogOutOfLineLiteralsARMv8Compiler >> usesOutOfLineLiteral [
 		[JumpFull]		-> [^true].
 		"Arithmetic"
 		[AddCqR]		-> [^self rotateable8bitSignedImmediate: (operands at: 0) ifTrue: [:r :i :n| false] ifFalse: [true]].
-		[AndCqR]		-> [^self rotateable8bitBitwiseImmediate: (operands at: 0)
-								ifTrue: [:r :i :n| false]
-								ifFalse: [1 << (operands at: 0) highBit ~= ((operands at: 0) + 1)]].
-		[AndCqRR]		-> [^self rotateable8bitBitwiseImmediate: (operands at: 0)
-								ifTrue: [:r :i :n| false]
-								ifFalse: [1 << (operands at: 0) highBit ~= ((operands at: 0) + 1)]].
+		[AndCqR]		-> [^ self
+				encodeLogicalImmediate: (operands at: 0)
+				registerSize: 64
+				ifPossible: [ :value | false ]
+				ifNotPossible: [ true ] ].
+		[AndCqRR]		-> [^ self
+				encodeLogicalImmediate: (operands at: 0)
+				registerSize: 64
+				ifPossible: [ :value | false ]
+				ifNotPossible: [ true ]].
 		[CmpCqR]		-> [^self rotateable8bitSignedImmediate: (operands at: 0) ifTrue: [:r :i :n| false] ifFalse: [true]].
 		[CmpC32R]		-> [^self rotateable8bitSignedImmediate: (operands at: 0) ifTrue: [:r :i :n| false] ifFalse: [true]].
 		[OrCqR]			-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
