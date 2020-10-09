@@ -1728,13 +1728,22 @@ CogARMv8Compiler >> concretizeInvertibleDataOperationCqR: armOpcode [
 
 { #category : #'generate machine code - concretize' }
 CogARMv8Compiler >> concretizeJumpFull [
+"Will get inlined into concretizeAt: switch."
 
-	| offset |
-	offset := (operands at: 0) signedIntFromLong
-		- address signedIntFromLong.	"normal pc offset"
-	self assert: (self isInImmediateJumpRange: offset).	"+- 24Mb is plenty of range in code space"
-	self machineCodeAt: 0 put: (self b: offset).
-	^ machineCodeSize := 4
+	"Sizing/generating calls.
+		Jump targets can be to absolute addresses or other abstract instructions.
+		Generating initial trampolines instructions may have no maxSize and be to absolute addresses.
+		Otherwise instructions must have a machineCodeSize which must be kept to."
+
+	<inline: true>
+	<var: #jumpTarget type: #'AbstractInstruction *'>
+	| jumpTarget instrOffset |
+	jumpTarget := self longJumpTargetAddress.
+	instrOffset := self moveCw: jumpTarget intoR: ConcreteIPReg.
+	"blx ConcreteIPReg"
+	self machineCodeAt: instrOffset put: (self br: ConcreteIPReg).
+	self assert: instrOffset = self literalLoadInstructionBytes.
+	^ machineCodeSize := instrOffset + 4
 ]
 
 { #category : #'generate machine code' }
