@@ -7258,11 +7258,11 @@ Cogit >> genInnerPICAbortTrampoline: name [
 Cogit >> genLoadCStackPointersForPrimCall [
 	debugPrimCallStackOffset = 0
 		ifTrue:
-			[self MoveAw: self cStackPointerAddress R: SPReg]
+			[self MoveAw: self cStackPointerAddress R: backEnd cStackPointer]
 		ifFalse:
 			[self MoveAw: self cStackPointerAddress R: TempReg.
 			 self SubCq: debugPrimCallStackOffset R: TempReg.
-			 self MoveR: TempReg R: SPReg].
+			 self MoveR: TempReg R: backEnd cStackPointer].
 	cFramePointerInUse ifTrue:
 		[self MoveAw: self cFramePointerAddress R: FPReg].
 	^0
