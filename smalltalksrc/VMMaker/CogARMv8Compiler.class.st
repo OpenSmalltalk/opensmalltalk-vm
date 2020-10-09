@@ -57,7 +57,10 @@ Class {
 		'R10',
 		'R11',
 		'R12',
+		'R19',
 		'R2',
+		'R20',
+		'R21',
 		'R3',
 		'R4',
 		'R5',
@@ -145,6 +148,11 @@ CogARMv8Compiler class >> initialize [
 	R10 := 10.
 	R11 := 11.
 	R12 := 12.
+
+	R19 := 19.
+	R20 := 20.
+	R21 := 21.
+
 	SP := 31.
 	LR := 30.
 	PC := 15.
@@ -238,9 +246,9 @@ CogARMv8Compiler class >> initializeAbstractRegisters [
 	FPReg				:= 29 "X29".
 	Arg0Reg			:= R3. "overlaps with last C arg reg"
 	Arg1Reg			:= R4.
-	Extra0Reg			:= R7.
-	Extra1Reg			:= R8.
-	Extra2Reg			:= R9.
+	Extra0Reg			:= R19. "These are callee saved registers"
+	Extra1Reg			:= R20.
+	Extra2Reg			:= R21.
 	VarBaseReg		:= R10.	"Must be callee saved" self assert: ConcreteVarBaseReg = R10.
 	RISCTempReg		:= R12.	"a.k.a. IP" self assert: ConcreteIPReg = R12.
 	LinkReg				:= LR. "X30"

@@ -1132,6 +1132,8 @@ SimpleStackBasedCogit >> compileMachineCodeInterpreterPrimitive: primitiveRoutin
 	 on the Smalltalk stack, assuming it consumes little or no stack space."
 	<var: #primitiveRoutine declareC: 'void (*primitiveRoutine)(void)'>
 	| jmpFail liveRegsMask |
+	
+
 	"for now handle functions with less than 4 arguments; our C call marshalling machinery
 	 extends up to 4 arguments only, and the first argument of an mcprim is the receiver."
 	self assert: methodOrBlockNumArgs <= 3.
@@ -1143,11 +1145,17 @@ SimpleStackBasedCogit >> compileMachineCodeInterpreterPrimitive: primitiveRoutin
 							[(self numRegArgs > 1 and: [methodOrBlockNumArgs > 1])
 								ifFalse: [self registerMaskFor: ReceiverResultReg and: Arg0Reg]
 								ifTrue: [self registerMaskFor: ReceiverResultReg and: Arg0Reg and: Arg1Reg]].
+
+	"As this is using a call, I need to store the Link register."
+	backEnd hasLinkRegister 
+		ifTrue: [ self MoveR: LinkReg R: Extra0Reg ].
+	
 	backEnd genSaveRegs: (liveRegsMask bitAnd: CallerSavedRegisterMask).
 	methodOrBlockNumArgs > self numRegArgs ifTrue:
 		["Wrangle args into Arg0Reg, Arg1Reg, SendNumArgsReg & ClassReg"
 		 "offset := self bitCountOf: (liveRegsMask bitAnd: CallerSavedRegisterMask)."
 		 self shouldBeImplemented].
+	
 	backEnd
 		genMarshallNArgs: methodOrBlockNumArgs + 1
 		arg: ReceiverResultReg
@@ -1159,6 +1167,10 @@ SimpleStackBasedCogit >> compileMachineCodeInterpreterPrimitive: primitiveRoutin
 	backEnd
 		genRemoveNArgsFromStack: methodOrBlockNumArgs + 1;
 		genRestoreRegs: (liveRegsMask bitAnd: CallerSavedRegisterMask).
+
+	backEnd hasLinkRegister 
+		ifTrue: [ self MoveR: Extra0Reg R: LinkReg ].
+
 	self CmpCq: 0 R: backEnd cResultRegister.
 	jmpFail := self JumpZero: 0.
 	backEnd cResultRegister ~= ReceiverResultReg ifTrue:
@@ -1324,6 +1336,7 @@ SimpleStackBasedCogit >> compilePrimitive [
 	| code opcodeIndexAtPrimitive primitiveDescriptor primitiveRoutine flags |
 	<var: #primitiveDescriptor type: #'PrimitiveDescriptor *'>
 	<var: #primitiveRoutine declareC: 'void (*primitiveRoutine)(void)'>
+
 	primitiveIndex = 0 ifTrue: [^0].
 	code := 0.
 	"Note opcodeIndex so that compileFallbackToInterpreterPrimitive:

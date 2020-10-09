@@ -66,6 +66,14 @@ VMPrimitiveCallAbstractTest >> jitMethod: aPharoCompiledMethod selector: aSelect
 ]
 
 { #category : #'methods under test' }
+VMPrimitiveCallAbstractTest >> methodThatCallPrimitive159 [
+
+	<primitive: 159>
+
+	^ 42 
+]
+
+{ #category : #'methods under test' }
 VMPrimitiveCallAbstractTest >> methodThatCallPrimitive1: anArg [
 
 	"This method is used to test the invocation of a primitive.

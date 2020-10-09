@@ -8420,6 +8420,7 @@ Cogit >> handleABICallOrJumpSimulationTrap: aProcessorSimulationTrap evaluable: 
 Cogit >> handleCallOrJumpSimulationTrap: aProcessorSimulationTrap [
 	<doNotGenerate>
 	| evaluable function memory result savedFramePointer savedStackPointer savedArgumentCount rpc |
+
 	evaluable := simulatedTrampolines at: aProcessorSimulationTrap address.
 	function := evaluable isBlock
 					ifTrue: ['aBlock; probably some plugin primitive']
@@ -9530,16 +9531,24 @@ Cogit >> mapObjectReferencesInMachineCodeForYoungGC [
 ]
 
 { #category : #'simulation only' }
-Cogit >> mapPrimitive: primitiveRoutine "<Symbol>" withIndexToUniqueAddress: primitiveIndex [ "<SmallInteger>"
+Cogit >> mapPrimitive: primitiveRoutine "<Symbol>" withIndexToUniqueAddress: primIndex [ "<SmallInteger>"
 	| uniqueAddress |
+
 	<doNotGenerate>
+
 	self assert: (primitiveRoutine isSymbol or: [primitiveRoutine isBlock]).
-	uniqueAddress := -1 - methodZoneBase - (primitiveIndex * 4) - 16r1000 bitAnd: self allButTopBitOfAddressSpaceMask.
+
+	uniqueAddress := -1 - methodZoneBase - (primIndex * 4) - 16r1000 
+		bitAnd: self allButTopBitOfAddressSpaceMask.
+	
 	simulatedTrampolines
 		at: uniqueAddress
 		ifAbsentPut:
 			[primitiveRoutine isSymbol
-				ifTrue: [MessageSend receiver: coInterpreter selector: primitiveRoutine]
+				ifTrue: [MessageSend 
+						receiver: coInterpreter 
+						selector: primitiveRoutine
+						arguments: (1 to: primitiveRoutine numArgs) asArray ]
 				ifFalse: [primitiveRoutine]].
 	^uniqueAddress
 ]

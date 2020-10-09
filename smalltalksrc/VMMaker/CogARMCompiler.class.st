@@ -237,7 +237,7 @@ CogARMCompiler class >> initializeAbstractRegisters [
 	FPReg				:= R11.
 	Arg0Reg			:= R3. "overlaps with last C arg reg"
 	Arg1Reg			:= R4.
-	Extra0Reg			:= R7.
+	Extra0Reg			:= R7.  "These are callee saved registers"
 	Extra1Reg			:= R8.
 	Extra2Reg			:= R9.
 	VarBaseReg		:= R10.	"Must be callee saved" self assert: ConcreteVarBaseReg = R10.

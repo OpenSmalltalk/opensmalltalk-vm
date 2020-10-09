@@ -1,6 +1,9 @@
 Class {
 	#name : #VMPrimitiveCallingTest,
 	#superclass : #VMPrimitiveCallAbstractTest,
+	#instVars : [
+		'classLargeInteger'
+	],
 	#pools : [
 		'CogRTLOpcodes'
 	],
@@ -10,6 +13,7 @@ Class {
 { #category : #helpers }
 VMPrimitiveCallingTest >> callCogMethod: callingMethod receiver: receiver arguments: arguments returnAddress: returnAddress [
 
+	machineSimulator receiverRegisterValue: receiver.
 	self pushAddress: receiver.
 	
 	arguments do: [ :e | self pushAddress: e ].
@@ -40,12 +44,80 @@ VMPrimitiveCallingTest >> initStack [
 ]
 
 { #category : #'tests - without tracing' }
-VMPrimitiveCallingTest >> setUp [ 
-	
+VMPrimitiveCallingTest >> setUp [
 	super setUp.
-	
+
 	"Initializing the primTraceLog table"
-	interpreter movePrimTraceLogToMemoryAt: cogit methodZoneBase + interpreter cogCodeSize + stackSpaceSize + methodCacheSize.
+	interpreter movePrimTraceLogToMemoryAt:
+		cogit methodZoneBase + interpreter cogCodeSize + stackSpaceSize
+		+ methodCacheSize.
+
+	classLargeInteger := self newClassInOldSpaceWithSlots: 0 instSpec: memory firstByteFormat.
+	
+	memory setHashBitsOf: classLargeInteger to: ClassLargePositiveIntegerCompactIndex.
+	memory
+		storePointer: ClassLargePositiveIntegerCompactIndex
+		ofObject: memory classTableFirstPage
+		withValue: classLargeInteger.
+]
+
+{ #category : #'tests - run on smalltalk stack' }
+VMPrimitiveCallingTest >> testCallingPrimitiveInSmalltalkStackWithInvalidReceiverRunsFallbackCode [
+
+	| callingMethod |
+
+	callingMethod := self jitMethod: (self findMethod: #methodThatCallPrimitive159).
+
+	self initStack.	
+
+	self 
+		callCogMethod: callingMethod 
+		receiver: memory nilObject 
+		arguments: {}
+		returnAddress: callerAddress.
+	
+	self assert: machineSimulator receiverRegisterValue equals: (memory integerObjectOf: 42).
+	
+
+]
+
+{ #category : #'tests - run on smalltalk stack' }
+VMPrimitiveCallingTest >> testCallingPrimitiveInSmalltalkStackWithLargeIntegerWillExecuteThePrimitiveAndReturnASmallInteger [
+
+	| callingMethod |
+
+	callingMethod := self jitMethod: (self findMethod: #methodThatCallPrimitive159).
+
+	self initStack.	
+
+	self 
+		callCogMethod: callingMethod 
+		receiver: (memory signed64BitIntegerFor: SmallInteger maxVal + 1) 
+		arguments: {}
+		returnAddress: callerAddress.
+	
+	self assert: machineSimulator receiverRegisterValue equals: (memory integerObjectOf: (SmallInteger maxVal + 1) hashMultiply).
+	
+
+]
+
+{ #category : #'tests - run on smalltalk stack' }
+VMPrimitiveCallingTest >> testCallingPrimitiveInSmalltalkStackWithSmallIntegerReceiverReturnsSmallInteger [
+
+	| callingMethod |
+
+	callingMethod := self jitMethod: (self findMethod: #methodThatCallPrimitive159).
+
+	self initStack.	
+
+	self 
+		callCogMethod: callingMethod 
+		receiver: (memory integerObjectOf: 5) 
+		arguments: {}
+		returnAddress: callerAddress.
+	
+	self assert: machineSimulator receiverRegisterValue equals: (memory integerObjectOf: 5 hashMultiply).
+	
 
 ]
 
@@ -164,6 +236,52 @@ VMPrimitiveCallingTest >> testPrimitiveIsNotTracedIfNotCalled [
 	
 	1 to: interpreter primTraceLogEntries - 1 do:
 		[:i| self assert: (interpreter primTraceLog at: i) = 0].
+	
+
+]
+
+{ #category : #'test - fail fast' }
+VMPrimitiveCallingTest >> testPrimitiveWithPrimitiveFailExecutesFallbackCode [
+
+	| callingMethod |
+
+	"Patching the primitive to remove primitiveFunction"
+	interpreter primitiveTable at: 1 + 1 put: #primitiveFail.
+
+	callingMethod := self jitMethod: (self findMethod: #methodThatCallPrimitive1:).
+
+	self initStack.	
+
+	self 
+		callCogMethod: callingMethod 
+		receiver: memory nilObject 
+		arguments: {memory nilObject}
+		returnAddress: callerAddress.
+	
+	self assert: machineSimulator receiverRegisterValue equals: (memory integerObjectOf: 42).
+	
+
+]
+
+{ #category : #'test - fail fast' }
+VMPrimitiveCallingTest >> testPrimitiveWithoutFunctionExecutesFallbackCode [
+
+	| callingMethod |
+
+	"Patching the primitive to remove primitiveFunction"
+	interpreter primitiveTable at: 1 + 1 put: 0.
+
+	callingMethod := self jitMethod: (self findMethod: #methodThatCallPrimitive1:).
+
+	self initStack.	
+
+	self 
+		callCogMethod: callingMethod 
+		receiver: memory nilObject 
+		arguments: {memory nilObject}
+		returnAddress: callerAddress.
+	
+	self assert: machineSimulator receiverRegisterValue equals: (memory integerObjectOf: 42).
 	
 
 ]
