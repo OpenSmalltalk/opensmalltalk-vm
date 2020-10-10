@@ -98,6 +98,8 @@
 #endif
 # include <errno.h>
 # include <unistd.h>
+# include <poll.h>
+# define USE_POLL 1
 
 #endif /* !ACORN */
 
@@ -177,7 +179,10 @@ typedef struct privateSocketStruct
   socklen_t senderSize;		/* dynamic sizeof(sender) */
   int multiListen;			/* whether to listen for multiple connections */
   int acceptedSock;			/* a connection that has been accepted */
-  int notifiedOfWritability; /* flag compensates for select denying writable */
+  int notifiedOfWritability;/* flag avoids calling select/poll a second time */
+#define notifiedOfWritability(pss) ((pss)->notifiedOfWritability)
+#define setNoticeOfWritability(pss) ((pss)->notifiedOfWritability = 1)
+#define clearNoticeOfWritability(pss) ((pss)->notifiedOfWritability = 0)
 } privateSocketStruct;
 
 #define CONN_NOTIFY		(1<<0)
@@ -344,19 +349,34 @@ socketReadable(int s)
 static int
 socketWritable(int s)
 {
+#if USE_POLL
+  struct pollfd fd;
+
+  fd.fd = s;
+  fd.events = POLLOUT;
+
+# ifdef AIO_DEBUG
+	if (poll(&fd, 1, 0) < 0)
+		perror("socketWritable: poll(&fd, 1, 0)");
+# else
+	poll(&fd, 1, 0);
+# endif
+	return fd.revents & POLLOUT;
+#else
   struct timeval tv = { 0, 0 }; // i.e. poll
   fd_set fds;
 
   FD_ZERO(&fds);
   FD_SET(s, &fds);
-#ifdef AIO_DEBUG
+# ifdef AIO_DEBUG
   { int r = select(s + 1, 0, &fds, 0, &tv);
 	if (r < 0)
 		perror("socketWritable: select(1,0,&fd,0,&poll)");
 	return r > 0;
   }
-#else
+# else
   return select(s + 1, 0, &fds, 0, &tv) > 0;
+# endif
 #endif
 }
 
@@ -503,7 +523,7 @@ dataHandler(int fd, void *data, int flags)
 	 * in sqSocketSendDone answering false for new sockets. So we subvert select
 	 * by setting the notifiedOfWritability flag, tested in sqSocketSendDone.
 	 */
-	pss->notifiedOfWritability = true;
+	setNoticeOfWritability(pss);
   }
   if (flags & AIO_X)
 	{
@@ -1148,9 +1168,8 @@ sqSocketSendDone(SocketPtr s)
 	 * in sqSocketSendDone answering false for new sockets. So we subvert select
 	 * by testing the notifiedOfWritability flag, set in dataHandler.
 	 */
-	  if (PSP(s)->notifiedOfWritability)
-		return true;
-	  if (socketWritable(SOCKET(s)))
+	  if (notifiedOfWritability(PSP(s))
+	   || socketWritable(SOCKET(s)))
 		return true;
 	  FPRINTF((stderr, "sqSocketSendDone(%d) !socketWritable\n", SOCKET(s)));
 	  aioHandle(SOCKET(s), dataHandler, AIO_WX);
@@ -1220,22 +1239,37 @@ sqSocketReceiveDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
 sqInt
 sqSocketSendDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
 {
-  int nsent= 0;
+  int nsent, err = 0;
 
   if (!socketValid(s))
 	return -1;
 
-  PSP(s)->notifiedOfWritability = false;
+  clearNoticeOfWritability(PSP(s));
   if (TCPSocketType != s->socketType)
 	{
 	  /* --- UDP/RAW --- */
 	  FPRINTF((stderr, "UDP sendData(%d, %ld)\n", SOCKET(s), bufSize));
 	  if ((nsent= sendto(SOCKET(s), buf, bufSize, 0, (struct sockaddr *)&SOCKETPEER(s), sizeof(SOCKETPEER(s)))) <= 0)
 		{
-	  int err = errno;
-		  if (err == EWOULDBLOCK)	/* asynchronous write in progress */
+		  if (nsent < 0
+		   && (err = errno) == EWOULDBLOCK)	/* asynchronous write in progress */
 			return 0;
-		  FPRINTF((stderr, "UDP send failed %d %s\n", err, strerror(err)));
+		  FPRINTF((stderr, "UDP sendto failed %d %s\n", err, strerror(err)));
+		  /* IEEE Std 1003.1, 2004 Edition, sendto - send a message on a socket
+		   * [EISCONN]	A destination address was specified and the socket
+		   *			is already connected. This error may or may not be
+		   *			returned for connection mode sockets.
+		   * Hence use send if socket is connected.
+		   */
+		  if (nsent < 0 && err == EISCONN) {
+			FPRINTF((stderr, "UDP retry sendData(%d, %ld)\n", SOCKET(s), bufSize));
+			if ((nsent = send(SOCKET(s), buf, bufSize, 0)) > 0)
+				goto completed;
+			if (nsent < 0
+			 && (err = errno) == EWOULDBLOCK)	/* asynchronous write in progress */
+			  return 0;
+			FPRINTF((stderr, "UDP send failed %d %s\n", err, strerror(err)));
+		  }
 		  SOCKETERROR(s)= err;
 		  return 0;
 		}
@@ -1246,22 +1280,21 @@ sqSocketSendDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
 	  FPRINTF((stderr, "TCP sendData(%d, %ld)\n", SOCKET(s), bufSize));
 	  if ((nsent= write(SOCKET(s), buf, bufSize)) <= 0)
 		{
-		  if ((nsent == -1) && (errno == EWOULDBLOCK))
+		  err = nsent < 0 ? errno : 0;
+		  if (err == EWOULDBLOCK)
 			{
 			  FPRINTF((stderr, "TCP sendData(%d, %ld) -> %d [blocked]",
 					   SOCKET(s), bufSize, nsent));
 			  return 0;
 			}
-		  else
-			{
-			  /* error: most likely "connection closed by peer" */
-			  SOCKETSTATE(s)= OtherEndClosed;
-			  SOCKETERROR(s)= errno;
-			  FPRINTF((stderr, "TCP write failed -> %d", SOCKETERROR(s)));
-			  return 0;
-			}
+		  /* error: most likely "connection closed by peer" */
+		  SOCKETSTATE(s)= OtherEndClosed;
+		  SOCKETERROR(s)= err;
+		  FPRINTF((stderr, "TCP write failed -> %d", SOCKETERROR(s)));
+		  return 0;
 		}
 	}
+completed:
   /* write completed synchronously */
   FPRINTF((stderr, "sendData(%d) done = %d\n", SOCKET(s), nsent));
   return nsent;
@@ -1315,7 +1348,7 @@ sqSockettoHostportSendDataBufCount(SocketPtr s, sqInt address, sqInt port, char 
 	  saddr.sin_family= AF_INET;
 	  saddr.sin_port= htons((short)port);
 	  saddr.sin_addr.s_addr= htonl(address);
-	  PSP(s)->notifiedOfWritability = false;
+	  clearNoticeOfWritability(PSP(s));
 	  {
 		int nsent= sendto(SOCKET(s), buf, bufSize, 0, (struct sockaddr *)&saddr, sizeof(saddr));
 		if (nsent >= 0)
@@ -2376,7 +2409,7 @@ sqSocketSendUDPToSizeDataBufCount(SocketPtr s, char *addr, sqInt addrSize, char 
   if (socketValid(s) && addressValid(addr, addrSize) && (TCPSocketType != s->socketType)) /* --- UDP/RAW --- */
 	{
 	  int nsent= sendto(SOCKET(s), buf, bufSize, 0, socketAddress(addr), addrSize - AddressHeaderSize);
-	  PSP(s)->notifiedOfWritability = false;
+	  clearNoticeOfWritability(PSP(s));
 	  if (nsent >= 0)
 		return nsent;
 
