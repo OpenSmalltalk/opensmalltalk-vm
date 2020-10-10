@@ -100,7 +100,7 @@ typedef struct acceptedSocketStruct {
 
 union sockaddr_any
 {
-  struct sockaddr	sa;
+  struct sockaddr		sa;
   struct sockaddr_in	sin;
   struct sockaddr_in6	sin6;
 };
@@ -181,7 +181,9 @@ static int socketReadable(SOCKET s)
 
   FD_ZERO(&fds);
   FD_SET(s, &fds);
-  return select(1, &fds, NULL, NULL, &tv) == 1;
+  // N.B. the first parameter is ignored on windows, but we set it
+  // for compatibility with squnixSocket.c
+  return select(s+1, &fds, NULL, NULL, &tv) == 1;
 }
 
 static int socketWritable(SOCKET s)
@@ -1641,6 +1643,9 @@ static socketOption socketOptions[]= {
   { "SO_KEEPALIVE",		SOL_SOCKET,	SO_KEEPALIVE,      1 },
   { "SO_OOBINLINE",		SOL_SOCKET,	SO_OOBINLINE,      1 },
   { "SO_LINGER",		SOL_SOCKET,	SO_LINGER,         1 },
+#if defined(SO_USELOOPBACK)
+  { "SO_USELOOPBACK",		SOL_SOCKET,	SO_USELOOPBACK,         1 },
+#endif
   { "IP_TTL",				SOL_IP,		IP_TTL, 1 },
   { "IP_MULTICAST_IF",		SOL_IP,		IP_MULTICAST_IF,   1 },
   { "IP_MULTICAST_TTL",		SOL_IP,		IP_MULTICAST_TTL,  1 },

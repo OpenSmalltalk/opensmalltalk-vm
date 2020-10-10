@@ -350,13 +350,13 @@ socketWritable(int s)
   FD_ZERO(&fds);
   FD_SET(s, &fds);
 #ifdef AIO_DEBUG
-  { int r = select(1, 0, &fds, 0, &tv);
+  { int r = select(s + 1, 0, &fds, 0, &tv);
 	if (r < 0)
 		perror("socketWritable: select(1,0,&fd,0,&poll)");
 	return r > 0;
   }
 #else
-  return select(1, 0, &fds, 0, &tv) > 0;
+  return select(s + 1, 0, &fds, 0, &tv) > 0;
 #endif
 }
 
@@ -1379,6 +1379,9 @@ static socketOption socketOptions[]= {
   { "SO_KEEPALIVE",			SOL_SOCKET,	SO_KEEPALIVE },
   { "SO_OOBINLINE",			SOL_SOCKET,	SO_OOBINLINE },
   { "SO_LINGER",			SOL_SOCKET,	SO_LINGER },
+#if defined(SO_USELOOPBACK)
+  { "SO_USELOOPBACK",		SOL_SOCKET,	SO_USELOOPBACK },
+#endif
   { "IP_TTL",				SOL_IP,		IP_TTL },
   { "IP_HDRINCL",			SOL_IP,		IP_HDRINCL },
   { "IP_MULTICAST_IF",		SOL_IP,		IP_MULTICAST_IF },
