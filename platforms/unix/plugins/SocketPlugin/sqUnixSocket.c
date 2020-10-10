@@ -1130,28 +1130,27 @@ sqSocketRemotePort(SocketPtr s)
 sqInt
 sqSocketReceiveDataAvailable(SocketPtr s)
 {
-  if (!socketValid(s)) return false;
+  int fd, n;
+  if (!socketValid(s))
+	return false;
+  fd = SOCKET(s);
   if (SOCKETSTATE(s) == Connected)
 	{
-	  int fd= SOCKET(s);
-	  int n=  socketReadable(fd);
-	  if (n > 0)
+	  if ((n = socketReadable(fd)) > 0)
 		{
 		  FPRINTF((stderr, "receiveDataAvailable(%d) -> true\n", fd));
 		  return true;
-		}
-	  else if (n < 0)
+		};
+	  if (n < 0)
 		{
 		  FPRINTF((stderr, "receiveDataAvailable(%d): other end closed\n", fd));
 		  SOCKETSTATE(s)= OtherEndClosed;
 		}
 	}
   else /* (SOCKETSTATE(s) != Connected) */
-	{
 	  FPRINTF((stderr, "receiveDataAvailable(%d): socket not connected\n", SOCKET(s)));
-	}
   aioHandle(SOCKET(s), dataHandler, AIO_RX);
-  FPRINTF((stderr, "receiveDataAvailable(%d) -> false [aioHandle is set]\n", SOCKET(s)));
+  FPRINTF((stderr, "receiveDataAvailable(%d) -> false [aioHandle is set]\n", fd));
   return false;
 }
 
@@ -1185,7 +1184,7 @@ sqSocketSendDone(SocketPtr s)
 sqInt
 sqSocketReceiveDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
 {
-  int nread= 0;
+  int nread, err = 0;
 
   if (!socketValid(s))
 	return -1;
@@ -1198,13 +1197,13 @@ sqSocketReceiveDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
 	  socklen_t addrSize= sizeof(SOCKETPEER(s));
 	  if ((nread= recvfrom(SOCKET(s), buf, bufSize, 0, (struct sockaddr *)&SOCKETPEER(s), &addrSize)) <= 0)
 		{
-		  if ((nread == -1) && (errno == EWOULDBLOCK))
+		  if (nread < 0 && (err = errno) == EWOULDBLOCK)
 			{
 			  FPRINTF((stderr, "UDP receiveData(%d) < 1 [blocked]\n", SOCKET(s)));
 			  return 0;
 			}
-		  SOCKETERROR(s)= errno;
-		  FPRINTF((stderr, "UDP receiveData(%d) < 1 [a:%d]\n", SOCKET(s), errno));
+		  SOCKETERROR(s)= err;
+		  FPRINTF((stderr, "UDP receiveData(%d)=>%d [e:%d]\n", SOCKET(s), nread, err));
 		  return 0;
 		}
 	  SOCKETPEERSIZE(s)= addrSize;
@@ -1214,15 +1213,15 @@ sqSocketReceiveDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
 	  /* --- TCP --- */
 	  if ((nread= read(SOCKET(s), buf, bufSize)) <= 0)
 		{
-		  if ((nread == -1) && (errno == EWOULDBLOCK))
+		  if (nread < 0 && (err = errno) == EWOULDBLOCK)
 			{
-			  FPRINTF((stderr, "TCP receiveData(%d) < 1 [blocked]\n", SOCKET(s)));
+			  FPRINTF((stderr, "TCP receiveData(%d)=>%d [EWOULDBLOCK]\n", SOCKET(s), nread));
 			  return 0;
 			}
 		  /* connection reset */
 		  SOCKETSTATE(s)= OtherEndClosed;
-		  SOCKETERROR(s)= errno;
-		  FPRINTF((stderr, "TCP receiveData(%d) < 1 [b:%d]\n", SOCKET(s), errno));
+		  SOCKETERROR(s)= err;
+		  FPRINTF((stderr, "TCP receiveData(%d)=>%d [e:%d]\n", SOCKET(s), nread, err));
 		  notify(PSP(s), CONN_NOTIFY);
 		  return 0;
 		}
