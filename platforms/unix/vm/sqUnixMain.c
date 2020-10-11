@@ -1708,6 +1708,7 @@ static void vm_printUsage(void)
   printf("  "VMOPTION("nohandlers")"           disable sigsegv & sigusr1 handlers\n");
 #if defined(AIO_DEBUG)
   printf("  "VMOPTION("aiolog")"               output async io logging info\n");
+#endif
   printf("  "VMOPTION("plugins")" <path>       specify alternative plugin location (see manpage)\n");
   printf("  "VMOPTION("textenc")" <enc>        set encoding for external text (default: UTF-8)\n");
   printf("  "VMOPTION("version")"              print version information, then exit\n");
