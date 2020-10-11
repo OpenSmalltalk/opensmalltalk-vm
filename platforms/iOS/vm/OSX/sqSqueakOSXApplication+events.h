@@ -46,6 +46,7 @@
 - (void) recordKeyDownEvent:(NSEvent *)theEvent fromView: (NSView <sqSqueakOSXView> *) aView ;
 - (void) recordKeyUpEvent:(NSEvent *)theEvent fromView: (NSView <sqSqueakOSXView> *) aView ;
 - (void) recordMouseEvent: (NSEvent*) theEvent fromView: (NSView <sqSqueakOSXView> *) aView;
+- (void) recordMouseButtonEvent: (NSEvent*) theEvent fromView: (NSView <sqSqueakOSXView> *) aView;
 - (void) recordWheelEvent: (NSEvent*) theEvent  fromView: (NSView <sqSqueakOSXView> *) aView;
 - (void) pushEventToQueue: (sqInputEvent *) evt;
 - (void) fakeMouseWheelKeyboardEventsKeyCode: (int) keyCode ascii: (int) ascii windowIndex: (int) windowIndex;

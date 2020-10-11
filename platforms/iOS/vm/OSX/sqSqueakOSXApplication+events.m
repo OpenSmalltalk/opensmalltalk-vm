@@ -276,6 +276,32 @@ static int buttonState=0;
 	interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
 }
 
+- (void) recordMouseButtonEvent:(NSEvent *)theEvent fromView: (NSView <sqSqueakOSXView> *) aView{
+	sqMouseEvent evt;
+
+	evt.type = EventTypeMouse;
+	evt.timeStamp = ioMSecs();
+
+	NSPoint local_point = [aView convertPoint: [theEvent locationInWindow] fromView:nil];
+
+	evt.x =  lrintf((float)local_point.x);
+	evt.y =  lrintf((float)local_point.y);
+
+	int buttonAndModifiers = [self mapMouseAndModifierStateToSqueakBits: theEvent];
+	evt.buttons = buttonAndModifiers & 0x07;
+	evt.modifiers = buttonAndModifiers >> 3;
+#if COGVM | STACKVM
+	evt.nrClicks = theEvent.clickCount;
+#else
+	evt.reserved1 = theEvent.clickCount;
+#endif 
+	evt.windowIndex =  aView.windowLogic.windowIndex;
+
+	[self pushEventToQueue:(sqInputEvent *) &evt];
+    //NSLog(@"mouse hit x %i y %i buttons %i mods %i",evt.x,evt.y,evt.buttons,evt.modifiers);
+	interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
+}
+
 - (void) recordWheelEvent:(NSEvent *) theEvent fromView: (NSView <sqSqueakOSXView> *) aView{
 
 	[self recordMouseEvent: theEvent fromView: aView];
