@@ -242,8 +242,8 @@ CogARMv8Compiler class >> initializeAbstractRegisters [
 	ClassReg			:= R2.
 	ReceiverResultReg	:= R5.
 	SendNumArgsReg	:= R6.
-	SPReg				:= SP. "a.k.a. X28".
-	FPReg				:= 29 "X29".
+	SPReg				:= 28. "X28 is used to manage the Smalltalk stack".
+	FPReg				:= 29. "X29"
 	Arg0Reg			:= R3. "overlaps with last C arg reg"
 	Arg1Reg			:= R4.
 	Extra0Reg			:= R19. "These are callee saved registers"

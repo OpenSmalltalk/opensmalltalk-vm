@@ -18,10 +18,7 @@ VMPrimitiveCallingTest >> callCogMethod: callingMethod receiver: receiver argume
 	
 	arguments do: [ :e | self pushAddress: e ].
 	
-	machineSimulator hasLinkRegister 
-		ifTrue: [ machineSimulator linkRegisterValue: returnAddress ] 
-		ifFalse: [ self pushAddress: returnAddress ].
-	
+	self prepareCall.
 	machineSimulator instructionPointerValue: callingMethod address + cogit noCheckEntryOffset. 
 	
 	self runFrom: callingMethod address + cogit noCheckEntryOffset until: returnAddress.
