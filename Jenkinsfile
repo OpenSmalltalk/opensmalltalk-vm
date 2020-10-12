@@ -11,6 +11,10 @@ def shell(params){
     else sh(params)
 }
 
+def isMainBranch(){
+	return env.BRANCH_NAME == 'headless'
+}
+
 def runInCygwin(command){
 	def c = """#!c:\\tools\\cygwin\\bin\\bash --login
     cd `cygpath \"$WORKSPACE\"`
@@ -47,7 +51,7 @@ def buildGTKBundle(){
 				stash includes: "${gtkBundleName}", name: "packages-windows-gtkBundle"
 				archiveArtifacts artifacts: "${gtkBundleName}"
 				
-				if(!isPullRequest() && env.BRANCH_NAME == 'headless'){
+				if(!isPullRequest() && isMainBranch()){
 					sshagent (credentials: ['b5248b59-a193-4457-8459-e28e9eb29ed7']) {
 						sh "scp -o StrictHostKeyChecking=no \
 						${gtkBundleName} \
@@ -91,6 +95,7 @@ def runBuild(platformName, configuration, headless = true){
         shell "make package"
       }
     }
+	
 		stash excludes: '_CPack_Packages', includes: "${buildDirectory}/build/packages/*", name: "packages-${platform}-${configuration}"
 		archiveArtifacts artifacts: "${buildDirectory}/build/packages/*", excludes: '_CPack_Packages'
 	}
