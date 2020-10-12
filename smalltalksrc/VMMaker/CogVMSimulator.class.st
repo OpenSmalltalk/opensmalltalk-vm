@@ -2310,6 +2310,7 @@ CogVMSimulator >> mapFunctionToAddress: aSymbolOrIndexOrBlock [
 	 aSymbolOrIndex is either a Symbol (#primitiveExternalCall) or an
 	 index above 1001 (an index + 1000 into the externalPrimitiveTable)."
 	| sobui symbolOrBlock |
+
 	aSymbolOrIndexOrBlock = 0 ifTrue: [^0].
 	self assert: (aSymbolOrIndexOrBlock isSymbol
 				or: [aSymbolOrIndexOrBlock isBlock
