@@ -91,8 +91,8 @@ def runBuild(platformName, configuration, headless = true){
         shell "make package"
       }
     }
-		stash excludes: '_CPack_Packages', includes: '${buildDirectory}/build/packages/*', name: "packages-${platform}-${configuration}"
-		archiveArtifacts artifacts: '${buildDirectory}/build/packages/*', excludes: '_CPack_Packages'
+		stash excludes: '_CPack_Packages', includes: "${buildDirectory}/build/packages/*", name: "packages-${platform}-${configuration}"
+		archiveArtifacts artifacts: "${buildDirectory}/build/packages/*", excludes: '_CPack_Packages'
 	}
 }
 
