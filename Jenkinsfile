@@ -197,7 +197,7 @@ def uploadPackages(){
 				return;
 			}
 			
-			if(env.BRANCH_NAME != 'headless'){
+			if(!isMainBranch()){
 				echo "[DO NO UPLOAD] In branch different that 'headless': ${env.BRANCH_NAME}";
 				return;
 			}
@@ -205,6 +205,10 @@ def uploadPackages(){
 			upload('osx', "CoInterpreterWithQueueFFI", 'mac')
 			upload('unix', "CoInterpreterWithQueueFFI",'linux')
 			upload('windows', "CoInterpreterWithQueueFFI", 'win')
+
+			upload('osx-stockReplacement', "CoInterpreterWithQueueFFI", 'mac')
+			upload('unix-stockReplacement', "CoInterpreterWithQueueFFI",'linux')
+			upload('windows-stockReplacement', "CoInterpreterWithQueueFFI", 'win')
 		}
 	}
 }
