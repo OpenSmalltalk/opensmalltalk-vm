@@ -8426,9 +8426,6 @@ Cogit >> handleABICallOrJumpSimulationTrap: aProcessorSimulationTrap evaluable: 
 Cogit >> handleCallOrJumpSimulationTrap: aProcessorSimulationTrap [
 	<doNotGenerate>
 	| evaluable function memory result savedFramePointer savedStackPointer savedArgumentCount rpc |
-	
-	self assert: (coInterpreter isOnRumpCStack: processor sp).
-	
 	evaluable := simulatedTrampolines at: aProcessorSimulationTrap address.
 	function := evaluable isBlock
 					ifTrue: ['aBlock; probably some plugin primitive']
@@ -8464,12 +8461,10 @@ Cogit >> handleCallOrJumpSimulationTrap: aProcessorSimulationTrap [
 												postCallArgumentsNumArgs: evaluable numArgs
 												in: memory) ]
 				on: ReenterMachineCode
-				do: [:ex| 
-					self assert: (coInterpreter isOnRumpCStack: processor sp).
-					ex return: ex returnValue].
+				do: [:ex| ex return: ex returnValue ].
 
-	self assert: (coInterpreter isOnRumpCStack: processor sp).
 	coInterpreter assertValidExternalStackPointers.
+
 	"Verify the stack layout assumption compileInterpreterPrimitive: makes, provided we've
 	 not called something that has built a frame, such as closure value or evaluate method, or
 	 switched frames, such as primitiveSignal, primitiveWait, primitiveResume, primitiveSuspend et al."
