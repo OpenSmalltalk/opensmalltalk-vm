@@ -9,7 +9,9 @@ Class {
 		'disassembleAtPCButton',
 		'machineState',
 		'initialInstructionToDisassemble',
-		'stack'
+		'stack',
+		'ipInput',
+		'jumpToButton'
 	],
 	#category : #'VMMaker-Tools'
 }
@@ -21,6 +23,9 @@ VMMachineCodeDebugger class >> defaultSpec [
 		add: #instructions;
 		add: (SpBoxLayout newVertical
 			add: #machineState;
+			add: (SpBoxLayout newHorizontal
+				add: #ipInput;
+				add: #jumpToButton);
 			add: #stepButton;
 			add: #disassembleAtPCButton;
 			yourself);
@@ -76,7 +81,9 @@ VMMachineCodeDebugger >> connectPresenters [
 		item 
 			name: 'Inspect'; 
 			action: [ instructions selection selectedItem inspect ] ].
-	instructions contextMenu: instructionsContextMenu
+	instructions contextMenu: instructionsContextMenu.
+	
+	jumpToButton action: [ self jump ].
 ]
 
 { #category : #actions }
@@ -151,7 +158,19 @@ VMMachineCodeDebugger >> initializePresenters [
 	stepButton label: 'Step'.
 	
 	disassembleAtPCButton := self newButton.
-	disassembleAtPCButton label: 'Disassemble at PC'
+	disassembleAtPCButton label: 'Disassemble at PC'.
+	
+	ipInput := self newTextInput.
+	jumpToButton := self newButton.
+	jumpToButton label: 'Jump to'
+]
+
+{ #category : #actions }
+VMMachineCodeDebugger >> jump [
+
+	machineSimulator instructionPointerValue: (NumberParser parse: ipInput text).
+	self refreshInstructions.
+	self refreshRegisters.
 ]
 
 { #category : #accessing }

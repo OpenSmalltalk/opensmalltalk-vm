@@ -548,9 +548,9 @@ UnicornSimulator >> stackPointerRegisterValue: aValue [
 UnicornSimulator >> stackValues [
 	
 	| initialValue |
-	initialValue := self stackPointerRegisterValue.
+	initialValue := self smalltalkStackPointerRegisterValue.
 	
-	^ (1 to: 20) collect: [ :anIndex |  
+	^ (1 to: 30) collect: [ :anIndex |  
 		VMMachineCodeDebuggerStackItem address: initialValue + (memory wordSize * (anIndex - 1)) on: self.	
 	] 
 ]
