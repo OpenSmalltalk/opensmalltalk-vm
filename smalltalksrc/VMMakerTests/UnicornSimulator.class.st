@@ -508,6 +508,12 @@ UnicornSimulator >> simulateLeafCallOf: anInteger nextpc: anInteger2 memory: aSp
 	self subclassResponsibility
 ]
 
+{ #category : #accessing }
+UnicornSimulator >> smalltalkStackPointerRegister [
+	"By default they are the same"
+	^ self stackPointerRegister
+]
+
 { #category : #registers }
 UnicornSimulator >> smalltalkStackPointerRegisterValue [
 

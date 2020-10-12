@@ -235,6 +235,12 @@ UnicornARMv5Simulator >> r11: anInteger [
 	^ self writeRegister: UcARMRegisters r11 value: anInteger
 ]
 
+{ #category : #accessing }
+UnicornARMv5Simulator >> r12 [
+	
+	^ self readRegister: UcARMRegisters r12
+]
+
 { #category : #'as yet unclassified' }
 UnicornARMv5Simulator >> r12: anInteger [ 
 

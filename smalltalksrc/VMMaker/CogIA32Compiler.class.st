@@ -222,6 +222,12 @@ CogIA32Compiler >> cResultRegisterLow [
 	^ EAX
 ]
 
+{ #category : #accessing }
+CogIA32Compiler >> cStackPointer [
+	
+	^ ESP
+]
+
 { #category : #'inline cacheing' }
 CogIA32Compiler >> callFullTargetFromReturnAddress: callSiteReturnAddress [
 	"Answer the address the call immediately preceding callSiteReturnAddress will jump to."

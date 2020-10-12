@@ -30,7 +30,7 @@ VMPrimitiveCallingTest >> initStack [
 	self createBaseFrame.
 	
 	"Initialize Stack to the correct pointers in the selected page"
-	machineSimulator stackPointerRegisterValue: interpreter stackPointer.
+	machineSimulator smalltalkStackPointerRegisterValue: interpreter stackPointer.
 	machineSimulator framePointerRegisterValue: interpreter framePointer.
 	machineSimulator baseRegisterValue: cogit varBaseAddress.
 	

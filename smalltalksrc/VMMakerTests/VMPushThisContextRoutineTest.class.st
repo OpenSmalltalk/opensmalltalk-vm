@@ -172,7 +172,7 @@ VMPushThisContextRoutineTest >> testNewMarriedLargeContextHasCorrectStackPointer
 
 	self runFrom: routine until: callingAddress.	
 	
-	expectedStackPointer := ((machineSimulator framePointerRegisterValue - machineSimulator stackPointerRegisterValue) / wordSize) - ( 3 "Stack elements to not count due to call convention") + 3 "num arguments".
+	expectedStackPointer := ((machineSimulator framePointerRegisterValue - machineSimulator smalltalkStackPointerRegisterValue) / wordSize) - ( 3 "Stack elements to not count due to call convention") + 3 "num arguments".
 	
 	self assert: (memory fetchPointer: StackPointerIndex ofObject: machineSimulator receiverRegisterValue ) equals: (memory integerObjectOf: expectedStackPointer).
 ]

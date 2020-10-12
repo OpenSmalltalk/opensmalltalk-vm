@@ -371,6 +371,12 @@ CogX64Compiler >> cResultRegisterHigh [
 	^ RDX
 ]
 
+{ #category : #accessing }
+CogX64Compiler >> cStackPointer [
+	
+	^ RSP
+]
+
 { #category : #'full transfer run-time support' }
 CogX64Compiler >> callFullTargetFromReturnAddress: callSiteReturnAddress [
 	"Answer the address the full call immediately preceding callSiteReturnAddress will jump to."
