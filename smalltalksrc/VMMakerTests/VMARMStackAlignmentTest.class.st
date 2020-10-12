@@ -40,7 +40,9 @@ VMARMStackAlignmentTest >> runInstructions [
 VMARMStackAlignmentTest >> setUp [
 
 	super setUp.
-	instructions := OrderedCollection new
+	instructions := OrderedCollection new.
+	
+	machineSimulator stackPointerRegisterValue: interpreter rumpCStackAddress
 ]
 
 { #category : #tests }

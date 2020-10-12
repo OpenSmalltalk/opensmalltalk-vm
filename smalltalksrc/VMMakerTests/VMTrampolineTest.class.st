@@ -62,10 +62,12 @@ VMTrampolineTest >> setUp [
 
 { #category : #tests }
 VMTrampolineTest >> testCallEnilopmartSucceedsExecution [
-	| inc baseMethod baseFrame baseMethodIP ctx page |
+	| inc baseMethod baseMethodIP ctx page |
 	"Add 1 to the receiver result reg as a small integer"
 	inc := self compile: [ 
 		cogit AddCq: 1 << memory numSmallIntegerTagBits R: ReceiverResultReg.
+		"Force a return to our call"
+		cogit PushCw: callerAddress.
 		cogit RetN: 0 ].
 
 	initialAddress := self compileWithoutOutput: [ cogit
@@ -99,6 +101,8 @@ VMTrampolineTest >> testCallEnilopmartSucceedsExecution [
 	"Calling convention of enilopmarts: target address and arguments are pushed to the stack"	
 	interpreter push: inc.
 	interpreter push: (memory integerObjectOf: 2).
+
+	self prepareCall.
 	self runUntilReturn.
 
 	self assert: machineSimulator receiverRegisterValue equals: (memory integerObjectOf: 3)

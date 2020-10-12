@@ -51,10 +51,7 @@ VMCodeCompactionTest >> testCompactDuringInterpreterPrimitiveThatMovesCurrentMet
 	self pushAddress: memory nilObject.
 	self pushAddress: memory falseObject.
 
-	machineSimulator hasLinkRegister 
-		ifTrue: [ machineSimulator linkRegisterValue: callerAddress ] 
-		ifFalse: [ self pushAddress: callerAddress ].
-	
+	self prepareCall.
 	machineSimulator instructionPointerValue: compactMethod address + cogit noCheckEntryOffset. 
 	
 	self runFrom: compactMethod address + cogit noCheckEntryOffset until: callerAddress.

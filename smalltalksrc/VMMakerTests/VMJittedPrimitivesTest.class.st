@@ -76,11 +76,7 @@ VMJittedPrimitivesTest >> prepareStackForSendReceiver: aReceiver arguments: argu
 	self pushAddress: aReceiver.
 	arguments do: [ :anArgument | self pushAddress: anArgument ].
 	self machineSimulator receiverRegisterValue: aReceiver.
-
-	machineSimulator hasLinkRegister 
-		ifTrue: [ machineSimulator linkRegisterValue: callerAddress "The caller IP in ARM is in the linkRegister"]
-		ifFalse: [ self pushAddress:  callerAddress. " I need to push the caller IP, as this is a message send" ]
-
+	self prepareCall
 ]
 
 { #category : #helpers }

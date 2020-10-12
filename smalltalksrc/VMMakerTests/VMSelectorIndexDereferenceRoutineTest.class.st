@@ -85,11 +85,7 @@ VMSelectorIndexDereferenceRoutineTest >> testPositiveSelectorIndexIsLookedUpInMe
 	machineSimulator classRegisterValue: index.
 	machineSimulator baseRegisterValue: cogit varBaseAddress.
 	
-	"This routine will be called with a call.
-	Then simulate a call by putting the caller address in the stack or register where it corresponds"
-	cogit backend hasLinkRegister
-		ifTrue: [ machineSimulator linkRegisterValue: callerAddress ]
-		ifFalse: [ self pushAddress: callerAddress ].
+	self prepareCall.
 	self runFrom: cogit ceDereferenceSelectorIndex until: callerAddress.
 
 	self assert: machineSimulator classRegisterValue equals: memory falseObject

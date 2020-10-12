@@ -246,10 +246,7 @@ VMSimpleStackBasedCogitAbstractTest >> createFramelessCallFrom: returnAddress re
 	self pushAddress: receiver.
 	arguments do: [ :anArgument | self pushAddress: anArgument ].
 
-	machineSimulator hasLinkRegister 
-		ifTrue: [ machineSimulator linkRegisterValue: returnAddress ]
-		ifFalse: [ self pushAddress: returnAddress  ].
-
+	self prepareCall.
 	machineSimulator receiverRegisterValue: receiver.
 
 	"We initialize the internal Cogit state by hand because we don't have a method to cog"	
@@ -530,16 +527,25 @@ VMSimpleStackBasedCogitAbstractTest >> popAddress [
 ]
 
 { #category : #helpers }
+VMSimpleStackBasedCogitAbstractTest >> prepareCall [
+
+	machineSimulator hasLinkRegister 
+		ifTrue: [ 
+			"The caller IP in ARM is in the linkRegister"
+			machineSimulator linkRegisterValue: callerAddress ]
+		ifFalse: [ 
+			"I need to push the caller IP, as this is a message send"
+			self pushAddress:  callerAddress ]
+
+]
+
+{ #category : #helpers }
 VMSimpleStackBasedCogitAbstractTest >> prepareStackForSendReceiver: aReceiver arguments: arguments [ 	
 
 	self pushAddress: aReceiver.
 	arguments do: [ :anArgument | self pushAddress: anArgument ].
 	self machineSimulator receiverRegisterValue: aReceiver.
-
-	machineSimulator hasLinkRegister 
-		ifTrue: [ machineSimulator linkRegisterValue: callerAddress "The caller IP in ARM is in the linkRegister"]
-		ifFalse: [ self pushAddress:  callerAddress. " I need to push the caller IP, as this is a message send" ]
-
+	self prepareCall
 ]
 
 { #category : #helpers }
