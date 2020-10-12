@@ -11,7 +11,7 @@ esac
 MAKE=gmake
 INSTALLDIR=sqcogspursunosht/usr
 # Some gcc versions create a broken VM using -O2
-OPT="-g -DNDEBUG -DDEBUGVM=0"
+OPT="-g -DAIO_DEBUG -DNDEBUG -DDEBUGVM=0"
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
