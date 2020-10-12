@@ -315,6 +315,12 @@ UnicornProcessor >> x12: anInteger [
 	machineSimulator x12: anInteger
 ]
 
+{ #category : #accessing }
+UnicornProcessor >> x19: anInteger [ 
+
+	machineSimulator x19: anInteger
+]
+
 { #category : #'as yet unclassified' }
 UnicornProcessor >> x1: anInteger [ 
 

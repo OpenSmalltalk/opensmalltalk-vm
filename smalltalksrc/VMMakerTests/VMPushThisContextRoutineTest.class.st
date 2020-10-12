@@ -30,10 +30,9 @@ VMPushThisContextRoutineTest >> setUp [
 { #category : #tests }
 VMPushThisContextRoutineTest >> testMarriedContextReturnsSpouseObject [
 
-	| isLargeContext isInBlock routine numberOfArguments methodObject callingAddress contextOop |
+	| isLargeContext isInBlock routine numberOfArguments methodObject contextOop |
 	isLargeContext := false.
 	isInBlock := 0 "non-block, i.e., a normal method".
-	callingAddress := self compile: [ cogit Stop ].
 	cogit objectRepresentation ceScheduleScavengeTrampoline: (self compile: [ cogit Stop ]).
 	routine := self compile: [ cogit objectRepresentation genGetActiveContextLarge: isLargeContext inBlock: isInBlock ].
 	numberOfArguments := 3.
@@ -44,7 +43,7 @@ VMPushThisContextRoutineTest >> testMarriedContextReturnsSpouseObject [
 		buildMethod.
 
 	self machineCodeFrameBuilder
-		returnAddress: callingAddress;
+		returnAddress: callerAddress;
 		spouseContext: contextOop;
 		arguments: { 
 			memory integerObjectOf: 1.
@@ -58,11 +57,9 @@ VMPushThisContextRoutineTest >> testMarriedContextReturnsSpouseObject [
 		buildFrame.
 		
 	"Push the address of the caller of the routine"
-	cogit backend hasLinkRegister
-		ifFalse: [ self pushAddress: callingAddress ].
-
 	machineSimulator sendNumberOfArgumentsRegisterValue: numberOfArguments.
-	self runFrom: routine until: callingAddress.
+	self prepareCall.
+	self runFrom: routine until: callerAddress.
 	
 	self assert: machineSimulator receiverRegisterValue equals: contextOop
 ]
@@ -70,16 +67,15 @@ VMPushThisContextRoutineTest >> testMarriedContextReturnsSpouseObject [
 { #category : #tests }
 VMPushThisContextRoutineTest >> testNewMarriedContextHasLargeSize [
 
-	| isLargeContext isInBlock routine numberOfArguments callingAddress |
+	| isLargeContext isInBlock routine numberOfArguments |
 	isLargeContext := true.
 	isInBlock := 0 "non-block, i.e., a normal method".
-	callingAddress := self compile: [ cogit Stop ].
 	cogit objectRepresentation ceScheduleScavengeTrampoline: (self compile: [ cogit Stop ]).
 	routine := self compile: [ cogit objectRepresentation genGetActiveContextLarge: isLargeContext inBlock: isInBlock ].
 	
 	numberOfArguments := 3.
 	self machineCodeFrameBuilder
-		returnAddress: callingAddress;
+		returnAddress: callerAddress;
 		arguments: { 
 			memory integerObjectOf: 1.
 			memory integerObjectOf: 2.
@@ -92,13 +88,11 @@ VMPushThisContextRoutineTest >> testNewMarriedContextHasLargeSize [
 		buildFrame.
 		
 	"Push the address of the caller of the routine"
-	cogit backend hasLinkRegister
-		ifFalse: [ self pushAddress: callingAddress ].
-
+	self prepareCall.
 	machineSimulator baseRegisterValue: cogit varBaseAddress.
 	machineSimulator sendNumberOfArgumentsRegisterValue: numberOfArguments.
 
-	self runFrom: routine until: callingAddress.	
+	self runFrom: routine until: callerAddress.	
 
 	self assert: (memory numSlotsOf: machineSimulator receiverRegisterValue) equals: LargeContextSlots.
 ]
@@ -106,16 +100,15 @@ VMPushThisContextRoutineTest >> testNewMarriedContextHasLargeSize [
 { #category : #tests }
 VMPushThisContextRoutineTest >> testNewMarriedContextHasSmallSize [
 
-	| isLargeContext isInBlock routine numberOfArguments callingAddress |
+	| isLargeContext isInBlock routine numberOfArguments |
 	isLargeContext := false.
 	isInBlock := 0 "non-block, i.e., a normal method".
-	callingAddress := self compile: [ cogit Stop ].
 	cogit objectRepresentation ceScheduleScavengeTrampoline: (self compile: [ cogit Stop ]).
 	routine := self compile: [ cogit objectRepresentation genGetActiveContextLarge: isLargeContext inBlock: isInBlock ].
 	
 	numberOfArguments := 3.
 	self machineCodeFrameBuilder
-		returnAddress: callingAddress;
+		returnAddress: callerAddress;
 		arguments: { 
 			memory integerObjectOf: 1.
 			memory integerObjectOf: 2.
@@ -129,12 +122,12 @@ VMPushThisContextRoutineTest >> testNewMarriedContextHasSmallSize [
 
 	"Push the address of the caller of the routine"
 	cogit backend hasLinkRegister
-		ifFalse: [ self pushAddress: callingAddress ].
+		ifFalse: [ self pushAddress: callerAddress ].
 
 	machineSimulator baseRegisterValue: cogit varBaseAddress.
 	machineSimulator sendNumberOfArgumentsRegisterValue: numberOfArguments.
 	
-	self runFrom: routine until: callingAddress.	
+	self runFrom: routine until: callerAddress.	
 	
 	self assert: (memory numSlotsOf: machineSimulator receiverRegisterValue) equals: SmallContextSlots
 ]
@@ -142,16 +135,15 @@ VMPushThisContextRoutineTest >> testNewMarriedContextHasSmallSize [
 { #category : #tests }
 VMPushThisContextRoutineTest >> testNewMarriedLargeContextHasCorrectStackPointer [
 
-	| isLargeContext isInBlock routine numberOfArguments callingAddress expectedStackPointer |
+	| isLargeContext isInBlock routine numberOfArguments expectedStackPointer |
 	isLargeContext := true.
 	isInBlock := 0 "non-block, i.e., a normal method".
-	callingAddress := self compile: [ cogit Stop ].
 	cogit objectRepresentation ceScheduleScavengeTrampoline: (self compile: [ cogit Stop ]).
 	routine := self compile: [ cogit objectRepresentation genGetActiveContextLarge: isLargeContext inBlock: isInBlock ].
 	
 	numberOfArguments := 3.
 	self machineCodeFrameBuilder
-		returnAddress: callingAddress;
+		returnAddress: callerAddress;
 		arguments: { 
 			memory integerObjectOf: 1.
 			memory integerObjectOf: 2.
@@ -165,12 +157,12 @@ VMPushThisContextRoutineTest >> testNewMarriedLargeContextHasCorrectStackPointer
 		
 	"Push the address of the caller of the routine"
 	cogit backend hasLinkRegister
-		ifFalse: [ self pushAddress: callingAddress ].
+		ifFalse: [ self pushAddress: callerAddress ].
 
 	machineSimulator baseRegisterValue: cogit varBaseAddress.
 	machineSimulator sendNumberOfArgumentsRegisterValue: numberOfArguments.
 
-	self runFrom: routine until: callingAddress.	
+	self runFrom: routine until: callerAddress.	
 	
 	expectedStackPointer := ((machineSimulator framePointerRegisterValue - machineSimulator smalltalkStackPointerRegisterValue) / wordSize) - ( 3 "Stack elements to not count due to call convention") + 3 "num arguments".
 	
@@ -180,16 +172,15 @@ VMPushThisContextRoutineTest >> testNewMarriedLargeContextHasCorrectStackPointer
 { #category : #tests }
 VMPushThisContextRoutineTest >> testNewMarriedSmallContextHasArguments [
 
-	| isLargeContext isInBlock routine numberOfArguments callingAddress |
+	| isLargeContext isInBlock routine numberOfArguments |
 	isLargeContext := false.
 	isInBlock := 0 "non-block, i.e., a normal method".
-	callingAddress := self compile: [ cogit Stop ].
 	cogit objectRepresentation ceScheduleScavengeTrampoline: (self compile: [ cogit Stop ]).
 	routine := self compile: [ cogit objectRepresentation genGetActiveContextLarge: isLargeContext inBlock: isInBlock ].
 	
 	numberOfArguments := 3.
 	self machineCodeFrameBuilder
-		returnAddress: callingAddress;
+		returnAddress: callerAddress;
 		receiver: memory trueObject;
 		arguments: { 
 			memory integerObjectOf: 1.
@@ -203,13 +194,12 @@ VMPushThisContextRoutineTest >> testNewMarriedSmallContextHasArguments [
 		buildFrame.
 		
 	"Push the address of the caller of the routine"
-	cogit backend hasLinkRegister
-		ifFalse: [ self pushAddress: callingAddress ].
+	self prepareCall.
 
 	machineSimulator baseRegisterValue: cogit varBaseAddress.
 	machineSimulator sendNumberOfArgumentsRegisterValue: numberOfArguments.
 
-	self runFrom: routine until: callingAddress.	
+	self runFrom: routine until: callerAddress.	
 	
 	self assert: (memory fetchPointer: Context allSlots size +0 ofObject: machineSimulator receiverRegisterValue ) equals: (memory integerObjectOf: 1).
 	self assert: (memory fetchPointer: Context allSlots size +1 ofObject: machineSimulator receiverRegisterValue ) equals: (memory integerObjectOf: 2).
@@ -219,16 +209,15 @@ VMPushThisContextRoutineTest >> testNewMarriedSmallContextHasArguments [
 { #category : #tests }
 VMPushThisContextRoutineTest >> testNewMarriedSmallContextHasClosureInNil [
 
-	| isLargeContext isInBlock routine numberOfArguments callingAddress |
+	| isLargeContext isInBlock routine numberOfArguments |
 	isLargeContext := false.
 	isInBlock := 0 "non-block, i.e., a normal method".
-	callingAddress := self compile: [ cogit Stop ].
 	cogit objectRepresentation ceScheduleScavengeTrampoline: (self compile: [ cogit Stop ]).
 	routine := self compile: [ cogit objectRepresentation genGetActiveContextLarge: isLargeContext inBlock: isInBlock ].
 	
 	numberOfArguments := 3.
 	self machineCodeFrameBuilder
-		returnAddress: callingAddress;
+		returnAddress: callerAddress;
 		arguments: { 
 			memory integerObjectOf: 1.
 			memory integerObjectOf: 2.
@@ -241,13 +230,12 @@ VMPushThisContextRoutineTest >> testNewMarriedSmallContextHasClosureInNil [
 		buildFrame.
 		
 	"Push the address of the caller of the routine"
-	cogit backend hasLinkRegister
-		ifFalse: [ self pushAddress: callingAddress ].
+	self prepareCall.
 
 	machineSimulator baseRegisterValue: cogit varBaseAddress.
 	machineSimulator sendNumberOfArgumentsRegisterValue: numberOfArguments.
 
-	self runFrom: routine until: callingAddress.	
+	self runFrom: routine until: callerAddress.	
 
 	self assert: (memory fetchPointer: ClosureIndex ofObject: machineSimulator receiverRegisterValue ) equals: (memory nilObject).
 ]
@@ -255,16 +243,15 @@ VMPushThisContextRoutineTest >> testNewMarriedSmallContextHasClosureInNil [
 { #category : #tests }
 VMPushThisContextRoutineTest >> testNewMarriedSmallContextHasClosureInSetOne [
 
-	| isLargeContext isInBlock routine numberOfArguments callingAddress |
+	| isLargeContext isInBlock routine numberOfArguments |
 	isLargeContext := false.
 	isInBlock := InVanillaBlock "non-block, i.e., a normal method".
-	callingAddress := self compile: [ cogit Stop ].
 	cogit objectRepresentation ceScheduleScavengeTrampoline: (self compile: [ cogit Stop ]).
 	routine := self compile: [ cogit objectRepresentation genGetActiveContextLarge: isLargeContext inBlock: isInBlock ].
 	
 	numberOfArguments := 3.
 	self machineCodeFrameBuilder
-		returnAddress: callingAddress;
+		returnAddress: callerAddress;
 		receiver: memory trueObject;
 		arguments: { 
 			memory integerObjectOf: 1.
@@ -278,13 +265,12 @@ VMPushThisContextRoutineTest >> testNewMarriedSmallContextHasClosureInSetOne [
 		buildFrame.
 		
 	"Push the address of the caller of the routine"
-	cogit backend hasLinkRegister
-		ifFalse: [ self pushAddress: callingAddress ].
+	self prepareCall.
 
 	machineSimulator baseRegisterValue: cogit varBaseAddress.
 	machineSimulator sendNumberOfArgumentsRegisterValue: numberOfArguments.
 
-	self runFrom: routine until: callingAddress.	
+	self runFrom: routine until: callerAddress.	
 
 	self assert: (memory fetchPointer: ClosureIndex ofObject: machineSimulator receiverRegisterValue ) equals: (memory trueObject).
 ]
@@ -292,10 +278,9 @@ VMPushThisContextRoutineTest >> testNewMarriedSmallContextHasClosureInSetOne [
 { #category : #tests }
 VMPushThisContextRoutineTest >> testNewMarriedSmallContextHasCorrectStackPointer [
 
-	| isLargeContext isInBlock routine numberOfArguments methodObject callingAddress contextOop expectedStackPointer |
+	| isLargeContext isInBlock routine numberOfArguments methodObject contextOop expectedStackPointer |
 	isLargeContext := false.
 	isInBlock := 0 "non-block, i.e., a normal method".
-	callingAddress := self compile: [ cogit Stop ].
 	cogit objectRepresentation ceScheduleScavengeTrampoline: (self compile: [ cogit Stop ]).
 	routine := self compile: [ cogit objectRepresentation genGetActiveContextLarge: isLargeContext inBlock: isInBlock ].
 	
@@ -303,7 +288,7 @@ VMPushThisContextRoutineTest >> testNewMarriedSmallContextHasCorrectStackPointer
 	contextOop := memory integerObjectOf: 42.
 	methodObject := self newMethodWithSmallContext: false WithArguments: numberOfArguments.
 	self machineCodeFrameBuilder
-		returnAddress: callingAddress;
+		returnAddress: callerAddress;
 		arguments: { 
 			memory integerObjectOf: 1.
 			memory integerObjectOf: 2.
@@ -316,13 +301,12 @@ VMPushThisContextRoutineTest >> testNewMarriedSmallContextHasCorrectStackPointer
 		buildFrame.
 		
 	"Push the address of the caller of the routine"
-	cogit backend hasLinkRegister
-		ifFalse: [ self pushAddress: callingAddress ].
+	self prepareCall.
 
 	machineSimulator baseRegisterValue: cogit varBaseAddress.
 	machineSimulator sendNumberOfArgumentsRegisterValue: numberOfArguments.
 
-	self runFrom: routine until: callingAddress.	
+	self runFrom: routine until: callerAddress.	
 	
 	expectedStackPointer := ((machineSimulator framePointerRegisterValue - machineSimulator smalltalkStackPointerRegisterValue) / wordSize) - ( 3 "Stack elements to not count due to call convention") + 3 "num arguments".
 	
@@ -332,16 +316,15 @@ VMPushThisContextRoutineTest >> testNewMarriedSmallContextHasCorrectStackPointer
 { #category : #tests }
 VMPushThisContextRoutineTest >> testNewMarriedSmallContextHasReceiver [
 
-	| isLargeContext isInBlock routine numberOfArguments callingAddress |
+	| isLargeContext isInBlock routine numberOfArguments |
 	isLargeContext := false.
 	isInBlock := 0 "non-block, i.e., a normal method".
-	callingAddress := self compile: [ cogit Stop ].
 	cogit objectRepresentation ceScheduleScavengeTrampoline: (self compile: [ cogit Stop ]).
 	routine := self compile: [ cogit objectRepresentation genGetActiveContextLarge: isLargeContext inBlock: isInBlock ].
 	
 	numberOfArguments := 3.
 	self machineCodeFrameBuilder
-		returnAddress: callingAddress;
+		returnAddress: callerAddress;
 		receiver: memory trueObject;
 		arguments: { 
 			memory integerObjectOf: 1.
@@ -355,13 +338,12 @@ VMPushThisContextRoutineTest >> testNewMarriedSmallContextHasReceiver [
 		buildFrame.
 		
 	"Push the address of the caller of the routine"
-	cogit backend hasLinkRegister
-		ifFalse: [ self pushAddress: callingAddress ].
+	self prepareCall.
 
 	machineSimulator baseRegisterValue: cogit varBaseAddress.
 	machineSimulator sendNumberOfArgumentsRegisterValue: numberOfArguments.
 
-	self runFrom: routine until: callingAddress.	
+	self runFrom: routine until: callerAddress.	
 	
 	self assert: (memory fetchPointer: ReceiverIndex ofObject: machineSimulator receiverRegisterValue ) equals: (memory trueObject).
 ]
@@ -369,16 +351,15 @@ VMPushThisContextRoutineTest >> testNewMarriedSmallContextHasReceiver [
 { #category : #tests }
 VMPushThisContextRoutineTest >> testNewMarriedSmallContextHasTemporaries [
 
-	| isLargeContext isInBlock routine numberOfArguments callingAddress |
+	| isLargeContext isInBlock routine numberOfArguments |
 	isLargeContext := false.
 	isInBlock := 0 "non-block, i.e., a normal method".
-	callingAddress := self compile: [ cogit Stop ].
 	cogit objectRepresentation ceScheduleScavengeTrampoline: (self compile: [ cogit Stop ]).
 	routine := self compile: [ cogit objectRepresentation genGetActiveContextLarge: isLargeContext inBlock: isInBlock ].
 	
 	numberOfArguments := 3.
 	self machineCodeFrameBuilder
-		returnAddress: callingAddress;
+		returnAddress: callerAddress;
 		receiver: memory trueObject;
 		arguments: { 
 			memory integerObjectOf: 1.
@@ -392,13 +373,12 @@ VMPushThisContextRoutineTest >> testNewMarriedSmallContextHasTemporaries [
 		buildFrame.
 		
 	"Push the address of the caller of the routine"
-	cogit backend hasLinkRegister
-		ifFalse: [ self pushAddress: callingAddress ].
+	self prepareCall.
 
 	machineSimulator baseRegisterValue: cogit varBaseAddress.
 	machineSimulator sendNumberOfArgumentsRegisterValue: numberOfArguments.
 
-	self runFrom: routine until: callingAddress.	
+	self runFrom: routine until: callerAddress.	
 	
 	"The temporaries are not copied they are initialized in nil"
 	
@@ -411,10 +391,9 @@ VMPushThisContextRoutineTest >> testNewMarriedSmallContextHasTemporaries [
 { #category : #tests }
 VMPushThisContextRoutineTest >> testSingleContextReturnsNewSpouseInNewSpace [
 
-	| isLargeContext isInBlock routine numberOfArguments methodObject callingAddress contextOop |
+	| isLargeContext isInBlock routine numberOfArguments methodObject contextOop |
 	isLargeContext := false.
 	isInBlock := 0 "non-block, i.e., a normal method".
-	callingAddress := self compile: [ cogit Stop ].
 	cogit objectRepresentation ceScheduleScavengeTrampoline: (self compile: [ cogit Stop ]).
 	routine := self compile: [ cogit objectRepresentation genGetActiveContextLarge: isLargeContext inBlock: isInBlock ].
 	
@@ -422,7 +401,7 @@ VMPushThisContextRoutineTest >> testSingleContextReturnsNewSpouseInNewSpace [
 	contextOop := memory integerObjectOf: 42.
 	methodObject := self newMethodWithSmallContext: false WithArguments: numberOfArguments.
 	self machineCodeFrameBuilder
-		returnAddress: callingAddress;
+		returnAddress: callerAddress;
 		arguments: { 
 			memory integerObjectOf: 1.
 			memory integerObjectOf: 2.
@@ -435,13 +414,12 @@ VMPushThisContextRoutineTest >> testSingleContextReturnsNewSpouseInNewSpace [
 		buildFrame.
 
 	"Push the address of the caller of the routine"
-	cogit backend hasLinkRegister
-		ifFalse: [ self pushAddress: callingAddress ].
+	self prepareCall.
 
 	machineSimulator baseRegisterValue: cogit varBaseAddress.
 	machineSimulator sendNumberOfArgumentsRegisterValue: numberOfArguments.
 
-	self runFrom: routine until: callingAddress.	
+	self runFrom: routine until: callerAddress.	
 	
 	self assert: (memory isYoung: machineSimulator receiverRegisterValue)
 ]

@@ -412,6 +412,12 @@ UnicornARMv8Simulator >> x18: anInteger [
 	self writeRegister: UcARM64Registers x18 value: anInteger
 ]
 
+{ #category : #accesing }
+UnicornARMv8Simulator >> x19: anInteger [ 
+	
+	self writeRegister: UcARM64Registers x19 value: anInteger
+]
+
 { #category : #registers }
 UnicornARMv8Simulator >> x1: anInteger [ 
 
