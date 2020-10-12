@@ -36,6 +36,7 @@ project(PharoVM)
 
 set(FLAVOUR CoInterpreterWithQueueFFI CACHE STRING "The kind of VM to generate. Possible values: StackVM, CogVM, CoInterpreterWithQueueFFI")
 set(GENERATE_SOURCES 1 CACHE BOOL "If it generates the sources")
+set(ALWAYS_INTERACTIVE 0 CACHE BOOL "If this VM will always add interactive or not. If it is set, the headless parameter is not by default true")
 
 if(FLAVOUR MATCHES "StackVM")
   set(VMSOURCEFILES ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/src/gcc3x-interp.c)

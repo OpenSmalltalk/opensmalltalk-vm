@@ -63,9 +63,13 @@ def buildGTKBundle(){
 	}
 }
 
-def runBuild(platform, configuration){
+def runBuild(platformName, configuration, headless = true){
 	cleanWs()
 	
+	def platform = headless ? platformName : "${platformName}-stockReplacement"
+	def buildDirectory = headless ? "build" :"build-stockReplacement"
+
+	def additionalParameters = headless ? "" : "-DALWAYS_INTERACTIVE=1" 
 
     stage("Checkout-${platform}"){
       dir('repository') {
@@ -76,19 +80,19 @@ def runBuild(platform, configuration){
 
 	stage("Build-${platform}-${configuration}"){
     if(isWindows()){
-      runInCygwin "mkdir build"
-      runInCygwin "cd build && cmake -DFLAVOUR=${configuration} ../repository"
-      runInCygwin "cd build && make install"
-      runInCygwin "cd build && make package"
+      runInCygwin "mkdir ${buildDirectory}"
+      runInCygwin "cd ${buildDirectory} && cmake -DFLAVOUR=${configuration} ${additionalParameters} ../repository"
+      runInCygwin "cd ${buildDirectory} && make install"
+      runInCygwin "cd ${buildDirectory} && make package"
     }else{
-      cmakeBuild generator: "Unix Makefiles", cmakeArgs: "-DFLAVOUR=${configuration}", sourceDir: "repository", buildDir: "build", installation: "InSearchPath"
-      dir("build"){
+      cmakeBuild generator: "Unix Makefiles", cmakeArgs: "-DFLAVOUR=${configuration} ${additionalParameters}", sourceDir: "repository", buildDir: "${buildDirectory}", installation: "InSearchPath"
+      dir("${buildDirectory}"){
         shell "make install"
         shell "make package"
       }
     }
-		stash excludes: '_CPack_Packages', includes: 'build/build/packages/*', name: "packages-${platform}-${configuration}"
-		archiveArtifacts artifacts: 'build/build/packages/*', excludes: '_CPack_Packages'
+		stash excludes: '_CPack_Packages', includes: '${buildDirectory}/build/packages/*', name: "packages-${platform}-${configuration}"
+		archiveArtifacts artifacts: '${buildDirectory}/build/packages/*', excludes: '_CPack_Packages'
 	}
 }
 
@@ -215,6 +219,9 @@ try{
 			node(platform){
 				timeout(30){
 					runBuild(platform, "CoInterpreterWithQueueFFI")
+				}
+				timeout(30){
+					runBuild(platform, "CoInterpreterWithQueueFFI", false)
 				}
 			}
 		}
