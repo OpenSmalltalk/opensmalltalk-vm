@@ -4,7 +4,7 @@ set -e
 INSTALLDIR=sqstkspur64sunosht/usr
 # Some gcc versions create a broken VM using -O2
 OPT="-g -DNDEBUG -DDEBUGVM=0"
-MAKE=/usr/bin/gmake
+MAKE=gmake
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
