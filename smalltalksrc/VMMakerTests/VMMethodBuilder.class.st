@@ -50,8 +50,8 @@ VMMethodBuilder >> compiledMethodClassIndex [
 { #category : #filling }
 VMMethodBuilder >> fillMethod [
 	self putHeaderInMethod.
-	self putBytecodesInMethod.
 	self putLiteralInMethod.
+	self putBytecodesInMethod.
 ]
 
 { #category : #initialization }
