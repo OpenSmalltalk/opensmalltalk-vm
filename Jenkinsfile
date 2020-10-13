@@ -184,6 +184,25 @@ def upload(platform, configuration, vmDir) {
 	}
 }
 
+def uploadStockReplacement(platform, configuration, vmDir) {
+
+	cleanWs()
+
+	unstash name: "packages-${platform}-${configuration}"
+
+	def expandedBinaryFileName = sh(returnStdout: true, script: "ls build/build/packages/PharoVM-*-${vmDir}64-bin.zip").trim()
+
+	sshagent (credentials: ['b5248b59-a193-4457-8459-e28e9eb29ed7']) {
+		sh "scp -o StrictHostKeyChecking=no \
+		${expandedBinaryFileName} \
+		pharoorgde@ssh.cluster023.hosting.ovh.net:/home/pharoorgde/files/vm/pharo-spur64/${vmDir}"
+		sh "scp -o StrictHostKeyChecking=no \
+		${expandedBinaryFileName} \
+		pharoorgde@ssh.cluster023.hosting.ovh.net:/home/pharoorgde/files/vm/pharo-spur64/${vmDir}/latestReplacement.zip"
+	}
+}
+
+
 def isPullRequest() {
   return env.CHANGE_ID != null
 }
@@ -206,9 +225,9 @@ def uploadPackages(){
 			upload('unix', "CoInterpreterWithQueueFFI",'linux')
 			upload('windows', "CoInterpreterWithQueueFFI", 'win')
 
-			upload('osx-stockReplacement', "CoInterpreterWithQueueFFI", 'mac')
-			upload('unix-stockReplacement', "CoInterpreterWithQueueFFI",'linux')
-			upload('windows-stockReplacement', "CoInterpreterWithQueueFFI", 'win')
+			uploadStockReplacement('osx-stockReplacement', "CoInterpreterWithQueueFFI", 'mac')
+			uploadStockReplacement('unix-stockReplacement', "CoInterpreterWithQueueFFI",'linux')
+			uploadStockReplacement('windows-stockReplacement', "CoInterpreterWithQueueFFI", 'win')
 		}
 	}
 }
