@@ -190,7 +190,7 @@ def uploadStockReplacement(platform, configuration, vmDir) {
 
 	unstash name: "packages-${platform}-${configuration}"
 
-	def expandedBinaryFileName = sh(returnStdout: true, script: "ls build/build/packages/PharoVM-*-${vmDir}64-bin.zip").trim()
+	def expandedBinaryFileName = sh(returnStdout: true, script: "ls build-stockReplacement/build/packages/PharoVM-*-${vmDir}64-bin.zip").trim()
 
 	sshagent (credentials: ['b5248b59-a193-4457-8459-e28e9eb29ed7']) {
 		sh "scp -o StrictHostKeyChecking=no \
