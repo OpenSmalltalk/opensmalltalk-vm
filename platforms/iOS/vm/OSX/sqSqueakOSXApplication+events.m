@@ -49,6 +49,22 @@ extern SqueakOSXAppDelegate *gDelegateApp;
 
 static int buttonState=0;
 
+static int firstScreenHeight = 0;
+/*
+ * Answer (cache) the height of the main display, needed for transforming
+ * mac screen coordinates to Squeak screen coordinates.
+ */
+int
+yZero()
+{
+	if (!firstScreenHeight) {
+		NSScreen *originScreen = [NSScreen screens][0];
+		NSRect origin  = [originScreen frame];
+		firstScreenHeight = origin.size.height;
+	}
+	return firstScreenHeight;
+}
+
 @interface sqSqueakOSXApplication (eventsPrivate)
 
 - (sqButton) resolveModifier:(sqModifier)modifier forMouseButton:(sqButton)mouseButton;
@@ -531,20 +547,68 @@ static int buttonState=0;
 	interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
 }
 
-- (void) recordWindowEvent: (int) windowType window: (NSWindow *) window {
+- (void) recordWindowEvent: (int) windowEventType window: (NSWindow *) window {
 	sqWindowEvent evt;
 
 	evt.type		= EventTypeWindow;
 	evt.timeStamp	= ioMSecs();
-	evt.action		= windowType;
-	switch (windowType) {
-		NSRect frame = [window frame];
-		NSRect screen = [[window screen] frame];
-		evt.value1 = frame.origin.x;
-		evt.value2 = screen.size.height - (frame.size.height + frame.origin.y);
-		evt.value3 = frame.size.width;
-		evt.value4 = frame.size.height;
+	evt.action		= windowEventType;
+
+	/* The Mac origin is bottom left, always 0@0. The Smalltalk origin
+	 * is top left (0@first screen height in Mac coordinates).
+	 * Secondary screens can be at negative offsets.
+	 */
+#define left(r)   ((r).origin.x)
+#define top(r)    (yZero() - ((r).origin.y + (r).size.height))
+#define right(r)  ((r).origin.x + (r).size.width)
+#define bottom(r) (yZero() - (r).origin.y)
+
+	switch (windowEventType) {
+	case WindowEventMetricChange: {
+		NSRect frame   = [window frame];
+		NSRect view    = [[window contentView] frame];
+		int windowMBH  = frame.size.height - view.size.height;
+
+		evt.value1 = left(frame);
+		evt.value2 = top(frame) + windowMBH;
+		evt.value3 = right(frame);
+		evt.value4 = bottom(frame) + windowMBH;
+#if DEBUG_WINDOW_CHANGED_HOOK
+# define i(v) (int)v
+		NSRect screen  = [[window screen] frame];
+		NSRect visible = [[window screen] visibleFrame];
+		int screenMBH  = screen.size.height - visible.size.height;
+
+		printf( "WindowEventMetricChange\n"
+				"\tscreen %d %d %d %d (mbh %d)\n"
+				"\twin %d %d %d %d (mbh %d)\n"
+				"\t\t%d@%d corner: %d@%d\n",
+				i(screen.origin.x), i(screen.origin.y),
+					i(screen.size.width), i(screen.size.height), screenMBH,
+				i(frame.origin.x), i(frame.origin.y),
+					i(frame.size.width), i(frame.size.height), windowMBH,
+				i(evt.value1), i(evt.value2), i(evt.value3), i(evt.value4));
+#endif
 		break;
+	}
+	case WindowEventChangeScreen: {
+		NSRect screen = [[window screen] frame];
+
+		evt.value1 = left(screen);
+		evt.value2 = top(screen);
+		evt.value3 = right(screen);
+		evt.value4 = bottom(screen);
+#if DEBUG_WINDOW_CHANGED_HOOK
+		printf( "WindowEventChangeScreen %d@%d corner: %d@%d\n",
+				i(evt.value1), i(evt.value2), i(evt.value3), i(evt.value4));
+# undef i
+#endif
+		break;
+	}
+#undef bottom
+#undef right
+#undef top
+#undef left
 	default:
 		evt.value1 = 0;
 		evt.value2 = 0;

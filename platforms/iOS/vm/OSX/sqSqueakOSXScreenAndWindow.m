@@ -46,7 +46,7 @@
 
 extern SqueakOSXAppDelegate *gDelegateApp;
 
-static void dispatchWindowChangedHook(char *messageSelector, NSWindow *window);
+static void dispatchWindowChangedHook(char *, NSWindow *, int);
 
 @interface sqSqueakOSXScreenAndWindow()
     @property (nonatomic,strong) NSView <sqSqueakOSXView> * mainViewOnWindow;
@@ -81,18 +81,18 @@ static void dispatchWindowChangedHook(char *messageSelector, NSWindow *window);
 	return NO;
 }
 
-#define windowResizeMethod(msg) - (void)msg (NSNotification *)notification { \
-	dispatchWindowChangedHook(#msg,(NSWindow *)(notification.object)); \
+#define windowResizeMethod(msg,type) - (void)msg (NSNotification *)notice { \
+	dispatchWindowChangedHook(#msg,(NSWindow *)(notice.object),type); \
 }
 
-windowResizeMethod(windowDidResize:)
-windowResizeMethod(windowDidMiniaturize:)
-windowResizeMethod(windowDidDeminiaturize:)
+windowResizeMethod(windowDidResize:,WindowEventMetricChange)
+windowResizeMethod(windowDidMiniaturize:,WindowEventMetricChange)
+windowResizeMethod(windowDidDeminiaturize:,WindowEventMetricChange)
 //These two not needed since windowDidResize: is also dispatched
-//windowResizeMethod(windowDidEnterFullScreen:)
-//windowResizeMethod(windowDidExitFullScreen:)
+//windowResizeMethod(windowDidEnterFullScreen:,WindowEventMetricChange)
+//windowResizeMethod(windowDidExitFullScreen:,WindowEventMetricChange)
 //This one is dispatched when entering/exiting true full screen mode
-windowResizeMethod(windowDidChangeScreen:)
+windowResizeMethod(windowDidChangeScreen:,WindowEventChangeScreen)
 
 @end
 
@@ -114,19 +114,9 @@ getSTWindow(void)
 static windowChangedHook hookLine = 0;
 
 static void
-dispatchWindowChangedHook(char *messageSelector, NSWindow *window)
+dispatchWindowChangedHook(char *selector, NSWindow *window, int eventType)
 {
-#if DEBUG_WINDOW_CHANGED_HOOK
-	NSRect w = [window frame];
-	NSRect s = [[window screen] frame];
-# define i(f) (int)f
-	printf( "Got %s win %d %d %d %d screen %d %d %d %d\n",
-			messageSelector,
-			i(w.origin.x), i(w.origin.y), i(w.size.width), i(w.size.height),
-			i(s.origin.x), i(s.origin.y), i(s.size.width), i(s.size.height));
-# undef i
-#endif
-	[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordWindowEvent: WindowEventMetricChange window: window];
+	[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordWindowEvent: eventType window: window];
 	if (hookLine) hookLine();
 }
 

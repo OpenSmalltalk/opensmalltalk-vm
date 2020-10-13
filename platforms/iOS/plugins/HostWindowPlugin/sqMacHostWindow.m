@@ -58,6 +58,9 @@ extern struct VirtualMachine *interpreterProxy;
 /* WARNING, WARNING, WARNING, Will Robertson!! This is a partial implementation
  * that cannot create new windows.  It simply answers or operates on the main
  * Squeak window, which is all that Terf needs.
+ *
+ * Regarding coordinate system transformations use recordWindowEvent:window: in
+ * platforms/iOS//vm/OSX/sqSqueakOSXApplication+events.m for reference.
  */
 
 #define nsWindowFromIndex(wix) ((__bridge NSWindow *)windowHandleFromIndex(wix))
@@ -97,9 +100,8 @@ ioPositionOfWindow(wIndexType windowIndex)
 		return -1;
 
     NSRect win = [window frame];
-	NSRect screen = [[window screen] frame];
 	return packedDoubleXY(win.origin.x,
-						  screen.size.height-(win.size.height+win.origin.y));
+						  yZero() - (win.origin.y + win.size.height));
 }
 
 sqInt
@@ -109,9 +111,8 @@ ioPositionOfWindowSetxy(wIndexType windowIndex, sqInt x, sqInt y)
 		return 0;
 	NSWindow *window = nsWindowFromIndex(windowIndex);
     NSRect frame = [window frame];
-	NSRect screen = [[window screen] frame];
     frame.origin.x = x;
-    frame.origin.y = screen.size.height - (frame.size.height + y);
+    frame.origin.y = yZero() - (y + frame.size.height);
     [window setFrame: frame display: YES];    
 
 	return 0;
@@ -185,7 +186,8 @@ static windowDescriptorBlock *windowListRoot = NULL;
 /* window list management */
 
 windowDescriptorBlock *
-windowBlockFromIndex(wIndexType windowIndex) {
+windowBlockFromIndex(wIndexType windowIndex)
+{
 windowDescriptorBlock *entry;
 	entry = windowListRoot;
 	while (entry) {
@@ -196,7 +198,9 @@ windowDescriptorBlock *entry;
 	return NULL;
 }
 
-windowDescriptorBlock *windowBlockFromHandle(wHandleType windowHandle) {
+windowDescriptorBlock *
+windowBlockFromHandle(wHandleType windowHandle)
+{
 windowDescriptorBlock *entry;
 	entry = windowListRoot;
 	while (entry) {
@@ -208,7 +212,9 @@ windowDescriptorBlock *entry;
 }
 
 
-wHandleType windowHandleFromIndex(wIndexType windowIndex)  {
+wHandleType
+windowHandleFromIndex(wIndexType windowIndex) 
+{
 windowDescriptorBlock *entry;
 	entry = windowListRoot;
 	while (entry) {
@@ -276,9 +282,8 @@ RemoveWindowBlock(windowDescriptorBlock * thisWindow)
 windowDescriptorBlock *prevEntry;
 
 	/* Unlink the entry from the module chain */
-	if (thisWindow == windowListRoot) {
+	if (thisWindow == windowListRoot)
 		windowListRoot = thisWindow->next;
-	}
 	else {
 		prevEntry = windowListRoot;
 		while (prevEntry->next != thisWindow) {

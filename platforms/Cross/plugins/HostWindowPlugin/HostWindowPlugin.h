@@ -25,7 +25,8 @@ height, sqInt depth, sqInt affectedL, sqInt affectedR, sqInt affectedT, sqInt af
 sqIntptr_t windowIndex);
 
 /* ioSizeOfWindow: arg is sqIntptr_t. Return the size of the specified
- * window in (width<<16 || height) format like ioScreenSize.
+ * window in (width<<16 || height) format like ioScreenSize. The size includes
+ * the window's title bar, and borders, if any.
  * Return -1 for failure - typically invalid windowIndex
  * -1 is chosen since itwould correspond to a window size of 64k@64k which
  * I hope is unlikely for some time to come */
@@ -33,7 +34,8 @@ extern sqInt ioSizeOfWindow(sqIntptr_t windowIndex);
 
 /* ioSizeOfNativeWindow: arg is void* windowHandle, defined as usqIntptr_t
  * for convenience. Return the size of the specified native window in
- * (width<<16 || height) format like ioScreenSize.
+ * (width<<16 || height) format like ioScreenSize. The size includes
+ * the window's title bar, and borders, if any.
  * Return -1 for failure - typically invalid windowHandle
  * -1 is chosen since it would correspond to a window size of +/-32k@+/-32k
  * which it is hoped is unlikely for some time to come */
@@ -50,13 +52,17 @@ extern sqInt ioSizeOfNativeDisplay(usqIntptr_t windowHandle);
 extern sqInt ioSizeOfWindowSetxy(sqIntptr_t windowIndex, sqInt w, sqInt h);
 
 /* ioPositionOfWindow: arg is sqIntptr_t windowIndex. Return the pos of the
- * specified window in (left<<16 || top) format like ioScreenSize.
+ * specified window in (left<<16 || top) format like ioScreenSize. The position
+ * is the origin of the host window and not its content, so it does not offset
+ * the position by the window's title bar, if any.
  * Return -1 (as above) for failure - typically invalid windowIndex */
 extern sqInt ioPositionOfWindow(sqIntptr_t windowIndex);
 
 /* ioPositionOfNativeWindow: arg is void* windowHandle, defined as usqIntptr_t
  * for convenience. Return the pos of the specified native window in
- * (left<<16 || top) format like ioScreenSize.
+ * (left<<16 || top) format like ioScreenSize. The position is the origin of the
+ * host window and not its content, so it does not offset the position by the
+ * window's title bar, if any.
  * Return -1 (as above) for failure - typically invalid windowHandle */
 extern sqInt ioPositionOfNativeWindow(usqIntptr_t windowHandle);
 
@@ -66,8 +72,10 @@ extern sqInt ioPositionOfNativeWindow(usqIntptr_t windowHandle);
 extern sqInt ioPositionOfNativeDisplay(usqIntptr_t windowHandle);
 
 /* ioPositionOfWindowSetxy: args are sqIntptr_t windowIndex, sqInt x & y for the
- * origin x/y for the window. Return the actual origin the OS
- * produced in (left<<16 || top) format or -1 for failure, as above */
+ * origin x/y for the window. The position is the origin of the host window and
+ * not its content, so it does not offset the position by the window's title
+ * bar, if any. Return the actual origin the OS produced in (left<<16 || top)
+ * format or -1 for failure, as above */
 extern sqInt ioPositionOfWindowSetxy(sqIntptr_t windowIndex, sqInt x, sqInt y);
 
 /* ioSetTitleOfWindow: args are sqIntptr_t windowIndex, char* newTitle and
