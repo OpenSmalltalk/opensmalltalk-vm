@@ -39,7 +39,7 @@
 #import "sqSqueakMainApplication+events.h"
 #import "sqSqueakOSXView.h"
 
-@class NSWIndow;
+@class NSWindow;
 @interface sqSqueakOSXApplication (events) 
 
 - (void) recordCharEvent:(NSString *) unicodeString fromView: (NSView <sqSqueakOSXView>*) mainView;
@@ -53,5 +53,5 @@
 - (int) mapMouseAndModifierStateToSqueakBits: (NSEvent *) event;
 - (int) translateCocoaModifiersToSqueakModifiers: (NSUInteger) modifiers;
 - (void) recordDragEvent: (int) dragType numberOfFiles: (int) numFiles where: (NSPoint) local_point windowIndex: (sqInt) windowIndex view:(NSView *)aView;
-- (void) recordWindowEvent: (int) type window: (NSWIndow *) window;
+- (void) recordWindowEvent: (int) type window: (NSWindow *) window;
 @end

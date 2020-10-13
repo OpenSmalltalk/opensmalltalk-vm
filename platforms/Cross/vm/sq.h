@@ -1,13 +1,9 @@
 /****************************************************************************
-*   PROJECT: Common include
+*   PROJECT: Common include for BackToTheFuture/Squeak/Cog/OpenSmalltalk VM
 *   FILE:    sq.h
-*   CONTENT: 
 *
-*   AUTHOR:  
-*   ADDRESS: 
-*   EMAIL:   
-*   RCSID:   $Id: sq.h 1283 2005-12-31 00:51:12Z rowledge $
-*
+*			See comments associated with STACKVM, COGVM, SPURVM, COGMTVM,
+*			below for an overview of various VM flavours & features.
 */
 
 #ifndef _SQ_H
@@ -35,6 +31,10 @@
 #	define IMAGE_DIALECT_NAME "Newspeak"
 #	define DEFAULT_IMAGE_NAME "newspeak.image"
 #	define IMAGE_ENV_NAME "NEWSPEAK_IMAGE"
+# elif CuisVM
+#	define IMAGE_DIALECT_NAME "CuisVM"
+#	define DEFAULT_IMAGE_NAME "CuisVM.image"
+#	define IMAGE_ENV_NAME "CUIS_IMAGE"
 # elif PharoVM
 #	define IMAGE_DIALECT_NAME "Pharo"
 #	define DEFAULT_IMAGE_NAME "Pharo.image"
@@ -65,17 +65,35 @@
    can be redefined in sqPlatformSpecific.h if desired. These default
    versions are defined in terms of the ANSI Standard C libraries.
 */
-#define sqImageFile					   FILE *
-#define sqImageFileClose(f)                  		   fclose(f)
-#define sqImageFileOpen(fileName, mode)      		   fopen(fileName, mode)
-#define sqImageFilePosition(f)               		   ftell(f)
-#define sqImageFileRead(ptr, sz, count, f)   		   fread(ptr, sz, count, f)
-#define sqImageFileSeek(f, pos)              		   fseek(f, pos, SEEK_SET)
-#define sqImageFileSeekEnd(f, pos)              	   fseek(f, pos, SEEK_END)
-#define sqImageFileWrite(ptr, sz, count, f)  		   fwrite(ptr, sz, count, f)
-#define sqImageFileStartLocation(fileRef, fileName, size)  0
+#define sqImageFile								FILE *
+#define sqImageFileClose(f)						fclose(f)
+#define sqImageFileOpen(fileName, mode)			fopen(fileName, mode)
+#define sqImageFilePosition(f)					ftell(f)
+#define sqImageFileRead(ptr, sz, count, f)		fread(ptr, sz, count, f)
+#define sqImageFileSeek(f, pos)					fseek(f, pos, SEEK_SET)
+#define sqImageFileSeekEnd(f, pos)				fseek(f, pos, SEEK_END)
+#define sqImageFileWrite(ptr, sz, count, f)		fwrite(ptr, sz, count, f)
+#define sqImageFileStartLocation(f,fileName,sz)	0
 
 /* Platform-dependent macros for handling object memory. */
+
+#if SPURVM
+/* Spur is an improved object representation/garbage collector/heap manager that
+ * replaces the original BttF "V3" Memory Manager (so called because Spur came
+ * after Squeak V3).  Spur offers considerable performance improvements but is
+ * not backwards-compatible with V3, and requires different internal plumbing.
+ * Unlike the V3 memory manager, Spur manages old space heap memory in segments,
+ * and is able to release memry back to the OS when the heap shrinks.
+ */
+
+/* Allocate a region of memory of al least sz bytes, at or above minAddr.
+ * If the attempt fails, answer null.  If the attempt succeeds, answer the
+ * start of the region and assign its size through asp.
+ */
+extern void *sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt sz, void *minAddr, sqInt *asp);
+extern void sqDeallocateMemorySegmentAtOfSize(void *addr, sqInt sz);
+
+#else /* SPURVM */
 
 /* Note: The grow/shrink macros assume that the object memory can be extended
    continuously at its prior end. The garbage collector cannot deal with
@@ -88,20 +106,18 @@
    actually allocate.
    The default implementation assumes a fixed size memory allocated at startup.
 */
-#define sqAllocateMemory(minHeapSize, desiredHeapSize)  malloc(desiredHeapSize)
-#define sqGrowMemoryBy(oldLimit, delta)			oldLimit
-#define sqShrinkMemoryBy(oldLimit, delta)		oldLimit
-#define sqMemoryExtraBytesLeft(includingSwap)		0
-
-#if SPURVM
-/* Allocate a region of memory of al least sz bytes, at or above minAddr.
- * If the attempt fails, answer null.  If the attempt succeeds, answer the
- * start of the region and assign its size through asp.
- */
-extern void *sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt sz, void *minAddr, sqInt *asp);
-extern void sqDeallocateMemorySegmentAtOfSize(void *addr, sqInt sz);
+# define sqAllocateMemory(minHeapSize, desiredHeapSize)  malloc(desiredHeapSize)
+# define sqGrowMemoryBy(oldLimit, delta)			oldLimit
+# define sqShrinkMemoryBy(oldLimit, delta)		oldLimit
+# define sqMemoryExtraBytesLeft(includingSwap)	0
 #endif /* SPURVM */
+
 #if COGVM
+/* Cog is a JIT extension for the VM. It still relies on the Interpreter (called
+ * the CoInterpreter because it sits alongside the "Cogit") for primitives,
+ * for executing methods the frst time, and to fall back on in exceptional
+ * circumstances.  COGVM implies STACKVM.  See STACKVM below.
+ */
 extern void sqMakeMemoryExecutableFromToCodeToDataDelta(usqInt, usqInt, sqInt*);
 extern void sqMakeMemoryNotExecutableFromTo(usqInt, usqInt);
 #endif
@@ -169,6 +185,22 @@ long ioMicroMSecs(void);
 #define MillisecondClockMask 0x1FFFFFFF
 
 #if STACKVM
+/* STACKVM is a replacement for the original BttF Interpreter VM which
+ * interpreted code using Context objects as described in Smalltalk-80: the
+ * Language and its Implementation.  STACKVM retains the image-level "illusion"
+ * of Contexts but maps the most recently active Contexts to stack frames. This
+ * provides both faster interpretation and enables the COGVM Cogit.  The scheme
+ * is similar to that described in Deutsch & Schiffman's classic Efficient
+ * Implementation of the Smalltalk-80 Language, but is a third generation
+ * implementation, providing (and indeed depending on) pure closures, and using
+ * a LISP-style indirection vector for modifyable closed-over variables to break
+ * dependencies between stack frames.
+ * See e.g. www.mirandabanda.org/cogblog/2008/06/07/closures-part-i/
+ *
+ * Since all OpenSmalltalk VMs are at least STACKVMs, STACKVM is synonymous
+ * with OpenSmalltalk-VM and Cog VM.
+ */
+/* Time API, Cog uses 64-bit microseconds fron 1901 as much as possible */
 extern void forceInterruptCheckFromHeartbeat(void);
 unsigned long long ioUTCMicrosecondsNow(void);
 unsigned long long ioUTCMicroseconds(void);
@@ -327,6 +359,16 @@ unsigned long ioHeartbeatFrequency(int);
 #endif /* STACKVM */
 
 #if COGMTVM
+/* COGMTVM is a yet-to-be-released "multi-threaded" VM in the style of Python,
+ * where any thread can own the VM, but only one thread can be running the VM
+ * at any one time.  Unlike Python's Global Interpreter Lock, this VM uses a
+ * lock-free algorithm, based on David Simmons' design as realised in the AOS
+ * and S# VMs.  Thread switches occur on FFI calls that take long enough for
+ * the VM to notice (and may take place at other times, but FFI calls are the
+ * key points).  Hence any call any be potentially non-blocking, and thread-
+ * switch is cheap, simple and efficient. The heartbeat defined above is
+ * extended to spot blocking FFI calls. See CoInterpreterMT in VMMaker.oscog.
+ */
 #define THRLOGSZ 256
 extern int thrlogidx;
 extern char *thrlog[];
@@ -411,7 +453,8 @@ sqInt ioMousePoint(void);
 sqInt ioPeekKeystroke(void);
 /* Note: In an event driven architecture, ioProcessEvents is obsolete.
    It can be implemented as a no-op since the image will check for
-   events in regular intervals. */
+   events at regular intervals.
+ */
 sqInt ioProcessEvents(void);
 
 
@@ -435,7 +478,7 @@ sqInt ioProcessEvents(void);
 /* Keypress state for keyboard events. */
 #define EventKeyChar	0
 #define EventKeyDown	1
-#define EventKeyUp	2
+#define EventKeyUp		2
 
 /* Button definitions. */
 #define RedButtonBit	4
@@ -443,126 +486,125 @@ sqInt ioProcessEvents(void);
 #define BlueButtonBit	1
 
 /* Modifier definitions. */
-#define ShiftKeyBit	1
-#define CtrlKeyBit	2
+#define ShiftKeyBit		1
+#define CtrlKeyBit		2
 #define OptionKeyBit	4
 #define CommandKeyBit	8
 
 /* generic input event */
-typedef struct sqInputEvent
-{
-  sqIntptr_t type;				/* type of event; either one of EventTypeXXX */
+typedef struct sqInputEvent {
+  sqIntptr_t type;			/* type of event; either one of EventTypeXXX */
   usqIntptr_t timeStamp;	/* time stamp */
-  /* the interpretation of the following fields depend on the type of the event */
+  /* the interpretation of the following fields depend on the event type */
   sqIntptr_t unused1;
   sqIntptr_t unused2;
   sqIntptr_t unused3;
   sqIntptr_t unused4;
   sqIntptr_t unused5;
-  sqIntptr_t windowIndex;		/* SmallInteger used in image to identify a host window structure */
+  sqIntptr_t windowIndex;	/* SmallInteger used in image to identify a host window structure */
 } sqInputEvent;
 
 /* mouse input event */
-typedef struct sqMouseEvent
-{
-  sqIntptr_t type;				/* EventTypeMouse */
+typedef struct sqMouseEvent {
+  sqIntptr_t type;			/* EventTypeMouse */
   usqIntptr_t timeStamp;	/* time stamp */
-  sqIntptr_t x;					/* mouse position x */
-  sqIntptr_t y;					/* mouse position y */
-  sqIntptr_t buttons;				/* combination of xxxButtonBit */
-  sqIntptr_t modifiers;			/* combination of xxxKeyBit */
-  sqIntptr_t nrClicks;			/* number of clicks in button downs - was reserved1 */
-  sqIntptr_t windowIndex;			/* host window structure */
+  sqIntptr_t x;				/* mouse position x */
+  sqIntptr_t y;				/* mouse position y */
+  sqIntptr_t buttons;		/* combination of xxxButtonBit */
+  sqIntptr_t modifiers;		/* combination of xxxKeyBit */
+  sqIntptr_t nrClicks;		/* number of clicks in button downs - was reserved1 */
+  sqIntptr_t windowIndex;	/* host window structure */
 } sqMouseEvent;
 
 /* keyboard input event */
-typedef struct sqKeyboardEvent
-{
-  sqIntptr_t type;				/* EventTypeKeyboard */
+typedef struct sqKeyboardEvent {
+  sqIntptr_t type;			/* EventTypeKeyboard */
   usqIntptr_t timeStamp;	/* time stamp */
-  sqIntptr_t charCode;			/* character code in Mac Roman encoding */
-  sqIntptr_t pressCode;			/* press code; any of EventKeyXXX */
-  sqIntptr_t modifiers;			/* combination of xxxKeyBit */
-  sqIntptr_t utf32Code;			/* UTF-32 unicode value */
-  sqIntptr_t reserved1;			/* reserved for future use */
-  sqIntptr_t windowIndex;			/* host window structure */
+  sqIntptr_t charCode;		/* character code in Mac Roman encoding */
+  sqIntptr_t pressCode;		/* press code; any of EventKeyXXX */
+  sqIntptr_t modifiers;		/* combination of xxxKeyBit */
+  sqIntptr_t utf32Code;		/* UTF-32 unicode value */
+  sqIntptr_t reserved1;		/* reserved for future use */
+  sqIntptr_t windowIndex;	/* host window structure */
 } sqKeyboardEvent;
 
 /* drop files event */
-typedef struct sqDragDropFilesEvent
-{
-  sqIntptr_t type;				/* EventTypeDropFiles */
+typedef struct sqDragDropFilesEvent {
+  sqIntptr_t type;			/* EventTypeDropFiles */
   usqIntptr_t timeStamp;	/* time stamp */
-  sqIntptr_t dragType;			/* one of DragXXX (see below) */
-  sqIntptr_t x;					/* mouse position x */
-  sqIntptr_t y;					/* mouse position y */
-  sqIntptr_t modifiers;			/* combination of xxxKeyBit */
-  sqIntptr_t numFiles;			/* number of files in transaction */
-  sqIntptr_t windowIndex;			/* host window structure */
+  sqIntptr_t dragType;		/* one of DragXXX (see below) */
+  sqIntptr_t x;				/* mouse position x */
+  sqIntptr_t y;				/* mouse position y */
+  sqIntptr_t modifiers;		/* combination of xxxKeyBit */
+  sqIntptr_t numFiles;		/* number of files in transaction */
+  sqIntptr_t windowIndex;	/* host window structure */
 } sqDragDropFilesEvent;
 
-#define SQDragEnter	1 /* drag operation from OS entered Squeak window	 */
-#define SQDragMove	2 /* drag operation from OS moved within Squeak window */
-#define SQDragLeave	3 /* drag operation from OS left Squeak window	 */
-#define SQDragDrop	4 /* drag operation dropped contents onto Squeak.      */
+#define SQDragEnter		1 /* OS drag operation entered Squeak window	 */
+#define SQDragMove		2 /* OS drag operation moved within Squeak window */
+#define SQDragLeave		3 /* OS drag operation left Squeak window	 */
+#define SQDragDrop		4 /* OS drag operation dropped contents onto Squeak. */
 #define SQDragRequest	5 /* data request from other app. */
 
 /* menu event */
-typedef struct sqMenuEvent
-{
-  sqIntptr_t type;				/* type of event; EventTypeMenu */
+typedef struct sqMenuEvent {
+  sqIntptr_t type;			/* type of event; EventTypeMenu */
   usqIntptr_t timeStamp;	/* time stamp */
-  /* the interpretation of the following fields depend on the type  of the event */
-  sqIntptr_t menu;				/* platform-dependent to indicate which menu was picked */
-  sqIntptr_t menuItem;			/* given a menu having 1 to N items this maps to the menu item number */
-  sqIntptr_t reserved1;			/* reserved for future use */
-  sqIntptr_t reserved2;			/* reserved for future use */
-  sqIntptr_t reserved3;			/* reserved for future use */
-  sqIntptr_t windowIndex;			/* host window structure */
+  /* the interpretation of the following fields depend on the event type */
+  sqIntptr_t menu;			/* platform-dependent to indicate which menu was picked */
+  sqIntptr_t menuItem;		/* given a menu having 1 to N items this maps to the menu item number */
+  sqIntptr_t reserved1;		/* reserved for future use */
+  sqIntptr_t reserved2;		/* reserved for future use */
+  sqIntptr_t reserved3;		/* reserved for future use */
+  sqIntptr_t windowIndex;	/* host window structure */
 } sqMenuEvent;
 
 /* window action event */
-typedef struct sqWindowEvent
-{
-  sqIntptr_t type;				/* type of event;  EventTypeWindow */
+typedef struct sqWindowEvent {
+  sqIntptr_t type;			/* type of event;  EventTypeWindow */
   usqIntptr_t timeStamp;	/* time stamp */
-  /* the interpretation of the following fields depend on the type  of the event */
-  sqIntptr_t action;				/* one of WindowEventXXX (see below) */
-  sqIntptr_t value1;				/* used for rectangle edges */
-  sqIntptr_t value2;				/* used for rectangle edges */
-  sqIntptr_t value3;				/* used for rectangle edges */
-  sqIntptr_t value4;				/* used for rectangle edges */
-  sqIntptr_t windowIndex;			/* host window structure */
+  /* the interpretation of the following fields depend on the event type */
+  sqIntptr_t action;		/* one of WindowEventXXX (see below) */
+  sqIntptr_t value1;		/* used for rectangle edges (left) */
+  sqIntptr_t value2;		/* used for rectangle edges (top) */
+  sqIntptr_t value3;		/* used for rectangle edges (right) */
+  sqIntptr_t value4;		/* used for rectangle edges (bottom) */
+  sqIntptr_t windowIndex;	/* host window structure */
 } sqWindowEvent;
 
-#define WindowEventMetricChange	1 /* size or position of window changed - value1-4 are left/top/right/bottom values */
-#define WindowEventClose	2 /* window close icon pressed */
-#define WindowEventIconise	3 /* window iconised or hidden etc */
-#define WindowEventActivated	4 /* window made active - some platforms only - do not rely upon this */
-#define WindowEventPaint	5 /* window area (in value1-4) needs updating. Some platforms do not need to send this, do not rely on it in image */
-#define WindowEventStinks	6 /* this window stinks (just to see if people read this stuff) */
+#define WindowEventMetricChange	1	/* size or position of window changed
+									 * value1-4 are left/top/right/bottom
+									 */
+#define WindowEventClose		2	/* window close icon pressed */
+#define WindowEventIconise		3	/* window iconised or hidden etc */
+#define WindowEventActivated	4	/* window made active - some platforms only
+									 * do not rely upon this */
+#define WindowEventPaint		5	/* window area (in value1-4) needs updating.
+									 * Some platforms do not need to send this,
+									 * do not rely on it in image */
+#define WindowEventChangeScreen	6	/* window moved to new screen.
+									 * rect args are dimensions of new screen */
 
-typedef struct sqComplexEvent
-{
-  sqIntptr_t type;				/* type of event;  EventTypeComplex */
+typedef struct sqComplexEvent {
+  sqIntptr_t type;			/* type of event;  EventTypeComplex */
   usqIntptr_t timeStamp;	/* time stamp */
-  /* the interpretation of the following fields depend on the type  of the event */
-  sqIntptr_t action;		        /* one of ComplexEventXXX (see below) */
-  sqIntptr_t objectPointer;		/* used to point to object */
+  /* the interpretation of the following fields depend on the event type */
+  sqIntptr_t action;		/* one of ComplexEventXXX (see below) */
+  sqIntptr_t objectPointer;	/* used to point to object */
   sqIntptr_t unused1;
   sqIntptr_t unused2;
   sqIntptr_t unused3;
-  sqIntptr_t windowIndex;			/* host window structure */
+  sqIntptr_t windowIndex;	/* host window structure */
 } sqComplexEvent;
 
-#define ComplexEventTypeTouchsDown	1
-#define ComplexEventTypeTouchsUp	2
-#define ComplexEventTypeTouchsMoved	3
-#define ComplexEventTypeTouchsStationary 4
-#define ComplexEventTypeTouchsCancelled	5
+#define ComplexEventTypeTouchsDown			1
+#define ComplexEventTypeTouchsUp			2
+#define ComplexEventTypeTouchsMoved			3
+#define ComplexEventTypeTouchsStationary	4
+#define ComplexEventTypeTouchsCancelled		5
 #define ComplexEventTypeAccelerationData	6
-#define ComplexEventTypeLocationData	7
-#define ComplexEventTypeApplicationData	8
+#define ComplexEventTypeLocationData		7
+#define ComplexEventTypeApplicationData		8
 
 
 /* Set an asynchronous input semaphore index for events. */
@@ -606,18 +648,6 @@ sqInt clipboardSize(void);
 sqInt clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex);
 sqInt clipboardWriteFromAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex);
 
-
-/* Interpreter entry points needed by compiled primitives. */
-void *arrayValueOf(sqInt arrayOop);
-sqInt checkedIntegerValueOf(sqInt intOop);
-void *fetchArrayofObject(sqInt fieldIndex, sqInt objectPointer);
-double fetchFloatofObject(sqInt fieldIndex, sqInt objectPointer);
-sqInt fetchIntegerofObject(sqInt fieldIndex, sqInt objectPointer);
-double floatValueOf(sqInt floatOop);
-sqInt pop(sqInt nItems);
-sqInt pushInteger(sqInt integerValue);
-sqInt sizeOfSTArrayFromCPrimitive(void *cPtr);
-sqInt storeIntegerofObjectwithValue(sqInt fieldIndex, sqInt objectPointer, sqInt integerValue);
 
 /* System attributes. */
 sqInt attributeSize(sqInt indexNumber);

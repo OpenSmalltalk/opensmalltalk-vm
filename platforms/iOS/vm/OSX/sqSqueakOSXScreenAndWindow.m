@@ -46,7 +46,7 @@
 
 extern SqueakOSXAppDelegate *gDelegateApp;
 
-static void dispatchWindowChangedHook(void);
+static void dispatchWindowChangedHook(char *messageSelector, NSWindow *window);
 
 @interface sqSqueakOSXScreenAndWindow()
     @property (nonatomic,strong) NSView <sqSqueakOSXView> * mainViewOnWindow;
@@ -81,15 +81,9 @@ static void dispatchWindowChangedHook(void);
 	return NO;
 }
 
-#if DEBUG_WINDOW_CHANGED_HOOK
-# define windowResizeMethod(msg) - (void)msg (NSNotification *)notification { \
-	printf( #msg "\n"); \
+#define windowResizeMethod(msg) - (void)msg (NSNotification *)notification { \
+	dispatchWindowChangedHook(#msg,(NSWindow *)(notification.object)); \
 }
-#else
-# define windowResizeMethod(msg) - (void)msg (NSNotification *)notification { \
-	dispatchWindowChangedHook(); \
-}
-#endif
 
 windowResizeMethod(windowDidResize:)
 windowResizeMethod(windowDidMiniaturize:)
@@ -120,8 +114,21 @@ getSTWindow(void)
 static windowChangedHook hookLine = 0;
 
 static void
-dispatchWindowChangedHook()
-{	if (hookLine) hookLine(); }
+dispatchWindowChangedHook(char *messageSelector, NSWindow *window)
+{
+#if DEBUG_WINDOW_CHANGED_HOOK
+	NSRect w = [window frame];
+	NSRect s = [[window screen] frame];
+# define i(f) (int)f
+	printf( "Got %s win %d %d %d %d screen %d %d %d %d\n",
+			messageSelector,
+			i(w.origin.x), i(w.origin.y), i(w.size.width), i(w.size.height),
+			i(s.origin.x), i(s.origin.y), i(s.size.width), i(s.size.height));
+# undef i
+#endif
+	[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordWindowEvent: WindowEventMetricChange window: window];
+	if (hookLine) hookLine();
+}
 
 windowChangedHook
 getWindowChangedHook() { return hookLine; }

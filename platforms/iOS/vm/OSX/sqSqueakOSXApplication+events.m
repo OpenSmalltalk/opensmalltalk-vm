@@ -531,16 +531,26 @@ static int buttonState=0;
 	interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
 }
 
-- (void) recordWindowEvent: (int) windowType window: (NSWIndow *) window {
+- (void) recordWindowEvent: (int) windowType window: (NSWindow *) window {
 	sqWindowEvent evt;
 
-	evt.type= EventTypeWindow;
-	evt.timeStamp=  ioMSecs();
-	evt.action= windowType;
-	evt.value1 =  0;
-	evt.value2 =  0;
-	evt.value3 =  0;
-	evt.value4 =  0;
+	evt.type		= EventTypeWindow;
+	evt.timeStamp	= ioMSecs();
+	evt.action		= windowType;
+	switch (windowType) {
+		NSRect frame = [window frame];
+		NSRect screen = [[window screen] frame];
+		evt.value1 = frame.origin.x;
+		evt.value2 = screen.size.height - (frame.size.height + frame.origin.y);
+		evt.value3 = frame.size.width;
+		evt.value4 = frame.size.height;
+		break;
+	default:
+		evt.value1 = 0;
+		evt.value2 = 0;
+		evt.value3 = 0;
+		evt.value4 = 0;
+	}
 	evt.windowIndex = windowIndexFromHandle((__bridge wHandleType)window);
 	[self pushEventToQueue: (sqInputEvent *) &evt];
 
