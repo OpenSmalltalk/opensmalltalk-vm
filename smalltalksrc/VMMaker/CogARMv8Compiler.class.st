@@ -1014,12 +1014,19 @@ CogARMv8Compiler >> computeMaximumSize [
 		[OrCqR]					-> [^self rotateable8bitImmediate: (operands at: 0)
 											ifTrue: [:r :i| 4]
 											ifFalse: [self literalLoadInstructionBytes + 4]].
-		[SubCqR]				-> [^self rotateable8bitSignedImmediate: (operands at: 0)
-											ifTrue: [:r :i :n| 4]
-											ifFalse: [self literalLoadInstructionBytes + 4]].
-		[TstCqR]				-> [^self rotateable8bitImmediate: (operands at: 0)
-											ifTrue: [:r :i| 4]
-											ifFalse: [self literalLoadInstructionBytes + 4]].
+		[SubCqR]				-> [| constant |
+			"If it fits in 12 bits, we can used an immediate instruction.
+			Othewise we need to use a literal and load it"
+			constant := operands at: 0.
+			(constant bitAnd: 16rfff) = constant
+				ifTrue: [ ^ 4 ]
+				ifFalse: [ ^ self literalLoadInstructionBytes + 4 ] ].
+		[TstCqR]				-> [
+			^self
+				encodeLogicalImmediate: (operands at: 0)
+				registerSize: 64
+				ifPossible: [ :v | 4 ]
+				ifNotPossible: [ self literalLoadInstructionBytes + 4 ] ].
 		[XorCqR]				-> [^self rotateable8bitBitwiseImmediate: (operands at: 0)
 										ifTrue: [:r :i :n| 4]
 										ifFalse:
@@ -1053,6 +1060,8 @@ CogARMv8Compiler >> computeMaximumSize [
 		[LogicalShiftLeftRR]			-> [^4].
 		[LogicalShiftRightRR]		-> [^4].
 		[ArithmeticShiftRightRR]		-> [^4].
+		[RotateLeftCqR]					-> [^4].
+		[RotateRightCqR]					-> [^4].
 		[AddRdRd]					-> [^4].
 		[CmpRdRd]					-> [^4].
 		[SubRdRd]					-> [^4].
@@ -1156,6 +1165,8 @@ CogARMv8Compiler >> computeMaximumSize [
 										ifFalse: [self literalLoadInstructionBytes + 4]].
 		"Conversion"
 		[ConvertRRd]			-> [^4].
+		[MoveRdR]				-> [^4].
+		[MoveRRd]				-> [^4].
 				
 		"This is a fixed size instruction using a literal. We need exactly 1 instructions to move a literal from a PC relative position, so this takes ALWAYS 1 instruction of 4 bytes"
 		[MovePatcheableC32R] -> [ ^ 4 ]
@@ -2750,40 +2761,35 @@ CogARMv8Compiler >> concretizePrefetchAw [
 
 { #category : #'generate machine code - concretize' }
 CogARMv8Compiler >> concretizePushCq [
-	"Will get inlined into concretizeAt: switch."
 
-	<inline: true>
-	^ self concretizePushCw
-]
-
-{ #category : #'generate machine code - concretize' }
-CogARMv8Compiler >> concretizePushCw [
 	"Will get inlined into concretizeAt: switch."
 
 	<inline: true>
 	| word instrOffset |
 	word := operands at: 0.
-	
-	dependent ifNotNil: [
-		self moveCw: word intoR: ConcreteIPReg.
-		instrOffset := 4
-	] ifNil: [
-		(self inCurrentCompilation: word)
-			ifTrue: [ instrOffset := self loadCwInto: ConcreteIPReg ]
-			ifFalse: [
-				self
-					shiftable16bitImmediate: word
-					ifTrue: [ :shift :value | 
-						self
-							machineCodeAt: 0
-							put: (self 
-								movSize: 1
-								destinationRegister: ConcreteIPReg
-								imm: value
-								shift: shift).
-						instrOffset := 4 ]
-					ifFalse: [ 1halt ].
-			] ].
+	self
+		shiftable16bitImmediate: word
+		ifTrue: [ :shift :value | 
+			self machineCodeAt: 0 put: (self
+				movSize: 1
+				destinationRegister: ConcreteIPReg
+				imm: value
+				shift: shift).
+				instrOffset := 4 ]
+		ifFalse: [ instrOffset := self loadCwInto: ConcreteIPReg ].
+	self machineCodeAt: instrOffset put: (self pushR: ConcreteIPReg).
+	^ machineCodeSize := instrOffset + 4
+]
+
+{ #category : #'generate machine code - concretize' }
+CogARMv8Compiler >> concretizePushCw [
+
+	"Will get inlined into concretizeAt: switch."
+
+	<inline: true>
+	| word instrOffset |
+	word := operands at: 0.
+	instrOffset := self loadCwInto: ConcreteIPReg.
 	self machineCodeAt: instrOffset put: (self pushR: ConcreteIPReg).
 	^ machineCodeSize := instrOffset + 4
 ]
@@ -2945,6 +2951,7 @@ CogARMv8Compiler >> concretizeSubCqR [
 	| word fits12Bits reg instrOffset |
 	word := operands at: 0.
 	reg := operands at: 1.
+	word < 0 ifTrue: [ self halt ].
 	fits12Bits := (word bitAnd: 16rfff) = word.
 	fits12Bits ifTrue: [
 		self
