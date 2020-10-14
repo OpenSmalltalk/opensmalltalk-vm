@@ -68,6 +68,15 @@ VMAbstractFFITest >> newExternalAddress: anInteger [
 	^ anExternalAddress
 ]
 
+{ #category : #'as yet unclassified' }
+VMAbstractFFITest >> newMethodWithBytecodes: aCollection [ 
+
+	^ methodBuilder 
+		newMethod;
+		bytecodes: aCollection;
+		buildMethod
+]
+
 { #category : #helpers }
 VMAbstractFFITest >> readyProcesses [
 	
