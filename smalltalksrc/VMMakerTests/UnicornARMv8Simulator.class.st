@@ -19,7 +19,7 @@ UnicornARMv8Simulator >> argument0RegisterValue [
 { #category : #registers }
 UnicornARMv8Simulator >> baseRegister [
 
-	^ UcARM64Registers x10
+	^ UcARM64Registers x24
 ]
 
 { #category : #'as yet unclassified' }
@@ -37,7 +37,7 @@ UnicornARMv8Simulator >> carry [
 { #category : #registers }
 UnicornARMv8Simulator >> classRegister [
 	
-	^ UcARM64Registers x2
+	^ UcARM64Registers x22
 ]
 
 { #category : #registers }
@@ -212,7 +212,7 @@ UnicornARMv8Simulator >> postCallArgumentsNumArgs: numArgs "<Integer>" in: aMemo
 { #category : #registers }
 UnicornARMv8Simulator >> receiverRegister [
 	
-	^ UcARM64Registers x5
+	^ UcARM64Registers x23
 ]
 
 { #category : #accessing }
@@ -236,7 +236,7 @@ UnicornARMv8Simulator >> retpcIn: aMemory [
 { #category : #registers }
 UnicornARMv8Simulator >> sendNumberOfArgumentsRegister [
 	
-	^ UcARM64Registers x6
+	^ UcARM64Registers x25
 ]
 
 { #category : #'as yet unclassified' }
@@ -290,7 +290,8 @@ UnicornARMv8Simulator >> smashCallerSavedRegistersWithValuesFrom: base by: step 
 { #category : #'as yet unclassified' }
 UnicornARMv8Simulator >> smashRegisterAccessors [
 	
-	^#( x1: x2: x3: x4: x5: x6: x7: x8: x9: x10: x11: x12: )
+	"Caller saved registers to smash"
+	^#( x0: x1: x2: x3: x4: x5: x6: x7: x8: x9: x10: x11: x12: )
 ]
 
 { #category : #'as yet unclassified' }
@@ -309,6 +310,12 @@ UnicornARMv8Simulator >> sp [
 UnicornARMv8Simulator >> stackPointerRegister [
 	
 	^ UcARM64Registers sp
+]
+
+{ #category : #accessing }
+UnicornARMv8Simulator >> w25: anInteger [ 
+
+	self writeRegister: UcARM64Registers w25 value: anInteger
 ]
 
 { #category : #'as yet unclassified' }
@@ -394,9 +401,9 @@ UnicornARMv8Simulator >> x15: anInteger [
 	self writeRegister: UcARM64Registers x15 value: anInteger
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 UnicornARMv8Simulator >> x16: anInteger [ 
-
+	
 	self writeRegister: UcARM64Registers x16 value: anInteger
 ]
 
@@ -428,6 +435,24 @@ UnicornARMv8Simulator >> x1: anInteger [
 UnicornARMv8Simulator >> x2 [
 
 	^ self readRegister: UcARM64Registers x2
+]
+
+{ #category : #accessing }
+UnicornARMv8Simulator >> x23: anInteger [ 
+	
+	self writeRegister: UcARM64Registers x23 value: anInteger
+]
+
+{ #category : #accessing }
+UnicornARMv8Simulator >> x24: anInteger [ 
+	
+	self writeRegister: UcARM64Registers x24 value: anInteger
+]
+
+{ #category : #accessing }
+UnicornARMv8Simulator >> x25: anInteger [ 
+	
+	self writeRegister: UcARM64Registers x25 value: anInteger
 ]
 
 { #category : #'as yet unclassified' }

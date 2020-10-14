@@ -22,7 +22,7 @@ VMMethodBytecodeToIRMapping >> computeIR [
 
 	| coggedResult cogit |
 	coggedResult := StackToRegisterMappingCogit
-		computeIRForMethod: method
+		cog: method
 		selectorOrNumCopied: (method isCompiledBlock ifFalse: [ method selector ] ifTrue: [ method numTemps ])
 		options: #(
 			COGMTVM false
