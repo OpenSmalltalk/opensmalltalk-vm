@@ -3412,6 +3412,16 @@ CogARMv8Compiler >> extractOffsetFromConditionalBranch: instruction [
 ]
 
 { #category : #'as yet unclassified' }
+CogARMv8Compiler >> fMoveSize: is64Bits fromDoublePrecisionFloatRegister: sourceDoublePrecisionFloatRegister toScalarRegister: destinationScalarRegister [
+	
+	^ self
+		fMoveSize: is64Bits
+		fromScalarToDoublePrecision: 0
+		sourceRegister: sourceDoublePrecisionFloatRegister
+		destinationRegister: destinationScalarRegister
+]
+
+{ #category : #'as yet unclassified' }
 CogARMv8Compiler >> fMoveSize: is64Bits fromScalarRegister: sourceScalarRegister toDoublePrecisionFloatRegister: destinationDoublePrecisionFloatRegister [
 	
 	^ self
