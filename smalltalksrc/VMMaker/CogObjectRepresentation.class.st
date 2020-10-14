@@ -727,6 +727,8 @@ CogObjectRepresentation >> genPrimitiveAsFloat [
 	<option: #DPFPReg0>
 	| jumpFailAlloc |
 	<var: #jumpFailAlloc type: #'AbstractInstruction *'>
+	cogit mclassIsSmallInteger ifFalse:
+		[^UnimplementedPrimitive].
 	cogit processorHasDoublePrecisionFloatingPointSupport ifFalse:
 		[^UnimplementedPrimitive].
 	cogit MoveR: ReceiverResultReg R: TempReg.
@@ -740,7 +742,7 @@ CogObjectRepresentation >> genPrimitiveAsFloat [
 	cogit MoveR: SendNumArgsReg R: ReceiverResultReg.
 	cogit genPrimReturn.
 	jumpFailAlloc jmpTarget: cogit Label.
-	^0
+	^ CompletePrimitive
 ]
 
 { #category : #'primitive generators' }

@@ -57,10 +57,15 @@ Class {
 		'R10',
 		'R11',
 		'R12',
+		'R16',
 		'R19',
 		'R2',
 		'R20',
 		'R21',
+		'R22',
+		'R23',
+		'R24',
+		'R25',
 		'R3',
 		'R4',
 		'R5',
@@ -2426,6 +2431,23 @@ CogARMv8Compiler >> concretizeMoveRR [
 	^ machineCodeSize := 4
 ]
 
+{ #category : #concretize }
+CogARMv8Compiler >> concretizeMoveRRd [
+
+	<inline: true>
+	| sourceRegister destinationRegister |
+	sourceRegister := operands at: 0.
+	destinationRegister := operands at: 1.
+
+	self
+		machineCodeAt: 0
+		put: (self
+			fMoveSize: 1
+			fromScalarRegister: sourceRegister
+			toDoublePrecisionFloatRegister: destinationRegister).
+	^ machineCodeSize := 4
+]
+
 { #category : #'as yet unclassified' }
 CogARMv8Compiler >> concretizeMoveRX32rR [
 
@@ -2496,22 +2518,30 @@ CogARMv8Compiler >> concretizeMoveRdM64r [
 	"Store FP fpReg to dstReg+offset"
 
 	<inline: true>
-	| dstReg offset fpReg u |
-	self halt.
-	offset := operands at: 1.
-	u := offset > 0
-		ifTrue: [ 1 ]
-		ifFalse: [ 0 ].
-	dstReg := operands at: 2.
+	| baseRegister offset fpReg u |
 	fpReg := operands at: 0.
-	machineCode
-		at: 0
-		put:
-			(self
-				fstd: fpReg
-				rn: dstReg
-				plus: u
-				imm: offset >> 2).
+	offset := operands at: 1.
+	baseRegister := operands at: 2.
+	
+	self
+		machineCodeAt: 0
+		put: (self strBaseRegister: baseRegister positiveOffset: offset sourceDoublePrecisionFloatingPointRegister: fpReg).
+	^ machineCodeSize := 4
+]
+
+{ #category : #concretize }
+CogARMv8Compiler >> concretizeMoveRdR [
+	<inline: true>
+	| sourceDoublePrecisionRegister destinationScalerRegister |
+	sourceDoublePrecisionRegister := operands at: 0.
+	destinationScalerRegister := operands at: 1.
+
+	self
+		machineCodeAt: 0
+		put: (self
+			fMoveSize: 1
+			fromDoublePrecisionFloatRegister: sourceDoublePrecisionRegister
+			toScalarRegister: destinationScalerRegister).
 	^ machineCodeSize := 4
 ]
 
@@ -2577,11 +2607,13 @@ CogARMv8Compiler >> concretizeMulRdRd [
 	"FP multiply regLHS by regRHS and stick result in regLHS"
 
 	<inline: true>
-	| regLHS regRHS |
-	self halt.
-	regRHS := operands at: 0.
-	regLHS := operands at: 1.
-	machineCode at: 0 put: (self fmuld: regLHS with: regRHS).
+	| registerA registerB destinationRegister |
+	registerA := operands at: 0.
+	destinationRegister := registerB := operands at: 1.
+	machineCode at: 0 put: (self
+		fMulFirstRegister: registerA
+		secondRegister: registerB
+		destinationRegister: destinationRegister).
 	^ machineCodeSize := 4
 ]
 
@@ -2770,6 +2802,36 @@ CogARMv8Compiler >> concretizeRetN [
 				ror: 0).
 	self machineCodeAt: 4 put: self ret.
 	^ machineCodeSize := 8
+]
+
+{ #category : #concretize }
+CogARMv8Compiler >> concretizeRotateLeftCqR [
+	<inline: true>
+
+	| rotation sourceRegister destinationRegister |
+	rotation := operands at: 0.
+	destinationRegister := sourceRegister := operands at: 1.
+	self machineCodeAt: 0 put: (self
+		rorSize: 1
+		sourceRegister: sourceRegister
+		rotationBits: 64 - rotation "We rotate right by the inverse number of bits..."
+		destinationRegister: destinationRegister).
+	^ machineCodeSize := 4
+]
+
+{ #category : #concretize }
+CogARMv8Compiler >> concretizeRotateRightCqR [
+	<inline: true>
+
+	| rotation sourceRegister destinationRegister |
+	rotation := operands at: 0.
+	destinationRegister := sourceRegister := operands at: 1.
+	self machineCodeAt: 0 put: (self
+		rorSize: 1
+		sourceRegister: sourceRegister
+		rotationBits: rotation
+		destinationRegister: destinationRegister).
+	^ machineCodeSize := 4
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -3135,6 +3197,9 @@ CogARMv8Compiler >> dispatchConcretize [
 		[ArithmeticShiftRightRR]			-> [^self concretizeArithmeticShiftRightRR].
 		[LogicalShiftLeftRR]				-> [^self concretizeLogicalShiftLeftRR].
 		[LogicalShiftRightRR]			-> [^self concretizeLogicalShiftRightRR].
+		[RotateLeftCqR]					->	[^self concretizeRotateLeftCqR].
+		[RotateRightCqR]				->	[^self concretizeRotateRightCqR].
+
 		"ARM Specific Arithmetic" 
 		[MUL]			-> [^self concretizeMUL].
 		[SMULH]			-> [^self concretizeSMULH].
@@ -3171,6 +3236,8 @@ CogARMv8Compiler >> dispatchConcretize [
 		[PrefetchAw]		-> [^self concretizePrefetchAw].
 		"Conversion"
 		[ConvertRRd]		-> [^self concretizeConvertRRd].
+		[MoveRdR]			-> [^self concretizeMoveRdR].
+		[MoveRRd]			-> [^self concretizeMoveRRd].
 		
 		"Patcheable literal instruction"
 		[ MovePatcheableC32R ] -> [ ^ self concretizeMovePatcheableC32R ]
@@ -3320,19 +3387,48 @@ CogARMv8Compiler >> extractOffsetFromConditionalBranch: instruction [
 { #category : #'as yet unclassified' }
 CogARMv8Compiler >> fMoveSize: is64Bits fromScalarRegister: sourceScalarRegister toDoublePrecisionFloatRegister: destinationDoublePrecisionFloatRegister [
 	
+	^ self
+		fMoveSize: is64Bits
+		fromScalarToDoublePrecision: 1
+		sourceRegister: sourceScalarRegister
+		destinationRegister: destinationDoublePrecisionFloatRegister
+]
+
+{ #category : #'as yet unclassified' }
+CogARMv8Compiler >> fMoveSize: is64Bits fromScalarToDoublePrecision: fromScalarToDoublePrecision sourceRegister: sourceRegister destinationRegister: destinationRegister [
+	
 	"C7.2.131 FMOV (general)
 	
 	Floating-point Move to or from general-purpose register without conversion. This instruction transfers the contents of a SIMD&FP register to a general-purpose register, or the contents of a general-purpose register to a SIMD&FP register.
 	
-	64-bit to double-precision variant
-	FMOV <Dd>, <Xn>"
+	Double-precision to 64-bit variant
+	FMOV <Xd>, <Dn>"
 	
 	^ (is64Bits bitAnd: 1) << 31
 		bitOr: (2r1111 << 25
 		bitOr: (2r01 "ftype" << 22
-		bitOr: (2r100111 << 16
-		bitOr: ((sourceScalarRegister bitAnd: 16r1f) << 5
-		bitOr: ((destinationDoublePrecisionFloatRegister bitAnd: 16r1f))))))
+		bitOr: (2r10011 << 17
+		bitOr: ((fromScalarToDoublePrecision bitAnd: 1) << 16
+		bitOr: ((sourceRegister bitAnd: 16r1f) << 5
+		bitOr: ((destinationRegister bitAnd: 16r1f)))))))
+]
+
+{ #category : #assembler }
+CogARMv8Compiler >> fMulFirstRegister: registerA secondRegister: registerB destinationRegister: destinationRegister [ 
+	
+	"C7.2.136 FMUL (Scalar)
+	
+	Floating-point Multiply (scalar). This instruction multiplies the floating-point values of the two source SIMD&FP registers, and writes the result to the destination SIMD&FP register.
+	
+	FMUL <Dd>, <Dn>, <Dm>"
+	
+	^ 2r1111 << 25
+		bitOr: (2r01 "double precision variant only" << 22
+		bitOr: (2r1 << 21
+		bitOr: (((registerB bitAnd: 16r1f) << 16)
+		bitOr: (2r1 << 11
+		bitOr: (((registerA bitAnd: 16r1f) << 5)
+		bitOr: (destinationRegister bitAnd: 16r1f))))))
 ]
 
 { #category : #'ARM convenience instructions' }
@@ -5127,6 +5223,24 @@ CogARMv8Compiler >> rightShiftSize: is64Bits sourceRegister: sourceRegister shif
 		bitOr: (destinationRegister bitAnd: 2r11111)))))))
 ]
 
+{ #category : #assembler }
+CogARMv8Compiler >> rorSize: is64bits sourceRegister: sourceRegister rotationBits: immediate6bitValue destinationRegister: destinationRegister [
+
+	"C6.2.226 ROR (immediate)
+	
+	Rotate right (immediate) provides the value of the contents of a register rotated by a variable number of bits. The bits that are rotated off the right end are inserted into the vacated bit positions on the left.
+	
+	ROR <Xd>, <Xs>, #<shift>"
+	
+	^ (is64bits bitAnd: 1) << 31
+		bitOr: (2r100111 << 23
+		bitOr: ((is64bits "N" bitAnd: 1) << 22
+		bitOr: ((sourceRegister bitAnd: 16r1f) << 16
+		bitOr: ((immediate6bitValue bitAnd: 16r3f) << 10
+		bitOr: ((sourceRegister bitAnd: 16r1f) << 5
+		bitOr: ((destinationRegister bitAnd: 16r1f)))))))
+]
+
 { #category : #testing }
 CogARMv8Compiler >> rotateable8bitBitwiseImmediate: constant ifTrue: trueAlternativeBlock ifFalse: falseAlternativeBlock [
 	<inline: true>
@@ -5376,6 +5490,27 @@ CogARMv8Compiler >> str: destinationRegister rn: baseReg plus: u imm: immediate9
 		baseRegister: baseReg
 		signedOffset: (u = 0 ifTrue: [ immediate9bitValue negated ] ifFalse: [ immediate9bitValue ])
 		destinationRegister: destinationRegister
+]
+
+{ #category : #assembler }
+CogARMv8Compiler >> strBaseRegister: baseReg positiveOffset: immediate12bitValue sourceDoublePrecisionFloatingPointRegister: sourceRegister [
+
+	"C7.2.331 STR (immediate, SIMD&FP)
+	
+	Store SIMD&FP register (immediate offset). This instruction stores a single SIMD&FP register to memory. The address that is used for the store is calculated from a base register value and an immediate offset.
+	
+	Unsigned offset Variant
+		
+	STR <Dt>, [<Xn|SP>{, #<pimm>}]
+		
+	only 64bits are supported for now
+	"
+
+	^ 2r11 << 30
+		bitOr: (2r111101 << 24
+		bitOr: ((immediate12bitValue / 8 bitAnd: 16rfff) << 10
+		bitOr: ((baseReg bitAnd: 16r1f) << 5
+		bitOr: (sourceRegister bitAnd: 16r1f))))
 ]
 
 { #category : #assembler }
