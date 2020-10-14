@@ -192,6 +192,11 @@ UnicornI386Simulator >> integerRegisterState [
 ]
 
 { #category : #'as yet unclassified' }
+UnicornI386Simulator >> pc [
+	^ self readRegister: UcX86Registers eip
+]
+
+{ #category : #'as yet unclassified' }
 UnicornI386Simulator >> postCallArgumentsNumArgs: numArgs in: aMemory [
 	"Answer an argument vector of the requested size after a vanilla
 	 ABI call.  On IA32 this typically means accessing stacked arguments

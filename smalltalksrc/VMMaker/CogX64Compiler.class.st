@@ -4168,6 +4168,15 @@ CogX64Compiler >> padIfPossibleWithStopsFrom: startAddr to: endAddr [
 	self stopsFrom: startAddr to: endAddr
 ]
 
+{ #category : #'calling C function in Smalltalk stack' }
+CogX64Compiler >> prepareStackToCallCFunctionInSmalltalkStack: anInteger [ 
+
+	"In SysV and Win64 Extra5Reg (R15) is callee preserved"
+	cogit MoveR: SPReg R: Extra5Reg.
+	cogit AndCq: 16rFFFFFFFFFFFFFFF0 R: SPReg. 
+	cogit SubCq: 8 R: SPReg. 	
+]
+
 { #category : #accessing }
 CogX64Compiler >> pushCwByteSize [
 	<inline: true>
@@ -4208,6 +4217,13 @@ CogX64Compiler >> relocateMethodReferenceBeforeAddress: pc by: delta [
 				and: [((objectMemory byteAt: pc - 5) bitOr: (self mod: 0 RM: 0 RO: 7)) = (self mod: ModRegInd RM: 5 RO: 7)])
 				or: [(objectMemory byteAt: pc - 8) = 16r8D "push"
 				and: [((objectMemory byteAt: pc - 7) bitOr: (self mod: 0 RM: 0 RO: 7)) = (self mod: ModRegInd RM: 5 RO: 7)]])
+]
+
+{ #category : #'calling C function in Smalltalk stack' }
+CogX64Compiler >> returnFromCallCFunctionInSmalltalkStack: anInteger [ 
+
+	cogit MoveR: Extra5Reg R: SPReg.
+
 ]
 
 { #category : #'inline cacheing' }

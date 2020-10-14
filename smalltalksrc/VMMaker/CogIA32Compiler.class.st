@@ -3876,6 +3876,27 @@ CogIA32Compiler >> padIfPossibleWithStopsFrom: startAddr to: endAddr [
 	self stopsFrom: startAddr to: endAddr
 ]
 
+{ #category : #'calling C function in Smalltalk stack' }
+CogIA32Compiler >> prepareStackToCallCFunctionInSmalltalkStack: numberOfArguments [
+
+	| numberAdditionalPushes remainer |
+
+	remainer := numberOfArguments + 2 \\ 4 "Includes the caller address, and the original stack pointer".
+	numberAdditionalPushes := remainer = 0 ifTrue: [ 0 ] ifFalse: [ 4 - remainer  ].
+
+	cogit MoveR: SPReg R: TempReg.
+	cogit AndCq: 16rFFFFFFF0 R: SPReg.
+
+	"Save Original Stack Pointer"
+	cogit PushR: TempReg.
+	
+	"I just push some padding for alignement"
+	numberAdditionalPushes > 0 
+		ifTrue: [ cogit SubCq: numberAdditionalPushes * 4 R: SPReg ]. 
+	
+	
+]
+
 { #category : #abi }
 CogIA32Compiler >> registerToSaveIP [
 	"Temporary register used for fetching the instruction pointer. This should
@@ -3904,6 +3925,27 @@ CogIA32Compiler >> relocateCallBeforeReturnPC: retpc by: delta [
 CogIA32Compiler >> relocateMethodReferenceBeforeAddress: pc by: delta [
 	<inline: true>
 	self relocateCallBeforeReturnPC: pc by: delta
+]
+
+{ #category : #'calling C function in Smalltalk stack' }
+CogIA32Compiler >> returnFromCallCFunctionInSmalltalkStack: numberOfArguments [
+
+	| numberAdditionalPushes remainer |
+
+	remainer := numberOfArguments + 2 \\ 4 "Includes the caller address, and the original stack pointer, and the temporary pointer".
+	numberAdditionalPushes := remainer = 0 ifTrue: [ 0 ] ifFalse: [ 4 - remainer  ].
+
+	"I just push some padding for alignement"
+	numberAdditionalPushes > 0 
+		ifTrue: [ cogit AddCq: numberAdditionalPushes * 4 R: SPReg ]. 
+
+	"Restore Original Stack Pointer"
+	cogit PopR: Arg0Reg.
+	cogit MoveR: Arg0Reg R: SPReg.
+
+	
+	
+	
 ]
 
 { #category : #'inline cacheing' }

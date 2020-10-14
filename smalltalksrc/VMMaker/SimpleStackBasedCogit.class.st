@@ -1155,6 +1155,8 @@ SimpleStackBasedCogit >> compileMachineCodeInterpreterPrimitive: primitiveRoutin
 		["Wrangle args into Arg0Reg, Arg1Reg, SendNumArgsReg & ClassReg"
 		 "offset := self bitCountOf: (liveRegsMask bitAnd: CallerSavedRegisterMask)."
 		 self shouldBeImplemented].
+
+	backEnd prepareStackToCallCFunctionInSmalltalkStack: methodOrBlockNumArgs + 1.
 	
 	backEnd
 		genMarshallNArgs: methodOrBlockNumArgs + 1
@@ -1163,9 +1165,12 @@ SimpleStackBasedCogit >> compileMachineCodeInterpreterPrimitive: primitiveRoutin
 		arg: Arg1Reg
 		arg: SendNumArgsReg
 		"arg: ClassReg (when we extend C call marchalling to support 5 args for replaceFrom:to:with:startingAt:".
+
 	self CallFullRT: primitiveRoutine asInteger.
+
 	backEnd
 		genRemoveNArgsFromStack: methodOrBlockNumArgs + 1;
+		returnFromCallCFunctionInSmalltalkStack: methodOrBlockNumArgs + 1;
 		genRestoreRegs: (liveRegsMask bitAnd: CallerSavedRegisterMask).
 
 	backEnd hasLinkRegister 

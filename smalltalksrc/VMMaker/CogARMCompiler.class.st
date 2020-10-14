@@ -2998,6 +2998,18 @@ CogARMCompiler >> popR: dstReg [
 	^self memMxr: AL reg: dstReg base: SP p: 0 u: 1 b: 0 w: 0 l: 1 imm: 4
 ]
 
+{ #category : #'calling C function in Smalltalk stack' }
+CogARMCompiler >> prepareStackToCallCFunctionInSmalltalkStack: anObject [
+
+	"ARMv5 should be aligned to 16 bytes"
+
+	cogit MoveR: SPReg R: Extra1Reg.
+	cogit MoveR: SPReg R: Extra2Reg.
+	
+	cogit AndCq: ((1 << 32) - 16) R: Extra2Reg. 
+	cogit MoveR: Extra2Reg R: SPReg.
+]
+
 { #category : #accessing }
 CogARMCompiler >> pushLinkRegisterByteSize [
 	^4
@@ -3020,6 +3032,13 @@ CogARMCompiler >> relocateCallBeforeReturnPC: retpc by: delta [
 		 distanceDiv4 := instr bitAnd: 16rFFFFFF.
 		 distanceDiv4 := distanceDiv4 + (delta // 4).
 		 objectMemory longAt: (self instructionAddressBefore: retpc ) put: ((instr bitAnd: 16rFF000000) bitOr: (distanceDiv4 bitAnd: 16rFFFFFF))]
+]
+
+{ #category : #'calling C function in Smalltalk stack' }
+CogARMCompiler >> returnFromCallCFunctionInSmalltalkStack: anObject [
+
+	cogit MoveR: Extra1Reg R: SPReg.
+
 ]
 
 { #category : #'inline cacheing' }

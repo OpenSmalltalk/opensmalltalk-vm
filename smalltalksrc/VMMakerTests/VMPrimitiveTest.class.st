@@ -461,11 +461,6 @@ VMPrimitiveTest >> testPrimitiveInstVarAtPutOverBoundShouldFailForIndexable [
 	
 	object := memory instantiateClass: class indexableSize: 1.
 
-
-	1halt.
-	((EP2Backend simulator: interpreter)
-		handleOnAddress: object).
-
 	interpreter push: object.
 	interpreter push: (memory integerObjectOf: 2).
 	interpreter push: memory falseObject.

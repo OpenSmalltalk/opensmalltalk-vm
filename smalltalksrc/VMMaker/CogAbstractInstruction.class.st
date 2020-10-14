@@ -1382,6 +1382,15 @@ CogAbstractInstruction >> outputMachineCodeAt: targetAddress [
 		objectMemory byteAt: targetAddress + j put: (machineCode at: j)]
 ]
 
+{ #category : #'calling C function in Smalltalk stack' }
+CogAbstractInstruction >> prepareStackToCallCFunctionInSmalltalkStack: anObject [
+	
+	"This is a hook to allow the backends to implement special handling when calling a C function in the Smalltalk stack"
+	
+	<doNotGenerate>
+	self subclassResponsibility
+]
+
 { #category : #printing }
 CogAbstractInstruction >> printStateOn: aStream [
 	| opcodeName orneryOperands format |
@@ -1478,6 +1487,15 @@ CogAbstractInstruction >> resolveJumpTarget [
 	(self isAFixup: fixup) ifTrue:
 		[self assert: (cogit addressIsInInstructions: fixup targetInstruction).
 		 self jmpTarget: fixup targetInstruction]
+]
+
+{ #category : #'calling C function in Smalltalk stack' }
+CogAbstractInstruction >> returnFromCallCFunctionInSmalltalkStack: anObject [
+	
+	"This is a hook to allow the backends to implement special handling when calling a C function in the Smalltalk stack"
+	
+	<doNotGenerate>
+	self subclassResponsibility
 ]
 
 { #category : #'full transfer run-time support' }

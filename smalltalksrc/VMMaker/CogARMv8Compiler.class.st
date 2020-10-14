@@ -4908,6 +4908,21 @@ CogARMv8Compiler >> prefetchMemory: prefetchOperationFlags sourceRegister: sourc
 		bitOr: (prefetchOperationFlags bitAnd: 16r1f)))
 ]
 
+{ #category : #'calling C function in Smalltalk stack' }
+CogARMv8Compiler >> prepareStackToCallCFunctionInSmalltalkStack: anObject [ 
+
+	"In ARMv8 we are using an alternative SPReg that is not the machine SP.
+	We need to sync the SP register to the Smalltalk stackPointer, so the called function 
+	will execute correctly."
+	
+	cogit MoveR: SPReg R: Extra2Reg.
+
+	"ARMv8 should be aligned to 16 bytes"
+
+	cogit AndCq: ((1 << 64) - 16) R: Extra2Reg. 
+	cogit MoveR: Extra2Reg R: SP.
+]
+
 { #category : #accessing }
 CogARMv8Compiler >> pushLinkRegisterByteSize [
 	^4
@@ -4944,6 +4959,13 @@ CogARMv8Compiler >> ret [
 	
 	^ (2r1101011001011111000000 << 10)
 		bitOr: LR << 5
+]
+
+{ #category : #'calling C function in Smalltalk stack' }
+CogARMv8Compiler >> returnFromCallCFunctionInSmalltalkStack: anObject [ 
+
+	"In ARMv8 I don't need to do nothing"
+
 ]
 
 { #category : #patching }

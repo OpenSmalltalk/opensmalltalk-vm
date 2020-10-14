@@ -8428,6 +8428,10 @@ Cogit >> handleCallOrJumpSimulationTrap: aProcessorSimulationTrap [
 	| evaluable function memory result savedFramePointer savedStackPointer savedArgumentCount rpc |
 
 	evaluable := simulatedTrampolines at: aProcessorSimulationTrap address.
+
+	(self isPrimitiveRunningInSmalltalkStack: evaluable selector) 
+		ifTrue: [ self assertCStackWellAligned ]. 
+
 	function := evaluable isBlock
 					ifTrue: ['aBlock; probably some plugin primitive']
 					ifFalse:
@@ -8438,6 +8442,7 @@ Cogit >> handleCallOrJumpSimulationTrap: aProcessorSimulationTrap [
 		[coInterpreter assertValidExternalStackPointers].
 	(function beginsWith: 'ceShort') ifTrue:
 		[^self perform: function with: aProcessorSimulationTrap].
+	
 	aProcessorSimulationTrap type == #call
 		ifTrue:
 			[processor
@@ -8851,6 +8856,13 @@ Cogit >> isPCWithinMethodZone: address [
 	^address asUnsignedInteger
 		between: methodZoneBase
 		and: methodZone freeStart
+]
+
+{ #category : #testing }
+Cogit >> isPrimitiveRunningInSmalltalkStack: aSelector [
+
+	^ aSelector = #mcprimHashMultiply:
+
 ]
 
 { #category : #'method map' }
