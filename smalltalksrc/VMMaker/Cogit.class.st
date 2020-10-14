@@ -8429,7 +8429,7 @@ Cogit >> handleCallOrJumpSimulationTrap: aProcessorSimulationTrap [
 
 	evaluable := simulatedTrampolines at: aProcessorSimulationTrap address.
 
-	(self isPrimitiveRunningInSmalltalkStack: evaluable selector) 
+	(evaluable isBlock not and: [self isPrimitiveRunningInSmalltalkStack: evaluable selector]) 
 		ifTrue: [ self assertCStackWellAligned ]. 
 
 	function := evaluable isBlock
