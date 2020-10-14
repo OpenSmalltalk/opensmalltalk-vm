@@ -2274,18 +2274,12 @@ CogARMv8Compiler >> concretizeMoveRAb [
 				machineCodeAt: 0
 				put: (self strbSourceRegister: srcReg destinationRegister: ConcreteVarBaseReg offset: offset).
 			^ machineCodeSize := 4 ].
-	1halt.
 	"load the address into ConcreteIPReg"
 	instrOffset := self moveCw: destAddr intoR: ConcreteIPReg.
 	"We *could* overwrite the last instruction above with a LDR a, b, last-byte-of-srcAddr BUT that would break if we change to loading literals instead of forming long constants"
 	self
 		machineCodeAt: instrOffset
-		put:
-			(self
-				strb: srcReg
-				rn: ConcreteIPReg
-				plus: 1
-				imm: 0).
+		put: (self strbSourceRegister: srcReg destinationRegister: ConcreteIPReg).
 	^ machineCodeSize := instrOffset + 4
 ]
 
