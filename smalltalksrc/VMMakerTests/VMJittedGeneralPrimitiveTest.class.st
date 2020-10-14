@@ -571,6 +571,50 @@ VMJittedGeneralPrimitiveTest >> testPrimitiveAddReturnsAnSmallIntegerWhenNegativ
 	self assert: self machineSimulator receiverRegisterValue equals: (memory integerObjectOf: -94).
 ]
 
+{ #category : #'tests - primitiveAsFloat' }
+VMJittedGeneralPrimitiveTest >> testPrimitiveAsFloatDoesNotCompileIfReceiverTagIsNotSmallInteger [
+	
+	| result |
+	
+	"Setting a value that is not the SmallInteger tag"
+	
+	cogit receiverTags: 0.
+	
+	self compile: [ result := cogit objectRepresentation genPrimitiveAsFloat ].
+	self assert: result equals: UnimplementedPrimitive.
+]
+
+{ #category : #'tests - primitiveAsFloat' }
+VMJittedGeneralPrimitiveTest >> testPrimitiveAsFloatIsCompleteWhenReceiverTagIsSmallInteger [
+	
+	| result |
+	
+	cogit receiverTags: memory smallIntegerTag.
+	
+	self compile: [ result := cogit objectRepresentation genPrimitiveAsFloat ].
+	self assert: result equals: CompletePrimitive.
+]
+
+{ #category : #'tests - primitiveAsFloat' }
+VMJittedGeneralPrimitiveTest >> testPrimitiveAsFloatReturnsASmallFloat [
+	
+	| endInstruction primitiveAddress |
+	
+	"Small floats are only valid in 64 bits"
+	self wordSize = 4 ifTrue: [ ^ self skip ].
+	
+	cogit receiverTags: memory smallIntegerTag.
+	
+	primitiveAddress := self compile: [ 
+		cogit objectRepresentation genPrimitiveAsFloat.
+		"If the primitive fails it continues, so we need to have an instruction to detect the end"
+		endInstruction := cogit Stop ].
+	
+	self prepareStackForSendReceiver: (memory integerObjectOf: 42).
+	self runUntilReturn.
+	self assert: self machineSimulator receiverRegisterValue equals: (memory floatObjectOf: 42.0)
+]
+
 { #category : #'tests - primitiveBitAnd/Or' }
 VMJittedGeneralPrimitiveTest >> testPrimitiveBitAndDoesCompileForSmallIntegerReceiver [
 	

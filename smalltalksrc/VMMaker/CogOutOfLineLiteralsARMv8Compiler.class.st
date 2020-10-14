@@ -164,6 +164,7 @@ CogOutOfLineLiteralsARMv8Compiler >> moveCw: constant intoR: destReg [
 	 Literals are stored out-of-line; emit a LDR with the relevant offset."
 	 <var: 'constant' type: #usqInt>
 	<inline: true>
+	self assert: dependent opcode = Literal.
 	self assert: (cogit addressIsInCurrentCompilation: dependent address).
 	self assert: (dependent address - (address + 8)) abs < (1<<12).
 	self machineCodeAt: 0
@@ -341,7 +342,9 @@ CogOutOfLineLiteralsARMv8Compiler >> usesOutOfLineLiteral [
 		[CallFull]		-> [^true].
 		[JumpFull]		-> [^true].
 		"Arithmetic"
-		[AddCqR]		-> [^self rotateable8bitSignedImmediate: (operands at: 0) ifTrue: [:r :i :n| false] ifFalse: [true]].
+		[AddCqR]		-> [ | constant |
+			constant := operands at: 0.
+			^ (constant abs bitAnd: 16rfff) ~= constant abs].
 		[AndCqR]		-> [^ self
 				encodeLogicalImmediate: (operands at: 0)
 				registerSize: 64
@@ -355,8 +358,14 @@ CogOutOfLineLiteralsARMv8Compiler >> usesOutOfLineLiteral [
 		[CmpCqR]		-> [^self rotateable8bitSignedImmediate: (operands at: 0) ifTrue: [:r :i :n| false] ifFalse: [true]].
 		[CmpC32R]		-> [^self rotateable8bitSignedImmediate: (operands at: 0) ifTrue: [:r :i :n| false] ifFalse: [true]].
 		[OrCqR]			-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
-		[SubCqR]		-> [^self rotateable8bitSignedImmediate: (operands at: 0) ifTrue: [:r :i :n| false] ifFalse: [true]].
-		[TstCqR]		-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
+		[SubCqR]		-> [ | constant |
+			constant := operands at: 0.
+			^ (constant bitAnd: 16rfff) ~= constant ].
+		[TstCqR]		-> [ ^self
+				encodeLogicalImmediate: (operands at: 0)
+				registerSize: 64
+				ifPossible: [ :v | false ]
+				ifNotPossible: [ true ] ].
 		[XorCqR]		-> [^self rotateable8bitBitwiseImmediate: (operands at: 0) ifTrue: [:r :i :n| false] ifFalse: [true]].
 		[AddCwR]		-> [^true].
 		[AndCwR]		-> [^true].
@@ -388,7 +397,7 @@ CogOutOfLineLiteralsARMv8Compiler >> usesOutOfLineLiteral [
 				or: [ offset < 0 and: [ (offset abs bitAnd: 16rff) = offset ] ]) ifTrue: [ ^ false ].
 			^ true ].
 		[PushCw]		-> [^(self inCurrentCompilation: (operands at: 0)) not].
-		[PushCq]		-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
+		[PushCq]		-> [^self shiftable16bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
 		[PrefetchAw] 	-> [^(self isAddressRelativeToVarBase: (operands at: 0)) ifTrue: [false] ifFalse: [true]].
 
 		"Patcheable instruction. Moves a literal. Uses out of line literal."
