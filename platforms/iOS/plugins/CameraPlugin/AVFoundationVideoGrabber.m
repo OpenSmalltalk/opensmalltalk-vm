@@ -45,7 +45,9 @@ void printDevices();
 }
 @end
 
-SqueakVideoGrabber *grabbers[8] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+#define CAMERA_COUNT 4
+
+SqueakVideoGrabber *grabbers[CAMERA_COUNT];
 
 @implementation SqueakVideoGrabber
 
@@ -245,10 +247,19 @@ getDeviceName(sqInt cameraNum)
   return (char*)[((AVCaptureDevice*)[devices objectAtIndex: cameraNum-1]).localizedName UTF8String];
 }
 
+static char *
+getDeviceUID(sqInt cameraNum)
+{
+  NSArray *devices = [AVCaptureDevice devicesWithMediaType: AVMediaTypeVideo];
+  if (cameraNum < 1 || cameraNum > [devices count])
+    return NULL;
+  return (char*)[((AVCaptureDevice*)[devices objectAtIndex: cameraNum-1]).uniqueID UTF8String];
+}
+
 sqInt
 CameraOpen(sqInt cameraNum, sqInt desiredWidth, sqInt desiredHeight)
 {
-  if (cameraNum<1 || cameraNum>8)
+  if (cameraNum<1 || cameraNum>CAMERA_COUNT)
 	return false;
   SqueakVideoGrabber *grabber = grabbers[cameraNum-1];
 
@@ -269,7 +280,7 @@ CameraClose(sqInt cameraNum)
 {
   SqueakVideoGrabber *grabber;
 
-  if (cameraNum >= 1 && cameraNum <= 8
+  if (cameraNum >= 1 && cameraNum <= CAMERA_COUNT
 	&& (grabber = grabbers[cameraNum-1]))
 	  [grabber stopCapture: cameraNum];
 }
@@ -280,7 +291,7 @@ CameraExtent(sqInt cameraNum)
   SqueakVideoGrabber *grabber;
 
   /* if the camera is already open answer its extent */
-  if (cameraNum >= 1 && cameraNum <= 8
+  if (cameraNum >= 1 && cameraNum <= CAMERA_COUNT
 	&& (grabber = grabbers[cameraNum-1]))
 	return grabber->width <<16 | grabber->height;
 #if 1
@@ -302,7 +313,7 @@ CameraExtent(sqInt cameraNum)
 sqInt
 CameraGetFrame(sqInt cameraNum, unsigned char *buf, sqInt pixelCount)
 {
-  if (cameraNum<1 || cameraNum>8)
+  if (cameraNum<1 || cameraNum>CAMERA_COUNT)
 	return -1;
   SqueakVideoGrabber *grabber = grabbers[cameraNum-1];
   if (!grabber)
@@ -322,11 +333,15 @@ char *
 CameraName(sqInt cameraNum)
 { return getDeviceName(cameraNum); }
 
+char *
+CameraUID(sqInt cameraNum)
+{ return getDeviceUID(cameraNum); }
+
 static sqInt
 CameraIsOpen(sqInt cameraNum)
 {
 	return
-		cameraNum >= 1 && cameraNum <= 8
+		cameraNum >= 1 && cameraNum <= CAMERA_COUNT
 		&& grabbers[cameraNum-1]
 		&& grabbers[cameraNum-1]->pixels != (unsigned int *)0;
 }
@@ -336,7 +351,7 @@ CameraSetSemaphore(sqInt cameraNum, sqInt semaphoreIndex)
 {
   SqueakVideoGrabber *grabber;
 
-  if (cameraNum >= 1 && cameraNum <= 8
+  if (cameraNum >= 1 && cameraNum <= CAMERA_COUNT
 	&& (grabber = grabbers[cameraNum-1])) {
 		grabber->semaphoreIndex = semaphoreIndex;
 		return 0;
@@ -353,4 +368,15 @@ CameraGetParam(sqInt cameraNum, sqInt paramNum)
 							* grabbers[cameraNum-1]->height * 4;
 
 	return -2;
+}
+
+sqInt
+cameraInit(void) { return 1; }
+
+sqInt
+cameraShutdown(void)
+{
+	for (int cameraNum = 1; cameraNum <= CAMERA_COUNT; cameraNum++)
+		(void)CameraClose(cameraNum);
+	return 1;
 }

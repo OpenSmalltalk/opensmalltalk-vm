@@ -239,7 +239,7 @@ static void closeHandler(int, void *, int);
 
 
 #ifdef AIO_DEBUG
-char *
+static char *
 socketHandlerName(aioHandler h)
 {
   if (h == acceptHandler)     return "acceptHandler";
@@ -354,6 +354,7 @@ socketWritable(int s)
 
   fd.fd = s;
   fd.events = POLLOUT;
+  fd.revents = 0;
 
 # ifdef AIO_DEBUG
 	if (poll(&fd, 1, 0) < 0)

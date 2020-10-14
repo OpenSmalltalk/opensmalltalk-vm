@@ -4,7 +4,6 @@ B3DAcceleratorPlugin \
 BochsIA32Plugin \
 BochsX64Plugin \
 CameraPlugin \
-CroquetPlugin \
 FileAttributesPlugin \
 MIDIPlugin \
 Squeak3D \

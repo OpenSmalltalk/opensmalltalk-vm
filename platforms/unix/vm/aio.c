@@ -466,12 +466,12 @@ aioEnable(int fd, void *data, int flags)
 
 #elif defined(FIOASYNC)
 		arg = getpid();
-		if (ioctl(fd, SIOCSPGRP, &arg) < 0)
-			perror("ioctl(SIOCSPGRP, getpid())");
+		if (ioctl(fd, TIOCSPGRP, &arg) < 0)
+			perror("ioctl(TIOCSPGRP, getpid())");
 		arg = 1;
 		if (ioctl(fd, FIOASYNC, &arg) < 0)
 			perror("ioctl(FIOASYNC, 1)");
-		FPRINTF((stderr, "aioEnable(%d): Elicit SIGIO via FIOASYNC/fcntl\n", fd));
+		FPRINTF((stderr, "aioEnable(%d): Elicit SIGIO via FIOASYNC/ioctl\n", fd));
 #else
 		FPRINTF((stderr, "aioEnable(%d): UNABLE TO ELICIT SIGIO!!\n", fd));
 #endif
