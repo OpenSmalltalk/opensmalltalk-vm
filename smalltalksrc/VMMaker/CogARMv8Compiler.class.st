@@ -153,10 +153,16 @@ CogARMv8Compiler class >> initialize [
 	R10 := 10.
 	R11 := 11.
 	R12 := 12.
+	
+	R16 := 16.
 
 	R19 := 19.
 	R20 := 20.
 	R21 := 21.
+	R22 := 22.
+	R23 := 23.
+	R24 := 24.
+	R25 := 25.
 
 	SP := 31.
 	LR := 30.
@@ -176,9 +182,8 @@ CogARMv8Compiler class >> initialize [
 	CArg2Reg := 2.
 	CArg3Reg := 3.
 
-	ConcreteVarBaseReg := 10.
-	ConcreteIPReg := 12. "IP, The Intra-Procedure-call scratch register."
-	ConcretePCReg := 15.
+	ConcreteVarBaseReg := R24.
+	ConcreteIPReg := R16. "IP, The Intra-Procedure-call scratch register."
 
 	"C3.1.1 Conditional branch
 	Conditional branches change the flow of execution depending on the current state of the Condition flags or the value in a general-purpose register."
@@ -236,17 +241,32 @@ CogARMv8Compiler class >> initializeAbstractRegisters [
 		A subroutine must preserve the contents of the registers r4-r8, r10, r11 and SP (and r9 in PCS variants that designate r9 as v6).
 	 SP = r13, so the callee-saved regs are r4-r8 & r10-r12.
 	 The caller-saved registers are those that are not callee-saved and not reserved for hardware/abi uses,
-	 i..e r0-r3, r9 & r12.
+	
+	 
+	Caller saved Registers:
+	X0 - X7 are to pass arguments.
+	X8 is indirect return address.
+	X9 - X15 general purpose.
+	
+	X16 - X17 - Intra procedure scratch register.
+	
+	Callee saved registers:
+	X18 is caller saved but platform specific (user programs should not use it).	
+	X19 - X29 are callee saved.
+	
+	X30 is LR.
+	X31 is SP.
+	
 	 We exclude registers 0 & 1 (TempReg/CArg0Reg & CArg1Reg) from the CallerSavedRegisterMask because we only
 	 use them for argument passing and so never want to save and restore them.  In fact restoring TempReg/CArg0Reg
 	 would overwrite function results, so it shouldn't be included under any circumstances."
 
-	CallerSavedRegisterMask := self registerMaskFor: "0 and: 1 and:" 2 and: 3 and: 9 and: 12.
+	CallerSavedRegisterMask := self registerMaskFor: 3 and: 4.
 
 	TempReg			:= R1.
-	ClassReg			:= R2.
-	ReceiverResultReg	:= R5.
-	SendNumArgsReg	:= R6.
+	ClassReg			:= R22.
+	ReceiverResultReg	:= R23.
+	SendNumArgsReg	:= R25.
 	SPReg				:= 28. "X28 is used to manage the Smalltalk stack".
 	FPReg				:= 29. "X29"
 	Arg0Reg			:= R3. "overlaps with last C arg reg"
@@ -254,8 +274,8 @@ CogARMv8Compiler class >> initializeAbstractRegisters [
 	Extra0Reg			:= R19. "These are callee saved registers"
 	Extra1Reg			:= R20.
 	Extra2Reg			:= R21.
-	VarBaseReg		:= R10.	"Must be callee saved" self assert: ConcreteVarBaseReg = R10.
-	RISCTempReg		:= R12.	"a.k.a. IP" self assert: ConcreteIPReg = R12.
+	VarBaseReg		:= R24.	"Must be callee saved" self assert: ConcreteVarBaseReg = R24.
+	RISCTempReg		:= R16.	"a.k.a. IP" self assert: ConcreteIPReg = R16.
 	LinkReg				:= LR. "X30"
 	PCReg				:= PC. "R15"	
 

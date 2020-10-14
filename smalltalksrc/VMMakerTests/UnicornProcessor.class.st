@@ -304,6 +304,12 @@ UnicornProcessor >> sp: anInteger [
 ]
 
 { #category : #'as yet unclassified' }
+UnicornProcessor >> w25: anInteger [ 
+	
+	machineSimulator w25: anInteger 
+]
+
+{ #category : #'as yet unclassified' }
 UnicornProcessor >> w6: anInteger [ 
 	
 	machineSimulator w6: anInteger 
@@ -316,6 +322,12 @@ UnicornProcessor >> x12: anInteger [
 ]
 
 { #category : #accessing }
+UnicornProcessor >> x16: anInteger [ 
+	
+	machineSimulator x16: anInteger
+]
+
+{ #category : #accessing }
 UnicornProcessor >> x19: anInteger [ 
 
 	machineSimulator x19: anInteger
@@ -325,6 +337,24 @@ UnicornProcessor >> x19: anInteger [
 UnicornProcessor >> x1: anInteger [ 
 
 	machineSimulator x1: anInteger
+]
+
+{ #category : #accessing }
+UnicornProcessor >> x23: anInteger [ 
+	
+	machineSimulator x23: anInteger
+]
+
+{ #category : #accessing }
+UnicornProcessor >> x24: anInteger [ 
+	
+	machineSimulator x24: anInteger
+]
+
+{ #category : #accessing }
+UnicornProcessor >> x25: anInteger [ 
+	
+	machineSimulator x25: anInteger
 ]
 
 { #category : #'as yet unclassified' }
