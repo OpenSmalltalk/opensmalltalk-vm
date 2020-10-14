@@ -5188,10 +5188,11 @@ CogARMv8Compiler >> rewriteJumpFullAt: callSiteReturnAddress target: callTargetA
 	Answer the extent of the
 	 code change which is used to compute the range of the icache to flush."
 	<inline: true>
+	
 	^self
 		rewriteFullTransferAt: callSiteReturnAddress
 		target: callTargetAddress
-		expectedInstruction: 16rE12FFF1C
+		expectedInstruction: 16rD61F0200 "This is the assembled instruction br x16. This will break if we change the assignment of registers"
 ]
 
 { #category : #'inline cacheing' }
