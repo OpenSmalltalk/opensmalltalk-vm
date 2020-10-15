@@ -194,6 +194,34 @@ VMTrampolineTest >> testSendTrampolineShouldNotOverrideLinkRegisterWhenCallDeref
 ]
 
 { #category : #tests }
+VMTrampolineTest >> testSmalltalkToCStackShouldLoadCFramePointer [
+	
+	self compile: [ cogit genSmalltalkToCStackSwitch: false "do not push link register" ].
+	
+	cogit setCStackPointer: 777.
+	cogit setCFramePointer: 888.
+	machineSimulator baseRegisterValue: cogit varBaseAddress.
+
+	self runFrom: initialAddress until: self getLastAddress.
+
+	self assert: machineSimulator framePointerRegisterValue equals: 888
+]
+
+{ #category : #tests }
+VMTrampolineTest >> testSmalltalkToCStackShouldLoadCStackPointer [
+	
+	self compile: [ cogit genSmalltalkToCStackSwitch: false "do not push link register" ].
+	
+	cogit setCStackPointer: 777.
+	cogit setCFramePointer: 888.
+	machineSimulator baseRegisterValue: cogit varBaseAddress.
+
+	self runFrom: initialAddress until: self getLastAddress.
+
+	self assert: machineSimulator stackPointerRegisterValue equals: 777
+]
+
+{ #category : #tests }
 VMTrampolineTest >> testSmalltalkToCStackShouldPushLinkRegister [
 
 	cogit backend hasLinkRegister ifFalse: [ ^ self skip ].
