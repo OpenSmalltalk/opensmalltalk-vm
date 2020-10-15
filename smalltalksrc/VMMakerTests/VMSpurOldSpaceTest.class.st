@@ -235,21 +235,29 @@ VMSpurOldSpaceTest >> testAllocatePowerInListShouldAddLeftoverInList [
 VMSpurOldSpaceTest >> testAllocatePowerInListShouldIgnoreNonPowers [
 
 	| sizeToAllocate powerOfSizeToAllocate nonMultipleAddress newAddress |
-	sizeToAllocate := 80.
+	"bitSize * allocationUnit equals maxChunckSize in the freeList
+	The freeList has bitsPerWords slots.
+	Each slots contains a pointer (wordsize), which behaves as a linked list.
+	Each linked list contains links free chunks of the same size.
+	The nodeSize of each list equals index * allocationUnit.
+	For example in 32 bits the free list will have 31 slots (1 for reserved for the tree).
+	The last linked list is stored at index 31 (0 based) and will contain nodes of size 248 (index * 8)."
+	sizeToAllocate := 10 * wordSize.
 	powerOfSizeToAllocate := sizeToAllocate * (2 ** 2).
 	
 	nonMultipleAddress := self createFreeChunkOfSize: 120.
+	
 	self createFreeChunkOfSize: powerOfSizeToAllocate.
-
+	
 	newAddress := memory allocateOldSpaceChunkOfBytes: sizeToAllocate.
-	self deny: newAddress equals: nonMultipleAddress
+	self deny: newAddress equals: nonMultipleAddress.
 ]
 
 { #category : #'tests-7-allocation-strategy-list-power' }
 VMSpurOldSpaceTest >> testAllocatePowerInListShouldRemoveNodeFromList [
 
 	| sizeToAllocate powerOfSizeToAllocate |
-	sizeToAllocate := 80.
+	sizeToAllocate := 10 * wordSize.
 	powerOfSizeToAllocate := sizeToAllocate * (2 ** 2).
 	self createFreeChunkOfSize: powerOfSizeToAllocate.
 
