@@ -205,17 +205,23 @@ VMObjectLayoutTests >> testObjectMinimumSize [
 ]
 
 { #category : #tests }
-VMObjectLayoutTests >> testObjectWith0SlotsIsSavedIn2Words [
+VMObjectLayoutTests >> testObjectWith0SlotsIsAreAlwaysAligned [
 	| class slots obj1oop obj2oop |
 	"objects always are allocated with at least one slots for forwarding"
 	slots := 0.
 	class := self installClassIntoClassTableWithInstSpec: 1 instSize: slots.
 	obj1oop := memory instantiateClass: class.
 	obj2oop := memory instantiateClass: class.
-	self assert: (memory bytesInObject: obj1oop) equals: objectHeaderSize + wordSize.
-	self assert: (memory slotSizeOf: obj1oop) equals: slots.
-	self assert: (memory slotSizeOf: obj2oop) equals: slots.
-	self assert: obj2oop - obj1oop equals: wordSize * 2
+	self assert: obj2oop - obj1oop equals: objectHeaderSize + memory allocationUnit
+]
+
+{ #category : #tests }
+VMObjectLayoutTests >> testObjectWith0SlotsIsAreAlwaysWithAtLeastOneSlotsForForwarding [
+	| class slots  oop |
+	slots := 0.
+	class := self installClassIntoClassTableWithInstSpec: 1 instSize: slots.
+	oop := memory instantiateClass: class.
+	self assert: (memory bytesInObject: oop) equals: objectHeaderSize + memory allocationUnit.
 ]
 
 { #category : #tests }
@@ -236,15 +242,13 @@ VMObjectLayoutTests >> testObjectWithMoreThan254SlotsHasTheCorrectSize [
 { #category : #tests }
 VMObjectLayoutTests >> testObjectWithMoreThan254SlotsHasTwoHeaders [
 	| class objOop header2 mask numSlots |
-	mask := memory wordSize = 8
-		ifTrue: [ 16rFFFFFFFFFFFFFF ]
-		ifFalse: [ 16rFFFFFF ].
+	mask := 16rFFFFFFFFFFFFFF.
 	255 to: 265 do: [ :slots | 
 		class := self
 			installClassIntoClassTableWithInstSpec: 1
 			instSize: slots.
 		objOop := memory instantiateClass: class.
-		header2 := memory longAt: objOop - self wordSize.	"header before the main header"
+		header2 := memory long64At: objOop - objectHeaderSize.	"header before the main header"
 		numSlots := header2 bitAnd: mask.
 		self assert: numSlots equals: slots ]
 ]
