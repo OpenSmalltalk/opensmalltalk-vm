@@ -40,11 +40,6 @@
 #define DBG(s,c)
 #endif
 
-/*** Socket Type Constants ***/
-#define TCPSocketType 0
-#define UDPSocketType 1
-#define RAWSocketType 2
-
 /*** Resolver Status Constants ***/
 #define RESOLVER_UNINITIALIZED 0
 #define RESOLVER_SUCCESS  1
@@ -71,10 +66,10 @@
 #define SIGNAL(index) synchronizedSignalSemaphoreWithIndex(index)
 
 #ifndef INVALID_SOCKET
-#define INVALID_SOCKET (-1)
+# define INVALID_SOCKET (-1)
 #endif
 #ifndef SOCKET_ERROR
-#define SOCKET_ERROR (-1)
+# define SOCKET_ERROR (-1)
 #endif
 
 static WSADATA wsaData;
@@ -86,7 +81,7 @@ static u_long zero = 0;
 static u_long one = 1;
 
 #ifndef MAXHOSTNAMELEN
-#define MAXHOSTNAMELEN 256
+# define MAXHOSTNAMELEN 256
 #endif
 static char localHostName[MAXHOSTNAMELEN];
 static u_long localHostAddress;
@@ -165,10 +160,10 @@ extern struct VirtualMachine *interpreterProxy;
 #define FAIL()         interpreterProxy->primitiveFail()
 
 #define LOCKSOCKET(mutex, duration) \
-  if(WaitForSingleObject(mutex, duration) == WAIT_FAILED)\
+  if (WaitForSingleObject(mutex, duration) == WAIT_FAILED)\
 	  printLastError(TEXT("Failed to lock socket"));
 #define UNLOCKSOCKET(mutex)\
-  if(ReleaseMutex(mutex) == 0)\
+  if (ReleaseMutex(mutex) == 0)\
 	printLastError(TEXT("Failed to unlock socket"));
 
 /*****************************************************************************
@@ -209,11 +204,11 @@ static int socketError(SOCKET s)
 static int removeFromList(privateSocketStruct *pss) {
   /* remove the private pointer from the list */
   privateSocketStruct *tmp;
-  if(pss == firstSocket) firstSocket = pss->next;
+  if (pss == firstSocket) firstSocket = pss->next;
   else {
 	tmp = firstSocket;
-	while(tmp && tmp->next != pss) tmp = tmp->next;
-	if(tmp) tmp->next = pss->next;
+	while (tmp && tmp->next != pss) tmp = tmp->next;
+	if (tmp) tmp->next = pss->next;
   }
   return 0;
 }
@@ -231,7 +226,7 @@ static void cleanupSocket(privateSocketStruct *pss)
   LOCKSOCKET(pss->mutex, INFINITE);
   remainingThreads = --pss->closePending;
   UNLOCKSOCKET(pss->mutex);
-  if(remainingThreads > 0) {
+  if (remainingThreads > 0) {
 	/* somebody else will do the cleanup */
 	return;
   }
@@ -243,7 +238,7 @@ static void cleanupSocket(privateSocketStruct *pss)
   CloseHandle(pss->hWriteThread);
 
   /* Cleanup any accepted sockets */
-  while(pss->accepted) {
+  while (pss->accepted) {
 	acceptedSocketStruct *temp = pss->accepted;
 	struct linger l;
 	pss->accepted = temp->next;
@@ -270,7 +265,7 @@ static int inplaceAcceptHandler(privateSocketStruct *pss)
   struct linger l;
 
   newSocket = accept(pss->s,0,NULL);
-  if(newSocket == INVALID_SOCKET) {
+  if (newSocket == INVALID_SOCKET) {
 	pss->sockError = WSAGetLastError();
   } else {
 	/* Destroy the server socket */
@@ -303,18 +298,18 @@ static int acceptHandler(privateSocketStruct *pss)
 
   /* accept incoming connections */
   result = accept(pss->s, (struct sockaddr*) &pss->peer, &addrSize);
-  if(result != INVALID_SOCKET) {
+  if (result != INVALID_SOCKET) {
 	/* prepare the accept structure */
 	/* Q: Are the C allocation functions thread safe?! */
 	accepted = GlobalLock(GlobalAlloc(GMEM_MOVEABLE | GMEM_ZEROINIT, sizeof(acceptedSocketStruct)));
-	if(accepted) {
+	if (accepted) {
 	  accepted->s = result;
 	  MoveMemory(&accepted->peer, &addr, addrSize);
 	}
   } else {
 	pss->sockError = WSAGetLastError();
   }
-  if(accepted != NULL) {
+  if (accepted != NULL) {
 	accepted->next = pss->accepted;
 	pss->accepted = accepted;
 	pss->sockState = Connected;
@@ -329,11 +324,11 @@ static void debugPrintSocket(privateSocketStruct *pss) {
   printf("\tHandle: %" PRIxSQPTR "\n", pss->s);
   printf("\tType: %d\n", pss->sockType);
   printf("\tState: %x", pss->sockState & SOCK_PUBLIC_MASK);
-  if(pss->sockState & SOCK_DATA_READABLE)
+  if (pss->sockState & SOCK_DATA_READABLE)
 	printf(" [readable]");
-  if(pss->sockState & SOCK_DATA_WRITABLE)
+  if (pss->sockState & SOCK_DATA_WRITABLE)
 	printf(" [writable]");
-  if(pss->sockState & SOCK_BOUND_UDP)
+  if (pss->sockState & SOCK_BOUND_UDP)
 	printf(" [bound for udp]");
   printf("\n");
   printf("\tError: %x\n", pss->sockError);
@@ -343,7 +338,7 @@ static void debugPrintSocket(privateSocketStruct *pss) {
   { /* count pending accept()s */
 	acceptedSocketStruct *tmp = pss->accepted;
 	int n = 0;
-	while(tmp) {
+	while (tmp) {
 	  tmp = tmp->next;
 	  n++;
 	}
@@ -360,7 +355,7 @@ int win32DebugPrintSocketState(void) {
   privateSocketStruct *pss;
 
   pss = firstSocket;
-  while(pss) {
+  while (pss) {
 	debugPrintSocket(pss);
 	pss = pss->next;
   }
@@ -371,56 +366,56 @@ static void debugCheckWatcherThreads(privateSocketStruct *pss, char* caller) {
   int state = pss->sockState;
   int printReason = 0;
 
-  if(pss->readWatcherOp == WatchAccept) {
+  if (pss->readWatcherOp == WatchAccept) {
 	/* accept() is different; don't bother */
 	return;
   }
-  if(pss->readWatcherOp == WatchAcceptSingle) {
+  if (pss->readWatcherOp == WatchAcceptSingle) {
 	/* same thing */
 	return;
   }
 
-  if( (state & SOCK_PUBLIC_MASK) == Unconnected )
+  if ( (state & SOCK_PUBLIC_MASK) == Unconnected )
 	/* means we should not be watching anything */
-	if(pss->readSelect || pss->writeSelect ||
+	if (pss->readSelect || pss->writeSelect ||
 	   (pss->readWatcherOp != 0) || (pss->writeWatcherOp != 0)) {
 	  printReason |= 1; /* watching stuff on unconnected socket */
 	}
 
-  if( (state & SOCK_PUBLIC_MASK) == Connected) {
-	if(pss->readWatcherOp != WatchData)
+  if ( (state & SOCK_PUBLIC_MASK) == Connected) {
+	if (pss->readWatcherOp != WatchData)
 	  printReason |= 2; /* watching non-data stuff on connected socket */
-	if( (state & SOCK_DATA_READABLE) == pss->readSelect)
+	if ( (state & SOCK_DATA_READABLE) == pss->readSelect)
 	  printReason |= 4; /* watching w/ data or not watching w/o data */
-	if(pss->writeWatcherOp != WatchData)
+	if (pss->writeWatcherOp != WatchData)
 	  printReason |= 8; /* watching non-data stuff */
-	if( (state & SOCK_DATA_WRITABLE) == pss->writeSelect)
+	if ( (state & SOCK_DATA_WRITABLE) == pss->writeSelect)
 	  printReason |= 16; /* watching w/ data or not watching w/o data */
   }
 
-  if( (state & SOCK_PUBLIC_MASK) == WaitingForConnection) {
-	if(!pss->writeSelect || (pss->writeWatcherOp != WatchConnect))
+  if ( (state & SOCK_PUBLIC_MASK) == WaitingForConnection) {
+	if (!pss->writeSelect || (pss->writeWatcherOp != WatchConnect))
 	  printReason |= 32; /* not watching for connection */
   }
-  if( (state & SOCK_PUBLIC_MASK) == ThisEndClosed) {
-	if(!pss->readSelect || (pss->readWatcherOp != WatchClose))
+  if ( (state & SOCK_PUBLIC_MASK) == ThisEndClosed) {
+	if (!pss->readSelect || (pss->readWatcherOp != WatchClose))
 	  printReason |= 64; /* not watching for close */
   }
-  if(printReason) {
+  if (printReason) {
 	printf("#### WARNING: Watcher threads are running wild on socket (%s)\n", caller);
-	if(printReason & 1)
+	if (printReason & 1)
 	  printf("\t* Watching for stuff while unconnected\n");
-	if(printReason & 2)
+	if (printReason & 2)
 	  printf("\t* Watching for non-data while no data readable\n");
-	if(printReason & 4)
+	if (printReason & 4)
 	  printf("\t* Socket read state differs from select() state\n");
-	if(printReason & 8)
+	if (printReason & 8)
 	  printf("\t* Watching for non-data while no data writable\n");
-	if(printReason & 16)
+	if (printReason & 16)
 	  printf("\t* Socket write state differs from select() state\n");
-	if(printReason & 32)
+	if (printReason & 32)
 	  printf("\t* Watching for non-connect while connecting\n");
-	if(printReason & 64)
+	if (printReason & 64)
 	  printf("\t* Watching for non-close while closing\n");
 	debugPrintSocket(pss);
   }
@@ -445,10 +440,10 @@ static DWORD WINAPI readWatcherThread(privateSocketStruct *pss)
   fd_set fds;
   int n, doWait;
 
-  while(1) {
+  while (1) {
 	doWait = 1;
 	/* Do we have a task to perform?! */
-	if(pss->readWatcherOp) {
+	if (pss->readWatcherOp) {
 	  /* Determine state of the socket */
 	  FD_ZERO(&fds);
 	  FD_SET(pss->s, &fds);
@@ -460,7 +455,7 @@ static DWORD WINAPI readWatcherThread(privateSocketStruct *pss)
 		 1 - if the socket is readable
 		 SOCKET_ERROR - if the socket has been closed
 	  */
-	  if(n == 1) {
+	  if (n == 1) {
 		/* Guard socket state modification */
 		LOCKSOCKET(pss->mutex, INFINITE);
 		/* Change appropriate socket state */
@@ -496,7 +491,7 @@ static DWORD WINAPI readWatcherThread(privateSocketStruct *pss)
 		}
 		UNLOCKSOCKET(pss->mutex);
 	  } else {
-		if(n == SOCKET_ERROR) {
+		if (n == SOCKET_ERROR) {
 		  int err = WSAGetLastError();
 		  LOCKSOCKET(pss->mutex, INFINITE);
 		  pss->sockState = OtherEndClosed;
@@ -511,11 +506,11 @@ static DWORD WINAPI readWatcherThread(privateSocketStruct *pss)
 	}
 
 	/* Wait until we have something to do */
-	if(doWait && !pss->closePending)
+	if (doWait && !pss->closePending)
 	  WaitForSingleObject(pss->hReadWatcherEvent, INFINITE);
 
 	/* Check if we need to close the socket */
-	if(pss->closePending) {
+	if (pss->closePending) {
 	  cleanupSocket(pss);
 	  /* And stop running */
 	  ExitThread(0);
@@ -529,9 +524,9 @@ static DWORD WINAPI writeWatcherThread(privateSocketStruct *pss)
   fd_set fds, err;
   int n, doWait, errSize;
 
-  while(1) {
+  while (1) {
 	doWait = 1;
-	if(pss->writeWatcherOp) {
+	if (pss->writeWatcherOp) {
 	  /* Determine state of the socket */
 	  FD_ZERO(&fds);
 	  FD_SET(pss->s, &fds);
@@ -545,12 +540,12 @@ static DWORD WINAPI writeWatcherThread(privateSocketStruct *pss)
 		 1 - if the socket is writable or an error occured
 		 SOCKET_ERROR - if the socket has been closed
 	  */
-	  if(n == 1) {
+	  if (n == 1) {
 		/* Guard socket state modification */
 		LOCKSOCKET(pss->mutex, INFINITE);
-		if(FD_ISSET(pss->s, &err)) {
+		if (FD_ISSET(pss->s, &err)) {
 		  /* An error occured */
-		  if(pss->writeWatcherOp == WatchConnect) {
+		  if (pss->writeWatcherOp == WatchConnect) {
 			/* asynchronous connect failed */
 			pss->sockState = Unconnected;
 			SIGNAL(pss->connSema);
@@ -585,7 +580,7 @@ static DWORD WINAPI writeWatcherThread(privateSocketStruct *pss)
 		}
 		UNLOCKSOCKET(pss->mutex);
 	  } else {
-		if(n == SOCKET_ERROR) {
+		if (n == SOCKET_ERROR) {
 		  int err = WSAGetLastError();
 		  LOCKSOCKET(pss->mutex, INFINITE);
 		  pss->sockState = OtherEndClosed;
@@ -599,12 +594,12 @@ static DWORD WINAPI writeWatcherThread(privateSocketStruct *pss)
 	  }
 	}
 	/* Wait until we have something to do */
-	if(doWait && !pss->closePending) {
+	if (doWait && !pss->closePending) {
 	  WaitForSingleObject(pss->hWriteWatcherEvent, INFINITE);
 	}
 
 	/* Check if we need to close the socket */
-	if(pss->closePending) {
+	if (pss->closePending) {
 	  cleanupSocket(pss);
 	  /* And stop running */
 	  ExitThread(0);
@@ -658,7 +653,7 @@ static int createWatcherThreads(privateSocketStruct *pss)
 				   /* creation parameter -- create suspended so we can check the return value */
 				 &id);              /* return value for thread id */
   pss->hReadThread = hThread;
-  if(!hThread) {
+  if (!hThread) {
 	printLastError(TEXT("CreateThread() failed"));
 	removeFromList(pss);
 	pss->closePending = 1;
@@ -666,9 +661,9 @@ static int createWatcherThreads(privateSocketStruct *pss)
 	cleanupSocket(pss);
 	return 0;
   }
-  if(!SetThreadPriority(hThread, THREAD_PRIORITY_HIGHEST))
+  if (!SetThreadPriority(hThread, THREAD_PRIORITY_HIGHEST))
 	printLastError(TEXT("SetThreadPriority() failed"));
-  if(!ResumeThread(hThread))
+  if (!ResumeThread(hThread))
 	printLastError(TEXT("ResumeThread() failed"));
 
   /* Create the write watcher */
@@ -681,7 +676,7 @@ static int createWatcherThreads(privateSocketStruct *pss)
 				   /* creation parameter -- create suspended so we can check the return value */
 				 &id);              /* return value for thread id */
   pss->hWriteThread = hThread;
-  if(!hThread) {
+  if (!hThread) {
 	printLastError(TEXT("CreateThread() failed"));
 	removeFromList(pss);
 	abortSocket(pss);
@@ -689,9 +684,9 @@ static int createWatcherThreads(privateSocketStruct *pss)
 	SetEvent(pss->hReadWatcherEvent);
 	return 0;
   }
-  if(!SetThreadPriority(hThread, THREAD_PRIORITY_HIGHEST))
+  if (!SetThreadPriority(hThread, THREAD_PRIORITY_HIGHEST))
 	printLastError(TEXT("SetThreadPriority() failed"));
-  if(!ResumeThread(hThread))
+  if (!ResumeThread(hThread))
 	printLastError(TEXT("ResumeThread() failed"));
 
   return 1;
@@ -722,7 +717,7 @@ sqInt sqNetworkInit(sqInt semaIndex)
 	return -1;
 
   /* Confirm that the Windows Sockets DLL supports 1.1 or greater */
-  if(HIBYTE(wsaData.wVersion < 1) || HIBYTE(wsaData.wVersion) > 2) {
+  if (HIBYTE(wsaData.wVersion < 1) || HIBYTE(wsaData.wVersion) > 2) {
 	WSACleanup();
 	return -1;
   }
@@ -747,7 +742,7 @@ void sqNetworkShutdown(void)
   if (thisNetSession == 0) return;  /* noop if network is already shut down */
 
   /* Clean up pending sockets */
-  while(firstSocket) {
+  while (firstSocket) {
 	pss = firstSocket;
 	/* Abort socket */
 	abortSocket(pss);
@@ -774,21 +769,22 @@ void sqNetworkShutdown(void)
 /*****************************************************************************
   SocketValid: Validate a given SocketPtr
 *****************************************************************************/
-static int SocketValid(SocketPtr s) {
-  if ((s != NULL) &&
-	  (s->privateSocketPtr != NULL) &&
-	  (s->sessionID == thisNetSession)) {
+static int
+SocketValid(SocketPtr s)
+{
+  if (s
+   && s->privateSocketPtr
+   && s->sessionID == thisNetSession)
 	return true;
-  } else {
-	FAIL();
-	return false;
-  }
+  FAIL();
+  return false;
 }
 
 /*****************************************************************************
   sqSocketAbortConnection: Immediately terminate a pending connection
 *****************************************************************************/
-void sqSocketAbortConnection(SocketPtr s)
+void
+sqSocketAbortConnection(SocketPtr s)
 {
   if (!SocketValid(s)) return;
   /* abort the socket connection */
@@ -798,7 +794,8 @@ void sqSocketAbortConnection(SocketPtr s)
 /*****************************************************************************
   sqSocketCloseConnection: gracefully close an open socket
 *****************************************************************************/
-void sqSocketCloseConnection(SocketPtr s)
+void
+sqSocketCloseConnection(SocketPtr s)
 {
   privateSocketStruct *pss = PSP(s);
   int err;
@@ -808,9 +805,9 @@ void sqSocketCloseConnection(SocketPtr s)
   err = closesocket(SOCKET(s));
   LOCKSOCKET(pss->mutex, INFINITE);
   pss->readWatcherOp = pss->writeWatcherOp = 0;
-  if(err) {
+  if (err) {
 	err = WSAGetLastError();
-	if(err == WSAEWOULDBLOCK) {
+	if (err == WSAEWOULDBLOCK) {
 	  /* Setup the read watcher to see when it closed */
 	  pss->sockState = ThisEndClosed;
 	  pss->readWatcherOp = WatchClose;
@@ -827,7 +824,7 @@ void sqSocketCloseConnection(SocketPtr s)
 	SIGNAL(pss->connSema);
   }
   /* Cleanup any accepted sockets */
-  while(pss->accepted) {
+  while (pss->accepted) {
 	acceptedSocketStruct *temp = pss->accepted;
 	struct linger l;
 	pss->accepted = temp->next;
@@ -870,8 +867,8 @@ void sqSocketConnectToPort(SocketPtr s, sqInt addr, sqInt port)
   ADDRESS(s)->sin_port = htons((short)port);
   ADDRESS(s)->sin_addr.s_addr = htonl(addr);
 
-  if(TCPSocketType != s->socketType) { /* UDP/RAW */
-	if(!(pss->sockState & SOCK_BOUND_UDP)) {
+  if (TCPSocketType != s->socketType) { /* UDP/RAW */
+	if (!(pss->sockState & SOCK_BOUND_UDP)) {
 	  /* The socket is locally unbound and we
 		 must 'magically' assign a local port so
 		 that client code can also read from the socket */
@@ -882,9 +879,9 @@ void sqSocketConnectToPort(SocketPtr s, sqInt addr, sqInt port)
 
   /* TCP */
   err = connect( SOCKET(s), (struct sockaddr*) ADDRESS(s), sizeof(struct sockaddr_in));
-  if(err) {
+  if (err) {
 	err = WSAGetLastError();
-	if(err != WSAEWOULDBLOCK) {
+	if (err != WSAEWOULDBLOCK) {
 	  pss->sockState = Unconnected; /* reset */
 	  pss->sockError = err;
 	  SIGNAL(pss->connSema);
@@ -927,17 +924,17 @@ void sqSocketListenOnPort(SocketPtr s, sqInt port)
   addr.sin_addr.s_addr = INADDR_ANY;
 
   result = bind( SOCKET(s), (struct sockaddr*) &addr, sizeof(struct sockaddr_in));
-  if(result == SOCKET_ERROR) {
+  if (result == SOCKET_ERROR) {
 	pss->sockError = WSAGetLastError();
 	FAIL();
 	return;
   }
-  if(TCPSocketType != s->socketType) { /* UDP/RAW */
+  if (TCPSocketType != s->socketType) { /* UDP/RAW */
 	SOCKETSTATE(s) = Connected | SOCK_BOUND_UDP | SOCK_DATA_WRITABLE;
   } else { /* TCP */
 	/* show our willingness to accept a single incoming connection */
 	result = listen(SOCKET(s), 1);
-	if(result == SOCKET_ERROR) {
+	if (result == SOCKET_ERROR) {
 	  FAIL();
 	} else {
 	  /* Waiting for accept => Start read watcher */
@@ -966,7 +963,7 @@ void sqSocketBindToPort(SocketPtr s, int addr, int port)
   inaddr.sin_addr.s_addr = htonl(addr);
 
   result = bind( SOCKET(s), (struct sockaddr*) &inaddr, sizeof(struct sockaddr_in));
-  if(result == SOCKET_ERROR) {
+  if (result == SOCKET_ERROR) {
 	pss->sockError = WSAGetLastError();
 	FAIL();
 	return;
@@ -992,7 +989,7 @@ void sqSocketListenOnPortBacklogSizeInterface(SocketPtr s, sqInt port, sqInt bac
 
   if (!SocketValid(s)) return;
 
-  if(TCPSocketType != s->socketType) { /* UDP/RAW */
+  if (TCPSocketType != s->socketType) { /* UDP/RAW */
 	sqSocketListenOnPort(s, port);
 	return;
   }
@@ -1004,14 +1001,14 @@ void sqSocketListenOnPortBacklogSizeInterface(SocketPtr s, sqInt port, sqInt bac
   inaddr.sin_addr.s_addr = htonl(addr);
 
   result = bind( SOCKET(s), (struct sockaddr*) &inaddr, sizeof(struct sockaddr_in));
-  if(result == SOCKET_ERROR) {
+  if (result == SOCKET_ERROR) {
 	pss->sockError = WSAGetLastError();
 	FAIL();
 	return;
   }
   /* show our willingness to accept a backlogSize incoming connections */
   result = listen(SOCKET(s), backlogSize);
-  if(result != SOCKET_ERROR) {
+  if (result != SOCKET_ERROR) {
 	LOCKSOCKET(pss->mutex, INFINITE);
 	/* Waiting for accept => Start read watcher */
 	pss->sockState = WaitingForConnection;
@@ -1037,7 +1034,7 @@ void sqSocketDestroy(SocketPtr s)
   pss = s->privateSocketPtr;
 
   /* close the socket if it is open */
-  if(pss->s) {
+  if (pss->s) {
 	sqSocketAbortConnection(s);
   }
 
@@ -1065,7 +1062,7 @@ sqInt sqSocketReceiveDataAvailable(SocketPtr s)
 {
   int sockState;
 
-  if(!SocketValid(s)) return 0;
+  if (!SocketValid(s)) return 0;
   DBG(s,"sqSocketReceiveDataAvailable");
   sockState = SOCKETSTATE(s);
   return (sockState & SOCK_DATA_READABLE) /* e.g., do we have data? */
@@ -1084,10 +1081,10 @@ sqInt sqSocketReceiveDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
   int addrSize;
 
   if (!SocketValid(s)) return -1;
-  if(bufSize <= 0) return bufSize;
+  if (bufSize <= 0) return bufSize;
 
   /* read incoming data */
-  if(TCPSocketType != pss->sockType) { /* UDP/RAW */
+  if (TCPSocketType != pss->sockType) { /* UDP/RAW */
 	addrSize = sizeof(pss->peer);
 	result = recvfrom(pss->s, buf, bufSize, 0,
 					  (struct sockaddr*) &pss->peer, &addrSize);
@@ -1101,20 +1098,20 @@ sqInt sqSocketReceiveDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
   LOCKSOCKET(pss->mutex, INFINITE)
 
   /* Check if something went wrong */
-  if(result <= 0) {
-	  if(result == 0) {
+  if (result <= 0) {
+	  if (result == 0) {
 		/* UDP/RAW doesn't know "other end closed" state */
-		if(pss->sockType == TCPSocketType)
+		if (pss->sockType == TCPSocketType)
 		  pss->sockState = OtherEndClosed;
-	  } else if(result < 0) {
+	  } else if (result < 0) {
 		int err = WSAGetLastError();
-		if(err != WSAEWOULDBLOCK) {
+		if (err != WSAEWOULDBLOCK) {
 		  /* printf("ERROR: %d\n", err); */
 		  /* NOTE: We consider all other errors to be fatal, e.g.,
 			 report them as "other end closed". Looking at the
 			 WSock documentation this ought to be correct. */
 		  /* UDP/RAW doesn't know "other end closed" state */
-		  if(pss->sockType == TCPSocketType) {
+		  if (pss->sockType == TCPSocketType) {
 			pss->sockState = OtherEndClosed;
 			SIGNAL(pss->connSema);
 		  }
@@ -1124,7 +1121,7 @@ sqInt sqSocketReceiveDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
 	  }
   }
 
-  if(!socketReadable(pss->s)) {
+  if (!socketReadable(pss->s)) {
 	/* no more data to read; wake up read watcher */
 	pss->sockState &= ~SOCK_DATA_READABLE;
 	pss->readWatcherOp = WatchData;
@@ -1167,10 +1164,10 @@ sqInt sqSocketSendDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
 	  what the Unix VM does but I think we should actually
 	  fail here....
   **************************************/
-  if(!bufSize) return 0;
+  if (!bufSize) return 0;
 
   /* send actual data */
-  if(TCPSocketType != pss->sockType) { /* UDP/RAW */
+  if (TCPSocketType != pss->sockType) { /* UDP/RAW */
 	addrSize = sizeof(pss->peer);
 	result = sendto(pss->s, buf, bufSize, 0,
 					(struct sockaddr*) &pss->peer, addrSize);
@@ -1183,20 +1180,20 @@ sqInt sqSocketSendDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
   LOCKSOCKET(pss->mutex, INFINITE)
 
   /* Check if something went wrong */
-  if(result <= 0) {
-	  if(result == 0) {
+  if (result <= 0) {
+	  if (result == 0) {
 		/* UDP/RAW doesn't know "other end closed" state */
-		if(pss->sockType == TCPSocketType)
+		if (pss->sockType == TCPSocketType)
 		  pss->sockState = OtherEndClosed;
 	  } else {
 		int err = WSAGetLastError();
-		if(err != WSAEWOULDBLOCK) {
+		if (err != WSAEWOULDBLOCK) {
 		  /* printf("ERROR: %d\n", err); */
 		  /* NOTE: We consider all other errors to be fatal, e.g.,
 			 report them as "other end closed". Looking at the
 			 WSock documentation this ought to be correct. */
 		  /* UDP/RAW doesn't know "other end closed" state */
-		  if(pss->sockType == TCPSocketType) {
+		  if (pss->sockType == TCPSocketType) {
 			pss->sockState = OtherEndClosed;
 			SIGNAL(pss->connSema);
 		  }
@@ -1206,7 +1203,7 @@ sqInt sqSocketSendDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
 	  }
   }
 
-  if(!socketWritable(pss->s)) {
+  if (!socketWritable(pss->s)) {
 	/* can't write more data; wake up write watcher */
 	pss->sockState &= ~SOCK_DATA_WRITABLE;
 	pss->writeWatcherOp = WatchData;
@@ -1222,7 +1219,7 @@ sqInt sqSocketSendDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
 *****************************************************************************/
 sqInt sqSocketError(SocketPtr s)
 {
-  if(!SocketValid(s)) return -1;
+  if (!SocketValid(s)) return -1;
   return SOCKETERROR(s);
 }
 
@@ -1235,8 +1232,8 @@ sqInt sqSocketLocalAddress(SocketPtr s)
   int sinSize = sizeof(sin);
 
   if (!SocketValid(s)) return -1;
-  if(getsockname(SOCKET(s), (struct sockaddr *)&sin, &sinSize)) return 0; /* failed */
-  if(sin.sin_family != AF_INET) return 0; /* can't handle other than internet addresses */
+  if (getsockname(SOCKET(s), (struct sockaddr *)&sin, &sinSize)) return 0; /* failed */
+  if (sin.sin_family != AF_INET) return 0; /* can't handle other than internet addresses */
   return ntohl(sin.sin_addr.s_addr);
 }
 
@@ -1249,8 +1246,8 @@ sqInt sqSocketLocalPort(SocketPtr s)
   int sinSize = sizeof(sin);
 
   if (!SocketValid(s)) return -1;
-  if(getsockname(SOCKET(s), (struct sockaddr *)&sin, &sinSize)) return 0; /* failed */
-  if(sin.sin_family != AF_INET) return 0; /* can't handle other than internet addresses */
+  if (getsockname(SOCKET(s), (struct sockaddr *)&sin, &sinSize)) return 0; /* failed */
+  if (sin.sin_family != AF_INET) return 0; /* can't handle other than internet addresses */
   return ntohs(sin.sin_port);
 }
 
@@ -1263,12 +1260,12 @@ sqInt sqSocketRemoteAddress(SocketPtr s)
   int sinSize = sizeof(sin);
 
   if (!SocketValid(s)) return -1;
-  if(TCPSocketType == s->socketType) { /* TCP */
-	if(getpeername(SOCKET(s), (struct sockaddr *)&sin, &sinSize)) return 0; /* failed */
+  if (TCPSocketType == s->socketType) { /* TCP */
+	if (getpeername(SOCKET(s), (struct sockaddr *)&sin, &sinSize)) return 0; /* failed */
   } else { /* UDP/RAW */
 	MoveMemory(&sin,&(PSP(s)->peer),sinSize);
   }
-  if(sin.sin_family != AF_INET) return 0; /* can't handle other than internet addresses */
+  if (sin.sin_family != AF_INET) return 0; /* can't handle other than internet addresses */
   return ntohl(sin.sin_addr.s_addr);
 }
 
@@ -1281,12 +1278,12 @@ sqInt sqSocketRemotePort(SocketPtr s)
   int sinSize = sizeof(sin);
 
   if (!SocketValid(s)) return -1;
-  if(TCPSocketType == s->socketType) { /* TCP */
-	if(getpeername(SOCKET(s), (struct sockaddr *)&sin, &sinSize)) return 0; /* failed */
+  if (TCPSocketType == s->socketType) { /* TCP */
+	if (getpeername(SOCKET(s), (struct sockaddr *)&sin, &sinSize)) return 0; /* failed */
   } else { /* UDP */
 	MoveMemory(&sin,&(PSP(s)->peer),sinSize);
   }
-  if(sin.sin_family != AF_INET) return 0; /* can't handle other than internet addresses */
+  if (sin.sin_family != AF_INET) return 0; /* can't handle other than internet addresses */
   return ntohs(sin.sin_port);
 }
 
@@ -1304,7 +1301,7 @@ void sqSocketSetReusable (SocketPtr s)
   *(int *)buf = 1;
   bufSize = 4;
   err = setsockopt(SOCKET(s), SOL_SOCKET, SO_REUSEADDR, buf, bufSize);
-  if(err < 0) interpreterProxy->success(false);
+  if (err < 0) interpreterProxy->success(false);
 }
 
 /*****************************************************************************
@@ -1341,12 +1338,12 @@ void	sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaI
 
   s->sessionID = 0;
   /* perform internal initialization */
-  if(socketType == TCPSocketType)
+  if (socketType == TCPSocketType)
 	newSocket = socket(domain,SOCK_STREAM, 0);
-  else if(socketType == UDPSocketType)
+  else if (socketType == UDPSocketType)
 	newSocket = socket(domain, SOCK_DGRAM, 0);
   else { FAIL(); return; }
-  if(newSocket == INVALID_SOCKET) {
+  if (newSocket == INVALID_SOCKET) {
 	FAIL();
 	return;
   }
@@ -1362,7 +1359,7 @@ void	sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaI
 	 more data. We work around this by specifying the window size
 	 explicitly (only for Vista; one would hope that later versions
 	 of windows get this done without failing. */
-  if(runningVista && socketType == TCPSocketType) {
+  if (runningVista && socketType == TCPSocketType) {
 	unsigned int val = 65536;
 	setsockopt(newSocket, SOL_SOCKET, SO_RCVBUF, (char *)&val, sizeof(val));
   }
@@ -1376,7 +1373,7 @@ void	sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaI
   pss->writeSema = writeSemaIndex;
 
   /* UDP sockets are born "connected" */
-  if(UDPSocketType == socketType) {
+  if (UDPSocketType == socketType) {
 	pss->sockState = Connected | SOCK_DATA_WRITABLE;
   } else {/* TCP */
 	pss->sockState = Unconnected;
@@ -1396,18 +1393,18 @@ void	sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaI
 
   /* Create a new mutex object for synchronized access */
   pss->mutex = CreateMutex(NULL, 0,NULL);
-  if(!pss->mutex) { FAIL(); return; }
+  if (!pss->mutex) { FAIL(); return; }
 
   /* Install the socket into the socket list */
   pss->next = firstSocket;
   firstSocket = pss;
 
   /* Setup the watchers */
-  if(UDPSocketType == socketType) {
+  if (UDPSocketType == socketType) {
 	/* Since UDP sockets are always connected */
 	pss->readWatcherOp = pss->writeWatcherOp = WatchData;
   }
-  if(!createWatcherThreads(pss)) {
+  if (!createWatcherThreads(pss)) {
 	/* note: necessary cleanup is done from within createWatcherThreads */
 	s->privateSocketPtr = NULL; /* declare invalid */
 	FAIL();
@@ -1438,7 +1435,7 @@ void sqSocketCreateRawProtoTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(Soc
 	case 1: newSocket = socket(domain, SOCK_RAW, IPPROTO_ICMP); break;
 	default: newSocket = INVALID_SOCKET;
   }
-  if(newSocket == INVALID_SOCKET) {
+  if (newSocket == INVALID_SOCKET) {
 	FAIL();
 	return;
   }
@@ -1471,7 +1468,7 @@ void sqSocketCreateRawProtoTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(Soc
 
   /* Create a new mutex object for synchronized access */
   pss->mutex = CreateMutex(NULL, 0,NULL);
-  if(!pss->mutex) { FAIL(); return; }
+  if (!pss->mutex) { FAIL(); return; }
 
   /* Install the socket into the socket list */
   pss->next = firstSocket;
@@ -1479,7 +1476,7 @@ void sqSocketCreateRawProtoTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(Soc
 
   /* Setup the watchers */
   pss->readWatcherOp = pss->writeWatcherOp = WatchData;
-  if(!createWatcherThreads(pss)) {
+  if (!createWatcherThreads(pss)) {
 	/* note: necessary cleanup is done from within createWatcherThreads */
 	s->privateSocketPtr = NULL; /* declare invalid */
 	FAIL();
@@ -1509,9 +1506,9 @@ void sqSocketAcceptFromRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(SocketPtr s
   /* Guard modification in server socket state */
   LOCKSOCKET(pss->mutex, INFINITE);
   accepted = pss->accepted;
-  if(accepted) {
+  if (accepted) {
 	pss->accepted = accepted->next;
-	if(!pss->accepted) {
+	if (!pss->accepted) {
 	  /* No more connections; go back to waiting state and start watcher */
 	  pss->sockState = WaitingForConnection;
 	  pss->readWatcherOp = WatchAccept;
@@ -1520,11 +1517,11 @@ void sqSocketAcceptFromRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(SocketPtr s
   }
   UNLOCKSOCKET(pss->mutex);
 
-  if(!accepted) { /* something was wrong here */
+  if (!accepted) { /* something was wrong here */
 	FAIL();
 	return;
   }
-  if(accepted->s == INVALID_SOCKET) {
+  if (accepted->s == INVALID_SOCKET) {
 	FAIL();
 	return;
   }
@@ -1549,7 +1546,7 @@ void sqSocketAcceptFromRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(SocketPtr s
 
   /* Create a new mutex object for synchronized access */
   pss->mutex = CreateMutex(NULL, 0,NULL);
-  if(!pss->mutex) { FAIL(); return; }
+  if (!pss->mutex) { FAIL(); return; }
 
   /* Install the socket into the socket list */
   pss->next = firstSocket;
@@ -1558,7 +1555,7 @@ void sqSocketAcceptFromRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(SocketPtr s
   /* Setup the watchers */
   pss->readWatcherOp = pss->writeWatcherOp = WatchData;
 
-  if(!createWatcherThreads(pss)) {
+  if (!createWatcherThreads(pss)) {
 	/* note: necessary cleanup is done from within createWatcherThreads */
 	s->privateSocketPtr = NULL; /* declare invalid */
 	FAIL();
@@ -1571,14 +1568,14 @@ void sqSocketAcceptFromRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(SocketPtr s
 sqInt sqSocketReceiveUDPDataBufCountaddressportmoreFlag(SocketPtr s, char *buf, sqInt bufSize,  sqInt *address,  sqInt *port, sqInt *moreFlag)
 {
   int nRead;
-  if(TCPSocketType == s->socketType)
+  if (TCPSocketType == s->socketType)
 	return interpreterProxy->primitiveFail();
   /* bind UDP/RAW socket*/
   sqSocketConnectToPort(s, *address, *port);
-  if(interpreterProxy->failed()) return 0;
+  if (interpreterProxy->failed()) return 0;
   /* receive data */
   nRead = sqSocketReceiveDataBufCount(s, buf, bufSize);
-  if(nRead >= 0) {
+  if (nRead >= 0) {
 	*address= ntohl(ADDRESS(s)->sin_addr.s_addr);
 	*port= ntohs(ADDRESS(s)->sin_port);
   }
@@ -1587,11 +1584,11 @@ sqInt sqSocketReceiveUDPDataBufCountaddressportmoreFlag(SocketPtr s, char *buf, 
 
 sqInt	sqSockettoHostportSendDataBufCount(SocketPtr s, sqInt address, sqInt port, char *buf, sqInt bufSize)
 {
-  if(TCPSocketType == s->socketType)
+  if (TCPSocketType == s->socketType)
 	return interpreterProxy->primitiveFail();
   /* bind UDP/RAW socket */
   sqSocketConnectToPort(s, address, port);
-  if(interpreterProxy->failed()) return 0;
+  if (interpreterProxy->failed()) return 0;
   /* send data */
   return sqSocketSendDataBufCount(s, buf, bufSize);
 }
@@ -1694,25 +1691,25 @@ sqInt sqSocketSetOptionsoptionNameStartoptionNameSizeoptionValueStartoptionValue
 	socketOption *opt= findOption(optionName, (size_t)optionNameSize);
 
 	if (opt == 0) goto barf;
-	if(optionValueSize >= sizeof(optionValue)) goto barf;
+	if (optionValueSize >= sizeof(optionValue)) goto barf;
 
 	memcpy(optionValue, optionValueIndex, optionValueSize);
 	optionValue[optionValueSize] = 0;
 
-	if(opt->optType == 1) {
+	if (opt->optType == 1) {
 	  /* integer options */
 	  ((int*)buf)[0] = atoi(optionValue);
 	  bufSize = sizeof(int);
 	  /* printf("optionValue: %d (%s)\n", ((int*)buf)[0], optionValue); */
-	} else if(opt->optType == 100) {
+	} else if (opt->optType == 100) {
 	  /* multicast options, taking one or two IP addresses, e.g.,
 		 '1.2.3.4|5.6.7.8' specifies multicast group + interface
 		 '1.2.3.4' specifies only multicast group (interface is INADDR_ANY)
 	  */
-	  if(optionValueSize == 4) {
+	  if (optionValueSize == 4) {
 		((int*)buf)[0] = ((int*)optionValue)[0];
 		((int*)buf)[1] = INADDR_ANY;
-	  } else if(optionValueSize == 8) {
+	  } else if (optionValueSize == 8) {
 		((int*)buf)[0] = ((int*)optionValue)[0];
 		((int*)buf)[1] = ((int*)optionValue)[1];
 	  } else {
@@ -1726,7 +1723,7 @@ sqInt sqSocketSetOptionsoptionNameStartoptionNameSizeoptionValueStartoptionValue
 	  int err;
 	  err = setsockopt(SOCKET(s), opt->optLevel, opt->optName,buf, bufSize);
 	  /* printf("setsockopt(): %d\n", err); */
-	  if(err < 0) goto barf;
+	  if (err < 0) goto barf;
 	}
 	/* it isn't clear what we're supposed to return here, since
 	   setsockopt isn't supposed to have any value-result parameters
@@ -1778,23 +1775,23 @@ sqInt sqSocketGetOptionsoptionNameStartoptionNameSizereturnedValue
   }
 
 #if 0
-  if(opt->optType == 200) {
+  if (opt->optType == 200) {
 	int sz, err;
 	struct sockaddr_in addr;
 	/* WSAIoctl() */
-	if(opt->optName != SIO_GET_BROADCAST_ADDRESS) goto barf;
+	if (opt->optName != SIO_GET_BROADCAST_ADDRESS) goto barf;
 	err = WSAIoctl(SOCKET(s),
 				   SIO_GET_BROADCAST_ADDRESS,
 				   NULL, 0,
 				   &addr, sizeof(addr),
 				   &sz,
 				   NULL, NULL);
-	if(err) {
+	if (err) {
 	  printf("WSAIoctl error: %d (WSAGetLastError=%d)\n",
 			 err, WSAGetLastError());
 	  goto barf;
 	}
-	if(sz != sizeof(addr)) {
+	if (sz != sizeof(addr)) {
 	  printf("WSAIoctl returned %d instead of %d\n", sz, sizeof(addr));
 	  goto barf;
 	}
@@ -1836,7 +1833,7 @@ nameOf(int netAddress)
   lastError = 0;
   nAddr = htonl(netAddress);
   he = gethostbyaddr((char*)&nAddr,sizeof(nAddr),AF_INET);
-  if(he) return he->h_name;
+  if (he) return he->h_name;
   lastError = h_errno;
   return "";
 }
@@ -1847,7 +1844,7 @@ addressOf(char *hostName)
 
   lastError = 0;
   he = gethostbyname(hostName);
-  if(he) return ntohl(*(long*)(he->h_addr_list[0]));
+  if (he) return ntohl(*(long*)(he->h_addr_list[0]));
   lastError = h_errno;
   return 0;
 }
@@ -1857,7 +1854,7 @@ addressOf(char *hostName)
 *****************************************************************************/
 void sqResolverAbort(void)
 {
-  if(!asyncLookupHandle) return; /* lookup already finished */
+  if (!asyncLookupHandle) return; /* lookup already finished */
   TerminateThread(asyncLookupHandle, 0);
   /* forget last name */
   lastName[0] = 0;
@@ -1912,7 +1909,7 @@ sqInt sqResolverNameLookupResult(void)
 void sqResolverStartAddrLookup(sqInt address)
 {
   DWORD id;
-  if(asyncLookupHandle) return; /* lookup in progress */
+  if (asyncLookupHandle) return; /* lookup in progress */
   asyncLookupHandle =
 	CreateThread(NULL,                    /* No security descriptor */
 				 128*1024,                /* max stack size     */
@@ -1921,30 +1918,31 @@ void sqResolverStartAddrLookup(sqInt address)
 				 CREATE_SUSPENDED | STACK_SIZE_PARAM_IS_A_RESERVATION,
 										/* creation parameter -- create suspended so we can check the return value */
 				 &id);                    /* return value for thread id */
-  if(!asyncLookupHandle)
+  if (!asyncLookupHandle)
 	printLastError(TEXT("CreateThread() failed"));
   /* lookups run with normal priority */
-  if(!SetThreadPriority(asyncLookupHandle, THREAD_PRIORITY_NORMAL))
+  if (!SetThreadPriority(asyncLookupHandle, THREAD_PRIORITY_NORMAL))
 	printLastError(TEXT("SetThreadPriority() failed"));
-  if(!ResumeThread(asyncLookupHandle))
+  if (!ResumeThread(asyncLookupHandle))
 	printLastError(TEXT("ResumeThread() failed"));
 }
 
 /*****************************************************************************
   sqResolverStartNameLookup: Look up the address to a given host name
 *****************************************************************************/
-void sqResolverStartNameLookup(char *hostName, sqInt nameSize)
+void
+sqResolverStartNameLookup(char *hostName, sqInt nameSize)
 { int len;
   DWORD id;
 
-  if(asyncLookupHandle) return; /* lookup in progress */
+  if (asyncLookupHandle) return; /* lookup in progress */
   len = nameSize < MAXHOSTNAMELEN ? nameSize : MAXHOSTNAMELEN;
-  if((lastError == 0) &&
-	 (strlen(lastName) == len) &&
-	 (strncmp(hostName, lastName, len) == 0)) {
-		  /* same as last, no point in looking it up */
-		  SIGNAL(resolverSemaphoreIndex);
-		  return;
+  if (lastError == 0
+   && strlen(lastName) == len
+   && !strncmp(hostName, lastName, len)) {
+	  /* same as last, no point in looking it up */
+	  SIGNAL(resolverSemaphoreIndex);
+	  return;
   }
   MoveMemory(lastName,hostName, len);
   lastName[len] = 0;
@@ -1957,27 +1955,28 @@ void sqResolverStartNameLookup(char *hostName, sqInt nameSize)
 				 CREATE_SUSPENDED | STACK_SIZE_PARAM_IS_A_RESERVATION,
 										/* creation parameter -- create suspended so we can check the return value */
 				 &id);                    /* return value for thread id */
-  if(!asyncLookupHandle)
+  if (!asyncLookupHandle)
 	printLastError(TEXT("CreateThread() failed"));
   /* lookups run with normal priority */
-  if(!SetThreadPriority(asyncLookupHandle, THREAD_PRIORITY_NORMAL))
+  if (!SetThreadPriority(asyncLookupHandle, THREAD_PRIORITY_NORMAL))
 	printLastError(TEXT("SetThreadPriority() failed"));
-  if(!ResumeThread(asyncLookupHandle))
+  if (!ResumeThread(asyncLookupHandle))
 	printLastError(TEXT("ResumeThread() failed"));
 }
 
 /*****************************************************************************
   sqResolverStatus: Return resolver status
 *****************************************************************************/
-sqInt sqResolverStatus(void)
+sqInt
+sqResolverStatus(void)
 {
-  if(!thisNetSession)
+  if (!thisNetSession)
 	return RESOLVER_UNINITIALIZED; /* not initialized */
 
-  if(asyncLookupHandle)
+  if (asyncLookupHandle)
 	return RESOLVER_BUSY; /* lookup in progress */
 
-  if(lastError)
+  if (lastError)
 	return RESOLVER_ERROR; /* resolver idle but last request failed */
 
   return RESOLVER_SUCCESS; /* ready and idle */
@@ -1988,13 +1987,14 @@ sqInt sqResolverStatus(void)
 /*****************************************************************************
  sqGetHostByAddr: Perform a threaded gethostbyaddr()
 *****************************************************************************/
-DWORD WINAPI sqGetHostByAddr(int netAddress)
+DWORD WINAPI
+sqGetHostByAddr(int netAddress)
 { struct hostent *he;
   u_long nAddr;
 
   nAddr = htonl(netAddress);
   he = gethostbyaddr((char*)&nAddr, 4, PF_INET);
-  if(he)
+  if (he)
 	{
 	  strcpy(lastName,he->h_name);
 	  lastAddr = ntohl(*(long*)(he->h_addr_list[0]));
@@ -2013,11 +2013,12 @@ DWORD WINAPI sqGetHostByAddr(int netAddress)
 /*****************************************************************************
  sqGetHostByName: Perform a threaded gethostbyname()
 *****************************************************************************/
-DWORD WINAPI sqGetHostByName(char *hostName)
+DWORD WINAPI
+sqGetHostByName(char *hostName)
 { struct hostent *he;
 
   he = gethostbyname(hostName);
-  if(he)
+  if (he)
 	{
 	  strcpy(lastName,he->h_name);
 	  lastAddr = ntohl(*(long*)(he->h_addr_list[0]));
@@ -2033,81 +2034,20 @@ DWORD WINAPI sqGetHostByName(char *hostName)
 }
 
 /***** socket module initializers *****/
-sqInt socketInit(void)
+sqInt
+socketInit(void)
 {
-		thisNetSession = 0;
-		return 1;
+	thisNetSession = 0;
+	return 1;
 }
 
-sqInt socketShutdown(void)
+sqInt
+socketShutdown(void)
 {
-		sqNetworkShutdown();
-		sqResolverAbort();
-		return 1;
+	sqNetworkShutdown();
+	sqResolverAbort();
+	return 1;
 }
-
-
-/* mir 2009-03-26: Generalised primitives for IPv6, &c. (based on the unix version) */
-
-/* flags */
-
-#define SQ_SOCKET_NUMERIC		(1<<0)
-#define SQ_SOCKET_PASSIVE		(1<<1)
-
-/* family */
-
-#define SQ_SOCKET_FAMILY_UNSPECIFIED	0
-#define SQ_SOCKET_FAMILY_LOCAL		1
-#define SQ_SOCKET_FAMILY_INET4		2
-#define SQ_SOCKET_FAMILY_INET6		3
-#define SQ_SOCKET_FAMILY_MAX		4
-
-/* type */
-
-#define SQ_SOCKET_TYPE_UNSPECIFIED	0
-#define SQ_SOCKET_TYPE_STREAM		1
-#define SQ_SOCKET_TYPE_DGRAM		2
-#define SQ_SOCKET_TYPE_MAX		3
-
-/* protocol */
-
-#define SQ_SOCKET_PROTOCOL_UNSPECIFIED	0
-#define SQ_SOCKET_PROTOCOL_TCP		1
-#define SQ_SOCKET_PROTOCOL_UDP		2
-#define SQ_SOCKET_PROTOCOL_MAX		3
-
-void  sqResolverGetAddressInfoHostSizeServiceSizeFlagsFamilyTypeProtocol(char *hostName, sqInt hostSize, char *servName, sqInt servSize,
-																		 sqInt flags, sqInt family, sqInt type, sqInt protocol);
-sqInt sqResolverGetAddressInfoSize(void);
-void  sqResolverGetAddressInfoResultSize(char *addr, sqInt addrSize);
-sqInt sqResolverGetAddressInfoFamily(void);
-sqInt sqResolverGetAddressInfoType(void);
-sqInt sqResolverGetAddressInfoProtocol(void);
-sqInt sqResolverGetAddressInfoNext(void);
-
-sqInt sqSocketAddressSizeGetPort(char *addr, sqInt addrSize);
-void  sqSocketAddressSizeSetPort(char *addr, sqInt addrSize, sqInt port);
-
-void  sqResolverGetNameInfoSizeFlags(char *addr, sqInt addrSize, sqInt flags);
-sqInt sqResolverGetNameInfoHostSize(void);
-void  sqResolverGetNameInfoHostResultSize(char *name, sqInt nameSize);
-sqInt sqResolverGetNameInfoServiceSize(void);
-void  sqResolverGetNameInfoServiceResultSize(char *name, sqInt nameSize);
-
-sqInt sqResolverHostNameSize(void);
-void  sqResolverHostNameResultSize(char *name, sqInt nameSize);
-
-void  sqSocketBindToAddressSize(SocketPtr s, char *addr, sqInt addrSize);
-void  sqSocketListenBacklog(SocketPtr s, sqInt backlogSize);
-void  sqSocketConnectToAddressSize(SocketPtr s, char *addr, sqInt addrSize);
-
-sqInt sqSocketLocalAddressSize(SocketPtr s);
-void  sqSocketLocalAddressResultSize(SocketPtr s, char *addr, int addrSize);
-sqInt sqSocketRemoteAddressSize(SocketPtr s);
-void  sqSocketRemoteAddressResultSize(SocketPtr s, char *addr, int addrSize);
-
-sqInt sqSocketSendUDPToSizeDataBufCount(SocketPtr s, char *addr, sqInt addrSize, char *buf, sqInt bufSize);
-sqInt sqSocketReceiveUDPDataBufCount(SocketPtr s, char *buf, sqInt bufSize);
 
 
 /* ---- address and service lookup ---- */
@@ -2138,13 +2078,9 @@ void sqResolverGetAddressInfoHostSizeServiceSizeFlagsFamilyTypeProtocol(char *ho
 	  localInfo= addrInfo= 0;
 	}
 
-  if ((!thisNetSession)
-	  || (hostSize < 0) || (hostSize > MAXHOSTNAMELEN)
-	  || (servSize < 0) || (servSize > MAXHOSTNAMELEN)
-	  || (family   < 0) || (family   >= SQ_SOCKET_FAMILY_MAX)
-	  || (family   == SQ_SOCKET_FAMILY_LOCAL)
-	  || (type     < 0) || (type     >= SQ_SOCKET_TYPE_MAX)
-	  || (protocol < 0) || (protocol >= SQ_SOCKET_PROTOCOL_MAX))
+  if (!thisNetSession
+   || hostSize < 0 || hostSize > MAXHOSTNAMELEN
+   || servSize < 0 || servSize > MAXHOSTNAMELEN)
 	goto fail;
 
   if (hostSize)
@@ -2160,23 +2096,24 @@ void sqResolverGetAddressInfoHostSizeServiceSizeFlagsFamilyTypeProtocol(char *ho
   if (flags & SQ_SOCKET_NUMERIC)	request.ai_flags |= AI_NUMERICHOST;
   if (flags & SQ_SOCKET_PASSIVE)	request.ai_flags |= AI_PASSIVE;
 
-  switch (family)
-	{
-	case SQ_SOCKET_FAMILY_INET4:	request.ai_family= AF_INET;		break;
-	case SQ_SOCKET_FAMILY_INET6:	request.ai_family= AF_INET6;		break;
-	}
+  switch (family) {
+	case SQ_SOCKET_FAMILY_UNSPECIFIED:	request.ai_family= AF_UNSPEC;	break;
+	case SQ_SOCKET_FAMILY_INET4:		request.ai_family= AF_INET;		break;
+	case SQ_SOCKET_FAMILY_INET6:		request.ai_family= AF_INET6;	break;
+	default: goto fail; // N.B. includes SQ_SOCKET_FAMILY_LOCAL
+  }
 
-  switch (type)
-	{
+  switch (type) {
 	case SQ_SOCKET_TYPE_STREAM:		request.ai_socktype= SOCK_STREAM;	break;
 	case SQ_SOCKET_TYPE_DGRAM:		request.ai_socktype= SOCK_DGRAM;	break;
-	}
+	default: goto fail;
+  }
 
-  switch (protocol)
-	{
+  switch (protocol) {
 	case SQ_SOCKET_PROTOCOL_TCP:	request.ai_protocol= IPPROTO_TCP;	break;
 	case SQ_SOCKET_PROTOCOL_UDP:	request.ai_protocol= IPPROTO_UDP;	break;
-	}
+	default: goto fail;
+  }
 
   gaiError= getaddrinfo(hostSize ? host : 0, servSize ? serv : 0, &request, &addrList);
 
@@ -2206,9 +2143,16 @@ struct addressHeader
 
 #define addressHeader(A)	((struct addressHeader *)(A))
 #define socketAddress(A)	((struct sockaddr *)((char *)(A) + AddressHeaderSize))
-
-#define addressValid(A, S)	(thisNetSession && (thisNetSession == addressHeader(A)->sessionID) && (addressHeader(A)->size == (S) - AddressHeaderSize))
 #define addressSize(A)		(addressHeader(A)->size)
+
+static inline sqInt
+addressValid(char *addr, sqInt addrSize)
+{
+	return
+		thisNetSession
+	 && thisNetSession == addressHeader(addr)->sessionID
+	 && addressHeader(addr)->size == (addrSize - AddressHeaderSize);
+}
 
 
 sqInt sqResolverGetAddressInfoSize(void)
@@ -2478,7 +2422,7 @@ void sqSocketListenBacklog(SocketPtr s, sqInt backlogSize)
 
   if (!SocketValid(s)) return;
 
-  if(UDPSocketType == s->socketType) {
+  if (UDPSocketType == s->socketType) {
 	SOCKETSTATE(s) = Connected | SOCK_BOUND_UDP | SOCK_DATA_WRITABLE;
 	return;
   }
@@ -2490,7 +2434,7 @@ void sqSocketListenBacklog(SocketPtr s, sqInt backlogSize)
 
   /* show our willingness to accept a backlogSize incoming connections */
   result = listen(SOCKET(s), backlogSize);
-  if(result != SOCKET_ERROR) {
+  if (result != SOCKET_ERROR) {
 	LOCKSOCKET(pss->mutex, INFINITE);
 	/* Waiting for accept => Start read watcher */
 	pss->sockState = WaitingForConnection;
@@ -2515,33 +2459,18 @@ void sqSocketConnectToAddressSize(SocketPtr s, char *addr, sqInt addrSize)
   if (!(SocketValid(s) && addressValid(addr, addrSize)))
 	  FAIL();
 
-  if(UDPSocketType == s->socketType) { /* UDP */
-	if(!(pss->sockState & SOCK_BOUND_UDP)) {
+  if (UDPSocketType == s->socketType) { /* UDP */
+	if (!(pss->sockState & SOCK_BOUND_UDP)) {
 	  /* The socket is locally unbound and we
 		 must 'magically' assign a local port so
 		 that client code can also read from the socket */
 	  sqSocketListenOnPort(s,0); /* Note: 0 is a wildcard */
 	}
 	return;
-		}
+  }
 
   /* TCP */
-  err = connect( SOCKET(s), socketAddress(addr), addressSize(addr));
-  if(err) {
-	err = WSAGetLastError();
-	if(err != WSAEWOULDBLOCK) {
-	  pss->sockState = Unconnected; /* reset */
-	  pss->sockError = err;
-	  SIGNAL(pss->connSema);
-	} else {
-	  /* Connection in progress => Start write watcher */
-	  LOCKSOCKET(pss->mutex, INFINITE);
-	  pss->sockState = WaitingForConnection;
-	  pss->writeWatcherOp = WatchConnect;
-	  SetEvent(pss->hWriteWatcherEvent);
-	  UNLOCKSOCKET(pss->mutex);
-	}
-  } else {
+  if (!connect( SOCKET(s), socketAddress(addr), addressSize(addr))) {
 	/* Connection completed synchronously */
 	LOCKSOCKET(pss->mutex, INFINITE);
 	pss->sockState = Connected | SOCK_DATA_WRITABLE;
@@ -2550,7 +2479,20 @@ void sqSocketConnectToAddressSize(SocketPtr s, char *addr, sqInt addrSize)
 	SIGNAL(pss->connSema);
 	SIGNAL(pss->writeSema);
 	UNLOCKSOCKET(pss->mutex);
+	return;
   }
+  if ((err = WSAGetLastError()) != WSAEWOULDBLOCK) {
+	  pss->sockState = Unconnected; /* reset */
+	  pss->sockError = err;
+	  SIGNAL(pss->connSema);
+	  return;
+  }
+  /* Connection in progress => Start write watcher */
+  LOCKSOCKET(pss->mutex, INFINITE);
+  pss->sockState = WaitingForConnection;
+  pss->writeWatcherOp = WatchConnect;
+  SetEvent(pss->hWriteWatcherEvent);
+  UNLOCKSOCKET(pss->mutex);
 }
 
 
@@ -2644,7 +2586,7 @@ void sqSocketRemoteAddressResultSize(SocketPtr s, char *addr, int addrSize)
 
 sqInt sqSocketSendUDPToSizeDataBufCount(SocketPtr s, char *addr, sqInt addrSize, char *buf, sqInt bufSize)
 {
-  if(UDPSocketType != s->socketType)
+  if (UDPSocketType != s->socketType)
 	return interpreterProxy->primitiveFail();
 
   /* send data */

@@ -115,14 +115,6 @@
 # define sd_listen_fds(u) 0
 #endif
 
-/*** Socket types ***/
-
-#define TCPSocketType			0 /* SOCK_STREAM on AF_INET or AF_INET6 */
-#define UDPSocketType			1 /* SOCK_DGRAM on AF_INET or AF_INET6 */
-#define RAWSocketType			2 /* SOCK_RAW on AF_INET or AF_INET6 */
-#define SeqPacketSocketType		3 /* SOCK_SEQPACKET on AF_INET or AF_INET6 */
-#define ReliableDGramSocketType	4 /* SOCK_RDM on AF_INET or AF_INET6 */
-
 #define ReuseExistingSocket		65536
 
 #define ProvidedTCPSocketType		(TCPSocketType + ReuseExistingSocket)
@@ -136,21 +128,21 @@
 /*** Resolver states ***/
 
 #define ResolverUninitialised	0
-#define ResolverSuccess		1
-#define ResolverBusy		2
-#define ResolverError		3
+#define ResolverSuccess			1
+#define ResolverBusy			2
+#define ResolverError			3
 
 
 /*** TCP Socket states ***/
 
-#define Invalid			-1
-#define Unconnected		 0
-#define WaitingForConnection	 1
-#define Connected		 2
-#define OtherEndClosed		 3
-#define ThisEndClosed		 4
+#define Invalid					-1
+#define Unconnected		 		0
+#define WaitingForConnection	1
+#define Connected		 		2
+#define OtherEndClosed		 	3
+#define ThisEndClosed		 	4
 
-#define LINGER_SECS		 1
+#define LINGER_SECS		 		1
 
 static int thisNetSession= 0;
 
@@ -323,7 +315,10 @@ nameToAddr(char *hostName)
 static int
 socketValid(SocketPtr s)
 {
-  if (s && s->privateSocketPtr && thisNetSession && (s->sessionID == thisNetSession))
+  if (s
+   && s->privateSocketPtr
+   && thisNetSession
+   && s->sessionID == thisNetSession)
 	return true;
   success(false);
   return false;
@@ -1717,70 +1712,6 @@ sqResolverStartNameLookup(char *hostName, sqInt nameSize)
   interpreterProxy->signalSemaphoreWithIndex(resolverSema);
 }
 
-
-/* ikp 2007-06-07: Generalised primitives for IPv6, &c. */
-
-/* flags */
-
-#define SQ_SOCKET_NUMERIC		(1<<0)
-#define SQ_SOCKET_PASSIVE		(1<<1)
-
-/* family */
-
-#define SQ_SOCKET_FAMILY_UNSPECIFIED	0
-#define SQ_SOCKET_FAMILY_LOCAL			1
-#define SQ_SOCKET_FAMILY_INET4			2
-#define SQ_SOCKET_FAMILY_INET6			3
-#define SQ_SOCKET_FAMILY_MAX			4
-
-/* type */
-
-#define SQ_SOCKET_TYPE_UNSPECIFIED	0
-#define SQ_SOCKET_TYPE_STREAM		1
-#define SQ_SOCKET_TYPE_DGRAM		2
-#define SQ_SOCKET_TYPE_MAX			3
-
-/* protocol */
-
-#define SQ_SOCKET_PROTOCOL_UNSPECIFIED	0
-#define SQ_SOCKET_PROTOCOL_TCP			1
-#define SQ_SOCKET_PROTOCOL_UDP			2
-#define SQ_SOCKET_PROTOCOL_MAX			3
-
-void  sqResolverGetAddressInfoHostSizeServiceSizeFlagsFamilyTypeProtocol(char *hostName, sqInt hostSize, char *servName, sqInt servSize,
-																		 sqInt flags, sqInt family, sqInt type, sqInt protocol);
-sqInt sqResolverGetAddressInfoSize(void);
-void  sqResolverGetAddressInfoResultSize(char *addr, sqInt addrSize);
-sqInt sqResolverGetAddressInfoFamily(void);
-sqInt sqResolverGetAddressInfoType(void);
-sqInt sqResolverGetAddressInfoProtocol(void);
-sqInt sqResolverGetAddressInfoNext(void);
-
-sqInt sqSocketAddressSizeGetPort(char *addr, sqInt addrSize);
-void  sqSocketAddressSizeSetPort(char *addr, sqInt addrSize, sqInt port);
-
-void  sqResolverGetNameInfoSizeFlags(char *addr, sqInt addrSize, sqInt flags);
-sqInt sqResolverGetNameInfoHostSize(void);
-void  sqResolverGetNameInfoHostResultSize(char *name, sqInt nameSize);
-sqInt sqResolverGetNameInfoServiceSize(void);
-void  sqResolverGetNameInfoServiceResultSize(char *name, sqInt nameSize);
-
-sqInt sqResolverHostNameSize(void);
-void  sqResolverHostNameResultSize(char *name, sqInt nameSize);
-
-void  sqSocketBindToAddressSize(SocketPtr s, char *addr, sqInt addrSize);
-void  sqSocketListenBacklog(SocketPtr s, sqInt backlogSize);
-void  sqSocketConnectToAddressSize(SocketPtr s, char *addr, sqInt addrSize);
-
-sqInt sqSocketLocalAddressSize(SocketPtr s);
-void  sqSocketLocalAddressResultSize(SocketPtr s, char *addr, int addrSize);
-sqInt sqSocketRemoteAddressSize(SocketPtr s);
-void  sqSocketRemoteAddressResultSize(SocketPtr s, char *addr, int addrSize);
-
-sqInt sqSocketSendUDPToSizeDataBufCount(SocketPtr s, char *addr, sqInt addrSize, char *buf, sqInt bufSize);
-sqInt sqSocketReceiveUDPDataBufCount(SocketPtr s, char *buf, sqInt bufSize);
-
-
 /* ---- address and service lookup ---- */
 
 
@@ -1813,12 +1744,9 @@ sqResolverGetAddressInfoHostSizeServiceSizeFlagsFamilyTypeProtocol
 	  localInfo= addrInfo= 0;
 	}
 
-  if ((!thisNetSession)
-	  || (hostSize < 0) || (hostSize > MAXHOSTNAMELEN)
-	  || (servSize < 0) || (servSize > MAXHOSTNAMELEN)
-	  || (family   < 0) || (family   >= SQ_SOCKET_FAMILY_MAX)
-	  || (type     < 0) || (type     >= SQ_SOCKET_TYPE_MAX)
-	  || (protocol < 0) || (protocol >= SQ_SOCKET_PROTOCOL_MAX))
+  if (!thisNetSession
+   || hostSize < 0 || hostSize > MAXHOSTNAMELEN
+   || servSize < 0 || servSize > MAXHOSTNAMELEN)
 	goto fail;
 
   if (hostSize)
@@ -1831,10 +1759,13 @@ sqResolverGetAddressInfoHostSizeServiceSizeFlagsFamilyTypeProtocol
 
   FPRINTF((stderr, "  -> GetAddressInfo %s %s\n", host, serv));
 
-  if (servSize && (family == SQ_SOCKET_FAMILY_LOCAL) && (servSize < sizeof(((struct sockaddr_un *)0)->sun_path)) && !(flags & SQ_SOCKET_NUMERIC))
+  if (servSize
+   && family == SQ_SOCKET_FAMILY_LOCAL
+   && servSize < sizeof(((struct sockaddr_un *)0)->sun_path)
+   && !(flags & SQ_SOCKET_NUMERIC))
 	{
 	  struct stat st;
-	  if ((0 == stat(servName, &st)) && (st.st_mode & S_IFSOCK))
+	  if (!stat(servName, &st) && (st.st_mode & S_IFSOCK))
 		{
 		  struct sockaddr_un *saun= calloc(1, sizeof(struct sockaddr_un));
 		  localInfo= (struct addrinfo *)calloc(1, sizeof(struct addrinfo));
@@ -1857,26 +1788,30 @@ sqResolverGetAddressInfoHostSizeServiceSizeFlagsFamilyTypeProtocol
   if (flags & SQ_SOCKET_NUMERIC)	request.ai_flags |= AI_NUMERICHOST;
   if (flags & SQ_SOCKET_PASSIVE)	request.ai_flags |= AI_PASSIVE;
 
-  switch (family)
-	{
-	case SQ_SOCKET_FAMILY_LOCAL:	request.ai_family= AF_UNIX;		break;
-	case SQ_SOCKET_FAMILY_INET4:	request.ai_family= AF_INET;		break;
-	case SQ_SOCKET_FAMILY_INET6:	request.ai_family= AF_INET6;		break;
-	}
+  switch (family) {
+	case SQ_SOCKET_FAMILY_UNSPECIFIED:	request.ai_family= PF_UNSPEC;	break;
+	case SQ_SOCKET_FAMILY_LOCAL:		request.ai_family= AF_UNIX;		break;
+	case SQ_SOCKET_FAMILY_INET4:		request.ai_family= AF_INET;		break;
+	case SQ_SOCKET_FAMILY_INET6:		request.ai_family= AF_INET6;	break;
+	default: goto fail;
+  }
 
-  switch (type)
-	{
+  switch (type) {
 	case SQ_SOCKET_TYPE_STREAM:		request.ai_socktype= SOCK_STREAM;	break;
 	case SQ_SOCKET_TYPE_DGRAM:		request.ai_socktype= SOCK_DGRAM;	break;
-	}
+	default: goto fail;
+  }
 
-  switch (protocol)
-	{
+  switch (protocol) {
 	case SQ_SOCKET_PROTOCOL_TCP:	request.ai_protocol= IPPROTO_TCP;	break;
 	case SQ_SOCKET_PROTOCOL_UDP:	request.ai_protocol= IPPROTO_UDP;	break;
-	}
+	default: goto fail;
+  }
 
-  gaiError= getaddrinfo(hostSize ? host : 0, servSize ? serv : 0, &request, &addrList);
+  gaiError = getaddrinfo(hostSize ? host : 0,
+						 servSize ? serv : 0,
+						 &request,
+						 &addrList);
 
   if (gaiError)
 	{
@@ -1914,11 +1849,18 @@ struct addressHeader
 
 #define AddressHeaderSize	sizeof(struct addressHeader)
 
-#define addressHeader(A)	((struct addressHeader *)(A))
-#define socketAddress(A)	((struct sockaddr *)((char *)(A) + AddressHeaderSize))
+#define addressHeader(A) ((struct addressHeader *)(A))
+#define socketAddress(A) ((struct sockaddr *)((char *)(A) + AddressHeaderSize))
+#define addressSize(A)	 (addressHeader(A)->size)
 
-#define addressValid(A, S)	(thisNetSession && (thisNetSession == addressHeader(A)->sessionID) && (addressHeader(A)->size == ((S) - AddressHeaderSize)))
-#define addressSize(A)		(addressHeader(A)->size)
+static inline sqInt
+addressValid(char *addr, sqInt addrSize)
+{
+	return
+		thisNetSession
+	 && thisNetSession == addressHeader(addr)->sessionID
+	 && addressHeader(addr)->size == (addrSize - AddressHeaderSize);
+}
 
 
 #if 0
@@ -1934,7 +1876,7 @@ dumpAddr(struct sockaddr *addr, int addrSize)
 	case AF_UNIX:	fprintf(stderr, "local\n"); break;
 	case AF_INET:	fprintf(stderr, "inet\n"); break;
 	case AF_INET6:	fprintf(stderr, "inet6\n"); break;
-	default:		fprintf(stderr, "?\n"); break;
+	default:		fprintf(stderr, "? %d\n", (int)addr->sa_family); break;
 	}
 }
 #endif
@@ -2254,6 +2196,8 @@ sqSocketListenBacklog(SocketPtr s, sqInt backlogSize)
 void
 sqSocketConnectToAddressSize(SocketPtr s, char *addr, sqInt addrSize)
 {
+  int result, err;
+
   /* TCP => open a connection.
    * UDP => set remote address.
    */
@@ -2265,48 +2209,44 @@ sqSocketConnectToAddressSize(SocketPtr s, char *addr, sqInt addrSize)
 
   FPRINTF((stderr, "connectToAddressSize(%d)\n", SOCKET(s)));
 
-  if (TCPSocketType != s->socketType)	/* --- UDP/RAW --- */
+  if (TCPSocketType == s->socketType)
 	{
-	  if (SOCKET(s) >= 0)
-		{
-		  int result;
-		  memcpy((void *)&SOCKETPEER(s), socketAddress(addr), addressSize(addr));
-		  SOCKETPEERSIZE(s)= addressSize(addr);
-		  result= connect(SOCKET(s), socketAddress(addr), addressSize(addr));
-		  if (result == 0)
-			SOCKETSTATE(s)= Connected;
-		}
-	}
-  else					/* --- TCP --- */
-	{
-	  int result;
 	  aioEnable(SOCKET(s), PSP(s), 0);
 	  result= connect(SOCKET(s), socketAddress(addr), addressSize(addr));
-	  FPRINTF((stderr, "connect() => %d\n", result));
+	  if (result < 0)
+		err = errno;
+	  FPRINTF((stderr, "sqSocketConnectToAddressSize connect() => %d\n", result));
 	  if (result == 0)
 		{
 		  /* connection completed synchronously */
 		  SOCKETSTATE(s)= Connected;
 		  notify(PSP(s), CONN_NOTIFY);
 		  setLinger(SOCKET(s), 1);
+		  return;
 		}
-	  else
+	  if (err == EINPROGRESS || err == EWOULDBLOCK)
 		{
-		  if (errno == EINPROGRESS || errno == EWOULDBLOCK)
-			{
-			  /* asynchronous connection in progress */
-			  SOCKETSTATE(s)= WaitingForConnection;
-			  aioHandle(SOCKET(s), connectHandler, AIO_WX);  /* W => connect() */
-			}
-		  else
-			{
-			  /* connection error */
-			  perror("sqConnectToAddressSize");
-			  SOCKETSTATE(s)= Unconnected;
-			  SOCKETERROR(s)= errno;
-			  notify(PSP(s), CONN_NOTIFY);
-			}
+		  /* asynchronous connection in progress */
+		  SOCKETSTATE(s)= WaitingForConnection;
+		  aioHandle(SOCKET(s), connectHandler, AIO_WX);  /* W => connect() */
+		  return;
 		}
+	  /* connection error */
+	  perror("sqConnectToAddressSize");
+	  SOCKETSTATE(s)= Unconnected;
+	  SOCKETERROR(s)= err;
+	  notify(PSP(s), CONN_NOTIFY);
+	  return;
+	}
+
+  /* --- UDP/RAW --- */
+  if (SOCKET(s) >= 0)
+	{
+	  memcpy((void *)&SOCKETPEER(s), socketAddress(addr), addressSize(addr));
+	  SOCKETPEERSIZE(s)= addressSize(addr);
+	  result= connect(SOCKET(s), socketAddress(addr), addressSize(addr));
+	  if (result == 0)
+		SOCKETSTATE(s)= Connected;
 	}
 }
 
@@ -2406,7 +2346,9 @@ sqInt
 sqSocketSendUDPToSizeDataBufCount(SocketPtr s, char *addr, sqInt addrSize, char *buf, sqInt bufSize)
 {
   FPRINTF((stderr, "sendTo(%d)\n", SOCKET(s)));
-  if (socketValid(s) && addressValid(addr, addrSize) && (TCPSocketType != s->socketType)) /* --- UDP/RAW --- */
+  if (socketValid(s)
+   && addressValid(addr, addrSize)
+   && TCPSocketType != s->socketType) /* --- UDP/RAW --- */
 	{
 	  int nsent= sendto(SOCKET(s), buf, bufSize, 0, socketAddress(addr), addrSize - AddressHeaderSize);
 	  clearNoticeOfWritability(PSP(s));
@@ -2429,7 +2371,8 @@ sqInt
 sqSocketReceiveUDPDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
 {
   FPRINTF((stderr, "recvFrom(%d)\n", SOCKET(s)));
-  if (socketValid(s) && (TCPSocketType != s->socketType)) /* --- UDP/RAW --- */
+  if (socketValid(s)
+   && TCPSocketType != s->socketType) /* --- UDP/RAW --- */
 	{
 	  socklen_t saddrSize= sizeof(SOCKETPEER(s));
 	  int nread= recvfrom(SOCKET(s), buf, bufSize, 0, &SOCKETPEER(s).sa, &saddrSize);

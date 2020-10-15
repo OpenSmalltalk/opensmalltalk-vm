@@ -4,6 +4,43 @@
 sqInt socketInit(void);
 sqInt socketShutdown(void);
 
+/*** Socket types ***/
+
+#define TCPSocketType			0 /* SOCK_STREAM on AF_INET or AF_INET6 */
+#define UDPSocketType			1 /* SOCK_DGRAM on AF_INET or AF_INET6 */
+#define RAWSocketType			2 /* SOCK_RAW on AF_INET or AF_INET6 */
+#define SeqPacketSocketType		3 /* SOCK_SEQPACKET on AF_INET or AF_INET6 */
+#define ReliableDGramSocketType	4 /* SOCK_RDM on AF_INET or AF_INET6 */
+
+/* ikp 2007-06-07: Generalised primitives for IPv6, &c. */
+
+/* flags */
+
+#define SQ_SOCKET_NUMERIC		(1<<0)
+#define SQ_SOCKET_PASSIVE		(1<<1)
+
+/* family */
+
+#define SQ_SOCKET_FAMILY_UNSPECIFIED	0
+#define SQ_SOCKET_FAMILY_LOCAL			1
+#define SQ_SOCKET_FAMILY_INET4			2
+#define SQ_SOCKET_FAMILY_INET6			3
+#define SQ_SOCKET_FAMILY_MAX			4
+
+/* type */
+
+#define SQ_SOCKET_TYPE_UNSPECIFIED		0
+#define SQ_SOCKET_TYPE_STREAM			1
+#define SQ_SOCKET_TYPE_DGRAM			2
+#define SQ_SOCKET_TYPE_MAX				3
+
+/* protocol */
+
+#define SQ_SOCKET_PROTOCOL_UNSPECIFIED	0
+#define SQ_SOCKET_PROTOCOL_TCP			1
+#define SQ_SOCKET_PROTOCOL_UDP			2
+#define SQ_SOCKET_PROTOCOL_MAX			3
+
 typedef struct
 {
   int	sessionID;
