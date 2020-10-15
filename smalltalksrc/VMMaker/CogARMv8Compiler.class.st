@@ -1536,7 +1536,7 @@ CogARMv8Compiler >> concretizeCmpCqR [
 	quickImmediate := operands at: 0.
 	registerToUse := operands at: 1.
 
-	quickImmediate > 0 ifTrue: [  
+	quickImmediate >= 0 ifTrue: [  
 		fits12Bits := (quickImmediate bitAnd: 16rfff) = quickImmediate.
 		fits12Bits ifTrue: [
 			self
@@ -4253,7 +4253,11 @@ CogARMv8Compiler >> ldrSize: size baseRegister: baseReg unsignedOffset: immediat
 { #category : #assembler }
 CogARMv8Compiler >> ldrSize: is64Bits baseRegister: baseReg unsignedOffset: immediate12bitValue destinationRegister: destinationRegister [
 
-	"Encodes a Load Register (immediate) instruction of the form
+	"C6.2.131 LDR (immediate)
+	
+	oad Register (immediate) loads a word or doubleword from memory and writes it to a register. The address that is used for the load is calculated from a base register and an immediate offset.
+	
+	Unsigned offset variant
 	
 	LDR <Xt>, [<Xn|SP>{, #<pimm>}]"
 	
