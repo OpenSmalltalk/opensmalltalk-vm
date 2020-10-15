@@ -27,6 +27,15 @@ Class {
 	#category : #'VMMakerTests-MemoryTests'
 }
 
+{ #category : #'building suites' }
+VMSpurMemoryManagerTest class >> testParameters [ 
+
+	^ ParametrizedTestMatrix new
+			forSelector: #wordSize addOptions: { 4 . 8 };
+			yourself
+
+]
+
 { #category : #accessing }
 VMSpurMemoryManagerTest >> initialCodeSize [
 	^ 0

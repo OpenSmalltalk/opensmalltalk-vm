@@ -12,15 +12,6 @@ Class {
 	#category : #'VMMakerTests-InterpreterTests'
 }
 
-{ #category : #'building suites' }
-VMPrimitiveTest class >> testParameters [ 
-
-	^ ParametrizedTestMatrix new
-			forSelector: #wordSize addOptions: { 4 . 8 };
-			yourself
-
-]
-
 { #category : #'as yet unclassified' }
 VMPrimitiveTest >> newArrayWith: aCollection [ 
 	| array |
