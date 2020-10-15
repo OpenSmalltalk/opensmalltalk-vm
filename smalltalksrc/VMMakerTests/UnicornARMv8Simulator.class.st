@@ -124,10 +124,10 @@ UnicornARMv8Simulator >> hasLinkRegister [
 UnicornARMv8Simulator >> initializeRegisterAliases [
 
 	registerAliases
-		at: #x2 put: #classRegister;
-		at: #x5 put: #receiverRegister;
-		at: #x6 put: #sendNumberOfArgumentsRegister;
-		at: #x10 put: #baseRegister;
+		at: #x22 put: #classRegister;
+		at: #x23 put: #receiverRegister;
+		at: #x25 put: #sendNumberOfArgumentsRegister;
+		at: #x24 put: #baseRegister;
 		at: #x28 put: #vmStackPointer;
 		at: #x29 put: #framePointerRegister;
 		at: #x30 put: #linkRegister
@@ -218,7 +218,7 @@ UnicornARMv8Simulator >> receiverRegister [
 { #category : #accessing }
 UnicornARMv8Simulator >> registerList [
 
-	^ #(lr pc sp fp x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x28 zero negative carry overflow)
+	^ #(lr pc sp fp x28 x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 x12 x16 x19 x20 x22 x23 x24 x25 zero negative carry overflow)
 ]
 
 { #category : #'as yet unclassified' }
@@ -402,6 +402,12 @@ UnicornARMv8Simulator >> x15: anInteger [
 ]
 
 { #category : #accessing }
+UnicornARMv8Simulator >> x16 [
+	
+	^ self readRegister: UcARM64Registers x16
+]
+
+{ #category : #accessing }
 UnicornARMv8Simulator >> x16: anInteger [ 
 	
 	self writeRegister: UcARM64Registers x16 value: anInteger
@@ -417,6 +423,12 @@ UnicornARMv8Simulator >> x17: anInteger [
 UnicornARMv8Simulator >> x18: anInteger [ 
 
 	self writeRegister: UcARM64Registers x18 value: anInteger
+]
+
+{ #category : #accessing }
+UnicornARMv8Simulator >> x19 [
+	
+	^ self readRegister: UcARM64Registers x19
 ]
 
 { #category : #accesing }
@@ -438,15 +450,45 @@ UnicornARMv8Simulator >> x2 [
 ]
 
 { #category : #accessing }
+UnicornARMv8Simulator >> x20 [
+	
+	^ self readRegister: UcARM64Registers x20
+]
+
+{ #category : #accessing }
+UnicornARMv8Simulator >> x22 [
+	
+	^ self readRegister: UcARM64Registers x22
+]
+
+{ #category : #accessing }
+UnicornARMv8Simulator >> x23 [
+
+	^ self readRegister: UcARM64Registers x23
+]
+
+{ #category : #accessing }
 UnicornARMv8Simulator >> x23: anInteger [ 
 	
 	self writeRegister: UcARM64Registers x23 value: anInteger
 ]
 
 { #category : #accessing }
+UnicornARMv8Simulator >> x24 [
+
+	^ self readRegister: UcARM64Registers x24
+]
+
+{ #category : #accessing }
 UnicornARMv8Simulator >> x24: anInteger [ 
 	
 	self writeRegister: UcARM64Registers x24 value: anInteger
+]
+
+{ #category : #accessing }
+UnicornARMv8Simulator >> x25 [
+
+	^ self readRegister: UcARM64Registers x25
 ]
 
 { #category : #accessing }
