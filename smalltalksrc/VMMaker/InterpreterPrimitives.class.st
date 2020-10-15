@@ -285,6 +285,24 @@ InterpreterPrimitives >> initializeInterpreter: bytesToShift [
 	sHEAFn := self ioLoadFunction: 'secHasEnvironmentAccess' From: 'SecurityPlugin'
 ]
 
+{ #category : #'simulation support' }
+InterpreterPrimitives >> ioGetCurrentWorkingDirectory: aCStringHolder maxLength: maxLength [
+	<doNotGenerate>
+
+	| anEncodedString |
+
+	anEncodedString := FileLocator workingDirectory fullName utf8Encoded.
+
+	aCStringHolder object
+		replaceFrom: 1
+		to: anEncodedString size
+		with: anEncodedString
+		startingAt: 1.
+	
+	"No Error"
+	^ 0
+]
+
 { #category : #'object access primitives' }
 InterpreterPrimitives >> isAppropriateForCopyObject: oop [
 	^objectMemory isPointersNonImm: oop
