@@ -78,7 +78,7 @@ VMObjectLayoutTests >> testObjectHeaderEncodesAmountOfSlots [
 	0 to: 254 do: [ :slots |
 		class := self installClassIntoClassTableWithInstSpec: 1 instSize: slots.
 		objOop := memory instantiateClass: class.
-		header := memory longAt: objOop.
+		header := memory long64At: objOop.
 		self assert: (header >> 56 bitAnd: 16rFF) equals: slots
 	]
 ]
