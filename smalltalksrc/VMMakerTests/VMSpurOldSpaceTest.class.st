@@ -619,7 +619,7 @@ VMSpurOldSpaceTest >> testFreeListsShouldBeIndexedBySlotSize [
 
 	| firstAddress freeListHead |
 	
-	2 to: 63 do: [ :numberOfSlots | | byteSize |
+	2 to: memory numFreeLists - 1 do: [ :numberOfSlots | | byteSize |
 		byteSize := numberOfSlots * memory allocationUnit.
 		
 		firstAddress := memory allocateOldSpaceChunkOfBytes: byteSize.
@@ -633,7 +633,7 @@ VMSpurOldSpaceTest >> testFreeListsShouldBeIndexedBySlotSize [
 { #category : #'tests-1-startup' }
 VMSpurOldSpaceTest >> testInitialFreeListShouldBeEmpty [
 
-	2 to: 63 do: [ :numberOfSlots |
+	2 to: memory numFreeLists - 1 do: [ :numberOfSlots |
 		self
 			assert: (memory freeLists at: numberOfSlots)
 			equals: 0
