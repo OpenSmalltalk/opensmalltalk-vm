@@ -122,13 +122,13 @@ VMObjectLayoutTests >> testObjectHeaderEncodesObjecFormatForIndexableOpaqueLayou
 	bits := 16.
 	instSpec := 12.
 	class := self installClassIntoClassTableWithInstSpec: instSpec instSize: 0.
-	maxSize := 64 / bits.
+	maxSize := (wordSize * 8) / bits.
 	1 to: maxSize do: [ :size |
 		| padding |
-		padding := 64 - (size * bits).
+		padding := (wordSize * 8) - (size * bits).
 		objOop := memory instantiateClass: class indexableSize: size.
 		classInstSpec := memory instSpecOfClass: class.
-		header := memory longAt:objOop.
+		header := memory longAt: objOop.
 		self assert: (header >> 24 bitAnd: 16r1F) equals: classInstSpec + (padding / bits)
 		] 
 ]
@@ -142,10 +142,10 @@ VMObjectLayoutTests >> testObjectHeaderEncodesObjecFormatForIndexableOpaqueLayou
 	bits := 32.
 	instSpec := 10.
 	class := self installClassIntoClassTableWithInstSpec: instSpec instSize: 0.
-	maxSize := 64 / bits.
+	maxSize := (wordSize * 8) / bits.
 	1 to: maxSize do: [ :size |
 		| padding |
-		padding := 64 - (size * bits).
+		padding := (wordSize * 8) - (size * bits).
 		objOop := memory instantiateClass: class indexableSize: size.
 		classInstSpec := memory instSpecOfClass: class.
 		header := memory longAt:objOop.
