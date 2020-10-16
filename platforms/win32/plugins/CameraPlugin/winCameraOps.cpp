@@ -36,7 +36,10 @@ public:
 	{
 		frameCount = 0;
 		lFrameBufSize = 0;
-		pFrameBuf = NULL;
+		if (pFrameBuf) {
+			delete [] pFrameBuf;
+			pFrameBuf = NULL;
+		}
 		return 1;
 	}
 
@@ -59,7 +62,6 @@ public:
 
 		// if the buffer sizes don't match, discard ours to force creating a new one
 		if (lFrameBufSize != lThisBufSize) {
-			lFrameBufSize = 0;
 			delete [] pFrameBuf;
 			pFrameBuf = NULL;
 		}
@@ -68,7 +70,8 @@ public:
 		if (!pFrameBuf) {
 			pFrameBuf = new BYTE[lThisBufSize];
 			lFrameBufSize = lThisBufSize;
-			if (!pFrameBuf) lFrameBufSize = 0;
+			if (!pFrameBuf)
+				lFrameBufSize = 0;
 		}
 
 		// Copy the bitmap data into our global buffer
@@ -246,6 +249,17 @@ CameraUID(sqInt cameraNum)
 }
 
 sqInt
+CameraGetSemaphore(sqInt cameraNum)
+{
+	Camera *theCamera;
+
+	return  (theCamera = ActiveCamera(cameraNum))
+		 && theCamera->semaphoreIndex > 0
+		? theCamera->semaphoreIndex
+		: 0;
+}
+
+sqInt
 CameraSetSemaphore(sqInt cameraNum, sqInt semaphoreIndex)
 {
 	Camera *theCamera;
@@ -292,7 +306,6 @@ ActiveCamera(int cameraNum)
 	cameraNum >= 1 && cameraNum <= CAMERA_COUNT
 	&& theCameras[cameraNum].pCamera
 	&& theCameras[cameraNum].pGraph
-	&& theCameras[cameraNum].mCB.pFrameBuf
 		? &theCameras[cameraNum]
 		: 0;
 }

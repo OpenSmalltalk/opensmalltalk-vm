@@ -139,8 +139,17 @@ void __attribute__ ((destructor)) libDes(void);
 
 /* >>>>>>>>>>> UTILITY */
 
-static inline int   camIsOpen(camPtr cam) { return ( cam->isOpen); }
-static inline int camIsClosed(camPtr cam) { return (!cam->isOpen); }
+static camPtr
+camera(int camNum)
+{
+	return
+		camNum >= 1 && camNum <= CAMERA_COUNT
+		? camInfo + camNum - 1
+		: 0;
+}
+
+static inline int   camIsOpen(camPtr cam) { return cam && cam->isOpen; }
+static inline int camIsClosed(camPtr cam) { return !cam || !cam->isOpen; }
 
 
 static void
@@ -772,15 +781,16 @@ initCamera(camPtr cam, int w, int h)
 }
 
 
-/* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
-/* >>>>>>>>>>>>>>>>> SCRATCH I/F >>>>>>>>>>>>>>>>> */
-/* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
-
 sqInt
 CameraGetParam(sqInt camNum, sqInt paramNum)
 {
-	camPtr cam = &camInfo[camNum-1];
-	return false;
+	camPtr cam = camera(camNum);
+
+	if (!cam) return -1;
+	if (paramNum == 1) return cam->frameCount;
+	if (paramNum == 2) return cam->bmWidth * cam->bmHeight * 4;
+
+	return -2;
 }
 
 
@@ -802,7 +812,7 @@ sqInt
 CameraGetFrame(sqInt camNum, unsigned char* buf, sqInt pixelCount)
 {
 	int ourCount;
-	camPtr cam = &camInfo[camNum-1];
+	camPtr cam = camera(camNum);
 
 	FPRINTF((stderr, "CameraGetFrame %ld %s %ld=%ld (%d,%ld)\n",
 			camNum, camIsClosed(cam) ? "closed" : "open",
@@ -844,17 +854,18 @@ CameraGetFrame(sqInt camNum, unsigned char* buf, sqInt pixelCount)
 sqInt
 CameraExtent(sqInt camNum)
 {
-	camPtr cam = &camInfo[camNum-1];
-	if (camIsClosed(cam))
-		return false;
-	return (cam->bmWidth << 16) + cam->bmHeight;
+	camPtr cam = camera(camNum);
+
+	return camIsOpen(cam)
+		? (cam->bmWidth << 16) + cam->bmHeight
+		: 0;
 }
 
 
 char*
 CameraName(sqInt camNum)
 {
-	camPtr cam = &camInfo[camNum-1];
+	camPtr cam = camera(camNum);
 	return camIsOpen(cam)
 		? (char *)&cam->cap.card[0]
 		: 0;
@@ -863,7 +874,7 @@ CameraName(sqInt camNum)
 char *
 CameraUID(sqInt camNum)
 {
-	camPtr cam = &camInfo[camNum-1];
+	camPtr cam = camera(camNum);
 	return camIsOpen(cam)
 		? (char *)&cam->cap.bus_info[0]
 		: 0;
@@ -873,7 +884,7 @@ CameraUID(sqInt camNum)
 void
 CameraClose(sqInt camNum)
 {
-	camPtr cam = &camInfo[camNum-1];
+	camPtr cam = camera(camNum);
 	if (camIsClosed(cam))
 		return;
 	aioDisable(cam->fileDesc);
@@ -887,7 +898,7 @@ CameraClose(sqInt camNum)
 sqInt
 CameraOpen(sqInt camNum, sqInt frameWidth, sqInt frameHeight)
 {
-	camPtr cam = &camInfo[camNum-1];
+	camPtr cam = camera(camNum);
 
 	if (camIsOpen(cam))
 		return false;
@@ -901,8 +912,6 @@ CameraOpen(sqInt camNum, sqInt frameWidth, sqInt frameHeight)
 static void
 cameraHandler(int fd, camPtr cam, int flags)
 {
-	int devNum;
-
 	FPRINTF((stderr, "cameraHandler %d %p %x (%d)\n",
 			fd, cam, flags, cam->semaphoreIndex));
 	if ((flags & AIO_R)
@@ -912,6 +921,16 @@ cameraHandler(int fd, camPtr cam, int flags)
 	}
 }
 
+
+sqInt
+CameraGetSemaphore(sqInt camNum)
+{
+	camPtr cam = camera(camNum);
+
+	return cam && cam->semaphoreIndex > 0
+		? cam->semaphoreIndex
+		: 0;
+}
 
 /* Alas, see for example
  * https://www.kernel.org/doc/html/v5.4/media/uapi/v4l/async.html
@@ -926,7 +945,7 @@ cameraHandler(int fd, camPtr cam, int flags)
 sqInt
 CameraSetSemaphore(sqInt camNum, sqInt semaphoreIndex)
 {
-	camPtr cam = &camInfo[camNum-1];
+	camPtr cam = camera(camNum);
 
 	if (!camIsOpen(cam))
 		return PrimErrBadIndex;
@@ -939,7 +958,7 @@ CameraSetSemaphore(sqInt camNum, sqInt semaphoreIndex)
 }
 
 #ifdef AIO_DEBUG
-static char *(* oldHandlerChain)(aioHandler h);
+static char *(*oldHandlerChain)(aioHandler h);
 static char *
 cameraHandleName(aioHandler h)
 {

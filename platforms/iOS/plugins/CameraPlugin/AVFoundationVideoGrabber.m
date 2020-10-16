@@ -347,6 +347,18 @@ CameraIsOpen(sqInt cameraNum)
 }
 
 sqInt
+CameraGetSemaphore(sqInt cameraNum)
+{
+  SqueakVideoGrabber *grabber;
+
+  return cameraNum >= 1 && cameraNum <= CAMERA_COUNT
+	  && (grabber = grabbers[cameraNum-1])
+	  && grabber->semaphoreIndex > 0
+		? grabber->semaphoreIndex
+		: 0;
+}
+
+sqInt
 CameraSetSemaphore(sqInt cameraNum, sqInt semaphoreIndex)
 {
   SqueakVideoGrabber *grabber;

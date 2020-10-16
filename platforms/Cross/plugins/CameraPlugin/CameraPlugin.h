@@ -10,6 +10,7 @@ char *CameraUID(sqInt cameraNum);
 sqInt CameraExtent(sqInt cameraNum);
 sqInt CameraGetFrame(sqInt cameraNum, unsigned char *buf, sqInt pixelCount);
 sqInt CameraGetParam(sqInt cameraNum, sqInt paramNum);
+sqInt CameraGetSemaphore(sqInt cameraNum);
 sqInt CameraSetSemaphore(sqInt cameraNum, sqInt semaphoreIndex);
 
 #endif /* _SQ_CAMERA_PLUGIN_H_ */
