@@ -622,7 +622,7 @@ sqInt ioGetNextEvent(sqInputEvent *evt);
 
 /* Image file and VM path names. */
 extern char imageName[];
-char *getImageName(void);
+VM_EXPORT char *getImageName(void);
 sqInt imageNameGetLength(sqInt sqImageNameIndex, sqInt length);
 sqInt imageNamePutLength(sqInt sqImageNameIndex, sqInt length);
 sqInt imageNameSize(void);

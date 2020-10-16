@@ -3,6 +3,7 @@
 # See platforms/win32/plugins/SqueakSSL/Makefile
 EXTERNAL_PLUGINS = \
 B3DAcceleratorPlugin \
+CameraPlugin \
 FileAttributesPlugin \
 Squeak3D \
 SqueakFFIPrims \

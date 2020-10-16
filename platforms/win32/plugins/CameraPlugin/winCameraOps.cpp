@@ -123,7 +123,14 @@ static void SetCameraWidthAndFPS(ICaptureGraphBuilder2 *pCaptureGraphBuilder, IB
 static void SetOutputToRGB(Camera *theCamera);
 static void SetFramesPerSecond(int fps);
 
-#define SAFE_RELEASE(x) { if (x) x->Release(); x = NULL; }
+// pGrabber and pMediaControl appear to get overwritten in the non-debug VM
+// so be very careful in calling release functions
+#if BytesPerWord == 8
+# define InRangePtr(p) (!((uintptr_t)(p) >> 56))
+#else
+# define InRangePtr(p) (!((uintptr_t)(p) >> 31))
+#endif
+#define SAFE_RELEASE(x) { if ((x) && InRangePtr(x)) (x)->Release(); (x) = NULL; }
 
 //////////////////////////////////////////////
 // Entry Points
@@ -146,7 +153,9 @@ CameraClose(sqInt cameraNum)
 		return;
 
 	// stop getting video
-	if (theCamera->pMediaControl)
+	// pGrabber and pMediaControl appear to get overwritten in the non-debug VM
+	// so be very careful in calling them
+	if (InRangePtr(theCamera->pMediaControl))
 		theCamera->pMediaControl->StopWhenReady();
 
 	// release DirectShow objects
@@ -281,6 +290,8 @@ static Camera *
 ActiveCamera(int cameraNum)
 { return
 	cameraNum >= 1 && cameraNum <= CAMERA_COUNT
+	&& theCameras[cameraNum].pCamera
+	&& theCameras[cameraNum].pGraph
 	&& theCameras[cameraNum].mCB.pFrameBuf
 		? &theCameras[cameraNum]
 		: 0;
@@ -363,70 +374,76 @@ FreeMediaTypeFields(AM_MEDIA_TYPE *pMediaType)  // free format and pUnk fields
 }
 
 static char *
-GetCameraNameAndUID(int cameraNum, char **uidp)
+GetCameraNameAndUID(int requestedCameraNum, char **uidp)
 {
-	CComPtr <ICreateDevEnum> pDevEnum = NULL;
-	CComPtr <IEnumMoniker> pClassEnum = NULL;
+	ICreateDevEnum *pDevEnum = NULL;
+	IEnumMoniker *pClassEnum = NULL;
 	IMoniker *pMoniker = NULL;
 	IPropertyBag *pPropBag;
 	VARIANT variant;
 	HRESULT hr;
 	char *result = NULL;
+	int videoInputDeviceIndex = 0;
 
 	// Create the system device enumerator
-	hr = CoCreateInstance(
-		CLSID_SystemDeviceEnum, NULL, CLSCTX_INPROC,
-		IID_ICreateDevEnum, (void **) &pDevEnum);
+	hr = CoCreateInstance(CLSID_SystemDeviceEnum, NULL, CLSCTX_INPROC,
+							IID_ICreateDevEnum, (void **)&pDevEnum);
 	if (FAILED(hr))
 		return NULL;
 
 	// Create an enumerator for the video capture devices
-	hr = pDevEnum->CreateClassEnumerator(CLSID_VideoInputDeviceCategory, &pClassEnum, 0);
-	if (FAILED(hr))
-		return NULL;
-
 	// If there are no enumerators for the requested type, then
 	// CreateClassEnumerator will succeed, but pClassEnum will be NULL.
-	if (!pClassEnum)
+	hr = pDevEnum->CreateClassEnumerator(CLSID_VideoInputDeviceCategory, &pClassEnum, 0);
+	if (FAILED(hr)
+	 || !pClassEnum) {
+		pDevEnum->Release();
 		return NULL;
-
-	// Note that if the Next() call succeeds but there are no monikers,
-	// it will return S_FALSE, which is not a failure. Therefore, we check
-	// that the return code is S_OK instead of using the SUCCEEDED() macro.
-	for (int i = 0; i < cameraNum; i++)
-		if ((hr = pClassEnum->Next(1, &pMoniker, NULL)) != S_OK)
-			return NULL;
-
-	hr = pMoniker->BindToStorage(0, 0, IID_IPropertyBag, (void**)(&pPropBag));
-
-	// Find the description or friendly name
-	VariantInit(&variant);
-	variant.vt = VT_BSTR;
-	hr = pPropBag->Read(L"Description", &variant, 0);
-	if (FAILED(hr))
-		hr = pPropBag->Read(L"FriendlyName", &variant, 0);
-
-	if (SUCCEEDED(hr)) {
-		size_t n = SysStringLen(variant.bstrVal);
-		result = (char *)malloc(n + 1);
-		strncpy(result, (const char *)variant.bstrVal, n);
-		result[n] = 0;
-		VariantClear(&variant);
-	}
-	/* If asked for the UID/DevicePath, answer it through uidp */
-	VariantInit(&variant);
-	variant.vt = VT_BSTR;
-	if (uidp
-	 && SUCCEEDED(hr = pPropBag->Read(L"DevicePath", &variant, 0))) {
-		size_t n = SysStringLen(variant.bstrVal);
-		*uidp = (char *)malloc(n + 1);
-		strncpy(*uidp, (const char *)variant.bstrVal, n);
-		(*uidp)[n] = 0;
-		VariantClear(&variant);
 	}
 
-	pPropBag->Release();
-	pMoniker->Release();
+	while (pClassEnum->Next(1, &pMoniker, NULL) == S_OK) {
+		hr = pMoniker->BindToStorage(0, 0, IID_IPropertyBag, (void**)&pPropBag);
+		if (FAILED(hr)) {
+			pMoniker->Release();
+			continue;  
+		} 
+		if (++videoInputDeviceIndex >= requestedCameraNum)
+			break;
+
+		pPropBag->Release();
+		pMoniker->Release();
+	}
+	if (videoInputDeviceIndex == requestedCameraNum) {
+		// Find the description or friendly name
+		VariantInit(&variant);
+		variant.vt = VT_BSTR;
+		hr = pPropBag->Read(L"Description", &variant, 0);
+		if (FAILED(hr))
+			hr = pPropBag->Read(L"FriendlyName", &variant, 0);
+
+		if (SUCCEEDED(hr)) {
+			size_t n = SysStringLen(variant.bstrVal);
+			result = (char *)malloc(n + 1);
+			n = sprintf(result, "%S", variant.bstrVal);
+			result[n] = 0;
+			VariantClear(&variant);
+		}
+		/* If asked for the UID/DevicePath, answer it through uidp */
+		VariantInit(&variant);
+		variant.vt = VT_BSTR;
+		if (result
+		 && uidp
+		 && SUCCEEDED(hr = pPropBag->Read(L"DevicePath", &variant, 0))) {
+			size_t n = SysStringLen(variant.bstrVal);
+			*uidp = (char *)malloc(n + 1);
+			n = sprintf(*uidp, "%S", variant.bstrVal);
+			(*uidp)[n] = 0;
+			VariantClear(&variant);
+		}
+		pMoniker->Release();
+		pPropBag->Release();
+	}
+	pDevEnum->Release();
 	return result;
 }
 
@@ -611,3 +628,103 @@ cameraShutdown(void)
 	return 1;
 }
 } // extern "C"
+
+#if defined(PRINT_DEVICES_PROGRAM)
+extern "C" {
+
+struct VirtualMachine *interpreterProxy;
+
+HRESULT
+EnumerateDevices(REFGUID category, IEnumMoniker **ppEnum)
+{
+	// Create the System Device Enumerator.
+	ICreateDevEnum *pDevEnum;
+	HRESULT hr = CoCreateInstance(CLSID_SystemDeviceEnum, NULL,  
+		CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pDevEnum));
+
+	if (SUCCEEDED(hr)) {
+		// Create an enumerator for the category.
+		hr = pDevEnum->CreateClassEnumerator(category, ppEnum, 0);
+		if (hr == S_FALSE) {
+			hr = VFW_E_NOT_FOUND;  // The category is empty. Treat as an error.
+		}
+		pDevEnum->Release();
+	}
+	return hr;
+}
+
+void
+DisplayDeviceInformation(IEnumMoniker *pEnum)
+{
+	IMoniker *pMoniker = NULL;
+	int count = 0, ok_count = 0;
+
+	while (pEnum->Next(1, &pMoniker, NULL) == S_OK) {
+		IPropertyBag *pPropBag;
+		HRESULT hr = pMoniker->BindToStorage(0, 0, IID_PPV_ARGS(&pPropBag));
+		count += 1;
+		if (FAILED(hr)) {
+			pMoniker->Release();
+			continue;  
+		} 
+		ok_count += 1;
+
+		VARIANT var;
+		VariantInit(&var);
+
+		// Get description or friendly name.
+		hr = pPropBag->Read(L"Description", &var, 0);
+		if (SUCCEEDED(hr)) {
+			printf("Description: %S (%d,%d)\n", var.bstrVal, count, ok_count);
+			VariantClear(&var); 
+		}
+		hr = pPropBag->Read(L"FriendlyName", &var, 0);
+		if (SUCCEEDED(hr)) {
+			printf("FriendlyName %S (%d,%d)\n", var.bstrVal, count, ok_count);
+			VariantClear(&var); 
+		}
+
+		hr = pPropBag->Write(L"FriendlyName", &var);
+
+		// WaveInID applies only to audio capture devices.
+		hr = pPropBag->Read(L"WaveInID", &var, 0);
+		if (SUCCEEDED(hr)) {
+			printf("WaveIn ID: %d\n", var.lVal);
+			VariantClear(&var); 
+		}
+
+		hr = pPropBag->Read(L"DevicePath", &var, 0);
+		if (SUCCEEDED(hr)) {
+			// The device path is not intended for display.
+			printf("Device path: %S\n", var.bstrVal);
+			VariantClear(&var); 
+		}
+
+		pPropBag->Release();
+		pMoniker->Release();
+	}
+}
+
+int
+main()
+{
+	HRESULT hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
+	if (SUCCEEDED(hr)) {
+		IEnumMoniker *pEnum;
+
+		hr = EnumerateDevices(CLSID_VideoInputDeviceCategory, &pEnum);
+		if (SUCCEEDED(hr)) {
+			DisplayDeviceInformation(pEnum);
+			pEnum->Release();
+		}
+		hr = EnumerateDevices(CLSID_AudioInputDeviceCategory, &pEnum);
+		if (SUCCEEDED(hr)) {
+			DisplayDeviceInformation(pEnum);
+			pEnum->Release();
+		}
+		CoUninitialize();
+	}
+	return 0;
+}
+}
+#endif // PRINT_DEVICES_PROGRAM

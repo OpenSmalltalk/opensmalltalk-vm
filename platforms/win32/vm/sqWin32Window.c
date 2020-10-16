@@ -2577,12 +2577,11 @@ sqInt clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex) {
 /*                    Image / VM File Naming                                */
 /****************************************************************************/
 
-sqInt vmPathSize(void)
-{
-  return strlen(vmPathA);
-}
+sqInt
+vmPathSize(void) { return strlen(vmPathA); }
 
-sqInt vmPathGetLength(sqInt sqVMPathIndex, sqInt length)
+sqInt
+vmPathGetLength(sqInt sqVMPathIndex, sqInt length)
 {
   char *stVMPath= (char *)sqVMPathIndex;
   int count, i;
@@ -2597,17 +2596,14 @@ sqInt vmPathGetLength(sqInt sqVMPathIndex, sqInt length)
   return count;
 }
 
-char* getImageName(void)
-{
-  return imageName;
-}
+EXPORT(char *)
+getImageName(void) { return imageName; }
 
-sqInt imageNameSize(void)
-{
-  return strlen(imageName);
-}
+sqInt
+imageNameSize(void) { return strlen(imageName); }
 
-sqInt imageNameGetLength(sqInt sqImageNameIndex, sqInt length)
+sqInt
+imageNameGetLength(sqInt sqImageNameIndex, sqInt length)
 {
   char *sqImageName= (char *)sqImageNameIndex;
   int count, i;
@@ -2622,7 +2618,8 @@ sqInt imageNameGetLength(sqInt sqImageNameIndex, sqInt length)
   return count;
 }
 
-sqInt imageNamePutLength(sqInt sqImageNameIndex, sqInt length)
+sqInt
+imageNamePutLength(sqInt sqImageNameIndex, sqInt length)
 {
   char *sqImageName= (char *)sqImageNameIndex;
   char tmpImageName[IMAGE_NAME_SIZE +1];
@@ -2662,7 +2659,9 @@ sqInt imageNamePutLength(sqInt sqImageNameIndex, sqInt length)
   return 1;
 }
 
-sqInt sqGetFilenameFromString(char *buf, char *fileName, sqInt length, sqInt alias) {
+sqInt
+sqGetFilenameFromString(char *buf, char *fileName, sqInt length, sqInt alias)
+{
   memcpy(buf, fileName, length);
   buf[length] = 0;
   return 1;
@@ -2676,7 +2675,9 @@ extern char *osInfoString;
 extern char *gdInfoString;
 extern char *win32VersionName;
 
-char * GetAttributeString(sqInt id) {
+char *
+GetAttributeString(sqInt id)
+{
 	/* This is a hook for getting various status strings back from
 	   the OS. In particular, it allows Squeak to be passed arguments
 	   such as the name of a file to be processed. Command line options
@@ -2738,14 +2739,18 @@ char * GetAttributeString(sqInt id) {
   return NULL;
 }
 
-sqInt attributeSize(sqInt id) {
+sqInt
+attributeSize(sqInt id)
+{
   char *attrValue;
   attrValue = GetAttributeString(id);
   if(!attrValue) return primitiveFail();
   return strlen(attrValue);
 }
 
-sqInt getAttributeIntoLength(sqInt id, sqInt byteArrayIndex, sqInt length) {
+sqInt
+getAttributeIntoLength(sqInt id, sqInt byteArrayIndex, sqInt length)
+{
   char *srcPtr, *dstPtr, *end;
   int charsToMove;
 
@@ -2769,7 +2774,9 @@ sqInt getAttributeIntoLength(sqInt id, sqInt byteArrayIndex, sqInt length) {
 /*                      File Startup                                        */
 /****************************************************************************/
 
-int sqLaunchDrop(void) {
+int
+sqLaunchDrop(void)
+{
   HANDLE h;
   WCHAR *src, **argv=NULL;
   char tmp[MAX_PATH];
@@ -2809,7 +2816,8 @@ int sqLaunchDrop(void) {
 }
 
 /* Check if the path/file name is subdirectory of the image path */
-int isLocalFileName(TCHAR *fileName)
+int
+isLocalFileName(TCHAR *fileName)
 {
   int i;
   for(i=0; i<lstrlen(imagePath); i++)
@@ -2817,7 +2825,9 @@ int isLocalFileName(TCHAR *fileName)
   return 1;
 }
 
-void SetupFilesAndPath() {
+void
+SetupFilesAndPath()
+{
   char *tmp;
   WCHAR *wtmp;
   WCHAR tmpName[MAX_PATH+1];
@@ -2850,7 +2860,9 @@ void SetupFilesAndPath() {
 /* SqueakImageLength():
    Return the length of the image if it is a valid Squeak image file.
    Otherwise return 0. */
-DWORD SqueakImageLengthFromHandle(HANDLE hFile) {
+DWORD
+SqueakImageLengthFromHandle(HANDLE hFile)
+{
   DWORD dwRead, dwSize, magic = 0;
   /* get the file size */
   dwSize = GetFileSize(hFile, NULL);
@@ -2870,7 +2882,9 @@ DWORD SqueakImageLengthFromHandle(HANDLE hFile) {
   return 0;
 }
 
-DWORD SqueakImageLength(WCHAR *fileName) {
+DWORD
+SqueakImageLength(WCHAR *fileName)
+{
   DWORD dwSize;
   HANDLE hFile;
 
@@ -2891,7 +2905,9 @@ DWORD SqueakImageLength(WCHAR *fileName) {
    Search the current directory for exactly one image file.
    If it is found, copy the name into imageName and return true.
 */
-int findImageFile(void) {
+int
+findImageFile(void)
+{
   WIN32_FIND_DATAW findData;
   HANDLE findHandle;
   int nextFound;
@@ -2911,7 +2927,9 @@ int findImageFile(void) {
    Pop up a file open dialog for image files.
    Copy the selection into imageName and return true.
 */
-int openImageFile(void) {
+int
+openImageFile(void)
+{
   OPENFILENAMEW ofn;
   WCHAR path[MAX_PATH];
 
@@ -2945,7 +2963,8 @@ static DWORD startTime;
 static DWORD splashTime;
 
 /* splash window procedure */
-static LRESULT CALLBACK SplashWndProcA(HWND hwnd,
+static LRESULT CALLBACK
+SplashWndProcA(HWND hwnd,
 				UINT message,
 				WPARAM wParam,
 				LPARAM lParam) {
@@ -2953,7 +2972,7 @@ static LRESULT CALLBACK SplashWndProcA(HWND hwnd,
   HDC mdc;
   HANDLE hOld;
 
-  switch(message) {
+  switch (message) {
   case WM_PAINT:
     BeginPaint(hwnd,&ps);
     mdc = CreateCompatibleDC(ps.hdc);
@@ -2975,7 +2994,9 @@ static LRESULT CALLBACK SplashWndProcA(HWND hwnd,
   return 1;
 }
 
-void ShowSplashScreen(void) {
+void
+ShowSplashScreen(void)
+{
   WNDCLASS wc;
   TCHAR splashFile[1024];
   TCHAR splashTitle[1024];
@@ -3042,7 +3063,9 @@ void ShowSplashScreen(void) {
   startTime = GetTickCount();
 }
 
-void HideSplashScreen(void) {
+void
+HideSplashScreen(void)
+{
   if(hSplashWnd) {
     /* hide splash window after minimal time */
     while(GetTickCount() - startTime < splashTime) {
@@ -3067,7 +3090,8 @@ void HideSplashScreen(void) {
 # define TVMOPTION(arg) TEXT("-") TEXT(arg)
 
 /* print usage with different output levels */
-int printUsage(int level)
+int
+printUsage(int level)
 {
   switch(level) {
     case 0: /* No command line given */

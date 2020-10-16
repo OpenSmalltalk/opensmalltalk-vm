@@ -85,7 +85,7 @@ closelog(void)
 #endif
 
 #if defined(SQUEAK_BUILTIN_PLUGIN)
-extern char *getImageName(void);
+IMPORT(char *) getImageName(void);
 #endif
 
 int

@@ -6,7 +6,7 @@
 
 #else
 #  ifdef _WIN32
-#   include <windows.h>
+#   include <Windows.h>
 #  endif
 #  if defined(BUILD_FOR_OSX) || (MAC_OS_X_VERSION_MAX_ALLOWED >= 1070) || defined(TARGET_API_MAC_CARBON)
 #   include <OpenGL/gl.h>
