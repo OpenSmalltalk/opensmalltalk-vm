@@ -787,8 +787,12 @@ CameraGetParam(sqInt camNum, sqInt paramNum)
 	camPtr cam = camera(camNum);
 
 	if (!cam) return -1;
-	if (paramNum == 1) return cam->frameCount;
-	if (paramNum == 2) return cam->bmWidth * cam->bmHeight * 4;
+	if (paramNum == 1)
+		return cam->frameCount
+			? cam->frameCount
+			: (cameraReadable(cam) ? 1 : 0);
+	if (paramNum == 2)
+		return cam->bmWidth * cam->bmHeight * 4;
 
 	return -2;
 }
