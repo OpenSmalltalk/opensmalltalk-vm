@@ -17,7 +17,7 @@
 #if x86_64|x64|__x86_64|__x86_64__
 
 #if defined(_MSC_VER) || defined(__MINGW32__)
-# include "windows.h" /* for GetSystemInfo & VirtualAlloc */
+# include <Windows.h> /* for GetSystemInfo & VirtualAlloc */
 # error Windows doesn't use the SystemV ABI
 #elif __APPLE__ && __MACH__
 # include <sys/mman.h> /* for mprotect */

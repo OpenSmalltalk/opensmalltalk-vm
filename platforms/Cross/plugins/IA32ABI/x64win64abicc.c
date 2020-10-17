@@ -11,7 +11,7 @@
 #if defined(x86_64) || defined(__amd64) || defined(__x86_64) || defined(__amd64__) || defined(__x86_64__) || defined(_M_AMD64) || defined(_M_X64)
 
 #if defined(_MSC_VER) || defined(__MINGW32__)
-# include "windows.h" /* for GetSystemInfo & VirtualAlloc */
+# include <Windows.h> /* for GetSystemInfo & VirtualAlloc */
 #else
 # error Non windows should use the SystemV ABI, not the win64 ABI
 #endif

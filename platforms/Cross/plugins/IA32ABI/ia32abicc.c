@@ -11,7 +11,7 @@
 #if defined(_M_I386) || defined(_M_IX86) || defined(_X86_) || defined(i386) || defined(i486) || defined(i586) || defined(i686) || defined(__i386__) || defined(__386__) || defined(X86) || defined(I386)
 
 #if defined(_MSC_VER) || defined(__MINGW32__)
-# include "windows.h" /* for GetSystemInfo & VirtualAlloc */
+# include <Windows.h> /* for GetSystemInfo & VirtualAlloc */
 #elif __APPLE__ && __MACH__
 # include <sys/mman.h> /* for mprotect */
 # if OBJC_DEBUG /* define this to get debug info for struct objc_class et al */
