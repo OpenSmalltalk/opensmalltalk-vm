@@ -238,7 +238,7 @@ CameraName(sqInt cameraNum)
 char *
 CameraUID(sqInt cameraNum)
 {
-	char *uid;
+	char *uid = 0;
 
 	mitigateleak();
 	if (cameraNum < 1 || cameraNum > CAMERA_COUNT)
