@@ -128,7 +128,7 @@ ioSizeOfWindow(wIndexType windowIndex)
 
 	NSRect win = [window frame];
 
-	return packedDoubleXY(win.size.width, win.size.height);
+	return packedDoubleXY(win.size.width,win.size.height);
 }
 
 sqInt
@@ -301,7 +301,8 @@ sqInt
 getCurrentIndexInUse(void) { return nextIndex - 1; }
 
 #if TerfVM
-void *ioGetWindowHandle(void)
+void *
+ioGetWindowHandle(void)
 {
 	extern void *getSTWindow();
 	return getSTWindow();
@@ -315,10 +316,9 @@ ioPositionOfNativeWindow(usqIntptr_t windowHandle)
 
 	NSWindow *window = (__bridge NSWindow *)(void *)windowHandle;
     NSRect win = [window frame];
-	NSRect screen = [[window screen] frame];
 
 	return packedDoubleXY(win.origin.x,
-						  screen.size.height-(win.size.height+win.origin.y));
+						  yZero() - (win.origin.y + win.size.height));
 }
 
 sqInt
@@ -330,31 +330,50 @@ ioSizeOfNativeWindow(usqIntptr_t windowHandle)
 	NSWindow *window = (__bridge NSWindow *)(void *)windowHandle;
 	NSRect win = [window frame];
 
-	return packedDoubleXY(win.size.width, win.size.height);
+	return packedDoubleXY(win.size.width,win.size.height);
 }
 
+static int
+titlebarHeight(NSWindow *window,NSRect win)
+{
+    NSSize contentSize = [window contentRectForFrameRect: win].size;
+
+    return win.size.height - contentSize.height;
+}
+
+/* ioPositionOfNativeDisplay answers the origin of the client rectangle,
+ * in screen coordinates of the specified window handle, i.e. of the
+ * rectangle below the title bar.
+ */
 sqInt
 ioPositionOfNativeDisplay(usqIntptr_t windowHandle)
 {
 	if (!windowHandle)
 		return -1;
 
-	NSScreen *screen = (__bridge NSScreen *)(void *)windowHandle;
-    NSRect frame = [screen frame];
+	NSWindow *window = (__bridge NSWindow *)(void *)windowHandle;
+    NSRect win = [window frame];
 
-	return packedDoubleXY(frame.origin.x,frame.origin.y);
+	return packedDoubleXY(win.origin.x,
+						  yZero() + titlebarHeight(window,win)
+						  - (win.origin.y + win.size.height));
 }
 
+/* ioSizeOfNativeDisplay answers the extent of the client rectangle,
+ * in screen coordinates of the specified window handle, i.e. of the
+ * rectangle below the title bar.
+ */
 sqInt
 ioSizeOfNativeDisplay(usqIntptr_t windowHandle)
 {
 	if (!windowHandle)
 		return -1;
 
-	NSScreen *screen = (__bridge NSScreen *)(void *)windowHandle;
-    NSRect frame = [screen frame];
+	NSWindow *window = (__bridge NSWindow *)(void *)windowHandle;
+    NSRect win = [window frame];
 
-	return packedDoubleXY(frame.origin.x,frame.origin.y);
+	return packedDoubleXY(win.size.width,
+						  win.size.height-titlebarHeight(window,win));
 }
 
 /* Return the pixel origin (topleft) of the platform-defined working area
@@ -380,8 +399,8 @@ ioSizeOfScreenWorkArea(sqIntptr_t windowIndex)
 }
 #endif // TerfVM
 
-/* eem Oct 2020 what happens with multiple monitors? Presumably there's a
- * unified address space that covers all displays.
+/* What happens with multiple monitors? There's a unified address space that
+ * covers all displays.
  */
 sqInt
 ioSetCursorPositionXY(long x, long y)
