@@ -2207,22 +2207,20 @@ parseGenericArgs(int argc, char *argv[])
 			return imageName != 0;
 		}
 
-	if (*imageName == 0) { /* only try to use image name if none is provided */
-		if (*argv[0] && IsImage(argv[0])) {
-			strncpy(imageName, argv[0],MAX_PATH_UTF8);
-			MultiByteToWideChar(CP_UTF8, 0, imageName, -1, imageNameW, MAX_PATH);
-			/* if provided, the image is a vm argument. */
-			vmOptions[numOptionsVM++] = argv[0];
-		}
+	/* Always allow the command-line to override an implicit image name. */
+	if (*argv[0] && IsImage(argv[0])) {
+		strncpy(imageName, argv[0], MAX_PATH_UTF8);
+		MultiByteToWideChar(CP_UTF8, 0, imageName, -1, imageNameW, MAX_PATH);
+		/* if provided, the image is a vm argument. */
+		vmOptions[numOptionsVM++] = argv[0];
 	}
-	else /* provide image name as second argument if implicitly specified */
+	else if (*imageName) /* provide image name as second argument if implicitly specified */
 		imageOptions[numOptionsImage++] = imageName;
 
-	imageOptions[numOptionsImage++] = argv[0];
-	for (i = 1; i < argc; i++)
+	for (i = 0; i < argc; i++)
 		imageOptions[numOptionsImage++] = argv[i];
 
-  return 1;
+	return 1;
 }
 
 static int
