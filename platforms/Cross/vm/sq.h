@@ -201,7 +201,8 @@ long ioMicroMSecs(void);
  * with OpenSmalltalk-VM and Cog VM.
  */
 /* Time API, Cog uses 64-bit microseconds fron 1901 as much as possible */
-extern void forceInterruptCheckFromHeartbeat(void);
+void forceInterruptCheckFromHeartbeat(void);
+void ioInitTime(void);
 unsigned long long ioUTCMicrosecondsNow(void);
 unsigned long long ioUTCMicroseconds(void);
 unsigned long long ioLocalMicrosecondsNow(void);
