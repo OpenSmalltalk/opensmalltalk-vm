@@ -206,6 +206,8 @@ callIA32DoubleReturn(SIGNATURE) { double (*f)(), r;
  * args would get copied into a struct on the stack. A pointer to the struct
  * is then passed as the 3rd argument of sendInvokeCallbackStackRegistersJmpbuf
  */
+#error this uses the old API and needs rewriting; cf the other thinkEntry
+#error routines in this directory
 long
 thunkEntry(void *thunkp, sqIntptr_t *stackp)
 {

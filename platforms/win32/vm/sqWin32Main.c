@@ -92,7 +92,7 @@
 /*** Crash debug -- Imported from Virtual Machine ***/
 int getFullScreenFlag(void);
 sqInt methodPrimitiveIndex(void);
-int getCurrentBytecode(void);
+sqInt getCurrentBytecode(void);
 
 extern void printPhaseTime(int);
 

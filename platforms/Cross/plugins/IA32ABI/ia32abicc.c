@@ -185,7 +185,6 @@ __attribute__((optimize("O0")))
 thunkEntry(void *thunkp, sqIntptr_t *stackp)
 {
 	VMCallbackContext vmcc;
-	VMCallbackContext *previousCallbackContext;
 	int flags, returnType;
 
 #if STACK_ALIGN_HACK
@@ -211,7 +210,7 @@ thunkEntry(void *thunkp, sqIntptr_t *stackp)
 	}
 
 	if (!(returnType = setjmp(vmcc.trampoline))) {
-		previousCallbackContext = getMRCC();
+		vmcc.savedMostRecentCallbackContext = getMRCC();
 		setMRCC(&vmcc);
 		vmcc.thunkp = thunkp;
 		vmcc.stackp = stackp + 2; /* skip address of retpc & retpc (thunk) */
@@ -219,11 +218,11 @@ thunkEntry(void *thunkp, sqIntptr_t *stackp)
 		vmcc.floatregargsp = 0;
 		interpreterProxy->sendInvokeCallbackContext(&vmcc);
 		fprintf(stderr,"Warning; callback failed to invoke\n");
-		setMRCC(previousCallbackContext);
+		setMRCC(vmcc.savedMostRecentCallbackContext);
 		interpreterProxy->disownVM(flags);
 		return -1;
 	}
-	setMRCC(previousCallbackContext);
+	setMRCC(vmcc.savedMostRecentCallbackContext);
 	interpreterProxy->disownVM(flags);
 
 	switch (returnType) {
