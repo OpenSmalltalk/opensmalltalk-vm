@@ -1739,17 +1739,16 @@ CogARMv8Compiler >> concretizeDataOperationRR: armOpcode [
 
 { #category : #'generate machine code - concretize' }
 CogARMv8Compiler >> concretizeDivRdRd [
-	"Will get inlined into concretizeAt: switch."
-
 	"FP divide regLHS by regRHS and stick result in regLHS"
 
 	<inline: true>
-	| regLHS regRHS |
-	self halt.
-	1 halt.
-	regRHS := operands at: 0.
-	regLHS := operands at: 1.
-	machineCode at: 0 put: (self fdivd: regLHS by: regRHS).
+	| registerA registerB destinationRegister |
+	registerA := operands at: 0.
+	destinationRegister := registerB := operands at: 1.
+	machineCode at: 0 put: (self
+		fDivFirstRegister: registerA
+		secondRegister: registerB
+		destinationRegister: destinationRegister).
 	^ machineCodeSize := 4
 ]
 
@@ -2627,8 +2626,6 @@ CogARMv8Compiler >> concretizeMoveXwrRR [
 
 { #category : #'generate machine code - concretize' }
 CogARMv8Compiler >> concretizeMulRdRd [
-	"Will get inlined into concretizeAt: switch."
-
 	"FP multiply regLHS by regRHS and stick result in regLHS"
 
 	<inline: true>
@@ -3021,15 +3018,16 @@ CogARMv8Compiler >> concretizeSubRR [
 
 { #category : #'generate machine code - concretize' }
 CogARMv8Compiler >> concretizeSubRdRd [
-	"Will get inlined into concretizeAt: switch."
+	"FP substract registerA from registerB and stick result in registerB"
 
 	<inline: true>
-	| regLHS regRHS |
-	"Subtract FP regRHS from FP regLHS and leave the result in FP regLHS"
-	self halt.
-	regRHS := operands at: 0.
-	regLHS := operands at: 1.
-	machineCode at: 0 put: (self fsubd: regLHS with: regRHS).
+	| registerA registerB destinationRegister |
+	registerA := operands at: 0.
+	destinationRegister := registerB := operands at: 1.
+	machineCode at: 0 put: (self
+		fSubFirstRegister: registerB
+		secondRegister: registerA
+		destinationRegister: destinationRegister).
 	^ machineCodeSize := 4
 ]
 
@@ -3405,6 +3403,24 @@ CogARMv8Compiler >> extractOffsetFromConditionalBranch: instruction [
 		ifFalse: [ twoComplement << 2 ]
 ]
 
+{ #category : #assembler }
+CogARMv8Compiler >> fDivFirstRegister: registerA secondRegister: registerB destinationRegister: destinationRegister [ 
+
+	"C7.2.98 FDIV (scalar)
+	
+	Floating-point Divide (scalar). This instruction divides the floating-point value of the first source SIMD&FP register by the floating-point value of the second source SIMD&FP register, and writes the result to the destination SIMD&FP register.
+	
+	FDIV <Dd>, <Dn>, <Dm>"
+	
+	^ 2r1111 << 25
+		bitOr: (2r01 "double precision variant only" << 22
+		bitOr: (2r1 << 21
+		bitOr: (((registerB bitAnd: 16r1f) << 16)
+		bitOr: (2r11 << 11
+		bitOr: (((registerA bitAnd: 16r1f) << 5)
+		bitOr: (destinationRegister bitAnd: 16r1f))))))
+]
+
 { #category : #'as yet unclassified' }
 CogARMv8Compiler >> fMoveSize: is64Bits fromDoublePrecisionFloatRegister: sourceDoublePrecisionFloatRegister toScalarRegister: destinationScalarRegister [
 	
@@ -3458,6 +3474,24 @@ CogARMv8Compiler >> fMulFirstRegister: registerA secondRegister: registerB desti
 		bitOr: (2r1 << 21
 		bitOr: (((registerB bitAnd: 16r1f) << 16)
 		bitOr: (2r1 << 11
+		bitOr: (((registerA bitAnd: 16r1f) << 5)
+		bitOr: (destinationRegister bitAnd: 16r1f))))))
+]
+
+{ #category : #assembler }
+CogARMv8Compiler >> fSubFirstRegister: registerA secondRegister: registerB destinationRegister: destinationRegister [
+
+	"C7.2.174 FSUB (scalar)
+	
+	Floating-point Subtract (scalar). This instruction subtracts the floating-point value of the second source SIMD&FP register from the floating-point value of the first source SIMD&FP register, and writes the result to the destination SIMD&FP register.
+	
+	FSUB <Dd>, <Dn>, <Dm>"
+	
+	^ 2r1111 << 25
+		bitOr: (2r01 "double precision variant only" << 22
+		bitOr: (2r1 << 21
+		bitOr: (((registerB bitAnd: 16r1f) << 16)
+		bitOr: (2r111 << 11
 		bitOr: (((registerA bitAnd: 16r1f) << 5)
 		bitOr: (destinationRegister bitAnd: 16r1f))))))
 ]
