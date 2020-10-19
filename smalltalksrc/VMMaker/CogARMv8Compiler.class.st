@@ -3270,8 +3270,18 @@ CogARMv8Compiler >> encodeLogicalImmediate: immediate registerSize: registerSize
 	
 	https://dinfuehr.github.io/blog/encoding-of-immediate-values-on-aarch64/
 	"
-
 	<inline: #always>
+	<var: #immediate type: 'uint64_t'>
+	<var: #maskedImmediate type: 'uint64_t'>
+
+	<var: #size type: 'uint64_t'>
+	<var: #trailingZeros type: #'uint32_t'>
+	<var: #trailingOnes type: #'uint32_t'>
+	<var: #mask type: #'uint64_t'>
+	<var: #leadingOnes type: #'uint32_t'>
+	<var: #immr type: #'uint32_t'>
+	<var: #nimms type: #'uint64_t'>
+	<var: #n type: #'uint32_t'>
 
 	| size mask maskedImmediate trailingZeros trailingOnes leadingOnes immr nimms n |
 
