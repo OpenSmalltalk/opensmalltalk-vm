@@ -533,7 +533,8 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 		addHeaderFile:'#else';
 		addHeaderFile:'"cointerp.h"';
 		addHeaderFile:'#endif';
-		addHeaderFile:'"cogit.h"'.
+		addHeaderFile:'"cogit.h"';
+		addHeaderFile:'<stdint.h>'.
 	aCCodeGenerator
 		var: #ceGetFP
 			declareC: 'usqIntptr_t (*ceGetFP)(void)';

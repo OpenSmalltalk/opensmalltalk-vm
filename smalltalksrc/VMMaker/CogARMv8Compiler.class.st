@@ -3311,12 +3311,12 @@ CogARMv8Compiler >> encodeLogicalImmediate: immediate registerSize: registerSize
 	].
 
 	immr := (size - trailingZeros) bitAnd: (size - 1).
-	nimms := (size-1) bitInvert64 << 1.
+	nimms := (size-1) bitInvert64 << 1 bitAnd: 16rFFFFFFFFFFFFFFFF.
 	nimms := nimms bitOr: trailingOnes - 1.
 	
 	n := ((nimms >> 6) bitAnd: 1) bitXor: 1.
 	
-	^ aBlockWithEncoding value: ((n << 12) bitOr: (immr << 6 bitOr: nimms & 16r3f))
+	^ aBlockWithEncoding value: ((n << 12) bitOr: (immr << 6 bitOr: (nimms bitAnd: 16r3f)))
 ]
 
 { #category : #'as yet unclassified' }
