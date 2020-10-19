@@ -121,6 +121,7 @@ currentUTCUSecsImplementation(unsigned __int64 *utcTickBaseUsecsp,
 	 * resync to the system time.  
 	 */
 	if (currentTick < prevTick) {
+		FILETIME utcNow;
 		unsigned __int64 now;
 		*baseTickp = currentTick;
 		GetSystemTimeAsFileTime(&utcNow);
