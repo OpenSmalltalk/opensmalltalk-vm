@@ -3666,6 +3666,30 @@ CogARMv8Compiler >> fullCallsAreRelative [
 	^false
 ]
 
+{ #category : #abi }
+CogARMv8Compiler >> genCaptureCStackPointers: captureFramePointer [
+
+	"Save the register to a caller-saved register.
+	The caller may have been using the same register for something else.
+	So we need to save it and restore it later.
+	Make sure to reuse a caller-saved register: we can reuse it freely"
+	self hasVarBaseRegister ifTrue:
+		[cogit
+			MoveR: VarBaseReg R: R1;
+			MoveCq: cogit varBaseAddress R: VarBaseReg].
+	captureFramePointer ifTrue:
+		[cogit MoveR: FPReg Aw: cogit cFramePointerAddress].
+
+	"Capture the stack pointer prior to the call"
+	cogit MoveR: self cStackPointer Aw: cogit cStackPointerAddress.
+	
+	"Restore the base register for our caller"
+	self hasVarBaseRegister ifTrue:
+		[cogit MoveR: R1 R: VarBaseReg].
+
+	cogit RetN: 0.
+]
+
 { #category : #'abstract instructions' }
 CogARMv8Compiler >> genDivR: abstractRegDenominator R: abstractRegNumerator Quo: abstractRegQuotient Rem: abstractRegRemainder [
 

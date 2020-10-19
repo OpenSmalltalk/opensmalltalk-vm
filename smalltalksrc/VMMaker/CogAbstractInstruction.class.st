@@ -733,6 +733,30 @@ CogAbstractInstruction >> genAlignCStackSavingRegisters: regMask numArgs: numArg
 	^0
 ]
 
+{ #category : #abi }
+CogAbstractInstruction >> genCaptureCStackPointers: captureFramePointer [
+
+	self hasVarBaseRegister ifTrue:
+		[cogit
+			PushR: VarBaseReg;
+			MoveCq: cogit varBaseAddress R: VarBaseReg].
+	captureFramePointer ifTrue:
+		[cogit MoveR: FPReg Aw: cogit cFramePointerAddress].
+	"Capture the stack pointer prior to the call.  If we've pushed VarBaseReg take that into account."
+	(self leafCallStackPointerDelta ~= 0
+	 or: [self hasVarBaseRegister])
+		ifTrue:
+			[cogit MoveR: self cStackPointer R: TempReg.
+			 cogit AddCq: (self hasVarBaseRegister
+							ifTrue: [self leafCallStackPointerDelta + objectMemory wordSize]
+							ifFalse: [self leafCallStackPointerDelta]) R: TempReg.
+			 cogit MoveR: TempReg Aw: cogit cStackPointerAddress]
+		ifFalse: [cogit MoveR: self cStackPointer Aw: cogit cStackPointerAddress].
+	self hasVarBaseRegister ifTrue:
+		[cogit PopR: VarBaseReg].
+	cogit RetN: 0.
+]
+
 { #category : #'abstract instructions' }
 CogAbstractInstruction >> genJumpFPEqual: jumpTarget [
 	<inline: true>
