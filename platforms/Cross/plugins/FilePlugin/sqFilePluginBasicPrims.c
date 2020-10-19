@@ -746,7 +746,7 @@ sqFileSize(SQFile *f) {
 	if (!sqFileValid(f))
 		return interpreterProxy->success(false);
 	if (f->isStdioStream)
-		return interpreterProxy->success(false);
+		return 0;
 	return getSize(f);
 }
 
