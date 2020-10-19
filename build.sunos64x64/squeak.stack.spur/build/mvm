@@ -3,8 +3,8 @@ set -e
 # Stack Spur VM with VM profiler and threaded heartbeat
 INSTALLDIR=sqstkspur64sunosht/usr
 # Some gcc versions create a broken VM using -O2
-OPT="-g -DNDEBUG -DDEBUGVM=0"
-MAKE=/usr/bin/gmake
+OPT="-g -DAIO_DEBUG -DNDEBUG -DDEBUGVM=0"
+MAKE=gmake
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift

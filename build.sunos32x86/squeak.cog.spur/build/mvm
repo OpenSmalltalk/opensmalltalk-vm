@@ -8,10 +8,10 @@ i86pc) ;; # we're good
 fi ;;
 esac
 # Spur VM with VM profiler and threaded heartbeat
-MAKE=/usr/bin/gmake
+MAKE=gmake
 INSTALLDIR=sqcogspursunosht/usr
 # Some gcc versions create a broken VM using -O2
-OPT="-g -DNDEBUG -DDEBUGVM=0"
+OPT="-g -DAIO_DEBUG -DNDEBUG -DDEBUGVM=0"
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
