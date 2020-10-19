@@ -188,12 +188,8 @@ extern sqInt primitiveFailForFFIExceptionat(usqLong exceptionCode, usqInt pc);
   DWORD result;
 
   /* #1: Try to handle exception in the regular (memory access)
-     exception filter if virtual memory support is enabled */
-#ifndef NO_VIRTUAL_MEMORY
+     exception filter */
   result = sqExceptionFilter(exp);
-#else
-  result = EXCEPTION_CONTINUE_SEARCH;
-#endif
 
   /* #2: If that didn't work, try to handle any FP problems */
   if (result != EXCEPTION_CONTINUE_EXECUTION) {
@@ -1639,17 +1635,8 @@ sqMain(int argc, char *argv[])
   /* allocate this before anything is going to happen */
   vmWakeUpEvent = CreateEvent(NULL, 1, 0, NULL);
 
-#ifdef NO_VIRTUAL_MEMORY
-  if(!dwMemorySize) {
-    dwMemorySize = 4;
-    virtualMemory = (int)imageSize + max(imageSize, dwMemorySize * 0x00100000);
-  } else {
-    virtualMemory = (int)dwMemorySize * 0x00100000;
-  }
-#else
   /* initial commit size = imageSize + 4MB */
   virtualMemory = imageSize + 0x00400000;
-#endif
 
 #if !NO_FIRST_LEVEL_EXCEPTION_HANDLER
 # ifndef _MSC_VER
