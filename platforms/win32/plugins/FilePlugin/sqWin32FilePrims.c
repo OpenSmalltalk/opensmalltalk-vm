@@ -30,6 +30,7 @@
 #include "FilePlugin.h"
 
 #include "sqWin32File.h"
+#include "sqImageFileAccess.h"
 
 extern struct VirtualMachine *interpreterProxy;
 

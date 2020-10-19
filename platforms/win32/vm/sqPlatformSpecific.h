@@ -27,12 +27,8 @@
 # include <corecrt.h> // for size_t
 #endif
 
-#ifdef _MSC_VER
-#define squeakFileOffsetType __int64
-#else
-#define squeakFileOffsetType unsigned long long
-#endif
-
+/* File positions in the FilePlugin */
+typedef unsigned __int64 squeakFileOffsetType;
 
 /* pluggable primitive support */
 #if defined(_MSC_VER) || defined(__MINGW32__)
