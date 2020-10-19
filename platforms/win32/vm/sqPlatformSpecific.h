@@ -29,6 +29,12 @@
 
 /* File positions in the FilePlugin */
 typedef unsigned __int64 squeakFileOffsetType;
+/* File support; we don't need no steenkin stdio */
+#define NO_STD_FILE_SUPPORT
+
+/* File positions in the FilePlugin */
+typedef unsigned __int64 squeakFileOffsetType;
+#define PATH_MAX _MAX_PATH
 
 /* pluggable primitive support */
 #if defined(_MSC_VER) || defined(__MINGW32__)

@@ -82,8 +82,6 @@
 #	define NO_JOYSTICK
 #	define NO_MIDI
 #	define NO_ASYNC_FILES
-  /* Do not rely on stdio functions but rather pure Win32 stuff */
-#	define WIN32_FILE_SUPPORT
   /* Take out the static strings */
 #	define NO_WARNINGS
 #endif /* MINIMAL */

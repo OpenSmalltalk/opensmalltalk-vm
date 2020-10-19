@@ -53,7 +53,7 @@ CFLAGS:= -msse2 -ggdb2 -m32 \
 	-mno-rtd -mms-bitfields $(OFLAGS) $(NOBUILTIN) $(WARNINGS)
 
 TZ:=$(shell date +%Z)
-DEFS:=	$(COGDEFS) $(WINVER) -DWIN32=1 -DWIN32_FILE_SUPPORT -DNO_ISNAN \
+DEFS:=	$(COGDEFS) $(WINVER) -DWIN32=1 -DNO_ISNAN \
 		-DNO_SERVICE -D'TZ="$(TZ)"' \
 		$(NDEBUG) -DLSB_FIRST -D'VM_NAME="$(VM_NAME)"' $(XDEFS) $(CROQUET)
 

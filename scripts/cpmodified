@@ -1,0 +1,10 @@
+#!/bin/bash
+# Copy modified files to some other source tree.
+if [ ! \( -n "$1" -a -d "$1" -a $# = 1 \) ]; then
+	echo usage: $0 directory
+	exit 1
+fi
+for f in `git status --porcelain | egrep "^ M|^M " | sed 's/^...//'`; do
+	echo cp -p "$f" "$1/$f"
+	cp -p "$f" "$1/$f"
+done

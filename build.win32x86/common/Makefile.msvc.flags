@@ -86,12 +86,11 @@ CFLAGS=	-m32 -MD -DLP32=1 -DWIN32=1 -gcodeview $(OFLAGS) \
 	$(NOBUILTIN) $(WARNINGS)
 endif
 
-# Do _not_ define NDEBUG.  The entire point of the msvc build is to debug with
+# Do _not_ define NDEBUG.  One key point of the msvc build is to debug with
 # MSVC and defining NDEBUG installs a default catch-everything exception handler
 # that effectively disables debugging.
-#DEFS:=	-DWIN32_FILE_SUPPORT -DNO_SERVICE -DNO_STD_FILE_SUPPORT -DNDEBUG \
-#	-DLSB_FIRST -DVM_NAME=\"$(VM)\" -DX86 $(XDEFS) $(CROQUET)
-DEFS:=	-DWIN32_FILE_SUPPORT -DNO_SERVICE -DLSB_FIRST -DX86 $(XDEFS) $(CROQUET)
+#DEFS:=	-DNO_SERVICE -DNDEBUG -DLSB_FIRST -DX86 $(XDEFS) $(CROQUET)
+DEFS:=	-DNO_SERVICE -DLSB_FIRST -DX86 $(XDEFS) $(CROQUET)
 # XDEFS=	-DSQUEAK_BUILTIN_PLUGIN
 # Include the Microsoft headers and any extras.
 # Put -I. last because boost includes bizarreness such as
