@@ -66,15 +66,10 @@
 #undef dispatchFunctionPointer
 #undef dispatchFunctionPointerOnin
 
-#undef squeakFileOffsetType
 #define squeakFileOffsetType off_t
-#include <unistd.h>
+//#include <unistd.h>
 
-#undef sqFTruncate
 #define sqFTruncate(f,o) ftruncate(fileno(f), o)
-#define ftell ftello
-#define fseek fseeko
-//int	 ftruncate(int, off_t);
 
 #undef sqFilenameFromStringOpen
 #undef sqFilenameFromString
@@ -94,6 +89,7 @@ sqAllocateMemoryMac(heapSize, minimumMemory, fileStream, headerSize)
 #endif
 
 #ifdef BUILD_FOR_OSX
+# include <sys/types.h>
 size_t sqImageFileReadEntireImage(void *, size_t, size_t, void *);
 #define sqImageFileReadEntireImage(memoryAddress, elementSize,  length, fileStream) \
 sqImageFileReadEntireImage(memoryAddress, elementSize, length, fileStream)
@@ -117,16 +113,16 @@ sqInt sqGrowMemoryBy(sqInt memoryLimit, sqInt delta);
 sqInt sqShrinkMemoryBy(sqInt memoryLimit, sqInt delta);
 sqInt sqMemoryExtraBytesLeft(sqInt includingSwap);
 
-    #undef insufficientMemorySpecifiedError
-    #undef insufficientMemoryAvailableError
-    #undef unableToReadImageError
+#undef insufficientMemorySpecifiedError
+#undef insufficientMemoryAvailableError
+#undef unableToReadImageError
 int plugInNotifyUser(char *msg);
-    #define insufficientMemorySpecifiedError() plugInNotifyUser("The amount of memory specified by the Setting Slider is not enough for the installed Squeak image file.")
-    #define insufficientMemoryAvailableError() plugInNotifyUser("There is not enough memory to give Squeak the amount specified by the Setting Slider")
-    #define unableToReadImageError() plugInNotifyUser("Read failed or premature end of image file")
-	#undef browserPluginReturnIfNeeded
-	int plugInTimeToReturn(void);
-	#define browserPluginReturnIfNeeded() if (plugInTimeToReturn()) {ReturnFromInterpret();}
+#define insufficientMemorySpecifiedError() plugInNotifyUser("The amount of memory specified by the Setting Slider is not enough for the installed Squeak image file.")
+#define insufficientMemoryAvailableError() plugInNotifyUser("There is not enough memory to give Squeak the amount specified by the Setting Slider")
+#define unableToReadImageError() plugInNotifyUser("Read failed or premature end of image file")
+#undef browserPluginReturnIfNeeded
+int plugInTimeToReturn(void);
+#define browserPluginReturnIfNeeded() if (plugInTimeToReturn()) {ReturnFromInterpret();}
 
 sqInt ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt extentY, sqInt offsetX, sqInt offsetY);
 

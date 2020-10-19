@@ -21,6 +21,7 @@
 
 #include "sqMemoryAccess.h"
 #include "sqVirtualMachine.h"
+#include "sqImageFileAccess.h" /* this is platform-dependent */
 
 #define true	1
 #define false	0
@@ -59,23 +60,7 @@
 #define VM_EXPORT
 #define VM_FUNCTION_EXPORT(returnType) returnType
 
-/* Image save/restore macros. */
-
-/* Note: The image file save and restore code uses these macros; they
-   can be redefined in sqPlatformSpecific.h if desired. These default
-   versions are defined in terms of the ANSI Standard C libraries.
-*/
-#define sqImageFile								FILE *
-#define sqImageFileClose(f)						fclose(f)
-#define sqImageFileOpen(fileName, mode)			fopen(fileName, mode)
-#define sqImageFilePosition(f)					ftell(f)
-#define sqImageFileRead(ptr, sz, count, f)		fread(ptr, sz, count, f)
-#define sqImageFileSeek(f, pos)					fseek(f, pos, SEEK_SET)
-#define sqImageFileSeekEnd(f, pos)				fseek(f, pos, SEEK_END)
-#define sqImageFileWrite(ptr, sz, count, f)		fwrite(ptr, sz, count, f)
-#define sqImageFileStartLocation(f,fileName,sz)	0
-
-/* Platform-dependent macros for handling object memory. */
+/* Platform-dependent API to allocate/manage object memory. */
 
 #if SPURVM
 /* Spur is an improved object representation/garbage collector/heap manager that
@@ -238,15 +223,6 @@ sqLong ioHighResClock(void);
   resolveAlias boolean - it seems to only be of use by OSX but is crucial there.
 */
 sqInt sqGetFilenameFromString(char *aCharBuffer, char *aFilenameString, sqInt filenameLength, sqInt aBoolean);
-
-/* Macro to provide default null behaviour for ftruncate - a non-ansi call
-   used in FilePlugin.
-   Override in sqPlatformSpecific.h for each platform that implements a
-   file truncate, or consider replacing the
-   ../Cross/plugins/FilePlugin/sqFilePluginBasicPrims.c
-   file with a platform specific version as Win32 and RISC OS do. 
-*/
-#define sqFTruncate(filenum, fileoffset) true
 
 /* Macros to support Mac browser plugin without ugly code in Interpreter. */
 
