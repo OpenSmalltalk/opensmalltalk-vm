@@ -222,6 +222,9 @@ void *ioLoadModule(char *pluginName)
  *  moduleName and suffix.  Answer the new module entry, or 0 if the shared
  *  library could not be loaded. Try all combinations of prefixes and suffixes,
  *	including no prefix or suffix.
+ *
+ *  Passing an empty string means to not consider a directory but let dlopen
+ *  figure out the path.
  */
 static void *
 tryLoading(char *dirName, char *moduleName)
@@ -231,10 +234,11 @@ tryLoading(char *dirName, char *moduleName)
   void        *handle= 0;
   char	     **prefix= 0, **suffix= 0;
   struct stat  buf;
+	int useFullPath = dirName[0] != 0;
 
   DPRINTF((stderr, __FILE__ " %d tryLoadModule(%s,%s)\n", __LINE__, dirName, moduleName));
   /* If dirName does not exist it is pointless searching for libraries in it. */
-  if (stat(dirName,&buf)) {
+  if (useFullPath && stat(dirName,&buf)) {
 	if (errno != ENOENT) {
 		fprintf(stderr,
 				"tryLoading(%s,%s): stat(%s) %s\n",
@@ -249,15 +253,18 @@ tryLoading(char *dirName, char *moduleName)
 		int         n;
 		n = snprintf(libName, sizeof(libName), "%s%s%s%s",dirName,*prefix,moduleName,*suffix);
 		assert(n >= 0 && n < NAME_MAX + 32);
-		if (!stat(libName, &buf)) {
-			if (S_ISDIR(buf.st_mode))
+		if (!useFullPath || !stat(libName, &buf)) {
+			if (useFullPath && S_ISDIR(buf.st_mode))
 				DPRINTF((stderr, __FILE__ " %d ignoring directory: %s\n", __LINE__, libName));
 			else {
 				handle = dlopen(libName, RTLD_NOW | RTLD_GLOBAL);
 				DPRINTF((stderr, __FILE__ " %d tryLoading dlopen(%s) = %p\n", __LINE__, libName, handle));
 				if (handle == 0) {
-					fprintf(stderr,"%s tryLoading %s: dlopen: %s\n", moduleName, libName, dlerror());
-					fflush(stderr);
+					// only report a failure to load if we definitely expected to be able to load something
+					if (useFullPath) {
+						fprintf(stderr,"%s tryLoading %s: dlopen: %s\n", moduleName, libName, dlerror());
+						fflush(stderr);
+					}
 				}
 				else {
 # if DEBUG

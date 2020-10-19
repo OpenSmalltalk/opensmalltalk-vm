@@ -104,6 +104,7 @@ static char *getVersionInfo(int verbose);
 
 @implementation sqSqueakOSXApplication 
 @synthesize squeakCursor;
+@synthesize aboutWindow;
 
 - (void) setupFloat {
 	fldcw(0x12bf);	/* signed infinity, round to nearest, REAL8, disable intrs, disable signals */

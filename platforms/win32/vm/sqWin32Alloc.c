@@ -11,7 +11,7 @@
 #include <Windows.h>
 #include "sq.h"
 
-#if !defined(NO_VIRTUAL_MEMORY) && !SPURVM /* Spur uses sqWin32SpurAlloc.c */
+#if !SPURVM /* Spur uses sqWin32SpurAlloc.c */
 
 /* For Qwaq Forums: Disallow memory shrinking to avoid crashes
    due to GC/OpenGL relocation problems within glDrawElements.
@@ -203,4 +203,4 @@ sqMakeMemoryNotExecutableFromTo(usqInt startAddr, usqInt endAddr)
 		perror("VirtualProtect(x,y,PAGE_EXECUTE_READWRITE)");
 }
 # endif /* COGVM */
-#endif /* !defined(NO_VIRTUAL_MEMORY) && !SPURVM */
+#endif /* !SPURVM */

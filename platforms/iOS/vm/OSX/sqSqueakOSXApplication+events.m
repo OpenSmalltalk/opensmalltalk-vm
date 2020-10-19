@@ -83,6 +83,20 @@ yZero()
 
 @implementation sqSqueakOSXApplication (events)
 
+// This method filters the event that should not be processed by the Squeak Application.
+// This events are related to windows that are launched from a third party library (as SDL)
+// Check pumpRunLoopEventSendAndSignal:(BOOL)signal for more details.
+
+// The events processed by the VM are the ones in the main window or in the about window.
+- (BOOL) shouldFilterEvent: (NSEvent*)event {
+    
+    sqSqueakOSXApplication * sqApplication = (sqSqueakOSXApplication*)gDelegateApp.squeakApplication;
+    
+    return event.window
+        && event.window != gDelegateApp.window
+        && event.window != [sqApplication aboutWindow];
+}
+
 - (void) pumpRunLoopEventSendAndSignal:(BOOL)signal {
 
 #ifdef PharoVM
@@ -100,7 +114,7 @@ yZero()
                              dequeue:YES])) {
          // If the event is not a system event or an event of *this* window, queue the event
          // Otherwise treat the event normally and send it to the app
-         if (event.window && event.window != gDelegateApp.window){
+         if ([self shouldFilterEvent: event]){
            [alienEventQueue addObject: event];
          }else{
            [NSApp sendEvent: event];
