@@ -36,6 +36,7 @@
 #include "sq.h"
 #include "sqAssert.h"
 #include "sqMemoryAccess.h"
+#include "sqImageFileAccess.h"
 #include "sqaio.h"
 #include "sqUnixCharConv.h"
 #include "sqSCCSVersion.h"

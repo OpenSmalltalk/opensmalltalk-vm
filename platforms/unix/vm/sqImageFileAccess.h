@@ -4,7 +4,9 @@
 *
 */
 
-/* This is expected to be included by sq.h */
+/* This is expected to be included by the interpreters and the file containing
+ * main that actually launches the system.
+ */
 
 #ifndef _SQ_IMAGE_FILE_ACCESS_H
 #define _SQ_IMAGE_FILE_ACCESS_H
@@ -17,6 +19,10 @@
 
 #define sqImageFile	int
 #define squeakFileOffsetType off_t
+
+/* Save/restore. */
+/* Read the image from the given file starting at the given image offset */
+size_t readImageFromFileHeapSizeStartingAt(sqImageFile f, usqInt desiredHeapSize, squeakFileOffsetType imageOffset);
 
 static inline void
 sqImageFileClose(sqImageFile f)
@@ -39,11 +45,12 @@ sqImageFileOpen(const char *fileName, const char *mode)
 	return fd;
 }
 
-//* sqImageFileRead answers the number of items read, not number of bytes
+// sqImageFileRead answers the number of items read, not number of bytes
+// size_t is for sizes.  ssize_t is for sizes + the -1 error flag
 static inline size_t
 sqImageFileRead(void *ptr, long sz, long count, sqImageFile f)
 {
-	size_t nread = read(f, ptr, count * sz);
+	ssize_t nread = read(f, ptr, (size_t)(count * sz));
 	if (nread == (size_t)-1) {
 		perror("read");
 		exit(errno);
@@ -51,11 +58,12 @@ sqImageFileRead(void *ptr, long sz, long count, sqImageFile f)
 	return nread / sz;
 }
 
-//* sqImageFileWrite answers the number of items written, not number of bytes
+// sqImageFileWrite answers the number of items written, not number of bytes
+// size_t is for sizes.  ssize_t is for sizes + the -1 error flag
 static inline size_t
 sqImageFileWrite(void *ptr, long sz, long count, sqImageFile f)
 {
-	size_t nwritten = write(f, ptr, count * sz);
+	ssize_t nwritten = write(f, ptr, (size_t)(count * sz));
 
 	/* Don't exit; if snapshotting, continuing is probably the best course */
 	if (nwritten == (size_t)-1)

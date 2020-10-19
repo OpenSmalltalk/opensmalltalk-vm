@@ -78,6 +78,7 @@
 
 #include "sq.h"
 #include "sqAssert.h"
+#include "sqImageFileAccess.h"
 #include "sqMacUIConstants.h"
 #include "sqMacMain.h"
 #include "sqMacUIMenuBar.h"

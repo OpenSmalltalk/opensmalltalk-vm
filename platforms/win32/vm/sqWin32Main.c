@@ -21,6 +21,7 @@
 #include <float.h>
 #include <ole2.h>
 #include "sq.h"
+#include "sqImageFileAccess.h"
 #include "sqWin32Prefs.h"
 #include "sqAssert.h"
 #include "sqWin32Backtrace.h"

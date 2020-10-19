@@ -37,6 +37,7 @@
 //
 
 #import "sqSqueakMainApplication+imageReadWrite.h"
+#include "sqImageFileAccess.h"
 
 #ifdef SPURVM
 #  include <sys/stat.h>

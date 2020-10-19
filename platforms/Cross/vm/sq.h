@@ -21,7 +21,6 @@
 
 #include "sqMemoryAccess.h"
 #include "sqVirtualMachine.h"
-#include "sqImageFileAccess.h" /* this is platform-dependent */
 
 #define true	1
 #define false	0
@@ -615,10 +614,6 @@ sqInt readableFormat(sqInt imageVersion);
 sqInt ioCanRenameImage(void);
 sqInt ioCanWriteImage(void);
 sqInt ioDisableImageWrite(void);
-
-/* Save/restore. */
-/* Read the image from the given file starting at the given image offset */
-size_t readImageFromFileHeapSizeStartingAt(sqImageFile f, usqInt desiredHeapSize, squeakFileOffsetType imageOffset);
 
 /* Clipboard (cut/copy/paste). */
 sqInt clipboardSize(void);
