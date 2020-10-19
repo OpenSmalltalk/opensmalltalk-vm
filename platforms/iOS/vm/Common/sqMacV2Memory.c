@@ -47,6 +47,7 @@
 
 #include "sq.h" 
 #if !SPURVM
+#include "sqImageFileAccess.h"
 #include "sqMacV2Memory.h"
 #include <sys/mman.h>
 #include <errno.h>
