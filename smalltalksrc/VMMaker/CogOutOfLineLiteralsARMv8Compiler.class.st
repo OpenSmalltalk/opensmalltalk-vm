@@ -48,7 +48,7 @@ CogOutOfLineLiteralsARMv8Compiler >> concretizeMoveC32R [
 		self shiftable16bitImmediate: (operands at: 0) negated - 1
 			ifTrue: [ :shift :value |
 					self machineCodeAt: 0 put: (self
-						movSize: 0
+						movSize: 1
 						destinationRegister: (operands at: 1)
 						negatedImm: value
 						shift: shift).
@@ -58,7 +58,7 @@ CogOutOfLineLiteralsARMv8Compiler >> concretizeMoveC32R [
 	self shiftable16bitImmediate: (operands at: 0)
 		ifTrue: [ :shift :value |
 				self machineCodeAt: 0 put: (self
-					movSize: 0
+					movSize: 1
 					destinationRegister: (operands at: 1)
 					imm: value
 					shift: shift).
