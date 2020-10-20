@@ -21,6 +21,7 @@ Class {
 		'CmpNotOpcode',
 		'CmpOpcode',
 		'ConcreteIPReg',
+		'ConcreteIPReg2',
 		'ConcretePCReg',
 		'ConcreteVarBaseReg',
 		'D0',
@@ -58,6 +59,7 @@ Class {
 		'R11',
 		'R12',
 		'R16',
+		'R17',
 		'R19',
 		'R2',
 		'R20',
@@ -1107,7 +1109,11 @@ CogARMv8Compiler >> computeMaximumSize [
 													ifTrue: [(operands at: 0) = SP
 														ifTrue: [ 8 ]
 														ifFalse: [ 4 ]]
-													ifFalse: [self literalLoadInstructionBytes + 4]].
+													ifFalse: [
+														^ ((operands at: 0) = SP
+															ifTrue: [ 4 ]
+															ifFalse: [ 0 ]) + 
+																self literalLoadInstructionBytes + 4]].
 		[MoveAbR]				-> [^(self isAddressRelativeToVarBase: (operands at: 0))
 													ifTrue: [4]
 													ifFalse: [self literalLoadInstructionBytes + 4]].
@@ -2287,12 +2293,12 @@ CogARMv8Compiler >> concretizeMoveRAw [
 	"Will get inlined into concretizeAt: switch."
 
 	<inline: true>
-	| srcReg destAddr instrOffset |
+	| srcReg destAddr instrOffset actualSourceRegister |
 	srcReg := operands at: 0.
 	destAddr := operands at: 1.
-	(self isAddressRelativeToVarBase: destAddr) ifTrue: [ | actualSourceRegister |
+	(self isAddressRelativeToVarBase: destAddr) ifTrue: [ | actualSourceRegister2 |
 		machineCodeSize := 0.
-		actualSourceRegister := srcReg = SP
+		actualSourceRegister2 := srcReg = SP
 			ifTrue: [ 
 				self
 					machineCodeAt: 0
@@ -2308,15 +2314,24 @@ CogARMv8Compiler >> concretizeMoveRAw [
 					strSize: 1
 					baseRegister: ConcreteVarBaseReg
 					positiveOffset: destAddr - cogit varBaseAddress
-					destinationRegister: actualSourceRegister).
+					destinationRegister: actualSourceRegister2).
 		^ machineCodeSize := machineCodeSize + 4 ].
 
 	"load the address into ConcreteIPReg"
 	instrOffset := self moveCw: destAddr intoR: ConcreteIPReg.
-	"We *could* overwrite the last instruction above with a LDR a, b, last-byte-of-srcAddr BUT that would break if we change to loading literals instead of forming long constants"
+	
+	actualSourceRegister := srcReg = SP
+		ifTrue: [ 
+				self
+					machineCodeAt: instrOffset
+					put: (self movToFromSP: ConcreteIPReg2 rn: SP).
+				instrOffset := instrOffset + 4.
+				ConcreteIPReg2 ]
+		ifFalse: [ srcReg ].
+	
 	self
 		machineCodeAt: instrOffset
-		put: (self strSize: 1 baseRegister: ConcreteIPReg positiveOffset: 0 destinationRegister: srcReg).
+		put: (self strSize: 1 baseRegister: ConcreteIPReg positiveOffset: 0 destinationRegister: actualSourceRegister).
 	^ machineCodeSize := instrOffset + 4
 ]
 
