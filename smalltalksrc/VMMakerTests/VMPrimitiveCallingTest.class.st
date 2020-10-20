@@ -474,6 +474,28 @@ VMPrimitiveCallingTest >> testNamedPrimitiveIsNotTracedIfNotCalled [
 
 ]
 
+{ #category : #'tests - primitiveFunctionPointer' }
+VMPrimitiveCallingTest >> testPrimitiveCallSetsPrimitiveFunctionPointerWhenCallingCImplementation [
+
+	| callingMethod |
+
+	callingMethod := self jitMethod: (self findMethod: #methodThatCallPrimitive1:).
+
+	self initStack.	
+
+	self 
+		callCogMethod: callingMethod 
+		receiver: memory nilObject 
+		arguments: {memory nilObject}
+		returnAddress: callerAddress.
+	
+	self 
+		assert: (cogit simulatedTrampolineFor: interpreter primitiveFunctionPointer) selector
+		equals: #primitiveAdd
+	
+
+]
+
 { #category : #'tests - retry primitive' }
 VMPrimitiveCallingTest >> testPrimitiveFailingWithAccessorDepthWithForwardersDoesRetry [
 
