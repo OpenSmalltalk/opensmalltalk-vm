@@ -2430,6 +2430,11 @@ CogVMSimulator >> maybeMapPrimitiveFunctionPointerBackToSomethingEvaluable [
 						   and: [(self pluginEntryFor: externalIndex) third == evaluable]).
 			 primitiveFunctionPointer := externalIndex.
 			 ^self]].
+	
+	(primitiveFunctionPointer isInteger and: [ 
+		cogit simulatedTrampolines includesKey: primitiveFunctionPointer ])
+		ifTrue: [ primitiveFunctionPointer := (cogit simulatedTrampolines at: primitiveFunctionPointer) selector  ].
+	
 	^super maybeMapPrimitiveFunctionPointerBackToSomethingEvaluable
 ]
 
@@ -2921,6 +2926,7 @@ CogVMSimulator >> primitiveFailCount: anInteger [
 CogVMSimulator >> primitiveFailCounting [
 
 	"This primitive always fails, but it counts the number of calls. Useful for tests"
+
 	primitiveFailCount := primitiveFailCount + 1.
 	self primitiveFail.
 	

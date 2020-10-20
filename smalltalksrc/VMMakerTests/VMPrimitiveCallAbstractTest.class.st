@@ -76,6 +76,16 @@ VMPrimitiveCallAbstractTest >> methodThatCallNamedPrimitive: anArg [
 ]
 
 { #category : #'methods under test' }
+VMPrimitiveCallAbstractTest >> methodThatCallNamedPrimitiveCounting: anArg [
+
+	"This method is used to test the invocation of a primitive.
+	The primitive to invoke is later changed in the primitive table of the interpreter used in the test"
+	<primitive: 'primitiveFailCounting'>
+	
+	^ 84
+]
+
+{ #category : #'methods under test' }
 VMPrimitiveCallAbstractTest >> methodThatCallPrimitive159 [
 
 	<primitive: 159>

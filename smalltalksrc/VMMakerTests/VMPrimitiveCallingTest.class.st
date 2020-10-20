@@ -61,6 +61,7 @@ VMPrimitiveCallingTest >> setUp [
 	
 	interpreter codeGeneratorToComputeAccessorDepth: (VMMockCodeGenerator for: interpreter).
 	interpreter codeGeneratorToComputeAccessorDepth addPrimitive: #primitiveThatDoNothingWithOneArgument.
+	interpreter codeGeneratorToComputeAccessorDepth initializeWithPrimitiveTable.
 ]
 
 { #category : #'tests - with tracing' }
@@ -285,6 +286,177 @@ VMPrimitiveCallingTest >> testCallingPrimitivesTakingTracesReturnsValidResults [
 	self assert: machineSimulator receiverRegisterValue equals: (memory integerObjectOf: 3)
 ]
 
+{ #category : #'tests - retry primitive' }
+VMPrimitiveCallingTest >> testNamedPrimitiveFailingWithAccessorDepthWithForwardersDoesRetry [
+
+	| callingMethod forwarder receiver |
+
+	interpreter primitiveFailCount: 0.
+	interpreter codeGeneratorToComputeAccessorDepth addPrimitive: #primitiveFailCounting accessorDepth: 1.
+
+	callingMethod := self jitMethod: (self findMethod: #methodThatCallNamedPrimitiveCounting:).
+
+	self initStack.	
+
+	forwarder := self newZeroSizedObject.
+	self keepObjectInVMVariable1: forwarder.
+
+	interpreter gcMode: GCModeNewSpace.
+	memory doScavenge: 1 "TenureByAge".
+
+	self assert: (memory isForwarded: forwarder).
+
+	receiver := self newObjectWithSlots: 1.
+	memory storePointer: 0 ofObject: receiver withValue: forwarder. 
+
+	self 
+		callCogMethod: callingMethod 
+		receiver: receiver 
+		arguments: {memory trueObject}
+		returnAddress: callerAddress.
+	
+	self assert: interpreter primitiveFailCount equals: 2.
+	
+
+]
+
+{ #category : #'tests - retry primitive' }
+VMPrimitiveCallingTest >> testNamedPrimitiveFailingWithAccessorDepthWithoutForwardersDoNotRetry [
+
+	| callingMethod |
+
+	interpreter primitiveFailCount: 0.
+	interpreter codeGeneratorToComputeAccessorDepth addPrimitive: #primitiveFailCounting accessorDepth: 1.
+
+	callingMethod := self jitMethod: (self findMethod: #methodThatCallNamedPrimitiveCounting:).
+
+	self initStack.	
+
+	self 
+		callCogMethod: callingMethod 
+		receiver: memory nilObject 
+		arguments: {memory nilObject}
+		returnAddress: callerAddress.
+	
+	self assert: interpreter primitiveFailCount equals: 1.
+	
+
+]
+
+{ #category : #'tests - retry primitive' }
+VMPrimitiveCallingTest >> testNamedPrimitiveFailingWithAccessorDepthZeroWithForwardersDoesNotRetry [
+
+	| callingMethod forwarder receiver |
+
+	interpreter primitiveFailCount: 0.
+	interpreter codeGeneratorToComputeAccessorDepth addPrimitive: #primitiveFailCounting accessorDepth: 0.
+
+	callingMethod := self jitMethod: (self findMethod: #methodThatCallNamedPrimitiveCounting:).
+
+	self initStack.	
+
+	forwarder := self newZeroSizedObject.
+	self keepObjectInVMVariable1: forwarder.
+
+	interpreter gcMode: GCModeNewSpace.
+	memory doScavenge: 1 "TenureByAge".
+
+	self assert: (memory isForwarded: forwarder).
+
+	receiver := self newObjectWithSlots: 1.
+	memory storePointer: 0 ofObject: receiver withValue: forwarder. 
+
+	self 
+		callCogMethod: callingMethod 
+		receiver: receiver 
+		arguments: {memory trueObject}
+		returnAddress: callerAddress.
+	
+	self assert: interpreter primitiveFailCount equals: 1.
+	
+
+]
+
+{ #category : #'tests - retry primitive' }
+VMPrimitiveCallingTest >> testNamedPrimitiveFailingWithAccessorDepthZeroWithoutForwardersDoNotRetry [
+
+	| callingMethod |
+
+	interpreter primitiveFailCount: 0.
+	interpreter codeGeneratorToComputeAccessorDepth addPrimitive: #primitiveFailCounting accessorDepth: 0.
+
+	callingMethod := self jitMethod: (self findMethod: #methodThatCallNamedPrimitiveCounting:).
+
+	self initStack.	
+
+	self 
+		callCogMethod: callingMethod 
+		receiver: memory nilObject 
+		arguments: {memory nilObject}
+		returnAddress: callerAddress.
+	
+	self assert: interpreter primitiveFailCount equals: 1.
+	
+
+]
+
+{ #category : #'tests - retry primitive' }
+VMPrimitiveCallingTest >> testNamedPrimitiveFailingWithNegativeAccessorDepthWithForwardersDoNotRetry [
+
+	| callingMethod forwarder receiver |
+
+	interpreter primitiveFailCount: 0.
+	interpreter codeGeneratorToComputeAccessorDepth addPrimitive: #primitiveFailCounting accessorDepth: -1.
+
+	callingMethod := self jitMethod: (self findMethod: #methodThatCallNamedPrimitiveCounting:).
+
+	self initStack.	
+
+	forwarder := self newZeroSizedObject.
+	self keepObjectInVMVariable1: forwarder.
+
+	interpreter gcMode: GCModeNewSpace.
+	memory doScavenge: 1 "TenureByAge".
+
+	self assert: (memory isForwarded: forwarder).
+
+	receiver := self newObjectWithSlots: 1.
+	memory storePointer: 0 ofObject: receiver withValue: forwarder. 
+
+	self 
+		callCogMethod: callingMethod 
+		receiver: receiver 
+		arguments: {memory trueObject}
+		returnAddress: callerAddress.
+	
+	self assert: interpreter primitiveFailCount equals: 1.
+	
+
+]
+
+{ #category : #'tests - retry primitive' }
+VMPrimitiveCallingTest >> testNamedPrimitiveFailingWithNegativeAccessorDepthWithoutForwardersDoNotRetry [
+
+	| callingMethod |
+
+	interpreter primitiveFailCount: 0.
+	interpreter codeGeneratorToComputeAccessorDepth addPrimitive: #primitiveFailCounting accessorDepth: -1.
+
+	callingMethod := self jitMethod: (self findMethod: #methodThatCallNamedPrimitiveCounting:).
+
+	self initStack.	
+
+	self 
+		callCogMethod: callingMethod 
+		receiver: memory nilObject 
+		arguments: {memory nilObject}
+		returnAddress: callerAddress.
+	
+	self assert: interpreter primitiveFailCount equals: 1.
+	
+
+]
+
 { #category : #'tests - with tracing' }
 VMPrimitiveCallingTest >> testNamedPrimitiveIsNotTracedIfNotCalled [
 
@@ -303,24 +475,34 @@ VMPrimitiveCallingTest >> testNamedPrimitiveIsNotTracedIfNotCalled [
 ]
 
 { #category : #'tests - retry primitive' }
-VMPrimitiveCallingTest >> testPrimitiveFailingWithAccessorDepthRetriesOnFailure [
+VMPrimitiveCallingTest >> testPrimitiveFailingWithAccessorDepthWithForwardersDoesRetry [
 
-	| callingMethod |
+	| callingMethod forwarder receiver |
 
 	"Patching the primitive to remove primitiveFunction"
-	interpreter primitiveFailCount: 1.
+	interpreter primitiveFailCount: 0.
 	interpreter primitiveTable at: 1 + 1 put: #primitiveFailCounting.
+	interpreter primitiveAccessorDepthTable at: 1 put: 1.
 
 	callingMethod := self jitMethod: (self findMethod: #methodThatCallPrimitive1:).
 
 	self initStack.	
 
-	1halt.
+	forwarder := self newZeroSizedObject.
+	self keepObjectInVMVariable1: forwarder.
+
+	interpreter gcMode: GCModeNewSpace.
+	memory doScavenge: 1 "TenureByAge".
+
+	self assert: (memory isForwarded: forwarder).
+
+	receiver := self newObjectWithSlots: 1.
+	memory storePointer: 0 ofObject: receiver withValue: forwarder. 
 
 	self 
 		callCogMethod: callingMethod 
-		receiver: memory nilObject 
-		arguments: {memory nilObject}
+		receiver: receiver 
+		arguments: {memory trueObject}
 		returnAddress: callerAddress.
 	
 	self assert: interpreter primitiveFailCount equals: 2.
@@ -329,14 +511,136 @@ VMPrimitiveCallingTest >> testPrimitiveFailingWithAccessorDepthRetriesOnFailure 
 ]
 
 { #category : #'tests - retry primitive' }
-VMPrimitiveCallingTest >> testPrimitiveFailingWithAccessorDepthZeroDoesNotRetry [
+VMPrimitiveCallingTest >> testPrimitiveFailingWithAccessorDepthWithoutForwardersDoNotRetry [
 
 	| callingMethod |
 
 	"Patching the primitive to remove primitiveFunction"
 	interpreter primitiveFailCount: 0.
-	interpreter class primitiveAccessorDepthTable at: 1 + 1 put: 0.
 	interpreter primitiveTable at: 1 + 1 put: #primitiveFailCounting.
+	interpreter primitiveAccessorDepthTable at: 1 put: 1.
+
+	callingMethod := self jitMethod: (self findMethod: #methodThatCallPrimitive1:).
+
+	self initStack.	
+
+	self 
+		callCogMethod: callingMethod 
+		receiver: memory nilObject 
+		arguments: {memory nilObject}
+		returnAddress: callerAddress.
+	
+	self assert: interpreter primitiveFailCount equals: 1.
+	
+
+]
+
+{ #category : #'tests - retry primitive' }
+VMPrimitiveCallingTest >> testPrimitiveFailingWithAccessorDepthZeroWithForwardersDoesNotRetry [
+
+	| callingMethod forwarder receiver |
+
+	"Patching the primitive to remove primitiveFunction"
+	interpreter primitiveFailCount: 0.
+	interpreter primitiveTable at: 1 + 1 put: #primitiveFailCounting.
+	interpreter primitiveAccessorDepthTable at: 1 put: 0.
+
+	callingMethod := self jitMethod: (self findMethod: #methodThatCallPrimitive1:).
+
+	self initStack.	
+
+	forwarder := self newZeroSizedObject.
+	self keepObjectInVMVariable1: forwarder.
+
+	interpreter gcMode: GCModeNewSpace.
+	memory doScavenge: 1 "TenureByAge".
+
+	self assert: (memory isForwarded: forwarder).
+
+	receiver := self newObjectWithSlots: 1.
+	memory storePointer: 0 ofObject: receiver withValue: forwarder. 
+
+	self 
+		callCogMethod: callingMethod 
+		receiver: receiver 
+		arguments: {memory trueObject}
+		returnAddress: callerAddress.
+	
+	self assert: interpreter primitiveFailCount equals: 1.
+	
+
+]
+
+{ #category : #'tests - retry primitive' }
+VMPrimitiveCallingTest >> testPrimitiveFailingWithAccessorDepthZeroWithoutForwardersDoNotRetry [
+
+	| callingMethod |
+
+	"Patching the primitive to remove primitiveFunction"
+	interpreter primitiveFailCount: 0.
+	interpreter primitiveAccessorDepthTable at: 1 put: 0.
+	interpreter primitiveTable at: 1 + 1 put: #primitiveFailCounting.
+
+	callingMethod := self jitMethod: (self findMethod: #methodThatCallPrimitive1:).
+
+	self initStack.	
+
+	self 
+		callCogMethod: callingMethod 
+		receiver: memory nilObject 
+		arguments: {memory nilObject}
+		returnAddress: callerAddress.
+	
+	self assert: interpreter primitiveFailCount equals: 1.
+	
+
+]
+
+{ #category : #'tests - retry primitive' }
+VMPrimitiveCallingTest >> testPrimitiveFailingWithNegativeAccessorDepthWithForwardersDoNotRetry [
+
+	| callingMethod forwarder receiver |
+
+	"Patching the primitive to remove primitiveFunction"
+	interpreter primitiveFailCount: 0.
+	interpreter primitiveTable at: 1 + 1 put: #primitiveFailCounting.
+	interpreter primitiveAccessorDepthTable at: 1 put: -1.
+
+	callingMethod := self jitMethod: (self findMethod: #methodThatCallPrimitive1:).
+
+	self initStack.	
+
+	forwarder := self newZeroSizedObject.
+	self keepObjectInVMVariable1: forwarder.
+
+	interpreter gcMode: GCModeNewSpace.
+	memory doScavenge: 1 "TenureByAge".
+
+	self assert: (memory isForwarded: forwarder).
+
+	receiver := self newObjectWithSlots: 1.
+	memory storePointer: 0 ofObject: receiver withValue: forwarder. 
+
+	self 
+		callCogMethod: callingMethod 
+		receiver: receiver 
+		arguments: {memory trueObject}
+		returnAddress: callerAddress.
+	
+	self assert: interpreter primitiveFailCount equals: 1.
+	
+
+]
+
+{ #category : #'tests - retry primitive' }
+VMPrimitiveCallingTest >> testPrimitiveFailingWithNegativeAccessorDepthWithoutForwardersDoNotRetry [
+
+	| callingMethod |
+
+	"Patching the primitive to remove primitiveFunction"
+	interpreter primitiveFailCount: 0.
+	interpreter primitiveTable at: 1 + 1 put: #primitiveFailCounting.
+	interpreter primitiveAccessorDepthTable at: 1 put: -1.
 
 	callingMethod := self jitMethod: (self findMethod: #methodThatCallPrimitive1:).
 

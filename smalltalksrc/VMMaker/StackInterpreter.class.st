@@ -15843,7 +15843,7 @@ StackInterpreter >> maybeMapPrimitiveFunctionPointerBackToSomethingEvaluable [
 												ifAbsent: [self error: 'entry not found']).
 		 self assert: ((self pluginEntryFor: externalIndex) notNil
 					   and: [(self pluginEntryFor: externalIndex) second == primitiveFunctionPointer]).
-		 primitiveFunctionPointer := externalIndex]
+		 primitiveFunctionPointer := externalIndex ]
 ]
 
 { #category : #'primitive support' }
