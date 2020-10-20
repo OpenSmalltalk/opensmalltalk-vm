@@ -590,7 +590,6 @@ VMJittedGeneralPrimitiveTest >> testPrimitiveAsFloatIsCompleteWhenReceiverTagIsS
 	| result |
 	
 	self setUpCogMethodEntry.
-	cogit lastNInstructions: OrderedCollection new.	
 	
 	cogit receiverTags: memory smallIntegerTag.
 	

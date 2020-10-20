@@ -721,6 +721,7 @@ VMSimpleStackBasedCogitAbstractTest >> setUp [
 	cogit cogCodeBase: initialAddress.
 	memory coInterpreter cogCodeSize: self initialCodeSize.
 	memory coInterpreter heapBase: memory newSpaceStart.
+	cogit initializeProcessor.
 	cogit generateStackPointerCapture.
 	cogit methodZone manageFrom: cogit cogCodeBase to: initialAddress + self initialCodeSize.
 

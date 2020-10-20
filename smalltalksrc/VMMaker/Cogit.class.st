@@ -8837,8 +8837,7 @@ Cogit >> isBackwardBranch: descriptor at: pc exts: nExts in: aMethodObj [
 { #category : #initialization }
 Cogit >> isCFramePointerInUse [
 	<doNotGenerate>
-	"This should be implemented externally, e.g. in sqPlatMain.c."
-	^true
+	^ cFramePointerInUse
 ]
 
 { #category : #'bytecode generator support' }

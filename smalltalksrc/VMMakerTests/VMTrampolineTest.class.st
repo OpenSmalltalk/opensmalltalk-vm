@@ -109,6 +109,28 @@ VMTrampolineTest >> testCallEnilopmartSucceedsExecution [
 ]
 
 { #category : #tests }
+VMTrampolineTest >> testDetectFrameNotPointerInUse [
+
+	"The code in generateStackPointerCapture detects if the C Frame pointer is in use.
+	If we use the simulation mode that does not update it, the VM should detect it is not in use"
+	cogit simulateFPInUse: false.
+	self compileWithoutOutput: [ cogit generateStackPointerCapture ] bytecodes: 10.
+	
+	self deny: cogit isCFramePointerInUse
+]
+
+{ #category : #tests }
+VMTrampolineTest >> testDetectFramePointerInUse [
+
+	"The code in generateStackPointerCapture detects if the C Frame pointer is in use.
+	If we use the simulation mode that does not update it, the VM should detect it is not in use"
+	cogit simulateFPInUse: true.
+	self compileWithoutOutput: [ cogit generateStackPointerCapture ] bytecodes: 10.
+	
+	self assert: cogit isCFramePointerInUse
+]
+
+{ #category : #tests }
 VMTrampolineTest >> testLoadStackPointersShouldLoadFramePointer [
 	
 	self compile: [ cogit backend genLoadStackPointers ].
