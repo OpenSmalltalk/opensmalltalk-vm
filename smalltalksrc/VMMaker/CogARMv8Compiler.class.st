@@ -1739,17 +1739,16 @@ CogARMv8Compiler >> concretizeDataOperationRR: armOpcode [
 
 { #category : #'generate machine code - concretize' }
 CogARMv8Compiler >> concretizeDivRdRd [
-	"Will get inlined into concretizeAt: switch."
-
 	"FP divide regLHS by regRHS and stick result in regLHS"
 
 	<inline: true>
-	| regLHS regRHS |
-	self halt.
-	1 halt.
-	regRHS := operands at: 0.
-	regLHS := operands at: 1.
-	machineCode at: 0 put: (self fdivd: regLHS by: regRHS).
+	| registerA registerB destinationRegister |
+	registerA := operands at: 0.
+	destinationRegister := registerB := operands at: 1.
+	machineCode at: 0 put: (self
+		fDivFirstRegister: registerA
+		secondRegister: registerB
+		destinationRegister: destinationRegister).
 	^ machineCodeSize := 4
 ]
 
@@ -2627,8 +2626,6 @@ CogARMv8Compiler >> concretizeMoveXwrRR [
 
 { #category : #'generate machine code - concretize' }
 CogARMv8Compiler >> concretizeMulRdRd [
-	"Will get inlined into concretizeAt: switch."
-
 	"FP multiply regLHS by regRHS and stick result in regLHS"
 
 	<inline: true>
@@ -3021,15 +3018,16 @@ CogARMv8Compiler >> concretizeSubRR [
 
 { #category : #'generate machine code - concretize' }
 CogARMv8Compiler >> concretizeSubRdRd [
-	"Will get inlined into concretizeAt: switch."
+	"FP substract registerA from registerB and stick result in registerB"
 
 	<inline: true>
-	| regLHS regRHS |
-	"Subtract FP regRHS from FP regLHS and leave the result in FP regLHS"
-	self halt.
-	regRHS := operands at: 0.
-	regLHS := operands at: 1.
-	machineCode at: 0 put: (self fsubd: regLHS with: regRHS).
+	| registerA registerB destinationRegister |
+	registerA := operands at: 0.
+	destinationRegister := registerB := operands at: 1.
+	machineCode at: 0 put: (self
+		fSubFirstRegister: registerB
+		secondRegister: registerA
+		destinationRegister: destinationRegister).
 	^ machineCodeSize := 4
 ]
 
@@ -3272,8 +3270,18 @@ CogARMv8Compiler >> encodeLogicalImmediate: immediate registerSize: registerSize
 	
 	https://dinfuehr.github.io/blog/encoding-of-immediate-values-on-aarch64/
 	"
-
 	<inline: #always>
+	<var: #immediate type: 'uint64_t'>
+	<var: #maskedImmediate type: 'uint64_t'>
+
+	<var: #size type: 'uint64_t'>
+	<var: #trailingZeros type: #'uint32_t'>
+	<var: #trailingOnes type: #'uint32_t'>
+	<var: #mask type: #'uint64_t'>
+	<var: #leadingOnes type: #'uint32_t'>
+	<var: #immr type: #'uint32_t'>
+	<var: #nimms type: #'uint64_t'>
+	<var: #n type: #'uint32_t'>
 
 	| size mask maskedImmediate trailingZeros trailingOnes leadingOnes immr nimms n |
 
@@ -3303,12 +3311,12 @@ CogARMv8Compiler >> encodeLogicalImmediate: immediate registerSize: registerSize
 	].
 
 	immr := (size - trailingZeros) bitAnd: (size - 1).
-	nimms := (size-1) bitInvert64 << 1.
+	nimms := (size-1) bitInvert64 << 1 bitAnd: 16rFFFFFFFFFFFFFFFF.
 	nimms := nimms bitOr: trailingOnes - 1.
 	
 	n := ((nimms >> 6) bitAnd: 1) bitXor: 1.
 	
-	^ aBlockWithEncoding value: ((n << 12) bitOr: (immr << 6 bitOr: nimms & 16r3f))
+	^ aBlockWithEncoding value: ((n << 12) bitOr: (immr << 6 bitOr: (nimms bitAnd: 16r3f)))
 ]
 
 { #category : #'as yet unclassified' }
@@ -3405,6 +3413,24 @@ CogARMv8Compiler >> extractOffsetFromConditionalBranch: instruction [
 		ifFalse: [ twoComplement << 2 ]
 ]
 
+{ #category : #assembler }
+CogARMv8Compiler >> fDivFirstRegister: registerA secondRegister: registerB destinationRegister: destinationRegister [ 
+
+	"C7.2.98 FDIV (scalar)
+	
+	Floating-point Divide (scalar). This instruction divides the floating-point value of the first source SIMD&FP register by the floating-point value of the second source SIMD&FP register, and writes the result to the destination SIMD&FP register.
+	
+	FDIV <Dd>, <Dn>, <Dm>"
+	
+	^ 2r1111 << 25
+		bitOr: (2r01 "double precision variant only" << 22
+		bitOr: (2r1 << 21
+		bitOr: (((registerB bitAnd: 16r1f) << 16)
+		bitOr: (2r11 << 11
+		bitOr: (((registerA bitAnd: 16r1f) << 5)
+		bitOr: (destinationRegister bitAnd: 16r1f))))))
+]
+
 { #category : #'as yet unclassified' }
 CogARMv8Compiler >> fMoveSize: is64Bits fromDoublePrecisionFloatRegister: sourceDoublePrecisionFloatRegister toScalarRegister: destinationScalarRegister [
 	
@@ -3458,6 +3484,24 @@ CogARMv8Compiler >> fMulFirstRegister: registerA secondRegister: registerB desti
 		bitOr: (2r1 << 21
 		bitOr: (((registerB bitAnd: 16r1f) << 16)
 		bitOr: (2r1 << 11
+		bitOr: (((registerA bitAnd: 16r1f) << 5)
+		bitOr: (destinationRegister bitAnd: 16r1f))))))
+]
+
+{ #category : #assembler }
+CogARMv8Compiler >> fSubFirstRegister: registerA secondRegister: registerB destinationRegister: destinationRegister [
+
+	"C7.2.174 FSUB (scalar)
+	
+	Floating-point Subtract (scalar). This instruction subtracts the floating-point value of the second source SIMD&FP register from the floating-point value of the first source SIMD&FP register, and writes the result to the destination SIMD&FP register.
+	
+	FSUB <Dd>, <Dn>, <Dm>"
+	
+	^ 2r1111 << 25
+		bitOr: (2r01 "double precision variant only" << 22
+		bitOr: (2r1 << 21
+		bitOr: (((registerB bitAnd: 16r1f) << 16)
+		bitOr: (2r111 << 11
 		bitOr: (((registerA bitAnd: 16r1f) << 5)
 		bitOr: (destinationRegister bitAnd: 16r1f))))))
 ]
@@ -3620,6 +3664,30 @@ CogARMv8Compiler >> fullCallsAreRelative [
 	 compation. If so, they are annotated with IsRelativeCall in methods and relocated in
 	 relocateIfCallOrMethodReference:mcpc:delta:"
 	^false
+]
+
+{ #category : #abi }
+CogARMv8Compiler >> genCaptureCStackPointers: captureFramePointer [
+
+	"Save the register to a caller-saved register.
+	The caller may have been using the same register for something else.
+	So we need to save it and restore it later.
+	Make sure to reuse a caller-saved register: we can reuse it freely"
+	self hasVarBaseRegister ifTrue:
+		[cogit
+			MoveR: VarBaseReg R: R1;
+			MoveCq: cogit varBaseAddress R: VarBaseReg].
+	captureFramePointer ifTrue:
+		[cogit MoveR: FPReg Aw: cogit cFramePointerAddress].
+
+	"Capture the stack pointer prior to the call"
+	cogit MoveR: self cStackPointer Aw: cogit cStackPointerAddress.
+	
+	"Restore the base register for our caller"
+	self hasVarBaseRegister ifTrue:
+		[cogit MoveR: R1 R: VarBaseReg].
+
+	cogit RetN: 0.
 ]
 
 { #category : #'abstract instructions' }

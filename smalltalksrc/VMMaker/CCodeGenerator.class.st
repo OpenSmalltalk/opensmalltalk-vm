@@ -5225,6 +5225,10 @@ CCodeGenerator >> sizeOfIntegralCType: anIntegralCType [ "<String>"
 		['long']		->	[BytesPerWord]. "It's ambiguous on LLP64 and we'll later remove it"
 		['size_t']	->	[BytesPerWord].
 		['pid_t']		->	[BytesPerWord].
+		
+		"Standard C types"
+		['uint64_t']		->	[8].
+		['uint32_t']		->	[4].
 	}
 	otherwise:
 		[((anIntegralCType beginsWith: 'unsigned') "e.g. 'unsigned  : 8'"

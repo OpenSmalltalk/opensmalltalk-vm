@@ -159,7 +159,7 @@ SocketPluginSimulator >> socketInit [
 { #category : #simulation }
 SocketPluginSimulator >> sqNetworkInit: resolverSemaIndex [
 	"Simply assume the network is initialized."
-	(NetNameResolver classPool at: #HaveNetwork) ifFalse:
+	(NetNameResolver classPool at: #HaveNetwork) ifNil:
 		[NetNameResolver initializeNetwork].
 	resolverSemaphoreIndex
 		ifNil: [resolverSemaphoreIndex := resolverSemaIndex]
