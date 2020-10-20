@@ -69,11 +69,11 @@ extern SqueakOSXAppDelegate *gDelegateApp;
     NSURL *url = [NSURL URLWithString: urlString];
     [[NSWorkspace sharedWorkspace] openURL: url];
 }
-#endif
 
 - (void)orderFrontStandardAboutPanel:(id)sender;
 {
     [super orderFrontStandardAboutPanel: sender];
     [gDelegateApp.squeakApplication setAboutWindow: [self keyWindow]];
 }
+#endif
 @end
