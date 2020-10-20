@@ -44,10 +44,7 @@ VMJittedPrimitivesTest >> new32BitIndexableOfSize: aSize [
 { #category : #helpers }
 VMJittedPrimitivesTest >> new64BitIndexableOfSize: aSize [
 
-	^ memory
-		allocateNewSpaceSlots: aSize
-		format: memory sixtyFourBitIndexableFormat
-		classIndex: self nextOrdinaryClassIndex.
+	^ self newBitIndexableOfSize: aSize bytesPerSlot: 8 format: memory sixtyFourBitIndexableFormat
 ]
 
 { #category : #helpers }

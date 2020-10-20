@@ -407,15 +407,19 @@ VMJittedGeneralPrimitiveTest >> testGetNumberOfSlotsOf32BitIndexableWithPadding 
 { #category : #'tests - support' }
 VMJittedGeneralPrimitiveTest >> testGetNumberOfSlotsOf64BitIndexable [
 
+	| desiredSlots |
+	
+	desiredSlots := 7.
+
 	self compile: [
 		cogit objectRepresentation
 			genGetNumSlotsOf: ReceiverResultReg
 			into: Arg0Reg ].
 
-	machineSimulator receiverRegisterValue: (self new64BitIndexableOfSize: 7).
+	machineSimulator receiverRegisterValue: (self new64BitIndexableOfSize: desiredSlots).
 	self runGeneratedCode.
 
-	self assert: machineSimulator argument0RegisterValue equals: 7
+	self assert: machineSimulator argument0RegisterValue equals: (desiredSlots * 8 / self wordSize)
 ]
 
 { #category : #'tests - support' }
