@@ -15843,7 +15843,7 @@ StackInterpreter >> maybeMapPrimitiveFunctionPointerBackToSomethingEvaluable [
 												ifAbsent: [self error: 'entry not found']).
 		 self assert: ((self pluginEntryFor: externalIndex) notNil
 					   and: [(self pluginEntryFor: externalIndex) second == primitiveFunctionPointer]).
-		 primitiveFunctionPointer := externalIndex]
+		 primitiveFunctionPointer := externalIndex ]
 ]
 
 { #category : #'primitive support' }
@@ -16949,6 +16949,11 @@ StackInterpreter >> primitiveFloatSubtract: rcvrOop fromArg: argOop [
 	arg := objectMemory loadFloatOrIntFrom: argOop.
 	self successful ifTrue:
 		[self pop: 2 thenPushFloat: rcvr - arg]
+]
+
+{ #category : #accessing }
+StackInterpreter >> primitiveFunctionPointer [
+	^ primitiveFunctionPointer
 ]
 
 { #category : #'compiled methods' }

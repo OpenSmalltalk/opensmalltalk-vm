@@ -3,8 +3,7 @@ Class {
 	#superclass : #Object,
 	#instVars : [
 		'interpreter',
-		'addedPrimitives',
-		'codeGenerator'
+		'addedPrimitives'
 	],
 	#category : #'VMMakerTests-JitTests'
 }
@@ -20,41 +19,41 @@ VMMockCodeGenerator class >> for: aCogVMSimulatorLSB [
 { #category : #'as yet unclassified' }
 VMMockCodeGenerator >> accessorDepthForSelector: aString [ 
 	
-	(addedPrimitives includes: aString) 
-		ifTrue: [ ^ -1 ].
+	^ addedPrimitives at: aString 
 	
-	^ self codeGenerator accessorDepthForSelector: aString
+	
 ]
 
 { #category : #'as yet unclassified' }
 VMMockCodeGenerator >> addPrimitive: aSelector [ 
 	
-	addedPrimitives add: aSelector
+	self addPrimitive: aSelector accessorDepth: -1
 ]
 
 { #category : #'as yet unclassified' }
-VMMockCodeGenerator >> codeGenerator [
+VMMockCodeGenerator >> addPrimitive: aSelector accessorDepth: aDepth [
 	
-	^ codeGenerator ifNil: [ 
-		codeGenerator := (VMMaker new
-			buildCodeGeneratorForInterpreter: CoInterpreterPrimitives
-			includeAPIMethods: false
-			initializeClasses: false)
-				logger: Transcript;
-				yourself ]
+	addedPrimitives at: aSelector put: aDepth
 ]
 
 { #category : #'as yet unclassified' }
 VMMockCodeGenerator >> exportedPrimitiveNames [
 
-	^ codeGenerator exportedPrimitiveNames ,
-	  (addedPrimitives collect: [ :e | e -> e ]) asDictionary
+	^ (addedPrimitives keys collect: [ :e | e -> e ]) asDictionary
 ]
 
 { #category : #initialization }
 VMMockCodeGenerator >> initialize [ 
 
-	addedPrimitives := OrderedCollection new
+	addedPrimitives := Dictionary new
+]
+
+{ #category : #'as yet unclassified' }
+VMMockCodeGenerator >> initializeWithPrimitiveTable [
+
+	interpreter primitiveTable
+		select: [ :aSelector | aSelector isSymbol ]
+		thenDo: [ :aSelector | self addPrimitive: aSelector ]
 ]
 
 { #category : #'as yet unclassified' }

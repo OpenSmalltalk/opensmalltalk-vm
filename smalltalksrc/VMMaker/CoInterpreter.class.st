@@ -1400,6 +1400,7 @@ CoInterpreter >> ceCheckAndMaybeRetryPrimitive: primIndex [
 	<api>
 	<option: #SpurObjectMemory>
 	| retried |
+	
 	cogit recordPrimTrace ifTrue:
 		[self fastLogPrim: TracePrimitiveFailure].
 	retried := self retryPrimitiveOnFailure.
@@ -3575,6 +3576,13 @@ CoInterpreter >> gcMode [
 	^gcMode
 ]
 
+{ #category : #'as yet unclassified' }
+CoInterpreter >> gcMode: anInteger [ 
+
+	<doNotGenerate>
+	gcMode := anInteger
+]
+
 { #category : #'cog jit support' }
 CoInterpreter >> getCheckAllocFiller [
 	<api>
@@ -5720,6 +5728,14 @@ CoInterpreter >> primTraceLogIndexAddress [
 	"N.B. primTraceLogIndex is 8-bits"
 	^self cCode: [(self addressOf: primTraceLogIndex) asUnsignedInteger]
 		inSmalltalk: [cogit simulatedReadWriteVariableAddress: #primTraceLogIndex in: self]
+]
+
+{ #category : #'as yet unclassified' }
+CoInterpreter >> primitiveAccessorDepthTable [
+	
+	<doNotGenerate>
+	
+	^ primitiveAccessorDepthTable
 ]
 
 { #category : #'as yet unclassified' }

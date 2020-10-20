@@ -114,6 +114,10 @@ VMTrampolineTest >> testDetectFrameNotPointerInUse [
 	"The code in generateStackPointerCapture detects if the C Frame pointer is in use.
 	If we use the simulation mode that does not update it, the VM should detect it is not in use"
 	cogit simulateFPInUse: false.
+	
+	"This routine is always called by C, so this is always aligned"
+	machineSimulator stackPointerRegisterValue: (machineSimulator stackPointerRegisterValue bitAnd: -16). 
+	
 	self compileWithoutOutput: [ cogit generateStackPointerCapture ] bytecodes: 10.
 	
 	self deny: cogit isCFramePointerInUse
@@ -125,6 +129,10 @@ VMTrampolineTest >> testDetectFramePointerInUse [
 	"The code in generateStackPointerCapture detects if the C Frame pointer is in use.
 	If we use the simulation mode that does not update it, the VM should detect it is not in use"
 	cogit simulateFPInUse: true.
+	
+	"This routine is always called by C, so this is always aligned"
+	machineSimulator stackPointerRegisterValue: (machineSimulator stackPointerRegisterValue bitAnd: -16). 
+	
 	self compileWithoutOutput: [ cogit generateStackPointerCapture ] bytecodes: 10.
 	
 	self assert: cogit isCFramePointerInUse

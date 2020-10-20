@@ -27,6 +27,12 @@ UnicornX64Simulator >> baseRegister [
 ]
 
 { #category : #'as yet unclassified' }
+UnicornX64Simulator >> cResultRegister [
+	
+	^ self rax
+]
+
+{ #category : #'as yet unclassified' }
 UnicornX64Simulator >> cReturnRegisterValue: anInteger [ 
 	
 	self rax: anInteger
@@ -99,6 +105,12 @@ UnicornX64Simulator >> initializeRegisterAliases [
 UnicornX64Simulator >> instructionPointerRegister [
 	
 	^ UcX86Registers rip
+]
+
+{ #category : #'as yet unclassified' }
+UnicornX64Simulator >> integerRegisterState [
+	
+	^ #()
 ]
 
 { #category : #'as yet unclassified' }

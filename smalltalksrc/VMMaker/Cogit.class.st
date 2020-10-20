@@ -8431,6 +8431,11 @@ Cogit >> handleABICallOrJumpSimulationTrap: aProcessorSimulationTrap evaluable: 
 	| addressToReturn |
 	self assert: (aProcessorSimulationTrap type = #call or: [ aProcessorSimulationTrap type = #jump]).
 
+	"I am implemented for ARMv5 only"
+	addressToReturn := processor hasLinkRegister 
+		ifTrue: [ processor linkRegisterValue ] 
+		ifFalse: [ 1halt. ].
+
 	processor
 		simulateLeafCallOf: aProcessorSimulationTrap address
 		nextpc: 16rBADF00D
@@ -8441,11 +8446,6 @@ Cogit >> handleABICallOrJumpSimulationTrap: aProcessorSimulationTrap evaluable: 
 										in: coInterpreter memory).
 
 	evaluable numArgs < 4 ifFalse: [ 1 halt  "If we have more parameters than the ones that fit in the registers"].
-
-	"I am implemented for ARMv5 only"
-	addressToReturn := processor hasLinkRegister 
-		ifTrue: [ processor linkRegisterValue ] 
-		ifFalse: [ 1halt. ].
 
 	processor pc: addressToReturn
 ]
@@ -11867,19 +11867,19 @@ Cogit >> simulateLeafCallOf: someFunction [
 	self recordRegisters.
 
 	spOnEntry := processor sp.
-		
+	
 	processor
 		simulateLeafCallOf: someFunction
-		nextpc: 16rBADF00D5
+		nextpc: 16rBADF00D0
 		memory: coInterpreter memory.
 	
 	singleStep 
 		ifTrue: [ self notYetImplemented ].
 		
-	processor runUntil: 16rBADF00D5.
+	processor runUntil: 16rBADF00D0.
 
 	self assert: processor sp = spOnEntry.
-	self assert: processor pc = 16rBADF00D5.
+	self assert: processor pc = 16rBADF00D0.
 	
 	self recordRegisters.	
 	^processor cResultRegister
