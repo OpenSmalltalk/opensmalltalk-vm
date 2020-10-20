@@ -157,6 +157,7 @@ CogARMv8Compiler class >> initialize [
 	R12 := 12.
 	
 	R16 := 16.
+	R17 := 17.
 
 	R19 := 19.
 	R20 := 20.
@@ -185,7 +186,9 @@ CogARMv8Compiler class >> initialize [
 	CArg3Reg := 3.
 
 	ConcreteVarBaseReg := R24.
-	ConcreteIPReg := R16. "IP, The Intra-Procedure-call scratch register."
+	"X16 and X17 are the Intra procedural scratch registers"
+	ConcreteIPReg := R16.
+	ConcreteIPReg2 := R17.
 
 	"C3.1.1 Conditional branch
 	Conditional branches change the flow of execution depending on the current state of the Condition flags or the value in a general-purpose register."
