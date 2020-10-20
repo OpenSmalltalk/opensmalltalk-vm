@@ -1145,6 +1145,17 @@ VMClass >> safe: signedInteger mod: positiveModulus [
 		ifFalse: [remainder]
 ]
 
+{ #category : #'translation support' }
+VMClass >> simulationOnly: aBlock [
+
+	"Evaluate piece of code only during simulation.
+	This should get translated as a NOP"
+	<inline: #always>
+	self
+		cCode: [  ]
+		inSmalltalk: aBlock
+]
+
 { #category : #'memory access' }
 VMClass >> singleFloatAtPointer: pointer [
 	<doNotGenerate>

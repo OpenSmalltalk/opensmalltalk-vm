@@ -79,6 +79,12 @@ UnicornProcessor >> fp [
 	^ machineSimulator framePointerRegisterValue
 ]
 
+{ #category : #registers }
+UnicornProcessor >> fp: aValue [
+
+	^ machineSimulator framePointerRegisterValue: aValue
+]
+
 { #category : #'as yet unclassified' }
 UnicornProcessor >> hasLinkRegister [
 	
@@ -144,10 +150,22 @@ UnicornProcessor >> pc: anInteger [
 	^ machineSimulator instructionPointerValue: anInteger
 ]
 
+{ #category : #'stack-management' }
+UnicornProcessor >> popWord [
+	
+	^ machineSimulator popWord
+]
+
 { #category : #'as yet unclassified' }
 UnicornProcessor >> postCallArgumentsNumArgs: anInteger in: aSpurSimulatedMemory [ 
 	
 	^ machineSimulator postCallArgumentsNumArgs: anInteger in: aSpurSimulatedMemory
+]
+
+{ #category : #'stack-management' }
+UnicornProcessor >> pushWord: anInteger [ 
+	
+	machineSimulator pushWord: anInteger
 ]
 
 { #category : #'as yet unclassified' }

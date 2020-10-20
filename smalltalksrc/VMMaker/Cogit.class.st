@@ -268,7 +268,8 @@ Class {
 		'debugOpcodeIndices',
 		'disassemblingMethod',
 		'cogConstituentIndex',
-		'directedSendUsesBinding'
+		'directedSendUsesBinding',
+		'simulateFPInUse'
 	],
 	#classVars : [
 		'AltBlockCreationBytecodeSize',
@@ -3860,17 +3861,9 @@ Cogit >> ceCannotResumePC [
 Cogit >> ceCaptureCStackPointers [
 	<api: 'extern void (*ceCaptureCStackPointers)()'>
 	<doNotGenerate>
-	| range |
-	coInterpreter isThreadedVM ifFalse:
-		[^self].
-	thisContext sender selector == #generateStackPointerCapture ifTrue:
-		[^self].
-	range := coInterpreter cStackRangeForThreadIndex: coInterpreter threadManager getVMOwner.
-	self assert: (range notNil "VM is owned"
-				and: [(range includes: processor sp)
-				and: [range includes: processor fp]]).
-	self setCStackPointer: processor sp.
-	self setCFramePointer: processor fp
+
+	processor machineSimulator baseRegisterValue: self varBaseAddress.
+	self simulateLeafCallOf: ceCaptureCStackPointers
 ]
 
 { #category : #testing }
@@ -4130,6 +4123,49 @@ Cogit >> checkAssertsEnabledInCogit [
 	| assertsAreEnabledInCogit |
 	assertsAreEnabledInCogit := false.
 	self assert: assertsAreEnabledInCogit
+]
+
+{ #category : #initialization }
+Cogit >> checkCFramePointerInUse [
+	| currentCSP result |
+	
+	"Check if the CFramePointer is in use.
+	Different C compilers can choose to not use the frame pointers to delimit stack frames, and use instead the frame pointer as a general purpose register.
+	This function implements a rough heuristic to determine if the FP is used as a frame delimiter or not.
+	
+	This function is meant to work as follows:
+	 - the caller should call ceCaptureCStackPointers capturing the FP and SP of the caller.
+	 - then the caller calls this function that will in turn also call ceCaptureCStackPointers to capture the FP and SP.
+	
+	If the FP moved between the two calls, and the FP captured the second time is between the previous one and the new SP, this means the compiler probably generated code to update the FP.
+	"
+	
+	self simulationOnly: [
+		"Simulate what the C compiler should have introduced on each call"
+		processor pushWord: 16rBEEF "Fake caller address".
+		simulateFPInUse ifTrue: [
+			processor pushWord: processor fp.
+			processor fp: processor sp.
+		].
+	].
+	
+	currentCSP := self getCStackPointer.
+	self ceCaptureCStackPointers.
+	self assert: self getCStackPointer < currentCSP.
+	
+	result := self getCFramePointer >= self getCStackPointer
+		and: [ self getCFramePointer <= currentCSP ].
+	
+	self simulationOnly: [
+		"Simulate what the C compiler should have introduced on return"
+		simulateFPInUse ifTrue: [
+			processor sp: processor fp.
+			processor fp: processor popWord.
+		].
+		processor popWord "Fake caller address".
+	].
+
+	^ result
 ]
 
 { #category : #debugging }
@@ -8245,8 +8281,8 @@ Cogit >> generateStackPointerCapture [
 	oldMethodZoneBase := methodZoneBase.
 	oldTrampolineTableIndex := trampolineTableIndex.
 	self generateCaptureCStackPointers: true.
-	self perform: #ceCaptureCStackPointers.
-	(cFramePointerInUse := self isCFramePointerInUse) ifFalse:
+	self ceCaptureCStackPointers.
+	(cFramePointerInUse := self checkCFramePointerInUse) ifFalse:
 		[methodZoneBase := oldMethodZoneBase.
 		 trampolineTableIndex := oldTrampolineTableIndex.
 		 self generateCaptureCStackPointers: false].
@@ -8618,6 +8654,7 @@ Cogit >> initialOpenPICUsageCount [
 Cogit >> initialize [
 	| wordSize |
 	initialPC := 0.
+	simulateFPInUse := true.
 	wordSize := self class objectMemoryClass wordSize.
 	cogMethodSurrogateClass := wordSize = 4
 											ifTrue: [CogMethodSurrogate32]
@@ -8807,8 +8844,7 @@ Cogit >> isBackwardBranch: descriptor at: pc exts: nExts in: aMethodObj [
 { #category : #initialization }
 Cogit >> isCFramePointerInUse [
 	<doNotGenerate>
-	"This should be implemented externally, e.g. in sqPlatMain.c."
-	^true
+	^ cFramePointerInUse
 ]
 
 { #category : #'bytecode generator support' }
@@ -11814,6 +11850,12 @@ Cogit >> simulateEnilopmart: enilopmartAddress numArgs: n [
 	"We should either longjmp back to the interpreter or
 	 stay in machine code so control should not reach here."
 	self assert: false
+]
+
+{ #category : #accessing }
+Cogit >> simulateFPInUse: aBoolean [
+	<doNotGenerate>
+	simulateFPInUse := aBoolean
 ]
 
 { #category : #'simulation only' }

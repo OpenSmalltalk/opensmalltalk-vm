@@ -22,6 +22,12 @@ UnicornARMv8Simulator >> baseRegister [
 	^ UcARM64Registers x24
 ]
 
+{ #category : #accessing }
+UnicornARMv8Simulator >> cResultRegister [
+	
+	^ self x0
+]
+
 { #category : #'as yet unclassified' }
 UnicornARMv8Simulator >> cReturnRegisterValue: anInteger [ 
 	
@@ -137,6 +143,12 @@ UnicornARMv8Simulator >> initializeRegisterAliases [
 UnicornARMv8Simulator >> instructionPointerRegister [
 
 	^ UcARM64Registers pc
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv8Simulator >> integerRegisterState [
+
+	^{	 }
 ]
 
 { #category : #registers }
