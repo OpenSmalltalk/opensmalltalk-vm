@@ -78,7 +78,9 @@ Class {
 		'eventQueue',
 		'expectedSends',
 		'expecting',
-		'bootstrapping'
+		'bootstrapping',
+		'codeGeneratorToComputeAccessorDepth',
+		'primitiveFailCount'
 	],
 	#classVars : [
 		'ByteCountsPerMicrosecond',
@@ -689,12 +691,20 @@ CogVMSimulator >> close [  "close any files that ST may have opened, etc"
 
 { #category : #'primitive support' }
 CogVMSimulator >> codeGeneratorToComputeAccessorDepth [
-	^(VMMaker new
-		buildCodeGeneratorForInterpreter: CoInterpreterPrimitives
-		includeAPIMethods: false
-		initializeClasses: false)
-			logger: self transcript;
-			yourself
+
+	^ codeGeneratorToComputeAccessorDepth ifNil: [
+		(VMMaker new
+			buildCodeGeneratorForInterpreter: CoInterpreterPrimitives
+			includeAPIMethods: false
+			initializeClasses: false)
+				logger: self transcript;
+				yourself]
+]
+
+{ #category : #'as yet unclassified' }
+CogVMSimulator >> codeGeneratorToComputeAccessorDepth: aCCodeGenerator [ 
+
+	codeGeneratorToComputeAccessorDepth := aCCodeGenerator
 ]
 
 { #category : #'simulation only' }
@@ -2799,6 +2809,12 @@ CogVMSimulator >> pluginEntryFor: mapIndex [
 								ifFalse: [mapIndex])
 ]
 
+{ #category : #'as yet unclassified' }
+CogVMSimulator >> pluginList: aCollection [ 
+
+	pluginList := aCollection
+]
+
 { #category : #'object memory support' }
 CogVMSimulator >> preGCAction: gcModeArg [
 	"Override to void debugStackPointers on any GC/remap"
@@ -2888,6 +2904,26 @@ CogVMSimulator >> primitiveExecuteMethod [
 CogVMSimulator >> primitiveExecuteMethodArgsArray [
 	self halt: thisContext selector.
 	^super primitiveExecuteMethodArgsArray
+]
+
+{ #category : #'as yet unclassified' }
+CogVMSimulator >> primitiveFailCount [
+	^ primitiveFailCount
+]
+
+{ #category : #'as yet unclassified' }
+CogVMSimulator >> primitiveFailCount: anInteger [ 
+
+	primitiveFailCount := anInteger
+]
+
+{ #category : #'as yet unclassified' }
+CogVMSimulator >> primitiveFailCounting [
+
+	"This primitive always fails, but it counts the number of calls. Useful for tests"
+	primitiveFailCount := primitiveFailCount + 1.
+	self primitiveFail.
+	
 ]
 
 { #category : #'as yet unclassified' }
@@ -3050,6 +3086,20 @@ CogVMSimulator >> primitiveStoreStackp [
 	self halt."
 	"(self stackValue: 1) = 16r1934F80 ifTrue: [self halt]."
 	super primitiveStoreStackp
+]
+
+{ #category : #'plugin support' }
+CogVMSimulator >> primitiveThatDoNothingWithOneArgument [
+	
+	| arg recvr |
+
+	arg := self stackTop.
+	recvr := self stackValue: 1.
+	
+	recvr = objectMemory nilObject 
+		ifTrue: [ ^ self primitiveFail ].
+	
+	^ self pop: 2 thenPush: arg.
 ]
 
 { #category : #'multi-threading simulation switch' }

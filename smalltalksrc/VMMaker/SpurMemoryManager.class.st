@@ -4106,7 +4106,7 @@ SpurMemoryManager >> compactor [
 
 { #category : #'header format' }
 SpurMemoryManager >> compiledMethodFormatForNumBytes: numBytes [
-	^self firstCompiledMethodFormat + (8 - numBytes bitAnd: self wordSize - 1)
+	^self firstCompiledMethodFormat + (self wordSize - numBytes bitAnd: self wordSize - 1)
 ]
 
 { #category : #'free space' }
@@ -9047,6 +9047,21 @@ SpurMemoryManager >> needGCFlag: anInteger [
 	needGCFlag := anInteger ~= 0
 ]
 
+{ #category : #'as yet unclassified' }
+SpurMemoryManager >> newArrayWith: aCollection [
+	<doNotGenerate>
+	| array |
+
+	array := self
+		         newObjectWithSlots: aCollection size
+		         format: self arrayFormat
+		         classIndex: self arrayClassIndexPun.
+
+	aCollection withIndexDo: [ :item :index | 
+		self storePointer: index - 1 ofObject: array withValue: item ].
+	^ array
+]
+
 { #category : #'ffi - helpers' }
 SpurMemoryManager >> newExternalAddressWithValue: aPointer [
 	| ptr oop |
@@ -9129,6 +9144,21 @@ SpurMemoryManager >> newObjectHash [
 #(-13 10701116 0.637836217880249 true '16r38000001')
 #(-14 10689443 0.637140452861786 true '16r38000001')
 #(-15 7853923 0.4681302905082702 true '16r38000001')"
+]
+
+{ #category : #'as yet unclassified' }
+SpurMemoryManager >> newObjectWithSlots: slots format: aFormat classIndex: anIndex [
+
+	<doNotGenerate>
+	
+	| oop |
+	oop := self
+			allocateSlots: slots
+			format: aFormat
+			classIndex: anIndex.
+			
+	oop ifNotNil: [ self fillObj: oop numSlots: slots with: self nilObject ].
+	^ oop
 ]
 
 { #category : #'image segment in/out' }

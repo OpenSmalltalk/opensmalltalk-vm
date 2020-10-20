@@ -104,6 +104,12 @@ UnicornI386Simulator >> edi [
 	^ self readRegister: UcX86Registers edi
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornI386Simulator >> edi: anInteger [ 
+	
+	self writeRegister: UcX86Registers edi value: anInteger
+]
+
 { #category : #accessing }
 UnicornI386Simulator >> edx [
 	^ self readRegister: UcX86Registers edx
@@ -137,6 +143,12 @@ UnicornI386Simulator >> eip: anInteger [
 UnicornI386Simulator >> esi [
 	
 	^ self readRegister: UcX86Registers esi
+]
+
+{ #category : #'as yet unclassified' }
+UnicornI386Simulator >> esi: anInteger [ 
+	
+	self writeRegister: UcX86Registers esi value: anInteger
 ]
 
 { #category : #accessing }
@@ -263,6 +275,12 @@ UnicornI386Simulator >> smashCallerSavedRegistersWithValuesFrom: base by: step i
 	   withIndexDo:
 		[:accessor :index|
 		self perform: accessor with: index - 1 * step + base]
+]
+
+{ #category : #registers }
+UnicornI386Simulator >> smashRegisterAccessors [
+
+	^#(eax: ebx: ecx: edx: esi: edi:)
 ]
 
 { #category : #'as yet unclassified' }

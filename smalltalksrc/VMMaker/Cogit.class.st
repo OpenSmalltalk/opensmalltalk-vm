@@ -8377,6 +8377,13 @@ Cogit >> getPrimitiveIndex [
 	^primitiveIndex
 ]
 
+{ #category : #'as yet unclassified' }
+Cogit >> guardPageSize: anInteger [ 
+
+	<doNotGenerate>
+	guardPageSize := anInteger
+]
+
 { #category : #'translation support' }
 Cogit >> halt [
 	<cmacro: '() warning("halt")'>
