@@ -2290,7 +2290,7 @@ StackInterpreter >> addToExternalPrimitiveTable: functionAddress [
 
 	externalPrimitiveTableFirstFreeIndex to: MaxExternalPrimitiveTableSize-1 do:
 		[ :i |
-		(externalPrimitiveTable at: i) ifNil:
+		(externalPrimitiveTable at: i) = 0 ifTrue:
 			[externalPrimitiveTable at: i put: functionAddress.
 			^externalPrimitiveTableFirstFreeIndex := i+1]].
 	"if no space left, return zero so it'll looked up again"
