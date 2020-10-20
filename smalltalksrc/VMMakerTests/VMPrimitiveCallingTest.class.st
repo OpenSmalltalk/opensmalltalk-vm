@@ -20,7 +20,7 @@ VMPrimitiveCallingTest >> callCogMethod: callingMethod receiver: receiver argume
 	
 	self prepareCall.
 	machineSimulator instructionPointerValue: callingMethod address + cogit noCheckEntryOffset. 
-	
+
 	self runFrom: callingMethod address + cogit noCheckEntryOffset until: returnAddress.
 
 ]
@@ -286,6 +286,28 @@ VMPrimitiveCallingTest >> testCallingPrimitivesTakingTracesReturnsValidResults [
 	self assert: machineSimulator receiverRegisterValue equals: (memory integerObjectOf: 3)
 ]
 
+{ #category : #'tests - primitiveFunctionPointer' }
+VMPrimitiveCallingTest >> testNamedPrimitiveCallSetsPrimitiveFunctionPointerWhenCallingCImplementation [
+
+	| callingMethod |
+
+	callingMethod := self jitMethod: (self findMethod: #methodThatCallNamedPrimitive:).
+
+	self initStack.	
+
+	self 
+		callCogMethod: callingMethod 
+		receiver: memory nilObject 
+		arguments: {memory nilObject}
+		returnAddress: callerAddress.
+	
+	self 
+		assert: interpreter primitiveFunctionPointer
+		equals: #primitiveThatDoNothingWithOneArgument
+	
+
+]
+
 { #category : #'tests - retry primitive' }
 VMPrimitiveCallingTest >> testNamedPrimitiveFailingWithAccessorDepthWithForwardersDoesRetry [
 
@@ -490,7 +512,7 @@ VMPrimitiveCallingTest >> testPrimitiveCallSetsPrimitiveFunctionPointerWhenCalli
 		returnAddress: callerAddress.
 	
 	self 
-		assert: (cogit simulatedTrampolineFor: interpreter primitiveFunctionPointer) selector
+		assert: (cogit simulatedTrampolines at: interpreter primitiveFunctionPointer) selector
 		equals: #primitiveAdd
 	
 

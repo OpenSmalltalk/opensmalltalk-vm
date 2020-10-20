@@ -709,10 +709,6 @@ VMSimpleStackBasedCogitAbstractTest >> setUp [
 	"We don't access its contents, but we need it to be after nil, true and false"
 	memory hiddenRootsObject: (self newObjectWithSlots: 0).
 
-	"Initializing Unicorn processor"
-	self setUpCPUSimulator.
-	
-	cogit processor machineSimulator: machineSimulator.
 	cogit setStackAlignment: 16 expectedSPOffset: 0 expectedFPOffset: 0.
 	cogit initializeBackend.
 	cogit methodZone manageFrom: initialAddress to: initialAddress + self initialCodeSize.
@@ -722,6 +718,9 @@ VMSimpleStackBasedCogitAbstractTest >> setUp [
 	memory coInterpreter cogCodeSize: self initialCodeSize.
 	memory coInterpreter heapBase: memory newSpaceStart.
 	cogit initializeProcessor.
+	
+	machineSimulator := cogit processor machineSimulator.
+	
 	cogit generateStackPointerCapture.
 	cogit methodZone manageFrom: cogit cogCodeBase to: initialAddress + self initialCodeSize.
 

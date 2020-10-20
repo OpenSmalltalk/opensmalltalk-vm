@@ -17,6 +17,12 @@ UnicornARMv5Simulator >> baseRegister [
 ]
 
 { #category : #'as yet unclassified' }
+UnicornARMv5Simulator >> cResultRegister [
+	
+	^ self r0
+]
+
+{ #category : #'as yet unclassified' }
 UnicornARMv5Simulator >> cReturnRegisterValue: anInteger [ 
 
 	self r0: anInteger 
@@ -145,6 +151,12 @@ UnicornARMv5Simulator >> hasLinkRegister [
 UnicornARMv5Simulator >> instructionPointerRegister [
 
 	^ UcARMRegisters pc
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv5Simulator >> integerRegisterState [
+	
+	^ #()
 ]
 
 { #category : #registers }
@@ -390,7 +402,7 @@ UnicornARMv5Simulator >> simulateJumpCallOf: address memory: aMemory [
 { #category : #'as yet unclassified' }
 UnicornARMv5Simulator >> simulateLeafCallOf: address nextpc: nextpc memory: aMemory [
 
-	self pushWord: nextpc.
+	self lr: nextpc.
 	self pc: address
 ]
 

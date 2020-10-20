@@ -16951,6 +16951,11 @@ StackInterpreter >> primitiveFloatSubtract: rcvrOop fromArg: argOop [
 		[self pop: 2 thenPushFloat: rcvr - arg]
 ]
 
+{ #category : #accessing }
+StackInterpreter >> primitiveFunctionPointer [
+	^ primitiveFunctionPointer
+]
+
 { #category : #'compiled methods' }
 StackInterpreter >> primitiveIndexOf: methodPointer [
 	<api>
