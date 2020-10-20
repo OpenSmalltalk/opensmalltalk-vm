@@ -20353,7 +20353,7 @@ StackInterpreter >> signed64BitIntegerFor: integerValue [
 	^newLargeInteger
 ]
 
-{ #category : #'primitive support' }
+{ #category : #'runtime support' }
 StackInterpreter >> sigset: aJumpBuf jmp: sigSaveMask [
 	"Hack simulation of sigsetjmp/siglongjmp.
 	 Assign to reenterInterpreter the exception that when

@@ -1081,18 +1081,8 @@ CogARMv8Compiler >> computeMaximumSize [
 		[MSUB]					-> [^4].
 				
 		"Data Movement"						
-		[MoveCqR]				-> [^self literalLoadInstructionBytes = 4
-										ifTrue: [self literalLoadInstructionBytes]
-										ifFalse:
-											[self rotateable8bitBitwiseImmediate: (operands at: 0)
-												ifTrue: [:r :i :n| 4]
-												ifFalse: [self literalLoadInstructionBytes]]].
-		[MoveC32R]				-> [^self literalLoadInstructionBytes = 4
-										ifTrue: [self literalLoadInstructionBytes]
-										ifFalse:
-											[(self inCurrentCompilation: (operands at: 0))
-												ifTrue: [4]
-												ifFalse: [self literalLoadInstructionBytes]]].
+		[MoveCqR]				-> [^ 4].
+		[MoveC32R]				-> [ ^ 4 ].
 		[MoveCwR]				-> [^self literalLoadInstructionBytes = 4
 										ifTrue: [self literalLoadInstructionBytes]
 										ifFalse:
@@ -2103,12 +2093,7 @@ CogARMv8Compiler >> concretizeMoveCqR [
 	quickConstant := operands at: 0.
 	destinationRegister := operands at: 1.
 
-	"If the quickConstant fits in 32bits, concretize as MoveC32R"
-	(quickConstant bitAnd: 16rFFFFFFFF) = quickConstant ifTrue: [ 
-		^ self concretizeMoveC32R
-	].
-	"otherwise, concretize as a move CwR"
-	^self moveCw: quickConstant intoR: destinationRegister
+	^ self concretizeMoveC32R
 ]
 
 { #category : #'generate machine code - concretize' }
