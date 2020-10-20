@@ -66,6 +66,16 @@ VMPrimitiveCallAbstractTest >> jitMethod: aPharoCompiledMethod selector: aSelect
 ]
 
 { #category : #'methods under test' }
+VMPrimitiveCallAbstractTest >> methodThatCallNamedPrimitive: anArg [
+
+	"This method is used to test the invocation of a primitive.
+	The primitive to invoke is later changed in the primitive table of the interpreter used in the test"
+	<primitive: 'primitiveThatDoNothingWithOneArgument'>
+	
+	^ 84
+]
+
+{ #category : #'methods under test' }
 VMPrimitiveCallAbstractTest >> methodThatCallPrimitive159 [
 
 	<primitive: 159>
@@ -91,11 +101,20 @@ VMPrimitiveCallAbstractTest >> methodToCompile1 [
 { #category : #tests }
 VMPrimitiveCallAbstractTest >> setUp [
 
+	| primitiveAccessorDepthTable |
+	
 	super setUp.
 	self setUpCogMethodEntry.
 
 	"Initializing the accessor depth table with a value for the first primitive"
-	interpreter primitiveAccessorDepthTable: { 0 }.
+	primitiveAccessorDepthTable := Array new: interpreter primitiveTable size.
+	
+	1 to: interpreter primitiveTable size 
+		do: [ :i | primitiveAccessorDepthTable at: i put: -1 ].	 
+
+	interpreter primitiveAccessorDepthTable: primitiveAccessorDepthTable.
 	
 	cogit 	lastNInstructions: OrderedCollection new.
+	
+	cogit guardPageSize: cogit class guardPageSize.
 ]

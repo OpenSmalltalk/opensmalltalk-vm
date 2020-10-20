@@ -158,6 +158,24 @@ UnicornX64Simulator >> r12: anInteger [
 ]
 
 { #category : #'as yet unclassified' }
+UnicornX64Simulator >> r13: anInteger [ 
+	
+	self writeRegister: UcX86Registers r13 value: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornX64Simulator >> r14: anInteger [ 
+	
+	self writeRegister: UcX86Registers r14 value: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornX64Simulator >> r15: anInteger [ 
+	
+	self writeRegister: UcX86Registers r15 value: anInteger
+]
+
+{ #category : #'as yet unclassified' }
 UnicornX64Simulator >> r1: anInteger [ 
 	
 	^ self writeRegister: UcX86Registers r1 value: anInteger
@@ -405,6 +423,12 @@ UnicornX64Simulator >> smashCallerSavedRegistersWithValuesFrom: base by: step in
 	volatileRegisters withIndexDo:
 		[:setter :index|
 		self perform: setter with: index - 1 * step + base]
+]
+
+{ #category : #'as yet unclassified' }
+UnicornX64Simulator >> smashRegisterAccessors [
+
+	^#(rax: rbx: rcx: rdx: rsi: rdi: r8: r9: r10: r11: r12: r13: r14: r15:)
 ]
 
 { #category : #'phisical-registers' }

@@ -56,6 +56,71 @@ VMPrimitiveCallingTest >> setUp [
 		storePointer: ClassLargePositiveIntegerCompactIndex
 		ofObject: memory classTableFirstPage
 		withValue: classLargeInteger.
+		
+	interpreter pluginList: OrderedCollection new.
+	
+	interpreter codeGeneratorToComputeAccessorDepth: (VMMockCodeGenerator for: interpreter).
+	interpreter codeGeneratorToComputeAccessorDepth addPrimitive: #primitiveThatDoNothingWithOneArgument.
+]
+
+{ #category : #'tests - with tracing' }
+VMPrimitiveCallingTest >> testCallingNamedPrimitiveTakingTracesWithInvalidNumbersExecutesFailbackCode [
+
+	| callingMethod |
+
+	callingMethod := self jitMethod: (self findMethod: #methodThatCallNamedPrimitive:).
+
+	self initStack.	
+
+	self 
+		callCogMethod: callingMethod 
+		receiver: memory nilObject 
+		arguments: {memory integerObjectOf: 2}
+		returnAddress: callerAddress.
+	
+	self assert: machineSimulator receiverRegisterValue equals: (memory integerObjectOf: 42 + 42).
+	
+
+]
+
+{ #category : #'tests - with tracing' }
+VMPrimitiveCallingTest >> testCallingNamedPrimitivesTakingTracesHasATraceForThePrimitive [
+
+	| callingMethod |
+
+	cogit sendTrace: 8.
+	
+	callingMethod := self jitMethod: (self findMethod: #methodThatCallNamedPrimitive:).
+	
+	self initStack.
+	
+	self 
+		callCogMethod: callingMethod 
+		receiver: (memory integerObjectOf: 1) 
+		arguments: {memory integerObjectOf: 2}
+		returnAddress: callerAddress.
+	
+	self assert: (interpreter primTraceLog at: 1) equals: callingMethod selector
+]
+
+{ #category : #'tests - with tracing' }
+VMPrimitiveCallingTest >> testCallingNamedPrimitivesTakingTracesReturnsValidResults [
+
+	| callingMethod |
+
+	cogit sendTrace: 8.
+	
+	callingMethod := self jitMethod: (self findMethod: #methodThatCallNamedPrimitive:).
+	
+	self initStack.
+	
+	self 
+		callCogMethod: callingMethod 
+		receiver: (memory integerObjectOf: 1) 
+		arguments: {memory integerObjectOf: 2}
+		returnAddress: callerAddress.
+	
+	self assert: machineSimulator receiverRegisterValue equals: (memory integerObjectOf: 2)
 ]
 
 { #category : #'tests - run on smalltalk stack' }
@@ -221,6 +286,74 @@ VMPrimitiveCallingTest >> testCallingPrimitivesTakingTracesReturnsValidResults [
 ]
 
 { #category : #'tests - with tracing' }
+VMPrimitiveCallingTest >> testNamedPrimitiveIsNotTracedIfNotCalled [
+
+	| callingMethod |
+
+	cogit sendTrace: 8.
+	
+	callingMethod := self jitMethod: (self findMethod: #methodThatCallNamedPrimitive:).
+	
+	self initStack.
+	
+	1 to: interpreter primTraceLogEntries - 1 do:
+		[:i| self assert: (interpreter primTraceLog at: i) = 0].
+	
+
+]
+
+{ #category : #'tests - retry primitive' }
+VMPrimitiveCallingTest >> testPrimitiveFailingWithAccessorDepthRetriesOnFailure [
+
+	| callingMethod |
+
+	"Patching the primitive to remove primitiveFunction"
+	interpreter primitiveFailCount: 1.
+	interpreter primitiveTable at: 1 + 1 put: #primitiveFailCounting.
+
+	callingMethod := self jitMethod: (self findMethod: #methodThatCallPrimitive1:).
+
+	self initStack.	
+
+	1halt.
+
+	self 
+		callCogMethod: callingMethod 
+		receiver: memory nilObject 
+		arguments: {memory nilObject}
+		returnAddress: callerAddress.
+	
+	self assert: interpreter primitiveFailCount equals: 2.
+	
+
+]
+
+{ #category : #'tests - retry primitive' }
+VMPrimitiveCallingTest >> testPrimitiveFailingWithAccessorDepthZeroDoesNotRetry [
+
+	| callingMethod |
+
+	"Patching the primitive to remove primitiveFunction"
+	interpreter primitiveFailCount: 0.
+	interpreter class primitiveAccessorDepthTable at: 1 + 1 put: 0.
+	interpreter primitiveTable at: 1 + 1 put: #primitiveFailCounting.
+
+	callingMethod := self jitMethod: (self findMethod: #methodThatCallPrimitive1:).
+
+	self initStack.	
+
+	self 
+		callCogMethod: callingMethod 
+		receiver: memory nilObject 
+		arguments: {memory nilObject}
+		returnAddress: callerAddress.
+	
+	self assert: interpreter primitiveFailCount equals: 1.
+	
+
+]
+
+{ #category : #'tests - with tracing' }
 VMPrimitiveCallingTest >> testPrimitiveIsNotTracedIfNotCalled [
 
 	| callingMethod |
@@ -237,7 +370,7 @@ VMPrimitiveCallingTest >> testPrimitiveIsNotTracedIfNotCalled [
 
 ]
 
-{ #category : #'test - fail fast' }
+{ #category : #'tests - fail fast' }
 VMPrimitiveCallingTest >> testPrimitiveWithPrimitiveFailExecutesFallbackCode [
 
 	| callingMethod |
@@ -260,7 +393,7 @@ VMPrimitiveCallingTest >> testPrimitiveWithPrimitiveFailExecutesFallbackCode [
 
 ]
 
-{ #category : #'test - fail fast' }
+{ #category : #'tests - fail fast' }
 VMPrimitiveCallingTest >> testPrimitiveWithoutFunctionExecutesFallbackCode [
 
 	| callingMethod |

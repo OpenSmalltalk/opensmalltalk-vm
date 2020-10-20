@@ -388,9 +388,10 @@ UnicornARMv5Simulator >> simulateJumpCallOf: address memory: aMemory [
 ]
 
 { #category : #'as yet unclassified' }
-UnicornARMv5Simulator >> simulateLeafCallOf: anInteger nextpc: anInteger2 memory: aSpurSimulatedMemory [ 
+UnicornARMv5Simulator >> simulateLeafCallOf: address nextpc: nextpc memory: aMemory [
 
-	
+	self pushWord: nextpc.
+	self pc: address
 ]
 
 { #category : #'as yet unclassified' }
@@ -405,6 +406,12 @@ UnicornARMv5Simulator >> smashCallerSavedRegistersWithValuesFrom: base by: step 
 	#(r0: r1: r2: r3: r9: r12: lr:) withIndexDo:
 		[:accessor :index|
 		self perform: accessor with: index - 1 * step + base]
+]
+
+{ #category : #registers }
+UnicornARMv5Simulator >> smashRegisterAccessors [
+
+	^ #(r0: r1: r2: r3:)
 ]
 
 { #category : #registers }

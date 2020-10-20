@@ -503,9 +503,10 @@ UnicornSimulator >> sendNumberOfArgumentsRegisterValue: aValue [
 ]
 
 { #category : #'as yet unclassified' }
-UnicornSimulator >> simulateLeafCallOf: anInteger nextpc: anInteger2 memory: aSpurSimulatedMemory [ 
-	
-	self subclassResponsibility
+UnicornSimulator >> simulateLeafCallOf: address nextpc: nextpc memory: aMemory [
+
+	self pushWord: nextpc.
+	self rip: address
 ]
 
 { #category : #accessing }
@@ -526,10 +527,17 @@ UnicornSimulator >> smalltalkStackPointerRegisterValue: aValue [
 	self writeRegister: self smalltalkStackPointerRegister value: aValue
 ]
 
-{ #category : #'as yet unclassified' }
-UnicornSimulator >> smashRegistersWithValuesFrom: base by: step [
+{ #category : #registers }
+UnicornSimulator >> smashRegisterAccessors [
 	
-	self subclassResponsibility
+	^ self subclassResponsibility 
+]
+
+{ #category : #registers }
+UnicornSimulator >> smashRegistersWithValuesFrom: base by: step [ 
+	
+	self smashRegisterAccessors withIndexDo: [:accessor :index|
+		self perform: accessor with: index - 1 * step + base]
 ]
 
 { #category : #registers }
