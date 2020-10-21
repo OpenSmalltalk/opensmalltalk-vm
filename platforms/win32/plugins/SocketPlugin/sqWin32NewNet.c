@@ -24,6 +24,7 @@
 #include <WS2tcpip.h>
 #include <WinSock2.h>
 #include <Windows.h>
+#include <stdio.h> /* for debugCheckWatcherThreads printf */
 
 #include "sq.h"
 #include "SocketPlugin.h"
@@ -31,13 +32,13 @@
 #ifndef NO_NETWORK
 
 #ifndef STACK_SIZE_PARAM_IS_A_RESERVATION
-#  define STACK_SIZE_PARAM_IS_A_RESERVATION 0x00010000
+# define STACK_SIZE_PARAM_IS_A_RESERVATION 0x00010000
 #endif
 
 #ifndef NDEBUG
-#define DBG(s,c) debugCheckWatcherThreads(PSP(s),c)
+# define DBG(s,c) debugCheckWatcherThreads(PSP(s),c)
 #else
-#define DBG(s,c)
+# define DBG(s,c)
 #endif
 
 /*** Resolver Status Constants ***/
@@ -362,43 +363,40 @@ int win32DebugPrintSocketState(void) {
   return 1;
 }
 
-static void debugCheckWatcherThreads(privateSocketStruct *pss, char* caller) {
+static void
+debugCheckWatcherThreads(privateSocketStruct *pss, char *caller)
+{
   int state = pss->sockState;
   int printReason = 0;
 
-  if (pss->readWatcherOp == WatchAccept) {
-	/* accept() is different; don't bother */
+  if (pss->readWatcherOp == WatchAccept /* accept() is different; don't bother */
+   || pss->readWatcherOp == WatchAcceptSingle) /* same thing */
 	return;
-  }
-  if (pss->readWatcherOp == WatchAcceptSingle) {
-	/* same thing */
-	return;
-  }
 
-  if ( (state & SOCK_PUBLIC_MASK) == Unconnected )
+  if ((state & SOCK_PUBLIC_MASK) == Unconnected ) {
 	/* means we should not be watching anything */
-	if (pss->readSelect || pss->writeSelect ||
-	   (pss->readWatcherOp != 0) || (pss->writeWatcherOp != 0)) {
+	if (pss->readSelect || pss->writeSelect
+	 || pss->readWatcherOp != 0 || pss->writeWatcherOp != 0)
 	  printReason |= 1; /* watching stuff on unconnected socket */
-	}
+  }
 
   if ( (state & SOCK_PUBLIC_MASK) == Connected) {
 	if (pss->readWatcherOp != WatchData)
 	  printReason |= 2; /* watching non-data stuff on connected socket */
-	if ( (state & SOCK_DATA_READABLE) == pss->readSelect)
+	if ((state & SOCK_DATA_READABLE) == pss->readSelect)
 	  printReason |= 4; /* watching w/ data or not watching w/o data */
 	if (pss->writeWatcherOp != WatchData)
 	  printReason |= 8; /* watching non-data stuff */
-	if ( (state & SOCK_DATA_WRITABLE) == pss->writeSelect)
+	if ((state & SOCK_DATA_WRITABLE) == pss->writeSelect)
 	  printReason |= 16; /* watching w/ data or not watching w/o data */
   }
 
-  if ( (state & SOCK_PUBLIC_MASK) == WaitingForConnection) {
-	if (!pss->writeSelect || (pss->writeWatcherOp != WatchConnect))
+  if ((state & SOCK_PUBLIC_MASK) == WaitingForConnection) {
+	if (!pss->writeSelect || pss->writeWatcherOp != WatchConnect)
 	  printReason |= 32; /* not watching for connection */
   }
-  if ( (state & SOCK_PUBLIC_MASK) == ThisEndClosed) {
-	if (!pss->readSelect || (pss->readWatcherOp != WatchClose))
+  if ((state & SOCK_PUBLIC_MASK) == ThisEndClosed) {
+	if (!pss->readSelect || pss->readWatcherOp != WatchClose)
 	  printReason |= 64; /* not watching for close */
   }
   if (printReason) {
@@ -434,7 +432,8 @@ static void debugCheckWatcherThreads(privateSocketStruct *pss, char* caller) {
  *****************************************************************************
  *****************************************************************************/
 
-static DWORD WINAPI readWatcherThread(privateSocketStruct *pss)
+static DWORD WINAPI
+readWatcherThread(privateSocketStruct *pss)
 {
   struct timeval tv= { 1000, 0 }; /* Timeout value == 1000 sec */
   fd_set fds;
@@ -518,7 +517,8 @@ static DWORD WINAPI readWatcherThread(privateSocketStruct *pss)
   }
 }
 
-static DWORD WINAPI writeWatcherThread(privateSocketStruct *pss)
+static DWORD WINAPI
+writeWatcherThread(privateSocketStruct *pss)
 {
   struct timeval tv= { 1000, 0 }; /* Timeout value == 1000 sec */
   fd_set fds, err;
@@ -594,9 +594,8 @@ static DWORD WINAPI writeWatcherThread(privateSocketStruct *pss)
 	  }
 	}
 	/* Wait until we have something to do */
-	if (doWait && !pss->closePending) {
+	if (doWait && !pss->closePending)
 	  WaitForSingleObject(pss->hWriteWatcherEvent, INFINITE);
-	}
 
 	/* Check if we need to close the socket */
 	if (pss->closePending) {
@@ -611,7 +610,8 @@ static DWORD WINAPI writeWatcherThread(privateSocketStruct *pss)
  *****************************************************************************
  *****************************************************************************/
 
-static void abortSocket(privateSocketStruct *pss)
+static void
+abortSocket(privateSocketStruct *pss)
 {
   struct linger l;
 
@@ -628,7 +628,8 @@ static void abortSocket(privateSocketStruct *pss)
 }
 
 /* createWatcherThreads: Create the state change watcher threads */
-static int createWatcherThreads(privateSocketStruct *pss)
+static int
+createWatcherThreads(privateSocketStruct *pss)
 {
   DWORD id;
   HANDLE hThread;
@@ -699,7 +700,8 @@ static int createWatcherThreads(privateSocketStruct *pss)
 /*****************************************************************************
   sqNetworkInit: Initialize network with the given DNS semaphore.
 *****************************************************************************/
-sqInt sqNetworkInit(sqInt semaIndex)
+sqInt
+sqNetworkInit(sqInt semaIndex)
 {
   int err;
   OSVERSIONINFOEX osInfo;
@@ -736,7 +738,8 @@ sqInt sqNetworkInit(sqInt semaIndex)
 /*****************************************************************************
   sqNetworkShutdown: Clean up networking.
 *****************************************************************************/
-void sqNetworkShutdown(void)
+void
+sqNetworkShutdown(void)
 {
   privateSocketStruct *pss;
   if (thisNetSession == 0) return;  /* noop if network is already shut down */
