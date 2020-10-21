@@ -3917,8 +3917,8 @@ CoInterpreter >> initStackPagesAndInterpret [
 { #category : #initialization }
 CoInterpreter >> initializeCodeGenerator [
 	cogit
-		initializeCodeZoneFrom: (self cCode: [objectMemory memory] inSmalltalk: [Cogit guardPageSize])
-		upTo: (self cCode: [objectMemory memory] inSmalltalk: [Cogit guardPageSize]) + cogCodeSize
+		initializeCodeZoneFrom: (self cCode: [objectMemory memory] inSmalltalk: [objectMemory cogCodeBase])
+		upTo: (self cCode: [objectMemory memory] inSmalltalk: [objectMemory cogCodeBase]) + cogCodeSize
 ]
 
 { #category : #'frame access' }
