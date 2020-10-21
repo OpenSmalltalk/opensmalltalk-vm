@@ -2905,12 +2905,6 @@ CogVMSimulator >> primitiveExecuteMethod [
 	^super primitiveExecuteMethod
 ]
 
-{ #category : #'control primitives' }
-CogVMSimulator >> primitiveExecuteMethodArgsArray [
-	self halt: thisContext selector.
-	^super primitiveExecuteMethodArgsArray
-]
-
 { #category : #'as yet unclassified' }
 CogVMSimulator >> primitiveFailCount [
 	^ primitiveFailCount
