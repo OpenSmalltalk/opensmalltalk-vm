@@ -1530,6 +1530,7 @@ CogARMv8Compiler >> concretizeCmpC32R [
 { #category : #'generate machine code - concretize' }
 CogARMv8Compiler >> concretizeCmpCqR [
 	
+	<var: #quickImmediate type: #sqInt>
 	<inline: true>
 	| quickImmediate registerToUse fits12Bits fitsShifted12Bits |
 	quickImmediate := operands at: 0.
