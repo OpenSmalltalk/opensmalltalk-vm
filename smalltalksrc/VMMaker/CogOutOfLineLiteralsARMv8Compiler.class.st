@@ -355,7 +355,10 @@ CogOutOfLineLiteralsARMv8Compiler >> usesOutOfLineLiteral [
 				registerSize: 64
 				ifPossible: [ :value | false ]
 				ifNotPossible: [ true ]].
-		[CmpCqR]		-> [^self rotateable8bitSignedImmediate: (operands at: 0) ifTrue: [:r :i :n| false] ifFalse: [true]].
+		[CmpCqR]		-> [ 
+				((operands at: 0) abs bitAnd: 16rFFF) = (operands at: 0) abs ifTrue: [ ^ false ].
+				((operands at: 0) abs << 12 >> 12 bitAnd: 16rFFF) = (operands at: 0) abs ifTrue: [ ^ false ].
+				^ true].
 		[CmpC32R]		-> [^self rotateable8bitSignedImmediate: (operands at: 0) ifTrue: [:r :i :n| false] ifFalse: [true]].
 		[OrCqR]			-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
 		[SubCqR]		-> [ | constant |
