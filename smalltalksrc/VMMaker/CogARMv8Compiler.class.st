@@ -1103,10 +1103,9 @@ CogARMv8Compiler >> computeMaximumSize [
 														ifTrue: [ 8 ]
 														ifFalse: [ 4 ]]
 													ifFalse: [
-														^ ((operands at: 0) = SP
-															ifTrue: [ 4 ]
-															ifFalse: [ 0 ]) + 
-																self literalLoadInstructionBytes + 4]].
+													 	(operands at: 0) = SP
+															ifTrue: [ 4 + self literalLoadInstructionBytes + 4 ]
+															ifFalse: [ self literalLoadInstructionBytes + 4 ]]].
 		[MoveAbR]				-> [^(self isAddressRelativeToVarBase: (operands at: 0))
 													ifTrue: [4]
 													ifFalse: [self literalLoadInstructionBytes + 4]].
