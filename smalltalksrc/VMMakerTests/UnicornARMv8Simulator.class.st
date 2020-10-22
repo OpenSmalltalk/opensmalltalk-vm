@@ -631,5 +631,5 @@ UnicornARMv8Simulator >> xzr: anInteger [
 { #category : #'as yet unclassified' }
 UnicornARMv8Simulator >> zero [
 
-	^ (self nzcv bitAnd: (1<<30))~= 0
+	^ (self nzcv bitAnd: (1<<30)) ~= 0
 ]

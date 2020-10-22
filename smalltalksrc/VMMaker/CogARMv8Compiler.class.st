@@ -1529,6 +1529,7 @@ CogARMv8Compiler >> concretizeCmpC32R [
 { #category : #'generate machine code - concretize' }
 CogARMv8Compiler >> concretizeCmpCqR [
 	
+	<var: #quickImmediate type: #sqInt>
 	<inline: true>
 	| quickImmediate registerToUse fits12Bits fitsShifted12Bits |
 	quickImmediate := operands at: 0.
@@ -1543,7 +1544,7 @@ CogARMv8Compiler >> concretizeCmpCqR [
 					(self cmpSize: 1 immediate12BitValue: quickImmediate shiftFlag: 0 register: registerToUse).
 			^ machineCodeSize := 4 ].
 		
-		fitsShifted12Bits := (quickImmediate >> 12 << 12) = quickImmediate.
+		fitsShifted12Bits := ((quickImmediate >> 12) bitAnd: 16rFFF) = (quickImmediate >> 12).
 		fitsShifted12Bits ifTrue: [ 
 			self
 				machineCodeAt: 0
@@ -1561,7 +1562,7 @@ CogARMv8Compiler >> concretizeCmpCqR [
 					(self cmnSize: 1 immediate12BitValue: quickImmediate shiftFlag: 0 register: registerToUse).
 			^ machineCodeSize := 4 ].
 		
-		fitsShifted12Bits := (quickImmediate >> 12 << 12) = quickImmediate.
+		fitsShifted12Bits := ((quickImmediate >> 12) bitAnd: 16rFFF) = (quickImmediate >> 12).
 		fitsShifted12Bits ifTrue: [ 
 			self
 				machineCodeAt: 0
