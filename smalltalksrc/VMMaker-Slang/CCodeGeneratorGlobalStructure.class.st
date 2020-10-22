@@ -10,7 +10,7 @@ Class {
 		'localStructDef',
 		'structDefDefine'
 	],
-	#category : #'VMMaker-Translation to C'
+	#category : #'VMMaker-Slang'
 }
 
 { #category : #'C code generator' }

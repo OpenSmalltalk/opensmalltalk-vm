@@ -1,7 +1,7 @@
 Class {
 	#name : #CCodeGeneratorInlineAlwaysStrategy,
 	#superclass : #CCodeGeneratorAbsoluteInlineStrategy,
-	#category : #'VMMaker-Translation to C'
+	#category : #'VMMaker-Slang'
 }
 
 { #category : #accessing }

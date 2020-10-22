@@ -16,7 +16,7 @@ Class {
 	#classInstVars : [
 		'timeStamp'
 	],
-	#category : #'VMMaker-Support'
+	#category : #'VMMaker-Slang'
 }
 
 { #category : #translation }
@@ -343,42 +343,6 @@ VMClass class >> objectMemoryClass [
 { #category : #'accessing class hierarchy' }
 VMClass class >> objectRepresentationClass [
 	^self objectMemoryClass objectRepresentationClass
-]
-
-{ #category : #utilities }
-VMClass class >> openCogTestsMultiWindowBrowser [
-	"Answer a new multi-window browser on the test classes in VMMaker"
-	"self openCogTestsMultiWindowBrowser"
-	| testClasses b |
-	testClasses := (PackageInfo named: 'VMMaker') classes select: [:c| c inheritsFrom: TestCase].
-	testClasses removeAll: AbstractInstructionTests allSubclasses.
-	testClasses removeAll: (testClasses select: [:c| '*Plugin*' match: c name]).
-	b := Browser open.
-	testClasses do:
-		[:class| b selectCategoryForClass: class; selectClass: class]
-		separatedBy:
-			[b multiWindowState addNewWindow].
-	b multiWindowState selectWindowIndex: 1
-]
-
-{ #category : #utilities }
-VMClass class >> openCogitMultiWindowBrowser [
-	"Answer a new multi-window browser on the ObjectMemory classes, the Cog Interpreter classes, and the main JIT classes"
-	"self openCogitMultiWindowBrowser"
-	| b |
-	b := Browser open.
-	Cogit withAllSubclasses,
-	CogObjectRepresentation withAllSubclasses,
-	{CogMethodZone. CogRTLOpcodes },
-	(CogAbstractInstruction withAllSubclasses reject: [:c| c name endsWith: 'Tests']),
-	CogBytecodeFixup withAllSubclasses,
-	CogSimStackEntry withAllSubclasses,
-	{VMStructType. VMMaker. CCodeGenerator. TMethod}
-		do: [:class|
-			b selectCategoryForClass: class; selectClass: class]
-		separatedBy:
-			[b multiWindowState addNewWindow].
-	b multiWindowState selectWindowIndex: 1
 ]
 
 { #category : #translation }
@@ -714,15 +678,6 @@ VMClass >> deny: aBooleanOrBlock [
 	aBooleanOrBlock value ifTrue: [AssertionFailure signal: 'Assertion failed']
 ]
 
-{ #category : #'simulation support' }
-VMClass >> doOrDefer: aBlock [
-	<doNotGenerate>
-	"Either evaluate aBlock immediately if in the uiProcess or defer aBlock as a UI message"
-	Processor activeProcess == self uiProcess
-		ifTrue: [aBlock value]
-		ifFalse: [WorldState addDeferredUIMessage: aBlock]
-]
-
 { #category : #'debug support' }
 VMClass >> eassert: aBooleanExpressionOrBlock [
 	"This is for expensive asserts that we're only interested in checking in extremis.
@@ -738,18 +693,6 @@ VMClass >> eassert: aBooleanExpressionOrBlock [
 VMClass >> error [
 
 	<cmacro: ''>
-]
-
-{ #category : #'printf logging' }
-VMClass >> f: logFilename open: mode [
-	"Simulate a FILE stream by answering a transcript.
-	 Can be used with the f:printf: method."
-	<doNotGenerate>
-	^true
-		ifTrue: [(TranscriptStream on: (String new: 100000))
-					openLabel: logFilename;
-					yourself]
-		ifFalse: [self coInterpreter transcript]
 ]
 
 { #category : #'memory access' }

@@ -7,7 +7,7 @@ Class {
 	#instVars : [
 		'comment'
 	],
-	#category : #'VMMaker-Translation to C'
+	#category : #'VMMaker-Slang'
 }
 
 { #category : #utilities }

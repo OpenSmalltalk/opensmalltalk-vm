@@ -5,7 +5,7 @@ Class {
 		'label',
 		'asmLabel'
 	],
-	#category : #'VMMaker-Translation to C'
+	#category : #'VMMaker-Slang'
 }
 
 { #category : #accessing }

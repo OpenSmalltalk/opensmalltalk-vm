@@ -46,7 +46,7 @@ Class {
 	#pools : [
 		'VMBasicConstants'
 	],
-	#category : #'VMMaker-Translation to C'
+	#category : #'VMMaker-Slang'
 }
 
 { #category : #'class initialization' }
@@ -71,18 +71,6 @@ CCodeGenerator class >> monticelloDescriptionFor: aClass [
 	pkg ancestry ancestors isEmpty ifFalse:
 		[uuid := pkg ancestry ancestors first id].
 	^aClass name, (pkg modified ifTrue: [' * '] ifFalse: [' ']), pkg ancestry ancestorString, ' uuid: ', uuid asString
-]
-
-{ #category : #'removing from system' }
-CCodeGenerator class >> removeCompilerMethods [
-	"Before removing the C code generator classes from the system, use this method to remove the compiler node methods that support it. This avoids leaving dangling references to C code generator classes in the compiler node classes."
-
-	ParseNode withAllSubclasses do: [ :nodeClass |
-		nodeClass removeCategory: 'C translation'.
-	].
-	Smalltalk at: #AbstractSound ifPresent: [:abstractSound |
-		 abstractSound class removeCategory: 'primitive generation'].
-
 ]
 
 { #category : #'C code generator' }
@@ -4308,7 +4296,7 @@ CCodeGenerator >> nilOrBooleanConditionFor: nodeOrNil [
 		(vmClass notNil
 		 and: [nodeOrNil args first isConstant
 		 and: [(value := nodeOrNil args first value) isSymbol
-		 and: [((vmClass ifNil: [VMBasicConstants]) defineAtCompileTime: value) not
+		 and: [(vmClass defineAtCompileTime: value) not
 		 and: [(vmClass bindingOf: value) notNil]]]]) ifTrue:
 			[self logger
 					nextPutAll: 'Warning: cppIf: reference to ';
@@ -4320,7 +4308,7 @@ CCodeGenerator >> nilOrBooleanConditionFor: nodeOrNil [
 		 ^(optionsDictionary notNil
 		   and: [nodeOrNil args first isConstant
 		   and: [(#(true false) includes: (optionsDictionary at: maybeName ifAbsent: [nil]))
-		   and: [((vmClass ifNil: [VMBasicConstants]) defineAtCompileTime: maybeName) not]]]) ifTrue:
+		   and: [(vmClass defineAtCompileTime: maybeName) not]]]) ifTrue:
 			[optionsDictionary at: nodeOrNil args first name]].
 	^nil
 ]

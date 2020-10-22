@@ -4,7 +4,7 @@ Class {
 	#instVars : [
 		'codeGenerator'
 	],
-	#category : #'VMMaker-Translation to C'
+	#category : #'VMMaker-Slang'
 }
 
 { #category : #'instance-cre' }

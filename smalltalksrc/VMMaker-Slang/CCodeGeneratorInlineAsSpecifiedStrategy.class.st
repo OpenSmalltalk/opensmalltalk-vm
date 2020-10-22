@@ -4,7 +4,7 @@ Class {
 	#instVars : [
 		'selectorsOfMethodsNotToInline'
 	],
-	#category : #'VMMaker-Translation to C'
+	#category : #'VMMaker-Slang'
 }
 
 { #category : #'as yet unclassified' }

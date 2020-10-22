@@ -4,7 +4,7 @@ Class {
 	#instVars : [
 		'expression'
 	],
-	#category : #'VMMaker-Translation to C'
+	#category : #'VMMaker-Slang'
 }
 
 { #category : #transformations }

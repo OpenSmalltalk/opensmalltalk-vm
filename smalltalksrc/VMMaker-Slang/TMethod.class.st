@@ -31,7 +31,7 @@ Class {
 	#classVars : [
 		'CaseStatements'
 	],
-	#category : #'VMMaker-Translation to C'
+	#category : #'VMMaker-Slang'
 }
 
 { #category : #'class initialization' }
