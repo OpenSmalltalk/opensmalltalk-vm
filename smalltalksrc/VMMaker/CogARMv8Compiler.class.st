@@ -1007,10 +1007,10 @@ CogARMv8Compiler >> computeMaximumSize [
 													[1 << (operands at: 0) highBit = ((operands at: 0) + 1)
 														ifTrue: [8]
 														ifFalse: [self literalLoadInstructionBytes + 4]]]].
-		[CmpCqR]				-> [ | immediate |
-			immediate := operands at: 0.
+		[CmpCqR]				-> [| immediate |
+			immediate := (operands at: 0) abs.
 			^ ((immediate bitAnd: 16rfff) = immediate
-				or: [ (immediate >> 12 << 12) = immediate ])
+				or: [ ((immediate >> 12) bitAnd: 16rfff) = (immediate >> 12) ])
 					ifTrue: [ 4]
 					ifFalse: [self literalLoadInstructionBytes + 4]].
 		[CmpC32R]				-> [^self rotateable8bitSignedImmediate: (operands at: 0)
@@ -1544,7 +1544,7 @@ CogARMv8Compiler >> concretizeCmpCqR [
 					(self cmpSize: 1 immediate12BitValue: quickImmediate shiftFlag: 0 register: registerToUse).
 			^ machineCodeSize := 4 ].
 		
-		fitsShifted12Bits := (quickImmediate >> 12 << 12) = quickImmediate.
+		fitsShifted12Bits := ((quickImmediate >> 12) bitAnd: 16rFFF) = (quickImmediate >> 12).
 		fitsShifted12Bits ifTrue: [ 
 			self
 				machineCodeAt: 0
@@ -1562,7 +1562,7 @@ CogARMv8Compiler >> concretizeCmpCqR [
 					(self cmnSize: 1 immediate12BitValue: quickImmediate shiftFlag: 0 register: registerToUse).
 			^ machineCodeSize := 4 ].
 		
-		fitsShifted12Bits := (quickImmediate >> 12 << 12) = quickImmediate.
+		fitsShifted12Bits := ((quickImmediate >> 12) bitAnd: 16rFFF) = (quickImmediate >> 12).
 		fitsShifted12Bits ifTrue: [ 
 			self
 				machineCodeAt: 0
