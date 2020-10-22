@@ -2622,7 +2622,7 @@ CogVMSimulator >> openOn: fileName extraMemory: extraBytes [
 	| f version headerSize dataSize count oldBaseAddr bytesToShift swapBytes
 	  headerFlags firstSegSize heapSize
 	  hdrNumStackPages hdrEdenBytes hdrMaxExtSemTabSize
-	  hdrCogCodeSize stackZoneSize methodCacheSize primTraceLogSize allocationReserve |
+	  hdrCogCodeSize stackZoneSize methodCacheSize primTraceLogSize allocationReserve vmRequiredMemorySize |
 	"open image file and read the header"
 
 	(f := self openImageFileNamed: fileName) ifNil: [^self].
@@ -2693,14 +2693,16 @@ CogVMSimulator >> openOn: fileName extraMemory: extraBytes [
 	 simulation the methodCache must be relocated to memory."
 	methodCacheSize := methodCache size * objectMemory wordSize.
 	primTraceLogSize := primTraceLog size * objectMemory wordSize.
+
 	"allocate interpreter memory. This list is in address order, low to high.
 	 In the actual VM the stack zone exists on the C stack."
-	heapBase := (Cogit guardPageSize
+	vmRequiredMemorySize := (Cogit guardPageSize
 				+ cogCodeSize
 				+ stackZoneSize
 				+ methodCacheSize
 				+ primTraceLogSize
 				+ self rumpCStackSize) roundUpTo: objectMemory allocationUnit.
+
 	"compare memory requirements with availability"
 	allocationReserve := self interpreterAllocationReserveBytes.
 	objectMemory hasSpurMemoryManagerAPI
@@ -2724,15 +2726,17 @@ CogVMSimulator >> openOn: fileName extraMemory: extraBytes [
 						+ (extraBytes > allocationReserve
 							ifTrue: [0]
 							ifFalse: [allocationReserve])].
+
+	objectMemory allocateMemoryOfSize: vmRequiredMemorySize + heapSize.	
+	
 	heapBase := objectMemory
-					setHeapBase: heapBase
-					memoryLimit:  heapBase + heapSize
-					endOfMemory: heapBase + dataSize.
+					setHeapBase: objectMemory memory initialAddress + vmRequiredMemorySize
+					memoryLimit:  objectMemory memory initialAddress + vmRequiredMemorySize + heapSize
+					endOfMemory: objectMemory memory initialAddress + vmRequiredMemorySize + dataSize.
 
 	self assert: cogCodeSize \\ 4 = 0.
 	self assert: objectMemory memoryLimit \\ 4 = 0.
 	self assert: self rumpCStackSize \\ 4 = 0.
-	objectMemory allocateMemoryOfSize: objectMemory memoryLimit.
 	"read in the image in bulk, then swap the bytes if necessary"
 	f position: headerSize.
 	count := objectMemory readHeapFromImageFile: f dataBytes: dataSize.
@@ -2903,12 +2907,6 @@ CogVMSimulator >> primitiveDoPrimitiveWithArgs [
 CogVMSimulator >> primitiveExecuteMethod [
 	self halt: thisContext selector.
 	^super primitiveExecuteMethod
-]
-
-{ #category : #'control primitives' }
-CogVMSimulator >> primitiveExecuteMethodArgsArray [
-	self halt: thisContext selector.
-	^super primitiveExecuteMethodArgsArray
 ]
 
 { #category : #'as yet unclassified' }

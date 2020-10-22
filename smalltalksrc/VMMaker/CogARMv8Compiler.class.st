@@ -1007,10 +1007,10 @@ CogARMv8Compiler >> computeMaximumSize [
 													[1 << (operands at: 0) highBit = ((operands at: 0) + 1)
 														ifTrue: [8]
 														ifFalse: [self literalLoadInstructionBytes + 4]]]].
-		[CmpCqR]				-> [ | immediate |
-			immediate := operands at: 0.
+		[CmpCqR]				-> [| immediate |
+			immediate := (operands at: 0) abs.
 			^ ((immediate bitAnd: 16rfff) = immediate
-				or: [ (immediate >> 12 << 12) = immediate ])
+				or: [ ((immediate >> 12) bitAnd: 16rfff) = (immediate >> 12) ])
 					ifTrue: [ 4]
 					ifFalse: [self literalLoadInstructionBytes + 4]].
 		[CmpC32R]				-> [^self rotateable8bitSignedImmediate: (operands at: 0)
@@ -1081,18 +1081,8 @@ CogARMv8Compiler >> computeMaximumSize [
 		[MSUB]					-> [^4].
 				
 		"Data Movement"						
-		[MoveCqR]				-> [^self literalLoadInstructionBytes = 4
-										ifTrue: [self literalLoadInstructionBytes]
-										ifFalse:
-											[self rotateable8bitBitwiseImmediate: (operands at: 0)
-												ifTrue: [:r :i :n| 4]
-												ifFalse: [self literalLoadInstructionBytes]]].
-		[MoveC32R]				-> [^self literalLoadInstructionBytes = 4
-										ifTrue: [self literalLoadInstructionBytes]
-										ifFalse:
-											[(self inCurrentCompilation: (operands at: 0))
-												ifTrue: [4]
-												ifFalse: [self literalLoadInstructionBytes]]].
+		[MoveCqR]				-> [^ 4].
+		[MoveC32R]				-> [ ^ 4 ].
 		[MoveCwR]				-> [^self literalLoadInstructionBytes = 4
 										ifTrue: [self literalLoadInstructionBytes]
 										ifFalse:
@@ -1540,6 +1530,7 @@ CogARMv8Compiler >> concretizeCmpC32R [
 { #category : #'generate machine code - concretize' }
 CogARMv8Compiler >> concretizeCmpCqR [
 	
+	<var: #quickImmediate type: #sqInt>
 	<inline: true>
 	| quickImmediate registerToUse fits12Bits fitsShifted12Bits |
 	quickImmediate := operands at: 0.
@@ -1554,7 +1545,7 @@ CogARMv8Compiler >> concretizeCmpCqR [
 					(self cmpSize: 1 immediate12BitValue: quickImmediate shiftFlag: 0 register: registerToUse).
 			^ machineCodeSize := 4 ].
 		
-		fitsShifted12Bits := (quickImmediate >> 12 << 12) = quickImmediate.
+		fitsShifted12Bits := ((quickImmediate >> 12) bitAnd: 16rFFF) = (quickImmediate >> 12).
 		fitsShifted12Bits ifTrue: [ 
 			self
 				machineCodeAt: 0
@@ -1572,7 +1563,7 @@ CogARMv8Compiler >> concretizeCmpCqR [
 					(self cmnSize: 1 immediate12BitValue: quickImmediate shiftFlag: 0 register: registerToUse).
 			^ machineCodeSize := 4 ].
 		
-		fitsShifted12Bits := (quickImmediate >> 12 << 12) = quickImmediate.
+		fitsShifted12Bits := ((quickImmediate >> 12) bitAnd: 16rFFF) = (quickImmediate >> 12).
 		fitsShifted12Bits ifTrue: [ 
 			self
 				machineCodeAt: 0
@@ -2103,12 +2094,7 @@ CogARMv8Compiler >> concretizeMoveCqR [
 	quickConstant := operands at: 0.
 	destinationRegister := operands at: 1.
 
-	"If the quickConstant fits in 32bits, concretize as MoveC32R"
-	(quickConstant bitAnd: 16rFFFFFFFF) = quickConstant ifTrue: [ 
-		^ self concretizeMoveC32R
-	].
-	"otherwise, concretize as a move CwR"
-	^self moveCw: quickConstant intoR: destinationRegister
+	^ self concretizeMoveC32R
 ]
 
 { #category : #'generate machine code - concretize' }

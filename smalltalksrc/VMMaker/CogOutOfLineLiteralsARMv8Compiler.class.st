@@ -48,7 +48,7 @@ CogOutOfLineLiteralsARMv8Compiler >> concretizeMoveC32R [
 		self shiftable16bitImmediate: (operands at: 0) negated - 1
 			ifTrue: [ :shift :value |
 					self machineCodeAt: 0 put: (self
-						movSize: 0
+						movSize: 1
 						destinationRegister: (operands at: 1)
 						negatedImm: value
 						shift: shift).
@@ -58,7 +58,7 @@ CogOutOfLineLiteralsARMv8Compiler >> concretizeMoveC32R [
 	self shiftable16bitImmediate: (operands at: 0)
 		ifTrue: [ :shift :value |
 				self machineCodeAt: 0 put: (self
-					movSize: 0
+					movSize: 1
 					destinationRegister: (operands at: 1)
 					imm: value
 					shift: shift).
@@ -355,7 +355,10 @@ CogOutOfLineLiteralsARMv8Compiler >> usesOutOfLineLiteral [
 				registerSize: 64
 				ifPossible: [ :value | false ]
 				ifNotPossible: [ true ]].
-		[CmpCqR]		-> [^self rotateable8bitSignedImmediate: (operands at: 0) ifTrue: [:r :i :n| false] ifFalse: [true]].
+		[CmpCqR]		-> [ 
+				((operands at: 0) abs bitAnd: 16rFFF) = (operands at: 0) abs ifTrue: [ ^ false ].
+				((operands at: 0) abs << 12 >> 12 bitAnd: 16rFFF) = (operands at: 0) abs ifTrue: [ ^ false ].
+				^ true].
 		[CmpC32R]		-> [^self rotateable8bitSignedImmediate: (operands at: 0) ifTrue: [:r :i :n| false] ifFalse: [true]].
 		[OrCqR]			-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
 		[SubCqR]		-> [ | constant |
@@ -376,10 +379,11 @@ CogOutOfLineLiteralsARMv8Compiler >> usesOutOfLineLiteral [
 		[LoadEffectiveAddressMwrR]
 						-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
 		"Data Movement"						
-		[MoveCqR]		-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
+		[MoveCqR]		-> [^ self shiftable16bitImmediate: (operands at: 0) abs
+			ifTrue: [ :s :v | false ] ifFalse: [ true ]].
 		[MoveCwR]		-> [^(self inCurrentCompilation: (operands at: 0)) not].
 		[MoveC32R]  -> [ ^ self shiftable16bitImmediate: (operands at: 0)
-			ifTrue: [ true ] ifFalse: [ self halt ] ].
+			ifTrue: [ :s :v | false ] ifFalse: [ true ] ].
 		[MoveAwR]		-> [^(self isAddressRelativeToVarBase: (operands at: 0)) ifTrue: [false] ifFalse: [true]].
 		[MoveRAw]		-> [^(self isAddressRelativeToVarBase: (operands at: 1)) ifTrue: [false] ifFalse: [true]].
 		[MoveAbR]		-> [^(self isAddressRelativeToVarBase: (operands at: 0)) ifTrue: [false] ifFalse: [true]].
