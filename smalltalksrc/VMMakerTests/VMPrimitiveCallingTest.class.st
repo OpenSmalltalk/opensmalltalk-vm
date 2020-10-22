@@ -62,6 +62,8 @@ VMPrimitiveCallingTest >> setUp [
 	interpreter codeGeneratorToComputeAccessorDepth: (VMMockCodeGenerator for: interpreter).
 	interpreter codeGeneratorToComputeAccessorDepth addPrimitive: #primitiveThatDoNothingWithOneArgument.
 	interpreter codeGeneratorToComputeAccessorDepth initializeWithPrimitiveTable.
+	
+	self createActiveProcess
 ]
 
 { #category : #'tests - with tracing' }
@@ -286,6 +288,28 @@ VMPrimitiveCallingTest >> testCallingPrimitivesTakingTracesReturnsValidResults [
 	self assert: machineSimulator receiverRegisterValue equals: (memory integerObjectOf: 3)
 ]
 
+{ #category : #'tests - newMethod' }
+VMPrimitiveCallingTest >> testNamedPrimitiveCallSetsNewMethod [
+
+	| callingMethod |
+
+	callingMethod := self jitMethod: (self findMethod: #methodThatCallNamedPrimitive:).
+
+	self initStack.	
+
+	self 
+		callCogMethod: callingMethod 
+		receiver: memory nilObject 
+		arguments: {memory nilObject}
+		returnAddress: callerAddress.
+	
+	self 
+		assert: interpreter newMethod
+		equals: callingMethod methodObject
+	
+
+]
+
 { #category : #'tests - primitiveFunctionPointer' }
 VMPrimitiveCallingTest >> testNamedPrimitiveCallSetsPrimitiveFunctionPointerWhenCallingCImplementation [
 
@@ -492,6 +516,28 @@ VMPrimitiveCallingTest >> testNamedPrimitiveIsNotTracedIfNotCalled [
 	
 	1 to: interpreter primTraceLogEntries - 1 do:
 		[:i| self assert: (interpreter primTraceLog at: i) = 0].
+	
+
+]
+
+{ #category : #'tests - newMethod' }
+VMPrimitiveCallingTest >> testPrimitiveCallSetsNewMethod [
+
+	| callingMethod |
+
+	callingMethod := self jitMethod: (self findMethod: #methodThatCallPrimitive1:).
+
+	self initStack.	
+
+	self 
+		callCogMethod: callingMethod 
+		receiver: memory nilObject 
+		arguments: {memory nilObject}
+		returnAddress: callerAddress.
+	
+	self 
+		assert: interpreter newMethod
+		equals: callingMethod methodObject
 	
 
 ]
@@ -739,6 +785,56 @@ VMPrimitiveCallingTest >> testPrimitiveWithPrimitiveFailExecutesFallbackCode [
 	self assert: machineSimulator receiverRegisterValue equals: (memory integerObjectOf: 42).
 	
 
+]
+
+{ #category : #'tests - profile sampling' }
+VMPrimitiveCallingTest >> testPrimitiveWithProfileSemaphoreAndNextTickTakesSample [
+
+	| callingMethod |
+
+	"I have a profile semaphore, because I want to generate the code"
+	interpreter profileSemaphore: self newZeroSizedObject.
+	"I will not take samples"
+	interpreter nextProfileTick: 1.
+
+	callingMethod := self jitMethod: (self findMethod: #methodThatCallPrimitive1:).
+
+
+	self initStack.	
+
+	"When the sampling C routine is call, a check interrupt is force, so the activation of the fallback code aborts and go to the abort routine"
+	self 
+		callCogMethod: callingMethod 
+		receiver: memory nilObject 
+		arguments: {memory nilObject}
+		returnAddress: cogit ceMethodAbortTrampoline.
+
+	self assert: machineSimulator instructionPointerValue equals: cogit ceMethodAbortTrampoline.
+	self assert: interpreter nextProfileTick equals: 0
+]
+
+{ #category : #'tests - profile sampling' }
+VMPrimitiveCallingTest >> testPrimitiveWithProfileSemaphoreButNotNextTickDoesNotTakeSample [
+
+	| callingMethod |
+
+	"I have a profile semaphore, because I want to generate the code"
+	interpreter profileSemaphore: self newZeroSizedObject.
+	"I will not take samples"
+	interpreter nextProfileTick: 0.
+
+	callingMethod := self jitMethod: (self findMethod: #methodThatCallPrimitive1:).
+
+	self initStack.	
+
+	"If the profile routine is not call the fallback code is executed normally"
+	self 
+		callCogMethod: callingMethod 
+		receiver: memory nilObject 
+		arguments: {memory nilObject}
+		returnAddress: callerAddress.
+		
+	self assert: machineSimulator receiverRegisterValue equals: (memory integerObjectOf: 42)
 ]
 
 { #category : #'tests - fail fast' }

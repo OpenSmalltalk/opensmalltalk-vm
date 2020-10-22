@@ -4077,6 +4077,12 @@ Cogit >> ceSICMiss: receiver [
 ]
 
 { #category : #accessing }
+Cogit >> ceScheduleScavengeTrampoline: anInteger [ 
+
+	objectRepresentation 	ceScheduleScavengeTrampoline: anInteger
+]
+
+{ #category : #accessing }
 Cogit >> ceSmallActiveContextInBlockTrampoline [
 
 	<doNotGenerate>
