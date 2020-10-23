@@ -1113,13 +1113,13 @@ CogARMv8Compiler >> computeMaximumSize [
 		[MoveRAb]				-> [^(self isAddressRelativeToVarBase: (operands at: 1))
 													ifTrue: [4]
 													ifFalse: [self literalLoadInstructionBytes + 4]].
-		[MoveRMwr]			-> [^self is9BitValue: (operands at: 1)
-										ifTrue: [ :value | 4 ]
-										ifFalse: [ self shiftable16bitImmediate: (operands at: 1) ifTrue: [ :value :shift | 8 ] ifFalse: [ self notYetImplemented ] ]].
+		[MoveRMwr]			-> [self is9BitValue: (operands at: 1)
+										ifTrue: [ :value | ^  4 ]
+										ifFalse: [ self shiftable16bitImmediate: (operands at: 1) ifTrue: [ :value :shift | ^  8 ] ifFalse: [ self notYetImplemented. ^ 0 ] ]].
 		[MoveRdM64r]			-> [^self literalLoadInstructionBytes + 4]. 
 		[MoveMbrR]				-> [^self is9BitValue: (operands at: 0)
 										ifTrue: [:value | 8 "2 instrutions" ]
-										ifFalse: [ self notYetImplemented ]].
+										ifFalse: [ self notYetImplemented. 0 ]].
 		[MoveRMbr]				-> [^self is12BitValue: (operands at: 1)
 										ifTrue: [:u :i| 4]
 										ifFalse: [self literalLoadInstructionBytes + 4]].
@@ -2169,7 +2169,7 @@ CogARMv8Compiler >> concretizeMoveMbrR [
 
 	<var: #offset type: #sqInt>
 	<inline: true>
-	| srcReg offset destReg instrOffset |
+	| srcReg offset destReg |
 	offset := operands at: 0.
 	srcReg := operands at: 1.
 	destReg := operands at: 2.
@@ -2185,23 +2185,8 @@ CogARMv8Compiler >> concretizeMoveMbrR [
 				put: (self ldurbSize: 1 baseRegister: srcReg signedOffset: immediate9bitTwoComplementValue destinationRegister: destReg).
 			^ machineCodeSize := 8 ]
 		ifFalse: [
-			1halt.
-			 (self isAddressRelativeToVarBase: offset)
-				ifTrue: [ self
-						machineCodeAt: 0
-						put:
-							(self
-								adds: ConcreteIPReg
-								rn: ConcreteVarBaseReg
-								imm: offset - cogit varBaseAddress
-								ror: 0).
-					instrOffset := 4 ]
-				ifFalse: [ instrOffset := self moveCw: offset intoR: ConcreteIPReg ].
-			"ldrb destReg, [srcReg, ConcreteIPReg]"
-			self
-				machineCodeAt: instrOffset
-				put: (self ldrb: destReg rn: srcReg rm: ConcreteIPReg).
-			^ machineCodeSize := instrOffset + 4 ].
+			self notYetImplemented.
+			^ machineCodeSize := 4 ].
 	^ 0	"to keep Slang happy"
 ]
 
@@ -2349,22 +2334,7 @@ CogARMv8Compiler >> concretizeMoveRM16r [
 				put: (self strhSourceRegister: srcReg destinationRegister: baseReg offset: offset / 2).
 			^ machineCodeSize := 4 ]
 		ifFalse: [ 
-			self halt.
-			(self isAddressRelativeToVarBase: offset)
-				ifTrue: [ self
-						machineCodeAt: 0
-						put:
-							(self
-								adds: ConcreteIPReg
-								rn: ConcreteVarBaseReg
-								imm: offset - cogit varBaseAddress
-								ror: 0).
-					instrOffset := 4 ]
-				ifFalse: [ instrOffset := self moveCw: offset intoR: ConcreteIPReg ].
-			"strb 	srcReg, [baseReg, ConcreteIPReg]"
-			self
-				machineCodeAt: instrOffset
-				put: (self strh: srcReg rn: baseReg rm: ConcreteIPReg).
+			self notYetImplemented.
 			^ machineCodeSize := instrOffset + 4 ].
 	^ 0	"to keep Slang happy"
 ]
@@ -2375,8 +2345,9 @@ CogARMv8Compiler >> concretizeMoveRMbr [
 
 	<var: #offset type: #sqInt>
 	<inline: true>
-	| srcReg offset baseReg instrOffset |
-	self halt.
+	| srcReg offset baseReg |
+	self notYetImplemented.
+	
 	srcReg := operands at: 0.
 	offset := operands at: 1.
 	baseReg := operands at: 2.
@@ -2392,22 +2363,9 @@ CogARMv8Compiler >> concretizeMoveRMbr [
 						plus: u
 						imm: immediate).	"strb 	srcReg, [baseReg, #immediate]"
 			^ machineCodeSize := 4 ]
-		ifFalse: [ (self isAddressRelativeToVarBase: offset)
-				ifTrue: [ self
-						machineCodeAt: 0
-						put:
-							(self
-								adds: ConcreteIPReg
-								rn: ConcreteVarBaseReg
-								imm: offset - cogit varBaseAddress
-								ror: 0).
-					instrOffset := 4 ]
-				ifFalse: [ instrOffset := self moveCw: offset intoR: ConcreteIPReg ].
-			"strb 	srcReg, [baseReg, ConcreteIPReg]"
-			self
-				machineCodeAt: instrOffset
-				put: (self strb: srcReg rn: baseReg rm: ConcreteIPReg).
-			^ machineCodeSize := instrOffset + 4 ].
+		ifFalse: [ 
+			self notYetImplemented.
+			^ machineCodeSize := 4 ].
 	^ 0	"to keep Slang happy"
 ]
 
@@ -5715,13 +5673,6 @@ CogARMv8Compiler >> strb: destinationRegister rn: baseReg plus: u imm: immediate
 
 	self notYetImplemented.
 	^ 0
-]
-
-{ #category : #'ARM convenience instructions' }
-CogARMv8Compiler >> strb: srcReg rn: baseReg rm: offsetReg [
-
-	self notYetImplemented.
-	^0
 ]
 
 { #category : #assembler }
