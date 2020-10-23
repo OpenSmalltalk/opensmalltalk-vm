@@ -42,10 +42,12 @@ CogOutOfLineLiteralsARMv8Compiler >> concretizeLiteral [
 { #category : #'generate machine code' }
 CogOutOfLineLiteralsARMv8Compiler >> concretizeMoveC32R [
 	"Will get inlined into concretizeAt: switch."
-
+	<var: #quickConstant type: #sqInt>
 	<inline: true>
-	(operands at: 0) < 0 ifTrue: [ 
-		self shiftable16bitImmediate: (operands at: 0) negated - 1
+	| quickConstant |
+	quickConstant := operands at: 0.
+	quickConstant < 0 ifTrue: [ 
+		self shiftable16bitImmediate: quickConstant negated - 1
 			ifTrue: [ :shift :value |
 					self machineCodeAt: 0 put: (self
 						movSize: 1
@@ -55,7 +57,7 @@ CogOutOfLineLiteralsARMv8Compiler >> concretizeMoveC32R [
 				^ machineCodeSize := 4 ]
 			ifFalse: [ self halt ]].
 
-	self shiftable16bitImmediate: (operands at: 0)
+	self shiftable16bitImmediate: quickConstant
 		ifTrue: [ :shift :value |
 				self machineCodeAt: 0 put: (self
 					movSize: 1

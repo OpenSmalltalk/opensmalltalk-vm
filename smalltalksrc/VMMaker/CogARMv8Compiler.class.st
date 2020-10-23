@@ -1323,6 +1323,7 @@ CogARMv8Compiler >> concretizeAlignmentNops [
 
 { #category : #'generate machine code - concretize' }
 CogARMv8Compiler >> concretizeAndCqR [
+	<var: #val type: #sqInt>
 	<inline: true>
 	| val rd rn |
 	val := operands at: 0.
@@ -1365,6 +1366,7 @@ CogARMv8Compiler >> concretizeAndCqRR [
 
 	"AND is very important since it's used to mask all sorts of flags in the jit. We take special care to try to find compact ways to make the masks"
 
+	<var: #val type: #sqInt>
 	<inline: true>
 	| val srcReg dstReg |
 
@@ -1407,6 +1409,7 @@ CogARMv8Compiler >> concretizeAndRR [
 { #category : #'generate machine code - concretize' }
 CogARMv8Compiler >> concretizeArithmeticShiftRightCqR [
 
+	<var: #shiftValue type: #sqInt>
 	<inline: true>
 	| shiftValue reg |
 	shiftValue := operands at: 0.
@@ -1888,7 +1891,7 @@ CogARMv8Compiler >> concretizeLoadEffectiveAddressMwrR [
 CogARMv8Compiler >> concretizeLogicalShiftLeftCqR [
 	"Will get inlined into concretizeAt: switch."
 
-	
+	<var: #distance type: #sqInt>
 	<inline: true>
 	| distance reg |
 	distance := (operands at: 0) min: 63.
@@ -1921,6 +1924,7 @@ CogARMv8Compiler >> concretizeLogicalShiftLeftRR [
 CogARMv8Compiler >> concretizeLogicalShiftRightCqR [
 	"Will get inlined into concretizeAt: switch."
 
+	<var: #distance type: #sqInt>
 	<inline: true>
 	| distance reg |
 	distance := (operands at: 0) min: 63.
@@ -2088,7 +2092,7 @@ CogARMv8Compiler >> concretizeMoveCqR [
 
 	"If the quick constant is in fact a shiftable 8bit, generate the apropriate MOV, otherwise do what is necessary for a whole word."
 
-	<var: #word type: #sqInt>
+	<var: #quickConstant type: #sqInt>
 	<inline: true>
 	| destinationRegister quickConstant |
 	quickConstant := operands at: 0.
@@ -2667,6 +2671,7 @@ CogARMv8Compiler >> concretizeNop [
 
 { #category : #'generate machine code - concretize' }
 CogARMv8Compiler >> concretizeOrCqR [
+	<var: #val type: #sqInt>
 	<inline: true>
 	| val rd rn |
 	val := operands at: 0.
@@ -2758,7 +2763,7 @@ CogARMv8Compiler >> concretizePrefetchAw [
 CogARMv8Compiler >> concretizePushCq [
 
 	"Will get inlined into concretizeAt: switch."
-
+	<var: #word type: #sqInt>
 	<inline: true>
 	| word instrOffset |
 	word := operands at: 0.
@@ -2827,8 +2832,8 @@ CogARMv8Compiler >> concretizeRetN [
 
 { #category : #concretize }
 CogARMv8Compiler >> concretizeRotateLeftCqR [
+	<var: #rotation type: #sqInt>
 	<inline: true>
-
 	| rotation sourceRegister destinationRegister |
 	rotation := operands at: 0.
 	destinationRegister := sourceRegister := operands at: 1.
@@ -2842,8 +2847,8 @@ CogARMv8Compiler >> concretizeRotateLeftCqR [
 
 { #category : #concretize }
 CogARMv8Compiler >> concretizeRotateRightCqR [
+	<var: #rotation type: #sqInt>
 	<inline: true>
-
 	| rotation sourceRegister destinationRegister |
 	rotation := operands at: 0.
 	destinationRegister := sourceRegister := operands at: 1.
@@ -3038,10 +3043,12 @@ CogARMv8Compiler >> concretizeSubRdRd [
 { #category : #'generate machine code - concretize' }
 CogARMv8Compiler >> concretizeTstCqR [
 	"Will get inlined into concretizeAt: switch."
-
+	<var: #word type: #sqInt>
 	<inline: true>
+	| word |
+	word := operands at: 0.
 	self
-		encodeLogicalImmediate: (operands at: 0)
+		encodeLogicalImmediate: word
 		registerSize: 64
 		ifPossible: [ :immediate13LogicalValue |
 			self
