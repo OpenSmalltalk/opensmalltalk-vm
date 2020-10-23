@@ -58,6 +58,7 @@ VMPrimitiveCallAbstractTest >> jitMethod: aPharoCompiledMethod selector: aSelect
 	"We are using V3 bytecode, so we need to recompile the method"
 	v3Method := self class compiler
 							encoderClass: EncoderForV3PlusClosures;
+							options: #(-optionFullBlockClosure);
 							compile: aPharoCompiledMethod sourceCode.
 	
 	methodOop := methodBuilder fillFromPharoMethod: v3Method; buildMethod.
@@ -99,13 +100,14 @@ VMPrimitiveCallAbstractTest >> methodThatCallPrimitive1: anArg [
 	"This method is used to test the invocation of a primitive.
 	The primitive to invoke is later changed in the primitive table of the interpreter used in the test"
 	<primitive: 1>
+	
 	^ 42
 ]
 
 { #category : #'methods under test' }
 VMPrimitiveCallAbstractTest >> methodToCompile1 [
 
-	^ 42
+	^ 42 bitInvert
 ]
 
 { #category : #tests }

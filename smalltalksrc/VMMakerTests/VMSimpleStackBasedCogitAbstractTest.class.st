@@ -206,7 +206,6 @@ VMSimpleStackBasedCogitAbstractTest >> createFramefulCallFrom: returnAddress rec
 			caller's method ip/base frame's sender context
 	fp->	saved fp
 			method
-			frame flags
 			context (uninitialized)
 			receiver
 			first temp
