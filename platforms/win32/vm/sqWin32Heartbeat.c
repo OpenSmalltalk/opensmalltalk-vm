@@ -109,6 +109,7 @@ currentUTCMicrosecondsImplementation(void)
  */
 
 # define currentUTCMicroseconds(a,b,c) currentUTCUSecsImplementation(a,b,c)
+static unsigned __int64
 currentUTCUSecsImplementation(unsigned __int64 *utcTickBaseUsecsp,
 							  DWORD *lastTickp, DWORD *baseTickp)
 {
