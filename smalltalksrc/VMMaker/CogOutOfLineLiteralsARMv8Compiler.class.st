@@ -400,7 +400,7 @@ CogOutOfLineLiteralsARMv8Compiler >> usesOutOfLineLiteral [
 		[MoveMwrR]	-> [ | offset |
 			offset := (operands at: 0).
 			((offset >= 0 and: [ (offset bitAnd: 16rFFF) = offset ])
-				or: [ offset < 0 and: [ (offset abs bitAnd: 16rff) = offset ] ]) ifTrue: [ ^ false ].
+				or: [ offset < 0 and: [ (offset abs bitAnd: 16rff) = offset abs ] ]) ifTrue: [ ^ false ].
 			^ true ].
 		[PushCw]		-> [^(self inCurrentCompilation: (operands at: 0)) not].
 		[PushCq]		-> [^self shiftable16bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].

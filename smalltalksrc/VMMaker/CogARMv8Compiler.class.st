@@ -4123,7 +4123,7 @@ CogARMv8Compiler >> inverseOpcodeFor: armOpcode [
 { #category : #'as yet unclassified' }
 CogARMv8Compiler >> is12BitValue: constant ifTrue: aTrueBlock ifFalse: aFalseBlock [ 
 	
-	<inline: #always>
+	<inline: true>
 	
 	^ constant abs <= 2047 "(2 raisedTo: 11) - 1"
 		ifTrue: [ | twoComplement |
@@ -4132,7 +4132,7 @@ CogARMv8Compiler >> is12BitValue: constant ifTrue: aTrueBlock ifFalse: aFalseBlo
 				ifTrue: [ constant ]
 				ifFalse: [ 16rfff - constant abs + 1 ].
 			aTrueBlock value: constant >= 0 value: twoComplement ]
-		ifFalse: aFalseBlock
+		ifFalse: [aFalseBlock value]
 ]
 
 { #category : #'private-bit-manipulation' }
@@ -4141,22 +4141,10 @@ CogARMv8Compiler >> is64bitMask64: aMask [
 	^ aMask ~= 0 and: [ ((aMask + 1) bitAnd: aMask) == 0 ]
 ]
 
-{ #category : #testing }
-CogARMv8Compiler >> is8BitValue: constant ifTrue: trueAlternativeBlock	ifFalse: falseAlternativeBlock [
-	"For extended LDR and STR for half & double, there is an instruction allowing for one instruction encoding if the offset is encodable in 8 bit."
-	<inline: true>
-	constant abs <= 255 "(2 raisedTo: 8)-1"
-		ifTrue:
-			[constant >= 0 
-				ifTrue: [trueAlternativeBlock value: 1 value: constant]
-				ifFalse: [trueAlternativeBlock value: 0 value: constant abs]]
-		ifFalse: falseAlternativeBlock
-]
-
 { #category : #'as yet unclassified' }
 CogARMv8Compiler >> is9BitValue: constant ifTrue: aTrueBlock ifFalse: aFalseBlock [ 
 	
-	<inline: #always>
+	<inline: true>
 	
 	^ constant abs <= 255 "(2 raisedTo: 8) - 1"
 		ifTrue: [ | twoComplement |
@@ -4165,7 +4153,7 @@ CogARMv8Compiler >> is9BitValue: constant ifTrue: aTrueBlock ifFalse: aFalseBloc
 				ifTrue: [ constant ]
 				ifFalse: [ 16r1ff - constant abs + 1 ].
 			aTrueBlock value: twoComplement ]
-		ifFalse: aFalseBlock
+		ifFalse: [ aFalseBlock value ]
 ]
 
 { #category : #testing }
