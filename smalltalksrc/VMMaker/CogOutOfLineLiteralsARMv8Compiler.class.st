@@ -94,7 +94,7 @@ CogOutOfLineLiteralsARMv8Compiler >> getDefaultCogCodeSize [
 { #category : #'inline cacheing' }
 CogOutOfLineLiteralsARMv8Compiler >> inlineCacheTagAt: callSiteReturnAddress [
 	<inline: true>
-	^objectMemory long32At: (self pcRelativeAddressAt: (callSiteReturnAddress - 8) asUnsignedInteger)
+	^objectMemory longAt: (self pcRelativeAddressAt: (callSiteReturnAddress - 8) asUnsignedInteger)
 ]
 
 { #category : #testing }
@@ -253,8 +253,8 @@ CogOutOfLineLiteralsARMv8Compiler >> rewriteInlineCacheAt: callSiteReturnAddress
 	call := self bl: callDistance.
 	objectMemory
 		long32At: (self instructionAddressBefore: callSiteReturnAddress ) put: call;
-		longAt: (self pcRelativeAddressAt: callSiteReturnAddress - 8) put: cacheTag signedIntToLong.
-	self assert: (self inlineCacheTagAt: callSiteReturnAddress) = cacheTag  signedIntToLong.
+		longAt: (self pcRelativeAddressAt: callSiteReturnAddress - 8) put: cacheTag signedIntToLong64.
+	self assert: (self inlineCacheTagAt: callSiteReturnAddress) = cacheTag  signedIntToLong64.
 	"self cCode: ''
 		inSmalltalk: [cogit disassembleFrom: callSiteReturnAddress - 8 to: (self pcRelativeAddressAt: callSiteReturnAddress - 8)]."
 	^4
@@ -384,7 +384,7 @@ CogOutOfLineLiteralsARMv8Compiler >> usesOutOfLineLiteral [
 		[MoveCqR]		-> [^ self shiftable16bitImmediate: (operands at: 0) abs
 			ifTrue: [ :s :v | false ] ifFalse: [ true ]].
 		[MoveCwR]		-> [^(self inCurrentCompilation: (operands at: 0)) not].
-		[MoveC32R]  -> [ ^ self shiftable16bitImmediate: (operands at: 0)
+		[MoveC32R]  -> [ ^ self shiftable16bitImmediate: (operands at: 0) abs
 			ifTrue: [ :s :v | false ] ifFalse: [ true ] ].
 		[MoveAwR]		-> [^(self isAddressRelativeToVarBase: (operands at: 0)) ifTrue: [false] ifFalse: [true]].
 		[MoveRAw]		-> [^(self isAddressRelativeToVarBase: (operands at: 1)) ifTrue: [false] ifFalse: [true]].
