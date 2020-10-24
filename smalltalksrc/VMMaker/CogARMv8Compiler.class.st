@@ -4051,8 +4051,8 @@ CogARMv8Compiler >> instructionIsOR: instr [
 
 { #category : #testing }
 CogARMv8Compiler >> instructionIsPush: instr [
-	"is this a push -str r??, [sp, #-4] -  instruction?"
-	^(self conditionIsNotNever: instr) and: [(instr bitAnd: 16rFFF0FFF) = 16r52D0004]
+	"is this a push R str r??, [sp, #-8] -  instruction?"
+	^ (self pushR: 0) = (instr bitAnd: 16rFFFFFFFFFFFFFFE0)
 ]
 
 { #category : #disassembly }
@@ -5103,7 +5103,7 @@ CogARMv8Compiler >> relocateCallBeforeReturnPC: retpc by: delta [
 		 self assert: ((self instructionIsB: instr) or: [self instructionIsBL: instr]).
 		 distanceDiv4 := instr bitAnd: 16rFFFFFF.
 		 distanceDiv4 := distanceDiv4 + (delta // 4).
-		 objectMemory longAt: (self instructionAddressBefore: retpc ) put: ((instr bitAnd: 16rFF000000) bitOr: (distanceDiv4 bitAnd: 16rFFFFFF))]
+		 objectMemory long32At: (self instructionAddressBefore: retpc ) put: ((instr bitAnd: 16rFF000000) bitOr: (distanceDiv4 bitAnd: 16rFFFFFF))]
 ]
 
 { #category : #assembler }
