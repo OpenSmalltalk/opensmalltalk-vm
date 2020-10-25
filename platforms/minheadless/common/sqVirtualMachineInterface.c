@@ -39,6 +39,7 @@
 #include "sq.h"
 #include "sqSCCSVersion.h"
 #include "sqTextEncoding.h"
+#include "sqImageFileAccess.h"
 
 #define DefaultHeapSize		  20	     	/* megabytes BEYOND actual image size */
 #define DefaultMmapSize		1024     	/* megabytes of virtual memory */
