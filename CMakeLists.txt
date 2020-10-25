@@ -624,6 +624,12 @@ elseif(WIN32)
 		platforms/minheadless/windows
 	)
 
+	if(SQUEAK_PLATFORM_X86_32)
+		set(SETJMP_IMPL platform/win32/misc/_setjmp-x86.asm)
+	else()
+		set(SETJMP_IMPL platform/win32/misc/_setjmp-x64.asm)
+	endif()
+
 	set(VM_PLATFORM_SOURCES
     	platforms/minheadless/windows/sqWin32Alloc.h
         platforms/minheadless/windows/sqWin32HandleTable.h
@@ -639,6 +645,7 @@ elseif(WIN32)
     	platforms/minheadless/windows/sqWin32Stubs.c
     	platforms/minheadless/windows/sqWin32Threads.c
     	platforms/minheadless/windows/sqWin32Time.c
+		${SETJMP_IMPL}
 		${VM_PLATFORM_SOURCES}
 	)
     add_definitions(
