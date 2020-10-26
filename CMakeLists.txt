@@ -2,6 +2,8 @@
 cmake_minimum_required(VERSION 2.8)
 cmake_policy(SET CMP0054 NEW)
 project(OpenSmalltalkVM)
+#for setjmp.asm
+enable_language(ASM-ATT)
 
 option(ONLY_CONFIG_H "Only generate config.h" OFF)
 option(SPUR_OBJECT_MODEL "Spur Object Model" ON)
