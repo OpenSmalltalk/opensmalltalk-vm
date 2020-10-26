@@ -625,9 +625,9 @@ elseif(WIN32)
 	)
 
 	if(SQUEAK_PLATFORM_X86_32)
-		set(SETJMP_IMPL platform/win32/misc/_setjmp-x86.asm)
+		set(SETJMP_IMPL platforms/win32/misc/_setjmp-x86.asm)
 	else()
-		set(SETJMP_IMPL platform/win32/misc/_setjmp-x64.asm)
+		set(SETJMP_IMPL platforms/win32/misc/_setjmp-x64.asm)
 	endif()
 
 	set(VM_PLATFORM_SOURCES
