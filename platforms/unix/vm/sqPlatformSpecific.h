@@ -36,6 +36,7 @@
 #undef sqShrinkMemoryBy
 #undef sqMemoryExtraBytesLeft
 
+#include <stdio.h>  /* include this BEFORE we #define ftell and avoid signature mismatch */
 #include "sqMemoryAccess.h"
 
 extern usqInt sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize);
