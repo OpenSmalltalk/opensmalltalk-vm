@@ -61,6 +61,12 @@ SlangClass >> cCode: codeStringOrBlock inSmalltalk: aBlock [
 	^aBlock value
 ]
 
+{ #category : #accessing }
+SlangClass >> cogitClass [
+	
+	self subclassResponsibility
+]
+
 { #category : #'C pre-processor extensions' }
 SlangClass >> defined: aSymbol [
 	"Simulated version of the C pre-processor defined()"
@@ -91,4 +97,22 @@ SlangClass >> eassert: aBooleanExpressionOrBlock [
 SlangClass >> error [
 
 	<cmacro: ''>
+]
+
+{ #category : #accessing }
+SlangClass >> initializationOptions [
+	
+	self subclassResponsibility
+]
+
+{ #category : #accessing }
+SlangClass >> interpreterClass [
+	
+	self subclassResponsibility
+]
+
+{ #category : #accessing }
+SlangClass >> objectMemoryClass [
+	
+	self subclassResponsibility
 ]

@@ -332,7 +332,7 @@ VMMaker >> buildCodeGeneratorForCogit: cogitClass includeAPIMethods: getAPIMetho
 				ifTrue: [cgc initializeWithOptions: optionsDictionary]
 				ifFalse: [cgc initialize]]].
 
-	cogitClasses := OrderedCollection withAll: (cogitClass withAllSuperclasses copyUpThrough: VMClass) reverse.
+	cogitClasses := OrderedCollection withAll: (cogitClass withAllSuperclasses copyUpThrough: SlangClass) reverse.
 	cogitClasses addAllLast: (cogitClass ancilliaryClasses reject: [:class| class isStructClass]).
 	cogitClasses do: [:cgc| cg addClass: cgc].
 	"Now make sure to add struct classes that the most specific subclasses specify.
@@ -390,11 +390,11 @@ VMMaker >> buildCodeGeneratorForInterpreter: interpreterClass includeAPIMethods:
 	{interpreterClass. interpreterClass objectMemoryClass} do:
 		[:vmClass| | theClass |
 		 theClass := vmClass.
-		 [theClass ~~ VMClass] whileTrue:
+		 [theClass ~~ SlangClass] whileTrue:
 			[interpreterClasses addFirst: theClass.
 			 theClass := theClass superclass]].
 	interpreterClasses
-		addFirst: VMClass;
+		addFirst: SlangClass;
 		addAllLast: (cg nonStructClassesForTranslationClasses: interpreterClasses).
 
 	initializeClasses ifTrue:
@@ -674,7 +674,7 @@ VMMaker >> generateCogitIncludeFileFor: cogitClass [
 	"Generate the skeletal cogit.c that includes the processor-specific cogit files."
 
 	| code fileName file fileCode |
-	code := Cogit generateCodeStringForCogitDotC.
+	code := cogitClass generateCodeStringForCogitDotC.
 	fileName := (self coreVMDirectory / cogitClass sourceFileName) fullName.
 	((self coreVMDirectory asFileReference / cogitClass sourceFileName) exists
 	and: [fileCode := fileName asFileReference contents.
@@ -881,7 +881,7 @@ VMMaker >> initialize [
 	platformName := 'Cross'.
 	is64BitVM := false.
 	doCleanupOldFiles := false.
-	interpreterClassName := StackInterpreterPrimitives name.
+	interpreterClassName := #StackInterpreterPrimitives.
 	optionsDictionary := Dictionary newFromPairs: {#BytesPerWord. 4}.
 	SlangStructType voidStructTypeCache
 ]
@@ -1163,10 +1163,10 @@ VMMaker >> needsToRegenerateInterpreterFile [
 	 source file (e.g. interp.c) if it already exists.  Answer if the file needs regenerating."
 
 	| classes tStamp |
-	classes := self interpreterClass withAllSuperclasses copyUpTo: VMClass.
+	classes := self interpreterClass withAllSuperclasses copyUpTo: SlangClass.
 	self interpreterClass objectMemoryClass ifNotNil:
 		[:objectMemoryClass|
-		classes addAllLast: (objectMemoryClass withAllSuperclasses copyUpTo: VMClass)].
+		classes addAllLast: (objectMemoryClass withAllSuperclasses copyUpTo: SlangClass)].
 	classes copy do:
 		[:class| classes addAllLast: class ancilliaryClasses].
 	tStamp := classes inject: 0 into: [:tS :cl| tS max: cl timeStamp].

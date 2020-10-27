@@ -25,7 +25,7 @@ Class {
 		'interpreterFilename',
 		'shouldCleanupOldFile'
 	],
-	#category : #'VMMaker-PostProcessing'
+	#category : #'Slang-PostProcessing'
 }
 
 { #category : #'as yet unclassified' }

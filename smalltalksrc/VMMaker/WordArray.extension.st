@@ -16,8 +16,3 @@ WordArray class >> ccgDeclareCForVar: aSymbolOrString [
 
 	^'unsigned *', aSymbolOrString
 ]
-
-{ #category : #'*VMMaker-inspecting' }
-WordArray class >> defaultIntegerBaseInDebugger [
-	^16
-]

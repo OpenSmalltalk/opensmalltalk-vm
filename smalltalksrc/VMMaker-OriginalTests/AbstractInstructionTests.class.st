@@ -12,11 +12,6 @@ Class {
 	#category : #'VMMaker-OriginalTests'
 }
 
-{ #category : #debugger }
-AbstractInstructionTests class >> defaultIntegerBaseInDebugger [
-	^16
-]
-
 { #category : #utilities }
 AbstractInstructionTests class >> defaultTestClass [
 	"self defaultTestClass"

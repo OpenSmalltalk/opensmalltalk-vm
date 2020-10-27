@@ -104,14 +104,6 @@ VMClass class >> declareInterpreterVersionIn: aCCodeGenerator defaultName: defau
 					(aCCodeGenerator shortMonticelloDescriptionForClass: self),']"'.
 ]
 
-{ #category : #debugger }
-VMClass class >> defaultIntegerBaseInDebugger [
-	"DefaultBase := 16."
-	"DefaultBase := 10."
-	DefaultBase isNil ifTrue: [DefaultBase := 16].
-	^DefaultBase
-]
-
 { #category : #'accessing class hierarchy' }
 VMClass class >> defaultObjectMemoryClass [
 	"Default for all-in-one VMs where the interpreter inherits from the object memory."

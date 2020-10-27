@@ -8,6 +8,12 @@ Class {
 }
 
 { #category : #accessing }
+VMMakerConfiguration class >> baseInterpreterClass [
+
+	^ InterpreterPrimitives
+]
+
+{ #category : #accessing }
 VMMakerConfiguration class >> coreVMDirName [
 	^DirNames at: #coreVMDir
 ]
@@ -262,4 +268,13 @@ VMMakerConfiguration class >> sourceDirName [
 { #category : #accessing }
 VMMakerConfiguration class >> sourceTree [
 	^DirNames at: #sourceTree ifAbsent: [ FileSystem workingDirectory pathString ]
+]
+
+{ #category : #accessing }
+VMMakerConfiguration class >> unusedConstantNames [
+	"Don't generate any defines for the externally defined constants,
+	 STACKVM, COGVM, COGMTVM et al, unless they're actually used."
+	^ (VMClass class>>#initializeMiscConstants) literals
+		select: [ :lit | lit isVariableBinding and: [lit key isString]]
+		thenCollect: [ :lit | lit key]
 ]

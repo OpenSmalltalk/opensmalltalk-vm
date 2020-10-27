@@ -38,7 +38,8 @@ Class {
 		'breakSrcInlineSelectors',
 		'breakDestInlineSelectors',
 		'breakOnInline',
-		'vmMaker'
+		'vmMaker',
+		'environment'
 	],
 	#classVars : [
 		'NoRegParmsInAssertVMs'
@@ -1286,12 +1287,8 @@ CCodeGenerator >> emitCConstantsOn: aStream [
 	"Store the global variable declarations on the given stream."
 	| unused |
 	unused := constants keys asSet.
-	"Don't generate any defines for the externally defined constants,
-	 STACKVM, COGVM, COGMTVM et al, unless they're actually used."
-	(VMClass class>>#initializeMiscConstants) literalsDo:
-		[:lit|
-		(lit isVariableBinding and: [lit key isString]) ifTrue:
-			[unused add: lit key]].
+	self vmmakerConfiguration unusedConstantNames
+		do: [ :name | unused add: name ].
 	methods do:
 		[:meth|
 		meth declarations keysDo:
@@ -1559,6 +1556,17 @@ CCodeGenerator >> emitHeaderFiles: headerFilesSubSequence on: aStream [
 		hdr first ~= $# ifTrue:
 			[aStream nextPutAll: '#include '].
 		aStream nextPutAll: hdr; cr]
+]
+
+{ #category : #accessing }
+CCodeGenerator >> environment [
+	
+	^ environment ifNil: [ Smalltalk ]
+]
+
+{ #category : #accessing }
+CCodeGenerator >> environment: aCollection [ 
+	environment := aCollection
 ]
 
 { #category : #public }
@@ -4104,7 +4112,7 @@ CCodeGenerator >> maybeBreakForTestToInline: aNodeOrSelector in: aTMethod [
 { #category : #'C translation support' }
 CCodeGenerator >> maybeEmitPrimitiveFailureDefineFor: selector on: aStream [
 	 (vmClass notNil
-	 and: [(vmClass inheritsFrom: InterpreterPrimitives)
+	 and: [(vmClass inheritsFrom: self vmmakerConfiguration baseInterpreterClass)
 	 and: [(vmClass primitiveTable includes: selector)]]) ifTrue:
 		[aStream nextPutAll: '#else\# define ' withCRs; nextPutAll: selector; nextPutAll: ' (void (*)(void))0\' withCRs]
 ]
@@ -4507,16 +4515,16 @@ CCodeGenerator >> optionIsTrue: pragma in: aClass [
 		[^true].
 
 	"If the option is the name of a subclass of Cogit, include it if it inherits from the Cogit class."
-	(Smalltalk classNamed: key) ifNotNil:
+	(self environment classNamed: key) ifNotNil:
 		[:optionClass|
 		 aClass cogitClass ifNotNil:
 			[:cogitClass|
-			 (optionClass includesBehavior: Cogit) ifTrue:
-				[^cogitClass includesBehavior: optionClass]].
+			 (cogitClass includesBehavior: optionClass) ifTrue:
+				[ ^ true]].
 		 aClass objectMemoryClass ifNotNil:
 			[:objectMemoryClass|
-			 (optionClass includesBehavior: SpurMemoryManager) ifTrue:
-				[^objectMemoryClass includesBehavior: optionClass]]].
+			 (objectMemoryClass includesBehavior: optionClass) ifTrue:
+				[^true]]].
 	"Lookup options in options, class variables of the defining class, VMBasicConstants, the interpreterClass and the objectMemoryClass"
 	{aClass initializationOptions.
 	  aClass.
