@@ -36,7 +36,7 @@ PharoVMMaker class >> generate: aClassName outputDirectory: aDirectory [
 { #category : #generation }
 PharoVMMaker >> generate: interpreterClass memoryManager: memoryManager [
 
-	VMMaker initializeForPharo.
+	VMMakerConfiguration initializeForPharo.
 	(interpreterClass bindingOf: #COGMTVM) value: false.
 
 	[ 
@@ -50,7 +50,8 @@ PharoVMMaker >> generate: interpreterClass memoryManager: memoryManager [
 				#bytecodeTableInitializer. #initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid}
 		to: self outputDirectory / 'generated'
 		platformDir: self outputDirectory / 'generated'
-		including: #())
+		including: #()
+		configuration: VMMakerConfiguration)
 			internal: #() external: #(FilePlugin);
 			doCleanupOldFiles;
 			generateInterpreterFile;
@@ -61,41 +62,7 @@ PharoVMMaker >> generate: interpreterClass memoryManager: memoryManager [
 { #category : #generation }
 PharoVMMaker >> generateCoInterpreter [
 
-	VMMaker initializeForPharo.
-	(CoInterpreter bindingOf: #COGMTVM) value: false.
-
-	[ VMMaker
-		generateMainVM: CoInterpreter
-		and: StackToRegisterMappingCogit
-		with: #(COGMTVM false
-				ObjectMemory Spur64BitCoMemoryManager
-				MULTIPLEBYTECODESETS true
-				bytecodeTableInitializer initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid)
-		to: self outputDirectory / 'generated'
-		platformDir: self outputDirectory / 'generated'
-		including: #() ] valueSupplyingAnswer:true.
-]
-
-{ #category : #generation }
-PharoVMMaker >> generateCoInterpreterMT [
-
-	VMMaker initializeForPharo.
-	[VMMaker
-		generateMainVM: CoInterpreterMT
-		and: StackToRegisterMappingCogit
-		with: #(COGMTVM true
-				ObjectMemory Spur64BitCoMemoryManager
-				MULTIPLEBYTECODESETS true
-				bytecodeTableInitializer initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid)
-		to: self outputDirectory / 'generated'
-		platformDir: self outputDirectory / 'generated'
-		including:#()] valueSupplyingAnswer: true.
-]
-
-{ #category : #generation }
-PharoVMMaker >> generateCoInterpreterWithQueueFFI [
-
-	self generate: CoInterpreterWithQueueFFI memoryManager: #Spur64BitCoMemoryManager.
+	self generate: CoInterpreter memoryManager: #Spur64BitCoMemoryManager.
 ]
 
 { #category : #generation }

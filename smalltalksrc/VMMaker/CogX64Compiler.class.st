@@ -313,7 +313,7 @@ CogX64Compiler class >> machineCodeDeclaration [
 { #category : #translation }
 CogX64Compiler class >> moduleName [
 	"CogAbstractInstruction subclasses collect: [:ea| ea moduleName]"
-	^'cogit', self ISA, ((InitializationOptions at: #ABI ifAbsent: ['']) copyWithout: $_)
+	^'cogit', self ISA, ((self initializationOptions at: #ABI ifAbsent: ['']) copyWithout: $_)
 ]
 
 { #category : #translation }

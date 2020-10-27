@@ -82,7 +82,7 @@ CogAbstractInstruction class >> byteSizeForSimulator: aVMClass [
 	 This is for estimating the alloca in allocateOpcodes:bytecodes:ifFail:
 	 self allSubclasses collect: [:ea| {ea. ea byteSizeForSimulator: ea basicNew}]"
 	| ptrsize |
-	ptrsize := self == CogAbstractInstruction ifTrue: [BytesPerWord] ifFalse: [self wordSize].
+	ptrsize := self == CogAbstractInstruction ifTrue: [VMClass bytesPerWord] ifFalse: [self wordSize].
 	^CogCompilerClass instSize
 		- 4 "cogit, objectMemory, bcpc, machineCode"
 		- 4 + 1
