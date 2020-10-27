@@ -332,10 +332,10 @@ int windowState= WIN_CHANGED;
 
 #ifdef DEBUG_CONV
 # define DCONV_PRINTF(...) printf(__VA_ARGS__)
-# define DCONV_FPRINTF(...) fprintf(stderr,__VA_ARGS__)
+# define DCONV_PRINTERR(...) fprintf(stderr,__VA_ARGS__)
 #else
 # define DCONV_PRINTF(...) 0
-# define DCONV_FPRINTF(...) 0
+# define DCONV_PRINTERR(...) 0
 #endif
 
 
@@ -1768,22 +1768,22 @@ static int x2sqKeyInput(XKeyEvent *xevt, KeySym *symbolic)
     switch (status)
       {
       case XLookupNone:		/* still composing */
-	DCONV_FPRINTF(stderr, "x2sqKey XLookupNone\n");
+	DCONV_PRINTERR("x2sqKey XLookupNone\n");
 	return -1;
 
       case XLookupChars:
-	DCONV_FPRINTF(stderr, "x2sqKey XLookupChars count %d\n", count);
+	DCONV_PRINTERR("x2sqKey XLookupChars count %d\n", count);
       case XLookupBoth:
-	DCONV_FPRINTF(stderr, "x2sqKey XLookupBoth count %d\n", count);
+	DCONV_PRINTERR("x2sqKey XLookupBoth count %d\n", count);
 	lastKey= (count ? string[0] : -1);
-	DCONV_FPRINTF(stderr, "x2sqKey == %d\n", lastKey);
+	DCONV_PRINTERR("x2sqKey == %d\n", lastKey);
 	return lastKey;
 
       case XLookupKeySym:
-	DCONV_FPRINTF(stderr, "x2sqKey XLookupKeySym\n");
+	DCONV_PRINTERR("x2sqKey XLookupKeySym\n");
 	{
 	  int charCode= translateCode(*symbolic, 0, xevt);
-	  DCONV_FPRINTF("SYM %d -> %d\n", symbolic, charCode);
+	  DCONV_PRINTERR("SYM %d -> %d\n", symbolic, charCode);
 	  if (charCode < 0)
 	    return -1;	/* unknown key */
 	  if ((charCode == 127) && mapDelBs)
@@ -1823,7 +1823,7 @@ static int x2sqKeyCompositionInput(XKeyEvent *xevt, KeySym *symbolic)
       return key;
     }
 
-  DCONV_FPRINTF(stderr, "keycode %u\n", xevt->keycode);
+  DCONV_PRINTERR("keycode %u\n", xevt->keycode);
 
   {
     Status status;
@@ -1868,18 +1868,23 @@ static int x2sqKeyCompositionInput(XKeyEvent *xevt, KeySym *symbolic)
     switch (status)
       {
       case XLookupNone:		/* still composing */
-	DCONV_FPRINTF(stderr, "x2sqKey XLookupNone\n");
+	DCONV_PRINTERR("x2sqKey XLookupNone\n");
+	*symbolic= 0;
 	return -1;
 
       case XLookupChars:
-	DCONV_FPRINTF(stderr, "x2sqKey XLookupChars count %d\n", inputCount);
+	DCONV_PRINTERR("x2sqKey XLookupChars count %d\n", inputCount);
       case XLookupBoth:
-	DCONV_FPRINTF(stderr, "x2sqKey XLookupBoth count %d\n", inputCount);
+	DCONV_PRINTERR("x2sqKey XLookupBoth count %d\n", inputCount);
 	if (inputCount == 0)
-	  return lastKey= -1;
+	  {
+	    *symbolic= 0;
+	    return lastKey= -1;
+	  }
 	else if (inputCount == 1)
 	  {
 	    inputCount= 0;
+	    *symbolic= 0;
 	    return lastKey= inputBuf[0];
 	  }
 	else
@@ -1901,18 +1906,19 @@ static int x2sqKeyCompositionInput(XKeyEvent *xevt, KeySym *symbolic)
 	    lastKey= (inputCount > 0 ? inputBuf[inputCount - 1] : -1);
 #          endif
 	
+	    *symbolic= 0;
 	    return -1; /* we've already recorded the key events */
 	  }
 
       case XLookupKeySym:
-	DCONV_FPRINTF(stderr, "x2sqKey XLookupKeySym\n");
+	DCONV_PRINTERR("x2sqKey XLookupKeySym\n");
 	{
 	  int charCode;
 	  if (*symbolic == XK_Multi_key)
 	    {
 	      multi_key_pressed= 1;
 	      multi_key_buffer= 0;
-	      DCONV_FPRINTF(stderr, "multi_key was pressed\n");
+	      DCONV_PRINTERR("multi_key was pressed\n");
 	      return -1;
 	  }
 	  
@@ -2262,12 +2268,12 @@ static int xkeysym2ucs4(KeySym keysym)
              0x2a, /* Multiply  */
              0x2b, /* Add       */
              0x2c, /* Separator */
-             0x2d, /* Substract */
+             0x2d, /* Subtract */
              0x2e, /* Decimal   */
              0x2f  /* Divide    */
      };
 
- 	static unsigned short const sqSpecialKey[] = { 
+  static unsigned short const sqSpecialKey[] = { 
              1,  /* HOME  */
              28, /* LEFT  */ 
              30, /* UP    */
@@ -2277,8 +2283,7 @@ static int xkeysym2ucs4(KeySym keysym)
              12, /* NEXT (page down/new page?) */
              4,  /* END */
              1   /* HOME */
-     };
-
+  };
 
   /* Latin-1 */
   if (   (keysym >= 0x0020 && keysym <= 0x007e)
@@ -3650,8 +3655,8 @@ handleEvent(XEvent *evt)
 	KeySym symbolic;
 	int keyCode= x2sqKey(&evt->xkey, &symbolic);
 	int ucs4= xkeysym2ucs4(symbolic);
-	DCONV_FPRINTF(stderr, "symbolic, keyCode, ucs4: %x, %d, %d\n", symbolic, keyCode, ucs4);
-	DCONV_FPRINTF(stderr, "pressed, buffer: %d, %x\n", multi_key_pressed, multi_key_buffer);
+	DCONV_PRINTERR("symbolic, keyCode, ucs4: %x, %d, %x\n", symbolic, keyCode, ucs4);
+	DCONV_PRINTERR("pressed, buffer: %d, %x\n", multi_key_pressed, multi_key_buffer);
 	if (multi_key_pressed && multi_key_buffer == 0)
 	  {
 	    switch (ucs4)
@@ -3713,10 +3718,10 @@ handleEvent(XEvent *evt)
 	  if (symbolic != XK_Multi_key)
 	    {
 	      multi_key_pressed= 0; 
-	      DCONV_FPRINTF(stderr, "multi_key reset\n");
+	      DCONV_PRINTERR("multi_key reset\n");
 	    }
 	  }
-	DCONV_FPRINTF(stderr, "keyCode, ucs4, multi_key_buffer: %d, %d, %x\n", keyCode, ucs4, multi_key_buffer);
+	DCONV_PRINTERR("keyCode, ucs4, multi_key_buffer: %d, %d, %x\n", keyCode, ucs4, multi_key_buffer);
 	if (keyCode >= 0)
 	  {
 	    recordKeystroke(keyCode);			/* DEPRECATED */
