@@ -771,7 +771,7 @@ VMMaker >> generateExternalPlugins [
 
 	self logDateAndTime.
 	self deleteUnwantedExternalPluginDirectories.
-	InterpreterPlugin initialize.
+	self vmmakerConfiguration interpreterPluginClass initialize.
 	self externalPluginsDo: [:plugin | 
 		self generateExternalPlugin: plugin].
 	self storeExternalPluginList.
@@ -793,7 +793,7 @@ VMMaker >> generateInternalPlugins [
 	"generate the internal plugins and add their exports to the main list. te exports list is NOT written to file by this method"
 
 	self deleteUnwantedInternalPluginDirectories.
-	InterpreterPlugin initialize.
+	self vmmakerConfiguration interpreterPluginClass initialize.
 	self internalPluginsDo: [:plugin | 
 		self privateGenerateInternalPlugin: plugin].
 	self logDateAndTime.
@@ -1132,7 +1132,7 @@ VMMaker >> needsToRegenerateCogitFile [
 	 file if it already exists. Answer if the file needs regenerating."
 
 	| cogitClass cogitClasses tStamp files |
-	cogitClasses := (cogitClass := self interpreterClass cogitClass) withAllSuperclasses copyUpThrough: Cogit.
+	cogitClasses := (cogitClass := self interpreterClass cogitClass) withAllSuperclasses copyUpThrough: self vmmakerConfiguration baseCogitClass.
 	cogitClasses addAllLast: cogitClass ancilliaryClasses.
 	tStamp := cogitClasses inject: 0 into: [:tS :cl| tS max: cl timeStamp].
 
@@ -1340,7 +1340,7 @@ VMMaker >> processFilesForInternalPlugin: plugin [
 { #category : #initialize }
 VMMaker >> providedPlugins [
 	"generate the list by asking the InterpreterPlugins"
-	^ ((InterpreterPlugin allSubclasses
+	^ ((self vmmakerConfiguration interpreterPluginClass allSubclasses
 		select: [:cl | cl shouldBeTranslatedFor: platformName])
 		collect: [:cl | cl name]) asSortedCollection
 ]
@@ -1467,7 +1467,7 @@ VMMaker >> validatePlugin:	plName in: listOfPlugins [
 		ifTrue: [(listOfPlugins includes: plName)
 				ifTrue: [plugin := Smalltalk classNamed: plName]]
 		ifFalse: [((plName isBehavior
-						and: [plName inheritsFrom: InterpreterPlugin])
+						and: [plName inheritsFrom: self vmmakerConfiguration interpreterPluginClass])
 					and: [listOfPlugins includes: plName name])
 				ifTrue: [plugin := plName]].
 	plugin ifNil: [^ self couldNotFindPluginClass: plName].

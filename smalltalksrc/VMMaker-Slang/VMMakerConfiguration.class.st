@@ -8,9 +8,21 @@ Class {
 }
 
 { #category : #accessing }
+VMMakerConfiguration class >> baseCogitClass [
+
+	^ Cogit
+]
+
+{ #category : #accessing }
 VMMakerConfiguration class >> baseInterpreterClass [
 
 	^ InterpreterPrimitives
+]
+
+{ #category : #accessing }
+VMMakerConfiguration class >> baseObjectMemoryManagerClass [
+
+	^ SpurMemoryManager
 ]
 
 { #category : #accessing }
@@ -248,6 +260,12 @@ VMMakerConfiguration class >> initializeForPharo [
 VMMakerConfiguration class >> initializeForPlugins: options [ 
 	
 	VMClass initializeForPlugins: options 
+]
+
+{ #category : #accessing }
+VMMakerConfiguration class >> interpreterPluginClass [
+
+	^ InterpreterPlugin
 ]
 
 { #category : #accessing }

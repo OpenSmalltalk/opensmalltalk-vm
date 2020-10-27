@@ -167,7 +167,7 @@ CCodeGenerator >> accessorDepthForChain: chain [ "OrderedCollection"
 	chain do:
 		[:node|
 		 ((node isAssignment and: [node expression isVariable])
-		  or: [node isSend and: [SpurMemoryManager isSameLevelObjectAccessor: node selector]]) ifFalse:
+		  or: [node isSend and: [self vmmakerConfiguration baseObjectMemoryManagerClass isSameLevelObjectAccessor: node selector]]) ifFalse:
 			[accessorDepth := accessorDepth + 1]].
 	^accessorDepth
 ]
@@ -202,7 +202,7 @@ CCodeGenerator >> accessorDepthForMethod: method [
 { #category : #'spur primitive compilation' }
 CCodeGenerator >> accessorDepthForSelector: selector [
 	^(selector = #initialiseModule
-	   or: [InterpreterPlugin includesSelector: selector]) ifFalse:
+	   or: [self vmmakerConfiguration interpreterPluginClass includesSelector: selector]) ifFalse:
 		[(self methodNamed: selector) ifNotNil:
 			[:m| self accessorDepthForMethod: m]]
 ]
@@ -249,7 +249,7 @@ CCodeGenerator >> accessorsAndAssignmentsForMethod: method actuals: actualParame
 							 accessors addAll: subAccessors.
 							 assignments addAll: subAssignments]]]].
 		(node isAssignment
-		 and: [(node expression isSend and: [SpurMemoryManager isTerminalObjectAccessor: node expression selector]) not
+		 and: [(node expression isSend and: [self vmmakerConfiguration baseObjectMemoryManagerClass isTerminalObjectAccessor: node expression selector]) not
 		 and: [(roots includes: node expression)
 			or: [(accessors includes: node expression)
 			or: [node expression isVariable and: [node expression name ~= 'nil']]]]]) ifTrue:
