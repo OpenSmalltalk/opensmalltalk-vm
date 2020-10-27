@@ -403,6 +403,19 @@ VMSpurMemoryManagerTest >> setContextClassIntoClassTable [
 ]
 
 { #category : #running }
+VMSpurMemoryManagerTest >> setMethodClassIntoClassTable [
+	| aClass |
+	aClass := self
+		newClassInOldSpaceWithSlots: 0
+		instSpec: CompiledMethod instSpec.
+	memory setHashBitsOf: aClass to: 16 "not necessarily ok, this is not enforced by the VM".
+	memory
+		storePointer: 16 "not necessarily ok, this is not enforced by the VM"
+		ofObject: memory classTableFirstPage
+		withValue: aClass
+]
+
+{ #category : #running }
 VMSpurMemoryManagerTest >> setUp [
 	super setUp.
 

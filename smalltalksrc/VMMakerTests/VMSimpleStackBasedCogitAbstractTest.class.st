@@ -18,7 +18,8 @@ Class {
 		'sentSelector',
 		'selectorAtIndex',
 		'inlineCacheMissTrampoline',
-		'machineSimulator'
+		'machineSimulator',
+		'send1TrampolineAddress'
 	],
 	#pools : [
 		'CogAbstractRegisters',
@@ -539,8 +540,15 @@ VMSimpleStackBasedCogitAbstractTest >> prepareCall [
 ]
 
 { #category : #helpers }
+VMSimpleStackBasedCogitAbstractTest >> prepareStackForSendReceiver: aReceiver [
+
+	self prepareStackForSendReceiver: aReceiver arguments: #()
+]
+
+{ #category : #helpers }
 VMSimpleStackBasedCogitAbstractTest >> prepareStackForSendReceiver: aReceiver arguments: arguments [ 	
 
+	machineSimulator baseRegisterValue: cogit varBaseAddress.
 	self pushAddress: aReceiver.
 	arguments do: [ :anArgument | self pushAddress: anArgument ].
 	self machineSimulator receiverRegisterValue: aReceiver.
@@ -746,6 +754,13 @@ VMSimpleStackBasedCogitAbstractTest >> setUpCogMethodEntry [
 	cogit generateEnilopmarts.
 	cogit maybeGenerateCheckFeatures.
 			
+	"Create a send trampoline so we can stop..."
+	sendTrampolineAddress := self compileTrampoline: [ cogit RetN: 0 ] named: #send0argsTrampoline.
+	cogit ordinarySendTrampolineAt: 0 "args" put: sendTrampolineAddress.
+	
+	send1TrampolineAddress := self compileTrampoline: [ cogit RetN: 0 ] named: #send1argsTrampoline.
+	cogit ordinarySendTrampolineAt: 1 "args" put: send1TrampolineAddress.
+
 	cogit ceCPICMissTrampoline: (self compileTrampoline: [ cogit RetN: 0 ] named:#ceCPICMissTrampoline).
 	cogit cePICAbortTrampoline: (self compileTrampoline: [ cogit RetN: 0 ] named:#cePICAbortTrampoline).
 	cogit ceMethodAbortTrampoline: (self compileTrampoline: [ cogit RetN: 0 ] named:#ceMethodAbortTrampoline).

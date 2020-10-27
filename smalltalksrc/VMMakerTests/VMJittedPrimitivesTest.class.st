@@ -67,22 +67,6 @@ VMJittedPrimitivesTest >> newBitIndexableOfSize: aSize bytesPerSlot: bytesPerSlo
 ]
 
 { #category : #helpers }
-VMJittedPrimitivesTest >> prepareStackForSendReceiver: aReceiver [
-
-	self prepareStackForSendReceiver: aReceiver arguments: #()
-]
-
-{ #category : #helpers }
-VMJittedPrimitivesTest >> prepareStackForSendReceiver: aReceiver arguments: arguments [ 	
-
-	machineSimulator baseRegisterValue: cogit varBaseAddress.
-	self pushAddress: aReceiver.
-	arguments do: [ :anArgument | self pushAddress: anArgument ].
-	self machineSimulator receiverRegisterValue: aReceiver.
-	self prepareCall
-]
-
-{ #category : #helpers }
 VMJittedPrimitivesTest >> setUp [
 
 	super setUp.

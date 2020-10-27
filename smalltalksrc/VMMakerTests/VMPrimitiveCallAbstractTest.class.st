@@ -67,6 +67,36 @@ VMPrimitiveCallAbstractTest >> jitMethod: aPharoCompiledMethod selector: aSelect
 ]
 
 { #category : #'methods under test' }
+VMPrimitiveCallAbstractTest >> methodReturningNil [
+
+	^ nil
+]
+
+{ #category : #'methods under test' }
+VMPrimitiveCallAbstractTest >> methodSendingCharacterArgument [
+
+	"This method is used to test sends.
+	This send can be unlinked, linked to a method, or to a PIC"
+	^ self methodWithSend: $7
+]
+
+{ #category : #'methods under test' }
+VMPrimitiveCallAbstractTest >> methodSendingLiteralVariableArgument [
+
+	"This method is used to test sends.
+	This send can be unlinked, linked to a method, or to a PIC"
+	^ self methodWithSend: Object
+]
+
+{ #category : #'methods under test' }
+VMPrimitiveCallAbstractTest >> methodSendingNilArgument [
+
+	"This method is used to test sends.
+	This send can be unlinked, linked to a method, or to a PIC"
+	^ self methodWithSend: nil
+]
+
+{ #category : #'methods under test' }
 VMPrimitiveCallAbstractTest >> methodThatCallNamedPrimitive: anArg [
 
 	"This method is used to test the invocation of a primitive.
@@ -110,6 +140,22 @@ VMPrimitiveCallAbstractTest >> methodToCompile1 [
 	^ 42 bitInvert
 ]
 
+{ #category : #'methods under test' }
+VMPrimitiveCallAbstractTest >> methodWithSend [
+
+	"This method is used to test sends.
+	This send can be unlinked, linked to a method, or to a PIC"
+	^ self send
+]
+
+{ #category : #'methods under test' }
+VMPrimitiveCallAbstractTest >> methodWithSend: arg [
+
+	"This method is used to test sends.
+	This send can be unlinked, linked to a method, or to a PIC"
+	^ arg send
+]
+
 { #category : #tests }
 VMPrimitiveCallAbstractTest >> setUp [
 
@@ -117,6 +163,8 @@ VMPrimitiveCallAbstractTest >> setUp [
 	
 	super setUp.
 	self setUpCogMethodEntry.
+	cogit generateClosedPICPrototype.
+	cogit methodZone manageFrom: cogit methodZoneBase to: cogit methodZone effectiveLimit.
 
 	"Initializing the accessor depth table with a value for the first primitive"
 	primitiveAccessorDepthTable := Array new: interpreter primitiveTable size.
