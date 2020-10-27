@@ -17211,11 +17211,15 @@ ac_res=$ac_cv_search_XShmAttach
 if test "$ac_res" != no; then :
   test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
 
+
+$as_echo "#define HAVE_LIBXEXT 1" >>confdefs.h
+
+
 fi
 
     if test "$have_gl" = ""; then have_gl="no"; fi
     if test "$have_gl" = "yes"; then
-        for ac_header in GL/gl.h gl/gl.h gl.h
+      for ac_header in GL/gl.h gl/gl.h gl.h
 do :
   as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
 ac_fn_c_check_header_mongrel "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
@@ -17224,11 +17228,7 @@ if eval test \"x\$"$as_ac_Header"\" = x"yes"; then :
 #define `$as_echo "HAVE_$ac_header" | $as_tr_cpp` 1
 _ACEOF
 
-          have_gl=yes
-
-$as_echo "#define USE_X11_GLX 1" >>confdefs.h
-
-          { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing glIsEnabled" >&5
+        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing glIsEnabled" >&5
 $as_echo_n "checking for library containing glIsEnabled... " >&6; }
 if ${ac_cv_search_glIsEnabled+:} false; then :
   $as_echo_n "(cached) " >&6
@@ -17282,9 +17282,15 @@ ac_res=$ac_cv_search_glIsEnabled
 if test "$ac_res" != no; then :
   test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
 
-fi
+          have_gl=yes
+
+$as_echo "#define USE_X11_GLX 1" >>confdefs.h
 
           break
+
+fi
+
+        break
 
 fi
 
@@ -17298,10 +17304,7 @@ $as_echo "#define USE_X11_GLX 0" >>confdefs.h
     ac_fn_c_check_header_mongrel "$LINENO" "X11/extensions/Xrender.h" "ac_cv_header_X11_extensions_Xrender_h" "$ac_includes_default"
 if test "x$ac_cv_header_X11_extensions_Xrender_h" = xyes; then :
 
-
-$as_echo "#define HAVE_LIBXRENDER 1" >>confdefs.h
-
-          { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing XRenderCreateCursor" >&5
+      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing XRenderCreateCursor" >&5
 $as_echo_n "checking for library containing XRenderCreateCursor... " >&6; }
 if ${ac_cv_search_XRenderCreateCursor+:} false; then :
   $as_echo_n "(cached) " >&6
@@ -17355,9 +17358,14 @@ ac_res=$ac_cv_search_XRenderCreateCursor
 if test "$ac_res" != no; then :
   test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
 
+
+$as_echo "#define HAVE_LIBXRENDER 1" >>confdefs.h
+
+        break
+
 fi
 
-          break
+      break
 
 fi
 
