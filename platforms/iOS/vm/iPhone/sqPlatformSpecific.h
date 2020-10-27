@@ -71,14 +71,11 @@
 
 #undef sqFTruncate
 #define sqFTruncate(f,o) ftruncate(fileno(f), o)
-#define ftell ftello
-#define fseek fseeko
-//int	 ftruncate(int, off_t);
 
 #undef sqFilenameFromStringOpen
 #undef sqFilenameFromString
-void		sqFilenameFromStringOpen(char *buffer,sqInt fileIndex, long fileLength);
-void		sqFilenameFromString(char *buffer,sqInt fileIndex, long fileLength);
+void sqFilenameFromStringOpen(char *buffer,sqInt fileIndex, long fileLength);
+void sqFilenameFromString(char *buffer,sqInt fileIndex, long fileLength);
 #undef allocateMemoryMinimumImageFileHeaderSize
 #undef sqImageFileReadEntireImage
 #if SPURVM

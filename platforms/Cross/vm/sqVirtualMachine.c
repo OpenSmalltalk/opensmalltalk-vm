@@ -604,7 +604,7 @@ fopen_for_append(char *filename)
 		? fopen(filename,"r+")
 		: fopen(filename,"w+");
 	if (f)
-		fseek(f,0,SEEK_END);
+		_fseeki64(f,0,SEEK_END);
 	return f;
 }
 #elif defined(_WIN32)

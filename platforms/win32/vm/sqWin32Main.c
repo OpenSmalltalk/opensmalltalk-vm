@@ -245,7 +245,7 @@ fopen_for_append(WCHAR *filename)
 		? _wfopen(filename,L"r+")
 		: _wfopen(filename,L"w+");
 	if (f)
-		fseek(f,0,SEEK_END);
+		_fseeki64(f,0,SEEK_END);
 	return f;
 }
 #else

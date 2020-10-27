@@ -454,9 +454,9 @@ compute_exe_symbols(dll_exports *exports)
 		printLastError(TEXT("fopen"));
 		return;
 	}
-	fseek(f,0,SEEK_END);
-	len = ftell(f);
-	fseek(f,0,SEEK_SET);
+	_fseeki64(f,0,SEEK_END);
+	len = _ftelli64(f);
+	_fseeki64(f,0,SEEK_SET);
 	if (!(contents = malloc(len))) {
 		printLastError(TEXT("malloc"));
 		fclose(f);

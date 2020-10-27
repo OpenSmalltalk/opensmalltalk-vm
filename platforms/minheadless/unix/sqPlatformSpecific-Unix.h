@@ -97,8 +97,6 @@ extern void sqFilenameFromString(char *uxName, sqInt stNameIndex, int sqNameLeng
 #undef	sqFTruncate
 /* sqFTruncate should return 0 on success, ftruncate does also */
 #define	sqFTruncate(f,o) ftruncate(fileno(f), o)
-#define ftell ftello
-#define fseek fseeko
 
 #if defined(__GNUC__)
 # if !defined(VM_LABEL)

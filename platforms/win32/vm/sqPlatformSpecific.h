@@ -27,10 +27,16 @@
 # include <corecrt.h> // for size_t
 #endif
 
-/* File positions in the FilePlugin */
+/* File positions in the FilePlugin & other plugins */
 typedef unsigned __int64 squeakFileOffsetType;
-/* File support; we don't need no steenkin stdio */
+/* File support; we don't use the FilePlugin's default stdio implementation */
 #define NO_STD_FILE_SUPPORT
+/* The unix sources use fseeko and ftello for 64-bit use of fseek, ftell.
+ * The MSVC version of these is, as of this writing, _fseeki64 & _ftelli64.
+ * Some cross-platform plugins use fseeko/ftello, hence this patch...
+ */
+#define fseeko(a,b,c) _fseeki64(a,b,c)
+#define ftello(f) _ftelli64(f)
 
 /* File positions in the FilePlugin */
 typedef unsigned __int64 squeakFileOffsetType;
@@ -48,7 +54,7 @@ typedef unsigned __int64 squeakFileOffsetType;
 
 
 /* missing functions */
-#ifdef _MSC_VER
+#if _MSC_VER
 /* see on msdn the list of functions available
  *  CRT Alphabetical Function Reference
  *  https://msdn.microsoft.com/en-US/library/634ca0c2.aspx */

@@ -42,7 +42,7 @@ static char** optionArray;
 int ImageVersionNumber;
 
 static char* nextOption(void) {
-	if(opt >= numOptions) return 0;
+	if (opt >= numOptions) return 0;
 	return optionArray[opt++];
 }
 
@@ -58,8 +58,8 @@ int magic;
 extern sqInt byteSwapped(sqInt);
 
 	fp = fopen(name,"rb");
-	if(!fp) return 0; /* could not open file */
-	if(fread(&magic, 1, sizeof(magic), fp) != sizeof(magic)) {
+	if (!fp) return 0; /* could not open file */
+	if (fread(&magic, 1, sizeof(magic), fp) != sizeof(magic)) {
 		/* could not read an int from file */
 		fclose(fp);
 		return 0;
@@ -73,12 +73,12 @@ extern sqInt byteSwapped(sqInt);
 		return true;
 	}
 	/* no luck at beginning of file, seek to 512 and try again */
-	if(fseek( fp, 512, SEEK_SET)) {
+	if (fseeko(fp, 512, SEEK_SET)) {
 		/* seek failed, which implies file is too small */
 		fclose(fp);
 		return false;
 	}
-	if(fread(&magic, 1, sizeof(magic), fp) != sizeof(magic)) {
+	if (fread(&magic, 1, sizeof(magic), fp) != sizeof(magic)) {
 	/* could not read an int from file */
 	fclose(fp);
 	return 0;
@@ -102,17 +102,17 @@ char buf[50];
 char *tmp = buf;
 int factor = 1;
 
-	while(isdigit(*src)) *(tmp++) = *(src++);
+	while (isdigit(*src)) *(tmp++) = *(src++);
 
-	if(*src && tolower(*src) == 'k') {factor = 1024; src++;}
-	else if(*src && tolower(*src) == 'm') {factor = 1024*1024; src++;}
-	else if(*src && *src != ' ') /* strange chars at end */
+	if (*src && tolower(*src) == 'k') {factor = 1024; src++;}
+	else if (*src && tolower(*src) == 'm') {factor = 1024*1024; src++;}
+	else if (*src && *src != ' ') /* strange chars at end */
 		return NULL;
-	if(tmp == buf) /* no numbers found */
+	if (tmp == buf) /* no numbers found */
 		return NULL;
 	*tmp = 0;
 	*dst = atol(buf) * factor;
-	if(*src) *(src++) = 0;
+	if (*src) *(src++) = 0;
 	return src;
 }
 
@@ -122,10 +122,10 @@ int negative;
 unsigned value;
 
 	negative = *src == '-';
-	if(negative) src++;
+	if (negative) src++;
 	src = parseUnsignedArg(src, &value);
-	if(!src) return NULL;
-	if(negative) *dst = 0-(int)value;
+	if (!src) return NULL;
+	if (negative) *dst = 0-(int)value;
 	else *dst = (int) value;
 	return src;
 }
@@ -136,12 +136,12 @@ vmArg *arg;
 int arglen;
 char * string;
 
-	while(1)
+	while (1)
 		{
-			if((string = nextOption()) == NULL)
+			if ((string = nextOption()) == NULL)
 				return NULL; /* no more */
 
-			if(*string != '-') {
+			if (*string != '-') {
 				opt--;
 				return 1; /* no '-' means this isn't a VM option - probably the image name */
 			}
@@ -151,20 +151,20 @@ char * string;
 
 			/* search args list */
 			arg = args;
-			while(arg->type != ARG_NONE){
+			while (arg->type != ARG_NONE){
 				arglen = strlen(arg->name);
-				if(strncmp(arg->name, string, strlen(arg->name)) == 0)
+				if (strncmp(arg->name, string, strlen(arg->name)) == 0)
 					break;
 				arg++;
 			}
-			if(arg->type == ARG_NONE)
+			if (arg->type == ARG_NONE)
 				return NULL; /* done */
 
 			/* if the char at the end of the option name is ':',
 			 * null it out and skip ahead one
 			 */
 			string += (arglen-1);
-			if(*string== ':') *(string++) = 0;
+			if (*string== ':') *(string++) = 0;
 
 			switch(arg->type) {
 				case ARG_FLAG:
@@ -179,13 +179,13 @@ char * string;
 				case ARG_INT:
 					vmOptions[numOptionsVM++] = string;
 					string = parseSignedArg(string, (int*)arg->value);
-					if(!string) return NULL;
+					if (!string) return NULL;
 					break;
 
 				case ARG_UINT:
 					vmOptions[numOptionsVM++] = string;
 					string = parseUnsignedArg(string, (unsigned int*)arg->value);
-					if(!string) return NULL;
+					if (!string) return NULL;
 					break;
 
 				default:
@@ -211,7 +211,7 @@ extern void setDefaultImageName(void);
 	/* now decode the putative image name */
 	canonicalizeFilename(string, imageName);
 
-	if(*imageName && IsImage(imageName)) {
+	if (*imageName && IsImage(imageName)) {
 		// all is ok, its the image name
 	} else { /* Not the image name -- use a default in the !Squeak appdir */
 		setDefaultImageName();
@@ -221,13 +221,13 @@ extern void setDefaultImageName(void);
 	imageOptions[numOptionsImage++] = imageName;
 
 	// now go through any more options
-	while((string = nextOption()) && *string) {
-			if(numOptionsImage > MAX_OPTIONS)
-				return NULL; /* too many args */
-			while(*string && *string == ' ')
-				string++; /* skip blanks */
-			imageOptions[numOptionsImage++] = string;
-			if(!string) return NULL;
+	while ((string = nextOption()) && *string) {
+		if (numOptionsImage > MAX_OPTIONS)
+			return NULL; /* too many args */
+		while (*string && *string == ' ')
+			string++; /* skip blanks */
+		imageOptions[numOptionsImage++] = string;
+		if (!string) return NULL;
 	}
 	return 1;
 }
