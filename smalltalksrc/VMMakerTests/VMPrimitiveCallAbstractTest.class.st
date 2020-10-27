@@ -137,7 +137,7 @@ VMPrimitiveCallAbstractTest >> methodThatCallPrimitive1: anArg [
 { #category : #'methods under test' }
 VMPrimitiveCallAbstractTest >> methodToCompile1 [
 
-	^ 42 bitInvert
+	^ 42
 ]
 
 { #category : #'methods under test' }
