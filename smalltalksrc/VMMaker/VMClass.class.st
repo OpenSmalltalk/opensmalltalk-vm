@@ -32,6 +32,12 @@ VMClass class >> basicRemoveSelector: aSelector [
 ]
 
 { #category : #accessing }
+VMClass class >> bytesPerOop [
+	
+	^ BytesPerOop
+]
+
+{ #category : #accessing }
 VMClass class >> bytesPerWord [
 	
 	^ BytesPerWord 

@@ -20,6 +20,15 @@ SlangClass class >> declareCVarsIn: aCCodeGenerator [
 ]
 
 { #category : #translation }
+SlangClass class >> defineAtCompileTime: anObject [
+
+	"Override to define at translation time those variables that need to
+	 be defined at compile time only in plugins, but not in the main VM,
+	 because the VM generated is specific to these varables."
+	^ false
+]
+
+{ #category : #translation }
 SlangClass class >> prepareToBeAddedToCodeGenerator: aCCodeGenerator [ 
 	"Hook for translation.  e.g. allows a subclass to override its
 	 superclass's methods by deleting them before it adds its own."

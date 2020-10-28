@@ -8,6 +8,12 @@ Class {
 }
 
 { #category : #accessing }
+VMMakerConfiguration class >> baseClass [
+
+	^ VMClass
+]
+
+{ #category : #accessing }
 VMMakerConfiguration class >> baseCogitClass [
 
 	^ Cogit
@@ -23,6 +29,24 @@ VMMakerConfiguration class >> baseInterpreterClass [
 VMMakerConfiguration class >> baseObjectMemoryManagerClass [
 
 	^ SpurMemoryManager
+]
+
+{ #category : #accessing }
+VMMakerConfiguration class >> baseStructClass [
+	
+	^ VMStructType
+]
+
+{ #category : #accessing }
+VMMakerConfiguration class >> bytesPerOop [
+	
+	^ self baseClass bytesPerOop
+]
+
+{ #category : #accessing }
+VMMakerConfiguration class >> bytesPerWord [
+	
+	^ self baseClass bytesPerWord
 ]
 
 { #category : #accessing }
@@ -269,6 +293,12 @@ VMMakerConfiguration class >> interpreterPluginClass [
 ]
 
 { #category : #accessing }
+VMMakerConfiguration class >> interpreterProxyClass [
+
+	^ InterpreterProxy
+]
+
+{ #category : #accessing }
 VMMakerConfiguration class >> platformsDirName [
 	^DirNames at: #platformsDir
 ]
@@ -276,6 +306,12 @@ VMMakerConfiguration class >> platformsDirName [
 { #category : #accessing }
 VMMakerConfiguration class >> pluginsDirName [
 	^DirNames at: #pluginsDir
+]
+
+{ #category : #accessing }
+VMMakerConfiguration class >> referenceObjectMemoryClass [
+	"Define the class from which to take methods to define the interpreter proxy imports."
+	^ Spur32BitMemoryManager
 ]
 
 { #category : #accessing }

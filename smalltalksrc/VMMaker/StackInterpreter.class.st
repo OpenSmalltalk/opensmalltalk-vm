@@ -1822,6 +1822,8 @@ StackInterpreter class >> primitiveAccessorDepthTable [
 	| cg |
 	cg := CCodeGenerator new.
 	cg vmClass: StackInterpreter.
+	cg vmMaker: VMMaker new.
+	cg vmMaker vmmakerConfiguration: VMMakerConfiguration.
 	^self primitiveTable collect:
 		[:thing| | implementingClass method |
 		(thing isInteger "quick prims, 0 for fast primitve fail"

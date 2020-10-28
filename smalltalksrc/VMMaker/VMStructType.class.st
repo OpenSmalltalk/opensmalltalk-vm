@@ -3,10 +3,7 @@ I am an absract superclass for classes which map to simple structs in C,  Right 
 "
 Class {
 	#name : #VMStructType,
-	#superclass : #VMClass,
-	#classVars : [
-		'StructTypeNameCache'
-	],
+	#superclass : #SlangStructType,
 	#category : #'VMMaker-Support'
 }
 

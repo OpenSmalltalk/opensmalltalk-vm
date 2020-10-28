@@ -52,7 +52,7 @@ PharoVMMaker >> generate: interpreterClass memoryManager: memoryManager [
 		platformDir: self outputDirectory / 'generated'
 		including: #()
 		configuration: VMMakerConfiguration)
-			internal: #() external: #(FilePlugin);
+			internal: #(BitBltSimulation) external: #(FilePlugin);
 			doCleanupOldFiles;
 			generateInterpreterFile;
 			generateCogitFiles;

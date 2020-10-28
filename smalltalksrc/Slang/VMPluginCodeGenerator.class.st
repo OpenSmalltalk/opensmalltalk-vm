@@ -87,8 +87,8 @@ VMPluginCodeGenerator >> collectAndCheckInterpreterProxyInterfaceFor: selectors 
 		reference := self compileToTMethodSelector: selector
 						in: ((interpreterClass whichClassIncludesSelector: selector) ifNil:
 							[(objectMemoryClass whichClassIncludesSelector: selector) ifNil:
-								[InterpreterProxy]]).
-		actual := self compileToTMethodSelector: selector in: InterpreterProxy.
+								[self vmmakerConfiguration interpreterProxyClass]]).
+		actual := self compileToTMethodSelector: selector in: self vmmakerConfiguration interpreterProxyClass.
 		{ actual. reference } do:
 			[:tMethod|
 			 tMethod recordDeclarationsIn: self.
@@ -220,9 +220,8 @@ VMPluginCodeGenerator >> emitCTypesOn: aStream [
 { #category : #'C code generator' }
 VMPluginCodeGenerator >> emitExportsOn: aStream [
 	"Store all the exported primitives in the form used by the internal named prim system."
-	| nilVMClass |
-	(nilVMClass := vmClass isNil) ifTrue: "We need a vmClass temporarily to compute accessor depths."
-		[vmClass := StackInterpreter].
+	vmClass ifNil: [ self error: 'We need a vmClass to compute accessor depths' ].
+
 	aStream cr; cr; nextPutAll:'#ifdef SQUEAK_BUILTIN_PLUGIN'.
 	self emitExportsNamed: pluginClass moduleName
 		pluginName: pluginClass moduleExportsName
@@ -230,8 +229,6 @@ VMPluginCodeGenerator >> emitExportsOn: aStream [
 	aStream cr; nextPutAll: '#else /* ifdef SQ_BUILTIN_PLUGIN */'; cr; cr.
 	self emitAccessorDepthsOn: aStream.
 	aStream cr; nextPutAll: '#endif /* ifdef SQ_BUILTIN_PLUGIN */'; cr.
-	nilVMClass ifTrue:
-		[vmClass := nil]
 ]
 
 { #category : #'C translation' }
@@ -468,7 +465,7 @@ VMPluginCodeGenerator >> pluginFunctionsToClone [
 
 	^((pluginFunctionsUsed
 		reject: [:selector| self noteUsedPluginFunction: selector])
-			select: [:selector| InterpreterProxy includesSelector: selector])
+			select: [:selector| self vmmakerConfiguration interpreterProxyClass includesSelector: selector])
 				asSortedCollection
 ]
 
@@ -578,20 +575,20 @@ VMPluginCodeGenerator >> prepareTranslatedPrimitives [
 		 meth primitive > 0 ifTrue:
 			[meth
 				preparePrimitivePrologue;
-				mapSendsFromSelfToInterpreterProxy: InterpreterProxy selectors]]
+				mapSendsFromSelfToInterpreterProxy: self vmmakerConfiguration interpreterProxyClass selectors]]
 ]
 
 { #category : #'C code generator' }
 VMPluginCodeGenerator >> referenceInterpreterClass [
 	"Define the class from which to take methods to define the interpreter proxy imports."
 	^(Smalltalk classNamed: #StackInterpreter) 
-		ifNil: [InterpreterProxy]
+		ifNil: [self vmmakerConfiguration interpreterProxyClass]
 ]
 
 { #category : #'C code generator' }
 VMPluginCodeGenerator >> referenceObjectMemoryClass [
 	"Define the class from which to take methods to define the interpreter proxy imports."
-	^ Spur32BitMemoryManager
+	^ self vmmakerConfiguration referenceObjectMemoryClass
 ]
 
 { #category : #public }
@@ -770,7 +767,7 @@ VMPluginCodeGenerator >> withGuardAgainstDefinitionOf: selector on: aStream do: 
 
 { #category : #'C translation' }
 VMPluginCodeGenerator >> withOptionalVerbiageFor: selector on: aStream do: mainBlock ifOptionalDo: optionalBlock [
-	(InterpreterProxy >> selector pragmaAt: #option:)
+	(self vmmakerConfiguration interpreterProxyClass >> selector pragmaAt: #option:)
 		ifNil:
 			[mainBlock value]
 		ifNotNil:

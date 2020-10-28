@@ -44,9 +44,6 @@ Class {
 	#classVars : [
 		'NoRegParmsInAssertVMs'
 	],
-	#pools : [
-		'VMBasicConstants'
-	],
 	#category : #Slang
 }
 
@@ -516,7 +513,7 @@ CCodeGenerator >> addStructClasses: classes [
 	structClasses := classes.
 	structClasses do:
 		[:structClass|
-		 (structClass withAllSuperclasses copyUpTo: SlangStructType) do:
+		 (structClass withAllSuperclasses copyUpTo: self vmmakerConfiguration baseStructClass) do:
 			[:structClassOrSuperclass|
 			 self addStructClass: structClassOrSuperclass]]
 ]
@@ -1029,7 +1026,7 @@ CCodeGenerator >> computeKernelReturnTypes [
 
 		 pointerForOop: #'char *' oopForPointer: #sqInt
 		 baseHeaderSize #sqInt wordSize #sqInt bytesPerOop #sqInt).
-	BytesPerWord = 8 ifTrue:
+	self vmmakerConfiguration bytesPerWord = 8 ifTrue:
 		[#(long32At: long32At:put: unalignedLong32At: unalignedLong32At:put:) do:
 			[:accessor|
 			dictionary at: accessor put: #int]].
@@ -3499,7 +3496,6 @@ CCodeGenerator >> initialize [
 	variables := Set new: 100.
 	variableDeclarations := Dictionary new: 100.
 	methods := Dictionary new: 500.
-	kernelReturnTypes := self computeKernelReturnTypes.
 	macros := Dictionary new.
 	self initializeCTranslationDictionary.
 	headerFiles := OrderedCollection new.
@@ -4001,6 +3997,12 @@ CCodeGenerator >> isStructSend: aTSendNode [
 CCodeGenerator >> isVoidPointer: aCType [ "<String>"
 	"sigh..."
 	^#('void *' 'void*') includes: aCType asString
+]
+
+{ #category : #'initialize-release' }
+CCodeGenerator >> kernelReturnTypes [
+	
+	^ kernelReturnTypes ifNil: [ kernelReturnTypes := self computeKernelReturnTypes ]
 ]
 
 { #category : #utilities }
@@ -5029,7 +5031,7 @@ CCodeGenerator >> returnTypeForSend: sendNode in: aTMethod ifNil: typeIfNil [
 	methodOrNil := self anyMethodNamed: (sel := sendNode selector).
 	(methodOrNil notNil and: [methodOrNil returnType notNil]) ifTrue:
 		[^self baseTypeForType: methodOrNil returnType].
-	^kernelReturnTypes
+	^self kernelReturnTypes
 		at: sel
 		ifAbsent:
 			[sel
@@ -5220,17 +5222,17 @@ CCodeGenerator >> sizeOfIntegralCType: anIntegralCType [ "<String>"
 		['sqLong']	->	[8].
 		['usqLong']	->	[8].
 		['long long']	->	[8].
-		['sqInt']		->	[BytesPerOop].
-		['usqInt']	->	[BytesPerOop].
-		['sqIntptr_t']	->	[BytesPerWord].
-		['usqIntptr_t']	->	[BytesPerWord].
+		['sqInt']		->	[self vmmakerConfiguration bytesPerOop].
+		['usqInt']	->	[self vmmakerConfiguration bytesPerOop].
+		['sqIntptr_t']	->	[self vmmakerConfiguration bytesPerWord].
+		['usqIntptr_t']	->	[self vmmakerConfiguration bytesPerWord].
 		['int']		->	[4].
 		['short']		->	[2].
 		['short int']	->	[2].
 		['char']		->	[1].
-		['long']		->	[BytesPerWord]. "It's ambiguous on LLP64 and we'll later remove it"
-		['size_t']	->	[BytesPerWord].
-		['pid_t']		->	[BytesPerWord].
+		['long']		->	[self vmmakerConfiguration bytesPerWord]. "It's ambiguous on LLP64 and we'll later remove it"
+		['size_t']	->	[self vmmakerConfiguration bytesPerWord].
+		['pid_t']		->	[self vmmakerConfiguration bytesPerWord].
 		
 		"Standard C types"
 		['uint64_t']		->	[8].
@@ -5723,6 +5725,12 @@ CCodeGenerator >> vmMaker [
 { #category : #accessing }
 CCodeGenerator >> vmMaker: aVMMaker [
 	vmMaker := aVMMaker
+]
+
+{ #category : #accessing }
+CCodeGenerator >> vmmakerConfiguration [
+	
+	^ self vmMaker vmmakerConfiguration
 ]
 
 { #category : #utilities }

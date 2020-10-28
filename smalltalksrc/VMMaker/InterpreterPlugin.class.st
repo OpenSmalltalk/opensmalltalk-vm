@@ -57,7 +57,10 @@ InterpreterPlugin class >> buildCodeGenerator [
 	"Build a CCodeGenerator for the plugin"
 	| cg pluginClasses |
 	cg := self codeGeneratorClass new initialize.
+	cg vmClass: self.
 	cg pluginClass: self.
+	cg vmMaker: VMMaker new.
+	cg vmMaker vmmakerConfiguration: VMMakerConfiguration.
 	(pluginClasses := self pluginClassesUpToRoot) do:
 		[:aClass| cg addClass: aClass].
 	(cg structClassesForTranslationClasses: pluginClasses) do:
@@ -73,6 +76,8 @@ InterpreterPlugin class >> buildCodeGeneratorForVMClass: aVMClass [
 	cg := self codeGeneratorClass new initialize.
 	cg vmClass: aVMClass.
 	cg pluginClass: self.
+	cg vmMaker: VMMaker new.
+	cg vmMaker vmmakerConfiguration: VMMakerConfiguration.
 	(pluginClasses := self pluginClassesUpToRoot) do:
 		[:aClass| cg addClass: aClass].
 	(cg structClassesForTranslationClasses: pluginClasses) do:
@@ -330,7 +335,7 @@ InterpreterPlugin class >> translateInDirectory: directory doInlining: inlineFla
 			[^nil]].
 
 	self initialize.
-	cg := self buildCodeGenerator.
+	cg := self buildCodeGeneratorForVMClass: StackInterpreter.
 	cg inferTypesForImplicitlyTypedVariablesAndMethods.
 	self pruneUnusedInterpreterPluginMethodsIn: cg.
 	cg storeCodeOnFile:  (directory / fname) fullName doInlining: inlineFlag.

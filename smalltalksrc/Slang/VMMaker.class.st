@@ -374,51 +374,56 @@ VMMaker >> buildCodeGeneratorForInterpreter [
 
 { #category : #'generate sources' }
 VMMaker >> buildCodeGeneratorForInterpreter: interpreterClass includeAPIMethods: getAPIMethods initializeClasses: initializeClasses [
+
 	"Answer the code generator for translating the interpreter."
 
 	| cg interpreterClasses |
-	initializeClasses ifTrue:
-		[interpreterClass initializeWithOptions: optionsDictionary.
-		 interpreterClass hasCogit ifTrue:
-			[interpreterClass cogitClass initializeWithOptions: optionsDictionary]].
+	initializeClasses ifTrue: [ 
+		interpreterClass initializeWithOptions: optionsDictionary.
+		interpreterClass hasCogit ifTrue: [ 
+			interpreterClass cogitClass initializeWithOptions:
+				optionsDictionary ] ].
 
 	(cg := self createCodeGenerator) vmClass: interpreterClass.
 
 	"Construct interpreterClasses as all classes from interpreterClass &
 	 objectMemoryClass up to VMClass in superclass to subclass order."
 	interpreterClasses := OrderedCollection new.
-	{interpreterClass. interpreterClass objectMemoryClass} do:
-		[:vmClass| | theClass |
-		 theClass := vmClass.
-		 [theClass ~~ SlangClass] whileTrue:
-			[interpreterClasses addFirst: theClass.
-			 theClass := theClass superclass]].
+	{ 
+		interpreterClass.
+		interpreterClass objectMemoryClass } do: [ :vmClass | 
+		| theClass |
+		theClass := vmClass.
+		[ theClass ~~ self vmmakerConfiguration baseClass ] whileTrue: [ 
+			interpreterClasses addFirst: theClass.
+			theClass := theClass superclass ] ].
 	interpreterClasses
-		addFirst: SlangClass;
-		addAllLast: (cg nonStructClassesForTranslationClasses: interpreterClasses).
+		addFirst: self vmmakerConfiguration baseClass;
+		addAllLast:
+			(cg nonStructClassesForTranslationClasses: interpreterClasses).
 
-	initializeClasses ifTrue:
-		[interpreterClasses do:
-			[:ic|
+	initializeClasses ifTrue: [ 
+		interpreterClasses do: [ :ic | 
 			(ic respondsTo: #initializeWithOptions:)
-				ifTrue: [ic initializeWithOptions: interpreterClass initializationOptions]
-				ifFalse: [ic initialize]].
-		 (cg structClassesForTranslationClasses: interpreterClasses) do:
-			[:structClass| structClass initialize]].
+				ifTrue: [ 
+				ic initializeWithOptions: interpreterClass initializationOptions ]
+				ifFalse: [ ic initialize ] ].
+		(cg structClassesForTranslationClasses: interpreterClasses) do: [ 
+			:structClass | structClass initialize ] ].
 
-	cg addStructClasses: (cg structClassesForTranslationClasses: interpreterClasses).
+	cg addStructClasses:
+		(cg structClassesForTranslationClasses: interpreterClasses).
 
-	interpreterClasses do: [:ic| cg addClass: ic].
+	interpreterClasses do: [ :ic | cg addClass: ic ].
 
-	getAPIMethods ifTrue:
-		[interpreterClass cogitClass ifNotNil:
-			[:cogitClass|
-			 cg includeAPIFrom: (self
-									buildCodeGeneratorForCogit: cogitClass
-									includeAPIMethods: false
-									initializeClasses: false)]].
+	getAPIMethods ifTrue: [ 
+		interpreterClass cogitClass ifNotNil: [ :cogitClass | 
+			cg includeAPIFrom: (self
+					 buildCodeGeneratorForCogit: cogitClass
+					 includeAPIMethods: false
+					 initializeClasses: false) ] ].
 
-	^cg
+	^ cg
 ]
 
 { #category : #'plugin lists' }
