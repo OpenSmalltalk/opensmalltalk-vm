@@ -167,12 +167,12 @@ UnicornSimulator >> disassembler [
 { #category : #executing }
 UnicornSimulator >> doStartAt: startAddress until: until timeout: timeout count: count [
 
-	| actualCount result error startTime currentTime remainingTimeout |
+	| result error startTime currentTime remainingTimeout remainingCount |
 
-	actualCount := 0.
 	self instructionPointerValue: startAddress.
 	startTime := Time millisecondClockValue.
 	remainingTimeout := timeout.
+	remainingCount := count.
 
 	[ true ]
 		whileTrue: [ 
@@ -180,7 +180,7 @@ UnicornSimulator >> doStartAt: startAddress until: until timeout: timeout count:
 				startAt: self instructionPointerValue
 				until: until
 				timeout: remainingTimeout
-				count: count.
+				count: remainingCount.
 					
 				stopReason ifNotNil: [ 
 						error := stopReason.
@@ -188,16 +188,20 @@ UnicornSimulator >> doStartAt: startAddress until: until timeout: timeout count:
 						error signal ].
 		
 			"If execution did not stop because of a stop reason, verify the error code"
-			unicorn verifyErrorCode: result.
-			actualCount := actualCount + 1] 
+			unicorn verifyErrorCode: result] 
 				on: UnicornInvalidMemoryAccess do: [ :invalidAccess |
+					
 					self instructionPointerValue = until ifTrue: [ ^ 0 ].
-					actualCount := actualCount + 1.
+					
 					(self handleInvalidAccess: invalidAccess)
 						ifFalse: [ ^ result ]].
 			
 			stopReason ifNotNil: [ ^ result ].
-			count = actualCount ifTrue: [ ^ result ].
+		
+			count ~= 0 ifTrue: [ | lastCount |
+				lastCount := unicorn lastInstructionCount.
+				remainingCount := remainingCount - lastCount.
+				remainingCount <= 0 ifTrue: [ ^ result ]].
 			
 			timeout ~= 0 ifTrue: [  
 				currentTime := Time millisecondClockValue.
@@ -209,7 +213,8 @@ UnicornSimulator >> doStartAt: startAddress until: until timeout: timeout count:
 								target: until;
 								signal ]].
 			
-			self instructionPointerValue = until ifTrue: [ ^ result ]]
+			self instructionPointerValue = until 
+				ifTrue: [ ^ result ]]
 ]
 
 { #category : #'as yet unclassified' }
@@ -251,8 +256,19 @@ UnicornSimulator >> getLastAddress: abstractInstructions [
 { #category : #'handling invalid accesses' }
 UnicornSimulator >> handleInvalidAccess: invalidAccess [ 
 
-	^ invalidAccessHandler value: invalidAccess
+	| previousInstructionPointer hasToContinue |
+	previousInstructionPointer := self instructionPointerValue.
 	
+	"If the called handler want to resume execution but it has not set a next instruction pointer to execute I will calculate it"
+	
+	(hasToContinue := invalidAccessHandler value: invalidAccess)
+		ifTrue: [ previousInstructionPointer = self instructionPointerValue 
+			ifTrue: [  
+					self instructionPointerValue: 
+						self lastExecutedInstructionAddress + self lastExecutedInstructionSize 
+				] ].	
+		
+	^ hasToContinue
 ]
 
 { #category : #testing }
@@ -324,6 +340,24 @@ UnicornSimulator >> integerRegisterState [
 { #category : #'handling invalid accesses' }
 UnicornSimulator >> invalidAccessHandler: aFullBlockClosure [ 
 	invalidAccessHandler := aFullBlockClosure
+]
+
+{ #category : #accessing }
+UnicornSimulator >> lastExecutedInstructionAddress [
+
+	^ unicorn lastExecutedInstructionAddress 
+]
+
+{ #category : #accessing }
+UnicornSimulator >> lastExecutedInstructionSize [
+
+	^ unicorn lastExecutedInstructionSize 
+]
+
+{ #category : #accessing }
+UnicornSimulator >> lastInstructionCount [
+	
+	^ unicorn lastInstructionCount 
 ]
 
 { #category : #memory }

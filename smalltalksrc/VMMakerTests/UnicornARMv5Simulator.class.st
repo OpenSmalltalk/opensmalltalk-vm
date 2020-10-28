@@ -94,6 +94,58 @@ UnicornARMv5Simulator >> disassembler [
 	^ LLVMDisassembler armv7
 ]
 
+{ #category : #executing }
+UnicornARMv5Simulator >> doStartAt: startAddress until: until timeout: timeout count: count [
+
+	| result error startTime currentTime remainingTimeout remainingCount |
+
+	self instructionPointerValue: startAddress.
+	startTime := Time millisecondClockValue.
+	remainingTimeout := timeout.
+	remainingCount := count.
+
+	[ true ]
+		whileTrue: [ 
+			[result :=  unicorn
+				startAt: self instructionPointerValue
+				until: until
+				timeout: remainingTimeout
+				count: 1.
+					
+				stopReason ifNotNil: [ 
+						error := stopReason.
+						stopReason := nil.
+						error signal ].
+		
+			"If execution did not stop because of a stop reason, verify the error code"
+			unicorn verifyErrorCode: result] 
+				on: UnicornInvalidMemoryAccess do: [ :invalidAccess |
+					
+					self instructionPointerValue = until ifTrue: [ ^ 0 ].
+					
+					(self handleInvalidAccess: invalidAccess)
+						ifFalse: [ ^ result ]].
+			
+			stopReason ifNotNil: [ ^ result ].
+		
+			count ~= 0 ifTrue: [ | lastCount |
+				remainingCount := remainingCount - 1.
+				remainingCount <= 0 ifTrue: [ ^ result ]].
+			
+			timeout ~= 0 ifTrue: [  
+				currentTime := Time millisecondClockValue.
+				remainingTimeout := remainingTimeout - (currentTime - startTime).
+				
+				remainingTimeout <= 0
+					ifTrue: [ 	
+						UnicornTimeout new
+								target: until;
+								signal ]].
+			
+			self instructionPointerValue = until 
+				ifTrue: [ ^ result ]]
+]
+
 { #category : #'as yet unclassified' }
 UnicornARMv5Simulator >> doublePrecisionFloatingPointRegister0Value [
 
