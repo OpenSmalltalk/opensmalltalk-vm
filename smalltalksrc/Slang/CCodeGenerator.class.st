@@ -1047,7 +1047,7 @@ CCodeGenerator >> const: constName declareC: declarationString [
 { #category : #accessing }
 CCodeGenerator >> constantClass [
 	
-	^ vmClass constantClass
+	^ (vmClass ifNil: [ self vmmakerConfiguration ]) constantClass.
 ]
 
 { #category : #utilities }
@@ -4508,12 +4508,12 @@ CCodeGenerator >> optionIsTrue: pragma in: aClass [
 	"Answer whether an option: or notOption: pragma is true in the context of aClass.
 	 The argument to the option: pragma is interpreted as either a Cogit class name
 	 or a class variable name or a variable name in VMBasicConstants."
-	| key |
+	| key constantClass |
 	key := pragma argumentAt: 1.
 
 	"If the option is one to be defined at compile time we'll generate a
 	 conditional around its declaration and definition."
-	(vmClass constantClass defineAtCompileTime: key) ifTrue:
+	(self constantClass defineAtCompileTime: key) ifTrue:
 		[^true].
 
 	"If the option is the name of a subclass of Cogit, include it if it inherits from the Cogit class."

@@ -220,8 +220,9 @@ VMPluginCodeGenerator >> emitCTypesOn: aStream [
 { #category : #'C code generator' }
 VMPluginCodeGenerator >> emitExportsOn: aStream [
 	"Store all the exported primitives in the form used by the internal named prim system."
-	vmClass ifNil: [ self error: 'We need a vmClass to compute accessor depths' ].
-
+	| nilVMClass |
+	(nilVMClass := vmClass isNil) ifTrue: "We need a vmClass temporarily to compute accessor depths."
+		[vmClass := self vmmakerConfiguration defaultInterpreterClass ].
 	aStream cr; cr; nextPutAll:'#ifdef SQUEAK_BUILTIN_PLUGIN'.
 	self emitExportsNamed: pluginClass moduleName
 		pluginName: pluginClass moduleExportsName
@@ -229,6 +230,8 @@ VMPluginCodeGenerator >> emitExportsOn: aStream [
 	aStream cr; nextPutAll: '#else /* ifdef SQ_BUILTIN_PLUGIN */'; cr; cr.
 	self emitAccessorDepthsOn: aStream.
 	aStream cr; nextPutAll: '#endif /* ifdef SQ_BUILTIN_PLUGIN */'; cr.
+	nilVMClass ifTrue:
+		[vmClass := nil]
 ]
 
 { #category : #'C translation' }

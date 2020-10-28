@@ -50,6 +50,12 @@ VMMakerConfiguration class >> bytesPerWord [
 ]
 
 { #category : #accessing }
+VMMakerConfiguration class >> constantClass [
+	"The basic constant pool for full generation"
+	^ self baseClass constantClass
+]
+
+{ #category : #accessing }
 VMMakerConfiguration class >> coreVMDirName [
 	^DirNames at: #coreVMDir
 ]
@@ -58,6 +64,12 @@ VMMakerConfiguration class >> coreVMDirName [
 VMMakerConfiguration class >> coreVMHeadersDirName [
 
 	^ DirNames at: #coreVMHeadersDir ifAbsent: [ self coreVMDirName ]
+]
+
+{ #category : #accessing }
+VMMakerConfiguration class >> defaultInterpreterClass [
+
+	^ StackInterpreter
 ]
 
 { #category : #configurations }

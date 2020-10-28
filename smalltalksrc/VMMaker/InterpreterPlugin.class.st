@@ -328,14 +328,16 @@ InterpreterPlugin class >> translateInDirectory: directory doInlining: inlineFla
 	 fname := self moduleName, '.c'.
 
 	"don't translate if the file is newer than my timeStamp"
-	(directory / fname) ifExists: [:fstat| | mTime |
+	"(directory / fname) ifExists: [:fstat| | mTime |
 		mTime := fstat modificationTime.
 		mTime isInteger ifFalse: [mTime := mTime asSeconds].
 		 (self allCodeOlderThan: mTime) ifTrue:
-			[^nil]].
+			[^nil]]."
 
 	self initialize.
-	cg := self buildCodeGeneratorForVMClass: StackInterpreter.
+	"The VM class should be nil for plugins, because there is code that conditionally checks if it is nil or not.
+	A nil VM class is assumed as a plugin context..."
+	cg := self buildCodeGeneratorForVMClass: nil.
 	cg inferTypesForImplicitlyTypedVariablesAndMethods.
 	self pruneUnusedInterpreterPluginMethodsIn: cg.
 	cg storeCodeOnFile:  (directory / fname) fullName doInlining: inlineFlag.
