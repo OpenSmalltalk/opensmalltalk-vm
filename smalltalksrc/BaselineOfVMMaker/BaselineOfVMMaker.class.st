@@ -48,13 +48,16 @@ BaselineOfVMMaker >> baseline: spec [
 				
 			"Main VMMaker packages"	
 			spec
-				package: 'VMMaker' with: [ spec requires: #( 'Slang' 'VMMakerLoadingDependencies' 'Printf') ].
+				package: 'VMMaker-Slang'
+				with: [ spec requires: #( 'Slang' 'VMMaker' ) ];
+				package: 'VMMaker'
+				with: [ spec requires: #( 'Slang' 'VMMakerLoadingDependencies' 'Printf') ].
 								
 			"VM plugins"
 			spec package: 'FileAttributesPlugin' with: [ spec requires: #( 'VMMakerCompatibilityForPharo6') ].
 			
 			spec group: 'plugins' with: #('FileAttributesPlugin').
-			spec group: 'core' with: #('VMMaker').
+			spec group: 'core' with: #('VMMaker-Slang').
 			spec group: 'tools' with: #('VMMaker-Tools').			
 			spec group: 'tests' with: #('VMMakerTests' 'VMMaker-OriginalTests' 'VMMaker-MT-Tests').			
 			spec group: 'default' with: #( 'core' 'plugins' 'tools' 'tests') ]
