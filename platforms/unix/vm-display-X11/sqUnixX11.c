@@ -1869,7 +1869,6 @@ static int x2sqKeyCompositionInput(XKeyEvent *xevt, KeySym *symbolic)
       {
       case XLookupNone:		/* still composing */
 	DCONV_PRINTERR("x2sqKey XLookupNone\n");
-	*symbolic= 0;
 	return -1;
 
       case XLookupChars:
@@ -1877,14 +1876,10 @@ static int x2sqKeyCompositionInput(XKeyEvent *xevt, KeySym *symbolic)
       case XLookupBoth:
 	DCONV_PRINTERR("x2sqKey XLookupBoth count %d\n", inputCount);
 	if (inputCount == 0)
-	  {
-	    *symbolic= 0;
 	    return lastKey= -1;
-	  }
 	else if (inputCount == 1)
 	  {
 	    inputCount= 0;
-	    *symbolic= 0;
 	    return lastKey= inputBuf[0];
 	  }
 	else
@@ -1906,7 +1901,6 @@ static int x2sqKeyCompositionInput(XKeyEvent *xevt, KeySym *symbolic)
 	    lastKey= (inputCount > 0 ? inputBuf[inputCount - 1] : -1);
 #          endif
 	
-	    *symbolic= 0;
 	    return -1; /* we've already recorded the key events */
 	  }
 
@@ -3652,7 +3646,7 @@ handleEvent(XEvent *evt)
     case KeyPress:
       noteEventState(evt->xkey);
       {
-	KeySym symbolic;
+	KeySym symbolic= 0;
 	int keyCode= x2sqKey(&evt->xkey, &symbolic);
 	int ucs4= xkeysym2ucs4(symbolic);
 	DCONV_PRINTERR("symbolic, keyCode, ucs4: %x, %d, %x\n", symbolic, keyCode, ucs4);
