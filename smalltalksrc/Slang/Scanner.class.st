@@ -1,7 +1,7 @@
 Class {
 	#name : #Scanner,
 	#superclass : #Object,
-	#category : #'VMMakerCompatibilityForPharo6-System'
+	#category : #'Slang-ToRemove'
 }
 
 { #category : #scanning }

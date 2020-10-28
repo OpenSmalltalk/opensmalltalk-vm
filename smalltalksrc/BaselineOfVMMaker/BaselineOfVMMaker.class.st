@@ -10,6 +10,13 @@ BaselineOfVMMaker >> baseline: spec [
 	spec
 		for: #common
 		do: [
+			
+			"Slang, the basics"			
+			spec
+				package: 'Slang';
+				package: 'Slang-Tests' with: [
+					spec requires: #('Slang') ].
+			
 			"External Dependencies"
 			spec baseline: 'Unicorn' with: [ 
 				spec repository: 'github://guillep/pharo-unicorn' ].
@@ -41,7 +48,7 @@ BaselineOfVMMaker >> baseline: spec [
 				
 			"Main VMMaker packages"	
 			spec
-				package: 'VMMaker' with: [ spec requires: #( 'VMMakerLoadingDependencies' 'Printf') ].
+				package: 'VMMaker' with: [ spec requires: #( 'Slang' 'VMMakerLoadingDependencies' 'Printf') ].
 								
 			"VM plugins"
 			spec package: 'FileAttributesPlugin' with: [ spec requires: #( 'VMMakerCompatibilityForPharo6') ].
