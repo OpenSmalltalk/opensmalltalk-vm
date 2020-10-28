@@ -1960,47 +1960,37 @@ imageNotFound(char *imageName)
 }
 
 
-void imgInit(void)
+void
+imgInit(void)
 {
-  /* read the image file and allocate memory for Squeak heap */
-  for (;;)
-    {
-      FILE *f= 0;
-      struct stat sb;
-      char imageName[MAXPATHLEN];
-      sq2uxPath(shortImageName, strlen(shortImageName), imageName, 1000, 1);
-      if ((  (-1 == stat(imageName, &sb)))
-	  || ( 0 == (f= fopen(imageName, "r"))))
-	{
-	  if (dpy->winImageFind(shortImageName, sizeof(shortImageName)))
-	    continue;
-	  dpy->winImageNotFound();
-	  imageNotFound(shortImageName);
-	}
-
-	int fd = fileno(f);
-	if (fd < 0) abort();
-#      ifdef DEBUG_IMAGE
-	printf("fstat(%d) => %d\n", fd, fstat(fd, &sb));
-#      endif
-
-      recordFullPathForImageName(shortImageName); /* full image path */
-      if (extraMemory)
-	useMmap= 0;
-      else
-	extraMemory= DefaultHeapSize * 1024 * 1024;
-#    ifdef DEBUG_IMAGE
-      printf("image size %ld + heap size %ld (useMmap = %d)\n", (long)sb.st_size, extraMemory, useMmap);
-#    endif
-#if SPURVM
-	  readImageFromFileHeapSizeStartingAt(fd, 0, 0);
-#else
-      extraMemory += (long)sb.st_size;
-      readImageFromFileHeapSizeStartingAt(fd, extraMemory, 0);
-#endif
-      sqImageFileClose(fd);
-      break;
+    /* read the image file and allocate memory for Squeak heap */
+    int fd;
+    struct stat sb;
+    char imagePath[MAXPATHLEN];
+    sq2uxPath(shortImageName, strlen(shortImageName), imagePath, MAXPATHLEN - 1, 1);
+    if (-1 == stat(imagePath, &sb) || (!S_ISREG(sb.st_mode) && !S_ISLNK(sb.st_mode))) {
+        imageNotFound(imagePath); // imageNotFound will exit
     }
+    fd = sqImageFileOpen(imagePath, "rb"); // sqImageFileOpen handles the errors. fd is valid here
+#ifdef DEBUG_IMAGE
+    printf("fstat(%d) => %d\n", fd, fstat(fd, &sb));
+#endif
+
+    recordFullPathForImageName(shortImageName); /* full image path */
+    if (extraMemory)
+        useMmap= 0;
+    else
+        extraMemory= DefaultHeapSize * 1024 * 1024;
+#ifdef DEBUG_IMAGE
+    printf("image size %ld + heap size %ld (useMmap = %d)\n", (long)sb.st_size, extraMemory, useMmap);
+#endif
+#if SPURVM
+    readImageFromFileHeapSizeStartingAt(fd, 0, 0);
+#else
+    extraMemory += (long)sb.st_size;
+    readImageFromFileHeapSizeStartingAt(fd, extraMemory, 0);
+#endif
+    sqImageFileClose(fd);
 }
 
 #if defined(__GNUC__) && ( defined(i386) || defined(__i386) || defined(__i386__)  \
