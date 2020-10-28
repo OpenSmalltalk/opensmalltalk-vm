@@ -85,6 +85,18 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 		return 0;
 	}
 
+static inline void
+resetSegmentRegisters(uintptr_t byteSize, uintptr_t minWriteMaxExecAddr)
+{
+	bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.limit_scaled
+		= minWriteMaxExecAddr > 0 ? minWriteMaxExecAddr - 1 : 0;
+	bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.limit = minWriteMaxExecAddr >> 16;
+	bx_cpu.sregs[BX_SEG_REG_DS].cache.u.segment.limit_scaled =
+	bx_cpu.sregs[BX_SEG_REG_SS].cache.u.segment.limit_scaled = byteSize;
+	bx_cpu.sregs[BX_SEG_REG_DS].cache.u.segment.limit =
+	bx_cpu.sregs[BX_SEG_REG_SS].cache.u.segment.limit = byteSize >> 16;
+}
+
 #define initEipFetchPtr(cpup) ((cpup)->eipFetchPtr = theMemory)
 #define resetInstructionFetch(cpup) do { \
 		(cpup)->eipPageBias = (bx_address)0; \
@@ -92,8 +104,8 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 
 	long
 	singleStepCPUInSizeMinAddressReadWrite(void *cpu,
-									void *memory, ulong byteSize,
-									ulong minAddr, ulong minWriteMaxExecAddr)
+									void *memory, uintptr_t byteSize,
+									uintptr_t minAddr, uintptr_t minWriteMaxExecAddr)
 	{
 		BX_CPU_C *anx86 = (BX_CPU_C *)cpu;
 
@@ -109,13 +121,7 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 		}
 
 		blidx = 0;
-		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.limit_scaled
-			= minWriteMaxExecAddr > 0 ? minWriteMaxExecAddr - 1 : 0;
-		bx_cpu.sregs[BX_SEG_REG_DS].cache.u.segment.limit_scaled =
-		bx_cpu.sregs[BX_SEG_REG_SS].cache.u.segment.limit_scaled = byteSize;
-		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.limit = minWriteMaxExecAddr >> 16;
-		bx_cpu.sregs[BX_SEG_REG_DS].cache.u.segment.limit =
-		bx_cpu.sregs[BX_SEG_REG_SS].cache.u.segment.limit = byteSize >> 16;
+		resetSegmentRegisters(byteSize, minWriteMaxExecAddr);
 		initEipFetchPtr(anx86);
 		resetInstructionFetch(anx86);
 
@@ -125,8 +131,8 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 	}
 
 	long
-	runCPUInSizeMinAddressReadWrite(void *cpu, void *memory, ulong byteSize,
-									ulong minAddr, ulong minWriteMaxExecAddr)
+	runCPUInSizeMinAddressReadWrite(void *cpu, void *memory, uintptr_t byteSize,
+									uintptr_t minAddr, uintptr_t minWriteMaxExecAddr)
 	{
 		BX_CPU_C *anx86 = (BX_CPU_C *)cpu;
 
@@ -138,13 +144,7 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 		minWriteAddress = minWriteMaxExecAddr;
 
 		blidx = 0;
-		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.limit_scaled
-			= minWriteMaxExecAddr > 0 ? minWriteMaxExecAddr - 1 : 0;
-		bx_cpu.sregs[BX_SEG_REG_DS].cache.u.segment.limit_scaled =
-		bx_cpu.sregs[BX_SEG_REG_SS].cache.u.segment.limit_scaled = byteSize;
-		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.limit = minWriteMaxExecAddr >> 16;
-		bx_cpu.sregs[BX_SEG_REG_DS].cache.u.segment.limit =
-		bx_cpu.sregs[BX_SEG_REG_SS].cache.u.segment.limit = byteSize >> 16;
+		resetSegmentRegisters(byteSize, minWriteMaxExecAddr);
 		initEipFetchPtr(anx86);
 		resetInstructionFetch(anx86);
 
@@ -163,7 +163,7 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 	 * Currently a dummy for Bochs.
 	 */
 	void
-	flushICacheFromTo(void *cpu, ulong saddr, ulong eaddr)
+	flushICacheFromTo(void *cpu, uintptr_t saddr, uintptr_t eaddr)
 	{
 #if BX_SUPPORT_ICACHE
 # error not yet implemented
@@ -171,8 +171,8 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 	}
 
 	long
-	disassembleForAtInSize(void *cpu, ulong laddr,
-							void *memory, ulong byteSize)
+	disassembleForAtInSize(void *cpu, uintptr_t laddr,
+							void *memory, uintptr_t byteSize)
 	{
 		BX_CPU_C *anx86 = (BX_CPU_C *)cpu;
 
@@ -232,7 +232,7 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 	}
 
 	void
-	storeIntegerRegisterStateOfinto(void *cpu, int *registerState)
+	storeIntegerRegisterStateOfinto(void *cpu, WordType *registerState)
 	{
 		/* N.B. EAX=0,ECX=1,EDX=2,EBX=3,ESP=4,EBP=5,ESI=6,EDI=7 */
 		registerState[0] = bx_cpu.gen_reg[BX_32BIT_REG_EAX].dword.erx;

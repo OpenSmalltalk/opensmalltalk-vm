@@ -81,7 +81,7 @@ resetCPU(void *cpu)
 
 static inline long
 runOnCPU(sim_cpu *cpu, void *memory, 
-		ulong byteSize, ulong minAddr, ulong minWriteMaxExecAddr, int runOrStep)
+		uintptr_t byteSize, uintptr_t minAddr, uintptr_t minWriteMaxExecAddr, int runOrStep)
 {
 	uint64_t postpc = cpu->pc + sizeof(cpu->instr);
 
@@ -133,14 +133,14 @@ runOnCPU(sim_cpu *cpu, void *memory,
 
 long
 singleStepCPUInSizeMinAddressReadWrite(void *cpu, void *memory, 
-		ulong byteSize, ulong minAddr, ulong minWriteMaxExecAddr)
+		uintptr_t byteSize, uintptr_t minAddr, uintptr_t minWriteMaxExecAddr)
 {
 	return runOnCPU(cpu, memory, byteSize, minAddr, minWriteMaxExecAddr, step);
 }
 
 long
 runCPUInSizeMinAddressReadWrite(void *cpu, void *memory, 
-		ulong byteSize, ulong minAddr, ulong minWriteMaxExecAddr)
+		uintptr_t byteSize, uintptr_t minAddr, uintptr_t minWriteMaxExecAddr)
 {
 	return runOnCPU(cpu, memory, byteSize, minAddr, minWriteMaxExecAddr, run);
 }
@@ -149,7 +149,7 @@ runCPUInSizeMinAddressReadWrite(void *cpu, void *memory,
  * Currently a dummy for ARM Processor Alien.
  */
 void
-flushICacheFromTo(void *cpu, ulong saddr, ulong eaddr)
+flushICacheFromTo(void *cpu, uintptr_t saddr, uintptr_t eaddr)
 {
 #if 0
 # error not yet implemented
@@ -173,8 +173,8 @@ gdb_log_printf(void *stream, const char * format, ...)
 }
 
 long
-disassembleForAtInSize(void *cpu, ulong laddr,
-			void *memory, ulong byteSize)
+disassembleForAtInSize(void *cpu, uintptr_t laddr,
+			void *memory, uintptr_t byteSize)
 {
 	gdblog_index = 0;
 	// ignore the cpu
@@ -222,7 +222,7 @@ getlog(long *len)
 }
 
 void
-storeIntegerRegisterStateOfinto(void *cpu, long long *registerState)
+storeIntegerRegisterStateOfinto(void *cpu, WordType *registerState)
 {
 	for (int n = -1; ++n < 32;)
 		registerState[n] = ((sim_cpu *)cpu)->gr[n].u64;

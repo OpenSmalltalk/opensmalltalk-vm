@@ -9,6 +9,7 @@
 #endif
 #include <bfd.h>
 #include <dis-asm.h>
+#include <opcodes/disassemble.h>
 
 #include <stdarg.h>
 
@@ -24,7 +25,7 @@ ARMul_State*	lastCPU = NULL;
 static char	gdb_log[LOGSIZE+1];
 static int	gdblog_index = 0;
 
-ulong	minReadAddress, minWriteAddress;
+uintptr_t	minReadAddress, minWriteAddress;
 
 /* The interrupt check chain is a convention wherein functions wanting to be
  * called on interrupt check chain themselves together by remembering the head
@@ -85,7 +86,7 @@ resetCPU(void *cpu)
 
 static inline long
 runOnCPU(ARMul_State *cpu, void *memory, 
-		ulong byteSize, ulong minAddr, ulong minWriteMaxExecAddr, ARMword (*runOrStep)(ARMul_State*))
+		uintptr_t byteSize, uintptr_t minAddr, uintptr_t minWriteMaxExecAddr, ARMword (*runOrStep)(ARMul_State*))
 {
 	assert(lastCPU == cpu);
 
@@ -123,14 +124,14 @@ ARMul_Emulate26 (ARMul_State * state)
 
 long
 singleStepCPUInSizeMinAddressReadWrite(void *cpu, void *memory, 
-		ulong byteSize, ulong minAddr, ulong minWriteMaxExecAddr)
+		uintptr_t byteSize, uintptr_t minAddr, uintptr_t minWriteMaxExecAddr)
 {
 	return runOnCPU(cpu, memory, byteSize, minAddr, minWriteMaxExecAddr, ARMul_DoInstr);
 }
 
 long
 runCPUInSizeMinAddressReadWrite(void *cpu, void *memory, 
-		ulong byteSize, ulong minAddr, ulong minWriteMaxExecAddr)
+		uintptr_t byteSize, uintptr_t minAddr, uintptr_t minWriteMaxExecAddr)
 {
 	return runOnCPU(cpu, memory, byteSize, minAddr, minWriteMaxExecAddr, ARMul_DoProg);
 }
@@ -139,7 +140,7 @@ runCPUInSizeMinAddressReadWrite(void *cpu, void *memory,
  * Currently a dummy for ARM Processor Alien.
  */
 void
-flushICacheFromTo(void *cpu, ulong saddr, ulong eaddr)
+flushICacheFromTo(void *cpu, uintptr_t saddr, uintptr_t eaddr)
 {
 #if 0
 # error not yet implemented
@@ -163,8 +164,8 @@ gdb_log_printf(void *stream, const char *format, ...)
 }
 
 long
-disassembleForAtInSize(void *cpu, ulong laddr,
-			void *memory, ulong byteSize)
+disassembleForAtInSize(void *cpu, uintptr_t laddr,
+			void *memory, uintptr_t byteSize)
 {
 	gdblog_index = 0;
 	// ignore the cpu
@@ -213,7 +214,7 @@ getlog(long *len)
 }
 
 void
-storeIntegerRegisterStateOfinto(void *cpu, int *registerState)
+storeIntegerRegisterStateOfinto(void *cpu, WordType *registerState)
 {
 	for (int n = -1; ++n < 16;)
 		registerState[n] = ((ARMul_State *)cpu)->Reg[n];
