@@ -438,6 +438,12 @@ UnicornARMv5Simulator >> stackPointerRegister [
 ]
 
 { #category : #accessing }
+UnicornARMv5Simulator >> temporaryRegisterValue [
+	
+	^ self r0
+]
+
+{ #category : #accessing }
 UnicornARMv5Simulator >> wordSize [
 	^ 4
 ]
