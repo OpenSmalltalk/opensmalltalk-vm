@@ -136,7 +136,7 @@ VMMachineSimulatorTest >> testMemoryAccessExceptionHandledTimeoutIsRespected [
 
 	self compile: [ 
 		cogit MoveCq: 0 R: TempReg.
-		cogit MoveCq: 16rFFFFFF0000 R: ClassReg.
+		cogit MoveCq: 16rFFFF0000 R: ClassReg.
 		cogit MoveMb: 0 r: ClassReg R: ReceiverResultReg. 
 
 		label := cogit Label.
@@ -239,11 +239,117 @@ VMMachineSimulatorTest >> testMemoryAccessExceptionHandledUntilAddressIsRespecte
 ]
 
 { #category : #'tests - memory access exception' }
+VMMachineSimulatorTest >> testMemoryAccessExceptionInCallContinuesToCorrectPC [
+
+	| lastInstruction invalidAddressHandled returningPoint |
+	self compile: [ 
+		cogit MoveCq: 0 R: TempReg. 
+		cogit CallFull: 16r7FFF0000.
+		returningPoint := cogit MoveCq: 99 R: TempReg. 
+		lastInstruction := cogit RetN: 0].
+	
+	invalidAddressHandled := false.
+	
+	self machineSimulator invalidAccessHandler: [:invalidAccess | 
+		invalidAddressHandled := true.
+		self machineSimulator instructionPointerValue: returningPoint address.
+		true].
+	
+	self
+		runFrom: initialAddress
+		until: lastInstruction address
+		timeout: 0.
+
+
+	self assert: self temporaryRegisterValue equals: 99.
+	self assert: invalidAddressHandled
+]
+
+{ #category : #'tests - memory access exception' }
+VMMachineSimulatorTest >> testMemoryAccessExceptionInCallHasUpdatedPC [
+
+	| lastInstruction invalidAddressHandled |
+	self compile: [ 
+		cogit CallFull: 16r7FFF0000.
+		lastInstruction := cogit RetN: 0].
+	
+	invalidAddressHandled := false.
+	
+	self machineSimulator invalidAccessHandler: [:invalidAccess | 
+		self 
+			assert: self machineSimulator instructionPointerValue 
+			equals: 16r7FFF0000.
+		invalidAddressHandled := true.
+		false].
+	
+	self
+		runFrom: initialAddress
+		until: lastInstruction address
+		timeout: 0.
+
+
+	self assert: invalidAddressHandled
+]
+
+{ #category : #'tests - memory access exception' }
+VMMachineSimulatorTest >> testMemoryAccessExceptionInJumpContinuesToCorrectPC [
+
+	| lastInstruction invalidAddressHandled returningPoint |
+	self compile: [ 
+		cogit MoveCq: 0 R: TempReg. 
+		cogit JumpFull: 16r7FFF0000.
+		returningPoint := cogit MoveCq: 99 R: TempReg. 
+		lastInstruction := cogit RetN: 0].
+	
+	invalidAddressHandled := false.
+	
+	self machineSimulator invalidAccessHandler: [:invalidAccess | 
+		invalidAddressHandled := true.
+		self machineSimulator instructionPointerValue: returningPoint address.
+		true].
+	
+	self
+		runFrom: initialAddress
+		until: lastInstruction address
+		timeout: 0.
+
+
+	self assert: self temporaryRegisterValue equals: 99.
+	self assert: invalidAddressHandled
+]
+
+{ #category : #'tests - memory access exception' }
+VMMachineSimulatorTest >> testMemoryAccessExceptionInJumpHasUpdatedPC [
+
+	| lastInstruction invalidAddressHandled |
+	self compile: [ 
+		cogit JumpFull: 16r7FFF0000.
+		lastInstruction := cogit RetN: 0].
+	
+	invalidAddressHandled := false.
+	
+	self machineSimulator invalidAccessHandler: [:invalidAccess | 
+		self 
+			assert: self machineSimulator instructionPointerValue 
+			equals: 16r7FFF0000.
+		invalidAddressHandled := true.
+		false].
+	
+	self
+		runFrom: initialAddress
+		until: lastInstruction address
+		timeout: 0.
+
+
+	self assert: invalidAddressHandled
+]
+
+{ #category : #'tests - memory access exception' }
 VMMachineSimulatorTest >> testMemoryAccessExceptionInstructionPointerInCorrectAddress [
 
 	| lastInstruction invalidAccessInstruction invalidAddressHandled |
 	self compile: [ 
-		cogit MoveCq: 16rFFFFFF0000 R: TempReg.
+		cogit MoveCq: 16rFFFF0000 R: TempReg.
 		invalidAccessInstruction := cogit MoveMb: 0 r: TempReg R: ClassReg.
 		"This instruction should not be called"
 		lastInstruction := cogit Call: 16rFFFFF0.  ].
