@@ -337,23 +337,6 @@ VMPrimitiveTest >> testPrimitiveArrayBecomeOneWayCreatesForwardThatPointsToOrigi
 ]
 
 { #category : #'tests - primitiveAtPut' }
-VMPrimitiveTest >> testPrimitiveAtPutFailsForImmutableObject [
-	| class object |
-	class := self newClassInOldSpaceWithSlots: 0 instSpec: memory arrayFormat.
-	
-	object := memory instantiateClass: class indexableSize: 1.
-
-	memory setIsImmutableOf: object to: true. 
-
-	interpreter push: object.
-	interpreter push: (memory integerObjectOf: 1).
-	interpreter push: memory falseObject.
-	interpreter primitiveAtPut.
-	
-	self assert: interpreter failed.
-]
-
-{ #category : #'tests - primitiveAtPut' }
 VMPrimitiveTest >> testPrimitiveAtPutFailsForNonIndexableObject [
 	| class object |
 	class := self newClassInOldSpaceWithSlots: 0 instSpec: memory nonIndexablePointerFormat.
