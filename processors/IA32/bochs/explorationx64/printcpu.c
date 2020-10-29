@@ -15,7 +15,7 @@
 static char buf[10];
 
 char *
-lower(char *s)
+lower(const char *s)
 {
 	int i;
 	for (i = 0; i < strlen(s); i++)
