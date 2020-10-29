@@ -72,12 +72,14 @@ platforms/unix/config/autom4te.cache/
 # /image/
 /image/*.sum
 /image/*.tgz
+/image/*.cs
 /image/*.st
 /image/coglinux*
 /image/cogwin
 /image/cogspurlinux*
 /image/*.dmp
 /image/*.png
+/image/*.text
 /image/sqlinux*
 /image/sqwin*
 /image/cogspurwin
