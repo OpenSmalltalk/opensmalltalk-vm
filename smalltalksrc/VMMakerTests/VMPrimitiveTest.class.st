@@ -337,6 +337,64 @@ VMPrimitiveTest >> testPrimitiveArrayBecomeOneWayCreatesForwardThatPointsToOrigi
 ]
 
 { #category : #'tests - primitiveAtPut' }
+VMPrimitiveTest >> testPrimitiveAtPutFailsForForwardedReceiver [
+	| class objectInstance |
+	"I don't know how to force an object to be forwarded ."
+	
+	self skip.
+	
+	
+	"We push receiver then 3 arguments"
+	class := self newClassInOldSpaceWithSlots: 0 instSpec: memory nonIndexablePointerFormat.
+	objectInstance := memory instantiateClass: class.
+	
+	interpreter push: objectInstance.
+	interpreter push: (memory integerObjectOf: 0).
+	interpreter push: memory falseObject.
+	interpreter push: memory falseObject.
+	interpreter argumentCount: 4.
+	interpreter primitiveAtPut.
+	
+	self assert: interpreter failed.
+	self assert: interpreter primFailCode equals: PrimErrBadArgument. 
+]
+
+{ #category : #'tests - primitiveAtPut' }
+VMPrimitiveTest >> testPrimitiveAtPutFailsForImmediate [
+
+	interpreter push: (memory integerObjectOf: 32).
+	interpreter push: (memory integerObjectOf: 1).
+	interpreter push: memory falseObject.
+	interpreter primitiveAtPut.
+	
+	self assert: interpreter failed.
+	self assert: interpreter primFailCode equals: PrimErrInappropriate. 
+]
+
+{ #category : #'tests - primitiveAtPut' }
+VMPrimitiveTest >> testPrimitiveAtPutFailsForMoreThanTwoArguments [
+	| class objectInstance |
+	"I don't know how to force a bad argument count."
+	
+	self skip.
+	
+	
+	"We push receiver then 3 arguments"
+	class := self newClassInOldSpaceWithSlots: 0 instSpec: memory nonIndexablePointerFormat.
+	objectInstance := memory instantiateClass: class.
+	
+	interpreter push: objectInstance.
+	interpreter push: (memory integerObjectOf: 0).
+	interpreter push: memory falseObject.
+	interpreter push: memory falseObject.
+	interpreter argumentCount: 4.
+	interpreter primitiveAtPut.
+	
+	self assert: interpreter failed.
+	self assert: interpreter primFailCode equals: PrimErrBadArgument. 
+]
+
+{ #category : #'tests - primitiveAtPut' }
 VMPrimitiveTest >> testPrimitiveAtPutFailsForNonIndexableObject [
 	| class object |
 	class := self newClassInOldSpaceWithSlots: 0 instSpec: memory nonIndexablePointerFormat.
@@ -350,6 +408,21 @@ VMPrimitiveTest >> testPrimitiveAtPutFailsForNonIndexableObject [
 	
 	self assert: interpreter failed.
 	self assert: interpreter primFailCode equals: PrimErrBadReceiver. 
+]
+
+{ #category : #'tests - primitiveAtPut' }
+VMPrimitiveTest >> testPrimitiveAtPutFailsForNonIntegerArgument [
+	| class objectInstance |
+	class := self newClassInOldSpaceWithSlots: 0 instSpec: memory nonIndexablePointerFormat.
+	objectInstance := memory instantiateClass: class.
+	
+	interpreter push: objectInstance.
+	interpreter push: memory falseObject.
+	interpreter push: memory falseObject.
+	interpreter primitiveAtPut.
+	
+	self assert: interpreter failed.
+	self assert: interpreter primFailCode equals: PrimErrBadArgument. 
 ]
 
 { #category : #'tests - primitiveAtPut' }
