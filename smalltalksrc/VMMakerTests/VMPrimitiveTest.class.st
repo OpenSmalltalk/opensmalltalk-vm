@@ -349,9 +349,10 @@ VMPrimitiveTest >> testPrimitiveAtPutFailsForNonIndexableObject [
 	interpreter primitiveAtPut.
 	
 	self assert: interpreter failed.
+	self assert: interpreter primFailCode equals: PrimErrBadReceiver. 
 ]
 
-{ #category : #'tests - primitiveImmutability' }
+{ #category : #'tests - primitiveAtPut' }
 VMPrimitiveTest >> testPrimitiveAtPutFailsIfObjectIsImmutable [
 
 	| class object slotIndex objectToPutInSlot |
@@ -372,8 +373,7 @@ VMPrimitiveTest >> testPrimitiveAtPutFailsIfObjectIsImmutable [
 	interpreter primitiveAtPut.
 	
 	self assert: interpreter failed.
-	"8 is the no modification exception in the special object array for the primFailCode"
-	self assert: interpreter primFailCode equals: 8. 
+	self assert: interpreter primFailCode equals: PrimErrNoModification. 
 ]
 
 { #category : #'tests - primitiveAtPut' }
@@ -441,6 +441,7 @@ VMPrimitiveTest >> testPrimitiveInstVarAtPutOverBoundShouldFailForIndexable [
 	interpreter primitiveInstVarAtPut.
 	
 	self assert: interpreter failed.
+	self assert: interpreter primFailCode equals: PrimErrBadIndex. 
 ]
 
 { #category : #'tests - primitiveAtPut' }
@@ -456,6 +457,7 @@ VMPrimitiveTest >> testPrimitiveInstVarAtPutOverBoundShouldFailNonIndexable [
 	interpreter primitiveInstVarAtPut.
 	
 	self assert: interpreter failed.
+	self assert: interpreter primFailCode equals: PrimErrBadIndex.
 ]
 
 { #category : #'tests - primitiveAtPut' }
@@ -789,6 +791,7 @@ VMPrimitiveTest >> testPrimitiveSlotAtPutOverBoundShouldFailForIndexable [
 	interpreter primitiveSlotAtPut.
 	
 	self assert: interpreter failed.
+	self assert: interpreter primFailCode equals: PrimErrBadIndex. 
 ]
 
 { #category : #'tests - primitiveAtPut' }
@@ -804,6 +807,7 @@ VMPrimitiveTest >> testPrimitiveSlotAtPutOverBoundShouldFailNonIndexable [
 	interpreter primitiveSlotAtPut.
 	
 	self assert: interpreter failed.
+	self assert: interpreter primFailCode equals: PrimErrBadIndex.
 ]
 
 { #category : #'tests - primitiveAtPut' }
