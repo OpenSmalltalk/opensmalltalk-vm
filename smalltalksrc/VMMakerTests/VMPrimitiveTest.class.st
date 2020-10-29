@@ -972,3 +972,19 @@ VMPrimitiveTest >> testPrimitiveSnapshotNewKeptObjectShouldBeTenured [
 	self assert: (memory hashBitsOf: self keptObjectInVMVariable1) equals: objectHash
 
 ]
+
+{ #category : #'tests - primitiveAtPut' }
+VMPrimitiveTest >> testPrimitiveStringAtPutShouldFailForNonCharacterArgument [
+	"Every other test is common with at:put:"
+	| objectInstance |
+	objectInstance := self newString: 'pouet'.
+	
+	interpreter push: objectInstance.
+	interpreter push: (memory integerObjectOf: 3).
+	interpreter push: memory falseObject.
+	interpreter primitiveStringAtPut.
+	
+	self assert: interpreter failed.
+	self assert: interpreter primFailCode equals: PrimErrBadArgument.
+	Smalltalk specialObjectsArray
+]
