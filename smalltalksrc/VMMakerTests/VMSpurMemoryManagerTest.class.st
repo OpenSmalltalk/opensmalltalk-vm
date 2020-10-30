@@ -320,10 +320,11 @@ VMSpurMemoryManagerTest >> newSmallContextReceiver: anOop method: aMethodOop arg
 { #category : #helpers }
 VMSpurMemoryManagerTest >> newString: aString [
 	| vmString |
+	
 	vmString := self
 		newOldSpaceObjectWithSlots: aString size
 		format: memory firstByteFormat
-		classIndex: ByteString hash.
+		classIndex: (memory fetchClassTagOf: memory classString).
 
 	aString
 		doWithIndex: [ :char :index | 

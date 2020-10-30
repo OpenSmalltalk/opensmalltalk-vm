@@ -4901,8 +4901,7 @@ StackInterpreter >> commonAtPut: stringy [
 		ifTrue: [ | charToPut rcvrClassTag |
 			"We should also check the receiver is String"
 			rcvrClassTag := objectMemory fetchClassTagOf: rcvr.
-			(objectMemory classForClassTag: rcvrClassTag)
-				= objectMemory classString
+			rcvrClassTag = (objectMemory fetchClassTagOf: objectMemory classString)
 				ifFalse: [ ^ self primitiveFailFor: PrimErrBadReceiver ].
 			"inline of asciiOfCharacter: value. Non return of primitiveFailFor:"
 			(objectMemory isCharacterObject: value)
