@@ -12,6 +12,20 @@ Class {
 	#category : #'VMMakerTests-InterpreterTests'
 }
 
+{ #category : #asserting }
+VMPrimitiveTest >> assert: anOop contentEquals: oopToCompare [ 
+
+	| numSlotOop numSlotOopToCompare |
+	numSlotOop := memory numSlotsOf: anOop.
+	numSlotOopToCompare := (memory numSlotsOf: anOop).
+	self assert:  numSlotOop equals: numSlotOopToCompare.
+	
+	0 to: numSlotOop do: [:index | 
+	self assert: (memory fetchByte: index ofObject: anOop) equals: (memory fetchByte: index ofObject:oopToCompare)		
+		]	
+	
+]
+
 { #category : #'as yet unclassified' }
 VMPrimitiveTest >> newArrayWith: aCollection [ 
 	| array |
@@ -980,11 +994,29 @@ VMPrimitiveTest >> testPrimitiveStringAtPutShouldFailForNonCharacterArgument [
 	objectInstance := self newString: 'pouet'.
 	
 	interpreter push: objectInstance.
-	interpreter push: (memory integerObjectOf: 3).
+	interpreter push: (memory integerObjectOf: 1).
 	interpreter push: memory falseObject.
 	interpreter primitiveStringAtPut.
 	
 	self assert: interpreter failed.
 	self assert: interpreter primFailCode equals: PrimErrBadArgument.
+
+]
+
+{ #category : #'tests - primitiveAtPut' }
+VMPrimitiveTest >> testPrimitiveStringAtPutShouldNotModifyStringIfFailedWhenNonCharacterArgument [
+	"Every other test is common with at:put:"
+	| string |
+	string := self newString: 'po'.
+	
+	interpreter push: string.
+	interpreter push: (memory integerObjectOf: 1).
+	interpreter push: memory falseObject.
+	interpreter primitiveStringAtPut.
+	
+	self assert: interpreter failed.
+	self assert: interpreter primFailCode equals: PrimErrBadArgument.
+	
+	self assert: string contentEquals: (self newString: 'po').
 
 ]
