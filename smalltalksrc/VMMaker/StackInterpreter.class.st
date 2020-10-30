@@ -2295,17 +2295,6 @@ StackInterpreter >> addressCouldBeClassObj: maybeClassObj [
 	  and: [self objCouldBeClassObj: maybeClassObj]
 ]
 
-{ #category : #'debug support' }
-StackInterpreter >> allAccessibleObjectsOkay [
-	"Ensure that all accessible objects in the heap are okay."
-	| ok |
-	ok := true.
-	objectMemory allObjectsDoSafely:
-		[:oop|
-		ok := ok & (self okayFields: oop)].
-	^ok
-]
-
 { #category : #'stack pages' }
 StackInterpreter >> allOnesAsCharStar [
 	<inline: true>
@@ -4089,7 +4078,7 @@ StackInterpreter >> checkAllAccessibleObjectsOkay [
 	<api>
 	| ok |
 	ok := true.
-	objectMemory allObjectsDoSafely:
+	objectMemory allObjectsDo:
 		[:oop| ok := ok & (self checkOkayFields: oop)].
 	^ok
 ]
@@ -17148,7 +17137,7 @@ StackInterpreter >> printAllStacks [
 				  or: [classIdx = mutexClass]) ifTrue:
 					[self printProcsOnList: obj]]]
 		ifFalse:
-			[objectMemory allObjectsDoSafely:
+			[objectMemory allObjectsDo:
 				[:obj| | classObj |
 				 classObj := objectMemory fetchClassOfNonImm: obj.
 				 (classObj = semaphoreClass

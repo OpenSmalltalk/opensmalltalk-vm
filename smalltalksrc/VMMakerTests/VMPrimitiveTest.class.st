@@ -986,5 +986,5 @@ VMPrimitiveTest >> testPrimitiveStringAtPutShouldFailForNonCharacterArgument [
 	
 	self assert: interpreter failed.
 	self assert: interpreter primFailCode equals: PrimErrBadArgument.
-	Smalltalk specialObjectsArray
+
 ]

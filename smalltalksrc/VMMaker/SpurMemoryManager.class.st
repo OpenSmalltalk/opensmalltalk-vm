@@ -1678,12 +1678,6 @@ SpurMemoryManager >> allObjectsDo: aBlock [
 	self allOldSpaceObjectsDo: aBlock
 ]
 
-{ #category : #'object enumeration' }
-SpurMemoryManager >> allObjectsDoSafely: aBlock [
-	<inline: true>
-	self allObjectsDo: aBlock
-]
-
 { #category : #'free space' }
 SpurMemoryManager >> allObjectsInFreeTree: freeNode do: aBlock [
 	| listNode |
