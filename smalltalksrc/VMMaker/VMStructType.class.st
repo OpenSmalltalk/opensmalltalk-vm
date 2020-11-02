@@ -395,7 +395,7 @@ VMStructType class >> setter: getter bitPosition: bitPosition bitWidth: bitWidth
 			[:offsetExpr| accessor := accessor, offsetExpr, ' + '].
 		mask := #(16rFF 16rFFFF 16rFFFFFFFF 16rFFFFFFFF)
 						at: endByte - startByte + 1
-						ifAbsent: [(2 raisedTo: 64) - 1].
+						ifAbsent: [(2 ** 64) - 1].
 		s nextPutAll: getter; nextPutAll: ': aValue'.
 		(typeOrNil notNil or: [alignedPowerOf2]) ifFalse:
 			[s crtab: 1; nextPutAll: 'self assert: (aValue between: 0 and: '; nextPutAll:  ((1 << bitWidth) - 1) hex; nextPutAll: ').'].

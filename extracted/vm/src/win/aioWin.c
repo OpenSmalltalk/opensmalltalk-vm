@@ -1,7 +1,13 @@
+#include "winsock2.h"
 #include "pharovm/pharo.h"
 #include "sqaio.h"
 
 #include "windows.h"
+
+void heartbeat_poll_enter(long microSeconds);
+
+void heartbeat_poll_exit(long microSeconds);
+
 
 typedef struct _AioFileDescriptor {
 
@@ -86,18 +92,22 @@ void aioFileDescriptor_remove(int fd){
 		previous->next = found->next;
 	}
 
-	WSACloseEvent(found->readEvent);
-	WSACloseEvent(found->writeEvent);
+	if((found->flags & AIO_EXT) == 0){
+		WSACloseEvent(found->readEvent);
+		WSACloseEvent(found->writeEvent);
+	}
 
 	free(found);
 }
 
-long aioFileDescriptor_size(){
+long aioFileDescriptor_numberOfHandles(){
 	AioFileDescriptor* element = fileDescriptorList;
 	long count = 0;
 
 	while(element){
-		count++;
+		if(element->readEvent != NULL) count++;
+		if(element->writeEvent != NULL) count++;
+
 		element = element->next;
 	}
 
@@ -109,11 +119,15 @@ void aioFileDescriptor_fillHandles(HANDLE* handles){
 	long index = 0;
 
 	while(element){
-		handles[index] = element->readEvent;
-		index++;
+		if(element->readEvent != NULL){
+			handles[index] = element->readEvent;
+			index++;
+		}
 
-		handles[index] = element->writeEvent;
-		index++;
+		if(element->writeEvent != NULL){
+			handles[index] = element->writeEvent;
+			index++;
+		}
 		element = element->next;
 	}
 
@@ -130,13 +144,15 @@ void aioFileDescriptor_signal_withHandle(HANDLE event){
 			/**
 			 * The event should be reset once it has been processed.
 			 */
-			WSAResetEvent(element->readEvent);
+			if((element->flags & AIO_EXT) == 0){
+				WSAResetEvent(element->readEvent);
 
-			if(element->mask == 0) {
-				return;
+				if(element->mask == 0) {
+					return;
+				}
+				//We set the event to 0 so it is not recalled after
+				WSAEventSelect(element->fd, element->readEvent, 0);
 			}
-			//We set the event to 0 so it is not recalled after
-			WSAEventSelect(element->fd, element->readEvent, 0);
 
 			element->handlerFn(element->fd, element->clientData, AIO_R);
 			return;
@@ -147,13 +163,15 @@ void aioFileDescriptor_signal_withHandle(HANDLE event){
 			/**
 			 * The event should be reset once it has been processed.
 			 */
-			WSAResetEvent(element->writeEvent);
+			if((element->flags & AIO_EXT) == 0){
+				WSAResetEvent(element->writeEvent);
 
-			if(element->mask == 0) {
-				return;
+				if(element->mask == 0) {
+					return;
+				}
+				//We set the event to 0 so it is not recalled after
+				WSAEventSelect(element->fd, element->writeEvent, 0);
 			}
-			//We set the event to 0 so it is not recalled after
-			WSAEventSelect(element->fd, element->writeEvent, 0);
 
 			element->handlerFn(element->fd, element->clientData, AIO_W);
 			return;
@@ -245,6 +263,56 @@ EXPORT(void) aioDisable(int fd){
 	aioFileDescriptor_remove(fd);
 }
 
+EXPORT(void) aioEnableExternalHandler(int fd, HANDLE handle, void *clientData, aioHandler handlerFn, int mask){
+
+	AioFileDescriptor * aioFileDescriptor;
+
+	aioFileDescriptor = aioFileDescriptor_find(fd);
+	if(!aioFileDescriptor){
+		aioFileDescriptor = aioFileDescriptor_new();
+		aioFileDescriptor->next = NULL;
+	}
+
+	aioFileDescriptor->fd = fd;
+	aioFileDescriptor->clientData = clientData;
+	aioFileDescriptor->flags = AIO_EXT;
+
+	if(mask & AIO_R){
+		aioFileDescriptor->readEvent = handle;
+		aioFileDescriptor->writeEvent = NULL;
+	}else{
+		aioFileDescriptor->readEvent = NULL;
+		aioFileDescriptor->writeEvent = handle;
+	}
+
+	aioFileDescriptor->handlerFn = handlerFn;
+	aioFileDescriptor->mask = mask;
+}
+
+/*
+ * As Pipes may not signal an event when there is data we check if any of the handles is a pipe and check if there
+ * are data to read, if there is, we signal the handler.
+ */
+static void checkHandlesForPipes(HANDLE* handlesToQuery, long size){
+	for(int i = 0 ; i < size ; i++){
+		  if (GetFileType(handlesToQuery[i]) == FILE_TYPE_PIPE ){
+			  DWORD maxDataAvailable;
+			  DWORD toRead;
+
+			  PeekNamedPipe(handlesToQuery[i],
+					  NULL,
+					  0,
+					  NULL,
+					  &maxDataAvailable,
+					  NULL);
+
+			  if(maxDataAvailable > 0){
+				  aioFileDescriptor_signal_withHandle(handlesToQuery[i]);
+			  }
+		  }
+	}
+}
+
 EXPORT(long) aioPoll(long microSeconds){
 
 	HANDLE* handlesToQuery;
@@ -252,9 +320,9 @@ EXPORT(long) aioPoll(long microSeconds){
 	long signaledIndex;
 	AioFileDescriptor* signaled;
 
-	//We require two events per socket
-	int size = aioFileDescriptor_size() * 2;
+	long size = aioFileDescriptor_numberOfHandles();
 
+	//We have an additional one for the interrupt event
 	handlesToQuery = malloc(sizeof(HANDLE) * (size+1));
 	aioFileDescriptor_fillHandles(handlesToQuery);
 
@@ -268,6 +336,7 @@ EXPORT(long) aioPoll(long microSeconds){
 	returnValue = WaitForMultipleObjectsEx(size + 1, handlesToQuery, FALSE, microSeconds / 1000, FALSE);
 
 	if(returnValue == WAIT_TIMEOUT){
+		checkHandlesForPipes(handlesToQuery, size + 1);
 		heartbeat_poll_exit(microSeconds);
 		free(handlesToQuery);
 		return 0;
@@ -303,8 +372,9 @@ EXPORT(long) aioPoll(long microSeconds){
 		}
 	}
 
-	free(handlesToQuery);
+	checkHandlesForPipes(handlesToQuery, size + 1);
 
+	free(handlesToQuery);
 	return 1;
 }
 

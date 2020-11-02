@@ -30,6 +30,8 @@ For building the VM it is required the following set of tools:
 - Binutils (make and friends) 
 - wget
 - unzip
+- automake
+- libtool
 
 In Linux Fedora, it is needed to install libcurl and to create a symbolic link to alias such library with the name used by libGit.
 For doing so, it is required to do:
@@ -38,14 +40,25 @@ For doing so, it is required to do:
 sudo ln -s /usr/lib64/libcurl.so.4 /usr/lib64/libcurl-gnutls.so.4
 ```
 
+In Ubuntu 20.04 and in Mint 20, the VM is built with the following packages:
+
+- build-essentials
+- gcc 
+- g++
+- binutils
+- cmake
+- git
+- wget 
+- unzip
+- uuid-dev
+- libssl-dev
+
 Building in OSX / Linux:
 
 ```bash
 $ cmake . 
 $ make install
 ```
-In some latest Ubuntu installations is required to install the package libssl-dev.
-We are working to solve this dependency as the others in the build.
 
 Building in Windows:
 

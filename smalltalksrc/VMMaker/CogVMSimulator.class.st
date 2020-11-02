@@ -1498,7 +1498,7 @@ CogVMSimulator >> incrementByteCount [
 { #category : #'test support' }
 CogVMSimulator >> initStackPagesForTests [
 	numStackPages := 8.
-	stackPages := self stackPagesClass new.
+	stackPages := self stackPagesClass new setInterpreter: self.
 	objectMemory allocateMemoryOfSize: 1024 * 1024.
 	cogCodeSize := 0.
 	heapBase := self methodCacheSize

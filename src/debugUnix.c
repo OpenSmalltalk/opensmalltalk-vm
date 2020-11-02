@@ -17,6 +17,7 @@
 
 #define BACKTRACE_DEPTH 64
 
+extern void dumpPrimTraceLog(void);
 
 void ifValidWriteBackStackPointersSaveTo(void *theCFP, void *theCSP, char **savedFPP, char **savedSPP);
 
@@ -27,6 +28,7 @@ void reportStackState(const char *msg, char *date, int printAll, ucontext_t *uap
 
 char * getVersionInfo(int verbose);
 void getCrashDumpFilenameInto(char *buf);
+void dumpPrimTraceLog();
 
 void doReport(char* fault, ucontext_t *uap){
 	time_t now = time(NULL);
@@ -84,14 +86,14 @@ void sigsegv(int sig, siginfo_t *info, ucontext_t *uap)
 EXPORT(void) installErrorHandlers(){
 	struct sigaction sigusr1_handler_action, sigsegv_handler_action;
 
-	sigsegv_handler_action.sa_sigaction = (void (*)(int, struct __siginfo *, void *))sigsegv;
+	sigsegv_handler_action.sa_sigaction = (void (*)(int, siginfo_t *, void *))sigsegv;
 	sigsegv_handler_action.sa_flags = SA_NODEFER | SA_SIGINFO;
 	sigemptyset(&sigsegv_handler_action.sa_mask);
     (void)sigaction(SIGBUS, &sigsegv_handler_action, 0);
     (void)sigaction(SIGILL, &sigsegv_handler_action, 0);
     (void)sigaction(SIGSEGV, &sigsegv_handler_action, 0);
 
-	sigusr1_handler_action.sa_sigaction = (void (*)(int, struct __siginfo *, void *))sigusr1;
+	sigusr1_handler_action.sa_sigaction = (void (*)(int, siginfo_t *, void *))sigusr1;
 	sigusr1_handler_action.sa_flags = SA_NODEFER | SA_SIGINFO;
 	sigemptyset(&sigusr1_handler_action.sa_mask);
     (void)sigaction(SIGUSR1, &sigusr1_handler_action, 0);
@@ -169,17 +171,17 @@ void * printRegisterState(ucontext_t *uap, FILE* output)
 #elif __linux__ && __x86_64__
 	greg_t *regs = uap->uc_mcontext.gregs;
 	fprintf(output,
-			"\trax 0x%08x rbx 0x%08x rcx 0x%08x rdx 0x%08x\n"
-			"\trdi 0x%08x rsi 0x%08x rbp 0x%08x rsp 0x%08x\n"
-			"\tr8  0x%08x r9  0x%08x r10 0x%08x r11 0x%08x\n"
-			"\tr12 0x%08x r13 0x%08x r14 0x%08x r15 0x%08x\n"
-			"\trip 0x%08x\n",
+			"\trax 0x%08llx rbx 0x%08llx rcx 0x%08llx rdx 0x%08llx\n"
+			"\trdi 0x%08llx rsi 0x%08llx rbp 0x%08llx rsp 0x%08llx\n"
+			"\tr8  0x%08llx r9  0x%08llx r10 0x%08llx r11 0x%08llx\n"
+			"\tr12 0x%08llx r13 0x%08llx r14 0x%08llx r15 0x%08llx\n"
+			"\trip 0x%08llx\n",
 			regs[REG_RAX], regs[REG_RBX], regs[REG_RCX], regs[REG_RDX],
 			regs[REG_RDI], regs[REG_RDI], regs[REG_RBP], regs[REG_RSP],
 			regs[REG_R8 ], regs[REG_R9 ], regs[REG_R10], regs[REG_R11],
 			regs[REG_R12], regs[REG_R13], regs[REG_R14], regs[REG_R15],
 			regs[REG_RIP]);
-	return regs[REG_RIP];
+	return (void*)regs[REG_RIP];
 # elif __linux__ && (defined(__arm__) || defined(__arm32__) || defined(ARM32))
 	struct sigcontext *regs = &uap->uc_mcontext;
 	fprintf(output,
@@ -191,6 +193,54 @@ void * printRegisterState(ucontext_t *uap, FILE* output)
 	        regs->arm_r4,regs->arm_r5,regs->arm_r6,regs->arm_r7,
 	        regs->arm_r8,regs->arm_r9,regs->arm_r10,regs->arm_fp,
 	        regs->arm_ip, regs->arm_sp, regs->arm_lr, regs->arm_pc);
+	return regs->arm_pc;
+# elif __linux__ && defined(__aarch64__)
+	fprintf(output,
+			"\t x00 0x%016llx x01 0x%016llx x02 0x%016llx x03 0x%016llx\n"
+			"\t x04 0x%016llx x05 0x%016llx x06 0x%016llx x07 0x%016llx\n"
+			"\t x08 0x%016llx x09 0x%016llx x10 0x%016llx x11 0x%016llx\n"
+			"\t x12 0x%016llx x13 0x%016llx x14 0x%016llx x15 0x%016llx\n"
+			"\t x16 0x%016llx x17 0x%016llx x18 0x%016llx x19 0x%016llx\n"
+			"\t x20 0x%016llx x21 0x%016llx x22 0x%016llx x23 0x%016llx\n"
+			"\t x24 0x%016llx x25 0x%016llx x26 0x%016llx x27 0x%016llx\n"
+			"\t x28 0x%016llx  FP 0x%016llx  LR 0x%016llx  SP 0x%016llx\n"
+			"\t  PC 0x%016llx  STATE 0x%016llx\n",
+
+            uap->uc_mcontext.regs[0],
+            uap->uc_mcontext.regs[1],
+            uap->uc_mcontext.regs[2],
+            uap->uc_mcontext.regs[3],
+            uap->uc_mcontext.regs[4],
+            uap->uc_mcontext.regs[5],
+            uap->uc_mcontext.regs[6],
+            uap->uc_mcontext.regs[7],
+            uap->uc_mcontext.regs[8],
+            uap->uc_mcontext.regs[9],
+            uap->uc_mcontext.regs[10],
+            uap->uc_mcontext.regs[11],
+            uap->uc_mcontext.regs[12],
+            uap->uc_mcontext.regs[13],
+            uap->uc_mcontext.regs[14],
+            uap->uc_mcontext.regs[15],
+            uap->uc_mcontext.regs[16],
+            uap->uc_mcontext.regs[17],
+            uap->uc_mcontext.regs[18],
+            uap->uc_mcontext.regs[19],
+            uap->uc_mcontext.regs[20],
+            uap->uc_mcontext.regs[21],
+            uap->uc_mcontext.regs[22],
+            uap->uc_mcontext.regs[23],
+            uap->uc_mcontext.regs[24],
+            uap->uc_mcontext.regs[25],
+            uap->uc_mcontext.regs[26],
+            uap->uc_mcontext.regs[27],
+            uap->uc_mcontext.regs[28],
+            uap->uc_mcontext.regs[29],
+            uap->uc_mcontext.regs[30],
+            uap->uc_mcontext.sp,
+            uap->uc_mcontext.pc,
+            uap->uc_mcontext.pstate);
+    return (void*)uap->uc_mcontext.pc; 
 #else
 	fprintf(output,"don't know how to derive register state from a ucontext_t on this platform\n");
 	return 0;
@@ -267,11 +317,14 @@ void reportStackState(const char *msg, char *date, int printAll, ucontext_t *uap
 			void *fp = (void *)(uap ? uap->sc_rbp: 0);
 			void *sp = (void *)(uap ? uap->sc_rsp: 0);
 # elif __sun__ && __i386__
-      void *fp = (void *)(uap ? uap->uc_mcontext.gregs[REG_FP]: 0);
-      void *sp = (void *)(uap ? uap->uc_mcontext.gregs[REG_SP]: 0);
+            void *fp = (void *)(uap ? uap->uc_mcontext.gregs[REG_FP]: 0);
+            void *sp = (void *)(uap ? uap->uc_mcontext.gregs[REG_SP]: 0);
 # elif defined(__arm__) || defined(__arm32__) || defined(ARM32)
 			void *fp = (void *)(uap ? uap->uc_mcontext.arm_fp: 0);
 			void *sp = (void *)(uap ? uap->uc_mcontext.arm_sp: 0);
+# elif defined(__aarch64__)
+			void *fp = (void *)(uap ? uap->uc_mcontext.regs[29]: 0); // This is the Register that we are using for the FramePointer
+			void *sp = (void *)(uap ? uap->uc_mcontext.sp: 0);
 # else
 #	error need to implement extracting pc from a ucontext_t on this system
 # endif

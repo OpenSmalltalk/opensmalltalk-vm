@@ -48,6 +48,14 @@ CObjectAccessor >> -= decrement [
 ]
 
 { #category : #converting }
+CObjectAccessor >> asDoubleAccessor [
+
+	^ self asPluggableAccessor
+		atBlock: [:obj :index | obj doubleAt: index]
+		atPutBlock: [:obj :index :value | obj doubleAt: index put: value]
+]
+
+{ #category : #converting }
 CObjectAccessor >> asFloatAccessor [
 
 	^ self asPluggableAccessor
@@ -61,6 +69,14 @@ CObjectAccessor >> asIntAccessor [
 	^ self asPluggableAccessor
 		atBlock: [:obj :index | obj intAt: index]
 		atPutBlock: [:obj :index :value | obj intAt: index put: value]
+]
+
+{ #category : #transformation }
+CObjectAccessor >> asIntAccessorOfSize: byteSize signed: isSigned [ 
+
+	^ self asPluggableAccessor
+		atBlock: [:obj :index | obj integerAt: index size: byteSize signed: isSigned ]
+		atPutBlock: [:obj :index :value | obj integerAt: index put: value size: byteSize signed: isSigned ]
 ]
 
 { #category : #converting }
@@ -89,6 +105,14 @@ CObjectAccessor >> asPluggableAccessor: accessorArray [
 		atPutBlock: accessorArray last
 ]
 
+{ #category : #converting }
+CObjectAccessor >> asPointerAccessor: wordSize [
+
+	^ self asPluggableAccessor
+		atBlock: [ :obj :index | obj integerAt: index size: wordSize signed: false ]
+		atPutBlock: [ :obj :index :value | obj integerAt: index put: value size: wordSize signed: false ]
+]
+
 { #category : #accessing }
 CObjectAccessor >> at: index [
 	^object instVarAt: index + offset + 1
@@ -104,9 +128,19 @@ CObjectAccessor >> coerceTo: cTypeString sim: interpreterSimulator [
 
 	cTypeString caseOf: {
 		[#'float *']			-> [^self asFloatAccessor].
+		[#'double *']		-> [^self asDoubleAccessor].
 		[#'int *']			-> [^self asIntAccessor].
-		['sqInputEvent*']	-> [^self].
-		[#'char *' ] -> [ ^self ] }
+		[#'void **']			-> [^self asPointerAccessor: interpreterSimulator objectMemory wordSize].
+		[#'int8_t *']		-> [^self asIntAccessorOfSize: 1 signed: true ].
+		[#'uint8_t *']		-> [^self asIntAccessorOfSize: 1 signed: false ].
+		[#'char *']		-> [^self asIntAccessorOfSize: 1 signed: false ].
+		[#'int16_t *']		-> [^self asIntAccessorOfSize: 2 signed: true ].
+		[#'uint16_t *']		-> [^self asIntAccessorOfSize: 2 signed: false ].
+		[#'int32_t *']		-> [^self asIntAccessorOfSize: 4 signed: true ].
+		[#'uint32_t *']		-> [^self asIntAccessorOfSize: 4 signed: false ].
+		[#'int64_t *']		-> [^self asIntAccessorOfSize: 8 signed: true ].
+		[#'uint64_t *']		-> [^self asIntAccessorOfSize: 8 signed: false ].
+		['sqInputEvent*']	-> [^self] }
 		otherwise: [self halt].
 	^ self
 ]

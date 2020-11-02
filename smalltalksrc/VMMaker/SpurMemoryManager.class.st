@@ -940,6 +940,8 @@ SpurMemoryManager class >> initializeSpecialObjectIndices [
 	ClassFloat := 9.
 	ClassMethodContext := 10.
 	"ClassBlockContext := 11. unused by the VM"
+	"Suspended processes in Callout (it is a list of linked processes or nil)"
+	SuspendedProcessInCallout := 11.
 	ClassPoint := 12.
 	ClassLargePositiveInteger := 13.
 	TheDisplay := 14.
@@ -3486,6 +3488,12 @@ SpurMemoryManager >> classArray [
 	^self splObj: ClassArray
 ]
 
+{ #category : #accessing }
+SpurMemoryManager >> classArray: anOop [ 
+	<doNotGenerate>
+	self splObj: ClassArray put: anOop
+]
+
 { #category : #'class table' }
 SpurMemoryManager >> classAtIndex: classIndex [
 	<api>
@@ -3531,6 +3539,14 @@ SpurMemoryManager >> classByteArray [
 	^self splObj: ClassByteArray
 ]
 
+{ #category : #accessing }
+SpurMemoryManager >> classByteArray: anOop [ 
+
+	<doNotGenerate>
+
+	self splObj: ClassByteArray put: anOop
+]
+
 { #category : #'plugin support' }
 SpurMemoryManager >> classCharacter [
 	^self splObj: ClassCharacter
@@ -3539,6 +3555,12 @@ SpurMemoryManager >> classCharacter [
 { #category : #accessing }
 SpurMemoryManager >> classExternalAddress [
 	^self splObj: ClassExternalAddress
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> classExternalAddress: aClass [
+	<doNotGenerate>
+	^self splObj: ClassExternalAddress put: aClass
 ]
 
 { #category : #instantiation }
@@ -9009,6 +9031,20 @@ SpurMemoryManager >> needGCFlag: anInteger [
 	needGCFlag := anInteger ~= 0
 ]
 
+{ #category : #'ffi - helpers' }
+SpurMemoryManager >> newExternalAddressWithValue: aPointer [
+	| ptr oop |
+	<var: #ptr type:'void **'>
+
+	oop := self
+		       instantiateClass: self classExternalAddress
+		       indexableSize: (self sizeof: #'void*').
+
+	ptr := self firstIndexableField: oop.
+	ptr at: 0 put: aPointer.
+	^ oop
+]
+
 { #category : #'header access' }
 SpurMemoryManager >> newHashBitsOf: objOop [
 	| hash |
@@ -10807,12 +10843,100 @@ SpurMemoryManager >> rawOverflowSlotsOf: objOop put: numSlots [
 	self subclassResponsibility
 ]
 
+{ #category : #'ffi - helpers' }
+SpurMemoryManager >> readFloat32AtPointer: aCArrayAccessor [ 
+	
+	| floatPtr |
+	floatPtr := self cCoerce: (aCArrayAccessor) to: #'float *'.
+	^ floatPtr at: 0
+]
+
+{ #category : #'ffi - helpers' }
+SpurMemoryManager >> readFloat64AtPointer: aCArrayAccessor [ 
+	
+	| floatPtr |
+	floatPtr := self cCoerce: (aCArrayAccessor) to: #'double *'.
+	^ floatPtr at: 0
+]
+
 { #category : #snapshot }
 SpurMemoryManager >> readHeapFromImageFile: f dataBytes: numBytes [
 	"Read numBytes of image data from f into memory at memoryBaseForImageRead.
 	 Answer the number of bytes written."
 	<doNotGenerate>
 	^segmentManager readHeapFromImageFile: f dataBytes: numBytes
+]
+
+{ #category : #'ffi - helpers' }
+SpurMemoryManager >> readPointerAtPointer: aCArrayAccessor [ 
+
+	| ptrPtr |
+	ptrPtr := self cCoerce: aCArrayAccessor to: #'void **'.
+	^ ptrPtr at: 0
+]
+
+{ #category : #'ffi - helpers' }
+SpurMemoryManager >> readSINT16AtPointer: aCArrayAccessor [ 
+	
+	| intPtr |
+	intPtr := self cCoerce: aCArrayAccessor to: #'int16_t *'.
+	^ intPtr at: 0
+]
+
+{ #category : #'ffi - helpers' }
+SpurMemoryManager >> readSINT32AtPointer: aCArrayAccessor [ 
+	
+	| intPtr |
+	intPtr := self cCoerce: aCArrayAccessor to: #'int32_t *'.
+	^ intPtr at: 0
+]
+
+{ #category : #'ffi - helpers' }
+SpurMemoryManager >> readSINT64AtPointer: aCArrayAccessor [ 
+	
+	| intPtr |
+	intPtr := self cCoerce: aCArrayAccessor to: #'int64_t *'.
+	^ intPtr at: 0
+]
+
+{ #category : #'ffi - helpers' }
+SpurMemoryManager >> readSINT8AtPointer: aCArrayAccessor [ 
+	
+	| intPtr |
+	intPtr := self cCoerce: aCArrayAccessor to: #'int8_t *'.
+	^ intPtr at: 0
+]
+
+{ #category : #'ffi - helpers' }
+SpurMemoryManager >> readUINT16AtPointer: aCArrayAccessor [ 
+	
+	| intPtr |
+	intPtr := self cCoerce: aCArrayAccessor to: #'uint16_t *'.
+	^ intPtr at: 0
+]
+
+{ #category : #'ffi - helpers' }
+SpurMemoryManager >> readUINT32AtPointer: aCArrayAccessor [ 
+	
+	| intPtr |
+	intPtr := self cCoerce: aCArrayAccessor to: #'uint32_t *'.
+	^ intPtr at: 0
+]
+
+{ #category : #'ffi - helpers' }
+SpurMemoryManager >> readUINT64AtPointer: aCArrayAccessor [ 
+	
+	| intPtr |
+	intPtr := self cCoerce: aCArrayAccessor to: #'uint64_t *'.
+	^ intPtr at: 0
+]
+
+{ #category : #'ffi - helpers' }
+SpurMemoryManager >> readUINT8AtPointer: aCArrayAccessor [ 
+	
+	| intPtr |
+	intPtr := self cCoerce: aCArrayAccessor to: #'uint8_t *'.
+	^ intPtr at: 0
 ]
 
 { #category : #compaction }

@@ -34,23 +34,6 @@ UnicornARMv5Simulator >> disassembler [
 	^ LLVMDisassembler armv5
 ]
 
-{ #category : #executing }
-UnicornARMv5Simulator >> doRunGeneratedCodeStartAt: initialAddress instructions: instructions [
-
-	"The Cogit for ARM generates more instructions per abstract opcode.
-	So, it is using the fact that all the instructions are 4 bytes to calculate the number of instructions.
-	The number of instructions should be affected by the amount of literals that have been generated.
-	As the literals are generated in the code, we have to skip their execution"
-
-	| numberOfInstructions |
-	numberOfInstructions := ((self getLastAddress: instructions) - initialAddress) / 4.
-
-	^ unicorn startAt: initialAddress
-		until: 0
-		timeout: 0
-		count: numberOfInstructions.
-]
-
 { #category : #'as yet unclassified' }
 UnicornARMv5Simulator >> extractDestinationRegisterFromAssembly: aLLVMInstruction [ 
 	
@@ -141,9 +124,33 @@ UnicornARMv5Simulator >> r10 [
 	^ self readRegister: UcARMRegisters r10
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornARMv5Simulator >> r10: anInteger [ 
+	
+	^ self writeRegister: UcARMRegisters r10 value: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv5Simulator >> r11: anInteger [ 
+	
+	^ self writeRegister: UcARMRegisters r11 value: anInteger
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv5Simulator >> r1: anInteger [ 
+	
+	^ self writeRegister: UcARMRegisters r1 value: anInteger
+]
+
 { #category : #registers }
 UnicornARMv5Simulator >> r2 [
 	^ self readRegister: UcARMRegisters r2
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv5Simulator >> r2: anInteger [ 
+	
+	^ self writeRegister: UcARMRegisters r2 value: anInteger
 ]
 
 { #category : #registers }
@@ -151,9 +158,21 @@ UnicornARMv5Simulator >> r3 [
 	^ self readRegister: UcARMRegisters r3
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornARMv5Simulator >> r3: anInteger [ 
+	
+	^ self writeRegister: UcARMRegisters r3 value: anInteger
+]
+
 { #category : #registers }
 UnicornARMv5Simulator >> r4 [
 	^ self readRegister: UcARMRegisters r4
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv5Simulator >> r4: anInteger [ 
+	
+	^ self writeRegister: UcARMRegisters r4 value: anInteger
 ]
 
 { #category : #registers }
@@ -172,9 +191,21 @@ UnicornARMv5Simulator >> r6 [
 	^ self readRegister: UcARMRegisters r6
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornARMv5Simulator >> r6: anInteger [ 
+	
+	^ self writeRegister: UcARMRegisters r6 value: anInteger
+]
+
 { #category : #registers }
 UnicornARMv5Simulator >> r7 [
 	^ self readRegister: UcARMRegisters r7
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv5Simulator >> r7: anInteger [ 
+	
+	^ self writeRegister: UcARMRegisters r7 value: anInteger
 ]
 
 { #category : #registers }
@@ -182,9 +213,21 @@ UnicornARMv5Simulator >> r8 [
 	^ self readRegister: UcARMRegisters r8
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornARMv5Simulator >> r8: anInteger [ 
+	
+	^ self writeRegister: UcARMRegisters r8 value: anInteger
+]
+
 { #category : #registers }
 UnicornARMv5Simulator >> r9 [
 	^ self readRegister: UcARMRegisters r9
+]
+
+{ #category : #'as yet unclassified' }
+UnicornARMv5Simulator >> r9: anInteger [ 
+	
+	^ self writeRegister: UcARMRegisters r9 value: anInteger
 ]
 
 { #category : #registers }

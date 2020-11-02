@@ -145,7 +145,7 @@ VMPluginCodeGenerator >> emitAccessorDepthsOn: aStream [
 				[self withOptionalConditionalDefineFor: method
 					on: aStream
 					do: [aStream
-							nextPutAll: 'signed char ';
+							nextPutAll: 'EXPORT(signed char) ';
 							nextPutAll: primName;
 							nextPutAll: 'AccessorDepth = ';
 							nextPutAll: (self cLiteralFor: depth);

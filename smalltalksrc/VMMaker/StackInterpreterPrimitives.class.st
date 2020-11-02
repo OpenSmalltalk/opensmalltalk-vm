@@ -1,8 +1,26 @@
 Class {
 	#name : #StackInterpreterPrimitives,
 	#superclass : #StackInterpreter,
+	#pools : [
+		'LibFFIConstants',
+		'VMBasicConstants'
+	],
 	#category : #'VMMaker-Interpreter'
 }
+
+{ #category : #'ffi - helpers' }
+StackInterpreterPrimitives >> allocateParameters: anInteger using: allocationBlock [
+	<inline: #always>
+
+	anInteger = 0 ifTrue: [ ^ nil ].
+
+	^ self
+		cCode: [ allocationBlock value: anInteger ]
+		inSmalltalk: [ | ptr | 
+			ptr := allocationBlock value: anInteger.
+			ptr setObject: (Array new: anInteger).
+			ptr]
+]
 
 { #category : #'primitive support' }
 StackInterpreterPrimitives >> cloneContext: aContext [ 
@@ -42,6 +60,13 @@ StackInterpreterPrimitives >> cloneContext: aContext [
 						ofObject: cloned
 						withValue: (objectMemory fetchPointer: i + CtxtTempFrameStart ofObject: aContext)]]].
 	^cloned
+]
+
+{ #category : #'ffi - helpers' }
+StackInterpreterPrimitives >> ffi_call: aCif _: externalFunctionAddress _: returnHolder _: parameters [
+
+	<doNotGenerate>
+	libFFI ffiCall: aCif _: externalFunctionAddress _: returnHolder _: parameters
 ]
 
 { #category : #'object access primitives' }
@@ -102,6 +127,57 @@ StackInterpreterPrimitives >> frameIsMarked: theFPInt [
 	^((stackPages longAt: theFPInt + FoxFrameFlags) bitAnd: 2) ~= 0
 ]
 
+{ #category : #'ffi - helpers' }
+StackInterpreterPrimitives >> freeArgumentsArray: arguments count: count [
+
+	0 to: count - 1 do: [ :i |  
+		(arguments at: i) ifNotNil: [ :aPtr | 
+			arguments at: i put: nil.
+			self free: aPtr ]].
+	
+	self free: arguments.
+	
+]
+
+{ #category : #'ffi - helpers' }
+StackInterpreterPrimitives >> getHandler: anOop [ 
+
+	<api>
+	<returnTypeC: #'void *'>
+
+	((objectMemory isPointers: anOop) not or: [ (objectMemory slotSizeOf: anOop) < 1 ])
+		ifTrue: [ self primitiveFail. ^ nil ].
+		
+	^ self readAddress: (objectMemory fetchPointer: 0 ofObject: anOop)
+
+]
+
+{ #category : #'ffi - helpers' }
+StackInterpreterPrimitives >> getHandlerAsCif: anOop [
+
+	^ self
+		cCode: [ self cCoerce: (self getHandler: anOop) to: 'ffi_cif *' ]
+		inSmalltalk: [ libFFI cifAtAddress: (self getHandler: anOop)]
+]
+
+{ #category : #'ffi - helpers' }
+StackInterpreterPrimitives >> getTaskFromAddress: anInteger [
+
+	^ self
+		  cCode: [ self cCoerce: anInteger to: #'WorkerTask *' ]
+		  inSmalltalk: [ libFFI testWorker tasks detect: [ :e | e asInteger = anInteger ] ]
+]
+
+{ #category : #'ffi - helpers' }
+StackInterpreterPrimitives >> getWorkerFromAddress: anInteger [
+
+	^ self
+		  cCode: [ self cCoerce: anInteger to: #'Worker *' ]
+		  inSmalltalk: [ 
+			self assert: anInteger = libFFI testWorker asInteger.
+			libFFI testWorker ]
+]
+
 { #category : #'object access primitives' }
 StackInterpreterPrimitives >> isAppropriateForCopyObject: oop [
 	(objectMemory isPointersNonImm: oop) ifFalse:
@@ -116,11 +192,264 @@ StackInterpreterPrimitives >> isAppropriateForCopyObject: oop [
 	^true
 ]
 
+{ #category : #logging }
+StackInterpreterPrimitives >> logDebug: aString [
+
+	<doNotGenerate>
+
+	aString traceCr.
+]
+
+{ #category : #logging }
+StackInterpreterPrimitives >> logDebug: aFormat _: aParameter [
+
+	<doNotGenerate>
+
+	(aFormat printf: { aParameter }) traceCr
+]
+
 { #category : #'object access primitives' }
 StackInterpreterPrimitives >> markFrame: theFPInt [
 	stackPages
 		longAt: theFPInt + FoxFrameFlags
 		put: ((stackPages longAt: theFPInt + FoxFrameFlags) bitOr: 2)
+]
+
+{ #category : #'ffi - helpers' }
+StackInterpreterPrimitives >> marshallAndPushReturnValueFrom: returnHolder ofType: ffiType poping: argumentsAndReceiverCount [
+
+	<var: #ffiType type: #'ffi_type *'>
+
+	[ ffiType type ]
+		caseOf: {
+			[ FFI_TYPE_SINT8 ] 	-> [ self pop: argumentsAndReceiverCount thenPushInteger: (objectMemory readSINT8AtPointer: returnHolder) ].
+			[ FFI_TYPE_SINT16 ] 	-> [ self pop: argumentsAndReceiverCount thenPushInteger: (objectMemory readSINT16AtPointer: returnHolder) ].
+			[ FFI_TYPE_SINT32 ] 	-> [ self pop: argumentsAndReceiverCount thenPushInteger: (objectMemory readSINT32AtPointer: returnHolder) ].
+			[ FFI_TYPE_SINT64 ] 	-> [ self pop: argumentsAndReceiverCount thenPushInteger: (objectMemory readSINT64AtPointer: returnHolder) ].
+
+			[ FFI_TYPE_UINT8 ] 	-> [ self pop: argumentsAndReceiverCount thenPushInteger: (objectMemory readUINT8AtPointer: returnHolder) ].
+			[ FFI_TYPE_UINT16 ] 	-> [ self pop: argumentsAndReceiverCount thenPushInteger: (objectMemory readUINT16AtPointer: returnHolder) ].
+			[ FFI_TYPE_UINT32 ] 	-> [ self pop: argumentsAndReceiverCount thenPushInteger: (objectMemory readUINT32AtPointer: returnHolder) ].
+			[ FFI_TYPE_UINT64 ] 	-> [ self pop: argumentsAndReceiverCount thenPushInteger: (objectMemory readUINT64AtPointer: returnHolder) ].
+
+			[ FFI_TYPE_POINTER ] 	-> [ self pop: argumentsAndReceiverCount thenPush: (objectMemory newExternalAddressWithValue: (objectMemory readPointerAtPointer: returnHolder)) ].
+
+			[ FFI_TYPE_STRUCT ] 	-> [ self pop: argumentsAndReceiverCount thenPush: (self newByteArrayWithStructContent: returnHolder size: ffiType size) ].
+
+			[ FFI_TYPE_FLOAT ] 	-> [ self pop: argumentsAndReceiverCount thenPushFloat: (objectMemory readFloat32AtPointer: returnHolder) ].
+			[ FFI_TYPE_DOUBLE ] 	-> [ self pop: argumentsAndReceiverCount thenPushFloat: (objectMemory readFloat64AtPointer: returnHolder) ].
+			[ FFI_TYPE_VOID ] 		-> [ self pop: argumentsAndReceiverCount - 1 "Pop the arguments leaving the receiver" ]}
+			otherwise: [ self primitiveFailFor: PrimErrBadArgument ]
+
+]
+
+{ #category : #'ffi - helpers' }
+StackInterpreterPrimitives >> marshallArgumentFrom: argumentsArrayOop atIndex: i into: argHolder ofType: argType withSize: argTypeSize [
+
+	[ argType ]
+		caseOf:
+			{([ FFI_TYPE_POINTER ]
+				-> [ self marshallPointerFrom: argumentsArrayOop at: i into: argHolder ]).
+			([ FFI_TYPE_STRUCT ]
+				-> [ self marshallStructFrom: argumentsArrayOop at: i into: argHolder withSize: argTypeSize ]).
+			([ FFI_TYPE_FLOAT ]
+				-> [ self marshallFloatFrom: argumentsArrayOop at: i into: argHolder ]).
+			([ FFI_TYPE_DOUBLE ]
+				-> [ self marshallDoubleFrom: argumentsArrayOop at: i into: argHolder ]).
+			([ FFI_TYPE_SINT8 ]
+				-> [ self marshallSInt8From: argumentsArrayOop at: i into: argHolder ]).
+			([ FFI_TYPE_UINT8 ]
+				-> [ self marshallUInt8From: argumentsArrayOop at: i into: argHolder ]).
+			([ FFI_TYPE_SINT16 ]
+				-> [ self marshallSInt16From: argumentsArrayOop at: i into: argHolder ]).
+			([ FFI_TYPE_UINT16 ]
+				-> [ self marshallUInt16From: argumentsArrayOop at: i into: argHolder ]).
+			([ FFI_TYPE_SINT32 ]
+				-> [ self marshallSInt32From: argumentsArrayOop at: i into: argHolder ]).
+			([ FFI_TYPE_UINT32 ]
+				-> [ self marshallUInt32From: argumentsArrayOop at: i into: argHolder ]).
+			([ FFI_TYPE_SINT64 ]
+				-> [ self marshallSInt64From: argumentsArrayOop at: i into: argHolder ]).
+			([ FFI_TYPE_UINT64 ]
+				-> [ self marshallUInt64From: argumentsArrayOop at: i into: argHolder ])}
+		otherwise: [ self primitiveFailFor: PrimErrBadArgument ]
+]
+
+{ #category : #'ffi - helpers' }
+StackInterpreterPrimitives >> marshallDoubleFrom: argumentArrayOop at: index into: holder [ 
+
+	| doubleHolder |
+	doubleHolder := self cCoerce: holder to: #'double *'.
+	
+	doubleHolder at: 0 put: (self fetchFloat: index ofObject: argumentArrayOop ).
+
+]
+
+{ #category : #'ffi - helpers' }
+StackInterpreterPrimitives >> marshallFloatFrom: argumentArrayOop at: index into: holder [ 
+	
+	| floatHolder |
+	floatHolder := self cCoerce: holder to: #'float *'.
+	
+	floatHolder at: 0 put: (self fetchFloat: index ofObject: argumentArrayOop ).
+	
+]
+
+{ #category : #'ffi - helpers' }
+StackInterpreterPrimitives >> marshallPointerFrom: argumentArrayOop at: index into: holder [ 
+	
+	| pointerHolder externalAddress |
+	pointerHolder := self cCoerce: holder to: #'void **'.
+	externalAddress := objectMemory fetchPointer: index ofObject: argumentArrayOop.
+	pointerHolder at: 0 put: (self readAddress: externalAddress).
+	
+]
+
+{ #category : #'ffi - helpers' }
+StackInterpreterPrimitives >> marshallSInt16From: argumentArrayOop at: index into: holder [
+
+	| intHolder value |
+
+	value := self fetchInteger: index ofObject: argumentArrayOop.	
+	value > INT16_MAX ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+	value < INT16_MIN ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+
+	intHolder := self cCoerce: holder to: #'int16_t *'.
+	intHolder at: 0 put: value.
+		
+]
+
+{ #category : #'ffi - helpers' }
+StackInterpreterPrimitives >> marshallSInt32From: argumentArrayOop at: index into: holder [
+
+	| intHolder value |
+
+	value := self fetchInteger: index ofObject: argumentArrayOop.	
+	value > INT32_MAX ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+	value < INT32_MIN ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+
+	intHolder := self cCoerce: holder to: #'int32_t *'.
+	intHolder at: 0 put: (self fetchInteger: index ofObject: argumentArrayOop ).
+		
+]
+
+{ #category : #'ffi - helpers' }
+StackInterpreterPrimitives >> marshallSInt64From: argumentArrayOop at: index into: holder [
+
+	| intHolder |
+	intHolder := self cCoerce: holder to: #'int64_t *'.
+	intHolder at: 0 put: (self fetchInteger: index ofObject: argumentArrayOop ).
+		
+]
+
+{ #category : #'ffi - helpers' }
+StackInterpreterPrimitives >> marshallSInt8From: argumentArrayOop at: index into: holder [
+
+	| intHolder value |
+
+	value := self fetchInteger: index ofObject: argumentArrayOop.	
+	value > INT8_MAX ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+	value < INT8_MIN ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+
+	intHolder := self cCoerce: holder to: #'int8_t *'.
+	intHolder at: 0 put: (self fetchInteger: index ofObject: argumentArrayOop ).
+		
+]
+
+{ #category : #'ffi - helpers' }
+StackInterpreterPrimitives >> marshallStructFrom: argumentsArrayOop at: index into: holder withSize: typeSize [ 
+
+
+	| address srcPtr oop |
+
+	oop := objectMemory fetchPointer: index ofObject: argumentsArrayOop.
+	
+	(objectMemory fetchClassOf: oop) = objectMemory classExternalAddress
+		ifTrue: [
+				address := self readAddress: oop.
+				address = 0 ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ]]
+		ifFalse: [  
+			(objectMemory fetchClassOf: oop) = objectMemory classByteArray 
+				ifFalse: [ ^ self primitiveFailFor: PrimErrBadArgument  ].
+				address := objectMemory firstIndexableField: oop ].
+	
+	srcPtr := objectMemory cCoerce: address to: 'void *'.
+	
+	self 
+		cCode:  [ objectMemory memcpy: holder _:  srcPtr _: typeSize ]
+		inSmalltalk: [ 
+			holder object 
+				replaceFrom: 1 to: typeSize 
+				with: (objectMemory cCoerce: srcPtr to: 'char *') startingAt: 0]
+]
+
+{ #category : #'ffi - helpers' }
+StackInterpreterPrimitives >> marshallUInt16From: argumentArrayOop at: index into: holder [
+
+	| intHolder value |
+	
+	value := self fetchInteger: index ofObject: argumentArrayOop.
+	value < 0 ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+	value > UINT16_MAX ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+		
+	intHolder := self cCoerce: holder to: #'uint16_t *'.
+	intHolder at: 0 put: value.
+		
+]
+
+{ #category : #'ffi - helpers' }
+StackInterpreterPrimitives >> marshallUInt32From: argumentArrayOop at: index into: holder [
+
+	| intHolder value |
+	
+	value := self fetchInteger: index ofObject: argumentArrayOop.
+	value < 0 ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+	value > UINT32_MAX ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+		
+	intHolder := self cCoerce: holder to: #'uint32_t *'.
+	intHolder at: 0 put: value.
+		
+]
+
+{ #category : #'ffi - helpers' }
+StackInterpreterPrimitives >> marshallUInt64From: argumentArrayOop at: index into: holder [
+
+	| intHolder value |
+	
+	value := self fetchInteger: index ofObject: argumentArrayOop.
+	value < 0 ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+		
+	intHolder := self cCoerce: holder to: #'uint64_t *'.
+	intHolder at: 0 put: value.
+		
+]
+
+{ #category : #'ffi - helpers' }
+StackInterpreterPrimitives >> marshallUInt8From: argumentArrayOop at: index into: holder [
+
+	| intHolder value oop |
+	
+	oop := objectMemory fetchPointer: index ofObject: argumentArrayOop.
+	value := (objectMemory isCharacterObject: oop) 
+		ifTrue: [ objectMemory characterValueOf: oop ]	
+		ifFalse: [ objectMemory integerValueOf: oop ].
+	
+	value < 0 ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+	value > UINT8_MAX ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+		
+	intHolder := self cCoerce: holder to: #'uint8_t *'.
+	intHolder at: 0 put: value.
+		
+]
+
+{ #category : #'ffi - helpers' }
+StackInterpreterPrimitives >> newByteArrayWithStructContent: aPointer size: sizeToCopy [ 
+	
+	| oop targetPointer |
+	oop := objectMemory instantiateClass: objectMemory classByteArray indexableSize: sizeToCopy.
+	targetPointer := objectMemory firstIndexableField: oop.
+	self memcpy: targetPointer _: aPointer _: sizeToCopy.
+	^ oop
 ]
 
 { #category : #'primitive support' }
@@ -210,6 +539,24 @@ StackInterpreterPrimitives >> pathTo: goal using: stack followWeak: followWeak [
 		 index := objectMemory integerValueOf: (objectMemory fetchPointer: stackp - 1 ofObject: stack).
 		 current := objectMemory fetchPointer: stackp - 2 ofObject: stack.
 		 stackp := stackp - 2] repeat
+]
+
+{ #category : #'ffi - helpers' }
+StackInterpreterPrimitives >> popSameThreadCalloutSuspendedProcess [
+	
+	| aProcess |
+	aProcess := objectMemory splObj: SuspendedProcessInCallout.
+	
+	aProcess = objectMemory nilObject
+		ifTrue: [ self error: 'SameThreadCalloutSuspendedProcessStack is empty' ].	
+	
+	objectMemory 
+		splObj: SuspendedProcessInCallout 
+		put: (objectMemory fetchPointer: NextLinkIndex ofObject: aProcess).
+	
+	objectMemory storePointer: NextLinkIndex ofObject: aProcess withValue: objectMemory nilObject.
+	
+	^ aProcess
 ]
 
 { #category : #'system control primitives' }
@@ -1277,6 +1624,84 @@ StackInterpreterPrimitives >> primitivePin [
 	self pop: argumentCount + 1 thenPush: wasPinned
 ]
 
+{ #category : #ffi }
+StackInterpreterPrimitives >> primitiveSameThreadCallout [
+	<export: true>
+	| externalFunction cif PARAM_EXTERNALFUNCTION PARAM_ARGUMENTS argumentsArrayOop argumentSize parameters returnHolder |
+	<var: #parameters type: #'void **'>
+	<var: #returnHolder type: #'void *'>
+	<var: #externalFunction type: #'void *'>
+
+	PARAM_EXTERNALFUNCTION := 1.
+	PARAM_ARGUMENTS := 0.
+
+	"1. Obtain externalFunction and extract the CIF"
+	externalFunction := self getHandler: (self stackValue: PARAM_EXTERNALFUNCTION).
+	self failed 
+		ifTrue: [ 
+			self logDebug: 'Invalid External Function Argument'.
+			^ self primitiveFailFor: PrimErrBadArgument ].
+
+	cif := self getHandlerAsCif:(objectMemory
+				fetchPointer: 1
+				ofObject: (self stackValue: PARAM_EXTERNALFUNCTION)).
+
+	self failed
+		ifTrue: [ 
+			self logDebug: 'Invalid CIF in ExternalFunction'.
+			^ self primitiveFailFor: PrimErrBadArgument ].
+
+	" 2. Prepare Arguments:
+	- Verify Arguments is an Array
+	- Allocate space for all the arguments in the stack and a holder for the return, and the parameters' pointer C array
+	- Marshall arguments and store in the parameter array."
+	argumentsArrayOop := self stackValue: PARAM_ARGUMENTS.
+
+	(objectMemory isArray: argumentsArrayOop)
+		ifFalse: [ 
+			self logDebug: 'Argument Array is not an Array'.
+			^ self primitiveFailFor: PrimErrBadArgument ].
+
+	argumentSize := cif numberArguments.
+
+	(objectMemory slotSizeOf: argumentsArrayOop) = argumentSize
+		ifFalse: [ 
+			self logDebug: 'Argument Array size mismatch'.
+			^ self primitiveFailFor: PrimErrBadArgument ].
+		
+	parameters := self allocateParameters: argumentSize 
+		using: [:aSize | self alloca: (self sizeof: #'void*') * aSize ].
+
+	0 to: argumentSize - 1 do: [ :i | 
+		| argType argHolder |
+		argType := cif argTypeAt: i.
+
+		argHolder := self alloca: argType size.
+		parameters at: i put: argHolder.
+	
+		self marshallArgumentFrom: argumentsArrayOop atIndex: i into: argHolder ofType: argType type withSize: argType size. 
+				
+		self failed 
+				ifTrue: [ 
+					self logDebug: 'Could not convert argument index: %d' _: i + 1.
+					^ self primitiveFailFor: PrimErrBadArgument ]].
+	
+	returnHolder := self alloca: cif returnType size.
+
+	" 3. Call and then return
+	- Call
+	- Marshall Argument and push it to the stack
+	- Return"
+	self
+		ffi_call: cif
+		_: externalFunction
+		_: returnHolder
+		_: parameters.
+
+	self marshallAndPushReturnValueFrom: returnHolder ofType: cif returnType poping: 3.	
+
+]
+
 { #category : #'memory space primitives' }
 StackInterpreterPrimitives >> primitiveSetGCSemaphore [
 	"Primitive. Indicate the semaphore to be signalled for upon garbage collection"
@@ -1912,6 +2337,122 @@ StackInterpreterPrimitives >> primitiveVoidVMState [
 	self marryContextInNewStackPageAndInitializeInterpreterRegisters: activeContext
 ]
 
+{ #category : #ffi }
+StackInterpreterPrimitives >> primitiveWorkerCallout [
+	<export: true>
+	| externalFunction cif PARAM_EXTERNALFUNCTION PARAM_ARGUMENTS PARAM_SEMAPHORE_INDEX PARAM_RECEIVER argumentsArrayOop argumentSize parameters returnHolder receiver worker semaphoreIndex task |
+	<var: #parameters type: #'void **'>
+	<var: #returnHolder type: #'void *'>
+	<var: #task type: #'WorkerTask *'>
+	<var: #externalFunction type: #'void *'>
+
+	PARAM_RECEIVER 				:= 3.
+	PARAM_EXTERNALFUNCTION 	:= 2.
+	PARAM_ARGUMENTS 			:= 1.
+	PARAM_SEMAPHORE_INDEX 	:= 0.
+
+	"1. Obtain externalFunction and extract the CIF"
+	externalFunction := self getHandler: (self stackValue: PARAM_EXTERNALFUNCTION).
+	self failed 
+		ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+
+	cif := self getHandlerAsCif:(objectMemory
+				fetchPointer: 1
+				ofObject: (self stackValue: PARAM_EXTERNALFUNCTION)).
+
+	self failed
+		ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+
+	" 2. Obtain the semaphore index"
+	semaphoreIndex := self stackIntegerValue: PARAM_SEMAPHORE_INDEX.
+	self failed
+		ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+
+	" 3. Obtain the receiver and extract the worker "
+	receiver := self stackValue: PARAM_RECEIVER.
+	worker := self getWorkerFromAddress: (self getHandler: receiver).
+
+	self failed
+		ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+
+	" 4. Prepare Arguments:
+	- Verify Arguments is an Array
+	- Allocate space for all the arguments in the stack and a holder for the return, and the parameters' pointer C array
+	- Marshall arguments and store in the parameter array."
+	argumentsArrayOop := self stackValue: PARAM_ARGUMENTS.
+
+	(objectMemory isArray: argumentsArrayOop)
+		ifFalse: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+
+	argumentSize := cif numberArguments.
+
+	(objectMemory slotSizeOf: argumentsArrayOop) = argumentSize
+		ifFalse: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+		
+	parameters := self allocateParameters: argumentSize using: [ :aSize | 
+		self calloc: aSize _: (self sizeof: #'void*')].
+
+	0 to: argumentSize - 1 do: [ :i | 
+		| argType argHolder |
+		argType := cif argTypeAt: i.
+
+		argHolder := self malloc: argType size.
+		parameters at: i put: argHolder.
+	
+		self marshallArgumentFrom: argumentsArrayOop atIndex: i into: argHolder ofType: argType type withSize: argType size.
+				
+		self failed 
+				ifTrue: [ 
+					self freeArgumentsArray: parameters count: argumentSize.
+					^ self primitiveFailFor: PrimErrBadArgument ]].
+	
+	cif returnType size > 0 
+		ifTrue: [returnHolder := self malloc: cif returnType size]
+		ifFalse: [returnHolder := nil].
+
+	" 5. Create the worker task and enqueue it"
+
+	task := self worker_task_new: externalFunction _: cif _: parameters _: returnHolder _: semaphoreIndex.
+
+	self worker_dispatch_callout: worker _: task.
+
+	self pop: 4 thenPush: (objectMemory newExternalAddressWithValue: (self cCoerce: task asInteger to: 'void*'))
+]
+
+{ #category : #ffi }
+StackInterpreterPrimitives >> primitiveWorkerExtractReturnValue [
+	<export: true>
+	| returnHolder task PARAM_RECEIVER PARAM_TASK_ADDRESS  worker taskAddress receiver |
+	<var: #returnHolder type: #'void *'>
+	<var: #task type: #'WorkerTask *'>
+	<var: #worker type: #'Worker *'>
+	<var: #externalFunction type: #'void *'>
+
+	PARAM_RECEIVER 				:= 1.
+	PARAM_TASK_ADDRESS			:= 0.
+
+	"1. Extract Task address and worker"
+	taskAddress := self readAddress: (self stackValue: PARAM_TASK_ADDRESS).
+	receiver := self stackValue: PARAM_RECEIVER.
+	worker := self getWorkerFromAddress: (self getHandler: receiver).
+
+	self failed
+		ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+
+	"2. Get the returnHolder from the task"
+	task := self getTaskFromAddress: taskAddress.
+	returnHolder := task returnHolderAddress.
+	
+	"3. Marshall the return value and push it in the stack"
+	self 
+		marshallAndPushReturnValueFrom: returnHolder 
+		ofType: task cif returnType 
+		poping: 2.
+
+	"4. Free the task."	
+	task freeTask.
+]
+
 { #category : #'object access primitives' }
 StackInterpreterPrimitives >> pruneStack: stack stackp: stackp [
 	"Prune the stack to contain only the path, removing stacked indices
@@ -1959,6 +2500,96 @@ StackInterpreterPrimitives >> pruneStack: stack stackp: stackp [
 	objectMemory popRemappableOop
 ]
 
+{ #category : #ffi }
+StackInterpreterPrimitives >> ptEnterInterpreterFromCallback: aPointer [
+
+	" Enter the interpreter from a callback in the VM thread.
+	The VM is suspended in a callout or primitive, which are not safe suspension points. 
+	The callback has been put in a queue for further processing from the image.
+	We first put the VM in a runnable state by putting it in a safe suspension point first
+	   => we suspend the active process and store it for further resuming
+	Then we enter the interpreter."
+	<api>
+	<var: #aPointer type: #'void *'>
+	<var: #vmCallbackContext type: #'VMCallbackContext *'>
+
+	| vmCallbackContext suspendedProcess |
+	
+	vmCallbackContext := self 
+		cCode: [self cCoerce: aPointer to: #'VMCallbackContext *'] 
+		inSmalltalk: [aPointer].
+
+	"I am the entry point when arriving for a callback"
+	
+	vmCallbackContext savedPrimFunctionPointer: primitiveFunctionPointer.	
+	self saveCStackStateForCallbackContext: vmCallbackContext.		
+	
+	"We need to preserve newMethod explicitly since it is not activated yet
+	and therefore no context has been created for it. If the caller primitive
+	for any reason decides to fail we need to make sure we execute the correct
+	method and not the one 'last used' in the call back"	
+	self push: newMethod.
+	
+	suspendedProcess := self supendActiveProcess.
+	self pushSameThreadCalloutSuspendedProcess: suspendedProcess. 
+	
+	self enterSmalltalkExecutive.	
+	
+	"NEVER REACHED"
+	^ 1
+]
+
+{ #category : #ffi }
+StackInterpreterPrimitives >> ptExitInterpreterToCallback: aPointer [
+	<api>
+	<var: #aPointer type: #'void *'>
+	<var: #vmCallbackContext type: #'VMCallbackContext *'>
+
+	| vmCallbackContext suspendedProcess |
+
+	vmCallbackContext := self 
+		cCode: [self cCoerce: aPointer to: #'VMCallbackContext *']
+		inSmalltalk: [ aPointer ].
+	
+	suspendedProcess := self popSameThreadCalloutSuspendedProcess.
+	self putToSleep: self activeProcess yieldingIf: preemptionYields.
+	self transferTo: suspendedProcess.
+	
+	newMethod := self popStack.
+	
+	self restoreCStackStateForCallbackContext: vmCallbackContext.			
+	primitiveFunctionPointer := vmCallbackContext savedPrimFunctionPointer.
+	
+	self siglong: vmCallbackContext trampoline jmp: 1.
+
+	"NEVER REACHED"	
+	^ 1
+
+]
+
+{ #category : #'ffi - helpers' }
+StackInterpreterPrimitives >> pushSameThreadCalloutSuspendedProcess: aSuspendedProcess [
+
+	objectMemory
+		storePointer: NextLinkIndex
+		ofObject: aSuspendedProcess
+		withValue: (objectMemory splObj: SuspendedProcessInCallout).
+
+	objectMemory splObj: SuspendedProcessInCallout put: aSuspendedProcess
+]
+
+{ #category : #'ffi - helpers' }
+StackInterpreterPrimitives >> readAddress: anOop [ 
+
+	<api>
+	<returnTypeC: #'void *'>
+
+	(objectMemory is: anOop KindOfClass: objectMemory classExternalAddress)
+		ifFalse: [ self primitiveFail. ^ nil ].
+
+	^ objectMemory fetchPointer: 0 ofObject: anOop.
+]
+
 { #category : #'object access primitives' }
 StackInterpreterPrimitives >> unmarkAfterPathTo [
 	<inline: false>
@@ -1981,4 +2612,28 @@ StackInterpreterPrimitives >> unmarkAllFrames [
 			  (flags bitAnd: 2) ~= 0 ifTrue:
 				[objectMemory longAt: theFP + FoxFrameFlags put: flags - 2].
 			  (theFP := self frameCallerFP: theFP) ~= 0] whileTrue]]
+]
+
+{ #category : #'ffi - helpers' }
+StackInterpreterPrimitives >> worker_dispatch_callout: worker _: task [ 
+	
+	<doNotGenerate>
+	worker dispatchCallout: task.
+
+]
+
+{ #category : #'ffi - helpers' }
+StackInterpreterPrimitives >> worker_task_new: externalFunction _: cif _: parameters _: returnHolder _: semaphoreIndex [
+	<doNotGenerate>
+	
+	<returnTypeC: #sqInt>
+	
+	^ LibFFIWorkerTask new
+			anExternalFunction: externalFunction;
+			cif: cif;
+			parametersAddress: parameters;
+			returnHolderAddress: returnHolder;
+			semaphoreIndex: semaphoreIndex;
+			yourself
+	
 ]

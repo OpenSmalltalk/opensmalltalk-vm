@@ -34,6 +34,12 @@ UnicornSimulator class >> X64 [
 	^ UnicornX64Simulator new
 ]
 
+{ #category : #'instance creation' }
+UnicornSimulator class >> aarch64 [
+	
+	^ UnicornARMv8Simulator new
+]
+
 { #category : #accessing }
 UnicornSimulator >> aliasForRegister: aRegisterName [
 
@@ -129,15 +135,6 @@ UnicornSimulator >> disassembler [
 ]
 
 { #category : #executing }
-UnicornSimulator >> doRunGeneratedCodeStartAt: initialAddress instructions: instructions [
-
-	^ unicorn startAt: initialAddress
-		until: 0
-		timeout: 0
-		count: instructions size.
-]
-
-{ #category : #executing }
 UnicornSimulator >> doStartAt: startAddress until: until timeout: timeout count: count [
 
 	| actualCount result error |
@@ -152,16 +149,21 @@ UnicornSimulator >> doStartAt: startAddress until: until timeout: timeout count:
 				until: 0
 				timeout: 0
 				count: 1.
-			
+					
 				stopReason ifNotNil: [ 
 						error := stopReason.
 						stopReason := nil.
 						error signal ].
+		
+			"If execution did not stop because of a stop reason, verify the error code"
+			unicorn verifyErrorCode: result.
+
 			
 					actualCount := actualCount + 1] 
 				on: UnicornInvalidMemoryAccess do: [ :invalidAccess |
 					self instructionPointerValue = until ifTrue: [ ^ 0 ].
-					self cogit handleSimulationTrap: (UnicornSimulationTrap simulator: self error: invalidAccess). ].
+					self cogit handleSimulationTrap: (UnicornSimulationTrap simulator: self error: invalidAccess).
+					actualCount := actualCount + 1 ].
 			
 			stopReason ifNotNil: [ ^ result ].
 			count = actualCount ifTrue: [ ^ result ].
@@ -334,6 +336,12 @@ UnicornSimulator >> register: anIndex readInto: aByteArray [
 	unicorn register: anIndex readInto: aByteArray 
 ]
 
+{ #category : #'as yet unclassified' }
+UnicornSimulator >> register: aRegisterIndex write: aByteArray [
+
+	unicorn register: aRegisterIndex readInto: aByteArray 
+]
+
 { #category : #accessing }
 UnicornSimulator >> registerDescriptors [
 	
@@ -386,6 +394,18 @@ UnicornSimulator >> sendNumberOfArgumentsRegisterValue [
 UnicornSimulator >> sendNumberOfArgumentsRegisterValue: aValue [
 
 	^ self writeRegister: self sendNumberOfArgumentsRegister value: aValue
+]
+
+{ #category : #'as yet unclassified' }
+UnicornSimulator >> simulateLeafCallOf: anInteger nextpc: anInteger2 memory: aSpurSimulatedMemory [ 
+	
+	self subclassResponsibility
+]
+
+{ #category : #'as yet unclassified' }
+UnicornSimulator >> smashRegistersWithValuesFrom: base by: step [
+	
+	self subclassResponsibility
 ]
 
 { #category : #registers }

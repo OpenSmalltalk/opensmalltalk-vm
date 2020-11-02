@@ -3,6 +3,8 @@
 #include "pharovm/fileDialog.h"
 #include "pharovm/pathUtilities.h"
 
+extern void setMaxStacksToPrint(sqInt anInteger);
+
 #if defined(__GNUC__) && ( defined(i386) || defined(__i386) || defined(__i386__)  \
 			|| defined(i486) || defined(__i486) || defined (__i486__) \
 			|| defined(intel) || defined(x86) || defined(i86pc) )
@@ -26,19 +28,17 @@ void mtfsfi(unsigned long long fpscr)
 #endif
 
 static int loadPharoImage(const char* fileName);
-static void ensureSemaphoreInitialized();
-static int runVMThread(void* p);
+static void* runVMThread(void* p);
 static int runOnMainThread(VMParameters *parameters);
 static int runOnWorkerThread(VMParameters *parameters);
 
-static Semaphore* mainLoopSemaphore;
-static sqInt (*mainLoopClosure)();
+EXPORT(sqInt) runMainThreadWorker();
 
 EXPORT(int) vmRunOnWorkerThread = 0;
 
 //TODO: All this should be concentrated in an unique vm parameters structure.
 EXPORT(int)
-isVMRunOnWorkerThread()
+isVMRunOnWorkerThread(void)
 {
     return vmRunOnWorkerThread;
 }
@@ -50,8 +50,6 @@ EXPORT(int) vm_init(VMParameters* parameters)
 	//Unix Initialization specific
 	fldcw(0x12bf);	/* signed infinity, round to nearest, REAL8, disable intrs, disable signals */
     mtfsfi(0);		/* disable signals, IEEE mode, round to nearest */
-
-    ensureSemaphoreInitialized();
 
     ioInitTime();
 
@@ -127,7 +125,7 @@ vm_main_with_parameters(VMParameters *parameters)
 	LOG_SIZEOF(double);
 
     vmRunOnWorkerThread = vm_parameter_vector_has_element(&parameters->vmParameters, "--worker");
-    
+
     return vmRunOnWorkerThread
         ? runOnWorkerThread(parameters)
         : runOnMainThread(parameters);
@@ -207,32 +205,7 @@ loadPharoImage(const char* fileName)
     return 1;
 }
 
-static void
-ensureSemaphoreInitialized()
-{
-    if(!mainLoopSemaphore) {
-        mainLoopSemaphore = platform_semaphore_new(0);
-    }
-}
-
-EXPORT(int)
-mainThreadLoop()
-{
-    ensureSemaphoreInitialized();
-    do {
-    	if(mainLoopClosure != NULL)mainLoopClosure();
-        mainLoopSemaphore->wait(mainLoopSemaphore);
-    } while(true);
-}
-
-EXPORT(sqInt)
-mainThread_schedule(sqInt (*closure)())
-{
-    mainLoopClosure = closure;
-    mainLoopSemaphore->signal(mainLoopSemaphore);
-}
-
-static int
+static void*
 runVMThread(void* p)
 {
     VMParameters *parameters = (VMParameters*)p;
@@ -240,11 +213,12 @@ runVMThread(void* p)
     if(!vm_init(parameters))
     {
         logError("Error opening image file: %s\n", parameters->imageFileName);
-        return -1;
+        return (void*)-1;
     }
     //setFlagVMRunOnWorkerThread(flagVMRunOnWorkerThread);
-    
+
     vm_run_interpreter();
+	return NULL;
 }
 
 static int
@@ -263,7 +237,7 @@ runOnWorkerThread(VMParameters *parameters)
     size_t size;
 
     logDebug("Running VM on worker thread\n");
-    
+
     /*
      * I have to get the attributes of the main thread
      * to get the max stack size.
@@ -274,8 +248,6 @@ runOnWorkerThread(VMParameters *parameters)
     pthread_attr_getstacksize(&tattr, &size);
 
     logDebug("Stack size: %ld\n", size);
-
-    ensureSemaphoreInitialized();
 
     if(pthread_attr_setstacksize(&tattr, size * 4)){
         perror("Setting thread stack size");
@@ -289,11 +261,5 @@ runOnWorkerThread(VMParameters *parameters)
 
     pthread_detach(thread_id);
 
-    /*
-     * I will now wait if any plugin wants to run stuff in the main thread.
-     * This is used by the ThreadedFFI plugin to run a worker in the main thread.
-     * This runner is used to create and handle UI operations, required by OSX.
-     */
-
-    return mainThreadLoop();
+    return runMainThreadWorker();
 }

@@ -4,18 +4,6 @@ Provide access to the host machine file system. Requires both the Cross platform
 Class {
 	#name : #FilePlugin,
 	#superclass : #InterpreterPlugin,
-	#instVars : [
-		'sCCPfn',
-		'sCDPfn',
-		'sCGFTfn',
-		'sCLPfn',
-		'sCSFTfn',
-		'sDFAfn',
-		'sCDFfn',
-		'sCOFfn',
-		'sCRFfn',
-		'sHFAfn'
-	],
 	#classVars : [
 		'DirBadPath',
 		'DirEntryFound',
@@ -27,10 +15,7 @@ Class {
 { #category : #translation }
 FilePlugin class >> declareCVarsIn: aCCodeGenerator [
 
-	"Hmmm, we could use (self instVarNames select: [:ivn| ivn first = $s and: [ivn second isUppercase]])"
-	self declareC:  #('sCCPfn' 'sCDFfn' 'sCDPfn' 'sCGFTfn' 'sCLPfn' 'sCOFfn' 'sCRFfn' 'sCSFTfn' 'sDFAfn' 'sHFAfn')
-		as: #'void *'
-		in: aCCodeGenerator.
+	aCCodeGenerator addHeaderFile: '"pharovm/imageAccess.h"'.
 	aCCodeGenerator addHeaderFile: '"FilePlugin.h"'
 ]
 
@@ -101,45 +86,31 @@ FilePlugin >> dir_Delimitor [
 ]
 
 { #category : #'file primitives' }
-FilePlugin >> fileOpenName: nameIndex size: nameSize write: writeFlag secure: secureFlag [
-	"Open the named file, possibly checking security. Answer the file oop."
-	| file fileOop okToOpen |
+FilePlugin >> fileOpenName: nameIndex size: nameSize write: writeFlag [
+	"Open the named file. Answer the file oop."
+	| file fileOop |
 	<var: #file type: 'SQFile *'>
 	<var: 'nameIndex' type: 'char *'>
 	<export: true>
 	fileOop := interpreterProxy instantiateClass: interpreterProxy classByteArray indexableSize: self fileRecordSize.
 	file := self fileValueOf: fileOop.
-	interpreterProxy failed
-		ifFalse: [ secureFlag ifTrue: [
-				"If the security plugin can be loaded, use it to check for permission.
-				If not, assume it's ok"
-				sCOFfn ~= 0 
-					ifTrue: [okToOpen := self cCode: '((sqInt (*) (char *, sqInt, sqInt)) sCOFfn)(nameIndex, nameSize, writeFlag)' inSmalltalk:[true].
-						okToOpen
-							ifFalse: [interpreterProxy primitiveFail]]]].
+
 	interpreterProxy failed
 		ifFalse: [self cCode: 'sqFileOpen(file, nameIndex, nameSize, writeFlag)' inSmalltalk: [file]].
+
 	^ fileOop
 ]
 
 { #category : #'file primitives' }
-FilePlugin >> fileOpenNewName: nameIndex size: nameSize secure: secureFlag [ 
+FilePlugin >> fileOpenNewName: nameIndex size: nameSize [
 	"Open the new named file, possibly checking security. Answer the file oop."
-	| file fileOop okToOpen |
+	| file fileOop |
 	<var: #file type: 'SQFile *'>
 	<var: 'nameIndex' type: 'char *'>
 	<export: true>
 	fileOop := interpreterProxy instantiateClass: interpreterProxy classByteArray indexableSize: self fileRecordSize.
 	file := self fileValueOf: fileOop.
-	interpreterProxy failed
-		ifFalse: [ secureFlag ifTrue: [
-				"If the security plugin can be loaded, use it to check for permission.
-				If not, assume it's ok"
-				sCOFfn ~= 0 
-					ifTrue: [
-						okToOpen := self cCode: '((sqInt (*) (char *, sqInt, sqInt)) sCOFfn)(nameIndex, nameSize, true)' inSmalltalk:[true].
-						okToOpen
-							ifFalse: [interpreterProxy primitiveFail]]]].
+	
 	interpreterProxy failed
 		ifFalse: [| exists |
 			exists := false.
@@ -171,16 +142,7 @@ FilePlugin >> fileValueOf: objectPointer [
 { #category : #'initialize-release' }
 FilePlugin >> initialiseModule [
 	<export: true>
-	sCCPfn := interpreterProxy ioLoadFunction: 'secCanCreatePathOfSize' From: 'SecurityPlugin'.
-	sCDPfn := interpreterProxy ioLoadFunction: 'secCanDeletePathOfSize' From: 'SecurityPlugin'.
-	sCGFTfn := interpreterProxy ioLoadFunction: 'secCanGetFileTypeOfSize' From: 'SecurityPlugin'.
-	sCLPfn := interpreterProxy ioLoadFunction: 'secCanListPathOfSize' From: 'SecurityPlugin'.
-	sCSFTfn := interpreterProxy ioLoadFunction: 'secCanSetFileTypeOfSize' From: 'SecurityPlugin'.
-	sDFAfn := interpreterProxy ioLoadFunction: 'secDisableFileAccess' From: 'SecurityPlugin'.
-	sCDFfn := interpreterProxy ioLoadFunction: 'secCanDeleteFileOfSize' From: 'SecurityPlugin'.
-	sCOFfn := interpreterProxy ioLoadFunction: 'secCanOpenFileOfSizeWritable' From: 'SecurityPlugin'.
-	sCRFfn := interpreterProxy ioLoadFunction: 'secCanRenameFileOfSize' From: 'SecurityPlugin'.
-	sHFAfn := interpreterProxy ioLoadFunction: 'secHasFileAccess' From: 'SecurityPlugin'.
+
 	^self sqFileInit
 ]
 
@@ -267,18 +229,6 @@ FilePlugin >> makeDirEntryName: entryName size: entryNameSize createDate: create
 	^results
 ]
 
-{ #category : #'initialize-release' }
-FilePlugin >> moduleUnloaded: aModuleName [
-	"The module with the given name was just unloaded.
-	Make sure we have no dangling references."
-	<export: true>
-	<var: #aModuleName type: 'char *'>
-	(aModuleName strcmp: 'SecurityPlugin') = 0 ifTrue:[
-		"The security plugin just shut down. How odd."
-		sCCPfn := sCDPfn := sCGFTfn := sCLPfn := sCSFTfn := sDFAfn := sCDFfn := sCOFfn := sCRFfn := sHFAfn := 0.
-	].
-]
-
 { #category : #private }
 FilePlugin >> pointerFrom: pointerByteArray [
 	"Answer the machine address contained in anExternalAddressOop."
@@ -351,13 +301,7 @@ FilePlugin >> primitiveDirectoryCreate [
 		[^interpreterProxy primitiveFail].
 	dirNameIndex := interpreterProxy firstIndexableField: dirName.
 	dirNameSize := interpreterProxy byteSizeOf: dirName.
-	"If the security plugin can be loaded, use it to check for permission.
-	If not, assume it's ok"
-	sCCPfn ~= 0 ifTrue:
-		[okToCreate := self cCode: ' ((sqInt (*)(char *, sqInt))sCCPfn)(dirNameIndex, dirNameSize)'
-							inSmalltalk: [true].
-		 okToCreate ifFalse:
-			[^interpreterProxy primitiveFail]].
+
 	(self dir_Create: dirNameIndex _: dirNameSize) ifFalse:
 		[^interpreterProxy primitiveFail].
 	interpreterProxy pop: 1
@@ -366,7 +310,7 @@ FilePlugin >> primitiveDirectoryCreate [
 { #category : #'directory primitives' }
 FilePlugin >> primitiveDirectoryDelete [
 
-	| dirName dirNameIndex dirNameSize okToDelete |
+	| dirName dirNameIndex dirNameSize |
 	<var: #dirNameIndex type: 'char *'>
 	<export: true>
 
@@ -375,12 +319,7 @@ FilePlugin >> primitiveDirectoryDelete [
 		ifFalse: [^interpreterProxy primitiveFail].
 	dirNameIndex := interpreterProxy firstIndexableField: dirName.
 	dirNameSize := interpreterProxy byteSizeOf: dirName.
-	"If the security plugin can be loaded, use it to check for permission.
-	If not, assume it's ok"
-	sCDPfn ~= 0
-		ifTrue: [okToDelete := self cCode: ' ((sqInt (*)(char *, sqInt))sCDPfn)(dirNameIndex, dirNameSize)' inSmalltalk: [false].
-			okToDelete
-				ifFalse: [^interpreterProxy primitiveFail]].
+
 	(self
 			cCode: 'dir_Delete(dirNameIndex, dirNameSize)'
 			inSmalltalk: [false])
@@ -419,7 +358,7 @@ FilePlugin >> primitiveDirectoryEntry [
 	 Primitive fails if the outer path does not identify a readable directory.
 	 (This is a lookup-by-name variant of primitiveDirectoryLookup.)"
 
-	| requestedName pathName pathNameIndex pathNameSize status entryName entryNameSize createDate modifiedDate dirFlag posixPermissions symlinkFlag fileSize okToList reqNameIndex reqNameSize |
+	| requestedName pathName pathNameIndex pathNameSize status entryName entryNameSize createDate modifiedDate dirFlag posixPermissions symlinkFlag fileSize reqNameIndex reqNameSize |
 	
 	<var: 'entryName' declareC: 'char entryName[256]'>
 	<var: 'pathNameIndex' type: 'char *'>
@@ -441,14 +380,8 @@ FilePlugin >> primitiveDirectoryEntry [
 	self cCode: '' inSmalltalk:
 		[entryName := ByteString new: 256.
 		 entryNameSize := createDate := modifiedDate := dirFlag := fileSize := posixPermissions := symlinkFlag := nil].
-	"If the security plugin can be loaded, use it to check for permission. 
-	 If not, assume it's ok"
-	okToList := sCLPfn ~= 0
-					ifTrue: [self cCode: '((sqInt (*)(char *, sqInt))sCLPfn)(pathNameIndex, pathNameSize)' inSmalltalk: [true]]
-					ifFalse: [true].
-	status := okToList
-		ifTrue:
-			[self dir_EntryLookup: pathNameIndex _: pathNameSize
+
+	status := self dir_EntryLookup: pathNameIndex _: pathNameSize
 					_: reqNameIndex _: reqNameSize
 					_: entryName _: (self addressOf: entryNameSize put: [:v| entryNameSize := v])
 					_: (self addressOf: createDate put: [:v| createDate := v])
@@ -456,9 +389,7 @@ FilePlugin >> primitiveDirectoryEntry [
 					_: (self addressOf: dirFlag put: [:v| dirFlag := v])
 					_: (self addressOf: fileSize put: [:v| fileSize := v])
 					_: (self addressOf: posixPermissions put: [:v| posixPermissions := v])
-					_: (self addressOf: symlinkFlag put: [:v| symlinkFlag := v])]
-		ifFalse:
-			[DirNoMoreEntries].
+					_: (self addressOf: symlinkFlag put: [:v| symlinkFlag := v]).
 
 	interpreterProxy failed ifTrue:
 		[^nil].
@@ -472,32 +403,21 @@ FilePlugin >> primitiveDirectoryEntry [
 	interpreterProxy 
 		pop: 3	"pop pathName, index, rcvr" 
 		thenPush:
-			(self 
-				cppIf: PharoVM 
-				ifTrue:
-					[self
-						makeDirEntryName: entryName
-						size: entryNameSize
-						createDate: createDate
-						modDate: modifiedDate
-						isDir: dirFlag
-						fileSize: fileSize
-						posixPermissions: posixPermissions
-						isSymlink: symlinkFlag]
-				ifFalse:
-					[self
-						makeDirEntryName: entryName
-						size: entryNameSize
-						createDate: createDate
-						modDate: modifiedDate
-						isDir: dirFlag
-						fileSize: fileSize])
+			(self    
+				makeDirEntryName: entryName
+				size: entryNameSize
+				createDate: createDate
+				modDate: modifiedDate
+				isDir: dirFlag
+				fileSize: fileSize
+				posixPermissions: posixPermissions
+				isSymlink: symlinkFlag)
 ]
 
 { #category : #'directory primitives' }
 FilePlugin >> primitiveDirectoryGetMacTypeAndCreator [
 
-	| creatorString typeString fileName creatorStringIndex typeStringIndex fileNameIndex fileNameSize okToGet |
+	| creatorString typeString fileName creatorStringIndex typeStringIndex fileNameIndex fileNameSize |
 	<var: 'creatorStringIndex' type: 'char *'>
 	<var: 'typeStringIndex' type: 'char *'>
 	<var: 'fileNameIndex' type: 'char *'>
@@ -518,12 +438,7 @@ FilePlugin >> primitiveDirectoryGetMacTypeAndCreator [
 	typeStringIndex := interpreterProxy firstIndexableField: typeString.
 	fileNameIndex := interpreterProxy firstIndexableField: fileName.
 	fileNameSize := interpreterProxy byteSizeOf: fileName.
-	"If the security plugin can be loaded, use it to check for permission.
-	If not, assume it's ok"
-	sCGFTfn ~= 0
-		ifTrue: [okToGet := self cCode: ' ((sqInt (*)(char *, sqInt))sCGFTfn)(fileNameIndex, fileNameSize)'.
-			okToGet
-				ifFalse: [^interpreterProxy primitiveFail]].
+
 	(self
 			cCode: 'dir_GetMacFileTypeAndCreator(fileNameIndex, fileNameSize, typeStringIndex, creatorStringIndex)'
 			inSmalltalk: [true])
@@ -534,7 +449,7 @@ FilePlugin >> primitiveDirectoryGetMacTypeAndCreator [
 { #category : #'directory primitives' }
 FilePlugin >> primitiveDirectoryLookup [
 
-	| index pathName pathNameIndex pathNameSize status entryName entryNameSize createDate modifiedDate dirFlag symlinkFlag posixPermissions fileSize okToList |
+	| index pathName pathNameIndex pathNameSize status entryName entryNameSize createDate modifiedDate dirFlag symlinkFlag posixPermissions fileSize |
 	
 	<var: 'entryName' declareC: 'char entryName[256]'>
 	<var: 'pathNameIndex' type: 'char *'>
@@ -552,12 +467,7 @@ FilePlugin >> primitiveDirectoryLookup [
 		 entryNameSize := createDate := modifiedDate := dirFlag := fileSize := posixPermissions := symlinkFlag := nil].
 	"If the security plugin can be loaded, use it to check for permission. 
 	If not, assume it's ok"
-	okToList := sCLPfn ~= 0
-					ifTrue: [self cCode: '((sqInt (*)(char *, sqInt))sCLPfn)(pathNameIndex, pathNameSize)' inSmalltalk: [true]]
-					ifFalse: [true].
-	status := okToList
-		ifTrue:
-			[self dir_Lookup: pathNameIndex _: pathNameSize
+	status := self dir_Lookup: pathNameIndex _: pathNameSize
 					_: index
 					_: entryName _: (self addressOf: entryNameSize put: [:v| entryNameSize := v])
 					_: (self addressOf: createDate put: [:v| createDate := v])
@@ -565,8 +475,8 @@ FilePlugin >> primitiveDirectoryLookup [
 					_: (self addressOf: dirFlag put: [:v| dirFlag := v])
 					_: (self addressOf: fileSize put: [:v| fileSize := v])
 					_: (self addressOf: posixPermissions put: [:v| posixPermissions := v])
-					_: (self addressOf: symlinkFlag put: [:v| symlinkFlag := v])]
-		ifFalse: [DirNoMoreEntries].
+					_: (self addressOf: symlinkFlag put: [:v| symlinkFlag := v]).
+					
 	interpreterProxy failed ifTrue:
 		[^nil].
 	status = DirNoMoreEntries ifTrue: "no more entries; return nil"
@@ -604,7 +514,7 @@ FilePlugin >> primitiveDirectoryLookup [
 { #category : #'directory primitives' }
 FilePlugin >> primitiveDirectorySetMacTypeAndCreator [
 
-	| creatorString typeString fileName creatorStringIndex typeStringIndex fileNameIndex fileNameSize okToSet |
+	| creatorString typeString fileName creatorStringIndex typeStringIndex fileNameIndex fileNameSize |
 	<var: 'creatorStringIndex' type: 'char *'>
 	<var: 'typeStringIndex' type: 'char *'>
 	<var: 'fileNameIndex' type: 'char *'>
@@ -623,28 +533,12 @@ FilePlugin >> primitiveDirectorySetMacTypeAndCreator [
 	typeStringIndex := interpreterProxy firstIndexableField: typeString.
 	fileNameIndex := interpreterProxy firstIndexableField: fileName.
 	fileNameSize := interpreterProxy byteSizeOf: fileName.
-	"If the security plugin can be loaded, use it to check for permission.
-	If not, assume it's ok"
-	sCSFTfn ~= 0 ifTrue:
-		[okToSet := self
-						cCode: '((sqInt (*)(char *, sqInt))sCSFTfn)(fileNameIndex, fileNameSize)'
-						inSmalltalk: [true].
-		 okToSet ifFalse:
-			[^interpreterProxy primitiveFail]].
+
 	(self
 		cCode: 'dir_SetMacFileTypeAndCreator(fileNameIndex, fileNameSize, typeStringIndex, creatorStringIndex)'
 		inSmalltalk: [true]) ifFalse:
 			[^interpreterProxy primitiveFail].
 	interpreterProxy pop: 3
-]
-
-{ #category : #'security primitives' }
-FilePlugin >> primitiveDisableFileAccess [
-	<export: true>
-	"If the security plugin can be loaded, use it to turn off file access
-	 If not, assume it's ok"
-	sDFAfn ~= 0 ifTrue:
-		[self cCode: '((sqInt (*)(void))sDFAfn)()']
 ]
 
 { #category : #'file primitives' }
@@ -682,12 +576,7 @@ FilePlugin >> primitiveFileDelete [
 		ifFalse: [^ interpreterProxy primitiveFail].
 	nameIndex := interpreterProxy firstIndexableField: namePointer.
 	nameSize := interpreterProxy byteSizeOf: namePointer.
-	"If the security plugin can be loaded, use it to check for permission.
-	If not, assume it's ok"
-	sCDFfn ~= 0
-		ifTrue: [okToDelete := self cCode: ' ((sqInt (*)(char *, sqInt))sCDFfn)(nameIndex, nameSize)' inSmalltalk: [true].
-			okToDelete
-				ifFalse: [^ interpreterProxy primitiveFail]].
+
 	self
 		sqFileDeleteName: nameIndex
 		Size: nameSize.
@@ -755,7 +644,7 @@ FilePlugin >> primitiveFileOpen [
 		ifFalse: [^ interpreterProxy primitiveFail].
 	nameIndex := interpreterProxy firstIndexableField: namePointer.
 	nameSize := interpreterProxy byteSizeOf: namePointer.
-	filePointer := self fileOpenName: nameIndex size: nameSize write: writeFlag secure: true.
+	filePointer := self fileOpenName: nameIndex size: nameSize write: writeFlag.
 	interpreterProxy failed
 		ifFalse: [interpreterProxy methodReturnValue: filePointer]
 
@@ -771,7 +660,7 @@ FilePlugin >> primitiveFileOpenNew [
 		ifFalse: [^ interpreterProxy primitiveFail].
 	nameIndex := interpreterProxy firstIndexableField: namePointer.
 	nameSize := interpreterProxy byteSizeOf: namePointer.
-	filePointer := self fileOpenNewName: nameIndex size: nameSize secure: true.
+	filePointer := self fileOpenNewName: nameIndex size: nameSize.
 	interpreterProxy failed
 		ifFalse: [
 			interpreterProxy methodReturnValue: filePointer]
@@ -883,12 +772,7 @@ FilePlugin >> primitiveFileRename [
 	newNameSize := interpreterProxy byteSizeOf: newNamePointer.
 	oldNameIndex := interpreterProxy firstIndexableField: oldNamePointer.
 	oldNameSize := interpreterProxy byteSizeOf: oldNamePointer.
-	"If the security plugin can be loaded, use it to check for rename permission.
-	If not, assume it's ok"
-	sCRFfn ~= 0 ifTrue: 
-		[okToRename := self cCode: ' ((sqInt (*)(char *, sqInt))sCRFfn)(oldNameIndex, oldNameSize)'
-			inSmalltalk: [true].
-		okToRename ifFalse: [^interpreterProxy primitiveFail]].
+
 	self
 		sqFileRenameOld: oldNameIndex Size: oldNameSize
 		New: newNameIndex Size: newNameSize.
@@ -933,9 +817,7 @@ FilePlugin >> primitiveFileStdioHandles [
 	| fileRecords result validMask |
 	<export: true>
 	<var: 'fileRecords' declareC: 'SQFile fileRecords[3]'>
-	sHFAfn ~= 0 ifTrue:
-		[(self cCode: ' ((sqInt (*)(void))sHFAfn)()' inSmalltalk: [true]) ifFalse:
-			[^interpreterProxy primitiveFailFor: PrimErrUnsupported]].
+
 	self cCode: '' inSmalltalk: [fileRecords := Array new: 3].
 	validMask := self sqFileStdioHandlesInto: fileRecords.
 	validMask < 0 ifTrue:
@@ -1036,16 +918,22 @@ FilePlugin >> primitiveFileWrite [
 		[interpreterProxy methodReturnValue: (interpreterProxy integerObjectOf: bytesWritten // elementSize)]
 ]
 
-{ #category : #'security primitives' }
-FilePlugin >> primitiveHasFileAccess [
-	|  hasAccess |
+{ #category : #'file primitives' }
+FilePlugin >> primitiveWaitForDataWithSemaphore [
+	"This primitive set a semaphore passed as a semaphoreIndex to be signalled when there is data in the File / Pipe, and it will not block"
+
+	| semaphoreIndex file |
+	<var: 'file' type: 'SQFile *'>
 	<export: true>
-	"If the security plugin can be loaded, use it to check . 
-	If not, assume it's ok"
-	sHFAfn ~= 0
-		ifTrue: [hasAccess := self cCode: ' ((sqInt (*)(void))sHFAfn)()' inSmalltalk: [true]]
-		ifFalse: [hasAccess := true].
-	interpreterProxy methodReturnBool: hasAccess
+
+	semaphoreIndex := interpreterProxy integerValueOf: (interpreterProxy stackValue: 0).
+	file := self fileValueOf: (interpreterProxy stackValue: 1).
+
+	interpreterProxy failed ifFalse:
+		[self waitForData: file onSemaphoreIndex: semaphoreIndex ].
+
+	interpreterProxy failed ifFalse:
+		[interpreterProxy pop: 2] "pop position, file; leave rcvr on stack"
 ]
 
 { #category : #'file primitives' }

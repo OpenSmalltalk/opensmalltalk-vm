@@ -148,7 +148,7 @@ TMethod >> allReferencedVariablesUsing: aCodeGen [
 			node isVariable ifTrue: [refs add: node name asString].
 			node isStmtList ifTrue: [refs addAll: node args].
 			(node isSend
-			 and: [node selector beginsWith: #cCode:]) ifTrue:
+			 and: [node selector value beginsWith: #cCode:]) ifTrue:
 				[aCodeGen addVariablesInVerbatimCIn: node to: refs]]
 		unless:
 			[:node :parent|

@@ -308,8 +308,7 @@ InterpreterPlugin class >> translateInDirectory: directory doInlining: inlineFla
 	 fname := self moduleName, '.c'.
 
 	"don't translate if the file is newer than my timeStamp"
-	(directory entryAt: fname ifAbsent: nil) ifNotNil:
-		[:fstat| | mTime |
+	(directory / fname) ifExists: [:fstat| | mTime |
 		mTime := fstat modificationTime.
 		mTime isInteger ifFalse: [mTime := mTime asSeconds].
 		 (self allCodeOlderThan: mTime) ifTrue:
@@ -319,7 +318,7 @@ InterpreterPlugin class >> translateInDirectory: directory doInlining: inlineFla
 	cg := self buildCodeGenerator.
 	cg inferTypesForImplicitlyTypedVariablesAndMethods.
 	self pruneUnusedInterpreterPluginMethodsIn: cg.
-	cg storeCodeOnFile:  (directory fullNameFor: fname) doInlining: inlineFlag.
+	cg storeCodeOnFile:  (directory / fname) fullName doInlining: inlineFlag.
 	^cg exportedPrimitiveNames asArray
 ]
 

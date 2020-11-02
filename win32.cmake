@@ -6,6 +6,7 @@ if(NOT Win32VMExecutableIcon)
     set(Win32VMExecutableIcon "${Win32ResourcesFolder}/Pharo.ico")
 endif()
 set(Win32Resource "${CMAKE_CURRENT_BINARY_DIR}/${VM_EXECUTABLE_NAME}.rc")
+set(Win32ConsoleResource "${CMAKE_CURRENT_BINARY_DIR}/${VM_EXECUTABLE_CONSOLE_NAME}.rc")
 set(Win32DLLResource "${CMAKE_CURRENT_BINARY_DIR}/${VM_EXECUTABLE_NAME}DLL.rc")
 set(Win32Manifest "${CMAKE_CURRENT_BINARY_DIR}/${VM_EXECUTABLE_NAME}.exe.manifest")
 set(Win32ConsoleManifest "${CMAKE_CURRENT_BINARY_DIR}/${VM_EXECUTABLE_CONSOLE_NAME}.exe.manifest")
@@ -35,43 +36,36 @@ set(EXTRACTED_SOURCES
     ${Win32DLLResource}
 )
 
-set(VM_FRONTEND_SOURCES_COMMON
-    ${Win32Resource}
-)
-
 set(VM_FRONTEND_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/win32Main.c
-    ${Win32Manifest}
-    ${VM_FRONTEND_SOURCES_COMMON})
+    ${Win32Resource})
 
 set(VM_CONSOLE_FRONTEND_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/unixMain.c
-    ${Win32ConsoleManifest}
-    ${VM_FRONTEND_SOURCES_COMMON})
+    ${Win32ConsoleResource})
 
 set(VM_FRONTEND_APPLICATION_TYPE WIN32)
 
 configure_file("${Win32ResourcesFolder}/${VM_EXECUTABLE_NAME}.rc.in" "${Win32Resource}" @ONLY IMMEDIATE)
 configure_file("${Win32ResourcesFolder}/${VM_EXECUTABLE_NAME}DLL.rc.in" "${Win32DLLResource}" @ONLY IMMEDIATE)
 configure_file("${Win32ResourcesFolder}/${VM_EXECUTABLE_NAME}.exe.manifest.in" "${Win32Manifest}" @ONLY IMMEDIATE)
-configure_file("${Win32ResourcesFolder}/${VM_EXECUTABLE_NAME}.exe.manifest.in" "${Win32ConsoleManifest}" @ONLY IMMEDIATE)
+configure_file("${Win32ResourcesFolder}/${VM_EXECUTABLE_CONSOLE_NAME}.rc.in" "${Win32ConsoleResource}" @ONLY IMMEDIATE)
+configure_file("${Win32ResourcesFolder}/${VM_EXECUTABLE_CONSOLE_NAME}.exe.manifest.in" "${Win32ConsoleManifest}" @ONLY IMMEDIATE)
 
 macro(add_third_party_dependencies_per_platform)
     add_third_party_dependency("pixman-0.34.0" "build/vm")
     add_third_party_dependency("cairo-1.15.4" "build/vm")
     add_third_party_dependency("freetype-2.9.1" "build/vm")
-    add_third_party_dependency("libffi-3.3-rc0" "build/vm")
     add_third_party_dependency("libgit2-0.25.1-fixLibGit" "build/vm")
-    add_third_party_dependency_with_baseurl("libgit2-win-1.0.0" "build/vm" "https://github.com/guillep/libgit_build/releases/download/v1.0.1")
+    add_third_party_dependency("libgit2-win-1.0.0" "build/vm")
     add_third_party_dependency("libpng-1.6.34" "build/vm")
     add_third_party_dependency("libssh2-1.9.0" "build/vm")
     add_third_party_dependency("openssl-1.0.2q-fixLigGit" "build/vm")
     add_third_party_dependency("gcc-runtime-3.4" "build/vm")
     add_third_party_dependency("zlib-1.2.11-fixLibGit" "build/vm")
     add_third_party_dependency("SDL2-2.0.5" "build/vm")
-    add_third_party_dependency("PThreadedFFI-1.3.1-win64" "build/vm")
+    add_third_party_dependency("PThreadedFFI-1.4.0-win64" "build/vm")
 endmacro()
-
 
 macro(configure_installables INSTALL_COMPONENT)
     set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/build/dist")
@@ -92,6 +86,13 @@ macro(configure_installables INSTALL_COMPONENT)
           FILES_MATCHING
             PATTERN *
             PATTERN *.dll EXCLUDE)
+
+	install(
+		DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/bin/"
+		DESTINATION "./"
+		COMPONENT ${INSTALL_COMPONENT}
+		FILES_MATCHING PATTERN *.dll
+		PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
 	install(
 	    DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/win/"
@@ -124,3 +125,8 @@ macro(add_required_libs_per_platform)
    set_target_properties(${VM_EXECUTABLE_NAME} PROPERTIES LINK_FLAGS "-mwindows")
    set_target_properties(${VM_EXECUTABLE_CONSOLE_NAME} PROPERTIES LINK_FLAGS "-mconsole")
 endmacro()
+
+set(LIBFFI_TARGET "--target=x86_64-unknown-cygwin")
+set(LIBFFI_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/bin/cygffi-7.dll")
+set(LIBFFI_FILES "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/bin/cygffi-7.dll")
+set(LIBFFI_ADDITIONAL "AR=${CMAKE_TOOLCHAIN_PREFIX}-ar.exe" "DLLTOOL=${CMAKE_TOOLCHAIN_PREFIX}-dlltool.exe")

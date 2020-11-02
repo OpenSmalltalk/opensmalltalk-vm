@@ -174,7 +174,9 @@ sqInt sqGetFilenameFromString(char * aCharBuffer, char * aFilenameString, sqInt 
    ../Cross/plugins/FilePlugin/sqFilePluginBasicPrims.c
    file with a platform specific version as Win32 and RISC OS do.
 */
+#ifndef sqFTruncate
 #define sqFTruncate(filenum, fileoffset) true
+#endif
 
 /* Macros to support Mac browser plugin without ugly code in Interpreter. */
 
@@ -602,6 +604,8 @@ sqInt ioFreeModule(void *moduleHandle);
 
 /* The Squeak version from which this interpreter was generated. */
 extern const char *interpreterVersion;
+
+void warning(char* msg);
 
 int ioGetCurrentWorkingDirectorymaxLength(char * aCString, size_t maxLength);
 

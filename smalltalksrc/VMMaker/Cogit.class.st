@@ -3870,6 +3870,13 @@ Cogit >> ceCheckFeatures [
 	^self simulateLeafCallOf: ceCheckFeaturesFunction
 ]
 
+{ #category : #'as yet unclassified' }
+Cogit >> ceDereferenceSelectorIndex [
+	
+	<doNotGenerate>
+	^ objectRepresentation selectorIndexDereferenceRoutine
+]
+
 { #category : #'simulation only' }
 Cogit >> ceEnterCogCodePopReceiverReg [
 	<api: 'extern void (*ceEnterCogCodePopReceiverReg)()'>
@@ -8343,6 +8350,13 @@ Cogit >> halt: aString [
 	Halt new signal: aString
 ]
 
+{ #category : #'translation support' }
+Cogit >> haltIf: aBlock [
+
+	aBlock ifTrue: [ self halt ]
+
+]
+
 { #category : #'simulation only' }
 Cogit >> handleABICallOrJumpSimulationTrap: aProcessorSimulationTrap evaluable: evaluable [
 	<doNotGenerate>
@@ -10228,12 +10242,6 @@ Cogit >> noTargetsFreeInClosedPIC: cPIC [
 	^(self cPICHasFreedTargets: cPIC) not
 ]
 
-{ #category : #'translation support' }
-Cogit >> notYetImplemented [
-	<cmacro: '() warning("not yet implemented")'>
-	super notYetImplemented
-]
-
 { #category : #initialization }
 Cogit >> numArgsOrSendNumArgsReg: numArgs [
 	"The send trampolines have different versions for different arg counts, with special
@@ -11740,7 +11748,9 @@ Cogit >> simulateEnilopmart: enilopmartAddress numArgs: n [
 	 this will take us back to handleCallSimulationTrap:.  Otherwise
 	 start executing machine code in the simulator."
 	(ReenterMachineCode new returnValue: #continueNoReturn) signal.
+	1halt.
 	self simulateCogCodeAt: enilopmartAddress.
+	1halt.
 	"We should either longjmp back to the interpreter or
 	 stay in machine code so control should not reach here."
 	self assert: false
@@ -11935,6 +11945,12 @@ Cogit >> stackPointerAddress [
 	"redirect for the backEnd's genSaveStackPointers"
 	<doNotGenerate>
 	^coInterpreter stackPointerAddress
+]
+
+{ #category : #'as yet unclassified' }
+Cogit >> stackPointerAlignment [
+	<doNotGenerate>
+	^ backEnd stackPointerAlignment
 ]
 
 { #category : #disassembly }

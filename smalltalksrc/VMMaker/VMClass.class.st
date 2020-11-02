@@ -656,6 +656,13 @@ VMClass >> cPreprocessorDirective: codeString [
 	<doNotGenerate>
 ]
 
+{ #category : #'C library simulation' }
+VMClass >> calloc: num _: size [ 
+
+	<doNotGenerate>
+	^ self malloc: num * size
+]
+
 { #category : #'translation support' }
 VMClass >> cppIf: conditionBlockOrValue ifTrue: trueExpressionOrBlock [
 	"When translated, produces #if (condition) #else #endif CPP directives.
@@ -722,6 +729,12 @@ VMClass >> eassert: aBooleanExpressionOrBlock [
 	ExpensiveAsserts ifTrue:
 		[aBooleanExpressionOrBlock value ifFalse:
 			[AssertionFailure signal: 'Assertion failed']]
+]
+
+{ #category : #'translation support' }
+VMClass >> error [
+
+	<cmacro: ''>
 ]
 
 { #category : #'printf logging' }
@@ -974,6 +987,12 @@ VMClass >> minorVersion [
 	"This is implemented in sqVirtualMachine.c, so this form is for simulation only."
 	<doNotGenerate>
 	^self class vmProxyMinorVersion
+]
+
+{ #category : #'translation support' }
+VMClass >> notYetImplemented [
+	<cmacro: '() logError("not yet implemented")'>
+	super notYetImplemented
 ]
 
 { #category : #'translation support' }

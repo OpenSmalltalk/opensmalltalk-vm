@@ -6476,9 +6476,8 @@ CoInterpreter >> restoreCStackStateForCallbackContext: vmCallbackContext [
 	cogit
 		setCStackPointer: vmCallbackContext savedCStackPointer;
 		setCFramePointer: vmCallbackContext savedCFramePointer.
-	self memcpy: reenterInterpreter
-		_: vmCallbackContext savedReenterInterpreter asVoidPointer
-		_: (self sizeof: #'jmp_buf')
+
+	super restoreCStackStateForCallbackContext: vmCallbackContext
 ]
 
 { #category : #'process primitive support' }
@@ -7148,8 +7147,8 @@ CoInterpreter >> transcript [
 { #category : #'process primitive support' }
 CoInterpreter >> transferTo: newProc [
 	"replaced by transferTo:from: for better tracing (for debugging)"
-	<doNotGenerate>
-	self shouldNotImplement
+
+	^ self transferTo: newProc from: 0
 ]
 
 { #category : #'process primitive support' }

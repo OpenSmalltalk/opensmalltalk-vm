@@ -150,9 +150,7 @@ VMMaker class >> coreVMHeadersDirName [
 { #category : #initialisation }
 VMMaker class >> default [
 	"return a VMMaker initialised to build a default no-internal-plugins, no-external-plugins vm codebase"
-	^self forPlatform: (true
-						ifTrue: ['Cross'] 
-						ifFalse: [SmalltalkImage current platformName])
+	^self forPlatform: 'Cross'
 ]
 
 { #category : #utilities }
@@ -1246,19 +1244,19 @@ VMMaker >> externalPluginListName [
 { #category : #'target directories' }
 VMMaker >> externalPluginsDirectory [
 	"return the target directory for the external plugins sources"
-	| fd |
-	fd := self sourceDirectory directoryNamed: self class pluginsDirName.
-	fd assureExistence.
-	^fd
+	^ (self sourceDirectory / self class pluginsDirName)
+		ensureCreateDirectory;
+		yourself. 
 ]
 
 { #category : #'target directories' }
 VMMaker >> externalPluginsDirectoryFor: plugin [
 	"return the directory for the external plugin sources"
-	|fd|
-	fd := self externalPluginsDirectory directoryNamed: plugin moduleName.
-	fd assureExistence.
-	^fd
+	
+	^ (self externalPluginsDirectory / plugin moduleName)
+		ensureCreateDirectory;
+		yourself
+
 ]
 
 { #category : #'plugin lists' }
@@ -1279,6 +1277,15 @@ VMMaker >> for64BitVM [
 "set my flag to make a 64bit pointer model VM"
 	is64BitVM := true.
 	self changed: #sourceDirectory.
+]
+
+{ #category : #headers }
+VMMaker >> generateAdditionalHeadersFor: aClass withCodeGenerator: cg [
+
+	aClass additionalHeadersDo: [:headerName :headerContents| | filePath |
+		 filePath := (self coreVMHeadersDirectory / headerName) fullName.
+		 (cg needToGenerateHeader: headerName file: filePath contents: headerContents) ifTrue:
+			 [cg storeHeaderOnFile: filePath contents: headerContents]].
 ]
 
 { #category : #'generate sources' }
@@ -1313,11 +1320,9 @@ VMMaker >> generateCogitFiles [
 	cogitClass translateableInstructionSubclassesAndInstalledOptionsDo:
 		[:compilerClass|
 		cg := self generateCogitFileFor: cogitClass].
-	cg vmClass additionalHeadersDo:
-		[:headerName :headerContents| | filePath |
-		 filePath := (self coreVMHeadersDirectory / headerName) fullName.
-		 (cg needToGenerateHeader: headerName file: filePath contents: headerContents) ifTrue:
-			 [cg storeHeaderOnFile: filePath contents: headerContents]].
+
+	self generateAdditionalHeadersFor: cg vmClass withCodeGenerator: cg.
+
 	cogitClass apiExportHeaderName ifNotNil:
 		[cg storeAPIExportHeader: cogitClass apiExportHeaderName
 			OnFile: (self includeFilePathFor: cogitClass apiExportHeaderName)]
@@ -1469,11 +1474,7 @@ VMMaker >> generateInterpreterFile [
 								ifFalse: [ex pass]]].
 	self reinitializeWordSizeFrom: cg.
 
-	self interpreterClass additionalHeadersDo:
-		[:headerName :headerContents| | filePath |
-		 filePath := self coreVMHeadersDirectory / headerName.
-		 (cg needToGenerateHeader: headerName file: filePath contents: headerContents) ifTrue:
-			 [cg storeHeaderOnFile: filePath contents: headerContents]].
+	self generateAdditionalHeadersFor: self interpreterClass withCodeGenerator: cg.
 
 	self needsToRegenerateInterpreterFile ifFalse: [^nil].
 
@@ -2075,7 +2076,7 @@ VMMaker >> storeExternalPluginList [
 			[:cls|
 			s space; nextPut: $\; cr; nextPutAll: cls moduleName].
 		s cr].
-	filePath := self makefileDirectory fullNameFor: self externalPluginListName.
+	filePath := (self makefileDirectory / self externalPluginListName) fullName.
 	(CCodeGenerator basicNew needToGenerateHeader: filePath file: filePath contents: contents) ifTrue:
 		[[fileStream := VMMaker forceNewFileNamed: filePath] 
 			on: FileDoesNotExistException 

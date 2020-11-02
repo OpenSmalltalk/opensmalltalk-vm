@@ -135,6 +135,7 @@ CArray >> coerceTo: cTypeString sim: interpreterSimulator [
 		['unsigned int *']	-> [self shallowCopy unitSize: 4; yourself].
 		['int *']				-> [self shallowCopy unitSize: 4; yourself].
 		['char *']			-> [self shallowCopy unitSize: 1; yourself].
+		['void *']			-> [self shallowCopy unitSize: 1; yourself].
 		['unsigned char *']	-> [self shallowCopy unitSize: 1; yourself].
 		['unsigned']		-> [self ptrAddress].
 		['sqInt']				-> [self ptrAddress].

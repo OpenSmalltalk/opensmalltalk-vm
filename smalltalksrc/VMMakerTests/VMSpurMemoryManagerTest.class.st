@@ -152,6 +152,11 @@ VMSpurMemoryManagerTest >> keptObjectInVMVariable3 [
 	^ interpreter profileMethod
 ]
 
+{ #category : #helpers }
+VMSpurMemoryManagerTest >> interpreterClass [ 
+	^ StackInterpreterSimulatorLSB
+]
+
 { #category : #accessor }
 VMSpurMemoryManagerTest >> memory [
 	^ memory
@@ -177,16 +182,17 @@ VMSpurMemoryManagerTest >> newClassInOldSpaceWithSlots: numberOfSlots instSpec: 
 
 { #category : #helpers }
 VMSpurMemoryManagerTest >> newInterpreter [
-
 	memory := self newMemory.
 
-	StackInterpreterSimulatorLSB
-		initializeWithOptions: {
-			#BytesPerWord. self wordSize.
-			#ObjectMemory. memory class name}
+	self interpreterClass
+		initializeWithOptions:
+			{#BytesPerWord.
+			self wordSize.
+			#ObjectMemory.
+			memory class name}
 		objectMemoryClass: memory class.
 
-	^ StackInterpreterSimulatorLSB basicNew
+	^ self interpreterClass basicNew
 		objectMemory: memory;
 		basicInitialize
 ]

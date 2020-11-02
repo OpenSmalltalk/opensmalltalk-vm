@@ -30,7 +30,7 @@ VMPushThisContextRoutineTest >> setUp [
 { #category : #tests }
 VMPushThisContextRoutineTest >> testMarriedContextReturnsSpouseObject [
 
-	| isLargeContext isInBlock routine numberOfArguments methodObject callingAddress contextOop |
+	| isLargeContext isInBlock routine numberOfArguments callingAddress contextOop |
 	isLargeContext := false.
 	isInBlock := 0 "non-block, i.e., a normal method".
 	callingAddress := self compile: [ cogit Stop ].
@@ -38,6 +38,8 @@ VMPushThisContextRoutineTest >> testMarriedContextReturnsSpouseObject [
 	routine := self compile: [ cogit objectRepresentation genGetActiveContextLarge: isLargeContext inBlock: isInBlock ].
 	numberOfArguments := 3.
 	contextOop := memory integerObjectOf: 42.
+
+ 
 	methodObject := methodBuilder newMethod 
 		isSmall: false;
 		numberOfArguments: numberOfArguments;
@@ -70,7 +72,7 @@ VMPushThisContextRoutineTest >> testMarriedContextReturnsSpouseObject [
 { #category : #tests }
 VMPushThisContextRoutineTest >> testNewMarriedContextHasLargeSize [
 
-	| isLargeContext isInBlock routine numberOfArguments methodObject callingAddress contextOop |
+	| isLargeContext isInBlock routine numberOfArguments callingAddress |
 	isLargeContext := true.
 	isInBlock := 0 "non-block, i.e., a normal method".
 	callingAddress := self compile: [ cogit Stop ].
@@ -78,8 +80,6 @@ VMPushThisContextRoutineTest >> testNewMarriedContextHasLargeSize [
 	routine := self compile: [ cogit objectRepresentation genGetActiveContextLarge: isLargeContext inBlock: isInBlock ].
 	
 	numberOfArguments := 3.
-	contextOop := memory integerObjectOf: 42.
-	methodObject := self newMethodWithSmallContext: false WithArguments: numberOfArguments.
 	self machineCodeFrameBuilder
 		returnAddress: callingAddress;
 		arguments: { 
@@ -108,7 +108,7 @@ VMPushThisContextRoutineTest >> testNewMarriedContextHasLargeSize [
 { #category : #tests }
 VMPushThisContextRoutineTest >> testNewMarriedContextHasSmallSize [
 
-	| isLargeContext isInBlock routine numberOfArguments methodObject callingAddress contextOop |
+	| isLargeContext isInBlock routine numberOfArguments callingAddress |
 	isLargeContext := false.
 	isInBlock := 0 "non-block, i.e., a normal method".
 	callingAddress := self compile: [ cogit Stop ].
@@ -116,8 +116,6 @@ VMPushThisContextRoutineTest >> testNewMarriedContextHasSmallSize [
 	routine := self compile: [ cogit objectRepresentation genGetActiveContextLarge: isLargeContext inBlock: isInBlock ].
 	
 	numberOfArguments := 3.
-	contextOop := memory integerObjectOf: 42.
-	methodObject := self newMethodWithSmallContext: false WithArguments: numberOfArguments.
 	self machineCodeFrameBuilder
 		returnAddress: callingAddress;
 		arguments: { 
@@ -146,7 +144,7 @@ VMPushThisContextRoutineTest >> testNewMarriedContextHasSmallSize [
 { #category : #tests }
 VMPushThisContextRoutineTest >> testNewMarriedLargeContextHasCorrectStackPointer [
 
-	| isLargeContext isInBlock routine numberOfArguments methodObject callingAddress contextOop expectedStackPointer |
+	| isLargeContext isInBlock routine numberOfArguments callingAddress expectedStackPointer |
 	isLargeContext := true.
 	isInBlock := 0 "non-block, i.e., a normal method".
 	callingAddress := self compile: [ cogit Stop ].
@@ -154,8 +152,6 @@ VMPushThisContextRoutineTest >> testNewMarriedLargeContextHasCorrectStackPointer
 	routine := self compile: [ cogit objectRepresentation genGetActiveContextLarge: isLargeContext inBlock: isInBlock ].
 	
 	numberOfArguments := 3.
-	contextOop := memory integerObjectOf: 42.
-	methodObject := self newMethodWithSmallContext: false WithArguments: numberOfArguments.
 	self machineCodeFrameBuilder
 		returnAddress: callingAddress;
 		arguments: { 
@@ -186,7 +182,7 @@ VMPushThisContextRoutineTest >> testNewMarriedLargeContextHasCorrectStackPointer
 { #category : #tests }
 VMPushThisContextRoutineTest >> testNewMarriedSmallContextHasArguments [
 
-	| isLargeContext isInBlock routine numberOfArguments methodObject callingAddress contextOop expectedStackPointer |
+	| isLargeContext isInBlock routine numberOfArguments callingAddress |
 	isLargeContext := false.
 	isInBlock := 0 "non-block, i.e., a normal method".
 	callingAddress := self compile: [ cogit Stop ].
@@ -194,8 +190,6 @@ VMPushThisContextRoutineTest >> testNewMarriedSmallContextHasArguments [
 	routine := self compile: [ cogit objectRepresentation genGetActiveContextLarge: isLargeContext inBlock: isInBlock ].
 	
 	numberOfArguments := 3.
-	contextOop := memory integerObjectOf: 42.
-	methodObject := self newMethodWithSmallContext: false WithArguments: numberOfArguments.
 	self machineCodeFrameBuilder
 		returnAddress: callingAddress;
 		receiver: memory trueObject;
@@ -218,8 +212,6 @@ VMPushThisContextRoutineTest >> testNewMarriedSmallContextHasArguments [
 	machineSimulator sendNumberOfArgumentsRegisterValue: numberOfArguments.
 
 	self runFrom: routine until: callingAddress.	
-	
-	expectedStackPointer := ((machineSimulator framePointerRegisterValue - machineSimulator stackPointerRegisterValue) / wordSize) - ( 3 "Stack elements to not count due to call convention") + 3 "num arguments".
 	
 	self assert: (memory fetchPointer: Context allSlots size +0 ofObject: machineSimulator receiverRegisterValue ) equals: (memory integerObjectOf: 1).
 	self assert: (memory fetchPointer: Context allSlots size +1 ofObject: machineSimulator receiverRegisterValue ) equals: (memory integerObjectOf: 2).
@@ -229,7 +221,7 @@ VMPushThisContextRoutineTest >> testNewMarriedSmallContextHasArguments [
 { #category : #tests }
 VMPushThisContextRoutineTest >> testNewMarriedSmallContextHasClosureInNil [
 
-	| isLargeContext isInBlock routine numberOfArguments methodObject callingAddress contextOop expectedStackPointer |
+	| isLargeContext isInBlock routine numberOfArguments callingAddress |
 	isLargeContext := false.
 	isInBlock := 0 "non-block, i.e., a normal method".
 	callingAddress := self compile: [ cogit Stop ].
@@ -237,8 +229,6 @@ VMPushThisContextRoutineTest >> testNewMarriedSmallContextHasClosureInNil [
 	routine := self compile: [ cogit objectRepresentation genGetActiveContextLarge: isLargeContext inBlock: isInBlock ].
 	
 	numberOfArguments := 3.
-	contextOop := memory integerObjectOf: 42.
-	methodObject := self newMethodWithSmallContext: false WithArguments: numberOfArguments.
 	self machineCodeFrameBuilder
 		returnAddress: callingAddress;
 		arguments: { 
@@ -260,16 +250,14 @@ VMPushThisContextRoutineTest >> testNewMarriedSmallContextHasClosureInNil [
 	machineSimulator sendNumberOfArgumentsRegisterValue: numberOfArguments.
 
 	self runFrom: routine until: callingAddress.	
-	
-	expectedStackPointer := ((machineSimulator framePointerRegisterValue - machineSimulator stackPointerRegisterValue) / wordSize) - ( 3 "Stack elements to not count due to call convention") + 3 "num arguments".
-	
+
 	self assert: (memory fetchPointer: ClosureIndex ofObject: machineSimulator receiverRegisterValue ) equals: (memory nilObject).
 ]
 
 { #category : #tests }
 VMPushThisContextRoutineTest >> testNewMarriedSmallContextHasClosureInSetOne [
 
-	| isLargeContext isInBlock routine numberOfArguments methodObject callingAddress contextOop expectedStackPointer |
+	| isLargeContext isInBlock routine numberOfArguments callingAddress |
 	isLargeContext := false.
 	isInBlock := InVanillaBlock "non-block, i.e., a normal method".
 	callingAddress := self compile: [ cogit Stop ].
@@ -277,8 +265,6 @@ VMPushThisContextRoutineTest >> testNewMarriedSmallContextHasClosureInSetOne [
 	routine := self compile: [ cogit objectRepresentation genGetActiveContextLarge: isLargeContext inBlock: isInBlock ].
 	
 	numberOfArguments := 3.
-	contextOop := memory integerObjectOf: 42.
-	methodObject := self newMethodWithSmallContext: false WithArguments: numberOfArguments.
 	self machineCodeFrameBuilder
 		returnAddress: callingAddress;
 		receiver: memory trueObject;
@@ -301,9 +287,7 @@ VMPushThisContextRoutineTest >> testNewMarriedSmallContextHasClosureInSetOne [
 	machineSimulator sendNumberOfArgumentsRegisterValue: numberOfArguments.
 
 	self runFrom: routine until: callingAddress.	
-	
-	expectedStackPointer := ((machineSimulator framePointerRegisterValue - machineSimulator stackPointerRegisterValue) / wordSize) - ( 3 "Stack elements to not count due to call convention") + 3 "num arguments".
-	
+
 	self assert: (memory fetchPointer: ClosureIndex ofObject: machineSimulator receiverRegisterValue ) equals: (memory trueObject).
 ]
 
@@ -350,7 +334,7 @@ VMPushThisContextRoutineTest >> testNewMarriedSmallContextHasCorrectStackPointer
 { #category : #tests }
 VMPushThisContextRoutineTest >> testNewMarriedSmallContextHasReceiver [
 
-	| isLargeContext isInBlock routine numberOfArguments methodObject callingAddress contextOop expectedStackPointer |
+	| isLargeContext isInBlock routine numberOfArguments callingAddress |
 	isLargeContext := false.
 	isInBlock := 0 "non-block, i.e., a normal method".
 	callingAddress := self compile: [ cogit Stop ].
@@ -358,8 +342,6 @@ VMPushThisContextRoutineTest >> testNewMarriedSmallContextHasReceiver [
 	routine := self compile: [ cogit objectRepresentation genGetActiveContextLarge: isLargeContext inBlock: isInBlock ].
 	
 	numberOfArguments := 3.
-	contextOop := memory integerObjectOf: 42.
-	methodObject := self newMethodWithSmallContext: false WithArguments: numberOfArguments.
 	self machineCodeFrameBuilder
 		returnAddress: callingAddress;
 		receiver: memory trueObject;
@@ -383,15 +365,13 @@ VMPushThisContextRoutineTest >> testNewMarriedSmallContextHasReceiver [
 
 	self runFrom: routine until: callingAddress.	
 	
-	expectedStackPointer := ((machineSimulator framePointerRegisterValue - machineSimulator stackPointerRegisterValue) / wordSize) - ( 3 "Stack elements to not count due to call convention") + 3 "num arguments".
-	
 	self assert: (memory fetchPointer: ReceiverIndex ofObject: machineSimulator receiverRegisterValue ) equals: (memory trueObject).
 ]
 
 { #category : #tests }
 VMPushThisContextRoutineTest >> testNewMarriedSmallContextHasTemporaries [
 
-	| isLargeContext isInBlock routine numberOfArguments methodObject callingAddress contextOop |
+	| isLargeContext isInBlock routine numberOfArguments callingAddress |
 	isLargeContext := false.
 	isInBlock := 0 "non-block, i.e., a normal method".
 	callingAddress := self compile: [ cogit Stop ].
@@ -399,8 +379,6 @@ VMPushThisContextRoutineTest >> testNewMarriedSmallContextHasTemporaries [
 	routine := self compile: [ cogit objectRepresentation genGetActiveContextLarge: isLargeContext inBlock: isInBlock ].
 	
 	numberOfArguments := 3.
-	contextOop := memory integerObjectOf: 42.
-	methodObject := self newMethodWithSmallContext: false WithArguments: numberOfArguments.
 	self machineCodeFrameBuilder
 		returnAddress: callingAddress;
 		receiver: memory trueObject;

@@ -1,4 +1,5 @@
 #include "pharovm/pharo.h"
+#include "pharovm/imageAccess.h"
 #include <stdio.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -22,7 +23,7 @@ sqInt basicImageFileClose(sqImageFile f){
 	return fclose((FILE*)f);
 }
 
-sqImageFile basicImageFileOpen(char* fileName, char *mode){
+sqImageFile basicImageFileOpen(const char* fileName, char *mode){
 	return fopen(fileName, mode);
 }
 

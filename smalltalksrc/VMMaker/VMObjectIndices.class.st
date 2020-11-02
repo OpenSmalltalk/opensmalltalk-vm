@@ -102,6 +102,7 @@ Class {
 		'StreamWriteLimitIndex',
 		'SuperclassIndex',
 		'SuspendedContextIndex',
+		'SuspendedProcessInCallout',
 		'TheDisplay',
 		'TheFinalizationSemaphore',
 		'TheInputSemaphore',
