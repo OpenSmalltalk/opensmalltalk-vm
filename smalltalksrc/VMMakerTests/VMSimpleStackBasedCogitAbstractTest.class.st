@@ -804,6 +804,12 @@ VMSimpleStackBasedCogitAbstractTest >> stackPointerRegisterValue: aValue [
 	machineSimulator stackPointerRegisterValue: aValue
 ]
 
+{ #category : #accessing }
+VMSimpleStackBasedCogitAbstractTest >> temporaryRegisterValue [
+	
+	^ self machineSimulator temporaryRegisterValue 
+]
+
 { #category : #'helpers - stack' }
 VMSimpleStackBasedCogitAbstractTest >> top [
 

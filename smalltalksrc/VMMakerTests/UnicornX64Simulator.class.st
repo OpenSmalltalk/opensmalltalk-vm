@@ -456,6 +456,12 @@ UnicornX64Simulator >> stackPointerRegister [
 ]
 
 { #category : #accessing }
+UnicornX64Simulator >> temporaryRegisterValue [
+
+	^ self rax
+]
+
+{ #category : #accessing }
 UnicornX64Simulator >> wordSize [
 	
 	^ 8

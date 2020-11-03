@@ -318,6 +318,12 @@ UnicornARMv8Simulator >> stackPointerRegister [
 ]
 
 { #category : #accessing }
+UnicornARMv8Simulator >> temporaryRegisterValue [
+	
+	^ self x1
+]
+
+{ #category : #accessing }
 UnicornARMv8Simulator >> w25: anInteger [ 
 
 	self writeRegister: UcARM64Registers w25 value: anInteger

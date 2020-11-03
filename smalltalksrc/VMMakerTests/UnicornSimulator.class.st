@@ -5,7 +5,8 @@ Class {
 		'unicorn',
 		'stopReason',
 		'memory',
-		'registerAliases'
+		'registerAliases',
+		'invalidAccessHandler'
 	],
 	#category : #'VMMakerTests-Unicorn'
 }
@@ -166,18 +167,20 @@ UnicornSimulator >> disassembler [
 { #category : #executing }
 UnicornSimulator >> doStartAt: startAddress until: until timeout: timeout count: count [
 
-	| actualCount result error |
+	| result error startTime currentTime remainingTimeout remainingCount |
 
-	actualCount := 0.
 	self instructionPointerValue: startAddress.
+	startTime := Time millisecondClockValue.
+	remainingTimeout := timeout.
+	remainingCount := count.
 
 	[ true ]
 		whileTrue: [ 
 			[result :=  unicorn
 				startAt: self instructionPointerValue
-				until: 0
-				timeout: 0
-				count: 1.
+				until: until
+				timeout: remainingTimeout
+				count: remainingCount.
 					
 				stopReason ifNotNil: [ 
 						error := stopReason.
@@ -185,18 +188,33 @@ UnicornSimulator >> doStartAt: startAddress until: until timeout: timeout count:
 						error signal ].
 		
 			"If execution did not stop because of a stop reason, verify the error code"
-			unicorn verifyErrorCode: result.
-
-			
-					actualCount := actualCount + 1] 
+			unicorn verifyErrorCode: result] 
 				on: UnicornInvalidMemoryAccess do: [ :invalidAccess |
+					
 					self instructionPointerValue = until ifTrue: [ ^ 0 ].
-					self cogit handleSimulationTrap: (UnicornSimulationTrap simulator: self error: invalidAccess).
-					actualCount := actualCount + 1 ].
+					
+					(self handleInvalidAccess: invalidAccess)
+						ifFalse: [ ^ result ]].
 			
 			stopReason ifNotNil: [ ^ result ].
-			count = actualCount ifTrue: [ ^ result ].
-			self instructionPointerValue = until ifTrue: [ ^ result ]]
+		
+			count ~= 0 ifTrue: [ | lastCount |
+				lastCount := unicorn lastInstructionCount.
+				remainingCount := remainingCount - lastCount.
+				remainingCount <= 0 ifTrue: [ ^ result ]].
+			
+			timeout ~= 0 ifTrue: [  
+				currentTime := Time millisecondClockValue.
+				remainingTimeout := remainingTimeout - (currentTime - startTime).
+				
+				remainingTimeout <= 0
+					ifTrue: [ 	
+						UnicornTimeout new
+								target: until;
+								signal ]].
+			
+			self instructionPointerValue = until 
+				ifTrue: [ ^ result ]]
 ]
 
 { #category : #'as yet unclassified' }
@@ -235,6 +253,24 @@ UnicornSimulator >> getLastAddress: abstractInstructions [
 	^ abstractInstructions last address + abstractInstructions last machineCodeSize
 ]
 
+{ #category : #'handling invalid accesses' }
+UnicornSimulator >> handleInvalidAccess: invalidAccess [ 
+
+	| previousInstructionPointer hasToContinue |
+	previousInstructionPointer := self instructionPointerValue.
+	
+	"If the called handler want to resume execution but it has not set a next instruction pointer to execute I will calculate it"
+	
+	(hasToContinue := invalidAccessHandler value: invalidAccess)
+		ifTrue: [ previousInstructionPointer = self instructionPointerValue 
+			ifTrue: [  
+					self instructionPointerValue: 
+						self lastExecutedInstructionAddress + self lastExecutedInstructionSize 
+				] ].	
+		
+	^ hasToContinue
+]
+
 { #category : #testing }
 UnicornSimulator >> hasLinkRegister [
 	^ false
@@ -249,6 +285,10 @@ UnicornSimulator >> initialize [
 	
 	registerAliases := Dictionary new.
 	self initializeRegisterAliases.
+	
+	invalidAccessHandler := [ :invalidAccess | 
+		self cogit handleSimulationTrap: (UnicornSimulationTrap simulator: self error: invalidAccess).
+		true]
 ]
 
 { #category : #initialization }
@@ -295,6 +335,29 @@ UnicornSimulator >> instructionPointerValue: aValue [
 UnicornSimulator >> integerRegisterState [
 	
 	self subclassResponsibility 
+]
+
+{ #category : #'handling invalid accesses' }
+UnicornSimulator >> invalidAccessHandler: aFullBlockClosure [ 
+	invalidAccessHandler := aFullBlockClosure
+]
+
+{ #category : #accessing }
+UnicornSimulator >> lastExecutedInstructionAddress [
+
+	^ unicorn lastExecutedInstructionAddress 
+]
+
+{ #category : #accessing }
+UnicornSimulator >> lastExecutedInstructionSize [
+
+	^ unicorn lastExecutedInstructionSize 
+]
+
+{ #category : #accessing }
+UnicornSimulator >> lastInstructionCount [
+	
+	^ unicorn lastInstructionCount 
 ]
 
 { #category : #memory }
@@ -572,17 +635,8 @@ UnicornSimulator >> stackValues [
 { #category : #executing }
 UnicornSimulator >> startAt: begin until: until timeout: timeout count: count [ 
 
-	| error result |
-	result := self doStartAt: begin until: until timeout: timeout count: count.
+	^ self doStartAt: begin until: until timeout: timeout count: count.
 	
-	"If we did not stop for a known reason, verify the error code of the function"
-	unicorn verifyErrorCode: result.
-	
-	"Verify we stopped because we arrived to the right end addres and not a timeout"
-	(until = 0 or: [ self instructionPointerValue = until ]) ifFalse: [
-		UnicornTimeout new
-			target: until;
-			signal ]
 ]
 
 { #category : #actions }
@@ -593,6 +647,12 @@ UnicornSimulator >> step [
 		until: 0
 		timeout: 0
 		count: 1
+]
+
+{ #category : #accessing }
+UnicornSimulator >> temporaryRegisterValue [
+	
+	^ self subclassResponsibility
 ]
 
 { #category : #accessing }

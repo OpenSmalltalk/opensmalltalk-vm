@@ -295,6 +295,12 @@ UnicornI386Simulator >> stackPointerRegister [
 ]
 
 { #category : #accessing }
+UnicornI386Simulator >> temporaryRegisterValue [
+	
+	^ self eax
+]
+
+{ #category : #accessing }
 UnicornI386Simulator >> wordSize [
 	
 	^ 4
