@@ -97,19 +97,22 @@ UnicornARMv5Simulator >> disassembler [
 { #category : #executing }
 UnicornARMv5Simulator >> doStartAt: startAddress until: until timeout: timeout count: count [
 
-	| result error startTime currentTime remainingTimeout remainingCount |
+	| actualCount result error startTime remainingTimeout currentTime |
 
+	"This implementation is almost the same, because ARMv5 does not accept correctly to run 
+	more than one instruction. It has the problem that it misses the count or the current address"
+
+	actualCount := 0.
 	self instructionPointerValue: startAddress.
 	startTime := Time millisecondClockValue.
 	remainingTimeout := timeout.
-	remainingCount := count.
 
 	[ true ]
 		whileTrue: [ 
 			[result :=  unicorn
 				startAt: self instructionPointerValue
-				until: until
-				timeout: remainingTimeout
+				until: 0
+				timeout: 0
 				count: 1.
 					
 				stopReason ifNotNil: [ 
@@ -118,20 +121,22 @@ UnicornARMv5Simulator >> doStartAt: startAddress until: until timeout: timeout c
 						error signal ].
 		
 			"If execution did not stop because of a stop reason, verify the error code"
-			unicorn verifyErrorCode: result] 
+			unicorn verifyErrorCode: result.
+
+			
+					actualCount := actualCount + 1] 
 				on: UnicornInvalidMemoryAccess do: [ :invalidAccess |
-					
 					self instructionPointerValue = until ifTrue: [ ^ 0 ].
 					
 					(self handleInvalidAccess: invalidAccess)
-						ifFalse: [ ^ result ]].
+						ifFalse: [ ^ result ].
+						
+					actualCount := actualCount + 1 ].
 			
 			stopReason ifNotNil: [ ^ result ].
-		
-			count ~= 0 ifTrue: [ | lastCount |
-				remainingCount := remainingCount - 1.
-				remainingCount <= 0 ifTrue: [ ^ result ]].
-			
+			count = actualCount ifTrue: [ ^ result ].
+
+
 			timeout ~= 0 ifTrue: [  
 				currentTime := Time millisecondClockValue.
 				remainingTimeout := remainingTimeout - (currentTime - startTime).
@@ -141,9 +146,8 @@ UnicornARMv5Simulator >> doStartAt: startAddress until: until timeout: timeout c
 						UnicornTimeout new
 								target: until;
 								signal ]].
-			
-			self instructionPointerValue = until 
-				ifTrue: [ ^ result ]]
+
+			self instructionPointerValue = until ifTrue: [ ^ result ]]
 ]
 
 { #category : #'as yet unclassified' }

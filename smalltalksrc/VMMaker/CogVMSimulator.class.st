@@ -3512,6 +3512,12 @@ CogVMSimulator >> setBreakCount: anInteger [
 	breakCount := anInteger
 ]
 
+{ #category : #accessing }
+CogVMSimulator >> setBreakSelectorLength: anInteger [ 
+	
+	breakSelectorLength := anInteger
+]
+
 { #category : #'multi-threading simulation switch' }
 CogVMSimulator >> setCogVMFlags: flags [
 	"This method includes or excludes CoInterpreterMT methods as required.
