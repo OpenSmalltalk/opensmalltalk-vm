@@ -71,6 +71,12 @@ UnicornSimulator >> argument0RegisterValue [
 	^ self r3
 ]
 
+{ #category : #accessing }
+UnicornSimulator >> argument0RegisterValue: anInteger [ 
+	
+	self subclassResponsibility
+]
+
 { #category : #registers }
 UnicornSimulator >> baseRegister [
 

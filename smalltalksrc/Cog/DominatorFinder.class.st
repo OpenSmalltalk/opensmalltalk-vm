@@ -239,7 +239,7 @@ DominatorFinder class >> exampleMethod [
 { #category : #'class initialization' }
 DominatorFinder class >> initialize [
 	"self initialize"
-	ReturnSelectors := ((self systemNavigation allCallsOn: #return:from: localTo: Context) collect: [:mr| mr selector]) as: IdentitySet.
+"	ReturnSelectors := ((self systemNavigation allCallsOn: #return:from: localTo: Context) collect: [:mr| mr selector]) as: IdentitySet."
 ]
 
 { #category : #'message handling' }

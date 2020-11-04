@@ -115,10 +115,9 @@ VMCodeCompactionTest >> testCompactingShouldRelocateInSendsLiterals [
 		runFrom: (interpreter cogMethodOf: methodOop) address + cogit noCheckEntryOffset
 		until: send1TrampolineAddress.
 
-	interpreter stackPointer: machineSimulator smalltalkStackPointerRegisterValue.
-	"If in CISC, the call to the trampoline has pushed the caller's IP so we need to skip one in the stack"
+	"In StackToRegisterMappingCogit the argument came in the registerArg0"
 	self
-		assert: (interpreter stackValue: (cogit backEnd hasLinkRegister ifTrue: [0] ifFalse: [1]))
+		assert: machineSimulator argument0RegisterValue
 		equals: memory nilObject
 ]
 
@@ -323,7 +322,9 @@ VMCodeCompactionTest >> testCompactingShouldRelocatePolymorphicPICCallsite [
 	
 	"Check PIC MISS trampoline"
 	self createFramefulCallFrom: callerAddress.
+	
 	self prepareStackForSendReceiver: memory falseObject arguments: { memory characterObjectOf: 7 }.
+	
 	self
 		runFrom: (interpreter cogMethodOf: callerMethodOop) address + cogit noCheckEntryOffset
 		until: cogit ceCPICMissTrampoline.

@@ -44,6 +44,12 @@ VMPrimitiveCallAbstractTest >> findMethod: aSelector [
 	^ self class lookupSelector: aSelector
 ]
 
+{ #category : #'methods under test' }
+VMPrimitiveCallAbstractTest >> jitCompilerClass [
+
+	^ StackToRegisterMappingCogit 
+]
+
 { #category : #helpers }
 VMPrimitiveCallAbstractTest >> jitMethod: aPharoCompiledMethod [ 
 
@@ -56,7 +62,7 @@ VMPrimitiveCallAbstractTest >> jitMethod: aPharoCompiledMethod selector: aSelect
 	| methodOop v3Method |
 	
 	"We are using V3 bytecode, so we need to recompile the method"
-	v3Method := self class compiler
+	v3Method := aPharoCompiledMethod methodClass compiler
 							encoderClass: EncoderForV3PlusClosures;
 							options: #(-optionFullBlockClosure);
 							compile: aPharoCompiledMethod sourceCode.
@@ -64,6 +70,14 @@ VMPrimitiveCallAbstractTest >> jitMethod: aPharoCompiledMethod selector: aSelect
 	methodOop := methodBuilder fillFromPharoMethod: v3Method; buildMethod.
 
 	^ cogit cog: methodOop selector: aSelectorOop
+]
+
+{ #category : #'methods under test' }
+VMPrimitiveCallAbstractTest >> jitOptions [
+
+	^ super jitOptions
+		  at: #IMMUTABILITY put: true;
+		  yourself
 ]
 
 { #category : #'methods under test' }
@@ -156,12 +170,13 @@ VMPrimitiveCallAbstractTest >> methodWithSend: arg [
 	^ arg send
 ]
 
-{ #category : #tests }
+{ #category : #running }
 VMPrimitiveCallAbstractTest >> setUp [
 
 	| primitiveAccessorDepthTable |
 	
 	super setUp.
+	
 	self setUpCogMethodEntry.
 	cogit generateClosedPICPrototype.
 	cogit methodZone manageFrom: cogit methodZoneBase to: cogit methodZone effectiveLimit.
@@ -177,4 +192,33 @@ VMPrimitiveCallAbstractTest >> setUp [
 	cogit 	lastNInstructions: OrderedCollection new.
 	
 	cogit guardPageSize: cogit class guardPageSize.
+
+]
+
+{ #category : #running }
+VMPrimitiveCallAbstractTest >> setUpTrampolines [
+
+	super setUpTrampolines.
+	
+	cogit methodAbortTrampolines at: 0 put: cogit ceMethodAbortTrampoline.
+	cogit methodAbortTrampolines at: 1 put: cogit ceMethodAbortTrampoline.
+	cogit methodAbortTrampolines at: 2 put: cogit ceMethodAbortTrampoline.
+	cogit methodAbortTrampolines at: 3 put: cogit ceMethodAbortTrampoline.
+	
+	cogit picMissTrampolines at: 0 put: cogit ceCPICMissTrampoline.
+	cogit picMissTrampolines at: 1 put: cogit ceCPICMissTrampoline.
+	cogit picMissTrampolines at: 2 put: cogit ceCPICMissTrampoline.
+	cogit picMissTrampolines at: 3 put: cogit ceCPICMissTrampoline.
+
+	cogit picAbortTrampolines at: 0 put: cogit cePICAbortTrampoline.
+	cogit picAbortTrampolines at: 1 put: cogit cePICAbortTrampoline.
+	cogit picAbortTrampolines at: 2 put: cogit cePICAbortTrampoline.
+	cogit picAbortTrampolines at: 3 put: cogit cePICAbortTrampoline.
+	
+	cogit ceStoreCheckTrampoline: (self compileTrampoline: [ cogit RetN: 0 ] named:#ceStoreCheckTrampoline).
+	cogit objectRepresentation setAllStoreTrampolinesWith: (self compileTrampoline: [ cogit RetN: 0 ] named: #ceStoreTrampoline).
+	
+"	1halt.
+	cogit ceStoreCheckTrampoline: 0.
+"	
 ]

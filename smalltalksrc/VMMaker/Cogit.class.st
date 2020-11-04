@@ -4123,6 +4123,14 @@ Cogit >> ceSmallActiveContextInMethodTrampoline: anAddress [
 	objectRepresentation ceSmallActiveContextInMethodTrampoline: anAddress
 ]
 
+{ #category : #accessing }
+Cogit >> ceStoreCheckTrampoline: anAddress [ 
+	
+	self objectRepresentation ceStoreCheckTrampoline: anAddress
+
+
+]
+
 { #category : #debugging }
 Cogit >> checkAssertsEnabledInCogit [
 	<api>

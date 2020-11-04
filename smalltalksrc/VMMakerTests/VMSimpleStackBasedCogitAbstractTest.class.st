@@ -422,6 +422,15 @@ VMSimpleStackBasedCogitAbstractTest >> jitCompilerClass [
 	^ SimpleStackBasedCogit
 ]
 
+{ #category : #running }
+VMSimpleStackBasedCogitAbstractTest >> jitOptions [
+
+	^ Dictionary newFromPairs: { 
+		#ISA. isa.
+		#IMMUTABILITY. false.
+		#ObjectMemory. self memoryClass name }
+]
+
 { #category : #'helpers - frames' }
 VMSimpleStackBasedCogitAbstractTest >> machineCodeFrameBuilder [
 
@@ -467,10 +476,7 @@ VMSimpleStackBasedCogitAbstractTest >> newInterpreter [
 VMSimpleStackBasedCogitAbstractTest >> newJitCompiler [
 
 	| compiler |
-	self jitCompilerClass initializeWithOptions: (Cogit asOptionsDictionary: { 
-		#ISA . isa.
-		#IMMUTABILITY. false.
-		#ObjectMemory. self memoryClass name }).
+	self jitCompilerClass initializeWithOptions: (Cogit asOptionsDictionary: self jitOptions).
 
 	compiler := self jitCompilerClass new 
 		setInterpreter: memory coInterpreter;
@@ -551,7 +557,14 @@ VMSimpleStackBasedCogitAbstractTest >> prepareStackForSendReceiver: aReceiver ar
 	machineSimulator baseRegisterValue: cogit varBaseAddress.
 	self pushAddress: aReceiver.
 	arguments do: [ :anArgument | self pushAddress: anArgument ].
+	
 	self machineSimulator receiverRegisterValue: aReceiver.
+
+	"If the cogit is the StackToRegisterMapping the arguments should go in the registers also"
+	(cogit isKindOf: StackToRegisterMappingCogit) ifTrue: [
+		arguments size >= 1 ifTrue: [ self machineSimulator argument0RegisterValue: (arguments at: 1) ].
+		arguments size > 1 ifTrue: [ self halt ]].
+	
 	self prepareCall
 ]
 
@@ -747,13 +760,26 @@ VMSimpleStackBasedCogitAbstractTest >> setUpCPUSimulator [
 	machineSimulator mapMemory: memory memory memoryObject at: initialAddress.
 ]
 
-{ #category : #'tests - PIC' }
+{ #category : #running }
 VMSimpleStackBasedCogitAbstractTest >> setUpCogMethodEntry [
 	
 	cogit allocateOpcodes: 80 bytecodes: 0 ifFail: [ self error: 'Could not allocate opcodes' ].
 	cogit generateEnilopmarts.
 	cogit maybeGenerateCheckFeatures.
 			
+	self setUpTrampolines.
+	
+	"This is the function a megamorphic PIC will jump when there is a miss"
+	inlineCacheMissTrampoline := cogit simulatedAddressFor: #ceSendFromInLineCacheMiss:.
+	
+	cogit computeEntryOffsets.
+	
+	cogit methodZone manageFrom: cogit methodZoneBase to: cogit methodZoneBase + self initialCodeSize.
+]
+
+{ #category : #running }
+VMSimpleStackBasedCogitAbstractTest >> setUpTrampolines [
+
 	"Create a send trampoline so we can stop..."
 	sendTrampolineAddress := self compileTrampoline: [ cogit RetN: 0 ] named: #send0argsTrampoline.
 	cogit ordinarySendTrampolineAt: 0 "args" put: sendTrampolineAddress.
@@ -764,13 +790,7 @@ VMSimpleStackBasedCogitAbstractTest >> setUpCogMethodEntry [
 	cogit ceCPICMissTrampoline: (self compileTrampoline: [ cogit RetN: 0 ] named:#ceCPICMissTrampoline).
 	cogit cePICAbortTrampoline: (self compileTrampoline: [ cogit RetN: 0 ] named:#cePICAbortTrampoline).
 	cogit ceMethodAbortTrampoline: (self compileTrampoline: [ cogit RetN: 0 ] named:#ceMethodAbortTrampoline).
-	
-	"This is the function a megamorphic PIC will jump when there is a miss"
-	inlineCacheMissTrampoline := cogit simulatedAddressFor: #ceSendFromInLineCacheMiss:.
-	
-	cogit computeEntryOffsets.
-	
-	cogit methodZone manageFrom: cogit methodZoneBase to: cogit methodZoneBase + self initialCodeSize.
+
 ]
 
 { #category : #'helpers - stack' }
