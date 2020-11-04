@@ -241,50 +241,50 @@ check_include_files(uuid.h HAVE_UUID_H)
 check_library_exists(uuid uuidgen "" HAVE_UUIDGEN)
 check_library_exists(uuid uuid_generate "" HAVE_UUID_GENERATE)
 
+
 if(GENERATE_SOURCES)
-#Custom command that downloads a Pharo image and VM in ${VMMAKER_OUTPUT_PATH}
-if(NOT GENERATE_PHARO_VM) 
-add_custom_command(
-  OUTPUT ${VMMAKER_OUTPUT_PATH}/Pharo.image ${VMMAKER_OUTPUT_PATH}/pharo
-  COMMAND wget -O - https://get.pharo.org/64/90 | bash
-  COMMAND wget -O - https://get.pharo.org/64/vm90 | bash
-  WORKING_DIRECTORY ${VMMAKER_OUTPUT_PATH}
-  COMMENT "Downloading Pharo 90")
-else()
-add_custom_command(
-  OUTPUT ${VMMAKER_OUTPUT_PATH}/Pharo.image ${VMMAKER_OUTPUT_PATH}/pharo
-  COMMAND wget -O - https://get.pharo.org/64/90 | bash
-  WORKING_DIRECTORY ${VMMAKER_OUTPUT_PATH}
-  COMMENT "Downloading Pharo 90")
-endif()
+  #Custom command that downloads a Pharo image and VM in ${VMMAKER_OUTPUT_PATH}
+  if(NOT GENERATE_PHARO_VM) 
+    add_custom_command(
+      OUTPUT ${VMMAKER_OUTPUT_PATH}/Pharo.image ${VMMAKER_OUTPUT_PATH}/pharo
+      COMMAND wget -O - https://get.pharo.org/64/90 | bash
+      COMMAND wget -O - https://get.pharo.org/64/vm90 | bash
+      WORKING_DIRECTORY ${VMMAKER_OUTPUT_PATH}
+      COMMENT "Downloading Pharo 90")
+  else()
+    add_custom_command(
+      OUTPUT ${VMMAKER_OUTPUT_PATH}/Pharo.image ${VMMAKER_OUTPUT_PATH}/pharo
+      COMMAND wget -O - https://get.pharo.org/64/90 | bash
+      WORKING_DIRECTORY ${VMMAKER_OUTPUT_PATH}
+      COMMENT "Downloading Pharo 90")
+  endif()
 
 
-add_custom_command(
-  OUTPUT ${VMMAKER_OUTPUT_PATH}/VMMaker.image
-  COMMAND ${VMMAKER_PHARO_VM} Pharo.image --save --quit ${CMAKE_CURRENT_SOURCE_DIR_TO_OUT}/scripts/installVMMaker.st ${CMAKE_CURRENT_SOURCE_DIR_TO_OUT}
-  COMMAND ${VMMAKER_PHARO_VM} Pharo.image save VMMaker
-  DEPENDS ${VMMAKER_OUTPUT_PATH}/Pharo.image
-  WORKING_DIRECTORY ${VMMAKER_OUTPUT_PATH}
-COMMENT "Generating VMMaker image")
+  add_custom_command(
+    OUTPUT ${VMMAKER_OUTPUT_PATH}/VMMaker.image
+    COMMAND ${VMMAKER_PHARO_VM} Pharo.image --save --quit ${CMAKE_CURRENT_SOURCE_DIR_TO_OUT}/scripts/installVMMaker.st ${CMAKE_CURRENT_SOURCE_DIR_TO_OUT}
+    COMMAND ${VMMAKER_PHARO_VM} Pharo.image save VMMaker
+    DEPENDS ${VMMAKER_OUTPUT_PATH}/Pharo.image
+    WORKING_DIRECTORY ${VMMAKER_OUTPUT_PATH}
+  COMMENT "Generating VMMaker image")
 
-#Custom command that generates the vm source code from VMMaker into ${VMMAKER_OUTPUT_PATH} and copies it to ${CMAKE_CURRENT_SOURCE_DIR}
-if (NOT GENERATE_PHARO_VM)
-add_custom_command(
-  OUTPUT ${VMSOURCEFILES} ${PLUGIN_GENERATED_FILES}
-  COMMAND ${VMMAKER_OUTPUT_PATH}/pharo ${VMMAKER_OUTPUT_PATH}/VMMaker.image eval \"PharoVMMaker generate: \#\'${FLAVOUR}\' outputDirectory: \'${CMAKE_CURRENT_BINARY_DIR_TO_OUT}\'\"
-  DEPENDS ${VMMAKER_OUTPUT_PATH}/VMMaker.image
-  COMMENT "Generating VM files for flavour: ${FLAVOUR}")
-else()
-add_custom_command(
-  OUTPUT ${VMSOURCEFILES} ${PLUGIN_GENERATED_FILES}
-  COMMAND ${VMMAKER_PHARO_VM} ${VMMAKER_OUTPUT_PATH}/VMMaker.image eval \"PharoVMMaker generate: \#\'${FLAVOUR}\' outputDirectory: \'${CMAKE_CURRENT_BINARY_DIR_TO_OUT}\'\"
-  DEPENDS ${VMMAKER_OUTPUT_PATH}/VMMaker.image
-  COMMENT "Generating VM files for flavour: ${FLAVOUR}")
-endif()
+  #Custom command that generates the vm source code from VMMaker into ${VMMAKER_OUTPUT_PATH} and copies it to ${CMAKE_CURRENT_SOURCE_DIR}
+  if (NOT GENERATE_PHARO_VM)
+    add_custom_command(
+      OUTPUT ${VMSOURCEFILES} ${PLUGIN_GENERATED_FILES}
+      COMMAND ${VMMAKER_OUTPUT_PATH}/pharo ${VMMAKER_OUTPUT_PATH}/VMMaker.image eval \"PharoVMMaker generate: \#\'${FLAVOUR}\' outputDirectory: \'${CMAKE_CURRENT_BINARY_DIR_TO_OUT}\'\"
+      DEPENDS ${VMMAKER_OUTPUT_PATH}/VMMaker.image
+      COMMENT "Generating VM files for flavour: ${FLAVOUR}")
+  else()
+    add_custom_command(
+      OUTPUT ${VMSOURCEFILES} ${PLUGIN_GENERATED_FILES}
+      COMMAND ${VMMAKER_PHARO_VM} ${VMMAKER_OUTPUT_PATH}/VMMaker.image eval \"PharoVMMaker generate: \#\'${FLAVOUR}\' outputDirectory: \'${CMAKE_CURRENT_BINARY_DIR_TO_OUT}\'\"
+      DEPENDS ${VMMAKER_OUTPUT_PATH}/VMMaker.image
+      COMMENT "Generating VM files for flavour: ${FLAVOUR}")
+  endif()
 
-add_custom_target(vmmaker DEPENDS ${VMMAKER_OUTPUT_PATH}/VMMaker.image)
-add_custom_target(generate-sources DEPENDS ${VMSOURCEFILES} ${PLUGIN_GENERATED_FILES})
-  
+  add_custom_target(vmmaker DEPENDS ${VMMAKER_OUTPUT_PATH}/VMMaker.image)
+  add_custom_target(generate-sources DEPENDS ${VMSOURCEFILES} ${PLUGIN_GENERATED_FILES})
 endif()
 
 #Generating config file
