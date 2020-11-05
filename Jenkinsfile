@@ -94,7 +94,7 @@ def runBuild(platformName, configuration, headless = true){
       runInCygwin "cd ${buildDirectory} && make install"
       runInCygwin "cd ${buildDirectory} && make package"
     }else{
-      cmakeBuild generator: "Unix Makefiles", cmakeArgs: "-DFLAVOUR=${configuration} ${additionalParameters}", sourceDir: "repository", buildDir: "${buildDirectory}", installation: "InSearchPath"
+      cmakeBuild generator: "Unix Makefiles", cmakeArgs: "-DFLAVOUR=${configuration} -DVERBOSE=TRUE ${additionalParameters}", sourceDir: "repository", buildDir: "${buildDirectory}", installation: "InSearchPath"
       dir("${buildDirectory}"){
         shell "make install"
         shell "make package"
