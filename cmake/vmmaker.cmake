@@ -29,15 +29,15 @@ make_directory(${VMMAKER_OUTPUT_PATH})
 #The list of generated files given the flavour
 if(FLAVOUR MATCHES "StackVM")
   set(PHARO_VM_SLANG_VM_SOURCE_FILES
-    ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/src/gcc3x-interp.c)
+    ${GENERATED_SOURCE_DIR}/generated/vm/src/gcc3x-interp.c)
 else()
   set(PHARO_VM_SLANG_VM_SOURCE_FILES
-    ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/src/cogit.c
-    ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/src/gcc3x-cointerp.c)
+    ${GENERATED_SOURCE_DIR}/generated/vm/src/cogit.c
+    ${GENERATED_SOURCE_DIR}/generated/vm/src/gcc3x-cointerp.c)
 endif()
 
 set(PHARO_VM_SLANG_PLUGIN_GENERATED_FILES 
-  	${CMAKE_CURRENT_BINARY_DIR}/generated/plugins/src/FilePlugin/FilePlugin.c)
+  	${GENERATED_SOURCE_DIR}/generated/plugins/src/FilePlugin/FilePlugin.c)
 
 
 #Custom command that downloads a Pharo image and VM in ${VMMAKER_OUTPUT_PATH}

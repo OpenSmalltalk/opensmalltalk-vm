@@ -56,7 +56,9 @@ else()
     )    
 endif()
 
-addLibraryWithRPATH(FilePlugin ${FilePlugin_SOURCES} 	${CMAKE_CURRENT_BINARY_DIR}/generated/plugins/src/FilePlugin/FilePlugin.c)
+addLibraryWithRPATH(FilePlugin
+    ${FilePlugin_SOURCES}
+    ${GENERATED_SOURCE_DIR}/generated/plugins/src/FilePlugin/FilePlugin.c)
 
 if(OSX)
     target_link_libraries(FilePlugin "-framework CoreFoundation")

@@ -1,0 +1,16 @@
+﻿{
+  "configurations": [
+    {
+      "name": "x86-Debug-clang",
+      "generator": "Visual Studio 16 2019",
+      "configurationType": "Debug",
+      "inheritEnvironments": [ "clang_cl_x86" ],
+      "buildRoot": "${projectDir}\\out\\build\\${name}",
+      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "cmakeCommandArgs": "-DGENERATE_SOURCES=FALSE -DWITHOUT_DEPENDENCIES=TRUE",
+      "buildCommandArgs": "",
+      "ctestCommandArgs": "",
+      "variables": []
+    }
+  ]
+}

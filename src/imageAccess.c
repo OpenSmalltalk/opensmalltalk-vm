@@ -3,7 +3,10 @@
 #include <stdio.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+
+#if !defined(_WIN32)
 #include <unistd.h>
+#endif
 
 /*
  * The read and write function uses a 128kb chunk size.
@@ -135,7 +138,8 @@ int basicImageFileExists(const char* aPath){
 }
 
 void basicImageReportProgress(size_t totalSize, size_t currentSize){
-
+	
+	int i;
 	char bar[BARLENGTH + 1];
 	bar[BARLENGTH] = 0;
 
@@ -145,7 +149,7 @@ void basicImageReportProgress(size_t totalSize, size_t currentSize){
 	if(totalSize){
 		int percentage = currentSize * 100 / totalSize;
 
-		for(int i = 0; i < BARLENGTH; i++){
+		for(i = 0; i < BARLENGTH; i++){
 			bar[i] = percentage >= ((i+1) * (100/BARLENGTH)) ? '#' : '-';
 		}
 

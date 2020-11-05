@@ -143,7 +143,7 @@ ioFindExternalFunctionInAccessorDepthInto(char *lookupName, void *moduleHandle,
     return function;
 }
 
-#if defined(WIN64)
+#if defined(_WIN32)
 
 void *
 loadModuleHandle(const char *fileName)

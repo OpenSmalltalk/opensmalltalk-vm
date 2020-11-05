@@ -277,7 +277,17 @@ EXPORT(void) printRegisterState(PCONTEXT regs, FILE* output){
 
 	fprintf(output,"\n\nRegisters:\n");
 
-
+#if _M_IX86
+	fprintf(output,
+		"ContextFlags: 0x%016llx\n"
+		"\teax 0x%016llx ebx 0x%016llx ecx 0x%016llx edx 0x%016llx\n"
+		"\tedi 0x%016llx esi 0x%016llx ebp 0x%016llx esp 0x%016llx\n"
+		"\trip 0x%016llx\n",
+		regs->ContextFlags,
+		regs->Eax, regs->Ebx, regs->Ecx, regs->Edx,
+		regs->Edi, regs->Esi, regs->Ebp, regs->Esp,
+		regs->Eip);
+#elif 
 	fprintf(output,
 			"ContextFlags: 0x%016llx\n"
 			"\trax 0x%016llx rbx 0x%016llx rcx 0x%016llx rdx 0x%016llx\n"
@@ -287,8 +297,9 @@ EXPORT(void) printRegisterState(PCONTEXT regs, FILE* output){
 			"\trip 0x%016llx\n",
 			regs->ContextFlags,
 			regs->Rax, regs->Rbx, regs->Rcx, regs->Rdx,
-			regs->Rdi, regs->Rdi, regs->Rbp, regs->Rsp,
+			regs->Rdi, regs->Rsi, regs->Rbp, regs->Rsp,
 			regs->R8 , regs->R9 , regs->R10, regs->R11,
 			regs->R12, regs->R13, regs->R14, regs->R15,
 			regs->Rip);
+#endif
 }

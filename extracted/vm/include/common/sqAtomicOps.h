@@ -199,8 +199,8 @@ AtomicGet(__int64 *target)
       lock cmpxchg8b [edi]
    }
 }
-#	define get64(variable) AtomicGet(&((__int64)variable))
-#	define set64(variable,value) AtomicSet(&((__int64)variable), (__int64)value)
+#	define get64(variable) AtomicGet(&variable)
+#	define set64(variable,value) AtomicSet(&variable, (__int64)value)
 
 # else /* TARGET_OS_IS_IPHONE elif x86 variants etc */
 
