@@ -90,7 +90,7 @@ def runBuild(platformName, configuration, headless = true){
     if(isWindows()){
       runInCygwin "mkdir ${buildDirectory}"
       recordCygwinVersions(buildDirectory)
-      runInCygwin "cd ${buildDirectory} && cmake -DFLAVOUR=${configuration} ${additionalParameters} ../repository"
+      runInCygwin "cd ${buildDirectory} && cmake -DFLAVOUR=${configuration} -DVERBOSE=TRUE ${additionalParameters} ../repository"
       runInCygwin "cd ${buildDirectory} && make install"
       runInCygwin "cd ${buildDirectory} && make package"
     }else{
