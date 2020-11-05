@@ -1,7 +1,15 @@
-cmake_minimum_required(VERSION 2.8.4)
+#  Pharo Virtual Machine
+#
+#  Available Targets:
+#
+#  vmmaker: generates a Pharo development environment with the virtual machine code, Slang transpiler and machine code simulation
+#  generate-sources: generates the virtual machine source code in C, using the Slang-to-C transpiler
 
+cmake_minimum_required(VERSION 2.8.4)
 # Use new and simpler escape sequences
 cmake_policy(SET CMP0053 NEW)
+
+project(PharoVM)
 
 include(macros.cmake)
 
@@ -11,13 +19,13 @@ set(VERSION_PATCH 1)
 
 set(APPNAME Pharo CACHE STRING "VM Application name")
 
+# Extract VCS information
 get_commit_hash(GIT_COMMIT_HASH)
 get_git_describe(GIT_DESCRIBE)
 get_git_date(GIT_COMMIT_DATE)
+message(STATUS "${GIT_DESCRIBE} - Commit: ${GIT_COMMIT_HASH} - Date: ${GIT_COMMIT_DATE}")
 
-set(BUILT_FROM "${GIT_DESCRIBE} - Commit: ${GIT_COMMIT_HASH} - Date: ${GIT_COMMIT_DATE}")
-message(STATUS ${BUILT_FROM})
-
+#Configure toolchain for CYGWIN
 if ((CMAKE_HOST_UNIX) AND (${CMAKE_HOST_SYSTEM_NAME} MATCHES "CYGWIN*"))
   message(STATUS "Building on CYGWIN CMAKE: Adapting paths")
   set(CYGWIN 1)
@@ -31,8 +39,6 @@ if ((CMAKE_HOST_UNIX) AND (${CMAKE_HOST_SYSTEM_NAME} MATCHES "CYGWIN*"))
   SET(CMAKE_RC_COMPILER ${CMAKE_TOOLCHAIN_PREFIX}-windres)
   SET(CMAKE_SYSTEM_PROCESSOR x86_64)
 endif()
-
-project(PharoVM)
 
 set(FLAVOUR CoInterpreterWithQueueFFI CACHE STRING "The kind of VM to generate. Possible values: StackVM, CogVM, CoInterpreterWithQueueFFI")
 set(GENERATE_SOURCES 1 CACHE BOOL "If it generates the sources")
@@ -50,12 +56,6 @@ set(PLUGIN_GENERATED_FILES
 
 if(FLAVOUR MATCHES "CoInterpreterWithQueueFFI")
   add_definitions(-DASYNC_FFI_QUEUE=1)
-endif()
-
-if (GENERATE_PHARO_VM) 
-	set(VMMAKER_PHARO_VM ${GENERATE_PHARO_VM})
-else()
-	set(VMMAKER_PHARO_VM ./pharo)
 endif()
 
 # Configuration
@@ -202,9 +202,7 @@ else()
 	message(FATAL_ERROR "Failed to find a 64 bits integer type.")
 endif()
 
-#Setting output directories
-set(VMMAKER_OUTPUT_PATH "build/vmmaker")
-make_directory(${VMMAKER_OUTPUT_PATH})
+
 set(EXECUTABLE_OUTPUT_PATH "build/vm")
 
 #If in OSX, configure creation of Bundle
@@ -243,48 +241,8 @@ check_library_exists(uuid uuid_generate "" HAVE_UUID_GENERATE)
 
 
 if(GENERATE_SOURCES)
-  #Custom command that downloads a Pharo image and VM in ${VMMAKER_OUTPUT_PATH}
-  if(NOT GENERATE_PHARO_VM) 
-    add_custom_command(
-      OUTPUT ${VMMAKER_OUTPUT_PATH}/Pharo.image ${VMMAKER_OUTPUT_PATH}/pharo
-      COMMAND wget -O - https://get.pharo.org/64/90 | bash
-      COMMAND wget -O - https://get.pharo.org/64/vm90 | bash
-      WORKING_DIRECTORY ${VMMAKER_OUTPUT_PATH}
-      COMMENT "Downloading Pharo 90")
-  else()
-    add_custom_command(
-      OUTPUT ${VMMAKER_OUTPUT_PATH}/Pharo.image ${VMMAKER_OUTPUT_PATH}/pharo
-      COMMAND wget -O - https://get.pharo.org/64/90 | bash
-      WORKING_DIRECTORY ${VMMAKER_OUTPUT_PATH}
-      COMMENT "Downloading Pharo 90")
-  endif()
-
-
-  add_custom_command(
-    OUTPUT ${VMMAKER_OUTPUT_PATH}/VMMaker.image
-    COMMAND ${VMMAKER_PHARO_VM} Pharo.image --save --quit ${CMAKE_CURRENT_SOURCE_DIR_TO_OUT}/scripts/installVMMaker.st ${CMAKE_CURRENT_SOURCE_DIR_TO_OUT}
-    COMMAND ${VMMAKER_PHARO_VM} Pharo.image save VMMaker
-    DEPENDS ${VMMAKER_OUTPUT_PATH}/Pharo.image
-    WORKING_DIRECTORY ${VMMAKER_OUTPUT_PATH}
-  COMMENT "Generating VMMaker image")
-
-  #Custom command that generates the vm source code from VMMaker into ${VMMAKER_OUTPUT_PATH} and copies it to ${CMAKE_CURRENT_SOURCE_DIR}
-  if (NOT GENERATE_PHARO_VM)
-    add_custom_command(
-      OUTPUT ${VMSOURCEFILES} ${PLUGIN_GENERATED_FILES}
-      COMMAND ${VMMAKER_OUTPUT_PATH}/pharo ${VMMAKER_OUTPUT_PATH}/VMMaker.image eval \"PharoVMMaker generate: \#\'${FLAVOUR}\' outputDirectory: \'${CMAKE_CURRENT_BINARY_DIR_TO_OUT}\'\"
-      DEPENDS ${VMMAKER_OUTPUT_PATH}/VMMaker.image
-      COMMENT "Generating VM files for flavour: ${FLAVOUR}")
-  else()
-    add_custom_command(
-      OUTPUT ${VMSOURCEFILES} ${PLUGIN_GENERATED_FILES}
-      COMMAND ${VMMAKER_PHARO_VM} ${VMMAKER_OUTPUT_PATH}/VMMaker.image eval \"PharoVMMaker generate: \#\'${FLAVOUR}\' outputDirectory: \'${CMAKE_CURRENT_BINARY_DIR_TO_OUT}\'\"
-      DEPENDS ${VMMAKER_OUTPUT_PATH}/VMMaker.image
-      COMMENT "Generating VM files for flavour: ${FLAVOUR}")
-  endif()
-
-  add_custom_target(vmmaker DEPENDS ${VMMAKER_OUTPUT_PATH}/VMMaker.image)
-  add_custom_target(generate-sources DEPENDS ${VMSOURCEFILES} ${PLUGIN_GENERATED_FILES})
+  #Include targets to build the dev environment and the sources
+  include(cmake/vmmaker.cmake)
 endif()
 
 #Generating config file
@@ -459,29 +417,4 @@ install(
 
 # Packaging Setup
 
-make_directory("build/packages")
-
-get_full_platform_name(FULL_PLATFORM_NAME)
-
-set(CPACK_PACKAGE_DESCRIPTION "${APPNAME} Headless VM for ${FULL_PLATFORM_NAME}")
-set(CPACK_PACKAGE_VERSION_MAJOR "${VERSION_MAJOR}")
-set(CPACK_PACKAGE_VERSION_MINOR "${VERSION_MINOR}")
-set(CPACK_PACKAGE_VERSION_PATCH "${VERSION_PATCH}")
-set(CPACK_PACKAGE_VENDOR "${APPNAME}")
-set(CPACK_PACKAGE_HOMEPAGE_URL "https://pharo.org")
-
-if(ALWAYS_INTERACTIVE)
-	set(CPACK_PACKAGE_FILE_NAME "${APPNAME}VM-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}-${GIT_COMMIT_HASH}-StockReplacement-${FULL_PLATFORM_NAME}")
-else()
-	set(CPACK_PACKAGE_FILE_NAME "${APPNAME}VM-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}-${GIT_COMMIT_HASH}-${FULL_PLATFORM_NAME}")
-endif()
-
-set(CPACK_PACKAGE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/build/packages")
-set(CPACK_PACKAGE_CHECKSUM "SHA1")
-set(CPACK_GENERATOR "ZIP")
-set(CPACK_INCLUDE_TOPLEVEL_DIRECTORY FALSE)
-
-#Tell CPACK to archive each sub component separately
-set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
-
-include (CPack)
+include(cmake/packaging.cmake)
