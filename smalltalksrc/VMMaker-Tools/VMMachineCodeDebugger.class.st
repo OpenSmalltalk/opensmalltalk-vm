@@ -19,17 +19,19 @@ Class {
 { #category : #specs }
 VMMachineCodeDebugger class >> defaultSpec [
 
-	^ SpBoxLayout newHorizontal
-		add: #instructions;
-		add: (SpBoxLayout newVertical
-			add: #machineState;
-			add: (SpBoxLayout newHorizontal
-				add: #ipInput;
-				add: #jumpToButton);
-			add: #stepButton;
-			add: #disassembleAtPCButton;
-			yourself);
-		add: #stack;
+	^ SpPanedLayout newHorizontal
+		add: #instructions;		
+		add: (SpPanedLayout newHorizontal
+			add: (SpBoxLayout newVertical
+					add: #machineState;
+					add: (SpBoxLayout newHorizontal
+						add: #ipInput;
+						add: #jumpToButton);
+					add: #stepButton;
+					add: #disassembleAtPCButton;
+					yourself);
+			add: #stack; 
+			yourself)
 		yourself
 ]
 
@@ -60,6 +62,33 @@ VMMachineCodeDebugger >> cogit: anObject [
 ]
 
 { #category : #initialization }
+VMMachineCodeDebugger >> connectMachineStatePresenter [
+
+	| contextMenu |
+	
+	contextMenu := SpMenuPresenter new.
+	contextMenu addItem: [ :item |
+		item 
+			name: 'Inspect Value'; 
+			action: [ machineState selection selectedItem inspectValue ] ].
+
+	contextMenu addItem: [ :item |
+		item 
+			name: 'Copy Value to Clipboard'; 
+			action: [ machineState selection selectedItem copyValueToClipboard ] ].
+
+	contextMenu addItem: [ :item |
+		item 
+			name: 'Print Value'; 
+			action: [ machineState selection selectedItem printValue ] ].
+
+	machineState contextMenu: contextMenu.
+
+	
+
+]
+
+{ #category : #initialization }
 VMMachineCodeDebugger >> connectPresenters [
 
 	| instructionsContextMenu |
@@ -82,6 +111,8 @@ VMMachineCodeDebugger >> connectPresenters [
 			name: 'Inspect'; 
 			action: [ self inspectSelectedInstruction ] ].
 	instructions contextMenu: instructionsContextMenu.
+	
+	self connectMachineStatePresenter.
 	
 	jumpToButton action: [ self jump ].
 ]

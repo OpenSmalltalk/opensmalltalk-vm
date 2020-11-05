@@ -376,6 +376,11 @@ UnicornSimulator >> mapMemory: aMemory at: anAddress [
 ]
 
 { #category : #accessing }
+UnicornSimulator >> memory [
+	^ memory
+]
+
+{ #category : #accessing }
 UnicornSimulator >> memory: aSpur64BitMMLECoSimulator [
 	
 	memory := aSpur64BitMMLECoSimulator 
