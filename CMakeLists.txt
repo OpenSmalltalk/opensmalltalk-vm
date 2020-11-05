@@ -9,8 +9,6 @@ cmake_minimum_required(VERSION 2.8.4)
 # Use new and simpler escape sequences
 cmake_policy(SET CMP0053 NEW)
 
-project(PharoVM)
-
 include(macros.cmake)
 
 set(VERSION_MAJOR 8)
@@ -39,6 +37,10 @@ if ((CMAKE_HOST_UNIX) AND (${CMAKE_HOST_SYSTEM_NAME} MATCHES "CYGWIN*"))
   SET(CMAKE_RC_COMPILER ${CMAKE_TOOLCHAIN_PREFIX}-windres)
   SET(CMAKE_SYSTEM_PROCESSOR x86_64)
 endif()
+
+#Set up the project
+#This needs to be at this point, after setting the toolchain configuration
+project(PharoVM)
 
 set(FLAVOUR CoInterpreterWithQueueFFI CACHE STRING "The kind of VM to generate. Possible values: StackVM, CogVM, CoInterpreterWithQueueFFI")
 set(GENERATE_SOURCES 1 CACHE BOOL "If it generates the sources")
