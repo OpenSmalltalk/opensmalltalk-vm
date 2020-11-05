@@ -502,7 +502,7 @@ VMSimpleStackBasedCogitAbstractTest >> openMachineDebugger [
 { #category : #helpers }
 VMSimpleStackBasedCogitAbstractTest >> openMachineDebuggerAt: anAddress [
 	
-	VMMachineCodeDebugger new
+	^ VMMachineCodeDebugger new
 		cogit: cogit;
 		machineSimulator: machineSimulator;
 		initialInstructionToDisassemble: anAddress;
