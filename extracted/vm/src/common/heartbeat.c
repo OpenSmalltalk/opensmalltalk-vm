@@ -113,10 +113,9 @@ static unsigned long long
 currentUTCMicroseconds()
 {
 	struct timeval utcNow;
-
 	gettimeofday(&utcNow,0);
 	return ((utcNow.tv_sec * MicrosecondsPerSecond) + utcNow.tv_usec)
-			+ MicrosecondsFrom1901To1970;
+		+ MicrosecondsFrom1901To1970;
 }
 
 /*
@@ -316,10 +315,10 @@ heartbeat()
 
 typedef enum { dead, condemned, nascent, quiescent, active } machine_state;
 
+#if !defined(_WIN32)
 #define UNDEFINED 0xBADF00D
 
 static int					stateMachinePolicy = UNDEFINED;
-#if !defined(_WIN32)
 static struct sched_param	stateMachinePriority;
 #endif
 
@@ -331,8 +330,13 @@ static volatile machine_state beatState = nascent;
 static int beatMilliseconds = DEFAULT_BEAT_MS;
 static struct timespec beatperiod = { 0, DEFAULT_BEAT_MS * 1000 * 1000 };
 
+#if defined(_WIN32)
+DWORD WINAPI
+beatStateMachine(LPVOID careLess)
+#else
 static void *
 beatStateMachine(void *careLess)
+#endif
 {
 #if !defined(_WIN32) // Change heartbeat priority
     int er;
@@ -374,11 +378,11 @@ beatStateMachine(void *careLess)
 void
 ioInitHeartbeat()
 {
-	int er;
 	struct timespec halfAMo;
 #if defined(_WIN32)
 	HANDLE careLess;
 #else
+	int er;
 	pthread_t careLess;
 #endif
 

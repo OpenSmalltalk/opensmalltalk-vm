@@ -176,7 +176,7 @@ AtomicGet(uint64_t *target)
 /* see http://web.archive.org/web/20120411073941/http://www.niallryan.com/node/137 */
 
 static __inline void
-AtomicSet(__int64 *target, __int64 new_value)
+AtomicSet(unsigned __int64 *target, unsigned __int64 new_value)
 {
    __asm
    {
@@ -186,8 +186,8 @@ AtomicSet(__int64 *target, __int64 new_value)
    }
 }
 
-static __inline __int64
-AtomicGet(__int64 *target)
+static __inline unsigned __int64
+AtomicGet(unsigned long long *target)
 {
    __asm
    {
@@ -199,8 +199,8 @@ AtomicGet(__int64 *target)
       lock cmpxchg8b [edi]
    }
 }
-#	define get64(variable) AtomicGet(&variable)
-#	define set64(variable,value) AtomicSet(&variable, (__int64)value)
+#	define get64(variable) AtomicGet((unsigned long long*)&variable)
+#	define set64(variable,value) AtomicSet((unsigned __int64*)&variable, (unsigned __int64)value)
 
 # else /* TARGET_OS_IS_IPHONE elif x86 variants etc */
 

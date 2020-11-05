@@ -1,15 +1,51 @@
 ﻿{
   "configurations": [
     {
-      "name": "x86-Debug-clang",
+      "name": "x86-Debug-StackVM-clang",
       "generator": "Visual Studio 16 2019",
       "configurationType": "Debug",
       "inheritEnvironments": [ "clang_cl_x86" ],
       "buildRoot": "${projectDir}\\out\\build\\${name}",
       "installRoot": "${projectDir}\\out\\install\\${name}",
+      "cmakeCommandArgs": "-DGENERATE_SOURCES=FALSE -DWITHOUT_DEPENDENCIES=TRUE -DFlavour=StackVM",
+      "buildCommandArgs": "",
+      "ctestCommandArgs": "",
+      "variables": []
+    },
+    {
+      "name": "x86-Debug-Cog-msvc",
+      "generator": "Visual Studio 16 2019",
+      "configurationType": "Debug",
+      "buildRoot": "${projectDir}\\out\\build\\${name}",
+      "installRoot": "${projectDir}\\out\\install\\${name}",
       "cmakeCommandArgs": "-DGENERATE_SOURCES=FALSE -DWITHOUT_DEPENDENCIES=TRUE",
       "buildCommandArgs": "",
       "ctestCommandArgs": "",
+      "inheritEnvironments": [ "msvc_x86" ],
+      "variables": []
+    },
+    {
+      "name": "x86-Debug-Cog-clang",
+      "generator": "Visual Studio 16 2019",
+      "configurationType": "Debug",
+      "buildRoot": "${projectDir}\\out\\build\\${name}",
+      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "cmakeCommandArgs": "-DGENERATE_SOURCES=FALSE -DWITHOUT_DEPENDENCIES=TRUE",
+      "buildCommandArgs": "",
+      "ctestCommandArgs": "",
+      "inheritEnvironments": [ "clang_cl_x86" ],
+      "variables": []
+    },
+    {
+      "name": "x86-Debug-StackVM-msvc",
+      "generator": "Visual Studio 16 2019",
+      "configurationType": "Debug",
+      "buildRoot": "${projectDir}\\out\\build\\${name}",
+      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "cmakeCommandArgs": "-DGENERATE_SOURCES=FALSE -DWITHOUT_DEPENDENCIES=TRUE -DFlavour=StackVM",
+      "buildCommandArgs": "",
+      "ctestCommandArgs": "",
+      "inheritEnvironments": [ "msvc_x86" ],
       "variables": []
     }
   ]

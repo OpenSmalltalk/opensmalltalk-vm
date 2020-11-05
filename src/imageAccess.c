@@ -41,7 +41,7 @@ size_t basicImageFileRead(void * initialPtr, size_t sz, size_t count, sqImageFil
 	size_t lastReadBytes = 0;
 	size_t chunkToRead = 0;
 	size_t remainingBytes = 0;
-	void* currentPtr = initialPtr;
+	char* currentPtr = initialPtr;
 
 	if(bytesToRead <= CHUNK_SIZE){
 		return fread(initialPtr, sz, count, (FILE*)f);
@@ -98,7 +98,7 @@ size_t basicImageFileWrite(void* initialPtr, size_t sz, size_t count, sqImageFil
 	size_t bytesToWrite = sz * count;
 	size_t lastWriteBytes = 0;
 	size_t chunkToWrite = 0;
-	void* currentPtr = initialPtr;
+	char* currentPtr = initialPtr;
 
 	if(bytesToWrite <= CHUNK_SIZE){
 		return fwrite(initialPtr, sz, count, (FILE*)f);

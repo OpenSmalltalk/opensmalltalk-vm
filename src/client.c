@@ -30,7 +30,9 @@ void mtfsfi(unsigned long long fpscr)
 static int loadPharoImage(const char* fileName);
 static void* runVMThread(void* p);
 static int runOnMainThread(VMParameters *parameters);
+#if PHARO_VM_IN_WORKER_THREAD
 static int runOnWorkerThread(VMParameters *parameters);
+#endif
 
 EXPORT(sqInt) runMainThreadWorker();
 

@@ -53,7 +53,7 @@ void ceCheckForInterrupts(void);
 
 sqInt nilObject(void);
 
-long long getVMGMTOffset();
+EXPORT(long long) getVMGMTOffset();
 
 EXPORT(long) aioPoll(long microSeconds);
 EXPORT(void) aioInit(void);
