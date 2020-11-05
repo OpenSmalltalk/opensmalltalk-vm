@@ -66,6 +66,10 @@ def buildGTKBundle(){
 		}
 	}
 }
+def recordCygwinVersions(){
+    runInCygwin "cd ${buildDirectory} &&  cygcheck -c -d > cygwinVersions.txt"
+	archiveArtifacts artifacts: "${buildDirectory}/cygwinVersions.txt"
+}
 
 def runBuild(platformName, configuration, headless = true){
 	cleanWs()
@@ -85,6 +89,7 @@ def runBuild(platformName, configuration, headless = true){
 	stage("Build-${platform}-${configuration}"){
     if(isWindows()){
       runInCygwin "mkdir ${buildDirectory}"
+      recordCygwinVersions()
       runInCygwin "cd ${buildDirectory} && cmake -DFLAVOUR=${configuration} ${additionalParameters} ../repository"
       runInCygwin "cd ${buildDirectory} && make install"
       runInCygwin "cd ${buildDirectory} && make package"
