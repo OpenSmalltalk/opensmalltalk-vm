@@ -76,7 +76,7 @@ UnicornARMv8Simulator >> createUnicorn [
 { #category : #disassembling }
 UnicornARMv8Simulator >> disassembler [
 	
-	^ LLVMDisassembler aarch64
+	^ LLVMARMDisassembler aarch64
 ]
 
 { #category : #'as yet unclassified' }

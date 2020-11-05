@@ -97,7 +97,7 @@ UnicornARMv5Simulator >> createUnicorn [
 { #category : #disassembling }
 UnicornARMv5Simulator >> disassembler [
 	
-	^ LLVMDisassembler armv7
+	^ LLVMARMDisassembler armv7
 ]
 
 { #category : #executing }
