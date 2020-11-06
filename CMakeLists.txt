@@ -277,14 +277,6 @@ include_directories(
 
 set(VM_FRONTEND_APPLICATION_TYPE)
 include(cmake/${CMAKE_SYSTEM_NAME}.cmake)
-if(WIN)
-    include(win32.cmake)
-elseif(OSX)
-    include(osx.cmake)
-elseif(UNIX)
-    include(unix.cmake)
-endif()
-
 #
 # LibFFI
 #
