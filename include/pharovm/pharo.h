@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include "exportDefinition.h"
+
 #include <stddef.h>
 #include <stdio.h>
 #include <stdio.h>
