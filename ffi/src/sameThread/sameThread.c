@@ -1,7 +1,8 @@
 #include "setjmp.h"
 
-#include "pharovm/pThreadedFFI/pThreadedFFI.h"
+#include "pThreadedFFI.h"
 #include "vmCallback.h"
+#include "pharovm/macros.h"
 
 /*
  * Define sigsetjmp and siglongjmp to be the most minimal setjmp/longjmp available on the platform.

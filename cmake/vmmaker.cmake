@@ -84,14 +84,9 @@ else()
 endif()
 
 #Define generated files as elements in the c-src component for packaging
-install(FILES
-  ${VMSOURCEFILES}
-  DESTINATION pharo-vm/generated/vm
-  COMPONENT c-src)
-  
-install(FILES
-  ${PLUGIN_GENERATED_FILES}
-  DESTINATION pharo-vm/generated/plugins
+install(DIRECTORY
+  ${CMAKE_CURRENT_BINARY_DIR}/generated/
+  DESTINATION pharo-vm/generated/
   COMPONENT c-src)
 
 install(FILES
@@ -103,6 +98,18 @@ install(FILES
   ${PLUGIN_GENERATED_FILES}
   DESTINATION plugins
   COMPONENT generated-src)
+  
+install(
+  DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/generated/vm/include/"
+  DESTINATION vm/include
+  COMPONENT generated-src
+  FILES_MATCHING PATTERN *.h)
+
+install(
+  DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/generated/vm/include/"
+  DESTINATION include/pharovm
+  COMPONENT include
+  FILES_MATCHING PATTERN *.h)
 
 add_custom_target(vmmaker DEPENDS ${VMMAKER_OUTPUT_PATH}/VMMaker.image)
 add_custom_target(generate-sources DEPENDS ${VMSOURCEFILES} ${PLUGIN_GENERATED_FILES})

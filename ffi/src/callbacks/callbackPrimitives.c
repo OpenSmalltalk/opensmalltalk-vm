@@ -1,4 +1,5 @@
-#include "pharovm/pThreadedFFI/callbacks.h"
+#include "callbacks.h"
+#include "pharovm/macros.h"
 
 /* primitiveReadNextWorkerCallback
  *  answers next pending callback

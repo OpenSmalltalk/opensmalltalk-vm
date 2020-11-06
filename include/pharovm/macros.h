@@ -38,8 +38,6 @@
  *
  */
 
-void primitiveEnd();
-
 #define PrimitiveWithDepth(functionName, N) signed char functionName ##AccessorDepth = N; \
 	void functionName (void)
 

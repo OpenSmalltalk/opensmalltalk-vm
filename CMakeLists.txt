@@ -283,16 +283,11 @@ include_directories(
 
 if (${FEATURE_FFI})
     include_directories(${CMAKE_CURRENT_SOURCE_DIR}/ffi/include)
+    add_compile_definitions(FEATURE_FFI=1)
 endif()
 
 set(VM_FRONTEND_APPLICATION_TYPE)
 include(cmake/${CMAKE_SYSTEM_NAME}.cmake)
-if(OSX)
-    include(osx.cmake)
-elseif(UNIX)
-    include(unix.cmake)
-endif()
-
 #
 # LibFFI
 #
@@ -360,21 +355,21 @@ set(SUPPORT_SOURCES
 
 if(${FEATURE_FFI})
     list (APPEND SUPPORT_SOURCES
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/functionDefinitionPrimitives.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/primitiveCalls.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/primitiveUtils.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/pThreadedFFI.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/types.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/typesPrimitives.c
-	    ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/utils.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/functionDefinitionPrimitives.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/primitiveCalls.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/primitiveUtils.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/pThreadedFFI.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/types.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/typesPrimitives.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/utils.c
     
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/callbacks/callbackPrimitives.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/callbacks/callbacks.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/callbacks/callbackPrimitives.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/callbacks/callbacks.c
    
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/sameThread/sameThread.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/worker/worker.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/worker/workerPrimitives.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/worker/workerTask.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/sameThread/sameThread.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/worker/worker.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/worker/workerPrimitives.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/worker/workerTask.c
 
         ${CMAKE_CURRENT_SOURCE_DIR}/src/threadSafeQueue/threadSafeQueue.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/semaphores/pharoSemaphore.c
@@ -420,33 +415,6 @@ include(plugins.cmake)
 if (NOT WITHOUT_DEPENDENCIES)
 	add_third_party_dependencies_per_platform()
 endif()
-
-# Selecting files to include in the package
-
-configure_installables(bin)
-
-install(FILES
-  ${CMAKE_CURRENT_BINARY_DIR}/build/include/pharovm/config.h
-  DESTINATION include/pharovm
-  COMPONENT include)
-
-install(
-    DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/pharovm"
-    DESTINATION include
-    COMPONENT include
-    FILES_MATCHING PATTERN *.h)
-
-install(
-    DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/common/"
-    DESTINATION include/pharovm
-    COMPONENT include
-    FILES_MATCHING PATTERN *.h)
-
-install(
-    DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/generated/vm/include/"
-    DESTINATION include/pharovm
-    COMPONENT include
-    FILES_MATCHING PATTERN *.h)
 
 # Packaging Setup
 

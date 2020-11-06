@@ -1,5 +1,5 @@
-#include "pharovm/pThreadedFFI/pThreadedFFI.h"
-#include "pharovm/pThreadedFFI/worker.h"
+#include "pThreadedFFI.h"
+#include "worker.h"
 
 Worker *mainThreadWorker = NULL;
 

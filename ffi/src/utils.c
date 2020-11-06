@@ -1,4 +1,4 @@
-#include "pharovm/pThreadedFFI/pThreadedFFI.h"
+#include "pThreadedFFI.h"
 
 
 void writeAddress(sqInt anExternalAddress, void* value){

@@ -1,4 +1,5 @@
-#include "pharovm/pThreadedFFI/worker.h"
+#include "worker.h"
+#include "pharovm/macros.h"
 
 /* primitiveCreateWorker
  *   creates a new worker and set the address in the external address that exists in the worker instance.

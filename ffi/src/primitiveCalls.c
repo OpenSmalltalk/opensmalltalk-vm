@@ -1,4 +1,5 @@
-#include "pharovm/pThreadedFFI/pThreadedFFI.h"
+#include "pThreadedFFI.h"
+#include "pharovm/macros.h"
 
 /**
  * primitivePrepareParameters: aParameterArray into: aParameterAddress prepareReturn: aReturnHodler into: aReturnAddress

@@ -1,4 +1,4 @@
-#include "pharovm/pThreadedFFI/pThreadedFFI.h"
+#include "pThreadedFFI.h"
 
 void fillBasicType(sqInt aOop){
 	void* address;

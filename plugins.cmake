@@ -133,7 +133,7 @@ addLibraryWithRPATH(SqueakFFIPrims ${SqueakFFIPrims_SOURCES})
 #
 # IA32ABI Plugin
 #
-
+if(${FEATURE_FFI})
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/IA32ABI/include/common
 )
@@ -152,6 +152,7 @@ if(WIN)
 endif()
 
 addLibraryWithRPATH(IA32ABI ${IA32ABI_SOURCES})
+endif()
 
 #
 # LargeIntegers Plugin
