@@ -6,7 +6,7 @@ void unimplementedPrimitive(const char* name){
 	logWarn("Unimplemented primitive: %s\n", name);
 }
 
-#ifdef WIN64
+#ifdef _WIN32
 int ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt extentY, sqInt offsetX, sqInt offsetY)
 #else
 sqInt ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt extentY, sqInt offsetX, sqInt offsetY)
@@ -296,7 +296,7 @@ void ioSignalInputEvent(void){
 }
 
 char* ioGetLogDirectory(void){
-    return "";
+    return (char*)"";
 }
 
 sqInt ioSetLogDirectoryOfSize(void* lblIndex, sqInt sz){

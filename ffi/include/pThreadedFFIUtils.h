@@ -17,7 +17,6 @@ sqInt arrayObjectAt(sqInt array, sqInt index);
 sqInt arrayObjectAtPut(sqInt array, sqInt index, sqInt object);
 sqInt arrayObjectSize(sqInt array);
 // clean ending for a primitive
-void primitiveEnd();
 void primitiveEndReturn(sqInt ret);
 void primitiveEndReturnInteger(sqInt ret);
 // others

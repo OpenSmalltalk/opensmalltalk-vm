@@ -55,7 +55,9 @@ EXPORT(int) vm_init(VMParameters* parameters)
 
     ioInitTime();
 
+#if PHARO_VM_IN_WORKER_THREAD
     ioVMThread = ioCurrentOSThread();
+#endif
 	ioInitExternalSemaphores();
 	setMaxStacksToPrint(parameters->maxStackFramesToPrint);
 
@@ -126,11 +128,15 @@ vm_main_with_parameters(VMParameters *parameters)
 	LOG_SIZEOF(float);
 	LOG_SIZEOF(double);
 
+#if PHARO_VM_IN_WORKER_THREAD
     vmRunOnWorkerThread = vm_parameter_vector_has_element(&parameters->vmParameters, "--worker");
 
     return vmRunOnWorkerThread
         ? runOnWorkerThread(parameters)
         : runOnMainThread(parameters);
+#else
+	return runOnMainThread(parameters);
+#endif
 }
 
 EXPORT(int)

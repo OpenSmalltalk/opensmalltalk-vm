@@ -2,6 +2,7 @@
 #define __SQ_WIN32_ALLOC_H
 
 #ifndef NO_VIRTUAL_MEMORY
+#include "sqMemoryAccess.h"
 
 /*
    Limit the default size for virtual memory to 512MB to avoid nasty
