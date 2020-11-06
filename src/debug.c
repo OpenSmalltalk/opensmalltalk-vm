@@ -81,7 +81,7 @@ EXPORT(void) logMessage(int level, const char* fileName, const char* functionNam
 	localtime_s(&ltime_struct, &now);
 	struct tm* ltime = &ltime_struct;
 #else
-	struct tm* ltime = localtime_s(&now);
+	struct tm* ltime = localtime(&now);
 #endif
 
 	strftime(timestamp, 20, "%Y-%m-%d %H:%M:%S", ltime);
