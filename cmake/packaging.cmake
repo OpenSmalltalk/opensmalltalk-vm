@@ -1,8 +1,32 @@
 # Packaging support file
 #
 # Manage the packaging of the VM executable, sources and headers
+# This support file defines
+#   - Several components to package
+#   - Their packaging with CPack
 
 make_directory("build/packages")
+
+# Selecting files to include in the packages
+
+configure_installables(bin)
+
+install(FILES
+  ${CMAKE_CURRENT_BINARY_DIR}/build/include/pharovm/config.h
+  DESTINATION include/pharovm
+  COMPONENT include)
+
+install(
+    DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/pharovm"
+    DESTINATION include
+    COMPONENT include
+    FILES_MATCHING PATTERN *.h)
+
+install(
+    DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/common/"
+    DESTINATION include/pharovm
+    COMPONENT include
+    FILES_MATCHING PATTERN *.h)
 
 install(DIRECTORY
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake"

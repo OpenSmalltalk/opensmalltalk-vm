@@ -390,33 +390,6 @@ if (NOT WITHOUT_DEPENDENCIES)
 	add_third_party_dependencies_per_platform()
 endif()
 
-# Selecting files to include in the package
-
-configure_installables(bin)
-
-install(FILES
-  ${CMAKE_CURRENT_BINARY_DIR}/build/include/pharovm/config.h
-  DESTINATION include/pharovm
-  COMPONENT include)
-
-install(
-    DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/pharovm"
-    DESTINATION include
-    COMPONENT include
-    FILES_MATCHING PATTERN *.h)
-
-install(
-    DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/common/"
-    DESTINATION include/pharovm
-    COMPONENT include
-    FILES_MATCHING PATTERN *.h)
-
-install(
-    DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/generated/vm/include/"
-    DESTINATION include/pharovm
-    COMPONENT include
-    FILES_MATCHING PATTERN *.h)
-
 # Packaging Setup
 
 include(cmake/packaging.cmake)
