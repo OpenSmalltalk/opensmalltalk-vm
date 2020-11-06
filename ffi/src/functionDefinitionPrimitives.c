@@ -2,7 +2,7 @@
 #include "pharovm/macros.h"
 
 #ifdef FEATURE_FFI
-#include "pharovm/pThreadedFFI/pThreadedFFI.h"
+#include "pThreadedFFI.h"
 
 void* defineFunctionWithAnd(ffi_type* parameters[], sqInt count, void* returnType){
 	ffi_cif* cif;

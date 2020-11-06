@@ -278,6 +278,7 @@ include_directories(
 
 if (${FEATURE_FFI})
     include_directories(${CMAKE_CURRENT_SOURCE_DIR}/ffi/include)
+    add_compile_definitions(FEATURE_FFI=1)
 endif()
 
 set(VM_FRONTEND_APPLICATION_TYPE)
