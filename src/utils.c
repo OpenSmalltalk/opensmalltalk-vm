@@ -20,7 +20,7 @@ char vmPath[FILENAME_MAX];
 	void fillApplicationDirectory(char* vmPath);
 #endif
 
-#ifdef WIN64
+#ifdef _WIN32
 BOOL fIsConsole = 1;
 #endif
 
@@ -32,7 +32,7 @@ void *os_exports[][3]=
 };
 
 static const char* systemSearchPaths[] = {
-#ifdef WIN64
+#ifdef _WIN32
 #endif
 #if defined(__linux__) || defined(unix) || defined(__APPLE__)
 	"./",
@@ -57,16 +57,15 @@ static const char* systemSearchPaths[] = {
 char** pluginPaths = NULL;
 char* emptyPaths[] = {NULL};
 
-
-EXPORT(char*) getSourceVersion(){
+EXPORT(const char*) getSourceVersion(){
 	return VM_BUILD_SOURCE_STRING;
 }
 
-EXPORT(char*) getVMVersion(){
+EXPORT(const char*) getVMVersion(){
 	return VM_BUILD_STRING;
 }
 
-char * GetAttributeString(sqInt id)
+const char * GetAttributeString(sqInt id)
 {
     if (id < 0)	/* VM argument */
     {
@@ -94,7 +93,7 @@ char * GetAttributeString(sqInt id)
         return VM_TARGET_CPU;
     case 1004:
         /* Interpreter version string */
-        return  (char *)interpreterVersion;
+        return  interpreterVersion;
     case 1006:
         /* vm build string */
         return getVMVersion();
@@ -135,8 +134,18 @@ sqInt attributeSize(sqInt id)
 
 sqInt getAttributeIntoLength(sqInt id, sqInt byteArrayIndex, sqInt length)
 {
-    if (length > 0)
-        strncpy(pointerForOop(byteArrayIndex), GetAttributeString(id), length);
+	if (length > 0) {
+#ifdef _WIN32
+		/*
+		* Unsafe version of deprecated strncpy for compatibility
+		* - does not check error code
+		* - does use count as the size of the destination buffer
+		*/
+		strncpy_s(pointerForOop(byteArrayIndex), length, GetAttributeString(id), length);
+#else
+		strncpy(pointerForOop(byteArrayIndex), GetAttributeString(id), length);
+#endif
+	}
     return 0;
 }
 
@@ -152,7 +161,16 @@ EXPORT(char*) getVMName(){
  * It copies the parameter to internal storage.
  */
 void setVMName(const char* name){
+#ifdef _WIN32
+	/*
+	* Unsafe version of deprecated strcpy for compatibility
+	* - does not check error code
+	* - does use count as the size of the destination buffer
+	*/
+	strcpy_s(vmName, strlen(name), name);
+#else
 	strcpy(vmName, name);
+#endif
 }
 
 char* getImageName(){
@@ -164,7 +182,16 @@ char* getImageName(){
  * It copies the parameter to internal storage.
  */
 void setImageName(const char* name){
+#ifdef _WIN32
+	/*
+	* Unsafe version of deprecated strcpy for compatibility
+	* - does not check error code
+	* - does use count as the size of the destination buffer
+	*/
+	strcpy_s(imageName, strlen(name), name);
+#else
 	strcpy(imageName, name);
+#endif
 }
 
 /**
@@ -172,10 +199,19 @@ void setImageName(const char* name){
  * It copies the parameter to internal storage.
  */
 EXPORT(void) setVMPath(const char* name){
+#ifdef _WIN32
+	/*
+	* Unsafe version of deprecated strcpy for compatibility
+	* - does not check error code
+	* - does use count as the size of the destination buffer
+	*/
+	strcpy_s(vmFullPath, strlen(name), name);
+#else
 	strcpy(vmFullPath, name);
+#endif
 
 	int bufferSize = strlen(name) + 1;
-	char* tmpBasedir = alloca(bufferSize);
+	char* tmpBasedir = (char*)alloca(bufferSize);
 
 #if __APPLE__
 	fillApplicationDirectory(vmPath);
@@ -183,7 +219,16 @@ EXPORT(void) setVMPath(const char* name){
 #else
 	getBasePath(name, tmpBasedir, bufferSize);
 
+#ifdef _WIN32
+	/*
+	* Unsafe version of deprecated strcpy for compatibility
+	* - does not check error code
+	* - does use count as the size of the destination buffer
+	*/
+	strcpy_s(vmPath, bufferSize, tmpBasedir);
+#else
 	strcpy(vmPath, tmpBasedir);
+#endif
 #endif
 }
 
@@ -265,7 +310,7 @@ char* getImageArgument(int index){
 }
 
 static void
-copyParams(int newCount, const char** new, int* oldCount, char*** old){
+copyParams(int newCount, const char** newParams, int* oldCount, char*** old){
 	int i;
 	//Releasing the old params
 	if(*oldCount > 0){
@@ -282,8 +327,17 @@ copyParams(int newCount, const char** new, int* oldCount, char*** old){
 	*old = (char**)malloc(sizeof(char*) * newCount);
 
 	for(i=0; i < newCount; i++){
-		(*old)[i] = malloc(strlen(new[i])+1);
-		strcpy((*old)[i], new[i]);
+		int oldSize = strlen(newParams[i]) + 1;
+		(*old)[i] = (char*)malloc(oldSize);
+#ifdef _WIN32
+		/*
+		* Unsafe version of deprecated strcpy for compatibility
+		* - does not check error code
+		*/
+		strcpy_s((*old)[i], oldSize, newParams[i]);
+#else
+		strcpy((*old)[i], newParams[i]);
+#endif
 	}
 }
 
@@ -320,13 +374,13 @@ ioExitWithErrorCode(int errorCode)
 sqInt
 sqGetFilenameFromString(char * aCharBuffer, char * aFilenameString, sqInt filenameLength, sqInt resolveAlias)
 {
-    int numLinks= 0;
-    struct stat st;
-
     memcpy(aCharBuffer, aFilenameString, filenameLength);
     aCharBuffer[filenameLength]= 0;
 
 #ifndef _WIN32
+	struct stat st;
+	int numLinks = 0;
+
     if (resolveAlias)
     {
         for (;;)	/* aCharBuffer might refer to link or alias */
@@ -525,7 +579,7 @@ EXPORT(int) __cdecl abortMessage(TCHAR *fmt, ...)
 #endif
 
 EXPORT(char*) getFullPath(char const *relativePath, char* fullPath, int fullPathSize){
-#ifdef WIN64
+#ifdef _WIN32
 
 	int requiredSize = MultiByteToWideChar(CP_UTF8, 0, relativePath, -1, NULL, 0);
 	LPWSTR relativePathWide = (LPWSTR)alloca(sizeof(WCHAR) * (requiredSize + 1));
@@ -558,7 +612,7 @@ EXPORT(char*) getFullPath(char const *relativePath, char* fullPath, int fullPath
 }
 
 EXPORT(void) getBasePath(char const *path, char* basePath, int basePathSize){
-#ifdef WIN64
+#ifdef _WIN32
 
 	int requiredSize = MultiByteToWideChar(CP_UTF8, 0, path, -1, NULL, 0);
 
@@ -573,12 +627,12 @@ EXPORT(void) getBasePath(char const *path, char* basePath, int basePathSize){
 
 	if(error != 0){
 		logError("Could not extract basepath: %s", path);
-		strcpy(basePath, "");
+		strcpy_s(basePath, basePathSize, "");
 		return;
 	}
 
-	wcscpy(finalBasePathWide, driveWide);
-	wcscat(finalBasePathWide, basePathWide);
+	wcscpy_s(finalBasePathWide, sizeof(WCHAR) * basePathSize, driveWide);
+	wcscat_s(finalBasePathWide, sizeof(WCHAR) * basePathSize, basePathWide);
 
 	WideCharToMultiByte(CP_UTF8, 0, finalBasePathWide, -1, basePath, basePathSize, NULL, 0);
 

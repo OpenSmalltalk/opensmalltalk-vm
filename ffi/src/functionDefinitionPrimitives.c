@@ -1,3 +1,7 @@
+#include "sq.h"
+#include "pharovm/macros.h"
+
+#ifdef FEATURE_FFI
 #include "pharovm/pThreadedFFI/pThreadedFFI.h"
 
 void* defineFunctionWithAnd(ffi_type* parameters[], sqInt count, void* returnType){
@@ -17,8 +21,14 @@ void* defineFunctionWithAnd(ffi_type* parameters[], sqInt count, void* returnTyp
 		
 	return cif;
 }
+#endif
 
 PrimitiveWithDepth(primitiveDefineFunction, 2){
+
+#ifndef FEATURE_FFI
+	primitiveFail();
+#else
+
     sqInt count;
     void*handler;
     sqInt idx;
@@ -51,12 +61,17 @@ PrimitiveWithDepth(primitiveDefineFunction, 2){
 
 	setHandler(receiver, handler);
 	checkFailed();
-
+#endif
 	primitiveEnd();
 }
 
 PrimitiveWithDepth(primitiveFreeDefinition, 1){
-    void*handler;
+
+#ifndef FEATURE_FFI
+	primitiveFail();
+#else
+
+	void*handler;
     sqInt receiver;
 
 	receiver = stackValue(0);
@@ -74,4 +89,6 @@ PrimitiveWithDepth(primitiveFreeDefinition, 1){
 	free(handler);
 
 	setHandler(receiver, 0);
+
+#endif
 }

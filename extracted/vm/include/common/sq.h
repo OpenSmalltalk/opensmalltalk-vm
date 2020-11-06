@@ -64,7 +64,9 @@
    If the platform requires special declaration modifiers, the EXPORT and
    VM_EXPORT macros can be redefined.
 */
+#ifndef VM_EXPORT
 #define VM_EXPORT
+#endif
 #define VM_FUNCTION_EXPORT(returnType) returnType
 
 /* Platform-dependent macros for handling object memory. */

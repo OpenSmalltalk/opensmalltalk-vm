@@ -8,12 +8,11 @@
 
 */
 
-
-
 #if _WIN32 || _WIN64
 /* Override necessary definitions */
 #undef putchar
 #include "sqWin32Alloc.h"
+#include "sqMemoryAccess.h"
 
 
 #include <windows.h>
@@ -65,7 +64,7 @@
 error "Not Win32 or Win64!"
 #endif /* _WIN32 || _WIN64 */
 
-#ifdef WIN64
+#ifdef _WIN32
 int ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt extentY, sqInt offsetX, sqInt offsetY);
 #else
 sqInt ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt extentY, sqInt offsetX, sqInt offsetY);

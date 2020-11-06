@@ -45,6 +45,7 @@ project(PharoVM)
 set(FLAVOUR CoInterpreterWithQueueFFI CACHE STRING "The kind of VM to generate. Possible values: StackVM, CogVM, CoInterpreterWithQueueFFI")
 set(GENERATE_SOURCES TRUE CACHE BOOL "If it generates the sources")
 set(ALWAYS_INTERACTIVE FALSE CACHE BOOL "If this VM will always add interactive or not. If it is set, the headless parameter is not by default true")
+set(FEATURE_FFI TRUE CACHE BOOL "Configure and compile support for FFI in the VM")
 
 # If we are generating sources, set the source dir as the generation source dir.
 # Otherwise set it to by default to the current source dir, parametrizable
@@ -275,6 +276,10 @@ include_directories(
 	${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/include
 )
 
+if (${FEATURE_FFI})
+    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/ffi/include)
+endif()
+
 set(VM_FRONTEND_APPLICATION_TYPE)
 include(cmake/${CMAKE_SYSTEM_NAME}.cmake)
 if(WIN)
@@ -348,28 +353,29 @@ set(SUPPORT_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/common/heartbeat.c
 )
 
-### FFI support
-#    ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/functionDefinitionPrimitives.c
-#    ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/primitiveCalls.c
-#    ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/primitiveUtils.c
-#    ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/pThreadedFFI.c
-#    ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/types.c
-#	${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/typesPrimitives.c
-#	${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/utils.c
+if(${FEATURE_FFI})
+    list (APPEND SUPPORT_SOURCES
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/functionDefinitionPrimitives.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/primitiveCalls.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/primitiveUtils.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/pThreadedFFI.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/types.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/typesPrimitives.c
+	    ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/utils.c
     
-#    ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/callbacks/callbackPrimitives.c
-#    ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/callbacks/callbacks.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/callbacks/callbackPrimitives.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/callbacks/callbacks.c
    
-#    ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/sameThread/sameThread.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/sameThread/sameThread.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/worker/worker.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/worker/workerPrimitives.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/worker/workerTask.c
 
-#    ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/worker/worker.c
-#    ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/worker/workerPrimitives.c
-#    ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/worker/workerTask.c
-
-#    ${CMAKE_CURRENT_SOURCE_DIR}/src/threadSafeQueue/threadSafeQueue.c
-#    ${CMAKE_CURRENT_SOURCE_DIR}/src/semaphores/platformSemaphore.c
-#    ${CMAKE_CURRENT_SOURCE_DIR}/src/semaphores/pharoSemaphore.c
-
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/threadSafeQueue/threadSafeQueue.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/semaphores/platformSemaphore.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/semaphores/pharoSemaphore.c
+    )
+endif()
 
 
 set(VM_SOURCES
@@ -380,7 +386,10 @@ set(VM_SOURCES
 
 add_executable(${VM_EXECUTABLE_NAME} ${VM_FRONTEND_APPLICATION_TYPE} ${VM_FRONTEND_SOURCES})
 addLibraryWithRPATH(${VM_LIBRARY_NAME} ${VM_SOURCES})
-add_dependencies(${VM_LIBRARY_NAME} libFFI)
+
+if (${FEATURE_FFI})
+    add_dependencies(${VM_LIBRARY_NAME} libFFI)
+endif()
 
 #If in OSX, configure creation of Bundle
 if(OSX)
@@ -393,7 +402,10 @@ if(OSX)
 endif()
 
 target_link_libraries(${VM_EXECUTABLE_NAME} ${VM_LIBRARY_NAME})
+
+if(${FEATURE_FFI})
 target_link_libraries(${VM_LIBRARY_NAME} "ffi")
+endif()
 
 add_required_libs_per_platform()
 

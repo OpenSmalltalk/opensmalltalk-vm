@@ -34,7 +34,7 @@ void error(char *errorMessage){
     abort();
 }
 
-static char* severityName[5] = {"ERROR", "WARN", "INFO", "DEBUG", "TRACE"};
+static const char* severityName[5] = {"ERROR", "WARN", "INFO", "DEBUG", "TRACE"};
 
 EXPORT(void) logAssert(const char* fileName, const char* functionName, int line, char* msg){
 	logMessage(LOG_WARN, fileName, functionName, line, msg);
@@ -42,7 +42,6 @@ EXPORT(void) logAssert(const char* fileName, const char* functionName, int line,
 
 void logMessageFromErrno(int level, const char* msg, const char* fileName, const char* functionName, int line){
 	char buffer[1024+1];
-	int msgLength;
 
 #ifdef WIN32
 	strerror_s(buffer, 1024, errno);
@@ -76,7 +75,14 @@ EXPORT(void) logMessage(int level, const char* fileName, const char* functionNam
 	}
 
 	time_t now = time(NULL);
-	struct tm* ltime = localtime(&now);
+
+#if defined(_WIN32)
+	struct tm ltime_struct;
+	localtime_s(&ltime_struct, &now);
+	struct tm* ltime = &ltime_struct;
+#else
+	struct tm* ltime = localtime_s(&now);
+#endif
 
 	strftime(timestamp, 20, "%Y-%m-%d %H:%M:%S", ltime);
 
@@ -108,7 +114,16 @@ EXPORT(void) logMessage(int level, const char* fileName, const char* functionNam
 
 void getCrashDumpFilenameInto(char *buf)
 {
+#ifdef _WIN32
+	/*
+	* Unsafe version of deprecated strcpy for compatibility
+	* - does not check error code
+	* - does use count as the size of the destination buffer
+	*/
+	strcat_s(buf, 9, "crash.dmp");
+#else
 	strcat(buf, "crash.dmp");
+#endif
 }
 
 char *getVersionInfo(int verbose)
@@ -159,9 +174,9 @@ char *getVersionInfo(int verbose)
 #endif
 
   if(verbose){
-	  snprintf(info, BUFFER_SIZE, IMAGE_DIALECT_NAME" VM version: "VM_VERSION"-"VM_BUILD_STRING USE_XSHM_STRING" "COMPILER_VERSION" [" BuildVariant HBID " VM]\nBuilt from: %s\n With:%s\n Revision: "VM_BUILD_SOURCE_STRING, INTERP_BUILD, GetAttributeString(1008));
+	  snprintf(info, BUFFER_SIZE, IMAGE_DIALECT_NAME "VM version:" VM_VERSION "-" VM_BUILD_STRING USE_XSHM_STRING " " COMPILER_VERSION " [" BuildVariant HBID " VM]\nBuilt from: %s\n With:%s\n Revision: " VM_BUILD_SOURCE_STRING, INTERP_BUILD, GetAttributeString(1008));
   }else{
-	  snprintf(info, BUFFER_SIZE, VM_VERSION"-"VM_BUILD_STRING USE_XSHM_STRING" "COMPILER_VERSION" [" BuildVariant HBID " VM]\n%s\n%s\n"VM_BUILD_SOURCE_STRING, INTERP_BUILD, GetAttributeString(1008));
+	  snprintf(info, BUFFER_SIZE, VM_VERSION "-" VM_BUILD_STRING USE_XSHM_STRING " " COMPILER_VERSION " [" BuildVariant HBID " VM]\n%s\n%s\n" VM_BUILD_SOURCE_STRING, INTERP_BUILD, GetAttributeString(1008));
   }
 
   return info;

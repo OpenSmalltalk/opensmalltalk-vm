@@ -24,8 +24,8 @@
 
 #endif
 
-EXPORT(char*) getSourceVersion();
-EXPORT(char*) getVMVersion();
+EXPORT(const char*) getSourceVersion();
+EXPORT(const char*) getVMVersion();
 EXPORT(char*) getVMName();
 
 EXPORT(void) setVMName(const char* name);

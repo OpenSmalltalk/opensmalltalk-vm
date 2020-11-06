@@ -22,7 +22,13 @@
       "buildCommandArgs": "",
       "ctestCommandArgs": "",
       "inheritEnvironments": [ "msvc_x86" ],
-      "variables": []
+      "variables": [
+        {
+          "name": "FEATURE_FFI",
+          "value": "False",
+          "type": "BOOL"
+        }
+      ]
     },
     {
       "name": "x86-Debug-Cog-clang",
@@ -34,7 +40,13 @@
       "buildCommandArgs": "",
       "ctestCommandArgs": "",
       "inheritEnvironments": [ "clang_cl_x86" ],
-      "variables": []
+      "variables": [
+        {
+          "name": "FEATURE_FFI",
+          "value": "False",
+          "type": "BOOL"
+        }
+      ]
     },
     {
       "name": "x86-Debug-StackVM-msvc",
