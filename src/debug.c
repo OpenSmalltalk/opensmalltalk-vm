@@ -1,6 +1,11 @@
 #include "pharovm/pharo.h"
 #include <stdarg.h>
+
+#ifdef _WIN32
+
+#else
 #include <sys/time.h>
+#endif
 
 char * GetAttributeString(sqInt id);
 

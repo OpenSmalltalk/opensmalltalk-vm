@@ -2,10 +2,9 @@
 #include <sys/stat.h>
 #include "pharovm/pathUtilities.h"
 
-#ifndef WIN64
+#ifndef _WIN32
 #include <libgen.h>
 #include <sys/param.h>
-
 #else
 #include <Windows.h>
 #endif
@@ -267,10 +266,10 @@ char* getImageArgument(int index){
 
 static void
 copyParams(int newCount, const char** new, int* oldCount, char*** old){
-
+	int i;
 	//Releasing the old params
 	if(*oldCount > 0){
-		for(int i=0; i < *oldCount; i++){
+		for(i=0; i < *oldCount; i++){
 			free((*old)[i]);
 		}
 		free(*old);
@@ -282,7 +281,7 @@ copyParams(int newCount, const char** new, int* oldCount, char*** old){
 	*oldCount = newCount;
 	*old = (char**)malloc(sizeof(char*) * newCount);
 
-	for(int i=0; i < newCount; i++){
+	for(i=0; i < newCount; i++){
 		(*old)[i] = malloc(strlen(new[i])+1);
 		strcpy((*old)[i], new[i]);
 	}
@@ -327,7 +326,7 @@ sqGetFilenameFromString(char * aCharBuffer, char * aFilenameString, sqInt filena
     memcpy(aCharBuffer, aFilenameString, filenameLength);
     aCharBuffer[filenameLength]= 0;
 
-#ifndef WIN64
+#ifndef _WIN32
     if (resolveAlias)
     {
         for (;;)	/* aCharBuffer might refer to link or alias */
@@ -428,7 +427,7 @@ static void redZoneTestSigHandler(int sig)
 }
 #endif
 
-#ifndef WIN64
+#ifndef _WIN32
 static long int min(long int x, long int y) { return (x < y) ? x : y; }
 static long int max(long int x, long int y) { return (x > y) ? x : y; }
 #endif

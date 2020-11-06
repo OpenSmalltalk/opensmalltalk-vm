@@ -9,8 +9,48 @@ int semaphore_wait(PlatformSemaphore sem);
 int semaphore_signal(PlatformSemaphore sem);
 int semaphore_release(PlatformSemaphore sem);
 
+#if defined(_WIN32)
 
-#ifndef __APPLE__
+/*
+* Win32 semaphore implementation
+* Based on the documentation in 
+*   https://docs.microsoft.com/en-us/windows/win32/sync/using-semaphore-objects
+*   https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-createsemaphorea
+*/
+
+PlatformSemaphore
+semaphore_new(long initialValue) {
+    PlatformSemaphore ghSemaphore = CreateSemaphore(
+        NULL,           // default security attributes
+        0,              // initial count
+        0,              // maximum count
+        NULL);          // unnamed semaphore
+  
+    return ghSemaphore;
+}
+
+int
+semaphore_wait(PlatformSemaphore sem) {
+    DWORD dwWaitResult;
+    return WaitForSingleObject(
+        sem,   // handle to semaphore
+        0L);           // zero-second time-out interval
+}
+
+int
+semaphore_signal(PlatformSemaphore sem) {
+    return ReleaseSemaphore(
+        sem,         // handle to semaphore
+        1,           // increase count by one
+        NULL);       // not interested in previous count
+}
+
+int
+semaphore_release(PlatformSemaphore sem) {
+    return CloseHandle(sem);
+}
+
+#elif !defined(__APPLE__)
 
 PlatformSemaphore
 semaphore_new(long initialValue){
@@ -25,7 +65,6 @@ semaphore_new(long initialValue){
 
     return wrapper;
 }
-
 
 int
 semaphore_wait(PlatformSemaphore sem){

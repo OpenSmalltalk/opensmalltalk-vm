@@ -21,9 +21,16 @@
 #include "sqMemoryFence.h"
 //#include "sqSCCSVersion.h"
 #include <errno.h>
+
+#if defined(_WIN32)
+#include <windows.h>
+#else
 #include <pthread.h>
-#include <sys/types.h>
 #include <sys/time.h>
+#endif
+
+#include <sys/types.h>
+
 #include "sqaio.h"
 
 #include "pharovm/debug.h"
@@ -106,10 +113,9 @@ static unsigned long long
 currentUTCMicroseconds()
 {
 	struct timeval utcNow;
-
 	gettimeofday(&utcNow,0);
 	return ((utcNow.tv_sec * MicrosecondsPerSecond) + utcNow.tv_usec)
-			+ MicrosecondsFrom1901To1970;
+		+ MicrosecondsFrom1901To1970;
 }
 
 /*
@@ -205,6 +211,8 @@ ioHighResClock(void)
 	/* Tim, not sure I have input beyond:
 		Is there a 64-bit clock on ARM?  If so, access it here :-)
 	 */
+#elif defined(_WIN32)
+	value = __rdtsc();
 #else
 # error "no high res clock defined"
 #endif
@@ -307,10 +315,12 @@ heartbeat()
 
 typedef enum { dead, condemned, nascent, quiescent, active } machine_state;
 
+#if !defined(_WIN32)
 #define UNDEFINED 0xBADF00D
 
 static int					stateMachinePolicy = UNDEFINED;
 static struct sched_param	stateMachinePriority;
+#endif
 
 static volatile machine_state beatState = nascent;
 
@@ -320,9 +330,15 @@ static volatile machine_state beatState = nascent;
 static int beatMilliseconds = DEFAULT_BEAT_MS;
 static struct timespec beatperiod = { 0, DEFAULT_BEAT_MS * 1000 * 1000 };
 
+#if defined(_WIN32)
+DWORD WINAPI
+beatStateMachine(LPVOID careLess)
+#else
 static void *
 beatStateMachine(void *careLess)
+#endif
 {
+#if !defined(_WIN32) // Change heartbeat priority
     int er;
 	if ((er = pthread_setschedparam(pthread_self(),
 									stateMachinePolicy,
@@ -337,6 +353,8 @@ beatStateMachine(void *careLess)
 		errno = er;
 		logWarnFromErrno("pthread_setschedparam failed");
 	}
+#endif
+
 	beatState = active;
 	while (beatState != condemned) {
 # define MINSLEEPNS 2000 /* don't bother sleeping for short times */
@@ -360,14 +378,19 @@ beatStateMachine(void *careLess)
 void
 ioInitHeartbeat()
 {
-	int er;
 	struct timespec halfAMo;
+#if defined(_WIN32)
+	HANDLE careLess;
+#else
+	int er;
 	pthread_t careLess;
+#endif
 
 	heartbeatStopMutex = platform_semaphore_new(1);
 	heartbeatSemaphore = platform_semaphore_new(0);
 	polling = 0;
 
+#if !defined(_WIN32)  // Change heartbeat priority
 	/* First time through choose a policy and priority for the heartbeat thread,
 	 * and install ioInitHeartbeat via pthread_atfork to be run again in a forked
 	 * child, restarting the heartbeat in a forked child.
@@ -389,11 +412,24 @@ ioInitHeartbeat()
 			stateMachinePolicy = SCHED_FIFO;
 		pthread_atfork(0, /*prepare*/ 0, /*parent*/ ioInitHeartbeat /*child*/);
 	}
-	else /* subsequently (in the child) init beatState before creating thread */
+	else {
+		/* subsequently (in the child) init beatState before creating thread */
 		beatState = nascent;
+	}
+#endif  // Change heartbeat priority
 
 	halfAMo.tv_sec  = 0;
 	halfAMo.tv_nsec = 1000 * 100;
+
+#if defined(_WIN32)
+	careLess = CreateThread(
+		NULL,                   // default security attributes
+		0,                      // use default stack size  
+		beatStateMachine,       // thread function name
+		NULL,			            // argument to thread function
+		0,                      // use default creation flags: 0 is run immediately
+		NULL);   // returns the thread identifier 
+#else
 	if ((er= pthread_create(&careLess,
 							(const pthread_attr_t *)0,
 							beatStateMachine,
@@ -402,8 +438,11 @@ ioInitHeartbeat()
 		logErrorFromErrno("beat thread creation failed");
 		exit(errno);
 	}
-	while (beatState == nascent)
+#endif	
+	
+	while (beatState == nascent) {
 		nanosleep(&halfAMo, 0);
+	}
 }
 
 void

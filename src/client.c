@@ -30,7 +30,9 @@ void mtfsfi(unsigned long long fpscr)
 static int loadPharoImage(const char* fileName);
 static void* runVMThread(void* p);
 static int runOnMainThread(VMParameters *parameters);
+#if PHARO_VM_IN_WORKER_THREAD
 static int runOnWorkerThread(VMParameters *parameters);
+#endif
 
 EXPORT(sqInt) runMainThreadWorker();
 
@@ -134,7 +136,7 @@ vm_main_with_parameters(VMParameters *parameters)
 EXPORT(int)
 vm_main(int argc, const char** argv, const char** env)
 {
-	VMParameters parameters = {};
+	VMParameters parameters;
 	parameters.processArgc = argc;
 	parameters.processArgv = argv;
 	parameters.environmentVector = env;
@@ -151,7 +153,7 @@ vm_main(int argc, const char** argv, const char** env)
 	if(parameters.isInteractiveSession && parameters.isDefaultImage && !parameters.defaultImageFound &&
 		!vm_file_dialog_is_nop())
 	{
-		VMFileDialog fileDialog = {};
+		VMFileDialog fileDialog;
 		fileDialog.title = "Select Pharo Image to Open";
 		fileDialog.message = "Choose an image file to execute";
 		fileDialog.filterDescription = "Pharo Images (*.image)";
@@ -229,6 +231,7 @@ runOnMainThread(VMParameters *parameters)
     return 0;
 }
 
+#if PHARO_VM_IN_WORKER_THREAD
 static int
 runOnWorkerThread(VMParameters *parameters)
 {
@@ -263,3 +266,4 @@ runOnWorkerThread(VMParameters *parameters)
 
     return runMainThreadWorker();
 }
+#endif // PHARO_VM_IN_WORKER_THREAD

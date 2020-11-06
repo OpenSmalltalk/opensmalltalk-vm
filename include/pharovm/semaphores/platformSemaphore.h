@@ -6,7 +6,14 @@
 
 #include <stdlib.h>
 
-#ifndef __APPLE__
+#if defined(_WIN32)
+
+#include <windows.h>
+
+typedef HANDLE PlatformSemaphore;
+#define isValidSemaphore(aSemaphore) (aSemaphore != NULL)
+
+#elif !defined(__APPLE__)
 // I am a normal unix
 #include <pthread.h>
 #include <semaphore.h>
@@ -14,6 +21,7 @@
 
 typedef sem_t* PlatformSemaphore;
 #define isValidSemaphore(aSemaphore) (aSemaphore != NULL)
+
 #else
 // I am OSX
 #include <dispatch/dispatch.h>

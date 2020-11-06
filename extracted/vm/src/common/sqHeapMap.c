@@ -137,7 +137,7 @@ static uchar **mapPages[NUMROOTPAGES] = { 0, };
 int
 heapMapAtWord(void *wordPointer)
 {
-	ulong address = (ulong)wordPointer;
+	unsigned _int64 address = (unsigned _int64)wordPointer;
 	uchar **directory, *page;
 	if ((address & ((1<<LOGWORDSIZE)-1)))
 		error("misaligned word");
@@ -155,7 +155,7 @@ heapMapAtWord(void *wordPointer)
 void
 heapMapAtWordPut(void *wordPointer, int bit)
 {
-	ulong address = (ulong)wordPointer;
+	unsigned _int64 address = (unsigned _int64)wordPointer;
 	uchar **directory, *page;
 	if ((address & ((1<<LOGWORDSIZE)-1)))
 		error("misaligned word");
