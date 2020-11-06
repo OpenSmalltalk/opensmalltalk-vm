@@ -42,6 +42,8 @@
  *	many of the connection-oriented functions should be removed and cremated.
  */
 
+#if FEATURE_SOCKETS
+
 #include "pharovm/pharo.h"
 #include "sq.h"
 #include "SocketPlugin.h"
@@ -67,7 +69,7 @@
 
 #else /* !ACORN */
 
-#ifdef WIN64
+#ifdef _WIN32
 
 #include "winsock2.h"
 #include "Windows.h"
@@ -2428,3 +2430,5 @@ sqInt sqSocketReceiveUDPDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
   success(false);
   return 0;
 }
+
+#endif // FEATURE_SOCKETS

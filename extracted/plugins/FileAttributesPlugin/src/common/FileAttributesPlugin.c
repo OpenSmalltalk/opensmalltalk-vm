@@ -16,8 +16,12 @@ static char __buildInfo[] = "FileAttributesPlugin FileAttributesPlugin.oscog-akg
 #include <errno.h>
 #include <limits.h>
 #include <sys/types.h>
+
+#if !defined(_WIN32)
 #include <unistd.h>
+#endif
 #include <dirent.h>
+
 #if _WIN32 || _WIN64
 # include <windows.h>
 # include <winbase.h>
@@ -36,7 +40,11 @@ static char __buildInfo[] = "FileAttributesPlugin FileAttributesPlugin.oscog-akg
 #if !defined(HAVE_LSTAT) && !defined(_WIN32) && !defined(_WIN64)
 # define HAVE_LSTAT 1
 #endif
+
+#if !defined(_WIN32)
 #include <unistd.h>
+#endif
+
 #include <pharovm/debug.h>
 /* AKG 2018 - FileAttributesPlugin.c translated from class FileAttributesPlugin */
 

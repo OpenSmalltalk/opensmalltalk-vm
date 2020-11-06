@@ -528,7 +528,7 @@ osCogStackPageHeadroom()
 /* Helper to pop up a message box with a message formatted from the         */
 /*   printf() format string and arguments                                   */
 /****************************************************************************/
-#ifdef WIN64
+#ifdef _WIN32
 EXPORT(int) __cdecl sqMessageBox(DWORD dwFlags, const char *titleString, const char* fmt, ...)
 { TCHAR *buf;
   va_list args;

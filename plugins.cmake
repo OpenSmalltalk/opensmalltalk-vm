@@ -50,7 +50,7 @@ else()
     )
     
     file(GLOB FilePlugin_SOURCES
-        ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/FilePlugin/src/win/*.c   
+        ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/FilePlugin/src/win/*.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/fileUtilsWin.c
         ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/win/sqWin32Directory.c        
     )    
@@ -89,15 +89,18 @@ addLibraryWithRPATH(UUIDPlugin ${UUIDPlugin_SOURCES})
 if(WIN)
     target_link_libraries(UUIDPlugin "-lole32")
 endif()
+
 #
 # Socket Plugin
-# 
-
+#
+if (${FEATURE_SOCKETS})
+target_compile_definitions(FEATURE_SOCKETS=1)
 if(WIN)
     add_vm_plugin(SocketPlugin)
     target_link_libraries(SocketPlugin "-lWs2_32")
 else()
     add_vm_plugin(SocketPlugin)
+endif()
 endif()
 
 #
@@ -285,8 +288,7 @@ if(OSX)
     target_link_libraries(SqueakSSL "-framework CoreFoundation")
     target_link_libraries(SqueakSSL "-framework Security")
 elseif(WIN)
-    target_link_libraries(SqueakSSL "-lSecur32")
-    target_link_libraries(SqueakSSL "-lCrypt32")
+    target_link_libraries(SqueakSSL Crypt32.lib Secur32.lib)
 else()
     target_link_libraries(SqueakSSL "-lssl")    
 endif()

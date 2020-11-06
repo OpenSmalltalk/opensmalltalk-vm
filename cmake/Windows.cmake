@@ -1,3 +1,5 @@
+set(WIN 1)
+
 set(VM_EXECUTABLE_CONSOLE_NAME "${VM_EXECUTABLE_NAME}Console")
 set(VM_VERSION_FILEVERSION "${APPNAME}VM-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}-${GIT_COMMIT_HASH}")
 
@@ -113,7 +115,7 @@ macro(add_required_libs_per_platform)
    target_link_libraries(${VM_LIBRARY_NAME} comctl32)
    target_link_libraries(${VM_LIBRARY_NAME} uuid)
 
-   target_link_libraries(${VM_LIBRARY_NAME} pthread)
+#   target_link_libraries(${VM_LIBRARY_NAME} pthread)
    target_link_libraries(${VM_EXECUTABLE_NAME} Ole32)
    target_link_libraries(${VM_EXECUTABLE_NAME} comctl32)
    target_link_libraries(${VM_EXECUTABLE_NAME} uuid)

@@ -7,10 +7,26 @@
       "inheritEnvironments": [ "clang_cl_x86" ],
       "buildRoot": "${projectDir}\\out\\build\\${name}",
       "installRoot": "${projectDir}\\out\\install\\${name}",
-      "cmakeCommandArgs": "-DGENERATE_SOURCES=FALSE -DWITHOUT_DEPENDENCIES=TRUE -DFlavour=StackVM",
+      "cmakeCommandArgs": "-DGENERATE_SOURCES=FALSE -DWITHOUT_DEPENDENCIES=TRUE -DFLAVOUR=StackVM",
       "buildCommandArgs": "",
       "ctestCommandArgs": "",
-      "variables": []
+      "variables": [
+        {
+          "name": "FEATURE_FFI",
+          "value": "False",
+          "type": "BOOL"
+        },
+        {
+          "name": "FEATURE_GNUISATION",
+          "value": "False",
+          "type": "BOOL"
+        },
+        {
+          "name": "FEATURE_SOCKETS",
+          "value": "False",
+          "type": "BOOL"
+        }
+      ]
     },
     {
       "name": "x86-Debug-Cog-msvc",

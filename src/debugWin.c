@@ -22,6 +22,7 @@ EXPORT(void) printMachineCallStack(PCONTEXT ctx , FILE* output);
 
 #if COGVM
 	usqInt stackLimitAddress(void);
+	void printCogMethodFor(void* address);
 #endif
 
 static int
@@ -201,8 +202,6 @@ void captureStack(PCONTEXT context, STACKFRAME64* frames, int framePointersSize,
 
 #define NUMBER_OF_STACKS 32
 
-void printCogMethodFor(void *address);
-
 void printSymbolInfo(STACKFRAME64 *frame, FILE* output){
 
 	DWORD64 displacement64;
@@ -229,7 +228,11 @@ void printSymbolInfo(STACKFRAME64 *frame, FILE* output){
 		}
 		fprintf(output, "\n");
 	}else{
+#if COGVM
 		printCogMethodFor(frame->AddrPC.Offset);
+#else
+		fprintf(output, "Cannot identify frame method");
+#endif
 	}
 
 }

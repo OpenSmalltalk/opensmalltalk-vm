@@ -89,10 +89,7 @@ EXPORT(void) logMessage(int level, const char* fileName, const char* functionNam
 	//Printing the header.
 	// Ex: [DEBUG] 2017-11-14 21:57:53,661 functionName (filename:line) - This is a debug log message.
 
-	struct timeval utcNow;
-	gettimeofday(&utcNow,0);
-
-	fprintf(outputStream, "[%-5s] %s.%03lld %s (%s:%d):", severityName[level - 1], timestamp, (long long)(utcNow.tv_usec / 1000) , functionName, fileName, line);
+	fprintf(outputStream, "[%-5s] %s.%03lld %s (%s:%d):", severityName[level - 1], timestamp, 0 /* milliseconds */ , functionName, fileName, line);
 
 	//Printint the message from the var_args.
 	va_list list;
