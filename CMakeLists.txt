@@ -347,21 +347,21 @@ set(SUPPORT_SOURCES
 
 if(${FEATURE_FFI})
     list (APPEND SUPPORT_SOURCES
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/functionDefinitionPrimitives.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/primitiveCalls.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/primitiveUtils.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/pThreadedFFI.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/types.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/typesPrimitives.c
-	    ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/utils.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/functionDefinitionPrimitives.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/primitiveCalls.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/primitiveUtils.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/pThreadedFFI.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/types.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/typesPrimitives.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/utils.c
     
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/callbacks/callbackPrimitives.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/callbacks/callbacks.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/callbacks/callbackPrimitives.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/callbacks/callbacks.c
    
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/sameThread/sameThread.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/worker/worker.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/worker/workerPrimitives.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/pThreadedFFI/worker/workerTask.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/sameThread/sameThread.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/worker/worker.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/worker/workerPrimitives.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/worker/workerTask.c
 
         ${CMAKE_CURRENT_SOURCE_DIR}/src/threadSafeQueue/threadSafeQueue.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/semaphores/platformSemaphore.c
