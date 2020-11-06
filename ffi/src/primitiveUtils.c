@@ -1,4 +1,5 @@
-#include "pharovm/pThreadedFFI/pThreadedFFI.h"
+#include "pThreadedFFI.h"
+#include "pharovm/macros.h"
 
 /**
  * This primitive copy the memory from an object to the other.

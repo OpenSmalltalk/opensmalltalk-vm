@@ -1,5 +1,5 @@
-#include "pharovm/pThreadedFFI/callbacks.h"
-#include "pharovm/pThreadedFFI/worker.h"
+#include "callbacks.h"
+#include "worker.h"
 
 TSQueue* callbackQueue = NULL;
 

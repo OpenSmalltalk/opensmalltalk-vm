@@ -1,4 +1,4 @@
-#include "pharovm/pThreadedFFI/workerTask.h"
+#include "workerTask.h"
 
 #include <stdio.h>
 #include <ffi.h>

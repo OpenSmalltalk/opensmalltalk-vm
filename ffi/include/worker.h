@@ -1,8 +1,8 @@
 #ifndef __WORKER__
 #define __WORKER__
 
-#include "pharovm/pThreadedFFI/pThreadedFFI.h"
 #include "pharovm/threadSafeQueue/threadSafeQueue.h"
+#include "pThreadedFFI.h"
 #include "workerTask.h"
 
 typedef struct __Worker Worker;

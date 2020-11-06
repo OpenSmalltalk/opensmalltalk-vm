@@ -1,4 +1,5 @@
-#include "pharovm/pThreadedFFI/pThreadedFFI.h"
+#include "pThreadedFFI.h"
+#include "pharovm/macros.h"
 
 int getTypeByteSize(void* aType);
 void fillBasicType(sqInt aOop);

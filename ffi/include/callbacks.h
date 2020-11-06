@@ -3,9 +3,9 @@
 
 #include <ffi.h>
 
+#include "pThreadedFFI.h"
 #include "pharovm/semaphores/pharoSemaphore.h"
 #include "pharovm/semaphores/pSemaphore.h"
-#include "pharovm/pThreadedFFI/pThreadedFFI.h"
 #include "pharovm/threadSafeQueue/threadSafeQueue.h"
 
 typedef struct _Callback Callback;

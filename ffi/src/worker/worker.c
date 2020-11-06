@@ -1,5 +1,5 @@
-#include "pharovm/pThreadedFFI/pThreadedFFI.h"
-#include "pharovm/pThreadedFFI/worker.h"
+#include "pThreadedFFI.h"
+#include "worker.h"
 
 #include <stdio.h>
 #include <ffi.h>
