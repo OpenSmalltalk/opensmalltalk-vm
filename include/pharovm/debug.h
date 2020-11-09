@@ -1,8 +1,6 @@
 #pragma once
 
-#ifndef EXPORT
-#define EXPORT(x)  x
-#endif
+#include "exportDefinition.h"
 
 #ifndef  DEBUG
 # define DEBUG	0

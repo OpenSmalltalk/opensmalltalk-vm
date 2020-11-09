@@ -60,4 +60,7 @@ sqInt ptEnterInterpreterFromCallback(void*);
 sqInt ptExitInterpreterToCallback(void*);
 
 int osCogStackPageHeadroom();
+
+sqInt isForwarded(sqInt oop);
+
 #endif /* INCLUDE_INTERPRETER_H_ */

@@ -30,10 +30,10 @@
  * Last edited: Tue Mar 29 13:06:00 PDT 2016
  */
 
-#include "sqaio.h"
 #include "pharovm/debug.h"
 #include "pharovm/semaphores/platformSemaphore.h"
 #include "sqMemoryFence.h"
+#include "sqaio.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>

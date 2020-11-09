@@ -491,7 +491,8 @@ EXPORT(int) __cdecl sqMessageBox(DWORD dwFlags, const char *titleString, const c
   return result;
 }
 
-EXPORT(void) printLastError(const TCHAR *prefix) { LPVOID lpMsgBuf;
+EXPORT(void) printLastError(const TCHAR *prefix) {
+  LPVOID lpMsgBuf;
   DWORD lastError;
 
   lastError = GetLastError();
