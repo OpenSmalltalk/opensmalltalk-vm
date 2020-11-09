@@ -220,6 +220,7 @@ sqInt isLong64s(sqInt);
 sqInt identityHashOf(sqInt);
 sqInt isWordsOrShorts(sqInt);
 sqInt bytesPerElement(sqInt);
+sqInt fileTimesInUTC(void);
 #endif
 
 void *ioLoadFunctionFrom(char *fnName, char *modName);
@@ -577,6 +578,7 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->identityHashOf = identityHashOf;
 	VM->isWordsOrShorts = isWordsOrShorts;
 	VM->bytesPerElement = bytesPerElement;
+	VM->fileTimesInUTC = fileTimesInUTC;
 #endif
 	return VM;
 }

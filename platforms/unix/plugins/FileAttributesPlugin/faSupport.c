@@ -184,13 +184,18 @@ sqLong faConvertUnixToLongSqueakTime(time_t unixTime)
 {
 sqLong	squeakTime;
 
+	/* Squeak epoch is Jan 1, 1901.  Unix epoch is Jan 1, 1970: 17 leap years
+	 * and 52 non-leap years later than Squeak. */
+	if (interpreterProxy->fileTimesInUTC())
+		return (sqLong)unixTime + (52*365UL + 17*366UL) * 24*60*60UL;
+
 	squeakTime = unixTime;
 #if defined(HAVE_TM_GMTOFF)
 	squeakTime = squeakTime + localtime(&unixTime)->tm_gmtoff;
 #elif defined(HAVE_TIMEZONE)
 	squeakTime = squeakTime + (daylight*60*60) - timezone;
 #else
-	#error: cannot determine timezone correction
+#	error: cannot determine timezone correction
 #endif
 	/* Squeak epoch is Jan 1, 1901.  Unix epoch is Jan 1, 1970: 17 leap years
 	 * and 52 non-leap years later than Squeak. */
@@ -349,106 +354,95 @@ sqInt faRewindDirectory(fapath *aFaPath)
  */
 sqInt faFileAttribute(fapath *aFaPath, sqInt attributeNumber)
 {
-faStatStruct	statBuf;
-int		status;
-sqInt		resultOop = 0;
-int		mode;
-
+	faStatStruct	statBuf;
 
 	if (attributeNumber <= 12) {
 		/* Requested attribute comes from stat() entry */
-		status = stat(faGetPlatPath(aFaPath), &statBuf);
-		if (status) {
+		if (stat(faGetPlatPath(aFaPath), &statBuf)) {
 			interpreterProxy->primitiveFailForOSError(FA_CANT_STAT_PATH);
 			return 0; }
 
 		switch (attributeNumber) {
 
-			case 1: /* fileName, not supported for a single attribute */
-				resultOop = interpreterProxy->nilObject();
-				break;
+		case 1: /* fileName, not supported for a single attribute */
+			return nilOop;
 
-			case 2: /* Mode */
-				resultOop = interpreterProxy->positive32BitIntegerFor(statBuf.st_mode);
-				break;
+		case 2: /* Mode */
+			return interpreterProxy->positive32BitIntegerFor(statBuf.st_mode);
 
-			case 3: /* inode */
-				resultOop = interpreterProxy->positive64BitIntegerFor(statBuf.st_ino);
-				break;
+		case 3: /* inode */
+			return interpreterProxy->positive64BitIntegerFor(statBuf.st_ino);
 
-			case 4: /* device id */
-				resultOop = interpreterProxy->positive64BitIntegerFor(statBuf.st_dev);
-				break;
+		case 4: /* device id */
+			return interpreterProxy->positive64BitIntegerFor(statBuf.st_dev);
 
-			case 5: /* nlink */
-				resultOop = interpreterProxy->positive64BitIntegerFor(statBuf.st_nlink);
-				break;
+		case 5: /* nlink */
+			return interpreterProxy->positive64BitIntegerFor(statBuf.st_nlink);
 
-			case 6: /* uid */
-				resultOop = interpreterProxy->positive32BitIntegerFor(statBuf.st_uid);
-				break;
+		case 6: /* uid */
+			return interpreterProxy->positive32BitIntegerFor(statBuf.st_uid);
 
-			case 7: /* gid */
-				resultOop = interpreterProxy->positive32BitIntegerFor(statBuf.st_gid);
-				break;
+		case 7: /* gid */
+			return interpreterProxy->positive32BitIntegerFor(statBuf.st_gid);
 
-			case 8: /* size (if file) */
-				if (S_ISDIR(statBuf.st_mode) == 0)
-					resultOop = interpreterProxy->positive64BitIntegerFor(statBuf.st_size);
-				else
-					resultOop = interpreterProxy->positive32BitIntegerFor(0);
-				break;
+		case 8: /* size (if file) */
+			if (S_ISDIR(statBuf.st_mode) == 0)
+				return interpreterProxy->positive64BitIntegerFor(statBuf.st_size);
+			else
+				return interpreterProxy->positive32BitIntegerFor(0);
 
-			case 9: /* access time */
-				resultOop = interpreterProxy->signed64BitIntegerFor(
-					faConvertUnixToLongSqueakTime(statBuf.st_atime));
-				break;
+		case 9: /* access time */
+			return interpreterProxy->signed64BitIntegerFor(
+				faConvertUnixToLongSqueakTime(statBuf.st_atime));
 
-			case 10: /* modified time */
-				resultOop = interpreterProxy->signed64BitIntegerFor(
-					faConvertUnixToLongSqueakTime(statBuf.st_mtime));
-				break;
+		case 10: /* modified time */
+			return interpreterProxy->signed64BitIntegerFor(
+				faConvertUnixToLongSqueakTime(statBuf.st_mtime));
 
-			case 11: /* change time */
-				resultOop = interpreterProxy->signed64BitIntegerFor(
-					faConvertUnixToLongSqueakTime(statBuf.st_ctime));
-				break;
+		case 11: /* change time */
+			return interpreterProxy->signed64BitIntegerFor(
+				faConvertUnixToLongSqueakTime(statBuf.st_ctime));
 
-			case 12: /* creation time */
-				resultOop = interpreterProxy->nilObject();
-				break;
+		case 12: /* creation time */
+#if defined(_DARWIN_FEATURE_64_BIT_INODE)
+			return interpreterProxy->signed64BitIntegerFor(
+				faConvertUnixToLongSqueakTime(statBuf.st_birthtime));
+#else
+			return nilOop;
+#endif
+		default:
+			interpreterProxy->primitiveFailFor(PrimErrBadArgument);
 		}
-	} else if (attributeNumber < 16) {
+	}
+	if (attributeNumber < 16) {
+		int mode;
 		switch (attributeNumber) {
-			case 13:
-				mode = R_OK;
-				break;
-
-			case 14:
-				mode = W_OK;
-				break;
-
-			case 15:
-				mode = X_OK;
-				break;
+		case 13:
+			mode = R_OK;
+			break;
+		case 14:
+			mode = W_OK;
+			break;
+		case 15:
+			mode = X_OK;
+			break;
 		}
-		if (access(faGetPlatPath(aFaPath), mode) == 0)
-			resultOop = interpreterProxy->trueObject();
-		else
-			resultOop = interpreterProxy->falseObject();
-	} else if (attributeNumber == 16) {
+		return access(faGetPlatPath(aFaPath), mode) == 0
+			? trueOop
+			: falseOop;
+	}
+	if (attributeNumber == 16) {
 		/* isSymlink */
-		status = lstat(faGetPlatPath(aFaPath), &statBuf);
-		if (status) {
+		if (lstat(faGetPlatPath(aFaPath), &statBuf)) {
 			interpreterProxy->primitiveFailForOSError(FA_CANT_STAT_PATH);
 			 return 0; }
-		if (S_ISLNK(statBuf.st_mode))
-			resultOop = interpreterProxy->trueObject();
-		else
-			resultOop = interpreterProxy->falseObject();
+		return S_ISLNK(statBuf.st_mode)
+			? trueOop
+			: falseOop;
 	}
 
-	return resultOop;
+	interpreterProxy->primitiveFailFor(PrimErrBadArgument);
+	return nilOop;
 }
 
 
@@ -470,7 +464,7 @@ sqInt		targetOop;
 char		targetFile[FA_PATH_MAX];
 
 
-	targetOop = interpreterProxy->nilObject();
+	targetOop = nilOop;
 	if (lStat) {
 		status = lstat(faGetPlatPath(aFaPath), &statBuf);
 		if (status)
@@ -534,14 +528,10 @@ char		targetFile[FA_PATH_MAX];
 		interpreterProxy->signed64BitIntegerFor(
 			faConvertUnixToLongSqueakTime(statBuf.st_ctime)));
 
-	interpreterProxy->storePointerofObjectwithValue(
-		11, attributeArray,
-		interpreterProxy->nilObject());
+	interpreterProxy->storePointerofObjectwithValue(11, attributeArray, nilOop);
 
 	/* Windows file attribute flags - not supported on Unix */
-	interpreterProxy->storePointerofObjectwithValue(
-		12, attributeArray,
-		interpreterProxy->nilObject());
+	interpreterProxy->storePointerofObjectwithValue(12, attributeArray, nilOop);
 
 	return FA_SUCCESS;
 }
@@ -555,15 +545,7 @@ char		targetFile[FA_PATH_MAX];
  */
 sqInt faAccessAttributes(fapath *aFaPath, sqInt attributeArray, sqInt offset)
 {
-sqInt	index;
-sqInt	trueOop;
-sqInt	falseOop;
-sqInt	accessOop;
-
-
-	index = offset;
-	trueOop = interpreterProxy->trueObject();
-	falseOop = interpreterProxy->falseObject();
+	sqInt accessOop, index = offset;
 
 	accessOop = access(faGetPlatPath(aFaPath), R_OK) ? falseOop : trueOop;
 	interpreterProxy->storePointerofObjectwithValue(index++, attributeArray, accessOop);

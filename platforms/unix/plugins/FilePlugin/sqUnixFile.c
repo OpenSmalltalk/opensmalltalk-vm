@@ -29,6 +29,7 @@
  */
 
 #include "sq.h"
+#include "sqVirtualMachine.h"
 #include "FilePlugin.h"
 #include "sqUnixCharConv.h"
 
@@ -85,7 +86,29 @@ DIR *openDir= 0;
 
 /*** Functions ***/
 
-extern time_t convertToSqueakTime(time_t unixTime);
+static sqInt
+fileAsSqueakTime(time_t unixTime)
+{
+extern struct VirtualMachine* interpreterProxy;
+
+  /* Squeak epoch is Jan 1, 1901.  Unix epoch is Jan 1, 1970: 17 leap years
+     and 52 non-leap years later than Squeak. */
+  if (interpreterProxy->fileTimesInUTC())
+	return unixTime + (52*365UL + 17*366UL) * 24*60*60UL;
+
+#ifdef HAVE_TM_GMTOFF
+  unixTime+= localtime(&unixTime)->tm_gmtoff;
+#else
+# ifdef HAVE_TIMEZONE
+  unixTime+= ((daylight) * 60*60) - timezone;
+# else
+#  error: cannot determine timezone correction
+# endif
+#endif
+  /* Squeak epoch is Jan 1, 1901.  Unix epoch is Jan 1, 1970: 17 leap years
+     and 52 non-leap years later than Squeak. */
+  return unixTime + ((52*365UL + 17*366UL) * 24*60*60UL);
+}
 
 
 void 
@@ -248,9 +271,9 @@ sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
   }
 
   /* last change time */
-  *creationDate= convertToSqueakTime(statBuf.st_ctime);
+  *creationDate= fileAsSqueakTime(statBuf.st_ctime);
   /* modification time */
-  *modificationDate= convertToSqueakTime(statBuf.st_mtime);
+  *modificationDate= fileAsSqueakTime(statBuf.st_mtime);
 
   if (S_ISDIR(statBuf.st_mode))
     *isDirectory= true;
@@ -311,9 +334,9 @@ sqInt dir_EntryLookup(char *pathString, sqInt pathStringLength, char* nameString
   *nameLength = ux2sqPath(nameString, nameStringLength, name, 256, 0);
 
   /* last change time */
-  *creationDate= convertToSqueakTime(statBuf.st_ctime);
+  *creationDate= fileAsSqueakTime(statBuf.st_ctime);
   /* modification time */
-  *modificationDate= convertToSqueakTime(statBuf.st_mtime);
+  *modificationDate= fileAsSqueakTime(statBuf.st_mtime);
 
   if (S_ISDIR(statBuf.st_mode))
     *isDirectory= true;

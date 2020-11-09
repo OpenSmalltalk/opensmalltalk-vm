@@ -7,6 +7,8 @@
 #include "faConstants.h"
 #include "faSupport.h"
 
+sqInt nilOop, falseOop, trueOop;
+
 /*
  * FAPathPtr
  *
@@ -29,4 +31,3 @@ sqInt faInvalidateSessionId(int *sessionId);
 sqInt faSetStDirOop(fapath *aFaPath, sqInt pathNameOop);
 sqInt faSetStPathOop(fapath *aFaPath, sqInt pathNameOop);
 sqInt faCharToByteArray(const char *cBuf, sqInt *byteArrayOop);
-
