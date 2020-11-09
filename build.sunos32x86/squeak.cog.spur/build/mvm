@@ -10,8 +10,10 @@ esac
 # Spur VM with VM profiler and threaded heartbeat
 MAKE=gmake
 INSTALLDIR=sqcogspursunosht/usr
+# GNU configure AC_SYS_LARGEFILE is not adding -D_FILE_OFFSET_BITS (config.h)
+# to use lseek64 instead of lseek, must -D it here
 # Some gcc versions create a broken VM using -O2
-OPT="-g -DAIO_DEBUG -DNDEBUG -DDEBUGVM=0"
+OPT="-g -DAIO_DEBUG -DNDEBUG -DDEBUGVM=0 -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64"
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
