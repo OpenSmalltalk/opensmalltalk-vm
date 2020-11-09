@@ -418,7 +418,8 @@ Class {
 		'printedStackFrames',
 		'maxStacksToPrint',
 		'maxStackMessagePrinted',
-		'libFFI'
+		'libFFI',
+		'codeGeneratorToComputeAccessorDepth'
 	],
 	#classVars : [
 		'AccessModifierPrivate',
@@ -1832,7 +1833,7 @@ StackInterpreter class >> primitiveAccessorDepthTable [
 			ifTrue: [-1]
 			ifFalse:
 				[method := cg compileToTMethodSelector: thing in: implementingClass.
-				 cg accessorDepthForMethod: method]]
+				 cg accessorDepthCalculator accessorDepthForMethod: method]]
 ]
 
 { #category : #constants }
@@ -4860,12 +4861,20 @@ StackInterpreter >> closureIn: context numArgs: numArgs instructionPointer: init
 
 { #category : #'primitive support' }
 StackInterpreter >> codeGeneratorToComputeAccessorDepth [
-	^(VMMaker new
-		buildCodeGeneratorForInterpreter: self class primitivesClass
-		includeAPIMethods: false
-		initializeClasses: false)
-			logger: self transcript;
-			yourself
+
+	^ codeGeneratorToComputeAccessorDepth ifNil: [
+		^(VMMaker new
+			buildCodeGeneratorForInterpreter: self class primitivesClass
+			includeAPIMethods: false
+			initializeClasses: false)
+				logger: self transcript;
+				yourself ]
+]
+
+{ #category : #'as yet unclassified' }
+StackInterpreter >> codeGeneratorToComputeAccessorDepth: aCCodeGenerator [ 
+	<doNotGenerate>
+	codeGeneratorToComputeAccessorDepth := aCCodeGenerator
 ]
 
 { #category : #'indexing primitive support' }
@@ -21561,7 +21570,7 @@ StackInterpreter >> tryLoadNewPlugin: pluginString pluginEntries: pluginEntries 
 				 primitiveTable withIndexDo:
 					[:prim :index| | depth |
 					 prim isSymbol ifTrue:
-						[depth := cg accessorDepthForSelector: prim.
+						[depth := cg accessorDepthCalculator accessorDepthForSelector: prim.
 						 self assert: (depth isInteger or: [depth isNil and: [(plugin class whichClassIncludesSelector: prim) isNil]]).
 						 primitiveAccessorDepthTable at: index - 1 put: depth]]].
 		 cg exportedPrimitiveNames do:

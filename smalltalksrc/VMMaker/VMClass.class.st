@@ -116,11 +116,6 @@ VMClass class >> defaultObjectMemoryClass [
 	^nil
 ]
 
-{ #category : #translation }
-VMClass class >> getVMMaker [
-	^Notification new tag: #getVMMaker; signal
-]
-
 { #category : #'accessing class hierarchy' }
 VMClass class >> hasCogit [
 	^false

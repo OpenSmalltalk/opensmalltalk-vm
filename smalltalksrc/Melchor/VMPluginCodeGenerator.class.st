@@ -10,58 +10,13 @@ Class {
 		'inProgressSelectors',
 		'inliningDone'
 	],
-	#category : #Slang
+	#category : #Melchor
 }
 
 { #category : #'spur primitive compilation' }
-VMPluginCodeGenerator >> accessorChainsForMethod: method interpreterClass: interpreterClass [
-	inProgressSelectors := Set new.
-	^[super accessorChainsForMethod: method interpreterClass: interpreterClass] ensure:
-		[inProgressSelectors := nil]
-]
+VMPluginCodeGenerator >> accessorDepthCalculator [
 
-{ #category : #'spur primitive compilation' }
-VMPluginCodeGenerator >> accessorDepthDeterminationFollowsSelfSends [
-	^true
-]
-
-{ #category : #'spur primitive compilation' }
-VMPluginCodeGenerator >> accessorsAndAssignmentsForSubMethodNamed: selector actuals: actualParameters depth: depth interpreterClass: interpreterClass into: aTrinaryBlock [
-	"Evaluate aTrinaryBlock with the root accessor sends, accessor sends and assignments in the sub-method named selector."
-
-	| method map |
-	(inProgressSelectors includes: selector) ifTrue:
-		[^nil].
-	inProgressSelectors add: selector.
-	method := self methodNamed: selector.
-	"this is unsatisfactory.  a pluggable scheme that asks the relevant plugin the right question would
-	 be better but for now the only cross-plugin load is for loadBitBltFrom:warping: and variants."
-	(#(loadBitBltFrom: loadWarpBltFrom: loadBitBltFrom:warping:) includes: selector) ifTrue:
-		[(method isNil
-		  or: [method definingClass ~~ BitBltSimulation]) ifTrue:
-			[method := (BitBltSimulation >> selector) asTranslationMethodOfClass: TMethod]].
-	method ifNil:
-		[^nil].
-	map := Dictionary new.
-	method args do: [:var| map at: var put: depth asString, var].
-	method locals do: [:var| map at: var put: depth asString, var].
-	^self accessorsAndAssignmentsForMethod: (method copy renameVariablesUsing: map)
-		actuals: actualParameters
-		depth: depth + 1
-		interpreterClass: interpreterClass
-		into: aTrinaryBlock
-]
-
-{ #category : #'spur primitive compilation' }
-VMPluginCodeGenerator >> actualsForMethod: aTMethod [
-	"Normal primitives have no arguments, but translated primitives do.
-	 Override to answer actuals for translated primitives."
-	^(aTMethod args size - 1 to: 0 by: -1) collect:
-		[:i|
-		 TSendNode new
-			setSelector: #stackValue:
-			receiver: (TVariableNode new setName: 'interpreterProxy')
-			arguments: {TConstantNode new setValue: i}]
+	^ MLPluginAccessorDepthCalculator forCodeGenerator: self
 ]
 
 { #category : #'C translation' }
@@ -136,7 +91,7 @@ VMPluginCodeGenerator >> emitAccessorDepthsOn: aStream [
 	self sortedExportMethods do:
 		[:method| | primName |
 		 primName := self cFunctionNameFor: method selector.
-		 (self accessorDepthForSelector: primName asSymbol) ifNotNil:
+		 (self accessorDepthCalculator accessorDepthForSelector: primName asSymbol) ifNotNil:
 			[:depth|
 			 "store the accessor depth in a byte variable; save a little space
 			  by omitting depths < 0; support code supplies the default."
@@ -389,14 +344,6 @@ VMPluginCodeGenerator >> initializeCTranslationDictionary [
 { #category : #testing }
 VMPluginCodeGenerator >> isGeneratingPluginCode [
 	^true
-]
-
-{ #category : #'spur primitive compilation' }
-VMPluginCodeGenerator >> isObjectAccessor: selector given: interpreterClass [
-	"Override to include the selectors transformed into accessors for translated primitives.
-	 InterpreterPlugin browseTranslatedPrimitives"
-	^(#(asciiValue at: at:put: basicAt: size) includes: selector)
-	  or: [super isObjectAccessor: selector given: interpreterClass]
 ]
 
 { #category : #utilities }
