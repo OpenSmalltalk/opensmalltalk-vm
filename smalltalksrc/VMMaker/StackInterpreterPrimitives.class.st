@@ -218,6 +218,7 @@ StackInterpreterPrimitives >> markFrame: theFPInt [
 { #category : #'ffi - helpers' }
 StackInterpreterPrimitives >> marshallAndPushReturnValueFrom: returnHolder ofType: ffiType poping: argumentsAndReceiverCount [
 
+	<option: #FEATURE_FFI>
 	<var: #ffiType type: #'ffi_type *'>
 
 	[ ffiType type ]
@@ -246,6 +247,7 @@ StackInterpreterPrimitives >> marshallAndPushReturnValueFrom: returnHolder ofTyp
 { #category : #'ffi - helpers' }
 StackInterpreterPrimitives >> marshallArgumentFrom: argumentsArrayOop atIndex: i into: argHolder ofType: argType withSize: argTypeSize [
 
+	<option: #FEATURE_FFI>
 	[ argType ]
 		caseOf:
 			{([ FFI_TYPE_POINTER ]
@@ -1632,74 +1634,75 @@ StackInterpreterPrimitives >> primitiveSameThreadCallout [
 	<var: #returnHolder type: #'void *'>
 	<var: #externalFunction type: #'void *'>
 
-	PARAM_EXTERNALFUNCTION := 1.
-	PARAM_ARGUMENTS := 0.
+	self cppIf: #FEATURE_FFI ifTrue: [
+		PARAM_EXTERNALFUNCTION := 1.
+		PARAM_ARGUMENTS := 0.
 
-	"1. Obtain externalFunction and extract the CIF"
-	externalFunction := self getHandler: (self stackValue: PARAM_EXTERNALFUNCTION).
-	self failed 
-		ifTrue: [ 
-			self logDebug: 'Invalid External Function Argument'.
-			^ self primitiveFailFor: PrimErrBadArgument ].
-
-	cif := self getHandlerAsCif:(objectMemory
-				fetchPointer: 1
-				ofObject: (self stackValue: PARAM_EXTERNALFUNCTION)).
-
-	self failed
-		ifTrue: [ 
-			self logDebug: 'Invalid CIF in ExternalFunction'.
-			^ self primitiveFailFor: PrimErrBadArgument ].
-
-	" 2. Prepare Arguments:
-	- Verify Arguments is an Array
-	- Allocate space for all the arguments in the stack and a holder for the return, and the parameters' pointer C array
-	- Marshall arguments and store in the parameter array."
-	argumentsArrayOop := self stackValue: PARAM_ARGUMENTS.
-
-	(objectMemory isArray: argumentsArrayOop)
-		ifFalse: [ 
-			self logDebug: 'Argument Array is not an Array'.
-			^ self primitiveFailFor: PrimErrBadArgument ].
-
-	argumentSize := cif numberArguments.
-
-	(objectMemory slotSizeOf: argumentsArrayOop) = argumentSize
-		ifFalse: [ 
-			self logDebug: 'Argument Array size mismatch'.
-			^ self primitiveFailFor: PrimErrBadArgument ].
-		
-	parameters := self allocateParameters: argumentSize 
-		using: [:aSize | self alloca: (self sizeof: #'void*') * aSize ].
-
-	0 to: argumentSize - 1 do: [ :i | 
-		| argType argHolder |
-		argType := cif argTypeAt: i.
-
-		argHolder := self alloca: argType size.
-		parameters at: i put: argHolder.
-	
-		self marshallArgumentFrom: argumentsArrayOop atIndex: i into: argHolder ofType: argType type withSize: argType size. 
-				
+		"1. Obtain externalFunction and extract the CIF"
+		externalFunction := self getHandler: (self stackValue: PARAM_EXTERNALFUNCTION).
 		self failed 
-				ifTrue: [ 
-					self logDebug: 'Could not convert argument index: %d' _: i + 1.
-					^ self primitiveFailFor: PrimErrBadArgument ]].
-	
-	returnHolder := self alloca: cif returnType size.
+			ifTrue: [ 
+				self logDebug: 'Invalid External Function Argument'.
+				^ self primitiveFailFor: PrimErrBadArgument ].
 
-	" 3. Call and then return
-	- Call
-	- Marshall Argument and push it to the stack
-	- Return"
-	self
-		ffi_call: cif
-		_: externalFunction
-		_: returnHolder
-		_: parameters.
+		cif := self getHandlerAsCif:(objectMemory
+					fetchPointer: 1
+					ofObject: (self stackValue: PARAM_EXTERNALFUNCTION)).
 
-	self marshallAndPushReturnValueFrom: returnHolder ofType: cif returnType poping: 3.	
+		self failed
+			ifTrue: [ 
+				self logDebug: 'Invalid CIF in ExternalFunction'.
+				^ self primitiveFailFor: PrimErrBadArgument ].
 
+		" 2. Prepare Arguments:
+		- Verify Arguments is an Array
+		- Allocate space for all the arguments in the stack and a holder for the return, and the parameters' pointer C array
+		- Marshall arguments and store in the parameter array."
+		argumentsArrayOop := self stackValue: PARAM_ARGUMENTS.
+
+		(objectMemory isArray: argumentsArrayOop)
+			ifFalse: [ 
+				self logDebug: 'Argument Array is not an Array'.
+				^ self primitiveFailFor: PrimErrBadArgument ].
+
+		argumentSize := cif numberArguments.
+
+		(objectMemory slotSizeOf: argumentsArrayOop) = argumentSize
+			ifFalse: [ 
+				self logDebug: 'Argument Array size mismatch'.
+				^ self primitiveFailFor: PrimErrBadArgument ].
+			
+		parameters := self allocateParameters: argumentSize 
+			using: [:aSize | self alloca: (self sizeof: #'void*') * aSize ].
+
+		0 to: argumentSize - 1 do: [ :i | 
+			| argType argHolder |
+			argType := cif argTypeAt: i.
+
+			argHolder := self alloca: argType size.
+			parameters at: i put: argHolder.
+		
+			self marshallArgumentFrom: argumentsArrayOop atIndex: i into: argHolder ofType: argType type withSize: argType size. 
+					
+			self failed 
+					ifTrue: [ 
+						self logDebug: 'Could not convert argument index: %d' _: i + 1.
+						^ self primitiveFailFor: PrimErrBadArgument ]].
+		
+		returnHolder := self alloca: cif returnType size.
+
+		" 3. Call and then return
+		- Call
+		- Marshall Argument and push it to the stack
+		- Return"
+		self
+			ffi_call: cif
+			_: externalFunction
+			_: returnHolder
+			_: parameters.
+
+		self marshallAndPushReturnValueFrom: returnHolder ofType: cif returnType poping: 3.	
+ 	] ifFalse: [ self primitiveFailFor: PrimErrUnsupported ]
 ]
 
 { #category : #'memory space primitives' }
@@ -2345,6 +2348,8 @@ StackInterpreterPrimitives >> primitiveWorkerCallout [
 	<var: #returnHolder type: #'void *'>
 	<var: #task type: #'WorkerTask *'>
 	<var: #externalFunction type: #'void *'>
+	
+	self cppIf: #FEATURE_FFI ifTrue: [
 
 	PARAM_RECEIVER 				:= 3.
 	PARAM_EXTERNALFUNCTION 	:= 2.
@@ -2417,6 +2422,8 @@ StackInterpreterPrimitives >> primitiveWorkerCallout [
 	self worker_dispatch_callout: worker _: task.
 
 	self pop: 4 thenPush: (objectMemory newExternalAddressWithValue: (self cCoerce: task asInteger to: 'void*'))
+	
+	] ifFalse: [ self primitiveFailFor: PrimErrUnsupported ]
 ]
 
 { #category : #ffi }
@@ -2428,29 +2435,31 @@ StackInterpreterPrimitives >> primitiveWorkerExtractReturnValue [
 	<var: #worker type: #'Worker *'>
 	<var: #externalFunction type: #'void *'>
 
-	PARAM_RECEIVER 				:= 1.
-	PARAM_TASK_ADDRESS			:= 0.
+	self cppIf: #FEATURE_FFI ifTrue: [
+		PARAM_RECEIVER 				:= 1.
+		PARAM_TASK_ADDRESS			:= 0.
 
-	"1. Extract Task address and worker"
-	taskAddress := self readAddress: (self stackValue: PARAM_TASK_ADDRESS).
-	receiver := self stackValue: PARAM_RECEIVER.
-	worker := self getWorkerFromAddress: (self getHandler: receiver).
+		"1. Extract Task address and worker"
+		taskAddress := self readAddress: (self stackValue: PARAM_TASK_ADDRESS).
+		receiver := self stackValue: PARAM_RECEIVER.
+		worker := self getWorkerFromAddress: (self getHandler: receiver).
 
-	self failed
-		ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
+		self failed
+			ifTrue: [ ^ self primitiveFailFor: PrimErrBadArgument ].
 
-	"2. Get the returnHolder from the task"
-	task := self getTaskFromAddress: taskAddress.
-	returnHolder := task returnHolderAddress.
-	
-	"3. Marshall the return value and push it in the stack"
-	self 
-		marshallAndPushReturnValueFrom: returnHolder 
-		ofType: task cif returnType 
-		poping: 2.
+		"2. Get the returnHolder from the task"
+		task := self getTaskFromAddress: taskAddress.
+		returnHolder := task returnHolderAddress.
+		
+		"3. Marshall the return value and push it in the stack"
+		self 
+			marshallAndPushReturnValueFrom: returnHolder 
+			ofType: task cif returnType 
+			poping: 2.
 
-	"4. Free the task."	
-	task freeTask.
+		"4. Free the task."	
+		task freeTask.
+ 	] ifFalse: [ self primitiveFailFor: PrimErrUnsupported ]
 ]
 
 { #category : #'object access primitives' }

@@ -524,10 +524,13 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 		addHeaderFile:'"vmCallback.h"';
 		addHeaderFile:'"sqMemoryFence.h"';
 		addHeaderFile:'"dispdbg.h"';
-		addHeaderFile:'#if FEATURE_FFI';
-		addHeaderFile:'<ffi.h>';
-		addHeaderFile:'"pharovm/pThreadedFFI/worker.h"';
-		addHeaderFile:'#endif //FEATURE_FFI'.
+
+"This cannot be properly expressed in slang.
+If ffi is put as a separate header, slang will sort the header and put it outside the #ifdef"
+		addHeaderFile:'#if FEATURE_FFI
+#include <ffi.h>
+#include "pharovm/pThreadedFFI/worker.h"
+#endif //FEATURE_FFI'.
 
 	LowcodeVM ifTrue: [ aCCodeGenerator addHeaderFile:'"sqLowcodeFFI.h"'].
 
