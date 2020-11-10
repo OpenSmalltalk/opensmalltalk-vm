@@ -524,9 +524,11 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 		addHeaderFile:'"vmCallback.h"';
 		addHeaderFile:'"sqMemoryFence.h"';
 		addHeaderFile:'"dispdbg.h"';
+		addHeaderFile:'#if FEATURE_FFI';
 		addHeaderFile:'<ffi.h>';
-		addHeaderFile:'"pharovm/pThreadedFFI/worker.h"'.
-		
+		addHeaderFile:'"pharovm/pThreadedFFI/worker.h"';
+		addHeaderFile:'#endif //FEATURE_FFI'.
+
 	LowcodeVM ifTrue: [ aCCodeGenerator addHeaderFile:'"sqLowcodeFFI.h"'].
 
 	vmClass declareInterpreterVersionIn: aCCodeGenerator defaultName: 'Stack'.
