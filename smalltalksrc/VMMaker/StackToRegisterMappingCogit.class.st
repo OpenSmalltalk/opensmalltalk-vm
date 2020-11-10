@@ -2334,7 +2334,7 @@ StackToRegisterMappingCogit >> ceShortCutTraceStore: aProcessorSimulationTrap [
 
 { #category : #accessing }
 StackToRegisterMappingCogit >> ceStoreCheckTrampoline [
-	
+	<doNotGenerate>
 	^ self objectRepresentation ceStoreCheckTrampoline
 ]
 
