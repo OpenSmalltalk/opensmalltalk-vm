@@ -2924,7 +2924,7 @@ CogARMv8Compiler >> concretizeSubCqR [
 
 	"Try whether the quick constant is a small negative number. If it is, optimize."
 
-	<var: #word type: #sqInt>
+	<var: #word type: #usqInt>
 	<inline: true>
 	| word fits12Bits reg instrOffset |
 	word := operands at: 0.
