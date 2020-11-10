@@ -133,6 +133,36 @@ VMARMV8SpecificEncodingTest >> testEncodeCmpCqRWithPositiveShiftable13BitConstan
 ]
 
 { #category : #'tests - cmpCqR' }
+VMARMV8SpecificEncodingTest >> testEncodeMoveCqRWithEncodeableLargeNumber [
+
+
+	| constantValue |
+	constantValue := 16rF234 << 16.
+	self compile: [		 
+		cogit MoveCq: constantValue R: 24 ].
+
+	self runGeneratedCode.
+	
+	"Assert Cmp was equals"
+	self assert: machineSimulator x24 equals: constantValue
+]
+
+{ #category : #'tests - cmpCqR' }
+VMARMV8SpecificEncodingTest >> testEncodeMoveCqRWithLargeConstant [
+
+
+	| constantValue |
+	constantValue := 281474841613120.
+	self compile: [		 
+		cogit MoveCq: constantValue R: 24 ].
+
+	self runGeneratedCode.
+	
+	"Assert Cmp was equals"
+	self assert: machineSimulator x24 equals: constantValue
+]
+
+{ #category : #'tests - cmpCqR' }
 VMARMV8SpecificEncodingTest >> testEncodeOrCqRWithEncodableConstant [
 
 	self compile: [

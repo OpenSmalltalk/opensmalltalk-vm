@@ -45,6 +45,7 @@ CogOutOfLineLiteralsARMv8Compiler >> concretizeMoveC32R [
 	<var: #quickConstant type: #sqInt>
 	<inline: true>
 	| quickConstant |
+	
 	quickConstant := operands at: 0.
 	quickConstant < 0 ifTrue: [ 
 		self shiftable16bitImmediate: quickConstant negated - 1

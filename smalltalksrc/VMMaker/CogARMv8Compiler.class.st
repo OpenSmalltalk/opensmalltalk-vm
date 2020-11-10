@@ -2105,11 +2105,7 @@ CogARMv8Compiler >> concretizeMoveCqR [
 
 	"If the quick constant is in fact a shiftable 8bit, generate the apropriate MOV, otherwise do what is necessary for a whole word."
 
-	<var: #quickConstant type: #sqInt>
 	<inline: true>
-	| destinationRegister quickConstant |
-	quickConstant := operands at: 0.
-	destinationRegister := operands at: 1.
 
 	^ self concretizeMoveC32R
 ]
@@ -5566,11 +5562,11 @@ CogARMv8Compiler >> shiftable16bitImmediate: constant ifTrue: trueAlternativeBlo
 		[^trueAlternativeBlock value: 0 value: constant].
 	0 to: 2 do: [:i | | shiftedValue shiftMagnitude |
 		shiftMagnitude := (1 << i) * 16.
-		shiftedValue := constant >> (1 << i) * 16.
-		shiftedValue << shiftMagnitude = constant
-			ifTrue: [ [ ^ trueAlternativeBlock
+		shiftedValue := constant >> shiftMagnitude.
+		(shiftedValue << shiftMagnitude = constant and: [ (shiftedValue bitAnd: 16rFFFF) = shiftedValue ])
+			ifTrue: [ ^ trueAlternativeBlock
 					value: shiftMagnitude
-					value: shiftedValue ] ] ].
+					value: shiftedValue ] ].
 	^falseAlternativeBlock value
 ]
 
