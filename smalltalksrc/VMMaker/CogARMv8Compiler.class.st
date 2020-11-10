@@ -1069,12 +1069,17 @@ CogARMv8Compiler >> computeMaximumSize [
 		[ArithmeticShiftRightRR]		-> [^4].
 		[RotateLeftCqR]					-> [^4].
 		[RotateRightCqR]					-> [^4].
+	
+		"Floating point operations"
+	
 		[AddRdRd]					-> [^4].
 		[CmpRdRd]					-> [^4].
 		[SubRdRd]					-> [^4].
 		[MulRdRd]					-> [^4].
 		[DivRdRd]					-> [^4].
 		[SqrtRd]					-> [^4].
+		[XorRdRd]					-> [^4].
+						
 		"ARM Specific Arithmetic"
 		[MUL]			-> [^4].
 		[SMULH] 		-> 	[^4].
@@ -1206,8 +1211,10 @@ CogARMv8Compiler >> concretizeAddCqR [
 	word := operands at: 0.
 	
 	((operands at: 1) = SP) ifTrue: [
-	self notYetImplemented.
 		"This only works if Cq fits in 12 bits..."
+		"If it is the SP, it requires additional handling"
+		self notYetImplemented.
+
 		self assert: (word bitAnd: 16rfff) = word.
 		self
 			machineCodeAt: 0
@@ -1301,6 +1308,7 @@ CogARMv8Compiler >> concretizeAddRR [
 
 { #category : #'generate machine code - concretize' }
 CogARMv8Compiler >> concretizeAddRdRd [
+
 	"Will get inlined into concretizeAt: switch."
 
 	"Add FP regRHS to FP regLHS and stick result in FP regLHS"
@@ -1308,11 +1316,15 @@ CogARMv8Compiler >> concretizeAddRdRd [
 	<inline: true>
 	| regLHS regRHS |
 
-	self notYetImplemented.
-
 	regRHS := operands at: 0.
 	regLHS := operands at: 1.
-	machineCode at: 0 put: (self faddd: regLHS with: regRHS).
+
+	machineCode at: 0 put: (self
+			 faddSize: 1
+			 firstSourceRegister: regLHS
+			 secondSourceRegister: regRHS
+			 destinationRegister: regLHS).
+
 	^ machineCodeSize := 4
 ]
 
@@ -1752,8 +1764,8 @@ CogARMv8Compiler >> concretizeDivRdRd [
 	registerA := operands at: 0.
 	destinationRegister := registerB := operands at: 1.
 	machineCode at: 0 put: (self
-		fDivFirstRegister: registerA
-		secondRegister: registerB
+		fDivFirstRegister: registerB
+		secondRegister: registerA
 		destinationRegister: destinationRegister).
 	^ machineCodeSize := 4
 ]
@@ -2894,10 +2906,8 @@ CogARMv8Compiler >> concretizeSqrtRd [
 	<inline: true>
 	| regLHS |
 	
-	self notYetImplemented.
-	
 	regLHS := operands at: 0.
-	machineCode at: 0 put: (self fsqrtd: regLHS).
+	machineCode at: 0 put: (self fSqrtd: regLHS destinationRegister: regLHS).
 	^ machineCodeSize := 4
 ]
 
@@ -3061,6 +3071,22 @@ CogARMv8Compiler >> concretizeXorRR [
 	^ machineCodeSize := 4
 ]
 
+{ #category : #'generate machine code - concretize' }
+CogARMv8Compiler >> concretizeXorRdRd [
+	"FP XOR registerA by registerB and stick result in registerB"
+
+	<inline: true>
+	| registerA registerB destinationRegister |
+	registerA := operands at: 0.
+	destinationRegister := registerB := operands at: 1.
+
+	machineCode at: 0 put: (self
+		fEorFirstRegister: registerA
+		secondRegister: registerB
+		destinationRegister: destinationRegister).
+	^ machineCodeSize := 4
+]
+
 { #category : #encoding }
 CogARMv8Compiler >> cond: c br: link offset: offset [
 	"c : 4 bit, opcode = 10 bitOr: link, offset >>2, limited to 24 bits (which are sign-extended, shifted left 2 and added to 8 + pc to make the resulting address)"
@@ -3185,12 +3211,17 @@ CogARMv8Compiler >> dispatchConcretize [
 		[OrRR]						-> [^self concretizeOrRR].
 		[SubRR]						-> [^self concretizeSubRR].
 		[XorRR]						-> [^self concretizeXorRR].
+
+		"Floating point operations"
+	
 		[AddRdRd]					-> [^self concretizeAddRdRd].
 		[CmpRdRd]					-> [^self concretizeCmpRdRd].
 		[DivRdRd]					-> [^self concretizeDivRdRd].
 		[MulRdRd]					-> [^self concretizeMulRdRd].
 		[SubRdRd]					-> [^self concretizeSubRdRd].
 		[SqrtRd]					-> [^self concretizeSqrtRd].
+		[XorRdRd]					-> [^self concretizeXorRdRd].
+
 		[NegateR]						-> [^self concretizeNegateR].
 		[LoadEffectiveAddressMwrR]	-> [^self concretizeLoadEffectiveAddressMwrR].
 		[ArithmeticShiftRightCqR]		-> [^self concretizeArithmeticShiftRightCqR].
@@ -3414,6 +3445,22 @@ CogARMv8Compiler >> fDivFirstRegister: registerA secondRegister: registerB desti
 		bitOr: (destinationRegister bitAnd: 16r1f))))))
 ]
 
+{ #category : #assembler }
+CogARMv8Compiler >> fEorFirstRegister: registerA secondRegister: registerB destinationRegister: destinationRegister [ 
+
+	"C7.2.41 EOR (vector)
+	
+	Bitwise Exclusive OR (vector). This instruction performs a bitwise Exclusive OR operation between the two source SIMD&FP registers, and places the result in the destination SIMD&FP register.
+	
+	EOR <Vd>.<T>, <Vn>.<T>, <Vm>.<T> (We only implemented for 64 bits double precision)"
+	
+	^ 2r101110001 << 21
+		bitOr: (((registerB bitAnd: 16r1f) << 16)
+		bitOr: (2r111 << 10
+		bitOr: (((registerA bitAnd: 16r1f) << 5)
+		bitOr: (destinationRegister bitAnd: 16r1f))))	
+]
+
 { #category : #'as yet unclassified' }
 CogARMv8Compiler >> fMoveSize: is64Bits fromDoublePrecisionFloatRegister: sourceDoublePrecisionFloatRegister toScalarRegister: destinationScalarRegister [
 	
@@ -3472,6 +3519,24 @@ CogARMv8Compiler >> fMulFirstRegister: registerA secondRegister: registerB desti
 ]
 
 { #category : #assembler }
+CogARMv8Compiler >> fSqrtd: sourceRegister destinationRegister: destinationRegister [
+
+	"C7.2.172 FSQRT (scalar)
+	
+	Floating-point Square Root (scalar). This instruction calculates the square root of the value in the SIMD&FP source register and writes the result to the SIMD&FP destination register.
+
+	FSQRT <Dd>, <Dn>
+	"
+
+	^ 2r1111 << 25
+		bitOr: (2r01 "double precision variant only" << 22
+		bitOr: (2r1 << 21
+		bitOr: (2r111 << 14
+		bitOr: (((sourceRegister bitAnd: 16r1f) << 5)
+		bitOr: (destinationRegister bitAnd: 16r1f)))))
+]
+
+{ #category : #assembler }
 CogARMv8Compiler >> fSubFirstRegister: registerA secondRegister: registerB destinationRegister: destinationRegister [
 
 	"C7.2.174 FSUB (scalar)
@@ -3489,13 +3554,22 @@ CogARMv8Compiler >> fSubFirstRegister: registerA secondRegister: registerB desti
 		bitOr: (destinationRegister bitAnd: 16r1f))))))
 ]
 
-{ #category : #'ARM convenience instructions' }
-CogARMv8Compiler >> faddd: destReg with: srcReg [
-"FADDD or VADD instruction to add double srcReg to double destReg and stick result in double destReg
-FADDD destReg, destReg, srcReg -  ARM_ARM v5 DDI 01001.pdf pp. C4-6
-VADD.F64 destReg, destReg, srcReg - ARM_ARM v7 DDI10406.pdf pp. A8-536-7"
-	<inline: true>
-	^((2r11101110001100000000101100000000 bitOr: destReg<<16 ) bitOr: destReg<<12) bitOr: srcReg
+{ #category : #assembler }
+CogARMv8Compiler >> faddSize: precision firstSourceRegister: registerA secondSourceRegister: registerB destinationRegister: destinationRegister [ 
+
+		"C7.2.50 FADD (scalar)
+	
+	Floating-point Add (scalar). This instruction adds the floating-point values of the two source SIMD&FP registers, and writes the result to the destination SIMD&FP register.
+	
+	FADD <Dd>, <Dn>, <Dm>"
+	
+	^ 2r11110 << 24
+		bitOr: ((precision bitAnd: 2r11) << 22
+		bitOr: (2r1 << 21
+		bitOr: (((registerB bitAnd: 16r1f) << 16)
+		bitOr: (2r101 << 11
+		bitOr: (((registerA bitAnd: 16r1f) << 5)
+		bitOr: (destinationRegister bitAnd: 16r1f))))))
 ]
 
 { #category : #'as yet unclassified' }
@@ -3608,15 +3682,6 @@ VCVTW. regB, regA - ARM_ARM v7 DDI10406.pdf pp. A8-576-8"
 	"the src reg bits are spread out a little"
 	srcReg := (regA >>1) bitOr:(regA bitAnd: 1) << 5.
 	^(2r11101110101110000000101111000000 bitOr: srcReg ) bitOr: regB<<12
-]
-
-{ #category : #'ARM convenience instructions' }
-CogARMv8Compiler >> fsqrtd: destReg [
-"FSQRTD or VSQRT instruction to square root double dividend destReg and stick result in double destReg
-ARM_ARM v5 DDI 01001.pdf pp. C4-97
-VSQRT.F64 destReg, destReg - ARM_ARM v7 DDI10406 pp. A8-756-7"
-	<inline: true>
-	^((2r11101110101100010000101111000000 ) bitOr: destReg<<12) bitOr: destReg
 ]
 
 { #category : #'ARM convenience instructions' }
