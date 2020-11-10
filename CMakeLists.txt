@@ -54,7 +54,7 @@ set(FEATURE_GNUISATION TRUE CACHE BOOL "Use gcc gnu extensions to compile the VM
 if(${GENERATE_SOURCES})
     set(GENERATED_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR})
 else()
-    set(GENERATED_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR} CACHE BOOL "Source directory where to find the generated source. Default value is CMAKE_CURRENT_SOURCE_DIR")
+    set(GENERATED_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR} CACHE STRING "Source directory where to find the generated source. Default value is CMAKE_CURRENT_SOURCE_DIR")
 endif()
 
 if(FLAVOUR MATCHES "StackVM")

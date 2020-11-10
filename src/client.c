@@ -182,7 +182,6 @@ vm_main(int argc, const char** argv, const char** env)
 		parameters.isDefaultImage = false;
 		vm_file_dialog_destroy(&fileDialog);
 	}
-
 	int exitCode = vm_main_with_parameters(&parameters);
 	vm_parameters_destroy(&parameters);
 	return exitCode;

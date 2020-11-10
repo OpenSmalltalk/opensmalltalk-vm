@@ -40,7 +40,7 @@ void *getModuleSymbol(void *module, const char *symbol);
 
 const char *moduleNamePatterns[] = {
     "%s%s",
-#if defined(WIN64)
+#if defined(_WIN32)
     "%s%s.dll",
     "%slib%s.dll",
 #elif defined(__APPLE__)

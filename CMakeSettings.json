@@ -7,7 +7,7 @@
       "inheritEnvironments": [ "clang_cl_x86" ],
       "buildRoot": "${projectDir}\\out\\build\\${name}",
       "installRoot": "${projectDir}\\out\\install\\${name}",
-      "cmakeCommandArgs": "-DGENERATE_SOURCES=FALSE -DWITHOUT_DEPENDENCIES=TRUE -DFLAVOUR=StackVM",
+      "cmakeCommandArgs": "-DGENERATE_SOURCES=FALSE -DWITHOUT_DEPENDENCIES=TRUE -DFLAVOUR=StackVM -DGENERATED_SOURCE_DIR=stack32",
       "buildCommandArgs": "",
       "ctestCommandArgs": "",
       "variables": [
