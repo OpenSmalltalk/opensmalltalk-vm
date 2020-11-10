@@ -105,6 +105,12 @@ PharoVMMaker >> generateStackVM [
 
 ]
 
+{ #category : #generation }
+PharoVMMaker >> generateStackVM32 [
+
+	self generate: StackInterpreter memoryManager: #Spur32BitMemoryManager
+]
+
 { #category : #accessing }
 PharoVMMaker >> outputDirectory [
 	^ outputDirectory
