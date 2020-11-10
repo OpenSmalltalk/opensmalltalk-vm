@@ -645,7 +645,8 @@ CogARMv8Compiler >> assembleSubCq: quickValue R: registerToUse [
 					destinationRegister: reg).
 		^ machineCodeSize := 4
 	].
-	1halt.
+
+	self notYetImplemented.
 	^ 0
 ]
 
@@ -1179,7 +1180,8 @@ CogARMv8Compiler >> concreteCalleeSavedRegisterMask [
 	"According to IHI0042E ARM Architecture Procedure Calling Standard, in section 5.1.1:
 		A subroutine must preserve the contents of the registers r4-r8, r10, r11 and SP (and r9 in PCS variants that designate r9 as v6).
 	 SP = r13, so..."
-	1halt.
+	self notYetImplemented.
+
 	^2r0000110111110000
 ]
 
@@ -1190,7 +1192,8 @@ CogARMv8Compiler >> concreteCallerSavedRegisterMask [
 	 SP = r13, so the callee-saved regs are r4-r8 & r10-r12.
 	 The caller-saved registers are those that are not callee-saved and not reserved for hardware/abi uses,
 	 i..e r0-r3, r9 & r12."
-	1halt.
+	self notYetImplemented.
+
 	^2r1001000001111
 ]
 
@@ -1203,7 +1206,7 @@ CogARMv8Compiler >> concretizeAddCqR [
 	word := operands at: 0.
 	
 	((operands at: 1) = SP) ifTrue: [
-			1halt.
+	self notYetImplemented.
 		"This only works if Cq fits in 12 bits..."
 		self assert: (word bitAnd: 16rfff) = word.
 		self
@@ -1271,7 +1274,7 @@ CogARMv8Compiler >> concretizeAddRR [
 	destinationRegister := rightRegister := operands at: 1.
 
 	"If one of the operands is the stack pointer, we need to use the extended version"
-	rightRegister = SP ifTrue: [ self halt ].
+	rightRegister = SP ifTrue: [ self notYetImplemented ].
 	
 	instruction := leftRegister = SP ifFalse: [ 
 		self
@@ -1282,7 +1285,7 @@ CogARMv8Compiler >> concretizeAddRR [
 			shiftOffset: 0
 			destinationRegister: destinationRegister
 	] ifTrue: [
-	1halt.
+		self notYetImplemented.
 		self
 			addsExtendedSize: 1
 			leftRegisterMaybeSP: leftRegister
@@ -1304,8 +1307,9 @@ CogARMv8Compiler >> concretizeAddRdRd [
 
 	<inline: true>
 	| regLHS regRHS |
-	self halt.
-	1 halt.
+
+	self notYetImplemented.
+
 	regRHS := operands at: 0.
 	regLHS := operands at: 1.
 	machineCode at: 0 put: (self faddd: regLHS with: regRHS).
@@ -1385,7 +1389,7 @@ CogARMv8Compiler >> concretizeAndCqRR [
 					sourceRegister: srcReg
 					destinationRegister: dstReg).
 			^ machineCodeSize := 4 ]
-		ifNotPossible: [ self halt ].
+		ifNotPossible: [ self notYetImplemented ].
 ]
 
 { #category : #'as yet unclassified' }
@@ -1593,9 +1597,8 @@ CogARMv8Compiler >> concretizeCmpCwR [
 	
 	self assert: dependent notNil.
 	self moveCw: (operands at: 0) intoR: ConcreteIPReg.
-	(operands at: 1) = SP ifTrue: [ 
-		self halt.
-	].	
+	(operands at: 1) = SP ifTrue: [ self notYetImplemented ].	
+
 	self
 		machineCodeAt: machineCodeSize
 		put:
@@ -1680,8 +1683,8 @@ CogARMv8Compiler >> concretizeConditionalInstruction [
 
 	<returnTypeC: #void>
 	| savedCond |
-	self halt.
-	1 halt.
+	self notYetImplemented.
+
 	self assert: conditionOrNil notNil.
 	savedCond := conditionOrNil.
 	conditionOrNil := nil.
@@ -1767,8 +1770,8 @@ CogARMv8Compiler >> concretizeFPConditionalJump: conditionCode [
 CogARMv8Compiler >> concretizeFill32 [
 	"fill with operand 0 according to the processor's endianness"
 
-	self halt.
-	1 halt.
+	self notYetImplemented.
+
 	self machineCodeAt: 0 put: (operands at: 0).
 	^ machineCodeSize := 4
 ]
@@ -1884,7 +1887,7 @@ CogARMv8Compiler >> concretizeLoadEffectiveAddressMwrR [
 					immediate12: offset
 					destinationRegister: destReg).
 			^ machineCodeSize := 4 ]
-		ifFalse: [ self halt ].
+		ifFalse: [ self notYetImplemented ].
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -1957,8 +1960,8 @@ V -> 1.
 You don't want to mess with this too much."
 
 	| flags |
-	self halt.
-	1 halt.
+	self notYetImplemented.
+
 	flags := operands at: 0.
 	self machineCodeAt: 0 put: (self msr: flags).
 	^ machineCodeSize := 4
@@ -2135,7 +2138,7 @@ CogARMv8Compiler >> concretizeMoveM16rR [
 						destinationRegister: destReg).
 			^ machineCodeSize := 4  ].
 	
-	self halt.
+	self notYetImplemented.
 	
 	^0
 ]
@@ -2375,7 +2378,8 @@ CogARMv8Compiler >> concretizeMoveRMwr [
 
 	<var: #offset type: #sqInt>
 	<inline: true>
-	| srcReg offset baseReg instrOffset |
+	| srcReg offset baseReg |
+
 	srcReg := operands at: 0.
 	offset := operands at: 1.
 	baseReg := operands at: 2.
@@ -2402,7 +2406,7 @@ CogARMv8Compiler >> concretizeMoveRMwr [
 						machineCodeAt: 4
 						put: (self strSize: 1 baseRegister: baseReg offsetRegister: ConcreteIPReg extension: 2r011 "LSL" shift: 0 "no LSL" storedRegister: srcReg).
 					^ machineCodeSize := 8  ]
-				ifFalse: [ self halt ]].
+				ifFalse: [ self notYetImplemented ]].
 	^ 0	"to keep Slang happy"
 ]
 
@@ -2708,7 +2712,9 @@ CogARMv8Compiler >> concretizePrefetchAw [
 						sourceRegister: ConcreteVarBaseReg
 						offset: addressOperand - cogit varBaseAddress).
 			^ machineCodeSize := 4 ].
-	1halt.
+	
+	self notYetImplemented.
+	
 	instrOffset := self moveCw: addressOperand intoR: ConcreteIPReg.
 	"pld	[ConcreteIPReg]"
 	self
@@ -2859,8 +2865,10 @@ CogARMv8Compiler >> concretizeSMULH [
 { #category : #'generate machine code - concretize' }
 CogARMv8Compiler >> concretizeSMULL [
 	| srcA srcB hiResultReg loResultReg |
+
 	"Generate an SMULL loResultReg, hiResultReg, srcA, srcB instruction"
-	self halt.
+	self notYetImplemented.
+
 	srcA := operands at: 0.
 	"NOTE: srcB contains the other mutiplicand at this point. It is OK to use it as the destination for the low part of the result and in fact this saves us moving it later"
 	loResultReg := srcB := operands at: 1.
@@ -2885,7 +2893,9 @@ CogARMv8Compiler >> concretizeSqrtRd [
 
 	<inline: true>
 	| regLHS |
-	self halt.
+	
+	self notYetImplemented.
+	
 	regLHS := operands at: 0.
 	machineCode at: 0 put: (self fsqrtd: regLHS).
 	^ machineCodeSize := 4
@@ -2909,7 +2919,11 @@ CogARMv8Compiler >> concretizeSubCqR [
 	| word fits12Bits reg instrOffset |
 	word := operands at: 0.
 	reg := operands at: 1.
-	word < 0 ifTrue: [ self halt ].
+	
+	word < 0 ifTrue: [ 
+			self logError: 'Invalid constant'. 
+			self abort  ].
+	
 	fits12Bits := (word bitAnd: 16rfff) = word.
 	fits12Bits ifTrue: [
 		self
@@ -2968,7 +2982,7 @@ CogARMv8Compiler >> concretizeSubRR [
 			shiftOffset: 0
 			destinationRegister: destReg
 	] ifTrue: [
-		1halt.
+		self notYetImplemented.
 		"Maybe this is the implementation.... ??"
 		instruction := self
 			subsExtendedSize: 1
@@ -3013,7 +3027,7 @@ CogARMv8Compiler >> concretizeTstCqR [
 				machineCodeAt: 0
 				put: (self tstSize: 1 immediate13bitValue: immediate13LogicalValue register: (operands at: 1)).
 			^ machineCodeSize := 4 ]
-		ifNotPossible: [ self halt ].
+		ifNotPossible: [ self notYetImplemented ].
 	^ 0	"to keep Slang happy"
 ]
 
@@ -3378,7 +3392,7 @@ CogARMv8Compiler >> extractOffsetFromConditionalBranch: instruction [
 	
 	"Check if negative, if the highest bit is on"
 	^ (twoComplement allMask: 1 << 18)
-		ifTrue: [ 1halt ]
+		ifTrue: [ self notYetImplemented  ]
 		ifFalse: [ twoComplement << 2 ]
 ]
 
@@ -4618,7 +4632,7 @@ CogARMv8Compiler >> loadCwInto: destReg [
 			ifTrue: [ 
 				self machineCodeAt: 0 put: (self adrSignedImmediate21BitsValue: distance destinationRegister: destReg).
 				^ machineCodeSize := 4 ]
-			ifFalse: [ self halt. ]].
+			ifFalse: [ self notYetImplemented. ]].
 	
 	"If this fails, use the conventional literal load sequence."
 	^self moveCw: operand intoR: destReg
@@ -5464,7 +5478,7 @@ CogARMv8Compiler >> setsConditionCodesFor: aConditionalJumpOpcode [
 			[LogicalShiftRightCqR]		->	[false].
 			[XorRR]							->	[false]
 		}
-		otherwise: [self halt: 'unhandled opcode in setsConditionCodesFor:'. false]
+		otherwise: [self logError: 'unhandled opcode in setsConditionCodesFor:'. self abort. false]
 ]
 
 { #category : #testing }

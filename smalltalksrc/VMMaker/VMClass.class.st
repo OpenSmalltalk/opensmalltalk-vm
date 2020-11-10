@@ -994,8 +994,14 @@ VMClass >> minorVersion [
 
 { #category : #'translation support' }
 VMClass >> notYetImplemented [
-	<cmacro: '() logError("not yet implemented")'>
-	super notYetImplemented
+
+	<inline: true>
+
+	self
+		cCode: [ 
+			self logError: 'not yet implemented'.
+			self abort ]
+		inSmalltalk: [ super notYetImplemented ]
 ]
 
 { #category : #'translation support' }
