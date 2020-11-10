@@ -1018,9 +1018,13 @@ CogARMv8Compiler >> computeMaximumSize [
 		[CmpC32R]				-> [^self rotateable8bitSignedImmediate: (operands at: 0)
 											ifTrue: [:r :i :n| 4]
 											ifFalse: [self literalLoadInstructionBytes + 4]].
-		[OrCqR]					-> [^self rotateable8bitImmediate: (operands at: 0)
-											ifTrue: [:r :i| 4]
-											ifFalse: [self literalLoadInstructionBytes + 4]].
+		[OrCqR]				-> [
+			^self
+				encodeLogicalImmediate: (operands at: 0)
+				registerSize: 64
+				ifPossible: [ :v | 4 ]
+				ifNotPossible: [ self literalLoadInstructionBytes + 4 ] ].
+			
 		[SubCqR]				-> [| constant |
 			"If it fits in 12 bits, we can used an immediate instruction.
 			Othewise we need to use a literal and load it"

@@ -14,7 +14,7 @@ CogOutOfLineLiteralsARMv8Compiler >> cmpC32RTempByteSize [
 	^8
 ]
 
-{ #category : #'generate machine code' }
+{ #category : #'generate machine code - concretize' }
 CogOutOfLineLiteralsARMv8Compiler >> concretizeLiteral [
 	"Generate an out-of-line literal.  Copy the value and any annotation from the stand-in in the literals manager."
 	| literalAsInstruction literal twoComplement |
@@ -39,7 +39,7 @@ CogOutOfLineLiteralsARMv8Compiler >> concretizeLiteral [
 	machineCodeSize := 8
 ]
 
-{ #category : #'generate machine code' }
+{ #category : #'generate machine code - concretize' }
 CogOutOfLineLiteralsARMv8Compiler >> concretizeMoveC32R [
 	"Will get inlined into concretizeAt: switch."
 	<var: #quickConstant type: #sqInt>
@@ -56,7 +56,7 @@ CogOutOfLineLiteralsARMv8Compiler >> concretizeMoveC32R [
 						negatedImm: value
 						shift: shift).
 				^ machineCodeSize := 4 ]
-			ifFalse: [ self halt ]].
+			ifFalse: [ self notYetImplemented ]].
 
 	self shiftable16bitImmediate: quickConstant
 		ifTrue: [ :shift :value |
@@ -107,7 +107,7 @@ CogOutOfLineLiteralsARMv8Compiler >> isPCDependent [
 	  or: [opcode ~= Literal and: [dependent notNil and: [dependent opcode = Literal]]]]
 ]
 
-{ #category : #'generate machine code' }
+{ #category : #'generate machine code - support' }
 CogOutOfLineLiteralsARMv8Compiler >> isSharable [
 	"Hack:  To know if a literal should be unique (not shared) mark the second operand."
 	<inline: true>
@@ -132,7 +132,7 @@ CogOutOfLineLiteralsARMv8Compiler >> literalLoadInstructionBytes [
 	^4
 ]
 
-{ #category : #'generate machine code' }
+{ #category : #'generate machine code - support' }
 CogOutOfLineLiteralsARMv8Compiler >> literalOpcodeIndex [
 	"Hack:  To know how far away a literal is from its referencing instruction we store
 	 its opcodeIndex, or -1, if as yet unassigned, in the second operand of the literal."
@@ -147,7 +147,7 @@ CogOutOfLineLiteralsARMv8Compiler >> loadLiteralByteSize [
 	^4
 ]
 
-{ #category : #'generate machine code' }
+{ #category : #'generate machine code - support' }
 CogOutOfLineLiteralsARMv8Compiler >> mapEntryAddress [
 	"Typically map entries apply to the end of an instruction, for two reasons:
 	  a)	to cope with literals embedded in variable-length instructions, since, e.g.
@@ -269,7 +269,7 @@ CogOutOfLineLiteralsARMv8Compiler >> rewriteInlineCacheTag: cacheTag at: callSit
 	objectMemory longAt: (self pcRelativeAddressAt: callSiteReturnAddress - 8) put: cacheTag
 ]
 
-{ #category : #'generate machine code' }
+{ #category : #'generate machine code - support' }
 CogOutOfLineLiteralsARMv8Compiler >> setLiteralOpcodeIndex: index [
 	"Hack:  To know how far away a literal is from its referencing instruction we store
 	 its opcodeIndex, or -1, if as yet unassigned, in the second operand of the literal."
@@ -278,7 +278,7 @@ CogOutOfLineLiteralsARMv8Compiler >> setLiteralOpcodeIndex: index [
 	operands at: 2 put: index
 ]
 
-{ #category : #'generate machine code' }
+{ #category : #'generate machine code - support' }
 CogOutOfLineLiteralsARMv8Compiler >> sizePCDependentInstructionAt: eventualAbsoluteAddress [
 	"Size a jump and set its address.  The target may be another instruction
 	 or an absolute address.  On entry the address inst var holds our virtual
@@ -329,7 +329,7 @@ CogOutOfLineLiteralsARMv8Compiler >> storeLiteral: literal beforeFollowingAddres
 		put: literal
 ]
 
-{ #category : #'generate machine code' }
+{ #category : #'generate machine code - support' }
 CogOutOfLineLiteralsARMv8Compiler >> updateLabel: labelInstruction [
 	opcode ~= Literal ifTrue:
 		[super updateLabel: labelInstruction]
@@ -363,7 +363,12 @@ CogOutOfLineLiteralsARMv8Compiler >> usesOutOfLineLiteral [
 				((operands at: 0) abs << 12 >> 12 bitAnd: 16rFFF) = (operands at: 0) abs ifTrue: [ ^ false ].
 				^ true].
 		[CmpC32R]		-> [^self rotateable8bitSignedImmediate: (operands at: 0) ifTrue: [:r :i :n| false] ifFalse: [true]].
-		[OrCqR]			-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
+		[OrCqR]			-> [^self
+				encodeLogicalImmediate: (operands at: 0)
+				registerSize: 64
+				ifPossible: [ :v | false ]
+				ifNotPossible: [ true ]].
+				
 		[SubCqR]		-> [ | constant |
 			constant := operands at: 0.
 			^ (constant bitAnd: 16rfff) ~= constant ].

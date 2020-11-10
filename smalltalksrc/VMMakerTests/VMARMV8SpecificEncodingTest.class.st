@@ -175,6 +175,18 @@ VMARMV8SpecificEncodingTest >> testEncodeOrCqRWithEncodableConstant [
 ]
 
 { #category : #'tests - cmpCqR' }
+VMARMV8SpecificEncodingTest >> testEncodeOrCqRWithLargeConstant [
+
+	self compile: [
+		cogit OrCq: 67108865 R: ReceiverResultReg ].
+	
+	machineSimulator receiverRegisterValue: 16r100.
+	self runGeneratedCode.
+	
+	self assert: machineSimulator receiverRegisterValue equals: (67108865 bitOr: 16r100)
+]
+
+{ #category : #'tests - cmpCqR' }
 VMARMV8SpecificEncodingTest >> testEncodeOrCqRWithNonEncodableConstant [
 
 	self compile: [
