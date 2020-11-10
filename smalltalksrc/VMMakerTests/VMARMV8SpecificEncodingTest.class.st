@@ -131,3 +131,27 @@ VMARMV8SpecificEncodingTest >> testEncodeCmpCqRWithPositiveShiftable13BitConstan
 	"Assert Cmp was equals"
 	self assert: machineSimulator zero
 ]
+
+{ #category : #'tests - cmpCqR' }
+VMARMV8SpecificEncodingTest >> testEncodeOrCqRWithEncodableConstant [
+
+	self compile: [
+		cogit OrCq: 16rFF R: ReceiverResultReg ].
+	
+	machineSimulator receiverRegisterValue: 16r100.
+	self runGeneratedCode.
+	
+	self assert: machineSimulator receiverRegisterValue equals: 16r1FF
+]
+
+{ #category : #'tests - cmpCqR' }
+VMARMV8SpecificEncodingTest >> testEncodeOrCqRWithNonEncodableConstant [
+
+	self compile: [
+		cogit OrCq: 16r12345678 R: ReceiverResultReg ].
+	
+	machineSimulator receiverRegisterValue: 16r100.
+	self runGeneratedCode.
+	
+	self assert: machineSimulator receiverRegisterValue equals: (16r12345678 bitOr: 16r100)
+]

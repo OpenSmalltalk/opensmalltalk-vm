@@ -5009,9 +5009,19 @@ CogARMv8Compiler >> orSize: is64Bits immediate13bitValue: logicalEncodedImmediat
 
 { #category : #assembler }
 CogARMv8Compiler >> orSize: is64Bits shiftedRegister: shiftedRegister shiftType: shiftType shiftValue: immediate6bitValue withRegister: sourceRegister2 destinationRegister: destinationRegister [
-	
-	self notYetImplemented.
-	^ 0
+
+	" C6.2.206 Bitwise OR (shifted register) 
+		performs a bitwise (inclusive) OR of a register value and an optionally-shifted register value, and writes the 		result to the destination register."
+
+	^ self
+		  logicalShiftedRegisterSize: is64Bits
+		  opcode: 2r01
+		  firstRegister: sourceRegister2
+		  shiftedRegister: shiftedRegister
+		  shiftOption: shiftType
+		  shiftValue: immediate6bitValue
+		  negated: 0
+		  destinationRegister: destinationRegister
 ]
 
 { #category : #'generate machine code' }
