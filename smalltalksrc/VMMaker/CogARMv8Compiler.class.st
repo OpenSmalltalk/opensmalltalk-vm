@@ -3995,6 +3995,7 @@ CogARMv8Compiler >> instructionAddressBefore: followingAddress [
 CogARMv8Compiler >> instructionBeforeAddress: followingAddress [
 	"Answer the instruction immediately preceding followingAddress."
 	<inline: true>
+	<returnTypeC: #'uint32_t'>
 	^objectMemory long32At: (self instructionAddressBefore: followingAddress)
 ]
 
@@ -4052,6 +4053,8 @@ CogARMv8Compiler >> instructionIsOR: instr [
 { #category : #testing }
 CogARMv8Compiler >> instructionIsPush: instr [
 	"is this a push R str r??, [sp, #-8] -  instruction?"
+	<var: #instr type: #'uint32_t'> 
+	
 	^ (self pushR: 0) = (instr bitAnd: 16rFFFFFFFFFFFFFFE0)
 ]
 
