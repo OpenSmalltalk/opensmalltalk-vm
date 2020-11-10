@@ -300,6 +300,18 @@ CogObjectRepresentationForSpur >> ceSmallActiveContextInMethodTrampoline: anInte
 	ceSmallActiveContextInMethodTrampoline := anInteger
 ]
 
+{ #category : #accessing }
+CogObjectRepresentationForSpur >> ceStoreCheckTrampoline [
+	
+	^ ceStoreCheckTrampoline 
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> ceStoreTrampolines [
+
+	^ ceStoreTrampolines
+]
+
 { #category : #'sista support' }
 CogObjectRepresentationForSpur >> checkRememberedInTrampoline [
 	<inline: true>

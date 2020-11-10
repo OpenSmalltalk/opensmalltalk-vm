@@ -217,8 +217,4 @@ VMPrimitiveCallAbstractTest >> setUpTrampolines [
 	
 	cogit ceStoreCheckTrampoline: (self compileTrampoline: [ cogit RetN: 0 ] named:#ceStoreCheckTrampoline).
 	cogit objectRepresentation setAllStoreTrampolinesWith: (self compileTrampoline: [ cogit RetN: 0 ] named: #ceStoreTrampoline).
-	
-"	1halt.
-	cogit ceStoreCheckTrampoline: 0.
-"	
 ]

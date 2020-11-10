@@ -2332,6 +2332,12 @@ StackToRegisterMappingCogit >> ceShortCutTraceStore: aProcessorSimulationTrap [
 				into: (processor registerAt: ReceiverResultReg)]
 ]
 
+{ #category : #accessing }
+StackToRegisterMappingCogit >> ceStoreCheckTrampoline [
+	
+	^ self objectRepresentation ceStoreCheckTrampoline
+]
+
 { #category : #'compile abstract instructions' }
 StackToRegisterMappingCogit >> compileAbstractInstructionsFrom: start through: end [
 	"Loop over bytecodes, dispatching to the generator for each bytecode, handling fixups in due course."

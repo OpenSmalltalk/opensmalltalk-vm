@@ -7,6 +7,19 @@ Class {
 	#category : #'VMMakerTests-JitTests'
 }
 
+{ #category : #utils }
+VMCodeCompactionTest >> createFillingMethods: anInteger [ 
+
+	| firstMethod |
+
+	firstMethod := self jitMethod: (self findMethod: #methodToCompile1).
+	2 to: anInteger do: [ :i | self jitMethod: (self findMethod: #methodToCompile1) ].
+	
+	^ firstMethod
+
+
+]
+
 { #category : #tests }
 VMCodeCompactionTest >> fillCodeZone [
 
@@ -478,4 +491,51 @@ VMCodeCompactionTest >> testCompactingShouldRelocatePolymorphicPICMNUAbortCallsi
 	self
 		assert: machineSimulator instructionPointerValue
 		equals: cogit cePICAbortTrampoline
+]
+
+{ #category : #tests }
+VMCodeCompactionTest >> testRelocatingAMethodDoesNotAffectTheFrameCreationPushes [
+
+	| firstMethod compactMethod methodOop readOnlyObject |
+	
+	firstMethod := self createFillingMethods: 10.
+
+	"We are using this method because it modifies an instance variable"
+	compactMethod := self jitMethod: (ZnEncodedStream lookupSelector: #on:).
+	compactMethod cmUsageCount: 4.
+	methodOop := compactMethod methodObject.
+	
+	self fillCodeZone.
+
+	self createBaseFrame.	
+	interpreter commenceCogCompiledCodeCompaction.	
+	
+	"Obtaining the relocated method"
+	compactMethod := interpreter cogMethodOf: methodOop.
+
+	"The receiver should be a read only, so it will create the frame and call the routine"
+	readOnlyObject := self newObjectWithSlots: 1.
+	memory setIsImmutableOf: readOnlyObject to: true.
+	
+	"We create to activate the method"
+	self createFramefulCallFrom: callerAddress.
+	self prepareStackForSendReceiver: readOnlyObject arguments: { memory falseObject }.
+
+	"We run until the ceStoreTrampoline"
+	self 
+		runFrom: compactMethod address + cogit noCheckEntryOffset 
+		until: (cogit objectRepresentation ceStoreTrampolines at: 0).
+	
+	"To access to the stack we need to put in sync the pointers"	
+	interpreter stackPointer: machineSimulator smalltalkStackPointerRegisterValue.
+	interpreter framePointer: machineSimulator framePointerRegisterValue.
+
+	machineSimulator hasLinkRegister 
+		ifFalse: [ interpreter popStack. ].
+
+	"Asserting the correct structure of the created frame"			
+	self assert: interpreter stackTop equals: readOnlyObject.
+	self assert: (interpreter stackValue: 1) equals: memory nilObject.
+	self assert: (interpreter stackValue: 2) equals: compactMethod address.
+
 ]
