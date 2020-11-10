@@ -6,15 +6,25 @@
 #include <libgen.h>
 #include <sys/param.h>
 #else
-#include <Windows.h>
+#include <windows.h>
+/* Maximum length of file name */
+#if !defined(PATH_MAX)
+#   define PATH_MAX MAX_PATH
+#endif
+#if !defined(FILENAME_MAX)
+#   define FILENAME_MAX MAX_PATH
+#endif
+#if !defined(NAME_MAX)
+#   define NAME_MAX FILENAME_MAX
+#endif
 #endif
 
 #include <signal.h>
 
-char vmName[FILENAME_MAX];
-char imageName[FILENAME_MAX];
-char vmFullPath[FILENAME_MAX];
-char vmPath[FILENAME_MAX];
+char vmName[PATH_MAX];
+char imageName[PATH_MAX];
+char vmFullPath[PATH_MAX];
+char vmPath[PATH_MAX];
 
 #if __APPLE__
 	void fillApplicationDirectory(char* vmPath);
@@ -205,7 +215,7 @@ EXPORT(void) setVMPath(const char* name){
 	* - does not check error code
 	* - does use count as the size of the destination buffer
 	*/
-	strcpy_s(vmFullPath, strlen(name), name);
+	strcpy_s(vmFullPath, PATH_MAX, name);
 #else
 	strcpy(vmFullPath, name);
 #endif
@@ -528,7 +538,7 @@ osCogStackPageHeadroom()
 /* Helper to pop up a message box with a message formatted from the         */
 /*   printf() format string and arguments                                   */
 /****************************************************************************/
-#ifdef WIN64
+#ifdef _WIN32
 EXPORT(int) __cdecl sqMessageBox(DWORD dwFlags, const char *titleString, const char* fmt, ...)
 { TCHAR *buf;
   va_list args;
@@ -631,8 +641,8 @@ EXPORT(void) getBasePath(char const *path, char* basePath, int basePathSize){
 		return;
 	}
 
-	wcscpy_s(finalBasePathWide, sizeof(WCHAR) * basePathSize, driveWide);
-	wcscat_s(finalBasePathWide, sizeof(WCHAR) * basePathSize, basePathWide);
+	wcscpy_s(finalBasePathWide, basePathSize, driveWide);
+	wcscat_s(finalBasePathWide, basePathSize, basePathWide);
 
 	WideCharToMultiByte(CP_UTF8, 0, finalBasePathWide, -1, basePath, basePathSize, NULL, 0);
 

@@ -112,10 +112,28 @@ ioGetClockLogSizeUsecsIdxMsecsIdx(sqInt *np, void **usecsp, sqInt *uip, void **m
 static unsigned long long
 currentUTCMicroseconds()
 {
+#if defined(_WIN32)
+	FILETIME ft;
+	SYSTEMTIME st;
+	ULARGE_INTEGER l;
+
+	GetSystemTime(&st);              // Gets the current system time
+	SystemTimeToFileTime(&st, &ft);  // Converts the current system time to file time format
+	
+	// Copy the file time structure to a large integer structure
+	l.LowPart  = ft.dwLowDateTime;
+	l.HighPart = ft.dwHighDateTime;
+
+	//The number of 100-nanosecond intervals since January 1, 1601
+	//Transform it to microseconds
+	//TODO: Convert to january 1901 relative
+	return l.QuadPart / 10;
+#else
 	struct timeval utcNow;
 	gettimeofday(&utcNow,0);
 	return ((utcNow.tv_sec * MicrosecondsPerSecond) + utcNow.tv_usec)
 		+ MicrosecondsFrom1901To1970;
+#endif
 }
 
 /*
@@ -360,6 +378,9 @@ beatStateMachine(void *careLess)
 # define MINSLEEPNS 2000 /* don't bother sleeping for short times */
 		struct timespec naptime = beatperiod;
 
+#if defined(_WIN32)
+		Sleep(2);
+#else
 		while (nanosleep(&naptime, &naptime) == -1
 			&& naptime.tv_sec >= 0 /* oversleeps can return tv_sec < 0 */
 			&& (naptime.tv_sec > 0 || naptime.tv_nsec > MINSLEEPNS)) /*repeat*/
@@ -367,7 +388,7 @@ beatStateMachine(void *careLess)
 				logErrorFromErrno("nanosleep");
 				exit(1);
 			}
-
+#endif
 		heartbeat_wait_if_polling();
 		heartbeat();
 	}
@@ -441,7 +462,11 @@ ioInitHeartbeat()
 #endif	
 	
 	while (beatState == nascent) {
+#if defined(_WIN32)
+		//Nothing for now?
+#else
 		nanosleep(&halfAMo, 0);
+#endif
 	}
 }
 

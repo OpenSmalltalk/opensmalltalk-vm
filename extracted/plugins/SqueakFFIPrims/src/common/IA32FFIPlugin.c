@@ -2568,26 +2568,7 @@ ffiLogCallout(sqInt lit)
 EXPORT(sqInt)
 ffiLogCallsTo(char *fileName)
 {
-    sqInt ok;
-
-	if (fileName == null) {
-
-		/* disable logging */
-		ok = ffiLogFileNameOfLength(null, 0);
-		if (!ok) {
-			return 0;
-		}
-		ffiLogEnabled = 0;
-	}
-	else {
-
-		/* enable logging */
-		ok = ffiLogFileNameOfLength(fileName, strlen(fileName));
-		if (!ok) {
-			return 0;
-		}
-		ffiLogEnabled = 1;
-	}
+	//Cancel implementtion as in X64Win64FFIPlugin
 	return 1;
 }
 
@@ -5636,35 +5617,11 @@ primitiveLoadSymbolFromModule(void)
 EXPORT(sqInt)
 primitiveLogCallsTo(void)
 {
-    sqInt logFile;
-    sqInt ok;
+	// Cancel implementation as with X64Win64FFIPlugin
+	sqInt logFile;
+	sqInt ok;
 
-	if (!((methodArgumentCount()) == 1)) {
-		return primitiveFail();
-	}
-	logFile = stackValue(0);
-	if (logFile == (nilObject())) {
-
-		/* disable logging */
-		ok = ffiLogFileNameOfLength(null, 0);
-		if (!ok) {
-			return primitiveFail();
-		}
-		ffiLogEnabled = 0;
-	}
-	else {
-
-		/* enable logging */
-		if (!(isBytes(logFile))) {
-			return primitiveFail();
-		}
-		ok = ffiLogFileNameOfLength(firstIndexableField(logFile), byteSizeOf(logFile));
-		if (!ok) {
-			return primitiveFail();
-		}
-		ffiLogEnabled = 1;
-	}
-	return pop(1);
+	return primitiveFail();
 }
 
 

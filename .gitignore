@@ -12,7 +12,6 @@ Pharo.changes
 Pharo.image
 Pharo*.sources
 PharoDebug.log
-generated/
 pharo
 pharo-local/
 pharo-ui

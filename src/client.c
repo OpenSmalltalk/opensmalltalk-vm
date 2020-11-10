@@ -86,7 +86,7 @@ vm_main_with_parameters(VMParameters *parameters)
 
 	if(parameters->isDefaultImage && !parameters->defaultImageFound)
 	{
-		logError("No image has been specified, and no default image has been found.\n");
+		////logError("No image has been specified, and no default image has been found.\n");
 		vm_printUsageTo(stdout);
 		return 0;
 	}
@@ -143,6 +143,11 @@ EXPORT(int)
 vm_main(int argc, const char** argv, const char** env)
 {
 	VMParameters parameters;
+	parameters.vmParameters.count = 0;
+	parameters.vmParameters.parameters = NULL;
+	parameters.imageParameters.count = 0;
+	parameters.imageParameters.parameters = NULL;
+
 	parameters.processArgc = argc;
 	parameters.processArgv = argv;
 	parameters.environmentVector = env;

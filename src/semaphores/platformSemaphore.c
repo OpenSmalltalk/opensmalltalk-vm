@@ -31,7 +31,6 @@ semaphore_new(long initialValue) {
 
 int
 semaphore_wait(PlatformSemaphore sem) {
-    DWORD dwWaitResult;
     return WaitForSingleObject(
         sem,   // handle to semaphore
         0L);           // zero-second time-out interval
@@ -134,7 +133,7 @@ platform_semaphore_free(Semaphore *semaphore){
 	free(semaphore);
 }
 
-EXPORT(Semaphore*)
+Semaphore*
 platform_semaphore_new(int initialValue) {
 	Semaphore *semaphore = (Semaphore *) malloc(sizeof(Semaphore));
 	semaphore->handle = (void *) semaphore_new(initialValue);

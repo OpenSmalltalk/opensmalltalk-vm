@@ -46,6 +46,8 @@ set(FLAVOUR CoInterpreterWithQueueFFI CACHE STRING "The kind of VM to generate. 
 set(GENERATE_SOURCES TRUE CACHE BOOL "If it generates the sources")
 set(ALWAYS_INTERACTIVE FALSE CACHE BOOL "If this VM will always add interactive or not. If it is set, the headless parameter is not by default true")
 set(FEATURE_FFI TRUE CACHE BOOL "Configure and compile support for FFI in the VM")
+set(FEATURE_SOCKETS TRUE CACHE BOOL "Configure and compile support for sockets in the VM")
+set(FEATURE_GNUISATION TRUE CACHE BOOL "Use gcc gnu extensions to compile the VM")
 
 # If we are generating sources, set the source dir as the generation source dir.
 # Otherwise set it to by default to the current source dir, parametrizable
@@ -56,8 +58,11 @@ else()
 endif()
 
 if(FLAVOUR MATCHES "StackVM")
-  set(VMSOURCEFILES
-    ${GENERATED_SOURCE_DIR}/generated/vm/src/gcc3x-interp.c)
+    if(${FEATURE_GNUISATION})
+        set(VMSOURCEFILES ${GENERATED_SOURCE_DIR}/generated/vm/src/gcc3x-interp.c)
+    else()
+        set(VMSOURCEFILES ${GENERATED_SOURCE_DIR}/generated/vm/src/interp.c)
+    endif()
 else()
   set(VMSOURCEFILES
     ${GENERATED_SOURCE_DIR}/generated/vm/src/cogit.c
@@ -343,6 +348,8 @@ set(SUPPORT_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/stringUtilities.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/imageAccess.c
     
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/semaphores/platformSemaphore.c
+
     ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/common/heartbeat.c
 )
 
@@ -365,7 +372,6 @@ if(${FEATURE_FFI})
         ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/worker/workerTask.c
 
         ${CMAKE_CURRENT_SOURCE_DIR}/src/threadSafeQueue/threadSafeQueue.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/semaphores/platformSemaphore.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/semaphores/pharoSemaphore.c
     )
 endif()
@@ -397,7 +403,7 @@ endif()
 target_link_libraries(${VM_EXECUTABLE_NAME} ${VM_LIBRARY_NAME})
 
 if(${FEATURE_FFI})
-target_link_libraries(${VM_LIBRARY_NAME} "ffi")
+    target_link_libraries(${VM_LIBRARY_NAME} "ffi")
 endif()
 
 add_required_libs_per_platform()

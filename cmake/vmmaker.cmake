@@ -28,8 +28,11 @@ make_directory(${VMMAKER_OUTPUT_PATH})
 
 #The list of generated files given the flavour
 if(FLAVOUR MATCHES "StackVM")
-  set(PHARO_VM_SLANG_VM_SOURCE_FILES
-    ${GENERATED_SOURCE_DIR}/generated/vm/src/gcc3x-interp.c)
+    if(FEATURE_GNUISATION)
+        set(VMSOURCEFILES ${GENERATED_SOURCE_DIR}/generated/vm/src/gcc3x-interp.c)
+    else()
+        set(VMSOURCEFILES ${GENERATED_SOURCE_DIR}/generated/vm/src/interp.c)
+    endif()
 else()
   set(PHARO_VM_SLANG_VM_SOURCE_FILES
     ${GENERATED_SOURCE_DIR}/generated/vm/src/cogit.c
