@@ -3,7 +3,7 @@ I generate code that can be loaded dynamically from external libraries (e.g., DS
 "
 Class {
 	#name : #VMPluginCodeGenerator,
-	#superclass : #CCodeGenerator,
+	#superclass : #MLVMCCodeGenerator,
 	#instVars : [
 		'pluginClass',
 		'pluginFunctionsUsed',
@@ -162,17 +162,6 @@ VMPluginCodeGenerator >> emitCHeaderOn: aStream [
 ]
 
 { #category : #'C code generator' }
-VMPluginCodeGenerator >> emitCTypesOn: aStream [
-	"Store local type declarations on the given stream."
-	(self structClassesForTranslationClasses: { pluginClass }) do:
-		[:structClass|
-		(structClass isAbstract not
-		 and: [pluginClass shouldGenerateTypedefFor: structClass]) ifTrue:
-			[structClass printTypedefOn: aStream.
-			 aStream cr; cr]]
-]
-
-{ #category : #'C code generator' }
 VMPluginCodeGenerator >> emitExportsOn: aStream [
 	"Store all the exported primitives in the form used by the internal named prim system."
 	| nilVMClass |
@@ -209,11 +198,11 @@ VMPluginCodeGenerator >> generateIntegerObjectOf: msgNode on: aStream indent: le
 	 cast expression to long if in the 64-bit world, since e.g. in 64-bits
 		(int)(16r1FFFFF << 3) = (int)16rFFFFFFF8 = -8
 	 whereas
-		(long)(16r1FFFFF << 3) = (long)16rFFFFFFF8 = 4294967288."
+		(long)(16r1FFFFF << 3) = (long) 16rFFFFFFF8 = 4294967288."
 	type := self typeFor: expr in: currentMethod.
 	typeIsUnsigned := type first = $u.
 	mustCastToUnsigned := typeIsUnsigned not
-							  or: [(self sizeOfIntegralCType: type) < (self sizeOfIntegralCType: #usqInt)].
+		or: [(self sizeOfIntegralCType: type) < (self sizeOfIntegralCType: #usqInt)].
 	mustCastToUnsigned ifTrue:
 		[aStream nextPutAll: '(usqInt)'].
 	self emitCExpression: expr on: aStream.
@@ -555,6 +544,13 @@ VMPluginCodeGenerator >> selectorsThatMayBeGeneratedAsMacros [
 	^self selectorsThatAreGeneratedAsMacros, #(isIntegerObject: isImmediate:)
 ]
 
+{ #category : #'C code generator' }
+VMPluginCodeGenerator >> shouldGenerateStruct: structClass [
+
+	^ structClass isAbstract not
+		 and: [pluginClass shouldGenerateTypedefFor: structClass]
+]
+
 { #category : #inlining }
 VMPluginCodeGenerator >> sizeOfIntegralCType: anIntegralCType [ "<String>"
 	"Hack; because the plugin sources are compiled either as 32 or 64 bit
@@ -678,6 +674,12 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 
 	stream cr; crtab; nextPutAll:'return VM;'; cr; nextPutAll:'}'; cr.
 	stream close.
+]
+
+{ #category : #'C code generator' }
+VMPluginCodeGenerator >> structClasses [
+	
+	^ self structClassesForTranslationClasses: { pluginClass }
 ]
 
 { #category : #'C code generator' }

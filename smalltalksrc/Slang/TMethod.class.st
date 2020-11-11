@@ -3096,10 +3096,8 @@ TMethod >> typeFor: aVariable in: aCodeGen [
 
 { #category : #utilities }
 TMethod >> typeForSelf [
-	self assert: definingClass notNil.
-	^[definingClass typeForSelf]
-		on: MessageNotUnderstood
-		do: [:ex| nil]
+
+	^ definingClass typeForSelf
 ]
 
 { #category : #inlining }

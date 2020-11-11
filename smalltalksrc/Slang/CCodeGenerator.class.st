@@ -86,12 +86,6 @@ CCodeGenerator >> abortBlock [
 	^vmMaker ifNotNil: [:vmm| vmm abortBlock]
 ]
 
-{ #category : #'spur primitive compilation' }
-CCodeGenerator >> accessorDepthCalculator [
-
-	^ MLAccessorDepthCalculator forCodeGenerator: self 
-]
-
 { #category : #public }
 CCodeGenerator >> addAllClassVarsFor: aClass [
 	"Add the class variables for the given class (and its superclasses) to the code base as constants."
@@ -340,7 +334,7 @@ CCodeGenerator >> addStructClasses: classes [
 	structClasses := classes.
 	structClasses do:
 		[:structClass|
-		 (structClass withAllSuperclasses copyUpTo: self vmmakerConfiguration baseStructClass) do:
+		 (structClass withAllSuperclasses copyUpTo: structClass baseStructClass) do:
 			[:structClassOrSuperclass|
 			 self addStructClass: structClassOrSuperclass]]
 ]
@@ -823,44 +817,6 @@ CCodeGenerator >> compileToTMethodSelector: selector in: aClass [
 ]
 
 { #category : #public }
-CCodeGenerator >> computeKernelReturnTypes [
-	| dictionary |
-	dictionary := Dictionary newFromPairs:
-		#(oopAt: #sqInt oopAt:put: #sqInt
-			oopAtPointer: #sqInt oopAtPointer:put: #sqInt
-		 byteAt: #sqInt byteAt:put: #sqInt
-			byteAtPointer: #sqInt byteAtPointer:put: #sqInt
-		 shortAt: #sqInt shortAt:put: #sqInt
-			shortAtPointer: #sqInt shortAtPointer:put: #sqInt
-		 intAt: #sqInt intAt:put: #sqInt
-			intAtPointer: #sqInt intAtPointer:put: #sqInt
-		 longAt: #sqInt longAt:put: #sqInt
-			longAtPointer: #sqInt longAtPointer:put: #sqInt
-				long32At: #int long32At:put: #int
-					unalignedLongAt: #sqInt unalignedLongAt:put: #sqInt
-						unalignedLong32At: #int unalignedLong32At:put: #int
-
-		 long64At: #sqLong long64At:put: #sqLong
-		 long64AtPointer: #sqLong long64AtPointer:put: #sqLong
-	
-		singleFloatAtPointer: #float singleFloatAtPointerPut: #float		
-		floatAtPointer: #double floatAtPointerPut: #double
-				
-		 fetchFloatAt:into: #void storeFloatAt:from: #void
-			fetchFloatAtPointer:into: #void storeFloatAtPointer:from: #void
-		 fetchSingleFloatAt:into: #void storeSingleFloatAt:from: #void
-			fetchSingleFloatAtPointer:into: #void storeSingleFloatAtPointer:from: #void
-
-		 pointerForOop: #'char *' oopForPointer: #sqInt
-		 baseHeaderSize #sqInt wordSize #sqInt bytesPerOop #sqInt).
-	self vmmakerConfiguration bytesPerWord = 8 ifTrue:
-		[#(long32At: long32At:put: unalignedLong32At: unalignedLong32At:put:) do:
-			[:accessor|
-			dictionary at: accessor put: #int]].
-	^dictionary
-]
-
-{ #category : #public }
 CCodeGenerator >> const: constName declareC: declarationString [
 	"Record the given C declaration for a constant."
 
@@ -877,6 +833,12 @@ CCodeGenerator >> constantClass [
 	^ (vmClass ifNil: [ self vmmakerConfiguration ]) constantClass.
 ]
 
+{ #category : #'C code generator' }
+CCodeGenerator >> constants [
+
+	^ constants keys
+]
+
 { #category : #utilities }
 CCodeGenerator >> conventionalTypeForType: aCTypeString [
 	"The pointer type convention in this version of VMMaker is to have a space between the base type and any *'s.
@@ -890,7 +852,7 @@ CCodeGenerator >> conventionalTypeForType: aCTypeString [
 	(index < type size
 	 and: [(type at: index) ~~ Character space]) ifTrue:
 		[type := (type copyFrom: 1 to: index), ' ', (type copyFrom: index + 1 to: type size)].
-	^type
+	^type asSymbol
 ]
 
 { #category : #accessing }
@@ -951,41 +913,12 @@ CCodeGenerator >> doBasicInlining: inlineFlagOrSymbol [
 ]
 
 { #category : #inlining }
-CCodeGenerator >> doInlining: inlineFlagOrSymbol [
-	"Inline the bodies of all methods that are suitable for inlining."
-	"Modified slightly for the core VM translator, since the first level of inlining for the interpret loop must be performed in order that the instruction implementations can easily discover their addresses. Remember to inline the bytecode routines as well"
-
-	| removed |
-	inlineFlagOrSymbol isSymbol ifTrue:
-		[self inlineDispatchesInMethodNamed: #interpret localizingVars: #().	
-		 self doBasicInlining: inlineFlagOrSymbol.
-		 self pruneUnreachableMethods.
-		 ^self].
-
-	inlineFlagOrSymbol ifFalse:
-		[self inlineDispatchesInMethodNamed: #interpret localizingVars: #().	
-		self pruneUnreachableMethods.
-		^self].
-
-	self doBasicInlining: inlineFlagOrSymbol.
-
-	vmClass ifNil: [^self].
-
-	UIManager default
-		displayProgress: 'Inlining bytecodes'
-		from: 1 to: 2
-		during: [:bar |
-			self inlineDispatchesInMethodNamed: #interpret
-				localizingVars: vmClass namesOfVariablesToLocalize.
-			bar value: 1.
-			removed := self removeMethodsReferingToGlobals: vmClass namesOfVariablesToLocalize
-							except: #interpret.
-			bar value: 2].
-
-	"only prune when generating the interpreter itself"
-	self pruneUnreachableMethods.
-
-	self reportShouldNotBeRemoved: removed  varList: vmClass namesOfVariablesToLocalize
+CCodeGenerator >> doInlining: inlineFlag [
+	"do inlining for a plugin; avoid doing it twice and make sure that
+	 primitive prolog preparation is done immediately after inlining.
+	 Also, since sharing between plugins means that normal pruning
+	 can't be done, allow plugins that want to prune specific methods."
+	self doBasicInlining: inlineFlag
 ]
 
 { #category : #utilities }
@@ -1066,8 +999,7 @@ CCodeGenerator >> emitCCodeOn: aStream doInlining: inlineFlag doAssertions: asse
 	self emitCFunctionPrototypes: methodList on: aStream.
 	self emitCVariablesOn: aStream.
 	self emitCMacros: methodList on: aStream.
-	self emitCMethods: methodList on: aStream.
-	self emitExportsOn: aStream.
+	self emitCMethods: methodList on: aStream
 
 ]
 
@@ -1107,28 +1039,12 @@ CCodeGenerator >> emitCConstants: constList on: aStream [
 ]
 
 { #category : #'C code generator' }
-CCodeGenerator >> emitCConstantsOn: aStream [ 
+CCodeGenerator >> emitCConstantsOn: aStream [
+
 	"Store the global variable declarations on the given stream."
-	| unused |
-	unused := constants keys asSet.
-	self vmmakerConfiguration unusedConstantNames
-		do: [ :name | unused add: name ].
-	methods do:
-		[:meth|
-		meth declarations keysDo:
-			[:v|
-			(meth typeFor: v in: self) ifNotNil:
-				[:type| unused remove: type ifAbsent: []]].
-		unused remove: meth returnType ifAbsent: [].
-		meth parseTree nodesDo:
-			[:n| n isConstant ifTrue: [unused remove: n name ifAbsent: []]]].
-	unused copy do:
-		[:const|
-		(variableDeclarations anySatisfy: [:value| value includesSubstring: const]) ifTrue:
-			[unused remove: const ifAbsent: []]].
-	"and VMBasicConstants mostBasicConstantNames *must* be taken from interp.h"
-	unused addAll: self constantClass mostBasicConstantNames.
-	self emitCConstants: (constants keys reject: [:any| unused includes: any]) on: aStream
+	self
+		emitCConstants: self constants
+		on: aStream
 ]
 
 { #category : #'C code generator' }
@@ -1195,14 +1111,10 @@ CCodeGenerator >> emitCHeaderOn: aStream [
 	aStream nextPutAll: (self fileHeaderVersionStampForSourceClass: headerClass); cr; cr.
 	self emitGlobalStructFlagOn: aStream.
 
-	self addHeaderFileFirst: '"sq.h"'.
 	"Additional header files; include C library ones first."
 	self emitHeaderFiles: (headerFiles select: [:hdr| hdr includes: $<]) on: aStream.
 	"Additional header files; include squeak VM ones last"
 	self emitHeaderFiles: (headerFiles reject: [:hdr| hdr includes: $<]) on: aStream.
-
-	vmClass isInterpreterClass ifTrue:
-		[self maybePutPreambleFor: vmClass on: aStream].
 
 	aStream cr
 ]
@@ -1239,6 +1151,7 @@ CCodeGenerator >> emitCMethods: methodList on: aStream [
 			methodList doWithIndex:
 				[ :m :i |
 				bar value: i.
+				self haltIf: [ m selector = #main ].
 				(m isRealMethod
 				 and: [self shouldGenerateMethod: m]) ifTrue:
 					[m emitCCodeOn: aStream generator: self]]]
@@ -1257,13 +1170,10 @@ CCodeGenerator >> emitCTestBlock: aBlockNode on: aStream indent: level [
 { #category : #'C code generator' }
 CCodeGenerator >> emitCTypesOn: aStream [ 
 	"Store local type declarations on the given stream."
-	structClasses ifNotNil:
-		[structClasses do:
-			[:structClass|
-			(structClass isAbstract not
-			 and: [vmClass shouldGenerateTypedefFor: structClass]) ifTrue:
-				[structClass printTypedefOn: aStream.
-				 aStream cr; cr]]]
+	self structClasses do: [:structClass|
+		(self shouldGenerateStruct: structClass) ifTrue: [
+			structClass printTypedefOn: aStream.
+			aStream cr; cr ] ]
 ]
 
 { #category : #'C code generator' }
@@ -1302,35 +1212,31 @@ CCodeGenerator >> emitCVariablesOn: aStream [
 ]
 
 { #category : #'C code generator' }
+CCodeGenerator >> emitExportNamed: exportsNamePrefix forMethod: method pluginName: pluginName on: aStream [
+
+	| primName |
+	primName := self cFunctionNameFor: method selector.
+	aStream
+		tab;
+		nextPutAll: '{(void*)_m, "';
+		nextPutAll: primName;
+		nextPutAll: '", (void*)';
+		nextPutAll: primName;
+		nextPutAll: '},';
+		cr
+]
+
+{ #category : #'C code generator' }
 CCodeGenerator >> emitExportsNamed: exportsNamePrefix pluginName: pluginName on: aStream [
 
 	"Store all the exported primitives in the form used by the internal named prim system."
-
-	| excludeDepth |
-
-	vmClass ifNil: [self error: 'We need a vmClass temporarily to compute accessor depths.'].
-		
-	"Don't include the depth in the vm's named primitives if the vm is non-Spur."
-	excludeDepth := exportsNamePrefix = 'vm'
-					  and: [pluginName isEmpty
-					  and: [vmClass objectMemoryClass hasSpurMemoryManagerAPI not]].
 	aStream cr; cr; nextPutAll: 'static char _m[] = "'; nextPutAll: pluginName; nextPutAll: '";'.
 	aStream cr; nextPutAll: 'void* '; nextPutAll: exportsNamePrefix; nextPutAll: '_exports[][3] = {'; cr.
 	self sortedExportMethods do:
 		[:method|
 		self withOptionalConditionalDefineFor: method
 			on: aStream
-			do: [| primName |
-				 primName := self cFunctionNameFor: method selector.
-				 aStream tab; nextPutAll: '{(void*)_m, "'; nextPutAll: primName.
-				 excludeDepth ifFalse:
-					[(self accessorDepthCalculator accessorDepthForSelector: primName asSymbol) ifNotNil:
-						[:depth| "store the accessor depth in a hidden byte immediately after the primName"
-						self assert: depth < 128.
-						aStream
-							nextPutAll: '\000\';
-							nextPutAll: ((depth bitAnd: 255) printStringBase: 8 nDigits: 3)]].
-				 aStream nextPutAll: '", (void*)'; nextPutAll: primName; nextPutAll: '},'; cr]].
+			do: [ self emitExportNamed: exportsNamePrefix forMethod: method pluginName: pluginName on: aStream ]].
 	aStream tab; nextPutAll: '{NULL, NULL, NULL}'; cr; nextPutAll: '};'; cr.
 
 ]
@@ -3759,6 +3665,7 @@ CCodeGenerator >> isNode: aNode constantValueWithinRangeOfType: aType [
 
 { #category : #'C code generator' }
 CCodeGenerator >> isNonArgumentImplicitReceiverVariableName: aString [
+
 	^(self typeOfVariable: aString) == #implicit
 	    or: [vmClass
 			ifNil: [#('interpreterProxy' 'self') includes: aString]
@@ -3814,12 +3721,6 @@ CCodeGenerator >> isStructSend: aTSendNode [
 CCodeGenerator >> isVoidPointer: aCType [ "<String>"
 	"sigh..."
 	^#('void *' 'void*') includes: aCType asString
-]
-
-{ #category : #'initialize-release' }
-CCodeGenerator >> kernelReturnTypes [
-	
-	^ kernelReturnTypes ifNil: [ kernelReturnTypes := self computeKernelReturnTypes ]
 ]
 
 { #category : #utilities }
@@ -4288,13 +4189,7 @@ CCodeGenerator >> nonStructClassesForTranslationClasses: classes [
 	| nonStructClasses |
 	nonStructClasses := OrderedCollection new.
 	classes do:
-		[:aTranslationClass|
-		([aTranslationClass ancilliaryClasses]
-				on: MessageNotUnderstood
-				do: [:ex|
-					ex message selector == #ancilliaryClasses
-						ifTrue: [#()]
-						ifFalse: [ex pass]]) do:
+		[:aTranslationClass| aTranslationClass ancilliaryClasses do:
 			[:class|
 			(vmClass isNil or: [vmClass isAcceptableAncilliaryClass: class]) ifTrue:
 				[(class isStructClass
@@ -4836,7 +4731,7 @@ CCodeGenerator >> returnPrefixFromVariable: aName [
 ]
 
 { #category : #'type inference' }
-CCodeGenerator >> returnTypeForSend: sendNode in: aTMethod ifNil: typeIfNil [
+CCodeGenerator >> returnTypeForSend: sendNode in: aTMethod boundTo: aCalledMethod typeIfNil: typeIfNil [
 	"Answer the return type for a send.  Unbound sends default to typeIfNil.
 	 Methods with types as yet unknown have a type determined either by the
 	 kernelReturnTypes or the table below, or, if they are in neither set, then nil.
@@ -4844,14 +4739,8 @@ CCodeGenerator >> returnTypeForSend: sendNode in: aTMethod ifNil: typeIfNil [
 	 generated expessions so that inlining would not change the expression.
 	 If there is a method for sel but its return type is as yet unknown it mustn't
 	 be defaulted, since on a subsequent pass its type may be computable."
-	| sel methodOrNil |
-	methodOrNil := self anyMethodNamed: (sel := sendNode selector).
-	(methodOrNil notNil and: [methodOrNil returnType notNil]) ifTrue:
-		[^self baseTypeForType: methodOrNil returnType].
-	^self kernelReturnTypes
-		at: sel
-		ifAbsent:
-			[sel
+
+	^sendNode selector
 				caseOf: {
 				[#integerValueOf:]		->	[#sqInt].
 				[#isIntegerObject:]		->	[#int].
@@ -4927,7 +4816,30 @@ CCodeGenerator >> returnTypeForSend: sendNode in: aTMethod ifNil: typeIfNil [
 				[#caseOf:]				->	[self typeFor: sendNode args first in: aTMethod] }
 				otherwise: "If there /is/ a method for sel but its return type is as yet unknown it /mustn't/ be defaulted,
 							since on a subsequent pass its type may be computable.  Only default unbound selectors."
-					[methodOrNil ifNotNil: [nil] ifNil: [typeIfNil]]]
+					[aCalledMethod ifNotNil: [nil] ifNil: [typeIfNil]]
+]
+
+{ #category : #'type inference' }
+CCodeGenerator >> returnTypeForSend: sendNode in: aTMethod ifNil: typeIfNil [
+	"Answer the return type for a send.  Unbound sends default to typeIfNil.
+	 Methods with types as yet unknown have a type determined either by the
+	 kernelReturnTypes or the table below, or, if they are in neither set, then nil.
+	 The inferred type should match as closely as possible the C type of
+	 generated expessions so that inlining would not change the expression.
+	 If there is a method for sel but its return type is as yet unknown it mustn't
+	 be defaulted, since on a subsequent pass its type may be computable."
+	| sel methodOrNil |
+
+	methodOrNil := self anyMethodNamed: (sel := sendNode selector).
+
+	(methodOrNil notNil and: [methodOrNil returnType notNil]) ifTrue:
+		[^self baseTypeForType: methodOrNil returnType].
+
+	^ self
+		returnTypeForSend: sendNode
+		in: aTMethod
+		boundTo: methodOrNil
+		typeIfNil: typeIfNil
 ]
 
 { #category : #accessing }
@@ -4973,6 +4885,13 @@ CCodeGenerator >> shortMonticelloDescriptionForClass: aClass [
 	^self class shortMonticelloDescriptionForClass: aClass
 ]
 
+{ #category : #'C code generator' }
+CCodeGenerator >> shouldExcludeDepth [
+
+	"Don't include the depth in the vm's named primitives if the vm is non-Spur."
+	^ vmClass notNil and: [ vmClass objectMemoryClass hasSpurMemoryManagerAPI not ]
+]
+
 { #category : #utilities }
 CCodeGenerator >> shouldGenerateAsInterpreterProxySend: aSendNode [
 	^(self messageReceiverIsInterpreterProxy: aSendNode)
@@ -4984,6 +4903,12 @@ CCodeGenerator >> shouldGenerateMethod: aTMethod [
 	^(self isBuiltinSelector: aTMethod selector)
 		ifTrue: [requiredSelectors includes: aTMethod selector]
 		ifFalse: [aTMethod inline ~~ #always]
+]
+
+{ #category : #'C code generator' }
+CCodeGenerator >> shouldGenerateStruct: structClass [
+
+	^ structClass isAbstract not
 ]
 
 { #category : #utilities }
@@ -5193,9 +5118,10 @@ CCodeGenerator >> structAccessorSelectors [
 		thenCollect: [ :m | m selector]
 ]
 
-{ #category : #accessing }
+{ #category : #'C code generator' }
 CCodeGenerator >> structClasses [
-	^structClasses
+
+	^ structClasses ifNil: [ #() ]
 ]
 
 { #category : #utilities }
@@ -5206,12 +5132,7 @@ CCodeGenerator >> structClassesForTranslationClasses: classes [
 	theStructClasses := OrderedCollection new.
 	classes do:
 		[:aTranslationClass|
-		([aTranslationClass ancilliaryClasses]
-				on: MessageNotUnderstood
-				do: [:ex|
-					ex message selector == #ancilliaryClasses
-						ifTrue: [#()]
-						ifFalse: [ex pass]]) do:
+		aTranslationClass ancilliaryClasses do:
 			[:class|
 			(class isStructClass
 			 and: [(vmClass isNil or: [vmClass isAcceptableAncilliaryClass: class])
@@ -5436,6 +5357,29 @@ CCodeGenerator >> unsignedTypeForIntegralType: aCTypeString [
 			[(aCTypeString beginsWith: 'sq')
 				ifTrue: ['u' , aCTypeString]
 				ifFalse: ['unsigned ' , aCTypeString]]
+]
+
+{ #category : #'C code generator' }
+CCodeGenerator >> unusedConstants [
+
+	| unused |
+	unused := constants keys asSet.
+	self vmmakerConfiguration unusedConstantNames do: [ :name | 
+		unused add: name ].
+	methods do: [ :meth | 
+		meth declarations keysDo: [ :v | 
+			(meth typeFor: v in: self) ifNotNil: [ :type | 
+				unused remove: type ifAbsent: [  ] ] ].
+		unused remove: meth returnType ifAbsent: [  ].
+		meth parseTree nodesDo: [ :n | 
+			n isConstant ifTrue: [ unused remove: n name ifAbsent: [  ] ] ] ].
+	unused copy do: [ :const | 
+		(variableDeclarations anySatisfy: [ :value | 
+			 value includesSubstring: const ]) ifTrue: [ 
+			unused remove: const ifAbsent: [  ] ] ].
+	"and VMBasicConstants mostBasicConstantNames *must* be taken from interp.h"
+	unused addAll: self constantClass mostBasicConstantNames.
+	^ unused
 ]
 
 { #category : #accessing }

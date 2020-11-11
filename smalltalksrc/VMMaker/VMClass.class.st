@@ -293,12 +293,6 @@ VMClass class >> isPluginClass [
 	^false
 ]
 
-{ #category : #translation }
-VMClass class >> isStructClass [
-	"The various VMStructType classes override this."
-	^false
-]
-
 { #category : #accessing }
 VMClass class >> memoryManagerVersion [ 
 	^ self subclassResponsibility
@@ -402,12 +396,6 @@ VMClass class >> translationClass [
 	 VMs that inherit from ObjectMemory this is the receiver.  But for the separate VMs
 	 where most primitives are in a subclass it will be the subclass with the primitives."
 	^self
-]
-
-{ #category : #translation }
-VMClass class >> typeForSelf [
-	"Answer the type to give self if appropriate, or nil if not."
-	^nil
 ]
 
 { #category : #translation }
@@ -1028,35 +1016,6 @@ VMClass >> singleFloatAtPointer: pointer [
 VMClass >> singleFloatAtPointer: pointer put: value [
 	<doNotGenerate>
 	self halt.
-]
-
-{ #category : #'translation support' }
-VMClass >> sizeof: objectSymbolOrClass [
-	<doNotGenerate>
-	| index |
-	objectSymbolOrClass isInteger ifTrue:
-		[^self class objectMemoryClass wordSize].
-	(#(usqInt sqInt) includes: objectSymbolOrClass) ifTrue: [^self class objectMemoryClass bytesPerOop].
-	objectSymbolOrClass isSymbol ifTrue:
-		[(objectSymbolOrClass last == $*
-		 or: [#(#long #'unsigned long' #'sqIntptr_t'  #'usqIntptr_t' #'size_t') includes: objectSymbolOrClass]) ifTrue:
-			[^self class objectMemoryClass wordSize].
-		index := #(	#sqLong #usqLong #double
-					#int #'unsigned int' #float
-					#short #'unsigned short'
-					#char #'unsigned char' #'signed char')
-						indexOf: objectSymbolOrClass
-						ifAbsent:
-							[self error: 'unrecognized C type name'].
-		^#(8 8 8
-			4 4 4
-			2 2
-			1 1 1) at: index].
-	^(objectSymbolOrClass isBehavior
-		ifTrue: [objectSymbolOrClass]
-		ifFalse: [objectSymbolOrClass class])
-			alignedByteSizeOf: objectSymbolOrClass
-			forClient: self
 ]
 
 { #category : #'simulation support' }

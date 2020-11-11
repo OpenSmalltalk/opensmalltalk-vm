@@ -157,7 +157,7 @@ VMStructType class >> fieldAccessorsForBytesPerWord: bytesPerWord [
 { #category : #translation }
 VMStructType class >> filteredInstVarNames [
 	"Eliminate the obvious simulation-only inst vars"
-	^self allInstVarNames reject:
+	^super filteredInstVarNames reject:
 		[:n|
 		Cogit isNonArgumentImplicitReceiverVariableName: n]
 ]
@@ -234,33 +234,8 @@ VMStructType class >> isAbstract [
 ]
 
 { #category : #translation }
-VMStructType class >> isAccessor: aSelector [
-	"Answer if aSelector is simply an accessor method for one of our fields."
-	^(self instVarIndexFor: (aSelector copyWithout: $:) ifAbsent: [0]) > 0
-]
-
-{ #category : #translation }
 VMStructType class >> isNonArgumentImplicitReceiverVariableName: aString [
 	^Cogit isNonArgumentImplicitReceiverVariableName: aString
-]
-
-{ #category : #translation }
-VMStructType class >> isStructClass [
-	^true
-]
-
-{ #category : #translation }
-VMStructType class >> needsTypeTag [
-	self instVarNamesAndTypesForTranslationDo:
-		[:ivn :type|
-		((type isArray ifTrue: [type] ifFalse: [{type}]) anySatisfy:
-			[:str|
-			str isString
-			and: [str includesSubstring: self structTagName]]) ifTrue:
-				[^true]].
-	^false
-
-	"VMStructType allSubclasses select: [:sc| sc needsTypeTag]"
 ]
 
 { #category : #accessing }
@@ -275,69 +250,6 @@ VMStructType class >> offsetForInstVar: instVarName [
 	^nil
 ]
 
-{ #category : #translation }
-VMStructType class >> printTypedefOn: aStream [
-	aStream nextPutAll: 'typedef struct '.
-	self needsTypeTag
-		ifTrue: [ aStream
-				nextPutAll: self structTagName;
-				space ].
-	aStream
-		nextPut: ${;
-		cr.
-	self
-		instVarNamesAndTypesForTranslationDo: [ :ivn :typeArg | 
-			| type |
-			ivn first == $#
-				ifTrue: [ aStream nextPutAll: ivn ]
-				ifFalse: [ type := typeArg.
-					#(BytesPerWord BaseHeaderSize BytesPerOop)
-						do: [ :sizeConstant | 
-							| index sizeConstantSize |
-							(type notNil
-								and: [ (index := type indexOf: sizeConstant ifAbsent: 0) > 0 ])
-								ifTrue: [ sizeConstantSize := self constantClass classPool at: sizeConstant.
-									type := (type at: index + 1) = sizeConstantSize
-										ifTrue: [ type := type copyReplaceFrom: index to: index + 1 with: #().
-											type size = 1
-												ifTrue: [ type first ]
-												ifFalse: [ type ] ] ] ].
-					type
-						ifNotNil: [ type isArray
-								ifTrue: [ aStream tab: 1.
-									aStream nextPutAll: type first.
-									(type first last isSeparator or: [ type first last = $* ])
-										ifFalse: [ aStream tab: 2 ].
-									aStream nextPutAll: ivn.
-									type last first isSeparator
-										ifFalse: [ aStream space ].
-									aStream nextPutAll: type last ]
-								ifFalse: [ aStream tab: 1.
-									aStream nextPutAll: type.
-									(type last isSeparator or: [ type last = $* ])
-										ifFalse: [ aStream tab: 1 ].
-									aStream nextPutAll: ivn ] ].
-					aStream nextPut: $; ].
-			aStream cr ].
-	aStream
-		nextPutAll: ' } ';
-		nextPutAll: self structTypeName;
-		nextPut: $;;
-		cr.
-	self name ~= self structTypeName
-		ifTrue: [ (self withAllSuperclasses
-				copyUpThrough: (self class whichClassIncludesSelector: #structTypeName) instanceSide)
-				do: [ :structClass | 
-					aStream
-						cr;
-						nextPutAll: '#define ';
-						nextPutAll: structClass name;
-						space;
-						nextPutAll: self structTypeName ].
-			aStream cr ].
-	aStream flush
-]
-
 { #category : #'accessing class hierarchy' }
 VMStructType class >> removeSubclass: aSubclass [
 	self voidStructTypeCache.
@@ -348,23 +260,6 @@ VMStructType class >> removeSubclass: aSubclass [
 VMStructType class >> rename: aString [
 	self voidStructTypeCache.
 	^super rename: aString
-]
-
-{ #category : #translation }
-VMStructType class >> returnTypeForAccessor: aSelector [
-	| varName deStructTag |
-	varName := aSelector copyWithout: $:.
-	deStructTag := [:decl| decl copyReplaceAll: 'struct ', self structTagName with: self structTypeName].
-	self instVarNamesAndTypesForTranslationDo:
-		[:var :typeSpec|
-		var = varName ifTrue:
-			[^typeSpec isArray
-				ifTrue: [(deStructTag value: typeSpec first), ' ', typeSpec last]
-				ifFalse: [deStructTag value: typeSpec]]].
-	^nil
-
-
-	"InterpreterStackPage returnTypeForAccessor: #nextPage:"
 ]
 
 { #category : #'code generation' }
@@ -433,27 +328,10 @@ VMStructType class >> shouldBeGenerated [
 	^ true
 ]
 
-{ #category : #translation }
-VMStructType class >> structTagName [
-	^'_', self structTypeName
-]
-
-{ #category : #translation }
-VMStructType class >> structTypeName [
-	"Provide the typedef name.  Subclases can override."
-	^self name
-]
-
 { #category : #accessing }
 VMStructType class >> timeStamp [
 	
 	^ VMClass timeStamp
-]
-
-{ #category : #translation }
-VMStructType class >> typeForSelf [
-	"Answer the type to give self if appropriate, or nil if not."
-	^self structTypeName, ' *'
 ]
 
 { #category : #translation }
