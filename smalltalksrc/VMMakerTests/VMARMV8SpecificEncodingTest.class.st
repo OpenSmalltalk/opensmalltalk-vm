@@ -163,6 +163,23 @@ VMARMV8SpecificEncodingTest >> testEncodeMoveCqRWithLargeConstant [
 ]
 
 { #category : #'tests - cmpCqR' }
+VMARMV8SpecificEncodingTest >> testEncodeMoveCqRWithNegativeLargeConstant [
+
+
+	| constantValue completementValue |
+	constantValue := -281474841613120.
+	completementValue := constantValue negated bitInvert64 + 1.
+	
+	self compile: [		 
+		cogit MoveCq: constantValue R: 24 ].
+
+	self runGeneratedCode.
+	
+	"Assert Cmp was equals"
+	self assert: machineSimulator x24 hex equals: completementValue hex
+]
+
+{ #category : #'tests - cmpCqR' }
 VMARMV8SpecificEncodingTest >> testEncodeOrCqRWithEncodableConstant [
 
 	self compile: [

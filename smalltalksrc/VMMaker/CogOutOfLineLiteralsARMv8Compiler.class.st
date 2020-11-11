@@ -56,7 +56,9 @@ CogOutOfLineLiteralsARMv8Compiler >> concretizeMoveC32R [
 						negatedImm: value
 						shift: shift).
 				^ machineCodeSize := 4 ]
-			ifFalse: [ self notYetImplemented ]].
+			ifFalse: [ 
+			self loadCwInto: (operands at: 1).
+			^ machineCodeSize := 4 ]].
 
 	self shiftable16bitImmediate: quickConstant
 		ifTrue: [ :shift :value |
