@@ -547,7 +547,7 @@ CCodeGenerator >> cLiteralFor: anObject [
 				[^self cFunctionNameFor: anObject].
 			anObject isString ifTrue:
 				[^'"', (anObject copyReplaceAll: (String with: Character cr) with: '\n') , '"'].
-			anObject == nil ifTrue: [^ 'null' ].
+			anObject == nil ifTrue: [^ self nilTranslation ].
 			anObject == true ifTrue: [^ '1' ].
 			anObject == false ifTrue: [^ '0' ].
 			anObject isCharacter ifTrue:
@@ -887,6 +887,12 @@ CCodeGenerator >> declareVar: varName type: type [
 	self var: (variables add: varName asString) type: type
 ]
 
+{ #category : #'type inference' }
+CCodeGenerator >> defaultType [
+	
+	^ #int
+]
+
 { #category : #inlining }
 CCodeGenerator >> doBasicInlining: inlineFlagOrSymbol [
 	"Inline the bodies of all methods that are suitable for inlining.
@@ -1151,7 +1157,6 @@ CCodeGenerator >> emitCMethods: methodList on: aStream [
 			methodList doWithIndex:
 				[ :m :i |
 				bar value: i.
-				self haltIf: [ m selector = #main ].
 				(m isRealMethod
 				 and: [self shouldGenerateMethod: m]) ifTrue:
 					[m emitCCodeOn: aStream generator: self]]]
@@ -3114,25 +3119,13 @@ CCodeGenerator >> globalsAsSet [
 { #category : #'type inference' }
 CCodeGenerator >> harmonizeReturnTypesIn: aSetOfTypes [
 	"Eliminate signed/unsigned conflicts in aSetOfTypes. Non-negative integers can be either
-	 signed or unsigned. Ignore them unless there are no types, in which case default to sqInt."
-	| constantIntegers sqs usqs |
+	 signed or unsigned. Ignore them unless there are no types, in which case use the default type."
+	| constantIntegers |
 	constantIntegers := aSetOfTypes select: [:element| element isInteger].
 	aSetOfTypes removeAll: constantIntegers.
-	"N.B. Because of LP64 vs LLP64 issues do *not* rename #long to #sqInt or #'unsigned long' to #usqInt"
-	#(char short int #'long long' #'unsigned char' #'unsigned short' #'unsigned int' #'unsigned long long')
-		with: #(sqInt sqInt sqInt sqLong usqInt usqInt usqInt usqLong)
-		do: [:type :replacement|
-			(aSetOfTypes includes: type) ifTrue:
-				[aSetOfTypes remove: type; add: replacement]].
-	sqs := aSetOfTypes select: [:t| t beginsWith: 'sq'].
-	usqs := aSetOfTypes select: [:t| t beginsWith: 'usq'].
-	^(sqs size + usqs size = aSetOfTypes size
-	   and: [sqs notEmpty
-	   and: [sqs allSatisfy: [:t| usqs includes: 'u', t]]])
-		ifTrue: [sqs]
-		ifFalse: [(aSetOfTypes isEmpty and: [constantIntegers notEmpty])
-					ifTrue: [Set with: #sqInt]
-					ifFalse: [aSetOfTypes]]
+	^(aSetOfTypes isEmpty and: [constantIntegers notEmpty])
+		ifTrue: [Set with: self defaultType]
+		ifFalse: [aSetOfTypes]
 ]
 
 { #category : #public }
@@ -4119,6 +4112,12 @@ CCodeGenerator >> nilOrBooleanConstantReceiverOf: aNode [
 		 and: [aNode receiver value == nil]]]]) ifTrue:
 			[^true]].
 	^nil
+]
+
+{ #category : #'translation support' }
+CCodeGenerator >> nilTranslation [
+	"Defined in some header file as a macro?"
+	^ 'NULL'
 ]
 
 { #category : #inlining }

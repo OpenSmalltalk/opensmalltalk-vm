@@ -589,7 +589,9 @@ TMethod >> emitCFunctionPrototype: aStream generator: aCodeGen isPrototype: isPr
 			ifTrue: [aStream nextPutAll: #void]
 			ifFalse:
 				[args
-					do: [:arg| aStream nextPutAll: (self declarationAt: arg)]
+					do: [:arg| aStream nextPutAll: (self
+							declarationAt: arg
+							ifAbsent: [aCodeGen defaultType, ' ', arg])]
 					separatedBy: [aStream nextPutAll: ', ']].
 		aStream nextPut: $)].
 	isPrototype ifTrue:
