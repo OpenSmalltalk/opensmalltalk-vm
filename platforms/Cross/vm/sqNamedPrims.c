@@ -514,7 +514,7 @@ ioShutdownAllModules(void)
 {
 	ModuleEntry *entry = firstModule;
 	while (entry) {
-		shutdownModule(entry);
+		(void)shutdownModule(entry);
 		entry = entry->next;
 	}
 	return 1;
@@ -538,10 +538,10 @@ ioUnloadModule(char *moduleName)
 		return 1; /* module was never loaded */
 
 	/* Try to shutdown the module */
-	if (!shutdownModule(entry)) {
+	if (!shutdownModule(entry))
 		/* Could not shut down the module. Bail out. */
 		return 0;
-	}
+
 	/* Notify all interested parties about the fact */
 	temp = firstModule;
 	while (temp) {

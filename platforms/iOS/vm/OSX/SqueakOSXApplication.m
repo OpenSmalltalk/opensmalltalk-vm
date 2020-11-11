@@ -70,10 +70,12 @@ extern SqueakOSXAppDelegate *gDelegateApp;
     [[NSWorkspace sharedWorkspace] openURL: url];
 }
 
+# if 0 // Disabled because no implementatioon of setAboutWindow: yet exists
 - (void)orderFrontStandardAboutPanel:(id)sender;
 {
     [super orderFrontStandardAboutPanel: sender];
     [gDelegateApp.squeakApplication setAboutWindow: [self keyWindow]];
 }
+# endif
 #endif
 @end

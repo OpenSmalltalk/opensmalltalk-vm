@@ -620,7 +620,8 @@ sqFileDescriptorType(int fdNum)
 
 
 size_t
-sqFileReadIntoAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startIndex) {
+sqFileReadIntoAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startIndex)
+{
 	/* Read count bytes from the given file into byteArray starting at
 	   startIndex. byteArray is the address of the first byte of a
 	   Squeak bytes object (e.g. String or ByteArray). startIndex
@@ -631,13 +632,6 @@ sqFileReadIntoAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startInde
 	char *dst;
 	size_t bytesRead;
 	FILE *file;
-#if COGMTVM
-	sqInt myThreadIndex;
-#endif
-#if COGMTVM && SPURVM
-	int wasPinned;
-	sqInt bufferOop = (sqInt)byteArrayIndex - BaseHeaderSize;
-#endif
 
 	if (!sqFileValid(f))
 		return interpreterProxy->success(false);
@@ -651,25 +645,6 @@ sqFileReadIntoAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startInde
 	}
 	dst = byteArrayIndex + startIndex;
 	if (f->isStdioStream) {
-#if COGMTVM
-# if SPURVM
-		if (!(wasPinned = interpreterProxy->isPinned(bufferOop))) {
-			if (!(bufferOop = interpreterProxy->pinObject(bufferOop)))
-				return 0;
-			dst = bufferOop + BaseHeaderSize + startIndex;
-		}
-		myThreadIndex = interpreterProxy->disownVM(0);
-# else
-		if (interpreterProxy->isInMemory((sqInt)f)
-		 && interpreterProxy->isYoung((sqInt)f)
-		 || interpreterProxy->isInMemory((sqInt)dst)
-		 && interpreterProxy->isYoung((sqInt)dst)) {
-			interpreterProxy->primitiveFailFor(PrimErrObjectMayMove);
-			return 0;
-		}
-		myThreadIndex = interpreterProxy->disownVM(DisownVMLockOutFullGC);
-# endif
-#endif /* COGMTVM */
 		/* Line buffering in fread can't be relied upon, at least on Mac OS X
 		 * and mingw win32.  So do it the hard way.
 		 */
@@ -680,13 +655,6 @@ sqFileReadIntoAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startInde
 				bytesRead += 1;
 		}
 		while (bytesRead <= 0 && ferror(file) && errno == EINTR);
-#if COGMTVM
-		interpreterProxy->ownVM(myThreadIndex);
-# if SPURVM
-		if (!wasPinned)
-			interpreterProxy->unpinObject(bufferOop);
-# endif
-#endif /* COGMTVM */
 	}
 	else
 		do {

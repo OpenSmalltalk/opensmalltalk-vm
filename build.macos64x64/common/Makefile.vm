@@ -46,6 +46,11 @@ else ifeq ($(CONFIGURATION),debug)
 else # default CONFIGURATION=product
 	BUILD:=build
 endif
+ifeq ($(THREADING),multi)
+    MAKERSRC:=$(wildcard $(VMSRCDIR)/gcc3x-*interpmt.c $(VMSRCDIR)/cogit.c)
+else
+    MAKERSRC:=$(wildcard $(VMSRCDIR)/gcc3x-*interp.c $(VMSRCDIR)/cogit.c)
+endif
 $(shell mkdir -p deps >/dev/null) # deps is the dependencies directory
 BLDDIR:= $(BUILD)
 OBJDIR:= $(BLDDIR)/vm
@@ -59,7 +64,6 @@ OSXCLASSESDIR:=$(PLATDIR)/iOS/vm/Common/Classes
 OSXPLUGINSDIR:=$(PLATDIR)/iOS/plugins
 UNIXVMDIR:=$(PLATDIR)/unix/vm
 
-MAKERSRC:=$(wildcard $(VMSRCDIR)/gcc3x-*interp.c $(VMSRCDIR)/cogit.c)
 CROSSSRC:= $(wildcard $(CROSSDIR)/*.c)
 #XEX:= ... %/sqMacV2Browser.m ...
 XEX:=%/sqSqueakMainApplication+screen.m %/sqMacV2Window.m \

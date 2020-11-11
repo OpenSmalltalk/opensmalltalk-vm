@@ -2181,6 +2181,7 @@ extern sqInt reportStackHeadroom;
 #endif
   printPhaseTime(3);
   dpy->winExit();
+  ioShutdownAllModules();
   exit(ec);
   return ec;
 }

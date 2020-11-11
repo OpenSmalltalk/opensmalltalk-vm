@@ -1213,7 +1213,8 @@ static Atom stringToAtom(char *target, size_t size)
  * isDnd : true if XdndSelection, false if CLIPBOARD or PRIMARY
  * isClaiming : true if XGetSelectionOwner is needed
  */
-static void display_clipboardWriteWithType(char *data, size_t ndata, char *typeName, size_t nTypeName, int isDnd, int isClaiming)
+static void
+display_clipboardWriteWithType(char *data, size_t ndata, char *typeName, size_t nTypeName, int isDnd, int isClaiming)
 {
   if (allocateSelectionBuffer(ndata))
     {
@@ -1227,7 +1228,8 @@ static void display_clipboardWriteWithType(char *data, size_t ndata, char *typeN
 }
 
 
-static sqInt display_clipboardSize(void)
+static sqInt
+display_clipboardSize(void)
 {
   if (stOwnsClipboard) return 0;
   getSelection();
@@ -1235,7 +1237,8 @@ static sqInt display_clipboardSize(void)
 }
 
 
-static sqInt display_clipboardWriteFromAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex)
+static sqInt
+display_clipboardWriteFromAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex)
 {
   display_clipboardWriteWithType(pointerForOop(byteArrayIndex + startIndex), count, "", 0, 0, 1);
   return 0;
@@ -1244,7 +1247,8 @@ static sqInt display_clipboardWriteFromAt(sqInt count, sqInt byteArrayIndex, sqI
 /* Transfer the X selection into the given byte array; optimise local requests. */
 /* Call clipboardSize() or clipboardSizeWithType() before this. */
 
-static sqInt display_clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex)
+static sqInt
+display_clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex)
 {
   int clipSize;
 
@@ -2407,7 +2411,8 @@ static void waitForCompletions(void)
  * CLIPBOARD as a NULL-terminated array of strings, or 0 on error.
  * The caller must free() the returned array.
  */
-static char **display_clipboardGetTypeNames(void)
+static char **
+display_clipboardGetTypeNames(void)
 {
   Atom    *targets= NULL;
   size_t   bytes= 0;
@@ -2435,7 +2440,8 @@ static char **display_clipboardGetTypeNames(void)
 /* Read the clipboard data associated with the typeName to
  * stPrimarySelection.  Answer the size of the data.
  */
-static sqInt display_clipboardSizeWithType(char *typeName, int nTypeName)
+static sqInt
+display_clipboardSizeWithType(char *typeName, int nTypeName)
 {
   size_t 	  bytes;
   Atom   	  type;
@@ -4664,7 +4670,8 @@ translateCode(KeySym symbolic, int *modp, XKeyEvent *evt)
 #endif
 
 
-static sqInt display_ioFormPrint(sqInt bitsIndex, sqInt width, sqInt height, sqInt depth, double hScale, double vScale, sqInt landscapeFlag)
+static sqInt
+display_ioFormPrint(sqInt bitsIndex, sqInt width, sqInt height, sqInt depth, double hScale, double vScale, sqInt landscapeFlag)
 {
 # if defined(PRINT_PS_FORMS)
 
@@ -4823,7 +4830,8 @@ static sqInt display_ioFormPrint(sqInt bitsIndex, sqInt width, sqInt height, sqI
 }
 
 
-static sqInt display_ioBeep(void)
+static sqInt
+display_ioBeep(void)
 {
   if (isConnectedToXServer)
     XBell(stDisplay, 0);	/* ring at default volume */
@@ -4831,14 +4839,16 @@ static sqInt display_ioBeep(void)
 }
 
 
-static sqInt display_ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
+static sqInt
+display_ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 {
   aioSleepForUsecs(handleEvents() ? 0 : microSeconds);
   return 0;
 }
 
 
-static sqInt display_ioProcessEvents(void)
+static sqInt
+display_ioProcessEvents(void)
 {
   LogEventChain((dbgEvtChF,"ioPE."));
   handleEvents();
@@ -4848,7 +4858,8 @@ static sqInt display_ioProcessEvents(void)
 
 
 /* returns the depth of the Squeak window */
-static sqInt display_ioScreenDepth(void)
+static sqInt
+display_ioScreenDepth(void)
 {
   Window root;
   int x, y;
@@ -4862,13 +4873,15 @@ static sqInt display_ioScreenDepth(void)
 }
 
 
-static double display_ioScreenScaleFactor(void)
+static double
+display_ioScreenScaleFactor(void)
 {
   return 1.0;
 }
 
 /* returns the size of the Squeak window */
-static sqInt display_ioScreenSize(void)
+static sqInt
+display_ioScreenSize(void)
 {
   int winSize= getSavedWindowSize();
 
@@ -4924,7 +4937,8 @@ static int fakeBigCursor()
 
 static sqInt display_ioSetCursorWithMaskBig(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt offsetX, sqInt offsetY);
 
-static sqInt display_ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt offsetX, sqInt offsetY)
+static sqInt
+display_ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt offsetX, sqInt offsetY)
 {
   unsigned int *cursorBits= (unsigned int *)pointerForOop(cursorBitsIndex);
   unsigned int *cursorMask= (unsigned int *)pointerForOop(cursorMaskIndex);
@@ -4984,7 +4998,8 @@ static sqInt display_ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMask
 }
 
 
-static sqInt display_ioSetCursorWithMaskBig(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt offsetX, sqInt offsetY)
+static sqInt
+display_ioSetCursorWithMaskBig(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt offsetX, sqInt offsetY)
 {
   unsigned int *cursorBits= (unsigned int *)pointerForOop(cursorBitsIndex);
   unsigned int *cursorMask= (unsigned int *)pointerForOop(cursorMaskIndex);
@@ -5043,7 +5058,8 @@ sqInt ioSetCursor(sqInt cursorBitsIndex, sqInt offsetX, sqInt offsetY)
 #endif
 
 
-static sqInt display_ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt extentY, sqInt offsetX, sqInt offsetY)
+static sqInt
+display_ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt extentY, sqInt offsetX, sqInt offsetY)
 {
 #if defined(HAVE_LIBXRENDER) && (RENDER_MAJOR > 0 || RENDER_MINOR >= 5)
   int eventbase, errorbase;
@@ -5147,7 +5163,8 @@ static void sendFullScreenHint(int enable)
 }
 
 
-static sqInt display_ioSetFullScreen(sqInt fullScreen)
+static sqInt
+display_ioSetFullScreen(sqInt fullScreen)
 {
   int winX, winY;
   unsigned int winW, winH;
@@ -5345,7 +5362,8 @@ static void stXDestroyImage(XImage *image)
 #define bytesPerLineRD(width, depth)	((((width)*(depth)) >> 5) << 2)
 
 
-static sqInt display_ioForceDisplayUpdate(void)
+static sqInt
+display_ioForceDisplayUpdate(void)
 {
 #if defined(USE_XSHM)
   if (asyncUpdate && isConnectedToXServer)
@@ -5358,7 +5376,8 @@ static sqInt display_ioForceDisplayUpdate(void)
 }
 
 
-static sqInt display_ioShowDisplay(sqInt dispBitsIndex, sqInt width, sqInt height, sqInt depth,
+static sqInt
+display_ioShowDisplay(sqInt dispBitsIndex, sqInt width, sqInt height, sqInt depth,
 				   sqInt affectedL, sqInt affectedR, sqInt affectedT, sqInt affectedB)
 {
   static char *stDisplayBits= 0;	/* last known oop of the VM's Display */
@@ -5704,7 +5723,8 @@ static sqInt display_ioShowDisplay(sqInt dispBitsIndex, sqInt width, sqInt heigh
 }
 
 
-static sqInt display_ioHasDisplayDepth(sqInt i)
+static sqInt
+display_ioHasDisplayDepth(sqInt i)
 {
   switch (i)
     {
@@ -5721,7 +5741,8 @@ static sqInt display_ioHasDisplayDepth(sqInt i)
 }
 
 
-static sqInt display_ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenFlag)
+static sqInt
+display_ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenFlag)
 {
   fprintf(stderr, "ioSetDisplayMode(%ld, %ld, %ld, %ld)\n",
 	  width, height, depth, fullscreenFlag);
@@ -6700,7 +6721,8 @@ void copyImage32To24(int *fromImageData, int *toImageData, int width, int height
 }
 
 
-static void display_winSetName(char *imageName)
+static void
+display_winSetName(char *imageName)
 {
   /* update the window title */
   if (isConnectedToXServer)
@@ -6824,8 +6846,7 @@ static void display_ioGLsetBufferRect(glRenderer *r, sqInt x, sqInt y, sqInt w, 
 
 static FILE *logfile = 0;
 static void
-closelog(void)
-{ if (logfile) (void)fclose(logfile); }
+closelog(void) { if (logfile) (void)fclose(logfile); }
 
 static int
 myPrint3Dlog(char *fmt, ...)
@@ -6892,7 +6913,8 @@ static sqInt display_ioGLinitialise(void) { return 1; }
 #define _renderContext(R)	((R)->context)
 #define renderContext(R)	((GLXContext)(R)->context)
 
-static sqInt display_ioGLcreateRenderer(glRenderer *r, sqInt x, sqInt y, sqInt w, sqInt h, sqInt flags)
+static sqInt
+display_ioGLcreateRenderer(glRenderer *r, sqInt x, sqInt y, sqInt w, sqInt h, sqInt flags)
 {
   XVisualInfo* visinfo= 0;
 
@@ -6989,20 +7011,23 @@ static sqInt display_ioGLcreateRenderer(glRenderer *r, sqInt x, sqInt y, sqInt w
 }
 
 
-static void display_ioGLdestroyRenderer(glRenderer *r)
+static void
+display_ioGLdestroyRenderer(glRenderer *r)
 {
   glXDestroyContext(stDisplay, renderContext(r));
   XDestroyWindow(stDisplay, renderWindow(r));
 }
 
 
-static void display_ioGLswapBuffers(glRenderer *r)
+static void
+display_ioGLswapBuffers(glRenderer *r)
 {
   glXSwapBuffers(stDisplay, renderWindow(r));
 }
 
 
-static sqInt display_ioGLmakeCurrentRenderer(glRenderer *r)
+static sqInt
+display_ioGLmakeCurrentRenderer(glRenderer *r)
 {
   if (r)
     {
@@ -7018,7 +7043,8 @@ static sqInt display_ioGLmakeCurrentRenderer(glRenderer *r)
 }
 
 
-static void display_ioGLsetBufferRect(glRenderer *r, sqInt x, sqInt y, sqInt w, sqInt h)
+static void
+display_ioGLsetBufferRect(glRenderer *r, sqInt x, sqInt y, sqInt w, sqInt h)
 {
   XMoveResizeWindow(stDisplay, renderWindow(r), x, y, w, h);
 }
@@ -7108,7 +7134,8 @@ static long display_hostWindowShowDisplay(unsigned *dispBitsIndex, long width, l
 #define isWindowHandle(winIdx) ((realWindowHandle(winIdx)) >= 65536)
 
 static long display_ioSizeOfNativeWindow(void *windowHandle);
-static long display_hostWindowGetSize(long windowIndex)
+static long
+display_hostWindowGetSize(long windowIndex)
 {
   return isWindowHandle(windowIndex)
     ? display_ioSizeOfNativeWindow((void *)realWindowHandle(windowIndex))
@@ -7118,7 +7145,8 @@ static long display_hostWindowGetSize(long windowIndex)
 /* ioSizeOfWindowSetxy: args are int windowIndex, int w & h for the
  * width / height to make the window. Return the actual size the OS
  * produced in (width<<16 | height) format or -1 for failure as above. */
-static long display_hostWindowSetSize(long windowIndex, long w, long h)
+static long
+display_hostWindowSetSize(long windowIndex, long w, long h)
 {
   XWindowAttributes attrs;
   int real_border_width;
@@ -7150,7 +7178,8 @@ static long display_hostWindowGetPosition(long windowIndex)
 /* ioPositionOfWindowSetxy: args are int windowIndex, int x & y for the
  * origin x/y for the window. Return the actual origin the OS
  * produced in (left<<16 | top) format or -1 for failure, as above */
-static long display_hostWindowSetPosition(long windowIndex, long x, long y)
+static long
+display_hostWindowSetPosition(long windowIndex, long x, long y)
 {
   if (!isWindowHandle(windowIndex))
     return -1;
@@ -7160,7 +7189,8 @@ static long display_hostWindowSetPosition(long windowIndex, long x, long y)
 }
 
 
-static long display_hostWindowSetTitle(long windowIndex, char *newTitle, long sizeOfTitle)
+static long
+display_hostWindowSetTitle(long windowIndex, char *newTitle, long sizeOfTitle)
 { 
   if (windowIndex != 1 && windowIndex != stParent && windowIndex != stWindow)
     return -1;
@@ -7173,7 +7203,8 @@ static long display_hostWindowSetTitle(long windowIndex, char *newTitle, long si
   return 0;
 }
 
-static long display_ioSizeOfNativeWindow(void *windowHandle)
+static long
+display_ioSizeOfNativeWindow(void *windowHandle)
 {
   XWindowAttributes attrs;
   int real_border_width;
@@ -7190,7 +7221,8 @@ static long display_ioSizeOfNativeWindow(void *windowHandle)
     | (attrs.height + attrs.y + real_border_width);
 }
 
-static long display_ioPositionOfNativeWindow(void *windowHandle)
+static long
+display_ioPositionOfNativeWindow(void *windowHandle)
 {
   XWindowAttributes attrs;
   Window neglected_child;
@@ -7211,21 +7243,18 @@ static long display_ioPositionOfNativeWindow(void *windowHandle)
 static char *display_winSystemName(void) { return "X11"; }
 
 
-static void display_winInit(void)
+static void
+display_winInit(void)
 {
   if (!strcmp(argVec[0], "headlessSqueak"))
     headless= 1;
 
 #if defined(USE_XSHM)
-  {
 #  if defined(AT_EXIT)
     AT_EXIT(shmExit);
-    AT_EXIT((void(*)(void))ioShutdownAllModules);
 #  else
 #    warning: cannot free display bitmap on exit!
-#    warning: cannot shut down module system on exit!
 #   endif
-  }
 #endif
 
   /* avoid compiler warning */
@@ -7233,7 +7262,8 @@ static void display_winInit(void)
 }
 
 
-static void display_winOpen(int argc, char *dropFiles[])
+static void
+display_winOpen(int argc, char *dropFiles[])
 {
 #if defined(DEBUG_WINDOW)
   int sws= getSavedWindowSize();
@@ -7256,14 +7286,17 @@ static void display_winOpen(int argc, char *dropFiles[])
 }
 
 
-static void display_winExit(void)
+static void
+display_winExit(void)
 {
   disconnectXDisplay();
 }
 
 
-static long  display_winImageFind(char *buf, int len)	{ return 0; }
-static void display_winImageNotFound(void)		{}
+static long
+display_winImageFind(char *buf, int len)	{ return 0; }
+static void
+display_winImageNotFound(void)		{}
 
 #if SqDisplayVersionMajor >= 1 && SqDisplayVersionMinor >= 3
 
@@ -7349,7 +7382,8 @@ SqDisplayDefine(X11);
 /*** module ***/
 
 
-static void display_printUsage(void)
+static void
+display_printUsage(void)
 {
   printf("\nX11 <option>s:\n");
   printf("  "VMOPTION("browserWindow")" <wid>  run in window <wid>\n");
@@ -7384,14 +7418,16 @@ static void display_printUsage(void)
   printf("  "VMOPTION("xshm")"                 use X shared memory extension\n");
 }
 
-static void display_printUsageNotes(void)
+static void
+display_printUsageNotes(void)
 {
   printf("  Using `unix:0' for <dpy> may improve local display performance.\n");
   printf("  "VMOPTION("xshm")" only works when " xResName " is running on the X server host.\n");
 }
 
 
-static void display_parseEnvironment(void)
+static void
+display_parseEnvironment(void)
 {
   char *ev= 0;
 
@@ -7432,7 +7468,8 @@ static void display_parseEnvironment(void)
 
 
 
-static int display_parseArgument(int argc, char **argv)
+static int
+display_parseArgument(int argc, char **argv)
 {
   int n= 1;
   char *arg= argv[0];
