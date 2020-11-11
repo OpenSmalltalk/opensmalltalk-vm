@@ -388,7 +388,8 @@ int checkIfReadConsoleWillBlock(HANDLE consoleHandle){
 	/*
 	 * Check for the keyDown of VK_RETURN, as this is used by ReadConsole in ENABLE_LINE_INPUT mode
 	 */
-	for(int i = 0; i < numberOfEvents; i++){
+	int i = 0;
+	for(i = 0; i < numberOfEvents; i++){
 		if( events[i].EventType == KEY_EVENT
 			&& events[i].Event.KeyEvent.bKeyDown
 			&& events[i].Event.KeyEvent.wVirtualKeyCode == VK_RETURN){

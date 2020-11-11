@@ -70,11 +70,27 @@
       "configurationType": "Debug",
       "buildRoot": "${projectDir}\\out\\build\\${name}",
       "installRoot": "${projectDir}\\out\\install\\${name}",
-      "cmakeCommandArgs": "-DGENERATE_SOURCES=FALSE -DWITHOUT_DEPENDENCIES=TRUE -DFlavour=StackVM",
+      "cmakeCommandArgs": "-DGENERATE_SOURCES=FALSE -DWITHOUT_DEPENDENCIES=TRUE -DFLAVOUR=StackVM -DGENERATED_SOURCE_DIR=stack32",
       "buildCommandArgs": "",
       "ctestCommandArgs": "",
       "inheritEnvironments": [ "msvc_x86" ],
-      "variables": []
+      "variables": [
+        {
+          "name": "FEATURE_FFI",
+          "value": "False",
+          "type": "BOOL"
+        },
+        {
+          "name": "FEATURE_GNUISATION",
+          "value": "False",
+          "type": "BOOL"
+        },
+        {
+          "name": "FEATURE_SOCKETS",
+          "value": "False",
+          "type": "BOOL"
+        }
+      ]
     }
   ]
 }
