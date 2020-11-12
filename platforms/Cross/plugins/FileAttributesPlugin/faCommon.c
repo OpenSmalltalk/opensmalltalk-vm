@@ -9,6 +9,7 @@
 
 extern struct VirtualMachine * interpreterProxy;
 int	vmSessionId = 0;
+sqInt nilOop, falseOop, trueOop;
 
 
 /*

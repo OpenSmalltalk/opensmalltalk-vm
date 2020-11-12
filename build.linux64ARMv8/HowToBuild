@@ -253,6 +253,10 @@ and then retry.
 Ubuntu
 	sudo apt-get install uuid-dev libcairo2-dev libpango1.0-dev libgl1-mesa-dev libgl1-mesa-glx libssl-dev
 
+Manjaro
+	sudo pacman -S uuid-dev libgl1-mesa-dev libgl1-mesa-glx libssl-dev
+	sudo pacman -S xf86-video-fbdeV
+
 More advice and examples for other distros gratefully received.
 
 
