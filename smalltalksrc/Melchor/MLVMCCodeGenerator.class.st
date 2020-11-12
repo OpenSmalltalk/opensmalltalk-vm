@@ -2,15 +2,31 @@ Class {
 	#name : #MLVMCCodeGenerator,
 	#superclass : #CCodeGenerator,
 	#instVars : [
-		'vmClass'
+		'vmClass',
+		'vmMaker'
 	],
 	#category : #Melchor
 }
+
+{ #category : #'C code generator' }
+MLVMCCodeGenerator >> abortBlock [
+	^self vmMaker ifNotNil: [:vmm| vmm abortBlock]
+]
 
 { #category : #'spur primitive compilation' }
 MLVMCCodeGenerator >> accessorDepthCalculator [
 
 	^ MLAccessorDepthCalculator forCodeGenerator: self 
+]
+
+{ #category : #'C code generator' }
+MLVMCCodeGenerator >> bytesPerOop [
+	^ self vmmakerConfiguration bytesPerOop
+]
+
+{ #category : #'C code generator' }
+MLVMCCodeGenerator >> bytesPerWord [
+	^ self vmmakerConfiguration bytesPerWord
 ]
 
 { #category : #'C code generator' }
@@ -64,6 +80,14 @@ MLVMCCodeGenerator >> constants [
 	"and VMBasicConstants mostBasicConstantNames *must* be taken from interp.h"
 	unused := self unusedConstants.
 	^ super constants keys reject: [ :any | unused includes: any ]
+]
+
+{ #category : #'C code generator' }
+MLVMCCodeGenerator >> declaredConstants [
+	| unused |
+	unused := super declaredConstants.
+	unused addAll: self vmmakerConfiguration unusedConstantNames.
+	^ unused
 ]
 
 { #category : #'C code generator' }
@@ -637,4 +661,20 @@ MLVMCCodeGenerator >> vmHeaderContentsWithBytesPerWord: bytesPerWord [
 
 	^ ByteString
 		streamContents: [ :tempStream | self vmClass writeVMHeaderTo: tempStream bytesPerWord: bytesPerWord generator: self ]
+]
+
+{ #category : #accessing }
+MLVMCCodeGenerator >> vmMaker [
+	^vmMaker
+]
+
+{ #category : #accessing }
+MLVMCCodeGenerator >> vmMaker: aVMMaker [
+	vmMaker := aVMMaker
+]
+
+{ #category : #accessing }
+MLVMCCodeGenerator >> vmmakerConfiguration [
+	
+	^ self vmMaker vmmakerConfiguration
 ]

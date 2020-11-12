@@ -37,7 +37,6 @@ Class {
 		'breakSrcInlineSelectors',
 		'breakDestInlineSelectors',
 		'breakOnInline',
-		'vmMaker',
 		'environment',
 		'compileTimeOptions'
 	],
@@ -83,7 +82,7 @@ CCodeGenerator class >> shortMonticelloDescriptionForClass: aClass [
 
 { #category : #accessing }
 CCodeGenerator >> abortBlock [
-	^vmMaker ifNotNil: [:vmm| vmm abortBlock]
+	^ nil
 ]
 
 { #category : #public }
@@ -496,6 +495,16 @@ CCodeGenerator >> breakSrcInlineSelector: aSelector [
 	breakSrcInlineSelectors add: aSelector
 ]
 
+{ #category : #inlining }
+CCodeGenerator >> bytesPerOop [
+	^ 8
+]
+
+{ #category : #inlining }
+CCodeGenerator >> bytesPerWord [
+	^ 8
+]
+
 { #category : #utilities }
 CCodeGenerator >> cCodeForMethod: selector [
 	"Answer a string containing the C code for the given method."
@@ -885,6 +894,11 @@ CCodeGenerator >> declareModuleName: nameString [
 CCodeGenerator >> declareVar: varName type: type [
 	"This both creates a varable and provides its type"
 	self var: (variables add: varName asString) type: type
+]
+
+{ #category : #'C code generator' }
+CCodeGenerator >> declaredConstants [
+	^ constants keys asSet
 ]
 
 { #category : #'type inference' }
@@ -4802,17 +4816,17 @@ CCodeGenerator >> sizeOfIntegralCType: anIntegralCType [ "<String>"
 		['sqLong']	->	[8].
 		['usqLong']	->	[8].
 		['long long']	->	[8].
-		['sqInt']		->	[self vmmakerConfiguration bytesPerOop].
-		['usqInt']	->	[self vmmakerConfiguration bytesPerOop].
-		['sqIntptr_t']	->	[self vmmakerConfiguration bytesPerWord].
-		['usqIntptr_t']	->	[self vmmakerConfiguration bytesPerWord].
+		['sqInt']		->	[self bytesPerOop].
+		['usqInt']	->	[self bytesPerOop].
+		['sqIntptr_t']	->	[self bytesPerWord].
+		['usqIntptr_t']	->	[self bytesPerWord].
 		['int']		->	[4].
 		['short']		->	[2].
 		['short int']	->	[2].
 		['char']		->	[1].
-		['long']		->	[self vmmakerConfiguration bytesPerWord]. "It's ambiguous on LLP64 and we'll later remove it"
-		['size_t']	->	[self vmmakerConfiguration bytesPerWord].
-		['pid_t']		->	[self vmmakerConfiguration bytesPerWord].
+		['long']		->	[self bytesPerWord]. "It's ambiguous on LLP64 and we'll later remove it"
+		['size_t']	->	[self bytesPerWord].
+		['pid_t']		->	[self bytesPerWord].
 		
 		"Standard C types"
 		['uint64_t']		->	[8].
@@ -5184,11 +5198,8 @@ CCodeGenerator >> unsignedTypeForIntegralType: aCTypeString [
 
 { #category : #'C code generator' }
 CCodeGenerator >> unusedConstants [
-
 	| unused |
-	unused := constants keys asSet.
-	self vmmakerConfiguration unusedConstantNames do: [ :name | 
-		unused add: name ].
+	unused := self declaredConstants.
 	methods do: [ :meth | 
 		meth declarations keysDo: [ :v | 
 			(meth typeFor: v in: self) ifNotNil: [ :type | 
@@ -5300,22 +5311,6 @@ CCodeGenerator >> vmHeaderContentsWithBytesPerWord: bytesPerWord [
 	"Store C header code on the given stream."
 
 	^ ''
-]
-
-{ #category : #accessing }
-CCodeGenerator >> vmMaker [
-	^vmMaker
-]
-
-{ #category : #accessing }
-CCodeGenerator >> vmMaker: aVMMaker [
-	vmMaker := aVMMaker
-]
-
-{ #category : #accessing }
-CCodeGenerator >> vmmakerConfiguration [
-	
-	^ self vmMaker vmmakerConfiguration
 ]
 
 { #category : #utilities }
