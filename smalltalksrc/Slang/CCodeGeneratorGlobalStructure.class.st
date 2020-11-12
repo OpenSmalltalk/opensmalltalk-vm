@@ -108,7 +108,7 @@ CCodeGeneratorGlobalStructure >> emitCVariablesOn: aStream [
 								[self preDeclareInterpreterProxyOn: target]
 							ifFalse: [target nextPutAll: 'static ']]
 					ifFalse:
-						[(vmClass mustBeGlobal: varString) ifFalse:
+						[(self vmClass mustBeGlobal: varString) ifFalse:
 							[target nextPutAll: (inStruct ifTrue: ['_iss '] ifFalse: ['static '])]].
 				target nextPutAll: decl; nextPut: $;; cr]].
 	structure
@@ -201,7 +201,7 @@ CCodeGeneratorGlobalStructure >> placeInStructure: var [
 	(check includesSubstring: 'static') ifTrue: [^false].
 	(check includesSubstring: 'volatile') ifTrue: [^false].
 
-	^(vmClass mustBeGlobal: var) not
+	^(self vmClass mustBeGlobal: var) not
 ]
 
 { #category : #'C code generator' }

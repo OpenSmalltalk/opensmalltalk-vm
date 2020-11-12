@@ -73,7 +73,7 @@ MLVMCCodeGenerator >> defineAtCompileTime: aString [
 	(super defineAtCompileTime: aString)
 		ifTrue: [ ^ true ].
 		
-	^ (vmClass ifNil: [self constantClass]) defineAtCompileTime: aString
+	^ (self vmClass ifNil: [self constantClass]) defineAtCompileTime: aString
 ]
 
 { #category : #inlining }
@@ -95,23 +95,23 @@ MLVMCCodeGenerator >> doInlining: inlineFlagOrSymbol [
 
 	self doBasicInlining: inlineFlagOrSymbol.
 
-	vmClass ifNil: [^self].
+	self vmClass ifNil: [^self].
 
 	UIManager default
 		displayProgress: 'Inlining bytecodes'
 		from: 1 to: 2
 		during: [:bar |
 			self inlineDispatchesInMethodNamed: #interpret
-				localizingVars: vmClass namesOfVariablesToLocalize.
+				localizingVars: self vmClass namesOfVariablesToLocalize.
 			bar value: 1.
-			removed := self removeMethodsReferingToGlobals: vmClass namesOfVariablesToLocalize
+			removed := self removeMethodsReferingToGlobals: self vmClass namesOfVariablesToLocalize
 							except: #interpret.
 			bar value: 2].
 
 	"only prune when generating the interpreter itself"
 	self pruneUnreachableMethods.
 
-	self reportShouldNotBeRemoved: removed  varList: vmClass namesOfVariablesToLocalize
+	self reportShouldNotBeRemoved: removed  varList: self vmClass namesOfVariablesToLocalize
 ]
 
 { #category : #'C code generator' }
@@ -127,8 +127,8 @@ MLVMCCodeGenerator >> emitCHeaderOn: aStream [
 	
 	self addHeaderFileFirst: '"sq.h"'.
 	super emitCHeaderOn: aStream.
-	vmClass isInterpreterClass ifTrue:
-		[self maybePutPreambleFor: vmClass on: aStream].
+	self vmClass isInterpreterClass ifTrue:
+		[self maybePutPreambleFor: self vmClass on: aStream].
 
 	aStream cr
 ]
@@ -262,5 +262,5 @@ MLVMCCodeGenerator >> returnTypeForSend: sendNode in: aTMethod boundTo: aCalledM
 MLVMCCodeGenerator >> shouldGenerateStruct: structClass [
 
 	^ (super shouldGenerateStruct: structClass)
-		and: [vmClass shouldGenerateTypedefFor: structClass]
+		and: [self vmClass shouldGenerateTypedefFor: structClass]
 ]
