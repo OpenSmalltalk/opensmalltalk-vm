@@ -6,7 +6,6 @@ Class {
 	#name : #CCodeGenerator,
 	#superclass : #Object,
 	#instVars : [
-		'vmClass',
 		'structClasses',
 		'translationDict',
 		'asArgumentTranslationDict',
@@ -834,12 +833,6 @@ CCodeGenerator >> const: constName declareC: declarationString [
 				value: declarationString)
 ]
 
-{ #category : #accessing }
-CCodeGenerator >> constantClass [
-	
-	^ (self vmClass ifNil: [ self vmmakerConfiguration ]) constantClass.
-]
-
 { #category : #'C code generator' }
 CCodeGenerator >> constants [
 
@@ -972,21 +965,6 @@ CCodeGenerator >> emitBuiltinConstructFor: msgNode on: aStream level: level [
 ]
 
 { #category : #'C code generator' }
-CCodeGenerator >> emitCAPIExportHeaderOn: aStream [ 
-	"Store prototype declarations for all API methods on the given stream."
-	| exportedAPIMethods usedConstants |
-	exportedAPIMethods := self sortMethods: (methods select: [:m| m isAPIMethod]).
-	exportedAPIMethods do:
-		[:m|
-		m static ifTrue:
-			[logger ensureCr; show: m selector, ' excluded from export API because it is static'; cr]].
-	self emitCFunctionPrototypes: exportedAPIMethods on: aStream.
-	self emitGlobalCVariablesOn: aStream.
-	usedConstants := self emitCMacros: exportedAPIMethods on: aStream.
-	self emitCConstants: usedConstants on: aStream
-]
-
-{ #category : #'C code generator' }
 CCodeGenerator >> emitCCodeOn: aStream doInlining: inlineFlag doAssertions: assertionFlag [
 	"Emit C code for all methods in the code base onto the given stream. All inlined method calls should already have been expanded."
 
@@ -1030,35 +1008,41 @@ CCodeGenerator >> emitCCodeOn: aStream doInlining: inlineFlag doAssertions: asse
 { #category : #'C code generator' }
 CCodeGenerator >> emitCConstants: constList on: aStream [
 	"Store the global variable declarations on the given stream."
-	constList isEmpty ifTrue: [^self].
-	aStream cr; nextPutAll: '/*** Constants ***/'; cr.
-	(self sortStrings: constList) do:
-		[:varName| | node default value |
+
+	constList isEmpty ifTrue: [ ^ self ].
+	aStream
+		cr;
+		nextPutAll: '/*** Constants ***/';
+		cr.
+	(self sortStrings: constList) do: [ :varName | 
+		| node default value |
 		node := constants at: varName.
-		node name isEmpty ifFalse:
-			["If the definition includes a C comment, or looks like a conditional, take it as is, otherwise convert
+		node name isEmpty ifFalse: [ "If the definition includes a C comment, or looks like a conditional, take it as is, otherwise convert
 			  the value from Smalltalk to C.
 			  Allow the class to provide an alternative definition, either of just the value or the whole shebang."
-			default := (node value isString
-						and: [(node value includesSubstring: '/*')
-								or: [(node value includesSubstring: ' ? ') and: [node value includesSubstring: ' : ']]])
-							ifTrue: [node value]
-							ifFalse: [self cLiteralFor: node value name: varName].
+			default := (node value isString and: [ 
+				            (node value includesSubstring: '/*') or: [ 
+					            (node value includesSubstring: ' ? ') and: [ 
+						            node value includesSubstring: ' : ' ] ] ])
+				           ifTrue: [ node value ]
+				           ifFalse: [ self cLiteralFor: node value name: varName ].
 			default = #undefined
-				ifTrue: [aStream nextPutAll: '#undef '; nextPutAll: node name; cr]
-				ifFalse:
-					[value := self vmClass
-								ifNotNil:
-									[(self vmClass specialValueForConstant: node name default: default)
-										ifNotNil: [:specialDef| specialDef]
-										ifNil: [default]]
-								ifNil: [default].
+				ifTrue: [ 
+					aStream
+						nextPutAll: '#undef ';
+						nextPutAll: node name;
+						cr ]
+				ifFalse: [ 
+					value := self valueForContant: node ifAbsent: default.
 					(self defineAtCompileTime: node name)
-						ifTrue: [self putConditionalDefineOf: node name
-									as: value
-									comment: 'Allow this to be overridden on the compiler command line'
-									on: aStream]
-						ifFalse: [self putDefineOf: node name as: value on: aStream]]]].
+						ifTrue: [ 
+							self
+								putConditionalDefineOf: node name
+								as: value
+								comment:
+								'Allow this to be overridden on the compiler command line'
+								on: aStream ]
+						ifFalse: [ self putDefineOf: node name as: value on: aStream ] ] ] ].
 	aStream cr
 ]
 
@@ -1095,7 +1079,12 @@ CCodeGenerator >> emitCExpression: aParseNode on: aStream indent: level [
 ]
 
 { #category : #'C code generator' }
-CCodeGenerator >> emitCFunctionPrototypes: methodList on: aStream [ 
+CCodeGenerator >> emitCFunctionPrototypeFor: m on: aStream [
+	^ m emitCFunctionPrototype: aStream generator: self
+]
+
+{ #category : #'C code generator' }
+CCodeGenerator >> emitCFunctionPrototypes: methodList on: aStream [
 	"Store prototype declarations for all non-inlined methods on the given stream.
 	 Add a define for a NoDbgRegParms attribute for static functions used for debugging.
 	 gcc and other compilers will use non-standard calling conventions for static functions
@@ -1106,20 +1095,15 @@ CCodeGenerator >> emitCFunctionPrototypes: methodList on: aStream [
 	 with the attribute.  We mark functions we want to observe in a profiler as NeverInline.
 	 The sqConfig.h file for the platform should define NeverInline suitably for the platform's
 	 compiler, if the compiler can be persuaded not to inline certain functions."
-	aStream cr; nextPutAll: '/*** Function Prototypes ***/'; cr.
-	self vmClass ifNotNil:
-		[NoRegParmsInAssertVMs ifTrue:
-			[aStream nextPutAll: '\\#if !PRODUCTION && defined(PlatformNoDbgRegParms)\# define NoDbgRegParms PlatformNoDbgRegParms\#endif' withCRs.
-			 aStream nextPutAll: '\\#if !defined(NoDbgRegParms)\# define NoDbgRegParms /*empty*/\#endif\\' withCRs].
-		 aStream nextPutAll: '\\#if !defined(NeverInline)\# define NeverInline /*empty*/\#endif\\' withCRs].
-	(methodList select: [:m| m isRealMethod and: [self shouldGenerateMethod: m]]) do:
-		[:m |
-		self vmClass ifNotNil:
-			[(NoRegParmsInAssertVMs and: [m export not and: [m isStatic and: [m args notEmpty]]]) ifTrue:
-				[m addFunctionAttribute: 'NoDbgRegParms'].
-			 m inline == #never ifTrue:
-				[m addFunctionAttribute: 'NeverInline']].
-		m emitCFunctionPrototype: aStream generator: self].
+
+	aStream
+		cr;
+		nextPutAll: '/*** Function Prototypes ***/';
+		cr.
+	self emitFunctionPrototypesPreambleOn: aStream.
+	methodList
+		select: [ :m | m isRealMethod and: [ self shouldGenerateMethod: m ] ]
+		thenDo: [ :m | self emitCFunctionPrototypeFor: m on: aStream ].
 	aStream cr
 ]
 
@@ -1127,12 +1111,6 @@ CCodeGenerator >> emitCFunctionPrototypes: methodList on: aStream [
 CCodeGenerator >> emitCHeaderOn: aStream [
 	"Emit the initial part of a source file on aStream, comprising the version stamp,
 	 the global struct usage flags, the header files and preamble code."
-
-	| headerClass |
-	headerClass := [self vmClass coreInterpreterClass]
-						on: MessageNotUnderstood
-						do: [:ex| self vmClass].
-	aStream nextPutAll: (self fileHeaderVersionStampForSourceClass: headerClass); cr; cr.
 	self emitGlobalStructFlagOn: aStream.
 
 	"Additional header files; include C library ones first."
@@ -1200,6 +1178,14 @@ CCodeGenerator >> emitCTypesOn: aStream [
 ]
 
 { #category : #'C code generator' }
+CCodeGenerator >> emitCVariableDeclarationFor: aDeclaration andVarString: varString on: aStream [
+	aStream
+		nextPutAll: aDeclaration;
+		nextPut: $;;
+		cr
+]
+
+{ #category : #'C code generator' }
 CCodeGenerator >> emitCVariablesOn: aStream [ 
 	"Store the global variable declarations on the given stream."
 
@@ -1212,25 +1198,7 @@ CCodeGenerator >> emitCVariablesOn: aStream [
 			ifTrue:
 				[aStream nextPutAll: decl; cr]
 			ifFalse:
-				[self isGeneratingPluginCode
-					ifTrue:
-						[varString = 'interpreterProxy'
-							ifTrue: "quite special..."
-								[self preDeclareInterpreterProxyOn: aStream]
-							ifFalse: [(decl beginsWith: 'static') ifFalse:
-										[aStream nextPutAll: 'static ']]]
-					ifFalse:
-						[(self vmClass mustBeGlobal: varString)
-							ifTrue:
-								[(decl beginsWith: 'static ') ifTrue:
-									[decl := decl allButFirst: 7]]
-							ifFalse:
-								[(decl beginsWith: 'static') ifFalse:
-									[aStream nextPutAll: 'static ']]].
-				aStream
-					nextPutAll: decl;
-					nextPut: $;;
-					cr]].
+				[self emitCVariableDeclarationFor: decl andVarString: varString on: aStream ]].
 	aStream cr
 ]
 
@@ -1265,35 +1233,8 @@ CCodeGenerator >> emitExportsNamed: exportsNamePrefix pluginName: pluginName on:
 ]
 
 { #category : #'C code generator' }
-CCodeGenerator >> emitExportsOn: aStream [
-	"Store all the exported primitives in the form used by the internal named prim system."
-	(self vmClass isNil or: [self vmClass isInterpreterClass]) ifTrue:
-		[self emitExportsNamed: 'vm' pluginName: '' on: aStream]
-]
-
-{ #category : #'C code generator' }
-CCodeGenerator >> emitGlobalCVariablesOn: aStream [
-	"Store the global variable declarations on the given stream."
-
-	aStream cr; nextPutAll: '/*** Global Variables ***/'; cr.
-	
-	(self sortStrings: (variables select: [:v| self vmClass mustBeGlobal: v])) do:
-		[:var | | varString decl |
-		varString := var asString.
-		decl := variableDeclarations at: varString ifAbsent: ['sqInt ' , varString].
-		decl first == $# "support cgen var: #bytecodeSetSelector declareC: '#define bytecodeSetSelector 0' hack"
-			ifTrue:
-				[aStream nextPutAll: decl; cr]
-			ifFalse:
-				[(decl includesSubstring: ' private ') ifFalse: "work-around hack to prevent localization of variables only referenced once."
-					[(decl beginsWith: 'static') ifFalse: [aStream nextPutAll: 'VM_EXPORT '].
-					(decl includes: $=) ifTrue:
-						[decl := decl copyFrom: 1 to: (decl indexOf: $=) - 1].
-					aStream
-						nextPutAll: decl;
-						nextPut: $;;
-						cr]]].
-	aStream cr
+CCodeGenerator >> emitFunctionPrototypesPreambleOn: aStream [
+	"hook for outputing a preamble before all function prototypes are emitted"
 ]
 
 { #category : #'C code generator' }
@@ -1634,14 +1575,17 @@ CCodeGenerator >> generateBitInvert: msgNode on: aStream indent: level [
 	 a 32-bit value on 64-bit platforms."
 
 	| castToUnsignedInt castToUnsignedLong castToUnsignedLongLong |
-	(castToUnsignedInt := msgNode selector = #bitInvert32) ifTrue:
-		[aStream nextPutAll: '(unsigned int)'].
+	(castToUnsignedInt := msgNode selector = #bitInvert32) ifTrue: [ 
+		aStream nextPutAll: '(unsigned int)' ].
 	aStream nextPut: $~.
-	(castToUnsignedLong := msgNode selector = #bitInvert64 and: [self vmClass notNil and: [self vmClass objectMemoryClass wordSize = 8]]) ifTrue:
-		[aStream nextPutAll: '(usqIntptr_t)'].
-	(castToUnsignedLongLong := msgNode selector = #bitInvert64 and: [self vmClass isNil or: [self vmClass objectMemoryClass wordSize = 4]]) ifTrue:
-		[aStream nextPutAll: '(unsigned long long)'].
-	self assert: castToUnsignedInt asBit + castToUnsignedLong asBit + castToUnsignedLongLong asBit <= 1. "We should only do a single cast"
+	(castToUnsignedLong := msgNode selector = #bitInvert64 and: [ 
+		                       self is32Bit not "then it's 64 bits" ]) 
+		ifTrue: [ aStream nextPutAll: '(usqIntptr_t)' ].
+	(castToUnsignedLongLong := msgNode selector = #bitInvert64 and: [ 
+		                           self is32Bit ]) ifTrue: [ 
+		aStream nextPutAll: '(unsigned long long)' ].
+	self assert: castToUnsignedInt asBit + castToUnsignedLong asBit
+		+ castToUnsignedLongLong asBit <= 1. "We should only do a single cast"
 	self emitCExpression: msgNode receiver on: aStream
 ]
 
@@ -2368,59 +2312,6 @@ CCodeGenerator >> generateInlineDirective: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
-CCodeGenerator >> generateIntegerObjectOf: msgNode on: aStream indent: level [
-	"Generate the C code for this message onto the given stream."
-	| expr mustCastToUnsigned type typeIsUnsigned |
-	expr := msgNode args first.
-	aStream nextPutAll: '(('.
-	"Note that the default type of an integer constant in C is int.  Hence we /must/
-	 cast expression to long if in the 64-bit world, since e.g. in 64-bits
-		(int)(16r1FFFFF << 3) = (int)16rFFFFFFF8 = -8
-	 whereas
-		(long)(16r1FFFFF << 3) = (long) 16rFFFFFFF8 = 4294967288."
-	type := self typeFor: expr in: currentMethod.
-	typeIsUnsigned := type first = $u.
-	mustCastToUnsigned := typeIsUnsigned not
-		or: [(self sizeOfIntegralCType: type) < (self sizeOfIntegralCType: #usqInt)].
-	mustCastToUnsigned ifTrue:
-		[aStream nextPutAll: '(usqInt)'].
-	self emitCExpression: expr on: aStream.
-	aStream
-		nextPutAll: ' << ';
-		print: self vmClass objectMemoryClass numSmallIntegerTagBits;
-		nextPutAll: ') | 1)'
-]
-
-{ #category : #'C translation' }
-CCodeGenerator >> generateIntegerValueOf: msgNode on: aStream indent: level [
-	"Generate the C code for this message onto the given stream."
-
-	aStream nextPut: $(.
-	self emitCExpression: msgNode args first on: aStream.
-	aStream nextPutAll: ' >> ';
-		print: self vmClass objectMemoryClass numSmallIntegerTagBits;
-		nextPut: $).
-]
-
-{ #category : #'C translation' }
-CCodeGenerator >> generateIsIntegerObject: msgNode on: aStream indent: level [
-	"Generate the C code for this message onto the given stream."
-
-	self vmClass objectMemoryClass numSmallIntegerTagBits = 1
-		ifTrue:
-			[aStream nextPutAll: '('.
-			 self emitCExpression: msgNode args first on: aStream.
-			 aStream nextPutAll: ' & 1)']
-		ifFalse:
-			[aStream nextPutAll: '((('.
-			 self emitCExpression: msgNode args first on: aStream.
-			 aStream
-				nextPutAll: ') & ';
-				print: 1 << self vmClass objectMemoryClass numSmallIntegerTagBits - 1;
-				nextPutAll: ') == 1)']
-]
-
-{ #category : #'C translation' }
 CCodeGenerator >> generateIsNil: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
@@ -2710,7 +2601,7 @@ CCodeGenerator >> generateShiftLeft: msgNode on: aStream indent: level [
 	(rcvr constantNumbericValueIfAtAllPossibleOrNilIn: self) ifNotNil:
 		[:rcvrVal |
 		 (arg constantNumbericValueIfAtAllPossibleOrNilIn: self)
-			ifNil: [castToLong := self vmClass notNil and: [self vmClass objectMemoryClass wordSize = 8]]
+			ifNil: [castToLong := self is64Bit]
 			ifNotNil:
 				[:argVal |
 				| valueBeyondInt |
@@ -2851,8 +2742,7 @@ CCodeGenerator >> generateSignedIntToLong: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	aStream nextPutAll: '((usqInt) '.
-	(self vmClass notNil
-	 and: [self vmClass objectMemoryClass wordSize = 8]) ifTrue:
+	self is64Bit ifTrue:
 		[aStream nextPutAll: '(int)'].
 	self emitCExpression: msgNode receiver on: aStream.
 	aStream nextPut: $)
@@ -3503,15 +3393,18 @@ CCodeGenerator >> inlineDispatchesInMethodNamed: selector localizingVars: varsLi
 
 { #category : #utilities }
 CCodeGenerator >> instVarNamesForClass: aClass [
-	^self vmClass
-		ifNil: [aClass instVarNames]
-		ifNotNil: [aClass instVarNames reject:
-					[:ivn| self vmClass isNonArgumentImplicitReceiverVariableName: ivn]]
+	^ aClass instVarNames
+
 ]
 
-{ #category : #accessing }
-CCodeGenerator >> interpreterVersion [
-	^self vmClass interpreterVersion, '[', self vmClass objectMemoryClass memoryManagerVersion, ']'
+{ #category : #'C translation' }
+CCodeGenerator >> is32Bit [
+	^ self wordSize = 4
+]
+
+{ #category : #'C translation' }
+CCodeGenerator >> is64Bit [
+	^ self is32Bit not
 ]
 
 { #category : #'C translation support' }
@@ -3525,6 +3418,11 @@ CCodeGenerator >> is64BitIntegralVariable: node typeInto: aBlock [
 							ifTrue: [decl allButLast: node name size + 1]
 							ifFalse: [decl]).
 			true]]]
+]
+
+{ #category : #utilities }
+CCodeGenerator >> isAcceptableAncilliaryClass: class [
+	^ true
 ]
 
 { #category : #inlining }
@@ -3571,33 +3469,27 @@ CCodeGenerator >> isCLiteral: anObject [
 CCodeGenerator >> isConstantNode: aNode valueInto: aBlock [
 	"Answer if aNode evaluates to a constant, and if so, evaluate aBlock with the value of that constant."
 
-	aNode isConstant ifTrue:
-		[(aNode isDefine
-		  and: [(self vmClass ifNil: [self constantClass]) defineAtCompileTime: aNode name]) ifTrue:
-			[^false].
-		 aBlock value: aNode value.
-		 ^true].
-	(aNode isVariable
-	 and: [aNode name = #nil]) ifTrue:
-		[aBlock value: nil.
-		 ^true].
-	aNode isSend ifTrue:
-		[(self anyMethodNamed: aNode selector)
-			ifNil:
-				[(self constantClass valueOfBasicSelector: aNode selector) ifNotNil:
-					[:value|
-					 aBlock value: value.
-					 ^true].
-				 aNode constantNumbericValueOrNil ifNotNil:
-					[:value|
-					 aBlock value: value.
-					 ^true]]
-			ifNotNil:
-				[:m|
-				(m statements size = 1
-				 and: [m statements last isReturn]) ifTrue:
-					[^self isConstantNode: m statements last expression valueInto: aBlock]]].
-	^false
+	aNode isConstant ifTrue: [ 
+		(aNode isDefine and: [ self defineAtCompileTime: aNode name ]) 
+			ifTrue: [ ^ false ].
+		aBlock value: aNode value.
+		^ true ].
+	(aNode isVariable and: [ aNode name = #nil ]) ifTrue: [ 
+		aBlock value: nil.
+		^ true ].
+	aNode isSend ifTrue: [ 
+		(self anyMethodNamed: aNode selector)
+			ifNil: [ 
+				| hasValue |
+				hasValue := self valueOfConstantNode: aNode doing: aBlock.
+				hasValue ifTrue: [ ^ true ] ]
+			ifNotNil: [ :m | 
+				(m statements size = 1 and: [ m statements last isReturn ]) 
+					ifTrue: [ 
+						^ self
+							  isConstantNode: m statements last expression
+							  valueInto: aBlock ] ] ].
+	^ false
 ]
 
 { #category : #inlining }
@@ -3677,10 +3569,7 @@ CCodeGenerator >> isNode: aNode constantValueWithinRangeOfType: aType [
 { #category : #'C code generator' }
 CCodeGenerator >> isNonArgumentImplicitReceiverVariableName: aString [
 
-	^(self typeOfVariable: aString) == #implicit
-	    or: [self vmClass
-			ifNil: [#('interpreterProxy' 'self') includes: aString]
-	 		ifNotNil: [self vmClass isNonArgumentImplicitReceiverVariableName: aString]]
+	^ (self typeOfVariable: aString) == #implicit
 ]
 
 { #category : #'type inference' }
@@ -3741,7 +3630,7 @@ CCodeGenerator >> localizeGlobalVariables [
 	"find all globals used in only one method"
 	candidates := globalVariableUsage select: [:e | e size = 1].
 	"Don't localize globals; nor those that are only assigned to; they're for debugging..."
-	(candidates keys select: [:k| (self vmClass mustBeGlobal: k)
+	(candidates keys select: [:k| (self mustBeGlobal: k)
 								or: [(self methodNamed: (globalVariableUsage at: k) anyOne)
 										ifNil: [false]
 										ifNotNil: [:m| (m readsVariable: k) not]]]) do:
@@ -3838,14 +3727,6 @@ CCodeGenerator >> maybeBreakForTestToInline: aNodeOrSelector in: aTMethod [
 	and: [(breakDestInlineSelectors isEmpty or: [(breakDestInlineSelectors includes: aTMethod selector)])
 	and: [breakOnInline ~~ true]]]) ifTrue:
 		[aTMethod halt: aTMethod selector, ' ', selector]
-]
-
-{ #category : #'C translation support' }
-CCodeGenerator >> maybeEmitPrimitiveFailureDefineFor: selector on: aStream [
-	 (self vmClass notNil
-	 and: [(self vmClass inheritsFrom: self vmmakerConfiguration baseInterpreterClass)
-	 and: [(self vmClass primitiveTable includes: selector)]]) ifTrue:
-		[aStream nextPutAll: '#else\# define ' withCRs; nextPutAll: selector; nextPutAll: ' (void (*)(void))0\' withCRs]
 ]
 
 { #category : #'C code generator' }
@@ -4004,31 +3885,46 @@ CCodeGenerator >> mostBasicConstantSelectors [
 	^ #()
 ]
 
+{ #category : #utilities }
+CCodeGenerator >> mustBeGlobal: aName [
+	^ false
+]
+
 { #category : #'C code generator' }
 CCodeGenerator >> needToGenerateHeader: headerName file: interpHdrPath contents: newContentsArg [
 	"Check if we need to regenerate a header file.  We always need to if the contents have changed.
 	 But if not we can avoid needless recompilations by not regenerating.  So only regenerate if the
 	 package stamp is dirty and the monticello stamp is clean."
-	
+
 	| newContents oldContents dirtyStamp |
-	
-	interpHdrPath asFileReference exists 
-		ifFalse: [^true].
-		
+	interpHdrPath asFileReference exists ifFalse: [ ^ true ].
 	newContents := newContentsArg.
 	oldContents := interpHdrPath asFileReference contents.
-	oldContents := oldContents copyReplaceAll: {Character cr. Character lf} with: {Character cr}.
+	oldContents := oldContents
+		               copyReplaceAll: { 
+				               Character cr.
+				               Character lf }
+		               with: { Character cr }.
 	oldContents replaceAll: Character lf with: Character cr.
 	dirtyStamp := (oldContents indexOfSubCollection: '* VMMaker') ~= 0.
-	(newContents beginsWith: '/*') = (oldContents beginsWith: '/*') ifFalse:
-		[(newContents beginsWith: '/*') ifTrue:
-			[newContents := newContents readStream upToAll: '*/'; skipSeparators; upToEnd].
-		 (oldContents beginsWith: '/*') ifTrue:
-			[oldContents := oldContents readStream upToAll: '*/'; skipSeparators; upToEnd]].
-	^oldContents ~= newContents
-	 or: [(dirtyStamp and: [[((self class monticelloDescriptionFor: self vmClass) includes: $*) not]
-							on: Error do: [:ex| false]]) "If no stamp don't worry"
-	 or: [self confirm: headerName, ' contents are unchanged.\Writing the file may cause recompilation of support files.\Do you want to write the header file?' withCRs]]
+	(newContents beginsWith: '/*') = (oldContents beginsWith: '/*') 
+		ifFalse: [ 
+			(newContents beginsWith: '/*') ifTrue: [ 
+				newContents := newContents readStream
+					               upToAll: '*/';
+					               skipSeparators;
+					               upToEnd ].
+			(oldContents beginsWith: '/*') ifTrue: [ 
+				oldContents := oldContents readStream
+					               upToAll: '*/';
+					               skipSeparators;
+					               upToEnd ] ].
+	^ oldContents ~= newContents or: [ 
+		  (dirtyStamp and: [ self shouldGenerateHeader ]) or: [ 
+			  self confirm: headerName
+				  ,
+					  ' contents are unchanged.\Writing the file may cause recompilation of support files.\Do you want to write the header file?'
+						  withCRs ] "If no stamp don't worry" ]
 ]
 
 { #category : #utilities }
@@ -4037,35 +3933,29 @@ CCodeGenerator >> nilOrBooleanConditionFor: nodeOrNil [
 	 (i.e. cppIf:ifTrue: et al or ifTrue: et al) and the conditional does evaluate to a translation-time
 	 boolean constant, answer that constant, otherwise answer nil.  Used to prune dead code,
 	 either for code generaton or dead variable elimination."
-	generateDeadCode ifTrue: [^nil].
-	nodeOrNil ifNil:
-		[^nil].
-	nodeOrNil isSend ifFalse:
-		[^nil].
-	(#(ifTrue: ifFalse: ifTrue:ifFalse: ifFalse:ifTrue:) includes: nodeOrNil selector) ifTrue:
-		[^self nilOrBooleanConstantReceiverOf: nodeOrNil receiver].
-	(#(and: or:) includes: nodeOrNil selector) ifTrue:
-		[^self nilOrBooleanConstantReceiverOf: nodeOrNil].
-	(#(cppIf:ifTrue: cppIf:ifTrue:ifFalse:) includes: nodeOrNil selector) ifTrue:
-		[| maybeName value |
-		(self vmClass notNil
-		 and: [nodeOrNil args first isConstant
-		 and: [(value := nodeOrNil args first value) isSymbol
-		 and: [(self vmClass defineAtCompileTime: value) not
-		 and: [(self vmClass bindingOf: value) notNil]]]]) ifTrue:
-			[self logger
-					nextPutAll: 'Warning: cppIf: reference to ';
-					store: value;
-					nextPutAll: ' when variable of same name exists.'; cr].
 
-		maybeName := nodeOrNil args first isConstant ifTrue:
-							[nodeOrNil args first nameOrValue].
-		 ^(optionsDictionary notNil
-		   and: [nodeOrNil args first isConstant
-		   and: [(#(true false) includes: (optionsDictionary at: maybeName ifAbsent: [nil]))
-		   and: [(self vmClass defineAtCompileTime: maybeName) not]]]) ifTrue:
-			[optionsDictionary at: nodeOrNil args first name]].
-	^nil
+	generateDeadCode ifTrue: [ ^ nil ].
+	nodeOrNil ifNil: [ ^ nil ].
+	nodeOrNil isSend ifFalse: [ ^ nil ].
+	(#( ifTrue: ifFalse: #ifTrue:ifFalse: #ifFalse:ifTrue: ) includes:
+		 nodeOrNil selector) ifTrue: [ 
+		^ self nilOrBooleanConstantReceiverOf: nodeOrNil receiver ].
+	(#( and: or: ) includes: nodeOrNil selector) ifTrue: [ 
+		^ self nilOrBooleanConstantReceiverOf: nodeOrNil ].
+	(#( #cppIf:ifTrue: #cppIf:ifTrue:ifFalse: ) includes: nodeOrNil selector) 
+		ifTrue: [ 
+		| maybeName value |
+		value := nodeOrNil args first value.
+		self validateCppIf: nodeOrNil withValue: value.
+		maybeName := nodeOrNil args first isConstant ifTrue: [ 
+			             nodeOrNil args first nameOrValue ].
+		^ (optionsDictionary notNil and: [ 
+			   nodeOrNil args first isConstant and: [ 
+				   (#( true false ) includes:
+					    (optionsDictionary at: maybeName ifAbsent: [ nil ])) and: [ 
+					   (self defineAtCompileTime: maybeName) not ] ] ]) 
+			  ifTrue: [ optionsDictionary at: nodeOrNil args first name ] ].
+	^ nil
 ]
 
 { #category : #utilities }
@@ -4209,17 +4099,17 @@ CCodeGenerator >> nodeToCast: exprNode to: cType [
 CCodeGenerator >> nonStructClassesForTranslationClasses: classes [
 	"Answer in superclass order (any superclass precedes any subclass)
 	 the ancilliaryClasses that are not struct classes for all the given classes."
+
 	| nonStructClasses |
 	nonStructClasses := OrderedCollection new.
-	classes do:
-		[:aTranslationClass| aTranslationClass ancilliaryClasses do:
-			[:class|
-			(self vmClass isNil or: [self vmClass isAcceptableAncilliaryClass: class]) ifTrue:
-				[(class isStructClass
-				 or: [(nonStructClasses includes: class)
-				 or: [classes includes: class]]) ifFalse:
-					[nonStructClasses addLast: class]]]].
-	^self superclassOrder: nonStructClasses
+	classes do: [ :aTranslationClass | 
+		aTranslationClass ancilliaryClasses do: [ :class | 
+			(self isAcceptableAncilliaryClass: class) ifTrue: [ 
+				(class isStructClass or: [ 
+					 (nonStructClasses includes: class) or: [ 
+						 classes includes: class ] ]) ifFalse: [ 
+					nonStructClasses addLast: class ] ] ] ].
+	^ self superclassOrder: nonStructClasses
 ]
 
 { #category : #utilities }
@@ -4604,16 +4494,10 @@ CCodeGenerator >> removeMethodsReferingToGlobals: varList except: methodName [
 { #category : #utilities }
 CCodeGenerator >> removeVariable: aName [
 	"Remove the given (instance) variable from the code base."
-	self removeVariable: aName
-		ifAbsent:
-			[(self vmClass notNil
-			  and: [self vmClass isNonArgumentImplicitReceiverVariableName: aName]) ifFalse:
-				[logger
-					ensureCr;
-					show: 'warning, variable '
-						, aName
-						, ' doesn''t exist or has already been removed';
-						cr]]
+
+	self
+		removeVariable: aName
+		ifAbsent: [ self error: 'variable missing: ' , aName ]
 ]
 
 { #category : #utilities }
@@ -4653,49 +4537,6 @@ CCodeGenerator >> reportRecursiveMethods [
 { #category : #inlining }
 CCodeGenerator >> reportShouldNotBeRemoved: removed varList: varList [
 	"Report whether any of the removed methods are still used."
-	| varListAsStrings shouldNotBeRemoved |
-	varListAsStrings := varList collect: [ :sym | sym asString ].
-	shouldNotBeRemoved := Set new.
-	removed do:
-		[:m|
-		m isAPIMethod ifTrue:
-			[shouldNotBeRemoved add: m selector]].
-	methods do:
-		[:m|
-		(m selector = #interpret
-		 or: [removed includes: m selector]) ifFalse:
-			[m allCalls do:
-				[:sel|
-				(removed includesKey: sel) ifTrue:
-					[shouldNotBeRemoved add: sel]]]].
-	self vmClass additionalSelectorTables do:
-		[:selectorTable|
-		 selectorTable do:
-			[:selOrInteger|
-			selOrInteger isInteger ifFalse:
-				[(removed includesKey: selOrInteger) ifTrue:
-					[shouldNotBeRemoved add: selOrInteger]]]].
-	shouldNotBeRemoved do:
-		[:sel| | str |
-		str := String streamContents:
-				[:strm| | them |
-				strm
-					nextPutAll: 'Removed ';
-					nextPutAll: sel;
-					nextPutAll: ' because it refers to the local variable'.
-				them := (removed at: sel) freeVariableReferences asSet intersection: varListAsStrings.
-				them size > 1 ifTrue:
-					[strm nextPut: $s.
-					 them := self sortStrings: them].
-				them do: [:var| strm space; nextPutAll: var].
-
-				strm
-					nextPutAll: ' of interpret.';
-					cr;
-					nextPutAll: 'But it is either used outside of interpret or exported!!';
-					cr].
-		logger ensureCr; show: str.
-		self inform: str]
 ]
 
 { #category : #'C translation support' }
@@ -4885,17 +4726,14 @@ CCodeGenerator >> shortMonticelloDescriptionForClass: aClass [
 	^self class shortMonticelloDescriptionForClass: aClass
 ]
 
-{ #category : #'C code generator' }
-CCodeGenerator >> shouldExcludeDepth [
-
-	"Don't include the depth in the vm's named primitives if the vm is non-Spur."
-	^ self vmClass notNil and: [ self vmClass objectMemoryClass hasSpurMemoryManagerAPI not ]
-]
-
 { #category : #utilities }
 CCodeGenerator >> shouldGenerateAsInterpreterProxySend: aSendNode [
-	^(self messageReceiverIsInterpreterProxy: aSendNode)
-	  and: [(self constantClass mostBasicConstantSelectors includes: aSendNode selector) not]
+	^ false
+]
+
+{ #category : #'C code generator' }
+CCodeGenerator >> shouldGenerateHeader [
+	^ false
 ]
 
 { #category : #utilities }
@@ -5056,20 +4894,6 @@ CCodeGenerator >> stepExpressionIsNegative: aNode [
 ]
 
 { #category : #public }
-CCodeGenerator >> storeAPIExportHeader: headerName OnFile: fullHeaderPath [
-	"Store C header code on the given file. Evaluate
-	 aBlock with the stream to generate its contents."
-
-	| header |
-	header := String streamContents:
-				[:s|
-				 s nextPutAll: (self fileHeaderVersionStampForSourceClass: nil); cr.
-				 self emitCAPIExportHeaderOn: s].
-	(self needToGenerateHeader: headerName file: fullHeaderPath contents: header) ifTrue:
-		[self storeHeaderOnFile: fullHeaderPath contents: header]
-]
-
-{ #category : #public }
 CCodeGenerator >> storeCodeOnFile: fileName doInlining: inlineFlag [
 	"Store C code for this code base on the given file."
 
@@ -5128,17 +4952,16 @@ CCodeGenerator >> structClasses [
 CCodeGenerator >> structClassesForTranslationClasses: classes [
 	"Answer in superclass order (any superclass precedes any subclass)
 	 the ancilliaryClasses that are struct classes for all the given classes."
+
 	| theStructClasses |
 	theStructClasses := OrderedCollection new.
-	classes do:
-		[:aTranslationClass|
-		aTranslationClass ancilliaryClasses do:
-			[:class|
-			(class isStructClass
-			 and: [(self vmClass isNil or: [self vmClass isAcceptableAncilliaryClass: class])
-			 and: [(theStructClasses includes: class) not]]) ifTrue:
-				[theStructClasses addLast: class]]].
-	^self superclassOrder: theStructClasses
+	classes do: [ :aTranslationClass | 
+		aTranslationClass ancilliaryClasses do: [ :class | 
+			(class isStructClass and: [ 
+				 (self isAcceptableAncilliaryClass: class) and: [ 
+					 (theStructClasses includes: class) not ] ]) ifTrue: [ 
+				theStructClasses addLast: class ] ] ].
+	^ self superclassOrder: theStructClasses
 ]
 
 { #category : #'C code generator' }
@@ -5377,8 +5200,6 @@ CCodeGenerator >> unusedConstants [
 		(variableDeclarations anySatisfy: [ :value | 
 			 value includesSubstring: const ]) ifTrue: [ 
 			unused remove: const ifAbsent: [  ] ] ].
-	"and VMBasicConstants mostBasicConstantNames *must* be taken from interp.h"
-	unused addAll: self constantClass mostBasicConstantNames.
 	^ unused
 ]
 
@@ -5392,6 +5213,25 @@ CCodeGenerator >> useSymbolicConstants [
 CCodeGenerator >> useSymbolicConstants: aBool [
 	"Indicate whether we should generate symbolic constants instead of their actual values"
 	useSymbolicConstants := aBool
+]
+
+{ #category : #utilities }
+CCodeGenerator >> validateCppIf: nodeOrNil withValue: value [
+	
+]
+
+{ #category : #'C code generator' }
+CCodeGenerator >> valueForContant: node ifAbsent: default [
+	^ default
+]
+
+{ #category : #utilities }
+CCodeGenerator >> valueOfConstantNode: aNode doing: aBlock [
+	aNode constantNumbericValueOrNil 
+		ifNotNil: [ :value | 
+			aBlock value: value.
+			^ true ].
+	^ false
 ]
 
 { #category : #public }
@@ -5455,27 +5295,11 @@ CCodeGenerator >> variableOfType: variableType acceptsValue: exprNode ofType: ex
 							or: [self isIntegralCType: expressionType]]]]]]]]
 ]
 
-{ #category : #accessing }
-CCodeGenerator >> vmClass [
-	"Answer the interpreter class if any.  This is nil other than for the core VM."
-	^vmClass
-]
-
-{ #category : #accessing }
-CCodeGenerator >> vmClass: aClass [
-	"Set the main translation class if any.  This is nil other than for the core VM.
-	 It may be an interpreter or a cogit"
-	vmClass := aClass.
-	vmClass ifNotNil:
-		[generateDeadCode := vmClass shouldGenerateDeadCode]
-]
-
 { #category : #public }
 CCodeGenerator >> vmHeaderContentsWithBytesPerWord: bytesPerWord [
 	"Store C header code on the given stream."
 
-	^ ByteString
-		streamContents: [ :tempStream | self vmClass writeVMHeaderTo: tempStream bytesPerWord: bytesPerWord generator: self ]
+	^ ''
 ]
 
 { #category : #accessing }
@@ -5534,4 +5358,9 @@ CCodeGenerator >> withOptionalConditionalDefineFor: aTMethod on: aStream do: aBl
 
 	aBlock value.
 	aTMethod terminateConditionalDefineFor: compileTimeOptionPragmas on: aStream
+]
+
+{ #category : #'C translation' }
+CCodeGenerator >> wordSize [
+	^ 4
 ]
