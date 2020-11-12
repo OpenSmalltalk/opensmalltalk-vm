@@ -513,7 +513,7 @@ VMMaker >> createCodeGenerator [
 
 { #category : #initialize }
 VMMaker >> createCogitCodeGenerator [
-	^CCodeGenerator new
+	^MLVMCCodeGenerator new
 		vmMaker: self;
 		logger: logger;
 		options: optionsDictionary;
