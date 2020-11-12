@@ -3168,13 +3168,13 @@ CCodeGenerator >> implicitReturnTypeFor: aSelector [
 	 aSelector. Default to #sqInt if there is no method, or if the method's
 	 defining class doesn't understand implicitReturnTypeFor:."
 	| m |
-	m := methods at: aSelector ifAbsent: [^#sqInt].
+	m := methods at: aSelector ifAbsent: [ ^ self defaultType ].
 	^[m definingClass implicitReturnTypeFor: aSelector]
 		on: MessageNotUnderstood
 		do: [:ex|
 			ex message selector ~~ #implicitReturnTypeFor: ifTrue:
 				[ex pass].
-			#sqInt]
+			^ self defaultType]
 ]
 
 { #category : #accessing }
