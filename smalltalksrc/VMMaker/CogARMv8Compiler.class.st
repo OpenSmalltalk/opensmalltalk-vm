@@ -2336,7 +2336,7 @@ CogARMv8Compiler >> concretizeMoveRM16r [
 	offset := operands at: 1.
 	baseReg := operands at: 2.
 
-	self assert: offset > 0.
+	self assert: offset >= 0.
 	self assert: offset \\ 2 = 0.
 
 	self
@@ -5837,8 +5837,8 @@ CogARMv8Compiler >> strhSourceRegister: sourceRegister destinationRegister: dest
 	^ 2r1111 << 27
 		bitOr: (1 << 24
 		bitOr: ((immediate12BitValue bitAnd: 16rfff) << 10
-		bitOr: ((sourceRegister bitAnd: 16r1f) << 5
-		bitOr: (destinationRegister bitAnd: 16r1f))))
+		bitOr: ((destinationRegister bitAnd: 16r1f) << 5
+		bitOr: (sourceRegister bitAnd: 16r1f))))
 ]
 
 { #category : #assembler }

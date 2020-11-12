@@ -1367,6 +1367,7 @@ CogARMCompiler >> concretizeMoveRM16r [
 	srcReg := operands at: 0.
 	offset := operands at: 1.
 	baseReg := operands at: 2.
+
 	self is12BitValue: offset
 		ifTrue:
 			[ :u :immediate | 
