@@ -5502,8 +5502,8 @@ CogARMv8Compiler >> scalarConvertSize: is64Bits fromScalarRegister: scalarRegist
 	64-bit to double-precision variant
 	
 	SCVTF <Dd>, <Xn>"
-	
-	^ (is64Bits bitAnd: 1 << 31)
+
+	^ ((is64Bits bitAnd: 1) << 31)
 		bitOr: (2r1111 << 25
 		bitOr: (2r01 "double precision" << 22
 		bitOr: (2r10001 << 17
