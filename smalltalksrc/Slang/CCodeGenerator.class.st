@@ -914,7 +914,7 @@ CCodeGenerator >> defineAtCompileTime: aString [
 	Otherwise, do it at transpilation time, 
 	 - the code with the option is generated if the value of the option is true
 	 - if not true or unset, do not generate"
-
+	compileTimeOptions ifNil: [ ^ false ].
 	^ (compileTimeOptions includes: aString)
 ]
 

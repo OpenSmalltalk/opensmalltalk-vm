@@ -6,3 +6,8 @@ Class {
 	#superclass : #PackageManifest,
 	#category : #Slang
 }
+
+{ #category : #'meta-data - dependency analyser' }
+ManifestVMMakerSlang class >> manuallyResolvedDependencies [
+	^ #(#'FileSystem-Core' #'Collections-Abstract')
+]

@@ -651,7 +651,7 @@ TMethod >> emitInlineOn: aStream level: level generator: aCodeGen [
 			[:var|
 			 aStream
 				crtab: level+1;
-				nextPutAll: (self declarationAt: var);
+				nextPutAll: (self declarationAt: var ifAbsent: [ aCodeGen defaultType, ' ', var]);
 				nextPut: $;].
 			 aStream cr].
 	aStream crtab: level+1.
@@ -2450,7 +2450,7 @@ TMethod >> removeUnusedTempsAndNilIfRequiredIn: aCodeGen [
 				(readBeforeAssigned := (self findReadBeforeAssignedIn: simplyTypedLocals in: aCodeGen)) notEmpty]]) ifTrue:
 		[readBeforeAssigned := readBeforeAssigned reject:
 			[:v| | d | "don't initialize externs, statics, arrays or the explicitly initialized."
-			 d := self declarationAt: v.
+			 d := self declarationAt: v ifAbsent: [ aCodeGen defaultType , ' ' , v ].
 			 (d beginsWith: 'extern') or: [(d beginsWith: 'static') or: [(d includes: $[) or: [d includes: $=]]]].
 		 parseTree statements addAllFirst:
 			(readBeforeAssigned asSortedCollection collect:
@@ -3101,7 +3101,7 @@ TMethod >> typeFor: aVariable in: aCodeGen [
 { #category : #utilities }
 TMethod >> typeForSelf [
 
-	^ definingClass typeForSelf
+	^ [ definingClass typeForSelf ] on: MessageNotUnderstood do: [ :ex | nil ]
 ]
 
 { #category : #inlining }

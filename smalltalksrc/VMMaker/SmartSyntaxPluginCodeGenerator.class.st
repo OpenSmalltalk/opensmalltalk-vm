@@ -3,7 +3,7 @@ Subclass of CCodeGenerator, used in connection with TestInterpreterPlugin to gen
 "
 Class {
 	#name : #SmartSyntaxPluginCodeGenerator,
-	#superclass : #VMPluginCodeGenerator,
+	#superclass : #AnObsoleteVMPluginCodeGenerator,
 	#instVars : [
 		'debugFlag'
 	],

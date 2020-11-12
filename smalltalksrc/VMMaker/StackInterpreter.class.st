@@ -1821,7 +1821,7 @@ StackInterpreter class >> prepareToBeAddedToCodeGenerator: aCodeGen [
 { #category : #constants }
 StackInterpreter class >> primitiveAccessorDepthTable [
 	| cg |
-	cg := CCodeGenerator new.
+	cg := MLVMCCodeGenerator new.
 	cg vmClass: StackInterpreter.
 	cg vmMaker: VMMaker new.
 	cg vmMaker vmmakerConfiguration: VMMakerConfiguration.
@@ -1839,7 +1839,7 @@ StackInterpreter class >> primitiveAccessorDepthTable [
 { #category : #constants }
 StackInterpreter class >> primitiveTable [
 	| cg |
-	cg := CCodeGenerator new.
+	cg := MLVMCCodeGenerator new.
 	cg vmClass: self.
 	^PrimitiveTable collect:
 		[:thing|

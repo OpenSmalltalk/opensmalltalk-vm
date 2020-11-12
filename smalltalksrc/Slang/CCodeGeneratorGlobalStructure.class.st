@@ -5,7 +5,7 @@ Only simple globals are currently put in the array. Someday we might try adding 
 "
 Class {
 	#name : #CCodeGeneratorGlobalStructure,
-	#superclass : #CCodeGenerator,
+	#superclass : #MLVMCCodeGenerator,
 	#instVars : [
 		'localStructDef',
 		'structDefDefine'

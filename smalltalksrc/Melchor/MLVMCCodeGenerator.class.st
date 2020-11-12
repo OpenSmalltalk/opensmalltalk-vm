@@ -79,7 +79,7 @@ MLVMCCodeGenerator >> constants [
 	| unused |
 	"and VMBasicConstants mostBasicConstantNames *must* be taken from interp.h"
 	unused := self unusedConstants.
-	^ super constants keys reject: [ :any | unused includes: any ]
+	^ constants keys reject: [ :any | unused includes: any ]
 ]
 
 { #category : #'C code generator' }
