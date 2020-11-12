@@ -63,6 +63,19 @@ MLVMCCodeGenerator >> defaultType [
 	^ #sqInt
 ]
 
+{ #category : #'compile-time-options' }
+MLVMCCodeGenerator >> defineAtCompileTime: aString [ 
+	"Define if the code generator should define the option at compile time or at generation time.
+	If true, the decision of the option will be delayed to compilation time.
+	Otherwise, do it at transpilation time, 
+	 - the code with the option is generated if the value of the option is true
+	 - if not true or unset, do not generate"
+	(super defineAtCompileTime: aString)
+		ifTrue: [ ^ true ].
+		
+	^ (vmClass ifNil: [self constantClass]) defineAtCompileTime: aString
+]
+
 { #category : #inlining }
 MLVMCCodeGenerator >> doInlining: inlineFlagOrSymbol [
 	"Inline the bodies of all methods that are suitable for inlining."
@@ -177,10 +190,53 @@ MLVMCCodeGenerator >> kernelReturnTypes [
 	^ kernelReturnTypes ifNil: [ kernelReturnTypes := self computeKernelReturnTypes ]
 ]
 
+{ #category : #translating }
+MLVMCCodeGenerator >> mostBasicConstantSelectors [
+
+	^ self constantClass mostBasicConstantSelectors
+]
+
 { #category : #'C code generator' }
 MLVMCCodeGenerator >> nilTranslation [
 	"Defined in some header file as a macro?"
 	^ 'null'
+]
+
+{ #category : #'C code generator' }
+MLVMCCodeGenerator >> optionIsTrue: pragma in: aClass [
+	"Answer whether an option: or notOption: pragma is true in the context of aClass.
+	 The argument to the option: pragma is interpreted as either a Cogit class name
+	 or a class variable name or a variable name in VMBasicConstants."
+	| key constantClass |
+	key := pragma argumentAt: 1.
+
+	(super optionIsTrue: pragma in: aClass) ifTrue:
+		[^true].
+
+	"If the option is the name of a subclass of Cogit, include it if it inherits from the Cogit class."
+	(self environment classNamed: key) ifNotNil:
+		[:optionClass|
+		 aClass cogitClass ifNotNil:
+			[:cogitClass|
+			 (cogitClass includesBehavior: optionClass) ifTrue:
+				[ ^ true]].
+		 aClass objectMemoryClass ifNotNil:
+			[:objectMemoryClass|
+			 (objectMemoryClass includesBehavior: optionClass) ifTrue:
+				[^true]]].
+	"Lookup options in options, class variables of the defining class, VMBasicConstants, the interpreterClass and the objectMemoryClass"
+	{aClass initializationOptions.
+	  aClass.
+	  self constantClass.
+	  aClass interpreterClass.
+	  aClass objectMemoryClass} do:
+		[:scopeOrNil|
+		 scopeOrNil ifNotNil:
+			[:scope|
+			 (scope bindingOf: key) ifNotNil:
+				[:binding|
+				binding value ~~ false ifTrue: [^true]]]].
+	^false
 ]
 
 { #category : #'C code generator' }

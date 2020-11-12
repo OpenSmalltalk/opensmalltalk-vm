@@ -388,7 +388,7 @@ TMethod >> compileTimeOptionPragmas: aCodeGenerator [
 	^ self compiledMethod pragmas
 		select: [ :pragma | 
 			(#option: == pragma selector or: [ #notOption: == pragma selector ])
-				and: [ aCodeGenerator constantClass defineAtCompileTime: (pragma argumentAt: 1) ] ]
+				and: [ aCodeGenerator defineAtCompileTime: (pragma argumentAt: 1) ] ]
 ]
 
 { #category : #accessing }
@@ -1808,7 +1808,7 @@ TMethod >> isNode: aNode substitutableFor: argName inMethod: targetMeth in: aCod
 			ifTrue: [] ifFalse:
 		[node isSend
 			ifTrue:
-				[((aCodeGen constantClass mostBasicConstantSelectors includes: node selector)
+				[((aCodeGen mostBasicConstantSelectors includes: node selector)
 				  or: [node isBuiltinOperator]) ifFalse: [^false].
 				 count := count + 1] ifFalse:
 		[node isVariable ifTrue:
@@ -3087,8 +3087,8 @@ TMethod >> typeFor: aVariable in: aCodeGen [
 	^(declarations
 			at: varName
 			ifAbsent:
-				[(args includes: varName) "arg types default to sqInt"
-					ifTrue: ['sqInt ', varName]
+				[(args includes: varName) "arg types default to default integer type"
+					ifTrue: [aCodeGen defaultType, ' ', varName]
 					ifFalse:
 						[(locals includes: varName) ifFalse: "don't provide type for locals"
 							[aCodeGen typeOfVariable: varName]]]) ifNotNil:

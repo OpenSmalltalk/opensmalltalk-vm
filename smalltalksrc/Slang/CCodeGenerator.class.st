@@ -39,7 +39,8 @@ Class {
 		'breakDestInlineSelectors',
 		'breakOnInline',
 		'vmMaker',
-		'environment'
+		'environment',
+		'compileTimeOptions'
 	],
 	#classVars : [
 		'NoRegParmsInAssertVMs'
@@ -796,6 +797,12 @@ CCodeGenerator >> collectInlineList: strategy [
 					[ inlineList add: assoc key ]]]
 ]
 
+{ #category : #accessing }
+CCodeGenerator >> compileTimeOptions: aCollection [ 
+	
+	compileTimeOptions := aCollection
+]
+
 { #category : #utilities }
 CCodeGenerator >> compileToTMethodSelector: selector in: aClass [
 	"Compile a method to a TMethod"
@@ -891,6 +898,17 @@ CCodeGenerator >> declareVar: varName type: type [
 CCodeGenerator >> defaultType [
 	
 	^ #int
+]
+
+{ #category : #'compile-time-options' }
+CCodeGenerator >> defineAtCompileTime: aString [ 
+	"Define if the code generator should define the option at compile time or at generation time.
+	If true, the decision of the option will be delayed to compilation time.
+	Otherwise, do it at transpilation time, 
+	 - the code with the option is generated if the value of the option is true
+	 - if not true or unset, do not generate"
+
+	^ (compileTimeOptions includes: aString)
 ]
 
 { #category : #inlining }
@@ -1035,7 +1053,7 @@ CCodeGenerator >> emitCConstants: constList on: aStream [
 										ifNotNil: [:specialDef| specialDef]
 										ifNil: [default]]
 								ifNil: [default].
-					((vmClass ifNil: [self constantClass]) defineAtCompileTime: node name)
+					(self defineAtCompileTime: node name)
 						ifTrue: [self putConditionalDefineOf: node name
 									as: value
 									comment: 'Allow this to be overridden on the compiler command line'
@@ -3980,6 +3998,12 @@ CCodeGenerator >> methodsThatCanInvoke: aSelectorList [
 	
 ]
 
+{ #category : #translating }
+CCodeGenerator >> mostBasicConstantSelectors [
+	"Returns a list of selectors that should be translated as macros"
+	^ #()
+]
+
 { #category : #'C code generator' }
 CCodeGenerator >> needToGenerateHeader: headerName file: interpHdrPath contents: newContentsArg [
 	"Check if we need to regenerate a header file.  We always need to if the contents have changed.
@@ -4219,38 +4243,15 @@ CCodeGenerator >> optionIsTrue: pragma in: aClass [
 	"Answer whether an option: or notOption: pragma is true in the context of aClass.
 	 The argument to the option: pragma is interpreted as either a Cogit class name
 	 or a class variable name or a variable name in VMBasicConstants."
-	| key constantClass |
+	| key |
 	key := pragma argumentAt: 1.
-
-	"If the option is one to be defined at compile time we'll generate a
-	 conditional around its declaration and definition."
-	(self constantClass defineAtCompileTime: key) ifTrue:
-		[^true].
-
-	"If the option is the name of a subclass of Cogit, include it if it inherits from the Cogit class."
-	(self environment classNamed: key) ifNotNil:
-		[:optionClass|
-		 aClass cogitClass ifNotNil:
-			[:cogitClass|
-			 (cogitClass includesBehavior: optionClass) ifTrue:
-				[ ^ true]].
-		 aClass objectMemoryClass ifNotNil:
-			[:objectMemoryClass|
-			 (objectMemoryClass includesBehavior: optionClass) ifTrue:
-				[^true]]].
-	"Lookup options in options, class variables of the defining class, VMBasicConstants, the interpreterClass and the objectMemoryClass"
-	{aClass initializationOptions.
-	  aClass.
-	  self constantClass.
-	  aClass interpreterClass.
-	  aClass objectMemoryClass} do:
-		[:scopeOrNil|
-		 scopeOrNil ifNotNil:
-			[:scope|
-			 (scope bindingOf: key) ifNotNil:
-				[:binding|
-				binding value ~~ false ifTrue: [^true]]]].
-	^false
+	(self defineAtCompileTime: key)
+		ifTrue: [ ^ true ].
+	
+	(aClass bindingOf: key) ifNotNil: [:binding|
+		binding value ~~ false ifTrue: [^true] ].
+	
+	^ false
 ]
 
 { #category : #accessing }
