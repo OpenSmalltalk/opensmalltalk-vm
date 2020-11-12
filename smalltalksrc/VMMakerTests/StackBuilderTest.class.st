@@ -35,8 +35,7 @@ Class {
 { #category : #offset }
 StackBuilderTest >> addFullFrame [
 	| frame |
-
-	method := self newMethodWithBytecodes: #[1 2 3 4 5 6 7 8 ].
+	method := methodBuilder newMethod ; buildMethod.
 
 	frame := stackBuilder addNewFrame.
 	instructionPointer := method + 17.
@@ -143,15 +142,6 @@ StackBuilderTest >> setUp [
 
 	stackBuilder buildStack.
 
-]
-
-{ #category : #'test-VMstate' }
-StackBuilderTest >> testAddArgumentsOnOtherThanBaseFrameFails [
-
-	stackBuilder .
-	
-
-	stackBuilder buildStack.
 ]
 
 { #category : #'test-VMstate' }

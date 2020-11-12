@@ -5,40 +5,23 @@ Class {
 		'methodOop',
 		'selectorOop',
 		'receiver',
-		'class',
 		'methodDictionary',
-		'arrayOfMethods'
+		'arrayOfMethods',
+		'receiverClass'
 	],
 	#pools : [
 		'VMBasicConstants',
-		'VMBytecodeConstants',
-		'VMObjectIndices',
-		'VMSqueakClassIndices'
+		'VMBytecodeConstants'
 	],
 	#category : #'VMMakerTests-InterpreterTests'
 }
-
-{ #category : #tests }
-VMLookUpTest >> installSelector: aSelectorOop method: aMethodOop inMethodDictionary: aMethodDictionary [
-	
-	| anArrayOfMethods |
-	anArrayOfMethods := memory fetchPointer: MethodArrayIndex ofObject: aMethodDictionary.
-	memory
-		storePointer: (memory methodDictionaryHash: aSelectorOop mask: 11) + 2
-		ofObject: aMethodDictionary
-		withValue: aSelectorOop.
-	memory
-		storePointer: (memory methodDictionaryHash: aSelectorOop mask: 11)
-		ofObject: anArrayOfMethods
-		withValue: aMethodOop
-]
 
 { #category : #tests }
 VMLookUpTest >> setArrayClassIntoClassTable [
 	| aClass |
 	aClass := self
 		newClassInOldSpaceWithSlots: 0
-		format: Array instSpec.
+		instSpec: Array instSpec.
 	memory setHashBitsOf: aClass to: ClassArrayCompactIndex.
 	memory
 		storePointer: ClassArrayCompactIndex
@@ -51,25 +34,12 @@ VMLookUpTest >> setMessageClassIntoClassTable [
 	| aClass |
 	aClass := self
 		newClassInOldSpaceWithSlots: MessageSend allSlots size 
-		format: MessageSend instSpec.
+		instSpec: MessageSend instSpec.
 	memory setHashBitsOf: aClass to: ClassMessageCompactIndex.
 	memory
 		storePointer: ClassMessageCompactIndex
 		ofObject: memory classTableFirstPage
 		withValue: aClass
-]
-
-{ #category : #tests }
-VMLookUpTest >> setSmallIntegerClassIntoClassTable [
-
-	class := self
-		newClassInOldSpaceWithSlots: 0
-		format: memory forwardedFormat.
-	memory setHashBitsOf: class to: memory smallIntegerTag.
-	memory
-		storePointer: memory smallIntegerTag
-		ofObject: memory classTableFirstPage
-		withValue: class
 ]
 
 { #category : #running }
@@ -81,14 +51,14 @@ VMLookUpTest >> setUp [
 
 	"Create the root context with a valid method"
 	"Let's create a method with enough size. It should have at least a literal (4 or 8 bytes depending the word size) and some bytecodes, so we can put the IP inside the method"
-	newMethod := self newMethodWithBytecodes: #[ 1 2 3 4 5 6 7 8 9 0 ].
+	newMethod := methodBuilder newMethod buildMethod.
 	
 	"The context has 5 (in 32 bits) or 9 (in 64 bits) as initial IP, as method has at least one literal"
 	ctx := self newSmallContextReceiver: memory nilObject method: newMethod arguments: #() temporaries: #() ip: self wordSize + 1.
 	
 	page := interpreter makeBaseFrameFor: ctx.
 	interpreter setStackPointersFromPage: page.
-	
+	interpreter setStackPageAndLimit: page.
 	
 	"The ScheduleAssocation should be initialized to a valid Processor object"
 	processorOopAssociation := self newObjectWithSlots: 2.
@@ -112,47 +82,20 @@ VMLookUpTest >> setUp [
 
 { #category : #tests }
 VMLookUpTest >> setUpClassAndMethod [
-	methodOop := self newMethodWithBytecodes: #[1 2 3 4 5 6 7 8 9].
+	methodOop := methodBuilder newMethod buildMethod.
 	selectorOop := memory integerObjectOf: 42.
 	receiver := memory integerObjectOf: 56.
-	self setSmallIntegerClassIntoClassTable
-]
-
-{ #category : #tests }
-VMLookUpTest >> setUpMethodDictionaryIn: aClass [
-	"2 instances variables the array of methods and the tally
-	and 12 entries to put elemetns of the collection"
-	
-	| aMethodDictionary anArrayOfMethods |
-	aMethodDictionary := self
-		newObjectWithSlots: 2 + 12
-		format: MethodDictionary instSpec
-		classIndex: memory arrayClassIndexPun.
-	anArrayOfMethods := self
-		newObjectWithSlots: 12
-		format: Array instSpec
-		classIndex: memory arrayClassIndexPun.
-	memory
-		storePointer: MethodDictionaryIndex
-		ofObject: aClass
-		withValue: aMethodDictionary.
-	memory
-		storePointer: MethodArrayIndex
-		ofObject: aMethodDictionary
-		withValue: anArrayOfMethods.
-		
-	
-
+	receiverClass := self setSmallIntegerClassIntoClassTable
 ]
 
 { #category : #tests }
 VMLookUpTest >> testInstallSmallIntegerClassIntoClassTable [
 	"We set a smallInteger class into the classTable"
 
-	self setSmallIntegerClassIntoClassTable.
+	receiverClass := self setSmallIntegerClassIntoClassTable.
 	self
 		assert: (memory fetchClassOf: (memory integerObjectOf: 17))
-		equals: class
+		equals: receiverClass
 ]
 
 { #category : #tests }
@@ -160,13 +103,13 @@ VMLookUpTest >> testLookUpFindsMethodInClass [
 	
 	| aMethodDictionary |
 	self setUpClassAndMethod.	
-	self setUpMethodDictionaryIn: class.
-	aMethodDictionary := memory fetchPointer: MethodDictionaryIndex ofObject: class.
+	self setUpMethodDictionaryIn: receiverClass.
+	aMethodDictionary := memory fetchPointer: MethodDictionaryIndex ofObject: receiverClass.
 	self installSelector: selectorOop method: methodOop  inMethodDictionary: aMethodDictionary.
 	
 	interpreter methodDictLinearSearchLimit: 3.
 	interpreter messageSelector: selectorOop.
-	interpreter lookupMethodInClass: class.
+	interpreter lookupMethodInClass: receiverClass.
 	self assert: interpreter newMethod equals: methodOop
 ]
 
@@ -177,21 +120,21 @@ VMLookUpTest >> testLookUpFindsMethodInSuperclass [
 	self setUpClassAndMethod.
 	self setArrayClassIntoClassTable.
 	self setMessageClassIntoClassTable.
-	self setUpMethodDictionaryIn: class.
+	self setUpMethodDictionaryIn: receiverClass.
 	
 	superclass := self
 		newClassInOldSpaceWithSlots: 0
-		format: memory arrayFormat.
+		instSpec: memory arrayFormat.
 	self setUpMethodDictionaryIn: superclass.	
 	superclassMethodDictionary := memory fetchPointer: MethodDictionaryIndex ofObject: superclass. 
-	memory storePointer: SuperclassIndex ofObject: class  withValue: superclass.	
+	memory storePointer: SuperclassIndex ofObject: receiverClass  withValue: superclass.	
 	
 	self installSelector: selectorOop method: methodOop inMethodDictionary: superclassMethodDictionary.
 	
 	interpreter methodDictLinearSearchLimit: 3.
 	interpreter setBreakSelector: nil.
 	interpreter messageSelector: selectorOop.
-	interpreter lookupMethodInClass: class.
+	interpreter lookupMethodInClass: receiverClass.
 	self assert: interpreter newMethod equals: methodOop
 ]
 
@@ -200,8 +143,8 @@ VMLookUpTest >> testLookUpInDefiningClassCreatesANewEntryInCache [
 
 	| aMethodDictionary |
 	self setUpClassAndMethod.	
-	self setUpMethodDictionaryIn: class.
-	aMethodDictionary := memory fetchPointer: MethodDictionaryIndex ofObject: class.
+	self setUpMethodDictionaryIn: receiverClass.
+	aMethodDictionary := memory fetchPointer: MethodDictionaryIndex ofObject: receiverClass.
 	self installSelector: selectorOop method: methodOop  inMethodDictionary: aMethodDictionary.
 	
 	interpreter methodDictLinearSearchLimit: 3.
@@ -220,12 +163,12 @@ VMLookUpTest >> testLookUpInFindsCannotInterpretCreatesANewEntryInCache [
 	
 	superclass := self
 		newClassInOldSpaceWithSlots: 0
-		format: memory arrayFormat.
+		instSpec: memory arrayFormat.
 	self setUpMethodDictionaryIn: superclass.	
 	superclassMethodDictionary := memory fetchPointer: MethodDictionaryIndex ofObject: superclass. 
-	memory storePointer: SuperclassIndex ofObject: class  withValue: superclass.	
+	memory storePointer: SuperclassIndex ofObject: receiverClass  withValue: superclass.	
 	
-	cannotInterpretMethodOop := self newMethodWithBytecodes: #[1 2 3 4 5 6 7 8 9].
+	cannotInterpretMethodOop := methodBuilder newMethod buildMethod.
 	cannotInterpretSelectorOop := self newString: 'CannotInterpret'. 
 	self installSelector: cannotInterpretSelectorOop method: cannotInterpretMethodOop inMethodDictionary: superclassMethodDictionary.
 	
@@ -247,11 +190,11 @@ VMLookUpTest >> testLookUpInFindsDNUCreatesANewEntryInCache [
 	self setUpClassAndMethod.
 	self setArrayClassIntoClassTable.
 	self setMessageClassIntoClassTable.
-	self setUpMethodDictionaryIn: class.
-	aMethodDictionary := memory fetchPointer: MethodDictionaryIndex ofObject: class.
+	self setUpMethodDictionaryIn: receiverClass.
+	aMethodDictionary := memory fetchPointer: MethodDictionaryIndex ofObject: receiverClass.
 	self installSelector: selectorOop method: methodOop  inMethodDictionary: aMethodDictionary.
 	
-	dnuMethodOop := self newMethodWithBytecodes: #[1 2 3 4 5 6 7 8 9].
+	dnuMethodOop := methodBuilder newMethod buildMethod.
 	dnuSelectorOop := self newString: 'DNU'. 
 	self installSelector: dnuSelectorOop method: dnuMethodOop inMethodDictionary: aMethodDictionary.
 	
@@ -271,14 +214,14 @@ VMLookUpTest >> testLookUpInSuperclassCreatesANewEntryInCache [
 
 	| superclass superclassMethodDictionary |
 	self setUpClassAndMethod.	
-	self setUpMethodDictionaryIn: class.
+	self setUpMethodDictionaryIn: receiverClass.
 	
 	superclass := self
 		newClassInOldSpaceWithSlots: 0
-		format: memory arrayFormat.
+		instSpec: memory arrayFormat.
 	self setUpMethodDictionaryIn: superclass.	
 	superclassMethodDictionary := memory fetchPointer: MethodDictionaryIndex ofObject: superclass. 
-	memory storePointer: SuperclassIndex ofObject: class  withValue: superclass.	
+	memory storePointer: SuperclassIndex ofObject: receiverClass  withValue: superclass.	
 	
 	self installSelector: selectorOop method: methodOop inMethodDictionary: superclassMethodDictionary.
 	
@@ -298,12 +241,12 @@ VMLookUpTest >> testLookUpNonExistingCannotInterpretAnswersDNUMethod [
 	
 	superclass := self
 		newClassInOldSpaceWithSlots: 0
-		format: memory arrayFormat.
+		instSpec: memory arrayFormat.
 	self setUpMethodDictionaryIn: superclass.	
 	superclassMethodDictionary := memory fetchPointer: MethodDictionaryIndex ofObject: superclass. 
-	memory storePointer: SuperclassIndex ofObject: class withValue: superclass.	
+	memory storePointer: SuperclassIndex ofObject: receiverClass withValue: superclass.	
 	
-	dnuMethodOop := self newMethodWithBytecodes: #[1 2 3 4 5 6 7 8 9].
+	dnuMethodOop := methodBuilder newMethod buildMethod.
 	dnuSelectorOop := self newString: 'DNU'. 
 	self installSelector: dnuSelectorOop method: dnuMethodOop inMethodDictionary: superclassMethodDictionary.
 	
@@ -314,7 +257,7 @@ VMLookUpTest >> testLookUpNonExistingCannotInterpretAnswersDNUMethod [
 	interpreter methodDictLinearSearchLimit: 3.
 	interpreter setBreakSelector: nil.
 	interpreter messageSelector: nonExistingSelector.
-	interpreter lookupMethodInClass: class.
+	interpreter lookupMethodInClass: receiverClass.
 	self assert: interpreter newMethod equals: dnuMethodOop.
 ]
 
@@ -325,8 +268,8 @@ VMLookUpTest >> testLookUpNonExistingDNUThrowsRecursivelyDoesNotUnderstand [
 	self setUpClassAndMethod.
 	self setArrayClassIntoClassTable.
 	self setMessageClassIntoClassTable.
-	self setUpMethodDictionaryIn: class.
-	aMethodDictionary := memory fetchPointer: MethodDictionaryIndex ofObject: class.
+	self setUpMethodDictionaryIn: receiverClass.
+	aMethodDictionary := memory fetchPointer: MethodDictionaryIndex ofObject: receiverClass.
 	self installSelector: selectorOop method: methodOop  inMethodDictionary: aMethodDictionary.
 
 	
@@ -336,7 +279,7 @@ VMLookUpTest >> testLookUpNonExistingDNUThrowsRecursivelyDoesNotUnderstand [
 	interpreter setBreakSelector: nil.
 	interpreter messageSelector: nonExistingSelector.
 	"DoesNotUnderStand is no there so infinite recursion of DNU"
-	self should: [interpreter lookupMethodInClass: class] raise: Error.
+	self should: [interpreter lookupMethodInClass: receiverClass] raise: Error.
 ]
 
 { #category : #tests }
@@ -346,11 +289,11 @@ VMLookUpTest >> testLookUpNonExistingSelectorAnswersDNUMethod [
 	self setUpClassAndMethod.
 	self setArrayClassIntoClassTable.
 	self setMessageClassIntoClassTable.
-	self setUpMethodDictionaryIn: class.
-	aMethodDictionary := memory fetchPointer: MethodDictionaryIndex ofObject: class.
+	self setUpMethodDictionaryIn: receiverClass.
+	aMethodDictionary := memory fetchPointer: MethodDictionaryIndex ofObject: receiverClass.
 	self installSelector: selectorOop method: methodOop  inMethodDictionary: aMethodDictionary.
 	
-	dnuMethodOop := self newMethodWithBytecodes: #[1 2 3 4 5 6 7 8 9].
+	dnuMethodOop := methodBuilder newMethod buildMethod.
 	dnuSelectorOop := self newString: 'DNU'. 
 	self installSelector: dnuSelectorOop method: dnuMethodOop inMethodDictionary: aMethodDictionary.
 	
@@ -361,7 +304,7 @@ VMLookUpTest >> testLookUpNonExistingSelectorAnswersDNUMethod [
 	interpreter methodDictLinearSearchLimit: 3.
 	interpreter setBreakSelector: nil.
 	interpreter messageSelector: nonExistingSelector.
-	interpreter lookupMethodInClass: class.
+	interpreter lookupMethodInClass: receiverClass.
 	self assert: interpreter newMethod equals: dnuMethodOop.
 ]
 
@@ -375,12 +318,12 @@ VMLookUpTest >> testLookUpWithNilMethodDictionaryFindsCannotInterpret [
 	
 	superclass := self
 		newClassInOldSpaceWithSlots: 0
-		format: memory arrayFormat.
+		instSpec: memory arrayFormat.
 	self setUpMethodDictionaryIn: superclass.	
 	superclassMethodDictionary := memory fetchPointer: MethodDictionaryIndex ofObject: superclass. 
-	memory storePointer: SuperclassIndex ofObject: class  withValue: superclass.	
+	memory storePointer: SuperclassIndex ofObject: receiverClass  withValue: superclass.	
 	
-	cannotInterpretMethodOop := self newMethodWithBytecodes: #[1 2 3 4 5 6 7 8 9].
+	cannotInterpretMethodOop := methodBuilder newMethod buildMethod.
 	cannotInterpretSelectorOop := self newString: 'CannotInterpret'. 
 	self installSelector: cannotInterpretSelectorOop method: cannotInterpretMethodOop inMethodDictionary: superclassMethodDictionary.
 	
@@ -391,6 +334,94 @@ VMLookUpTest >> testLookUpWithNilMethodDictionaryFindsCannotInterpret [
 	interpreter methodDictLinearSearchLimit: 3.
 	interpreter setBreakSelector: nil.
 	interpreter messageSelector: nonExistingSelector.
-	interpreter lookupMethodInClass: class.
+	interpreter lookupMethodInClass: receiverClass.
 	self assert: interpreter newMethod equals: cannotInterpretMethodOop.
+]
+
+{ #category : #tests }
+VMLookUpTest >> testPrimitivePerformCreatesCorrectFrame [
+	| aMethodDictionary receiverOop frame |	
+	"Primitive perform sets everything up (frame, instruction pointer..) so next interpret loop will execute the first bytecode."
+	"(1) the Instruction Pointer is set to be just before the bytecode to execute, so fetchNextBytecode will fetch the first bytecode ( #justActivateNewMethod: )"
+
+	self setUpClassAndMethod.	
+	self setUpMethodDictionaryIn: receiverClass.
+	aMethodDictionary := memory fetchPointer: MethodDictionaryIndex ofObject: receiverClass.
+	self installSelector: selectorOop method: methodOop  inMethodDictionary: aMethodDictionary.
+	interpreter methodDictLinearSearchLimit: 3.
+
+	receiverOop := memory integerObjectOf: 41."random number"	
+	interpreter push: receiverOop.
+	interpreter push: selectorOop.
+	interpreter argumentCount: 1.
+	interpreter primitivePerform.
+	
+	interpreter internalizeIPandSP.
+	frame := VMStackFrame newFramePointer: (interpreter framePointer) withInterpreter: interpreter.
+	self assert: frame receiver equals: receiverOop.
+ 	self assert: frame method equals: methodOop.
+	"self assert: frame arguments equals: 0." "<- we could add it when implemented in VMFrame"
+
+]
+
+{ #category : #tests }
+VMLookUpTest >> testPrimitivePerformExecutes [
+	| aMethodDictionary receiverOop |
+	self setUpClassAndMethod.	
+	self setUpMethodDictionaryIn: receiverClass.
+	aMethodDictionary := memory fetchPointer: MethodDictionaryIndex ofObject: receiverClass.
+	self installSelector: selectorOop method: methodOop  inMethodDictionary: aMethodDictionary.
+	interpreter methodDictLinearSearchLimit: 3.
+
+	receiverOop := memory integerObjectOf: 41."random number"	
+	interpreter push: receiverOop.
+	interpreter push: selectorOop.
+	interpreter argumentCount: 1." seems to be the offset from the stack top."
+	interpreter primitivePerform.
+	
+	self assert: interpreter stackTop equals: receiverOop
+]
+
+{ #category : #tests }
+VMLookUpTest >> testPrimitivePerformFindsMethodOop [
+	| aMethodDictionary receiverOop |
+	self setUpClassAndMethod.	
+	self setUpMethodDictionaryIn: receiverClass.
+	aMethodDictionary := memory fetchPointer: MethodDictionaryIndex ofObject: receiverClass.
+	self installSelector: selectorOop method: methodOop  inMethodDictionary: aMethodDictionary.
+	interpreter methodDictLinearSearchLimit: 3.
+
+	receiverOop := memory integerObjectOf: 41."random number"	
+	interpreter push: receiverOop.
+	interpreter push: selectorOop.
+	interpreter argumentCount: 1.
+	interpreter primitivePerform.
+	
+	self assert: interpreter newMethod equals: methodOop.
+	self assert: interpreter instructionPointer equals: methodOop + objectHeaderSize + wordSize - 1 "+ header object + header of compiledMethod - (1)"
+ 	
+	"(1) the Instruction Pointer is set to be just before the bytecode to execute, so fetchNextBytecode will fetch the first bytecode ( #justActivateNewMethod: )"
+]
+
+{ #category : #tests }
+VMLookUpTest >> testPrimitivePerformSetsIPBeforeFirstBytecode [
+	| aMethodDictionary receiverOop |	
+	"Primitive perform sets everything up (frame, instruction pointer..) so next interpret loop will execute the first bytecode."
+	"(1) the Instruction Pointer is set to be just before the bytecode to execute, so fetchNextBytecode will fetch the first bytecode ( #justActivateNewMethod: )"
+
+	self setUpClassAndMethod.	
+	self setUpMethodDictionaryIn: receiverClass.
+	aMethodDictionary := memory fetchPointer: MethodDictionaryIndex ofObject: receiverClass.
+	self installSelector: selectorOop method: methodOop  inMethodDictionary: aMethodDictionary.
+	interpreter methodDictLinearSearchLimit: 3.
+
+	receiverOop := memory integerObjectOf: 41."random number"	
+	interpreter push: receiverOop.
+	interpreter push: selectorOop.
+	interpreter argumentCount: 1.
+	interpreter primitivePerform.
+	
+	self assert: interpreter instructionPointer equals: methodOop + objectHeaderSize + wordSize - 1 "+ header object + header of compiledMethod - (1)"
+ 	
+
 ]

@@ -232,7 +232,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testExtendedStoreStoresInstanceVariableIn
 { #category : #'tests - jumps' }
 VMSimpleStackBasedCogitBytecodeTest >> testJumpForwardJumpsOverAnInstruction [
 	
-	cogit methodObj: (self newMethodWithBytecodes: #[144 122 121]).
+	cogit methodObj: (methodBuilder newMethod bytecodes: #[144 122 121]; buildMethod).
 	
 	self compile: [ | fixup nextOpcodeIndex |
 		cogit byte0: 144.
@@ -973,7 +973,11 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushThisContextForFullBlockWithFullFr
 		arguments: { memory falseObject . memory trueObject . memory falseObject }
 		temporaries: #().
 	numberOfArguments := 3.
-	methodObject := self newMethodWithSmallContext: false WithArguments: numberOfArguments.
+	methodObject := methodBuilder newMethod 
+		isSmall: false;
+		numberOfArguments: numberOfArguments;
+		buildMethod.
+		
 	method := self compile: [
 		cogit inBlock: InFullBlock.
 		cogit methodOrBlockNumArgs: numberOfArguments.
@@ -999,7 +1003,10 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushThisContextForFullBlockWithSmallF
 		arguments: { memory falseObject . memory trueObject . memory falseObject }
 		temporaries: #().
 	numberOfArguments := 3.
-	methodObject := self newMethodWithSmallContext: true WithArguments: numberOfArguments.
+	methodObject := methodBuilder newMethod 
+		isSmall: true;
+		numberOfArguments: numberOfArguments;
+		buildMethod.
 	method := self compile: [
 		cogit inBlock: InFullBlock.
 		cogit methodOrBlockNumArgs: numberOfArguments.
@@ -1025,7 +1032,10 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushThisContextForMethodWithLargeFram
 		arguments: { memory falseObject . memory trueObject . memory falseObject }
 		temporaries: #().
 	numberOfArguments := 3.
-	methodObject := self newMethodWithSmallContext: false WithArguments: numberOfArguments.
+	methodObject := methodBuilder newMethod 
+		isSmall: false;
+		numberOfArguments: numberOfArguments;
+		buildMethod.
 	method := self compile: [ 
 		cogit methodOrBlockNumArgs: numberOfArguments.
 		cogit methodObj: methodObject.
@@ -1050,7 +1060,10 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushThisContextForMethodWithSmallFram
 		arguments: { memory falseObject . memory trueObject . memory falseObject }
 		temporaries: #().
 	numberOfArguments := 3.
-	methodObject := self newMethodWithSmallContext: true WithArguments: numberOfArguments.
+	methodObject := methodBuilder newMethod 
+		isSmall: true;
+		numberOfArguments: numberOfArguments;
+		buildMethod.
 	method := self compile: [ 
 		cogit methodOrBlockNumArgs: numberOfArguments.
 		cogit methodObj: methodObject.
@@ -1075,7 +1088,10 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushThisContextForVanillaBlockWithLar
 		arguments: { memory falseObject . memory trueObject . memory falseObject }
 		temporaries: #().
 	numberOfArguments := 3.
-	methodObject := self newMethodWithSmallContext: false WithArguments: numberOfArguments.
+	methodObject := methodBuilder newMethod 
+		isSmall: false;
+		numberOfArguments: numberOfArguments;
+		buildMethod.
 	method := self compile: [
 		cogit inBlock: InVanillaBlock.
 		cogit methodOrBlockNumArgs: numberOfArguments.
@@ -1101,7 +1117,10 @@ VMSimpleStackBasedCogitBytecodeTest >> testPushThisContextForVanillaBlockWithSma
 		arguments: { memory falseObject . memory trueObject . memory falseObject }
 		temporaries: #().
 	numberOfArguments := 3.
-	methodObject := self newMethodWithSmallContext: true WithArguments: numberOfArguments.
+	methodObject := methodBuilder newMethod 
+		isSmall: true;
+		numberOfArguments: numberOfArguments;
+		buildMethod.
 	method := self compile: [
 		cogit inBlock: InVanillaBlock.
 		cogit methodOrBlockNumArgs: numberOfArguments.
@@ -1309,7 +1328,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendLiteralOneWithZeroArgsMovesSelect
 	The literal taken starts from zero in 208, one in 209... and so on"
 	cogit byte0: 208 + literalIndex.
 	selector := memory falseObject.
-	cogit methodObj: (self newMethodWithLiteral: selector at: literalIndex).
+	cogit methodObj: (methodBuilder newMethod literalAt: literalIndex put: selector ; buildMethod).
 
 	"The method will have 3 literals.
 	The first literal is the methodHeader (smallInteger with flags).
@@ -1341,7 +1360,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendLiteralOneWithZeroArgsMovesSelect
 	literalIndex := 1.
 	cogit byte0: literalIndex.
 	selector := memory falseObject.
-	cogit methodObj: (self newMethodWithLiteral: selector at: literalIndex).
+	cogit methodObj: (methodBuilder newMethod literalAt: literalIndex put: selector ; buildMethod).
 	sendAddress := self compile: [ cogit genSendLiteralSelector0ArgsBytecode ].
 
 	"Push receiver, arg, then send"
@@ -1363,7 +1382,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendLiteralZeroWithZeroArgsMovesRecei
 	self createFramefulCallFrom: callerAddress.
 	
 	cogit byte0: 0.
-	cogit methodObj: (self newMethodWithLiteral: memory falseObject at: 0).
+	cogit methodObj: (methodBuilder newMethod literals: { memory nilObject }; buildMethod).
 	sendAddress := self compile: [ cogit genSendLiteralSelector0ArgsBytecode ].
 
 	"Push receiver then send"
@@ -1386,7 +1405,9 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendLiteralZeroWithZeroArgsMovesSelec
 	
 	cogit byte0: 0.
 	selector := memory falseObject.
-	cogit methodObj: (self newMethodWithLiteral: selector at: (literalIndex := 0)).
+	cogit methodObj: (methodBuilder newMethod 
+		literalAt: (literalIndex := 0) put: selector ;
+		buildMethod).
 	sendAddress := self compile: [ cogit genSendLiteralSelector0ArgsBytecode ].
 
 	"Push receiver, arg, then send"
@@ -1412,7 +1433,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendLiteralZeroWithZeroArgsMovesSelec
 	
 	cogit byte0: 0.
 	selector := memory falseObject.
-	cogit methodObj: (self newMethodWithLiteral: selector at: 0).
+	cogit methodObj: (methodBuilder newMethod literals: { selector }; buildMethod).
 	sendAddress := self compile: [ cogit genSendLiteralSelector0ArgsBytecode ].
 
 	"Push receiver, arg, then send"
@@ -1434,7 +1455,7 @@ VMSimpleStackBasedCogitBytecodeTest >> testSendLiteralZeroWithZeroArgsPushesRetu
 	self createFramefulCallFrom: callerAddress.
 	
 	cogit byte0: 0.
-	cogit methodObj: (self newMethodWithLiteral: memory falseObject at: 0).
+	cogit methodObj: (methodBuilder newMethod literals: { memory falseObject } ; buildMethod).
 	sendAddress := self compile: [ cogit genSendLiteralSelector0ArgsBytecode ].
 
 	"Push receiver, arg, then send"

@@ -123,6 +123,16 @@ SpurSimulatedMemory >> long64At: address put: aValue [
 		signed: true
 ]
 
+{ #category : #'as yet unclassified' }
+SpurSimulatedMemory >> longAt: address [ 
+	
+	^ memoryObject
+		integerAt: address - initialAddress
+		size: 4
+		signed: true
+
+]
+
 { #category : #accessing }
 SpurSimulatedMemory >> longAt: address put: aValue [
 

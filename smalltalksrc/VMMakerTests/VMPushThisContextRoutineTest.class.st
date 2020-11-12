@@ -16,7 +16,7 @@ VMPushThisContextRoutineTest >> setUp [
 
 	contextClass := self
 		newClassInOldSpaceWithSlots: Context allSlots size
-		format: Context instSpec.
+		instSpec: Context instSpec.
 		
 	memory setHashBitsOf: contextClass to: ClassMethodContextCompactIndex.
 		
@@ -38,6 +38,12 @@ VMPushThisContextRoutineTest >> testMarriedContextReturnsSpouseObject [
 	routine := self compile: [ cogit objectRepresentation genGetActiveContextLarge: isLargeContext inBlock: isInBlock ].
 	numberOfArguments := 3.
 	contextOop := memory integerObjectOf: 42.
+
+ 
+	methodObject := methodBuilder newMethod 
+		isSmall: false;
+		numberOfArguments: numberOfArguments;
+		buildMethod.
 
 	self machineCodeFrameBuilder
 		returnAddress: callingAddress;

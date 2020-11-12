@@ -142,7 +142,7 @@ VMSpurTreeAllocationStrategyForSmallTreeTest >> test04AllocateSmallerThanLiliput
 VMSpurTreeAllocationStrategyForSmallTreeTest >> test05AllocateExactSmallerTreeNodeShouldReuseNodeAddress [
 
 	| desiredAddress allocatedAddress |
-	desiredAddress := self smallerNodeOf: self freeTreeRootOop.
+	desiredAddress := memory startOfObject: (self smallerNodeOf: self freeTreeRootOop).
 	
 	allocatedAddress := memory allocateOldSpaceChunkOfBytes: (self sizeOfChildInBreadthFirstOrder: 2).
 	self assert: allocatedAddress equals: desiredAddress
@@ -181,7 +181,7 @@ VMSpurTreeAllocationStrategyForSmallTreeTest >> test06AllocateSmallerThanLiliput
 VMSpurTreeAllocationStrategyForSmallTreeTest >> test07AllocateExactBiggerTreeNodeShouldReuseNodeAddress [
 
 	| desiredAddress allocatedAddress |
-	desiredAddress := self largerNodeOf: self freeTreeRootOop.
+	desiredAddress := memory startOfObject: (self largerNodeOf: self freeTreeRootOop).
 	
 	allocatedAddress := memory allocateOldSpaceChunkOfBytes: (self sizeOfChildInBreadthFirstOrder: 3).
 	self assert: allocatedAddress equals: desiredAddress
@@ -258,7 +258,7 @@ VMSpurTreeAllocationStrategyForSmallTreeTest >> test10AllocateSecondSmallerThanL
 VMSpurTreeAllocationStrategyForSmallTreeTest >> test11AllocateExactLargerOfSmallerLeafTreeNodeShouldReuseNodeAddress [
 
 	| desiredAddress allocatedAddress |
-	desiredAddress := self largerNodeOf: (self smallerNodeOf: self freeTreeRootOop).
+	desiredAddress := memory startOfObject: (self largerNodeOf: (self smallerNodeOf: self freeTreeRootOop)).
 	allocatedAddress := memory allocateOldSpaceChunkOfBytes: (self sizeOfChildInBreadthFirstOrder: 5).
 	self assert: allocatedAddress equals: desiredAddress
 ]
@@ -296,7 +296,7 @@ VMSpurTreeAllocationStrategyForSmallTreeTest >> test12AllocateSmallerThanLiliput
 VMSpurTreeAllocationStrategyForSmallTreeTest >> test13AllocateExactSmallerOfLargerLeafTreeNodeShouldReuseNodeAddress [
 
 	| desiredAddress allocatedAddress |
-	desiredAddress := self smallerNodeOf: (self largerNodeOf: self freeTreeRootOop).
+	desiredAddress := memory startOfObject: (self smallerNodeOf: (self largerNodeOf: self freeTreeRootOop)).
 	
 	allocatedAddress := memory allocateOldSpaceChunkOfBytes: (self sizeOfChildInBreadthFirstOrder: 6).
 	self assert: allocatedAddress equals: desiredAddress
@@ -335,7 +335,7 @@ VMSpurTreeAllocationStrategyForSmallTreeTest >> test14AllocateSmallerThanLiliput
 VMSpurTreeAllocationStrategyForSmallTreeTest >> test15AllocateExactLargerOfLargerLeafTreeNodeShouldReuseNodeAddress [
 
 	| desiredAddress allocatedAddress |
-	desiredAddress := self largerNodeOf: (self largerNodeOf: self freeTreeRootOop).
+	desiredAddress := memory startOfObject: (self largerNodeOf: (self largerNodeOf: self freeTreeRootOop)).
 	
 	allocatedAddress := memory allocateOldSpaceChunkOfBytes: (self sizeOfChildInBreadthFirstOrder: 7).
 	self assert: allocatedAddress equals: desiredAddress

@@ -8,7 +8,7 @@ Class {
 VMStackMappingTest >> buildStackFromFrames [
 
 	3 timesRepeat:[  | method |
-		method := self newMethodWithBytecodes: #[1 2 3 4 5 6 7 8 ].
+		method := methodBuilder newMethod buildMethod.
 		stackBuilder addNewFrame 
 			method: method;
 			beSuspendedAt: method + 17.
@@ -21,7 +21,7 @@ VMStackMappingTest >> buildStackFromFrames [
 { #category : #helpers }
 VMStackMappingTest >> newContext [
 	| method |
-	method:= self newMethodWithBytecodes: #(1 2 3 4 5 6 7 8).
+	method:= methodBuilder newMethod buildMethod.
 	^self newSmallContextReceiver: memory nilObject method: method arguments: #() temporaries: #() ip: 10.
 ]
 
@@ -39,6 +39,27 @@ VMStackMappingTest >> testDivorceAMarriedContextShuoldMakeItSingle [
 	fp := interpreter frameOfMarriedContext: context. 
 	interpreter externalDivorceFrame: fp andContext: context.
 	self assert: (interpreter isSingleContext: context)
+]
+
+{ #category : #tests }
+VMStackMappingTest >> testDivorceFramesInPage [
+	| page |
+	self buildStackFromFrames.
+	page := stackBuilder page.
+	stackBuilder frames do:[ :aFrame |
+		aFrame marryToContext.
+		].
+	stackBuilder frames do:[ :aFrame |
+		self assert: aFrame isMarried.
+		].
+	
+	interpreter divorceFramesIn: page.
+	
+	stackBuilder frames do:[ :aFrame |
+		self assert: aFrame isSingle.
+		].
+	self assert: (interpreter stackPages isFree: page)
+
 ]
 
 { #category : #tests }

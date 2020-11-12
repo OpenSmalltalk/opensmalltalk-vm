@@ -120,7 +120,7 @@ StackInterpreterSimulator >> allObjectsSelect: objBlock [
 
 	| selected |
 	selected := OrderedCollection new.
-	objectMemory allObjectsDoSafely:
+	objectMemory allObjectsDo:
 		[:obj|
 		(objBlock value: obj) ifTrue: [selected addLast: obj]].
 	^selected
@@ -1725,6 +1725,11 @@ StackInterpreterSimulator >> pluginEntryFor: mapIndex [
 	^mappedPluginEntries at: (mapIndex > 1000
 								ifTrue: [externalPrimitiveTable at: mapIndex - 1001]
 								ifFalse: [mapIndex])
+]
+
+{ #category : #'as yet unclassified' }
+StackInterpreterSimulator >> pluginList: aCollection [ 
+	pluginList := aCollection
 ]
 
 { #category : #'object memory support' }

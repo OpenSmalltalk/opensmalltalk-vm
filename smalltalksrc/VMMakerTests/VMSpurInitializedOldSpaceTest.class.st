@@ -67,48 +67,6 @@ VMSpurInitializedOldSpaceTest >> freeTreeRootStartAddress [
 ]
 
 { #category : #helpers }
-VMSpurInitializedOldSpaceTest >> initializeOldSpaceForFullGC [
-
-	| ourArrayClass |
-
-	memory markStack: memory nilObject.
-	memory weaklingStack: memory nilObject.
-	
-	ourArrayClass := self newObjectWithSlots: 3.
-	memory
-		storePointer: "InstanceSpecificationIndex" 2
-		ofObject: ourArrayClass
-		withValue: (memory integerObjectOf: Array format).
-	memory ensureBehaviorHash: ourArrayClass.
-	
-	memory storePointer: 16 ofObject: memory classTableFirstPage withValue: ourArrayClass.
-	memory shrinkThreshold: 0.
-	memory growHeadroom: 10*1024*1024.
-	
-	memory flushNewSpace.
-]
-
-{ #category : #tests }
-VMSpurInitializedOldSpaceTest >> keepObjectInVMVariable1: ephemeronObjectOop [
-	memory coInterpreter newMethod: ephemeronObjectOop
-]
-
-{ #category : #tests }
-VMSpurInitializedOldSpaceTest >> keepObjectInVMVariable2: nonEphemeronObjectOop [
-	memory coInterpreter profileSemaphore: nonEphemeronObjectOop
-]
-
-{ #category : #tests }
-VMSpurInitializedOldSpaceTest >> keepObjectInVMVariable3: ephemeronObjectOop [
-	memory coInterpreter profileMethod: ephemeronObjectOop
-]
-
-{ #category : #tests }
-VMSpurInitializedOldSpaceTest >> keptObjectInVMVariable1 [
-	^ memory coInterpreter newMethod
-]
-
-{ #category : #helpers }
 VMSpurInitializedOldSpaceTest >> largerNodeOf: aNode [
 
 	^ memory
