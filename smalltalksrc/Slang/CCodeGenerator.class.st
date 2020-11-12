@@ -5312,7 +5312,7 @@ CCodeGenerator >> typeOfVariable: varName [ "<String>"
 	^(constants at: varName ifAbsent: []) ifNotNil:
 		[:const|
 		const value isInteger
-			ifTrue: [#sqInt]
+			ifTrue: [self defaultType]
 			ifFalse:
 				[const value isFloat ifTrue:
 					[#double]]]

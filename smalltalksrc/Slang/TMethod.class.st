@@ -429,6 +429,7 @@ TMethod >> computePossibleSideEffectsInto: writtenToVars visited: visitedSelecto
 
 { #category : #accessing }
 TMethod >> declarationAt: aVariableName [
+	self error: 'Use declarationAt: arg ifAbsent: [aCodeGen defaultType, '' '', arg] instead'.
 	^declarations at: aVariableName ifAbsent: [#sqInt, ' ', aVariableName]
 ]
 
@@ -619,7 +620,8 @@ TMethod >> emitCLocalsOn: aStream generator: aCodeGen [
 	(locals isEmpty and: [maybeExternFunctions isEmpty]) ifFalse:
 		[(aCodeGen sortStrings: locals, maybeExternFunctions) do:
 			[ :var | | decl |
-			decl := self declarationAt: var.
+			decl := self declarationAt: var
+							ifAbsent: [aCodeGen defaultType, ' ', var].
 			(volatileVariables
 			 or: [(decl beginsWith: 'static')
 			 or: [(decl beginsWith: 'extern')

@@ -495,7 +495,8 @@ TParseNode >> structTargetKindIn: aCodeGen [
 { #category : #'type inference' }
 TParseNode >> typeFrom: aCodeGenerator in: aTMethod [
 	"This is the default type in case of doubt"
-	^(self typeOrNilFrom: aCodeGenerator in: aTMethod) ifNil: [#sqInt]
+	^(self typeOrNilFrom: aCodeGenerator in: aTMethod)
+		ifNil: [ aCodeGenerator defaultType ]
 ]
 
 { #category : #'type inference' }
