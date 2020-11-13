@@ -204,7 +204,8 @@ AtomicGet(unsigned long long *target)
 
 # else /* TARGET_OS_IS_IPHONE elif x86 variants etc */
 
-#if defined(__arm__) && (defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7A__))
+// _M_ARM64 MSVC macro for ARM64
+#if defined(__arm__) || defined(_M_ARM64)
 /* tpr - this is code intended for the Raspberry Pi Raspbian OS 
  * We'll experimentally trust in our MMU to keep 64bit accesses atomic */
 # define get64(variable) variable

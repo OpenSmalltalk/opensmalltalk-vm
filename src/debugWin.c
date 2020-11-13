@@ -168,8 +168,11 @@ void captureStack(PCONTEXT context, STACKFRAME64* frames, int framePointersSize,
 	frame.AddrPC.Mode = AddrModeFlat;
 	frame.AddrFrame.Mode = AddrModeFlat;
 	frame.AddrStack.Mode = AddrModeFlat;
-
-#if defined(_WIN64)
+#if defined(_M_ARM64)
+	frame.AddrPC.Offset = context->Pc;
+	frame.AddrFrame.Offset = context->Fp;
+	frame.AddrStack.Offset = context->Sp;
+#elif defined(_WIN64)
 	frame.AddrPC.Offset = context->Rip;
 	frame.AddrFrame.Offset = context->Rbp;
 	frame.AddrStack.Offset = context->Rsp;
@@ -300,7 +303,29 @@ EXPORT(void) printRegisterState(PCONTEXT regs, FILE* output){
 		regs->Eax, regs->Ebx, regs->Ecx, regs->Edx,
 		regs->Edi, regs->Esi, regs->Ebp, regs->Esp,
 		regs->Eip);
-#elif 
+#elif _M_ARM64
+	fprintf(output,
+		"ContextFlags: 0x%016lx\n"
+		"\tX0 0x%016lx X1 0x%016lx X2 0x%016lx X3 0x%016lx\n"
+		"\tX4 0x%016lx X5 0x%016lx X6 0x%016lx X7 0x%016lx\n"
+		"\tX8 0x%016lx X9 0x%016lx X10 0x%016lx X11 0x%016lx\n"
+		"\tX12 0x%016lx X13 0x%016lx X14 0x%016lx X15 0x%016lx\n"
+		"\tX16 0x%016lx X17 0x%016lx X16 0x%016lx X17 0x%016lx\n"
+		"\tX20 0x%016lx X21 0x%016lx X22 0x%016lx X23 0x%016lx\n"
+		"\tX24 0x%016lx X25 0x%016lx X26 0x%016lx X27 0x%016lx\n"
+		"\tX28 0x%016lx FP 0x%016lx LR 0x%016lx SP 0x%016lx\n"
+		"\tPC 0x%016lx\n",
+		regs->ContextFlags,
+		regs->X0, regs->X1, regs->X2, regs->X3,
+		regs->X4, regs->X5, regs->X6, regs->X7,
+		regs->X8, regs->X9, regs->X10, regs->X11,
+		regs->X12, regs->X13, regs->X14, regs->X15,
+		regs->X16, regs->X17, regs->X18, regs->X19,
+		regs->X20, regs->X21, regs->X22, regs->X23,
+		regs->X24, regs->X25, regs->X26, regs->X27,
+		regs->X28, regs->Fp, regs->Lr, regs->Sp,
+		regs->Pc);
+#else
 	fprintf(output,
 			"ContextFlags: 0x%016llx\n"
 			"\trax 0x%016llx rbx 0x%016llx rcx 0x%016llx rdx 0x%016llx\n"

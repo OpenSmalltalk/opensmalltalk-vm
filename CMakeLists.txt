@@ -31,7 +31,7 @@ if ((CMAKE_HOST_UNIX) AND (${CMAKE_HOST_SYSTEM_NAME} MATCHES "CYGWIN*"))
 
   # specify the cross compiler
   set(CMAKE_TOOLCHAIN_PREFIX x86_64-w64-mingw32)
-
+  
   SET(CMAKE_C_COMPILER   ${CMAKE_TOOLCHAIN_PREFIX}-clang)
   SET(CMAKE_CXX_COMPILER ${CMAKE_TOOLCHAIN_PREFIX}-clang++)
   SET(CMAKE_RC_COMPILER ${CMAKE_TOOLCHAIN_PREFIX}-windres)
@@ -49,6 +49,7 @@ set(FEATURE_FFI TRUE CACHE BOOL "Configure and compile support for FFI in the VM
 set(FEATURE_SOCKETS TRUE CACHE BOOL "Configure and compile support for sockets in the VM")
 set(FEATURE_COMPILE_GNUISATION TRUE CACHE BOOL "Use gcc gnu extensions to compile the VM")
 set(FEATURE_COMPILE_INLINE_MEMORY_ACCESSORS TRUE CACHE BOOL "Use inline memory accessors instead of macros")
+set(WITHOUT_DEPENDENCIES FALSE CACHE BOOL "Do not download dependencies at build time.")
 
 # If we are generating sources, set the source dir as the generation source dir.
 # Otherwise set it to by default to the current source dir, parametrizable
