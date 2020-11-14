@@ -8,7 +8,9 @@
 
 #include <stdio.h>
 #include <ffi.h>
+#if FEATURE_THREADED_FFI
 #include <pthread.h>
+#endif
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>

@@ -228,7 +228,7 @@ else()
 endif()
 
 
-set(EXECUTABLE_OUTPUT_PATH "build/vm")
+set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}"/build/vm")
 
 #If in OSX, configure creation of Bundle
 if (OSX)
@@ -284,7 +284,6 @@ include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}/build/include/
     ${CMAKE_CURRENT_BINARY_DIR}/build/include/pharovm/
     ${GENERATED_SOURCE_DIR}/generated/vm/include
-	${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/include
 )
 
 if (${FEATURE_FFI})
@@ -294,49 +293,14 @@ endif()
 
 set(VM_FRONTEND_APPLICATION_TYPE)
 include(cmake/${CMAKE_SYSTEM_NAME}.cmake)
+
 #
 # LibFFI
 #
-
-if (NOT WITHOUT_DEPENDENCIES)
-
-ExternalProject_Add(build_libFFI
-    PREFIX "${CMAKE_CURRENT_BINARY_DIR}/build/libffi"
-    SOURCE_DIR "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/src"
-    STAMP_DIR "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/stamp"
-    BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/src"
-
-    UPDATE_COMMAND ""
-
-    GIT_REPOSITORY "https://github.com/libffi/libffi.git"
-    GIT_TAG "v3.3"
-    CONFIGURE_COMMAND "./autogen.sh" COMMAND ./configure "${LIBFFI_TARGET}" "--disable-docs" "--prefix=${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install" "CC=${CMAKE_C_COMPILER}" "CXX=${CMAKE_C_COMPILER}" ${LIBFFI_ADDITIONAL}
-	BUILD_COMMAND "${CMAKE_MAKE_PROGRAM}" ${LIBFFI_ADDITIONAL}
-)
-
-make_directory("${CMAKE_CURRENT_BINARY_DIR}/build/dist")
-
-if(OSX)
-    add_custom_command(
-      OUTPUT  ${LIBFFI_OUTPUT}
-      DEPENDS build_libFFI
-      COMMAND install_name_tool -id "@executable_path/Plugins/libffi.7.dylib" "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/lib/libffi.7.dylib"
-      COMMAND install_name_tool -id "@executable_path/Plugins/libffi.dylib" "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/lib/libffi.dylib"
-      WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/lib/"
-      COMMENT "Changing RPath of Libffi")
-
-	add_custom_target(libFFI DEPENDS "${LIBFFI_OUTPUT}")
-else()
-	add_custom_target(libFFI DEPENDS build_libFFI)
+if (${FEATURE_FFI})
+    include(cmake/libffi.cmake)
 endif()
 
-link_directories("${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/lib")
-
-endif()
-
-#
-# End LibFFI
-#
 
 set(GENERATED_SOURCES ${VMSOURCEFILES})
 
@@ -364,22 +328,29 @@ if(${FEATURE_FFI})
         ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/functionDefinitionPrimitives.c
         ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/primitiveCalls.c
         ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/primitiveUtils.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/pThreadedFFI.c
         ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/types.c
         ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/typesPrimitives.c
         ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/utils.c
+
+        # Single-threaded callout support
+        ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/sameThread/sameThread.c
     
+        # Callback support
         ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/callbacks/callbackPrimitives.c
         ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/callbacks/callbacks.c
-   
-        ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/sameThread/sameThread.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/worker/worker.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/worker/workerPrimitives.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/worker/workerTask.c
 
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/threadSafeQueue/threadSafeQueue.c
+        # Required by callbacks
         ${CMAKE_CURRENT_SOURCE_DIR}/src/semaphores/pharoSemaphore.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/threadSafeQueue/threadSafeQueue.c
     )
+    if (${FEATURE_THREADED_FFI})
+        list(APPEND SUPPORT_SOURCES
+            ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/pThreadedFFI.c
+            ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/worker/worker.c
+            ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/worker/workerPrimitives.c
+            ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/worker/workerTask.c
+        )
+    endif()
 endif()
 
 
@@ -409,7 +380,7 @@ endif()
 target_link_libraries(${VM_EXECUTABLE_NAME} ${VM_LIBRARY_NAME})
 
 if(${FEATURE_FFI})
-    target_link_libraries(${VM_LIBRARY_NAME} "ffi")
+    target_link_libraries(${VM_LIBRARY_NAME} libFFI)
 endif()
 
 add_required_libs_per_platform()
