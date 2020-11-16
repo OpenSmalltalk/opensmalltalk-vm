@@ -122,6 +122,11 @@ VMSpurMemoryManagerTest >> interpreter [
 	^ interpreter
 ]
 
+{ #category : #helpers }
+VMSpurMemoryManagerTest >> interpreterClass [ 
+	^ StackInterpreterSimulatorLSB
+]
+
 { #category : #tests }
 VMSpurMemoryManagerTest >> keepObjectInVMVariable1: anOop [
 	interpreter newMethod: anOop
@@ -150,11 +155,6 @@ VMSpurMemoryManagerTest >> keptObjectInVMVariable2 [
 { #category : #tests }
 VMSpurMemoryManagerTest >> keptObjectInVMVariable3 [
 	^ interpreter profileMethod
-]
-
-{ #category : #helpers }
-VMSpurMemoryManagerTest >> interpreterClass [ 
-	^ StackInterpreterSimulatorLSB
 ]
 
 { #category : #accessor }

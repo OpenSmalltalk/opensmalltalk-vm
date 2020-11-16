@@ -4908,11 +4908,7 @@ StackInterpreter >> commonAtPut: stringy [
 		ifTrue: [ ^ self primitiveFailFor: PrimErrNoModification ].
 	index := objectMemory integerValueOf: index.
 	stringy
-		ifTrue: [ | charToPut rcvrClassTag |
-			"We should also check the receiver is String"
-			rcvrClassTag := objectMemory fetchClassTagOf: rcvr.
-			rcvrClassTag = (objectMemory fetchClassTagOf: objectMemory classString)
-				ifFalse: [ ^ self primitiveFailFor: PrimErrBadReceiver ].
+		ifTrue: [ | charToPut |
 			"inline of asciiOfCharacter: value. Non return of primitiveFailFor:"
 			(objectMemory isCharacterObject: value)
 				ifTrue: [ charToPut := CharacterTable
@@ -18223,18 +18219,6 @@ StackInterpreter >> printUnbalancedStack: primIdx [
 		
 ]
 
-{ #category : #'as yet unclassified' }
-StackInterpreter >> profileMethod [
-	<doNotGenerate>
-	^ profileMethod
-]
-
-{ #category : #'as yet unclassified' }
-StackInterpreter >> profileSemaphore [
-	<doNotGenerate>
-	^ profileSemaphore
-]
-    
 { #category : #'process primitive support' }
 StackInterpreter >> processesInProcessListDo: aBlock [
 	"Return the highest priority process that is ready to run.
@@ -18264,6 +18248,18 @@ StackInterpreter >> processesInProcessListDo: aBlock [
 				  (self isLiveContext: ctxt) ifTrue:
 					[ aBlock value: proc ] ].
 			 proc := objectMemory fetchPointer: NextLinkIndex ofObject: proc ]].
+]
+
+{ #category : #'as yet unclassified' }
+StackInterpreter >> profileMethod [
+	<doNotGenerate>
+	^ profileMethod
+]
+
+{ #category : #'as yet unclassified' }
+StackInterpreter >> profileSemaphore [
+	<doNotGenerate>
+	^ profileSemaphore
 ]
 
 { #category : #'internal interpreter access' }

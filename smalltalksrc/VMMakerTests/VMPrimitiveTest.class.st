@@ -1004,24 +1004,6 @@ VMPrimitiveTest >> testPrimitiveStringAtPutShouldFailForNonCharacterArgument [
 ]
 
 { #category : #'tests - primitiveAtPut' }
-VMPrimitiveTest >> testPrimitiveStringAtPutShouldFailsWhenReceiverIsNotAString [
-	"Every other test is common with at:put:"
-	| class objectInstance |
-	class := self newClassInOldSpaceWithSlots: 1 instSpec: memory arrayFormat .
-	
-	objectInstance := memory instantiateClass: class indexableSize: 1.
-
-	interpreter push: objectInstance.
-	interpreter push: (memory integerObjectOf: 1).
-	interpreter push: (memory characterObjectOf: 2).
-	interpreter primitiveStringAtPut.
-	
-	self assert: interpreter failed.
-	self assert: interpreter primFailCode equals: PrimErrBadReceiver.
-
-]
-
-{ #category : #'tests - primitiveAtPut' }
 VMPrimitiveTest >> testPrimitiveStringAtPutShouldNotFailWhenReceiverIsAString [
 	"Every other test is common with at:put:"
 	| string |
