@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <string.h> /* for memset */
 #include <stdio.h> /* for logErrorFromErrno */
+#include <stdint.h>
 
 #include "pharovm/debug.h"
 

@@ -88,6 +88,8 @@ file(GLOB UUIDPlugin_SOURCES
 addLibraryWithRPATH(UUIDPlugin ${UUIDPlugin_SOURCES})
 if(WIN)
     target_link_libraries(UUIDPlugin "-lole32")
+elseif(UNIX)
+    target_link_libraries(UUIDPlugin uuid)
 endif()
 
 #
@@ -295,7 +297,7 @@ if(OSX)
 elseif(WIN)
     target_link_libraries(SqueakSSL Crypt32.lib Secur32.lib)
 else()
-    target_link_libraries(SqueakSSL "-lssl")    
+    target_link_libraries(SqueakSSL ssl)    
 endif()
 
 
