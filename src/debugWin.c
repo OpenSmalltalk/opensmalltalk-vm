@@ -54,11 +54,12 @@ EXPORT(LONG) CALLBACK customExceptionHandler(LPEXCEPTION_POINTERS exp){
 		return EXCEPTION_CONTINUE_SEARCH;
 
 	printCrashDebugInformation(exp);
-   	return EXCEPTION_EXECUTE_HANDLER;
+
+   	return EXCEPTION_CONTINUE_SEARCH;
 }
 
 void installErrorHandlers(){
-	AddVectoredExceptionHandler(1 /*CALL_FIRST*/,customExceptionHandler);
+	AddVectoredExceptionHandler(0 /*CALL_LAST*/,customExceptionHandler);
 }
 
 
