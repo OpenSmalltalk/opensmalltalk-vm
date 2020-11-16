@@ -65,7 +65,7 @@ if(OSX)
 endif()
 
 if(WIN)
-    target_compile_definitions(FilePlugin PUBLIC "-DWIN32_FILE_SUPPORT")
+    target_compile_definitions(FilePlugin PRIVATE "-DWIN32_FILE_SUPPORT")
 endif()
 
 
@@ -94,13 +94,13 @@ endif()
 # Socket Plugin
 #
 if (${FEATURE_SOCKETS})
-target_compile_definitions(FEATURE_SOCKETS=1)
-if(WIN)
+  if(WIN)
     add_vm_plugin(SocketPlugin)
     target_link_libraries(SocketPlugin "-lWs2_32")
-else()
+  else()
     add_vm_plugin(SocketPlugin)
-endif()
+  endif()
+  target_compile_definitions(SocketPlugin PRIVATE "FEATURE_SOCKETS=1")
 endif()
 
 #
