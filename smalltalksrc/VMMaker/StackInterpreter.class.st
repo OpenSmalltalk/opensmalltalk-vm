@@ -529,8 +529,10 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 If ffi is put as a separate header, slang will sort the header and put it outside the #ifdef"
 		addHeaderFile:'#if FEATURE_FFI
 #include <ffi.h>
+#endif //FEATURE_FFI
+#if FEATURE_THREADED_FFI
 #include "pharovm/pThreadedFFI/worker.h"
-#endif //FEATURE_FFI'.
+#endif //FEATURE_THREADED_FFI'.
 
 	LowcodeVM ifTrue: [ aCCodeGenerator addHeaderFile:'"sqLowcodeFFI.h"'].
 
