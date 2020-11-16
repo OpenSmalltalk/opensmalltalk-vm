@@ -86,9 +86,9 @@ file(GLOB UUIDPlugin_SOURCES
 )
 
 addLibraryWithRPATH(UUIDPlugin ${UUIDPlugin_SOURCES})
-if(WIN)
+if(${WIN})
     target_link_libraries(UUIDPlugin "-lole32")
-elseif(UNIX)
+elseif(${UNIX} AND NOT ${OSX})
     target_link_libraries(UUIDPlugin uuid)
 endif()
 
