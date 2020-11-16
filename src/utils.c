@@ -151,7 +151,7 @@ sqInt getAttributeIntoLength(sqInt id, sqInt byteArrayIndex, sqInt length)
 		* - does not check error code
 		* - does use count as the size of the destination buffer
 		*/
-		strncpy_s(pointerForOop(byteArrayIndex), length, GetAttributeString(id), length);
+		strncpy_s(pointerForOop(byteArrayIndex), length + 1, GetAttributeString(id), length);
 #else
 		strncpy(pointerForOop(byteArrayIndex), GetAttributeString(id), length);
 #endif
@@ -198,7 +198,7 @@ void setImageName(const char* name){
 	* - does not check error code
 	* - does use count as the size of the destination buffer
 	*/
-	strcpy_s(imageName, strlen(name), name);
+	strcpy_s(imageName, PATH_MAX, name);
 #else
 	strcpy(imageName, name);
 #endif

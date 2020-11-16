@@ -117,6 +117,8 @@ add_vm_plugin(SurfacePlugin)
 # This solution is not portable to different architectures!
 #
 
+if(${FEATURE_FFI})
+
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/SqueakFFIPrims/include/common
 )
@@ -129,6 +131,8 @@ set(SqueakFFIPrims_SOURCES
 )
 
 addLibraryWithRPATH(SqueakFFIPrims ${SqueakFFIPrims_SOURCES})
+
+endif()
 
 #
 # IA32ABI Plugin

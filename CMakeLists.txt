@@ -31,7 +31,7 @@ if ((CMAKE_HOST_UNIX) AND (${CMAKE_HOST_SYSTEM_NAME} MATCHES "CYGWIN*"))
 
   # specify the cross compiler
   set(CMAKE_TOOLCHAIN_PREFIX x86_64-w64-mingw32)
-
+  
   SET(CMAKE_C_COMPILER   ${CMAKE_TOOLCHAIN_PREFIX}-clang)
   SET(CMAKE_CXX_COMPILER ${CMAKE_TOOLCHAIN_PREFIX}-clang++)
   SET(CMAKE_RC_COMPILER ${CMAKE_TOOLCHAIN_PREFIX}-windres)
@@ -47,14 +47,20 @@ set(GENERATE_SOURCES TRUE CACHE BOOL "If it generates the sources")
 set(ALWAYS_INTERACTIVE FALSE CACHE BOOL "If this VM will always add interactive or not. If it is set, the headless parameter is not by default true")
 set(FEATURE_FFI TRUE CACHE BOOL "Configure and compile support for FFI in the VM")
 set(FEATURE_SOCKETS TRUE CACHE BOOL "Configure and compile support for sockets in the VM")
-set(FEATURE_GNUISATION TRUE CACHE BOOL "Use gcc gnu extensions to compile the VM")
+set(FEATURE_COMPILE_GNUISATION TRUE CACHE BOOL "Use gcc gnu extensions to compile the VM")
+set(FEATURE_COMPILE_INLINE_MEMORY_ACCESSORS TRUE CACHE BOOL "Use inline memory accessors instead of macros")
+set(WITHOUT_DEPENDENCIES FALSE CACHE BOOL "Do not download dependencies at build time.")
 
 # If we are generating sources, set the source dir as the generation source dir.
 # Otherwise set it to by default to the current source dir, parametrizable
 if(${GENERATE_SOURCES})
     set(GENERATED_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR})
 else()
-    set(GENERATED_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR} CACHE BOOL "Source directory where to find the generated source. Default value is CMAKE_CURRENT_SOURCE_DIR")
+    set(GENERATED_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR} CACHE STRING "Source directory where to find the generated source. Default value is CMAKE_CURRENT_SOURCE_DIR")
+endif()
+
+if (${FEATURE_COMPILE_INLINE_MEMORY_ACCESSORS})
+    add_compile_definitions(USE_INLINE_MEMORY_ACCESSORS=1)
 endif()
 
 if(FLAVOUR MATCHES "StackVM")

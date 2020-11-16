@@ -359,5 +359,8 @@ ASALocalRun/
 
 # BeatPulse healthcheck temp database
 healthchecksdb
+
 /generated
 /out/build
+/stack32/generated
+/stack64/generated

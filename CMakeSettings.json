@@ -7,13 +7,13 @@
       "inheritEnvironments": [ "clang_cl_x86" ],
       "buildRoot": "${projectDir}\\out\\build\\${name}",
       "installRoot": "${projectDir}\\out\\install\\${name}",
-      "cmakeCommandArgs": "-DGENERATE_SOURCES=FALSE -DWITHOUT_DEPENDENCIES=TRUE -DFLAVOUR=StackVM",
+      "cmakeCommandArgs": "",
       "buildCommandArgs": "",
       "ctestCommandArgs": "",
       "variables": [
         {
           "name": "FEATURE_FFI",
-          "value": "False",
+          "value": "True",
           "type": "BOOL"
         },
         {
@@ -25,6 +25,36 @@
           "name": "FEATURE_SOCKETS",
           "value": "False",
           "type": "BOOL"
+        },
+        {
+          "name": "FEATURE_COMPILE_GNUISATION",
+          "value": "False",
+          "type": "BOOL"
+        },
+        {
+          "name": "FEATURE_COMPILE_INLINE_MEMORY_ACCESSORS",
+          "value": "False",
+          "type": "BOOL"
+        },
+        {
+          "name": "WITHOUT_DEPENDENCIES",
+          "value": "True",
+          "type": "BOOL"
+        },
+        {
+          "name": "GENERATE_SOURCES",
+          "value": "False",
+          "type": "BOOL"
+        },
+        {
+          "name": "GENERATED_SOURCE_DIR",
+          "value": "stack32",
+          "type": "STRING"
+        },
+        {
+          "name": "FLAVOUR",
+          "value": "StackVM ",
+          "type": "STRING"
         }
       ]
     },
@@ -70,10 +100,58 @@
       "configurationType": "Debug",
       "buildRoot": "${projectDir}\\out\\build\\${name}",
       "installRoot": "${projectDir}\\out\\install\\${name}",
-      "cmakeCommandArgs": "-DGENERATE_SOURCES=FALSE -DWITHOUT_DEPENDENCIES=TRUE -DFlavour=StackVM",
+      "cmakeCommandArgs": "",
       "buildCommandArgs": "",
       "ctestCommandArgs": "",
       "inheritEnvironments": [ "msvc_x86" ],
+      "variables": [
+        {
+          "name": "FEATURE_FFI",
+          "value": "False",
+          "type": "BOOL"
+        },
+        {
+          "name": "FEATURE_COMPILE_GNUISATION",
+          "value": "False",
+          "type": "BOOL"
+        },
+        {
+          "name": "FEATURE_SOCKETS",
+          "value": "False",
+          "type": "BOOL"
+        },
+        {
+          "name": "GENERATE_SOURCES",
+          "value": "False",
+          "type": "BOOL"
+        },
+        {
+          "name": "WITHOUT_DEPENDENCIES",
+          "value": "True",
+          "type": "BOOL"
+        },
+        {
+          "name": "FEATURE_COMPILE_INLINE_MEMORY_ACCESSORS",
+          "value": "True",
+          "type": "BOOL"
+        },
+        {
+          "name": "FLAVOUR",
+          "value": "StackVM",
+          "type": "STRING"
+        },
+        {
+          "name": "GENERATED_SOURCE_DIR",
+          "value": "stack32",
+          "type": "STRING"
+        }
+      ],
+      "intelliSenseMode": "windows-msvc-x86"
+    },
+    {
+      "name": "ARM-StackVM-msvc",
+      "cacheRoot": "C:\\Users\\lse\\Documents\\Projects\\ARM64-build",
+      "inheritEnvironments": [],
       "variables": []
     }
   ]
