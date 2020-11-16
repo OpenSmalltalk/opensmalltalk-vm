@@ -8,22 +8,16 @@
 
 */
 
+#include "pharovm/exportDefinition.h"
+
 #if _WIN32 || _WIN64
 /* Override necessary definitions */
-#undef putchar
-#include "sqWin32Alloc.h"
+# undef putchar
+# include "sqWin32Alloc.h"
 #include "sqMemoryAccess.h"
 
 
-#include <windows.h>
-
-/* pluggable primitive support */
-#if defined(_MSC_VER) || defined(__MINGW32__)
-#  undef EXPORT
-#  define EXPORT(returnType) __declspec( dllexport ) returnType
-#  undef VM_EXPORT
-#  define VM_EXPORT __declspec( dllexport )
-#endif
+# include <windows.h>
 
 # define ioCurrentOSThread() pthread_self()
 
