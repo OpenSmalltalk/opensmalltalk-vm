@@ -14,6 +14,8 @@
 #define LOG_TRACE		5
 
 EXPORT(void) logLevel(int level);
+EXPORT(int) getLogLevel();
+
 EXPORT(void) logMessage(int level, const char* fileName, const char* functionName, int line, ...);
 EXPORT(void) logAssert(const char* fileName, const char* functionName, int line, char* msg);
 

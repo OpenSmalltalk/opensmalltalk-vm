@@ -52,6 +52,10 @@ isExceptionAReasonForCrashing(LPEXCEPTION_POINTERS exp) {
 		}
 	}
 
+	if(getLogLevel() < LOG_WARN){
+		return 0;
+	}
+
 	if(!found)
 		return 0;
 
@@ -88,7 +92,7 @@ EXPORT(LONG) CALLBACK customExceptionHandler(LPEXCEPTION_POINTERS exp){
 
 	printCrashDebugInformation(exp);
 
-   	return EXCEPTION_CONTINUE_SEARCH;
+	return EXCEPTION_CONTINUE_SEARCH;
 }
 
 void installErrorHandlers(){
