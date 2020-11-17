@@ -46,14 +46,14 @@ set(PHARO_VM_SLANG_PLUGIN_GENERATED_FILES
 #Custom command that downloads a Pharo image and VM in ${VMMAKER_OUTPUT_PATH}
 if(NOT GENERATE_PHARO_VM) 
   add_custom_command(
-    OUTPUT ${VMMAKER_OUTPUT_PATH}/Pharo.image ${VMMAKER_OUTPUT_PATH}/pharo
+    OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${VMMAKER_OUTPUT_PATH}/Pharo.image" "${CMAKE_CURRENT_BINARY_DIR}/${VMMAKER_OUTPUT_PATH}/pharo"
     COMMAND wget -O - https://get.pharo.org/64/90 | bash
     COMMAND wget -O - https://get.pharo.org/64/vm90 | bash
     WORKING_DIRECTORY ${VMMAKER_OUTPUT_PATH}
     COMMENT "Downloading Pharo 90")
 else()
   add_custom_command(
-    OUTPUT ${VMMAKER_OUTPUT_PATH}/Pharo.image ${VMMAKER_OUTPUT_PATH}/pharo
+    OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${VMMAKER_OUTPUT_PATH}/Pharo.image" "${CMAKE_CURRENT_BINARY_DIR}/${VMMAKER_OUTPUT_PATH}/pharo"
     COMMAND wget -O - https://get.pharo.org/64/90 | bash
     WORKING_DIRECTORY ${VMMAKER_OUTPUT_PATH}
     COMMENT "Downloading Pharo 90")
@@ -61,27 +61,20 @@ endif()
 
 
 add_custom_command(
-  OUTPUT ${VMMAKER_OUTPUT_PATH}/VMMaker.image
+  OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${VMMAKER_OUTPUT_PATH}/VMMaker.image"
   COMMAND ${VMMAKER_PHARO_VM} Pharo.image --save --quit ${CMAKE_CURRENT_SOURCE_DIR_TO_OUT}/scripts/installVMMaker.st ${CMAKE_CURRENT_SOURCE_DIR_TO_OUT}
   COMMAND ${VMMAKER_PHARO_VM} Pharo.image save VMMaker
-  DEPENDS ${VMMAKER_OUTPUT_PATH}/Pharo.image
+  DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/${VMMAKER_OUTPUT_PATH}/Pharo.image"
   WORKING_DIRECTORY ${VMMAKER_OUTPUT_PATH}
 COMMENT "Generating VMMaker image")
 
 #Custom command that generates the vm source code from VMMaker into ${VMMAKER_OUTPUT_PATH} and copies it to ${CMAKE_CURRENT_SOURCE_DIR}
-if (NOT GENERATE_PHARO_VM)
-  add_custom_command(
+add_custom_command(
     OUTPUT ${VMSOURCEFILES} ${PLUGIN_GENERATED_FILES}
-    COMMAND ${VMMAKER_OUTPUT_PATH}/pharo ${VMMAKER_OUTPUT_PATH}/VMMaker.image eval \"PharoVMMaker generate: \#\'${FLAVOUR}\' outputDirectory: \'${CMAKE_CURRENT_BINARY_DIR_TO_OUT}\'\"
-    DEPENDS ${VMMAKER_OUTPUT_PATH}/VMMaker.image
+    COMMAND ${VMMAKER_PHARO_VM} VMMaker.image eval \"PharoVMMaker generate: \#\'${FLAVOUR}\' outputDirectory: \'${CMAKE_CURRENT_BINARY_DIR_TO_OUT}\'\"
+    DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/${VMMAKER_OUTPUT_PATH}/VMMaker.image"
+    WORKING_DIRECTORY ${VMMAKER_OUTPUT_PATH}
     COMMENT "Generating VM files for flavour: ${FLAVOUR}")
-else()
-  add_custom_command(
-    OUTPUT ${VMSOURCEFILES} ${PLUGIN_GENERATED_FILES}
-    COMMAND ${VMMAKER_PHARO_VM} ${VMMAKER_OUTPUT_PATH}/VMMaker.image eval \"PharoVMMaker generate: \#\'${FLAVOUR}\' outputDirectory: \'${CMAKE_CURRENT_BINARY_DIR_TO_OUT}\'\"
-    DEPENDS ${VMMAKER_OUTPUT_PATH}/VMMaker.image
-    COMMENT "Generating VM files for flavour: ${FLAVOUR}")
-endif()
 
 #Define generated files as elements in the c-src component for packaging
 install(DIRECTORY
