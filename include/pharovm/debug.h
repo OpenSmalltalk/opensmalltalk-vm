@@ -17,6 +17,7 @@ EXPORT(void) logLevel(int level);
 EXPORT(void) logMessage(int level, const char* fileName, const char* functionName, int line, ...);
 EXPORT(void) logAssert(const char* fileName, const char* functionName, int line, char* msg);
 
+EXPORT(void) registerCurrentThreadToHandleExceptions();
 EXPORT(void) installErrorHandlers();
 
 //This variable is set externally by CMAKE

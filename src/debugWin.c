@@ -2,6 +2,8 @@
 #include <Windows.h>
 #include <DbgHelp.h>
 
+EXPORT(void) registerCurrentThreadToHandle();
+
 void ifValidWriteBackStackPointersSaveTo(void *theCFP, void *theCSP, char **savedFPP, char **savedSPP);
 
 void printAllStacks();
@@ -20,8 +22,39 @@ EXPORT(void) printMachineCallStack(PCONTEXT ctx , FILE* output);
 	usqInt stackLimitAddress(void);
 #endif
 
+#define MAX_THREADID_TO_REGISTER 50
+DWORD threadIDs[MAX_THREADID_TO_REGISTER];
+int threadIDCount = 0;
+
+EXPORT(void) registerCurrentThreadToHandleExceptions(){
+
+	if(threadIDCount == MAX_THREADID_TO_REGISTER){
+		logWarn("Maximum registered ThreadID count");
+		return;
+	}
+
+	threadIDs[threadIDCount] = GetCurrentThreadId();
+	threadIDCount ++;
+}
+
 static int
 isExceptionAReasonForCrashing(LPEXCEPTION_POINTERS exp) {
+
+	int found = 0;
+	DWORD currentThread;
+
+	currentThread = GetCurrentThreadId();
+
+	for(int i = 0; i < threadIDCount; i++){
+		if(threadIDs[i] == currentThread){
+			found = 1;
+			break;
+		}
+	}
+
+	if(!found)
+		return 0;
+
 	switch(exp->ExceptionRecord->ExceptionCode){
 		case EXCEPTION_ACCESS_VIOLATION:
 		case EXCEPTION_ARRAY_BOUNDS_EXCEEDED:
