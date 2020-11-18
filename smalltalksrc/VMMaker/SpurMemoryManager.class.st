@@ -12825,7 +12825,7 @@ SpurMemoryManager >> unalignedLong32At: index [
 
 { #category : #simulation }
 SpurMemoryManager >> unalignedLong32At: index put: aValue [
-	<cmacro: '(addr,value) lon32Atput(addr,value)'>
+	<cmacro: '(addr,value) long32Atput(addr,value)'>
 
 	| odd hi lo mask |
 	aValue < 0 ifTrue:
