@@ -1240,6 +1240,108 @@ StackInterpreterPrimitives >> primitiveExternalCall [
 ]
 
 { #category : #ffi }
+StackInterpreterPrimitives >> primitiveFFIAllocate [
+	"Primitive. Allocate an object on the external heap."
+	| byteSize addr oop |
+
+	<api>
+	<inline: false>
+	<var: #ptr type: #'sqIntptr_t *'>
+
+	byteSize := self stackIntegerValue: 0.
+	self failed ifTrue: [ ^ self ].
+	
+	addr := self malloc: byteSize.
+	addr = 0 ifTrue: [^ self primitiveFail].
+	
+	oop := objectMemory newExternalAddressWithValue: addr.
+	
+	^ self methodReturnValue: oop
+]
+
+{ #category : #ffi }
+StackInterpreterPrimitives >> primitiveFFIFree [
+	"Primitive. Free the object pointed to on the external heap."
+	| addr oop |
+
+	<export: true>
+	<inline: false>
+	<var: #ptr type: #'sqIntptr_t *'>
+
+	oop  := self stackObjectValue: 0.
+	addr := self readAddress: oop.
+	self failed ifTrue: [ ^ self].
+
+	(addr = 0
+	 or: [(addr asUnsignedIntegerPtr bitAnd: (self sizeof: #'sqIntptr_t') - 1) ~= 0
+	 or: [objectMemory isInMemory: addr]]) ifTrue:
+		[^ self primitiveFail].
+	
+	self free: addr.
+	
+	self writeAddress: oop to: 0.
+	^ self methodReturnValue: oop
+]
+
+{ #category : #ffi }
+StackInterpreterPrimitives >> primitiveFFIIntegerAt [
+	"Answer a (signed or unsigned) n byte integer from the given byte offset
+	 in the receiver, using the platform's endianness."
+	
+	| isSigned byteSize byteOffset rcvr addr value mask valueOop |
+	
+	<var: 'value' type: #usqLong>
+	<var: 'mask' type: #usqLong>
+	<api>
+	<inline: false>
+	
+	isSigned := self booleanValueOf: (self stackValue: 0).
+	byteSize := self stackIntegerValue: 1.
+	byteOffset := self stackIntegerValue: 2.
+	rcvr := self stackObjectValue: 3.
+	self failed ifTrue:[ ^self ].
+		
+	(byteOffset > 0
+	 and: [(byteSize between: 1 and: 8)
+	 and: [(byteSize bitAnd: byteSize - 1) = 0 "a.k.a. isPowerOfTwo"]]) ifFalse:
+		[^self primitiveFailFor: PrimErrBadArgument].
+	
+	addr := self maybeExternalAddressOf: rcvr startingAt: byteOffset size: byteSize.
+	addr = 0 ifTrue: [^self primitiveFailFor: PrimErrBadArgument].
+	
+	byteSize <= 2
+		ifTrue:
+			[byteSize = 1
+				ifTrue: [value := self cCoerce: (objectMemory byteAt: addr) to: #'unsigned char']
+				ifFalse: [value := self cCoerce: (objectMemory unalignedShortAt: addr) to: #'unsigned short']]
+		ifFalse:
+			[byteSize = 4
+				ifTrue: [value := self cCoerce: (objectMemory unalignedLong32At: addr) to: #'unsigned int']
+				ifFalse: [value := objectMemory unalignedLong64At: addr]].
+
+	byteSize < BytesPerWord
+		ifTrue:
+			[isSigned ifTrue: "sign extend value"
+				[mask := 1 asUnsignedLongLong << (byteSize * 8 - 1).
+				value := (value bitAnd: mask-1) - (value bitAnd: mask)].
+			 "note: byte/short (&long if BytesPerWord=8) never exceed SmallInteger range"
+			 valueOop := objectMemory integerObjectOf: value]
+		ifFalse: "general 64 bit integer; note these never fail"
+			[isSigned
+				ifTrue:
+					[byteSize < 8 ifTrue: "sign extend value"
+						[mask := 1 asUnsignedLongLong << (byteSize * 8 - 1).
+						value := (value bitAnd: mask-1) - (value bitAnd: mask)].
+					 self cCode: [] inSmalltalk:
+						[(byteSize = 8 and: [(value bitShift: -56) >= 128]) ifTrue:
+							[value := value - (1 bitShift: 64)]].
+					 valueOop := objectMemory signed64BitIntegerFor: value]
+				ifFalse:[valueOop := objectMemory positive64BitIntegerFor: value]].
+
+	^ objectMemory methodReturnValue: valueOop
+]
+
+{ #category : #ffi }
 StackInterpreterPrimitives >> primitiveFFIIntegerAtPut [
 	"Store a (signed or unsigned) n byte integer at the given byte offset
 	 in the receiver, using the platform's endianness."
@@ -1248,7 +1350,7 @@ StackInterpreterPrimitives >> primitiveFFIIntegerAtPut [
 	
 	<var: 'value' type: #sqLong>
 	<var: 'max' type: #sqLong>
-	<export: true>
+	<api>
 	<inline: false>
 	
 	isSigned := self booleanValueOf: (self stackValue: 0).
@@ -2028,10 +2130,10 @@ StackInterpreterPrimitives >> primitiveLoadPointerFromExternalAddress [
 { #category : #ffi }
 StackInterpreterPrimitives >> primitiveLoadSymbolFromModule [
 	"Attempt to find the address of a symbol in a loaded library."
-	<export: true>
 
 	| symbol module moduleHandle address oop symbolString symbolStringSize |
 
+	<api>
 	<var: #address type: #'void *'>
 	<var: #ptr type: #'void **'>
 	<var: #symbolString type: #'char *'>
@@ -4195,4 +4297,16 @@ StackInterpreterPrimitives >> worker_task_new: externalFunction _: cif _: parame
 			semaphoreIndex: semaphoreIndex;
 			yourself
 	
+]
+
+{ #category : #'ffi - helpers' }
+StackInterpreterPrimitives >> writeAddress: anOop to: aValue [
+
+	<api>
+	<var: #aValue type: #'void *'>
+
+	(objectMemory is: anOop KindOfClass: objectMemory classExternalAddress)
+		ifFalse: [ self primitiveFail. ^ nil ].
+
+	^ objectMemory storePointer: 0 ofObject: anOop withValue: (self cCoerce: aValue to: #sqInt).
 ]

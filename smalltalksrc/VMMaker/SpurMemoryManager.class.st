@@ -12813,8 +12813,9 @@ SpurMemoryManager >> trueObject: anOop [
 
 { #category : #simulation }
 SpurMemoryManager >> unalignedLong32At: index [
-	"Support for primitiveFFIIntegerAt[Put]"
-	<doNotGenerate>
+
+	<cmacro: '(addr) long32At(addr)'>
+
 	| odd hi lo |
 	(odd := index bitAnd: 3) = 0 ifTrue:
 		[^self long32At: index].
@@ -12846,8 +12847,9 @@ SpurMemoryManager >> unalignedLong32At: index put: aValue [
 
 { #category : #simulation }
 SpurMemoryManager >> unalignedLong64At: index [
-	"Support for primitiveFFIIntegerAt[Put]"
-	<doNotGenerate>
+
+	<cmacro: '(addr) long64At(addr)'>
+
 	| odd hi lo |
 	(odd := index bitAnd: 7) = 0 ifTrue:
 		[^self long64At: index].
@@ -12879,8 +12881,9 @@ SpurMemoryManager >> unalignedLong64At: index put: aValue [
 
 { #category : #simulation }
 SpurMemoryManager >> unalignedShortAt: index [
-	"Support for primitiveFFIIntegerAt[Put]"
-	<doNotGenerate>
+
+	<cmacro: '(addr) shortAt(addr)'>
+
 	| hi lo |
 	(index bitAnd: 1) = 0 ifTrue:
 		[^self shortAt: index].
