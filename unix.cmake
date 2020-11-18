@@ -1,3 +1,5 @@
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wl,-rpath=.")
+
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/unix
     ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/common
@@ -27,7 +29,7 @@ set(VM_FRONTEND_SOURCES
 
 
 macro(add_third_party_dependencies_per_platform)
-    add_third_party_dependency("PThreadedFFI-1.3.1-linux64" "build/vm")
+    add_third_party_dependency("PThreadedFFI-1.4.0-linux64" "build/vm")
     add_third_party_dependency("libgit2-0.25.1" "build/vm")
     add_third_party_dependency_with_baseurl("libgit2-linux-1.0.0" "build/vm" "https://github.com/guillep/libgit_build/releases/download/v1.0.1")
     add_third_party_dependency("libssh2-1.7.0" "build/vm")

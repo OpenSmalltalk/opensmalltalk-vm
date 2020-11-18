@@ -3,15 +3,9 @@
 
 Worker *mainThreadWorker = NULL;
 
-sqInt
-runInMainThread() {
-    worker_run(mainThreadWorker);
-    return 1;
-}
-
-sqInt
-initMainThreadWorker(void) {
+EXPORT(sqInt)
+runMainThreadWorker() {
     mainThreadWorker = worker_newSpawning(false);
-    mainThread_schedule(runInMainThread);
+	worker_run(mainThreadWorker);
     return 1;
 }

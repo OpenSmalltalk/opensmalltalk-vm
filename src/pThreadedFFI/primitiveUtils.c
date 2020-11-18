@@ -45,11 +45,16 @@ PrimitiveWithDepth(primitiveCopyFromTo, 1){
  *
  * Receives an OOP as parameter and returns an SmallInteger
  */
-Primitive(primitiveGetAddressOfOOP){
+PrimitiveWithDepth(primitiveGetAddressOfOOP, 2){
 	sqInt oop;
 
 	oop = stackValue(0);
 	checkFailed();
+
+	if(isForwarded(oop)){
+		primitiveFail();
+		return;
+	}
 
 	if(!isPinned(oop)){
 		primitiveFail();

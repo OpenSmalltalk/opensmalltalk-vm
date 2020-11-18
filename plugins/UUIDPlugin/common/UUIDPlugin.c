@@ -107,6 +107,8 @@ EXPORT(sqInt) setInterpreter(struct VirtualMachine *anInterpreter)
     sqInt ok;
 
 	interpreterProxy = anInterpreter;
+	
+	return 0;
 }
 
 EXPORT(const char*)

@@ -31,10 +31,6 @@
 #ifndef __sqaio_h
 #define __sqaio_h
 
-#ifndef EXPORT
-# define EXPORT(returnType) returnType
-#endif
-
 #define AIO_X	(1<<0)	/* handle for exceptions */
 #define AIO_R	(1<<1)	/* handle for read */
 #define AIO_W	(1<<2)	/* handle for write */

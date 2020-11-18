@@ -28,6 +28,8 @@
  * 
  */
 
+#include "pharovm/exportDefinition.h"
+
 #include "sqMemoryAccess.h"
 
 extern usqInt sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize, usqInt baseAddress);

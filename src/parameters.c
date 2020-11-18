@@ -245,6 +245,7 @@ splitVMAndImageParameters(int argc, const char** argv, VMParameters* parameters)
 		return error;
 	}
 
+#if !ALWAYS_INTERACTIVE
 	// Add additional VM parameters.
 	const char *extraVMParameters = "--headless";
 	error = vm_parameter_vector_insert_from(&parameters->vmParameters, 1, &extraVMParameters);
@@ -253,6 +254,7 @@ splitVMAndImageParameters(int argc, const char** argv, VMParameters* parameters)
 		vm_parameters_destroy(parameters);
 		return error;
 	}
+#endif
 
 	return VM_SUCCESS;
 }
@@ -281,15 +283,49 @@ logParameters(const VMParameters* parameters)
 VMErrorCode
 vm_parameters_ensure_interactive_image_parameter(VMParameters* parameters)
 {
+	const char* interactiveParameter = "--interactive";
+	const char* headlessParameter = "--headless";
+	VMErrorCode error;
+
 	if (parameters->isInteractiveSession)
 	{
 		if (!vm_parameter_vector_has_element(&parameters->imageParameters, "--interactive"))
 		{
-			const char* interactiveParameter = "--interactive";
-			VMErrorCode error = vm_parameter_vector_insert_from(&parameters->imageParameters, 1, &interactiveParameter);
-			if (error) return error;
+			error = vm_parameter_vector_insert_from(&parameters->imageParameters, 1, &interactiveParameter);
+			if (error)
+				return error;
+
 		}
 	}
+
+#if ALWAYS_INTERACTIVE
+
+	/*
+	 * If the macro ALWAYS_INTERACTIVE is set, we invert the logic of headless / interactive
+	 * This is to mimic the old VM behavior
+	 */
+
+	if (!vm_parameter_vector_has_element(&parameters->vmParameters, "--headless") &&
+			!vm_parameter_vector_has_element(&parameters->imageParameters, "--interactive")){
+
+		error = vm_parameter_vector_insert_from(&parameters->imageParameters, 1, &interactiveParameter);
+
+		if (error)
+			return error;
+	}
+
+	/* Ensure we have headless parameter when in interactive mode (the image is expecting it)*/
+
+	if (!vm_parameter_vector_has_element(&parameters->vmParameters, "--headless") &&
+			vm_parameter_vector_has_element(&parameters->imageParameters, "--interactive")) {
+
+		error = vm_parameter_vector_insert_from(&parameters->vmParameters, 1, &headlessParameter);
+
+		if (error)
+			return error;
+	}
+
+#endif
 
 	return VM_SUCCESS;
 }
@@ -303,8 +339,12 @@ vm_printUsageTo(FILE *out)
 "\n"
 "Common <option>s:\n"
 "  --help                 	Print this help message, then exit\n"
+#if ALWAYS_INTERACTIVE
+"  --headless             	Run in headless (no window) mode (default: false)\n"
+#else
 "  --headless             	Run in headless (no window) mode (default: true)\n"
-"  --worker               run in worker thread (default: false)\n"
+#endif
+"  --worker               	run in worker thread (default: false)\n"
 "  --logLevel=<level>     	Sets the log level (ERROR, WARN, INFO or DEBUG)\n"
 "  --version              	Print version information, then exit\n"
 "  --maxFramesToLog=<cant>	Sets the max numbers of Smalltalk frames to log"

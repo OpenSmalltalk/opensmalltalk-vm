@@ -36,6 +36,7 @@ project(PharoVM)
 
 set(FLAVOUR CoInterpreterWithQueueFFI CACHE STRING "The kind of VM to generate. Possible values: StackVM, CogVM, CoInterpreterWithQueueFFI")
 set(GENERATE_SOURCES 1 CACHE BOOL "If it generates the sources")
+set(ALWAYS_INTERACTIVE 0 CACHE BOOL "If this VM will always add interactive or not. If it is set, the headless parameter is not by default true")
 
 if(FLAVOUR MATCHES "StackVM")
   set(VMSOURCEFILES ${CMAKE_CURRENT_BINARY_DIR}/generated/vm/src/gcc3x-interp.c)
@@ -49,6 +50,12 @@ set(PLUGIN_GENERATED_FILES
 
 if(FLAVOUR MATCHES "CoInterpreterWithQueueFFI")
   add_definitions(-DASYNC_FFI_QUEUE=1)
+endif()
+
+if (GENERATE_PHARO_VM) 
+	set(VMMAKER_PHARO_VM ${GENERATE_PHARO_VM})
+else()
+	set(VMMAKER_PHARO_VM ./pharo)
 endif()
 
 # Configuration
@@ -236,28 +243,45 @@ check_library_exists(uuid uuid_generate "" HAVE_UUID_GENERATE)
 
 if(GENERATE_SOURCES)
 #Custom command that downloads a Pharo image and VM in ${VMMAKER_OUTPUT_PATH}
+if(NOT GENERATE_PHARO_VM) 
 add_custom_command(
   OUTPUT ${VMMAKER_OUTPUT_PATH}/Pharo.image ${VMMAKER_OUTPUT_PATH}/pharo
   COMMAND wget -O - https://get.pharo.org/64/90 | bash
   COMMAND wget -O - https://get.pharo.org/64/vm90 | bash
   WORKING_DIRECTORY ${VMMAKER_OUTPUT_PATH}
   COMMENT "Downloading Pharo 90")
+else()
+add_custom_command(
+  OUTPUT ${VMMAKER_OUTPUT_PATH}/Pharo.image ${VMMAKER_OUTPUT_PATH}/pharo
+  COMMAND wget -O - https://get.pharo.org/64/90 | bash
+  WORKING_DIRECTORY ${VMMAKER_OUTPUT_PATH}
+  COMMENT "Downloading Pharo 90")
+endif()
+
 
 add_custom_command(
   OUTPUT ${VMMAKER_OUTPUT_PATH}/VMMaker.image
-  COMMAND ./pharo Pharo.image --save --quit ${CMAKE_CURRENT_SOURCE_DIR_TO_OUT}/scripts/installVMMaker.st ${CMAKE_CURRENT_SOURCE_DIR_TO_OUT}
-  COMMAND ./pharo Pharo.image save VMMaker
+  COMMAND ${VMMAKER_PHARO_VM} Pharo.image --save --quit ${CMAKE_CURRENT_SOURCE_DIR_TO_OUT}/scripts/installVMMaker.st ${CMAKE_CURRENT_SOURCE_DIR_TO_OUT}
+  COMMAND ${VMMAKER_PHARO_VM} Pharo.image save VMMaker
   DEPENDS ${VMMAKER_OUTPUT_PATH}/Pharo.image
   WORKING_DIRECTORY ${VMMAKER_OUTPUT_PATH}
 COMMENT "Generating VMMaker image")
 
 #Custom command that generates the vm source code from VMMaker into ${VMMAKER_OUTPUT_PATH} and copies it to ${CMAKE_CURRENT_SOURCE_DIR}
+if (NOT GENERATE_PHARO_VM)
 add_custom_command(
   OUTPUT ${VMSOURCEFILES} ${PLUGIN_GENERATED_FILES}
   COMMAND ${VMMAKER_OUTPUT_PATH}/pharo ${VMMAKER_OUTPUT_PATH}/VMMaker.image eval \"PharoVMMaker generate: \#\'${FLAVOUR}\' outputDirectory: \'${CMAKE_CURRENT_BINARY_DIR_TO_OUT}\'\"
   DEPENDS ${VMMAKER_OUTPUT_PATH}/VMMaker.image
   COMMENT "Generating VM files for flavour: ${FLAVOUR}")
-  
+else()
+add_custom_command(
+  OUTPUT ${VMSOURCEFILES} ${PLUGIN_GENERATED_FILES}
+  COMMAND ${VMMAKER_PHARO_VM} ${VMMAKER_OUTPUT_PATH}/VMMaker.image eval \"PharoVMMaker generate: \#\'${FLAVOUR}\' outputDirectory: \'${CMAKE_CURRENT_BINARY_DIR_TO_OUT}\'\"
+  DEPENDS ${VMMAKER_OUTPUT_PATH}/VMMaker.image
+  COMMENT "Generating VM files for flavour: ${FLAVOUR}")
+endif()
+
 add_custom_target(vmmaker DEPENDS ${VMMAKER_OUTPUT_PATH}/VMMaker.image)
 add_custom_target(generate-sources DEPENDS ${VMSOURCEFILES} ${PLUGIN_GENERATED_FILES})
   
@@ -293,18 +317,22 @@ endif()
 # LibFFI
 #
 
+if (NOT WITHOUT_DEPENDENCIES)
+
 ExternalProject_Add(build_libFFI
-    PREFIX "${CMAKE_CURRENT_BINARY_DIR}/build/libffi"
-    SOURCE_DIR "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/src"
-    STAMP_DIR "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/stamp"
-    BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/src"
+	GIT_CONFIG "core.autocrlf=input"
+	PREFIX "${CMAKE_CURRENT_BINARY_DIR}/build/libffi"
+	SOURCE_DIR "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/src"
+	STAMP_DIR "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/stamp"
+	BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/src"
 
-    UPDATE_COMMAND ""
+	UPDATE_COMMAND ""
 
-    GIT_REPOSITORY "https://github.com/libffi/libffi.git"
-    GIT_TAG "v3.3"
-    CONFIGURE_COMMAND "./autogen.sh" COMMAND ./configure "${LIBFFI_TARGET}" "--disable-docs" "--prefix=${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install" "CC=${CMAKE_C_COMPILER}" "CXX=${CMAKE_C_COMPILER}" ${LIBFFI_ADDITIONAL}
-	BUILD_COMMAND "${CMAKE_MAKE_PROGRAM}" "${LIBFFI_ADDITIONAL}"
+	GIT_REPOSITORY "https://github.com/libffi/libffi.git"
+	GIT_TAG "v3.3"
+	
+	CONFIGURE_COMMAND "./autogen.sh" COMMAND ./configure "${LIBFFI_TARGET}" "--disable-docs" "--prefix=${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install" "CC=${CMAKE_C_COMPILER}" "CXX=${CMAKE_C_COMPILER}" ${LIBFFI_ADDITIONAL}
+	BUILD_COMMAND "${CMAKE_MAKE_PROGRAM}" ${LIBFFI_ADDITIONAL}
 )
 
 make_directory("${CMAKE_CURRENT_BINARY_DIR}/build/dist")
@@ -324,6 +352,8 @@ else()
 endif()
 
 link_directories("${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/lib")
+
+endif()
 
 #
 # End LibFFI
@@ -398,7 +428,9 @@ include(plugins.cmake)
 
 # Handling Third party dependencies
 
-add_third_party_dependencies_per_platform()
+if (NOT WITHOUT_DEPENDENCIES)
+	add_third_party_dependencies_per_platform()
+endif()
 
 # Selecting files to include in the package
 
@@ -439,7 +471,13 @@ set(CPACK_PACKAGE_VERSION_MINOR "${VERSION_MINOR}")
 set(CPACK_PACKAGE_VERSION_PATCH "${VERSION_PATCH}")
 set(CPACK_PACKAGE_VENDOR "${APPNAME}")
 set(CPACK_PACKAGE_HOMEPAGE_URL "https://pharo.org")
-set(CPACK_PACKAGE_FILE_NAME "${APPNAME}VM-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}-${GIT_COMMIT_HASH}-${FULL_PLATFORM_NAME}")
+
+if(ALWAYS_INTERACTIVE)
+	set(CPACK_PACKAGE_FILE_NAME "${APPNAME}VM-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}-${GIT_COMMIT_HASH}-StockReplacement-${FULL_PLATFORM_NAME}")
+else()
+	set(CPACK_PACKAGE_FILE_NAME "${APPNAME}VM-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}-${GIT_COMMIT_HASH}-${FULL_PLATFORM_NAME}")
+endif()
+
 set(CPACK_PACKAGE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/build/packages")
 set(CPACK_PACKAGE_CHECKSUM "SHA1")
 set(CPACK_GENERATOR "ZIP")

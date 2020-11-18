@@ -1,8 +1,6 @@
 #pragma once
 
-#ifndef EXPORT
-#define EXPORT(x)  x
-#endif
+#include "exportDefinition.h"
 
 #ifndef  DEBUG
 # define DEBUG	0
@@ -16,9 +14,12 @@
 #define LOG_TRACE		5
 
 EXPORT(void) logLevel(int level);
+EXPORT(int) getLogLevel();
+
 EXPORT(void) logMessage(int level, const char* fileName, const char* functionName, int line, ...);
 EXPORT(void) logAssert(const char* fileName, const char* functionName, int line, char* msg);
 
+EXPORT(void) registerCurrentThreadToHandleExceptions();
 EXPORT(void) installErrorHandlers();
 
 //This variable is set externally by CMAKE
