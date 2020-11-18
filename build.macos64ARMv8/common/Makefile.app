@@ -155,13 +155,12 @@ $(VMLOCALIZATION): $(OSXCOMMONDIR)/English.lproj/$(SYSTEM)-Localizable.strings
 	@mkdir -p $(dir $@)
 	cp -p $< $@
 
-$(VMMENUNIB): $(PLATDIR)/iOS/vm/English.lproj/MainMenu.xib
+$(VMMENUNIB): $(PLATDIR)/iOS/vm/English.lproj/$(SYSTEM)-MainMenu.xib
 	@mkdir -p $(dir $@)
 	$(XCUB)/ibtool --errors --warnings --notices --module $(VM) \
 	--minimum-deployment-target $(TARGET_VERSION_MIN) \
 	--auto-activate-custom-fonts --output-format human-readable-text \
-	--compile $(VMMENUNIB) \
-	$(PLATDIR)/iOS/vm/English.lproj/MainMenu.xib
+	--compile $(VMMENUNIB) $<
 
 $(APP)/Contents/Resources/%.icns: $(OSXDIR)/%.icns
 	@mkdir -p $(APP)/Contents/Resources

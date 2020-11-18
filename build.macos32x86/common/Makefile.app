@@ -160,8 +160,7 @@ $(VMMENUNIB): $(PLATDIR)/iOS/vm/English.lproj/$(SYSTEM)-MainMenu.xib
 	$(XCUB)/ibtool --errors --warnings --notices --module $(VM) \
 	--minimum-deployment-target $(TARGET_VERSION_MIN) \
 	--auto-activate-custom-fonts --output-format human-readable-text \
-	--compile $(VMMENUNIB) \
-	$(PLATDIR)/iOS/vm/English.lproj/$(SYSTEM)-MainMenu.xib
+	--compile $(VMMENUNIB) $<
 
 $(APP)/Contents/Resources/%.icns: $(OSXDIR)/%.icns
 	@mkdir -p $(APP)/Contents/Resources
