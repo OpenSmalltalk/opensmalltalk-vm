@@ -6795,14 +6795,6 @@ SpurMemoryManager >> ioLoadFunction: functionName From: moduleName [
 ]
 
 { #category : #'simulation only' }
-SpurMemoryManager >> ioLoadModule: moduleNameIndex OfLength: moduleLength [
-	<doNotGenerate>
-	<returnTypeC: #'void *'>
-	"Dummy - provided by support code"
-	^0
-]
-
-{ #category : #'simulation only' }
 SpurMemoryManager >> ioUTCMicrosecondsNow [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	<doNotGenerate>
