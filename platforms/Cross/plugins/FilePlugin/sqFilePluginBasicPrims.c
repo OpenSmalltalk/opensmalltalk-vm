@@ -34,6 +34,7 @@
 #include "sq.h"
 
 #include <errno.h>
+#include <unistd.h> // required on BigSur
 
 #ifndef NO_STD_FILE_SUPPORT
 

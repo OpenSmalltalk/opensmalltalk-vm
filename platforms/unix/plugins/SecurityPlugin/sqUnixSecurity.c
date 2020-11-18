@@ -15,6 +15,7 @@
 #include "sq.h"
 #include "SecurityPlugin.h"
 
+#include <unistd.h>
 #include <sys/param.h>
 
 static char secureUserDirectory[MAXPATHLEN+1];     /* imagepath/secure/    */
