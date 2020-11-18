@@ -13,26 +13,11 @@
       "variables": [
         {
           "name": "FEATURE_FFI",
-          "value": "False",
-          "type": "BOOL"
-        },
-        {
-          "name": "FEATURE_GNUISATION",
-          "value": "False",
+          "value": "True",
           "type": "BOOL"
         },
         {
           "name": "FEATURE_SOCKETS",
-          "value": "False",
-          "type": "BOOL"
-        },
-        {
-          "name": "FEATURE_COMPILE_GNUISATION",
-          "value": "False",
-          "type": "BOOL"
-        },
-        {
-          "name": "FEATURE_COMPILE_INLINE_MEMORY_ACCESSORS",
           "value": "False",
           "type": "BOOL"
         },
@@ -55,6 +40,11 @@
           "name": "FLAVOUR",
           "value": "StackVM ",
           "type": "STRING"
+        },
+        {
+          "name": "FEATURE_LIB_SDL2",
+          "value": "True",
+          "type": "BOOL"
         }
       ]
     },
@@ -107,7 +97,7 @@
       "variables": [
         {
           "name": "FEATURE_FFI",
-          "value": "False",
+          "value": "True",
           "type": "BOOL"
         },
         {
