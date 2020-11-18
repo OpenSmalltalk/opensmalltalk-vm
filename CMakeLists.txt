@@ -42,6 +42,16 @@ endif()
 #This needs to be at this point, after setting the toolchain configuration
 project(PharoVM)
 
+# Correctly set the system processor under MSVC
+# This is required because CMake will set the HOST_PROCESSOR in windows
+# And not care about our Visual Studio settings
+# See https://gitlab.kitware.com/cmake/cmake/-/issues/15170
+if (MSVC)
+    set(CMAKE_SYSTEM_PROCESSOR ${MSVC_CXX_ARCHITECTURE_ID})
+endif()
+message(STATUS "Compiling for architecture: ${CMAKE_SYSTEM_PROCESSOR}")
+
+
 set(FLAVOUR CoInterpreterWithQueueFFI CACHE STRING "The kind of VM to generate. Possible values: StackVM, CogVM, CoInterpreterWithQueueFFI")
 set(GENERATE_SOURCES TRUE CACHE BOOL "If it generates the sources")
 set(ALWAYS_INTERACTIVE FALSE CACHE BOOL "If this VM will always add interactive or not. If it is set, the headless parameter is not by default true")
@@ -49,7 +59,10 @@ set(FEATURE_FFI TRUE CACHE BOOL "Configure and compile support for FFI in the VM
 set(FEATURE_SOCKETS TRUE CACHE BOOL "Configure and compile support for sockets in the VM")
 set(FEATURE_COMPILE_GNUISATION TRUE CACHE BOOL "Use gcc gnu extensions to compile the VM")
 set(FEATURE_COMPILE_INLINE_MEMORY_ACCESSORS TRUE CACHE BOOL "Use inline memory accessors instead of macros")
-set(WITHOUT_DEPENDENCIES FALSE CACHE BOOL "Do not download dependencies at build time.")
+
+set(WITHOUT_DEPENDENCIES FALSE CACHE BOOL "Do not download dependencies at build time")
+set(FEATURE_LIB_SDL2 TRUE CACHE BOOL "Build SDL2 support")
+set(FEATURE_LIB_CAIRO TRUE CACHE BOOL "Build Cairo support" )
 
 # If we are generating sources, set the source dir as the generation source dir.
 # Otherwise set it to by default to the current source dir, parametrizable
@@ -228,7 +241,7 @@ else()
 endif()
 
 
-set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}"/build/vm")
+set(EXECUTABLE_OUTPUT_PATH "${CMAKE_CURRENT_BINARY_DIR}/build/vm")
 
 #If in OSX, configure creation of Bundle
 if (OSX)
@@ -388,10 +401,7 @@ add_required_libs_per_platform()
 include(plugins.cmake)
 
 # Handling Third party dependencies
-
-if (NOT WITHOUT_DEPENDENCIES)
-	add_third_party_dependencies_per_platform()
-endif()
+add_third_party_dependencies_per_platform()
 
 # Packaging Setup
 

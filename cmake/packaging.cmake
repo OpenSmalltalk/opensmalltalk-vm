@@ -53,7 +53,7 @@ install(FILES
     COMPONENT c-src
 )
 
-get_full_platform_name(FULL_PLATFORM_NAME)
+get_platform_name(FULL_PLATFORM_NAME)
 
 set(CPACK_PACKAGE_DESCRIPTION "${APPNAME} Headless VM for ${FULL_PLATFORM_NAME}")
 set(CPACK_PACKAGE_VERSION_MAJOR "${VERSION_MAJOR}")
