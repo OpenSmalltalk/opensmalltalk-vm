@@ -1572,7 +1572,12 @@ ffiCalloutToSpecOnStackin(void *procAddr, sqInt specOnStack, CalloutState *callo
 		);
 	if ((allocaLiesSoSetSpBeforeCall())
 	 || (mustAlignStack())) {
+#if defined(_MSC_VER)
+		char* vector = (calloutState->argVector);
+		_asm mov esp, vector
+#else
 		setsp((calloutState->argVector));
+#endif // defined(_MSC_VER)
 	}
 	/* begin atomicTypeOf: */
 	typeSpec = (calloutState->ffiRetHeader);
@@ -1582,7 +1587,12 @@ ffiCalloutToSpecOnStackin(void *procAddr, sqInt specOnStack, CalloutState *callo
 		/* undo any callee argument pops because it may confuse stack management with the alloca. */
 		floatRet = dispatchFunctionPointer(((double (*)()) procAddr));
 		if (isCalleePopsConvention((calloutState->callFlags))) {
+#if defined(_MSC_VER)
+			char* vector = (calloutState->argVector);
+			_asm mov esp, vector
+#else
 			setsp((calloutState->argVector));
+#endif // defined(_MSC_VER)
 		}
 		ownVM(myThreadIndex);
 		return floatObjectOf(floatRet);
@@ -1591,7 +1601,12 @@ ffiCalloutToSpecOnStackin(void *procAddr, sqInt specOnStack, CalloutState *callo
 	/* undo any callee argument pops because it may confuse stack management with the alloca. */
 	intRet = dispatchFunctionPointer(((usqLong (*)()) procAddr));
 	if (isCalleePopsConvention((calloutState->callFlags))) {
+#if defined(_MSC_VER)
+		char* vector = (calloutState->argVector);
+		_asm mov esp, vector
+#else
 		setsp((calloutState->argVector));
+#endif // defined(_MSC_VER)
 	}
 	ownVM(myThreadIndex);
 	if (((calloutState->ffiRetHeader)) & (FFIFlagPointer + FFIFlagStructure)) {
@@ -1994,7 +2009,12 @@ ffiCallArgArrayOrNilNumArgs(sqInt externalFunction, sqInt argArrayOrNil, sqInt n
 		);
 	if ((allocaLiesSoSetSpBeforeCall())
 	 || (mustAlignStack())) {
+#if defined(_MSC_VER)
+		char* vector = (calloutState->argVector);
+		_asm mov esp, vector
+#else
 		setsp((calloutState->argVector));
+#endif // defined(_MSC_VER)
 	}
 	/* begin atomicTypeOf: */
 	typeSpec = (calloutState->ffiRetHeader);
@@ -2004,7 +2024,12 @@ ffiCallArgArrayOrNilNumArgs(sqInt externalFunction, sqInt argArrayOrNil, sqInt n
 		/* undo any callee argument pops because it may confuse stack management with the alloca. */
 		floatRet = dispatchFunctionPointer(((double (*)()) (((void *) address))));
 		if (isCalleePopsConvention((calloutState->callFlags))) {
+#if defined(_MSC_VER)
+			char* vector = (calloutState->argVector);
+			_asm mov esp, vector
+#else
 			setsp((calloutState->argVector));
+#endif // defined(_MSC_VER)
 		}
 		ownVM(myThreadIndex);
 		result = floatObjectOf(floatRet);
@@ -2014,7 +2039,12 @@ ffiCallArgArrayOrNilNumArgs(sqInt externalFunction, sqInt argArrayOrNil, sqInt n
 	/* undo any callee argument pops because it may confuse stack management with the alloca. */
 	intRet = dispatchFunctionPointer(((usqLong (*)()) (((void *) address))));
 	if (isCalleePopsConvention((calloutState->callFlags))) {
+#if defined(_MSC_VER)
+		char* vector = (calloutState->argVector);
+		_asm mov esp, vector
+#else
 		setsp((calloutState->argVector));
+#endif // defined(_MSC_VER)
 	}
 	ownVM(myThreadIndex);
 	if (((calloutState->ffiRetHeader)) & (FFIFlagPointer + FFIFlagStructure)) {
@@ -4002,7 +4032,12 @@ primitiveCallout(void)
 		);
 	if ((allocaLiesSoSetSpBeforeCall())
 	 || (mustAlignStack())) {
+#if defined(_MSC_VER)
+		char* vector = (calloutState1->argVector);
+		_asm mov esp, vector
+#else
 		setsp((calloutState1->argVector));
+#endif // defined(_MSC_VER)
 	}
 	/* begin atomicTypeOf: */
 	typeSpec2 = (calloutState1->ffiRetHeader);
@@ -4012,7 +4047,12 @@ primitiveCallout(void)
 		/* undo any callee argument pops because it may confuse stack management with the alloca. */
 		floatRet1 = dispatchFunctionPointer(((double (*)()) (((void *) address2))));
 		if (isCalleePopsConvention((calloutState1->callFlags))) {
+#if defined(_MSC_VER)
+			char* vector = (calloutState1->argVector);
+			_asm mov esp, vector
+#else
 			setsp((calloutState1->argVector));
+#endif // defined(_MSC_VER)
 		}
 		ownVM(myThreadIndex1);
 		result2 = floatObjectOf(floatRet1);
@@ -4022,7 +4062,12 @@ primitiveCallout(void)
 	/* undo any callee argument pops because it may confuse stack management with the alloca. */
 	intRet1 = dispatchFunctionPointer(((usqLong (*)()) (((void *) address2))));
 	if (isCalleePopsConvention((calloutState1->callFlags))) {
+#if defined(_MSC_VER)
+		char* vector = (calloutState1->argVector);
+		_asm mov esp, vector
+#else
 		setsp((calloutState1->argVector));
+#endif // defined(_MSC_VER)
 	}
 	ownVM(myThreadIndex1);
 	if (((calloutState1->ffiRetHeader)) & (FFIFlagPointer + FFIFlagStructure)) {
@@ -4919,7 +4964,12 @@ primitiveCalloutWithArgs(void)
 		);
 	if ((allocaLiesSoSetSpBeforeCall())
 	 || (mustAlignStack())) {
+#if defined(_MSC_VER)
+		char* vector = (calloutState1->argVector);
+		_asm mov esp, vector
+#else
 		setsp((calloutState1->argVector));
+#endif // defined(_MSC_VER)
 	}
 	/* begin atomicTypeOf: */
 	typeSpec2 = (calloutState1->ffiRetHeader);
@@ -4929,7 +4979,12 @@ primitiveCalloutWithArgs(void)
 		/* undo any callee argument pops because it may confuse stack management with the alloca. */
 		floatRet1 = dispatchFunctionPointer(((double (*)()) (((void *) address2))));
 		if (isCalleePopsConvention((calloutState1->callFlags))) {
+#if defined(_MSC_VER)
+			char* vector = (calloutState1->argVector);
+			_asm mov esp, vector
+#else
 			setsp((calloutState1->argVector));
+#endif // defined(_MSC_VER)
 		}
 		ownVM(myThreadIndex1);
 		result2 = floatObjectOf(floatRet1);
@@ -4939,7 +4994,12 @@ primitiveCalloutWithArgs(void)
 	/* undo any callee argument pops because it may confuse stack management with the alloca. */
 	intRet1 = dispatchFunctionPointer(((usqLong (*)()) (((void *) address2))));
 	if (isCalleePopsConvention((calloutState1->callFlags))) {
+#if defined(_MSC_VER)
+		char* vector = (calloutState1->argVector);
+		_asm mov esp, vector
+#else
 		setsp((calloutState1->argVector));
+#endif // defined(_MSC_VER)
 	}
 	ownVM(myThreadIndex1);
 	if (((calloutState1->ffiRetHeader)) & (FFIFlagPointer + FFIFlagStructure)) {

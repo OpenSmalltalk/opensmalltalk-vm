@@ -51,6 +51,8 @@
  */
 //
 
+#include "pharovm/exportDefinition.h"
+
 #ifdef macintoshSqueak
 //#define SQUEAK_BUILTIN_PLUGIN
 #define ENABLE_URL_FETCH

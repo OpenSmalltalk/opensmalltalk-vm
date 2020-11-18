@@ -13,7 +13,7 @@
       "variables": [
         {
           "name": "FEATURE_FFI",
-          "value": "True",
+          "value": "False",
           "type": "BOOL"
         },
         {

@@ -65,7 +65,7 @@ if(OSX)
 endif()
 
 if(WIN)
-    target_compile_definitions(FilePlugin PUBLIC "-DWIN32_FILE_SUPPORT")
+    target_compile_definitions(FilePlugin PRIVATE "-DWIN32_FILE_SUPPORT")
 endif()
 
 
@@ -86,21 +86,23 @@ file(GLOB UUIDPlugin_SOURCES
 )
 
 addLibraryWithRPATH(UUIDPlugin ${UUIDPlugin_SOURCES})
-if(WIN)
+if(${WIN})
     target_link_libraries(UUIDPlugin "-lole32")
+elseif(${UNIX} AND NOT ${OSX})
+    target_link_libraries(UUIDPlugin uuid)
 endif()
 
 #
 # Socket Plugin
 #
 if (${FEATURE_SOCKETS})
-    target_compile_definitions(SocketPlugin FEATURE_SOCKETS=1)
-if(WIN)
+  if(WIN)
     add_vm_plugin(SocketPlugin)
     target_link_libraries(SocketPlugin "-lWs2_32")
-else()
+  else()
     add_vm_plugin(SocketPlugin)
-endif()
+  endif()
+  target_compile_definitions(SocketPlugin PRIVATE "FEATURE_SOCKETS=1")
 endif()
 
 #
@@ -108,6 +110,34 @@ endif()
 #
 
 add_vm_plugin(SurfacePlugin)
+
+#
+# SqueakFFIPrims Plugin
+#
+
+#
+# This solution is not portable to different architectures!
+#
+
+if(${FEATURE_FFI})
+
+include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/SqueakFFIPrims/include/common
+)
+
+set(SqueakFFIPrims_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/SqueakFFIPrims/src/common/SqueakFFIPrims.c 
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/SqueakFFIPrims/src/common/sqManualSurface.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/SqueakFFIPrims/src/common/sqFFIPlugin.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/SqueakFFIPrims/src/common/sqFFITestFuncs.c
+)
+
+message(STATUS "Adding plugin: SqueakFFIPrims")
+addLibraryWithRPATH(SqueakFFIPrims ${SqueakFFIPrims_SOURCES})
+
+endif()
+
+
 
 #
 # LargeIntegers Plugin
@@ -243,10 +273,10 @@ addLibraryWithRPATH(SqueakSSL ${SqueakSSL_SOURCES})
 if(OSX)
     target_link_libraries(SqueakSSL "-framework CoreFoundation")
     target_link_libraries(SqueakSSL "-framework Security")
-elseif(WIN)
-    target_link_libraries(SqueakSSL Crypt32.lib Secur32.lib)
+elseif(${WIN})
+    target_link_libraries(SqueakSSL Crypt32 Secur32)
 else()
-    target_link_libraries(SqueakSSL "-lssl")    
+    target_link_libraries(SqueakSSL ssl)    
 endif()
 
 

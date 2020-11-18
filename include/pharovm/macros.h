@@ -37,9 +37,10 @@
  * should be 1. In the case of wanting to use x or y, depth should be 2.
  *
  */
+#include "exportDefinition.h"
 
-#define PrimitiveWithDepth(functionName, N) signed char functionName ##AccessorDepth = N; \
-	void functionName (void)
+#define PrimitiveWithDepth(functionName, N) EXPORT(signed) char functionName ##AccessorDepth = N; \
+	EXPORT(void) functionName (void)
 
 #define Primitive(functionName) PrimitiveWithDepth(functionName, 0)
 

@@ -8,11 +8,11 @@
  *
  */
 
-#include "sqaio.h"
 #include "pharovm/debug.h"
 #include "pharovm/semaphores/platformSemaphore.h"
 #include "sqaio.h"
 #include "sqMemoryFence.h"
+#include "sqaio.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>

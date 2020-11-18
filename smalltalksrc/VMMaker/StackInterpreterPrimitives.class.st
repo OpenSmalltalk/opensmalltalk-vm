@@ -152,7 +152,7 @@ StackInterpreterPrimitives >> doPrimitiveWorkerCallout [
 	
 	Method primitiveWorkerCallout checks if the feature is available. If so, it calls this method."
 	<inline: false>
-	<option: #FEATURE_FFI>
+	<option: #FEATURE_THREADED_FFI>
 	
 	<export: true>
 	| externalFunction cif PARAM_EXTERNALFUNCTION PARAM_ARGUMENTS PARAM_SEMAPHORE_INDEX PARAM_RECEIVER argumentsArrayOop argumentSize parameters returnHolder receiver worker semaphoreIndex task |
@@ -241,7 +241,7 @@ StackInterpreterPrimitives >> doPrimitiveWorkerExtractReturnValue [
 	
 	Method primitiveWorkerExtractReturnValue checks if the feature is available. If so, it calls this method."
 	<inline: false>
-	<option: #FEATURE_FFI>
+	<option: #FEATURE_THREADED_FFI>
 	
 	| returnHolder task PARAM_RECEIVER PARAM_TASK_ADDRESS  worker taskAddress receiver |
 	<var: #returnHolder type: #'void *'>
@@ -2493,7 +2493,7 @@ StackInterpreterPrimitives >> primitiveWorkerCallout [
 	Method primitiveWorkerCallout checks if the feature is available. If so, it calls the actual implementation: doPrimitiveWorkerCallout."
 	<export: true>
 	
-	self cppIf: FEATURE_FFI ifTrue: [
+	self cppIf: FEATURE_THREADED_FFI ifTrue: [
 		self doPrimitiveWorkerCallout.
 	] ifFalse: [ 
 		self primitiveFailFor: PrimErrUnsupported ]
@@ -2506,7 +2506,7 @@ StackInterpreterPrimitives >> primitiveWorkerExtractReturnValue [
 	Method primitiveWorkerExtractReturnValue checks if the feature is available. If so, it calls the actual implementation: doPrimitiveWorkerExtractReturnValue."
 	<export: true>
 	
-	self cppIf: FEATURE_FFI ifTrue: [
+	self cppIf: FEATURE_THREADED_FFI ifTrue: [
 		self doPrimitiveWorkerExtractReturnValue.
 	] ifFalse: [ 
 		self primitiveFailFor: PrimErrUnsupported ]
