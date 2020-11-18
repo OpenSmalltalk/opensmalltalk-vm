@@ -12825,8 +12825,8 @@ SpurMemoryManager >> unalignedLong32At: index [
 
 { #category : #simulation }
 SpurMemoryManager >> unalignedLong32At: index put: aValue [
-	"Support for primitiveFFIIntegerAt[Put]"
-	<doNotGenerate>
+	<cmacro: '(addr,value) lon32Atput(addr,value)'>
+
 	| odd hi lo mask |
 	aValue < 0 ifTrue:
 		[self unalignedLong64At: index put: (aValue bitAnd: 16rFFFFFFFF).
@@ -12858,8 +12858,8 @@ SpurMemoryManager >> unalignedLong64At: index [
 
 { #category : #simulation }
 SpurMemoryManager >> unalignedLong64At: index put: aValue [
-	"Support for primitiveFFIIntegerAt[Put]"
-	<doNotGenerate>
+	<cmacro: '(addr,value) long64Atput(addr,value)'>
+
 	| odd hi lo mask |
 	aValue < 0 ifTrue:
 		[self unalignedLong64At: index put: (aValue bitAnd: 16rFFFFFFFFFFFFFFFF).
@@ -12891,8 +12891,8 @@ SpurMemoryManager >> unalignedShortAt: index [
 
 { #category : #simulation }
 SpurMemoryManager >> unalignedShortAt: index put: aValue [
-	"Support for primitiveFFIIntegerAt[Put]"
-	<doNotGenerate>
+	<cmacro: '(addr,value) shortAtput(addr,value)'>
+	
 	(index bitAnd: 1) = 0 ifTrue:
 		[^self shortAt: index put: aValue].
 	self shouldBeImplemented.
