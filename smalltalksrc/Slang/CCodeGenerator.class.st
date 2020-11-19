@@ -4922,6 +4922,11 @@ CCodeGenerator >> stepExpressionIsNegative: aNode [
 	^false
 ]
 
+{ #category : #utilities }
+CCodeGenerator >> stopOnErrors: aBoolean [
+	stopOnErrors := aBoolean
+]
+
 { #category : #public }
 CCodeGenerator >> storeCodeOnFile: fileName doInlining: inlineFlag [
 	"Store C code for this code base on the given file."
