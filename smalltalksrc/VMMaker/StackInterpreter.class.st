@@ -6192,7 +6192,8 @@ StackInterpreter >> extendedStoreBytecodePop: popBoolean [
 		^ self fetchNextBytecode].
 	variableType = 1 ifTrue:
 		[ self fetchNextBytecode.
-		^self temporary: variableIndex in: localFP put: value].
+		self temporary: variableIndex in: localFP put: value.
+		^ self "keep slang happy"].
 	variableType = 3 ifTrue:
 		[self storeLiteralVariable: variableIndex withValue: value.
 		^ self fetchNextBytecode].
@@ -8602,13 +8603,14 @@ StackInterpreter >> internalExecuteNewMethod [
 	<inline: true>
 	primitiveFunctionPointer ~= 0 ifTrue:
 		[self isPrimitiveFunctionPointerAnIndex ifTrue:
-			[^self internalQuickPrimitiveResponse].
+			[self internalQuickPrimitiveResponse.
+			^ self "keep slang happy"].
 		 self externalizeIPandSP.
 		 succeeded := self slowPrimitiveResponse.
 		 self internalizeIPandSP.
 		 succeeded ifTrue:
 			[self browserPluginReturnIfNeeded.
-			^nil]].
+			^ self]].
 	"if not primitive, or primitive failed, activate the method"
 	^self internalActivateNewMethod
 ]
@@ -9827,8 +9829,6 @@ StackInterpreter >> longPrintOop: oop [
 					[column := 1. self cr]].
 			column = 1 ifFalse:
 				[self cr]].
-		"keeps slang happy :)"
-		^ self "implicit self return is typed as void"
 ]
 
 { #category : #'stack bytecodes' }
@@ -19385,7 +19385,7 @@ StackInterpreter >> reverseDisplayFrom: startIndex to: endIndex [
 	| wordStartIndex wordEndIndex primFailCodeValue |
 	self postGCUpdateDisplayBits ifFalse:
 		[^self].
-	(displayBits = 0 or: [(objectMemory isImmediate: displayBits asInteger) or: [displayDepth <= 0]]) ifTrue: [^nil].
+	(displayBits = 0 or: [(objectMemory isImmediate: displayBits asInteger) or: [displayDepth <= 0]]) ifTrue: [^self].
 	wordStartIndex := (startIndex max: 0) * displayDepth // 32.
 	wordEndIndex := (endIndex min: displayWidth) * displayDepth // 32.
 	displayBits asInteger + (wordStartIndex * 4) to: displayBits asInteger + (wordEndIndex * 4) by: 4 do:
