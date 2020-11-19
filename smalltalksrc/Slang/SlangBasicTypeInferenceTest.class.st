@@ -123,6 +123,7 @@ SlangBasicTypeInferenceTest >> testAnIntEqual64ConstantNode [
 { #category : #constant }
 SlangBasicTypeInferenceTest >> testAnIntGreater64ConstantNode [
 	| tMethod |
+	<expectedFailure>
 	tMethod := ccg methodNamed: #anIntGreater64ConstantNode.
 		
 	self assert: tMethod isNotNil.

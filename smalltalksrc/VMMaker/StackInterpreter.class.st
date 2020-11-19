@@ -9769,7 +9769,9 @@ StackInterpreter >> longPrintOop: oop [
 	self print: ' hash '; printHexnp: (objectMemory rawHashBitsOf: oop).
 	self cr.
 	(fmt between: objectMemory firstByteFormat and: objectMemory firstCompiledMethodFormat - 1) ifTrue:
-		[^self printStringOf: oop; cr].
+		[self printStringOf: oop; cr. 
+		^ self "keep slang happy !"
+		].
 	(fmt between: objectMemory firstLongFormat and: objectMemory firstByteFormat - 1) ifTrue:
 		[0 to: ((objectMemory num32BitUnitsOf: oop) min: 256) - 1 do:
 			[:i| | field32 |
@@ -9824,7 +9826,9 @@ StackInterpreter >> longPrintOop: oop [
 				column > bytecodesPerLine ifTrue:
 					[column := 1. self cr]].
 			column = 1 ifFalse:
-				[self cr]]
+				[self cr]].
+		"keeps slang happy :)"
+		^ self "implicit self return is typed as void"
 ]
 
 { #category : #'stack bytecodes' }
