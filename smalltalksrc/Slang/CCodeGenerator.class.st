@@ -39,7 +39,7 @@ Class {
 		'breakOnInline',
 		'environment',
 		'compileTimeOptions',
-		'moreErrors'
+		'stopOnErrors'
 	],
 	#classVars : [
 		'NoRegParmsInAssertVMs'
@@ -3097,7 +3097,7 @@ CCodeGenerator >> inferTypes [
 		do: [ :n | 
 			typeConflicts add: n.
 			n resume ].
-	(moreErrors and: [ typeConflicts isNotEmpty ]) ifTrue: [ Error signal: 'there were type errors' ]
+	(stopOnErrors and: [ typeConflicts isNotEmpty ]) ifTrue: [ Error signal: 'there were type errors' ]
 ]
 
 { #category : #'type inference' }
@@ -3173,7 +3173,7 @@ CCodeGenerator >> initialize [
 	breakSrcInlineSelectors := IdentitySet new.
 	breakDestInlineSelectors := IdentitySet new.
 	
-	moreErrors := false.
+	stopOnErrors := false.
 ]
 
 { #category : #'C translation support' }
