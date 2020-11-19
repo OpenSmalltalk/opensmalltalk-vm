@@ -7,7 +7,7 @@
       "inheritEnvironments": [ "clang_cl_x86" ],
       "buildRoot": "${projectDir}\\out\\build\\${name}",
       "installRoot": "${projectDir}\\out\\install\\${name}",
-      "cmakeCommandArgs": "-DGENERATE_SOURCES=FALSE -DWITHOUT_DEPENDENCIES=TRUE -DFLAVOUR=StackVM -DGENERATED_SOURCE_DIR=stack32",
+      "cmakeCommandArgs": " -DFLAVOUR=StackVM -DGENERATED_SOURCE_DIR=stack32",
       "buildCommandArgs": "",
       "ctestCommandArgs": "",
       "variables": [
@@ -23,6 +23,16 @@
         },
         {
           "name": "FEATURE_SOCKETS",
+          "value": "False",
+          "type": "BOOL"
+        },
+        {
+          "name": "GENERATE_SOURCES",
+          "value": "True",
+          "type": "BOOL"
+        },
+        {
+          "name": "FEATURE_COMPILE_GNUISATION",
           "value": "False",
           "type": "BOOL"
         }
@@ -70,7 +80,7 @@
       "configurationType": "Debug",
       "buildRoot": "${projectDir}\\out\\build\\${name}",
       "installRoot": "${projectDir}\\out\\install\\${name}",
-      "cmakeCommandArgs": "-DGENERATE_SOURCES=FALSE -DWITHOUT_DEPENDENCIES=TRUE -DFLAVOUR=StackVM -DGENERATED_SOURCE_DIR=stack32",
+      "cmakeCommandArgs": " -DFLAVOUR=StackVM -DGENERATED_SOURCE_DIR=stack32",
       "buildCommandArgs": "",
       "ctestCommandArgs": "",
       "inheritEnvironments": [ "msvc_x86" ],
@@ -88,6 +98,16 @@
         {
           "name": "FEATURE_SOCKETS",
           "value": "False",
+          "type": "BOOL"
+        },
+        {
+          "name": "FEATURE_COMPILE_GNUISATION",
+          "value": "False",
+          "type": "BOOL"
+        },
+        {
+          "name": "GENERATE_SOURCES",
+          "value": "True",
           "type": "BOOL"
         }
       ]
