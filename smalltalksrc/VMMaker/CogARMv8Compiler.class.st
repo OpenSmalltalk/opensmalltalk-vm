@@ -346,13 +346,6 @@ CogARMv8Compiler >> add: destReg rn: srcReg imm: immediate ror: rot [
 		destinationRegister: destReg
 ]
 
-{ #category : #'ARM convenience instructions' }
-CogARMv8Compiler >> add: destReg rn: srcReg rm: addReg [
-
-	self notYetImplemented.
-	^0
-]
-
 { #category : #assembler }
 CogARMv8Compiler >> addSize: is64Bits sourceRegister: sourceRegister shift: shift immediate12: immediate12bitValue destinationRegister: destinationRegister [
 	
@@ -1186,28 +1179,6 @@ CogARMv8Compiler >> computeMaximumSize [
 
 ]
 
-{ #category : #accessing }
-CogARMv8Compiler >> concreteCalleeSavedRegisterMask [
-	"According to IHI0042E ARM Architecture Procedure Calling Standard, in section 5.1.1:
-		A subroutine must preserve the contents of the registers r4-r8, r10, r11 and SP (and r9 in PCS variants that designate r9 as v6).
-	 SP = r13, so..."
-	self notYetImplemented.
-
-	^2r0000110111110000
-]
-
-{ #category : #accessing }
-CogARMv8Compiler >> concreteCallerSavedRegisterMask [
-	"According to IHI0042E ARM Architecture Procedure Calling Standard, in section 5.1.1:
-		A subroutine must preserve the contents of the registers r4-r8, r10, r11 and SP (and r9 in PCS variants that designate r9 as v6).
-	 SP = r13, so the callee-saved regs are r4-r8 & r10-r12.
-	 The caller-saved registers are those that are not callee-saved and not reserved for hardware/abi uses,
-	 i..e r0-r3, r9 & r12."
-	self notYetImplemented.
-
-	^2r1001000001111
-]
-
 { #category : #'generate machine code - concretize' }
 CogARMv8Compiler >> concretizeAddCqR [
 
@@ -1488,27 +1459,6 @@ CogARMv8Compiler >> concretizeCMPMULOverflow [
 ]
 
 { #category : #'generate machine code - concretize' }
-CogARMv8Compiler >> concretizeCMPSMULL [
-	"Generate a CMP a, b, ASR #31 instruction, specifically for comparing the resutls of SMULLs in genMulR:R:"
-
-	| hiReg loReg |
-	self notYetImplemented.
-
-	hiReg := operands at: 0.
-	loReg := operands at: 1.
-	self
-		machineCodeAt: 0
-		put:
-			(self
-				type: 0
-				op: CmpOpcode
-				set: 1
-				rn: hiReg
-				rd: 0) + (31 << 7) + (2 << 5) + loReg.	"the shift amount"	"the shift type - ASR"
-	^ machineCodeSize := 4
-]
-
-{ #category : #'generate machine code - concretize' }
 CogARMv8Compiler >> concretizeCall [
 	"Will get inlined into concretizeAt: switch."
 
@@ -1695,27 +1645,6 @@ CogARMv8Compiler >> concretizeCmpRdRd [
 	^ machineCodeSize := 4
 ]
 
-{ #category : #'generate machine code' }
-CogARMv8Compiler >> concretizeConditionalInstruction [
-	"Concretize the current instruction, but with a condition."
-
-	<returnTypeC: #void>
-	| savedCond |
-	self notYetImplemented.
-
-	self assert: conditionOrNil notNil.
-	savedCond := conditionOrNil.
-	conditionOrNil := nil.
-	self dispatchConcretize.
-	conditionOrNil := savedCond.
-	0 to: machineCodeSize - 1 by: 4 do: [ :i | 
-		| instr |
-		instr := (self machineCodeAt: i) bitClear: 16rF << 28.
-		self
-			machineCodeAt: i
-			put: (instr bitOr: (conditionOrNil bitAnd: 16rF) << 28) ]
-]
-
 { #category : #'generate machine code - concretize' }
 CogARMv8Compiler >> concretizeConditionalJump: conditionCode [
 	"Will get inlined into concretizeAt: switch."
@@ -1749,13 +1678,6 @@ CogARMv8Compiler >> concretizeConvertRRd [
 
 { #category : #'generate machine code - concretize' }
 CogARMv8Compiler >> concretizeDataOperationCwR: armOpcode [
-
-	self notYetImplemented.
-	^ 0
-]
-
-{ #category : #'generate machine code - concretize' }
-CogARMv8Compiler >> concretizeDataOperationRR: armOpcode [
 
 	self notYetImplemented.
 	^ 0
@@ -1963,24 +1885,6 @@ CogARMv8Compiler >> concretizeLogicalShiftRightRR [
 
 	self notYetImplemented.
 	^ 0
-]
-
-{ #category : #'generate machine code - concretize' }
-CogARMv8Compiler >> concretizeMSR [
-	"Generate an MSR CPSR_f, #flags instruction.
-Note that we only have business with the NZCV flags so we use
-N -> 8
-Z -> 4
-C -> 2
-V -> 1.
-You don't want to mess with this too much."
-
-	| flags |
-	self notYetImplemented.
-
-	flags := operands at: 0.
-	self machineCodeAt: 0 put: (self msr: flags).
-	^ machineCodeSize := 4
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -2880,29 +2784,6 @@ CogARMv8Compiler >> concretizeSMULH [
 ]
 
 { #category : #'generate machine code - concretize' }
-CogARMv8Compiler >> concretizeSMULL [
-	| srcA srcB hiResultReg loResultReg |
-
-	"Generate an SMULL loResultReg, hiResultReg, srcA, srcB instruction"
-	self notYetImplemented.
-
-	srcA := operands at: 0.
-	"NOTE: srcB contains the other mutiplicand at this point. It is OK to use it as the destination for the low part of the result and in fact this saves us moving it later"
-	loResultReg := srcB := operands at: 1.
-	hiResultReg := RISCTempReg.
-	self
-		machineCodeAt: 0
-		put:
-			(self
-				type: 0
-				op: 6
-				set: 0
-				rn: hiResultReg
-				rd: loResultReg) + (srcA << 8) + (9 << 4) + srcB.
-	^ machineCodeSize := 4
-]
-
-{ #category : #'generate machine code - concretize' }
 CogARMv8Compiler >> concretizeSqrtRd [
 	"Will get inlined into concretizeAt: switch."
 
@@ -3149,7 +3030,7 @@ CogARMv8Compiler >> dispatchConcretize [
 	 bytecode set."
 	<returnTypeC: #void>
 	conditionOrNil ifNotNil:
-		[self concretizeConditionalInstruction.
+		[self error: 'ARMv8 / aarch64 does not support conditions encoded in the instruction'.
 		 ^self].
 		 
 	opcode caseOf: {
@@ -4468,20 +4349,6 @@ CogARMv8Compiler >> ldrSize: is64Bits programCounterRelativeOffset: immediate19b
 		bitOr: (2r011000 << 24
 		bitOr: ((twoComplement bitAnd: 2r1111111111111111111) << 5
 		bitOr: (destinationRegister bitAnd: 2r11111))))
-]
-
-{ #category : #'ARM convenience instructions' }
-CogARMv8Compiler >> ldrb: destReg rn: baseReg plus: u imm: immediate12bitValue [
-
-	self notYetImplemented.
-	^0
-]
-
-{ #category : #'ARM convenience instructions' }
-CogARMv8Compiler >> ldrb: destReg rn: baseReg rm: offsetReg [
-
-	self notYetImplemented.
-	^0
 ]
 
 { #category : #'as yet unclassified' }
@@ -5831,13 +5698,6 @@ CogARMv8Compiler >> strbSourceRegister: sourceRegister destinationRegister: dest
 		bitOr: (sourceRegister bitAnd: 16r1f))))
 ]
 
-{ #category : #'ARM convenience instructions' }
-CogARMv8Compiler >> strh: destReg rn: baseReg plus: u imm: immediate8bitValue [
-
-	self notYetImplemented.
-	^0
-]
-
 { #category : #'as yet unclassified' }
 CogARMv8Compiler >> strhSourceRegister: sourceRegister destinationRegister: destinationRegister offset: immediate12BitValue [
 	
@@ -6030,16 +5890,6 @@ CogARMv8Compiler >> tstSize: is64bits immediate13bitValue: immediate13bitValue r
 		bitOr: (immediate13bitValue << 10
 		bitOr: ((registerToUse bitAnd: 2r11111) << 5
 		bitOr: 2r11111)))
-]
-
-{ #category : #encoding }
-CogARMv8Compiler >> type: type op: flagsOrOpcode set: doUpdateStatusRegister rn:  sourceRegister rd: targetRegister [
-	<inline: true>
-
-	"(self cond: AL type: type op: flagsOrOpcode set: doUpdateStatusRegister) 
-		bitOr: (sourceRegister << 16 bitOr: targetRegister << 12)"
-		self notYetImplemented.
-		^ 0
 ]
 
 { #category : #'as yet unclassified' }
