@@ -512,7 +512,7 @@ sqInt ioDisableImageWrite(void);
 
 #include "pharovm/imageAccess.h"
 
-size_t readImageFromFileHeapSizeStartingAt(sqImageFile f, usqInt desiredHeapSize, size_t imageOffset);
+size_t readImageFromFileHeapSizeStartingAt(sqImageFile f, usqInt desiredHeapSize, uint64_t imageOffset);
 
 /* Clipboard (cut/copy/paste). */
 sqInt clipboardSize(void);
