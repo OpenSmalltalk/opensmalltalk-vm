@@ -1659,6 +1659,11 @@ CCodeGenerator >> generateAbs: msgNode on: aStream indent: level [
 	
 	aStream nextPutAll: absFun.
 	aStream nextPut: $(.
+	"Adding a cast to guarantee correct testing"
+	aStream nextPut: $(;
+			  nextPutAll: type;
+			  nextPut: $).
+	
 	self emitCExpression: msgNode receiver on: aStream.
 	aStream nextPut: $)
 ]
