@@ -1141,7 +1141,7 @@ TMethod >> inferReturnTypeFromReturnsIn: aCodeGen [
 					s := Set new.
 					self addTypesFor: n expression to: s in: aCodeGen.
 					{n. s}]]"
-			
+
 	aCodeGen maybeBreakForTestToInline: selector in: self.
 	returnType ifNotNil: [^self].
 	aCodeGen

@@ -38,7 +38,8 @@ Class {
 		'breakDestInlineSelectors',
 		'breakOnInline',
 		'environment',
-		'compileTimeOptions'
+		'compileTimeOptions',
+		'moreErrors'
 	],
 	#classVars : [
 		'NoRegParmsInAssertVMs'
@@ -3087,6 +3088,18 @@ CCodeGenerator >> includeAPIFrom: aCCodeGenerator [
 	apiVariables := aCCodeGenerator selectAPIVariables
 ]
 
+{ #category : #'C translation' }
+CCodeGenerator >> inferTypes [
+	| typeConflicts |
+	typeConflicts := OrderedCollection new.
+	[ self inferTypesForImplicitlyTypedVariablesAndMethods ]
+		on: Notification
+		do: [ :n | 
+			typeConflicts add: n.
+			n resume ].
+	(moreErrors and: [ typeConflicts isNotEmpty ]) ifTrue: [ Error signal: 'there were type errors' ]
+]
+
 { #category : #'type inference' }
 CCodeGenerator >> inferTypesForImplicitlyTypedVariablesAndMethods [
 	"Infer the return tupe and the types of untyped variables.
@@ -3158,7 +3171,9 @@ CCodeGenerator >> initialize [
 	previousCommentMarksInlining := false.
 	previousCommenter := nil.
 	breakSrcInlineSelectors := IdentitySet new.
-	breakDestInlineSelectors := IdentitySet new
+	breakDestInlineSelectors := IdentitySet new.
+	
+	moreErrors := false.
 ]
 
 { #category : #'C translation support' }

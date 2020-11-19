@@ -642,7 +642,7 @@ VMMaker >> generateCogitFileFor: cogitClass [
 	| cg |
 	cg := self buildCodeGeneratorForCogit.
 
-	cg inferTypesForImplicitlyTypedVariablesAndMethods.
+	cg inferTypes.
 	self needsToRegenerateCogitFile ifFalse: [^cg].
 
 	cg vmClass preGenerationHook: cg.
@@ -810,7 +810,7 @@ VMMaker >> generateInterpreterFile [
 
 	self needsToRegenerateInterpreterFile ifFalse: [^nil].
 
-	cg inferTypesForImplicitlyTypedVariablesAndMethods.
+	cg inferTypes.
 
 	self interpreterClass preGenerationHook: cg.
 	vmHeaderContents := cg vmHeaderContentsWithBytesPerWord: self wordSize.
