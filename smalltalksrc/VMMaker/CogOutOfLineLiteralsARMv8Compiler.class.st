@@ -73,11 +73,85 @@ CogOutOfLineLiteralsARMv8Compiler >> concretizeMoveC32R [
 			^ machineCodeSize := 4 ]
 ]
 
+{ #category : #'generate machine code - concretize' }
+CogOutOfLineLiteralsARMv8Compiler >> concretizeMoveMbrR [
+	"Will get inlined into concretizeAt: switch."
+
+	<var: #offset type: #sqInt>
+	<inline: true>
+	| srcReg offset destReg |
+	offset := operands at: 0.
+	srcReg := operands at: 1.
+	destReg := operands at: 2.
+
+	self
+		is9BitValue: offset
+		ifTrue: [ :immediate9bitTwoComplementValue |
+			self
+				machineCodeAt: 0
+				put: (self movSize: 1 destinationRegister: destReg imm: 0 shift: 0).
+			self
+				machineCodeAt: 4
+				put: (self ldurbSize: 1 baseRegister: srcReg signedOffset: immediate9bitTwoComplementValue destinationRegister: destReg).
+			^ machineCodeSize := 8 ]
+		ifFalse: [
+			self loadRelativeLiteralIn: ConcreteIPReg.
+			self
+				machineCodeAt: 4
+				put: (self ldrbSourceRegister: srcReg offsetRegister: ConcreteIPReg destinationRegister: destReg).
+
+			^ machineCodeSize := 8 ].
+	^ 0	"to keep Slang happy"
+]
+
 { #category : #'as yet unclassified' }
 CogOutOfLineLiteralsARMv8Compiler >> concretizeMovePatcheableC32R [
 	
 	self loadRelativeLiteralIn: (operands at: 1).
 	^ machineCodeSize := 4
+]
+
+{ #category : #'generate machine code - concretize' }
+CogOutOfLineLiteralsARMv8Compiler >> concretizeMoveRMwr [
+	"Will get inlined into concretizeAt: switch."
+
+	<var: #offset type: #sqInt>
+	<inline: true>
+	| srcReg offset baseReg |
+
+	srcReg := operands at: 0.
+	offset := operands at: 1.
+	baseReg := operands at: 2.
+	self
+		is9BitValue: offset
+		ifTrue: [ :value |
+			self
+				machineCodeAt: 0
+				put:(self
+					sturSize: 1
+					baseRegister: baseReg
+					signedOffset: offset
+					destinationRegister: srcReg).
+			^ machineCodeSize := 4 ]
+		ifFalse: [
+			self
+				shiftable16bitImmediate: offset
+				ifTrue: [ :shift :value | 
+					self assert: shift = 0.
+					self
+						machineCodeAt: 0
+						put: (self movSize: 1 destinationRegister: ConcreteIPReg imm: value shift: shift).
+					self
+						machineCodeAt: 4
+						put: (self strSize: 1 baseRegister: baseReg offsetRegister: ConcreteIPReg extension: 2r011 "LSL" shift: 0 "no LSL" storedRegister: srcReg).
+					^ machineCodeSize := 8  ]
+				ifFalse: [ 
+						self loadRelativeLiteralIn: ConcreteIPReg.
+					self
+						machineCodeAt: 4
+						put: (self strSize: 1 baseRegister: baseReg offsetRegister: ConcreteIPReg extension: 2r011 "LSL" shift: 0 "no LSL" storedRegister: srcReg).
+					^ machineCodeSize := 8 ]].
+	^ 0	"to keep Slang happy"
 ]
 
 { #category : #accessing }
@@ -407,7 +481,7 @@ CogOutOfLineLiteralsARMv8Compiler >> usesOutOfLineLiteral [
 														ifFalse: [ ^ true ] ]].
 												
 		[MoveRdM64r]	-> [^self is12BitValue: (operands at: 1) ifTrue: [:s :v| false] ifFalse: [true]]. 
-		[MoveMbrR]		-> [^self is12BitValue: (operands at: 0) ifTrue: [:s :v| false] ifFalse: [true]].
+		[MoveMbrR]		-> [^self is9BitValue: (operands at: 0) ifTrue: [:v| false] ifFalse: [true]].
 		[MoveRMbr]		-> [^self is12BitValue: (operands at: 1) ifTrue: [:s :v| false] ifFalse: [true]].
 		[MoveM16rR]	-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
 		[MoveRM16r]	-> [^self is12BitValue: (operands at: 1) ifTrue: [:s :v| false] ifFalse: [true]].

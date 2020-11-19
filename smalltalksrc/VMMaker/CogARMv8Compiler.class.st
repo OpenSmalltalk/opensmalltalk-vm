@@ -1124,7 +1124,7 @@ CogARMv8Compiler >> computeMaximumSize [
 		[MoveRdM64r]			-> [^self literalLoadInstructionBytes + 4]. 
 		[MoveMbrR]			-> [^self is9BitValue: (operands at: 0)
 										ifTrue: [:value | 8 "2 instrutions" ]
-										ifFalse: [ self notYetImplemented. 0 ]].
+										ifFalse: [ self literalLoadInstructionBytes + 4 ]].
 		[MoveRMbr]				-> [^self is12BitValue: (operands at: 1)
 										ifTrue: [:u :i| 4]
 										ifFalse: [self literalLoadInstructionBytes + 4]].
@@ -2083,33 +2083,6 @@ CogARMv8Compiler >> concretizeMoveM64rRd [
 ]
 
 { #category : #'generate machine code - concretize' }
-CogARMv8Compiler >> concretizeMoveMbrR [
-	"Will get inlined into concretizeAt: switch."
-
-	<var: #offset type: #sqInt>
-	<inline: true>
-	| srcReg offset destReg |
-	offset := operands at: 0.
-	srcReg := operands at: 1.
-	destReg := operands at: 2.
-
-	self
-		is9BitValue: offset
-		ifTrue: [ :immediate9bitTwoComplementValue |
-			self
-				machineCodeAt: 0
-				put: (self movSize: 1 destinationRegister: destReg imm: 0 shift: 0).
-			self
-				machineCodeAt: 4
-				put: (self ldurbSize: 1 baseRegister: srcReg signedOffset: immediate9bitTwoComplementValue destinationRegister: destReg).
-			^ machineCodeSize := 8 ]
-		ifFalse: [
-			self notYetImplemented.
-			^ machineCodeSize := 4 ].
-	^ 0	"to keep Slang happy"
-]
-
-{ #category : #'generate machine code - concretize' }
 CogARMv8Compiler >> concretizeMoveMwrR [
 	"Will get inlined into concretizeAt: switch."
 
@@ -2285,49 +2258,6 @@ CogARMv8Compiler >> concretizeMoveRMbr [
 		ifFalse: [ 
 			self notYetImplemented.
 			^ machineCodeSize := 4 ].
-	^ 0	"to keep Slang happy"
-]
-
-{ #category : #'generate machine code - concretize' }
-CogARMv8Compiler >> concretizeMoveRMwr [
-	"Will get inlined into concretizeAt: switch."
-
-	<var: #offset type: #sqInt>
-	<inline: true>
-	| srcReg offset baseReg |
-
-	srcReg := operands at: 0.
-	offset := operands at: 1.
-	baseReg := operands at: 2.
-	self
-		is9BitValue: offset
-		ifTrue: [ :value |
-			self
-				machineCodeAt: 0
-				put:(self
-					sturSize: 1
-					baseRegister: baseReg
-					signedOffset: offset
-					destinationRegister: srcReg).
-			^ machineCodeSize := 4 ]
-		ifFalse: [
-			self
-				shiftable16bitImmediate: offset
-				ifTrue: [ :shift :value | 
-					self assert: shift = 0.
-					self
-						machineCodeAt: 0
-						put: (self movSize: 1 destinationRegister: ConcreteIPReg imm: value shift: shift).
-					self
-						machineCodeAt: 4
-						put: (self strSize: 1 baseRegister: baseReg offsetRegister: ConcreteIPReg extension: 2r011 "LSL" shift: 0 "no LSL" storedRegister: srcReg).
-					^ machineCodeSize := 8  ]
-				ifFalse: [ 
-						self loadRelativeLiteralIn: ConcreteIPReg.
-					self
-						machineCodeAt: 4
-						put: (self strSize: 1 baseRegister: baseReg offsetRegister: ConcreteIPReg extension: 2r011 "LSL" shift: 0 "no LSL" storedRegister: srcReg).
-					^ machineCodeSize := 8 ]].
 	^ 0	"to keep Slang happy"
 ]
 
@@ -4470,21 +4400,6 @@ CogARMv8Compiler >> ldurSize: is64Bits baseRegister: baseReg signedOffset: immed
 		bitOr: ((twoComplement bitAnd: 2r111111111) << 12
 		bitOr:((baseReg bitAnd: 2r11111) << 5
 		bitOr: (destinationRegister bitAnd: 2r11111)))))
-]
-
-{ #category : #assembler }
-CogARMv8Compiler >> ldurbBaseRegister: baseRegister signedOffset: immediate9bitTwoComplementOffset destinationRegister: destinationRegister [
-	
-	"C6.2.168 LDURB
-	
-	Load Register Byte (unscaled) calculates an address from a base register and an immediate offset, loads a byte from memory, zero-extends it, and writes it to a register.
-	
-	LDURB <Wt>, [<Xn|SP>{, #<simm>}]"
-	
-	^ 2r111000010 << 21
-		bitOr: ((immediate9bitTwoComplementOffset bitAnd: 16r1ff) << 12
-		bitOr: ((baseRegister bitAnd: 16r1f) << 5
-		bitOr: (destinationRegister bitAnd: 16r1f)))
 ]
 
 { #category : #assembler }
