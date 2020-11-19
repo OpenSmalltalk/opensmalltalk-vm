@@ -109,7 +109,11 @@ include(ExternalProject)
 set(COMMON_FLAGS "")
 set(BUILD_I386_VERSION NO)
 
-if(WIN)
+if(MSVC)
+    set(OS_TYPE "Win32")
+    get_platform_name(VM_TARGET_OS)
+    message(STATUS "Building for ${VM_TARGET_OS}")
+elseif(WIN)
     message(STATUS "Building for WINDOWS")
 
     #Tell the system we are not in UNIX. This is required for Cygwin builds
