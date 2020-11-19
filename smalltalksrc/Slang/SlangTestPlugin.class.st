@@ -1,7 +1,7 @@
 Class {
 	#name : #SlangTestPlugin,
 	#superclass : #InterpreterPlugin,
-	#category : #'VMMaker-Plugins'
+	#category : #Slang
 }
 
 { #category : #primitives }

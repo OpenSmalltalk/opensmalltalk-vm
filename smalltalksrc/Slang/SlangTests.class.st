@@ -1,7 +1,7 @@
 Class {
 	#name : #SlangTests,
 	#superclass : #TestCase,
-	#category : #'VMMaker-OriginalTests'
+	#category : #Slang
 }
 
 { #category : #tests }
