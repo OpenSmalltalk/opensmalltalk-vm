@@ -1125,9 +1125,11 @@ CogARMv8Compiler >> computeMaximumSize [
 													ifFalse: [self literalLoadInstructionBytes + 4]].
 		[MoveRMwr]			-> [self is9BitValue: (operands at: 1)
 										ifTrue: [ :value | ^  4 ]
-										ifFalse: [ self shiftable16bitImmediate: (operands at: 1) ifTrue: [ :value :shift | ^  8 ] ifFalse: [ self notYetImplemented. ^ 0 ] ]].
+										ifFalse: [ self shiftable16bitImmediate: (operands at: 1) 
+														ifTrue: [ :value :shift | ^  8 ] 
+														ifFalse: [ ^ self literalLoadInstructionBytes + 4 ] ]].
 		[MoveRdM64r]			-> [^self literalLoadInstructionBytes + 4]. 
-		[MoveMbrR]				-> [^self is9BitValue: (operands at: 0)
+		[MoveMbrR]			-> [^self is9BitValue: (operands at: 0)
 										ifTrue: [:value | 8 "2 instrutions" ]
 										ifFalse: [ self notYetImplemented. 0 ]].
 		[MoveRMbr]				-> [^self is12BitValue: (operands at: 1)
@@ -2416,7 +2418,12 @@ CogARMv8Compiler >> concretizeMoveRMwr [
 						machineCodeAt: 4
 						put: (self strSize: 1 baseRegister: baseReg offsetRegister: ConcreteIPReg extension: 2r011 "LSL" shift: 0 "no LSL" storedRegister: srcReg).
 					^ machineCodeSize := 8  ]
-				ifFalse: [ self notYetImplemented ]].
+				ifFalse: [ 
+						self loadRelativeLiteralIn: ConcreteIPReg.
+					self
+						machineCodeAt: 4
+						put: (self strSize: 1 baseRegister: baseReg offsetRegister: ConcreteIPReg extension: 2r011 "LSL" shift: 0 "no LSL" storedRegister: srcReg).
+					^ machineCodeSize := 8 ]].
 	^ 0	"to keep Slang happy"
 ]
 
@@ -4191,7 +4198,7 @@ CogARMv8Compiler >> is9BitValue: originalConstant ifTrue: aTrueBlock ifFalse: aF
 	If not... the variable is removed and using the parameter of the call site."
 	constant := self cCoerce: originalConstant to: #'sqInt'.
 	
-	^ constant abs <= 255 "(2 raisedTo: 8) - 1"
+	^ (constant abs <= 255 or: [ constant = -256 ]) "9 bits go from -256..255"
 		ifTrue: [ | twoComplement |
 			"Two complement using 9 bits"
 			twoComplement := constant >= 0

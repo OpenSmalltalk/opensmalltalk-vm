@@ -76,13 +76,7 @@ CogOutOfLineLiteralsARMv8Compiler >> concretizeMoveC32R [
 { #category : #'as yet unclassified' }
 CogOutOfLineLiteralsARMv8Compiler >> concretizeMovePatcheableC32R [
 	
-	self assert: (cogit addressIsInCurrentCompilation: dependent address).
-	self assert: (dependent address - (address + 8)) abs < (1<<12).
-
-	self machineCodeAt: 0 put: (self
-		ldrSize: 1 "32 bits"
-		programCounterRelativeOffset: dependent address - address
-		destinationRegister: (operands at: 1)).
+	self loadRelativeLiteralIn: (operands at: 1).
 	^ machineCodeSize := 4
 ]
 
@@ -149,6 +143,20 @@ CogOutOfLineLiteralsARMv8Compiler >> loadLiteralByteSize [
 	^4
 ]
 
+{ #category : #literals }
+CogOutOfLineLiteralsARMv8Compiler >> loadRelativeLiteralIn: destReg [
+
+	<inline: true>
+
+	self assert: dependent opcode = Literal.
+	self assert: (cogit addressIsInCurrentCompilation: dependent address).
+	self assert: (dependent address - (address + 8)) abs < (1 << 12).
+	self machineCodeAt: 0 put: (self
+			 ldrSize: 1
+			 programCounterRelativeOffset: dependent address - address
+			 destinationRegister: destReg) "64 bits"
+]
+
 { #category : #'generate machine code - support' }
 CogOutOfLineLiteralsARMv8Compiler >> mapEntryAddress [
 	"Typically map entries apply to the end of an instruction, for two reasons:
@@ -169,14 +177,7 @@ CogOutOfLineLiteralsARMv8Compiler >> moveCw: constant intoR: destReg [
 	 Literals are stored out-of-line; emit a LDR with the relevant offset."
 	 <var: 'constant' type: #usqInt>
 	<inline: true>
-	self assert: dependent opcode = Literal.
-	self assert: (cogit addressIsInCurrentCompilation: dependent address).
-	self assert: (dependent address - (address + 8)) abs < (1<<12).
-	self machineCodeAt: 0
-		put: (self
-			ldrSize: 1 "64 bits"
-			programCounterRelativeOffset: dependent address - address
-			destinationRegister: destReg).
+	self loadRelativeLiteralIn: destReg.
 	^machineCodeSize := 4
 ]
 
@@ -398,7 +399,13 @@ CogOutOfLineLiteralsARMv8Compiler >> usesOutOfLineLiteral [
 		[MoveRAw]		-> [^(self isAddressRelativeToVarBase: (operands at: 1)) ifTrue: [false] ifFalse: [true]].
 		[MoveAbR]		-> [^(self isAddressRelativeToVarBase: (operands at: 0)) ifTrue: [false] ifFalse: [true]].
 		[MoveRAb]		-> [^(self isAddressRelativeToVarBase: (operands at: 1)) ifTrue: [false] ifFalse: [true]].
-		[MoveRMwr]	-> [^self is12BitValue: (operands at: 1) ifTrue: [:s :v| false] ifFalse: [true]].
+	
+		[MoveRMwr]	-> [self is9BitValue: (operands at: 1)
+										ifTrue: [ :value | ^  false ]
+										ifFalse: [ self shiftable16bitImmediate: (operands at: 1) 
+														ifTrue: [ :value :shift | ^ false ] 
+														ifFalse: [ ^ true ] ]].
+												
 		[MoveRdM64r]	-> [^self is12BitValue: (operands at: 1) ifTrue: [:s :v| false] ifFalse: [true]]. 
 		[MoveMbrR]		-> [^self is12BitValue: (operands at: 0) ifTrue: [:s :v| false] ifFalse: [true]].
 		[MoveRMbr]		-> [^self is12BitValue: (operands at: 1) ifTrue: [:s :v| false] ifFalse: [true]].
