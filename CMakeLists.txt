@@ -23,6 +23,10 @@ get_git_describe(GIT_DESCRIBE)
 get_git_date(GIT_COMMIT_DATE)
 message(STATUS "${GIT_DESCRIBE} - Commit: ${GIT_COMMIT_HASH} - Date: ${GIT_COMMIT_DATE}")
 
+# Avoid using the d postfix to debug libraries
+# Otherwise, debug libraries change name and breaks FFI bindings
+set(CMAKE_DEBUG_POSTFIX "")
+
 #Configure toolchain for CYGWIN
 if ((CMAKE_HOST_UNIX) AND (${CMAKE_HOST_SYSTEM_NAME} MATCHES "CYGWIN*"))
   message(STATUS "Building on CYGWIN CMAKE: Adapting paths")
@@ -62,7 +66,8 @@ set(FEATURE_COMPILE_INLINE_MEMORY_ACCESSORS TRUE CACHE BOOL "Use inline memory a
 
 set(WITHOUT_DEPENDENCIES FALSE CACHE BOOL "Do not download dependencies at build time")
 set(FEATURE_LIB_SDL2 TRUE CACHE BOOL "Build SDL2 support")
-set(FEATURE_LIB_CAIRO TRUE CACHE BOOL "Build Cairo support" )
+set(FEATURE_LIB_CAIRO TRUE CACHE BOOL "Build Cairo support")
+set(FEATURE_LIB_FREETYPE2 TRUE CACHE BOOL "Build Cairo support")
 
 # If we are generating sources, set the source dir as the generation source dir.
 # Otherwise set it to by default to the current source dir, parametrizable

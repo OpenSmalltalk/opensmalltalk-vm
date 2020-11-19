@@ -57,7 +57,6 @@ configure_file("${Win32ResourcesFolder}/${VM_EXECUTABLE_CONSOLE_NAME}.exe.manife
 macro(add_third_party_dependencies_per_platform)
 
     if (NOT WITHOUT_DEPENDENCIES)
-        add_third_party_dependency("freetype-2.9.1" "build/vm")
 
         # Libgit2 dependencies
         add_third_party_dependency("libgit2-win-1.0.0" "build/vm")
@@ -76,6 +75,10 @@ macro(add_third_party_dependencies_per_platform)
         add_third_party_dependency("PThreadedFFI-1.4.0-win64" "build/vm")
     endif()
     
+    if(${FEATURE_LIB_FREETYPE2})
+        include(cmake/importFreetype2.cmake)
+    endif()
+
     if(${FEATURE_LIB_CAIRO})
         include(cmake/importCairo.cmake)
     endif()
