@@ -4183,6 +4183,7 @@ CogARMv8Compiler >> is64bitMask64: aMask [
 CogARMv8Compiler >> is9BitValue: constant ifTrue: aTrueBlock ifFalse: aFalseBlock [ 
 	
 	<inline: true>
+	<var: #constant type: 'sqInt'>
 	
 	^ constant abs <= 255 "(2 raisedTo: 8) - 1"
 		ifTrue: [ | twoComplement |
