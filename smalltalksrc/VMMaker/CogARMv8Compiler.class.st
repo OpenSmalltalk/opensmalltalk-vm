@@ -4180,10 +4180,16 @@ CogARMv8Compiler >> is64bitMask64: aMask [
 ]
 
 { #category : #'as yet unclassified' }
-CogARMv8Compiler >> is9BitValue: constant ifTrue: aTrueBlock ifFalse: aFalseBlock [ 
+CogARMv8Compiler >> is9BitValue: originalConstant ifTrue: aTrueBlock ifFalse: aFalseBlock [ 
+	
+	| constant |
 	
 	<inline: true>
 	<var: #constant type: 'sqInt'>
+	
+	"This is needed to force the type conversion in an inlined function.
+	If not... the variable is removed and using the parameter of the call site."
+	constant := self cCoerce: originalConstant to: #'sqInt'.
 	
 	^ constant abs <= 255 "(2 raisedTo: 8) - 1"
 		ifTrue: [ | twoComplement |
