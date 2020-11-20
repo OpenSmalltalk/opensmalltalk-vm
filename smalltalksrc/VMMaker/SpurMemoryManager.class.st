@@ -802,7 +802,7 @@ SpurMemoryManager class >> identifySignedComparisonsFor: options in: selectors n
 				options: options.
 	cg := vmm buildCodeGeneratorForInterpreter.
 	cg vmClass preGenerationHook: cg.
-	cg inferTypesForImplicitlyTypedVariablesAndMethods.
+	cg inferTypes.
 	cg retainMethods: self selectors.
 	cg prepareMethods.
 	cg doInlining: true.

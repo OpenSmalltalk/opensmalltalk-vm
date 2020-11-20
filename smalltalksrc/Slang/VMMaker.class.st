@@ -513,15 +513,6 @@ VMMaker >> createCodeGenerator [
 		yourself
 ]
 
-{ #category : #initialize }
-VMMaker >> createCogitCodeGenerator [
-	^MLVMCCodeGenerator new
-		vmMaker: self;
-		logger: logger;
-		options: optionsDictionary;
-		yourself
-]
-
 { #category : #'source directories' }
 VMMaker >> crossPlatformDirectory [
 	"return the directory where we should find the cross-platform literal 

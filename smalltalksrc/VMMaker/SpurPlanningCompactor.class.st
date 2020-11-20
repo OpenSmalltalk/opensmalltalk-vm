@@ -126,7 +126,7 @@ SpurPlanningCompactor class >> identifyMul: options noise: noise [
 				options: options.
 	cg := vmm buildCodeGeneratorForInterpreter.
 	cg vmClass preGenerationHook: cg.
-	cg inferTypesForImplicitlyTypedVariablesAndMethods.
+	cg inferTypes.
 	cg retainMethods: self selectors.
 	cg prepareMethods.
 	cg doInlining: true.
@@ -151,7 +151,7 @@ SpurPlanningCompactor class >> identifySignedComparisonsFor: options noise: nois
 				options: options.
 	cg := vmm buildCodeGeneratorForInterpreter.
 	cg vmClass preGenerationHook: cg.
-	cg inferTypesForImplicitlyTypedVariablesAndMethods.
+	cg inferTypes.
 	cg retainMethods: self selectors.
 	cg prepareMethods.
 	cg doInlining: true.

@@ -404,6 +404,12 @@ CCodeGenerator >> anyMethodNamed: selector [
 					ifAbsent: []]]
 ]
 
+{ #category : #accessing }
+CCodeGenerator >> apiMethods [
+
+	^ apiMethods
+]
+
 { #category : #utilities }
 CCodeGenerator >> arrayInitializerCalled: varName for: array sizeString: sizeStringOrNil type: cType [
 	"array is a literal array or a CArray on some array."
@@ -3088,65 +3094,12 @@ CCodeGenerator >> includeAPIFrom: aCCodeGenerator [
 	apiVariables := aCCodeGenerator selectAPIVariables
 ]
 
-{ #category : #'C translation' }
-CCodeGenerator >> inferTypes [
-	| typeConflicts |
-	typeConflicts := OrderedCollection new.
-	[ self inferTypesForImplicitlyTypedVariablesAndMethods ]
-		on: Notification
-		do: [ :n | 
-			typeConflicts add: n copy freeze.
-			n resume ].
-	(stopOnErrors and: [ typeConflicts isNotEmpty ]) ifTrue: [ Error signal: 'there were type errors' ]
-]
-
 { #category : #'type inference' }
-CCodeGenerator >> inferTypesForImplicitlyTypedVariablesAndMethods [
-	"Infer the return tupe and the types of untyped variables.
-	 As far as variables go, for now we try only to infer variables
-	 assigned the result of #longLongAt:, but much more could be
-	 done here."
-
-	"Iterate over all methods, inferring #void return types, until we reach a fixed point."
-	| allMethods |
-	allMethods := apiMethods
-					ifNil: [methods]
-					ifNotNil: [(Set withAll: methods)
-								addAll: apiMethods;
-								yourself].
-	"Make an initial pass to assign the return types of all simple methods that return constants,
-	 or those that have explicit return types."						
-	allMethods do:
-		[:m|
-		m removeFinalSelfReturnIn: self. "must precede recordDeclarationsIn: because it may set returnType"
-		m recordDeclarationsIn: self.
-		(m returnType isNil
-		 and: [m isReturnConstant]) ifTrue:
-			[m inferReturnTypeIn: self]].
-
-	"now iterate until we reach a fixed point"
-	[| changedReturnType |
-	 changedReturnType := false.
-	 allMethods do:
-		[:m|
-		 m inferTypesForImplicitlyTypedVariablesIn: self.
-		 (m inferReturnTypeIn: self) ifTrue:
-			[changedReturnType := true]].
-	 changedReturnType] whileTrue.
-
-	"Type all as-yet-untyped methods as the default"
-	methods do:
-		[:m|
-		m returnType ifNil:
-			[m returnType: (m returnsExpression
-								ifTrue: [#sqInt]
-								ifFalse: [self implicitReturnTypeFor: m])].
-		m transformReturns].
-
-	"Make a final pass to type anything assigned from the default type"
-	allMethods do:
-		[:m|
-		 m inferTypesForImplicitlyTypedVariablesIn: self]
+CCodeGenerator >> inferTypes [
+	
+	(SlangTyper on: self)
+		stopOnErrors: stopOnErrors;
+		inferTypes
 ]
 
 { #category : #'initialize-release' }
@@ -3770,31 +3723,6 @@ CCodeGenerator >> maybePutPreambleFor: aClass on: aStream [
 			nextPutAll: '/* end '; print: actualClass; nextPutAll: '>>preambleCCode */'; cr]
 ]
 
-{ #category : #'type inference' }
-CCodeGenerator >> mergeTypeOf: var in: aDictionary with: newType method: tMethod [
-	"var is a variable that has been assigned an expression of type  newType.
-	 Either assign its type, if it is as yet untyped, or merge newType with its existing type.
-	 N.B. We refuse to promote a variable that already has integral type to a floating point
-	 type.  The existing plugins depend on this; one can always use an explicit type in future."
-	| existingType mergedType |
-	existingType := self
-						extractTypeFor: var
-						fromDeclaration: (aDictionary at: var ifAbsentPut: [newType, ' ', var]).
-	existingType ~= newType ifTrue:
-		[((self isPointerCType: existingType)
-		  or: [self isPointerCType: newType])
-			ifTrue:
-				[existingType = #'void *' ifTrue: [^newType].
-				 newType = #'void *' ifTrue: [^existingType].
-				 self logger show: 'conflicting types ', existingType, ' ', newType, ' for ', var, ' in ', tMethod selector.
-				 ^existingType]
-			ifFalse:
-				[((self isIntegralCType: existingType)
-				  and: [self isFloatingPointCType: newType]) ifFalse:
-					[mergedType := self promoteArithmeticTypes: existingType and: newType.
-					 aDictionary at: var put: mergedType, ' ', var]]]
-]
-
 { #category : #utilities }
 CCodeGenerator >> messageReceiverIsInterpreterProxy: sendNode [
 	^self isGeneratingPluginCode
@@ -3861,6 +3789,12 @@ CCodeGenerator >> methodStatsString [
 		].
 	].
 	^ s contents
+]
+
+{ #category : #accessing }
+CCodeGenerator >> methods [
+
+	^ methods
 ]
 
 { #category : #utilities }

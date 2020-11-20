@@ -35,7 +35,7 @@ Class {
 SlangBasicTypeInferenceTest >> setUp [
 	super setUp.
 	ccg addClass: SlangBasicTypeInferenceTestClass.
-	ccg inferTypesForImplicitlyTypedVariablesAndMethods.
+	ccg inferTypes.
 
 ]
 

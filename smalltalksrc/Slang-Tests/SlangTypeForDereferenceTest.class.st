@@ -8,7 +8,7 @@ Class {
 SlangTypeForDereferenceTest >> setUp [
 	super setUp.
 	ccg addClass: SlangTypeForDereferenceTestClass.
-	ccg inferTypesForImplicitlyTypedVariablesAndMethods.
+	ccg inferTypes.
 ]
 
 { #category : #tests }
