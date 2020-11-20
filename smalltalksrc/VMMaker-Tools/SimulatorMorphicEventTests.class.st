@@ -4,7 +4,7 @@ Class {
 	#pools : [
 		'EventSensorConstants'
 	],
-	#category : #'VMMaker-InterpreterSimulation-Morphic'
+	#category : #'VMMaker-Tools-Old'
 }
 
 { #category : #'test event' }
