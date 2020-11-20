@@ -1,7 +1,7 @@
 Class {
 	#name : #SlangTypePromotionTest,
 	#superclass : #SlangAbstractTestCase,
-	#category : #Slang
+	#category : #'Slang-Tests'
 }
 
 { #category : #'integer-types' }

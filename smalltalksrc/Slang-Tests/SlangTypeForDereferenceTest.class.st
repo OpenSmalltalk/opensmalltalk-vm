@@ -1,7 +1,7 @@
 Class {
 	#name : #SlangTypeForDereferenceTest,
 	#superclass : #SlangAbstractTestCase,
-	#category : #Slang
+	#category : #'Slang-Tests'
 }
 
 { #category : #running }

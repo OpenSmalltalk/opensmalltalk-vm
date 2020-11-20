@@ -1,5 +1,5 @@
 Class {
 	#name : #SlangObjectMemorySuperclass,
-	#superclass : #SpurMemoryManager,
+	#superclass : #SlangClass,
 	#category : #'Slang-Tests'
 }

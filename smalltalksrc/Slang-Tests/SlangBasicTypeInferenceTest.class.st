@@ -28,7 +28,7 @@ There is only one possible type by node, no ambiguities.
 Class {
 	#name : #SlangBasicTypeInferenceTest,
 	#superclass : #SlangAbstractTestCase,
-	#category : #Slang
+	#category : #'Slang-Tests'
 }
 
 { #category : #running }

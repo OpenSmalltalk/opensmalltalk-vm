@@ -5,7 +5,7 @@ Class {
 		'visitor',
 		'propertyName'
 	],
-	#category : #Slang
+	#category : #'Slang-Tests'
 }
 
 { #category : #running }

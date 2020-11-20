@@ -1,7 +1,7 @@
 Class {
 	#name : #SlangTypeForDereferenceTestClass,
-	#superclass : #InterpreterPlugin,
-	#category : #Slang
+	#superclass : #SlangClass,
+	#category : #'Slang-Tests'
 }
 
 { #category : #'as yet unclassified' }

@@ -4,7 +4,7 @@ Class {
 	#instVars : [
 		'ccg'
 	],
-	#category : #Slang
+	#category : #'Slang-Tests'
 }
 
 { #category : #running }

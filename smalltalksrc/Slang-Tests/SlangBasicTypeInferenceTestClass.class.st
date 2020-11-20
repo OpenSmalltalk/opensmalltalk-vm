@@ -1,7 +1,7 @@
 Class {
 	#name : #SlangBasicTypeInferenceTestClass,
-	#superclass : #InterpreterPlugin,
-	#category : #Slang
+	#superclass : #SlangClass,
+	#category : #'Slang-Tests'
 }
 
 { #category : #constant }
