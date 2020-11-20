@@ -17,11 +17,6 @@
           "type": "BOOL"
         },
         {
-          "name": "FEATURE_SOCKETS",
-          "value": "False",
-          "type": "BOOL"
-        },
-        {
           "name": "WITHOUT_DEPENDENCIES",
           "value": "True",
           "type": "BOOL"

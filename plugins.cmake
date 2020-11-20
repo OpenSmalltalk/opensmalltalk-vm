@@ -95,14 +95,11 @@ endif()
 #
 # Socket Plugin
 #
-if (${FEATURE_SOCKETS})
+if (${FEATURE_NETWORK})
+    add_vm_plugin(SocketPlugin)
   if(WIN)
-    add_vm_plugin(SocketPlugin)
     target_link_libraries(SocketPlugin "-lWs2_32")
-  else()
-    add_vm_plugin(SocketPlugin)
   endif()
-  target_compile_definitions(SocketPlugin PRIVATE "FEATURE_SOCKETS=1")
 endif()
 
 #
@@ -121,9 +118,7 @@ add_vm_plugin(SurfacePlugin)
 
 if(${FEATURE_FFI})
 
-include_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/SqueakFFIPrims/include/common
-)
+message(STATUS "Adding plugin: SqueakFFIPrims")
 
 set(SqueakFFIPrims_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/SqueakFFIPrims/src/common/SqueakFFIPrims.c 
@@ -131,12 +126,31 @@ set(SqueakFFIPrims_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/SqueakFFIPrims/src/common/sqFFIPlugin.c
     ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/SqueakFFIPrims/src/common/sqFFITestFuncs.c
 )
-
-message(STATUS "Adding plugin: SqueakFFIPrims")
 addLibraryWithRPATH(SqueakFFIPrims ${SqueakFFIPrims_SOURCES})
+target_include_directories(SqueakFFIPrims 
+PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/SqueakFFIPrims/include/common
+)
+
+
+#
+# IA32ABI Plugin
+#
+
+set(IA32ABI_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/IA32ABI/src/common/IA32ABI.c 
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/IA32ABI/src/common/AlienSUnitTestProcedures.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/IA32ABI/src/common/xabicc.c
+)
+addLibraryWithRPATH(IA32ABI ${IA32ABI_SOURCES})
+
+target_include_directories(IA32ABI
+    PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/IA32ABI/include/common
+)
+target_link_libraries(IA32ABI ${VM_LIBRARY_NAME})
 
 endif()
-
 
 
 #

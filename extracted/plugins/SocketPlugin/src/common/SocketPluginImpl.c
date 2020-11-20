@@ -42,7 +42,14 @@
  *	many of the connection-oriented functions should be removed and cremated.
  */
 
-#if FEATURE_SOCKETS
+#ifdef _WIN32
+
+ // Need to include winsock2 before windows.h
+ // Windows.h will import otherwise winsock (1) and create conflicts
+#include <winsock2.h>
+#include <windows.h>
+#include <Ws2tcpip.h>
+#endif //WIN32
 
 #include "pharovm/pharo.h"
 #include "sq.h"
@@ -71,13 +78,8 @@
 
 #ifdef _WIN32
 
-#include "winsock2.h"
-#include "Windows.h"
-
 #include <sys/stat.h>
 
-#include <winsock2.h>
-#include <ws2tcpip.h>
 #include <stdio.h>
 
 typedef unsigned int sa_family_t;
@@ -121,8 +123,10 @@ struct sockaddr_un
 #   include <time.h>
 # endif
 # include <errno.h>
-# include <unistd.h>
 
+#if !defined(_WIN32)
+# include <unistd.h>
+#endif
 #endif /* !ACORN */
 
 /* Solaris sometimes fails to define this in netdb.h */
@@ -194,7 +198,7 @@ static u_long localHostAddress;	/* GROSS IPv4 ASSUMPTION! */
  * We have to use the correct ones if not, the errors are not correctly detected.
  */
 
-#ifdef WIN64
+#ifdef _WIN32
 # define ERROR_IN_PROGRESS	WSAEINPROGRESS
 # define ERROR_WOULD_BLOCK	WSAEWOULDBLOCK
 #else
@@ -1641,7 +1645,7 @@ sqInt sqResolverAddrLookupResultSize(void)	{ return strlen(lastName); }
 sqInt sqResolverError(void)			{ return lastError; }
 sqInt sqResolverLocalAddress(void) {
 
-#ifndef WIN64
+#ifndef _WIN32
 
 	/*
 	 * TODO: Check all this code, because is does not work if you have more than one network interface.
@@ -2430,5 +2434,3 @@ sqInt sqSocketReceiveUDPDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
   success(false);
   return 0;
 }
-
-#endif // FEATURE_SOCKETS

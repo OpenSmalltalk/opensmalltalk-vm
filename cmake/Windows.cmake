@@ -13,10 +13,13 @@ set(Win32DLLResource "${CMAKE_CURRENT_BINARY_DIR}/${VM_EXECUTABLE_NAME}DLL.rc")
 set(Win32Manifest "${CMAKE_CURRENT_BINARY_DIR}/${VM_EXECUTABLE_NAME}.exe.manifest")
 set(Win32ConsoleManifest "${CMAKE_CURRENT_BINARY_DIR}/${VM_EXECUTABLE_CONSOLE_NAME}.exe.manifest")
 
-include_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/win
-    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/common
-)
+function(add_platform_headers)
+    target_include_directories(${VM_LIBRARY_NAME}
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/win
+        ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/common
+    )
+endfunction()
 
 set(EXTRACTED_SOURCES
 #Common sources
@@ -58,9 +61,6 @@ macro(add_third_party_dependencies_per_platform)
 
     if (NOT WITHOUT_DEPENDENCIES)
 
-        # Libgit2 dependencies
-        add_third_party_dependency("libgit2-win-1.0.0" "build/vm")
-        add_third_party_dependency("libgit2-0.25.1-fixLibGit" "build/vm")
         add_third_party_dependency("zlib-1.2.11-fixLibGit" "build/vm")
 
 
@@ -75,6 +75,10 @@ macro(add_third_party_dependencies_per_platform)
         add_third_party_dependency("PThreadedFFI-1.4.0-win64" "build/vm")
     endif()
     
+    if(${FEATURE_LIB_GIT2})
+        include(cmake/importLibGit2.cmake)
+    endif()
+
     if(${FEATURE_LIB_FREETYPE2})
         include(cmake/importFreetype2.cmake)
     endif()

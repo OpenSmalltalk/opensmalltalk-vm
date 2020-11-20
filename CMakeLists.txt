@@ -21,7 +21,10 @@ set(APPNAME Pharo CACHE STRING "VM Application name")
 get_commit_hash(GIT_COMMIT_HASH)
 get_git_describe(GIT_DESCRIBE)
 get_git_date(GIT_COMMIT_DATE)
-message(STATUS "${GIT_DESCRIBE} - Commit: ${GIT_COMMIT_HASH} - Date: ${GIT_COMMIT_DATE}")
+
+#Variable used to set the VM date
+set(BUILT_FROM "${GIT_DESCRIBE} - Commit: ${GIT_COMMIT_HASH} - Date: ${GIT_COMMIT_DATE}")
+message(STATUS ${BUILT_FROM})
 
 # Avoid using the d postfix to debug libraries
 # Otherwise, debug libraries change name and breaks FFI bindings
@@ -60,7 +63,7 @@ set(FLAVOUR CoInterpreterWithQueueFFI CACHE STRING "The kind of VM to generate. 
 set(GENERATE_SOURCES TRUE CACHE BOOL "If it generates the sources")
 set(ALWAYS_INTERACTIVE FALSE CACHE BOOL "If this VM will always add interactive or not. If it is set, the headless parameter is not by default true")
 set(FEATURE_FFI TRUE CACHE BOOL "Configure and compile support for FFI in the VM")
-set(FEATURE_SOCKETS TRUE CACHE BOOL "Configure and compile support for sockets in the VM")
+set(FEATURE_NETWORK TRUE CACHE BOOL "Configure and compile support for network and sockets in the VM")
 set(FEATURE_COMPILE_GNUISATION TRUE CACHE BOOL "Use gcc gnu extensions to compile the VM")
 set(FEATURE_COMPILE_INLINE_MEMORY_ACCESSORS TRUE CACHE BOOL "Use inline memory accessors instead of macros")
 
@@ -68,6 +71,7 @@ set(WITHOUT_DEPENDENCIES FALSE CACHE BOOL "Do not download dependencies at build
 set(FEATURE_LIB_SDL2 TRUE CACHE BOOL "Build SDL2 support")
 set(FEATURE_LIB_CAIRO TRUE CACHE BOOL "Build Cairo support")
 set(FEATURE_LIB_FREETYPE2 TRUE CACHE BOOL "Build Cairo support")
+set(FEATURE_LIB_GIT2 TRUE CACHE BOOL "Build LibGit2 support")
 
 # If we are generating sources, set the source dir as the generation source dir.
 # Otherwise set it to by default to the current source dir, parametrizable
@@ -293,25 +297,11 @@ if(GENERATE_SOURCES)
 endif()
 
 #Generating config file
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/pharovm/config.h.in build/include/pharovm/config.h)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/pharovm/config.h.in ${CMAKE_CURRENT_BINARY_DIR}build/include/pharovm/config.h)
 
 message(STATUS "C Compiler: ${CMAKE_C_COMPILER}")
 message(STATUS "C++ Compiler: ${CMAKE_CXX_COMPILER}")
 message(STATUS "Resource Compiler: ${CMAKE_RC_COMPILER}")
-
-
-include_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/semaphores
-    ${CMAKE_CURRENT_BINARY_DIR}/build/include/
-    ${CMAKE_CURRENT_BINARY_DIR}/build/include/pharovm/
-    ${GENERATED_SOURCE_DIR}/generated/vm/include
-)
-
-if (${FEATURE_FFI})
-    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/ffi/include)
-    add_compile_definitions(FEATURE_FFI=1)
-endif()
 
 set(VM_FRONTEND_APPLICATION_TYPE)
 include(cmake/${CMAKE_SYSTEM_NAME}.cmake)
@@ -322,7 +312,6 @@ include(cmake/${CMAKE_SYSTEM_NAME}.cmake)
 if (${FEATURE_FFI})
     include(cmake/libffi.cmake)
 endif()
-
 
 set(GENERATED_SOURCES ${VMSOURCEFILES})
 
@@ -384,6 +373,25 @@ set(VM_SOURCES
 
 add_executable(${VM_EXECUTABLE_NAME} ${VM_FRONTEND_APPLICATION_TYPE} ${VM_FRONTEND_SOURCES})
 addLibraryWithRPATH(${VM_LIBRARY_NAME} ${VM_SOURCES})
+
+target_include_directories(${VM_LIBRARY_NAME}
+PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include
+    ${CMAKE_CURRENT_BINARY_DIR}/build/include/pharovm/
+    ${GENERATED_SOURCE_DIR}/generated/vm/include
+PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/semaphores
+)
+add_platform_headers()
+
+
+if (${FEATURE_FFI})
+    target_include_directories(${VM_LIBRARY_NAME}
+        PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/ffi/include)
+    target_compile_definitions(${VM_LIBRARY_NAME} 
+        PRIVATE FEATURE_FFI=1)
+endif()
 
 if (${FEATURE_FFI})
     add_dependencies(${VM_LIBRARY_NAME} libFFI)
