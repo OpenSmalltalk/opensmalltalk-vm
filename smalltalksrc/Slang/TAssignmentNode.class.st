@@ -5,7 +5,7 @@ Class {
 		'variable',
 		'expression'
 	],
-	#category : #Slang
+	#category : #'Slang-AST'
 }
 
 { #category : #transformations }

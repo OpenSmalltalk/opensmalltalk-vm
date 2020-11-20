@@ -4,7 +4,7 @@ An exception class for the use of VMMaker
 Class {
 	#name : #VMMakerException,
 	#superclass : #Error,
-	#category : #Slang
+	#category : #'Slang-Core'
 }
 
 { #category : #'priv handling' }

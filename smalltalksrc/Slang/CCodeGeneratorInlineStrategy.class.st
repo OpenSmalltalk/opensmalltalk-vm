@@ -4,7 +4,7 @@ Class {
 	#instVars : [
 		'codeGenerator'
 	],
-	#category : #Slang
+	#category : #'Slang-CodeGeneration'
 }
 
 { #category : #'instance-cre' }

@@ -1,7 +1,7 @@
 Class {
 	#name : #CCodeGeneratorInlineNeverStrategy,
 	#superclass : #CCodeGeneratorAbsoluteInlineStrategy,
-	#category : #Slang
+	#category : #'Slang-CodeGeneration'
 }
 
 { #category : #asserting }

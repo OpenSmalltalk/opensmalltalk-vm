@@ -1,7 +1,7 @@
 Class {
 	#name : #TPrintfFormatStringNode,
 	#superclass : #TConstantNode,
-	#category : #Slang
+	#category : #'Slang-AST'
 }
 
 { #category : #'C code generation' }

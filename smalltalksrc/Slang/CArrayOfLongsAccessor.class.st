@@ -24,7 +24,7 @@ Class {
 		'address',
 		'elementByteSize'
 	],
-	#category : #Slang
+	#category : #'Slang-Types'
 }
 
 { #category : #accessing }

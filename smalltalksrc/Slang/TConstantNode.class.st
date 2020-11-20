@@ -4,7 +4,7 @@ Class {
 	#instVars : [
 		'value'
 	],
-	#category : #Slang
+	#category : #'Slang-AST'
 }
 
 { #category : #transformations }

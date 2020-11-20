@@ -105,7 +105,7 @@ Class {
 		'vmmakerConfiguration',
 		'stopOnErrors'
 	],
-	#category : #Slang
+	#category : #'Slang-Core'
 }
 
 { #category : #initialisation }

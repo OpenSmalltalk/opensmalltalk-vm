@@ -1,7 +1,7 @@
 Class {
 	#name : #CCodeGeneratorInlineAsSpecifiedOrQuickStrategy,
 	#superclass : #CCodeGeneratorInlineAsSpecifiedStrategy,
-	#category : #Slang
+	#category : #'Slang-CodeGeneration'
 }
 
 { #category : #accessing }

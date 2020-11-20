@@ -10,7 +10,7 @@ Class {
 		'lasts',
 		'cases'
 	],
-	#category : #Slang
+	#category : #'Slang-AST'
 }
 
 { #category : #transformations }

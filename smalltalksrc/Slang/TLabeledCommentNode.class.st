@@ -5,7 +5,7 @@ Class {
 		'label',
 		'asmLabel'
 	],
-	#category : #Slang
+	#category : #'Slang-AST'
 }
 
 { #category : #accessing }

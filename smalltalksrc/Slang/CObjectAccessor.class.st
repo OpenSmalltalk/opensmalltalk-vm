@@ -8,7 +8,7 @@ Class {
 		'object',
 		'offset'
 	],
-	#category : #Slang
+	#category : #'Slang-Types'
 }
 
 { #category : #accessing }

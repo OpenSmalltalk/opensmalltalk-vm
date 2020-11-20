@@ -4,7 +4,7 @@ I store metadata for this package. These meta data are used by other tools such 
 Class {
 	#name : #ManifestVMMakerSlang,
 	#superclass : #PackageManifest,
-	#category : #Slang
+	#category : #'Slang-Manifest'
 }
 
 { #category : #'meta-data - dependency analyser' }

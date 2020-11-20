@@ -44,7 +44,7 @@ Class {
 	#classVars : [
 		'NoRegParmsInAssertVMs'
 	],
-	#category : #Slang
+	#category : #'Slang-CodeGeneration'
 }
 
 { #category : #'class initialization' }

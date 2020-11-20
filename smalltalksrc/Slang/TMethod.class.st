@@ -31,7 +31,7 @@ Class {
 	#classVars : [
 		'CaseStatements'
 	],
-	#category : #Slang
+	#category : #'Slang-AST'
 }
 
 { #category : #'class initialization' }

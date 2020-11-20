@@ -4,7 +4,7 @@ Class {
 	#classVars : [
 		'ExpensiveAsserts'
 	],
-	#category : #Slang
+	#category : #'Slang-Types'
 }
 
 { #category : #translation }

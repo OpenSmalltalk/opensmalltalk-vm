@@ -5,7 +5,7 @@ Class {
 		'caseLabels',
 		'cases'
 	],
-	#category : #Slang
+	#category : #'Slang-AST'
 }
 
 { #category : #transformations }

@@ -4,7 +4,7 @@ Class {
 	#instVars : [
 		'label'
 	],
-	#category : #Slang
+	#category : #'Slang-AST'
 }
 
 { #category : #'C code generation' }

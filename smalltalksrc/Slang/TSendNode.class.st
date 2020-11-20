@@ -7,7 +7,7 @@ Class {
 		'arguments',
 		'isBuiltinOperator'
 	],
-	#category : #Slang
+	#category : #'Slang-AST'
 }
 
 { #category : #accessing }

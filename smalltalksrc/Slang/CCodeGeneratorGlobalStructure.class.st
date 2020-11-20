@@ -10,7 +10,7 @@ Class {
 		'localStructDef',
 		'structDefDefine'
 	],
-	#category : #Slang
+	#category : #'Slang-CodeGeneration'
 }
 
 { #category : #'C code generator' }

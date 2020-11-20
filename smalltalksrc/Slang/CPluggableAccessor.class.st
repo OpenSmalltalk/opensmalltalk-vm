@@ -9,7 +9,7 @@ Class {
 		'writeBlock',
 		'objectSize'
 	],
-	#category : #Slang
+	#category : #'Slang-Types'
 }
 
 { #category : #coercion }

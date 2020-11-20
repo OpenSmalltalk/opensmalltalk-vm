@@ -4,7 +4,7 @@ Class {
 	#instVars : [
 		'name'
 	],
-	#category : #Slang
+	#category : #'Slang-AST'
 }
 
 { #category : #accessing }

@@ -4,7 +4,7 @@ Class {
 	#classVars : [
 		'StructTypeNameCache'
 	],
-	#category : #Slang
+	#category : #'Slang-Types'
 }
 
 { #category : #accessing }

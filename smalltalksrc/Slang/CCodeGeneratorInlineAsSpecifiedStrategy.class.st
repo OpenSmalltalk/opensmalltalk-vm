@@ -4,7 +4,7 @@ Class {
 	#instVars : [
 		'selectorsOfMethodsNotToInline'
 	],
-	#category : #Slang
+	#category : #'Slang-CodeGeneration'
 }
 
 { #category : #'as yet unclassified' }

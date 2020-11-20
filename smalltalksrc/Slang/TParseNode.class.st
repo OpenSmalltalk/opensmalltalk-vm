@@ -7,7 +7,7 @@ Class {
 	#instVars : [
 		'comment'
 	],
-	#category : #Slang
+	#category : #'Slang-AST'
 }
 
 { #category : #utilities }

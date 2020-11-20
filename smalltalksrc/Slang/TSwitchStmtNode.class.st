@@ -12,7 +12,7 @@ Class {
 		'otherwiseOrNil',
 		'switchVariable'
 	],
-	#category : #Slang
+	#category : #'Slang-AST'
 }
 
 { #category : #transformations }
