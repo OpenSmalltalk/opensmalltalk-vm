@@ -28,12 +28,6 @@ MLPluginAccessorDepthCalculator >> accessorsAndAssignmentsForSubMethodNamed: sel
 		[^nil].
 	inProgressSelectors add: selector.
 	method := codeGenerator methodNamed: selector.
-	"this is unsatisfactory.  a pluggable scheme that asks the relevant plugin the right question would
-	 be better but for now the only cross-plugin load is for loadBitBltFrom:warping: and variants."
-	(#(loadBitBltFrom: loadWarpBltFrom: loadBitBltFrom:warping:) includes: selector) ifTrue:
-		[(method isNil
-		  or: [method definingClass ~~ BitBltSimulation]) ifTrue:
-			[method := (BitBltSimulation >> selector) asTranslationMethodOfClass: TMethod]].
 	method ifNil:
 		[^nil].
 	map := Dictionary new.

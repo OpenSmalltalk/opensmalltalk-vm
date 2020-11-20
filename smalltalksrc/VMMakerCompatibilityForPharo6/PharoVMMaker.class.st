@@ -56,9 +56,9 @@ PharoVMMaker >> generate: interpreterClass memoryManager: memoryManager [
 			stopOnErrors: stopOnErrors;
 			internal: #() external: #(FilePlugin);
 			doCleanupOldFiles;
-			generateInterpreterFile;
-			generateCogitFiles;
-			generateExternalPlugins] valueSupplyingAnswer:true.
+			generateInterpreterFile";"
+			"generateCogitFiles;
+			generateExternalPlugins"] valueSupplyingAnswer:true.
 ]
 
 { #category : #generation }
