@@ -1,6 +1,6 @@
 #!/bin/sh
 # Revert the argument if its changes comprise only the generation metadata
-# such as date generated, VMMaker version etc.
+# such as date generated, VMMaker version, etc.
 
 TEST=
 if [ "$1" = "-t" -o \( "$1" = "-T" \) ]; then
