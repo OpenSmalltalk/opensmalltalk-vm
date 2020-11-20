@@ -102,7 +102,8 @@ Class {
 		'abortBlock',
 		'doCleanupOldFiles',
 		'silently',
-		'vmmakerConfiguration'
+		'vmmakerConfiguration',
+		'stopOnErrors'
 	],
 	#category : #Slang
 }
@@ -508,6 +509,7 @@ VMMaker >> createCodeGenerator [
 		vmMaker: self;
 		logger: logger;
 		options: optionsDictionary;
+		stopOnErrors: stopOnErrors;
 		yourself
 ]
 
@@ -1392,6 +1394,12 @@ VMMaker >> sourceDirectoryName: aString [
 VMMaker >> sourceFilePathFor: sourceFileName [
 	"Answer the fully-qualified path for the generated source file."
 	^ self coreVMDirectory / sourceFileName
+]
+
+{ #category : #accessing }
+VMMaker >> stopOnErrors: aValue [
+
+	stopOnErrors := aValue
 ]
 
 { #category : #exports }

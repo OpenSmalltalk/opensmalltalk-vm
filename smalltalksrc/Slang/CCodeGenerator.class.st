@@ -3095,7 +3095,7 @@ CCodeGenerator >> inferTypes [
 	[ self inferTypesForImplicitlyTypedVariablesAndMethods ]
 		on: Notification
 		do: [ :n | 
-			typeConflicts add: n.
+			typeConflicts add: n copy freeze.
 			n resume ].
 	(stopOnErrors and: [ typeConflicts isNotEmpty ]) ifTrue: [ Error signal: 'there were type errors' ]
 ]

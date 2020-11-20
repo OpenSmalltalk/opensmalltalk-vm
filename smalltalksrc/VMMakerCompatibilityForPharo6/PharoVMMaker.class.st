@@ -5,7 +5,8 @@ Class {
 	#name : #PharoVMMaker,
 	#superclass : #Object,
 	#instVars : [
-		'outputDirectory'
+		'outputDirectory',
+		'stopOnErrors'
 	],
 	#category : #'VMMakerCompatibilityForPharo6-CommandLine'
 }
@@ -52,6 +53,7 @@ PharoVMMaker >> generate: interpreterClass memoryManager: memoryManager [
 		platformDir: self outputDirectory / 'generated'
 		including: #()
 		configuration: VMMakerConfiguration)
+			stopOnErrors: stopOnErrors;
 			internal: #() external: #(FilePlugin);
 			doCleanupOldFiles;
 			generateInterpreterFile;
@@ -74,6 +76,12 @@ PharoVMMaker >> generateStackVM [
 ]
 
 { #category : #accessing }
+PharoVMMaker >> initialize [
+	super initialize.
+	stopOnErrors := false
+]
+
+{ #category : #accessing }
 PharoVMMaker >> outputDirectory [
 	^ outputDirectory
 ]
@@ -81,4 +89,14 @@ PharoVMMaker >> outputDirectory [
 { #category : #accessing }
 PharoVMMaker >> outputDirectory: anObject [
 	outputDirectory := anObject asFileReference
+]
+
+{ #category : #accessing }
+PharoVMMaker >> stopOnErrors [
+	^ stopOnErrors
+]
+
+{ #category : #accessing }
+PharoVMMaker >> stopOnErrors: anObject [
+	stopOnErrors := anObject
 ]
