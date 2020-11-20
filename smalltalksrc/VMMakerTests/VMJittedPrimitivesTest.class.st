@@ -94,4 +94,7 @@ VMJittedPrimitivesTest >> setUp [
 		storePointer: ClassFloatCompactIndex
 		ofObject: memory classTableFirstPage
 		withValue: classFloat.
+		
+	memory classExternalAddress: (self newClassInOldSpaceWithSlots: 0 format: (memory byteFormatForNumBytes: 0) ).
+	
 ]

@@ -491,6 +491,14 @@ CogOutOfLineLiteralsARMv8Compiler >> usesOutOfLineLiteral [
 		[MoveM16rR]	-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
 		[MoveRM16r]	-> [^self is12BitValue: (operands at: 1) ifTrue: [:s :v| false] ifFalse: [true]].
 		[MoveM64rRd]	-> [^self is12BitValue: (operands at: 0) ifTrue: [:s :v| false] ifFalse: [true]].
+		
+		[MoveM32rR] -> [ offset := (operands at: 0).
+			(offset >= 0 and: [ (offset bitAnd: 16rFFF) = offset ]) 
+				ifTrue: [ ^ false ]
+				ifFalse: [ 	self
+									is9BitValue: offset
+										ifTrue: [ :v | ^ false ] 
+										ifFalse: [^ true ] ] ].
 
 		[MoveMwrR]	-> [
 			offset := (operands at: 0).
@@ -508,7 +516,7 @@ CogOutOfLineLiteralsARMv8Compiler >> usesOutOfLineLiteral [
 		"Patcheable instruction. Moves a literal. Uses out of line literal."
 		[MovePatcheableC32R] -> [ ^ true ]
 		}
-		otherwise: [self assert: false].
+		otherwise: [self error: 'We should not be here!!!'].
 	^false "to keep C compiler quiet"
 
 ]

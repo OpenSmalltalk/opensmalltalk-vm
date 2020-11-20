@@ -87,12 +87,9 @@ VMDivisionInstructionTest >> testIntegerDivisionWithNegativeNumeratorReturnsCorr
 ]
 
 { #category : #'as yet unclassified' }
-VMDivisionInstructionTest >> twoComplementOf: anInteger [ 
-	
-	| mask |
-	anInteger < 0 ifFalse: [ ^ anInteger ].
-	
-	mask := self wordSize = 8 ifTrue: [ 16rFFFFFFFFFFFFFFFF ] ifFalse: [ 16rFFFFFFFF ].
-	
-	^ mask - anInteger abs + 1
+VMDivisionInstructionTest >> twoComplementOf: anInteger [
+
+	^ self wordSize = 8
+		  ifTrue: [ anInteger twoComplementOfBitSize: 64 ]
+		  ifFalse: [ anInteger twoComplementOfBitSize: 32 ]
 ]

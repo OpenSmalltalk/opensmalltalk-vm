@@ -177,6 +177,24 @@ VMSpurMemoryManagerTest >> memory [
 ]
 
 { #category : #'helpers - classes' }
+VMSpurMemoryManagerTest >> newClassInOldSpaceWithSlots: numberOfSlots format: format [
+	| newClass formatWithSlots |
+
+	newClass := memory
+		allocateSlotsInOldSpace: 3
+		format: memory nonIndexablePointerFormat
+		classIndex: memory arrayClassIndexPun.
+	
+	memory storePointer: 0 ofObject: newClass withValue: memory nilObject.
+	memory storePointer: 1 ofObject: newClass withValue: memory nilObject.
+	
+	formatWithSlots := format << 16 + numberOfSlots. 
+	memory storePointer: 2 ofObject: newClass withValue: (memory integerObjectOf: formatWithSlots ).
+		
+	^ newClass	
+]
+
+{ #category : #'helpers - classes' }
 VMSpurMemoryManagerTest >> newClassInOldSpaceWithSlots: numberOfSlots instSpec: format [
 	| newClass formatWithSlots |
 

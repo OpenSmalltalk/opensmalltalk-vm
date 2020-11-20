@@ -56,24 +56,6 @@ VMAbstractPrimitiveTest >> newArrayWith: aCollection [
 	
 ]
 
-{ #category : #'helpers - classes' }
-VMAbstractPrimitiveTest >> newClassInOldSpaceWithSlots: numberOfSlots format: format [
-	| newClass formatWithSlots |
-
-	newClass := memory
-		allocateSlotsInOldSpace: 3
-		format: memory nonIndexablePointerFormat
-		classIndex: memory arrayClassIndexPun.
-	
-	memory storePointer: 0 ofObject: newClass withValue: memory nilObject.
-	memory storePointer: 1 ofObject: newClass withValue: memory nilObject.
-	
-	formatWithSlots := format << 16 + numberOfSlots. 
-	memory storePointer: 2 ofObject: newClass withValue: (memory integerObjectOf: formatWithSlots ).
-		
-	^ newClass	
-]
-
 { #category : #'helpers - frames' }
 VMAbstractPrimitiveTest >> newSmallContextReceiver: anOop method: aMethodOop arguments: aCollectionOfArgumentsOop temporaries: aCollectionOfTemporariesOop ip: anIp [
 

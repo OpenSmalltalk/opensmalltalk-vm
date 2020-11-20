@@ -1139,6 +1139,15 @@ CogARMv8Compiler >> computeMaximumSize [
 											ifTrue: [:r :i| 4]
 											ifFalse: [self literalLoadInstructionBytes + 4]].
 		[MoveM64rRd]			-> [^"self literalLoadInstructionBytes + "4].
+		[MoveM32rR]			-> [ 			
+			offset := (operands at: 0).
+			(offset >= 0 and: [ (offset bitAnd: 16rFFF) = offset ]) 
+				ifTrue: [ ^ 4 ]
+				ifFalse: [ 	self
+									is9BitValue: offset
+										ifTrue: [ :v | ^ 4 ] 
+										ifFalse: [^ self literalLoadInstructionBytes + 4 ] ]].
+
 		[MoveMwrR]			-> [ 			
 			offset := (operands at: 0).
 			(offset >= 0 and: [ (offset bitAnd: 16rFFF) = offset ]) 
@@ -2063,6 +2072,55 @@ CogARMv8Compiler >> concretizeMoveM16rR [
 	self notYetImplemented.
 	
 	^0
+]
+
+{ #category : #'generate machine code - concretize' }
+CogARMv8Compiler >> concretizeMoveM32rR [
+	"Will get inlined into concretizeAt: switch."
+
+	<var: #offset type: #sqInt>
+	<inline: true>
+	| srcReg offset destReg instrOffset |
+	offset := operands at: 0.
+	srcReg := operands at: 1.
+	destReg := operands at: 2.
+
+	"If it is a positive 12 bit value this can be encoded as a LDR with a positive 12bit offset"
+	(offset >= 0 and: [ (offset bitAnd: 16rFFF) = offset ]) ifTrue: [
+		self
+			machineCodeAt: 0
+			put:
+				(self
+					ldrSize: 0"is32Bits"
+					baseRegister: srcReg
+					unsignedOffset: offset
+					destinationRegister: destReg).
+		^ machineCodeSize := 4
+	].
+	
+	"If it is negative, maybe we can encode it as a LDUR signed 9bit offset"
+	self
+		is9BitValue: offset
+		ifTrue: [ :immediate | 
+			self
+				machineCodeAt: 0
+				put:
+					(self
+						ldurSize: 0 "32bits"
+						baseRegister: srcReg
+						signedOffset: immediate
+						destinationRegister: destReg).
+			^ machineCodeSize := 4 ]
+		ifFalse: [
+			"Otherwise, this may be a literal"
+			self assert: dependent notNil.
+			instrOffset := self moveCw: offset intoR: ConcreteIPReg.
+			self
+				machineCodeAt: instrOffset
+				put: (self ldrSize: 0 "32 bits" indexRegister: ConcreteIPReg baseRegister: srcReg destinationRegister: destReg).
+			^ machineCodeSize := instrOffset + 4 ].
+		
+	^ 0	"to keep Slang happy"
 ]
 
 { #category : #'generate machine code - concretize' }
@@ -3076,6 +3134,7 @@ CogARMv8Compiler >> dispatchConcretize [
 		[MoveRM16r]		-> [^self concretizeMoveRM16r].
 		[MoveM16rR]		-> [^self concretizeMoveM16rR].
 		[MoveM64rRd]		-> [^self concretizeMoveM64rRd].
+		[MoveM32rR]		-> [^self concretizeMoveM32rR].
 		[MoveMwrR]		-> [^self concretizeMoveMwrR].
 		[MoveXbrRR]		-> [^self concretizeMoveXbrRR].
 		[MoveRXbrR]		-> [^self concretizeMoveRXbrR].
