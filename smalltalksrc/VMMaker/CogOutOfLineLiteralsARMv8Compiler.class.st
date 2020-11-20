@@ -417,6 +417,10 @@ CogOutOfLineLiteralsARMv8Compiler >> usesOutOfLineLiteral [
 	"Answer if the receiver uses an out-of-line literal.  Needs only
 	 to work for the opcodes created with gen:literal:operand: et al."
 
+	| offset |
+	
+	<var: #offset type: 'sqInt'>
+
 	opcode
 		caseOf: {
 		[CallFull]		-> [^true].
@@ -465,10 +469,11 @@ CogOutOfLineLiteralsARMv8Compiler >> usesOutOfLineLiteral [
 						-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
 		"Data Movement"						
 		[MoveCqR]		-> [^ self shiftable16bitImmediate: (operands at: 0) abs
-			ifTrue: [ :s :v | false ] ifFalse: [ true ]].
-		[MoveCwR]		-> [^(self inCurrentCompilation: (operands at: 0)) not].
+								ifTrue: [ :s :v | false ] ifFalse: [ true ]].
 		[MoveC32R]  -> [ ^ self shiftable16bitImmediate: (operands at: 0) abs
 			ifTrue: [ :s :v | false ] ifFalse: [ true ] ].
+
+		[MoveCwR]		-> [^(self inCurrentCompilation: (operands at: 0)) not].
 		[MoveAwR]		-> [^(self isAddressRelativeToVarBase: (operands at: 0)) ifTrue: [false] ifFalse: [true]].
 		[MoveRAw]		-> [^(self isAddressRelativeToVarBase: (operands at: 1)) ifTrue: [false] ifFalse: [true]].
 		[MoveAbR]		-> [^(self isAddressRelativeToVarBase: (operands at: 0)) ifTrue: [false] ifFalse: [true]].
@@ -486,11 +491,16 @@ CogOutOfLineLiteralsARMv8Compiler >> usesOutOfLineLiteral [
 		[MoveM16rR]	-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
 		[MoveRM16r]	-> [^self is12BitValue: (operands at: 1) ifTrue: [:s :v| false] ifFalse: [true]].
 		[MoveM64rRd]	-> [^self is12BitValue: (operands at: 0) ifTrue: [:s :v| false] ifFalse: [true]].
-		[MoveMwrR]	-> [ | offset |
+
+		[MoveMwrR]	-> [
 			offset := (operands at: 0).
-			((offset >= 0 and: [ (offset bitAnd: 16rFFF) = offset ])
-				or: [ offset < 0 and: [ (offset abs bitAnd: 16rff) = offset abs ] ]) ifTrue: [ ^ false ].
-			^ true ].
+			(offset >= 0 and: [ (offset bitAnd: 16rFFF) = offset ]) 
+				ifTrue: [ ^ false ]
+				ifFalse: [ 	self
+									is9BitValue: offset
+										ifTrue: [ :v | ^ false ] 
+										ifFalse: [^ true ] ]].
+								
 		[PushCw]		-> [^(self inCurrentCompilation: (operands at: 0)) not].
 		[PushCq]		-> [^self shiftable16bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
 		[PrefetchAw] 	-> [^(self isAddressRelativeToVarBase: (operands at: 0)) ifTrue: [false] ifFalse: [true]].

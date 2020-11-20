@@ -4,7 +4,8 @@ Class {
 	#instVars : [
 		'baseMethodIP',
 		'baseFrame',
-		'baseMethod'
+		'baseMethod',
+		'v3Method'
 	],
 	#category : #'VMMakerTests-JitTests'
 }
@@ -59,7 +60,7 @@ VMPrimitiveCallAbstractTest >> jitMethod: aPharoCompiledMethod [
 { #category : #helpers }
 VMPrimitiveCallAbstractTest >> jitMethod: aPharoCompiledMethod selector: aSelectorOop [
 
-	| methodOop v3Method |
+	| methodOop |
 	
 	"We are using V3 bytecode, so we need to recompile the method"
 	v3Method := aPharoCompiledMethod methodClass compiler

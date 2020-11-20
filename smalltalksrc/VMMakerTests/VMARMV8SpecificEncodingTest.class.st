@@ -46,6 +46,30 @@ VMARMV8SpecificEncodingTest >> doTestEncodeMoveMbrR: constant [
 
 ]
 
+{ #category : #'tests - MoveMwrR' }
+VMARMV8SpecificEncodingTest >> doTestEncodeMoveMwrR: constant [
+
+	| expectedAddress expectedValue |
+	
+	expectedAddress := initialAddress + 1024.
+	expectedValue := 16r10001000.
+
+	self compile: [
+		cogit MoveMw: constant r: ReceiverResultReg R: Arg0Reg].
+	
+	memory long32At: expectedAddress put: expectedValue.
+	
+	machineSimulator argument0RegisterValue: 0.
+	machineSimulator receiverRegisterValue: expectedAddress + constant negated.
+
+	self runGeneratedCode.
+	
+	self 
+		assert: machineSimulator argument0RegisterValue 
+		equals: expectedValue.
+
+]
+
 { #category : #'tests - MoveRMwr' }
 VMARMV8SpecificEncodingTest >> doTestEncodeMoveRMwr: constant [
 
@@ -265,6 +289,34 @@ VMARMV8SpecificEncodingTest >> testEncodeMoveMbrRWithPositiveNon9BitConstant [
 	self doTestEncodeMoveMbrR: 1024.
 
 
+]
+
+{ #category : #'tests - MoveMwrR' }
+VMARMV8SpecificEncodingTest >> testEncodeMoveMwrRWithNegative9BitConstant [
+
+	self doTestEncodeMoveMwrR: -256
+	
+]
+
+{ #category : #'tests - MoveMwrR' }
+VMARMV8SpecificEncodingTest >> testEncodeMoveMwrRWithNegativeNon9BitConstant [
+
+	self doTestEncodeMoveMwrR: -20056
+	
+]
+
+{ #category : #'tests - MoveMwrR' }
+VMARMV8SpecificEncodingTest >> testEncodeMoveMwrRWithPositive12BitConstant [
+
+	self doTestEncodeMoveMwrR: 16r100
+	
+]
+
+{ #category : #'tests - MoveMwrR' }
+VMARMV8SpecificEncodingTest >> testEncodeMoveMwrRWithPositiveNon9BitConstant [
+
+	self doTestEncodeMoveMwrR: 20056
+	
 ]
 
 { #category : #'tests - MoveRMwr' }

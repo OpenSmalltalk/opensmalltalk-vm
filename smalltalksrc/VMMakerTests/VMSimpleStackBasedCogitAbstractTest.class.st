@@ -19,7 +19,9 @@ Class {
 		'selectorAtIndex',
 		'inlineCacheMissTrampoline',
 		'machineSimulator',
-		'send1TrampolineAddress'
+		'send1TrampolineAddress',
+		'send2TrampolineAddress',
+		'send3TrampolineAddress'
 	],
 	#pools : [
 		'CogAbstractRegisters',
@@ -786,6 +788,13 @@ VMSimpleStackBasedCogitAbstractTest >> setUpTrampolines [
 	
 	send1TrampolineAddress := self compileTrampoline: [ cogit RetN: 0 ] named: #send1argsTrampoline.
 	cogit ordinarySendTrampolineAt: 1 "args" put: send1TrampolineAddress.
+
+	send2TrampolineAddress := self compileTrampoline: [ cogit RetN: 0 ] named: #send2argsTrampoline.
+	cogit ordinarySendTrampolineAt: 2 "args" put: send2TrampolineAddress.
+
+	send3TrampolineAddress := self compileTrampoline: [ cogit RetN: 0 ] named: #send3argsTrampoline.
+	cogit ordinarySendTrampolineAt: 3 "args" put: send3TrampolineAddress.
+
 
 	cogit ceCPICMissTrampoline: (self compileTrampoline: [ cogit RetN: 0 ] named:#ceCPICMissTrampoline).
 	cogit cePICAbortTrampoline: (self compileTrampoline: [ cogit RetN: 0 ] named:#cePICAbortTrampoline).

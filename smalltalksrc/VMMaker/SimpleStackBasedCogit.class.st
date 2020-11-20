@@ -2949,6 +2949,7 @@ SimpleStackBasedCogit >> genSendLiteralSelector1ArgBytecode [
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genSendLiteralSelector2ArgsBytecode [
+
 	^self genSend: (byte0 bitAnd: 15) numArgs: 2
 ]
 

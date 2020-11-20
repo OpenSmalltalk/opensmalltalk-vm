@@ -935,6 +935,10 @@ CogARMv8Compiler >> computeMaximumSize [
 	 N.B.  The ^N forms are to get around the bytecode compiler's long branch
 	 limits which are exceeded when each case jumps around the otherwise."
 
+	| offset |
+
+	<var: #offset type: #'sqInt'>
+
 	opcode
 		caseOf: {
 		"Noops & Pseudo Ops"
@@ -1085,8 +1089,8 @@ CogARMv8Compiler >> computeMaximumSize [
 		[MSUB]					-> [^4].
 				
 		"Data Movement"						
-		[MoveCqR]				-> [^ 4].
-		[MoveC32R]				-> [ ^ 4 ].
+		[MoveCqR]				-> [^4].
+		[MoveC32R]			-> [^4].
 		[MoveCwR]				-> [^self literalLoadInstructionBytes = 4
 										ifTrue: [self literalLoadInstructionBytes]
 										ifFalse:
@@ -1094,7 +1098,7 @@ CogARMv8Compiler >> computeMaximumSize [
 												ifTrue: [4]
 												ifFalse: [self literalLoadInstructionBytes]]].
 		[MoveRR]				-> [^4].
-		[MoveRdRd]				-> [^4].
+		[MoveRdRd]			-> [^4].
 		[MoveAwR]				-> [
 			"if register is SP we need an extra move"
 			^(self isAddressRelativeToVarBase: (operands at: 0))
@@ -1135,12 +1139,14 @@ CogARMv8Compiler >> computeMaximumSize [
 											ifTrue: [:r :i| 4]
 											ifFalse: [self literalLoadInstructionBytes + 4]].
 		[MoveM64rRd]			-> [^"self literalLoadInstructionBytes + "4].
-		[MoveMwrR]			-> [ | offset |
-			offset := operands at: 0.
-			^ ((offset >= 0 and: [(offset bitAnd: 16rFFF) = offset])
-				or: [offset < 0 and: [ (offset abs bitAnd: 16rFF) = offset abs ]])
-				ifTrue: [ 4 ]
-				ifFalse: [ 8 ]].
+		[MoveMwrR]			-> [ 			
+			offset := (operands at: 0).
+			(offset >= 0 and: [ (offset bitAnd: 16rFFF) = offset ]) 
+				ifTrue: [ ^ 4 ]
+				ifFalse: [ 	self
+									is9BitValue: offset
+										ifTrue: [ :v | ^ 4 ] 
+										ifFalse: [^ self literalLoadInstructionBytes + 4 ] ]].
 		[MoveXbrRR]			-> [^4].
 		[MoveX32rRR]			-> [^4].
 		[MoveRX32rR]			-> [^4].
@@ -2092,7 +2098,7 @@ CogARMv8Compiler >> concretizeMoveMwrR [
 	offset := operands at: 0.
 	srcReg := operands at: 1.
 	destReg := operands at: 2.
-	
+
 	"If it is a positive 12 bit value this can be encoded as a LDR with a positive 12bit offset"
 	(offset >= 0 and: [ (offset bitAnd: 16rFFF) = offset ]) ifTrue: [
 		self
@@ -2127,6 +2133,7 @@ CogARMv8Compiler >> concretizeMoveMwrR [
 				machineCodeAt: instrOffset
 				put: (self ldrSize: 1 indexRegister: ConcreteIPReg baseRegister: srcReg destinationRegister: destReg).
 			^ machineCodeSize := instrOffset + 4 ].
+		
 	^ 0	"to keep Slang happy"
 ]
 
