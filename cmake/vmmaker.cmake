@@ -24,7 +24,7 @@ endif()
 
 #Setting output directories
 set(VMMAKER_OUTPUT_PATH "build/vmmaker")
-make_directory(${VMMAKER_OUTPUT_PATH})
+make_directory(${CMAKE_CURRENT_BINARY_DIR}/${VMMAKER_OUTPUT_PATH})
 
 #The list of generated files given the flavour
 if(FLAVOUR MATCHES "StackVM")

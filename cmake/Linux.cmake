@@ -1,10 +1,12 @@
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wl,-rpath=.")
 
+function(add_platform_headers)
 target_include_directories(${VM_LIBRARY_NAME}
 PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/unix
     ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/common
 )
+endfunction() #add_platform_headers
 
 set(EXTRACTED_SOURCES
 #Common sources
@@ -30,12 +32,25 @@ set(VM_FRONTEND_SOURCES
 
 
 macro(add_third_party_dependencies_per_platform)
+	if (NOT WITHOUT_DEPENDENCIES)
     add_third_party_dependency("PThreadedFFI-1.4.0-linux64" "build/vm")
-    add_third_party_dependency("libgit2-0.25.1" "build/vm")
-    add_third_party_dependency_with_baseurl("libgit2-linux-1.0.0" "build/vm" "https://github.com/guillep/libgit_build/releases/download/v1.0.1")
-    add_third_party_dependency("libssh2-1.7.0" "build/vm")
-    add_third_party_dependency("openssl-1.0.2q" "build/vm")
-    add_third_party_dependency("SDL2-2.0.7" "build/vm")
+	endif()
+
+	if(${FEATURE_LIB_GIT2})
+        include(cmake/importLibGit2.cmake)
+    endif()
+
+    if(${FEATURE_LIB_FREETYPE2})
+        include(cmake/importFreetype2.cmake)
+    endif()
+
+    if(${FEATURE_LIB_CAIRO})
+        include(cmake/importCairo.cmake)
+    endif()
+
+    if(${FEATURE_LIB_SDL2})
+        include(cmake/importSDL2.cmake)
+    endif()
 endmacro()
 
 

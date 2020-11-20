@@ -14,14 +14,11 @@ find_library(LIBGIT2_LIBRARY NAMES git2)
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(libgit2 REQUIRED_VARS LIBGIT2_LIBRARY LIBGIT2_INCLUDE_PATH)
 
+if(LIBGIT2_FOUND AND NOT TARGET git2)
+    add_library(git2 SHARED IMPORTED)
+    set_target_properties(git2 PROPERTIES
+            IMPORTED_LOCATION "${LIBGIT2_LIBRARY}"
+            INTERFACE_INCLUDE_DIRECTORIES "${LIBGIT2_INCLUDE_PATH}"
+    )
 
-if (LIBGIT2_FOUND)
-  set(LIBGIT2_INCLUDE_DIR  ${LIBGIT2_INCLUDE_PATH})
-  set(LIBGIT2_INCLUDE_DIRS ${LIBGIT2_INCLUDE_PATH})
-  set(LIBGIT2_LIBRARIES    ${LIBGIT2_LIBRARY})
 endif()
-
-mark_as_advanced(
-  LIBGIT2_INCLUDE_PATH
-  LIBGIT2_LIBRARY
-)

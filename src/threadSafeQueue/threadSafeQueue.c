@@ -1,4 +1,5 @@
 #include "pharovm/threadSafeQueue/threadSafeQueue.h"
+#include "pharovm/semaphores/platformSemaphore.h"
 
 #include <stdio.h>
 #include <stdlib.h>

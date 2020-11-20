@@ -17,6 +17,9 @@ set(VERSION_PATCH 1)
 
 set(APPNAME Pharo CACHE STRING "VM Application name")
 
+# Configure CMake to load our modules
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
 # Extract VCS information
 get_commit_hash(GIT_COMMIT_HASH)
 get_git_describe(GIT_DESCRIBE)
@@ -297,7 +300,7 @@ if(GENERATE_SOURCES)
 endif()
 
 #Generating config file
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/pharovm/config.h.in ${CMAKE_CURRENT_BINARY_DIR}build/include/pharovm/config.h)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/pharovm/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/build/include/pharovm/config.h)
 
 message(STATUS "C Compiler: ${CMAKE_C_COMPILER}")
 message(STATUS "C++ Compiler: ${CMAKE_CXX_COMPILER}")
@@ -305,13 +308,6 @@ message(STATUS "Resource Compiler: ${CMAKE_RC_COMPILER}")
 
 set(VM_FRONTEND_APPLICATION_TYPE)
 include(cmake/${CMAKE_SYSTEM_NAME}.cmake)
-
-#
-# LibFFI
-#
-if (${FEATURE_FFI})
-    include(cmake/libffi.cmake)
-endif()
 
 set(GENERATED_SOURCES ${VMSOURCEFILES})
 
@@ -374,6 +370,13 @@ set(VM_SOURCES
 add_executable(${VM_EXECUTABLE_NAME} ${VM_FRONTEND_APPLICATION_TYPE} ${VM_FRONTEND_SOURCES})
 addLibraryWithRPATH(${VM_LIBRARY_NAME} ${VM_SOURCES})
 
+#
+# LibFFI
+#
+if (${FEATURE_FFI})
+    include(cmake/libffi.cmake)
+endif()
+
 target_include_directories(${VM_LIBRARY_NAME}
 PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -385,7 +388,6 @@ PRIVATE
 )
 add_platform_headers()
 
-
 if (${FEATURE_FFI})
     target_include_directories(${VM_LIBRARY_NAME}
         PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/ffi/include)
@@ -393,9 +395,6 @@ if (${FEATURE_FFI})
         PRIVATE FEATURE_FFI=1)
 endif()
 
-if (${FEATURE_FFI})
-    add_dependencies(${VM_LIBRARY_NAME} libFFI)
-endif()
 
 #If in OSX, configure creation of Bundle
 if(OSX)
@@ -408,10 +407,6 @@ if(OSX)
 endif()
 
 target_link_libraries(${VM_EXECUTABLE_NAME} ${VM_LIBRARY_NAME})
-
-if(${FEATURE_FFI})
-    target_link_libraries(${VM_LIBRARY_NAME} libFFI)
-endif()
 
 add_required_libs_per_platform()
 

@@ -1,6 +1,8 @@
 find_package(Freetype)
 
-if (NOT Freetype_FOUND)
+if (Freetype_FOUND)
+	add_dependencies(${VM_LIBRARY_NAME} Freetype::Freetype)
+elseif (NOT WITHOUT_DEPENDENCIES)
 	message(STATUS "Freetype not found in the system")
 
     message(STATUS "Building Freetype")
@@ -27,9 +29,11 @@ if (NOT Freetype_FOUND)
     #set_target_properties(${NAME} PROPERTIES MACOSX_RPATH ON)
     set_target_properties(freetype PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})
     #set_target_properties(${NAME} PROPERTIES INSTALL_NAME_DIR "@executable_path/Plugins")
-endif()
 
-add_dependencies(${VM_LIBRARY_NAME} freetype)
+	add_dependencies(${VM_LIBRARY_NAME} freetype)
+else()
+ 	message(FATAL_ERROR "Freetype not found")
+endif()
 
 
 # add_third_party_dependency("freetype-2.9.1" "build/vm")
