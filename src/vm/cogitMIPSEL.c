@@ -5370,7 +5370,7 @@ configureMNUCPICmethodOperandnumArgsdelta(CogMethod *cPIC, sqInt methodOperand, 
 static sqInt NoDbgRegParms
 cPICCompactAndIsNowEmpty(CogMethod *cPIC)
 {
-    usqInt entryPoint;
+    sqInt entryPoint;
     sqInt followingAddress;
     sqInt i;
     sqInt methods[MaxCPICCases];
