@@ -1,9 +1,12 @@
-target_include_directories(${VM_LIBRARY_NAME}
-PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/osx
-    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/unix
-    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/common
-)
+
+function(add_platform_headers)
+  target_include_directories(${VM_LIBRARY_NAME}
+    PUBLIC
+      ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/osx
+      ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/unix
+      ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/common
+    )
+endfunction() #add_platform_headers
 
 set(EXTRACTED_SOURCES
 #Common sources
@@ -45,16 +48,25 @@ set(VM_FRONTEND_SOURCES
 configure_file(resources/mac/Info.plist.in build/includes/Info.plist)
 
 macro(add_third_party_dependencies_per_platform)
-    add_third_party_dependency("pixman-0.34.0" ${LIBRARY_OUTPUT_DIRECTORY})
-    add_third_party_dependency("cairo-1.15.4" ${LIBRARY_OUTPUT_DIRECTORY})
-    add_third_party_dependency("freetype-2.9.1" ${LIBRARY_OUTPUT_DIRECTORY})
-    add_third_party_dependency("libgit2-0.25.1" ${LIBRARY_OUTPUT_DIRECTORY})
-    add_third_party_dependency("libgit2-mac-1.0.0" ${LIBRARY_OUTPUT_DIRECTORY})
-    add_third_party_dependency("libpng-1.2.49" ${LIBRARY_OUTPUT_DIRECTORY})
-    add_third_party_dependency("libssh2-1.7.0" ${LIBRARY_OUTPUT_DIRECTORY})
-    add_third_party_dependency("openssl-1.0.2q" ${LIBRARY_OUTPUT_DIRECTORY})
-    add_third_party_dependency("PThreadedFFI-1.4.0-osx64" ${LIBRARY_OUTPUT_DIRECTORY})
-    add_third_party_dependency("SDL2-2.0.7" ${LIBRARY_OUTPUT_DIRECTORY})
+	if (NOT WITHOUT_DEPENDENCIES)
+    add_third_party_dependency("PThreadedFFI-1.4.0-osx64" "build/vm")
+	endif()
+
+	if(${FEATURE_LIB_GIT2})
+    include(cmake/importLibGit2.cmake)
+  endif()
+
+  if(${FEATURE_LIB_FREETYPE2})
+    include(cmake/importFreetype2.cmake)
+  endif()
+
+  if(${FEATURE_LIB_CAIRO})
+    include(cmake/importCairo.cmake)
+  endif()
+
+  if(${FEATURE_LIB_SDL2})
+    include(cmake/importSDL2.cmake)
+  endif()
 endmacro()
 
 macro(configure_installables INSTALL_COMPONENT)
