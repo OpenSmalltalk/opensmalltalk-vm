@@ -1156,9 +1156,9 @@ CogARMv8Compiler >> computeMaximumSize [
 											ifTrue: [:r :i| 4]
 											ifFalse: [self literalLoadInstructionBytes + 4]].
 		[MoveM32rRs]			-> [^self is12BitValue: (operands at: 0) 
-										ifTrue: [:s :v| 4] ifFalse: [self notYetImplemented]].
+										ifTrue: [:s :v| 4] ifFalse: [self notYetImplemented. 0]].
 		[MoveM64rRd]			-> [^self is12BitValue: (operands at: 0) 
-										ifTrue: [:s :v| 4] ifFalse: [self notYetImplemented]].
+										ifTrue: [:s :v| 4] ifFalse: [self notYetImplemented. 0]].
 		[MoveM32rR]			-> [ 			
 			offset := (operands at: 0).
 			(offset >= 0 and: [ (offset bitAnd: 16rFFF) = offset ]) 
