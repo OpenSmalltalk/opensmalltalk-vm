@@ -37,12 +37,12 @@ VMJittedPrimitivesTest >> executePrimitiveWithReceiver: receiverOop withArgument
 	If we are in a system without a link register, we need to push the caller IP to the stack to simulate a call"
 
 	self prepareStackForSendReceiver: receiverOop arguments: { firstArgumentOop. secondArgumentOop }.
-"	
-	machineSimulator instructionPointerValue: initialAddress.
+	
+"	machineSimulator instructionPointerValue: initialAddress.
 	self openMachineDebugger.
 	1halt.
-"
-	self runUntilReturn.
+
+"	self runUntilReturn.
 
 ]
 

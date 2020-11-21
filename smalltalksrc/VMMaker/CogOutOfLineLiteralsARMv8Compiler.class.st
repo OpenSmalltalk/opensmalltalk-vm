@@ -112,6 +112,49 @@ CogOutOfLineLiteralsARMv8Compiler >> concretizeMovePatcheableC32R [
 ]
 
 { #category : #'generate machine code - concretize' }
+CogOutOfLineLiteralsARMv8Compiler >> concretizeMoveRM32r [
+	"Will get inlined into concretizeAt: switch."
+
+	<var: #offset type: #sqInt>
+	<inline: true>
+	| srcReg offset baseReg |
+
+	srcReg := operands at: 0.
+	offset := operands at: 1.
+	baseReg := operands at: 2.
+	self
+		is9BitValue: offset
+		ifTrue: [ :value |
+			self
+				machineCodeAt: 0
+				put:(self
+					sturSize: 0 "32 bits"
+ 					baseRegister: baseReg
+					signedOffset: offset
+					destinationRegister: srcReg).
+			^ machineCodeSize := 4 ]
+		ifFalse: [
+			self
+				shiftable16bitImmediate: offset
+				ifTrue: [ :shift :value | 
+					self assert: shift = 0.
+					self
+						machineCodeAt: 0
+						put: (self movSize: 1 destinationRegister: ConcreteIPReg imm: value shift: shift).
+					self
+						machineCodeAt: 4
+						put: (self strSize: 0 "32 bits" baseRegister: baseReg offsetRegister: ConcreteIPReg extension: 2r011 "LSL" shift: 0 "no LSL" storedRegister: srcReg).
+					^ machineCodeSize := 8  ]
+				ifFalse: [ 
+						self loadRelativeLiteralIn: ConcreteIPReg.
+					self
+						machineCodeAt: 4
+						put: (self strSize: 0 "32 bits" baseRegister: baseReg offsetRegister: ConcreteIPReg extension: 2r011 "LSL" shift: 0 "no LSL" storedRegister: srcReg).
+					^ machineCodeSize := 8 ]].
+	^ 0	"to keep Slang happy"
+]
+
+{ #category : #'generate machine code - concretize' }
 CogOutOfLineLiteralsARMv8Compiler >> concretizeMoveRMwr [
 	"Will get inlined into concretizeAt: switch."
 
@@ -479,19 +522,29 @@ CogOutOfLineLiteralsARMv8Compiler >> usesOutOfLineLiteral [
 		[MoveAbR]		-> [^(self isAddressRelativeToVarBase: (operands at: 0)) ifTrue: [false] ifFalse: [true]].
 		[MoveRAb]		-> [^(self isAddressRelativeToVarBase: (operands at: 1)) ifTrue: [false] ifFalse: [true]].
 	
+
+		[MoveRM32r]	-> [self is9BitValue: (operands at: 1)
+										ifTrue: [ :value | ^  false ]
+										ifFalse: [ self shiftable16bitImmediate: (operands at: 1) 
+														ifTrue: [ :value :shift | ^ false ] 
+														ifFalse: [ ^ true ] ]].
+
 		[MoveRMwr]	-> [self is9BitValue: (operands at: 1)
 										ifTrue: [ :value | ^  false ]
 										ifFalse: [ self shiftable16bitImmediate: (operands at: 1) 
 														ifTrue: [ :value :shift | ^ false ] 
 														ifFalse: [ ^ true ] ]].
-												
+
+		[MoveRsM32r]	-> [^self is12BitValue: (operands at: 1) ifTrue: [:s :v| false] ifFalse: [true]]. 												
 		[MoveRdM64r]	-> [^self is12BitValue: (operands at: 1) ifTrue: [:s :v| false] ifFalse: [true]]. 
-		[MoveMbrR]		-> [^self is9BitValue: (operands at: 0) ifTrue: [:v| false] ifFalse: [true]].
-		[MoveRMbr]		-> [^self is12BitValue: (operands at: 1) ifTrue: [:s :v| false] ifFalse: [true]].
+		[MoveMbrR]	-> [^self is9BitValue: (operands at: 0) ifTrue: [:v| false] ifFalse: [true]].
+		[MoveRMbr]	-> [^self is12BitValue: (operands at: 1) ifTrue: [:s :v| false] ifFalse: [true]].
+		[MoveRM8r]	-> [^self is12BitValue: (operands at: 1) ifTrue: [:s :v| false] ifFalse: [true]].
 		[MoveM16rR]	-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
 		[MoveRM16r]	-> [^self is12BitValue: (operands at: 1) ifTrue: [:s :v| false] ifFalse: [true]].
+		[MoveM32rRs]	-> [^self is12BitValue: (operands at: 0) ifTrue: [:s :v| false] ifFalse: [true]].
 		[MoveM64rRd]	-> [^self is12BitValue: (operands at: 0) ifTrue: [:s :v| false] ifFalse: [true]].
-		
+			
 		[MoveM32rR] -> [ offset := (operands at: 0).
 			(offset >= 0 and: [ (offset bitAnd: 16rFFF) = offset ]) 
 				ifTrue: [ ^ false ]
