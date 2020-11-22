@@ -68,6 +68,12 @@ PharoVMMaker >> generateCoInterpreter [
 ]
 
 { #category : #generation }
+PharoVMMaker >> generateCoInterpreterWithQueueFFI [
+
+	self generate: CoInterpreter memoryManager: #Spur64BitCoMemoryManager.
+]
+
+{ #category : #generation }
 PharoVMMaker >> generateStackVM [
 
 	self generate: StackInterpreter memoryManager: #Spur64BitMemoryManager.
