@@ -1041,6 +1041,12 @@ SpurMemoryManager class >> isSameLevelObjectAccessor: selector [
 	^#(arrayValueOf: firstFixedField: firstIndexableField:) includes: selector
 ]
 
+{ #category : #'simulation only' }
+SpurMemoryManager class >> isSpurMemoryManagerClass [
+
+	^ true
+]
+
 { #category : #translation }
 SpurMemoryManager class >> isTerminalObjectAccessor: selector [
 	"For accessor depth calculation, answer if selector doesn't answer another object object; merely a value."

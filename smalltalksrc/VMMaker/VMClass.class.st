@@ -293,6 +293,12 @@ VMClass class >> isPluginClass [
 	^false
 ]
 
+{ #category : #translation }
+VMClass class >> isSpurMemoryManagerClass [
+
+	^ false
+]
+
 { #category : #accessing }
 VMClass class >> memoryManagerVersion [ 
 	^ self subclassResponsibility
