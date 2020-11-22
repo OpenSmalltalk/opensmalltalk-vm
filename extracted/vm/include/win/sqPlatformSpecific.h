@@ -8,22 +8,16 @@
 
 */
 
+#include "pharovm/exportDefinition.h"
+
 #if _WIN32 || _WIN64
 /* Override necessary definitions */
-#undef putchar
-#include "sqWin32Alloc.h"
+# undef putchar
+# include "sqWin32Alloc.h"
 #include "sqMemoryAccess.h"
 
 
-#include <windows.h>
-
-/* pluggable primitive support */
-#if defined(_MSC_VER) || defined(__MINGW32__)
-#  undef EXPORT
-#  define EXPORT(returnType) __declspec( dllexport ) returnType
-#  undef VM_EXPORT
-#  define VM_EXPORT __declspec( dllexport )
-#endif
+# include <windows.h>
 
 # define ioCurrentOSThread() pthread_self()
 
@@ -135,6 +129,10 @@ extern const unsigned long tltiIndex;
 #	define CONTEXT_FP Ebp
 #	define CONTEXT_SP Esp
 #elif defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
+#	define CONTEXT_PC Rip
+#	define CONTEXT_FP Rbp
+#	define CONTEXT_SP Rsp
+#elif defined(_M_ARM64)
 #	define CONTEXT_PC Rip
 #	define CONTEXT_FP Rbp
 #	define CONTEXT_SP Rsp

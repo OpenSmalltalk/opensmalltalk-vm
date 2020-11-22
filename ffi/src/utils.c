@@ -49,26 +49,6 @@ char *readString(sqInt aString) {
     return (char *)firstIndexableField(aString);
 }
 
-inline sqInt getReceiver() {
-    return stackValue(methodArgumentCount());
-}
-
-inline void primitiveEnd() {
-    //pop all execept receiver, which will be answered (^self)
-    pop(methodArgumentCount());
-}
-
-inline void primitiveEndReturn(sqInt ret) {
-    //pop all including receiver, we are answering our own result
-    pop(methodArgumentCount() + 1);
-    push(ret);
-}
-
-inline void primitiveEndReturnInteger(sqInt ret) {
-    pop(methodArgumentCount() + 1);
-    pushInteger(ret);
-}
-
 // Extras
 
 inline sqInt newExternalAddress(void *address) {

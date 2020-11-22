@@ -83,7 +83,6 @@ EXPORT(sqInt) primDrainOSEventQueue(void);
 EXPORT(sqInt) primFloatAt(void);
 EXPORT(sqInt) primFloatAtPut(void);
 EXPORT(sqInt) primFree(void);
-EXPORT(sqInt) primInIOProcessEventsFlagAddress(void);
 EXPORT(sqInt) primInLibraryFindSymbol(void);
 EXPORT(sqInt) primLoadLibrary(void);
 EXPORT(sqInt) primMalloc(void);
@@ -912,24 +911,6 @@ primFree(void)
 	pop(1);
 	return 0;
 }
-
-
-/*	Answer the address of the int inIOProcessEvents flag. This can be used to
-	disable invocation of ioProcessEvents and is for backward-compatibility.
-	Please use the core VM primitiveEventProcessingControl in new code. */
-
-	/* IA32ABIPlugin>>#primInIOProcessEventsFlagAddress */
-EXPORT(sqInt)
-primInIOProcessEventsFlagAddress(void)
-{
-    extern int inIOProcessEvents;
-
-	methodReturnValue((BytesPerWord == 8
-		? positive64BitIntegerFor(((usqInt)((&inIOProcessEvents))))
-		: positive32BitIntegerFor(((usqInt)((&inIOProcessEvents))))));
-	return 0;
-}
-
 
 /*	Attempt to find the address of a symbol in a loaded library.
 	The primitive can have a signature either of the form:

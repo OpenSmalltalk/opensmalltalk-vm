@@ -1,0 +1,28 @@
+#include "windows.h"
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION     8,6,1,0
+PRODUCTVERSION  8,6,1,0
+FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
+FILEFLAGS       VS_FF_DEBUG
+FILEOS          VOS__WINDOWS32
+FILETYPE        VFT_APP
+FILESUBTYPE     VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904E4"    // Lang=US English, CharSet=Windows Multilin
+        BEGIN
+            VALUE "CompanyName", "Pharo.org\0"
+            VALUE "FileDescription", "Pharo Virtual Machine\0"
+            VALUE "FileVersion", "PharoVM-8.6.1-a8e4aa9f8"
+            VALUE "LegalCopyright", "Copyright \251 https://github.com/opensmalltalk 1996-2016\0" // TODO: Check this field
+            VALUE "ProductName", "Pharo\0"
+            VALUE "ProductVersion", "8.6.1-a8e4aa9f8\0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1252
+    END
+END

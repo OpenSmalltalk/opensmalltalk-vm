@@ -13,20 +13,21 @@
       "variables": [
         {
           "name": "FEATURE_FFI",
+          "value": "True",
+          "type": "BOOL"
+        },
+        {
+          "name": "WITHOUT_DEPENDENCIES",
+          "value": "True",
+          "type": "BOOL"
+        },
+        {
+          "name": "GENERATE_SOURCES",
           "value": "False",
           "type": "BOOL"
         },
         {
-          "name": "FEATURE_GNUISATION",
-          "value": "False",
-          "type": "BOOL"
-        },
-        {
-          "name": "FEATURE_SOCKETS",
-          "value": "False",
-          "type": "BOOL"
-        },
-        {
+
           "name": "GENERATE_SOURCES",
           "value": "True",
           "type": "BOOL"
@@ -34,6 +35,21 @@
         {
           "name": "FEATURE_COMPILE_GNUISATION",
           "value": "False",
+          "type": "BOOL"
+        },
+        {
+          "name": "GENERATED_SOURCE_DIR",
+          "value": "stack32",
+          "type": "STRING"
+        },
+        {
+          "name": "FLAVOUR",
+          "value": "StackVM ",
+          "type": "STRING"
+        },
+        {
+          "name": "FEATURE_LIB_SDL2",
+          "value": "True",
           "type": "BOOL"
         }
       ]
@@ -87,11 +103,11 @@
       "variables": [
         {
           "name": "FEATURE_FFI",
-          "value": "False",
+          "value": "True",
           "type": "BOOL"
         },
         {
-          "name": "FEATURE_GNUISATION",
+          "name": "FEATURE_COMPILE_GNUISATION",
           "value": "False",
           "type": "BOOL"
         },
@@ -109,8 +125,35 @@
           "name": "GENERATE_SOURCES",
           "value": "True",
           "type": "BOOL"
+        },
+        {
+          "name": "WITHOUT_DEPENDENCIES",
+          "value": "True",
+          "type": "BOOL"
+        },
+        {
+          "name": "FEATURE_COMPILE_INLINE_MEMORY_ACCESSORS",
+          "value": "True",
+          "type": "BOOL"
+        },
+        {
+          "name": "FLAVOUR",
+          "value": "StackVM",
+          "type": "STRING"
+        },
+        {
+          "name": "GENERATED_SOURCE_DIR",
+          "value": "stack32",
+          "type": "STRING"
         }
-      ]
+      ],
+      "intelliSenseMode": "windows-msvc-x86"
+    },
+    {
+      "name": "ARM-StackVM-msvc",
+      "cacheRoot": "C:\\Users\\lse\\Documents\\Projects\\ARM64-build",
+      "inheritEnvironments": [],
+      "variables": []
     }
   ]
 }

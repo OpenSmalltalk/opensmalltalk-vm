@@ -17,11 +17,21 @@ set(VERSION_PATCH 1)
 
 set(APPNAME Pharo CACHE STRING "VM Application name")
 
+# Configure CMake to load our modules
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
 # Extract VCS information
 get_commit_hash(GIT_COMMIT_HASH)
 get_git_describe(GIT_DESCRIBE)
 get_git_date(GIT_COMMIT_DATE)
-message(STATUS "${GIT_DESCRIBE} - Commit: ${GIT_COMMIT_HASH} - Date: ${GIT_COMMIT_DATE}")
+
+#Variable used to set the VM date
+set(BUILT_FROM "${GIT_DESCRIBE} - Commit: ${GIT_COMMIT_HASH} - Date: ${GIT_COMMIT_DATE}")
+message(STATUS ${BUILT_FROM})
+
+# Avoid using the d postfix to debug libraries
+# Otherwise, debug libraries change name and breaks FFI bindings
+set(CMAKE_DEBUG_POSTFIX "")
 
 #Configure toolchain for CYGWIN
 if ((CMAKE_HOST_UNIX) AND (${CMAKE_HOST_SYSTEM_NAME} MATCHES "CYGWIN*"))
@@ -31,7 +41,7 @@ if ((CMAKE_HOST_UNIX) AND (${CMAKE_HOST_SYSTEM_NAME} MATCHES "CYGWIN*"))
 
   # specify the cross compiler
   set(CMAKE_TOOLCHAIN_PREFIX x86_64-w64-mingw32)
-
+  
   SET(CMAKE_C_COMPILER   ${CMAKE_TOOLCHAIN_PREFIX}-clang)
   SET(CMAKE_CXX_COMPILER ${CMAKE_TOOLCHAIN_PREFIX}-clang++)
   SET(CMAKE_RC_COMPILER ${CMAKE_TOOLCHAIN_PREFIX}-windres)
@@ -42,13 +52,29 @@ endif()
 #This needs to be at this point, after setting the toolchain configuration
 project(PharoVM)
 
+# Correctly set the system processor under MSVC
+# This is required because CMake will set the HOST_PROCESSOR in windows
+# And not care about our Visual Studio settings
+# See https://gitlab.kitware.com/cmake/cmake/-/issues/15170
+if (MSVC)
+    set(CMAKE_SYSTEM_PROCESSOR ${MSVC_CXX_ARCHITECTURE_ID})
+endif()
+message(STATUS "Compiling for architecture: ${CMAKE_SYSTEM_PROCESSOR}")
+
+
 set(FLAVOUR CoInterpreterWithQueueFFI CACHE STRING "The kind of VM to generate. Possible values: StackVM, CogVM, CoInterpreterWithQueueFFI")
 set(GENERATE_SOURCES TRUE CACHE BOOL "If it generates the sources")
 set(ALWAYS_INTERACTIVE FALSE CACHE BOOL "If this VM will always add interactive or not. If it is set, the headless parameter is not by default true")
 set(FEATURE_FFI TRUE CACHE BOOL "Configure and compile support for FFI in the VM")
-set(FEATURE_SOCKETS TRUE CACHE BOOL "Configure and compile support for sockets in the VM")
+set(FEATURE_NETWORK TRUE CACHE BOOL "Configure and compile support for network and sockets in the VM")
 set(FEATURE_COMPILE_GNUISATION TRUE CACHE BOOL "Use gcc gnu extensions to compile the VM")
 set(FEATURE_COMPILE_INLINE_MEMORY_ACCESSORS TRUE CACHE BOOL "Use inline memory accessors instead of macros")
+
+set(WITHOUT_DEPENDENCIES FALSE CACHE BOOL "Do not download dependencies at build time")
+set(FEATURE_LIB_SDL2 TRUE CACHE BOOL "Build SDL2 support")
+set(FEATURE_LIB_CAIRO TRUE CACHE BOOL "Build Cairo support")
+set(FEATURE_LIB_FREETYPE2 TRUE CACHE BOOL "Build Cairo support")
+set(FEATURE_LIB_GIT2 TRUE CACHE BOOL "Build LibGit2 support")
 
 # If we are generating sources, set the source dir as the generation source dir.
 # Otherwise set it to by default to the current source dir, parametrizable
@@ -95,7 +121,11 @@ include(ExternalProject)
 set(COMMON_FLAGS "")
 set(BUILD_I386_VERSION NO)
 
-if(WIN)
+if(MSVC)
+    set(OS_TYPE "Win32")
+    get_platform_name(VM_TARGET_OS)
+    message(STATUS "Building for ${VM_TARGET_OS}")
+elseif(WIN)
     message(STATUS "Building for WINDOWS")
 
     #Tell the system we are not in UNIX. This is required for Cygwin builds
@@ -227,7 +257,7 @@ else()
 endif()
 
 
-set(EXECUTABLE_OUTPUT_PATH "build/vm")
+set(EXECUTABLE_OUTPUT_PATH "${CMAKE_CURRENT_BINARY_DIR}/build/vm")
 
 #If in OSX, configure creation of Bundle
 if (OSX)
@@ -270,72 +300,14 @@ if(GENERATE_SOURCES)
 endif()
 
 #Generating config file
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/pharovm/config.h.in build/include/pharovm/config.h)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/pharovm/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/build/include/pharovm/config.h)
 
 message(STATUS "C Compiler: ${CMAKE_C_COMPILER}")
 message(STATUS "C++ Compiler: ${CMAKE_CXX_COMPILER}")
 message(STATUS "Resource Compiler: ${CMAKE_RC_COMPILER}")
 
-
-include_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/semaphores
-    ${CMAKE_CURRENT_BINARY_DIR}/build/include/
-    ${CMAKE_CURRENT_BINARY_DIR}/build/include/pharovm/
-    ${GENERATED_SOURCE_DIR}/generated/vm/include
-	${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/include
-)
-
-if (${FEATURE_FFI})
-    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/ffi/include)
-    add_compile_definitions(FEATURE_FFI=1)
-endif()
-
 set(VM_FRONTEND_APPLICATION_TYPE)
 include(cmake/${CMAKE_SYSTEM_NAME}.cmake)
-#
-# LibFFI
-#
-
-if (NOT WITHOUT_DEPENDENCIES)
-
-ExternalProject_Add(build_libFFI
-    PREFIX "${CMAKE_CURRENT_BINARY_DIR}/build/libffi"
-    SOURCE_DIR "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/src"
-    STAMP_DIR "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/stamp"
-    BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/src"
-
-    UPDATE_COMMAND ""
-
-    GIT_REPOSITORY "https://github.com/libffi/libffi.git"
-    GIT_TAG "v3.3"
-    CONFIGURE_COMMAND "./autogen.sh" COMMAND ./configure "${LIBFFI_TARGET}" "--disable-docs" "--prefix=${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install" "CC=${CMAKE_C_COMPILER}" "CXX=${CMAKE_C_COMPILER}" ${LIBFFI_ADDITIONAL}
-	BUILD_COMMAND "${CMAKE_MAKE_PROGRAM}" ${LIBFFI_ADDITIONAL}
-)
-
-make_directory("${CMAKE_CURRENT_BINARY_DIR}/build/dist")
-
-if(OSX)
-    add_custom_command(
-      OUTPUT  ${LIBFFI_OUTPUT}
-      DEPENDS build_libFFI
-      COMMAND install_name_tool -id "@executable_path/Plugins/libffi.7.dylib" "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/lib/libffi.7.dylib"
-      COMMAND install_name_tool -id "@executable_path/Plugins/libffi.dylib" "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/lib/libffi.dylib"
-      WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/lib/"
-      COMMENT "Changing RPath of Libffi")
-
-	add_custom_target(libFFI DEPENDS "${LIBFFI_OUTPUT}")
-else()
-	add_custom_target(libFFI DEPENDS build_libFFI)
-endif()
-
-link_directories("${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/lib")
-
-endif()
-
-#
-# End LibFFI
-#
 
 set(GENERATED_SOURCES ${VMSOURCEFILES})
 
@@ -363,22 +335,29 @@ if(${FEATURE_FFI})
         ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/functionDefinitionPrimitives.c
         ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/primitiveCalls.c
         ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/primitiveUtils.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/pThreadedFFI.c
         ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/types.c
         ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/typesPrimitives.c
         ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/utils.c
+
+        # Single-threaded callout support
+        ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/sameThread/sameThread.c
     
+        # Callback support
         ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/callbacks/callbackPrimitives.c
         ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/callbacks/callbacks.c
-   
-        ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/sameThread/sameThread.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/worker/worker.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/worker/workerPrimitives.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/worker/workerTask.c
 
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/threadSafeQueue/threadSafeQueue.c
+        # Required by callbacks
         ${CMAKE_CURRENT_SOURCE_DIR}/src/semaphores/pharoSemaphore.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/threadSafeQueue/threadSafeQueue.c
     )
+    if (${FEATURE_THREADED_FFI})
+        list(APPEND SUPPORT_SOURCES
+            ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/pThreadedFFI.c
+            ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/worker/worker.c
+            ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/worker/workerPrimitives.c
+            ${CMAKE_CURRENT_SOURCE_DIR}/ffi/src/worker/workerTask.c
+        )
+    endif()
 endif()
 
 
@@ -391,9 +370,31 @@ set(VM_SOURCES
 add_executable(${VM_EXECUTABLE_NAME} ${VM_FRONTEND_APPLICATION_TYPE} ${VM_FRONTEND_SOURCES})
 addLibraryWithRPATH(${VM_LIBRARY_NAME} ${VM_SOURCES})
 
+#
+# LibFFI
+#
 if (${FEATURE_FFI})
-    add_dependencies(${VM_LIBRARY_NAME} libFFI)
+    include(cmake/libffi.cmake)
 endif()
+
+target_include_directories(${VM_LIBRARY_NAME}
+PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include
+    ${CMAKE_CURRENT_BINARY_DIR}/build/include/pharovm/
+    ${GENERATED_SOURCE_DIR}/generated/vm/include
+PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/semaphores
+)
+add_platform_headers()
+
+if (${FEATURE_FFI})
+    target_include_directories(${VM_LIBRARY_NAME}
+        PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/ffi/include)
+    target_compile_definitions(${VM_LIBRARY_NAME} 
+        PRIVATE FEATURE_FFI=1)
+endif()
+
 
 #If in OSX, configure creation of Bundle
 if(OSX)
@@ -407,19 +408,12 @@ endif()
 
 target_link_libraries(${VM_EXECUTABLE_NAME} ${VM_LIBRARY_NAME})
 
-if(${FEATURE_FFI})
-    target_link_libraries(${VM_LIBRARY_NAME} "ffi")
-endif()
-
 add_required_libs_per_platform()
 
 include(plugins.cmake)
 
 # Handling Third party dependencies
-
-if (NOT WITHOUT_DEPENDENCIES)
-	add_third_party_dependencies_per_platform()
-endif()
+add_third_party_dependencies_per_platform()
 
 # Packaging Setup
 

@@ -7,6 +7,10 @@
 #include <sys/time.h>
 #endif
 
+#ifndef PATH_MAX
+#define PATH_MAX MAX_PATH
+#endif
+
 char * GetAttributeString(sqInt id);
 
 #if defined(DEBUG) && DEBUG
@@ -117,7 +121,7 @@ void getCrashDumpFilenameInto(char *buf)
 	* - does not check error code
 	* - does use count as the size of the destination buffer
 	*/
-	strcat_s(buf, 9, "crash.dmp");
+	strcat_s(buf, PATH_MAX + 1, "crash.dmp");
 #else
 	strcat(buf, "crash.dmp");
 #endif

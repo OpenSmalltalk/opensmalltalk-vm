@@ -5,7 +5,7 @@
  * The plugin is misnamed.  It should be the AlienPlugin, but its history
  * dictates otherwise.
  */
-#if defined(_M_I386) || defined(_X86_) || defined(i386) || defined(i486) || defined(i586) || defined(i686) || defined(__i386__) || defined(__386__) || defined(X86) || defined(I386)
+#if defined(_M_I386) || defined(_M_IX86) || defined(_X86_) || defined(i386) || defined(i486) || defined(i586) || defined(i686) || defined(__i386__) || defined(__386__) || defined(X86) || defined(I386)
 # include "ia32abicc.c"
 #elif powerpc|ppc
 # include "ppc32abicc.c"

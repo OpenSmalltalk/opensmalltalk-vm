@@ -224,10 +224,15 @@ ioHighResClock(void)
 						: "=a" (value)
 						: 
 						: "rdx");
-#elif (defined(__arm__) && (defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7A__))) || defined(__aarch64__)
+#elif (defined(__arm__) && (defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7A__))) || defined(__aarch64__) || defined(_M_ARM64)
 	/* tpr - do nothing for now; needs input from eliot to decide further */
 	/* Tim, not sure I have input beyond:
 		Is there a 64-bit clock on ARM?  If so, access it here :-)
+		see
+		https://stackoverflow.com/questions/40454157/is-there-an-equivalent-instruction-to-rdtsc-in-arm/40455065
+		https://developer.arm.com/documentation/ddi0460/c/Events-and-Performance-Monitor/Performance-monitoring-registers/c9--User-Enable-Register
+		https://developer.arm.com/documentation/ddi0460/c/Events-and-Performance-Monitor/Performance-monitoring-registers/c9--Count-Enable-Set-Register
+		https://github.com/google/benchmark/blob/v1.1.0/src/cycleclock.h#L116
 	 */
 #elif defined(_WIN32)
 	value = __rdtsc();

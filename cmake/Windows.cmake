@@ -13,10 +13,13 @@ set(Win32DLLResource "${CMAKE_CURRENT_BINARY_DIR}/${VM_EXECUTABLE_NAME}DLL.rc")
 set(Win32Manifest "${CMAKE_CURRENT_BINARY_DIR}/${VM_EXECUTABLE_NAME}.exe.manifest")
 set(Win32ConsoleManifest "${CMAKE_CURRENT_BINARY_DIR}/${VM_EXECUTABLE_CONSOLE_NAME}.exe.manifest")
 
-include_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/win
-    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/common
-)
+function(add_platform_headers)
+    target_include_directories(${VM_LIBRARY_NAME}
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/win
+        ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include/common
+    )
+endfunction()
 
 set(EXTRACTED_SOURCES
 #Common sources
@@ -55,18 +58,38 @@ configure_file("${Win32ResourcesFolder}/${VM_EXECUTABLE_CONSOLE_NAME}.rc.in" "${
 configure_file("${Win32ResourcesFolder}/${VM_EXECUTABLE_CONSOLE_NAME}.exe.manifest.in" "${Win32ConsoleManifest}" @ONLY IMMEDIATE)
 
 macro(add_third_party_dependencies_per_platform)
-    add_third_party_dependency("pixman-0.34.0" "build/vm")
-    add_third_party_dependency("cairo-1.15.4" "build/vm")
-    add_third_party_dependency("freetype-2.9.1" "build/vm")
-    add_third_party_dependency("libgit2-0.25.1-fixLibGit" "build/vm")
-    add_third_party_dependency("libgit2-win-1.0.0" "build/vm")
-    add_third_party_dependency("libpng-1.6.34" "build/vm")
-    add_third_party_dependency("libssh2-1.9.0" "build/vm")
-    add_third_party_dependency("openssl-1.0.2q-fixLigGit" "build/vm")
-    add_third_party_dependency("gcc-runtime-3.4" "build/vm")
-    add_third_party_dependency("zlib-1.2.11-fixLibGit" "build/vm")
-    add_third_party_dependency("SDL2-2.0.5" "build/vm")
-    add_third_party_dependency("PThreadedFFI-1.4.0-win64" "build/vm")
+
+    if (NOT WITHOUT_DEPENDENCIES)
+
+        add_third_party_dependency("zlib-1.2.11-fixLibGit" "build/vm")
+
+
+        add_third_party_dependency("libssh2-1.9.0" "build/vm")
+        add_third_party_dependency("openssl-1.0.2q-fixLigGit" "build/vm")
+        
+        # Cygwin runtime?
+        add_third_party_dependency("gcc-runtime-3.4" "build/vm")
+        
+        # Backwards compatibility for those using PThreaded Plugin
+        # Current support is in the VM
+        add_third_party_dependency("PThreadedFFI-1.4.0-win64" "build/vm")
+    endif()
+    
+    if(${FEATURE_LIB_GIT2})
+        include(cmake/importLibGit2.cmake)
+    endif()
+
+    if(${FEATURE_LIB_FREETYPE2})
+        include(cmake/importFreetype2.cmake)
+    endif()
+
+    if(${FEATURE_LIB_CAIRO})
+        include(cmake/importCairo.cmake)
+    endif()
+
+    if(${FEATURE_LIB_SDL2})
+        include(cmake/importSDL2.cmake)
+    endif()
 endmacro()
 
 macro(configure_installables INSTALL_COMPONENT)
@@ -105,27 +128,29 @@ macro(configure_installables INSTALL_COMPONENT)
 endmacro()
 
 macro(add_required_libs_per_platform)
-   add_executable(${VM_EXECUTABLE_CONSOLE_NAME} ${VM_CONSOLE_FRONTEND_SOURCES})
-   target_link_libraries(${VM_EXECUTABLE_CONSOLE_NAME} ${VM_LIBRARY_NAME})
+	add_executable(${VM_EXECUTABLE_CONSOLE_NAME} ${VM_CONSOLE_FRONTEND_SOURCES})
+	target_link_libraries(${VM_EXECUTABLE_CONSOLE_NAME} ${VM_LIBRARY_NAME})
 
-   target_link_libraries(${VM_LIBRARY_NAME} winmm)
-   target_link_libraries(${VM_LIBRARY_NAME} Ws2_32)
-   target_link_libraries(${VM_LIBRARY_NAME} DbgHelp)
-   target_link_libraries(${VM_LIBRARY_NAME} Ole32)
-   target_link_libraries(${VM_LIBRARY_NAME} comctl32)
-   target_link_libraries(${VM_LIBRARY_NAME} uuid)
+	target_link_libraries(${VM_LIBRARY_NAME} winmm)
+	target_link_libraries(${VM_LIBRARY_NAME} Ws2_32)
+	target_link_libraries(${VM_LIBRARY_NAME} DbgHelp)
+	target_link_libraries(${VM_LIBRARY_NAME} Ole32)
+	target_link_libraries(${VM_LIBRARY_NAME} comctl32)
+	target_link_libraries(${VM_LIBRARY_NAME} uuid)
 
-#   target_link_libraries(${VM_LIBRARY_NAME} pthread)
-   target_link_libraries(${VM_EXECUTABLE_NAME} Ole32)
-   target_link_libraries(${VM_EXECUTABLE_NAME} comctl32)
-   target_link_libraries(${VM_EXECUTABLE_NAME} uuid)
+	if(${CYGWIN})
+		target_link_libraries(${VM_LIBRARY_NAME} pthread)
+	endif()
+	target_link_libraries(${VM_EXECUTABLE_NAME} Ole32)
+	target_link_libraries(${VM_EXECUTABLE_NAME} comctl32)
+	target_link_libraries(${VM_EXECUTABLE_NAME} uuid)
 
-   target_link_libraries(${VM_EXECUTABLE_CONSOLE_NAME} Ole32)
-   target_link_libraries(${VM_EXECUTABLE_CONSOLE_NAME} comctl32)
-   target_link_libraries(${VM_EXECUTABLE_CONSOLE_NAME} uuid)
+	target_link_libraries(${VM_EXECUTABLE_CONSOLE_NAME} Ole32)
+	target_link_libraries(${VM_EXECUTABLE_CONSOLE_NAME} comctl32)
+	target_link_libraries(${VM_EXECUTABLE_CONSOLE_NAME} uuid)
 
-   set_target_properties(${VM_EXECUTABLE_NAME} PROPERTIES LINK_FLAGS "-mwindows")
-   set_target_properties(${VM_EXECUTABLE_CONSOLE_NAME} PROPERTIES LINK_FLAGS "-mconsole")
+	set_target_properties(${VM_EXECUTABLE_NAME} PROPERTIES LINK_FLAGS "-mwindows")
+	set_target_properties(${VM_EXECUTABLE_CONSOLE_NAME} PROPERTIES LINK_FLAGS "-mconsole")
 endmacro()
 
 set(LIBFFI_TARGET "--target=x86_64-unknown-cygwin")

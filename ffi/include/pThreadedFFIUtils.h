@@ -9,7 +9,6 @@ char *readString(sqInt aString);
 void *getAddressFromExternalAddressOrByteArray(sqInt anExternalAddressOrByteArray);
 
 // meta
-sqInt getReceiver();
 sqInt getAttributeOf(sqInt receiver, int index);
 void *getHandlerOf(sqInt receiver, int index);
 // arrays
@@ -17,9 +16,27 @@ sqInt arrayObjectAt(sqInt array, sqInt index);
 sqInt arrayObjectAtPut(sqInt array, sqInt index, sqInt object);
 sqInt arrayObjectSize(sqInt array);
 // clean ending for a primitive
-void primitiveEnd();
-void primitiveEndReturn(sqInt ret);
-void primitiveEndReturnInteger(sqInt ret);
+
+// Inline  functions need to be defined in the file that uses them. Thus define them at the header level
+inline sqInt getReceiver() {
+    return stackValue(methodArgumentCount());
+}
+
+inline void primitiveEnd() {
+    //pop all execept receiver, which will be answered (^self)
+    pop(methodArgumentCount());
+}
+
+inline void primitiveEndReturn(sqInt ret) {
+    //pop all including receiver, we are answering our own result
+    pop(methodArgumentCount() + 1);
+    push(ret);
+}
+
+inline void primitiveEndReturnInteger(sqInt ret) {
+    pop(methodArgumentCount() + 1);
+    pushInteger(ret);
+}
 // others
 sqInt newExternalAddress(void *address);
 
