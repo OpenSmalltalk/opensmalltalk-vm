@@ -58,6 +58,32 @@ VMJittedPrimitiveSizeTest >> testPrimitiveSize32bitIndexableShouldReturnNumberOf
 ]
 
 { #category : #'tests - bit indexable' }
+VMJittedPrimitiveSizeTest >> testPrimitiveSize32bitIndexableWithExtraHeaderShouldReturnNumberOf32bitSlots [
+
+	| integerArray aSize bytesPerSlot desiredByteSize numberOfWordSizeSlots padding |
+
+	aSize := 32768.
+	bytesPerSlot := 4.
+
+	desiredByteSize := aSize * bytesPerSlot roundUpTo: self wordSize.
+	numberOfWordSizeSlots := desiredByteSize / self wordSize.
+	padding := desiredByteSize / bytesPerSlot - aSize.
+	integerArray := memory
+		  allocateSlotsInOldSpace: numberOfWordSizeSlots
+		  format: memory firstLongFormat + padding
+		  classIndex: self nextOrdinaryClassIndex.
+
+	self prepareStackForSendReceiver: integerArray.
+
+	machineSimulator baseRegisterValue: cogit varBaseAddress.
+	self runUntilReturn.
+	
+	self
+		assert: (memory integerValueOf: machineSimulator receiverRegisterValue)
+		equals: 32768
+]
+
+{ #category : #'tests - bit indexable' }
 VMJittedPrimitiveSizeTest >> testPrimitiveSize64bitIndexableShouldReturnNumberOf64bitSlots [
 
 	| integerArray |

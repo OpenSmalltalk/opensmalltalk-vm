@@ -93,6 +93,21 @@ VMARMV8SpecificEncodingTest >> doTestEncodeMoveRMwr: constant [
 ]
 
 { #category : #'tests - cmpCqR' }
+VMARMV8SpecificEncodingTest >> testEncodeCmpCqRNonEncodeable12BitConstant [
+
+	| constant |
+	constant := 32768 << 3 + 1.
+	self compile: [		 
+		cogit CmpCq: constant R: ReceiverResultReg ].
+	
+	machineSimulator receiverRegisterValue: constant.
+	self runGeneratedCode.
+	
+	"Assert Cmp was equals"
+	self assert: machineSimulator zero
+]
+
+{ #category : #'tests - cmpCqR' }
 VMARMV8SpecificEncodingTest >> testEncodeCmpCqRWithNegative12BitConstant [
 
 	| negativeConstant12Bits |
