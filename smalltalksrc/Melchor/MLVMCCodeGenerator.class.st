@@ -442,11 +442,18 @@ MLVMCCodeGenerator >> optionIsTrue: pragma in: aClass [
 	"Answer whether an option: or notOption: pragma is true in the context of aClass.
 	 The argument to the option: pragma is interpreted as either a Cogit class name
 	 or a class variable name or a variable name in VMBasicConstants."
-	| key constantClass |
+	| key |
 	key := pragma argumentAt: 1.
 
 	(super optionIsTrue: pragma in: aClass) ifTrue:
 		[^true].
+
+	"If the option is the name of a subclass of Cogit, include it if it inherits from the Cogit class."
+	(Smalltalk classNamed: key) ifNotNil: [ :optionClass |
+		aClass cogitClass ifNotNil: [ :cogitClass |
+			^cogitClass includesBehavior: optionClass ].
+		aClass objectMemoryClass ifNotNil: [ :objectMemoryClass |
+			^objectMemoryClass includesBehavior: optionClass ] ].
 
 	"If the option is the name of a subclass of Cogit, include it if it inherits from the Cogit class."
 	(self environment classNamed: key) ifNotNil:
