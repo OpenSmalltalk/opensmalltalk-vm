@@ -12,10 +12,10 @@
 
 #include <signal.h>
 
-char vmName[FILENAME_MAX] = {0};
-char imageName[FILENAME_MAX] = {0};
-char vmFullPath[FILENAME_MAX] = {0};
-char vmPath[FILENAME_MAX] = {0};
+char vmName[FILENAME_MAX];
+char imageName[FILENAME_MAX];
+char vmFullPath[FILENAME_MAX];
+char vmPath[FILENAME_MAX];
 
 #if __APPLE__
 	void fillApplicationDirectory(char* vmPath);
@@ -25,6 +25,7 @@ char vmPath[FILENAME_MAX] = {0};
 BOOL fIsConsole = 1;
 #endif
 
+int isVMRunOnWorkerThread(void);
 
 void *os_exports[][3]=
 {
@@ -113,7 +114,7 @@ char * GetAttributeString(sqInt id)
 
     case 1009: /* source tree version info */
         return getSourceVersion();
-            
+
     case 1010: /* Implements AIO Interrupt */
         return "AIO";
 
@@ -412,13 +413,19 @@ isCFramePointerInUse()
  * descend.
  */
 
-static char * volatile p = 0;
+static char * volatile redZoneTestEndPointer = 0;
 
 
-#ifdef siginfo_t
-	static void sighandler(int sig, siginfo_t *info, void *uap) { p = (char *)&sig; }
+#ifdef SIGPROF
+static void redZoneTestSigHandler(int sig, siginfo_t *info, void *uap)
+{
+	redZoneTestEndPointer = (char *)&sig;
+}
 #else
-	static void sighandler(int sig) { p = (char *)&sig; }
+static void redZoneTestSigHandler(int sig)
+{
+	redZoneTestEndPointer = (char *)&sig;
+}
 #endif
 
 #ifndef WIN64
@@ -426,23 +433,23 @@ static long int min(long int x, long int y) { return (x < y) ? x : y; }
 static long int max(long int x, long int y) { return (x > y) ? x : y; }
 #endif
 
-static int getRedzoneSize()
+static int getRedZoneSize()
 {
 #if defined(SIGPROF) /* cygwin */
 	struct sigaction handler_action, old;
-	handler_action.sa_sigaction = sighandler;
+	handler_action.sa_sigaction = redZoneTestSigHandler;
 	handler_action.sa_flags = SA_NODEFER | SA_SIGINFO;
 	sigemptyset(&handler_action.sa_mask);
 	(void)sigaction(SIGPROF, &handler_action, &old);
 
-	do kill(getpid(),SIGPROF); while (!p);
+	do kill(getpid(),SIGPROF); while (!redZoneTestEndPointer);
 	(void)sigaction(SIGPROF, &old, 0);
-	return (int)min((usqInt)&old,(usqInt)&handler_action) - sizeof(struct sigaction) - (int)p;
+	return (int)min((usqInt)&old,(usqInt)&handler_action) - sizeof(struct sigaction) - (usqInt)redZoneTestEndPointer;
 #else /* cygwin */
-	void (*old)(int) = signal(SIGBREAK, sighandler);
+	void (*old)(int) = signal(SIGBREAK, redZoneTestSigHandler);
 
-	do raise(SIGBREAK); while (!p);
-	return (char *)&old - p;
+	do raise(SIGBREAK); while (!redZoneTestEndPointer);
+	return (int) ((char *)&old - redZoneTestEndPointer);
 #endif /* cygwin */
 }
 
@@ -459,7 +466,7 @@ int
 osCogStackPageHeadroom()
 {
 	if (!stackPageHeadroom)
-		stackPageHeadroom = getRedzoneSize() + 1024;
+		stackPageHeadroom = getRedZoneSize() + 1024;
 	return stackPageHeadroom;
 }
 
@@ -484,7 +491,8 @@ EXPORT(int) __cdecl sqMessageBox(DWORD dwFlags, const char *titleString, const c
   return result;
 }
 
-EXPORT(void) printLastError(const TCHAR *prefix) { LPVOID lpMsgBuf;
+EXPORT(void) printLastError(const TCHAR *prefix) {
+  LPVOID lpMsgBuf;
   DWORD lastError;
 
   lastError = GetLastError();
@@ -577,7 +585,9 @@ EXPORT(void) getBasePath(char const *path, char* basePath, int basePathSize){
 	WideCharToMultiByte(CP_UTF8, 0, finalBasePathWide, -1, basePath, basePathSize, NULL, 0);
 
 #else
-	strcpy(basePath, dirname(path));
+	char * pathCopy = strdup(path);
+	strcpy(basePath, dirname(pathCopy));
+	free(pathCopy);
 #endif
 }
 
@@ -608,5 +618,3 @@ EXPORT(const char **) getProcessEnvironmentVector(){
 EXPORT(int) ioGetCurrentWorkingDirectorymaxLength(char * aCString, size_t maxLength){
 	return vm_path_get_current_working_dir_into(aCString, maxLength) == VM_SUCCESS ? 0 : -1 ;
 }
-
-

@@ -40,14 +40,25 @@ For doing so, it is required to do:
 sudo ln -s /usr/lib64/libcurl.so.4 /usr/lib64/libcurl-gnutls.so.4
 ```
 
+In Ubuntu 20.04 and in Mint 20, the VM is built with the following packages:
+
+- build-essentials
+- gcc 
+- g++
+- binutils
+- cmake
+- git
+- wget 
+- unzip
+- uuid-dev
+- libssl-dev
+
 Building in OSX / Linux:
 
 ```bash
 $ cmake . 
 $ make install
 ```
-In some latest Ubuntu installations is required to install the package libssl-dev.
-We are working to solve this dependency as the others in the build.
 
 Building in Windows:
 
@@ -61,6 +72,7 @@ The build in Windows, uses Cygwin. This tool should be installed, and the follow
 - curl 
 - make
 - git
+- libtool
 
 ```bash
 $ cmake .

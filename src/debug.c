@@ -24,6 +24,10 @@ EXPORT(void) logLevel(int value){
 	max_error_level = value;
 }
 
+EXPORT(int) getLogLevel(){
+	return max_error_level;
+}
+
 void error(char *errorMessage){
     logError(errorMessage);
     abort();
@@ -81,7 +85,7 @@ EXPORT(void) logMessage(int level, const char* fileName, const char* functionNam
 	struct timeval utcNow;
 	gettimeofday(&utcNow,0);
 
-	fprintf(outputStream, "[%-5s] %s.%03d %s (%s:%d):", severityName[level - 1], timestamp, utcNow.tv_usec / 1000 , functionName, fileName, line);
+	fprintf(outputStream, "[%-5s] %s.%03lld %s (%s:%d):", severityName[level - 1], timestamp, (long long)(utcNow.tv_usec / 1000) , functionName, fileName, line);
 
 	//Printint the message from the var_args.
 	va_list list;

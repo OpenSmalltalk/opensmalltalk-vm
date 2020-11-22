@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include "exportDefinition.h"
+
 #include <stddef.h>
 #include <stdio.h>
 #include <stdio.h>
@@ -78,8 +80,6 @@ void *getModuleSymbol(void *module, const char *symbol);
 
 void *getHandler(sqInt anExternalObject);
 void *readAddress(sqInt anExternalAddress);
-
-EXPORT(sqInt) mainThread_schedule(sqInt (*closure)());
 
 EXPORT(int) isVMRunOnWorkerThread();
 void setMaxStacksToPrint(sqInt anInteger);

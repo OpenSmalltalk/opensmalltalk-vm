@@ -11,6 +11,10 @@ def shell(params){
     else sh(params)
 }
 
+def isMainBranch(){
+	return env.BRANCH_NAME == 'headless'
+}
+
 def runInCygwin(command){
 	def c = """#!c:\\tools\\cygwin\\bin\\bash --login
     cd `cygpath \"$WORKSPACE\"`
@@ -47,7 +51,7 @@ def buildGTKBundle(){
 				stash includes: "${gtkBundleName}", name: "packages-windows-gtkBundle"
 				archiveArtifacts artifacts: "${gtkBundleName}"
 				
-				if(!isPullRequest() && env.BRANCH_NAME == 'headless'){
+				if(!isPullRequest() && isMainBranch()){
 					sshagent (credentials: ['b5248b59-a193-4457-8459-e28e9eb29ed7']) {
 						sh "scp -o StrictHostKeyChecking=no \
 						${gtkBundleName} \
@@ -62,10 +66,18 @@ def buildGTKBundle(){
 		}
 	}
 }
+def recordCygwinVersions(buildDirectory){
+    runInCygwin "cd ${buildDirectory} &&  cygcheck -c -d > cygwinVersions.txt"
+	archiveArtifacts artifacts: "${buildDirectory}/cygwinVersions.txt"
+}
 
-def runBuild(platform, configuration){
+def runBuild(platformName, configuration, headless = true){
 	cleanWs()
 	
+	def platform = headless ? platformName : "${platformName}-stockReplacement"
+	def buildDirectory = headless ? "build" :"build-stockReplacement"
+
+	def additionalParameters = headless ? "" : "-DALWAYS_INTERACTIVE=1" 
 
     stage("Checkout-${platform}"){
       dir('repository') {
@@ -76,19 +88,21 @@ def runBuild(platform, configuration){
 
 	stage("Build-${platform}-${configuration}"){
     if(isWindows()){
-      runInCygwin "mkdir build"
-      runInCygwin "cd build && cmake -DFLAVOUR=${configuration} ../repository"
-      runInCygwin "cd build && make install"
-      runInCygwin "cd build && make package"
+      runInCygwin "mkdir ${buildDirectory}"
+      recordCygwinVersions(buildDirectory)
+      runInCygwin "cd ${buildDirectory} && cmake -DFLAVOUR=${configuration} ${additionalParameters} ../repository"
+      runInCygwin "cd ${buildDirectory} && VERBOSE=1 make install"
+      runInCygwin "cd ${buildDirectory} && VERBOSE=1 make package"
     }else{
-      cmakeBuild generator: "Unix Makefiles", cmakeArgs: "-DFLAVOUR=${configuration}", sourceDir: "repository", buildDir: "build", installation: "InSearchPath"
-      dir("build"){
-        shell "make install"
-        shell "make package"
+      cmakeBuild generator: "Unix Makefiles", cmakeArgs: "-DFLAVOUR=${configuration} ${additionalParameters}", sourceDir: "repository", buildDir: "${buildDirectory}", installation: "InSearchPath"
+      dir("${buildDirectory}"){
+        shell "VERBOSE=1 make install"
+        shell "VERBOSE=1 make package"
       }
     }
-		stash excludes: '_CPack_Packages', includes: 'build/build/packages/*', name: "packages-${platform}-${configuration}"
-		archiveArtifacts artifacts: 'build/build/packages/*', excludes: '_CPack_Packages'
+	
+		stash excludes: '_CPack_Packages', includes: "${buildDirectory}/build/packages/*", name: "packages-${platform}-${configuration}"
+		archiveArtifacts artifacts: "${buildDirectory}/build/packages/*", excludes: '_CPack_Packages'
 	}
 }
 
@@ -175,6 +189,25 @@ def upload(platform, configuration, vmDir) {
 	}
 }
 
+def uploadStockReplacement(platform, configuration, vmDir) {
+
+	cleanWs()
+
+	unstash name: "packages-${platform}-${configuration}"
+
+	def expandedBinaryFileName = sh(returnStdout: true, script: "ls build-stockReplacement/build/packages/PharoVM-*-${vmDir}64-bin.zip").trim()
+
+	sshagent (credentials: ['b5248b59-a193-4457-8459-e28e9eb29ed7']) {
+		sh "scp -o StrictHostKeyChecking=no \
+		${expandedBinaryFileName} \
+		pharoorgde@ssh.cluster023.hosting.ovh.net:/home/pharoorgde/files/vm/pharo-spur64/${vmDir}"
+		sh "scp -o StrictHostKeyChecking=no \
+		${expandedBinaryFileName} \
+		pharoorgde@ssh.cluster023.hosting.ovh.net:/home/pharoorgde/files/vm/pharo-spur64/${vmDir}/latestReplacement.zip"
+	}
+}
+
+
 def isPullRequest() {
   return env.CHANGE_ID != null
 }
@@ -188,7 +221,7 @@ def uploadPackages(){
 				return;
 			}
 			
-			if(env.BRANCH_NAME != 'headless'){
+			if(!isMainBranch()){
 				echo "[DO NO UPLOAD] In branch different that 'headless': ${env.BRANCH_NAME}";
 				return;
 			}
@@ -196,6 +229,10 @@ def uploadPackages(){
 			upload('osx', "CoInterpreterWithQueueFFI", 'mac')
 			upload('unix', "CoInterpreterWithQueueFFI",'linux')
 			upload('windows', "CoInterpreterWithQueueFFI", 'win')
+
+			uploadStockReplacement('osx-stockReplacement', "CoInterpreterWithQueueFFI", 'mac')
+			uploadStockReplacement('unix-stockReplacement', "CoInterpreterWithQueueFFI",'linux')
+			uploadStockReplacement('windows-stockReplacement', "CoInterpreterWithQueueFFI", 'win')
 		}
 	}
 }
@@ -215,6 +252,9 @@ try{
 			node(platform){
 				timeout(30){
 					runBuild(platform, "CoInterpreterWithQueueFFI")
+				}
+				timeout(30){
+					runBuild(platform, "CoInterpreterWithQueueFFI", false)
 				}
 			}
 		}

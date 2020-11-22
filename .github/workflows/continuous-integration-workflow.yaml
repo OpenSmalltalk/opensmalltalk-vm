@@ -20,9 +20,13 @@ jobs:
             CC: clang
             CXX: clang++
         steps:
-            - name: Install dependencies
+            - name: Install dependencies (Linux)
               if: matrix.variant.os == 'ubuntu-18.04'
               run: sudo apt-get install uuid-dev
+
+            - name: Install dependencies (OS X)
+              if: matrix.variant.os == 'macos-latest'
+              run: brew install autoconf automake libtool
 
             - uses: actions/checkout@v1
 
