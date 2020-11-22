@@ -4101,9 +4101,6 @@ CCodeGenerator >> optionIsTrue: pragma in: aClass [
 	(self defineAtCompileTime: key)
 		ifTrue: [ ^ true ].
 	
-	(aClass bindingOf: key) ifNotNil: [:binding|
-		binding value ~~ false ifTrue: [^true] ].
-	
 	^ false
 ]
 
