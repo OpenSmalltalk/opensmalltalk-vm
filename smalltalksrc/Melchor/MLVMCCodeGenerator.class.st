@@ -444,7 +444,7 @@ MLVMCCodeGenerator >> optionIsTrue: pragma in: aClass [
 	 or a class variable name or a variable name in VMBasicConstants."
 	| key |
 	key := pragma argumentAt: 1.
-		self haltIf: [ key = #Spur64BitMemoryManager ].
+
 	(super optionIsTrue: pragma in: aClass) ifTrue:
 		[^true].
 
