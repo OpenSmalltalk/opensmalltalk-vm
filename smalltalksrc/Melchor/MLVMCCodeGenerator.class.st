@@ -190,6 +190,8 @@ MLVMCCodeGenerator >> emitCHeaderOn: aStream [
 						on: MessageNotUnderstood
 						do: [:ex| self vmClass].
 	aStream nextPutAll: (self fileHeaderVersionStampForSourceClass: headerClass); cr; cr.
+	self addHeaderFileFirst: '"sq.h"'.
+
 	super emitCHeaderOn: aStream
 ]
 
