@@ -1,6 +1,6 @@
 Class {
 	#name : #MLVMCCodeGenerator,
-	#superclass : #AnObsoleteCCodeGenerator,
+	#superclass : #CCodeGenerator,
 	#instVars : [
 		'vmClass',
 		'vmMaker'
