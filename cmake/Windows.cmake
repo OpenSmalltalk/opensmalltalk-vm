@@ -59,21 +59,11 @@ configure_file("${Win32ResourcesFolder}/${VM_EXECUTABLE_CONSOLE_NAME}.exe.manife
 
 macro(add_third_party_dependencies_per_platform)
 
-    if (NOT WITHOUT_DEPENDENCIES)
-
-        add_third_party_dependency("zlib-1.2.11-fixLibGit" "build/vm")
-
-
-        add_third_party_dependency("libssh2-1.9.0" "build/vm")
-        add_third_party_dependency("openssl-1.0.2q-fixLigGit" "build/vm")
-        
-        # Cygwin runtime?
-        add_third_party_dependency("gcc-runtime-3.4" "build/vm")
-        
-        # Backwards compatibility for those using PThreaded Plugin
-        # Current support is in the VM
-        add_third_party_dependency("PThreadedFFI-1.4.0-win64" "build/vm")
-    endif()
+#    if (NOT WITHOUT_DEPENDENCIES)
+#        # Backwards compatibility for those using PThreaded Plugin
+#        # Current support is in the VM
+#        add_third_party_dependency("PThreadedFFI-1.4.0-win64" "build/vm")
+#    endif()
     
     if(${FEATURE_LIB_GIT2})
         include(cmake/importLibGit2.cmake)
