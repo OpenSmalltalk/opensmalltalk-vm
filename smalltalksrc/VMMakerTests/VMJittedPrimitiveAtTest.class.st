@@ -116,6 +116,32 @@ VMJittedPrimitiveAtTest >> testPrimitiveAt16bitIndexableThirdPaddingOutOfBoundsS
 	self assertFallsThrough
 ]
 
+{ #category : #'tests - 16bit indexable' }
+VMJittedPrimitiveAtTest >> testPrimitiveAt16bitIndexableWithLargeNumberShouldReturnValue [
+
+	| integerArray offset expectedValue |
+
+	integerArray := self new16BitIndexableOfSize: 3.
+	offset := 2.
+	expectedValue := 16rFFFF.
+
+	memory
+		storeShort16: offset - 1
+		ofObject: integerArray
+		withValue: expectedValue.
+
+	self
+		prepareStackForSendReceiver: integerArray
+		arguments: { memory integerObjectOf: offset }.
+	machineSimulator baseRegisterValue: cogit varBaseAddress.
+
+	self runUntilReturn.
+
+	self
+		assert: (memory integerValueOf: machineSimulator receiverRegisterValue)
+		equals: expectedValue
+]
+
 { #category : #'tests - 32bit indexable' }
 VMJittedPrimitiveAtTest >> testPrimitiveAt32bitIndexableOutOfBoundsAtPaddingShouldFallThrough [
 
@@ -171,6 +197,35 @@ VMJittedPrimitiveAtTest >> testPrimitiveAt32bitIndexableShouldReturnValue [
 	self
 		assert: (memory integerValueOf: machineSimulator receiverRegisterValue)
 		equals: 17
+]
+
+{ #category : #'tests - 32bit indexable' }
+VMJittedPrimitiveAtTest >> testPrimitiveAt32bitIndexableWithLargeNumberShouldReturnValue [
+
+	| integerArray offset expectedValue |
+
+	"In 32bits it should fall through, as it will create a LargePositiveInteger"
+	wordSize = 8 ifFalse: [ ^ self skip. ].
+	
+	integerArray := self new32BitIndexableOfSize: 3.
+	offset := 2.
+	expectedValue := 16rFFFFFFFF.
+
+	memory
+		storeLong32: offset - 1
+		ofObject: integerArray
+		withValue: expectedValue.
+
+	self
+		prepareStackForSendReceiver: integerArray
+		arguments: { memory integerObjectOf: offset }.
+	machineSimulator baseRegisterValue: cogit varBaseAddress.
+
+	self runUntilReturn.
+
+	self
+		assert: (memory integerValueOf: machineSimulator receiverRegisterValue)
+		equals: expectedValue
 ]
 
 { #category : #'tests - 64bit indexable' }
@@ -404,6 +459,32 @@ VMJittedPrimitiveAtTest >> testPrimitiveAt8bitIndexableThirdPaddingOutOfBoundsSh
 	self prepareStackForSendReceiver: integerArray arguments: { memory integerObjectOf: offset }.
 
 	self assertFallsThrough
+]
+
+{ #category : #'tests - 8bit indexable' }
+VMJittedPrimitiveAtTest >> testPrimitiveAt8bitIndexableWithLargeNumberShouldReturnValue [
+
+	| integerArray offset expectedValue |
+
+	integerArray := self new8BitIndexableOfSize: 3.
+	offset := 2.
+	expectedValue := 16rFF.
+
+	memory
+		storeByte: offset - 1
+		ofObject: integerArray
+		withValue: expectedValue.
+
+	self
+		prepareStackForSendReceiver: integerArray
+		arguments: { memory integerObjectOf: offset }.
+	machineSimulator baseRegisterValue: cogit varBaseAddress.
+
+	self runUntilReturn.
+
+	self
+		assert: (memory integerValueOf: machineSimulator receiverRegisterValue)
+		equals: expectedValue
 ]
 
 { #category : #'tests - pointer indexable' }
