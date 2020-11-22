@@ -444,16 +444,18 @@ MLVMCCodeGenerator >> optionIsTrue: pragma in: aClass [
 	 or a class variable name or a variable name in VMBasicConstants."
 	| key |
 	key := pragma argumentAt: 1.
-
+		self haltIf: [ key = #Spur64BitMemoryManager ].
 	(super optionIsTrue: pragma in: aClass) ifTrue:
 		[^true].
 
 	"If the option is the name of a subclass of Cogit, include it if it inherits from the Cogit class."
 	(Smalltalk classNamed: key) ifNotNil: [ :optionClass |
 		aClass cogitClass ifNotNil: [ :cogitClass |
-			^cogitClass includesBehavior: optionClass ].
+			(cogitClass includesBehavior: optionClass)
+				ifTrue: [ ^ true ] ].
 		aClass objectMemoryClass ifNotNil: [ :objectMemoryClass |
-			^objectMemoryClass includesBehavior: optionClass ] ].
+			(objectMemoryClass includesBehavior: optionClass)
+				ifTrue: [ ^ true ] ] ].
 
 	"If the option is the name of a subclass of Cogit, include it if it inherits from the Cogit class."
 	(self environment classNamed: key) ifNotNil:
