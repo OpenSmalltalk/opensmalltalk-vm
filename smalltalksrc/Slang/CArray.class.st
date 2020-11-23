@@ -10,7 +10,7 @@ Class {
 		'ptrOffset',
 		'unitSize'
 	],
-	#category : #'VMMaker-InterpreterSimulation'
+	#category : #'Slang-Types'
 }
 
 { #category : #'int arithmetic' }

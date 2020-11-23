@@ -4,7 +4,7 @@ Class {
 	#instVars : [
 		'object'
 	],
-	#category : #'VMMaker-InterpreterSimulation'
+	#category : #'Slang-Types'
 }
 
 { #category : #'instance creation' }
