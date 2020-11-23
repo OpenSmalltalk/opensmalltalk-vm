@@ -17,6 +17,12 @@ VMMockCodeGenerator class >> for: aCogVMSimulatorLSB [
 ]
 
 { #category : #'as yet unclassified' }
+VMMockCodeGenerator >> accessorDepthCalculator [
+
+	^ self 
+]
+
+{ #category : #'as yet unclassified' }
 VMMockCodeGenerator >> accessorDepthForSelector: aString [ 
 	
 	^ addedPrimitives at: aString 
