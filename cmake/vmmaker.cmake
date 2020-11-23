@@ -9,22 +9,80 @@
 #
 # and the following targets
 #
-#     generate_sources
+#     generate-sources
 #     vmmaker
 #
 # TODOs:
-#  - Check at configure time that wget/curl are available? Otherwise this crashes miserably
 #  - Make the VMFlavours autodescribed? Slang could output a list of generated files that we could use
 
+set(CMAKE_VERBOSE_MAKEFILE TRUE)
+
+#Setting vmmaker directory and image 
+set( VMMAKER_DIR    "${CMAKE_CURRENT_BINARY_DIR}/build/vmmaker")
+set( VMMAKER_IMAGE  "${VMMAKER_DIR}/image/VMMaker.image")
+
+#Setting platform specific vmmaker virtual machine, with cached download or override
 if (GENERATE_PHARO_VM) 
-	set(VMMAKER_PHARO_VM ${GENERATE_PHARO_VM})
+    message("Overriding VM used for code generation")  
+	set(VMMAKER_VM ${GENERATE_PHARO_VM})
 else()
-	set(VMMAKER_PHARO_VM ./pharo)
+    #Pick platform specific VM to download
+    if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
+        message("Defining Windows VM to download for code generation")
+        set(VMMAKER_VM ${VMMAKER_DIR}/vm/PharoConsole.exe)
+        set(VM_URL https://files.pharo.org/vm/pharo-spur64/win/PharoVM-8.6.1-e829a1da-StockReplacement-win64-bin_signed.zip)
+        set(VM_URL_HASH SHA256=d24a2fb5d8d744a4c8ce0bc332051960d6f5d8db9f75754317b5aee8eafb7cb1)
+    elseif(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
+        message(FATAL_ERROR "TODO - CMAKE_HOST_SYSTEM_NAME ${CMAKE_HOST_SYSTEM_NAME}")
+        set(VMMAKER_VM       TODO)
+        set(VM_URL           TODO)
+        set(VM_URL_HASH      TODO)
+    elseif(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin")
+        message(FATAL_ERROR "TODO - CMAKE_HOST_SYSTEM_NAME ${CMAKE_HOST_SYSTEM_NAME}")
+        set(VMMAKER_VM       TODO)
+        set(VM_URL           TODO)
+        set(VM_URL_HASH      TODO)
+    else()
+        message(FATAL_ERROR "VM DOWNLOAD NOT HANDLED FOR CMAKE HOST SYSTEM: ${CMAKE_HOST_SYSTEM_NAME}")
+    endif()
+
+    #Download VM
+    ExternalProject_Add(
+        build_vmmaker_get_vm
+
+        URL ${VM_URL}
+        URL_HASH ${VM_URL_HASH}
+        BUILD_COMMAND       echo 
+        UPDATE_COMMAND      echo 
+        CONFIGURE_COMMAND   echo 
+        INSTALL_COMMAND     echo 
+
+        PREFIX "${VMMAKER_DIR}"
+        SOURCE_DIR "${VMMAKER_DIR}/vm"
+        BUILD_IN_SOURCE True
+
+        STEP_TARGETS   build
+        )
 endif()
 
-#Setting output directories
-set(VMMAKER_OUTPUT_PATH "build/vmmaker")
-make_directory(${CMAKE_CURRENT_BINARY_DIR}/${VMMAKER_OUTPUT_PATH})
+#Bootstrap VMMaker.image from downloaded image
+ExternalProject_Add(
+        build_vmmaker_get_image
+
+        URL https://files.pharo.org/image/90/Pharo9.0-SNAPSHOT.build.839.sha.099690e.arch.64bit.zip
+        URL_HASH SHA256=00c489f0516005d7ba7be259673eab1225ad9a4d1f90df9ce5082cbce4b47b82
+ 	    BUILD_COMMAND ${VMMAKER_VM} --headless ${VMMAKER_DIR}/image/Pharo9.0-SNAPSHOT-64bit-099690e.image save VMMaker
+        COMMAND ${VMMAKER_VM} --headless ${VMMAKER_IMAGE} --save --quit ${CMAKE_CURRENT_SOURCE_DIR}/scripts/installVMMaker.st ${CMAKE_CURRENT_SOURCE_DIR}
+        UPDATE_COMMAND      echo 
+        CONFIGURE_COMMAND   echo 
+        INSTALL_COMMAND     echo 
+
+        PREFIX "${VMMAKER_DIR}"
+        SOURCE_DIR "${VMMAKER_DIR}/image"
+        BUILD_IN_SOURCE True
+
+        DEPENDS build_vmmaker_get_vm-build
+        )
 
 #The list of generated files given the flavour
 if(FLAVOUR MATCHES "StackVM")
@@ -42,38 +100,11 @@ endif()
 set(PHARO_VM_SLANG_PLUGIN_GENERATED_FILES 
   	${GENERATED_SOURCE_DIR}/generated/plugins/src/FilePlugin/FilePlugin.c)
 
-
-#Custom command that downloads a Pharo image and VM in ${VMMAKER_OUTPUT_PATH}
-if(NOT GENERATE_PHARO_VM) 
-  add_custom_command(
-    OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${VMMAKER_OUTPUT_PATH}/Pharo.image" "${CMAKE_CURRENT_BINARY_DIR}/${VMMAKER_OUTPUT_PATH}/pharo"
-    COMMAND wget -O - https://get.pharo.org/64/90 | bash
-    COMMAND wget -O - https://get.pharo.org/64/vm90 | bash
-    WORKING_DIRECTORY ${VMMAKER_OUTPUT_PATH}
-    COMMENT "Downloading Pharo 90")
-else()
-  add_custom_command(
-    OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${VMMAKER_OUTPUT_PATH}/Pharo.image" "${CMAKE_CURRENT_BINARY_DIR}/${VMMAKER_OUTPUT_PATH}/pharo"
-    COMMAND wget -O - https://get.pharo.org/64/90 | bash
-    WORKING_DIRECTORY ${VMMAKER_OUTPUT_PATH}
-    COMMENT "Downloading Pharo 90")
-endif()
-
-
-add_custom_command(
-  OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${VMMAKER_OUTPUT_PATH}/VMMaker.image"
-  COMMAND ${VMMAKER_PHARO_VM} Pharo.image --save --quit ${CMAKE_CURRENT_SOURCE_DIR_TO_OUT}/scripts/installVMMaker.st ${CMAKE_CURRENT_SOURCE_DIR_TO_OUT}
-  COMMAND ${VMMAKER_PHARO_VM} Pharo.image save VMMaker
-  DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/${VMMAKER_OUTPUT_PATH}/Pharo.image"
-  WORKING_DIRECTORY ${VMMAKER_OUTPUT_PATH}
-COMMENT "Generating VMMaker image")
-
-#Custom command that generates the vm source code from VMMaker into ${VMMAKER_OUTPUT_PATH} and copies it to ${CMAKE_CURRENT_SOURCE_DIR}
+#Custom command that generates the vm source code from VMMaker into "out/build/XXXX/generated" folder
 add_custom_command(
     OUTPUT ${VMSOURCEFILES} ${PLUGIN_GENERATED_FILES}
-    COMMAND ${VMMAKER_PHARO_VM} VMMaker.image eval \"PharoVMMaker generate: \#\'${FLAVOUR}\' outputDirectory: \'${CMAKE_CURRENT_BINARY_DIR_TO_OUT}\'\"
-    DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/${VMMAKER_OUTPUT_PATH}/VMMaker.image"
-    WORKING_DIRECTORY ${VMMAKER_OUTPUT_PATH}
+    COMMAND ${VMMAKER_VM} --headless ${VMMAKER_IMAGE} eval \"PharoVMMaker generate: \#\'${FLAVOUR}\' outputDirectory: \'\'\"
+    DEPENDS ${VMMAKER_IMAGE}
     COMMENT "Generating VM files for flavour: ${FLAVOUR}")
 
 #Define generated files as elements in the c-src component for packaging
