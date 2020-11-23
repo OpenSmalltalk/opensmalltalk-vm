@@ -79,7 +79,6 @@ Class {
 		'expectedSends',
 		'expecting',
 		'bootstrapping',
-		'codeGeneratorToComputeAccessorDepth',
 		'primitiveFailCount'
 	],
 	#classVars : [
