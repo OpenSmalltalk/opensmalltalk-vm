@@ -2332,6 +2332,12 @@ StackToRegisterMappingCogit >> ceShortCutTraceStore: aProcessorSimulationTrap [
 				into: (processor registerAt: ReceiverResultReg)]
 ]
 
+{ #category : #accessing }
+StackToRegisterMappingCogit >> ceStoreCheckTrampoline [
+	<doNotGenerate>
+	^ self objectRepresentation ceStoreCheckTrampoline
+]
+
 { #category : #'compile abstract instructions' }
 StackToRegisterMappingCogit >> compileAbstractInstructionsFrom: start through: end [
 	"Loop over bytecodes, dispatching to the generator for each bytecode, handling fixups in due course."
@@ -12723,6 +12729,12 @@ StackToRegisterMappingCogit >> methodAbortTrampolineFor: numArgs [
 	^methodAbortTrampolines at: (numArgs min: self numRegArgs + 1)
 ]
 
+{ #category : #accessing }
+StackToRegisterMappingCogit >> methodAbortTrampolines [
+	<doNotGenerate>
+	^ methodAbortTrampolines
+]
+
 { #category : #testing }
 StackToRegisterMappingCogit >> methodFoundInvalidPostScan [
 	"Frameless methods with local temporaries cause problems,
@@ -12795,6 +12807,21 @@ StackToRegisterMappingCogit >> numberOfSpillsInTopNItems: n [
 { #category : #trampolines }
 StackToRegisterMappingCogit >> picAbortTrampolineFor: numArgs [
 	^picAbortTrampolines at: (numArgs min: self numRegArgs + 1)
+]
+
+{ #category : #accessing }
+StackToRegisterMappingCogit >> picAbortTrampolines [
+
+	<doNotGenerate>
+	^ picAbortTrampolines
+]
+
+{ #category : #accessing }
+StackToRegisterMappingCogit >> picMissTrampolines [
+	
+	<doNotGenerate>
+	^ picMissTrampolines 	
+
 ]
 
 { #category : #testing }

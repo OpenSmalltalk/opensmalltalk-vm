@@ -20,6 +20,12 @@ UnicornX64Simulator >> argument0RegisterValue [
 	^ self rdi
 ]
 
+{ #category : #accessing }
+UnicornX64Simulator >> argument0RegisterValue: anInteger [ 
+
+	self writeRegister: UcX86Registers rdi value: anInteger
+]
+
 { #category : #'phisical-registers' }
 UnicornX64Simulator >> baseRegister [
 
@@ -453,6 +459,12 @@ UnicornX64Simulator >> sp [
 UnicornX64Simulator >> stackPointerRegister [
 
 	^ UcX86Registers rsp
+]
+
+{ #category : #accessing }
+UnicornX64Simulator >> temporaryRegisterValue [
+
+	^ self rax
 ]
 
 { #category : #accessing }

@@ -449,6 +449,12 @@ Spur64BitMemoryManager >> floatValueOf: oop [
 	^0.0
 ]
 
+{ #category : #accessing }
+Spur64BitMemoryManager >> freeLists [
+	<doNotGenerate>
+	^ freeLists
+]
+
 { #category : #'interpreter access' }
 Spur64BitMemoryManager >> hasSixtyFourBitImmediates [
 	"The V3 64-bit memory manager has 64-bit oops, but its SmallIntegers only have

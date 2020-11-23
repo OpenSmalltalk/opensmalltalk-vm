@@ -16,6 +16,12 @@ UnicornARMv8Simulator >> argument0RegisterValue [
 	^ self x3
 ]
 
+{ #category : #accessing }
+UnicornARMv8Simulator >> argument0RegisterValue: anInteger [ 
+
+	self writeRegister: UcARM64Registers x3 value: anInteger
+]
+
 { #category : #registers }
 UnicornARMv8Simulator >> baseRegister [
 
@@ -70,7 +76,7 @@ UnicornARMv8Simulator >> createUnicorn [
 { #category : #disassembling }
 UnicornARMv8Simulator >> disassembler [
 	
-	^ LLVMDisassembler aarch64
+	^ LLVMARMDisassembler aarch64
 ]
 
 { #category : #'as yet unclassified' }
@@ -315,6 +321,12 @@ UnicornARMv8Simulator >> sp [
 UnicornARMv8Simulator >> stackPointerRegister [
 	
 	^ UcARM64Registers sp
+]
+
+{ #category : #accessing }
+UnicornARMv8Simulator >> temporaryRegisterValue [
+	
+	^ self x1
 ]
 
 { #category : #accessing }

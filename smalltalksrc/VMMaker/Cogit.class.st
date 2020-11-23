@@ -3872,6 +3872,13 @@ Cogit >> ceCheckFeatures [
 	^self simulateLeafCallOf: ceCheckFeaturesFunction
 ]
 
+{ #category : #accessing }
+Cogit >> ceCheckForInterruptTrampoline: anInteger [ 
+	<doNotGenerate>
+
+	ceCheckForInterruptTrampoline := anInteger
+]
+
 { #category : #'as yet unclassified' }
 Cogit >> ceDereferenceSelectorIndex [
 	
@@ -4083,6 +4090,23 @@ Cogit >> ceScheduleScavengeTrampoline: anInteger [
 ]
 
 { #category : #accessing }
+Cogit >> ceSendMustBeBooleanAddFalseTrampoline: anInteger [
+
+	<doNotGenerate>
+
+	ceSendMustBeBooleanAddFalseTrampoline := anInteger
+]
+
+{ #category : #accessing }
+Cogit >> ceSendMustBeBooleanAddTrueTrampoline: anInteger [ 
+
+	<doNotGenerate>
+	
+	ceSendMustBeBooleanAddTrueTrampoline :=	anInteger
+
+]
+
+{ #category : #accessing }
 Cogit >> ceSmallActiveContextInBlockTrampoline [
 
 	<doNotGenerate>
@@ -4121,6 +4145,14 @@ Cogit >> ceSmallActiveContextInMethodTrampoline: anAddress [
 
 	<doNotGenerate>
 	objectRepresentation ceSmallActiveContextInMethodTrampoline: anAddress
+]
+
+{ #category : #accessing }
+Cogit >> ceStoreCheckTrampoline: anAddress [ 
+	
+	self objectRepresentation ceStoreCheckTrampoline: anAddress
+
+
 ]
 
 { #category : #debugging }

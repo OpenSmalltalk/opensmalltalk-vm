@@ -79,6 +79,7 @@ Class {
 		'expectedSends',
 		'expecting',
 		'bootstrapping',
+		'codeGeneratorToComputeAccessorDepth',
 		'primitiveFailCount'
 	],
 	#classVars : [
@@ -688,6 +689,24 @@ CogVMSimulator >> cloneSimulationWindow [
 { #category : #initialization }
 CogVMSimulator >> close [  "close any files that ST may have opened, etc"
 	pluginList do: [:assoc| | plugin | plugin := assoc value. plugin ~~ self ifTrue: [plugin close]]
+]
+
+{ #category : #'primitive support' }
+CogVMSimulator >> codeGeneratorToComputeAccessorDepth [
+
+	^ codeGeneratorToComputeAccessorDepth ifNil: [
+		(VMMaker new
+			buildCodeGeneratorForInterpreter: CoInterpreterPrimitives
+			includeAPIMethods: false
+			initializeClasses: false)
+				logger: self transcript;
+				yourself]
+]
+
+{ #category : #'as yet unclassified' }
+CogVMSimulator >> codeGeneratorToComputeAccessorDepth: aCCodeGenerator [ 
+
+	codeGeneratorToComputeAccessorDepth := aCCodeGenerator
 ]
 
 { #category : #'simulation only' }
@@ -3493,6 +3512,12 @@ CogVMSimulator >> setBreakBlockFromString: aString [
 { #category : #accessing }
 CogVMSimulator >> setBreakCount: anInteger [
 	breakCount := anInteger
+]
+
+{ #category : #accessing }
+CogVMSimulator >> setBreakSelectorLength: anInteger [ 
+	
+	breakSelectorLength := anInteger
 ]
 
 { #category : #'multi-threading simulation switch' }

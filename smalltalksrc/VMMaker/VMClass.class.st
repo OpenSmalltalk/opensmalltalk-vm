@@ -3,9 +3,10 @@ I am an abstract superclass for all classes in the VM that want to maintain a so
 "
 Class {
 	#name : #VMClass,
-	#superclass : #SlangClass,
+	#superclass : #Object,
 	#classVars : [
 		'DefaultBase',
+		'ExpensiveAsserts',
 		'InitializationOptions'
 	],
 	#pools : [
@@ -15,7 +16,7 @@ Class {
 	#classInstVars : [
 		'timeStamp'
 	],
-	#category : #VMMaker
+	#category : #'VMMaker-Support'
 }
 
 { #category : #translation }
@@ -578,6 +579,15 @@ VMClass >> cppIf: conditionBlockOrValue ifTrue: trueExpressionOrBlock [
 	^self cppIf: conditionBlockOrValue ifTrue: trueExpressionOrBlock ifFalse: nil
 ]
 
+{ #category : #'C pre-processor extensions' }
+VMClass >> defined: aSymbol [
+	"Simulated version of the C pre-processor defined()"
+	<doNotGenerate>
+	^(self class bindingOf: aSymbol)
+		ifNil: [false]
+		ifNotNil: [:binding| binding value ~~ #undefined]
+]
+
 { #category : #'memory access' }
 VMClass >> fetchSingleFloatAtPointer: pointer into: aFloat [
 	"This gets implemented by Macros in C, where its types will also be checked.
@@ -820,8 +830,14 @@ VMClass >> minorVersion [
 
 { #category : #'translation support' }
 VMClass >> notYetImplemented [
-	<cmacro: '() logError("not yet implemented")'>
-	super notYetImplemented
+
+	<inline: true>
+
+	self
+		cCode: [ 
+			self logError: 'not yet implemented'.
+			self abort ]
+		inSmalltalk: [ super notYetImplemented ]
 ]
 
 { #category : #'translation support' }

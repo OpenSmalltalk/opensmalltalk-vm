@@ -16,6 +16,12 @@ UnicornI386Simulator >> argument0RegisterValue [
 	^ self esi
 ]
 
+{ #category : #accessing }
+UnicornI386Simulator >> argument0RegisterValue: anInteger [ 
+
+	self writeRegister: UcX86Registers esi value: anInteger
+]
+
 { #category : #registers }
 UnicornI386Simulator >> baseRegister [
 
@@ -292,6 +298,12 @@ UnicornI386Simulator >> sp [
 UnicornI386Simulator >> stackPointerRegister [
 	
 	^ UcX86Registers esp
+]
+
+{ #category : #accessing }
+UnicornI386Simulator >> temporaryRegisterValue [
+	
+	^ self eax
 ]
 
 { #category : #accessing }

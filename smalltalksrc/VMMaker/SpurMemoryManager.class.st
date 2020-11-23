@@ -6795,14 +6795,6 @@ SpurMemoryManager >> ioLoadFunction: functionName From: moduleName [
 ]
 
 { #category : #'simulation only' }
-SpurMemoryManager >> ioLoadModule: moduleNameIndex OfLength: moduleLength [
-	<doNotGenerate>
-	<returnTypeC: #'void *'>
-	"Dummy - provided by support code"
-	^0
-]
-
-{ #category : #'simulation only' }
 SpurMemoryManager >> ioUTCMicrosecondsNow [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	<doNotGenerate>
@@ -9071,7 +9063,7 @@ SpurMemoryManager >> newExternalAddressWithValue: aPointer [
 		       instantiateClass: self classExternalAddress
 		       indexableSize: (self sizeof: #'void*').
 
-	ptr := self firstIndexableField: oop.
+	ptr := self cCoerce: (self firstIndexableField: oop) to: #'void **'.
 	ptr at: 0 put: aPointer.
 	^ oop
 ]
@@ -12821,8 +12813,9 @@ SpurMemoryManager >> trueObject: anOop [
 
 { #category : #simulation }
 SpurMemoryManager >> unalignedLong32At: index [
-	"Support for primitiveFFIIntegerAt[Put]"
-	<doNotGenerate>
+
+	<cmacro: '(addr) long32At(addr)'>
+
 	| odd hi lo |
 	(odd := index bitAnd: 3) = 0 ifTrue:
 		[^self long32At: index].
@@ -12833,8 +12826,8 @@ SpurMemoryManager >> unalignedLong32At: index [
 
 { #category : #simulation }
 SpurMemoryManager >> unalignedLong32At: index put: aValue [
-	"Support for primitiveFFIIntegerAt[Put]"
-	<doNotGenerate>
+	<cmacro: '(addr,value) long32Atput(addr,value)'>
+
 	| odd hi lo mask |
 	aValue < 0 ifTrue:
 		[self unalignedLong64At: index put: (aValue bitAnd: 16rFFFFFFFF).
@@ -12854,8 +12847,9 @@ SpurMemoryManager >> unalignedLong32At: index put: aValue [
 
 { #category : #simulation }
 SpurMemoryManager >> unalignedLong64At: index [
-	"Support for primitiveFFIIntegerAt[Put]"
-	<doNotGenerate>
+
+	<cmacro: '(addr) long64At(addr)'>
+
 	| odd hi lo |
 	(odd := index bitAnd: 7) = 0 ifTrue:
 		[^self long64At: index].
@@ -12866,8 +12860,8 @@ SpurMemoryManager >> unalignedLong64At: index [
 
 { #category : #simulation }
 SpurMemoryManager >> unalignedLong64At: index put: aValue [
-	"Support for primitiveFFIIntegerAt[Put]"
-	<doNotGenerate>
+	<cmacro: '(addr,value) long64Atput(addr,value)'>
+
 	| odd hi lo mask |
 	aValue < 0 ifTrue:
 		[self unalignedLong64At: index put: (aValue bitAnd: 16rFFFFFFFFFFFFFFFF).
@@ -12887,8 +12881,9 @@ SpurMemoryManager >> unalignedLong64At: index put: aValue [
 
 { #category : #simulation }
 SpurMemoryManager >> unalignedShortAt: index [
-	"Support for primitiveFFIIntegerAt[Put]"
-	<doNotGenerate>
+
+	<cmacro: '(addr) shortAt(addr)'>
+
 	| hi lo |
 	(index bitAnd: 1) = 0 ifTrue:
 		[^self shortAt: index].
@@ -12899,8 +12894,8 @@ SpurMemoryManager >> unalignedShortAt: index [
 
 { #category : #simulation }
 SpurMemoryManager >> unalignedShortAt: index put: aValue [
-	"Support for primitiveFFIIntegerAt[Put]"
-	<doNotGenerate>
+	<cmacro: '(addr,value) shortAtput(addr,value)'>
+	
 	(index bitAnd: 1) = 0 ifTrue:
 		[^self shortAt: index put: aValue].
 	self shouldBeImplemented.

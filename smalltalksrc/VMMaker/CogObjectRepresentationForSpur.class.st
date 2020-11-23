@@ -300,6 +300,18 @@ CogObjectRepresentationForSpur >> ceSmallActiveContextInMethodTrampoline: anInte
 	ceSmallActiveContextInMethodTrampoline := anInteger
 ]
 
+{ #category : #accessing }
+CogObjectRepresentationForSpur >> ceStoreCheckTrampoline [
+	
+	^ ceStoreCheckTrampoline 
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> ceStoreTrampolines [
+
+	^ ceStoreTrampolines
+]
+
 { #category : #'sista support' }
 CogObjectRepresentationForSpur >> checkRememberedInTrampoline [
 	<inline: true>
@@ -3298,6 +3310,15 @@ CogObjectRepresentationForSpur >> hasValidHeaderPostGC: cogMethod [
 	^cogMethod objectHeader = objectMemory nullHeaderForMachineCodeMethod
 ]
 
+{ #category : #initialization }
+CogObjectRepresentationForSpur >> initialize [
+
+	<doNotGenerate>
+	super initialize.
+	
+	ceStoreTrampolines := (CArrayAccessor on: (Array new: NumStoreTrampolines))
+]
+
 { #category : #'garbage collection' }
 CogObjectRepresentationForSpur >> inlineCacheTagIsYoung: cacheTag [
 	"Since all cache tags in Spur are class indices none of
@@ -3613,6 +3634,14 @@ CogObjectRepresentationForSpur >> resetCountersIn: cogMethod [
 	<api>
 	<option: #SistaCogit>
 	cogit fillInCounters: (self numCountersFor: cogMethod counters) atStartAddress: cogMethod counters
+]
+
+{ #category : #initialization }
+CogObjectRepresentationForSpur >> setAllStoreTrampolinesWith: anAddress [ 
+	
+	<doNotGenerate>
+	0 to: NumStoreTrampolines - 1 do:  [ :anIndex |
+		ceStoreTrampolines at: anIndex put: anAddress]
 ]
 
 { #category : #'mapped inlined primitive support' }

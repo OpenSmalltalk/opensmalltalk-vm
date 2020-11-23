@@ -10,6 +10,12 @@ UnicornARMv5Simulator >> arg0Register [
 	^ UcARMRegisters r3
 ]
 
+{ #category : #accessing }
+UnicornARMv5Simulator >> argument0RegisterValue: anInteger [ 
+
+	self writeRegister: UcARMRegisters r3 value: anInteger
+]
+
 { #category : #registers }
 UnicornARMv5Simulator >> baseRegister [
 
@@ -91,7 +97,63 @@ UnicornARMv5Simulator >> createUnicorn [
 { #category : #disassembling }
 UnicornARMv5Simulator >> disassembler [
 	
-	^ LLVMDisassembler armv7
+	^ LLVMARMDisassembler armv7
+]
+
+{ #category : #executing }
+UnicornARMv5Simulator >> doStartAt: startAddress until: until timeout: timeout count: count [
+
+	| actualCount result error startTime remainingTimeout currentTime |
+
+	"This implementation is almost the same, because ARMv5 does not accept correctly to run 
+	more than one instruction. It has the problem that it misses the count or the current address"
+
+	actualCount := 0.
+	self instructionPointerValue: startAddress.
+	startTime := Time millisecondClockValue.
+	remainingTimeout := timeout.
+
+	[ true ]
+		whileTrue: [ 
+			[result :=  unicorn
+				startAt: self instructionPointerValue
+				until: 0
+				timeout: 0
+				count: 1.
+					
+				stopReason ifNotNil: [ 
+						error := stopReason.
+						stopReason := nil.
+						error signal ].
+		
+			"If execution did not stop because of a stop reason, verify the error code"
+			unicorn verifyErrorCode: result.
+
+			
+					actualCount := actualCount + 1] 
+				on: UnicornInvalidMemoryAccess do: [ :invalidAccess |
+					self instructionPointerValue = until ifTrue: [ ^ 0 ].
+					
+					(self handleInvalidAccess: invalidAccess)
+						ifFalse: [ ^ result ].
+						
+					actualCount := actualCount + 1 ].
+			
+			stopReason ifNotNil: [ ^ result ].
+			count = actualCount ifTrue: [ ^ result ].
+
+
+			timeout ~= 0 ifTrue: [  
+				currentTime := Time millisecondClockValue.
+				remainingTimeout := remainingTimeout - (currentTime - startTime).
+				
+				remainingTimeout <= 0
+					ifTrue: [ 	
+						UnicornTimeout new
+								target: until;
+								signal ]].
+
+			self instructionPointerValue = until ifTrue: [ ^ result ]]
 ]
 
 { #category : #'as yet unclassified' }
@@ -435,6 +497,12 @@ UnicornARMv5Simulator >> sp [
 UnicornARMv5Simulator >> stackPointerRegister [
 	
 	^ UcARMRegisters sp
+]
+
+{ #category : #accessing }
+UnicornARMv5Simulator >> temporaryRegisterValue [
+	
+	^ self r0
 ]
 
 { #category : #accessing }
