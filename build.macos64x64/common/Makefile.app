@@ -186,6 +186,11 @@ pathapp:
 
 # To sign the app, set SIGNING_IDENTITY in the environment, e.g.
 # export SIGNING_IDENTITY="Developer ID Application: Eliot Miranda"
+# If you're using ssh and codesign fails you probably need to unlock your
+# keychain.  List the keychain using
+#	$ security list-keychains -d user
+# Unlock using e.g.
+#	$ security unlock-keychain -p "<password>" "~/Library/Keychains/login.keychain-db"
 #
 ifeq ($(SIGNING_IDENTITY),)
 signapp:
