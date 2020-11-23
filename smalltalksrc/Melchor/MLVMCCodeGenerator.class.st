@@ -192,7 +192,11 @@ MLVMCCodeGenerator >> emitCHeaderOn: aStream [
 	aStream nextPutAll: (self fileHeaderVersionStampForSourceClass: headerClass); cr; cr.
 	self addHeaderFileFirst: '"sq.h"'.
 
-	super emitCHeaderOn: aStream
+	super emitCHeaderOn: aStream.
+	
+	vmClass isInterpreterClass ifTrue:
+		[self maybePutPreambleFor: vmClass on: aStream].
+	aStream cr
 ]
 
 { #category : #'C code generator' }
@@ -448,7 +452,9 @@ MLVMCCodeGenerator >> optionIsTrue: pragma in: aClass [
 	(super optionIsTrue: pragma in: aClass) ifTrue:
 		[^true].
 
-	"If the option is the name of a subclass of Cogit, include it if it inherits from the Cogit class."
+	"If the option is the name of a subclass of Cogit or the memory manager,
+	include it if it inherits from the one of the configured classes
+	otherwise, do not include it and cut here"
 	(self environment classNamed: key) ifNotNil:
 		[:optionClass|
 		 aClass cogitClass ifNotNil:
@@ -459,6 +465,7 @@ MLVMCCodeGenerator >> optionIsTrue: pragma in: aClass [
 			[:objectMemoryClass|
 			 (optionClass isSpurMemoryManagerClass) ifTrue:
 				[^objectMemoryClass includesBehavior: optionClass]]].
+	
 	"Lookup options in options, class variables of the defining class, VMBasicConstants, the interpreterClass and the objectMemoryClass"
 	{aClass initializationOptions.
 	  aClass.
