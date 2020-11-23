@@ -988,6 +988,11 @@ SimpleStackBasedCogit >> compileInterpreterPrimitive: primitiveRoutine flags: fl
 	<var: #continuePostSamplePrim type: #'AbstractInstruction *'>
 	<var: #continuePostSampleNonPrim type: #'AbstractInstruction *'>
 
+	"Save processor fp, sp and return pc in the interpreter's frame stack and instruction pointers"
+	self genExternalizePointersForPrimitiveCall.
+	"Switch to the C stack."
+	self genLoadCStackPointersForPrimCall.
+
 	(flags anyMask: PrimCallCollectsProfileSamples) ifTrue:
 		["Test nextProfileTick for being non-zero and call checkProfileTick if so"
 		objectMemory wordSize = 4
@@ -1027,11 +1032,6 @@ SimpleStackBasedCogit >> compileInterpreterPrimitive: primitiveRoutine flags: fl
 				(self MoveCw: methodLabel asInteger R: ClassReg)).
 		 self MoveMw: (self offset: CogMethod of: #methodObject) r: ClassReg R: TempReg.
 		 self MoveR: TempReg Aw: coInterpreter newMethodAddress].
-
-	"Save processor fp, sp and return pc in the interpreter's frame stack and instruction pointers"
-	self genExternalizePointersForPrimitiveCall.
-	"Switch to the C stack."
-	self genLoadCStackPointersForPrimCall.
 
 	"Invoke the primitive"
 	self PrefetchAw: coInterpreter primFailCodeAddress.

@@ -3,10 +3,9 @@ I am an abstract superclass for all classes in the VM that want to maintain a so
 "
 Class {
 	#name : #VMClass,
-	#superclass : #Object,
+	#superclass : #SlangClass,
 	#classVars : [
 		'DefaultBase',
-		'ExpensiveAsserts',
 		'InitializationOptions'
 	],
 	#pools : [

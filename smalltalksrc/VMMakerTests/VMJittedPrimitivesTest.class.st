@@ -101,6 +101,6 @@ VMJittedPrimitivesTest >> setUp [
 		ofObject: memory classTableFirstPage
 		withValue: classFloat.
 		
-	memory classExternalAddress: (self newClassInOldSpaceWithSlots: 0 format: (memory byteFormatForNumBytes: 0) ).
+	memory classExternalAddress: (self newClassInOldSpaceWithSlots: 0 instSpec: (memory byteFormatForNumBytes: 0) ).
 	
 ]

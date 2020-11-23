@@ -11,21 +11,6 @@ Class {
 }
 
 { #category : #helpers }
-VMPrimitiveCallingTest >> callCogMethod: callingMethod receiver: receiver arguments: arguments returnAddress: returnAddress [
-
-	machineSimulator receiverRegisterValue: receiver.
-	self pushAddress: receiver.
-	
-	arguments do: [ :e | self pushAddress: e ].
-	
-	self prepareCall.
-	machineSimulator instructionPointerValue: callingMethod address + cogit noCheckEntryOffset. 
-
-	self runFrom: callingMethod address + cogit noCheckEntryOffset until: returnAddress.
-
-]
-
-{ #category : #helpers }
 VMPrimitiveCallingTest >> initStack [
 
 	self createBaseFrame.
