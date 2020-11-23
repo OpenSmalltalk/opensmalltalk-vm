@@ -14,11 +14,15 @@ else # Allow Makefile to set specific SDK
 override SDK:=$(realpath $(addprefix $(SDKsDIR)/, $(SDK)))
 endif
 ifeq ($(strip $(SDK)),)
-$(error could not find a valid SDK)
+  ifeq ($(wildcard $(realpath $(addprefix $(SDKsDIR)/,MacOSX.sdk))),)
+	$(error could not find a valid SDK)
+  else
+	SDK:=$(realpath $(addprefix $(SDKsDIR)/,MacOSX.sdk))
+  endif
 endif
 TARGET_ARCH:=i386
 ifeq ($(TARGET_VERSION_MIN),) # Allow Makefile to set TARGET_VERSION_MIN
-TARGET_VERSION_MIN:=10.7
+TARGET_VERSION_MIN:=10.9
 endif
 
 # Determine where to install plugins in the .app bundle using the Squeak

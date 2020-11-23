@@ -14,7 +14,11 @@ else # Allow Makefile to set specific SDK
 override SDK:=$(realpath $(addprefix $(SDKsDIR)/, $(SDK)))
 endif
 ifeq ($(strip $(SDK)),)
-$(error could not find a valid SDK)
+  ifeq ($(wildcard $(realpath $(addprefix $(SDKsDIR)/,MacOSX.sdk))),)
+	$(error could not find a valid SDK)
+  else
+	SDK:=$(realpath $(addprefix $(SDKsDIR)/,MacOSX.sdk))
+  endif
 endif
 TARGET_ARCH:=arm64
 #TARGET_CPU:=apple-a12
