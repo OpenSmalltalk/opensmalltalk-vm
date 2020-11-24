@@ -1,7 +1,23 @@
-find_package(LibGit2)
+function(find_system_git2)
+  message(STATUS "Looking for Git2 in the system")
+  find_package(LibGit2)
+  if(NOT LIBGIT2_FOUND)
+    message(STATUS "Git2 not found.")
+  endif()
+  set(LIBGIT2_FOUND ${LIBGIT2_FOUND} PARENT_SCOPE)
+endif()
 
-if (NOT LIBGIT2_FOUND AND NOT WITHOUT_DEPENDENCIES)
-	message(STATUS "LibGit2 not found in the system")
+function(download_git2)
+  message(STATUS "Downloading Git2 binary")
+  if(WIN)
+    add_third_party_dependency("libgit2-win-1.0.0" "build/vm")
+    add_third_party_dependency("libgit2-0.25.1-fixLibGit" "build/vm")    
+  else()
+    add_third_party_dependency("libgit2-0.25.1" "build/vm")
+  endif()
+endfunction()
+
+function(build_git2)
 	message(STATUS "Building LibGit2 with LibSSH 1.9.0")
 	
 	include(cmake/DownloadProject.cmake)
@@ -34,12 +50,20 @@ if (NOT LIBGIT2_FOUND AND NOT WITHOUT_DEPENDENCIES)
 	if(WIN)
 		add_dependencies(git2 libgit2_copy)
 	endif()
-elseif(NOT LIBGIT2_FOUND)
- 	message(FATAL_ERROR "LibGit2 not found")
+endif()
+
+if (NOT WITHOUT_DEPENDENCIES)
+  #Only get Git2 if required
+  if(PHARO_DEPENDENCIES_PREFER_DOWNLOAD_BINARIES)
+    #Download SDL2 binaries directly
+    download_git2()
+  else()
+    #Look for Git2 in the system, then build or download if possible
+    find_system_git2()
+    if(NOT LIBGIT2_FOUND)
+      build_SDL2()
+    endif()
+  endif()
 endif()
 
 add_dependencies(${VM_LIBRARY_NAME} git2)
-
-# Libgit2 dependencies
-# add_third_party_dependency("libgit2-win-1.0.0" "build/vm")
-# add_third_party_dependency("libgit2-0.25.1-fixLibGit" "build/vm")
