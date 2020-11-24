@@ -19,6 +19,7 @@ elseif (NOT WITHOUT_DEPENDENCIES)
 
 	include_directories("${libffi_BINARY_DIR}/include")
 	add_library(libFFI ALIAS ffi_shared)
+  target_link_libraries(${VM_LIBRARY_NAME} ffi_shared)
 else()
  	message(FATAL_ERROR "FFI not found")
 endif()
