@@ -5,6 +5,7 @@
 #ifndef PATH_MAX
 #define PATH_MAX MAX_PATH
 #endif
+EXPORT(void) registerCurrentThreadToHandle();
 
 void ifValidWriteBackStackPointersSaveTo(void *theCFP, void *theCSP, char **savedFPP, char **savedSPP);
 
@@ -25,8 +26,43 @@ EXPORT(void) printMachineCallStack(PCONTEXT ctx , FILE* output);
 	void printCogMethodFor(void* address);
 #endif
 
+#define MAX_THREADID_TO_REGISTER 50
+DWORD threadIDs[MAX_THREADID_TO_REGISTER];
+int threadIDCount = 0;
+
+EXPORT(void) registerCurrentThreadToHandleExceptions(){
+
+	if(threadIDCount == MAX_THREADID_TO_REGISTER){
+		logWarn("Maximum registered ThreadID count");
+		return;
+	}
+
+	threadIDs[threadIDCount] = GetCurrentThreadId();
+	threadIDCount ++;
+}
+
 static int
 isExceptionAReasonForCrashing(LPEXCEPTION_POINTERS exp) {
+
+	int found = 0;
+	DWORD currentThread;
+
+	currentThread = GetCurrentThreadId();
+
+	for(int i = 0; i < threadIDCount; i++){
+		if(threadIDs[i] == currentThread){
+			found = 1;
+			break;
+		}
+	}
+
+	if(getLogLevel() < LOG_WARN){
+		return 0;
+	}
+
+	if(!found)
+		return 0;
+
 	switch(exp->ExceptionRecord->ExceptionCode){
 		case EXCEPTION_ACCESS_VIOLATION:
 		case EXCEPTION_ARRAY_BOUNDS_EXCEEDED:
@@ -59,11 +95,12 @@ EXPORT(LONG) CALLBACK customExceptionHandler(LPEXCEPTION_POINTERS exp){
 		return EXCEPTION_CONTINUE_SEARCH;
 
 	printCrashDebugInformation(exp);
-   	return EXCEPTION_EXECUTE_HANDLER;
+
+	return EXCEPTION_CONTINUE_SEARCH;
 }
 
 void installErrorHandlers(){
-	AddVectoredExceptionHandler(1 /*CALL_FIRST*/,customExceptionHandler);
+	AddVectoredExceptionHandler(0 /*CALL_LAST*/,customExceptionHandler);
 }
 
 
