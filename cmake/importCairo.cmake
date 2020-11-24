@@ -4,7 +4,7 @@ if (Cairo_FOUND)
 
 elseif (NOT WITHOUT_DEPENDENCIES)
 
-  if (not UNIX)
+  if (NOT UNIX)
     # Cairo does not support building on CMake
     # Download it for now, except for linuxes
     add_third_party_dependency("cairo-1.15.4" "build/vm")
