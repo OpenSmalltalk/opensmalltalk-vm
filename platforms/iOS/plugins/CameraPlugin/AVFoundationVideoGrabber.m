@@ -19,6 +19,10 @@ extern struct VirtualMachine *interpreterProxy;
 #include <Cocoa/Cocoa.h>
 #include <AVFoundation/AVFoundation.h>
 
+// dispatch_release will only compile if macosx-version-min<=10.7
+#if MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
+# define dispatch_release(shunned) 0
+#endif
 
 void printDevices();
 
