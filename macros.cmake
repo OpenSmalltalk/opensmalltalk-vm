@@ -68,8 +68,8 @@ macro(add_third_party_dependency_with_baseurl NAME TARGETPATH BASEURL)
         "${${NAME}_SOURCE_DIR}/*"
     )
     add_custom_target(${NAME}
-        COMMAND ${CMAKE_COMMAND} -E copy ${DOWNLOADED_THIRD_PARTY_LIBRARIES} "${LIBRARY_OUTPUT_PATH}/$<CONFIG>"
-        COMMENT "Copying ${NAME} binaries from '${${NAME}_SOURCE_DIR}' to '${LIBRARY_OUTPUT_PATH}/$<CONFIG>'" VERBATIM)
+        COMMAND ${CMAKE_COMMAND} -E copy ${DOWNLOADED_THIRD_PARTY_LIBRARIES} "${LIBRARY_OUTPUT_PATH}/"
+        COMMENT "Copying ${NAME} binaries from '${${NAME}_SOURCE_DIR}' to '${LIBRARY_OUTPUT_PATH}/'" VERBATIM)
     add_dependencies(${VM_LIBRARY_NAME} ${NAME})
 endmacro()
 
