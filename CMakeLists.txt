@@ -70,6 +70,7 @@ set(FEATURE_NETWORK TRUE CACHE BOOL "Configure and compile support for network a
 set(FEATURE_COMPILE_GNUISATION TRUE CACHE BOOL "Use gcc gnu extensions to compile the VM")
 set(FEATURE_COMPILE_INLINE_MEMORY_ACCESSORS TRUE CACHE BOOL "Use inline memory accessors instead of macros")
 
+set(PHARO_DEPENDENCIES_PREFER_DOWNLOAD_BINARIES FALSE CACHE BOOL "Prefer downloading dependencies")
 set(WITHOUT_DEPENDENCIES FALSE CACHE BOOL "Do not download dependencies at build time")
 set(FEATURE_LIB_SDL2 TRUE CACHE BOOL "Build SDL2 support")
 set(FEATURE_LIB_CAIRO TRUE CACHE BOOL "Build Cairo support")
