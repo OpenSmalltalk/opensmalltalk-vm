@@ -9,7 +9,11 @@ endfunction()
 
 function(download_SDL2)
   message(STATUS "Downloading SDL2 binary")
-  add_third_party_dependency("SDL2-2.0.5" "build/vm")
+  if(WIN)
+    add_third_party_dependency("SDL2-2.0.5" "build/vm")
+  else()
+    add_third_party_dependency("SDL2-2.0.7" "build/vm")
+  endif()
 endfunction()
 
 function(build_SDL2)
