@@ -375,7 +375,7 @@ addLibraryWithRPATH(${VM_LIBRARY_NAME} ${VM_SOURCES})
 # LibFFI
 #
 if (${FEATURE_FFI})
-    include(cmake/libffi.cmake)
+    include(cmake/importLibFFI.cmake)
 endif()
 
 target_include_directories(${VM_LIBRARY_NAME}

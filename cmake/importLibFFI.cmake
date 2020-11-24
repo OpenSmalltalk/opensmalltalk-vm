@@ -1,8 +1,14 @@
-find_package(FFI)
+function(find_system_ffi)
+  message(STATUS "Looking for FFI in the system")
+  find_package(FFI)
+  if(NOT FFI_FOUND)
+    message(STATUS "FFI not found.")
+  endif()
+  set(FFI_FOUND ${FFI_FOUND} PARENT_SCOPE)
+endif()
 
-if (FFI_FOUND)
-	target_link_libraries(${VM_LIBRARY_NAME} FFI::lib)
-elseif (NOT WITHOUT_DEPENDENCIES)
+function(build_ffi)
+  message(STATUS "Building FFI")
 	include(cmake/DownloadProject.cmake)
 
 	download_project(PROJ                libffi
@@ -20,6 +26,15 @@ elseif (NOT WITHOUT_DEPENDENCIES)
 	include_directories("${libffi_BINARY_DIR}/include")
 	add_library(libFFI ALIAS ffi_shared)
   target_link_libraries(${VM_LIBRARY_NAME} ffi_shared)
+endif()
+
+if(PHARO_DEPENDENCIES_PREFER_DOWNLOAD_BINARIES)
+  #Download SDL2 binaries directly
+  build_FFI()
 else()
- 	message(FATAL_ERROR "FFI not found")
+  #Look for FFI in the system, then build or download if possible
+  find_system_FFI()
+  if(NOT FFI_FOUND)
+    build_FFI()
+  endif()
 endif()
