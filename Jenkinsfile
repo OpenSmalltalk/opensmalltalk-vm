@@ -94,7 +94,7 @@ def runBuild(platformName, configuration, headless = true){
       runInCygwin "cd ${buildDirectory} && VERBOSE=1 make install"
       runInCygwin "cd ${buildDirectory} && VERBOSE=1 make package"
     }else{
-      cmakeBuild generator: "Unix Makefiles", cmakeArgs: "-DFLAVOUR=${configuration} ${additionalParameters}", sourceDir: "repository", buildDir: "${buildDirectory}", installation: "InSearchPath"
+      cmakeBuild generator: "Unix Makefiles", cmakeArgs: "-DFLAVOUR=${configuration} ${additionalParameters} -DPHARO_DEPENDENCIES_PREFER_DOWNLOAD_BINARIES=TRUE", sourceDir: "repository", buildDir: "${buildDirectory}", installation: "InSearchPath"
       dir("${buildDirectory}"){
         shell "VERBOSE=1 make install"
         shell "VERBOSE=1 make package"
