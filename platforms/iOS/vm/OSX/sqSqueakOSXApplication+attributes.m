@@ -64,7 +64,7 @@ typedef struct {
 	case 1002:  { /* OS name: "solaris2.5" on unix, "win95" on win32, ... */
         static char data[32] = { 0 };
         NSOperatingSystemVersion version = [self getOperatingSystemVersion];
-        sprintf(data,"%ld%ld.%ld",
+        sprintf(data,"%ld%02ld.%ld",
                 (long)version.majorVersion,
                 (long)version.minorVersion,
                 (long)version.patchVersion);
