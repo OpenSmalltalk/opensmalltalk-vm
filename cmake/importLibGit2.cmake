@@ -27,7 +27,6 @@ function(download_git2)
     add_third_party_dependency("libssh2-1.7.0" ${LIBRARY_OUTPUT_DIRECTORY})
     add_third_party_dependency("openssl-1.0.2q" ${LIBRARY_OUTPUT_DIRECTORY})    
   endif()
-  
 endfunction()
 
 function(build_git2)
