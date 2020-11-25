@@ -1,7 +1,7 @@
 find_package(Cairo)
 
 if (Cairo_FOUND)
-
+	add_dependencies(${VM_LIBRARY_NAME} Cairo::Cairo)
 elseif (NOT WITHOUT_DEPENDENCIES)
 
   # Cairo does not support building on CMake
@@ -18,5 +18,3 @@ elseif (NOT WITHOUT_DEPENDENCIES)
 else()
 	message(FATAL_ERROR "Could not find Cairo")
 endif()
-
-add_dependencies(${VM_LIBRARY_NAME} Cairo::Cairo)

@@ -1,7 +1,9 @@
 function(find_system_ffi)
   message(STATUS "Looking for FFI in the system")
   find_package(FFI)
-  if(NOT FFI_FOUND)
+  if(FFI_FOUND)
+	target_link_libraries(${VM_LIBRARY_NAME} FFI::lib)
+  else()
     message(STATUS "FFI not found.")
   endif()
   set(FFI_FOUND ${FFI_FOUND} PARENT_SCOPE)
@@ -26,6 +28,11 @@ function(build_ffi)
 	set_target_properties(ffi_shared PROPERTIES MACOSX_RPATH ON)
 	set_target_properties(ffi_shared PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})
 	set_target_properties(ffi_shared PROPERTIES INSTALL_NAME_DIR "@executable_path/Plugins")
+
+	# libffi cmakelists does not correctly export the library includes
+	# so we have to make it ourselves...
+	target_include_directories(ffi_shared
+		PRIVATE "${libffi_BINARY_DIR}/include")
 
 	add_library(libFFI ALIAS ffi_shared)
 	target_link_libraries(${VM_LIBRARY_NAME} ffi_shared)
