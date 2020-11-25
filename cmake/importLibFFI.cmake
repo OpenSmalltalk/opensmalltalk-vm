@@ -31,8 +31,7 @@ function(build_ffi)
 
 	# libffi cmakelists does not correctly export the library includes
 	# so we have to make it ourselves...
-	target_include_directories(ffi_shared
-		PRIVATE "${libffi_BINARY_DIR}/include")
+	include_directories("${libffi_BINARY_DIR}/include")
 
 	add_library(libFFI ALIAS ffi_shared)
 	target_link_libraries(${VM_LIBRARY_NAME} ffi_shared)
