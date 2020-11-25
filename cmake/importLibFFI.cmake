@@ -8,7 +8,7 @@ function(find_system_ffi)
 endfunction()
 
 function(build_ffi)
-  message(STATUS "Building FFI")
+	message(STATUS "Building FFI")
 	include(cmake/DownloadProject.cmake)
 
 	download_project(PROJ                libffi
@@ -19,17 +19,18 @@ function(build_ffi)
 
 	add_subdirectory(${libffi_SOURCE_DIR} ${libffi_BINARY_DIR} EXCLUDE_FROM_ALL)
 
+	set_target_properties(objlib PROPERTIES POSITION_INDEPENDENT_CODE OFF)
+
 	#set_target_properties(${NAME} PROPERTIES MACOSX_RPATH ON)
 	set_target_properties(ffi_shared PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})
 	#set_target_properties(${NAME} PROPERTIES INSTALL_NAME_DIR "@executable_path/Plugins")
 
-	include_directories("${libffi_BINARY_DIR}/include")
 	add_library(libFFI ALIAS ffi_shared)
-  target_link_libraries(${VM_LIBRARY_NAME} ffi_shared)
+	target_link_libraries(${VM_LIBRARY_NAME} ffi_shared)
 endfunction()
 
 if(PHARO_DEPENDENCIES_PREFER_DOWNLOAD_BINARIES)
-  #Download SDL2 binaries directly
+  #Download FFI binaries directly
   build_FFI()
 else()
   #Look for FFI in the system, then build or download if possible

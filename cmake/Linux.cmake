@@ -32,9 +32,9 @@ set(VM_FRONTEND_SOURCES
 
 
 macro(add_third_party_dependencies_per_platform)
-#	if (NOT WITHOUT_DEPENDENCIES)
-#    add_third_party_dependency("PThreadedFFI-1.4.0-linux64" "build/vm")
-#	endif()
+	if (NOT WITHOUT_DEPENDENCIES)
+		add_third_party_dependency("PThreadedFFI-1.4.0-linux64" "build/vm")
+	endif()
 
 	if(${FEATURE_LIB_GIT2})
         include(cmake/importLibGit2.cmake)

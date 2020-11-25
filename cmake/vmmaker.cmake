@@ -18,7 +18,7 @@
 set(CMAKE_VERBOSE_MAKEFILE TRUE)
 
 #Setting vmmaker directory and image 
-set( VMMAKER_DIR    "${CMAKE_CURRENT_BINARY_DIR}/build/vmmaker")
+set( VMMAKER_DIR    "${CMAKE_CURRENT_BINARY_DIR_TO_OUT}/build/vmmaker")
 set( VMMAKER_IMAGE  "${VMMAKER_DIR}/image/VMMaker.image")
 
 #Setting platform specific vmmaker virtual machine, with cached download or override
@@ -73,7 +73,7 @@ ExternalProject_Add(
         URL https://files.pharo.org/image/90/Pharo9.0-SNAPSHOT.build.839.sha.099690e.arch.64bit.zip
         URL_HASH SHA256=00c489f0516005d7ba7be259673eab1225ad9a4d1f90df9ce5082cbce4b47b82
         BUILD_COMMAND ${VMMAKER_VM} --headless ${VMMAKER_DIR}/image/Pharo9.0-SNAPSHOT-64bit-099690e.image save VMMaker
-        COMMAND ${VMMAKER_VM} --headless ${VMMAKER_IMAGE} --save --quit "${CMAKE_CURRENT_SOURCE_DIR}/scripts/installVMMaker.st" "${CMAKE_CURRENT_SOURCE_DIR}"
+        COMMAND ${VMMAKER_VM} --headless ${VMMAKER_IMAGE} --save --quit "${CMAKE_CURRENT_SOURCE_DIR_TO_OUT}/scripts/installVMMaker.st" "${CMAKE_CURRENT_SOURCE_DIR_TO_OUT}"
         UPDATE_COMMAND      echo 
         CONFIGURE_COMMAND   echo
         INSTALL_COMMAND     echo
@@ -105,7 +105,7 @@ set(PHARO_VM_SLANG_PLUGIN_GENERATED_FILES
 #Custom command that generates the vm source code from VMMaker into "out/build/XXXX/generated" folder
 add_custom_command(
     OUTPUT ${VMSOURCEFILES} ${PLUGIN_GENERATED_FILES}
-    COMMAND ${VMMAKER_VM} --headless ${VMMAKER_IMAGE} eval \"PharoVMMaker generate: \#\'${FLAVOUR}\' outputDirectory: \'${CMAKE_CURRENT_BINARY_DIR}\'\"
+    COMMAND ${VMMAKER_VM} --headless ${VMMAKER_IMAGE} eval \"PharoVMMaker generate: \#\'${FLAVOUR}\' outputDirectory: \'${CMAKE_CURRENT_BINARY_DIR_TO_OUT}\'\"
     DEPENDS build_vmmaker_get_image
     COMMENT "Generating VM files for flavour: ${FLAVOUR}")
 
