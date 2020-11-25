@@ -5,7 +5,7 @@ function(find_system_ffi)
     message(STATUS "FFI not found.")
   endif()
   set(FFI_FOUND ${FFI_FOUND} PARENT_SCOPE)
-endif()
+endfunction()
 
 function(build_ffi)
   message(STATUS "Building FFI")
@@ -26,7 +26,7 @@ function(build_ffi)
 	include_directories("${libffi_BINARY_DIR}/include")
 	add_library(libFFI ALIAS ffi_shared)
   target_link_libraries(${VM_LIBRARY_NAME} ffi_shared)
-endif()
+endfunction()
 
 if(PHARO_DEPENDENCIES_PREFER_DOWNLOAD_BINARIES)
   #Download SDL2 binaries directly
