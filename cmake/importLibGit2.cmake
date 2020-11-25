@@ -5,7 +5,7 @@ function(find_system_git2)
     message(STATUS "Git2 not found.")
   endif()
   set(LIBGIT2_FOUND ${LIBGIT2_FOUND} PARENT_SCOPE)
-endif()
+endfunction()
 
 function(download_git2)
   message(STATUS "Downloading Git2 binary")
@@ -50,7 +50,7 @@ function(build_git2)
 	if(WIN)
 		add_dependencies(git2 libgit2_copy)
 	endif()
-endif()
+endfunction()
 
 if (NOT WITHOUT_DEPENDENCIES)
   #Only get Git2 if required
