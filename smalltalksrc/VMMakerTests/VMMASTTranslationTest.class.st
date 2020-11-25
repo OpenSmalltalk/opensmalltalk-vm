@@ -371,7 +371,7 @@ VMMASTTranslationTest >> testMethodWithoutExplicitReturnInOtherMethodReturnsVoid
 	codeGenerator addMethod: translation.
 	codeGenerator doInlining: true.
 
-	codeGenerator inferTypesForImplicitlyTypedVariablesAndMethods.
+	codeGenerator inferTypes.
 
 	self assert: translation returnType equals: #void
 ]
@@ -386,7 +386,7 @@ VMMASTTranslationTest >> testMethodWithoutExplicitReturnReturnsVoid [
 	codeGenerator addMethod: translation.
 	codeGenerator doInlining: true.
 
-	codeGenerator inferTypesForImplicitlyTypedVariablesAndMethods.
+	codeGenerator inferTypes.
 
 	self assert: translation returnType equals: #void
 ]

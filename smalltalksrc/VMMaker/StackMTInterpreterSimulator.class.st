@@ -810,7 +810,9 @@ StackMTInterpreterSimulator >> initialize [
 	self flushMethodCache.
 	gcSemaphoreIndex := 0.
 	externalSemaphoreSignalRequests := externalSemaphoreSignalResponses := #().
-	externalPrimitiveTable := CArrayAccessor on: (Array new: MaxExternalPrimitiveTableSize).
+	externalPrimitiveTable := CArrayAccessor on: (Array
+		new: MaxExternalPrimitiveTableSize
+		withAll: 0).
 	externalPrimitiveTableFirstFreeIndex := 0.
 	primitiveTable := self class primitiveTable copy.
 	self initializePluginEntries.

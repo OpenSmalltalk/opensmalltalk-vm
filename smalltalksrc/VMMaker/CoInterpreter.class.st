@@ -845,7 +845,7 @@ CoInterpreter >> assertValidExecutionPointe: lip r: lifp s: lisp imbar: inInterp
 							ifTrue: [self iframeSavedIP: lifp]
 							ifFalse: [lip].
 				 self assert: (theIP >= (methodField + (objectMemory lastPointerOf: methodField))
-							  and: [theIP < (methodField + (objectMemory numBytesOfBytes: methodField) + objectMemory baseHeaderSize - 1)])
+							  and: [theIP <= (methodField + (objectMemory numBytesOfBytes: methodField) + objectMemory baseHeaderSize - 1)])
 					l: ln].
 			 self assert: ((self iframeIsBlockActivation: lifp)
 					or: [(self pushedReceiverOrClosureOfFrame: lifp) = (self iframeReceiver: lifp)])
@@ -1400,6 +1400,7 @@ CoInterpreter >> ceCheckAndMaybeRetryPrimitive: primIndex [
 	<api>
 	<option: #SpurObjectMemory>
 	| retried |
+	
 	cogit recordPrimTrace ifTrue:
 		[self fastLogPrim: TracePrimitiveFailure].
 	retried := self retryPrimitiveOnFailure.
@@ -2401,6 +2402,18 @@ CoInterpreter >> cogMethodOf: aMethodOop [
 	self assert: ((objectMemory isNonImmediate: methodHeader)
 				and: [methodHeader asUnsignedInteger < objectMemory startOfMemory]).
 	^self cCoerceSimple: methodHeader to: #'CogMethod *'
+]
+
+{ #category : #'as yet unclassified' }
+CoInterpreter >> cogMethodZone [
+	<doNotGenerate>
+	^ cogMethodZone
+]
+
+{ #category : #'as yet unclassified' }
+CoInterpreter >> cogMethodZone: aCogMethodZone [ 
+	<doNotGenerate>
+	cogMethodZone := aCogMethodZone
 ]
 
 { #category : #accessing }
@@ -3563,6 +3576,13 @@ CoInterpreter >> gcMode [
 	^gcMode
 ]
 
+{ #category : #'as yet unclassified' }
+CoInterpreter >> gcMode: anInteger [ 
+
+	<doNotGenerate>
+	gcMode := anInteger
+]
+
 { #category : #'cog jit support' }
 CoInterpreter >> getCheckAllocFiller [
 	<api>
@@ -3897,8 +3917,8 @@ CoInterpreter >> initStackPagesAndInterpret [
 { #category : #initialization }
 CoInterpreter >> initializeCodeGenerator [
 	cogit
-		initializeCodeZoneFrom: (self cCode: [objectMemory memory] inSmalltalk: [Cogit guardPageSize])
-		upTo: (self cCode: [objectMemory memory] inSmalltalk: [Cogit guardPageSize]) + cogCodeSize
+		initializeCodeZoneFrom: (self cCode: [objectMemory memory] inSmalltalk: [objectMemory cogCodeBase])
+		upTo: (self cCode: [objectMemory memory] inSmalltalk: [objectMemory cogCodeBase]) + cogCodeSize
 ]
 
 { #category : #'frame access' }
@@ -5668,11 +5688,24 @@ CoInterpreter >> primNumberExternalCall [
 	^PrimNumberExternalCall
 ]
 
+{ #category : #'as yet unclassified' }
+CoInterpreter >> primTraceLog [
+	<doNotGenerate>
+	^ primTraceLog
+]
+
 { #category : #'cog jit support' }
 CoInterpreter >> primTraceLogAddress [
 	<api>
 	<returnTypeC: #'void *'>
 	^self cCode: [primTraceLog] inSmalltalk: [primTraceLog offset * objectMemory wordSize]
+]
+
+{ #category : #'as yet unclassified' }
+CoInterpreter >> primTraceLogEntries [
+	<doNotGenerate>
+	
+	^ PrimTraceLogSize
 ]
 
 { #category : #'cog jit support' }
@@ -5695,6 +5728,22 @@ CoInterpreter >> primTraceLogIndexAddress [
 	"N.B. primTraceLogIndex is 8-bits"
 	^self cCode: [(self addressOf: primTraceLogIndex) asUnsignedInteger]
 		inSmalltalk: [cogit simulatedReadWriteVariableAddress: #primTraceLogIndex in: self]
+]
+
+{ #category : #'as yet unclassified' }
+CoInterpreter >> primitiveAccessorDepthTable [
+	
+	<doNotGenerate>
+	
+	^ primitiveAccessorDepthTable
+]
+
+{ #category : #'as yet unclassified' }
+CoInterpreter >> primitiveAccessorDepthTable: aCollection [ 
+	
+	<doNotGenerate>
+	
+	primitiveAccessorDepthTable := aCollection
 ]
 
 { #category : #'trampoline support' }
@@ -6848,7 +6897,9 @@ CoInterpreter >> siglong: aJumpBuf jmp: returnValue [
 	 and: [returnValue ~= 2 "2 == returnToThreadSchedulingLoopVia:"]) ifTrue:
 		[self assert: (self isOnRumpCStack: cogit processor sp).
 		 self assertValidExecutionPointe: instructionPointer r: framePointer s: stackPointer imbar: true line: nil].
-	aJumpBuf returnValue: returnValue; signal
+	"Restore the Registers"
+	cogit processor sp: (aJumpBuf properties at: #savedSP).
+	aJumpBuf returnValue: returnValue; signal.
 ]
 
 { #category : #trampolines }
@@ -6873,6 +6924,18 @@ CoInterpreter >> signed64BitIntegerFor: integerValue [
 CoInterpreter >> signed64BitValueOf: oop [
 	<api>
 	^super signed64BitValueOf: oop
+]
+
+{ #category : #'runtime support' }
+CoInterpreter >> sigset: aJumpBuf jmp: sigSaveMask [
+	"Hack simulation of sigsetjmp/siglongjmp.
+	 Assign to reenterInterpreter the exception that when
+	 raised simulates a longjmp back to the interpreter." 
+	<doNotGenerate>
+	| result |
+	result := super sigset: aJumpBuf jmp: sigSaveMask.
+	reenterInterpreter properties at: #savedSP put: cogit processor sp.
+	^result
 ]
 
 { #category : #'primitive support' }

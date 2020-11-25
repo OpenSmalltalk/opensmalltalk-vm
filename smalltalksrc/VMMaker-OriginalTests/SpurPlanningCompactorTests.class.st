@@ -8,11 +8,6 @@ Class {
 	#category : #'VMMaker-OriginalTests'
 }
 
-{ #category : #debugger }
-SpurPlanningCompactorTests class >> defaultIntegerBaseInDebugger [
-	^VMClass defaultIntegerBaseInDebugger
-]
-
 { #category : #utilities }
 SpurPlanningCompactorTests class >> preenImage [
 	"Assume there's a Pharo bootstrap core32.image in ../oscogvm/image/core32.image.

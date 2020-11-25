@@ -337,7 +337,7 @@ SistaCogitClone >> genBinaryConstOpVarInlinePrimitive: prim [
 				 self SubR: ra R: TempReg.
 				 objectRepresentation genAddSmallIntegerTagsTo: TempReg.
 				 self MoveR: TempReg R: ra].
-		[2]	->	[objectRepresentation genShiftAwaySmallIntegerTagsInScratchReg: ra.
+		[2]	->	[objectRepresentation genConvertSmallIntegerToIntegerInReg: ra.
 				 self MoveCq: untaggedVal R: TempReg.
 				 self MulR: TempReg R: ra.
 				 objectRepresentation genSetSmallIntegerTagsIn: ra].
@@ -413,7 +413,7 @@ SistaCogitClone >> genBinaryConstOpVarSmiInlinePrimitive: primIndex [
 				 self MoveR: TempReg R: ra].
 		"2002	*
 		Smi, Smi => Smi (no overflow, optimised if one operand is a constant)"
-		[2]	->	[objectRepresentation genShiftAwaySmallIntegerTagsInScratchReg: ra.
+		[2]	->	[objectRepresentation genConvertSmallIntegerToIntegerInReg: ra.
 				 self MoveCq: untaggedVal R: TempReg.
 				 self MulR: TempReg R: ra.
 				 objectRepresentation genSetSmallIntegerTagsIn: ra].
@@ -641,7 +641,7 @@ SistaCogitClone >> genBinaryVarOpConstInlinePrimitive: prim [
 		[0]	->	[self AddCq: untaggedVal R: rr].
 		[1]	->	[self SubCq: untaggedVal R: rr ].
 		[2]	->	[self flag: 'could use MulCq:R'.
-				 objectRepresentation genShiftAwaySmallIntegerTagsInScratchReg: rr.
+				 objectRepresentation genConvertSmallIntegerToIntegerInReg: rr.
 				 self MoveCq: untaggedVal R: TempReg.
 				 self MulR: TempReg R: rr.
 				 objectRepresentation genSetSmallIntegerTagsIn: rr].
@@ -704,7 +704,7 @@ SistaCogitClone >> genBinaryVarOpConstSmiInlinePrimitive: primIndex [
 		"2002	*
 		 Smi, Smi => Smi (no overflow, optimised if one operand is a constant)"
 		[2]	->	[self flag: 'could use MulCq:R'.
-				 objectRepresentation genShiftAwaySmallIntegerTagsInScratchReg: rr.
+				 objectRepresentation genConvertSmallIntegerToIntegerInReg: rr.
 				 self MoveCq: untaggedVal R: TempReg.
 				 self MulR: TempReg R: rr.
 				 objectRepresentation genSetSmallIntegerTagsIn: rr].
@@ -744,7 +744,7 @@ SistaCogitClone >> genBinaryVarOpVarInlinePrimitive: prim [
 				 self AddR: ra R: rr].
 		[1]	->	[self SubR: ra R: rr.
 				 objectRepresentation genAddSmallIntegerTagsTo: rr].
-		[2]	->	[self genShiftAwaySmallIntegerTagsInScratchReg: rr.
+		[2]	->	[self genConvertSmallIntegerToIntegerInReg: rr.
 				 self genRemoveSmallIntegerTagsInScratchReg: ra.
 				 self MulR: ra R: rr.
 				 self genSetSmallIntegerTagsIn: rr].
@@ -817,7 +817,7 @@ SistaCogitClone >> genBinaryVarOpVarSmiInlinePrimitive: primIndex [
 				 objectRepresentation genAddSmallIntegerTagsTo: rr].
 		"2002	*
 		Smi, Smi => Smi (no overflow, optimised if one operand is a constant)"
-		[2]	->	[self genShiftAwaySmallIntegerTagsInScratchReg: rr.
+		[2]	->	[self genConvertSmallIntegerToIntegerInReg: rr.
 				 self genRemoveSmallIntegerTagsInScratchReg: ra.
 				 self MulR: ra R: rr.
 				 self genSetSmallIntegerTagsIn: rr].
@@ -1157,8 +1157,8 @@ SistaCogitClone >> genDivInlinePrimitive: primIndex [
 	self assert: backEnd canDivQuoRem.
 	"arg non zero, no overflow check. / remains (unused in optimised code)"
 	primIndex caseOf: {
-		[4] ->	[objectRepresentation genShiftAwaySmallIntegerTagsInScratchReg: ra.
-				objectRepresentation genShiftAwaySmallIntegerTagsInScratchReg: rr.
+		[4] ->	[objectRepresentation genConvertSmallIntegerToIntegerInReg: ra.
+				objectRepresentation genConvertSmallIntegerToIntegerInReg: rr.
 				self DivR: ra R: rr Quo: rr Rem: TempReg.
 				"If remainder is zero, success"
 				self CmpCq: 0 R: TempReg.
@@ -1187,8 +1187,8 @@ SistaCogitClone >> genDivInlinePrimitive: primIndex [
 				self AddR: ra R: rr.
 				jumpSameSign jmpTarget: (jumpExact jmpTarget: self Label).
 				objectRepresentation genSetSmallIntegerTagsIn: rr ].
-		[6] ->	[objectRepresentation genShiftAwaySmallIntegerTagsInScratchReg: ra.
-				objectRepresentation genShiftAwaySmallIntegerTagsInScratchReg: rr.
+		[6] ->	[objectRepresentation genConvertSmallIntegerToIntegerInReg: ra.
+				objectRepresentation genConvertSmallIntegerToIntegerInReg: rr.
 				self DivR: ra R: rr Quo: rr Rem: ra.
 				objectRepresentation genConvertIntegerToSmallIntegerInReg: rr].
 	} otherwise: [^EncounteredUnknownBytecode].

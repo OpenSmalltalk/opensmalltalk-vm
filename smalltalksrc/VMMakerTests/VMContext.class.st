@@ -20,8 +20,34 @@ VMContext class >> newOnContext: anInteger withInterpreter: aStackInterpreterSim
 ]
 
 { #category : #accessing }
+VMContext >> caller [
+	| senderContext |
+
+	"Check if widowed (marriage should have been checked by sender)"
+	"If widowed it's just me!"
+	(interpreter isMarriedOrWidowedContext: contextOop)
+		ifTrue: [ ^ nil ].
+	
+	senderContext := self sender.
+	senderContext = interpreter objectMemory nilObject
+		ifTrue: [ ^ nil ].
+
+	^ VMContext newOnContext: senderContext withInterpreter: interpreter
+]
+
+{ #category : #accessing }
 VMContext >> contextOop: anInteger [ 
 	contextOop := anInteger
+]
+
+{ #category : #accessing }
+VMContext >> description [
+	| homeContextOop method selector |
+	homeContextOop := interpreter findHomeForContext: contextOop.
+	method := interpreter objectMemory fetchPointer: MethodIndex ofObject: homeContextOop.
+	selector := interpreter findSelectorOfMethod: method.
+	
+	^ interpreter stringOf: selector
 ]
 
 { #category : #accessing }

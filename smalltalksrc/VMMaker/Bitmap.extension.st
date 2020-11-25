@@ -6,11 +6,6 @@ Bitmap >> coerceTo: cTypeString sim: interpreter [
 	^ self
 ]
 
-{ #category : #'*VMMaker-debugger' }
-Bitmap class >> defaultIntegerBaseInDebugger [
-	^16
-]
-
 { #category : #'*VMMaker-JITSimulation' }
 Bitmap >> long64At: byteAddress [
 	| lowBits hiWord loWord midWord mask wordIndex result signBit |

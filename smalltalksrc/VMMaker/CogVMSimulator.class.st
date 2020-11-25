@@ -78,7 +78,8 @@ Class {
 		'eventQueue',
 		'expectedSends',
 		'expecting',
-		'bootstrapping'
+		'bootstrapping',
+		'primitiveFailCount'
 	],
 	#classVars : [
 		'ByteCountsPerMicrosecond',
@@ -267,7 +268,9 @@ CogVMSimulator >> basicInitialize [
 	cogCompiledCodeCompactionCalledFor := false.
 	gcSemaphoreIndex := 0.
 	externalSemaphoreSignalRequests := externalSemaphoreSignalResponses := #().
-	externalPrimitiveTable := CArrayAccessor on: (Array new: MaxExternalPrimitiveTableSize).
+	externalPrimitiveTable := CArrayAccessor on: (Array
+		new: MaxExternalPrimitiveTableSize
+		withAll: 0).
 	externalPrimitiveTableFirstFreeIndex := 0.
 	primitiveTable := self class primitiveTable copy.
 
@@ -433,7 +436,6 @@ CogVMSimulator >> ceBaseFrameReturn: returnValue [
 
 { #category : #trampolines }
 CogVMSimulator >> ceContext: aOnceMarriedContext instVar: slotIndex [
-	"aOnceMarriedContext = 26431360 ifTrue: [self halt]."
 	cogit assertCStackWellAligned.
 	^super ceContext: aOnceMarriedContext instVar: slotIndex
 ]
@@ -690,12 +692,20 @@ CogVMSimulator >> close [  "close any files that ST may have opened, etc"
 
 { #category : #'primitive support' }
 CogVMSimulator >> codeGeneratorToComputeAccessorDepth [
-	^(VMMaker new
-		buildCodeGeneratorForInterpreter: CoInterpreterPrimitives
-		includeAPIMethods: false
-		initializeClasses: false)
-			logger: self transcript;
-			yourself
+
+	^ codeGeneratorToComputeAccessorDepth ifNil: [
+		(VMMaker new
+			buildCodeGeneratorForInterpreter: CoInterpreterPrimitives
+			includeAPIMethods: false
+			initializeClasses: false)
+				logger: self transcript;
+				yourself]
+]
+
+{ #category : #'as yet unclassified' }
+CogVMSimulator >> codeGeneratorToComputeAccessorDepth: aCCodeGenerator [ 
+
+	codeGeneratorToComputeAccessorDepth := aCCodeGenerator
 ]
 
 { #category : #'simulation only' }
@@ -2311,6 +2321,7 @@ CogVMSimulator >> mapFunctionToAddress: aSymbolOrIndexOrBlock [
 	 aSymbolOrIndex is either a Symbol (#primitiveExternalCall) or an
 	 index above 1001 (an index + 1000 into the externalPrimitiveTable)."
 	| sobui symbolOrBlock |
+
 	aSymbolOrIndexOrBlock = 0 ifTrue: [^0].
 	self assert: (aSymbolOrIndexOrBlock isSymbol
 				or: [aSymbolOrIndexOrBlock isBlock
@@ -2420,6 +2431,11 @@ CogVMSimulator >> maybeMapPrimitiveFunctionPointerBackToSomethingEvaluable [
 						   and: [(self pluginEntryFor: externalIndex) third == evaluable]).
 			 primitiveFunctionPointer := externalIndex.
 			 ^self]].
+	
+	(primitiveFunctionPointer isInteger and: [ 
+		cogit simulatedTrampolines includesKey: primitiveFunctionPointer ])
+		ifTrue: [ primitiveFunctionPointer := (cogit simulatedTrampolines at: primitiveFunctionPointer) selector  ].
+	
 	^super maybeMapPrimitiveFunctionPointerBackToSomethingEvaluable
 ]
 
@@ -2607,7 +2623,7 @@ CogVMSimulator >> openOn: fileName extraMemory: extraBytes [
 	| f version headerSize dataSize count oldBaseAddr bytesToShift swapBytes
 	  headerFlags firstSegSize heapSize
 	  hdrNumStackPages hdrEdenBytes hdrMaxExtSemTabSize
-	  hdrCogCodeSize stackZoneSize methodCacheSize primTraceLogSize allocationReserve |
+	  hdrCogCodeSize stackZoneSize methodCacheSize primTraceLogSize allocationReserve vmRequiredMemorySize |
 	"open image file and read the header"
 
 	(f := self openImageFileNamed: fileName) ifNil: [^self].
@@ -2678,14 +2694,16 @@ CogVMSimulator >> openOn: fileName extraMemory: extraBytes [
 	 simulation the methodCache must be relocated to memory."
 	methodCacheSize := methodCache size * objectMemory wordSize.
 	primTraceLogSize := primTraceLog size * objectMemory wordSize.
+
 	"allocate interpreter memory. This list is in address order, low to high.
 	 In the actual VM the stack zone exists on the C stack."
-	heapBase := (Cogit guardPageSize
+	vmRequiredMemorySize := (Cogit guardPageSize
 				+ cogCodeSize
 				+ stackZoneSize
 				+ methodCacheSize
 				+ primTraceLogSize
 				+ self rumpCStackSize) roundUpTo: objectMemory allocationUnit.
+
 	"compare memory requirements with availability"
 	allocationReserve := self interpreterAllocationReserveBytes.
 	objectMemory hasSpurMemoryManagerAPI
@@ -2709,15 +2727,17 @@ CogVMSimulator >> openOn: fileName extraMemory: extraBytes [
 						+ (extraBytes > allocationReserve
 							ifTrue: [0]
 							ifFalse: [allocationReserve])].
+
+	objectMemory allocateMemoryOfSize: vmRequiredMemorySize + heapSize.	
+	
 	heapBase := objectMemory
-					setHeapBase: heapBase
-					memoryLimit:  heapBase + heapSize
-					endOfMemory: heapBase + dataSize.
+					setHeapBase: objectMemory memory initialAddress + vmRequiredMemorySize
+					memoryLimit:  objectMemory memory initialAddress + vmRequiredMemorySize + heapSize
+					endOfMemory: objectMemory memory initialAddress + vmRequiredMemorySize + dataSize.
 
 	self assert: cogCodeSize \\ 4 = 0.
 	self assert: objectMemory memoryLimit \\ 4 = 0.
 	self assert: self rumpCStackSize \\ 4 = 0.
-	objectMemory allocateMemoryOfSize: objectMemory memoryLimit.
 	"read in the image in bulk, then swap the bytes if necessary"
 	f position: headerSize.
 	count := objectMemory readHeapFromImageFile: f dataBytes: dataSize.
@@ -2797,6 +2817,12 @@ CogVMSimulator >> pluginEntryFor: mapIndex [
 	^mappedPluginEntries at: (mapIndex > 1000
 								ifTrue: [externalPrimitiveTable at: mapIndex - 1001]
 								ifFalse: [mapIndex])
+]
+
+{ #category : #'as yet unclassified' }
+CogVMSimulator >> pluginList: aCollection [ 
+
+	pluginList := aCollection
 ]
 
 { #category : #'object memory support' }
@@ -2884,10 +2910,33 @@ CogVMSimulator >> primitiveExecuteMethod [
 	^super primitiveExecuteMethod
 ]
 
-{ #category : #'control primitives' }
-CogVMSimulator >> primitiveExecuteMethodArgsArray [
-	self halt: thisContext selector.
-	^super primitiveExecuteMethodArgsArray
+{ #category : #'as yet unclassified' }
+CogVMSimulator >> primitiveFailCount [
+	^ primitiveFailCount
+]
+
+{ #category : #'as yet unclassified' }
+CogVMSimulator >> primitiveFailCount: anInteger [ 
+
+	primitiveFailCount := anInteger
+]
+
+{ #category : #'as yet unclassified' }
+CogVMSimulator >> primitiveFailCounting [
+
+	"This primitive always fails, but it counts the number of calls. Useful for tests"
+
+	primitiveFailCount := primitiveFailCount + 1.
+	self primitiveFail.
+	
+]
+
+{ #category : #'as yet unclassified' }
+CogVMSimulator >> primitiveForceMachineCodeCompaction [
+	
+	self commenceCogCompiledCodeCompaction.
+	self pop: 2 thenPushBool: true.
+
 ]
 
 { #category : #'other primitives' }
@@ -3042,6 +3091,20 @@ CogVMSimulator >> primitiveStoreStackp [
 	self halt."
 	"(self stackValue: 1) = 16r1934F80 ifTrue: [self halt]."
 	super primitiveStoreStackp
+]
+
+{ #category : #'plugin support' }
+CogVMSimulator >> primitiveThatDoNothingWithOneArgument [
+	
+	| arg recvr |
+
+	arg := self stackTop.
+	recvr := self stackValue: 1.
+	
+	recvr = objectMemory nilObject 
+		ifTrue: [ ^ self primitiveFail ].
+	
+	^ self pop: 2 thenPush: arg.
 ]
 
 { #category : #'multi-threading simulation switch' }
@@ -3448,6 +3511,12 @@ CogVMSimulator >> setBreakBlockFromString: aString [
 { #category : #accessing }
 CogVMSimulator >> setBreakCount: anInteger [
 	breakCount := anInteger
+]
+
+{ #category : #accessing }
+CogVMSimulator >> setBreakSelectorLength: anInteger [ 
+	
+	breakSelectorLength := anInteger
 ]
 
 { #category : #'multi-threading simulation switch' }

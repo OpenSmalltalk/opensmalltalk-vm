@@ -1,128 +1,106 @@
 Class {
 	#name : #VMJittedPrimitivesTest,
 	#superclass : #VMSimpleStackBasedCogitAbstractTest,
+	#instVars : [
+		'classFloat'
+	],
+	#pools : [
+		'CogRTLOpcodes'
+	],
 	#category : #'VMMakerTests-JitTests'
 }
 
+{ #category : #private }
+VMJittedPrimitivesTest class >> isAbstract [
+	^ self == VMJittedPrimitivesTest
+]
+
 { #category : #helpers }
-VMJittedPrimitivesTest >> prepareStackForSendReceiver: aReceiver arguments: arguments [ 	
-
-	self pushAddress: aReceiver.
-	arguments do: [ :anArgument | self pushAddress: anArgument ].
-	self machineSimulator receiverRegisterValue: aReceiver.
-
-	machineSimulator hasLinkRegister 
-		ifTrue: [ machineSimulator linkRegisterValue: callerAddress "The caller IP in ARM is in the linkRegister"]
-		ifFalse: [ self pushAddress:  callerAddress. " I need to push the caller IP, as this is a message send" ]
+VMJittedPrimitivesTest >> executePrimitiveWithReceiver: receiverOop withArgument: argumentOop [
+	
+	"Simulate a primitive execution having an object as receiver and a single argument
+	  - the receiver goes to the receiver register
+	  - the argument should be pushed to the stack
+	If we are in a system without a link register, we need to push the caller IP to the stack to simulate a call"
+	
+	self prepareStackForSendReceiver: receiverOop arguments: { argumentOop }.
+	self runUntilReturn.
 
 ]
 
-{ #category : #'tests - primitiveAdd' }
-VMJittedPrimitivesTest >> testPrimitiveAddDoesNotCompileIfReceiverTagIsNotSmallInteger [
+{ #category : #utils }
+VMJittedPrimitivesTest >> executePrimitiveWithReceiver: receiverOop withArgument: firstArgumentOop and: secondArgumentOop [ 
+
+	"Simulate a primitive execution having an object as receiver and a single argument
+	  - the receiver goes to the receiver register
+	  - the arguments should be pushed to the stack
+	If we are in a system without a link register, we need to push the caller IP to the stack to simulate a call"
+
+	self prepareStackForSendReceiver: receiverOop arguments: { firstArgumentOop. secondArgumentOop }.
 	
-	| result |
-	
-	"Setting a value that is not the SmallInteger tag"
-	
-	cogit receiverTags: 0.
-	
-	self compile: [ result := cogit objectRepresentation genPrimitiveAdd ].
-	self assert: result equals: UnimplementedPrimitive.
+"	machineSimulator instructionPointerValue: initialAddress.
+	self openMachineDebugger.
+	1halt.
+
+"	self runUntilReturn.
+
 ]
 
-{ #category : #'tests - primitiveAdd' }
-VMJittedPrimitivesTest >> testPrimitiveAddFailsWhenArgumentIsNotSmallInteger [
-	
-	| endInstruction primitiveAddress |
-	
-	cogit receiverTags: memory smallIntegerTag.
-	
-	primitiveAddress := self compile: [ 
-		cogit objectRepresentation genPrimitiveAdd.
-		"If the primitive fails it continues, so we need to have an instruction to detect the end"
-		endInstruction := cogit Stop ].
+{ #category : #helpers }
+VMJittedPrimitivesTest >> new16BitIndexableOfSize: aSize [
 
-	self prepareStackForSendReceiver: (memory integerObjectOf: 7) arguments: { memory nilObject }.
-	
-	self runFrom: primitiveAddress until: endInstruction address.
+	^ self newBitIndexableOfSize: aSize bytesPerSlot: 2 format: memory firstShortFormat
 ]
 
-{ #category : #'tests - primitiveAdd' }
-VMJittedPrimitivesTest >> testPrimitiveAddFailsWhenSumOverflows [
-	
-	| endInstruction primitiveAddress |
-	
-	cogit receiverTags: memory smallIntegerTag.
-	
-	primitiveAddress := self compile: [ 
-		cogit objectRepresentation genPrimitiveAdd.
-		"If the primitive fails it continues, so we need to have an instruction to detect the end"
-		endInstruction := cogit Stop ].
+{ #category : #helpers }
+VMJittedPrimitivesTest >> new32BitIndexableOfSize: aSize [
 
-	self prepareStackForSendReceiver: (memory integerObjectOf: memory maxSmallInteger) arguments: { memory integerObjectOf: 1 }.
-
-	self runFrom: primitiveAddress until: endInstruction address.
+	^ self newBitIndexableOfSize: aSize bytesPerSlot: 4 format: memory firstLongFormat
 ]
 
-{ #category : #'tests - primitiveAdd' }
-VMJittedPrimitivesTest >> testPrimitiveAddFailsWhenSumOverflowsWhenNegative [
-	
-	| endInstruction primitiveAddress |
-	
-	cogit receiverTags: memory smallIntegerTag.
-	
-	primitiveAddress := self compile: [ 
-		cogit objectRepresentation genPrimitiveAdd.
-		"If the primitive fails it continues, so we need to have an instruction to detect the end"
-		endInstruction := cogit Stop ].
-	
-	self prepareStackForSendReceiver: (memory integerObjectOf: memory minSmallInteger) arguments: { memory integerObjectOf: -1 }.
-	
-	self runFrom: primitiveAddress until: endInstruction address.
+{ #category : #helpers }
+VMJittedPrimitivesTest >> new64BitIndexableOfSize: aSize [
+
+	^ self newBitIndexableOfSize: aSize bytesPerSlot: 8 format: memory sixtyFourBitIndexableFormat
 ]
 
-{ #category : #'tests - primitiveAdd' }
-VMJittedPrimitivesTest >> testPrimitiveAddIsCompleteWhenReceiverTagIsSmallInteger [
-	
-	| result |
-	
-	cogit receiverTags: memory smallIntegerTag.
-	
-	self compile: [ result := cogit objectRepresentation genPrimitiveAdd ].
-	self assert: result equals: CompletePrimitive.
+{ #category : #helpers }
+VMJittedPrimitivesTest >> new8BitIndexableOfSize: aSize [
+
+	^ self newBitIndexableOfSize: aSize bytesPerSlot: 1 format: memory firstByteFormat
 ]
 
-{ #category : #'tests - primitiveAdd' }
-VMJittedPrimitivesTest >> testPrimitiveAddReturnsAnSmallInteger [
-	
-	| endInstruction primitiveAddress |
-	
-	cogit receiverTags: memory smallIntegerTag.
-	
-	primitiveAddress := self compile: [ 
-		cogit objectRepresentation genPrimitiveAdd.
-		"If the primitive fails it continues, so we need to have an instruction to detect the end"
-		endInstruction := cogit Stop ].
+{ #category : #helpers }
+VMJittedPrimitivesTest >> newBitIndexableOfSize: aSize bytesPerSlot: bytesPerSlot format: format [
 
-	self prepareStackForSendReceiver: (memory integerObjectOf: 42) arguments: { memory integerObjectOf: 52 }.
-	self runFrom: primitiveAddress until: callerAddress.
-	self assert: self machineSimulator receiverRegisterValue equals: (memory integerObjectOf: 94).
+	| padding numberOfWordSizeSlots desiredByteSize |
+	desiredByteSize := aSize * bytesPerSlot roundUpTo: self wordSize.
+	numberOfWordSizeSlots := desiredByteSize / self wordSize.
+	padding := desiredByteSize / bytesPerSlot - aSize.
+	^ memory
+		  allocateNewSpaceSlots: numberOfWordSizeSlots
+		  format: format + padding
+		  classIndex: self nextOrdinaryClassIndex
 ]
 
-{ #category : #'tests - primitiveAdd' }
-VMJittedPrimitivesTest >> testPrimitiveAddReturnsAnSmallIntegerWhenNegativeNumbers [
-	
-	| endInstruction primitiveAddress |
-	
-	cogit receiverTags: memory smallIntegerTag.
-	
-	primitiveAddress := self compile: [ 
-		cogit objectRepresentation genPrimitiveAdd.
-		"If the primitive fails it continues, so we need to have an instruction to detect the end"
-		endInstruction := cogit Stop ].
+{ #category : #helpers }
+VMJittedPrimitivesTest >> prepareStackForSendReceiver: aReceiver [
 
-	self prepareStackForSendReceiver: (memory integerObjectOf: -42) arguments: { memory integerObjectOf: -52 }.
+	self prepareStackForSendReceiver: aReceiver arguments: #()
+]
+
+{ #category : #helpers }
+VMJittedPrimitivesTest >> setUp [
+
+	super setUp.
+
+	classFloat := self newClassInOldSpaceWithSlots: 0 instSpec: memory firstLongFormat.
+	memory setHashBitsOf: classFloat to: ClassFloatCompactIndex.
+	memory
+		storePointer: ClassFloatCompactIndex
+		ofObject: memory classTableFirstPage
+		withValue: classFloat.
+		
+	memory classExternalAddress: (self newClassInOldSpaceWithSlots: 0 instSpec: (memory byteFormatForNumBytes: 0) ).
 	
-	self runFrom: primitiveAddress until: callerAddress.
-	self assert: self machineSimulator receiverRegisterValue equals: (memory integerObjectOf: -94).
 ]
