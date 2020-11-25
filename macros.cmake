@@ -59,7 +59,8 @@ macro(add_third_party_dependency_with_baseurl NAME TARGETPATH BASEURL)
 
     get_platform_name(PLATNAME)
     message("Adding third-party libraries for ${PLATNAME}: ${NAME}")
-
+    
+    include(DownloadProject)
     download_project(PROJ ${NAME}
         URL         "${BASEURL}${NAME}.zip"
         ${UPDATE_DISCONNECTED_IF_AVAILABLE}
