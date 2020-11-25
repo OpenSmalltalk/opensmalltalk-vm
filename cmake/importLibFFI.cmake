@@ -19,11 +19,13 @@ function(build_ffi)
 
 	add_subdirectory(${libffi_SOURCE_DIR} ${libffi_BINARY_DIR} EXCLUDE_FROM_ALL)
 
-	set_target_properties(objlib PROPERTIES POSITION_INDEPENDENT_CODE OFF)
+	if(CYGWIN)
+		set_target_properties(objlib PROPERTIES POSITION_INDEPENDENT_CODE OFF)
+	endif()
 
-	#set_target_properties(${NAME} PROPERTIES MACOSX_RPATH ON)
+	set_target_properties(ffi_shared PROPERTIES MACOSX_RPATH ON)
 	set_target_properties(ffi_shared PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})
-	#set_target_properties(${NAME} PROPERTIES INSTALL_NAME_DIR "@executable_path/Plugins")
+	set_target_properties(ffi_shared PROPERTIES INSTALL_NAME_DIR "@executable_path/Plugins")
 
 	add_library(libFFI ALIAS ffi_shared)
 	target_link_libraries(${VM_LIBRARY_NAME} ffi_shared)
