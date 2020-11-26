@@ -42,7 +42,7 @@ def buildGTKBundle(){
 			dir("build"){
 				shell "wget http://files.pharo.org/vm/pharo-spur64/win/third-party/Gtk3.zip"
 				shell "unzip Gtk3.zip -d ./bundleGTK"
-				shell "unzip -n build/packages/PharoVM-*-win64-bin.zip -d ./bundleGTK"
+				shell "unzip -n build/packages/PharoVM-*-Windows-x86_64-bin.zip -d ./bundleGTK"
 
 				dir("bundleGTK"){
 					shell "zip -r -9 ../${gtkBundleName} *"
@@ -100,6 +100,10 @@ def runBuild(platformName, configuration, headless = true){
         shell "VERBOSE=1 make package"
       }
     }
+    fileOperations([fileCopyOperation(includes: 'PharoVM-8.6.1-a874dc897-Windows-x86_64-bin.zip', targetLocation: 'PharoVM-8.6.1-a874dc897-win64-bin.zip')])
+    fileOperations([fileCopyOperation(includes: 'PharoVM-8.6.1-a874dc897-Linux-x86_64-bin.zip', targetLocation: 'PharoVM-8.6.1-a874dc897-linux64-bin.zip')])
+    fileOperations([fileCopyOperation(includes: 'PharoVM-8.6.1-a874dc897-mac64-bin.zip', targetLocation: 'PharoVM-8.6.1-a874dc897-win64-bin.zip')])
+
 	
 		stash excludes: '_CPack_Packages', includes: "${buildDirectory}/build/packages/*", name: "packages-${platform}-${configuration}"
 		archiveArtifacts artifacts: "${buildDirectory}/build/packages/*", excludes: '_CPack_Packages'
@@ -163,14 +167,14 @@ def runTests(platform, configuration, packages, withWorker){
 	}
 }
 
-def upload(platform, configuration, vmDir) {
+def upload(platform, configuration, archiveName,vmDir) {
 
 	cleanWs()
 
 	unstash name: "packages-${platform}-${configuration}"
 
-	def expandedBinaryFileName = sh(returnStdout: true, script: "ls build/build/packages/PharoVM-*-${vmDir}64-bin.zip").trim()
-	def expandedHeadersFileName = sh(returnStdout: true, script: "ls build/build/packages/PharoVM-*-${vmDir}64-include.zip").trim()
+	def expandedBinaryFileName = sh(returnStdout: true, script: "ls build/build/packages/PharoVM-*-${archiveName}-bin.zip").trim()
+	def expandedHeadersFileName = sh(returnStdout: true, script: "ls build/build/packages/PharoVM-*-${archiveName}-include.zip").trim()
 
 	sshagent (credentials: ['b5248b59-a193-4457-8459-e28e9eb29ed7']) {
 		sh "scp -o StrictHostKeyChecking=no \
@@ -189,13 +193,13 @@ def upload(platform, configuration, vmDir) {
 	}
 }
 
-def uploadStockReplacement(platform, configuration, vmDir) {
+def uploadStockReplacement(platform, configuration, archiveName, vmDir) {
 
 	cleanWs()
 
 	unstash name: "packages-${platform}-${configuration}"
 
-	def expandedBinaryFileName = sh(returnStdout: true, script: "ls build-stockReplacement/build/packages/PharoVM-*-${vmDir}64-bin.zip").trim()
+	def expandedBinaryFileName = sh(returnStdout: true, script: "ls build-stockReplacement/build/packages/PharoVM-*-${archiveName}-bin.zip").trim()
 
 	sshagent (credentials: ['b5248b59-a193-4457-8459-e28e9eb29ed7']) {
 		sh "scp -o StrictHostKeyChecking=no \
@@ -226,13 +230,16 @@ def uploadPackages(){
 				return;
 			}
 			
-			upload('osx', "CoInterpreterWithQueueFFI", 'mac')
-			upload('unix', "CoInterpreterWithQueueFFI",'linux')
-			upload('windows', "CoInterpreterWithQueueFFI", 'win')
+			upload('osx', "CoInterpreterWithQueueFFI", 'mac64', 'mac')
+			upload('unix', "CoInterpreterWithQueueFFI", 'linux64', 'linux')
+			upload('windows', "CoInterpreterWithQueueFFI", 'win64', 'win')
+			upload('osx', "CoInterpreterWithQueueFFI", 'Darwin-x86_64', 'Darwin-x86_64')
+			upload('unix', "CoInterpreterWithQueueFFI", 'Linux-x86_64', 'Linux-x86_64')
+			upload('windows', "CoInterpreterWithQueueFFI", 'Windows-x86_64', 'Windows-x86_64')
 
-			uploadStockReplacement('osx-stockReplacement', "CoInterpreterWithQueueFFI", 'mac')
-			uploadStockReplacement('unix-stockReplacement', "CoInterpreterWithQueueFFI",'linux')
-			uploadStockReplacement('windows-stockReplacement', "CoInterpreterWithQueueFFI", 'win')
+			uploadStockReplacement('osx-stockReplacement', "CoInterpreterWithQueueFFI", 'mac64', 'mac')
+			uploadStockReplacement('unix-stockReplacement', "CoInterpreterWithQueueFFI", 'linux64', 'linux')
+			uploadStockReplacement('windows-stockReplacement', "CoInterpreterWithQueueFFI", 'win64', 'win')
 		}
 	}
 }
