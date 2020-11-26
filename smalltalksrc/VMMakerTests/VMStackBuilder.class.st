@@ -171,8 +171,7 @@ VMStackBuilder >> setInterpreterVariables [
 
 	lastFrame := frames last.
 	interpreter method: lastFrame method.
-	interpreter instructionPointer:
-		(interpreter initialIPForHeader: methodHeader method: methodOop) - 1.
+
 ]
 
 { #category : #accessing }
