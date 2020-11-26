@@ -919,6 +919,23 @@ StackInterpreterSimulator >> interpret [
 	^nil
 ]
 
+{ #category : #'as yet unclassified' }
+StackInterpreterSimulator >> interpretUntilReturn [
+	self shouldBeImplemented.
+]
+
+{ #category : #'as yet unclassified' }
+StackInterpreterSimulator >> interpretWhile: aFullBlockClosure [ 
+	self internalizeIPandSP.
+	self fetchNextBytecode.
+	[aFullBlockClosure value] whileTrue:
+		[self dispatchOn: currentBytecode in: BytecodeTable.
+		 self incrementByteCount].
+	localIP := localIP - 1.
+	"undo the pre-increment of IP before returning"
+	self externalizeIPandSP
+]
+
 { #category : #'stack pages' }
 StackInterpreterSimulator >> interpreterAllocationReserveBytes [
 	^bootstrapping

@@ -15929,6 +15929,13 @@ StackInterpreter >> metaclassNumSlots [
 	^metaclassNumSlots
 ]
 
+{ #category : #'as yet unclassified' }
+StackInterpreter >> method [
+
+	<doNotGenerate>
+	^ method
+]
+
 { #category : #accessing }
 StackInterpreter >> method: oop [
 	<doNotGenerate>
