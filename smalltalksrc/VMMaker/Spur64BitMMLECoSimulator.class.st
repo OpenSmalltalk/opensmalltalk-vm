@@ -75,7 +75,7 @@ Spur64BitMMLECoSimulator >> coInterpreter: aCoInterpreter cogit: aCogit [
 
 { #category : #'simulation only' }
 Spur64BitMMLECoSimulator >> cogCodeBase [
-	^Cogit guardPageSize
+	^ memory initialAddress + Cogit guardPageSize
 ]
 
 { #category : #'debug support' }

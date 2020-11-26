@@ -3,7 +3,7 @@ Extension { #name : #Integer }
 { #category : #'*VMMaker-Tools' }
 Integer >> aarch64Disassembled [
 	
-	^ self disassembleWith: LLVMDisassembler aarch64
+	^ self disassembleWith: LLVMARMDisassembler aarch64
 ]
 
 { #category : #'*VMMaker-Tools' }

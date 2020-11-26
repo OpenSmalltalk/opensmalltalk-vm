@@ -138,7 +138,7 @@ CogBlockMethod class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 				[aBinaryBlock
 					value: ivn
 					value: (ivn caseOf: {
-								['objectHeader']			-> [self objectMemoryClass baseHeaderSize = 8
+								['objectHeader']			-> [VMClass objectMemoryClass baseHeaderSize = 8
 																ifTrue: [#sqLong]
 																ifFalse: [#sqInt]].
 								['cmNumArgs']				-> [#(unsigned ' : 8')].		"SqueakV3 needs only 5 bits"

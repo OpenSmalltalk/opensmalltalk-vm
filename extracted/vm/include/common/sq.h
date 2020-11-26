@@ -14,6 +14,7 @@
 #define _SQ_H
 
 #include "sqConfig.h"
+#include "pharovm/exportDefinition.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -29,10 +30,6 @@
 #define true	1
 #define false	0
 #define null	0  /* using "null" because nil is predefined in Think C */
-
-#ifndef EXPORT
-#define EXPORT(returnType) returnType
-#endif
 
 #include "pharovm/semaphores/platformSemaphore.h"
 
@@ -54,20 +51,6 @@
 #	define IMAGE_ENV_NAME "SQUEAK_IMAGE"
 # endif
 #endif
-
-/* Pluggable primitives macros. */
-
-/* Note: All pluggable primitives are defined as
-	EXPORT(int) somePrimitive(void)
-   All non-static variables in the VM and plugins are declared as
-	VM_EXPORT type var
-   If the platform requires special declaration modifiers, the EXPORT and
-   VM_EXPORT macros can be redefined.
-*/
-#define VM_EXPORT
-#define VM_FUNCTION_EXPORT(returnType) returnType
-
-/* Platform-dependent macros for handling object memory. */
 
 #if SPURVM
 /* Allocate a region of memory of al least sz bytes, at or above minAddr.

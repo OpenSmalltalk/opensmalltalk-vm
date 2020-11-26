@@ -82,6 +82,12 @@ void sigsegv(int sig, siginfo_t *info, ucontext_t *uap)
 	abort();
 }
 
+/*
+ * Useful if we want to filter which are the threads to monitor
+ */
+EXPORT(void) registerCurrentThreadToHandleExceptions(){
+
+}
 
 EXPORT(void) installErrorHandlers(){
 	struct sigaction sigusr1_handler_action, sigsegv_handler_action;

@@ -24,6 +24,10 @@ EXPORT(void) logLevel(int value){
 	max_error_level = value;
 }
 
+EXPORT(int) getLogLevel(){
+	return max_error_level;
+}
+
 void error(char *errorMessage){
     logError(errorMessage);
     abort();

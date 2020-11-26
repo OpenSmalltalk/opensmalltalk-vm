@@ -124,14 +124,9 @@ SpurPlanningCompactor class >> identifyMul: options noise: noise [
 	vmm := (VMMaker forPlatform: 'Cross')
 				interpreterClass: StackInterpreter;
 				options: options.
-	cg := [vmm buildCodeGeneratorForInterpreter]
-			on: Notification
-			do: [:ex|
-				ex tag == #getVMMaker
-					ifTrue: [ex resume: vmm]
-					ifFalse: [ex pass]].
+	cg := vmm buildCodeGeneratorForInterpreter.
 	cg vmClass preGenerationHook: cg.
-	cg inferTypesForImplicitlyTypedVariablesAndMethods.
+	cg inferTypes.
 	cg retainMethods: self selectors.
 	cg prepareMethods.
 	cg doInlining: true.
@@ -154,14 +149,9 @@ SpurPlanningCompactor class >> identifySignedComparisonsFor: options noise: nois
 	vmm := (VMMaker forPlatform: 'Cross')
 				interpreterClass: StackInterpreter;
 				options: options.
-	cg := [vmm buildCodeGeneratorForInterpreter]
-			on: Notification
-			do: [:ex|
-				ex tag == #getVMMaker
-					ifTrue: [ex resume: vmm]
-					ifFalse: [ex pass]].
+	cg := vmm buildCodeGeneratorForInterpreter.
 	cg vmClass preGenerationHook: cg.
-	cg inferTypesForImplicitlyTypedVariablesAndMethods.
+	cg inferTypes.
 	cg retainMethods: self selectors.
 	cg prepareMethods.
 	cg doInlining: true.

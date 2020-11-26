@@ -174,7 +174,28 @@ freeModuleHandle(void *module)
 void *
 getModuleSymbol(void *module, const char *symbol)
 {
-    return (void*)GetProcAddress((HMODULE)(module ? module : GetModuleHandle(NULL)), symbol);
+	FARPROC address = GetProcAddress((HMODULE)(module ? module : GetModuleHandle(NULL)), symbol);
+
+	if(address == NULL){
+	  LPVOID lpMsgBuf;
+	  DWORD lastError;
+
+	  lastError = GetLastError();
+	  FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER |  FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+					NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+					(LPTSTR) &lpMsgBuf, 0, NULL );
+	  logWarn("Looking up symbol %s: %s", symbol, lpMsgBuf);
+	}
+
+	if(address == NULL && module == NULL){
+	  logWarn("Retrying in VM DLL");
+	  void * vmModule;
+
+	  vmModule = GetModuleHandle("PharoVMCore.dll");
+	  return getModuleSymbol(vmModule, symbol);
+	}
+
+    return (void*) address;
 }
 
 #elif defined(__linux__) || defined(__unix__) || defined(__APPLE__)

@@ -5,9 +5,9 @@ cmake_policy(SET CMP0053 NEW)
 
 include(macros.cmake)
 
-set(VERSION_MAJOR 8)
-set(VERSION_MINOR 6)
-set(VERSION_PATCH 1)
+set(VERSION_MAJOR 9)
+set(VERSION_MINOR 0)
+set(VERSION_PATCH 0)
 
 set(APPNAME Pharo CACHE STRING "VM Application name")
 
@@ -320,16 +320,18 @@ endif()
 if (NOT WITHOUT_DEPENDENCIES)
 
 ExternalProject_Add(build_libFFI
-    PREFIX "${CMAKE_CURRENT_BINARY_DIR}/build/libffi"
-    SOURCE_DIR "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/src"
-    STAMP_DIR "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/stamp"
-    BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/src"
+	GIT_CONFIG "core.autocrlf=input"
+	PREFIX "${CMAKE_CURRENT_BINARY_DIR}/build/libffi"
+	SOURCE_DIR "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/src"
+	STAMP_DIR "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/stamp"
+	BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/src"
 
-    UPDATE_COMMAND ""
+	UPDATE_COMMAND ""
 
-    GIT_REPOSITORY "https://github.com/libffi/libffi.git"
-    GIT_TAG "v3.3"
-    CONFIGURE_COMMAND "./autogen.sh" COMMAND ./configure "${LIBFFI_TARGET}" "--disable-docs" "--prefix=${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install" "CC=${CMAKE_C_COMPILER}" "CXX=${CMAKE_C_COMPILER}" ${LIBFFI_ADDITIONAL}
+	GIT_REPOSITORY "https://github.com/libffi/libffi.git"
+	GIT_TAG "v3.3"
+	
+	CONFIGURE_COMMAND "./autogen.sh" COMMAND ./configure "${LIBFFI_TARGET}" "--disable-docs" "--prefix=${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install" "CC=${CMAKE_C_COMPILER}" "CXX=${CMAKE_C_COMPILER}" ${LIBFFI_ADDITIONAL}
 	BUILD_COMMAND "${CMAKE_MAKE_PROGRAM}" ${LIBFFI_ADDITIONAL}
 )
 

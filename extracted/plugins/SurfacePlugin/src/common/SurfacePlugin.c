@@ -76,6 +76,15 @@ EXPORT(int) ioShowSurface(int surfaceID, int x, int y, int w, int h);
 EXPORT(int) ioRegisterSurface(sqIntptr_t surfaceHandle, sqSurfaceDispatch *fn, int *surfaceID);
 EXPORT(int) ioUnregisterSurface(int surfaceID);
 EXPORT(int) ioFindSurface(int surfaceID, sqSurfaceDispatch *fn, sqIntptr_t *surfaceHandle);
+
+EXPORT(sqInt) primitiveSetManualSurfacePointer(void);
+EXPORT(sqInt) primitiveCreateManualSurface(void);
+EXPORT(sqInt) primitiveDestroyManualSurface(void);
+
+int createManualSurface(int width, int height, int rowPitch, int depth, int isMSB);
+int destroyManualSurface(int surfaceID);
+int setManualSurfacePointer(int surfaceID, void* ptr);
+
 #pragma export off
 
 /* ioGetSurfaceFormat:
@@ -199,6 +208,95 @@ EXPORT(int) ioFindSurface(int surfaceID, sqSurfaceDispatch *fn, sqIntptr_t *surf
 	return 1;
 }
 
+/*	arguments: name(type, stack offset)
+	width(Integer, 4)
+	height(Integer, 3)
+	rowPitch(Integer, 2)
+	depth(Integer, 1)
+	isMSB(Boolean, 0) */
+
+	/* ThreadedFFIPlugin>>#primitiveCreateManualSurface */
+EXPORT(sqInt)
+primitiveCreateManualSurface(void)
+{
+    sqInt depth;
+    sqInt height;
+    sqInt isMSB;
+    sqInt result;
+    sqInt rowPitch;
+    sqInt width;
+
+	if (!((interpreterProxy->methodArgumentCount()) == 5)) {
+		return interpreterProxy->primitiveFailFor(PrimErrBadNumArgs);
+	}
+	width = interpreterProxy->stackIntegerValue(4);
+	height = interpreterProxy->stackIntegerValue(3);
+	rowPitch = interpreterProxy->stackIntegerValue(2);
+	depth = interpreterProxy->stackIntegerValue(1);
+	isMSB = interpreterProxy->stackObjectValue(0);
+	isMSB = interpreterProxy->booleanValueOf(isMSB);
+	if (interpreterProxy->failed()) {
+		return NULL;
+	}
+	result = createManualSurface(width, height, rowPitch, depth, isMSB);
+	if (result < 0) {
+		return interpreterProxy->primitiveFail();
+	}
+	result = interpreterProxy->signed32BitIntegerFor(result);
+	return interpreterProxy->popthenPush(6, result);
+}
+
+	/* ThreadedFFIPlugin>>#primitiveDestroyManualSurface */
+EXPORT(sqInt)
+primitiveDestroyManualSurface(void)
+{
+    sqInt surfaceID;
+
+	if (!((interpreterProxy->methodArgumentCount()) == 1)) {
+		return interpreterProxy->primitiveFail();
+	}
+	surfaceID = interpreterProxy->stackIntegerValue(0);
+	if (!(interpreterProxy->failed())) {
+		if ((destroyManualSurface(surfaceID)) == 0) {
+			interpreterProxy->primitiveFail();
+		}
+		else {
+			interpreterProxy->pop(1);
+		}
+	}
+	return 0;
+}
+
+/*	Create a 'manual surface' data-structure. See the ExternalForm class in
+	the FFI package for example usage. */
+/*	arguments: name(type, stack offset)
+	surfaceID(Integer, 1)
+	ptr(uint32/uint64, 0) */
+
+	/* ThreadedFFIPlugin>>#primitiveSetManualSurfacePointer */
+EXPORT(sqInt)
+primitiveSetManualSurfacePointer(void)
+{
+    usqIntptr_t ptr;
+    sqInt result;
+    sqInt surfaceID;
+
+	if (!((interpreterProxy->methodArgumentCount()) == 2)) {
+		return interpreterProxy->primitiveFail();
+	}
+	surfaceID = interpreterProxy->stackIntegerValue(1);
+	ptr = interpreterProxy->positiveMachineIntegerValueOf(interpreterProxy->stackValue(0));
+	if (interpreterProxy->failed()) {
+		return NULL;
+	}
+	result = setManualSurfacePointer(surfaceID, ((void *)ptr));
+	if (result == 0) {
+		return interpreterProxy->primitiveFail();
+	}
+	return interpreterProxy->pop(2);
+}
+
+
 EXPORT(long) setInterpreter(struct VirtualMachine* anInterpreter) {
     long ok;
 
@@ -241,6 +339,15 @@ void* SurfacePlugin_exports[][3] = {
   {"SurfacePlugin", "ioRegisterSurface", (void*)ioRegisterSurface},
   {"SurfacePlugin", "ioUnregisterSurface", (void*)ioUnregisterSurface},
   {"SurfacePlugin", "ioFindSurface", (void*)ioFindSurface},
+  {"SurfacePlugin", "primitiveCreateManualSurface\000\000", (void*)primitiveCreateManualSurface},
+  {"SurfacePlugin", "primitiveDestroyManualSurface\000\000", (void*)primitiveDestroyManualSurface},
+  {"SurfacePlugin", "primitiveSetManualSurfacePointer\000\000", (void*)primitiveSetManualSurfacePointer},
   {NULL, NULL, NULL}
 };
 #endif /* ifdef SQ_BUILTIN_PLUGIN */
+
+
+EXPORT(signed char) primitiveSetManualSurfacePointerAccessorDepth = 0;
+EXPORT(signed char) primitiveCreateManualSurfaceAccessorDepth = 0;
+EXPORT(signed char) primitiveDestroyManualSurfaceAccessorDepth = 0;
+

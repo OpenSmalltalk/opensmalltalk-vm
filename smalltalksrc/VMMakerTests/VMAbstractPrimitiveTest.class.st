@@ -56,24 +56,6 @@ VMAbstractPrimitiveTest >> newArrayWith: aCollection [
 	
 ]
 
-{ #category : #'helpers - classes' }
-VMAbstractPrimitiveTest >> newClassInOldSpaceWithSlots: numberOfSlots format: format [
-	| newClass formatWithSlots |
-
-	newClass := memory
-		allocateSlotsInOldSpace: 3
-		format: memory nonIndexablePointerFormat
-		classIndex: memory arrayClassIndexPun.
-	
-	memory storePointer: 0 ofObject: newClass withValue: memory nilObject.
-	memory storePointer: 1 ofObject: newClass withValue: memory nilObject.
-	
-	formatWithSlots := format << 16 + numberOfSlots. 
-	memory storePointer: 2 ofObject: newClass withValue: (memory integerObjectOf: formatWithSlots ).
-		
-	^ newClass	
-]
-
 { #category : #'helpers - frames' }
 VMAbstractPrimitiveTest >> newSmallContextReceiver: anOop method: aMethodOop arguments: aCollectionOfArgumentsOop temporaries: aCollectionOfTemporariesOop ip: anIp [
 
@@ -127,7 +109,7 @@ VMAbstractPrimitiveTest >> newSmallContextReceiver: anOop method: aMethodOop arg
 VMAbstractPrimitiveTest >> setUp [
 	
 	"taken from VMSimpleStackBasedCogitBytecodeTest >> #setup"
-	| newMethod ctx page processorOopAssociation processorOop processorListsArray priorities |
+	| newMethod ctx page |
 	super setUp.
 	
 	memory nilObject: (self newObjectWithSlots: 0).
@@ -155,22 +137,8 @@ VMAbstractPrimitiveTest >> setUp [
 	interpreter setStackPointersFromPage: page.
 	interpreter libFFI: LibFFI new.
 	interpreter libFFI interpreter: interpreter.
-	
-	"The ScheduleAssocation should be initialized to a valid Processor object"
-	processorOopAssociation := self newObjectWithSlots: 2.
-	processorOop := self newObjectWithSlots: 2.
-	priorities := 2.
-	processorListsArray := self newObjectWithSlots: priorities.
-	1 to: priorities do: [ :index | 
-		"Put an empty linked list in each"
-		memory storePointer: index - 1 ofObject: processorListsArray withValue: (self newObjectWithSlots: 2) ].
-	
-	memory splObj: SchedulerAssociation put: processorOopAssociation.
-	memory storePointer: ValueIndex ofObject: processorOopAssociation withValue: processorOop.
-	memory storePointer: ProcessListsIndex ofObject: processorOop withValue: processorListsArray.
 
-	"Create a new process with the 4 mandatory instance variables and set it as active process"
-	memory storePointer: ActiveProcessIndex ofObject: processorOop withValue:  (self newObjectWithSlots: 4).
+	self createActiveProcess.	
 	
 	"The current instruction pointer is an absolute address pointing to the current bytecode inside the method"
 	interpreter instructionPointer: newMethod + memory baseHeaderSize + memory wordSize + 1.

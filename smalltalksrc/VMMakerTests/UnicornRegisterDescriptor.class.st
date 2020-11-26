@@ -20,6 +20,18 @@ UnicornRegisterDescriptor >> alias: aString [
 	alias := aString
 ]
 
+{ #category : #actions }
+UnicornRegisterDescriptor >> copyValueToClipboard [
+	
+	Clipboard clipboardText: self value hex
+]
+
+{ #category : #actions }
+UnicornRegisterDescriptor >> inspectValue [
+
+	self value inspect
+]
+
 { #category : #accessing }
 UnicornRegisterDescriptor >> name [
 	^ name
@@ -38,6 +50,12 @@ UnicornRegisterDescriptor >> printOn: aStream [
 		
 	aStream print: self value hex	
 
+]
+
+{ #category : #actions }
+UnicornRegisterDescriptor >> printValue [
+
+	simulator memory interpreter longPrintOop: self value
 ]
 
 { #category : #accessing }

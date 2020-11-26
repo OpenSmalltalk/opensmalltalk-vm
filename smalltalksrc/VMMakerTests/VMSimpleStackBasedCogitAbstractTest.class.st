@@ -18,12 +18,17 @@ Class {
 		'sentSelector',
 		'selectorAtIndex',
 		'inlineCacheMissTrampoline',
-		'machineSimulator'
+		'machineSimulator',
+		'send1TrampolineAddress',
+		'send2TrampolineAddress',
+		'send3TrampolineAddress'
 	],
 	#pools : [
+		'CogAbstractRegisters',
 		'CogCompilationConstants',
 		'CogMethodConstants',
-		'VMBytecodeConstants'
+		'VMBytecodeConstants',
+		'VMSqueakClassIndices'
 	],
 	#category : #'VMMakerTests-JitTests'
 }
@@ -56,9 +61,9 @@ VMSimpleStackBasedCogitAbstractTest >> abstractInstructions [
 VMSimpleStackBasedCogitAbstractTest >> assertPushed: anOop after: aBlockClosure [
 	
 	| before after |
-	before := machineSimulator stackPointerRegisterValue.
+	before := machineSimulator smalltalkStackPointerRegisterValue.
 	aBlockClosure value.
-	after := machineSimulator stackPointerRegisterValue.
+	after := machineSimulator smalltalkStackPointerRegisterValue.
 	
 	self assert: after equals: before - self wordSize.
 	self assert: (self readMemoryAt: after) equals: anOop
@@ -92,7 +97,7 @@ VMSimpleStackBasedCogitAbstractTest >> compile: aBlockClosure [
 	This version assumes the block has a single 1-bytecode statement 
 	  => this is used to estimate the amount of memory to preallocate for the geneated code.
 	Return the address to the generated piece of code."
-	^ self compile: aBlockClosure bytecodes: 1
+	^ self compile: aBlockClosure bytecodes: 2
 ]
 
 { #category : #helpers }
@@ -109,15 +114,12 @@ VMSimpleStackBasedCogitAbstractTest >> compile: aBlockClosure bytecodes: bytecod
 	  => this is used to estimate the amount of memory to preallocate for the geneated code.
 	Return the address to the generated piece of code."
 
-	"We estimate the same ammount of bytecode as the Cogit"
 	| allocatedAddress |
-	cogit allocateOpcodes: (bytecodes + 10) * 10 bytecodes: bytecodes ifFail: [ self fail ].
-	cogit zeroOpcodeIndex.
-	cogit maxLitIndex: -1.
-	cogit methodLabel address: cogit methodZone freeStart.
-	
-	aBlockClosure value.
 
+	"Generate the IR"
+	self compileWithoutOutput: aBlockClosure bytecodes: bytecodes.
+
+	"Then output the machine code"
 	cogit computeMaximumSizes.
 	
 	"methodLabel address + headerSize?"
@@ -139,6 +141,42 @@ VMSimpleStackBasedCogitAbstractTest >> compileSpecialSend [
 	self createFramefulCallFrom: callerAddress.
 	cogit byte0: 176 + (selectorIndex - 1 / 2).
 	sendAddress := self compile: [ cogit genSpecialSelectorSend ].
+]
+
+{ #category : #helpers }
+VMSimpleStackBasedCogitAbstractTest >> compileTrampoline: aBlock named: aTrampolineName [
+
+	| startAddress | 
+
+	cogit methodZone freeStart: cogit methodZoneBase.
+
+	startAddress := self compile: aBlock.
+
+	cogit outputInstructionsForGeneratedRuntimeAt: startAddress.
+	cogit recordGeneratedRunTime: aTrampolineName address: startAddress.
+	cogit recordRunTimeObjectReferences.
+
+	cogit methodZoneBase: cogit methodZone freeStart.
+
+	^ startAddress
+]
+
+{ #category : #helpers }
+VMSimpleStackBasedCogitAbstractTest >> compileWithoutOutput: aBlockClosure bytecodes: bytecodes [
+	
+	"Call a compilation block initializing the compiler before.
+	This method does not generate the machine code, just the IR.
+	
+	This is useful in two cases:
+	  - compiler intrinsics (routines and trampolines) are written to output the machine code directly
+	  - this is used as the first part of the #compile:bytecodes:header: to initialize the compiler"
+
+	cogit allocateOpcodes: (bytecodes + 10) * 10 bytecodes: bytecodes ifFail: [ self fail ].
+	cogit zeroOpcodeIndex.
+	cogit maxLitIndex: -1.
+	cogit methodLabel address: cogit methodZone freeStart.
+	
+	^ aBlockClosure value
 ]
 
 { #category : #'helpers - frames' }
@@ -171,7 +209,6 @@ VMSimpleStackBasedCogitAbstractTest >> createFramefulCallFrom: returnAddress rec
 			caller's method ip/base frame's sender context
 	fp->	saved fp
 			method
-			frame flags
 			context (uninitialized)
 			receiver
 			first temp
@@ -211,10 +248,7 @@ VMSimpleStackBasedCogitAbstractTest >> createFramelessCallFrom: returnAddress re
 	self pushAddress: receiver.
 	arguments do: [ :anArgument | self pushAddress: anArgument ].
 
-	machineSimulator hasLinkRegister 
-		ifTrue: [ machineSimulator linkRegisterValue: returnAddress ]
-		ifFalse: [ self pushAddress: returnAddress  ].
-
+	self prepareCall.
 	machineSimulator receiverRegisterValue: receiver.
 
 	"We initialize the internal Cogit state by hand because we don't have a method to cog"	
@@ -366,13 +400,16 @@ VMSimpleStackBasedCogitAbstractTest >> initializeInitialStackFrame [
 ]
 
 { #category : #running }
-VMSimpleStackBasedCogitAbstractTest >> initializeStackMemory [.
-	stackMemoryStartAddress := initialAddress + self initialCodeSize.
-	stackMemoryEndAddress := stackMemoryStartAddress + stackSpaceSize.
+VMSimpleStackBasedCogitAbstractTest >> initializeStackMemory [
+	
+	| page |
+	stackMemoryStartAddress := self interpreter stackPages minStackAddress.
+
+	page := memory coInterpreter stackPages newStackPage.
 
 	"The stack pointer is at the top of the stack"
-	machineSimulator stackPointerRegisterValue: stackMemoryEndAddress.
-	machineSimulator framePointerRegisterValue: stackMemoryEndAddress.
+	machineSimulator smalltalkStackPointerRegisterValue: page baseAddress.
+	machineSimulator framePointerRegisterValue: page baseAddress.
 ]
 
 { #category : #'helpers - registers' }
@@ -385,6 +422,15 @@ VMSimpleStackBasedCogitAbstractTest >> instructionPointer [
 VMSimpleStackBasedCogitAbstractTest >> jitCompilerClass [
 
 	^ SimpleStackBasedCogit
+]
+
+{ #category : #running }
+VMSimpleStackBasedCogitAbstractTest >> jitOptions [
+
+	^ Dictionary newFromPairs: { 
+		#ISA. isa.
+		#IMMUTABILITY. false.
+		#ObjectMemory. self memoryClass name }
 ]
 
 { #category : #'helpers - frames' }
@@ -431,15 +477,15 @@ VMSimpleStackBasedCogitAbstractTest >> newInterpreter [
 { #category : #running }
 VMSimpleStackBasedCogitAbstractTest >> newJitCompiler [
 
-	self jitCompilerClass initializeWithOptions: (Cogit asOptionsDictionary: { 
-		#ISA . isa.
-		#IMMUTABILITY. false.
-		#ObjectMemory. self memoryClass name }).
+	| compiler |
+	self jitCompilerClass initializeWithOptions: (Cogit asOptionsDictionary: self jitOptions).
 
-	^ self jitCompilerClass new 
+	compiler := self jitCompilerClass new 
 		setInterpreter: memory coInterpreter;
-		yourself
+		yourself.
 
+	interpreter cogMethodZone: compiler methodZone.
+	^ compiler
 
 ]
 
@@ -458,7 +504,7 @@ VMSimpleStackBasedCogitAbstractTest >> openMachineDebugger [
 { #category : #helpers }
 VMSimpleStackBasedCogitAbstractTest >> openMachineDebuggerAt: anAddress [
 	
-	VMMachineCodeDebugger new
+	^ VMMachineCodeDebugger new
 		cogit: cogit;
 		machineSimulator: machineSimulator;
 		initialInstructionToDisassemble: anAddress;
@@ -471,13 +517,13 @@ VMSimpleStackBasedCogitAbstractTest >> pop [
 	| stackAddressIntegerValue poppedByteArray |
 
 	"Getting address from stack register"
-	stackAddressIntegerValue := machineSimulator stackPointerRegisterValue.
+	stackAddressIntegerValue := machineSimulator smalltalkStackPointerRegisterValue.
 
 	"Putting the value in the stack memory"
 	poppedByteArray := self top.
 
 	"Updating SP"
-	machineSimulator stackPointerRegisterValue: stackAddressIntegerValue + self wordSize.
+	machineSimulator smalltalkStackPointerRegisterValue: stackAddressIntegerValue + self wordSize.
 	
 	^ poppedByteArray
 ]
@@ -486,6 +532,42 @@ VMSimpleStackBasedCogitAbstractTest >> pop [
 VMSimpleStackBasedCogitAbstractTest >> popAddress [
 	
 	^ self pop integerAt: 1 size: self wordSize signed: false
+]
+
+{ #category : #helpers }
+VMSimpleStackBasedCogitAbstractTest >> prepareCall [
+
+	machineSimulator hasLinkRegister 
+		ifTrue: [ 
+			"The caller IP in ARM is in the linkRegister"
+			machineSimulator linkRegisterValue: callerAddress ]
+		ifFalse: [ 
+			"I need to push the caller IP, as this is a message send"
+			self pushAddress:  callerAddress ]
+
+]
+
+{ #category : #helpers }
+VMSimpleStackBasedCogitAbstractTest >> prepareStackForSendReceiver: aReceiver [
+
+	self prepareStackForSendReceiver: aReceiver arguments: #()
+]
+
+{ #category : #helpers }
+VMSimpleStackBasedCogitAbstractTest >> prepareStackForSendReceiver: aReceiver arguments: arguments [ 	
+
+	machineSimulator baseRegisterValue: cogit varBaseAddress.
+	self pushAddress: aReceiver.
+	arguments do: [ :anArgument | self pushAddress: anArgument ].
+	
+	self machineSimulator receiverRegisterValue: aReceiver.
+
+	"If the cogit is the StackToRegisterMapping the arguments should go in the registers also"
+	(cogit isKindOf: StackToRegisterMappingCogit) ifTrue: [
+		arguments size >= 1 ifTrue: [ self machineSimulator argument0RegisterValue: (arguments at: 1) ].
+		arguments size > 1 ifTrue: [ self halt ]].
+	
+	self prepareCall
 ]
 
 { #category : #helpers }
@@ -501,11 +583,11 @@ VMSimpleStackBasedCogitAbstractTest >> push: aByteArray [
 	self assert: aByteArray size equals: self wordSize.
 
 	"Getting address from stack register"
-	stackAddressIntegerValue := machineSimulator stackPointerRegisterValue.
+	stackAddressIntegerValue := machineSimulator smalltalkStackPointerRegisterValue.
 
 	"Updating SP"
 	stackAddressIntegerValue := stackAddressIntegerValue - self wordSize.
-	machineSimulator stackPointerRegisterValue: stackAddressIntegerValue.
+	machineSimulator smalltalkStackPointerRegisterValue: stackAddressIntegerValue.
 	
 	"Putting the value in the stack memory"
 	machineSimulator
@@ -649,11 +731,6 @@ VMSimpleStackBasedCogitAbstractTest >> setUp [
 	"We don't access its contents, but we need it to be after nil, true and false"
 	memory hiddenRootsObject: (self newObjectWithSlots: 0).
 
-	"Initializing Unicorn processor"
-	self setUpCPUSimulator.
-	self initializeStackMemory.
-	
-	cogit processor machineSimulator: machineSimulator.
 	cogit setStackAlignment: 16 expectedSPOffset: 0 expectedFPOffset: 0.
 	cogit initializeBackend.
 	cogit methodZone manageFrom: initialAddress to: initialAddress + self initialCodeSize.
@@ -662,15 +739,18 @@ VMSimpleStackBasedCogitAbstractTest >> setUp [
 	cogit cogCodeBase: initialAddress.
 	memory coInterpreter cogCodeSize: self initialCodeSize.
 	memory coInterpreter heapBase: memory newSpaceStart.
+	cogit initializeProcessor.
+	
+	machineSimulator := cogit processor machineSimulator.
+	
 	cogit generateStackPointerCapture.
 	cogit methodZone manageFrom: cogit cogCodeBase to: initialAddress + self initialCodeSize.
 
-
-	self initializeInitialStackFrame.
-	
 	memory coInterpreter numStackPages: 8.
 
 	self initializeOldSpaceForScavenger.
+	self initializeStackMemory.
+	self initializeInitialStackFrame.	
 ]
 
 { #category : #running }
@@ -682,17 +762,44 @@ VMSimpleStackBasedCogitAbstractTest >> setUpCPUSimulator [
 	machineSimulator mapMemory: memory memory memoryObject at: initialAddress.
 ]
 
-{ #category : #'tests - PIC' }
+{ #category : #running }
 VMSimpleStackBasedCogitAbstractTest >> setUpCogMethodEntry [
 	
-	cogit ceCPICMissTrampoline: (self compile: [ cogit RetN: 0 ]).
-	cogit cePICAbortTrampoline: (self compile: [ cogit RetN: 0 ]).
-	cogit ceMethodAbortTrampoline: (self compile: [ cogit RetN: 0 ]).
+	cogit allocateOpcodes: 80 bytecodes: 0 ifFail: [ self error: 'Could not allocate opcodes' ].
+	cogit generateEnilopmarts.
+	cogit maybeGenerateCheckFeatures.
+			
+	self setUpTrampolines.
 	
 	"This is the function a megamorphic PIC will jump when there is a miss"
 	inlineCacheMissTrampoline := cogit simulatedAddressFor: #ceSendFromInLineCacheMiss:.
 	
 	cogit computeEntryOffsets.
+	
+	cogit methodZone manageFrom: cogit methodZoneBase to: cogit methodZoneBase + self initialCodeSize.
+]
+
+{ #category : #running }
+VMSimpleStackBasedCogitAbstractTest >> setUpTrampolines [
+
+	"Create a send trampoline so we can stop..."
+	sendTrampolineAddress := self compileTrampoline: [ cogit RetN: 0 ] named: #send0argsTrampoline.
+	cogit ordinarySendTrampolineAt: 0 "args" put: sendTrampolineAddress.
+	
+	send1TrampolineAddress := self compileTrampoline: [ cogit RetN: 0 ] named: #send1argsTrampoline.
+	cogit ordinarySendTrampolineAt: 1 "args" put: send1TrampolineAddress.
+
+	send2TrampolineAddress := self compileTrampoline: [ cogit RetN: 0 ] named: #send2argsTrampoline.
+	cogit ordinarySendTrampolineAt: 2 "args" put: send2TrampolineAddress.
+
+	send3TrampolineAddress := self compileTrampoline: [ cogit RetN: 0 ] named: #send3argsTrampoline.
+	cogit ordinarySendTrampolineAt: 3 "args" put: send3TrampolineAddress.
+
+
+	cogit ceCPICMissTrampoline: (self compileTrampoline: [ cogit RetN: 0 ] named:#ceCPICMissTrampoline).
+	cogit cePICAbortTrampoline: (self compileTrampoline: [ cogit RetN: 0 ] named:#cePICAbortTrampoline).
+	cogit ceMethodAbortTrampoline: (self compileTrampoline: [ cogit RetN: 0 ] named:#ceMethodAbortTrampoline).
+
 ]
 
 { #category : #'helpers - stack' }
@@ -710,7 +817,7 @@ VMSimpleStackBasedCogitAbstractTest >> stackAt: index [
 	| stackAddressIntegerValue |
 
 	"Getting address from stack register"
-	stackAddressIntegerValue := machineSimulator stackPointerRegisterValue + (index * self wordSize).
+	stackAddressIntegerValue := machineSimulator smalltalkStackPointerRegisterValue + (index * self wordSize).
 	^ machineSimulator memoryAt: stackAddressIntegerValue readNext: self wordSize.
 ]
 
@@ -724,6 +831,12 @@ VMSimpleStackBasedCogitAbstractTest >> stackPointerRegisterValue [
 VMSimpleStackBasedCogitAbstractTest >> stackPointerRegisterValue: aValue [
 
 	machineSimulator stackPointerRegisterValue: aValue
+]
+
+{ #category : #accessing }
+VMSimpleStackBasedCogitAbstractTest >> temporaryRegisterValue [
+	
+	^ self machineSimulator temporaryRegisterValue 
 ]
 
 { #category : #'helpers - stack' }

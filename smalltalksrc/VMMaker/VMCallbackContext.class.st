@@ -62,6 +62,12 @@ VMCallbackContext class >> printTypedefOn: aStream [
 		cr
 ]
 
+{ #category : #asserting }
+VMCallbackContext class >> shouldBeGenerated [
+
+	^ false
+]
+
 { #category : #accessing }
 VMCallbackContext >> floatregargsp [
 	"Answer the value of floatregargsp"

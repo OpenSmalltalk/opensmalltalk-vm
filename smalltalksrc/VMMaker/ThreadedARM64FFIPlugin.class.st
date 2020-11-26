@@ -446,6 +446,18 @@ ThreadedARM64FFIPlugin >> nonRegisterStructReturnIsViaImplicitFirstArgument [
 	^false
 ]
 
+{ #category : #primitives }
+ThreadedARM64FFIPlugin >> primitiveCallout [
+
+	^ self ffiFail: FFINoCalloutAvailable
+]
+
+{ #category : #primitives }
+ThreadedARM64FFIPlugin >> primitiveCalloutWithArgs [
+
+	^ self ffiFail: FFINoCalloutAvailable
+]
+
 { #category : #marshalling }
 ThreadedARM64FFIPlugin >> returnStructInRegisters: returnStructSize [
 	"Answer if a struct result of a given size is able to be returned in registers.

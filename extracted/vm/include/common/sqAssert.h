@@ -33,6 +33,7 @@
 # define assertal(expr,line) (expr)
 # define assertfl(msg,line) (void) 0
 # define eassert(expr) (void) 0 /* hack disabling of asserts.  Better in makefile? */
+
 # define PRODUCTION 1
 
 #else

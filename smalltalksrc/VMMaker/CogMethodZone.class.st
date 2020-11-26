@@ -68,7 +68,8 @@ Class {
 		'coInterpreter',
 		'objectRepresentation',
 		'cogit',
-		'objectMemory'
+		'objectMemory',
+		'percentageToEnsureRelease'
 	],
 	#pools : [
 		'CogMethodConstants',
@@ -162,6 +163,13 @@ CogMethodZone >> allocate: numBytes [
 CogMethodZone >> allocationLimit [
 	<inline: true>
 	^limitAddress - (methodCount * objectMemory wordSize)
+]
+
+{ #category : #'as yet unclassified' }
+CogMethodZone >> baseAddress: anInteger [ 
+
+	<doNotGenerate>
+	baseAddress := anInteger
 ]
 
 { #category : #'jit - api' }

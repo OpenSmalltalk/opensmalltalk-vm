@@ -144,7 +144,7 @@ VMSpurScavengerTest >> testContextInStackShouldSurviveScanvenge [
 
 	| newObjectOop newObjectHash newObjectAddress |	
 	
-	stackBuilder addNewFrame method: (self newMethodWithBytecodes: #[1 2 3 4 5 6 7 8] ).
+	stackBuilder addNewFrame method: methodBuilder newMethod buildMethod.
 	stackBuilder buildStack.
 	newObjectOop := interpreter ensureFrameIsMarried: interpreter framePointer  SP: interpreter stackPointer.
 	newObjectHash := (memory hashBitsOf: newObjectOop).
@@ -261,12 +261,8 @@ VMSpurScavengerTest >> testMethodInStackShouldSurviveScanvenge [
 	newObjectOop := self newZeroSizedObject.
 	newObjectHash := (memory hashBitsOf: newObjectOop).
 	
-	self
-		makeBaseFrameWithMethod: newObjectOop
-		context: memory nilObject
-		receiver: memory nilObject
-		args: #()
-		andStack: #().
+	stackBuilder addNewFrame method: newObjectOop.
+	stackBuilder buildStack.
 
 	"Nil should survive, but newObjectOop should survive too.
 	Nil is referenced by the roots because many of their slots are nilled.
@@ -311,12 +307,8 @@ VMSpurScavengerTest >> testObjectInStackShouldSurviveScanvenge [
 	newObjectOop := self newZeroSizedObject.
 	newObjectHash := (memory hashBitsOf: newObjectOop).
 	
-	self
-		makeBaseFrameWithMethod: memory nilObject
-		context: memory nilObject
-		receiver: memory nilObject
-		args: #()
-		andStack: { newObjectOop }.
+	stackBuilder addNewFrame stack: { newObjectOop }.
+	stackBuilder buildStack.
 
 	"Nil should survive, but newObjectOop should survive too.
 	Nil is referenced by the roots because many of their slots are nilled.
@@ -406,12 +398,8 @@ VMSpurScavengerTest >> testReceiverInStackShouldSurviveScanvenge [
 	newObjectOop := self newZeroSizedObject.
 	newObjectHash := (memory hashBitsOf: newObjectOop).
 	
-	self
-		makeBaseFrameWithMethod: memory nilObject
-		context: memory nilObject
-		receiver: newObjectOop
-		args: #()
-		andStack: #().
+	stackBuilder addNewFrame receiver: newObjectOop.
+	stackBuilder buildStack.
 
 	"Nil should survive, but newObjectOop should survive too.
 	Nil is referenced by the roots because many of their slots are nilled.
@@ -526,13 +514,9 @@ VMSpurScavengerTest >> testScavengeObjectInRememberedSetShouldBeInvertedToBeBefo
 	They will be inverted in memory when the scavenger copies them to future space"
 	objectInTheStack := self newZeroSizedObject.
 	objectInRememberedSet := self newZeroSizedObject.
-	
-	self
-		makeBaseFrameWithMethod: objectInTheStack
-		context: memory nilObject
-		receiver: memory nilObject
-		args: #()
-		andStack: #().
+
+	stackBuilder addNewFrame method: objectInTheStack.
+	stackBuilder buildStack.
 		
 	memory storePointer: 0 ofObject: oldObjectAddress withValue: objectInRememberedSet.
 	
@@ -556,13 +540,9 @@ VMSpurScavengerTest >> testScavengeObjectInRemembererdSetShouldBeBeforeObjectInS
 	objectInRememberedSet := self newZeroSizedObject.
 	objectInTheStack := self newZeroSizedObject.
 	
-	self
-		makeBaseFrameWithMethod: objectInTheStack
-		context: memory nilObject
-		receiver: memory nilObject
-		args: #()
-		andStack: #().
-		
+	stackBuilder addNewFrame method: objectInTheStack.
+	stackBuilder buildStack.
+	
 	memory storePointer: 0 ofObject: oldObjectAddress withValue: objectInRememberedSet.
 	
 	memory doScavenge: 1 "TenureByAge".
@@ -577,12 +557,8 @@ VMSpurScavengerTest >> testScavengeObjectInStackShouldBeBeforeObjectInSpecialVar
 	objectInTheStack := self newZeroSizedObject.
 	objectInSpecialVariable := self newZeroSizedObject.
 	
-	self
-		makeBaseFrameWithMethod: objectInTheStack
-		context: memory nilObject
-		receiver: memory nilObject
-		args: #()
-		andStack: #().
+	stackBuilder addNewFrame method: objectInTheStack.
+	stackBuilder buildStack.
 		
 	memory coInterpreter method: objectInSpecialVariable.
 	
@@ -598,12 +574,8 @@ VMSpurScavengerTest >> testScavengeObjectInStackShouldBeInvertedToBeBeforeObject
 	objectInSpecialVariable := self newZeroSizedObject.
 	objectInTheStack := self newZeroSizedObject.
 	
-	self
-		makeBaseFrameWithMethod: objectInTheStack
-		context: memory nilObject
-		receiver: memory nilObject
-		args: #()
-		andStack: #().
+	stackBuilder addNewFrame method: objectInTheStack.
+	stackBuilder buildStack.
 		
 	memory coInterpreter method: objectInSpecialVariable.
 	
