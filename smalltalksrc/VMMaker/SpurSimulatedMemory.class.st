@@ -76,7 +76,7 @@ SpurSimulatedMemory >> initialAddress: anAddress [
 SpurSimulatedMemory >> initialize [
 
 	super initialize.
-	initialAddress := 0.
+	initialAddress := 2*1024*1024.
 ]
 
 { #category : #initialization }
@@ -121,6 +121,16 @@ SpurSimulatedMemory >> long64At: address put: aValue [
 		put: aValue
 		size: 8
 		signed: true
+]
+
+{ #category : #'as yet unclassified' }
+SpurSimulatedMemory >> longAt: address [ 
+	
+	^ memoryObject
+		integerAt: address - initialAddress
+		size: 4
+		signed: true
+
 ]
 
 { #category : #accessing }

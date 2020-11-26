@@ -4,11 +4,6 @@ Class {
 	#category : #'VMMaker-OriginalTests'
 }
 
-{ #category : #debugger }
-MemoryTests class >> defaultIntegerBaseInDebugger [
-	^16
-]
-
 { #category : #'test support' }
 MemoryTests >> deepStack: n [
 	"Not tail recursive."

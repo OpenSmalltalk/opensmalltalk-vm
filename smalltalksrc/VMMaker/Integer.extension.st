@@ -291,3 +291,20 @@ Integer >> signedIntToShort [
 Integer >> singleStepRequiredToTriggerIn: aCogit [
 	^self between: aCogit cogCodeBase and: aCogit methodZone limitZony
 ]
+
+{ #category : #'*VMMaker' }
+Integer >> twoComplementOfBitSize: aBitSize [
+
+	| mask result |
+
+	self >= 0 ifTrue: [ ^ self ].
+	
+	mask := (1 << aBitSize) - 1.
+	result := mask - self abs + 1.
+	
+	(result < 0 or: [ result > mask ]) 
+		ifTrue: [ self error: 'The number does not fit in the required size' ].
+	
+	
+	^ result.
+]

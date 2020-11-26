@@ -396,7 +396,6 @@ Spur64BitMemoryManager >> fetchClassTagOf: oop [
 { #category : #'object access' }
 Spur64BitMemoryManager >> fetchLong32: fieldIndex ofFloatObject: oop [
 	"index by word size, and return a pointer as long as the word size"
-	
 	| bits |
 	(self isImmediateFloat: oop) ifFalse:
 		[^self fetchLong32: fieldIndex ofObject: oop].
@@ -420,18 +419,12 @@ Spur64BitMemoryManager >> fillObj: objOop numSlots: numSlots with: fillValue [
 
 { #category : #'interpreter access' }
 Spur64BitMemoryManager >> floatObjectOf: aFloat [
-	| newFloatObj |
 	<inline: false>
 	<var: #aFloat type: #double>
 	<api>
 	(self isSmallFloatValue: aFloat) ifTrue:
 		[^self smallFloatObjectOf: aFloat].
-	newFloatObj := self
-						eeInstantiateSmallClassIndex: ClassFloatCompactIndex
-						format: self firstLongFormat
-						numSlots: (self sizeof: #double) / self bytesPerOop.
-	self storeFloatAt: newFloatObj + self baseHeaderSize from: aFloat.
-	^newFloatObj
+	^ self boxedFloatObjectOf: aFloat
 ]
 
 { #category : #'interpreter access' }
@@ -454,6 +447,12 @@ Spur64BitMemoryManager >> floatValueOf: oop [
 				 ^result]].
 	coInterpreter primitiveFail.
 	^0.0
+]
+
+{ #category : #accessing }
+Spur64BitMemoryManager >> freeLists [
+	<doNotGenerate>
+	^ freeLists
 ]
 
 { #category : #'interpreter access' }

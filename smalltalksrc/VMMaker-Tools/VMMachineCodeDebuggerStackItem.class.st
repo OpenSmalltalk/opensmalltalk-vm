@@ -35,7 +35,7 @@ VMMachineCodeDebuggerStackItem >> machineSimulator: anUnicornARMv8Simulator [
 { #category : #evaluating }
 VMMachineCodeDebuggerStackItem >> specialRegister [
 
-	machineSimulator sp = address ifTrue: [ ^ 'SP' ].
+	machineSimulator smalltalkStackPointerRegisterValue = address ifTrue: [ ^ 'SP' ].
 	machineSimulator fp = address ifTrue: [ ^ 'FP' ].
 	^ ''
 ]

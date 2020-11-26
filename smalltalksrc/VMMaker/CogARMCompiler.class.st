@@ -237,7 +237,7 @@ CogARMCompiler class >> initializeAbstractRegisters [
 	FPReg				:= R11.
 	Arg0Reg			:= R3. "overlaps with last C arg reg"
 	Arg1Reg			:= R4.
-	Extra0Reg			:= R7.
+	Extra0Reg			:= R7.  "These are callee saved registers"
 	Extra1Reg			:= R8.
 	Extra2Reg			:= R9.
 	VarBaseReg		:= R10.	"Must be callee saved" self assert: ConcreteVarBaseReg = R10.
@@ -323,13 +323,14 @@ CogARMCompiler >> adds: destReg rn: srcReg imm: immediate ror: rot [
 CogARMCompiler >> aeabiDiv: dividend Mod: divisor [
 "simulate the __aeabi_idivmod call"
 	<doNotGenerate>
-	| proc result top bottom|
+	| proc result dividendAsInteger divisorAsInteger|
 	proc := cogit processor.
-	top := proc convertInternalToInteger: dividend.
-	bottom := proc convertInternalToInteger: divisor.
+
+	dividendAsInteger := proc convertInternalToInteger: dividend.
+	divisorAsInteger := proc convertInternalToInteger: divisor.
 	
-	proc r0: (result := proc convertIntegerToInternal: (top quo: bottom)).
-	proc r1: (proc convertIntegerToInternal: (top rem: bottom)).
+	proc r0: (result := proc convertIntegerToInternal: (dividendAsInteger quo: divisorAsInteger)).
+	proc r1: (proc convertIntegerToInternal: (dividendAsInteger rem: divisorAsInteger)).
 	^result
 ]
 
@@ -427,6 +428,12 @@ CogARMCompiler >> cResultRegister [
 	"Answer the register through which C funcitons return integral results."
 	<inline: true>
 	^R0
+]
+
+{ #category : #accessing }
+CogARMCompiler >> cStackPointer [
+	
+	^ SP
 ]
 
 { #category : #accessing }
@@ -1360,6 +1367,7 @@ CogARMCompiler >> concretizeMoveRM16r [
 	srcReg := operands at: 0.
 	offset := operands at: 1.
 	baseReg := operands at: 2.
+
 	self is12BitValue: offset
 		ifTrue:
 			[ :u :immediate | 
@@ -1551,8 +1559,7 @@ CogARMCompiler >> concretizeNegateableDataOperationCqR: armOpcode [
 	rn := operands at: 1.
 	"Extra note - if ever a version of this code wants to NOT set the Set flag
 	 - Cmp must always have it set or it will pretend to be a SMALALBT and Very Bad Things might happen."
-	rd := opcode = CmpOpcode ifTrue: [0] ifFalse: [rn].
-
+	rd := armOpcode = CmpOpcode ifTrue: [0] ifFalse: [rn].
 	self rotateable8bitSignedImmediate: val 
 		ifTrue:
 			[:rot :immediate : negate|
@@ -2992,6 +2999,18 @@ CogARMCompiler >> popR: dstReg [
 	^self memMxr: AL reg: dstReg base: SP p: 0 u: 1 b: 0 w: 0 l: 1 imm: 4
 ]
 
+{ #category : #'calling C function in Smalltalk stack' }
+CogARMCompiler >> prepareStackToCallCFunctionInSmalltalkStack: anObject [
+
+	"ARMv5 should be aligned to 16 bytes"
+
+	cogit MoveR: SPReg R: Extra1Reg.
+	cogit MoveR: SPReg R: Extra2Reg.
+	
+	cogit AndCq: ((1 << 32) - 16) R: Extra2Reg. 
+	cogit MoveR: Extra2Reg R: SPReg.
+]
+
 { #category : #accessing }
 CogARMCompiler >> pushLinkRegisterByteSize [
 	^4
@@ -3014,6 +3033,13 @@ CogARMCompiler >> relocateCallBeforeReturnPC: retpc by: delta [
 		 distanceDiv4 := instr bitAnd: 16rFFFFFF.
 		 distanceDiv4 := distanceDiv4 + (delta // 4).
 		 objectMemory longAt: (self instructionAddressBefore: retpc ) put: ((instr bitAnd: 16rFF000000) bitOr: (distanceDiv4 bitAnd: 16rFFFFFF))]
+]
+
+{ #category : #'calling C function in Smalltalk stack' }
+CogARMCompiler >> returnFromCallCFunctionInSmalltalkStack: anObject [
+
+	cogit MoveR: Extra1Reg R: SPReg.
+
 ]
 
 { #category : #'inline cacheing' }
@@ -3236,7 +3262,7 @@ CogARMCompiler >> stackPageInterruptHeadroomBytes [
 CogARMCompiler >> stop [
 "generate a BKPT ( - ARM_ARM v7 DDI10406 pp. A8-56) instruction. We could, given a good enough creative impulse and an over-active sense of humour, add some numerically encoded witticism to this instruction in bits 8-19 & 0-3. It has no effect on the execution but can be a way to specify which breakpoint has been hit etc."
 	<inline: true>
-	^AL << 28 bitOr: (16r42 << 20 bitOr: (7 << 4))
+	^AL << 28 bitOr: (16r12 << 20 bitOr: (7 << 4))
 ]
 
 { #category : #'generate machine code - support' }

@@ -82,7 +82,7 @@ CogAbstractInstruction class >> byteSizeForSimulator: aVMClass [
 	 This is for estimating the alloca in allocateOpcodes:bytecodes:ifFail:
 	 self allSubclasses collect: [:ea| {ea. ea byteSizeForSimulator: ea basicNew}]"
 	| ptrsize |
-	ptrsize := self == CogAbstractInstruction ifTrue: [BytesPerWord] ifFalse: [self wordSize].
+	ptrsize := self == CogAbstractInstruction ifTrue: [VMClass bytesPerWord] ifFalse: [self wordSize].
 	^CogCompilerClass instSize
 		- 4 "cogit, objectMemory, bcpc, machineCode"
 		- 4 + 1
@@ -123,7 +123,7 @@ CogAbstractInstruction class >> ifTranslateableAddWithOptionsTo: aCollection [
 
 { #category : #'class initialization' }
 CogAbstractInstruction class >> initialize [
-	NumOperands := 3
+	NumOperands := 4
 ]
 
 { #category : #'class initialization' }
@@ -551,6 +551,13 @@ CogAbstractInstruction >> cResultRegister [
 ]
 
 { #category : #accessing }
+CogAbstractInstruction >> cStackPointer [
+	
+	"Return the SP register for the current platform used by C code"
+	self subclassResponsibility
+]
+
+{ #category : #accessing }
 CogAbstractInstruction >> callInstructionByteSize [
 	self subclassResponsibility
 ]
@@ -726,6 +733,30 @@ CogAbstractInstruction >> genAlignCStackSavingRegisters: regMask numArgs: numArg
 	^0
 ]
 
+{ #category : #abi }
+CogAbstractInstruction >> genCaptureCStackPointers: captureFramePointer [
+
+	self hasVarBaseRegister ifTrue:
+		[cogit
+			PushR: VarBaseReg;
+			MoveCq: cogit varBaseAddress R: VarBaseReg].
+	captureFramePointer ifTrue:
+		[cogit MoveR: FPReg Aw: cogit cFramePointerAddress].
+	"Capture the stack pointer prior to the call.  If we've pushed VarBaseReg take that into account."
+	(self leafCallStackPointerDelta ~= 0
+	 or: [self hasVarBaseRegister])
+		ifTrue:
+			[cogit MoveR: self cStackPointer R: TempReg.
+			 cogit AddCq: (self hasVarBaseRegister
+							ifTrue: [self leafCallStackPointerDelta + objectMemory wordSize]
+							ifFalse: [self leafCallStackPointerDelta]) R: TempReg.
+			 cogit MoveR: TempReg Aw: cogit cStackPointerAddress]
+		ifFalse: [cogit MoveR: self cStackPointer Aw: cogit cStackPointerAddress].
+	self hasVarBaseRegister ifTrue:
+		[cogit PopR: VarBaseReg].
+	cogit RetN: 0.
+]
+
 { #category : #'abstract instructions' }
 CogAbstractInstruction >> genJumpFPEqual: jumpTarget [
 	<inline: true>
@@ -772,6 +803,14 @@ CogAbstractInstruction >> genJumpFPNotEqual: jumpTarget [
 	<returnTypeC: #'AbstractInstruction *'>
 	<var: #jumpTarget type: #'void *'>
 	^cogit gen: JumpFPNotEqual operand: jumpTarget asInteger
+]
+
+{ #category : #'abstract instructions' }
+CogAbstractInstruction >> genJumpMultiplyOverflow: jumpTarget [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	<var: #jumpTarget type: #'void *'>
+	^cogit JumpOverflow: jumpTarget
 ]
 
 { #category : #'smalltalk calling convention' }
@@ -1367,6 +1406,15 @@ CogAbstractInstruction >> outputMachineCodeAt: targetAddress [
 		objectMemory byteAt: targetAddress + j put: (machineCode at: j)]
 ]
 
+{ #category : #'calling C function in Smalltalk stack' }
+CogAbstractInstruction >> prepareStackToCallCFunctionInSmalltalkStack: anObject [
+	
+	"This is a hook to allow the backends to implement special handling when calling a C function in the Smalltalk stack"
+	
+	<doNotGenerate>
+	self subclassResponsibility
+]
+
 { #category : #printing }
 CogAbstractInstruction >> printStateOn: aStream [
 	| opcodeName orneryOperands format |
@@ -1463,6 +1511,15 @@ CogAbstractInstruction >> resolveJumpTarget [
 	(self isAFixup: fixup) ifTrue:
 		[self assert: (cogit addressIsInInstructions: fixup targetInstruction).
 		 self jmpTarget: fixup targetInstruction]
+]
+
+{ #category : #'calling C function in Smalltalk stack' }
+CogAbstractInstruction >> returnFromCallCFunctionInSmalltalkStack: anObject [
+	
+	"This is a hook to allow the backends to implement special handling when calling a C function in the Smalltalk stack"
+	
+	<doNotGenerate>
+	self subclassResponsibility
 ]
 
 { #category : #'full transfer run-time support' }

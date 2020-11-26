@@ -1609,12 +1609,6 @@ CogObjectRepresentationFor32BitSpur >> genRemoveSmallIntegerTagsInScratchReg: sc
 	^0
 ]
 
-{ #category : #'compile abstract instructions' }
-CogObjectRepresentationFor32BitSpur >> genShiftAwaySmallIntegerTagsInScratchReg: scratchReg [
-	cogit ArithmeticShiftRightCq: 1 R: scratchReg.
-	^0
-]
-
 { #category : #initialization }
 CogObjectRepresentationFor32BitSpur >> genStoreHeader: header intoNewInstance: rcvrReg using: scratchReg [
 	"Generate the instructions to move the constant header into a new instance pointed to by rcvrReg."

@@ -20,7 +20,7 @@ VMMTGenerationTests >> generate: aSelector [
 	codeGenerator addClass: SpurMemoryManager.
 	codeGenerator addClass: Spur64BitMemoryManager.
 	codeGenerator addClass: SpurGenerationScavenger.
-	codeGenerator inferTypesForImplicitlyTypedVariablesAndMethods.
+	codeGenerator inferTypes.
 	
 	(codeGenerator methodNamed: aSelector) export: true.
 	codeGenerator retainMethods: { aSelector }.

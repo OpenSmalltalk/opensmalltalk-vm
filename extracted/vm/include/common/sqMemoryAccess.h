@@ -349,7 +349,7 @@ typedef union { double d; int i[sizeof(double) / sizeof(int)]; } _swapper;
 /* This doesn't belong here, but neither do 'self flag: ...'s belong in the
    image. We use a macro, not an inline function; we need no trace of flag.
  */
-#define flag(foo) 0
+#define flag(foo) (void)0
 
 /* heap debugging facilities in sqHeapMap.c */
 extern void clearHeapMap(void);

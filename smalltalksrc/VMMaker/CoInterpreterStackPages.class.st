@@ -191,6 +191,12 @@ CoInterpreterStackPages >> memIndexFor: byteAddress [
 	^(self oopForPointer: byteAddress) - coInterpreter stackZoneBase - 1 // objectMemory wordSize + 1
 ]
 
+{ #category : #'as yet unclassified' }
+CoInterpreterStackPages >> minStackAddress [
+	<doNotGenerate>
+	^ minStackAddress
+]
+
 { #category : #'page access' }
 CoInterpreterStackPages >> pageIndexFor: pointer [ "<Integer>"
 	"Answer the page index for a pointer into stack memory, i.e. the index

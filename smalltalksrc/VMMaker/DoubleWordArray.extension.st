@@ -10,11 +10,6 @@ DoubleWordArray >> byteAt: byteAddress [
 		bitAnd: 16rFF
 ]
 
-{ #category : #'*VMMaker-debugger' }
-DoubleWordArray class >> defaultIntegerBaseInDebugger [
-	^16
-]
-
 { #category : #'*VMMaker-JITSimulation' }
 DoubleWordArray >> long64At: byteIndex [
 	| lowBits wordIndex value high low |
