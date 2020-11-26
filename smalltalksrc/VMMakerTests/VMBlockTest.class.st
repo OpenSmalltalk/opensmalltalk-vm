@@ -74,7 +74,7 @@ VMBlockTest >> testBlockClosureClassIsOnlyInSpecialObjectArrayShouldStillInstant
 { #category : #testing }
 VMBlockTest >> testPushClosureBytecodePushesClosure [
 
-	| methodOop methodHeader previousMethodOop |
+	| methodOop previousMethodOop |
 	methodOop := self createMethodOopFromPharoMethod:
 		             self class >> #methodReturningABlock.
 
@@ -89,7 +89,6 @@ VMBlockTest >> testPushClosureBytecodePushesClosure [
 		receiver: memory trueObject.
 	stackBuilder buildStack.
 	
-	interpreter instructionPointer: (methodBuilder bytecodeAt: 0 forMethod: methodOop).
 	interpreter interpretWhile: [ interpreter method = methodOop ].
 
 	self

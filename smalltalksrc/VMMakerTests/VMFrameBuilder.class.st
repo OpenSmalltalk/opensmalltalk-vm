@@ -56,7 +56,9 @@ Class {
 		'previousFrameArgsSize',
 		'argumentSize',
 		'myFramePointer',
-		'myStackPointer'
+		'myStackPointer',
+		'vmMethodBuilder',
+		'methodBuilder'
 	],
 	#category : #'VMMakerTests-Builders'
 }
@@ -174,6 +176,21 @@ VMFrameBuilder >> initializeWithInterpreter: anInterpreter andMemory: aMemory [
 	argumentSize := 0.
 ]
 
+{ #category : #initialization }
+VMFrameBuilder >> initializeWithInterpreter: anInterpreter andMemory: aMemory andMethodBuilder: aMethodBuilder [
+	memory := aMemory.
+	interpreter := anInterpreter. "allow to not care if it's for a cog or stack interpreter"
+	methodBuilder := aMethodBuilder.
+	method := memory nilObject.
+	context := memory nilObject.
+	receiver := memory nilObject.
+	temps := OrderedCollection new.
+	stack := OrderedCollection new.
+
+	previousFrameArgsSize := 0. " set by the StackBuilder"
+	argumentSize := 0.
+]
+
 { #category : #accesing }
 VMFrameBuilder >> instructionPointer [
 	^ instructionPointer
@@ -216,7 +233,8 @@ VMFrameBuilder >> method [
 
 { #category : #accessing }
 VMFrameBuilder >> method: anOop [
-	method := anOop
+	method := anOop.
+	(memory isCompiledMethod: anOop) ifTrue: [ interpreter instructionPointer: (methodBuilder bytecodeAt: 0 forMethod: anOop)]
 ]
 
 { #category : #accessing }
@@ -313,4 +331,16 @@ VMFrameBuilder >> temps [
 { #category : #accessing }
 VMFrameBuilder >> temps: anObject [
 	temps := anObject
+]
+
+{ #category : #accessing }
+VMFrameBuilder >> vmMethodBuilder [
+
+	^ vmMethodBuilder
+]
+
+{ #category : #accessing }
+VMFrameBuilder >> vmMethodBuilder: anObject [
+
+	vmMethodBuilder := anObject
 ]
