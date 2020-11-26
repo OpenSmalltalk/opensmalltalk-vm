@@ -32,7 +32,8 @@ Class {
 	#instVars : [
 		'page',
 		'frames',
-		'args'
+		'args',
+		'methodBuilder'
 	],
 	#category : #'VMMakerTests-Builders'
 }
@@ -164,7 +165,7 @@ VMStackBuilder >> pushFrames [
 
 { #category : #build }
 VMStackBuilder >> setInterpreterVariables [
-	| lastFrame methodHeader methodOop |
+	| lastFrame |
 	interpreter setStackPageAndLimit: page.
 	interpreter setStackPointersFromPage: page.
 	interpreter internalizeIPandSP.

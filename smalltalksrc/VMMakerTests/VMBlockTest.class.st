@@ -49,10 +49,8 @@ VMBlockTest >> testPushClosureBytecodePushesClosure [
 		method: methodOop;
 		receiver: memory trueObject.
 	stackBuilder buildStack.
-	methodHeader := memory methodHeaderOf: methodOop.
-
-	interpreter instructionPointer:
-		(interpreter initialIPForHeader: methodHeader method: methodOop) - 1.
+	
+	interpreter instructionPointer: (methodBuilder bytecodeAt: 0 forMethod: methodOop).
 	interpreter interpretWhile: [ interpreter method = methodOop ].
 
 	self
