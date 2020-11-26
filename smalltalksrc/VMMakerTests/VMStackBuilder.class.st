@@ -171,6 +171,7 @@ VMStackBuilder >> setInterpreterVariables [
 
 	lastFrame := frames last.
 	interpreter method: lastFrame method.
+
 ]
 
 { #category : #accessing }
