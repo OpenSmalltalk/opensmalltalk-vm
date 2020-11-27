@@ -4848,6 +4848,8 @@ StackInterpreter >> closureIn: context numArgs: numArgs instructionPointer: init
 								eeInstantiateSmallClassIndex: ClassBlockClosureCompactIndex
 								format: objectMemory indexablePointersFormat
 								numSlots: ClosureFirstCopiedValueIndex + numCopied]
+							
+		"This path is for preSpur images"					
 		ifFalse:
 			[newClosure := objectMemory
 								eeInstantiateSmallClass: (objectMemory splObj: ClassBlockClosure)
