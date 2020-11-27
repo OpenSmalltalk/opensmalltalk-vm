@@ -1002,15 +1002,15 @@ InterpreterPrimitives >> primitiveBeCursor [
 		argumentCount = 0
 			ifTrue: [
 				depth = 32
-					ifTrue: [(self cCode: 'ioSetCursorARGB(cursorBitsIndex, extentX, extentY, offsetX, offsetY)'
+					ifTrue: [(self cCode: [ self ioSetCursorARGB: cursorBitsIndex _: extentX _: extentY _:  offsetX _: offsetY ]
 						inSmalltalk: [ourCursor show. Cursor currentCursor == ourCursor])	
 							ifFalse: [^self success: false]]
-					ifFalse: [self cCode: 'ioSetCursor(cursorBitsIndex, offsetX, offsetY)'
+					ifFalse: [self cCode: [ self ioSetCursor: cursorBitsIndex _: offsetX _: offsetY ]
 						inSmalltalk: [ourCursor show]]]
-			ifFalse: [self cCode: 'ioSetCursorWithMask(cursorBitsIndex, maskBitsIndex, offsetX, offsetY)'
+			ifFalse: [self cCode: [ self ioSetCursorWithMask: cursorBitsIndex _: maskBitsIndex _: offsetX, offsetY ]
 						inSmalltalk: [cursorBitsIndex == maskBitsIndex. "placate compiler"
 									ourCursor show]].
-		self pop: argumentCount]
+		self pop: argumentCount] 
 ]
 
 { #category : #'I/O primitives' }
@@ -1659,7 +1659,8 @@ InterpreterPrimitives >> primitiveControlVMProfiling [
 			[((objectMemory isIntegerObject: bufferSize)
 			  and: [(bufferSize := objectMemory integerValueOf: bufferSize) > 0]) ifFalse:
 				[^self primitiveFail]].
-	numSamples := self cCode: 'ioControlNewProfile(onOffBar,bufferSize)' inSmalltalk: [1667].
+		
+	numSamples := self cCode: [ self ioControlNewProfile: onOffBar _: bufferSize ] inSmalltalk: [1667].
 	self pop: 3 thenPushInteger: numSamples
 ]
 
@@ -4846,7 +4847,8 @@ InterpreterPrimitives >> primitiveStopVMProfiling [
 	((vmHistArrayOrNil = objectMemory nilObject or: [(objectMemory fetchClassOfNonImm: vmHistArrayOrNil) = (objectMemory splObj: ClassArray)])
 	 and: [(objectMemory fetchClassOfNonImm: vmHistArrayOrNil) = (objectMemory fetchClassOfNonImm: easHistArrayOrNil)]) ifFalse:
 		[^self primitiveFail].
-	self cCode: 'ioControlProfile(0,&vmHist,&vmBins,&easHist,&easBins)'
+	
+	self cCode: [ self ioControlProfile: 0 _: (self addressOf: vmHist) _: (self addressOf: vmBins) _: (self addressOf: easHist) _: (self addressOf: easBins) ]
 		inSmalltalk: [vmHist := vmBins := easHist := easBins := 0].
 	vmHistArrayOrNil ~= objectMemory nilObject ifTrue:
 		[((objectMemory numSlotsOf: vmHistArrayOrNil) = vmBins
@@ -5321,8 +5323,7 @@ InterpreterPrimitives >> primitiveVMProfileInfoInto [
 			 self success: (objectMemory numSlotsOf: info) >= 4]].
 	self successful ifFalse:
 		[^nil].
-	
-	self cCode: 'ioProfileStatus(&running,&exeStart,&exeLimit,0,&vmBins,0,&easBins)'
+	self cCode: 	[ self ioProfileStatus: (self addressOf: running) _: (self addressOf: exeStart) _: (self addressOf: exeLimit) _: 0 _: (self addressOf: vmBins) _: 0 _: (self addressOf: easBins) ]
 		inSmalltalk: [running := exeStart := exeLimit := vmBins := easBins := 0].
 	info ~= objectMemory nilObject ifTrue:
 		[objectMemory storePointerUnchecked: 0
