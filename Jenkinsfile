@@ -100,9 +100,9 @@ def runBuild(platformName, configuration, headless = true){
         shell "VERBOSE=1 make package"
       }
     }
-    fileOperations([fileCopyOperation(includes: 'PharoVM-8.6.1-a874dc897-Windows-x86_64-bin.zip', targetLocation: 'PharoVM-8.6.1-a874dc897-win64-bin.zip')])
-    fileOperations([fileCopyOperation(includes: 'PharoVM-8.6.1-a874dc897-Linux-x86_64-bin.zip', targetLocation: 'PharoVM-8.6.1-a874dc897-linux64-bin.zip')])
-    fileOperations([fileCopyOperation(includes: 'PharoVM-8.6.1-a874dc897-mac64-bin.zip', targetLocation: 'PharoVM-8.6.1-a874dc897-win64-bin.zip')])
+    shell 'cp PharoVM-8.6.1-a874dc897-Windows-x86_64-bin.zip PharoVM-8.6.1-a874dc897-win64-bin.zip || true'
+    shell 'cp PharoVM-8.6.1-a874dc897-Linux-x86_64-bin.zip PharoVM-8.6.1-a874dc897-linux64-bin.zip || true'
+    shell 'cp PharoVM-8.6.1-a874dc897-mac64-bin.zip PharoVM-8.6.1-a874dc897-win64-bin.zip || true'
 
 	
 		stash excludes: '_CPack_Packages', includes: "${buildDirectory}/build/packages/*", name: "packages-${platform}-${configuration}"
