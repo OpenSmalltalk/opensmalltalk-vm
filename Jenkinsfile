@@ -100,10 +100,13 @@ def runBuild(platformName, configuration, headless = true){
         shell "VERBOSE=1 make package"
       }
     }
-    shell 'cp PharoVM-8.6.1-a874dc897-Windows-x86_64-bin.zip PharoVM-8.6.1-a874dc897-win64-bin.zip || true'
-    shell 'cp PharoVM-8.6.1-a874dc897-Linux-x86_64-bin.zip PharoVM-8.6.1-a874dc897-linux64-bin.zip || true'
-    shell 'cp PharoVM-8.6.1-a874dc897-mac64-bin.zip PharoVM-8.6.1-a874dc897-win64-bin.zip || true'
-
+		def commitHash = checkout(scm).GIT_COMMIT
+		def shortGitHash = commitHash.substring(0,8)
+    dir("${buildDirectory}/build/packages"){
+      shell 'cp PharoVM-8.6.1-${shortGitHash}-Windows-x86_64-bin.zip PharoVM-8.6.1-${shortGitHash}-win64-bin.zip || true'
+      shell 'cp PharoVM-8.6.1-${shortGitHash}-Linux-x86_64-bin.zip PharoVM-8.6.1-${shortGitHash}-linux64-bin.zip || true'
+      shell 'cp PharoVM-8.6.1-${shortGitHash}-mac64-bin.zip PharoVM-8.6.1-${shortGitHash}-mac64-bin.zip || true'
+    }
 	
 		stash excludes: '_CPack_Packages', includes: "${buildDirectory}/build/packages/*", name: "packages-${platform}-${configuration}"
 		archiveArtifacts artifacts: "${buildDirectory}/build/packages/*", excludes: '_CPack_Packages'
