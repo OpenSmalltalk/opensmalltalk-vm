@@ -11,7 +11,7 @@ VMStackMappingTest >> buildStackFromFrames [
 		method := methodBuilder newMethod buildMethod.
 		stackBuilder addNewFrame 
 			method: method;
-			beSuspendedAt: method + 17.
+			beSuspended
 		].
 
 	stackBuilder buildStack.

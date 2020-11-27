@@ -58,7 +58,8 @@ Class {
 		'myFramePointer',
 		'myStackPointer',
 		'vmMethodBuilder',
-		'methodBuilder'
+		'methodBuilder',
+		'isSuspended'
 	],
 	#category : #'VMMakerTests-Builders'
 }
@@ -90,8 +91,14 @@ VMFrameBuilder >> argumentSize: anObject [
 ]
 
 { #category : #configuring }
+VMFrameBuilder >> beSuspended [
+	isSuspended := true
+]
+
+{ #category : #configuring }
 VMFrameBuilder >> beSuspendedAt: anInstructionPointer [
-	instructionPointer := anInstructionPointer 
+	instructionPointer := anInstructionPointer.
+	self beSuspended
 ]
 
 { #category : #accessing }
@@ -163,20 +170,6 @@ VMFrameBuilder >> gtInspectorItemsIn: composite [
 ]
 
 { #category : #initialization }
-VMFrameBuilder >> initializeWithInterpreter: anInterpreter andMemory: aMemory [
-	memory := aMemory.
-	interpreter := anInterpreter. "allow to not care if it's for a cog or stack interpreter"
-	method := memory nilObject.
-	context := memory nilObject.
-	receiver := memory nilObject.
-	temps := OrderedCollection new.
-	stack := OrderedCollection new.
-
-	previousFrameArgsSize := 0. " set by the StackBuilder"
-	argumentSize := 0.
-]
-
-{ #category : #initialization }
 VMFrameBuilder >> initializeWithInterpreter: anInterpreter andMemory: aMemory andMethodBuilder: aMethodBuilder [
 	memory := aMemory.
 	interpreter := anInterpreter. "allow to not care if it's for a cog or stack interpreter"
@@ -186,12 +179,14 @@ VMFrameBuilder >> initializeWithInterpreter: anInterpreter andMemory: aMemory an
 	receiver := memory nilObject.
 	temps := OrderedCollection new.
 	stack := OrderedCollection new.
-
+	instructionPointer := 0.
+	isSuspended := false.
+	
 	previousFrameArgsSize := 0. " set by the StackBuilder"
 	argumentSize := 0.
 ]
 
-{ #category : #accesing }
+{ #category : #accessing }
 VMFrameBuilder >> instructionPointer [
 	^ instructionPointer
 ]
@@ -218,7 +213,7 @@ VMFrameBuilder >> isSingle [
 
 { #category : #testing }
 VMFrameBuilder >> isSuspended [
-	^ instructionPointer isNil
+	^ isSuspended
 ]
 
 { #category : #context }
@@ -233,8 +228,7 @@ VMFrameBuilder >> method [
 
 { #category : #accessing }
 VMFrameBuilder >> method: anOop [
-	method := anOop.
-	(memory isCompiledMethod: anOop) ifTrue: [ interpreter instructionPointer: (methodBuilder bytecodeAt: 0 forMethod: anOop)]
+	method := anOop
 ]
 
 { #category : #accessing }
@@ -275,6 +269,7 @@ VMFrameBuilder >> pushFrame [
 { #category : #building }
 VMFrameBuilder >> pushYourself [
 	interpreter push: method.
+	self setInstructionPointerBeforeFirstBytecode.
 	self pushFlags.
 	self pushFrame.
 	self pushCurrentFramesStack.
@@ -286,7 +281,7 @@ VMFrameBuilder >> pushYourself [
 				ofObject: context
 				withValue: (interpreter withSmallIntegerTags: page baseFP)	""SenderIndex"" ]."
 				
-	instructionPointer ifNotNil: [ interpreter push: instructionPointer ].
+	isSuspended ifTrue: [ interpreter push: instructionPointer ].
 	
 	myStackPointer:= interpreter stackPointer.
 	myFramePointer := interpreter framePointer.
@@ -303,6 +298,17 @@ VMFrameBuilder >> receiver: anObject [
 	receiver := anObject
 ]
 
+{ #category : #building }
+VMFrameBuilder >> setInstructionPointerBeforeFirstBytecode [
+
+	"If possible, setting IP to before the first bytecode, so it is ready for fetchNextBytecode"
+
+	((memory isCompiledMethod: method) and: [ instructionPointer = 0 ]) 
+		ifTrue: [ 
+			instructionPointer := methodBuilder bytecodeAt: 0 forMethod: method.
+			interpreter instructionPointer: instructionPointer ]
+]
+
 { #category : #accessing }
 VMFrameBuilder >> stack [
 	^ stack
@@ -313,7 +319,7 @@ VMFrameBuilder >> stack: anObject [
 	stack := anObject
 ]
 
-{ #category : #accesing }
+{ #category : #accessing }
 VMFrameBuilder >> stackPointer [
 	^ myStackPointer
 ]

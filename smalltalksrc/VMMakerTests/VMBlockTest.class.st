@@ -46,12 +46,13 @@ VMBlockTest >> methodReturningABlock [
 VMBlockTest >> testBlockClosureClassIsOnlyInSpecialObjectArrayShouldStillInstantiate [
 
 	| methodOop methodHeader previousMethodOop |
+	previousMethodOop := self createMethodOopFromPharoMethod:
+		                     self class >> #anEmptyMethod.
+
 	methodOop := self createMethodOopFromPharoMethod:
 		             self class >> #methodReturningABlock.
 
-	previousMethodOop := self createMethodOopFromPharoMethod:
-		                     self class >> #anEmptyMethod.
-	"To force the use of the specialObjectArray"	
+	"To force the use of the specialObjectArray"
 	ClassBlockClosureCompactIndex := 0.
 	self installBlockClosureClassInSplOnly.
 	"We want to avoid baseFrameReturn (base frame initialisation)"
@@ -62,8 +63,6 @@ VMBlockTest >> testBlockClosureClassIsOnlyInSpecialObjectArrayShouldStillInstant
 	stackBuilder buildStack.
 	methodHeader := memory methodHeaderOf: methodOop.
 
-	interpreter instructionPointer:
-		(interpreter initialIPForHeader: methodHeader method: methodOop) - 1.
 	interpreter interpretWhile: [ interpreter method = methodOop ].
 
 	self
@@ -75,11 +74,11 @@ VMBlockTest >> testBlockClosureClassIsOnlyInSpecialObjectArrayShouldStillInstant
 VMBlockTest >> testPushClosureBytecodePushesClosure [
 
 	| methodOop previousMethodOop |
-	methodOop := self createMethodOopFromPharoMethod:
-		             self class >> #methodReturningABlock.
-
 	previousMethodOop := self createMethodOopFromPharoMethod:
 		                     self class >> #anEmptyMethod.
+
+	methodOop := self createMethodOopFromPharoMethod:
+		             self class >> #methodReturningABlock.
 
 	self installBlockClosureClass.
 	"We want to avoid baseFrameReturn (base frame initialisation)"
