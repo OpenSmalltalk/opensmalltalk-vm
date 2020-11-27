@@ -148,6 +148,12 @@ CogObjectRepresentation >> genConvertSmallFloatToSmallFloatHashAsIntegerInReg: r
 	^EncounteredUnknownBytecode
 ]
 
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genConvertSmallIntegerToIntegerInReg: aRegister [
+
+	self subclassResponsibility
+]
+
 { #category : #'bytecode generator support' }
 CogObjectRepresentation >> genCreateClosureAt: bcpc numArgs: numArgs numCopied: numCopied contextNumArgs: ctxtNumArgs large: isLargeCtxt inBlock: isInBlock [
 	"Create a closure with the given startpc, numArgs and numCopied
@@ -721,6 +727,8 @@ CogObjectRepresentation >> genPrimitiveAsFloat [
 	<option: #DPFPReg0>
 	| jumpFailAlloc |
 	<var: #jumpFailAlloc type: #'AbstractInstruction *'>
+	cogit mclassIsSmallInteger ifFalse:
+		[^UnimplementedPrimitive].
 	cogit processorHasDoublePrecisionFloatingPointSupport ifFalse:
 		[^UnimplementedPrimitive].
 	cogit MoveR: ReceiverResultReg R: TempReg.
@@ -734,7 +742,7 @@ CogObjectRepresentation >> genPrimitiveAsFloat [
 	cogit MoveR: SendNumArgsReg R: ReceiverResultReg.
 	cogit genPrimReturn.
 	jumpFailAlloc jmpTarget: cogit Label.
-	^0
+	^ CompletePrimitive
 ]
 
 { #category : #'primitive generators' }
@@ -916,12 +924,12 @@ CogObjectRepresentation >> genPrimitiveDiv [
 	jumpNotSI := self genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
 	"We must shift away the tags, not just subtract them, so that the
 	 overflow case doesn't actually overflow the machine instruction."
-	self genShiftAwaySmallIntegerTagsInScratchReg: ClassReg.
+	self genConvertSmallIntegerToIntegerInReg: ClassReg.
 	(cogit lastOpcode setsConditionCodesFor: JumpZero) ifFalse:
 		[cogit CmpCq: 0 R: ClassReg].
 	jumpZero := cogit JumpZero: 0.
 	cogit MoveR: ReceiverResultReg R: TempReg.
-	self genShiftAwaySmallIntegerTagsInScratchReg: TempReg.
+	self genConvertSmallIntegerToIntegerInReg: TempReg.
 	cogit DivR: ClassReg R: TempReg Quo: TempReg Rem: ClassReg.
 	"If remainder is zero we must check for overflow."
 	cogit CmpCq: 0 R: ClassReg.
@@ -958,10 +966,10 @@ CogObjectRepresentation >> genPrimitiveDivide [
 	jumpNotSI := self genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
 	"We must shift away the tags, not just subtract them, so that the
 	 overflow case doesn't actually overflow the machine instruction."
-	self genShiftAwaySmallIntegerTagsInScratchReg: ClassReg.
+	self genConvertSmallIntegerToIntegerInReg: ClassReg.
 	jumpZero := cogit JumpZero: 0.
 	cogit MoveR: ReceiverResultReg R: TempReg.
-	self genShiftAwaySmallIntegerTagsInScratchReg: TempReg.
+	self genConvertSmallIntegerToIntegerInReg: TempReg.
 	cogit DivR: ClassReg R: TempReg Quo: TempReg Rem: ClassReg.
 	"If remainder is non-zero fail."
 	cogit CmpCq: 0 R: ClassReg.
@@ -1361,10 +1369,10 @@ CogObjectRepresentation >> genPrimitiveMultiply [
 	cogit MoveR: Arg0Reg R: ClassReg.
 	cogit MoveR: ReceiverResultReg R: Arg1Reg.
 	jumpNotSI := self genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
-	self genShiftAwaySmallIntegerTagsInScratchReg: ClassReg.
+	self genConvertSmallIntegerToIntegerInReg: ClassReg.
 	self genRemoveSmallIntegerTagsInScratchReg: Arg1Reg.
 	cogit MulR: Arg1Reg R: ClassReg.
-	jumpOvfl := cogit JumpOverflow: 0.
+	jumpOvfl := cogit JumpMultiplyOverflow: 0.
 	self genSetSmallIntegerTagsIn: ClassReg.
 	cogit MoveR: ClassReg R: ReceiverResultReg.
 	cogit genPrimReturn.
@@ -1431,12 +1439,12 @@ CogObjectRepresentation >> genPrimitiveQuo [
 	jumpNotSI := self genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
 	"We must shift away the tags, not just subtract them, so that the
 	 overflow case doesn't actually overflow the machine instruction."
-	self genShiftAwaySmallIntegerTagsInScratchReg: ClassReg.
+	self genConvertSmallIntegerToIntegerInReg: ClassReg.
 	(cogit lastOpcode setsConditionCodesFor: JumpZero) ifFalse:
 		[cogit CmpCq: 0 R: ClassReg].
 	jumpZero := cogit JumpZero: 0.
 	cogit MoveR: ReceiverResultReg R: TempReg.
-	self genShiftAwaySmallIntegerTagsInScratchReg: TempReg.
+	self genConvertSmallIntegerToIntegerInReg: TempReg.
 	cogit DivR: ClassReg R: TempReg Quo: TempReg Rem: ClassReg.
 	"If remainder is zero we must check for overflow."
 	cogit CmpCq: 0 R: ClassReg.
@@ -1777,6 +1785,11 @@ CogObjectRepresentation >> genQuickReturnSelf [
 ]
 
 { #category : #'compile abstract instructions' }
+CogObjectRepresentation >> genRemoveSmallIntegerTagsInScratchReg: scratchReg [
+	self subclassResponsibility
+]
+
+{ #category : #'compile abstract instructions' }
 CogObjectRepresentation >> genSetSmallIntegerTagsIn: scratchReg [
 	self subclassResponsibility
 ]
@@ -1812,8 +1825,10 @@ CogObjectRepresentation >> genSmallIntegerComparison: jumpOpcode orDoubleCompari
 	r := self genSmallIntegerComparison: jumpOpcode.
 	r < 0 ifTrue:
 		[^r].
-	self cppIf: #DPFPReg0 defined ifTrue:
+	self cppIf: (self defined: #DPFPReg0) ifTrue:
 	"Fall through on non-SmallInteger argument.  Argument may be a Float : let us check or fail"
+	"If we are compiling in a platform where the only immediate values are smallintegers, then at this point we know we have a non-immediate (since it was tested before).
+	Otherwise, check if this is an immediate value or not. If it is immediate (e.g., a character) then just jump to the end."
 	[self smallIntegerIsOnlyImmediateType ifFalse:
 		[jumpNonInt := self genJumpImmediate: Arg0Reg].
 	self genGetCompactClassIndexNonImmOf: Arg0Reg into: SendNumArgsReg.

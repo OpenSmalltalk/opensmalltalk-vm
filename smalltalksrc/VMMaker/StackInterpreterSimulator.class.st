@@ -186,7 +186,9 @@ StackInterpreterSimulator >> basicInitialize [
 	self flushMethodCache.
 	gcSemaphoreIndex := 0.
 	externalSemaphoreSignalRequests := externalSemaphoreSignalResponses := #().
-	externalPrimitiveTable := CArrayAccessor on: (Array new: MaxExternalPrimitiveTableSize).
+	externalPrimitiveTable := CArrayAccessor on: (Array
+		new: MaxExternalPrimitiveTableSize
+		withAll: 0).
 	externalPrimitiveTableFirstFreeIndex := 0.
 	primitiveTable := self class primitiveTable copy.
 	desiredNumStackPages := desiredEdenBytes := 0.
@@ -958,23 +960,6 @@ StackInterpreterSimulator >> ioExit [
 StackInterpreterSimulator >> ioExitWithErrorCode: ec [
 
 	quitBlock value  "Cause return from #test"
-]
-
-{ #category : #'I/O primitives support' }
-StackInterpreterSimulator >> ioGetCurrentWorkingDirectory: aCStringHolder maxLength: maxLength [
-
-	| anEncodedString |
-
-	anEncodedString := FileLocator workingDirectory fullName utf8Encoded.
-
-	aCStringHolder object
-		replaceFrom: 1
-		to: anEncodedString size
-		with: anEncodedString
-		startingAt: 1.
-	
-	"No Error"
-	^ 0
 ]
 
 { #category : #'process primitive support' }

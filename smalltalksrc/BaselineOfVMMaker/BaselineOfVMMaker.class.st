@@ -10,6 +10,17 @@ BaselineOfVMMaker >> baseline: spec [
 	spec
 		for: #common
 		do: [
+			
+			"Slang, the basics"			
+			spec
+				package: 'Slang';
+				package: 'Slang-Tests' with: [
+					spec requires: #('Slang') ].
+			
+			"Melchor is a VM-oriented Slang"
+			spec package: 'Melchor' with: [
+				spec requires: #('Slang') ].
+			
 			"External Dependencies"
 			spec baseline: 'Unicorn' with: [ 
 				spec repository: 'github://guillep/pharo-unicorn' ].
@@ -41,13 +52,16 @@ BaselineOfVMMaker >> baseline: spec [
 				
 			"Main VMMaker packages"	
 			spec
-				package: 'VMMaker' with: [ spec requires: #( 'VMMakerLoadingDependencies' 'Printf') ].
+				package: 'VMMaker-Slang'
+				with: [ spec requires: #( 'Melchor' 'VMMaker' ) ];
+				package: 'VMMaker'
+				with: [ spec requires: #( 'Melchor' 'VMMakerLoadingDependencies' 'Printf') ].
 								
 			"VM plugins"
 			spec package: 'FileAttributesPlugin' with: [ spec requires: #( 'VMMakerCompatibilityForPharo6') ].
 			
 			spec group: 'plugins' with: #('FileAttributesPlugin').
-			spec group: 'core' with: #('VMMaker').
+			spec group: 'core' with: #('VMMaker-Slang').
 			spec group: 'tools' with: #('VMMaker-Tools').			
 			spec group: 'tests' with: #('VMMakerTests' 'VMMaker-OriginalTests' 'VMMaker-MT-Tests').			
 			spec group: 'default' with: #( 'core' 'plugins' 'tools' 'tests') ]

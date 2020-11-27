@@ -418,7 +418,8 @@ Class {
 		'printedStackFrames',
 		'maxStacksToPrint',
 		'maxStackMessagePrinted',
-		'libFFI'
+		'libFFI',
+		'codeGeneratorToComputeAccessorDepth'
 	],
 	#classVars : [
 		'AccessModifierPrivate',
@@ -1820,8 +1821,10 @@ StackInterpreter class >> prepareToBeAddedToCodeGenerator: aCodeGen [
 { #category : #constants }
 StackInterpreter class >> primitiveAccessorDepthTable [
 	| cg |
-	cg := CCodeGenerator new.
+	cg := MLVMCCodeGenerator new.
 	cg vmClass: StackInterpreter.
+	cg vmMaker: VMMaker new.
+	cg vmMaker vmmakerConfiguration: VMMakerConfiguration.
 	^self primitiveTable collect:
 		[:thing| | implementingClass method |
 		(thing isInteger "quick prims, 0 for fast primitve fail"
@@ -1830,13 +1833,13 @@ StackInterpreter class >> primitiveAccessorDepthTable [
 			ifTrue: [-1]
 			ifFalse:
 				[method := cg compileToTMethodSelector: thing in: implementingClass.
-				 cg accessorDepthForMethod: method]]
+				 cg accessorDepthCalculator accessorDepthForMethod: method]]
 ]
 
 { #category : #constants }
 StackInterpreter class >> primitiveTable [
 	| cg |
-	cg := CCodeGenerator new.
+	cg := MLVMCCodeGenerator new.
 	cg vmClass: self.
 	^PrimitiveTable collect:
 		[:thing|
@@ -4606,6 +4609,7 @@ StackInterpreter >> checkProfileTick: aPrimitiveMethod [
 	"Check if the profile timer has expired and if so take a sample.
 	 If the primitive has failed sample the profileMethod as nil."
 	<inline: false>
+
 	self assert: nextProfileTick ~= 0.
 	self ioHighResClock >= nextProfileTick ifTrue:
 		[profileProcess := self activeProcess.
@@ -4846,12 +4850,20 @@ StackInterpreter >> closureIn: context numArgs: numArgs instructionPointer: init
 
 { #category : #'primitive support' }
 StackInterpreter >> codeGeneratorToComputeAccessorDepth [
-	^(VMMaker new
-		buildCodeGeneratorForInterpreter: self class primitivesClass
-		includeAPIMethods: false
-		initializeClasses: false)
-			logger: self transcript;
-			yourself
+
+	^ codeGeneratorToComputeAccessorDepth ifNil: [
+		^(VMMaker new
+			buildCodeGeneratorForInterpreter: self class primitivesClass
+			includeAPIMethods: false
+			initializeClasses: false)
+				logger: self transcript;
+				yourself ]
+]
+
+{ #category : #'as yet unclassified' }
+StackInterpreter >> codeGeneratorToComputeAccessorDepth: aCCodeGenerator [ 
+	<doNotGenerate>
+	codeGeneratorToComputeAccessorDepth := aCCodeGenerator
 ]
 
 { #category : #'indexing primitive support' }
@@ -6177,7 +6189,8 @@ StackInterpreter >> extendedStoreBytecodePop: popBoolean [
 		^ self fetchNextBytecode].
 	variableType = 1 ifTrue:
 		[ self fetchNextBytecode.
-		^self temporary: variableIndex in: localFP put: value].
+		self temporary: variableIndex in: localFP put: value.
+		^ self "keep slang happy"].
 	variableType = 3 ifTrue:
 		[self storeLiteralVariable: variableIndex withValue: value.
 		^ self fetchNextBytecode].
@@ -8587,13 +8600,14 @@ StackInterpreter >> internalExecuteNewMethod [
 	<inline: true>
 	primitiveFunctionPointer ~= 0 ifTrue:
 		[self isPrimitiveFunctionPointerAnIndex ifTrue:
-			[^self internalQuickPrimitiveResponse].
+			[self internalQuickPrimitiveResponse.
+			^ self "keep slang happy"].
 		 self externalizeIPandSP.
 		 succeeded := self slowPrimitiveResponse.
 		 self internalizeIPandSP.
 		 succeeded ifTrue:
 			[self browserPluginReturnIfNeeded.
-			^nil]].
+			^ self]].
 	"if not primitive, or primitive failed, activate the method"
 	^self internalActivateNewMethod
 ]
@@ -9754,7 +9768,9 @@ StackInterpreter >> longPrintOop: oop [
 	self print: ' hash '; printHexnp: (objectMemory rawHashBitsOf: oop).
 	self cr.
 	(fmt between: objectMemory firstByteFormat and: objectMemory firstCompiledMethodFormat - 1) ifTrue:
-		[^self printStringOf: oop; cr].
+		[self printStringOf: oop; cr. 
+		^ self "keep slang happy !"
+		].
 	(fmt between: objectMemory firstLongFormat and: objectMemory firstByteFormat - 1) ifTrue:
 		[0 to: ((objectMemory num32BitUnitsOf: oop) min: 256) - 1 do:
 			[:i| | field32 |
@@ -9809,7 +9825,7 @@ StackInterpreter >> longPrintOop: oop [
 				column > bytecodesPerLine ifTrue:
 					[column := 1. self cr]].
 			column = 1 ifFalse:
-				[self cr]]
+				[self cr]].
 ]
 
 { #category : #'stack bytecodes' }
@@ -15840,7 +15856,7 @@ StackInterpreter >> maybeMapPrimitiveFunctionPointerBackToSomethingEvaluable [
 												ifAbsent: [self error: 'entry not found']).
 		 self assert: ((self pluginEntryFor: externalIndex) notNil
 					   and: [(self pluginEntryFor: externalIndex) second == primitiveFunctionPointer]).
-		 primitiveFunctionPointer := externalIndex]
+		 primitiveFunctionPointer := externalIndex ]
 ]
 
 { #category : #'primitive support' }
@@ -16298,6 +16314,14 @@ StackInterpreter >> newMethod [
 	<doNotGenerate>
 
 	^ newMethod
+]
+
+{ #category : #accessing }
+StackInterpreter >> nextProfileTick: anInteger [ 
+	
+	<doNotGenerate>
+	nextProfileTick := anInteger
+
 ]
 
 { #category : #'compiled methods' }
@@ -16948,6 +16972,11 @@ StackInterpreter >> primitiveFloatSubtract: rcvrOop fromArg: argOop [
 		[self pop: 2 thenPushFloat: rcvr - arg]
 ]
 
+{ #category : #accessing }
+StackInterpreter >> primitiveFunctionPointer [
+	^ primitiveFunctionPointer
+]
+
 { #category : #'compiled methods' }
 StackInterpreter >> primitiveIndexOf: methodPointer [
 	<api>
@@ -17073,6 +17102,12 @@ StackInterpreter >> primitiveObject: actualReceiver perform: selector withArgume
 	self executeNewMethod.
 	self initPrimCall.  "Recursive xeq affects primErrorCode"
 	^nil
+]
+
+{ #category : #'as yet unclassified' }
+StackInterpreter >> primitiveTable [
+	<doNotGenerate>
+	^ primitiveTable
 ]
 
 { #category : #'debug printing' }
@@ -19347,7 +19382,7 @@ StackInterpreter >> reverseDisplayFrom: startIndex to: endIndex [
 	| wordStartIndex wordEndIndex primFailCodeValue |
 	self postGCUpdateDisplayBits ifFalse:
 		[^self].
-	(displayBits = 0 or: [(objectMemory isImmediate: displayBits asInteger) or: [displayDepth <= 0]]) ifTrue: [^nil].
+	(displayBits = 0 or: [(objectMemory isImmediate: displayBits asInteger) or: [displayDepth <= 0]]) ifTrue: [^self].
 	wordStartIndex := (startIndex max: 0) * displayDepth // 32.
 	wordEndIndex := (endIndex min: displayWidth) * displayDepth // 32.
 	displayBits asInteger + (wordStartIndex * 4) to: displayBits asInteger + (wordEndIndex * 4) by: 4 do:
@@ -20344,7 +20379,7 @@ StackInterpreter >> signed64BitIntegerFor: integerValue [
 	^newLargeInteger
 ]
 
-{ #category : #'primitive support' }
+{ #category : #'runtime support' }
 StackInterpreter >> sigset: aJumpBuf jmp: sigSaveMask [
 	"Hack simulation of sigsetjmp/siglongjmp.
 	 Assign to reenterInterpreter the exception that when
@@ -21530,13 +21565,13 @@ StackInterpreter >> tryLoadNewPlugin: pluginString pluginEntries: pluginEntries 
 									ifTrue: [realPluginClass]
 									ifFalse: [plugin class])
 								 withAllSuperclasses detect: [:class| class shouldBeTranslated].
-				 cg := realPlugin buildCodeGenerator]
+				 cg := realPlugin buildCodeGeneratorForVMClass: self class]
 			ifFalse:
 				[cg := self codeGeneratorToComputeAccessorDepth.
 				 primitiveTable withIndexDo:
 					[:prim :index| | depth |
 					 prim isSymbol ifTrue:
-						[depth := cg accessorDepthForSelector: prim.
+						[depth := cg accessorDepthCalculator accessorDepthForSelector: prim.
 						 self assert: (depth isInteger or: [depth isNil and: [(plugin class whichClassIncludesSelector: prim) isNil]]).
 						 primitiveAccessorDepthTable at: index - 1 put: depth]]].
 		 cg exportedPrimitiveNames do:
@@ -21941,7 +21976,7 @@ StackInterpreter >> validBCPC: thePC inMethod: aMethod [
 	 at the start of a method that contains a primitive.  This because methods like
 	 Context(Part)>>reset have to be updated to skip the callPrimtiive bytecode otherwise."
 	^thePC >= (self startPCOfMethod: aMethod)
-	  and: [thePC < (objectMemory numBytesOfBytes: aMethod)]
+	  and: [thePC <= (objectMemory numBytesOfBytes: aMethod)]
 ]
 
 { #category : #'debug support' }

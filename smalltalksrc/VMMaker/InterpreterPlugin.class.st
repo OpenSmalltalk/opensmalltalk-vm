@@ -57,7 +57,27 @@ InterpreterPlugin class >> buildCodeGenerator [
 	"Build a CCodeGenerator for the plugin"
 	| cg pluginClasses |
 	cg := self codeGeneratorClass new initialize.
+	cg vmClass: self.
 	cg pluginClass: self.
+	cg vmMaker: VMMaker new.
+	cg vmMaker vmmakerConfiguration: VMMakerConfiguration.
+	(pluginClasses := self pluginClassesUpToRoot) do:
+		[:aClass| cg addClass: aClass].
+	(cg structClassesForTranslationClasses: pluginClasses) do:
+		[:structClasss| cg addStructClass: structClasss].
+	cg addMethodsForTranslatedPrimitives: self translatedPrimitives.
+	^cg
+]
+
+{ #category : #translation }
+InterpreterPlugin class >> buildCodeGeneratorForVMClass: aVMClass [
+	"Build a CCodeGenerator for the plugin"
+	| cg pluginClasses |
+	cg := self codeGeneratorClass new initialize.
+	cg vmClass: aVMClass.
+	cg pluginClass: self.
+	cg vmMaker: VMMaker new.
+	cg vmMaker vmmakerConfiguration: VMMakerConfiguration.
 	(pluginClasses := self pluginClassesUpToRoot) do:
 		[:aClass| cg addClass: aClass].
 	(cg structClassesForTranslationClasses: pluginClasses) do:
@@ -308,15 +328,17 @@ InterpreterPlugin class >> translateInDirectory: directory doInlining: inlineFla
 	 fname := self moduleName, '.c'.
 
 	"don't translate if the file is newer than my timeStamp"
-	(directory / fname) ifExists: [:fstat| | mTime |
+	"(directory / fname) ifExists: [:fstat| | mTime |
 		mTime := fstat modificationTime.
 		mTime isInteger ifFalse: [mTime := mTime asSeconds].
 		 (self allCodeOlderThan: mTime) ifTrue:
-			[^nil]].
+			[^nil]]."
 
 	self initialize.
-	cg := self buildCodeGenerator.
-	cg inferTypesForImplicitlyTypedVariablesAndMethods.
+	"The VM class should be nil for plugins, because there is code that conditionally checks if it is nil or not.
+	A nil VM class is assumed as a plugin context..."
+	cg := self buildCodeGeneratorForVMClass: nil.
+	cg inferTypes.
 	self pruneUnusedInterpreterPluginMethodsIn: cg.
 	cg storeCodeOnFile:  (directory / fname) fullName doInlining: inlineFlag.
 	^cg exportedPrimitiveNames asArray

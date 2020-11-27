@@ -3,10 +3,9 @@ I am an abstract superclass for all classes in the VM that want to maintain a so
 "
 Class {
 	#name : #VMClass,
-	#superclass : #Object,
+	#superclass : #SlangClass,
 	#classVars : [
 		'DefaultBase',
-		'ExpensiveAsserts',
 		'InitializationOptions'
 	],
 	#pools : [
@@ -18,12 +17,6 @@ Class {
 	],
 	#category : #'VMMaker-Support'
 }
-
-{ #category : #translation }
-VMClass class >> ancilliaryClasses [
-	"Answer any extra classes to be included in the translation."
-	^{}
-]
 
 { #category : #translation }
 VMClass class >> apiExportHeaderName [
@@ -38,9 +31,16 @@ VMClass class >> basicRemoveSelector: aSelector [
 		[:oldMethod| self touch. oldMethod]
 ]
 
-{ #category : #translation }
-VMClass class >> cogMethodClass: options [
-	^ CogMethod
+{ #category : #accessing }
+VMClass class >> bytesPerOop [
+	
+	^ BytesPerOop
+]
+
+{ #category : #accessing }
+VMClass class >> bytesPerWord [
+	
+	^ BytesPerWord 
 ]
 
 { #category : #'accessing class hierarchy' }
@@ -51,6 +51,12 @@ VMClass class >> cogitClass [
 	^Smalltalk classNamed: (InitializationOptions
 								at: #Cogit
 								ifAbsent: [#StackToRegisterMappingCogit])
+]
+
+{ #category : #'accessing class hierarchy' }
+VMClass class >> constantClass [
+
+	^ VMBasicConstants
 ]
 
 { #category : #'accessing class hierarchy' }
@@ -104,23 +110,10 @@ VMClass class >> declareInterpreterVersionIn: aCCodeGenerator defaultName: defau
 					(aCCodeGenerator shortMonticelloDescriptionForClass: self),']"'.
 ]
 
-{ #category : #debugger }
-VMClass class >> defaultIntegerBaseInDebugger [
-	"DefaultBase := 16."
-	"DefaultBase := 10."
-	DefaultBase isNil ifTrue: [DefaultBase := 16].
-	^DefaultBase
-]
-
 { #category : #'accessing class hierarchy' }
 VMClass class >> defaultObjectMemoryClass [
 	"Default for all-in-one VMs where the interpreter inherits from the object memory."
 	^nil
-]
-
-{ #category : #translation }
-VMClass class >> getVMMaker [
-	^Notification new tag: #getVMMaker; signal
 ]
 
 { #category : #'accessing class hierarchy' }
@@ -142,13 +135,7 @@ VMClass class >> initializationOptions [
 { #category : #initialization }
 VMClass class >> initialize [
 	InitializationOptions ifNil: [InitializationOptions := Dictionary new].
-	ExpensiveAsserts := false.
-	(Smalltalk classNamed: #Utilities) ifNotNil:
-		[:utilitiesClass|
-		 (utilitiesClass classPool at: #CommonRequestStrings ifAbsent: []) ifNotNil:
-			[:commonRequestStringHolder|
-			(commonRequestStringHolder contents asString includesSubstring: 'VMClass open') ifFalse:
-				[Utilities appendToCommonRequests: '-\VMMaker generateConfiguration\VMMaker generateAllConfigurationsUnderVersionControl\VMMaker generateAllSpurConfigurations\VMClass openCogMultiWindowBrowser\VMClass openObjectMemoriesInterpretersBrowser\VMClass openSpurMultiWindowBrowser\VMClass openCogSpurMultiWindowBrowser\VMClass openCogitMultiWindowBrowser' withCRs]]]
+	ExpensiveAsserts := false
 ]
 
 { #category : #initialization }
@@ -307,9 +294,9 @@ VMClass class >> isPluginClass [
 ]
 
 { #category : #translation }
-VMClass class >> isStructClass [
-	"The various VMStructType classes override this."
-	^false
+VMClass class >> isSpurMemoryManagerClass [
+
+	^ false
 ]
 
 { #category : #accessing }
@@ -351,69 +338,10 @@ VMClass class >> objectRepresentationClass [
 	^self objectMemoryClass objectRepresentationClass
 ]
 
-{ #category : #utilities }
-VMClass class >> openCogTestsMultiWindowBrowser [
-	"Answer a new multi-window browser on the test classes in VMMaker"
-	"self openCogTestsMultiWindowBrowser"
-	| testClasses b |
-	testClasses := (PackageInfo named: 'VMMaker') classes select: [:c| c inheritsFrom: TestCase].
-	testClasses removeAll: AbstractInstructionTests allSubclasses.
-	testClasses removeAll: (testClasses select: [:c| '*Plugin*' match: c name]).
-	b := Browser open.
-	testClasses do:
-		[:class| b selectCategoryForClass: class; selectClass: class]
-		separatedBy:
-			[b multiWindowState addNewWindow].
-	b multiWindowState selectWindowIndex: 1
-]
-
-{ #category : #utilities }
-VMClass class >> openCogitMultiWindowBrowser [
-	"Answer a new multi-window browser on the ObjectMemory classes, the Cog Interpreter classes, and the main JIT classes"
-	"self openCogitMultiWindowBrowser"
-	| b |
-	b := Browser open.
-	Cogit withAllSubclasses,
-	CogObjectRepresentation withAllSubclasses,
-	{CogMethodZone. CogRTLOpcodes },
-	(CogAbstractInstruction withAllSubclasses reject: [:c| c name endsWith: 'Tests']),
-	CogBytecodeFixup withAllSubclasses,
-	CogSimStackEntry withAllSubclasses,
-	{VMStructType. VMMaker. CCodeGenerator. TMethod}
-		do: [:class|
-			b selectCategoryForClass: class; selectClass: class]
-		separatedBy:
-			[b multiWindowState addNewWindow].
-	b multiWindowState selectWindowIndex: 1
-]
-
-{ #category : #translation }
-VMClass class >> prepareToBeAddedToCodeGenerator: aCCodeGenerator [ 
-	"Hook for translation.  e.g. allows a subclass to override its
-	 superclass's methods by deleting them before it adds its own."
-]
-
-{ #category : #translation }
-VMClass class >> requiredMethodNames: options [
-	"Answer a list of method names that should be retained for export or other
-	 support reasons.  These are typically entry-points that unless explicitly noted
-	 will be deleted by the code generator since it will assume these are not used."
-	^#()
-]
-
-{ #category : #translation }
-VMClass class >> shouldGenerateDeadCode [
-	"Answer if the code generator should generate dead code, e.g. in false ifTrue: [dead] ifFalse: [live].
-	 This *may* be useful in debugging (see CCodeGenerator>>nilOrBooleanConstantReceiverOf: et al).
-	 But by default we answer false."
-
-	^false
-]
-
 { #category : #translation }
 VMClass class >> shouldGenerateTypedefFor: aStructClass [
 	"Hack to work-around multiple definitions.  Sometimes a type has been defined in an include."
-	^aStructClass ~~ VMCallbackContext
+	^aStructClass shouldBeGenerated
 ]
 
 { #category : #translation }
@@ -425,7 +353,7 @@ VMClass class >> shouldIncludeMethodForSelector: selector [
 			 (c >> selector pragmaAt: #option:)
 				ifNotNil:
 					[:pragma|
-					(VMBasicConstants defineAtCompileTime: pragma arguments first)
+					(self constantClass defineAtCompileTime: pragma arguments first)
 					 or: [InitializationOptions
 							at: pragma arguments first
 							ifAbsent: [(self bindingOf: pragma arguments first)
@@ -477,12 +405,6 @@ VMClass class >> translationClass [
 ]
 
 { #category : #translation }
-VMClass class >> typeForSelf [
-	"Answer the type to give self if appropriate, or nil if not."
-	^nil
-]
-
-{ #category : #translation }
 VMClass class >> writeVMHeaderTo: aStream bytesPerWord: bytesPerWord generator: aCCodeGenerator [
 	"Generate the contents of interp.h on aStream.  Specific Interpreter subclasses
 	 override to add more stuff."
@@ -496,13 +418,13 @@ VMClass class >> writeVMHeaderTo: aStream bytesPerWord: bytesPerWord generator: 
 
 	"The most basic constants must be defined here, not in e.g. the plugin sources, to allow those
 	 other sources to be shared between different builds (Spur vs SqueakV3, 32-bit vs 64-bit, etc)"
-	VMBasicConstants mostBasicConstantNames asSet sorted do:
+	self constantClass mostBasicConstantNames asSet sorted do:
 		[:constName|
-		(VMBasicConstants classPool at: constName ifAbsent: []) ifNotNil:
+		(self constantClass classPool at: constName ifAbsent: []) ifNotNil:
 			[:const| aCCodeGenerator putDefineOf: constName as: const on: aStream]].
 	aStream cr.
 
-	((VMBasicConstants classPool associations select: [:a| a key beginsWith: 'PrimErr'])
+	((self constantClass classPool associations select: [:a| a key beginsWith: 'PrimErr'])
 		sorted: [:a1 :a2| a1 value <= a2 value])
 		do: [:a| aCCodeGenerator putDefineOf: a key as: a value on: aStream].
 	aStream cr.
@@ -621,25 +543,6 @@ VMClass >> asserta: aBooleanExpression l: linenum [
 	^self asserta: aBooleanExpression
 ]
 
-{ #category : #'translation support' }
-VMClass >> cCode: codeString [
-	"Support for Smalltalk-to-C translation.
-	 For translation only; noop when running in Smalltalk.
-	 The argument is output literally when generating C code."
-	<doNotGenerate>
-]
-
-{ #category : #'translation support' }
-VMClass >> cCode: codeStringOrBlock inSmalltalk: aBlock [
-	"Support for Smalltalk-to-C translation. The first argument is output when generating C code.
-	  But if this code is being simulated in Smalltalk, answer the result of evaluating the given block.
-	  If the first argument is a string it is output literally, and if it is a block it is translated.
-	  N.B.  If the first argument is a block then replacement happens at TMethod creation time so the use
-	  of cCode:inSmalltalk: with a block first argument does not prevent inlining and is hence preferred."
-	<doNotGenerate>
-	^aBlock value
-]
-
 { #category : #'memory access' }
 VMClass >> cCoerce: value to: cTypeString [
 	"Type coercion. For translation a cast will be emmitted. When running in Smalltalk
@@ -675,78 +578,13 @@ VMClass >> cppIf: conditionBlockOrValue ifTrue: trueExpressionOrBlock [
 	^self cppIf: conditionBlockOrValue ifTrue: trueExpressionOrBlock ifFalse: nil
 ]
 
-{ #category : #'translation support' }
-VMClass >> cppIf: conditionBlockOrSymbolValue ifTrue: trueExpressionOrBlock ifFalse: falseExpressionOrBlockOrNil [
-	"When translated, produces #if (condition) #else #endif CPP directives.
-	 Example usage:
-
-		self cppIf: [BytesPerWord = 8]
-			ifTrue: [self doSomethingFor64Bit]
-			ifFalse: [self doSomethingFor32Bit]
-		self cppIf: BytesPerWord = 8
-			ifTrue: [self doSomethingFor64Bit]
-			ifFalse: [self doSomethingFor32Bit]
-		self cppIf: #A_GLOBAL
-			ifTrue: [self doSomethingFor64Bit]
-			ifFalse: [self doSomethingFor32Bit]"
+{ #category : #'C pre-processor extensions' }
+VMClass >> defined: aSymbol [
+	"Simulated version of the C pre-processor defined()"
 	<doNotGenerate>
-	^(conditionBlockOrSymbolValue value
+	^(self class bindingOf: aSymbol)
 		ifNil: [false]
-		ifNotNil: [:value|
-			value isInteger
-				ifTrue: [value ~= 0]
-				ifFalse:
-					[value isSymbol
-						ifTrue: [(self class bindingOf: value)
-									ifNil: [false]
-									ifNotNil: [:binding| binding value]]
-						ifFalse: [value]]])
-		ifTrue: trueExpressionOrBlock
-		ifFalse: falseExpressionOrBlockOrNil
-]
-
-{ #category : #'simulation support' }
-VMClass >> deny: aBooleanOrBlock [
-	<doNotGenerate>
-	aBooleanOrBlock value ifTrue: [AssertionFailure signal: 'Assertion failed']
-]
-
-{ #category : #'simulation support' }
-VMClass >> doOrDefer: aBlock [
-	<doNotGenerate>
-	"Either evaluate aBlock immediately if in the uiProcess or defer aBlock as a UI message"
-	Processor activeProcess == self uiProcess
-		ifTrue: [aBlock value]
-		ifFalse: [WorldState addDeferredUIMessage: aBlock]
-]
-
-{ #category : #'debug support' }
-VMClass >> eassert: aBooleanExpressionOrBlock [
-	"This is for expensive asserts that we're only interested in checking in extremis.
-	 For example now that Spur objStacks are debugged there's no benefit to
-	 evaluating isValidObjStack: throughout the mark loop because its damn slow."
-	<doNotGenerate>
-	ExpensiveAsserts ifTrue:
-		[aBooleanExpressionOrBlock value ifFalse:
-			[AssertionFailure signal: 'Assertion failed']]
-]
-
-{ #category : #'translation support' }
-VMClass >> error [
-
-	<cmacro: ''>
-]
-
-{ #category : #'printf logging' }
-VMClass >> f: logFilename open: mode [
-	"Simulate a FILE stream by answering a transcript.
-	 Can be used with the f:printf: method."
-	<doNotGenerate>
-	^true
-		ifTrue: [(TranscriptStream on: (String new: 100000))
-					openLabel: logFilename;
-					yourself]
-		ifFalse: [self coInterpreter transcript]
+		ifNotNil: [:binding| binding value ~~ #undefined]
 ]
 
 { #category : #'memory access' }
@@ -991,8 +829,14 @@ VMClass >> minorVersion [
 
 { #category : #'translation support' }
 VMClass >> notYetImplemented [
-	<cmacro: '() logError("not yet implemented")'>
-	super notYetImplemented
+
+	<inline: true>
+
+	self
+		cCode: [ 
+			self logError: 'not yet implemented'.
+			self abort ]
+		inSmalltalk: [ super notYetImplemented ]
 ]
 
 { #category : #'translation support' }
@@ -1142,6 +986,17 @@ VMClass >> safe: signedInteger mod: positiveModulus [
 		ifFalse: [remainder]
 ]
 
+{ #category : #'translation support' }
+VMClass >> simulationOnly: aBlock [
+
+	"Evaluate piece of code only during simulation.
+	This should get translated as a NOP"
+	<inline: #always>
+	self
+		cCode: [  ]
+		inSmalltalk: aBlock
+]
+
 { #category : #'memory access' }
 VMClass >> singleFloatAtPointer: pointer [
 	<doNotGenerate>
@@ -1152,35 +1007,6 @@ VMClass >> singleFloatAtPointer: pointer [
 VMClass >> singleFloatAtPointer: pointer put: value [
 	<doNotGenerate>
 	self halt.
-]
-
-{ #category : #'translation support' }
-VMClass >> sizeof: objectSymbolOrClass [
-	<doNotGenerate>
-	| index |
-	objectSymbolOrClass isInteger ifTrue:
-		[^self class objectMemoryClass wordSize].
-	(#(usqInt sqInt) includes: objectSymbolOrClass) ifTrue: [^self class objectMemoryClass bytesPerOop].
-	objectSymbolOrClass isSymbol ifTrue:
-		[(objectSymbolOrClass last == $*
-		 or: [#(#long #'unsigned long' #'sqIntptr_t'  #'usqIntptr_t' #'size_t') includes: objectSymbolOrClass]) ifTrue:
-			[^self class objectMemoryClass wordSize].
-		index := #(	#sqLong #usqLong #double
-					#int #'unsigned int' #float
-					#short #'unsigned short'
-					#char #'unsigned char' #'signed char')
-						indexOf: objectSymbolOrClass
-						ifAbsent:
-							[self error: 'unrecognized C type name'].
-		^#(8 8 8
-			4 4 4
-			2 2
-			1 1 1) at: index].
-	^(objectSymbolOrClass isBehavior
-		ifTrue: [objectSymbolOrClass]
-		ifFalse: [objectSymbolOrClass class])
-			alignedByteSizeOf: objectSymbolOrClass
-			forClient: self
 ]
 
 { #category : #'simulation support' }

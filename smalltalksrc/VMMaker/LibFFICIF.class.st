@@ -17,7 +17,7 @@ Class {
 { #category : #translation }
 LibFFICIF class >> filteredInstVarNames [
 	"Eliminate the obvious simulation-only inst vars"
-	^ self allInstVarNames copyWithoutAll: #(address libFFI)
+	^ super filteredInstVarNames copyWithoutAll: #(address libFFI)
 ]
 
 { #category : #translation }

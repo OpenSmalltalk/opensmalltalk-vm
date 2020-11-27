@@ -217,6 +217,8 @@ runVMThread(void* p)
     }
     //setFlagVMRunOnWorkerThread(flagVMRunOnWorkerThread);
 
+    registerCurrentThreadToHandleExceptions();
+
     vm_run_interpreter();
 	return NULL;
 }

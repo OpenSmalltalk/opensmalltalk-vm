@@ -5,9 +5,9 @@ cmake_policy(SET CMP0053 NEW)
 
 include(macros.cmake)
 
-set(VERSION_MAJOR 8)
-set(VERSION_MINOR 6)
-set(VERSION_PATCH 1)
+set(VERSION_MAJOR 9)
+set(VERSION_MINOR 0)
+set(VERSION_PATCH 0)
 
 set(APPNAME Pharo CACHE STRING "VM Application name")
 

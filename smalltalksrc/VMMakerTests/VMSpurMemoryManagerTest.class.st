@@ -33,7 +33,6 @@ VMSpurMemoryManagerTest class >> testParameters [
 	^ ParametrizedTestMatrix new
 			forSelector: #wordSize addOptions: { 4 . 8 };
 			yourself
-
 ]
 
 { #category : #accessing }
@@ -385,6 +384,19 @@ VMSpurMemoryManagerTest >> setContextClassIntoClassTable [
 	memory setHashBitsOf: aClass to: ClassMethodContextCompactIndex.
 	memory
 		storePointer: ClassMethodContextCompactIndex
+		ofObject: memory classTableFirstPage
+		withValue: aClass
+]
+
+{ #category : #running }
+VMSpurMemoryManagerTest >> setMethodClassIntoClassTable [
+	| aClass |
+	aClass := self
+		newClassInOldSpaceWithSlots: 0
+		instSpec: CompiledMethod instSpec.
+	memory setHashBitsOf: aClass to: 16 "not necessarily ok, this is not enforced by the VM".
+	memory
+		storePointer: 16 "not necessarily ok, this is not enforced by the VM"
 		ofObject: memory classTableFirstPage
 		withValue: aClass
 ]

@@ -76,7 +76,7 @@ SpurSimulatedMemory >> initialAddress: anAddress [
 SpurSimulatedMemory >> initialize [
 
 	super initialize.
-	initialAddress := 0.
+	initialAddress := 2*1024*1024.
 ]
 
 { #category : #initialization }
