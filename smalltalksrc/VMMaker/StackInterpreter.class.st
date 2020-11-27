@@ -21580,7 +21580,7 @@ StackInterpreter >> tryLoadNewPlugin: pluginString pluginEntries: pluginEntries 
 			 pluginEntries addLast: {plugin.
 									fnSymbol.
 									[plugin perform: fnSymbol. self].
-									cg accessorDepthForSelector: fnSymbol}].
+									cg accessorDepthCalculator accessorDepthForSelector: fnSymbol}].
 		 self transcript show: '...done'].
 	^pluginString asString -> plugin
 ]
