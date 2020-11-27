@@ -212,8 +212,6 @@ static sqInt realpathAsType(sqInt classIdentifier);
 static void reapChildProcess(int sigNum);
 static sqInt resendSignal(int sigNum);
 static void restoreDefaultSignalHandlers(void);
-static sqInt sandboxSecurity(void);
-static sqInt securityHeurisitic(void);
 static void sendSignalToPids(void);
 static sqInt sendSignaltoPid(sqInt sig, sqInt pid);
 static SESSIONIDENTIFIERTYPE sessionIdentifierFrom(sqInt aByteArray);
@@ -343,7 +341,6 @@ static const char *moduleName =
 #endif
 ;
 static void *originalSigHandlers[NSIG + 1];
-static int osprocessSandboxSecurity;
 static pid_t *pidArray = NULL;
 static sqInt pidCount;
 static unsigned char semaIndices[NSIG + 1];
@@ -460,7 +457,8 @@ cStringFromString(sqInt aString)
 
 	/* Space for a null terminated C string. */
 	cString = callocWrappersize(len + 1, 1);
-	(char *) strncpy (cString, sPtr, len);
+	strncpy (cString, sPtr, len);
+
 	return cString;
 }
 
@@ -868,11 +866,6 @@ forkAndExecInDirectory(sqInt useSignalHandler)
 	if (useSignalHandler) {
 		setSigChldHandler();
 	}
-	if ((sandboxSecurity()) == 1) {
-		pop(10);
-		pushInteger(-1);
-		return null;
-	}
 	workingDir = stackObjectValue(0);
 	envOffsets = stackObjectValue(1);
 	envVecBuffer = stackObjectValue(2);
@@ -1250,7 +1243,6 @@ handleSignal(int sigNum)
 EXPORT(sqInt)
 initialiseModule(void)
 {
-	osprocessSandboxSecurity = -1;
 	initializeModuleForPlatform();
 	return 1;
 }
@@ -2196,16 +2188,10 @@ primitiveForkSqueak(void)
     pid_t pid;
 
 
-	/* Do not fork child if running in secure mode */
-	if ((sandboxSecurity()) == 1) {
-		pop(1);
-		pushInteger(-1);
-	}
-	else {
-		pid = forkSqueak(1);
-		pop(1);
-		pushInteger(pid);
-	}
+	pid = forkSqueak(1);
+	pop(1);
+	pushInteger(pid);
+
 	return 0;
 }
 
@@ -2230,16 +2216,9 @@ primitiveForkSqueakWithoutSigHandler(void)
     pid_t pid;
 
 
-	/* Do not fork child if running in secure mode */
-	if ((sandboxSecurity()) == 1) {
-		pop(1);
-		pushInteger(-1);
-	}
-	else {
-		pid = forkSqueak(0);
-		pop(1);
-		pushInteger(pid);
-	}
+	pid = forkSqueak(0);
+	pop(1);
+	pushInteger(pid);
 	return 0;
 }
 
@@ -3063,24 +3042,18 @@ primitiveSendSigabrtTo(void)
     int result;
 
 
-	/* Do not allow signal sending if running in secure mode */
-	if ((sandboxSecurity()) == 1) {
+	if (isIntegerObject(stackValue(0))) {
+		pidToSignal = stackIntegerValue(0);
+		/* begin sendSignal:toPid: */
+		result = kill(pidToSignal, SIGABRT);
+		pop(2);
+		pushInteger(result);
+	}
+	else {
 		pop(2);
 		pushInteger(-1);
 	}
-	else {
-		if (isIntegerObject(stackValue(0))) {
-			pidToSignal = stackIntegerValue(0);
-			/* begin sendSignal:toPid: */
-			result = kill(pidToSignal, SIGABRT);
-			pop(2);
-			pushInteger(result);
-		}
-		else {
-			pop(2);
-			pushInteger(-1);
-		}
-	}
+
 	return 0;
 }
 
@@ -3100,24 +3073,18 @@ primitiveSendSigalrmTo(void)
     int result;
 
 
-	/* Do not allow signal sending if running in secure mode */
-	if ((sandboxSecurity()) == 1) {
+	if (isIntegerObject(stackValue(0))) {
+		pidToSignal = stackIntegerValue(0);
+		/* begin sendSignal:toPid: */
+		result = kill(pidToSignal, SIGALRM);
+		pop(2);
+		pushInteger(result);
+	}
+	else {
 		pop(2);
 		pushInteger(-1);
 	}
-	else {
-		if (isIntegerObject(stackValue(0))) {
-			pidToSignal = stackIntegerValue(0);
-			/* begin sendSignal:toPid: */
-			result = kill(pidToSignal, SIGALRM);
-			pop(2);
-			pushInteger(result);
-		}
-		else {
-			pop(2);
-			pushInteger(-1);
-		}
-	}
+
 	return 0;
 }
 
@@ -3138,24 +3105,18 @@ primitiveSendSigchldTo(void)
     int result;
 
 
-	/* Do not allow signal sending if running in secure mode */
-	if ((sandboxSecurity()) == 1) {
+	if (isIntegerObject(stackValue(0))) {
+		pidToSignal = stackIntegerValue(0);
+		/* begin sendSignal:toPid: */
+		result = kill(pidToSignal, SIGCHLD);
+		pop(2);
+		pushInteger(result);
+	}
+	else {
 		pop(2);
 		pushInteger(-1);
 	}
-	else {
-		if (isIntegerObject(stackValue(0))) {
-			pidToSignal = stackIntegerValue(0);
-			/* begin sendSignal:toPid: */
-			result = kill(pidToSignal, SIGCHLD);
-			pop(2);
-			pushInteger(result);
-		}
-		else {
-			pop(2);
-			pushInteger(-1);
-		}
-	}
+
 	return 0;
 }
 
@@ -3175,24 +3136,18 @@ primitiveSendSigcontTo(void)
     int result;
 
 
-	/* Do not allow signal sending if running in secure mode */
-	if ((sandboxSecurity()) == 1) {
+	if (isIntegerObject(stackValue(0))) {
+		pidToSignal = stackIntegerValue(0);
+		/* begin sendSignal:toPid: */
+		result = kill(pidToSignal, SIGCONT);
+		pop(2);
+		pushInteger(result);
+	}
+	else {
 		pop(2);
 		pushInteger(-1);
 	}
-	else {
-		if (isIntegerObject(stackValue(0))) {
-			pidToSignal = stackIntegerValue(0);
-			/* begin sendSignal:toPid: */
-			result = kill(pidToSignal, SIGCONT);
-			pop(2);
-			pushInteger(result);
-		}
-		else {
-			pop(2);
-			pushInteger(-1);
-		}
-	}
+
 	return 0;
 }
 
@@ -3211,24 +3166,18 @@ primitiveSendSighupTo(void)
     int result;
 
 
-	/* Do not allow signal sending if running in secure mode */
-	if ((sandboxSecurity()) == 1) {
+	if (isIntegerObject(stackValue(0))) {
+		pidToSignal = stackIntegerValue(0);
+		/* begin sendSignal:toPid: */
+		result = kill(pidToSignal, SIGHUP);
+		pop(2);
+		pushInteger(result);
+	}
+	else {
 		pop(2);
 		pushInteger(-1);
 	}
-	else {
-		if (isIntegerObject(stackValue(0))) {
-			pidToSignal = stackIntegerValue(0);
-			/* begin sendSignal:toPid: */
-			result = kill(pidToSignal, SIGHUP);
-			pop(2);
-			pushInteger(result);
-		}
-		else {
-			pop(2);
-			pushInteger(-1);
-		}
-	}
+
 	return 0;
 }
 
@@ -3248,24 +3197,18 @@ primitiveSendSigintTo(void)
     int result;
 
 
-	/* Do not allow signal sending if running in secure mode */
-	if ((sandboxSecurity()) == 1) {
+	if (isIntegerObject(stackValue(0))) {
+		pidToSignal = stackIntegerValue(0);
+		/* begin sendSignal:toPid: */
+		result = kill(pidToSignal, SIGINT);
+		pop(2);
+		pushInteger(result);
+	}
+	else {
 		pop(2);
 		pushInteger(-1);
 	}
-	else {
-		if (isIntegerObject(stackValue(0))) {
-			pidToSignal = stackIntegerValue(0);
-			/* begin sendSignal:toPid: */
-			result = kill(pidToSignal, SIGINT);
-			pop(2);
-			pushInteger(result);
-		}
-		else {
-			pop(2);
-			pushInteger(-1);
-		}
-	}
+
 	return 0;
 }
 
@@ -3285,24 +3228,18 @@ primitiveSendSigkillTo(void)
     int result;
 
 
-	/* Do not allow signal sending if running in secure mode */
-	if ((sandboxSecurity()) == 1) {
+	if (isIntegerObject(stackValue(0))) {
+		pidToSignal = stackIntegerValue(0);
+		/* begin sendSignal:toPid: */
+		result = kill(pidToSignal, SIGKILL);
+		pop(2);
+		pushInteger(result);
+	}
+	else {
 		pop(2);
 		pushInteger(-1);
 	}
-	else {
-		if (isIntegerObject(stackValue(0))) {
-			pidToSignal = stackIntegerValue(0);
-			/* begin sendSignal:toPid: */
-			result = kill(pidToSignal, SIGKILL);
-			pop(2);
-			pushInteger(result);
-		}
-		else {
-			pop(2);
-			pushInteger(-1);
-		}
-	}
+
 	return 0;
 }
 
@@ -3322,24 +3259,18 @@ primitiveSendSigpipeTo(void)
     int result;
 
 
-	/* Do not allow signal sending if running in secure mode */
-	if ((sandboxSecurity()) == 1) {
+	if (isIntegerObject(stackValue(0))) {
+		pidToSignal = stackIntegerValue(0);
+		/* begin sendSignal:toPid: */
+		result = kill(pidToSignal, SIGPIPE);
+		pop(2);
+		pushInteger(result);
+	}
+	else {
 		pop(2);
 		pushInteger(-1);
 	}
-	else {
-		if (isIntegerObject(stackValue(0))) {
-			pidToSignal = stackIntegerValue(0);
-			/* begin sendSignal:toPid: */
-			result = kill(pidToSignal, SIGPIPE);
-			pop(2);
-			pushInteger(result);
-		}
-		else {
-			pop(2);
-			pushInteger(-1);
-		}
-	}
+
 	return 0;
 }
 
@@ -3358,24 +3289,18 @@ primitiveSendSigquitTo(void)
     int result;
 
 
-	/* Do not allow signal sending if running in secure mode */
-	if ((sandboxSecurity()) == 1) {
+	if (isIntegerObject(stackValue(0))) {
+		pidToSignal = stackIntegerValue(0);
+		/* begin sendSignal:toPid: */
+		result = kill(pidToSignal, SIGQUIT);
+		pop(2);
+		pushInteger(result);
+	}
+	else {
 		pop(2);
 		pushInteger(-1);
 	}
-	else {
-		if (isIntegerObject(stackValue(0))) {
-			pidToSignal = stackIntegerValue(0);
-			/* begin sendSignal:toPid: */
-			result = kill(pidToSignal, SIGQUIT);
-			pop(2);
-			pushInteger(result);
-		}
-		else {
-			pop(2);
-			pushInteger(-1);
-		}
-	}
+
 	return 0;
 }
 
@@ -3395,24 +3320,18 @@ primitiveSendSigstopTo(void)
     int result;
 
 
-	/* Do not allow signal sending if running in secure mode */
-	if ((sandboxSecurity()) == 1) {
+	if (isIntegerObject(stackValue(0))) {
+		pidToSignal = stackIntegerValue(0);
+		/* begin sendSignal:toPid: */
+		result = kill(pidToSignal, SIGSTOP);
+		pop(2);
+		pushInteger(result);
+	}
+	else {
 		pop(2);
 		pushInteger(-1);
 	}
-	else {
-		if (isIntegerObject(stackValue(0))) {
-			pidToSignal = stackIntegerValue(0);
-			/* begin sendSignal:toPid: */
-			result = kill(pidToSignal, SIGSTOP);
-			pop(2);
-			pushInteger(result);
-		}
-		else {
-			pop(2);
-			pushInteger(-1);
-		}
-	}
+
 	return 0;
 }
 
@@ -3432,24 +3351,18 @@ primitiveSendSigtermTo(void)
     int result;
 
 
-	/* Do not allow signal sending if running in secure mode */
-	if ((sandboxSecurity()) == 1) {
+	if (isIntegerObject(stackValue(0))) {
+		pidToSignal = stackIntegerValue(0);
+		/* begin sendSignal:toPid: */
+		result = kill(pidToSignal, SIGTERM);
+		pop(2);
+		pushInteger(result);
+	}
+	else {
 		pop(2);
 		pushInteger(-1);
 	}
-	else {
-		if (isIntegerObject(stackValue(0))) {
-			pidToSignal = stackIntegerValue(0);
-			/* begin sendSignal:toPid: */
-			result = kill(pidToSignal, SIGTERM);
-			pop(2);
-			pushInteger(result);
-		}
-		else {
-			pop(2);
-			pushInteger(-1);
-		}
-	}
+
 	return 0;
 }
 
@@ -3469,24 +3382,18 @@ primitiveSendSigusr1To(void)
     int result;
 
 
-	/* Do not allow signal sending if running in secure mode */
-	if ((sandboxSecurity()) == 1) {
+	if (isIntegerObject(stackValue(0))) {
+		pidToSignal = stackIntegerValue(0);
+		/* begin sendSignal:toPid: */
+		result = kill(pidToSignal, SIGUSR1);
+		pop(2);
+		pushInteger(result);
+	}
+	else {
 		pop(2);
 		pushInteger(-1);
 	}
-	else {
-		if (isIntegerObject(stackValue(0))) {
-			pidToSignal = stackIntegerValue(0);
-			/* begin sendSignal:toPid: */
-			result = kill(pidToSignal, SIGUSR1);
-			pop(2);
-			pushInteger(result);
-		}
-		else {
-			pop(2);
-			pushInteger(-1);
-		}
-	}
+
 	return 0;
 }
 
@@ -3506,24 +3413,18 @@ primitiveSendSigusr2To(void)
     int result;
 
 
-	/* Do not allow signal sending if running in secure mode */
-	if ((sandboxSecurity()) == 1) {
+	if (isIntegerObject(stackValue(0))) {
+		pidToSignal = stackIntegerValue(0);
+		/* begin sendSignal:toPid: */
+		result = kill(pidToSignal, SIGUSR2);
+		pop(2);
+		pushInteger(result);
+	}
+	else {
 		pop(2);
 		pushInteger(-1);
 	}
-	else {
-		if (isIntegerObject(stackValue(0))) {
-			pidToSignal = stackIntegerValue(0);
-			/* begin sendSignal:toPid: */
-			result = kill(pidToSignal, SIGUSR2);
-			pop(2);
-			pushInteger(result);
-		}
-		else {
-			pop(2);
-			pushInteger(-1);
-		}
-	}
+
 	return 0;
 }
 
@@ -4435,69 +4336,6 @@ restoreDefaultSignalHandlers(void)
 	}
 }
 
-
-/*	Answer 1 if running in secure mode, else 0. The osprocessSandboxSecurity
-	variable is initialized to -1. On the first call to this method, set its
-	value to
-	either 0 (user has full access to the plugin) or 1 (user is not permitted
-	to do
-	dangerous things).
- */
-
-	/* OSProcessPlugin>>#sandboxSecurity */
-static sqInt
-sandboxSecurity(void)
-{
-	if (osprocessSandboxSecurity < 0) {
-		osprocessSandboxSecurity = securityHeurisitic();
-	}
-	return osprocessSandboxSecurity;
-}
-
-
-/*	Answer 0 to permit full access to OSProcess functions, or 1 if access
-	should be
-	restricted for dangerous functions. The rules are:
-	- If the security plugin is not present, grant full access
-	- If the security plugin can be loaded, restrict access unless user has
-	all of secCanWriteImage, secHasFileAccess and secHasSocketAccess */
-/*	FIXME: This function has not been tested. -dtl */
-/*	If the security plugin can be loaded, use it to check. If not, assume it's
-	ok 
- */
-
-	/* OSProcessPlugin>>#securityHeurisitic */
-static sqInt
-securityHeurisitic(void)
-{
-    sqInt canWriteImage;
-    sqInt hasFileAccess;
-    sqInt hasSocketAccess;
-    void (*sCWIfn)(void);
-    void (*sHFAfn)(void);
-    void (*sHSAfn)(void);
-
-	sCWIfn = ioLoadFunctionFrom("secCanWriteImage", "SecurityPlugin");
-	if (sCWIfn == 0) {
-		return 0;
-	}
-	canWriteImage = ((sqInt (*) (void)) sCWIfn)();
-	sHFAfn = ioLoadFunctionFrom("secHasFileAccess", "SecurityPlugin");
-	if (sHFAfn == 0) {
-		return 0;
-	}
-	hasFileAccess = ((sqInt (*) (void)) sHFAfn)();
-	sHSAfn = ioLoadFunctionFrom("secHasSocketAccess", "SecurityPlugin");
-	if (sHSAfn == 0) {
-		return 0;
-	}
-	hasSocketAccess = ((sqInt (*) (void)) sHSAfn)();
-	return ((canWriteImage
-	 && (hasFileAccess))
-	 && (hasSocketAccess)
-		? 0
-		: 1);
-}
 
 
 /*	Exit function to be registered with atexit() to signal child processes on

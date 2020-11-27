@@ -1,18 +1,6 @@
 include(plugins.macros.cmake)
 
 #
-# SecurityPlugin - Dummy Version
-#
-
-message(STATUS "Adding plugin: SecurityPlugin")    
-
-file(GLOB SecurityPlugin_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/plugins/SecurityPlugin/common/*.c   
-)
-
-addLibraryWithRPATH(SecurityPlugin ${SecurityPlugin_SOURCES})
-
-#
 # FilePlugin
 #
 message(STATUS "Adding plugin: FilePlugin")
