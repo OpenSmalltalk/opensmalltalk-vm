@@ -1007,7 +1007,7 @@ InterpreterPrimitives >> primitiveBeCursor [
 							ifFalse: [^self success: false]]
 					ifFalse: [self cCode: [ self ioSetCursor: cursorBitsIndex _: offsetX _: offsetY ]
 						inSmalltalk: [ourCursor show]]]
-			ifFalse: [self cCode: [ self ioSetCursorWithMask: cursorBitsIndex _: maskBitsIndex _: offsetX, offsetY ]
+			ifFalse: [self cCode: [ self ioSetCursorWithMask: cursorBitsIndex _: maskBitsIndex _: offsetX _: offsetY ]
 						inSmalltalk: [cursorBitsIndex == maskBitsIndex. "placate compiler"
 									ourCursor show]].
 		self pop: argumentCount] 
