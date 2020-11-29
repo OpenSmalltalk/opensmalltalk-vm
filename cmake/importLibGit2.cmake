@@ -63,7 +63,7 @@ function(build_git2)
 	endif()
 endfunction()
 
-if (NOT WITHOUT_DEPENDENCIES)
+if (DOWNLOAD_DEPENDENCIES)
   #Only get Git2 if required
   if(PHARO_DEPENDENCIES_PREFER_DOWNLOAD_BINARIES)
     #Download SDL2 binaries directly

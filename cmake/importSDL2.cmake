@@ -31,7 +31,7 @@ function(build_SDL2)
     set(SDL2_FOUND "From build_SDL2" PARENT_SCOPE)
 endfunction()
 
-if (NOT WITHOUT_DEPENDENCIES)
+if (DOWNLOAD_DEPENDENCIES)
   #Only get SDL2 if required
   if(PHARO_DEPENDENCIES_PREFER_DOWNLOAD_BINARIES)
     #Download SDL2 binaries directly
