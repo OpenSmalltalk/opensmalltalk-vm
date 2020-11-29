@@ -76,15 +76,13 @@ def runBuild(platformName, configuration, headless = true){
 	
 	def platform = headless ? platformName : "${platformName}-stockReplacement"
 	def buildDirectory = headless ? "build" :"build-stockReplacement"
+	def additionalParameters = headless ? "" : "-DALWAYS_INTERACTIVE=1"
 
-	def additionalParameters = headless ? "" : "-DALWAYS_INTERACTIVE=1" 
-
-    stage("Checkout-${platform}"){
-      dir('repository') {
-          checkout scm
-      }
+  stage("Checkout-${platform}"){
+    dir('repository') {
+        checkout scm
     }
-
+  }
 
 	stage("Build-${platform}-${configuration}"){
     if(isWindows()){
@@ -99,13 +97,6 @@ def runBuild(platformName, configuration, headless = true){
         shell "VERBOSE=1 make install"
         shell "VERBOSE=1 make package"
       }
-    }
-		def commitHash = checkout(scm).GIT_COMMIT
-		def shortGitHash = commitHash.substring(0,8)
-    dir("${buildDirectory}/build/packages"){
-      shell 'cp PharoVM-8.6.1-${shortGitHash}-Windows-x86_64-bin.zip PharoVM-8.6.1-${shortGitHash}-win64-bin.zip || true'
-      shell 'cp PharoVM-8.6.1-${shortGitHash}-Linux-x86_64-bin.zip PharoVM-8.6.1-${shortGitHash}-linux64-bin.zip || true'
-      shell 'cp PharoVM-8.6.1-${shortGitHash}-mac64-bin.zip PharoVM-8.6.1-${shortGitHash}-mac64-bin.zip || true'
     }
 	
 		stash excludes: '_CPack_Packages', includes: "${buildDirectory}/build/packages/*", name: "packages-${platform}-${configuration}"
