@@ -59,7 +59,7 @@ configure_file("${Win32ResourcesFolder}/${VM_EXECUTABLE_CONSOLE_NAME}.exe.manife
 
 macro(add_third_party_dependencies_per_platform)
 
-    if (NOT WITHOUT_DEPENDENCIES)
+    if (DOWNLOAD_DEPENDENCIES)
         # Backwards compatibility for those using PThreaded Plugin
         # Current support is in the VM
         add_third_party_dependency("PThreadedFFI-1.4.0-win64" "build/vm")

@@ -2,7 +2,7 @@ find_package(Cairo)
 
 if (Cairo_FOUND)
 	add_dependencies(${VM_LIBRARY_NAME} Cairo::Cairo)
-elseif (NOT WITHOUT_DEPENDENCIES)
+elseif (DOWNLOAD_DEPENDENCIES)
 
   # Cairo does not support building on CMake
   # Download it for now, except for linuxes
