@@ -26,8 +26,8 @@
 
 #endif
 
-EXPORT(char*) getSourceVersion();
-EXPORT(char*) getVMVersion();
+EXPORT(const char*) getSourceVersion();
+EXPORT(const char*) getVMVersion();
 EXPORT(char*) getVMName();
 
 EXPORT(void) setVMName(const char* name);
@@ -55,7 +55,7 @@ void ceCheckForInterrupts(void);
 
 sqInt nilObject(void);
 
-long long getVMGMTOffset();
+EXPORT(long long) getVMGMTOffset();
 
 EXPORT(long) aioPoll(long microSeconds);
 EXPORT(void) aioInit(void);

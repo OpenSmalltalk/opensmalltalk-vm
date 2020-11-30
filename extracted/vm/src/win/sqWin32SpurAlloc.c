@@ -59,13 +59,17 @@ sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize, usqInt desiredBaseA
 	minAppAddr = sysInfo.lpMinimumApplicationAddress;
 	maxAppAddr = sysInfo.lpMaximumApplicationAddress;
 
+#if __MINGW32__
 	/* choose a suitable starting point. In MinGW the malloc heap is below the
 	 * program, so take the max of a malloc and something from uninitialized
 	 * data.
 	 */
 	hint = malloc(1);
 	free(hint);
-	hint = max(hint,(char *)&fIsConsole);
+	hint = max(hint, (char*)&fIsConsole);
+#else
+	hint = desiredBaseAddress;
+#endif
 
 	alignment = max(pageSize,1024*1024);
 	address = (char *)(((usqInt)hint + alignment - 1) & ~(alignment - 1));

@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <string.h> /* for memset */
 #include <stdio.h> /* for logErrorFromErrno */
+#include <stdint.h>
 
 #include "pharovm/debug.h"
 
@@ -137,7 +138,7 @@ static uchar **mapPages[NUMROOTPAGES] = { 0, };
 int
 heapMapAtWord(void *wordPointer)
 {
-	ulong address = (ulong)wordPointer;
+	uint64_t address = (uint64_t)wordPointer;
 	uchar **directory, *page;
 	if ((address & ((1<<LOGWORDSIZE)-1)))
 		error("misaligned word");
@@ -155,7 +156,7 @@ heapMapAtWord(void *wordPointer)
 void
 heapMapAtWordPut(void *wordPointer, int bit)
 {
-	ulong address = (ulong)wordPointer;
+	uint64_t address = (uint64_t)wordPointer;
 	uchar **directory, *page;
 	if ((address & ((1<<LOGWORDSIZE)-1)))
 		error("misaligned word");

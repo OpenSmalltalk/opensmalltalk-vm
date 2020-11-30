@@ -80,7 +80,7 @@ typedef struct sqSSL {
 static sqSSL **handleBuf = NULL;
 static sqInt handleMax = 0;
 
-static char* emptyString = "";
+static const char* emptyString = "";
 
 #include "pharovm/debug.h"
 
@@ -104,7 +104,7 @@ static void sqPrintSBD(char *title, SecBufferDesc sbd) {
 	logTrace("%s\n", title);
 	for(i=0; i<sbd.cBuffers; i++) {
 		SecBuffer *buf = sbd.pBuffers + i;
-		logTrace("\tbuf[%d]: %d (%d bytes) ptr=%"PRIxSQPTR"\n", i,buf->BufferType, buf->cbBuffer, (sqIntptr_t)buf->pvBuffer);
+		logTrace("\tbuf[%d]: %d (%d bytes) ptr=%" PRIxSQPTR "\n", i,buf->BufferType, buf->cbBuffer, (sqIntptr_t)buf->pvBuffer);
 	}
 }
 
@@ -120,7 +120,7 @@ static void sqCopyExtraData(sqSSL *ssl, SecBufferDesc sbd) {
 		SecBuffer *buf = sbd.pBuffers + i;
 		if(buf->BufferType == SECBUFFER_EXTRA) {
 			int count = buf->cbBuffer;
-			char *srcPtr = buf->pvBuffer;
+			char *srcPtr = (char*) buf->pvBuffer;
 			char *dstPtr = ssl->dataBuf + ssl->dataLen;
 			logTrace("sqCopyExtraData: Retaining %d bytes\n", count);
 			/* I *think* the extra buffers are always in input range.

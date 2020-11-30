@@ -3,7 +3,11 @@
  */
 #include <errno.h>
 #include <sys/types.h>
+#if defined(_WIN32)
+#include "dirent.h"
+#else
 #include <unistd.h>
+#endif
 #include <assert.h>
 
 

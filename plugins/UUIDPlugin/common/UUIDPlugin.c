@@ -9,7 +9,7 @@ int sqUUIDShutdown(void);
 
 struct VirtualMachine* interpreterProxy;
 
-#ifdef WIN64
+#ifdef _WIN32
 	#include <windows.h>
 	#include <ole2.h>
 
@@ -23,6 +23,7 @@ struct VirtualMachine* interpreterProxy;
 
 
 #else
+
 	#if defined(HAVE_SYS_UUID_H)
 	# include <sys/types.h>
 	# include <sys/uuid.h>

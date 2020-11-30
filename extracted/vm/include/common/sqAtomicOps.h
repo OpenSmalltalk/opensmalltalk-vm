@@ -176,7 +176,7 @@ AtomicGet(uint64_t *target)
 /* see http://web.archive.org/web/20120411073941/http://www.niallryan.com/node/137 */
 
 static __inline void
-AtomicSet(__int64 *target, __int64 new_value)
+AtomicSet(unsigned __int64 *target, unsigned __int64 new_value)
 {
    __asm
    {
@@ -186,8 +186,8 @@ AtomicSet(__int64 *target, __int64 new_value)
    }
 }
 
-static __inline __int64
-AtomicGet(__int64 *target)
+static __inline unsigned __int64
+AtomicGet(unsigned long long *target)
 {
    __asm
    {
@@ -199,12 +199,13 @@ AtomicGet(__int64 *target)
       lock cmpxchg8b [edi]
    }
 }
-#	define get64(variable) AtomicGet(&((__int64)variable))
-#	define set64(variable,value) AtomicSet(&((__int64)variable), (__int64)value)
+#	define get64(variable) AtomicGet((unsigned long long*)&variable)
+#	define set64(variable,value) AtomicSet((unsigned __int64*)&variable, (unsigned __int64)value)
 
 # else /* TARGET_OS_IS_IPHONE elif x86 variants etc */
 
-#if defined(__arm__) && (defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7A__))
+// _M_ARM64 MSVC macro for ARM64
+#if defined(__arm__) || defined(_M_ARM64)
 /* tpr - this is code intended for the Raspberry Pi Raspbian OS 
  * We'll experimentally trust in our MMU to keep 64bit accesses atomic */
 # define get64(variable) variable

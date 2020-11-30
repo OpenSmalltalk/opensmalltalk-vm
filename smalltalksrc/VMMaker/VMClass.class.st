@@ -155,6 +155,9 @@ VMClass class >> initializeMiscConstants [
 	VMBIGENDIAN class. "Mention this for the benefit of CCodeGenerator>>emitCConstantsOn:"
 	SPURVM := STACKVM := COGVM := COGMTVM := false.
 
+	"Assignment needs to be in here to recognized this constant as a compile-time defined macro"
+	FEATURE_FFI := FEATURE_THREADED_FFI := false.
+
 	InitializationOptions ifNil: [InitializationOptions := Dictionary new].
 	omc := InitializationOptions at: #ObjectMemory ifAbsent: [self error: 'Please specify an object memory'].
 

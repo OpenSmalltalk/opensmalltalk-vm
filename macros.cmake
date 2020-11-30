@@ -9,6 +9,7 @@ macro(addLibraryWithRPATH NAME)
 
     # Declare the main executable depends on the plugin so it gets built with it
     add_dependencies(${VM_EXECUTABLE_NAME} ${NAME})
+    #target_link_libraries(${VM_EXECUTABLE_NAME} ${NAME})
     #Declare the plugin depends on the VM core library
     if(NOT "${NAME}" STREQUAL "${VM_LIBRARY_NAME}")
         target_link_libraries(${NAME} ${VM_LIBRARY_NAME})
@@ -17,34 +18,7 @@ endmacro()
 
 
 macro(get_platform_name VARNAME)
-    if(WIN)
-        set(${VARNAME} "win")
-    else()
-        if(OSX)
-            set(${VARNAME} "mac")
-        else()
-            set(${VARNAME} "linux")
-        endif()
-    endif()
-endmacro()
-
-macro(get_full_platform_name VARNAME)
-
-    if(SIZEOF_VOID_P EQUAL 8)
-        set(ARCH 64)
-    else()
-        set(ARCH 32)
-    endif()
-
-    if(WIN)
-        set(${VARNAME} "win${ARCH}")
-    else()
-        if(OSX)
-            set(${VARNAME} "mac${ARCH}")
-        else()
-            set(${VARNAME} "linux${ARCH}")
-        endif()
-    endif()
+    set(${VARNAME} ${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR})
 endmacro()
 
 macro(get_full_platform_name_with_osx VARNAME)
@@ -85,19 +59,30 @@ macro(add_third_party_dependency_with_baseurl NAME TARGETPATH BASEURL)
 
     get_platform_name(PLATNAME)
     message("Adding third-party libraries for ${PLATNAME}: ${NAME}")
-
-    add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/build/third-party/${NAME}.zip"
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/build/third-party
-        COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_CURRENT_BINARY_DIR}/build/third-party wget --no-check-certificate "${BASEURL}/${NAME}.zip"
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-
-	do_decompress_thirdparty(${NAME} ${TARGETPATH})
+    
+    include(DownloadProject)
+    download_project(PROJ ${NAME}
+        URL         "${BASEURL}${NAME}.zip"
+        ${UPDATE_DISCONNECTED_IF_AVAILABLE}
+    )
+    file(GLOB DOWNLOADED_THIRD_PARTY_LIBRARIES
+        "${${NAME}_SOURCE_DIR}/*"
+    )
+    add_custom_target(${NAME}
+        COMMAND ${CMAKE_COMMAND} -E copy ${DOWNLOADED_THIRD_PARTY_LIBRARIES} "${LIBRARY_OUTPUT_PATH}/"
+        COMMENT "Copying ${NAME} binaries from '${${NAME}_SOURCE_DIR}' to '${LIBRARY_OUTPUT_PATH}/'" VERBATIM)
+    add_dependencies(${VM_LIBRARY_NAME} ${NAME})
 endmacro()
 
 # Add a third party dependency taken from the files.pharo.org repository
 macro(add_third_party_dependency NAME TARGETPATH)
+    if(SIZEOF_VOID_P EQUAL 8)
+        set(ARCH 64)
+    else()
+        set(ARCH 32)
+    endif()
     get_platform_name(PLATNAME)
-    set(BASE_URL "https://files.pharo.org/vm/pharo-spur64/${PLATNAME}/third-party/")
+    set(BASE_URL "https://files.pharo.org/vm/pharo-spur${ARCH}/${PLATNAME}/third-party/")
     add_third_party_dependency_with_baseurl(${NAME} ${TARGETPATH} ${BASE_URL})
 endmacro()
 
