@@ -964,7 +964,7 @@ TMethod >> extractStaticDirective [
 	^self
 		extractDirective: #static:
 		valueBlock: [:sendNode| sendNode args first value ~= false]
-		default: (export or: [(properties includesKey: #api) or: [properties includesKey: #api:]]) not
+		default: (export or: [ self isAPIMethod ]) not
 ]
 
 { #category : #'primitive compilation' }
