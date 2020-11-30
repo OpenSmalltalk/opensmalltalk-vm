@@ -44,8 +44,6 @@ EXPORT(sqInt) initialiseModule(void);
 static sqInt intToNetAddress(sqInt addr);
 EXPORT(sqInt) moduleUnloaded(char *aModuleName);
 static sqInt netAddressToInt(unsigned char *ptrToByteArray);
-EXPORT(sqInt) primitiveDisableSocketAccess(void);
-EXPORT(sqInt) primitiveHasSocketAccess(void);
 EXPORT(sqInt) primitiveInitializeNetwork(void);
 EXPORT(sqInt) primitiveResolverAbortLookup(void);
 EXPORT(sqInt) primitiveResolverAddressLookupResult(void);
@@ -183,12 +181,6 @@ static const char *moduleName =
 	"SocketPlugin VMMaker.oscog-eem.2495 (e)"
 #endif
 ;
-static void * sCCLOPfn;
-static void * sCCSOTfn;
-static void * sCCTPfn;
-static void * sDSAfn;
-static void * sHSAfn;
-
 
 
 /*	Note: This is hardcoded so it can be run from Squeak.
@@ -207,11 +199,6 @@ getModuleName(void)
 EXPORT(sqInt)
 initialiseModule(void)
 {
-	sDSAfn = ioLoadFunctionFrom("secDisableSocketAccess", "SecurityPlugin");
-	sHSAfn = ioLoadFunctionFrom("secHasSocketAccess", "SecurityPlugin");
-	sCCTPfn = ioLoadFunctionFrom("secCanConnectToPort", "SecurityPlugin");
-	sCCLOPfn = ioLoadFunctionFrom("secCanListenOnPort", "SecurityPlugin");
-	sCCSOTfn = ioLoadFunctionFrom("secCanCreateSocketOfType", "SecurityPlugin");
 	return socketInit();
 }
 
@@ -244,11 +231,6 @@ intToNetAddress(sqInt addr)
 EXPORT(sqInt)
 moduleUnloaded(char *aModuleName)
 {
-	if ((strcmp(aModuleName, "SecurityPlugin")) == 0) {
-
-		/* The security plugin just shut down. How odd. */
-		sDSAfn = (sHSAfn = (sCCTPfn = (sCCLOPfn = (sCCSOTfn = 0))));
-	}
 	return 0;
 }
 
@@ -271,28 +253,6 @@ netAddressToInt(unsigned char *ptrToByteArray)
 	return (((ptrToByteArray[3]) + (((usqInt)((ptrToByteArray[2])) << 8))) + (((usqInt)((ptrToByteArray[1])) << 16))) + (((usqInt)((ptrToByteArray[0])) << 24));
 }
 
-
-/*	If the security plugin can be loaded, use it to turn off socket access
-	If not, assume it's ok */
-
-	/* SocketPlugin>>#primitiveDisableSocketAccess */
-EXPORT(sqInt)
-primitiveDisableSocketAccess(void)
-{
-	if (sDSAfn != 0) {
-		((sqInt (*) (void)) sDSAfn)();
-	}
-	return 0;
-}
-
-	/* SocketPlugin>>#primitiveHasSocketAccess */
-EXPORT(sqInt)
-primitiveHasSocketAccess(void)
-{
-	popthenPush(1, ((((sHSAfn == 0)
- || ( ((sqInt (*) (void)) sHSAfn)()))) ? trueObject() : falseObject()));
-	return null;
-}
 
 	/* SocketPlugin>>#primitiveInitializeNetwork: */
 EXPORT(sqInt)
@@ -1137,7 +1097,6 @@ primitiveSocketConnectToPort(void)
 {
 	sqInt addr;
 	char *address;
-	sqInt okToConnect;
 	sqInt port;
 	SocketPtr s;
 	sqInt socket;
@@ -1162,13 +1121,7 @@ primitiveSocketConnectToPort(void)
 	}
 	addr = ((((((unsigned char *) address))[3]) + (((usqInt)(((((unsigned char *) address))[2])) << 8))) + (((usqInt)(((((unsigned char *) address))[1])) << 16))) + (((usqInt)(((((unsigned char *) address))[0])) << 24));
 	l1:	/* end netAddressToInt: */;
-	if (sCCTPfn != 0) {
-		okToConnect =  ((sqInt (*) (sqInt, sqInt)) sCCTPfn)(addr, port);
-		if (!okToConnect) {
-			primitiveFail();
-			return null;
-		}
-	}
+
 	/* begin socketValueOf: */
 	if ((isBytes(socket))
 	 && ((byteSizeOf(socket)) == (sizeof(SQSocket)))) {
@@ -1192,7 +1145,6 @@ EXPORT(sqInt)
 primitiveSocketCreate(void)
 {
 	sqInt netType;
-	sqInt okToCreate;
 	sqInt recvBufSize;
 	SocketPtr s;
 	sqInt semaIndex;
@@ -1216,13 +1168,7 @@ primitiveSocketCreate(void)
 	if (failed()) {
 		return null;
 	}
-	if (sCCSOTfn != 0) {
-		okToCreate =  ((sqInt (*) (sqInt, sqInt)) sCCSOTfn)(netType, socketType);
-		if (!okToCreate) {
-			primitiveFail();
-			return null;
-		}
-	}
+
 	socketOop = instantiateClassindexableSize(classByteArray(), sizeof(SQSocket));
 	/* begin socketValueOf: */
 	if ((isBytes(socketOop))
@@ -1249,7 +1195,6 @@ primitiveSocketCreate3Semaphores(void)
 	sqInt aReadSema;
 	sqInt aWriteSema;
 	sqInt netType;
-	sqInt okToCreate;
 	sqInt recvBufSize;
 	SocketPtr s;
 	sqInt semaIndex;
@@ -1277,13 +1222,7 @@ primitiveSocketCreate3Semaphores(void)
 	if (failed()) {
 		return null;
 	}
-	if (sCCSOTfn != 0) {
-		okToCreate =  ((sqInt (*) (sqInt, sqInt)) sCCSOTfn)(netType, socketType);
-		if (!okToCreate) {
-			primitiveFail();
-			return null;
-		}
-	}
+
 	socketOop = instantiateClassindexableSize(classByteArray(), sizeof(SQSocket));
 	/* begin socketValueOf: */
 	if ((isBytes(socketOop))
@@ -1310,7 +1249,6 @@ primitiveSocketCreateRAW(void)
 	sqInt aReadSema;
 	sqInt aWriteSema;
 	sqInt netType;
-	sqInt okToCreate;
 	sqInt protoType;
 	sqInt recvBufSize;
 	SocketPtr s;
@@ -1338,13 +1276,7 @@ primitiveSocketCreateRAW(void)
 	if (failed()) {
 		return null;
 	}
-	if (sCCSOTfn != 0) {
-		okToCreate =  ((sqInt (*) (sqInt, sqInt)) sCCSOTfn)(netType, protoType);
-		if (!okToCreate) {
-			primitiveFail();
-			return null;
-		}
-	}
+
 	socketOop = instantiateClassindexableSize(classByteArray(), sizeof(SQSocket));
 	/* begin socketValueOf: */
 	if ((isBytes(socketOop))
@@ -1477,7 +1409,6 @@ primitiveSocketGetOptions(void)
 EXPORT(sqInt)
 primitiveSocketListenOnPort(void)
 {
-	sqInt okToListen;
 	sqInt port;
 	SocketPtr s;
 	sqInt socket;
@@ -1500,13 +1431,7 @@ primitiveSocketListenOnPort(void)
 		primitiveFailFor(PrimErrBadArgument);
 		s = null;
 	}
-	if (sCCLOPfn != 0) {
-		okToListen =  ((sqInt (*) (sqInt, sqInt)) sCCLOPfn)((sqInt)s, port);
-		if (!okToListen) {
-			primitiveFail();
-			return null;
-		}
-	}
+
 	if (!(failed())) {
 		sqSocketListenOnPort(s, port);
 	}
@@ -1526,7 +1451,6 @@ EXPORT(sqInt)
 primitiveSocketListenOnPortBacklog(void)
 {
 	sqInt backlog;
-	sqInt okToListen;
 	sqInt port;
 	SocketPtr s;
 	sqInt socket;
@@ -1551,13 +1475,7 @@ primitiveSocketListenOnPortBacklog(void)
 		primitiveFailFor(PrimErrBadArgument);
 		s = null;
 	}
-	if (sCCLOPfn != 0) {
-		okToListen =  ((sqInt (*) (sqInt, sqInt)) sCCLOPfn)((sqInt)s, port);
-		if (!okToListen) {
-			primitiveFail();
-			return null;
-		}
-	}
+
 	sqSocketListenOnPortBacklogSize(s, port, backlog);
 	if (!(failed())) {
 		pop(3);
@@ -1606,13 +1524,7 @@ primitiveSocketListenOnPortBacklogInterface(void)
 		primitiveFailFor(PrimErrBadArgument);
 		s = null;
 	}
-	if (sCCLOPfn != 0) {
-		okToListen =  ((sqInt (*) (sqInt, sqInt)) sCCLOPfn)((sqInt)s, port);
-		if (!okToListen) {
-			primitiveFail();
-			return null;
-		}
-	}
+
 	/* begin netAddressToInt: */
 	sz = byteSizeOf(((sqInt)(sqIntptr_t)((((unsigned char *) ifAddr))) - BaseHeaderSize));
 	if (!(sz == 4)) {
@@ -2417,8 +2329,6 @@ void* SocketPlugin_exports[][3] = {
 	{(void*)_m, "getModuleName", (void*)getModuleName},
 	{(void*)_m, "initialiseModule", (void*)initialiseModule},
 	{(void*)_m, "moduleUnloaded", (void*)moduleUnloaded},
-	{(void*)_m, "primitiveDisableSocketAccess\000\377", (void*)primitiveDisableSocketAccess},
-	{(void*)_m, "primitiveHasSocketAccess\000\377", (void*)primitiveHasSocketAccess},
 	{(void*)_m, "primitiveInitializeNetwork\000\000", (void*)primitiveInitializeNetwork},
 	{(void*)_m, "primitiveResolverAbortLookup\000\377", (void*)primitiveResolverAbortLookup},
 	{(void*)_m, "primitiveResolverAddressLookupResult\000\377", (void*)primitiveResolverAddressLookupResult},
