@@ -3,8 +3,9 @@
 #ifndef __imageAccess_h__
 #define __imageAccess_h__
 
+#include <stdint.h>
 #define sqImageFile void*
-#define squeakFileOffsetType size_t
+#define squeakFileOffsetType uint64_t
 
 typedef struct {
 	sqInt (*imageFileClose)(sqImageFile f);

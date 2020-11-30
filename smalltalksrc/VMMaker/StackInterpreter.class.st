@@ -525,9 +525,16 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 		addHeaderFile:'"vmCallback.h"';
 		addHeaderFile:'"sqMemoryFence.h"';
 		addHeaderFile:'"dispdbg.h"';
-		addHeaderFile:'<ffi.h>';
-		addHeaderFile:'"pharovm/pThreadedFFI/worker.h"'.
-		
+
+"This cannot be properly expressed in slang.
+If ffi is put as a separate header, slang will sort the header and put it outside the #ifdef"
+		addHeaderFile:'#if FEATURE_FFI
+#include <ffi.h>
+#endif //FEATURE_FFI
+#if FEATURE_THREADED_FFI
+#include "pharovm/pThreadedFFI/worker.h"
+#endif //FEATURE_THREADED_FFI'.
+
 	LowcodeVM ifTrue: [ aCCodeGenerator addHeaderFile:'"sqLowcodeFFI.h"'].
 
 	vmClass declareInterpreterVersionIn: aCCodeGenerator defaultName: 'Stack'.
@@ -1298,7 +1305,7 @@ StackInterpreter class >> initializePrimitiveTable [
 		(100 primitivePerformInSuperclass)		"Blue Book: primitiveSignalAtTick"
 		(101 primitiveBeCursor)
 		(102 primitiveBeDisplay)
-		(103 primitiveScanCharacters)
+		(103 primitiveFail)	"primitiveScanCharacters"
 		(104 primitiveFail)	"primitiveDrawLoop"
 		(105 primitiveStringReplace)
 		(106 primitiveScreenSize)

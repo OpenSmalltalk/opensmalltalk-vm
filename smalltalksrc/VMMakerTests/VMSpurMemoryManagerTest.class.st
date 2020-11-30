@@ -483,16 +483,16 @@ VMSpurMemoryManagerTest >> setUp [
 	"Schedule a GC, so it does not try to schedule one"
 	memory needGCFlag: 1.
 	
-	stackBuilder := VMStackBuilder new
-		interpreter: interpreter; 
-		memory: memory;
-		yourself.
-				
-	methodBuilder := VMMethodBuilder new
+		methodBuilder := VMMethodBuilder new
 		interpreter: interpreter; 
 		memory: memory;
 		yourself.
 
+	stackBuilder := VMStackBuilder new
+		interpreter: interpreter; 
+		memory: memory;
+		methodBuilder: methodBuilder;
+		yourself.
 ]
 
 { #category : #running }

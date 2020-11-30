@@ -55,7 +55,6 @@ PharoVMMaker >> generate: interpreterClass memoryManager: memoryManager [
 		configuration: VMMakerConfiguration)
 			stopOnErrors: stopOnErrors;
 			internal: #() external: #(FilePlugin);
-			doCleanupOldFiles;
 			generateInterpreterFile;
 			generateCogitFiles;
 			generateExternalPlugins] valueSupplyingAnswer:true.
@@ -79,6 +78,12 @@ PharoVMMaker >> generateStackVM [
 	self generate: StackInterpreter memoryManager: #Spur64BitMemoryManager.
 
 
+]
+
+{ #category : #generation }
+PharoVMMaker >> generateStackVM32 [
+
+	self generate: StackInterpreter memoryManager: #Spur32BitMemoryManager
 ]
 
 { #category : #accessing }

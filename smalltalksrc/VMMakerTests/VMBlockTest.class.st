@@ -149,6 +149,17 @@ VMBlockTest >> testCreatingABlockWithTwoArgumentsClosureShouldHaveTwoArguments [
 		                     self class >> #anEmptyMethod.
 
 	self installBlockClosureClass.
+	| methodOop methodHeader previousMethodOop |
+	previousMethodOop := self createMethodOopFromPharoMethod:
+		                     self class >> #anEmptyMethod.
+
+	methodOop := self createMethodOopFromPharoMethod:
+		             self class >> #methodReturningABlock.
+
+	"To force the use of the specialObjectArray"
+	ClassBlockClosureCompactIndex := 0.
+	self installBlockClosureClassInSplOnly.
+
 	"We want to avoid baseFrameReturn (base frame initialisation)"
 	stackBuilder addNewFrame method: previousMethodOop.
 	stackBuilder addNewFrame
@@ -183,6 +194,7 @@ VMBlockTest >> testCreatingABlockWithoutArgumentsClosureShouldHaveNoArgument [
 	stackBuilder buildStack.
 	
 	interpreter instructionPointer: (methodBuilder bytecodeAt: 0 forMethod: methodOop).
+
 	interpreter interpretWhile: [ interpreter method = methodOop ].
 
 	self
@@ -200,6 +212,9 @@ VMBlockTest >> testPushClosureBytecodePushesClosure [
 	previousMethodOop := self createMethodOopFromPharoMethod:
 		                     self class >> #anEmptyMethod.
 
+	methodOop := self createMethodOopFromPharoMethod:
+		             self class >> #methodReturningABlock.
+
 	self installBlockClosureClass.
 	"We want to avoid baseFrameReturn (base frame initialisation)"
 	stackBuilder addNewFrame method: previousMethodOop.
@@ -208,7 +223,6 @@ VMBlockTest >> testPushClosureBytecodePushesClosure [
 		receiver: memory trueObject.
 	stackBuilder buildStack.
 	
-	interpreter instructionPointer: (methodBuilder bytecodeAt: 0 forMethod: methodOop).
 	interpreter interpretWhile: [ interpreter method = methodOop ].
 
 	self

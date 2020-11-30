@@ -1,0 +1,148 @@
+﻿{
+  "configurations": [
+    {
+      "name": "x86-Debug-StackVM-clang",
+      "generator": "Visual Studio 16 2019",
+      "configurationType": "Debug",
+      "inheritEnvironments": [ "clang_cl_x86" ],
+      "buildRoot": "${projectDir}\\out\\build\\${name}",
+      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "cmakeCommandArgs": "",
+      "buildCommandArgs": "",
+      "ctestCommandArgs": "",
+      "variables": [
+        {
+          "name": "FEATURE_FFI",
+          "value": "True",
+          "type": "BOOL"
+        },
+        {
+          "name": "DOWNLOAD_DEPENDENCIES",
+          "value": "False",
+          "type": "BOOL"
+        },
+        {
+          "name": "GENERATE_SOURCES",
+          "value": "True",
+          "type": "BOOL"
+        },
+        {
+          "name": "FEATURE_COMPILE_GNUISATION",
+          "value": "False",
+          "type": "BOOL"
+        },
+        {
+          "name": "GENERATED_SOURCE_DIR",
+          "value": "stack32",
+          "type": "STRING"
+        },
+        {
+          "name": "FLAVOUR",
+          "value": "StackVM ",
+          "type": "STRING"
+        },
+        {
+          "name": "FEATURE_LIB_SDL2",
+          "value": "False",
+          "type": "BOOL"
+        }
+      ]
+    },
+    {
+      "name": "x86-Debug-Cog-msvc",
+      "generator": "Visual Studio 16 2019",
+      "configurationType": "Debug",
+      "buildRoot": "${projectDir}\\out\\build\\${name}",
+      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "cmakeCommandArgs": "-DGENERATE_SOURCES=FALSE -DDOWNLOAD_DEPENDENCIES=FALSE",
+      "buildCommandArgs": "",
+      "ctestCommandArgs": "",
+      "inheritEnvironments": [ "msvc_x86" ],
+      "variables": [
+        {
+          "name": "FEATURE_FFI",
+          "value": "False",
+          "type": "BOOL"
+        }
+      ]
+    },
+    {
+      "name": "x86-Debug-Cog-clang",
+      "generator": "Visual Studio 16 2019",
+      "configurationType": "Debug",
+      "buildRoot": "${projectDir}\\out\\build\\${name}",
+      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "cmakeCommandArgs": "",
+      "buildCommandArgs": "",
+      "ctestCommandArgs": "",
+      "inheritEnvironments": [ "clang_cl_x86" ],
+      "variables": [
+        {
+          "name": "FEATURE_FFI",
+          "value": "False",
+          "type": "BOOL"
+        }
+      ]
+    },
+    {
+      "name": "x86-Debug-StackVM-msvc",
+      "generator": "Visual Studio 16 2019",
+      "configurationType": "Debug",
+      "buildRoot": "${projectDir}\\out\\build\\${name}",
+      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "cmakeCommandArgs": "",
+      "buildCommandArgs": "",
+      "ctestCommandArgs": "",
+      "inheritEnvironments": [ "msvc_x86" ],
+      "variables": [
+        {
+          "name": "FEATURE_FFI",
+          "value": "True",
+          "type": "BOOL"
+        },
+        {
+          "name": "FEATURE_COMPILE_GNUISATION",
+          "value": "False",
+          "type": "BOOL"
+        },
+        {
+          "name": "FEATURE_SOCKETS",
+          "value": "False",
+          "type": "BOOL"
+        },
+        {
+          "name": "GENERATE_SOURCES",
+          "value": "True",
+          "type": "BOOL"
+        },
+        {
+          "name": "DOWNLOAD_DEPENDENCIES",
+          "value": "False",
+          "type": "BOOL"
+        },
+        {
+          "name": "FEATURE_COMPILE_INLINE_MEMORY_ACCESSORS",
+          "value": "True",
+          "type": "BOOL"
+        },
+        {
+          "name": "FLAVOUR",
+          "value": "StackVM",
+          "type": "STRING"
+        },
+        {
+          "name": "GENERATED_SOURCE_DIR",
+          "value": "stack32",
+          "type": "STRING"
+        }
+      ],
+      "intelliSenseMode": "windows-msvc-x86"
+    },
+    {
+      "name": "ARM-StackVM-msvc",
+      "cacheRoot": "C:\\Users\\lse\\Documents\\Projects\\ARM64-build",
+      "inheritEnvironments": [],
+      "variables": []
+    }
+  ]
+}

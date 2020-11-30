@@ -512,7 +512,7 @@ sqInt ioDisableImageWrite(void);
 
 #include "pharovm/imageAccess.h"
 
-size_t readImageFromFileHeapSizeStartingAt(sqImageFile f, usqInt desiredHeapSize, size_t imageOffset);
+size_t readImageFromFileHeapSizeStartingAt(sqImageFile f, usqInt desiredHeapSize, uint64_t imageOffset);
 
 /* Clipboard (cut/copy/paste). */
 sqInt clipboardSize(void);
@@ -590,6 +590,6 @@ extern const char *interpreterVersion;
 
 void warning(char* msg);
 
-int ioGetCurrentWorkingDirectorymaxLength(char * aCString, size_t maxLength);
+EXPORT(int) ioGetCurrentWorkingDirectorymaxLength(char * aCString, size_t maxLength);
 
 #endif /* _SQ_H */
