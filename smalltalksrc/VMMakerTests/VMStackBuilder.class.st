@@ -32,7 +32,8 @@ Class {
 	#instVars : [
 		'page',
 		'frames',
-		'args'
+		'args',
+		'methodBuilder'
 	],
 	#category : #'VMMakerTests-Builders'
 }
@@ -47,7 +48,7 @@ VMStackBuilder >> addNewFrame [
 	| frame |
 	"'add' a new frame in the sense of an OrderedCollection, which will be iterated with #do:
 	The last frame added, will be the stackTop"
-	frame := VMFrameBuilder new initializeWithInterpreter: interpreter andMemory: memory.
+	frame := VMFrameBuilder new initializeWithInterpreter: interpreter andMemory: memory andMethodBuilder: methodBuilder.
 	frames add: frame.
 	^ frame "the frame is then configured by the caller"
 ]
@@ -97,6 +98,18 @@ VMStackBuilder >> initialize [
 	super initialize.
 	frames := OrderedCollection new. "will be treated in reverse"
 	args := OrderedCollection new.
+]
+
+{ #category : #accessing }
+VMStackBuilder >> methodBuilder [
+
+	^ methodBuilder
+]
+
+{ #category : #accessing }
+VMStackBuilder >> methodBuilder: anObject [
+
+	methodBuilder := anObject
 ]
 
 { #category : #accessing }
@@ -168,9 +181,10 @@ VMStackBuilder >> setInterpreterVariables [
 	interpreter setStackPageAndLimit: page.
 	interpreter setStackPointersFromPage: page.
 	interpreter internalizeIPandSP.
-
+	
 	lastFrame := frames last.
 	interpreter method: lastFrame method.
+
 ]
 
 { #category : #accessing }
