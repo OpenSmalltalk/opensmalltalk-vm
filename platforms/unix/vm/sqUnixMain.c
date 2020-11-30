@@ -1008,7 +1008,7 @@ printRegisterState(ucontext_t *uap)
 			uap->sc_r8, uap->sc_r9, uap->sc_r10, uap->sc_r11,
 			uap->sc_r12, uap->sc_r13, uap->sc_r14, uap->sc_r15,
 			uap->sc_rip);
-	return (void*)uap->sc_rip;
+	return (void *)uap->sc_rip;
 # elif __linux__ && (defined(__arm64__) || defined(__aarch64__))
 	void **regs = (void **)&uap->uc_mcontext.regs[0];
 	printf(	"\tx0 %p x1 %p x2 %p x3 %p\n"
@@ -1027,7 +1027,7 @@ printRegisterState(ucontext_t *uap)
 			regs[20], regs[21], regs[22], regs[23],
 			regs[24], regs[25], regs[26], regs[27],
 			regs[28], regs[29], regs[30], (void *)(uap->uc_mcontext.sp));
-	return uap->uc_mcontext.pc;
+	return (void *)uap->uc_mcontext.pc;
 # elif __linux__ && (defined(__arm__) || defined(__arm32__) || defined(ARM32))
 	struct sigcontext *regs = &uap->uc_mcontext;
 	printf(	"\t r0 0x%08x r1 0x%08x r2 0x%08x r3 0x%08x\n"
@@ -1038,6 +1038,7 @@ printRegisterState(ucontext_t *uap)
 	        regs->arm_r4,regs->arm_r5,regs->arm_r6,regs->arm_r7,
 	        regs->arm_r8,regs->arm_r9,regs->arm_r10,regs->arm_fp,
 	        regs->arm_ip, regs->arm_sp, regs->arm_lr, regs->arm_pc);
+	return (void *)uap->uc_mcontext.arm_pc;
 #else
 	printf("don't know how to derive register state from a ucontext_t on this platform\n");
 	return 0;

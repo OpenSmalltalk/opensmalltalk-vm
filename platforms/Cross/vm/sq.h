@@ -210,8 +210,15 @@ void	addIdleUsecs(sqInt);
  * purpose register, in which case it need not and should not be captured.
  */
 extern int isCFramePointerInUse(usqIntptr_t *cFpPtr, usqIntptr_t *cSpPtr);
+/* For writing back the machine frame and stack pointer to the interpreter's
+ * variables, which may allow for a stack backtrace to be generated on an
+ * exception.
+ */
+extern void ifValidWriteBackStackPointersSaveTo(void *,void *,char **,char **);
 # endif
 #endif /* STACKVM */
+extern void printCallStack(void);
+extern void printAllStacks(void);
 
 /* this function should return the value of the high performance
    counter if there is such a thing on this platform (otherwise return 0) */

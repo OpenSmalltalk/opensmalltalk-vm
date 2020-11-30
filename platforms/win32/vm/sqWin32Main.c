@@ -2241,7 +2241,7 @@ isCFramePointerInUse(usqIntptr_t *cFrmPtrPtr, usqIntptr_t *cStkPtrPtr)
 	return *cFrmPtrPtr >= *cStkPtrPtr && *cFrmPtrPtr <= currentCSP;
 }
 # else
-#	error please provide a deifnition of isCFramePointerInUse for this platform
+#	error please provide a definition of isCFramePointerInUse for this platform
 # endif /* defined(_M_IX86) et al */
 
 /* Answer an approximation of the size of the redzone (if any).  Do so by
