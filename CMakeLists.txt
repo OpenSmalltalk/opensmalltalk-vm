@@ -262,6 +262,7 @@ set(EXECUTABLE_OUTPUT_PATH "${CMAKE_CURRENT_BINARY_DIR}/build/vm")
 
 #If in OSX, configure creation of Bundle
 if (OSX)
+  set(EXECUTABLE_OUTPUT_PATH "build/vm/$<CONFIG>/")
   set(LIBRARY_OUTPUT_DIRECTORY "build/vm/$<CONFIG>/${VM_EXECUTABLE_NAME}.app/Contents/MacOS/Plugins")
 else()
   set(LIBRARY_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})
@@ -412,6 +413,8 @@ target_link_libraries(${VM_EXECUTABLE_NAME} ${VM_LIBRARY_NAME})
 add_required_libs_per_platform()
 
 include(plugins.cmake)
+
+add_subdirectory(ffiTestLibrary ${CMAKE_CURRENT_BINARY_DIR}/build/ffiTestLibrary)
 
 # Handling Third party dependencies
 add_third_party_dependencies_per_platform()
