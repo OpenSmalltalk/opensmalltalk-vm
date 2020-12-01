@@ -80,7 +80,7 @@ macro(configure_installables INSTALL_COMPONENT)
   
   
   install(
-    DIRECTORY "${CMAKE_BINARY_DIR}/build/vm/$<CONFIG>/"
+    DIRECTORY "${CMAKE_BINARY_DIR}/build/vm/Debug/"
     DESTINATION "./"
     USE_SOURCE_PERMISSIONS
     COMPONENT ${INSTALL_COMPONENT})
