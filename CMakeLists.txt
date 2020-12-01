@@ -262,7 +262,8 @@ set(EXECUTABLE_OUTPUT_PATH "${CMAKE_CURRENT_BINARY_DIR}/build/vm")
 
 #If in OSX, configure creation of Bundle
 if (OSX)
-  set(EXECUTABLE_OUTPUT_PATH "build/vm/$<CONFIG>/")
+  set(EXECUTABLE_OUTPUT_PATH "build/vm/Debug")
+  set(RUNTIME_OUTPUT_PATH "build/vm/")
   set(LIBRARY_OUTPUT_DIRECTORY "build/vm/$<CONFIG>/${VM_EXECUTABLE_NAME}.app/Contents/MacOS/Plugins")
 else()
   set(LIBRARY_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})
