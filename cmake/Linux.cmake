@@ -92,9 +92,3 @@ macro(add_required_libs_per_platform)
   target_link_libraries(${VM_LIBRARY_NAME} m)
   target_link_libraries(${VM_LIBRARY_NAME} pthread)
 endmacro()
-
-set(LIBFFI_TARGET "")
-
-set(LIBFFI_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/build/bin/libffi.so" "${CMAKE_CURRENT_BINARY_DIR}/build/bin/libffi.7.so")
-set(DYLIB_EXT "*.so*")
-set(LIBFFI_FILES "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/lib/${DYLIB_EXT}")

@@ -59,10 +59,7 @@ configure_file("${Win32ResourcesFolder}/${VM_EXECUTABLE_CONSOLE_NAME}.exe.manife
 
 macro(add_third_party_dependencies_per_platform)
 
-    if (DOWNLOAD_DEPENDENCIES)
-        # Backwards compatibility for those using PThreaded Plugin
-        # Current support is in the VM
-        add_third_party_dependency("PThreadedFFI-1.4.0-win64" "build/vm")
+    if (DOWNLOAD_DEPENDENCIES AND CYGWIN)
 		add_third_party_dependency("gcc-runtime-3.4" "build/vm")
     endif()
     
@@ -143,8 +140,3 @@ macro(add_required_libs_per_platform)
 	set_target_properties(${VM_EXECUTABLE_NAME} PROPERTIES LINK_FLAGS "-mwindows")
 	set_target_properties(${VM_EXECUTABLE_CONSOLE_NAME} PROPERTIES LINK_FLAGS "-mconsole")
 endmacro()
-
-set(LIBFFI_TARGET "--target=x86_64-unknown-cygwin")
-set(LIBFFI_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/bin/cygffi-7.dll")
-set(LIBFFI_FILES "${CMAKE_CURRENT_BINARY_DIR}/build/libffi/install/bin/cygffi-7.dll")
-set(LIBFFI_ADDITIONAL "AR=${CMAKE_TOOLCHAIN_PREFIX}-ar.exe" "DLLTOOL=${CMAKE_TOOLCHAIN_PREFIX}-dlltool.exe")
