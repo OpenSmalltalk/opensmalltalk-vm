@@ -1458,7 +1458,7 @@ StackInterpreterPrimitives >> primitiveFFIAllocate [
 	"Primitive. Allocate an object on the external heap."
 	| byteSize addr oop |
 
-	<api>
+	<export: true>
 	<inline: false>
 	<var: #ptr type: #'sqIntptr_t *'>
 
@@ -1503,10 +1503,10 @@ StackInterpreterPrimitives >> primitiveFFIIntegerAt [
 	 in the receiver, using the platform's endianness."
 	
 	| isSigned byteSize byteOffset rcvr addr value mask valueOop |
-	
+
+	<export: true>
 	<var: 'value' type: #usqLong>
 	<var: 'mask' type: #usqLong>
-	<api>
 	<inline: false>
 	
 	isSigned := self booleanValueOf: (self stackValue: 0).
@@ -1561,10 +1561,10 @@ StackInterpreterPrimitives >> primitiveFFIIntegerAtPut [
 	 in the receiver, using the platform's endianness."
 	
 	| isSigned byteSize byteOffset rcvr addr value max valueOop |
-	
+
+	<export: true>
 	<var: 'value' type: #sqLong>
 	<var: 'max' type: #sqLong>
-	<api>
 	<inline: false>
 	
 	isSigned := self booleanValueOf: (self stackValue: 0).
@@ -2347,7 +2347,7 @@ StackInterpreterPrimitives >> primitiveLoadSymbolFromModule [
 
 	| symbol module moduleHandle address oop symbolString symbolStringSize |
 
-	<api>
+	<export: true>
 	<var: #address type: #'void *'>
 	<var: #ptr type: #'void **'>
 	<var: #symbolString type: #'char *'>
