@@ -227,9 +227,7 @@ set(PHARO_VM TRUE)
 set(DEFAULT_IMAGE_NAME ${APPNAME}.image)
 
 set(VM_TARGET "${CMAKE_SYSTEM}")
-
-#Change to the correct CPU
-set(VM_TARGET_CPU "x86_64")
+set(VM_TARGET_CPU ${CMAKE_SYSTEM_PROCESSOR})
 
 # Type sizes
 if(BUILD_I386_VERSION)
