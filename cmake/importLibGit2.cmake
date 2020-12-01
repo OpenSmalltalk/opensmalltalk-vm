@@ -1,7 +1,9 @@
 function(find_system_git2)
   message(STATUS "Looking for Git2 in the system")
   find_package(LibGit2)
-  if(NOT LIBGIT2_FOUND)
+  if(LIBGIT2_FOUND)
+	add_dependencies(${VM_LIBRARY_NAME} git2)
+  else()
     message(STATUS "Git2 not found.")
   endif()
   set(LIBGIT2_FOUND ${LIBGIT2_FOUND} PARENT_SCOPE)
@@ -52,15 +54,16 @@ function(build_git2)
 
 	#set_target_properties(${NAME} PROPERTIES MACOSX_RPATH ON)
 	add_custom_target(libgit2_copy
-		COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LibGit2_BINARY_DIR}/Debug/git2.dll ${EXECUTABLE_OUTPUT_PATH}/Debug/build/vm
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LibGit2_BINARY_DIR}/$<CONFIG>/git2.dll ${EXECUTABLE_OUTPUT_PATH}/$<CONFIG>/build/vm
 		COMMENT "Copying Libgit binaries from '${LibGit2_BINARY_DIR}' to '${EXECUTABLE_OUTPUT_PATH}'" VERBATIM
 	)
 
 	#set_target_properties(${NAME} PROPERTIES INSTALL_NAME_DIR "@executable_path/Plugins")
 
 	if(WIN)
-		add_dependencies(git2 libgit2_copy)
+		add_dependencies(libgit2_copy git2)
 	endif()
+	add_dependencies(${VM_LIBRARY_NAME} git2)
 endfunction()
 
 if (DOWNLOAD_DEPENDENCIES)
@@ -72,9 +75,7 @@ if (DOWNLOAD_DEPENDENCIES)
     #Look for Git2 in the system, then build or download if possible
     find_system_git2()
     if(NOT LIBGIT2_FOUND)
-      build_SDL2()
+      build_git2()
     endif()
   endif()
 endif()
-
-add_dependencies(${VM_LIBRARY_NAME} git2)
