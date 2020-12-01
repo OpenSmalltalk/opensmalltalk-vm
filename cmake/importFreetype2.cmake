@@ -50,10 +50,10 @@ if (DOWNLOAD_DEPENDENCIES)
     #Download Freetype binaries directly
     download_Freetype()
   else()
-    #Look for SDL2 in the system, then build or download if possible
+    #Look for Freetype in the system, then build or download if possible
     find_system_Freetype()
     if(NOT Freetype_FOUND)
-        build_Freetype_FOUND()
+        build_Freetype()
     endif()
   endif()
 endif()
