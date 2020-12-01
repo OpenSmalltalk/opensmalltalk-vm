@@ -1,4 +1,5 @@
 ﻿{
+  "template-hash": "@template_hash@",
   "configurations": [
     {
       "name": "x86-Debug-StackVM-clang",
