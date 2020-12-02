@@ -50,7 +50,7 @@
 #define SqueakFrameSize	4	// guaranteed (see class SoundPlayer)
 extern struct VirtualMachine* interpreterProxy;
 
-void
+static void
 MyAudioQueueOutputCallback (sqSqueakSoundCoreAudio *myInstance,
 							AudioQueueRef           inAQ,
 							AudioQueueBufferRef     inBuffer) {
@@ -83,28 +83,14 @@ MyAudioQueueOutputCallback (sqSqueakSoundCoreAudio *myInstance,
 	interpreterProxy->signalSemaphoreWithIndex(myInstance.semaIndexForOutput);	
 }
 
-void
-MyAudioQueuePropertyListener (void *              inUserData,
-							  AudioQueueRef           inAQ,
-							  AudioQueuePropertyID    inID)
-{
-	UInt32 isRunning;
-	UInt32 size = sizeof(isRunning);
-	sqSqueakSoundCoreAudio * myInstance = (__bridge  sqSqueakSoundCoreAudio *)inUserData;
-
-	AudioQueueGetProperty (inAQ, kAudioQueueProperty_IsRunning, &isRunning, &size);
-	myInstance.outputIsRunning = isRunning != 0;
-	//NSLog(@"%i Is Running %i",ioMSecs(),isRunning);
-}
-
-void
+static void
 MyAudioQueueInputCallback ( void                  *inUserData,
 							AudioQueueRef          inAQ,
 							AudioQueueBufferRef    inBuffer,
 							const AudioTimeStamp  *inStartTime,
 							UInt32                 inNumberPacketDescriptions,
 							const AudioStreamPacketDescription  *inPacketDescs) {
-	sqSqueakSoundCoreAudio * myInstance = (__bridge  sqSqueakSoundCoreAudio *)inUserData;
+	sqSqueakSoundCoreAudio *myInstance = (__bridge  sqSqueakSoundCoreAudio *)inUserData;
 
 	if (!myInstance.inputIsRunning) 
 		return;
@@ -428,7 +414,7 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 	 || startSliceIndex > bufferSizeInBytes) 
 		return interpreterProxy->primitiveFail();
 
-	usqInt    start= startSliceIndex * SqueakFrameSize / 2;
+	usqInt    start = startSliceIndex * SqueakFrameSize / 2;
 	soundAtom	*atom = [self.soundInQueue returnOldest];
 	if (!atom) 
 		return 0;
