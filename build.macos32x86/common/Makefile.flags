@@ -4,10 +4,17 @@
 # These are derived from Xcode v 6.2 for Apple LLVM version 6.0 (clang-600.0.57)
 
 XCODE:=$(shell /usr/bin/xcode-select -p)
+ifneq (,$(shell /usr/bin/xcodebuild -version | grep " 1[2-9]\."))
+$(info **************************** WARNING ********************************)
+$(info ***                                                               ***)
+$(info ***      32-bit builds on Xcode 12 & Big Sur et al may fail!      ***)
+$(info ***                                                               ***)
+$(info **************************** WARNING ********************************)
+endif
 XCUB:=$(XCODE)/usr/bin
 SDKsDIR:=$(XCODE)/Platforms/MacOSX.platform/Developer/SDKs
 #Build the oldest SDK installed
-SDKs:=MacOSX10.9.sdk MacOSX10.10.sdk MacOSX10.11.sdk MacOSX10.12.sdk MacOSX10.13.sdk
+SDKs:=MacOSX10.9.sdk MacOSX10.10.sdk MacOSX10.11.sdk MacOSX10.12.sdk MacOSX10.13.sdk MacOSX10.14.sdk
 ifeq ($(SDK),)
 SDK:=$(firstword $(realpath $(addprefix $(SDKsDIR)/, $(SDKs))))
 else # Allow Makefile to set specific SDK
