@@ -139,43 +139,6 @@ VMBlockTest >> testCreatingABlockClosureShouldHaveOuterContextObject [
 ]
 
 { #category : #testing }
-VMBlockTest >> testCreatingABlockWithTwoArgumentsClosureShouldHaveTwoArguments [
-
-	| methodOop previousMethodOop |
-	methodOop := self createMethodOopFromPharoMethod:
-		             self class >> #methodReturningABlockWithTwoArguments.
-
-	previousMethodOop := self createMethodOopFromPharoMethod:
-		                     self class >> #anEmptyMethod.
-
-	self installBlockClosureClass.
-	| methodOop methodHeader previousMethodOop |
-	previousMethodOop := self createMethodOopFromPharoMethod:
-		                     self class >> #anEmptyMethod.
-
-	methodOop := self createMethodOopFromPharoMethod:
-		             self class >> #methodReturningABlock.
-
-	"To force the use of the specialObjectArray"
-	ClassBlockClosureCompactIndex := 0.
-	self installBlockClosureClassInSplOnly.
-
-	"We want to avoid baseFrameReturn (base frame initialisation)"
-	stackBuilder addNewFrame method: previousMethodOop.
-	stackBuilder addNewFrame
-		method: methodOop;
-		receiver: memory trueObject.
-	stackBuilder buildStack.
-	
-	interpreter instructionPointer: (methodBuilder bytecodeAt: 0 forMethod: methodOop).
-	interpreter interpretWhile: [ interpreter method = methodOop ].
-
-	self
-		assert: (memory fetchPointer: ClosureNumArgsIndex ofObject: interpreter stackTop) equals: (memory integerObjectOf: 2).
-
-]
-
-{ #category : #testing }
 VMBlockTest >> testCreatingABlockWithoutArgumentsClosureShouldHaveNoArgument [
 
 	| methodOop previousMethodOop |
