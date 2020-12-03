@@ -149,9 +149,9 @@ VMAbstractPrimitiveTest >> setUp [
 	self createProcessFor: newMethod priority: 1.
 	self createProcessFor: newMethod priority: 1.
 	
-	memory classExternalAddress: (self newClassInOldSpaceWithSlots: 0 format: (memory byteFormatForNumBytes: 0) ).
-	memory classArray: (self newClassInOldSpaceWithSlots: 0 format: memory arrayFormat ).
-	memory classByteArray: (self newClassInOldSpaceWithSlots: 0 format: (memory byteFormatForNumBytes: 0) ).
+	memory classExternalAddress: (self newClassInOldSpaceWithSlots: 0 instSpec: (memory byteFormatForNumBytes: 0) ).
+	memory classArray: (self newClassInOldSpaceWithSlots: 0 instSpec: memory arrayFormat ).
+	memory classByteArray: (self newClassInOldSpaceWithSlots: 0 instSpec: (memory byteFormatForNumBytes: 0) ).
 
 	memory lastHash: 1
 ]
