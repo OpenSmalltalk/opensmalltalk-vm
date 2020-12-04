@@ -520,7 +520,7 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator
 		addHeaderFile:'<stddef.h> /* for e.g. alloca */';
 		addHeaderFile:'<stdint.h> /* for e.g. alloca */';
-		addHeaderFile:'<setjmp.h>';
+		addHeaderFile:'"sigjmp_support.h"';
 		addHeaderFile:'<wchar.h> /* for wint_t */';
 		addHeaderFile:'"vmCallback.h"';
 		addHeaderFile:'"sqMemoryFence.h"';
@@ -1793,26 +1793,6 @@ invalidCompactClassError(char *s) { /* Print a (compact) class index error messa
 #endif
 	exit(-1);
 }
-
-/*
- * Define sigsetjmp and siglongjmp to be the most minimal setjmp/longjmp available on the platform.
- * Note: on windows 64 via mingw-w64, the 2nd argument NULL to _setjmp prevents stack unwinding
- */
-#undef sigsetjmp
-#undef siglongjmp
-#if _MSC_VER
-# define sigsetjmp(jb,ssmf) _setjmp(jb)
-# define siglongjmp(jb,v) longjmp(jb,v)
-#elif _WIN64 && __GNUC__
-# define sigsetjmp(jb,ssmf) _setjmp(jb,NULL)
-# define siglongjmp(jb,v) longjmp(jb,v)
-#elif _WIN32
-# define sigsetjmp(jb,ssmf) setjmp(jb)
-# define siglongjmp(jb,v) longjmp(jb,v)
-#else
-# define sigsetjmp(jb,ssmf) _setjmp(jb)
-# define siglongjmp(jb,v) _longjmp(jb,v)
-#endif
 
 #define odd(v) ((int)(v)&1)
 #define even(v) (!odd(v))

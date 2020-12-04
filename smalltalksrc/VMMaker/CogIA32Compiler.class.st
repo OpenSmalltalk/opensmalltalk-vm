@@ -3014,20 +3014,6 @@ CogIA32Compiler >> dispatchConcretizeProcessorSpecific [
 	}
 ]
 
-{ #category : #'inline cacheing' }
-CogIA32Compiler >> flushICacheFrom: startAddress "<Integer>" to: endAddress [ "<Integer>"
-
-	"Defined in jit/jit.h"	
-	<doNotGenerate>
-	
-	"On Intel processors where code and data have the same linear address, no
-	 special action is required to flush the instruction cache.  One only needs to
-	 execute a serializing instruction (e.g. CPUID) if code and data are at different
-	 virtual addresses (e.g. a debugger using memory-mapping to access a debugee).
-	 Using the macro avoids an unnecessary call."
-	self halt: #ceFlushICache
-]
-
 { #category : #abi }
 CogIA32Compiler >> fullCallsAreRelative [
 	"Answer if CallFull and/or JumpFull are relative and hence need relocating on method
