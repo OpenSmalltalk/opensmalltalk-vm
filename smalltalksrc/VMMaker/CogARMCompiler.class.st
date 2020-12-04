@@ -2046,13 +2046,6 @@ VLDR.64 ARM_ARM v7 DDI10406 pp. A8-622-3"
 	^(((2r11101101000100000000101100000000 bitOr:(srcReg <<16)) bitOr: destReg<<12) bitOr: u<<23) bitOr: immediate8bitValue
 ]
 
-{ #category : #'inline cacheing' }
-CogARMCompiler >> flushICacheFrom: startAddress "<Integer>" to: endAddress [ "<Integer>"
-	<cmacro: '(me,startAddress,endAddress) __clear_cache((char*) startAddress, (char*) (endAddress ))'>
-	"On ARM we almost certainly need to flush and wash hands. On linux we use __clear_cache (see http://community.arm.com/groups/processors/blog/2010/02/17/caches-and-self-modifying-code for a decent example) and remember that the end address is *exclusive* so we can just use the end address passed in since it is always the byte after the actual last one needing flushing"
-	self halt: #ceFlushICache
-]
-
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> fmsrFrom: regA to: regB [
 "FMSR or VMOV instruction to move a value from an ARM reg to an fpu double register ready for conversion

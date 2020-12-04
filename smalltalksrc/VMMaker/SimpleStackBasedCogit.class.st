@@ -3710,7 +3710,7 @@ SimpleStackBasedCogit >> rewritePrimInvocationIn: cogMethod to: primFunctionPoin
 			extent := backEnd
 						rewriteCallFullAt: address
 						target: primFunctionPointer asUnsignedInteger].
-	processor
+	self
 		flushICacheFrom: cogMethod asUnsignedInteger + cmNoCheckEntryOffset
 		to: address asUnsignedInteger + extent
 ]
