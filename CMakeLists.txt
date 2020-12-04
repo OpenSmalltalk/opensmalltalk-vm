@@ -423,6 +423,7 @@ endif()
 target_include_directories(${VM_LIBRARY_NAME}
 PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/pharovm
     ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include
     ${CMAKE_CURRENT_BINARY_DIR}/build/include/pharovm/
     ${GENERATED_SOURCE_DIR}/generated/vm/include
