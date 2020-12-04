@@ -61,6 +61,44 @@ if (MSVC)
 endif()
 message(STATUS "Compiling for architecture: ${CMAKE_SYSTEM_PROCESSOR}")
 
+# Windows setjmp does not work as Unix's
+# by it default will unwind the stack, which is not possible in generated code
+# setjmp has an extra argument not exposed in C to avoid unwinding
+# This extra asm file defines a wrapper function that sets this argument to 0
+If(MSVC AND ${CMAKE_SYSTEM_PROCESSOR} MATCHES "ARM64")
+    get_filename_component(COMPILER_DIR "${CMAKE_C_COMPILER}" DIRECTORY)
+    set(CMAKE_ASM_MASM_COMPILER ${COMPILER_DIR}/armasm64.exe)
+    set(CMAKE_ASM_COMPILER ${CMAKE_ASM_MASM_COMPILER})
+    enable_language(ASM)
+
+    set(ASM_PATH "src/utils/setjmp-Windows-wrapper-${CMAKE_SYSTEM_PROCESSOR}.s")
+
+    get_filename_component(ASM_FILENAME "${ASM_PATH}" NAME_WE)
+    get_filename_component(ASM_DIRNAME "${ASM_PATH}" DIRECTORY)
+
+    add_custom_command(
+        COMMAND "${CMAKE_C_COMPILER}" /nologo /P /EP /I. /I"${CMAKE_CURRENT_SOURCE_DIR}/${ASM_DIRNAME}" /Fi"${CMAKE_CURRENT_BINARY_DIR}/${ASM_FILENAME}.asm" /Iinclude
+                /I"${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/${ASM_PATH}"
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${ASM_PATH}
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${ASM_FILENAME}.asm
+        COMMENT "Preprocessing ${CMAKE_CURRENT_SOURCE_DIR}/${ASM_PATH}. Outputting to ${CMAKE_CURRENT_BINARY_DIR}/${ASM_FILENAME}.asm")
+
+    set_source_files_properties("${CMAKE_CURRENT_BINARY_DIR}/${ASM_FILENAME}.asm" PROPERTIES GENERATED TRUE)
+
+    if(TARGET_PLATFORM MATCHES X86.*)
+        list(APPEND SUPPORT_SOURCES ${CMAKE_CURRENT_BINARY_DIR}/${ASM_FILENAME}.asm)
+    else()
+        add_custom_command(
+            COMMAND "${CMAKE_ASM_MASM_COMPILER}" /Fo "${CMAKE_CURRENT_BINARY_DIR}/${ASM_FILENAME}.obj" "${CMAKE_CURRENT_BINARY_DIR}/${ASM_FILENAME}.asm"
+            DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${ASM_FILENAME}.asm
+            OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${ASM_FILENAME}.obj
+            COMMENT "Assembling ${CMAKE_CURRENT_BINARY_DIR}/${ASM_FILENAME}.asm")
+
+        set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/${ASM_FILENAME}.obj PROPERTIES EXTERNAL_OBJECT TRUE)
+
+        list(APPEND SUPPORT_SOURCES ${CMAKE_CURRENT_BINARY_DIR}/${ASM_FILENAME}.obj)
+    endif()
+endif()
 
 set(FLAVOUR CoInterpreterWithQueueFFI CACHE STRING "The kind of VM to generate. Possible values: StackVM, CogVM, CoInterpreterWithQueueFFI")
 set(GENERATE_SOURCES TRUE CACHE BOOL "If it generates the sources")
@@ -96,9 +134,15 @@ if(FLAVOUR MATCHES "StackVM")
         set(VMSOURCEFILES ${GENERATED_SOURCE_DIR}/generated/vm/src/interp.c)
     endif()
 else()
-  set(VMSOURCEFILES
-    ${GENERATED_SOURCE_DIR}/generated/vm/src/cogit.c
-    ${GENERATED_SOURCE_DIR}/generated/vm/src/gcc3x-cointerp.c)
+    if(${FEATURE_GNUISATION})
+      set(VMSOURCEFILES
+        ${GENERATED_SOURCE_DIR}/generated/vm/src/cogit.c
+        ${GENERATED_SOURCE_DIR}/generated/vm/src/gcc3x-cointerp.c)
+    else()
+      set(VMSOURCEFILES
+        ${GENERATED_SOURCE_DIR}/generated/vm/src/cogit.c
+        ${GENERATED_SOURCE_DIR}/generated/vm/src/cointerp.c)
+    endif()
 endif()
 
 set(PLUGIN_GENERATED_FILES 
@@ -310,7 +354,7 @@ include(cmake/${CMAKE_SYSTEM_NAME}.cmake)
 
 set(GENERATED_SOURCES ${VMSOURCEFILES})
 
-set(SUPPORT_SOURCES	
+list(APPEND SUPPORT_SOURCES	
 	${CMAKE_CURRENT_SOURCE_DIR}/src/debug.c
 	${CMAKE_CURRENT_SOURCE_DIR}/src/utils.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/errorCode.c
