@@ -512,7 +512,7 @@ Cogit class >> cogToBytecodeMethodMapping [
 { #category : #translation }
 Cogit class >> declareCVarsIn: aCCodeGenerator [
 	#(	'coInterpreter' 'objectMemory' 'methodZone' 'objectRepresentation'
-		'cogBlockMethodSurrogateClass' 'cogMethodSurrogateClass' 'threadManager' 'processor' 'lastNInstructions' 'simulatedAddresses'
+		'cogBlockMethodSurrogateClass' 'cogMethodSurrogateClass' 'threadManager' 'lastNInstructions' 'simulatedAddresses'
 		'simulatedTrampolines' 'simulatedVariableGetters' 'simulatedVariableSetters'
 		'printRegisters' 'printInstructions' 'clickConfirm' 'singleStep') do:
 			[:simulationVariableNotNeededForRealVM|
@@ -525,6 +525,7 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator removeConstant: #COGMTVM. "this should be defined at compile time"
 	aCCodeGenerator
 		addHeaderFile:'<stddef.h>'; "for e.g. offsetof"
+		addHeaderFile:'"jit/jit.h"';
 		addHeaderFile:'"sqCogStackAlignment.h"';
 		addHeaderFile:'"dispdbg.h"'; "must precede cointerp.h & cogit.h otherwise NoDbgRegParms gets screwed up"
 		addHeaderFile:'"cogmethod.h"'.
@@ -609,7 +610,8 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 		declareVar: #CFramePointer type: #'void *';
 		declareVar: #CStackPointer type: #'void *';
 		declareVar: #minValidCallAddress type: #'usqIntptr_t';
-		declareVar: #debugPrimCallStackOffset type: #'usqIntptr_t'.
+		declareVar: #debugPrimCallStackOffset type: #'usqIntptr_t';
+		declareVar: 'processor' type: #implicit.
 	aCCodeGenerator vmClass generatorTable ifNotNil:
 		[:bytecodeGenTable|
 		aCCodeGenerator

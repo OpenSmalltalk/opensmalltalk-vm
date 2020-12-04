@@ -3253,7 +3253,10 @@ CogX64Compiler >> dispatchConcretizeProcessorSpecific [
 
 { #category : #'inline cacheing' }
 CogX64Compiler >> flushICacheFrom: startAddress "<Integer>" to: endAddress [ "<Integer>"
-	<cmacro: '(me,startAddress,endAddress) 0'>
+
+	"Defined in jit/jit.h"	
+	<doNotGenerate>
+
 	"On Intel processors where code and data have the same linear address, no
 	 special action is required to flush the instruciton cache.  One only needs to
 	 execute a serializing instruction (e.g. CPUID) if code and data are at different
