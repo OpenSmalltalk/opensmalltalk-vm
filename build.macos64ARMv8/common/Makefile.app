@@ -198,8 +198,10 @@ signapp:
 else
 signapp:
 	rm -rf $(APP)/Contents/MacOS/*.cstemp
-	codesign -f --deep -s "$(SIGNING_IDENTITY)" \
-			--entitlements ../common/entitlements.plist $(APP)
+	codesign --force --deep -s "$(SIGNING_IDENTITY)" \
+			--timestamp --options=runtime \
+			--entitlements ../common/entitlements.plist \
+			$(APP)
 endif
 
 touchapp:
