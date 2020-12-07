@@ -37,6 +37,7 @@
 
 #define SecondsFrom1901To1970      2177452800LL
 #define MicrosecondsFrom1901To1970 2177452800000000LL
+#define MicrosecondsFrom1601To1970 11644473600000000LL
 
 #define MicrosecondsPerSecond 1000000LL
 #define MillisecondsPerSecond 1000LL
@@ -126,8 +127,7 @@ currentUTCMicroseconds()
 
 	//The number of 100-nanosecond intervals since January 1, 1601
 	//Transform it to microseconds
-	//TODO: Convert to january 1901 relative
-	return l.QuadPart / 10;
+	return (l.QuadPart / 10) - MicrosecondsFrom1601To1970 + MicrosecondsFrom1901To1970;
 #else
 	struct timeval utcNow;
 	gettimeofday(&utcNow,0);
