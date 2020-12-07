@@ -3,19 +3,32 @@
  */
 #include <errno.h>
 #include <sys/types.h>
-#if defined(_WIN32)
-#include "dirent.h"
-#else
-#include <unistd.h>
-#endif
 #include <assert.h>
-
 
 #include "sq.h"
 #include "faCommon.h"
 #include <pharovm/debug.h>
 
+ /**
+  * Posix permissions are not defined in Windows, except when using
+  * Mingw or Cygwin. Since these constants are just standard, we define
+  * them for our purpose of emulating permissions.
+  */
+#if defined(_WIN32)
+#define S_IRUSR 0400
+#define S_IWUSR 0200
+#define S_IXUSR 0100
+#endif
+
 #define	S_IFLNK	0xA000
+
+//Define dirent.h after S_IRUSR & Co
+#if defined(_WIN32)
+#include "dirent.h"
+#else
+#include <unistd.h>
+#endif
+
 
 extern struct VirtualMachine * interpreterProxy;
 
