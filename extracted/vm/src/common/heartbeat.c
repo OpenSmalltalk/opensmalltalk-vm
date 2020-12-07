@@ -109,7 +109,6 @@ ioGetClockLogSizeUsecsIdxMsecsIdx(sqInt *np, void **usecsp, sqInt *uip, void **m
 
 
 /* Compute the current VM time basis, the number of microseconds from 1901. */
-
 static unsigned long long
 currentUTCMicroseconds()
 {
@@ -126,7 +125,7 @@ currentUTCMicroseconds()
 	l.HighPart = ft.dwHighDateTime;
 
 	//The number of 100-nanosecond intervals since January 1, 1601
-	//Transform it to microseconds
+	//Transform it to microseconds from 1901
 	return (l.QuadPart / 10) - MicrosecondsFrom1601To1970 + MicrosecondsFrom1901To1970;
 #else
 	struct timeval utcNow;
