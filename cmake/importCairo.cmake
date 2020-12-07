@@ -1,8 +1,4 @@
-find_package(Cairo)
-
-if (Cairo_FOUND)
-	add_dependencies(${VM_LIBRARY_NAME} Cairo::Cairo)
-elseif (DOWNLOAD_DEPENDENCIES)
+if (DOWNLOAD_DEPENDENCIES)
 
   # Cairo does not support building on CMake
   # Download it for now, except for linuxes
@@ -15,6 +11,4 @@ elseif (DOWNLOAD_DEPENDENCIES)
       add_third_party_dependency("libpng-1.2.49" "build/vm")
     endif()
   endif()
-else()
-	message(FATAL_ERROR "Could not find Cairo")
 endif()
