@@ -4835,6 +4835,8 @@ StackInterpreter >> closureIn: context numArgs: numArgs instructionPointer: init
 								eeInstantiateSmallClassIndex: ClassBlockClosureCompactIndex
 								format: objectMemory indexablePointersFormat
 								numSlots: ClosureFirstCopiedValueIndex + numCopied]
+							
+		"This path is for preSpur images"					
 		ifFalse:
 			[newClosure := objectMemory
 								eeInstantiateSmallClass: (objectMemory splObj: ClassBlockClosure)
@@ -21577,7 +21579,7 @@ StackInterpreter >> tryLoadNewPlugin: pluginString pluginEntries: pluginEntries 
 			 pluginEntries addLast: {plugin.
 									fnSymbol.
 									[plugin perform: fnSymbol. self].
-									cg accessorDepthForSelector: fnSymbol}].
+									cg accessorDepthCalculator accessorDepthForSelector: fnSymbol}].
 		 self transcript show: '...done'].
 	^pluginString asString -> plugin
 ]

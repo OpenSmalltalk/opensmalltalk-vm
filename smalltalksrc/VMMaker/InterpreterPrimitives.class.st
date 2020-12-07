@@ -824,9 +824,7 @@ InterpreterPrimitives >> primitiveArctan [
 	self successful ifTrue:
 		[self stackTopPut: (objectMemory floatObjectOf:
 								(self cCode: [rcvr atan]
-									inSmalltalk: [rcvr = rcvr
-													ifTrue: [rcvr arcTan]
-													ifFalse: [Float nan]]))]
+									inSmalltalk: [rcvr arcTan]))]
 ]
 
 { #category : #'object access primitives' }
@@ -1927,9 +1925,7 @@ InterpreterPrimitives >> primitiveExp [
 	self successful ifTrue:
 		[self stackTopPut: (objectMemory floatObjectOf:
 								(self cCode: [rcvr exp]
-									inSmalltalk: [rcvr = rcvr
-													ifTrue: [rcvr exp]
-													ifFalse: [Float nan]]))]
+									inSmalltalk: [rcvr exp]))]
 ]
 
 { #category : #'arithmetic float primitives' }
@@ -3025,9 +3021,7 @@ InterpreterPrimitives >> primitiveLogN [
 	self successful ifTrue:
 		[self stackTopPut: (objectMemory floatObjectOf:
 								(self cCode: [rcvr log]
-									inSmalltalk: [rcvr = rcvr
-													ifTrue: [rcvr ln]
-													ifFalse: [Float nan]]))]
+									inSmalltalk: [rcvr ln]))]
 ]
 
 { #category : #'memory space primitives' }
@@ -3982,9 +3976,7 @@ InterpreterPrimitives >> primitiveSine [
 	self successful ifTrue:
 		[self stackTopPut: (objectMemory floatObjectOf:
 								(self cCode: [rcvr sin]
-									inSmalltalk: [rcvr = rcvr
-													ifTrue: [rcvr sin]
-													ifFalse: [Float nan]]))]
+									inSmalltalk: [rcvr sin]))]
 ]
 
 { #category : #'indexing primitives' }
@@ -4995,9 +4987,7 @@ InterpreterPrimitives >> primitiveTruncated [
 	rcvr := self stackFloatValue: 0.
 	self successful ifTrue:
 		[self cCode: [self mod: rcvr f: (self addressOf: trunc)]
-			inSmalltalk: [trunc := rcvr = rcvr
-									ifTrue: [rcvr truncated]
-									ifFalse: [Float nan]].
+			inSmalltalk: [trunc := rcvr truncated].
 		 (trunc between: objectMemory minSmallInteger asFloat and: objectMemory maxSmallInteger asFloat)
 			ifTrue: [self stackTopPut: (objectMemory integerObjectOf: trunc asInteger)]
 			ifFalse: [self primitiveFail]]
