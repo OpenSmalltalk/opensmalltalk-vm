@@ -35,7 +35,7 @@ Class {
 { #category : #offset }
 StackBuilderTest >> addFullFrame [
 	| frame |
-	method := methodBuilder newMethod ; buildMethod.
+	method := methodBuilder newMethod numberOfTemporaries: 2; numberOfArguments: 2; buildMethod.
 
 	frame := stackBuilder addNewFrame.
 	instructionPointer := method + 17.
@@ -159,6 +159,34 @@ StackBuilderTest >> testCallerInstructionPointerIsPushedInStack [
 		equals: stackBuilder frames second instructionPointer.
 ]
 
+{ #category : #'test-setFromMethod' }
+StackBuilderTest >> testFrameHasMoreArgumentsThanMethodShouldFail [
+
+	| frame |
+	stackBuilder reset.
+
+	method := methodBuilder newMethod buildMethod.
+	frame := stackBuilder addNewFrame.
+	frame method: method;
+		argumentSize: 1.
+
+	self should: [ stackBuilder buildStack ] raise: Error
+]
+
+{ #category : #'test-setFromMethod' }
+StackBuilderTest >> testFrameHasMoreTemporariesThanMethodShouldFail [
+	
+	| frame |
+	stackBuilder reset.
+	
+	method := methodBuilder newMethod buildMethod.
+	frame := stackBuilder addNewFrame.
+	frame method: method;
+		temps: { memory nilObject }.
+
+	self should: [ stackBuilder buildStack ] raise: Error
+]
+
 { #category : #'test-VMstate' }
 StackBuilderTest >> testHeadFramePointerCallerCallerIsBaseFramePointer [
 	"We have 3 frames. 
@@ -175,7 +203,7 @@ StackBuilderTest >> testHeadFramePointerCallerIsNotBaseFramePointer [
 		equals: stackBuilder page baseFP
 ]
 
-{ #category : #'test-VMstate' }
+{ #category : #'test-setFromMethod' }
 StackBuilderTest >> testInstructionPointerIsSetBeforeFirstBytecodeOfLastMethodPushed [
 
 	method := methodBuilder newMethod buildMethod.
@@ -184,6 +212,38 @@ StackBuilderTest >> testInstructionPointerIsSetBeforeFirstBytecodeOfLastMethodPu
 	
 	self assert: interpreter instructionPointer
 		equals: (methodBuilder bytecodeAt: 0 forMethod: method)
+]
+
+{ #category : #'test-setFromMethod' }
+StackBuilderTest >> testMethodHasMoreArgumentsThanFrameShouldUpdateFrame [
+
+	| frame argNum |
+	stackBuilder reset.
+
+	argNum := 1.
+	method := methodBuilder newMethod ; numberOfArguments: argNum ; buildMethod.
+	frame := stackBuilder addNewFrame.
+	frame method: method.
+
+	self assert: frame argumentSize equals: 0.
+	stackBuilder buildStack.
+	self assert: frame argumentSize equals: argNum.
+]
+
+{ #category : #'test-setFromMethod' }
+StackBuilderTest >> testMethodHasMoreTemporariesThanFrameShouldUpdateFrame [
+
+	| frame tempNum |
+	stackBuilder reset.
+
+	tempNum := 1.
+	method := methodBuilder newMethod ; numberOfTemporaries: tempNum ; buildMethod.
+	frame := stackBuilder addNewFrame.
+	frame method: method.
+
+	self assert: frame temps isEmpty.
+	stackBuilder buildStack.
+	self assert: frame temps equals: (OrderedCollection new: tempNum withAll: memory nilObject).
 ]
 
 { #category : #'test-order' }

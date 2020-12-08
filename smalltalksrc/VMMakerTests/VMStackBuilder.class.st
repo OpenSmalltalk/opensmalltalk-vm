@@ -98,6 +98,9 @@ VMStackBuilder >> initialize [
 	super initialize.
 	frames := OrderedCollection new. "will be treated in reverse"
 	args := OrderedCollection new.
+	
+	"used to reset"
+	page := nil.
 ]
 
 { #category : #accessing }
@@ -173,6 +176,11 @@ VMStackBuilder >> pushFrame: aFrame [
 VMStackBuilder >> pushFrames [
 	self pushBaseFrame.
 	self pushAllButFirstFrames.
+]
+
+{ #category : #'as yet unclassified' }
+VMStackBuilder >> reset [
+	self initialize.
 ]
 
 { #category : #build }
