@@ -1,4 +1,5 @@
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wl,-rpath=.")
+set(PHARO_BIN_LOCATION "`/usr/bin/dirname \"\$0\"`/../lib" CACHE STRING "The default location of the PHARO bin, used by the launch.sh.in")
 
 function(add_platform_headers)
 target_include_directories(${VM_LIBRARY_NAME}
