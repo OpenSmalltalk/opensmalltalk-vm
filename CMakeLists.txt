@@ -77,6 +77,8 @@ set(FEATURE_LIB_CAIRO TRUE CACHE BOOL "Build Cairo support")
 set(FEATURE_LIB_FREETYPE2 TRUE CACHE BOOL "Build Cairo support")
 set(FEATURE_LIB_GIT2 TRUE CACHE BOOL "Build LibGit2 support")
 
+set(PHARO_LIBRARY_PATH "@executable_path/Plugins" CACHE STRING "The RPATH to use in the build")
+
 # If we are generating sources, set the source dir as the generation source dir.
 # Otherwise set it to by default to the current source dir, parametrizable
 if(${GENERATE_SOURCES})

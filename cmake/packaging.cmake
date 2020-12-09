@@ -37,6 +37,8 @@ install(DIRECTORY
     "${CMAKE_CURRENT_SOURCE_DIR}/resources"
     "${CMAKE_CURRENT_SOURCE_DIR}/scripts"
     "${CMAKE_CURRENT_SOURCE_DIR}/src"
+    "${CMAKE_CURRENT_SOURCE_DIR}/ffiTestLibrary"
+    "${CMAKE_CURRENT_SOURCE_DIR}/ffi"
     DESTINATION pharo-vm
     COMPONENT c-src
 )
