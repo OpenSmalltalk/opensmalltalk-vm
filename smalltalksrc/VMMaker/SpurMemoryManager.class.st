@@ -9938,6 +9938,12 @@ SpurMemoryManager >> outOfPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag
 		[becomeEffectsFlags := becomeEffectsFlags bitOr: OldBecameNewFlag]
 ]
 
+{ #category : #accessing }
+SpurMemoryManager >> outerContextOf: aBlockClosureOop [
+
+	^ self fetchPointer: ClosureOuterContextIndex ofObject: aBlockClosureOop
+]
+
 { #category : #'simulation only' }
 SpurMemoryManager >> ownVM: flags [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
