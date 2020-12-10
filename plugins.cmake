@@ -98,7 +98,6 @@ endif()
 #
 
 add_vm_plugin(SurfacePlugin)
-target_link_libraries(SurfacePlugin PRIVATE SqueakFFIPrims)
 
 #
 # SqueakFFIPrims Plugin
