@@ -30,7 +30,7 @@ typedef struct __TSQueueNode {
  **/
 TSQueue *threadsafe_queue_new(Semaphore *semaphore) {
 	Semaphore* mutex;
-	if (platform_semaphore_new(1) == NULL) {
+	if ((mutex = platform_semaphore_new(1)) == NULL) {
 		perror("mutex initialization error in make_queue");
 		return 0;
 	}
