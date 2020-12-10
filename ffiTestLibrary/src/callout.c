@@ -1,31 +1,43 @@
-#include <unistd.h>
 #include "testLibrary.h"
 
+//Define proper exports on Win32
+#ifdef _WIN32
+# define EXPORT(returnType) __declspec( dllexport ) returnType
+#else
+# define EXPORT(returnType) returnType
+#endif
+
 //Deprecated
-int returnAnswer(){
+EXPORT(int) returnAnswer(){
 	return 42;
 }
 
 //Deprecated
-int sumTwoNumbers(int a, int b){
+EXPORT(int) sumTwoNumbers(int a, int b){
   return a+b; 
 }
 
 //Deprecated
-float sumAFloatAndADouble(float a, double b){
+EXPORT(int) sumAFloatAndADouble(float a, double b){
   return a+b; 
 }
 
-int shortCallout(){
+EXPORT(int) shortCallout(){
   return 42;
 }
 
-int longCallout(int seconds){
-  sleep(seconds); // will sleep for number of seconds
-  return 1;
+EXPORT(int) longCallout(int seconds){
+
+	// will sleep for number of seconds
+#if defined(_WIN32)
+	Sleep(seconds * 1000);
+#else
+	sleep(seconds);
+#endif
+	return 1;
 }
 
-int multipleArgumentCallout(
+EXPORT(int) multipleArgumentCallout(
   int arg1,
   int arg2,
   int arg3,
