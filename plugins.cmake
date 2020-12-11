@@ -46,7 +46,7 @@ endif()
 
 addLibraryWithRPATH(FilePlugin
     ${FilePlugin_SOURCES}
-    ${GENERATED_SOURCE_DIR}/generated/plugins/src/FilePlugin/FilePlugin.c)
+    ${PHARO_CURRENT_GENERATED}/plugins/src/FilePlugin/FilePlugin.c)
 
 if(OSX)
     target_link_libraries(FilePlugin PRIVATE "-framework CoreFoundation")

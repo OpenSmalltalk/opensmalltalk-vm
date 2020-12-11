@@ -62,7 +62,7 @@ endif()
 message(STATUS "Compiling for architecture: ${CMAKE_SYSTEM_PROCESSOR}")
 
 
-set(FLAVOUR CoInterpreterWithQueueFFI CACHE STRING "The kind of VM to generate. Possible values: StackVM, CogVM, CoInterpreterWithQueueFFI")
+set(FLAVOUR CoInterpreter CACHE STRING "The kind of VM to generate. Possible values: StackVM, CoInterpreter")
 set(GENERATE_SOURCES TRUE CACHE BOOL "If it generates the sources")
 set(ALWAYS_INTERACTIVE FALSE CACHE BOOL "If this VM will always add interactive or not. If it is set, the headless parameter is not by default true")
 set(FEATURE_FFI TRUE CACHE BOOL "Configure and compile support for FFI in the VM")
@@ -91,23 +91,8 @@ if (${FEATURE_COMPILE_INLINE_MEMORY_ACCESSORS})
     add_compile_definitions(USE_INLINE_MEMORY_ACCESSORS=1)
 endif()
 
-if(FLAVOUR MATCHES "StackVM")
-    if(${FEATURE_GNUISATION})
-        set(VMSOURCEFILES ${GENERATED_SOURCE_DIR}/generated/vm/src/gcc3x-interp.c)
-    else()
-        set(VMSOURCEFILES ${GENERATED_SOURCE_DIR}/generated/vm/src/interp.c)
-    endif()
-else()
-  set(VMSOURCEFILES
-    ${GENERATED_SOURCE_DIR}/generated/vm/src/cogit.c
-    ${GENERATED_SOURCE_DIR}/generated/vm/src/gcc3x-cointerp.c)
-endif()
 
-set(PLUGIN_GENERATED_FILES 
-  	${GENERATED_SOURCE_DIR}/generated/plugins/src/FilePlugin/FilePlugin.c)
-
-
-if(FLAVOUR MATCHES "CoInterpreterWithQueueFFI")
+if(FLAVOUR MATCHES "CoInterpreter")
   add_definitions(-DASYNC_FFI_QUEUE=1)
 endif()
 
@@ -259,7 +244,6 @@ else()
 	message(FATAL_ERROR "Failed to find a 64 bits integer type.")
 endif()
 
-
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_CURRENT_BINARY_DIR}/build/vm")
 
 #If in OSX, configure creation of Bundle
@@ -299,10 +283,8 @@ check_library_exists(uuid uuidgen "" HAVE_UUIDGEN)
 check_library_exists(uuid uuid_generate "" HAVE_UUID_GENERATE)
 
 
-if(GENERATE_SOURCES)
-  #Include targets to build the dev environment and the sources
-  include(cmake/vmmaker.cmake)
-endif()
+#Include targets to build the dev environment and the sources
+include(cmake/vmmaker.cmake)
 
 #Generating config file
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/pharovm/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/build/include/pharovm/config.h)
@@ -387,7 +369,7 @@ PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include
     ${CMAKE_CURRENT_BINARY_DIR}/build/include/pharovm/
-    ${GENERATED_SOURCE_DIR}/generated/vm/include
+    ${PHARO_CURRENT_GENERATED}/vm/include
 PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include/semaphores
 )
