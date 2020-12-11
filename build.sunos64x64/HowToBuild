@@ -4,6 +4,7 @@ How To Build On Solaris
 
 Contents:
         - Overview
+	- /etc/security/policy.conf
 	- Audio Headers
 	- OpenSSL
 	- Squeak Profile
@@ -37,6 +38,45 @@ To run the vm, consider running the process in the RT (real-time) class.
  
 For Solaris specific suggestions you can contact me (David Stes)
 or alternatively (and maybe better!) the OpenSmalltalk team ...
+
+/etc/security/policy.conf
+-------------------------
+
+It is possible that the Squeak VM is trying to run a special thread
+(LWP or light weight process) for heartbeat at a non-default priority.
+
+If you run squeak and if you get the following error:
+
+	pthread_setschedparam failed: Not owner
+
+This is due to a lack of "proc_priocntl" privilege.
+
+# ppriv -v -l proc_priocntl
+proc_priocntl
+    Allows a process to elevate its priority above its current level.
+    Allows a process to change its scheduling class to any scheduling class,
+    including the RT class.
+
+If so, then consider change the following in the /etc/security/policy.conf:
+
+	cp /etc/security/policy.conf /etc/security/policy.conf.orig
+
+change
+
+	#PRIV_DEFAULT=basic
+
+to
+
+	PRIV_DEFAULT=basic,proc_priocntl
+
+You can run squeak in a Solaris zone and do the above in a zone only.
+If you run squeak in a zone, you may also have to set the privilege limit:
+
+# zonecfg -z example-zone info | grep limitpriv
+limitpriv: default,proc_priocntl
+
+If you do not want to change the policy.conf file, you can also read on,
+and see the discussion below for running squeak with 'pfexec' (profile exec).
 
 Audio Headers
 -------------
