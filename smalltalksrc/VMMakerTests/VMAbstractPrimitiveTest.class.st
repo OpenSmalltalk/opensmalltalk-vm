@@ -153,7 +153,7 @@ VMAbstractPrimitiveTest >> setUp [
 	memory classArray: (self newClassInOldSpaceWithSlots: 0 instSpec: memory arrayFormat ).
 	memory classByteArray: (self newClassInOldSpaceWithSlots: 0 instSpec: (memory byteFormatForNumBytes: 0) ).
 
-	classFloat := self newClassInOldSpaceWithSlots: 0 instSpec: memory firstLongFormat.
+  classFloat := self newClassInOldSpaceWithSlots: 0 instSpec: memory firstLongFormat.
 	memory setHashBitsOf: classFloat to: ClassFloatCompactIndex.
 	memory
 		storePointer: ClassFloatCompactIndex
@@ -176,7 +176,6 @@ VMAbstractPrimitiveTest >> setUp [
 		storePointer: ClassLargeNegativeIntegerCompactIndex
 		ofObject: memory classTableFirstPage
 		withValue: classLargeNegativeInteger.
-
 
 	memory lastHash: 1
 ]

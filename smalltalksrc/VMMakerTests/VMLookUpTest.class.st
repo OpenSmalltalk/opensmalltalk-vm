@@ -421,7 +421,8 @@ VMLookUpTest >> testPrimitivePerformSetsIPBeforeFirstBytecode [
 	interpreter argumentCount: 1.
 	interpreter primitivePerform.
 	
-	self assert: interpreter instructionPointer equals: methodOop + objectHeaderSize + wordSize - 1 "+ header object + header of compiledMethod - (1)"
- 	
+	"Minus one because it's *before* first bytecode"
+	self assert: interpreter instructionPointer 
+		equals: (methodBuilder bytecodeAt: 1 forMethod: methodOop) - 1.
 
 ]

@@ -1,18 +1,6 @@
 include(plugins.macros.cmake)
 
 #
-# SecurityPlugin - Dummy Version
-#
-
-message(STATUS "Adding plugin: SecurityPlugin")    
-
-file(GLOB SecurityPlugin_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/plugins/SecurityPlugin/common/*.c   
-)
-
-addLibraryWithRPATH(SecurityPlugin ${SecurityPlugin_SOURCES})
-
-#
 # FilePlugin
 #
 message(STATUS "Adding plugin: FilePlugin")
@@ -50,20 +38,22 @@ else()
     )
     
     file(GLOB FilePlugin_SOURCES
-        ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/FilePlugin/src/win/*.c   
+        ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/FilePlugin/src/win/*.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/fileUtilsWin.c
         ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/src/win/sqWin32Directory.c        
     )    
 endif()
 
-addLibraryWithRPATH(FilePlugin ${FilePlugin_SOURCES} 	${CMAKE_CURRENT_BINARY_DIR}/generated/plugins/src/FilePlugin/FilePlugin.c)
+addLibraryWithRPATH(FilePlugin
+    ${FilePlugin_SOURCES}
+    ${GENERATED_SOURCE_DIR}/generated/plugins/src/FilePlugin/FilePlugin.c)
 
 if(OSX)
     target_link_libraries(FilePlugin "-framework CoreFoundation")
 endif()
 
 if(WIN)
-    target_compile_definitions(FilePlugin PUBLIC "-DWIN32_FILE_SUPPORT")
+    target_compile_definitions(FilePlugin PRIVATE "-DWIN32_FILE_SUPPORT")
 endif()
 
 
@@ -84,18 +74,20 @@ file(GLOB UUIDPlugin_SOURCES
 )
 
 addLibraryWithRPATH(UUIDPlugin ${UUIDPlugin_SOURCES})
-if(WIN)
+if(${WIN})
     target_link_libraries(UUIDPlugin "-lole32")
+elseif(${UNIX} AND NOT ${OSX})
+    target_link_libraries(UUIDPlugin uuid)
 endif()
+
 #
 # Socket Plugin
-# 
-
-if(WIN)
+#
+if (${FEATURE_NETWORK})
     add_vm_plugin(SocketPlugin)
+  if(WIN)
     target_link_libraries(SocketPlugin "-lWs2_32")
-else()
-    add_vm_plugin(SocketPlugin)
+  endif()
 endif()
 
 #
@@ -103,6 +95,7 @@ endif()
 #
 
 add_vm_plugin(SurfacePlugin)
+target_link_libraries(SurfacePlugin SqueakFFIPrims)
 
 #
 # SqueakFFIPrims Plugin
@@ -112,9 +105,9 @@ add_vm_plugin(SurfacePlugin)
 # This solution is not portable to different architectures!
 #
 
-include_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/SqueakFFIPrims/include/common
-)
+if(${FEATURE_FFI})
+
+message(STATUS "Adding plugin: SqueakFFIPrims")
 
 set(SqueakFFIPrims_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/SqueakFFIPrims/src/common/SqueakFFIPrims.c 
@@ -122,24 +115,24 @@ set(SqueakFFIPrims_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/SqueakFFIPrims/src/common/sqFFIPlugin.c
     ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/SqueakFFIPrims/src/common/sqFFITestFuncs.c
 )
-
 addLibraryWithRPATH(SqueakFFIPrims ${SqueakFFIPrims_SOURCES})
+target_include_directories(SqueakFFIPrims 
+PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/SqueakFFIPrims/include/common
+)
+
 
 #
 # IA32ABI Plugin
 #
-
-include_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/IA32ABI/include/common
-)
 
 set(IA32ABI_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/IA32ABI/src/common/IA32ABI.c 
     ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/IA32ABI/src/common/AlienSUnitTestProcedures.c
     ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/IA32ABI/src/common/xabicc.c
 )
-
-if(WIN)
+# Only add this file for Win x86_64
+if(WIN AND CMAKE_SYSTEM_PROCESSOR MATCHES x86_64)
     set(IA32ABI_SOURCES
         ${IA32ABI_SOURCES}
         ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/IA32ABI/src/common/x64win64stub.c
@@ -147,6 +140,16 @@ if(WIN)
 endif()
 
 addLibraryWithRPATH(IA32ABI ${IA32ABI_SOURCES})
+
+target_include_directories(IA32ABI
+    PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/IA32ABI/include/common
+)
+
+target_link_libraries(IA32ABI ${VM_LIBRARY_NAME})
+
+endif()
+
 
 #
 # LargeIntegers Plugin
@@ -282,11 +285,10 @@ addLibraryWithRPATH(SqueakSSL ${SqueakSSL_SOURCES})
 if(OSX)
     target_link_libraries(SqueakSSL "-framework CoreFoundation")
     target_link_libraries(SqueakSSL "-framework Security")
-elseif(WIN)
-    target_link_libraries(SqueakSSL "-lSecur32")
-    target_link_libraries(SqueakSSL "-lCrypt32")
+elseif(${WIN})
+    target_link_libraries(SqueakSSL Crypt32 Secur32)
 else()
-    target_link_libraries(SqueakSSL "-lssl")    
+    target_link_libraries(SqueakSSL ssl)    
 endif()
 
 

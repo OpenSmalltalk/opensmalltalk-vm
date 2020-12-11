@@ -2,6 +2,9 @@
 #include <Windows.h>
 #include <DbgHelp.h>
 
+#ifndef PATH_MAX
+#define PATH_MAX MAX_PATH
+#endif
 EXPORT(void) registerCurrentThreadToHandle();
 
 void ifValidWriteBackStackPointersSaveTo(void *theCFP, void *theCSP, char **savedFPP, char **savedSPP);
@@ -20,6 +23,7 @@ EXPORT(void) printMachineCallStack(PCONTEXT ctx , FILE* output);
 
 #if COGVM
 	usqInt stackLimitAddress(void);
+	void printCogMethodFor(void* address);
 #endif
 
 #define MAX_THREADID_TO_REGISTER 50
@@ -136,34 +140,34 @@ EXPORT(void) printCrashDebugInformation(LPEXCEPTION_POINTERS exp){
 
 char* getExceptionMessage(LPEXCEPTION_POINTERS exp){
 	switch(exp->ExceptionRecord->ExceptionCode){
-		case EXCEPTION_ACCESS_VIOLATION: return "EXCEPTION_ACCESS_VIOLATION";
-		case EXCEPTION_ARRAY_BOUNDS_EXCEEDED: return "EXCEPTION_ARRAY_BOUNDS_EXCEEDED";
-		case EXCEPTION_BREAKPOINT: return "EXCEPTION_BREAKPOINT";
-		case EXCEPTION_DATATYPE_MISALIGNMENT: return "EXCEPTION_DATATYPE_MISALIGNMENT";
-		case EXCEPTION_FLT_DENORMAL_OPERAND: return "EXCEPTION_FLT_DENORMAL_OPERAND";
-		case EXCEPTION_FLT_DIVIDE_BY_ZERO: return "EXCEPTION_FLT_DIVIDE_BY_ZERO";
-		case EXCEPTION_FLT_INEXACT_RESULT: return "EXCEPTION_FLT_INEXACT_RESULT";
-		case EXCEPTION_FLT_INVALID_OPERATION: return "EXCEPTION_FLT_INVALID_OPERATION";
-		case EXCEPTION_FLT_OVERFLOW: return "EXCEPTION_FLT_OVERFLOW";
-		case EXCEPTION_FLT_STACK_CHECK: return "EXCEPTION_FLT_STACK_CHECK";
-		case EXCEPTION_FLT_UNDERFLOW: return "EXCEPTION_FLT_UNDERFLOW";
-		case EXCEPTION_ILLEGAL_INSTRUCTION: return "EXCEPTION_ILLEGAL_INSTRUCTION";
-		case EXCEPTION_IN_PAGE_ERROR: return "EXCEPTION_IN_PAGE_ERROR";
-		case EXCEPTION_INT_DIVIDE_BY_ZERO: return "EXCEPTION_INT_DIVIDE_BY_ZERO";
-		case EXCEPTION_INT_OVERFLOW: return "EXCEPTION_INT_OVERFLOW";
-		case EXCEPTION_INVALID_DISPOSITION: return "EXCEPTION_INVALID_DISPOSITION";
-		case EXCEPTION_NONCONTINUABLE_EXCEPTION: return "EXCEPTION_NONCONTINUABLE_EXCEPTION";
-		case EXCEPTION_PRIV_INSTRUCTION: return "EXCEPTION_PRIV_INSTRUCTION";
-		case EXCEPTION_SINGLE_STEP: return "EXCEPTION_SINGLE_STEP";
-		case EXCEPTION_STACK_OVERFLOW: return "EXCEPTION_STACK_OVERFLOW";
+		case EXCEPTION_ACCESS_VIOLATION: return (char*)"EXCEPTION_ACCESS_VIOLATION";
+		case EXCEPTION_ARRAY_BOUNDS_EXCEEDED: return (char*)"EXCEPTION_ARRAY_BOUNDS_EXCEEDED";
+		case EXCEPTION_BREAKPOINT: return (char*)"EXCEPTION_BREAKPOINT";
+		case EXCEPTION_DATATYPE_MISALIGNMENT: return (char*)"EXCEPTION_DATATYPE_MISALIGNMENT";
+		case EXCEPTION_FLT_DENORMAL_OPERAND: return (char*)"EXCEPTION_FLT_DENORMAL_OPERAND";
+		case EXCEPTION_FLT_DIVIDE_BY_ZERO: return (char*)"EXCEPTION_FLT_DIVIDE_BY_ZERO";
+		case EXCEPTION_FLT_INEXACT_RESULT: return (char*)"EXCEPTION_FLT_INEXACT_RESULT";
+		case EXCEPTION_FLT_INVALID_OPERATION: return (char*)"EXCEPTION_FLT_INVALID_OPERATION";
+		case EXCEPTION_FLT_OVERFLOW: return (char*)"EXCEPTION_FLT_OVERFLOW";
+		case EXCEPTION_FLT_STACK_CHECK: return (char*)"EXCEPTION_FLT_STACK_CHECK";
+		case EXCEPTION_FLT_UNDERFLOW: return (char*)"EXCEPTION_FLT_UNDERFLOW";
+		case EXCEPTION_ILLEGAL_INSTRUCTION: return (char*)"EXCEPTION_ILLEGAL_INSTRUCTION";
+		case EXCEPTION_IN_PAGE_ERROR: return (char*)"EXCEPTION_IN_PAGE_ERROR";
+		case EXCEPTION_INT_DIVIDE_BY_ZERO: return (char*)"EXCEPTION_INT_DIVIDE_BY_ZERO";
+		case EXCEPTION_INT_OVERFLOW: return (char*)"EXCEPTION_INT_OVERFLOW";
+		case EXCEPTION_INVALID_DISPOSITION: return (char*)"EXCEPTION_INVALID_DISPOSITION";
+		case EXCEPTION_NONCONTINUABLE_EXCEPTION: return (char*)"EXCEPTION_NONCONTINUABLE_EXCEPTION";
+		case EXCEPTION_PRIV_INSTRUCTION: return (char*)"EXCEPTION_PRIV_INSTRUCTION";
+		case EXCEPTION_SINGLE_STEP: return (char*)"EXCEPTION_SINGLE_STEP";
+		case EXCEPTION_STACK_OVERFLOW: return (char*)"EXCEPTION_STACK_OVERFLOW";
 		default:
-			return "Unknown Exception";
+			return (char*)"Unknown Exception";
 	}
 }
 
 void reportStackState(LPEXCEPTION_POINTERS exp, char* date, FILE* output){
 
-	fprintf(output,"\n%s(%d) at 0x%016llx - %s\n\n", getExceptionMessage(exp), exp->ExceptionRecord->ExceptionCode, exp->ExceptionRecord->ExceptionAddress, date);
+	fprintf(output,"\n%s(%ld) at 0x%016llx - %s\n\n", getExceptionMessage(exp), exp->ExceptionRecord->ExceptionCode, (unsigned long long)exp->ExceptionRecord->ExceptionAddress, date);
 	fprintf(output,"%s\n%s\n\n", GetAttributeString(0), getVersionInfo(1));
 
 
@@ -201,12 +205,21 @@ void captureStack(PCONTEXT context, STACKFRAME64* frames, int framePointersSize,
 	frame.AddrPC.Mode = AddrModeFlat;
 	frame.AddrFrame.Mode = AddrModeFlat;
 	frame.AddrStack.Mode = AddrModeFlat;
-
+#if defined(_M_ARM64)
+	frame.AddrPC.Offset = context->Pc;
+	frame.AddrFrame.Offset = context->Fp;
+	frame.AddrStack.Offset = context->Sp;
+#elif defined(_WIN64)
 	frame.AddrPC.Offset = context->Rip;
 	frame.AddrFrame.Offset = context->Rbp;
 	frame.AddrStack.Offset = context->Rsp;
-
-	for (size_t i = 0; i < framePointersSize + frameSkip; i++){
+#else
+	frame.AddrPC.Offset = context->Eip;
+	frame.AddrFrame.Offset = context->Ebp;
+	frame.AddrStack.Offset = context->Esp;
+#endif
+	size_t i;
+	for (i = 0; i < framePointersSize + frameSkip; i++){
 		if (StackWalk64(IMAGE_FILE_MACHINE_AMD64,
 				GetCurrentProcess(),
 				GetCurrentThread(),
@@ -228,8 +241,6 @@ void captureStack(PCONTEXT context, STACKFRAME64* frames, int framePointersSize,
 }
 
 #define NUMBER_OF_STACKS 32
-
-void printCogMethodFor(void *address);
 
 void printSymbolInfo(STACKFRAME64 *frame, FILE* output){
 
@@ -253,11 +264,15 @@ void printSymbolInfo(STACKFRAME64 *frame, FILE* output){
 		fprintf(output, "%s", symbol->Name);
 
 		if (SymGetLineFromAddr64(GetCurrentProcess(), frame->AddrPC.Offset, &displacement, &line)) {
-			fprintf(output, " (%s:%d)", line.FileName, line.LineNumber);
+			fprintf(output, " (%s:%ld)", line.FileName, line.LineNumber);
 		}
 		fprintf(output, "\n");
 	}else{
+#if COGVM
 		printCogMethodFor(frame->AddrPC.Offset);
+#else
+		fprintf(output, "Cannot identify frame method");
+#endif
 	}
 
 }
@@ -271,8 +286,8 @@ EXPORT(void) printMachineCallStack(PCONTEXT ctx, FILE* output){
 
 	fprintf(output,"\n\nC Callstack:\n\n");
 
-
-	for(int i=0; i< NUMBER_OF_STACKS; i++){
+	int i;
+	for(i = 0; i< NUMBER_OF_STACKS; i++){
 
 		if(frames[i].AddrPC.Offset == 0)
 			break;
@@ -315,7 +330,39 @@ EXPORT(void) printRegisterState(PCONTEXT regs, FILE* output){
 
 	fprintf(output,"\n\nRegisters:\n");
 
-
+#if _M_IX86
+	fprintf(output,
+		"ContextFlags: 0x%016lx\n"
+		"\teax 0x%016lx ebx 0x%016lx ecx 0x%016lx edx 0x%016lx\n"
+		"\tedi 0x%016lx esi 0x%016lx ebp 0x%016lx esp 0x%016lx\n"
+		"\trip 0x%016lx\n",
+		regs->ContextFlags,
+		regs->Eax, regs->Ebx, regs->Ecx, regs->Edx,
+		regs->Edi, regs->Esi, regs->Ebp, regs->Esp,
+		regs->Eip);
+#elif _M_ARM64
+	fprintf(output,
+		"ContextFlags: 0x%016lx\n"
+		"\tX0 0x%016lx X1 0x%016lx X2 0x%016lx X3 0x%016lx\n"
+		"\tX4 0x%016lx X5 0x%016lx X6 0x%016lx X7 0x%016lx\n"
+		"\tX8 0x%016lx X9 0x%016lx X10 0x%016lx X11 0x%016lx\n"
+		"\tX12 0x%016lx X13 0x%016lx X14 0x%016lx X15 0x%016lx\n"
+		"\tX16 0x%016lx X17 0x%016lx X16 0x%016lx X17 0x%016lx\n"
+		"\tX20 0x%016lx X21 0x%016lx X22 0x%016lx X23 0x%016lx\n"
+		"\tX24 0x%016lx X25 0x%016lx X26 0x%016lx X27 0x%016lx\n"
+		"\tX28 0x%016lx FP 0x%016lx LR 0x%016lx SP 0x%016lx\n"
+		"\tPC 0x%016lx\n",
+		regs->ContextFlags,
+		regs->X0, regs->X1, regs->X2, regs->X3,
+		regs->X4, regs->X5, regs->X6, regs->X7,
+		regs->X8, regs->X9, regs->X10, regs->X11,
+		regs->X12, regs->X13, regs->X14, regs->X15,
+		regs->X16, regs->X17, regs->X18, regs->X19,
+		regs->X20, regs->X21, regs->X22, regs->X23,
+		regs->X24, regs->X25, regs->X26, regs->X27,
+		regs->X28, regs->Fp, regs->Lr, regs->Sp,
+		regs->Pc);
+#else
 	fprintf(output,
 			"ContextFlags: 0x%016llx\n"
 			"\trax 0x%016llx rbx 0x%016llx rcx 0x%016llx rdx 0x%016llx\n"
@@ -325,8 +372,9 @@ EXPORT(void) printRegisterState(PCONTEXT regs, FILE* output){
 			"\trip 0x%016llx\n",
 			regs->ContextFlags,
 			regs->Rax, regs->Rbx, regs->Rcx, regs->Rdx,
-			regs->Rdi, regs->Rdi, regs->Rbp, regs->Rsp,
+			regs->Rdi, regs->Rsi, regs->Rbp, regs->Rsp,
 			regs->R8 , regs->R9 , regs->R10, regs->R11,
 			regs->R12, regs->R13, regs->R14, regs->R15,
 			regs->Rip);
+#endif
 }

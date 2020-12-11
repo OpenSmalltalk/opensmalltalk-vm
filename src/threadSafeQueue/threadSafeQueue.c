@@ -1,6 +1,6 @@
 #include "pharovm/threadSafeQueue/threadSafeQueue.h"
+#include "pharovm/semaphores/platformSemaphore.h"
 
-#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -12,7 +12,7 @@
 struct __TSQueue {
 	struct __TSQueueNode *first;
 	struct __TSQueueNode *last;
-	pthread_mutex_t mutex;
+	Semaphore *mutex;
 	Semaphore *semaphore;
 };
 
@@ -29,9 +29,9 @@ typedef struct __TSQueueNode {
  *  Returns a pointer to the newly created queue
  **/
 TSQueue *threadsafe_queue_new(Semaphore *semaphore) {
-	pthread_mutex_t mutex;
-	if (pthread_mutex_init(&(mutex), NULL) != 0) {
-		perror("pthread_mutex_init error in make_queue");
+	Semaphore* mutex;
+	if (platform_semaphore_new(1) == NULL) {
+		perror("mutex initialization error in make_queue");
 		return 0;
 	}
 
@@ -49,8 +49,8 @@ TSQueue *threadsafe_queue_new(Semaphore *semaphore) {
  *  Fails if pointer is invalid
  **/
 void threadsafe_queue_free(TSQueue *queue) {
-	pthread_mutex_t mutex = queue->mutex;
-	pthread_mutex_lock(&mutex);
+	Semaphore *mutex = queue->mutex;
+	platform_semaphore_wait(mutex);
 	TSQueueNode *node = queue->first;
 	TSQueueNode *next_node = node;
 	while (node) {
@@ -59,7 +59,8 @@ void threadsafe_queue_free(TSQueue *queue) {
 		node = next_node;
 	}
 	free(queue);
-	pthread_mutex_unlock(&mutex);
+	platform_semaphore_signal(mutex);
+	//TODO: shouldn't we free the mutex here? if so, we should check if the mutex is alive after every wait
 }
 
 /**
@@ -68,13 +69,13 @@ void threadsafe_queue_free(TSQueue *queue) {
 int threadsafe_queue_size(TSQueue *queue) {
     int size = 0;
     TSQueueNode *node;
-    pthread_mutex_lock(&(queue->mutex));
+	platform_semaphore_wait(queue->mutex);
     node = queue->first;
     while(node){
         size++;
         node = node->next;
     }
-    pthread_mutex_unlock(&(queue->mutex));
+	platform_semaphore_signal(queue->mutex);
     return size;
 }
 
@@ -88,7 +89,7 @@ void threadsafe_queue_put(TSQueue *queue, void *element) {
 	node->element = element;
 	node->next = NULL;
 
-	pthread_mutex_lock(&(queue->mutex));
+	platform_semaphore_wait(queue->mutex);
 	if (!queue->first) {
 		queue->first = node;
 		queue->last = node;
@@ -96,7 +97,7 @@ void threadsafe_queue_put(TSQueue *queue, void *element) {
 		queue->last->next = node;
 		queue->last = node;
 	}
-	pthread_mutex_unlock(&(queue->mutex));
+	platform_semaphore_signal(queue->mutex);
 
 	queue->semaphore->signal(queue->semaphore);
 }
@@ -122,14 +123,14 @@ void *threadsafe_queue_take(TSQueue *queue) {
 
 	void *element = node->element;
 
-	pthread_mutex_lock(&(queue->mutex));
+	platform_semaphore_wait(queue->mutex);
 	if (queue->first == queue->last) {
 		queue->first = NULL;
 		queue->last = NULL;
 	} else {
 		queue->first = node->next;
 	}
-	pthread_mutex_unlock(&(queue->mutex));
+	platform_semaphore_signal(queue->mutex);
 	free(node);
 	return element;
 }

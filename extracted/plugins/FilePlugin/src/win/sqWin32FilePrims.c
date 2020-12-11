@@ -78,11 +78,8 @@ int thisSession = 0;
 int hasCaseSensitiveDuplicate(WCHAR *path);
 
 typedef union {
-  struct {
-    DWORD dwLow;
-    DWORD dwHigh;
-  };
-  squeakFileOffsetType offset;
+	LARGE_INTEGER li;
+	squeakFileOffsetType offset;
 } win32FileOffset;
 
 
@@ -99,7 +96,7 @@ sqInt sqFileAtEnd(SQFile *f) {
   if (f->isStdioStream)
     return 0;
   ofs.offset = 0;
-  ofs.dwLow = SetFilePointer(FILE_HANDLE(f), 0, &ofs.dwHigh, FILE_CURRENT);
+  ofs.li.LowPart = SetFilePointer(FILE_HANDLE(f), 0, &ofs.li.HighPart, FILE_CURRENT);
   return ofs.offset >= sqFileSize(f);
 }
 
@@ -151,7 +148,7 @@ squeakFileOffsetType sqFileGetPosition(SQFile *f) {
   if (!sqFileValid(f))
     FAIL();
   ofs.offset = 0;
-  ofs.dwLow = SetFilePointer(FILE_HANDLE(f), 0, &ofs.dwHigh, FILE_CURRENT);
+  ofs.li.LowPart = SetFilePointer(FILE_HANDLE(f), 0, &ofs.li.HighPart, FILE_CURRENT);
   return ofs.offset;
 }
 
@@ -208,7 +205,7 @@ sqInt sqFileOpen(SQFile *f, char* fileNameIndex, sqInt fileNameSize, sqInt write
     AddHandleToTable(win32Files, h);
     /* compute and cache file size */
     ofs.offset = 0;
-    ofs.dwLow = SetFilePointer(h, 0, &ofs.dwHigh, FILE_END);
+    ofs.li.LowPart = SetFilePointer(h, 0, &ofs.li.HighPart, FILE_END);
     SetFilePointer(h, 0, NULL, FILE_BEGIN);
     f->writable = writeFlag ? true : false;
   }
@@ -375,7 +372,7 @@ int checkIfReadConsoleWillBlock(HANDLE consoleHandle){
 	/*
 	 * Having a single event in ENABLE_LINE_INPUT mode, we return that it will not block
 	 */
-	if(numberOfEvents > 0 && (mode & ENABLE_LINE_INPUT == 0)) {
+	if(numberOfEvents > 0 && ((mode & ENABLE_LINE_INPUT) == 0)) {
 		return false;
 	}
 
@@ -388,7 +385,8 @@ int checkIfReadConsoleWillBlock(HANDLE consoleHandle){
 	/*
 	 * Check for the keyDown of VK_RETURN, as this is used by ReadConsole in ENABLE_LINE_INPUT mode
 	 */
-	for(int i = 0; i < numberOfEvents; i++){
+	int i = 0;
+	for(i = 0; i < numberOfEvents; i++){
 		if( events[i].EventType == KEY_EVENT
 			&& events[i].Event.KeyEvent.bKeyDown
 			&& events[i].Event.KeyEvent.wVirtualKeyCode == VK_RETURN){
@@ -473,7 +471,7 @@ sqInt sqFileSetPosition(SQFile *f, squeakFileOffsetType position)
   /* Set the file's read/write head to the given position. */
   if (!sqFileValid(f))
     FAIL();
-  SetFilePointer(FILE_HANDLE(f), ofs.dwLow, &ofs.dwHigh, FILE_BEGIN);
+  SetFilePointer(FILE_HANDLE(f), ofs.li.LowPart, &ofs.li.HighPart, FILE_BEGIN);
   return 1;
 }
 
@@ -483,7 +481,7 @@ squeakFileOffsetType sqFileSize(SQFile *f) {
   if (!sqFileValid(f))
     FAIL();
   ofs.offset = 0;
-  ofs.dwLow = GetFileSize(FILE_HANDLE(f), &ofs.dwHigh);
+  ofs.li.LowPart = GetFileSize(FILE_HANDLE(f), &ofs.li.HighPart);
   return ofs.offset;
 }
 
@@ -508,7 +506,7 @@ sqInt sqFileTruncate(SQFile *f, squeakFileOffsetType offset) {
   ofs.offset = offset;
   if (!sqFileValid(f))
     FAIL();
-  SetFilePointer(FILE_HANDLE(f), ofs.dwLow, &ofs.dwHigh, FILE_BEGIN);
+  SetFilePointer(FILE_HANDLE(f), ofs.li.LowPart, (PLONG)&ofs.li.HighPart, FILE_BEGIN);
   if(!SetEndOfFile(FILE_HANDLE(f))) return 0;
   return 1;
 }

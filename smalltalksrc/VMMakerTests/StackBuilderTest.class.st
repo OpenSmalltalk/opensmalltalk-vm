@@ -175,6 +175,17 @@ StackBuilderTest >> testHeadFramePointerCallerIsNotBaseFramePointer [
 		equals: stackBuilder page baseFP
 ]
 
+{ #category : #'test-VMstate' }
+StackBuilderTest >> testInstructionPointerIsSetBeforeFirstBytecodeOfLastMethodPushed [
+
+	method := methodBuilder newMethod buildMethod.
+	stackBuilder addNewFrame method: method. 
+	stackBuilder buildStack.
+	
+	self assert: interpreter instructionPointer
+		equals: (methodBuilder bytecodeAt: 0 forMethod: method)
+]
+
 { #category : #'test-order' }
 StackBuilderTest >> testOrderArgument1InBaseFrame [
 	self assert: (interpreter stackPages longAtPointer: interpreter stackPage baseFP + (self offsetArgument1FromBaseFP * memory bytesPerOop))

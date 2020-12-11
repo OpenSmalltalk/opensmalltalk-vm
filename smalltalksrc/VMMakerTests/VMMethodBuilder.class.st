@@ -31,6 +31,16 @@ VMMethodBuilder >> buildMethodHeader [
 		+ (isPrimitive asBit << 16)
 ]
 
+{ #category : #helper }
+VMMethodBuilder >> bytecodeAt: anIndex forMethod: aMethodOop [
+	| methodHeader |
+	"1 based"
+	methodHeader := memory methodHeaderOf: aMethodOop.
+
+	^ (interpreter initialIPForHeader: methodHeader method: aMethodOop) + anIndex - 1.
+
+]
+
 { #category : #accessing }
 VMMethodBuilder >> bytecodes [
 	^ bytecodes

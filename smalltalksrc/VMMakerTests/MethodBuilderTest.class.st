@@ -41,6 +41,54 @@ MethodBuilderTest >> testBuildEmptyMethodIsCompiledMethod [
 ]
 
 { #category : #running }
+MethodBuilderTest >> testBytecodeAtForMethodWithNoLiteral [
+	| bytecodeAddress |
+	literals := { }.
+	method := methodBuilder newMethod 
+		bytecodes: #[ 1 2 3 4 5 6 7 8 9 ];
+		literals: literals;
+		buildMethod.
+
+	bytecodeAddress := methodBuilder bytecodeAt: 1 forMethod: method.
+	
+	self assert: (memory byteAt: bytecodeAddress) equals: 1
+]
+
+{ #category : #running }
+MethodBuilderTest >> testBytecodeAtForMethodWithOneLiteral [
+	| bytecodeAddress |
+	literals := { 1 }.
+	method := methodBuilder newMethod 
+		bytecodes: #[ 1 2 3 4 5 6 7 8 9 ];
+		literals: literals;
+		buildMethod.
+
+	bytecodeAddress := methodBuilder bytecodeAt: 1 forMethod: method.
+	
+	self assert: (memory byteAt: bytecodeAddress) equals: 1
+]
+
+{ #category : #running }
+MethodBuilderTest >> testBytecodeAtForMethodWithTwoLiteral [
+	| bytecodeAddress |
+	literals := { 1. 2 }.
+	method := methodBuilder newMethod 
+		bytecodes: #[ 1 2 3 4 5 6 7 8 9 ];
+		literals: literals;
+		buildMethod.
+
+		bytecodeAddress := methodBuilder bytecodeAt: 1 forMethod: method.
+	
+	self assert: (memory byteAt: bytecodeAddress) equals: 1
+]
+
+{ #category : #running }
+MethodBuilderTest >> testGeneratingCompiledMethod [
+	method := methodBuilder newMethod bytecodes: #[ 1 2 3 4 5 6 7 8 ]; buildMethod.
+	self assert: (memory isCompiledMethod: method).
+]
+
+{ #category : #running }
 MethodBuilderTest >> testInstanciateMethodShouldTakeOneSlotForEightBytecodes [
 	| numberOfByteCode |
 	numberOfByteCode := 8.
@@ -58,4 +106,18 @@ MethodBuilderTest >> testInstanciateMethodShouldTakeTwoSlotForNineBytecodes [
 
 	"should equal the header (1) + the number of bytecodes divided by wordsize"
 	self assert: methodBuilder slotSize equals: 1 + (numberOfByteCode / wordSize) ceiling.
+]
+
+{ #category : #running }
+MethodBuilderTest >> testSecondBytecodeAtForMethodWithOneLiteral [
+	| bytecodeAddress |
+	literals := { 1 }.
+	method := methodBuilder newMethod 
+		bytecodes: #[ 1 2 3 4 5 6 7 8 9 ];
+		literals: literals;
+		buildMethod.
+
+	bytecodeAddress := methodBuilder bytecodeAt: 2 forMethod: method.
+	
+	self assert: (memory byteAt: bytecodeAddress) equals: 2
 ]

@@ -16,7 +16,8 @@ Class {
 		'methodCacheSize',
 		'rumpCStackSize',
 		'wordSize',
-		'methodBuilder'
+		'methodBuilder',
+		'v3Method'
 	],
 	#pools : [
 		'VMBasicConstants',
@@ -55,6 +56,21 @@ VMSpurMemoryManagerTest >> createActiveProcess [
 	
 	"Create a new process with the 4 mandatory instance variables and set it as active process"
 	memory storePointer: ActiveProcessIndex ofObject: processorOop withValue:  (self newObjectWithSlots: 4).
+]
+
+{ #category : #helpers }
+VMSpurMemoryManagerTest >> createMethodOopFromPharoMethod: aPharoCompiledMethod [
+
+	| methodOop |
+	v3Method := aPharoCompiledMethod methodClass compiler
+		            encoderClass: EncoderForV3PlusClosures;
+		            options: #( - optionFullBlockClosure );
+		            compile: aPharoCompiledMethod sourceCode.
+
+	methodOop := methodBuilder
+		             fillFromPharoMethod: v3Method;
+		             buildMethod.
+	^ methodOop
 ]
 
 { #category : #accessing }
@@ -146,6 +162,16 @@ VMSpurMemoryManagerTest >> interpreter [
 { #category : #helpers }
 VMSpurMemoryManagerTest >> interpreterClass [ 
 	^ StackInterpreterSimulatorLSB
+]
+
+{ #category : #helpers }
+VMSpurMemoryManagerTest >> jitMethod: aPharoCompiledMethod selector: aSelectorOop [
+
+	| methodOop |
+	"We are using V3 bytecode, so we need to recompile the method"
+	methodOop := self createMethodOopFromPharoMethod:
+		             aPharoCompiledMethod.
+	^ cogit cog: methodOop selector: aSelectorOop
 ]
 
 { #category : #tests }
@@ -465,16 +491,16 @@ VMSpurMemoryManagerTest >> setUp [
 	"Schedule a GC, so it does not try to schedule one"
 	memory needGCFlag: 1.
 	
-	stackBuilder := VMStackBuilder new
-		interpreter: interpreter; 
-		memory: memory;
-		yourself.
-				
-	methodBuilder := VMMethodBuilder new
+		methodBuilder := VMMethodBuilder new
 		interpreter: interpreter; 
 		memory: memory;
 		yourself.
 
+	stackBuilder := VMStackBuilder new
+		interpreter: interpreter; 
+		memory: memory;
+		methodBuilder: methodBuilder;
+		yourself.
 ]
 
 { #category : #running }

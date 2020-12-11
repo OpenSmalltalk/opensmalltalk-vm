@@ -16,8 +16,12 @@ static char __buildInfo[] = "FileAttributesPlugin FileAttributesPlugin.oscog-akg
 #include <errno.h>
 #include <limits.h>
 #include <sys/types.h>
+
+#if !defined(_WIN32)
 #include <unistd.h>
+#endif
 #include <dirent.h>
+
 #if _WIN32 || _WIN64
 # include <windows.h>
 # include <winbase.h>
@@ -36,7 +40,11 @@ static char __buildInfo[] = "FileAttributesPlugin FileAttributesPlugin.oscog-akg
 #if !defined(HAVE_LSTAT) && !defined(_WIN32) && !defined(_WIN64)
 # define HAVE_LSTAT 1
 #endif
+
+#if !defined(_WIN32)
 #include <unistd.h>
+#endif
+
 #include <pharovm/debug.h>
 /* AKG 2018 - FileAttributesPlugin.c translated from class FileAttributesPlugin */
 
@@ -67,8 +75,6 @@ static char __buildInfo[] = "FileAttributesPlugin FileAttributesPlugin.oscog-akg
 static sqInt addressObjectFor(void *aMachineAddress);
 static sqInt attributeArrayformask(sqInt *attributeArrayPtr, fapath *faPath, sqInt attributeMask);
 static sqInt badSessionId(void);
-static sqInt canOpenDirectoryStreamForlength(char *aPathCString, sqInt length);
-static sqInt canStatFilePathlength(char *aPathCString, sqInt length);
 #if _WIN32
 static sqLong convertWinToSqueakTime(SYSTEMTIME st);
 #endif /* _WIN32 */
@@ -101,9 +107,6 @@ static sqInt sizeOfFaPath(void);
 static sqInt sizeOfFaPathPtr(void);
 static sqInt stringFromCString(const char *aCString);
 
-
-/*** Variables ***/
-static int hasSecurityPlugin = 1;
 
 #if !defined(SQUEAK_BUILTIN_PLUGIN)
 static void * (*arrayValueOf)(sqInt oop);
@@ -171,9 +174,6 @@ static const char *moduleName =
 	"FileAttributesPlugin FileAttributesPlugin.oscog-akg.49 (e)"
 #endif
 ;
-static void * sCLPfn;
-static void * sCOFfn;
-
 
 
 /*	Answer an ExternalAddress object which represents aMachineAddress */
@@ -316,59 +316,6 @@ badSessionId(void)
 }
 
 
-/*	Answer non-zero if security permits the directory to be listed. */
-/*	FIXME: This function has not been tested. -dtl */
-/*	If the security plugin can be loaded, use it to check . 
-	If not, assume it's ok */
-/*	The hasSecurityPlugin flag is set to 1 by default */
-
-	/* FileAttributesPlugin>>#canOpenDirectoryStreamFor:length: */
-static sqInt
-canOpenDirectoryStreamForlength(char *aPathCString, sqInt length)
-{
-	if (hasSecurityPlugin == 0) {
-		return 1;
-	}
-	if (sCLPfn != 0) {
-		return  ((int (*) (char *, int)) sCLPfn)(aPathCString, length);
-	}
-	else {
-
-		/* Reset the flag so we do not try again next time */
-		hasSecurityPlugin = 0;
-		return 1;
-	}
-}
-
-
-/*	Answer non-zero if security permits the a stat() call on the file path.
-	Allow a
-	stat() call only on files which we are permitted to open.
- */
-/*	FIXME: This function has not been tested. -dtl */
-/*	If the security plugin can be loaded, use it to check . 
-	If not, assume it's ok */
-/*	The hasSecurityPlugin flag is set to 1 by default */
-
-	/* FileAttributesPlugin>>#canStatFilePath:length: */
-static sqInt
-canStatFilePathlength(char *aPathCString, sqInt length)
-{
-	if (hasSecurityPlugin == 0) {
-		return 1;
-	}
-	if (sCOFfn != 0) {
-		return  ((int (*) (char *, int, int)) sCOFfn)(aPathCString, length, 0);
-	}
-	else {
-
-		/* Reset the flag so we do not try again next time */
-		hasSecurityPlugin = 0;
-		return 1;
-	}
-}
-
-
 /*	Convert the supplied Windows SYSTEMTIME to Squeak time */
 
 	/* FileAttributesPlugin>>#convertWinToSqueakTime: */
@@ -426,8 +373,6 @@ getModuleName(void)
 EXPORT(sqInt)
 initialiseModule(void)
 {
-	sCOFfn = ioLoadFunctionFrom("secCanOpenFileOfSizeWritable", "SecurityPlugin");
-	sCLPfn = ioLoadFunctionFrom("secCanListPathOfSize", "SecurityPlugin");
 	return 1;
 }
 
@@ -465,10 +410,7 @@ pathOoptoBuffermaxLen(sqInt pathNameOop, char *cPathName, sqInt maxLen)
 		return -1 /* stringTooLong */;
 	}
 	sPtr = arrayValueOf(pathNameOop);
-	if ((canStatFilePathlength(sPtr, len)) == 0) {
-		/* begin cantStatPath */
-		return ((sqInt) -3);
-	}
+
 	memcpy(cPathName, sPtr, len);
 	cPathName[len] = 0;
 	return 0;
@@ -811,10 +753,6 @@ primitiveOpendir(void)
 	faSetStDirOop(faPath, dirName);
 	if (failed()) {
 		return primitiveFailureCode();
-	}
-	if (!(canOpenDirectoryStreamForlength(faGetStPath(faPath), faGetStPathLen(faPath)))) {
-		free(faPath);
-		return primitiveFailForOSError(-9 /* cantOpenDir */);
 	}
 	status = faOpenDirectory(faPath);
 	if (status == 1 /* noMoreData */) {

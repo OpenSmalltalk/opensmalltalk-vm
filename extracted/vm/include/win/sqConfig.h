@@ -43,7 +43,9 @@
   || defined(x86_64) || defined(__x86_64__) || defined(__x86_64) \
   || defined(x64) \
     \
-  || defined(_WIN32_WCE)
+  || defined(_WIN32_WCE) \
+    \
+  || defined(_M_ARM64)
 #  include "sqWin32.h"
 #  define SQ_CONFIG_DONE
 # else

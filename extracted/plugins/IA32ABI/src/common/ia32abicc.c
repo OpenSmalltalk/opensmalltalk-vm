@@ -8,7 +8,7 @@
 /* null if compiled on other than x86, to get around gnu make bugs or
  * misunderstandings on our part.
  */
-#if defined(_M_I386) || defined(_X86_) || defined(i386) || defined(i486) || defined(i586) || defined(i686) || defined(__i386__) || defined(__386__) || defined(X86) || defined(I386)
+#if defined(_M_IX86) || defined(_M_I386) || defined(_X86_) || defined(i386) || defined(i486) || defined(i586) || defined(i686) || defined(__i386__) || defined(__386__) || defined(X86) || defined(I386)
 
 #if defined(_MSC_VER) || defined(__MINGW32__)
 # include "windows.h" /* for GetSystemInfo & VirtualAlloc */
@@ -53,10 +53,13 @@ struct VirtualMachine* interpreterProxy;
 #ifdef _MSC_VER
 # define alloca _alloca
 #endif
-#if __GNUC__
+
+#if __GNUC__ || __clang__
+// GCC style __asm__ works fork clang and GCC
 # define setsp(sp) __asm__ volatile ("movl %0,%%esp" : : "m"(sp))
 # define getsp() ({ void *sp; __asm__ volatile ("movl %%esp,%0" : "=r"(sp) : ); sp;})
 #endif
+
 #if __APPLE__ && __MACH__ && __i386__
 # define STACK_ALIGN_BYTES 16
 #elif __linux__ && __i386__
@@ -191,10 +194,11 @@ thunkEntry(void *thunkp, sqIntptr_t *stackp)
   { void *sp = getsp();
     int offset = (unsigned long)sp & (STACK_ALIGN_BYTES - 1);
 	if (offset) {
-# if _MSC_VER
-		_asm sub esp, dword ptr offset;
-# elif __GNUC__
-		__asm__ ("sub %0,%%esp" : : "m"(offset));
+#if __clang__ || __GNUC__
+		//Windows Clang or gcc
+		__asm__("sub %0,%%esp" : : "m"(offset));
+# elif _MSC_VER
+		__asm sub esp, dword ptr offset;
 # else
 #  error need to subtract offset from esp
 # endif
