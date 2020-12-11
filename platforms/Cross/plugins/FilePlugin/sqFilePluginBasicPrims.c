@@ -34,7 +34,9 @@
 #include "sq.h"
 
 #include <errno.h>
-#include <unistd.h> // required on BigSur
+#if !_MSC_VER
+# include <unistd.h> // required on BigSur
+#endif
 
 #ifndef NO_STD_FILE_SUPPORT
 
@@ -44,9 +46,9 @@
 #include <stdio.h>
 
 #if _MSC_VER
-#ifndef S_ISFIFO
-#define S_ISFIFO(x) 0
-#endif
+# ifndef S_ISFIFO
+#	define S_ISFIFO(x) 0
+# endif
 #endif
 
 #include "sqMemoryAccess.h"
