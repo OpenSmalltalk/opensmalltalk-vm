@@ -38,29 +38,32 @@ PharoVMMaker class >> generate: aClassName outputDirectory: aDirectory [
 PharoVMMaker >> generate: interpreterClass memoryManager: memoryManager [
 
 	| platformDirectory |
-	VMMakerConfiguration initializeForPharo.
-	(interpreterClass bindingOf: #COGMTVM) value: false.
-
-	platformDirectory := self platformDirectoryFor: memoryManager.
-
-	[ 
 	
-	(VMMaker
-		makerFor: interpreterClass
-		and: StackToRegisterMappingCogit
-		with: {#COGMTVM. false.
-				#ObjectMemory. memoryManager name.
-				#MULTIPLEBYTECODESETS. true.
-				#bytecodeTableInitializer. #initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid}
-		to: platformDirectory
-		platformDir:platformDirectory
-		including: #()
-		configuration: VMMakerConfiguration)
-			stopOnErrors: stopOnErrors;
-			internal: #() external: #(FilePlugin);
-			generateInterpreterFile;
-			generateCogitFiles;
-			generateExternalPlugins] valueSupplyingAnswer:true.
+	Author useAuthor: 'vmMaker' during: [
+	
+		VMMakerConfiguration initializeForPharo.
+		(interpreterClass bindingOf: #COGMTVM) value: false.
+
+		platformDirectory := self platformDirectoryFor: memoryManager.
+
+		[ 
+		
+		(VMMaker
+			makerFor: interpreterClass
+			and: StackToRegisterMappingCogit
+			with: {#COGMTVM. false.
+					#ObjectMemory. memoryManager name.
+					#MULTIPLEBYTECODESETS. true.
+					#bytecodeTableInitializer. #initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid}
+			to: platformDirectory
+			platformDir:platformDirectory
+			including: #()
+			configuration: VMMakerConfiguration)
+				stopOnErrors: stopOnErrors;
+				internal: #() external: #(FilePlugin);
+				generateInterpreterFile;
+				generateCogitFiles;
+				generateExternalPlugins] valueSupplyingAnswer:true.]
 ]
 
 { #category : #generation }
