@@ -178,7 +178,7 @@ def uploadStockReplacement(platform, configuration, archiveName) {
 
 	cleanWs()
 
-	unstash name: "packages-${platform}-${configuration}"
+	unstash name: "packages-${archiveName}-${configuration}"
 
 	def expandedBinaryFileName = sh(returnStdout: true, script: "ls build-stockReplacement/build/packages/PharoVM-*-${archiveName}-bin.zip").trim()
 
