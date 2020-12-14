@@ -391,7 +391,7 @@ aioPoll(long microSeconds)
 	do {
 		const unsigned long long start = ioUTCMicroseconds();
 		const struct epoll_event events[128];
-		const int eventsTriggered = epoll_wait(epollFd, (struct epoll_event*)events, 128, (int)microSeconds);
+		const int eventsTriggered = epoll_wait(epollFd, (struct epoll_event*)events, 128, (int)(microSeconds / 1000));
 		if (eventsTriggered == -1) {
 			if (errno != EINTR) {
 				perror("epoll_wait");
@@ -715,7 +715,7 @@ aioHandle(int fd, aioHandler handlerFn, int mask)
 	if (mask & AIO_R) data->readHandler = handlerFn;
 	if (mask & AIO_W) data->writeHandler = handlerFn;
 	if (mask & AIO_X) data->exceptionHandler = handlerFn;
-	event->events = epollFlagsForAIOFlags[mask & AIO_RWX] | (mask & AIO_EXT ? EPOLLET : 0);
+	event->events = epollFlagsForAIOFlags[mask & AIO_RWX] | EPOLLET;
 	int epoll_operation = data->aioMask & AIO_RWX
 			? EPOLL_CTL_MOD
 			: EPOLL_CTL_ADD;
