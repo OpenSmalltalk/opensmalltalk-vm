@@ -215,9 +215,9 @@ def uploadPackages(){
 			upload('Linux-x86_64', "CoInterpreterWithQueueFFI", 'Linux-x86_64')
 			upload('Windows-x86_64', "CoInterpreterWithQueueFFI", 'Windows-x86_64')
 
-			uploadStockReplacement('Darwin-x86_64', "CoInterpreterWithQueueFFI", 'Darwin-x86_64-stockReplacement')
-			uploadStockReplacement('Linux-x86_64', "CoInterpreterWithQueueFFI", 'Linux-x86_64-stockReplacement')
-			uploadStockReplacement('Windows-x86_64', "CoInterpreterWithQueueFFI", 'Windows-x86_64-stockReplacement')
+			uploadStockReplacement('Darwin-x86_64', "CoInterpreterWithQueueFFI", 'StockReplacement-Darwin-x86_64')
+			uploadStockReplacement('Linux-x86_64', "CoInterpreterWithQueueFFI", 'StockReplacement-Linux-x86_64')
+			uploadStockReplacement('Windows-x86_64', "CoInterpreterWithQueueFFI", 'StockReplacement-Windows-x86_64')
 		}
 	}
 }
