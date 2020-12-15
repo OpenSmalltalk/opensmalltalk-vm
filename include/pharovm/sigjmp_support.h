@@ -14,7 +14,7 @@
 #undef setjmp
 #undef sigsetjmp
 #undef siglongjmp
-#if _MSC_VER
+#if _MSC_VER && !__clang__
 // MSVC versions of setjmp and longjmp use the exception mechanism and do unwind the stack
 // However, unwinding the stack does not work in the precense of native code generated dynamically by the JIT
 // Use instead two definitions of setjmp and longjmp defined by ourselves for the current platform
