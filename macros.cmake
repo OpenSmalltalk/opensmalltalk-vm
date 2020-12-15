@@ -135,7 +135,7 @@ if(${CMAKE_VERSION} VERSION_LESS "3.12.0")
 	
 	macro(add_compile_definitions)
 		foreach(loop_var ${ARGN})
-			add_definitions("-D${loop_var}")
+			add_definitions("-D'${loop_var}'")
 		endforeach()
 	endmacro()
 	
