@@ -1,18 +1,18 @@
 #include "testLibrary.h"
 
 int sizeOfPoint(){
-	return sizeof(POINT);
+	return sizeof(OUR_POINT);
 }
 
-POINT newPoint(int x, int y){
-	POINT p;
+OUR_POINT newPoint(int x, int y){
+	OUR_POINT p;
 	p.x = x;
 	p.y = y;
 
 	return p;
 }
 
-int assertCorrectPoint(POINT aPoint, int x, int y){
+int assertCorrectPoint(OUR_POINT aPoint, int x, int y){
 	return aPoint.x == x && aPoint.y == y;
 }
 

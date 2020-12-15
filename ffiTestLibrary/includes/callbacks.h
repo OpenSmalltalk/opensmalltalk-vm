@@ -66,7 +66,7 @@ simple_callback_with_name(void*, pointer)
 
 simple_callback_byCopy_and_ref(NESTED_STRUCTS)
 simple_callback_byCopy_and_ref(LONG_STRUCT)
-simple_callback_byCopy_and_ref(POINT)
+simple_callback_byCopy_and_ref(OUR_POINT)
 
 /************************************************************
 *** Derived types, e.g., size_t, String, etc
