@@ -513,7 +513,15 @@ vm_parameters_parse(int argc, const char** argv, VMParameters* parameters)
 		return VM_ERROR_OUT_OF_MEMORY;
 	}
 
+#if _WIN32
+	WCHAR pathString[MAX_PATH];
+	char encodedPath[MAX_PATH];
+	GetModuleFileNameW(NULL, pathString, MAX_PATH);
+	WideCharToMultiByte(CP_UTF8, 0, pathString, -1, encodedPath, FILENAME_MAX, NULL, 0);
+	fullPath = getFullPath(encodedPath, fullPathBuffer, FILENAME_MAX);
+#else
 	fullPath = getFullPath(argv[0], fullPathBuffer, FILENAME_MAX);
+#endif
 	setVMPath(fullPath);
 	free(fullPathBuffer);
 

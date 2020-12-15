@@ -200,7 +200,7 @@ getModuleSymbol(void *module, const char *symbol)
 	  logWarn("Retrying in VM DLL");
 	  void * vmModule;
 
-	  vmModule = GetModuleHandle("PharoVMCore.dll");
+	  vmModule = GetModuleHandleW(L"PharoVMCore.dll");
 	  return getModuleSymbol(vmModule, symbol);
 	}
 
