@@ -229,6 +229,8 @@ void captureStack(PCONTEXT context, STACKFRAME64* frames, int framePointersSize,
 	DWORD machineType = IMAGE_FILE_MACHINE_ARM64;
 #elif defined(_WIN64)
 	DWORD machineType = IMAGE_FILE_MACHINE_AMD64;
+#elif defined(_M_IX86)
+	DWORD machineType = IMAGE_FILE_MACHINE_I386;
 #else
 #error Architecture not defined
 #endif
