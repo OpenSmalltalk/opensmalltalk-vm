@@ -60,7 +60,7 @@ configure_file("${Win32ResourcesFolder}/${VM_EXECUTABLE_CONSOLE_NAME}.exe.manife
 macro(add_third_party_dependencies_per_platform)
 
     if (DOWNLOAD_DEPENDENCIES AND CYGWIN)
-		add_third_party_dependency("gcc-runtime-3.4" "build/vm")
+		add_third_party_dependency("gcc-runtime-3.4")
     endif()
     
     if(${FEATURE_LIB_GIT2})
@@ -116,6 +116,11 @@ macro(configure_installables INSTALL_COMPONENT)
 endmacro()
 
 macro(add_required_libs_per_platform)
+
+    # Compile Windows Using Unicode support
+    target_compile_definitions(${VM_LIBRARY_NAME}
+        PRIVATE -D_UNICODE -DUNICODE)
+
 	add_executable(${VM_EXECUTABLE_CONSOLE_NAME} ${VM_CONSOLE_FRONTEND_SOURCES})
 	target_link_libraries(${VM_EXECUTABLE_CONSOLE_NAME} ${VM_LIBRARY_NAME})
 
@@ -125,6 +130,9 @@ macro(add_required_libs_per_platform)
 	target_link_libraries(${VM_LIBRARY_NAME} Ole32)
 	target_link_libraries(${VM_LIBRARY_NAME} comctl32)
 	target_link_libraries(${VM_LIBRARY_NAME} uuid)
+    # Disable Safe Structured Exception Handling
+    #target_link_libraries(${VM_LIBRARY_NAME} "$<$<CXX_COMPILER_ID:MSVC>:-SAFESEH:NO>")
+
 
 	if(${CYGWIN})
 		target_link_libraries(${VM_LIBRARY_NAME} pthread)
@@ -136,6 +144,7 @@ macro(add_required_libs_per_platform)
 	target_link_libraries(${VM_EXECUTABLE_CONSOLE_NAME} Ole32)
 	target_link_libraries(${VM_EXECUTABLE_CONSOLE_NAME} comctl32)
 	target_link_libraries(${VM_EXECUTABLE_CONSOLE_NAME} uuid)
+
 
 	set_target_properties(${VM_EXECUTABLE_NAME} PROPERTIES LINK_FLAGS "-mwindows")
 	set_target_properties(${VM_EXECUTABLE_CONSOLE_NAME} PROPERTIES LINK_FLAGS "-mconsole")

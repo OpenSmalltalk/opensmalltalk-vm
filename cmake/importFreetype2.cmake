@@ -12,7 +12,7 @@ endfunction()
 function(download_Freetype)
   if (NOT UNIX)
     # Download it for now, except for linuxes
-    add_third_party_dependency("freetype-2.9.1" "build/vm")
+    add_third_party_dependency("freetype-2.9.1")
   endif()
 endfunction()
 
