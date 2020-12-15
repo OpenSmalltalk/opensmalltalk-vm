@@ -195,7 +195,7 @@ ioUpdateVMTimezone()
 # endif
 #endif
 
-#ifdef WIN64
+#ifdef _WIN32
   TIME_ZONE_INFORMATION timeZoneInformation;
   if(GetTimeZoneInformation(&timeZoneInformation) == TIME_ZONE_ID_INVALID){
 	  logError("Unable to get timezone information");
