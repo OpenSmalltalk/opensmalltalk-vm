@@ -134,7 +134,9 @@ if(${CMAKE_VERSION} VERSION_LESS "3.12.0")
     message(STATUS "Please consider to switch to CMake 3.12.0 or later")
 	
 	macro(add_compile_definitions)
-		add_definitions(${ARGN})
+		foreach(loop_var ${ARGN})
+			add_definitions("-D${loop_var}")
+		endforeach()
 	endmacro()
 	
 endif()

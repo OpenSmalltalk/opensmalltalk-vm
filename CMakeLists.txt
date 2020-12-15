@@ -97,7 +97,7 @@ set(PLUGIN_GENERATED_FILES
 
 
 if(FLAVOUR MATCHES "CoInterpreter")
-  add_compile_definitions(-DASYNC_FFI_QUEUE=1)
+  add_compile_definitions(ASYNC_FFI_QUEUE=1)
 endif()
 
 # Configuration
@@ -151,10 +151,10 @@ elseif(WIN)
     # this one is important
     SET(CMAKE_SYSTEM_NAME Windows)
 
-    add_compile_definitions(-DNO_ISNAN -DNO_SERVICE -D'TZ="CEST"' "-D'VM_LABEL(foo)=0'" -DLSB_FIRST=1 -DAllocationCheckFiller=0xADD4E55)
+    add_compile_definitions(NO_ISNAN NO_SERVICE 'TZ="CEST"' "'VM_LABEL(foo)=0'" LSB_FIRST=1 AllocationCheckFiller=0xADD4E55)
 
     #Setting minimal Windows Version to VISTA
-    add_compile_definitions(-D_WIN32_WINNT=0x0600 -DWINVER=0x0600 -DNTDDI_VERSION=0x06000000 -DWIN64=1)
+    add_compile_definitions(_WIN32_WINNT=0x0600 WINVER=0x0600 NTDDI_VERSION=0x06000000 WIN64=1)
 
 elseif(UNIX)
 
@@ -164,7 +164,7 @@ elseif(UNIX)
 
     set(COMMON_FLAGS "-O2 -Wall -Werror=implicit-function-declaration")
 
-    add_compile_definitions(-DLSB_FIRST=1)
+    add_compile_definitions(LSB_FIRST=1)
 
     set(OS_TYPE "unix")
     if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -186,13 +186,13 @@ set(OPTIMIZATION_FLAGS "")
 set(CMAKE_C_FLAGS "-g ${COMMON_FLAGS} ${OPTIMIZATION_FLAGS} -DNDEBUG -DDEBUGVM=0")
 set(CMAKE_CXX_FLAGS "-g ${COMMON_FLAGS} ${OPTIMIZATION_FLAGS} -DNDEBUG -DDEBUGVM=0")
 
-add_compile_definitions(-DIMMUTABILITY=1)
-add_compile_definitions(-DCOGMTVM=0)
-add_compile_definitions(-DPharoVM=1)
+add_compile_definitions(IMMUTABILITY=1)
+add_compile_definitions(COGMTVM=0)
+add_compile_definitions(PharoVM=1)
 
 #We require that VM_LABEL does nothing.
 #We should actually cleanup all the places where this is set/used in the VM
-add_compile_definitions(-D"VM_LABEL\(foo\)=0")
+add_compile_definitions("VM_LABEL\(foo\)=0")
 
 #
 # This definition is used to improve the logging of the messages, to cut-down the path
@@ -202,7 +202,7 @@ add_compile_definitions(-D"VM_LABEL\(foo\)=0")
 # Note that it does not matter if the OS uses / or \, because we are only
 # saving the path size.
 string(LENGTH "${CMAKE_SOURCE_DIR}/" SOURCE_PATH_SIZE)
-add_compile_definitions("-DSOURCE_PATH_SIZE=${SOURCE_PATH_SIZE}")
+add_compile_definitions("SOURCE_PATH_SIZE=${SOURCE_PATH_SIZE}")
 
 if(UNIX AND NOT OSX AND NOT WIN)
     set(VM_EXECUTABLE_NAME pharo CACHE STRING "VM Executable name")
