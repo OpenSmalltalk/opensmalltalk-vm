@@ -56,7 +56,7 @@ project(PharoVM)
 # This is required because CMake will set the HOST_PROCESSOR in windows
 # And not care about our Visual Studio settings
 # See https://gitlab.kitware.com/cmake/cmake/-/issues/15170
-if (MSVC)
+if(MSVC AND NOT ${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang")
     set(CMAKE_SYSTEM_PROCESSOR ${MSVC_CXX_ARCHITECTURE_ID})
 endif()
 message(STATUS "Compiling for architecture: ${CMAKE_SYSTEM_PROCESSOR}")
@@ -65,9 +65,11 @@ message(STATUS "Compiling for architecture: ${CMAKE_SYSTEM_PROCESSOR}")
 # by it default will unwind the stack, which is not possible in generated code
 # setjmp has an extra argument not exposed in C to avoid unwinding
 # This extra asm file defines a wrapper function that sets this argument to 0
-If(MSVC AND ${CMAKE_SYSTEM_PROCESSOR} MATCHES "ARM64")
+if(MSVC AND NOT ${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang")
     get_filename_component(COMPILER_DIR "${CMAKE_C_COMPILER}" DIRECTORY)
-    set(CMAKE_ASM_MASM_COMPILER ${COMPILER_DIR}/armasm64.exe)
+    if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "ARM64")
+        set(CMAKE_ASM_MASM_COMPILER ${COMPILER_DIR}/armasm64.exe)
+    endif()
     set(CMAKE_ASM_COMPILER ${CMAKE_ASM_MASM_COMPILER})
     enable_language(ASM)
 
@@ -85,8 +87,13 @@ If(MSVC AND ${CMAKE_SYSTEM_PROCESSOR} MATCHES "ARM64")
 
     set_source_files_properties("${CMAKE_CURRENT_BINARY_DIR}/${ASM_FILENAME}.asm" PROPERTIES GENERATED TRUE)
 
-    if(TARGET_PLATFORM MATCHES X86.*)
+    if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "X86.*")
         list(APPEND SUPPORT_SOURCES ${CMAKE_CURRENT_BINARY_DIR}/${ASM_FILENAME}.asm)
+        set_source_files_properties(
+            ${CMAKE_CURRENT_BINARY_DIR}/${ASM_FILENAME}.asm
+            PROPERTIES
+            COMPILE_FLAGS "/safeseh"
+        )
     else()
         add_custom_command(
             COMMAND "${CMAKE_ASM_MASM_COMPILER}" /Fo "${CMAKE_CURRENT_BINARY_DIR}/${ASM_FILENAME}.obj" "${CMAKE_CURRENT_BINARY_DIR}/${ASM_FILENAME}.asm"
@@ -300,7 +307,7 @@ else()
 endif()
 
 
-set(EXECUTABLE_OUTPUT_PATH "${CMAKE_CURRENT_BINARY_DIR}/build/vm")
+set(EXECUTABLE_OUTPUT_PATH "${CMAKE_CURRENT_BINARY_DIR}/build/vm/")
 
 #If in OSX, configure creation of Bundle
 if (OSX)
