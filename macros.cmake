@@ -125,3 +125,16 @@ macro(get_git_date VARNAME)
         OUTPUT_VARIABLE ${VARNAME}
         OUTPUT_STRIP_TRAILING_WHITESPACE)
 endmacro()
+
+#
+# Compatibility with old CMAKE versions to remove, as fast as posible
+#
+
+if(${CMAKE_VERSION} VERSION_LESS "3.12.0") 
+    message(STATUS "Please consider to switch to CMake 3.12.0 or later")
+	
+	macro(add_compile_definitions)
+		add_definitions(${ARGN})
+	endmacro()
+	
+endif()
