@@ -151,7 +151,7 @@ elseif(WIN)
     # this one is important
     SET(CMAKE_SYSTEM_NAME Windows)
 
-    add_compile_definitions(NO_ISNAN NO_SERVICE 'TZ="CEST"' "'VM_LABEL(foo)=0'" LSB_FIRST=1 AllocationCheckFiller=0xADD4E55)
+    add_compile_definitions(NO_ISNAN NO_SERVICE "'VM_LABEL(foo)=0'" LSB_FIRST=1 AllocationCheckFiller=0xADD4E55)
 
     #Setting minimal Windows Version to VISTA
     add_compile_definitions(_WIN32_WINNT=0x0600 WINVER=0x0600 NTDDI_VERSION=0x06000000 WIN64=1)
