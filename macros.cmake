@@ -1,18 +1,18 @@
 macro(addLibraryWithRPATH NAME)
     SET(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-    set(CMAKE_INSTALL_RPATH "@executable_path/Plugins")
+    set(CMAKE_INSTALL_RPATH ${PHARO_LIBRARY_PATH})
 
     add_library(${NAME} SHARED ${ARGN})
     set_target_properties(${NAME} PROPERTIES MACOSX_RPATH ON)
     set_target_properties(${NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_DIRECTORY})
-    set_target_properties(${NAME} PROPERTIES INSTALL_NAME_DIR "@executable_path/Plugins")
+    set_target_properties(${NAME} PROPERTIES INSTALL_NAME_DIR ${PHARO_LIBRARY_PATH})
 
     # Declare the main executable depends on the plugin so it gets built with it
     add_dependencies(${VM_EXECUTABLE_NAME} ${NAME})
     #target_link_libraries(${VM_EXECUTABLE_NAME} ${NAME})
     #Declare the plugin depends on the VM core library
     if(NOT "${NAME}" STREQUAL "${VM_LIBRARY_NAME}")
-        target_link_libraries(${NAME} ${VM_LIBRARY_NAME})
+	target_link_libraries(${NAME} PRIVATE ${VM_LIBRARY_NAME})
     endif()
 endmacro()
 
@@ -125,3 +125,18 @@ macro(get_git_date VARNAME)
         OUTPUT_VARIABLE ${VARNAME}
         OUTPUT_STRIP_TRAILING_WHITESPACE)
 endmacro()
+
+#
+# Compatibility with old CMAKE versions to remove, as fast as posible
+#
+
+if(${CMAKE_VERSION} VERSION_LESS "3.12.0") 
+    message(STATUS "Please consider to switch to CMake 3.12.0 or later")
+	
+	macro(add_compile_definitions)
+		foreach(loop_var ${ARGN})
+			add_definitions("-D'${loop_var}'")
+		endforeach()
+	endmacro()
+	
+endif()

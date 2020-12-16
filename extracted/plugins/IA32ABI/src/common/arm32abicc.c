@@ -15,6 +15,7 @@
 
 #include <string.h> /* for memcpy et al */
 #include <setjmp.h>
+#include <unistd.h>
 
 #include "sqMemoryAccess.h"
 #include "vmCallback.h"
