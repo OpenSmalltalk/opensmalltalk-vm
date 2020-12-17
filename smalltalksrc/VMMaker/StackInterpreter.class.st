@@ -396,10 +396,6 @@ Class {
 		'gcSemaphoreIndex',
 		'classByteArrayCompactIndex',
 		'checkedPluginName',
-		'nativeSP',
-		'nativeStackPointer',
-		'lowcodeCalloutState',
-		'shadowCallStackPointer',
 		'displayBits',
 		'displayWidth',
 		'displayHeight',
@@ -535,8 +531,6 @@ If ffi is put as a separate header, slang will sort the header and put it outsid
 #include "pharovm/pThreadedFFI/worker.h"
 #endif //FEATURE_THREADED_FFI'.
 
-	LowcodeVM ifTrue: [ aCCodeGenerator addHeaderFile:'"sqLowcodeFFI.h"'].
-
 	vmClass declareInterpreterVersionIn: aCCodeGenerator defaultName: 'Stack'.
 	aCCodeGenerator
 		var: #interpreterProxy  type: #'struct VirtualMachine*'.
@@ -630,17 +624,6 @@ If ffi is put as a separate header, slang will sort the header and put it outsid
 		
 	aCCodeGenerator removeVariable: #'libFFI'.
 	LibFFIConstants classVariables do: [ :e | aCCodeGenerator removeConstant: e name ].
-		
-	LowcodeVM
-		ifTrue:
-			[aCCodeGenerator
-				var: #lowcodeCalloutState type: #'sqLowcodeCalloutState*'.
-			 self declareC: #(nativeSP nativeStackPointer shadowCallStackPointer)
-				as: #'char *'
-				in: aCCodeGenerator]
-		ifFalse:
-			[#(lowcodeCalloutState nativeSP nativeStackPointer shadowCallStackPointer) do:
-				[:var| aCCodeGenerator removeVariable: var]]
 ]
 
 { #category : #translation }
@@ -8209,7 +8192,6 @@ StackInterpreter >> initializeInterpreter: bytesToShift [
 			[breakSelectorLength := objectMemory minSmallInteger]].
 	methodDictLinearSearchLimit := 8.
 	self initialCleanup.
-	LowcodeVM ifTrue: [ self setupNativeStack ].
 	profileSemaphore := profileProcess := profileMethod := objectMemory nilObject.
 	interruptKeycode := 2094. "cmd-. as used for Mac but no other OS"
 	[globalSessionID = 0] whileTrue:
@@ -8673,7 +8655,6 @@ StackInterpreter >> internalizeIPandSP [
 	localIP := self pointerForOop: instructionPointer.
 	localSP := self pointerForOop: stackPointer.
 	localFP := self pointerForOop: framePointer.
-	LowcodeVM ifTrue: [ nativeSP := 0. ]
 ]
 
 { #category : #'interpreter shell' }

@@ -263,7 +263,6 @@ Class {
 		'cPICEndOfCodeLabel',
 		'ceMallocTrampoline',
 		'ceFreeTrampoline',
-		'ceFFICalloutTrampoline',
 		'debugBytecodePointers',
 		'debugOpcodeIndices',
 		'disassemblingMethod',
@@ -1134,7 +1133,6 @@ Cogit class >> notesAndQueries [
 { #category : #accessing }
 Cogit class >> numTrampolines [
 	^39 "31 + 4 each for self and super sends"
-		+ (LowcodeVM ifTrue: [1] ifFalse: [0])
 		+ (COGMTVM ifTrue: [ 2 ] ifFalse: [ 0 ])
 
 	"self withAllSubclasses collect: [:c| {c. (c instVarNames select: [:ea| ea beginsWith: 'ce']) size}]"
@@ -8114,9 +8112,6 @@ Cogit >> generateRunTimeTrampolines [
 	ceFreeTrampoline := self genTrampolineFor: #ceFree:
 											called: 'ceFreeTrampoline'
 											arg: ReceiverResultReg.
-	LowcodeVM ifTrue: [
-		ceFFICalloutTrampoline := self genFFICalloutTrampoline.
-	]
 ]
 
 { #category : #initialization }

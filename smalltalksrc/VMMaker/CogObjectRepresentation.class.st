@@ -52,7 +52,7 @@ CogObjectRepresentation class >> initializeMiscConstants [
 
 { #category : #accessing }
 CogObjectRepresentation class >> numTrampolines [
-	^1 "ceStoreCheckTrampoline" + (LowcodeVM ifTrue: [ 9 ] ifFalse: [ 0 ])
+	^1 "ceStoreCheckTrampoline"
 ]
 
 { #category : #translation }
