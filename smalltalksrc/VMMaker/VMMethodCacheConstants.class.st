@@ -9,11 +9,6 @@ Class {
 	#name : #VMMethodCacheConstants,
 	#superclass : #SharedPool,
 	#classVars : [
-		'LookupRuleDynamicSuper',
-		'LookupRuleImplicit',
-		'LookupRuleMNU',
-		'LookupRuleOrdinary',
-		'LookupRuleSelf',
 		'MethodCacheClass',
 		'MethodCacheEntries',
 		'MethodCacheEntrySize',
@@ -22,18 +17,7 @@ Class {
 		'MethodCachePrim',
 		'MethodCachePrimFunction',
 		'MethodCacheSelector',
-		'MethodCacheSize',
-		'NSMethodCacheActualReceiver',
-		'NSMethodCacheCallingMethod',
-		'NSMethodCacheClassTag',
-		'NSMethodCacheDepthOrLookupRule',
-		'NSMethodCacheEntries',
-		'NSMethodCacheEntrySize',
-		'NSMethodCacheMask',
-		'NSMethodCachePrimFunction',
-		'NSMethodCacheSelector',
-		'NSMethodCacheSize',
-		'NSMethodCacheTargetMethod'
+		'MethodCacheSize'
 	],
 	#category : #'VMMaker-Interpreter'
 }

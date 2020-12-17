@@ -334,7 +334,6 @@ Class {
 		'numExtB',
 		'primitiveFunctionPointer',
 		'methodCache',
-		'nsMethodCache',
 		'atCache',
 		'lkupClassTag',
 		'lkupClass',
@@ -921,18 +920,6 @@ StackInterpreter class >> initializeCaches [
 	MethodCacheSize := MethodCacheEntries * MethodCacheEntrySize.
 	CacheProbeMax := 3.
 
-	NSMethodCacheEntries := 512.
-	NSMethodCacheSelector := 1.
-	NSMethodCacheClassTag := 2.
-	NSMethodCacheCallingMethod := 3.
-	NSMethodCacheDepthOrLookupRule := 4.
-	NSMethodCacheTargetMethod := 5.
-	NSMethodCachePrimFunction := 6.
-	NSMethodCacheActualReceiver := 7.
-	NSMethodCacheEntrySize := 8.	"Must be power of two for masking scheme."
-	NSMethodCacheMask := NSMethodCacheEntries - 1 * NSMethodCacheEntrySize.
-	NSMethodCacheSize := NSMethodCacheEntries * NSMethodCacheEntrySize.
-
 	AtCacheOop := 1.
 	AtCacheSize := 2.
 	AtCacheFmt := 3.
@@ -942,18 +929,6 @@ StackInterpreter class >> initializeCaches [
 	AtCacheMask := (atCacheEntries-1) * atCacheEntrySize.
 	AtPutBase := atCacheEntries * atCacheEntrySize.
 	AtCacheTotalSize := atCacheEntries * atCacheEntrySize * 2.
-
-	"LookupRuleOuter is [0, 255], with the value being the lexical depth. Note that an
-	 outer send to lexical depth 0 is equivalent to a self send. Implicit receiver and
-	 outer sends are encoded as adjacent values to allow a quick range check to
-	 determine whether the absent receiver might differ from the method receiver.
-	 Note also Smalltalk super sends use ordinary send lookup rules."
-	LookupRuleSelf := 0.
-	LookupRuleImplicit := 256.
-	LookupRuleDynamicSuper := 257.
-	LookupRuleOrdinary := 258.
-	LookupRuleMNU := 259.
-
 ]
 
 { #category : #initialization }
@@ -8252,50 +8227,6 @@ StackInterpreter >> inlineLookupInMethodCacheSel: selector classTag: classTag [
 	^false
 ]
 
-{ #category : #'method lookup cache' }
-StackInterpreter >> inlineLookupInNSMethodCacheSel: selector classTag: classTag method: callingMethod lookupRule: lookupRule [
-	"Like inlineLookupInMethodCacheSel:classTag:, but the cache is additionally key'd by the calling method and lookupRule/depth and additionally answers localAbsentReceiverOrZero."
-
-	| hash probe |
-	<inline: true>
-	hash := (objectMemory methodCacheHashOf: selector with: classTag) bitXor: (callingMethod bitXor: lookupRule).
-
-	probe := hash bitAnd: NSMethodCacheMask.  "first probe"
-	(((((nsMethodCache at: probe + NSMethodCacheSelector) = selector) and:
-		[(nsMethodCache at: probe + NSMethodCacheClassTag) = classTag]) and:
-		[(nsMethodCache at: probe + NSMethodCacheCallingMethod) = callingMethod]) and:
-		[(nsMethodCache at: probe + NSMethodCacheDepthOrLookupRule) = lookupRule]) ifTrue:
-			[newMethod := nsMethodCache at: probe + NSMethodCacheTargetMethod.
-			primitiveFunctionPointer := self cCoerceSimple: (nsMethodCache at: probe + NSMethodCachePrimFunction)
-											to: #'void (*)()'.
-			localAbsentReceiverOrZero := nsMethodCache at: probe + NSMethodCacheActualReceiver.
-			^true	"found entry in cache; done"].
-
-	probe := (hash >> 1) bitAnd: NSMethodCacheMask.  "second probe"
-	(((((nsMethodCache at: probe + NSMethodCacheSelector) = selector) and:
-		[(nsMethodCache at: probe + NSMethodCacheClassTag) = classTag]) and:
-		[(nsMethodCache at: probe + NSMethodCacheCallingMethod) = callingMethod]) and:
-		[(nsMethodCache at: probe + NSMethodCacheDepthOrLookupRule) = lookupRule]) ifTrue:
-			[newMethod := nsMethodCache at: probe + NSMethodCacheTargetMethod.
-			primitiveFunctionPointer := self cCoerceSimple: (nsMethodCache at: probe + NSMethodCachePrimFunction)
-											to: #'void (*)()'.
-			localAbsentReceiverOrZero := nsMethodCache at: probe + NSMethodCacheActualReceiver.
-			^true	"found entry in cache; done"].
-
-	probe := (hash >> 2) bitAnd: NSMethodCacheMask.
-	(((((nsMethodCache at: probe + NSMethodCacheSelector) = selector) and:
-		[(nsMethodCache at: probe + NSMethodCacheClassTag) = classTag]) and:
-		[(nsMethodCache at: probe + NSMethodCacheCallingMethod) = callingMethod]) and:
-		[(nsMethodCache at: probe + NSMethodCacheDepthOrLookupRule) = lookupRule]) ifTrue:
-			[newMethod := nsMethodCache at: probe + NSMethodCacheTargetMethod.
-			primitiveFunctionPointer := self cCoerceSimple: (nsMethodCache at: probe + NSMethodCachePrimFunction)
-											to: #'void (*)()'.
-			localAbsentReceiverOrZero := nsMethodCache at: probe + NSMethodCacheActualReceiver.
-			^true	"found entry in cache; done"].
-
-	^false
-]
-
 { #category : #'frame access' }
 StackInterpreter >> instVar: offset ofContext: aContext [
 	"Fetch an instance variable from a maybe married context.
@@ -9616,34 +9547,6 @@ StackInterpreter >> lookupInMethodCacheSel: selector classTag: classTag [
 	 'primitiveFunctionPointer' and answer true. Otherwise, answer false."
 	<inline: false>
 	^self inlineLookupInMethodCacheSel: selector classTag: classTag
-]
-
-{ #category : #'message sending' }
-StackInterpreter >> lookupMNU [
-	"A send lookup failed. Replace the arguments on the stack with a Message and lookup
-	 #doesNotUndestand: starting at lkupClass. Note that MNU lookup ignores access modifiers.
-	 This makes it different from an ordinary send of #doesNotUnderstand:, which must only
-	 find public methods.
-	IN: lkupClass
-	IN: messageSelector
-	IN: argumentCount
-	OUT: newMethod
-	OUT: primitiveIndex
-	RESULT: LookupRuleMNU"
-
-	| currentClass dictionary found |
-	self lookupBreakFor: lkupClass.
-	self createActualMessageTo: lkupClass.
-	messageSelector := objectMemory splObj: SelectorDoesNotUnderstand.
-	currentClass := lkupClass.
-	[currentClass ~= objectMemory nilObject] whileTrue:
-		[dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: currentClass.
-		found := self lookupMethodInDictionary: dictionary.
-		found ifTrue: [^LookupRuleMNU].
-		currentClass := self superclassOf: currentClass].
-
-	self error: 'Recursive not understood error encountered'
-
 ]
 
 { #category : #'message sending' }
