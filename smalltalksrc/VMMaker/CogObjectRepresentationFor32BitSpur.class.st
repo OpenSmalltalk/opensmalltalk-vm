@@ -16,11 +16,6 @@ CogObjectRepresentationFor32BitSpur class >> defaultObjectMemoryClass [
 	^Spur32BitCoMemoryManager
 ]
 
-{ #category : #accessing }
-CogObjectRepresentationFor32BitSpur class >> numTrampolines [
-	^ super numTrampolines + (LowcodeVM ifTrue: [4] ifFalse: [0])
-]
-
 { #category : #'sista support' }
 CogObjectRepresentationFor32BitSpur >> allImmediate: immediateMask branchIf: reg instanceOfBehaviors: arrayObj target: targetFixUp [
 	< inline: true>	
