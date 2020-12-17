@@ -5,7 +5,7 @@
 #  vmmaker: generates a Pharo development environment with the virtual machine code, Slang transpiler and machine code simulation
 #  generate-sources: generates the virtual machine source code in C, using the Slang-to-C transpiler
 
-cmake_minimum_required(VERSION 2.8.4)
+cmake_minimum_required(VERSION 3.7.2)
 # Use new and simpler escape sequences
 cmake_policy(SET CMP0053 NEW)
 
@@ -107,7 +107,7 @@ if(MSVC AND NOT ${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang")
     endif()
 endif()
 
-set(FLAVOUR CoInterpreterWithQueueFFI CACHE STRING "The kind of VM to generate. Possible values: StackVM, CogVM, CoInterpreterWithQueueFFI")
+set(FLAVOUR CoInterpreter CACHE STRING "The kind of VM to generate. Possible values: StackVM, CoInterpreter")
 set(GENERATE_SOURCES TRUE CACHE BOOL "If it generates the sources")
 set(ALWAYS_INTERACTIVE FALSE CACHE BOOL "If this VM will always add interactive or not. If it is set, the headless parameter is not by default true")
 set(FEATURE_FFI TRUE CACHE BOOL "Configure and compile support for FFI in the VM")
@@ -122,6 +122,8 @@ set(FEATURE_LIB_CAIRO TRUE CACHE BOOL "Build Cairo support")
 set(FEATURE_LIB_FREETYPE2 TRUE CACHE BOOL "Build Cairo support")
 set(FEATURE_LIB_GIT2 TRUE CACHE BOOL "Build LibGit2 support")
 
+set(PHARO_LIBRARY_PATH "@executable_path/Plugins" CACHE STRING "The RPATH to use in the build")
+
 # If we are generating sources, set the source dir as the generation source dir.
 # Otherwise set it to by default to the current source dir, parametrizable
 if(${GENERATE_SOURCES})
@@ -134,30 +136,12 @@ if (${FEATURE_COMPILE_INLINE_MEMORY_ACCESSORS})
     add_compile_definitions(USE_INLINE_MEMORY_ACCESSORS=1)
 endif()
 
-if(FLAVOUR MATCHES "StackVM")
-    if(${FEATURE_GNUISATION})
-        set(VMSOURCEFILES ${GENERATED_SOURCE_DIR}/generated/vm/src/gcc3x-interp.c)
-    else()
-        set(VMSOURCEFILES ${GENERATED_SOURCE_DIR}/generated/vm/src/interp.c)
-    endif()
-else()
-    if(${FEATURE_GNUISATION})
-      set(VMSOURCEFILES
-        ${GENERATED_SOURCE_DIR}/generated/vm/src/cogit.c
-        ${GENERATED_SOURCE_DIR}/generated/vm/src/gcc3x-cointerp.c)
-    else()
-      set(VMSOURCEFILES
-        ${GENERATED_SOURCE_DIR}/generated/vm/src/cogit.c
-        ${GENERATED_SOURCE_DIR}/generated/vm/src/cointerp.c)
-    endif()
-endif()
-
 set(PLUGIN_GENERATED_FILES 
   	${GENERATED_SOURCE_DIR}/generated/plugins/src/FilePlugin/FilePlugin.c)
 
 
-if(FLAVOUR MATCHES "CoInterpreterWithQueueFFI")
-  add_definitions(-DASYNC_FFI_QUEUE=1)
+if(FLAVOUR MATCHES "CoInterpreter")
+  add_compile_definitions(ASYNC_FFI_QUEUE=1)
 endif()
 
 # Configuration
@@ -211,10 +195,10 @@ elseif(WIN)
     # this one is important
     SET(CMAKE_SYSTEM_NAME Windows)
 
-    add_definitions(-DNO_ISNAN -DNO_SERVICE -D'TZ="CEST"' "-D'VM_LABEL(foo)=0'" -DLSB_FIRST=1 -DAllocationCheckFiller=0xADD4E55)
+    add_compile_definitions(NO_ISNAN NO_SERVICE "'VM_LABEL(foo)=0'" LSB_FIRST=1 AllocationCheckFiller=0xADD4E55)
 
     #Setting minimal Windows Version to VISTA
-    add_definitions(-D_WIN32_WINNT=0x0600 -DWINVER=0x0600 -DNTDDI_VERSION=0x06000000 -DWIN64=1)
+    add_compile_definitions(_WIN32_WINNT=0x0600 WINVER=0x0600 NTDDI_VERSION=0x06000000 WIN64=1)
 
 elseif(UNIX)
 
@@ -224,7 +208,7 @@ elseif(UNIX)
 
     set(COMMON_FLAGS "-O2 -Wall -Werror=implicit-function-declaration")
 
-    add_definitions(-DLSB_FIRST=1)
+    add_compile_definitions(LSB_FIRST=1)
 
     set(OS_TYPE "unix")
     if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -246,13 +230,13 @@ set(OPTIMIZATION_FLAGS "")
 set(CMAKE_C_FLAGS "-g ${COMMON_FLAGS} ${OPTIMIZATION_FLAGS} -DNDEBUG -DDEBUGVM=0")
 set(CMAKE_CXX_FLAGS "-g ${COMMON_FLAGS} ${OPTIMIZATION_FLAGS} -DNDEBUG -DDEBUGVM=0")
 
-add_definitions(-DIMMUTABILITY=1)
-add_definitions(-DCOGMTVM=0)
-add_definitions(-DPharoVM=1)
+add_compile_definitions(IMMUTABILITY=1)
+add_compile_definitions(COGMTVM=0)
+add_compile_definitions(PharoVM=1)
 
 #We require that VM_LABEL does nothing.
 #We should actually cleanup all the places where this is set/used in the VM
-add_definitions(-D"VM_LABEL\(foo\)=0")
+add_compile_definitions("VM_LABEL\(foo\)=0")
 
 #
 # This definition is used to improve the logging of the messages, to cut-down the path
@@ -262,7 +246,7 @@ add_definitions(-D"VM_LABEL\(foo\)=0")
 # Note that it does not matter if the OS uses / or \, because we are only
 # saving the path size.
 string(LENGTH "${CMAKE_SOURCE_DIR}/" SOURCE_PATH_SIZE)
-add_definitions("-DSOURCE_PATH_SIZE=${SOURCE_PATH_SIZE}")
+add_compile_definitions("SOURCE_PATH_SIZE=${SOURCE_PATH_SIZE}")
 
 if(UNIX AND NOT OSX AND NOT WIN)
     set(VM_EXECUTABLE_NAME pharo CACHE STRING "VM Executable name")
@@ -306,7 +290,6 @@ else()
 	message(FATAL_ERROR "Failed to find a 64 bits integer type.")
 endif()
 
-
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_CURRENT_BINARY_DIR}/build/vm/")
 
 #If in OSX, configure creation of Bundle
@@ -346,10 +329,8 @@ check_library_exists(uuid uuidgen "" HAVE_UUIDGEN)
 check_library_exists(uuid uuid_generate "" HAVE_UUID_GENERATE)
 
 
-if(GENERATE_SOURCES)
-  #Include targets to build the dev environment and the sources
-  include(cmake/vmmaker.cmake)
-endif()
+#Include targets to build the dev environment and the sources
+include(cmake/vmmaker.cmake)
 
 #Generating config file
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/pharovm/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/build/include/pharovm/config.h)
@@ -435,7 +416,7 @@ PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include/pharovm
     ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include
     ${CMAKE_CURRENT_BINARY_DIR}/build/include/pharovm/
-    ${GENERATED_SOURCE_DIR}/generated/vm/include
+    ${PHARO_CURRENT_GENERATED}/vm/include
 PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include/semaphores
 )

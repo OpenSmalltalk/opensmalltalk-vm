@@ -41,7 +41,7 @@ CogStackPage class >> getter: getter bitPosition: bitPosition bitWidth: bitWidth
 		startByte := bitPosition // 8.
 		endByte := bitPosition + bitWidth - 1 // 8.
 		self assert: bitPosition \\ 8 = 0.
-		self assert: startByte \\ (bitWidth // 8) = 0.
+
 		accessor := #('byte' 'short' 'long' 'long')
 							at: endByte - startByte + 1
 							ifAbsent: ['long64'].
@@ -104,7 +104,7 @@ CogStackPage class >> setter: getter bitPosition: bitPosition bitWidth: bitWidth
 		startByte := bitPosition // 8.
 		endByte := bitPosition + bitWidth - 1 // 8.
 		self assert: bitPosition \\ 8 = 0.
-		self assert: startByte \\ (bitWidth // 8) = 0.
+
 		accessor := #('byte' 'short' 'long' 'long')
 							at: endByte - startByte + 1
 							ifAbsent: ['long64'].

@@ -14,14 +14,14 @@ static inline BOOL flushICacheFromto(char* startAddress,char* endAddress) {
 #elif defined(__arm__)|| defined(__aarch64__)
 
 // Flush the instruction cache on Linux systems using __clear_cache
-#define flushICacheFromto(me,startAddress,endAddress) __clear_cache((char*) startAddress, (char*) (endAddress ))
+#define flushICacheFromto(startAddress,endAddress) __clear_cache((char*) startAddress, (char*) (endAddress ))
 
 #else
 
 // Do not Flush the instruction cache on Intel systems
 // Flushing the instruction cache is only required if code and data do not have the same linear addresses.
 // See the CPUID and CLFLUSH instructions in the x86 manual
-#define flushICacheFromto(me,startAddress,endAddress) 0
+#define flushICacheFromto(startAddress,endAddress) 0
 
 #endif
 
