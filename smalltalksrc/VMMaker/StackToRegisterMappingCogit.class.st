@@ -160,8 +160,7 @@ Class {
 { #category : #translation }
 StackToRegisterMappingCogit class >> ancilliaryClasses [
 	^super ancilliaryClasses,
-	  { self basicNew simStackEntryClass. self basicNew bytecodeFixupClass. CogSSOptStatus } ,
-	(LowcodeVM ifTrue: [ { self basicNew simStackNativeEntryClass } ] ifFalse: [ #() ])
+	  { self basicNew simStackEntryClass. self basicNew bytecodeFixupClass. CogSSOptStatus }
 ]
 
 { #category : #documentation }
@@ -250,10 +249,6 @@ StackToRegisterMappingCogit class >> declareCVarsIn: aCodeGen [
 			type: #CogSSOptStatus;
 		var: 'prevBCDescriptor'
 			type: #'BytecodeDescriptor *'.
-	LowcodeVM ifTrue: [
-		aCodeGen var: 'simNativeStack'
-			declareC: 'CogSimStackNativeEntry simNativeStack[', self simNativeStackSlots asString, ']'
-	].
 
 	self numPushNilsFunction ifNotNil:
 		[aCodeGen
@@ -1630,24 +1625,6 @@ StackToRegisterMappingCogit >> genCallPrimitiveBytecode [
 	prim := byte2 - 128 << 8 + byte1.
 	primSet := prim >> 13 bitAnd: 3.
 	prim := prim bitAnd: 8191.
-	LowcodeVM
-		ifTrue:
-			[
-			primSet = 1 ifTrue: [
-				prim < 1000 ifTrue:
-					[^self genLowcodeNullaryInlinePrimitive: prim].
-
-				prim < 2000 ifTrue:
-					[^self genLowcodeUnaryInlinePrimitive: prim - 1000].
-				
-				prim < 3000 ifTrue:
-					[^ self genLowcodeBinaryInlinePrimitive: prim - 2000].
-
-				prim < 4000 ifTrue:
-					[^self genLowcodeTrinaryInlinePrimitive: prim - 3000].
-			]
-		].
-
 	^EncounteredUnknownBytecode
 ]
 
@@ -4201,12 +4178,6 @@ StackToRegisterMappingCogit >> simStackAt: index [
 StackToRegisterMappingCogit >> simStackEntryClass [
 	<doNotGenerate>
 	^CogSimStackEntry
-]
-
-{ #category : #initialization }
-StackToRegisterMappingCogit >> simStackNativeEntryClass [
-	<doNotGenerate>
-	^CogSimStackNativeEntry
 ]
 
 { #category : #'simulation only' }

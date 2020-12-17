@@ -9738,43 +9738,6 @@ StackInterpreter >> lowcodeCalloutState: calloutState float32Register: registerI
 ]
 
 { #category : #'inline primitive ffi abi' }
-StackInterpreter >> lowcodeCalloutState: calloutState float32Register: registerId value: value [
-	"This is implemented as C macros in platform specific headers"
-	<var: #value type: #'float' >
-	<doNotGenerate>
-
-]
-
-{ #category : #'inline primitive ffi abi' }
-StackInterpreter >> lowcodeCalloutState: calloutState float64Register: registerId [
-	"This is implemented as C macros in platform specific headers"
-	<doNotGenerate>
-
-]
-
-{ #category : #'inline primitive ffi abi' }
-StackInterpreter >> lowcodeCalloutState: calloutState float64Register: registerId value: value [
-	"This is implemented as C macros in platform specific headers"
-	<var: #value type: #'double' >
-	<doNotGenerate>
-
-]
-
-{ #category : #'inline primitive ffi abi' }
-StackInterpreter >> lowcodeCalloutState: calloutState int32Register: registerId [
-	"This is implemented as C macros in platform specific headers"
-	<doNotGenerate>
-
-]
-
-{ #category : #'inline primitive ffi abi' }
-StackInterpreter >> lowcodeCalloutState: calloutState int32Register: registerId value: value [
-	"This is implemented as C macros in platform specific headers"
-	<doNotGenerate>
-
-]
-
-{ #category : #'inline primitive ffi abi' }
 StackInterpreter >> lowcodeCalloutState: calloutState int64Register: registerId [
 	"This is implemented as C macros in platform specific headers"
 	<doNotGenerate>
@@ -9797,20 +9760,6 @@ StackInterpreter >> lowcodeCalloutState: calloutState pointerRegister: registerI
 
 { #category : #'inline primitive ffi abi' }
 StackInterpreter >> lowcodeCalloutState: calloutState pointerRegister: registerId value: value [
-	"This is implemented as C macros in platform specific headers"
-	<doNotGenerate>
-
-]
-
-{ #category : #'inline primitive ffi abi' }
-StackInterpreter >> lowcodeCalloutState: calloutState stackPointer: calloutStackPointer stackSize: calloutStackSize callFunction: functionPointer [
-	"This is implemented as C macros in platform specific headers"
-	<doNotGenerate>
-
-]
-
-{ #category : #'inline primitive ffi abi' }
-StackInterpreter >> lowcodeCalloutStateFetchResultFloat32: calloutState [
 	"This is implemented as C macros in platform specific headers"
 	<doNotGenerate>
 
@@ -14491,13 +14440,6 @@ StackInterpreter >> setFrameHasContext: theFP [
 	<inline: true>
 	<var: #theFP type: #'char *'>
 	stackPages byteAt: theFP + FoxFrameFlags + 2 put: 1
-]
-
-{ #category : #'frame access' }
-StackInterpreter >> setFrameHasNativeFrame: theFP [
-	<inline: true>
-	<var: #theFP type: #'char *'>
-	self temporary: (self frameNumArgs: theFP) in: theFP put: (objectMemory splObj: LowcodeContextMark)
 ]
 
 { #category : #'plugin primitive support' }

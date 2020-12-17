@@ -3045,8 +3045,6 @@ CogObjectRepresentationForSpur >> generateObjectRepresentationTrampolines [
 	ceLargeActiveContextInBlockTrampoline := self genActiveContextTrampolineLarge: true inBlock: InVanillaBlock called: 'ceLargeBlockContext'.
 	SistaV1BytecodeSet ifTrue:
 		[ceLargeActiveContextInFullBlockTrampoline := self genActiveContextTrampolineLarge: true inBlock: InFullBlock called: 'ceLargeFullBlockContext'].
-		
-	LowcodeVM ifTrue: [ self generateLowcodeObjectTrampolines ]
 ]
 
 { #category : #'bytecode generator support' }
