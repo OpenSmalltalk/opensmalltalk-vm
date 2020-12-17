@@ -3896,14 +3896,6 @@ CogIA32Compiler >> prepareStackToCallCFunctionInSmalltalkStack: numberOfArgument
 	
 ]
 
-{ #category : #abi }
-CogIA32Compiler >> registerToSaveIP [
-	"Temporary register used for fetching the instruction pointer. This should
-	not be used for passing parameters in a standard ABI"
-	<option: #LowcodeVM>
-	^ ClassReg
-]
-
 { #category : #'inline cacheing' }
 CogIA32Compiler >> relocateCallBeforeReturnPC: retpc by: delta [
 	| distance |

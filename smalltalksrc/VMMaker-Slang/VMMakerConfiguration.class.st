@@ -205,40 +205,6 @@ VMMakerConfiguration class >> generateSqueakSpurCogVM [
 ]
 
 { #category : #configurations }
-VMMakerConfiguration class >> generateSqueakSpurLowcodeCog64VM [
-	"No primitives since we can use those for the Cog VM"
-	^VMMaker
-		generate: CoInterpreter
-		and: StackToRegisterMappingCogit
-		with: #(ObjectMemory Spur64BitCoMemoryManager
-				SistaVM true
-				LowcodeVM true
-				MULTIPLEBYTECODESETS true
-				bytecodeTableInitializer initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid)
-		to: self sourceTree, '/spurlowcode64src'
-		platformDir: self sourceTree, '/platforms'
-		including:#()
-		configuration: self
-]
-
-{ #category : #configurations }
-VMMakerConfiguration class >> generateSqueakSpurLowcodeCogVM [
-	"No primitives since we can use those for the Cog VM"
-	^VMMaker
-		generate: CoInterpreter
-		and: StackToRegisterMappingCogit
-		with: #(ObjectMemory Spur32BitCoMemoryManager
-				SistaVM true
-				LowcodeVM true
-				MULTIPLEBYTECODESETS true
-				bytecodeTableInitializer initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid)
-		to: self sourceTree, '/spurlowcodesrc'
-		platformDir: self sourceTree, '/platforms'
-		including:#()
-		configuration: self
-]
-
-{ #category : #configurations }
 VMMakerConfiguration class >> generateSqueakSpurRegisterCogVM [
 	"No primitives since we can use those for the Cog VM"
 	^VMMaker

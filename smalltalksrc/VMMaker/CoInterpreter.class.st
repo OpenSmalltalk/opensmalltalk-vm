@@ -2464,19 +2464,8 @@ CoInterpreter >> commenceCogCompiledCodeCompaction [
 CoInterpreter >> commonCallerReturn [
 	"Return to the previous context/frame (sender for method activations, caller for block activations)."
 	<sharedCodeNamed: 'commonCallerReturn' inCase: #returnTopFromBlock>
-	| callersFPOrNull doWeHaveANativeFrame |
+	| callersFPOrNull |
 	<var: #callersFPOrNull type: #'char *'>
-
-	"TODO: Store/restore the nativeSP more properly, when it exists"
-	LowcodeVM ifTrue: [ 
-		doWeHaveANativeFrame := self frameHasNativeFrame: localFP.
-		doWeHaveANativeFrame ifTrue: [
-			nativeStackPointer := (self nativePreviousStackPointerIn: localFP) - 1.
-			nativeSP := 0.
-			self setFrameHasNotNativeFrame: localFP.
-		].
-	].
-
 	callersFPOrNull := self frameCallerFP: localFP.
 	callersFPOrNull = 0 "baseFrame" ifTrue:
 		[self assert: localFP = stackPage baseFP.
@@ -4136,7 +4125,6 @@ CoInterpreter >> internalizeIPandSP [
 	localIP := self pointerForOop: instructionPointer.
 	localSP := self pointerForOop: stackPointer.
 	localFP := self pointerForOop: framePointer.
-	LowcodeVM ifTrue: [ nativeSP := 0. ]
 ]
 
 { #category : #'trampoline support' }
@@ -4404,22 +4392,6 @@ CoInterpreter >> lookupOrdinary: selector receiver: rcvr [
 			[self assert: erridx <= self maxLookupNoMNUErrorCode.
 			 ^erridx]].
 	^newMethod
-]
-
-{ #category : #'inline primitive ffi abi' }
-CoInterpreter >> lowcodeDoCallout: functionPointer [
-	<option: #LowcodeVM>
-	<var: #functionPointer type: #'char*' >
-	self undoFetchNextBytecode.
-	self externalizeIPandSP.
-	self lowcodeCalloutState: lowcodeCalloutState callFunction: functionPointer.
-	instructionPointer = cogit ceReturnToInterpreterPC ifTrue: [
-		instructionPointer := self iframeSavedIP: framePointer.
-	].
-	self internalizeIPandSP.
-	self reloadLowcodeStateAfterCallout.
-	self fetchNextBytecode.
-	^ self lowcodeCalloutStateFetchResultFloat32: lowcodeCalloutState
 ]
 
 { #category : #'cog jit support' }
@@ -5398,96 +5370,6 @@ CoInterpreter >> mustMapMachineCodePC: theIP context: aOnceMarriedContext [
 	 and: [self methodHeaderHasPrimitive: cogMethod methodHeader]]) ifTrue:
 		[bcpc := bcpc + (self sizeOfCallPrimitiveBytecode: cogMethod methodHeader)].
 	^objectMemory integerObjectOf: bcpc + 1
-]
-
-{ #category : #'internal interpreter access' }
-CoInterpreter >> nativeFramePointerIn: theFP [
-	"See StackInterpreter class>>initializeFrameIndices"
-	<option: #LowcodeVM>
-	<returnTypeC: #'char*'>
-	<var: #theFP type: #'char *'>
-	^(self isMachineCodeFrame: theFP)
-		ifTrue:
-			[stackPages pointerAtPointer: theFP + FoxMFReceiver - (BytesPerWord*3) ]
-		ifFalse:
-			[stackPages pointerAtPointer: theFP + FoxIFReceiver - (BytesPerWord*3) ]
-]
-
-{ #category : #'internal interpreter access' }
-CoInterpreter >> nativeFramePointerIn: theFP put: valueOopPointer [
-	"See StackInterpreter class>>initializeFrameIndices"
-	<option: #LowcodeVM>
-	<returnTypeC: #'char*'>
-	<var: #theFP type: #'char *'>
-	<var: #valueOopPointer type: #'char*'>
-	^(self isMachineCodeFrame: theFP)
-		ifTrue:
-			[stackPages pointerAtPointer: theFP + FoxMFReceiver - (BytesPerWord*3) put: valueOopPointer]
-		ifFalse:
-			[stackPages pointerAtPointer: theFP + FoxIFReceiver - (BytesPerWord*3) put: valueOopPointer]
-]
-
-{ #category : #'internal interpreter access' }
-CoInterpreter >> nativePreviousStackPointerIn: theFP [
-	"See StackInterpreter class>>initializeFrameIndices"
-	<option: #LowcodeVM>
-	<returnTypeC: #'char*'>
-	<var: #theFP type: #'char *'>
-	^(self isMachineCodeFrame: theFP)
-		ifTrue:
-			[stackPages pointerAtPointer: theFP + FoxMFReceiver - (BytesPerWord*2)]
-		ifFalse:
-			[stackPages pointerAtPointer: theFP + FoxIFReceiver - (BytesPerWord*2)]
-]
-
-{ #category : #'internal interpreter access' }
-CoInterpreter >> nativePreviousStackPointerIn: theFP put: valueOopPointer [
-	"See StackInterpreter class>>initializeFrameIndices"
-	<option: #LowcodeVM>
-	<returnTypeC: #'char*'>
-	<var: #theFP type: #'char *'>
-	<var: #valueOopPointer type: #'char *'>
-	^(self isMachineCodeFrame: theFP)
-		ifTrue:
-			[stackPages pointerAtPointer: theFP + FoxMFReceiver - (BytesPerWord*2) put: valueOopPointer]
-		ifFalse:
-			[stackPages pointerAtPointer: theFP + FoxIFReceiver - (BytesPerWord*2) put: valueOopPointer]
-]
-
-{ #category : #'trampoline support' }
-CoInterpreter >> nativeStackPointerAddress [
-	<option: #LowcodeVM>
-	<api>
-	<returnTypeC: #usqInt>
-	^self cCode: [(self addressOf: nativeStackPointer) asUnsignedInteger]
-		inSmalltalk: [cogit simulatedReadWriteVariableAddress: #nativeStackPointer in: self]
-]
-
-{ #category : #'internal interpreter access' }
-CoInterpreter >> nativeStackPointerIn: theFP [
-	"See StackInterpreter class>>initializeFrameIndices"
-	<option: #LowcodeVM>
-	<returnTypeC: #'char*'>
-	<var: #theFP type: #'char *'>
-	^(self isMachineCodeFrame: theFP)
-		ifTrue:
-			[stackPages pointerAtPointer: theFP + FoxMFReceiver - (BytesPerWord*4)]
-		ifFalse:
-			[stackPages pointerAtPointer: theFP + FoxIFReceiver - (BytesPerWord*4)]
-]
-
-{ #category : #'internal interpreter access' }
-CoInterpreter >> nativeStackPointerIn: theFP put: valueOopPointer [
-	"See StackInterpreter class>>initializeFrameIndices"
-	<option: #LowcodeVM>
-	<returnTypeC: #'char*'>
-	<var: #theFP type: #'char *'>
-	<var: #valueOopPointer type: #'char *'>
-	^(self isMachineCodeFrame: theFP)
-		ifTrue:
-			[stackPages pointerAtPointer: theFP + FoxMFReceiver - (BytesPerWord*4) put: valueOopPointer]
-		ifFalse:
-			[stackPages pointerAtPointer: theFP + FoxIFReceiver - (BytesPerWord*4) put: valueOopPointer]
 ]
 
 { #category : #'cog jit support' }
@@ -6819,42 +6701,6 @@ CoInterpreter >> setUpForUseByFacade: aCurrentImageCoInterpreterFacade [
 	 can be computed."
 	<doNotGenerate>
 	numStackPages := 0
-]
-
-{ #category : #'trampoline support' }
-CoInterpreter >> shadowCallStackAddress [
-	<option: #LowcodeVM>
-	<api>
-	<returnTypeC: #usqInt>
-	^self cCode: [(self addressOf: shadowCallStackPointer) asUnsignedInteger]
-		inSmalltalk: [cogit simulatedReadWriteVariableAddress: #shadowCallStackPointer in: self]
-]
-
-{ #category : #'internal interpreter access' }
-CoInterpreter >> shadowCallStackPointerIn: theFP [
-	"See StackInterpreter class>>initializeFrameIndices"
-	<option: #LowcodeVM>
-	<returnTypeC: #'char*'>
-	<var: #theFP type: #'char *'>
-	^(self isMachineCodeFrame: theFP)
-		ifTrue:
-			[stackPages pointerAtPointer: theFP + FoxMFReceiver - (BytesPerWord*5)]
-		ifFalse:
-			[stackPages pointerAtPointer: theFP + FoxIFReceiver - (BytesPerWord*5)]
-]
-
-{ #category : #'internal interpreter access' }
-CoInterpreter >> shadowCallStackPointerIn: theFP put: valueOopPointer [
-	"See StackInterpreter class>>initializeFrameIndices"
-	<option: #LowcodeVM>
-	<returnTypeC: #'char*'>
-	<var: #theFP type: #'char *'>
-	<var: #valueOopPointer type: #'char *'>
-	^(self isMachineCodeFrame: theFP)
-		ifTrue:
-			[stackPages pointerAtPointer: theFP + FoxMFReceiver - (BytesPerWord*5) put: valueOopPointer]
-		ifFalse:
-			[stackPages pointerAtPointer: theFP + FoxIFReceiver - (BytesPerWord*5) put: valueOopPointer]
 ]
 
 { #category : #'debug printing' }
