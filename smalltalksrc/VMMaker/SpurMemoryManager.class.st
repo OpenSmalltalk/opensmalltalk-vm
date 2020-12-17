@@ -1681,12 +1681,6 @@ SpurMemoryManager >> allObjectsDo: aBlock [
 	self allOldSpaceObjectsDo: aBlock
 ]
 
-{ #category : #'object enumeration' }
-SpurMemoryManager >> allObjectsDoSafely: aBlock [
-	<inline: true>
-	self allObjectsDo: aBlock
-]
-
 { #category : #'free space' }
 SpurMemoryManager >> allObjectsInFreeTree: freeNode do: aBlock [
 	| listNode |
@@ -4847,9 +4841,21 @@ SpurMemoryManager >> fetchByte: byteIndex ofObject: objOop [
 
 { #category : #'object access' }
 SpurMemoryManager >> fetchClassOf: oop [
+	"In 64 bits the tagBits are fixed and never used for anything else.
+	Applying the tag has 3 different values
+	If the tagBits are 001, the oop is a SmallInteger.
+	If the tagBits are 010, the oop is a Character.
+	If the tagBits are 101, the oop is a SmallFloat.
+	Otherwise it's tagBits are 000, the oop is an address and we fetch the class from the header
+	
+	In 32 bits, the tagBits are variable.
+	If the tagBits are X1, the oop is a SmallInteger, and using the tagMask will return 1 or 3.
+	Therefore the SmallInteger class is installed in both indexes 1 and 3.
+	If the tagBits are 10, the oop is a character and the class is installed in index 2.
+	Otherwise the last tagBits are 00, which is an address so we fetch the class from the header."
 	| tagBits |
 	^(tagBits := oop bitAnd: self tagMask) ~= 0
-		ifTrue: [self fetchPointer: tagBits ofObject: classTableFirstPage]
+		ifTrue: [	self fetchPointer: tagBits ofObject: classTableFirstPage]
 		ifFalse: [self fetchClassOfNonImm: oop]
 ]
 
@@ -9064,7 +9070,7 @@ SpurMemoryManager >> newExternalAddressWithValue: aPointer [
 		       indexableSize: (self sizeof: #'void*').
 
 	ptr := self cCoerce: (self firstIndexableField: oop) to: #'void **'.
-	ptr at: 0 put: aPointer.
+	ptr at: 0 put: aPointer asIntegerPtr.
 	^ oop
 ]
 

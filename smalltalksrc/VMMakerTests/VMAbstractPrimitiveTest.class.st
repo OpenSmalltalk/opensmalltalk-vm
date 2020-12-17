@@ -109,7 +109,7 @@ VMAbstractPrimitiveTest >> newSmallContextReceiver: anOop method: aMethodOop arg
 VMAbstractPrimitiveTest >> setUp [
 	
 	"taken from VMSimpleStackBasedCogitBytecodeTest >> #setup"
-	| newMethod ctx page |
+	| newMethod ctx page classFloat classLargeInteger classLargeNegativeInteger |
 	super setUp.
 	
 	memory nilObject: (self newObjectWithSlots: 0).
@@ -152,6 +152,30 @@ VMAbstractPrimitiveTest >> setUp [
 	memory classExternalAddress: (self newClassInOldSpaceWithSlots: 0 instSpec: (memory byteFormatForNumBytes: 0) ).
 	memory classArray: (self newClassInOldSpaceWithSlots: 0 instSpec: memory arrayFormat ).
 	memory classByteArray: (self newClassInOldSpaceWithSlots: 0 instSpec: (memory byteFormatForNumBytes: 0) ).
+
+  classFloat := self newClassInOldSpaceWithSlots: 0 instSpec: memory firstLongFormat.
+	memory setHashBitsOf: classFloat to: ClassFloatCompactIndex.
+	memory
+		storePointer: ClassFloatCompactIndex
+		ofObject: memory classTableFirstPage
+		withValue: classFloat.
+
+
+	classLargeInteger := self newClassInOldSpaceWithSlots: 0 instSpec: memory firstByteFormat.
+	
+	memory setHashBitsOf: classLargeInteger to: ClassLargePositiveIntegerCompactIndex.
+	memory
+		storePointer: ClassLargePositiveIntegerCompactIndex
+		ofObject: memory classTableFirstPage
+		withValue: classLargeInteger.
+
+	classLargeNegativeInteger := self newClassInOldSpaceWithSlots: 0 instSpec: memory firstByteFormat.
+	
+	memory setHashBitsOf: classLargeNegativeInteger to: ClassLargeNegativeIntegerCompactIndex.
+	memory
+		storePointer: ClassLargeNegativeIntegerCompactIndex
+		ofObject: memory classTableFirstPage
+		withValue: classLargeNegativeInteger.
 
 	memory lastHash: 1
 ]

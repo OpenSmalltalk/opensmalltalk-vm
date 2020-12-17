@@ -90,18 +90,22 @@ MethodBuilderTest >> testGeneratingCompiledMethod [
 
 { #category : #running }
 MethodBuilderTest >> testInstanciateMethodShouldTakeOneSlotForEightBytecodes [
+	| numberOfByteCode |
+	numberOfByteCode := 8.
 	method := methodBuilder newMethod bytecodes: #[ 1 2 3 4 5 6 7 8 ]; buildMethod.
 
-	"should equal the header (1) + the number of bytecodes divided by 8"
-	self assert: methodBuilder slotSize equals: 2.
+	"should equal the header (1) + the number of bytecodes divided by wordsize"
+	self assert: methodBuilder slotSize equals: 1 + (numberOfByteCode / wordSize) ceiling..
 ]
 
 { #category : #running }
 MethodBuilderTest >> testInstanciateMethodShouldTakeTwoSlotForNineBytecodes [
+	| numberOfByteCode |
+	numberOfByteCode := 9.
 	method := methodBuilder newMethod bytecodes: #[ 1 2 3 4 5 6 7 8 9 ]; buildMethod.
 
-	"should equal the header (1) + the number of bytecodes divided by 8"
-	self assert: methodBuilder slotSize equals: 3.
+	"should equal the header (1) + the number of bytecodes divided by wordsize"
+	self assert: methodBuilder slotSize equals: 1 + (numberOfByteCode / wordSize) ceiling.
 ]
 
 { #category : #running }
