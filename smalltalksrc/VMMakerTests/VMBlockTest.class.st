@@ -127,7 +127,6 @@ VMBlockTest >> testCreatingABlockClosureShouldHaveOuterContextObject [
 	stackBuilder buildStack.
 	
 	interpreter instructionPointer: (methodBuilder bytecodeAt: 0 forMethod: methodOop).
-	1halt.
 	interpreter interpretWhile: [ interpreter method = methodOop ].
 
 	"Currently fails because the stack frame is not overriden.
