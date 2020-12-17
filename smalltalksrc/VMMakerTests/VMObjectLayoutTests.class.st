@@ -78,7 +78,7 @@ VMObjectLayoutTests >> testObjectHeaderEncodesAmountOfSlots [
 	0 to: 254 do: [ :slots |
 		class := self installClassIntoClassTableWithInstSpec: 1 instSize: slots.
 		objOop := memory instantiateClass: class.
-		header := memory long64At: objOop.
+		header := memory baseHeader: objOop.
 		self assert: (header >> 56 bitAnd: 16rFF) equals: slots
 	]
 ]
@@ -90,7 +90,7 @@ VMObjectLayoutTests >> testObjectHeaderEncodesClassIndex [
 		class := self installClassIntoClassTableWithInstSpec: 1 instSize: 0.
 		objOop := memory instantiateClass: class.
 		classIndex := memory rawHashBitsOf: class.
-		header := memory longAt:objOop.
+		header := memory baseHeader: objOop.
 		memory fetchClassTagOf: objOop.
 		self assert: (header bitAnd: 16r3FFFFF) equals: classIndex
 	]
@@ -106,7 +106,7 @@ VMObjectLayoutTests >> testObjectHeaderEncodesObjecFormatForFixedLayout [
 		class := self installClassIntoClassTableWithInstSpec: instSpec instSize: 0.
 		objOop := memory instantiateClass: class.
 		classInstSpec := memory instSpecOfClass: class.
-		header := memory longAt:objOop.
+		header := memory baseHeader: objOop.
 		self assert: (header >> 24 bitAnd: 16r1F) equals: classInstSpec
 	]
 ]
@@ -128,7 +128,7 @@ VMObjectLayoutTests >> testObjectHeaderEncodesObjecFormatForIndexableOpaqueLayou
 		padding := (wordSize * 8) - (size * bits).
 		objOop := memory instantiateClass: class indexableSize: size.
 		classInstSpec := memory instSpecOfClass: class.
-		header := memory longAt: objOop.
+		header := memory baseHeader: objOop.
 		self assert: (header >> 24 bitAnd: 16r1F) equals: classInstSpec + (padding / bits)
 		] 
 ]
@@ -148,7 +148,7 @@ VMObjectLayoutTests >> testObjectHeaderEncodesObjecFormatForIndexableOpaqueLayou
 		padding := (wordSize * 8) - (size * bits).
 		objOop := memory instantiateClass: class indexableSize: size.
 		classInstSpec := memory instSpecOfClass: class.
-		header := memory longAt:objOop.
+		header := memory baseHeader: objOop.
 		self assert: (header >> 24 bitAnd: 16r1F) equals: classInstSpec + (padding / bits)
 		] 
 ]
@@ -174,7 +174,7 @@ VMObjectLayoutTests >> testObjectHeaderEncodesObjecFormatForIndexableOpaqueLayou
 		padding := (wordSize * bits) - (size * bits).
 		objOop := memory instantiateClass: class indexableSize: size.
 		classInstSpec := memory instSpecOfClass: class.
-		header := memory longAt:objOop.
+		header := memory baseHeader: objOop.
 		self assert: (header >> 24 bitAnd: 16r1F) equals: classInstSpec + (padding / bits)
 		] 
 	
@@ -188,7 +188,7 @@ VMObjectLayoutTests >> testObjectHeaderEncodesObjecFormatForIndexablePointerLayo
 	1 to: 10 do: [ :size |
 		objOop := memory instantiateClass: class indexableSize: size.
 		classInstSpec := memory instSpecOfClass: class.
-		header := memory longAt:objOop.
+		header := memory baseHeader: objOop.
 		self assert: (header >> 24 bitAnd: 16r1F) equals: classInstSpec
 	]
 	
@@ -241,15 +241,15 @@ VMObjectLayoutTests >> testObjectWithMoreThan254SlotsHasTheCorrectSize [
 
 { #category : #tests }
 VMObjectLayoutTests >> testObjectWithMoreThan254SlotsHasTwoHeaders [
-	| class objOop header2 mask numSlots |
+	| class objOop bigOopHeader mask numSlots |
 	mask := 16rFFFFFFFFFFFFFF.
 	255 to: 265 do: [ :slots | 
 		class := self
 			installClassIntoClassTableWithInstSpec: 1
 			instSize: slots.
 		objOop := memory instantiateClass: class.
-		header2 := memory long64At: objOop - objectHeaderSize.	"header before the main header"
-		numSlots := header2 bitAnd: mask.
+		bigOopHeader := memory baseHeader: objOop - objectHeaderSize.	"header before the main header"
+		numSlots := bigOopHeader bitAnd: mask.
 		self assert: numSlots equals: slots ]
 ]
 
