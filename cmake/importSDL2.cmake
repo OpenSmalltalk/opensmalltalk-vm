@@ -19,11 +19,11 @@ endfunction()
 function(build_SDL2)
     message(STATUS "Building SDL2")
   	include(cmake/DownloadProject.cmake)
-    download_project(PROJ SDL2
-        URL         https://libsdl.org/release/SDL2-2.0.12.tar.gz
-        URL_HASH    MD5=783b6f2df8ff02b19bb5ce492b99c8ff
+	download_project(PROJ   SDL2
+        GIT_REPOSITORY      https://github.com/pharo-project/SDL2.git
+        GIT_TAG             "v2.0.12"
         ${UPDATE_DISCONNECTED_IF_AVAILABLE}
-    )
+	)
     add_subdirectory(${SDL2_SOURCE_DIR} ${SDL2_BINARY_DIR} EXCLUDE_FROM_ALL)
 
     set_target_properties(SDL2 PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})

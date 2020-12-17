@@ -13,10 +13,10 @@ function(build_ffi)
 	message(STATUS "Building FFI")
 	include(cmake/DownloadProject.cmake)
 
-	download_project(PROJ                libffi
-                 GIT_REPOSITORY      https://github.com/guillep/libffi.git
-                 GIT_TAG             "v3.3-cmake"
-                 ${UPDATE_DISCONNECTED_IF_AVAILABLE}
+	download_project(PROJ   libffi
+		GIT_REPOSITORY      https://github.com/pharo-project/libffi.git
+        GIT_TAG             "v3.3-cmake"
+        ${UPDATE_DISCONNECTED_IF_AVAILABLE}
 	)
 
 	add_subdirectory(${libffi_SOURCE_DIR} ${libffi_BINARY_DIR} EXCLUDE_FROM_ALL)
