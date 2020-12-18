@@ -326,7 +326,7 @@ $(OBJDIR)/%.dylib: FORCE
 
 $(BLDDIR)/fdlibm/libm.a:
 	@-mkdir -p $(@D)
-	$(MAKE) CFLAGS="$(OFLAGS) -D_IEEE_LIBM -isysroot $(SDK)" -C $(@D) \
+	$(MAKE) CFLAGS="$(OFLAGS) -arch $(TARGET_ARCH) -D_IEEE_LIBM -isysroot $(SDK)" -C $(@D) \
 		TP=../../$(TPDIR) -f ../../$(TPDIR)/fdlibm/Makefile.remote
 
 FORCE:

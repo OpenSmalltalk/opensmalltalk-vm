@@ -7,7 +7,7 @@ XCODE:=$(shell /usr/bin/xcode-select -p)
 XCUB:=$(XCODE)/usr/bin
 SDKsDIR:=$(XCODE)/Platforms/MacOSX.platform/Developer/SDKs
 #Build oldest installed SDK
-SDKs:=MacOSX11.0.sdk
+SDKs:=MacOSX.sdk
 ifeq ($(SDK),)
 SDK:=$(firstword $(realpath $(addprefix $(SDKsDIR)/, $(SDKs))))
 else # Allow Makefile to set specific SDK
@@ -22,7 +22,6 @@ ifeq ($(strip $(SDK)),)
 endif
 TARGET_ARCH:=arm64
 #TARGET_CPU:=apple-a12
-#TARGET_CPU:=apple-a12 -D__arm64__=1 # Hack; clang neglects to set __arm64__
 ifeq ($(TARGET_VERSION_MIN),) # Allow Makefile to set TARGET_VERSION_MIN
 TARGET_VERSION_MIN:=11.0
 endif
@@ -46,18 +45,10 @@ OBJC_CODE_MODEL := -fobjc-arc
 ifdef BIT_IDENTICAL_FLOATING_POINT
 CFLAGS:=$(CFLAGS) -DBIT_IDENTICAL_FLOATING_POINT=1
 endif
-#CFLAGS:=$(CFLAGS) -DBUILD_FOR_OSX=1 -DUSE_METAL=1 -DUSE_OPENGL=1 -DUSE_CORE_GRAPHICS=1 \
-#		-target $(TARGET_ARCH) -mcpu=$(TARGET_CPU) \
-#		-mmacosx-version-min=$(TARGET_VERSION_MIN) \
-#		-fvisibility=default \
-#		-fmacro-backtrace-limit=0 -fdiagnostics-show-note-include-stack \
-#		-fmessage-length=0 -fpascal-strings -fasm-blocks -fstrict-aliasing \
-#		$(XCFLAGS) \
-#		-isysroot $(SDK) \
-#		-include $(PLATDIR)/iOS/vm/SqueakPureObjc_Prefix.pch
 
 CFLAGS:=$(CFLAGS) -DBUILD_FOR_OSX=1 -DUSE_METAL=1 -DUSE_OPENGL=1 -DUSE_CORE_GRAPHICS=1 \
 		-arch $(TARGET_ARCH) \
+		-mmacosx-version-min=$(TARGET_VERSION_MIN) \
 		-fvisibility=default \
 		-fmacro-backtrace-limit=0 -fdiagnostics-show-note-include-stack \
 		-fmessage-length=0 -fpascal-strings -fasm-blocks -fstrict-aliasing \
@@ -89,7 +80,7 @@ WARNINGS:= -Wno-missing-field-initializers -Wno-missing-prototypes \
 # N.B. No QuickTime framework; that is 32-bit only.
 FRAMEWORKS:=-fobjc-link-runtime \
 			-framework Foundation -framework OpenGL -framework Cocoa \
-			-framework AudioToolbox -framework CoreAudio \
+			-framework AudioToolbox -framework CoreAudio -framework AVFoundation \
 			-framework SystemConfiguration \
 			-framework ApplicationServices -framework Security \
 			-framework QuartzCore \

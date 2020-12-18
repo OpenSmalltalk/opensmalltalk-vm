@@ -8,6 +8,14 @@
 	<true/>
 	<key>com.apple.security.cs.allow-unsigned-executable-memory</key>
 	<true/>
+	<key>com.apple.security.device.audio-input</key>
+	<true/>
+	<key>com.apple.security.device.microphone</key>
+	<true/>
+	<key>com.apple.security.device.video-input</key>
+	<true/>
+	<key>com.apple.security.device.camera</key>
+	<true/>
 <!-- Apparently this key allows an application to *be* a debugger,
 	not to be debugged
 	<key>com.apple.security.cs.debugger</key>
