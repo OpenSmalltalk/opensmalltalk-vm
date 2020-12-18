@@ -26,6 +26,61 @@ extern struct VirtualMachine *interpreterProxy;
 # define dispatch_release(shunned) 0
 #endif
 
+#if defined(MAC_OS_X_VERSION_10_14)
+static canAccessCamera = false;
+static askedToAccessCamera = false;
+
+static void
+askToAccessCamera()
+{
+	askedToAccessCamera = true;
+	// Request permission to access the camera.
+	// This API is only available in the 10.14 SDK and subsequent.
+	switch ([AVCaptureDevice authorizationStatusForMediaType: AVMediaTypeVideo]) {
+		case AVAuthorizationStatusAuthorized:
+			// The user has previously granted access to the camera.
+			canAccessCamera = true;
+			return;
+		case AVAuthorizationStatusNotDetermined: {
+			// The app hasn't yet asked the user for camera access.
+			__block BOOL gotResponse = false;
+			const struct timespec rqt = {0,100000000}; // 1/10th sec
+			[AVCaptureDevice
+				requestAccessForMediaType: AVMediaTypeVideo
+				completionHandler: ^(BOOL granted) {
+										gotResponse = true;
+										canAccessCamera = granted;
+									}];
+			while (!gotResponse)
+				nanosleep(&rqt,0);
+			return;
+		}
+		case AVAuthorizationStatusDenied:
+			// The user has previously denied access.
+			// One would hope one could to ask again; max once per run.
+			// But at least in MacOS X 11.1 one cannot ask again; the request to ask
+			// send (requestAccessForMediaType:completionHandler:) is ignored.
+		case AVAuthorizationStatusRestricted:
+			// The user can't grant access due to restrictions.
+			canAccessCamera = false;
+	}
+}
+#endif
+
+static __inline bool
+ensureCameraAccess()
+{
+#if defined(MAC_OS_X_VERSION_10_14)
+	if (!askedToAccessCamera)
+		askToAccessCamera();
+	if (!canAccessCamera)
+		interpreterProxy->primitiveFailFor(PrimErrInappropriate);
+	return canAccessCamera;
+#else
+	return true;
+#endif
+}
+
 void printDevices();
 
 @interface SqueakVideoGrabber : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate>
@@ -86,30 +141,6 @@ SqueakVideoGrabber *grabbers[CAMERA_COUNT];
       desiredWidth:(int)desiredWidth 
       desiredHeight:(int)desiredHeight
 {
-#if defined(MAC_OS_X_VERSION_10_14)
-	// Request permission to access the camera.
-	// This API is only available in the 10.14 SDK and subsequent.
-	switch ([AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeVideo]) {
-		case AVAuthorizationStatusAuthorized:
-			// The user has previously granted access to the camera.
-			break;
-		case AVAuthorizationStatusNotDetermined: {
-			// The app hasn't yet asked the user for camera access.
-			__block BOOL goodToGo = false;
-			[AVCaptureDevice
-				requestAccessForMediaType:AVMediaTypeVideo
-				completionHandler: ^(BOOL granted) { goodToGo = granted; }];
-			if (goodToGo)
-				break;
-		}
-		case AVAuthorizationStatusDenied:
-			// The user has previously denied access.
-		case AVAuthorizationStatusRestricted:
-			// The user can't grant access due to restrictions.
-			interpreterProxy->primitiveFailFor(PrimErrInappropriate);
-			return false;
-	}
-#endif
 	NSArray *devices = [[AVCaptureDevice devices] filteredArrayUsingPredicate:
      [NSPredicate predicateWithBlock:^BOOL(id object, NSDictionary *bindings) {
         return [object hasMediaType: AVMediaTypeVideo] || [object hasMediaType: AVMediaTypeMuxed];
@@ -291,6 +322,10 @@ CameraOpen(sqInt cameraNum, sqInt desiredWidth, sqInt desiredHeight)
 {
   if (cameraNum<1 || cameraNum>CAMERA_COUNT)
 	return false;
+
+  if (!ensureCameraAccess())
+	return false;
+
   SqueakVideoGrabber *grabber = grabbers[cameraNum-1];
 
   if (grabber && grabber->pixels)
@@ -318,6 +353,9 @@ sqInt
 CameraExtent(sqInt cameraNum)
 {
   SqueakVideoGrabber *grabber;
+
+  if (!ensureCameraAccess())
+	return 0;
 
   /* if the camera is already open answer its extent */
   if (cameraNum >= 1 && cameraNum <= CAMERA_COUNT
