@@ -18,9 +18,11 @@ extern struct VirtualMachine *interpreterProxy;
 
 #include <Cocoa/Cocoa.h>
 #include <AVFoundation/AVFoundation.h>
+#include <AVFoundation/AVCaptureDevice.h>
 
 // dispatch_release will only compile if macosx-version-min<=10.7
 #if MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
+# undef dispatch_release
 # define dispatch_release(shunned) 0
 #endif
 
@@ -84,7 +86,31 @@ SqueakVideoGrabber *grabbers[CAMERA_COUNT];
       desiredWidth:(int)desiredWidth 
       desiredHeight:(int)desiredHeight
 {
-  NSArray *devices = [[AVCaptureDevice devices] filteredArrayUsingPredicate:
+#if defined(MAC_OS_X_VERSION_10_14)
+	// Request permission to access the camera.
+	// This API is only available in the 10.14 SDK and subsequent.
+	switch ([AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeVideo]) {
+		case AVAuthorizationStatusAuthorized:
+			// The user has previously granted access to the camera.
+			break;
+		case AVAuthorizationStatusNotDetermined: {
+			// The app hasn't yet asked the user for camera access.
+			__block BOOL goodToGo = false;
+			[AVCaptureDevice
+				requestAccessForMediaType:AVMediaTypeVideo
+				completionHandler: ^(BOOL granted) { goodToGo = granted; }];
+			if (goodToGo)
+				break;
+		}
+		case AVAuthorizationStatusDenied:
+			// The user has previously denied access.
+		case AVAuthorizationStatusRestricted:
+			// The user can't grant access due to restrictions.
+			interpreterProxy->primitiveFailFor(PrimErrInappropriate);
+			return false;
+	}
+#endif
+	NSArray *devices = [[AVCaptureDevice devices] filteredArrayUsingPredicate:
      [NSPredicate predicateWithBlock:^BOOL(id object, NSDictionary *bindings) {
         return [object hasMediaType: AVMediaTypeVideo] || [object hasMediaType: AVMediaTypeMuxed];
     }]];
@@ -276,7 +302,6 @@ CameraOpen(sqInt cameraNum, sqInt desiredWidth, sqInt desiredHeight)
   return [grabber	initCapture: cameraNum-1
 					desiredWidth: desiredWidth
 					desiredHeight: desiredHeight];
-  return true;
 }
 
 void 

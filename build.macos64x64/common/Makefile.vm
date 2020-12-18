@@ -210,8 +210,13 @@ print-settings:
 	$(info OBJDIR=$(OBJDIR))
 	$(info LIBS=$(LIBS))
 	$(info BUNDLES=$(BUNDLES))
-	$(info deps=$(patsubst %,deps/%.d,$(notdir $(basename $(VMSRC)))))
+	$(info SDK=$(SDK))
 	$(info -----------------------------------------------------)
+
+print-deps:
+	$(info ---------------- Makefile.vm dep files ------------------)
+	$(info deps=$(patsubst %,deps/%.d,$(notdir $(basename $(VMSRC)))))
+	$(info ---------------- Makefile.vm dep files ------------------)
 
 print-objects:
 	$(info ---------------- Makefile.vm objects ------------------)
@@ -267,7 +272,7 @@ $(OBJDIR)/%.lib: FORCE
 	rm -f $(BUILD)/vm/$(*F).ignore
 	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) MAKEFILE=$(call plugin-makefile,$(*F)) \
-		CONFIGURATION=$(CONFIGURATION) ARCH=$(TARGET_ARCH) \
+		CONFIGURATION=$(CONFIGURATION) ARCH=$(TARGET_ARCH) TARGET_VERSION_MIN=$(TARGET_VERSION_MIN) \
 		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
 		LIBNAME=$(*F) COGDEFS="$(COGDEFS)" XDEFS=-DSQUEAK_BUILTIN_PLUGIN \
 		$(PLUGINHACK) \
@@ -291,7 +296,7 @@ $(OBJDIR)/%.bundle:	FORCE
 	rm -f $(BUILD)/vm/$(*F).ignore
 	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) MAKEFILE=$(call plugin-makefile,$(*F)) \
-		CONFIGURATION=$(CONFIGURATION) ARCH=$(TARGET_ARCH) \
+		CONFIGURATION=$(CONFIGURATION) ARCH=$(TARGET_ARCH) TARGET_VERSION_MIN=$(TARGET_VERSION_MIN) \
 		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
 		LIBNAME=$(*F) COGDEFS="$(COGDEFS)" \
 		APP=$(APP) VM=$(VM) BLDDIR=$(BLDDIR) \

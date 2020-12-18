@@ -39,6 +39,7 @@
  */
 
 #import <CoreAudio/CoreAudio.h>
+#include <AVFoundation/AVCaptureDevice.h>
 
 //typedef struct _device { AudioDeviceID id; } DeviceID;
 
@@ -345,8 +346,31 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 - (sqInt)	snd_StartRecording: (sqInt) desiredSamplesPerSec stereo: (sqInt) stereo semaIndex: (sqInt) semaIndex {
 
 	if (desiredSamplesPerSec <= 0 || stereo < 0 || stereo > 1) 
-		return interpreterProxy->primitiveFail();
+		return interpreterProxy->primitiveFailFor(PrimErrBadArgument);
 
+#if defined(MAC_OS_X_VERSION_10_14)
+	// Request permission to access the microphone.
+	// This API is only available in the 10.14 SDK and subsequent.
+	switch ([AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeAudio]) {
+		case AVAuthorizationStatusAuthorized:
+			// The user has previously granted access to the microphone.
+			break;
+		case AVAuthorizationStatusNotDetermined: {
+			// The app hasn't yet asked the user for microphone access.
+			__block BOOL goodToGo = false;
+			[AVCaptureDevice
+				requestAccessForMediaType:AVMediaTypeAudio
+				completionHandler: ^(BOOL granted) { goodToGo = granted; }];
+			if (goodToGo)
+				break;
+		}
+		case AVAuthorizationStatusDenied:
+			// The user has previously denied access.
+		case AVAuthorizationStatusRestricted:
+			// The user can't grant access due to restrictions.
+			return interpreterProxy->primitiveFailFor(PrimErrInappropriate);
+	}
+#endif
 	if (self.inputAudioQueue)
 		[self snd_StopRecording];
 
