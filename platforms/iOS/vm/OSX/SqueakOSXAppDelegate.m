@@ -146,7 +146,9 @@ SqueakOSXAppDelegate *gDelegateApp;
 	resetFrame.size.width = width;
 	resetFrame.size.height = height;
     [self.window setAcceptsMouseMovedEvents: YES];
+#if MAC_OS_X_VERSION_MIN_REQUIRED <= MAC_OS_X_VERSION_10_9
 	[self.window useOptimizedDrawing: YES];
+#endif
 	[self.window setTitle: [[[[self squeakApplication] imageNameURL] path] lastPathComponent]];
 	[self.window setRepresentedURL: [[self squeakApplication] imageNameURL]];
 	[self.window setInitialFirstResponder: [self mainView]];
