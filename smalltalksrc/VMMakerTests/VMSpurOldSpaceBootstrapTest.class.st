@@ -8,28 +8,13 @@ Class {
 VMSpurOldSpaceBootstrapTest >> testClassTableHasTablePagesAndHiddenRoots [
 
 	| tableRoot |
-	
-	memory coInterpreter desiredNumStackPages: 8.
-	memory coInterpreter initStackPages.
-	memory coInterpreter bootstrapping: true.
 	memory nilObject: self newZeroSizedObject.
-
-	memory coInterpreter method: memory nilObject.
-	memory coInterpreter instructionPointer: memory nilObject.
-	memory coInterpreter newMethod: memory nilObject.
-	memory coInterpreter profileProcess: memory nilObject.
-	memory coInterpreter profileMethod: memory nilObject.
-	memory coInterpreter profileSemaphore: memory nilObject.
-	memory mournQueue: memory nilObject.
-	memory specialObjectsOop: memory nilObject.
-	
 	"Initialize old space with free list, class table, hidden roots and remembered set to be able to scavenge"
 	memory initializeFreeList.
 	memory segmentManager collapseSegmentsPostSwizzle.
 	memory updateFreeLists.
 	memory computeFreeSpacePostSwizzle.
 	memory initializeOldSpaceFirstFree: memory freeOldSpaceStart.
-
 
 	tableRoot := memory allocateClassTable.
 	

@@ -81,8 +81,8 @@ VMMethodBuilder >> fillLiteralsFromPharo: pharoLiterals [
 { #category : #filling }
 VMMethodBuilder >> fillMethod [
 	self putHeaderInMethod.
-	self putBytecodesInMethod.
 	self putLiteralInMethod.
+	self putBytecodesInMethod.
 ]
 
 { #category : #initialization }

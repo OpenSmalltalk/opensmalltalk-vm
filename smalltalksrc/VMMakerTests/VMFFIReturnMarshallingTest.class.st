@@ -56,7 +56,10 @@ VMFFIReturnMarshallingTest >> testPrimitiveCalloutReturningDoublePushSmallFloatI
 	self
 		doTestCalloutWithReturnType: interpreter libFFI double
 		returnValue: 7.0
-		expectedSmalltalkValue: (memory floatObjectOf: 7.0)
+		asserting: [ 	
+				self assert: interpreter primFailCode equals: 0.
+				self assert: (memory floatValueOf: interpreter stackTop) equals: 7.0 ].
+
 ]
 
 { #category : #'tests - marshalling return' }
@@ -65,7 +68,10 @@ VMFFIReturnMarshallingTest >> testPrimitiveCalloutReturningFloatPushSmallFloatIn
 	self
 		doTestCalloutWithReturnType: interpreter libFFI float
 		returnValue: 7.0
-		expectedSmalltalkValue: (memory floatObjectOf: 7.0)
+		asserting: [ 	
+				self assert: interpreter primFailCode equals: 0.
+				self assert: (memory floatValueOf: interpreter stackTop) equals: 7.0 ].
+
 ]
 
 { #category : #'tests - marshalling return' }

@@ -37,6 +37,7 @@ VMPushThisContextRoutineTest >> testMarriedContextReturnsSpouseObject [
 	routine := self compile: [ cogit objectRepresentation genGetActiveContextLarge: isLargeContext inBlock: isInBlock ].
 	numberOfArguments := 3.
 	contextOop := memory integerObjectOf: 42.
+
 	methodObject := methodBuilder newMethod 
 		isSmall: false;
 		numberOfArguments: numberOfArguments;

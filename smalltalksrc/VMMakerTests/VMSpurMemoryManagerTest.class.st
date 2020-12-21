@@ -28,6 +28,14 @@ Class {
 	#category : #'VMMakerTests-MemoryTests'
 }
 
+{ #category : #'building suites' }
+VMSpurMemoryManagerTest class >> testParameters [ 
+
+	^ ParametrizedTestMatrix new
+			forSelector: #wordSize addOptions: { 4 . 8 };
+			yourself
+]
+
 { #category : #helpers }
 VMSpurMemoryManagerTest >> createActiveProcess [
 
@@ -38,17 +46,16 @@ VMSpurMemoryManagerTest >> createActiveProcess [
 	processorOop := self newObjectWithSlots: 2.
 	priorities := 2.
 	processorListsArray := self newObjectWithSlots: priorities.
-	1 to: priorities do: [ :index | 
+	1 to: priorities do: [ :index |
 		"Put an empty linked list in each"
 		memory storePointer: index - 1 ofObject: processorListsArray withValue: (self newObjectWithSlots: 2) ].
 	
 	memory splObj: SchedulerAssociation put: processorOopAssociation.
 	memory storePointer: ValueIndex ofObject: processorOopAssociation withValue: processorOop.
 	memory storePointer: ProcessListsIndex ofObject: processorOop withValue: processorListsArray.
-
+	
 	"Create a new process with the 4 mandatory instance variables and set it as active process"
 	memory storePointer: ActiveProcessIndex ofObject: processorOop withValue:  (self newObjectWithSlots: 4).
-
 ]
 
 { #category : #helpers }
@@ -366,10 +373,11 @@ VMSpurMemoryManagerTest >> newSmallContextReceiver: anOop method: aMethodOop arg
 { #category : #helpers }
 VMSpurMemoryManagerTest >> newString: aString [
 	| vmString |
+	
 	vmString := self
 		newOldSpaceObjectWithSlots: aString size
 		format: memory firstByteFormat
-		classIndex: ByteString hash.
+		classIndex: (memory fetchClassTagOf: memory classString).
 
 	aString
 		doWithIndex: [ :char :index | 
@@ -522,6 +530,42 @@ VMSpurMemoryManagerTest >> setUpScheduler [
 		withValue: (memory integerObjectOf: 0).
 	
 	memory memoryActiveProcess: activeProcessOop.
+]
+
+{ #category : #running }
+VMSpurMemoryManagerTest >> setUpUsingImage [
+
+	"This is an alternate setUp using an image to correctly initialize memory/interpreter.
+	Currently not used by default, as some tests still fails, but is usable.
+	For example, we could test that all test are working on both a specific setup, and image load one.
+	Or we could design tests using the image setUp, which should have everything ready to use, and do the specific on after, to refine the requirements of a setUp for a test."
+	super setUp.
+	interpreter := self newInterpreter 
+		pluginList: { }.
+		
+	"You currently have to setup the path by hand, I do not rememeber/know how to get the directory from a repository, to do a correct relative path
+	Sorry :3"
+	self halt.
+	interpreter openOn: 'fileToPath'.
+	interpreter initStackPages.
+	interpreter loadInitialContext.
+	
+	objectHeaderSize := 8 "bytes. Always.".
+	emptyObjectSize := objectHeaderSize + 8 "minimum required single empty slot, to use for forwarders".
+	
+	newSpaceSize := memory oldSpaceStart -memory newSpaceStart.
+	oldSpaceSize := memory oldSpaceSize.
+	
+	stackBuilder := VMStackBuilder new
+		interpreter: interpreter; 
+		memory: memory;
+		yourself.
+				
+	methodBuilder := VMMethodBuilder new
+		interpreter: interpreter; 
+		memory: memory;
+		yourself.
+		
 ]
 
 { #category : #accessing }
