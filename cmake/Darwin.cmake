@@ -48,10 +48,6 @@ set(VM_FRONTEND_SOURCES
 configure_file(resources/mac/Info.plist.in build/includes/Info.plist)
 
 macro(add_third_party_dependencies_per_platform)
-	if (DOWNLOAD_DEPENDENCIES)
-		add_third_party_dependency("PThreadedFFI-1.4.0-osx64")
-	endif()
-
 	if(${FEATURE_LIB_GIT2})
 		include(cmake/importLibGit2.cmake)
 	endif()

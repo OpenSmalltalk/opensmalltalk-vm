@@ -1,5 +1,6 @@
 # Include a library in the project, linking it to the main library
 macro(addLibraryWithRPATH NAME)
+
     addIndependentLibraryWithRPATH(${NAME} ${ARGN})
 
     # Declare the main executable depends on the plugin so it gets built with it
@@ -7,7 +8,7 @@ macro(addLibraryWithRPATH NAME)
 
     #Declare the plugin depends on the VM core library
     if(NOT "${NAME}" STREQUAL "${VM_LIBRARY_NAME}")
-	target_link_libraries(${NAME} PRIVATE ${VM_LIBRARY_NAME})
+      target_link_libraries(${NAME} PRIVATE ${VM_LIBRARY_NAME})
     endif()
 endmacro()
 
@@ -45,20 +46,6 @@ macro(get_full_platform_name_with_osx VARNAME)
     endif()
 endmacro()
 
-
-
-macro(do_decompress_thirdparty NAME TARGETPATH)
-    add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/build/third-party/${NAME}.done"
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/${TARGETPATH}
-        COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_CURRENT_BINARY_DIR}/build/third-party unzip -o "${NAME}.zip" -d ${CMAKE_CURRENT_BINARY_DIR}/${TARGETPATH}
-        COMMAND ${CMAKE_COMMAND} -E touch "${CMAKE_CURRENT_BINARY_DIR}/build/third-party/${NAME}.done"
-        DEPENDS "build/third-party/${NAME}.zip"
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-
-    add_custom_target(${NAME} ALL DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/build/third-party/${NAME}.done")
-    add_dependencies(${VM_EXECUTABLE_NAME} ${NAME})
-endmacro()
-
 # Add a third party dependency taken from the given URL
 macro(add_third_party_dependency_with_baseurl NAME BASEURL)
 
@@ -73,10 +60,15 @@ macro(add_third_party_dependency_with_baseurl NAME BASEURL)
     file(GLOB DOWNLOADED_THIRD_PARTY_LIBRARIES
         "${${NAME}_SOURCE_DIR}/*"
     )
-
-    add_custom_target(${NAME}
-        COMMAND ${CMAKE_COMMAND} -E copy ${DOWNLOADED_THIRD_PARTY_LIBRARIES} "$<TARGET_FILE_DIR:${VM_LIBRARY_NAME}>"
-    )
+    add_custom_target(${NAME})
+		foreach(LIBRARY_PATH IN LISTS DOWNLOADED_THIRD_PARTY_LIBRARIES)
+      message(STATUS ${LIBRARY_PATH})
+      add_custom_command(TARGET ${NAME}
+        POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy "${LIBRARY_PATH}" "${LIBRARY_OUTPUT_DIRECTORY}"
+      )
+		endforeach()
+    add_dependencies(${VM_EXECUTABLE_NAME} ${NAME})
 endmacro()
 
 # Add a third party dependency taken from the files.pharo.org repository
