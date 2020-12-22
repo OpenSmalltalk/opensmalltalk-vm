@@ -15,6 +15,44 @@ set(VERSION_MAJOR 9)
 set(VERSION_MINOR 0)
 set(VERSION_PATCH 0)
 
+if(${CMAKE_GENERATOR} MATCHES "Visual Studio.*")
+    set(user_file "${CMAKE_SOURCE_DIR}/CMakeSettings.jsonx" )
+    set(template_file "${CMAKE_SOURCE_DIR}/CMakeSettings.json.template" )
+    file(SHA256 ${template_file} template_hash)
+
+    if(EXISTS "${user_file}")
+        file(SHA256 "${user_file}" user_hash)
+        set(user_bak_file "${user_file}.bak.${user_hash}")
+
+        # From 'user_file' extract recorded hash of template it was copied from
+        file(READ "${user_file}" user_settings )
+        string(REGEX MATCH ".*template-hash[^a-zA-Z0-9]*([a-zA-Z0-9-]*).*" _ ${user_settings})
+        set(recorded_template_hash ${CMAKE_MATCH_1})
+
+        if(NOT "${template_hash}" STREQUAL "${recorded_template_hash}")
+            # move existing file out of the way if template file has changed
+            file(RENAME "${user_file}" "${user_bak_file}")
+        endif()
+    endif()
+
+    if(NOT EXISTS "${user_file}")
+        # copy 'template_file' to 'user_file' substituting variable 'template_hash'
+        configure_file("${template_file}" "${user_file}" @ONLY)  
+
+        if(EXISTS ${user_bak_file})
+            message("NOTICE!! Your 'CMakeSettings.json' file has been replaced by updated template.") 
+            message("NOTICE!! It is recommended you base your configuration settings off this update.") 
+            message("NOTICE!! Your old settings saved to ${user_bak_file}")
+            message("NOTICE!! To force using your old settings, copy 'template-hash' from new 'CMakeSettings.json' into your restored file.") 
+            message(FATAL_ERROR "Not really an error, just an important NOTICE!! to read in output.") 
+        endif()
+    endif()
+endif()
+#help code review focus on this part by exiting quickly...
+message(FATAL_ERROR "EVERYTHING OKAY, JUST HELP QUICK CODE REVIEW") 
+
+
+
 set(APPNAME Pharo CACHE STRING "VM Application name")
 
 # Configure CMake to load our modules
