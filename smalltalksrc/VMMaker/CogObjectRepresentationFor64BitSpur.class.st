@@ -906,40 +906,6 @@ CogObjectRepresentationFor64BitSpur >> genJumpSmallIntegerInScratchReg: aRegiste
 	^self genJumpSmallInteger: aRegister
 ]
 
-{ #category : #'inline primitive support' }
-CogObjectRepresentationFor64BitSpur >> genLcInt32ToOop: value [
-	<option: #LowcodeVM>
-	cogit SignExtend32R: value R: value.
-	self genConvertIntegerToSmallIntegerInReg: value.
-	cogit ssPushRegister: value.
-	^ 0
-]
-
-{ #category : #'inline primitive support' }
-CogObjectRepresentationFor64BitSpur >> genLcOopToInt32: value [
-	<option: #LowcodeVM>
-	self genConvertSmallIntegerToIntegerInReg: value.
-	cogit ssPushNativeRegister: value.
-	^ 0
-]
-
-{ #category : #'inline primitive support' }
-CogObjectRepresentationFor64BitSpur >> genLcOopToUInt32: value [
-	<option: #LowcodeVM>
-	self genConvertSmallIntegerToIntegerInReg: value.
-	cogit ssPushNativeRegister: value.
-	^ 0
-]
-
-{ #category : #'inline primitive support' }
-CogObjectRepresentationFor64BitSpur >> genLcUInt32ToOop: value [
-	<option: #LowcodeVM>
-	cogit ZeroExtend32R: value R: value.
-	self genConvertIntegerToSmallIntegerInReg: value.
-	cogit ssPushRegister: value.
-	^ 0
-]
-
 { #category : #'primitive generators' }
 CogObjectRepresentationFor64BitSpur >> genPrimitiveAtPutSigned: signedVersion [
 	"Generate the code for primitives 61 & 165, at:put:/basicAt:put: & integerAt:put:.  If signedVersion is true

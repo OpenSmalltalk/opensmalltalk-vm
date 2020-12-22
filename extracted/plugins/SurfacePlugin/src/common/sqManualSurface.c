@@ -1,4 +1,3 @@
-#include "sqFFI.h"
 #include "sq.h"
 
 #include "sqVirtualMachine.h"

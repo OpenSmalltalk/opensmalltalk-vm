@@ -35,7 +35,7 @@ def buildGTKBundle(){
 
 			def commitHash = checkout(scm).GIT_COMMIT
 
-			unstash name: "packages-Windows-x86_64-CoInterpreterWithQueueFFI"
+			unstash name: "packages-Windows-x86_64-CoInterpreter"
 			def shortGitHash = commitHash.substring(0,8)
 			def gtkBundleName = "PharoVM-8.1.0-GTK-${shortGitHash}-win64-bin.zip"
 
@@ -178,7 +178,7 @@ def uploadStockReplacement(platform, configuration, archiveName) {
 
 	cleanWs()
 
-	unstash name: "packages-${platform}-${configuration}"
+	unstash name: "packages-${archiveName}-${configuration}"
 
 	def expandedBinaryFileName = sh(returnStdout: true, script: "ls build-stockReplacement/build/packages/PharoVM-*-${archiveName}-bin.zip").trim()
 
@@ -211,13 +211,13 @@ def uploadPackages(){
 				return;
 			}
 			
-			upload('Darwin-x86_64', "CoInterpreterWithQueueFFI", 'Darwin-x86_64')
-			upload('Linux-x86_64', "CoInterpreterWithQueueFFI", 'Linux-x86_64')
-			upload('Windows-x86_64', "CoInterpreterWithQueueFFI", 'Windows-x86_64')
+			upload('Darwin-x86_64', "CoInterpreter", 'Darwin-x86_64')
+			upload('Linux-x86_64', "CoInterpreter", 'Linux-x86_64')
+			upload('Windows-x86_64', "CoInterpreter", 'Windows-x86_64')
 
-			uploadStockReplacement('Darwin-x86_64', "CoInterpreterWithQueueFFI", 'Darwin-x86_64-stockReplacement')
-			uploadStockReplacement('Linux-x86_64', "CoInterpreterWithQueueFFI", 'Linux-x86_64-stockReplacement')
-			uploadStockReplacement('Windows-x86_64', "CoInterpreterWithQueueFFI", 'Windows-x86_64-stockReplacement')
+			uploadStockReplacement('Darwin-x86_64', "CoInterpreter", 'Darwin-x86_64-stockReplacement')
+			uploadStockReplacement('Linux-x86_64', "CoInterpreter", 'Linux-x86_64-stockReplacement')
+			uploadStockReplacement('Windows-x86_64', "CoInterpreter", 'Windows-x86_64-stockReplacement')
 		}
 	}
 }
@@ -236,10 +236,10 @@ try{
 		builders[platform] = {
 			node(platform){
 				timeout(30){
-					runBuild(platform, "CoInterpreterWithQueueFFI")
+					runBuild(platform, "CoInterpreter")
 				}
 				timeout(30){
-					runBuild(platform, "CoInterpreterWithQueueFFI", false)
+					runBuild(platform, "CoInterpreter", false)
 				}
 			}
 		}
@@ -247,10 +247,10 @@ try{
 		tests[platform] = {
 			node(platform){
 				timeout(45){
-					runTests(platform, "CoInterpreterWithQueueFFI", ".*", false)
+					runTests(platform, "CoInterpreter", ".*", false)
 				}
 				timeout(45){
-					runTests(platform, "CoInterpreterWithQueueFFI", ".*", true)
+					runTests(platform, "CoInterpreter", ".*", true)
 				}				
 			}
 		}

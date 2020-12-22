@@ -3014,17 +3014,6 @@ CogIA32Compiler >> dispatchConcretizeProcessorSpecific [
 	}
 ]
 
-{ #category : #'inline cacheing' }
-CogIA32Compiler >> flushICacheFrom: startAddress "<Integer>" to: endAddress [ "<Integer>"
-	<cmacro: '(me,startAddress,endAddress) 0'>
-	"On Intel processors where code and data have the same linear address, no
-	 special action is required to flush the instruction cache.  One only needs to
-	 execute a serializing instruction (e.g. CPUID) if code and data are at different
-	 virtual addresses (e.g. a debugger using memory-mapping to access a debugee).
-	 Using the macro avoids an unnecessary call."
-	self halt: #ceFlushICache
-]
-
 { #category : #abi }
 CogIA32Compiler >> fullCallsAreRelative [
 	"Answer if CallFull and/or JumpFull are relative and hence need relocating on method
@@ -3384,8 +3373,7 @@ CogIA32Compiler >> genPushC64: constant64Bits [
 	<var: #constant64Bits type: #sqLong>
 	<returnTypeC: #'AbstractInstruction *'>
 	| inst highPart |
-	self assert: BytesPerWord = 4.
-	highPart := self cCode: '(constant64Bits >> 32LL)' inSmalltalk: [ constant64Bits bitShift: -32 ].
+	highPart := constant64Bits bitShift: -32.
 	inst :=cogit PushCw: highPart.
 	cogit PushCw: (constant64Bits bitAnd: 16rFFFFFFFF).
 	^inst
@@ -3895,14 +3883,6 @@ CogIA32Compiler >> prepareStackToCallCFunctionInSmalltalkStack: numberOfArgument
 		ifTrue: [ cogit SubCq: numberAdditionalPushes * 4 R: SPReg ]. 
 	
 	
-]
-
-{ #category : #abi }
-CogIA32Compiler >> registerToSaveIP [
-	"Temporary register used for fetching the instruction pointer. This should
-	not be used for passing parameters in a standard ABI"
-	<option: #LowcodeVM>
-	^ ClassReg
 ]
 
 { #category : #'inline cacheing' }

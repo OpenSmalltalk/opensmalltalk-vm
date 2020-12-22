@@ -287,7 +287,7 @@ static void closeHandler(int, void *, int);
  */
 
 int getLastSocketError(){
-#ifdef WIN64
+#ifdef _WIN32
 	return WSAGetLastError();
 #else
 	return errno;
@@ -309,7 +309,7 @@ char *socketHandlerName(aioHandler h)
 
 /*** module initialisation/shutdown ***/
 
-#ifdef WIN64
+#ifdef _WIN32
 static WSADATA wsaData;
 #endif
 
@@ -317,7 +317,7 @@ static WSADATA wsaData;
 sqInt socketInit(void)
 {
 
-#ifdef WIN64
+#ifdef _WIN32
 
 	if(WSAStartup( MAKEWORD(2,0), &wsaData ) != 0)
 		return -1;
@@ -381,7 +381,7 @@ static int nameToAddr(char *hostName)
 
 	   if(anAddressInfo->ai_family == AF_INET){
 		   addr = (struct sockaddr_in *)anAddressInfo->ai_addr;
-#ifdef WIN64
+#ifdef _WIN32
 		   address = ntohl(addr->sin_addr.S_un.S_addr);
 #else
 		   address = ntohl(addr->sin_addr.s_addr);
@@ -425,7 +425,7 @@ static int socketReadable(int s, int type)
   if (n > 0) return 1;
   if ((n < 0) && ((error = getLastSocketError()) == ERROR_WOULD_BLOCK)) return 0;
 
-#ifdef WIN64
+#ifdef _WIN32
   /*
    * In Windows we can receive an error that the buffer is
    * not big enough. This situation leads to know that there is data to read.
@@ -533,30 +533,36 @@ static void connectHandler(int fd, void *data, int flags)
 {
   privateSocketStruct *pss= (privateSocketStruct *)data;
   logTrace("connectHandler(%d, %p, %d)\n", fd, data, flags);
+  
+  // If AIO called us but the socket was already resolved, just return
+  // Avoids race condition of the AIO
+  if (pss->sockState != WaitingForConnection) {
+    // Disable the FD again just in case
+    aioDisable(fd);
+    return;
+  }
+  
   if (flags & AIO_X) /* -- exception */
-    {
-      /* error during asynchronous connect() */
+  {
+    /* error during asynchronous connect() */
+    aioDisable(fd);
+    pss->sockError= socketError(fd);
+    pss->sockState= Unconnected;
+    logWarnFromErrno("connectHandler");
+  } else /* (flags & AIO_W) -- connect completed */
+  {
+    /* connect() has completed */
+    int error= socketError(fd);
+    if (error) {
       aioDisable(fd);
-      pss->sockError= socketError(fd);
-      pss->sockState= Unconnected;
-      logWarnFromErrno("connectHandler");
-    }
-  else /* (flags & AIO_W) -- connect completed */
-    {
-      /* connect() has completed */
-      int error= socketError(fd);
-      if (error)
-	{
-	  logTrace("connectHandler: error %d (%s)\n", error, strerror(error));
-	  pss->sockError= error;
-	  pss->sockState= Unconnected;
-	}
-      else
-	{
-	  pss->sockState= Connected;
-	  setLinger(pss->s, 1);
-	}
-    }
+      logTrace("connectHandler: error %d (%s)\n", error, strerror(error));
+	    pss->sockError= error;
+	    pss->sockState= Unconnected;
+	  } else {
+      pss->sockState= Connected;
+      setLinger(pss->s, 1);
+	  }
+  }
   notify(pss, CONN_NOTIFY);
 }
 
@@ -1491,7 +1497,7 @@ sqInt sqSocketSetOptionsoptionNameStartoptionNameSizeoptionValueStartoptionValue
       socketOption *opt= findOption(optionName, (size_t)optionNameSize);
       if (opt != 0)
 	{
-#ifdef WIN64
+#ifdef _WIN32
 	  ULONG   val= 0;
 #else
 	  int val=0;

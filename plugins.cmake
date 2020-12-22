@@ -46,10 +46,10 @@ endif()
 
 addLibraryWithRPATH(FilePlugin
     ${FilePlugin_SOURCES}
-    ${GENERATED_SOURCE_DIR}/generated/plugins/src/FilePlugin/FilePlugin.c)
+    ${PHARO_CURRENT_GENERATED}/plugins/src/FilePlugin/FilePlugin.c)
 
 if(OSX)
-    target_link_libraries(FilePlugin "-framework CoreFoundation")
+    target_link_libraries(FilePlugin PRIVATE "-framework CoreFoundation")
 endif()
 
 if(WIN)
@@ -61,7 +61,7 @@ endif()
 # FileAttributesPlugin
 #
 add_vm_plugin(FileAttributesPlugin)
-target_link_libraries(FileAttributesPlugin FilePlugin)
+target_link_libraries(FileAttributesPlugin PRIVATE FilePlugin)
 
 #
 # UUIDPlugin
@@ -74,10 +74,13 @@ file(GLOB UUIDPlugin_SOURCES
 )
 
 addLibraryWithRPATH(UUIDPlugin ${UUIDPlugin_SOURCES})
-if(${WIN})
-    target_link_libraries(UUIDPlugin "-lole32")
-elseif(${UNIX} AND NOT ${OSX})
-    target_link_libraries(UUIDPlugin uuid)
+if(WIN)
+    target_link_libraries(UUIDPlugin PRIVATE "-lole32")
+elseif(UNIX AND NOT OSX)
+   #find_path(LIB_UUID_INCLUDE_DIR uuid.h PATH_SUFFIXES uuid)
+    find_library(LIB_UUID_LIBRARY uuid)
+    message(STATUS "Using uuid library:" ${LIB_UUID_LIBRARY}) 
+    target_link_libraries(UUIDPlugin PRIVATE ${LIB_UUID_LIBRARY})
 endif()
 
 #
@@ -86,7 +89,7 @@ endif()
 if (${FEATURE_NETWORK})
     add_vm_plugin(SocketPlugin)
   if(WIN)
-    target_link_libraries(SocketPlugin "-lWs2_32")
+    target_link_libraries(SocketPlugin PRIVATE "-lWs2_32")
   endif()
 endif()
 
@@ -95,61 +98,6 @@ endif()
 #
 
 add_vm_plugin(SurfacePlugin)
-target_link_libraries(SurfacePlugin SqueakFFIPrims)
-
-#
-# SqueakFFIPrims Plugin
-#
-
-#
-# This solution is not portable to different architectures!
-#
-
-if(${FEATURE_FFI})
-
-message(STATUS "Adding plugin: SqueakFFIPrims")
-
-set(SqueakFFIPrims_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/SqueakFFIPrims/src/common/SqueakFFIPrims.c 
-    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/SqueakFFIPrims/src/common/sqManualSurface.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/SqueakFFIPrims/src/common/sqFFIPlugin.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/SqueakFFIPrims/src/common/sqFFITestFuncs.c
-)
-addLibraryWithRPATH(SqueakFFIPrims ${SqueakFFIPrims_SOURCES})
-target_include_directories(SqueakFFIPrims 
-PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/SqueakFFIPrims/include/common
-)
-
-
-#
-# IA32ABI Plugin
-#
-
-set(IA32ABI_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/IA32ABI/src/common/IA32ABI.c 
-    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/IA32ABI/src/common/AlienSUnitTestProcedures.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/IA32ABI/src/common/xabicc.c
-)
-# Only add this file for Win x86_64
-if(WIN AND CMAKE_SYSTEM_PROCESSOR MATCHES x86_64)
-    set(IA32ABI_SOURCES
-        ${IA32ABI_SOURCES}
-        ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/IA32ABI/src/common/x64win64stub.c
-    )
-endif()
-
-addLibraryWithRPATH(IA32ABI ${IA32ABI_SOURCES})
-
-target_include_directories(IA32ABI
-    PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/IA32ABI/include/common
-)
-
-target_link_libraries(IA32ABI ${VM_LIBRARY_NAME})
-
-endif()
-
 
 #
 # LargeIntegers Plugin
@@ -237,7 +185,7 @@ endif()
 addLibraryWithRPATH(LocalePlugin ${LocalePlugin_SOURCES})
 
 if(OSX)
-    target_link_libraries(LocalePlugin "-framework CoreFoundation")
+	target_link_libraries(LocalePlugin PRIVATE "-framework CoreFoundation")
 endif()
 
 #
@@ -283,12 +231,13 @@ endif()
 addLibraryWithRPATH(SqueakSSL ${SqueakSSL_SOURCES})
 
 if(OSX)
-    target_link_libraries(SqueakSSL "-framework CoreFoundation")
-    target_link_libraries(SqueakSSL "-framework Security")
-elseif(${WIN})
-    target_link_libraries(SqueakSSL Crypt32 Secur32)
+    target_link_libraries(SqueakSSL PRIVATE "-framework CoreFoundation")
+    target_link_libraries(SqueakSSL PRIVATE "-framework Security")
+elseif(WIN)
+    target_link_libraries(SqueakSSL PRIVATE Crypt32 Secur32)
 else()
-    target_link_libraries(SqueakSSL ssl)    
+    find_package(OpenSSL REQUIRED)
+    target_link_libraries(SqueakSSL PRIVATE OpenSSL::SSL OpenSSL::Crypto)    
 endif()
 
 
@@ -303,5 +252,5 @@ add_vm_plugin(DSAPrims)
 
 if(NOT WIN)
     add_vm_plugin(UnixOSProcessPlugin)
-    target_link_libraries(UnixOSProcessPlugin FilePlugin)
+    target_link_libraries(UnixOSProcessPlugin PRIVATE FilePlugin)
 endif()

@@ -117,9 +117,15 @@ VMFFIArgumentMarshallingTest >> testCalloutWithSINT32ArgumentWithPositiveValueIs
 { #category : #'tests - parameters marshalling' }
 VMFFIArgumentMarshallingTest >> testCalloutWithSINT32NegativeOutOfRangeProducesBadArgument [
 
+	| valueToStore |
+	valueToStore := self wordSize = 8 
+		ifTrue: [ memory integerObjectOf: INT32_MIN - 1 ]
+		ifFalse: [ memory signed32BitIntegerFor: INT32_MIN - 1 ].
+
+
 	self
 		doTestFuntionWithArgumentType:  interpreter libFFI sint32
-		smalltalkValue: (memory integerObjectOf: INT32_MIN - 1)
+		smalltalkValue: valueToStore
 		failsWith: PrimErrBadArgument
 
 ]
@@ -129,7 +135,7 @@ VMFFIArgumentMarshallingTest >> testCalloutWithSINT32PositiveOutOfRangeProducesB
 
 	self
 		doTestFuntionWithArgumentType:  interpreter libFFI sint32
-		smalltalkValue: (memory integerObjectOf: INT32_MAX + 1)
+		smalltalkValue: (memory signed32BitIntegerFor: INT32_MAX + 1)
 		failsWith: PrimErrBadArgument
 
 ]
@@ -272,9 +278,14 @@ VMFFIArgumentMarshallingTest >> testCalloutWithUINT32ArgumentWithPositiveValueIs
 { #category : #'tests - parameters marshalling' }
 VMFFIArgumentMarshallingTest >> testCalloutWithUINT32WithPositiveOutOfRangeFailsWithPrimErrBadArgument [
 
+	| valueToStore |
+	valueToStore := self wordSize = 8 
+		ifTrue: [ memory integerObjectOf: UINT32_MAX + 1 ]
+		ifFalse: [ memory signed32BitIntegerFor: UINT32_MAX + 1 ].
+
 	self
 		doTestFuntionWithArgumentType: interpreter libFFI uint32
-		smalltalkValue: (memory integerObjectOf: UINT32_MAX + 1)
+		smalltalkValue: valueToStore
 		failsWith: PrimErrBadArgument
 ]
 

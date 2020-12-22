@@ -32,7 +32,7 @@ CogSSBytecodeFixup class >> byteSizeForSimulator: aVMClass [
 	"Answer an approximation of the byte size of an AbstractInstruction struct.
 	 This is for estimating the alloca in allocateOpcodes:bytecodes:ifFail:
 	 self withAllSubclasses collect: [:ea| { ea byteSizeForSimulator: ea basicNew. ea typedef}]"
-	^(LowcodeVM ifTrue: [self instSize - 1] ifFalse: [self instSize - 2]) * (aVMClass sizeof: #'void *')
+	^(self instSize - 2) * (aVMClass sizeof: #'void *')
 ]
 
 { #category : #translation }
@@ -46,9 +46,7 @@ CogSSBytecodeFixup class >> filteredInstVarNames [
 		remove: 'instructionIndex';
 			add: 'instructionIndex' afterIndex: (vars indexOf: 'simStackPtr');
 		remove: 'isTargetOfBackwardBranch';
-			add: 'isTargetOfBackwardBranch' afterIndex: (vars indexOf: 'simStackPtr');
-		add: '#if LowcodeVM' beforeIndex: (vars indexOf: 'simNativeStackPtr');
-		add: '#endif' afterIndex: (vars indexOf: 'simNativeStackSize').
+			add: 'isTargetOfBackwardBranch' afterIndex: (vars indexOf: 'simStackPtr').
 	^vars
 ]
 
@@ -176,28 +174,12 @@ CogSSBytecodeFixup >> printStateOn: aStream [
 CogSSBytecodeFixup >> reinitialize [
 	<inline: true>
 	targetInstruction := simStackPtr := 0.
-	LowcodeVM ifTrue:
-		[simNativeStackPtr := simNativeStackSize := 0]
 ]
 
 { #category : #accessing }
 CogSSBytecodeFixup >> setIsBackwardBranchFixup [
 	<inline: true>
 	isTargetOfBackwardBranch := true
-]
-
-{ #category : #accessing }
-CogSSBytecodeFixup >> simNativeStackPtr [
-	"Answer the value of simStackPtr"
-
-	^ simNativeStackPtr
-]
-
-{ #category : #accessing }
-CogSSBytecodeFixup >> simNativeStackPtr: anObject [
-	"Set the value of simStackPtr"
-
-	^simNativeStackPtr := anObject
 ]
 
 { #category : #accessing }

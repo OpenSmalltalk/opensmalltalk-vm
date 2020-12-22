@@ -12,13 +12,18 @@ Class {
 	#category : #'VMMakerTests-InterpreterTests'
 }
 
-{ #category : #'building suites' }
-VMPrimitiveTest class >> testParameters [ 
+{ #category : #asserting }
+VMPrimitiveTest >> assert: anOop contentEquals: oopToCompare [ 
 
-	^ ParametrizedTestMatrix new
-			forSelector: #wordSize addOptions: { 4 . 8 };
-			yourself
-
+	| numSlotOop numSlotOopToCompare |
+	numSlotOop := memory numSlotsOf: anOop.
+	numSlotOopToCompare := (memory numSlotsOf: anOop).
+	self assert:  numSlotOop equals: numSlotOopToCompare.
+	
+	0 to: numSlotOop do: [:index | 
+	self assert: (memory fetchByte: index ofObject: anOop) equals: (memory fetchByte: index ofObject:oopToCompare)		
+		]	
+	
 ]
 
 { #category : #'as yet unclassified' }
@@ -346,20 +351,61 @@ VMPrimitiveTest >> testPrimitiveArrayBecomeOneWayCreatesForwardThatPointsToOrigi
 ]
 
 { #category : #'tests - primitiveAtPut' }
-VMPrimitiveTest >> testPrimitiveAtPutFailsForImmutableObject [
-	| class object |
-	class := self newClassInOldSpaceWithSlots: 0 instSpec: memory arrayFormat.
+VMPrimitiveTest >> testPrimitiveAtPutFailsForForwardedReceiver [
+	| class objectInstance |
+	"I don't know how to force an object to be forwarded ."
 	
-	object := memory instantiateClass: class indexableSize: 1.
+	self skip.
+	
+	
+	"We push receiver then 3 arguments"
+	class := self newClassInOldSpaceWithSlots: 0 instSpec: memory nonIndexablePointerFormat.
+	objectInstance := memory instantiateClass: class.
+	
+	interpreter push: objectInstance.
+	interpreter push: (memory integerObjectOf: 0).
+	interpreter push: memory falseObject.
+	interpreter push: memory falseObject.
+	interpreter argumentCount: 4.
+	interpreter primitiveAtPut.
+	
+	self assert: interpreter failed.
+	self assert: interpreter primFailCode equals: PrimErrBadArgument. 
+]
 
-	memory setIsImmutableOf: object to: true. 
+{ #category : #'tests - primitiveAtPut' }
+VMPrimitiveTest >> testPrimitiveAtPutFailsForImmediate [
 
-	interpreter push: object.
+	interpreter push: (memory integerObjectOf: 32).
 	interpreter push: (memory integerObjectOf: 1).
 	interpreter push: memory falseObject.
 	interpreter primitiveAtPut.
 	
 	self assert: interpreter failed.
+	self assert: interpreter primFailCode equals: PrimErrInappropriate. 
+]
+
+{ #category : #'tests - primitiveAtPut' }
+VMPrimitiveTest >> testPrimitiveAtPutFailsForMoreThanTwoArguments [
+	| class objectInstance |
+	"I don't know how to force a bad argument count."
+	
+	self skip.
+	
+	
+	"We push receiver then 3 arguments"
+	class := self newClassInOldSpaceWithSlots: 0 instSpec: memory nonIndexablePointerFormat.
+	objectInstance := memory instantiateClass: class.
+	
+	interpreter push: objectInstance.
+	interpreter push: (memory integerObjectOf: 0).
+	interpreter push: memory falseObject.
+	interpreter push: memory falseObject.
+	interpreter argumentCount: 4.
+	interpreter primitiveAtPut.
+	
+	self assert: interpreter failed.
+	self assert: interpreter primFailCode equals: PrimErrBadArgument. 
 ]
 
 { #category : #'tests - primitiveAtPut' }
@@ -375,9 +421,25 @@ VMPrimitiveTest >> testPrimitiveAtPutFailsForNonIndexableObject [
 	interpreter primitiveAtPut.
 	
 	self assert: interpreter failed.
+	self assert: interpreter primFailCode equals: PrimErrBadReceiver. 
 ]
 
-{ #category : #'tests - primitiveImmutability' }
+{ #category : #'tests - primitiveAtPut' }
+VMPrimitiveTest >> testPrimitiveAtPutFailsForNonIntegerArgument [
+	| class objectInstance |
+	class := self newClassInOldSpaceWithSlots: 0 instSpec: memory nonIndexablePointerFormat.
+	objectInstance := memory instantiateClass: class.
+	
+	interpreter push: objectInstance.
+	interpreter push: memory falseObject.
+	interpreter push: memory falseObject.
+	interpreter primitiveAtPut.
+	
+	self assert: interpreter failed.
+	self assert: interpreter primFailCode equals: PrimErrBadArgument. 
+]
+
+{ #category : #'tests - primitiveAtPut' }
 VMPrimitiveTest >> testPrimitiveAtPutFailsIfObjectIsImmutable [
 
 	| class object slotIndex objectToPutInSlot |
@@ -398,8 +460,7 @@ VMPrimitiveTest >> testPrimitiveAtPutFailsIfObjectIsImmutable [
 	interpreter primitiveAtPut.
 	
 	self assert: interpreter failed.
-	"8 is the no modification exception in the special object array for the primFailCode"
-	self assert: interpreter primFailCode equals: 8. 
+	self assert: interpreter primFailCode equals: PrimErrNoModification. 
 ]
 
 { #category : #'tests - primitiveAtPut' }
@@ -467,6 +528,7 @@ VMPrimitiveTest >> testPrimitiveInstVarAtPutOverBoundShouldFailForIndexable [
 	interpreter primitiveInstVarAtPut.
 	
 	self assert: interpreter failed.
+	self assert: interpreter primFailCode equals: PrimErrBadIndex. 
 ]
 
 { #category : #'tests - primitiveAtPut' }
@@ -482,6 +544,7 @@ VMPrimitiveTest >> testPrimitiveInstVarAtPutOverBoundShouldFailNonIndexable [
 	interpreter primitiveInstVarAtPut.
 	
 	self assert: interpreter failed.
+	self assert: interpreter primFailCode equals: PrimErrBadIndex.
 ]
 
 { #category : #'tests - primitiveAtPut' }
@@ -805,7 +868,7 @@ VMPrimitiveTest >> testPrimitiveSetImmutabilityOfObjectAsTrueSetsImmutability [
 { #category : #'tests - primitiveAtPut' }
 VMPrimitiveTest >> testPrimitiveSlotAtPutOverBoundShouldFailForIndexable [
 	| class object |
-	class := self newClassInOldSpaceWithSlots: 1 instSpec: memory arrayFormat .
+	class := self newClassInOldSpaceWithSlots: 1 instSpec: memory arrayFormat.
 	
 	object := memory instantiateClass: class indexableSize: 1.
 
@@ -815,6 +878,7 @@ VMPrimitiveTest >> testPrimitiveSlotAtPutOverBoundShouldFailForIndexable [
 	interpreter primitiveSlotAtPut.
 	
 	self assert: interpreter failed.
+	self assert: interpreter primFailCode equals: PrimErrBadIndex. 
 ]
 
 { #category : #'tests - primitiveAtPut' }
@@ -830,6 +894,7 @@ VMPrimitiveTest >> testPrimitiveSlotAtPutOverBoundShouldFailNonIndexable [
 	interpreter primitiveSlotAtPut.
 	
 	self assert: interpreter failed.
+	self assert: interpreter primFailCode equals: PrimErrBadIndex.
 ]
 
 { #category : #'tests - primitiveAtPut' }
@@ -920,4 +985,55 @@ VMPrimitiveTest >> testPrimitiveSnapshotNewKeptObjectShouldBeTenured [
 
 	self assert: (memory hashBitsOf: self keptObjectInVMVariable1) equals: objectHash
 
+]
+
+{ #category : #'tests - primitiveAtPut' }
+VMPrimitiveTest >> testPrimitiveStringAtPutShouldFailForNonCharacterArgument [
+	"Every other test is common with at:put:"
+	| objectInstance |
+	objectInstance := self newString: 'pouet'.
+	
+	interpreter push: objectInstance.
+	interpreter push: (memory integerObjectOf: 1).
+	interpreter push: memory falseObject.
+	interpreter primitiveStringAtPut.
+	
+	self assert: interpreter failed.
+	self assert: interpreter primFailCode equals: PrimErrBadArgument.
+
+]
+
+{ #category : #'tests - primitiveAtPut' }
+VMPrimitiveTest >> testPrimitiveStringAtPutShouldNotFailWhenReceiverIsAString [
+	"Every other test is common with at:put:"
+	| string |
+
+	string := self newString: 'po'.
+
+	interpreter push: string.
+	interpreter push: (memory integerObjectOf: 1).
+	interpreter push: (memory characterObjectOf: 2).
+
+	interpreter primitiveStringAtPut.
+	
+	self assert: interpreter successful.
+
+]
+
+{ #category : #'tests - primitiveAtPut' }
+VMPrimitiveTest >> testPrimitiveStringAtPutShouldNotModifyStringIfFailedWhenNonCharacterArgument [
+	"Every other test is common with at:put:"
+
+	| string |
+	string := self newString: 'po'.
+
+	interpreter push: string.
+	interpreter push: (memory integerObjectOf: 1).
+	interpreter push: memory falseObject.
+	interpreter primitiveStringAtPut.
+
+	self assert: interpreter failed.
+	self assert: interpreter primFailCode equals: PrimErrBadArgument.
+
+	self assert: string contentEquals: (self newString: 'po')
 ]

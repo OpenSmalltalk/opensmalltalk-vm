@@ -26,7 +26,7 @@
  * Mingw or Cygwin. Since these constants are just standard, we define
  * them for our purpose of emulating permissions.
  */
-#ifndef S_IRUSR
+#if defined(_WIN32)
 #define S_IRUSR 0400
 #define S_IWUSR 0200
 #define S_IXUSR 0100
