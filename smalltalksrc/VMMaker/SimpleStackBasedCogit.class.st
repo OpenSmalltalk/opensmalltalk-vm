@@ -1499,30 +1499,6 @@ SimpleStackBasedCogit >> firstSpecialSelectorBytecodeOffset [
 ]
 
 { #category : #'bytecode generator support' }
-SimpleStackBasedCogit >> frameOffsetOfNativeFrameMark [
-	<option: #LowcodeVM>
-	^ FoxMFReceiver - BytesPerWord
-]
-
-{ #category : #'bytecode generator support' }
-SimpleStackBasedCogit >> frameOffsetOfNativeFramePointer [
-	<option: #LowcodeVM>
-	^ FoxMFReceiver - (BytesPerWord*3)
-]
-
-{ #category : #'bytecode generator support' }
-SimpleStackBasedCogit >> frameOffsetOfNativeStackPointer [
-	<option: #LowcodeVM>
-	^ FoxMFReceiver - (BytesPerWord*4)
-]
-
-{ #category : #'bytecode generator support' }
-SimpleStackBasedCogit >> frameOffsetOfPreviousNativeStackPointer [
-	<option: #LowcodeVM>
-	^ FoxMFReceiver - (BytesPerWord*2)
-]
-
-{ #category : #'bytecode generator support' }
 SimpleStackBasedCogit >> frameOffsetOfTemporary: index [
 	^self frameOffsetOfTemporary: index numArgs: methodOrBlockNumArgs
 ]
@@ -3376,26 +3352,6 @@ SimpleStackBasedCogit >> generateTracingTrampolines [
 SimpleStackBasedCogit >> isCallerSavedReg: reg [
 	<inline: true>
 	^self register: reg isInMask: CallerSavedRegisterMask
-]
-
-{ #category : #'bytecode generator support' }
-SimpleStackBasedCogit >> loadNativeArgumentAddress: baseOffset to: reg [
-	<option: #LowcodeVM>
-	self MoveMw: self frameOffsetOfPreviousNativeStackPointer r: FPReg R: reg.
-	self AddCq: baseOffset - 1 R: reg.
-]
-
-{ #category : #'bytecode generator support' }
-SimpleStackBasedCogit >> loadNativeFramePointerInto: reg [
-	<option: #LowcodeVM>
-	self MoveMw: self frameOffsetOfNativeFramePointer r: FPReg R: reg
-]
-
-{ #category : #'bytecode generator support' }
-SimpleStackBasedCogit >> loadNativeLocalAddress: baseOffset to: reg [
-	<option: #LowcodeVM>
-	self MoveMw: self frameOffsetOfNativeFramePointer r: FPReg R: reg.
-	self AddCq: baseOffset - 1 R: reg.
 ]
 
 { #category : #'method introspection' }

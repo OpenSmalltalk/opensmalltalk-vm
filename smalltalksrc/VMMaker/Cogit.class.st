@@ -263,7 +263,6 @@ Class {
 		'cPICEndOfCodeLabel',
 		'ceMallocTrampoline',
 		'ceFreeTrampoline',
-		'ceFFICalloutTrampoline',
 		'debugBytecodePointers',
 		'debugOpcodeIndices',
 		'disassemblingMethod',
@@ -1134,7 +1133,6 @@ Cogit class >> notesAndQueries [
 { #category : #accessing }
 Cogit class >> numTrampolines [
 	^39 "31 + 4 each for self and super sends"
-		+ (LowcodeVM ifTrue: [1] ifFalse: [0])
 		+ (COGMTVM ifTrue: [ 2 ] ifFalse: [ 0 ])
 
 	"self withAllSubclasses collect: [:c| {c. (c instVarNames select: [:ea| ea beginsWith: 'ce']) size}]"
@@ -5414,35 +5412,6 @@ Cogit >> compileCallFor: aRoutine numArgs: numArgs arg: regOrConst0 arg: regOrCo
 	backEnd genRestoreRegs: regsToSave
 ]
 
-{ #category : #initialization }
-Cogit >> compileCallFor: aRoutine numArgs: numArgs floatArg: regOrConst0 floatArg: regOrConst1 floatArg: regOrConst2 floatArg: regOrConst3 resultReg: resultRegOrNone regsToSave: regMask [
-	"Generate a call to aRoutine with up to 4 arguments.  If resultRegOrNone is not
-	 NoReg assign the C result to resultRegOrNone.  If saveRegs, save all registers.
-	 Hack: a negative arg value indicates an abstract register, a non-negative value
-	 indicates a constant."
-	<option: #LowcodeVM>
-	<var: #aRoutine type: #'void *'>
-	<inline: false>
-	| regsToSave |
-	regsToSave := resultRegOrNone = NoReg
-						ifTrue: [regMask]
-						ifFalse: [regMask bitClear: (self registerMaskFor: resultRegOrNone)].
-	cStackAlignment > objectMemory wordSize ifTrue:
-		[backEnd
-			genAlignCStackSavingRegisters: regsToSave
-			numArgs: numArgs
-			wordAlignment: cStackAlignment / objectMemory wordSize].
-	backEnd
-		genSaveRegs: regsToSave;
-		genMarshallNArgs: numArgs floatArg: regOrConst0 floatArg: regOrConst1 floatArg: regOrConst2 floatArg: regOrConst3.
-	self CallFullRT: (self cCode: [aRoutine asUnsignedInteger]
-						inSmalltalk: [self simulatedTrampolineFor: aRoutine]).
-	resultRegOrNone ~= NoReg ifTrue:
-		[backEnd genWriteCResultIntoReg: resultRegOrNone].
-	backEnd genRemoveNFloatArgsFromStack: numArgs.
-	backEnd genRestoreRegs: regsToSave
-]
-
 { #category : #'in-line cacheing' }
 Cogit >> compileClosedPICPrototype [
 	"Compile the abstract instructions for a full closed PIC, used to generate the chunk of code
@@ -5805,35 +5774,6 @@ Cogit >> compileTrampolineFor: aRoutine numArgs: numArgs arg: regOrConst0 arg: r
 		arg: regOrConst3
 		resultReg: resultRegOrNone
 		resultReg: resultReg2OrNone
-		regsToSave: regMask.
-	backEnd genLoadStackPointers.
-	(pushLinkReg and: [backEnd hasLinkRegister])
-		ifTrue:
-			[backEnd hasPCRegister
-				ifTrue: [self PopR: PCReg]
-				ifFalse: [self PopR: LinkReg. 
-						self RetN: 0]]
-		ifFalse: [self RetN: 0]
-]
-
-{ #category : #initialization }
-Cogit >> compileTrampolineFor: aRoutine numArgs: numArgs floatArg: regOrConst0 floatArg: regOrConst1 floatArg: regOrConst2 floatArg: regOrConst3 regsToSave: regMask pushLinkReg: pushLinkReg resultReg: resultRegOrNone [
-	"Generate a trampoline with up to four arguments.  Generate either a call or a jump to aRoutine
-	 as requested by callJumpBar.  If generating a call and resultRegOrNone is not NoReg pass the C
-	 result back in resultRegOrNone.
-	 Hack: a negative value indicates an abstract register, a non-negative value indicates a constant."
-	<option: #LowcodeVM>
-	<var: #aRoutine type: #'void *'>
-	<inline: false>
-	self genSmalltalkToCStackSwitch: pushLinkReg.
-	self
-		compileCallFor: aRoutine
-		numArgs: numArgs
-		floatArg: regOrConst0
-		floatArg: regOrConst1
-		floatArg: regOrConst2
-		floatArg: regOrConst3
-		resultReg: resultRegOrNone
 		regsToSave: regMask.
 	backEnd genLoadStackPointers.
 	(pushLinkReg and: [backEnd hasLinkRegister])
@@ -7234,37 +7174,6 @@ Cogit >> genExternalizePointersForPrimitiveCall [
 ]
 
 { #category : #initialization }
-Cogit >> genFFICalloutTrampoline [
-	<option: #LowcodeVM>
-	| startAddress |
-	opcodeIndex := 0.
-	backEnd hasLinkRegister ifTrue: [
-		self MoveR: LinkReg Aw: coInterpreter instructionPointerAddress
-	] ifFalse: [
-		self PopR: backEnd registerToSaveIP.
-		self MoveR: backEnd registerToSaveIP Aw: coInterpreter instructionPointerAddress
-	].
-
-	self CallR: TempReg.
-
-	backEnd hasLinkRegister ifTrue: [
-		self MoveAw: coInterpreter instructionPointerAddress R: LinkReg 
-	] ifFalse: [
-		self MoveAw: coInterpreter instructionPointerAddress R: backEnd registerToSaveIP.
-		self PushR: backEnd registerToSaveIP.
-	].
-
-	self RetN: 0.
-
-	startAddress := methodZoneBase.
-	self outputInstructionsForGeneratedRuntimeAt: startAddress.
-	self recordGeneratedRunTime: 'ceFFICalloutTrampoline' address: startAddress.
-	self recordRunTimeObjectReferences.
-	^ startAddress
-
-]
-
-{ #category : #initialization }
 Cogit >> genGetLeafCallStackPointer [
 	"Generate a routine that answers the stack pointer immedately
 	 after a leaf call, used for checking stack pointer alignment."
@@ -7733,28 +7642,6 @@ Cogit >> genTrampolineFor: aRoutine called: aString arg: regOrConst0 result: res
 ]
 
 { #category : #initialization }
-Cogit >> genTrampolineFor: aRoutine called: aString arg: regOrConst0 result: resultReg result: resultReg2 [
-	"Generate a trampoline with one argument that answers a result.
-	 Hack: a negative value indicates an abstract register, a non-negative value indicates a constant."
-	<option: #LowcodeVM>
-	<var: #aRoutine type: #'void *'>
-	<var: #aString type: #'char *'>
-	^self
-		genTrampolineFor: aRoutine
-		called: aString
-		numArgs: 1
-		arg: regOrConst0
-		arg: nil
-		arg: nil
-		arg: nil
-		regsToSave: self emptyRegisterMask
-		pushLinkReg: true
-		resultReg: resultReg
-		resultReg: resultReg2
-		appendOpcodes: false
-]
-
-{ #category : #initialization }
 Cogit >> genTrampolineFor: aRoutine called: aString floatArg: regOrConst0 result: resultReg [
 	"Generate a trampoline with one argument that answers a result.
 	 Hack: a negative value indicates an abstract register, a non-negative value indicates a constant."
@@ -7853,35 +7740,6 @@ Cogit >> genTrampolineFor: aRoutine called: trampolineName numArgs: numArgs arg:
 		pushLinkReg: pushLinkReg
 		resultReg: resultRegOrNone
 		resultReg: resultReg2OrNone.
-	self outputInstructionsForGeneratedRuntimeAt: startAddress.
-	self recordGeneratedRunTime: trampolineName address: startAddress.
-	self recordRunTimeObjectReferences.
-	^startAddress
-]
-
-{ #category : #initialization }
-Cogit >> genTrampolineFor: aRoutine called: trampolineName numArgs: numArgs floatArg: regOrConst0 floatArg: regOrConst1 floatArg: regOrConst2 floatArg: regOrConst3 regsToSave: regMask pushLinkReg: pushLinkReg resultReg: resultRegOrNone appendOpcodes: appendBoolean [
-	"Generate a trampoline with up to four arguments.  Generate either a call or a jump to aRoutineOrNil
-	 as requested by callJumpBar.  If generating a call and resultRegOrNone is not NoReg pass the C result
-	 back in resultRegOrNone.
-	 Hack: a negative value indicates an abstract register, a non-negative value indicates a constant."
-	<option: #LowcodeVM>
-	<var: #aRoutine type: #'void *'>
-	<var: #trampolineName type: #'char *'>
-	| startAddress |
-	<inline: false>
-	startAddress := methodZoneBase.
-	appendBoolean ifFalse:
-		[self zeroOpcodeIndex].
-	self compileTrampolineFor: aRoutine
-		numArgs: numArgs
-		floatArg: regOrConst0
-		floatArg: regOrConst1
-		floatArg: regOrConst2
-		floatArg: regOrConst3
-		regsToSave: regMask
-		pushLinkReg: pushLinkReg
-		resultReg: resultRegOrNone.
 	self outputInstructionsForGeneratedRuntimeAt: startAddress.
 	self recordGeneratedRunTime: trampolineName address: startAddress.
 	self recordRunTimeObjectReferences.
@@ -8254,9 +8112,6 @@ Cogit >> generateRunTimeTrampolines [
 	ceFreeTrampoline := self genTrampolineFor: #ceFree:
 											called: 'ceFreeTrampoline'
 											arg: ReceiverResultReg.
-	LowcodeVM ifTrue: [
-		ceFFICalloutTrampoline := self genFFICalloutTrampoline.
-	]
 ]
 
 { #category : #initialization }

@@ -4183,14 +4183,6 @@ CogX64Compiler >> pushCwByteSize [
 	self subclassResponsibility
 ]
 
-{ #category : #abi }
-CogX64Compiler >> registerToSaveIP [
-	"Temporary register used for fetching the instruction pointer. This should
-	not be used for passing parameters in a standard ABI"
-	<option: #LowcodeVM>
-	^ R15
-]
-
 { #category : #'inline cacheing' }
 CogX64Compiler >> relocateCallBeforeReturnPC: retpc by: delta [
 	| distance |

@@ -1321,10 +1321,6 @@ RegisterAllocatingCogit >> liveRegisters [
 	0 to: simStackPtr do:
 		[:i|
 		regsSet := regsSet bitOr: (self simStackAt: i) registerMask].
-	LowcodeVM ifTrue:
-		[(simNativeSpillBase max: 0) to: simNativeStackPtr do:
-			[:i|
-			regsSet := regsSet bitOr: (self simNativeStackAt: i) nativeRegisterMask]].
 	^regsSet
 ]
 
@@ -1955,13 +1951,13 @@ RegisterAllocatingCogit >> simStackSameAs: fixup [
 ]
 
 { #category : #'simulation stack' }
-RegisterAllocatingCogit >> ssAllocateRequiredRegMask: requiredRegsMask upThrough: stackPtr upThroughNative: nativeStackPtr [
+RegisterAllocatingCogit >> ssAllocateRequiredRegMask: requiredRegsMask upThrough: stackPtr [
 	"Override to void any required registers in temp vars."
 	0 to: methodOrBlockNumTemps do:
 		[:i|
 		((self simStackAt: i) registerMask anyMask: requiredRegsMask) ifTrue:
 			[(self simStackAt: i) liveRegister: NoReg]].
-	super ssAllocateRequiredRegMask: requiredRegsMask upThrough: stackPtr upThroughNative: nativeStackPtr
+	super ssAllocateRequiredRegMask: requiredRegsMask upThrough: stackPtr
 ]
 
 { #category : #'simulation stack' }

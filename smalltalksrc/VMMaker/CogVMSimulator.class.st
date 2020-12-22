@@ -262,7 +262,6 @@ CogVMSimulator >> basicInitialize [
 	enableCog := true.
 
 	methodCache := Array new: MethodCacheSize.
-	nsMethodCache := Array new: NSMethodCacheSize.
 	atCache := nil.
 	self flushMethodCache.
 	cogCompiledCodeCompactionCalledFor := false.

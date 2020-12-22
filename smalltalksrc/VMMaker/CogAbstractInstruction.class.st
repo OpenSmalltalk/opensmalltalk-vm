@@ -953,15 +953,6 @@ CogAbstractInstruction >> genWriteCResultIntoReg: abstractRegister [
 		[cogit gen: MoveRR operand: cResultReg operand: abstractRegister]
 ]
 
-{ #category : #abi }
-CogAbstractInstruction >> genWriteCSecondResultIntoReg: abstractRegister [
-	<option: #LowcodeVM>
-	| cResultReg |
-	cResultReg := self cResultRegisterHigh.
-	abstractRegister ~= cResultReg ifTrue:
-		[cogit gen: MoveRR operand: cResultReg operand: abstractRegister]
-]
-
 { #category : #'inline cacheing' }
 CogAbstractInstruction >> generateICacheFlush [
 	"A dummy routine.

@@ -37,7 +37,6 @@ Class {
 		'HashMultiplyConstant',
 		'HashMultiplyMask',
 		'IMMUTABILITY',
-		'LowcodeVM',
 		'MULTIPLEBYTECODESETS',
 		'NewspeakVM',
 		'PharoVM',

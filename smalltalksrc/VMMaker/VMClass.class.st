@@ -172,7 +172,6 @@ VMClass class >> initializeMiscConstants [
 	PharoVM := InitializationOptions at: #PharoVM ifAbsentPut: [false].
 	SistaVM := InitializationOptions at: #SistaVM ifAbsentPut: [false].
 	TempVectReadBarrier := InitializationOptions at: #TempVectReadBarrier ifAbsentPut: [false].
-	LowcodeVM := InitializationOptions at: #LowcodeVM ifAbsentPut: [false].
 	MULTIPLEBYTECODESETS := InitializationOptions at: #MULTIPLEBYTECODESETS ifAbsentPut: [false].
 	"Simulation only; on by default..."
 	CloneOnGC := InitializationOptions at: #CloneOnGC ifAbsentPut: [true].

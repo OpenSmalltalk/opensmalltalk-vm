@@ -13,7 +13,6 @@ Class {
 		'LargeContextBit',
 		'LargeContextSize',
 		'LargeContextSlots',
-		'NewsqueakV4BytecodeSet',
 		'SistaV1BytecodeSet',
 		'SmallContextSize',
 		'SmallContextSlots',
@@ -28,7 +27,6 @@ Class {
 { #category : #'simulator initialization' }
 VMBytecodeConstants class >> falsifyBytecodeSetFlags: initializationOptions [
 	SqueakV3PlusClosuresBytecodeSet.
-	NewsqueakV4BytecodeSet.
 	SistaV1BytecodeSet.
 	classPool keys do:
 		[:k|
