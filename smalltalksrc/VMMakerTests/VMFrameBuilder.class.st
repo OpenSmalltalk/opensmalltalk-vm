@@ -268,13 +268,13 @@ VMFrameBuilder >> pushFrame [
 
 { #category : #building }
 VMFrameBuilder >> pushYourself [
+	self setVariablesFromCompiledMethod.
+
 	interpreter push: method.
-	self setInstructionPointerBeforeFirstBytecode.
 	self pushFlags.
 	self pushFrame.
 	self pushCurrentFramesStack.
-		
-	
+
 	"context ~= memory nilObject
 		ifTrue: [ memory
 				storePointerUnchecked: 0
@@ -299,14 +299,44 @@ VMFrameBuilder >> receiver: anObject [
 ]
 
 { #category : #building }
+VMFrameBuilder >> setArgsFromMethod [
+	| argNumber |
+	argNumber := interpreter argumentCountOf: method.
+	
+	argNumber = argumentSize ifFalse: [ 
+		argumentSize = 0
+			ifTrue: [ argumentSize := argNumber ]
+			ifFalse: [ self error: 'Set temporaries do not match the number of arguments from the method oop.' ]]
+]
+
+{ #category : #building }
 VMFrameBuilder >> setInstructionPointerBeforeFirstBytecode [
 
 	"If possible, setting IP to before the first bytecode, so it is ready for fetchNextBytecode"
 
-	((memory isCompiledMethod: method) and: [ instructionPointer = 0 ]) 
-		ifTrue: [ 
-			instructionPointer := methodBuilder bytecodeAt: 0 forMethod: method.
-			interpreter instructionPointer: instructionPointer ]
+	(instructionPointer = 0 ) ifFalse: [ ^ self ]. 
+	instructionPointer := methodBuilder bytecodeAt: 0 forMethod: method.
+	interpreter instructionPointer: instructionPointer
+]
+
+{ #category : #building }
+VMFrameBuilder >> setTempsFromMethod [
+	| tempNumber |
+	tempNumber := interpreter tempCountOf: method.
+
+	tempNumber = temps size ifFalse: [ 
+		temps isEmpty
+			ifTrue: [ temps := OrderedCollection new: tempNumber withAll: memory nilObject ]
+			ifFalse: [ self error: 'Set temporaries do not match the number of temporaries from the method oop.' ]]
+]
+
+{ #category : #building }
+VMFrameBuilder >> setVariablesFromCompiledMethod [
+	(memory isCompiledMethod: method) ifFalse: [ ^ self ].
+
+	self setInstructionPointerBeforeFirstBytecode.
+	self setTempsFromMethod.
+	self setArgsFromMethod
 ]
 
 { #category : #accessing }
