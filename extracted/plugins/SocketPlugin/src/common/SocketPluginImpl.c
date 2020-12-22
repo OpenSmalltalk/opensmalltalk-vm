@@ -533,30 +533,36 @@ static void connectHandler(int fd, void *data, int flags)
 {
   privateSocketStruct *pss= (privateSocketStruct *)data;
   logTrace("connectHandler(%d, %p, %d)\n", fd, data, flags);
+  
+  // If AIO called us but the socket was already resolved, just return
+  // Avoids race condition of the AIO
+  if (pss->sockState != WaitingForConnection) {
+    // Disable the FD again just in case
+    aioDisable(fd);
+    return;
+  }
+  
   if (flags & AIO_X) /* -- exception */
-    {
-      /* error during asynchronous connect() */
+  {
+    /* error during asynchronous connect() */
+    aioDisable(fd);
+    pss->sockError= socketError(fd);
+    pss->sockState= Unconnected;
+    logWarnFromErrno("connectHandler");
+  } else /* (flags & AIO_W) -- connect completed */
+  {
+    /* connect() has completed */
+    int error= socketError(fd);
+    if (error) {
       aioDisable(fd);
-      pss->sockError= socketError(fd);
-      pss->sockState= Unconnected;
-      logWarnFromErrno("connectHandler");
-    }
-  else /* (flags & AIO_W) -- connect completed */
-    {
-      /* connect() has completed */
-      int error= socketError(fd);
-      if (error)
-	{
-	  logTrace("connectHandler: error %d (%s)\n", error, strerror(error));
-	  pss->sockError= error;
-	  pss->sockState= Unconnected;
-	}
-      else
-	{
-	  pss->sockState= Connected;
-	  setLinger(pss->s, 1);
-	}
-    }
+      logTrace("connectHandler: error %d (%s)\n", error, strerror(error));
+	    pss->sockError= error;
+	    pss->sockState= Unconnected;
+	  } else {
+      pss->sockState= Connected;
+      setLinger(pss->s, 1);
+	  }
+  }
   notify(pss, CONN_NOTIFY);
 }
 
