@@ -13,10 +13,10 @@ function(build_ffi)
 	message(STATUS "Building FFI")
 	include(cmake/DownloadProject.cmake)
 
-	download_project(PROJ                libffi
-                 GIT_REPOSITORY      https://github.com/guillep/libffi.git
-                 GIT_TAG             "v3.3-cmake"
-                 ${UPDATE_DISCONNECTED_IF_AVAILABLE}
+	download_project(PROJ   libffi
+		GIT_REPOSITORY      https://github.com/pharo-project/libffi.git
+        GIT_TAG             "v3.3-cmake"
+        ${UPDATE_DISCONNECTED_IF_AVAILABLE}
 	)
 
 	add_subdirectory(${libffi_SOURCE_DIR} ${libffi_BINARY_DIR} EXCLUDE_FROM_ALL)
@@ -25,16 +25,25 @@ function(build_ffi)
 		set_target_properties(objlib PROPERTIES POSITION_INDEPENDENT_CODE OFF)
 	endif()
 
-	set_target_properties(ffi_shared PROPERTIES MACOSX_RPATH ON)
-	set_target_properties(ffi_shared PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})
-	set_target_properties(ffi_shared PROPERTIES INSTALL_NAME_DIR "@executable_path/Plugins")
+  set_target_properties(ffi_shared PROPERTIES MACOSX_RPATH ON)
+  set_target_properties(ffi_shared PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${LIBRARY_OUTPUT_DIRECTORY}")
+  set_target_properties(ffi_shared PROPERTIES INSTALL_NAME_DIR "${PHARO_LIBRARY_PATH}")
 
 	# libffi cmakelists does not correctly export the library includes
 	# so we have to make it ourselves...
 	include_directories("${libffi_BINARY_DIR}/include")
 
 	add_library(libFFI ALIAS ffi_shared)
+    
+  add_custom_target(libffi_copy
+    COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:ffi_shared>" "${LIBRARY_OUTPUT_DIRECTORY}"
+		COMMENT "Copying libffi binaries to '${LIBRARY_OUTPUT_DIRECTORY}'" VERBATIM
+  )
+  
+  add_dependencies(libffi_copy libFFI)
+  
 	target_link_libraries(${VM_LIBRARY_NAME} ffi_shared)
+  add_dependencies(${VM_LIBRARY_NAME} libffi_copy)
 endfunction()
 
 if(PHARO_DEPENDENCIES_PREFER_DOWNLOAD_BINARIES)

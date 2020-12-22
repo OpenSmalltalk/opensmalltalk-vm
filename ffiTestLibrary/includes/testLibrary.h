@@ -3,9 +3,13 @@
 
 #include <stdlib.h>
 #include <stdint.h>
-#include <unistd.h>
 #include <string.h>
 #include <stdio.h>
+
+#if !defined(_WIN32)
+#include <unistd.h>
+#endif
+
 
 #include "structures.h"
 

@@ -165,6 +165,7 @@ char* getExceptionMessage(LPEXCEPTION_POINTERS exp){
 	}
 }
 
+extern void dumpPrimTraceLog(void);
 void reportStackState(LPEXCEPTION_POINTERS exp, char* date, FILE* output){
 
 	fprintf(output,"\n%s(%ld) at 0x%016llx - %s\n\n", getExceptionMessage(exp), exp->ExceptionRecord->ExceptionCode, (unsigned long long)exp->ExceptionRecord->ExceptionAddress, date);
@@ -180,6 +181,9 @@ void reportStackState(LPEXCEPTION_POINTERS exp, char* date, FILE* output){
 	printRegisterState(&ctx, output);
 
 	printMachineCallStack(&ctx, output);
+
+	fprintf(output, "\nMost recent primitives\n");
+	dumpPrimTraceLog();
 
 }
 
@@ -207,6 +211,7 @@ void captureStack(PCONTEXT context, STACKFRAME64* frames, int framePointersSize,
 	frame.AddrStack.Mode = AddrModeFlat;
 #if defined(_M_ARM64)
 	frame.AddrPC.Offset = context->Pc;
+	frame.AddrReturn.Offset = context->Lr;
 	frame.AddrFrame.Offset = context->Fp;
 	frame.AddrStack.Offset = context->Sp;
 #elif defined(_WIN64)
@@ -219,8 +224,19 @@ void captureStack(PCONTEXT context, STACKFRAME64* frames, int framePointersSize,
 	frame.AddrStack.Offset = context->Esp;
 #endif
 	size_t i;
+
+#if defined(_M_ARM64)
+	DWORD machineType = IMAGE_FILE_MACHINE_ARM64;
+#elif defined(_WIN64)
+	DWORD machineType = IMAGE_FILE_MACHINE_AMD64;
+#elif defined(_M_IX86)
+	DWORD machineType = IMAGE_FILE_MACHINE_I386;
+#else
+#error Architecture not defined
+#endif
+
 	for (i = 0; i < framePointersSize + frameSkip; i++){
-		if (StackWalk64(IMAGE_FILE_MACHINE_AMD64,
+		if (StackWalk64(machineType,
 				GetCurrentProcess(),
 				GetCurrentThread(),
 				&frame,

@@ -27,17 +27,20 @@ else()
     set(PHARO_CURRENT_GENERATED ${GENERATED_SOURCE_DIR}/generated/32)
 endif()
 
-#The list of generated files given the flavour
+#If not StackVM, include also JIT related files
 if(FLAVOUR MATCHES "StackVM")
-    if(FEATURE_GNUISATION)
-        set(VMSOURCEFILES ${PHARO_CURRENT_GENERATED}/vm/src/gcc3x-interp.c)
-    else()
-        set(VMSOURCEFILES ${PHARO_CURRENT_GENERATED}/vm/src/interp.c)
-    endif()
+  if(${FEATURE_COMPILE_GNUISATION})
+      set(VMSOURCEFILES ${PHARO_CURRENT_GENERATED}/vm/src/gcc3x-interp.c)
+  else()
+      set(VMSOURCEFILES ${PHARO_CURRENT_GENERATED}/vm/src/interp.c)
+  endif()
 else()
-set(VMSOURCEFILES
-    ${PHARO_CURRENT_GENERATED}/vm/src/cogit.c
-    ${PHARO_CURRENT_GENERATED}/vm/src/gcc3x-cointerp.c)
+  list(APPEND VMSOURCEFILES ${PHARO_CURRENT_GENERATED}/vm/src/cogit.c)
+  if(${FEATURE_COMPILE_GNUISATION})
+      list(APPEND VMSOURCEFILES ${PHARO_CURRENT_GENERATED}/vm/src/gcc3x-cointerp.c)
+  else()
+      list(APPEND VMSOURCEFILES ${PHARO_CURRENT_GENERATED}/vm/src/cointerp.c)
+  endif()
 endif()
 
 set(PLUGIN_GENERATED_FILES 

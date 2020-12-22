@@ -48,10 +48,6 @@ set(VM_FRONTEND_SOURCES
 configure_file(resources/mac/Info.plist.in build/includes/Info.plist)
 
 macro(add_third_party_dependencies_per_platform)
-	if (DOWNLOAD_DEPENDENCIES)
-		add_third_party_dependency("PThreadedFFI-1.4.0-osx64" "build/vm")
-	endif()
-
 	if(${FEATURE_LIB_GIT2})
 		include(cmake/importLibGit2.cmake)
 	endif()
@@ -102,10 +98,3 @@ execute_process(
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     OUTPUT_VARIABLE OSX_SDK_PATH
     OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-
-set(DYLIB_EXT "*.dylib")
-set(LIBFFI_TARGET "--target=x86_64-apple-darwin")
-set(LIBFFI_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/build/bin/libffi.dylib" "${CMAKE_CURRENT_BINARY_DIR}/build/bin/libffi.7.dylib")
-set(LIBFFI_ADDITIONAL "CPATH=${OSX_SDK_PATH}/usr/include")
-

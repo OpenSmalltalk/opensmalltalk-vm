@@ -100,60 +100,6 @@ endif()
 add_vm_plugin(SurfacePlugin)
 
 #
-# SqueakFFIPrims Plugin
-#
-
-#
-# This solution is not portable to different architectures!
-#
-
-if(${FEATURE_FFI})
-
-message(STATUS "Adding plugin: SqueakFFIPrims")
-
-set(SqueakFFIPrims_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/SqueakFFIPrims/src/common/SqueakFFIPrims.c 
-    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/SqueakFFIPrims/src/common/sqManualSurface.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/SqueakFFIPrims/src/common/sqFFIPlugin.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/SqueakFFIPrims/src/common/sqFFITestFuncs.c
-)
-addLibraryWithRPATH(SqueakFFIPrims ${SqueakFFIPrims_SOURCES})
-target_include_directories(SqueakFFIPrims 
-PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/SqueakFFIPrims/include/common
-)
-
-
-#
-# IA32ABI Plugin
-#
-
-set(IA32ABI_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/IA32ABI/src/common/IA32ABI.c 
-    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/IA32ABI/src/common/AlienSUnitTestProcedures.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/IA32ABI/src/common/xabicc.c
-)
-# Only add this file for Win x86_64
-if(WIN AND CMAKE_SYSTEM_PROCESSOR MATCHES x86_64)
-    set(IA32ABI_SOURCES
-        ${IA32ABI_SOURCES}
-        ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/IA32ABI/src/common/x64win64stub.c
-    )
-endif()
-
-addLibraryWithRPATH(IA32ABI ${IA32ABI_SOURCES})
-
-target_include_directories(IA32ABI
-    PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/extracted/plugins/IA32ABI/include/common
-)
-
-target_link_libraries(IA32ABI PRIVATE ${VM_LIBRARY_NAME})
-
-endif()
-
-
-#
 # LargeIntegers Plugin
 #
 

@@ -1,28 +1,8 @@
-#include "setjmp.h"
+#include "sigjmp_support.h"
 
 #include "pThreadedFFI.h"
 #include "vmCallback.h"
 #include "pharovm/macros.h"
-
-/*
- * Define sigsetjmp and siglongjmp to be the most minimal setjmp/longjmp available on the platform.
- * Note: on windows 64 via mingw-w64, the 2nd argument NULL to _setjmp prevents stack unwinding
- */
-#undef sigsetjmp
-#undef siglongjmp
-#if _MSC_VER
-# define sigsetjmp(jb,ssmf) _setjmp(jb)
-# define siglongjmp(jb,v) longjmp(jb,v)
-#elif _WIN64 && __GNUC__
-# define sigsetjmp(jb,ssmf) _setjmp(jb,NULL)
-# define siglongjmp(jb,v) longjmp(jb,v)
-#elif _WIN32
-# define sigsetjmp(jb,ssmf) setjmp(jb)
-# define siglongjmp(jb,v) longjmp(jb,v)
-#else
-# define sigsetjmp(jb,ssmf) _setjmp(jb)
-# define siglongjmp(jb,v) _longjmp(jb,v)
-#endif
 
 void sameThreadCallbackEnter(struct _Runner* runner, struct _CallbackInvocation* callback);
 void sameThreadCallbackExit(struct _Runner* runner, struct _CallbackInvocation* callback);

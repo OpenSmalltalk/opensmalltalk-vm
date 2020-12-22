@@ -56,11 +56,56 @@ project(PharoVM)
 # This is required because CMake will set the HOST_PROCESSOR in windows
 # And not care about our Visual Studio settings
 # See https://gitlab.kitware.com/cmake/cmake/-/issues/15170
-if (MSVC)
+if(MSVC AND NOT ${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang")
     set(CMAKE_SYSTEM_PROCESSOR ${MSVC_CXX_ARCHITECTURE_ID})
 endif()
 message(STATUS "Compiling for architecture: ${CMAKE_SYSTEM_PROCESSOR}")
 
+# Windows setjmp does not work as Unix's
+# by it default will unwind the stack, which is not possible in generated code
+# setjmp has an extra argument not exposed in C to avoid unwinding
+# This extra asm file defines a wrapper function that sets this argument to 0
+if(MSVC AND NOT ${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang")
+    get_filename_component(COMPILER_DIR "${CMAKE_C_COMPILER}" DIRECTORY)
+    if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "ARM64")
+        set(CMAKE_ASM_MASM_COMPILER ${COMPILER_DIR}/armasm64.exe)
+    endif()
+    set(CMAKE_ASM_COMPILER ${CMAKE_ASM_MASM_COMPILER})
+    enable_language(ASM)
+
+    set(ASM_PATH "src/utils/setjmp-Windows-wrapper-${CMAKE_SYSTEM_PROCESSOR}.s")
+
+    get_filename_component(ASM_FILENAME "${ASM_PATH}" NAME_WE)
+    get_filename_component(ASM_DIRNAME "${ASM_PATH}" DIRECTORY)
+
+    add_custom_command(
+        COMMAND "${CMAKE_C_COMPILER}" /nologo /P /EP /I. /I"${CMAKE_CURRENT_SOURCE_DIR}/${ASM_DIRNAME}" /Fi"${CMAKE_CURRENT_BINARY_DIR}/${ASM_FILENAME}.asm" /Iinclude
+                /I"${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/${ASM_PATH}"
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${ASM_PATH}
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${ASM_FILENAME}.asm
+        COMMENT "Preprocessing ${CMAKE_CURRENT_SOURCE_DIR}/${ASM_PATH}. Outputting to ${CMAKE_CURRENT_BINARY_DIR}/${ASM_FILENAME}.asm")
+
+    set_source_files_properties("${CMAKE_CURRENT_BINARY_DIR}/${ASM_FILENAME}.asm" PROPERTIES GENERATED TRUE)
+
+    if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "X86.*")
+        list(APPEND SUPPORT_SOURCES ${CMAKE_CURRENT_BINARY_DIR}/${ASM_FILENAME}.asm)
+        set_source_files_properties(
+            ${CMAKE_CURRENT_BINARY_DIR}/${ASM_FILENAME}.asm
+            PROPERTIES
+            COMPILE_FLAGS "/safeseh"
+        )
+    else()
+        add_custom_command(
+            COMMAND "${CMAKE_ASM_MASM_COMPILER}" /Fo "${CMAKE_CURRENT_BINARY_DIR}/${ASM_FILENAME}.obj" "${CMAKE_CURRENT_BINARY_DIR}/${ASM_FILENAME}.asm"
+            DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${ASM_FILENAME}.asm
+            OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${ASM_FILENAME}.obj
+            COMMENT "Assembling ${CMAKE_CURRENT_BINARY_DIR}/${ASM_FILENAME}.asm")
+
+        set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/${ASM_FILENAME}.obj PROPERTIES EXTERNAL_OBJECT TRUE)
+
+        list(APPEND SUPPORT_SOURCES ${CMAKE_CURRENT_BINARY_DIR}/${ASM_FILENAME}.obj)
+    endif()
+endif()
 
 set(FLAVOUR CoInterpreter CACHE STRING "The kind of VM to generate. Possible values: StackVM, CoInterpreter")
 set(GENERATE_SOURCES TRUE CACHE BOOL "If it generates the sources")
@@ -90,7 +135,6 @@ endif()
 if (${FEATURE_COMPILE_INLINE_MEMORY_ACCESSORS})
     add_compile_definitions(USE_INLINE_MEMORY_ACCESSORS=1)
 endif()
-
 
 set(PLUGIN_GENERATED_FILES 
   	${GENERATED_SOURCE_DIR}/generated/plugins/src/FilePlugin/FilePlugin.c)
@@ -218,9 +262,7 @@ set(PHARO_VM TRUE)
 set(DEFAULT_IMAGE_NAME ${APPNAME}.image)
 
 set(VM_TARGET "${CMAKE_SYSTEM}")
-
-#Change to the correct CPU
-set(VM_TARGET_CPU "x86_64")
+set(VM_TARGET_CPU ${CMAKE_SYSTEM_PROCESSOR})
 
 # Type sizes
 if(BUILD_I386_VERSION)
@@ -248,7 +290,7 @@ else()
 	message(FATAL_ERROR "Failed to find a 64 bits integer type.")
 endif()
 
-set(EXECUTABLE_OUTPUT_PATH "${CMAKE_CURRENT_BINARY_DIR}/build/vm")
+set(EXECUTABLE_OUTPUT_PATH "${CMAKE_CURRENT_BINARY_DIR}/build/vm/")
 
 #If in OSX, configure creation of Bundle
 if (OSX)
@@ -302,7 +344,7 @@ include(cmake/${CMAKE_SYSTEM_NAME}.cmake)
 
 set(GENERATED_SOURCES ${VMSOURCEFILES})
 
-set(SUPPORT_SOURCES	
+list(APPEND SUPPORT_SOURCES	
 	${CMAKE_CURRENT_SOURCE_DIR}/src/debug.c
 	${CMAKE_CURRENT_SOURCE_DIR}/src/utils.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/errorCode.c
@@ -371,6 +413,7 @@ endif()
 target_include_directories(${VM_LIBRARY_NAME}
 PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/pharovm
     ${CMAKE_CURRENT_SOURCE_DIR}/extracted/vm/include
     ${CMAKE_CURRENT_BINARY_DIR}/build/include/pharovm/
     ${PHARO_CURRENT_GENERATED}/vm/include

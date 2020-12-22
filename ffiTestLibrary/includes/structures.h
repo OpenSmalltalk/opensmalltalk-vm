@@ -4,7 +4,7 @@
 typedef struct{
 	int x;
 	int y;
-} POINT;
+} OUR_POINT;
 
 typedef struct{
 	char a[100];

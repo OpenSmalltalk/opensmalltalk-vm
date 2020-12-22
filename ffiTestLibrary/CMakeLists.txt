@@ -11,7 +11,7 @@ set(TestLibrary_SOURCES
 	${CMAKE_CURRENT_SOURCE_DIR}/src/structures.c
 )
 
-addLibraryWithRPATH(TestLibrary ${TestLibrary_SOURCES})
+addIndependentLibraryWithRPATH(TestLibrary ${TestLibrary_SOURCES})
 
 target_include_directories(TestLibrary
 PRIVATE
