@@ -10,7 +10,7 @@ function(find_system_Freetype)
 endfunction()
 
 function(download_Freetype)
-  if (NOT UNIX)
+  if (WIN OR OSX)
     # Download it for now, except for linuxes
     add_third_party_dependency("freetype-2.9.1")
   endif()
