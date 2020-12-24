@@ -1,5 +1,5 @@
 ﻿{
-  "template-hash": "@template_hash@",
+  "template-uuid": "700d49bd-a613-4a13-b9ce-ff59cf3e7f18",
   "configurations": [
     {
       "name": "x86-Debug-StackVM-clang",
