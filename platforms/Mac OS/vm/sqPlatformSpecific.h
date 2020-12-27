@@ -208,7 +208,7 @@ extern const pthread_key_t tltiIndex;
 # endif
 #endif
 
-#if !defined(VM_LABEL) || COGVM
+#if !defined(VM_LABEL) || COGVM || STACKVM
 # undef VM_LABEL
 # define VM_LABEL(foo) ((void)0)
 #endif
