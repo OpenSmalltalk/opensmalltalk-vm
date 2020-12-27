@@ -78,6 +78,9 @@ typedef enum {
 	CR_pixClear,              /* 39 */
 	CR_fixAlpha,              /* 40 */
 	CR_rgbComponentAlpha,     /* 41 */
+	CR_alphaScale,            /* 42 */
+	CR_alphaUnscale,          /* 43 */
+	CR_alphaBlendUnscaled,    /* 44 */
 	CR_any = -1u
 }
 combination_rule_t;
