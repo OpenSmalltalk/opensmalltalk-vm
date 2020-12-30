@@ -57,7 +57,7 @@ int AEC_ENABLED = 1;
 # define aec_soundInit() 0
 # define aec_soundShutdown() 0
 # define aec_snd_StartRecording(sps, str, six) 0
-# define aec_snd_StopRecording() 0
+# define aec_snd_StopRecording(0) 0
 # define aec_snd_GetRecordingSampleRate() 0
 # define aec_snd_RecordSamplesIntoAtLength(b, ssi, bsz) 0
 #endif
@@ -74,36 +74,40 @@ int AEC_ENABLED = 1;
 
 #define mmFAILED(mm) ((mm) != MMSYSERR_NOERROR)
 
-static HWND *theSTWindow = NULL; /* a reference to Squeak's main window */
-
-LPDIRECTSOUND lpdSound = NULL;
-LPDIRECTSOUNDBUFFER lpdPrimaryBuffer = NULL;
-LPDIRECTSOUNDBUFFER lpdPlayBuffer = NULL;
-WAVEFORMATEX waveOutFormat;
+// Global vars shared with sqWin32AEC.c
 HANDLE hPlayEvent = NULL;
 HANDLE hPlayThread = NULL;
-int playBufferSize = 0;
-int playBufferIndex = 0;
-int playBufferAvailable = 0;
-int playTerminate = 0;
-int playSemaphore = -1;
-
-LPDIRECTSOUNDCAPTURE lpdCapture = NULL;
-LPDIRECTSOUNDCAPTUREBUFFER lpdRecBuffer = NULL;
-WAVEFORMATEX waveInFormat;
 HANDLE hRecEvent = NULL;
 HANDLE hRecThread = NULL;
-int recBufferFrameCount = 640;
-/* For 16kHz 16-bit mono sound,this is 1280msecs */
-const int totalRecBufferSize = 40960;
-int recBufferSize = 0;
-int recBufferReadPosition = 0;
-int recBufferWritePosition = 0;
-int recBufferAvailable = 0;
 int recTerminate = 0;
 int recSemaphore = -1;
-int recSampleRate;
+DWORD recSampleRate;
 int recIsStereo;
+
+static HWND *theSTWindow = NULL; /* a reference to Squeak's main window */
+
+static LPDIRECTSOUND lpdSound = NULL;
+static LPDIRECTSOUNDBUFFER lpdPrimaryBuffer = NULL;
+static LPDIRECTSOUNDBUFFER lpdPlayBuffer = NULL;
+static WAVEFORMATEX waveOutFormat;
+static int playBufferSize = 0;
+static int playBufferIndex = 0;
+static int playBufferAvailable = 0;
+static int playTerminate = 0;
+static int playSemaphore = -1;
+
+#define RELEASE_SOUND_CAPTURE_STATE_ON_STOP_RECORDING 0
+static LPDIRECTSOUNDCAPTURE lpdCapture = NULL;
+static LPDIRECTSOUNDCAPTUREBUFFER lpdRecBuffer = NULL;
+static int isRecording = 0;
+static WAVEFORMATEX waveInFormat;
+static int recBufferFrameCount = 640;
+/* For 16kHz 16-bit mono sound,this is 1280msecs */
+static const int totalRecBufferSize = 40960;
+static int recBufferSize = 0;
+static int recBufferReadPosition = 0;
+static int recBufferWritePosition = 0;
+static int recBufferAvailable = 0;
 
 /*******************************************************************************/
 /* Default devices: Windows does not provide an API for this. 11/10/08 HRS ... */
@@ -228,9 +232,8 @@ void
 shutdownDeviceInfoList(DeviceInfoList* list)
 {
 	int i;
-	for (i=0; i < DEVICE_MAX; i++) {
+	for (i=0; i < DEVICE_MAX; i++)
 		clearDeviceInfo(&list->devices[i]);
-	}
 	clearDeviceInfo(&list->defaultDevice);
 }
 
@@ -245,7 +248,8 @@ shutdownDeviceInfoList(DeviceInfoList* list)
 	UINT win32deviceCount;
 	char **win32deviceNames;	
 	*/
-BOOL CALLBACK deviceEnumerationCallback(LPGUID lpGUID, LPCTSTR lpszDesc, LPCTSTR lpszDrvName, LPVOID lpContext)
+static BOOL CALLBACK
+deviceEnumerationCallback(LPGUID lpGUID, LPCTSTR lpszDesc, LPCTSTR lpszDrvName, LPVOID lpContext)
 {
 	DeviceInfoList* deviceList = (DeviceInfoList*)lpContext;
 	DeviceInfo* device;
@@ -253,7 +257,8 @@ BOOL CALLBACK deviceEnumerationCallback(LPGUID lpGUID, LPCTSTR lpszDesc, LPCTSTR
 	HRESULT hr;
 
 	/* We can't handle any more devices. */
-	if (index > DEVICE_MAX) return FALSE;
+	if (index > DEVICE_MAX)
+		return FALSE;
 
 	/* No matter what happens from here on, we've "added" a device to the list. */
 	deviceList->enumerationCounter++;
@@ -272,11 +277,10 @@ BOOL CALLBACK deviceEnumerationCallback(LPGUID lpGUID, LPCTSTR lpszDesc, LPCTSTR
 		}
 		return TRUE;
 	}
-	else if (device->guid && IsEqualGUID(device->guid, lpGUID)) {
+	else if (device->guid && IsEqualGUID(device->guid, lpGUID))
 		/* Same device, in the same position. We're done. */
 		return TRUE;
-	}
-	
+
 	/* The device at the current index didn't match, so we know the list has changed. */
 	deviceList->changed = TRUE;
 
@@ -299,17 +303,10 @@ BOOL CALLBACK deviceEnumerationCallback(LPGUID lpGUID, LPCTSTR lpszDesc, LPCTSTR
 }
 
 
-static void *aalloc(size_t s) /* Allocate our standard size array of, of CLEARED element size s. */
-{
-	void *p = calloc(DEVICE_MAX + 1, s);
-	XPRINT(("	allocated %d @ %x\n", s, p));
-	return p;
-}
-
-
 /* There are a few places where we ask for line info for, e.g., a speaker, but we would also accept headphones, digital, etc. */
 /* Side-effects pmxl->dwComponentType */
-MMRESULT flexMixerGetLineInfo(HMIXEROBJ hmxobj, LPMIXERLINE pmxl)
+static MMRESULT
+flexMixerGetLineInfo(HMIXEROBJ hmxobj, LPMIXERLINE pmxl)
 {
 	MMRESULT mmResult = mixerGetLineInfo(hmxobj, pmxl, MIXER_OBJECTF_MIXER + MIXER_GETLINEINFOF_COMPONENTTYPE);
 
@@ -333,7 +330,7 @@ MMRESULT flexMixerGetLineInfo(HMIXEROBJ hmxobj, LPMIXERLINE pmxl)
 	return flexMixerGetLineInfo(hmxobj, pmxl);
 }
 
-	
+
 sqInt
 getNumberOfSoundPlayerDevices()
 {
@@ -343,29 +340,29 @@ getNumberOfSoundPlayerDevices()
 	playerDevices.enumerationCounter = 0;
 	hr = DirectSoundEnumerate((LPDSENUMCALLBACK)deviceEnumerationCallback, (VOID*)&playerDevices);
 	if (FAILED(hr)) {
-		DPRINTF(("player enumeration failed\n"));
+		DSPRINTF(("player enumeration failed\n"));
 		return 0;
 	}
-	DPRINTF(("player enumeration complete\n"));
+	DVSPRINTF(("player enumeration complete\n"));
 	for (counter=playerDevices.enumerationCounter; counter < playerDevices.deviceCount; counter++) {  /* Free excess if the there are now fewer devices. */
 		DeviceInfo* device = &(playerDevices.devices[counter]);
-		DPRINTF(("player changed in post-enumeration\n"));
+		DSPRINTF(("player changed in post-enumeration\n"));
 		playerDevices.changed = true;
 		clearDeviceInfo(device);
-		DPRINTF(("	free %d\n", counter));
+		DSPRINTF(("	free %d\n", counter));
 	}
 	playerDevices.deviceCount = playerDevices.enumerationCounter;
 
 	if (playerDevices.changed) {
 		char* deviceName = playerDevices.defaultDevice.name;
 		if (!deviceName) deviceName = "NULL";
-		DPRINTF(("player devices changed... setting default device: %s\n", deviceName));
+		DSPRINTF(("player devices changed... setting default device: %s\n", deviceName));
 		setDefaultSoundPlayer(deviceName);
 	}
 	if (recorderDevices.changed) {
 		char* deviceName = recorderDevices.defaultDevice.name;
 		if (!deviceName) deviceName = "NULL";
-		DPRINTF(("recorder devices changed... setting default device: %s\n", deviceName));
+		DMPRINTF(("recorder devices changed... setting default device: %s\n", deviceName));
 		setDefaultSoundRecorder(deviceName);
 	}
 
@@ -381,28 +378,28 @@ getNumberOfSoundRecorderDevices()
 	recorderDevices.enumerationCounter = 0;
 	hr = DirectSoundCaptureEnumerate((LPDSENUMCALLBACK)deviceEnumerationCallback, (VOID*)&recorderDevices);
 	if (FAILED(hr)) {
-		DPRINTF(("recorder enumeration failed\n"));
+		DMPRINTF(("recorder enumeration failed\n"));
 		return 0;
 	}
-	DPRINTF(("recorder enumeration complete\n"));
+	DVMPRINTF(("recorder enumeration complete\n"));
 	for (counter=recorderDevices.enumerationCounter; counter < recorderDevices.deviceCount; counter++) {  /* Free excess if the there are now fewer devices. */
 		DeviceInfo* device = &(recorderDevices.devices[counter]);
 		recorderDevices.changed = true;
 		clearDeviceInfo(device);
-		DPRINTF(("	free %d\n", counter));
+		DMPRINTF(("	free %d\n", counter));
 	}
 	recorderDevices.deviceCount = recorderDevices.enumerationCounter;
 
 	if (playerDevices.changed) {
 		char* deviceName = playerDevices.defaultDevice.name;
 		if (!deviceName) deviceName = "NULL";
-		DPRINTF(("player devices changed... setting default device: %s\n", deviceName));
+		DSPRINTF(("player devices changed... setting default device: %s\n", deviceName));
 		setDefaultSoundPlayer(deviceName);
 	}
 	if (recorderDevices.changed) {
 		char* deviceName = recorderDevices.defaultDevice.name;
 		if (!deviceName) deviceName = "NULL";
-		DPRINTF(("recorder devices changed... setting default device: %s\n", deviceName));
+		DMPRINTF(("recorder devices changed... setting default device: %s\n", deviceName));
 		setDefaultSoundRecorder(deviceName);
 	}
 	return recorderDevices.deviceCount;
@@ -428,8 +425,7 @@ getSoundRecorderDeviceName(sqInt index)
 			: (char *)0;
 } 
 
-void
-logDeviceNames(void);
+void logDeviceNames(void);
 
 void
 setDefaultSoundPlayer(char *deviceName)
@@ -440,14 +436,14 @@ setDefaultSoundPlayer(char *deviceName)
 	for (counter=0; counter<max; counter++) {
 		DeviceInfo* device = &(playerDevices.devices[counter]);
 		if (!strcmp(device->name, deviceName)) {
-			DPRINTF(("setDefaultSoundPlayer('%s')\n", deviceName));
+			DSPRINTF(("setDefaultSoundPlayer('%s')\n", deviceName));
 			duplicateDeviceName(&playerDevices.defaultDevice, device->name);
 			setDeviceGUID(&playerDevices.defaultDevice, device->guid);
 			playerDevices.defaultDevice.mmID = device->mmID;
 			return;
 		}
 	}
-	DPRINTF(("Unable to setDefaultSoundPlayer('%s')\n", deviceName));
+	DSPRINTF(("Unable to setDefaultSoundPlayer('%s')\n", deviceName));
 	clearDeviceInfo(&playerDevices.defaultDevice);
 	return;
 } 
@@ -461,34 +457,32 @@ setDefaultSoundRecorder(char *deviceName)
 	for (counter=0; counter<max; counter++) {
 		DeviceInfo* device = &(recorderDevices.devices[counter]);
 		if (!strcmp(device->name, deviceName)) {
-			DPRINTF(("setDefaultSoundRecorder('%s')\n", deviceName));
+			DMPRINTF(("setDefaultSoundRecorder('%s')\n", deviceName));
 			duplicateDeviceName(&recorderDevices.defaultDevice, device->name);
 			setDeviceGUID(&recorderDevices.defaultDevice, device->guid);
 			recorderDevices.defaultDevice.mmID = device->mmID;
 			return;
 		}
 	}
-	DPRINTF(("unable to setDefaultSoundRecorder('%s')\n", deviceName));
+	DMPRINTF(("unable to setDefaultSoundRecorder('%s')\n", deviceName));
 	clearDeviceInfo(&recorderDevices.defaultDevice);
 } 
 
 char *
 getDefaultSoundPlayer()
 {
-	if (playerDevices.defaultDevice.name) {
-		// Force enumeration to verify that default device is still available.
+	// Force enumeration to verify that default device is still available.
+	if (playerDevices.defaultDevice.name)
 		getNumberOfSoundPlayerDevices();
-	}
 	return playerDevices.defaultDevice.name;
 }
 
 char *
 getDefaultSoundRecorder()
 {
-	if (recorderDevices.defaultDevice.name) {
-		// Force enumeration to verify that default device is still available.
+	// Force enumeration to verify that default device is still available.
+	if (recorderDevices.defaultDevice.name)
 		getNumberOfSoundRecorderDevices();
-	}
 	return recorderDevices.defaultDevice.name;
 }
 
@@ -575,12 +569,12 @@ closeDevs(HMIXER hmx, HWAVEIN hwaveIn, HWAVEOUT hwaveOut)
 /*	Answers the volume (as a double [0, 1]) of the first line of deviceID that has the specified lineType.
 	If inLevel is between [0, 1], sets the volume before reading it. 
 	A negative deviceID means to use the default waveIn/Out device (based on lineType arg). */
-double
+static double
 accessMixerVolume(UINT deviceID, DWORD lineType, double inLevel) 
 {
 	double outLevel;
 	UINT v;
-	
+
 	MMRESULT result;
 	HMIXER hmx = NULL;
 
@@ -612,16 +606,18 @@ accessMixerVolume(UINT deviceID, DWORD lineType, double inLevel)
 
 		if (lineType == MIXERLINE_COMPONENTTYPE_DST_WAVEIN) {
 			result = waveInOpen(&hwaveIn, WAVE_MAPPER, &wfx, 0, 0, CALLBACK_NULL);
-			DPRINTF(("	waveInOpen=>%d (BADFORMAT=%d, BADFLAG=%d), hwave=%lx\n", result, WAVERR_BADFORMAT, MMSYSERR_INVALFLAG, hwaveIn));
+			DMPRINTF(("	waveInOpen=>%d (BADFORMAT=%d, BADFLAG=%d), hwave=%lx\n", result, WAVERR_BADFORMAT, MMSYSERR_INVALFLAG, hwaveIn));
 			if (mmFAILED(result)) return -1;
 			result = mixerOpen(&hmx, (UINT) hwaveIn, 0, 0, MIXER_OBJECTF_HWAVEIN);
-		} else {
+		}
+		else {
 			result = waveOutOpen(&hwaveOut, WAVE_MAPPER, &wfx, 0, 0, CALLBACK_NULL);
-			DPRINTF(("	waveInOpen=>%d (BADFORMAT=%d, BADFLAG=%d), hwave=%lx\n", result, WAVERR_BADFORMAT, MMSYSERR_INVALFLAG, hwaveOut));
+			DSPRINTF(("	waveInOpen=>%d (BADFORMAT=%d, BADFLAG=%d), hwave=%lx\n", result, WAVERR_BADFORMAT, MMSYSERR_INVALFLAG, hwaveOut));
 			if (mmFAILED(result)) return -1;
 			result = mixerOpen(&hmx, (UINT) hwaveOut, 0, 0, MIXER_OBJECTF_HWAVEOUT);
 		}
-	} else {
+	}
+	else {
 		result = mixerOpen(&hmx, deviceID, 0, 0, MIXER_OBJECTF_MIXER);
 	}
 	XPRINT(("	mixerOpen=>%x (BADDEVICEID=%d), handle=%lx\n", result, MMSYSERR_BADDEVICEID, hmx));
@@ -666,7 +662,8 @@ accessMixerVolume(UINT deviceID, DWORD lineType, double inLevel)
 	if (inLevel < 0) {
 		result = mixerGetControlDetails((HMIXEROBJ) hmx, &mmDetails, MIXER_OBJECTF_HMIXER | MIXER_GETCONTROLDETAILSF_VALUE);
 		XPRINT(("	got result=%x, val=%x\n", result, mmValue[0].dwValue));
-	} else {
+	}
+	else {
 		v = (mmControl[0].Bounds.dwMaximum - mmControl[0].Bounds.dwMinimum);
 		v = (UINT) (v * inLevel);
 		v += mmControl[0].Bounds.dwMinimum;
@@ -708,7 +705,8 @@ dx_snd_Volume(double *left, double *right)
 
 /* module initialization/shutdown */
 sqInt
-dx_soundInit(void) {
+dx_soundInit(void)
+{
   initializeDeviceInfoList(&playerDevices);
   initializeDeviceInfoList(&recorderDevices);
   playerDevices.dataflow = DIRECTSOUNDDEVICE_DATAFLOW_RENDER;
@@ -720,29 +718,39 @@ dx_soundInit(void) {
     return 0;
   }
 
-  if (!dsound_InitClassFactory()) {
-	  return 0;
-  }
+  if (!dsound_InitClassFactory())
+	return 0;
 
   hRecEvent = CreateEvent( NULL, FALSE, FALSE, NULL );
   hPlayEvent = CreateEvent( NULL, FALSE, FALSE, NULL );
   return 1;
 }
 
-sqInt dx_snd_StopPlaying(void);
-sqInt dx_snd_StopRecording(void);
+static sqInt dx_snd_StopPlaying(void);
+sqInt dx_snd_StopRecording(int);
 
 sqInt
-dx_soundShutdown(void) {
-  DPRINTF(("dx_soundShutDown\n"));
-  dx_snd_StopPlaying();
-  dx_snd_StopRecording();
-  dsound_ShutdownClassFactory();
-  CloseHandle(hPlayEvent);
-  CloseHandle(hRecEvent);
-  shutdownDeviceInfoList(&playerDevices);
-  shutdownDeviceInfoList(&recorderDevices);
-  return 1;
+dx_soundShutdown(void)
+{
+	DPRINTF(("dx_soundShutDown\n"));
+	dx_snd_StopPlaying();
+	dx_snd_StopRecording(0);
+	dsound_ShutdownClassFactory();
+	CloseHandle(hPlayEvent);
+	CloseHandle(hRecEvent);
+	shutdownDeviceInfoList(&playerDevices);
+	shutdownDeviceInfoList(&recorderDevices);
+	if (!RELEASE_SOUND_CAPTURE_STATE_ON_STOP_RECORDING) {
+		if (lpdRecBuffer) {
+			IDirectSoundCaptureBuffer_Release(lpdRecBuffer);
+			lpdRecBuffer = NULL;
+		}
+		if (lpdCapture) {
+			IDirectSoundCapture_Release(lpdCapture);
+			lpdCapture = NULL;
+		}
+	}
+	return 1;
 }
 
 sqInt
@@ -774,7 +782,9 @@ dx_snd_StopPlaying(void) {
   return 1;
 }
 
-DWORD WINAPI playCallback( LPVOID ignored ) {
+static DWORD WINAPI
+playCallback(LPVOID ignored)
+{
   while (1) {
     if (WaitForSingleObject(hPlayEvent, INFINITE) == WAIT_OBJECT_0) {
       if (playTerminate) {
@@ -790,7 +800,9 @@ DWORD WINAPI playCallback( LPVOID ignored ) {
   }
 }
 
-DWORD WINAPI dxRecCallback( LPVOID ignored ) {
+static DWORD WINAPI
+dxRecCallback(LPVOID ignored)
+{
   while (1) {
     if (WaitForSingleObject(hRecEvent, INFINITE) == WAIT_OBJECT_0) {
       if (recTerminate) return 0; /* done playing */
@@ -836,7 +848,7 @@ dx_snd_PlaySamplesFromAtLength(sqInt frameCount, void *arrayIndex, sqInt startIn
   if (bytesWritten < playBufferSize)
     return 0;
 
-  DPRINTF(("[%d", frameCount));
+  DSPRINTF(("[%d", frameCount));
 
   hRes = IDirectSoundBuffer_Lock(lpdPlayBuffer, 
 				 playBufferSize * playBufferIndex,
@@ -845,7 +857,7 @@ dx_snd_PlaySamplesFromAtLength(sqInt frameCount, void *arrayIndex, sqInt startIn
 				 NULL, NULL, 
 				 0);
   if (FAILED(hRes)) {
-    DPRINTF(("snd_Play: IDirectSoundBuffer_Lock failed (errCode: %x)\n", hRes));
+    DSPRINTF(("dx_snd_Play: IDirectSoundBuffer_Lock failed (errCode: %lx)\n", hRes));
     return 0;
   }
   /* mix in stuff */
@@ -854,12 +866,12 @@ dx_snd_PlaySamplesFromAtLength(sqInt frameCount, void *arrayIndex, sqInt startIn
     short *shortSrc = (short*)((char *)arrayIndex+startIndex);
     short *shortDst = (short*)dstPtr;
     dstLen /= 2;
-    DPRINTF(("|%d", dstLen));
+    DSPRINTF(("|%d", dstLen));
     for (i=0;i<dstLen;i++)
       *shortDst++ = *(shortSrc++);
   }
   IDirectSoundBuffer_Unlock(lpdPlayBuffer, dstPtr, dstLen, NULL, 0);
-  DPRINTF(("]"));
+  DSPRINTF(("]"));
   playBufferAvailable = 0;
   return bytesWritten / waveOutFormat.nBlockAlign;
 }
@@ -884,7 +896,7 @@ dx_snd_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sqInt semaInde
      (samplesPerSec != waveOutFormat.nSamplesPerSec) || 
      ((stereo == 0) != (waveOutFormat.nChannels == 1))) {
     /* format change */
-    DPRINTF(("DXSound format change (%d, %d, %s)\n", frameCount, samplesPerSec, (stereo ? "stereo" : "mono")));
+    DSPRINTF(("DXSound format change (%d, %d, %s)\n", frameCount, samplesPerSec, (stereo ? "stereo" : "mono")));
     dx_snd_StopPlaying();
   }
 
@@ -892,37 +904,37 @@ dx_snd_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sqInt semaInde
     /* keep playing */
     playTerminate = 0;
     playSemaphore = semaIndex; /* might have changed */
-    DPRINTF(("Continuing DSound\n"));
+    DSPRINTF(("Continuing DSound\n"));
     return 1;
   }
- 
-  DPRINTF(("Starting DSound\n"));
+
+  DSPRINTF(("Starting DSound\n"));
    if (!lpdSound) {
     /* Initialize DirectSound */
-    DPRINTF(("# Creating lpdSound\n"));
+    DSPRINTF(("# Creating lpdSound\n"));
     hRes = CoCreateInstance(&CLSID_DirectSound,
 			    NULL, 
 			    CLSCTX_INPROC_SERVER,
 			    &IID_IDirectSound,
 			    (void**)&lpdSound);
     if (FAILED(hRes)) { return 0; }
-    DPRINTF(("# Initializing lpdSound\n"));
+    DSPRINTF(("# Initializing lpdSound\n"));
     hRes = IDirectSound_Initialize(lpdSound, playerDevices.defaultDevice.guid);
     if (FAILED(hRes)) { return 0; }
     /* set the cooperative level (DSSCL_PRIORITY is recommended) */
     hRes = IDirectSound_SetCooperativeLevel(lpdSound, *theSTWindow, DSSCL_PRIORITY);
     if (FAILED(hRes)) {
-      DPRINTF(("sndStart: IDirectSound_SetCooperativeLevel failed (errCode: %x)\n", hRes));
+      DSPRINTF(("sndStart: IDirectSound_SetCooperativeLevel failed (errCode: %lx)\n", hRes));
       /* for now don't fail because of lack in cooperation */
     }
     /* grab the primary sound buffer for handling format changes */
     ZeroMemory(&dsbd, sizeof(dsbd));
     dsbd.dwSize = sizeof(dsbd);
     dsbd.dwFlags = DSBCAPS_PRIMARYBUFFER;
-    DPRINTF(("# Creating primary buffer\n"));
+    DSPRINTF(("# Creating primary buffer\n"));
     hRes = IDirectSound_CreateSoundBuffer(lpdSound, &dsbd, &lpdPrimaryBuffer, NULL);
     if (FAILED(hRes)) {
-      DPRINTF(("sndStart: Failed to create primary buffer (errCode: %x)\n", hRes));
+      DSPRINTF(("sndStart: Failed to create primary buffer (errCode: %lx)\n", hRes));
     }
   }
 
@@ -930,7 +942,7 @@ dx_snd_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sqInt semaInde
 
   if (!hPlayThread) {
     /* create the playback notification thread */
-    DPRINTF(("# Creating playback thread\n"));
+    DSPRINTF(("# Creating playback thread\n"));
     hPlayThread = CreateThread(NULL, 128*1024, playCallback, NULL, 
 			       STACK_SIZE_PARAM_IS_A_RESERVATION, &threadID);
     if (hPlayThread == 0) { return 0; }
@@ -966,11 +978,11 @@ dx_snd_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sqInt semaInde
   if (lpdPrimaryBuffer) {
     hRes = IDirectSoundBuffer_SetFormat(lpdPrimaryBuffer, &waveOutFormat);
     if (FAILED(hRes)) {
-      DPRINTF(("sndStart: Failed to set primary buffer format (errCode: %x)\n", hRes));
+      DSPRINTF(("sndStart: Failed to set primary buffer format (errCode: %lx)\n", hRes));
     }
   }
 
-  DPRINTF(("# Creating play buffer\n"));
+  DSPRINTF(("# Creating play buffer\n"));
   hRes = IDirectSound_CreateSoundBuffer(lpdSound, &dsbd, &lpdPlayBuffer, NULL);
   if (FAILED(hRes)) { return 0; }
 
@@ -983,12 +995,12 @@ dx_snd_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sqInt semaInde
   posNotify[1].dwOffset = 2 * playBufferSize - 1;
   posNotify[0].hEventNotify = hPlayEvent;
   posNotify[1].hEventNotify = hPlayEvent;
-  DPRINTF(("# Setting notifications\n"));
+  DSPRINTF(("# Setting notifications\n"));
   hRes = IDirectSoundNotify_SetNotificationPositions(lpdNotify, 2, posNotify);
   IDirectSoundNotify_Release(lpdNotify);
   if (FAILED(hRes)) { return 0; }
 
-  DPRINTF(("# Starting to play buffer\n"));
+  DSPRINTF(("# Starting to play buffer\n"));
   hRes = IDirectSoundBuffer_Play(lpdPlayBuffer, 0, 0, DSBPLAY_LOOPING);
   if (FAILED(hRes)) { return 0; }
   return 1;
@@ -1002,7 +1014,6 @@ dx_snd_Stop(void) { dx_snd_StopPlaying(); return 1; }
 sqInt
 dx_snd_StartRecording(sqInt samplesPerSec, sqInt stereo, sqInt semaIndex)
 {
-	DSCBUFFERDESC dscb;
 	DSCCAPS dsccaps;
 	DSBPOSITIONNOTIFY  posNotify[32]; /* see 'numNotificationPoints' below */
 	LPDIRECTSOUNDNOTIFY lpdNotify = NULL;
@@ -1012,6 +1023,7 @@ dx_snd_StartRecording(sqInt samplesPerSec, sqInt stereo, sqInt semaIndex)
 	int i; /* loop index */
 	/* 'Notification Points' tell DirectSound when to call a callback to notify us that sound has been recorded.*/
 	int numNotificationPoints;
+	int formatChanged;
 
 	// Stash these in case we need to stop and restart recording with the
 	// same parameters as requested this time.
@@ -1019,30 +1031,29 @@ dx_snd_StartRecording(sqInt samplesPerSec, sqInt stereo, sqInt semaIndex)
 	recIsStereo = stereo;
 	recSemaphore = semaIndex;
 
-	if (lpdRecBuffer) {
+	if (isRecording)
 		snd_StopRecording();
-	}
 
-	DPRINTF(("snd_StartRec: beginning DirectSound audio capture\n"));
-	DPRINTF(("\tsamplingRate: %d   stereo: %d   sem-index: %d\n", samplesPerSec, stereo, semaIndex));
+	DMPRINTF(("dx_snd_StartRec: beginning DirectSound audio capture\n"));
+	DMPRINTF(("\tsamplingRate: %d   stereo: %d   sem-index: %d\n", samplesPerSec, stereo, semaIndex));
 
 	if (!lpdCapture) {
 		hRes = CoCreateInstance(&CLSID_DirectSoundCapture8,
-			NULL, 
-			CLSCTX_INPROC_SERVER,
-			&IID_IDirectSoundCapture,
-			(void**)&lpdCapture);
+								NULL, 
+								CLSCTX_INPROC_SERVER,
+								&IID_IDirectSoundCapture,
+								(void**)&lpdCapture);
 		if (FAILED(hRes)) {
-			DPRINTF(("snd_StartRec: CoCreateInstance() failed (errCode: %x)\n", hRes));
+			DMPRINTF(("dx_snd_StartRec: CoCreateInstance() failed (errCode: %lx)\n", hRes));
 			return 0;
 		}
 		if (!recorderDevices.defaultDevice.guid) {
 			// Just to let us know; it will still work if the GUID is NULL.
-			DPRINTF(("snd_StartRec: default GUID is NULL (just FYI)\n"));
+			DMPRINTF(("dx_snd_StartRec: default GUID is NULL (just FYI)\n"));
 		}
 		hRes = IDirectSoundCapture_Initialize(lpdCapture, recorderDevices.defaultDevice.guid);
 		if (FAILED(hRes)) {
-			DPRINTF(("snd_StartRec: IDirectSoundCapture_Initialize() failed (errCode: %x)\n", hRes));
+			DMPRINTF(("dx_snd_StartRec: IDirectSoundCapture_Initialize() failed (errCode: %lx)\n", hRes));
 			lpdCapture = NULL;
 			return 0;
 		}
@@ -1051,20 +1062,20 @@ dx_snd_StartRecording(sqInt samplesPerSec, sqInt stereo, sqInt semaIndex)
 	dsccaps.dwSize = sizeof(dsccaps);
 	hRes = IDirectSoundCapture_GetCaps(lpdCapture, &dsccaps);
 	if (FAILED(hRes)) {
-		DPRINTF(("snd_StartRec: IDirectSoundCapture_GetCaps() failed (errCode: %x)\n", hRes));
+		DMPRINTF(("dx_snd_StartRec: IDirectSoundCapture_GetCaps() failed (errCode: %lx)\n", hRes));
 	}
 	else {
 #	define isCertified (dsccaps.dwFlags & DSCCAPS_CERTIFIED) ? "yes" : "no"
 #	define isEmulated (dsccaps.dwFlags & DSCCAPS_EMULDRIVER) ? "yes" : "no"
 #	define hasMulticapture (dsccaps.dwFlags & DSCCAPS_MULTIPLECAPTURE) ? "yes" : "no"
-		DPRINTF(("snd_StartRec: using capture-device with capabilities:  certified: %s  emulated: %s  multicapture: %s  formats: 0x%lx  channels: %d\n", isCertified, isEmulated, hasMulticapture, dsccaps.dwFormats, dsccaps.dwChannels));
+		DMPRINTF(("dx_snd_StartRec: using capture-device with capabilities:  certified: %s  emulated: %s  multicapture: %s  formats: 0x%lx  channels: %d\n", isCertified, isEmulated, hasMulticapture, dsccaps.dwFormats, dsccaps.dwChannels));
 	}
 
 	/* create the recording notification thread */
 	hRecThread = CreateThread(NULL, 128*1024, dxRecCallback, NULL, 
-		STACK_SIZE_PARAM_IS_A_RESERVATION, &threadID);
-	if (hRecThread == 0) {
-		printLastError("snd_StartRec: CreateThread failed");
+								STACK_SIZE_PARAM_IS_A_RESERVATION, &threadID);
+	if (!hRecThread) {
+		printLastError("dx_snd_StartRec: CreateThread failed");
 		snd_StopRecording();
 		return 0;
 	}
@@ -1080,38 +1091,47 @@ dx_snd_StartRecording(sqInt samplesPerSec, sqInt stereo, sqInt semaIndex)
 	/* This computation assumes that totalRecBufferSize is 20480 bytes. */
 	numNotificationPoints = totalRecBufferSize / recBufferSize;
 	if (numNotificationPoints > 32) {
-		printLastError(TEXT("snd_StartRec: frame size must be >= 1280 bytes"));
+		printLastError(TEXT("dx_snd_StartRec: frame size must be >= 1280 bytes"));
 		snd_StopRecording();
 		return 0;
 	}
 
+	formatChanged =    waveInFormat.nChannels != (stereo ? 2 : 1)
+					|| waveInFormat.nSamplesPerSec != samplesPerSec;
 	/* create the secondary sound buffer */
-	dscb.dwSize = sizeof(dscb);
-	dscb.dwFlags = DSCBCAPS_WAVEMAPPED;
-	dscb.dwBufferBytes = numNotificationPoints * recBufferSize;
-	dscb.dwReserved = 0;
 	waveInFormat.wFormatTag = WAVE_FORMAT_PCM;
 	waveInFormat.nChannels = stereo ? 2 : 1;
 	waveInFormat.nSamplesPerSec = samplesPerSec;
 	waveInFormat.nAvgBytesPerSec = samplesPerSec * bytesPerFrame;
 	waveInFormat.nBlockAlign = bytesPerFrame;
 	waveInFormat.wBitsPerSample = 16;
-	dscb.lpwfxFormat = &waveInFormat;
+	if (formatChanged || !lpdRecBuffer) {
+		DSCBUFFERDESC dscb;
+		dscb.lpwfxFormat = &waveInFormat;
+		dscb.dwSize = sizeof(dscb);
+		dscb.dwFlags = DSCBCAPS_WAVEMAPPED;
+		dscb.dwBufferBytes = numNotificationPoints * recBufferSize;
+		dscb.dwReserved = 0;
 #if 0 // these appear to be obsolete
-	dscb.dwFXCount = 0;
-	dscb.lpDSCFXDesc = NULL;
+		dscb.dwFXCount = 0;
+		dscb.lpDSCFXDesc = NULL;
 #endif
-	hRes = IDirectSoundCapture_CreateCaptureBuffer(lpdCapture, &dscb, &lpdRecBuffer, NULL);
-	if (FAILED(hRes)) {
-		DPRINTF(("snd_StartRec: IDirectSoundCapture_CreateCaptureBuffer() failed (errCode: %x)\n", hRes));
-		DPRINTF(("\tchannels: %d  frequency: %dHz\n", waveInFormat.nChannels, samplesPerSec));
-		return 0;
+		if (lpdRecBuffer) {
+			IDirectSoundCaptureBuffer_Stop(lpdRecBuffer);
+			IDirectSoundCaptureBuffer_Release(lpdRecBuffer);
+		}
+		hRes = IDirectSoundCapture_CreateCaptureBuffer(lpdCapture, &dscb, &lpdRecBuffer, NULL);
+		if (FAILED(hRes)) {
+			DMPRINTF(("dx_snd_StartRec: IDirectSoundCapture_CreateCaptureBuffer() failed (errCode: %lx)\n", hRes));
+			DMPRINTF(("\tchannels: %d  frequency: %dHz\n", waveInFormat.nChannels, samplesPerSec));
+			return 0;
+		}
 	}
 	hRes = IDirectSoundCaptureBuffer_QueryInterface(lpdRecBuffer,
-		&IID_IDirectSoundNotify, 
-		(void**)&lpdNotify );
+													&IID_IDirectSoundNotify, 
+													(void**)&lpdNotify );
 	if (FAILED(hRes)) {
-		DPRINTF(("snd_StartRec: QueryInterface(IDirectSoundNotify) failed (errCode: %x)\n"));
+		DMPRINTF(("dx_snd_StartRec: QueryInterface(IDirectSoundNotify) failed (errCode: %lx)\n"));
 		snd_StopRecording();
 		return 0;
 	}
@@ -1122,52 +1142,62 @@ dx_snd_StartRecording(sqInt samplesPerSec, sqInt stereo, sqInt semaIndex)
 	hRes = IDirectSoundNotify_SetNotificationPositions(lpdNotify, numNotificationPoints, posNotify);
 	IDirectSoundNotify_Release(lpdNotify);
 	if (FAILED(hRes)) {
-		DPRINTF(("snd_StartRec: IDirectSoundNotify_SetNotificationPositions() failed (errCode: %x)\n", hRes));
+		DMPRINTF(("dx_snd_StartRec: IDirectSoundNotify_SetNotificationPositions() failed (errCode: %lx)\n", hRes));
 		snd_StopRecording();
 		return 0;
 	}
 	hRes = IDirectSoundCaptureBuffer_Start(lpdRecBuffer, DSCBSTART_LOOPING);
 	if (FAILED(hRes)) {
-		DPRINTF(("snd_StartRec: IDirectSoundCaptureBuffer_Start() failed (errCode: %x)\n", hRes));
+		DMPRINTF(("dx_snd_StartRec: IDirectSoundCaptureBuffer_Start() failed (errCode: %lx)\n", hRes));
 		snd_StopRecording();
 		return 0;
 	}
-
+	isRecording = 1;
 	return 0;
 }
 
 sqInt
-dx_snd_StopRecording(void) {
-  if (lpdRecBuffer) {
-    IDirectSoundCaptureBuffer_Stop(lpdRecBuffer);
-    IDirectSoundCaptureBuffer_Release(lpdRecBuffer);
-    lpdRecBuffer = NULL;
-  }
-  if (lpdCapture) {
-    IDirectSoundCapture_Release(lpdCapture);
-    lpdCapture = NULL;
-  }
-  if (hRecThread) {
-    ResetEvent(hRecEvent);
-    recTerminate = 1;
-    SetEvent(hRecEvent);
-    WaitForSingleObject(hRecThread, 100); /* wait until terminated */
-    hRecThread = NULL;
-    recTerminate = 0;
-  }
-  ResetEvent(hRecEvent);
+dx_snd_StopRecording(int recursing)
+{
+	if (!recursing) {
+		DMPRINTF(("dx_snd_StopRecording\n"));
+		aec_snd_StopRecording(1);
+	}
+	if (lpdRecBuffer) {
+		IDirectSoundCaptureBuffer_Stop(lpdRecBuffer);
+		if (RELEASE_SOUND_CAPTURE_STATE_ON_STOP_RECORDING) {
+			IDirectSoundCaptureBuffer_Release(lpdRecBuffer);
+			lpdRecBuffer = NULL;
+		}
+	}
+	if (RELEASE_SOUND_CAPTURE_STATE_ON_STOP_RECORDING
+	 && lpdCapture) {
+		IDirectSoundCapture_Release(lpdCapture);
+		lpdCapture = NULL;
+	}
+	if (hRecThread) {
+		ResetEvent(hRecEvent);
+		recTerminate = 1;
+		SetEvent(hRecEvent);
+		WaitForSingleObject(hRecThread, 100); /* wait until terminated */
+		hRecThread = NULL;
+		recTerminate = 0;
+	}
+	ResetEvent(hRecEvent);
+	isRecording = 0;
 
-  return 0;
+	return 0;
 }
 
 double
-dx_snd_GetRecordingSampleRate(void) {
-  if (!lpdRecBuffer) return 0.0;
-  return (double) waveInFormat.nSamplesPerSec;
+dx_snd_GetRecordingSampleRate(void)
+{
+  return isRecording ? (double)waveInFormat.nSamplesPerSec : 0.0;
 }
 
 sqInt
-dx_snd_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex, sqInt bufferSizeInBytes) {
+dx_snd_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex, sqInt bufferSizeInBytes)
+{
   /* if data is available, copy as many sample slices as possible into the
      given buffer starting at the given slice index. do not write past the
      end of the buffer, which is buf + bufferSizeInBytes. return the number
@@ -1179,14 +1209,9 @@ dx_snd_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex, sqInt bufferS
   HRESULT hRes;
   DWORD srcLen, srcLen2;
 
-  if (!lpdRecBuffer) {
-    /* not recording */
+  if (!isRecording
+   || !recBufferAvailable)
     return 0;
-  }
-  if (!recBufferAvailable) {
-    /* no data available */
-    return 0;
-  }
 
   if (recBufferReadPosition == recBufferWritePosition) {
     /* We are confused. We should never read the buffer being recorded.
@@ -1209,8 +1234,8 @@ dx_snd_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex, sqInt bufferS
 					(void*)&srcPtr2, &srcLen2,
 					0);
   if (FAILED(hRes)) {
-    DPRINTF(("snd_Rec: IDirectSoundCaptureBuffer_Lock() failed (errCode: %x)\n", hRes));
-	DPRINTF(("\taddr: %x  readPos: %d  srcPtr: %x/%d  srcPtr2: x/%d    \n", lpdRecBuffer, recBufferReadPosition, bytesCopied, srcPtr, srcLen, srcPtr2, srcLen2));
+    DMPRINTF(("dx_snd_Rec: IDirectSoundCaptureBuffer_Lock() failed (errCode: %lx)\n", hRes));
+	DMPRINTF(("\taddr: %p  readPos: %d  srcPtr: %p/%d  srcPtr2: %p/%d\n", lpdRecBuffer, recBufferReadPosition, bytesCopied, srcPtr, srcLen, srcPtr2, srcLen2));
 	return 0;
   } 
 
@@ -1233,20 +1258,20 @@ dx_snd_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex, sqInt bufferS
 
   /* Sanity check: print out error msg if we fail */
   if (bytesCopied != srcLen+srcLen2) {
-	DPRINTF(("snd_Rec: total locked buffer size does not match expected/requested value\n"));
+	DMPRINTF(("dx_snd_Rec: total locked buffer size does not match expected/requested value\n"));
   }
 
   /* Update the position within the DirectSound buffer that we will read from next.
           If there are no more bytes available to read, set a flag to say so. */
   recBufferReadPosition = (recBufferReadPosition + bytesCopied) % totalRecBufferSize;
   recBufferAvailable -= bytesCopied;
- 
+
   /* We're finished with the DirectSound buffer; unlock it. */
   hRes = IDirectSoundCaptureBuffer_Unlock(lpdRecBuffer,
 					  srcPtr, srcLen,
 					  srcPtr2, srcLen2);
   if (FAILED(hRes)) {
-    DPRINTF(("snd_Rec: IDirectSoundCaptureBuffer_Unlock() failed (errCode: %x)\n", hRes));
+    DMPRINTF(("dx_snd_Rec: IDirectSoundCaptureBuffer_Unlock() failed (errCode: %lx)\n", hRes));
   }
 
   return bytesCopied / bytesPerSlice;
@@ -1272,70 +1297,27 @@ void dx_snd_SetVolume(double left, double right)
   volume = (int)(left * 0xFFFF);
   if (right < 0.0) right = 0.0;
   if (right > 1.0) right = 1.0;
-  volume |= ((int)(right *0xFFFF)) << 16;
+  volume |= ((int)(right * 0xFFFF)) << 16;
 
   waveOutSetVolume((HWAVEOUT) 0, volume);
 }
 #endif /* old */
 
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
-
-/* HACK! Define LPWAVEFORMAT as LPWAVEFORMATEX for WinVER >= 4 */
-#if WINVER >= 0x0400
-#define LPWAVEFORMAT LPWAVEFORMATEX
-#endif
-
-/* number of buffers used */
-#define NUM_BUFFERS 4
-/* initial buffer size */
-#define BUFFER_SIZE 4096
-
-/* Note: NUM_BUFFERS and BUFFER_SIZE should be carefully chosen.
-   You better not touch it unless you know what you're doing, but
-   ALWAYS use a multiple of 2 for NUM_BUFFERS. BUFFER_SIZE affects 
-   only sound input. The output buffer size is determined by Squeak.
-*/
-
-HWAVEOUT hWaveOut = 0;
-HWAVEIN hWaveIn = 0;
-WAVEFORMATEX waveOutFormat;
-WAVEFORMATEX waveInFormat;
-
-
-
-
-/*******************************************************************/
-/*  Sound output functions                                         */
-/*******************************************************************/
-
-
-
-
-/*******************************************************************/
-/*  Sound input functions                                          */
-/*******************************************************************/
-
-
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
-/***************************************************************************/
 /* module initialization/shutdown */
 sqInt
-soundInit(void) {
-  dx_soundInit();
-  aec_soundInit();
-  return 1;
+soundInit(void)
+{
+	dx_soundInit();
+	aec_soundInit();
+	return 1;
 }
 
 sqInt
-soundShutdown(void) {
-  dx_soundShutdown();
-  aec_soundShutdown();
-  return 1;
+soundShutdown(void)
+{
+	dx_soundShutdown();
+	aec_soundShutdown();
+	return 1;
 }
 
 /* sound output */
@@ -1375,7 +1357,7 @@ snd_StartRecording(sqInt desiredSamplesPerSec, sqInt stereo, sqInt semaIndex) {
 
 sqInt
 snd_StopRecording(void) {
-	return AEC_ENABLED ? aec_snd_StopRecording() : dx_snd_StopRecording();
+	return AEC_ENABLED ? aec_snd_StopRecording(0) : dx_snd_StopRecording(0);
 }
 
 double
@@ -1407,23 +1389,23 @@ snd_EnableAEC(sqInt trueOrFalse)
 	// Fail primitive if we're trying to turn AEC on but it's not 
 	// supported on this platform.
 	if (trueOrFalse && !AEC_SUPPORTED) {
-		DPRINTF(("AEC is not supported on this platform\n"));
+		DMPRINTF(("AEC is not supported on this platform\n"));
 		return PrimErrUnsupported; 
 	}
 	// If we're already in the requested state, there's nothing to do;
 	// return successfully.
 	if (!!trueOrFalse == !!AEC_ENABLED) {
-		DPRINTF(("No change was requested to AEC state\n"));
+		DMPRINTF(("No change was requested to AEC state\n"));
 		return 0; 
 	}
 	// If we're already recording, we must stop, change state, and restart.
 	wasRecording = hRecThread ? 1 : 0;
-	if (wasRecording) { snd_StopRecording(); }
-	DPRINTF(("Set AEC state to %d\n", trueOrFalse));
-	AEC_ENABLED = trueOrFalse;
-	if (wasRecording) { 
+	if (wasRecording)
+		snd_StopRecording();
+	DMPRINTF(("Set AEC state to %d\n", trueOrFalse));
+	AEC_ENABLED = (int)trueOrFalse;
+	if (wasRecording)
 		snd_StartRecording(recSampleRate, recIsStereo, recSemaphore); 
-	}
 	return 0; // success
 #else
 	return PrimErrUnsupported; 
