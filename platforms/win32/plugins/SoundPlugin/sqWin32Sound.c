@@ -57,7 +57,7 @@ int AEC_ENABLED = 1;
 # define aec_soundInit() 0
 # define aec_soundShutdown() 0
 # define aec_snd_StartRecording(sps, str, six) 0
-# define aec_snd_StopRecording(0) 0
+# define aec_snd_StopRecording(i) 0
 # define aec_snd_GetRecordingSampleRate() 0
 # define aec_snd_RecordSamplesIntoAtLength(b, ssi, bsz) 0
 #endif
