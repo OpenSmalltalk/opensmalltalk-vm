@@ -1,7 +1,7 @@
 ifndef THIRDPARTYDIR
 	include ../common/Makefile.lib.extra
 endif
-include ../../third-party/libpng.spec.win
+include ../../third-party/libpng.spec
 
 # plugin definitions
 LIBPNGURL:=$(libpng_spec_download_url)
