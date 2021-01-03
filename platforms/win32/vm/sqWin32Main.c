@@ -1477,7 +1477,7 @@ sqImageFile findEmbeddedImage(void) { return 0; }
 /*                        sqMain                                            */
 /****************************************************************************/
 #if (STACKVM || NewspeakVM) && !COGVM
-extern sqInt sendTrace;
+extern volatile int sendTrace;
 #endif
 #if STACKVM || NewspeakVM
 extern sqInt checkForLeaks;
@@ -1893,7 +1893,7 @@ parseVMArgument(int argc, char *argv[])
 #endif /* VISTA_SECURITY */
 #if (STACKVM || NewspeakVM) && !COGVM
 	else if (!strcmp(argv[0], VMOPTION("sendtrace")))
-		{ extern sqInt sendTrace; sendTrace = 1; return 1; }
+		{ extern volatile int sendTrace; sendTrace = 1; return 1; }
 #endif
 
 	/* parameters */

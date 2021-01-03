@@ -1558,7 +1558,7 @@ static int vm_parseArgument(int argc, char **argv)
   else if (!strcmp(argv[0], VMOPTION("aiolog")))	{ aioDebugLogging = 1; return 1; }
 #endif
 #if (STACKVM || NewspeakVM) && !COGVM
-  else if (!strcmp(argv[0], VMOPTION("sendtrace"))) { extern sqInt sendTrace; sendTrace = 1; return 1; }
+  else if (!strcmp(argv[0], VMOPTION("sendtrace"))) { extern volatile int sendTrace; sendTrace = 1; return 1; }
 #endif
   else if (!strcmp(argv[0], VMOPTION("single")))    { runAsSingleInstance=1; return 1; }
   /* option requires an argument */

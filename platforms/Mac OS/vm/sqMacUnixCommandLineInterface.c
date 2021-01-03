@@ -180,7 +180,7 @@ static int parseArgument(int argc, char **argv)
 	printPhaseTime(1);
 	return 1; }
 #if (STACKVM || NewspeakVM) && !COGVM
-  else if (!strcmp(argv[0], VMOPTION("sendtrace"))) { extern sqInt sendTrace; sendTrace = 1; return 1; }
+  else if (!strcmp(argv[0], VMOPTION("sendtrace"))) { extern volatile int sendTrace; sendTrace = 1; return 1; }
 #endif
   else if (argc > 1 && !strcmp(argv[0], VMOPTION("memory")))	{ 
 	gMaxHeapSize = strtolbkmg(argv[1]);	 
