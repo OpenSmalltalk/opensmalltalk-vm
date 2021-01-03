@@ -22,11 +22,11 @@ $(LIBPNGARCHIVE):
 $(THIRDPARTYLIBDIR)/$(LIBPNGLIBNAME): $(LIBPNGARCHIVE)
 	tar x -f $(LIBPNGARCHIVE) -C $(THIRDPARTYDIR)
 	cd $(LIBPNGDIR) \
-		&& ./configure --prefix='$(THIRDPARTYOUTDIR)' CFLAGS='-arch i386' LDFLAGS='-arch i386' \
+		&& ./configure --prefix='$(THIRDPARTYOUTDIR)' CFLAGS='-arch i386' LDFLAGS='-arch i386 -L$(THIRDPARTYOUTDIR)/lib' \
 		&& make \
 		&& make install
 
-$(LIBPNGLIB): $(THIRDPARTYLIBDIR)/$(LIBPNGLIBNAME)
+$(LIBPNGLIB): zlib $(THIRDPARTYLIBDIR)/$(LIBPNGLIBNAME)
 	cp -f $(THIRDPARTYLIBDIR)/$(LIBPNGLIBNAME) $(THIRDPARTYINSTALLDIR)
 	install_name_tool -id "@executable_path/Plugins/$(LIBPNGLIBNAME)" $(LIBPNGLIB)
 	@echo "Installing links"
