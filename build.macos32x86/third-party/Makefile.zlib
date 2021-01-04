@@ -22,7 +22,7 @@ $(ZLIBARCHIVE):
 $(THIRDPARTYLIBDIR)/$(ZLIBLIBNAME): $(ZLIBARCHIVE)
 	tar x -f $(ZLIBARCHIVE) -C $(THIRDPARTYDIR)
 	cd $(ZLIBDIR) \
-		&& ./configure --prefix='$(THIRDPARTYOUTDIR)' --archs='-arch i386' \
+		&& CFLAGS='-arch i386 ' LDFLAGS='-arch i386 ' ./configure --prefix='$(THIRDPARTYOUTDIR)' \
 		&& make \
 		&& make install
 
