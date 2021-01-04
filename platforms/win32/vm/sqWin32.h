@@ -190,7 +190,7 @@ extern TCHAR windowClassName[];  /* class name for the window */
 extern char  squeakIniNameA[];   /* full path to ini file - UTF8 */
 extern WCHAR squeakIniNameW[];   /* full path to ini file - UTF16 */
 
-#ifdef UNICODE
+#if _UNICODE
 # define imageNameT imageNameW /* define the generic TCHAR* version */
 # define imagePath  imagePathW
 # define vmName vmNameW
@@ -283,7 +283,7 @@ int __cdecl warnPrintf(char *fmt, ...);
 int __cdecl warnPrintfW(WCHAR *fmt, ...);
 #endif
 
-#ifdef UNICODE
+#if _UNICODE
 #define warnPrintfT warnPrintfW
 #else
 #define warnPrintfT warnPrintf

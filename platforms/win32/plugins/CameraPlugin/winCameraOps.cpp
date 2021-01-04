@@ -1,6 +1,19 @@
 #include <Windows.h>
 
+// I dunno why atlbase.h barfs when _UNCODE=1, but it does
+#if _UNICODE
+# define _UNICODE_WAS_SET 1
+# undef _UNICODE
+#else
+# undef _UNICODE_WAS_SET
+#endif
+
 #include <atlbase.h>
+
+#if _UNICODE_WAS_SET
+# define _UNICODE 1
+#endif
+
 #include <dshow.h>
 #include <stdio.h>
 #include <qedit.h>
