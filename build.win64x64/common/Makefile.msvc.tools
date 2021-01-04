@@ -67,8 +67,8 @@ WINVER:=-D_WIN64=1 -D_WIN32_WINNT=0x1001 -DWINVER=0x1001
 NOBUILTIN:=-D_MT
 MACHINE:=x64
 
-#!#! Some microsoft inludes test for _UNICODE (as described in Microshaft's
-#!#! documentation), but others test for UNICODE, so we have to define both.
+#!#! UNICODE applies to API calls, _UNICODE to string representation, so one
+#!#! must define both.
 DEFS:=	-D$(VM)VM=1 $(COGDEFS) $(MEMACCESS) $(WINVER) $(JMPDEFS) \
 		-DWIN32=1 -DUNICODE=1 -D_UNICODE=1 -DNO_ISNAN -DNO_SERVICE \
 		$(NDEBUG) -DLSB_FIRST -DVM_NAME='"$(VM_NAME)"' $(XDEFS) $(CROQUET)
