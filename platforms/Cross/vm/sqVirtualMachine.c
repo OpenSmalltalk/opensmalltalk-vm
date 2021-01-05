@@ -29,6 +29,11 @@ extern void *setInterruptCheckChain(void (*aFunction)(void));
 void (*setInterruptCheckChain(void (*aFunction)(void)))() { return 0; }
 #endif
 
+/* InterpreterProxy methodsFor: 'BitBlt support' */
+sqInt loadBitBltFrom(sqInt bbOop);
+sqInt copyBits(void);
+sqInt copyBitsFromtoat(sqInt leftX, sqInt rightX, sqInt yValue);
+
 #if VM_PROXY_MINOR > 10
 extern sqInt disownVM(sqInt flags);
 extern sqInt ownVM(sqInt threadIdAndFlags);

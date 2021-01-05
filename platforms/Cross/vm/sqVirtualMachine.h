@@ -231,7 +231,7 @@ typedef struct VirtualMachine {
 	sqInt (*classExternalLibrary)(void);
 	sqInt (*classExternalStructure)(void);
 	void *(*ioLoadModuleOfLength)(sqInt modIndex, sqInt modLength);
-	void *(*ioLoadSymbolOfLengthFromModule)(sqInt fnIndex, sqInt fnLength, sqInt handle);
+	void *(*ioLoadSymbolOfLengthFromModule)(sqInt fnIndex, sqInt fnLength, void *handle);
 	sqInt (*isInMemory)(sqInt address);
 
 #endif
@@ -352,7 +352,7 @@ typedef struct VirtualMachine {
 #if VM_PROXY_MINOR > 11
 /* VMCallbackContext opaque type avoids all including setjmp.h & vmCallback.h */
   sqInt (*sendInvokeCallbackContext)(vmccp);
-  sqInt (*returnAsThroughCallbackContext)(int, vmccp, sqInt);
+  sqInt (*returnAsThroughCallbackContext)(sqInt, vmccp, sqInt);
   sqIntptr_t  (*signedMachineIntegerValueOf)(sqInt);
   sqIntptr_t  (*stackSignedMachineIntegerValue)(sqInt);
   usqIntptr_t (*positiveMachineIntegerValueOf)(sqInt);
@@ -402,7 +402,7 @@ typedef struct VirtualMachine {
 #endif
 } VirtualMachine;
 
-# if (defined(SQUEAK_INTERNAL_PLUGIN) || defined(FOR_SVM_C)) \
+# if (defined(SQUEAK_BUILTIN_PLUGIN) || defined(FOR_SVM_C)) \
 	&& !defined(SQ_USE_GLOBAL_STRUCT) // Prevent the interpereter seeing these
 /*** Function prototypes ***/
 
@@ -554,11 +554,6 @@ sqInt vmEndianness(void);
 sqInt getInterruptPending(void);
 void  error(const char *);
 
-/* InterpreterProxy methodsFor: 'BitBlt support' */
-sqInt loadBitBltFrom(sqInt bbOop);
-sqInt copyBits(void);
-sqInt copyBitsFromtoat(sqInt leftX, sqInt rightX, sqInt yValue);
-
 /* InterpreterProxy methodsFor: 'FFI support' */
 sqInt classExternalAddress(void);
 sqInt classExternalData(void);
@@ -566,7 +561,7 @@ sqInt classExternalFunction(void);
 sqInt classExternalLibrary(void);
 sqInt classExternalStructure(void);
 void *ioLoadModuleOfLength(sqInt moduleNameIndex, sqInt moduleNameLength);
-void *ioLoadSymbolOfLengthFromModule(sqInt functionNameIndex, sqInt functionNameLength, sqInt moduleHandle);
+void *ioLoadSymbolOfLengthFromModule(sqInt functionNameIndex, sqInt functionNameLength, void *moduleHandle);
 sqInt isInMemory(sqInt address);
 sqInt classAlien(void); /* Alien FFI */
 sqInt classUnsafeAlien(void); /* Alien FFI */
@@ -579,7 +574,7 @@ sqInt *getStackPointer(void);  /* Alien FFI */
 sqInt sendInvokeCallbackStackRegistersJmpbuf(sqInt thunkPtrAsInt, sqInt stackPtrAsInt, sqInt regsPtrAsInt, sqInt jmpBufPtrAsInt); /* Alien FFI */
 sqInt reestablishContextPriorToCallback(sqInt callbackContext); /* Alien FFI */
 sqInt sendInvokeCallbackContext(vmccp);
-sqInt returnAsThroughCallbackContext(int, vmccp, sqInt);
+sqInt returnAsThroughCallbackContext(sqInt, vmccp, sqInt);
 #endif /* VM_PROXY_MINOR > 8 */
 #if VM_PROXY_MINOR > 12 /* Spur */
 sqInt isImmediate(sqInt oop);
