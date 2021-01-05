@@ -97,7 +97,7 @@ dropRequestFileName(sqInt dropIndex)	// in st coordinates
 
 	// file:///path & file:/path => path; anything else answered verbatim
 	return prefixLength == 8 || prefixLength == 6
-		? uxDropFileNames[dropIndex - 1] + fileURILength
+		? uxDropFileNames[dropIndex - 1] + prefixLength
 		: uxDropFileNames[dropIndex - 1];
 }
 
