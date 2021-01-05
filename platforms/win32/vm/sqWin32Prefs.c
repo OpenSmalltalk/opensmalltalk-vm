@@ -202,7 +202,7 @@ void LoadPreferences()
   WideCharToMultiByte(CP_UTF8, 0, imageNameW, -1, imageName, MAX_PATH_UTF8, NULL, NULL);
 
   /* get window title from ini file */
-#ifdef UNICODE
+#if _UNICODE
   {
     TCHAR windowTitleT[MAX_PATH];
     GetPrivateProfileString(U_GLOBAL, TEXT("WindowTitle"),

@@ -61,8 +61,10 @@ WINVER:=-D_WIN32_WINNT=0x0501 -DWINVER=0x0501
 NOBUILTIN:=-D_MT
 MACHINE:=x86
 
+#!#! UNICODE applies to API calls, _UNICODE to string representation, so one
+#!#! must define both.
 DEFS:=	$(COGDEFS) $(MEMACCESS) $(WINVER) \
-	-DWIN32=1 -DUNICODE=1 -DNO_ISNAN -DNO_SERVICE \
+	-DWIN32=1 -DUNICODE=1 -D_UNICODE=1 -DNO_ISNAN -DNO_SERVICE \
 	$(NDEBUG) -DLSB_FIRST -D'VM_NAME="$(VM_NAME)"' $(XDEFS) $(CROQUET)
 
 #############################################################################

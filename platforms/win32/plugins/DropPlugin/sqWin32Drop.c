@@ -32,17 +32,6 @@ extern HWND stWindow;
 #define DPRINTF(x)
 #endif
 
-int sqSecFileAccessCallback(void *function) {
-#ifndef _MSC_VER
-#warning "REMOVE THIS NONSENSE"
-#warning "REMOVE THIS NONSENSE"
-#warning "REMOVE THIS NONSENSE"
-#warning "REMOVE THIS NONSENSE"
-#warning "REMOVE THIS NONSENSE"
-#endif
-  return 0;
-}
-
 
 /***************************************************************************/
 /***************************************************************************/
@@ -280,9 +269,8 @@ static char** dropFiles = NULL;
 static void freeDropFiles(void) {
   int i;
   if(dropFiles) {
-    for(i=0; i < numDropFiles; i++) {
+    for(i=0; i < numDropFiles; i++)
       free(dropFiles[i]);
-    }
     free(dropFiles);
     dropFiles = NULL;
     numDropFiles = 0;
@@ -768,11 +756,16 @@ int dropShutdown(void) {
   return 1;
 }
 
-char *dropRequestFileName(int dropIndex) {
+char *
+dropRequestFileName(int dropIndex) {
   DPRINTF(("dropRequestFileName(%d)\n", dropIndex));
   if(dropIndex < 1 || dropIndex > numDropFiles) return NULL;
   return dropFiles[dropIndex-1];
 }
+
+// So far win32 supports only files.
+char *
+dropRequestURI(int dropIndex) { return NULL; }
 
 sqInt dropRequestFileHandle(sqInt dropIndex) {
   sqInt fileHandle;

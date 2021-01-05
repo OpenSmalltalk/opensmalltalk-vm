@@ -260,8 +260,8 @@ resetSegmentRegisters(uintptr_t byteSize, uintptr_t minWriteMaxExecAddr)
 		registerState[3]  = bx_cpu.gen_reg[BX_64BIT_REG_RDX].rrx;
 		registerState[4]  = bx_cpu.gen_reg[BX_64BIT_REG_RSP].rrx;
 		registerState[5]  = bx_cpu.gen_reg[BX_64BIT_REG_RBP].rrx;
-		registerState[6]  = bx_cpu.gen_reg[BX_64BIT_REG_RDI].rrx;
-		registerState[7]  = bx_cpu.gen_reg[BX_64BIT_REG_RSI].rrx;
+		registerState[6]  = bx_cpu.gen_reg[BX_64BIT_REG_RSI].rrx;
+		registerState[7]  = bx_cpu.gen_reg[BX_64BIT_REG_RDI].rrx;
 		registerState[8]  = bx_cpu.gen_reg[BX_64BIT_REG_R8 ].rrx;
 		registerState[9]  = bx_cpu.gen_reg[BX_64BIT_REG_R9 ].rrx;
 		registerState[10] = bx_cpu.gen_reg[BX_64BIT_REG_R10].rrx;

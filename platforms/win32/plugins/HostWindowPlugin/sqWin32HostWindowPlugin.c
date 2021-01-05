@@ -314,7 +314,7 @@ ioShowDisplayOnWindow(unsigned char* dispBits, sqInt width,
 
   if (lines == 0) {
     printLastError(TEXT("SetDIBitsToDevice failed"));
-#if UNICODE
+#if _UNICODE
     warnPrintfW(TEXT("width=%" PRIdSQINT ",height=%" PRIdSQINT ",bits=%" PRIXSQPTR ",dc=%" PRIXSQPTR "\n"),
 #else
     warnPrintf(TEXT("width=%" PRIdSQINT ",height=%" PRIdSQINT ",bits=%" PRIXSQPTR ",dc=%" PRIXSQPTR "\n"),

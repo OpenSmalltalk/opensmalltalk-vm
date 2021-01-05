@@ -254,6 +254,13 @@ static char *getVersionInfo(int verbose);
 		return 1;
 	}
 #endif
+#if (STACKVM || NewspeakVM) && !COGVM
+	if ([argData isEqualToString: VMOPTIONOBJ("sendtrace")]) {
+		extern volatile int sendTrace;
+		sendTrace = 1;
+		return 1;
+	}
+#endif
 #if COGVM
 	if ([argData compare: VMOPTIONOBJ("trace") options: NSLiteralSearch range: NSMakeRange(0,VMOPTIONLEN(6))] == NSOrderedSame) {
 		extern int traceFlags;

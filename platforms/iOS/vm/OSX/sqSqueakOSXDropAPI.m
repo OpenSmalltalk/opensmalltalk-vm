@@ -50,12 +50,14 @@ sqInt dropShutdown(void) {
 	return 1;
 };
 
-char* dropRequestFileName(sqInt dropIndex) {
-	/* return name of file or NULL if error */
+char *dropRequestFileName(sqInt dropIndex) {
+	/* return file name or NULL if error */
 	NSView <sqSqueakOSXView> *view = [((sqSqueakOSXScreenAndWindow*)((__bridge NSWindow *)windowHandleFromIndex(1)).delegate) getMainViewOnWindow];
 	NSString *fileNameString = [view dragFileNameStringAtIndex: dropIndex];
 	return (char *) [fileNameString UTF8String];
 }
+
+char *dropRequestURI(sqInt dropIndex) { return NULL; }
 
 /* note: dropRequestFileHandle needs to bypass plugin security checks when implemented */
 sqInt dropRequestFileHandle(sqInt dropIndex) {
@@ -74,8 +76,4 @@ sqInt dropRequestFileHandle(sqInt dropIndex) {
 	}
 	sqInt result = ((sqInt (*) (char * nameIndex, sqInt nameSize, sqInt writeFlag, sqInt secureFlag)) fn)(fileName,(sqInt) strlen(fileName), 0,0);
 	return result;
-}
-
-sqInt sqSecFileAccessCallback(void *ptr) { 
-	return 0; 
 }

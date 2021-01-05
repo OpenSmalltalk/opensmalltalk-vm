@@ -45,7 +45,7 @@ ioLoadModule(char *pluginName)
 	int nameLen = pluginName ? (int)strlen(pluginName) : 0;
 	int endsInDLL = nameLen > 4 && !strcmp(pluginName + nameLen - 4, ".dll");
 			
-#ifdef UNICODE
+#if _UNICODE
 	int len = MultiByteToWideChar(CP_UTF8, 0, pluginName, -1, NULL, 0);
 	if (len <= 0)
 		return 0; /* invalid UTF8 ? */

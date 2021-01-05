@@ -19,19 +19,24 @@
 /*   printf() format string and arguments                                   */
 /****************************************************************************/
 #ifndef sqMessageBox
-int __cdecl sqMessageBox(DWORD dwFlags, const TCHAR *titleString, const TCHAR* fmt, ...)
-{ TCHAR *buf;
-  va_list args;
-  DWORD result;
+int __cdecl
+sqMessageBox(DWORD dwFlags, const TCHAR *titleString, const TCHAR *fmt, ...)
+{	TCHAR *buf;
+	va_list args;
+	DWORD result;
 
-  buf = (TCHAR*) calloc(sizeof(TCHAR), 4096);
-  va_start(args, fmt);
-  _vsntprintf(buf, 4096-1, fmt, args);
-  va_end(args);
+	buf = (TCHAR*) calloc(sizeof(TCHAR), 4096);
+	va_start(args, fmt);
+#if _UNICODE
+	_vsnwprintf(buf, 4096-1, fmt, args);
+#else
+	_vsntprintf(buf, 4096-1, fmt, args);
+#endif
+	va_end(args);
 
-  result = MessageBox(stWindow,buf,titleString,dwFlags|MB_SETFOREGROUND);
-  free(buf);
-  return result;
+	result = MessageBox(stWindow,buf,titleString,dwFlags|MB_SETFOREGROUND);
+	free(buf);
+	return result;
 }
 #endif
 
