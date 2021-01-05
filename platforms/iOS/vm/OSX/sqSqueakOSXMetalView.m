@@ -861,12 +861,10 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 }
 
 - (NSString*) dragFileNameStringAtIndex: (sqInt) index {
-	if (!self.dragItems)
+	if (!self.dragItems
+	 || index < 1 || index > [self.dragItems count])
 		return NULL;
-	if (index < 1 || index > [self.dragItems count])
-		return NULL;
-	NSString *filePath = (self.dragItems)[(NSUInteger) index - 1];
-	return filePath;
+	return (self.dragItems)[(NSUInteger) index - 1];
 }
 
 
