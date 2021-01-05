@@ -402,7 +402,8 @@ typedef struct VirtualMachine {
 #endif
 } VirtualMachine;
 
-# if defined(SQUEAK_INTERNAL_PLUGIN) || defined(FOR_SVM_C)
+# if (defined(SQUEAK_INTERNAL_PLUGIN) || defined(FOR_SVM_C)) \
+	&& !defined(SQ_USE_GLOBAL_STRUCT) // Prevent the interpereter seeing these
 /*** Function prototypes ***/
 
 /* InterpreterProxy methodsFor: 'stack access' */
