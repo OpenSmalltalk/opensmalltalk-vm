@@ -27,7 +27,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@inria.fr>
  * 
- * Last edited: 2009-08-19 04:21:30 by piumarta on emilia-2.local
+ * Last edited: 2020/1/5 eem
  * 
  * BUGS
  * 
@@ -151,15 +151,14 @@ static void updateCursor(int state);
 void getMousePosition(void);
 
 
-static void *xmalloc(size_t size)
+static void *
+xmalloc(size_t size)
 {
   void *ptr= malloc(size);
-  if (!ptr)
-    {
-      fprintf(stderr, "out of memory\n");
-      exit(1);
-    }
-  return ptr;
+  if (ptr)
+	  return ptr;
+  fprintf(stderr, "out of memory\n");
+  exit(1);
 }
 
 
@@ -167,12 +166,10 @@ static void *
 xcalloc(size_t nmemb, size_t size)
 {
   void *ptr= calloc(nmemb, size);
-  if (!ptr)
-    {
-      fprintf(stderr, "out of memory\n");
-      exit(1);
-    }
-  return ptr;
+  if (ptr)
+	  return ptr;
+  fprintf(stderr, "out of memory\n");
+  exit(1);
 }
 
 
@@ -180,12 +177,10 @@ static void *
 xrealloc(void *ptr, size_t size)
 {
   ptr= realloc(ptr, size);
-  if (!ptr)
-    {
-      fprintf(stderr, "out of memory\n");
-      exit(1);
-    }
-  return ptr;
+  if (ptr)
+	  return ptr;
+  fprintf(stderr, "out of memory\n");
+  exit(1);
 }
 
 

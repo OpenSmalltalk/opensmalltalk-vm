@@ -41,12 +41,10 @@
 #include "FilePlugin.h"
 #include "DropPlugin.h"
 
-#include <assert.h>
-
-
 extern struct VirtualMachine  *interpreterProxy;
-extern int		       uxDropFileCount;
-extern char		     **uxDropFileNames;
+extern int						uxDropFileCount;
+extern char					  **uxDropFileNames;
+extern void						dndReceived(char *fileName);
 
 #if defined(SQUEAK_INTERNAL_PLUGIN)
 extern SQFile * fileValueOf(sqInt objectPointer);
