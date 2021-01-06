@@ -37,6 +37,7 @@
  */
 
 #include "sq.h"
+#include "sqAssert.h"
 #include "sqVirtualMachine.h"
 #include "FilePlugin.h"
 #include "DropPlugin.h"
