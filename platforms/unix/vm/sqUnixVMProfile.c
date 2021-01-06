@@ -60,9 +60,7 @@ extern unsigned long _etext;
 
 #include <errno.h>
 
-#define clone(foo) fubar(foo) // sched.h declares clone
 #include "sq.h"
-#undef clone
 
 /*
  * The pc collection scheme is an event buffer into which are written pcs.  The
