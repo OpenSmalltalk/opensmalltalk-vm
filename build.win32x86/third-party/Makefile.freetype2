@@ -20,7 +20,6 @@ $(FREETYPE2ARCHIVE):
 	
 $(THIRDPARTYLIBDIR)/$(FREETYPE2LIBNAME): $(FREETYPE2ARCHIVE)
 	tar x -f $(FREETYPE2ARCHIVE) -C $(THIRDPARTYDIR)
-	patch -p1 -d $(FREETYPE2DIR) < ../../third-party/freetype291.patch
 	cp ../third-party/Toolchain-cross-mingw32-cygwin.cmake $(FREETYPE2DIR)
 	test -d $(FREETYPE2DIR)/build || mkdir $(FREETYPE2DIR)/build
 	cd $(FREETYPE2DIR)/build \
