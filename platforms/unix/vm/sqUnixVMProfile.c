@@ -43,10 +43,7 @@ ioClearProfile(void)
 {
 }
 #else /* NO_VM_PROFILE */
-/* linux's sched.h defines clone that conflicts with the interpreter's */
-# define clone NameSpacePollutant
-# include <pthread.h>
-# undef clone
+#include <pthread.h>
 #include "include_ucontext.h"
 #include <signal.h>
 #include <sys/time.h>

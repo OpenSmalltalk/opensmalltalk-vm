@@ -174,7 +174,7 @@ typedef struct VirtualMachine {
 
 	/* InterpreterProxy methodsFor: 'instance creation' */
 
-	sqInt (*clone)(sqInt oop);
+	sqInt (*cloneObject)(sqInt oop);
 	sqInt (*instantiateClassindexableSize)(sqInt classPointer, sqInt size);
 	sqInt (*makePointwithxValueyValue)(sqInt xValue, sqInt yValue);
 	sqInt (*popRemappableOop)(void);
@@ -524,7 +524,7 @@ sqInt classString(void);
 
 
 /* InterpreterProxy methodsFor: 'instance creation' */
-sqInt clone(sqInt oop);
+sqInt cloneObject(sqInt oop);
 sqInt instantiateClassindexableSize(sqInt classPointer, sqInt size);
 sqInt makePointwithxValueyValue(sqInt xValue, sqInt yValue);
 sqInt popRemappableOop(void);

@@ -154,7 +154,7 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->classString = classString;
 
 	/* InterpreterProxy methodsFor: 'instance creation' */
-	VM->clone = clone;
+	VM->cloneObject = cloneObject;
 	VM->instantiateClassindexableSize = instantiateClassindexableSize;
 	VM->makePointwithxValueyValue = makePointwithxValueyValue;
 	VM->popRemappableOop = popRemappableOop;

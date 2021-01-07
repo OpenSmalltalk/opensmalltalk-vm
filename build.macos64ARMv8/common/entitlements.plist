@@ -16,6 +16,8 @@
 	<true/>
 	<key>com.apple.security.device.camera</key>
 	<true/>
+	<key>com.apple.security.files.all</key>
+	<true/>
 <!-- Apparently this key allows an application to *be* a debugger,
 	not to be debugged
 	<key>com.apple.security.cs.debugger</key>
