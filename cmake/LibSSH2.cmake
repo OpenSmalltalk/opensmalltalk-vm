@@ -1,6 +1,6 @@
-set(LibSSH2_Spec_URL "https://www.libssh2.org/download/libssh2-1.7.0.tar.gz")
-set(LibSSH2_Spec_ArchiveName libssh2-1.7.0.tar.gz)
-set(LibSSH2_Spec_ArchiveHash "SHA256=e4561fd43a50539a8c2ceb37841691baf03ecb7daf043766da1b112e4280d584")
+set(LibSSH2_Spec_URL "https://www.libssh2.org/download/libssh2-1.9.0.tar.gz")
+set(LibSSH2_Spec_ArchiveName libssh2-1.9.0.tar.gz)
+set(LibSSH2_Spec_ArchiveHash "SHA256=d5fb8bd563305fd1074dda90bd053fb2d29fc4bce048d182f96eaa466dfadafd")
 
 set(LibSSH2_Spec_MacLibraries libssh2.1.dylib)
 set(LibSSH2_Spec_MacLibrariesSymlinks libssh2*.dylib)
