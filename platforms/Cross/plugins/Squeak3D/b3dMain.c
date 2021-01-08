@@ -15,9 +15,7 @@
 #include <stdio.h>  /* printf() */
 #include <stdlib.h> /* exit()   */
 #include <limits.h> /* INT_MIN INT_MAX */
-#if 0
-# include <assert.h> /* assert() */
-#endif
+
 #include "b3d.h"
 #include "b3dAlloc.h"
 

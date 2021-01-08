@@ -193,14 +193,6 @@ extern usqLong ioVMTickerStartUSecs(void);
 
 /* Interpreter entry points. */
 
-/* Disable Intel compiler inlining of error which is used for breakpoints */
-#ifdef __INTEL_COMPILER 
-#   pragma auto_inline(off)
-#endif
-extern void error(const char *);
-#ifdef __INTEL_COMPILER 
-#   pragma auto_inline(on)
-#endif
 sqInt checkedByteAt(sqInt byteAddress);
 sqInt checkedByteAtput(sqInt byteAddress, sqInt byte);
 sqInt checkedLongAt(sqInt byteAddress);
