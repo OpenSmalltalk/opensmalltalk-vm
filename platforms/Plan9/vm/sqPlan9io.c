@@ -70,12 +70,15 @@ void ioDestroy(void) {
 }
 
 /* Time */
-long ioMSecs(void) {
+usqInt
+ioMSecs(void)
+{
 	vlong now = nsec();
 	return (now - start_time)/1000000;
 }
 
-long ioMicroMSecs(void) { return ioMSecs(); }
+usqInt
+ioMicroMSecs(void) { return ioMSecs(); }
 
 sqInt ioSeconds(void) {
 	return (sqInt)convertToSqueakTime(time(NULL));

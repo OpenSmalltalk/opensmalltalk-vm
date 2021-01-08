@@ -81,7 +81,7 @@ ioUpdateVMTimezone()
 	vmGMTOffset = localtime(&utctt)->tm_gmtoff * MicrosecondsPerSecond;
 }
 
-int
+usqInt
 ioMSecs()
 {
 	return ((get64(utcMicrosecondClock) - utcStartMicroseconds)
@@ -105,7 +105,7 @@ ioHighResClock(void)
 }
 
 /* Note: ioMicroMSecs returns *milli*seconds */
-int ioMicroMSecs(void)
+usqInt ioMicroMSecs(void)
 {
 	updateMicrosecondClock();
 	return ioMSecs();

@@ -239,7 +239,7 @@ typedef struct VirtualMachine {
 #if VM_PROXY_MINOR > 3
 
 	void *(*ioLoadFunctionFrom)(char *fnName, char *modName);
-	sqInt (*ioMicroMSecs)(void);
+	usqInt (*ioMicroMSecs)(void);
 
 #endif
 
@@ -544,7 +544,7 @@ sqInt showDisplayBitsLeftTopRightBottom(sqInt aForm, sqInt l, sqInt t, sqInt r, 
 sqInt signalSemaphoreWithIndex(sqInt semaIndex);
 sqInt success(sqInt aBoolean);
 sqInt superclassOf(sqInt classPointer);
-sqInt ioMicroMSecs(void);
+usqInt ioMicroMSecs(void);
 unsigned long long  ioUTCMicroseconds(void);
 unsigned long long  ioUTCMicrosecondsNow(void);
 void forceInterruptCheck(void);

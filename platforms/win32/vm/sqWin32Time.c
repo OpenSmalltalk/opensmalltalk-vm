@@ -49,14 +49,16 @@ int ioSeconds(void)
   return convertToSqueakTime(sysTime);
 }
 
-int ioMSecs()
+usqInt
+ioMSecs()
 {
   /* Make sure the value fits into Squeak SmallIntegers */
   return timeGetTime() & MillisecondClockMask;
 }
 
 /* Note: ioMicroMSecs returns *milli*seconds */
-int ioMicroMSecs(void)
+usqInt
+ioMicroMSecs(void)
 {
   /* Make sure the value fits into Squeak SmallIntegers */
   return timeGetTime() & MillisecondClockMask;

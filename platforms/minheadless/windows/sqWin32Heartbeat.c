@@ -262,11 +262,12 @@ unsigned long long
 ioLocalMicrosecondsNow() { return ioUTCMicrosecondsNow() + vmGMTOffset; };
 
 /* ioMSecs answers the millisecondClock as of the last tick. */
-long
+usqInt
 ioMSecs() { return millisecondClock; }
 
 /* ioMicroMSecs answers the millisecondClock right now */
-long ioMicroMSecs(void) { return microToMilliseconds(ioUTCMicrosecondsNow());}
+usqInt
+ioMicroMSecs(void) { return microToMilliseconds(ioUTCMicrosecondsNow());}
 
 /* returns the local wall clock time */
 sqInt

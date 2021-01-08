@@ -207,7 +207,8 @@ ioInitTime(void)
 }
 
 
-long ioMSecs(void)
+usqInt
+ioMSecs(void)
 {
   struct timeval now;
   gettimeofday(&now, 0);
@@ -220,7 +221,8 @@ long ioMSecs(void)
   return lowResMSecs= (now.tv_usec / 1000 + now.tv_sec * 1000);
 }
 
-long ioMicroMSecs(void)
+usqInt
+ioMicroMSecs(void)
 {
   /* return the highest available resolution of the millisecond clock */
   return ioMSecs();	/* this already to the nearest millisecond */
