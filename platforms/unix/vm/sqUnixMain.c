@@ -207,7 +207,7 @@ ioInitTime(void)
 }
 
 
-usqInt
+unsigned int
 ioMSecs(void)
 {
   struct timeval now;
@@ -221,7 +221,7 @@ ioMSecs(void)
   return lowResMSecs= (now.tv_usec / 1000 + now.tv_sec * 1000);
 }
 
-usqInt
+unsigned int
 ioMicroMSecs(void)
 {
   /* return the highest available resolution of the millisecond clock */

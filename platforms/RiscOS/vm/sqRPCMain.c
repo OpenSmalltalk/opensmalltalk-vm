@@ -361,7 +361,7 @@ unsigned int microsecondsvalue(void) {
 	return 1000 * millisecondTimerValue();
 }
 
-usqInt
+unsigned int
 ioMicroMSecs(void) {
 /* The
    function ioMicroMSecs() is used only to collect timing statistics

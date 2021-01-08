@@ -116,7 +116,7 @@ extern const char *aioMaskNames[8];
     } while (0)
 # else /* !ACORN */
     extern long aioLastTick, aioThisTick, aioDebugLogging, pollpipOutput;
-    extern long ioMSecs(void);
+    extern unsigned int ioMSecs(void);
 	extern const char *__shortFileName(const char *);
 #   define FPRINTF(X) do if (aioDebugLogging) {		\
 	aioThisTick = ioMSecs();						\

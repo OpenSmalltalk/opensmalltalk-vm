@@ -77,7 +77,7 @@ ioMSecs(void)
 	return (now - start_time)/1000000;
 }
 
-usqInt
+unsigned int
 ioMicroMSecs(void) { return ioMSecs(); }
 
 sqInt ioSeconds(void) {

@@ -453,7 +453,7 @@ int ioGetKeystroke(void) {
 	return keystate;
 }
 
-int ioMicroMSecs(void) {
+unsigned int ioMicroMSecs(void) {
 	/* millisecond clock based on microsecond timer (about 60 times slower than clock()!!) */
 	/* Note: This function and ioMSecs() both return a time in milliseconds. The difference
 	   is that ioMicroMSecs() is called only when precise millisecond resolution is essential,
@@ -468,7 +468,7 @@ int ioMicroMSecs(void) {
 	return (microTicks.lo / 1000) + (microTicks.hi * 4294967);
 }
 
-sqInt ioMSecs(void) {
+unsigned int ioMSecs(void) {
 	/* return a time in milliseconds for use in Delays and Time millisecondClockValue */
 	/* Note: This was once a macro based on clock(); it now uses the microsecond clock for
 	   greater resolution. See the comment in ioMicroMSecs(). */

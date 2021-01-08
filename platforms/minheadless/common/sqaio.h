@@ -109,7 +109,8 @@ extern unsigned long long ioUTCMicrosecondsNow(void);
       platReportError((os_error *)&privateErr); \
     } while (0)
 # else /* !ACORN */
-    extern long aioLastTick, aioThisTick, ioMSecs(void);
+    extern long aioLastTick, aioThisTick; \
+	extern unsigned int ioMSecs(void);
 	extern const char *__shortFileName(const char *);
 #   define FPRINTF(X) do { \
 	aioThisTick = ioMSecs(); \

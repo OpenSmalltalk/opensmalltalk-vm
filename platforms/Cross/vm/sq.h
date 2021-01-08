@@ -97,8 +97,8 @@
    the clock to return the time right now, rather than of the last heartbeat.
 */
 
-usqInt ioMSecs(void);
-usqInt ioMicroMSecs(void);
+unsigned int ioMSecs(void);
+unsigned int ioMicroMSecs(void);
 
 /* duplicate the generated definition in the interpreter.  If they differ the
  * compiler will complain and catch it for us.  We use 0x1FFFFFFF instead of
