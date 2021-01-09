@@ -146,6 +146,7 @@ resetSegmentRegisters(uintptr_t byteSize, uintptr_t minWriteMaxExecAddr)
 		resetInstructionFetch(anx64);
 
 		anx64->cpu_single_step();
+		anx64->force_flags();
 
 		return blidx == 0 ? 0 : SomethingLoggedError;
 	}
@@ -170,6 +171,7 @@ resetSegmentRegisters(uintptr_t byteSize, uintptr_t minWriteMaxExecAddr)
 
 		bx_pc_system.kill_bochs_request = 0;
 		anx64->cpu_loop(0 /* = "run forever" until exception or interupt */);
+		anx64->force_flags();
 		if (anx64->stop_reason != STOP_NO_REASON) {
 			anx64->gen_reg[BX_64BIT_REG_RIP].rrx = anx64->prev_rip;
 			if (theErrorAcorn == NoError)
