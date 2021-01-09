@@ -33,7 +33,7 @@
 
 
 #if defined(_MSC_VER)
-#include <windows.h> /* for atomic ops */
+# include <Windows.h> /* for atomic ops */
 #endif	
 
 #if    defined(LP32) || defined(ILP32) \
