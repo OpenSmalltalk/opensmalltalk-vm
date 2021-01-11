@@ -24,7 +24,7 @@
 
 #if defined(__MINGW32__) || defined(__MINGW64__)
 // vcruntime.h defines size_t for MSVC builds, but not for mingw builds.
-# include <corecrt.h> // for size_t
+# include <stddef.h> // for size_t
 #endif
 
 /* File positions in the FilePlugin & other plugins */
