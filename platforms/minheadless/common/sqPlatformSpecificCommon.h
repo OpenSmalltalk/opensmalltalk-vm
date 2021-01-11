@@ -43,7 +43,7 @@ extern void sqFatalErrorPrintf(const char *format, ...);
 extern void sqFatalErrorPrintfNoExit(const char *format, ...);
 #ifndef error
 extern void sqError(const char *errorMessage);
-#define error sqError
+#define error(msg) sqError(msg)
 #endif
 
 
