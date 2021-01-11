@@ -244,8 +244,6 @@ sqInt dir_Lookup(char *pathString, sqInt pathLength, sqInt index,
   }
   lastIndex = index;
 
-#if !defined(_WIN32_WCE)
-  /* Like Unix, Windows CE does not have drive letters */
   if (pathLength == 0) {
     /* we're at the top of the file system --- return possible drives */
     int mask;
@@ -267,7 +265,6 @@ sqInt dir_Lookup(char *pathString, sqInt pathLength, sqInt index,
         }
     return NO_MORE_ENTRIES;
   }
-#endif /* !defined(_WIN32_WCE) */
 
   /* cache the path */
   if (lastString) free(lastString);
@@ -384,9 +381,6 @@ sqInt dir_EntryLookup(char *pathString, sqInt pathLength, char* nameString, sqIn
   *posixPermissions = 0;
   *isSymlink        = 0;
 
-
-#if !defined(_WIN32_WCE)
-  /* Like Unix, Windows CE does not have drive letters */
   if (pathLength == 0) {
     /* we're at the top of the file system --- return possible drives */
     char drive = toupper(nameString[0]);
@@ -411,7 +405,6 @@ sqInt dir_EntryLookup(char *pathString, sqInt pathLength, char* nameString, sqIn
     }
     return NO_MORE_ENTRIES;
   }
-#endif /* !defined(_WIN32_WCE) */
 
   if (hasCaseSensitiveDuplicate(win32Path)) {
     return BAD_PATH;
