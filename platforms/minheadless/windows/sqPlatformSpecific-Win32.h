@@ -24,7 +24,9 @@
 
 /* File positions in the FilePlugin */
 typedef unsigned __int64 squeakFileOffsetType;
-#define PATH_MAX _MAX_PATH
+#if !defined(PATH_MAX)
+# define PATH_MAX _MAX_PATH
+#endif
 
 /* pluggable primitive support */
 #if defined(_MSC_VER) || defined(__MINGW32__)
