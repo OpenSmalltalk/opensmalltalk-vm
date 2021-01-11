@@ -75,6 +75,7 @@ typedef struct
     sqInt (*dropShutdown) (void);
 
     char* (*dropRequestFileName)(sqInt dropIndex);
+    char* (*dropRequestURI)(sqInt dropIndex);
     sqInt (*dropRequestFileHandle)(sqInt dropIndex);
 } sqWindowSystem;
 

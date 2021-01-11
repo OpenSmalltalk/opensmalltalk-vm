@@ -268,6 +268,12 @@ dropRequestFileName(sqInt dropIndex)
     return currentWindowSystem->dropRequestFileName(dropIndex);
 }
 
+/* *** TODO ***
+ * provide support for URI */
+char *
+dropRequestURI(sqInt dropIndex)
+{ return NULL; }
+
 sqInt
 dropRequestFileHandle(sqInt dropIndex)
 {

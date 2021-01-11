@@ -225,6 +225,10 @@ sqNull_dropRequestFileName(sqInt dropIndex)
     return 0;
 }
 
+static char *
+sqNull_dropRequestURI(sqInt dropIndex)
+{ return NULL; }
+
 static sqInt
 sqNull_dropRequestFileHandle(sqInt dropIndex)
 {
@@ -267,5 +271,6 @@ sqWindowSystem sqNullWindowSystem = {
     .dropInit = sqNull_dropInit,
     .dropShutdown = sqNull_dropShutdown,
     .dropRequestFileName = sqNull_dropRequestFileName,
+    .dropRequestURI = sqNull_dropRequestURI,
     .dropRequestFileHandle = sqNull_dropRequestFileHandle,
 };
