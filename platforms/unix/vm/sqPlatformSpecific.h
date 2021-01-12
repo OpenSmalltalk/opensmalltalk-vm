@@ -31,13 +31,13 @@
 #ifndef _SQ_PLATFORM_SPECIFIC_H
 #define _SQ_PLATFORM_SPECIFIC_H
 
+#include <stdio.h>
+#include "sqMemoryAccess.h"
+
 #undef sqAllocateMemory
 #undef sqGrowMemoryBy
 #undef sqShrinkMemoryBy
 #undef sqMemoryExtraBytesLeft
-
-#include <stdio.h>
-#include "sqMemoryAccess.h"
 
 extern usqInt sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize);
 #define allocateMemoryMinimumImageFileHeaderSize(heapSize, minimumMemory, fileStream, headerSize) \
