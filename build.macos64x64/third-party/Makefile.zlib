@@ -1,0 +1,40 @@
+ifndef THIRDPARTYDIR
+	include ../common/Makefile.lib.extra
+endif
+include ../../third-party/zlib.spec
+
+# plugin definitions
+ZLIBURL:=$(zlib_spec_download_url)
+ZLIBLIBNAME:=$(zlib_spec_product_name_macOS)
+ZLIBDIR:=$(THIRDPARTYDIR)/$(zlib_spec_unpack_dir_name)
+ZLIBARCHIVE:=$(THIRDPARTYCACHEDIR)/$(zlib_spec_archive_name)
+ZLIBLIB:=$(THIRDPARTYINSTALLDIR)/$(ZLIBLIBNAME)
+ZLIBSYMLINKS:=$(zlib_spec_symlinks_macOS)
+
+# ensure third-party library is built and recognised by plugins
+INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
+EXTRALIBS:=$(EXTRALIBS) $(ZLIBLIB)
+PLUGINREQS:=$(THIRDPARTYLIBS)
+	
+$(ZLIBARCHIVE): 
+	curl -o $(ZLIBARCHIVE) -L $(ZLIBURL) 
+
+$(THIRDPARTYLIBDIR)/$(ZLIBLIBNAME): $(ZLIBARCHIVE)
+	tar x -f $(ZLIBARCHIVE) -C $(THIRDPARTYDIR)
+	cd $(ZLIBDIR) \
+		&& ./configure --prefix='$(THIRDPARTYOUTDIR)' --archs='-arch x86_64' \
+		&& make \
+		&& make install
+
+$(ZLIBLIB): $(THIRDPARTYLIBDIR)/$(ZLIBLIBNAME)
+	cp -f $(THIRDPARTYLIBDIR)/$(ZLIBLIBNAME) $(THIRDPARTYINSTALLDIR)
+	install_name_tool -id "@executable_path/Plugins/$(ZLIBLIBNAME)" $(ZLIBLIB)
+	@echo "Installing links"
+	@for each in $(THIRDPARTYLIBDIR)/$(ZLIBSYMLINKS); do \
+		if [ -L $$each ]; then \
+			cp -a $$each $(THIRDPARTYINSTALLDIR); \
+		fi \
+	done
+	@echo "DONE"
+	
+zlib: $(ZLIBLIB)

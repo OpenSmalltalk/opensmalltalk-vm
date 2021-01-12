@@ -170,7 +170,7 @@ function(INSTALL_THIRDPARTY_BUILD_ARTIFACTS ThirdpartyProjectName)
         set(InstallLibraryGlobPatterns ${ARTIFACT_KIND_MAC_LIBRARIES_SYMLINK_PATTERNS})
     elseif(WIN32)
         set(InstallLibrarySourceFolder bin)
-        set(InstallLibraryFileNames ${ARTIFACT_KIND_WINDOWS_DLLS})
+        set(InstallLibraryGlobPaterns ${ARTIFACT_KIND_WINDOWS_DLLS})
     else()
         set(InstallLibraryFileNames ${ARTIFACT_KIND_LINUX_LIBRARIES})
         set(InstallLibraryGlobPatterns ${ARTIFACT_KIND_LINUX_LIBRARIES_SYMLINK_PATTERNS})
@@ -240,7 +240,7 @@ endfunction()
 ## This function adds an autoconf based thirdparty dependency.
 function(ADD_THIRDPARTY_WITH_AUTOCONF NAME)
     set(options BUILD_AS_NATIVE_TOOL NEVER_LOG_CONFIGURE NEVER_LOG_BUILD NEVER_LOG_INSTALL)
-    set(oneValueArgs DOWNLOAD_URL ARCHIVE_NAME ARCHIVE_SHA256 PATCH CFLAGS CXXFLAGS LDFLAGS)
+    set(oneValueArgs DOWNLOAD_URL ARCHIVE_NAME ARCHIVE_HASH PATCH CFLAGS CXXFLAGS LDFLAGS)
     set(multiValueArgs
         AUTOCONF_EXTRA_ARGS
         DEPENDENCIES
@@ -355,7 +355,7 @@ function(ADD_THIRDPARTY_WITH_AUTOCONF NAME)
 
         ExternalProject_Add(${NAME}
             URL "${parsed_arguments_DOWNLOAD_URL}"
-            URL_HASH "SHA256=${parsed_arguments_ARCHIVE_SHA256}"
+            URL_HASH "${parsed_arguments_ARCHIVE_HASH}"
             DOWNLOAD_NAME "${parsed_arguments_ARCHIVE_NAME}"
             DOWNLOAD_DIR "${ThirdPartyCacheDownloadDirectory}"
             PREFIX "${CMAKE_CURRENT_BINARY_DIR}/thirdparty/${NAME}"
@@ -391,7 +391,7 @@ endfunction()
 
 function(ADD_THIRDPARTY_WITH_CMAKE NAME)
     set(options NEVER_LOG_CONFIGURE NEVER_LOG_BUILD NEVER_LOG_INSTALL)
-    set(oneValueArgs DOWNLOAD_URL ARCHIVE_NAME ARCHIVE_SHA256 PATCH CFLAGS CXXFLAGS LDFLAGS)
+    set(oneValueArgs DOWNLOAD_URL ARCHIVE_NAME ARCHIVE_HASH PATCH CFLAGS CXXFLAGS LDFLAGS)
     set(multiValueArgs
         CMAKE_EXTRA_ARGS
         DEPENDENCIES
@@ -481,7 +481,7 @@ function(ADD_THIRDPARTY_WITH_CMAKE NAME)
 
         ExternalProject_Add(${NAME}
             URL "${parsed_arguments_DOWNLOAD_URL}"
-            URL_HASH "SHA256=${parsed_arguments_ARCHIVE_SHA256}"
+            URL_HASH "${parsed_arguments_ARCHIVE_HASH}"
             DOWNLOAD_NAME "${parsed_arguments_ARCHIVE_NAME}"
             DOWNLOAD_DIR "${ThirdPartyCacheDownloadDirectory}"
             PREFIX "${CMAKE_CURRENT_BINARY_DIR}/thirdparty/${NAME}"

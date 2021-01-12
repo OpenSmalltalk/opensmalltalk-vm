@@ -3,6 +3,8 @@
 # Do make init to allow make -n to function.
 #
 
+BIT_IDENTICAL_FLOATING_POINT=BIT_IDENTICAL_FLOATING_POINT
+
 VMSRCDIR:= ../../spurstack64src/vm
 SOURCEFILE:=SqueakV50.sources
 

@@ -1,6 +1,6 @@
-set(Cairo_Spec_URL "http://cairographics.org/snapshots/cairo-1.15.4.tar.xz")
-set(Cairo_Spec_ArchiveName cairo-1.15.4.tar.xz)
-set(Cairo_Spec_ArchiveSha256 deddf31e196e826e7790bbbf7d0f4b3fd15df243aa48511b349f1791b96be291)
+set(Cairo_Spec_URL "http://cairographics.org/snapshots/cairo-1.15.14.tar.xz")
+set(Cairo_Spec_ArchiveName cairo-1.15.14.tar.xz)
+set(Cairo_Spec_ArchiveHash "SHA1=62ebffbaf4cc81c412f0ad3f87dc20499f85d046")
 
 set(Cairo_Spec_MacLibraries libcairo.2.dylib)
 set(Cairo_Spec_MacLibrariesSymlinks libcairo*.dylib)
@@ -23,7 +23,7 @@ endif()
 add_thirdparty_with_autoconf(Cairo
     DOWNLOAD_URL ${Cairo_Spec_URL}
     ARCHIVE_NAME ${Cairo_Spec_ArchiveName}
-    ARCHIVE_SHA256 ${Cairo_Spec_ArchiveSha256}
+    ARCHIVE_HASH ${Cairo_Spec_ArchiveHash}
     AUTOCONF_EXTRA_ARGS --disable-silent-rules --disable-xlib --disable-dependency-tracking --disable-interpreter ${Cairo_Spec_AutoconfFlags}
     MAC_LIBRARIES ${Cairo_Spec_MacLibraries}
     MAC_LIBRARIES_SYMLINK_PATTERNS ${Cairo_Spec_MacLibrariesSymlinks}
