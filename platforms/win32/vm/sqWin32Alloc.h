@@ -14,12 +14,12 @@
 #endif
 
 /* Memory initialize-release */
+#include "sqMemoryAccess.h" /* for sqInt et al */
+
 #undef sqAllocateMemory
 #undef sqGrowMemoryBy
 #undef sqShrinkMemoryBy
 #undef sqMemoryExtraBytesLeft
-
-#include "sqMemoryAccess.h" /* for sqInt et al */
 
 void *sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize);
 #define allocateMemoryMinimumImageFileHeaderSize(heapSize, minimumMemory, fileStream, headerSize) \
