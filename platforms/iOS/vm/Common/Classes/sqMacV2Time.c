@@ -90,7 +90,7 @@ sqLong ioMicroSeconds(void)
 	return theTimeIs;
 }
 
-usqInt ioMicroMSecs(void)
+unsigned int ioMicroMSecs(void)
 {
 	//API Documented
 	struct timeval now;
@@ -106,7 +106,7 @@ usqInt ioMicroMSecs(void)
 	return theTimeIs;
 }
 
-usqInt ioMSecs(void) {
+unsigned int ioMSecs(void) {
 	//API Documented
 	return ioMicroMSecs();
 }

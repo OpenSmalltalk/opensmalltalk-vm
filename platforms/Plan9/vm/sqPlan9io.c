@@ -70,7 +70,7 @@ void ioDestroy(void) {
 }
 
 /* Time */
-usqInt
+unsigned int
 ioMSecs(void)
 {
 	vlong now = nsec();
