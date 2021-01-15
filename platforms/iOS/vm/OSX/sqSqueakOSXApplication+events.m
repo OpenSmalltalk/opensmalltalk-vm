@@ -561,6 +561,23 @@ yZero()
 	interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
 }
 
+- (void) recordURLEvent:(int)dragType numberOfFiles:(int)numFiles
+{
+	sqDragDropFilesEvent evt;
+
+	evt.type= EventTypeDragDropFiles;
+	evt.timeStamp= ioMSecs();
+	evt.dragType= dragType;
+	evt.x = 0;
+	evt.y = 0;
+	evt.modifiers= 0;
+	evt.numFiles= numFiles;
+	evt.windowIndex =  0;
+	[self pushEventToQueue: (sqInputEvent *) &evt];
+
+	interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
+}
+
 - (void) recordWindowEvent: (int) windowEventType window: (NSWindow *) window {
 	sqWindowEvent evt;
 

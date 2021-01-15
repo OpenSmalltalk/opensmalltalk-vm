@@ -86,6 +86,11 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	dragItems = NULL;
 	clippyIsEmpty = YES;
 	colorspace = CGColorSpaceCreateDeviceRGB();
+	
+	NSAppleEventManager *appleEventManager = [NSAppleEventManager sharedAppleEventManager];
+	[appleEventManager setEventHandler:self
+					   andSelector:@selector(handleGetURLEvent:withReplyEvent:)
+					 forEventClass:kInternetEventClass andEventID:kAEGetURL];
 }
 
 - (void) initializeVariables {
@@ -566,8 +571,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	return results;
 }
 
-
-- (NSMutableArray *) filterOutSqueakImageFilesFromDraggedFiles: (id<NSDraggingInfo>)info {
+- (NSMutableArray *) filterOutSqueakImageFilesFromDraggedURIs: (id<NSDraggingInfo>)info {
 	NSPasteboard *pboard= [info draggingPasteboard];
 	NSMutableArray *results = [NSMutableArray arrayWithCapacity: 10];
 	if ([[pboard types] containsObject: NSFilenamesPboardType]) {
@@ -575,14 +579,17 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 		NSString *fileName;
 		for (fileName in files) {
 			if ([((sqSqueakOSXApplication*) gDelegateApp.squeakApplication) isImageFile: fileName] == NO)
-				[results addObject: fileName];
+			{
+				[results addObject: [NSURL fileURLWithPath: fileName]];
+			}
 		}
 	}
+
 	return results;
 }
 
 - (NSUInteger) countNumberOfNoneSqueakImageFilesInDraggedFiles: (id<NSDraggingInfo>)info {
-	NSArray *files = [self filterOutSqueakImageFilesFromDraggedFiles: info];
+	NSArray *files = [self filterOutSqueakImageFilesFromDraggedURIs: info];
 	return [files count];
 }
 
@@ -616,7 +623,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 
 - (BOOL) performDragOperation: (id<NSDraggingInfo>)info {
 	if (self.dragCount) {
-		self.dragItems = [self filterOutSqueakImageFilesFromDraggedFiles: info];
+		self.dragItems = [self filterOutSqueakImageFilesFromDraggedURIs: info];
 		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: SQDragDrop numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex  view: self];
 	}
 	
@@ -642,13 +649,21 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	return YES;
 }
 
-- (NSString*) dragFileNameStringAtIndex: (sqInt) index {
-	if (!self.dragItems)
+- (void)handleGetURLEvent:(NSAppleEventDescriptor *)event withReplyEvent:(NSAppleEventDescriptor *)replyEvent
+{
+	NSString* urlString = [[event paramDescriptorForKeyword:keyDirectObject] stringValue];
+	NSURL *url = [NSURL URLWithString: urlString];
+	dragItems = [NSMutableArray arrayWithCapacity: 1];
+	[dragItems addObject: url];
+	
+	[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordURLEvent: SQDragDrop numberOfFiles: 1];
+}
+
+- (NSURL*) dragURIAtIndex: (sqInt) index {
+	if (!self.dragItems || index < 1 || index > [self.dragItems count])
 		return NULL;
-	if (index < 1 || index > [self.dragItems count])
-		return NULL;
-	NSString *filePath = [self.dragItems objectAtIndex: (NSUInteger) index - 1];
-	return filePath;
+	
+	return (self.dragItems)[(NSUInteger) index - 1];
 }
 
 
