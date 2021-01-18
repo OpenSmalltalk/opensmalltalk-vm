@@ -349,7 +349,6 @@ int fullScreenDirect=	0;
 int iconified=		0;
 int withSpy=		0;
 
-
 /*xxx REMOVE REFS TO THESE IN sqUnixSound*.* */
 
 void feedback(int offset, int pixel)	{}
@@ -372,6 +371,9 @@ int inModalLoop= 0, dpyPitch= 0, dpyPixels= 0;
 /* To coordinate default window title with dndLaunchFile */
 static char *defaultWindowLabel = shortImageName;
 static long launchDropTimeoutMsecs = 1000; /* 1 second default launch drop timeout */
+
+/* Value of last key pressed indexed by KeyCode in the range 8 - 255 */
+static int lastKeyValue[256];
 
 
 /*** Functions ***/
@@ -1715,6 +1717,25 @@ static int recordPendingKeys(void)
     }
 }
 
+storeLastKeyValue(XKeyEvent *xevt, int value)
+{
+  static int initialized= 0;
+  if (!initialized)
+    {
+      for (int i= 0; i<256; i++) lastKeyValue[i]= -1;
+      initialized= -1;
+    }
+  lastKeyValue[xevt->keycode]= value;
+  return value;
+}
+
+int retrieveLastKeyValue(XKeyEvent *xevt)
+{
+  int value= lastKeyValue[xevt->keycode];
+  lastKeyValue[xevt->keycode]= -1;
+  return value;
+}
+
 static int xkeysym2ucs4(KeySym keysym);
 
 static int x2sqKeyInput(XKeyEvent *xevt, KeySym *symbolic)
@@ -1722,7 +1743,6 @@ static int x2sqKeyInput(XKeyEvent *xevt, KeySym *symbolic)
   static int initialised= 0;
   static XIM im= 0;
   static XIC ic= 0;
-  static int lastKey= -1;
 
   if (!initialised)
     {
@@ -1757,11 +1777,7 @@ static int x2sqKeyInput(XKeyEvent *xevt, KeySym *symbolic)
     }
 
   if (KeyPress != xevt->type)
-    {
-      int key= lastKey;
-      lastKey= -1;
-      return key;
-    }
+    return retrieveLastKeyValue(xevt);
 
   DCONV_PRINTF("keycode %u\n", xevt->keycode);
 
@@ -1779,9 +1795,8 @@ static int x2sqKeyInput(XKeyEvent *xevt, KeySym *symbolic)
 	DCONV_PRINTERR("x2sqKey XLookupChars count %d\n", count);
       case XLookupBoth:
 	DCONV_PRINTERR("x2sqKey XLookupBoth count %d\n", count);
-	lastKey= (count ? string[0] : -1);
-	DCONV_PRINTERR("x2sqKey == %d\n", lastKey);
-	return lastKey;
+	DCONV_PRINTERR("x2sqKey == %d\n", count ? string[0] : -1);
+	return storeLastKeyValue(xevt, count ? string[0] : -1);
 
       case XLookupKeySym:
 	DCONV_PRINTERR("x2sqKey XLookupKeySym\n");
@@ -1792,14 +1807,14 @@ static int x2sqKeyInput(XKeyEvent *xevt, KeySym *symbolic)
 	    return -1;	/* unknown key */
 	  if ((charCode == 127) && mapDelBs)
 	    charCode= 8;
-	  return lastKey= charCode;
+	  return storeLastKeyValue(xevt, charCode);
 	}
 
       default:
 	fprintf(stderr, "this cannot happen\n");
-	return lastKey= -1;
+	return storeLastKeyValue(xevt, -1);
       }
-    return lastKey= -1;
+    return storeLastKeyValue(xevt, -1);
   }
 
  revertInput:
@@ -1809,8 +1824,6 @@ static int x2sqKeyInput(XKeyEvent *xevt, KeySym *symbolic)
 
 static int x2sqKeyCompositionInput(XKeyEvent *xevt, KeySym *symbolic)
 {
-  static int lastKey= -1;
-
 # if defined(INIT_INPUT_WHEN_KEY_PRESSED)
   if (!inputContext)
     {
@@ -1821,11 +1834,7 @@ static int x2sqKeyCompositionInput(XKeyEvent *xevt, KeySym *symbolic)
 # endif
 
   if (KeyPress != xevt->type)
-    {
-      int key= lastKey;
-      lastKey= -1;
-      return key;
-    }
+    return retrieveLastKeyValue(xevt);
 
   DCONV_PRINTERR("keycode %u\n", xevt->keycode);
 
@@ -1835,13 +1844,13 @@ static int x2sqKeyCompositionInput(XKeyEvent *xevt, KeySym *symbolic)
     if (localeEncoding == sqTextEncoding)
       {
 	if (!(inputBuf= lookupKeys(XmbLookupString, xevt, inputString, sizeof(inputString), &inputCount, symbolic, &status)))
-	  return lastKey= -1;
+	  return storeLastKeyValue(xevt, -1);
       }
 #  if defined(X_HAVE_UTF8_STRING)
     else if (uxUTF8Encoding == sqTextEncoding)
       {
 	if (!(inputBuf= lookupKeys(Xutf8LookupString, xevt, inputString, sizeof(inputString), &inputCount, symbolic, &status)))
-	  return lastKey= -1;
+	  return storeLastKeyValue(xevt, -1);
       }
 #  endif
     else
@@ -1850,7 +1859,7 @@ static int x2sqKeyCompositionInput(XKeyEvent *xevt, KeySym *symbolic)
 	if (!(aBuf= lookupKeys(XmbLookupString, xevt, aStr, sizeof(aStr), &inputCount, symbolic, &status)))
 	  {
 	    fprintf(stderr, "status xmb2: %d\n", status);
-	    return lastKey= -1;
+	    return storeLastKeyValue(xevt, -1);
 	  }
 	if (inputCount > sizeof(inputString))
 	  {
@@ -1860,7 +1869,7 @@ static int x2sqKeyCompositionInput(XKeyEvent *xevt, KeySym *symbolic)
 		 fprintf(stderr, "x2sqKeyInput: out of memory\n");
 		 if (aStr != aBuf)
 		   free(aBuf);
-		 return lastKey= -1;
+		 return storeLastKeyValue(xevt, -1);
 	      }
 	  }
 	else
@@ -1880,11 +1889,11 @@ static int x2sqKeyCompositionInput(XKeyEvent *xevt, KeySym *symbolic)
       case XLookupBoth:
 	DCONV_PRINTERR("x2sqKey XLookupBoth count %d\n", inputCount);
 	if (inputCount == 0)
-	    return lastKey= -1;
+	    return storeLastKeyValue(xevt, -1);
 	else if (inputCount == 1)
 	  {
 	    inputCount= 0;
-	    return lastKey= inputBuf[0];
+	    return storeLastKeyValue(xevt, inputBuf[0]);
 	  }
 	else
 	  {
@@ -1899,10 +1908,10 @@ static int x2sqKeyCompositionInput(XKeyEvent *xevt, KeySym *symbolic)
 
 	    /* unclear which is best value for lastKey... */
 #          if 1
-	    lastKey= (inputCount == 1 ? inputBuf[0] : -1);
+	    storeLastKeyValue(xevt, inputCount == 1 ? inputBuf[0] : -1);
 #          else
-	    lastKey= (inputCount ? inputBuf[0] : -1);
-	    lastKey= (inputCount > 0 ? inputBuf[inputCount - 1] : -1);
+	    storeLastKeyValue(xevt, inputCount ? inputBuf[0] : -1);
+	    storeLastKeyValue(xevt, inputCount > 0 ? inputBuf[inputCount - 1] : -1);
 #          endif
 	
 	    return -1; /* we've already recorded the key events */
@@ -1926,14 +1935,14 @@ static int x2sqKeyCompositionInput(XKeyEvent *xevt, KeySym *symbolic)
 	    return -1;	/* unknown key */
 	  if ((charCode == 127) && mapDelBs)
 	    charCode= 8;
-	  return lastKey= charCode;
+	  return storeLastKeyValue(xevt, charCode);
 	}
 
       default:
 	fprintf(stderr, "this cannot happen\n");
-	return lastKey= -1;
+	return storeLastKeyValue(xevt, -1);
       }
-    return lastKey= -1;
+    return storeLastKeyValue(xevt, -1);
   }
 }
 
