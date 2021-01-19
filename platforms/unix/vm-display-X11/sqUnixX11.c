@@ -373,8 +373,17 @@ static char *defaultWindowLabel = shortImageName;
 static long launchDropTimeoutMsecs = 1000; /* 1 second default launch drop timeout */
 
 /* Value of last key pressed indexed by KeyCode in the range 8 - 255 */
-static int lastKeyValue[256];
-
+static int lastKeyValue[]=
+  {
+    -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+    -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+    -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+    -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+    -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+    -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+    -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+    -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1
+  };
 
 /*** Functions ***/
 
@@ -1719,20 +1728,14 @@ static int recordPendingKeys(void)
 
 storeLastKeyValue(XKeyEvent *xevt, int value)
 {
-  static int initialized= 0;
-  if (!initialized)
-    {
-      for (int i= 0; i<256; i++) lastKeyValue[i]= -1;
-      initialized= -1;
-    }
-  lastKeyValue[xevt->keycode]= value;
+  lastKeyValue[xevt->keycode & 0xff]= value;
   return value;
 }
 
 int retrieveLastKeyValue(XKeyEvent *xevt)
 {
   int value= lastKeyValue[xevt->keycode];
-  lastKeyValue[xevt->keycode]= -1;
+  lastKeyValue[xevt->keycode & 0xff]= -1;
   return value;
 }
 
