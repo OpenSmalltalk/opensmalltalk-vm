@@ -1726,13 +1726,15 @@ static int recordPendingKeys(void)
     }
 }
 
+static inline int
 storeLastKeyValue(XKeyEvent *xevt, int value)
 {
   lastKeyValue[xevt->keycode & 0xff]= value;
   return value;
 }
 
-int retrieveLastKeyValue(XKeyEvent *xevt)
+static inline int
+retrieveLastKeyValue(XKeyEvent *xevt)
 {
   int value= lastKeyValue[xevt->keycode];
   lastKeyValue[xevt->keycode & 0xff]= -1;
