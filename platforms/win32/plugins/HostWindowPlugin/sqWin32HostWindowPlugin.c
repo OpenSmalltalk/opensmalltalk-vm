@@ -572,5 +572,5 @@ ioSizeOfScreenWorkArea (sqIntptr_t windowIndex)
  * extent for each screen. So if there is one monitor the array has two entries.
  */
 sqInt
-ioScreenRectangles(void) { return 0; // for now }
+ioScreenRectangles(void) { return 0; } // for now
 #endif /* TerfVM */
