@@ -106,6 +106,11 @@ extern sqInt ioPositionOfScreenWorkArea(sqIntptr_t windowIndex);
  */
 extern sqInt ioSizeOfScreenWorkArea(sqIntptr_t windowIndex);
 
+/* ioScreenRectangles answer an Array of screen coordinates as pairs of packed
+ * points, origin, extent for each screen.
+ */
+extern sqInt ioScreenRectangles(void);
+
 /* ioSetCursorPositionXY: moves manually the position of the cursor.
  */
 extern sqInt ioSetCursorPositionXY(long x, long y);

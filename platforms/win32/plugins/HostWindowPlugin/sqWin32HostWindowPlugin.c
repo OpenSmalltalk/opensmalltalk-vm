@@ -567,4 +567,10 @@ ioSizeOfScreenWorkArea (sqIntptr_t windowIndex)
 	workArea = mi.rcWork;
 	return ((workArea.right - workArea.left) << 16) | ((workArea.bottom - workArea.top) & 0xFFFF);
 }
+
+/* Answer an Array of screen coordinates as pairs of packed points, origin,
+ * extent for each screen. So if there is one monitor the array has two entries.
+ */
+sqInt
+ioScreenRectangles(void) { return 0; // for now }
 #endif /* TerfVM */
