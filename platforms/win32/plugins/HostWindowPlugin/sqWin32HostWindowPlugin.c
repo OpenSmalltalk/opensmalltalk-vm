@@ -10,8 +10,15 @@
 
 #include <Windows.h>
 
+#if !defined(SQUEAK_BUILTIN_PLUGIN)
+# error "HostWindowPlugin can only be compiled as an internal plugin"
+#endif
+
+#include "sqVirtualMachine.h"
 #include "sq.h"
 #include "HostWindowPlugin.h"
+
+extern struct VirtualMachine *interpreterProxy;
 
 /* Import from sqWin32Window.c */
 extern int recordMouseEvent(MSG *msg, UINT nrClicks);
@@ -568,9 +575,32 @@ ioSizeOfScreenWorkArea (sqIntptr_t windowIndex)
 	return ((workArea.right - workArea.left) << 16) | ((workArea.bottom - workArea.top) & 0xFFFF);
 }
 
+static sqInt result, monitorIdx;
+static BOOL
+enumMonitor(HMONITOR monitor, HDC dc, LPRECT rect, LPARAM store)
+{
+	if (store) {
+		storeIntegerofObjectwithValue
+			(monitorIdx, result, packedXY(rect->left,rect->top));
+		storeIntegerofObjectwithValue
+			(monitorIdx+1, result, packedXY(rect->right - rect->left,rect->bottom - rect->top));
+	}
+	monitorIdx = monitorIdx + 2;
+	return 1;
+}
+
 /* Answer an Array of screen coordinates as pairs of packed points, origin,
  * extent for each screen. So if there is one monitor the array has two entries.
  */
 sqInt
-ioScreenRectangles(void) { return 0; } // for now
+ioScreenRectangles(void)
+{
+	monitorIdx = 0;
+	EnumDisplayMonitors(0,0,enumMonitor,0);
+	if ((result = instantiateClassindexableSize(classArray(),monitorIdx))) {
+		monitorIdx = 0;
+		EnumDisplayMonitors(0,0,enumMonitor,1);
+	}
+	return result;
+}
 #endif /* TerfVM */
