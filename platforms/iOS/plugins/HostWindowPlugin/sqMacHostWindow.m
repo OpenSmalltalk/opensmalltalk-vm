@@ -385,7 +385,8 @@ ioPositionOfScreenWorkArea(sqIntptr_t windowIndex)
     NSScreen *screen = [[[NSApplication sharedApplication] mainWindow] screen];
     NSRect frame = [screen visibleFrame];
 	// 0@36 last we looked...
-	return packedDoubleXY(frame.origin.x,frame.origin.y);
+	return packedDoubleXY(frame.origin.x,
+						  yZero() - (frame.origin.y + frame.size.height));
 }
 
 /* Return the pixel extent of the platform-defined working area
@@ -412,7 +413,8 @@ ioScreenRectangles(void)
 		for (int i = 0; i < n; i++) {
 			NSRect f = [screens[i] visibleFrame];
 			(void)storeIntegerofObjectwithValue
-					(i * 2, a, packedDoubleXY(f.origin.x,f.origin.y));
+					(i * 2, a, packedDoubleXY(f.origin.x,
+											  yZero() - (f.origin.y + f.size.height)));
 			(void)storeIntegerofObjectwithValue
 					(i * 2 + 1, a, packedDoubleXY(f.size.width,f.size.height));
 		}
