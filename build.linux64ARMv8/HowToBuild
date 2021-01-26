@@ -257,6 +257,10 @@ Manjaro
 	sudo pacman -S uuid-dev libgl1-mesa-dev libgl1-mesa-glx libssl-dev
 	sudo pacman -S xf86-video-fbdeV
 
+Debian (64-bit)
+	A complete build configuration (dockerized) can be found here:
+	https://github.com/LinqLover/squeak-raspi-docker/tree/master/osvm-mvm
+
 More advice and examples for other distros gratefully received.
 
 
