@@ -47,9 +47,13 @@
 extern struct	VirtualMachine* interpreterProxy;
 extern SqueakOSXAppDelegate *gDelegateApp;
 
-static int buttonState=0;
+static int buttonState = 0;
 
 static int firstScreenHeight = 0;
+
+#define MouseButtonMask 0x7
+#define MouseButtonShift 3
+
 /*
  * Answer (cache) the height of the main display, needed for transforming
  * mac screen coordinates to Squeak screen coordinates.
@@ -204,7 +208,7 @@ yZero()
 		unicode = [unicodeString characterAtIndex: i];
 
 		if (mainView.lastSeenKeyBoardStrokeDetails) {
-			evt.modifiers = [self translateCocoaModifiersToSqueakModifiers: mainView.lastSeenKeyBoardStrokeDetails.modifierFlags];
+			evt.modifiers = [self translateCocoaModifiersToSqueak: mainView.lastSeenKeyBoardStrokeDetails.modifierFlags];
 			evt.charCode = mainView.lastSeenKeyBoardStrokeDetails.keyCode;
 		} else {
 			evt.modifiers = 0;
@@ -255,7 +259,7 @@ yZero()
 	evt.timeStamp =  ioMSecs();
 	evt.charCode =	[theEvent keyCode];
 	evt.pressCode = EventKeyDown;
-	evt.modifiers = [self translateCocoaModifiersToSqueakModifiers: [theEvent modifierFlags]];
+	evt.modifiers = [self translateCocoaModifiersToSqueak: [theEvent modifierFlags]];
 	evt.utf32Code = 0;
 	evt.reserved1 = 0;
 	evt.windowIndex = [[aView windowLogic] windowIndex];
@@ -271,7 +275,7 @@ yZero()
 	evt.timeStamp =  ioMSecs();
 	evt.charCode =	[theEvent keyCode];
 	evt.pressCode = EventKeyUp;
-	evt.modifiers = [self translateCocoaModifiersToSqueakModifiers: [theEvent modifierFlags]];
+	evt.modifiers = [self translateCocoaModifiersToSqueak: [theEvent modifierFlags]];
 	evt.utf32Code = 0;
 	evt.reserved1 = 0;
 	evt.windowIndex =  aView.windowLogic.windowIndex;
@@ -292,8 +296,8 @@ yZero()
 	evt.y =  lrintf((float)local_point.y);
 
 	int buttonAndModifiers = [self mapMouseAndModifierStateToSqueakBits: theEvent];
-	evt.buttons = buttonAndModifiers & 0x07;
-	evt.modifiers = buttonAndModifiers >> 3;
+	evt.buttons = buttonAndModifiers & MouseButtonMask;
+	evt.modifiers = buttonAndModifiers >> MouseButtonShift;
 #if COGVM | STACKVM
 	evt.nrClicks = 0;
 #else
@@ -318,8 +322,8 @@ yZero()
 	evt.y =  lrintf((float)local_point.y);
 
 	int buttonAndModifiers = [self mapMouseAndModifierStateToSqueakBits: theEvent];
-	evt.buttons = buttonAndModifiers & 0x07;
-	evt.modifiers = buttonAndModifiers >> 3;
+	evt.buttons = buttonAndModifiers & MouseButtonMask;
+	evt.modifiers = buttonAndModifiers >> MouseButtonShift;
 #if COGVM | STACKVM
 	evt.nrClicks = theEvent.clickCount;
 #else
@@ -391,8 +395,8 @@ yZero()
 		prevYDelta = 0;
 
 		int buttonAndModifiers = [self mapMouseAndModifierStateToSqueakBits: theEvent];
-		evt.buttons = buttonAndModifiers & 7;
-		evt.modifiers = buttonAndModifiers >> 3;
+		evt.buttons = buttonAndModifiers & MouseButtonMask;
+		evt.modifiers = buttonAndModifiers >> MouseButtonShift;
 		evt.windowIndex =  aView.windowLogic.windowIndex;
 		[self pushEventToQueue:(sqInputEvent *) &evt];
 	}
@@ -470,7 +474,7 @@ yZero()
  *
  * While we could just shift and mask, let's be clean an just check.
  */
-- (int) translateCocoaModifiersToSqueakModifiers: (NSUInteger) modifiers {
+- (int) translateCocoaModifiersToSqueak: (NSUInteger) modifiers {
     return
         (modifiers & NSEventModifierFlagShift   ? ShiftKeyBit   : 0) |
         (modifiers & NSEventModifierFlagControl ? CtrlKeyBit    : 0) |
@@ -538,7 +542,8 @@ yZero()
     }
 
 	// button state: low three bits are mouse buttons; next 8 bits are modifier bits
-    buttonState = ([self translateCocoaModifiersToSqueakModifiers: flags] << 3) | (stButtons & 0x7);
+    buttonState = ([self translateCocoaModifiersToSqueak: flags] << MouseButtonShift)
+				| (stButtons & MouseButtonMask);
 	return buttonState;
 }
 
@@ -553,7 +558,7 @@ yZero()
 	evt.dragType= dragType;
 	evt.x = lrintf(local_point.x);
 	evt.y = lrintf(local_point.y);
-	evt.modifiers= (buttonState >> 3);
+	evt.modifiers= buttonState >> MouseButtonShift;
 	evt.numFiles= numFiles;
 	evt.windowIndex =  windowIndex;
 	[self pushEventToQueue: (sqInputEvent *) &evt];

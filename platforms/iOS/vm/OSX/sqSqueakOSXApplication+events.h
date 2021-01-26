@@ -51,7 +51,7 @@
 - (void) pushEventToQueue: (sqInputEvent *) evt;
 - (void) fakeMouseWheelKeyboardEventsKeyCode: (int) keyCode ascii: (int) ascii windowIndex: (int) windowIndex;
 - (int) mapMouseAndModifierStateToSqueakBits: (NSEvent *) event;
-- (int) translateCocoaModifiersToSqueakModifiers: (NSUInteger) modifiers;
+- (int) translateCocoaModifiersToSqueak: (NSUInteger) modifiers;
 - (void) recordDragEvent: (int) dragType numberOfFiles: (int) numFiles where: (NSPoint) local_point windowIndex: (sqInt) windowIndex view:(NSView *)aView;
 - (void) recordURLEvent: (int) dragType numberOfFiles: (int) numFiles;
 - (void) recordWindowEvent: (int) type window: (NSWindow *) window;
