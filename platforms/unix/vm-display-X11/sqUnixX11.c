@@ -6797,8 +6797,10 @@ int forgetXDisplay(void)
   stDisplay= null;      /* Squeak display                       */
   if (isConnectedToXServer)
     close(stXfd);
+#if ! (HAVE_CONFIG_H && HAVE_EPOLL)
   if (stXfd >= 0)
     aioDisable(stXfd);
+#endif
   stXfd= -1;		/* X connection file descriptor         */
   stParent= null;
   stWindow= null;       /* Squeak window                        */
