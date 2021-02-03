@@ -98,7 +98,6 @@ void printDevices();
   int						 height;
   int						 semaphoreIndex;
   bool						 bInitCalled;
-  bool						 firstTime;
 }
 @end
 
@@ -119,16 +118,28 @@ SqueakVideoGrabber *grabbers[CAMERA_COUNT];
   fromConnection:(AVCaptureConnection *)connection
 {
 	CVImageBufferRef imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
-	if (firstTime) {
-		width = CVPixelBufferGetWidth(imageBuffer);
-		height = CVPixelBufferGetHeight(imageBuffer);
-		pixels = malloc(width * height * 4);
+	int currentWidth = CVPixelBufferGetWidth(imageBuffer);
+	int currentHeight = CVPixelBufferGetHeight(imageBuffer);
+
+	if (!pixels) {
+		pixels = malloc(currentWidth * currentHeight * 4);
+		width = currentWidth;
+		height = currentHeight;
+	}
+	else if (currentWidth != width
+		  || currentHeight != height) {
+		if (currentWidth * currentHeight < width * height) {
+			if (pixels)
+				free(pixels);
+			pixels = malloc(currentWidth * currentHeight * 4);
+		}
+		width = currentWidth;
+		height = currentHeight;
 	}
 	CVPixelBufferLockBaseAddress(imageBuffer, 0);
 	memcpy(	pixels,
 			CVPixelBufferGetBaseAddress(imageBuffer),
-			width * height * 4);
-	firstTime = false;
+			currentWidth * currentHeight * 4);
 	CVPixelBufferUnlockBaseAddress(imageBuffer, 0);
 	frameCount++;
 	if (semaphoreIndex > 0)
@@ -254,7 +265,11 @@ SqueakVideoGrabber *grabbers[CAMERA_COUNT];
   [captureSession startRunning];
 
   bInitCalled = YES;
-  firstTime = true;
+  if (pixels) {
+	unsigned int *the_pixels = pixels;
+	pixels = NULL;
+	free(the_pixels);
+  }
   frameCount = 0;
   semaphoreIndex = -1;
   grabbers[deviceID] = self;
@@ -276,9 +291,9 @@ SqueakVideoGrabber *grabbers[CAMERA_COUNT];
     for (AVCaptureOutput *output1 in captureSession.outputs)
       [captureSession removeOutput: output1];
     [captureSession stopRunning];
-    free(pixels);
+	unsigned int *the_pixels = pixels;
     pixels = NULL;
-    firstTime = true;
+    free(the_pixels);
     frameCount = 0;
     bInitCalled = NO;
     captureSession = NULL;
@@ -385,7 +400,7 @@ CameraGetFrame(sqInt cameraNum, unsigned char *buf, sqInt pixelCount)
   SqueakVideoGrabber *grabber = grabbers[cameraNum-1];
   if (!grabber)
 	return -1;
-  if (!grabber->firstTime) {
+  if (grabber->pixels) {
     int ourFrames = grabber->frameCount;
 #define min(a,b) ((a)<=(b)?(a):(b))
 	long actualPixelCount = grabber->width * grabber->height;
