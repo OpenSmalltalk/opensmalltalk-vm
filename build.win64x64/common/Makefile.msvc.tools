@@ -87,7 +87,9 @@ DLLTOOL:=$(CBD)/x86_64-w64-mingw32-dlltool
 
 # The JIT will attempt to alloca up to 1.5Mb by default on x86-64. So set
 # the default stack size to 2Mb to avoid crashes in the JIT's alloca.
+ifeq ($(DEFAULT_STACK_SIZE),)
 DEFAULT_STACK_SIZE:=2097152
+endif
 STACK_LD_FLAG=/STACK:$(DEFAULT_STACK_SIZE),$(DEFAULT_STACK_SIZE)
 
 #EXPORT:=--export-all-symbols
