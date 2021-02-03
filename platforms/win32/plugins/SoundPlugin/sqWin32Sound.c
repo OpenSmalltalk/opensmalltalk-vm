@@ -312,6 +312,7 @@ flexMixerGetLineInfo(HMIXEROBJ hmxobj, LPMIXERLINE pmxl)
 
 	if (mmResult != MIXERR_INVALLINE)
 		return mmResult;
+
 	/* Output devices */
 	if (pmxl->dwComponentType == MIXERLINE_COMPONENTTYPE_DST_SPEAKERS)
 		pmxl->dwComponentType = MIXERLINE_COMPONENTTYPE_DST_HEADPHONES;
@@ -604,7 +605,8 @@ accessMixerVolume(UINT deviceID, DWORD lineType, double inLevel)
 		wfx.nBlockAlign = bytesPerFrame;
 		wfx.wBitsPerSample = 8 * bytesPerSample;
 
-		if (lineType == MIXERLINE_COMPONENTTYPE_DST_WAVEIN) {
+		if (lineType == MIXERLINE_COMPONENTTYPE_DST_WAVEIN
+		 || lineType == MIXERLINE_COMPONENTTYPE_DST_VOICEIN) {
 			result = waveInOpen(&hwaveIn, WAVE_MAPPER, &wfx, 0, 0, CALLBACK_NULL);
 			DMPRINTF(("	waveInOpen=>%d (BADFORMAT=%d, BADFLAG=%d), hwave=%lx\n", result, WAVERR_BADFORMAT, MMSYSERR_INVALFLAG, hwaveIn));
 			if (mmFAILED(result)) return -1;
@@ -629,8 +631,12 @@ accessMixerVolume(UINT deviceID, DWORD lineType, double inLevel)
 	mmLine.cbStruct = sizeof(MIXERLINE);
 	mmLine.dwComponentType = lineType;
 
+	DPRINTF(("mixerGetLineInfo COMP %u DEST %u SRC %u\n",
+			mixerGetLineInfo((HMIXEROBJ)hmx, &mmLine, MIXER_OBJECTF_MIXER + MIXER_GETLINEINFOF_COMPONENTTYPE),
+			mixerGetLineInfo((HMIXEROBJ)hmx, &mmLine, MIXER_OBJECTF_MIXER + MIXER_GETLINEINFOF_DESTINATION),
+			mixerGetLineInfo((HMIXEROBJ)hmx, &mmLine, MIXER_OBJECTF_MIXER + MIXER_GETLINEINFOF_SOURCE)));
 	result = flexMixerGetLineInfo((HMIXEROBJ) hmx, &mmLine);
-	XPRINT(("	mixerGetLineInfo=>%x, source %u, destinatation %u, type %x, %d channels, %d controls\n", result, 
+	DPRINTF(("	mixerGetLineInfo=>%x, source %u, destinatation %u, type %x, %d channels, %d controls\n", result, 
 			mmLine.dwSource,  mmLine.dwDestination, mmLine.dwComponentType, mmLine.cChannels, mmLine.cControls));
 	if (mmFAILED(result)) {
 		DPRINTF(("accessMixerVolume(): failed to get line info (error code: %d)\n", result));
