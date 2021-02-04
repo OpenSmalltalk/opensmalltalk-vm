@@ -426,6 +426,28 @@ getSoundRecorderDeviceName(sqInt index)
 			: (char *)0;
 } 
 
+#if TerfVM
+char *
+getSoundPlayerDeviceUID(sqInt index)
+{
+	if (!playerDevices.deviceCount)
+		getNumberOfSoundPlayerDevices();
+	return (unsigned)index < playerDevices.deviceCount
+			? printGUID(playerDevices.devices[index].guid)
+			: (char *)0;
+} 
+
+char *
+getSoundRecorderDeviceUID(sqInt index)
+{
+	if (!recorderDevices.deviceCount)
+		getNumberOfSoundRecorderDevices();
+	return (unsigned)index < recorderDevices.deviceCount
+			? printGUID(recorderDevices.devices[index].guid)
+			: (char *)0;
+} 
+#endif // TerfVM
+
 void logDeviceNames(void);
 
 void
