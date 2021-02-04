@@ -206,6 +206,12 @@ snd_SupportsAEC(void)                 { return snd->snd_SupportsAEC(); }
 sqInt
 snd_EnableAEC(sqInt flag)             { return snd->snd_EnableAEC(flag); }
 
+char *
+getSoundPlayerDeviceUID(sqInt i)   { return 0; /* for now */ }
+
+char *
+getSoundRecorderDeviceUID(sqInt i) { return 0; /* for now */ }
+
 #else
 sqInt snd_SupportsAEC(void)           { return 0; }
 sqInt snd_EnableAEC(sqInt flag)       { return -1; }

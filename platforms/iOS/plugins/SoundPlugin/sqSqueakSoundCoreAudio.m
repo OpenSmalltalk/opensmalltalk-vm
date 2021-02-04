@@ -41,8 +41,6 @@
 #import <CoreAudio/CoreAudio.h>
 #include <AVFoundation/AVCaptureDevice.h>
 
-//typedef struct _device { AudioDeviceID id; } DeviceID;
-
 #import "sqSqueakSoundCoreAudio.h"
 
 #import "sqMemoryFence.h"
@@ -235,6 +233,7 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 	numDevices = 0;
 	deviceIDs = nil;
 	deviceNames = nil;
+	deviceUIDs = nil;
 	deviceTypes = nil;
 	return 1;
 }
@@ -699,6 +698,11 @@ setVolumeOf(AudioDeviceID deviceID, char which, float volume)
 	getName = {	kAudioObjectPropertyName,
 				kAudioObjectPropertyScopeGlobal,
 				kAudioObjectPropertyElementMaster },
+#if TerfVM
+	getUID = {	kAudioDevicePropertyDeviceUID,
+				kAudioObjectPropertyScopeGlobal,
+				kAudioObjectPropertyElementMaster },
+#endif
 	getDevices = {	kAudioHardwarePropertyDevices,
 					kAudioObjectPropertyScopeGlobal,
 					kAudioObjectPropertyElementMaster },
@@ -721,6 +725,11 @@ setVolumeOf(AudioDeviceID deviceID, char which, float volume)
 		free(deviceIDs);
 		for (i = 0; i < numDevices; i++)
 			free(deviceNames[i]);
+#if TerfVM
+		for (i = 0; i < numDevices; i++)
+			free(deviceUIDs[i]);
+		free(deviceUIDs);
+#endif
 		free(deviceNames);
 		free(deviceTypes);
 		deviceIDs = 0;
@@ -745,12 +754,18 @@ setVolumeOf(AudioDeviceID deviceID, char which, float volume)
 								   0, nil, &datasize, (AudioDeviceID *)deviceIDs)
 
 	 || !(deviceNames = calloc(numDevices, sizeof(char *)))
+#if TerfVM
+	 || !(deviceUIDs  = calloc(numDevices, sizeof(char *)))
+#endif
 	 || !(deviceTypes = calloc(numDevices, sizeof(char)))) {
 		free(deviceIDs);
 		if (deviceNames)
 			free(deviceNames);
+		if (deviceUIDs)
+			free(deviceUIDs);
 		deviceIDs = 0;
 		deviceNames = 0;
+		deviceUIDs = 0;
 		numDevices = 0;
 		return;
 	}
@@ -758,6 +773,7 @@ setVolumeOf(AudioDeviceID deviceID, char which, float volume)
 	// Then get the names and types, and register the device changed listener.
 	for (i = 0; i < numDevices; i++) {
 		CFStringRef nameRef;
+        CFIndex length;
 
         if (AudioObjectGetPropertyDataSize(deviceIDs[i], &getName,
 											0, nil, &datasize)
@@ -765,13 +781,25 @@ setVolumeOf(AudioDeviceID deviceID, char which, float volume)
 											0, nil, &datasize, &nameRef))
 			error("could not get sound device name");
 
-        CFIndex length = CFStringGetLength(nameRef) + 1;
+        length = CFStringGetLength(nameRef) + 1;
         deviceNames[i] = (char *)malloc(length);
         CFStringGetCString(nameRef, deviceNames[i], length, kCFStringEncodingUTF8);
+		deviceNames[i][length - 1] = 0;
+#if TerfVM
+        if (AudioObjectGetPropertyDataSize(deviceIDs[i], &getUID,
+											0, nil, &datasize)
+		 || AudioObjectGetPropertyData    (deviceIDs[i], &getUID,
+											0, nil, &datasize, &nameRef))
+			error("could not get sound device UID");
+
+        length = CFStringGetLength(nameRef) + 1;
+        deviceUIDs[i] = (char *)malloc(length);
+        CFStringGetCString(nameRef, deviceUIDs[i], length, kCFStringEncodingUTF8);
+		deviceUIDs[i][length - 1] = 0;
+#endif
     	if (AudioObjectGetPropertyDataSize(deviceIDs[i], &getInputStreams,
 											0, NULL, &datasize))
-			error("could not get sound device Input stream info");
-		deviceNames[i][length - 1] = 0;
+			error("could not get sound device input stream info");
 		if (datasize > 0)
 			deviceTypes[i] = IsInput;
 
@@ -851,6 +879,26 @@ setVolumeOf(AudioDeviceID deviceID, char which, float volume)
 			return deviceNames[i];
 	return 0;
 }
+
+#if TerfVM
+- (char *) getSoundPlayerDeviceUID: (sqInt) di {
+	[self ensureDeviceList];
+	for (int i = 0, n = 0; i < numDevices; i++)
+		if (isOutput(i)
+		 && n++ == di)
+			return deviceUIDs[i];
+	return 0;
+}
+
+- (char *) getSoundRecorderDeviceUID: (sqInt) di {
+	[self ensureDeviceList];
+	for (int i = 0, n = 0; i < numDevices; i++)
+		if (isInput(i)
+		 && n++ == di)
+			return deviceUIDs[i];
+	return 0;
+}
+#endif // TerfVM
 
 - (void) setDefaultSoundPlayer: (char *) deviceName {
 	[self ensureDeviceList];
