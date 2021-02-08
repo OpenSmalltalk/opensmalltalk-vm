@@ -415,7 +415,7 @@ aioPoll(long microSeconds)
 					  handler(data->fd, data->clientData, AIO_W);
 					else {
 					  fprintf(stderr, "aioPoll in process %d no readHandler in writeEventData ", getpid());
-					  undefinedHandler(data->fd, data->clientData, AIO_R);
+					  undefinedHandler(data->fd, data->clientData, AIO_W);
 					}
 				}
 				if (event.events & (EPOLLPRI | EPOLLERR | EPOLLHUP)) {
@@ -423,7 +423,7 @@ aioPoll(long microSeconds)
 					  handler(data->fd, data->clientData, AIO_X);
 					else {
 					  fprintf(stderr, "aioPoll in process %d no readHandler in exceptionEventData ", getpid());
-					  undefinedHandler(data->fd, data->clientData, AIO_R);
+					  undefinedHandler(data->fd, data->clientData, AIO_X);
 					}
 				}
 			}
