@@ -403,9 +403,11 @@ sqInt ioProcessEvents(void);
 #define EventKeyUp		2
 
 /* Button definitions. */
-#define RedButtonBit	4
-#define YellowButtonBit	2
-#define BlueButtonBit	1
+#define BlueButtonBit		 1
+#define YellowButtonBit		 2
+#define RedButtonBit		 4
+#define MoveRightButtonBit	 8
+#define MoveLeftButtonBit	16
 
 /* Modifier definitions. */
 #define ShiftKeyBit		1
