@@ -9,15 +9,16 @@
 #ifndef _SQ_H
 #define _SQ_H
 
-#include "sqConfig.h"
-
-#include <math.h>
-#include "sqMathShim.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include <limits.h>
+
+#include "sqConfig.h"
+
+#include <math.h>
+#include "sqMathShim.h"
 
 #include "sqMemoryAccess.h"
 #include "sqVirtualMachine.h"
@@ -55,9 +56,15 @@
    If the platform requires special declaration modifiers, the EXPORT and
    VM_EXPORT macros can be redefined.
 */
-#define EXPORT(returnType) returnType
-#define VM_EXPORT
-#define VM_FUNCTION_EXPORT(returnType) returnType
+#if !defined(EXPORT)
+# define EXPORT(returnType) returnType
+#endif
+#if !defined(VM_EXPORT)
+# define VM_EXPORT
+#endif
+#if !defined(VM_FUNCTION_EXPORT)
+# define VM_FUNCTION_EXPORT(returnType) returnType
+#endif
 
 /* Platform-dependent millisecond clock macros. */
 
