@@ -14,7 +14,6 @@
 #include <mmsystem.h>
 
 #include "sq.h"
-#undef EXPORT
 #include "sqAssert.h"
 #include "sqMemoryFence.h"
 
@@ -145,7 +144,6 @@ static DWORD baseTick;
 static unsigned __int64 vmThreadUtcTickBaseMicroseconds;
 static DWORD vmThreadLastTick = (DWORD)-1;
 static DWORD vmThreadBaseTick;
-
 #endif // (_WIN32_WINNT >= _WIN32_WINNT_WIN8)
 
 /* The 64-bit clocks.  utcMicrosecondClock is utc microseconds from 1901.

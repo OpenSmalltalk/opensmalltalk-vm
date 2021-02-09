@@ -20,14 +20,10 @@
 IMPORT(void) error(const char *);
 IMPORT(void) warning(const char *);
 IMPORT(void) warningat(const char *,int);
-#elif defined(EXPORT) && !defined(SQUEAK_BUILTIN_PLUGIN)
+#else
 EXPORT(void) error(const char *);
 EXPORT(void) warning(const char *);
 EXPORT(void) warningat(const char *,int);
-#else
-void error(const char *);
-void warning(const char *);
-void warningat(const char *,int);
 #endif
 #pragma auto_inline(on)
 
