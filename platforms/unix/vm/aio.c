@@ -403,7 +403,7 @@ aioPoll(long microSeconds)
 				const struct epoll_event event = events[i];
 				struct epollEventData* data = (struct epollEventData*)(event.data.ptr);
 				if (event.events & EPOLLIN) {
-					if(handler= data->readHandler)
+					if((handler= data->readHandler))
 					  handler(data->fd, data->clientData, AIO_R);
 					else {
 					  fprintf(stderr, "aioPoll in process %d no readHandler in epollEventData ", getpid());
@@ -411,19 +411,19 @@ aioPoll(long microSeconds)
 					}
 				}
 				if (event.events & EPOLLOUT) {
-					if(handler= data->writeHandler)
+					if((handler= data->writeHandler))
 					  handler(data->fd, data->clientData, AIO_W);
 					else {
 					  fprintf(stderr, "aioPoll in process %d no readHandler in writeEventData ", getpid());
-					  undefinedHandler(data->fd, data->clientData, AIO_R);
+					  undefinedHandler(data->fd, data->clientData, AIO_W);
 					}
 				}
 				if (event.events & (EPOLLPRI | EPOLLERR | EPOLLHUP)) {
-					if(handler= data->exceptionHandler)
+					if((handler= data->exceptionHandler))
 					  handler(data->fd, data->clientData, AIO_X);
 					else {
 					  fprintf(stderr, "aioPoll in process %d no readHandler in exceptionEventData ", getpid());
-					  undefinedHandler(data->fd, data->clientData, AIO_R);
+					  undefinedHandler(data->fd, data->clientData, AIO_X);
 					}
 				}
 			}
