@@ -22,13 +22,18 @@
 *****************************************************************************/
 #include <Windows.h>
 #include <windowsx.h>
+#include <dbt.h>
 #include <shellapi.h>
 #include <commdlg.h>
 #include <excpt.h>
 
+/* WM_MOUSEWHEEL since Win98/NT4 */
+#ifndef WM_MOUSEWHEEL
+# define WM_MOUSEWHEEL 0x020A
+#endif
 /* only supported since Vista, and absent from some cygwin/mingw header */
 #ifndef WM_MOUSEHWHEEL
-#define WM_MOUSEHWHEEL                  0x020E
+# define WM_MOUSEHWHEEL                  0x020E
 #endif
 
 #if defined(__MINGW32_VERSION) && (__MINGW32_MAJOR_VERSION < 3)
@@ -97,6 +102,8 @@ int   mouseWord;			/* Input word for Squeak */
 int   buttonState = 0;		/* mouse button and modifier state when mouse
 							   button went down or 0 if not pressed */
 DWORD winButtonState = 0;
+
+EXPORT(int) deviceChangeCount = 1; // so that at startup it is > 0
 
 #define KEYBUF_SIZE 64
 int keyBuf[KEYBUF_SIZE];	/* circular buffer */
@@ -259,10 +266,8 @@ LRESULT CALLBACK MainWndProcA(HWND hwnd,
   return DefWindowProc(hwnd, message, wParam, lParam);
 }
 
-LRESULT CALLBACK MainWndProcW(HWND hwnd,
-                              UINT message,
-                              WPARAM wParam,
-                              LPARAM lParam)
+static LRESULT CALLBACK
+MainWndProcW(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 { 
   PAINTSTRUCT ps;
   static UINT lastClickTime = 0;
@@ -308,6 +313,12 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
     return sqLaunchDrop();
 
   switch(message) {
+  case WM_DEVICECHANGE:
+	DPRINTF("WM_DEVICECHANGE deviceChangeCount %d => %d\n",
+			deviceChangeCount, deviceChangeCount + 1);
+	deviceChangeCount += 1;
+	break;
+
   case WM_SYSCOMMAND:
   case WM_COMMAND: {
     int cmd = wParam & 0xFFF0;
@@ -347,7 +358,6 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
       break;
     }
     return DefWindowProcW(hwnd,message,wParam,lParam);
-    break;
   }
   /*  mousing */
   case WM_MOUSEMOVE:
@@ -961,8 +971,12 @@ sqInt ioIsWindowObscured(void) {
   return false; /* not obscured */
 }
 
-void SetupWindows()
+void
+SetupWindows()
 { WNDCLASS wc;
+  DEV_BROADCAST_HDR bh = {	sizeof(DEV_BROADCAST_HDR),
+							DBT_DEVTYP_DEVICEINTERFACE,
+							0 };
 
   /* create our update region */
   updateRgn = CreateRectRgn(0,0,1,1);
@@ -1027,6 +1041,13 @@ void SetupWindows()
   SetupDirectInput();
 #endif
   ioScreenSize(); /* compute new rect initially */
+
+  /* Make sure we receive WM_DEVICECHANGED messages */
+  if (!RegisterDeviceNotification(
+			stWindow,
+			&bh,
+			DEVICE_NOTIFY_WINDOW_HANDLE | DEVICE_NOTIFY_ALL_INTERFACE_CLASSES))
+      printLastError(TEXT("RegisterDeviceNotification failed"));
 }
 
 
@@ -1035,7 +1056,8 @@ void SetWindowSize(void) {
   int width, height, maxWidth, maxHeight, actualWidth, actualHeight;
   int deltaWidth, deltaHeight;
 
-  if(!IsWindow(stWindow)) return; /* might happen if run as NT service */
+  if (!IsWindow(stWindow))
+	return; /* might happen if run as NT service */
 
   if (getSavedWindowSize() != 0) {
     width  = (unsigned) getSavedWindowSize() >> 16;

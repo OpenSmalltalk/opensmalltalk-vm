@@ -4,6 +4,7 @@
 #ifndef SQ_WIN_32_H
 #define SQ_WIN_32_H
 
+#include "sqPlatformSpecific.h" // to get IMPORT, EXPORT et al
 
 /*************************************************************/
 /* NOTE: For a list of possible definitions see file README. */
@@ -219,11 +220,16 @@ extern HMENU vmPrefsMenu;         /* preferences menu */
 #endif
 
 extern HWND  consoleWindow;       /* console */
+#if defined(SQUEAK_EXTERNAL_PLUGIN)
+extern IMPORT(int) deviceChangeCount; // Counter tracking WM_DEVICECHANGE msgs
+#else
+extern EXPORT(int) deviceChangeCount;
+#endif
 
 
-extern HWND stWindow;	     	         /*	the squeak window */
+extern HWND stWindow;	     	 /*	the squeak window */
 extern HINSTANCE hInstance;	     /*	the instance of squeak running */
-extern HCURSOR currentCursor;	     /*	current cursor displayed by squeak */
+extern HCURSOR currentCursor;	 /*	current cursor displayed by squeak */
 extern HPALETTE palette;	     /*	the palette (might be unused) */
 extern LOGPALETTE *logPal;	     /*	the logical palette definition */
 extern BITMAPINFO *bmi1;	     /*	1 bit depth bitmap info */
@@ -347,11 +353,6 @@ typedef struct _NOTIFYICONDATAA {
 #define NIF_TIP         0x00000004
 
 #endif /* WINVER < 0x0400 */
-
-/* WM_MOUSEWHEEL since Win98/NT4 */
-#ifndef WM_MOUSEWHEEL
-#define WM_MOUSEWHEEL 0x020A
-#endif
 
 /******************************************************/
 /* Profiling support                                  */
