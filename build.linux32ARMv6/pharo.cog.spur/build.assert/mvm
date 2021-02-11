@@ -2,7 +2,7 @@
 set -e
 # assert PharoVM with VM profiler and threaded heartbeat
 INSTALLDIR=assert/phcogspurlinuxhtRPi
-OPT="-g3 -O1 -DDEBUGVM=0 -DPharoVM"
+OPT="-m32 -g3 -O1 -DDEBUGVM=0 -DPharoVM"
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift

@@ -2,7 +2,7 @@
 set -e
 # debug PharoVM with VM profiler and threaded heartbeat
 INSTALLDIR=debug/phcogspurlinuxhtRPi
-OPT="-g3 -O0 -DDEBUGVM=1 -DPharoVM"
+OPT="-m32 -g3 -O0 -DDEBUGVM=1 -DPharoVM"
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift

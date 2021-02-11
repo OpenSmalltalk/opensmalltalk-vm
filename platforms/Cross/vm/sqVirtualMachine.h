@@ -6,20 +6,6 @@
  */
 #include "interp.h"
 
-#if 0
-#include "sqPlatformSpecific.h" // for EXPORT()
-
-#pragma auto_inline(off)
-#if defined(IMPORT) && defined(SQUEAK_EXTERNAL_PLUGIN)
-IMPORT(void) error(const char *);
-#elif defined(EXPORT) && !defined(SQUEAK_BUILTIN_PLUGIN)
-EXPORT(void) error(const char *);
-#else
-extern void error(const char *);
-#endif
-#pragma auto_inline(on)
-#endif
-
 #if SPURVM
 # define VM_VERSION "5.0"
 #else

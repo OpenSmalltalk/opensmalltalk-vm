@@ -47,25 +47,6 @@
 # endif
 #endif
 
-/* Pluggable primitives macros. */
-
-/* Note: All pluggable primitives are defined as
-	EXPORT(int) somePrimitive(void)
-   All non-static variables in the VM and plugins are declared as
-	VM_EXPORT type var
-   If the platform requires special declaration modifiers, the EXPORT and
-   VM_EXPORT macros can be redefined.
-*/
-#if !defined(EXPORT)
-# define EXPORT(returnType) returnType
-#endif
-#if !defined(VM_EXPORT)
-# define VM_EXPORT
-#endif
-#if !defined(VM_FUNCTION_EXPORT)
-# define VM_FUNCTION_EXPORT(returnType) returnType
-#endif
-
 /* Platform-dependent millisecond clock macros. */
 
 /* Note: The Squeak VM uses two different clock functions for timing, and

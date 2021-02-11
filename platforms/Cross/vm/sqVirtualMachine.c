@@ -5,9 +5,9 @@
 #include <time.h>
 #include <setjmp.h>
 
-#include "sqAssert.h"
 #define FOR_SVM_C
 #include "sqVirtualMachine.h"
+#include "sqAssert.h"
 
 
 struct VirtualMachine *VM = NULL;

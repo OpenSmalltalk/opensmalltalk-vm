@@ -2,7 +2,7 @@
 set -e
 # Stack VM with VM profiler and threaded heartbeat
 INSTALLDIR=sqstklinuxhtRPi
-OPT="-g -O3 -DNDEBUG -DDEBUGVM=0 -DNO_VM_PROFILE=1"
+OPT="-m32 -g -O3 -DNDEBUG -DDEBUGVM=0 -DNO_VM_PROFILE=1"
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
@@ -19,7 +19,7 @@ test -f plugins.int || (test -f ../plugins.int && cp -p ../plugins.int . || cp -
 test -f plugins.ext || (test -f ../plugins.ext && cp -p ../plugins.ext . || cp -p ../../plugins.ext .)
 test -f config.h || ../../../platforms/unix/config/configure \
 	--with-src=stacksrc --disable-cogit \
-	--without-vm-display-fbdev --without-npsqueak --enable-fast-bitblt \
+	--without-npsqueak --enable-fast-bitblt \
 	TARGET_ARCH="-march=armv6 -mfpu=vfp -mfloat-abi=hard" \
 	CFLAGS="$OPT -DI_REALLY_DONT_CARE_HOW_UNSAFE_THIS_IS"
 rm -f vm/sqUnixMain.o # nuke version info
