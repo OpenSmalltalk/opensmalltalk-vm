@@ -131,7 +131,8 @@ INCLUDES:= -I. -I$(VMSRCDIR) -I$(WIN32DIR) -I$(CROSSDIR) $(XINC)
 # Common build rules
 #
 
-default: print-settings init $(VMEXE) $(CONSOLEVMEXE) $(DLLS) nukelibs $(APPPOST)
+#default: print-settings init $(VMEXE) $(CONSOLEVMEXE) $(DLLS) nukelibs $(APPPOST)
+default: print-settings init $(VMEXE) $(CONSOLEVMEXE) $(DLLS) $(APPPOST)
 
 svnver:
 	echo $(RC) $(RCFLAGS)
@@ -259,9 +260,9 @@ plugin-makefile = $(realpath $(firstword $(wildcard $(WIN32PLUGINSDIR)/$(1)/Make
 $(OBJDIR)/%.lib: $(call plugin-makefile,$(*F))
 	@-$(MKDIR) $(BUILD)/$(*F)
 	$(RM) -f $(BUILD)/vm/$(*F).ignore
-	$(MAKE) $(MFLAGS) -I../common BUILD=$(BUILD) \
+	$(MAKE) $(MFLAGS) $(SUBMFLAGS) -I../common BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) \
-		"VM=$(VM)" "VM_NAME=$(VM_NAME)" TPDIR=$(TPDIR) \
+		"VM=$(VM)" "VM_NAME=$(VM_NAME)" INTERNAL_PLUGIN=1 TPDIR=$(TPDIR) \
 		CONFIGURATION=$(CONFIGURATION) ARCH=$(ARCH) TOOLPREFIX=$(TOOLPREFIX) \
 		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
 		THIRDPARTYOUTDIR=$(THIRDPARTYOUTDIR) \
@@ -271,9 +272,9 @@ $(OBJDIR)/%.lib: $(call plugin-makefile,$(*F))
 $(OBJDIR)/%.dll: $(call plugin-makefile,$(*F))
 	@-$(MKDIR) $(BUILD)/$(*F)
 	$(RM) -f $(BUILD)/$(*F).ignore
-	$(MAKE) $(MFLAGS) -I../common BUILD=$(BUILD) \
+	$(MAKE) $(MFLAGS) $(SUBMFLAGS) -I../common BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) \
-		"VM=$(VM)" "VM_NAME=$(VM_NAME)" TPDIR=$(TPDIR) \
+		"VM=$(VM)" "VM_NAME=$(VM_NAME)" EXTERNAL_PLUGIN=1 TPDIR=$(TPDIR) \
 		CONFIGURATION=$(CONFIGURATION) ARCH=$(ARCH) TOOLPREFIX=$(TOOLPREFIX) \
 		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
 		THIRDPARTYOUTDIR=$(THIRDPARTYOUTDIR) JMPOBJ=$(JMPOBJ) \
