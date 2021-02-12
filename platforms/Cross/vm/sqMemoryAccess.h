@@ -5,6 +5,11 @@
  * Last edited: 2013-10-14 12:23:39 by eliot on McStalker
  */
 
+/* This file defines the core types for the VM, sqInt, usqInt et al, and
+ * the memory asccess API for the Smalltalk heap.  Consequently this file
+ * is the minimum required prerequisite for Smalltalk-related code.
+ */
+
 /* Systematic use of the macros defined in this file within the Interpreter,
  * ObjectMemory and plugins will permit all four combinations of 32/64-bit
  * image and 32/64-bit host to compile and run correctly.  (Code that uses
@@ -452,4 +457,18 @@ extern void sqMakeMemoryNotExecutableFromTo(usqInt, usqInt);
 # define VM_FUNCTION_EXPORT(returnType) returnType
 #endif
 
+/* sqPlatformSpecific.h serves a couple of contradictory purposes. One is to
+ * define platforms-specific implementations of facilities such as the EXPORT
+ * macros.  Another is to define platform-specific implementations of support
+ * functions, such as allocating memory, opening files, etc. This file needs
+ * the EXPORT macros, but defines the types needed to define the support APIs.
+ * So there is a circular dependency.  To solve ths sqPlatformSpecific.h only
+ * defines the support APIs if __sqMemoryAccess_h is defined, and this file
+ * arranges to include sqPlatformSpecific.h a second time to allow it to
+ * declare the support funciton API.
+ */
+#if defined(_SQ_PLATFORM_SPECIFIC_H)
+# undef _SQ_PLATFORM_SPECIFIC_H
+# include "sqPlatformSpecific.h"
+#endif
 #endif /* __sqMemoryAccess_h */

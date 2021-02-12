@@ -39,6 +39,7 @@
 #undef sqShrinkMemoryBy
 #undef sqMemoryExtraBytesLeft
 
+#if defined(__sqMemoryAccess_h) // Only define support API if we have sqInt etc
 extern usqInt sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize);
 #define allocateMemoryMinimumImageFileHeaderSize(heapSize, minimumMemory, fileStream, headerSize) \
 sqAllocateMemory(minimumMemory, heapSize)
@@ -93,6 +94,7 @@ typedef off_t squeakFileOffsetType;
 #define sqFilenameFromStringOpen sqFilenameFromString
 
 extern void sqFilenameFromString(char *uxName, sqInt stNameIndex, int sqNameLength);
+#endif // defined(__sqMemoryAccess_h)
 
 #undef dispatchFunctionPointer
 #undef dispatchFunctionPointerOnin

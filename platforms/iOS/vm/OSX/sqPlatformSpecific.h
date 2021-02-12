@@ -73,6 +73,8 @@
 
 #undef sqFilenameFromStringOpen
 #undef sqFilenameFromString
+
+#if defined(__sqMemoryAccess_h) // Only define support API if we have sqInt etc
 void		sqFilenameFromStringOpen(char *buffer,sqInt fileIndex, long fileLength);
 void		sqFilenameFromString(char *buffer,sqInt fileIndex, long fileLength);
 #undef allocateMemoryMinimumImageFileHeaderSize
@@ -125,6 +127,7 @@ int plugInTimeToReturn(void);
 #define browserPluginReturnIfNeeded() if (plugInTimeToReturn()) {ReturnFromInterpret();}
 
 sqInt ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt extentY, sqInt offsetX, sqInt offsetY);
+#endif // defined(__sqMemoryAccess_h)
 
 #if COGVM
 extern int osCogStackPageHeadroom(void);

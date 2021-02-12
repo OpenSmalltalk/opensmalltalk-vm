@@ -64,6 +64,8 @@ typedef FILE *sqImageFile;
 
 #undef sqFilenameFromStringOpen
 #undef sqFilenameFromString
+
+#if defined(__sqMemoryAccess_h) // Only define support API if we have sqInt etc
 void		sqFilenameFromStringOpen(char *buffer,sqInt fileIndex, long fileLength);
 void		sqFilenameFromString(char *buffer,sqInt fileIndex, long fileLength);
 void        sqImageFileClose(sqImageFile f);
@@ -144,6 +146,8 @@ void CopyCStringToPascal(const char* src, Str255 dst);
 sqInt sqGrowMemoryBy(sqInt memoryLimit, sqInt delta);
 sqInt sqShrinkMemoryBy(sqInt memoryLimit, sqInt delta);
 sqInt sqMemoryExtraBytesLeft(int flag);
+#endif // defined(__sqMemoryAccess_h)
+
 #if COGVM
 extern int osCogStackPageHeadroom(void);
 extern void reportMinimumUnusedHeadroom(void);
