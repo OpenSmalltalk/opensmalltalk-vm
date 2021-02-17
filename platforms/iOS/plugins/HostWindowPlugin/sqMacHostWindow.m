@@ -147,14 +147,16 @@ ioSizeOfWindowSetxy(wIndexType windowIndex, sqInt x, sqInt y)
 }
 
 sqInt
-ioSetTitleOfWindow(wIndexType windowIndex, char * newTitle, sqInt sizeOfTitle)
+ioSetTitleOfWindow(wIndexType windowIndex, char *newTitle, sqInt sizeOfTitle)
 {
-	if (windowIndex != 1)
+	NSWindow *window = nsWindowFromIndex(windowIndex);
+
+	if (!window)
 		return 0;
 
     NSString *title = [[NSString alloc] initWithBytes:newTitle length:sizeOfTitle encoding:NSUTF8StringEncoding];
 
-    [[[NSApplication sharedApplication] mainWindow] setTitle: title];
+    [window setTitle: title];
     RELEASEOBJ(title);
 
 	return 1;
