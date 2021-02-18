@@ -49,6 +49,8 @@
 - (sqInt)  ioScreenSize;
 - (sqInt)  ioScreenDepth;
 - (sqInt)  ioHasDisplayDepth: (sqInt) depth;
+- (char *) ioGetTitle;
+- (void)   ioSetTitle: (void *)title length: (int)len;
 - (void)   ioForceDisplayUpdate;
 - (void)   ioSetFullScreen: (sqInt) fullScreen;
 - (int)    ioShowDisplayOnWindow: (unsigned char*) dispBitsIndex

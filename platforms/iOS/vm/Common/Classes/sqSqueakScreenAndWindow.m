@@ -102,6 +102,18 @@ void MyProviderReleaseData (
 	return (w << 16) | (h & 0xFFFF);  /* w is high 16 bits; h is low 16 bits */
 }
 
+- (char *) ioGetTitle { return [gDelegateApp.window.title UTF8String]; }
+
+- (void)   ioSetTitle: (void *)titleBytes length: (int)len {
+
+    NSString *title = [[NSString alloc]
+							initWithBytes: titleBytes
+							length: len
+							encoding: NSUTF8StringEncoding];
+    [gDelegateApp.window setTitle: title];
+    RELEASEOBJ(title);
+}
+
 - (void) ioForceDisplayUpdate {
 	lastFlushTime = [NSDate timeIntervalSinceReferenceDate];
 	self.displayIsDirty = NO;
