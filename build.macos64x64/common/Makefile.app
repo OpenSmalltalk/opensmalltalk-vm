@@ -198,6 +198,7 @@ signapp:
 else
 signapp:
 	rm -rf $(APP)/Contents/MacOS/*.cstemp
+	xattr -cr $(APP)
 	for bundle in $(APP)/Contents/Resources/*.bundle; do \
 		codesign --force --deep -s "$(SIGNING_IDENTITY)" \
 				--timestamp --options=runtime \
