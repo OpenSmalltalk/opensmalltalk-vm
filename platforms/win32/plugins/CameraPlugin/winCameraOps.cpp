@@ -592,10 +592,14 @@ static void
 SetClosestWidthAndFrameRate(IAMStreamConfig *pCameraStream, int desiredWidth)
 {
 	int iCount = 0, iSize = 0;
-	int bestWidth = 1000000;
+	int bestWidth = INT_MAX;
 	AM_MEDIA_TYPE *selectedMediaType = NULL;
 	HRESULT hr;
 	LONGLONG minInterval, maxInterval;
+
+	// If desiredWidth = 0 answer largest (default?)
+	if (!desiredWidth)
+		desiredWidth = INT_MAX;
 
 	// iterate through all possible camera frame formats to find the best frame size
 	hr = pCameraStream->GetNumberOfCapabilities(&iCount, &iSize);

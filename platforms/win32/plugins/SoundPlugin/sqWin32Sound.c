@@ -24,6 +24,7 @@
 #include <ShlObj.h>  /* to use SHGetFolderPath to get preference directory. */
 #include <mmsystem.h>
 #include "sq.h"
+#include "sqWin32.h"
 #include "SoundPlugin.h"
 #include "sqWin32SoundDeviceSelection.h"
 #include "sqDSoundClassFactory.h"
@@ -117,6 +118,7 @@ static FILE *deviceLogFile = NULL;
 
 DeviceInfoList playerDevices;
 DeviceInfoList recorderDevices;
+static int myDeviceChangeCount = 0;
 
 
 static char GUIDString[128];
@@ -331,7 +333,6 @@ flexMixerGetLineInfo(HMIXEROBJ hmxobj, LPMIXERLINE pmxl)
 	return flexMixerGetLineInfo(hmxobj, pmxl);
 }
 
-
 sqInt
 getNumberOfSoundPlayerDevices()
 {
@@ -406,11 +407,22 @@ getNumberOfSoundRecorderDevices()
 	return recorderDevices.deviceCount;
 }
 
+static inline void
+ensureUpToDateDevices()
+{
+	if (!playerDevices.deviceCount
+	 || myDeviceChangeCount < deviceChangeCount)
+		getNumberOfSoundPlayerDevices();
+	if (!recorderDevices.deviceCount
+	 || myDeviceChangeCount < deviceChangeCount)
+		getNumberOfSoundRecorderDevices();
+	myDeviceChangeCount = deviceChangeCount;
+}
+
 char *
 getSoundPlayerDeviceName(sqInt index)
 {
-	if (!playerDevices.deviceCount)
-		getNumberOfSoundPlayerDevices();
+	ensureUpToDateDevices();
 	return (unsigned)index < playerDevices.deviceCount
 			? playerDevices.devices[index].name
 			: (char *)0;
@@ -419,8 +431,7 @@ getSoundPlayerDeviceName(sqInt index)
 char *
 getSoundRecorderDeviceName(sqInt index)
 {
-	if (!recorderDevices.deviceCount)
-		getNumberOfSoundRecorderDevices();
+	ensureUpToDateDevices();
 	return (unsigned)index < recorderDevices.deviceCount
 			? recorderDevices.devices[index].name
 			: (char *)0;
@@ -430,8 +441,7 @@ getSoundRecorderDeviceName(sqInt index)
 char *
 getSoundPlayerDeviceUID(sqInt index)
 {
-	if (!playerDevices.deviceCount)
-		getNumberOfSoundPlayerDevices();
+	ensureUpToDateDevices();
 	return (unsigned)index < playerDevices.deviceCount
 			? printGUID(playerDevices.devices[index].guid)
 			: (char *)0;
@@ -440,8 +450,7 @@ getSoundPlayerDeviceUID(sqInt index)
 char *
 getSoundRecorderDeviceUID(sqInt index)
 {
-	if (!recorderDevices.deviceCount)
-		getNumberOfSoundRecorderDevices();
+	ensureUpToDateDevices();
 	return (unsigned)index < recorderDevices.deviceCount
 			? printGUID(recorderDevices.devices[index].guid)
 			: (char *)0;

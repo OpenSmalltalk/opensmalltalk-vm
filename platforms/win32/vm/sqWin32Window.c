@@ -314,8 +314,10 @@ MainWndProcW(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 
   switch(message) {
   case WM_DEVICECHANGE:
+#if DEBUGVM
 	DPRINTF("WM_DEVICECHANGE deviceChangeCount %d => %d\n",
 			deviceChangeCount, deviceChangeCount + 1);
+#endif
 	deviceChangeCount += 1;
 	break;
 
