@@ -70,10 +70,10 @@ jobs:
     <<: *mac-build
 
   - stage: "Other Linux builds"
-    env: ARCH="linux64x64" FLAVOR="newspeak.cog.spur"
+  #  env: ARCH="linux64x64" FLAVOR="newspeak.cog.spur"
   - env: ARCH="linux64x64" FLAVOR="pharo.cog.spur" HEARTBEAT="itimer"
   # - env: ARCH="linux64x64" FLAVOR="pharo.sista.spur" HEARTBEAT="threaded"
-  - env: ARCH="linux32x86" FLAVOR="newspeak.cog.spur"
+  # - env: ARCH="linux32x86" FLAVOR="newspeak.cog.spur"
   - env: ARCH="linux32x86" FLAVOR="squeak.cog.v3"
   - env: ARCH="linux32x86" FLAVOR="squeak.sista.spur"
   - env: ARCH="linux32x86" FLAVOR="pharo.cog.spur" HEARTBEAT="itimer"
@@ -83,13 +83,13 @@ jobs:
     compiler: clang
 
   - stage: "Other Mac builds"
-    env: ARCH="macos64x64" FLAVOR="newspeak.cog.spur"
-    <<: *mac-build
+  #  env: ARCH="macos64x64" FLAVOR="newspeak.cog.spur"
+  #  <<: *mac-build
   # - env: ARCH="macos64x64" FLAVOR="pharo.sista.spur"
   #   <<: *mac-build
-  - env: ARCH="macos64x64" FLAVOR="pharo.cog.spur.lowcode"
+    env: ARCH="macos64x64" FLAVOR="pharo.cog.spur.lowcode"
     <<: *mac-build
-  - env: ARCH="macos32x86" FLAVOR="newspeak.cog.spur"
+  # - env: ARCH="macos32x86" FLAVOR="newspeak.cog.spur"
     <<: *mac-build
   - env: ARCH="macos32x86" FLAVOR="pharo.sista.spur"
     <<: *mac-build
@@ -101,9 +101,9 @@ jobs:
     <<: *mac-build
 
   - stage: "Stack builds"
-    env: ARCH="linux64x64" FLAVOR="newspeak.stack.spur"
-  - env: ARCH="linux64x64" FLAVOR="squeak.stack.spur"
-  - env: ARCH="linux32x86" FLAVOR="newspeak.stack.spur"
+    env: ARCH="linux64x64" FLAVOR="squeak.stack.spur"
+  # - env: ARCH="linux64x64" FLAVOR="newspeak.stack.spur"
+  # - env: ARCH="linux32x86" FLAVOR="newspeak.stack.spur"
   - env: ARCH="linux32x86" FLAVOR="squeak.stack.spur"
   - env: ARCH="linux32x86" FLAVOR="squeak.stack.v3"
   - env: ARCH="macos64x64" FLAVOR="pharo.stack.spur"
@@ -114,8 +114,8 @@ jobs:
     <<: *mac-build
   - env: ARCH="macos32x86" FLAVOR="newspeak.stack.spur"
     <<: *mac-build
-  - env: ARCH="macos64x64" FLAVOR="newspeak.stack.spur"
-    <<: *mac-build
+  # - env: ARCH="macos64x64" FLAVOR="newspeak.stack.spur"
+  #   <<: *mac-build
   - env: ARCH="macos32x86" FLAVOR="pharo.stack.spur"
     <<: *mac-build
   - env: ARCH="macos32x86" FLAVOR="pharo.stack.spur.lowcode"
@@ -126,15 +126,15 @@ jobs:
     <<: *mac-build
 
   - stage: "linux32ARMv6 builds"
-    env: ARCH="linux32ARMv6" FLAVOR="newspeak.cog.spur" CHROOT="schroot -p -c rpi
-      -- bash -c "
-    dist: trusty
-    group: edge
-  - env: ARCH="linux32ARMv6" FLAVOR="newspeak.stack.spur" CHROOT="schroot -p -c rpi
-      -- bash -c "
-    dist: trusty
-    group: edge
-  - env: ARCH="linux32ARMv6" FLAVOR="squeak.cog.spur" CHROOT="schroot -p -c rpi --
+    # env: ARCH="linux32ARMv6" FLAVOR="newspeak.cog.spur" CHROOT="schroot -p -c rpi
+    #   -- bash -c "
+    # dist: trusty
+    # group: edge
+  # - env: ARCH="linux32ARMv6" FLAVOR="newspeak.stack.spur" CHROOT="schroot -p -c rpi
+   #    -- bash -c "
+    # dist: trusty
+    # group: edge
+    env: ARCH="linux32ARMv6" FLAVOR="squeak.cog.spur" CHROOT="schroot -p -c rpi --
       bash -c "
     dist: trusty
     group: edge
