@@ -9,7 +9,7 @@ CC := clang
 CXX := clang++
 LD := clang
 LDCXX := clang++ # For linking c++ bundles
-CXXVERFLAGS:=-std=c++11 -stdlib=libc++
+CXXVERFLAGS:=-std=c++14 -stdlib=libc++
 
 include ../common/Makefile.flags
 
