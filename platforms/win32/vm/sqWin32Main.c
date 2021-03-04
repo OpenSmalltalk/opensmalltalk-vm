@@ -301,7 +301,7 @@ OutputConsoleString(char *string)
   }
   pos = SendMessageA(consoleWindow,WM_GETTEXTLENGTH, 0,0);
   SendMessageA(consoleWindow, EM_SETSEL, pos, pos);
-  while(*string)
+  while (*string)
     {
       SendMessageA( consoleWindow, WM_CHAR, *string, 1);
       string++;
@@ -1111,7 +1111,7 @@ extern char *__cogitBuildInfo;
     {
       int index = 1;
       char *pluginName;
-      while( (pluginName = ioListLoadedModule(index)) != NULL) {
+      while ( (pluginName = ioListLoadedModule(index)) != NULL) {
 	fprintf(f,"\t%s\n", pluginName);
 	fflush(f);
 	index++;

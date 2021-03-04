@@ -363,9 +363,9 @@ typedef struct _NOTIFYICONDATAA {
 #endif
 
 #if defined(PROFILE) && 0
-#define PROFILE_BEGIN(condition) if(condition) { DWORD __profileTicks = GetTickCount();
+#define PROFILE_BEGIN(condition) if (condition) { DWORD __profileTicks = GetTickCount();
 #define PROFILE_END(variable) variable += GetTickCount() - __profileTicks; }
-#define PROFILE_SHOW(variable) if(variable) {char s[20]; MessageBox(0,itoa(variable, s, 10), "Milliseconds for " #variable, MB_OK); }
+#define PROFILE_SHOW(variable) if (variable) {char s[20]; MessageBox(0,itoa(variable, s, 10), "Milliseconds for " #variable, MB_OK); }
 #else
 #define PROFILE_BEGIN(condition)
 #define PROFILE_END(variable)

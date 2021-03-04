@@ -148,7 +148,7 @@ ioInitTime()
 	TIMECAPS tCaps;
 
 	dwTimerPeriod = 0;
-	if(timeGetDevCaps(&tCaps,sizeof(tCaps)) != 0)
+	if (timeGetDevCaps(&tCaps,sizeof(tCaps)) != 0)
 		return;
 	dwTimerPeriod = tCaps.wPeriodMin;
 	if (timeBeginPeriod(dwTimerPeriod) != 0)

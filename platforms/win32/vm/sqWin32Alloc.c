@@ -67,14 +67,14 @@ void *sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
   maxReserved = MAX_VIRTUAL_MEMORY;
   do {
     pageBase = VirtualAlloc(NULL,maxReserved,MEM_RESERVE, PAGE_NOACCESS);
-    if(!pageBase) {
-      if(maxReserved == nowReserved) break;
+    if (!pageBase) {
+      if (maxReserved == nowReserved) break;
       /* make it smaller in steps of 128MB */
       maxReserved -= 128*1024*1024;
-      if(maxReserved < nowReserved) maxReserved = nowReserved;
+      if (maxReserved < nowReserved) maxReserved = nowReserved;
     }
-  } while(!pageBase);
-  if(!pageBase) {
+  } while (!pageBase);
+  if (!pageBase) {
     sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Error:"),
 		 TEXT("Unable to allocate memory (%d bytes requested)"),
 		 maxReserved);
@@ -82,7 +82,7 @@ void *sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
   }
   /* commit initial memory as requested */
   commit = nowReserved;
-  if(!VirtualAlloc(pageBase, commit, MEM_COMMIT, PAGE_READWRITE)) {
+  if (!VirtualAlloc(pageBase, commit, MEM_COMMIT, PAGE_READWRITE)) {
     sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Error:"),
 		 TEXT("Unable to commit memory (%d bytes requested)"),
 		 commit);
@@ -98,19 +98,19 @@ void *sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
 /************************************************************************/
 int sqGrowMemoryBy(int oldLimit, int delta) {
   /* round delta UP to page size */
-  if(fShowAllocations) {
+  if (fShowAllocations) {
     warnPrintf("Growing memory by %d...", delta);
   }
   delta = (delta + pageSize) & pageMask;
-  if(!VirtualAlloc(pageLimit, delta, MEM_COMMIT, PAGE_READWRITE)) {
-    if(fShowAllocations) {
+  if (!VirtualAlloc(pageLimit, delta, MEM_COMMIT, PAGE_READWRITE)) {
+    if (fShowAllocations) {
       warnPrintf("failed\n");
     }
     /* failed to grow */
     return oldLimit;
   }
   /* otherwise, expand pageLimit and return new top limit */
-  if(fShowAllocations) {
+  if (fShowAllocations) {
     warnPrintf("okay\n");
   }
   pageLimit += delta;
@@ -123,26 +123,26 @@ int sqGrowMemoryBy(int oldLimit, int delta) {
 /************************************************************************/
 int sqShrinkMemoryBy(int oldLimit, int delta) {
   /* round delta DOWN to page size */
-  if(fShowAllocations) {
+  if (fShowAllocations) {
     warnPrintf("Shrinking by %d...",delta);
   }
 #ifdef DO_NOT_SHRINK
   {
     /* Experimental - do not unmap memory and avoid OGL crashes */
-    if(fShowAllocations) warnPrintf(" - ignored\n");
+    if (fShowAllocations) warnPrintf(" - ignored\n");
     return oldLimit;
   }
 #endif
   delta &= pageMask;
-  if(!VirtualFree(pageLimit-delta, delta, MEM_DECOMMIT)) {
-    if(fShowAllocations) {
+  if (!VirtualFree(pageLimit-delta, delta, MEM_DECOMMIT)) {
+    if (fShowAllocations) {
       warnPrintf("failed\n");
     }
     /* failed to shrink */
     return oldLimit;
   }
   /* otherwise, shrink pageLimit and return new top limit */
-  if(fShowAllocations) {
+  if (fShowAllocations) {
     warnPrintf("okay\n");
   }
   pageLimit -= delta;
@@ -161,11 +161,11 @@ int sqMemoryExtraBytesLeft(int includingSwap) {
   mStat.dwLength = sizeof(mStat);
   GlobalMemoryStatus(&mStat);
   bytesLeft = mStat.dwAvailPhys;
-  if(includingSwap) {
+  if (includingSwap) {
     bytesLeft += mStat.dwAvailPageFile;
   };
   /* max bytes is also limited by maxReserved page size */
-  if(bytesLeft > (maxReserved - usedMemory)) {
+  if (bytesLeft > (maxReserved - usedMemory)) {
     bytesLeft = maxReserved - usedMemory;
   }
   return bytesLeft;

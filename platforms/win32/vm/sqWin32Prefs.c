@@ -53,7 +53,7 @@ void SetDeferredUpdate() {
 void SetShowConsole() {
   CheckMenuItem(vmPrefsMenu, ID_SHOWCONSOLE, MF_BYCOMMAND | 
 		(fShowConsole ? MF_CHECKED : MF_UNCHECKED));
-  if(IsWindow(stWindow)) 
+  if (IsWindow(stWindow)) 
     ShowWindow(consoleWindow, fShowConsole ? SW_SHOW : SW_HIDE);
   WritePrivateProfileString(U_GLOBAL,TEXT("ShowConsole"),
 			    fShowConsole ? U_ON:U_OFF,squeakIniName);
@@ -189,8 +189,8 @@ void LoadPreferences()
   /* get image file name from ini file */
   size = GetPrivateProfileStringW(L"Global", L"ImageFile", 
 			 L"", imageNameW, MAX_PATH, squeakIniNameW);
-  if(size > 0) {
-    if( !(imageNameW[0] == L'\\' && imageNameW[1] == L'\\') && !(imageNameW[1] == L':' && imageNameW[2] == L'\\')) {
+  if (size > 0) {
+    if ( !(imageNameW[0] == L'\\' && imageNameW[1] == L'\\') && !(imageNameW[1] == L':' && imageNameW[2] == L'\\')) {
       /* make the path relative to VM directory */
 	  wcscpy(imageNameW, vmNameW);
 	  (wcsrchr(imageNameW, W_BACKSLASH[0]))[1] = 0;
@@ -321,7 +321,7 @@ extern sqInt recordPrimTraceFunc();
   HMENU hMenu,pMenu;
 
   vmPrefsMenu = pMenu = CreatePopupMenu();
-  if(!fEnablePrefsMenu) return;
+  if (!fEnablePrefsMenu) return;
 
   AppendMenu(pMenu,MF_STRING | MF_DISABLED, 0,
 	     TEXT("[VM Preferences]"));
@@ -423,7 +423,7 @@ void TrackPrefsMenu(void) {
 }
 
 void HandlePrefsMenu(int cmd) {
-  switch(cmd) {
+  switch (cmd) {
   case ID_ABOUT: 
     MessageBoxA(stWindow,VM_VERSION_VERBOSE,
 	       "About " VM_NAME " on Win32", MB_OK);

@@ -55,7 +55,7 @@ IDirectInputDevice      *lpDev = NULL;
 
 #define ERROR_CHECK(hResult, errMsg) \
 if(FAILED(hResult)) { \
-  if(printDebugMessages) printf("%s (%s, %d)\n", errMsg, __FILE__, __LINE__); \
+  if (printDebugMessages) printf("%s (%s, %d)\n", errMsg, __FILE__, __LINE__); \
   return hResult; \
 }
 
@@ -105,12 +105,12 @@ HRESULT InitDirectInput( HANDLE hInstance, HWND hWnd )
 
 HRESULT FreeDirectInput()
 {
-  if(lpDev != NULL) {
+  if (lpDev != NULL) {
     lpDev->lpVtbl->Unacquire(lpDev);
     lpDev->lpVtbl->Release(lpDev);
     lpDev = NULL;
   }
-  if(lpDI != NULL) {
+  if (lpDI != NULL) {
     lpDI->lpVtbl->Release(lpDI);
     lpDI = NULL;
   }
@@ -123,8 +123,8 @@ void DumpBufferedMouseTrail(void) {
   DWORD               count;
   HRESULT             hr;
 
-  if(!lpDev) return;
-  while(1) {
+  if (!lpDev) return;
+  while (1) {
     count = 1;
     hr = lpDev->lpVtbl->GetDeviceData(lpDev,
 				      sizeof(DIDEVICEOBJECTDATA), 
@@ -135,14 +135,14 @@ void DumpBufferedMouseTrail(void) {
     if (hr == DIERR_INPUTLOST) {
       /* re-aquire the device if possible */
       hr = lpDev->lpVtbl->Acquire(lpDev);
-      if(FAILED(hr) || hr == S_FALSE) {
+      if (FAILED(hr) || hr == S_FALSE) {
 	/* sorry, can't do it */
 	break;
       }
       continue; /* start over reading */
     }
 
-    if(FAILED(hr) || count == 0) {
+    if (FAILED(hr) || count == 0) {
       /* no data or error */
       break;
     }
@@ -166,14 +166,14 @@ void GetBufferedMouseTrail(DWORD firstTick, DWORD lastTick,
 
   /* printf("[%d@%d] -- %d\n", x, y, lastTick - firstTick);*/
 
-  if(!lpDev) return;
+  if (!lpDev) return;
 
   seqNum = 0;
   nextX = lastX;
   nextY = lastY;
   numExtra = 0;
 
-  while(1) {
+  while (1) {
     count = 1;
     hr = lpDev->lpVtbl->GetDeviceData(lpDev,
 				      sizeof(DIDEVICEOBJECTDATA), 
@@ -184,31 +184,31 @@ void GetBufferedMouseTrail(DWORD firstTick, DWORD lastTick,
     if (hr == DIERR_INPUTLOST) {
       /* re-aquire the device if possible */
       hr = lpDev->lpVtbl->Acquire(lpDev);
-      if(FAILED(hr) || hr == S_FALSE) {
+      if (FAILED(hr) || hr == S_FALSE) {
 	/* sorry, can't do it */
 	break;
       }
       continue; /* start over reading */
     }
 
-    if(FAILED(hr) || count == 0) {
+    if (FAILED(hr) || count == 0) {
       /* no data or error */
       break;
     }
 
     /* if data arrived before first tick, ignore it */
-    if(data.dwTimeStamp <= firstTick) continue;
+    if (data.dwTimeStamp <= firstTick) continue;
 
     /* if data arrives at or after last tick, we're done */
-    if(data.dwTimeStamp >= lastTick) break;
+    if (data.dwTimeStamp >= lastTick) break;
 
     /* otherwise process it */
     switch (data.dwOfs) {
       case DIMOFS_X:
       case DIMOFS_Y:
-	if(seqNum != 0 && seqNum != data.dwSequence) {
+	if (seqNum != 0 && seqNum != data.dwSequence) {
 	  /* flush last event */
-	  if(numExtra < BUFFER_SIZE) {
+	  if (numExtra < BUFFER_SIZE) {
 	    xData[numExtra] = nextX;
 	    yData[numExtra] = nextY;
 	    stampData[numExtra] = timeStamp;
@@ -218,7 +218,7 @@ void GetBufferedMouseTrail(DWORD firstTick, DWORD lastTick,
 	}
 	timeStamp = data.dwTimeStamp;
 	seqNum = data.dwSequence;
-	if(data.dwOfs == DIMOFS_X) {
+	if (data.dwOfs == DIMOFS_X) {
 	  nextX += (int)data.dwData;
 	} else {
 	  nextY += (int)data.dwData;
@@ -233,19 +233,19 @@ void GetBufferedMouseTrail(DWORD firstTick, DWORD lastTick,
     }
   }
 
-  if(seqNum != 0 && (numExtra < BUFFER_SIZE)) {
+  if (seqNum != 0 && (numExtra < BUFFER_SIZE)) {
     xData[numExtra] = nextX;
     yData[numExtra] = nextY;
     stampData[numExtra] = timeStamp;
     numExtra++;
   }
-  if(numExtra > 0) {
+  if (numExtra > 0) {
     int i;
     /* check if lastX and lastY match what we got from the proto event.
        we need this as windows settings can affect the mouse events,
        and we really want to fill the stuff obtained here so that it
        matches in/out as close as possible. */
-    if(nextX != proto->x || nextY != proto->y) {
+    if (nextX != proto->x || nextY != proto->y) {
       /* rescale the trail to fit proto's expectations */
       int protoDx = proto->x - lastX;
       int protoDy = proto->y - lastY;
@@ -275,7 +275,7 @@ void SetupDirectInput(void) {
   HRESULT hr;
   FreeDirectInput();
   hr = InitDirectInput(hInstance, stWindow);
-  if(FAILED(hr)) {
+  if (FAILED(hr)) {
     FreeDirectInput();
   }
 }

@@ -40,7 +40,7 @@ void sqServiceControl(DWORD dwCtrlCode);
 void sqServiceMainFunction(DWORD dwArgc, LPWSTR *lpszArgv);
 
 #define failOn(condition, msg)\
-   if(condition)\
+   if (condition)\
      {\
        printLastError(msg);\
        return 0;\
@@ -55,7 +55,7 @@ char *printCommandLine()
 
   *buffer = 0;
 
-  if(dwMemorySize) /* need -memory: mb */
+  if (dwMemorySize) /* need -memory: mb */
     {
       wcsncat(buffer,L"-memory: ",1024 - 1 - wcslen(buffer));
 	  wcsncat(buffer, _ltow(dwMemorySize, lbuf, 10),1024 - 1 - wcslen(buffer));
@@ -76,7 +76,7 @@ char *printCommandLine()
    }
  }
 #endif /* STACKVM */
-  if(*logName) /* need -log: "logName" */
+  if (*logName) /* need -log: "logName" */
     {
 	  wcsncat(buffer, L"-log: \"",1024 - 1 - wcslen(buffer));
       wcsncat(buffer, logName,1024 - 1 - wcslen(buffer));
@@ -108,11 +108,11 @@ sqStartService(LPCWSTR serviceName)
   failOn(!schSCManager, TEXT("OpenSCManager failed"));
 
   schService = OpenServiceW(schSCManager, serviceName, SERVICE_ALL_ACCESS);
-  if(schService)
+  if (schService)
     {
       /* This may take some time */
       SetCursor(LoadCursor(NULL,IDC_WAIT));
-      if(StartService(schService, 0, NULL))
+      if (StartService(schService, 0, NULL))
         ok = 1;
       else
         printLastError(TEXT("StartService failed"));
@@ -142,7 +142,7 @@ sqChangeServiceConfig(LPCWSTR serviceName, DWORD startType)
   schService = OpenServiceW(schSCManager, serviceName, SERVICE_ALL_ACCESS);
   if (schService != NULL)
     {
-      if(ChangeServiceConfig(schService,
+      if (ChangeServiceConfig(schService,
                              SERVICE_WIN32_OWN_PROCESS,
                              startType,
                              SERVICE_ERROR_IGNORE,
@@ -187,7 +187,7 @@ sqRemoveService(LPCWSTR serviceName)
   else
     {
       ret = DeleteService(schService);
-      if(!ret)
+      if (!ret)
         printLastError(TEXT("DeleteService failed"));
       CloseServiceHandle(schService);
     }
@@ -226,16 +226,16 @@ sqInstallService(LPCWSTR serviceName, LPCWSTR serviceExe)
     CloseServiceHandle(schService);
   else
     {
-      if(GetLastError() == ERROR_SERVICE_EXISTS)
+      if (GetLastError() == ERROR_SERVICE_EXISTS)
         {
           /* The service already exists - ask the user to remove it */
-          if(MessageBoxW(0,L"A service of this name already exists. Try to remove it?",
+          if (MessageBoxW(0,L"A service of this name already exists. Try to remove it?",
                         serviceName, MB_YESNOCANCEL) == IDYES)
             {
               /* Now close the service manager ... */
               CloseServiceHandle(schSCManager);
               /* ... delete the old service ...  */
-              if(sqRemoveService(serviceName))
+              if (sqRemoveService(serviceName))
               /* ... and try again ... */
                 return sqInstallService(serviceName,serviceExe);
             }
@@ -262,7 +262,7 @@ void sqServiceInstall(void)
 
   /* get the VM name */
   GetModuleFileNameW(hInstance,tmp, 255);
-  if(!sqInstallService(serviceName, tmp))
+  if (!sqInstallService(serviceName, tmp))
     {
       warnPrintf("The service has NOT been installed.");
       return;
@@ -270,7 +270,7 @@ void sqServiceInstall(void)
   /* Create a new key for our service */
   _snwprintf(tmp,1024,L"SYSTEM\\CurrentControlSet\\Services\\%s\\Startup",serviceName);
   ok = RegCreateKeyW(HKEY_LOCAL_MACHINE, tmp, &hk);
-  if(ok != ERROR_SUCCESS)
+  if (ok != ERROR_SUCCESS)
     {
       printLastError(TEXT("RegCreateKey failed"));
       return;
@@ -282,7 +282,7 @@ void sqServiceInstall(void)
       REG_EXPAND_SZ,                          /* value type            */
       (LPBYTE) imageNameW,                    /* address of value data */
       (wcslen(imageNameW)+1)*sizeof(WCHAR));  /* length of value data  */
-  if(ok != ERROR_SUCCESS)
+  if (ok != ERROR_SUCCESS)
     {
       printLastError(TEXT("RegSetValueEX failed"));
       return;
@@ -294,7 +294,7 @@ void sqServiceInstall(void)
       REG_EXPAND_SZ,                       /* value type            */
       (LPBYTE) logName,                    /* address of value data */
       wcslen(logName) + 1)*sizeof(WCHAR);  /* length of value data */
-  if(ok != ERROR_SUCCESS)
+  if (ok != ERROR_SUCCESS)
     {
       printLastError(TEXT("RegSetValueEX failed"));
       return;
@@ -306,25 +306,25 @@ void sqServiceInstall(void)
       REG_DWORD,                /* value type            */
       (LPBYTE) &dwMemorySize,   /* address of value data */
       sizeof(DWORD));           /* length of value data  */
-  if(ok != ERROR_SUCCESS)
+  if (ok != ERROR_SUCCESS)
     {
       printLastError(TEXT("RegSetValueEX failed"));
       return;
     }
   RegCloseKey(hk);
   /* Successfully finished install */
-  if(MessageBoxW(0,L"Service installation successful. "
+  if (MessageBoxW(0,L"Service installation successful. "
                   L"Do you wish to start the service automatically on system startup?", 
                   serviceName,MB_YESNOCANCEL) == IDYES)
     {
-      if(!sqChangeServiceConfig(serviceName, SERVICE_AUTO_START))
+      if (!sqChangeServiceConfig(serviceName, SERVICE_AUTO_START))
         warnPrintf("The service was NOT configured.\n"
                    "Please go to control panel and configure the service manually.\n");
     }
-  if(MessageBoxW(0,L"Do you wish to start the service right now?",
+  if (MessageBoxW(0,L"Do you wish to start the service right now?",
                   serviceName,MB_YESNOCANCEL) == IDYES)
     {
-      if(!sqStartService(serviceName))
+      if (!sqStartService(serviceName))
         warnPrintf("The service was NOT started.\n"
                    "Please go to the control panel and start the service manually.\n");
     }
@@ -373,7 +373,7 @@ DWORD WINAPI sqThreadMain(DWORD ignored)
   /* Create a new key for our service */
   _snwprintf(tmpString,MAX_PATH+1,L"SYSTEM\\CurrentControlSet\\Services\\%s\\Startup",serviceName);
   ok = RegOpenKeyW(HKEY_LOCAL_MACHINE, tmpString, &hk);
-  if(ok != ERROR_SUCCESS)
+  if (ok != ERROR_SUCCESS)
     {
       sqStopService(L"Failed to open registry for startup parameters");
       TerminateThread(GetCurrentThread(), 0);
@@ -381,7 +381,7 @@ DWORD WINAPI sqThreadMain(DWORD ignored)
   /* Read the image name from the subkey. */
   dwSize = MAX_PATH*sizeof(WCHAR);
   ok = RegQueryValueExW(hk,L"Image",NULL, &dwType, (LPBYTE) imageNameW, &dwSize);
-  if(ok != ERROR_SUCCESS || dwType != REG_EXPAND_SZ)
+  if (ok != ERROR_SUCCESS || dwType != REG_EXPAND_SZ)
     {
       sqStopService(L"Failed to read the image name from registry");
       TerminateThread(GetCurrentThread(), 0);
@@ -391,7 +391,7 @@ DWORD WINAPI sqThreadMain(DWORD ignored)
   /* Read the log file name from the subkey. */
   dwSize = MAX_PATH*sizeof(WCHAR);
   ok = RegQueryValueExW(hk,L"Log",NULL, &dwType, (LPBYTE) &tmpString, &dwSize);
-  if(ok != ERROR_SUCCESS || dwType != REG_EXPAND_SZ)
+  if (ok != ERROR_SUCCESS || dwType != REG_EXPAND_SZ)
     {
       sqStopService(L"Failed to read the log file name from registry");
       TerminateThread(GetCurrentThread(), 0);
@@ -402,7 +402,7 @@ DWORD WINAPI sqThreadMain(DWORD ignored)
   /* Read the memory size from the subkey. */
   dwSize = sizeof(DWORD);
   ok = RegQueryValueExW(hk,L"Memory",NULL, &dwType, (LPBYTE) &dwMemorySize, &dwSize);
-  if(ok != ERROR_SUCCESS || dwType != REG_DWORD)
+  if (ok != ERROR_SUCCESS || dwType != REG_DWORD)
     {
       sqStopService(L"Failed to read the memory amount from registry");
       TerminateThread(GetCurrentThread(), 0);
@@ -459,7 +459,7 @@ void sqServiceMainFunction(DWORD dwArgc, LPWSTR *lpszArgv)
                      NULL,                    /* parameter for thread   */
                      STACK_SIZE_PARAM_IS_A_RESERVATION, /* creation parameter -- create running*/
                      &id);                    /* return value for thread id */
-    if(!threadHandle) goto cleanup;
+    if (!threadHandle) goto cleanup;
 
     /* report the status to the service control manager. */
     if (!ReportStatusToSCMgr( SERVICE_RUNNING, NO_ERROR,0, 0))
@@ -474,7 +474,7 @@ void sqServiceMainFunction(DWORD dwArgc, LPWSTR *lpszArgv)
     WaitForMultipleObjects(2, eventList,FALSE, INFINITE);
 
     /* somebody wants us terminated */
-    if(threadHandle)
+    if (threadHandle)
       TerminateThread(threadHandle,0);
 
     sqEventLogMessage(TEXT("The service was stopped"));
@@ -503,12 +503,12 @@ void sqServiceControl(DWORD dwCtrlCode)
     DWORD  dwState = SERVICE_RUNNING;
 
     /* Handle the requested control code. */
-    switch(dwCtrlCode) {
+    switch (dwCtrlCode) {
         case SERVICE_CONTROL_PAUSE:
           /* Pause the service if it is running. */
           if (ssStatus.dwCurrentState == SERVICE_RUNNING) 
             {
-              if(threadHandle) SuspendThread(threadHandle);
+              if (threadHandle) SuspendThread(threadHandle);
               dwState = SERVICE_PAUSED;
             }
           break;
@@ -516,7 +516,7 @@ void sqServiceControl(DWORD dwCtrlCode)
           /* Resume the paused service. */
           if (ssStatus.dwCurrentState == SERVICE_PAUSED) 
             {
-              if(threadHandle) ResumeThread(threadHandle);
+              if (threadHandle) ResumeThread(threadHandle);
               dwState = SERVICE_RUNNING;
             }
           break;
