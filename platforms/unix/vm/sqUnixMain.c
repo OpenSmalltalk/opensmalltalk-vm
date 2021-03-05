@@ -799,11 +799,7 @@ void clipboardWriteWithType(char *data, size_t nData, char *typeName, size_t nTy
   dpy->clipboardWriteWithType(data, nData, typeName, nTypeNames, isDnd, isClaiming);
 }
 
-sqInt ioGetButtonState(void)		{ return dpy->ioGetButtonState(); }
-sqInt ioPeekKeystroke(void)		{ return dpy->ioPeekKeystroke(); }
-sqInt ioGetKeystroke(void)		{ return dpy->ioGetKeystroke(); }
 sqInt ioGetNextEvent(sqInputEvent *evt)	{ return dpy->ioGetNextEvent(evt); }
-sqInt ioMousePoint(void)		{ return dpy->ioMousePoint(); }
 
 /*** Window labeling ***/
 char* ioGetWindowLabel(void) {return "";}

@@ -49,14 +49,6 @@ typedef struct
 
     sqInt (*getNextEvent)(sqInputEvent *evt);
 
-    sqInt (*getButtonState)(void);
-
-    sqInt (*getKeystroke)(void);
-
-    sqInt (*mousePoint)(void);
-
-    sqInt (*peekKeystroke)(void);
-
     sqInt (*processEvents)(void);
 
     double (*screenScaleFactor)(void);

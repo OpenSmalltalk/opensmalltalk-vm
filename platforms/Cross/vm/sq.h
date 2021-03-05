@@ -350,13 +350,11 @@ sqInt ioDisablePowerManager(sqInt disableIfNonZero);
    without event support.
 */
 
-sqInt ioGetButtonState(void);
-sqInt ioGetKeystroke(void);
-sqInt ioMousePoint(void);
-sqInt ioPeekKeystroke(void);
 /* Note: In an event driven architecture, ioProcessEvents is obsolete.
    It can be implemented as a no-op since the image will check for
    events at regular intervals.
+   eem 2021/3/5 not sure this is true; isn't it calls of ioProcessEvents
+   that allows signals of the inputSDemaphore to be generated?
  */
 sqInt ioProcessEvents(void);
 

@@ -181,30 +181,6 @@ ioGetNextEvent(sqInputEvent *evt)
 }
 
 sqInt
-ioGetButtonState(void)
-{
-    return currentWindowSystem->getButtonState();
-}
-
-sqInt
-ioGetKeystroke(void)
-{
-    return currentWindowSystem->getKeystroke();
-}
-
-sqInt
-ioMousePoint(void)
-{
-    return currentWindowSystem->mousePoint();
-}
-
-sqInt
-ioPeekKeystroke(void)
-{
-    return currentWindowSystem->peekKeystroke();
-}
-
-sqInt
 ioProcessEvents(void)
 {
     if(ioProcessEventsHandler)

@@ -18,10 +18,6 @@
 	The following are essential for display and user interaction:
 		ioScreenSize()
 		ioShowDisplay()
-		ioGetButtonState()
-		ioGetKeystroke()
-		ioMousePoint()
-		ioPeekKeystroke()
 
 	The following can be made no-ops:
 		ioProcessEvents() 	-- poll for input events on some platforms
@@ -429,28 +425,6 @@ int ioExit(void) {
 
 int ioForceDisplayUpdate(void) {
 	/* does nothing on a Mac */
-}
-
-int ioGetButtonState(void) {
-	/* return the state of the mouse and modifier buttons */
-	ioProcessEvents();  /* process all pending events */
-	return buttonState;
-}
-
-int ioGetKeystroke(void) {
-	/* return the next keystroke from the buffer or -1 if the buffer is empty */
-	int keystate;
-
-	ioProcessEvents();  /* process all pending events */
-	if (keyBufGet == keyBufPut) {
-		return -1;  /* keystroke buffer is empty */
-	} else {
-		keystate = keyBuf[keyBufGet];
-		keyBufGet = (keyBufGet + 1) % KEYBUF_SIZE;
-		/* set modifer bits in buttonState to reflect the last keystroke fetched */
-		buttonState = ((keystate >> 5) & 0xF8) | (buttonState & 0x7);
-	}
-	return keystate;
 }
 
 unsigned int ioMicroMSecs(void) {

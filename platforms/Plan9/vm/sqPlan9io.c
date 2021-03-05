@@ -285,41 +285,6 @@ sqInt ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenF
 	return 0;
 }
 
-/* Mouse/Keyboard */
-sqInt ioGetButtonState(void) {
-	int left = mouse_button_state & 1;
-	int middle = (mouse_button_state & 2) >> 1;
-	int right = (mouse_button_state & 4) >> 2;
-	return RedButtonBit*left | YellowButtonBit*middle | BlueButtonBit*right;
-}
-
-sqInt ioMousePoint(void) {
-	return ((mouse_position.x & 0xFFFF) << 16) | (mouse_position.y & 0xFFFF);
-}
-
-sqInt ioGetKeystroke(void) {
-	int k = evts_start;
-	while (k != evts_end) {
-		if (evts[k].type == EventTypeKeyboard) {
-			evts_start = (k+1) % EVT_BUFFER_SIZE;
-			return ((sqKeyboardEvent)evts[k]).charCode;
-		}
-		k = (k+1) % EVT_BUFFER_SIZE;
-	}
-	return 0;
-}
-
-sqInt ioPeekKeystroke(void) {
-	int k = evts_start;
-	while (k != evts_end) {
-		if (evts[k].type == EventTypeKeyboard) {
-			return ((sqKeyboardEvent)evts[k]).charCode;
-		}
-		k = (k+1) % EVT_BUFFER_SIZE;
-	}
-	return 0;
-}
-
 /* Return 1 if values were set, or 0 if no charcode could be made */
 static int splitRune(int rune, int* charCode, int* modifiers) {
 	static int escapeNext = 0;

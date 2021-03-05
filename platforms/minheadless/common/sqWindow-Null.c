@@ -138,30 +138,6 @@ sqNull_getNextEvent(sqInputEvent *evt)
 }
 
 static sqInt
-sqNull_getButtonState(void)
-{
-    return 0;
-}
-
-static sqInt
-sqNull_getKeystroke(void)
-{
-    return 0;
-}
-
-static sqInt
-sqNull_mousePoint(void)
-{
-    return 0;
-}
-
-static sqInt
-sqNull_peekKeystroke(void)
-{
-    return 0;
-}
-
-static sqInt
 sqNull_processEvents(void)
 {
     return 0;

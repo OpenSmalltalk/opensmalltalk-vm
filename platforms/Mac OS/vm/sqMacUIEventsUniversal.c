@@ -131,10 +131,6 @@ MAKETHESESTATIC int inputSemaphoreIndex = 0;/* if non-zero the event semaphore i
 
  int buttonState = 0;		/* mouse button and modifier state when mouse
 							   button went down or 0 if not pressed */
- int cachedButtonState = 0;	/* buffered mouse button and modifier state for
-							   last mouse click even if button has since gone up;
-							   this cache is kept until the next time ioGetButtonState()
-							   is called to avoid missing short clicks */
 int gButtonIsDown = 0;
 int windowActive = 0;		/* positive indicates the active window */
 
@@ -267,66 +263,6 @@ ioGetNextEvent(sqInputEvent *evt)
 		return ioGetNextEvent(evt);
 	}
 	return true;
-}
-
-sqInt
-ioGetButtonState(void)
-{
-	ioProcessEvents();
-	if ((cachedButtonState & 0x7) != 0) {
-		int result = cachedButtonState;
-		cachedButtonState = 0;  /* clear cached button state */
-		return result;
-	}
-	cachedButtonState = 0;  /* clear cached button state */
-	return buttonState;
-}
-
-sqInt
-ioGetKeystroke(void)
-{
-	int keystate;
-
-	    ioProcessEvents();
-	if (keyBufGet == keyBufPut) {
-		return -1;  /* keystroke buffer is empty */
-	} else {
-		keystate = keyBuf[keyBufGet];
-		keyBufGet = (keyBufGet + 1) % KEYBUF_SIZE;
-		/* set modifer bits in buttonState to reflect the last keystroke fetched */
-		buttonState = ((keystate >> 5) & 0xF8) | (buttonState & 0x7);
-	}
-	return keystate;
-}
-
-sqInt
-ioMousePoint(void)
-{
-	Point p;
-
-	    ioProcessEvents();
-	if (windowActive) {
-		p = carbonMousePosition;
-	} else {
-		/* don't report mouse motion if window is not active */
-		p = savedMousePosition;
-	}
-	return (p.h << 16) | (p.v & 0xFFFF);  /* x is high 16 bits; y is low 16 bits */
-}
-
-sqInt
-ioPeekKeystroke(void)
-{
-	int keystate;
-	    ioProcessEvents();
-	if (keyBufGet == keyBufPut) {
-		return -1;  /* keystroke buffer is empty */
-	} else {
-		keystate = keyBuf[keyBufGet];
-		/* set modifer bits in buttonState to reflect the last keystroke peeked at */
-		buttonState = ((keystate >> 5) & 0xF8) | (buttonState & 0x7);
-	}
-	return keystate;
 }
 
 void
@@ -1009,8 +945,6 @@ recordMouseEventCarbon(EventRef event,UInt32 whatHappened,Boolean noPointConvers
 	carbonMousePosition = where;
 
 	buttonState = MouseModifierStateCarbon(event,whatHappened);
- 	cachedButtonState = cachedButtonState | buttonState;
-
 
         if (whatHappened == kEventMouseWheelMoved) {
             GetEventParameter( event,

@@ -190,7 +190,6 @@ int recordMouseDown(WPARAM, LPARAM);
 int recordModifierButtons();
 int recordKeystroke(UINT,WPARAM,LPARAM);
 int recordVirtualKey(UINT,WPARAM,LPARAM);
-void recordMouse(void);
 void SetSystemTrayIcon(BOOL on);
 void HideSplashScreen(void);
 
@@ -1461,30 +1460,6 @@ sqInt ioGetNextEvent(sqInputEvent *evt) {
 /*              State based primitive set                                   */
 /****************************************************************************/
 
-sqInt ioGetKeystroke(void)
-{
-  int keystate;
-  ioProcessEvents();  /* process all pending events */
-  if (keyBufGet == keyBufPut) return -1;  /* keystroke buffer is empty */
-  keystate= keyBuf[keyBufGet];
-  keyBufGet= (keyBufGet + 1) % KEYBUF_SIZE;
-  /* set modifer bits in buttonState to reflect the last keystroke fetched */
-  buttonState= ((keystate >> 5) & 0xF8) | (buttonState & 0x7);
-  return keystate;
-}
-
-sqInt ioPeekKeystroke(void)
-{
-  int keystate;
-  ioProcessEvents();  /* process all pending events */
-  if (keyBufGet == keyBufPut) return -1;  /* keystroke buffer is empty */
-  keystate= keyBuf[keyBufGet];
-  /* set modifer bits in buttonState to reflect the last keystroke peeked at */
-  buttonState= ((keystate >> 5) & 0xF8) | (buttonState & 0x7);
-  return keystate;
-}
-
-
 void recordKey(int keystate)
 {
   keyBuf[keyBufPut]= keystate;
@@ -1593,41 +1568,6 @@ int recordModifierButtons()
   /* button state: low three bits are mouse buttons; next 4 bits are modifier bits */
   buttonState= modifiers | (buttonState & 0x7);
   return 1;
-}
-
-sqInt ioGetButtonState(void)
-{
-  if (fReduceCPUUsage || (fReduceCPUInBackground && !fHasFocus)) {
-    MSG msg;
-    /* Delay execution of squeak if
-       - there is currently no button pressed
-       - there is currently no mouse event in the input queue
-       by at most 5 msecs. This will reduce cpu load during idle times.
-    */
-    if ((buttonState & 0x7) == 0 &&
-       !PeekMessage(&msg, stWindow, WM_MOUSEFIRST, WM_MOUSELAST, PM_NOREMOVE))
-      MsgWaitForMultipleObjects(0,NULL,0,5, QS_MOUSE);
-  }
-  ioProcessEvents();  /* process all pending events */
-  return buttonState;
-}
-
-sqInt ioMousePoint(void)
-{
-  if (fReduceCPUUsage || (fReduceCPUInBackground && !fHasFocus)) {
-    MSG msg;
-    /* Delay execution of squeak if
-       - there is currently no button pressed
-       - there is currently no mouse event in the input queue
-       by at most 5 msecs. This will reduce cpu load during idle times.
-    */
-    if ((buttonState & 0x7) == 0 &&
-       !PeekMessage(&msg, stWindow, WM_MOUSEFIRST, WM_MOUSELAST, PM_NOREMOVE))
-      MsgWaitForMultipleObjects(0,NULL,0,5, QS_MOUSE);
-  }
-  ioProcessEvents();  /* process all pending events */
-  /* x is high 16 bits; y is low 16 bits */
-  return (mousePosition.x << 16) | (mousePosition.y);
 }
 
 /****************************************************************************/

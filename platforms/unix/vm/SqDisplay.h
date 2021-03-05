@@ -7,7 +7,7 @@ extern int    uxDropFileCount;
 extern char **uxDropFileNames;
 
 #define SqDisplayVersionMajor	1
-#define SqDisplayVersionMinor	5
+#define SqDisplayVersionMinor	6
 #define SqDisplayVersion	((SqDisplayVersionMajor << 16) | (SqDisplayVersionMinor))
 
 #if (REALIZE_OPENGL_H)
@@ -53,11 +53,7 @@ struct SqDisplay
   sqInt  (*dndOutAcceptedType)(char *type, int ntype);
   void   (*dndOutSend)(char *bytes, int nbytes);
   sqInt  (*dndReceived)(char *fileName);
-  sqInt  (*ioGetButtonState)(void);
-  sqInt  (*ioPeekKeystroke)(void);
-  sqInt  (*ioGetKeystroke)(void);
   sqInt  (*ioGetNextEvent)(sqInputEvent *evt);
-  sqInt  (*ioMousePoint)(void);
   /* OpenGL */
   void  *(*ioGetDisplay)(void);
   void  *(*ioGetWindow)(void);
@@ -132,11 +128,7 @@ static struct SqDisplay display_##NAME##_itf= {	\
   display_dndOutAcceptedType,  			\
   display_dndOutSend,				\
   display_dndReceived,				\
-  display_ioGetButtonState,			\
-  display_ioPeekKeystroke,			\
-  display_ioGetKeystroke,			\
   display_ioGetNextEvent,			\
-  display_ioMousePoint,				\
   display_ioGetDisplay,				\
   display_ioGetWindow,				\
   display_ioGLinitialise,			\
