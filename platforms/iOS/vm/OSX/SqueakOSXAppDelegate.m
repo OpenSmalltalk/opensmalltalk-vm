@@ -38,6 +38,7 @@
 
 #import "SqueakOSXAppDelegate.h"
 #import "sqSqueakOSXApplication.h"
+#import "sqSqueakOSXApplication+events.h"
 #import "sqSqueakOSXScreenAndWindow.h"
 #import "sqMacHostWindow.h"
 #import "sqSqueakOSXInfoPlistInterface.h"
@@ -59,7 +60,7 @@ SqueakOSXAppDelegate *gDelegateApp;
 
 @implementation SqueakOSXAppDelegate
 
-@synthesize window,mainView,possibleImageNameAtLaunchTime,checkForFileNameOnFirstParm,windowHandler;
+@synthesize window,mainView,possibleImageNameAtLaunchTime,checkForFileNameOnFirstParm,windowHandler,dragItems;
 
 - (sqSqueakMainApplication *) makeApplicationInstance {
 	return AUTORELEASEOBJ([[sqSqueakOSXApplication alloc] init]);
@@ -67,6 +68,12 @@ SqueakOSXAppDelegate *gDelegateApp;
 
 - (void)applicationWillFinishLaunching:(NSNotification *)aNotification {
 	self.checkForFileNameOnFirstParm = YES;
+	dragItems = NULL;
+	
+	NSAppleEventManager *appleEventManager = [NSAppleEventManager sharedAppleEventManager];
+	[appleEventManager setEventHandler:self
+					   andSelector:@selector(handleGetURLEvent:withReplyEvent:)
+					 forEventClass:kInternetEventClass andEventID:kAEGetURL];
 }
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
@@ -79,6 +86,9 @@ SqueakOSXAppDelegate *gDelegateApp;
 		gDelegateApp = self;	
 		self.squeakApplication = [self makeApplicationInstance];
 		[self.squeakApplication setupEventQueue];
+		// Push the startup schema and open file events into the event queue.
+		if(self.dragItems && [self.dragItems count] > 0)
+			[(sqSqueakOSXApplication *) self.squeakApplication recordURLEvent: SQDragDrop numberOfFiles: [self.dragItems count]];
 		[self singleThreadStart];
 //	[self workerThreadStart];
 	}
@@ -86,6 +96,24 @@ SqueakOSXAppDelegate *gDelegateApp;
 #ifdef PharoVM
      [[NSUserNotificationCenter defaultUserNotificationCenter] setDelegate:self];
 #endif
+}
+
+- (void)handleGetURLEvent:(NSAppleEventDescriptor *)event withReplyEvent:(NSAppleEventDescriptor *)replyEvent
+{
+	NSString* urlString = [[event paramDescriptorForKeyword:keyDirectObject] stringValue];
+	NSURL *url = [NSURL URLWithString: urlString];
+	dragItems = [NSMutableArray arrayWithCapacity: 1];
+	[dragItems addObject: url];
+	
+	if(self.squeakApplication)
+		[(sqSqueakOSXApplication *) self.squeakApplication recordURLEvent: SQDragDrop numberOfFiles: 1];
+}
+
+- (NSURL*) dragURIAtIndex: (sqInt) index {
+	if (!self.dragItems || index < 1 || index > [self.dragItems count])
+		return NULL;
+	
+	return (self.dragItems)[(NSUInteger) index - 1];
 }
 
 #ifdef PharoVM
@@ -185,13 +213,34 @@ SqueakOSXAppDelegate *gDelegateApp;
 #endif
 }
 
-- (BOOL)application:(NSApplication *)theApplication openFile:(NSString *)fileName {
-	if (self.checkForFileNameOnFirstParm == YES) {
-		self.checkForFileNameOnFirstParm = NO;
-		self.possibleImageNameAtLaunchTime = fileName;
+- (BOOL) isImageFile: (NSString *) filePath
+{
+ 	NSFileManager *dfm = [NSFileManager defaultManager];
+	BOOL isDirectory;
+
+	[dfm fileExistsAtPath: filePath isDirectory: &isDirectory];
+
+	if (isDirectory) 
+		return NO;
+
+	BOOL fileIsReadable = [[NSFileManager defaultManager] isReadableFileAtPath: filePath];
+
+	if (fileIsReadable == NO)
+		return NO;
+
+	if ([[[filePath lastPathComponent] pathExtension] compare: @"image" options: NSCaseInsensitiveSearch] ==   NSOrderedSame)
 		return YES;
-	} else {
-		if ([(sqSqueakOSXApplication*)self.squeakApplication isImageFile: fileName] == YES) {
+
+	return NO;
+}
+
+- (BOOL)application:(NSApplication *)theApplication openFile:(NSString *)fileName {
+	if([self isImageFile: fileName] == YES) {
+		if (self.checkForFileNameOnFirstParm == YES) {
+			self.checkForFileNameOnFirstParm = NO;
+			self.possibleImageNameAtLaunchTime = fileName;
+			return YES;
+		} else {
 			NSURL *url = [NSURL fileURLWithPath:[[NSBundle mainBundle] bundlePath]];
 			LSLaunchURLSpec launchSpec;
 			launchSpec.appURL = (CFURLRef)CFBridgingRetain(url);
@@ -205,7 +254,17 @@ SqueakOSXAppDelegate *gDelegateApp;
 #pragma unused(err)
 		}
 	}
+	else
+	{
+		NSURL *url = [NSURL fileURLWithPath: fileName];
+		dragItems = [NSMutableArray arrayWithCapacity: 1];
+		[dragItems addObject: url];
 		
+		if(self.squeakApplication)
+			[(sqSqueakOSXApplication *) self.squeakApplication recordURLEvent: SQDragDrop numberOfFiles: 1];
+		return YES;
+	}
+	
 	return NO;
 }
 

@@ -46,6 +46,9 @@
 #import "sqSqueakOSXApplication+imageReadWrite.h"
 #import "sqSqueakOSXApplication+attributes.h"
 #import "sqSqueakOSXViewFactory.h"
+#import "SqueakOSXAppDelegate.h"
+
+extern SqueakOSXAppDelegate *gDelegateApp;
 
 #if !defined(IMAGE_DIALECT_NAME)
 # if NewspeakVM
@@ -594,23 +597,7 @@ static char *getVersionInfo(int verbose);
 
 - (BOOL) isImageFile: (NSString *) filePath
 {
- 	NSFileManager *dfm = [NSFileManager defaultManager];
-	BOOL isDirectory;
-
-	[dfm fileExistsAtPath: filePath isDirectory: &isDirectory];
-
-	if (isDirectory) 
-		return NO;
-
-	BOOL fileIsReadable = [[NSFileManager defaultManager] isReadableFileAtPath: filePath];
-
-	if (fileIsReadable == NO)
-		return NO;
-
-	if ([[[filePath lastPathComponent] pathExtension] compare: @"image" options: NSCaseInsensitiveSearch] ==   NSOrderedSame)
-		return YES;
-
-	return NO;
+	return [gDelegateApp isImageFile: filePath];
 }
 
 @end

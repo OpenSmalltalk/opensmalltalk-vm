@@ -55,7 +55,6 @@
 - (NSUInteger) countNumberOfNoneSqueakImageFilesInDraggedFiles: (id<NSDraggingInfo>)info;
 - (NSMutableArray *) filterOutSqueakImageFilesFromDraggedURIs: (id<NSDraggingInfo>)info;
 - (NSMutableArray *) filterSqueakImageFilesFromDraggedFiles: (id<NSDraggingInfo>)info;
-- (NSURL*) dragURIAtIndex:(sqInt) index;
 - (void) drawThelayers;
 - (void) preDrawThelayers;
 - (void) drawImageUsingClip: (CGRect) clip;
