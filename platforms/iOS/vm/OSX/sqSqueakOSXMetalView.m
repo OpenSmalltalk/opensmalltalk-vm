@@ -106,7 +106,7 @@ static NSString *stringWithCharacter(unichar character) {
 
 @implementation sqSqueakOSXMetalView
 @synthesize squeakTrackingRectForCursor,lastSeenKeyBoardStrokeDetails,
-lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,lastFrameSize,fullScreenInProgress,fullScreendispBitsIndex,graphicsCommandQueue;
+lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSize,fullScreenInProgress,fullScreendispBitsIndex,graphicsCommandQueue;
 
 + (BOOL) isMetalViewSupported {
 	// Try to create the MTL system device.
@@ -164,16 +164,10 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	
 	dragInProgress = NO;
 	dragCount = 0;
-	dragItems = NULL;
 	clippyIsEmpty = YES;
 	colorspace = CGColorSpaceCreateDeviceRGB();
 	[self initializeSqueakColorMap];
     [[NSNotificationCenter defaultCenter] addObserver:self selector: @selector(didEnterFullScreen:) name:@"NSWindowDidEnterFullScreenNotification" object:nil];
-	
-	NSAppleEventManager *appleEventManager = [NSAppleEventManager sharedAppleEventManager];
-	[appleEventManager setEventHandler:self
-					   andSelector:@selector(handleGetURLEvent:withReplyEvent:)
-					 forEventClass:kInternetEventClass andEventID:kAEGetURL];
 }
 
 - (void) didEnterFullScreen: (NSNotification*) aNotification {
@@ -837,13 +831,13 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: SQDragLeave numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex view: self];
 	self.dragCount = 0;
 	self.dragInProgress = NO;
-	self.dragItems = NULL;
+	gDelegateApp.dragItems = NULL;
 }
 
 - (BOOL) performDragOperation: (id<NSDraggingInfo>)info {
 //    NSLog(@"performDragOperation %@",info);
 	if (self.dragCount) {
-		self.dragItems = [self filterOutSqueakImageFilesFromDraggedURIs: info];
+		gDelegateApp.dragItems = [self filterOutSqueakImageFilesFromDraggedURIs: info];
 		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: SQDragDrop numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex view: self];
 	}
 
@@ -865,23 +859,6 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 
 	dragInProgress = NO;
 	return YES;
-}
-
-- (void)handleGetURLEvent:(NSAppleEventDescriptor *)event withReplyEvent:(NSAppleEventDescriptor *)replyEvent
-{
-	NSString* urlString = [[event paramDescriptorForKeyword:keyDirectObject] stringValue];
-	NSURL *url = [NSURL URLWithString: urlString];
-	dragItems = [NSMutableArray arrayWithCapacity: 1];
-	[dragItems addObject: url];
-	
-	[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordURLEvent: SQDragDrop numberOfFiles: 1];
-}
-
-- (NSURL*) dragURIAtIndex: (sqInt) index {
-	if (!self.dragItems || index < 1 || index > [self.dragItems count])
-		return NULL;
-	
-	return (self.dragItems)[(NSUInteger) index - 1];
 }
 
 - (BOOL)ignoreModifierKeysWhileDragging {

@@ -580,7 +580,9 @@ yZero()
 	evt.windowIndex =  0;
 	[self pushEventToQueue: (sqInputEvent *) &evt];
 
-	interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
+	// interpreterProxy is nil when injecting events before startup.
+	if(interpreterProxy)
+		interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
 }
 
 - (void) recordWindowEvent: (int) windowEventType window: (NSWindow *) window {

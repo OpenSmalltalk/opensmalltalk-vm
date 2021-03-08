@@ -58,7 +58,6 @@
 	int		dragCount;
 	BOOL	firstDrawCompleted;
 	BOOL	syncNeeded;
-	NSMutableArray*  dragItems;
 	CGDisplayFadeReservationToken    fadeToken;
 	CGColorSpaceRef colorspace;
 	unsigned int*      colorMap32;

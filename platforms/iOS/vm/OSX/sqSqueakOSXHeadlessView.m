@@ -51,7 +51,7 @@ static NSString *stringWithCharacter(unichar character) {
 
 @implementation sqSqueakOSXHeadlessView
 @synthesize squeakTrackingRectForCursor,lastSeenKeyBoardStrokeDetails,
-lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,savedScreenBoundsAtTimeOfFullScreen;
+lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreenBoundsAtTimeOfFullScreen;
 
 #pragma mark Initialization / Release
 
@@ -76,7 +76,6 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
     [self registerForDraggedTypes: [NSArray arrayWithObjects: NSFilenamesPboardType, nil]];
 	dragInProgress = NO;
 	dragCount = 0;
-	dragItems = NULL;
 	clippyIsEmpty = YES;
 	colorspace = CGColorSpaceCreateDeviceRGB();
 }

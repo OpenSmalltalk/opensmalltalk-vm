@@ -39,7 +39,9 @@
 #include "sqMacHostWindow.h"
 #include "sq.h"
 #import "sqSqueakOSXView.h"
+#import "SqueakOSXAppDelegate.h"
 
+extern SqueakOSXAppDelegate *gDelegateApp;
 extern struct VirtualMachine* interpreterProxy;
 
 sqInt dropInit(void) {
@@ -51,8 +53,7 @@ sqInt dropShutdown(void) {
 };
 
 char *dropRequestFileName(sqInt dropIndex) {
-	NSView <sqSqueakOSXView> *view = [((sqSqueakOSXScreenAndWindow*)((__bridge NSWindow *)windowHandleFromIndex(1)).delegate) getMainViewOnWindow];
-	NSURL *dragURIAtIndex = [view dragURIAtIndex: dropIndex];
+	NSURL *dragURIAtIndex = [gDelegateApp dragURIAtIndex: dropIndex];
 	if(!dragURIAtIndex || !dragURIAtIndex.fileURL)
 		return NULL;
 	
@@ -60,8 +61,7 @@ char *dropRequestFileName(sqInt dropIndex) {
 }
 
 char *dropRequestURI(sqInt dropIndex) {
-	NSView <sqSqueakOSXView> *view = [((sqSqueakOSXScreenAndWindow*)((__bridge NSWindow *)windowHandleFromIndex(1)).delegate) getMainViewOnWindow];
-	NSURL *dragURIAtIndex = [view dragURIAtIndex: dropIndex];
+	NSURL *dragURIAtIndex = [gDelegateApp dragURIAtIndex: dropIndex];
 	if(!dragURIAtIndex)
 		return NULL;
 	

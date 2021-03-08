@@ -58,7 +58,7 @@ static NSString *stringWithCharacter(unichar character) {
 
 @implementation sqSqueakOSXCGView
 @synthesize squeakTrackingRectForCursor,lastSeenKeyBoardStrokeDetails,
-lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,savedScreenBoundsAtTimeOfFullScreen;
+lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreenBoundsAtTimeOfFullScreen;
 
 #pragma mark Initialization / Release
 
@@ -83,14 +83,8 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
     [self registerForDraggedTypes: [NSArray arrayWithObjects: NSFilenamesPboardType, nil]];
 	dragInProgress = NO;
 	dragCount = 0;
-	dragItems = NULL;
 	clippyIsEmpty = YES;
 	colorspace = CGColorSpaceCreateDeviceRGB();
-	
-	NSAppleEventManager *appleEventManager = [NSAppleEventManager sharedAppleEventManager];
-	[appleEventManager setEventHandler:self
-					   andSelector:@selector(handleGetURLEvent:withReplyEvent:)
-					 forEventClass:kInternetEventClass andEventID:kAEGetURL];
 }
 
 - (void) initializeVariables {
@@ -618,12 +612,12 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: SQDragLeave numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex  view: self];
 	self.dragCount = 0;
 	self.dragInProgress = NO;
-	self.dragItems = NULL;
+	gDelegateApp.dragItems = NULL;
 }
 
 - (BOOL) performDragOperation: (id<NSDraggingInfo>)info {
 	if (self.dragCount) {
-		self.dragItems = [self filterOutSqueakImageFilesFromDraggedURIs: info];
+		gDelegateApp.dragItems = [self filterOutSqueakImageFilesFromDraggedURIs: info];
 		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: SQDragDrop numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex  view: self];
 	}
 	
@@ -648,24 +642,6 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	dragInProgress = NO;
 	return YES;
 }
-
-- (void)handleGetURLEvent:(NSAppleEventDescriptor *)event withReplyEvent:(NSAppleEventDescriptor *)replyEvent
-{
-	NSString* urlString = [[event paramDescriptorForKeyword:keyDirectObject] stringValue];
-	NSURL *url = [NSURL URLWithString: urlString];
-	dragItems = [NSMutableArray arrayWithCapacity: 1];
-	[dragItems addObject: url];
-	
-	[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordURLEvent: SQDragDrop numberOfFiles: 1];
-}
-
-- (NSURL*) dragURIAtIndex: (sqInt) index {
-	if (!self.dragItems || index < 1 || index > [self.dragItems count])
-		return NULL;
-	
-	return (self.dragItems)[(NSUInteger) index - 1];
-}
-
 
 - (BOOL)ignoreModifierKeysWhileDragging {
 	return YES;
