@@ -203,7 +203,15 @@ SqueakVideoGrabber *grabbers[CAMERA_COUNT];
   [captureSession autorelease];
 #endif
   [captureSession beginConfiguration]; 
-  NSString *preset = NULL;
+  NSString *preset = NULL, *bestPreset = NULL, *bestPresetBelow = NULL;
+  int bestWidthBelow = 0, bestHeightBelow = 0;
+  int bestWidth = INT_MAX / 2, bestHeight = INT_MAX / 2;
+
+	// Choose the configuration. If there is an exact match, choose that.
+	// Otherwise choose the closest less than or equal to the desired size.
+	// If desiredWidth is zero and desiredHeight is zero, select the default
+	// (the largest available). Because smaller sizes may be unavailable, also
+	// find the best fit if no size smaller than the requested is available.
 
 #define USEPRESETFOR(p, w, h, h2) \
   if ([captureSession canSetSessionPreset: p]) { \
@@ -212,10 +220,44 @@ SqueakVideoGrabber *grabbers[CAMERA_COUNT];
 	  width = desiredWidth; \
 	  height = desiredHeight; \
 	} \
-	else if (!preset && !desiredWidth && !desiredHeight) { \
-	    preset = p; \
-		width = w; \
-		height = h; \
+	else if (!preset) { \
+		if (desiredWidth) { \
+			if (abs(desiredWidth - w) < abs(desiredWidth - bestWidth)) { \
+				bestPreset = p; \
+				bestWidth = w; \
+				bestHeight = h; \
+			} \
+			if (desiredWidth <= w && w > bestWidthBelow \
+			 && (desiredHeight <= h || desiredHeight <= h2)) { \
+				bestPresetBelow = p; \
+				bestWidthBelow = w; \
+				bestHeightBelow = h; \
+			} \
+		} \
+		else if (desiredHeight) { \
+			if (abs(desiredHeight - h) < abs(desiredHeight - bestHeight)) { \
+				bestPreset = p; \
+				bestWidth = w; \
+				bestHeight = h; \
+			} \
+			if (desiredWidth <= w) { \
+				if (desiredHeight <= h && h > bestHeightBelow) { \
+					bestPresetBelow = p; \
+					bestWidthBelow = w; \
+					bestHeightBelow = h; \
+				} \
+				else if (desiredHeight <= h2 && h2 > bestHeightBelow) { \
+					bestPresetBelow = p; \
+					bestWidthBelow = w; \
+					bestHeightBelow = h2; \
+				} \
+			} \
+		} \
+		else { \
+			preset = p; \
+			width = w; \
+			height = h; \
+		} \
 	} \
   }
 
@@ -231,6 +273,20 @@ SqueakVideoGrabber *grabbers[CAMERA_COUNT];
 
 //  IOS only
 //  USEPRESETFOR(AVCaptureSessionPreset1920x1080, 1920, 1080, 1440);
+
+  if (!preset) {
+	if (bestPresetBelow
+	 && (bestWidthBelow <= desiredWidth || bestHeightBelow <= desiredHeight)) {
+		preset = bestPresetBelow;
+		width = bestWidthBelow;
+		height = bestHeightBelow;
+	}
+	else {
+		preset = bestPreset;
+		width = bestWidth;
+		height = bestHeight;
+	}
+  }
 
 #undef USEPRESETFOR
 
