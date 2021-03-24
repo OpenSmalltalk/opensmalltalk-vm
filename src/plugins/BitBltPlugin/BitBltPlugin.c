@@ -1852,6 +1852,7 @@ copyBitsFallback(operation_t *op, unsigned int flags)
 		ungammaLookupTable = (void *) op->opt.componentAlpha.ungammaLookupTable;
 	}
 	destPPW = 32 / destDepth;
+	sourcePPW = 32 / sourceDepth;
 	cmBitsPerColor = 0;
 	if (cmMask == 0x1FF) {
 		cmBitsPerColor = 3;
