@@ -2,7 +2,7 @@
 set -e
 # assert VM with VM profiler and threaded heartbeat
 INSTALLDIR=assert/sqcogspurlinuxhtRPi
-OPT="-m32 -g3 -O1 -DDEBUGVM=0"
+OPT="-g3 -O1 -DDEBUGVM=0"
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
