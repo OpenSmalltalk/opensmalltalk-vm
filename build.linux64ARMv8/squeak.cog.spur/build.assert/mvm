@@ -21,6 +21,7 @@ test -f plugins.ext || (test -f ../plugins.ext && cp -p ../plugins.ext . || cp -
 test -f config.h || ../../../platforms/unix/config/configure \
 	--with-vmversion=5.0 --with-src=spur64src \
 	--without-vm-display-fbdev --without-npsqueak \
+	--enable-fast-bitblt \
 	CFLAGS="$MACHINE $OPT -DCOGMTVM=0 -DDUAL_MAPPED_CODE_ZONE=1" \
 	LIBS="-lrt"
 
