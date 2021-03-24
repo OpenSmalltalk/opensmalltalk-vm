@@ -1863,6 +1863,14 @@ copyBitsFallback(operation_t *op, unsigned int flags)
 	if (cmMask == 0x7FFF) {
 		cmBitsPerColor = 5;
 	}
+	/* In some places, sourceForm and destForm are compared in order to detect
+	 * whether we're reading and writing the same image. However, these have
+	 * not always been initialised by the time we get here, so substitute
+	 * sourceBits and destBits if so. */
+	if (sourceForm == 0 && destForm == 0) {
+	    sourceForm = sourceBits;
+	    destForm = destBits;
+	}
 	/* begin tryCopyingBitsQuickly */
 	if (noSource) {
 		done = 0;
