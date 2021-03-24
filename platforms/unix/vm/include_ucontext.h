@@ -3,7 +3,7 @@
 *   FILE:    include_ucontext.h
 *   CONTENT: Unix include machinery for accessing the ucontext_t * parameter
 *			 in a signal handler, which gives access to register state.
-*			 statistical profiling of the VM
+*			 Used for crash reports and statistical profiling of the VM.
 *
 *   AUTHOR:  Eliot Miranda
 *   ADDRESS: 
