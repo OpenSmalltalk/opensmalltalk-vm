@@ -6392,9 +6392,13 @@ rgbComponentAlphawith(sqInt sourceWord, sqInt destinationWord)
 	sqInt v;
 
 	alpha = sourceWord;
+#if 0
+	/* This is not a valid optimisation because alpha == 0 can change the destination
+	 * due to rounding errors in blending and/or in gamma lookup round-trip */
 	if (alpha == 0) {
 		return destinationWord;
 	}
+#endif
 	/* begin partitionedRgbComponentAlpha:dest:nBits:nPartitions: */
 
 	/* partition mask starts at the right */
