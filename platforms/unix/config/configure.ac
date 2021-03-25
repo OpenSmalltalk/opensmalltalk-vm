@@ -490,6 +490,10 @@ AH_TOP([/* config.h.in -- template for config.h			-*- C -*-
 
 #ifndef __sq_config_h
 #define __sq_config_h
+
+#ifdef _FEATURES_H
+#error This file was included too late. Please make sure it is included earlier
+#endif
 ])
 
 AH_TEMPLATE([VM_DLSYM_PREFIX],[Once used to specify mangled names on Mac OS, left for documentation purposes])
