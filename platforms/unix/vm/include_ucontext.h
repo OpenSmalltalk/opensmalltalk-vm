@@ -11,11 +11,8 @@
 *
 *****************************************************************************/
  
-#if __linux__
-# if !defined(__USE_GNU)
-#	define UNDEF__USE_GNU 1
-#	define __USE_GNU /* to get register defines in sys/ucontext.h */
-# endif
+#if __linux__ && !defined(_GNU_SOURCE)
+# error Compiler with GNU Extensions required to access register names
 #endif
 #ifdef __OpenBSD__
 # include <sys/signal.h>
@@ -24,9 +21,6 @@
 # include <ucontext.h>
 #else
 # include <sys/ucontext.h>
-#endif
-#if __linux__ && UNDEF__USE_GNU
-# undef __USE_GNU
 #endif
 
 #if __APPLE__ && __MACH__ && __DARWIN_UNIX03
