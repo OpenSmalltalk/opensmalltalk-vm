@@ -205,6 +205,37 @@ static void fastPathSourceWord32_32(operation_t *op, uint32_t flags)
 	} while (--height > 0);
 }
 
+static void fastPathAlphaBlend32_32(operation_t *op, uint32_t flags)
+{
+    IGNORE(flags);
+    COPY_OP_TO_LOCALS(op, uint32_t, uint32_t);
+    uint32_t *src = srcBits + srcPitch * srcY + srcX;
+    uint32_t *dest = destBits + destPitch * destY + destX;
+    srcPitch -= width;
+    destPitch -= width;
+    do {
+        uint32_t remain = width;
+        do {
+            uint32_t s = *src++;
+            uint32_t d = *dest;
+            unsigned int alpha = (s >> 24) & 0xFF;
+            unsigned int unAlpha = 0xFF - alpha;
+            uint32_t sAG = ((s >> 8) & 0xFF) | 0xFF0000;
+            uint32_t sRB = s & 0xFF00FF;
+            uint32_t dAG = (d >> 8) & 0xFF00FF;
+            uint32_t dRB = d & 0xFF00FF;
+            uint32_t blendAG = sAG * alpha + dAG * unAlpha + 0xFF00FF;
+            uint32_t blendRB = sRB * alpha + dRB * unAlpha + 0xFF00FF;
+            blendAG = ((((blendAG >> 8) & 0xFF00FF) + blendAG) >> 8) & 0xFF00FF;
+            blendRB = ((((blendRB >> 8) & 0xFF00FF) + blendRB) >> 8) & 0xFF00FF;
+            d = (blendAG << 8) | blendRB;
+            *dest++ = d;
+        } while (--remain > 0);
+        src += srcPitch;
+        dest += destPitch;
+    } while (--height > 0);
+}
+
 
 static void fastPathRightToLeft(operation_t *op, uint32_t flags)
 {
@@ -453,6 +484,7 @@ static fast_path_t fastPaths[] = {
 		{ fastPathSourceWord0_32_scalar, CR_sourceWord,      STD_FLAGS_NO_SOURCE(32,SCALAR) },
 
 		{ fastPathSourceWord32_32,       CR_sourceWord,      STD_FLAGS(32,32,NO,NO) &~ FAST_PATH_H_OVERLAP },
+		{ fastPathAlphaBlend32_32,       CR_alphaBlend,      STD_FLAGS(32,32,NO,NO) },
 		{ fastPathNoOp,                  CR_destinationWord, 0 },
 
 		/* Some special fast paths to extend the abilities of the others in corner cases */
