@@ -18401,7 +18401,7 @@ aarch64)
 # Check whether --enable-fast-bitblt was given.
 if test "${enable_fast_bitblt+set}" = set; then :
   enableval=$enable_fast_bitblt;  if   test "x$enableval" = "xyes" ; then
-      bitblt_objs="BitBltPlugin.o BitBltDispatch.o BitBltGeneric.o"
+      bitblt_objs="BitBltPlugin.o BitBltArm64.o BitBltDispatch.o BitBltGeneric.o"
       bitblt_flags="-DENABLE_FAST_BLT"
    fi
 

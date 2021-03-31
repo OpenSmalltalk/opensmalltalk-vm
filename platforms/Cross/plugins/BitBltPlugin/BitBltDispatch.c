@@ -32,6 +32,7 @@
 
 #include "BitBltDispatch.h"
 #include "BitBltArm.h"
+#include "BitBltArm64.h"
 #include "BitBltGeneric.h"
 #include "BitBltInternal.h"
 
@@ -202,7 +203,9 @@ void initialiseCopyBits(void)
 #ifdef __arm__
 	addArmFastPaths();
 #endif
-
+#ifdef __aarch64__
+	addArm64FastPaths();
+#endif
 }
 
 void addFastPaths(fast_path_t *paths, size_t n)
@@ -315,6 +318,55 @@ void copyBitsDispatch(operation_t *op)
 				 * each pixel has value 0 or not (note that non-zero pixels that
 				 * reduce to 0 when bit-packed use lookup index 1)
 				 */
+#ifdef __aarch64__
+				if (op->cmMask >= 15 && (op->cmMask & (op->cmMask + 1)) == 0) {
+					uint32_t value = (*op->cmLookupTable)[1];
+					uint32_t *ptr = (*op->cmLookupTable) + 2;
+					uint32_t *end = (*op->cmLookupTable) + 16;
+					for (; ptr != end; ++ptr)
+						if (*ptr != value)
+							break;
+					if (ptr == end) {
+						uint64_t result0, result1;
+						end += op->cmMask + 1 - 16;
+						__asm__ volatile (
+								"dup     v16.4s, %w[value]               \n\t"
+								"movi    v4.16b, #0                      \n\t"
+								"movi    v5.16b, #0                      \n\t"
+								"movi    v6.16b, #0                      \n\t"
+								"movi    v7.16b, #0                      \n\t"
+								"1:                                      \n\t"
+								"ld1     {v0.16b-v3.16b}, [%[ptr]], #64  \n\t"
+								"eor     v0.16b, v0.16b, v16.16b         \n\t"
+								"eor     v1.16b, v1.16b, v16.16b         \n\t"
+								"eor     v2.16b, v2.16b, v16.16b         \n\t"
+								"eor     v3.16b, v3.16b, v16.16b         \n\t"
+								"orr     v4.16b, v4.16b, v0.16b          \n\t"
+								"orr     v5.16b, v5.16b, v1.16b          \n\t"
+								"orr     v6.16b, v6.16b, v2.16b          \n\t"
+								"orr     v7.16b, v7.16b, v3.16b          \n\t"
+								"cmp     %[ptr], %[end]                  \n\t"
+								"b.ne    1b                              \n\t"
+								"orr     v4.16b, v4.16b, v5.16b          \n\t"
+								"orr     v6.16b, v6.16b, v7.16b          \n\t"
+								"orr     v4.16b, v4.16b, v6.16b          \n\t"
+								"mov     %[result0], v4.d[0]             \n\t"
+								"mov     %[result1], v4.d[1]             \n\t"
+						: /* Outputs */
+								    [ptr]"+r"(ptr),
+								[result0]"=r"(result0),
+								[result1]"=r"(result1)
+						: /* Inputs */
+								  [value]"r"(value),
+								    [end]"r"(end)
+						: /* Clobbers */
+								"cc"
+						);
+						if (result0 == 0 && result1 == 0)
+							flags |= FAST_PATH_1BIT_COLOR_MAP;
+					}
+				}
+#else
 				usqInt i;
 				flags |= FAST_PATH_1BIT_COLOR_MAP;
 				for (i = op->cmMask; i >= 2; --i) {
@@ -323,6 +375,7 @@ void copyBitsDispatch(operation_t *op)
 						break;
 					}
 				}
+#endif
 				if ((flags & FAST_PATH_1BIT_COLOR_MAP) == 0) {
 					if (op->src.depth == 32) {
 						if (op->cmMask == 0x7FFF && memcmp(op->cmMaskTable, maskTable85, sizeof maskTable85) == 0 && memcmp(op->cmShiftTable, shiftTable85, sizeof shiftTable85) == 0)

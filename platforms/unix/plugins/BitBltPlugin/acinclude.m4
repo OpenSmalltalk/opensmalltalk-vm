@@ -22,7 +22,7 @@ aarch64)
 AC_ARG_ENABLE(fast-bitblt,
  [  --enable-fast-bitblt enable fast BitBlt optimizations (default=no)],
  [ if   test "x$enableval" = "xyes" ; then
-      bitblt_objs="BitBltPlugin.o BitBltDispatch.o BitBltGeneric.o"
+      bitblt_objs="BitBltPlugin.o BitBltArm64.o BitBltDispatch.o BitBltGeneric.o"
       bitblt_flags="-DENABLE_FAST_BLT"
    fi
  ],
