@@ -9,6 +9,24 @@
 #ifndef _SQ_H
 #define _SQ_H
 
+
+#ifdef HAVE_CONFIG_H
+/* If HAVE_CONFIG_H is given (most presumably on the command line)
+ * it is safe to include the (#define-only) config.h.
+ * On prominent platforms, these defines must precede any inlcudes.
+ * To quote feature_test_macros(7) on Linux:
+ *   NOTE:  In  order to be effective, a feature test macro must be defined before including any header files.
+ *
+ * config.h provides these macros, either manually specified or
+ * through means of configuration (eg. autoconf/configure).
+ *
+ * Having these defines early does not hurt platforms not using this
+ * system but is vital on platforms using it. Hence it comes early
+ */
+#include "config.h"
+#endif
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
