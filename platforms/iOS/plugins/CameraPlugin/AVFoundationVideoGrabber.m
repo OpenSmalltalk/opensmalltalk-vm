@@ -128,7 +128,7 @@ SqueakVideoGrabber *grabbers[CAMERA_COUNT];
 	}
 	else if (currentWidth != width
 		  || currentHeight != height) {
-		if (currentWidth * currentHeight < width * height) {
+		if (currentWidth * currentHeight > width * height) {
 			if (pixels)
 				free(pixels);
 			pixels = malloc(currentWidth * currentHeight * 4);
