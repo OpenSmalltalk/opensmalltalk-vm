@@ -11,6 +11,7 @@
  */
 
 #include "sqVirtualMachine.h"
+#include "sqMemoryFence.h"
 #include "CameraPlugin.h"
 extern struct VirtualMachine *interpreterProxy;
 
@@ -27,8 +28,8 @@ extern struct VirtualMachine *interpreterProxy;
 #endif
 
 #if defined(MAC_OS_X_VERSION_10_14)
-static canAccessCamera = false;
-static askedToAccessCamera = false;
+static unsigned char canAccessCamera = false;
+static unsigned char askedToAccessCamera = false;
 
 static void
 askToAccessCamera()
@@ -92,12 +93,18 @@ void printDevices();
   AVCaptureSession			*captureSession;
   dispatch_queue_t			 queue;
   unsigned int				*pixels;
+  int						 pixelsByteSize;
+  void						*bufferAOrNil;
+  void						*bufferBOrNil;
+  sqInt						 bufferSize;
   sqInt						 frameCount;
   int						 deviceID;
   int						 width;
   int						 height;
   int						 semaphoreIndex;
-  bool						 bInitCalled;
+  unsigned char				 errorCode;
+  unsigned char				 bInitCalled;
+  unsigned char				 useBNotA;
 }
 @end
 
@@ -120,29 +127,49 @@ SqueakVideoGrabber *grabbers[CAMERA_COUNT];
 	CVImageBufferRef imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
 	int currentWidth = CVPixelBufferGetWidth(imageBuffer);
 	int currentHeight = CVPixelBufferGetHeight(imageBuffer);
+	void *theBuffer;
+	int alreadyHaveErrorCondition = errorCode;
 
-	if (!pixels) {
-		pixels = malloc(currentWidth * currentHeight * 4);
-		width = currentWidth;
-		height = currentHeight;
-	}
-	else if (currentWidth != width
-		  || currentHeight != height) {
-		if (currentWidth * currentHeight > width * height) {
-			if (pixels)
-				free(pixels);
-			pixels = malloc(currentWidth * currentHeight * 4);
+	width = currentWidth;
+	height = currentHeight;
+	if (bufferAOrNil) {
+		if (bufferBOrNil) {
+			theBuffer = useBNotA
+							? bufferBOrNil
+							: bufferAOrNil;
+			useBNotA = !useBNotA;
 		}
-		width = currentWidth;
-		height = currentHeight;
+		else
+			theBuffer = bufferAOrNil;
+		if (currentWidth * currentHeight * 4 > bufferSize)
+			errorCode = PrimErrWritePastObject;
 	}
-	CVPixelBufferLockBaseAddress(imageBuffer, 0);
-	memcpy(	pixels,
-			CVPixelBufferGetBaseAddress(imageBuffer),
-			currentWidth * currentHeight * 4);
-	CVPixelBufferUnlockBaseAddress(imageBuffer, 0);
+	else {
+		// No synchronization with CameraSetFrameBuffers et al.
+		// We assume this is in a higher-priority thread than Smalltalk.
+		if (pixels
+		 && currentWidth * currentHeight * 4 > pixelsByteSize) {
+			free(pixels);
+			pixels = 0;
+		}
+		if (!pixels) {
+			pixels = malloc(pixelsByteSize = currentWidth * currentHeight * 4);
+			if (!pixels) {
+				pixelsByteSize = 0;
+				errorCode = PrimErrNoCMemory;
+			}
+		}
+		theBuffer = pixels;
+	}
+	if (!errorCode) {
+		CVPixelBufferLockBaseAddress(imageBuffer, 0);
+		memcpy(	theBuffer,
+				CVPixelBufferGetBaseAddress(imageBuffer),
+				currentWidth * currentHeight * 4);
+		CVPixelBufferUnlockBaseAddress(imageBuffer, 0);
+	}
 	frameCount++;
-	if (semaphoreIndex > 0)
+	if (semaphoreIndex > 0 && !alreadyHaveErrorCondition)
 		interpreterProxy->signalSemaphoreWithIndex(semaphoreIndex);
 }
 
@@ -321,11 +348,6 @@ SqueakVideoGrabber *grabbers[CAMERA_COUNT];
   [captureSession startRunning];
 
   bInitCalled = YES;
-  if (pixels) {
-	unsigned int *the_pixels = pixels;
-	pixels = NULL;
-	free(the_pixels);
-  }
   frameCount = 0;
   semaphoreIndex = -1;
   grabbers[deviceID] = self;
@@ -347,14 +369,19 @@ SqueakVideoGrabber *grabbers[CAMERA_COUNT];
     for (AVCaptureOutput *output1 in captureSession.outputs)
       [captureSession removeOutput: output1];
     [captureSession stopRunning];
-	unsigned int *the_pixels = pixels;
-    pixels = NULL;
-    free(the_pixels);
-    frameCount = 0;
-    bInitCalled = NO;
+	// No need to free pixels carefully since camera is no longer running.
+    if (pixels) {
+		free(pixels);
+		pixels = NULL;
+		pixelsByteSize = 0;
+	}
+	frameCount = errorCode = 0;
+    bInitCalled = useBNotA = NO;
     captureSession = NULL;
     captureOutput = NULL;
     captureInput = NULL;
+	bufferAOrNil = bufferBOrNil = 0;
+	bufferSize = 0;
     grabbers[cameraNum-1] = NULL;
   }
 }
@@ -451,16 +478,23 @@ CameraExtent(sqInt cameraNum)
 sqInt
 CameraGetFrame(sqInt cameraNum, unsigned char *buf, sqInt pixelCount)
 {
-  if (cameraNum<1 || cameraNum>CAMERA_COUNT)
+  if (cameraNum < 1 || cameraNum > CAMERA_COUNT)
 	return -1;
   SqueakVideoGrabber *grabber = grabbers[cameraNum-1];
   if (!grabber)
 	return -1;
-  if (grabber->pixels) {
+  if (grabber->errorCode) {
+	int theCode = grabber->errorCode;
+	grabber->errorCode = 0;
+	return -theCode;
+  }
+  if (grabber->pixels || grabber->bufferAOrNil) {
     int ourFrames = grabber->frameCount;
+	if (grabber->pixels) {
 #define min(a,b) ((a)<=(b)?(a):(b))
-	long actualPixelCount = grabber->width * grabber->height;
-    memcpy(buf, grabber->pixels, min(pixelCount,actualPixelCount) * 4);
+		long actualPixelCount = grabber->width * grabber->height;
+		memcpy(buf, grabber->pixels, min(pixelCount,actualPixelCount) * 4);
+	}
     grabber->frameCount = 0;
     return ourFrames;
   }
@@ -507,6 +541,43 @@ CameraSetSemaphore(sqInt cameraNum, sqInt semaphoreIndex)
 		return 0;
 	}
 	return PrimErrNotFound;
+}
+
+// primSetCameraBuffers ensures buffers are pinned non-pointer objs if non-null
+sqInt
+CameraSetFrameBuffers(sqInt cameraNum, sqInt bufferA, sqInt bufferB)
+{
+  SqueakVideoGrabber *grabber;
+
+  if (cameraNum < 1
+   || cameraNum > CAMERA_COUNT
+   || !(grabber = grabbers[cameraNum-1]))
+	return PrimErrNotFound;
+
+  sqInt byteSize = interpreterProxy->byteSizeOf(bufferA);
+
+  if (bufferB
+   && byteSize != interpreterProxy->byteSizeOf(bufferB))
+	return PrimErrInappropriate;
+
+  if (grabber->width * grabber->height * 4 > byteSize)
+	return PrimErrWritePastObject;
+
+  grabber->bufferAOrNil = interpreterProxy->firstIndexableField(bufferA);
+  grabber->bufferBOrNil = bufferB
+						? interpreterProxy->firstIndexableField(bufferB)
+						: (void *)0;
+  grabber->bufferSize = byteSize;
+  sqLowLevelMFence();
+  // Need to free pixels carefully since camera may be running.
+  if (grabber->pixels) {
+	unsigned int *the_pixels = grabber->pixels;
+	grabber->pixelsByteSize = 0;
+	grabber->pixels = 0;
+	sqLowLevelMFence();
+	free(the_pixels);
+  }
+  return 0;
 }
 
 sqInt

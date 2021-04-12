@@ -936,6 +936,14 @@ CameraGetSemaphore(sqInt camNum)
 		: 0;
 }
 
+// primSetCameraBuffers ensures buffers are pinned non-pointer objs if non-null
+sqInt
+CameraSetFrameBuffers(sqInt cameraNum, sqInt bufferA, sqInt bufferB)
+{
+	// For now
+	return PrimErrUnsupported;
+}
+
 /* Alas, see for example
  * https://www.kernel.org/doc/html/v5.4/media/uapi/v4l/async.html
  * "3.5. Asynchronous I/O	This method is not defined yet."

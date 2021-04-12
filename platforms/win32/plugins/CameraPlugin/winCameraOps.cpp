@@ -272,6 +272,14 @@ CameraGetSemaphore(sqInt cameraNum)
 		: 0;
 }
 
+// primSetCameraBuffers ensures buffers are pinned non-pointer objs if non-null
+sqInt
+CameraSetFrameBuffers(sqInt cameraNum, sqInt bufferA, sqInt bufferB)
+{
+	// For now
+	return PrimErrUnsupported;
+}
+
 sqInt
 CameraSetSemaphore(sqInt cameraNum, sqInt semaphoreIndex)
 {
