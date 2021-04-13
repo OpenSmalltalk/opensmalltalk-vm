@@ -77,7 +77,7 @@ MSVCINCLUDES:=-I"$(subst \,/,$(subst ;," -I",$(INCLUDE)))"
 # DO NOT USE := FOR OFLAGS BECAUSE SOME PLUGINS REDEFINE THIS!!
 # -Z7 debug info in files; -Zi debug info in PDB
 # Turn off BUFFER_SECURITY for functional setjmp/longjmp
-BUFFER_SECURITY:=-GS-
+BUFFER_SECURITY:=-GS- -D_CRT_SECURE_NO_WARNINGS
 ifdef MSVC
 PRODUCTION_OFLAGS:=-Ox -Ob1 -Oi -Oy $(BUFFER_SECURITY)
 ASSERT_OFLAGS:=-Os -Oi- -Oy- $(BUFFER_SECURITY)

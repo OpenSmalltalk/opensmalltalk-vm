@@ -11,6 +11,7 @@
 #include <atlbase.h>
 
 #if _UNICODE_WAS_SET
+# undef _UNICODE
 # define _UNICODE 1
 #endif
 
@@ -19,29 +20,28 @@
 #include <qedit.h>
 
 extern "C" {
-#include "sq.h"
+#include "sqVirtualMachine.h"
+#include "sqMemoryFence.h"
 #include "CameraPlugin.h"
 
 extern struct VirtualMachine *interpreterProxy;
 
+static inline void *
+forwardDeclarationHack (struct Camera *aCamera, long lThisBufferSize,
+						int *widthp, int *heightp, int *semaphoreIndexp,
+						char *errorCodep, char *alreadyErrorp);
 static inline void
-attemptToSignalSemaphoreOfCameraWithBuffer(BYTE *frameBuffer);
-
+setErrorCode(struct Camera *aCamera, char errorCode);
 }
 
-// N.B. This pretends to support multiple cameras but in fact only supports
-// a single camera.  Volunteers are most welcome to correct this deficiency.
-// You'll need a Windows box with multiple cameras to do so though.
-
-//////////////////////////////////////////////
-// Sample Grabber Class
-//////////////////////////////////////////////
+#define FLIP_IN_CAPTURE 1
 
 class CSampleGrabberCB : public ISampleGrabberCB {
 public:
-	int frameCount;			// number of frames received since last GetFrame() call
-	long lFrameBufSize;		// size of buffer
-	BYTE *pFrameBuf;
+	struct Camera *myCamera;
+	BYTE  		  *pFrameBuf;
+	long   lFrameBufSize;	// size of pFrameBuf in bytes
+	int    frameCount;		// number of frames received since last GetFrame() call
 
 	// fake out any COM ref counting
 	STDMETHODIMP_(ULONG) AddRef() { return 2; }
@@ -51,7 +51,7 @@ public:
 		lFrameBufSize = 0;
 		if (pFrameBuf) {
 			delete [] pFrameBuf;
-			pFrameBuf = NULL;
+			pFrameBuf = nullptr;
 		}
 		return 1;
 	}
@@ -70,30 +70,66 @@ public:
 
 	STDMETHODIMP BufferCB(double dblThisSampleTime, BYTE * pThisBuf, long lThisBufSize)
 	{
+		void *theBuffer;
+		char alreadyHaveErrorCondition = 0, errorCode = 0;
+		int semaphoreIndex;
+		int width, height;
+		int pixelBytes = (lThisBufSize / 3) * 4;
+
 		if (!pThisBuf || !lThisBufSize)
 			return E_POINTER;
 
-		// if the buffer sizes don't match, discard ours to force creating a new one
-		if (lFrameBufSize != lThisBufSize) {
-			delete [] pFrameBuf;
-			pFrameBuf = NULL;
+		theBuffer = forwardDeclarationHack (myCamera,
+											pixelBytes,
+											&width, &height,
+											&semaphoreIndex,
+											&errorCode,
+											&alreadyHaveErrorCondition);
+		if (!theBuffer && !errorCode) {
+			// No synchronization with CameraSetFrameBuffers et al.
+			// We assume this is in a higher-priority thread than Smalltalk.
+			if (pFrameBuf
+			 && pixelBytes > lFrameBufSize) {
+				delete [] pFrameBuf;
+				pFrameBuf = nullptr;
+			}
+			if (!pFrameBuf) {
+				pFrameBuf = new BYTE[pixelBytes];
+				lFrameBufSize = pixelBytes;
+				if (!pFrameBuf) {
+					lFrameBufSize = 0;
+					setErrorCode(myCamera,PrimErrNoCMemory);
+				}
+			}
+			theBuffer = pFrameBuf;
 		}
 
-		// if we haven't yet created the data buffer, do it now.
-		if (!pFrameBuf) {
-			pFrameBuf = new BYTE[lThisBufSize];
-			lFrameBufSize = lThisBufSize;
-			if (!pFrameBuf)
-				lFrameBufSize = 0;
+		// Copy the bitmap data into the chosen buffer
+		if (!errorCode && theBuffer) {
+#if FLIP_IN_CAPTURE
+	// flip image vertically while copying to buffer
+	// N.B. For certain cameras this is unnecessary, see
+	// https://social.msdn.microsoft.com/Forums/windowsdesktop/en-US/bee4f7c0-5938-43ce-9db5-59a60b5f80bb/flip-webcam-vertically?forum=windowsdirectshowdevelopment
+			unsigned char *pSrc = pThisBuf;
+			for (int y = height - 1; y >= 0; y--) {
+				unsigned char *pDst = (unsigned char *)theBuffer + (4 * y * width);
+				int x = 0;
+				while (++x <= width) {
+					pDst[0] = pSrc[0];	// red
+					pDst[1] = pSrc[1];	// green
+					pDst[2] = pSrc[2];	// blue
+					pDst[3] = 255;		// alpha
+					pDst += 4;
+					pSrc += 3;
+				}
+			}
+#else
+			memcpy(theBuffer, pThisBuf, lThisBufSize);
+#endif
 		}
-
-		// Copy the bitmap data into our global buffer
-		if (pFrameBuf) {
-			memcpy(pFrameBuf, pThisBuf, lFrameBufSize);
-			attemptToSignalSemaphoreOfCameraWithBuffer(pFrameBuf);
-		}
-		frameCount++;
-
+		++frameCount;
+		if (!alreadyHaveErrorCondition && semaphoreIndex > 0)
+			interpreterProxy->signalSemaphoreWithIndex(semaphoreIndex);
 		return 0;
 	}
 };
@@ -109,19 +145,23 @@ typedef struct Camera {
 	IGraphBuilder			*pGraph;
 	ICaptureGraphBuilder2	*pCapture;
 	IMediaControl			*pMediaControl;
+#if 0
+	IAMVideoControl			*pVideoControl;
+#endif
 	IBaseFilter				*ppf;
 	ISampleGrabber			*pGrabber;
 	CSampleGrabberCB		 mCB;
+	void *					bufferAOrNil;
+	void *					bufferBOrNil;
+	sqInt					bufferSize;
 	int width;
 	int height;
 	int semaphoreIndex;
+	char					useBNotA;
+	char					errorCode;
 } Camera;
 
-#if 1
-# define CAMERA_COUNT 4
-#else
-# define CAMERA_COUNT 1
-#endif
+#define CAMERA_COUNT 4
 static Camera theCameras[CAMERA_COUNT];
 
 //////////////////////////////////////////////
@@ -146,7 +186,45 @@ static void SetFramesPerSecond(int fps);
 #else
 # define InRangePtr(p) (!((uintptr_t)(p) >> 31))
 #endif
-#define SAFE_RELEASE(x) { if ((x) && InRangePtr(x)) (x)->Release(); (x) = NULL; }
+#define SAFE_RELEASE(x) { if ((x) && InRangePtr(x)) (x)->Release(); (x) = nullptr; }
+
+/* Answer the buffer to use if the camera has a pinned object frame buffer,
+ * or nil. Load other usefu variables. This is a hack to get around Camera
+ * and CSampleGrabberCB needing to know about each other.
+ */
+static inline void *
+forwardDeclarationHack (struct Camera *aCamera, long lThisBufferSize,
+						int *widthp, int *heightp, int *semaphoreIndexp,
+						char *errorCodep, char *alreadyErrorp)
+{
+	void *theBuffer;
+
+	if (aCamera->errorCode)
+		*alreadyErrorp = 1;
+	*widthp = aCamera->width;
+	*heightp = aCamera->height;
+	*semaphoreIndexp = aCamera->semaphoreIndex;
+
+	if (!aCamera->bufferAOrNil)
+		return 0;
+
+	if (aCamera->bufferBOrNil) {
+		theBuffer = aCamera->useBNotA
+						? aCamera->bufferBOrNil
+						: aCamera->bufferAOrNil;
+		aCamera->useBNotA = !aCamera->useBNotA;
+	}
+	else
+		theBuffer = aCamera->bufferAOrNil;
+	if (lThisBufferSize > aCamera->bufferSize) {
+		*errorCodep = aCamera->errorCode = PrimErrWritePastObject;
+		return 0;
+	}
+	return theBuffer;
+}
+
+static inline void
+setErrorCode(struct Camera *aCamera, char ec) { aCamera->errorCode = ec; }
 
 //////////////////////////////////////////////
 // Entry Points
@@ -181,7 +259,14 @@ CameraClose(sqInt cameraNum)
 	SAFE_RELEASE(theCamera->pGrabber);
 	SAFE_RELEASE(theCamera->ppf);
 	SAFE_RELEASE(theCamera->pCamera);
-	theCamera->width = theCamera->height = theCamera->semaphoreIndex = 0;
+	theCamera->bufferAOrNil = 0;
+	theCamera->bufferBOrNil = 0;
+	theCamera->bufferSize = 0;
+	theCamera->width = 0;
+	theCamera->height = 0;
+	theCamera->semaphoreIndex = 0;
+	theCamera->useBNotA = 0;
+	theCamera->errorCode = 0;
 }
 
 sqInt
@@ -195,34 +280,51 @@ CameraExtent(sqInt cameraNum)
 }
 
 sqInt
-CameraGetFrame(sqInt cameraNum, unsigned char* buf, sqInt pixelCount)
+CameraGetFrame(sqInt cameraNum, unsigned char *buf, sqInt pixelCount)
 {
-	Camera *theCamera;
+	Camera *camera;
 
-	if (!(theCamera = ActiveCamera(cameraNum)))
+	if (!(camera = ActiveCamera(cameraNum)))
 		return -1;
 
-	int framesSinceLastCall = theCamera->mCB.frameCount;
+	if (camera->errorCode) {
+		int theCode = camera->errorCode;
+		camera->errorCode = 0;
+		return -theCode;
+	}
+	int framesSinceLastCall = camera->mCB.frameCount;
 	if (framesSinceLastCall == 0)
 		return 0;  // no frame available
-	theCamera->mCB.frameCount = 0;  // clear frame count
+	camera->mCB.frameCount = 0;  // clear frame count
 
-	if (pixelCount > (theCamera->mCB.lFrameBufSize / 3))
-		pixelCount = (theCamera->mCB.lFrameBufSize / 3);
+	if (camera->bufferAOrNil)
+		return framesSinceLastCall;
+
+#if FLIP_IN_CAPTURE
+	if (pixelCount > (camera->mCB.lFrameBufSize / 4))
+		pixelCount = camera->mCB.lFrameBufSize / 4;
+
+	memcpy(buf, camera->mCB.pFrameBuf, pixelCount * 4);
+#else
+	if (pixelCount > (camera->mCB.lFrameBufSize / 3))
+		pixelCount = camera->mCB.lFrameBufSize / 3;
 
 	// flip image vertically while copying to Squeak buf
 	// N.B. For certain cameras this is unnecessary, see
 	// https://social.msdn.microsoft.com/Forums/windowsdesktop/en-US/bee4f7c0-5938-43ce-9db5-59a60b5f80bb/flip-webcam-vertically?forum=windowsdirectshowdevelopment
-	unsigned char *pSrc = theCamera->mCB.pFrameBuf;
-	for (int w = theCamera->width, y = theCamera->height - 1; y >= 0; y--) {
+	unsigned char *pSrc = camera->mCB.pFrameBuf;
+	for (int w = camera->width, y = camera->height - 1; y >= 0; y--) {
 		unsigned char *pDst = &buf[4 * y * w];
 		for (int x = 0; x < w; x++) {
-			*pDst++ = *pSrc++;		// red
-			*pDst++ = *pSrc++;		// green
-			*pDst++ = *pSrc++;		// blue
-			*pDst++ = 255;			// alpha
+			pDst[0] = pSrc[0];	// red
+			pDst[1] = pSrc[1];	// green
+			pDst[2] = pSrc[2];	// blue
+			pDst[3] = 255;		// alpha
+			pDst += 4;
+			pSrc += 3;
 		}
 	}
+#endif
 	return framesSinceLastCall;
 }
 
@@ -255,7 +357,7 @@ CameraUID(sqInt cameraNum)
 
 	mitigateleak();
 	if (cameraNum < 1 || cameraNum > CAMERA_COUNT)
-		return NULL;
+		return nullptr;
 	char *leak = GetCameraNameAndUID(cameraNum,&uid);
 	if (leak) free(leak);
 	return storageleak = uid;
@@ -264,11 +366,11 @@ CameraUID(sqInt cameraNum)
 sqInt
 CameraGetSemaphore(sqInt cameraNum)
 {
-	Camera *theCamera;
+	Camera *camera;
 
-	return  (theCamera = ActiveCamera(cameraNum))
-		 && theCamera->semaphoreIndex > 0
-		? theCamera->semaphoreIndex
+	return  (camera = ActiveCamera(cameraNum))
+		 && camera->semaphoreIndex > 0
+		? camera->semaphoreIndex
 		: 0;
 }
 
@@ -276,43 +378,67 @@ CameraGetSemaphore(sqInt cameraNum)
 sqInt
 CameraSetFrameBuffers(sqInt cameraNum, sqInt bufferA, sqInt bufferB)
 {
-	// For now
-	return PrimErrUnsupported;
+	Camera *camera;
+
+  if (!(camera = ActiveCamera(cameraNum)))
+	return PrimErrNotFound;
+
+  sqInt byteSize = interpreterProxy->byteSizeOf(bufferA);
+
+  if (bufferB
+   && byteSize != interpreterProxy->byteSizeOf(bufferB))
+	return PrimErrInappropriate;
+
+  if (camera->width * camera->height * 4 > byteSize)
+	return PrimErrWritePastObject;
+
+  camera->bufferAOrNil = interpreterProxy->firstIndexableField(bufferA);
+  camera->bufferBOrNil = bufferB
+						? interpreterProxy->firstIndexableField(bufferB)
+						: nullptr;
+  camera->bufferSize = byteSize;
+  sqLowLevelMFence();
+  // Need to free pixels carefully since camera may be running.
+  if (camera->mCB.pFrameBuf) {
+	BYTE *the_pixels = camera->mCB.pFrameBuf;
+	camera->mCB.pFrameBuf = nullptr;
+	camera->mCB.lFrameBufSize = 0;
+	sqLowLevelMFence();
+	delete [] camera->mCB.pFrameBuf;
+  }
+  return 0;
 }
 
 sqInt
 CameraSetSemaphore(sqInt cameraNum, sqInt semaphoreIndex)
 {
-	Camera *theCamera;
+	Camera *camera;
 
-	if (!(theCamera = ActiveCamera(cameraNum)))
+	if (!(camera = ActiveCamera(cameraNum)))
 		return PrimErrNotFound;
-	theCamera->semaphoreIndex = semaphoreIndex;
+	camera->semaphoreIndex = (int)semaphoreIndex;
 	return 0;
-}
-
-static inline void
-attemptToSignalSemaphoreOfCameraWithBuffer(BYTE *frameBuffer)
-{
-	for (int i = 1, si = 0; i <= CAMERA_COUNT; i++)
-		if (theCameras[i].mCB.pFrameBuf == frameBuffer) {
-			if ((si = theCameras[i].semaphoreIndex) > 0)
-				interpreterProxy->signalSemaphoreWithIndex(si);
-			break;
-		}
 }
 
 sqInt
 CameraGetParam(sqInt cameraNum, sqInt paramNum)  // for debugging and testing
 {
-	Camera *theCamera;
+	Camera *camera;
 
-	if (!(theCamera = ActiveCamera(cameraNum)))
+	if (!(camera = ActiveCamera(cameraNum)))
 		return -1;
 	if (paramNum == 1)
-		return theCamera->mCB.frameCount;
+		return camera->mCB.frameCount;
 	if (paramNum == 2)
-		return theCamera->mCB.lFrameBufSize;
+		return camera->mCB.lFrameBufSize;
+#if 0
+	/* Negative values are platform specific info */
+	if (paramNum == -2) {
+		long capsFlags = 0;
+		camera->pVideoControl->GetCaps(camera->pVideoControl, &capsFlags);
+		return capsFlags;
+	}
+#endif
 
 	return -2;
 }
@@ -335,32 +461,32 @@ static HRESULT
 FindCamera(IBaseFilter ** ppSrcFilter, int cameraNum)
 {
 	HRESULT hr;
-	IBaseFilter *pSrc = NULL;
-	CComPtr <IMoniker> pMoniker = NULL;
+	IBaseFilter *pSrc = nullptr;
+	CComPtr <IMoniker> pMoniker = nullptr;
 	ULONG cFetched;
 
 	if (!ppSrcFilter)
 		return E_POINTER;
 
-	*ppSrcFilter = NULL;  // clear output in case we return early with an error
+	*ppSrcFilter = nullptr;  // clear output in case we return early with an error
 
 	// Create system device enumerator
-	CComPtr <ICreateDevEnum> pDevEnum = NULL;
+	CComPtr <ICreateDevEnum> pDevEnum = nullptr;
 	hr = CoCreateInstance(
-		CLSID_SystemDeviceEnum, NULL, CLSCTX_INPROC,
+		CLSID_SystemDeviceEnum, nullptr, CLSCTX_INPROC,
 		IID_ICreateDevEnum, (void **) &pDevEnum);
 	if (FAILED(hr))
 		return hr;
 
 	// Create enumerator for the video capture devices
-	CComPtr <IEnumMoniker> pClassEnum = NULL;
+	CComPtr <IEnumMoniker> pClassEnum = nullptr;
 	hr = pDevEnum->CreateClassEnumerator (CLSID_VideoInputDeviceCategory, &pClassEnum, 0);
 	if (FAILED(hr))
 		return hr;
 
 	// If there are no enumerators for the requested type, then
 	// CreateClassEnumerator will succeed, but pClassEnum will be NULL.
-	if (pClassEnum == NULL)
+	if (pClassEnum == nullptr)
 		return E_FAIL;
 
 	// Find the nth video capture device on the device list.
@@ -398,32 +524,32 @@ FreeMediaTypeFields(AM_MEDIA_TYPE *pMediaType)  // free format and pUnk fields
 	if (pMediaType->cbFormat != 0) {
 		CoTaskMemFree((PVOID) pMediaType->pbFormat);
 		pMediaType->cbFormat = 0;
-		pMediaType->pbFormat = NULL;
+		pMediaType->pbFormat = nullptr;
 	}
-	if (pMediaType->pUnk != NULL) {
+	if (pMediaType->pUnk != nullptr) {
 		// pUnk should be unused, but this is safest
 		pMediaType->pUnk->Release();
-		pMediaType->pUnk = NULL;
+		pMediaType->pUnk = nullptr;
 	}
 }
 
 static char *
 GetCameraNameAndUID(int requestedCameraNum, char **uidp)
 {
-	ICreateDevEnum *pDevEnum = NULL;
-	IEnumMoniker *pClassEnum = NULL;
-	IMoniker *pMoniker = NULL;
+	ICreateDevEnum *pDevEnum = nullptr;
+	IEnumMoniker *pClassEnum = nullptr;
+	IMoniker *pMoniker = nullptr;
 	IPropertyBag *pPropBag;
 	VARIANT variant;
 	HRESULT hr;
-	char *result = NULL;
+	char *result = nullptr;
 	int videoInputDeviceIndex = 0;
 
 	// Create the system device enumerator
-	hr = CoCreateInstance(CLSID_SystemDeviceEnum, NULL, CLSCTX_INPROC,
+	hr = CoCreateInstance(CLSID_SystemDeviceEnum, nullptr, CLSCTX_INPROC,
 							IID_ICreateDevEnum, (void **)&pDevEnum);
 	if (FAILED(hr))
-		return NULL;
+		return nullptr;
 
 	// Create an enumerator for the video capture devices
 	// If there are no enumerators for the requested type, then
@@ -432,10 +558,10 @@ GetCameraNameAndUID(int requestedCameraNum, char **uidp)
 	if (FAILED(hr)
 	 || !pClassEnum) {
 		pDevEnum->Release();
-		return NULL;
+		return nullptr;
 	}
 
-	while (pClassEnum->Next(1, &pMoniker, NULL) == S_OK) {
+	while (pClassEnum->Next(1, &pMoniker, nullptr) == S_OK) {
 		hr = pMoniker->BindToStorage(0, 0, IID_IPropertyBag, (void**)&pPropBag);
 		if (FAILED(hr)) {
 			pMoniker->Release();
@@ -486,102 +612,110 @@ InitCamera(int cameraNum, int desiredWidth)
 {
 	HRESULT hr;
 	int maxFPS;
-	Camera *theCamera = &theCameras[cameraNum];
+	Camera *camera = &theCameras[cameraNum];
 	// get USB camera or other video capture device
-	hr = FindCamera(&theCamera->pCamera, cameraNum);
+	hr = FindCamera(&camera->pCamera, cameraNum);
 	if (FAILED(hr))
 		return hr;
 
 	// create filter graph
 	hr = CoCreateInstance (
-		CLSID_FilterGraph, NULL, CLSCTX_INPROC,
-		IID_IGraphBuilder, (void **) &theCamera->pGraph);
+		CLSID_FilterGraph, nullptr, CLSCTX_INPROC,
+		IID_IGraphBuilder, (void **) &camera->pGraph);
 	if (FAILED(hr))
 		return hr;
 
 	// create capture graph builder
 	hr = CoCreateInstance (
-		CLSID_CaptureGraphBuilder2 , NULL, CLSCTX_INPROC,
-		IID_ICaptureGraphBuilder2, (void **) &theCamera->pCapture);
+		CLSID_CaptureGraphBuilder2 , nullptr, CLSCTX_INPROC,
+		IID_ICaptureGraphBuilder2, (void **) &camera->pCapture);
 	if (FAILED(hr))
 		return hr;
 
 	// get media control interface
-	hr = theCamera->pGraph->QueryInterface(IID_IMediaControl,(LPVOID *) &theCamera->pMediaControl);
+	hr = camera->pGraph->QueryInterface(IID_IMediaControl,(LPVOID *) &camera->pMediaControl);
 	if (FAILED(hr))
 		return hr;
+
+#if 0
+	// get media control interface
+	hr = camera->pGraph->QueryInterface(IID_IAMVideoControl,(LPVOID *) &camera->pVideoControl);
+	if (FAILED(hr))
+		return hr;
+#endif
 
 	// create SampleGrabber
 	hr = CoCreateInstance(
-		CLSID_SampleGrabber, NULL, CLSCTX_INPROC_SERVER,
-		IID_IBaseFilter, (void**) &theCamera->ppf);
+		CLSID_SampleGrabber, nullptr, CLSCTX_INPROC_SERVER,
+		IID_IBaseFilter, (void**) &camera->ppf);
 	if (FAILED(hr))
 		return hr;
 
-	theCamera->ppf->QueryInterface(IID_ISampleGrabber, (void**) &theCamera->pGrabber);
+	camera->ppf->QueryInterface(IID_ISampleGrabber, (void**) &camera->pGrabber);
 
 	// attach the filter graph to the capture graph
-	hr = theCamera->pCapture->SetFiltergraph(theCamera->pGraph);
+	hr = camera->pCapture->SetFiltergraph(camera->pGraph);
 	if (FAILED(hr))
 		return hr;
 
-	hr = theCamera->pGraph->AddFilter(theCamera->ppf, L"Scratch Frame Grabber");
+	hr = camera->pGraph->AddFilter(camera->ppf, L"Scratch Frame Grabber");
 	if (FAILED(hr))
 		return hr;
 
 	// add the camera
-	hr = theCamera->pGraph->AddFilter(theCamera->pCamera, L"Camera");
+	hr = camera->pGraph->AddFilter(camera->pCamera, L"Camera");
 	if (FAILED(hr))
 		return hr;
 
 	// set the desired framesize and image format and framerate
-	SetCameraWidthAndFPS(theCamera->pCapture, theCamera->pCamera, desiredWidth);
-	SetOutputToRGB(theCamera);
+	SetCameraWidthAndFPS(camera->pCapture, camera->pCamera, desiredWidth);
+	SetOutputToRGB(camera);
 
 	// connect the camera to the sample grabber, possibly inserting format conversion filters
-	hr = theCamera->pCapture->RenderStream(
+	hr = camera->pCapture->RenderStream(
 		&PIN_CATEGORY_CAPTURE, &MEDIATYPE_Video,
-		theCamera->pCamera, NULL, theCamera->ppf);
+		camera->pCamera, nullptr, camera->ppf);
 
 	// record the actual camera frame dimensions
 	AM_MEDIA_TYPE mt;
-	hr = theCamera->pGrabber->GetConnectedMediaType(&mt);
+	hr = camera->pGrabber->GetConnectedMediaType(&mt);
 	if (FAILED(hr))
 		return hr;
 
-	theCamera->width  = ((VIDEOINFOHEADER*) mt.pbFormat)->bmiHeader.biWidth;
-	theCamera->height = ((VIDEOINFOHEADER*) mt.pbFormat)->bmiHeader.biHeight;
-	theCamera->semaphoreIndex = -1;
+	camera->width  = ((VIDEOINFOHEADER*) mt.pbFormat)->bmiHeader.biWidth;
+	camera->height = ((VIDEOINFOHEADER*) mt.pbFormat)->bmiHeader.biHeight;
+	camera->semaphoreIndex = -1;
 	FreeMediaTypeFields(&mt);
 
-	hr = theCamera->pGrabber->SetOneShot(FALSE);
-	hr = theCamera->pGrabber->SetBufferSamples(FALSE);
-	hr = theCamera->pGrabber->SetCallback(&theCamera->mCB, 1);
+	hr = camera->pGrabber->SetOneShot(FALSE);
+	hr = camera->pGrabber->SetBufferSamples(FALSE);
+	hr = camera->pGrabber->SetCallback(&camera->mCB, 1);
 
 	// start getting video
-	hr = theCamera->pMediaControl->Run();
+	hr = camera->pMediaControl->Run();
 	if (FAILED(hr))
 		return hr;
 
+	camera->mCB.myCamera = camera;
 	return S_OK;
 }
 
 static void
-SetOutputToRGB(Camera *theCamera)
+SetOutputToRGB(Camera *camera)
 {
 	AM_MEDIA_TYPE mediaType;
 	mediaType.majortype = MEDIATYPE_Video;
 	mediaType.subtype = MEDIASUBTYPE_RGB24;
 	mediaType.formattype = GUID_NULL;
-	mediaType.pbFormat = NULL;
+	mediaType.pbFormat = nullptr;
 	mediaType.cbFormat = 0;
-	theCamera->pGrabber->SetMediaType(&mediaType);
+	camera->pGrabber->SetMediaType(&mediaType);
 }
 
 static void
 SetCameraWidthAndFPS(ICaptureGraphBuilder2 *pCaptureGraphBuilder, IBaseFilter *pSrcFilter, int desiredWidth)
 {
-	IAMStreamConfig *pCameraStream = NULL;
+	IAMStreamConfig *pCameraStream = nullptr;
 	HRESULT hr;
 
 	// get the stream configuration interface
@@ -601,9 +735,9 @@ SetClosestWidthAndFrameRate(IAMStreamConfig *pCameraStream, int desiredWidth)
 {
 	int iCount = 0, iSize = 0;
 	int bestWidth = INT_MAX;
-	AM_MEDIA_TYPE *selectedMediaType = NULL;
+	AM_MEDIA_TYPE *selectedMediaType = nullptr;
 	HRESULT hr;
-	LONGLONG minInterval, maxInterval;
+	int64_t minInterval, maxInterval;
 
 	// If desiredWidth = 0 answer largest (default?)
 	if (!desiredWidth)
@@ -612,14 +746,14 @@ SetClosestWidthAndFrameRate(IAMStreamConfig *pCameraStream, int desiredWidth)
 	// iterate through all possible camera frame formats to find the best frame size
 	hr = pCameraStream->GetNumberOfCapabilities(&iCount, &iSize);
 	for (int i = 0; i < iCount; i++) {
-		AM_MEDIA_TYPE *thisMediaType = NULL;
+		AM_MEDIA_TYPE *thisMediaType = nullptr;
 		VIDEO_STREAM_CONFIG_CAPS scc;
 		hr = pCameraStream->GetStreamCaps(i, &thisMediaType, (BYTE*) &scc);
 		if (SUCCEEDED(hr)) {
 			if (thisMediaType->majortype == MEDIATYPE_Video
 			 && thisMediaType->formattype == FORMAT_VideoInfo
 			 && thisMediaType->cbFormat >= sizeof(VIDEOINFOHEADER)
-			 && thisMediaType->pbFormat != NULL)
+			 && thisMediaType->pbFormat != nullptr)
 			{
 				VIDEOINFOHEADER* info = (VIDEOINFOHEADER*) thisMediaType->pbFormat;
 				int thisWidth = info->bmiHeader.biWidth;
@@ -637,7 +771,7 @@ SetClosestWidthAndFrameRate(IAMStreamConfig *pCameraStream, int desiredWidth)
 			// Delete the media type unless it's the selected one
 			if (thisMediaType != selectedMediaType)
 				FreeMediaType(thisMediaType);
-			thisMediaType = NULL;
+			thisMediaType = nullptr;
 		}
 	}
 
@@ -646,7 +780,7 @@ SetClosestWidthAndFrameRate(IAMStreamConfig *pCameraStream, int desiredWidth)
 		// Limit the frame rate to 30 frames per second
 		// Perverse, but the VIDEO_STREAM_CONFIG_CAPS contains the
 		// minimum and maximum frame durations (and in 100 nsec units).
-		LONGLONG thirtyFPS = 10ULL * 1000 * 1000 / 30ULL;
+		int64_t thirtyFPS = 10ULL * 1000 * 1000 / 30ULL;
 		((VIDEOINFOHEADER*) selectedMediaType->pbFormat)->AvgTimePerFrame
 			= max(thirtyFPS,minInterval);
 		hr = pCameraStream->SetFormat(selectedMediaType);
@@ -677,7 +811,7 @@ EnumerateDevices(REFGUID category, IEnumMoniker **ppEnum)
 {
 	// Create the System Device Enumerator.
 	ICreateDevEnum *pDevEnum;
-	HRESULT hr = CoCreateInstance(CLSID_SystemDeviceEnum, NULL,  
+	HRESULT hr = CoCreateInstance(CLSID_SystemDeviceEnum, nullptr,  
 		CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pDevEnum));
 
 	if (SUCCEEDED(hr)) {
@@ -694,10 +828,10 @@ EnumerateDevices(REFGUID category, IEnumMoniker **ppEnum)
 void
 DisplayDeviceInformation(IEnumMoniker *pEnum)
 {
-	IMoniker *pMoniker = NULL;
+	IMoniker *pMoniker = nullptr;
 	int count = 0, ok_count = 0;
 
-	while (pEnum->Next(1, &pMoniker, NULL) == S_OK) {
+	while (pEnum->Next(1, &pMoniker, nullptr) == S_OK) {
 		IPropertyBag *pPropBag;
 		HRESULT hr = pMoniker->BindToStorage(0, 0, IID_PPV_ARGS(&pPropBag));
 		count += 1;
@@ -746,7 +880,7 @@ DisplayDeviceInformation(IEnumMoniker *pEnum)
 int
 main()
 {
-	HRESULT hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
+	HRESULT hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
 	if (SUCCEEDED(hr)) {
 		IEnumMoniker *pEnum;
 
