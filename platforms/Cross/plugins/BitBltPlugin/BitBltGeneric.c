@@ -260,8 +260,13 @@ static void fastPathRightToLeft(operation_t *op, uint32_t flags)
 	uint32_t width = op->width;
 	uint32_t height = op->height;
 
-	uint8_t tempBuffer[CACHELINE_LEN * 64];
-#define BUFFER_LEN_PIXELS (cacheline_len * (sizeof tempBuffer / CACHELINE_LEN))
+#define BUFFER_LEN_CACHELINES 64
+	/* Need enough room to be able to quickly find BUFFER_LEN_CACHELINES
+	 * starting at any cacheline alignment
+	 */
+	uint8_t spaceForTempBuffer[CACHELINE_LEN * (BUFFER_LEN_CACHELINES + 2)];
+	uint8_t *tempBuffer = (uint8_t *)(((uintptr_t) spaceForTempBuffer + CACHELINE_LEN - 1) &~ (CACHELINE_LEN - 1));
+#define BUFFER_LEN_PIXELS (cacheline_len * BUFFER_LEN_CACHELINES)
 	opFromSrc.dest.bits = tempBuffer;
 	opFromSrc.dest.y = 0;
 	opFromSrc.height = 1;
@@ -377,8 +382,13 @@ static void fastPathDepthConv(operation_t *op, uint32_t flags)
 	uint32_t width = op->width;
 	uint32_t height = op->height;
 
-	uint8_t tempBuffer[CACHELINE_LEN * 64];
-#define BUFFER_LEN_PIXELS (cacheline_len * (sizeof tempBuffer / CACHELINE_LEN))
+#define BUFFER_LEN_CACHELINES 64
+	/* Need enough room to be able to quickly find BUFFER_LEN_CACHELINES
+	 * starting at any cacheline alignment
+	 */
+	uint8_t spaceForTempBuffer[CACHELINE_LEN * (BUFFER_LEN_CACHELINES + 2)];
+	uint8_t *tempBuffer = (uint8_t *)(((uintptr_t) spaceForTempBuffer + CACHELINE_LEN - 1) &~ (CACHELINE_LEN - 1));
+#define BUFFER_LEN_PIXELS (cacheline_len * BUFFER_LEN_CACHELINES)
 	opFromSrc.combinationRule = CR_sourceWord;
 	opFromSrc.dest.bits = tempBuffer;
 	opFromSrc.dest.y = 0;
