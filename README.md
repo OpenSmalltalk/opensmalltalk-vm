@@ -12,8 +12,8 @@ This is the README for the Cog Git source tree:
 
 
 Builds are tested automatically on each commit on Travis and Appveyor, for
-Windows 32, Mac OS X 32 and 64, and on Linux 32, 64, and ARM. Squeak, Pharo, and
-Newspeak VMs are built with and without JIT, with and without Spur, and with and
+Windows 32, Mac OS X 32 and 64, and on Linux 32, 64, and ARM. Squeak, and Pharo
+VMs are built with and without JIT, with and without Spur, and with and
 without Sista, as available per platform. All build artifacts are uploaded to
 Bintray.  If you wish to commit *without* triggering a build, for example if you
 were to only edit this documentation, then if you add **[ci skip]** somewhere in
@@ -52,13 +52,11 @@ will result in incorrect version stamps in your compiled VMs.
 Overview
 --------
 First, opensmalltalk-vm (a.k.a. the Cog VM) is the virtual machine beneath the
-Cuis, Pharo and Squeak Smalltalk dialects and one of the VMs beneath the
-Newspeak language.  For issues related to these systems that are unrelated to
-the VM itself, please use their forums:
+Cuis, Pharo and Squeak Smalltalk dialects.  For issues related to these systems
+that are unrelated to the VM itself, please use their forums:
 * http://www.cuis-smalltalk.org
 * http://pharo.org/community
 * http://squeak.org/community/
-* http://newspeaklanguage.org
 
 Second, the core VM, which comprises the execution engine and garbage collector,
 and the core plugins, is developed in Smalltalk, using the *VM Simulator*.  This
@@ -90,17 +88,13 @@ system, suitable for developing the VM in Smalltalk, and for generating new
 VM sources.
 
 The "Cog VM" comes in a bewildering variety of forms.  The first distinction
-is between Squeak/Croquet VMs that run Squeak, Pharo, Cuis, Croquet images
-and their ilk, and between Newspeak VMs that run Newspeak.
-
-Another distinction is between Stack, Cog and Sista VMs.  Stack VMs are those
-with context-to-stack mapping that optimise message sending by keeping method
-activations on a stack instead of in contexts.  These are pure interpreters but
-are significantly faster than the standard context-based Interpreter VM.  Cog
-VMs add a JIT to the mix, compiling methods used more than once to machine code
-on the fly.  Sista VMs, as yet unrealised and in development, add support for
-adaptive optimization that does speculative inlining at the bytecode-to-bytecode
-level.  These are under development and targeted for release in 2015.
+is between Stack, Cog and Sista VMs.  Stack VMs are those with context-to-stack
+mapping that optimise message sending by keeping method activations on a stack
+instead of in contexts.  These are pure interpreters but are significantly
+faster than the standard context-based Interpreter VM.  Cog VMs add a JIT to
+the mix, compiling methods used more than once to machine code on the fly.
+Sista VMs, as yet unrealised and in development, add support for adaptive
+optimization that does speculative inlining at the bytecode-to-bytecode level.
 
 Another distinction is between "v3" VMs and Spur VMs.  "v3" is the original
 object representation for Squeak as described in the back-to-the-future paper.
@@ -108,7 +102,7 @@ Spur, as described on the www.mirandabanda.org blog, is a faster object
 representation which uses generation scavenging, lazy forwarding for fast
 become, a single object header format common to 32 and 64 bit versions, and a
 segmented heap that can grow and shrink, releasing memory back to the host OS.
-Newspeak, Squeak 5.0 and Pharo 5 use Spur.
+Squeak 5.0, Cuis 5 and Pharo 5 and subsequent releases use Spur.
 
 Another distinction is between normal single-threaded VMs that schedule "green"
 Smalltalk light-weight processes above a single-threaded VM, and multi-threaded
@@ -126,16 +120,12 @@ The Slang output of the various VMs are kept in "vm source" directories.  These
 C sources define the core VM (the Smalltalk execution engine and the memory
 manager), and a substantial set of "plugins" that provide interfaces to various
 external facilities via Smalltalk primitive methods.  Each vm source directory
-is specific to a particular VM, be it Squeak Cog Spur, or Newspeak Stack, etc.
+is specific to a particular VM, be it Squeak Cog Spur, or V3 Stack, etc.
 The plugins can be shared between VMs, choosing the set of plugins to include
-in a VM at build time.
+in a VM at build time (see plugins.int & plugins.ext in build directories).
 
 The VM source are in directories such as
 ```
-	nscogsrc/vm			- Newspeak Cog V3
-	nsspursrc/vm		- Newspeak Cog Spur
-	nsspurstacksrc/vm	- Newspeak Stack Spur
-	nsstacksrc/vm		- Newspeak Stack V3
 	sistasrc/vm			- Smalltalk Sista V3
 	spursistasrc/vm		- Smalltalk Sista Spur
 	spursrc/vm			- Smalltalk Cog Spur
@@ -204,11 +194,13 @@ example, there exist
 
 There exist
 ```
-    build.macos32x86/bochsx86 - Support libraries for the BochsIA32Plugin which
+    build.macos64x64/bochsx86 - Support libraries for the BochsIA32Plugin which
                                 is used to develop Cog itself.
-    build.macos32x86/bochsx64 - Support libraries for the BochsX64Plugin which
+    build.macos64x64/bochsx64 - Support libraries for the BochsX64Plugin which
                                 is used to develop Cog itself.
-    build.macos32x86/gdbarm32 - Support libraries for the GdbARMPlugin which
+    build.macos64x64/gdbarm32 - Support libraries for the GdbARMPlugin which
+                                is used to develop Cog itself.
+    build.macos64x64/gdbarm64 - Support libraries for the GdbARMv8Plugin which
                                 is used to develop Cog itself.
 ```
 and the intention is to add such directories to contain e.g. support code for
@@ -221,6 +213,7 @@ There exist
 	build.macos32x86/common - Gnu Makefiles for building the various branded VMs
 	build.macos64x64/common - Gnu Makefiles for building the various branded VMs
 	build.win32x86/common   - Gnu Makefiles for building the various branded VMs
+	build.win64x64/common   - Gnu Makefiles for building the various branded VMs
 ```
 And the intention is to add build.linuxNN????/common as soon as possible to
 use Gnu Makefiles to build all VMs on all platfrms.
@@ -242,31 +235,18 @@ is
 	platforms/Cross/plugins
 	platforms/iOS/vm
 	platforms/iOS/plugins
-	platforms/Mac OS/vm
-	platforms/Mac OS/plugins
 	platforms/unix/vm*
 	platforms/unix/plugins
 	platforms/win32/vm
 	platforms/win32/plugins
 ```
 Each vm directory contains support for the core VM.  Each plugin directory
-contains run-time and build-time support for various plugins.  The following
-directories are subtrees that are shared with the old Squeak interpreter source:
-
- - platforms/Cross/plugins
-   - https://github.com/OpenSmalltalk/vm/tree/platform/Cross/plugins
- - platforms/win32/plugins
-   - https://github.com/OpenSmalltalk/vm/tree/platform/win32/plugins
-
-Being subtrees, their history is actually merged into the branch, but can be
-pushed separately as well. If you're not familiar with subtrees or git, the
-easiest is to use the scripts/gitciplugins script to check in any changes to
-the subtrees and push them to their respective branches.
+contains run-time and build-time support for various plugins.
 
 The processors directory contains the source for various processor simulators.
 The JIT is developed in Smalltalk by using one of these processor simulators
-to execute the code the JIT produces.  Currently only the Bochs x86/x86-64
-simulator and the gdbarm simulator are in use, for x86 and ARMv5 respectively.
+to execute the code the JIT produces.  Currently x86 & x86-64 are derived from
+Bochs, and ARMv6/v7 & ARMv8 are derived from gdb.
 
 Finally the image directory contains scripts that will build a "VMMaker" image,
 a Squeak Smalltalk image containing all the packages that comprise the Cog
@@ -275,4 +255,4 @@ sources in the vm source directories. There is also a script for generating a
 64-bit Spur image from a 32-bit Spur image.
 
 Eliot Miranda
-June 2016
+April 2021
