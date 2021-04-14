@@ -192,6 +192,109 @@ static void fastPathSourceWord0_32_scalar(operation_t *op, uint32_t flags)
 	} while (--height > 0);
 }
 
+static void fastPathSourceWord8_32(operation_t *op, uint32_t flags)
+{
+    IGNORE(flags);
+    COPY_OP_TO_LOCALS(op, uint8_t, uint32_t);
+    uint8_t *src = srcBits + srcPitch * srcY + (srcX ^ 3);
+    uint32_t *dest = destBits + destPitch * destY + destX;
+    switch ((srcX + width) & 3) {
+    case 0:
+        do {
+            int32_t x = width;
+            uint8_t *s = src;
+            if ((x & 3) >= 3)
+                *dest++ = (*cmLookupTable)[*s--];
+            if ((x & 3) >= 2)
+                *dest++ = (*cmLookupTable)[*s--];
+            if ((x & 3) >= 1)
+            {
+                *dest++ = (*cmLookupTable)[*s];
+                s += 7;
+            }
+            for (x -= 4; x >= 0; x -= 4) {
+                *dest++ = (*cmLookupTable)[*s--];
+                *dest++ = (*cmLookupTable)[*s--];
+                *dest++ = (*cmLookupTable)[*s--];
+                *dest++ = (*cmLookupTable)[*s];
+                s += 7;
+            }
+            src += srcPitch;
+            dest += destPitch - width;
+        } while (--height > 0);
+        break;
+    case 1:
+        do {
+            int32_t x = width;
+            uint8_t *s = src;
+            if ((x & 3) >= 3)
+                *dest++ = (*cmLookupTable)[*s--];
+            if ((x & 3) >= 2)
+            {
+                *dest++ = (*cmLookupTable)[*s];
+                s += 7;
+            }
+            if ((x & 3) >= 1)
+                *dest++ = (*cmLookupTable)[*s--];
+            for (x -= 4; x >= 0; x -= 4) {
+                *dest++ = (*cmLookupTable)[*s--];
+                *dest++ = (*cmLookupTable)[*s--];
+                *dest++ = (*cmLookupTable)[*s];
+                s += 7;
+                *dest++ = (*cmLookupTable)[*s--];
+            }
+            src += srcPitch;
+            dest += destPitch - width;
+        } while (--height > 0);
+        break;
+    case 2:
+        do {
+            int32_t x = width;
+            uint8_t *s = src;
+            if ((x & 3) >= 3)
+            {
+                *dest++ = (*cmLookupTable)[*s];
+                s += 7;
+            }
+            if ((x & 3) >= 2)
+                *dest++ = (*cmLookupTable)[*s--];
+            if ((x & 3) >= 1)
+                *dest++ = (*cmLookupTable)[*s--];
+            for (x -= 4; x >= 0; x -= 4) {
+                *dest++ = (*cmLookupTable)[*s--];
+                *dest++ = (*cmLookupTable)[*s];
+                s += 7;
+                *dest++ = (*cmLookupTable)[*s--];
+                *dest++ = (*cmLookupTable)[*s--];
+            }
+            src += srcPitch;
+            dest += destPitch - width;
+        } while (--height > 0);
+        break;
+    case 3:
+        do {
+            int32_t x = width;
+            uint8_t *s = src;
+            if ((x & 3) >= 3)
+                *dest++ = (*cmLookupTable)[*s--];
+            if ((x & 3) >= 2)
+                *dest++ = (*cmLookupTable)[*s--];
+            if ((x & 3) >= 1)
+                *dest++ = (*cmLookupTable)[*s--];
+            for (x -= 4; x >= 0; x -= 4) {
+                *dest++ = (*cmLookupTable)[*s];
+                s += 7;
+                *dest++ = (*cmLookupTable)[*s--];
+                *dest++ = (*cmLookupTable)[*s--];
+                *dest++ = (*cmLookupTable)[*s--];
+            }
+            src += srcPitch;
+            dest += destPitch - width;
+        } while (--height > 0);
+        break;
+    }
+}
+
 static void fastPathSourceWord32_32(operation_t *op, uint32_t flags)
 {
 	IGNORE(flags);
@@ -513,6 +616,7 @@ static fast_path_t fastPaths[] = {
 		{ fastPathClearWord32,           CR_clearWord,       STD_FLAGS_NO_SOURCE(32,NO) },
 		{ fastPathSourceWord0_32_scalar, CR_sourceWord,      STD_FLAGS_NO_SOURCE(32,SCALAR) },
 
+		{ fastPathSourceWord8_32,        CR_sourceWord,      STD_FLAGS(8,32,DIRECT,NO) },
 		{ fastPathSourceWord32_32,       CR_sourceWord,      STD_FLAGS(32,32,NO,NO) &~ FAST_PATH_H_OVERLAP },
 		{ fastPathAlphaBlend0_32_scalar, CR_alphaBlend,      STD_FLAGS_NO_SOURCE(32,SCALAR) },
 		{ fastPathAlphaBlend32_32,       CR_alphaBlend,      STD_FLAGS(32,32,NO,NO) },
