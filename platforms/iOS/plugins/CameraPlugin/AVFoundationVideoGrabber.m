@@ -289,17 +289,15 @@ SqueakVideoGrabber *grabbers[CAMERA_COUNT];
   }
 
   width = height = 0;
-  USEPRESETFOR(AVCaptureSessionPreset1280x720,  1920, 1080, 1440);
-  USEPRESETFOR(AVCaptureSessionPreset1280x720,  1280,  720,  960);
+//USEPRESETFOR(AVCaptureSessionPreset1920x1080, 1920, 1440, 1080); // iOS & 10.15 only :-(
+  USEPRESETFOR(AVCaptureSessionPreset1280x720,  1280,  960,  720);
+  USEPRESETFOR(AVCaptureSessionPreset960x540,    960,  540,  480);
   USEPRESETFOR(AVCaptureSessionPreset640x480,    640,  480,  360);
-  USEPRESETFOR(AVCaptureSessionPresetMedium,     480,  360,  270);
+//USEPRESETFOR(AVCaptureSessionPresetMedium,     480,  360,  270);
   USEPRESETFOR(AVCaptureSessionPreset352x288,    352,  288,  216);
   USEPRESETFOR(AVCaptureSessionPreset320x240,    320,  240,  180);
-  USEPRESETFOR(AVCaptureSessionPresetLow,        192,  108,  144);
-  USEPRESETFOR(AVCaptureSessionPresetLow,        160,  120,   90);
-
-//  IOS only
-//  USEPRESETFOR(AVCaptureSessionPreset1920x1080, 1920, 1080, 1440);
+  USEPRESETFOR(AVCaptureSessionPresetLow,        192,  144,  108);
+//USEPRESETFOR(AVCaptureSessionPresetLow,        160,  120,   90);
 
   if (!preset) {
 	if (bestPresetBelow
