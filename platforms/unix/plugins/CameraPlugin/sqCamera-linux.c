@@ -313,16 +313,13 @@ convertImageRGB24toARGB32 (camPtr cam)
 	uint8_t  *src = cam->inBuffer;
 	uint32_t *dst = cam->sqBuffer;
 	uint32_t pixelCount = cam->sqPixels;
-	uint32_t pixel;
-	size_t i;
 
 	if (!dst)
 		return;
 
-	for ( i = 0; i < pixelCount; i++) {
-		pixel = 0xFF000000 | (*src++ << 16);
-		pixel = pixel | (*src++ << 8);
-		*dst++  = pixel | *src++;
+	while (--pixelCount >= 0) {
+		*dst++ = 0xFF000000 | (*src[0] << 16) | (*src[1] << 8) | *src[2];
+		src += 3;
 	}
 }
 
@@ -333,23 +330,18 @@ convertImageRGB444toARGB32 (camPtr cam)
 	uint8_t  *src = cam->inBuffer;
 	uint32_t *dst = cam->sqBuffer;
 	uint32_t pixelCount = cam->sqPixels;
-	uint32_t r,g,b,pixel;
-	size_t i;
+	uint32_t r,g,b;
 
 	if (!dst)
 		return;
 
 	/* Byte0: (g)ggg(b)bbb, Byte1: xxxx(r)rrr */
 
-	for ( i = 0; i < pixelCount; i++) {
+	while (--pixelCount >= 0) {
 	  r = *src << 4;
 	  g = *src++ & 0xF0;
 	  b = (*src++ & 0x0F) << 4;
-	  pixel = 0xFF000000;
-	  pixel |= (r << 16);
-	  pixel |= (g <<  8);
-	  pixel |= b;
-	  *dst++ = pixel;
+	  *dst++ = 0xFF000000 | (r << 16) | (g <<  8) | b;
 	}
 }
 
@@ -417,7 +409,7 @@ xioctl (camPtr cam, int request, void * arg)
 	int r;
 	do r = vd_ioctl (cam->fileDesc, request, arg);
 	  while (-1 == r && EINTR == errno);
-	return (0 == r);
+	return 0 == r;
 }
 
 
@@ -904,8 +896,7 @@ CameraOpen(sqInt camNum, sqInt frameWidth, sqInt frameHeight)
 {
 	camPtr cam = camera(camNum);
 
-	if (camIsOpen(cam))
-		return false;
+	CameraClose(camNum);
 	if (!initCamera(cam, frameWidth, frameHeight))
 		return false;
 	cam->isOpen = true;
