@@ -43,9 +43,8 @@ extern void sqFatalErrorPrintf(const char *format, ...);
 extern void sqFatalErrorPrintfNoExit(const char *format, ...);
 #ifndef error
 extern void sqError(const char *errorMessage);
-#define error sqError
+#define error(x) sqError(x)
 #endif
-
 
 
 
@@ -58,10 +57,6 @@ extern void sqError(const char *errorMessage);
 #define messagePrintf printf
 #define warnPrintf printf
 #define errorPrintf printf
-
-#ifndef error
-#define error sqError
-#endif
 
 /* Function used by the Squeak security plugin. In a headless VM, do not create a message box. */
 extern int sqAskSecurityYesNoQuestion(const char *question);
