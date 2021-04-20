@@ -21,12 +21,18 @@ IMPORT(void) error(const char *);
 IMPORT(void) warning(const char *);
 IMPORT(void) warningat(const char *,int);
 #else
-# if !defined(EXPORT)
-#	define EXPORT(returnType) returnType
-# endif
+# if defined(SQUEAK_BUILTIN_PLUGIN)
+void error(const char *);
+void warning(const char *);
+void warningat(const char *,int);
+# else
+#   if !defined(EXPORT)
+#	  define EXPORT(returnType) returnType
+#   endif
 EXPORT(void) error(const char *);
 EXPORT(void) warning(const char *);
 EXPORT(void) warningat(const char *,int);
+#  endif
 #endif
 #pragma auto_inline(on)
 
