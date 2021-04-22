@@ -5,6 +5,11 @@
  * The plugin is misnamed.  It should be the AlienPlugin, but its history
  * dictates otherwise.
  */
+ 
+#ifdef HAVE_CONFIG_H
+#include "config.h" /* this must happen before including std libraries */
+#endif
+
 #if defined(_M_I386) || defined(_M_IX86) || defined(_X86_) || defined(i386) || defined(i486) || defined(i586) || defined(i686) || defined(__i386__) || defined(__386__) || defined(X86) || defined(I386)
 # include "ia32abicc.c"
 #elif powerpc|ppc

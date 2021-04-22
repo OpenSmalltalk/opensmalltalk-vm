@@ -12,6 +12,9 @@
 *
 *
 *****************************************************************************/
+#ifdef HAVE_CONFIG_H
+#include "config.h" /* this must happen before including std libraries */
+#endif
 #ifdef _WIN32
 # include <windows.h>
 # include <winerror.h>

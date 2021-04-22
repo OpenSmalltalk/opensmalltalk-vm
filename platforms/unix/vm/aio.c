@@ -30,19 +30,19 @@
  * Last edited: Tue Mar 29 13:06:00 PDT 2016
  */
 
-#include "interp.h" /* For COGVM define */
-#include "sqaio.h"
-#include "sqAssert.h"
-#include <stdlib.h>
-
 #ifdef HAVE_CONFIG_H
 
-# include "config.h"
+#include "config.h" /* this must happen before including std libraries */
 
 # ifdef HAVE_UNISTD_H
 #   include <sys/types.h>
 #   include <unistd.h>
 # endif /* HAVE_UNISTD_H */
+
+#include "interp.h" /* For COGVM define */
+#include "sqaio.h"
+#include "sqAssert.h"
+#include <stdlib.h>
 
 # ifdef NEED_GETHOSTNAME_P
     extern int gethostname();

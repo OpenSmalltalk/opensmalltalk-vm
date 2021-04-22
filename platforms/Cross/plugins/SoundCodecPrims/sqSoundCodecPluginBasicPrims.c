@@ -8,7 +8,9 @@
    and source files from Jutta Degener and Carsten Bormann implementation,
    patch level 10. This was done to simplify Squeak source code maintenance.
  */
-
+#ifdef HAVE_CONFIG_H
+#include "config.h" /* this must happen before including std libraries */
+#endif
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>

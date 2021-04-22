@@ -13,7 +13,10 @@
 *  August 5th, 2008, EEM wrote pc sampling code
 *
 *****************************************************************************/
- 
+#ifdef HAVE_CONFIG_H
+#include "config.h" /* this must happen before including std libraries */
+#endif
+
 #if NO_VM_PROFILE
 #include "sq.h"
 

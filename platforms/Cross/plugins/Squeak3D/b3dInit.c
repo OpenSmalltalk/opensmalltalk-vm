@@ -12,6 +12,9 @@
 *
 *
 *****************************************************************************/
+#ifdef HAVE_CONFIG_H
+#include "config.h" /* this must happen before including std libraries */
+#endif
 #include <string.h>
 #include <stdlib.h>
 #include <limits.h>
