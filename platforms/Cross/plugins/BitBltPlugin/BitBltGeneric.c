@@ -338,6 +338,42 @@ static void fastPathAlphaBlend0_32_scalar(operation_t *op, uint32_t flags)
     } while (--height > 0);
 }
 
+static void fastPathAlphaBlend32_32_map1_scalar(operation_t *op, uint32_t flags)
+{
+    IGNORE(flags);
+    COPY_OP_TO_LOCALS(op, uint32_t, uint32_t);
+    uint32_t *src = srcBits + srcPitch * srcY + srcX;
+    uint32_t *dest = destBits + destPitch * destY + destX;
+    srcPitch -= width;
+    destPitch -= width;
+    uint32_t s[2] = { (*op->cmLookupTable)[0] & (*op->halftoneBase)[0], (*op->cmLookupTable)[1] & (*op->halftoneBase)[0] };
+    unsigned int alpha[2] = { (s[0] >> 24) & 0xFF, (s[1] >> 24) & 0xFF };
+    unsigned int unAlpha[2] = { 0xFF - alpha[0], 0xFF - alpha[1] };
+    uint32_t sAG[2] = { ((s[0] >> 8) & 0xFF) | 0xFF0000, ((s[1] >> 8) & 0xFF) | 0xFF0000 };
+    uint32_t sRB[2] = { s[0] & 0xFF00FF, s[1] & 0xFF00FF };
+    sAG[0] *= alpha[0];
+    sAG[1] *= alpha[1];
+    sRB[0] *= alpha[0];
+    sRB[1] *= alpha[1];
+    do {
+        uint32_t remain = width;
+        do {
+            uint32_t s = !!*src++;
+            uint32_t d = *dest;
+            uint32_t dAG = (d >> 8) & 0xFF00FF;
+            uint32_t dRB = d & 0xFF00FF;
+            uint32_t blendAG = sAG[s] + dAG * unAlpha[s] + 0xFF00FF;
+            uint32_t blendRB = sRB[s] + dRB * unAlpha[s] + 0xFF00FF;
+            blendAG = ((((blendAG >> 8) & 0xFF00FF) + blendAG) >> 8) & 0xFF00FF;
+            blendRB = ((((blendRB >> 8) & 0xFF00FF) + blendRB) >> 8) & 0xFF00FF;
+            d = (blendAG << 8) | blendRB;
+            *dest++ = d;
+        } while (--remain > 0);
+        src += srcPitch;
+        dest += destPitch;
+    } while (--height > 0);
+}
+
 static void fastPathAlphaBlend32_32(operation_t *op, uint32_t flags)
 {
     IGNORE(flags);
@@ -619,6 +655,7 @@ static fast_path_t fastPaths[] = {
 		{ fastPathSourceWord8_32,        CR_sourceWord,      STD_FLAGS(8,32,DIRECT,NO) },
 		{ fastPathSourceWord32_32,       CR_sourceWord,      STD_FLAGS(32,32,NO,NO) &~ FAST_PATH_H_OVERLAP },
 		{ fastPathAlphaBlend0_32_scalar, CR_alphaBlend,      STD_FLAGS_NO_SOURCE(32,SCALAR) },
+		{ fastPathAlphaBlend32_32_map1_scalar, CR_alphaBlend, STD_FLAGS(32,32,1BIT,SCALAR) },
 		{ fastPathAlphaBlend32_32,       CR_alphaBlend,      STD_FLAGS(32,32,NO,NO) },
 		{ fastPathNoOp,                  CR_destinationWord, 0 },
 
