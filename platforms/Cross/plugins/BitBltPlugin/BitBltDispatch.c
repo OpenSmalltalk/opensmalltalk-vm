@@ -310,41 +310,56 @@ void copyBitsDispatch(operation_t *op)
 
 		if (op->cmFlags & ColorMapIndexedPart) {
 			if (op->cmFlags & ColorMapFixedPart) {
-				if (op->src.depth == 32) {
-					if (op->cmMask == 0x7FFF && memcmp(op->cmMaskTable, maskTable85, sizeof maskTable85) == 0 && memcmp(op->cmShiftTable, shiftTable85, sizeof shiftTable85) == 0)
-						flags |= FAST_PATH_15BIT_COLOR_MAP;
-					else if (op->cmMask == 0xFFF && memcmp(op->cmMaskTable, maskTable84, sizeof maskTable84) == 0 && memcmp(op->cmShiftTable, shiftTable84, sizeof shiftTable84) == 0)
-						flags |= FAST_PATH_12BIT_COLOR_MAP;
-					else if (op->cmMask == 0x1FF && memcmp(op->cmMaskTable, maskTable83, sizeof maskTable83) == 0 && memcmp(op->cmShiftTable, shiftTable83, sizeof shiftTable83) == 0)
-						flags |= FAST_PATH_9BIT_COLOR_MAP;
-					else {
-						/* Unsupported case 1 */
+				/* First check whether all except the first colour map entry match.
+				 * This indicates that the operation depends only upon whether
+				 * each pixel has value 0 or not (note that non-zero pixels that
+				 * reduce to 0 when bit-packed use lookup index 1)
+				 */
+				usqInt i;
+				flags |= FAST_PATH_1BIT_COLOR_MAP;
+				for (i = op->cmMask; i >= 2; --i) {
+					if ((*op->cmLookupTable)[i] != (*op->cmLookupTable)[1]) {
+						flags &= ~FAST_PATH_1BIT_COLOR_MAP;
+						break;
+					}
+				}
+				if ((flags & FAST_PATH_1BIT_COLOR_MAP) == 0) {
+					if (op->src.depth == 32) {
+						if (op->cmMask == 0x7FFF && memcmp(op->cmMaskTable, maskTable85, sizeof maskTable85) == 0 && memcmp(op->cmShiftTable, shiftTable85, sizeof shiftTable85) == 0)
+							flags |= FAST_PATH_15BIT_COLOR_MAP;
+						else if (op->cmMask == 0xFFF && memcmp(op->cmMaskTable, maskTable84, sizeof maskTable84) == 0 && memcmp(op->cmShiftTable, shiftTable84, sizeof shiftTable84) == 0)
+							flags |= FAST_PATH_12BIT_COLOR_MAP;
+						else if (op->cmMask == 0x1FF && memcmp(op->cmMaskTable, maskTable83, sizeof maskTable83) == 0 && memcmp(op->cmShiftTable, shiftTable83, sizeof shiftTable83) == 0)
+							flags |= FAST_PATH_9BIT_COLOR_MAP;
+						else {
+							/* Unsupported case 1 */
+							copyBitsFallback(op, 0);
+#ifdef PROFILING
+							profile_unrecorded_cases[1]++;
+#endif
+							return;
+						}
+					} else if (op->src.depth == 16) {
+						if (op->cmMask == 0xFFF && memcmp(op->cmMaskTable, maskTable54, sizeof maskTable54) == 0 && memcmp(op->cmShiftTable, shiftTable54, sizeof shiftTable54) == 0)
+							flags |= FAST_PATH_12BIT_COLOR_MAP;
+						else if (op->cmMask == 0x1FF && memcmp(op->cmMaskTable, maskTable53, sizeof maskTable53) == 0 && memcmp(op->cmShiftTable, shiftTable53, sizeof shiftTable53) == 0)
+							flags |= FAST_PATH_9BIT_COLOR_MAP;
+						else {
+							/* Unsupported case 2 */
+							copyBitsFallback(op, 0);
+#ifdef PROFILING
+							profile_unrecorded_cases[2]++;
+#endif
+							return;
+						}
+					} else {
+						/* Unsupported case 3 */
 						copyBitsFallback(op, 0);
 #ifdef PROFILING
-						profile_unrecorded_cases[1]++;
+						profile_unrecorded_cases[3]++;
 #endif
 						return;
 					}
-				} else if (op->src.depth == 16) {
-					if (op->cmMask == 0xFFF && memcmp(op->cmMaskTable, maskTable54, sizeof maskTable54) == 0 && memcmp(op->cmShiftTable, shiftTable54, sizeof shiftTable54) == 0)
-						flags |= FAST_PATH_12BIT_COLOR_MAP;
-					else if (op->cmMask == 0x1FF && memcmp(op->cmMaskTable, maskTable53, sizeof maskTable53) == 0 && memcmp(op->cmShiftTable, shiftTable53, sizeof shiftTable53) == 0)
-						flags |= FAST_PATH_9BIT_COLOR_MAP;
-					else {
-						/* Unsupported case 2 */
-						copyBitsFallback(op, 0);
-#ifdef PROFILING
-						profile_unrecorded_cases[2]++;
-#endif
-						return;
-					}
-				} else {
-					/* Unsupported case 3 */
-					copyBitsFallback(op, 0);
-#ifdef PROFILING
-					profile_unrecorded_cases[3]++;
-#endif
-					return;
 				}
 			} else {
 				if ((op->src.depth < 16 && op->cmMask == (1u << op->src.depth) - 1) ||
