@@ -640,6 +640,30 @@ static void fastPathDepthConv(operation_t *op, uint32_t flags)
 	} while (--height > 0);
 }
 
+static void fastPathEarlyHalftone(operation_t *op, uint32_t flags)
+{
+	/* With a 32bpp destination, the action of halftoning has no dependency on
+	 * the destination X coordinate of a pixel. Furthermore, scalar halftoning
+	 * doesn't depend on the destination Y coordinate either. If there's a
+	 * colour map as well, this means we can apply the halftone to the colour
+	 * map entries instead, which makes it easier to find a match for the
+	 * remaining part of the operation from amongst the available fast paths.
+	 */
+	uint32_t flags2 = (flags &~ FAST_PATH_SCALAR_HALFTONE) | FAST_PATH_NO_HALFTONE;
+	void (*func)(operation_t *, uint32_t) = lookupFastPath(op->combinationRule, flags2);
+	if (func == NULL) {
+		copyBitsFallback(op, flags);
+	} else {
+		uint32_t cmLookupTable2[1<<15];
+		for (int32_t i = op->cmMask; i >= 0; --i)
+			cmLookupTable2[i] = (*op->cmLookupTable)[i] & (*op->halftoneBase)[0];
+		operation_t op2 = *op;
+		op2.cmLookupTable = &cmLookupTable2;
+		op2.noHalftone = true;
+		func(&op2, flags2);
+	}
+}
+
 static void fastPathNoOp(operation_t *op, uint32_t flags)
 {
 	IGNORE(op);
@@ -662,6 +686,7 @@ static fast_path_t fastPaths[] = {
 		/* Some special fast paths to extend the abilities of the others in corner cases */
 		{ fastPathRightToLeft,           CR_any,             FAST_PATH_VECTOR_HALFTONE | ONLY_H_OVERLAP },
 		{ fastPathBottomToTop,           CR_any,             FAST_PATH_VECTOR_HALFTONE | ONLY_V_OVERLAP },
+		{ fastPathEarlyHalftone,         CR_any,             FAST_PATH_SRC_0BPP | ONLY_DEST_32BPP | FAST_PATH_NO_COLOR_MAP | ONLY_SCALAR_HALFTONE },
 		{ fastPathDepthConv,             CR_any,             FAST_PATH_SRC_0BPP | FAST_PATH_SRC_32BPP | ONLY_DEST_32BPP },
 		{ fastPathDepthConv,             CR_any,             FAST_PATH_SRC_0BPP | FAST_PATH_SRC_16BPP | ONLY_DEST_16BPP },
 		{ fastPathDepthConv,             CR_any,             FAST_PATH_SRC_0BPP | FAST_PATH_SRC_8BPP  | ONLY_DEST_8BPP },
