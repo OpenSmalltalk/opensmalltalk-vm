@@ -1368,7 +1368,7 @@ copyBits(void)
 	if (!(lockSurfaces())) {
 		return primitiveFail();
 	}
-#  if ENABLE_FAST_BLT
+#  ifdef ENABLE_FAST_BLT
 
 	/* you really, really mustn't call this unless you have the rest of the code to link to */
 	copyBitsFastPathSpecialised();
@@ -1390,7 +1390,7 @@ static sqInt
 copyBitsFastPathSpecialised(void)
 {
 
-#  if ENABLE_FAST_BLT
+#  ifdef ENABLE_FAST_BLT
 
 	/* set the affected area to 0 first */
 	affectedL = (affectedR = (affectedT = (affectedB = 0)));
@@ -1814,7 +1814,7 @@ copyBitsFallback(operation_t *op, unsigned int flags)
 	sqInt t;
 
 
-#  if ENABLE_FAST_BLT
+#  ifdef ENABLE_FAST_BLT
 
 	/* recover values from the operation struct used by the fast ARM code */
 	
@@ -3159,7 +3159,7 @@ initialiseModule(void)
 {
 	initBBOpTable();
 	initDither8Lookup();
-#  if ENABLE_FAST_BLT
+#  ifdef ENABLE_FAST_BLT
 	initialiseCopyBits();
 #  endif
 	return 1;
@@ -5192,7 +5192,7 @@ primitiveCompareColors(void)
 	if (failed()) {
 		return null;
 	}
-#  if ENABLE_FAST_BLT
+#  ifdef ENABLE_FAST_BLT
 	if (!(loadBitBltFromwarping(rcvr, 0))) {
 		return primitiveFail();
 	}
