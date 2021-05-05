@@ -993,7 +993,7 @@ void sqSocketListenOnPortBacklogSizeInterface(SocketPtr s, sqInt port, sqInt bac
   if (!SocketValid(s)) return;
 
   if (TCPSocketType != s->socketType) { /* UDP/RAW */
-	sqSocketListenOnPort(s, port);
+	sqSocketBindToPort(s, (int)addr, (int)port);
 	return;
   }
 
