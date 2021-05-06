@@ -54,14 +54,14 @@ CFLAGS:=$(CFLAGS) -DBUILD_FOR_OSX=1 -DUSE_METAL=1 -DUSE_OPENGL=1 -DUSE_CORE_GRAP
 		-isysroot $(SDK) \
 		-include $(PLATDIR)/iOS/vm/SqueakPureObjc_Prefix.pch
 
-BFLAGS:=-arch $(TARGET_ARCH) \
+BFLAGS:=-arch $(TARGET_ARCH) -mmacosx-version-min=$(TARGET_VERSION_MIN) \
 		-bundle \
 		-isysroot $(SDK) \
 		-Wl,-rpath,@executable_path/../Frameworks \
 		-Wl,-rpath,@executable_path/../$(APPPLUGINDIR) \
 		$(EXTRABFLAGS)
 
-DYFLAGS:=-arch $(TARGET_ARCH) \
+DYFLAGS:=-arch $(TARGET_ARCH) -mmacosx-version-min=$(TARGET_VERSION_MIN) \
 		-shared \
 		-isysroot $(SDK) \
 		$(EXTRADYFLAGS)

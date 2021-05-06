@@ -226,13 +226,15 @@ print-objects:
 ignore := $(addsuffix .%, $(basename $(wildcard $(BUILD)/vm/*.ignore)))
 
 $(OBJDIR)/$(VM): $(OBJDIR) $(VMOBJ) $(LIBS)
-	$(CC) -arch $(TARGET_ARCH) -o $(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -c $(OSXCOMMONDIR)/version.c
+	$(CC) -o $(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -c $(OSXCOMMONDIR)/version.c
 ifneq ($(LINK_WITH_CXX),)
-	$(LDCXX) -arch $(TARGET_ARCH) -isysroot $(SDK) $(CXXVERFLAGS) $(LDFLAGS) $(FRAMEWORKS) \
+	$(LDCXX) -arch $(TARGET_ARCH) -mmacosx-version-min=$(TARGET_VERSION_MIN) \
+			-isysroot $(SDK) $(CXXVERFLAGS) $(LDFLAGS) $(FRAMEWORKS) \
 			-Wl,-headerpad_max_install_names \
 			-o $(OBJDIR)/$(VM) $(VMOBJ) $(filter-out $(call ignore), $(LIBS))
 else
-	$(CC) -arch $(TARGET_ARCH) -isysroot $(SDK) $(LDFLAGS) $(FRAMEWORKS) \
+	$(CC) -arch $(TARGET_ARCH) -mmacosx-version-min=$(TARGET_VERSION_MIN) \
+			-isysroot $(SDK) $(LDFLAGS) $(FRAMEWORKS) \
 			-Wl,-headerpad_max_install_names \
 			-o $(OBJDIR)/$(VM) $(VMOBJ) $(filter-out $(call ignore), $(LIBS))
 endif
