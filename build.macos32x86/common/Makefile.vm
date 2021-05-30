@@ -22,17 +22,20 @@
 # and its short name, e.g. Squeak or Newspeak, used to choose app icon files.
 
 VM?=Squeak
+export VM
 SYSTEM?=$(VM)
 
 # PLUGINSRCDIR defines the locaton of the plugin source, the subsets of which
 # selected by plugins.int and plugins.ext will be built.
 
 PLUGINSRCDIR?=../../src/plugins
+export PLUGINSRCDIR
 
 # CONFIGURATION defines what version of the VM to build, product, assert or
 # debug.  The default is overridden in the mvm script
 
 CONFIGURATION?=product
+export CONFIGURATION
 
 
 #############################################################################
@@ -48,9 +51,11 @@ else # default CONFIGURATION=product
 endif
 $(shell mkdir -p deps >/dev/null) # deps is the dependencies directory
 BLDDIR:= $(BUILD)
+export BLDDIR
 OBJDIR:= $(BLDDIR)/vm
 
 PLATDIR:=../../platforms
+export PLATDIR
 CROSSDIR:=$(PLATDIR)/Cross/vm
 TPDIR:=$(PLATDIR)/Cross/third-party
 OSXDIR:=$(PLATDIR)/iOS/vm/OSX
@@ -266,10 +271,10 @@ $(OBJDIR)/%.lib: FORCE
 	rm -f $(BUILD)/vm/$(*F).ignore
 	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) MAKEFILE=$(call plugin-makefile,$(*F)) \
-		CONFIGURATION=$(CONFIGURATION) ARCH=$(TARGET_ARCH) \
-		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
+		ARCH=$(TARGET_ARCH) TARGET_VERSION_MIN=$(TARGET_VERSION_MIN) \
+		VMSRCDIR=$(VMSRCDIR) \
 		LIBNAME=$(*F) COGDEFS="$(COGDEFS)" XDEFS=-DSQUEAK_BUILTIN_PLUGIN \
-		$(PLUGINHACK) \
+		CXXVERFLAGS="$(CXXVERFLAGS)" $(PLUGINHACK) \
 		$(OBJDIR)/$(*F).lib
 
 prereqs/%.lib:
@@ -290,12 +295,11 @@ $(OBJDIR)/%.bundle:	FORCE
 	rm -f $(BUILD)/vm/$(*F).ignore
 	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) MAKEFILE=$(call plugin-makefile,$(*F)) \
-		CONFIGURATION=$(CONFIGURATION) ARCH=$(TARGET_ARCH) \
-		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
+		ARCH=$(TARGET_ARCH) TARGET_VERSION_MIN=$(TARGET_VERSION_MIN) \
+		VMSRCDIR=$(VMSRCDIR) \
 		LIBNAME=$(*F) COGDEFS="$(COGDEFS)" \
-		APP=$(APP) VM=$(VM) BLDDIR=$(BLDDIR) \
 		THIRDPARTYOUTDIR=$(THIRDPARTYOUTDIR) \
-		$(PLUGINHACK) \
+		CXXVERFLAGS="$(CXXVERFLAGS)" $(PLUGINHACK) \
 		$(OBJDIR)/$(*F).bundle
 		
 # External plugin. Made in the "Pharo way": as a simple dylib to be included in 
@@ -306,12 +310,11 @@ $(OBJDIR)/%.dylib: FORCE
 	rm -f $(BUILD)/vm/$(*F).ignore
 	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) MAKEFILE=$(call plugin-makefile,$(*F)) \
-		CONFIGURATION=$(CONFIGURATION) ARCH=$(TARGET_ARCH) \
-		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
-		LIBNAME=$(*F) COGDEFS="$(COGDEFS)" \
-		APP=$(APP) VM=$(VM) BLDDIR=$(BLDDIR) USEPLUGINASDYLIB=TRUE \
+		ARCH=$(TARGET_ARCH) TARGET_VERSION_MIN=$(TARGET_VERSION_MIN) \
+		VMSRCDIR=$(VMSRCDIR) \
+		LIBNAME=$(*F) USEPLUGINASDYLIB=TRUE COGDEFS="$(COGDEFS)" \
 		THIRDPARTYOUTDIR=$(THIRDPARTYOUTDIR) \
-		$(PLUGINHACK) \
+		CXXVERFLAGS="$(CXXVERFLAGS)" $(PLUGINHACK) \
 		$(OBJDIR)/$(*F).dylib
 
 # It would be nice to have this abbreviation but it creates havoc eem 2/2016
