@@ -97,6 +97,9 @@ PLUGINLIB:= $(VMDIR)/$(LIBNAME).lib
 PLUGINDLL:= $(VMDIR)/$(LIBNAME).dll
 LIBOBJ ?= 	$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$(LIBSRC)))		 
 LIBOBJ:=    $(addprefix $(OBJDIR)/,$(LIBOBJ))
+ifdef BIT_IDENTICAL_FLOATING_POINT
+LIBOBJ+=$(BUILD)/fdlibm/libm.a $(LIBS)
+endif
 
 
 VPATH:= $(MAKERDIR) $(WIN32DIR) $(CROSSDIR) $(OBJDIR)

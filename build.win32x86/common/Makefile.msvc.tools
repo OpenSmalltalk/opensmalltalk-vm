@@ -88,7 +88,10 @@ CONSOLELDFLAGS:= /subsystem:console $(BASELDFLAGS)
 DL:=/DEFAULTLIB:
 NDL:=/NODEFAULTLIB:
 
-STDLIBS:=$(STDLIBS) $(NDL)libc $(NDL)libcmt $(DL)msvcrt \
+ifdef BIT_IDENTICAL_FLOATING_POINT
+EXTRANDLS:=/NODEFAULTLIB:libm
+endif
+STDLIBS:=$(STDLIBS) $(NDL)libc $(NDL)libcmt $(EXTRANDLS) $(DL)msvcrt \
          dinput8.lib dsound.lib ws2_32.lib comdlg32.lib ole32.lib winmm.lib \
          version.lib wininet.lib user32.lib gdi32.lib psapi.lib \
          advapi32.lib kernel32.lib secur32.lib shell32.lib shfolder.lib

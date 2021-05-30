@@ -10,12 +10,16 @@ THIRDPARTYDIR?=$(BUILD)/third-party
 THIRDPARTYLIBDIR?=$(THIRDPARTYOUTDIR)/bin
 THIRDPARTYINCLUDEDIR?=$(THIRDPARTYOUTDIR)/include
 THIRDPARTYCACHEDIR?=../../.thirdparty-cache
-THIRDPARTYOUTDIR?=$(abspath $(THIRDPARTYCACHEDIR)/windows/i386)
+THIRDPARTYOUTDIR?=$(abspath $(THIRDPARTYCACHEDIR)/windows/x86_64)
+export THIRDPARTYOUTDIR
 THIRDPARTYINSTALLDIR?=$(BUILD)/vm
-THIRDPARTY_CFLAGS?=-m32 -static-libgcc -static-libstdc++
-THIRDPARTY_LDFLAGS?=-m32 -static-libgcc -static-libstdc++
+THIRDPARTY_CFLAGS?=-m64 -static-libgcc -static-libstdc++
+THIRDPARTY_LDFLAGS?=-m64 -static-libgcc -static-libstdc++
 WGET?=wget -q --no-check-certificate 
 
+#I need this toolchain to compile external libraries with appropriate gcc
+THIRDPARTY_TOOLCHAIN:=CC=x86_64-w64-mingw32-gcc AR=x86_64-w64-mingw32-ar LD=x86_64-w64-mingw32-clang NM=x86_64-w64-mingw32-nm RC=x86_64-w64-mingw32-windres DLLTOOL=x86_64-w64-mingw32-dlltool DLLWRAP=x86_64-w64-mingw32-dllwrap
+	
 
 $(THIRDPARTYDIR):
 	if [ ! -d $(THIRDPARTYDIR) ]; then mkdir -p $(THIRDPARTYDIR); fi

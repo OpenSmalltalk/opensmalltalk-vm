@@ -26,11 +26,8 @@ VIDOBJ=  $(VIDSRC:.c=.o)
 # add the libmpeg files
 LIBSRC += $(MP3SRC) $(AUDSRC) $(VIDSRC)
 LIBSRC=   $(notdir $(MAKERSRC) $(WIN32SRC) $(CROSSSRC) $(MP3SRC) $(AUDSRC) $(VIDSRC))
-LIBOBJ += $(MP3OBJ) $(AUDOBJ) $(VIDOBJ)
-#$(info filter is $(filter $(OBJDIR)/%,$(LIBOBJ)))
-#$(info filter-out is $(filter-out $(OBJDIR)/%,$(LIBOBJ)))
-LIBOBJ:=$(filter $(OBJDIR)/%, $(LIBOBJ)) \
-		$(addprefix $(OBJDIR)/, $(filter-out $(OBJDIR)/%, $(LIBOBJ)))
+MP3LIBOBJ := $(addprefix $(OBJDIR)/, $(MP3OBJ) $(AUDOBJ) $(VIDOBJ))
+LIBOBJ+=$(MP3LIBOBJ)
 
 # Restate the dependency.  Don't ask me why, but it appears necessary :/
 $(PLUGINLIB): $(LIBOBJ)

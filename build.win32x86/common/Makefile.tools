@@ -3,6 +3,7 @@
 #
 
 TOOLPREFIX:=i686-w64-mingw32-
+export TOOLPREFIX
 
 #############################################################################
 # C compiler settings (gcc 4.x)

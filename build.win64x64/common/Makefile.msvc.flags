@@ -7,6 +7,7 @@
 #############################################################################
 
 ARCH:=x64
+export ARCH
 
 # Find out where the MSVC tools are if not already defined.
 ifeq ($(VCToolsInstallDir),)
@@ -51,6 +52,7 @@ MSVC:=MSVC
 undefine Clang
 CC:=$(TOOLPREFIX)cl.exe -nologo
 endif
+export TOOLPREFIX
 $(info CC=$(CC))
 AS:=ml64
 

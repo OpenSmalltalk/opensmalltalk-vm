@@ -18,6 +18,7 @@ VM?=Squeak
 VM_NAME?=$(VM)
 CONFIGURATION=product
 THREADING=single
+export VM VM_NAME CONFIGURATION
 
 # Is this a Croquet VM (defaults to OGL instead of D3D)?
 CROQUET:=-DCROQUET
@@ -45,9 +46,11 @@ else
 endif
 $(shell mkdir -p deps >/dev/null) # deps is the dependencies directory
 PLUGINSRCDIR:= ../../src
+export PLUGINSRCDIR
 OBJDIR:= $(BUILD)/vm
 
 PLATDIR:=../../platforms
+export PLATDIR
 CROSSDIR:=$(PLATDIR)/Cross/vm
 TPDIR:=$(PLATDIR)/Cross/third-party
 WIN32DIR:=$(PLATDIR)/win32/vm
@@ -77,6 +80,7 @@ DLLS:= $(addprefix $(OBJDIR)/, $(addsuffix .dll, $(EXTERNAL_PLUGINS)))
 
 ifdef BIT_IDENTICAL_FLOATING_POINT
 LIBS:=$(BUILD)/fdlibm/libm.a $(LIBS)
+export BIT_IDENTICAL_FLOATING_POINT
 endif
 
 #############################################################################
@@ -275,12 +279,9 @@ $(OBJDIR)/%.lib: $(call plugin-makefile,$(*F))
 	rm -f $(BUILD)/vm/$(*F).ignore
 	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) \
-		"VM=$(VM)" "VM_NAME=$(VM_NAME)" \
-		CONFIGURATION=$(CONFIGURATION) TOOLPREFIX=$(TOOLPREFIX) \
-		THIRDPARTYOUTDIR=$(THIRDPARTYOUTDIR) \
-		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
-		LIBNAME=$(*F) COGDEFS="$(COGDEFS) -DSQUEAK_BUILTIN_PLUGIN" \
 		$(OBJDIR)/$(*F).lib
+		LIBNAME=$(*F) INTERNAL_PLUGIN=1 VMSRCDIR=$(VMSRCDIR) \
+		COGDEFS="$(COGDEFS) -DSQUEAK_BUILTIN_PLUGIN=$(*F)" $(OBJDIR)/$(*F).lib
 
 # External plugin.  Build as dll and copy to vm dir ($(OBJDIR)).
 $(OBJDIR)/%.dll: $(call plugin-makefile,$(*F))
@@ -288,15 +289,13 @@ $(OBJDIR)/%.dll: $(call plugin-makefile,$(*F))
 	rm -f $(BUILD)/$(*F).ignore
 	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) \
-		"VM=$(VM)" "VM_NAME=$(VM_NAME)" VMLIB=$(OBJDIR)/$(VMLIB) \
-		CONFIGURATION=$(CONFIGURATION) TOOLPREFIX=$(TOOLPREFIX) \
-		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
-		THIRDPARTYOUTDIR=$(THIRDPARTYOUTDIR) JMPOBJ=$(JMPOBJ) \
-		COGDEFS="$(COGDEFS) -DSQUEAK_EXTERNAL_PLUGIN=$(*F)" LIBNAME=$(*F) $(OBJDIR)/$(*F).dll
+		LIBNAME=$(*F) EXTERNAL_PLUGIN=1 VMSRCDIR=$(VMSRCDIR) \
+		JMPOBJ=$(JMPOBJ) VMLIB=$(OBJDIR)/$(VMLIB) \
+		COGDEFS="$(COGDEFS) -DSQUEAK_EXTERNAL_PLUGIN=$(*F)" $(OBJDIR)/$(*F).dll
 
 $(BUILD)/fdlibm/libm.a:
 	@-mkdir -p $(@D)
-	$(MAKE) CC="$(CC)" CFLAGS="$(CFLAGS) -D_IEEE_LIBM" -C $(@D) \
+	$(MAKE) CC='$(CC)' CFLAGS="$(CFLAGS) -D_IEEE_LIBM" -C $(@D) \
 		TP=../../$(TPDIR) -f ../../$(TPDIR)/fdlibm/Makefile.remote
 
 
