@@ -128,7 +128,7 @@ $(PLUGINLIB): $(VMDIR) $(OBJDIR) $(LIBOBJ) $(LIBSRC)
 PLUGINDLL_LIBS:=WinMM.lib ole32.lib dsound.lib msdmo.lib kernel32.lib /NODEFAULTLIB:libc /NODEFAULTLIB:libcmt /DEFAULTLIB:msvcrt
 
 $(PLUGINDLL): $(VMDIR) $(OBJDIR) $(LIBOBJ) $(JMPOBJ) $(LIBSRC)
-	$(LD) $(VMLIB) $(LDFLAGS) -DLL $(LIBOBJ) $(JMPOBJ) $(PLUGINDLL_LIBS) $(EXTRALIBS) \
+	$(LD) $(LDFLAGS) -DLL $(LIBOBJ) $(JMPOBJ) $(VMLIB) $(PLUGINDLL_LIBS) $(EXTRALIBS) \
 	-LIBPATH:$(BUILD)/vm \
 	-LIBPATH:"$(WindowsSdkDir)LIB/$(WindowsSDKVersion)/um/x86" \
 	-LIBPATH:"$(WindowsSdkDir)LIB/$(WindowsSDKVersion)/ucrt/x86" \

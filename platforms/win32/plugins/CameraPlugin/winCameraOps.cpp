@@ -737,7 +737,7 @@ SetClosestWidthAndFrameRate(IAMStreamConfig *pCameraStream, int desiredWidth)
 	int bestWidth = INT_MAX;
 	AM_MEDIA_TYPE *selectedMediaType = nullptr;
 	HRESULT hr;
-	int64_t minInterval, maxInterval;
+	__int64 minInterval, maxInterval;
 
 	// If desiredWidth = 0 answer largest (default?)
 	if (!desiredWidth)
@@ -780,7 +780,7 @@ SetClosestWidthAndFrameRate(IAMStreamConfig *pCameraStream, int desiredWidth)
 		// Limit the frame rate to 30 frames per second
 		// Perverse, but the VIDEO_STREAM_CONFIG_CAPS contains the
 		// minimum and maximum frame durations (and in 100 nsec units).
-		int64_t thirtyFPS = 10ULL * 1000 * 1000 / 30ULL;
+		__int64 thirtyFPS = 10ULL * 1000 * 1000 / 30ULL;
 		((VIDEOINFOHEADER*) selectedMediaType->pbFormat)->AvgTimePerFrame
 			= max(thirtyFPS,minInterval);
 		hr = pCameraStream->SetFormat(selectedMediaType);

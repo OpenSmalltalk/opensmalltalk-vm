@@ -275,7 +275,7 @@ $(OBJDIR)/%.dll: $(call plugin-makefile,$(*F))
 	$(MAKE) $(MFLAGS) $(SUBMFLAGS) -I../common BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) \
 		LIBNAME=$(*F) EXTERNAL_PLUGIN=1 VMSRCDIR=$(VMSRCDIR) \
-		JMPOBJ=$(JMPOBJ) VMLIB=$(VMLIB) \
+		JMPOBJ=$(JMPOBJ) VMLIB=$(OBJDIR)/$(VMLIB) \
 		COGDEFS="$(COGDEFS) -DSQUEAK_EXTERNAL_PLUGIN=$(*F)" $(OBJDIR)/$(*F).dll
 
 $(BUILD)/fdlibm/libm.a:
