@@ -12,7 +12,8 @@ INSTALLDIR=sqstkspursunosht/usr
 # GNU configure AC_SYS_LARGEFILE is not adding -D_FILE_OFFSET_BITS (config.h)
 # to use lseek64 instead of lseek, must -D it here
 # Some gcc versions create a broken VM using -O2
-OPT="-g -DAIO_DEBUG -DNDEBUG -DDEBUGVM=0 -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64"
+OPT="-DAIO_DEBUG -DNDEBUG -DDEBUGVM=0 -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64"
+LIBS="-lmapmalloc"
 MAKE=gmake
 
 if [ $# -ge 1 ]; then
@@ -34,7 +35,7 @@ test -f config.h || ../../../platforms/unix/config/configure \
 	--with-src=spurstacksrc --disable-cogit \
 	--without-vm-display-fbdev --without-npsqueak \
 	TARGET_ARCH="-m32" \
-        ac_cv_cflags_warn_all="-v" \
+	LIBS="$LIBS" \
 	CFLAGS="$OPT"
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../products/$INSTALLDIR
