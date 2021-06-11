@@ -3,7 +3,8 @@ set -e
 # Stack Spur VM with VM profiler and threaded heartbeat
 INSTALLDIR=sqstkspur64sunosht/usr
 # Some gcc versions create a broken VM using -O2
-OPT="-g -DAIO_DEBUG -DNDEBUG -DDEBUGVM=0"
+OPT="-DAIO_DEBUG -DNDEBUG -DDEBUGVM=0"
+LIBS="-lmapmalloc"
 MAKE=gmake
 
 if [ $# -ge 1 ]; then
@@ -25,6 +26,7 @@ test -f config.h || ../../../platforms/unix/config/configure \
 	--with-src=spurstack64src --disable-cogit \
 	--without-vm-display-fbdev --without-npsqueak \
 	TARGET_ARCH="-m64" \
+	LIBS="$LIBS" \
 	CFLAGS="$OPT"
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../products/$INSTALLDIR
