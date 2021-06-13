@@ -1,6 +1,6 @@
 /* sqUnixSound.c -- sound support for various Unix sound systems
  *
- * Provide funcitons that redirect sound calls to specific sound systems.
+ * Provide functions that redirect sound calls to specific sound systems.
  *
  * Author: Ian.Piumarta@inria.fr
  * 
