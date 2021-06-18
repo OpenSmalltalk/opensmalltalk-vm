@@ -846,12 +846,9 @@ sqSocketCloseConnection(SocketPtr s)
 *****************************************************************************/
 sqInt sqSocketConnectionStatus(SocketPtr s)
 {
-  int status;
-
-  if (!SocketValid(s)) return -1;
-  DBG(s, "sqSocketConnectionStatus");
-  status = SOCKETSTATE(s) & 0xFFFF;
-  return status;
+  return SocketValid(s)
+	? SOCKETSTATE(s) & 0xFFFF
+	: -1;
 }
 
 /*****************************************************************************
