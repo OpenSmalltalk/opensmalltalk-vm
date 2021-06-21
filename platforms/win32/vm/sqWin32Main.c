@@ -2000,6 +2000,10 @@ parseVMArgument(int argc, char *argv[])
 		extern sqInt desiredCogCodeSize;
 		desiredCogCodeSize = strtobkm(argv[1]);
 		return 2; }
+	else if (argc > 1 && !strcmp(argv[0], VMOPTION("logplugin"))) { 
+		extern char *primTracePluginName;
+		primTracePluginName = argv[1];
+		return 2; }
 # define TLSLEN (sizeof(VMOPTION("trace"))-1)
 	else if (!strncmp(argv[0], VMOPTION("trace"), TLSLEN)) {
 		extern int traceFlags;
