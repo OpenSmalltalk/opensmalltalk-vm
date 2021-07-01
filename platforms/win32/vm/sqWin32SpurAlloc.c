@@ -226,6 +226,37 @@ sqMakeMemoryNotExecutableFromTo(usqInt startAddr, usqInt endAddr)
 						&previous))
 		perror("VirtualProtect(x,y,PAGE_EXECUTE_READWRITE)");
 }
+
+
+void *
+allocateJITMemory(usqInt *desiredSize)
+{
+	char *address, *alloc;
+	usqIntptr_t alignment;
+	SYSTEM_INFO sysInfo;
+
+	/* determine page boundaries & available address space */
+	GetSystemInfo(&sysInfo);
+	pageSize = sysInfo.dwPageSize;
+	pageMask = ~(pageSize - 1);
+	minAppAddr = sysInfo.lpMinimumApplicationAddress;
+	maxAppAddr = sysInfo.lpMaximumApplicationAddress;
+
+#	if 0
+	alignment = max(pageSize,1024*1024);
+	address = (char *)(((usqInt)desiredPosition + alignment - 1) & ~(alignment - 1));
+#	endif
+	alloc = sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto
+				(roundUpToPage(*desiredSize),
+				 roundUpToPage(address),
+				 desiredSize);
+
+	if (!alloc) {
+		perror("Could not allocate JIT memory");
+		exit(1);
+	}
+	return alloc;
+}
 # endif /* COGVM */
 
 # if TEST_MEMORY

@@ -47,6 +47,7 @@
 #endif
 
 #include "sqMemoryAccess.h"
+#include "sqAssert.h"
 #include "debug.h"
 
 #if SPURVM
@@ -94,11 +95,20 @@ int mmapErrno = 0;
 # if !defined(MAP_ANON)
 #	define MAP_ANON MAP_ANONYMOUS
 # endif
+# if __OpenBSD__
+#	define MAP_FLAGS	(MAP_ANON | MAP_PRIVATE | MAP_STACK)
+# else
+#	define MAP_FLAGS	(MAP_ANON | MAP_PRIVATE)
+# endif
 
 static int min(int x, int y) { return (x < y) ? x : y; }
 static int max(int x, int y) { return (x > y) ? x : y; }
 
 /* Answer the address of minHeapSize rounded up to page size bytes of memory. */
+
+#if COGVM
+static void *endOfJITZone;
+#endif
 
 usqInt
 sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
@@ -107,6 +117,7 @@ sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
     unsigned long alignment;
     sqInt allocBytes;
 
+#if !COGVM
 	if (pageSize) {
 		fprintf(stderr, "sqAllocateMemory: already called\n");
 		exit(1);
@@ -115,6 +126,10 @@ sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
 	pageMask = ~(pageSize - 1);
 
 	hint = sbrk(0);
+#else
+	assert(pageSize != 0 && pageMask != 0);
+	hint = endOfJITZone;
+#endif
 
 	alignment = max(pageSize,1024*1024);
 	address = (char *)(((usqInt)hint + alignment - 1) & ~(alignment - 1));
@@ -144,7 +159,7 @@ sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress
 
 	while ((unsigned long)(address + bytes) > (unsigned long)address) {
 		alloc = mmap(address, bytes, PROT_READ | PROT_WRITE /*| PROT_EXEC*/,
-					 MAP_ANON | MAP_PRIVATE, -1, 0);
+					 MAP_FLAGS, -1, 0);
 		if (alloc == MAP_FAILED) {
 			mmapErrno = errno;
 			perror("sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto mmap");
@@ -248,6 +263,7 @@ sqMakeMemoryExecutableFromToCodeToDataDelta(usqInt startAddr,
 #  endif
 }
 
+#if 0
 void
 sqMakeMemoryNotExecutableFromTo(usqInt startAddr, usqInt endAddr)
 {
@@ -261,6 +277,38 @@ sqMakeMemoryNotExecutableFromTo(usqInt startAddr, usqInt endAddr)
 				 size,
 				 PROT_READ | PROT_WRITE) < 0)
 		perror("mprotect(x,y,PROT_READ | PROT_WRITE)");
+}
+#endif
+
+
+// Allocate memory for the code zone, which must be executable, and is
+// perferably writable.  Since the code zone lies below the heap, allocate at
+// as low an address as possible, to allow maximal space for heap growth.
+void *
+allocateJITMemory(usqInt *desiredSize)
+{
+	void *hint = sbrk(0); // a hint of the lowest possible address for mmap
+	void *result;
+
+	pageSize = getpagesize();
+	pageMask = ~(pageSize - 1);
+
+#if !defined(MAP_JIT)
+# define MAP_JIT 0
+#endif
+
+	*desiredSize = roundUpToPage(*desiredSize);
+	result =   mmap(hint, desiredSize,
+					PROT_READ | PROT_WRITE | PROT_EXEC,
+					MAP_FLAGS | MAP_JIT, -1, 0);
+	if (result == MAP_FAILED) {
+		perror("Could not allocate JIT memory");
+		exit(1);
+	}
+	// Note the address for sqAllocateMemory above
+	endOfJITZone = (char *)result + *desiredSize;
+
+	return result;
 }
 # endif /* COGVM */
 
@@ -282,7 +330,7 @@ main()
 	for (i = 80 MBytes; i < 2048UL MBytes; i += 80 MBytes)
 		printf("roadbump created at %p\n",
 				mmap(mem + i, pageSize, PROT_READ | PROT_WRITE,
-					 MAP_ANON | MAP_PRIVATE, -1, 0));
+					 MAP_FLAGS, -1, 0));
 	for (;;) {
 		sqInt segsz = 0;
 		char *seg = sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(32 MBytes, mem + 16 MBytes, &segsz);

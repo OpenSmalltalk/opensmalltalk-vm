@@ -255,7 +255,7 @@ thunkEntry(long x0, long x1, long x2, long x3,
 }
 
 /*
- * Thunk allocation support.  Since thunks must be exectuable and some OSs
+ * Thunk allocation support.  Since thunks must be executable and some OSs
  * may not provide default execute permission on memory returned by malloc
  * we must provide memory that is guaranteed to be executable.  The abstraction
  * is to answer an Alien that references an executable piece of memory that
@@ -292,7 +292,23 @@ allocateExecutablePage(sqIntptr_t *size)
 						PAGE_EXECUTE_READWRITE);
 	if (mem)
 		*size = pagesize;
+	return mem;
+
+#elif defined(MAP_JIT)
+
+	long pagesize = getpagesize();
+
+	void *mem = mmap(0, pagesize,
+					PROT_READ | PROT_WRITE | PROT_EXEC,
+					MAP_FLAGS | MAP_JIT, -1, 0);
+	if (result == MAP_FAILED) {
+		perror("Could not allocateExecutablePage");
+		exit(1);
+	}
+	*size = pagesize;
+	return mem;
 #else
+
 # if !defined(_POSIX_C_SOURCE) || _POSIX_C_SOURCE < 200112L
 	long pagesize = getpagesize();
 # else
@@ -308,7 +324,7 @@ allocateExecutablePage(sqIntptr_t *size)
 		return 0;
 	}
 	*size = pagesize;
-#endif
 	return mem;
+#endif
 }
 #endif /* defined(__ARM_ARCH_ISA_A64) || defined(__arm64__) || ... */
