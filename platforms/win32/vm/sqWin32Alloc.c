@@ -191,16 +191,28 @@ sqMakeMemoryExecutableFromToCodeToDataDelta(usqInt startAddr,
 		*codeToDataDelta = 0;
 }
 
-void
-sqMakeMemoryNotExecutableFromTo(usqInt startAddr, usqInt endAddr)
+void *
+allocateJITMemory(usqInt *desiredSize)
 {
-	DWORD previous;
+	char *address, *alloc;
+	usqIntptr_t alignment;
+	SYSTEM_INFO sysInfo;
 
-	if (!VirtualProtect((void *)startAddr,
-						endAddr - startAddr + 1,
-						PAGE_READWRITE,
-						&previous))
-		perror("VirtualProtect(x,y,PAGE_EXECUTE_READWRITE)");
+	/* determine page boundaries & available address space */
+	GetSystemInfo(&sysInfo);
+	pageSize = sysInfo.dwPageSize;
+	pageMask = ~(pageSize - 1);
+
+	alloc = sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto
+				(roundUpToPage(*desiredSize),
+				 roundUpToPage(address),
+				 desiredSize);
+
+	if (!alloc) {
+		perror("Could not allocate JIT memory");
+		exit(1);
+	}
+	return alloc;
 }
 # endif /* COGVM */
 #endif /* !SPURVM */

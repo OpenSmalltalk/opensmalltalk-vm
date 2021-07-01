@@ -213,21 +213,6 @@ sqMakeMemoryExecutableFromToCodeToDataDelta(usqInt startAddr,
 		*codeToDataDelta = 0;
 }
 
-void
-sqMakeMemoryNotExecutableFromTo(usqInt startAddr, usqInt endAddr)
-{
-	DWORD previous;
-    SIZE_T size;
-
-    size = endAddr - startAddr;
-	if (!VirtualProtect((void *)startAddr,
-						size,
-						PAGE_READWRITE,
-						&previous))
-		perror("VirtualProtect(x,y,PAGE_EXECUTE_READWRITE)");
-}
-
-
 void *
 allocateJITMemory(usqInt *desiredSize)
 {
@@ -242,10 +227,6 @@ allocateJITMemory(usqInt *desiredSize)
 	minAppAddr = sysInfo.lpMinimumApplicationAddress;
 	maxAppAddr = sysInfo.lpMaximumApplicationAddress;
 
-#	if 0
-	alignment = max(pageSize,1024*1024);
-	address = (char *)(((usqInt)desiredPosition + alignment - 1) & ~(alignment - 1));
-#	endif
 	alloc = sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto
 				(roundUpToPage(*desiredSize),
 				 roundUpToPage(address),

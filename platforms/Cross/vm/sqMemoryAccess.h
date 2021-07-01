@@ -422,7 +422,6 @@ extern void sqDeallocateMemorySegmentAtOfSize(void *addr, sqInt sz);
  * circumstances.  COGVM implies STACKVM.  See STACKVM below.
  */
 extern void sqMakeMemoryExecutableFromToCodeToDataDelta(usqInt, usqInt, sqInt*);
-extern void sqMakeMemoryNotExecutableFromTo(usqInt, usqInt);
 extern void *allocateJITMemory(usqInt *desiredSize);
 #endif
 

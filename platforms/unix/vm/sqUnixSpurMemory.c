@@ -263,24 +263,6 @@ sqMakeMemoryExecutableFromToCodeToDataDelta(usqInt startAddr,
 #  endif
 }
 
-#if 0
-void
-sqMakeMemoryNotExecutableFromTo(usqInt startAddr, usqInt endAddr)
-{
-	unsigned long firstPage = roundDownToPage(startAddr);
-	unsigned long size = endAddr - firstPage;
-	/* Arguably this is pointless since allocated memory always includes write
-	 * permission by default.  Annoyingly the mprotect call fails on both linux
-	 * and mac os x.  So make the whole thing a nop.
-	 */
-	if (mprotect((void *)firstPage,
-				 size,
-				 PROT_READ | PROT_WRITE) < 0)
-		perror("mprotect(x,y,PROT_READ | PROT_WRITE)");
-}
-#endif
-
-
 // Allocate memory for the code zone, which must be executable, and is
 // perferably writable.  Since the code zone lies below the heap, allocate at
 // as low an address as possible, to allow maximal space for heap growth.
