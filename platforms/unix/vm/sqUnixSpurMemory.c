@@ -280,7 +280,7 @@ allocateJITMemory(usqInt *desiredSize)
 #endif
 
 	*desiredSize = roundUpToPage(*desiredSize);
-	result =   mmap(hint, desiredSize,
+	result =   mmap(hint, *desiredSize,
 					PROT_READ | PROT_WRITE | PROT_EXEC,
 					MAP_FLAGS | MAP_JIT, -1, 0);
 	if (result == MAP_FAILED) {
