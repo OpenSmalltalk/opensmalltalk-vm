@@ -295,15 +295,20 @@ allocateExecutablePage(sqIntptr_t *size)
 	return mem;
 
 #elif defined(MAP_JIT)
+# if __OpenBSD__
+#	define MAP_FLAGS	(MAP_ANON | MAP_PRIVATE | MAP_STACK)
+# else
+#	define MAP_FLAGS	(MAP_ANON | MAP_PRIVATE)
+# endif
 
 	long pagesize = getpagesize();
 
-	void *mem = mmap(0, pagesize,
-					PROT_READ | PROT_WRITE | PROT_EXEC,
-					MAP_FLAGS | MAP_JIT, -1, 0);
-	if (result == MAP_FAILED) {
+	mem = mmap(	0, pagesize,
+				PROT_READ | PROT_WRITE | PROT_EXEC,
+				MAP_FLAGS | MAP_JIT, -1, 0);
+	if (mem == MAP_FAILED) {
 		perror("Could not allocateExecutablePage");
-		exit(1);
+		return 0;
 	}
 	*size = pagesize;
 	return mem;
