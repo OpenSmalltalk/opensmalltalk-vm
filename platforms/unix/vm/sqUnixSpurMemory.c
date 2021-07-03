@@ -37,9 +37,7 @@
 #  include <sys/mman.h>
 #endif
 #if DUAL_MAPPED_CODE_ZONE
-# if !__APPLE__
-#	include <sys/prctl.h>
-# endif
+# include <sys/prctl.h>
 #ifdef HAVE_SYS_STAT_H
 #  include <sys/stat.h> /* For mode constants */
 #endif
