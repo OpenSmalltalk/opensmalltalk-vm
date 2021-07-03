@@ -159,6 +159,7 @@ static char *getVersionInfo(int verbose);
 }
 
 - (void) parseUnixArgs {
+	[super parseUnixArgs];
 	NSProcessInfo *p = [NSProcessInfo processInfo];
 	[self parseArgs: [p arguments]];
 	[self parseEnv: [p environment]];

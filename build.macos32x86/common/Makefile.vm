@@ -119,7 +119,7 @@ DEBUGVM=-DDEBUGVM=0 -DNDEBUG=1 # Define NDEBUG for production to exclude asserts
 endif
 
 TZ:=$(shell date +%Z)
-DEFS:=	$(COGDEFS) -DUSE_GLOBAL_STRUCT=0 -DNO_ISNAN=1 \
+DEFS:=	-DUSE_GLOBAL_STRUCT=0 -DNO_ISNAN=1 \
 		-DUSE_INLINE_MEMORY_ACCESSORS -D'TZ="$(TZ)"' \
 		-DHAVE_CONFIG_H=1
 

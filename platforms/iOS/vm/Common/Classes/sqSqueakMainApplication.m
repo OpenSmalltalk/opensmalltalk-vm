@@ -53,6 +53,8 @@
 
 extern BOOL gSqueakHeadless;
 extern sqSqueakAppDelegate *gDelegateApp;
+char *fullExeName;
+char *exeName;
 
 @implementation sqSqueakMainApplication;
 @synthesize vmPathStringURL;
@@ -116,6 +118,11 @@ extern sqInt interpret(void);  //This is a VM Callback
 }
 
 - (void) parseUnixArgs {
+	fullExeName = [[[[NSBundle mainBundle] executablePath]
+					precomposedStringWithCanonicalMapping] UTF8String];
+	exeName = strrchr(fullExeName,'/')
+				? strrchr(fullExeName,'/') + 1
+				: fullExeName;
 }
 
 - (void) setupMenus {
