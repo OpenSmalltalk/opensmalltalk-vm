@@ -175,18 +175,13 @@ The files in build.macos64x64/common are
 
 SDKs and Problems
 -----------------
-The makefiles will use the oldest available SDK that is installed that is new
-enough to build the system.  The 64-bit build requires at least the 10.10 SDK.
-SDKs are installed in
+The makefiles will use the standard SDK, and has 11.0 as the minimum deployment
+target.  SDKs are installed in
 	/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/
 To obtain SDKs one way is to web search for "obtaining older sdks for Xcode",
 and follow the instructions you find.  But a more convenient place, at time of
 writing, is
 	git clone https://github.com/phracker/MacOSX-SDKs.git
-
-On Sierra people have reported that the support libraries for the SSLPlugin
-(libssl.dylib and libcrypto.dylib) are missing.  The symptom is an error
-message such as this in the output (and the LOG file produced) of the make:
 
 ld: library not found for -lssl
 clang: error: linker command failed with exit code 1 (use -v to see invocation)
@@ -212,6 +207,9 @@ is not set-up properly.  If you're logging in remotely, e.g. via ssh, and get
 an "User interaction is not allowed." error then see
 http://stackoverflow.com/questions/20205162/user-interaction-is-not-allowed-trying-to-sign-an-osx-app-using-codesign
 	"Login your build user via the GUI and open Keychain Access. Select your signing private key, right-click, choose Get Info, change to the Access Control tab and select the "Allow all applications to access this item"."
+
+You my find that signing an app bundle fails if the app bundle has been used.
+If signing fails simply delete all app bundles (e.g. Squeak*.app) and make anew.
 
 
 Building the VM Simulator Support Libraries

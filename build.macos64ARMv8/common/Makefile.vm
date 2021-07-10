@@ -235,12 +235,12 @@ $(OBJDIR)/$(VM): $(OBJDIR) $(VMOBJ) $(LIBS)
 ifneq ($(LINK_WITH_CXX),)
 	$(LDCXX) -arch $(TARGET_ARCH) -mmacosx-version-min=$(TARGET_VERSION_MIN) \
 			-isysroot $(SDK) $(CXXVERFLAGS) $(LDFLAGS) $(FRAMEWORKS) \
-			-Wl,-headerpad_max_install_names \
+			-Wl,-headerpad_max_install_names,-order_file,$(VMSRCDIR)/_variable_order \
 			-o $(OBJDIR)/$(VM) $(VMOBJ) $(filter-out $(call ignore), $(LIBS))
 else
 	$(CC) -arch $(TARGET_ARCH) -mmacosx-version-min=$(TARGET_VERSION_MIN) \
 			-isysroot $(SDK) $(LDFLAGS) $(FRAMEWORKS) \
-			-Wl,-headerpad_max_install_names \
+			-Wl,-headerpad_max_install_names,-order_file,$(VMSRCDIR)/_variable_order \
 			-o $(OBJDIR)/$(VM) $(VMOBJ) $(filter-out $(call ignore), $(LIBS))
 endif
 

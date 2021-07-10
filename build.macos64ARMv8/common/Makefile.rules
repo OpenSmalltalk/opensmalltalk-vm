@@ -9,7 +9,9 @@ CC := clang
 CXX := clang++
 LD := clang
 LDCXX := clang++ # For linking c++ bundles
+ifeq ($(CXXVERFLAGS),)
 CXXVERFLAGS:=-std=c++14 -stdlib=libc++
+endif
 
 include ../common/Makefile.flags
 
