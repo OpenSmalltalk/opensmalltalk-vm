@@ -45,6 +45,22 @@ LONG CALLBACK sqExceptionFilter(LPEXCEPTION_POINTERS exp)
   return EXCEPTION_WRONG_ACCESS;
 }
 
+# define roundDownToPage(v) ((sqIntptr_t)(v)&pageMask)
+# define roundUpToPage(v) (((sqIntptr_t)(v)+pageSize-1)&pageMask)
+
+static void
+initPageSize()
+{
+  SYSTEM_INFO sysInfo;
+
+  /* determine page boundaries & available address space */
+  if (!pageSize) {
+    GetSystemInfo(&sysInfo);
+    pageSize = sysInfo.dwPageSize;
+    pageMask = ~(pageSize - 1);
+  }
+}
+
 /************************************************************************/
 /* sqAllocateMemory: Initialize virtual memory                          */
 /************************************************************************/
@@ -59,10 +75,10 @@ sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
   pageMask = ~(pageSize - 1);
 
   /* round the requested size up to the next page boundary */
-  nowReserved = (desiredHeapSize + pageSize) & pageMask;
+  nowReserved = roundUpToPage(desiredHeapSize);
 
   /* round the initial commited size up to the next page boundary */
-  initialCommit = (minHeapSize + pageSize) & pageMask;
+  initialCommit = roundUpToPage(minHeapSize);
 
   /* Here, we only reserve the maximum memory to be used
      It will later be committed during actual access */
@@ -78,7 +94,7 @@ sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
   } while(!pageBase);
   if(!pageBase) {
     sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Error:"),
-		 "Unable to allocate memory (%d bytes requested)",
+		 TEXT("Unable to allocate memory (%d bytes requested)"),
 		 maxReserved);
     return pageBase;
   }
@@ -86,7 +102,7 @@ sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
   commit = nowReserved;
   if(!VirtualAlloc(pageBase, commit, MEM_COMMIT, PAGE_READWRITE)) {
     sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Error:"),
-		 "Unable to commit memory (%d bytes requested)",
+		 TEXT("Unable to commit memory (%d bytes requested)"),
 		 commit);
     return NULL;
   }
@@ -176,34 +192,40 @@ sqMemoryExtraBytesLeft(int includingSwap) {
   return bytesLeft;
 }
 
-#define roundDownToPage(v) ((v)&pageMask)
-#define roundUpToPage(v) (((v)+pageSize-1)&pageMask)
-
 # if COGVM
 void
 sqMakeMemoryExecutableFromToCodeToDataDelta(usqInt startAddr, usqInt endAddr, sqInt *codeToDataDelta)
 {
-	DWORD previous;
+  DWORD previous;
+  SIZE_T size;
 
-	if (!VirtualProtect((void *)startAddr,
-						endAddr - startAddr + 1,
-						PAGE_EXECUTE_READWRITE,
-						&previous))
-		sqWin32PrintLastError("VirtualProtect(x,y,PAGE_EXECUTE_READWRITE)");
-	if(codeToDataDelta)
-		*codeToDataDelta = 0;
+  size = endAddr - startAddr;
+  if (!VirtualProtect((void *)startAddr,
+            size,
+            PAGE_EXECUTE_READWRITE,
+            &previous))
+    sqWin32PrintLastError("VirtualProtect(x,y,PAGE_EXECUTE_READWRITE)");
+  if (codeToDataDelta)
+    *codeToDataDelta = 0;
 }
 
-void
-sqMakeMemoryNotExecutableFromTo(usqInt startAddr, usqInt endAddr)
+void *
+allocateJITMemory(usqInt *desiredSize)
 {
-	DWORD previous;
+  initPageSize();
 
-	if (!VirtualProtect((void *)startAddr,
-						endAddr - startAddr + 1,
-						PAGE_READWRITE,
-						&previous))
-		sqWin32PrintLastError("VirtualProtect(x,y,PAGE_EXECUTE_READWRITE)");
+  sqInt allocBytes = roundUpToPage(*desiredSize);
+
+  /* Allocate extra memory for the JIT. No need to make it executable (i.e., PAGE_EXECUTE_READWRITE) right away because there will be an extra call to sqMakeMemoryExecutableFromToCodeToDataDelta(..) anyway. */
+  char *alloc = VirtualAlloc(NULL,allocBytes,MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE);
+  
+  if (!alloc) {
+    sqWin32PrintLastError("Could not allocate JIT memory");
+    exit(1);
+  }
+
+  *desiredSize = allocBytes;
+  return alloc;
 }
 # endif /* COGVM */
 #endif /* !defined(NO_VIRTUAL_MEMORY) && !SPURVM */
