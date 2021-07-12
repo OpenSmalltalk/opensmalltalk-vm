@@ -116,7 +116,7 @@ typedef struct {
 	unsigned int          (*cmLookupTable)[];
 	bool                    noHalftone;
 	usqInt                  halftoneHeight;
-	sqInt                 (*halftoneBase)[];
+	unsigned int          (*halftoneBase)[];
 	union {
 		sqInt               sourceAlpha;
 		struct {

@@ -1368,7 +1368,7 @@ copyBits(void)
 	if (!(lockSurfaces())) {
 		return primitiveFail();
 	}
-#  if ENABLE_FAST_BLT
+#  ifdef ENABLE_FAST_BLT
 
 	/* you really, really mustn't call this unless you have the rest of the code to link to */
 	copyBitsFastPathSpecialised();
@@ -1390,7 +1390,7 @@ static sqInt
 copyBitsFastPathSpecialised(void)
 {
 
-#  if ENABLE_FAST_BLT
+#  ifdef ENABLE_FAST_BLT
 
 	/* set the affected area to 0 first */
 	affectedL = (affectedR = (affectedT = (affectedB = 0)));
@@ -1814,7 +1814,7 @@ copyBitsFallback(operation_t *op, unsigned int flags)
 	sqInt t;
 
 
-#  if ENABLE_FAST_BLT
+#  ifdef ENABLE_FAST_BLT
 
 	/* recover values from the operation struct used by the fast ARM code */
 	
@@ -1852,6 +1852,7 @@ copyBitsFallback(operation_t *op, unsigned int flags)
 		ungammaLookupTable = (void *) op->opt.componentAlpha.ungammaLookupTable;
 	}
 	destPPW = 32 / destDepth;
+	sourcePPW = 32 / sourceDepth;
 	cmBitsPerColor = 0;
 	if (cmMask == 0x1FF) {
 		cmBitsPerColor = 3;
@@ -1861,6 +1862,14 @@ copyBitsFallback(operation_t *op, unsigned int flags)
 	}
 	if (cmMask == 0x7FFF) {
 		cmBitsPerColor = 5;
+	}
+	/* In some places, sourceForm and destForm are compared in order to detect
+	 * whether we're reading and writing the same image. However, these have
+	 * not always been initialised by the time we get here, so substitute
+	 * sourceBits and destBits if so. */
+	if (sourceForm == 0 && destForm == 0) {
+	    sourceForm = sourceBits;
+	    destForm = destBits;
 	}
 	/* begin tryCopyingBitsQuickly */
 	if (noSource) {
@@ -3159,7 +3168,7 @@ initialiseModule(void)
 {
 	initBBOpTable();
 	initDither8Lookup();
-#  if ENABLE_FAST_BLT
+#  ifdef ENABLE_FAST_BLT
 	initialiseCopyBits();
 #  endif
 	return 1;
@@ -5192,7 +5201,7 @@ primitiveCompareColors(void)
 	if (failed()) {
 		return null;
 	}
-#  if ENABLE_FAST_BLT
+#  ifdef ENABLE_FAST_BLT
 	if (!(loadBitBltFromwarping(rcvr, 0))) {
 		return primitiveFail();
 	}
@@ -6383,9 +6392,13 @@ rgbComponentAlphawith(sqInt sourceWord, sqInt destinationWord)
 	sqInt v;
 
 	alpha = sourceWord;
+#if 0
+	/* This is not a valid optimisation because alpha == 0 can change the destination
+	 * due to rounding errors in blending and/or in gamma lookup round-trip */
 	if (alpha == 0) {
 		return destinationWord;
 	}
+#endif
 	/* begin partitionedRgbComponentAlpha:dest:nBits:nPartitions: */
 
 	/* partition mask starts at the right */
