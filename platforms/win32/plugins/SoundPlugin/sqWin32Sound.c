@@ -724,7 +724,7 @@ static sqInt
 dx_snd_SetRecordLevel(sqInt level) 
 { return 1000.0L * accessMixerVolume(recorderDevices.defaultDevice.mmID, MIXERLINE_COMPONENTTYPE_DST_WAVEIN, level / 1000.0L); }
 
-static int
+int
 snd_GetRecordLevel() 
 { return 1000.0L * accessMixerVolume(recorderDevices.defaultDevice.mmID, MIXERLINE_COMPONENTTYPE_DST_WAVEIN, -1.0); }
 
