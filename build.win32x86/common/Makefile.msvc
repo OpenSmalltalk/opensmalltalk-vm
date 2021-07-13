@@ -1,5 +1,5 @@
 #############################################################################
-# Common Makefile for Win64 VM using MSVC, e.g. 2017 Community, and gnu make
+# Common Makefile for Win32 VM using MSVC, e.g. 2017 Community, and gnu make
 # Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
 #
 # Do make init to allow make -n to function.
@@ -122,8 +122,8 @@ VMRES:=	$(VM).res
 VMDEFIN:=$(VM).def.in
 BTOBJ:= $(OBJDIR)/btext.o
 ETOBJ:= $(OBJDIR)/etext.o
-JMPASM:=_setjmp-x64.asm
-JMPOBJ:=$(OBJDIR)/_setjmp-x64.o
+JMPASM:=_setjmp-x86.asm
+JMPOBJ:=$(OBJDIR)/_setjmp-x86.o
 
 .PRECIOUS: mkNamedPrims.exe
 

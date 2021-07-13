@@ -83,7 +83,7 @@ sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
 #endif
 
 	alloc = sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto
-				(roundUpToPage(desiredHeapSize), minAddressHint(), &allocBytes);
+				(desiredHeapSize, minAddressHint(), &allocBytes);
 	if (!alloc) {
 		sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Error:"),
 					 TEXT("sqAllocateMemory: initial alloc failed!\n"));
@@ -225,7 +225,7 @@ allocateJITMemory(usqInt *desiredSize)
 	sqInt allocBytes;
 
 	char *alloc = sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto
-				(roundUpToPage(*desiredSize), minAddressHint(), &allocBytes);
+				(*desiredSize, minAddressHint(), &allocBytes);
 
 	if (!alloc) {
 		perror("Could not allocate JIT memory");
