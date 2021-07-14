@@ -5,7 +5,7 @@ How to build a new plugin:
 3. Edit the project settings:
    Header Search Path: /Developer/Headers/FlatCarbon
 4. Add the following files:
-   ../../../src/vm/interp.h
+   ../../../src/vm.32bit.cog.v3/interp.h
    ../../../platforms/Cross/vm/sqMemoryAccess.h
    ../../../platforms/Cross/vm/sqVirtualMachine.h
    ../../../platforms/Mac OS/vm/config.h
@@ -18,4 +18,4 @@ How to build a new plugin:
 6. Cross your fingers and compile
 
 Alternatively, adapt the Template provided here. Be sure to edit VMSRCDIR to be
-the directory containing vm/interp.h from the VM you're adding the plugin to.
+the directory containing interp.h from the VM you're adding the plugin to.
