@@ -1234,7 +1234,7 @@ static sqInt noUnscannedEphemerons(void);
 static sqInt NoDbgRegParms numBytesOfBitsformat(sqInt objOop, sqInt format);
 static sqInt NoDbgRegParms numBytesOfBytes(sqInt objOop);
 extern sqInt numBytesOf(sqInt objOop);
-extern usqInt numPointerSlotsOf(sqInt objOop);
+extern sqInt numPointerSlotsOf(sqInt objOop);
 static usqInt NoDbgRegParms numSlotsOfAny(sqInt objOop);
 extern usqInt numSlotsOf(sqInt objOop);
 static sqInt NoDbgRegParms numStrongSlotsOfInephemeral(sqInt objOop);
@@ -18625,8 +18625,7 @@ mnuMethodOrNilFor(sqInt rcvr)
 {   DECL_MAYBE_SQ_GLOBAL_STRUCT
     sqInt currentClass;
     sqInt dictionary;
-    sqInt fieldIndex;
-    usqInt index;
+    sqInt index;
     usqInt length;
     sqInt mask;
     sqInt methodArray;
@@ -18675,7 +18674,7 @@ mnuMethodOrNilFor(sqInt rcvr)
 		wrapAround = 0;
 		while (1) {
 			/* begin fetchPointer:ofObject: */
-			nextSelector = longAt((dictionary + BaseHeaderSize) + (index << (shiftForWord())));
+			nextSelector = longAt((dictionary + BaseHeaderSize) + (((sqInt)((usqInt)(index) << (shiftForWord())))));
 			if (nextSelector == GIV(nilObj)) {
 				mnuMethod = null;
 				goto l11;
@@ -18693,12 +18692,10 @@ mnuMethodOrNilFor(sqInt rcvr)
 				}
 				methodArray = objOop;
 				/* begin followField:ofObject: */
-				fieldIndex = index - SelectorStart;
-				/* begin fetchPointer:ofObject: */
-				objOop1 = longAt((methodArray + BaseHeaderSize) + (((sqInt)((usqInt)(fieldIndex) << (shiftForWord())))));
+				objOop1 = longAt((methodArray + BaseHeaderSize) + (((sqInt)((usqInt)((index - SelectorStart)) << (shiftForWord())))));
 				if (((!(objOop1 & (tagMask()))))
 				 && ((!((longAt(objOop1)) & ((classIndexMask()) - (isForwardedObjectClassIndexPun())))))) {
-					objOop1 = fixFollowedFieldofObjectwithInitialValue(fieldIndex, methodArray, objOop1);
+					objOop1 = fixFollowedFieldofObjectwithInitialValue(index - SelectorStart, methodArray, objOop1);
 				}
 				mnuMethod = objOop1;
 				goto l11;
@@ -19877,7 +19874,7 @@ printFrameWithSP(char *theFP, char *theSP)
     usqInt index;
     sqInt methodField;
     usqInt numArgs;
-    sqInt numTemps;
+    usqInt numTemps;
     char *rcvrAddress;
     sqInt rcvrOrClosure;
     CogBlockMethod * self_in_cmHomeMethod;
@@ -38472,7 +38469,7 @@ followForwardedObjectFieldstoDepth(sqInt objOop, sqInt depth)
     sqInt header1;
     sqInt i;
     sqInt numLiterals;
-    usqInt numSlots;
+    sqInt numSlots;
     usqInt numSlots1;
     sqInt oop;
     sqInt referent;
@@ -45776,7 +45773,7 @@ copyObjtoAddrstopAtsavedFirstFieldsindex(sqInt objOop, sqInt segAddr, sqInt endS
     sqInt iLimiT;
     sqInt methodHeader;
     sqInt numLiterals;
-    usqInt numMediatedSlots;
+    sqInt numMediatedSlots;
     usqInt numSlots;
     usqInt numSlots1;
     sqInt oop;
@@ -45808,7 +45805,7 @@ copyObjtoAddrstopAtsavedFirstFieldsindex(sqInt objOop, sqInt segAddr, sqInt endS
 			   here but that requires access to framePointer. */
 			/* begin numSlotsOfMarriedContext: */
 			contextSize = stackPointerIndexForFrame(frameOfMarriedContext(objOop));
-			numMediatedSlots = ((sqInt) (CtxtTempFrameStart + contextSize));
+			numMediatedSlots = CtxtTempFrameStart + contextSize;
 			for (i1 = 0; i1 < numMediatedSlots; i1 += 1) {
 				oop = fetchPointerofMarriedContext(i1, objOop);
 				assert(!(isOopForwarded(copy)));
@@ -52241,7 +52238,7 @@ numBytesOf(sqInt objOop)
 	Works with CompiledMethods, as well as ordinary objects. */
 
 	/* SpurMemoryManager>>#numPointerSlotsOf: */
-usqInt
+sqInt
 numPointerSlotsOf(sqInt objOop)
 {   DECL_MAYBE_SQ_GLOBAL_STRUCT
     sqInt contextSize;
@@ -55236,7 +55233,7 @@ printReferencesTo(sqInt anOop)
 					assert((ReceiverIndex + ((sp >> 1))) < (lengthOf(obj1)));
 					contextSize = (sp >> 1);
 	l9:	/* end fetchStackPointerOf: */;
-					i = ((usqInt) (CtxtTempFrameStart + contextSize));
+					i = CtxtTempFrameStart + contextSize;
 					goto l10;
 				}
 				/* begin numSlotsOf: */
@@ -55269,7 +55266,7 @@ printReferencesTo(sqInt anOop)
 			/* begin literalCountOfMethodHeader: */
 			assert((header & 1));
 			numLiterals = ((header >> 1)) & AlternateHeaderNumLiteralsMask;
-			i = ((usqInt) (numLiterals + LiteralStart));
+			i = numLiterals + LiteralStart;
 	l10:	/* end numPointerSlotsOf: */;
 			while (((i -= 1)) >= 0) {
 				if (anOop == (longAt((obj1 + BaseHeaderSize) + (((sqInt)((usqInt)(i) << (shiftForWord()))))))) {
@@ -58413,10 +58410,10 @@ updatePointers(void)
     sqInt numLiterals1;
     sqInt numLiterals2;
     sqInt numLiterals3;
-    usqInt numPointerSlots;
-    usqInt numPointerSlots1;
-    usqInt numPointerSlots2;
-    usqInt numPointerSlots3;
+    sqInt numPointerSlots;
+    sqInt numPointerSlots1;
+    sqInt numPointerSlots2;
+    sqInt numPointerSlots3;
     usqInt numSlots;
     usqInt numSlots1;
     usqInt numSlots11;
@@ -58994,7 +58991,7 @@ updatePointersInsavedFirstFieldPointer(sqInt obj, sqInt firstFieldPtr)
 			assert((ReceiverIndex + ((sp >> 1))) < (lengthOf(obj)));
 			contextSize = (sp >> 1);
 	l6:	/* end fetchStackPointerOf: */;
-			numPointerSlots = ((usqInt) (CtxtTempFrameStart + contextSize));
+			numPointerSlots = CtxtTempFrameStart + contextSize;
 			goto l10;
 		}
 		/* begin numSlotsOf: */
@@ -59024,7 +59021,7 @@ updatePointersInsavedFirstFieldPointer(sqInt obj, sqInt firstFieldPtr)
 	/* begin literalCountOfMethodHeader: */
 	assert((header & 1));
 	numLiterals = ((header >> 1)) & AlternateHeaderNumLiteralsMask;
-	numPointerSlots = ((usqInt) (numLiterals + LiteralStart));
+	numPointerSlots = numLiterals + LiteralStart;
 	l10:	/* end numPointerSlotsWhileCompactingOf:withFormat:savedFirstFieldPointer: */;
 	if ((fmt <= 5 /* lastPointerFormat */)
 	 && (numPointerSlots > 0)) {
@@ -59575,7 +59572,7 @@ prepareForSnapshot(void)
     sqInt limit;
     sqInt newEndOfMemory;
     sqInt next;
-    usqInt node;
+    sqInt node;
     SpurSegmentInfo *seg;
     sqInt smallChild;
     sqInt treeNode;
@@ -65256,8 +65253,7 @@ lookupSelectorinClass(sqInt selector, sqInt class)
 {   DECL_MAYBE_SQ_GLOBAL_STRUCT
     sqInt currentClass;
     sqInt dictionary;
-    sqInt fieldIndex;
-    usqInt index;
+    sqInt index;
     usqInt length;
     sqInt mask;
     sqInt meth;
@@ -65301,7 +65297,7 @@ lookupSelectorinClass(sqInt selector, sqInt class)
 		wrapAround = 0;
 		while (1) {
 			/* begin fetchPointer:ofObject: */
-			nextSelector = longAt((dictionary + BaseHeaderSize) + (index << (shiftForWord())));
+			nextSelector = longAt((dictionary + BaseHeaderSize) + (((sqInt)((usqInt)(index) << (shiftForWord())))));
 			if (nextSelector == GIV(nilObj)) {
 				meth = null;
 				goto l8;
@@ -65319,12 +65315,10 @@ lookupSelectorinClass(sqInt selector, sqInt class)
 				}
 				methodArray = objOop2;
 				/* begin followField:ofObject: */
-				fieldIndex = index - SelectorStart;
-				/* begin fetchPointer:ofObject: */
-				objOop1 = longAt((methodArray + BaseHeaderSize) + (((sqInt)((usqInt)(fieldIndex) << (shiftForWord())))));
+				objOop1 = longAt((methodArray + BaseHeaderSize) + (((sqInt)((usqInt)((index - SelectorStart)) << (shiftForWord())))));
 				if (((!(objOop1 & (tagMask()))))
 				 && ((!((longAt(objOop1)) & ((classIndexMask()) - (isForwardedObjectClassIndexPun())))))) {
-					objOop1 = fixFollowedFieldofObjectwithInitialValue(fieldIndex, methodArray, objOop1);
+					objOop1 = fixFollowedFieldofObjectwithInitialValue(index - SelectorStart, methodArray, objOop1);
 				}
 				meth = objOop1;
 				goto l8;

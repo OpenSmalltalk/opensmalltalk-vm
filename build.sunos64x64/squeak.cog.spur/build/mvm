@@ -3,11 +3,11 @@ set -e
 # Spur VM with VM profiler and threaded heartbeat
 INSTALLDIR=sqcogspur64sunosht/usr
 # Some gcc versions create a broken VM using -O2
-OPT="-g -DAIO_DEBUG -DNDEBUG -DDEBUGVM=0"
+OPT="-DAIO_DEBUG -DNDEBUG -DDEBUGVM=0"
 MAKE=gmake
 
 CFLAGS="$OPT -DCOGMTVM=0"
-LIBS=""
+LIBS="-lmapmalloc"
 LDFLAGS=""
 
 if [ $# -ge 1 ]; then

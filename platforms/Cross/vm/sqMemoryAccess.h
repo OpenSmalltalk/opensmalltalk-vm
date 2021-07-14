@@ -386,7 +386,7 @@ extern void heapMapAtWordPut(void *wordPointer, int bit);
  * after Squeak V3).  Spur offers considerable performance improvements but is
  * not backwards-compatible with V3, and requires different internal plumbing.
  * Unlike the V3 memory manager, Spur manages old space heap memory in segments,
- * and is able to release memry back to the OS when the heap shrinks.
+ * and is able to release memory back to the OS when the heap shrinks.
  */
 
 /* Allocate a region of memory of al least sz bytes, at or above minAddr.
@@ -418,11 +418,11 @@ extern void sqDeallocateMemorySegmentAtOfSize(void *addr, sqInt sz);
 #if COGVM
 /* Cog is a JIT extension for the VM. It still relies on the Interpreter (called
  * the CoInterpreter because it sits alongside the "Cogit") for primitives,
- * for executing methods the frst time, and to fall back on in exceptional
+ * for executing methods the first time, and to fall back on in exceptional
  * circumstances.  COGVM implies STACKVM.  See STACKVM below.
  */
 extern void sqMakeMemoryExecutableFromToCodeToDataDelta(usqInt, usqInt, sqInt*);
-extern void sqMakeMemoryNotExecutableFromTo(usqInt, usqInt);
+extern void *allocateJITMemory(usqInt *desiredSize);
 #endif
 
 /* Platform-dependent memory size adjustment macro. */

@@ -79753,7 +79753,7 @@ updatePointersInsavedFirstFieldPointer(sqInt obj, sqInt firstFieldPtr)
 			assert((ReceiverIndex + ((sp >> 3))) < (lengthOf(obj)));
 			contextSize = (sp >> 3);
 	l6:	/* end fetchStackPointerOf: */;
-			numPointerSlots = ((usqInt) (CtxtTempFrameStart + contextSize));
+			numPointerSlots = CtxtTempFrameStart + contextSize;
 			goto l10;
 		}
 		/* begin numSlotsOf: */
@@ -79783,7 +79783,7 @@ updatePointersInsavedFirstFieldPointer(sqInt obj, sqInt firstFieldPtr)
 	/* begin literalCountOfMethodHeader: */
 	assert((((header) & 7) == 1));
 	numLiterals = ((header >> 3)) & AlternateHeaderNumLiteralsMask;
-	numPointerSlots = ((usqInt) (numLiterals + LiteralStart));
+	numPointerSlots = numLiterals + LiteralStart;
 	l10:	/* end numPointerSlotsWhileCompactingOf:withFormat:savedFirstFieldPointer: */;
 	if ((fmt <= 5 /* lastPointerFormat */)
 	 && (numPointerSlots > 0)) {

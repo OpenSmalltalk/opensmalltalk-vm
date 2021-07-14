@@ -1623,6 +1623,10 @@ static int vm_parseArgument(int argc, char **argv)
     extern sqInt desiredCogCodeSize;
     desiredCogCodeSize = strtobkm(argv[1]);	 
     return 2; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("logplugin"))) { 
+	extern char *primTracePluginName;
+	primTracePluginName = argv[1];
+    return 2; }
 # define TLSLEN (sizeof(VMOPTION("trace"))-1)
   else if (!strncmp(argv[0], VMOPTION("trace"), TLSLEN)) { 
     extern int traceFlags;
@@ -1715,6 +1719,7 @@ static void vm_printUsage(void)
   printf("  -vm-<sys>-<dev>       use the <dev> driver for <sys> (see below)\n");
 #if STACKVM || NewspeakVM
 # if COGVM
+  printf("  "VMOPTION("logplugin")" name       only log primitives in plugin\n");
   printf("  "VMOPTION("trace")"[=num]          enable tracing (optionally to a specific value)\n");
 # else
   printf("  "VMOPTION("sendtrace")"            enable send tracing\n");

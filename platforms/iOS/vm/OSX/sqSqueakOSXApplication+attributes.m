@@ -154,16 +154,16 @@ typedef struct {
 - (NSOperatingSystemVersion) getOperatingSystemVersion
 {
     static NSOperatingSystemVersion osv = { 0 };
-    if (osv.majorVersion != 0) // fast cached path
+    if (osv.majorVersion) // fast cached path
         return osv;
 
 #if __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ >= 101000
-	osv = [self getNSOperatingSystemVersion];
+	osv = [[NSProcessInfo processInfo] operatingSystemVersion];
 #else
-    // This is officially true since 10.10 but unofficially since 10.9, hence the invocation
-    if ([[NSProcessInfo processInfo] respondsToSelector: @selector(operatingSystemVersion)]) {
-        osv = [self getNSOperatingSystemVersion];
-    }
+    // This is officially true since 10.10 but unofficially since 10.9,
+	// hence the check
+    if ([[NSProcessInfo processInfo] respondsToSelector: @selector(operatingSystemVersion)])
+        osv = [[NSProcessInfo processInfo] operatingSystemVersion];
 	else {
         SInt32 versionMajor=0, versionMinor=0, versionBugFix=0;
         Gestalt(gestaltSystemVersionMajor, &versionMajor);
@@ -174,20 +174,6 @@ typedef struct {
         osv.patchVersion = versionBugFix;
     }
 #endif /* __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ >= 101000 */
-    return osv;
-}
-
-- (NSOperatingSystemVersion) getNSOperatingSystemVersion
-{
-    static NSOperatingSystemVersion osv = { 0 };
-    SEL _osv = @selector(operatingSystemVersion);
-
-    NSMethodSignature* osvSignature = [NSProcessInfo instanceMethodSignatureForSelector: _osv];
-    NSInvocation* osvInvocation = [NSInvocation invocationWithMethodSignature: osvSignature];
-    [osvInvocation setTarget: [NSProcessInfo processInfo]];
-    [osvInvocation setSelector: _osv];
-    [osvInvocation invoke];
-    [osvInvocation getReturnValue: &osv];
     return osv;
 }
 

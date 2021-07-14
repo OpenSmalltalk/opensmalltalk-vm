@@ -38440,7 +38440,8 @@ mnuMethodOrNilFor(sqInt rcvr)
 {   DECL_MAYBE_SQ_GLOBAL_STRUCT
     sqInt currentClass;
     sqInt dictionary;
-    sqInt index;
+    sqInt fieldIndex;
+    usqInt index;
     usqInt length;
     sqInt mask;
     sqInt methodArray;
@@ -38489,7 +38490,7 @@ mnuMethodOrNilFor(sqInt rcvr)
 		wrapAround = 0;
 		while (1) {
 			/* begin fetchPointer:ofObject: */
-			nextSelector = longAt((dictionary + BaseHeaderSize) + (((sqInt)((usqInt)(index) << (shiftForWord())))));
+			nextSelector = longAt((dictionary + BaseHeaderSize) + (index << (shiftForWord())));
 			if (nextSelector == GIV(nilObj)) {
 				mnuMethod = null;
 				goto l11;
@@ -38507,10 +38508,12 @@ mnuMethodOrNilFor(sqInt rcvr)
 				}
 				methodArray = objOop;
 				/* begin followField:ofObject: */
-				objOop1 = longAt((methodArray + BaseHeaderSize) + (((sqInt)((usqInt)((index - SelectorStart)) << (shiftForWord())))));
+				fieldIndex = index - SelectorStart;
+				/* begin fetchPointer:ofObject: */
+				objOop1 = longAt((methodArray + BaseHeaderSize) + (((sqInt)((usqInt)(fieldIndex) << (shiftForWord())))));
 				if (((!(objOop1 & (tagMask()))))
 				 && ((!((longAt(objOop1)) & ((classIndexMask()) - (isForwardedObjectClassIndexPun())))))) {
-					objOop1 = fixFollowedFieldofObjectwithInitialValue(index - SelectorStart, methodArray, objOop1);
+					objOop1 = fixFollowedFieldofObjectwithInitialValue(fieldIndex, methodArray, objOop1);
 				}
 				mnuMethod = objOop1;
 				goto l11;
@@ -85252,7 +85255,8 @@ lookupSelectorinClass(sqInt selector, sqInt class)
 {   DECL_MAYBE_SQ_GLOBAL_STRUCT
     sqInt currentClass;
     sqInt dictionary;
-    sqInt index;
+    sqInt fieldIndex;
+    usqInt index;
     usqInt length;
     sqInt mask;
     sqInt meth;
@@ -85296,7 +85300,7 @@ lookupSelectorinClass(sqInt selector, sqInt class)
 		wrapAround = 0;
 		while (1) {
 			/* begin fetchPointer:ofObject: */
-			nextSelector = longAt((dictionary + BaseHeaderSize) + (((sqInt)((usqInt)(index) << (shiftForWord())))));
+			nextSelector = longAt((dictionary + BaseHeaderSize) + (index << (shiftForWord())));
 			if (nextSelector == GIV(nilObj)) {
 				meth = null;
 				goto l8;
@@ -85314,10 +85318,12 @@ lookupSelectorinClass(sqInt selector, sqInt class)
 				}
 				methodArray = objOop2;
 				/* begin followField:ofObject: */
-				objOop1 = longAt((methodArray + BaseHeaderSize) + (((sqInt)((usqInt)((index - SelectorStart)) << (shiftForWord())))));
+				fieldIndex = index - SelectorStart;
+				/* begin fetchPointer:ofObject: */
+				objOop1 = longAt((methodArray + BaseHeaderSize) + (((sqInt)((usqInt)(fieldIndex) << (shiftForWord())))));
 				if (((!(objOop1 & (tagMask()))))
 				 && ((!((longAt(objOop1)) & ((classIndexMask()) - (isForwardedObjectClassIndexPun())))))) {
-					objOop1 = fixFollowedFieldofObjectwithInitialValue(index - SelectorStart, methodArray, objOop1);
+					objOop1 = fixFollowedFieldofObjectwithInitialValue(fieldIndex, methodArray, objOop1);
 				}
 				meth = objOop1;
 				goto l8;

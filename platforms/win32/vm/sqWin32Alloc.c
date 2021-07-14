@@ -44,6 +44,23 @@ LONG CALLBACK sqExceptionFilter(LPEXCEPTION_POINTERS exp)
   return EXCEPTION_WRONG_ACCESS;
 }
 
+# define roundDownToPage(v) ((sqIntptr_t)(v)&pageMask)
+# define roundUpToPage(v) (((sqIntptr_t)(v)+pageSize-1)&pageMask)
+
+static void
+initPageSize()
+{
+  SYSTEM_INFO sysInfo;
+
+  /* determine page boundaries & available address space */
+  if (!pageSize) {
+    GetSystemInfo(&sysInfo);
+    pageSize = sysInfo.dwPageSize;
+    pageMask = ~(pageSize - 1);
+  }
+}
+
+
 /************************************************************************/
 /* sqAllocateMemory: Initialize virtual memory                          */
 /************************************************************************/
@@ -52,15 +69,13 @@ void *sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
   DWORD initialCommit, commit;
 
   /* determine page boundaries */
-  GetSystemInfo(&sysInfo);
-  pageSize = sysInfo.dwPageSize;
-  pageMask = ~(pageSize - 1);
+  initPageSize();
 
   /* round the requested size up to the next page boundary */
-  nowReserved = (desiredHeapSize + pageSize) & pageMask;
+  nowReserved = roundUpToPage(desiredHeapSize);
 
   /* round the initial commited size up to the next page boundary */
-  initialCommit = (minHeapSize + pageSize) & pageMask;
+  initialCommit = roundUpToPage(minHeapSize);
 
   /* Here, we only reserve the maximum memory to be used
      It will later be committed during actual access */
@@ -171,9 +186,6 @@ int sqMemoryExtraBytesLeft(int includingSwap) {
   return bytesLeft;
 }
 
-#define roundDownToPage(v) ((v)&pageMask)
-#define roundUpToPage(v) (((v)+pageSize-1)&pageMask)
-
 # if COGVM
 void
 sqMakeMemoryExecutableFromToCodeToDataDelta(usqInt startAddr,
@@ -181,9 +193,11 @@ sqMakeMemoryExecutableFromToCodeToDataDelta(usqInt startAddr,
 											sqInt *codeToDataDelta)
 {
 	DWORD previous;
+  SIZE_T size;
 
+  size = endAddr - startAddr;
 	if (!VirtualProtect((void *)startAddr,
-						endAddr - startAddr + 1,
+						size,
 						PAGE_EXECUTE_READWRITE,
 						&previous))
 		perror("VirtualProtect(x,y,PAGE_EXECUTE_READWRITE)");
@@ -191,16 +205,23 @@ sqMakeMemoryExecutableFromToCodeToDataDelta(usqInt startAddr,
 		*codeToDataDelta = 0;
 }
 
-void
-sqMakeMemoryNotExecutableFromTo(usqInt startAddr, usqInt endAddr)
+void *
+allocateJITMemory(usqInt *desiredSize)
 {
-	DWORD previous;
+	initPageSize();
 
-	if (!VirtualProtect((void *)startAddr,
-						endAddr - startAddr + 1,
-						PAGE_READWRITE,
-						&previous))
-		perror("VirtualProtect(x,y,PAGE_EXECUTE_READWRITE)");
+  sqInt allocBytes = roundUpToPage(*desiredSize);
+
+  /* Allocate extra memory for the JIT. No need to make it executable (i.e., PAGE_EXECUTE_READWRITE) right away because there will be an extra call to sqMakeMemoryExecutableFromToCodeToDataDelta(..) anyway. */
+	char *alloc = VirtualAlloc(NULL,allocBytes,MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE);
+  
+	if (!alloc) {
+		perror("Could not allocate JIT memory");
+		exit(1);
+	}
+
+  *desiredSize = allocBytes;
+	return alloc;
 }
 # endif /* COGVM */
 #endif /* !SPURVM */

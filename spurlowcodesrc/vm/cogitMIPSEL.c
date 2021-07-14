@@ -6481,7 +6481,7 @@ configureMNUCPICmethodOperandnumArgsdelta(CogMethod *cPIC, sqInt methodOperand, 
 static sqInt NoDbgRegParms
 cPICCompactAndIsNowEmpty(CogMethod *cPIC)
 {
-    usqInt entryPoint;
+    sqInt entryPoint;
     sqInt followingAddress;
     sqInt i;
     sqInt methods[MaxCPICCases];
@@ -10670,7 +10670,7 @@ static void NoDbgRegParms
 relocateCallsInClosedPIC(CogMethod *cPIC)
 {
     sqInt callDelta;
-    usqInt entryPoint;
+    sqInt entryPoint;
     sqInt i;
     sqInt pc;
     sqLong refDelta;

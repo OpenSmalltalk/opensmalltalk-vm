@@ -46,6 +46,7 @@ else # default CONFIGURATION=product => $(APPNAMEDEF).app
 	APP:=$(APPNAMEDEF).app
 	VM_IDENTIFIER:=$(APPIDENTIFIER)
 endif
+export APP
 
 default:	$(APP)
 

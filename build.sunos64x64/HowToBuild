@@ -1,15 +1,18 @@
 
-How To Build On Solaris
------------------------
+How To Build On Solaris 11 (VM notes by David Stes)
+---------------------------------------------------
 
 Contents:
         - Overview
+	- libmapmalloc
 	- /etc/security/policy.conf
+	- epoll
 	- Audio Headers
 	- OpenSSL
 	- Squeak Profile
 	- Real-Time Class
 	- Swapspace
+	- Stackspace
 	- C Compiler
 	- GNU make
 	- pkg-config
@@ -34,10 +37,36 @@ This will build and install into INSTALLDIR.
 The default value for INSTALLDIR is products/sqcogspur64sunos[ht]/usr,
 for the Cog Spur VM (see other values in the mvm scripts).
 
-To run the vm, consider running the process in the RT (real-time) class.
- 
 For Solaris specific suggestions you can contact me (David Stes)
 or alternatively (and maybe better!) the OpenSmalltalk team ...
+
+libmapmalloc
+------------
+
+The current OpenSmalltalk VM's use the Spur memory management (and
+object model or Smalltalk image format).
+
+Because Spur uses mmap() , we have observed best results with the Solaris
+libmapmalloc library, which also uses mmap() for acquiring heap space.
+
+With the default sbrk() malloc library, we have sometimes errors in
+plugins or support libraries that depend on malloc(); it appears that Spur
+works worse in a classical sbrk() heap allocation setup.
+
+Because libmapmalloc is provided on Solaris by the standard system/library,
+
+# pkg contents system/library | grep libmapmalloc
+usr/lib/amd64/libmapmalloc.so
+usr/lib/amd64/libmapmalloc.so.1
+usr/lib/libmapmalloc.so
+usr/lib/libmapmalloc.so.1
+usr/share/man/man3lib/libmapmalloc.3lib
+
+There shouldn't be any issue with running the libmapmalloc binaries,
+given the fact that system/library will be installed by default.
+
+The build scripts are setup to use libmapmalloc, but if you wish,
+you could modify this to use the default malloc library or libumem.
 
 /etc/security/policy.conf
 -------------------------
@@ -77,6 +106,18 @@ limitpriv: default,proc_priocntl
 
 If you do not want to change the policy.conf file, you can also read on,
 and see the discussion below for running squeak with 'pfexec' (profile exec).
+
+epoll
+-----
+
+Some OS configurations have a <sys/epoll.h> header file, and if so,
+the OpenSmalltalk configure script will automatically assume you want epoll.
+
+Add:
+
+  ax_cv_have_epoll=no ax_cv_have_epoll_pwait=no
+
+to the configure line if you wish to disable the (recent) epoll support.
 
 Audio Headers
 -------------
@@ -261,18 +302,51 @@ The command to increase the size is:
 
 This can be done online, but a reboot is not a bad idea after doing this.
 
+Stackspace
+----------
+
+ulimit -a will print stack-size :
+
+stack size              (kbytes, -s) 16384
+
+In some extreme cases the VM may print some warnings about stack size;
+I don't recommend changing the defaults of your system, but here's how :
+
+$ prctl -n process.max-stack-size -t basic -i process <PID>
+process: 1766: bash
+NAME    PRIVILEGE       VALUE    FLAG   ACTION                       RECIPIENT
+process.max-stack-size
+        basic           8.00MB      -   deny                                 -
+
+# prctl -t basic -n process.max-stack-size -r -v 16777216 -i process <PID>
+
+then after this change:
+
+# prctl -t basic -n process.max-stack-size -i process <PID>
+process: 1766: bash
+NAME    PRIVILEGE       VALUE    FLAG   ACTION                       RECIPIENT
+process.max-stack-size
+        basic           16.0MB      -   deny          
+
+As far as I've seen , stack-size problems occur mostly in case of some
+run-away process in Squeak and increasing will not help (may make it worse).
+
 C Compiler
 ----------
 
 As C compiler we have used both the Sun C compiler and GCC for Solaris.
 Currently we have succesfully built the VM with gcc 7.3 and gcc 9.2.
 
-Note that in the past Squeak3 was available on SunOS for SPARC and Intel.
+Note that in the past Squeak V3 was available on SunOS for SPARC and Intel.
 
 http://squeakvm.org/unix/release/Squeak-3.7-7.sparc-sun-solaris2.9.tar.gz
 http://squeakvm.org/unix/release/Squeak-3.7-7.i386-pc-solaris2.9.tar.gz
 
 It appears that those old Squeak V3 VM's were built with "gcc" for Solaris.
+
+There are also Solaris 10 binaries for SPARC at:
+
+http://files.squeak.org/3.9/unix-linux/
 
 GNU Make
 --------

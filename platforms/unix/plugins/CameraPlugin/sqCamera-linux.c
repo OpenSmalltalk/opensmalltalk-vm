@@ -318,7 +318,7 @@ convertImageRGB24toARGB32 (camPtr cam)
 		return;
 
 	while (--pixelCount >= 0) {
-		*dst++ = 0xFF000000 | (*src[0] << 16) | (*src[1] << 8) | *src[2];
+		*dst++ = 0xFF000000 | (src[0] << 16) | (src[1] << 8) | src[2];
 		src += 3;
 	}
 }

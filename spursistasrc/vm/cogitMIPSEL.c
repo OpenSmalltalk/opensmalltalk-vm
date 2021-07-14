@@ -10145,7 +10145,7 @@ static void NoDbgRegParms
 relocateCallsInClosedPIC(CogMethod *cPIC)
 {
     sqInt callDelta;
-    sqInt entryPoint;
+    usqInt entryPoint;
     sqInt i;
     sqInt pc;
     sqLong refDelta;
@@ -31701,7 +31701,7 @@ populatewithPICInfoForfirstCacheTag(sqInt tuple, CogMethod *cPIC, sqInt firstCac
 {
     sqInt cacheTag;
     sqInt classOop;
-    sqInt entryPoint;
+    usqInt entryPoint;
     sqInt i;
     sqInt pc;
     CogMethod *targetMethod;

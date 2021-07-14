@@ -3,6 +3,7 @@
 #
 
 TOOLPREFIX:=x86_64-w64-mingw32-
+export TOOLPREFIX
 
 #############################################################################
 # C compiler settings (Use clang for having a working FFI)

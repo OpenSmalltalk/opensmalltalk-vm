@@ -846,12 +846,9 @@ sqSocketCloseConnection(SocketPtr s)
 *****************************************************************************/
 sqInt sqSocketConnectionStatus(SocketPtr s)
 {
-  int status;
-
-  if (!SocketValid(s)) return -1;
-  DBG(s, "sqSocketConnectionStatus");
-  status = SOCKETSTATE(s) & 0xFFFF;
-  return status;
+  return SocketValid(s)
+	? SOCKETSTATE(s) & 0xFFFF
+	: -1;
 }
 
 /*****************************************************************************
@@ -993,7 +990,7 @@ void sqSocketListenOnPortBacklogSizeInterface(SocketPtr s, sqInt port, sqInt bac
   if (!SocketValid(s)) return;
 
   if (TCPSocketType != s->socketType) { /* UDP/RAW */
-	sqSocketListenOnPort(s, port);
+	sqSocketBindToPort(s, (int)addr, (int)port);
 	return;
   }
 

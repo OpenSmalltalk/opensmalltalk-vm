@@ -34,32 +34,24 @@ static sqIntptr_t  pageSize;     /* size of a memory page */
 static char  *minAppAddr;	/* SYSTEM_INFO lpMinimumApplicationAddress */
 static char  *maxAppAddr;	/* SYSTEM_INFO lpMaximumApplicationAddress */
 
-# define roundDownToPage(v) ((v)&pageMask)
-# define roundUpToPage(v) (((v)+pageSize-1)&pageMask)
+# define roundDownToPage(v) ((sqIntptr_t)(v)&pageMask)
+# define roundUpToPage(v) (((sqIntptr_t)(v)+pageSize-1)&pageMask)
 
-/************************************************************************/
-/* sqAllocateMemory: Initialize virtual memory                          */
-/************************************************************************/
-void *
-sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
+static char *
+minAddressHint()
 {
-	char *hint, *address, *alloc;
+	char *hint;
 	usqIntptr_t alignment;
-	sqInt allocBytes;
 	SYSTEM_INFO sysInfo;
 
-	if (pageSize) {
-		sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Error:"),
-					 TEXT("sqAllocateMemory already called"));
-		exit(1);
-	}
-
 	/* determine page boundaries & available address space */
-	GetSystemInfo(&sysInfo);
-	pageSize = sysInfo.dwPageSize;
-	pageMask = ~(pageSize - 1);
-	minAppAddr = sysInfo.lpMinimumApplicationAddress;
-	maxAppAddr = sysInfo.lpMaximumApplicationAddress;
+	if (!pageSize) {
+		GetSystemInfo(&sysInfo);
+		pageSize = sysInfo.dwPageSize;
+		pageMask = ~(pageSize - 1);
+		minAppAddr = sysInfo.lpMinimumApplicationAddress;
+		maxAppAddr = sysInfo.lpMaximumApplicationAddress;
+	}
 
 	/* choose a suitable starting point. In MinGW the malloc heap is below the
 	 * program, so take the max of a malloc and something from uninitialized
@@ -70,21 +62,35 @@ sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
 	hint = max(hint,(char *)&fIsConsole);
 
 	alignment = max(pageSize,1024*1024);
-	address = (char *)(((usqInt)hint + alignment - 1) & ~(alignment - 1));
+	return (char *)(((usqInt)hint + alignment - 1) & ~(alignment - 1));
+}
+
+/************************************************************************/
+/* sqAllocateMemory: Initialize virtual memory                          */
+/************************************************************************/
+void *
+sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
+{
+	char *alloc;
+	sqInt allocBytes;
+
+#if !COGVM
+	if (pageSize) {
+		sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Error:"),
+					 TEXT("sqAllocateMemory already called"));
+		exit(1);
+	}
+#endif
 
 	alloc = sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto
-				(roundUpToPage(desiredHeapSize), address, &allocBytes);
+				(desiredHeapSize, minAddressHint(), &allocBytes);
 	if (!alloc) {
-		exit(errno);
 		sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Error:"),
 					 TEXT("sqAllocateMemory: initial alloc failed!\n"));
 		exit(1);
 	}
 	return alloc;
 }
-
-#define roundDownToPage(v) ((v)&pageMask)
-#define roundUpToPage(v) (((v)+pageSize-1)&pageMask)
 
 /* Allocate a region of memory of at least size bytes, at or above minAddress.
  *  If the attempt fails, answer null.  If the attempt succeeds, answer the
@@ -213,18 +219,20 @@ sqMakeMemoryExecutableFromToCodeToDataDelta(usqInt startAddr,
 		*codeToDataDelta = 0;
 }
 
-void
-sqMakeMemoryNotExecutableFromTo(usqInt startAddr, usqInt endAddr)
+void *
+allocateJITMemory(usqInt *desiredSize)
 {
-	DWORD previous;
-    SIZE_T size;
+	sqInt allocBytes;
 
-    size = endAddr - startAddr;
-	if (!VirtualProtect((void *)startAddr,
-						size,
-						PAGE_READWRITE,
-						&previous))
-		perror("VirtualProtect(x,y,PAGE_EXECUTE_READWRITE)");
+	char *alloc = sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto
+				(*desiredSize, minAddressHint(), &allocBytes);
+
+	if (!alloc) {
+		perror("Could not allocate JIT memory");
+		exit(1);
+	}
+	*desiredSize = allocBytes;
+	return alloc;
 }
 # endif /* COGVM */
 

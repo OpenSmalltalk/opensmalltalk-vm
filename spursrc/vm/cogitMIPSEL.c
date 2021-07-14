@@ -5978,7 +5978,7 @@ configureMNUCPICmethodOperandnumArgsdelta(CogMethod *cPIC, sqInt methodOperand, 
 static sqInt NoDbgRegParms
 cPICCompactAndIsNowEmpty(CogMethod *cPIC)
 {
-    sqInt entryPoint;
+    usqInt entryPoint;
     sqInt followingAddress;
     sqInt i;
     sqInt methods[MaxCPICCases];
@@ -6079,7 +6079,7 @@ cPICHasForwardedClass(CogMethod *cPIC)
 static sqInt NoDbgRegParms
 cPICHasFreedTargets(CogMethod *cPIC)
 {
-    sqInt entryPoint;
+    usqInt entryPoint;
     sqInt i;
     sqInt pc;
     CogMethod *targetMethod;

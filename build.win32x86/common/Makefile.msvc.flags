@@ -7,6 +7,7 @@
 #############################################################################
 
 ARCH:=x86
+export ARCH
 
 # Find out where the MSVC tools are if not already defined.
 ifeq ($(VCToolsInstallDir),)
@@ -39,6 +40,7 @@ $(info VCINSTALLDIRSH=$(VCINSTALLDIRSH))
 $(info wildcard  C:/Program\ Files/LLVM/bin/.* $(wildcard C:/Program\ Files/LLVM/bin/.*))
 
 override TOOLPREFIX:="$(VCToolsInstallDir)bin/HostX64/x86/"
+export TOOLPREFIX
 MSVC:=MSVC
 undefine Clang
 undefine ClangC2

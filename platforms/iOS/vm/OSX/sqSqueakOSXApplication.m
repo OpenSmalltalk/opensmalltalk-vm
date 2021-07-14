@@ -159,6 +159,7 @@ static char *getVersionInfo(int verbose);
 }
 
 - (void) parseUnixArgs {
+	[super parseUnixArgs];
 	NSProcessInfo *p = [NSProcessInfo processInfo];
 	[self parseArgs: [p arguments]];
 	[self parseEnv: [p environment]];
@@ -265,6 +266,11 @@ static char *getVersionInfo(int verbose);
 	}
 #endif
 #if COGVM
+	if ([argData isEqualToString: VMOPTIONOBJ("logplugin")]) {
+		extern char *primTracePluginName;
+		primTracePluginName = peek;
+		return 2;
+	}
 	if ([argData compare: VMOPTIONOBJ("trace") options: NSLiteralSearch range: NSMakeRange(0,VMOPTIONLEN(6))] == NSOrderedSame) {
 		extern int traceFlags;
 
@@ -539,6 +545,7 @@ static char *getVersionInfo(int verbose);
 #endif
 #if STACKVM || NewspeakVM
 # if COGVM
+	printf("  "VMOPTION("logplugin")" name       only log primitives in plugin\n");
 	printf("  "VMOPTION("trace")"[=num]          enable tracing (optionally to a specific value)\n");
 # else
 	printf("  "VMOPTION("sendtrace")"            enable send tracing\n");

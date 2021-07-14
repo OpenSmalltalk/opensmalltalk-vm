@@ -19,7 +19,10 @@
 *
 *****************************************************************************/
 
-#define _CRT_SECURE_NO_WARNINGS /* eliminates msvc warnings for strcpy, fopen, etc. */
+#ifndef _CRT_SECURE_NO_WARNINGS
+# define _CRT_SECURE_NO_WARNINGS /* eliminates msvc warnings for strcpy, fopen, etc. */
+#endif
+#include <tchar.h>
 #include <Windows.h>
 #include <ShlObj.h>  /* to use SHGetFolderPath to get preference directory. */
 #include <mmsystem.h>
@@ -40,7 +43,7 @@ void printLastError(TCHAR *prefix)
   FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER |  FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
                 NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
                 (LPTSTR) &lpMsgBuf, 0, NULL );
-  warnPrintf(TEXT("%s (%lu) -- %s\n"), prefix, lastError, (char *)lpMsgBuf);
+  warnPrintfT(TEXT("%s (%lu) -- %s\n"), prefix, lastError, (char *)lpMsgBuf);
   LocalFree( lpMsgBuf );
 }
 #endif
@@ -185,7 +188,7 @@ duplicateDeviceName(DeviceInfo* device, char *lpszDesc)
 	}
 }
 
-void
+static void
 setDeviceGUID(DeviceInfo* device, LPGUID lpGUID)
 {
 	/* Free existing GUID, if any. */
@@ -206,7 +209,7 @@ setDeviceGUID(DeviceInfo* device, LPGUID lpGUID)
 	memcpy(device->guid, lpGUID, sizeof(GUID));
 }
 
-void
+static void
 clearDeviceInfo(DeviceInfo* device)
 {
 	setDeviceName(device, NULL);
@@ -214,7 +217,7 @@ clearDeviceInfo(DeviceInfo* device)
 	device->mmID = -1;
 }
 
-void
+static void
 initializeDeviceInfoList(DeviceInfoList* list) 
 {
 	int i;
@@ -230,7 +233,7 @@ initializeDeviceInfoList(DeviceInfoList* list)
 	list->defaultDevice.mmID = -1;
 }
 
-void
+static void
 shutdownDeviceInfoList(DeviceInfoList* list)
 {
 	int i;
@@ -299,7 +302,7 @@ deviceEnumerationCallback(LPGUID lpGUID, LPCTSTR lpszDesc, LPCTSTR lpszDrvName, 
 		DPRINTF(("ERROR: failed to obtain waveID from GUID: %s\n", printGUID(lpGUID)));
 	}
 	else {
-		DPRINTF(("NEW DEVICE: %d   NAME: %s  GUID: %s\n", device->mmID, device->name, printGUID(lpGUID)));
+		DPRINTF(("NEW DEVICE: %ld   NAME: %s  GUID: %s\n", device->mmID, device->name, printGUID(lpGUID)));
 	}
 	return TRUE;
 }
@@ -546,7 +549,7 @@ logDeviceNames()
 	}
 #endif
 
-	DPRINTF(("logDeviceNames() to '%s'\n", logName[0] ? logName : stdout));
+	DPRINTF(("logDeviceNames() to '%s'\n", logName[0] ? logName : "stdout"));
 
 	deviceLogFile = logName[0]
 						? fopen(logName, "wt")
@@ -622,7 +625,7 @@ accessMixerVolume(UINT deviceID, DWORD lineType, double inLevel)
 	WAVEFORMATEX wfx;
 	int bytesPerSample, bytesPerFrame, desiredSamplesPerSec;
 
-	DPRINTF(("accessMixerVolume(id:%u, type:%x, level:%g) \n", deviceID, lineType, inLevel));
+	DPRINTF(("accessMixerVolume(id:%u, type:%lx, level:%g) \n", deviceID, lineType, inLevel));
 
 	if ((int)deviceID < 0) {
 		/* Make up some data. */
@@ -639,7 +642,7 @@ accessMixerVolume(UINT deviceID, DWORD lineType, double inLevel)
 		if (lineType == MIXERLINE_COMPONENTTYPE_DST_WAVEIN
 		 || lineType == MIXERLINE_COMPONENTTYPE_DST_VOICEIN) {
 			result = waveInOpen(&hwaveIn, WAVE_MAPPER, &wfx, 0, 0, CALLBACK_NULL);
-			DMPRINTF(("	waveInOpen=>%d (BADFORMAT=%d, BADFLAG=%d), hwave=%lx\n", result, WAVERR_BADFORMAT, MMSYSERR_INVALFLAG, hwaveIn));
+			DMPRINTF(("	waveInOpen=>%d (BADFORMAT=%d, BADFLAG=%d), hwave=%p\n", result, WAVERR_BADFORMAT, MMSYSERR_INVALFLAG, hwaveIn));
 			if (mmFAILED(result)) return -1;
 			result = mixerOpen(&hmx, (UINT) hwaveIn, 0, 0, MIXER_OBJECTF_HWAVEIN);
 		}
@@ -667,7 +670,7 @@ accessMixerVolume(UINT deviceID, DWORD lineType, double inLevel)
 			mixerGetLineInfo((HMIXEROBJ)hmx, &mmLine, MIXER_OBJECTF_MIXER + MIXER_GETLINEINFOF_DESTINATION),
 			mixerGetLineInfo((HMIXEROBJ)hmx, &mmLine, MIXER_OBJECTF_MIXER + MIXER_GETLINEINFOF_SOURCE)));
 	result = flexMixerGetLineInfo((HMIXEROBJ) hmx, &mmLine);
-	DPRINTF(("	mixerGetLineInfo=>%x, source %u, destinatation %u, type %x, %d channels, %d controls\n", result, 
+	DPRINTF(("	mixerGetLineInfo=>%x, source %lu, destinatation %lu, type %lx, %ul channels, %ul controls\n", result, 
 			mmLine.dwSource,  mmLine.dwDestination, mmLine.dwComponentType, mmLine.cChannels, mmLine.cControls));
 	if (mmFAILED(result)) {
 		DPRINTF(("accessMixerVolume(): failed to get line info (error code: %d)\n", result));
@@ -717,7 +720,7 @@ accessMixerVolume(UINT deviceID, DWORD lineType, double inLevel)
 	return outLevel;
 }
 
-sqInt
+static sqInt
 dx_snd_SetRecordLevel(sqInt level) 
 { return 1000.0L * accessMixerVolume(recorderDevices.defaultDevice.mmID, MIXERLINE_COMPONENTTYPE_DST_WAVEIN, level / 1000.0L); }
 
@@ -725,11 +728,11 @@ int
 snd_GetRecordLevel() 
 { return 1000.0L * accessMixerVolume(recorderDevices.defaultDevice.mmID, MIXERLINE_COMPONENTTYPE_DST_WAVEIN, -1.0); }
 
-void
+static void
 dx_snd_SetVolume(double left, double right)
 { accessMixerVolume(playerDevices.defaultDevice.mmID, MIXERLINE_COMPONENTTYPE_DST_SPEAKERS, (left>right)?left:right); }
 
-void
+static void
 dx_snd_Volume(double *left, double *right)
 {
 	*left = accessMixerVolume(playerDevices.defaultDevice.mmID, MIXERLINE_COMPONENTTYPE_DST_SPEAKERS, -1.0);
@@ -741,7 +744,7 @@ dx_snd_Volume(double *left, double *right)
 /**************************************/
 
 /* module initialization/shutdown */
-sqInt
+static sqInt
 dx_soundInit(void)
 {
   initializeDeviceInfoList(&playerDevices);
@@ -764,9 +767,9 @@ dx_soundInit(void)
 }
 
 static sqInt dx_snd_StopPlaying(void);
-sqInt dx_snd_StopRecording(int);
+static sqInt dx_snd_StopRecording(int);
 
-sqInt
+static sqInt
 dx_soundShutdown(void)
 {
 	DPRINTF(("dx_soundShutDown\n"));
@@ -790,7 +793,7 @@ dx_soundShutdown(void)
 	return 1;
 }
 
-sqInt
+static sqInt
 dx_snd_StopPlaying(void) {
   playTerminate = 0;
   if (lpdPlayBuffer) {
@@ -859,17 +862,17 @@ dxRecCallback(LPVOID ignored)
 
 
 /* sound output */
-sqInt
+static sqInt
 dx_snd_AvailableSpace(void) { return playBufferAvailable ? playBufferSize : 0; }
 
-sqInt
+static sqInt
 dx_snd_InsertSamplesFromLeadTime(sqInt frameCount, void *srcBufPtr, sqInt samplesOfLeadTime)
 {
   /* currently not supported */
   return 0;
 }
 
-sqInt
+static sqInt
 dx_snd_PlaySamplesFromAtLength(sqInt frameCount, void *arrayIndex, sqInt startIndex)
 {
   HRESULT hRes;
@@ -913,10 +916,10 @@ dx_snd_PlaySamplesFromAtLength(sqInt frameCount, void *arrayIndex, sqInt startIn
   return bytesWritten / waveOutFormat.nBlockAlign;
 }
 
-sqInt
+static sqInt
 dx_snd_PlaySilence(void) { /* no longer supported */ return -1; }
 
-sqInt
+static sqInt
 dx_snd_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sqInt semaIndex) {
   DSBUFFERDESC dsbd;
   DSBPOSITIONNOTIFY  posNotify[2];
@@ -1043,12 +1046,12 @@ dx_snd_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sqInt semaInde
   return 1;
 }
 
-sqInt
+static sqInt
 dx_snd_Stop(void) { dx_snd_StopPlaying(); return 1; }
 
 /* sound input */
 
-sqInt
+static sqInt
 dx_snd_StartRecording(sqInt samplesPerSec, sqInt stereo, sqInt semaIndex)
 {
 	DSCCAPS dsccaps;
@@ -1072,7 +1075,7 @@ dx_snd_StartRecording(sqInt samplesPerSec, sqInt stereo, sqInt semaIndex)
 		snd_StopRecording();
 
 	DMPRINTF(("dx_snd_StartRec: beginning DirectSound audio capture\n"));
-	DMPRINTF(("\tsamplingRate: %d   stereo: %d   sem-index: %d\n", samplesPerSec, stereo, semaIndex));
+	DMPRINTF(("\tsamplingRate: %d   stereo: %d   sem-index: %d\n", (int)samplesPerSec, (int)stereo, (int)semaIndex));
 
 	if (!lpdCapture) {
 		hRes = CoCreateInstance(&CLSID_DirectSoundCapture8,
@@ -1105,14 +1108,14 @@ dx_snd_StartRecording(sqInt samplesPerSec, sqInt stereo, sqInt semaIndex)
 #	define isCertified (dsccaps.dwFlags & DSCCAPS_CERTIFIED) ? "yes" : "no"
 #	define isEmulated (dsccaps.dwFlags & DSCCAPS_EMULDRIVER) ? "yes" : "no"
 #	define hasMulticapture (dsccaps.dwFlags & DSCCAPS_MULTIPLECAPTURE) ? "yes" : "no"
-		DMPRINTF(("dx_snd_StartRec: using capture-device with capabilities:  certified: %s  emulated: %s  multicapture: %s  formats: 0x%lx  channels: %d\n", isCertified, isEmulated, hasMulticapture, dsccaps.dwFormats, dsccaps.dwChannels));
+		DMPRINTF(("dx_snd_StartRec: using capture-device with capabilities:  certified: %s  emulated: %s  multicapture: %s  formats: 0x%lx  channels: %lu\n", isCertified, isEmulated, hasMulticapture, dsccaps.dwFormats, dsccaps.dwChannels));
 	}
 
 	/* create the recording notification thread */
 	hRecThread = CreateThread(NULL, 128*1024, dxRecCallback, NULL, 
 								STACK_SIZE_PARAM_IS_A_RESERVATION, &threadID);
 	if (!hRecThread) {
-		printLastError("dx_snd_StartRec: CreateThread failed");
+		printLastError(TEXT("dx_snd_StartRec: CreateThread failed"));
 		snd_StopRecording();
 		return 0;
 	}
@@ -1160,7 +1163,7 @@ dx_snd_StartRecording(sqInt samplesPerSec, sqInt stereo, sqInt semaIndex)
 		hRes = IDirectSoundCapture_CreateCaptureBuffer(lpdCapture, &dscb, &lpdRecBuffer, NULL);
 		if (FAILED(hRes)) {
 			DMPRINTF(("dx_snd_StartRec: IDirectSoundCapture_CreateCaptureBuffer() failed (errCode: %lx)\n", hRes));
-			DMPRINTF(("\tchannels: %d  frequency: %dHz\n", waveInFormat.nChannels, samplesPerSec));
+			DMPRINTF(("\tchannels: %d  frequency: %dHz\n", waveInFormat.nChannels, (int)samplesPerSec));
 			return 0;
 		}
 	}
@@ -1168,7 +1171,7 @@ dx_snd_StartRecording(sqInt samplesPerSec, sqInt stereo, sqInt semaIndex)
 													&IID_IDirectSoundNotify, 
 													(void**)&lpdNotify );
 	if (FAILED(hRes)) {
-		DMPRINTF(("dx_snd_StartRec: QueryInterface(IDirectSoundNotify) failed (errCode: %lx)\n"));
+		DMPRINTF(("dx_snd_StartRec: QueryInterface(IDirectSoundNotify) failed (errCode: %lx)\n", hRes));
 		snd_StopRecording();
 		return 0;
 	}
@@ -1193,7 +1196,7 @@ dx_snd_StartRecording(sqInt samplesPerSec, sqInt stereo, sqInt semaIndex)
 	return 0;
 }
 
-sqInt
+static sqInt
 dx_snd_StopRecording(int recursing)
 {
 	if (!recursing) {
@@ -1226,13 +1229,13 @@ dx_snd_StopRecording(int recursing)
 	return 0;
 }
 
-double
+static double
 dx_snd_GetRecordingSampleRate(void)
 {
   return isRecording ? (double)waveInFormat.nSamplesPerSec : 0.0;
 }
 
-sqInt
+static sqInt
 dx_snd_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex, sqInt bufferSizeInBytes)
 {
   /* if data is available, copy as many sample slices as possible into the
@@ -1272,7 +1275,7 @@ dx_snd_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex, sqInt bufferS
 					0);
   if (FAILED(hRes)) {
     DMPRINTF(("dx_snd_Rec: IDirectSoundCaptureBuffer_Lock() failed (errCode: %lx)\n", hRes));
-	DMPRINTF(("\taddr: %p  readPos: %d  srcPtr: %p/%d  srcPtr2: %p/%d\n", lpdRecBuffer, recBufferReadPosition, bytesCopied, srcPtr, srcLen, srcPtr2, srcLen2));
+	DMPRINTF(("\taddr: %p  readPos: %d  srcPtr: %p/%d  srcPtr2: %p/%d\n", lpdRecBuffer, recBufferReadPosition, srcPtr, srcLen, srcPtr2, srcLen2));
 	return 0;
   } 
 
@@ -1317,7 +1320,8 @@ dx_snd_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex, sqInt bufferS
 
 /* NOTE: Both of the below functions use the default wave out device */
 #ifdef OLD
-void dx_snd_Volume(double *left, double *right)
+static void
+dx_snd_Volume(double *left, double *right)
 {
   DWORD volume = (DWORD)-1;
   waveOutGetVolume((HWAVEOUT)0, &volume);
@@ -1325,7 +1329,8 @@ void dx_snd_Volume(double *left, double *right)
   *right = (volume >> 16) / 65535.0;
 }
 
-void dx_snd_SetVolume(double left, double right)
+static void
+dx_snd_SetVolume(double left, double right)
 {
   DWORD volume;
 
@@ -1439,7 +1444,7 @@ snd_EnableAEC(sqInt trueOrFalse)
 	wasRecording = hRecThread ? 1 : 0;
 	if (wasRecording)
 		snd_StopRecording();
-	DMPRINTF(("Set AEC state to %d\n", trueOrFalse));
+	DMPRINTF(("Set AEC state to %d\n", (int)trueOrFalse));
 	AEC_ENABLED = (int)trueOrFalse;
 	if (wasRecording)
 		snd_StartRecording(recSampleRate, recIsStereo, recSemaphore); 
@@ -1452,4 +1457,13 @@ snd_EnableAEC(sqInt trueOrFalse)
 sqInt
 snd_SupportsAEC() { return AEC_SUPPORTED; }
 
+#if TerfVM
+sqInt
+setAECCaptureCallback(void *function, sqInt sampleRate, sqInt frameSize, int cancelInPlace)
+{ return PrimErrUnsupported; }
+
+sqInt
+setAECDequeueCallback(void *function)
+{ return PrimErrUnsupported; }
+#endif
 #endif /* NO_SOUND */

@@ -1270,7 +1270,7 @@ static sqInt NoDbgRegParms num64BitUnitsOf(sqInt objOop);
 static sqInt NoDbgRegParms numBytesOfBitsformat(sqInt objOop, sqInt format);
 static sqInt NoDbgRegParms numBytesOfBytes(sqInt objOop);
 extern sqInt numBytesOf(sqInt objOop);
-extern sqInt numPointerSlotsOf(sqInt objOop);
+extern usqInt numPointerSlotsOf(sqInt objOop);
 static usqInt NoDbgRegParms numSlotsOfAny(sqInt objOop);
 extern usqInt numSlotsOf(sqInt objOop);
 static sqInt NoDbgRegParms numStrongSlotsOfInephemeral(sqInt objOop);
@@ -42104,7 +42104,7 @@ followForwardedObjectFieldstoDepth(sqInt objOop, sqInt depth)
     sqInt header1;
     sqInt i;
     sqInt numLiterals;
-    sqInt numSlots;
+    usqInt numSlots;
     usqInt numSlots1;
     sqInt oop;
     sqInt referent;
@@ -49561,7 +49561,7 @@ copyObjtoAddrstopAtsavedFirstFieldsindex(sqInt objOop, sqInt segAddr, sqInt endS
     sqInt iLimiT;
     sqInt methodHeader;
     sqInt numLiterals;
-    sqInt numMediatedSlots;
+    usqInt numMediatedSlots;
     usqInt numSlots;
     usqInt numSlots1;
     sqInt oop;
@@ -56147,7 +56147,7 @@ numBytesOf(sqInt objOop)
 	Works with CompiledMethods, as well as ordinary objects. */
 
 	/* SpurMemoryManager>>#numPointerSlotsOf: */
-sqInt
+usqInt
 numPointerSlotsOf(sqInt objOop)
 {   DECL_MAYBE_SQ_GLOBAL_STRUCT
     sqInt contextSize;
@@ -59157,7 +59157,7 @@ printReferencesTo(sqInt anOop)
 					assert((ReceiverIndex + ((sp >> 3))) < (lengthOf(obj1)));
 					contextSize = (sp >> 3);
 	l9:	/* end fetchStackPointerOf: */;
-					i = CtxtTempFrameStart + contextSize;
+					i = ((usqInt) (CtxtTempFrameStart + contextSize));
 					goto l10;
 				}
 				/* begin numSlotsOf: */
@@ -59190,7 +59190,7 @@ printReferencesTo(sqInt anOop)
 			/* begin literalCountOfMethodHeader: */
 			assert((((header) & 7) == 1));
 			numLiterals = ((header >> 3)) & AlternateHeaderNumLiteralsMask;
-			i = numLiterals + LiteralStart;
+			i = ((usqInt) (numLiterals + LiteralStart));
 	l10:	/* end numPointerSlotsOf: */;
 			while (((i -= 1)) >= 0) {
 				if (anOop == (longAt((obj1 + BaseHeaderSize) + (((sqInt)((usqInt)(i) << (shiftForWord()))))))) {
@@ -62390,10 +62390,10 @@ updatePointers(void)
     sqInt numLiterals1;
     sqInt numLiterals2;
     sqInt numLiterals3;
-    sqInt numPointerSlots;
-    sqInt numPointerSlots1;
-    sqInt numPointerSlots2;
-    sqInt numPointerSlots3;
+    usqInt numPointerSlots;
+    usqInt numPointerSlots1;
+    usqInt numPointerSlots2;
+    usqInt numPointerSlots3;
     usqInt numSlots;
     usqInt numSlots1;
     usqInt numSlots11;

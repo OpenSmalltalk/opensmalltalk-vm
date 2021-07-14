@@ -31,6 +31,7 @@ BUILDDIR:=	$(BUILD)/$(LIBNAME)
 # Support directory locations
 CROSSVMDIR:= $(PLATDIR)/Cross/vm
 WIN32VMDIR:= $(PLATDIR)/win32/vm
+WIN32MISCDIR:=$(PLATDIR)/win32/misc
 MAKERVMDIR:= $(SRCDIR)/vm
 
 #############################################################################
@@ -72,6 +73,9 @@ PLUGINDLL:= $(VMDIR)/$(LIBNAME).dll
 LIBOBJ?=    $(LIBSRC:.c=.o)
 LIBOBJ:=    $(LIBOBJ:.cpp=.o)
 LIBOBJ:=    $(addprefix $(OBJDIR)/,$(LIBOBJ))
+ifdef BIT_IDENTICAL_FLOATING_POINT
+LIBOBJ+=$(BUILD)/fdlibm/libm.a $(LIBS)
+endif
 #$(info LIBOBJ is $(LIBOBJ))
 
 include ../common/Makefile.msvc.flags
@@ -92,6 +96,7 @@ print-settings:
 	$(info SRCDIR='$(SRCDIR)')
 	$(info CROSSDIR='$(CROSSDIR)')
 	$(info WIN32DIR='$(WIN32DIR)')
+	$(info WIN32MISCDIR='$(WIN32MISCDIR)')
 	$(info MAKERDIR='$(MAKERDIR)')
 	$(info CROSSSRC='$(CROSSSRC)')
 	$(info WIN32SRC='$(WIN32SRC)')
@@ -105,6 +110,7 @@ print-settings:
 	$(info PLUGINSRCDIR='$(PLUGINSRCDIR)')
 	$(info PLUGINLIB='$(PLUGINLIB)')
 	$(info PLUGINDLL='$(PLUGINDLL)')
+	$(info PLUGINDLL_LIBS='$(PLUGINDLL_LIBS)')
 	$(info XINC='$(XINC)')
 	$(info XDEFS='$(XDEFS)')
 	$(info -----------------------------------------------------)
@@ -119,8 +125,10 @@ $(PLUGINLIB): $(VMDIR) $(OBJDIR) $(LIBOBJ) $(LIBSRC)
 	-$(RM) $(PLUGINLIB)
 	$(LIBRARIAN) $(LIBOBJ) $(EXTRALIBS) -out:$(subst /,\\,$(PLUGINLIB))
 
+PLUGINDLL_LIBS:=WinMM.lib ole32.lib dsound.lib msdmo.lib kernel32.lib /NODEFAULTLIB:libc /NODEFAULTLIB:libcmt /DEFAULTLIB:msvcrt
+
 $(PLUGINDLL): $(VMDIR) $(OBJDIR) $(LIBOBJ) $(JMPOBJ) $(LIBSRC)
-	$(LD) WinMM.lib ole32.lib dsound.lib msdmo.lib kernel32.lib $(VMLIB) $(LDFLAGS) -DLL $(LIBOBJ) $(JMPOBJ) $(EXTRALIBS) \
+	$(LD) $(LDFLAGS) -DLL $(LIBOBJ) $(JMPOBJ) $(VMLIB) $(PLUGINDLL_LIBS) $(EXTRALIBS) \
 	-LIBPATH:$(BUILD)/vm \
 	-LIBPATH:"$(WindowsSdkDir)LIB/$(WindowsSDKVersion)/um/x86" \
 	-LIBPATH:"$(WindowsSdkDir)LIB/$(WindowsSDKVersion)/ucrt/x86" \

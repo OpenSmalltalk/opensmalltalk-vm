@@ -60590,7 +60590,7 @@ prepareForSnapshot(void)
     sqInt limit;
     sqInt newEndOfMemory;
     sqInt next;
-    usqInt node;
+    sqInt node;
     SpurSegmentInfo *seg;
     sqInt smallChild;
     sqInt treeNode;

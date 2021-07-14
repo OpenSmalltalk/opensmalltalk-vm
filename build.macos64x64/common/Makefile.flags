@@ -15,9 +15,9 @@ override SDK:=$(realpath $(addprefix $(SDKsDIR)/, $(SDK)))
 endif
 ifeq ($(strip $(SDK)),)
   ifeq ($(wildcard $(realpath $(addprefix $(SDKsDIR)/,MacOSX.sdk))),)
-	$(error could not find a valid SDK)
+    $(error could not find a valid SDK)
   else
-	SDK:=$(realpath $(addprefix $(SDKsDIR)/,MacOSX.sdk))
+    SDK:=$(realpath $(addprefix $(SDKsDIR)/,MacOSX.sdk))
   endif
 endif
 TARGET_ARCH:=x86_64
@@ -54,14 +54,14 @@ CFLAGS:=$(CFLAGS) -DBUILD_FOR_OSX=1 -DUSE_METAL=1 -DUSE_OPENGL=1 -DUSE_CORE_GRAP
 		-isysroot $(SDK) \
 		-include $(PLATDIR)/iOS/vm/SqueakPureObjc_Prefix.pch
 
-BFLAGS:=-arch $(TARGET_ARCH) \
+BFLAGS:=-arch $(TARGET_ARCH) -mmacosx-version-min=$(TARGET_VERSION_MIN) \
 		-bundle \
 		-isysroot $(SDK) \
 		-Wl,-rpath,@executable_path/../Frameworks \
 		-Wl,-rpath,@executable_path/../$(APPPLUGINDIR) \
 		$(EXTRABFLAGS)
 
-DYFLAGS:=-arch $(TARGET_ARCH) \
+DYFLAGS:=-arch $(TARGET_ARCH) -mmacosx-version-min=$(TARGET_VERSION_MIN) \
 		-shared \
 		-isysroot $(SDK) \
 		$(EXTRADYFLAGS)

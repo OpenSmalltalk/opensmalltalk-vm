@@ -402,20 +402,34 @@ sqMakeMemoryExecutableFromToCodeToDataDelta(usqInt startAddr,
 #  endif
 }
 
-void
-sqMakeMemoryNotExecutableFromTo(usqInt startAddr, usqInt endAddr)
+// Allocate memory for the code zone, which must be executable, and is
+// perferably writable.  Since the code zone lies below the heap, allocate at
+// as low an address as possible, to allow maximal space for heap growth.
+void *
+allocateJITMemory(usqInt *desiredSize)
 {
-# if 0
-	usqInt firstPage = roundDownToPage(startAddr);
-	/* Arguably this is pointless since allocated memory always does include
-	 * write permission.  Annoyingly the mprotect call fails on both linux &
-	 * mac os x.  So make the whole thing a nop.
-	 */
-	if (mprotect((void *)firstPage,
-				 endAddr - firstPage + 1,
-				 PROT_READ | PROT_WRITE) < 0)
-		perror("mprotect(x,y,PROT_READ | PROT_WRITE)");
-# endif
+	void *hint = sbrk(0); // a hint of the lowest possible address for mmap
+	void *result;
+
+	pageSize = getpagesize();
+	pageMask = ~(pageSize - 1);
+
+#if !defined(MAP_JIT)
+# define MAP_JIT 0
+#endif
+
+	*desiredSize = roundUpToPage(*desiredSize);
+	result =   mmap(hint, *desiredSize,
+					PROT_READ | PROT_WRITE | PROT_EXEC,
+					MAP_FLAGS | MAP_JIT, -1, 0);
+	if (result == MAP_FAILED) {
+		perror("Could not allocate JIT memory");
+		exit(1);
+	}
+	// Note the address for sqAllocateMemory above
+	endOfJITZone = (char *)result + *desiredSize;
+
+	return result;
 }
 #endif /* COGVM */
 

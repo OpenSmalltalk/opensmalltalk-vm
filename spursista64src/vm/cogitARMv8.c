@@ -7125,7 +7125,7 @@ rewriteImm19JumpBeforetarget(AbstractInstruction * self_in_rewriteImm19JumpBefor
 static sqInt NoDbgRegParms
 rewriteImm26JumpBeforetarget(AbstractInstruction * self_in_rewriteImm26JumpBeforetarget, sqInt followingAddress, sqInt targetAddress)
 {
-    usqInt instrOpcode;
+    sqInt instrOpcode;
     sqInt mcpc;
     sqInt offset;
 
@@ -7135,7 +7135,7 @@ rewriteImm26JumpBeforetarget(AbstractInstruction * self_in_rewriteImm26JumpBefor
 	instrOpcode = ((instructionBeforeAddress(self_in_rewriteImm26JumpBeforetarget, followingAddress))) >> 26;
 	assert((instrOpcode == 5)
 	 || (instrOpcode == 37));
-	codeLong32Atput(mcpc, (instrOpcode << 26) + (((offset) >> 2) & (0x3FFFFFF)));
+	codeLong32Atput(mcpc, (((sqInt)((usqInt)(instrOpcode) << 26))) + (((offset) >> 2) & (0x3FFFFFF)));
 	return 4;
 }
 
