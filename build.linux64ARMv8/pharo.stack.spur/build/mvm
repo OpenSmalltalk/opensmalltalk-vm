@@ -39,7 +39,7 @@ test -f config.h || ../../../platforms/unix/config/configure \
 	--with-vmversion=5.0 \
 	--without-vm-display-fbdev \
 	--without-npsqueak \
-	--with-src=spurstack64src --disable-cogit \
+	--with-src=src/vm.64bit.stack.spur --disable-cogit \
 	--enable-fast-bitblt \
 	TARGET_ARCH="-march=armv8-a" \
 	CFLAGS="$OPT -D__ARM_ARCH_ISA_A64 -DARM64 -D__arm__ -D__arm64__ -D__aarch64__ -DI_REALLY_DONT_CARE_HOW_UNSAFE_THIS_IS -DUSE_MIDI_ALSA -DCOGMTVM=0" \

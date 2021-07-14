@@ -21,7 +21,7 @@ test -f config.h || ../../../platforms/unix/config/configure \
 		--without-npsqueak \
 		--without-vm-display-fbdev \
 		--with-vmversion=5.0 \
-		--with-src=spursrc \
+		--with-src=src/vm.32bit.cog.spur \
 		--without-vm-display-fbdev \
 		--enable-fast-bitblt \
 	TARGET_ARCH="-march=armv6 -mfpu=vfp -mfloat-abi=hard" \

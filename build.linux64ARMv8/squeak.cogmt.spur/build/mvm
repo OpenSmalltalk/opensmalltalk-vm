@@ -20,7 +20,7 @@ esac
 test -f plugins.int || (test -f ../plugins.int && cp -p ../plugins.int . || cp -p ../../plugins.int .)
 test -f plugins.ext || (test -f ../plugins.ext && cp -p ../plugins.ext . || cp -p ../../plugins.ext .)
 test -f config.h || ../../../platforms/unix/config/configure \
-	--with-vmversion=5.0 --with-src=spur64src \
+	--with-vmversion=5.0 --with-src=src/vm.64bit.cog.spur \
 	--without-npsqueak \
 	INTERP=cointerpmt \
 	CFLAGS="$MACHINE $OPT -DCOGMTVM=1 -DDUAL_MAPPED_CODE_ZONE=1" \

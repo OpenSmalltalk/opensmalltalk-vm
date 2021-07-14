@@ -41,7 +41,7 @@ done
 test -f config.h || ../../../platforms/unix/config/configure \
 		--without-npsqueak \
 		--with-vmversion=5.0 \
-		--with-src=spurlowcodestacksrc --disable-cogit \
+		--with-src=src/lowcode.vm.32bit.stack.spur --disable-cogit \
 	TARGET_ARCH="-m32" \
 	CFLAGS="$OPT -msse2"
 rm -f vm/sqUnixMain.o # nuke version info
