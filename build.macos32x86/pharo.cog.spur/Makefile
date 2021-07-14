@@ -3,7 +3,7 @@
 # Do make init to allow make -n to function.
 #
 
-VMSRCDIR:=../../spursrc/vm
+VMSRCDIR:=../../src/vm.32bit.cog.spur
 VM:=Pharo
 COGDEFS:= -DPharoVM=1
 APPNAME:=Pharo

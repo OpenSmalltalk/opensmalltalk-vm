@@ -125,7 +125,7 @@ and plugins.ext to specify the external plugins (if any) to build.  The root
 Makefile then includes a full Makefile from the common directory.  For example,
 squeak.cog.spur's Makefile (minus commentary) reads
 	----8<-----build.macos32x86/squeak.cog.spur/Makefile----8<---------------
-	VMSRCDIR:= ../../spursrc/vm
+	VMSRCDIR:= ../../src/vm.32bit.cog.spur
 	SOURCEFILE:=SqueakV50.sources
 
 	include ../common/Makefile.app.squeak.cog

@@ -3,7 +3,7 @@
 # Do make init to allow make -n to function.
 #
 
-VMSRCDIR:= ../../spursrc/vm
+VMSRCDIR:= ../../src/vm.32bit.cog.spur
 SOURCEFILE:=SqueakV50.sources
 
 # Now include the Makefile proper, which is common to all Mac OS builds.

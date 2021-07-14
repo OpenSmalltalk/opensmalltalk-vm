@@ -126,14 +126,14 @@ in a VM at build time (see plugins.int & plugins.ext in build directories).
 
 The VM source are in directories such as
 ```
-	sistasrc/vm			- Smalltalk Sista V3
-	spursistasrc/vm		- Smalltalk Sista Spur
-	spursrc/vm			- Smalltalk Cog Spur
-	spur64src/vm		- Smalltalk Cog Spur 64-bit
-	spurstacksrc/vm		- Smalltalk Stack Spur
-	spurstack64src/vm	- Smalltalk Stack Spur 64-bit
-	src/vm				- Smalltalk Cog V3
-	stacksrc/vm			- Smalltalk Stack V3
+	src/vm.32bit.sista.v3		- Smalltalk Sista V3
+	src/vm.32bit.sista.spur		- Smalltalk Sista Spur
+	src/vm.32bit.cog.spur 		- Smalltalk Cog Spur
+	src/vm.64bit.cog.spur 		- Smalltalk Cog Spur 64-bit
+	src/vm.32bit.stack.spur 	- Smalltalk Stack Spur
+	src/vm.64bit.stack.spur 	- Smalltalk Stack Spur 64-bit
+	src/vm.32bit.cog.v3			- Smalltalk Cog V3
+	src/vm.32bit.stack.v3 		- Smalltalk Stack V3
 ```
 
 All plugins are in the directory

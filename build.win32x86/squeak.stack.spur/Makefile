@@ -4,7 +4,7 @@
 #############################################################################
 
 VM:=Squeak
-VMSRCDIR:=../../spurstacksrc/vm
+VMSRCDIR:=../../src/vm.32bit.stack.spur
 
 # This variable is set by VS Native Tools Command Prompts, not for cygwin wins
 VSCMD_ARG_HOST_ARCH := $(shell echo $$VSCMD_ARG_HOST_ARCH)

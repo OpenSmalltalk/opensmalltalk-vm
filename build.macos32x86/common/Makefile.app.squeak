@@ -3,7 +3,7 @@
 #
 
 # The caller should set VMSRCDIR to point to the relevant VM source
-# e.g. VMSRCDIR:= ../../spursrc/vm
+# e.g. VMSRCDIR:= ../../src/vm.32bit.cog.spur
 
 # Produce Squeak.app, SqueakAssert.app & SqueakDebug.app
 APPNAME:=Squeak

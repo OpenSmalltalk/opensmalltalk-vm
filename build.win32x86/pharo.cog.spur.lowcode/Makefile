@@ -6,7 +6,7 @@
 VM:=Pharo
 VM_NAME:=Pharo Virtual Machine
 
-VMSRCDIR:=../../spurlowcodesrc/vm
+VMSRCDIR:=../../src/lowcode.vm.32bit.cog.spur
 COGDEFS:= -DPharoVM=1
 
 COMPILER_TO_USE:=clang

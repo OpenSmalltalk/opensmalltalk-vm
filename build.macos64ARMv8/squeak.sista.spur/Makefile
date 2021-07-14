@@ -3,7 +3,7 @@
 # Do make init to allow make -n to function.
 #
 
-VMSRCDIR:= ../../spursista64src/vm
+VMSRCDIR:= ../../src/vm.64bit.sista.spur
 COGDEFS=
 SOURCEFILE:=SqueakV50.sources
 
