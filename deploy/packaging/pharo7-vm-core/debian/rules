@@ -9,11 +9,11 @@ export EXTRA_CFLAGS:=
 ifeq ($(DEB_BUILD_ARCH),i386)
 EXTRA_CFLAGS:=-msse2
 EXTRA_CPPFLAGS:=$(EXTRA_CPPFLAGS) -D_FILE_OFFSET_BITS=64
-SOURCES:=spursrc
+SOURCES:=src/vm.32bit.cog.spur
 endif
 ifeq ($(DEB_BUILD_ARCH),amd64)
 EXTRA_CFLAGS:=-msse2
-SOURCES:=spur64src
+SOURCES:=src/vm.64bit.cog.spur
 endif
 
 # Make sure that dpkg-buildflags are passed to the building process

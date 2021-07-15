@@ -267,7 +267,7 @@ simply run lldb on the executable in the MacOS directory in the .app bundle,
 e.g. if in the image directory you might do
 	lldb ../build.macos64x64/pharo.cog.spur/PharoAssert.app/Contents/MacOS/Pharo
 The VM includes many functions intended for VM debugging.  See e.g. functions
-beginning with print in the main VM source (e.g. spursrc/vm/gcc3x-cointerp.c).
+beginning with print in the main VM source (e.g. src/vm.64bit.cog.spur/gcc3x-cointerp.c).
 
 Eliot Miranda
 April 2018

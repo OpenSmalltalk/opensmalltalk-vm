@@ -32,7 +32,7 @@ test -f config.h || ../../../platforms/unix/config/configure \
 		--with-vmversion=5.0 \
 		--disable-dynamicopenssl \
 		--without-libtls \
-	--with-src=spurstacksrc --disable-cogit \
+	--with-src=src/vm.32bit.stack.spur --disable-cogit \
 	--without-vm-display-fbdev --without-npsqueak \
 	TARGET_ARCH="-m32" \
 	LIBS="$LIBS" \

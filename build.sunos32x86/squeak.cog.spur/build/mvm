@@ -33,7 +33,7 @@ test -f config.h || ../../../platforms/unix/config/configure --without-npsqueak 
 		--with-vmversion=5.0 \
 		--without-libtls \
 		--disable-dynamicopenssl \
-		--with-src=spursrc \
+		--with-src=src/vm.32bit.cog.spur \
 	TARGET_ARCH="-m32" \
 	LIBS="$LIBS" \
 	CFLAGS="$OPT -DCOGMTVM=0"
