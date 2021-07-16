@@ -4,7 +4,7 @@
 #############################################################################
 
 VM:=Squeak
-VMSRCDIR:=../../src/vm.32bit.sista.spur
+VMSRCDIR:=../../../src/vm.32bit.sista.spur
 
 COMPILER_TO_USE:=clang
 

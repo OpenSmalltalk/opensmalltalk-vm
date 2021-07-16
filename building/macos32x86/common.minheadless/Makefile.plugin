@@ -51,7 +51,7 @@ CFLAGS:= $(CFLAGS) $(OFLAGS) $(COGDEFS) $(DEBUGVM) $(XDEFS)
 #   MAKERDIR: The location of the VMMaker generated sources
 #   BUILDDIR: The location where the plugin is built
 #
-#PLUGINSRCDIR:=	../../src/plugins
+#PLUGINSRCDIR:=	../../../src/plugins
 
 ifeq ($(USEPLUGINASDYLIB),TRUE)
 # I do not like to use lib "as is" because that will strip all "lib" occurences, but I do not 

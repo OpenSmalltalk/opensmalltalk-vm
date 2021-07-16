@@ -6,7 +6,7 @@
 VM:=Pharo
 VM_NAME:=Pharo Virtual Machine
 
-VMSRCDIR:=../../src/vm.32bit.stack.spur
+VMSRCDIR:=../../../src/vm.32bit.stack.spur
 # NOTES: 
 # STACK_ALIGN_BYTES=16 is needed in mingw and FFI (and I suppose on other modules too).
 # ALLOCA_LIES_SO_USE_GETSP=0 Some compilers return the stack address+4 on alloca function, 

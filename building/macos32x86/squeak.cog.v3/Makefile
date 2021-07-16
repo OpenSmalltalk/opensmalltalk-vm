@@ -3,7 +3,7 @@
 # Do make init to allow make -n to function.
 #
 
-VMSRCDIR:= ../../src/vm.32bit.cog.v3
+VMSRCDIR:= ../../../src/vm.32bit.cog.v3
 SOURCEFILE:=SqueakV46.sources
 
 # Now include the Makefile proper, which is common to all Mac OS builds.

@@ -19,7 +19,7 @@ SYSTEM?=$(VM)
 # PLUGINSRCDIR defines the locaton of the plugin source, the subsets of which
 # selected by plugins.int and plugins.ext will be built.
 
-PLUGINSRCDIR?=../../src/plugins
+PLUGINSRCDIR?=../../../src/plugins
 
 # CONFIGURATION defines what version of the VM to build, product, assert or
 # debug.  The default is overridden in the mvm script

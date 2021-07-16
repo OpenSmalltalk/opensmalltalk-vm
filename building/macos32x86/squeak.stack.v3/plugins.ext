@@ -1,4 +1,4 @@
-# Copied, perhaps edited, from ../src/examplePlugins.ext
+# Copied, perhaps edited, from ../../src/examplePlugins.ext
 EXTERNAL_PLUGINS = \
 B3DAcceleratorPlugin \
 CameraPlugin \

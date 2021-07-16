@@ -131,7 +131,7 @@ Each build directory contains two files
 	plugins.int
 	plugins.ext
 that determine the set of plugins to be taken from the supplied plugins
-directory (which defaults to ../src/plugins), and which are to be linked
+directory (which defaults to ../../src/plugins), and which are to be linked
 into the VM (plugins.int) or compiled as external dlls to be dynamically
 linked at run-time (plugins.ext). Tailor these files as you wish.
 

@@ -120,7 +120,7 @@ The mvm script runs ../../platforms/unix/config/configure with the relevant
 options, runs make, and then make install to create a VM directory tree in
 ../../products, ../../products/assert or ../../products/debug as appropriate.
 plugins.int and plugins.ext determine the set of plugins to be taken from
-the supplied plugins directory (which defaults to ../src/plugins), and which
+the supplied plugins directory (which defaults to ../../src/plugins), and which
 are to be linked into the VM (plugins.int) or compiled as external shared
 objects to be dynamically linked at run-time (plugins.ext).
 	
