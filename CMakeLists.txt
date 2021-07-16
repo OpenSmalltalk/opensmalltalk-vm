@@ -1,18 +1,23 @@
 # OpenSmalltalkVM cmake build script.
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.11)
 cmake_policy(SET CMP0054 NEW)
 project(OpenSmalltalkVM)
 #for setjmp.asm
 enable_language(ASM-ATT)
 
 option(ONLY_CONFIG_H "Only generate config.h" OFF)
-option(SPUR_OBJECT_MODEL "Spur Object Model" ON)
-option(SISTA_OPTIMIZER "Sista Optimizer" OFF)
+
+option(COG_JIT "Cog JIT" ON)
+option(SPUR_OBJECT_MODEL "Spur Object Model (i.e, no V3 image format)" ON)
+option(SISTA_OPTIMIZER "Sista-optimized Cog JIT" OFF)
 option(LOWCODE_EXTENSIONS "Lowcode Extensions" OFF)
-option(PHARO_BRANDING "Pharo Branding" ON)
+
+option(PHARO_BRANDING "Pharo Branding" OFF)
+option(NEWSPEAK_BRANDING "Newspeak Branding" OFF)
+option(SQUEAK_BRANDING "Squeak Branding" ON)
+
 option(SUPPORT_TRADITIONAL_DISPLAY "Enables building a VM with support for a window." OFF)
 option(ALLOW_SDL2 "Enables support for the SDL2 display plugin" OFF)
-option(COG_JIT "Cog JIT" ON)
 option(GENERATE_TOP_LEVEL_RUN_SCRIPT "Generate a top level run script on installation" ON)
 option(MINIMAL_PLUGIN_SET "Build the VM with the minimal number of plugins" OFF)
 option(BUILD_PLUGINS_AS_BUNDLES "Build VM plugins as bundles" OFF)
@@ -117,18 +122,17 @@ endif()
 
 if(IS_64_BITS_BUILD_MACHINE)
 	option(BUILD_I386_VERSION "Build x86 32 bits version" OFF)
-    set(SQUEAK_PLATFORM_X86_64 True)
+    set(OSVM_PLATFORM_X86_64 True)
 else(IS_X86_BUILD_MACHINE)
-	set(SQUEAK_PLATFORM_X86_32 True)
+	set(OSVM_PLATFORM_X86_32 True)
 endif()
 
-if(SQUEAK_PLATFORM_X86_64)
+if(OSVM_PLATFORM_X86_64)
 	if(BUILD_I386_VERSION)
-        set(SQUEAK_PLATFORM_X86_32 True)
-	    set(SQUEAK_PLATFORM_X86_64 False)
+        set(OSVM_PLATFORM_X86_32 True)
+	    set(OSVM_PLATFORM_X86_64 False)
 	else()
 		set(VM_64BITS TRUE)
-		set(SourceFolderName "${SourceFolderName}64")
 		set(VM_TARGET_CPU "x86_64")
 		if(WIN32)
 			set(VM_TARGET_CPU "X64")
@@ -141,7 +145,7 @@ else()
 	set(VM_64BITS False)
 endif()
 
-if(SQUEAK_PLATFORM_X86_32)
+if(OSVM_PLATFORM_X86_32)
     if (MSVC)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:SSE2")
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /arch:SSE2")
@@ -158,8 +162,18 @@ if(SQUEAK_PLATFORM_X86_32)
 endif()
 
 set(VM_TARGET "${CMAKE_SYSTEM}")
-set(SourceFolderName "")
+set(SourceFolderName "src/")
 set(ProductFolderName "")
+
+# Lowcode extended instructions
+if(LOWCODE_EXTENSIONS)
+	add_definitions(-DLowcodeVM=1)
+	set(SourceFolderName "${SourceFolderName}lowcode.vm")
+	set(ProductFolderName "${ProductFolderName}lowcodevm")
+else()
+	set(SourceFolderName "${SourceFolderName}vm")
+endif()
+
 
 if(WIN32)
     set(OS_TYPE "Win32")
@@ -180,35 +194,40 @@ elseif(UNIX)
 endif()
 
 
-# Spur object model
-
-if(SPUR_OBJECT_MODEL)
-	#add_definitions(SpurVM=1)
-	set(SourceFolderName "spur")
-	set(ProductFolderName "spur${ProductFolderName}")
+# 64 bits VM
+if(VM_64BITS)
+	set(SourceFolderName "${SourceFolderName}.64bit")
+	set(ProductFolderName "${ProductFolderName}64")
+else()
+	set(SourceFolderName "${SourceFolderName}.32bit")
+	set(ProductFolderName "${ProductFolderName}32")
 endif()
 
-# Sista optimizer
+
+# What Cogit is active?
 if(SISTA_OPTIMIZER)
-	#add_definitions(SistaVM=1)
-	set(SourceFolderName "${SourceFolderName}sista")
-	set(ProductFolderName "${ProductFolderName}spur")
-endif()
-
-# Lowcode extended instructions
-if(LOWCODE_EXTENSIONS)
-	add_definitions(-DLowcodeVM=1)
-	set(SourceFolderName "${SourceFolderName}lowcode")
-	set(ProductFolderName "${ProductFolderName}lowcode")
-endif()
-
-# Stack interpreter
-if(COG_JIT)
+	#add_definitions(SistaVM=1) # not needed because already set in sources
+	set(SourceFolderName "${SourceFolderName}.sista")
+	set(ProductFolderName "sista${ProductFolderName}")
+elseif(COG_JIT)
+	set(SourceFolderName "${SourceFolderName}.cog")
 	set(ProductFolderName "cog${ProductFolderName}")
 else()
-    set(SourceFolderName "${SourceFolderName}stack")
+	set(SourceFolderName "${SourceFolderName}.stack")
 	set(ProductFolderName "stack${ProductFolderName}")
 endif()
+
+
+# Spur object model
+if(SPUR_OBJECT_MODEL)
+	#add_definitions(SpurVM=1) # not needed because already set in sources
+	set(SourceFolderName "${SourceFolderName}.spur")
+	set(ProductFolderName "spur${ProductFolderName}")
+else()
+	set(SourceFolderName "${SourceFolderName}.v3")
+	set(ProductFolderName "v3${ProductFolderName}")	
+endif()
+
 
 # Add the minheadless suffix
 set(ProductFolderName "${ProductFolderName}mhdls")
@@ -216,41 +235,60 @@ if(HAVE_SDL2 AND SUPPORT_TRADITIONAL_DISPLAY)
 	set(ProductFolderName "${ProductFolderName}sdl2")
 endif()
 
-# 64 bits VM
-if(VM_64BITS)
-	set(SourceFolderName "${SourceFolderName}64")
-	set(ProductFolderName "${ProductFolderName}64")
-endif()
-
 
 # VM branding
-set(VM_EXECUTABLE_NAME squeak)
-set(VM_LIBRARY_NAME SqueakVMCore)
-set(VM_NAME Squeak)
-set(PHARO_VM FALSE)
-set(SQUEAK_VM FALSE)
-
-if(DARWIN OR WIN32)
-	set(VM_EXECUTABLE_NAME Squeak)
-endif()
-
 if(PHARO_BRANDING)
-	add_definitions(-DPharoVM=1 -DIMMUTABILITY=1)
+	set(PHARO_VM TRUE)
 	set(VM_EXECUTABLE_NAME pharo)
 	set(VM_LIBRARY_NAME PharoVMCore)
-    set(VM_NAME Pharo)
+	set(VM_NAME Pharo)
 	set(VM_PLUGINS_ENV_VAR_NAME "PHARO_PLUGINS")
-    set(PHARO_VM TRUE)
 	set(ProductFolderName "ph${ProductFolderName}")
 	if(DARWIN OR WIN32)
 		set(VM_EXECUTABLE_NAME Pharo)
 	endif()
-else()
-    set(SQUEAK_VM TRUE)
+elseif(NEWSPEAK_BRANDING)
+	set(NEWSPEAK_VM TRUE)
+	set(VM_EXECUTABLE_NAME newspeak)
+	set(VM_LIBRARY_NAME NewspeakVMCore)
+	set(VM_NAME Newspeak)
+	set(VM_PLUGINS_ENV_VAR_NAME "NEWSPEAK_PLUGINS")
+	set(ProductFolderName "ns${ProductFolderName}")
+	if(DARWIN OR WIN32)
+		set(VM_EXECUTABLE_NAME Newspeak)
+	endif()	
+elseif(SQUEAK_BRANDING)
+	set(SQUEAK_VM TRUE)
+	set(VM_EXECUTABLE_NAME squeak)
+	set(VM_LIBRARY_NAME SqueakVMCore)
+	set(VM_NAME Squeak)
 	set(VM_PLUGINS_ENV_VAR_NAME "SQUEAK_PLUGINS")
 	set(ProductFolderName "sq${ProductFolderName}")
+	if(DARWIN OR WIN32)
+		set(VM_EXECUTABLE_NAME Squeak)
+	endif()
+else()
+	set(PHARO_VM FALSE)
+	set(NEWSPEAK_VM FALSE)
+	set(SQUEAK_VM FALSE)
+	set(VM_EXECUTABLE_NAME osvm)
+	set(VM_LIBRARY_NAME OpenSmalltalkVMCore)
+	set(VM_NAME OpenSmalltalkVM)
+	set(VM_PLUGINS_ENV_VAR_NAME "OPENSMALLTALK_PLUGINS")
+	if(DARWIN OR WIN32)
+		set(VM_EXECUTABLE_NAME OpenSmalltalkVM)
+	endif()
 endif()
 add_definitions(-DVM_NAME="${VM_NAME}")
+
+if(PHARO_VM)
+	add_definitions(-DPharoVM=1 -DIMMUTABILITY=1)
+elseif(NEWSPEAK_VM)
+	add_definitions(-DNewspeakVM=1)
+elseif(SQUEAK_VM)
+	# Nothing extra to define
+endif()
+
 
 # Cog JIT
 if(COG_JIT)
@@ -411,7 +449,7 @@ else()
 endif()
 
 # Type sizes
-if(BUILD_I386_VERSION OR SQUEAK_PLATFORM_X86_32)
+if(BUILD_I386_VERSION OR OSVM_PLATFORM_X86_32)
 	set(SIZEOF_INT 4)
 	set(SIZEOF_LONG 4)
 	set(SIZEOF_LONG_LONG 8)
@@ -465,22 +503,22 @@ include_directories(
 	"${PROJECT_SOURCE_DIR}/include"
 	"${PROJECT_SOURCE_DIR}/platforms/Cross/vm"
 	"${PROJECT_SOURCE_DIR}/platforms/Cross/plugins"
-	"${SourceFolderName}/vm"
+	"${SourceFolderName}"
 )
 
 # VM Flavor sources
 if(COG_JIT)
 	if(VM_MSVC)
-		set(InterpreterSource ${SourceFolderName}/vm/cointerp.c)
+		set(InterpreterSource ${SourceFolderName}/cointerp.c)
 	else()
-		set(InterpreterSource ${SourceFolderName}/vm/gcc3x-cointerp.c)
+		set(InterpreterSource ${SourceFolderName}/gcc3x-cointerp.c)
 	endif()
 	set(VM_FAVLOR_SOURCES
-		${SourceFolderName}/vm/cogit.c
+		${SourceFolderName}/cogit.c
 		${InterpreterSource}
 	)
 else()
-	set(InterpreterSource ${SourceFolderName}/vm/interp.c)
+	set(InterpreterSource ${SourceFolderName}/interp.c)
 	set(VM_FAVLOR_SOURCES
 		${InterpreterSource}
 	)
@@ -626,7 +664,7 @@ elseif(WIN32)
 		platforms/minheadless/windows
 	)
 
-	if(SQUEAK_PLATFORM_X86_32)
+	if(OSVM_PLATFORM_X86_32)
 		set(SETJMP_IMPL platforms/win32/misc/_setjmp-x86.asm)
 	else()
 		set(SETJMP_IMPL platforms/win32/misc/_setjmp-x64.asm)
@@ -669,12 +707,12 @@ elseif(WIN32)
 	endif()
 
     set(VM_DEPENDENCIES_LIBRARIES Winmm ${VM_DEPENDENCIES_LIBRARIES})
-    if(SQUEAK_PLATFORM_X86_32)
+    if(OSVM_PLATFORM_X86_32)
         add_definitions(
             -DX86
 			-DWIN32=1
         )
-	elseif(SQUEAK_PLATFORM_X86_64)
+	elseif(OSVM_PLATFORM_X86_64)
 		add_definitions(
 			-DWIN64=1
         )
