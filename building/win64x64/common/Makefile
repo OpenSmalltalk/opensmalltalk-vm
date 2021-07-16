@@ -45,7 +45,7 @@ else
 	endif
 endif
 $(shell mkdir -p deps >/dev/null) # deps is the dependencies directory
-PLUGINSRCDIR:= ../../src
+PLUGINSRCDIR:= ../../../src
 export PLUGINSRCDIR
 OBJDIR:= $(BUILD)/vm
 

@@ -47,7 +47,7 @@ else
 	endif
 endif
 
-PLUGINSRCDIR:= ../../src
+PLUGINSRCDIR:= ../../../src
 export PLUGINSRCDIR
 OBJDIR:= $(BUILD)/vm
 
