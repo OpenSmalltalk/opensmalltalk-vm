@@ -28,7 +28,7 @@ On Solaris "uname -s" reports the value "SunOS".
 To build,
 
   scripts/updateSCCSVersions
-  cd build.sunos64x64  (or cd build.sunos32x86)
+  cd building/sunos64x64  (or cd building/sunos32x86)
   cd squeak.cog.spur (or cd squeak.stack.spur)
   cd build
   ./mvm or ./mvm INSTALLDIR

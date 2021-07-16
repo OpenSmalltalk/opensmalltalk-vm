@@ -40,9 +40,9 @@ echo "$(cat platforms/Cross/plugins/sqPluginsSCCSVersion.h | .git_filters/RevDat
 if [[ "${BUILD_WITH_CMAKE}" == "yes" ]]; then
     [[ -z "${CPU_ARCH}" ]] && exit 2
     PLATFORM="minheadless_with_cmake"
-    BUILD_DIRECTORY="$(pwd)/build.minheadless.cmake/${CPU_ARCH}/${FLAVOR}";
+    BUILD_DIRECTORY="$(pwd)/building/minheadless.cmake/${CPU_ARCH}/${FLAVOR}";
 else
-    BUILD_DIRECTORY="$(pwd)/build.${ARCH}/${FLAVOR}";
+    BUILD_DIRECTORY="$(pwd)/building/${ARCH}/${FLAVOR}";
 fi
 readonly BUILD_DIRECTORY
 readonly PRODUCTS_DIR="$(pwd)/products"

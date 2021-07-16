@@ -1,7 +1,7 @@
 How to build a new plugin:
 1. Start xcode, create a new "Carbon bundle" project
-2. Create the project under build.macosNNproc/variant/MyPlugin
-   e.g.  build.macos32x86/squeak.cog.v3/MyPlugin
+2. Create the project under building/macosNNproc/variant/MyPlugin
+   e.g.  building/macos32x86/squeak.cog.v3/MyPlugin
 3. Edit the project settings:
    Header Search Path: /Developer/Headers/FlatCarbon
 4. Add the following files:

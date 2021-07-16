@@ -83,7 +83,7 @@ source). See "Installing support libraries" below.  If the configure step fails
 when "checking for C compiler default output file name", you have yet to install
 all the necessary support packages (e.g. libuuid).
 Then cd to the build directory of your choice, e.g.
-	build.linux32x86/squeak.cog.spur/build
+	building/linux32x86/squeak.cog.spur/build
 Then execute
 	./mvm
 	
@@ -93,7 +93,7 @@ file name", you have yet to install all the necessary support (e.g. lubuuid).
 
 The subdirectories conform to the production/assert/debug x itimer vs threaded
 heartbeat x single vs multi-threaded parts of the matrix described above.  For
-example, build.linux32x86/squeak.cog.v3 includes
+example, building/linux32x86/squeak.cog.v3 includes
 
 	build
 	build.itimerheartbeat
@@ -124,7 +124,7 @@ the supplied plugins directory (which defaults to ../src/plugins), and which
 are to be linked into the VM (plugins.int) or compiled as external shared
 objects to be dynamically linked at run-time (plugins.ext).
 	
-Finally, at the build.linux32x86 level the makeall script will run all the
+Finally, at the building/linux32x86 level the makeall script will run all the
 makeallclean scripts it can find.
 
 
@@ -220,7 +220,7 @@ BitBlt optimizations on ARM
 On ARM, BitBlt optimizations can be enbaled by including --enable-fast-bitblt as an option to ../platforms/unix/config/configure (not by default).
 This requires the use of the assembler asasm (cf. http://lists.squeakfoundation.org/pipermail/vm-dev/2013-May/012959.html and http://forum.world.st/commit-2774-add-instructions-for-enableFastBlt-on-arm-linux-td4704245.html). 
 However it is tricky to build from source and pre-packaged versions for Raspbian, Ubuntu, etc do not seem to be available. Therefore
-asasm is included in Cog/build.linux32ARMv7/ as a pre-built binary. The Makefiles for BitBltPlugin and vm-display-X11 reference it directly.
+asasm is included in Cog/building/linux32ARMv7/ as a pre-built binary. The Makefiles for BitBltPlugin and vm-display-X11 reference it directly.
 
 
 Installing support libraries
@@ -256,4 +256,4 @@ sudo apt-get install libasound2-dev
 
 More advice and examples for other distros gratefully received.
 
-(*) see ../build.linux32ARMv6/HowToBuild for Raspbian and Raspberry Pi.
+(*) see ../building/linux32ARMv6/HowToBuild for Raspbian and Raspberry Pi.

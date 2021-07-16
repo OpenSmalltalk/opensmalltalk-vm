@@ -98,7 +98,7 @@ Installs the 32bit pharo7 VM with GUI support.
 export CPPFLAGS="%vm_cppflags %vm_extra_cppflags"
 export CFLAGS="%{optflags} %vm_cflags"
 mkdir -p build/debian/build
-cp build.linux32x86/pharo.cog.spur/plugins.* build/debian/build/
+cp building/linux32x86/pharo.cog.spur/plugins.* build/debian/build/
 cd build/debian/build
 echo "foo %{_builddir}"
 %configure \

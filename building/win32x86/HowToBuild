@@ -86,7 +86,7 @@ Alternatively, an installation of mingw32 and msys may work, but has not been te
 
 Cygwin 2. Build
 Then cd to the build directory of your choice, e.g.
-	build.win32x86/squeak.cog.spur/
+	building/win32x86/squeak.cog.spur/
 Then execute
 	./mvm
 	
@@ -114,7 +114,7 @@ MSVC 1. Install the tools:
 MSVC 2. Build
 Open a x86 Native Tools Command Prompt from Visual Studio.
 Then cd to the build directory of your choice, e.g.
-	build.win32x86\squeak.cog.spur\
+	building/win32x86\squeak.cog.spur\
 Then execute
 	..\common\SETPATH.BAT
 to add the cygwin tools to your path (edit SETPATH if they are not installed in
@@ -137,7 +137,7 @@ linked at run-time (plugins.ext). Tailor these files as you wish.
 
 The Newspeak builds include an installer.  See Building an MSI installer below.
 
-Finally, at the build.win32x86 level the makeall script will run all the
+Finally, at the building/win32x86 level the makeall script will run all the
 mvm scripts it can find.
 
 
@@ -155,11 +155,11 @@ If you want to get the Cog VM simulator working you'll need to build one or more
 of the processor simulator plugins, each of which has support libraries that
 must be built:
 	Processor   Plugin           Support Library
-	x86         BochsIA32Plugin  build.linux32x86/bochsx86
-	x86_64/x64  BochsX64Plugin   build.linux32x86/bochsx64
-	ARMv5       GdbARMPlugin     build.linux32x86/gdbarm32
+	x86         BochsIA32Plugin  building/linux32x86/bochsx86
+	x86_64/x64  BochsX64Plugin   building/linux32x86/bochsx64
+	ARMv5       GdbARMPlugin     building/linux32x86/gdbarm32
 cd to the relevant directories; run conf.COG and then the build script, e.g.
-  $ cd build.linux32x86/bochsx86
+  $ cd building/linux32x86/bochsx86
   $ ./conf.COG
   $ ./makeem
 

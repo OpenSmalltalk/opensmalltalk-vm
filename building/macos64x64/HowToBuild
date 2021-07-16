@@ -1,7 +1,7 @@
 How To Build On Mac OS X
 ------------------------
-This file (build.macos64x64/HowToBuild) describes how to build VMs that run
-64-bit images.  build.macos32x86/HowToBuild describes how to build VMs that
+This file (building/macos64x64/HowToBuild) describes how to build VMs that run
+64-bit images.  building/macos32x86/HowToBuild describes how to build VMs that
 run 32-bit images.
 
 
@@ -126,12 +126,12 @@ the VM source to build, plugins.int to specify the internal plugins to build,
 and plugins.ext to specify the external plugins (if any) to build.  The root
 Makefile then includes a full Makefile from the common directory.  For example,
 squeak.cog.spur's Makefile (minus commentary) reads
-	----8<-----build.macos64x64/squeak.cog.spur/Makefile----8<---------------
+	----8<-----building/macos64x64/squeak.cog.spur/Makefile----8<---------------
 	VMSRCDIR:= ../../src/vm.64bit.cog.spur
 	SOURCEFILE:=SqueakV50.sources
 
 	include ../common/Makefile.app.squeak.cog
-	----8<-----build.macos64x64/squeak.cog.spur/Makefile----8<---------------
+	----8<-----building/macos64x64/squeak.cog.spur/Makefile----8<---------------
 Some external plugins require spport libraries.  In particular, the processor
 simulators used by VMMaker.oscog to develop the VM JITs, depend on C or C++
 code that implements a processor simulator.  See below.  Plugins that require
@@ -139,10 +139,10 @@ extra support or special compilation have makefiles under
 platforms/iOS/plugins/, for example plugins/iOS/plugins/RePlugin/Makefile.
 This Makefile sets some values and then includes common/Makefile.plugin to do
 the dirty work.  If you add an exotic plugin that requires such source please
-read the plugin makefile build.macos64x64/common/Makefile.plugin and the
+read the plugin makefile building/macos64x64/common/Makefile.plugin and the
 makefiles under plugins/iOS/plugins for examples of the facilities available.
 
-The files in build.macos64x64/common are
+The files in building/macos64x64/common are
 	Makefile.app
 		The top-level makefile for CocoaFast.app et al.
 		It includes Makefile.vm to build the vm and plugins and then constructs
@@ -220,11 +220,11 @@ If you want to get the Cog VM simulator working you'll need to build one or more
 of the processor simulator plugins, each of which has support libraries that
 must be built:
 	Processor   Plugin           Support Library
-	x86         BochsIA32Plugin  build.linux32x86/bochsx86
-	x86_64/x64  BochsX64Plugin   build.linux32x86/bochsx64
-	ARMv5       GdbARMPlugin     build.linux32x86/gdbarm32
+	x86         BochsIA32Plugin  building/linux32x86/bochsx86
+	x86_64/x64  BochsX64Plugin   building/linux32x86/bochsx64
+	ARMv5       GdbARMPlugin     building/linux32x86/gdbarm32
 cd to the relevant directories; run conf.COG and then the build script, e.g.
-  $ cd build.linux32x86/bochsx86
+  $ cd building/linux32x86/bochsx86
   $ ./conf.COG
   $ ./makeem
 
@@ -265,7 +265,7 @@ the debug one with -O0.  All are debuggable, including ful symbols, but the
 production one is less debuggable because of optimization.  To debug via lldb
 simply run lldb on the executable in the MacOS directory in the .app bundle,
 e.g. if in the image directory you might do
-	lldb ../build.macos64x64/pharo.cog.spur/PharoAssert.app/Contents/MacOS/Pharo
+	lldb ../building/macos64x64/pharo.cog.spur/PharoAssert.app/Contents/MacOS/Pharo
 The VM includes many functions intended for VM debugging.  See e.g. functions
 beginning with print in the main VM source (e.g. src/vm.64bit.cog.spur/gcc3x-cointerp.c).
 
