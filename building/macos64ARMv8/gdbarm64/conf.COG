@@ -1,5 +1,5 @@
 #!/bin/sh
-S=../../../processors/ARM/gdb-8.3.1
+S=../../../../processors/ARM/gdb-8.3.1
 TARGET="--target=aarch64 -mcpu=apple-a12"
 export CFLAGS="$TARGET -g -O2 -m64 -DCOG=1 -DWORDS_BIGENDIAN=0"
 #export CFLAGS="$TARGET -g3 -O0 -m64 -DCOG=1 -DWORDS_BIGENDIAN=0"

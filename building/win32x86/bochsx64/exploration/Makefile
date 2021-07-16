@@ -1,4 +1,4 @@
-BOCHS=../../../processors/IA32/bochs
+BOCHS=../../../../processors/IA32/bochs
 BOCHSEX64=$(BOCHS)/explorationx64
 LIBDEPS=../../cpu/libcpu.a
 CFLAGS=-m32 -I.. -I$(BOCHS) -I$(BOCHS)/cpu -I$(BOCHS)/instrument/stubs -L../cpu -lcpu

@@ -6,7 +6,7 @@
 
 # build cpu/libcpu.a disasm/libdisasm.a fpu/libfpu.a using
 # $ ./conf.COG
-# $ ../../processors/IA32/bochs/makeem
+# $ ../../../processors/IA32/bochs/makeem
 
 # Find the oldest appropriate SDK...
 XCODE=/Applications/Xcode.app/Contents/Developer
@@ -35,7 +35,7 @@ export CPPFLAGS
 export CXXFLAGS
 export LDFLAGS
 
-../../processors/IA32/bochs/configure \
+../../../processors/IA32/bochs/configure \
 	--enable-Cog \
 	--enable-cpu-level=6 \
 	--enable-sse=2 \

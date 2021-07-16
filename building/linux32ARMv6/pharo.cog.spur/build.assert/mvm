@@ -8,7 +8,7 @@ if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
 fi
 
-if ../../../scripts/checkSCCSversion ; then exit 1; fi
+if ../../../../scripts/checkSCCSversion ; then exit 1; fi
 echo -n "clean? "
 read a
 case $a in
@@ -17,7 +17,7 @@ n|no|N|NO)	echo "ok but this isn't safe!!";;
 esac
 test -f plugins.int || (test -f ../plugins.int && cp -p ../plugins.int . || cp -p ../../plugins.int .)
 test -f plugins.ext || (test -f ../plugins.ext && cp -p ../plugins.ext . || cp -p ../../plugins.ext .)
-test -f config.h || ../../../platforms/unix/config/configure \
+test -f config.h || ../../../../platforms/unix/config/configure \
 		--without-npsqueak \
 		--without-vm-display-fbdev \
 		--with-vmversion=5.0 \
@@ -28,8 +28,8 @@ test -f config.h || ../../../platforms/unix/config/configure \
 	CFLAGS="$OPT -DI_REALLY_DONT_CARE_HOW_UNSAFE_THIS_IS -DUSE_MIDI_ALSA -DCOGMTVM=0" \
 	LIBS=" -Wl,-rpath,'\$\$ORIGIN'"
 rm -f vm/sqUnixMain.o # nuke version info
-rm -rf ../../../products/$INSTALLDIR
-# prefer make install prefix=`readlink -f \`pwd\`/../../../products/$INSTALLDIR`
+rm -rf ../../../../products/$INSTALLDIR
+# prefer make install prefix=`readlink -f \`pwd\`/../../../../products/$INSTALLDIR`
 # but older linux readlinks lack the -f flag and Raspbian lacks `readlinks`
-make -j4 install-squeak install-plugins prefix=`(cd ../../../;pwd)`/products/$INSTALLDIR 2>&1 | tee LOG
-../../editpharoinstall.sh ../../../products/$INSTALLDIR "$@"
+make -j4 install-squeak install-plugins prefix=`(cd ../../../../;pwd)`/products/$INSTALLDIR 2>&1 | tee LOG
+../../editpharoinstall.sh ../../../../products/$INSTALLDIR "$@"

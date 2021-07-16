@@ -1,7 +1,7 @@
 ifndef THIRDPARTYDIR
 	include ../common/Makefile.lib.extra
 endif
-include ../../third-party/openssl.spec.win64
+include ../../../third-party/openssl.spec.win64
 
 # plugin definitions
 OPENSSLURL:=$(openssl_spec_download_url)

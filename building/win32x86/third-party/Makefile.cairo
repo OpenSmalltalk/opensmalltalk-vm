@@ -1,7 +1,7 @@
 ifndef THIRDPARTYDIR
 	include ../common/Makefile.lib.extra
 endif
-include ../../third-party/cairo.spec
+include ../../../third-party/cairo.spec
 
 # plugin definitions
 CAIROURL:=$(cairo_spec_download_url)

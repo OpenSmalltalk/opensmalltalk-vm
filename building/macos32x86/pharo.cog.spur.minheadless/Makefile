@@ -21,16 +21,16 @@ include ../common.minheadless/Makefile.app
 
 # third-party libraries
 #
-include ../third-party/Makefile.pkgconfig
-include ../third-party/Makefile.zlib
-include ../third-party/Makefile.libpng
-include ../third-party/Makefile.freetype2
-include ../third-party/Makefile.openssl
-include ../third-party/Makefile.libssh2
-include ../third-party/Makefile.libgit2
-include ../third-party/Makefile.libsdl2
-include ../third-party/Makefile.pixman
-include ../third-party/Makefile.cairo
+include ../../third-party/Makefile.pkgconfig
+include ../../third-party/Makefile.zlib
+include ../../third-party/Makefile.libpng
+include ../../third-party/Makefile.freetype2
+include ../../third-party/Makefile.openssl
+include ../../third-party/Makefile.libssh2
+include ../../third-party/Makefile.libgit2
+include ../../third-party/Makefile.libsdl2
+include ../../third-party/Makefile.pixman
+include ../../third-party/Makefile.cairo
 
 # extras for headless VM to open world with SDL2
 # 

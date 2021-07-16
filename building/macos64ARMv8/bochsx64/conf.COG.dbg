@@ -6,7 +6,7 @@
 
 # build cpu/libcpu.a disasm/libdisasm.a fpu/libfpu.a using
 # $ ./conf.COG.dbg
-# $ ../../processors/IA32/bochs/makeem
+# $ ../../../processors/IA32/bochs/makeem
 
 set echo
 CFLAGS="--target=aarch64 -mcpu=apple-a12 $CFLAGS"
@@ -22,7 +22,7 @@ export CPPFLAGS
 export CXXFLAGS
 export LDFLAGS
 
-../../processors/IA32/bochs/configure \
+../../../processors/IA32/bochs/configure \
 	--enable-Cog \
 	--enable-cpu-level=6 \
 	--enable-sse=2 \

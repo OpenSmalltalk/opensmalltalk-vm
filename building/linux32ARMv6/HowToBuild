@@ -115,9 +115,9 @@ Each build directory contains three files
 	mvm
 	plugins.int
 	plugins.ext
-The mvm script runs ../platforms/unix/config/configure with the relevant
+The mvm script runs ../../platforms/unix/config/configure with the relevant
 options, runs make, and then make install to create a VM directory tree in
-../products, ../products/assert or ../products/debug as appropriate.
+../../products, ../../products/assert or ../../products/debug as appropriate.
 plugins.int and plugins.ext determine the set of plugins to be taken from
 the supplied plugins directory (which defaults to ../src/plugins), and which
 are to be linked into the VM (plugins.int) or compiled as external shared
@@ -135,7 +135,7 @@ provides the 32-bit compiler and the ia32-libs provides the 32-bit libraries.
 You'll also have to add the -m32 switch to all gcc & g++ invocations.  The
 easiest way to do this is to add CC="gcc -m32" & CXX="g++ -m32" to the configure
 script:
-     ../../platforms/unix/config/configure CC="gcc -m32" CXX="g++ -m32" --without-npsqueak CFLAGS="-g -O2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=0" LIBS=-lpthread
+     ../../../platforms/unix/config/configure CC="gcc -m32" CXX="g++ -m32" --without-npsqueak CFLAGS="-g -O2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=0" LIBS=-lpthread
 To run a 32-bit VM on a 64-bit OS, you'll also need the 32-bit libraries
 provided by the ia32-libs package.
 
@@ -163,18 +163,18 @@ Squeak build system above autoconf to the Cog sources.  One can choose the vm
 source files, plugin source files, and optimization level to compile a VM of
 your choice.  To find the full set of options via
 
-	../platforms/unix/config/configure --help
+	../../platforms/unix/config/configure --help
 
 You can see the use of configure in the various mvm scripts in each build
 directory.  
 
 e.g.
-     ../../platforms/unix/config/configure --without-npsqueak CFLAGS="-g -O2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=0" LIBS=-lpthread
+     ../../../platforms/unix/config/configure --without-npsqueak CFLAGS="-g -O2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=0" LIBS=-lpthread
      make install prefix=WhereYouWantTheVmToGo
 
 	N.B. If you're on a 64-bit linux read 3e below!!
 	N.B. On Ubuntu *do not* supply "LIBS=-lpthread -luuid", i.e. use
-     ../platforms/unix/config/configure --without-npsqueak CFLAGS="-g -O2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=0"
+     ../../platforms/unix/config/configure --without-npsqueak CFLAGS="-g -O2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=0"
 
 
 N.B. The plugin set is defined by plugins.ext and plugins.int in the build dir.
@@ -202,7 +202,7 @@ There are issues with gcc version > 4.2.1.  Any of the following flags may break
 -fcaller-saves
 
 So turn them off.  e.g.
-     ../../platforms/unix/config/configure --without-npsqueak CFLAGS="-g -O2 -fno-caller-saves -fno-partial-inlining -fno-tree-pre -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=0" LIBS="-lpthread -luuid"
+     ../../../platforms/unix/config/configure --without-npsqueak CFLAGS="-g -O2 -fno-caller-saves -fno-partial-inlining -fno-tree-pre -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=0" LIBS="-lpthread -luuid"
 See http://smallissimo.blogspot.fr/2013/02/compiling-squeak-cog-virtual-machine-on.html
 
 There appear to be issues with 3.4.x gcc version on RedHat.  In particular
@@ -218,7 +218,7 @@ on Debian.
 
 BitBlt optimizations on ARM
 ---------------------------
-On ARM, BitBlt optimizations can be enbaled by including --enable-fast-bitblt as an option to ../platforms/unix/config/configure (default).
+On ARM, BitBlt optimizations can be enbaled by including --enable-fast-bitblt as an option to ../../platforms/unix/config/configure (default).
 This requires the use of the assembler asasm (cf. http://lists.squeakfoundation.org/pipermail/vm-dev/2013-May/012959.html and http://forum.world.st/commit-2774-add-instructions-for-enableFastBlt-on-arm-linux-td4704245.html). 
 However it is tricky to build from source and pre-packaged versions for Raspbian, Ubuntu, etc do not seem to be available. Therefore
 asasm is included in Cog/building/linux32ARMv6/ as a pre-built binary. The Makefiles for BitBltPlugin and vm-display-X11 reference it directly.

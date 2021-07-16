@@ -1,7 +1,7 @@
 ifndef THIRDPARTYDIR
 	include Makefile.lib.extra
 endif
-include ../../third-party/libsdl2.spec
+include ../../../third-party/libsdl2.spec
 
 # plugin definitions
 LIBSDL2URL:=$(libsdl2_spec_download_url)

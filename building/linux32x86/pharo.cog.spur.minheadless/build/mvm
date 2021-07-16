@@ -17,7 +17,7 @@ if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
 fi
 
-if ../../../scripts/checkSCCSversion ; then exit 1; fi
+if ../../../../scripts/checkSCCSversion ; then exit 1; fi
 echo -n "clean? "
 read a
 case $a in
@@ -25,12 +25,12 @@ n|no|N|NO)	echo "ok but this isn't safe!!";;
 *)		
 	test -f Makefile && make clean
 #	for lib in ${THIRDPARTYLIBS}; do
-#		../../third-party/mvm ${lib} clean
+#		../../../third-party/mvm ${lib} clean
 #	done
 esac
 
 for lib in ${THIRDPARTYLIBS}; do
-	../../third-party/mvm ${lib}
+	../../../third-party/mvm ${lib}
 done
 
 LDFLAGS="-L../../../.thirdparty-cache/linux/i386/lib" \
@@ -43,12 +43,12 @@ CFLAGS="-I../../../.thirdparty-cache/linux/i386/include -I../../.thirdparty-cach
 		../../.. 
 make
 
-productDir=../../../products/$INSTALLDIR
+productDir=../../../../products/$INSTALLDIR
 rm -rf "$productDir"
 mkdir "$productDir"
 productDir=`(cd "$productDir";pwd)`
 for lib in ${THIRDPARTYLIBS}; do
-	../../third-party/mvm ${lib} install $productDir
+	../../../third-party/mvm ${lib} install $productDir
 done
 cp dist/* $productDir
-../../editpharoinstall.sh ../../../products/$INSTALLDIR "$@"
+../../editpharoinstall.sh ../../../../products/$INSTALLDIR "$@"

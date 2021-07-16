@@ -1,7 +1,7 @@
 ifndef THIRDPARTYDIR
 	include Makefile.lib.extra
 endif
-include ../../third-party/libssh2.spec
+include ../../../third-party/libssh2.spec
 
 # plugin definitions
 LIBSSH2URL:=$(libssh2_spec_download_url)

@@ -49,7 +49,7 @@ PLUGINSRCDIR:= ../../src
 export PLUGINSRCDIR
 OBJDIR:= $(BUILD)/vm
 
-PLATDIR:=../../platforms
+PLATDIR:=../../../platforms
 export PLATDIR
 CROSSDIR:=$(PLATDIR)/Cross/vm
 TPDIR:=$(PLATDIR)/Cross/third-party

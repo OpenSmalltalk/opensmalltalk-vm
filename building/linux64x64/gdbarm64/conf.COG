@@ -1,5 +1,5 @@
 #!/bin/sh
-S=../../../processors/ARM/gdb-8.3.1
+S=../../../../processors/ARM/gdb-8.3.1
 export CFLAGS="-g -O2 -m64 -DCOG=1 -DWORDS_BIGENDIAN=0"
 CONFFLAGS='--target=aarch64-linux --with-system-zlib=yes'
 mkdir -p bfd gdb libiberty opcodes sim/common sim/aarch64

@@ -42,7 +42,7 @@ $(shell mkdir -p deps >/dev/null) # deps is the dependencies directory
 BLDDIR:= $(BUILD)
 OBJDIR:= $(BLDDIR)/vm
 
-PLATDIR:=../../platforms
+PLATDIR:=../../../platforms
 CROSSDIR:=$(PLATDIR)/Cross/vm
 OSXDIR:=$(PLATDIR)/minheadless/unix
 OSXCOMMONDIR:=$(PLATDIR)/minheadless/common

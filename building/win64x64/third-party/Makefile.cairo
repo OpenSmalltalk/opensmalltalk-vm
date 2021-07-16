@@ -3,7 +3,7 @@
 ifndef THIRDPARTYDIR
 	include ../common/Makefile.lib.extra
 endif
-include ../../third-party/cairo.spec
+include ../../../third-party/cairo.spec
 
 MINGWLIBDIR:=/usr/x86_64-w64-mingw32/sys-root/mingw/bin
 CAIROLIBNAME:=$(cairo_spec_product_name_windows)

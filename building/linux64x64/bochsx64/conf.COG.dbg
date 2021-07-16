@@ -21,7 +21,7 @@ export CPPFLAGS
 export CXXFLAGS
 export LDFLAGS
 
-../../processors/IA32/bochs/configure \
+../../../processors/IA32/bochs/configure \
 	--enable-Cog \
 	--enable-cpu-level=6 \
 	--enable-sse=2 \

@@ -6,14 +6,14 @@ How to build a new plugin:
    Header Search Path: /Developer/Headers/FlatCarbon
 4. Add the following files:
    ../../../src/vm.32bit.cog.v3/interp.h
-   ../../../platforms/Cross/vm/sqMemoryAccess.h
-   ../../../platforms/Cross/vm/sqVirtualMachine.h
-   ../../../platforms/Mac OS/vm/config.h
-   ../../../platforms/Mac OS/vm/sqConfig.h
-   ../../../platforms/Mac OS/vm/sqPlatformSpecific.h
+   ../../../../platforms/Cross/vm/sqMemoryAccess.h
+   ../../../../platforms/Cross/vm/sqVirtualMachine.h
+   ../../../../platforms/Mac OS/vm/config.h
+   ../../../../platforms/Mac OS/vm/sqConfig.h
+   ../../../../platforms/Mac OS/vm/sqPlatformSpecific.h
 5. Add the files for your plugin from
-   ../../../platforms/Cross/MyPlugin
-   ../../../platforms/Mac OS/MyPlugin
+   ../../../../platforms/Cross/MyPlugin
+   ../../../../platforms/Mac OS/MyPlugin
    ../../../src/plugins/MyPlugin
 6. Cross your fingers and compile
 
