@@ -33,13 +33,13 @@ for lib in ${THIRDPARTYLIBS}; do
 	../../../third-party/mvm ${lib}
 done
 
-LDFLAGS="-L../../../.thirdparty-cache/linux/i386/lib" \
-CFLAGS="-I../../../.thirdparty-cache/linux/i386/include -I../../.thirdparty-cache/linux/i386/include/SDL2" \
+LDFLAGS="-L../../../../.thirdparty-cache/linux/i386/lib" \
+CFLAGS="-I../../../../.thirdparty-cache/linux/i386/include -I../../../.thirdparty-cache/linux/i386/include/SDL2" \
 	cmake \
 		-DCMAKE_BUILD_TYPE=Release \
 		-DBUILD_I386_VERSION=ON \
-		-DSDL2_INCLUDE_DIR=../../../.thirdparty-cache/linux/i386/include/SDL2 \
-		-DSDL2_LIBRARY_PATH=../../../.thirdparty-cache/linux/i386/lib \
+		-DSDL2_INCLUDE_DIR=../../../../.thirdparty-cache/linux/i386/include/SDL2 \
+		-DSDL2_LIBRARY_PATH=../../../../.thirdparty-cache/linux/i386/lib \
 		../../.. 
 make
 

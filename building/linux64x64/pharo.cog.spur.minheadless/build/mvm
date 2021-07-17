@@ -23,14 +23,14 @@ for lib in ${THIRDPARTYLIBS}; do
 	../../../third-party/mvm ${lib}
 done
 
-LDFLAGS="-L../../../.thirdparty-cache/linux/x86_64/lib" \
+LDFLAGS="-L../../../../.thirdparty-cache/linux/x86_64/lib" \
 CC=clang \
-CFLAGS="-I../../../.thirdparty-cache/linux/x86_64/include -I../../.thirdparty-cache/linux/x86_64/include/SDL2" \
+CFLAGS="-I../../../../.thirdparty-cache/linux/x86_64/include -I../../../.thirdparty-cache/linux/x86_64/include/SDL2" \
 	cmake \
 		-DCMAKE_BUILD_TYPE=Release \
 		-DBUILD_I386_VERSION=OFF \
-		-DSDL2_INCLUDE_DIR=../../../.thirdparty-cache/linux/x86_64/include/SDL2 \
-		-DSDL2_LIBRARY_PATH=../../../.thirdparty-cache/linux/x86_64/lib \
+		-DSDL2_INCLUDE_DIR=../../../../.thirdparty-cache/linux/x86_64/include/SDL2 \
+		-DSDL2_LIBRARY_PATH=../../../../.thirdparty-cache/linux/x86_64/lib \
 		../../.. 
 make
 
