@@ -72,9 +72,10 @@ mkmf() {
   test -d ${name} || mkdir ${name}
   echo "" > ${make_targets}
   echo "" > ${excluded}
-  # collect source and header files
+  # collect source and header files, support "vm" and "vm.*" dirs
   for x in ${dirs}; do
-    d=${x}/${name}
+    d=${x}/${name} # e.g, platforms/unix/vm
+    if test ! -d ${d}; then d=${x}; fi # e.g., src/vm.64bit.cog.spur
     if test -d ${d}; then
       dd=${d}
       if test -f ${d}/mkmf.subdirs; then
