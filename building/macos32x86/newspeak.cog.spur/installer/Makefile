@@ -5,7 +5,7 @@
 # edit and run ./links to get .app and sources, then run make
 
 SOURCES := yes
-SOURCEFILENAME1 := ../../../sources/SqueakV50.sources
+SOURCEFILENAME1 := ../../../../sources/SqueakV50.sources
 DOCUMENTATION_DIR := doc
 
 include branding.gmk

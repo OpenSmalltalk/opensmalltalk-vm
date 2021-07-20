@@ -216,10 +216,10 @@ touchapp:
 	touch $(APP)
 
 # source installation
-%.sources: ../../sources/%.sources
+%.sources: ../../../sources/%.sources
 	ln $< $@
 
-$(APP)/Contents/Resources/%.sources: ../../sources/%.sources
+$(APP)/Contents/Resources/%.sources: ../../../sources/%.sources
 	ln $< $@
 
 print-app-settings:
