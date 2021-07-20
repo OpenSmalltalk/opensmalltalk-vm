@@ -24,10 +24,9 @@
 #include <setjmp.h>
 #include <stdio.h> /* for fprintf(stderr,...) */
 
-#include "sqMemoryAccess.h"
+#include "objAccess.h"
 #include "vmCallback.h"
 #include "sqAssert.h"
-#include "sqVirtualMachine.h"
 #include "ia32abi.h"
 
 #if !defined(min)
@@ -47,47 +46,11 @@ struct VirtualMachine* interpreterProxy;
 # define alloca _alloca
 #endif
 
-#define RoundUpPowerOfTwo(value, modulus)                                      \
+#define RoundUpPowerOfTwo(value, modulus) \
   (((value) + (modulus) - 1) & ~((modulus) - 1))
 
-#define IsAlignedPowerOfTwo(value, modulus)                                    \
+#define IsAlignedPowerOfTwo(value, modulus) \
   (((value) & ((modulus) - 1)) == 0)
-
-#define objIsAlien(anOop)                                                      \
-    (interpreterProxy->includesBehaviorThatOf(                                 \
-      interpreterProxy->fetchClassOf(anOop),                                   \
-      interpreterProxy->classAlien()))
-
-#define objIsUnsafeAlien(anOop)                                                \
-    (interpreterProxy->includesBehaviorThatOf(                                 \
-      interpreterProxy->fetchClassOf(anOop),                                   \
-      interpreterProxy->classUnsafeAlien()))
-
-#define sizeField(alien)                                                       \
-    (*(long*)pointerForOop((sqInt)(alien) + BaseHeaderSize))
-
-#define dataPtr(alien)                                                         \
-    pointerForOop((sqInt)(alien) + BaseHeaderSize + BytesPerOop)
-
-#define isIndirect(alien)                                                      \
-    (sizeField(alien) < 0)
-
-#define startOfParameterData(alien)                                            \
-    (isIndirect(alien)  ? *(void **)dataPtr(alien)                             \
-                        :  (void  *)dataPtr(alien))
-
-#define isIndirectSize(size)                                                   \
-    ((size) < 0)
-
-#define startOfDataWithSize(alien, size)                                       \
-    (isIndirectSize(size) ? *(void **)dataPtr(alien)	                       \
-                          :  (void  *)dataPtr(alien))
-
-#define isSmallInt(oop)                                                        \
-    ((oop)&1)
-
-#define intVal(oop)                                                            \
-    (((long)(oop))>>1)
 
 /*
  * Call a foreign function that answers an integral result in r0 according to
