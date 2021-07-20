@@ -125,10 +125,11 @@ extern sqLong returnX1value()
  * ARM EABI rules.
  */
 sqLong callIA32IntegralReturn(SIGNATURE) {
-  long (*f)(long r0, long r1, long r2, long r3,
-            double d0, double d1, double d2, double d3,
-            double d4, double d5, double d6, double d7);
-  long r;
+  sqInt (*f)(long r0, long r1, long r2, long r3,
+             long r4, long r5, long r6, long r7,
+             double d0, double d1, double d2, double d3,
+             double d4, double d5, double d6, double d7);
+  sqInt r;
 #include "dabusinessARM.h"
 }
 
@@ -138,6 +139,7 @@ sqLong callIA32IntegralReturn(SIGNATURE) {
  */
 sqLong callIA32FloatReturn(SIGNATURE) {
   float (*f)(long r0, long r1, long r2, long r3,
+             long r4, long r5, long r6, long r7,
              double d0, double d1, double d2, double d3,
              double d4, double d5, double d6, double d7);
   float r;
@@ -151,6 +153,7 @@ sqLong callIA32FloatReturn(SIGNATURE) {
 sqInt
 callIA32DoubleReturn(SIGNATURE) {
   double (*f)(long r0, long r1, long r2, long r3,
+              long r4, long r5, long r6, long r7,
               double d0, double d1, double d2, double d3,
               double d4, double d5, double d6, double d7);
   double r;
