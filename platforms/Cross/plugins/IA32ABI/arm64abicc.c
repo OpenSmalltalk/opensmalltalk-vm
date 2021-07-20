@@ -307,9 +307,13 @@ allocateExecutablePage(sqIntptr_t *size)
 #	define MAP_FLAGS	(MAP_ANON | MAP_PRIVATE)
 # endif
 
-	if (!pagesize)
-		pagesize = getpagesize();
 	void **newAllocatedPages;
+	if (!pagesize)
+# if !defined(_POSIX_C_SOURCE) || _POSIX_C_SOURCE < 200112L
+		pagesize = getpagesize();
+# else
+		pagesize = sysconf(_SC_PAGESIZE);
+# endif
 
 	mem = mmap(	0, pagesize,
 				PROT_READ | PROT_WRITE | PROT_EXEC,
@@ -321,10 +325,10 @@ allocateExecutablePage(sqIntptr_t *size)
 	*size = pagesize;
 
 # if defined(MAP_JIT)
-	++allocatedPagesSize;
 	newAllocatedPages = realloc(allocatedPages,
-								 allocatedPagesSize * sizeof(void *));
+								 ++allocatedPagesSize * sizeof(void *));
 	if (!newAllocatedPages) {
+		--allocatedPagesSize;
 		munmap(mem, pagesize);
 		perror("Could not realloc allocatedPages");
 		return 0;
