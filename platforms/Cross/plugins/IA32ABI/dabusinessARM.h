@@ -110,10 +110,10 @@
 				MaybePassAsDRegArg(d)
 			}
 			else {
-				sqInt v = interpreterProxy->signed32BitValueOf(arg);
+				sqInt v = interpreterProxy->signedMachineIntegerValueOf(arg);
 				if (interpreterProxy->failed()) {
 					interpreterProxy->primitiveFailFor(0);
-					v = interpreterProxy->positive32BitValueOf(arg);
+					v = interpreterProxy->positiveMachineIntegerValueOf(arg);
 					if (interpreterProxy->failed()) {
 						return PrimErrBadArgument;
 					}
@@ -154,10 +154,10 @@
 				MaybePassAsDRegArg(d)
 			}
 			else {
-				sqInt v = interpreterProxy->signed32BitValueOf(arg);
+				sqInt v = interpreterProxy->signedMachineIntegerValueOf(arg);
 				if (interpreterProxy->failed()) {
 					interpreterProxy->primitiveFailFor(0);
-					v = interpreterProxy->positive32BitValueOf(arg);
+					v = interpreterProxy->positiveMachineIntegerValueOf(arg);
 					if (interpreterProxy->failed()) {
 						return PrimErrBadArgument;
 					}
