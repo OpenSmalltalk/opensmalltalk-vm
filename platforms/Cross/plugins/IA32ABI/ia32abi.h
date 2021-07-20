@@ -37,6 +37,9 @@ extern sqInt callIA32FloatReturn   (SIGNATURE);
 extern sqInt callIA32DoubleReturn  (SIGNATURE);
 
 #define thunkEntryType long
+#define ifIsWithinExecutablePageMakePageWritable(address) 0
+#define makePageExecutableAgain(address) 0
+
 #if defined(i386) || defined(__i386) || defined(__i386__) || (defined(_WIN32) && !defined(_WIN64)) || defined(_M_IX86)
 # define INT_REG_ARGS /* none */
 # define DBL_REG_ARGS /* none */
@@ -56,6 +59,12 @@ extern sqInt callIA32DoubleReturn  (SIGNATURE);
 # define thunkEntryType long long
 # define INT_REG_ARGS long,long,long,long,long,long,long,long,
 # define DBL_REG_ARGS double,double,double,double,double,double,double,double,
+# if __APPLE__
+# undef ifIsWithinExecutablePageMakePageWritable
+# undef makePageExecutableAgain
+extern sqInt ifIsWithinExecutablePageMakePageWritable(char *address);
+extern void makePageExecutableAgain(char *address);
+# endif
 #elif defined(__ARM_ARCH__) || defined(__arm__) || defined(__arm32__) || defined(ARM32)
 # undef thunkEntryType
 # define thunkEntryType long long
