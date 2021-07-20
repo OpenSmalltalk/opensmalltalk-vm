@@ -195,9 +195,8 @@ thunkEntry(long x0, long x1, long x2, long x3,
 	   void *thunkpPlus16, sqIntptr_t *stackp)
 {
   VMCallbackContext vmcc;  /* See, e.g. spurstack64src/vm/vmCallback.h */
-  int flags;
-  int returnType;
-  long   regArgs[ NUM_REG_ARGS];
+  int flags, returnType;
+  sqIntptr_t regArgs[NUM_REG_ARGS];
   double dregArgs[NUM_DREG_ARGS];
 
   regArgs[0] = x0;
