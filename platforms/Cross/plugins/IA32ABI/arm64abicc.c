@@ -15,9 +15,12 @@
 #include <unistd.h> // for getpagesize/sysconf
 #include <stdlib.h> // for valloc
 #include <sys/mman.h> // for mprotect
-# if defined(MAP_JIT) && __APPLE__ // for pthread_jit_write_protect_np
+#if __APPLE__ && __MACH__ /* Mac OS X */
+#  if defined(MAP_JIT) // for pthread_jit_write_protect_np
 #	include <pthread.h>
-# endif
+#  endif
+#  include <libkern/OSCacheControl.h>
+#endif
 
 #include <string.h> // for memcpy et al
 #include <setjmp.h>
@@ -346,6 +349,10 @@ void
 makePageExecutableAgain(char *address)
 {
 	pthread_jit_write_protect_np(1);
+#if __APPLE__ && __MACH__ /* Mac OS X */
+	sys_dcache_flush(address, 64);
+	sys_icache_invalidate(address, 64);
+#endif
 }
 #endif // defined(MAP_JIT)
 #endif /* defined(__ARM_ARCH_ISA_A64) || defined(__arm64__) || ... */
