@@ -1,7 +1,7 @@
 #############################################################################
 # Generic Makefile for downloading sources
 
-SOURCESDIR:=../../sources
+SOURCESDIR:=../../../sources
 
 $(SOURCESDIR):
 	mkdir -p $(SOURCESDIR)

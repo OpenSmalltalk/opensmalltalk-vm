@@ -11,8 +11,8 @@ if [ "$1" = -source ]; then
 else
 	SourceFile=SqueakV50
 fi
-SOURCE=../../sources/$SourceFile.sources
-test -f $SOURCE || SOURCE=../../../sources/$SourceFile.sources
+SOURCE=../../../sources/$SourceFile.sources
+test -f $SOURCE || SOURCE=../../../../sources/$SourceFile.sources
 if [ -f squeak ]; then
 	mv squeak nsvm
 	sed -i.bak 's/squeak/nsvm/g' nsvm
