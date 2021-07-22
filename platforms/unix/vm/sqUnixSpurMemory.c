@@ -201,7 +201,7 @@ sqDeallocateMemorySegmentAtOfSize(void *addr, sqInt sz)
  * To cope with modern OSs that disallow executing code in writable memory we
  * dual-map the code zone, one mapping with read/write permissions and the other
  * with read/execute permissions. In such a configuration the code zone has
- * already been alloated and is not included in (what is no longer) the initial
+ * already been allocated and is not included in (what is no longer) the initial
  * alloc.
  */
 static void
@@ -254,6 +254,10 @@ sqMakeMemoryExecutableFromToCodeToDataDelta(usqInt startAddr,
 				 PROT_READ | PROT_EXEC) < 0)
 		perror("mprotect(x,y,PROT_READ | PROT_EXEC)");
 
+#  else if defined(MAP_JIT)
+
+	assert(!codeToDataDelta);
+
 #  else /* DUAL_MAPPED_CODE_ZONE */
 
 	if (mprotect((void *)firstPage,
@@ -283,7 +287,11 @@ allocateJITMemory(usqInt *desiredSize)
 
 	*desiredSize = roundUpToPage(*desiredSize);
 	result =   mmap(hint, *desiredSize,
+#if DUAL_MAPPED_CODE_ZONE
+					PROT_READ | PROT_EXEC,
+#else
 					PROT_READ | PROT_WRITE | PROT_EXEC,
+#endif
 					MAP_FLAGS | MAP_JIT, -1, 0);
 	if (result == MAP_FAILED) {
 		perror("Could not allocate JIT memory");

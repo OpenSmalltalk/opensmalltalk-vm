@@ -152,8 +152,9 @@ include ../common/Makefile.rules
 svnver:
 	@-echo $(SVNREV)
 
+# N.B. getversion is *not* cross compiled; it must run here and now
 getversion: $(OSXCOMMONDIR)/version.c deps/version.d $(CROSSDIR)/sqSCCSVersion.h
-	$(CC) -x c -DVERSION_PROGRAM=1 $(ALLFLAGS) $(INCLUDES) $< -o $@
+	$(CC) -x c -DVERSION_PROGRAM=1 $(INCLUDES) $< -o $@
 	$(POSTCOMPILE)
 
 -include deps/version.d
