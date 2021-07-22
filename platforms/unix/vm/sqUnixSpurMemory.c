@@ -254,7 +254,7 @@ sqMakeMemoryExecutableFromToCodeToDataDelta(usqInt startAddr,
 				 PROT_READ | PROT_EXEC) < 0)
 		perror("mprotect(x,y,PROT_READ | PROT_EXEC)");
 
-#  else if defined(MAP_JIT)
+#  elif defined(MAP_JIT)
 
 	assert(!codeToDataDelta);
 
