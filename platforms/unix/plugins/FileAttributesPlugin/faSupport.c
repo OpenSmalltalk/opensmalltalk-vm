@@ -2,6 +2,9 @@
  * faSupport.c - Unix support routines for the FileAttributesPlugin
  *
  */
+#ifdef HAVE_CONFIG_H
+#include "config.h" /* this must happen before including std libraries */
+#endif
 #include <errno.h>
 #include <sys/types.h>
 #include <unistd.h>

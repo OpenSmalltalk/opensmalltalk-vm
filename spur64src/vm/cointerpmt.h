@@ -249,7 +249,7 @@ extern sqInt minSlotsForShortening(void);
 extern sqInt nilObject(void);
 extern sqInt nonIndexablePointerFormat(void);
 extern sqInt numBytesOf(sqInt objOop);
-extern sqInt numPointerSlotsOf(sqInt objOop);
+extern usqInt numPointerSlotsOf(sqInt objOop);
 extern usqInt numSlotsOf(sqInt objOop);
 extern sqInt numStrongSlotsOfWeakling(sqInt objOop);
 extern sqInt objectAfter(sqInt objOop);
