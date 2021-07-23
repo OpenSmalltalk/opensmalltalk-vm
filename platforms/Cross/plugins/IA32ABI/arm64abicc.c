@@ -15,18 +15,20 @@
 #include <unistd.h> // for getpagesize/sysconf
 #include <stdlib.h> // for valloc
 #include <sys/mman.h> // for mprotect
-# if defined(MAP_JIT) && __APPLE__ // for pthread_jit_write_protect_np
+#if __APPLE__ && __MACH__ /* Mac OS X */
+#  if defined(MAP_JIT) // for pthread_jit_write_protect_np
 #	include <pthread.h>
-# endif
+#  endif
+#  include <libkern/OSCacheControl.h>
+#endif
 
 #include <string.h> // for memcpy et al
 #include <setjmp.h>
 #include <stdio.h> // for fprintf(stderr,...)
 
-#include "sqMemoryAccess.h"
+#include "objAccess.h"
 #include "vmCallback.h"
 #include "sqAssert.h"
-#include "sqVirtualMachine.h"
 #include "ia32abi.h"
 
 #if !defined(min)
@@ -46,48 +48,11 @@ struct VirtualMachine* interpreterProxy;
 # define alloca _alloca
 #endif
 
-#define RoundUpPowerOfTwo(value, modulus)                                      \
+#define RoundUpPowerOfTwo(value, modulus) \
   (((value) + (modulus) - 1) & ~((modulus) - 1))
 
-#define IsAlignedPowerOfTwo(value, modulus)                                    \
+#define IsAlignedPowerOfTwo(value, modulus) \
   (((value) & ((modulus) - 1)) == 0)
-
-#define objIsAlien(anOop)                                                      \
-    (interpreterProxy->includesBehaviorThatOf(                                 \
-      interpreterProxy->fetchClassOf(anOop),                                   \
-      interpreterProxy->classAlien()))
-
-#define objIsUnsafeAlien(anOop)                                                \
-    (interpreterProxy->includesBehaviorThatOf(                                 \
-      interpreterProxy->fetchClassOf(anOop),                                   \
-      interpreterProxy->classUnsafeAlien()))
-
-#define sizeField(alien)                                                       \
-    (*(long*)pointerForOop((sqLong)(alien) + BaseHeaderSize))
-
-#define dataPtr(alien)                                                         \
-    pointerForOop((sqLong)(alien) + BaseHeaderSize + BytesPerOop)
-
-#define isIndirect(alien)                                                      \
-    (sizeField(alien) < 0)
-
-#define startOfParameterData(alien)                                            \
-    (isIndirect(alien)  ? *(void **)dataPtr(alien)                             \
-                        :  (void  *)dataPtr(alien))
-
-#define isIndirectSize(size)                                                   \
-    ((size) < 0)
-
-#define startOfDataWithSize(alien, size)                                       \
-    (isIndirectSize(size) ? *(void **)dataPtr(alien)	                       \
-                          :  (void  *)dataPtr(alien))
-
-#define isSmallInt(oop)                                                        \
-    ((oop)&1)
-
-#define intVal(oop)                                                            \
-    (((long)(oop))>>1)
-
 
 /*
  * Call a foreign function to set x8 structure result address return register
@@ -125,10 +90,11 @@ extern sqLong returnX1value()
  * ARM EABI rules.
  */
 sqLong callIA32IntegralReturn(SIGNATURE) {
-  long (*f)(long r0, long r1, long r2, long r3,
-            double d0, double d1, double d2, double d3,
-            double d4, double d5, double d6, double d7);
-  long r;
+  sqInt (*f)(long r0, long r1, long r2, long r3,
+             long r4, long r5, long r6, long r7,
+             double d0, double d1, double d2, double d3,
+             double d4, double d5, double d6, double d7);
+  sqInt r;
 #include "dabusinessARM.h"
 }
 
@@ -138,6 +104,7 @@ sqLong callIA32IntegralReturn(SIGNATURE) {
  */
 sqLong callIA32FloatReturn(SIGNATURE) {
   float (*f)(long r0, long r1, long r2, long r3,
+             long r4, long r5, long r6, long r7,
              double d0, double d1, double d2, double d3,
              double d4, double d5, double d6, double d7);
   float r;
@@ -151,6 +118,7 @@ sqLong callIA32FloatReturn(SIGNATURE) {
 sqInt
 callIA32DoubleReturn(SIGNATURE) {
   double (*f)(long r0, long r1, long r2, long r3,
+              long r4, long r5, long r6, long r7,
               double d0, double d1, double d2, double d3,
               double d4, double d5, double d6, double d7);
   double r;
@@ -195,9 +163,8 @@ thunkEntry(long x0, long x1, long x2, long x3,
 	   void *thunkpPlus16, sqIntptr_t *stackp)
 {
   VMCallbackContext vmcc;  /* See, e.g. spurstack64src/vm/vmCallback.h */
-  int flags;
-  int returnType;
-  long   regArgs[ NUM_REG_ARGS];
+  int flags, returnType;
+  sqIntptr_t regArgs[NUM_REG_ARGS];
   double dregArgs[NUM_DREG_ARGS];
 
   regArgs[0] = x0;
@@ -308,9 +275,13 @@ allocateExecutablePage(sqIntptr_t *size)
 #	define MAP_FLAGS	(MAP_ANON | MAP_PRIVATE)
 # endif
 
-	if (!pagesize)
-		pagesize = getpagesize();
 	void **newAllocatedPages;
+	if (!pagesize)
+# if !defined(_POSIX_C_SOURCE) || _POSIX_C_SOURCE < 200112L
+		pagesize = getpagesize();
+# else
+		pagesize = sysconf(_SC_PAGESIZE);
+# endif
 
 	mem = mmap(	0, pagesize,
 				PROT_READ | PROT_WRITE | PROT_EXEC,
@@ -322,10 +293,10 @@ allocateExecutablePage(sqIntptr_t *size)
 	*size = pagesize;
 
 # if defined(MAP_JIT)
-	++allocatedPagesSize;
 	newAllocatedPages = realloc(allocatedPages,
-								 allocatedPagesSize * sizeof(void *));
+								 ++allocatedPagesSize * sizeof(void *));
 	if (!newAllocatedPages) {
+		--allocatedPagesSize;
 		munmap(mem, pagesize);
 		perror("Could not realloc allocatedPages");
 		return 0;
@@ -378,6 +349,10 @@ void
 makePageExecutableAgain(char *address)
 {
 	pthread_jit_write_protect_np(1);
+#if __APPLE__ && __MACH__ /* Mac OS X */
+	sys_dcache_flush(address, 64);
+	sys_icache_invalidate(address, 64);
+#endif
 }
 #endif // defined(MAP_JIT)
 #endif /* defined(__ARM_ARCH_ISA_A64) || defined(__arm64__) || ... */

@@ -59,8 +59,8 @@ void *getbaz() { return baz; }
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include "sqMemoryAccess.h"
-#include "sqVirtualMachine.h"
+
+#include "objAccess.h"
 #include "ia32abi.h"
 
 #include <setjmp.h>
@@ -102,29 +102,6 @@ struct VirtualMachine* interpreterProxy;
 
 #define moduloPOT(m,v) ((v)+(m)-1 & ~((m)-1))
 #define alignModuloPOT(m,v) ((void *)moduloPOT(m,(unsigned long)(v)))
-
-#define objIsAlien(anOop) (interpreterProxy->includesBehaviorThatOf(interpreterProxy->fetchClassOf(anOop), interpreterProxy->classAlien()))
-#define objIsUnsafeAlien(anOop) (interpreterProxy->includesBehaviorThatOf(interpreterProxy->fetchClassOf(anOop), interpreterProxy->classUnsafeAlien()))
-
-#define sizeField(alien) (*(long *)pointerForOop((sqInt)(alien) + BaseHeaderSize))
-#define dataPtr(alien) pointerForOop((sqInt)(alien) + BaseHeaderSize + BytesPerOop)
-#if 0 /* obsolete after adding pointer Aliens with size field == 0 */
-# define isIndirectOrPointer(alien) (sizeField(alien) <= 0)
-# define startOfData(alien) (isIndirectOrPointer(alien)		\
-								? *(void **)dataPtr(alien)	\
-								:  (void  *)dataPtr(alien))
-#endif
-#define isIndirect(alien) (sizeField(alien) < 0)
-#define startOfParameterData(alien) (isIndirect(alien)	\
-									? *(void **)dataPtr(alien)	\
-									:  (void  *)dataPtr(alien))
-#define isIndirectSize(size) ((size) < 0)
-#define startOfDataWithSize(alien,size) (isIndirectSize(size)	\
-								? *(void **)dataPtr(alien)		\
-								:  (void  *)dataPtr(alien))
-
-#define isSmallInt(oop) ((oop)&1)
-#define intVal(oop) (((long)(oop))>>1)
 
 extern long ffiCallAddressOf(void*);
 volatile long ffiStackIndex;

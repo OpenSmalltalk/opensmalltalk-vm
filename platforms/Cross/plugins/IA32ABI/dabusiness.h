@@ -89,10 +89,10 @@
 			argvec += sizeof(double);
 		}
 		else {
-			long v = interpreterProxy->signed32BitValueOf(arg);
+			long v = interpreterProxy->signedMachineIntegerValueOf(arg);
 			if (interpreterProxy->failed()) {
 				interpreterProxy->primitiveFailFor(0);
-				v = interpreterProxy->positive32BitValueOf(arg);
+				v = interpreterProxy->positiveMachineIntegerValueOf(arg);
 				if (interpreterProxy->failed())
 					return PrimErrBadArgument;
 			}
@@ -130,10 +130,10 @@
 			argvec += sizeof(double);
 		}
 		else {
-			long v = interpreterProxy->signed32BitValueOf(arg);
+			long v = interpreterProxy->signedMachineIntegerValueOf(arg);
 			if (interpreterProxy->failed()) {
 				interpreterProxy->primitiveFailFor(0);
-				v = interpreterProxy->positive32BitValueOf(arg);
+				v = interpreterProxy->positiveMachineIntegerValueOf(arg);
 				if (interpreterProxy->failed())
 					return PrimErrBadArgument;
 			}
