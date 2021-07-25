@@ -395,6 +395,7 @@ static void display_parseEnvironment(void)
   if ((ev= getenv("SQUEAK_FBDEV")))	fbDev=    strdup(ev);
   if ((ev= getenv("SQUEAK_KBMAP")))	kmPath=   strdup(ev);
   if ((ev= getenv("SQUEAK_MSDEV")))	msDev=    strdup(ev);
+  if ((ev= getenv("SQUEAK_KBDEV")))	kbDev.kbName=    strdup(ev);
   if ((ev= getenv("SQUEAK_MSPROTO")))	msProto=  strdup(ev);
   if ((ev= getenv("SQUEAK_VTLOCK")))	vtLock=   1;
   if ((ev= getenv("SQUEAK_VTSWITCH")))	vtSwitch= 1;
@@ -414,6 +415,7 @@ static int display_parseArgument(int argc, char **argv)
       if      (!strcmp(arg, "-fbdev"))	 fbDev=   argv[1];
       else if (!strcmp(arg, "-kbmap"))	 kmPath=  argv[1];
       else if (!strcmp(arg, "-msdev"))	 msDev=   argv[1];
+      else if (!strcmp(arg, "-kbdev"))	 kbDev.kbName=   argv[1]; 
       else if (!strcmp(arg, "-msproto")) msProto= argv[1];
       else
 	n= 0;	/* not recognised */

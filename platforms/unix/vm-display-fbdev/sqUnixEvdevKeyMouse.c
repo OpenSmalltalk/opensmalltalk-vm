@@ -535,9 +535,12 @@ void kb_open(struct kb *kbdSelf, int vtSwitch, int vtLock)
   int rc;
 
   assert(kbDev.fd == -1);
-  kbDev.fd= open(kbDev.kbName= KEYBOARD_DEV_NAME, O_RDONLY|O_NONBLOCK);
+  if (kbDev.kbName == 0) {
+    kbDev.kbName= KEYBOARD_DEV_NAME;
+  }
+  kbDev.fd= open(kbDev.kbName, O_RDONLY|O_NONBLOCK);
   if (kbDev.fd < 0) {
-    DPRINTF("FAILED TO OPEN: %s\n", KEYBOARD_DEV_NAME);
+    DPRINTF("FAILED TO OPEN: %s\n", kbDev.kbName);
     failPermissions("console");
   } else {
     DPRINTF("evdev opened Keyboard device %s\n", kbDev.kbName);
