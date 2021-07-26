@@ -340,7 +340,7 @@ static void display_winInit(void)
 #if defined(AT_EXIT)
   AT_EXIT(closeDisplay);
 #else
-# warning: cannot release /dev/fb on exit!
+# warning: cannot release /dev/fb0 on exit!
 # endif
 
   (void)recordMouseEvent;
@@ -365,7 +365,7 @@ static void failPermissions(const char *who)
   fprintf(stderr, "     (you might be able to load one with 'modprobe'; look in\n");
   fprintf(stderr, "     /lib/modules for something called '<your-card>fb.o'\n");
   fprintf(stderr, "  -  you don't have write permission on some of the following\n");
-  fprintf(stderr, "       /dev/tty*, /dev/fb*, /dev/psaux, /dev/input/mice\n");
+  fprintf(stderr, "       /dev/tty*, /dev/fb*, /dev/input/event?, /dev/input/mouse0\n");
   fprintf(stderr, "  -  you need to run Squeak as root on your machine\n");
   exit(1);
 }
@@ -374,12 +374,12 @@ static void failPermissions(const char *who)
 static void display_printUsage(void)
 {
   printf("\nFBDev <option>s:\n");
-  printf("  -fbdev <dev>          use framebuffer device <dev> (default: /dev/fb)\n");
-  printf("  -kbmap <file>         load keymap from <file> (default: use kernel keymap)\n");
-  printf("  -msdev <dev>          use mouse device <dev> (default: /dev/psaux)\n");
-  printf("  -msproto <protocol>   use the given <protocol> for the mouse (default: ps2)\n");
-  printf("  -vtlock               disallow all vt switching (for any reason)\n");
-  printf("  -vtswitch             enable keyboard vt switching (Alt+FNx)\n");
+  printf("  -fbdev <dev>          use framebuffer device <dev> (default: /dev/fb0)\n");
+  /*  printf("  -kbmap <file>         load keymap from <file> (default: use kernel keymap)\n");*/
+  printf("  -msdev <dev>          use mouse device <dev> (default: /dev/input/event1)\n");
+  printf("  -kbdev <dev>          use keyboard device <dev> (default: /dev/input/event0)\n");
+  /*  printf("  -vtlock               disallow all vt switching (for any reason)\n");
+      printf("  -vtswitch             enable keyboard vt switching (Alt+FNx)\n"); */
 }
 
 
