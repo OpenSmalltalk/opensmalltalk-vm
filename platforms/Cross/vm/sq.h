@@ -577,9 +577,9 @@ void *ioLoadExternalFunctionOfLengthFromModuleOfLength
 		(sqInt functionNameIndex, sqInt functionNameLength,
 		 sqInt moduleNameIndex, sqInt moduleNameLength);
 #if SPURVM
-void *ioLoadExternalFunctionOfLengthFromModuleOfLengthAccessorDepthInto
+void *ioLoadExternalFunctionOfLengthFromModuleOfLengthMetadataInto
 	(sqInt functionNameIndex, sqInt functionNameLength,
-	 sqInt moduleNameIndex,   sqInt moduleNameLength, sqInt *accessorDepthPtr);
+	 sqInt moduleNameIndex,   sqInt moduleNameLength, sqInt *metadataPtr);
 #endif
 sqInt  ioUnloadModuleOfLength(sqInt moduleNameIndex, sqInt moduleNameLength);
 void  *ioLoadFunctionFrom(char *functionName, char *pluginName);
@@ -601,14 +601,14 @@ void  *ioLoadSymbolOfLengthFromModule(sqInt functionNameIndex, sqInt functionNam
 */
 void *ioLoadModule(char *pluginName);
 
-/* ioFindExternalFunctionIn[AccessorDepthInto]:
+/* ioFindExternalFunctionIn[MetadataInto]:
 	Find the function with the given name in the moduleHandle.
 	WARNING: never primitiveFail() within, just return 0.
 	Note in Spur takes an extra parameter which is defaulted to 0.
 */
 #if SPURVM
-void *ioFindExternalFunctionInAccessorDepthInto(char *lookupName, void *moduleHandle, sqInt *accessorDepthPtr);
-# define ioFindExternalFunctionIn(ln,mh) ioFindExternalFunctionInAccessorDepthInto(ln,mh,0)
+void *ioFindExternalFunctionInMetadataInto(char *lookupName, void *moduleHandle, sqInt *metadataPtr);
+# define ioFindExternalFunctionIn(ln,mh) ioFindExternalFunctionInMetadataInto(ln,mh,0)
 #else
 void *ioFindExternalFunctionIn(char *lookupName, void *moduleHandle);
 #endif
