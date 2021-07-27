@@ -24,10 +24,14 @@ jobs:
       matrix:
         arch:
           - linux64x64
-          # - linux32x86
+          - linux32x86
         flavor:
-          - squeak.cog.spur
+          # - squeak.cog.spur
           # - squeak.stack.spur
+          # - pharo.cog.spur
+          # - pharo.stack.spur
+          - newspeak.cog.spur
+          - newspeak.stack.spur
         heartbeat:
           - threaded
           - itimer
@@ -40,15 +44,15 @@ jobs:
         #     flavor: squeak.cog.v3
         #   - arch: linux32x86
         #     flavor: squeak.stack.v3
-        exclude:
-          - arch: linux64x64
-            flavor: squeak.cog.spur
-            heartbeat: itimer
-            mode: debug
-          - arch: linux64x64
-            flavor: squeak.cog.spur
-            heartbeat: itimer
-            mode: assert
+        # exclude:
+        #   - arch: linux64x64
+        #     flavor: squeak.cog.spur
+        #     heartbeat: itimer
+        #     mode: debug
+        #   - arch: linux64x64
+        #     flavor: squeak.cog.spur
+        #     heartbeat: itimer
+        #     mode: assert
     runs-on: ubuntu-latest
     name: ${{ matrix.flavor }}${{ matrix.heartbeat == 'itimer' && ' (itimer)' || '' }} for ${{ matrix.arch }}${{ matrix.mode == 'debug' && ' (DEBUG)' || matrix.mode == 'assert' && ' (ASSERT)' || '' }}
     env:

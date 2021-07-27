@@ -23,14 +23,14 @@ jobs:
       matrix:
         arch: 
           - win64x64
-          # - win32x86
+          - win32x86
         flavor:
-          - squeak.cog.spur
+          # - squeak.cog.spur
           # - squeak.stack.spur
           # - pharo.cog.spur
           # - pharo.stack.spur
-          # - newspeak.cog.spur
-          # - newspeak.stack.spur
+          - newspeak.cog.spur
+          - newspeak.stack.spur
         mode:
           - fast
           - debug
