@@ -1,8 +1,7 @@
 name: Build for macOS
 
 on:
-  push:
-    # branches: [ marceltaeumel/actions ]
+  push: # All branches, but appropriate paths only.
     paths:
       - '.github/workflows/macos.yml' # This workflow spec
       - 'scripts/ci/**' # Support scripts for this workflow
@@ -15,6 +14,9 @@ on:
 
       - '!**.md'
       - '!**HowToBuild'
+  pull_request:
+    branches:
+      - Cog
 
 
 
@@ -99,7 +101,7 @@ jobs:
 
       - name: Update artifact in latest-release
         uses: ncipollo/release-action@v1.8.6
-        if: endsWith( github.ref , 'Cog' )
+        if: github.event_name == 'push' && endsWith( github.ref , 'Cog' )
         with:
           prerelease: true
           allowUpdates: true
