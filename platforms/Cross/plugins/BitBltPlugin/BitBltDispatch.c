@@ -23,17 +23,17 @@
  *
  */
 
-#include <stddef.h>
-#include<stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <stdbool.h>
-#include <string.h>
-
 #include "BitBltDispatch.h"
+#include <stdint.h>
 #include "BitBltArm.h"
 #include "BitBltGeneric.h"
 #include "BitBltInternal.h"
+
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
 
 /** Define this to enable profiling */
 //#define PROFILING

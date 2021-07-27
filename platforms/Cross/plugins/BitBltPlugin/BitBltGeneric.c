@@ -23,12 +23,13 @@
  *
  */
 
+#include "BitBltInternal.h"
+
 #include <stddef.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 
-#include "BitBltInternal.h"
 
 
 #define ROR(x,s) (((uint32_t)(x))>>(s)|((uint32_t)(x))<<((32-(s))))

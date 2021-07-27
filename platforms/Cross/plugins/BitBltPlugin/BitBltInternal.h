@@ -27,6 +27,8 @@
 #define BITBLTINTERNAL_H_
 
 #include "BitBltDispatch.h"
+#include <stdint.h>
+#include <stdlib.h>
 
 #define IGNORE(x) (void)(x)
 #define CACHELINE_LEN (32)
