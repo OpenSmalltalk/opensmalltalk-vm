@@ -23,10 +23,12 @@
  *
  */
 
+/* BEO */
+#include "BitBltInternal.h"
+
 #include <stddef.h>
 #include <stdint.h>
 
-#include "BitBltInternal.h"
 
 enum {
 	HALFTONE_NONE,
