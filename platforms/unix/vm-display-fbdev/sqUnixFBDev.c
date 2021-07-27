@@ -375,7 +375,8 @@ static void display_printUsage(void)
 {
   printf("\nFBDev <option>s:\n");
   printf("  -fbdev <dev>          use framebuffer device <dev> (default: /dev/fb0)\n");
-  /*  printf("  -kbmap <file>         load keymap from <file> (default: use kernel keymap)\n");*/
+  printf("  -kbmap <file>         load keymap from <file> \n");
+  printf("   [Make file by: 'dumpkeys -f -n --keys-only > squeak-kb.map' ]\n");
   printf("  -msdev <dev>          use mouse device <dev> (default: /dev/input/event1)\n");
   printf("  -kbdev <dev>          use keyboard device <dev> (default: /dev/input/event0)\n");
   /*  printf("  -vtlock               disallow all vt switching (for any reason)\n");
