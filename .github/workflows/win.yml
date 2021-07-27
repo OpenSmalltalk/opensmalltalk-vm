@@ -94,7 +94,7 @@ jobs:
 
       - name: Update artifact in latest-release
         uses: ncipollo/release-action@v1.8.6
-        if: endsWith(github.ref, 'marceltaeumel/actions')
+        if: endsWith(github.ref, 'Cog')
         with:
           prerelease: true
           allowUpdates: true
