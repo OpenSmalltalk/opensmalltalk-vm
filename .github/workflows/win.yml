@@ -1,0 +1,105 @@
+name: Build for Windows
+
+on:
+  push:
+    # branches: [ marceltaeumel/actions ]
+    paths:
+      - '.github/workflows/win.yml' # This workflow spec
+      - 'scripts/ci/**' # Support scripts for this workflow
+      - 'deploy/**' # More support scripts for this workflow
+
+      - 'build.win*/**' # Makefile-based build scripts
+      - '*src/**' # Generated VMMaker sources (incl. plugins)
+      - 'platforms/Cross/**'
+      - 'platforms/win32/**'
+
+      - '!**.md'
+      - '!**HowToBuild'
+
+jobs:
+  build:
+    strategy:
+      fail-fast: true
+      matrix:
+        arch: 
+          - win64x64
+          # - win32x86
+        flavor:
+          - squeak.cog.spur
+          # - squeak.stack.spur
+          # - pharo.cog.spur
+          # - pharo.stack.spur
+          # - newspeak.cog.spur
+          # - newspeak.stack.spur
+        mode:
+          - fast
+          - debug
+          - assert
+        # include:
+          # compatibility with Squeak 4.6 and older
+          # - arch: win32x86
+          #   flavor: squeak.cog.v3
+          #   mode: fast
+          # - arch: win32x86
+          #   flavor: squeak.stack.v3
+          # newer flavors w/ Sista-CogIt or Lowcode byteset
+          # - arch: win32x86
+          #   flavor: squeak.sista.spur
+          # - arch: win32x86
+          #   flavor: pharo.sista.spur
+          # - arch: win32x86
+          #   flavor: squeak.cog.spur.lowcode
+          # - arch: win32x86
+          #   flavor: pharo.cog.spur.lowcode
+    runs-on: windows-latest
+    name: ${{ matrix.flavor }} for ${{ matrix.arch }}${{ matrix.mode == 'debug' && ' (DEBUG)' || matrix.mode == 'assert' && ' (ASSERT)' || '' }}
+    env:
+      ARCH: ${{ matrix.arch }}
+      FLAVOR: ${{ matrix.flavor }}
+      MODE: ${{ matrix.mode }}
+    steps:
+      - name: Checkout files
+        uses: actions/checkout@v2
+
+      - name: Restore build cache
+        uses: actions/cache@v2
+        with:
+          path: .thirdparty-cache
+          key: thirdparty-cache # same for all runner.os
+
+      # - name: Setup tmate debugging session
+        # uses: mxschmitt/action-tmate@v3
+
+      - name: Build VM
+        shell: bash
+        run: ./scripts/ci/actions_build.sh
+        # run: C:\msys64\usr\bin\bash -lc "cd $(pwd); exec ./scripts/ci/actions_build.sh"
+        env:
+          MSYS_SYS: ${{ matrix.arch == 'win64x64' && 'mingw64' || 'mingw32' }}
+          MSYS_ENV: ${{ matrix.arch == 'win64x64' && 'x86_64' || 'i686' }}
+
+      - name: Sign VM (not implemented)
+        if: false
+        run: ./deploy/sign-vm.sh
+
+      - name: Pack VM
+        shell: bash
+        run: ./deploy/pack-vm.sh
+
+      - name: Store artifact w/ revision
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ env.ASSET_NAME }}_${{ env.ASSET_REVISION }}
+          path: products/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
+
+      - name: Update artifact in latest-release
+        uses: ncipollo/release-action@v1.8.6
+        if: endsWith(github.ref, 'marceltaeumel/actions')
+        with:
+          prerelease: true
+          allowUpdates: true
+          replacesArtifacts: true
+          artifacts: products/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ matrix.mode == 'debug' && 'latest-debug-build' || matrix.mode == 'assert' && 'latest-assert-build' || 'latest-build' }}
+          body: ${{ github.event.head_commit.message }}

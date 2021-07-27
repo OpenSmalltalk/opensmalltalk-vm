@@ -1,0 +1,102 @@
+name: Build for Linux (Ubuntu)
+
+on:
+  push:
+    # branches: [ marceltaeumel/actions ]
+    paths:
+      - '.github/workflows/linux.yml' # This workflow spec
+      - 'scripts/ci/**' # Support scripts for this workflow
+      - 'deploy/**' # More support scripts for this workflow
+
+      - 'build.linux*/**' # Makefile-based build scripts
+      - '*src/**' # Generated VMMaker sources (incl. plugins)
+      - 'platforms/Cross/**'
+      - 'platforms/unix/**'
+
+      - '!**.md'
+      - '!**HowToBuild'
+
+
+jobs:
+  build:
+    strategy:
+      fail-fast: true
+      matrix:
+        arch:
+          - linux64x64
+          # - linux32x86
+        flavor:
+          - squeak.cog.spur
+          # - squeak.stack.spur
+        heartbeat:
+          - threaded
+          - itimer
+        mode:
+          - fast
+          - debug
+          - assert
+        # include: # compatibility with Squeak 4.6 and older
+        #   - arch: linux32x86
+        #     flavor: squeak.cog.v3
+        #   - arch: linux32x86
+        #     flavor: squeak.stack.v3
+        exclude:
+          - arch: linux64x64
+            flavor: squeak.cog.spur
+            heartbeat: itimer
+            mode: debug
+          - arch: linux64x64
+            flavor: squeak.cog.spur
+            heartbeat: itimer
+            mode: assert
+    runs-on: ubuntu-latest
+    name: ${{ matrix.flavor }}${{ matrix.heartbeat == 'itimer' && ' (itimer)' || '' }} for ${{ matrix.arch }}${{ matrix.mode == 'debug' && ' (DEBUG)' || matrix.mode == 'assert' && ' (ASSERT)' || '' }}
+    env:
+      ARCH: ${{ matrix.arch }}
+      FLAVOR: ${{ matrix.flavor }}
+      MODE: ${{ matrix.mode }}
+    steps:
+      - name: Checkout files
+        uses: actions/checkout@v2
+
+      - name: Restore build cache
+        uses: actions/cache@v2
+        with:
+          path: .thirdparty-cache
+          key: thirdparty-cache # same for all runner.os
+
+      # - name: Setup tmate debugging session
+        # uses: mxschmitt/action-tmate@v3
+
+      - name: Prepare environment
+        run: ./scripts/ci/actions_prepare_ubuntu.sh
+
+      - name: Build VM
+        run: ./scripts/ci/actions_build.sh
+        env:
+          HEARTBEAT: ${{ matrix.heartbeat }}
+
+      - name: Sign VM (not implemented)
+        if: false
+        run: ./deploy/sign-vm.sh
+
+      - name: Pack VM
+        run: ./deploy/pack-vm.sh
+
+      - name: Store artifact w/ revision
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ env.ASSET_NAME }}_${{ env.ASSET_REVISION }}
+          path: ${{ env.PRODUCTS_PATH }}/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
+
+      - name: Update artifact in latest-release
+        uses: ncipollo/release-action@v1.8.6
+        if: endsWith( github.ref , 'marceltaeumel/actions' )
+        with:
+          prerelease: true
+          allowUpdates: true
+          replacesArtifacts: true
+          artifacts: ${{ env.PRODUCTS_PATH }}/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ matrix.mode == 'debug' && 'latest-debug-build' || matrix.mode == 'assert' && 'latest-assert-build' || 'latest-build' }}
+          body: ${{ github.event.head_commit.message }}
