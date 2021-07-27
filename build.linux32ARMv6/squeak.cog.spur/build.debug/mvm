@@ -2,7 +2,9 @@
 set -e
 # debug Spur VM with VM profiler and threaded heartbeat
 INSTALLDIR=debug/sqcogspurlinuxhtRPi
-OPT="-m32 -g3 -O0 -DDEBUGVM=1"
+#OPT="-m32 -g3 -O0 -DDEBUGVM=1"
+OPT="-g3 -O0 -DUSEEVDEV -DDEBUGVM=1 -DDEBUG=1 -DDEBUG_EVENTS"
+
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
