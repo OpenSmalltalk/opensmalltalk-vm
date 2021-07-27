@@ -1,10 +1,10 @@
-name: Build for Linux (x86)
+name: Build for Linux (ARM)
 
 on:
   push: # All branches, but appropriate paths only.
     paths:
-      - '.github/workflows/linux.yml' # This workflow spec
-      - 'scripts/ci/*linux_x86.sh' # Support scripts for this workflow
+      - '.github/workflows/linux-arm.yml' # This workflow spec
+      - 'scripts/ci/*linux_arm.sh' # Support scripts for this workflow
       - 'scripts/ci/*build.sh'
       - 'deploy/**'
 
@@ -29,35 +29,24 @@ jobs:
       fail-fast: true
       matrix:
         arch:
-          - linux64x64
-          - linux32x86
+          - linux32ARMv6
+          # - linux32ARMv7
+          # - linux64ARMv8
         flavor:
           - squeak.cog.spur
-          - squeak.stack.spur
-          - pharo.cog.spur
-          # - pharo.stack.spur # build not prepared
+          # - squeak.stack.spur
         heartbeat:
           - threaded
-          - itimer
+          # - itimer # not supported
         mode:
           - fast
-          - debug
-          - assert
-        include:
-          # sista build not fully prepared for linux64x64, so only your selected configurations for linux32x86
-          - arch: linux32x86
-            flavor: squeak.sista.spur
-            heartbeat: threaded
-            mode: fast
-          - arch: linux32x86
-            flavor: pharo.sista.spur
-            heartbeat: threaded
-            mode: fast
-
+          # - debug
+          # - assert
     runs-on: ubuntu-latest
     name: ${{ matrix.flavor }}${{ matrix.heartbeat == 'itimer' && ' (itimer)' || '' }} for ${{ matrix.arch }}${{ matrix.mode == 'debug' && ' (DEBUG)' || matrix.mode == 'assert' && ' (ASSERT)' || '' }}
     env:
       ARCH: ${{ matrix.arch }}
+      ARCH_ARM: ${{ matrix.arch == 'linux32ARMv6' && 'armv6' || matrix.arch == 'linux32ARMv7' && 'armv7' || 'aarch64' }}
       FLAVOR: ${{ matrix.flavor }}
       MODE: ${{ matrix.mode }}
     steps:
@@ -67,14 +56,19 @@ jobs:
       - name: Restore build cache
         uses: actions/cache@v2
         with:
-          path: .thirdparty-cache
-          key: thirdparty-cache-linux
+          path: armchroot
+          key: thirdparty-cache-linux-arm
+
+      # - name: Setup tmate debugging session
+        # uses: mxschmitt/action-tmate@v3
 
       - name: Prepare environment
-        run: ./scripts/ci/actions_prepare_linux_x86.sh
+        run: ./scripts/ci/actions_prepare_linux_arm.sh
 
       - name: Build VM
-        run: ./scripts/ci/actions_build.sh
+        run: |
+          schroot -p -c rpi --
+          ./scripts/ci/actions_build.sh
         env:
           HEARTBEAT: ${{ matrix.heartbeat }}
 
@@ -91,7 +85,7 @@ jobs:
           name: ${{ env.ASSET_NAME }}_${{ env.ASSET_REVISION }}
           path: ${{ env.PRODUCTS_PATH }}/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
 
-      - name: Update artifact in latest-build
+      - name: Update artifact in latest-release
         uses: ncipollo/release-action@v1.8.6
         if: github.event_name == 'push' && endsWith( github.ref , 'Cog' )
         with:

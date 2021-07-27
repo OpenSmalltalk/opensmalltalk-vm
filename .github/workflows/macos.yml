@@ -4,7 +4,7 @@ on:
   push: # All branches, but appropriate paths only.
     paths:
       - '.github/workflows/macos.yml' # This workflow spec
-      - 'scripts/ci/**' # Support scripts for this workflow
+      - 'scripts/ci/*build.sh' # Support scripts for this workflow
       - 'deploy/**' # More support scripts for this workflow
 
       - 'build.macos*/**' # Makefile-based build scripts
@@ -17,6 +17,9 @@ on:
   pull_request:
     branches:
       - Cog
+    paths-ignore:
+      - '**.md'
+      - '**HowToBuild'
 
 
 
@@ -29,31 +32,17 @@ jobs:
           - macos64x64
           # - macos32x86
         flavor:
-          # - squeak.cog.spur
-          # - squeak.stack.spur
-          # - pharo.cog.spur
-          # - pharo.stack.spur
-          - newspeak.cog.spur
-          - newspeak.stack.spur
+          - squeak.cog.spur
+          # - squeak.sista.spur # -Werror bc. decl. missing
+          - squeak.stack.spur
+          - pharo.cog.spur
+          # - pharo.sista.spur # -Werror bc. decl. missing
+          - pharo.stack.spur
         mode:
           - fast
           - debug
           - assert
-        # include:
-          # compatibility with Squeak 4.6 and older
-          # - arch: win32x86
-          #   flavor: squeak.cog.v3
-          # - arch: win32x86
-          #   flavor: squeak.stack.v3
-          # newer flavors w/ Sista-CogIt or Lowcode byteset
-          # - arch: win32x86
-          #   flavor: squeak.sista.spur
-          # - arch: win32x86
-          #   flavor: pharo.sista.spur
-          # - arch: win32x86
-          #   flavor: squeak.cog.spur.lowcode
-          # - arch: win32x86
-          #   flavor: pharo.cog.spur.lowcode
+
     runs-on: macos-latest
     name: ${{ matrix.flavor }} for ${{ matrix.arch }}${{ matrix.mode == 'debug' && ' (DEBUG)' || matrix.mode == 'assert' && ' (ASSERT)' || '' }}
     env:
@@ -68,10 +57,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: .thirdparty-cache
-          key: thirdparty-cache # same for all runner.os
-
-      # - name: Setup tmate debugging session
-        # uses: mxschmitt/action-tmate@v3
+          key: thirdparty-cache-macos
 
       - name: Build VM
         run: ./scripts/ci/actions_build.sh
@@ -99,7 +85,7 @@ jobs:
           name: ${{ env.ASSET_NAME }}_${{ env.ASSET_REVISION }}
           path: products/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
 
-      - name: Update artifact in latest-release
+      - name: Update artifact in latest-build
         uses: ncipollo/release-action@v1.8.6
         if: github.event_name == 'push' && endsWith( github.ref , 'Cog' )
         with:
