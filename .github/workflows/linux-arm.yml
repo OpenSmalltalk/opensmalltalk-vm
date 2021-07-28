@@ -95,8 +95,12 @@ jobs:
             FLAVOR: ${{ env.FLAVOR }}
             MODE: ${{ env.MODE }}
             HEARTBEAT: ${{ env.HEARTBEAT }}
+            GITHUB_ENV: $GITHUB_ENV
 
-          run: ./scripts/ci/actions_build.sh
+          run: |
+            printenv
+            echo "APP_NAME=${APP_NAME}" >> $GITHUB_ENV
+      # ./scripts/ci/actions_build.sh
 
       # - name: Sign VM (not implemented)
       #   if: false
