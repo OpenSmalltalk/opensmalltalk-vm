@@ -77,19 +77,21 @@ jobs:
           dockerRunArgs: |
             --volume "${PWD}:/checkout"
           env: |
-            GITHUB_PATH: $GITHUB_PATH
-            GITHUB_ENV: $GITHUB_ENV
+            ARCH: ${{ env.ARCH }}
+            ARCH_ARM: ${{ env.ARCH_ARM }}
+            FLAVOR: ${{ env.FLAVOR }}
+            MODE: $ {{ env.MODE }}
 
           install: |
-            echo "Setting up! ${GITHUB_PATH}"
-            echo "Env! ${GITHUB_ENV}"
+            echo "Setting up! ${ARCH}"
+            echo "Flavor! ${FLAVOR}"
             apt update
             apt install git
             apt install uuid-dev libcairo2-dev libpango1.0-dev libgl1-mesa-dev 
             apt install libgl1-mesa-glx libssl-dev libevdev-dev m4 libpulse-dev
           run: |
-            echo "Running! ${GITHUB_PATH}"
-            echo "Env! ${GITHUB_ENV}"
+            echo "Running Mode! ${MODE}"
+            echo "Arm! ${ARCH_ARM}"
             echo "PWD: ${PWD}"
             ls -lisa
             cd /checkout
