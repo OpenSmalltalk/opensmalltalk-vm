@@ -82,11 +82,19 @@ jobs:
             apt install uuid-dev libcairo2-dev libpango1.0-dev libgl1-mesa-dev 
             apt install libgl1-mesa-glx libssl-dev libevdev-dev m4 libpulse-dev
 
-          # env: |
-          #   ARCH: foo-arch
-          #   ARCH_ARM: foo-arch-arm
-          #   FLAVOR: foo-arch-flavor
-          #   MODE: foo-arch-mode
+#       build-essential libcairo2-dev libpango1.0-dev libssl-dev uuid-dev uuid-runtime libasound2-dev \
+#       devscripts libssl-dev libfreetype6-dev libx11-dev libxext-dev libxrender-dev \
+#       libx11-dev libsm-dev libice-dev libgl1-mesa-dev libgl1-mesa-glx git \
+#       libtool automake autoconf
+# cmake curl
+
+          env: |
+            ARCH: ${{ env.ARCH }}
+            ARCH_ARM: ${{ env.ARCH_ARM }}
+            FLAVOR: ${{ env.FLAVOR }}
+            MODE: ${{ env.MODE }}
+            RUNNER_OS: Linux
+            HEARTBEAT: ${{ matrix.heartbeat }}
 
           # setup: |
           #   echo "Setup! ${PWD}"
@@ -98,49 +106,29 @@ jobs:
           run: |
             echo "Running!"
             printenv
-            mkdir -p "foobar"
-
-      - name: Test
-        run: ls -lisa
-
-#       build-essential libcairo2-dev libpango1.0-dev libssl-dev uuid-dev uuid-runtime libasound2-dev \
-#       devscripts libssl-dev libfreetype6-dev libx11-dev libxext-dev libxrender-dev \
-#       libx11-dev libsm-dev libice-dev libgl1-mesa-dev libgl1-mesa-glx git \
-#       libtool automake autoconf
-# cmake curl
-
-
-
-
-
-      # - name: Build VM
-      #   run: |
-      #     schroot -p -c rpi --
-      #     ./scripts/ci/actions_build.sh
-      #   env:
-      #     HEARTBEAT: ${{ matrix.heartbeat }}
+            ./scripts/ci/actions_build.sh
 
       # - name: Sign VM (not implemented)
       #   if: false
       #   run: ./deploy/sign-vm.sh
 
-      # - name: Pack VM
-      #   run: ./deploy/pack-vm.sh
+      - name: Pack VM
+        run: ./deploy/pack-vm.sh
 
-      # - name: Store artifact w/ revision
-      #   uses: actions/upload-artifact@v2
-      #   with:
-      #     name: ${{ env.ASSET_NAME }}_${{ env.ASSET_REVISION }}
-      #     path: ${{ env.PRODUCTS_PATH }}/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
+      - name: Store artifact w/ revision
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ env.ASSET_NAME }}_${{ env.ASSET_REVISION }}
+          path: ${{ env.PRODUCTS_PATH }}/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
 
-      # - name: Update artifact in latest-release
-      #   uses: ncipollo/release-action@v1.8.6
-      #   if: github.event_name == 'push' && endsWith( github.ref , 'Cog' )
-      #   with:
-      #     prerelease: true
-      #     allowUpdates: true
-      #     replacesArtifacts: true
-      #     artifacts: ${{ env.PRODUCTS_PATH }}/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
-      #     token: ${{ secrets.GITHUB_TOKEN }}
-      #     tag: ${{ matrix.mode == 'debug' && 'latest-debug-build' || matrix.mode == 'assert' && 'latest-assert-build' || 'latest-build' }}
-      #     body: ${{ github.event.head_commit.message }}
+      - name: Update artifact in latest-release
+        uses: ncipollo/release-action@v1.8.6
+        if: github.event_name == 'push' && endsWith( github.ref , 'Cog' )
+        with:
+          prerelease: true
+          allowUpdates: true
+          replacesArtifacts: true
+          artifacts: ${{ env.PRODUCTS_PATH }}/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ matrix.mode == 'debug' && 'latest-debug-build' || matrix.mode == 'assert' && 'latest-assert-build' || 'latest-build' }}
+          body: ${{ github.event.head_commit.message }}
