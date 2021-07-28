@@ -25,6 +25,7 @@ jobs:
           # - { name: macos32x86, os: macos-latest }
 
         flavor:
+          # Only newsqueak.* builds are fully prepared for all platforms
           - newspeak.cog.spur
           - newspeak.stack.spur
 
