@@ -3,15 +3,16 @@ name: Build for macOS
 on:
   push: # All branches, but appropriate paths only.
     paths:
-      - '.github/workflows/macos.yml' # This workflow spec
-      - 'scripts/ci/*build.sh' # Support scripts for this workflow
-      - 'deploy/**' # More support scripts for this workflow
-
+      # This workflow spec and its support scripts
+      - '.github/workflows/macos.yml' 
+      - 'scripts/ci/*build.sh'
+      - 'deploy/**'
+      # Relevant sources for this platform
       - 'build.macos*/**' # Makefile-based build scripts
       - '*src/**' # Generated VMMaker sources (incl. plugins)
       - 'platforms/Cross/**'
       - 'platforms/iOS/**' # Note that 'platforms/Mac OS' is deprecated
-
+      # Skip changes in documentation artifacts
       - '!**.md'
       - '!**HowToBuild'
   pull_request:
@@ -22,7 +23,6 @@ on:
       - '**HowToBuild'
 
 
-
 jobs:
   build:
     strategy:
@@ -30,7 +30,7 @@ jobs:
       matrix:
         arch: 
           - macos64x64
-          # - macos32x86
+          # - macos32x86 # Might be deprecated in general
         flavor:
           - squeak.cog.spur
           # - squeak.sista.spur # -Werror bc. decl. missing
@@ -62,8 +62,8 @@ jobs:
       - name: Build VM
         run: ./scripts/ci/actions_build.sh
 
-      - name: Sign VM (secrets missing)
-        if: false
+      - name: Sign VM
+        continue-on-error: true # Save unsigned build artifacts
         run: ./deploy/sign-vm.sh
         env:
           SQUEAK_SIGN_PASSWORD: ${{ secrets.SQUEAK_SIGN_PASSWORD }}

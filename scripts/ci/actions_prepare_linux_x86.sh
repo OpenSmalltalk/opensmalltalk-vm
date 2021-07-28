@@ -1,4 +1,10 @@
+#!/bin/bash
 set -e
+
+# This script installs all packages required to build the various VM
+# flavors in an x86-compatible environment. It supports both 32-bit
+# and #64-bit architectures, which means that the host Linux platform
+# has to support the older i386 packages to make 32-bit compile.
 
 if [[ "${ARCH}" = "linux64x64" ]]; then
     sudo apt-get update -y

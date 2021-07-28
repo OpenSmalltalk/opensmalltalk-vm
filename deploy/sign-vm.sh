@@ -43,6 +43,11 @@ sign_macOS() {
     exit 35
   fi
 
+  if [[ -z "${sign_password}" ]]; then
+    echo "[Error] No password given to decrypt certificates for ${FLAVOR}. Cannot sign."
+    exit 234
+  fi
+  
   echo "::group::Decrypt certificate files..."
   openssl aes-256-cbc \
     -k "${sign_password}" \
@@ -87,11 +92,9 @@ if [[ ! -d "${PRODUCTS_PATH}" ]]; then
   exit 10
 fi
 
-if [[ ! $(type -t pack_$RUNNER_OS) ]]; then
+if [[ ! $(type -t sign_$RUNNER_OS) ]]; then
   echo "Unsupported runner OS ${RUNNER_OS}."
   exit 99
 fi
 
-pushd "${PRODUCTS_PATH}"
 sign_$RUNNER_OS
-popd

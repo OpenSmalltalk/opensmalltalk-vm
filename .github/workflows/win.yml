@@ -3,16 +3,17 @@ name: Build for Windows
 on:
   push: # All branches, but appropriate paths only.
     paths:
-      - '.github/workflows/win.yml' # This workflow spec
-      - 'scripts/ci/*msys.sh' # Support scripts for this workflow
+      # This workflow spec and its support scripts
+      - '.github/workflows/win.yml'
+      - 'scripts/ci/*msys.sh'
       - 'scripts/ci/*build.sh'
       - 'deploy/**'
-
+      # Relevant sources for this platform
       - 'build.win*/**' # Makefile-based build scripts
       - '*src/**' # Generated VMMaker sources (incl. plugins)
       - 'platforms/Cross/**'
       - 'platforms/win32/**'
-
+      # Skip changes in documentation artifacts
       - '!**.md'
       - '!**HowToBuild'
   pull_request:

@@ -1,17 +1,26 @@
 #!/bin/bash
-# Uses:
+set -e
+
+# This script locates and executes the platform and flavor-specific
+# build scripts, which are typically Makefile-based, to compile and
+# link the configured VM flavor. It then copies the build artifacts to
+# to the ./products directory for subsequent steps such as signing and
+# packing and deploying.
+#
+# This script uses/requires to following variables:
 # - ARCH (e.g., "macos64x64")
+# - ARCH_ARM (only set for ARM builds in docker container)
 # - FLAVOR (e.g., "squeak.cog.spur")
 # - RUNNER_OS (i.e., "Linux", "macOS", "Windows")
 # - HEARTBEAT (i.e., "threaded" or "itimer"; !! Linux only !!)
-# Provides:
+#
+# This script provides variables for subsequent steps:
 # - ASSET_REVISION (e.g., "202107261048")
 # - ASSET_NAME (e.g., "squeak.cog.spur_macos64x64")
-# - BUILD_PATH (e.g., "build.macos64x64/squeak.cog.spur")
 # - PRODUCTS_PATH (e.g., "products")
 # - APP_NAME (e.g., "vm" or "sqcogspur64linuxht" or "Squeak.app")
 
-set -e
+
 
 if [[ "${RUNNER_OS}" == "Windows" ]]; then
     source ./scripts/ci/actions_prepare_msys.sh
@@ -42,6 +51,17 @@ skip_BochsPlugins() {
     echo "Skipping Bochs plugins..."
     sed -i 's/Bochs.* //g' plugins.ext
     sed -i 's/Bochs.* //g' plugins.int
+}
+
+export_variable() {
+    local var_name=$1
+    local var_value=$2
+    if [[ ! -z "${ARCH_ARM}" ]]; then
+        # We are in a docker container. See https://github.com/uraimo/run-on-arch-action
+        echo "::set-output name=${var_name}::${var_value}"
+    else
+        echo "${var_name}=${var_value}" >> $GITHUB_ENV
+    fi
 }
 
 # export COGVREV="$(git describe --tags --always)"
@@ -153,12 +173,10 @@ elif [[ "${MODE}" == "assert" ]]; then
     ASSET_NAME="${ASSET_NAME}_assert"
 fi
 
-echo "ASSET_REVISION=${ASSET_REVISION}" >> $GITHUB_ENV
-echo "ASSET_NAME=${ASSET_NAME}" >> $GITHUB_ENV
+export_variable "ASSET_REVISION" "${ASSET_REVISION}"
+export_variable "ASSET_NAME" "${ASSET_NAME}"
 
-[[ ! -d "${BUILD_PATH}" ]] && exit 12
-echo "BUILD_PATH=${BUILD_PATH}" >> $GITHUB_ENV
 [[ ! -d "${PRODUCTS_PATH}" ]] && exit 13
-echo "PRODUCTS_PATH=${PRODUCTS_PATH}" >> $GITHUB_ENV
+export_variable "PRODUCTS_PATH" "${PRODUCTS_PATH}"
 [[ ! -d "${PRODUCTS_PATH}/${APP_NAME}" ]] && exit 14
-echo "APP_NAME=${APP_NAME}" >> $GITHUB_ENV
+export_variable "APP_NAME" "${APP_NAME}"
