@@ -72,33 +72,36 @@ jobs:
           arch: ${{ env.ARCH_ARM }}
           distro: buster
 
-          setup: |
-            echo "Setup! ${PWD}"
-          dockerRunArgs: |
-            --volume "${PWD}:/checkout"
+          # dockerRunArgs: |
+          #   --volume "${PWD}:/checkout"
+
+          install: |
+            echo "Installing stuff into the container!"
+            apt update
+            apt install git
+            apt install uuid-dev libcairo2-dev libpango1.0-dev libgl1-mesa-dev 
+            apt install libgl1-mesa-glx libssl-dev libevdev-dev m4 libpulse-dev
+
           # env: |
           #   ARCH: foo-arch
           #   ARCH_ARM: foo-arch-arm
           #   FLAVOR: foo-arch-flavor
           #   MODE: foo-arch-mode
 
-          install: |
-            echo "Setting up!"
-            echo "Flavor!"
-            apt update
-            apt install git
-            apt install uuid-dev libcairo2-dev libpango1.0-dev libgl1-mesa-dev 
-            apt install libgl1-mesa-glx libssl-dev libevdev-dev m4 libpulse-dev
+          # setup: |
+          #   echo "Setup! ${PWD}"
+
+          # env: |
+          #   GITHUB_PATH: $GITHUB_PATH
+          #   GITHUB_ENV: $GITHUB_ENV
+
           run: |
-            echo "Running Mode!"
-            echo "Arm!"
-            echo "PWD: ${PWD}"
-            ls -lisa
-            cd /checkout
-            ls -lusa
+            echo "Running!"
+            printenv
+            mkdir -p "foobar"
 
-
-
+      - name: Test
+        run: ls -lisa
 
 #       build-essential libcairo2-dev libpango1.0-dev libssl-dev uuid-dev uuid-runtime libasound2-dev \
 #       devscripts libssl-dev libfreetype6-dev libx11-dev libxext-dev libxrender-dev \
