@@ -78,15 +78,13 @@ jobs:
           install: |
             echo "Installing stuff into the container!"
             apt update
-            apt install git
+            apt install build-essential git libtool automake autoconf devscripts
             apt install uuid-dev libcairo2-dev libpango1.0-dev libgl1-mesa-dev 
             apt install libgl1-mesa-glx libssl-dev libevdev-dev m4 libpulse-dev
+            apt install libasound2-dev libfreetype6-dev libx11-dev libxrender-dev
 
-#       build-essential libcairo2-dev libpango1.0-dev libssl-dev uuid-dev uuid-runtime libasound2-dev \
-#       devscripts libssl-dev libfreetype6-dev libx11-dev libxext-dev libxrender-dev \
-#       libx11-dev libsm-dev libice-dev libgl1-mesa-dev libgl1-mesa-glx git \
-#       libtool automake autoconf
-# cmake curl
+# Other packages:
+# uuid-runtime libsm-dev libice-dev cmake 
 
           env: |
             ARCH: ${{ env.ARCH }}
@@ -96,17 +94,7 @@ jobs:
             RUNNER_OS: Linux
             HEARTBEAT: ${{ matrix.heartbeat }}
 
-          # setup: |
-          #   echo "Setup! ${PWD}"
-
-          # env: |
-          #   GITHUB_PATH: $GITHUB_PATH
-          #   GITHUB_ENV: $GITHUB_ENV
-
-          run: |
-            echo "Running!"
-            printenv
-            ./scripts/ci/actions_build.sh
+          run: ./scripts/ci/actions_build.sh
 
       # - name: Sign VM (not implemented)
       #   if: false
