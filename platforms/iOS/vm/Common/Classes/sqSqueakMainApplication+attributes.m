@@ -92,7 +92,7 @@ extern struct VirtualMachine* interpreterProxy;
 	else {
 		switch (indexNumber) {
 			case 0:
-                return [[[[NSBundle mainBundle] executablePath] precomposedStringWithCanonicalMapping] UTF8String];
+                return fullExeName;
 
 			case 1:
 				return [self getImageName];

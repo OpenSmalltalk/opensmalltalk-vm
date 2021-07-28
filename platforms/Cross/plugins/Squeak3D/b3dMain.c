@@ -12,6 +12,9 @@
 *
 *
 *****************************************************************************/
+#ifdef HAVE_CONFIG_H
+#include "config.h" /* this must happen before including std libraries */
+#endif
 #include <stdio.h>  /* printf() */
 #include <stdlib.h> /* exit()   */
 #include <limits.h> /* INT_MIN INT_MAX */

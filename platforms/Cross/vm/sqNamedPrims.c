@@ -16,7 +16,7 @@
 
 typedef struct {
   char *pluginName;
-  char *primitiveName; /* N.B. On Spur the accessorDepth is hidden after this */
+  char *primitiveName; /* N.B. On Spur metadata including the accessorDepth is hidden after this */
   void *primitiveAddress;
 } sqExport;
 
@@ -104,7 +104,7 @@ static void *
 findExternalFunctionIn(char *functionName, ModuleEntry *module
 #if SPURVM
 # define NADA , 0, 0
-					,  sqInt fnameLength, sqInt *accessorDepthPtr
+					,  sqInt fnameLength, sqInt *metadataPtr
 #else
 # define NADA /* nada */
 #endif
@@ -115,7 +115,7 @@ findExternalFunctionIn(char *functionName, ModuleEntry *module
 	DPRINTF(("Looking (externally) for %s in %s... ", functionName,module->name));
 	if (module->handle)
 #if SPURVM
-		result = ioFindExternalFunctionInAccessorDepthInto(functionName, module->handle, accessorDepthPtr);
+		result = ioFindExternalFunctionInMetadataInto(functionName, module->handle, metadataPtr);
 #else
 		result = ioFindExternalFunctionIn(functionName, module->handle);
 #endif
@@ -130,12 +130,12 @@ findExternalFunctionIn(char *functionName, ModuleEntry *module
 	Lookup the given "pluginName_functionName" in the internal
 	primitive table. If it can not be found try to look it up
 	by using the OS dependent mechanism (see comment below).
-	On SPUR also get accessorDepth, hidden in functionName, if asked for.
+	On SPUR also get metadata, hidden after functionName, if asked for.
 */
 static void *
 findInternalFunctionIn(char *functionName, char *pluginName
 #if SPURVM
-					,  sqInt fnameLength, sqInt *accessorDepthPtr
+					,  sqInt fnameLength, sqInt *metadataPtr
 #endif
 )
 {
@@ -166,8 +166,9 @@ findInternalFunctionIn(char *functionName, char *pluginName
       /* match */
       DPRINTF(("found\n"));
 #if SPURVM
-	  if (accessorDepthPtr)
-		*accessorDepthPtr = ((signed char *)function)[fnameLength+1];
+	  if (metadataPtr)
+		*metadataPtr = ((signed char *)function)[fnameLength+1] << 8
+					 + ((unsigned char *)function)[fnameLength+2];
 #endif
       return exports[index].primitiveAddress;
     }
@@ -179,14 +180,14 @@ findInternalFunctionIn(char *functionName, char *pluginName
 
 #if SPURVM
 static void *
-findFunctionAndAccessorDepthIn(char *functionName, ModuleEntry *module,
-								sqInt fnameLength, sqInt *accessorDepthPtr)
+findFunctionAndMetadataIn(char *functionName, ModuleEntry *module,
+								sqInt fnameLength, sqInt *metadataPtr)
 {
 	return module->handle == squeakModule->handle
 		? findInternalFunctionIn(functionName, module->name,
-								fnameLength, accessorDepthPtr)
+								fnameLength, metadataPtr)
 		: findExternalFunctionIn(functionName, module,
-								fnameLength, accessorDepthPtr);
+								fnameLength, metadataPtr);
 }
 #endif /* SPURVM */
 
@@ -389,15 +390,15 @@ ioLoadExternalFunctionOfLengthFromModuleOfLength
 }
 
 #if SPURVM
-/* ioLoadFunctionFromAccessorDepthInto
+/* ioLoadFunctionFromMetadataInto
 	Load and return the given function from the specified plugin.
 	Answer the function address if successful, otherwise 0.
-	Assign the primitive's accessor depth through accessorDepthPtr.
+	Assign the primitive's accessor depth and flags through metadataPtr.
 	This entry point is called from the interpreter proxy.
 */
 static void *
-ioLoadFunctionFromAccessorDepthInto(char *functionName, char *pluginName,
-									sqInt fnameLength, sqInt *accessorDepthPtr)
+ioLoadFunctionFromMetadataInto(char *functionName, char *pluginName,
+									sqInt fnameLength, sqInt *metadataPtr)
 {
 	ModuleEntry *module;
 	void *function;
@@ -412,17 +413,17 @@ ioLoadFunctionFromAccessorDepthInto(char *functionName, char *pluginName,
 		/* only the module was requested but not any specific function */
 	  return (void *)1;
 	/* and load the actual function */
-	function = findFunctionAndAccessorDepthIn(functionName, module, fnameLength, accessorDepthPtr);
+	function = findFunctionAndMetadataIn(functionName, module, fnameLength, metadataPtr);
 	return function;
 }
 
-/* ioLoadExternalFunctionOfLengthFromModuleOfLengthAccessorDepthInto
+/* ioLoadExternalFunctionOfLengthFromModuleOfLengthMetadataInto
 	Entry point for functions looked up through the VM.
 */
 void *
-ioLoadExternalFunctionOfLengthFromModuleOfLengthAccessorDepthInto
+ioLoadExternalFunctionOfLengthFromModuleOfLengthMetadataInto
 	(sqInt functionNameIndex, sqInt functionNameLength,
-	 sqInt moduleNameIndex,   sqInt moduleNameLength, sqInt *accessorDepthPtr)
+	 sqInt moduleNameIndex,   sqInt moduleNameLength, sqInt *metadataPtr)
 {
 	char *functionNamePointer = pointerForOop((usqInt)functionNameIndex);
 	char *moduleNamePointer = pointerForOop((usqInt)moduleNameIndex);
@@ -434,8 +435,8 @@ ioLoadExternalFunctionOfLengthFromModuleOfLengthAccessorDepthInto
 	functionName[functionNameLength] = 0;
 	strncpy(moduleName, moduleNamePointer, moduleNameLength);
 	moduleName[moduleNameLength] = 0;
-	return ioLoadFunctionFromAccessorDepthInto
-			(functionName, moduleName, functionNameLength, accessorDepthPtr);
+	return ioLoadFunctionFromMetadataInto
+			(functionName, moduleName, functionNameLength, metadataPtr);
 }
 #endif /* SPURVM */
 

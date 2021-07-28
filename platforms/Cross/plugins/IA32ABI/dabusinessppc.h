@@ -82,15 +82,12 @@
 				double v;
 				int sizeOfFloat = figureOutFloatSize(typeSignatureArray,i);
 				if (sizeOfFloat > 0) {
-					if (sizeOfFloat == sizeof(float)) {
-						float fv = *(float*)argvec;
-						v = fv;
-					} else {
+					if (sizeOfFloat == sizeof(float))
+						v = *(float*)argvec;
+					else
 						v = *(double*)argvec;
-					}
-					if (fpRegCount < 13) {  /* 13 registers for floating point numbers */
+					if (fpRegCount < 13) /* 13 registers for floating point numbers */
 						floatStorageArea[fpRegCount++] = v;
-					}
 				}
 			}
 			argvec += internalSructureSize;
@@ -100,29 +97,30 @@
 			if (interpreterProxy->failed())
 				return PrimErrBadArgument;
 			if (hasTypeArray && figureOutFloatSize(typeSignatureArray,i) == sizeof(float)) {
-				float floatv = v;
-				*(float *)argvec = floatv;
+				*(float *)argvec = (float)v;
 				argvec += sizeof(float);			
 				if (gpRegCount < 8) gpRegCount += 1;
-			} else {
+			}
+			else {
 				*(double *)argvec = v;
 				argvec += sizeof(double);			
 				if (gpRegCount < 8) gpRegCount += 2;
 			}
 			
-			if (fpRegCount < 13) {  /* 13 registers for floating point numbers */
+			if (fpRegCount < 13) /* 13 registers for floating point numbers */
 				floatStorageArea[fpRegCount++] = v;
-			}
 			
 			if (gpRegCount > 8) gpRegCount = 8;
-		}	else if (objIsUnsafeAlien(arg)) {
+		}
+		else if (objIsUnsafeAlien(arg)) {
 			sqInt bitsObj = interpreterProxy->fetchPointerofObject(0,arg);
 				void *v = interpreterProxy->firstIndexableField(bitsObj);
 				*(void **)argvec = v;
 				if (gpRegCount < 8) gpRegCount++;
 				argvec += sizeof(long);
-		}else {
-			long v = interpreterProxy->signed32BitValueOf(arg);
+		}
+		else {
+			long v = interpreterProxy->signedMachineIntegerValueOf(arg);
 			if (interpreterProxy->failed())
 				return PrimErrBadArgument;
 			*(long *)argvec = v;
@@ -142,4 +140,3 @@
 //	setsp(0);
 #endif
 	ffiCallAddressOf(f);
-	

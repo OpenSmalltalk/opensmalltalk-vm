@@ -123,7 +123,7 @@ DEBUGVM=-DDEBUGVM=0 -DNDEBUG=1 # Define NDEBUG for production to exclude asserts
 endif
 
 TZ:=$(shell date +%Z)
-DEFS:=	$(COGDEFS) -DUSE_GLOBAL_STRUCT=0 -DNO_ISNAN=1 \
+DEFS:=	-DUSE_GLOBAL_STRUCT=0 -DNO_ISNAN=1 \
 		-DUSE_INLINE_MEMORY_ACCESSORS -D'TZ="$(TZ)"' \
 		-DUSE_METAL=1 -DHAVE_CONFIG_H=1
 XDEFS:=	-DSQUEAK_BUILTIN_PLUGIN
@@ -155,8 +155,9 @@ include ../common/Makefile.rules
 svnver:
 	@-echo $(SVNREV)
 
+# N.B. getversion is *not* cross compiled; it must run here and now
 getversion: $(OSXCOMMONDIR)/version.c deps/version.d $(CROSSDIR)/sqSCCSVersion.h
-	$(CC) -x c -DVERSION_PROGRAM=1 $(ALLFLAGS) $(INCLUDES) $< -o $@
+	$(CC) -x c -DVERSION_PROGRAM=1 $(INCLUDES) $< -o $@
 	$(POSTCOMPILE)
 
 -include deps/version.d
@@ -230,17 +231,22 @@ print-objects:
 
 ignore := $(addsuffix .%, $(basename $(wildcard $(BUILD)/vm/*.ignore)))
 
+LINKNAMEARGS:=-Wl,-headerpad_max_install_names
+ifneq ($(wildcard $(VMSRCDIR)/_variable_order),)
+LINKNAMEARGS:=$(LINKNAMEARGS),-order_file,$(VMSRCDIR)/_variable_order
+endif
+
 $(OBJDIR)/$(VM): $(OBJDIR) $(VMOBJ) $(LIBS)
 	$(CC) -o $(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -c $(OSXCOMMONDIR)/version.c
 ifneq ($(LINK_WITH_CXX),)
 	$(LDCXX) -arch $(TARGET_ARCH) -mmacosx-version-min=$(TARGET_VERSION_MIN) \
 			-isysroot $(SDK) $(CXXVERFLAGS) $(LDFLAGS) $(FRAMEWORKS) \
-			-Wl,-headerpad_max_install_names \
+			$(LINKNAMEARGS) \
 			-o $(OBJDIR)/$(VM) $(VMOBJ) $(filter-out $(call ignore), $(LIBS))
 else
 	$(CC) -arch $(TARGET_ARCH) -mmacosx-version-min=$(TARGET_VERSION_MIN) \
 			-isysroot $(SDK) $(LDFLAGS) $(FRAMEWORKS) \
-			-Wl,-headerpad_max_install_names \
+			$(LINKNAMEARGS) \
 			-o $(OBJDIR)/$(VM) $(VMOBJ) $(filter-out $(call ignore), $(LIBS))
 endif
 

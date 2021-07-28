@@ -77,22 +77,22 @@ ioLoadModule(char *pluginName)
 
 #if SPURVM
 void *
-ioFindExternalFunctionInAccessorDepthInto(char *lookupName, void *moduleHandle,
-											sqInt *accessorDepthPtr)
+ioFindExternalFunctionInMetadataInto(char *lookupName, void *moduleHandle,
+											sqInt *metadataPtr)
 {
 	void *f;
 	char buffer[256];
 
 	f = GetProcAddress(moduleHandle, lookupName);
-	if (f && accessorDepthPtr) {
-		void *accessorDepthVarPtr;
-		snprintf(buffer,256,"%sAccessorDepth",lookupName);
-		accessorDepthVarPtr = GetProcAddress(moduleHandle, buffer);
+	if (f && metadataPtr) {
+		void *metadataVarPtr;
+		snprintf(buffer,256,"%sMetadata",lookupName);
+		metadataVarPtr = GetProcAddress(moduleHandle, buffer);
 		/* The Slang machinery assumes accessor depth defaults to -1, which
 		 * means "no accessor depth".  It saves space not outputting -1 depths.
 		 */
-		*accessorDepthPtr = accessorDepthVarPtr
-								? *(signed char *)accessorDepthVarPtr
+		*metadataPtr = metadataVarPtr
+								? *(signed char *)metadataVarPtr
 								: -1;
 	}
 	return f;

@@ -15,9 +15,9 @@ override SDK:=$(realpath $(addprefix $(SDKsDIR)/, $(SDK)))
 endif
 ifeq ($(strip $(SDK)),)
   ifeq ($(wildcard $(realpath $(addprefix $(SDKsDIR)/,MacOSX.sdk))),)
-	$(error could not find a valid SDK)
+    $(error could not find a valid SDK)
   else
-	SDK:=$(realpath $(addprefix $(SDKsDIR)/,MacOSX.sdk))
+    SDK:=$(realpath $(addprefix $(SDKsDIR)/,MacOSX.sdk))
   endif
 endif
 TARGET_ARCH:=x86_64

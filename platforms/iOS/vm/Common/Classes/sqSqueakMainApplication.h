@@ -46,6 +46,9 @@
 #import "sqSqueakInfoPlistInterface.h"
 #import	"sqSqueakSoundCoreAudio.h"
 
+extern char *fullExeName;	/* full VM path /Applications/Sq.../MacOS/Squeak */
+extern char *exeName;		/* short vm name, e.g. "Squeak" */
+
 @interface sqSqueakMainApplication : NSObject {
 	NSURL*		vmPathStringURL;
 	NSURL*		imageNameURL;

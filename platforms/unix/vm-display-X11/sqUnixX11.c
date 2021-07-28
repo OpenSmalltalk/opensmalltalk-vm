@@ -6782,31 +6782,37 @@ int openXDisplay(void)
   return 0;
 }
 
-int forgetXDisplay(void)
-{
-  /* Initialise variables related to the X connection, and
-     make the existing connection to the X Display invalid
-     for any further access from this Squeak image.  Any socket
-     connection to the X server is closed, but the server is
-     not told to terminate any windows or X sessions.  This
-     is used to support fork() for an existing Squeak image,
-     where the child is expected to continue as a headless
-     image, and the parent continues its normal execution. */
 
+static void clearXDisplayVariables()
+{
   displayName= 0;       /* name of display, or 0 for $DISPLAY   */
   stDisplay= null;      /* Squeak display                       */
-  if (isConnectedToXServer)
-  {
-    if (stXfd >= 0)
-      aioDisable(stXfd);
-    close(stXfd);
-  }
   stXfd= -1;		/* X connection file descriptor         */
   stParent= null;
   stWindow= null;       /* Squeak window                        */
   inputContext= 0;
   inputFont= NULL;
   isConnectedToXServer= 0;
+}
+
+
+/* Initialise variables related to the X connection, and make the existing
+ * connection to the X Display invalid for any further access from this
+ * Squeak image.  Any socket connection to the X server is closed, but the
+ * server is not told to terminate any windows or X sessions.  This is
+ * used to support fork() for an existing Squeak image, where the child
+ * is expected to continue as a headless image, and the parent continues
+ * its normal execution.
+ */
+int forgetXDisplay(void)
+{
+  if (isConnectedToXServer)
+    {
+      if (stXfd >= 0)
+        aioDisable(stXfd);
+      close(stXfd);
+      clearXDisplayVariables();
+    }
   return 0;
 }
 
@@ -6828,9 +6834,11 @@ int disconnectXDisplay(void)
 	}
       if (inputFont)
 	XFreeFontSet(stDisplay, inputFont);
+      if (stXfd >= 0)
+        aioDisable(stXfd);
       XCloseDisplay(stDisplay);
+      clearXDisplayVariables();
     }
-  forgetXDisplay();
   return 0;
 }
 

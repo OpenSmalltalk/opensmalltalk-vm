@@ -13,6 +13,8 @@
  * 15 July 2011
  */
 
+#include "config.h" /* this must happen before including std libraries */
+
 #define SCCS 0
 #define RCS 0
 #define CVS 0
