@@ -47,8 +47,8 @@ jobs:
           - arch: { name: linux32x86, os: ubuntu-latest }
             flavor: pharo.stack.spur.lowcode
 
-          - arch: { name: macos64x64, os: macos-latest }
-            flavor: pharo.cog.spur.lowcode
+          # - arch: { name: macos64x64, os: macos-latest }
+          #   flavor: pharo.cog.spur.lowcode # impl. decl. getThisSessionID
           - arch: { name: macos64x64, os: macos-latest }
             flavor: pharo.stack.spur.lowcode
 
