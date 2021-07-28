@@ -49,6 +49,7 @@ jobs:
       ARCH_ARM: ${{ matrix.arch == 'linux32ARMv6' && 'armv6' || matrix.arch == 'linux32ARMv7' && 'armv7' || 'aarch64' }}
       FLAVOR: ${{ matrix.flavor }}
       MODE: ${{ matrix.mode }}
+      HEARTBEAT: ${{ matrix.heartbeat }}
     steps:
       - name: Checkout files
         uses: actions/checkout@v2
@@ -78,21 +79,22 @@ jobs:
           install: |
             echo "Installing stuff into the container!"
             apt update
-            apt install build-essential git libtool automake autoconf devscripts
+            apt install build-essential git devscripts
             apt install uuid-dev libcairo2-dev libpango1.0-dev libgl1-mesa-dev 
             apt install libgl1-mesa-glx libssl-dev libevdev-dev m4 libpulse-dev
             apt install libasound2-dev libfreetype6-dev libx11-dev libxrender-dev
+            apt install libtool automake autoconf libltdl-dev
 
 # Other packages:
 # uuid-runtime libsm-dev libice-dev cmake 
 
-          env: |
+          env: | # Copy the entire environment for the docker container
+            RUNNER_OS: Linux
             ARCH: ${{ env.ARCH }}
             ARCH_ARM: ${{ env.ARCH_ARM }}
             FLAVOR: ${{ env.FLAVOR }}
             MODE: ${{ env.MODE }}
-            RUNNER_OS: Linux
-            HEARTBEAT: ${{ matrix.heartbeat }}
+            HEARTBEAT: ${{ env.HEARTBEAT }}
 
           run: ./scripts/ci/actions_build.sh
 
