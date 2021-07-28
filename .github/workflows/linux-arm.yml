@@ -53,46 +53,78 @@ jobs:
       - name: Checkout files
         uses: actions/checkout@v2
 
-      - name: Restore build cache
-        uses: actions/cache@v2
-        with:
-          path: armchroot
-          key: thirdparty-cache-linux-arm
+      # - name: Restore build cache
+      #   uses: actions/cache@v2
+      #   with:
+      #     path: armchroot
+      #     key: thirdparty-cache-linux-arm
 
       # - name: Setup tmate debugging session
         # uses: mxschmitt/action-tmate@v3
 
-      - name: Prepare environment
-        run: ./scripts/ci/actions_prepare_linux_arm.sh
+      # - name: Prepare environment
+      #   run: ./scripts/ci/actions_prepare_linux_arm.sh
 
+      # https://github.com/marketplace/actions/run-on-architecture
       - name: Build VM
-        run: |
-          schroot -p -c rpi --
-          ./scripts/ci/actions_build.sh
-        env:
-          HEARTBEAT: ${{ matrix.heartbeat }}
+        uses: uraimo/run-on-arch-action@v2.1.0
+        with: 
+          arch: ${{ env.ARCH_ARM }}
+          distro: buster
+          env: |
+            GITHUB_PATH: $GITHUB_PATH
+            GITHUB_ENV: $GITHUB_ENV
+          setup: |
+            echo "Setting up! ${GITHUB_PATH}"
+            echo "Env! ${GITHUB_ENV}"
+            apt update
+            apt install git
+            apt install uuid-dev libcairo2-dev libpango1.0-dev libgl1-mesa-dev 
+            apt install libgl1-mesa-glx libssl-dev libevdev-dev m4 libpulse-dev
+          run: |
+            echo "Running!"
 
-      - name: Sign VM (not implemented)
-        if: false
-        run: ./deploy/sign-vm.sh
 
-      - name: Pack VM
-        run: ./deploy/pack-vm.sh
 
-      - name: Store artifact w/ revision
-        uses: actions/upload-artifact@v2
-        with:
-          name: ${{ env.ASSET_NAME }}_${{ env.ASSET_REVISION }}
-          path: ${{ env.PRODUCTS_PATH }}/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
 
-      - name: Update artifact in latest-release
-        uses: ncipollo/release-action@v1.8.6
-        if: github.event_name == 'push' && endsWith( github.ref , 'Cog' )
-        with:
-          prerelease: true
-          allowUpdates: true
-          replacesArtifacts: true
-          artifacts: ${{ env.PRODUCTS_PATH }}/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ matrix.mode == 'debug' && 'latest-debug-build' || matrix.mode == 'assert' && 'latest-assert-build' || 'latest-build' }}
-          body: ${{ github.event.head_commit.message }}
+#       build-essential libcairo2-dev libpango1.0-dev libssl-dev uuid-dev uuid-runtime libasound2-dev \
+#       devscripts libssl-dev libfreetype6-dev libx11-dev libxext-dev libxrender-dev \
+#       libx11-dev libsm-dev libice-dev libgl1-mesa-dev libgl1-mesa-glx git \
+#       libtool automake autoconf
+# cmake curl
+
+
+
+
+
+      # - name: Build VM
+      #   run: |
+      #     schroot -p -c rpi --
+      #     ./scripts/ci/actions_build.sh
+      #   env:
+      #     HEARTBEAT: ${{ matrix.heartbeat }}
+
+      # - name: Sign VM (not implemented)
+      #   if: false
+      #   run: ./deploy/sign-vm.sh
+
+      # - name: Pack VM
+      #   run: ./deploy/pack-vm.sh
+
+      # - name: Store artifact w/ revision
+      #   uses: actions/upload-artifact@v2
+      #   with:
+      #     name: ${{ env.ASSET_NAME }}_${{ env.ASSET_REVISION }}
+      #     path: ${{ env.PRODUCTS_PATH }}/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
+
+      # - name: Update artifact in latest-release
+      #   uses: ncipollo/release-action@v1.8.6
+      #   if: github.event_name == 'push' && endsWith( github.ref , 'Cog' )
+      #   with:
+      #     prerelease: true
+      #     allowUpdates: true
+      #     replacesArtifacts: true
+      #     artifacts: ${{ env.PRODUCTS_PATH }}/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
+      #     token: ${{ secrets.GITHUB_TOKEN }}
+      #     tag: ${{ matrix.mode == 'debug' && 'latest-debug-build' || matrix.mode == 'assert' && 'latest-assert-build' || 'latest-build' }}
+      #     body: ${{ github.event.head_commit.message }}
