@@ -83,15 +83,15 @@ jobs:
           #   MODE: foo-arch-mode
 
           install: |
-            echo "Setting up! ${ARCH}"
-            echo "Flavor! ${FLAVOR}"
+            echo "Setting up!"
+            echo "Flavor!"
             apt update
             apt install git
             apt install uuid-dev libcairo2-dev libpango1.0-dev libgl1-mesa-dev 
             apt install libgl1-mesa-glx libssl-dev libevdev-dev m4 libpulse-dev
           run: |
-            echo "Running Mode! ${MODE}"
-            echo "Arm! ${ARCH_ARM}"
+            echo "Running Mode!"
+            echo "Arm!"
             echo "PWD: ${PWD}"
             ls -lisa
             cd /checkout
