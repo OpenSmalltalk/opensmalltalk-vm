@@ -77,10 +77,10 @@ jobs:
           dockerRunArgs: |
             --volume "${PWD}:/checkout"
           env: |
-            ARCH: ${{ env.ARCH }}
-            ARCH_ARM: ${{ env.ARCH_ARM }}
-            FLAVOR: ${{ env.FLAVOR }}
-            MODE: $ {{ env.MODE }}
+            ARCH: foo-arch
+            ARCH_ARM: foo-arch-arm
+            FLAVOR: foo-arch-flavor
+            MODE: foo-arch-mode
 
           install: |
             echo "Setting up! ${ARCH}"
