@@ -3,7 +3,7 @@ set -e
 [[ "${ARCH}" != "linux32ARMv6" ]] && exit 0
 
 MIRROR=http://archive.raspbian.org/raspbian
-VERSION=buster
+VERSION=jessie
 # TOOLS_DIR=$PWD/tools
 ARMCHROOT=$PWD/armchroot
 
