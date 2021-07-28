@@ -71,10 +71,16 @@ jobs:
         with: 
           arch: ${{ env.ARCH_ARM }}
           distro: buster
+
+          setup: |
+            echo "Setup! ${PWD}"
+          dockerRunArgs: |
+            --volume "${PWD}:/checkout"
           env: |
             GITHUB_PATH: $GITHUB_PATH
             GITHUB_ENV: $GITHUB_ENV
-          setup: |
+
+          install: |
             echo "Setting up! ${GITHUB_PATH}"
             echo "Env! ${GITHUB_ENV}"
             apt update
@@ -82,7 +88,12 @@ jobs:
             apt install uuid-dev libcairo2-dev libpango1.0-dev libgl1-mesa-dev 
             apt install libgl1-mesa-glx libssl-dev libevdev-dev m4 libpulse-dev
           run: |
-            echo "Running!"
+            echo "Running! ${GITHUB_PATH}"
+            echo "Env! ${GITHUB_ENV}"
+            echo "PWD: ${PWD}"
+            ls -lisa
+            cd /checkout
+            ls -lusa
 
 
 
