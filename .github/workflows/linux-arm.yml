@@ -69,6 +69,7 @@ jobs:
       # https://github.com/marketplace/actions/run-on-architecture
       - name: Build VM
         uses: uraimo/run-on-arch-action@v2.1.0
+        id: build-vm
         with: 
           arch: ${{ env.ARCH_ARM }}
           distro: buster
@@ -95,12 +96,16 @@ jobs:
             FLAVOR: ${{ env.FLAVOR }}
             MODE: ${{ env.MODE }}
             HEARTBEAT: ${{ env.HEARTBEAT }}
-            GITHUB_ENV: $GITHUB_ENV
 
-          run: |
-            printenv
-            echo "APP_NAME=${APP_NAME}" >> $GITHUB_ENV
-      # ./scripts/ci/actions_build.sh
+          run: ./scripts/ci/actions_build.sh
+
+      - name: Export variables from build step
+        run: |
+          echo "ASSET_REVISION=${{ steps.build-vm.outputs.ASSET_REVISION }}" >> $GITHUB_ENV
+          echo "ASSET_NAME=${{ steps.build-vm.outputs.ASSET_NAME }}" >> $GITHUB_ENV
+          echo "BUILD_PATH=${{ steps.build-vm.outputs.BUILD_PATH }}" >> $GITHUB_ENV
+          echo "PRODUCTS_PATH=${{ steps.build-vm.outputs.PRODUCTS_PATH }}" >> $GITHUB_ENV
+          echo "APP_NAME=${{ steps.build-vm.outputs.APP_NAME }}" >> $GITHUB_ENV
 
       # - name: Sign VM (not implemented)
       #   if: false

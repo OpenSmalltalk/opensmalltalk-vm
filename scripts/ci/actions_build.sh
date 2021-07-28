@@ -44,6 +44,17 @@ skip_BochsPlugins() {
     sed -i 's/Bochs.* //g' plugins.int
 }
 
+export_variable() {
+    local var_name = $1.
+    local var_vaue = $2.
+    if [[ ! -z "${ARM_ARCH}" ]]; then
+        # We are in a docker container. See https://github.com/uraimo/run-on-arch-action
+        echo "::set-output name=${var_name}::${var_value}"
+    else
+        echo "${var_name}=${var_value}" >> $GITHUB_ENV
+    fi
+}
+
 # export COGVREV="$(git describe --tags --always)"
 # export COGVDATE="$(git show -s --format=%cd HEAD)"
 # export COGVURL="$(git config --get remote.origin.url)"
@@ -153,12 +164,12 @@ elif [[ "${MODE}" == "assert" ]]; then
     ASSET_NAME="${ASSET_NAME}_assert"
 fi
 
-echo "ASSET_REVISION=${ASSET_REVISION}" >> $GITHUB_ENV
-echo "ASSET_NAME=${ASSET_NAME}" >> $GITHUB_ENV
+export_variable "ASSET_REVISION" "${ASSET_REVISION}"
+export_variable "ASSET_NAME" "${ASSET_NAME}"
 
 [[ ! -d "${BUILD_PATH}" ]] && exit 12
-echo "BUILD_PATH=${BUILD_PATH}" >> $GITHUB_ENV
+export_variable "BUILD_PATH" "${BUILD_PATH}"
 [[ ! -d "${PRODUCTS_PATH}" ]] && exit 13
-echo "PRODUCTS_PATH=${PRODUCTS_PATH}" >> $GITHUB_ENV
+export_variable "PRODUCTS_PATH" "${PRODUCTS_PATH}"
 [[ ! -d "${PRODUCTS_PATH}/${APP_NAME}" ]] && exit 14
-echo "APP_NAME=${APP_NAME}" >> $GITHUB_ENV
+export_variable "APP_NAME" "${APP_NAME}"
