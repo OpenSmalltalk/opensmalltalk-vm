@@ -6,7 +6,7 @@
 static char __buildInfo[] = "FT2Plugin Freetype-Plugin-EstebanLorenzano.70 uuid: 3729adbd-b383-456b-96ec-dac31cd293f8 " __DATE__ ;
 
 
-
+#include "config.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
