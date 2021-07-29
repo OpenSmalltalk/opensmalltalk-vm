@@ -62,8 +62,8 @@ jobs:
       - name: Build VM
         run: ./scripts/ci/actions_build.sh
 
-      - name: Sign VM (secrets missing)
-        if: false
+      - name: Sign VM
+        continue-on-error: true # Save unsigned build artifacts
         run: ./deploy/sign-vm.sh
         env:
           SQUEAK_SIGN_PASSWORD: ${{ secrets.SQUEAK_SIGN_PASSWORD }}

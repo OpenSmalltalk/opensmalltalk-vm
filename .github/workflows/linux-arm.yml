@@ -26,30 +26,32 @@ on:
 jobs:
   build:
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         arch:
           - linux32ARMv6
           # - linux32ARMv7
-          # - linux64ARMv8
+          - linux64ARMv8
         flavor:
           - squeak.cog.spur
-          # - squeak.stack.spur
-        heartbeat:
-          - threaded
-          # - itimer # not supported
+          - squeak.stack.spur
         mode:
           - fast
           # - debug
           # - assert
+        include:
+          - arch: linux32ARMv7
+            flavor: newspeak.cog.spur
+            mode: fast
+
     runs-on: ubuntu-latest
-    name: ${{ matrix.flavor }}${{ matrix.heartbeat == 'itimer' && ' (itimer)' || '' }} for ${{ matrix.arch }}${{ matrix.mode == 'debug' && ' (DEBUG)' || matrix.mode == 'assert' && ' (ASSERT)' || '' }}
+    name: ${{ matrix.flavor }} for ${{ matrix.arch }}${{ matrix.mode == 'debug' && ' (DEBUG)' || matrix.mode == 'assert' && ' (ASSERT)' || '' }}
     env:
       ARCH: ${{ matrix.arch }}
       ARCH_ARM: ${{ matrix.arch == 'linux32ARMv6' && 'armv6' || matrix.arch == 'linux32ARMv7' && 'armv7' || 'aarch64' }}
       FLAVOR: ${{ matrix.flavor }}
       MODE: ${{ matrix.mode }}
-      HEARTBEAT: ${{ matrix.heartbeat }}
+      HEARTBEAT: threaded # itimer not supported
     steps:
       - name: Checkout files
         uses: actions/checkout@v2
@@ -63,12 +65,6 @@ jobs:
       # - name: Setup tmate debugging session
         # uses: mxschmitt/action-tmate@v3
 
-      # - name: Prepare environment
-      #   run: ./scripts/ci/actions_prepare_linux_arm.sh
-
-      - name: Check env
-        run: echo "$GITHUB_ENV"
-
       # https://github.com/marketplace/actions/run-on-architecture
       - name: Build VM
         uses: uraimo/run-on-arch-action@v2.1.0
@@ -76,69 +72,58 @@ jobs:
         with: 
           arch: ${{ env.ARCH_ARM }}
           distro: buster
-          # env: |
-          #   GITHUB_ENV: ${{ GITHUB_ENV }}
-          run: |
-            echo "Running!"
-            printenv
-            echo "FOOBAR=42" >> $GITHUB_ENV
-          # dockerRunArgs: |
-          #   --volume "${PWD}:/checkout"
 
-      - name: Test var
-        run: echo "$FOOBAR"
-
-          # install: |
-          #   echo "Installing stuff into the container!"
-          #   apt update
-          #   apt install build-essential git devscripts
-          #   apt install uuid-dev libcairo2-dev libpango1.0-dev libgl1-mesa-dev 
-          #   apt install libgl1-mesa-glx libssl-dev libevdev-dev m4 libpulse-dev
-          #   apt install libasound2-dev libfreetype6-dev libx11-dev libxrender-dev
-          #   apt install libtool automake autoconf libltdl-dev
+          install: |
+            echo "Installing stuff into the container!"
+            apt update
+            apt install build-essential git devscripts
+            apt install uuid-dev libcairo2-dev libpango1.0-dev libgl1-mesa-dev 
+            apt install libgl1-mesa-glx libssl-dev libevdev-dev m4 libpulse-dev
+            apt install libasound2-dev libfreetype6-dev libx11-dev libxrender-dev
+            apt install libtool automake autoconf libltdl-dev
 
 # Other packages:
 # uuid-runtime libsm-dev libice-dev cmake 
 
-          # env: | # Copy the entire environment for the docker container
-          #   RUNNER_OS: Linux
-          #   ARCH: ${{ env.ARCH }}
-          #   ARCH_ARM: ${{ env.ARCH_ARM }}
-          #   FLAVOR: ${{ env.FLAVOR }}
-          #   MODE: ${{ env.MODE }}
-          #   HEARTBEAT: ${{ env.HEARTBEAT }}
+          env: | # Copy the entire environment for the docker container
+            RUNNER_OS: Linux
+            ARCH: ${{ env.ARCH }}
+            ARCH_ARM: ${{ env.ARCH_ARM }}
+            FLAVOR: ${{ env.FLAVOR }}
+            MODE: ${{ env.MODE }}
+            HEARTBEAT: ${{ env.HEARTBEAT }}
 
-          # run: ./scripts/ci/actions_build.sh
+          run: ./scripts/ci/actions_build.sh
 
-      # - name: Export variables from build step
-      #   run: |
-      #     echo "ASSET_REVISION=${{ steps.build-vm.outputs.ASSET_REVISION }}" >> $GITHUB_ENV
-      #     echo "ASSET_NAME=${{ steps.build-vm.outputs.ASSET_NAME }}" >> $GITHUB_ENV
-      #     echo "BUILD_PATH=${{ steps.build-vm.outputs.BUILD_PATH }}" >> $GITHUB_ENV
-      #     echo "PRODUCTS_PATH=${{ steps.build-vm.outputs.PRODUCTS_PATH }}" >> $GITHUB_ENV
-      #     echo "APP_NAME=${{ steps.build-vm.outputs.APP_NAME }}" >> $GITHUB_ENV
+      - name: Convert variables from build step
+        run: |
+          echo "ASSET_REVISION=${{ steps.build-vm.outputs.ASSET_REVISION }}" >> $GITHUB_ENV
+          echo "ASSET_NAME=${{ steps.build-vm.outputs.ASSET_NAME }}" >> $GITHUB_ENV
+          echo "BUILD_PATH=${{ steps.build-vm.outputs.BUILD_PATH }}" >> $GITHUB_ENV
+          echo "PRODUCTS_PATH=${{ steps.build-vm.outputs.PRODUCTS_PATH }}" >> $GITHUB_ENV
+          echo "APP_NAME=${{ steps.build-vm.outputs.APP_NAME }}" >> $GITHUB_ENV
 
-      # - name: Sign VM (not implemented)
-      #   if: false
-      #   run: ./deploy/sign-vm.sh
+      - name: Sign VM (not implemented)
+        if: false
+        run: ./deploy/sign-vm.sh
 
-      # - name: Pack VM
-      #   run: ./deploy/pack-vm.sh
+      - name: Pack VM
+        run: ./deploy/pack-vm.sh
 
-      # - name: Store artifact w/ revision
-      #   uses: actions/upload-artifact@v2
-      #   with:
-      #     name: ${{ env.ASSET_NAME }}_${{ env.ASSET_REVISION }}
-      #     path: ${{ env.PRODUCTS_PATH }}/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
+      - name: Store artifact w/ revision
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ env.ASSET_NAME }}_${{ env.ASSET_REVISION }}
+          path: ${{ env.PRODUCTS_PATH }}/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
 
-      # - name: Update artifact in latest-release
-      #   uses: ncipollo/release-action@v1.8.6
-      #   if: github.event_name == 'push' && endsWith( github.ref , 'Cog' )
-      #   with:
-      #     prerelease: true
-      #     allowUpdates: true
-      #     replacesArtifacts: true
-      #     artifacts: ${{ env.PRODUCTS_PATH }}/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
-      #     token: ${{ secrets.GITHUB_TOKEN }}
-      #     tag: ${{ matrix.mode == 'debug' && 'latest-debug-build' || matrix.mode == 'assert' && 'latest-assert-build' || 'latest-build' }}
-      #     body: ${{ github.event.head_commit.message }}
+      - name: Update artifact in latest-release
+        uses: ncipollo/release-action@v1.8.6
+        if: github.event_name == 'push' && endsWith( github.ref , 'Cog' )
+        with:
+          prerelease: true
+          allowUpdates: true
+          replacesArtifacts: true
+          artifacts: ${{ env.PRODUCTS_PATH }}/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ matrix.mode == 'debug' && 'latest-debug-build' || matrix.mode == 'assert' && 'latest-assert-build' || 'latest-build' }}
+          body: ${{ github.event.head_commit.message }}

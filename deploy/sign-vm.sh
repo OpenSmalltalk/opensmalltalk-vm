@@ -45,7 +45,7 @@ sign_macOS() {
 
   if [[ -z "${sign_password}" ]]; then
     echo "No password given to decrypt certificates for ${FLAVOR}. Skipping..."
-    exit 0
+    exit 234
   fi
   
   echo "::group::Decrypt certificate files..."
