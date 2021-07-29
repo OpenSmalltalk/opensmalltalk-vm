@@ -29,12 +29,12 @@ jobs:
       fail-fast: false
       matrix:
         arch:
-          - linux32ARMv6
+          # - linux32ARMv6
           # - linux32ARMv7
           - linux64ARMv8
         flavor:
           - squeak.cog.spur
-          - squeak.stack.spur
+          # - squeak.stack.spur # Some config issue with not working C compiler
         mode:
           - fast
           # - debug
@@ -74,13 +74,8 @@ jobs:
           distro: buster
 
           install: |
-            echo "Installing stuff into the container!"
-            apt update
-            apt install build-essential git devscripts
-            apt install uuid-dev libcairo2-dev libpango1.0-dev libgl1-mesa-dev 
-            apt install libgl1-mesa-glx libssl-dev libevdev-dev m4 libpulse-dev
-            apt install libasound2-dev libfreetype6-dev libx11-dev libxrender-dev
-            apt install libtool automake autoconf libltdl-dev
+            apt update -y
+            apt install -yq --no-install-suggests --no-install-recommends   build-essential git devscripts   uuid-dev libcairo2-dev libpango1.0-dev libgl1-mesa-dev libgl1-mesa-glx libssl-dev libevdev-dev m4 libpulse-dev   libasound2-dev libfreetype6-dev libx11-dev libxrender-dev   libtool automake autoconf libltdl-dev
 
 # Other packages:
 # uuid-runtime libsm-dev libice-dev cmake 
