@@ -29,19 +29,20 @@ jobs:
       fail-fast: false
       matrix:
         arch:
-          - linux32ARMv6
+          # - linux32ARMv6
           # - linux32ARMv7
-          # - linux64ARMv8
+          - linux64ARMv8
         flavor:
           # - squeak.cog.spur
           - squeak.stack.spur # Some config issue with not working C compiler
-          - pharo.cog.spur
-          - squeak.cog.v3
-          - squeak.stack.v3
+          - squeak.cogmt.spur
+          # - pharo.cog.spur
+          # - squeak.cog.v3
+          # - squeak.stack.v3
         mode:
           - fast
-          # - debug
-          # - assert
+          - debug
+          - assert
         # include:
         #   - arch: linux32ARMv7
         #     flavor: newspeak.cog.spur
@@ -65,7 +66,7 @@ jobs:
       # - name: Restore build cache
       #   uses: actions/cache@v2
       #   with:
-      #     path: armchroot
+      #     path: .thirdparty-cache
       #     key: thirdparty-cache-linux-arm
 
       # - name: Setup tmate debugging session
