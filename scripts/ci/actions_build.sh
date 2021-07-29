@@ -1,13 +1,13 @@
 #!/bin/bash
 # Uses:
 # - ARCH (e.g., "macos64x64")
+# - ARCH_ARM (only set for ARM builds in docker container)
 # - FLAVOR (e.g., "squeak.cog.spur")
 # - RUNNER_OS (i.e., "Linux", "macOS", "Windows")
 # - HEARTBEAT (i.e., "threaded" or "itimer"; !! Linux only !!)
 # Provides:
 # - ASSET_REVISION (e.g., "202107261048")
 # - ASSET_NAME (e.g., "squeak.cog.spur_macos64x64")
-# - BUILD_PATH (e.g., "build.macos64x64/squeak.cog.spur")
 # - PRODUCTS_PATH (e.g., "products")
 # - APP_NAME (e.g., "vm" or "sqcogspur64linuxht" or "Squeak.app")
 
@@ -167,8 +167,6 @@ fi
 export_variable "ASSET_REVISION" "${ASSET_REVISION}"
 export_variable "ASSET_NAME" "${ASSET_NAME}"
 
-[[ ! -d "${BUILD_PATH}" ]] && exit 12
-export_variable "BUILD_PATH" "${BUILD_PATH}"
 [[ ! -d "${PRODUCTS_PATH}" ]] && exit 13
 export_variable "PRODUCTS_PATH" "${PRODUCTS_PATH}"
 [[ ! -d "${PRODUCTS_PATH}/${APP_NAME}" ]] && exit 14

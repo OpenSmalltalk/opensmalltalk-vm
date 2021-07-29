@@ -94,8 +94,7 @@ jobs:
         run: |
           echo "ASSET_REVISION=${{ steps.build-vm.outputs.ASSET_REVISION }}" >> $GITHUB_ENV
           echo "ASSET_NAME=${{ steps.build-vm.outputs.ASSET_NAME }}" >> $GITHUB_ENV
-          echo "BUILD_PATH=${{ steps.build-vm.outputs.BUILD_PATH }}" >> $GITHUB_ENV
-          echo "PRODUCTS_PATH=${{ steps.build-vm.outputs.PRODUCTS_PATH }}" >> $GITHUB_ENV
+          echo "PRODUCTS_PATH=$(pwd)/products" >> $GITHUB_ENV
           echo "APP_NAME=${{ steps.build-vm.outputs.APP_NAME }}" >> $GITHUB_ENV
 
       - name: Sign VM (not implemented)
