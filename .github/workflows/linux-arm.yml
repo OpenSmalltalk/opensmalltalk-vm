@@ -74,7 +74,7 @@ jobs:
           arch: ${{ env.ARCH_ARM }}
           distro: buster
           env: |
-            GITHUB_ENV: $GITHUB_ENV
+            GITHUB_ENV: ${{ GITHUB_ENV }}
           run: |
             echo "Running!"
             printenv
@@ -83,7 +83,7 @@ jobs:
           #   --volume "${PWD}:/checkout"
 
       - name: Test var
-        run: echo "${{ env.FOOBAR }}"
+        run: echo "$FOOBAR"
 
           # install: |
           #   echo "Installing stuff into the container!"
