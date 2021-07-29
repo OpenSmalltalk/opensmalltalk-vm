@@ -45,8 +45,8 @@ skip_BochsPlugins() {
 }
 
 export_variable() {
-    local var_name = $1.
-    local var_vaue = $2.
+    local var_name=$1
+    local var_vaue=$2
     if [[ ! -z "${ARM_ARCH}" ]]; then
         # We are in a docker container. See https://github.com/uraimo/run-on-arch-action
         echo "::set-output name=${var_name}::${var_value}"
