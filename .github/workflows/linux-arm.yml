@@ -76,12 +76,18 @@ jobs:
             echo "INNER $(pwd)"
             mkdir -p "products"
             ls -lisa >> products/out1.txt
+            ls -l
+            cd products
+            ls -l
           # install: |
           #   apt update -y
           #   apt install -yq --no-install-suggests --no-install-recommends   build-essential git devscripts   uuid-dev libcairo2-dev libpango1.0-dev libgl1-mesa-dev libgl1-mesa-glx libssl-dev libevdev-dev m4 libpulse-dev   libasound2-dev libfreetype6-dev libx11-dev libxrender-dev   libtool automake autoconf libltdl-dev
       - run: |
           echo "OUTER $(pwd)"
-          sudo chmod --recursive +rw products
+          ls -l
+          cd products
+          ls -l
+          cd ..
           ls -lisa >> products/out2.txt
           cd products
           rm out1.txt
