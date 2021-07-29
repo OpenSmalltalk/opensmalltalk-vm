@@ -66,6 +66,9 @@ jobs:
       # - name: Prepare environment
       #   run: ./scripts/ci/actions_prepare_linux_arm.sh
 
+      - name: Check env
+        run: echo "$GITHUB_ENV"
+
       # https://github.com/marketplace/actions/run-on-architecture
       - name: Build VM
         uses: uraimo/run-on-arch-action@v2.1.0
@@ -73,8 +76,8 @@ jobs:
         with: 
           arch: ${{ env.ARCH_ARM }}
           distro: buster
-          env: |
-            GITHUB_ENV: ${{ GITHUB_ENV }}
+          # env: |
+          #   GITHUB_ENV: ${{ GITHUB_ENV }}
           run: |
             echo "Running!"
             printenv
