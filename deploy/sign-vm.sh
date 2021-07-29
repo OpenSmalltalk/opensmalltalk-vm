@@ -44,7 +44,7 @@ sign_macOS() {
   fi
 
   if [[ -z "${sign_password}" ]]; then
-    echo "No password given to decrypt certificates for ${FLAVOR}. Skipping..."
+    echo "[Error] No password given to decrypt certificates for ${FLAVOR}. Cannot sign."
     exit 234
   fi
   
@@ -92,7 +92,7 @@ if [[ ! -d "${PRODUCTS_PATH}" ]]; then
   exit 10
 fi
 
-if [[ ! $(type -t pack_$RUNNER_OS) ]]; then
+if [[ ! $(type -t sign_$RUNNER_OS) ]]; then
   echo "Unsupported runner OS ${RUNNER_OS}."
   exit 99
 fi
