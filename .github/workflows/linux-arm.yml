@@ -29,7 +29,7 @@ jobs:
       fail-fast: false
       matrix:
         arch:
-          # - linux32ARMv6
+          - linux32ARMv6
           # - linux32ARMv7
           - linux64ARMv8
         flavor:
