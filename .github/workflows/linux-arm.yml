@@ -81,6 +81,7 @@ jobs:
           #   apt install -yq --no-install-suggests --no-install-recommends   build-essential git devscripts   uuid-dev libcairo2-dev libpango1.0-dev libgl1-mesa-dev libgl1-mesa-glx libssl-dev libevdev-dev m4 libpulse-dev   libasound2-dev libfreetype6-dev libx11-dev libxrender-dev   libtool automake autoconf libltdl-dev
       - run: |
           echo "OUTER $(pwd)"
+          sudo chmod --recursive +rw products
           ls -lisa >> products/out2.txt
           cd products
           rm out1.txt
@@ -102,7 +103,7 @@ jobs:
       #   run: |
       #     echo "ASSET_REVISION=${{ steps.build-vm.outputs.ASSET_REVISION }}" >> $GITHUB_ENV
       #     echo "ASSET_NAME=${{ steps.build-vm.outputs.ASSET_NAME }}" >> $GITHUB_ENV
-      #     echo "PRODUCTS_PATH=$(pwd)/products" >> $GITHUB_ENV
+      #     echo "PRODUCTS_PATH=${{ steps.build-vm.outputs.PRODUCTS_PATH }}" >> $GITHUB_ENV
       #     echo "APP_NAME=${{ steps.build-vm.outputs.APP_NAME }}" >> $GITHUB_ENV
 
       # - name: Sign VM (not implemented)
