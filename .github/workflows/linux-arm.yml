@@ -83,7 +83,7 @@ jobs:
           #   --volume "${PWD}:/checkout"
 
       - name: Test var
-        run: echo "${{ FOOBAR }}"
+        run: echo "${{ env.FOOBAR }}"
 
           # install: |
           #   echo "Installing stuff into the container!"
