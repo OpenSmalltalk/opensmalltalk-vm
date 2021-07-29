@@ -31,18 +31,18 @@ jobs:
         arch:
           - linux32ARMv6
           # - linux32ARMv7
-          # - linux64ARMv8
+          - linux64ARMv8
         flavor:
           - squeak.cog.spur
           # - squeak.stack.spur # Some config issue with not working C compiler
         mode:
           - fast
-          # - debug
-          # - assert
-        # include:
-        #   - arch: linux32ARMv7
-        #     flavor: newspeak.cog.spur
-        #     mode: fast
+          - debug
+          - assert
+        include:
+          - arch: linux32ARMv7
+            flavor: newspeak.cog.spur
+            mode: fast
 
     runs-on: ubuntu-latest
     name: ${{ matrix.flavor }} for ${{ matrix.arch }}${{ matrix.mode == 'debug' && ' (DEBUG)' || matrix.mode == 'assert' && ' (ASSERT)' || '' }}
@@ -72,65 +72,53 @@ jobs:
         with: 
           arch: ${{ env.ARCH_ARM }}
           distro: buster
-          run: |
-            echo "INNER $(pwd)"
-            mkdir -p "products"
-            ls -lisa >> products/out1.txt
-          # install: |
-          #   apt update -y
-          #   apt install -yq --no-install-suggests --no-install-recommends   build-essential git devscripts   uuid-dev libcairo2-dev libpango1.0-dev libgl1-mesa-dev libgl1-mesa-glx libssl-dev libevdev-dev m4 libpulse-dev   libasound2-dev libfreetype6-dev libx11-dev libxrender-dev   libtool automake autoconf libltdl-dev
-      - run: |
-          echo "OUTER $(pwd)"
-          sudo chown -R runner products
-          ls -l
-          cd products
-          ls -l
-          cd ..
-          ls -lisa >> products/out2.txt
-          cd products
-          rm out1.txt
-          rm out2.txt
+
+          install: |
+            apt update -y
+            apt install -yq --no-install-suggests --no-install-recommends   build-essential git devscripts   uuid-dev libcairo2-dev libpango1.0-dev libgl1-mesa-dev libgl1-mesa-glx libssl-dev libevdev-dev m4 libpulse-dev   libasound2-dev libfreetype6-dev libx11-dev libxrender-dev   libtool automake autoconf libltdl-dev
+ 
 # Other packages:
 # uuid-runtime libsm-dev libice-dev cmake 
 
-      #     env: | # Copy the entire environment for the docker container
-      #       RUNNER_OS: Linux
-      #       ARCH: ${{ env.ARCH }}
-      #       ARCH_ARM: ${{ env.ARCH_ARM }}
-      #       FLAVOR: ${{ env.FLAVOR }}
-      #       MODE: ${{ env.MODE }}
-      #       HEARTBEAT: ${{ env.HEARTBEAT }}
+          env: | # Copy the entire environment for the docker container
+            RUNNER_OS: Linux
+            ARCH: ${{ env.ARCH }}
+            ARCH_ARM: ${{ env.ARCH_ARM }}
+            FLAVOR: ${{ env.FLAVOR }}
+            MODE: ${{ env.MODE }}
+            HEARTBEAT: ${{ env.HEARTBEAT }}
 
-      #     run: ./scripts/ci/actions_build.sh
+          run: ./scripts/ci/actions_build.sh
 
-      # - name: Convert variables from build step
-      #   run: |
-      #     echo "ASSET_REVISION=${{ steps.build-vm.outputs.ASSET_REVISION }}" >> $GITHUB_ENV
-      #     echo "ASSET_NAME=${{ steps.build-vm.outputs.ASSET_NAME }}" >> $GITHUB_ENV
-      #     echo "PRODUCTS_PATH=${{ steps.build-vm.outputs.PRODUCTS_PATH }}" >> $GITHUB_ENV
-      #     echo "APP_NAME=${{ steps.build-vm.outputs.APP_NAME }}" >> $GITHUB_ENV
+      - name: Post Build VM
+        run: |
+          sudo chown -R runner ${{ steps.build-vm.outputs.PRODUCTS_PATH }}
+          echo "ASSET_REVISION=${{ steps.build-vm.outputs.ASSET_REVISION }}" >> $GITHUB_ENV
+          echo "ASSET_NAME=${{ steps.build-vm.outputs.ASSET_NAME }}" >> $GITHUB_ENV
+          echo "PRODUCTS_PATH=${{ steps.build-vm.outputs.PRODUCTS_PATH }}" >> $GITHUB_ENV
+          echo "APP_NAME=${{ steps.build-vm.outputs.APP_NAME }}" >> $GITHUB_ENV
 
-      # - name: Sign VM (not implemented)
-      #   if: false
-      #   run: ./deploy/sign-vm.sh
+      - name: Sign VM (not implemented)
+        if: false
+        run: ./deploy/sign-vm.sh
 
-      # - name: Pack VM
-      #   run: ./deploy/pack-vm.sh
+      - name: Pack VM
+        run: ./deploy/pack-vm.sh
 
-      # - name: Store artifact w/ revision
-      #   uses: actions/upload-artifact@v2
-      #   with:
-      #     name: ${{ env.ASSET_NAME }}_${{ env.ASSET_REVISION }}
-      #     path: ${{ env.PRODUCTS_PATH }}/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
+      - name: Store artifact w/ revision
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ env.ASSET_NAME }}_${{ env.ASSET_REVISION }}
+          path: ${{ env.PRODUCTS_PATH }}/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
 
-      # - name: Update artifact in latest-release
-      #   uses: ncipollo/release-action@v1.8.6
-      #   if: github.event_name == 'push' && endsWith( github.ref , 'Cog' )
-      #   with:
-      #     prerelease: true
-      #     allowUpdates: true
-      #     replacesArtifacts: true
-      #     artifacts: ${{ env.PRODUCTS_PATH }}/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
-      #     token: ${{ secrets.GITHUB_TOKEN }}
-      #     tag: ${{ matrix.mode == 'debug' && 'latest-debug-build' || matrix.mode == 'assert' && 'latest-assert-build' || 'latest-build' }}
-      #     body: ${{ github.event.head_commit.message }}
+      - name: Update artifact in latest-release
+        uses: ncipollo/release-action@v1.8.6
+        if: github.event_name == 'push' && endsWith( github.ref , 'Cog' )
+        with:
+          prerelease: true
+          allowUpdates: true
+          replacesArtifacts: true
+          artifacts: ${{ env.PRODUCTS_PATH }}/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ matrix.mode == 'debug' && 'latest-debug-build' || matrix.mode == 'assert' && 'latest-assert-build' || 'latest-build' }}
+          body: ${{ github.event.head_commit.message }}
