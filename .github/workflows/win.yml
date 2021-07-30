@@ -24,14 +24,11 @@ on:
       - '**HowToBuild'
   workflow_dispatch:
     inputs:
-      input-tag:
-        description: "New release candidate: input tag"
+      tag:
+        description: "Build new release candidate for tag"
         required: true
         default: YYYYMMDDHHMM
-      output-tag:
-        description: "New release candidate: output tag"
-        required: true
-        default: release-candidate
+
 
 jobs:
   build:
@@ -74,7 +71,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         uses: actions/checkout@v2
         with:
-          ref: ${{ github.event.inputs.input-tag }}
+          ref: refs/tags${{ github.event.inputs.tag }}
 
       - name: Restore build cache
         uses: actions/cache@v2
@@ -128,5 +125,5 @@ jobs:
           replacesArtifacts: true
           artifacts: products/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          tag: github.event.inputs.output-tag
+          tag: github.event.inputs.tag
           body: ${{ github.event.head_commit.message }}
