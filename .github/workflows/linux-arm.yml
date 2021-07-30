@@ -81,7 +81,11 @@ jobs:
         # uses: mxschmitt/action-tmate@v3
 
       - run: |
-          echo "BEFORE!"
+          echo "BEFORE 1!"
+          echo "GITHUB_ENV=$GITHUB_ENV"
+
+      - run: |
+          echo "BEFORE 2!"
           echo "GITHUB_ENV=$GITHUB_ENV"
 
       # https://github.com/marketplace/actions/run-on-architecture
@@ -91,9 +95,9 @@ jobs:
         with: 
           arch: ${{ env.ARCH_ARM }}
           distro: buster
-          install: |
-            echo "Installing!"
-            echo "GITHUB_ENV=$GITHUB_ENV"
+          # install: |
+          #   echo "Installing!"
+          #   echo "GITHUB_ENV=$GITHUB_ENV"
           setup: |
             echo "Setting up!"
             echo "GITHUB_ENV=$GITHUB_ENV"
