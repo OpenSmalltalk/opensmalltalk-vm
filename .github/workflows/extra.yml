@@ -14,7 +14,7 @@ on:
 jobs:
   build:
     strategy:
-      fail-fast: false
+      fail-fast: false # let them finish bc. different platforms
       matrix:
         arch: 
           - { name: win64x64, os: windows-latest }
