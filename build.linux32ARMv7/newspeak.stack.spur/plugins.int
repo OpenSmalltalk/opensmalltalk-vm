@@ -1,0 +1,29 @@
+# Copied, perhaps edited, from ../../../nscogsrc/examplePlugins.int
+INTERNAL_PLUGINS = \
+AioPlugin \
+AsynchFilePlugin \
+BMPReadWriterPlugin \
+B2DPlugin \
+BitBltPlugin \
+DSAPrims \
+DropPlugin \
+FileCopyPlugin \
+FilePlugin \
+Float64ArrayPlugin \
+FloatArrayPlugin \
+FloatMathPlugin \
+HostWindowPlugin \
+ZipPlugin \
+JPEGReadWriter2Plugin \
+JPEGReaderPlugin \
+LargeIntegers \
+Matrix2x3Plugin \
+MiscPrimitivePlugin \
+IA32ABI \
+RePlugin \
+SecurityPlugin \
+SocketPlugin \
+SurfacePlugin \
+UUIDPlugin \
+UnixOSProcessPlugin \
+VMProfileLinuxSupportPlugin
