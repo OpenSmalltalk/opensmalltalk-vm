@@ -74,7 +74,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         uses: actions/checkout@v2
         with:
-          ref: refs/tags/${{ github.event.inputs.input-tag }}
+          ref: ${{ github.event.inputs.input-tag }}
 
       - name: Restore build cache
         uses: actions/cache@v2
