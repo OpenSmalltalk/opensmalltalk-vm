@@ -4,7 +4,10 @@ on:
   schedule:
     - cron: '0 0 1 * *'
   workflow_dispatch:
-    inputs: {}
+    inputs:
+      description: 'Deploy on success'
+      required: false
+      default: true
       # ref:
       #   description: 'Ref'
       #   required: true
