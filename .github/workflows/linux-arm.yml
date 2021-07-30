@@ -85,11 +85,8 @@ jobs:
         with: 
           arch: ${{ env.ARCH_ARM }}
           distro: buster
-          install: |
-            echo "Installing!"
-            ls -lisa
-            echo "PWD=$(pwd)"
-            ./scripts/ci/actions_prepare_linux_arm.sh
+          # TODO: It's tricky to call an external install script. Hmm...
+          install: ./home/runner/work/opensmalltalk-vm/opensmalltalk-vm/scripts/ci/actions_prepare_linux_arm.sh
           env: | # Copy the entire environment for the docker container
             ARCH: ${{ env.ARCH }}
             ARCH_ARM: ${{ env.ARCH_ARM }}
