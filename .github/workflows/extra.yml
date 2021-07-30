@@ -4,11 +4,11 @@ on:
   schedule:
     - cron: '0 0 1 * *'
   workflow_dispatch:
-    inputs:
-      ref:
-        description: 'Ref'
-        required: true
-        default: 'refs/heads/Cog'
+    inputs: []
+      # ref:
+      #   description: 'Ref'
+      #   required: true
+      #   default: 'refs/heads/Cog'
 
 
 jobs:
@@ -65,8 +65,8 @@ jobs:
     steps:
       - name: Checkout files
         uses: actions/checkout@v2
-        with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.ref || 'refs/heads/Cog'}}
+        # with:
+        #   ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.ref || 'refs/heads/Cog'}}
 
       - name: Restore build cache
         uses: actions/cache@v2
