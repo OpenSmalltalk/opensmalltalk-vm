@@ -1,17 +1,26 @@
 #!/bin/bash
-# Uses:
+set -e
+
+# This script locates and executes the platform and flavor-specific
+# build scripts, which are typically Makefile-based, to compile and
+# link the configured VM flavor. It then copies the build artifacts to
+# to the ./products directory for subsequent steps such as signing and
+# packing and deploying.
+#
+# This script uses/requires to following variables:
 # - ARCH (e.g., "macos64x64")
 # - ARCH_ARM (only set for ARM builds in docker container)
 # - FLAVOR (e.g., "squeak.cog.spur")
 # - RUNNER_OS (i.e., "Linux", "macOS", "Windows")
 # - HEARTBEAT (i.e., "threaded" or "itimer"; !! Linux only !!)
-# Provides:
+#
+# This script provides variables for subsequent steps:
 # - ASSET_REVISION (e.g., "202107261048")
 # - ASSET_NAME (e.g., "squeak.cog.spur_macos64x64")
 # - PRODUCTS_PATH (e.g., "products")
 # - APP_NAME (e.g., "vm" or "sqcogspur64linuxht" or "Squeak.app")
 
-set -e
+
 
 if [[ "${RUNNER_OS}" == "Windows" ]]; then
     source ./scripts/ci/actions_prepare_msys.sh

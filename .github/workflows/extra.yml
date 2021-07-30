@@ -2,13 +2,13 @@ name: Extra Monthly Builds
 
 on:
   schedule:
-    - cron: '0 0 1 * *'
+    - cron: '0 0 1 * *' # Build on the 1st of every month at midnight
   workflow_dispatch:
     inputs:
       should-deploy:
         description: 'Deploy on success'
-        required: false
-        default: true
+        required: true
+        default: "true" # No boolean support at the moment
 
 
 jobs:
@@ -94,7 +94,7 @@ jobs:
 
       - name: Update artifact in latest-build
         uses: ncipollo/release-action@v1.8.6
-        if: github.event.inputs.should-deploy && endsWith( github.ref , 'Cog' )
+        if: github.event.inputs.should-deploy == 'true' && endsWith( github.ref , 'Cog' )
         with:
           prerelease: true
           allowUpdates: true
