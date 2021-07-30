@@ -34,14 +34,14 @@ jobs:
         flavor:
           - squeak.cog.spur
           # - squeak.sista.spur # -Werror bc. decl. missing
-          # - squeak.stack.spur
-          # - pharo.cog.spur
+          - squeak.stack.spur
+          - pharo.cog.spur
           # - pharo.sista.spur # -Werror bc. decl. missing
-          # - pharo.stack.spur
+          - pharo.stack.spur
         mode:
           - fast
-          # - debug
-          # - assert
+          - debug
+          - assert
 
     runs-on: macos-latest
     name: ${{ matrix.flavor }} for ${{ matrix.arch }}${{ matrix.mode == 'debug' && ' (DEBUG)' || matrix.mode == 'assert' && ' (ASSERT)' || '' }}
