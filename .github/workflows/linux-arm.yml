@@ -22,7 +22,12 @@ on:
     paths-ignore:
       - '**.md'
       - '**HowToBuild'
-
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Build new release candidate for tag"
+        required: true
+        default: YYYYMMDDHHMM
 
 jobs:
   build:
@@ -51,7 +56,14 @@ jobs:
       HEARTBEAT: threaded # itimer not supported
     steps:
       - name: Checkout files
+        if: github.event_name != 'workflow_dispatch'
         uses: actions/checkout@v2
+
+      - name: Checkout files for new release candidate
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/checkout@v2
+        with:
+          ref: refs/tags/${{ github.event.inputs.tag }}
 
       # TODO: Can we use the same thirdparty cache for armv6, armv7, and aarch64? Are pre-compiled binaries compatible or organized differently?
       - name: Restore build cache
@@ -115,4 +127,16 @@ jobs:
           artifacts: ${{ env.PRODUCTS_PATH }}/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
           token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ matrix.mode == 'debug' && 'latest-debug-build' || matrix.mode == 'assert' && 'latest-assert-build' || 'latest-build' }}
+          body: ${{ github.event.head_commit.message }}
+
+      - name: Deploy artifact as new release candidate
+        uses: ncipollo/release-action@v1.8.6
+        if: github.event_name == 'workflow_dispatch'
+        with:
+          prerelease: true # release candidate
+          allowUpdates: true
+          replacesArtifacts: true
+          artifacts: ${{ env.PRODUCTS_PATH }}/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.event.inputs.tag }}
           body: ${{ github.event.head_commit.message }}

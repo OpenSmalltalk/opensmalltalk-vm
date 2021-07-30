@@ -21,7 +21,12 @@ on:
     paths-ignore:
       - '**.md'
       - '**HowToBuild'
-
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Build new release candidate for tag"
+        required: true
+        default: YYYYMMDDHHMM
 
 jobs:
   build:
@@ -51,7 +56,14 @@ jobs:
       MODE: ${{ matrix.mode }}
     steps:
       - name: Checkout files
+        if: github.event_name != 'workflow_dispatch'
         uses: actions/checkout@v2
+
+      - name: Checkout files for new release candidate
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/checkout@v2
+        with:
+          ref: refs/tags/${{ github.event.inputs.tag }}
 
       - name: Restore build cache
         uses: actions/cache@v2
@@ -95,4 +107,16 @@ jobs:
           artifacts: products/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
           token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ matrix.mode == 'debug' && 'latest-debug-build' || matrix.mode == 'assert' && 'latest-assert-build' || 'latest-build' }}
+          body: ${{ github.event.head_commit.message }}
+
+      - name: Deploy artifact as new release candidate
+        uses: ncipollo/release-action@v1.8.6
+        if: github.event_name == 'workflow_dispatch'
+        with:
+          prerelease: true # release candidate
+          allowUpdates: true
+          replacesArtifacts: true
+          artifacts: products/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.event.inputs.tag }}
           body: ${{ github.event.head_commit.message }}
