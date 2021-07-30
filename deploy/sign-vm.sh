@@ -97,6 +97,4 @@ if [[ ! $(type -t sign_$RUNNER_OS) ]]; then
   exit 99
 fi
 
-pushd "${PRODUCTS_PATH}"
 sign_$RUNNER_OS
-popd

@@ -80,6 +80,10 @@ jobs:
       # - name: Setup tmate debugging session
         # uses: mxschmitt/action-tmate@v3
 
+      - run: |
+          echo "BEFORE!"
+          echo "GITHUB_ENV=$GITHUB_ENV"
+
       # https://github.com/marketplace/actions/run-on-architecture
       - name: Build VM
         uses: uraimo/run-on-arch-action@v2.1.1
@@ -87,14 +91,24 @@ jobs:
         with: 
           arch: ${{ env.ARCH_ARM }}
           distro: buster
+          install: |
+            echo "Installing!"
+            echo "GITHUB_ENV=$GITHUB_ENV"
+          setup: |
+            echo "Setting up!"
+            echo "GITHUB_ENV=$GITHUB_ENV"
           run: |
             echo "Running!"
-            echo $RUNNER_OS
-            echo "FOO=42" >> $GITHUB_ENV
-      - run: echo $FOO
-          # install: |
-          #   apt update -y
-          #   apt install -yq --no-install-suggests --no-install-recommends   build-essential git devscripts   uuid-dev libcairo2-dev libpango1.0-dev libgl1-mesa-dev libgl1-mesa-glx libssl-dev libevdev-dev m4 libpulse-dev   libasound2-dev libfreetype6-dev libx11-dev libxrender-dev   libtool automake autoconf libltdl-dev
+            FOO=42
+            echo "GITHUB_ENV=$GITHUB_ENV"
+      - run: |
+          echo "Back again!"
+          echo "FOO=$FOO"
+          echo "GITHUB_ENV=$GITHUB_ENV"
+
+        # install: |
+        #   apt update -y
+        #   apt install -yq --no-install-suggests --no-install-recommends   build-essential git devscripts   uuid-dev libcairo2-dev libpango1.0-dev libgl1-mesa-dev libgl1-mesa-glx libssl-dev libevdev-dev m4 libpulse-dev   libasound2-dev libfreetype6-dev libx11-dev libxrender-dev   libtool automake autoconf libltdl-dev
  
 # Other packages:
 # uuid-runtime libsm-dev libice-dev cmake 
