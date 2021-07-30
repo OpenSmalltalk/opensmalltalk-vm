@@ -5,13 +5,10 @@ on:
     - cron: '0 0 1 * *'
   workflow_dispatch:
     inputs:
-      description: 'Deploy on success'
-      required: false
-      default: true
-      # ref:
-      #   description: 'Ref'
-      #   required: true
-      #   default: 'refs/heads/Cog'
+      should-deploy:
+        description: 'Deploy on success'
+        required: false
+        default: true
 
 
 jobs:
@@ -97,7 +94,7 @@ jobs:
 
       - name: Update artifact in latest-build
         uses: ncipollo/release-action@v1.8.6
-        if: endsWith( github.ref , 'Cog' )
+        if: github.event.inputs.should-deploy && endsWith( github.ref , 'Cog' )
         with:
           prerelease: true
           allowUpdates: true
