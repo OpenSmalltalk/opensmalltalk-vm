@@ -35,32 +35,24 @@ static sqIntptr_t  pageSize;     /* size of a memory page */
 static char  *minAppAddr;	/* SYSTEM_INFO lpMinimumApplicationAddress */
 static char  *maxAppAddr;	/* SYSTEM_INFO lpMaximumApplicationAddress */
 
-# define roundDownToPage(v) ((v)&pageMask)
-# define roundUpToPage(v) (((v)+pageSize-1)&pageMask)
+# define roundDownToPage(v) ((sqIntptr_t)(v)&pageMask)
+# define roundUpToPage(v) (((sqIntptr_t)(v)+pageSize-1)&pageMask)
 
-/************************************************************************/
-/* sqAllocateMemory: Initialize virtual memory                          */
-/************************************************************************/
-void *
-sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
+static char *
+minAddressHint()
 {
-	char *hint, *address, *alloc;
+	char *hint;
 	usqIntptr_t alignment;
-	sqInt allocBytes;
 	SYSTEM_INFO sysInfo;
 
-	if (pageSize) {
-		sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Error:"),
-					 "sqAllocateMemory already called");
-		exit(1);
-	}
-
 	/* determine page boundaries & available address space */
-	GetSystemInfo(&sysInfo);
-	pageSize = sysInfo.dwPageSize;
-	pageMask = ~(pageSize - 1);
-	minAppAddr = sysInfo.lpMinimumApplicationAddress;
-	maxAppAddr = sysInfo.lpMaximumApplicationAddress;
+	if (!pageSize) {
+		GetSystemInfo(&sysInfo);
+		pageSize = sysInfo.dwPageSize;
+		pageMask = ~(pageSize - 1);
+		minAppAddr = sysInfo.lpMinimumApplicationAddress;
+		maxAppAddr = sysInfo.lpMaximumApplicationAddress;
+	}
 
 	/* choose a suitable starting point. In MinGW the malloc heap is below the
 	 * program, so take the max of a malloc and something from uninitialized
@@ -71,21 +63,35 @@ sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
 	hint = max(hint,(char *)&fIsConsole);
 
 	alignment = max(pageSize,1024*1024);
-	address = (char *)(((usqInt)hint + alignment - 1) & ~(alignment - 1));
+	return (char *)(((usqInt)hint + alignment - 1) & ~(alignment - 1));
+}
+
+/************************************************************************/
+/* sqAllocateMemory: Initialize virtual memory                          */
+/************************************************************************/
+void *
+sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
+{
+	char *alloc;
+	sqInt allocBytes;
+
+#if !COGVM
+	if (pageSize) {
+		sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Error:"),
+					 TEXT("sqAllocateMemory already called"));
+		exit(1);
+	}
+#endif
 
 	alloc = sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto
-				(roundUpToPage(desiredHeapSize), address, &allocBytes);
+				(desiredHeapSize, minAddressHint(), &allocBytes);
 	if (!alloc) {
-		exit(errno);
 		sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Error:"),
-					 "sqAllocateMemory: initial alloc failed!\n");
+					 TEXT("sqAllocateMemory: initial alloc failed!\n"));
 		exit(1);
 	}
 	return alloc;
 }
-
-#define roundDownToPage(v) ((v)&pageMask)
-#define roundUpToPage(v) (((v)+pageSize-1)&pageMask)
 
 /* Allocate a region of memory of at least size bytes, at or above minAddress.
  *  If the attempt fails, answer null.  If the attempt succeeds, answer the
@@ -115,7 +121,7 @@ address_space_used(char *address, usqInt bytes)
 		return 1;
 	if (!VirtualQuery(address, &info, sizeof(info)))
 		sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Error:"),
-					"Unable to VirtualQuery range [%p, %p), Error: %u",
+					TEXT("Unable to VirtualQuery range [%p, %p), Error: %u"),
 					address, (char *)address + bytes, GetLastError());
 
 	addressSpaceUnused = info.BaseAddress == address
@@ -161,12 +167,12 @@ sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress
 			DWORD lastError = GetLastError();
 #if 0 /* Can't report this without making the system unusable... */
 			sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Error:"),
-						"Unable to VirtualAlloc committed memory at desired address (%" PRIuSQINT " bytes requested at %p, above %p), Error: %lu",
+						TEXT("Unable to VirtualAlloc committed memory at desired address (%") TEXT(PRIuSQINT) TEXT(" bytes requested at %p, above %p), Error: %lu")),
 						bytes, address, minAddress, lastError);
 #else
 			if (fIsConsole)
 				fprintf(stderr,
-						"Unable to VirtualAlloc committed memory at desired address (%" PRIuSQINT " bytes requested at %p, above %p), Error: %lu\n",
+						TEXT("Unable to VirtualAlloc committed memory at desired address (%" PRIuSQINT " bytes requested at %p, above %p), Error: %lu\n"),
 						bytes, address, minAddress, lastError);
 #endif
 			return 0;
@@ -176,7 +182,7 @@ sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress
 		 */
 		if (alloc && !VirtualFree(alloc, SizeForRelease(bytes), MEM_RELEASE))
 			sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Warning:"),
-						"Unable to VirtualFree committed memory (%" PRIuSQINT " bytes requested), Error: %ul",
+						TEXT("Unable to VirtualFree committed memory (%") TEXT(PRIuSQINT) TEXT(" bytes requested), Error: %ul"),
 						bytes, GetLastError());
 		address += delta;
 	}
@@ -191,7 +197,7 @@ sqDeallocateMemorySegmentAtOfSize(void *addr, sqInt sz)
 {
 	if (!VirtualFree(addr, SizeForRelease(sz), MEM_RELEASE))
 		sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Warning:"),
-					"Unable to VirtualFree committed memory (%" PRIuSQINT " bytes requested), Error: %ul",
+					TEXT("Unable to VirtualFree committed memory (%") TEXT(PRIuSQINT) TEXT(" bytes requested), Error: %ul"),
 					sz, GetLastError());
 }
 
@@ -214,18 +220,20 @@ sqMakeMemoryExecutableFromToCodeToDataDelta(usqInt startAddr,
         *codeToDataDelta = 0;
 }
 
-void
-sqMakeMemoryNotExecutableFromTo(usqInt startAddr, usqInt endAddr)
+void *
+allocateJITMemory(usqInt *desiredSize)
 {
-	DWORD previous;
-    SIZE_T size;
+	sqInt allocBytes;
 
-    size = endAddr - startAddr;
-	if (!VirtualProtect((void *)startAddr,
-						size,
-						PAGE_READWRITE,
-						&previous))
-		sqWin32PrintLastError("VirtualProtect(x,y,PAGE_EXECUTE_READWRITE)");
+	char *alloc = sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto
+				(*desiredSize, minAddressHint(), &allocBytes);
+
+	if (!alloc) {
+		sqWin32PrintLastError("Could not allocate JIT memory");
+		exit(1);
+	}
+	*desiredSize = allocBytes;
+	return alloc;
 }
 # endif /* COGVM */
 

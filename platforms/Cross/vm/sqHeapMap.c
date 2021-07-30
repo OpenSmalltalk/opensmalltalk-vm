@@ -18,7 +18,9 @@
  *          object that should have been collected.
  *
  ****************************************************************************/
-
+#ifdef HAVE_CONFIG_H
+#include "config.h" /* this must happen before including std libraries */
+#endif
 #include <stdlib.h>
 #include <string.h> /* for memset */
 #include <stdio.h> /* for perror */

@@ -19,56 +19,56 @@ environment:
       MINGW_ARCH: x86_64
 
       # Main minheadless VM variants.
-    - FLAVOR: squeak.cog.spur
+    - FLAVOR: squeak.cog.spur.minheadless
       ARCH: win32x86
       CPU_ARCH: x86
       CYG_ROOT: C:\cygwin
       MINGW_ARCH: i686
       BUILD_WITH_CMAKE: yes
-    - FLAVOR: squeak.cog.spur
-      ARCH: win64x64
-      CPU_ARCH: x64
-      CYG_ROOT: C:\cygwin64
-      MINGW_ARCH: x86_64
-      BUILD_WITH_CMAKE: yes
-    - FLAVOR: pharo.cog.spur
+    # - FLAVOR: squeak.cog.spur
+    #   ARCH: win64x64
+    #   CPU_ARCH: x64
+    #   CYG_ROOT: C:\cygwin64
+    #   MINGW_ARCH: x86_64
+    #   BUILD_WITH_CMAKE: yes
+    - FLAVOR: pharo.cog.spur.minheadless
       ARCH: win32x86
       CPU_ARCH: x86
       CYG_ROOT: C:\cygwin
       MINGW_ARCH: i686
       BUILD_WITH_CMAKE: yes
-    - FLAVOR: pharo.cog.spur
-      ARCH: win64x64
-      CPU_ARCH: x64
-      CYG_ROOT: C:\cygwin64
-      MINGW_ARCH: x86_64
-      BUILD_WITH_CMAKE: yes
+    # - FLAVOR: pharo.cog.spur
+    #   ARCH: win64x64
+    #   CPU_ARCH: x64
+    #   CYG_ROOT: C:\cygwin64
+    #   MINGW_ARCH: x86_64
+    #   BUILD_WITH_CMAKE: yes
 
       # Minheadless VM variants with SDL2 based support for traditional display.
-    - FLAVOR: squeak.cog.spur+sdl2
-      ARCH: win32x86
-      CPU_ARCH: x86
-      CYG_ROOT: C:\cygwin
-      MINGW_ARCH: i686
-      BUILD_WITH_CMAKE: yes
-    - FLAVOR: squeak.cog.spur+sdl2
-      ARCH: win64x64
-      CPU_ARCH: x64
-      CYG_ROOT: C:\cygwin64
-      MINGW_ARCH: x86_64
-      BUILD_WITH_CMAKE: yes
-    - FLAVOR: pharo.cog.spur+sdl2
-      ARCH: win32x86
-      CPU_ARCH: x86
-      CYG_ROOT: C:\cygwin
-      MINGW_ARCH: i686
-      BUILD_WITH_CMAKE: yes
-    - FLAVOR: pharo.cog.spur+sdl2
-      ARCH: win64x64
-      CPU_ARCH: x64
-      CYG_ROOT: C:\cygwin64
-      MINGW_ARCH: x86_64
-      BUILD_WITH_CMAKE: yes
+    # - FLAVOR: squeak.cog.spur+sdl2
+    #   ARCH: win32x86
+    #   CPU_ARCH: x86
+    #   CYG_ROOT: C:\cygwin
+    #   MINGW_ARCH: i686
+    #   BUILD_WITH_CMAKE: yes
+    # - FLAVOR: squeak.cog.spur+sdl2
+    #   ARCH: win64x64
+    #   CPU_ARCH: x64
+    #   CYG_ROOT: C:\cygwin64
+    #   MINGW_ARCH: x86_64
+    #   BUILD_WITH_CMAKE: yes
+    # - FLAVOR: pharo.cog.spur+sdl2
+    #   ARCH: win32x86
+    #   CPU_ARCH: x86
+    #   CYG_ROOT: C:\cygwin
+    #   MINGW_ARCH: i686
+    #   BUILD_WITH_CMAKE: yes
+    # - FLAVOR: pharo.cog.spur+sdl2
+    #   ARCH: win64x64
+    #   CPU_ARCH: x64
+    #   CYG_ROOT: C:\cygwin64
+    #   MINGW_ARCH: x86_64
+    #   BUILD_WITH_CMAKE: yes
 
       # Other VM variants
     - FLAVOR: squeak.sista.spur
@@ -132,6 +132,8 @@ environment:
 matrix:
   fast_finish: true
   allow_failures:
+    - FLAVOR: squeak.cog.spur.minheadless
+    - FLAVOR: pharo.cog.spur.minheadless
     - FLAVOR: squeak.sista.spur
     - FLAVOR: pharo.sista.spur
     - FLAVOR: squeak.cog.spur.lowcode
@@ -175,10 +177,10 @@ build_script:
 #  `before_deploy` is only invoked if the deployment provider is triggered.
 #  `deploy_script` is mutually exclusive to `deploy`.
 # In addition, the vm needs to be packed before artifacts are collected.
-after_build:
-  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER/deploy; exec 0</dev/null; exec ./filter-exec.sh pack-vm.sh"'
-  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER/deploy; exec 0</dev/null; exec ./filter-exec.sh bintray.sh"'
-  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER/deploy/pharo; exec 0</dev/null; exec ./filter-exec.sh deploy.sh"'
+#after_build:
+#  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER/deploy; exec 0</dev/null; exec ./filter-exec.sh pack-vm.sh"'
+#  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER/deploy; exec 0</dev/null; exec ./filter-exec.sh bintray.sh"'
+#  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER/deploy/pharo; exec 0</dev/null; exec ./filter-exec.sh deploy.sh"'
 
 test: off
 

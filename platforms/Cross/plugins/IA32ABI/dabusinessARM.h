@@ -2,6 +2,7 @@
  *  dabusinessARM.h
  *
  * Ryan Macnak, Eliot Miranda, 7/15
+ * Updated for aarch64/arm64 by Ken Dickey 26 Dec 2018
  *
  * Body of the various callIA32XXXReturn functions.
  * Call a foreign function according to ARM-ish ABI rules.
@@ -13,14 +14,14 @@
 	long size;
 	long nextReg;
 	long nextDReg;
-	long regs[NUM_REG_ARGS];
+	sqInt regs[NUM_REG_ARGS];
 	double dregs[NUM_DREG_ARGS];
 	sqInt funcAlien;
 	sqInt resultMaybeAlien;
-	long argvec;
-	long argstart;
+	sqInt argvec;
+	sqInt argstart;
 
-	assert(sizeof(long) == sizeof(void*));
+	assert(sizeof(sqInt) == sizeof(void*));
 
 	if (numArgs < 0) {
 		/* Stack or Cog VM. Need to access args downwards from first arg. */
@@ -28,12 +29,12 @@
 			sqInt arg = argVector[i + 1];
 			if (objIsAlien(arg) && (sizeField(arg) != 0))
 				/* Direct or indirect Alien. */
-				size += RoundUpPowerOfTwo(labs(sizeField(arg)), sizeof(long));
+				size += RoundUpPowerOfTwo(labs(sizeField(arg)), sizeof(sqInt));
 			else if (interpreterProxy->isFloatObject(arg))
 				size += sizeof(double);
 			else 
 				/* Assume an integer or pointer Alien. Check below. */
-				size += sizeof(long);
+				size += sizeof(sqInt);
 		}
 	}
 	else {
@@ -42,16 +43,16 @@
 			sqInt arg = argVector[i];
 			if (objIsAlien(arg) && (sizeField(arg) != 0))
 				/* Direct or indirect Alien. */
-				size += RoundUpPowerOfTwo(labs(sizeField(arg)), sizeof(long));
+				size += RoundUpPowerOfTwo(labs(sizeField(arg)), sizeof(sqInt));
 			else if (interpreterProxy->isFloatObject(arg))
 				size += sizeof(double);
 			else
 				/* Assume an integer or pointer Alien. Check below. */
-				size += sizeof(long);
+				size += sizeof(sqInt);
 		}
 	}
 
-	argstart = argvec = (long)alloca(size);
+	argstart = argvec = (sqInt)alloca(size);
 
 	assert(IsAlignedPowerOfTwo(argvec, STACK_ALIGN_BYTES));
 
@@ -62,8 +63,8 @@
 	if (nextReg < NUM_REG_ARGS) \
 		regs[nextReg++] = expr; \
 	else { \
-		*(long*)argvec = expr; \
-		argvec += sizeof(long); \
+		*(sqInt*)argvec = expr; \
+		argvec += sizeof(sqInt); \
 	}
 
 #define MaybePassAsDRegArg(expr) \
@@ -83,7 +84,7 @@
 				MaybePassAsRegArg(intVal(arg))
 			}
 			else if (objIsAlien(arg)) {
-				long argByteSize;
+				sqInt argByteSize;
 				if ((size = sizeField(arg)) == 0) /* Pointer Alien. */
 					size = argByteSize = sizeof(void *);
 				else /* Direct or indirect Alien. */
@@ -91,17 +92,17 @@
 				/* TODO(rmacnak): Structs larger than word size should be split
 				 * between remaining registers and the stack.
 				 */
-				if ((argByteSize <= sizeof(long)) && (nextReg < NUM_REG_ARGS)) {
-					regs[nextReg++] = *(long*)startOfDataWithSize(arg, size);
+				if ((argByteSize <= sizeof(sqInt)) && (nextReg < NUM_REG_ARGS)) {
+					regs[nextReg++] = *(sqInt*)startOfDataWithSize(arg, size);
 				}
 				else {
 					memcpy((void*)argvec, startOfDataWithSize(arg, size), argByteSize);
-					argvec += RoundUpPowerOfTwo(argByteSize, sizeof(long));
+					argvec += RoundUpPowerOfTwo(argByteSize, sizeof(sqInt));
 				}
 			}
 			else if (objIsUnsafeAlien(arg)) {
 				sqInt bitsObj = interpreterProxy->fetchPointerofObject(0,arg);
-				long v = (long)interpreterProxy->firstIndexableField(bitsObj);
+				sqInt v = (sqInt)interpreterProxy->firstIndexableField(bitsObj);
 				MaybePassAsRegArg(v)
 			}
 			else if (interpreterProxy->isFloatObject(arg)) {
@@ -109,10 +110,10 @@
 				MaybePassAsDRegArg(d)
 			}
 			else {
-				long v = interpreterProxy->signed32BitValueOf(arg);
+				sqInt v = interpreterProxy->signedMachineIntegerValueOf(arg);
 				if (interpreterProxy->failed()) {
 					interpreterProxy->primitiveFailFor(0);
-					v = interpreterProxy->positive32BitValueOf(arg);
+					v = interpreterProxy->positiveMachineIntegerValueOf(arg);
 					if (interpreterProxy->failed()) {
 						return PrimErrBadArgument;
 					}
@@ -128,24 +129,24 @@
 			if (isSmallInt(arg))
 				MaybePassAsDRegArg(intVal(arg))
 			else if (objIsAlien(arg)) {
-				long argByteSize;
+				sqInt argByteSize;
 				if ((size = sizeField(arg)) == 0) /* Pointer Alien. */
 					size = argByteSize = sizeof(void *);
 				else /* Direct or indirect Alien. */
 					argByteSize = labs(size);
 				/* TODO(rmacnak): Structs larger than word size should be split between
 					 remaining registers and the stack. */
-				if ((argByteSize <= sizeof(long)) && (nextReg < NUM_REG_ARGS)) {
-					regs[nextReg++] = *(long*)startOfDataWithSize(arg, size);
+				if ((argByteSize <= sizeof(sqInt)) && (nextReg < NUM_REG_ARGS)) {
+					regs[nextReg++] = *(sqInt*)startOfDataWithSize(arg, size);
 				}
 				else {
 					memcpy((void*)argvec, startOfDataWithSize(arg, size), argByteSize);
-					argvec += RoundUpPowerOfTwo(argByteSize, sizeof(long));
+					argvec += RoundUpPowerOfTwo(argByteSize, sizeof(sqInt));
 				}
 			}
 			else if (objIsUnsafeAlien(arg)) {
 				sqInt bitsObj = interpreterProxy->fetchPointerofObject(0,arg);
-				long v = (long)interpreterProxy->firstIndexableField(bitsObj);
+				sqInt v = (sqInt)interpreterProxy->firstIndexableField(bitsObj);
 				MaybePassAsRegArg(v)
 			}
 			else if (interpreterProxy->isFloatObject(arg)) {
@@ -153,10 +154,10 @@
 				MaybePassAsDRegArg(d)
 			}
 			else {
-				long v = interpreterProxy->signed32BitValueOf(arg);
+				sqInt v = interpreterProxy->signedMachineIntegerValueOf(arg);
 				if (interpreterProxy->failed()) {
 					interpreterProxy->primitiveFailFor(0);
-					v = interpreterProxy->positive32BitValueOf(arg);
+					v = interpreterProxy->positiveMachineIntegerValueOf(arg);
 					if (interpreterProxy->failed()) {
 						return PrimErrBadArgument;
 					}
@@ -174,6 +175,9 @@
 	 * floating-point co-processor registers.  Neat.
 	 */
 	r = f(regs[0], regs[1], regs[2], regs[3],
+#if NUM_REG_ARGS > 4
+		  regs[4], regs[5], regs[6], regs[7],
+#endif
 		  dregs[0], dregs[1], dregs[2], dregs[3],
 		  dregs[4], dregs[5], dregs[6], dregs[7]);
 
@@ -182,10 +186,10 @@
 	if (objIsAlien(resultMaybeAlien)) {
 		size = sizeField(resultMaybeAlien);
 		if (size == 0) /* Pointer Alien. */
-			size = sizeof(long);
+			size = sizeof(sqInt);
 		memcpy(startOfDataWithSize(resultMaybeAlien, size),
 			   &r,
-			   min((unsigned long)labs(size), sizeof(r)));
+			   min((usqInt)labs(size), sizeof(r)));
 	}
 
 	return PrimNoErr;

@@ -257,14 +257,17 @@ printRegisterState(ucontext_t *uap)
 			"\tx24 %p x25 %p x26 %p x27 %p\n"
 			"\tx29 %p  fp %p  lr %p  sp %p\n",
 			"\tcpsr 0x%08x\n",
-			regs->__x[0], regs->__x[1], regs->__x[2], regs->__x[3],
-			regs->__x[4], regs->__x[5], regs->__x[6], regs->__x[7],
-			regs->__x[8], regs->__x[9], regs->__x[10], regs->__x[11],
-			regs->__x[12], regs->__x[13], regs->__x[14], regs->__x[15],
-			regs->__x[16], regs->__x[17], regs->__x[18], regs->__x[19],
-			regs->__x[20], regs->__x[21], regs->__x[22], regs->__x[23],
-			regs->__x[24], regs->__x[25], regs->__x[26], regs->__x[27],
-			regs->__x[28], regs->__fp, regs->__lr, regs->__sp, regs->__pc, regs->__cpsr);
+#	define v(v) ((void *)(regs->v))
+			v(__x[0]), v(__x[1]), v(__x[2]), v(__x[3]),
+			v(__x[4]), v(__x[5]), v(__x[6]), v(__x[7]),
+			v(__x[8]), v(__x[9]), v(__x[10]), v(__x[11]),
+			v(__x[12]), v(__x[13]), v(__x[14]), v(__x[15]),
+			v(__x[16]), v(__x[17]), v(__x[18]), v(__x[19]),
+			v(__x[20]), v(__x[21]), v(__x[22]), v(__x[23]),
+			v(__x[24]), v(__x[25]), v(__x[26]), v(__x[27]),
+			v(__x[28]), v(__fp), v(__lr), v(__sp), v(__pc),
+			regs->__cpsr);
+#	undef v
 #elif defined(__arm__) || defined(__arm32__)
 	_STRUCT_ARM_THREAD_STATE *regs = &uap->uc_mcontext->ss;
 	printf(	"\t r0 0x%08x r1 0x%08x r2 0x%08x r3 0x%08x\n"

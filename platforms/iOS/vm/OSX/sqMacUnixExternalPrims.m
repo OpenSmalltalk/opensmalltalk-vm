@@ -98,7 +98,7 @@ tryLoadingInternals(NSString *libNameString)
 		dprintf((stderr, "ignoring directory: %s\n", libName));
 	else {
 		const char *why;
-	    dprintf((stderr, "tryLoading %s\n", libName));
+		dprintf((stderr, "tryLoading %s\n", libName));
 		if ((handle = dlopen(libName, RTLD_NOW | RTLD_GLOBAL)))
 			return handle;
 		why = dlerror();
@@ -169,12 +169,11 @@ tryLoadingVariations(NSString *dirNameString, char *moduleName)
 		return NULL;
 	}
 	for (prefix= prefixes;  *prefix;  ++prefix)
-		for (suffix= suffixes;  *suffix;  ++suffix)		{
+		for (suffix= suffixes;  *suffix;  ++suffix)	{
 			libName = [dirNameString stringByAppendingPathComponent: @(*prefix)];
-			if (**prefix)
-				libName = [libName stringByAppendingString: @(moduleName)];
-			else
-				libName = [libName stringByAppendingPathComponent: @(moduleName)];
+			libName = **prefix
+					? [libName stringByAppendingString: @(moduleName)]
+					: [libName stringByAppendingPathComponent: @(moduleName)];
 			if (**suffix)
 				libName = [libName stringByAppendingPathExtension: @(*suffix)];
 
@@ -187,18 +186,16 @@ tryLoadingVariations(NSString *dirNameString, char *moduleName)
 static void *
 tryLoadingLinked(char *libName)
 {
-    void *handle;
-
 #if !PharoVM
 	if (thePListInterface.SqueakPluginsBuiltInOrLocalOnly)
 		return NULL;
 #endif
 
-	handle = dlopen(libName, RTLD_NOW | RTLD_GLOBAL);
-    DPRINTF((stderr, __FILE__ " %d tryLoadingLinked dlopen(%s) = %p\n", __LINE__, libName, handle));
+	void *handle = dlopen(libName, RTLD_NOW | RTLD_GLOBAL);
+	DPRINTF((stderr, __FILE__ " %d tryLoadingLinked dlopen(%s) = %p\n", __LINE__, libName, handle));
 #if DEBUG
-    if(handle != 0)
-        printf("%s: loaded plugin `%s'\n", exeName, libName);
+	if (handle)
+		printf("%s: loaded plugin `%s'\n", exeName, libName);
 #endif
 	if (!handle) {
 		const char *why = dlerror();
@@ -207,7 +204,7 @@ tryLoadingLinked(char *libName)
 		else if (strstr(why,"undefined symbol"))
 			fprintf(stderr, "tryLoadingLinked: dlopen: %s\n", why);
 	}
-    return handle;
+	return handle;
 }
 
 /*  Find and load the named module.  Answer 0 if not found (do NOT fail
@@ -234,7 +231,7 @@ ioLoadModuleRaw(char *pluginName)
 		}
 		dprintf((stderr, "loaded: <intrinsic>\n"));
 		return handle;
-    }
+	}
 
 #if PharoVM
 	/* first, look in the "<Squeak VM directory>Plugins" directory for the library */
@@ -246,19 +243,19 @@ ioLoadModuleRaw(char *pluginName)
 	if (thePListInterface.SqueakPluginsBuiltInOrLocalOnly) {
 	  if ((   handle= tryLoadingLinked(                     pluginName))
 		  || (handle= tryLoadingBundle( vmDirPath,			pluginName))
-          || (handle= tryLoadingVariations( frameworksDirPath,	pluginName))
+		  || (handle= tryLoadingVariations( frameworksDirPath,	pluginName))
 #if PharoVM
-          || (handle= tryLoadingVariations( pluginDirPath,	pluginName))
+		  || (handle= tryLoadingVariations( pluginDirPath,	pluginName))
 #endif
 		  )
 		return handle;
 	}
-    else {
+	else {
 	  if ((   handle= tryLoadingLinked(                     pluginName))
 		  || (handle= tryLoadingBundle( vmDirPath,			pluginName))
-          || (handle= tryLoadingVariations( frameworksDirPath,	pluginName))
+		  || (handle= tryLoadingVariations( frameworksDirPath,	pluginName))
 #if PharoVM
-          || (handle= tryLoadingVariations( pluginDirPath,	pluginName))
+		  || (handle= tryLoadingVariations( pluginDirPath,	pluginName))
 #endif
 		  || (handle= tryLoadingVariations( @"./",			pluginName))
 		  || (handle= tryLoadingVariations( @"",			pluginName))
@@ -360,8 +357,8 @@ ioLoadModuleRaw(char *pluginName)
  */
 #if SPURVM
 void *
-ioFindExternalFunctionInAccessorDepthInto(char *lookupName, void *moduleHandle,
-											sqInt *accessorDepthPtr)
+ioFindExternalFunctionInMetadataInto(char *lookupName, void *moduleHandle,
+											sqInt *metadataPtr)
 #else
 void *
 ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
@@ -377,21 +374,21 @@ ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
 	&& strcmp(lookupName, "shutdownModule")
 	&& strcmp(lookupName, "setInterpreter")
 	&& strcmp(lookupName, "getModuleName"))
-    fprintf(stderr, "ioFindExternalFunctionIn(%s, %p):\n  %s\n",
+	fprintf(stderr, "ioFindExternalFunctionIn(%s, %p):\n  %s\n",
 			lookupName, moduleHandle, dlerror());
 
 #if SPURVM
-  if (fn && accessorDepthPtr) {
+  if (fn && metadataPtr) {
 	char buf[NAME_MAX+1];
-	signed char *accessorDepthVarPtr;
+	signed short *metadataVarPtr;
 
-	snprintf(buf, sizeof(buf), "%sAccessorDepth", lookupName); 
-	accessorDepthVarPtr = dlsym(moduleHandle, buf);
+	snprintf(buf, sizeof(buf), "%sMetadata", lookupName); 
+	metadataVarPtr = dlsym(moduleHandle, buf);
 	/* The Slang machinery assumes accessor depth defaults to -1, which
 	 * means "no accessor depth".  It saves space not outputting -1 depths.
 	 */
-	*accessorDepthPtr = accessorDepthVarPtr
-							? *accessorDepthVarPtr
+	*metadataPtr = metadataVarPtr
+							? *metadataVarPtr
 							: -1;
   }
 #endif /* SPURVM */
@@ -404,12 +401,10 @@ ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
 */
 sqInt ioFreeModule(void *moduleHandle)
 {
-  int results = dlclose(moduleHandle);
+	if (!dlclose(moduleHandle))
+		return 1;
 
-  if (results) {
-	  char* why = dlerror();
-      dprintf((stderr, "ioFreeModule(%ld): %s\n", (long) moduleHandle, why));
-      return 0;
-  }
-  return 1;
+	char *why = dlerror();
+	dprintf((stderr, "ioFreeModule(%ld): %s\n", (long) moduleHandle, why));
+	return 0;
 }

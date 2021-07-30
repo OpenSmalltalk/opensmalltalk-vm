@@ -176,7 +176,7 @@ pathapp:
 	install_name_tool -add_rpath @executable_path/Contents/$(APPPLUGINDIR) $(VMEXE)
 	install_name_tool -add_rpath @executable_path/Contents/Frameworks $(VMEXE)
 	if [ -d "$(APP)/Contents/Frameworks" ]; then \
-		for d in `cd "$(APP)/Contents" >/dev/null; find Frameworks -type d`; do \
+		for d in `cd "$(APP)/Contents" >/dev/null; find Frameworks -type d | fgrep -v .dSYM`; do \
 			echo install_name_tool -add_rpath @executable_path/../$$d $(VMEXE); \
 			install_name_tool -add_rpath @executable_path/../$$d $(VMEXE); \
 		done \
