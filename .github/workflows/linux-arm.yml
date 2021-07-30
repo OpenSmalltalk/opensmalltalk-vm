@@ -71,22 +71,12 @@ jobs:
       - name: Checkout files
         uses: actions/checkout@v2
 
-      # - name: Restore build cache
-      #   uses: actions/cache@v2
-      #   with:
-      #     path: .thirdparty-cache
-      #     key: thirdparty-cache-linux-arm
-
-      # - name: Setup tmate debugging session
-        # uses: mxschmitt/action-tmate@v3
-
-      - run: |
-          echo "BEFORE 1!"
-          echo "GITHUB_ENV=$GITHUB_ENV"
-
-      - run: |
-          echo "BEFORE 2!"
-          echo "GITHUB_ENV=$GITHUB_ENV"
+      # TODO: Can we use the same thirdparty cache for armv6, armv7, and aarch64? Are pre-compiled binaries compatible or organized differently?
+      - name: Restore build cache
+        uses: actions/cache@v2
+        with:
+          path: .thirdparty-cache
+          key: thirdparty-cache-linux-${{ env.ARCH_ARM }}
 
       # https://github.com/marketplace/actions/run-on-architecture
       - name: Build VM
@@ -95,67 +85,45 @@ jobs:
         with: 
           arch: ${{ env.ARCH_ARM }}
           distro: buster
-          # install: |
-          #   echo "Installing!"
-          #   echo "GITHUB_ENV=$GITHUB_ENV"
-          setup: |
-            echo "Setting up!"
-            echo "GITHUB_ENV=$GITHUB_ENV"
-          run: |
-            echo "Running!"
-            FOO=42
-            echo "GITHUB_ENV=$GITHUB_ENV"
-      - run: |
-          echo "Back again!"
-          echo "FOO=$FOO"
-          echo "GITHUB_ENV=$GITHUB_ENV"
+          install: ./scripts/ci/actions_prepare_linux_arm.sh
+          env: | # Copy the entire environment for the docker container
+            RUNNER_OS: Linux
+            ARCH: ${{ env.ARCH }}
+            ARCH_ARM: ${{ env.ARCH_ARM }}
+            FLAVOR: ${{ env.FLAVOR }}
+            MODE: ${{ env.MODE }}
+            HEARTBEAT: ${{ env.HEARTBEAT }}
+          run: ./scripts/ci/actions_build.sh
 
-        # install: |
-        #   apt update -y
-        #   apt install -yq --no-install-suggests --no-install-recommends   build-essential git devscripts   uuid-dev libcairo2-dev libpango1.0-dev libgl1-mesa-dev libgl1-mesa-glx libssl-dev libevdev-dev m4 libpulse-dev   libasound2-dev libfreetype6-dev libx11-dev libxrender-dev   libtool automake autoconf libltdl-dev
- 
-# Other packages:
-# uuid-runtime libsm-dev libice-dev cmake 
+      - name: Post Build VM
+        run: |
+          sudo chown -R runner ${{ steps.build-vm.outputs.PRODUCTS_PATH }}
+          echo "ASSET_REVISION=${{ steps.build-vm.outputs.ASSET_REVISION }}" >> $GITHUB_ENV
+          echo "ASSET_NAME=${{ steps.build-vm.outputs.ASSET_NAME }}" >> $GITHUB_ENV
+          echo "PRODUCTS_PATH=${{ steps.build-vm.outputs.PRODUCTS_PATH }}" >> $GITHUB_ENV
+          echo "APP_NAME=${{ steps.build-vm.outputs.APP_NAME }}" >> $GITHUB_ENV
 
-      #     env: | # Copy the entire environment for the docker container
-      #       RUNNER_OS: Linux
-      #       ARCH: ${{ env.ARCH }}
-      #       ARCH_ARM: ${{ env.ARCH_ARM }}
-      #       FLAVOR: ${{ env.FLAVOR }}
-      #       MODE: ${{ env.MODE }}
-      #       HEARTBEAT: ${{ env.HEARTBEAT }}
+      - name: Sign VM (not implemented)
+        if: false
+        run: ./deploy/sign-vm.sh
 
-      #     run: ./scripts/ci/actions_build.sh
+      - name: Pack VM
+        run: ./deploy/pack-vm.sh
 
-      # - name: Post Build VM
-      #   run: |
-      #     sudo chown -R runner ${{ steps.build-vm.outputs.PRODUCTS_PATH }}
-      #     echo "ASSET_REVISION=${{ steps.build-vm.outputs.ASSET_REVISION }}" >> $GITHUB_ENV
-      #     echo "ASSET_NAME=${{ steps.build-vm.outputs.ASSET_NAME }}" >> $GITHUB_ENV
-      #     echo "PRODUCTS_PATH=${{ steps.build-vm.outputs.PRODUCTS_PATH }}" >> $GITHUB_ENV
-      #     echo "APP_NAME=${{ steps.build-vm.outputs.APP_NAME }}" >> $GITHUB_ENV
+      - name: Store artifact w/ revision
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ env.ASSET_NAME }}_${{ env.ASSET_REVISION }}
+          path: ${{ env.PRODUCTS_PATH }}/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
 
-      # - name: Sign VM (not implemented)
-      #   if: false
-      #   run: ./deploy/sign-vm.sh
-
-      # - name: Pack VM
-      #   run: ./deploy/pack-vm.sh
-
-      # - name: Store artifact w/ revision
-      #   uses: actions/upload-artifact@v2
-      #   with:
-      #     name: ${{ env.ASSET_NAME }}_${{ env.ASSET_REVISION }}
-      #     path: ${{ env.PRODUCTS_PATH }}/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
-
-      # - name: Update artifact in latest-release
-      #   uses: ncipollo/release-action@v1.8.6
-      #   if: github.event_name == 'push' && endsWith( github.ref , 'Cog' )
-      #   with:
-      #     prerelease: true
-      #     allowUpdates: true
-      #     replacesArtifacts: true
-      #     artifacts: ${{ env.PRODUCTS_PATH }}/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
-      #     token: ${{ secrets.GITHUB_TOKEN }}
-      #     tag: ${{ matrix.mode == 'debug' && 'latest-debug-build' || matrix.mode == 'assert' && 'latest-assert-build' || 'latest-build' }}
-      #     body: ${{ github.event.head_commit.message }}
+      - name: Update artifact in latest-release
+        uses: ncipollo/release-action@v1.8.6
+        if: github.event_name == 'push' && endsWith( github.ref , 'Cog' )
+        with:
+          prerelease: true
+          allowUpdates: true
+          replacesArtifacts: true
+          artifacts: ${{ env.PRODUCTS_PATH }}/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ matrix.mode == 'debug' && 'latest-debug-build' || matrix.mode == 'assert' && 'latest-assert-build' || 'latest-build' }}
+          body: ${{ github.event.head_commit.message }}
