@@ -15,4 +15,5 @@ FileAttributesPlugin \
 BochsIA32Plugin \
 BochsX64Plugin \
 GdbARMPlugin \
-#SDL2DisplayPlugin
+VectorEnginePlugin \
+#SDL2DisplayPlugin \

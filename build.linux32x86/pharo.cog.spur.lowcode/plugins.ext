@@ -10,5 +10,6 @@ InternetConfigPlugin \
 SurfacePlugin \
 EventsHandlerPlugin \
 FileAttributesPlugin \
+VectorEnginePlugin \
 # SDL2DisplayPlugin \
 
