@@ -91,7 +91,7 @@ DASH_O:=-Fo
 OFLAGS= -Ot $(BUFFER_SECURITY)
 CFLAGS=	-MD -DLLP64=1 -DWIN64=1 -Z7 $(OFLAGS) \
 	-Dalloca=_alloca -Dhuge=my_huge \
-	-EHsc $(NOBUILTIN) $(WARNINGS)
+	-EHsc $(XCFLAGS) $(NOBUILTIN) $(WARNINGS)
 else ifdef Clang
 PRODUCTION_OFLAGS:=-Ox -Ob1 -Oi -Oy $(BUFFER_SECURITY)
 ASSERT_OFLAGS:=-Os -Oi- -Oy- $(BUFFER_SECURITY)
@@ -100,7 +100,7 @@ DASH_O:=-o
 OFLAGS= -Ot $(BUFFER_SECURITY)
 CFLAGS=	-MD -DLLP64=1 -DWIN64=1 -Z7 $(OFLAGS) \
 	-Dalloca=_alloca -Dhuge=my_huge \
-	-EHsc $(NOBUILTIN) $(WARNINGS)
+	-EHsc $(XCFLAGS) $(NOBUILTIN) $(WARNINGS)
 endif
 # Make all setjmp/longjmp varieties to our _setjmp/_longjmp in _setjmp-x86.asm
 JMPDEFS:=-Dsetjmp=_setjmp -Dlongjmp=_longjmp -D_siglongjmp=_longjmp
