@@ -17,4 +17,5 @@ ImmX11Plugin \
 XDisplayControlPlugin \
 DESPlugin \
 MD5Plugin \
-SHA2Plugin
+SHA2Plugin \
+VectorEnginePlugin \
