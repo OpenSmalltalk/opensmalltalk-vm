@@ -31,16 +31,19 @@ override VCINSTALLDIRSH:=$(shell echo "$(VCINSTALLDIR)" | sed 's/[()]/\\&/g')
 # C compiler settings assuming Visual C++ 2017 Community Edition
 #
 # Try and choose a compiler.  In order try:
-# If LLVM is installed in C:\Program FIles\LLVM use clang-cl.exe from there.
-# Otherwise use MSVC
+# If LLVM is installed in C:\Program Files\LLVM or C:\LLVM then
+# use clang-cl.exe from there. Otherwise use MSVC
 #
 
 $(info VCINSTALLDIR=$(VCINSTALLDIR))
 $(info VCINSTALLDIRSH=$(VCINSTALLDIRSH))
-#$(info wildcard VCINSTALLDIR $(wildcard $(VCINSTALLDIR)/.*))
-$(info wildcard  C:/Program\ Files/LLVM/bin/.* $(wildcard C:/Program\ Files/LLVM/bin/.*))
 
-ifneq ($(wildcard C:/Program\ Files/LLVM/bin/.*),)
+ifneq ($(wildcard C:/LLVM/bin/.*),)
+$(info LLVM/Clang detected)
+CC:="C:/LLVM/bin/clang-cl.exe"
+Clang:=Clang
+undefine MSVC
+else ifneq ($(wildcard C:/Program\ Files/LLVM/bin/.*),)
 $(info LLVM/Clang detected)
 CC:="C:/Program Files/LLVM/bin/clang-cl.exe"
 Clang:=Clang
