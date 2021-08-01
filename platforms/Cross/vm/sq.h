@@ -609,6 +609,8 @@ void *ioLoadModule(char *pluginName);
 #if SPURVM
 void *ioFindExternalFunctionInMetadataInto(char *lookupName, void *moduleHandle, sqInt *metadataPtr);
 # define ioFindExternalFunctionIn(ln,mh) ioFindExternalFunctionInMetadataInto(ln,mh,0)
+# define NullSpurMetadata -256 // -1 << 8, but shifting -ve values is undefined
+# define SpurPrimitiveMetadataType signed short
 #else
 void *ioFindExternalFunctionIn(char *lookupName, void *moduleHandle);
 #endif

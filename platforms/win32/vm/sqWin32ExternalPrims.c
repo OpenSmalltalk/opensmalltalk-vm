@@ -89,11 +89,11 @@ ioFindExternalFunctionInMetadataInto(char *lookupName, void *moduleHandle,
 		snprintf(buffer,256,"%sMetadata",lookupName);
 		metadataVarPtr = GetProcAddress(moduleHandle, buffer);
 		/* The Slang machinery assumes accessor depth defaults to -1, which
-		 * means "no accessor depth".  It saves space not outputting -1 depths.
+		 * means "no accessor depth".  It saves space not outputting null metadata.
 		 */
 		*metadataPtr = metadataVarPtr
-								? *(signed char *)metadataVarPtr
-								: -1;
+								? *(SpurPrimitiveMetadataType *)metadataVarPtr
+								: NullSpurMetadata;
 	}
 	return f;
 }
