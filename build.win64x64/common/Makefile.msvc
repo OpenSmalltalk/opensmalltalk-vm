@@ -12,6 +12,7 @@
 # VMSRCDIR the directory containing the interpreter, optional cogit and interp.h
 # CONFIGURATION configuration of VM to build from product, assert & debug
 # THREADING whether to build a multi-threaded FFI VM
+# COGDEFS supply any command-line defines to use, and may be null.
 
 .PHONY: all
 all: default
@@ -20,7 +21,7 @@ VM?=Squeak
 VM_NAME?=$(VM)
 CONFIGURATION=product
 THREADING=single
-export VM VM_NAME CONFIGURATION
+export VM VM_NAME CONFIGURATION COGDEFS
 
 # Is this a Croquet VM (defaults to OGL instead of D3D)?
 CROQUET:=-DCROQUET

@@ -21,6 +21,8 @@
 # The name of the VM to build, e.g. Squeak or "Newspeak Virtual Machine"
 # and its short name, e.g. Squeak or Newspeak, used to choose app icon files.
 
+export COGDEFS
+
 VM?=Squeak
 export VM
 SYSTEM?=$(VM)
