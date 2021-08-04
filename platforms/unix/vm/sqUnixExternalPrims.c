@@ -464,16 +464,17 @@ ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
 
 #if SPURVM
   if (fn && metadataPtr) {
-	signed short *metadataVarPtr;
+	SpurPrimitiveMetadataType *metadataVarPtr;
 
 	snprintf(buf+strlen(buf), sizeof(buf) - strlen(buf), "Metadata");
 	metadataVarPtr = dlsym(moduleHandle, buf);
 	/* The Slang machinery assumes accessor depth defaults to -1, which
-	 * means "no accessor depth".  It saves space not outputting -1 depths.
+	 * means "no accessor depth".  It saves space not outputting null metadata.
 	 */
 	*metadataPtr = metadataVarPtr
 							? *metadataVarPtr
-							: -1;
+							: NullSpurMetadata;
+	assert(validSpurPrimitiveMetadata(*metadataPtr));
   }
 #endif /* SPURVM */
 

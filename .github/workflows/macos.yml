@@ -1,0 +1,122 @@
+name: Build for macOS
+
+on:
+  push: # All branches, but appropriate paths only.
+    paths:
+      # This workflow spec and its support scripts
+      - '.github/workflows/macos.yml' 
+      - 'scripts/ci/*build.sh'
+      - 'deploy/**'
+      # Relevant sources for this platform
+      - 'build.macos*/**' # Makefile-based build scripts
+      - '*src/**' # Generated VMMaker sources (incl. plugins)
+      - 'platforms/Cross/**'
+      - 'platforms/iOS/**' # Note that 'platforms/Mac OS' is deprecated
+      # Skip changes in documentation artifacts
+      - '!**.md'
+      - '!**HowToBuild'
+  pull_request:
+    branches:
+      - Cog
+    paths-ignore:
+      - '**.md'
+      - '**HowToBuild'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Build new release candidate for tag"
+        required: true
+        default: YYYYMMDDHHMM
+
+jobs:
+  build:
+    strategy:
+      fail-fast: true
+      matrix:
+        arch: 
+          - macos64x64
+          # - macos32x86 # Might be deprecated in general
+        flavor:
+          - squeak.cog.spur
+          # - squeak.sista.spur # -Werror bc. decl. missing
+          - squeak.stack.spur
+          - pharo.cog.spur
+          # - pharo.sista.spur # -Werror bc. decl. missing
+          - pharo.stack.spur
+        mode:
+          - fast
+          - debug
+          - assert
+
+    runs-on: macos-latest
+    name: ${{ matrix.flavor }} for ${{ matrix.arch }}${{ matrix.mode == 'debug' && ' (DEBUG)' || matrix.mode == 'assert' && ' (ASSERT)' || '' }}
+    env:
+      ARCH: ${{ matrix.arch }}
+      FLAVOR: ${{ matrix.flavor }}
+      MODE: ${{ matrix.mode }}
+    steps:
+      - name: Checkout files
+        if: github.event_name != 'workflow_dispatch'
+        uses: actions/checkout@v2
+
+      - name: Checkout files for new release candidate
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/checkout@v2
+        with:
+          ref: refs/tags/${{ github.event.inputs.tag }}
+
+      - name: Restore build cache
+        uses: actions/cache@v2
+        with:
+          path: .thirdparty-cache
+          key: thirdparty-cache-macos
+
+      - name: Build VM
+        run: ./scripts/ci/actions_build.sh
+
+      - name: Sign VM
+        continue-on-error: true # Save unsigned build artifacts
+        run: ./deploy/sign-vm.sh
+        env:
+          SQUEAK_SIGN_PASSWORD: ${{ secrets.SQUEAK_SIGN_PASSWORD }}
+          SQUEAK_CERT_PASSWORD: ${{ secrets.SQUEAK_CERT_PASSWORD }}
+          SQUEAK_SIGN_IDENTITY: ${{ secrets.SQUEAK_SIGN_IDENTITY }}
+          PHARO_SIGN_PASSWORD: ${{ secrets.PHARO_SIGN_PASSWORD }}
+          PHARO_CERT_PASSWORD: ${{ secrets.PHARO_CERT_PASSWORD }}
+          PHARO_SIGN_IDENTITY: ${{ secrets.PHARO_SIGN_IDENTITY }}
+          NEWSPEAK_SIGN_PASSWORD: ${{ secrets.NEWSPEAK_SIGN_PASSWORD }}
+          NEWSPEAK_CERT_PASSWORD: ${{ secrets.NEWSPEAK_CERT_PASSWORD }}
+          NEWSPEAK_SIGN_IDENTITY: ${{ secrets.NEWSPEAK_SIGN_IDENTITY }}
+
+      - name: Pack VM
+        run: ./deploy/pack-vm.sh
+
+      - name: Store artifact w/ revision
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ env.ASSET_NAME }}_${{ env.ASSET_REVISION }}
+          path: products/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
+
+      - name: Update artifact in latest-build
+        uses: ncipollo/release-action@v1.8.6
+        if: github.event_name == 'push' && endsWith( github.ref , 'Cog' )
+        with:
+          prerelease: true
+          allowUpdates: true
+          replacesArtifacts: true
+          artifacts: products/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ matrix.mode == 'debug' && 'latest-debug-build' || matrix.mode == 'assert' && 'latest-assert-build' || 'latest-build' }}
+          body: ${{ github.event.head_commit.message }}
+
+      - name: Deploy artifact as new release candidate
+        uses: ncipollo/release-action@v1.8.6
+        if: github.event_name == 'workflow_dispatch'
+        with:
+          prerelease: true # release candidate
+          allowUpdates: true
+          replacesArtifacts: true
+          artifacts: products/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.event.inputs.tag }}
+          body: ${{ github.event.head_commit.message }}

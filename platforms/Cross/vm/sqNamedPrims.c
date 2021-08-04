@@ -167,8 +167,9 @@ findInternalFunctionIn(char *functionName, char *pluginName
       DPRINTF(("found\n"));
 #if SPURVM
 	  if (metadataPtr)
-		*metadataPtr = ((signed char *)function)[fnameLength+1] << 8
-					 + ((unsigned char *)function)[fnameLength+2];
+		*metadataPtr = (SpurPrimitiveMetadataType)
+						((((signed char *)function)[fnameLength+1] << 8)
+						+ ((unsigned char *)function)[fnameLength+2]);
 #endif
       return exports[index].primitiveAddress;
     }

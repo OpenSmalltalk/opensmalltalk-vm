@@ -26,7 +26,7 @@ extern void* preMessageHook;
 extern int fUseOpenGL;
 
 #define XFN(export) {"", #export, (void*)export},
-#define XFND(export,depth) {"", #export "\000" depth, (void*)export},
+#define XFNDF(export,depth,flags) {"", #export "\000" depth flags, (void*)export},
 #define XVAR(export) {"", #export, &export},
 
 void *os_exports[][3] = {
@@ -39,14 +39,14 @@ void *os_exports[][3] = {
 #ifndef NO_NETWORK
 	XFN(win32DebugPrintSocketState)
 #endif
-	XFND(primitivePluginBrowserReady,"\377")
-	XFND(primitivePluginRequestURLStream,"\001")
-	XFND(primitivePluginRequestURL,"\001")
-	XFND(primitivePluginPostURL,"\001")
-	XFND(primitivePluginRequestFileHandle,"\000")
-	XFND(primitivePluginDestroyRequest,"\000")
-	XFND(primitivePluginRequestState,"\000")
-	XFND(primitiveDnsInfo,"\377")
+	XFNDF(primitivePluginBrowserReady,"\377","\000")
+	XFNDF(primitivePluginRequestURLStream,"\001","\000")
+	XFNDF(primitivePluginRequestURL,"\001","\000")
+	XFNDF(primitivePluginPostURL,"\001","\000")
+	XFNDF(primitivePluginRequestFileHandle,"\000","\000")
+	XFNDF(primitivePluginDestroyRequest,"\000","\000")
+	XFNDF(primitivePluginRequestState,"\000","\000")
+	XFNDF(primitiveDnsInfo,"\377","\000")
 	XFN(printf)
 	XVAR(stWindow)
 	XVAR(firstMessageHook)

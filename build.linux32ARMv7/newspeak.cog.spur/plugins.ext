@@ -1,0 +1,3 @@
+# Copied, perhaps edited, from ../../../nscogsrc/examplePlugins.ext
+EXTERNAL_PLUGINS = \
+SqueakSSL
