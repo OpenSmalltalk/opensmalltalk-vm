@@ -15,7 +15,7 @@
 #include <Windows.h>
 #include <stdio.h>
 #include "sq.h"
-#import "sqAssert.h"
+#include "sqAssert.h"
 
 static HANDLE
 tryLoading(TCHAR *prefix, TCHAR *baseName, TCHAR *postfix)
