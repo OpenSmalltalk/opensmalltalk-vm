@@ -4,20 +4,27 @@ This is the README for the Cog Git source tree:
 	https://github.com/OpenSmalltalk/opensmalltalk-vm
 
 [![Download stable](https://img.shields.io/badge/download-stable-green.svg)](https://github.com/OpenSmalltalk/opensmalltalk-vm/releases/latest)
-[![Download bleedingEdge](https://img.shields.io/badge/download-bleeding%20edge-blue.svg)](https://bintray.com/opensmalltalk/vm/cog/_latestVersion#files)
-[![Unix Build Status](https://travis-ci.com/OpenSmalltalk/opensmalltalk-vm.svg?branch=Cog)](https://travis-ci.com/OpenSmalltalk/opensmalltalk-vm)
-[![Windows Build status](https://ci.appveyor.com/api/projects/status/ecrpcrqt844n8lkm/branch/Cog?svg=true)](https://ci.appveyor.com/project/OpenSmalltalk/vm/branch/Cog)  
+[![Download latestBuild](https://img.shields.io/badge/download-latest%20build-blue.svg)](https://github.com/OpenSmalltalk/opensmalltalk-vm/releases/tag/latest-build)
+[![Download latestAssertBuild](https://img.shields.io/badge/download-latest%20assert%20build-lightgrey.svg)](https://github.com/OpenSmalltalk/opensmalltalk-vm/releases/tag/latest-assert-build)
+[![Download latestDebugBuild](https://img.shields.io/badge/download-latest%20debug%20build-lightgrey.svg)](https://github.com/OpenSmalltalk/opensmalltalk-vm/releases/tag/latest-debug-build)
+
+[![Build for macOS](https://github.com/OpenSmalltalk/opensmalltalk-vm/actions/workflows/macos.yml/badge.svg)](https://github.com/OpenSmalltalk/opensmalltalk-vm/actions/workflows/macos.yml)
+[![Build for Windows](https://github.com/OpenSmalltalk/opensmalltalk-vm/actions/workflows/win.yml/badge.svg)](https://github.com/OpenSmalltalk/opensmalltalk-vm/actions/workflows/win.yml)
+[![Build for Linux (x86)](https://github.com/OpenSmalltalk/opensmalltalk-vm/actions/workflows/linux.yml/badge.svg)](https://github.com/OpenSmalltalk/opensmalltalk-vm/actions/workflows/linux.yml)
+[![Build for Linux (ARM)](https://github.com/OpenSmalltalk/opensmalltalk-vm/actions/workflows/linux-arm.yml/badge.svg)](https://github.com/OpenSmalltalk/opensmalltalk-vm/actions/workflows/linux-arm.yml)
 
 [![DOI](https://zenodo.org/badge/59481716.svg)](https://zenodo.org/badge/latestdoi/59481716)
 
 
-Builds are tested automatically on each commit on Travis and Appveyor, for
-Windows 32, Mac OS X 32 and 64, and on Linux 32, 64, and ARM. Squeak, and Pharo
-VMs are built with and without JIT, with and without Spur, and with and
-without Sista, as available per platform. All build artifacts are uploaded to
-Bintray.  If you wish to commit *without* triggering a build, for example if you
-were to only edit this documentation, then if you add **[ci skip]** somewhere in
-your commit message, Travis and Appveyor will *not* build that commit.
+Builds are tested automatically on each commit, for Windows, macOS, and Linux.
+Windows and Linux also have 32-bit targets. Squeak and Pharo VMs are built with 
+and without JIT, with and without Spur, and with and without Sista, as available
+per platform. All build artifacts remain accessible for 90 days for each
+workflow run; the latest artifacts are uploaded to a dedicated release tag
+(e.g., "latest-build"), overwritten with each successful run. If you wish to
+commit *without* triggering a build, for example if you were to only edit this 
+documentation, then if you add **[ci skip]** somewhere in your commit message, 
+no workflow run will be started for that commit.
 
 ### Important notice for Developers:
 We rely on source file substitutions in the src tree, specifically,
