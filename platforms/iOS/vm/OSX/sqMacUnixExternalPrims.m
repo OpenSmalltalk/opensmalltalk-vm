@@ -103,10 +103,14 @@ tryLoadingInternals(NSString *libNameString)
 		if ((handle = dlopen(libName, RTLD_NOW | RTLD_GLOBAL)))
 			return handle;
 		why = dlerror();
+#if PRINT_DL_ERRORS // In practice these reasons are too important to hide
+		fprintf(stderr, "ioLoadModule(%s):\t%s\n", libName, why);
+#else
 		if (thePListInterface.SqueakDebug)
 			fprintf(stderr, "ioLoadModule(%s):\n  %s\n", libName, why);
 		else if (strstr(why,"undefined symbol"))
 			fprintf(stderr, "tryLoadingInternals: dlopen: %s\n", why);
+#endif
 	}
 	return NULL;
 }
@@ -187,23 +191,38 @@ tryLoadingVariations(NSString *dirNameString, char *moduleName)
 static void *
 tryLoadingLinked(char *libName)
 {
+	struct stat buf;
+	void        *handle;
+
 #if !PharoVM
 	if (thePListInterface.SqueakPluginsBuiltInOrLocalOnly)
 		return NULL;
 #endif
 
-	void *handle = dlopen(libName, RTLD_NOW | RTLD_GLOBAL);
-	DPRINTF((stderr, __FILE__ " %d tryLoadingLinked dlopen(%s) = %p\n", __LINE__, libName, handle));
+	if (stat(libName, &buf)) {
+		dprintf((stderr, "tryLoadingLinked(%s) does not exist\n", libName));
+		return 0;
+	}
+	else if (S_ISDIR(buf.st_mode)) {
+		dprintf((stderr, "tryLoadingLinked(%s) is a directory\n", libName));
+		return 0;
+	}
+
+	handle = dlopen(libName, RTLD_NOW | RTLD_GLOBAL);
 #if DEBUG
 	if (handle)
 		printf("%s: loaded plugin `%s'\n", exeName, libName);
 #endif
 	if (!handle) {
 		const char *why = dlerror();
+#if PRINT_DL_ERRORS // In practice these reasons are too important to hide
+		fprintf(stderr, "tryLoadingLinked(%s):\t%s\n", libName, why);
+#else
 		if (thePListInterface.SqueakDebug)
 			fprintf(stderr, "tryLoadingLinked(%s):\n  %s\n", libName, why);
 		else if (strstr(why,"undefined symbol"))
 			fprintf(stderr, "tryLoadingLinked: dlopen: %s\n", why);
+#endif
 	}
 	return handle;
 }
@@ -227,7 +246,11 @@ ioLoadModuleRaw(char *pluginName)
 		handle = dlopen(0, RTLD_NOW | RTLD_GLOBAL);
 		if (!handle) {
 			char * why = dlerror();
+#if PRINT_DL_ERRORS // In practice these reasons are too important to hide
+			fprintf(stderr, "ioLoadModule(<intrinsic>): %s\n", why);
+#else
 			dprintf((stderr, "ioLoadModule(<intrinsic>): %s\n", why));
+#endif
 			return NULL;
 		}
 		dprintf((stderr, "loaded: <intrinsic>\n"));
@@ -407,6 +430,10 @@ sqInt ioFreeModule(void *moduleHandle)
 		return 1;
 
 	char *why = dlerror();
+#if PRINT_DL_ERRORS // In practice these reasons are too important to hide
+	fprintf(stderr, "ioFreeModule(%ld): %s\n", (long) moduleHandle, why);
+#else
 	dprintf((stderr, "ioFreeModule(%ld): %s\n", (long) moduleHandle, why));
+#endif
 	return 0;
 }
