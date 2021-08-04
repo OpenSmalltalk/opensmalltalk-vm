@@ -31,16 +31,19 @@ override VCINSTALLDIRSH:=$(shell echo "$(VCINSTALLDIR)" | sed 's/[()]/\\&/g')
 # C compiler settings assuming Visual C++ 2017 Community Edition
 #
 # Try and choose a compiler.  In order try:
-# If LLVM is installed in C:\Program FIles\LLVM use clang-cl.exe from there.
-# Otherwise use MSVC
+# If LLVM is installed in C:\Program Files\LLVM or C:\LLVM then
+# use clang-cl.exe from there. Otherwise use MSVC
 #
 
 $(info VCINSTALLDIR=$(VCINSTALLDIR))
 $(info VCINSTALLDIRSH=$(VCINSTALLDIRSH))
-#$(info wildcard VCINSTALLDIR $(wildcard $(VCINSTALLDIR)/.*))
-$(info wildcard  C:/Program\ Files/LLVM/bin/.* $(wildcard C:/Program\ Files/LLVM/bin/.*))
 
-ifneq ($(wildcard C:/Program\ Files/LLVM/bin/.*),)
+ifneq ($(wildcard C:/LLVM/bin/.*),)
+$(info LLVM/Clang detected)
+CC:="C:/LLVM/bin/clang-cl.exe"
+Clang:=Clang
+undefine MSVC
+else ifneq ($(wildcard C:/Program\ Files/LLVM/bin/.*),)
 $(info LLVM/Clang detected)
 CC:="C:/Program Files/LLVM/bin/clang-cl.exe"
 Clang:=Clang
@@ -88,7 +91,7 @@ DASH_O:=-Fo
 OFLAGS= -Ot $(BUFFER_SECURITY)
 CFLAGS=	-MD -DLLP64=1 -DWIN64=1 -Z7 $(OFLAGS) \
 	-Dalloca=_alloca -Dhuge=my_huge \
-	-EHsc $(NOBUILTIN) $(WARNINGS)
+	-EHsc $(XCFLAGS) $(NOBUILTIN) $(WARNINGS)
 else ifdef Clang
 PRODUCTION_OFLAGS:=-Ox -Ob1 -Oi -Oy $(BUFFER_SECURITY)
 ASSERT_OFLAGS:=-Os -Oi- -Oy- $(BUFFER_SECURITY)
@@ -97,7 +100,7 @@ DASH_O:=-o
 OFLAGS= -Ot $(BUFFER_SECURITY)
 CFLAGS=	-MD -DLLP64=1 -DWIN64=1 -Z7 $(OFLAGS) \
 	-Dalloca=_alloca -Dhuge=my_huge \
-	-EHsc $(NOBUILTIN) $(WARNINGS)
+	-EHsc $(XCFLAGS) $(NOBUILTIN) $(WARNINGS)
 endif
 # Make all setjmp/longjmp varieties to our _setjmp/_longjmp in _setjmp-x86.asm
 JMPDEFS:=-Dsetjmp=_setjmp -Dlongjmp=_longjmp -D_siglongjmp=_longjmp

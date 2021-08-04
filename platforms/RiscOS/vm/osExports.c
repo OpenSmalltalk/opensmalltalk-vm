@@ -28,7 +28,7 @@
 #include <stdio.h>
 /* duh ... this is ugly */
 #define XFN(export) {"", #export, (void*)export},
-#define XFND(export,depth) {"", #export "\000" depth, (void*)export},
+#define XFNDF(export,depth) {"", #export "\000" depth flags, (void*)export},
 extern void  setSocketPollFunction(int spf );
 void *os_exports[][3] = {
    XFN(setSocketPollFunction)

@@ -14,8 +14,8 @@
 
 #include <Windows.h>
 #include <stdio.h>
-#include <assert.h>
 #include "sq.h"
+#include "sqAssert.h"
 
 static HANDLE
 tryLoading(TCHAR *prefix, TCHAR *baseName, TCHAR *postfix)
@@ -89,11 +89,12 @@ ioFindExternalFunctionInMetadataInto(char *lookupName, void *moduleHandle,
 		snprintf(buffer,256,"%sMetadata",lookupName);
 		metadataVarPtr = GetProcAddress(moduleHandle, buffer);
 		/* The Slang machinery assumes accessor depth defaults to -1, which
-		 * means "no accessor depth".  It saves space not outputting -1 depths.
+		 * means "no accessor depth".  It saves space not outputting null metadata.
 		 */
 		*metadataPtr = metadataVarPtr
-								? *(signed char *)metadataVarPtr
-								: -1;
+								? *(SpurPrimitiveMetadataType *)metadataVarPtr
+								: NullSpurMetadata;
+		assert(validSpurPrimitiveMetadata(*metadataPtr));
 	}
 	return f;
 }

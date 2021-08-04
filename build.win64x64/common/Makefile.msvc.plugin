@@ -11,6 +11,11 @@
 #
 # EXCLUDESRC 	 defines patterns of source files to not compile, e.g. %/dump.c
 #
+# The following variables can be defined to extend the compilation flags.
+#
+# XCFLAGS    	 adds additional compilation flags after all other C preprocessor define flags
+# XINC    	 adds additional include flags after all other INCLUDE flags
+#
 # The following are the three key locations (set via invocation):
 # BUILDDIR: Where is the root of the build tree?
 # PLATDIR: Where is the root of the platforms tree?

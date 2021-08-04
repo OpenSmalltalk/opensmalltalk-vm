@@ -33,6 +33,7 @@
 
 #include <stdio.h>
 #include "sq.h"
+#include "sqAssert.h"
 
 int sqVMOptionTraceModuleLoading = 0;
 
@@ -155,20 +156,20 @@ ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
     function = getModuleSymbol(moduleHandle, lookupName);
 
 #if SPURVM
-    if (function && metadataPtr)
-    {
+    if (function && metadataPtr) {
         char buf[256];
-        signed short *metadataVarPtr;
+        SpurPrimitiveMetadataType *metadataVarPtr;
 
         strcpy(buf, lookupName);
     	snprintf(buf+strlen(buf), sizeof(buf) - strlen(buf), "Metadata");
     	metadataVarPtr = getModuleSymbol(moduleHandle, buf);
     	/* The Slang machinery assumes accessor depth defaults to -1, which
-    	 * means "no accessor depth".  It saves space not outputting -1 depths.
+    	 * means "no accessor depth".  It saves space not outputting null metadata.
     	 */
     	*metadataPtr = metadataVarPtr
     							? *metadataVarPtr
-    							: -1;
+    							: NullSpurMetadata;
+		assert(validSpurPrimitiveMetadata(*metadataPtr));
     }
 #endif /* SPURVM */
     return function;

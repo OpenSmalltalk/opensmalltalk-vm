@@ -1109,13 +1109,13 @@ primitiveSetVMSDL2Input()
 }
 
 #define XFN(export) {"", #export, (void*)export},
-#define XFND(export,depth) {"", #export "\000" depth, (void*)export},
+#define XFNDF(export,depth) {"", #export "\000" depth flags, (void*)export},
 
 static void *sdl2_exports[][3]=
 {
-    XFND(primitiveIsVMDisplayUsingSDL2, "\001")
-    XFND(primitivePollVMSDL2Event, "\001")
-    XFND(primitiveSetVMSDL2Input, "\001")
+    XFNDF(primitiveIsVMDisplayUsingSDL2, "\001","\000")
+    XFNDF(primitivePollVMSDL2Event, "\001","\000")
+    XFNDF(primitiveSetVMSDL2Input, "\001","\000")
     { 0, 0, 0 }
 };
 
