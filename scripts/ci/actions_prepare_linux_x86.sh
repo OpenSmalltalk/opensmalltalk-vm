@@ -33,7 +33,6 @@ if [[ "${ARCH}" = "linux64x64" ]]; then
 elif [[ "${ARCH}" = "linux32x86" ]]; then
     sudo dpkg --add-architecture i386
     sudo apt-get update -y
-    sudo apt-get remove -q -y gvfs-daemons
     sudo apt-get install -yq --no-install-suggests --no-install-recommends --allow-unauthenticated \
             devscripts \
             libc6-dev:i386 \
@@ -45,6 +44,8 @@ elif [[ "${ARCH}" = "linux32x86" ]]; then
             libx11-dev:i386 \
             libsm-dev:i386 \
             libice-dev:i386 \
+            libgl1-mesa-glx:i386 \
+            libgl1-mesa-dev:i386 \
             libxext-dev:i386 \
             libxrender-dev:i386 \
             libglapi-mesa:i386 \
