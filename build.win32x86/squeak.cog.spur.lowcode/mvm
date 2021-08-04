@@ -23,13 +23,13 @@ fi
 if ../../scripts/checkSCCSversion ; then exit 1; fi
 if [ -n "$D" ]; then
 	rm -rf builddbg/vm/*.exe
-	make $@ debug 2>&1 | tee LOGD
+	make $@ debug 2>&1 | tee LOGD ; test ${PIPESTATUS[0]} -eq 0
 fi
 if [ -n "$A" ]; then
 	rm -rf buildast/vm/*.exe
-	make $@ assert 2>&1 | tee LOGA
+	make $@ assert 2>&1 | tee LOGA ; test ${PIPESTATUS[0]} -eq 0
 fi
 if [ -n "$F" ]; then
 	rm -rf build/vm/*.exe
-	make $@ 2>&1 | tee LOGF
+	make $@ 2>&1 | tee LOGF ; test ${PIPESTATUS[0]} -eq 0
 fi
