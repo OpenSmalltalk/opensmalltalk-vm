@@ -103,7 +103,7 @@ jobs:
 
       - name: Update artifact in latest-release
         uses: ncipollo/release-action@v1.8.6
-        if: github.event_name == 'push' && endsWith( github.ref , 'Cog' )
+        if: github.event_name == 'schedule' || (github.event_name == 'push' && endsWith( github.ref , 'Cog' ))
         with:
           prerelease: true
           allowUpdates: true
