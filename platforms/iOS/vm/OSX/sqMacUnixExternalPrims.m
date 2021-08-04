@@ -43,6 +43,7 @@
 #import "sqSqueakOSXInfoPlistInterface.h"
 #import "SqueakOSXAppDelegate.h"
 #import "sq.h"
+#import "sqAssert.h"
 
 extern SqueakOSXAppDelegate *gDelegateApp;
 #define thePListInterface ((sqSqueakOSXInfoPlistInterface *)gDelegateApp.squeakApplication.infoPlistInterfaceLogic)
@@ -390,6 +391,7 @@ ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
 	*metadataPtr = metadataVarPtr
 							? *metadataVarPtr
 							: NullSpurMetadata;
+	assert(validSpurPrimitiveMetadata(*metadataPtr));
   }
 #endif /* SPURVM */
 
