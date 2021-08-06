@@ -199,6 +199,9 @@ tryLoadingLinked(char *libName)
 		return NULL;
 #endif
 
+#if 0 // This seems like the right thing to do but it breaks ioLoadModule
+	  // ioLoadModule for system dylibs found along the system path(2).
+	  // Instead, filter-out noise errors below
 	if (stat(libName, &buf)) {
 		dprintf((stderr, "tryLoadingLinked(%s) does not exist\n", libName));
 		return 0;
@@ -207,6 +210,7 @@ tryLoadingLinked(char *libName)
 		dprintf((stderr, "tryLoadingLinked(%s) is a directory\n", libName));
 		return 0;
 	}
+#endif
 
 	handle = dlopen(libName, RTLD_NOW | RTLD_GLOBAL);
 #if DEBUG
@@ -215,6 +219,15 @@ tryLoadingLinked(char *libName)
 #endif
 	if (!handle) {
 		const char *why = dlerror();
+		// filter out failures due to non-existent libraries
+		if (stat(libName, &buf)) {
+			dprintf((stderr, "tryLoadingLinked(%s) does not exist\n", libName));
+			return 0;
+		}
+		else if (S_ISDIR(buf.st_mode)) {
+			dprintf((stderr, "tryLoadingLinked(%s) is a directory\n", libName));
+			return 0;
+		}
 #if PRINT_DL_ERRORS // In practice these reasons are too important to hide
 		fprintf(stderr, "tryLoadingLinked(%s):\t%s\n", libName, why);
 #else
