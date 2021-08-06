@@ -14238,6 +14238,10 @@ dexSystem (sim_cpu *cpu)
 	do_MSR_reg (cpu);
       else if (INSTR (21, 19) == 0 && INSTR (15, 12) == 0x4)
 	do_MSR_immediate (cpu);
+#if COG // MRS <Xt>, CNTVCT_EL0 (Counter-timer Virtual Count reg)  p D13-3774
+      else if (INSTR (21, 19) == 7 && INSTR (15, 12) == 0xE && rt < 31)
+		cpu->gr[rt].u64 = cpu->cntvct;
+#endif
       else
 	HALT_NYI;
       return;
@@ -14371,6 +14375,7 @@ aarch64_step (sim_cpu *cpu)
   aarch64_set_next_PC (cpu, pc + 4);
 
 #if COG
+  cpu->cntvct++;
   aarch64_get_instr (cpu) = aarch64_get_mem_u32(cpu, pc);
 #else
   /* Code is always little-endian.  */
