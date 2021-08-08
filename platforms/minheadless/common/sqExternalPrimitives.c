@@ -33,6 +33,7 @@
 
 #include <stdio.h>
 #include "sq.h"
+#include "sqAssert.h"
 
 int sqVMOptionTraceModuleLoading = 0;
 
@@ -168,6 +169,7 @@ ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
     	*metadataPtr = metadataVarPtr
     							? *metadataVarPtr
     							: NullSpurMetadata;
+		assert(validSpurPrimitiveMetadata(*metadataPtr));
     }
 #endif /* SPURVM */
     return function;

@@ -14,8 +14,8 @@
 
 #include <Windows.h>
 #include <stdio.h>
-#include <assert.h>
 #include "sq.h"
+#include "sqAssert.h"
 
 static HANDLE
 tryLoading(TCHAR *prefix, TCHAR *baseName, TCHAR *postfix)
@@ -94,6 +94,7 @@ ioFindExternalFunctionInMetadataInto(char *lookupName, void *moduleHandle,
 		*metadataPtr = metadataVarPtr
 								? *(SpurPrimitiveMetadataType *)metadataVarPtr
 								: NullSpurMetadata;
+		assert(validSpurPrimitiveMetadata(*metadataPtr));
 	}
 	return f;
 }

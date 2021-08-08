@@ -474,6 +474,7 @@ ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
 	*metadataPtr = metadataVarPtr
 							? *metadataVarPtr
 							: NullSpurMetadata;
+	assert(validSpurPrimitiveMetadata(*metadataPtr));
   }
 #endif /* SPURVM */
 

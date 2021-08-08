@@ -45,6 +45,9 @@ struct _sim_cpu
 
   uint64_t     tpidr;  /* Thread pointer id.  */
 
+#if COG
+  uint64_t cntvct;
+#endif
   sim_cpu_base base;
 };
 
