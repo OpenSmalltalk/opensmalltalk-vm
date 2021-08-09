@@ -13,6 +13,7 @@
 */
 #if COG
 # include "GdbARMPlugin.h"
+extern uintptr_t    minReadAddress, minWriteAddress;
 #endif
 
 /*  armvirt.c -- ARMulator virtual memory interace:  ARM6 Instruction Emulator.
@@ -77,18 +78,14 @@ int SWI_vector_installed = FALSE;
 static ARMword
 GetWord (ARMul_State * state, ARMword address, int check)
 {
-  if(address < minReadAddress || address + 4 > (state->MemSize))
-  {
+  if (address < minReadAddress || address + 4 > (state->MemSize)) {
     //raise memory access error
     state->EndCondition = MemoryBoundsError;
     state->Emulate = FALSE;
-    gdb_log_printf(NULL, "Illegal memory read at %#p. ", address);
+    // gdb_log_printf(NULL, "Illegal memory read at %#p. ", address);
     return 0;
   }
-  else
-  {
-    return *((ARMword*) (state->MemDataPtr + (address & ~3)));
-  }
+  return *((ARMword*) (state->MemDataPtr + (address & ~3)));
 }
 
 /***************************************************************************\
@@ -98,16 +95,13 @@ GetWord (ARMul_State * state, ARMword address, int check)
 static void
 PutWord (ARMul_State * state, ARMword address, ARMword data, int check)
 {
-  if(address < minWriteAddress || address + 4 > (state->MemSize))
-  {
+  if (address < minWriteAddress || address + 4 > (state->MemSize)) {
     state->Emulate = FALSE;
     state->EndCondition = MemoryBoundsError;
-    gdb_log_printf(NULL, "Illegal memory write at %#p. ", address);
+    // gdb_log_printf(NULL, "Illegal memory write at %#p. ", address);
   } 
   else
-  {
     *((ARMword*) (state->MemDataPtr + (address & ~3))) = data;
-  }
 }
 
 /***************************************************************************\
