@@ -288,7 +288,7 @@ void BX_CPU_C::cpu_single_step()
 #endif // BX_SUPPORT_ICACHE
 
 #if BX_SUPPORT_TRACE_CACHE
-# error "COG assumes no BX_SUPPORT_TRACE_CACHE
+# error "COG assumes no BX_SUPPORT_TRACE_CACHE"
 #endif
 
       // decoding instruction completed -> continue with execution

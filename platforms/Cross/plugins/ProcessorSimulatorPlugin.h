@@ -5,6 +5,7 @@
  */
 
 #include <sys/types.h>
+#include <stdint.h>
 
 #define NoError 0
 #define ExecutionError 1
