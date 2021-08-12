@@ -1,4 +1,4 @@
-XCPPFLAGS=	-DUSE_BOCHS_CONFIG_H=1 \
+XCPPFLAGS=	-fPIC -DUSE_BOCHS_CONFIG_H=1 \
 			-I../../../bochsx64 \
 			-I$(topdir)/processors/IA32/bochs \
 			-I$(topdir)/processors/IA32/bochs/instrument/stubs
