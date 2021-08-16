@@ -54,7 +54,7 @@ sqInt dropShutdown(void) {
 
 char *dropRequestFileName(sqInt dropIndex) {
 	NSURL *dragURIAtIndex = [gDelegateApp dragURIAtIndex: dropIndex];
-	if(!dragURIAtIndex || !dragURIAtIndex.fileURL)
+	if (!dragURIAtIndex || !dragURIAtIndex.fileURL)
 		return NULL;
 	
 	return (char *) [dragURIAtIndex.path UTF8String];
@@ -62,7 +62,7 @@ char *dropRequestFileName(sqInt dropIndex) {
 
 char *dropRequestURI(sqInt dropIndex) {
 	NSURL *dragURIAtIndex = [gDelegateApp dragURIAtIndex: dropIndex];
-	if(!dragURIAtIndex)
+	if (!dragURIAtIndex)
 		return NULL;
 	
 	return (char *) [dragURIAtIndex.absoluteString UTF8String];
@@ -75,10 +75,10 @@ sqInt dropRequestFileHandle(sqInt dropIndex) {
 
 	char *fileName = dropRequestFileName(dropIndex);
 	if (!fileName)
-		return 0;
+		return interpreterProxy->nilObject();
 
 	void *fn = interpreterProxy->ioLoadFunctionFrom("fileOpenNamesizewritesecure", "FilePlugin");
-	if (fn == NULL) {
+	if (!fn) {
 		/* begin primitiveFail */
         interpreterProxy->success(false);
 		return 0;
