@@ -24,11 +24,13 @@
 // Read the image from the given file starting at the given image offset
 size_t readImageFromFileHeapSizeStartingAt(sqImageFile f, usqInt desiredHeapSize, squeakFileOffsetType imageOffset);
 
+static int sIFOMode;
+
 static inline sqImageFile
 sqImageFileOpen(const char *fileName, const char *mode)
 {
 	int fd = open(fileName,
-				  !strcmp(mode,"rb") ? O_RDONLY : O_RDWR+O_CREAT,
+				  sIFOMode = !strcmp(mode,"rb") ? O_RDONLY : O_RDWR+O_CREAT,
 				  0666);
 	if (fd < 0) {
 		perror("sqImageFileOpen open");
@@ -41,11 +43,10 @@ static inline void
 sqImageFileClose(sqImageFile f)
 {
 extern sqInt failed(void);
-	squeakFileOffsetType current_pos;
 
 	if (!failed()
-	 && (current_pos = lseek(f, 0, SEEK_CUR)) != (squeakFileOffsetType)-1
-	 && ftruncate(f,current_pos) < 0)
+	 && sIFOMode == O_RDWR+O_CREAT
+	 && ftruncate(f,lseek(f, 0, SEEK_CUR)) < 0)
 		perror("sqImageFileClose ftruncate");
 	/* Don't exit; if snapshotting, continuing is probably the best course */
 	if (close(f) < 0)
