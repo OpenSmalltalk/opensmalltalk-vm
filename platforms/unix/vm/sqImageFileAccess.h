@@ -41,9 +41,11 @@ static inline void
 sqImageFileClose(sqImageFile f)
 {
 extern sqInt failed(void);
+	squeakFileOffsetType current_pos;
 
 	if (!failed()
-	 && ftruncate(f,lseek(f, 0, SEEK_CUR)) < 0)
+	 && (current_pos = lseek(f, 0, SEEK_CUR)) != (squeakFileOffsetType)-1
+	 && ftruncate(f,current_pos) < 0)
 		perror("sqImageFileClose ftruncate");
 	/* Don't exit; if snapshotting, continuing is probably the best course */
 	if (close(f) < 0)
