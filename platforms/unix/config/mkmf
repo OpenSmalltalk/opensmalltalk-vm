@@ -74,8 +74,11 @@ mkmf() {
   echo "" > ${excluded}
   # collect source and header files, support "vm" and "vm.*" dirs
   for x in ${dirs}; do
-    d=${x}/${name} # e.g, platforms/unix/vm
-    if test ! -d ${d}; then d=${x}; fi # e.g., src/vm.64bit.cog.spur
+    d=${x}/${name}
+    if [ "${name}" = "vm" ]; then
+      # e.g, platforms/unix/vm would be okay but src/vm.64bit.cog.spur/vm is not
+      if test ! -d ${d}; then d=${x}; fi
+    fi
     if test -d ${d}; then
       dd=${d}
       if test -f ${d}/mkmf.subdirs; then

@@ -11735,8 +11735,8 @@ fi
 if test ! -d "${topdir}/${vmpsrc}"; then
   if test -d "${topdir}/platforms/unix/${vmpsrc}"; then
     vmpdir="${topdir}/platforms/unix/${vmpsrc}"
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: using built-in pligins directory" >&5
-$as_echo "using built-in pligins directory" >&6; }
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: using built-in plugins directory" >&5
+$as_echo "using built-in plugins directory" >&6; }
   fi
 fi
 

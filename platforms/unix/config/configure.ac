@@ -89,7 +89,7 @@ fi
 if test ! -d "${topdir}/${vmpsrc}"; then
   if test -d "${topdir}/platforms/unix/${vmpsrc}"; then
     vmpdir="${topdir}/platforms/unix/${vmpsrc}"
-    AC_MSG_RESULT([using built-in pligins directory])
+    AC_MSG_RESULT([using built-in plugins directory])
   fi
 fi
 
