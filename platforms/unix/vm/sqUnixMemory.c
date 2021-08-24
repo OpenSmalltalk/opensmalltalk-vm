@@ -427,7 +427,7 @@ allocateJITMemory(usqInt *desiredSize)
 		exit(1);
 	}
 	// Note the address for sqAllocateMemory above
-	endOfJITZone = (char *)result + *desiredSize;
+	// endOfJITZone = (char *)result + *desiredSize;
 
 	return result;
 }

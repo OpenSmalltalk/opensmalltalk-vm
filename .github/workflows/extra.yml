@@ -1,0 +1,105 @@
+name: Extra Monthly Builds
+
+on:
+  schedule:
+    - cron: '0 0 1 * *' # Build on the 1st of every month at midnight
+  workflow_dispatch:
+    inputs:
+      should-deploy:
+        description: 'Deploy on success'
+        required: true
+        default: "true" # No boolean support at the moment
+
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false # let them finish bc. different platforms
+      matrix:
+        arch: 
+          - { name: win64x64, os: windows-latest }
+          - { name: win32x86, os: windows-latest }
+          - { name: linux64x64, os: ubuntu-latest }
+          - { name: linux32x86, os: ubuntu-latest }
+          - { name: macos64x64, os: macos-latest }
+          # - { name: macos32x86, os: macos-latest }
+
+        flavor:
+          # Only newsqueak.* builds are fully prepared for all platforms
+          - newspeak.cog.spur
+          - newspeak.stack.spur
+
+        include:
+          - arch: { name: win32x86, os: windows-latest }
+            flavor: squeak.cog.v3
+          - arch: { name: win32x86, os: windows-latest }
+            flavor: squeak.stack.v3
+          - arch: { name: win32x86, os: windows-latest }
+            flavor: squeak.cog.spur.lowcode
+          # - arch: { name: win32x86, os: windows-latest }
+          #   flavor: pharo.cog.spur.lowcode
+
+          - arch: { name: linux32x86, os: ubuntu-latest }
+            flavor: squeak.cog.v3
+          - arch: { name: linux32x86, os: ubuntu-latest }
+            flavor: squeak.stack.v3
+          - arch: { name: linux32x86, os: ubuntu-latest }
+            flavor: pharo.cog.spur.lowcode
+          - arch: { name: linux32x86, os: ubuntu-latest }
+            flavor: pharo.stack.spur.lowcode
+
+          # - arch: { name: macos64x64, os: macos-latest }
+          #   flavor: pharo.cog.spur.lowcode # impl. decl. getThisSessionID
+          - arch: { name: macos64x64, os: macos-latest }
+            flavor: pharo.stack.spur.lowcode
+
+    runs-on: ${{ matrix.arch.os }}
+    name: ${{ matrix.flavor }} for ${{ matrix.arch.name }}
+    env:
+      ARCH: ${{ matrix.arch.name }}
+      FLAVOR: ${{ matrix.flavor }}
+      MODE: fast # no assert or debug here
+      HEARTBEAT: threaded # linux only; no itimer here
+      MSYS_SYS: ${{ matrix.arch.name == 'win64x64' && 'mingw64' || 'mingw32' }}
+      MSYS_ENV: ${{ matrix.arch.name == 'win64x64' && 'x86_64' || 'i686' }}
+    steps:
+      - name: Checkout files
+        uses: actions/checkout@v2
+        # with:
+        #   ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.ref || 'refs/heads/Cog'}}
+
+      - name: Restore build cache
+        uses: actions/cache@v2
+        with:
+          path: .thirdparty-cache
+          key: ${{ startsWith(matrix.arch.name, 'win') && 'thirdparty-cache-win' || startsWith(matrix.arch.name, 'linux') && 'thirdparty-cache-linux' || 'thirdparty-cache-macos' }}
+
+      - name: Prepare environment
+        if: startsWith(matrix.arch.name, 'linux')
+        run: ./scripts/ci/actions_prepare_linux_x86.sh
+
+      - name: Build VM
+        shell: bash
+        run: ./scripts/ci/actions_build.sh
+
+      - name: Pack VM
+        shell: bash
+        run: ./deploy/pack-vm.sh
+
+      - name: Store artifact w/ revision
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ env.ASSET_NAME }}_${{ env.ASSET_REVISION }}
+          path: products/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
+
+      - name: Update artifact in latest-build
+        uses: ncipollo/release-action@v1.8.6
+        if: github.event_name == 'schedule' || (github.event.inputs.should-deploy == 'true' && endsWith( github.ref , 'Cog' ))
+        with:
+          prerelease: true
+          allowUpdates: true
+          replacesArtifacts: true
+          artifacts: products/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ matrix.mode == 'debug' && 'latest-debug-build' || matrix.mode == 'assert' && 'latest-assert-build' || 'latest-build' }}
+          body: ${{ github.event.head_commit.message }}

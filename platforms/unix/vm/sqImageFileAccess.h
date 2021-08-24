@@ -15,20 +15,22 @@
 #include <unistd.h>
 #include <errno.h>
 
-/* On Unix we use the native file interface. */
+// On Unix we use the native file interface.
 
 #define sqImageFile	int
 #define squeakFileOffsetType off_t
 
-/* Save/restore. */
-/* Read the image from the given file starting at the given image offset */
+// Save/restore.
+// Read the image from the given file starting at the given image offset
 size_t readImageFromFileHeapSizeStartingAt(sqImageFile f, usqInt desiredHeapSize, squeakFileOffsetType imageOffset);
+
+static int sIFOMode;
 
 static inline sqImageFile
 sqImageFileOpen(const char *fileName, const char *mode)
 {
 	int fd = open(fileName,
-				  !strcmp(mode,"rb") ? O_RDONLY : O_RDWR+O_CREAT,
+				  sIFOMode = !strcmp(mode,"rb") ? O_RDONLY : O_RDWR+O_CREAT,
 				  0666);
 	if (fd < 0) {
 		perror("sqImageFileOpen open");
@@ -40,6 +42,12 @@ sqImageFileOpen(const char *fileName, const char *mode)
 static inline void
 sqImageFileClose(sqImageFile f)
 {
+extern sqInt failed(void);
+
+	if (!failed()
+	 && sIFOMode == O_RDWR+O_CREAT
+	 && ftruncate(f,lseek(f, 0, SEEK_CUR)) < 0)
+		perror("sqImageFileClose ftruncate");
 	/* Don't exit; if snapshotting, continuing is probably the best course */
 	if (close(f) < 0)
 		perror("sqImageFileClose close");

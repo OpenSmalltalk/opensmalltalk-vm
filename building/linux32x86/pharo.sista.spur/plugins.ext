@@ -12,5 +12,6 @@ EventsHandlerPlugin \
 SqueakSSL \
 FileAttributesPlugin \
 AioPlugin \
+VectorEnginePlugin \
 # SDL2DisplayPlugin \
 

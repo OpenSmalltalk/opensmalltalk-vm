@@ -18,7 +18,9 @@ eem 3/15/2017	Allow functions registered with ioGetSurfaceFormat,
 				failure).  This allows e.g. Pharo's AthensCairoSurface to
 				avoid installing two null callbacks for unlock & show.
 */
-
+#ifdef HAVE_CONFIG_H
+#include "config.h" /* this must happen before including std libraries */
+#endif
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>

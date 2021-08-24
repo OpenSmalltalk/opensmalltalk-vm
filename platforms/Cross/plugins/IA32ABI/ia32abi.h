@@ -101,3 +101,7 @@ extern thunkEntryType  thunkEntry (INT_REG_ARGS DBL_REG_ARGS void *,sqIntptr_t *
 extern void *allocateExecutablePage(sqIntptr_t *pagesize);
 extern VMCallbackContext *getMostRecentCallbackContext(void);
 #undef thunkEntryType
+
+#if NewspeakVM
+int ioDrainEventQueue(void);
+#endif

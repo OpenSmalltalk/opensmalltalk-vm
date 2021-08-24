@@ -16,6 +16,7 @@ XDisplayControlPlugin \
 DESPlugin \
 MD5Plugin \
 SHA2Plugin \
+VectorEnginePlugin \
 #BochsIA32Plugin \
 #BochsX64Plugin \
-#GdbARMPlugin
+#GdbARMPlugin \

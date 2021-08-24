@@ -59,7 +59,7 @@ newCPU()
 		initialSimState = *(lastCPU->cpu[0]);
 		memset(&initialSimState.gr[0],
 				0,
-				(char *)&initialSimState.fr[32] - (char *)&initialSimState.gr[0]);
+				(char *)&initialSimState.base - (char *)&initialSimState.gr[0]);
 		lastCPU->base.engine.jmpbuf = error_abort;
 	}
 	return lastCPU->cpu[0];

@@ -1,0 +1,114 @@
+name: Extra Monthly Builds (ARM)
+
+on:
+  schedule:
+    - cron: '0 0 1 * *' # Build on the 1st of every month at midnight
+  workflow_dispatch:
+    inputs:
+      should-deploy:
+        description: 'Deploy on success'
+        required: true
+        default: "true" # No boolean support at the moment
+
+# !! NOTICE !!
+# This workflow spec is basically a copy of linux-arm.yml. It includes
+# aspects of extra.yml for the manual workflow dispatch. Please update
+# this file according to its original files.
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false # let them finish bc. mixed platforms
+      matrix:
+        include:
+          # Only Newspeak is configured for ARMv7
+          - arch: linux32ARMv7
+            flavor: newspeak.cog.spur
+          - arch: linux32ARMv7
+            flavor: newspeak.stack.spur
+          # Some other flavors for backwards compatibility
+          - arch: linux32ARMv6
+            flavor: pharo.cog.spur
+          - arch: linux32ARMv6
+            flavor: squeak.cog.v3
+          - arch: linux32ARMv6
+            flavor: squeak.stack.v3
+          # CogMT not ready yet
+          # - arch: linux32ARMv8
+          #   flavor: squeak.cogmt.spur
+
+    runs-on: ubuntu-latest
+    name: ${{ matrix.flavor }} for ${{ matrix.arch }}
+    env:
+      ARCH: ${{ matrix.arch }}
+      ARCH_ARM: ${{ matrix.arch == 'linux32ARMv6' && 'armv6' || matrix.arch == 'linux32ARMv7' && 'armv7' || 'aarch64' }}
+      FLAVOR: ${{ matrix.flavor }}
+      MODE: fast # no assert or debug here
+      HEARTBEAT: threaded # itimer not supported
+    steps:
+      - name: Checkout files
+        uses: actions/checkout@v2
+
+      # TODO: Can we use the same thirdparty cache for armv6, armv7, and aarch64? Are pre-compiled binaries compatible or organized differently?
+      - name: Restore build cache
+        uses: actions/cache@v2
+        with:
+          path: .thirdparty-cache
+          key: thirdparty-cache-linux-${{ env.ARCH_ARM }}
+
+      # https://github.com/marketplace/actions/run-on-architecture
+      - name: Build VM
+        uses: uraimo/run-on-arch-action@v2.1.1
+        id: build-vm
+        with: 
+          arch: ${{ env.ARCH_ARM }}
+          distro: buster
+
+          #TODO: Somehow use ./scripts/ci/actions_prepare_linux_arm.sh
+          #SEE: https://github.com/uraimo/run-on-arch-action/issues/54
+          install: |
+            apt update -y
+            apt install -yq --no-install-suggests --no-install-recommends   build-essential git devscripts   uuid-dev libcairo2-dev libpango1.0-dev libgl1-mesa-dev libgl1-mesa-glx libssl-dev libevdev-dev m4 libpulse-dev   libasound2-dev libfreetype6-dev libx11-dev libxrender-dev   libtool automake autoconf libltdl-dev
+
+          env: | # Copy the entire environment for the docker container
+            ARCH: ${{ env.ARCH }}
+            ARCH_ARM: ${{ env.ARCH_ARM }}
+            FLAVOR: ${{ env.FLAVOR }}
+            MODE: ${{ env.MODE }}
+            HEARTBEAT: ${{ env.HEARTBEAT }}
+
+          run: ./scripts/ci/actions_build.sh
+
+      - name: Post Build VM
+        #TODO: https://github.com/uraimo/run-on-arch-action/issues/52
+        run: |
+          sudo chown -R runner ${{ steps.build-vm.outputs.PRODUCTS_PATH }}
+          echo "ASSET_REVISION=${{ steps.build-vm.outputs.ASSET_REVISION }}" >> $GITHUB_ENV
+          echo "ASSET_NAME=${{ steps.build-vm.outputs.ASSET_NAME }}" >> $GITHUB_ENV
+          echo "PRODUCTS_PATH=${{ steps.build-vm.outputs.PRODUCTS_PATH }}" >> $GITHUB_ENV
+          echo "APP_NAME=${{ steps.build-vm.outputs.APP_NAME }}" >> $GITHUB_ENV
+
+      - name: Sign VM (not implemented)
+        if: false
+        run: ./deploy/sign-vm.sh
+
+      - name: Pack VM
+        run: ./deploy/pack-vm.sh
+
+      - name: Store artifact w/ revision
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ env.ASSET_NAME }}_${{ env.ASSET_REVISION }}
+          path: ${{ env.PRODUCTS_PATH }}/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
+
+      - name: Update artifact in latest-release
+        uses: ncipollo/release-action@v1.8.6
+        if: github.event_name == 'schedule' || (github.event_name == 'push' && endsWith( github.ref , 'Cog' ))
+        with:
+          prerelease: true
+          allowUpdates: true
+          replacesArtifacts: true
+          artifacts: ${{ env.PRODUCTS_PATH }}/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ matrix.mode == 'debug' && 'latest-debug-build' || matrix.mode == 'assert' && 'latest-assert-build' || 'latest-build' }}
+          body: ${{ github.event.head_commit.message }}

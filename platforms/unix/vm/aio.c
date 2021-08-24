@@ -30,19 +30,19 @@
  * Last edited: Tue Mar 29 13:06:00 PDT 2016
  */
 
-#include "interp.h" /* For COGVM define */
-#include "sqaio.h"
-#include "sqAssert.h"
-#include <stdlib.h>
-
 #ifdef HAVE_CONFIG_H
 
-# include "config.h"
+#include "config.h" /* this must happen before including std libraries */
 
 # ifdef HAVE_UNISTD_H
 #   include <sys/types.h>
 #   include <unistd.h>
 # endif /* HAVE_UNISTD_H */
+
+#include "interp.h" /* For COGVM define */
+#include "sqaio.h"
+#include "sqAssert.h"
+#include <stdlib.h>
 
 # ifdef NEED_GETHOSTNAME_P
     extern int gethostname();
@@ -113,7 +113,7 @@ long	aioDebugLogging = 0;
 #endif
 
 #if HAVE_CONFIG_H && HAVE_EPOLL
-static int epollFd;
+static int epollFd= -1;
 static struct epoll_event** epollEventsByFileDescriptor;
 static size_t epollEventsByFileDescriptorSize;
 
@@ -230,13 +230,12 @@ growEpollEventsByFileDescriptorTo(size_t newSize) {
 	memset(epollEventsByFileDescriptor + epollEventsByFileDescriptorSize, 0, (newSize - epollEventsByFileDescriptorSize) * sizeof(*epollEventsByFileDescriptor));
 	epollEventsByFileDescriptorSize = newSize;
 }
-#endif
 
-void
-aioInit(void)
+static void
+epollInit(void)
 {
-	extern void forceInterruptCheck(int);	/* not really, but hey */
-#if HAVE_CONFIG_H && HAVE_EPOLL
+	if (epollFd >= 0)
+		close(epollFd);
 	epollFd = epoll_create1(EPOLL_CLOEXEC);
 	if (epollFd == -1) {
 		perror("epoll_create1 failed");
@@ -244,6 +243,18 @@ aioInit(void)
 	}
 	epollEventsByFileDescriptorSize = 0;
 	epollEventsByFileDescriptor = NULL;
+}
+#endif
+
+
+void
+aioInit(void)
+{
+	extern void forceInterruptCheck(int);	/* not really, but hey */
+#if HAVE_CONFIG_H && HAVE_EPOLL
+	epollInit();
+	if (pthread_atfork(NULL, NULL, epollInit))
+		perror("pthread_atfork");
 #else
 	FD_ZERO(&fdMask);
 	FD_ZERO(&rdMask);

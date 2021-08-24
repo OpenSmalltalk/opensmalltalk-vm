@@ -6,7 +6,7 @@
 static char __buildInfo[] = "EventsHandlerPlugin EventsHandlerPlugin-EstebanLorenzano.1 uuid: 1516ba00-d8f9-4928-93cf-a46ad8e46d70 " __DATE__ ;
 
 
-
+#include "config.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>

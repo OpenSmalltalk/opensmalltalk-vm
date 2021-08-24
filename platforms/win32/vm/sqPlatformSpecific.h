@@ -35,6 +35,7 @@ typedef unsigned __int64 squeakFileOffsetType;
  * The MSVC version of these is, as of this writing, _fseeki64 & _ftelli64.
  * Some cross-platform plugins use fseeko/ftello, hence this patch...
  */
+#include <stdio.h> /* note: stdio.h must be included before defining ftello/fseeko */
 #define fseeko(a,b,c) _fseeki64(a,b,c)
 #define ftello(f) _ftelli64(f)
 
