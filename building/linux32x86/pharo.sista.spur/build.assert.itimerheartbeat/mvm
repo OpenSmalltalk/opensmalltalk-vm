@@ -41,6 +41,6 @@ make install-squeak install-plugins prefix=`(cd ../../../../;pwd)`/products/$INS
 productDir=`find ../../../../products/$INSTALLDIR -name "5.0*"`
 productDir=`(cd $productDir;pwd)`
 for lib in ${THIRDPARTYLIBS}; do
-	../../../third-party/mvm ${lib} install $productDir
+	../../third-party/mvm ${lib} install $productDir
 done
 ../../editpharoinstall.sh ../../../../products/$INSTALLDIR "$@"

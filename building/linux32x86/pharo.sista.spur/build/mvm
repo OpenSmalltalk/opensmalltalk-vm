@@ -23,7 +23,7 @@ case $a in
 n|no|N|NO)	echo "ok but this isn't safe!!";;
 *)			test -f Makefile && make reallyclean
 #	for lib in ${THIRDPARTYLIBS}; do
-#		../../../third-party/mvm ${lib} clean
+#		../../third-party/mvm ${lib} clean
 #	done
 esac
 
@@ -46,6 +46,6 @@ make install-squeak install-plugins prefix=`(cd ../../../../;pwd)`/products/$INS
 productDir=`find ../../../../products/$INSTALLDIR -name "5.0*"`
 productDir=`(cd $productDir;pwd)`
 for lib in ${THIRDPARTYLIBS}; do
-	../../../third-party/mvm ${lib} install $productDir
+	../../third-party/mvm ${lib} install $productDir
 done
 ../../editpharoinstall.sh ../../../../products/$INSTALLDIR "$@"

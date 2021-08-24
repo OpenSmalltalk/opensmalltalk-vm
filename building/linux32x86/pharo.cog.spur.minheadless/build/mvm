@@ -25,12 +25,12 @@ n|no|N|NO)	echo "ok but this isn't safe!!";;
 *)		
 	test -f Makefile && make clean
 #	for lib in ${THIRDPARTYLIBS}; do
-#		../../../third-party/mvm ${lib} clean
+#		../../third-party/mvm ${lib} clean
 #	done
 esac
 
 for lib in ${THIRDPARTYLIBS}; do
-	../../../third-party/mvm ${lib}
+	../../third-party/mvm ${lib}
 done
 
 LDFLAGS="-L../../../../.thirdparty-cache/linux/i386/lib" \
@@ -48,7 +48,7 @@ rm -rf "$productDir"
 mkdir "$productDir"
 productDir=`(cd "$productDir";pwd)`
 for lib in ${THIRDPARTYLIBS}; do
-	../../../third-party/mvm ${lib} install $productDir
+	../../third-party/mvm ${lib} install $productDir
 done
 cp dist/* $productDir
 ../../editpharoinstall.sh ../../../../products/$INSTALLDIR "$@"
