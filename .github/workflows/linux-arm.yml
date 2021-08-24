@@ -9,7 +9,7 @@ on:
       - 'scripts/ci/*build.sh'
       - 'deploy/**'
       # Relevant sources for this platform
-      - 'build.linux*/**' # Makefile-based build scripts
+      - 'building/linux*/**' # Makefile-based build scripts
       - '*src/**' # Generated VMMaker sources (incl. plugins)
       - 'platforms/Cross/**'
       - 'platforms/unix/**'
