@@ -35,7 +35,7 @@ echo "$(cat platforms/Cross/plugins/sqPluginsSCCSVersion.h | .git_filters/RevDat
 readonly ASSET_REVISION=$(grep -m1 "SvnRawRevisionString" "platforms/Cross/vm/sqSCCSVersion.h" | sed 's/[^0-9.]*\([0-9.]*\).*/\1/')
 
 ASSET_NAME="${FLAVOR}_${ARCH}"
-BUILD_PATH="$(pwd)/build.${ARCH}/${FLAVOR}"
+BUILD_PATH="$(pwd)/building/${ARCH}/${FLAVOR}"
 
 PRODUCTS_PATH="$(pwd)/products"
 mkdir "${PRODUCTS_PATH}" || true # ensure PRODUCTS_PATH exists
