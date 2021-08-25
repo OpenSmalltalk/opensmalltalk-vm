@@ -4,7 +4,7 @@
 #############################################################################
 
 VM:=Squeak
-VMSRCDIR:=../../../src/lowcode.vm.32bit.cog.spur
+VMSRCDIR:=../../../src/spur32.cog.lowcode
 
 COGDEFS:= 
 COMPILER_TO_USE:=clang

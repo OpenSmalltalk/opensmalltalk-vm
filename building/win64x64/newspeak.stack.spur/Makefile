@@ -7,7 +7,7 @@
 VM:=nsvm
 VM_NAME:=Newspeak Virtual Machine
 
-VMSRCDIR:= ../../../src/newspeak.vm.64bit.stack.spur
+VMSRCDIR:= ../../../src/spur64.stack.newspeak
 
 # This variable is set by VS Native Tools Command Prompts, not for cygwin wins
 VSCMD_ARG_HOST_ARCH := $(shell echo $$VSCMD_ARG_HOST_ARCH)

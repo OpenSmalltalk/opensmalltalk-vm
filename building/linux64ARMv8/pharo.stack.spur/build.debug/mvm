@@ -21,7 +21,7 @@ test -f config.h || ../../../../platforms/unix/config/configure \
 	--without-npsqueak \
 	--without-vm-display-fbdev \
 	--with-vmversion=5.0 \
-	--with-src=src/vm.64bit.stack.spur --disable-cogit \
+	--with-src=src/spur64.stack --disable-cogit \
 	--without-vm-display-fbdev \
 	--enable-fast-bitblt \
  	TARGET_ARCH="-march=armv8-a" \

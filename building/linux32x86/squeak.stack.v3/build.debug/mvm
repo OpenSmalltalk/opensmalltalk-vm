@@ -25,7 +25,7 @@ esac
 test -f plugins.int || (test -f ../plugins.int && cp -p ../plugins.int . || cp -p ../../plugins.int .)
 test -f plugins.ext || (test -f ../plugins.ext && cp -p ../plugins.ext . || cp -p ../../plugins.ext .)
 test -f config.h || ../../../../platforms/unix/config/configure \
-	--with-src=src/vm.32bit.stack.v3 --disable-cogit \
+	--with-src=src/v3.stack --disable-cogit \
 	--without-vm-display-fbdev --without-npsqueak \
 	TARGET_ARCH="-m32" \
 	CFLAGS="$OPT -msse2"

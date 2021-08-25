@@ -5,7 +5,7 @@
 
 BIT_IDENTICAL_FLOATING_POINT=BIT_IDENTICAL_FLOATING_POINT
 
-VMSRCDIR:= ../../../src/vm.64bit.stack.spur
+VMSRCDIR:= ../../../src/spur64.stack
 SOURCEFILE:=SqueakV50.sources
 
 # Now include the Makefile proper, which is common to all Mac OS builds.
