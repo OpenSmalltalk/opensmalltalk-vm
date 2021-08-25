@@ -1,0 +1,113 @@
+#############################################################################
+# Compilation rules for 64-bit Cygwin/mingw compiler on Microsoft Windows
+#
+
+TOOLPREFIX:=x86_64-w64-mingw32-
+export TOOLPREFIX
+
+#############################################################################
+# C compiler settings (Use clang for having a working FFI)
+#
+ifeq ($(COMPILER_TO_USE),)
+COMPILER_TO_USE:=clang
+endif
+
+ifeq ($(COMPILER_TO_USE),clang)
+CC:= $(TOOLPREFIX)clang
+CXX:= $(TOOLPREFIX)clang++
+else
+CC:= $(TOOLPREFIX)gcc
+CXX:= $(TOOLPREFIX)g++
+endif
+
+WARNINGS:= -Wall -Wno-unused-variable -Wno-unknown-pragmas -Wno-unused-label -Wno-unused-function 
+
+# VM config flags.
+ifeq ($(CONFIGURATION),product)
+OFLAGS:= -O2 -momit-leaf-frame-pointer -funroll-loops
+NDEBUG:= -DNDEBUG -D'VM_LABEL(foo)=0' # Define NDEBUG for production to exclude asserts
+DEBUGVM=0
+else ifeq ($(CONFIGURATION),assert)
+OFLAGS:= -O1 -fno-omit-frame-pointer
+DEBUGVM=0
+NDEBUG:= -DAllocationCheckFiller=0xADD4E55 -D'VM_LABEL(foo)=0'
+else
+OFLAGS:= -O0 -fno-omit-frame-pointer
+DEBUGVM=1
+NDEBUG:= -DAllocationCheckFiller=0xADD4E55 -D'VM_LABEL(foo)=0'
+endif
+
+ifeq ($(THREADING),multi)
+COGDEFS:= $(COGDEFS) -DCOGMTVM=1 -DDEBUGVM=$(DEBUGVM)
+else
+COGDEFS:= $(COGDEFS) -DCOGMTVM=0 -DDEBUGVM=$(DEBUGVM)
+endif
+ifdef BIT_IDENTICAL_FLOATING_POINT
+COGDEFS:= $(COGDEFS) -DBIT_IDENTICAL_FLOATING_POINT=1
+endif
+
+ifeq ($(COMPILER_TO_USE),clang)
+COGDEFS:=$(COGDEFS) -fno-stack-protector
+endif
+
+# Set minimum version to WindowsXP (see /cygwin/usr/include/w32api/w32api.h)
+WINVER:=-D_WIN32_WINNT=0x0501 -DWINVER=0x0501
+
+# define _MT to eliminate the inline versions of printf et al in mingw/stdio.h
+NOBUILTIN:= -D_MT -fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf
+CFLAGS:= -fdeclspec -msse2 -ggdb2 -m64 \
+	-mno-rtd -mms-bitfields $(OFLAGS) $(NOBUILTIN) $(WARNINGS)
+
+TZ:=$(shell date +%Z)
+DEFS:=	-D$(VM)VM=1 $(COGDEFS) $(WINVER) \
+		-DWIN64=1 -DNO_ISNAN -DNO_SERVICE \
+		$(NDEBUG) -DLSB_FIRST -D'VM_NAME="$(VM_NAME)"' $(XDEFS) $(CROQUET)
+
+#############################################################################
+# Linker settings
+#
+# Note: I had to use 'gcc' instead of 'ld' to prevent unresolved symbols
+#       The switch '-mwindows' gives us a GUI app instead of a console app.
+#		Newer cygwins want --export-all-symbols in place of --export-dynamic.
+#
+LD:=	 $(CC)
+LDCXX := $(TOOLPREFIX)clang++ # For linking c++ bundles
+
+EXPORT:=--export-all-symbols
+BASELDFLAGS:=-m64 -mthreads -Wl,--stack -Xlinker 2097152,2097152 -Wl,$(EXPORT)
+LDFLAGS:= -mwindows $(BASELDFLAGS)
+CONSOLELDFLAGS:= -mconsole $(BASELDFLAGS)
+STDLIBS:= -lddraw -ldinput -lopengl32 -lws2_32 -lcomdlg32 -lole32 -lwinmm \
+	-lversion -lwininet -luser32 -lgdi32 -lpsapi -lkernel32 \
+	-ldsound -lsecur32 -lshfolder
+
+#############################################################################
+# Tools to use
+#
+AR:= $(TOOLPREFIX)ar rc
+CP:= cp
+RM:= rm
+SED:=sed
+NM:= $(TOOLPREFIX)nm
+DLLTOOL:=	$(TOOLPREFIX)dlltool
+DLLWRAP:=	$(TOOLPREFIX)dllwrap
+STRIP:= 	$(TOOLPREFIX)strip
+OBJCOPY:=	$(TOOLPREFIX)objcopy
+
+#############################################################################
+# RC settings
+#
+# Note: RC compiles the .rc files into linkable .o files
+#
+RC:=	 $(TOOLPREFIX)windres
+SCCSVER:=$(PLATDIR)/Cross/vm/sqSCCSVersion.h
+
+ifneq ($(shell grep 'GitRawRevisionString.*$$Rev$$.' $(SCCSVER)),)
+$(shell bash -c "cd ../../../scripts; ./updateSCCSVersions")
+endif
+SVNMAJOR := $(shell $(SED) -e "s/^static.*GitRawRevisionString.*Rev: \([0-9][0-9][0-9][0-9]\).*/\\1/p" -e d $(SCCSVER) | $(SED) -e 's/^0*//')
+SVNMINOR := $(shell $(SED) -e "s/^static.*GitRawRevisionString.*Rev: [0-9][0-9][0-9][0-9]\([0-9][0-9]\).*/\\1/p" -e "s/^0*//" -e d $(SCCSVER) | $(SED) -e 's/^0*//')
+SVNREV := $(shell $(SED) -e "s/^static.*GitRawRevisionString.*Rev: [0-9][0-9][0-9][0-9][0-9][0-9]\([0-9][0-9]\).*/\\1/p" -e "s/^0*//" -e d $(SCCSVER) | $(SED) -e 's/^0*//')
+SVNBUILD := $(shell $(SED) -e "s/^static.*GitRawRevisionString.*Rev: [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]\([0-9][0-9]*\).*/\\1/p" -e "s/^0*//" -e d $(SCCSVER) | $(SED) -e 's/^0*//')
+
+RCFLAGS:= --include-dir $(PLATDIR)/win32/misc -D_WIN32 -DFILEVERSIONVALUES=$(SVNMAJOR),$(SVNMINOR),$(SVNREV),$(SVNBUILD) '-DFILEVERSIONSTRING=\"$(SVNMAJOR).$(SVNMINOR).$(SVNREV).$(SVNBUILD)\\0\"'

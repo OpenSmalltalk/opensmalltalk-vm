@@ -80,8 +80,8 @@ AC_ARG_WITH(plugins,
 vmpdir="${vmpsrc}"
 
 if test ! -d "${topdir}/${vmmsrc}"; then
-  if test -d "${topdir}/platforms/unix/${vmmsrc}/vm"; then
-    vmmdir="${topdir}/platforms/unix/${vmmsrc}/vm"
+  if test -d "${topdir}/platforms/unix/${vmmsrc}"; then
+    vmmdir="${topdir}/platforms/unix/${vmmsrc}"
     AC_MSG_RESULT([using built-in src directory])
   fi
 fi
@@ -89,7 +89,7 @@ fi
 if test ! -d "${topdir}/${vmpsrc}"; then
   if test -d "${topdir}/platforms/unix/${vmpsrc}"; then
     vmpdir="${topdir}/platforms/unix/${vmpsrc}"
-    AC_MSG_RESULT([using built-in pligins directory])
+    AC_MSG_RESULT([using built-in plugins directory])
   fi
 fi
 
@@ -256,7 +256,7 @@ AC_PROG_LIBTOOL
 
 # Configured headers (pretty much everybody needs blddir and vm)
 
-INCLUDES="-I${blddir} -I${vmmcfg} -I${topdir}/platforms/unix/vm -I${topdir}/platforms/Cross/vm -I${vmmdir}/vm"
+INCLUDES="-I${blddir} -I${vmmcfg} -I${topdir}/platforms/unix/vm -I${topdir}/platforms/Cross/vm -I${vmmdir}"
 
 # these are not always added
 case $host_os in
@@ -297,7 +297,7 @@ AC_CHECK_HEADERS_ONCE([alloca.h]) # SunOS5
 AC_HEADER_TIME
 AC_HEADER_DIRENT
 
-if test -f "${vmmdir}/vm/interp.h"; then
+if test -f "${vmmdir}/interp.h"; then
   AC_DEFINE([HAVE_INTERP_H], [1], [Interpreter header file present])
 fi
 AC_SUBST(HAVE_INTERP_H)

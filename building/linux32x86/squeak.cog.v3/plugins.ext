@@ -1,0 +1,19 @@
+# Copied, perhaps edited, from ../../../src/examplePlugins.ext
+EXTERNAL_PLUGINS = \
+MIDIPlugin \
+B3DAcceleratorPlugin \
+BochsIA32Plugin \
+FileAttributesPlugin \
+Squeak3D \
+SqueakFFIPrims \
+SqueakSSL \
+LocalePlugin \
+UnicodePlugin \
+UnixOSProcessPlugin \
+UUIDPlugin \
+ImmX11Plugin \
+XDisplayControlPlugin \
+DESPlugin \
+MD5Plugin \
+SHA2Plugin \
+VectorEnginePlugin \

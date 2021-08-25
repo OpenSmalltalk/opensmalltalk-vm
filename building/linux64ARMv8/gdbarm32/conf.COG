@@ -1,0 +1,13 @@
+#!/bin/sh
+S=../../../../processors/ARM/gdb-8.3.1
+export CFLAGS="-g -Os -m64 -DCOG=1 -DWORDS_BIGENDIAN=0"
+export CFLAGS="-g3 -O0 -m64 -DCOG=1 -DWORDS_BIGENDIAN=0"
+CONFFLAGS='--target=arm-apple-darwin CC=clang CXX=clang++ --with-system-zlib=yes'
+mkdir -p bfd libiberty opcodes sim/common sim/arm
+for d in bfd libiberty opcodes; do
+	(cd $d; $S/$d/configure COG=1 CFLAGS="$CFLAGS" $CONFFLAGS)
+done
+for d in sim/common sim/arm; do
+	(cd $d;
+	 ../$S/$d/configure COG=1 CFLAGS="$CFLAGS" $CONFFLAGS)
+done

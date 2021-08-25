@@ -42,19 +42,19 @@ AC_DEFUN([AC_CHECK_VMM_DIR],[
   vmmcheck file -f ${vmmcfg}/plugins.ext
   vmmcheck dir  -d ${vmmdir}
   vmmcheck dir  -d ${vmpdir}
-  vmmcheck dir  -d ${vmmdir}/vm
-  vmmcheck file -f ${vmmdir}/vm/interp.h
-  vmmcheck file -f ${vmmdir}/vm/vmCallback.h
+  vmmcheck dir  -d ${vmmdir}
+  vmmcheck file -f ${vmmdir}/interp.h
+  vmmcheck file -f ${vmmdir}/vmCallback.h
   if test "$cogit" = yes ; then
-	  vmmcheck file -f ${vmmdir}/vm/cogit.c
-	  vmmcheck file -f ${vmmdir}/vm/cogit.h
-	  vmmcheck file -f ${vmmdir}/vm/cogmethod.h
-	  vmmcheck file -f ${vmmdir}/vm/cointerp.c
-	  vmmcheck file -f ${vmmdir}/vm/cointerp.h
-	  vmmcheck file -f ${vmmdir}/vm/gcc3x-cointerp.c
+	  vmmcheck file -f ${vmmdir}/cogit.c
+	  vmmcheck file -f ${vmmdir}/cogit.h
+	  vmmcheck file -f ${vmmdir}/cogmethod.h
+	  vmmcheck file -f ${vmmdir}/cointerp.c
+	  vmmcheck file -f ${vmmdir}/cointerp.h
+	  vmmcheck file -f ${vmmdir}/gcc3x-cointerp.c
   else
-	  vmmcheck file -f ${vmmdir}/vm/interp.c
-	  vmmcheck file -f ${vmmdir}/vm/gcc3x-interp.c
+	  vmmcheck file -f ${vmmdir}/interp.c
+	  vmmcheck file -f ${vmmdir}/gcc3x-interp.c
   fi
   AC_MSG_RESULT(okay)])
 
@@ -71,7 +71,7 @@ AC_DEFUN([AC_VM_VERSION],[
 
 
 AC_DEFUN([AC_CHECK_VERSION],[
-  gendir="${vmmdir}/vm"
+  gendir="${vmmdir}"
   version=`${cfgdir}/version ${gendir}/cointerp.c`
   SQ_MAJOR=`echo ${version} | cut -d ' ' -f 1`
   SQ_MINOR=`echo ${version} | cut -d ' ' -f 2`

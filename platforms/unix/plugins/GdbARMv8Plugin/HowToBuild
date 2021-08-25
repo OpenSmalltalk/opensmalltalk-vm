@@ -1,7 +1,7 @@
 Building the GdbARMv8Plugin
 ------------------------------
 
-In the build dirctory for the platform (e.g. build.linux64x64 for 64-bit linux)
+In the build dirctory for the platform (e.g. building/linux64x64 for 64-bit linux)
 locate the gdbarm64 directory.  In that directory use the makeem script, which
 invokes conf.COG, to configure and build the gdb-derived simulator for ARMv8/
 ARM64.  Then build a VM that has GdbARMv8Plugin in its plugins.ext.
