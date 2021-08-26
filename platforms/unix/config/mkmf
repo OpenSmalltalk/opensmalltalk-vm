@@ -76,7 +76,7 @@ mkmf() {
   for x in ${dirs}; do
     d=${x}/${name}
     if [ "${name}" = "vm" ]; then
-      # e.g, platforms/unix/vm would be okay but src/vm.64bit.cog.spur/vm is not
+      # e.g, platforms/unix/vm would be okay but src/spur64.cog/vm is not
       if test ! -d ${d}; then d=${x}; fi
     fi
     if test -d ${d}; then
