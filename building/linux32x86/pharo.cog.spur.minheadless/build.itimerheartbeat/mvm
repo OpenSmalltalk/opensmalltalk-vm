@@ -38,7 +38,7 @@ done
 
 test -f config.h || ../../../../platforms/unix/config/configure --without-npsqueak \
 		--with-vmversion=5.0 \
-		--with-src=src/vm.32bit.cog.spur \
+		--with-src=src/spur32.cog \
 	CC="gcc -m32" \
 	CXX="g++ -m32" \
 	CFLAGS="$OPT -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DCOGMTVM=0 -DITIMER_HEARTBEAT=1" \

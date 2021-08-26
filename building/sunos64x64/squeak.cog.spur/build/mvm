@@ -27,7 +27,7 @@ test -f config.h || ../../../../platforms/unix/config/configure --without-npsque
 		--with-vmversion=5.0 \
 		--without-libtls \
 		--disable-dynamicopenssl \
-		--with-src=src/vm.64bit.cog.spur \
+		--with-src=src/spur64.cog \
 	TARGET_ARCH="-m64" \
 	CFLAGS="$CFLAGS" \
 	LIBS="$LIBS" \

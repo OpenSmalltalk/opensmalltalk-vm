@@ -3,7 +3,7 @@
 # Do make init to allow make -n to function.
 #
 
-VMSRCDIR:=../../../src/vm.32bit.cog.v3
+VMSRCDIR:=../../../src/v3.cog
 VM:=Pharo
 COGDEFS:= -DPharoVM=1
 APPNAME:=Pharo

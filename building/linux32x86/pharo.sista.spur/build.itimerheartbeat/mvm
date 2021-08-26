@@ -33,7 +33,7 @@ test -f plugins.ext || (test -f ../plugins.ext && cp -p ../plugins.ext . || cp -
 test -f config.h || ../../../../platforms/unix/config/configure \
 		--without-npsqueak \
 		--with-vmversion=5.0 \
-		--with-src=src/vm.32bit.sista.spur \
+		--with-src=src/spur32.sista \
 	TARGET_ARCH="-m32" \
 	CFLAGS="$OPT -msse2 -DCOGMTVM=0 -DITIMER_HEARTBEAT=1" \
 	LDFLAGS="-Wl,-rpath,'\$\$ORIGIN' "

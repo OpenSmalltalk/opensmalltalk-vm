@@ -1,6 +1,6 @@
 -Iplatforms/Cross/vm
 -Iinclude
--Isrc/vm.32bit.cog.v3
+-Isrc/v3.cog
 -Iplatforms/minheadless/common
 -Iplatforms/minheadless/generic
 -Iplatforms/minheadless/unix

@@ -127,7 +127,7 @@ and plugins.ext to specify the external plugins (if any) to build.  The root
 Makefile then includes a full Makefile from the common directory.  For example,
 squeak.cog.spur's Makefile (minus commentary) reads
 	----8<-----building/macos64x64/squeak.cog.spur/Makefile----8<---------------
-	VMSRCDIR:= ../../../src/vm.64bit.cog.spur
+	VMSRCDIR:= ../../../src/spur64.cog
 	SOURCEFILE:=SqueakV50.sources
 
 	include ../common/Makefile.app.squeak.cog
@@ -265,7 +265,7 @@ simply run lldb on the executable in the MacOS directory in the .app bundle,
 e.g. if in the image directory you might do
 	lldb ../building/macos64x64/pharo.cog.spur/PharoAssert.app/Contents/MacOS/Pharo
 The VM includes many functions intended for VM debugging.  See e.g. functions
-beginning with print in the main VM source (e.g. src/vm.64bit.cog.spur/vm/gcc3x-cointerp.c).
+beginning with print in the main VM source (e.g. src/spur64.cog/vm/gcc3x-cointerp.c).
 
 Eliot Miranda
 April 2018

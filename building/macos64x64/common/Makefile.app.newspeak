@@ -3,7 +3,7 @@
 #
 
 # The caller should set VMSRCDIR to point to the relevant VM source
-# e.g. VMSRCDIR:= ../../../src/newspeak.vm.32bit.cog.spur
+# e.g. VMSRCDIR:= ../../../src/spur32.cog.newspeak
 
 VM:=NewspeakVirtualMachine
 SYSTEM:=Newspeak

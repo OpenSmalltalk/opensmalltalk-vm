@@ -6,7 +6,7 @@
 VM:=Pharo
 VM_NAME:=Pharo Virtual Machine
 
-VMSRCDIR:=../../../src/vm.32bit.cog.spur
+VMSRCDIR:=../../../src/spur32.cog
 COGDEFS:= -DPharoVM=1
 
 THIRDPARTYLIBS:=pkgconfig openssl libssh2 libgit2 libsdl2 zlib libpng freetype2 pixman cairo libgcc
