@@ -15,6 +15,7 @@ UnixOSProcessPlugin \
 DESPlugin \
 MD5Plugin \
 SHA2Plugin \
+VectorEnginePlugin \
 # Not working because no 64-bit QuickTime \
 # MIDIPlugin \
 # not working (because of Cocoa vs Carbon): \

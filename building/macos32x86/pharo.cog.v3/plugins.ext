@@ -20,6 +20,7 @@ EventsHandlerPlugin \
 BochsIA32Plugin \
 BochsX64Plugin \
 GdbARMPlugin \
+VectorEnginePlugin \
 # TEMPORARY REMOVE
 # B3DAcceleratorPlugin \
 # could work, but I don't know if relevant:

@@ -14,6 +14,7 @@ UnixOSProcessPlugin \
 DESPlugin \
 MD5Plugin \
 SHA2Plugin \
+VectorEnginePlugin \
 # Not working because of deprecated functionality \
 # CameraPlugin \
 # Not working because no 64-bit QuickTime \

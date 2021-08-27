@@ -12,5 +12,6 @@ Win32OSProcessPlugin \
 DESPlugin \
 MD5Plugin \
 SHA2Plugin \
+VectorEnginePlugin \
 #BochsIA32Plugin \
 #BochsX64Plugin \

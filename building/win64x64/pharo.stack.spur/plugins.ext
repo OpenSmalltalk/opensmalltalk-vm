@@ -4,4 +4,5 @@ B3DAcceleratorPlugin \
 SurfacePlugin \
 FT2Plugin \
 FileAttributesPlugin \
+VectorEnginePlugin \
 #SqueakSSL 

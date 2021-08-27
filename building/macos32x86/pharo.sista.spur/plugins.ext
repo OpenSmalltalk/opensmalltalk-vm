@@ -17,6 +17,7 @@ SerialPlugin \
 ObjectiveCPlugin \
 SDL2DisplayPlugin \
 EventsHandlerPlugin \
+VectorEnginePlugin \
 # TEMPORARY REMOVE
 # B3DAcceleratorPlugin \
 # could work, but I don't know if relevant:

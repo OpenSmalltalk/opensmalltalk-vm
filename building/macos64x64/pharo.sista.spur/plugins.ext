@@ -16,6 +16,7 @@ SerialPlugin \
 ObjectiveCPlugin \
 SDL2DisplayPlugin \
 EventsHandlerPlugin \
+VectorEnginePlugin \
 # Not working in 64bits (weird)
 # MIDIPlugin \
 # could work, but I don't know if relevant: \
