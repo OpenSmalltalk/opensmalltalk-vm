@@ -30,7 +30,7 @@
  OTHER DEALINGS IN THE SOFTWARE.
 
  The end-user documentation included with the redistribution, if any, must
- include the following acknowledgment: 
+ include the following acknowledgment:
  "This product includes software developed by Corporate Smalltalk Consulting Ltd
   (http://www.smalltalkconsulting.com) and its contributors",
  in the same place and form as other third-party acknowledgments.  Alternately,
@@ -47,16 +47,28 @@
 #import "sqAssert.h"
 
 #define SqueakFrameSize	4	// guaranteed (see class SoundPlayer)
-extern struct VirtualMachine* interpreterProxy;
+extern struct VirtualMachine *interpreterProxy;
 
 #if defined(MAC_OS_X_VERSION_10_14)
-static canAccessMicrophone = false;
-static askedToAccessMicrophone = false;
+static char canAccessMicrophone = false;
+static char askedToAccessMicrophone = false;
 
 static void
 askToAccessMicrophone()
 {
 	askedToAccessMicrophone = true;
+
+	// If compiled on 10.14 etc we still must run on older so use a run-time
+	// OS version check
+
+	NSOperatingSystemVersion version = [[NSProcessInfo processInfo] operatingSystemVersion];
+
+	if (version.majorVersion < 10
+	 || (version.majorVersion == 10 && version.minorVersion < 14)) {
+		canAccessMicrophone = true;
+		return;
+	}
+
 	// Request permission to access the microphone.
 	// This API is only available in the 10.14 SDK and subsequent.
 	switch ([AVCaptureDevice authorizationStatusForMediaType: AVMediaTypeAudio]) {
@@ -81,8 +93,8 @@ askToAccessMicrophone()
 		case AVAuthorizationStatusDenied:
 			// The user has previously denied access.
 			// One would hope one could to ask again; max once per run.
-			// But at least in MacOS X 11.1 one cannot ask again; the request to ask
-			// send (requestAccessForMediaType:completionHandler:) is ignored.
+			// But at least in MacOS X 11.1 one cannot ask again; the send of
+			// requestAccessForMediaType:completionHandler: is ignored.
 		case AVAuthorizationStatusRestricted:
 			// The user can't grant access due to restrictions.
 			canAccessMicrophone = false;
@@ -146,7 +158,7 @@ MyAudioQueueInputCallback ( void                  *inUserData,
 							const AudioStreamPacketDescription  *inPacketDescs) {
 	sqSqueakSoundCoreAudio *myInstance = (__bridge  sqSqueakSoundCoreAudio *)inUserData;
 
-	if (!myInstance.inputIsRunning) 
+	if (!myInstance.inputIsRunning)
 		return;
 
 	if (inNumberPacketDescriptions > 0) {
@@ -154,7 +166,7 @@ MyAudioQueueInputCallback ( void                  *inUserData,
 		[myInstance.soundInQueue addItem: atom];
     }
 
-	AudioQueueEnqueueBuffer (inAQ, inBuffer, 0, NULL);
+	AudioQueueEnqueueBuffer(inAQ, inBuffer, 0, NULL);
 	interpreterProxy->signalSemaphoreWithIndex(myInstance.semaIndexForInput);	
 }
 
@@ -177,7 +189,7 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 }
 
 @implementation soundAtom
-@synthesize	data; 
+@synthesize	data;
 @synthesize	byteCount;
 @synthesize	startOffset;
 
@@ -251,7 +263,7 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 	//NSLog(@"%i sound start playing frame count %i samples %i",ioMSecs(),frameCount,samplesPerSec);
 	int nChannels = 1 + (int)stereo;
 
-	if (frameCount <= 0 || samplesPerSec <= 0 || stereo < 0 || stereo > 1) 
+	if (frameCount <= 0 || samplesPerSec <= 0 || stereo < 0 || stereo > 1)
 		return 0; /* Causes primitive failure in primitiveSoundStart[WithSemaphore] */
 
 	self.semaIndexForOutput = semaIndex;
@@ -275,7 +287,7 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 	}
 	//NSLog(@"%i create new audioqueue",ioMSecs());
 	AudioQueueRef newQueue;
-	if (self.outputAudioQueue) 
+	if (self.outputAudioQueue)
 		[self snd_StopAndDispose];
 	*self.outputFormat = check;
 	if (AudioQueueNewOutput(self.outputFormat,
@@ -303,13 +315,13 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 		kAudioObjectPropertyScopeGlobal,
 		kAudioObjectPropertyElementMaster
 	};
-	if (AudioObjectAddPropertyListener(kAudioObjectSystemObject, 
+	if (AudioObjectAddPropertyListener(kAudioObjectSystemObject,
 										&deviceAddress,
 										MyAudioDevicesListener,
 										nil))
 		warning("failed to set output device notification");
 	deviceAddress.mSelector = kAudioHardwarePropertyDefaultInputDevice;
-	if (AudioObjectAddPropertyListener(kAudioObjectSystemObject, 
+	if (AudioObjectAddPropertyListener(kAudioObjectSystemObject,
 									&deviceAddress,
 									MyAudioDevicesListener,
 									nil))
@@ -330,16 +342,16 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 		return 1;
 	//NSLog(@"%i sound stop",ioMSecs());
 	self.outputIsRunning = NO;
-	if (!self.outputAudioQueue) 
+	if (!self.outputAudioQueue)
 		return 0;
 	OSStatus result = AudioQueueStop (self.outputAudioQueue,true);  //This implicitly invokes AudioQueueReset
-	if (result) 
+	if (result)
 		return 0;
 	return 1;
 }
 
 - (void) snd_Stop_Force {
-	if (!self.outputAudioQueue) 
+	if (!self.outputAudioQueue)
 		return;
 	//NSLog(@"%i sound stop force",ioMSecs());
 	OSStatus result = AudioQueueStop (self.outputAudioQueue,true);  //This implicitly invokes AudioQueueReset
@@ -348,7 +360,7 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 
 - (sqInt)	snd_StopAndDispose {
 	//NSLog(@"%i sound stopAndDispose",ioMSecs());
-	if (!self.outputAudioQueue) 
+	if (!self.outputAudioQueue)
 		return 0;
 
 	[self snd_Stop];
@@ -373,7 +385,7 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 	OSStatus result;
 	usqInt byteCount= frameCount * SqueakFrameSize;
 
-	if (!self.outputAudioQueue || frameCount <= 0 || startIndex > byteCount) 
+	if (!self.outputAudioQueue || frameCount <= 0 || startIndex > byteCount)
 		return -1; /* Causes primtive failure in primitiveSoundPlaySamples */
 	//NSLog(@"%i sound place samples on queue frames %i startIndex %i count %i",ioMSecs(),frameCount,startIndex,byteCount-startIndex);
 
@@ -393,13 +405,13 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 }
 
 - (sqInt)	snd_InsertSamplesFromLeadTime: (sqInt) frameCount srcBufPtr: (char*) srcBufPtr samplesOfLeadTime: (sqInt) samplesOfLeadTime {
-	//NOT IMPLEMEMENTED 
+	//NOT IMPLEMEMENTED
 	return 0;
 }
 
 - (sqInt)	snd_StartRecording: (sqInt) desiredSamplesPerSec stereo: (sqInt) stereo semaIndex: (sqInt) semaIndex {
 
-	if (desiredSamplesPerSec <= 0 || stereo < 0 || stereo > 1) 
+	if (desiredSamplesPerSec <= 0 || stereo < 0 || stereo > 1)
 		return interpreterProxy->primitiveFailFor(PrimErrBadArgument);
 
 	if (!ensureMicrophoneAccess())
@@ -422,7 +434,7 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 	self.inputFormat->mChannelsPerFrame = self.inputChannels;
 	self.inputFormat->mBitsPerChannel   = 16;
 
-	self.bufferSizeForInput = SqueakFrameSize * self.inputChannels * frameCount * 2 / 4;   
+	self.bufferSizeForInput = SqueakFrameSize * self.inputChannels * frameCount * 2 / 4;  
 	//Currently squeak does this thing where it stops yet leaves data in queue, this causes us to loose data if the buffer is too big
 
 	AudioQueueRef newQueue;
@@ -447,12 +459,12 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 - (sqInt)	snd_StopRecording {
 
 	if (!ensureMicrophoneAccess()
-	 || !self.inputAudioQueue) 
+	 || !self.inputAudioQueue)
 		return 0;
 
 	self.inputIsRunning = 0;
 	OSStatus result = AudioQueueStop (self.inputAudioQueue,true);  //This implicitly invokes AudioQueueReset
-	if (result) 
+	if (result)
 		return 0;
 	result = AudioQueueDispose (self.inputAudioQueue,true);
 	self.inputAudioQueue = nil;
@@ -463,7 +475,7 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 - (double) snd_GetRecordingSampleRate {
 
 	if (!ensureMicrophoneAccess()
-	 || !self.inputAudioQueue) 
+	 || !self.inputAudioQueue)
 		return interpreterProxy->primitiveFail();
 
 	return inputSampleRate;
@@ -475,12 +487,12 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 
 	if (!ensureMicrophoneAccess()
 	 || !self.inputAudioQueue
-	 || startSliceIndex > bufferSizeInBytes) 
+	 || startSliceIndex > bufferSizeInBytes)
 		return interpreterProxy->primitiveFail();
 
 	usqInt    start = startSliceIndex * SqueakFrameSize / 2;
 	soundAtom	*atom = [self.soundInQueue returnOldest];
-	if (!atom) 
+	if (!atom)
 		return 0;
 	if (bufferSizeInBytes-start >= atom.byteCount
 	 && atom.startOffset == 0) {
