@@ -1,4 +1,4 @@
-GDB=../../processors/ARM/gdb-8.3.1
+GDB=../../../processors/ARM/gdb-8.3.1
 PREREQUISITES:= ../gdbarm32/bfd/libbfd.a \
 				../gdbarm32/libiberty/libiberty.a \
 				../gdbarm32/opcodes/libopcodes.a \
