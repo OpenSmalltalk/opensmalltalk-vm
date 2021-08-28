@@ -1,0 +1,28 @@
+# Copied, perhaps edited, from ../../src/examplePlugins.ext
+EXTERNAL_PLUGINS = \
+B3DAcceleratorPlugin \
+ClipboardExtendedPlugin \
+CroquetPlugin \
+FT2Plugin \
+FloatMathPlugin \
+JPEGReadWriter2Plugin \
+JPEGReaderPlugin \
+LocalePlugin \
+Mpeg3Plugin \
+RePlugin \
+SqueakSSL \
+SurfacePlugin \
+UUIDPlugin \
+SerialPlugin \
+ObjectiveCPlugin \
+SDL2DisplayPlugin \
+EventsHandlerPlugin \
+BochsIA32Plugin \
+BochsX64Plugin \
+GdbARMPlugin \
+VectorEnginePlugin \
+# TEMPORARY REMOVE
+# not working (because of Cocoa vs Carbon):
+# MIDIPlugin \
+# QuicktimePlugin \
+# JoystickTabletPlugin

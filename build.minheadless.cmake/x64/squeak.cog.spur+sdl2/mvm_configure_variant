@@ -1,8 +1,0 @@
-#!/bin/sh
-if ../../../scripts/checkSCCSversion ; then exit 1; fi
-. ../common/configure_variant.sh
-
-cmake ../../../.. -G "$GENERATOR_NAME" -DCMAKE_BUILD_TYPE="$VARIANT_NAME" $CMAKE_EXTRA_ARGS \
-    -DPHARO_BRANDING=Off -DSPUR_OBJECT_MODEL=On -DCOG_JIT=On \
-    -DSUPPORT_TRADITIONAL_DISPLAY=ON -DALLOW_SDL2=ON \
-    -DCMAKE_INSTALL_PREFIX=install-dist

@@ -1,0 +1,17 @@
+# Copied, perhaps edited, from ../../src/examplePlugins.ext
+EXTERNAL_PLUGINS = \
+MIDIPlugin \
+B3DAcceleratorPlugin \
+FT2Plugin \
+JPEGReaderPlugin \
+JPEGReadWriter2Plugin \
+RePlugin \
+InternetConfigPlugin \
+SurfacePlugin \
+EventsHandlerPlugin \
+SqueakSSL \
+FileAttributesPlugin \
+AioPlugin \
+VectorEnginePlugin \
+# SDL2DisplayPlugin \
+

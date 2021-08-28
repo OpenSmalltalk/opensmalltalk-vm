@@ -1,0 +1,271 @@
+How To Build On Mac OS X
+------------------------
+This file (building/macos64x64/HowToBuild) describes how to build VMs that run
+64-bit images.  building/macos32x86/HowToBuild describes how to build VMs that
+run 32-bit images.
+
+
+Contents:
+	- Overview
+	- Checking out sources to build out-of-the-box
+	- Building out of the box
+	- The Structure of the Makefiles
+	- Building the VM Simulator Support Libraries
+	- Using Different Compilers
+	- Compilers To Avoid
+	- Installing third-party libraries
+	- Debugging with lldb
+
+
+Overview
+--------
+The "Cog" VM comes in a bewildering variety of forms.  The first distinction
+is between Squeak/Croquet VMs that run Squeak, Pharo, Cuis, Croquet images
+and their ilk, and between Newspeak VMs that run Newspeak.
+
+Another distinction is between Stack, Cog and Sista VMs.  Stack VMs are those
+with context-to-stack mapping that optimise message sending by keeping method
+actications on a stack instead of in contexts.  These are pure interpreters but
+significantly faster than the standard context-based Interpreter VM.  Cog VMs
+add a JIT to the mix, compiling methods used more than once to maxchine code on
+the fly.  Sista VMs, as yet unrealised and in development, add support for
+adaptive optimization that does speculative inlining at the bytecode-to-bytecode
+level.  These are targeted for release in 2015.
+
+Another distinction is between "v3" VMs and Spur VMs.  "v3" is the original
+object representation for Squeak as described in the back-to-the-future paper.
+Spur, as described on the www.mirandabanda.org blog, is a faster object
+representation which uses generation scavenging, lazy forwarding for fast
+become, and a single object header format common to 32 and 64 bit versions.
+Newspeak, Squeak 5 and the upcoming release of Pharo all use Spur.
+
+Another distinction is between normal single-threaded VMs that schedule "green"
+Smalltalk processes above a single-threaded VM, and "multi-threaded" VMs that
+share the VM between any number of native threads such that only one native
+thread owns the VM at any one time, switching between threads on FFI calls and
+callbacks or on Smalltalk process switches when Smalltalk processes are owned
+by threads.  This multi-threaded support is as yet experimental.
+
+The final distinction is between production, assert and debug VMs.  Production
+VMs are fully optimized, although they may include debugging symbols, and as
+their name implies are for use in production.  Assert and debug VMs include
+many assert checks that are disabled in the production VMs.  These asserts are
+very helpful in debugging VM problems but significantly impact performance.
+The difference between assert and debug VMs is that assert VMs are compiled
+with moderate optimization, which improves the performance of the asserts,
+whereas debug VMs are compiled with no optimization at all, providing maximum
+debuggability with minimum performance.
+
+This directory tree provides build directories for some of this matrix.  For
+example, squeak.cog.v3 contains a build directory for Smalltalk Cog VMs using
+the old object representation, newspeak.stack.spur contains a build directory
+for Newspeak Stack VMs using the Spur object representation.  Build as desired.
+
+
+Checking out sources to build out-of-the-box
+--------------------------------------------
+Check-out the repository from github:
+	git clone http://www.github.com/OpenSmalltalk/opensmalltalk-vm oscogvm
+	cd ./oscogvm
+	more README.md
+
+
+Building out of the box
+-----------------------
+0. The build system is based on Gnu Make for makefiles, and Xcode.app for
+compilers and libraries.  You will need a Mac OS X machine running at least
+10.13.x and Xcode v10.1 or later, with clang 10.  This requirement comes from
+new support for the Metal graphics system.  Alas Xcode 10.1 is the only version
+that will run on 10.13; go to https://developer.apple.com/download/more/ to
+obtain Xcode 10.1.  The version available on the app store requires MacOS 10.14.
+The system builds only the new Cocoa based VMs that use the platforms/iOS tree.
+The old Carbon-based VMs using platforms/Mac OS are unsupported.
+
+1. Install the tools (Xcode etc).  If you want to sign the application make sure
+you have installed a suitable certificate via Keychain Access and that the
+signing identity is in the SIGNING_IDENTITY environment variable, e.g. in the
+author's .profile is the line
+export SIGNING_IDENTITY="Developer ID Application: Eliot Miranda"
+
+1a. If you're doing a build in a headless context, e.g. logged in via ssh, then
+codesign may fail as it cannot ask for permission.  In this case you'll need to
+manually grant permission via
+	security -v unlock-keychain [-p <PASSWORD>] /Users/$USER/Library/Keychains/login.keychain
+where PASSWORD and ME are replaced by suitable values.
+Similarly one may be denied access to an executable when debugging with the lldb
+symptom "attach failed: lost connection" or some such.  Use
+	/usr/sbin/DevToolsSecurity --enable
+to fix this.
+
+2. cd to the VM configuration of your choice and run the mvm script, e.g.
+	cd buiild.macos64x64/squeak.cog.spur
+	./mvm -A
+	
+This will build CocoaFast.app, CocoaDebug.app and CocoaAssert.app applications
+(or maybe Squeak.app, SqueakAssert.app, SqueakDebug.app, Pharo.app,
+ PharoAssert.app, PharoDebug.app, etc) containing the three VM configurations.
+If the configuration includes the multi-threaded VM you can use mvm -S to make
+the single-threaded VMs, mvm -T to make the multi-threadeds in FastMT.app et al,
+and mvm -A to make them all.  mvm -d will make the Debug.app VM, etc.  mvm -?
+provides the gory details.
+
+In order to only build the production vm, you can launch the command:
+	./mvm -f
+
+Each build directory contains three files
+	plugins.int
+	plugins.ext
+Editing these and making is all one needs to do to change the set of plugins.
+But see The Structure of the Makefiles below for "complicated" plugins.
+
+
+The Structure of the Makefiles
+------------------------------
+Each VM build directory contains the mvm script, a root Makefile that selects
+the VM source to build, plugins.int to specify the internal plugins to build,
+and plugins.ext to specify the external plugins (if any) to build.  The root
+Makefile then includes a full Makefile from the common directory.  For example,
+squeak.cog.spur's Makefile (minus commentary) reads
+	----8<-----building/macos64x64/squeak.cog.spur/Makefile----8<---------------
+	VMSRCDIR:= ../../../src/spur64.cog
+	SOURCEFILE:=SqueakV50.sources
+
+	include ../common/Makefile.app.squeak.cog
+	----8<-----building/macos64x64/squeak.cog.spur/Makefile----8<---------------
+Some external plugins require spport libraries.  In particular, the processor
+simulators used by VMMaker.oscog to develop the VM JITs, depend on C or C++
+code that implements a processor simulator.  See below.  Plugins that require
+extra support or special compilation have makefiles under
+platforms/iOS/plugins/, for example plugins/iOS/plugins/RePlugin/Makefile.
+This Makefile sets some values and then includes common/Makefile.plugin to do
+the dirty work.  If you add an exotic plugin that requires such source please
+read the plugin makefile building/macos64x64/common/Makefile.plugin and the
+makefiles under plugins/iOS/plugins for examples of the facilities available.
+
+The files in building/macos64x64/common are
+	Makefile.app
+		The top-level makefile for CocoaFast.app et al.
+		It includes Makefile.vm to build the vm and plugins and then constructs
+		and optionally signs the .app bundle.  It may also install a Smalltalk
+		source file.
+	Makefile.app.newspeak
+		Modifies Makefile.app to rename the executable and install sources
+	Makefile.app.squeak.cog
+		Modifies Makefile.app to use the green VM icon that implies Cog
+	Makefile.flags
+		Defines the compilation flags and SDK to use in building the VM
+	Makefile.plugin
+		Makes either an internal FooPlugin.lib or an external FooPlugin.bundle.
+		If platforms/iOS/plugins/FooPlugin/Makefile exists Makefile.vm will
+		use it, and it should include Makefile.plugin to do the dirty work.
+	Makefile.rules
+		Defines the rules for compiling c, c++ and objective-c source files,
+		including maintaining dependency information.
+	Makefile.vm
+		Makes the VM executable in the chosen configuration from product,
+		assert or debug.  Decodes plugins.int and plugins.ext and invokes
+		make with the relevant makefile, either a special one such as
+		platforms/iOS/plugins/RePlugin/Makefile or Makefile.plugin, for each
+		internal or external plugin.
+	mkNamedPrims.sh
+		This script makes sqNamedPrims.h which defines the exports from the set
+		of internal plugins that the VM uses to access the primitives in
+		internal plugins.
+
+
+SDKs and Problems
+-----------------
+The makefiles will use the standard SDK, and has 11.0 as the minimum deployment
+target.  SDKs are installed in
+	/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/
+To obtain SDKs one way is to web search for "obtaining older sdks for Xcode",
+and follow the instructions you find.  But a more convenient place, at time of
+writing, is
+	git clone https://github.com/phracker/MacOSX-SDKs.git
+
+ld: library not found for -lssl
+clang: error: linker command failed with exit code 1 (use -v to see invocation)
+make[1]: *** [build/vm/SqueakSSL.bundle/Contents/MacOS/SqueakSSL] Error 1
+
+These libraries should be in the /usr/lib directory for the SDK being used.  Use
+
+make print-sdks
+
+to print the SDK, which might be e.g. /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.10.sdk.
+Libraries would then be found in /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.10.sdk/usr/lib.
+If they, or any other Apple support libraries, are missing, locate them (they
+may be in /usr/lib) and copy or link them into the SDK /usr/lib and retry the
+build.
+
+
+Signing Problems
+----------------
+The makefiles will attempt to sign the VM .app bundles that are built iff the
+environment variable SIGNING_IDENTITY is set (see "Building out of the box"
+above).  codesign, the Xcode utility for signing, may fail if Keychain Access
+is not set-up properly.  If you're logging in remotely, e.g. via ssh, and get
+an "User interaction is not allowed." error then see
+http://stackoverflow.com/questions/20205162/user-interaction-is-not-allowed-trying-to-sign-an-osx-app-using-codesign
+	"Login your build user via the GUI and open Keychain Access. Select your signing private key, right-click, choose Get Info, change to the Access Control tab and select the "Allow all applications to access this item"."
+
+You my find that signing an app bundle fails if the app bundle has been used.
+If signing fails simply delete all app bundles (e.g. Squeak*.app) and make anew.
+
+
+Building the VM Simulator Support Libraries
+-------------------------------------------
+If you want to get the Cog VM simulator working you'll need to build one or more
+of the processor simulator plugins, each of which has support libraries that
+must be built:
+	Processor   Plugin           Support Library
+	x86         BochsIA32Plugin  building/linux32x86/bochsx86
+	x86_64/x64  BochsX64Plugin   building/linux32x86/bochsx64
+	ARMv5       GdbARMPlugin     building/linux32x86/gdbarm32
+cd to the relevant directories; run conf.COG and then the build script, e.g.
+  $ cd building/linux32x86/bochsx86
+  $ ./conf.COG
+  $ ./makeem
+
+Then when Squeak VMs are built they will include the plugin(s) for which support
+libraries have been provided.
+
+
+Using Different Compilers
+-------------------------
+The build system uses Xcode's default compiler, clang by default.
+You may want to use a different compiler.  Users claim this is possible.
+For example, to install gcc 5.2 see
+	http://hamelot.co.uk/programming/add-gcc-compiler-to-xcode-6/
+(Thanks Hammad!).  There are no guarantees that this will work, but that's the
+best pointer I've found.
+
+
+Compilers To Avoid
+------------------
+Xcode 9.3.1 produces a broken VM on 64 bits.  We suggest that you avoid
+Xcode v9.3.x. 9.3.x ships with Apple LLVM version 9.1.0 (clang-902.0.39.1).
+See e.g. https://gist.github.com/yamaya/2924292
+
+
+Installing third-party libraries
+--------------------------------
+The Pharo VM depends on a number of third-party libraries.  cmake is needed to
+build the libraries.  Pre-compiled binaries for cmake can be downloaded from
+https://cmake.org/download.  Once e.g. /Applications/CMake.app is installed,
+ensure /Applications/CMake.app/Contents/bin is in PATH.
+
+
+Debugging with lldb
+-------------------
+As described in "Building out of the box" above, there are three kinds of VM
+built, the production one with full optimization, the assert VM with -O1, and
+the debug one with -O0.  All are debuggable, including ful symbols, but the
+production one is less debuggable because of optimization.  To debug via lldb
+simply run lldb on the executable in the MacOS directory in the .app bundle,
+e.g. if in the image directory you might do
+	lldb ../building/macos64x64/pharo.cog.spur/PharoAssert.app/Contents/MacOS/Pharo
+The VM includes many functions intended for VM debugging.  See e.g. functions
+beginning with print in the main VM source (e.g. src/spur64.cog/vm/gcc3x-cointerp.c).
+
+Eliot Miranda
+April 2018

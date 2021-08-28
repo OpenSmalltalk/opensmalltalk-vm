@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+set -e
+# Stack Spur VM with VM profiler and threaded heartbeat
+INSTALLDIR=sqstkspur64sunosht/usr
+# Some gcc versions create a broken VM using -O2
+OPT="-DAIO_DEBUG -DNDEBUG -DDEBUGVM=0"
+LIBS="-lmapmalloc"
+MAKE=gmake
+
+if [ $# -ge 1 ]; then
+	INSTALLDIR="$1"; shift
+fi
+if ../../../../scripts/checkSCCSversion ; then exit 1; fi
+echo -n "clean? "
+read a
+case $a in
+n|no|N|NO)	echo "ok but this isn't safe!!";;
+*)			rm -f config.h; test -f Makefile && $MAKE reallyclean
+esac
+test -f plugins.int || (test -f ../plugins.int && cp -p ../plugins.int . || cp -p ../../plugins.int .)
+test -f plugins.ext || (test -f ../plugins.ext && cp -p ../plugins.ext . || cp -p ../../plugins.ext .)
+test -f config.h || ../../../../platforms/unix/config/configure \
+		--with-vmversion=5.0 \
+		--without-libtls \
+		--disable-dynamicopenssl \
+	--with-src=src/spur64.stack --disable-cogit \
+	--without-vm-display-fbdev --without-npsqueak \
+	TARGET_ARCH="-m64" \
+	LIBS="$LIBS" \
+	CFLAGS="$OPT"
+rm -f vm/sqUnixMain.o # nuke version info
+rm -rf ../../../../products/$INSTALLDIR
+# prefer $MAKE install prefix=`readlink -f \`pwd\`/../../../../products/$INSTALLDIR`
+# but older linux readlinks lack the -f flag
+$MAKE install-squeak install-doc install-plugins prefix=`(cd ../../../../;pwd)`/products/$INSTALLDIR 2>&1 | tee LOG

@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+set -e
+case "`uname -m`" in # ensure we see x86 as machine type
+i86pc) ;; # we're good
+*) if type i386 2>&1 >/dev/null; then
+	echo "Re-exec as x86"
+	exec i386 "$0" "$@"
+fi ;;
+esac
+# Spur VM with VM profiler and threaded heartbeat
+MAKE=gmake
+INSTALLDIR=sqcogspursunosht/usr
+# GNU configure AC_SYS_LARGEFILE is not adding -D_FILE_OFFSET_BITS (config.h)
+# to use lseek64 instead of lseek, must -D it here
+# Some gcc versions create a broken VM using -O2
+OPT="-DAIO_DEBUG -DNDEBUG -DDEBUGVM=0 -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64"
+LIBS="-lmapmalloc"
+
+if [ $# -ge 1 ]; then
+	INSTALLDIR="$1"; shift
+fi
+
+if ../../../../scripts/checkSCCSversion ; then exit 1; fi
+echo -n "clean? "
+read a
+case $a in
+n|no|N|NO)	echo "ok but this isn't safe!!";;
+*)			test -f Makefile && $MAKE reallyclean
+esac
+test -f plugins.int || (test -f ../plugins.int && cp -p ../plugins.int . || cp -p ../../plugins.int .)
+test -f plugins.ext || (test -f ../plugins.ext && cp -p ../plugins.ext . || cp -p ../../plugins.ext .)
+test -f config.h || ../../../../platforms/unix/config/configure --without-npsqueak \
+		--with-vmversion=5.0 \
+		--without-libtls \
+		--disable-dynamicopenssl \
+		--with-src=src/spur32.cog \
+	TARGET_ARCH="-m32" \
+	LIBS="$LIBS" \
+	CFLAGS="$OPT -DCOGMTVM=0"
+rm -f vm/sqUnixMain.o # nuke version info
+rm -rf ../../../../products/$INSTALLDIR
+# prefer $MAKE install prefix=`readlink -f \`pwd\`/../../../../products/$INSTALLDIR`
+# but older linux readlinks lack the -f flag
+$MAKE install-squeak install-plugins prefix=`(cd ../../../../;pwd)`/products/$INSTALLDIR 2>&1 | tee LOG

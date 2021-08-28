@@ -1,0 +1,374 @@
+
+How To Build On Solaris 11 (VM notes by David Stes)
+---------------------------------------------------
+
+Contents:
+        - Overview
+	- libmapmalloc
+	- /etc/security/policy.conf
+	- epoll
+	- Audio Headers
+	- OpenSSL
+	- Squeak Profile
+	- Real-Time Class
+	- Swapspace
+	- Stackspace
+	- C Compiler
+	- GNU make
+	- pkg-config
+	- IPS package
+
+Overview
+--------
+
+These are some notes on building the OpenSmalltalk VM on Oracle Solaris 11.
+
+On Solaris "uname -s" reports the value "SunOS".
+
+To build,
+
+  scripts/updateSCCSVersions
+  cd building/sunos64x64  (or cd building/sunos32x86)
+  cd squeak.cog.spur (or cd squeak.stack.spur)
+  cd build
+  ./mvm or ./mvm INSTALLDIR
+
+This will build and install into INSTALLDIR.
+The default value for INSTALLDIR is products/sqcogspur64sunos[ht]/usr,
+for the Cog Spur VM (see other values in the mvm scripts).
+
+For Solaris specific suggestions you can contact me (David Stes)
+or alternatively (and maybe better!) the OpenSmalltalk team ...
+
+libmapmalloc
+------------
+
+The current OpenSmalltalk VM's use the Spur memory management (and
+object model or Smalltalk image format).
+
+Because Spur uses mmap() , we have observed best results with the Solaris
+libmapmalloc library, which also uses mmap() for acquiring heap space.
+
+With the default sbrk() malloc library, we have sometimes errors in
+plugins or support libraries that depend on malloc(); it appears that Spur
+works worse in a classical sbrk() heap allocation setup.
+
+Because libmapmalloc is provided on Solaris by the standard system/library,
+
+# pkg contents system/library | grep libmapmalloc
+usr/lib/amd64/libmapmalloc.so
+usr/lib/amd64/libmapmalloc.so.1
+usr/lib/libmapmalloc.so
+usr/lib/libmapmalloc.so.1
+usr/share/man/man3lib/libmapmalloc.3lib
+
+There shouldn't be any issue with running the libmapmalloc binaries,
+given the fact that system/library will be installed by default.
+
+The build scripts are setup to use libmapmalloc, but if you wish,
+you could modify this to use the default malloc library or libumem.
+
+/etc/security/policy.conf
+-------------------------
+
+It is possible that the Squeak VM is trying to run a special thread
+(LWP or light weight process) for heartbeat at a non-default priority.
+
+If you run squeak and if you get the following error:
+
+	pthread_setschedparam failed: Not owner
+
+This is due to a lack of "proc_priocntl" privilege.
+
+# ppriv -v -l proc_priocntl
+proc_priocntl
+    Allows a process to elevate its priority above its current level.
+    Allows a process to change its scheduling class to any scheduling class,
+    including the RT class.
+
+If so, then consider change the following in the /etc/security/policy.conf:
+
+	cp /etc/security/policy.conf /etc/security/policy.conf.orig
+
+change
+
+	#PRIV_DEFAULT=basic
+
+to
+
+	PRIV_DEFAULT=basic,proc_priocntl
+
+You can run squeak in a Solaris zone and do the above in a zone only.
+If you run squeak in a zone, you may also have to set the privilege limit:
+
+# zonecfg -z example-zone info | grep limitpriv
+limitpriv: default,proc_priocntl
+
+If you do not want to change the policy.conf file, you can also read on,
+and see the discussion below for running squeak with 'pfexec' (profile exec).
+
+epoll
+-----
+
+Some OS configurations have a <sys/epoll.h> header file, and if so,
+the OpenSmalltalk configure script will automatically assume you want epoll.
+
+Add:
+
+  ax_cv_have_epoll=no ax_cv_have_epoll_pwait=no
+
+to the configure line if you wish to disable the (recent) epoll support.
+
+Audio Headers
+-------------
+
+The configure script will look for header files (#include) and enable
+the build of some sound plugins, depending on what it finds.
+
+For example it will check for /usr/include/sys/soundcard.h,
+and /usr/include/sys/audio/audio_oss.h.
+
+You can find out which package installs that header file as follows:
+
+# pkg search  /usr/include/sys/audio/audio_oss.h
+
+Personally I like the "pulse" server supported by the "vm-sound-pulse" plugin.
+
+In some cases, the audio header files are in a separate package header-audio,
+which is not strictly needed because the PulseAudio server is sufficient.
+
+Make sure (before you configure and build) that header-audio is uninstalled,
+and that pulseaudio is installed.
+
+You can see whether the audio headers are installed as follows :
+
+# pkg list -a system/header/header-audio
+# pkg list -a library/audio/pulseaudio
+
+The header files for pulseaudio are in the pulseaudio package.
+
+OpenSSL
+-------
+
+We have tested with openssl 1.0.2 and build the VM with the option:
+
+	--disable-dynamicopenssl
+
+You may have to uninstall packages that provide/ usr/include/tls.h.
+
+The configure script may think that it has to enable TLS support,
+if it finds the tls.h header file.
+
+The package runtime/tcl-8 or runtime/tcl-8/tcl-openssl may provide tls.h.
+
+In order to avoid this problem, we build the VM with the option:
+
+	--without-libtls
+
+Squeak Profile
+--------------
+
+When running the squeak vm, after copying a Squeak .image and .change file,
+and after copying the Squeak Smalltalk source file (SqueakV50.sources).
+
+$ bin/squeak Squeak6.0alpha-19547-32bit.image 
+pthread_setschedparam failed: Not owner
+...
+
+This indicates that the process does not have the necessary "privilege" to issue a pthread_setschedparam() call.
+
+It is possible to get rid of this warning and run squeak as follows:
+
+$     pfexec squeak Squeak6.0alpha-19547-32bit.image 
+
+without warning.  This is a Solaris pfexec "execute squeak in a profile".
+
+To do this, add a profile "Squeak" (or modify the "Basic Solaris User" profile):
+
+# profiles -p Squeak
+profiles:Squeak> set desc="Allow Squeak VM to Set Priority"
+profiles:Squeak> add cmd=/usr/bin/squeak
+profiles:Squeak:squeak> set privs=proc_priocntl
+profiles:Squeak:squeak> end
+profiles:Squeak> commit
+profiles:Squeak> info
+        name=Squeak
+        desc=Allow Squeak VM to Set Priority
+        cmd=/usr/bin/squeak
+profiles:Squeak> exit
+
+The above commands adds the following entries to /etc/security :
+
+# tail /etc/security/exec_attr
+Squeak:solaris:cmd:::/usr/bin/squeak:privs=proc_priocntl
+
+# tail /etc/security/prof_attr
+Squeak:::Allow Squeak VM to Set Priority:
+
+Once the profile is created, you can assign the profile to a user:
+
+$ cp /etc/user_attr /etc/user_attr.backup
+$ usermod -P Squeak someuser
+
+This changes the file /etc/user_attr; you can also edit /etc/user_attr.
+
+The user can verify that the profile is available:
+
+$ userattr profiles
+Squeak,System Administrator
+
+Finally the following two pfexec usages both (!) require the Squeak profile to exist.  So the second form with -P proc_priocntl as argument to pfexec only works if proc_priocntl is in the "intersection of the available profiles and proc_prioctnl".  So it's not enough to simply pfexec -P proc_prioctnl the squeak vm, it is necessary that the root user assigns the Squeak profile to the user.
+
+$ pfexec squeak Cuis5.0-4112.image
+
+$ pfexec -P proc_priocntl squeak Cuis5.0-4112.image
+
+Verify as follows the squeak threads (LWP light-weight processes)
+
+$ ps -eLo pid,pri,lwp,class,comm | grep squeak
+ 3849  44      1   IA /usr/lib/squeak/5.0-202004221445-sunos/squeak
+ 3849  49      2   IA /usr/lib/squeak/5.0-202004221445-sunos/squeak
+ 3849  49      3   IA /usr/lib/squeak/5.0-202004221445-sunos/squeak
+ 3849  50      4   IA /usr/lib/squeak/5.0-202004221445-sunos/squeak
+
+Note that there are 4 threads (LWP) and they are in the schedule class IA;
+the last thread is running at priority 50 (the others at 49).
+
+Real-Time Class
+---------------
+
+Note that it is also possible to suppress the "pthread_setschedparam" warning,
+by running the squeak vm in the RT (real-time) class.
+
+One way would be to use priocntl -e and execute the squeak in the -c RT class.
+
+You must do this as "root".
+
+You can change a "bash" shell to RT class,
+
+bash-4.4$ priocntl -d $$
+INTERACTIVE CLASS PROCESSES:
+   PID[/LWP]       IAUPRILIM     IAUPRI     IAMODE
+   4026                0            0          1
+
+bash-4.4$ sudo priocntl -c RT -p 0 -s $$
+
+bash-4.4$ priocntl -d $$
+REAL TIME PROCESSES:
+   PID[/LWP]         RTPRI       TQNTM      TQSIG
+   3966                0          1000         0
+
+After changing the "bash" shell to the RT class, you can launch
+
+bash-4.4$ bin/squeak Squeak6.0alpha-19547-32bit.image
+
+It will inherit the RT class and the pthread_setschedparam warning is gone.
+
+Verify as follows the squeak threads (LWP light-weight processes)
+
+bash-4.4$ ps -eLo pid,pri,lwp,class,comm | grep squeak
+ 4029 100      1   RT bin/../lib/squeak/5.0-202003240214-solaris/squeak
+ 4029 101      2   RT bin/../lib/squeak/5.0-202003240214-solaris/squeak
+
+Note that one thread is running in priority 101 and another in priority 100.
+
+Swapspace
+---------
+
+It's not certain that the following notes apply, it depends on how much
+RAM you have in your machine(s) ...
+
+But make sure that there is sufficient free space in /tmp,
+mounted on swap in Solaris.
+
+The C compiler may use a lot of space for temporary files under /tmp.
+
+For example (the example 8G is what I use) :
+
+$ df -h /tmp
+Filesystem             Size   Used  Available Capacity  Mounted on
+swap                   8.2G    78M       8.1G     1%    /tmp
+
+If required, increase the "volsize" of the rpool/swap volume :
+
+# zfs get volsize rpool/swap
+NAME        PROPERTY  VALUE  SOURCE
+rpool/swap  volsize   8G     local
+
+The command to increase the size is:
+
+# zpool list rpool (check FREE space)
+# zfs set volsize=8G rpool/swap
+
+This can be done online, but a reboot is not a bad idea after doing this.
+
+Stackspace
+----------
+
+ulimit -a will print stack-size :
+
+stack size              (kbytes, -s) 16384
+
+In some extreme cases the VM may print some warnings about stack size;
+I don't recommend changing the defaults of your system, but here's how :
+
+$ prctl -n process.max-stack-size -t basic -i process <PID>
+process: 1766: bash
+NAME    PRIVILEGE       VALUE    FLAG   ACTION                       RECIPIENT
+process.max-stack-size
+        basic           8.00MB      -   deny                                 -
+
+# prctl -t basic -n process.max-stack-size -r -v 16777216 -i process <PID>
+
+then after this change:
+
+# prctl -t basic -n process.max-stack-size -i process <PID>
+process: 1766: bash
+NAME    PRIVILEGE       VALUE    FLAG   ACTION                       RECIPIENT
+process.max-stack-size
+        basic           16.0MB      -   deny          
+
+As far as I've seen , stack-size problems occur mostly in case of some
+run-away process in Squeak and increasing will not help (may make it worse).
+
+C Compiler
+----------
+
+As C compiler we have used both the Sun C compiler and GCC for Solaris.
+Currently we have succesfully built the VM with gcc 7.3 and gcc 9.2.
+
+Note that in the past Squeak V3 was available on SunOS for SPARC and Intel.
+
+http://squeakvm.org/unix/release/Squeak-3.7-7.sparc-sun-solaris2.9.tar.gz
+http://squeakvm.org/unix/release/Squeak-3.7-7.i386-pc-solaris2.9.tar.gz
+
+It appears that those old Squeak V3 VM's were built with "gcc" for Solaris.
+
+There are also Solaris 10 binaries for SPARC at:
+
+http://files.squeak.org/3.9/unix-linux/
+
+GNU Make
+--------
+
+For the Makefiles, pkg:/developer/build/gnu-make  must be installed.
+
+pkg-config
+----------
+
+The configure script uses the pkg-config tool for some plugins.
+
+Be sure to install it:
+
+   pkg install developer/build/pkg-config
+
+IPS Package
+-----------
+
+There exists an IPS (Solaris Image Packaging System) package for squeak.
+
+That's the easiest way to get a Squeak VM to run Squeak images,
+instead of compiling yourself.
+
+That package is available in the "solaris-userland" .
+

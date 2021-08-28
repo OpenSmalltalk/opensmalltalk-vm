@@ -1,0 +1,139 @@
+#############################################################################
+# Common Makefile for Win64 VM using MSVC, e.g. 2017 Community, and gnu make
+# Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
+#
+# Compilation rules for 64-bit MSVC 2017 compiler on Microsoft Windows
+#############################################################################
+
+# N.B. Compiler selection is in Makefile.msvc.flags.  Alas this is because of
+# ordering issues I'm too lazy to fix now.  If you can fix this, please do.
+
+# Overridable location of the Cygwin installation Cygwin Bin Directory
+CBD=c:/cygwin64/bin
+CBD64=c:/cygwin64/usr/x86_64-w64-mingw32/bin
+CBD32=c:/cygwin64/usr/i686-w64-mingw32/bin
+
+#############################################################################
+# C compiler settings (MSVC 2017 Community Edition)
+#
+
+# https://docs.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warnings-c4000-through-c4199?view=vs-2017
+ifdef MSVC
+WARNINGS:= -W4 -wd4100 -wd4668 -wd4255 -wd4555 -wd4706
+else ifdef Clang
+WARNINGS:= -Wall -Wno-unused-variable -Wno-unknown-pragmas -Wno-unused-value -Wno-unused-function -Wno-missing-variable-declarations -Wno-unused-macros -Wno-sign-compare -Wno-sign-conversion -Wno-pedantic -Wno-reserved-id-macro -Wno-undef
+endif
+
+# VM config flags.
+ifeq ($(CONFIGURATION),product)
+# -Ob enable inline expansion -Oy omit frame pointer, Oi enable intrinsics
+OFLAGS:=$(PRODUCTION_OFLAGS)
+NDEBUG:=-DNDEBUG -D'VM_LABEL(foo)=0' # Define NDEBUG for production to exclude asserts
+DEBUGVM=0
+else ifeq ($(CONFIGURATION),assert)
+OFLAGS:=$(ASSERT_OFLAGS)
+DEBUGVM=0
+NDEBUG:=-D'VM_LABEL(foo)=0'
+else
+OFLAGS:=$(DEBUG_OFLAGS)
+DEBUGVM=1
+NDEBUG:=-D'VM_LABEL(foo)=0'
+endif
+
+ifeq ($(THREADING),multi)
+COGDEFS:= $(COGDEFS) -DCOGMTVM=1 -DDEBUGVM=$(DEBUGVM)
+else
+COGDEFS:= $(COGDEFS) -DCOGMTVM=0 -DDEBUGVM=$(DEBUGVM)
+endif
+ifdef BIT_IDENTICAL_FLOATING_POINT
+COGDEFS:= $(COGDEFS) -DBIT_IDENTICAL_FLOATING_POINT=1
+endif
+
+# MSVC's preprocessor (bless its heart) can't manage complex expansions
+# and so unless we specify USE_INLINE_MEMORY_ACCESSORS lots of things
+# break, including the checks in checkAssumedCompactClasses
+ifdef MSVC
+MEMACCESS:=-DUSE_INLINE_MEMORY_ACCESSORS=1
+endif
+
+# Set minimum version to Windows 8 (see /cygwin/usr/include/w32api/w32api.h)
+#but if so, sqWin32AEC.cpp includes DeviceTopology.h & barfs
+#WINVER:=-D_WIN32_WINNT=0x0801 -DWINVER=0x0801
+# Set minimum version to Windows 10
+WINVER:=-D_WIN64=1 -D_WIN32_WINNT=0x1001 -DWINVER=0x1001
+
+# define _MT to eliminate the inline versions of printf et al in mingw/stdio.h
+#NOBUILTIN:= -fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf
+NOBUILTIN:=-D_MT
+MACHINE:=x64
+
+#!#! UNICODE applies to API calls, _UNICODE to string representation, so one
+#!#! must define both.
+DEFS:=	-D$(VM)VM=1 $(COGDEFS) $(MEMACCESS) $(WINVER) $(JMPDEFS) \
+		-DWIN32=1 -DUNICODE=1 -D_UNICODE=1 -DNO_ISNAN -DNO_SERVICE \
+		$(NDEBUG) -DLSB_FIRST -DVM_NAME='"$(VM_NAME)"' $(XDEFS) $(CROQUET)
+
+#############################################################################
+# Linker settings
+#
+LD:=	LINK /nologo /MACHINE:$(MACHINE) /INCREMENTAL:NO
+LDCXX:=	LINK /nologo /MACHINE:$(MACHINE) /INCREMENTAL:NO
+LIBRARIAN:=LIB /nologo
+# dlltool is used to create import libraries.  The alternatives are
+# Digital Mars' IMPLIB.EXE (32-bit only?) and mbarcadero's MKEXP.EXE (64-bit)
+# N.B. cygiconv-2.dll cygintl-8.dll cygwin1.dll must be copied to $(CBD64)
+# for this to work.
+DLLTOOL:=$(CBD)/x86_64-w64-mingw32-dlltool
+
+# The JIT will attempt to alloca up to 1.5Mb by default on x86-64. So set
+# the default stack size to 2Mb to avoid crashes in the JIT's alloca.
+ifeq ($(DEFAULT_STACK_SIZE),)
+DEFAULT_STACK_SIZE:=2097152
+endif
+STACK_LD_FLAG=/STACK:$(DEFAULT_STACK_SIZE),$(DEFAULT_STACK_SIZE)
+
+#EXPORT:=--export-all-symbols
+#BASELDFLAGS:=-m32 -mthreads -Wl,--large-address-aware,--dynamicbase,--nxcompat,$(EXPORT)
+BASELDFLAGS:= $(STACK_LD_FLAG) /DYNAMICBASE /LARGEADDRESSAWARE /NXCOMPAT /DEBUG:FULL
+LDFLAGS:= /subsystem:windows $(BASELDFLAGS) $(EXTRALDFLAGS)
+CONSOLELDFLAGS:= /subsystem:console $(BASELDFLAGS) $(EXTRALDFLAGS)
+DL:=/DEFAULTLIB:
+NDL:=/NODEFAULTLIB:
+
+ifdef BIT_IDENTICAL_FLOATING_POINT
+EXTRANDLS:=/NODEFAULTLIB:libm
+endif
+STDLIBS:=$(STDLIBS) $(NDL)libc $(NDL)libcmt $(EXTRANDLS) $(DL)msvcrt \
+         dinput8.lib dsound.lib ws2_32.lib comdlg32.lib ole32.lib winmm.lib \
+         version.lib wininet.lib user32.lib gdi32.lib psapi.lib \
+         advapi32.lib kernel32.lib secur32.lib shell32.lib shfolder.lib
+
+#############################################################################
+# Tools to use
+#
+CP:= $(CBD)/cp
+RM:= $(CBD)/rm
+MV:= $(CBD)/mv
+MKDIR:=$(CBD)/mkdir -p
+
+#############################################################################
+# RC settings
+#
+# Note: RC compiles the .rc files into linkable .o files
+#
+RC:=rc /nologo
+CVTRES:=cvtres /nologo
+SED:=$(CBD)/sed
+GREP:=$(CBD)/grep
+BASH:=$(CBD)/bash
+SCCSVER:=$(PLATDIR)/Cross/vm/sqSCCSVersion.h
+
+ifneq ($(shell $(GREP) 'GitRawRevisionString.*$$Rev$$.' $(SCCSVER)),)
+$(shell $(BASH) -c "cd ../../../scripts; ./updateSCCSVersions")
+endif
+SVNMAJOR := $(shell $(SED) -e "s/^static.*GitRawRevisionString.*Rev: \([0-9][0-9][0-9][0-9]\).*/\\1/p" -e d $(SCCSVER) | $(SED) -e 's/^0*//')
+SVNMINOR := $(shell $(SED) -e "s/^static.*GitRawRevisionString.*Rev: [0-9][0-9][0-9][0-9]\([0-9][0-9]\).*/\\1/p" -e "s/^0*//" -e d $(SCCSVER) | $(SED) -e 's/^0*//')
+SVNREV := $(shell $(SED) -e "s/^static.*GitRawRevisionString.*Rev: [0-9][0-9][0-9][0-9][0-9][0-9]\([0-9][0-9]\).*/\\1/p" -e "s/^0*//" -e d $(SCCSVER) | $(SED) -e 's/^0*//')
+SVNBUILD := $(shell $(SED) -e "s/^static.*GitRawRevisionString.*Rev: [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]\([0-9][0-9]*\).*/\\1/p" -e "s/^0*//" -e d $(SCCSVER) | $(SED) -e 's/^0*//')
+
+RCFLAGS:= /i $(PLATDIR)/win32/misc -D_WIN32 -DFILEVERSIONVALUES=$(SVNMAJOR),$(SVNMINOR),$(SVNREV),$(SVNBUILD) -DFILEVERSIONSTRING="\"$(SVNMAJOR).$(SVNMINOR).$(SVNREV).$(SVNBUILD)\""

@@ -133,14 +133,14 @@ in a VM at build time (see plugins.int & plugins.ext in build directories).
 
 The VM source are in directories such as
 ```
-	sistasrc/vm			- Smalltalk Sista V3
-	spursistasrc/vm		- Smalltalk Sista Spur
-	spursrc/vm			- Smalltalk Cog Spur
-	spur64src/vm		- Smalltalk Cog Spur 64-bit
-	spurstacksrc/vm		- Smalltalk Stack Spur
-	spurstack64src/vm	- Smalltalk Stack Spur 64-bit
-	src/vm				- Smalltalk Cog V3
-	stacksrc/vm			- Smalltalk Stack V3
+	src/v3.sista		- Smalltalk Sista V3
+	src/spur32.sista	- Smalltalk Sista Spur
+	src/spur32.cog 		- Smalltalk Cog Spur
+	src/spur64.cog 		- Smalltalk Cog Spur 64-bit
+	src/spur32.stack 	- Smalltalk Stack Spur
+	src/spur64.stack 	- Smalltalk Stack Spur 64-bit
+	src/v3.cog			- Smalltalk Cog V3
+	src/v3.stack 		- Smalltalk Stack V3
 ```
 
 All plugins are in the directory
@@ -173,27 +173,27 @@ Each vm source directory contains several files, a subset of the following:
 Platform build directories
 --------------------------
 The current "official" build directories are of the form
-build.OS_WordSize_Processor, and include
+building/OS_WordSize_Processor, and include
 ```
-	build.linux32x86	- uses autoconf, gcc and make
-	build.macos32x86	- 32-bit Mac OS X using clang and gmake
-	build.macos64x64	- 64-bit Mac OS X using clang and gmake
-	build.win32x86		- uses cygwin, gcc and gmake
+	building/linux32x86	- uses autoconf, gcc and make
+	building/macos32x86	- 32-bit Mac OS X using clang and gmake
+	building/macos64x64	- 64-bit Mac OS X using clang and gmake
+	building/win32x86		- uses cygwin, gcc and gmake
 ```
 More can be added as required.  In each there is a HowToBuild that describes
 the necessary steps to compile a VM.
 
-Within each build.OS_WordSize_Processor directory are a set of build directories
+Within each building/OS_WordSize_Processor directory are a set of build directories
 for specific configurations of Cog, and for support code and makefiles.  For
 example, there exist
 ```
-	build.macos32x86/squeak.cog.spur   - A Cog JIT VM with Squeak branding,
+	building/macos32x86/squeak.cog.spur   - A Cog JIT VM with Squeak branding,
                                          using the Spur memory manager.
-	build.macos32x86/squeak.stack.spur - A Stack interpreter VM with Squeak
+	building/macos32x86/squeak.stack.spur - A Stack interpreter VM with Squeak
                                          branding, and the Spur memory manager.
-	build.macos32x86/squeak.cog.v3     - A Cog JIT VM with Squeak branding,
+	building/macos32x86/squeak.cog.v3     - A Cog JIT VM with Squeak branding,
                                          using the old Squeak memory manager.
-	build.macos32x86/pharo.cog.spur    - A Cog JIT VM with Pharo branding and
+	building/macos32x86/pharo.cog.spur    - A Cog JIT VM with Pharo branding and
                                          plugins (not yet implemented) using the
                                          Spur memory manager.
 ```
@@ -201,13 +201,13 @@ example, there exist
 
 There exist
 ```
-    build.macos64x64/bochsx86 - Support libraries for the BochsIA32Plugin which
+    building/macos64x64/bochsx86 - Support libraries for the BochsIA32Plugin which
                                 is used to develop Cog itself.
-    build.macos64x64/bochsx64 - Support libraries for the BochsX64Plugin which
+    building/macos64x64/bochsx64 - Support libraries for the BochsX64Plugin which
                                 is used to develop Cog itself.
-    build.macos64x64/gdbarm32 - Support libraries for the GdbARMPlugin which
+    building/macos64x64/gdbarm32 - Support libraries for the GdbARMPlugin which
                                 is used to develop Cog itself.
-    build.macos64x64/gdbarm64 - Support libraries for the GdbARMv8Plugin which
+    building/macos64x64/gdbarm64 - Support libraries for the GdbARMv8Plugin which
                                 is used to develop Cog itself.
 ```
 and the intention is to add such directories to contain e.g. support code for
@@ -217,13 +217,13 @@ branded VM builds, avoiding duplication.
 
 There exist
 ```
-	build.macos32x86/common - Gnu Makefiles for building the various branded VMs
-	build.macos64x64/common - Gnu Makefiles for building the various branded VMs
-	build.win32x86/common   - Gnu Makefiles for building the various branded VMs
-	build.win64x64/common   - Gnu Makefiles for building the various branded VMs
+	building/macos32x86/common - Gnu Makefiles for building the various branded VMs
+	building/macos64x64/common - Gnu Makefiles for building the various branded VMs
+	building/win32x86/common   - Gnu Makefiles for building the various branded VMs
+	building/win64x64/common   - Gnu Makefiles for building the various branded VMs
 ```
-And the intention is to add build.linuxNN????/common as soon as possible to
-use Gnu Makefiles to build all VMs on all platfrms.
+And the intention is to add building/linuxNN????/common as soon as possible to
+use Gnu Makefiles to build all VMs on all platforms.
 
 The scripts directory contains various scripts for validating and checking-in
 generated sources, packaging builds into installable artifacts (tar, msi, zip),

@@ -1,0 +1,11 @@
+# Copied, perhaps edited, from ../../../src/examplePlugins.ext
+EXTERNAL_PLUGINS = \
+B3DAcceleratorPlugin \
+SurfacePlugin \
+SqueakSSL \
+FT2Plugin \
+FileAttributesPlugin \
+VectorEnginePlugin \
+# SDL2DisplayPlugin \
+# BochsIA32Plugin \
+# BochsX64Plugin \

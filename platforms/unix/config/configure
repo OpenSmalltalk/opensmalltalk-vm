@@ -11725,8 +11725,8 @@ fi
 vmpdir="${vmpsrc}"
 
 if test ! -d "${topdir}/${vmmsrc}"; then
-  if test -d "${topdir}/platforms/unix/${vmmsrc}/vm"; then
-    vmmdir="${topdir}/platforms/unix/${vmmsrc}/vm"
+  if test -d "${topdir}/platforms/unix/${vmmsrc}"; then
+    vmmdir="${topdir}/platforms/unix/${vmmsrc}"
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: using built-in src directory" >&5
 $as_echo "using built-in src directory" >&6; }
   fi
@@ -11735,8 +11735,8 @@ fi
 if test ! -d "${topdir}/${vmpsrc}"; then
   if test -d "${topdir}/platforms/unix/${vmpsrc}"; then
     vmpdir="${topdir}/platforms/unix/${vmpsrc}"
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: using built-in pligins directory" >&5
-$as_echo "using built-in pligins directory" >&6; }
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: using built-in plugins directory" >&5
+$as_echo "using built-in plugins directory" >&6; }
   fi
 fi
 
@@ -11785,19 +11785,19 @@ $as_echo "bad" >&6; }
   vmmcheck file -f ${vmmcfg}/plugins.ext
   vmmcheck dir  -d ${vmmdir}
   vmmcheck dir  -d ${vmpdir}
-  vmmcheck dir  -d ${vmmdir}/vm
-  vmmcheck file -f ${vmmdir}/vm/interp.h
-  vmmcheck file -f ${vmmdir}/vm/vmCallback.h
+  vmmcheck dir  -d ${vmmdir}
+  vmmcheck file -f ${vmmdir}/interp.h
+  vmmcheck file -f ${vmmdir}/vmCallback.h
   if test "$cogit" = yes ; then
-	  vmmcheck file -f ${vmmdir}/vm/cogit.c
-	  vmmcheck file -f ${vmmdir}/vm/cogit.h
-	  vmmcheck file -f ${vmmdir}/vm/cogmethod.h
-	  vmmcheck file -f ${vmmdir}/vm/cointerp.c
-	  vmmcheck file -f ${vmmdir}/vm/cointerp.h
-	  vmmcheck file -f ${vmmdir}/vm/gcc3x-cointerp.c
+	  vmmcheck file -f ${vmmdir}/cogit.c
+	  vmmcheck file -f ${vmmdir}/cogit.h
+	  vmmcheck file -f ${vmmdir}/cogmethod.h
+	  vmmcheck file -f ${vmmdir}/cointerp.c
+	  vmmcheck file -f ${vmmdir}/cointerp.h
+	  vmmcheck file -f ${vmmdir}/gcc3x-cointerp.c
   else
-	  vmmcheck file -f ${vmmdir}/vm/interp.c
-	  vmmcheck file -f ${vmmdir}/vm/gcc3x-interp.c
+	  vmmcheck file -f ${vmmdir}/interp.c
+	  vmmcheck file -f ${vmmdir}/gcc3x-interp.c
   fi
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: okay" >&5
 $as_echo "okay" >&6; }
@@ -13363,7 +13363,7 @@ fi
 
 # Configured headers (pretty much everybody needs blddir and vm)
 
-INCLUDES="-I${blddir} -I${vmmcfg} -I${topdir}/platforms/unix/vm -I${topdir}/platforms/Cross/vm -I${vmmdir}/vm"
+INCLUDES="-I${blddir} -I${vmmcfg} -I${topdir}/platforms/unix/vm -I${topdir}/platforms/Cross/vm -I${vmmdir}"
 
 # these are not always added
 case $host_os in
@@ -13749,7 +13749,7 @@ fi
 fi
 
 
-if test -f "${vmmdir}/vm/interp.h"; then
+if test -f "${vmmdir}/interp.h"; then
 
 $as_echo "#define HAVE_INTERP_H 1" >>confdefs.h
 

@@ -26,45 +26,48 @@
 platforms/unix/config/autom4te.cache/
 
 # Don't track build directory contents (with exceptions)
-/build*/**/*
+/building/**/**/*
 # except do track these files
-!/build*/common*/*
-!/build*/**/Makefile
-!/build*/**/NotYetImplemented
-!/build*/**/mvm
-!/build*/**/plugins.*
-!/build*/**/*.gmk
-!/build*/**/*.ico
-!/build*/**/*.in
-!/build*/**/*.manifest
-!/build*/**/*.rc
-!/build*/HowToBuild
-!/build*/edit*.sh
-!/build*/make*
+!/building/**/common*/*
+!/building/**/**/Makefile
+!/building/**/**/NotYetImplemented
+!/building/**/**/mvm
+!/building/**/**/plugins.*
+!/building/**/**/*.gmk
+!/building/**/**/*.ico
+!/building/**/**/*.in
+!/building/**/**/*.manifest
+!/building/**/**/*.rc
+!/building/**/HowToBuild
+!/building/**/edit*.sh
+!/building/**/make*
+!/building/**/asasm
+# ... and except this custom artifacts? What is this?
 !/build/**/conf.COG*
 !/build/**/make*
-!/build.*/asasm
+
+
 
 # Track installer directories
 !installer
 # but ignore these files (derived from `grep installer .gitignore.orig`)
-/build*/**/installer/*.app
-/build*/**/installer/*.applescript
-/build*/**/installer/*.dmg
-/build*/**/installer/Binary
-/build*/**/installer/Control.idt.orig
-/build*/**/installer/Icon
-/build*/**/installer/files.???
-/build*/**/installer/nsvm.*
-/build*/**/installer/*.idt
-/build*/**/installer/*.msi
-/build*/**/installer/*.rtf
+/building/**/**/installer/*.app
+/building/**/**/installer/*.applescript
+/building/**/**/installer/*.dmg
+/building/**/**/installer/Binary
+/building/**/**/installer/Control.idt.orig
+/building/**/**/installer/Icon
+/building/**/**/installer/files.???
+/building/**/**/installer/nsvm.*
+/building/**/**/installer/*.idt
+/building/**/**/installer/*.msi
+/building/**/**/installer/*.rtf
 
 # Track xcode directories
 !xcode
 # but ignore these files (derived from `grep xcode .gitignore.orig`)
-/build.macos32x86/xcode/*/Template.xcodeproj/*.mode1v3
-/build.macos32x86/xcode/*/Template.xcodeproj/*.pbxuser
+/building/macos32x86/xcode/*/Template.xcodeproj/*.mode1v3
+/building/macos32x86/xcode/*/Template.xcodeproj/*.pbxuser
 
 # /history/
 /history/README.*

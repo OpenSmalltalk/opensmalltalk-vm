@@ -53,15 +53,15 @@ if [ -n "$CM" ]; then
 	set -- CocoaFast.app CocoaFastMT.app
 	for app in Cog.app CogMT.app; do
 		test -d $app || mkdir $app
-		if [ -d ../build.macos32x86/$SQB/$1 ]; then
+		if [ -d ../building/macos32x86/$SQB/$1 ]; then
 			rm -rf $app/* $app-$TAG.tgz
-			echo build.macos32x86/$SQB/$1 '=>' $app '=>' $app-$TAG.tgz
-			(cd ../build.macos32x86/$SQB/$1 >/dev/null;tar cf - *) \
+			echo building/macos32x86/$SQB/$1 '=>' $app '=>' $app-$TAG.tgz
+			(cd ../building/macos32x86/$SQB/$1 >/dev/null;tar cf - *) \
 			| (cd $app;tar xf -)
 			tar czf $app-$TAG.tgz $app
 			EXES="$EXES	$app/Contents/MacOS/Squeak"
 		else
-			echo build.macos32x86/$SQB/$1 is missing
+			echo building/macos32x86/$SQB/$1 is missing
 		fi
 		shift
 	done
@@ -70,10 +70,10 @@ if [ -n "$CW" ]; then
 	set -- build/vm buildmt/vm
 	for dir in cogwin cogmtwin; do
 		test -d $dir || mkdir $dir
-		if [ -d ../build.win32x86/$SQB/$1 ]; then
+		if [ -d ../building/win32x86/$SQB/$1 ]; then
 			rm -rf $dir/* $dir-$TAG.zip
-			echo build.win32x86/$SQB/$1 '=>' $dir '=>' $dir-$TAG.zip
-			(cd ../build.win32x86/$SQB/$1 >/dev/null; \
+			echo building/win32x86/$SQB/$1 '=>' $dir '=>' $dir-$TAG.zip
+			(cd ../building/win32x86/$SQB/$1 >/dev/null; \
 			 tar cf - Squeak.exe Squeak.map Squeak.exe.manifest \
 				SqueakConsole.exe SqueakConsole.map SqueakConsole.exe.manifest \
 				*.dll) \
@@ -81,7 +81,7 @@ if [ -n "$CW" ]; then
 			zip -qr $dir-$TAG.zip $dir
 			EXES="$EXES	$dir/Squeak.exe	$dir/SqueakConsole.exe"
 		else
-			echo build.win32x86/$SQB/$1 is missing
+			echo building/win32x86/$SQB/$1 is missing
 		fi
 		shift
 	done

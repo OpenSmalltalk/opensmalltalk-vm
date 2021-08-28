@@ -30,12 +30,12 @@ Requires:	bash
 %global vm_cppflags -DNDEBUG -DDEBUGVM=0 -D_GNU_SOURCE -DCOGMTVM=0 -DPharoVM -DIMMUTABILITY=1 -DITIMER_HEARTBEAT=1
 
 %ifarch x86_64
-%global vmsources spur64src
+%global vmsources src/spur64.cog
 %global vm_cflags -msse2
 %global vm_extra_cppflags %{nil}
 %endif
 %ifarch %{ix86}
-%global vmsources spursrc
+%global vmsources src/spur32.cog
 %global vm_cflags -msse2
 %global vm_extra_cppflags -D_FILE_OFFSET_BITS=64
 %endif
@@ -98,7 +98,7 @@ Installs the 32bit pharo7 VM with GUI support.
 export CPPFLAGS="%vm_cppflags %vm_extra_cppflags"
 export CFLAGS="%{optflags} %vm_cflags"
 mkdir -p build/debian/build
-cp build.linux32x86/pharo.cog.spur/plugins.* build/debian/build/
+cp building/linux32x86/pharo.cog.spur/plugins.* build/debian/build/
 cd build/debian/build
 echo "foo %{_builddir}"
 %configure \

@@ -1,0 +1,51 @@
+#!/bin/bash -e
+# PharoVM with VM profiler and threaded heartbeat
+THIRDPARTYLIBS="libsdl2 openssl libssh2 libgit2"
+
+case "`uname -m`" in # ensure we see x86 as machine type
+i*86) ;; # we're good
+*) if type i386 2>&1 >/dev/null; then
+	echo "Re-exec as x86"
+	exec i386 "$0" "$@"
+fi ;;
+esac
+# Spur VM with VM profiler and threaded heartbeat
+INSTALLDIR=assert/phcogspurlinuxht
+
+if [ $# -ge 1 ]; then
+	INSTALLDIR="$1"; shift
+fi
+
+if ../../../../scripts/checkSCCSversion ; then exit 1; fi
+echo -n "clean? "
+read a
+case $a in
+n|no|N|NO)	echo "ok but this isn't safe!!";;
+*)		
+	test -f Makefile && make clean
+#	for lib in ${THIRDPARTYLIBS}; do
+#		../../third-party/mvm ${lib} clean
+#	done
+esac
+
+for lib in ${THIRDPARTYLIBS}; do
+	../../third-party/mvm ${lib}
+done
+
+LDFLAGS="-L../../../../.thirdparty-cache/linux/i386/lib" \
+CFLAGS="-I../../../../.thirdparty-cache/linux/i386/include -I../../../.thirdparty-cache/linux/i386/include/SDL2" \
+	cmake \
+		-DCMAKE_BUILD_TYPE=Assert \
+		-DBUILD_I386_VERSION=ON \
+		-DSDL2_INCLUDE_DIR=../../../../.thirdparty-cache/linux/i386/include/SDL2 \
+		-DSDL2_LIBRARY_PATH=../../../../.thirdparty-cache/linux/i386/lib \
+		../../.. 
+make
+
+productDir=`find ../../../../products/$INSTALLDIR -name "5.0*"`
+productDir=`(cd $productDir;pwd)`
+for lib in ${THIRDPARTYLIBS}; do
+	../../third-party/mvm ${lib} install $productDir
+done
+cp dist/* $productDir
+../../editpharoinstall.sh ../../../../products/$INSTALLDIR "$@"

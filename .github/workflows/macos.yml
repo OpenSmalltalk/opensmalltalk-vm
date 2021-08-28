@@ -8,7 +8,7 @@ on:
       - 'scripts/ci/*build.sh'
       - 'deploy/**'
       # Relevant sources for this platform
-      - 'build.macos*/**' # Makefile-based build scripts
+      - 'building/macos*/**' # Makefile-based build scripts
       - '*src/**' # Generated VMMaker sources (incl. plugins)
       - 'platforms/Cross/**'
       - 'platforms/iOS/**' # Note that 'platforms/Mac OS' is deprecated
