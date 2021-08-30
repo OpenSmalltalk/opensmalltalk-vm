@@ -260,6 +260,13 @@ ioInitTime(void)
 	utcStartMicroseconds = utcMicrosecondClock;
 }
 
+void resyncSystemTime() {
+  // By setting these values to maximum, currentUTCMicroseconds() will resync to the system time.
+  lastTick = (DWORD)-1;
+  vmThreadLastTick = (DWORD)-1;
+  ioUpdateVMTimezone();
+}
+
 unsigned long long
 ioUTCMicroseconds() { return get64(utcMicrosecondClock); }
 

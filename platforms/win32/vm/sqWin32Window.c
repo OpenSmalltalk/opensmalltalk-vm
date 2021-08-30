@@ -625,6 +625,10 @@ MainWndProcW(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
   case WM_KILLFOCUS:
     fHasFocus = 0;
     return DefWindowProcW(hwnd,message,wParam,lParam);
+
+  case WM_TIMECHANGE:
+    resyncSystemTime();
+
   default:
     /* Unprocessed messages may be processed outside the current
        module. If firstMessageHook is non-NULL and returns a non
