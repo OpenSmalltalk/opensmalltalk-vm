@@ -261,9 +261,13 @@ ioInitTime(void)
 }
 
 void resyncSystemTime() {
+  #if (_WIN32_WINNT >= _WIN32_WINNT_WIN8)
+  // Nothing to be done, time will be resynced upon every heartbeat tick
+  #else // (_WIN32_WINNT >= _WIN32_WINNT_WIN8)
   // By setting these values to maximum, currentUTCMicroseconds() will resync to the system time.
   lastTick = (DWORD)-1;
   vmThreadLastTick = (DWORD)-1;
+  #endif
   ioUpdateVMTimezone();
 }
 
