@@ -143,7 +143,7 @@ $(VMPLIST): $(OSXDIR)/$(SYSTEM)-Info.plist getversion
 	cp -p $< $@
 	sed -i '' '\
 		s!$$(VERSION)!$(shell ./getversion VERSION_TAG)!g;\
-		s!$$(VERSION_NUMBER)!$(shell ./getversion VERSION_NUMBER)!g;\
+		s!$$(VERSION_NUMBER)!$(shell ./getversion VERSION_REVISION_DATE_TIME)!g;\
 		s!$$(VERSION_TAG)!$(shell ./getversion VERSION_TAG)!g;\
 		s!$$(VIRTUAL_MACHINE_NICKNAME)!$(shell ./getversion VIRTUAL_MACHINE_NICKNAME)!g;\
 		s!$$(VM_NICKNAME)!$(shell ./getversion VM_NICKNAME)!g;\

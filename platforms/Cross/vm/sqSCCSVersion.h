@@ -75,6 +75,7 @@ revisionShortHash() { return "N.A."; }
 # define PREFIX ""
 static char GitRawRevisionString[] = "$Rev$";
 # define REV_START (GitRawRevisionString + 6)
+# define REV_TIME_START (GitRawRevisionString + 14)
 
 static char GitRawRevisionDate[] = "$Date$";
 # define DATE_START (GitRawRevisionDate + 7)
@@ -241,6 +242,17 @@ main(int _argc, char **_argv)
 		printf("%s-%s\n", vm_version, revisionAsString());
 	if (printit("VERSION_NUMBER"))
 		printf("%s.%s\n", vm_version, revisionAsString());
+# if GIT
+	if (printit("VERSION_REVISION_DATE_TIME")) {
+		// vm_version_major is just the major number; no decimal fraction
+		char vm_version_major[] = VM_VERSION;
+		*strchr(vm_version_major,'.') = 0;
+
+		// print e.g. 5.20210827.2054
+		printf("%s.%.*s.%s\n", vm_version_major,
+				8, revisionAsString(), revisionAsString() + 8);
+	}
+# endif
 	if (printit("COMMIT_HASH"))
 		printf("%s\n", revisionShortHash());
 	if (printit("NICKNAME"))
