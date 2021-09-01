@@ -681,6 +681,8 @@ INSTALL_SCRIPT
 INSTALL_PROGRAM
 AS
 SET_MAKE
+TARGET_ARCH
+getbuildarch
 target_os
 target_vendor
 target_cpu
@@ -5484,7 +5486,7 @@ esac
 fi
 
 : ${AR=ar}
-: ${AR_FLAGS=cru}
+: ${AR_FLAGS=cr}
 
 
 
@@ -7247,8 +7249,8 @@ int forced_loaded() { return 2;}
 _LT_EOF
       echo "$LTCC $LTCFLAGS -c -o conftest.o conftest.c" >&5
       $LTCC $LTCFLAGS -c -o conftest.o conftest.c 2>&5
-      echo "$AR cru libconftest.a conftest.o" >&5
-      $AR cru libconftest.a conftest.o 2>&5
+      echo "$AR cr libconftest.a conftest.o" >&5
+      $AR cr libconftest.a conftest.o 2>&5
       echo "$RANLIB libconftest.a" >&5
       $RANLIB libconftest.a 2>&5
       cat > conftest.c << _LT_EOF
@@ -7280,11 +7282,11 @@ $as_echo "$lt_cv_ld_force_load" >&6; }
       # to the OS version, if on x86, and 10.4, the deployment
       # target defaults to 10.4. Don't you love it?
       case ${MACOSX_DEPLOYMENT_TARGET-10.0},$host in
-	10.0,*86*-darwin8*|10.0,*-darwin[91]*)
+	10.0,*86*-darwin8*|10.0,*-darwin[912]*)
 	  _lt_dar_allow_undefined='$wl-undefined ${wl}dynamic_lookup' ;;
 	10.[012][,.]*)
 	  _lt_dar_allow_undefined='$wl-flat_namespace $wl-undefined ${wl}suppress' ;;
-	10.*)
+	10.*|11.*)
 	  _lt_dar_allow_undefined='$wl-undefined ${wl}dynamic_lookup' ;;
       esac
     ;;
@@ -8102,6 +8104,12 @@ lt_prog_compiler_static=
       ecc*)
 	lt_prog_compiler_wl='-Wl,'
 	lt_prog_compiler_pic='-KPIC'
+	lt_prog_compiler_static='-static'
+        ;;
+      # flang / f18. f95 an alias for gfortran or flang on Debian
+      flang* | f18* | f95*)
+	lt_prog_compiler_wl='-Wl,'
+	lt_prog_compiler_pic='-fPIC'
 	lt_prog_compiler_static='-static'
         ;;
       # icc used to be incompatible with GCC.
@@ -11972,6 +11980,100 @@ else
   GAS="unknown"
 fi
 
+
+########################
+
+# This section is used by the 'generic' linux32 & linux64 mvm configs which in turn are used for Debian package building on 'other' platforms which can only support stack VMs
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking TARGET_ARCH & CFLAGS" >&5
+$as_echo_n "checking TARGET_ARCH & CFLAGS... " >&6; }
+if [ "$VM_CFLAGS" != "" ]
+then
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: autoconfigure" >&5
+$as_echo "autoconfigure" >&6; }
+	# dpkg-architecture when available on Debian (and derivatives) with fallback to uname
+	# using DEB_HOST_GNU_CPU rather than DEB_HOST_ARCH_CPU for consistency with uname
+	# Extract the first word of "dpkg-architecture", so it can be a program name with args.
+set dummy dpkg-architecture; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_prog_getbuildarch+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test -n "$getbuildarch"; then
+  ac_cv_prog_getbuildarch="$getbuildarch" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_prog_getbuildarch="dpkg-architecture --query DEB_HOST_GNU_CPU"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  test -z "$ac_cv_prog_getbuildarch" && ac_cv_prog_getbuildarch="uname -m"
+fi
+fi
+getbuildarch=$ac_cv_prog_getbuildarch
+if test -n "$getbuildarch"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $getbuildarch" >&5
+$as_echo "$getbuildarch" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking autoconfigure arch" >&5
+$as_echo_n "checking autoconfigure arch... " >&6; }
+	build_arch=`$getbuildarch`
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $build_arch" >&5
+$as_echo "$build_arch" >&6; }
+	case $build_arch in
+		i686) TARGET_ARCH="-m32"
+			CFLAGS="-g -O2 -msse2"
+		;;
+
+		x86_64) TARGET_ARCH="-m64"
+			CFLAGS="-g -O1 -msse2"
+		;;
+
+	        # Omitting -DNO_VM_PROFILE=1 for now
+		armhf) TARGET_ARCH="-march=armv6 -mfpu=vfp -mfloat-abi=hard"
+			CFLAGS="-g -O3"
+		;;
+
+		# Omitting -DMUSL -DUSEEVDEV for now
+		aarch64) TARGET_ARCH="-march=armv8-a"
+			CFLAGS="-g -O2 -D__ARM_ARCH_ISA_A64 -DARM64 -D__arm__ -D__arm64__ -D__aarch64__"
+		;;
+
+		*)
+			if [ "$VM_WORD_SIZE" == "32" ]
+			then
+				TARGET_ARCH="-m32"
+			else
+				TARGET_ARCH="-m64"
+			fi
+			CFLAGS="-g -O2"
+		;;
+	esac
+
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: TARGET_ARCH=$TARGET_ARCH" >&5
+$as_echo "$as_me: TARGET_ARCH=$TARGET_ARCH" >&6;}
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: CFLAGS=$CFLAGS" >&5
+$as_echo "$as_me: CFLAGS=$CFLAGS" >&6;}
+else
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: mvm" >&5
+$as_echo "mvm" >&6; }
+fi
 
 ########################
 
@@ -19221,7 +19323,7 @@ rm -f UnicodePlugin.sub UnicodePlugin.lib
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for PangoCairo libraries" >&5
 $as_echo_n "checking for PangoCairo libraries... " >&6; }
 save_CPPFLAGS="$CPPFLAGS"
-CPPFLAGS="-I/usr/include/cairo -I/usr/include/pango-1.0 -I/usr/include/glib-2.0 -I/usr/lib/glib-2.0/include -I/usr/lib/arm-linux-gnueabihf/glib-2.0/include -I/usr/lib/i386-linux-gnu/glib-2.0/include"
+CPPFLAGS="-I/usr/include/cairo -I/usr/include/pango-1.0 -I/usr/include/glib-2.0 -I/usr/lib/glib-2.0/include -I/usr/lib/arm-linux-gnueabihf/glib-2.0/include -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/lib/i386-linux-gnu/glib-2.0/include"
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <pango/pangocairo.h>
