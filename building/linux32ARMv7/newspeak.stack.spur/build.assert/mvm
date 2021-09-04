@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 # assert Stack Spur VM with VM profiler and threaded heartbeat
-INSTALLDIR=assert/nsstkspurlinuxhtARMv7
+INSTALLDIR=assert/nsstkspur32linuxhtARMv7
 OPT="-g3 -O1 -DDEBUGVM=0"
 
 if [ $# -ge 1 ]; then

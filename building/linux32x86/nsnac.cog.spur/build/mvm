@@ -8,7 +8,7 @@ i*86) ;; # we're good
 fi ;;
 esac
 # VM with VM profiler and threaded heartbeat
-INSTALLDIR=nsnaccogspurlinuxht
+INSTALLDIR=nsnaccogspur32linuxht
 # Some gcc versions create a broken VM using -O2
 OPT="-g -O2 -DNDEBUG -DDEBUGVM=0"
 

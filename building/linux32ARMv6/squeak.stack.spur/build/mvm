@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 # Stack Spur VM and threaded heartbeat
-INSTALLDIR=sqstkspurlinuxhtRPi
+INSTALLDIR=sqstkspur32linuxhtRPi
 OPT="-g -O3 -DNDEBUG -DDEBUGVM=0 -DNO_VM_PROFILE=1"
 
 if [ $# -ge 1 ]; then
