@@ -44,6 +44,8 @@ srcdir=		@vmmdir@
 vmmcfg=		@vmmcfg@
 blddir=		@blddir@
 
+scriptname=	@scriptname@
+
 top_builddir=	@blddir@
 
 prefix=		@prefix@
