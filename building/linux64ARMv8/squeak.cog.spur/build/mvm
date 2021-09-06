@@ -3,6 +3,7 @@ set -e
 # Cog Spur VM with VM profiler and threaded heartbeat
 INSTALLDIR=sqcogspur64ARMv8linuxht
 # armv8.N-a all fail in signalSemaphoreWithIndex for N in 1,2,3,4,5
+# tpr - add enablementisation of fast bitblt ben avison code
 MACHINE="-march=armv8-a -mtune=cortex-a72"
 OPT="-g -O2 -DNDEBUG -DDEBUGVM=0 -DMUSL -D_GNU_SOURCE -DUSEEVDEV"
 ##OPT="-g -O3 -DNDEBUG -DDEBUGVM=0"
@@ -22,6 +23,7 @@ test -f plugins.ext || (test -f ../plugins.ext && cp -p ../plugins.ext . || cp -
 test -f config.h || ../../../../platforms/unix/config/configure \
 	--with-vmversion=5.0 --with-src=src/spur64.cog \
 	--without-npsqueak \
+	--enable-fast-bitblt \
 	CFLAGS="$MACHINE $OPT -DCOGMTVM=0 -DDUAL_MAPPED_CODE_ZONE=1" \
 	LIBS="-lrt"
 ##	--without-vm-display-fbdev --without-npsqueak \

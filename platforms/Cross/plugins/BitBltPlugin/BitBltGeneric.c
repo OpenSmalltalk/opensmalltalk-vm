@@ -193,6 +193,109 @@ static void fastPathSourceWord0_32_scalar(operation_t *op, uint32_t flags)
 	} while (--height > 0);
 }
 
+static void fastPathSourceWord8_32(operation_t *op, uint32_t flags)
+{
+    IGNORE(flags);
+    COPY_OP_TO_LOCALS(op, uint8_t, uint32_t);
+    uint8_t *src = srcBits + srcPitch * srcY + (srcX ^ 3);
+    uint32_t *dest = destBits + destPitch * destY + destX;
+    switch ((srcX + width) & 3) {
+    case 0:
+        do {
+            int32_t x = width;
+            uint8_t *s = src;
+            if ((x & 3) >= 3)
+                *dest++ = (*cmLookupTable)[*s--];
+            if ((x & 3) >= 2)
+                *dest++ = (*cmLookupTable)[*s--];
+            if ((x & 3) >= 1)
+            {
+                *dest++ = (*cmLookupTable)[*s];
+                s += 7;
+            }
+            for (x -= 4; x >= 0; x -= 4) {
+                *dest++ = (*cmLookupTable)[*s--];
+                *dest++ = (*cmLookupTable)[*s--];
+                *dest++ = (*cmLookupTable)[*s--];
+                *dest++ = (*cmLookupTable)[*s];
+                s += 7;
+            }
+            src += srcPitch;
+            dest += destPitch - width;
+        } while (--height > 0);
+        break;
+    case 1:
+        do {
+            int32_t x = width;
+            uint8_t *s = src;
+            if ((x & 3) >= 3)
+                *dest++ = (*cmLookupTable)[*s--];
+            if ((x & 3) >= 2)
+            {
+                *dest++ = (*cmLookupTable)[*s];
+                s += 7;
+            }
+            if ((x & 3) >= 1)
+                *dest++ = (*cmLookupTable)[*s--];
+            for (x -= 4; x >= 0; x -= 4) {
+                *dest++ = (*cmLookupTable)[*s--];
+                *dest++ = (*cmLookupTable)[*s--];
+                *dest++ = (*cmLookupTable)[*s];
+                s += 7;
+                *dest++ = (*cmLookupTable)[*s--];
+            }
+            src += srcPitch;
+            dest += destPitch - width;
+        } while (--height > 0);
+        break;
+    case 2:
+        do {
+            int32_t x = width;
+            uint8_t *s = src;
+            if ((x & 3) >= 3)
+            {
+                *dest++ = (*cmLookupTable)[*s];
+                s += 7;
+            }
+            if ((x & 3) >= 2)
+                *dest++ = (*cmLookupTable)[*s--];
+            if ((x & 3) >= 1)
+                *dest++ = (*cmLookupTable)[*s--];
+            for (x -= 4; x >= 0; x -= 4) {
+                *dest++ = (*cmLookupTable)[*s--];
+                *dest++ = (*cmLookupTable)[*s];
+                s += 7;
+                *dest++ = (*cmLookupTable)[*s--];
+                *dest++ = (*cmLookupTable)[*s--];
+            }
+            src += srcPitch;
+            dest += destPitch - width;
+        } while (--height > 0);
+        break;
+    case 3:
+        do {
+            int32_t x = width;
+            uint8_t *s = src;
+            if ((x & 3) >= 3)
+                *dest++ = (*cmLookupTable)[*s--];
+            if ((x & 3) >= 2)
+                *dest++ = (*cmLookupTable)[*s--];
+            if ((x & 3) >= 1)
+                *dest++ = (*cmLookupTable)[*s--];
+            for (x -= 4; x >= 0; x -= 4) {
+                *dest++ = (*cmLookupTable)[*s];
+                s += 7;
+                *dest++ = (*cmLookupTable)[*s--];
+                *dest++ = (*cmLookupTable)[*s--];
+                *dest++ = (*cmLookupTable)[*s--];
+            }
+            src += srcPitch;
+            dest += destPitch - width;
+        } while (--height > 0);
+        break;
+    }
+}
+
 static void fastPathSourceWord32_32(operation_t *op, uint32_t flags)
 {
 	IGNORE(flags);
@@ -204,6 +307,103 @@ static void fastPathSourceWord32_32(operation_t *op, uint32_t flags)
 		src += srcPitch;
 		dest += destPitch;
 	} while (--height > 0);
+}
+
+static void fastPathAlphaBlend0_32_scalar(operation_t *op, uint32_t flags)
+{
+    IGNORE(flags);
+    COPY_OP_TO_LOCALS(op, uint32_t, uint32_t);
+    uint32_t *dest = destBits + destPitch * destY + destX;
+    destPitch -= width;
+    uint32_t s = (*op->halftoneBase)[0];
+    unsigned int alpha = (s >> 24) & 0xFF;
+    unsigned int unAlpha = 0xFF - alpha;
+    uint32_t sAG = ((s >> 8) & 0xFF) | 0xFF0000;
+    uint32_t sRB = s & 0xFF00FF;
+    sAG *= alpha;
+    sRB *= alpha;
+    do {
+        uint32_t remain = width;
+        do {
+            uint32_t d = *dest;
+            uint32_t dAG = (d >> 8) & 0xFF00FF;
+            uint32_t dRB = d & 0xFF00FF;
+            uint32_t blendAG = sAG + dAG * unAlpha + 0xFF00FF;
+            uint32_t blendRB = sRB + dRB * unAlpha + 0xFF00FF;
+            blendAG = ((((blendAG >> 8) & 0xFF00FF) + blendAG) >> 8) & 0xFF00FF;
+            blendRB = ((((blendRB >> 8) & 0xFF00FF) + blendRB) >> 8) & 0xFF00FF;
+            d = (blendAG << 8) | blendRB;
+            *dest++ = d;
+        } while (--remain > 0);
+        dest += destPitch;
+    } while (--height > 0);
+}
+
+static void fastPathAlphaBlend32_32_map1_scalar(operation_t *op, uint32_t flags)
+{
+    IGNORE(flags);
+    COPY_OP_TO_LOCALS(op, uint32_t, uint32_t);
+    uint32_t *src = srcBits + srcPitch * srcY + srcX;
+    uint32_t *dest = destBits + destPitch * destY + destX;
+    srcPitch -= width;
+    destPitch -= width;
+    uint32_t s[2] = { (*op->cmLookupTable)[0] & (*op->halftoneBase)[0], (*op->cmLookupTable)[1] & (*op->halftoneBase)[0] };
+    unsigned int alpha[2] = { (s[0] >> 24) & 0xFF, (s[1] >> 24) & 0xFF };
+    unsigned int unAlpha[2] = { 0xFF - alpha[0], 0xFF - alpha[1] };
+    uint32_t sAG[2] = { ((s[0] >> 8) & 0xFF) | 0xFF0000, ((s[1] >> 8) & 0xFF) | 0xFF0000 };
+    uint32_t sRB[2] = { s[0] & 0xFF00FF, s[1] & 0xFF00FF };
+    sAG[0] *= alpha[0];
+    sAG[1] *= alpha[1];
+    sRB[0] *= alpha[0];
+    sRB[1] *= alpha[1];
+    do {
+        uint32_t remain = width;
+        do {
+            uint32_t s = !!*src++;
+            uint32_t d = *dest;
+            uint32_t dAG = (d >> 8) & 0xFF00FF;
+            uint32_t dRB = d & 0xFF00FF;
+            uint32_t blendAG = sAG[s] + dAG * unAlpha[s] + 0xFF00FF;
+            uint32_t blendRB = sRB[s] + dRB * unAlpha[s] + 0xFF00FF;
+            blendAG = ((((blendAG >> 8) & 0xFF00FF) + blendAG) >> 8) & 0xFF00FF;
+            blendRB = ((((blendRB >> 8) & 0xFF00FF) + blendRB) >> 8) & 0xFF00FF;
+            d = (blendAG << 8) | blendRB;
+            *dest++ = d;
+        } while (--remain > 0);
+        src += srcPitch;
+        dest += destPitch;
+    } while (--height > 0);
+}
+
+static void fastPathAlphaBlend32_32(operation_t *op, uint32_t flags)
+{
+    IGNORE(flags);
+    COPY_OP_TO_LOCALS(op, uint32_t, uint32_t);
+    uint32_t *src = srcBits + srcPitch * srcY + srcX;
+    uint32_t *dest = destBits + destPitch * destY + destX;
+    srcPitch -= width;
+    destPitch -= width;
+    do {
+        uint32_t remain = width;
+        do {
+            uint32_t s = *src++;
+            uint32_t d = *dest;
+            unsigned int alpha = (s >> 24) & 0xFF;
+            unsigned int unAlpha = 0xFF - alpha;
+            uint32_t sAG = ((s >> 8) & 0xFF) | 0xFF0000;
+            uint32_t sRB = s & 0xFF00FF;
+            uint32_t dAG = (d >> 8) & 0xFF00FF;
+            uint32_t dRB = d & 0xFF00FF;
+            uint32_t blendAG = sAG * alpha + dAG * unAlpha + 0xFF00FF;
+            uint32_t blendRB = sRB * alpha + dRB * unAlpha + 0xFF00FF;
+            blendAG = ((((blendAG >> 8) & 0xFF00FF) + blendAG) >> 8) & 0xFF00FF;
+            blendRB = ((((blendRB >> 8) & 0xFF00FF) + blendRB) >> 8) & 0xFF00FF;
+            d = (blendAG << 8) | blendRB;
+            *dest++ = d;
+        } while (--remain > 0);
+        src += srcPitch;
+        dest += destPitch;
+    } while (--height > 0);
 }
 
 
@@ -261,8 +461,13 @@ static void fastPathRightToLeft(operation_t *op, uint32_t flags)
 	uint32_t width = op->width;
 	uint32_t height = op->height;
 
-	uint8_t tempBuffer[CACHELINE_LEN * 64];
-#define BUFFER_LEN_PIXELS (cacheline_len * (sizeof tempBuffer / CACHELINE_LEN))
+#define BUFFER_LEN_CACHELINES 64
+	/* Need enough room to be able to quickly find BUFFER_LEN_CACHELINES
+	 * starting at any cacheline alignment
+	 */
+	uint8_t spaceForTempBuffer[CACHELINE_LEN * (BUFFER_LEN_CACHELINES + 2)];
+	uint8_t *tempBuffer = (uint8_t *)(((uintptr_t) spaceForTempBuffer + CACHELINE_LEN - 1) &~ (CACHELINE_LEN - 1));
+#define BUFFER_LEN_PIXELS (cacheline_len * BUFFER_LEN_CACHELINES)
 	opFromSrc.dest.bits = tempBuffer;
 	opFromSrc.dest.y = 0;
 	opFromSrc.height = 1;
@@ -378,8 +583,13 @@ static void fastPathDepthConv(operation_t *op, uint32_t flags)
 	uint32_t width = op->width;
 	uint32_t height = op->height;
 
-	uint8_t tempBuffer[CACHELINE_LEN * 64];
-#define BUFFER_LEN_PIXELS (cacheline_len * (sizeof tempBuffer / CACHELINE_LEN))
+#define BUFFER_LEN_CACHELINES 64
+	/* Need enough room to be able to quickly find BUFFER_LEN_CACHELINES
+	 * starting at any cacheline alignment
+	 */
+	uint8_t spaceForTempBuffer[CACHELINE_LEN * (BUFFER_LEN_CACHELINES + 2)];
+	uint8_t *tempBuffer = (uint8_t *)(((uintptr_t) spaceForTempBuffer + CACHELINE_LEN - 1) &~ (CACHELINE_LEN - 1));
+#define BUFFER_LEN_PIXELS (cacheline_len * BUFFER_LEN_CACHELINES)
 	opFromSrc.combinationRule = CR_sourceWord;
 	opFromSrc.dest.bits = tempBuffer;
 	opFromSrc.dest.y = 0;
@@ -431,6 +641,30 @@ static void fastPathDepthConv(operation_t *op, uint32_t flags)
 	} while (--height > 0);
 }
 
+static void fastPathEarlyHalftone(operation_t *op, uint32_t flags)
+{
+	/* With a 32bpp destination, the action of halftoning has no dependency on
+	 * the destination X coordinate of a pixel. Furthermore, scalar halftoning
+	 * doesn't depend on the destination Y coordinate either. If there's a
+	 * colour map as well, this means we can apply the halftone to the colour
+	 * map entries instead, which makes it easier to find a match for the
+	 * remaining part of the operation from amongst the available fast paths.
+	 */
+	uint32_t flags2 = (flags &~ FAST_PATH_SCALAR_HALFTONE) | FAST_PATH_NO_HALFTONE;
+	void (*func)(operation_t *, uint32_t) = lookupFastPath(op->combinationRule, flags2);
+	if (func == NULL) {
+		copyBitsFallback(op, flags);
+	} else {
+		uint32_t cmLookupTable2[1<<15];
+		for (int32_t i = op->cmMask; i >= 0; --i)
+			cmLookupTable2[i] = (*op->cmLookupTable)[i] & (*op->halftoneBase)[0];
+		operation_t op2 = *op;
+		op2.cmLookupTable = &cmLookupTable2;
+		op2.noHalftone = true;
+		func(&op2, flags2);
+	}
+}
+
 static void fastPathNoOp(operation_t *op, uint32_t flags)
 {
 	IGNORE(op);
@@ -443,12 +677,17 @@ static fast_path_t fastPaths[] = {
 		{ fastPathClearWord32,           CR_clearWord,       STD_FLAGS_NO_SOURCE(32,NO) },
 		{ fastPathSourceWord0_32_scalar, CR_sourceWord,      STD_FLAGS_NO_SOURCE(32,SCALAR) },
 
+		{ fastPathSourceWord8_32,        CR_sourceWord,      STD_FLAGS(8,32,DIRECT,NO) },
 		{ fastPathSourceWord32_32,       CR_sourceWord,      STD_FLAGS(32,32,NO,NO) &~ FAST_PATH_H_OVERLAP },
+		{ fastPathAlphaBlend0_32_scalar, CR_alphaBlend,      STD_FLAGS_NO_SOURCE(32,SCALAR) },
+		{ fastPathAlphaBlend32_32_map1_scalar, CR_alphaBlend, STD_FLAGS(32,32,1BIT,SCALAR) },
+		{ fastPathAlphaBlend32_32,       CR_alphaBlend,      STD_FLAGS(32,32,NO,NO) },
 		{ fastPathNoOp,                  CR_destinationWord, 0 },
 
 		/* Some special fast paths to extend the abilities of the others in corner cases */
 		{ fastPathRightToLeft,           CR_any,             FAST_PATH_VECTOR_HALFTONE | ONLY_H_OVERLAP },
 		{ fastPathBottomToTop,           CR_any,             FAST_PATH_VECTOR_HALFTONE | ONLY_V_OVERLAP },
+		{ fastPathEarlyHalftone,         CR_any,             FAST_PATH_SRC_0BPP | ONLY_DEST_32BPP | FAST_PATH_NO_COLOR_MAP | ONLY_SCALAR_HALFTONE },
 		{ fastPathDepthConv,             CR_any,             FAST_PATH_SRC_0BPP | FAST_PATH_SRC_32BPP | ONLY_DEST_32BPP },
 		{ fastPathDepthConv,             CR_any,             FAST_PATH_SRC_0BPP | FAST_PATH_SRC_16BPP | ONLY_DEST_16BPP },
 		{ fastPathDepthConv,             CR_any,             FAST_PATH_SRC_0BPP | FAST_PATH_SRC_8BPP  | ONLY_DEST_8BPP },

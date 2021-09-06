@@ -1542,7 +1542,7 @@ subblock SETA   0
         WHILE   subblock < pix_per_block*dst_w_bpp/128
       [ dst_w_bpp > 4 * src_bpp :LAND: src_bpp > 0
         ASSERT  flags & FLAG_MAX_256BIT_MACRO = 0
-        AddL    scratch, x, (prefetch_distance+2)*pix_per_block + subblock*128/dst_w_bpp
+        AddL    scratch, x, (prefetch_distance+2)*pix_per_block - subblock*128/dst_w_bpp
         TST     scratch, #32/src_bpp - 128/dst_w_bpp
         BNE     %FT53
         Read1Word src, 0, carry, &$fixed_skew, skew, scratch
