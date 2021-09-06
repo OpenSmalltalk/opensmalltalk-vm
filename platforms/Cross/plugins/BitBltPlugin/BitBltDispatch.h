@@ -26,8 +26,8 @@
 #ifndef BITBLTDISPATCH_H_
 #define BITBLTDISPATCH_H_
 
-#include "sqVirtualMachine.h"
 #include <stdbool.h>
+#include "sqVirtualMachine.h"
 
 #ifndef ColorMapPresent
 #define ColorMapPresent     1
@@ -116,7 +116,7 @@ typedef struct {
 	unsigned int          (*cmLookupTable)[];
 	bool                    noHalftone;
 	usqInt                  halftoneHeight;
-	unsigned int          (*halftoneBase)[];
+	sqInt                 (*halftoneBase)[];
 	union {
 		sqInt               sourceAlpha;
 		struct {
