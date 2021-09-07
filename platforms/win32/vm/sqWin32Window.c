@@ -628,6 +628,7 @@ MainWndProcW(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 
   case WM_TIMECHANGE:
     resyncSystemTime();
+    return DefWindowProcW(hwnd,message,wParam,lParam);
 
   default:
     /* Unprocessed messages may be processed outside the current
