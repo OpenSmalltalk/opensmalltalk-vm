@@ -528,7 +528,7 @@ counter SETA    counter + 4
 
 SourceWord GenerateFunctions 1, 4,, \
   FLAG_COLOUR_MAP :OR: FLAG_DST_WRITEONLY :OR: FLAG_SPILL_LINE_VARS :OR: FLAG_NO_EXPAND_SKEW, 2, \
-  "stride_s,map,bitptrs,orig_w,scratch", \
+  "stride_s,map,bitptrs,scratch,orig_w", \
   "x,stride_s,bitptrs", orig_w,, init ; leading_pixels_reg=wk3
 
 ; ********************************************************************
@@ -951,7 +951,7 @@ counter SETA    counter + 4
 
         MACRO
         SourceWord1_2_128bits_head $src, $fixed_skew, $intra_preloads
-        Read2Words src, 3, carry, $fixed_skew, skew, $wk0
+        Read2Words src, 2, carry, $fixed_skew, skew, $wk0
         MEND
 
         MACRO
@@ -959,8 +959,8 @@ counter SETA    counter + 4
         LCLA    counter
 counter SETA    0
         WHILE   counter < 16
-        MSR     CPSR_f, $wk3
-        MOV     $wk3, $wk3, LSL #4
+        MSR     CPSR_f, $wk2
+        MOV     $wk2, $wk2, LSL #4
         ORRPL   $wk0, ht, $wk0, LSL #2
         ORRMI   $wk0, ht_info, $wk0, LSL #2
         ORRNE   $wk0, ht, $wk0, LSL #2
@@ -973,8 +973,8 @@ counter SETA    counter + 4
         WEND
 counter SETA    0
         WHILE   counter < 16
-        MSR     CPSR_f, $wk3
-        MOV     $wk3, $wk3, LSL #4
+        MSR     CPSR_f, $wk2
+        MOV     $wk2, $wk2, LSL #4
         ORRPL   $wk1, ht, $wk1, LSL #2
         ORRMI   $wk1, ht_info, $wk1, LSL #2
         ORRNE   $wk1, ht, $wk1, LSL #2
@@ -987,8 +987,13 @@ counter SETA    counter + 4
         WEND
 counter SETA    0
         WHILE   counter < 16
+      [ counter = 0
+        MSR     CPSR_f, $wk3
+        MOV     $wk4, $wk3, LSL #4
+      |
         MSR     CPSR_f, $wk4
         MOV     $wk4, $wk4, LSL #4
+      ]
         ORRPL   $wk2, ht, $wk2, LSL #2
         ORRMI   $wk2, ht_info, $wk2, LSL #2
         ORRNE   $wk2, ht, $wk2, LSL #2
