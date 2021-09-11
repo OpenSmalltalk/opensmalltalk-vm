@@ -150,6 +150,7 @@ $(VMPLIST): $(OSXDIR)/$(SYSTEM)-Info.plist getversion
 		s!$$(VM_MAJOR)!$(shell ./getversion VM_MAJOR)!g;\
 		s!$$(VM_MINOR)!$(shell ./getversion VM_MINOR)!g;\
 		s!$$(VM_IDENTIFIER)!$(VM_IDENTIFIER)!g;\
+		s!$$(APP_IDENTIFIER)!$(APP_IDENTIFIER)!g;\
 	' $@
 
 $(VMLOCALIZATION): $(OSXCOMMONDIR)/English.lproj/$(SYSTEM)-Localizable.strings
