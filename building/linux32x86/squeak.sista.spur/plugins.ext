@@ -2,7 +2,6 @@
 EXTERNAL_PLUGINS = \
 MIDIPlugin \
 B3DAcceleratorPlugin \
-BochsIA32Plugin \
 FileAttributesPlugin \
 Squeak3D \
 SqueakFFIPrims \
@@ -16,4 +15,4 @@ XDisplayControlPlugin \
 DESPlugin \
 MD5Plugin \
 SHA2Plugin \
-VectorEnginePlugin \
+VectorEnginePlugin
