@@ -5,6 +5,10 @@ INSTALLDIR=sqcogspur64linux
 # Some gcc versions create a broken VM using -O2
 OPT="-g -O2 -DNDEBUG -DDEBUGVM=0"
 
+# Prefer clang over gcc, but use gcc if clang isn't available...
+CC=gcc
+if [ -x /usr/bin/clang ]; then CC=clang; fi
+
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
 fi
@@ -22,7 +26,7 @@ test -f config.h || ../../../../platforms/unix/config/configure --without-npsque
 		--with-vmversion=5.0 \
 		--with-src=src/spur64.cog \
 	TARGET_ARCH="-m64" \
-	CC=clang \
+	CC=$CC \
 	CFLAGS="$OPT -msse2 -DCOGMTVM=0 -DITIMER_HEARTBEAT=1"
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../../products/$INSTALLDIR
