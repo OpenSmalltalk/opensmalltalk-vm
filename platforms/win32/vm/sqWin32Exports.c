@@ -3,11 +3,6 @@
 #include "sqMemoryAccess.h"
 
 char * GetAttributeString(sqInt id);
-#if !NewspeakVM
-int win32JoystickDebugInfo(void);
-int win32JoystickDebugPrintRawValues(void);
-int win32JoystickDebugPrintAlternativeValues(void);
-#endif
 #ifndef NO_NETWORK
 int win32DebugPrintSocketState(void);
 #endif
@@ -20,9 +15,9 @@ sqInt primitivePluginDestroyRequest(void);
 sqInt primitivePluginRequestState(void);
 sqInt primitiveDnsInfo(void);
 
-extern void* stWindow;
-extern void* firstMessageHook;
-extern void* preMessageHook;
+extern void *stWindow;
+extern void *firstMessageHook;
+extern void *preMessageHook;
 extern int fUseOpenGL;
 
 #define XFN(export) {"", #export, (void*)export},
@@ -31,11 +26,6 @@ extern int fUseOpenGL;
 
 void *os_exports[][3] = {
 	XFN(GetAttributeString)
-#if !NewspeakVM
-	XFN(win32JoystickDebugInfo)
-	XFN(win32JoystickDebugPrintRawValues)
-	XFN(win32JoystickDebugPrintAlternativeValues)
-#endif
 #ifndef NO_NETWORK
 	XFN(win32DebugPrintSocketState)
 #endif

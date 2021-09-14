@@ -1109,7 +1109,7 @@ primitiveSetVMSDL2Input()
 }
 
 #define XFN(export) {"", #export, (void*)export},
-#define XFNDF(export,depth) {"", #export "\000" depth flags, (void*)export},
+#define XFNDF(export,depth,flags) {"", #export "\000" depth flags, (void*)export},
 
 static void *sdl2_exports[][3]=
 {
