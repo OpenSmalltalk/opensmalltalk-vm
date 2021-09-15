@@ -239,7 +239,7 @@ main(int _argc, char **_argv)
 	if (printit("VM_RELEASE"))
 		printf("%s\n", revisionAsString());
 	if (printit("VERSION_TAG"))
-		printf("%s-%s\n", vm_version, revisionAsString());
+		printf("%s-%s-%ibit\n", vm_version, revisionAsString(), 8 * sizeof(void *));
 	if (printit("VERSION_NUMBER"))
 		printf("%s.%s\n", vm_version, revisionAsString());
 # if GIT
