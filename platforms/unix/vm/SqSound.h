@@ -72,14 +72,14 @@ static struct SqSound sound_##NAME##_itf= { \
   sound_SetDevice, \
   sound_SetRecordBufferFrameCount, \
   sound_GetRecordLevel, \
-  sound_getNumberOfSoundPlayerDevices, \
-  sound_getNumberOfSoundRecorderDevices, \
-  sound_getDefaultSoundPlayer, \
-  sound_getDefaultSoundRecorder, \
-  sound_getSoundPlayerDeviceName, \
-  sound_getSoundRecorderDeviceName, \
-  sound_setDefaultSoundPlayer, \
-  sound_setDefaultSoundRecorder, \
+  sound_GetNumberOfSoundPlayerDevices, \
+  sound_GetNumberOfSoundRecorderDevices, \
+  sound_GetDefaultSoundPlayer, \
+  sound_GetDefaultSoundRecorder, \
+  sound_GetSoundPlayerDeviceName, \
+  sound_GetSoundRecorderDeviceName, \
+  sound_SetDefaultSoundPlayer, \
+  sound_SetDefaultSoundRecorder, \
   sound_SupportsAEC, \
   sound_EnableAEC, \
 }
@@ -105,14 +105,14 @@ static struct SqSound sound_##NAME##_itf= { \
   sound_SetDevice, \
   sound_SetRecordBufferFrameCount, \
   sound_GetRecordLevel, \
-  sound_getNumberOfSoundPlayerDevices, \
-  sound_getNumberOfSoundRecorderDevices, \
-  sound_getDefaultSoundPlayer, \
-  sound_getDefaultSoundRecorder, \
-  sound_getSoundPlayerDeviceName, \
-  sound_getSoundRecorderDeviceName, \
-  sound_setDefaultSoundPlayer, \
-  sound_setDefaultSoundRecorder, \
+  sound_GetNumberOfSoundPlayerDevices, \
+  sound_GetNumberOfSoundRecorderDevices, \
+  sound_GetDefaultSoundPlayer, \
+  sound_GetDefaultSoundRecorder, \
+  sound_GetSoundPlayerDeviceName, \
+  sound_GetSoundRecorderDeviceName, \
+  sound_SetDefaultSoundPlayer, \
+  sound_SetDefaultSoundRecorder, \
 }
 #else
 # define SqSoundDefine(NAME) \

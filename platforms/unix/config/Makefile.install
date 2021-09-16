@@ -30,7 +30,7 @@ uninstall-squeak : getversion .force
 	  $(UNINSTALL) $(ROOT)$(VM_APP_ICONS); \
 	fi
 	@$(UNINSTALL) $(ROOT)$(plgdir) $(squeak)
-	@$(UNINSTALL) $(ROOT)$(bindir) $(squeak)
+	@$(UNINSTALL) $(ROOT)$(bindir) $(scriptname)
 
 # plugins
 

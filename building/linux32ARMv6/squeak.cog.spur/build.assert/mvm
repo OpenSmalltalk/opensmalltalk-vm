@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 # assert VM with VM profiler and threaded heartbeat
-INSTALLDIR=assert/sqcogspurlinuxhtRPi
+INSTALLDIR=assert/sqcogspur32linuxhtRPi
 OPT="-g3 -O1 -DDEBUGVM=0"
 
 if [ $# -ge 1 ]; then

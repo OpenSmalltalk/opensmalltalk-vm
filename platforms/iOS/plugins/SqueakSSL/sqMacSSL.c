@@ -268,12 +268,11 @@ static OSStatus sqGetPeerCertificates(sqSSL* ssl)
                                                 &kCFTypeArrayCallBacks);
     if (ca == NULL) {
         return errSecAllocate;
-    } else {
-        for (CFIndex i = 0; i < certCount; i++) {
-            CFArrayAppendValue(ca, SecTrustGetCertificateAtIndex(trust, i));
-        }
-        ssl->certs = ca;
     }
+    for (CFIndex i = 0; i < certCount; i++) {
+        CFArrayAppendValue(ca, SecTrustGetCertificateAtIndex(trust, i));
+    }
+	ssl->certs = ca;
     CFRelease(trust);
     return status;
 }
@@ -289,7 +288,7 @@ static OSStatus sqVerifyCert(sqSSL *ssl, int isServer)
 
     ssl->certFlags = SQSSL_NO_CERTIFICATE;
     status = SSLCopyPeerTrust(ssl->ctx, &trust);
-    if (trust == NULL || status != noErr){
+    if (trust == NULL || status != noErr) {
         logprintf_status(status, "sqConnectSSL: SSLCopyPeerTrust");
         return SQSSL_GENERIC_ERROR;
     }
@@ -410,7 +409,6 @@ sqInt sqCreateSSL(void)
 {
     sqInt handle = 0;
     sqSSL* ssl = NULL;
-
 
     ssl = calloc(1, sizeof(sqSSL));
     ssl->loglevel = 0;
@@ -653,7 +651,7 @@ sqInt sqEncryptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char* dstBuf,
         || status == errSSLClosedGraceful) {
         return ssl->outLen;
     }
-    logprintf_status(status, "sqDecryptSSL: SSLWrite");
+    logprintf_status(status, "sqEncryptSSL: SSLWrite");
     return SQSSL_GENERIC_ERROR;
 }
 
@@ -720,7 +718,6 @@ char* sqGetStringPropertySSL(sqInt handle, int propID)
     case SQSSL_PROP_SERVERNAME: return ssl->serverName;
     default:
         logprintf("sqGetStringPropertySSL: Unknown property ID %d\n", propID);
-        return NULL;
     }
     return NULL;
 }
@@ -794,7 +791,6 @@ sqInt sqGetIntPropertySSL(sqInt handle, sqInt propID)
     case SQSSL_PROP_LOGLEVEL:  return ssl->loglevel;
     default:
         logprintf("sqGetIntPropertySSL: Unknown property ID %" PRIdSQINT "\n", propID);
-        return 0;
     }
     return 0;
 }

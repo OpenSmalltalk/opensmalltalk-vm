@@ -26,8 +26,8 @@
 #ifndef BITBLTDISPATCH_H_
 #define BITBLTDISPATCH_H_
 
-#include <stdbool.h>
 #include "sqVirtualMachine.h"
+#include <stdbool.h>
 
 #ifndef ColorMapPresent
 #define ColorMapPresent     1

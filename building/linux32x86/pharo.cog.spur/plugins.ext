@@ -15,5 +15,6 @@ AioPlugin \
 BochsIA32Plugin \
 BochsX64Plugin \
 GdbARMPlugin \
+GdbARMv8Plugin \
 VectorEnginePlugin \
-# SDL2DisplayPlugin \
+# SDL2DisplayPlugin

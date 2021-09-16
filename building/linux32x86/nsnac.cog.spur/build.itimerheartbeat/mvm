@@ -8,7 +8,7 @@ i*86) ;; # we're good
 fi ;;
 esac
 # Spur VM with VM profiler and itimer heartbeat
-INSTALLDIR=nsnaccogspurlinux
+INSTALLDIR=nsnaccogspur32linux
 # Some gcc versions create a broken VM using -O2
 OPT="-g -O2 -DNDEBUG -DDEBUGVM=0"
 

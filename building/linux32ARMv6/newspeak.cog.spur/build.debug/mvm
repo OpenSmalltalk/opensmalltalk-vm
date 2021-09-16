@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 # debug Spur VM with VM profiler and threaded heartbeat
-INSTALLDIR=debug/nscogspurlinuxhtRPi
+INSTALLDIR=debug/nscogspur32linuxhtRPi
 OPT="-g3 -O0 -DDEBUGVM=1"
 
 if [ $# -ge 1 ]; then

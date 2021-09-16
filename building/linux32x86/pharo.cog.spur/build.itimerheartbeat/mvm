@@ -11,7 +11,7 @@ fi ;;
 esac
 
 THIRDPARTYLIBS="libsdl2 openssl libssh2 libgit2"
-INSTALLDIR=phcogspurlinux
+INSTALLDIR=phcogspur32linux
 
 # Some gcc versions create a broken VM using -O2
 OPT="-g -O2 -DNDEBUG -DDEBUGVM=0 -DPharoVM"

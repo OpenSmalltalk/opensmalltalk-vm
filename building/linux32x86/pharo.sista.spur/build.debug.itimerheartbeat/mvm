@@ -8,7 +8,7 @@ i*86) ;; # we're good
 fi ;;
 esac
 # debug Spur VM with VM profiler and threaded heartbeat
-INSTALLDIR=debug/phsistaspurlinuxht
+INSTALLDIR=debug/phsistaspur32linuxht
 OPT="-g3 -O0 -DDEBUGVM=1 -DPharoVM"
 
 if [ $# -ge 1 ]; then
