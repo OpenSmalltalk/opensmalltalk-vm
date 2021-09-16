@@ -22,6 +22,8 @@ extern struct VirtualMachine *interpreterProxy;
 #define LONGLONG long long int
 #endif
 
+#if 0
+
 /* Max stack size */
 #define FFI_MAX_ARGS 128
 /* The stack used to assemble the arguments for a call */
@@ -389,4 +391,4 @@ int ffiCallAddressOfWithReturnType(int fn, int callType, int typeSpec)
 {
 	return ffiCallAddress(fn);
 }
-
+#endif // 0

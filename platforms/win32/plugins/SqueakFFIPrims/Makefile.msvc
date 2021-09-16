@@ -3,7 +3,7 @@
 # Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
 #############################################################################
 
-LIBSRC:=SqueakFFIPrims.c sqFFIPlugin.c sqFFITestFuncs.c sqManualSurface.c
+LIBSRC:=SqueakFFIPrims.c sqFFITestFuncs.c sqManualSurface.c
 
 include ../common/Makefile.msvc.plugin
 
