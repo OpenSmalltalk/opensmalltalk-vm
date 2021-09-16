@@ -240,6 +240,8 @@ main(int _argc, char **_argv)
 		printf("%s\n", revisionAsString());
 	if (printit("VERSION_TAG"))
 		printf("%s-%s-%ibit\n", vm_version, revisionAsString(), 8 * sizeof(void *));
+	if (printit("VERSION_TAG_NO_BITS"))
+		printf("%s-%s\n", vm_version, revisionAsString());
 	if (printit("VERSION_NUMBER"))
 		printf("%s.%s\n", vm_version, revisionAsString());
 # if GIT
