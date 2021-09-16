@@ -694,6 +694,7 @@ SQ_VERSION
 SQ_UPDATE
 SQ_MINOR
 SQ_MAJOR
+scriptname
 blddir
 vmmcfg
 vmpdir
@@ -768,7 +769,6 @@ datarootdir
 libexecdir
 sbindir
 bindir
-scriptname
 program_transform_name
 prefix
 exec_prefix
@@ -805,6 +805,7 @@ with_sqversion
 with_src
 with_plugins
 with_vmmcfg
+with_scriptname
 enable_cogit
 with_gnu_awk
 with_gnu_as
@@ -886,9 +887,6 @@ psdir='${docdir}'
 libdir='${exec_prefix}/lib'
 localedir='${datarootdir}/locale'
 mandir='${datarootdir}/man'
-
-# Start script name, e.g. /usr/bin/squeak
-scriptname='squeak'
 
 ac_prev=
 ac_dashdash=
@@ -995,11 +993,6 @@ do
   | --exec-pref=* | --exec-pre=* | --exec-pr=* | --exec-p=* | --exec-=* \
   | --exec=* | --exe=* | --ex=*)
     exec_prefix=$ac_optarg ;;
-
-  -scriptname | --scriptname | -script | --script)
-    ac_prev=scriptname ;;
-  -scriptname=* | --scriptname=* | -script=* | --script=*)
-    scriptname=$ac_optarg ;;
 
   -gas | --gas | --ga | --g)
     # Obsolete; use --with-gas.
@@ -1419,7 +1412,6 @@ Installation directories:
                           [$ac_default_prefix]
   --exec-prefix=EPREFIX   install architecture-dependent files in EPREFIX
                           [PREFIX]
-  --scriptname=SCRIPT     run script name installed in PREFIX [squeak]
 
 By default, \`make install' will install all the files in
 \`$ac_default_prefix/bin', \`$ac_default_prefix/lib' etc.  You can specify
@@ -1509,6 +1501,8 @@ Optional Packages:
                           (default=${topdir}/src/plugins)
    --with-vmmcfg=dir      vm configuration directory containing plugins.int
                           and plugins.ext (default=.)
+   --with-scriptname=SCRIPT
+                          run script name installed in SCRIPT (default=squeak)
    --with-gnu-awk         assume that awk is GNU gawk (default=no)
    --with-gnu-as          assume that as is the GNU assembler (default=no)
    --without-rfb          disable Remote FrameBuffer support (default=enabled)
@@ -11774,6 +11768,15 @@ else
 fi
 
 
+
+# Check whether --with-scriptname was given.
+if test "${with_scriptname+set}" = set; then :
+  withval=$with_scriptname; scriptname="${with_scriptname}"
+else
+  scriptname="squeak"
+fi
+
+
 # Compiling a Cogit VM or not?  If so, need a cogit$o, cointerp, etc.
 
 # Check whether --enable-cogit was given.
@@ -11819,6 +11822,7 @@ $as_echo "bad" >&6; }
   fi
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: okay" >&5
 $as_echo "okay" >&6; }
+
 
 
 
@@ -18508,7 +18512,6 @@ if test "${enable_fast_bitblt+set}" = set; then :
 fi
 
 ;;
-
 aarch64)
 # Check whether --enable-fast-bitblt was given.
 if test "${enable_fast_bitblt+set}" = set; then :
@@ -18520,6 +18523,7 @@ if test "${enable_fast_bitblt+set}" = set; then :
 fi
 
 ;;
+
 esac
 
 BITBLT_OBJS=$bitblt_objs

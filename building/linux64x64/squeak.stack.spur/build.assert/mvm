@@ -25,7 +25,7 @@ test -f config.h || ../../../../platforms/unix/config/configure \
 		--with-vmversion=5.0 \
 		--with-src=src/spur64.stack --disable-cogit \
 		--without-vm-display-fbdev --without-npsqueak \
-		--scriptname=spur64 \
+		--with-scriptname=spur64 \
 	TARGET_ARCH="-m64" \
 	CC=$CC \
 	CFLAGS="$OPT -msse2"

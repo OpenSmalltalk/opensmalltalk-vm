@@ -24,7 +24,7 @@ test -f plugins.ext || (test -f ../plugins.ext && cp -p ../plugins.ext . || cp -
 test -f config.h || ../../../../platforms/unix/config/configure --without-npsqueak \
 		--with-vmversion=5.0 \
 		--with-src=src/spur64.cog \
-		--scriptname=spur64 \
+		--with-scriptname=spur64 \
 	TARGET_ARCH="-m64" \
 	CC=$CC \
 	CFLAGS="$OPT -msse2 -DCOGMTVM=0"
