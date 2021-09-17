@@ -34,6 +34,7 @@ test -f config.h || ../../../../platforms/unix/config/configure --without-npsque
 		--without-libtls \
 		--disable-dynamicopenssl \
 		--with-src=src/spur32.cog \
+		--with-scriptname=spur32 \
 	TARGET_ARCH="-m32" \
 	LIBS="$LIBS" \
 	CFLAGS="$OPT -DCOGMTVM=0"

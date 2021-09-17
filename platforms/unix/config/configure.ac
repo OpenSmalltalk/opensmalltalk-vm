@@ -103,6 +103,11 @@ AC_ARG_WITH(vmmcfg,
 	[vmmcfg="${with-vmmcfg}"],
 	[vmmcfg="${blddir}"])
 
+AC_ARG_WITH(scriptname,
+	AS_HELP_STRING([ --with-scriptname=SCRIPT], [run script name installed in SCRIPT (default=squeak)]),
+	[scriptname="${with_scriptname}"],
+	[scriptname="squeak"])
+
 # Compiling a Cogit VM or not?  If so, need a cogit$o, cointerp, etc.
 
 AC_ARG_ENABLE(cogit,
@@ -121,6 +126,7 @@ AC_SUBST(vmmdir)
 AC_SUBST(vmpdir)
 AC_SUBST(vmmcfg)
 AC_SUBST(blddir)
+AC_SUBST(scriptname)
 
 SQ_VERSION=${SQ_MAJOR}.${SQ_MINOR}-${SQ_UPDATE}
 

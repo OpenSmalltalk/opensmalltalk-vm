@@ -21,6 +21,7 @@ test -f config.h || ../../../../platforms/unix/config/configure \
 		--with-vmversion=5.0 \
 	--with-src=src/spur64.stack --disable-cogit \
         --without-npsqueak \
+	--with-scriptname=spur64 \
 	TARGET_ARCH="-march=armv8-a" \
 	CFLAGS="$OPT -D__ARM_ARCH_ISA_A64 -DARM64 -D__arm__ -D__arm64__ -D__aarch64__"
 
