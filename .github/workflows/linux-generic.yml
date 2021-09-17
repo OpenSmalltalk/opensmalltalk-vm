@@ -1,0 +1,79 @@
+name: Build for Linux (generic)
+
+on:
+  push: # All branches, but appropriate paths only.
+    paths:
+        # This workflow spec and its support scripts
+      - '.github/workflows/linux-generic.yml'
+      - 'scripts/ci/*linux_x86.sh'
+      - 'scripts/ci/*build.sh'
+      - 'deploy/**'
+      # Relevant sources for this platform
+      - 'building/linux32/**' # Makefile-based build scripts
+      - 'building/linux64/**' # Makefile-based build scripts
+      - '*src/**' # Generated VMMaker sources (incl. plugins)
+      - 'platforms/Cross/**'
+      - 'platforms/unix/**'
+      # Skip changes in documentation artifacts
+      - '!**.md'
+      - '!**HowToBuild'
+  pull_request:
+    branches:
+      - Cog
+    paths-ignore:
+      - '**.md'
+      - '**HowToBuild'
+
+
+jobs:
+  build:
+    strategy:
+      fail-fast: true
+      matrix:
+        arch:
+          - linux64
+          - linux32
+        flavor:
+          - squeak.stack.spur
+        heartbeat:
+          - threaded
+        mode:
+          - fast
+
+
+    runs-on: ubuntu-latest
+    name: ${{ matrix.flavor }}${{ matrix.heartbeat == 'itimer' && ' (itimer)' || '' }} for ${{ matrix.arch }}${{ matrix.mode == 'debug' && ' (DEBUG)' || matrix.mode == 'assert' && ' (ASSERT)' || '' }}
+    env:
+      ARCH: ${{ matrix.arch }}
+      FLAVOR: ${{ matrix.flavor }}
+      MODE: ${{ matrix.mode }}
+    steps:
+      - name: Checkout files
+        uses: actions/checkout@v2
+
+      # - name: Restore build cache
+      #   uses: actions/cache@v2
+      #   with:
+      #     path: .thirdparty-cache
+      #     key: thirdparty-cache-linux-generic
+
+      - name: Prepare environment
+        run: ./scripts/ci/actions_prepare_linux_x86.sh
+
+      - name: Build VM
+        run: ./scripts/ci/actions_build.sh
+        env:
+          HEARTBEAT: ${{ matrix.heartbeat }}
+
+      # - name: Sign VM (not implemented)
+      #   if: false
+      #   run: ./deploy/sign-vm.sh
+
+      - name: Pack VM
+        run: ./deploy/pack-vm.sh
+
+      - name: Store artifact w/ revision
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ env.ASSET_NAME }}_${{ env.ASSET_REVISION }}
+          path: ${{ env.PRODUCTS_PATH }}/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
