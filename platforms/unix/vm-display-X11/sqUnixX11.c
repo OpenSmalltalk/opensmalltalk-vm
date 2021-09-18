@@ -3599,11 +3599,13 @@ handleEvent(XEvent *evt)
 	      break;
 	    }
 	}
+	  recordWindowEvent(WindowEventActivated, 0, 0, 0, 0, 1); /* windowIndex 1 is main window */
       break;
 
     case FocusOut:
       if (inputContext && (evt->xfocus.mode == NotifyNormal) && (evt->xfocus.detail == NotifyNonlinear))
 	XUnsetICFocus(inputContext);
+	  recordWindowEvent(WindowEventDeactivated, 0, 0, 0, 0, 1); /* windowIndex 1 is main window */
       break;
 
 #if 0
