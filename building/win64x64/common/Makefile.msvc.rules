@@ -12,33 +12,33 @@
 
 $(info OBJDIR is $(OBJDIR))
 
-DEPFLAGS = -MT $@ -MMD -MP -MF deps/$(*F).Td
-ALLFLAGS = $(DEPFLAGS) $(CFLAGS) $(INCLUDES) $(DEFS)
-POSTCOMPILE = sed '/^$$/d' <deps/$(*F).Td | sed '/^.*:$$/d' | sed 's/ [^ ]*:/:/' | sed 's/^build[^/]*/$$(BUILD)/' > deps/$(*F).d; rm deps/$(*F).Td; touch -r $< deps/$(*F).d
+DEPFLAGS = -MF deps/$(*F).Td
+ALLCFLAGS = $(DEPFLAGS) $(CFLAGS) $(INCLUDES) $(DEFS)
+ALLCXXFLAGS = $(DEPFLAGS) $(CXXFLAGS) $(INCLUDES) $(DEFS)
 
 #############################################################################
 # Rules for automated builds
 #
 
 #.c.o:
-#	$(CC) /Fo$@ $(CFLAGS) $(INCLUDES) $(DEFS) -c $(subst /,\\,$<)
+#	$(CC) -o $@ $(ALLCFLAGS) -c $(subst /,\\,$<)
 #
 
 .c.o:
-	$(CC) /Fo$(OBJDIR)/$@ $(CFLAGS) $(INCLUDES) $(DEFS) -c $<
+	$(CC) -o $(OBJDIR)/$@ $(ALLCFLAGS) -c $<
 
-$(OBJDIR)/%.o: %.c
-	$(CC) /Fo$@ $(CFLAGS) $(INCLUDES) $(DEFS) -c $<
+$(OBJDIR)/%.o: %.c deps/%.d
+	$(CC) -o $@ $(ALLCFLAGS) -c $<
 
 .cpp.o:
-	$(CC) /Fo$(OBJDIR)/$@ $(CFLAGS) $(INCLUDES) $(DEFS) -c $<
+	$(CC) -o $(OBJDIR)/$@ $(ALLCXXFLAGS) -c $<
 
 # This is causing the plugin directory to be repeated in the /F
 #$(OBJDIR)/%.o: %.cpp
-#	$(CC) /Fo$(OBJDIR)/$@ $(CFLAGS) $(INCLUDES) $(DEFS) -c $<
+#	$(CC) -o $(OBJDIR)/$@ $(ALLCXXFLAGS) -c $<
 
-$(OBJDIR)/%.o: %.cpp
-	$(CC) /Fo$@ $(CFLAGS) $(INCLUDES) $(DEFS) -c $<
+$(OBJDIR)/%.o: %.cpp deps/%.d
+	$(CC) -o $@ $(ALLCXXFLAGS) -c $<
 
 .rc.res:
 	$(RC) $(RCFLAGS) /fo $@ $<
@@ -51,3 +51,9 @@ $(OBJDIR)/%.o: %.cpp
 
 $(OBJDIR)/%.o: %.asm
 	$(AS) /Fo$@ $(DEFS) -c $<
+
+deps/%.d: ;
+
+.PRECIOUS: deps/%.d $(OBJDIR)/%.air $(OBJDIR)/%.metallib
+
+-include $(patsubst %,deps/%.d,$(notdir $(basename $(VMSRC) $(LIBSRC))))

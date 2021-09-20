@@ -1,9 +1,7 @@
 #############################################################################
-# Common Makefile for Win64 VM using MSVC, e.g. 2017 Community, and gnu make
+# Common Makefile for Win64 VM using Clang/MSVC, e.g. 2017 Community, gnu make
+# and the Windows 10 SDK.
 # Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
-#
-# Compilation rules and flags for plugins built with the MSVC toolchain, such
-# as the SoundPlugin.
 #############################################################################
 
 ARCH:=x64
@@ -28,33 +26,19 @@ override VCINSTALLDIR:=$(shell echo "$(VCINSTALLDIR)" | sed 's/ /\\ /g')
 override VCINSTALLDIRSH:=$(shell echo "$(VCINSTALLDIR)" | sed 's/[()]/\\&/g')
 
 #############################################################################
-# C compiler settings assuming Visual C++ 2017 Community Edition
+# C compiler settings assuming Clang & Visual C++ 2017 Community Edition
 #
-# Try and choose a compiler.  In order try:
-# If LLVM is installed in C:\Program Files\LLVM or C:\LLVM then
-# use clang-cl.exe from there. Otherwise use MSVC
-#
+# use clang.exe from either C:\Program Files\LLVM or C:\LLVM
+# We use clang rather than clang-cl or MSVC because
+#	clang-cl ignores /Oy-
+#	MSVC has a very poor preprocessor
 
 $(info VCINSTALLDIR=$(VCINSTALLDIR))
 $(info VCINSTALLDIRSH=$(VCINSTALLDIRSH))
 
-ifneq ($(wildcard C:/LLVM/bin/.*),)
-$(info LLVM/Clang detected)
-CC:="C:/LLVM/bin/clang-cl.exe"
+CC:="C:/LLVM/bin/clang.exe"
 Clang:=Clang
 undefine MSVC
-else ifneq ($(wildcard C:/Program\ Files/LLVM/bin/.*),)
-$(info LLVM/Clang detected)
-CC:="C:/Program Files/LLVM/bin/clang-cl.exe"
-Clang:=Clang
-undefine MSVC
-else
-$(info Clang not found; using MSVC)
-override TOOLPREFIX:="$(VCToolsInstallDir)bin/HostX64/x64/"
-MSVC:=MSVC
-undefine Clang
-CC:=$(TOOLPREFIX)cl.exe -nologo
-endif
 export TOOLPREFIX
 $(info CC=$(CC))
 AS:=ml64
@@ -82,26 +66,30 @@ MSVCINCLUDES:=-I"$(subst \,/,$(subst ;," -I",$(INCLUDE)))"
 # DO NOT USE := FOR OFLAGS BECAUSE SOME PLUGINS REDEFINE THIS!!
 # -Z7 debug info in files; -Zi debug info in PDB
 # Turn off BUFFER_SECURITY for functional setjmp/longjmp
-BUFFER_SECURITY:=-GS- -D_CRT_SECURE_NO_WARNINGS
-ifdef MSVC
-PRODUCTION_OFLAGS:=-Ox -Ob1 -Oi -Oy $(BUFFER_SECURITY)
-ASSERT_OFLAGS:=-Os -Oi- -Oy- $(BUFFER_SECURITY)
-DEBUG_OFLAGS:=-Od $(BUFFER_SECURITY)
-DASH_O:=-Fo
-OFLAGS= -Ot $(BUFFER_SECURITY)
-CFLAGS=	-MD -DLLP64=1 -DWIN64=1 -Z7 $(OFLAGS) \
-	-Dalloca=_alloca -Dhuge=my_huge \
-	-EHsc $(XCFLAGS) $(NOBUILTIN) $(WARNINGS)
-else ifdef Clang
-PRODUCTION_OFLAGS:=-Ox -Ob1 -Oi -Oy $(BUFFER_SECURITY)
-ASSERT_OFLAGS:=-Os -Oi- -Oy- $(BUFFER_SECURITY)
-DEBUG_OFLAGS:=-Od $(BUFFER_SECURITY)
+BUFFER_SECURITY:=-fno-stack-protector -D_CRT_SECURE_NO_WARNINGS
+# clang supports both -fno-omit-frame-pointer and -fno-omit-leaf-frame-pointer.
+# for exception handing we require a frame pointer (for unwind etc). So supply
+# -fno-omit-frame-pointer but not -fno-omit-leaf-frame-pointer with the intent
+# that clang does use a frame pointer in all non-leaf functions, but does not
+# use a frame pointer in leaf functions.
+#
+# Alas clang-cl supports only /Oy & /Oy- but ignores /Oy- (!!)
+FRAME_POINTER_FLAGS:=-fno-omit-frame-pointer -DcFramePointerInUse=1
+EXCEPTION_FLAGS:=-fexceptions
+CXX_EXCEPTION_FLAGS:=-fexceptions -fcxx-exceptions
+
+PRODUCTION_OFLAGS:=-O2 -finline-hint-functions $(FRAME_POINTER_FLAGS) $(BUFFER_SECURITY)
+ASSERT_OFLAGS:=-Os -fno-builtin $(FRAME_POINTER_FLAGS) $(BUFFER_SECURITY)
+DEBUG_OFLAGS:=-O0 $(FRAME_POINTER_FLAGS) $(BUFFER_SECURITY)
+
 DASH_O:=-o
-OFLAGS= -Ot $(BUFFER_SECURITY)
-CFLAGS=	-MD -DLLP64=1 -DWIN64=1 -Z7 $(OFLAGS) \
+OFLAGS= -O2 $(FRAME_POINTER_FLAGS) $(BUFFER_SECURITY)
+CFLAGS=	-MD -DLLP64=1 -DWIN64=1 -g3 $(OFLAGS) \
 	-Dalloca=_alloca -Dhuge=my_huge \
-	-EHsc $(XCFLAGS) $(NOBUILTIN) $(WARNINGS)
-endif
+	$(EXCEPTION_FLAGS) $(XCFLAGS) $(NOBUILTIN) $(WARNINGS)
+CXXFLAGS=-MD -DLLP64=1 -DWIN64=1 -g3 $(OFLAGS) \
+	-Dalloca=_alloca -Dhuge=my_huge \
+	$(CXX_EXCEPTION_FLAGS) $(XCFLAGS) $(NOBUILTIN) $(WARNINGS)
 # Make all setjmp/longjmp varieties to our _setjmp/_longjmp in _setjmp-x86.asm
 JMPDEFS:=-Dsetjmp=_setjmp -Dlongjmp=_longjmp -D_siglongjmp=_longjmp
 

@@ -185,34 +185,34 @@ static LONG CALLBACK
 squeakExceptionHandler(LPEXCEPTION_POINTERS exp)
 {
 extern sqInt primitiveFailForFFIExceptionat(usqLong exceptionCode, usqInt pc);
-  DWORD result;
+#if defined(NDEBUG)
+// in release mode, execute exception handler notifying user what happened
+	DWORD result = EXCEPTION_EXECUTE_HANDLER;
+#else
+// in debug mode, let the system crash so that we can see where it happened
+	DWORD result = EXCEPTION_CONTINUE_SEARCH;
+#endif
 
-  /* #1: Try to handle exception in the regular (memory access)
-     exception filter */
-  result = sqExceptionFilter(exp);
-
-  /* #2: If that didn't work, try to handle any FP problems */
-  if (result != EXCEPTION_CONTINUE_EXECUTION) {
+  /* #1: Try to handle any FP problems */
     DWORD code = exp->ExceptionRecord->ExceptionCode;
-    if ((code >= EXCEPTION_FLT_DENORMAL_OPERAND) && (code <= EXCEPTION_FLT_UNDERFLOW)) {
-      /* turn on the default masking of exceptions in the FPU and proceed */
-      _controlfp(FPU_DEFAULT, FPU_MASK);
-      result = EXCEPTION_CONTINUE_EXECUTION;
+    if (code >= EXCEPTION_FLT_DENORMAL_OPERAND
+	 && code <= EXCEPTION_FLT_UNDERFLOW) {
+		/* turn on the default masking of exceptions in the FPU and proceed */
+		_controlfp(FPU_DEFAULT, FPU_MASK);
+		result = EXCEPTION_CONTINUE_EXECUTION;
     }
-  }
 
-  /* #3: If that didn't work either try passing it on to the old
+  /* #2: If that didn't work either try passing it on to the old
      top-level filter */
-  if (result != EXCEPTION_CONTINUE_EXECUTION) {
-    if (TopLevelFilter) {
-      result = TopLevelFilter(exp);
-    }
-  }
-  if (result != EXCEPTION_CONTINUE_EXECUTION) {
-	  /* #4: Allow the VM to fail an FFI call in which an exception occurred. */
-	  primitiveFailForFFIExceptionat(exp->ExceptionRecord->ExceptionCode,
-									 exp->ContextRecord->CONTEXT_PC);
-#ifdef NDEBUG
+	if (result != EXCEPTION_CONTINUE_EXECUTION
+	 && TopLevelFilter)
+		result = TopLevelFilter(exp);
+
+	if (result != EXCEPTION_CONTINUE_EXECUTION) {
+		// #3: Allow the VM to fail an FFI call in which an exception occurred.
+		primitiveFailForFFIExceptionat(exp->ExceptionRecord->ExceptionCode,
+										exp->ContextRecord->CONTEXT_PC);
+#if defined(NDEBUG) || defined(VirtendVM)
 	/* #5: If that didn't work either give up and print a crash debug information */
     printCrashDebugInformation(exp);
     result = EXCEPTION_EXECUTE_HANDLER;
@@ -221,14 +221,31 @@ extern sqInt primitiveFailForFFIExceptionat(usqLong exceptionCode, usqInt pc);
   return result;
 }
 
-void InstallExceptionHandler(void)
+/* Structured exception handling is implemented completely differently in 64-bit
+ * Windows to 32-bit Windows (David Simmons, private communication, Sept 2021).
+ * To be able to write a stack trace in crash.dmp we need to be informed of
+ * exceptions before stack unwind.  On 64-bit Windows one must use vectored
+ * exception handling to be so informed.
+ */
+static void
+InstallExceptionHandler(void)
 {
+#if _WIN64
+# define CallFirst 1
+  TopLevelFilter = AddVectoredExceptionHandler(CallFirst,squeakExceptionHandler);
+#else
   TopLevelFilter = SetUnhandledExceptionFilter(squeakExceptionHandler);
+#endif
 }
 
-void UninstallExceptionHandler(void)
+static void
+UninstallExceptionHandler(void)
 {
+#if _WIN64
+  RemoveVectoredExceptionHandler(TopLevelFilter);
+#else
   SetUnhandledExceptionFilter(TopLevelFilter);
+#endif
   TopLevelFilter = NULL;
 }
 
@@ -1639,11 +1656,10 @@ sqMain(int argc, char *argv[])
   virtualMemory = imageSize + 0x00400000;
 
 #if !NO_FIRST_LEVEL_EXCEPTION_HANDLER
-# ifndef _MSC_VER
   /* Install our top-level exception handler */
   InstallExceptionHandler();
-# else
-  __try {
+# ifdef _MSC_VER
+  __try { // belt and braces...
 # endif
 #endif /* !NO_FIRST_LEVEL_EXCEPTION_HANDLER */
 
@@ -1691,10 +1707,9 @@ sqMain(int argc, char *argv[])
   } __except(squeakExceptionHandler(GetExceptionInformation())) {
     /* Do nothing */
   }
-# else
+# endif
   /* remove the top-level exception handler */
   UninstallExceptionHandler();
-# endif
 #endif /* !NO_FIRST_LEVEL_EXCEPTION_HANDLER */
   return 1;
 }
@@ -1984,7 +1999,7 @@ parseVMArgument(int argc, char *argv[])
 		return 1; }
 	else if (!strcmp(argv[0], VMOPTION("warnpid"))) {
 		extern sqInt warnpid;
-		warnpid = getpid();
+		warnpid = GetCurrentProcessId();
 		return 1; }
 	else if (!strcmp(argv[0], VMOPTION("failonffiexception"))) {
 		extern sqInt ffiExceptionResponse;

@@ -66,20 +66,6 @@ void SetDynamicConsole() {
 			    fDynamicConsole ? U_ON:U_OFF,squeakIniName);
 }
 
-void SetReduceCPUUsage() {
-  CheckMenuItem(vmPrefsMenu, ID_REDUCECPUUSAGE, MF_BYCOMMAND | 
-		(fReduceCPUUsage ? MF_CHECKED : MF_UNCHECKED));
-  WritePrivateProfileString(U_GLOBAL,TEXT("ReduceCPUUsage"),
-			    fReduceCPUUsage ? U_ON:U_OFF,squeakIniName);
-}
-
-void SetReduceCPUInBackground() {
-  CheckMenuItem(vmPrefsMenu, ID_REDUCEBACKGROUNDCPU, MF_BYCOMMAND | 
-		(fReduceCPUInBackground ? MF_CHECKED : MF_UNCHECKED));
-  WritePrivateProfileString(U_GLOBAL,TEXT("ReduceCPUInBackground"),
-			    fReduceCPUInBackground ? U_ON:U_OFF,squeakIniName);
-}
-
 void Set3ButtonMouse() {
   CheckMenuItem(vmPrefsMenu, ID_3BUTTONMOUSE, MF_BYCOMMAND | 
 		(f3ButtonMouse ? MF_CHECKED : MF_UNCHECKED));
@@ -117,10 +103,12 @@ void SetAllowSocketAccess() {
 }
 #endif
 
+#if !SPURVM
 void SetShowAllocations() {
   CheckMenuItem(vmPrefsMenu, ID_SHOWALLOCATIONS, MF_BYCOMMAND | 
 		(fShowAllocations ? MF_CHECKED : MF_UNCHECKED));
 }
+#endif
 
 void SetPriorityBoost() {
   CheckMenuItem(vmPrefsMenu, ID_PRIORITYBOOST, MF_BYCOMMAND | 
@@ -238,12 +226,6 @@ void LoadPreferences()
   fDynamicConsole = 
     GetPrivateProfileInt(U_GLOBAL,TEXT("DynamicConsole"),
 			 fDynamicConsole,squeakIniName);
-  fReduceCPUUsage = 
-    GetPrivateProfileInt(U_GLOBAL,TEXT("ReduceCPUUsage"),
-			 fReduceCPUUsage,squeakIniName);
-  fReduceCPUInBackground = 
-    GetPrivateProfileInt(U_GLOBAL,TEXT("ReduceCPUInBackground"),
-			 fReduceCPUInBackground,squeakIniName);
   f1ButtonMouse   = 
     GetPrivateProfileInt(U_GLOBAL,TEXT("1ButtonMouse"),
 			 f1ButtonMouse,squeakIniName);
@@ -298,8 +280,6 @@ void SetAllPreferences() {
   SetDeferredUpdate();
   SetShowConsole();
   SetDynamicConsole();
-  SetReduceCPUUsage();
-  SetReduceCPUInBackground();
   Set3ButtonMouse();
   Set1ButtonMouse();
   SetUseDirectSound();
@@ -308,7 +288,9 @@ void SetAllPreferences() {
 #ifndef NO_NETWORK
   SetAllowSocketAccess();
 #endif
+#if !SPURVM
   SetShowAllocations();
+#endif
   SetPriorityBoost();
   SetB3DXUsesOpenGL();
   SetCaseSensitiveFileMode();
@@ -362,10 +344,6 @@ extern sqInt recordPrimTraceFunc();
 
   { /* System related settings */
     hMenu = CreatePopupMenu();
-    AppendMenu(hMenu,MF_STRING | MF_UNCHECKED, ID_REDUCECPUUSAGE, 
-	       TEXT("Reduce CPU usage"));
-    AppendMenu(hMenu,MF_STRING | MF_UNCHECKED, ID_REDUCEBACKGROUNDCPU, 
-	       TEXT("Reduce background CPU usage"));
     AppendMenu(hMenu,MF_STRING | MF_UNCHECKED, ID_PRIORITYBOOST, 
 	       TEXT("Thread Priority Boost"));
 #ifndef NO_PRINTER
@@ -386,8 +364,10 @@ extern sqInt recordPrimTraceFunc();
 	       TEXT("Show output console"));
     AppendMenu(hMenu,MF_STRING | MF_UNCHECKED, ID_DYNAMICCONSOLE, 
 	       TEXT("Show console on errors"));
+#if !SPURVM
     AppendMenu(hMenu,MF_STRING | MF_UNCHECKED, ID_SHOWALLOCATIONS, 
 	       TEXT("Show allocation activity"));
+#endif
     AppendMenu(hMenu,MF_SEPARATOR, 0,NULL);
 #ifndef NO_NETWORK
     AppendMenu(hMenu, MF_STRING | MF_UNCHECKED, ID_DBGPRINTSOCKET,
@@ -440,20 +420,12 @@ void HandlePrefsMenu(int cmd) {
     fDynamicConsole = !fDynamicConsole;
     SetDynamicConsole();
     break;
-  case ID_REDUCECPUUSAGE:
-    fReduceCPUUsage = !fReduceCPUUsage;
-    SetReduceCPUUsage();
-    break;
   case ID_3BUTTONMOUSE:
     f3ButtonMouse = !f3ButtonMouse;
     Set3ButtonMouse();
     break;
   case ID_DEFAULTPRINTER:
     SetTheDefaultPrinter();
-    break;
-  case ID_REDUCEBACKGROUNDCPU:
-    fReduceCPUInBackground = !fReduceCPUInBackground;
-    SetReduceCPUInBackground();
     break;
   case ID_1BUTTONMOUSE:
     f1ButtonMouse = !f1ButtonMouse;
@@ -471,10 +443,12 @@ void HandlePrefsMenu(int cmd) {
     _ioSetImageWrite(!ioCanWriteImage());
     SetAllowImageWrite();
     break;
+#if !SPURVM
   case ID_SHOWALLOCATIONS:
     fShowAllocations = !fShowAllocations;
     SetShowAllocations();
     break;
+#endif
 #ifndef NO_NETWORK
   case ID_SOCKETACCESS:
     _ioSetSocketAccess(!ioHasSocketAccess());

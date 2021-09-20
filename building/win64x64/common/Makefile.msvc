@@ -213,10 +213,10 @@ mkNamedPrims.exe: $(WIN32UTILDIR)/mkNamedPrims.c
 	$(LD) /out:$@ mkNamedPrims.obj /subsystem:console /defaultlib:libcmt
 
 $(BTOBJ):	$(WIN32MISCDIR)/btext.c
-	$(CC) -c $< -Oy -Os $(DASH_O)$@
+	$(CC) -c $< -fomit-frame-pointer -Os $(DASH_O)$@
 
 $(ETOBJ):	$(WIN32MISCDIR)/etext.c
-	$(CC) -c $< -Oy -Os $(DASH_O)$@
+	$(CC) -c $< -fomit-frame-pointer -Os $(DASH_O)$@
 
 $(JMPOBJ):	$(WIN32MISCDIR)/$(JMPASM)
 	$(CC) -c $< $(DASH_O)$@
@@ -226,12 +226,12 @@ vm:	$(VMEXE)
 TZ:=$(shell $(CBD)/date +%Z)
 
 $(VMEXE): $(OBJDIR) $(THIRDPARTYLIBS) $(VMOBJ) $(LIBS) resource.o $(BTOBJ) $(ETOBJ) $(JMPOBJ)
-	$(CC) $(DASH_O)$(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -D'TZ="$(TZ)"' -c $(WIN32DIR)/version.c
+	$(CC) $(DASH_O)$(OBJDIR)/version.o $(ALLCFLAGS) -D'TZ="$(TZ)"' -c $(WIN32DIR)/version.c
 	$(LD) $(LDFLAGS) -OUT:$(VMEXE) -MAP:$(VMMAP) \
 			$(BTOBJ) $(VMOBJ) $(JMPOBJ) $(OBJDIR)/resource.o $(filter-out $(call ignore), $(LIBS)) $(STDLIBS) $(ETOBJ)
 
 $(CONSOLEVMEXE): $(VMOBJ) $(LIBS) resource.o $(BTOBJ) $(ETOBJ) $(JMPOBJ)
-	$(CC) $(DASH_O)$(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -D'TZ="$(TZ)"' -c $(WIN32DIR)/version.c
+	$(CC) $(DASH_O)$(OBJDIR)/version.o $(ALLCFLAGS) -D'TZ="$(TZ)"' -c $(WIN32DIR)/version.c
 	$(LD) $(CONSOLELDFLAGS) -OUT:$(CONSOLEVMEXE) -MAP:$(CONSOLEVMMAP) \
 			$(BTOBJ) $(VMOBJ) $(JMPOBJ) $(OBJDIR)/resource.o $(filter-out $(call ignore), $(LIBS)) $(STDLIBS) $(ETOBJ)
 

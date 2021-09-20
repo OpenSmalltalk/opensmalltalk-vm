@@ -128,9 +128,9 @@ BOOL fHasFocus = 0;        /* if Squeak has the input focus */
 BOOL fDeferredUpdate = 1; /* I prefer the deferred update*/
 BOOL fShowConsole = 0;    /* do we show the console window?*/
 BOOL fDynamicConsole = 1; /* Should we show the console if any errors occur? */
+#if !SPURVM
 BOOL fShowAllocations = 0; /* Show allocation activity */
-BOOL fReduceCPUUsage = 1; /* Should we reduce CPU usage? */
-BOOL fReduceCPUInBackground = 0; /* Should we reduce CPU usage when not active? */
+#endif
 BOOL fUseDirectSound = 1; /* Do we use DirectSound?! */
 BOOL fRunSingleApp = 0;   /* Do we allow only one instance of this VM? */
 
