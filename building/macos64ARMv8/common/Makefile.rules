@@ -15,25 +15,20 @@ endif
 
 include ../common/Makefile.flags
 
-DEPFLAGS = -MT $@ -MMD -MP -MF deps/$(*F).Td
+DEPFLAGS = -MMD -MT '$$(OBJDIR)/$(*F).o' -MF deps/$(*F).d
 ALLFLAGS = $(DEPFLAGS) $(WARNINGS) $(CFLAGS)
-POSTCOMPILE = sed '/^$$/d' <deps/$(*F).Td | sed '/^.*:$$/d' | sed 's/^build[^/]*/$$(BUILD)/' > deps/$(*F).d; rm deps/$(*F).Td; touch -r $< deps/$(*F).d
 
 $(OBJDIR)/%.o: %.c deps/%.d $(MAKEFILE)
 	$(CC) -x c $(ALLFLAGS) $(INCLUDES) -c $< -o $@
-	$(POSTCOMPILE)
 
 $(OBJDIR)/%.o: %.m deps/%.d $(MAKEFILE)
 	$(CC) -x objective-c $(OBJC_CODE_MODEL) $(ALLFLAGS) $(INCLUDES) -c $< -o $@
-	$(POSTCOMPILE)
 
 $(OBJDIR)/%.o: %.cpp deps/%.d $(MAKEFILE)
 	$(CXX) $(CXXVERFLAGS) $(ALLFLAGS) $(INCLUDES) -c $< -o $@
-	$(POSTCOMPILE)
 
 $(OBJDIR)/%.o: %.mm deps/%.d $(MAKEFILE)
 	$(CXX) $(CXXVERFLAGS) $(OBJC_CODE_MODEL) $(ALLFLAGS) $(INCLUDES) -c $< -o $@
-	$(POSTCOMPILE)
 
 deps/%.d: ;
 
