@@ -181,6 +181,18 @@ void SetSystemTrayIcon(BOOL on);
 /****************************************************************************/
 static LPTOP_LEVEL_EXCEPTION_FILTER TopLevelFilter = NULL;
 
+// Until we can implement a reliable first-chance exception handler on WIN64
+// we cannot support primitiveFailForFFIExceptionat there-on.
+sqInt
+ioCanCatchFFIExceptions()
+{
+#if _WIN64
+	return 0;
+#else
+	return 1;
+#endif
+}
+
 static LONG CALLBACK
 squeakExceptionHandler(LPEXCEPTION_POINTERS exp)
 {

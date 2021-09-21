@@ -75,6 +75,8 @@ typedef struct SUfdUdSi2 {union Ufd a; union UdSi2 b;} ffiTestSUfdUdSi2;
 
 #pragma export on
 
+EXPORT(char)  ffiTestIndirection(char *p) { return *p; }
+
 EXPORT(ffiTestSd2)  ffiTestInitSd2  (double    a,double    b)
 { ffiTestSd2 v = {a,b};
 	return v;

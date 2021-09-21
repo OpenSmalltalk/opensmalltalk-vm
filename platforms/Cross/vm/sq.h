@@ -588,9 +588,10 @@ sqInt  ioUnloadModule(char *moduleName);
 sqInt  ioUnloadModuleOfLength(sqInt moduleNameIndex, sqInt moduleNameLength);
 char  *ioListBuiltinModule(sqInt moduleIndex);
 char  *ioListLoadedModule(sqInt moduleIndex);
-/* The next two for the FFI, also implemented in sqNamedPrims.c. */
+/* The next three for the FFI, also implemented in sqNamedPrims.c. */
 void  *ioLoadModuleOfLength(sqInt moduleNameIndex, sqInt moduleNameLength);
 void  *ioLoadSymbolOfLengthFromModule(sqInt functionNameIndex, sqInt functionNameLength, void *moduleHandle);
+sqInt ioCanCatchFFIExceptions();
 
 /* The next three functions must be implemented by sqXYZExternalPrims.c */
 /* ioLoadModule:

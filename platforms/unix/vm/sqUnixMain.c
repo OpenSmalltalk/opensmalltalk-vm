@@ -1106,6 +1106,9 @@ sigusr1(int sig, siginfo_t *info, ucontext_t *uap)
 
 static int inFault = 0;
 
+sqInt
+ioCanCatchFFIExceptions() { return 1; }
+
 static void
 sigsegv(int sig, siginfo_t *info, ucontext_t *uap)
 {

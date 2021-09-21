@@ -333,6 +333,9 @@ sigusr1(int sig, siginfo_t *info, void *uap)
 
 static int inFault = 0;
 
+sqInt
+ioCanCatchFFIExceptions() { return 1; }
+
 void
 sigsegv(int sig, siginfo_t *info, void *uap)
 {
