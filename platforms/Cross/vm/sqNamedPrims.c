@@ -127,10 +127,8 @@ findExternalFunctionIn(char *functionName, ModuleEntry *module
 
 /*
 	findInternalFunctionIn:
-	Lookup the given "pluginName_functionName" in the internal
-	primitive table. If it can not be found try to look it up
-	by using the OS dependent mechanism (see comment below).
-	On SPUR also get metadata, hidden after functionName, if asked for.
+	Lookup the given "pluginName_functionName" in the internal primitive table.
+	On SPUR also get the metadata, hidden after functionName, if asked for.
 */
 static void *
 findInternalFunctionIn(char *functionName, char *pluginName
@@ -140,36 +138,45 @@ findInternalFunctionIn(char *functionName, char *pluginName
 )
 {
   sqInt listIndex, index;
+  sqExport *exports;
 
-  DPRINTF(("Looking (internally) for %s in %s ... ", functionName, (pluginName ? pluginName : "<intrinsic>")));
+  DPRINTF(("Looking (internally) for %s in %s ... ",
+          functionName, (pluginName ? pluginName : "<intrinsic>")));
 
-  /* canonicalize functionName and pluginName to be NULL if not specified */
-  if (functionName && !functionName[0]) functionName = NULL;
+  if (!functionName || !functionName[0])
+    return NULL;
+
+  /* canonicalize pluginName to be NULL if not specified */
   if (pluginName && !pluginName[0]) pluginName = NULL;
-  for (listIndex=0;; listIndex++) {
-    sqExport *exports = pluginExports[listIndex];
-    if (!exports) break;
+
+  for (listIndex=0; (exports = pluginExports[listIndex]); listIndex++) {
+    char *plugin = exports[0].pluginName;
+
+    /* canonicalize plugin to be NULL if not specified */
+    if (plugin && !plugin[0]) plugin = NULL;
+    /* check for module name match */
+    if (!pluginName != !plugin)
+      continue; /* one is missing */
+    if (plugin && strcmp(pluginName, plugin))
+      continue; /* name mismatch */
+
     for (index=0;; index++) {
-      char *plugin = exports[index].pluginName;
       char *function = exports[index].primitiveName;
-      /* canonicalize plugin and function to be NULL if not specified */
-      if (plugin && !plugin[0]) plugin = NULL;
-      if (function && !function[0]) function = NULL;
-      if (!plugin && !function) break; /* At end of table. */
-      /* check for module name match */
-      if ((pluginName == NULL) != (plugin == NULL)) continue; /* one is missing */
-      if (plugin && strcmp(pluginName, plugin)) continue; /* name mismatch */
+      if (!function || !function[0]) break; /* At end of table. */
+
+      assert(exports[0].pluginName == exports[index].pluginName);
+
       /* check for function name match */
-      if ((functionName == NULL) != (function == NULL)) continue; /* one is missing */
-      if (function && strcmp(functionName, function)) continue; /* name mismatch */
+      if (strcmp(functionName, function))
+        continue; /* name mismatch */
 
       /* match */
       DPRINTF(("found\n"));
 #if SPURVM
-	  if (metadataPtr)
-		*metadataPtr = (SpurPrimitiveMetadataType)
-						((((signed char *)function)[fnameLength+1] << 8)
-						+ ((unsigned char *)function)[fnameLength+2]);
+      if (metadataPtr)
+        *metadataPtr = (SpurPrimitiveMetadataType)
+                          ((((signed char *)function)[fnameLength+1] << 8)
+                        + ((unsigned char *)function)[fnameLength+2]);
 #endif
       return exports[index].primitiveAddress;
     }
