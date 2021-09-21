@@ -58,7 +58,7 @@ findLoadedModule(char *pluginName)
 }
 
 static ModuleEntry *
-addToModuleList(char *pluginName, void* handle, sqInt ffiFlag)
+addToModuleList(char *pluginName, void *handle, sqInt ffiFlag)
 {
 	ModuleEntry *module;
 
@@ -459,6 +459,14 @@ ioLoadSymbolOfLengthFromModule(sqInt functionNameIndex, sqInt functionNameLength
 		return 0; /* can't cope with those */
 	strncpy(functionName, functionNamePointer, functionNameLength);
 	functionName[functionNameLength] = 0;
+	// Interpret a tagged pointer as a short-hand for an internal plugin
+	// e.g. the SqueakFFIPrims module as an internal plugin where access to
+	// the test functions is required.
+	if (((sqInt)moduleHandle & 1))
+		return findInternalFunctionIn
+					(functionName, 
+					&(((ModuleEntry *)((sqInt)moduleHandle - 1))->name[0])
+					NADA);
 	return moduleHandle
 		? ioFindExternalFunctionIn(functionName, moduleHandle)
 		: IO_LOAD_GLOBAL(functionName);
@@ -468,6 +476,7 @@ ioLoadSymbolOfLengthFromModule(sqInt functionNameIndex, sqInt functionNameLength
 	This entry point is exclusively for the FFI.
 	It does *NOT* call any of the initializers nor
 	does it attempt to lookup stuff internally.
+	It answers internal plugins as a tagged pointer.
 */
 void *
 ioLoadModuleOfLength(sqInt moduleNameIndex, sqInt moduleNameLength)
@@ -475,17 +484,17 @@ ioLoadModuleOfLength(sqInt moduleNameIndex, sqInt moduleNameLength)
 	ModuleEntry *module;
 	char *moduleNamePointer= pointerForOop((usqInt)moduleNameIndex);
 	char moduleName[256];
-	sqInt i;
 
 	if (moduleNameLength > 255)
 		return 0; /* can't cope with those */
-	for (i=0; i< moduleNameLength; i++)
-		moduleName[i] = moduleNamePointer[i];
+	strncpy(moduleName, moduleNamePointer, moduleNameLength);
 	moduleName[moduleNameLength] = 0;
 
 	module = findOrLoadModule(moduleName, 1);
 	if (module)
-		return module->handle;
+		return module->handle
+				? module->handle
+				: (void *)((sqInt)module + 1);
 	return 0;
 }
 
@@ -573,12 +582,10 @@ ioUnloadModuleOfLength(sqInt moduleNameIndex, sqInt moduleNameLength)
 {
 	char *moduleNamePointer = pointerForOop((usqInt) moduleNameIndex);
 	char moduleName[256];
-	sqInt i;
 
 	if (moduleNameLength > 255)
 		return 0; /* can't cope with those */
-	for (i=0; i< moduleNameLength; i++)
-		moduleName[i] = moduleNamePointer[i];
+	strncpy(moduleName, moduleNamePointer, moduleNameLength);
 	moduleName[moduleNameLength] = 0;
 	return ioUnloadModule(moduleName);
 }

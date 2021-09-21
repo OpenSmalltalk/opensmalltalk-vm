@@ -18,16 +18,16 @@ include ../common/Makefile.flags
 DEPFLAGS = -MMD -MT '$$(OBJDIR)/$(*F).o' -MF deps/$(*F).d
 ALLFLAGS = $(DEPFLAGS) $(WARNINGS) $(CFLAGS)
 
-$(OBJDIR)/%.o: %.c deps/%.d $(MAKEFILE)
+$(OBJDIR)/%.o: %.c $(MAKEFILE)
 	$(CC) -x c $(ALLFLAGS) $(INCLUDES) -c $< -o $@
 
-$(OBJDIR)/%.o: %.m deps/%.d $(MAKEFILE)
+$(OBJDIR)/%.o: %.m $(MAKEFILE)
 	$(CC) -x objective-c $(OBJC_CODE_MODEL) $(ALLFLAGS) $(INCLUDES) -c $< -o $@
 
-$(OBJDIR)/%.o: %.cpp deps/%.d $(MAKEFILE)
+$(OBJDIR)/%.o: %.cpp $(MAKEFILE)
 	$(CXX) $(CXXVERFLAGS) $(ALLFLAGS) $(INCLUDES) -c $< -o $@
 
-$(OBJDIR)/%.o: %.mm deps/%.d $(MAKEFILE)
+$(OBJDIR)/%.o: %.mm $(MAKEFILE)
 	$(CXX) $(CXXVERFLAGS) $(OBJC_CODE_MODEL) $(ALLFLAGS) $(INCLUDES) -c $< -o $@
 
 deps/%.d: ;

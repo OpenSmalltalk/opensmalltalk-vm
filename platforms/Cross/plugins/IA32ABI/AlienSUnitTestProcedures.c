@@ -30,9 +30,12 @@
 
 *
  */
-#include "sq.h"
 
-#include "AlienSUnitTestProcedures.h"
+#if ALIEN_TEST_FUNCTIONS // These are in SqueakFFIPrims, and far more complete
+
+# include "sq.h"
+
+# include "AlienSUnitTestProcedures.h"
 
 /*****************************************************************************/
 /*****************************************************************************/
@@ -178,3 +181,4 @@ return c1+c2+c3+c4+c5+c6+c7+c8+c9+i1 + i2;
 EXPORT(LONGLONG) ffiTestLongLong10a2(char c1, char c2, char c3, char c4, char c5, char c6, char c7, char c8, char c9, char c10, LONGLONG i1, LONGLONG i2) {
 return c1+c2+c3+c4+c5+c6+c7+c8+c9+c10+i1 + i2;
 }
+#endif // ALIEN_TEST_FUNCTIONS
