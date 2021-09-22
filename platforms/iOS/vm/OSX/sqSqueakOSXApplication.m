@@ -378,6 +378,12 @@ static char *getVersionInfo(int verbose);
 		ffiExceptionResponse = -1;
 		return 1;
 	}
+	if ([argData isEqualToString: VMOPTIONOBJ("debugfailonffiexception")]) {
+		extern sqInt wait_for_debugger_to_attach_on_ffi_exception;
+		wait_for_debugger_to_attach_on_ffi_exception = 1;
+		printf("pid %d\n", getpid());
+		return 1;
+	}
 	if ([argData isEqualToString: VMOPTIONOBJ("eventtrace")]) {
 		extern sqInt eventTraceMask;
 		eventTraceMask = atoi(peek);		 

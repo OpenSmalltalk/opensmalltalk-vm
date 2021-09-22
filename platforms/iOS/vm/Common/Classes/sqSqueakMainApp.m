@@ -1,6 +1,6 @@
 /*
  *  sqSqueakMainApp.m
- *  
+ *
  *
  *  Created by John M McIntosh on 5/15/08.
  *
@@ -8,7 +8,7 @@
 /*
  Some of this code was funded via a grant from the European Smalltalk User Group (ESUG)
  Copyright (c) 2008 Corporate Smalltalk Consulting Ltd. All rights reserved.
- *   Small parts of this code is 
+ *   Small parts of this code is
  *   Copyright (C) 1996-2007 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
  *   All rights reserved.
@@ -34,10 +34,10 @@
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 
-The end-user documentation included with the redistribution, if any, must include the following acknowledgment: 
-"This product includes software developed by Corporate Smalltalk Consulting Ltd (http://www.smalltalkconsulting.com) 
-and its contributors", in the same place and form as other third-party acknowledgments. 
-Alternately, this acknowledgment may appear in the software itself, in the same form and location as other 
+The end-user documentation included with the redistribution, if any, must include the following acknowledgment:
+"This product includes software developed by Corporate Smalltalk Consulting Ltd (http://www.smalltalkconsulting.com)
+and its contributors", in the same place and form as other third-party acknowledgments.
+Alternately, this acknowledgment may appear in the software itself, in the same form and location as other
 such third-party acknowledgments.
 */
 //
@@ -336,6 +336,9 @@ static int inFault = 0;
 sqInt
 ioCanCatchFFIExceptions() { return 1; }
 
+extern sqInt wait_for_debugger_to_attach_on_ffi_exception;
+sqInt wait_for_debugger_to_attach_on_ffi_exception = 0;
+
 void
 sigsegv(int sig, siginfo_t *info, void *uap)
 {
@@ -352,6 +355,8 @@ sigsegv(int sig, siginfo_t *info, void *uap)
 
 	if (!inFault) {
 		extern sqInt primitiveFailForFFIExceptionat(usqLong exceptionCode, usqInt pc);
+		while (wait_for_debugger_to_attach_on_ffi_exception)
+			usleep(100000);  // sleep for 0.1 seconds
 		primitiveFailForFFIExceptionat(sig, ((ucontext_t *)uap)->_PC_IN_UCONTEXT);
 		inFault = 1;
 		getCrashDumpFilenameInto(crashdump);
@@ -385,26 +390,27 @@ sigsegv(int sig, siginfo_t *info, void *uap)
  *
  */
 
-void
-attachToSignals() {
 #if STACKVM
+void
+attachToSignals()
+{
 	struct sigaction sigusr1_handler_action, sigsegv_handler_action;
 
 	if (gNoSignalHandlers) return;
 
-    sigsegv_handler_action.sa_sigaction = sigsegv;
-    sigsegv_handler_action.sa_flags = SA_NODEFER | SA_SIGINFO;
-    sigemptyset(&sigsegv_handler_action.sa_mask);
-    (void)sigaction(SIGBUS, &sigsegv_handler_action, 0);
-    (void)sigaction(SIGILL, &sigsegv_handler_action, 0);
-    (void)sigaction(SIGSEGV, &sigsegv_handler_action, 0);
+	sigsegv_handler_action.sa_sigaction = sigsegv;
+	sigsegv_handler_action.sa_flags = SA_NODEFER | SA_SIGINFO;
+	sigemptyset(&sigsegv_handler_action.sa_mask);
+	(void)sigaction(SIGBUS, &sigsegv_handler_action, 0);
+	(void)sigaction(SIGILL, &sigsegv_handler_action, 0);
+	(void)sigaction(SIGSEGV, &sigsegv_handler_action, 0);
 
-    sigusr1_handler_action.sa_sigaction = sigusr1;
-    sigusr1_handler_action.sa_flags = SA_NODEFER | SA_SIGINFO;
-    sigemptyset(&sigusr1_handler_action.sa_mask);
-    (void)sigaction(SIGUSR1, &sigusr1_handler_action, 0);
-#endif
+	sigusr1_handler_action.sa_sigaction = sigusr1;
+	sigusr1_handler_action.sa_flags = SA_NODEFER | SA_SIGINFO;
+	sigemptyset(&sigusr1_handler_action.sa_mask);
+	(void)sigaction(SIGUSR1, &sigusr1_handler_action, 0);
 }
+#endif // STACKVM
 
 sqInt
 ioExit(void) {
@@ -424,7 +430,7 @@ sqInt
 ioDisablePowerManager(sqInt disableIfNonZero) {
 	//API Documented
 	return 0;
-}	
+}
 
 #if STACKVM
 sqInt reportStackHeadroom;
