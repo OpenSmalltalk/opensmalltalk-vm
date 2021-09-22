@@ -84,10 +84,10 @@ DEBUG_OFLAGS:=-O0 $(FRAME_POINTER_FLAGS) $(BUFFER_SECURITY)
 
 DASH_O:=-o
 OFLAGS= -O2 $(FRAME_POINTER_FLAGS) $(BUFFER_SECURITY)
-CFLAGS=	-MD -DLLP64=1 -DWIN64=1 -g3 $(OFLAGS) \
+CFLAGS=-DLLP64=1 -DWIN64=1 -g3 $(OFLAGS) \
 	-Dalloca=_alloca -Dhuge=my_huge \
 	$(EXCEPTION_FLAGS) $(XCFLAGS) $(NOBUILTIN) $(WARNINGS)
-CXXFLAGS=-MD -DLLP64=1 -DWIN64=1 -g3 $(OFLAGS) \
+CXXFLAGS=-DLLP64=1 -DWIN64=1 -g3 $(OFLAGS) \
 	-Dalloca=_alloca -Dhuge=my_huge \
 	$(CXX_EXCEPTION_FLAGS) $(XCFLAGS) $(NOBUILTIN) $(WARNINGS)
 # Make all setjmp/longjmp varieties to our _setjmp/_longjmp in _setjmp-x86.asm
