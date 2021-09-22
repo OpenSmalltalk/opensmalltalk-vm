@@ -2,7 +2,7 @@
 # Common Makefile for Win32 VM using MSVC, e.g. 2017 Community, and gnu make
 # Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
 #
-# Compilation rules for Microsoft Visual C++ Toolchain using ClangC2
+# Compilation rules for Microsoft Visual C++ Toolchain using Clang 10
 #
 # See http://make.mad-scientist.net/papers/advanced-auto-dependency-generation
 # for an explanation of the dependency management scheme.
@@ -16,23 +16,19 @@ $(info OBJDIR is $(OBJDIR))
 # Rules for automated builds
 #
 
-# We delete any and all system include files.  If the system changes, rebuild.
-# We're only interested in rebuilding correctly when our code changes.
-# Hence generate the dep files to a temporary .Td file and edit to a .d file.
-DEPFLAGS = -MT $@ -MF deps/$(*F).Td
-ALLFLAGS = $(DEPFLAGS) $(CFLAGS) $(INCLUDES) $(DEFS)
-POSTCOMPILE = tr \\015 \\012 <deps/$(*F).Td | egrep -v 'Community|Windows\\ Kits' | sed -e '/^[A-Z]:.*:$$/d' -e 's/ [^ ]*:/:/' -e 's/^build[^/]*/$$(BUILD)/' | grep '[/\\\\]' | sed "s|\\\\[^ (]|/|g" > deps/$(*F).d; rm deps/$(*F).Td; touch -r $< deps/$(*F).d
+# Not interested in recording system header dependencies.
+DEPFLAGS = -MMD -MF deps/$(*F).d
+ALLCFLAGS = $(DEPFLAGS) $(CFLAGS) $(INCLUDES) $(DEFS)
+ALLCXXFLAGS = $(DEPFLAGS) $(CXXFLAGS) $(INCLUDES) $(DEFS)
 
 .c.o:
 	$(CC) -o $(OBJDIR)/$@ $(ALLFLAGS) -c $<
 
 $(OBJDIR)/%.o: %.c
 	$(CC) -o $@ $(ALLFLAGS) -c $<
-	$(POSTCOMPILE)
 
 .cpp.o:
 	$(CC) -o $(OBJDIR)/$@ -fcxx-exceptions $(ALLFLAGS) -c $<
-	$(POSTCOMPILE)
 
 # This is causing the plugin directory to be repeated in the -F
 #$(OBJDIR)/%.o: %.cpp
@@ -40,7 +36,6 @@ $(OBJDIR)/%.o: %.c
 
 $(OBJDIR)/%.o: %.cpp
 	$(CC) -o $@ $(ALLFLAGS) -c $<
-	$(POSTCOMPILE)
 
 .rc.res:
 	$(RC) $(RCFLAGS) /fo $@ $<

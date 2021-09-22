@@ -12,9 +12,10 @@
 
 $(info OBJDIR is $(OBJDIR))
 
-DEPFLAGS = -MT $@ -MMD -MP -MF deps/$(*F).Td
-ALLFLAGS = $(DEPFLAGS) $(CFLAGS) $(INCLUDES) $(DEFS)
-POSTCOMPILE = sed '/^$$/d' <deps/$(*F).Td | sed '/^.*:$$/d' | sed 's/ [^ ]*:/:/' | sed 's/^build[^/]*/$$(BUILD)/' > deps/$(*F).d; rm deps/$(*F).Td; touch -r $< deps/$(*F).d
+# Not interested in recording system header dependencies.
+DEPFLAGS = -MMD -MF deps/$(*F).d
+ALLCFLAGS = $(DEPFLAGS) $(CFLAGS) $(INCLUDES) $(DEFS)
+ALLCXXFLAGS = $(DEPFLAGS) $(CXXFLAGS) $(INCLUDES) $(DEFS)
 
 #############################################################################
 # Rules for automated builds

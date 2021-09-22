@@ -12,7 +12,8 @@
 
 $(info OBJDIR is $(OBJDIR))
 
-DEPFLAGS = -MF deps/$(*F).d
+# Not interested in recording system header dependencies.
+DEPFLAGS = -MMD -MF deps/$(*F).d
 ALLCFLAGS = $(DEPFLAGS) $(CFLAGS) $(INCLUDES) $(DEFS)
 ALLCXXFLAGS = $(DEPFLAGS) $(CXXFLAGS) $(INCLUDES) $(DEFS)
 
