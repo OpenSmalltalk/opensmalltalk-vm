@@ -177,15 +177,15 @@ void LoadPreferences()
   /* get image file name from ini file */
   size = GetPrivateProfileStringW(L"Global", L"ImageFile", 
 			 L"", imageNameW, MAX_PATH, squeakIniNameW);
-  if (size > 0) {
-    if ( !(imageNameW[0] == L'\\' && imageNameW[1] == L'\\') && !(imageNameW[1] == L':' && imageNameW[2] == L'\\')) {
+  if (size > 0
+   && imageNameW[0] != L'\\'
+   && !(isalpha(imageNameW[0]) && imageNameW[1] == L':' && imageNameW[2] == L'\\')) {
       /* make the path relative to VM directory */
 	  wcscpy(imageNameW, vmNameW);
-	  (wcsrchr(imageNameW, W_BACKSLASH[0]))[1] = 0;
+	  wcsrchr(imageNameW, W_BACKSLASH[0])[1] = 0;
       size = wcslen(imageNameW);
       size = GetPrivateProfileStringW(L"Global", L"ImageFile",
 			 L"", imageNameW + size, MAX_PATH - size, squeakIniNameW);
-	}
   }
   WideCharToMultiByte(CP_UTF8, 0, imageNameW, -1, imageName, MAX_PATH_UTF8, NULL, NULL);
 

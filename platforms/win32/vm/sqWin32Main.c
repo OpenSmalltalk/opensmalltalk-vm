@@ -12,6 +12,7 @@
 *       with Unicode support.
 *****************************************************************************/
 #include <Windows.h>
+#include <process.h> // for _cexit
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -179,6 +180,9 @@ void SetSystemTrayIcon(BOOL on);
 /* not as sophisticated as MSVC's support. However, with this new handling  */
 /* scheme the entire thing becomes actually a lot simpler...                */
 /****************************************************************************/
+#if _WIN64
+static PVECTORED_EXCEPTION_HANDLER TopLevelVEHFilter = NULL;
+#endif
 static LPTOP_LEVEL_EXCEPTION_FILTER TopLevelFilter = NULL;
 
 // Until we can implement a reliable first-chance exception handler on WIN64
@@ -187,16 +191,49 @@ sqInt
 ioCanCatchFFIExceptions()
 {
 #if _WIN64
-	return 0;
+	return 1;
 #else
 	return 1;
 #endif
 }
 
+extern sqInt primitiveFailForFFIExceptionat(usqLong exceptionCode, usqInt pc);
+
+#if _WIN64
+static LONG NTAPI
+squeakVectoredExceptionHandler(PEXCEPTION_POINTERS exp)
+{
+  // #1: Try to handle any FP problems
+	DWORD code = exp->ExceptionRecord->ExceptionCode;
+	if (code >= EXCEPTION_FLT_DENORMAL_OPERAND
+	 && code <= EXCEPTION_FLT_UNDERFLOW) {
+		/* turn on the default masking of exceptions in the FPU and proceed */
+		_controlfp(FPU_DEFAULT, FPU_MASK);
+		return EXCEPTION_CONTINUE_EXECUTION;
+	}
+
+  // #2: If that didn't work then pass it on to the old top-level filter, which
+  // must answer EXCEPTION_CONTINUE_EXECUTION or EXCEPTION_CONTINUE_SEARCH;
+  // see https://docs.microsoft.com/en-us/archive/msdn-magazine/2001/september/
+  //	under-the-hood-new-vectored-exception-handling-in-windows-xp
+	if (TopLevelVEHFilter
+	 && TopLevelVEHFilter(exp) == EXCEPTION_CONTINUE_EXECUTION)
+		return EXCEPTION_CONTINUE_EXECUTION;
+
+  // #3: Allow the VM to fail an FFI call in which an exception occurred.
+	primitiveFailForFFIExceptionat(exp->ExceptionRecord->ExceptionCode,
+										exp->ContextRecord->CONTEXT_PC);
+# if defined(NDEBUG) || defined(VirtendVM)
+  // #4: If that didn't work either give up and print a crash debug information
+	printCrashDebugInformation(exp);
+# endif
+	return EXCEPTION_CONTINUE_SEARCH;
+}
+#endif // _WIN64
+
 static LONG CALLBACK
 squeakExceptionHandler(LPEXCEPTION_POINTERS exp)
 {
-extern sqInt primitiveFailForFFIExceptionat(usqLong exceptionCode, usqInt pc);
 #if defined(NDEBUG)
 // in release mode, execute exception handler notifying user what happened
 	DWORD result = EXCEPTION_EXECUTE_HANDLER;
@@ -205,17 +242,16 @@ extern sqInt primitiveFailForFFIExceptionat(usqLong exceptionCode, usqInt pc);
 	DWORD result = EXCEPTION_CONTINUE_SEARCH;
 #endif
 
-  /* #1: Try to handle any FP problems */
-    DWORD code = exp->ExceptionRecord->ExceptionCode;
-    if (code >= EXCEPTION_FLT_DENORMAL_OPERAND
+  // #1: Try to handle any FP problems
+	DWORD code = exp->ExceptionRecord->ExceptionCode;
+	if (code >= EXCEPTION_FLT_DENORMAL_OPERAND
 	 && code <= EXCEPTION_FLT_UNDERFLOW) {
 		/* turn on the default masking of exceptions in the FPU and proceed */
 		_controlfp(FPU_DEFAULT, FPU_MASK);
-		result = EXCEPTION_CONTINUE_EXECUTION;
-    }
+		return EXCEPTION_CONTINUE_EXECUTION;
+	}
 
-  /* #2: If that didn't work either try passing it on to the old
-     top-level filter */
+  // #2: If that didn't work try passing it on to the old top-level filter
 	if (result != EXCEPTION_CONTINUE_EXECUTION
 	 && TopLevelFilter)
 		result = TopLevelFilter(exp);
@@ -225,12 +261,12 @@ extern sqInt primitiveFailForFFIExceptionat(usqLong exceptionCode, usqInt pc);
 		primitiveFailForFFIExceptionat(exp->ExceptionRecord->ExceptionCode,
 										exp->ContextRecord->CONTEXT_PC);
 #if defined(NDEBUG) || defined(VirtendVM)
-	/* #5: If that didn't work either give up and print a crash debug information */
-    printCrashDebugInformation(exp);
-    result = EXCEPTION_EXECUTE_HANDLER;
+		/* #5: If that didn't work either give up and print a crash debug information */
+		printCrashDebugInformation(exp);
+		result = EXCEPTION_EXECUTE_HANDLER;
 #endif
-  }
-  return result;
+	}
+	return result;
 }
 
 /* Structured exception handling is implemented completely differently in 64-bit
@@ -244,20 +280,19 @@ InstallExceptionHandler(void)
 {
 #if _WIN64
 # define CallFirst 1
-  TopLevelFilter = AddVectoredExceptionHandler(CallFirst,squeakExceptionHandler);
-#else
-  TopLevelFilter = SetUnhandledExceptionFilter(squeakExceptionHandler);
+  TopLevelVEHFilter = AddVectoredExceptionHandler(CallFirst,squeakVectoredExceptionHandler);
 #endif
+  TopLevelFilter = SetUnhandledExceptionFilter(squeakExceptionHandler);
 }
 
 static void
 UninstallExceptionHandler(void)
 {
 #if _WIN64
-  RemoveVectoredExceptionHandler(TopLevelFilter);
-#else
-  SetUnhandledExceptionFilter(TopLevelFilter);
+  RemoveVectoredExceptionHandler(TopLevelVEHFilter);
+  TopLevelVEHFilter = NULL;
 #endif
+  SetUnhandledExceptionFilter(TopLevelFilter);
   TopLevelFilter = NULL;
 }
 
@@ -423,20 +458,8 @@ int ServiceMessageHook(void * hwnd, unsigned int message, unsigned int wParam, l
 /* SetSystemTrayIcon(): Set the icon in the system tray */
 void SetSystemTrayIcon(BOOL on)
 {
-  BOOL (WINAPI *ShellNotifyIcon)(DWORD,NOTIFYICONDATA*);
-  static HMODULE hShell = NULL;
   NOTIFYICONDATA nid;
 
-  /* NOTE: There is explicitly no unload of the shell32.dll in here.
-           Win95 has _serious_ problems with the module counter and
-           may just unload the shell32.dll even if it is referenced
-           by other processes */
-  if (!hShell) hShell = LoadLibrary(TEXT("shell32.dll"));
-  if (!hShell) return; /* should not happen */
-  /* On WinNT 3.* the following will just return NULL */
-  ShellNotifyIcon = (FARPROC)GetProcAddress(hShell, "Shell_NotifyIconA");
-
-  if (!ShellNotifyIcon) return;  /* ok, we don't have it */
   nid.cbSize = sizeof(nid);
   nid.hWnd   = stWindow;
   nid.uID    = (usqIntptr_t)hInstance;
@@ -444,10 +467,7 @@ void SetSystemTrayIcon(BOOL on)
   nid.uCallbackMessage = WM_USER+42;
   nid.hIcon  = LoadIcon(hInstance, MAKEINTRESOURCE(1));
   _tcscpy(nid.szTip, TEXT(VM_NAME) TEXT("!"));
-  if (on)
-    (*ShellNotifyIcon)(NIM_ADD, &nid);
-  else
-    (*ShellNotifyIcon)(NIM_DELETE, &nid);
+  Shell_NotifyIcon( on ? NIM_ADD : NIM_DELETE, &nid);
 }
 
 
@@ -912,7 +932,7 @@ getVersionInfo(int verbose)
  * terminating process (MinGW bug?). So instead call the shutdown sequence via
  * _cexit() and then terminate explicitly.
  */
-#define exit(ec) do { _cexit(ec); ExitProcess(ec); } while (0)
+#define exit(ec) do { _cexit(); ExitProcess(ec); } while (0)
 
  /*
  * Allow to test if the standard input/output files are from a console or not
@@ -925,10 +945,11 @@ getVersionInfo(int verbose)
  * 3 - file
  * 4 - cygwin terminal (windows only)
  */
-sqInt  fileHandleType(HANDLE fdHandle) {
-	if (fdHandle == INVALID_HANDLE_VALUE) {
+sqInt
+fileHandleType(HANDLE fdHandle)
+{
+	if (fdHandle == INVALID_HANDLE_VALUE)
 		return -1;
-	}
 
 	/* In case of Windows Shell case */
 	DWORD fileType = GetFileType(fdHandle);
@@ -943,14 +964,11 @@ sqInt  fileHandleType(HANDLE fdHandle) {
 	if (fileType != FILE_TYPE_PIPE) {
 		if (fileType == FILE_TYPE_DISK)
 			return 3; //We have a file here
-		if (fileType == FILE_TYPE_UNKNOWN && GetLastError() == ERROR_INVALID_HANDLE)
-			return  0; //No stdio allocated
+		if (fileType == FILE_TYPE_UNKNOWN
+		 && GetLastError() == ERROR_INVALID_HANDLE)
+			return 0; //No stdio allocated
 		return  -1;
 	}
-
-	int size = sizeof(FILE_NAME_INFO) + sizeof(WCHAR) * MAX_PATH;
-	FILE_NAME_INFO *nameinfo;
-	WCHAR *p = NULL;
 
 	typedef BOOL(WINAPI *pfnGetFileInformationByHandleEx)(
 		HANDLE                    hFile,
@@ -966,26 +984,22 @@ sqInt  fileHandleType(HANDLE fdHandle) {
 			return -1;
 	}
 
-	nameinfo = malloc(size);
-	if (nameinfo == NULL) {
+	int size = sizeof(FILE_NAME_INFO) + sizeof(WCHAR) * MAX_PATH;
+	FILE_NAME_INFO *nameinfo;
+	if (!(nameinfo = alloca(size)))
 		return -1;
-	}
-	/* Check the name of the pipe: '\{cygwin,msys}-XXXXXXXXXXXXXXXX-ptyN-{from,to}-master' */
+
+	// Check the name of the pipe: '\{cygwin,msys}-XXXXXXXXXXXXXXXX-ptyN-{from,to}-master'
 	if (pGetFileInformationByHandleEx(fdHandle, FileNameInfo, nameinfo, size)) {
 		nameinfo->FileName[nameinfo->FileNameLength / sizeof(WCHAR)] = L'\0';
-		p = nameinfo->FileName;
+		WCHAR *p = nameinfo->FileName;
 		//Check that the pipe name contains msys or cygwin
-		if ((((wcsstr(p, L"msys-") || wcsstr(p, L"cygwin-"))) &&
-			(wcsstr(p, L"-pty") && wcsstr(p, L"-master")))) {
-			//The openned pipe is a msys xor cygwin pipe to pty
-			free(nameinfo);
-			return 4;
-		}
-		else
-			free(nameinfo);
-			return 2; //else it is just a standard pipe
+		if ((wcsstr(p, L"msys-") || wcsstr(p, L"cygwin-"))
+		 && (wcsstr(p, L"-pty")
+		 && wcsstr(p, L"-master")))
+			return 4;	// The openned pipe is a msys or cygwin pipe to pty
+		return 2;		// else it is just a standard pipe
 	}
-	free(nameinfo);
 	return -1;
 }
 
@@ -1057,9 +1071,13 @@ void SetupStderr()
 /****************************************************************************/
 
 static void
-dumpStackIfInMainThread(FILE *optionalFile)
+dumpSmalltalkStackIfInMainThread(FILE *optionalFile)
 {
 	extern void printCallStack(void);
+	extern sqInt nilObject(void);
+
+	if (!nilObject()) // If no nilObject the image hasn't been loaded yet...
+		return;
 
 	if (!optionalFile) {
 		if (ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
@@ -1130,21 +1148,19 @@ extern char *__cogitBuildInfo;
     fprintf(f,"Source Version: %s\n", sourceVersionString('\n'));
     fflush(f);
     fprintf(f,"\n"
-	    "Current byte code: %d\n"
-	    "Primitive index: %" PRIdSQINT "\n",
-	    getCurrentBytecode(),
-	    methodPrimitiveIndex());
+			"Current byte code: %" PRIdSQINT "\n"
+			"Primitive index: %" PRIdSQINT "\n",
+			getCurrentBytecode(),
+			methodPrimitiveIndex());
     fflush(f);
     /* print loaded plugins */
     fprintf(f,"\nLoaded plugins:\n");
-    {
-      int index = 1;
-      char *pluginName;
-      while ( (pluginName = ioListLoadedModule(index)) != NULL) {
-	fprintf(f,"\t%s\n", pluginName);
-	fflush(f);
-	index++;
-      }
+    int index = 0;
+    char *pluginName;
+    while ((pluginName = ioListLoadedModule(++index))) {
+		fprintf(f,"\t%s\n", pluginName);
+		fflush(f);
+		index++;
     }
 
     printModuleInfo(f);
@@ -1221,7 +1237,7 @@ error(const char *msg) {
 	fflush(f);
 	print_backtrace(f, nframes, MAXFRAMES, callstack, symbolic_pcs);
 	fflush(f);
-	dumpStackIfInMainThread(f);
+	dumpSmalltalkStackIfInMainThread(f);
 	fflush(f);
 	fclose(f);
   }
@@ -1231,7 +1247,7 @@ error(const char *msg) {
   dumpPrimTrace(0);
   print_backtrace(stdout, nframes, MAXFRAMES, callstack, symbolic_pcs);
   /* /Don't/ print the caller's stack to stdout here; Cleanup will do so. */
-  /* dumpStackIfInMainThread(0); */
+  /* dumpSmalltalkStackIfInMainThread(0); */
   exit(EXIT_FAILURE);
 }
 
@@ -1390,7 +1406,7 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
 	printCommonCrashDumpInfo(f);
 	dumpPrimTrace(f);
 	print_backtrace(f, nframes, MAXFRAMES, callstack, symbolic_pcs);
-	dumpStackIfInMainThread(f);
+	dumpSmalltalkStackIfInMainThread(f);
     fclose(f);
   }
 
@@ -1399,7 +1415,7 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
   /* print C stack to stdout */
   print_backtrace(stdout, nframes, MAXFRAMES, callstack, symbolic_pcs);
   /* print the caller's stack to stdout */
-  dumpStackIfInMainThread(0);
+  dumpSmalltalkStackIfInMainThread(0);
 #if COGVM
   reportMinimumUnusedHeadroom();
 #endif
@@ -1417,9 +1433,9 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
 void __cdecl Cleanup(void)
 { /* not all of these are essential, but they're polite... */
 
-  if (!inCleanExit) {
-    dumpStackIfInMainThread(0);
-  }
+  if (!inCleanExit)
+    dumpSmalltalkStackIfInMainThread(0);
+
   ioShutdownAllModules();
   ioReleaseTime();
   /* tricky ... we have no systray icon when running
@@ -1600,7 +1616,6 @@ sqMain(int argc, char *argv[])
   fRunService = 0;
 #endif
 
-
   /* set time zone accordingly */
   _tzset();
 
@@ -1694,7 +1709,7 @@ sqMain(int argc, char *argv[])
 
     /* if headless running is requested, try to to create an icon
        in the Win95/NT system tray */
-    if (fHeadlessImage && (!fRunService))
+    if(fHeadlessImage && !fRunService)
       SetSystemTrayIcon(1);
 
     /* read the image file */
@@ -2117,7 +2132,6 @@ static int
 IsImage(char *name)
 {
 	int magic;
-	extern sqInt byteSwapped(sqInt);
 	sqImageFile fp;
 
 	fp = sqImageFileOpen(name,"rb");
@@ -2222,7 +2236,7 @@ parseGenericArgs(int argc, char *argv[])
 			/* It is OK to run the console VM provided an image has been
 			 * provided by the ini file.
 			 */
-			return imageName != 0;
+			return imageName[0] != 0;
 		}
 
 	/* Always allow the command-line to override an implicit image name. */

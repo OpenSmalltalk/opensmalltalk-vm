@@ -16,6 +16,12 @@
 #endif
 #define squeakFileOffsetType unsigned __int64
 
+// Save/restore.
+// Read the image from the given file starting at the given image offset
+size_t readImageFromFileHeapSizeStartingAt(sqImageFile f, usqInt desiredHeapSize, squeakFileOffsetType imageOffset);
+sqInt byteSwapped(sqInt);
+
+squeakFileOffsetType sqImageFileSize(sqImageFile h);
 int sqImageFileClose(sqImageFile h);
 sqImageFile sqImageFileOpen(const char *fileName, const char *mode);
 squeakFileOffsetType sqImageFilePosition(sqImageFile h);
