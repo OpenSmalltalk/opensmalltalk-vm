@@ -46,6 +46,7 @@
 #endif /* defined(__MINGW32_VERSION) && (__MINGW32_MAJOR_VERSION < 3) */
 
 #include "sq.h"
+#include "sqAssert.h" // for error
 #include "sqWin32Prefs.h"
 #include "sqSCCSVersion.h"
 
@@ -780,7 +781,7 @@ void SetupPixmaps(void)
   bmi1->bmiHeader.biPlanes = 1;
   bmi1->bmiHeader.biBitCount = 1;
   bmi1->bmiHeader.biCompression = BI_RGB;
-  for(i=0;i<2;i++)
+  for (i=0;i<2;i++)
     {
       bmi1->bmiColors[i].rgbRed = logPal->palPalEntry[i].peRed;
       bmi1->bmiColors[i].rgbGreen = logPal->palPalEntry[i].peGreen;
@@ -792,7 +793,7 @@ void SetupPixmaps(void)
   bmi4->bmiHeader.biPlanes = 1;
   bmi4->bmiHeader.biBitCount = 4;
   bmi4->bmiHeader.biCompression = BI_RGB;
-  for(i=0;i<16;i++)
+  for (i=0;i<16;i++)
     {
       bmi4->bmiColors[i].rgbRed = logPal->palPalEntry[i].peRed;
       bmi4->bmiColors[i].rgbGreen = logPal->palPalEntry[i].peGreen;
@@ -804,7 +805,7 @@ void SetupPixmaps(void)
   bmi8->bmiHeader.biPlanes = 1;
   bmi8->bmiHeader.biBitCount = 8;
   bmi8->bmiHeader.biCompression = BI_RGB;
-  for(i=0;i<256;i++)
+  for (i=0;i<256;i++)
     {
       bmi8->bmiColors[i].rgbRed = logPal->palPalEntry[i].peRed;
       bmi8->bmiColors[i].rgbGreen = logPal->palPalEntry[i].peGreen;
@@ -1926,7 +1927,7 @@ int reverse_image_bytes(unsigned int* dst, unsigned int *src,
     srcPixPtr = ((DWORD*)src) + (rect->top * pitch) + first;
     dstPixPtr = ((DWORD*)dst) + (rect->top * pitch) + first;
     if (reverseBits) {
-      for(yy = rect->top; yy < rect->bottom;
+      for (yy = rect->top; yy < rect->bottom;
 	  yy++, srcPixPtr += delta, dstPixPtr += delta) {
 	int i = nWords;
 	do {
@@ -1936,7 +1937,7 @@ int reverse_image_bytes(unsigned int* dst, unsigned int *src,
 	} while (--i);
       }
     } else { /* !reverseBits */
-      for(yy = rect->top; yy < rect->bottom;
+      for (yy = rect->top; yy < rect->bottom;
 	  yy++, srcPixPtr += delta, dstPixPtr += delta) {
 	int i = nWords;
 	do {
@@ -1968,7 +1969,7 @@ int reverse_image_words(unsigned int *dst, unsigned int *src,
     register DWORD* dstPixPtr DST_PIX_REG;
     srcPixPtr = ((DWORD*)src) + (rect->top * pitch) + first;
     dstPixPtr = ((DWORD*)dst) + (rect->top * pitch) + first;
-    for(yy = rect->top; yy < rect->bottom;
+    for (yy = rect->top; yy < rect->bottom;
 	yy++, srcPixPtr += delta, dstPixPtr += delta) {
       int i = nWords;
       do {
@@ -1999,7 +2000,7 @@ int copy_image_words(unsigned int *dst, unsigned int *src,
     DWORD* dstPixPtr;
     srcPixPtr = ((DWORD*)src) + (rect->top * pitch) + first;
     dstPixPtr = ((DWORD*)dst) + (rect->top * pitch) + first;
-    for(yy = rect->top; yy < rect->bottom;
+    for (yy = rect->top; yy < rect->bottom;
 	yy++, srcPixPtr += pitch, dstPixPtr += pitch) {
       memcpy(dstPixPtr, srcPixPtr, nWords*4);
     }
@@ -2367,7 +2368,7 @@ sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
     bmi->bmiHeader.biHeight = 1;
     bmi->bmiHeader.biSizeImage = 0;
     bitsPtr = dispBits + start + (updateRect.top * pitch);
-    for(line = updateRect.top; line < updateRect.bottom; line++) {
+    for (line = updateRect.top; line < updateRect.bottom; line++) {
       lines = SetDIBitsToDevice(dc, left, line, nPix, 1, 0, 0, 0, 1,
 				(void*) bitsPtr, bmi, DIB_RGB_COLORS);
       bitsPtr += pitch;
@@ -2404,16 +2405,16 @@ sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
 /*                      Clipboard                                           */
 /****************************************************************************/
 
-sqInt clipboardSize(void) { 
+sqInt
+clipboardSize(void)
+{ 
   HANDLE h;
   WCHAR *src;
   int i, count, bytesNeeded;
 
   /* Do we have text in the clipboard? */
-  if (!IsClipboardFormatAvailable(CF_UNICODETEXT))
-    return 0;
-
-  if (!OpenClipboard(stWindow))
+  if (!IsClipboardFormatAvailable(CF_UNICODETEXT)
+   || !OpenClipboard(stWindow))
     return 0;
 
   /* Get it in unicode format. */
@@ -2421,19 +2422,17 @@ sqInt clipboardSize(void) {
   src = GlobalLock(h);
 
   /* How many bytes do we need to store those unicode chars in UTF8 format? */
-  bytesNeeded = WideCharToMultiByte(CP_UTF8, 0, src, -1,
-				    NULL, 0, NULL, NULL );
+  bytesNeeded = WideCharToMultiByte(CP_UTF8, 0, src, -1, NULL, 0, NULL, NULL);
   if (bytesNeeded > 0) {
-    unsigned char *tmp = malloc(bytesNeeded+1);
+    char *tmp = malloc(bytesNeeded+1);
 
     /* Convert Unicode text to UTF8. */
-    WideCharToMultiByte(CP_UTF8, 0, src, -1, tmp, bytesNeeded , NULL, NULL);
+    WideCharToMultiByte(CP_UTF8, 0, src, -1, tmp, bytesNeeded, NULL, NULL);
 
     /* Count CrLfs for which we remove the extra Lf */
     count = bytesNeeded; /* ex. terminating zero */
-    for(i=0; i<count; i++) {
-      if ((tmp[i] == 13) && (tmp[i+1] == 10)) bytesNeeded--;
-    }
+    for (i=0; i<count; i++)
+      if (tmp[i] == 13 && tmp[i+1] == 10) bytesNeeded--;
     bytesNeeded--; /* discount terminating zero */
     free(tmp); /* no longer needed */
   }
@@ -2447,7 +2446,7 @@ sqInt clipboardSize(void) {
 /* send the given string to the clipboard */
 sqInt clipboardWriteFromAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex) {
   HANDLE h;
-  unsigned char *src, *tmp, *cvt;
+  char *src, *tmp, *cvt;
   int i, wcharsNeeded, utf8Count;
   WCHAR *out;
 
@@ -2455,22 +2454,17 @@ sqInt clipboardWriteFromAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex) 
     return 0;
 
   /* Get the pointer to the byte array. */
-  src = (unsigned char *)byteArrayIndex + startIndex;
+  src = (char *)byteArrayIndex + startIndex;
 
   /* Count lone CRs for which we want to add an extra Lf */
-  for(i=0, utf8Count=count; i<count; i++) {
-    if ((src[i] == 13) && (src[i+1] != 10)) utf8Count++;
-  }
+  for (i=0, utf8Count=count; i<count; i++)
+    if (src[i] == 13 && src[i+1] != 10) utf8Count++;
 
   /* allocate temporary storage and copy string (inserting Lfs) */
   cvt = tmp = malloc(utf8Count+1);
-  for(i=0;i<count;i++,tmp++,src++) {
-    *tmp = *src;
-    if (src[0] == 13 && src[1] != 10) {
-      tmp++;
-      *tmp = 10;
-    }
-  }
+  for (i=0;i<count;i++,tmp++,src++)
+    if ((*tmp = *src) == 13 && src[1] != 10)
+		*++tmp = 10;
   *tmp = 0; /* terminating zero */
 
   /* Note: At this point we have a valid UTF-8, CrLf-containing,
@@ -2502,16 +2496,13 @@ sqInt clipboardWriteFromAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex) 
 /* transfer the clipboard data into the given byte array */
 sqInt clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex) {
   HANDLE h;
-  unsigned char *dst, *cvt, *tmp;
+  char *dst, *cvt, *tmp;
   WCHAR *src;
   int i, bytesNeeded;
 
-
   /* Check if we have Unicode text available */
-  if (!IsClipboardFormatAvailable(CF_UNICODETEXT))
-    return 0;
-
-  if (!OpenClipboard(stWindow))
+  if (!IsClipboardFormatAvailable(CF_UNICODETEXT)
+   || !OpenClipboard(stWindow))
     return 0;
 
   /* Get clipboard data in Unicode format */
@@ -2519,19 +2510,16 @@ sqInt clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex) {
   src = GlobalLock(h);
 
   /* How many bytes do we need to store the UTF8 representation? */
-  bytesNeeded = WideCharToMultiByte(CP_UTF8, 0, src, -1,
-				    NULL, 0, NULL, NULL );
+  bytesNeeded = WideCharToMultiByte(CP_UTF8, 0, src, -1, NULL, 0, NULL, NULL);
 
   /* Convert Unicode text to UTF8. */
   cvt = tmp = malloc(bytesNeeded);
   WideCharToMultiByte(CP_UTF8, 0, src, -1, tmp, bytesNeeded, NULL, NULL);
 
   /* Copy data, skipping Lfs as needed */
-  dst = (unsigned char *)byteArrayIndex + startIndex;
-  for(i=0;i<count;i++,dst++,tmp++) {
-    *dst = *tmp;
-    if (((tmp[0] == 13) && (tmp[1] == 10))) tmp++;
-  }  
+  dst = (char *)byteArrayIndex + startIndex;
+  for (i=0;i<count;i++,dst++,tmp++)
+    if ((*dst = *tmp) == 13 && tmp[1] == 10) tmp++;
   free(cvt);
 
   GlobalUnlock(h);
@@ -2786,9 +2774,10 @@ sqLaunchDrop(void)
 int
 isLocalFileName(TCHAR *fileName)
 {
-  int i;
-  for(i=0; i<lstrlen(imagePath); i++)
-    if (imagePath[i] != fileName[i]) return 0;
+  int i, l;
+  for (i = 0, l = lstrlen(imagePath); i < l; i++)
+    if (imagePath[i] != fileName[i])
+      return 0;
   return 1;
 }
 

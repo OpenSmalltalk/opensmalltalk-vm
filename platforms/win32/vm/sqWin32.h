@@ -122,6 +122,8 @@ char *GetVMOption(int id);
 /********************************************************/
 void SetWindowSize(void);
 int printUsage(int level);
+int __cdecl DPRINTF(const char *fmt, ...);
+void resyncSystemTime();
 
 /********************************************************/
 /* Service Stuff                                        */

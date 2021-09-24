@@ -28,7 +28,7 @@ ALLCXXFLAGS = $(DEPFLAGS) $(CXXFLAGS) $(INCLUDES) $(DEFS)
 .c.o:
 	$(CC) -o $(OBJDIR)/$@ $(ALLCFLAGS) -c $<
 
-$(OBJDIR)/%.o: %.c deps/%.d
+$(OBJDIR)/%.o: %.c
 	$(CC) -o $@ $(ALLCFLAGS) -c $<
 
 .cpp.o:
@@ -38,7 +38,7 @@ $(OBJDIR)/%.o: %.c deps/%.d
 #$(OBJDIR)/%.o: %.cpp
 #	$(CC) -o $(OBJDIR)/$@ $(ALLCXXFLAGS) -c $<
 
-$(OBJDIR)/%.o: %.cpp deps/%.d
+$(OBJDIR)/%.o: %.cpp
 	$(CC) -o $@ $(ALLCXXFLAGS) -c $<
 
 .rc.res:

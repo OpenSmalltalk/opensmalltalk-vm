@@ -8,15 +8,15 @@ DEPFLAGS = -MT $@ -MMD -MP -MF deps/$(*F).Td
 ALLFLAGS = $(DEPFLAGS) $(CFLAGS) $(INCLUDES) $(DEFS)
 POSTCOMPILE = sed '/^$$/d' <deps/$(*F).Td | sed '/^.*:$$/d' | sed 's/ [^ ]*:/:/' | sed 's/^build[^/]*/$$(BUILD)/' > deps/$(*F).d; rm deps/$(*F).Td; touch -r $< deps/$(*F).d
 
-$(OBJDIR)/%.o: %.c deps/%.d
+$(OBJDIR)/%.o: %.c
 	$(CC) -x c $(ALLFLAGS) -c $< -o $@
 	$(POSTCOMPILE)
 
-$(OBJDIR)/%.o: %.m deps/%.d
+$(OBJDIR)/%.o: %.m
 	$(CC) -x objective-c $(ALLFLAGS) -c $< -o $@
 	$(POSTCOMPILE)
 
-$(OBJDIR)/%.o: %.cpp deps/%.d
+$(OBJDIR)/%.o: %.cpp
 	$(CXX) $(ALLFLAGS) -c $< -o $@
 	$(POSTCOMPILE)
 

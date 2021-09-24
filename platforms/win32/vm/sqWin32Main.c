@@ -99,7 +99,7 @@ sqInt getCurrentBytecode(void);
 extern void printPhaseTime(int);
 
 /* Import from sqWin32Alloc.c */
-LONG CALLBACK sqExceptionFilter(LPEXCEPTION_POINTERS exp);
+LONG CALLBACK sqExceptionFilter(PEXCEPTION_POINTERS exp);
 
 /* Import from sqWin32Window.c */
 char * GetAttributeString(sqInt id);
@@ -113,7 +113,7 @@ void ioReleaseTime(void);
 sqInt ioInitSecurity(void);
 
 /* forwarded declaration */
-static void printCrashDebugInformation(LPEXCEPTION_POINTERS exp);
+static void printCrashDebugInformation(PEXCEPTION_POINTERS exp);
 
 /*** Variables -- command line */
 static char *initialCmdLine;
@@ -181,7 +181,8 @@ void SetSystemTrayIcon(BOOL on);
 /* scheme the entire thing becomes actually a lot simpler...                */
 /****************************************************************************/
 #if _WIN64
-static PVECTORED_EXCEPTION_HANDLER TopLevelVEHFilter = NULL;
+static PVECTORED_EXCEPTION_HANDLER ourVEHHandle = NULL;
+static BOOL inFatalException = false;
 #endif
 static LPTOP_LEVEL_EXCEPTION_FILTER TopLevelFilter = NULL;
 
@@ -203,8 +204,12 @@ extern sqInt primitiveFailForFFIExceptionat(usqLong exceptionCode, usqInt pc);
 static LONG NTAPI
 squeakVectoredExceptionHandler(PEXCEPTION_POINTERS exp)
 {
-  // #1: Try to handle any FP problems
 	DWORD code = exp->ExceptionRecord->ExceptionCode;
+
+	if (inFatalException)
+		return EXCEPTION_CONTINUE_SEARCH;
+
+  // #1: Try to handle any FP problems
 	if (code >= EXCEPTION_FLT_DENORMAL_OPERAND
 	 && code <= EXCEPTION_FLT_UNDERFLOW) {
 		/* turn on the default masking of exceptions in the FPU and proceed */
@@ -212,27 +217,38 @@ squeakVectoredExceptionHandler(PEXCEPTION_POINTERS exp)
 		return EXCEPTION_CONTINUE_EXECUTION;
 	}
 
-  // #2: If that didn't work then pass it on to the old top-level filter, which
-  // must answer EXCEPTION_CONTINUE_EXECUTION or EXCEPTION_CONTINUE_SEARCH;
-  // see https://docs.microsoft.com/en-us/archive/msdn-magazine/2001/september/
-  //	under-the-hood-new-vectored-exception-handling-in-windows-xp
-	if (TopLevelVEHFilter
-	 && TopLevelVEHFilter(exp) == EXCEPTION_CONTINUE_EXECUTION)
-		return EXCEPTION_CONTINUE_EXECUTION;
-
-  // #3: Allow the VM to fail an FFI call in which an exception occurred.
-	primitiveFailForFFIExceptionat(exp->ExceptionRecord->ExceptionCode,
+	// codes defined in Include/{SDK Version}/um/winnt.h
+ 	if (code == STATUS_ACCESS_VIOLATION          /* 0xC0000005 */
+	 || code == STATUS_ILLEGAL_INSTRUCTION       /* 0xC000001D */
+	 || code == STATUS_NONCONTINUABLE_EXCEPTION  /* 0xC0000025 */
+	 || code == STATUS_INTEGER_DIVIDE_BY_ZERO    /* 0xC0000094 */
+	 || code == STATUS_INTEGER_OVERFLOW          /* 0xC0000095 */
+	 || code == STATUS_PRIVILEGED_INSTRUCTION    /* 0xC0000096 */
+	 || code == STATUS_STACK_OVERFLOW            /* 0xC00000FD */) {
+  // #2: Allow the VM to fail an FFI call in which an exception occurred.
+		primitiveFailForFFIExceptionat(exp->ExceptionRecord->ExceptionCode,
 										exp->ContextRecord->CONTEXT_PC);
+
+		inFatalException = true; // avoid looping exception handling
+
 # if defined(NDEBUG) || defined(VirtendVM)
-  // #4: If that didn't work either give up and print a crash debug information
-	printCrashDebugInformation(exp);
+  // #3: If that didn't work print crash debug information and exit
+		printCrashDebugInformation(exp);
+# if 1
+		DestroyWindow(stWindow);
+		ioExit();
+# else
+		_c_exit();
+		TerminateProcess(GetCurrentProcess(),code);
 # endif
+# endif
+	}
 	return EXCEPTION_CONTINUE_SEARCH;
 }
 #endif // _WIN64
 
 static LONG CALLBACK
-squeakExceptionHandler(LPEXCEPTION_POINTERS exp)
+squeakExceptionHandler(PEXCEPTION_POINTERS exp)
 {
 #if defined(NDEBUG)
 // in release mode, execute exception handler notifying user what happened
@@ -240,6 +256,11 @@ squeakExceptionHandler(LPEXCEPTION_POINTERS exp)
 #else
 // in debug mode, let the system crash so that we can see where it happened
 	DWORD result = EXCEPTION_CONTINUE_SEARCH;
+#endif
+
+#if _WIN64
+	if (inFatalException)
+		return EXCEPTION_CONTINUE_SEARCH;
 #endif
 
   // #1: Try to handle any FP problems
@@ -280,7 +301,9 @@ InstallExceptionHandler(void)
 {
 #if _WIN64
 # define CallFirst 1
-  TopLevelVEHFilter = AddVectoredExceptionHandler(CallFirst,squeakVectoredExceptionHandler);
+# define CallLast 0
+  ourVEHHandle = AddVectoredExceptionHandler(CallLast,
+											 squeakVectoredExceptionHandler);
 #endif
   TopLevelFilter = SetUnhandledExceptionFilter(squeakExceptionHandler);
 }
@@ -289,8 +312,8 @@ static void
 UninstallExceptionHandler(void)
 {
 #if _WIN64
-  RemoveVectoredExceptionHandler(TopLevelVEHFilter);
-  TopLevelVEHFilter = NULL;
+  RemoveVectoredExceptionHandler(ourVEHHandle);
+  ourVEHHandle = NULL;
 #endif
   SetUnhandledExceptionFilter(TopLevelFilter);
   TopLevelFilter = NULL;
@@ -1091,10 +1114,19 @@ dumpSmalltalkStackIfInMainThread(FILE *optionalFile)
 	if (ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
 		FILE tmpStdout = *stdout;
 		fprintf(optionalFile, "\n\nSmalltalk stack dump:\n");
+#if 0
 		*stdout = *optionalFile;
+#else
+		freopen_s(0, "crash.dmp", "a+", stdout);
+#endif
 		printCallStack();
+#if 0
 		*optionalFile = *stdout;
 		*stdout = tmpStdout;
+#else
+		fflush(stdout);
+		// No way to reopen stdout?
+#endif
 		fprintf(optionalFile,"\n");
 	}
 	else
@@ -1202,7 +1234,7 @@ error(const char *msg) {
     wcscpy(msgW, L"???");
   }
   _snwprintf(crashInfo,1024,
-      L"Sorry but the VM has crashed.\n\n"
+      L"Sorry but the " VM_NAME " VM has crashed.\n\n"
       L"Reason: %s\n\n"
       L"Current byte code: %d\n"
       L"Primitive index: %" _UNICODE_TEXT(PRIdSQINT) L"\n\n"
@@ -1215,7 +1247,7 @@ error(const char *msg) {
       vmLogDirW,
       L"crash.dmp");
   if (!fHeadlessImage)
-    MessageBoxW(stWindow,crashInfo,L"Fatal VM error",
+    MessageBoxW(stWindow,crashInfo,L"Fatal " VM_NAME " VM error",
                  MB_OK | MB_APPLMODAL | MB_ICONSTOP);
 
 #if !NewspeakVM
@@ -1272,7 +1304,7 @@ extern sqInt reportStackHeadroom;
 #pragma auto_inline(on)
 
 static void
-printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
+printCrashDebugInformation(PEXCEPTION_POINTERS exp)
 {
   void *callstack[MAXFRAMES];
   symbolic_pc symbolic_pcs[MAXFRAMES];
@@ -1305,7 +1337,7 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
 							MAXFRAMES-1);
   symbolic_backtrace(++nframes, callstack, symbolic_pcs);
   _snwprintf(crashInfo,1024,
-	   L"Sorry but the VM has crashed.\n\n"
+	   L"Sorry but the " VM_NAME " VM has crashed.\n\n"
 	   L"Exception code:    %08x\n"
 #ifdef _WIN64
 	   L"Exception address: %016" _UNICODE_TEXT(PRIxSQPTR) L"\n"
@@ -1326,7 +1358,7 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
 	   vmLogDirW,
 	   L"crash.dmp");
   if (!fHeadlessImage)
-    MessageBoxW(stWindow,crashInfo,L"Fatal VM error",
+    MessageBoxW(stWindow,crashInfo,L"Fatal " VM_NAME " VM error",
                  MB_OK | MB_APPLMODAL | MB_ICONSTOP);
 
 #if !NewspeakVM
