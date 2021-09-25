@@ -44,7 +44,6 @@ elif [[ "${ARCH}" = "linux32x86" ]]; then
             libx11-dev:i386 \
             libsm-dev:i386 \
             libice-dev:i386 \
-            libllvm12:i386 \
             libgl1-mesa-glx:i386 \
             libgl1-mesa-dev:i386 \
             libxext-dev:i386 \
