@@ -263,6 +263,14 @@ fi
 
 ########################
 
+PKG_CONFIG=$host-pkg-config
+if [[ ! $(type -t $PKG_CONFIG) ]]; then
+	# Workaround for Debian/Ubuntu
+	PKG_CONFIG=i686-linux-gnu-pkg-config
+fi
+
+########################
+
 TARGET_ARCH="$TARGET_ARCH"
 
 # tpr - try to keep msse out of it for Pi CFLAGS="$CFLAGS_32 $CFLAGS -msse"
