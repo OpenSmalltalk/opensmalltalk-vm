@@ -33,7 +33,7 @@ if [[ "${ARCH}" = "linux64x64" ]]; then
 elif [[ "${ARCH}" = "linux32x86" ]]; then
     sudo dpkg --add-architecture i386
     sudo apt-get update -y
-    sudo apt-get purge libfreetype6-dev "Might be loaded. Avoid conflict with i386 version below."
+    sudo apt-get purge libfreetype6-dev # Might be loaded. Avoid conflict with i386 version below
     sudo apt-get install -yq --no-install-suggests --no-install-recommends --allow-unauthenticated \
             devscripts \
             libc6-dev:i386 \
