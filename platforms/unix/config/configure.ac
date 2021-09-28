@@ -263,10 +263,10 @@ fi
 
 ########################
 
-PKG_CONFIG=$host-pkg-config
+PKG_CONFIG=/usr/bin/$host-pkg-config
 if [[ ! $(type -t $PKG_CONFIG) ]]; then
 	# Workaround for Debian/Ubuntu
-	PKG_CONFIG=i686-linux-gnu-pkg-config
+	PKG_CONFIG=/usr/bin/i686-linux-gnu-pkg-config
 fi
 
 ########################
