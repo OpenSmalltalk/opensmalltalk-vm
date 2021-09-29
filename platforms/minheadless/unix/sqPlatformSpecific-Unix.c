@@ -110,8 +110,6 @@ extern char *GetAttributeString(sqInt id);
 extern const char *getVersionInfo(int verbose);
 extern void getCrashDumpFilenameInto(char *buf);
 
-extern void printAllStacks(void);
-extern void printCallStack(void);
 extern void dumpPrimTraceLog(void);
 extern void pushOutputFile(char *);
 extern void popOutputFile(void);
@@ -376,6 +374,8 @@ findExecutablePath(const char *localVmName, char *dest, size_t destSize)
  * Allows e.g. writing to a log file and stderr.
  */
 static void *printRegisterState(ucontext_t *uap);
+
+#error "the new exception handling code from platforms/unix/vm/sqUnixMain.c needs to be integrated here. eem 2021/9/28"
 
 static void
 reportStackState(const char *msg, char *date, int printAll, ucontext_t *uap)

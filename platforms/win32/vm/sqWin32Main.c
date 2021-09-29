@@ -156,6 +156,15 @@ static int imageSize = 0;
 
 void SetSystemTrayIcon(BOOL on);
 
+/****************************************************************************/
+/*                     Exception handling                                   */
+/****************************************************************************/
+/* The following installs us a global exception filter for *all* exceptions */
+/* in Squeak. This is necessary since the C support of Mingw32 for SEH is   */
+/* not as sophisticated as MSVC's support. However, with this new handling  */
+/* scheme the entire thing becomes actually a lot simpler...                */
+/****************************************************************************/
+
 /* default fpu control word:
    _RC_NEAR: round to nearest
    _PC_53 :  double precision arithmetic (instead of extended)
@@ -165,38 +174,28 @@ void SetSystemTrayIcon(BOOL on);
 # if defined(_M_IX86) || defined(X86) || defined(_M_I386) || defined(_X86_) \
   || defined(i386) || defined(i486) || defined(i586) || defined(i686) \
   || defined(__i386__) || defined(__386__) || defined(I386)
-#define FPU_DEFAULT (_RC_NEAR + _PC_53 + _EM_INVALID + _EM_ZERODIVIDE + _EM_OVERFLOW + _EM_UNDERFLOW + _EM_INEXACT + _EM_DENORMAL)
-#define FPU_MASK    (_MCW_EM | _MCW_RC | _MCW_PC | _MCW_IC)
+# define FPU_DEFAULT (_RC_NEAR + _PC_53 + _EM_INVALID + _EM_ZERODIVIDE \
+					+ _EM_OVERFLOW + _EM_UNDERFLOW + _EM_INEXACT + _EM_DENORMAL)
+# define FPU_MASK    (_MCW_EM | _MCW_RC | _MCW_PC | _MCW_IC)
 #else
-#define FPU_DEFAULT (_RC_NEAR + _EM_INVALID + _EM_ZERODIVIDE + _EM_OVERFLOW + _EM_UNDERFLOW + _EM_INEXACT + _EM_DENORMAL)
-#define FPU_MASK    (_MCW_EM | _MCW_RC)
+# define FPU_DEFAULT (_RC_NEAR + _EM_INVALID + _EM_ZERODIVIDE \
+					+ _EM_OVERFLOW + _EM_UNDERFLOW + _EM_INEXACT + _EM_DENORMAL)
+# define FPU_MASK    (_MCW_EM | _MCW_RC)
 #endif
 
-/****************************************************************************/
-/*                     Exception handling                                   */
-/****************************************************************************/
-/* The following installs us a global exception filter for *all* exceptions */
-/* in Squeak. This is necessary since the C support of Mingw32 for SEH is   */
-/* not as sophisticated as MSVC's support. However, with this new handling  */
-/* scheme the entire thing becomes actually a lot simpler...                */
-/****************************************************************************/
+static void UninstallExceptionHandler(void);
+
 #if _WIN64
 static PVECTORED_EXCEPTION_HANDLER ourVEHHandle = NULL;
 static BOOL inFatalException = false;
+static BOOL debugBreakOnException = false;
 #endif
 static LPTOP_LEVEL_EXCEPTION_FILTER TopLevelFilter = NULL;
 
 // Until we can implement a reliable first-chance exception handler on WIN64
 // we cannot support primitiveFailForFFIExceptionat there-on.
 sqInt
-ioCanCatchFFIExceptions()
-{
-#if _WIN64
-	return 1;
-#else
-	return 1;
-#endif
-}
+ioCanCatchFFIExceptions() { return 1; }
 
 extern sqInt primitiveFailForFFIExceptionat(usqLong exceptionCode, usqInt pc);
 
@@ -226,22 +225,22 @@ squeakVectoredExceptionHandler(PEXCEPTION_POINTERS exp)
 	 || code == STATUS_PRIVILEGED_INSTRUCTION    /* 0xC0000096 */
 	 || code == STATUS_STACK_OVERFLOW            /* 0xC00000FD */) {
   // #2: Allow the VM to fail an FFI call in which an exception occurred.
+		if (debugBreakOnException) {
+			while (!IsDebuggerPresent())
+				Sleep(250);
+			DebugBreak();
+		}
 		primitiveFailForFFIExceptionat(exp->ExceptionRecord->ExceptionCode,
 										exp->ContextRecord->CONTEXT_PC);
 
 		inFatalException = true; // avoid looping exception handling
 
-# if defined(NDEBUG) || defined(VirtendVM)
   // #3: If that didn't work print crash debug information and exit
+		UninstallExceptionHandler();
+
 		printCrashDebugInformation(exp);
-# if 1
 		DestroyWindow(stWindow);
 		ioExit();
-# else
-		_c_exit();
-		TerminateProcess(GetCurrentProcess(),code);
-# endif
-# endif
 	}
 	return EXCEPTION_CONTINUE_SEARCH;
 }
@@ -279,13 +278,18 @@ squeakExceptionHandler(PEXCEPTION_POINTERS exp)
 
 	if (result != EXCEPTION_CONTINUE_EXECUTION) {
 		// #3: Allow the VM to fail an FFI call in which an exception occurred.
+		if (debugBreakOnException) {
+			while (!IsDebuggerPresent())
+				Sleep(250);
+			DebugBreak();
+		}
 		primitiveFailForFFIExceptionat(exp->ExceptionRecord->ExceptionCode,
 										exp->ContextRecord->CONTEXT_PC);
-#if defined(NDEBUG) || defined(VirtendVM)
-		/* #5: If that didn't work either give up and print a crash debug information */
+		/* #4: If that didn't work either give up and print crash debug information */
+		UninstallExceptionHandler();
+
 		printCrashDebugInformation(exp);
 		result = EXCEPTION_EXECUTE_HANDLER;
-#endif
 	}
 	return result;
 }
@@ -1094,63 +1098,30 @@ void SetupStderr()
 /****************************************************************************/
 
 static void
-dumpSmalltalkStackIfInMainThread(FILE *optionalFile)
+dumpSmalltalkStackIfInMainThread(FILE *file)
 {
-	extern void printCallStack(void);
 	extern sqInt nilObject(void);
 
 	if (!nilObject()) // If no nilObject the image hasn't been loaded yet...
 		return;
 
-	if (!optionalFile) {
-		if (ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
-			printf("\n\nSmalltalk stack dump:\n");
-			printCallStack();
-		}
-		else
-			printf("\nCan't dump Smalltalk stack. Not in VM thread\n");
-		return;
-	}
 	if (ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
-		FILE tmpStdout = *stdout;
-		fprintf(optionalFile, "\n\nSmalltalk stack dump:\n");
-#if 0
-		*stdout = *optionalFile;
-#else
-		freopen_s(0, "crash.dmp", "a+", stdout);
-#endif
-		printCallStack();
-#if 0
-		*optionalFile = *stdout;
-		*stdout = tmpStdout;
-#else
-		fflush(stdout);
-		// No way to reopen stdout?
-#endif
-		fprintf(optionalFile,"\n");
+		fprintf(file, "\n\nSmalltalk stack dump:\n");
+		printCallStackOn(file);
+		fprintf(file,"\n");
 	}
 	else
-		fprintf(optionalFile,"\nCan't dump Smalltalk stack. Not in VM thread\n");
+		fprintf(file,"\nCan't dump Smalltalk stack. Not in VM thread\n");
+	fflush(file);
 }
 
 #if STACKVM
 static void
-dumpPrimTrace(FILE *optionalFile)
+dumpPrimTrace(FILE *file)
 {
-	extern void dumpPrimTraceLog(void);
-
-	if (optionalFile) {
-		FILE tmpStdout = *stdout;
-		*stdout = *optionalFile;
-		dumpPrimTrace(0);
-		*optionalFile = *stdout;
-		*stdout = tmpStdout;
-	}
-	else {
-		printf("\nPrimitive trace:\n");
-		dumpPrimTraceLog();
-		printf("\n");
-	}
+	fprintf(file,"\nPrimitive trace:\n");
+	dumpPrimTraceLogOn(file);
+	fprintf(file,"\n");
 }
 #else
 # define dumpPrimTrace(f) 0
@@ -1276,10 +1247,10 @@ error(const char *msg) {
   printf("Error in %s thread\nReason: %s\n\n",
 		  inVMThread ? "the VM" : "some other",
 		  msg);
-  dumpPrimTrace(0);
+  dumpPrimTrace(stdout);
   print_backtrace(stdout, nframes, MAXFRAMES, callstack, symbolic_pcs);
   /* /Don't/ print the caller's stack to stdout here; Cleanup will do so. */
-  /* dumpSmalltalkStackIfInMainThread(0); */
+  /* dumpSmalltalkStackIfInMainThread(stdout); */
   exit(EXIT_FAILURE);
 }
 
@@ -1312,8 +1283,6 @@ printCrashDebugInformation(PEXCEPTION_POINTERS exp)
   WCHAR crashInfo[1024];
   FILE *f;
   int byteCode = -2;
-
-  UninstallExceptionHandler();
 
   if ((inVMThread = ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())))
     /* Retrieve current byte code.
@@ -1439,17 +1408,20 @@ printCrashDebugInformation(PEXCEPTION_POINTERS exp)
 	dumpPrimTrace(f);
 	print_backtrace(f, nframes, MAXFRAMES, callstack, symbolic_pcs);
 	dumpSmalltalkStackIfInMainThread(f);
+#if COGVM
+	reportMinimumUnusedHeadroomOn(f);
+#endif
     fclose(f);
   }
 
   /* print recently called prims to stdout */
-  dumpPrimTrace(0);
+  dumpPrimTrace(stdout);
   /* print C stack to stdout */
   print_backtrace(stdout, nframes, MAXFRAMES, callstack, symbolic_pcs);
   /* print the caller's stack to stdout */
-  dumpSmalltalkStackIfInMainThread(0);
+  dumpSmalltalkStackIfInMainThread(stdout);
 #if COGVM
-  reportMinimumUnusedHeadroom();
+  reportMinimumUnusedHeadroomOn(stdout);
 #endif
 
   } EXCEPT(EXCEPTION_EXECUTE_HANDLER) {
@@ -1466,7 +1438,7 @@ void __cdecl Cleanup(void)
 { /* not all of these are essential, but they're polite... */
 
   if (!inCleanExit)
-    dumpSmalltalkStackIfInMainThread(0);
+    dumpSmalltalkStackIfInMainThread(stdout);
 
   ioShutdownAllModules();
   ioReleaseTime();
@@ -1477,16 +1449,14 @@ void __cdecl Cleanup(void)
   if (palette) DeleteObject(palette);
   PROFILE_SHOW(ticksForReversal);
   PROFILE_SHOW(ticksForBlitting);
-  if (*stderrName)
-    {
+  if (*stderrName) {
       fclose(stderr);
       _wremove(stderrName);
-    }
-  if (*stdoutName)
-    {
+  }
+  if (*stdoutName) {
       fclose(stdout);
       _wremove(stdoutName);
-    }
+  }
   OleUninitialize();
 }
 
@@ -2068,6 +2038,11 @@ parseVMArgument(int argc, char *argv[])
 		extern sqInt ffiExceptionResponse;
 		ffiExceptionResponse = -1;
 		return 1; }
+# if _WIN64
+	else if (!strcmp(argv[0], VMOPTION("debugfailonffiexception"))) {
+		debugBreakOnException = true;
+		return 1; }
+# endif
 #endif /* STACKVM */
 #if COGVM
 	else if (argc > 1 && !strcmp(argv[0], VMOPTION("codesize"))) {

@@ -149,9 +149,6 @@ int    argCnt= 0;
 char **argVec= 0;
 char **envVec= 0;
 
-void printAllStacks(void);
-void printCallStack(void);
-extern void dumpPrimTraceLog(void);
 extern BOOL NSApplicationLoad(void);
 char *getVersionInfo(int verbose);
 

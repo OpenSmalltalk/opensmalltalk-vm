@@ -161,10 +161,16 @@ extern int isCFramePointerInUse(usqIntptr_t *cFpPtr, usqIntptr_t *cSpPtr);
  * exception.
  */
 extern void ifValidWriteBackStackPointersSaveTo(void *,void *,char **,char **);
+extern void dumpPrimTraceLog();
+extern void dumpPrimTraceLogOn(FILE *);
+extern void reportMinimumUnusedHeadroom();
+extern void reportMinimumUnusedHeadroomOn(FILE *);
 # endif
 #endif /* STACKVM */
 extern void printCallStack(void);
+extern void printCallStackOn(FILE *);
 extern void printAllStacks(void);
+extern void printAllStacksOn(FILE *);
 
 /* this function should return the value of the high performance
    counter if there is such a thing on this platform (otherwise return 0) */

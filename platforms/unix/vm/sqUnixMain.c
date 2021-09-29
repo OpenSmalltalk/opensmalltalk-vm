@@ -868,18 +868,16 @@ sqInt  primitivePluginRequestState(void)	{ return dpy->primitivePluginRequestSta
 
 static void outOfMemory(void)
 {
-  /* pushing stderr outputs the error report on stderr instead of stdout */
-  pushOutputFile((char *)STDERR_FILENO);
   error("out of memory\n");
 }
 
 /* Print an error message, possibly a stack trace, do /not/ exit.
  * Allows e.g. writing to a log file and stderr.
  */
-static void *printRegisterState(ucontext_t *uap);
+static void *printRegisterState(FILE *file, ucontext_t *uap);
 
 static void
-reportStackState(const char *msg, char *date, int printAll, ucontext_t *uap)
+reportStackState(FILE *file,const char *msg, char *date, int printAll, ucontext_t *uap)
 {
 #if !defined(NOEXECINFO) && defined(HAVE_EXECINFO_H)
 	void *addrs[BACKTRACE_DEPTH];
@@ -894,8 +892,8 @@ reportStackState(const char *msg, char *date, int printAll, ucontext_t *uap)
 	extern usqInt stackLimitAddress(void);
 #endif
 
-	printf("\n%s%s%s\n\n", msg, date ? " " : "", date ? date : "");
-	printf("%s\n%s\n\n", GetAttributeString(0), getVersionInfo(1));
+	fprintf(file,"\n%s%s%s\n\n", msg, date ? " " : "", date ? date : "");
+	fprintf(file,"%s\n%s\n\n", GetAttributeString(0), getVersionInfo(1));
 
 #if COGVM
 	/* Do not attempt to report the stack until the VM is initialized!! */
@@ -904,16 +902,16 @@ reportStackState(const char *msg, char *date, int printAll, ucontext_t *uap)
 #endif
 
 #if !defined(NOEXECINFO) && defined(HAVE_EXECINFO_H)
-	printf("C stack backtrace & registers:\n");
+	fprintf(file,"C stack backtrace & registers:\n");
 	if (uap) {
-		addrs[0] = printRegisterState(uap);
+		addrs[0] = printRegisterState(file,uap);
 		depth = 1 + backtrace(addrs + 1, BACKTRACE_DEPTH);
 	}
 	else
 		depth = backtrace(addrs, BACKTRACE_DEPTH);
-	putchar('*'); /* indicate where pc is */
-	fflush(stdout); /* backtrace_symbols_fd uses unbuffered i/o */
-	backtrace_symbols_fd(addrs, depth + 1, fileno(stdout));
+	fputc('*',file); /* indicate where pc is */
+	fflush(file); /* backtrace_symbols_fd uses unbuffered i/o */
+	backtrace_symbols_fd(addrs, depth + 1, fileno(file));
 #endif
 
 	if (ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
@@ -932,12 +930,12 @@ reportStackState(const char *msg, char *date, int printAll, ucontext_t *uap)
 
 			printingStack = true;
 			if (printAll) {
-				printf("\n\nAll Smalltalk process stacks (active first):\n");
-				printAllStacks();
+				fprintf(file,"\n\nAll Smalltalk process stacks (active first):\n");
+				printAllStacksOn(file);
 			}
 			else {
-				printf("\n\nSmalltalk stack dump:\n");
-				printCallStack();
+				fprintf(file,"\n\nSmalltalk stack dump:\n");
+				printCallStackOn(file);
 			}
 			printingStack = false;
 #if COGVM
@@ -947,76 +945,84 @@ reportStackState(const char *msg, char *date, int printAll, ucontext_t *uap)
 		}
 	}
 	else
-		printf("\nCan't dump Smalltalk stack(s). Not in VM thread\n");
+		fprintf(file,"\nCan't dump Smalltalk stack(s). Not in VM thread\n");
 #if STACKVM
-	printf("\nMost recent primitives\n");
-	dumpPrimTraceLog();
+	fprintf(file,"\nMost recent primitives\n");
+	dumpPrimTraceLogOn(file);
 # if COGVM
-	printf("\n");
+	fprintf(file,"\n");
 	reportMinimumUnusedHeadroom();
 # endif
 #endif
-	printf("\n\t(%s)\n", msg);
-	fflush(stdout);
+	fprintf(file,"\n\t(%s)\n", msg);
+	fflush(file);
 }
 
-/* Attempt to dump the registers to stdout.  Only do so if we know how. */
+/* Attempt to dump the registers to stdout.  Only do so if we know how.
+ * Answer the pc (or 0).
+ */
 static void *
-printRegisterState(ucontext_t *uap)
+printRegisterState(FILE *file,ucontext_t *uap)
 {
+#define v(v) ((void *)(v))
 #if __linux__ && __i386__
 	greg_t *regs = (greg_t *)&uap->uc_mcontext.gregs;
-	printf(	"\teax 0x%08x ebx 0x%08x ecx 0x%08x edx 0x%08x\n"
+	fprintf(file,
+			"\teax 0x%08x ebx 0x%08x ecx 0x%08x edx 0x%08x\n"
 			"\tedi 0x%08x esi 0x%08x ebp 0x%08x esp 0x%08x\n"
 			"\teip 0x%08x\n",
 			regs[REG_EAX], regs[REG_EBX], regs[REG_ECX], regs[REG_EDX],
 			regs[REG_EDI], regs[REG_EDI], regs[REG_EBP], regs[REG_ESP],
 			regs[REG_EIP]);
-	return (void *)regs[REG_EIP];
+	return v(regs[REG_EIP]);
 #elif __FreeBSD__ && __i386__
 	struct mcontext *regs = &uap->uc_mcontext;
-	printf(	"\teax 0x%08x ebx 0x%08x ecx 0x%08x edx 0x%08x\n"
+	fprintf(file,
+			"\teax 0x%08x ebx 0x%08x ecx 0x%08x edx 0x%08x\n"
 			"\tedi 0x%08x esi 0x%08x ebp 0x%08x esp 0x%08x\n"
 			"\teip 0x%08x\n",
 			regs->mc_eax, regs->mc_ebx, regs->mc_ecx, regs->mc_edx,
 			regs->mc_edi, regs->mc_edi, regs->mc_ebp, regs->mc_esp,
 			regs->mc_eip);
-	return regs->mc_eip;
+	return v(regs->mc_eip);
 #elif __linux__ && __x86_64__
 	greg_t *regs = (greg_t *)&uap->uc_mcontext.gregs;
-	printf(	"\trax 0x%08lx rbx 0x%08lx rcx 0x%08lx rdx 0x%08lx\n"
-			"\trdi 0x%08lx rsi 0x%08lx rbp 0x%08lx rsp 0x%08lx\n"
-			"\tr8  0x%08lx r9  0x%08lx r10 0x%08lx r11 0x%08lx\n"
-			"\tr12 0x%08lx r13 0x%08lx r14 0x%08lx r15 0x%08lx\n"
-			"\trip 0x%08lx\n",
-			regs[REG_RAX], regs[REG_RBX], regs[REG_RCX], regs[REG_RDX],
-			regs[REG_RDI], regs[REG_RSI], regs[REG_RBP], regs[REG_RSP],
-			regs[REG_R8 ], regs[REG_R9 ], regs[REG_R10], regs[REG_R11],
-			regs[REG_R12], regs[REG_R13], regs[REG_R14], regs[REG_R15],
-			regs[REG_RIP]);
-	return (void *)regs[REG_RIP];
+	fprintf(file,
+			"    rax %14p rbx %14p rcx %14p rdx %14p\n"
+			"    rdi %14p rsi %14p rbp %14p rsp %14p\n"
+			"    r8  %14p r9  %14p r10 %14p r11 %14p\n"
+			"    r12 %14p r13 %14p r14 %14p r15 %14p\n"
+			"    rip %14p\n",
+			v(regs[REG_RAX]),v(regs[REG_RBX]),v(regs[REG_RCX]),v(regs[REG_RDX]),
+			v(regs[REG_RDI]),v(regs[REG_RSI]),v(regs[REG_RBP]),v(regs[REG_RSP]),
+			v(regs[REG_R8 ]),v(regs[REG_R9 ]),v(regs[REG_R10]),v(regs[REG_R11]),
+			v(regs[REG_R12]),v(regs[REG_R13]),v(regs[REG_R14]),v(regs[REG_R15]),
+			v(regs[REG_RIP]));
+	return v(regs[REG_RIP]);
 # elif __OpenBSD__ && __x86_64__
-	printf(	"\trax 0x%08lx rbx 0x%08lx rcx 0x%08lx rdx 0x%08lx\n"
-			"\trdi 0x%08lx rsi 0x%08lx rbp 0x%08lx rsp 0x%08lx\n"
-			"\tr8  0x%08lx r9  0x%08lx r10 0x%08lx r11 0x%08lx\n"
-			"\tr12 0x%08lx r13 0x%08lx r14 0x%08lx r15 0x%08lx\n"
-			"\trip 0x%08lx\n",
-			uap->sc_rax, uap->sc_rbx, uap->sc_rcx, uap->sc_rdx,
-			uap->sc_rdi, uap->sc_rsi, uap->sc_rbp, uap->sc_rsp,
-			uap->sc_r8, uap->sc_r9, uap->sc_r10, uap->sc_r11,
-			uap->sc_r12, uap->sc_r13, uap->sc_r14, uap->sc_r15,
-			uap->sc_rip);
-	return (void *)uap->sc_rip;
+	fprintf(file,
+			"    rax %14p rbx %14p rcx %14p rdx %14p\n"
+			"    rdi %14p rsi %14p rbp %14p rsp %14p\n"
+			"    r8  %14p r9  %14p r10 %14p r11 %14p\n"
+			"    r12 %14p r13 %14p r14 %14p r15 %14p\n"
+			"    rip %14p\n",
+			v(uap->sc_rax),v(uap->sc_rbx),v(uap->sc_rcx),v(uap->sc_rdx),
+			v(uap->sc_rdi),v(uap->sc_rsi),v(uap->sc_rbp),v(uap->sc_rsp),
+			v(uap->sc_r8),v(uap->sc_r9),v(uap->sc_r10),v(uap->sc_r11),
+			v(uap->sc_r12),v(uap->sc_r13),v(uap->sc_r14),v(uap->sc_r15),
+			v(uap->sc_rip));
+	return v(uap->sc_rip);
 # elif __linux__ && (defined(__arm64__) || defined(__aarch64__))
 	void **regs = (void **)&uap->uc_mcontext.regs[0];
-	printf(	"\tx0 %p x1 %p x2 %p x3 %p\n"
-			"\tx4 %p x5 %p x6 %p x7 %p\n"
-			"\tx8 %p x9 %p x10 %p x11 %p\n"
-			"\tx12 %p x13 %p x14 %p x15 %p\n"
-			"\tx16 %p x17 %p x18 %p x19 %p\n"
-			"\tx20 %p x21 %p x22 %p x23 %p\n"
-			"\tx24 %p x25 %p x26 %p x27 %p\n"
-			"\tx29 %p  fp %p  lr %p  sp %p\n",
+	fprintf(file,
+			"     x0 %14p  x1 %14p  x2 %14p  x3 %14p\n"
+			"     x4 %14p  x5 %14p  x6 %14p  x7 %14p\n"
+			"     x8 %14p  x9 %14p x10 %14p x11 %14p\n"
+			"    x12 %14p x13 %14p x14 %14p x15 %14p\n"
+			"    x16 %14p x17 %14p x18 %14p x19 %14p\n"
+			"    x20 %14p x21 %14p x22 %14p x23 %14p\n"
+			"    x24 %14p x25 %14p x26 %14p x27 %14p\n"
+			"    x29 %14p  fp %14p  lr %14p  sp %14p\n",
 			regs[0], regs[1], regs[2], regs[3],
 			regs[4], regs[5], regs[6], regs[7],
 			regs[8], regs[9], regs[10], regs[11],
@@ -1025,10 +1031,11 @@ printRegisterState(ucontext_t *uap)
 			regs[20], regs[21], regs[22], regs[23],
 			regs[24], regs[25], regs[26], regs[27],
 			regs[28], regs[29], regs[30], (void *)(uap->uc_mcontext.sp));
-	return (void *)uap->uc_mcontext.pc;
+	return v(uap->uc_mcontext.pc);
 # elif __linux__ && (defined(__arm__) || defined(__arm32__) || defined(ARM32))
 	struct sigcontext *regs = &uap->uc_mcontext;
-	printf(	"\t r0 0x%08x r1 0x%08x r2 0x%08x r3 0x%08x\n"
+	fprintf(file,
+			"\t r0 0x%08x r1 0x%08x r2 0x%08x r3 0x%08x\n"
 	        "\t r4 0x%08x r5 0x%08x r6 0x%08x r7 0x%08x\n"
 	        "\t r8 0x%08x r9 0x%08x r10 0x%08x fp 0x%08x\n"
 	        "\t ip 0x%08x sp 0x%08x lr 0x%08x pc 0x%08x\n",
@@ -1036,10 +1043,10 @@ printRegisterState(ucontext_t *uap)
 	        regs->arm_r4,regs->arm_r5,regs->arm_r6,regs->arm_r7,
 	        regs->arm_r8,regs->arm_r9,regs->arm_r10,regs->arm_fp,
 	        regs->arm_ip, regs->arm_sp, regs->arm_lr, regs->arm_pc);
-	return (void *)uap->uc_mcontext.arm_pc;
+	return v(uap->uc_mcontext.arm_pc);
 #else
-	printf("don't know how to derive register state from a ucontext_t on this platform\n");
-	return 0;
+	fprintf(file,"don't know how to derive register state from a ucontext_t on this platform\n");
+	return v(0);
 #endif
 }
 
@@ -1066,18 +1073,20 @@ block()
 void
 error(const char *msg)
 {
-	reportStackState(msg,0,0,0);
+	reportStackState(stderr,msg,0,0,0);
 	if (blockOnError) block();
 	abort();
 }
 #pragma auto_inline(on)
 
-static void
-getCrashDumpFilenameInto(char *buf)
+static FILE *
+crashDumpFile()
 {
-	strcpy(buf,vmLogDirA);
-	vmLogDirA[0] && strcat(buf, "/");
-	strcat(buf, "crash.dmp");
+	char namebuf[MAXPATHLEN+1];
+	strcpy(namebuf,vmLogDirA);
+	vmLogDirA[0] && strcat(namebuf, "/");
+	strcat(namebuf, "crash.dmp");
+	return fopen(namebuf,"a+");
 }
 
 static void
@@ -1086,7 +1095,7 @@ sigusr1(int sig, siginfo_t *info, ucontext_t *uap)
 	int saved_errno = errno;
 	time_t now = time(NULL);
 	char ctimebuf[32];
-	char crashdump[MAXPATHLEN+1];
+	FILE *crashdump;
 
 	if (!ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
 		pthread_kill(getVMOSThread(),sig);
@@ -1094,12 +1103,11 @@ sigusr1(int sig, siginfo_t *info, ucontext_t *uap)
 		return;
 	}
 
-	getCrashDumpFilenameInto(crashdump);
+	crashdump = crashDumpFile();
 	ctime_r(&now,ctimebuf);
-	pushOutputFile(crashdump);
-	reportStackState("SIGUSR1", ctimebuf, 1, uap);
-	popOutputFile();
-	reportStackState("SIGUSR1", ctimebuf, 1, uap);
+	reportStackState(crashdump, "SIGUSR1", ctimebuf, 1, uap);
+	reportStackState(stdout, "SIGUSR1", ctimebuf, 1, uap);
+	fclose(crashdump);
 
 	errno = saved_errno;
 }
@@ -1114,7 +1122,7 @@ sigsegv(int sig, siginfo_t *info, ucontext_t *uap)
 {
 	time_t now = time(NULL);
 	char ctimebuf[32];
-	char crashdump[MAXPATHLEN+1];
+	FILE *crashdump;
 	const char *fault = sig == SIGSEGV
 						? "Segmentation fault"
 						: (sig == SIGBUS
@@ -1127,12 +1135,11 @@ sigsegv(int sig, siginfo_t *info, ucontext_t *uap)
 		extern sqInt primitiveFailForFFIExceptionat(usqLong exceptionCode, usqInt pc);
 		primitiveFailForFFIExceptionat(sig, uap->_PC_IN_UCONTEXT);
 		inFault = 1;
-		getCrashDumpFilenameInto(crashdump);
+		crashdump = crashDumpFile();
 		ctime_r(&now,ctimebuf);
-		pushOutputFile(crashdump);
-		reportStackState(fault, ctimebuf, 0, uap);
-		popOutputFile();
-		reportStackState(fault, ctimebuf, 0, uap);
+		reportStackState(crashdump, fault, ctimebuf, 0, uap);
+		reportStackState(stdout, fault, ctimebuf, 0, uap);
+		fclose(crashdump);
 	}
 	if (blockOnError) block();
 	abort();
