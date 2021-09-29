@@ -263,6 +263,17 @@ fi
 
 ########################
 
+case $target in
+	i686*) # workaround for 32-bit x86 builds on Ubuntu/Debian
+		PKG_CONFIG=/usr/bin/i686-linux-gnu-pkg-config
+		;;
+	*)
+		PKG_CONFIG=/usr/bin/pkg-config
+		;;
+esac
+
+########################
+
 TARGET_ARCH="$TARGET_ARCH"
 
 # tpr - try to keep msse out of it for Pi CFLAGS="$CFLAGS_32 $CFLAGS -msse"
