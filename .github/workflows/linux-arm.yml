@@ -19,9 +19,20 @@ on:
   pull_request:
     branches:
       - Cog
-    paths-ignore:
-      - '**.md'
-      - '**HowToBuild'
+    paths:
+      # This workflow spec and its support scripts
+      - '.github/workflows/linux-arm.yml'
+      - 'scripts/ci/*linux_arm.sh'
+      - 'scripts/ci/*build.sh'
+      - 'deploy/**'
+      # Relevant sources for this platform
+      - 'building/linux*/**' # Makefile-based build scripts
+      - '*src/**' # Generated VMMaker sources (incl. plugins)
+      - 'platforms/Cross/**'
+      - 'platforms/unix/**'
+      # Skip changes in documentation artifacts
+      - '!**.md'
+      - '!**HowToBuild'
   workflow_dispatch:
     inputs:
       tag:
