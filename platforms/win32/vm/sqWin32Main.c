@@ -278,11 +278,13 @@ squeakExceptionHandler(PEXCEPTION_POINTERS exp)
 
 	if (result != EXCEPTION_CONTINUE_EXECUTION) {
 		// #3: Allow the VM to fail an FFI call in which an exception occurred.
+#if _WIN64
 		if (debugBreakOnException) {
 			while (!IsDebuggerPresent())
 				Sleep(250);
 			DebugBreak();
 		}
+#endif // _WIN64
 		primitiveFailForFFIExceptionat(exp->ExceptionRecord->ExceptionCode,
 										exp->ContextRecord->CONTEXT_PC);
 		/* #4: If that didn't work either give up and print crash debug information */
