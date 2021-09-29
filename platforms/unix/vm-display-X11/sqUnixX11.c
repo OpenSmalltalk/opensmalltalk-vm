@@ -51,6 +51,10 @@
  *
  * Support for OSProcess plugin contributed by:
  *	Dave Lewis <lewis@mail.msen.com> Mon Oct 18 20:36:54 EDT 1999
+ *
+ * Fixes calls to recordKeyboardEvent() for EventKeyDown and EventKeyUp to 
+ * provide codes for virtual keys instead of Unicode characters.
+ *  Marcel Taeumel <marcel.taeumel@hpi.de>
  */
 
 #include "sq.h"
@@ -1698,7 +1702,7 @@ static int recordPendingKeys(void)
       }
       return 0;
     }
-  else
+  else /* no composition input */
     {
       if (inputCount > 0)
 	{
@@ -3744,7 +3748,7 @@ handleEvent(XEvent *evt)
 	  }
 	if ((keyCode >= 0) || (ucs4 > 0))
 	  {
-	    recordKeyboardEvent(keyCode, EventKeyDown, modifierState, ucs4);
+	    recordKeyboardEvent(evt->xkey.keycode, EventKeyDown, modifierState, evt->xkey.keycode);
 	    if (ucs4) /* only generate a key char event if there's a code. */
 		recordKeyboardEvent(keyCode, EventKeyChar, modifierState, ucs4);
 	    if (multi_key_buffer != 0)
@@ -3772,7 +3776,7 @@ handleEvent(XEvent *evt)
 	keyCode= x2sqKey(&evt->xkey, &symbolic);
 	ucs4= xkeysym2ucs4(symbolic);
 	if ((keyCode >= 0) || (ucs4 > 0))
-	  recordKeyboardEvent(keyCode, EventKeyUp, modifierState, ucs4);
+	  recordKeyboardEvent(evt->xkey.keycode, EventKeyUp, modifierState, evt->xkey.keycode);
       }
       break;
 
