@@ -287,7 +287,7 @@ crashDumpFile()
 #if defined(PREFERENCES_RELATIVE_LOG_LOCATION)
 	FSRef fsRef;
 	if (!FSFindFolder(kUserDomain, kPreferencesFolderType, 1, &fsRef)
-	 && !FSRefMakePath(&fsRef, buf, PATH_MAX)) {
+	 && !FSRefMakePath(&fsRef, namebuf, PATH_MAX)) {
 		strncat(namebuf,"/" PREFERENCES_RELATIVE_LOG_LOCATION "/crash.dmp",PATH_MAX+1);
 		return fopen(namebuf,"a+");
 	}
