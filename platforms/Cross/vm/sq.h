@@ -161,11 +161,11 @@ extern int isCFramePointerInUse(usqIntptr_t *cFpPtr, usqIntptr_t *cSpPtr);
  * exception.
  */
 extern void ifValidWriteBackStackPointersSaveTo(void *,void *,char **,char **);
-extern void dumpPrimTraceLog();
-extern void dumpPrimTraceLogOn(FILE *);
 extern void reportMinimumUnusedHeadroom();
 extern void reportMinimumUnusedHeadroomOn(FILE *);
 # endif
+extern void dumpPrimTraceLog();
+extern void dumpPrimTraceLogOn(FILE *);
 #endif /* STACKVM */
 extern void printCallStack(void);
 extern void printCallStackOn(FILE *);
