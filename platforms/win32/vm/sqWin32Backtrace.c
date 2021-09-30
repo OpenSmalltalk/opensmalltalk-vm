@@ -15,6 +15,9 @@
  */
 
 #include <Windows.h>
+#ifdef _MSC_VER
+# include <intrin.h>
+#endif
 #include <stdio.h>
 #include <string.h>
 
@@ -33,9 +36,6 @@
 # include "cogit.h"
 #endif
 
-#ifdef _MSC_VER
-#include <intrin.h>
-#endif
 
 typedef struct frame {
 	struct frame *savedfp;
@@ -46,7 +46,8 @@ typedef struct frame {
  * In between we cannot say.
  */
 #if defined(__MINGW32_MAJOR_VERSION) && __MINGW32_MAJOR_VERSION < 2
-/* see http://en.wikipedia.org/wiki/Win32_Thread_Information_Block
+/* See NT_TIB in winnt.h
+ * see http://en.wikipedia.org/wiki/Win32_Thread_Information_Block
  * & e.g. http://www.nirsoft.net/kernel_struct/vista/NT_TIB.html
  */
 typedef struct _NT_TIB
@@ -64,31 +65,26 @@ backtrace(void **retpcs, int nrpcs)
 {
 	void **__fp;
 
-# if defined(_M_IX86) || defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__)
-  #if defined(_MSC_VER)
-	__asm {
-		mov EAX, EBP
-		mov [__fp], EAX
-	}
-  #elif defined(__GNUC__)
-	asm volatile ("movl %%ebp, %0" : "=r"(__fp) : );
-  #else
-  # error "don't know how to derive ebp"
-  #endif
-#elif defined(__amd64__) || defined(__amd64) || defined(x86_64) || defined(__x86_64__) || defined(__x86_64) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
-  #if defined(_MSC_VER)
-	/* __asm {
-		mov RAX, RBP
-		mov [__fp], RAX
-	}*/
-	__fp = (void **) _AddressOfReturnAddress();
-  #elif defined(__GNUC__)
+#if _MSC_VER
+	// fp is immediately below retpc
+	__fp = (void **)((usqInt)_AddressOfReturnAddress() - sizeof(void *));
+
+#elif defined(_M_IX86) || defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__)
+# if defined(__GNUC__)
 	asm volatile ("movq %%rbp, %0" : "=r"(__fp) : );
-  #else
-  # error "don't know how to derive ebp"
-  #endif
+# else
+#	  error "don't know how to derive ebp with this compiler"
+# endif
+
+#elif defined(__amd64__) || defined(__amd64) || defined(x86_64) || defined(__x86_64__) || defined(__x86_64) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
+#	if defined(__GNUC__)
+	asm volatile ("movq %%rbp, %0" : "=r"(__fp) : );
+# else
+#	error "don't know how to derive rbp with this compiler"
+# endif
+
 #else
-#error "unknown architecture, cannot pick frame pointer"
+# error "unknown architecture, cannot pick frame pointer"
 #endif
 
 	return backtrace_from_fp(*__fp, retpcs, nrpcs);
@@ -102,33 +98,59 @@ backtrace_from_fp(void *startfp, void **retpcs, int nrpcs)
 	int i = 0;
 
 # if defined(_M_IX86) || defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__)
-  #if defined(_MSC_VER)
-	__asm {
-		mov EAX, FS:[18h]
-		mov [tib], EAX
-	}
-  #elif defined(__GNUC__)
+#	if defined(_MSC_VER)
+	tib = (NT_TIB *) __readfsdword(0x18); // mov EAX, FS:[18h]; mov [tib], EAX
+#	elif defined(__GNUC__)
 	asm volatile ("movl %%fs:0x18, %0" : "=r" (tib) : );
-  #else
-  # error "don't know how to derive tib"
-  #endif
-#elif defined(__amd64__) || defined(__amd64) || defined(x86_64) || defined(__x86_64__) || defined(__x86_64) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
-  #if defined(_MSC_VER)
-	/* __asm {
-		mov RAX, GS:[30h]
-		mov [tib], RAX
-	} */
-	tib = (NT_TIB *) __readgsqword(0x30);
-  #elif defined(__GNUC__)
+#	else
+#	  error "don't know how to derive tib"
+#	endif
+# elif defined(__amd64__) || defined(__amd64) || defined(x86_64) || defined(__x86_64__) || defined(__x86_64) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
+#	if defined(_MSC_VER)
+	tib = (NT_TIB *) __readgsqword(0x30); // mov RAX, GS:[30h]; mov [tib], RAX
+#	elif defined(__GNUC__)
 	asm volatile ("movq %%gs:0x30, %0" : "=r" (tib) : );
-  #else
-  # error "don't know how to derive tib"
-  #endif
-#else
-#error "unknown architecture, cannot pick frame pointer"
-#endif
+#	else
+#	  error "don't know how to derive tib"
+#	endif
+# else
+#	error "unknown architecture, cannot derive StackBase from TIB"
+# endif
+
+#define validfp(fp,sp) (((usqInt)(fp) & (sizeof(fp)-1)) == 0 \
+					 && (char *)(fp) > (char *)(sp) \
+					 && fp < (Frame *)tib->StackBase \
+					 && fp > (Frame *)tib->StackLimit)
 
 	fp = startfp;
+	
+  // For reasons we don't yet understand, in an optimized program (at least
+  // under clang) an exception can report a frame pointer which is pointing
+  // somewhere close to, but not at, the saved frame pointer, e.g.
+  // SP->F1819CC640  00007ff65ae9e5d9	d9 e5 e9 5a f6 7f 00 00
+  //     F1819CC648  8000000000000019	19 00 00 00 00 00 00 80
+  //     F1819CC650  000000f1819cc680	80 c6 9c 81 f1 00 00 00
+  //     F1819CC658  00007ff65679f166	66 f1 79 56 f6 7f 00 00
+  // FP->F1819CC660  00007ff656770e10	10 0e 77 56 f6 7f 00 00
+  //     F1819CC668  00007ff65ed46a58	58 6a d4 5e f6 7f 00 00
+  //     F1819CC670  000000f1819cc6a0	a0 c6 9c 81 f1 00 00 00
+  // In the above example the real saved frame pointer is at F1819CC670.  So
+  // as a hack check the frame pointer for validity and if it looks invalid
+  // mooch around to try and find the right one.
+
+	if (!validfp(fp,fp - 1)
+	 || !validfp(fp->savedfp,fp)) {
+		int attempts = 4;
+		fp = (Frame *)(((usqInt)fp | sizeof(void)-1) - (sizeof(void)-1));
+		while (--attempts >= 0) {
+			fp = (Frame *)((usqInt)fp + sizeof(void *));
+			if (validfp(fp,startfp)
+			 && validfp(fp->savedfp,fp))
+				break;
+		}
+		if (!validfp(fp,startfp))
+			fp = startfp;
+	}
 
 	while (i < nrpcs) {
 		Frame *savedfp;
@@ -137,8 +159,6 @@ backtrace_from_fp(void *startfp, void **retpcs, int nrpcs)
 			break;
 		retpcs[i++] = fp->retpc;
 		savedfp = fp->savedfp;
-
-#define validfp(fp,sp) (((usqInt)(fp) & (sizeof(fp)-1)) == 0 && (char *)(fp) > (char *)(sp))
 
 		if (savedfp >= (Frame *)tib->StackBase
 		 || !validfp(savedfp,startfp)
