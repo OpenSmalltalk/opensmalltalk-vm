@@ -162,12 +162,12 @@ typedef struct _dll_exports {
 	HMODULE module;
 	char name[MAX_PATH];
 	MODULEINFO info;
-	void (*find_symbol)(struct _dll_exports *, void *, symbolic_pc *);
+	void (*find_symbol)(struct _dll_exports *, ulong, symbolic_pc *);
 	int    n;
 	char   initialized;
 	ulong *functions;
 	union { char **funcNames; ulong *funcNameOffsets; sqInt *methods; } u;
-	int   *sorted_ordinals;
+	int   *sorted_ordinals; // deal with unsorted files by sorting indices
 } dll_exports;
 
 static dll_exports *dll_exports_for_pc(void *retpc);
@@ -184,7 +184,7 @@ symbolic_backtrace(int n, void **retpcs, symbolic_pc *spc)
 		dll_exports *exports = dll_exports_for_pc(retpcs[i]);
 
 		if (exports)
-			exports->find_symbol(exports, retpcs[i], spc + i);
+			exports->find_symbol(exports, (ulong)(retpcs[i]), spc + i);
 		else
 			spc[i].fnameOrSelector = spc[i].mname = 0, spc[i].offset = 0;
 	}
@@ -248,10 +248,10 @@ static int
 expcmp(const void *a, const void *b)
 { return (sqIntptr_t)((dll_exports *)a)->info.lpBaseOfDll - (sqIntptr_t)((dll_exports *)b)->info.lpBaseOfDll; }
 
-static  void find_in_dll(dll_exports *exports, void *pc, symbolic_pc *spc);
-static  void find_in_exe(dll_exports *exports, void *pc, symbolic_pc *spc);
+static  void find_in_dll(dll_exports *exports, ulong pc, symbolic_pc *spc);
+static  void find_in_exe(dll_exports *exports, ulong pc, symbolic_pc *spc);
 #if COGVM
-static  void find_in_cog(dll_exports *exports, void *pc, symbolic_pc *spc);
+static  void find_in_cog(dll_exports *exports, ulong pc, symbolic_pc *spc);
 extern sqInt nilObject(void);
 extern usqInt stackLimitAddress(void);
 #endif
@@ -346,10 +346,10 @@ dll_exports_for_pc(void *retpc)
 static void compute_dll_symbols(dll_exports *exports);
 
 static void
-find_in_dll(dll_exports *exports, void *pcval, symbolic_pc *spc)
+find_in_dll(dll_exports *exports, ulong pcval, symbolic_pc *spc)
 {
 	int i;
-	ulong pc = (ulong)pcval - (ulong)exports->info.lpBaseOfDll;
+	ulong pc = pcval - (ulong)exports->info.lpBaseOfDll;
 
 	spc->mname = strrchr(exports->name,'\\')
 					? strrchr(exports->name,'\\') + 1
@@ -359,13 +359,14 @@ find_in_dll(dll_exports *exports, void *pcval, symbolic_pc *spc)
 		compute_dll_symbols(exports);
 
 	for (i = 0; i < exports->n; i++) {
-		ulong addr = exports->functions[exports->sorted_ordinals[i]];
+		int ordinal = exports->sorted_ordinals[i];
+		ulong addr = exports->functions[ordinal];
 		if (pc >= addr
 		 && (  i + 1 >= exports->n
 			|| pc < exports->functions[exports->sorted_ordinals[i + 1]])) {
 			spc->fnameOrSelector = (char *)
-					(exports->u.funcNameOffsets[exports->sorted_ordinals[i]]
-					+ (ulong)exports->module);
+									(exports->u.funcNameOffsets[ordinal]
+									+ (ulong)exports->module);
 			spc->offset = pc - addr;
 			return;
 		}
@@ -377,7 +378,7 @@ find_in_dll(dll_exports *exports, void *pcval, symbolic_pc *spc)
 static void compute_exe_symbols(dll_exports *exports);
 
 static void
-find_in_exe(dll_exports *exports, void *pc, symbolic_pc *spc)
+find_in_exe(dll_exports *exports, ulong pc, symbolic_pc *spc)
 {
 	int i;
 
@@ -388,27 +389,58 @@ find_in_exe(dll_exports *exports, void *pc, symbolic_pc *spc)
 	if (!exports->initialized)
 		compute_exe_symbols(exports);
 
+	// With MSVC/Clang the map file is unsorted, so there are sorted ordinals
+	// With cygwin/mingw the map file is sorted, so there are no sorted_ordinals
+#if _MSC_VER
 	for (i = 0; i < exports->n; i++) {
-		ulong addr = exports->functions[i];
-		if ((ulong)pc >= addr
-		 && (  i + 1 >= exports->n
-			|| (ulong)pc < exports->functions[i + 1])) {
-			spc->fnameOrSelector = exports->u.funcNames[i];
-			spc->offset = (ulong)pc - addr;
+		int ordinal = exports->sorted_ordinals[i];
+		ulong addr = exports->functions[ordinal];
+		if (pc >= addr
+		 && (  ordinal + 1 >= exports->n
+			|| pc < exports->functions[exports->sorted_ordinals[i + 1]])) {
+			spc->fnameOrSelector = (char *)exports->u.funcNames[ordinal];
+			spc->offset = pc - addr;
 			return;
 		}
 	}
+#else
+	for (i = 0; i < exports->n; i++) {
+		ulong addr = exports->functions[i];
+		if (pc >= addr
+		 && (  i + 1 >= exports->n
+			|| pc < exports->functions[i + 1])) {
+			spc->fnameOrSelector = exports->u.funcNames[i];
+			spc->offset = pc - addr;
+			return;
+		}
+	}
+#endif
 	spc->fnameOrSelector = 0;
-	spc->offset = (ulong)pc - (ulong)exports->module;
+	spc->offset = pc - (ulong)exports->module;
 }
+
+// Rather than sort entries we deal with unsorted files by sorting indices into
+// them.
+static ulong *funcs_for_ordcmp;
+static int
+ordcmp(const void *a, const void *b)
+{ return funcs_for_ordcmp[*(int *)a] - funcs_for_ordcmp[*(int *)b]; }
 
 static void
 compute_exe_symbols(dll_exports *exports)
 {
-#if defined(_MSV_VER)
-# error parse of MSVC .map file as yet unimplemented
-# error Let me (eliot) suggest you get the Makefile to generate a BSD-style
-# error format from the MSVC /map file instead of writing the parser here.
+	char filename[MAX_PATH];
+	FILE *f;
+
+	strcpy(filename, exports->name);
+	strcpy(strrchr(filename,'.')+1,"map");
+
+	if (!(f = fopen(filename,"r"))) {
+		printLastError(TEXT("fopen"));
+		return;
+	}
+
+#if defined(_MSC_VER)
 /* Create the file using "cl .... /link /map"
  * Parse it by looking for lines beginning with " 0001:" where 0001 is the
  * segment number of the .text segment.  Representative lines look like
@@ -421,6 +453,71 @@ compute_exe_symbols(dll_exports *exports)
  * Be sure to look for global and static symbols.  The character "f" tells you
  * that this is a line for a function.
  */
+	int nsyms = 0, nchars = 0, n = 0;
+	ulong offset, interpretLogicalAddress = 0;
+	char fname[256], *symbols;
+
+	while (!feof(f)) {
+		// First scan to find number of symbols, the total symbol string size,
+		// and the logical address of interpret.
+		if (fscanf(f,
+# if _WIN64
+					" 0001:%llx %[^ 	] %*llx f %*[^ 	\n]\n",
+# else
+					" 0001:%lx %[^ 	] %*lx f %*[^ 	\n]\n",
+# endif
+					&offset, fname) == 2) {
+			nsyms += 1;
+			nchars += strlen(fname) + 1;
+			if (!interpretLogicalAddress
+			 && !strcmp("interpret",fname[0] == '_' ? fname + 1 : fname))
+				interpretLogicalAddress = offset;
+		}
+		else
+			fscanf(f,"%*[^\n]\n");
+	}
+	_fseeki64(f,0,SEEK_SET);
+	if (!(exports->functions		= calloc(nsyms,sizeof(ulong)))
+	 || !(exports->u.funcNames		= calloc(nsyms,sizeof(char *)))
+	 || !(exports->sorted_ordinals	= calloc(nsyms,sizeof(int)))
+	 || !(symbols					= calloc(nchars,sizeof(char)))) {
+		printLastError(TEXT("malloc"));
+		fclose(f);
+		return;
+	}
+	while (!feof(f)) {
+		if (fscanf(f,
+# if _WIN64
+					" 0001:%llx %[^ 	] %*llx f %*[^ 	\n]\n",
+# else
+					" 0001:%lx %[^ 	] %*lx f %*[^ 	\n]\n",
+# endif
+					&offset, symbols) == 2) {
+			exports->functions[n] = offset + ((ulong)interpret
+											- interpretLogicalAddress);
+			exports->u.funcNames[n] = symbols;
+			exports->sorted_ordinals[n] = n;
+			++n;
+			symbols += strlen(symbols) + 1;
+		}
+		else
+			fscanf(f,"%*[^\n]\n");
+	}
+	fclose(f);
+	exports->n = n;
+	exports->initialized = 1;
+	funcs_for_ordcmp = exports->functions;
+	qsort(exports->sorted_ordinals, n, sizeof(int), ordcmp);
+
+# if DBGPRINT // this to dump the symbols once sorted for checking
+	int i;
+	for (i = 0; i < n; i++)
+		printf("%3d %" PRIxSQINT " %s\n",
+				exports->sorted_ordinals[i],
+				exports->functions[exports->sorted_ordinals[i]]
+				+ (ulong)exports->module,
+				exports->u.funcNames[exports->sorted_ordinals[i]]);
+# endif
 #else  /* assume a BSD-style nm output as in
 		* nm --numeric-sort --defined-only -f bsd $(VMEXE) >$(VMMAP)
 		* where typical lines look like
@@ -442,18 +539,9 @@ compute_exe_symbols(dll_exports *exports)
 /* Read the entire file into memory.  We can use the string as the string table.
  * Once we've counted the lines we can parse and read the start addresses.
  */
-	char filename[MAX_PATH];
 	char *contents;
-	FILE *f;
 	int pos, len, nlines, n;
 
-	strcpy(filename, exports->name);
-	strcpy(strrchr(filename,'.')+1,"map");
-
-	if (!(f = fopen(filename,"r"))) {
-		printLastError(TEXT("fopen"));
-		return;
-	}
 	_fseeki64(f,0,SEEK_END);
 	len = _ftelli64(f);
 	_fseeki64(f,0,SEEK_SET);
@@ -489,8 +577,11 @@ compute_exe_symbols(dll_exports *exports)
 		ulong addr;
 		char  type, *symname;
 
-		/* Note: Scan format should better be SCNuSQPTR according to C99, if ever different from print format - but we did not define that macro */
-		asserta(sscanf(contents + pos, "%" PRIxSQPTR " %c", &addr, &type) == 2);
+# if _WIN64
+		asserta(sscanf(contents + pos, "%llx %c", &addr, &type) == 2);
+# else
+		asserta(sscanf(contents + pos, "%lx %c", &addr, &type) == 2);
+# endif
 		symname = strrchr(contents + pos, ' ') + 1;
 		if ((type == 't' || type == 'T')
 		 && strcmp(symname,".text")) {
@@ -501,25 +592,22 @@ compute_exe_symbols(dll_exports *exports)
 		pos += strlen(contents + pos) + 1;
 	}
 	exports->n = n;
-#endif
-#if DBGPRINT
+	exports->initialized = 1;
+	assert(exports->sorted_ordinals == 0);
+
+# if DBGPRINT
 	for (n = 0; n < exports->n; n++)
 		printf("exe [%p] %s\n",
 				exports->functions[exports->sorted_ordinals[n]],
 				exports->u.funcNames[exports->sorted_ordinals[n]]);
+# endif
 #endif
-	exports->initialized = 1;
 }
 
 /* See e.g. PEDump
 	http://msdn.microsoft.com/en-us/library/ms809762.aspx
 	http://msdn.microsoft.com/en-us/library/bb985994.aspx
  */
-
-static ulong *funcs_for_ordcmp;
-static int
-ordcmp(const void *a, const void *b)
-{ return funcs_for_ordcmp[*(int *)a] - funcs_for_ordcmp[*(int *)b]; }
 
 static void
 compute_dll_symbols(dll_exports *exports)
@@ -585,33 +673,33 @@ compute_dll_symbols(dll_exports *exports)
 
 #if DBGPRINT // this to dump the symbols once sorted for checking
 	for (i = 0; i < n; i++)
-		printf("%3d %lx %s\n",
+		printf("%3d %" PRIxSQPTR " %s\n",
 				exports->sorted_ordinals[i],
 				exports->functions[exports->sorted_ordinals[i]]
 				+ (ulong)exports->module,
-				exports->u.funcNameOffsets[exports->sorted_ordinals[i]]
-				+ (ulong)exports->module);
+				(char *)(exports->u.funcNameOffsets[exports->sorted_ordinals[i]]
+						+ (ulong)exports->module));
 #endif
 }
 
 #if COGVM
 static void
-find_in_cog(dll_exports *exports, void *pc, symbolic_pc *spc)
+find_in_cog(dll_exports *exports, ulong pc, symbolic_pc *spc)
 {
 	CogMethod *cogMethod;
 
 	spc->mname = (char *)&exports->name;
 
-	if ((spc->fnameOrSelector = codeEntryNameFor(pc)))
-		spc->offset = (ulong)pc - (ulong)codeEntryFor(pc);
-	else if ((cogMethod = methodFor(pc))) {
+	if ((spc->fnameOrSelector = codeEntryNameFor((char *)pc)))
+		spc->offset = pc - (ulong)codeEntryFor((char *)pc);
+	else if ((cogMethod = methodFor((char *)pc))) {
 		spc->fnameOrSelector = cogMethod->selector == nilObject()
 								? "Cog method with nil selector"
 								: (char *)(cogMethod->selector);
-		spc->offset = (ulong)pc - (ulong)cogMethod;
+		spc->offset = pc - (ulong)cogMethod;
 	}
 	else
-		spc->offset = (ulong)pc - (ulong)exports->info.lpBaseOfDll;
+		spc->offset = pc - (ulong)exports->info.lpBaseOfDll;
 }
 #endif
 
