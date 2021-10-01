@@ -263,6 +263,9 @@ static int x2sqKeyPlain(XKeyEvent *xevt, KeySym *symbolic);
 static int x2sqKeyInput(XKeyEvent *xevt, KeySym *symbolic);
 static int x2sqKeyCompositionInput(XKeyEvent *xevt, KeySym *symbolic);
 
+static int xkey2sqVirtualKeyCode(int xKeycode, KeySym xKeysym);
+static int xkeysym2ucs4(KeySym keysym);
+
 static x2sqKey_t x2sqKey= x2sqKeyPlain;
 
 static int multi_key_pressed = 0;
@@ -1745,8 +1748,6 @@ retrieveLastKeyValue(XKeyEvent *xevt)
   return value;
 }
 
-static int xkeysym2ucs4(KeySym keysym);
-
 static int x2sqKeyInput(XKeyEvent *xevt, KeySym *symbolic)
 {
   static int initialised= 0;
@@ -1956,7 +1957,7 @@ static int x2sqKeyCompositionInput(XKeyEvent *xevt, KeySym *symbolic)
 }
 
 #if DEBUG_KEYBOARD_EVENTS
-static const char *nameForKeycode(int keycode);
+static const char *nameForKeysym(KeySym keysym);
 #endif
 
 static int x2sqKeyPlain(XKeyEvent *xevt, KeySym *symbolic)
@@ -1972,7 +1973,7 @@ static int x2sqKeyPlain(XKeyEvent *xevt, KeySym *symbolic)
 	fprintf(stderr, "%d(%02x)%c", buf[i], buf[i], i + 1 < nConv ? ',' : ']');
   }
   fprintf(stderr, " %d(%02x) -> %d(%02x) (keysym %04x %s)\n",
-	 xevt->keycode, xevt->keycode, charCode, charCode, *symbolic, nameForKeycode(*symbolic));
+	 xevt->keycode, xevt->keycode, charCode, charCode, *symbolic, nameForKeysym(*symbolic));
 #endif
   if (!nConv && (charCode= translateCode(*symbolic, &modifierState, xevt)) < 0)
       return -1;	/* unknown key */
@@ -1989,6 +1990,11 @@ static int x2sqKeyPlain(XKeyEvent *xevt, KeySym *symbolic)
   }
 #endif
   return charCode;
+}
+
+static int xkey2sqVirtualKeyCode(int xKeycode, KeySym xKeysym)
+{
+  return xKeycode;
 }
 
 
@@ -2490,8 +2496,8 @@ display_clipboardSizeWithType(char *typeName, int nTypeName)
 /*
 grep '^#[ 	]*define[ 	][ 	]*XK_.*0x[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][^0-9a-fA-F]' /usr/include/X11/*.h |  sed 's/^.*\(XK_[^     ]*\)[   ]*\(0x[0-9a-fA-F]*\).*$/{ "\1", \2 }, /'
 */
-typedef struct { char *name; int code; } KeyNameEntry;
-static KeyNameEntry codes[] = {
+typedef struct { char *name; int keysym; } KeyNameEntry;
+static KeyNameEntry keyNameEntries[] = {
 { "XK_BackSpace", 0xff08 }, 
 { "XK_Linefeed", 0xff0a }, 
 { "XK_Return", 0xff0d }, 
@@ -3481,18 +3487,23 @@ static KeyNameEntry codes[] = {
 { 0, 0 }};
 
 static const char *
-nameForKeycode(int keycode)
+nameForKeysym(KeySym keysym)
 {	KeyNameEntry *kne;
 
-	for (kne = codes; kne->name; kne++)
-		if (kne->code == keycode)
+	for (kne = keyNameEntries; kne->name; kne++)
+		if (kne->keysym == keysym)
 			return kne->name;
 
-	return "UNKNOWN CODE";
+	return "UNKNOWN KEYSYM";
 }
 
 static const char *
-nameForKeyboardEvent(XEvent *evt) { return nameForKeycode(evt->xkey.keycode); }
+nameForKeyboardEvent(XEvent *evt)
+{
+  KeySym symbolic=0;
+  XLookupString(evt, 0, 0, &symbolic, 0);
+  return nameForKeysym(symbolic);
+}
 #endif /* DEBUG_EVENTS */
 
 extern sqInt sendWheelEvents; /* If true deliver EventTypeMouseWheel else kybd */
@@ -3638,13 +3649,14 @@ handleEvent(XEvent *evt)
 		else if (evt->xbutton.button <= 5) { /* only emulate up/down, as left/right
 												is used for text editing */
 		  int keyCode = mouseWheel2Squeak[evt->xbutton.button - 4];
+      int ascii = keyCode;
 		  /* Set every meta bit to distinguish the fake event from a real
 		   * right/left arrow.
 		   */
 		  int modifiers = modifierState | (CtrlKeyBit|OptionKeyBit|CommandKeyBit|ShiftKeyBit);
-		  recordKeyboardEvent(keyCode, EventKeyDown, modifiers, keyCode);
-		  recordKeyboardEvent(keyCode, EventKeyChar, modifiers, keyCode);
-		  recordKeyboardEvent(keyCode, EventKeyUp,   modifiers, keyCode);
+		  recordKeyboardEvent(keyCode, EventKeyDown, modifiers, 0);
+		  recordKeyboardEvent(ascii, EventKeyChar, modifiers, ascii);
+		  recordKeyboardEvent(keyCode, EventKeyUp,   modifiers, 0);
 		}
 	  }
 	  else
@@ -3671,9 +3683,10 @@ handleEvent(XEvent *evt)
       noteEventState(evt->xkey);
       {
 	KeySym symbolic= 0;
-	int keyCode= x2sqKey(&evt->xkey, &symbolic);
+	int ascii= x2sqKey(&evt->xkey, &symbolic);
 	int ucs4= xkeysym2ucs4(symbolic);
-	DCONV_PRINTERR("symbolic, keyCode, ucs4: %x, %d, %x\n", symbolic, keyCode, ucs4);
+  int virtualKeyCode= xkey2sqVirtualKeyCode(evt->xkey.keycode, symbolic);
+	DCONV_PRINTERR("symbolic, ascii, ucs4: %x, %d, %x\n", symbolic, ascii, ucs4);
 	DCONV_PRINTERR("pressed, buffer: %d, %x\n", multi_key_pressed, multi_key_buffer);
 	if (multi_key_pressed && multi_key_buffer == 0)
 	  {
@@ -3682,7 +3695,7 @@ handleEvent(XEvent *evt)
 #              define key_case(sym, code)		\
 	        case sym:				\
 	          multi_key_buffer= (code);		\
-		  keyCode= -1;				\
+		  ascii= -1;				\
 	          ucs4= -1;				\
 	          break;
 		key_case(0x60, 0x0300); /* grave */
@@ -3703,13 +3716,13 @@ handleEvent(XEvent *evt)
 	        if (multi_key_buffer == code)		\
 		  {					\
 		    multi_key_buffer= 0;		\
-		    keyCode= orig;			\
+		    ascii= orig;			\
 		    ucs4= orig;				\
 		  }					\
 		else					\
 		  {					\
 		    multi_key_buffer= (code);		\
-		    keyCode= -1;			\
+		    ascii= -1;			\
 		    ucs4= -1;				\
 		  }					\
 	        break;
@@ -3739,21 +3752,20 @@ handleEvent(XEvent *evt)
 	      DCONV_PRINTERR("multi_key reset\n");
 	    }
 	  }
-	DCONV_PRINTERR("keyCode, ucs4, multi_key_buffer: %d, %d, %x\n", keyCode, ucs4, multi_key_buffer);
-	if (keyCode >= 0)
+	DCONV_PRINTERR("ascii, ucs4, multi_key_buffer: %d, %d, %x\n", ascii, ucs4, multi_key_buffer);
+	if (ascii >= 0)
 	  {
-	    recordKeystroke(keyCode);			/* DEPRECATED */
+	    recordKeystroke(ascii);			/* DEPRECATED */
 	    if (multi_key_buffer != 0)
 	      recordKeystroke(multi_key_buffer);
 	  }
-	if ((keyCode >= 0) || (ucs4 > 0))
+	if ((ascii >= 0) || (ucs4 > 0))
 	  {
-	    recordKeyboardEvent(evt->xkey.keycode, EventKeyDown, modifierState, evt->xkey.keycode);
+	    recordKeyboardEvent(virtualKeyCode, EventKeyDown, modifierState, 0);
 	    if (ucs4) /* only generate a key char event if there's a code. */
-		recordKeyboardEvent(keyCode, EventKeyChar, modifierState, ucs4);
+		recordKeyboardEvent(ascii, EventKeyChar, modifierState, ucs4);
 	    if (multi_key_buffer != 0)
 	      {
-		recordKeyboardEvent(multi_key_buffer, EventKeyDown, modifierState, multi_key_buffer);
 		recordKeyboardEvent(multi_key_buffer, EventKeyChar, modifierState, multi_key_buffer);
 		multi_key_buffer= 0;
 	      }
@@ -3765,7 +3777,7 @@ handleEvent(XEvent *evt)
       noteEventState(evt->xkey);
       {
 	KeySym symbolic;
-	int keyCode, ucs4;
+	int ascii, ucs4, virtualKeyCode;
 	if (XPending(stDisplay))
 	  {
 	    XEvent evt2;
@@ -3773,10 +3785,11 @@ handleEvent(XEvent *evt)
 	    if ((evt2.type == KeyPress) && (evt2.xkey.keycode == evt->xkey.keycode) && ((evt2.xkey.time - evt->xkey.time < 2)))
 	      break;
 	  }
-	keyCode= x2sqKey(&evt->xkey, &symbolic);
+	ascii= x2sqKey(&evt->xkey, &symbolic);
 	ucs4= xkeysym2ucs4(symbolic);
-	if ((keyCode >= 0) || (ucs4 > 0))
-	  recordKeyboardEvent(evt->xkey.keycode, EventKeyUp, modifierState, evt->xkey.keycode);
+  virtualKeyCode= xkey2sqVirtualKeyCode(evt->xkey.keycode, symbolic);
+	if ((ascii >= 0) || (ucs4 > 0))
+	  recordKeyboardEvent(virtualKeyCode, EventKeyUp, modifierState, 0);
       }
       break;
 
