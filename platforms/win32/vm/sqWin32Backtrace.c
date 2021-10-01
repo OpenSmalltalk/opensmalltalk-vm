@@ -71,7 +71,7 @@ backtrace(void **retpcs, int nrpcs)
 
 #elif defined(_M_IX86) || defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__)
 # if defined(__GNUC__)
-	asm volatile ("movq %%rbp, %0" : "=r"(__fp) : );
+	asm volatile ("movl %%ebp, %0" : "=r"(__fp) : );
 # else
 #	  error "don't know how to derive ebp with this compiler"
 # endif
