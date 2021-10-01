@@ -1992,9 +1992,109 @@ static int x2sqKeyPlain(XKeyEvent *xevt, KeySym *symbolic)
   return charCode;
 }
 
+/* Maps X11 key symbols to a one-byte, cross-platform compatible virtual-key code.
+ *
+ * 0x00         (unknown virtual key)
+ * 0x01         XK_space (shifted from Latin-1)
+ * 0x02         XK_comma (shifted from Latin-1 OR guessed from xKeycode)
+ * 0x03         XK_period (shifted from Latin-1 OR guessed from xKeycode)
+ * 0x04 .. 0x07 (unused)
+ *
+ * 0x08 .. 0x1f SPECIAL KEYS 1 (from all-mask 0xff00)
+ * 0x20 .. 0x29 NUMERIC ASCII KEYS (shifted from Latin-1)
+ * 0x2a .. 0x43 ALPHABETIC ASCII KEYS (shifted from Latin-1)
+ *
+ * 0x44         US_MINUS (guessed from xKeycode)
+ * 0x45         US_PLUS (guessed from xKeycode)
+ * 0x46         US_LBRACKET (guessed from xKeycode)
+ * 0x47         US_RBRACKET (guessed from xKeycode)
+ * 0x48         US_COLON (guessed from xKeycode)
+ * 0x49         US_QUOTE (guessed from xKeycode)
+ * 0x4a         US_TILDE (guessed from xKeycode)
+ * 0x4b         US_BACKSLASH (guessed from xKeycode)
+ * 0x4c         US_COMMA (guessed from xKeycode)
+ * 0x4d         US_PERIOD (guessed from xKeycode)
+ * 0x4e         US_SLASH (guessed from xKeycode)
+ * 0x4f         US_102 (guessed from xKeycode)
+ *
+ * 0x50 .. 0xff SPECIAL KEYS 2 (from all-mask 0xff00)
+ */
 static int xkey2sqVirtualKeyCode(int xKeycode, KeySym xKeysym)
 {
-  return xKeycode;
+  if (xKeysym >= XK_0 /* 0x30 */ && xKeysym <= XK_9 /* 0x39 */)
+    return xKeysym - 0x10; // to start at 0x20
+  if (xKeysym >= XK_A /* 0x41 */ && xKeysym <= XK_Z /* 0x5a */)
+    return xKeysym - 0x17; // to start at 0x2a
+  if (xKeysym >= XK_a && xKeysym <= XK_z)
+    return xKeysym - 0x20 - 0x17; // to lowercase and to start at 0x2a
+  switch (xKeysym)
+  {
+    case XK_space: return 0x01;
+    case XK_comma: return 0x02;
+    case XK_period: return 0x03;
+  }
+  if ((xKeysym & 0xff00) == 0xff00) // XK_MISCELLANY (e.g., backspace, return, numpad, ...)
+  {
+    int vKeyCode = xKeysym & 0x00ff;
+    if (vKeyCode > 0x07 /* end extra stuff */
+      && (vKeyCode < 0x20 /* begin Latin-1 */ || vKeyCode > 0x4f /* end Latin-1 */))
+       return vKeyCode;
+  }
+  if (xKeycode >= 10 && xKeycode <= 19) // hopefully physical keys 1, 2, ... 9, 0
+    return 0x20 + (xKeycode - 10 + 1) % 10;
+  switch (xKeycode)
+  {
+    /* Hopefully US QWERTY layout ... */
+    case 24: return XK_Q - 0x17;
+    case 25: return XK_W - 0x17;
+    case 26: return XK_E - 0x17;
+    case 27: return XK_R - 0x17;
+    case 28: return XK_T - 0x17;
+    case 29: return XK_Y - 0x17;
+    case 30: return XK_U - 0x17;
+    case 31: return XK_I - 0x17;
+    case 32: return XK_O - 0x17;
+    case 33: return XK_P - 0x17;
+
+    case 38: return XK_A - 0x17;
+    case 39: return XK_S - 0x17;
+    case 40: return XK_D - 0x17;
+    case 41: return XK_F - 0x17;
+    case 42: return XK_G - 0x17;
+    case 43: return XK_H - 0x17;
+    case 44: return XK_J - 0x17;
+    case 45: return XK_K - 0x17;
+    case 46: return XK_L - 0x17;
+
+    case 52: return XK_Z - 0x17;
+    case 53: return XK_X - 0x17;
+    case 54: return XK_C - 0x17;
+    case 55: return XK_V - 0x17;
+    case 56: return XK_B - 0x17;
+    case 57: return XK_N - 0x17;
+    case 58: return XK_M - 0x17;
+
+  /* At this point, we can only guess about the remaining OEM keys.
+   * We comment their use in a standard US layout. */
+    case 20: return 0x44; // US_MINUS
+    case 21: return 0x45; // US_PLUS
+
+    case 34: return 0x46; // US_LBRACKET
+    case 35: return 0x47; // US_RBRACKET
+
+    case 47: return 0x48; // US_COLON
+    case 48: return 0x49; // US_QUOTE
+    case 49: return 0x4a; // US_TILDE
+
+    case 51: return 0x4b; // US_BACKSLASH
+
+    case 59: return 0x4c; // US_COMMA
+    case 60: return 0x4d; // US_PERIOD
+    case 61: return 0x4e; // US_SLASH
+
+    case 94: return 0x4f; // US_102
+  }
+  return 0x00;
 }
 
 
@@ -3498,7 +3598,7 @@ nameForKeysym(KeySym keysym)
 }
 
 static const char *
-nameForKeyboardEvent(XEvent *evt)
+nameForKeyboardEvent(XKeyEvent *evt)
 {
   KeySym symbolic=0;
   XLookupString(evt, 0, 0, &symbolic, 0);
@@ -4158,7 +4258,7 @@ void initPixmap(void)
 	for (b= 0; b < 6; b++)
 	  {
 	    int i= 40 + ((36 * r) + (6 * b) + g);
-	    if (i > 255) error("index out of range in color table compuation");
+	    if (i > 255) perror("index out of range in color table compuation");
 	    initColourmap(i, (r * 65535) / 5, (g * 65535) / 5, (b * 65535) / 5);
 	  }
   }
