@@ -260,7 +260,7 @@ printRegisterState(FILE *file,ucontext_t *uap)
 			vr(__x[24]), vr(__x[25]), vr(__x[26]), vr(__x[27]),
 			vr(__x[28]), vr(__fp),    vr(__lr),    vr(__sp),
 			vr(__pc), regs->__cpsr);
-	return v(__pc);
+	return vr(__pc);
 #elif defined(__arm__) || defined(__arm32__)
 	_STRUCT_ARM_THREAD_STATE *regs = &uap->uc_mcontext->ss;
 	fprintf(file,
@@ -287,7 +287,7 @@ crashDumpFile()
 #if defined(PREFERENCES_RELATIVE_LOG_LOCATION)
 	FSRef fsRef;
 	if (!FSFindFolder(kUserDomain, kPreferencesFolderType, 1, &fsRef)
-	 && !FSRefMakePath(&fsRef, namebuf, PATH_MAX)) {
+	 && !FSRefMakePath(&fsRef, (unsigned char *)namebuf, PATH_MAX)) {
 		strncat(namebuf,"/" PREFERENCES_RELATIVE_LOG_LOCATION "/crash.dmp",PATH_MAX+1);
 		return fopen(namebuf,"a+");
 	}
