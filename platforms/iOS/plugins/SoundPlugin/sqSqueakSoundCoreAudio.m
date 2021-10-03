@@ -5,6 +5,7 @@
 //  Created by John M McIntosh on 11/10/08.
 //	Extended with the Terf additions in May 2017 by Eliot Miranda
 //	Corrected for device addition/removal issues Aug 2020 by Eliot Miranda
+//	AEC interface added June 2021 by Eliot Miranda
 /*
  Some of this code was funded via a grant from the European Smalltalk User Group (ESUG)
  Copyright (c) 2008 Corporate Smalltalk Consulting Ltd. All rights reserved.
@@ -30,7 +31,7 @@
  OTHER DEALINGS IN THE SOFTWARE.
 
  The end-user documentation included with the redistribution, if any, must
- include the following acknowledgment: 
+ include the following acknowledgment:
  "This product includes software developed by Corporate Smalltalk Consulting Ltd
   (http://www.smalltalkconsulting.com) and its contributors",
  in the same place and form as other third-party acknowledgments.  Alternately,
@@ -39,24 +40,71 @@
  */
 
 #import <CoreAudio/CoreAudio.h>
-#include <AVFoundation/AVCaptureDevice.h>
+#import <AVFoundation/AVCaptureDevice.h>
+#if 0 // this neater API is unavailable on macos :-(
+# import <AVFoundation/AVAudioSessionTypes.h>
+#endif
 
 #import "sqSqueakSoundCoreAudio.h"
 
 #import "sqMemoryFence.h"
 #import "sqAssert.h"
 
+// eem: this is really the sample size in bytes, two shorts for stereo
 #define SqueakFrameSize	4	// guaranteed (see class SoundPlayer)
-extern struct VirtualMachine* interpreterProxy;
+extern struct VirtualMachine *interpreterProxy;
 
-#if defined(MAC_OS_X_VERSION_10_14)
-static canAccessMicrophone = false;
-static askedToAccessMicrophone = false;
+#if TerfVM
+static int (*aecCaptureCallback)(uint frequency, uint channelCount, uint sampleCount, short *channelSamplesIn) = 0;
+static int aecCaptureFrameSize = 0;
+static int (*aecDequeueCallback)(short *channelSamples, uint size) = 0;
+static char doAEC = false;
+#endif
+
+#if defined(MAC_OS_X_VERSION_10_14) \
+ || defined(MAC_OS_X_VERSION_10_15) \
+ || defined(MAC_OS_VERSION_11_0)
+static char canAccessMicrophone = false;
+static char askedToAccessMicrophone = false;
 
 static void
 askToAccessMicrophone()
 {
 	askedToAccessMicrophone = true;
+
+	// If compiled on 10.14 etc we still must run on older so use a run-time
+	// OS version check
+
+	NSOperatingSystemVersion version = [[NSProcessInfo processInfo] operatingSystemVersion];
+
+	if (version.majorVersion < 10
+	 || (version.majorVersion == 10 && version.minorVersion < 14)) {
+		canAccessMicrophone = true;
+		return;
+	}
+
+# if 0 // this neater API is unavailable on macos :-(
+	switch ([AVAudioSession.sharedInstance().requestRecordPermission]) {
+	case AVAudioSessionRecordPermissionUndetermined: {
+		__block BOOL gotResponse = false;
+		const struct timespec rqt = {0,100000000}; // 1/10th sec
+		[AVAudioSession.sharedInstance().requestRecordPermission:
+			^(BOOL granted) {
+								gotResponse = true;
+								canAccessMicrophone = granted;
+							}];
+		while (!gotResponse)
+			nanosleep(&rqt,0);
+		break;
+	}
+	case AVAudioSessionRecordPermissionGranted:
+		canAccessMicrophone = true;
+		break;
+	case AVAudioSessionRecordPermissionDenied:
+		canAccessMicrophone = false;
+		break;
+	}
+# else
 	// Request permission to access the microphone.
 	// This API is only available in the 10.14 SDK and subsequent.
 	switch ([AVCaptureDevice authorizationStatusForMediaType: AVMediaTypeAudio]) {
@@ -71,8 +119,9 @@ askToAccessMicrophone()
 			[AVCaptureDevice
 				requestAccessForMediaType: AVMediaTypeAudio
 				completionHandler: ^(BOOL granted) {
-										gotResponse = true;
 										canAccessMicrophone = granted;
+										gotResponse = true;
+										sqLowLevelMFence();
 									}];
 			while (!gotResponse)
 				nanosleep(&rqt,0);
@@ -87,15 +136,19 @@ askToAccessMicrophone()
 			// The user can't grant access due to restrictions.
 			canAccessMicrophone = false;
 	}
+# endif
 }
 #endif
 
 static __inline bool
 ensureMicrophoneAccess()
 {
-#if defined(MAC_OS_X_VERSION_10_14)
+#if defined(MAC_OS_X_VERSION_10_14) \
+ || defined(MAC_OS_X_VERSION_10_15) \
+ || defined(MAC_OS_VERSION_11_0)
 	if (!askedToAccessMicrophone)
 		askToAccessMicrophone();
+
 	if (!canAccessMicrophone)
 		interpreterProxy->primitiveFailFor(PrimErrInappropriate);
 	return canAccessMicrophone;
@@ -105,11 +158,11 @@ ensureMicrophoneAccess()
 }
 
 static void
-MyAudioQueueOutputCallback (sqSqueakSoundCoreAudio *myInstance,
+MyAudioQueueOutputCallback (sqSqueakSoundCoreAudio *mySelf,
 							AudioQueueRef           inAQ,
-							AudioQueueBufferRef     inBuffer) {
-
-	soundAtom	*atom = [myInstance.soundOutQueue returnOldest];
+							AudioQueueBufferRef     inBuffer)
+{
+	soundAtom	*atom = [mySelf.soundOutQueue returnOldest];
 
 	if (!atom) {
 		inBuffer->mAudioDataByteSize   = MIN(inBuffer->mAudioDataBytesCapacity,2644);
@@ -117,7 +170,7 @@ MyAudioQueueOutputCallback (sqSqueakSoundCoreAudio *myInstance,
 		//NSLog(@"%i Fill sound buffer with zero %i bytes",ioMSecs(),inBuffer->mAudioDataByteSize);
 	}
 	else if (inBuffer->mAudioDataBytesCapacity >= atom.byteCount) {
-		atom = [myInstance.soundOutQueue returnAndRemoveOldest];
+		atom = [mySelf.soundOutQueue returnAndRemoveOldest];
 		inBuffer->mAudioDataByteSize = atom.byteCount;
 		memcpy(inBuffer->mAudioData,atom.data,atom.byteCount);
 		RELEASEOBJ(atom);
@@ -128,13 +181,13 @@ MyAudioQueueOutputCallback (sqSqueakSoundCoreAudio *myInstance,
 		memcpy(inBuffer->mAudioData,atom.data+atom.startOffset,inBuffer->mAudioDataByteSize);
 		atom.startOffset = atom.startOffset + inBuffer->mAudioDataByteSize;
 		if (atom.startOffset == atom.byteCount) {
-			atom = [myInstance.soundOutQueue returnAndRemoveOldest]; //ignore now it's empty
+			atom = [mySelf.soundOutQueue returnAndRemoveOldest]; //ignore now it's empty
 			RELEASEOBJ(atom);
 		}
 //NSLog(@"%i Fill sound buffer with %i bytesB",ioMSecs(),inBuffer->mAudioDataByteSize);
 	}
-	AudioQueueEnqueueBuffer(inAQ,inBuffer,0,nil);			
-	interpreterProxy->signalSemaphoreWithIndex(myInstance.semaIndexForOutput);	
+	AudioQueueEnqueueBuffer(inAQ,inBuffer,0,nil);
+	interpreterProxy->signalSemaphoreWithIndex(mySelf.semaIndexForOutput);
 }
 
 static void
@@ -143,19 +196,62 @@ MyAudioQueueInputCallback ( void                  *inUserData,
 							AudioQueueBufferRef    inBuffer,
 							const AudioTimeStamp  *inStartTime,
 							UInt32                 inNumberPacketDescriptions,
-							const AudioStreamPacketDescription  *inPacketDescs) {
-	sqSqueakSoundCoreAudio *myInstance = (__bridge  sqSqueakSoundCoreAudio *)inUserData;
+							const AudioStreamPacketDescription  *inPacketDescs)
+{
+	sqSqueakSoundCoreAudio *mySelf = (__bridge  sqSqueakSoundCoreAudio *)inUserData;
 
-	if (!myInstance.inputIsRunning) 
+	// We're using a constant bit rate format (CBR) consequently no encoding.
+
+	assert(!inPacketDescs);
+	assert(inNumberPacketDescriptions
+		== inBuffer->mAudioDataByteSize / sizeof(short));
+
+	// Either inactive, or no input data.
+	// Nothing to do other than recycle the buffer
+	if (!mySelf.inputIsRunning
+	 || !inNumberPacketDescriptions) {
+		// recycle the input buffer
+		AudioQueueEnqueueBuffer (inAQ, inBuffer, 0, NULL);
 		return;
+	}
 
-	if (inNumberPacketDescriptions > 0) {
-		soundAtom *atom = AUTORELEASEOBJ([[soundAtom alloc] initWith: inBuffer->mAudioData count: inBuffer->mAudioDataByteSize]);
-		[myInstance.soundInQueue addItem: atom];
-    }
+#if TerfVM
+	// Provision for echo cancellation.  Two APIs, cancel in-place or queue.
 
-	AudioQueueEnqueueBuffer (inAQ, inBuffer, 0, NULL);
-	interpreterProxy->signalSemaphoreWithIndex(myInstance.semaIndexForInput);	
+	// If the buffer size of an atom is not a multiple of the AEC frame
+	// size then we need to use a queue. Data is sent to the canceller.
+	// The canceller puts the data in a ring buffer before processing as
+	// much data as possible, and putting the cancelled output in the
+	// output queue. snd_RecordSamplesIntoAtLength:... extracts the
+	// cancelled data from the queue via the aecDequeueCallback.
+	//
+	// If aecCaptureCallback answers < 0 then the AEC is not active.
+
+	if (doAEC
+	 && aecCaptureCallback
+	 && aecCaptureCallback(	mySelf.inputSampleRate,
+							mySelf.inputChannels,
+							inNumberPacketDescriptions,
+							(short *)inBuffer->mAudioData) >= 0) {
+		// the aecDequeueCallback better be in place...
+		assert(aecDequeueCallback);
+		// recycle the input buffer
+		AudioQueueEnqueueBuffer (inAQ, inBuffer, 0, NULL);
+		interpreterProxy->signalSemaphoreWithIndex(mySelf.semaIndexForInput);
+		return;
+	}
+	// If not active, fall through...
+#endif
+
+	soundAtom *atom = AUTORELEASEOBJ([[soundAtom alloc]
+										initWith: inBuffer->mAudioData
+										count: inBuffer->mAudioDataByteSize]);
+	[mySelf.soundInQueue addItem: atom];
+
+	// recycle the input buffer
+	AudioQueueEnqueueBuffer(inAQ, inBuffer, 0, NULL);
+
+	interpreterProxy->signalSemaphoreWithIndex(mySelf.semaIndexForInput);
 }
 
 
@@ -177,11 +273,11 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 }
 
 @implementation soundAtom
-@synthesize	data; 
+@synthesize	data;
 @synthesize	byteCount;
 @synthesize	startOffset;
 
-- (instancetype) initWith: (char*) buffer count: (usqInt) bytes {
+- (instancetype) initWith: (char *) buffer count: (usqInt) bytes {
 	data = malloc(bytes);
 	memcpy(data,buffer,bytes);
 	byteCount = bytes;
@@ -240,6 +336,10 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 
 - (sqInt) soundShutdown {
 	//NSLog(@"%i sound shutdown",ioMSecs());
+#if TerfVM
+	doAEC = false;
+	sqLowLevelMFence();
+#endif
 	if (self.outputAudioQueue)
 		[self snd_StopAndDispose];
 	if (self.inputAudioQueue)
@@ -249,11 +349,11 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 
 - (sqInt)	snd_Start: (sqInt) frameCount samplesPerSec: (sqInt) samplesPerSec stereo: (sqInt) stereo semaIndex: (sqInt) semaIndex {
 	//NSLog(@"%i sound start playing frame count %i samples %i",ioMSecs(),frameCount,samplesPerSec);
-	int nChannels = 1 + (int)stereo;
 
-	if (frameCount <= 0 || samplesPerSec <= 0 || stereo < 0 || stereo > 1) 
+	if (frameCount <= 0 || samplesPerSec <= 0 || stereo < 0 || stereo > 1)
 		return 0; /* Causes primitive failure in primitiveSoundStart[WithSemaphore] */
 
+	int nChannels = 1 + (int)stereo;
 	self.semaIndexForOutput = semaIndex;
 	AudioStreamBasicDescription check;
 	bzero(&check,sizeof(AudioStreamBasicDescription));
@@ -275,7 +375,7 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 	}
 	//NSLog(@"%i create new audioqueue",ioMSecs());
 	AudioQueueRef newQueue;
-	if (self.outputAudioQueue) 
+	if (self.outputAudioQueue)
 		[self snd_StopAndDispose];
 	*self.outputFormat = check;
 	if (AudioQueueNewOutput(self.outputFormat,
@@ -303,13 +403,13 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 		kAudioObjectPropertyScopeGlobal,
 		kAudioObjectPropertyElementMaster
 	};
-	if (AudioObjectAddPropertyListener(kAudioObjectSystemObject, 
+	if (AudioObjectAddPropertyListener(kAudioObjectSystemObject,
 										&deviceAddress,
 										MyAudioDevicesListener,
 										nil))
 		warning("failed to set output device notification");
 	deviceAddress.mSelector = kAudioHardwarePropertyDefaultInputDevice;
-	if (AudioObjectAddPropertyListener(kAudioObjectSystemObject, 
+	if (AudioObjectAddPropertyListener(kAudioObjectSystemObject,
 									&deviceAddress,
 									MyAudioDevicesListener,
 									nil))
@@ -330,16 +430,16 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 		return 1;
 	//NSLog(@"%i sound stop",ioMSecs());
 	self.outputIsRunning = NO;
-	if (!self.outputAudioQueue) 
+	if (!self.outputAudioQueue)
 		return 0;
 	OSStatus result = AudioQueueStop (self.outputAudioQueue,true);  //This implicitly invokes AudioQueueReset
-	if (result) 
+	if (result)
 		return 0;
 	return 1;
 }
 
 - (void) snd_Stop_Force {
-	if (!self.outputAudioQueue) 
+	if (!self.outputAudioQueue)
 		return;
 	//NSLog(@"%i sound stop force",ioMSecs());
 	OSStatus result = AudioQueueStop (self.outputAudioQueue,true);  //This implicitly invokes AudioQueueReset
@@ -348,7 +448,7 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 
 - (sqInt)	snd_StopAndDispose {
 	//NSLog(@"%i sound stopAndDispose",ioMSecs());
-	if (!self.outputAudioQueue) 
+	if (!self.outputAudioQueue)
 		return 0;
 
 	[self snd_Stop];
@@ -373,7 +473,7 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 	OSStatus result;
 	usqInt byteCount= frameCount * SqueakFrameSize;
 
-	if (!self.outputAudioQueue || frameCount <= 0 || startIndex > byteCount) 
+	if (!self.outputAudioQueue || frameCount <= 0 || startIndex > byteCount)
 		return -1; /* Causes primtive failure in primitiveSoundPlaySamples */
 	//NSLog(@"%i sound place samples on queue frames %i startIndex %i count %i",ioMSecs(),frameCount,startIndex,byteCount-startIndex);
 
@@ -392,14 +492,14 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 	return 1;
 }
 
-- (sqInt)	snd_InsertSamplesFromLeadTime: (sqInt) frameCount srcBufPtr: (char*) srcBufPtr samplesOfLeadTime: (sqInt) samplesOfLeadTime {
-	//NOT IMPLEMEMENTED 
+- (sqInt)	snd_InsertSamplesFromLeadTime: (sqInt) frameCount srcBufPtr: (char *) srcBufPtr samplesOfLeadTime: (sqInt) samplesOfLeadTime {
+	//NOT IMPLEMEMENTED
 	return 0;
 }
 
 - (sqInt)	snd_StartRecording: (sqInt) desiredSamplesPerSec stereo: (sqInt) stereo semaIndex: (sqInt) semaIndex {
 
-	if (desiredSamplesPerSec <= 0 || stereo < 0 || stereo > 1) 
+	if (desiredSamplesPerSec <= 0 || stereo < 0 || stereo > 1)
 		return interpreterProxy->primitiveFailFor(PrimErrBadArgument);
 
 	if (!ensureMicrophoneAccess())
@@ -409,8 +509,22 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 		[self snd_StopRecording];
 
 	self.semaIndexForInput = semaIndex;
-	self.inputSampleRate = (float) desiredSamplesPerSec;
-	sqInt frameCount = 5288 * desiredSamplesPerSec / 44100;
+	self.inputSampleRate = desiredSamplesPerSec;
+
+// Bizarre default frame count at 44.1kHz this is 119.9 ms (!!)
+#define DefaultRecordFrameSamplesAt441kHz 5288
+#undef DefaultRecordFrameSamplesAt441kHz
+// 5292 would be 120ms
+// 4410 would be 100ms
+#define DefaultRecordFrameSamplesAt441kHz 4410
+
+#if TerfVM
+	const sqInt frameCount = aecCaptureFrameSize
+							? aecCaptureFrameSize
+							: DefaultRecordFrameSamplesAt441kHz * desiredSamplesPerSec / 44100;
+#else
+	const sqInt frameCount = DefaultRecordFrameSamplesAt441kHz * desiredSamplesPerSec / 44100;
+#endif
 	self.inputChannels = 1 + stereo;
 	self.inputFormat->mSampleRate = (Float64)desiredSamplesPerSec;
 	self.inputFormat->mFormatID = kAudioFormatLinearPCM;
@@ -422,7 +536,7 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 	self.inputFormat->mChannelsPerFrame = self.inputChannels;
 	self.inputFormat->mBitsPerChannel   = 16;
 
-	self.bufferSizeForInput = SqueakFrameSize * self.inputChannels * frameCount * 2 / 4;   
+	self.bufferSizeForInput = SqueakFrameSize * self.inputChannels * frameCount * 2 / 4;
 	//Currently squeak does this thing where it stops yet leaves data in queue, this causes us to loose data if the buffer is too big
 
 	AudioQueueRef newQueue;
@@ -446,13 +560,12 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 
 - (sqInt)	snd_StopRecording {
 
-	if (!ensureMicrophoneAccess()
-	 || !self.inputAudioQueue) 
+	if (!self.inputAudioQueue)
 		return 0;
 
 	self.inputIsRunning = 0;
 	OSStatus result = AudioQueueStop (self.inputAudioQueue,true);  //This implicitly invokes AudioQueueReset
-	if (result) 
+	if (result)
 		return 0;
 	result = AudioQueueDispose (self.inputAudioQueue,true);
 	self.inputAudioQueue = nil;
@@ -463,41 +576,88 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 - (double) snd_GetRecordingSampleRate {
 
 	if (!ensureMicrophoneAccess()
-	 || !self.inputAudioQueue) 
+	 || !self.inputAudioQueue)
 		return interpreterProxy->primitiveFail();
 
-	return inputSampleRate;
+	return (double)inputSampleRate;
 }
 
-- (sqInt)	snd_RecordSamplesIntoAtLength: (char*) arrayIndex startSliceIndex: (usqInt) startSliceIndex bufferSizeInBytes: (usqInt) bufferSizeInBytes {
+// If data is available, copy as many sample slices as possible into the given
+// buffer starting at the given slice index. Do not write past the end of the
+// buffer, which is buf + bufferSizeInBytes. Return the number of slices (not
+// bytes) copied. A slice is one 16-bit sample in mono or two in stereo.
 
-	usqInt	count;
+- (sqInt) snd_RecordSamplesIntoAtLength: (char *) inputBuffer startSliceIndex: (usqInt) startSliceIndex bufferSizeInBytes: (usqInt) bufferSizeInBytes {
 
-	if (!ensureMicrophoneAccess()
-	 || !self.inputAudioQueue
-	 || startSliceIndex > bufferSizeInBytes) 
+	usqInt start = startSliceIndex * sizeof(short) * self.inputChannels;
+	sqInt count, total = 0;
+
+	if (!self.inputAudioQueue
+	 || start > bufferSizeInBytes)
 		return interpreterProxy->primitiveFail();
 
-	usqInt    start = startSliceIndex * SqueakFrameSize / 2;
-	soundAtom	*atom = [self.soundInQueue returnOldest];
-	if (!atom) 
-		return 0;
-	if (bufferSizeInBytes-start >= atom.byteCount
-	 && atom.startOffset == 0) {
-		atom = [self.soundInQueue returnAndRemoveOldest];
-		memcpy(arrayIndex+start,atom.data,atom.byteCount);
-		count= MIN(atom.byteCount, bufferSizeInBytes - start);
-        RELEASEOBJ(atom);
-		return count / (SqueakFrameSize / 2) / self.inputChannels;
+#if TerfVM
+	// See the use of aecCaptureCallback in MyAudioQueueInputCallback above.
+	// If aecDequeueCallback answers < 0 then the AEC is not active.
+
+	if (doAEC && aecDequeueCallback) {
+		usqInt remaining = (bufferSizeInBytes - start) / sizeof(short);
+		do {
+			count = aecDequeueCallback((short *)(inputBuffer + start), remaining);
+			if (count == 0)
+				return total / self.inputChannels;
+			if (total == 0 && count < 0) // break out if AEC not active
+				break;
+			total += count;
+			if (count == remaining)
+				return total / self.inputChannels;
+			remaining -= count;
+			start += count * sizeof(short);
+		} while (1);
 	}
-	count= MIN(atom.byteCount-atom.startOffset, bufferSizeInBytes - start);
-	memcpy(arrayIndex+start,atom.data+atom.startOffset,count);
-	atom.startOffset = atom.startOffset + (count);
+#endif
+
+	soundAtom *atom = [self.soundInQueue returnOldest];
+	if (!atom)
+		return 0;
+
+	// First deal with any partly emptied packets
+	if (atom.startOffset > 0) { // left over partial buffer
+		count = MIN(atom.byteCount-atom.startOffset, bufferSizeInBytes - start);
+		memcpy(inputBuffer+start,atom.data+atom.startOffset,count);
+		atom.startOffset = atom.startOffset + count;
+		// buffer is too small to hold the available samples. it's full; return
+		if (atom.startOffset < atom.byteCount)
+			return count / sizeof(short) / self.inputChannels;
+		atom = [self.soundInQueue returnAndRemoveOldest]; //ignore now it's empty
+		RELEASEOBJ(atom);
+		atom = [self.soundInQueue returnOldest];
+		total = count;
+		start += count;
+	}
+	// Now deal with as many packets as will fit
+	while (bufferSizeInBytes - start >= atom.byteCount
+	    && atom.startOffset == 0) {
+		atom = [self.soundInQueue returnAndRemoveOldest];
+		memcpy(inputBuffer+start,atom.data,atom.byteCount);
+		count = MIN(atom.byteCount, bufferSizeInBytes - start);
+		total += count;
+		start += count;
+        RELEASEOBJ(atom);
+		atom = [self.soundInQueue returnOldest];
+		if (!atom)
+			return total / sizeof(short) / self.inputChannels;
+	}
+	// Finally fill any remaining space in the buffer with some of the packet
+	count = MIN(atom.byteCount-atom.startOffset, bufferSizeInBytes - start);
+	total += count;
+	memcpy(inputBuffer+start,atom.data+atom.startOffset,count);
+	atom.startOffset = atom.startOffset + count;
 	if (atom.startOffset == atom.byteCount) {
 		atom = [self.soundInQueue returnAndRemoveOldest]; //ignore now it's empty
 		RELEASEOBJ(atom);
 	}
-	return count / (SqueakFrameSize / 2) / self.inputChannels;
+	return total / sizeof(short) / self.inputChannels;
 }
 
 // Terf SqSoundVersion 1.2 improvements
@@ -924,10 +1084,58 @@ setVolumeOf(AudioDeviceID deviceID, char which, float volume)
 		}
 }
 
-// For now simply don't attempt AEC. The web discussion is spotty and confusing.
-// So far we've only found AGC (automatic gain control) support.
-- (sqInt) snd_SupportsAEC { return 0; }
+- (sqInt) snd_SupportsAEC {
+#if TerfVM
+	return 1;
+#else
+	return 0;
+#endif
+}
 
-- (sqInt) snd_EnableAEC: (sqInt) flag { return -1; }
+- (sqInt) snd_EnableAEC: (sqInt) flag {
+#if TerfVM
+	char wasDoingAEC = doAEC;
 
+	doAEC = (char)flag;
+	sqLowLevelMFence();
+	if (!doAEC
+	 && wasDoingAEC
+	 && aecDequeueCallback)
+		while (aecDequeueCallback(0, 0)) ; // drain the output queue
+	return 0; // success
+#else
+	return PrimErrUnimplemented;
+#endif
+}
+
+#if TerfVM
+- (sqInt) setAECCaptureCallback: (void *) function sampleRate: (sqInt) sampleRate frameSize: (sqInt) frameSize cancelInPlace: (bool) cancelInPlace {
+
+	if (! (sampleRate == 48000
+		|| sampleRate == 44100
+		|| sampleRate == 32000
+		|| sampleRate == 16000
+		|| sampleRate == 8000))
+		return PrimErrInappropriate;
+
+	// WebrtcAEC is based on 10ms frames
+	int frameMS = frameSize * 1000 / (sampleRate == 44100 ? 48000 : sampleRate);
+
+	if (frameMS % 10)
+		return PrimErrInappropriate;
+
+	if (cancelInPlace)
+		return PrimErrUnsupported;
+
+	aecCaptureCallback = function;
+	aecCaptureFrameSize = frameSize;
+	return 0;
+}
+
+- (sqInt) setAECDequeueCallback: (void *) function {
+
+	aecDequeueCallback = function;
+	return 0;
+}
+#endif
 @end
