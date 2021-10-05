@@ -16,7 +16,11 @@ $(info OBJDIR is $(OBJDIR))
 # Rules for automated builds
 #
 
-DEPFLAGS = -MP -MF deps/$(*F).d
+ifeq ($(findstring /vm,$(OBJDIR)),/vm)
+DEPFLAGS:= -MMD -MP -MT '$$(BUILD)/vm/$(*F).o' -MF deps/$(*F).d
+else
+DEPFLAGS:= -MMD -MP -MT '$$(BUILD)/$(LIBNAME)/$(*F).o' -MF deps/$(*F).d
+endif
 ALLFLAGS = $(DEPFLAGS) $(CFLAGS) $(INCLUDES) $(DEFS)
 
 .c.o:
