@@ -2055,6 +2055,7 @@ static int xkey2sqVirtualKeyCode(int xKeycode, KeySym xKeysym)
     case XK_space: return 0x01;
     case XK_comma: return 0x02;
     case XK_period: return 0x03;
+    case XK_ISO_Left_Tab: return XK_Tab & 0x00ff; // shift-tab
   }
 
   // 5) If still no match, fall-back to US QWERTY layout using X11 keycodes
