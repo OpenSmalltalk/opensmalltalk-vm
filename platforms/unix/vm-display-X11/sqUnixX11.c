@@ -1992,47 +1992,42 @@ static int x2sqKeyPlain(XKeyEvent *xevt, KeySym *symbolic)
   return charCode;
 }
 
-/* Maps X11 key symbols to a one-byte, cross-platform compatible virtual-key code.
+/* Maps X11 key symbols to a one-byte, cross-platform compatible virtual-key 
+ * code. KeySym for special/misc. keys is directly mapped from 0xff__ to 0x00__.
+ * Selected characters from Latin-1 are shifted to fill the not used gaps 
+ * between 0x00 and 0xff, i.e., 0x01 to 0x07 and 0x44 to 0x4f. These characters 
+ * include XK_A to XK_Z and XK_0 to XK_9. Furthermore, keys common in a US layout
+ * are also mapped such as XK_period, XK_comma, XK_slash, XK_backslash, etc. This
+ * is similar to how SDL2 does it except their scancodes follow the USB standard
+ * while we mostly stick to the range of X11 KeySym, compressed into 1 byte.
  *
  * 0x00         (unknown virtual key)
  * 0x01         XK_space (shifted from Latin-1)
- * 0x02         XK_comma (shifted from Latin-1 OR guessed from xKeycode)
- * 0x03         XK_period (shifted from Latin-1 OR guessed from xKeycode)
+ * 0x02         XK_comma (shifted from Latin-1)
+ * 0x03         XK_period (shifted from Latin-1)
  * 0x04 .. 0x07 (unused)
  *
  * 0x08 .. 0x1f SPECIAL KEYS 1 (from all-mask 0xff00)
+ *
  * 0x20 .. 0x29 NUMERIC ASCII KEYS (shifted from Latin-1)
  * 0x2a .. 0x43 ALPHABETIC ASCII KEYS (shifted from Latin-1)
  *
- * 0x44         US_MINUS (guessed from xKeycode)
- * 0x45         US_PLUS (guessed from xKeycode)
- * 0x46         US_LBRACKET (guessed from xKeycode)
- * 0x47         US_RBRACKET (guessed from xKeycode)
- * 0x48         US_COLON (guessed from xKeycode)
- * 0x49         US_QUOTE (guessed from xKeycode)
- * 0x4a         US_TILDE (guessed from xKeycode)
- * 0x4b         US_BACKSLASH (guessed from xKeycode)
- * 0x4c         US_COMMA (guessed from xKeycode)
- * 0x4d         US_PERIOD (guessed from xKeycode)
- * 0x4e         US_SLASH (guessed from xKeycode)
+ * 0x44         XK_minus (guessed from xKeycode)
+ * 0x45         XK_equal (guessed from xKeycode)
+ * 0x46         XK_bracketleft (guessed from xKeycode)
+ * 0x47         XK_bracketright (guessed from xKeycode)
+ * 0x48         XK_semicolon (guessed from xKeycode)
+ * 0x49         XK_apostrophe (guessed from xKeycode)
+ * 0x4a         XK_tilde (guessed from xKeycode)
+ * 0x4b         XK_backslash (guessed from xKeycode)
+ * 0x4e         XK_slash (guessed from xKeycode)
  * 0x4f         US_102 (guessed from xKeycode)
  *
  * 0x50 .. 0xff SPECIAL KEYS 2 (from all-mask 0xff00)
  */
 static int xkey2sqVirtualKeyCode(int xKeycode, KeySym xKeysym)
 {
-  if (xKeysym >= XK_0 /* 0x30 */ && xKeysym <= XK_9 /* 0x39 */)
-    return xKeysym - 0x10; // to start at 0x20
-  if (xKeysym >= XK_A /* 0x41 */ && xKeysym <= XK_Z /* 0x5a */)
-    return xKeysym - 0x17; // to start at 0x2a
-  if (xKeysym >= XK_a && xKeysym <= XK_z)
-    return xKeysym - 0x20 - 0x17; // to lowercase and to start at 0x2a
-  switch (xKeysym)
-  {
-    case XK_space: return 0x01;
-    case XK_comma: return 0x02;
-    case XK_period: return 0x03;
-  }
+  // 1) Map XK_MISCELLANY from 0xff__ to 0x00__
   if ((xKeysym & 0xff00) == 0xff00) // XK_MISCELLANY (e.g., backspace, return, numpad, ...)
   {
     int vKeyCode = xKeysym & 0x00ff;
@@ -2040,11 +2035,30 @@ static int xkey2sqVirtualKeyCode(int xKeycode, KeySym xKeysym)
       && (vKeyCode < 0x20 /* begin Latin-1 */ || vKeyCode > 0x4f /* end Latin-1 */))
        return vKeyCode;
   }
+
+  // 2) Shift alpha-numeric keys from Latin-1 KeySym to fill the gaps
+  if (xKeysym >= XK_0 /* 0x30 */ && xKeysym <= XK_9 /* 0x39 */)
+    return xKeysym - 0x10; // to start at 0x20
+  if (xKeysym >= XK_A /* 0x41 */ && xKeysym <= XK_Z /* 0x5a */)
+    return xKeysym - 0x17; // to start at 0x2a
+  if (xKeysym >= XK_a && xKeysym <= XK_z)
+    return xKeysym - 0x20 - 0x17; // to lowercase and to start at 0x2a
+
+  // 3) Derive numerical keys (not num-pad) from keycode, language-agnostic
   if (xKeycode >= 10 && xKeycode <= 19) // hopefully physical keys 1, 2, ... 9, 0
     return 0x20 + (xKeycode - 10 + 1) % 10;
+
+  // 4) Derive virtual-key codes for other common keys, located in latin-1 range
+  switch (xKeysym)
+  {
+    case XK_space: return 0x01;
+    case XK_comma: return 0x02;
+    case XK_period: return 0x03;
+  }
+
+  // 5) If still no match, fall-back to US QWERTY layout using X11 keycodes
   switch (xKeycode)
   {
-    /* Hopefully US QWERTY layout ... */
     case 24: return XK_Q - 0x17;
     case 25: return XK_W - 0x17;
     case 26: return XK_E - 0x17;
@@ -2076,21 +2090,21 @@ static int xkey2sqVirtualKeyCode(int xKeycode, KeySym xKeysym)
 
   /* At this point, we can only guess about the remaining OEM keys.
    * We comment their use in a standard US layout. */
-    case 20: return 0x44; // US_MINUS
-    case 21: return 0x45; // US_PLUS
+    case 20: return 0x44; // XK_minus
+    case 21: return 0x45; // XK_equal
 
-    case 34: return 0x46; // US_LBRACKET
-    case 35: return 0x47; // US_RBRACKET
+    case 34: return 0x46; // XK_bracketleft
+    case 35: return 0x47; // XK_bracketright
 
-    case 47: return 0x48; // US_COLON
-    case 48: return 0x49; // US_QUOTE
-    case 49: return 0x4a; // US_TILDE
+    case 47: return 0x48; // XK_semicolon
+    case 48: return 0x49; // XK_apostrophe
+    case 49: return 0x4a; // XK_tilde
 
-    case 51: return 0x4b; // US_BACKSLASH
+    case 51: return 0x4b; // XK_backslash
 
-    case 59: return 0x4c; // US_COMMA
-    case 60: return 0x4d; // US_PERIOD
-    case 61: return 0x4e; // US_SLASH
+    case 59: return 0x02; // XK_comma
+    case 60: return 0x03; // XK_period
+    case 61: return 0x4e; // XK_slash
 
     case 94: return 0x4f; // US_102
   }
@@ -2506,9 +2520,9 @@ static int x2sqModifier(int state)
        	/* M - A C */ O|_|_|_,  O|M|_|S,  O|M|_|_,  O|M|_|S,
       };
 #    if defined(__POWERPC__) || defined(__ppc__)
-      mods= midofiers[state & 0x1f];
+      mods= midofiers[state & 0x1f]; // Ignore Mod3Mask up to Mod5Mask
 #    else
-      mods= midofiers[state & 0x0f];
+      mods= midofiers[state & 0x0f]; // Ignore Mod2Mask (e.g. NumLock), Mod3Mask, Mod4Mask (e.g. Win/Cmd), Mod5Mask
 #    endif
 #    if DEBUG_KEYBOARD_EVENTS || DEBUG_MOUSE_EVENTS
 	if (mods)
