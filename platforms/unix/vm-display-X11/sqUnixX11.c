@@ -4766,37 +4766,33 @@ translateCode(KeySym symbolic, int *modp, XKeyEvent *evt)
 # endif
 
 # if defined(XK_Control_L)
-	/* For XK_Shift_L, XK_Shift_R, XK_Caps_Lock & XK_Shift_Lock we can't just
-	 * use the SHIFT metastate since it would generate key codes. We use
-	 * META + SHIFT as these are all meta keys (meta == OptionKeyBit).
-	 */
-	case XK_Shift_L:
-		return withMetaSet(255,OptionKeyBit+ShiftKeyBit,ShiftKeyBit,modp,evt);
-	case XK_Shift_R:
-		return withMetaSet(254,OptionKeyBit+ShiftKeyBit,ShiftKeyBit,modp,evt);
-	case XK_Caps_Lock:
-		return withMetaSet(253,OptionKeyBit+ShiftKeyBit,ShiftKeyBit,modp,evt);
-	case XK_Shift_Lock:
-		return withMetaSet(252,OptionKeyBit+ShiftKeyBit,ShiftKeyBit,modp,evt);
-	case XK_Control_L:
-		return withMetaSet(251,OptionKeyBit+CtrlKeyBit,CtrlKeyBit,modp,evt);
-	case XK_Control_R:
-		return withMetaSet(250,OptionKeyBit+CtrlKeyBit,CtrlKeyBit,modp,evt);
-	case XK_Meta_L:
-		return withMetaSet(249,OptionKeyBit,0,modp,evt);
-	case XK_Meta_R:
-		return withMetaSet(248,OptionKeyBit,0,modp,evt);
-	/* John Brandt notes on 2018/11/28:
-	 * This doesn't match the above; here OptionKeyBit is used for the notmeta
-	 * parameter but in the preceding cases we use the bit other than the
-	 * OptionKeyBit.  Which is right?
-	 * The underlying issue here is the lack of a key event on pressing the
-	 * shift key; a feature that GT depends upon.
-	 */
-	case XK_Alt_L:
-		return withMetaSet(247,OptionKeyBit+CommandKeyBit,OptionKeyBit,modp,evt);
-	case XK_Alt_R:
-		return withMetaSet(246,OptionKeyBit+CommandKeyBit,OptionKeyBit,modp,evt);
+    /* No need to return ascii value (> -1) because not an EventKeyChar */
+    case XK_Shift_L:
+        return withMetaSet(-1,ShiftKeyBit,ShiftKeyBit,modp,evt);
+    case XK_Shift_R:
+        return withMetaSet(-1,ShiftKeyBit,ShiftKeyBit,modp,evt);
+    case XK_Caps_Lock:
+        return withMetaSet(-1,ShiftKeyBit,ShiftKeyBit,modp,evt);
+    case XK_Shift_Lock:
+        return withMetaSet(-1,ShiftKeyBit,ShiftKeyBit,modp,evt);
+    case XK_Control_L:
+    case XK_Control_R: // Re-use conversion Ctrl+Alt=Opt, see x2sqModifier()
+        if (evt->type == KeyPress)
+          evt->state= evt->state | ControlMask;
+        else
+          evt->state= evt->state & ~ControlMask;
+        *modp= x2sqModifier(evt->state);
+        return -1;
+    case XK_Meta_L:
+    case XK_Meta_R:
+    case XK_Alt_L:
+    case XK_Alt_R: // Re-use conversion Ctrl+Alt=Opt, see x2sqModifier()
+        if (evt->type == KeyPress)
+          evt->state= evt->state | Mod1Mask;
+        else
+          evt->state= evt->state & ~Mod1Mask;
+        *modp= x2sqModifier(evt->state);
+        return -1;
 # endif
 
     default:;
