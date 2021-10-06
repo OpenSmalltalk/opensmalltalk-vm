@@ -96,6 +96,12 @@ LIBS:=$(BUILD)/fdlibm/libm.a $(LIBS)
 export BIT_IDENTICAL_FLOATING_POINT
 endif
 
+.PHONY: libs dlls
+
+libs: $(LIBS)
+dlls: $(DLLS)
+
+
 #############################################################################
 # The third-party libraries
 #
@@ -137,8 +143,7 @@ INCLUDES:= -I. -I$(VMSRCDIR) -I$(WIN32DIR) -I$(CROSSDIR) $(XINC)
 # Common build rules
 #
 
-#default: print-settings init $(VMEXE) $(CONSOLEVMEXE) $(DLLS) nukelibs $(APPPOST)
-default: print-settings init $(VMEXE) $(CONSOLEVMEXE) $(DLLS) $(APPPOST)
+default: print-settings init libs $(VMEXE) $(CONSOLEVMEXE) dlls $(APPPOST)
 
 svnver:
 	echo $(RC) $(RCFLAGS)
@@ -167,25 +172,30 @@ init: $(THIRDPARTYPREREQS) $(OBJDIR) mkNamedPrims.exe
 cleanall:	clean cleanmt cleanast cleanmtast cleandbg cleanmtdbg
 
 clean:
-	$(RM) -rf sqNamedPrims.h mkNamedPrims.exe build
+	$(RM) -rf sqNamedPrims.h mkNamedPrims.exe build deps
 
 cleanmt:
-	$(RM) -rf sqNamedPrims.h mkNamedPrims.exe buildmt
+	$(RM) -rf sqNamedPrims.h mkNamedPrims.exe buildmt deps
 
 cleanast:
-	$(RM) -rf sqNamedPrims.h mkNamedPrims.exe buildast
+	$(RM) -rf sqNamedPrims.h mkNamedPrims.exe buildast deps
 
 cleanmtast:
-	$(RM) -rf sqNamedPrims.h mkNamedPrims.exe buildmtast
+	$(RM) -rf sqNamedPrims.h mkNamedPrims.exe buildmtast deps
 
 cleandbg:
-	$(RM) -rf sqNamedPrims.h mkNamedPrims.exe builddbg
+	$(RM) -rf sqNamedPrims.h mkNamedPrims.exe builddbg deps
 
 cleanmtdbg:
-	$(RM) -rf sqNamedPrims.h mkNamedPrims.exe buildmtdbg
+	$(RM) -rf sqNamedPrims.h mkNamedPrims.exe buildmtdbg deps
 
 nukelibs:
 	$(RM) $(LIBS)
+
+nukedlls:
+	$(RM) $(DLLS)
+
+.PHONY : print-settings
 
 print-settings:
 	$(info ---------------- Makefile settings ------------------)
@@ -200,6 +210,8 @@ print-settings:
 	$(info LIBS=$(LIBS))
 	$(info DLLS=$(DLLS))
 	$(info -----------------------------------------------------)
+
+.PHONY : print-objects
 
 print-objects:
 	$(info ---------------- Makefile objects ------------------)
@@ -221,19 +233,19 @@ $(ETOBJ):	$(WIN32MISCDIR)/etext.c
 $(JMPOBJ):	$(WIN32MISCDIR)/$(JMPASM)
 	$(CC) -c $< $(DASH_O)$@
 
-vm:	$(VMEXE)
+vm:	$(VMEXE) $(LIBS) $(DLLS)
 
 TZ:=$(shell $(CBD)/date +%Z)
 
-$(VMEXE): $(OBJDIR) $(THIRDPARTYLIBS) $(VMOBJ) $(LIBS) resource.o $(BTOBJ) $(ETOBJ) $(JMPOBJ)
+$(VMEXE): $(OBJDIR) $(THIRDPARTYLIBS) $(VMOBJ) libs resource.o $(BTOBJ) $(ETOBJ) $(JMPOBJ)
 	$(CC) $(DASH_O)$(OBJDIR)/version.o $(ALLCFLAGS) -D'TZ="$(TZ)"' -c $(WIN32DIR)/version.c
 	$(LD) $(LDFLAGS) -OUT:$(VMEXE) -MAP:$(VMMAP) \
-			$(BTOBJ) $(VMOBJ) $(JMPOBJ) $(OBJDIR)/resource.o $(filter-out $(call ignore), $(LIBS)) $(STDLIBS) $(ETOBJ)
+			$(BTOBJ) $(VMOBJ) $(JMPOBJ) resource.o $(filter-out $(call ignore), $(LIBS)) $(STDLIBS) $(ETOBJ)
 
-$(CONSOLEVMEXE): $(VMOBJ) $(LIBS) resource.o $(BTOBJ) $(ETOBJ) $(JMPOBJ)
+$(CONSOLEVMEXE): $(VMOBJ) libs resource.o $(BTOBJ) $(ETOBJ) $(JMPOBJ)
 	$(CC) $(DASH_O)$(OBJDIR)/version.o $(ALLCFLAGS) -D'TZ="$(TZ)"' -c $(WIN32DIR)/version.c
 	$(LD) $(CONSOLELDFLAGS) -OUT:$(CONSOLEVMEXE) -MAP:$(CONSOLEVMMAP) \
-			$(BTOBJ) $(VMOBJ) $(JMPOBJ) $(OBJDIR)/resource.o $(filter-out $(call ignore), $(LIBS)) $(STDLIBS) $(ETOBJ)
+			$(BTOBJ) $(VMOBJ) $(JMPOBJ) resource.o $(filter-out $(call ignore), $(LIBS)) $(STDLIBS) $(ETOBJ)
 
 $(OBJDIR):
 	@-$(MKDIR) $(BUILD)
@@ -256,12 +268,12 @@ $(VMDEF) $(VMLIB): $(VMOBJ)
 #
 
 .PHONY: $(OBJDIR)/%.lib $(OBJDIR)/%.dll
-
+.PHONY: always
 # Check for Makefile in win32 plugins directory otherwise use default Makefile
 plugin-makefile = $(realpath $(firstword $(wildcard $(WIN32PLUGINSDIR)/$(1)/Makefile.msvc ../common/Makefile.msvc.plugin)))
 
 # Internal plugin.  Build as lib then link in lib
-$(OBJDIR)/%.lib: $(call plugin-makefile,$(*F))
+$(OBJDIR)/%.lib: always
 	@-$(MKDIR) $(BUILD)/$(*F)
 	$(RM) -f $(BUILD)/vm/$(*F).ignore
 	$(MAKE) $(MFLAGS) $(SUBMFLAGS) -I../common BUILD=$(BUILD) \
@@ -270,7 +282,8 @@ $(OBJDIR)/%.lib: $(call plugin-makefile,$(*F))
 		COGDEFS="$(COGDEFS) -DSQUEAK_BUILTIN_PLUGIN=$(*F)" $(OBJDIR)/$(*F).lib
 
 # External plugin.  Build as dll and copy to vm dir ($(OBJDIR)).
-$(OBJDIR)/%.dll: $(call plugin-makefile,$(*F))
+$(OBJDIR)/%.dll: always
+	$(info WILDCARD $(*F): $(wildcard $(BUILD)/$(*F)/*.o))
 	@-$(MKDIR) $(BUILD)/$(*F)
 	$(RM) -f $(BUILD)/$(*F).ignore
 	$(MAKE) $(MFLAGS) $(SUBMFLAGS) -I../common BUILD=$(BUILD) \
@@ -291,12 +304,12 @@ $(BUILD)/fdlibm/libm.a:
 include ../common/Makefile.msvc.rules
 
 $(VMRES): $(VM).rc
-	$(RC) $(RCFLAGS) /Fo $(OBJDIR)/$@ $(VM).rc
+	$(RC) $(RCFLAGS) /Fo $@ $(VM).rc
 	$(CP) $(VM).exe.manifest $(OBJDIR)
 	$(CP) $(VM).exe.manifest $(OBJDIR)/$(VM)Console.exe.manifest
 
 resource.o:	$(VMRES)
-	$(CVTRES) /MACHINE:$(ARCH) /OUT:$(OBJDIR)/resource.o $(OBJDIR)/$(VMRES)
+	$(CVTRES) /MACHINE:$(ARCH) /OUT:resource.o $(VMRES)
 
 #############################################################################
 # Extra specific dependencies

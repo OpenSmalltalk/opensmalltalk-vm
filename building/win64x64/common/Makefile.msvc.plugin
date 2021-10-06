@@ -91,6 +91,8 @@ VPATH:= $(MAKERDIR) $(WIN32DIR) $(CROSSDIR) $(OBJDIR)
 
 all:	$(PLUGINLIB) $(PLUGINDLL)
 
+.PHONY : print-settings
+
 print-settings:
 	$(info ---------------- Makefile settings ------------------)
 	$(info PATH='$(PATH)')
@@ -134,6 +136,7 @@ PLUGINDLL_LIBS:=WinMM.lib ole32.lib msdmo.lib user32.lib kernel32.lib /NODEFAULT
 
 $(PLUGINDLL): $(VMDIR) $(OBJDIR) $(LIBOBJ) $(JMPOBJ) $(LIBSRC)
 	$(LD) $(LDFLAGS) -DLL $(LIBOBJ) $(JMPOBJ) $(VMLIB) $(PLUGINDLL_LIBS) $(EXTRALIBS) \
+	-NOIMPLIB \
 	-LIBPATH:$(BUILD)/vm \
 	-LIBPATH:"$(WindowsSdkDir)LIB/$(WindowsSDKVersion)/um/x64" \
 	-LIBPATH:"$(WindowsSdkDir)LIB/$(WindowsSDKVersion)/ucrt/x64" \

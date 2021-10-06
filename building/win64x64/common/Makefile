@@ -189,6 +189,8 @@ cleanmtdbg:
 nukelibs:
 	rm $(LIBS)
 
+.PHONY : print-settings
+
 print-settings:
 	$(info ---------------- Makefile settings ------------------)
 	$(info CONFIGURATION=$(CONFIGURATION))
@@ -202,6 +204,8 @@ print-settings:
 	$(info LIBS=$(LIBS))
 	$(info DLLS=$(DLLS))
 	$(info -----------------------------------------------------)
+
+.PHONY : print-objects
 
 print-objects:
 	$(info ---------------- Makefile objects ------------------)
