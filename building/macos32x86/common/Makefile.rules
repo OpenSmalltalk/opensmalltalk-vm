@@ -13,7 +13,11 @@ CXXVERFLAGS:=-std=c++14 -stdlib=libc++
 
 include ../common/Makefile.flags
 
-DEPFLAGS = -MMD -MT '$$(OBJDIR)/$(*F).o' -MF deps/$(*F).d
+ifeq ($(findstring /vm,$(OBJDIR)),/vm)
+DEPFLAGS = -MMD -MT '$$(BUILD)/vm/$(*F).o' -MF deps/$(*F).d
+else
+DEPFLAGS = -MMD -MT '$$(BUILD)/$(LIBNAME)/$(*F).o' -MF deps/$(*F).d
+endif
 ALLFLAGS = $(DEPFLAGS) $(WARNINGS) $(CFLAGS)
 
 $(OBJDIR)/%.o: %.c $(MAKEFILE)

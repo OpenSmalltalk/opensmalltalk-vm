@@ -10,19 +10,15 @@ else
 DEPFLAGS:= -MMD -MT '$$(BUILD)/$(LIBNAME)/$(*F).o' -MF deps/$(*F).d
 endif
 ALLFLAGS = $(DEPFLAGS) $(CFLAGS) $(INCLUDES) $(DEFS)
-POSTCOMPILE = sed '/^$$/d' <deps/$(*F).Td | sed '/^.*:$$/d' | sed 's/ [^ ]*:/:/' | sed 's/^build[^/]*/$$(BUILD)/' > deps/$(*F).d; rm deps/$(*F).Td; touch -r $< deps/$(*F).d
 
 $(OBJDIR)/%.o: %.c
 	$(CC) -x c $(ALLFLAGS) -c $< -o $@
-	$(POSTCOMPILE)
 
 $(OBJDIR)/%.o: %.m
 	$(CC) -x objective-c $(ALLFLAGS) -c $< -o $@
-	$(POSTCOMPILE)
 
 $(OBJDIR)/%.o: %.cpp
 	$(CXX) $(ALLFLAGS) -c $< -o $@
-	$(POSTCOMPILE)
 
 %res: %.rc
 	$(RC) $(RCFLAGS) -i $< -o $@
