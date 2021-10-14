@@ -5,7 +5,6 @@
 //  Created by John M McIntosh on 11/10/08.
 //	Extended with the Terf additions in May 2017 by Eliot Miranda
 //	Corrected for device addition/removal issues Aug 2020 by Eliot Miranda
-//	AEC interface added June 2021 by Eliot Miranda
 /*
  Some of this code was funded via a grant from the European Smalltalk User Group (ESUG)
  Copyright (c) 2008 Corporate Smalltalk Consulting Ltd. All rights reserved.
@@ -53,13 +52,6 @@
 // eem: this is really the sample size in bytes, two shorts for stereo
 #define SqueakFrameSize	4	// guaranteed (see class SoundPlayer)
 extern struct VirtualMachine *interpreterProxy;
-
-#if TerfVM
-static int (*aecCaptureCallback)(uint frequency, uint channelCount, uint sampleCount, short *channelSamplesIn) = 0;
-static int aecCaptureFrameSize = 0;
-static int (*aecDequeueCallback)(short *channelSamples, uint size) = 0;
-static char doAEC = false;
-#endif
 
 #if defined(MAC_OS_X_VERSION_10_14) \
  || defined(MAC_OS_X_VERSION_10_15) \
@@ -215,34 +207,6 @@ MyAudioQueueInputCallback ( void                  *inUserData,
 		return;
 	}
 
-#if TerfVM
-	// Provision for echo cancellation.  Two APIs, cancel in-place or queue.
-
-	// If the buffer size of an atom is not a multiple of the AEC frame
-	// size then we need to use a queue. Data is sent to the canceller.
-	// The canceller puts the data in a ring buffer before processing as
-	// much data as possible, and putting the cancelled output in the
-	// output queue. snd_RecordSamplesIntoAtLength:... extracts the
-	// cancelled data from the queue via the aecDequeueCallback.
-	//
-	// If aecCaptureCallback answers < 0 then the AEC is not active.
-
-	if (doAEC
-	 && aecCaptureCallback
-	 && aecCaptureCallback(	mySelf.inputSampleRate,
-							mySelf.inputChannels,
-							inNumberPacketDescriptions,
-							(short *)inBuffer->mAudioData) >= 0) {
-		// the aecDequeueCallback better be in place...
-		assert(aecDequeueCallback);
-		// recycle the input buffer
-		AudioQueueEnqueueBuffer (inAQ, inBuffer, 0, NULL);
-		interpreterProxy->signalSemaphoreWithIndex(mySelf.semaIndexForInput);
-		return;
-	}
-	// If not active, fall through...
-#endif
-
 	soundAtom *atom = AUTORELEASEOBJ([[soundAtom alloc]
 										initWith: inBuffer->mAudioData
 										count: inBuffer->mAudioDataByteSize]);
@@ -336,10 +300,6 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 
 - (sqInt) soundShutdown {
 	//NSLog(@"%i sound shutdown",ioMSecs());
-#if TerfVM
-	doAEC = false;
-	sqLowLevelMFence();
-#endif
 	if (self.outputAudioQueue)
 		[self snd_StopAndDispose];
 	if (self.inputAudioQueue)
@@ -518,13 +478,7 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 // 4410 would be 100ms
 #define DefaultRecordFrameSamplesAt441kHz 4410
 
-#if TerfVM
-	const sqInt frameCount = aecCaptureFrameSize
-							? aecCaptureFrameSize
-							: DefaultRecordFrameSamplesAt441kHz * desiredSamplesPerSec / 44100;
-#else
 	const sqInt frameCount = DefaultRecordFrameSamplesAt441kHz * desiredSamplesPerSec / 44100;
-#endif
 	self.inputChannels = 1 + stereo;
 	self.inputFormat->mSampleRate = (Float64)desiredSamplesPerSec;
 	self.inputFormat->mFormatID = kAudioFormatLinearPCM;
@@ -595,27 +549,6 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 	if (!self.inputAudioQueue
 	 || start > bufferSizeInBytes)
 		return interpreterProxy->primitiveFail();
-
-#if TerfVM
-	// See the use of aecCaptureCallback in MyAudioQueueInputCallback above.
-	// If aecDequeueCallback answers < 0 then the AEC is not active.
-
-	if (doAEC && aecDequeueCallback) {
-		usqInt remaining = (bufferSizeInBytes - start) / sizeof(short);
-		do {
-			count = aecDequeueCallback((short *)(inputBuffer + start), remaining);
-			if (count == 0)
-				return total / self.inputChannels;
-			if (total == 0 && count < 0) // break out if AEC not active
-				break;
-			total += count;
-			if (count == remaining)
-				return total / self.inputChannels;
-			remaining -= count;
-			start += count * sizeof(short);
-		} while (1);
-	}
-#endif
 
 	soundAtom *atom = [self.soundInQueue returnOldest];
 	if (!atom)
@@ -1084,58 +1017,7 @@ setVolumeOf(AudioDeviceID deviceID, char which, float volume)
 		}
 }
 
-- (sqInt) snd_SupportsAEC {
-#if TerfVM
-	return 1;
-#else
-	return 0;
-#endif
-}
+- (sqInt) snd_SupportsAEC { return 0; }
 
-- (sqInt) snd_EnableAEC: (sqInt) flag {
-#if TerfVM
-	char wasDoingAEC = doAEC;
-
-	doAEC = (char)flag;
-	sqLowLevelMFence();
-	if (!doAEC
-	 && wasDoingAEC
-	 && aecDequeueCallback)
-		while (aecDequeueCallback(0, 0)) ; // drain the output queue
-	return 0; // success
-#else
-	return PrimErrUnimplemented;
-#endif
-}
-
-#if TerfVM
-- (sqInt) setAECCaptureCallback: (void *) function sampleRate: (sqInt) sampleRate frameSize: (sqInt) frameSize cancelInPlace: (bool) cancelInPlace {
-
-	if (! (sampleRate == 48000
-		|| sampleRate == 44100
-		|| sampleRate == 32000
-		|| sampleRate == 16000
-		|| sampleRate == 8000))
-		return PrimErrInappropriate;
-
-	// WebrtcAEC is based on 10ms frames
-	int frameMS = frameSize * 1000 / (sampleRate == 44100 ? 48000 : sampleRate);
-
-	if (frameMS % 10)
-		return PrimErrInappropriate;
-
-	if (cancelInPlace)
-		return PrimErrUnsupported;
-
-	aecCaptureCallback = function;
-	aecCaptureFrameSize = frameSize;
-	return 0;
-}
-
-- (sqInt) setAECDequeueCallback: (void *) function {
-
-	aecDequeueCallback = function;
-	return 0;
-}
-#endif
+- (sqInt) snd_EnableAEC: (sqInt) flag { return -1; }
 @end
