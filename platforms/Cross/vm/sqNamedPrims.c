@@ -79,14 +79,12 @@ addToModuleList(char *pluginName, void *handle, sqInt ffiFlag)
 static sqInt
 removeFromList(ModuleEntry *entry)
 {
-	ModuleEntry *prevModule;
-
 	/* Unlink the entry from the module chain */
 	if (entry == firstModule) {
 		firstModule = entry->next;
 	}
 	else {
-		prevModule = firstModule;
+		ModuleEntry *prevModule = firstModule;
 		while (prevModule->next != entry)
 			prevModule = prevModule->next;
 		prevModule->next = entry->next;
@@ -211,8 +209,8 @@ findFunctionIn(char *functionName, ModuleEntry *module)
 	callInitializersIn:
 	Call the required initializers in the given module.
 	The module has been loaded before so the task is to
-	call a) setInterpreter() and check it's return, and
-	b) initialiseModule (if defined) and check it's return
+	call a) setInterpreter() and check its return, and
+	b) initialiseModule (if defined) and check its return
 	as well.
 */
 static sqInt
@@ -320,10 +318,8 @@ findAndLoadModule(char *pluginName, sqInt ffiLoad)
 	module = addToModuleList(pluginName, handle, ffiLoad);
 	if (!callInitializersIn(module)) {
 		/* Initializers failed */
-		if (handle != squeakModule->handle) {
-			/* physically unload module */
+		if (handle != squeakModule->handle) /* physically unload module */
 			ioFreeModule(handle);
-		}
 		removeFromList(module); /* remove list entry */
 		free(module); /* give back space */
 		module = NULL;
@@ -333,7 +329,7 @@ findAndLoadModule(char *pluginName, sqInt ffiLoad)
 
 /* findOrLoadModule:
 	Look if the given module is already loaded. 
-	If so, return it's handle, otherwise try to load it.
+	If so, return its handle, otherwise try to load it.
 */
 static ModuleEntry *
 findOrLoadModule(char *pluginName, sqInt ffiLoad)
@@ -348,10 +344,8 @@ findOrLoadModule(char *pluginName, sqInt ffiLoad)
 
 	/* see if the module was already loaded */
 	module = findLoadedModule(pluginName);
-	if (!module) {
-		/* if not try loading it */
+	if (!module) /* if not try loading it */
 		module = findAndLoadModule(pluginName, ffiLoad);
-	}
 	return module; /* module not found */
 }
 
@@ -566,10 +560,8 @@ ioUnloadModule(char *moduleName)
 		if (temp != entry) {
 			/* Lookup moduleUnloaded: from the plugin */
 			void *fn = findFunctionIn("moduleUnloaded", temp);
-			if (fn) {
-				/* call it */
+			if (fn) /* call it */
 				((sqInt (*) (char *))fn)(entry->name);
-			}
 		}
 		temp = temp->next;
 	}
@@ -613,9 +605,8 @@ ioListBuiltinModule(sqInt moduleIndex)
       char *plugin = exports[index].pluginName;
       char *function = exports[index].primitiveName;
       if (!function && !plugin) break; /* no more plugins */
-      if (!strcmp(function,"setInterpreter")) {
-        /* new module */
-        if (--moduleIndex == 0) {
+      if (!strcmp(function,"setInterpreter")
+       && --moduleIndex == 0) {
           char *moduleName;
           void * init0;
           init0 = findInternalFunctionIn("getModuleName", plugin NADA);
@@ -626,7 +617,6 @@ ioListBuiltinModule(sqInt moduleIndex)
 				return moduleName;
           }
           return plugin;
-        }
       }
     }
   }
