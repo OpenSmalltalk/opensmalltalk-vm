@@ -191,21 +191,21 @@ yZero()
 
 - (void) recordCharEvent:(NSString *) unicodeString fromView: (NSView <sqSqueakOSXView> *) mainView {
 	sqKeyboardEvent evt;
-	unichar unicode;
-	unsigned char isoCharacter;
 	NSInteger	i;
 	NSRange picker;
 	NSUInteger totaLength;
 
 	evt.type = EventTypeKeyboard;
-	evt.timeStamp =  ioMSecs();
+	evt.timeStamp = ioMSecs();
+	evt.reserved1 = 0;
+	evt.windowIndex = mainView.windowLogic.windowIndex;
 	picker.location = 0;
 	picker.length = 1;
 	totaLength = [unicodeString length];
 
 	for (i=0;i < totaLength;i++) {
-
-		unicode = [unicodeString characterAtIndex: i];
+		unsigned char isoCharacter;
+		unichar unicode = [unicodeString characterAtIndex: i];
 
 		if (mainView.lastSeenKeyBoardStrokeDetails) {
 			evt.modifiers = [self translateCocoaModifiersToSqueak: mainView.lastSeenKeyBoardStrokeDetails.modifierFlags];
@@ -215,27 +215,27 @@ yZero()
 			evt.charCode = 0;
 		}
 
-		if ((evt.modifiers & CommandKeyBit) && (evt.modifiers & ShiftKeyBit)) {  /* command and shift */
-			if ((unicode >= 97) && (unicode <= 122)) {
-				/* convert ascii code of command-shift-letter to upper case */
-				unicode = unicode - 32;
-			}
-		}
+		// convert ascii code of command-shift-letter to upper case
+		if ((evt.modifiers & CommandKeyBit) && (evt.modifiers & ShiftKeyBit)
+		 && (unicode >= 97) && (unicode <= 122))
+			unicode = unicode - 32;
 
 		NSString *lookupString = AUTORELEASEOBJ([[NSString alloc] initWithCharacters: &unicode length: 1]);
 		[lookupString getBytes: &isoCharacter maxLength: 1 usedLength: NULL encoding: NSISOLatin1StringEncoding
 					   options: 0 range: picker remainingRange: NULL];
 
 		evt.pressCode = EventKeyDown;
-		unsigned short keyCodeRemembered = evt.charCode;
+#if INCLUDE_UTF_IN_ALL_KEYBOARD_EVENTS || IUIAKE
+		evt.utf32Code = unicode;
+#else
 		evt.utf32Code = 0;
-		evt.reserved1 = 0;
-		evt.windowIndex =   mainView.windowLogic.windowIndex;
+#endif
 		[self pushEventToQueue: (sqInputEvent *)&evt];
 
-		evt.charCode =	isoCharacter;
+		sqIntptr_t keyCodeRemembered = evt.charCode;
+		evt.charCode  = isoCharacter;
 		evt.pressCode = EventKeyChar;
-		evt.modifiers = evt.modifiers;		
+		evt.modifiers = evt.modifiers;
 		evt.utf32Code = unicode;
 
 		[self pushEventToQueue: (sqInputEvent *) &evt];
@@ -243,13 +243,16 @@ yZero()
 		if (i > 1 || !mainView.lastSeenKeyBoardStrokeDetails) {
 			evt.pressCode = EventKeyUp;
 			evt.charCode = keyCodeRemembered;
+#if INCLUDE_UTF_IN_ALL_KEYBOARD_EVENTS || IUIAKE
+			evt.utf32Code = unicode;
+#else
 			evt.utf32Code = 0;
+#endif
 			[self pushEventToQueue: (sqInputEvent *) &evt];
 		}
 	}
 
 	interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
-
 }
 
 - (void) recordKeyDownEvent:(NSEvent *)theEvent fromView: (NSView <sqSqueakOSXView> *) aView {
