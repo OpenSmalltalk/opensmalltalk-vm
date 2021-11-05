@@ -315,6 +315,8 @@ void vprintLastError(TCHAR *fmt, ...);
 DWORD SqueakImageLength(WCHAR *fileName);
 int isLocalFileName(TCHAR *fileName);
 
+int recordMouseEvent(MSG *msg, UINT nrClicks);
+int recordKeyboardEvent(MSG *msg);
 #ifndef NO_DROP
 int recordDragDropEvent(HWND wnd, int dragType, int x, int y, int numFiles);
 #endif
