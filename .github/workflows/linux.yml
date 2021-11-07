@@ -3,7 +3,7 @@ name: Build for Linux (x86)
 on:
   push: # All branches, but appropriate paths only.
     paths:
-        # This workflow spec and its support scripts
+      # This workflow spec and its support scripts
       - '.github/workflows/linux.yml'
       - 'scripts/ci/*linux_x86.sh'
       - 'scripts/ci/*build.sh'
@@ -19,9 +19,20 @@ on:
   pull_request:
     branches:
       - Cog
-    paths-ignore:
-      - '**.md'
-      - '**HowToBuild'
+    paths:
+      # This workflow spec and its support scripts
+      - '.github/workflows/linux.yml'
+      - 'scripts/ci/*linux_x86.sh'
+      - 'scripts/ci/*build.sh'
+      - 'deploy/**'
+      # Relevant sources for this platform
+      - 'building/linux*/**' # Makefile-based build scripts
+      - '*src/**' # Generated VMMaker sources (incl. plugins)
+      - 'platforms/Cross/**'
+      - 'platforms/unix/**'
+      # Skip changes in documentation artifacts
+      - '!**.md'
+      - '!**HowToBuild'
   workflow_dispatch:
     inputs:
       tag:
@@ -68,7 +79,7 @@ jobs:
             heartbeat: threaded
             mode: fast
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     name: ${{ matrix.flavor }}${{ matrix.heartbeat == 'itimer' && ' (itimer)' || '' }} for ${{ matrix.arch }}${{ matrix.mode == 'debug' && ' (DEBUG)' || matrix.mode == 'assert' && ' (ASSERT)' || '' }}
     env:
       ARCH: ${{ matrix.arch }}

@@ -834,7 +834,7 @@ playCallback(LPVOID ignored)
         return 0; /* done playing */
       }
       playBufferAvailable = 1;
-      playBufferIndex = ++playBufferIndex & 1;
+      playBufferIndex ^= 1; /* flip the double buffer used */
       interpreterProxy->signalSemaphoreWithIndex(playSemaphore);
     }
   }

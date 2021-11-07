@@ -19,8 +19,8 @@ jobs:
         arch: 
           - { name: win64x64, os: windows-latest }
           - { name: win32x86, os: windows-latest }
-          - { name: linux64x64, os: ubuntu-latest }
-          - { name: linux32x86, os: ubuntu-latest }
+          - { name: linux64x64, os: ubuntu-18.04 }
+          - { name: linux32x86, os: ubuntu-18.04 }
           - { name: macos64x64, os: macos-latest }
           # - { name: macos32x86, os: macos-latest }
 
@@ -39,13 +39,13 @@ jobs:
           # - arch: { name: win32x86, os: windows-latest }
           #   flavor: pharo.cog.spur.lowcode
 
-          - arch: { name: linux32x86, os: ubuntu-latest }
+          - arch: { name: linux32x86, os: ubuntu-18.04 }
             flavor: squeak.cog.v3
-          - arch: { name: linux32x86, os: ubuntu-latest }
+          - arch: { name: linux32x86, os: ubuntu-18.04 }
             flavor: squeak.stack.v3
-          - arch: { name: linux32x86, os: ubuntu-latest }
+          - arch: { name: linux32x86, os: ubuntu-18.04 }
             flavor: pharo.cog.spur.lowcode
-          - arch: { name: linux32x86, os: ubuntu-latest }
+          - arch: { name: linux32x86, os: ubuntu-18.04 }
             flavor: pharo.stack.spur.lowcode
 
           # - arch: { name: macos64x64, os: macos-latest }

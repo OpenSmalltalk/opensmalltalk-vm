@@ -15,10 +15,10 @@ Some of this code was funded via a grant from the European Smalltalk User Group 
  copies of the Software, and to permit persons to whom the
  Software is furnished to do so, subject to the following
  conditions:
- 
+
  The above copyright notice and this permission notice shall be
  included in all copies or substantial portions of the Software.
- 
+
  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -27,11 +27,11 @@ Some of this code was funded via a grant from the European Smalltalk User Group 
  WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  OTHER DEALINGS IN THE SOFTWARE.
- 
- The end-user documentation included with the redistribution, if any, must include the following acknowledgment: 
- "This product includes software developed by Corporate Smalltalk Consulting Ltd (http://www.smalltalkconsulting.com) 
- and its contributors", in the same place and form as other third-party acknowledgments. 
- Alternately, this acknowledgment may appear in the software itself, in the same form and location as other 
+
+ The end-user documentation included with the redistribution, if any, must include the following acknowledgment:
+ "This product includes software developed by Corporate Smalltalk Consulting Ltd (http://www.smalltalkconsulting.com)
+ and its contributors", in the same place and form as other third-party acknowledgments.
+ Alternately, this acknowledgment may appear in the software itself, in the same form and location as other
  such third-party acknowledgments.
  */
 
@@ -53,10 +53,10 @@ SInt32 undoCounter=1, oldValue=0;  // jdr undo support
 	self = [super initWithFrame: aFrame];
 	self.autoresizingMask = UIViewAutoresizingFlexibleRightMargin|UIViewAutoresizingFlexibleBottomMargin|UIViewAutoresizingFlexibleHeight|UIViewAutoresizingFlexibleWidth;
 	colorspace = CGColorSpaceCreateDeviceRGB();
-    
+
     // jdr - hack cmd-z undo support
     self.arrowsNames = @[UIKeyInputLeftArrow, UIKeyInputRightArrow, UIKeyInputUpArrow, UIKeyInputDownArrow];
-    
+
     dispatch_async(dispatch_get_main_queue(), ^{
         [self setUndoFlag: undoCounter];
     });
@@ -81,15 +81,15 @@ SInt32 undoCounter=1, oldValue=0;  // jdr undo support
 }
 
 // Handles the continuation of a touch.
-- (void)touchesMoved:(NSSet *)touches withEvent:(UIEvent *)event 
-{  
+- (void)touchesMoved:(NSSet *)touches withEvent:(UIEvent *)event
+{
 	//Called by Main Thread, beware of calling Squeak routines in Squeak Thread
 	[(sqSqueakIPhoneApplication *) gDelegateApp.squeakApplication recordTouchEvent: touches type: UITouchPhaseMoved];
-	
+
 }
 
 // Handles the end of a touch event.
-- (void)touchesEnded:(NSSet *)touches withEvent:(UIEvent *)event 
+- (void)touchesEnded:(NSSet *)touches withEvent:(UIEvent *)event
 {
 	//Called by Main Thread, beware of calling Squeak routines in Squeak Thread
 	[(sqSqueakIPhoneApplication *) gDelegateApp.squeakApplication recordTouchEvent: touches type: UITouchPhaseEnded];
@@ -237,7 +237,7 @@ SInt32 undoCounter=1, oldValue=0;  // jdr undo support
 	[self recordCharEvent:[NSString stringWithCharacters: delete length: 1]];
 }
 
-- (void) pushEventToQueue: (sqInputEvent *) evt {	
+- (void) pushEventToQueue: (sqInputEvent *) evt {
 	NSMutableArray* data = [NSMutableArray arrayWithCapacity: 2];
 	[data addObject: @7];
 	[data addObject: [NSData  dataWithBytes:(const void *) evt length: sizeof(sqInputEvent)]];
@@ -245,16 +245,16 @@ SInt32 undoCounter=1, oldValue=0;  // jdr undo support
 }
 
 - (int) figureOutKeyCode: (unichar) unicode {
-	static int unicodeToKeyCode[] = {54, 115, 11, 52, 119, 114, 3, 5, 51, 48, 38, 116, 121, 36, 45, 31, 
-		96, 12, 15, 1, 17, 32, 9, 13, 7, 16, 6, 53, 123, 124, 126, 125, 49, 18, 39, 20, 21, 23, 26, 39, 
-		25, 29, 67, 69, 43, 27, 47, 44, 29, 18, 19, 20, 21, 23, 22, 26, 28, 25, 41, 41, 43, 24, 47, 
-		44, 19, 0, 11, 8, 2, 14, 3, 5, 4, 34, 38, 40, 37, 46, 45, 31, 35, 12, 15, 1, 17, 32, 9, 13, 
-		7, 16, 6, 33, 42, 30, 22, 27, 50, 0, 11, 8, 2, 14, 3, 5, 4, 34, 38, 40, 37, 46, 45, 31, 35, 
+	static int unicodeToKeyCode[] = {54, 115, 11, 52, 119, 114, 3, 5, 51, 48, 38, 116, 121, 36, 45, 31,
+		96, 12, 15, 1, 17, 32, 9, 13, 7, 16, 6, 53, 123, 124, 126, 125, 49, 18, 39, 20, 21, 23, 26, 39,
+		25, 29, 67, 69, 43, 27, 47, 44, 29, 18, 19, 20, 21, 23, 22, 26, 28, 25, 41, 41, 43, 24, 47,
+		44, 19, 0, 11, 8, 2, 14, 3, 5, 4, 34, 38, 40, 37, 46, 45, 31, 35, 12, 15, 1, 17, 32, 9, 13,
+		7, 16, 6, 33, 42, 30, 22, 27, 50, 0, 11, 8, 2, 14, 3, 5, 4, 34, 38, 40, 37, 46, 45, 31, 35,
 		12, 15, 1, 17, 32, 9, 13, 7, 16, 6, 33, 42, 30, 50, 117};
-	if (unicode > 127) 
+	if (unicode > 127)
 		return 0;
 	return unicodeToKeyCode[unicode];
-	
+
 }
 
 - (void) recordCharEvent:(NSString *) unicodeString {
@@ -264,61 +264,68 @@ SInt32 undoCounter=1, oldValue=0;  // jdr undo support
 	NSInteger	i;
 	NSRange picker;
 	NSUInteger totaLength;
-	
+
 	evt.type = EventTypeKeyboard;
 	evt.timeStamp = (int) ioMSecs();
 	picker.location = 0;
 	picker.length = 1;
 	totaLength = [unicodeString length];
 	for (i=0;i < totaLength;i++) {
-		
+
 		unicode = [unicodeString characterAtIndex: i];
 		NSString *lookupString = [[NSString alloc] initWithCharacters: &unicode length: 1];
 		[lookupString getBytes: &isoCharacter maxLength: 1 usedLength: NULL encoding: NSISOLatin1StringEncoding
 					   options: 0 range: picker remainingRange: NULL];
-		
+
 		// LF -> CR
 		if (isoCharacter == 10) {
 			unicode = 13;
             isoCharacter = 13;
         }
-		
+
 		evt.pressCode = EventKeyDown;
 		BOOL isUppercase = [[NSCharacterSet uppercaseLetterCharacterSet] characterIsMember: unicode];
 		evt.modifiers = isUppercase ? ShiftKeyBit : 0;
 		evt.charCode = [self figureOutKeyCode: unicode];
 
-		unsigned int keyCodeRemembered = evt.charCode;
+		// convert ascii code of command-shift-letter to upper case
+		if ((evt.modifiers & CommandKeyBit) && (evt.modifiers & ShiftKeyBit)
+          && (unicode >= 97) && (unicode <= 122))
+			unicode = unicode - 32;
+
+#if INCLUDE_UNICODE_IN_ALL_KEYBOARD_EVENTS || IUIAKE
+		evt.utf32Code = unicode;
+#else
 		evt.utf32Code = 0;
+#endif
 		evt.reserved1 = 0;
 		evt.windowIndex = 1;
 		[self pushEventToQueue: (sqInputEvent *)&evt];
-		
-		evt.charCode =	isoCharacter;
+
+		sqIntptr_t keyCodeRemembered = evt.charCode;
+		evt.charCode  = isoCharacter;
 		evt.pressCode = EventKeyChar;
 		evt.modifiers = evt.modifiers;
-		if ((evt.modifiers & CommandKeyBit) && (evt.modifiers & ShiftKeyBit)) {  /* command and shift */
-            if ((unicode >= 97) && (unicode <= 122)) {
-				/* convert ascii code of command-shift-letter to upper case */
-				unicode = unicode - 32;
-            }
-		}
-		
+
 		evt.utf32Code = unicode;
-		evt.timeStamp++; 
+		evt.timeStamp++;
 		[self pushEventToQueue: (sqInputEvent *) &evt];
 		if (YES) {
 			evt.pressCode = EventKeyUp;
 			evt.charCode = keyCodeRemembered;
+#if INCLUDE_UNICODE_IN_ALL_KEYBOARD_EVENTS || IUIAKE
+			evt.utf32Code = unicode;
+#else
 			evt.utf32Code = 0;
-			evt.timeStamp++; 
+#endif
+			evt.timeStamp++;
 			[self pushEventToQueue: (sqInputEvent *) &evt];
 		}
 	}
-	
+
 	interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
-	
+
 }
- 
+
 @end
 

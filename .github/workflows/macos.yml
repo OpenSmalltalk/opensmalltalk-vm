@@ -18,9 +18,19 @@ on:
   pull_request:
     branches:
       - Cog
-    paths-ignore:
-      - '**.md'
-      - '**HowToBuild'
+    paths:
+      # This workflow spec and its support scripts
+      - '.github/workflows/macos.yml' 
+      - 'scripts/ci/*build.sh'
+      - 'deploy/**'
+      # Relevant sources for this platform
+      - 'building/macos*/**' # Makefile-based build scripts
+      - '*src/**' # Generated VMMaker sources (incl. plugins)
+      - 'platforms/Cross/**'
+      - 'platforms/iOS/**' # Note that 'platforms/Mac OS' is deprecated
+      # Skip changes in documentation artifacts
+      - '!**.md'
+      - '!**HowToBuild'
   workflow_dispatch:
     inputs:
       tag:

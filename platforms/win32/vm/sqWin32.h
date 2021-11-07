@@ -122,6 +122,8 @@ char *GetVMOption(int id);
 /********************************************************/
 void SetWindowSize(void);
 int printUsage(int level);
+int __cdecl DPRINTF(const char *fmt, ...);
+void resyncSystemTime();
 
 /********************************************************/
 /* Service Stuff                                        */
@@ -245,11 +247,11 @@ extern BOOL  fRunService;    /* Do we run as NT service? */
 extern DWORD dwMemorySize;   /* How much memory do we use? */
 extern BOOL  fUseDirectSound;/* Do we use DirectSound?! */
 extern BOOL  fUseOpenGL;     /* Do we use OpenGL?! */
-extern BOOL fReduceCPUUsage; /* Should we reduce CPU usage? */
-extern BOOL fReduceCPUInBackground; /* reduce CPU usage when not active? */
 extern BOOL  f1ButtonMouse;  /* Should we use a 1 button mouse mapping? */
 extern BOOL  f3ButtonMouse;  /* Should we use a 3 button mouse mapping? */
+#if !SPURVM
 extern BOOL  fShowAllocations; /* Show memory allocations */
+#endif
 extern BOOL  fPriorityBoost; /* thread priority boost */
 extern BOOL  fEnableAltF4Quit; /* can we quit using Alt-F4? */
 extern BOOL  fEnableF2Menu;    /* can we get prefs menu via F2? */
@@ -269,7 +271,6 @@ extern BOOL updateRightNow;	     /*	update flag */
 extern BOOL fDeferredUpdate; /* I prefer the deferred update*/
 extern BOOL fShowConsole;    /* do we show the console window?*/
 extern BOOL fDynamicConsole; /* Should we show the console if any errors occur? */
-extern BOOL fReduceCPUUsage; /* Should we reduce CPU usage? */
 extern BOOL f3ButtonMouse;   /* Should we use a real 3 button mouse mapping? */
 extern BOOL fBufferMouse;    /* Should we buffer mouse input? */
 
@@ -314,6 +315,8 @@ void vprintLastError(TCHAR *fmt, ...);
 DWORD SqueakImageLength(WCHAR *fileName);
 int isLocalFileName(TCHAR *fileName);
 
+int recordMouseEvent(MSG *msg, UINT nrClicks);
+int recordKeyboardEvent(MSG *msg);
 #ifndef NO_DROP
 int recordDragDropEvent(HWND wnd, int dragType, int x, int y, int numFiles);
 #endif

@@ -365,6 +365,8 @@ osCogStackPageHeadroom()
 }
 #endif /* COGVM */
 
+#error "the new exception handling code from platforms/win32/vm/sqWin32Main.c needs to be integrated here. eem 2021/9/28"
+
 static LONG CALLBACK squeakExceptionHandler(LPEXCEPTION_POINTERS exp)
 {
     DWORD result;
@@ -457,47 +459,30 @@ sqExecuteFunctionWithCrashExceptionCatching(sqFunctionThatCouldCrash function, v
 static void
 dumpStackIfInMainThread(FILE *optionalFile)
 {
-	extern void printCallStack(void);
-
 	if (!optionalFile) {
-		if (ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
-			printf("\n\nSmalltalk stack dump:\n");
-			printCallStack();
-		}
-		else
-			printf("\nCan't dump Smalltalk stack. Not in VM thread\n");
+		dumpStackIfInMainThread(stdout);
 		return;
 	}
 	if (ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
-		FILE tmpStdout = *stdout;
 		fprintf(optionalFile, "\n\nSmalltalk stack dump:\n");
-		*stdout = *optionalFile;
-		printCallStack();
-		*optionalFile = *stdout;
-		*stdout = tmpStdout;
+		printCallStackOn(optionalFile);
 		fprintf(optionalFile,"\n");
 	}
 	else
 		fprintf(optionalFile,"\nCan't dump Smalltalk stack. Not in VM thread\n");
 }
 
-#if STACKVM
-static void dumpPrimTrace(FILE *optionalFile)
+#if COGVM
+static void
+dumpPrimTrace(FILE *optionalFile)
 {
-	extern void dumpPrimTraceLog(void);
-
-	if (optionalFile) {
-		FILE tmpStdout = *stdout;
-		*stdout = *optionalFile;
-		dumpPrimTrace(0);
-		*optionalFile = *stdout;
-		*stdout = tmpStdout;
+	if (!optionalFile) {
+		dumpPrimTrace(stdout);
+		return;
 	}
-	else {
-		printf("\nPrimitive trace:\n");
-		dumpPrimTraceLog();
-		printf("\n");
-	}
+	fprintf(optionalFile,"\nPrimitive trace:\n");
+	dumpPrimTraceLogOn(optionalFile);
+	fprintf(optionalFile,"\n");
 }
 #else
 # define dumpPrimTrace(f) 0

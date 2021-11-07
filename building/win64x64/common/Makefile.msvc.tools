@@ -18,11 +18,7 @@ CBD32=c:/cygwin64/usr/i686-w64-mingw32/bin
 #
 
 # https://docs.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warnings-c4000-through-c4199?view=vs-2017
-ifdef MSVC
-WARNINGS:= -W4 -wd4100 -wd4668 -wd4255 -wd4555 -wd4706
-else ifdef Clang
 WARNINGS:= -Wall -Wno-unused-variable -Wno-unknown-pragmas -Wno-unused-value -Wno-unused-function -Wno-missing-variable-declarations -Wno-unused-macros -Wno-sign-compare -Wno-sign-conversion -Wno-pedantic -Wno-reserved-id-macro -Wno-undef
-endif
 
 # VM config flags.
 ifeq ($(CONFIGURATION),product)
@@ -40,20 +36,15 @@ DEBUGVM=1
 NDEBUG:=-D'VM_LABEL(foo)=0'
 endif
 
-ifeq ($(THREADING),multi)
-COGDEFS:= $(COGDEFS) -DCOGMTVM=1 -DDEBUGVM=$(DEBUGVM)
-else
-COGDEFS:= $(COGDEFS) -DCOGMTVM=0 -DDEBUGVM=$(DEBUGVM)
-endif
-ifdef BIT_IDENTICAL_FLOATING_POINT
-COGDEFS:= $(COGDEFS) -DBIT_IDENTICAL_FLOATING_POINT=1
-endif
-
-# MSVC's preprocessor (bless its heart) can't manage complex expansions
-# and so unless we specify USE_INLINE_MEMORY_ACCESSORS lots of things
-# break, including the checks in checkAssumedCompactClasses
-ifdef MSVC
-MEMACCESS:=-DUSE_INLINE_MEMORY_ACCESSORS=1
+ifeq ($(findstring -DCOGMTVM=,$(COGDEFS)),)
+  ifeq ($(THREADING),multi)
+    COGDEFS:= $(COGDEFS) -DCOGMTVM=1 -DDEBUGVM=$(DEBUGVM)
+  else
+    COGDEFS:= $(COGDEFS) -DCOGMTVM=0 -DDEBUGVM=$(DEBUGVM)
+  endif
+  ifdef BIT_IDENTICAL_FLOATING_POINT
+    COGDEFS:= $(COGDEFS) -DBIT_IDENTICAL_FLOATING_POINT=1
+  endif
 endif
 
 # Set minimum version to Windows 8 (see /cygwin/usr/include/w32api/w32api.h)

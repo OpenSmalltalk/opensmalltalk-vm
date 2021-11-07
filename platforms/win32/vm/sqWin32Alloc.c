@@ -30,20 +30,6 @@ static LPSTR  pageLimit;    /* upper limit of commited pages */
 static DWORD  maxReserved;  /* maximum reserved virtual memory */
 static DWORD  usedMemory;   /* amount of memory currently in use */
 
-#ifndef NDEBUG
-/* in debug mode, let the system crash so that we can see where it happened */
-#define EXCEPTION_WRONG_ACCESS EXCEPTION_CONTINUE_SEARCH
-#else
-/* in release mode, execute the exception handler notifying the user what happened */
-#define EXCEPTION_WRONG_ACCESS EXCEPTION_EXECUTE_HANDLER
-#endif
-
-LONG CALLBACK sqExceptionFilter(LPEXCEPTION_POINTERS exp)
-{
-  /* always wrong access - we handle memory differently now */
-  return EXCEPTION_WRONG_ACCESS;
-}
-
 # define roundDownToPage(v) ((sqIntptr_t)(v)&pageMask)
 # define roundUpToPage(v) (((sqIntptr_t)(v)+pageSize-1)&pageMask)
 

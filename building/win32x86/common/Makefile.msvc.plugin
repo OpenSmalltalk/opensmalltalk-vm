@@ -86,6 +86,8 @@ VPATH:= $(MAKERDIR) $(WIN32DIR) $(CROSSDIR) $(OBJDIR)
 
 all:	$(PLUGINLIB) $(PLUGINDLL)
 
+.PHONY : print-settings
+
 print-settings:
 	$(info ---------------- Makefile settings ------------------)
 	$(info PATH='$(PATH)')

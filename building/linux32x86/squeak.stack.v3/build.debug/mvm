@@ -27,6 +27,7 @@ test -f plugins.ext || (test -f ../plugins.ext && cp -p ../plugins.ext . || cp -
 test -f config.h || ../../../../platforms/unix/config/configure \
 	--with-src=src/v3.stack --disable-cogit \
 	--without-vm-display-fbdev --without-npsqueak \
+	--with-scriptname=cog \
 	TARGET_ARCH="-m32" \
 	CFLAGS="$OPT -msse2"
 rm -f vm/sqUnixMain.o # nuke version info

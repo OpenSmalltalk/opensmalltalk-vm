@@ -20,6 +20,7 @@ test -f plugins.ext || (test -f ../plugins.ext && cp -p ../plugins.ext . || cp -
 test -f config.h || ../../../../platforms/unix/config/configure --without-npsqueak \
 		--with-vmversion=5.0 --with-src=src/v3.cog \
 		--without-npsqueak --enable-fast-bitblt \
+		--with-scriptname=cog \
 	TARGET_ARCH="-march=armv6 -mfpu=vfp -mfloat-abi=hard" \
 	CFLAGS="$OPT -DI_REALLY_DONT_CARE_HOW_UNSAFE_THIS_IS -DUSE_MIDI_ALSA -DCOGMTVM=0"
 rm -f vm/sqUnixMain.o # nuke version info

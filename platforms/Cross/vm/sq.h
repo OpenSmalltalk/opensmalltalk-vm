@@ -161,10 +161,16 @@ extern int isCFramePointerInUse(usqIntptr_t *cFpPtr, usqIntptr_t *cSpPtr);
  * exception.
  */
 extern void ifValidWriteBackStackPointersSaveTo(void *,void *,char **,char **);
+extern void reportMinimumUnusedHeadroom();
+extern void reportMinimumUnusedHeadroomOn(FILE *);
 # endif
+extern void dumpPrimTraceLog();
+extern void dumpPrimTraceLogOn(FILE *);
 #endif /* STACKVM */
 extern void printCallStack(void);
+extern void printCallStackOn(FILE *);
 extern void printAllStacks(void);
+extern void printAllStacksOn(FILE *);
 
 /* this function should return the value of the high performance
    counter if there is such a thing on this platform (otherwise return 0) */
@@ -590,9 +596,10 @@ sqInt  ioUnloadModule(char *moduleName);
 sqInt  ioUnloadModuleOfLength(sqInt moduleNameIndex, sqInt moduleNameLength);
 char  *ioListBuiltinModule(sqInt moduleIndex);
 char  *ioListLoadedModule(sqInt moduleIndex);
-/* The next two for the FFI, also implemented in sqNamedPrims.c. */
+/* The next three for the FFI, also implemented in sqNamedPrims.c. */
 void  *ioLoadModuleOfLength(sqInt moduleNameIndex, sqInt moduleNameLength);
 void  *ioLoadSymbolOfLengthFromModule(sqInt functionNameIndex, sqInt functionNameLength, void *moduleHandle);
+sqInt ioCanCatchFFIExceptions();
 
 /* The next three functions must be implemented by sqXYZExternalPrims.c */
 /* ioLoadModule:

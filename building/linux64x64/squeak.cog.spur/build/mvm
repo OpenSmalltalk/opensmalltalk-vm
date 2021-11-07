@@ -16,6 +16,10 @@ case $(uname -s) in
            ;;
 esac
 
+# Prefer clang over gcc, but use gcc if clang isn't available...
+CC=gcc
+if [ -x /usr/bin/clang ]; then CC=clang; fi
+
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
 fi
@@ -32,8 +36,9 @@ test -f plugins.ext || (test -f ../plugins.ext && cp -p ../plugins.ext . || cp -
 test -f config.h || ../../../../platforms/unix/config/configure --without-npsqueak \
 		--with-vmversion=5.0 \
 		--with-src=src/spur64.cog \
+		--with-scriptname=spur64 \
 	TARGET_ARCH="-m64" \
-	CC=clang \
+	CC=$CC \
 	CFLAGS="$CFLAGS" \
 	LIBS="$LIBS" \
 	LDFLAGS="$LDFLAGS"

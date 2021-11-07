@@ -34,6 +34,7 @@ test -f config.h || ../../../../platforms/unix/config/configure \
 		--without-libtls \
 	--with-src=src/spur32.stack --disable-cogit \
 	--without-vm-display-fbdev --without-npsqueak \
+	--with-scriptname=spur32 \
 	TARGET_ARCH="-m32" \
 	LIBS="$LIBS" \
 	CFLAGS="$OPT"

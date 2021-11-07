@@ -40,14 +40,14 @@ sqInt copyBitsFromtoat(sqInt leftX, sqInt rightX, sqInt yValue);
 #if VM_PROXY_MINOR > 10
 extern sqInt disownVM(sqInt flags);
 extern sqInt ownVM(sqInt threadIdAndFlags);
-#endif /* VM_PROXY_MINOR > 10 */
+#endif // VM_PROXY_MINOR > 10
 extern sqInt isYoung(sqInt);
 
 /* High-priority and synchronous ticker function support. */
 void addHighPriorityTickee(void (*ticker)(void), unsigned periodms);
 void addSynchronousTickee(void (*ticker)(void), unsigned periodms, unsigned roundms);
 
-#if SPURVM /* For now these are here; perhaps they're better in the VM. */
+#if SPURVM // For now these are here; perhaps they're better in the VM.
 static sqInt
 interceptFetchIntegerofObject(sqInt fieldIndex, sqInt objectPointer)
 {
@@ -93,7 +93,7 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->fetchIntegerofObject = fetchIntegerofObject;
 #endif
 	VM->fetchPointerofObject = fetchPointerofObject;
-#if OLD_FOR_REFERENCE /* slot repurposed for error */
+#if OLD_FOR_REFERENCE // slot repurposed for error
 	VM->obsoleteDontUseThisFetchWordofObject = obsoleteDontUseThisFetchWordofObject;
 #else
 	VM->error = error;
@@ -176,7 +176,7 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->success = success;
 	VM->superclassOf = superclassOf;
 
-#if VM_PROXY_MINOR <= 13 /* reused in 14 and above */
+#if VM_PROXY_MINOR <= 13 // reused in 14 and above
 
 	VM->compilerHookVector= 0;
 	VM->setCompilerInitialized= 0;
@@ -240,7 +240,15 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 
 #if VM_PROXY_MINOR > 7
 	VM->callbackEnter = callbackEnter;
+# if OLD_FOR_REFERENCE
+  /* N.B. callbackLeave is only ever called from the interpreter.  Further, it
+   * and callbackEnter are obsoleted by Alien/FFI callbacks that are simpler
+   * and faster.
+   */
 	VM->callbackLeave = callbackLeave;
+# elif VM_PROXY_MINOR > 16
+	VM->primitiveFailForwithSecondary = primitiveFailForwithSecondary;
+# endif
 	VM->addGCRoot = addGCRoot;
 	VM->removeGCRoot = removeGCRoot;
 #endif
@@ -258,7 +266,7 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 #endif
 
 #if VM_PROXY_MINOR > 9
-# if VM_PROXY_MINOR > 13 /* OS Errors available in primitives; easy return forms */
+# if VM_PROXY_MINOR > 13 // OS Errors available in primitives; easy return forms
 	VM->methodReturnBool = methodReturnBool;
 	VM->methodReturnFloat = methodReturnFloat;
 	VM->methodReturnInteger = methodReturnInteger;
@@ -302,7 +310,7 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->signalNoResume = signalNoResume;
 #endif
 
-#if VM_PROXY_MINOR > 12 /* Spur */
+#if VM_PROXY_MINOR > 12 // Spur
 	VM->isImmediate = isImmediate;
 	VM->characterObjectOf = characterObjectOf;
 	VM->characterValueOf = characterValueOf;
@@ -313,25 +321,25 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->unpinObject = unpinObject;
 #endif
 
-#if VM_PROXY_MINOR > 13 /* More Spur + OS Errors available via prim error code */
+#if VM_PROXY_MINOR > 13 // More Spur + OS Errors available via prim error code
 	VM->statNumGCs = statNumGCs;
 	VM->stringForCString = stringForCString;
 	VM->primitiveFailForOSError = primitiveFailForOSError;
 	VM->primitiveFailForFFIExceptionat = primitiveFailForFFIExceptionat;
 #endif
 
-#if VM_PROXY_MINOR > 14 /* SmartSyntaxPlugin validation rewrite support */
+#if VM_PROXY_MINOR > 14 // SmartSyntaxPlugin validation rewrite support
 	VM->isBooleanObject = isBooleanObject ;
 	VM->isPositiveMachineIntegerObject = isPositiveMachineIntegerObject;
 #endif
-#if VM_PROXY_MINOR > 15 /* Spur integer and float array classes */
+#if VM_PROXY_MINOR > 15 // Spur integer and float array classes
 	VM->classDoubleByteArray = classDoubleByteArray;
 	VM->classWordArray = classWordArray;
 	VM->classDoubleWordArray = classDoubleWordArray;
 	VM->classFloat32Array = classFloat32Array;
 	VM->classFloat64Array = classFloat64Array;
 #endif
-#if VM_PROXY_MINOR > 16 /* Spur isShorts and isLong64s testing support, hash */
+#if VM_PROXY_MINOR > 16 // Spur isShorts and isLong64s testing support, hash
 	VM->isShorts = isShorts;
 	VM->isLong64s = isLong64s;
 	VM->identityHashOf = identityHashOf;

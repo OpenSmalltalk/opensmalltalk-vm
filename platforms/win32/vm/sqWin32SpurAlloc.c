@@ -14,21 +14,6 @@
 
 #if SPURVM /* Non-spur uses sqWin32Alloc.c */
 
-/* Why does this have to be *here*?? eem 6/24/2014 */
-#if !defined(NDEBUG)
-/* in debug mode, let the system crash so that we can see where it happened */
-#define EXCEPTION_WRONG_ACCESS EXCEPTION_CONTINUE_SEARCH
-#else
-/* in release mode, execute the exception handler notifying the user what happened */
-#define EXCEPTION_WRONG_ACCESS EXCEPTION_EXECUTE_HANDLER
-#endif
-
-LONG CALLBACK sqExceptionFilter(LPEXCEPTION_POINTERS exp)
-{
-  /* always wrong access - we handle memory differently now */
-  return EXCEPTION_WRONG_ACCESS;
-}
-
 static sqIntptr_t  pageMask;     /* bit mask for the start of a memory page */
 static sqIntptr_t  pageSize;     /* size of a memory page */
 static char  *minAppAddr;	/* SYSTEM_INFO lpMinimumApplicationAddress */

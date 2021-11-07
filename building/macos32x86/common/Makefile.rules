@@ -13,25 +13,24 @@ CXXVERFLAGS:=-std=c++14 -stdlib=libc++
 
 include ../common/Makefile.flags
 
-DEPFLAGS = -MT $@ -MMD -MP -MF deps/$(*F).Td
+ifeq ($(findstring /vm,$(OBJDIR)),/vm)
+DEPFLAGS = -MMD -MT '$$(BUILD)/vm/$(*F).o' -MF deps/$(*F).d
+else
+DEPFLAGS = -MMD -MT '$$(BUILD)/$(LIBNAME)/$(*F).o' -MF deps/$(*F).d
+endif
 ALLFLAGS = $(DEPFLAGS) $(WARNINGS) $(CFLAGS)
-POSTCOMPILE = sed '/^$$/d' <deps/$(*F).Td | sed '/^.*:$$/d' | sed 's/^build[^/]*/$$(BUILD)/' > deps/$(*F).d; rm deps/$(*F).Td; touch -r $< deps/$(*F).d
 
-$(OBJDIR)/%.o: %.c deps/%.d $(MAKEFILE)
+$(OBJDIR)/%.o: %.c $(MAKEFILE)
 	$(CC) -x c $(ALLFLAGS) $(INCLUDES) -c $< -o $@
-	$(POSTCOMPILE)
 
-$(OBJDIR)/%.o: %.m deps/%.d $(MAKEFILE)
+$(OBJDIR)/%.o: %.m $(MAKEFILE)
 	$(CC) -x objective-c $(OBJC_CODE_MODEL) $(ALLFLAGS) $(INCLUDES) -c $< -o $@
-	$(POSTCOMPILE)
 
-$(OBJDIR)/%.o: %.cpp deps/%.d $(MAKEFILE)
+$(OBJDIR)/%.o: %.cpp $(MAKEFILE)
 	$(CXX) $(CXXVERFLAGS) $(ALLFLAGS) $(INCLUDES) -c $< -o $@
-	$(POSTCOMPILE)
 
-$(OBJDIR)/%.o: %.mm deps/%.d $(MAKEFILE)
+$(OBJDIR)/%.o: %.mm $(MAKEFILE)
 	$(CXX) $(CXXVERFLAGS) $(OBJC_CODE_MODEL) $(ALLFLAGS) $(INCLUDES) -c $< -o $@
-	$(POSTCOMPILE)
 
 deps/%.d: ;
 

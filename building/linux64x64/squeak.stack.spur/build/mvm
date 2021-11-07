@@ -4,6 +4,10 @@ set -e
 INSTALLDIR=sqstkspur64linuxht
 OPT="-g -O1 -DNDEBUG -DDEBUGVM=0"
 
+# Prefer clang over gcc, but use gcc if clang isn't available...
+CC=gcc
+if [ -x /usr/bin/clang ]; then CC=clang; fi
+
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
 fi
@@ -18,10 +22,11 @@ test -f plugins.int || (test -f ../plugins.int && cp -p ../plugins.int . || cp -
 test -f plugins.ext || (test -f ../plugins.ext && cp -p ../plugins.ext . || cp -p ../../plugins.ext .)
 test -f config.h || ../../../../platforms/unix/config/configure \
 		--with-vmversion=5.0 \
-	--with-src=src/spur64.stack --disable-cogit \
-	--without-vm-display-fbdev --without-npsqueak \
+		--with-src=src/spur64.stack --disable-cogit \
+		--without-vm-display-fbdev --without-npsqueak \
+		--with-scriptname=spur64 \
 	TARGET_ARCH="-m64" \
-	CC=clang \
+	CC=$CC \
 	CFLAGS="$OPT -msse2"
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../../products/$INSTALLDIR

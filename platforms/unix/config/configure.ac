@@ -28,7 +28,7 @@
 # 
 # Author: Ian.Piumarta@SqueakLand.org
 # 
-# Last edited: Wed Nov 13 17:15:30 PST 2013 by eliot
+# Last edited: Mon Aug 30 21:50:00 EST 2021 by phil
 
 AC_PREREQ([2.69])
 
@@ -103,6 +103,11 @@ AC_ARG_WITH(vmmcfg,
 	[vmmcfg="${with-vmmcfg}"],
 	[vmmcfg="${blddir}"])
 
+AC_ARG_WITH(scriptname,
+	AS_HELP_STRING([ --with-scriptname=SCRIPT], [run script name installed in SCRIPT (default=squeak)]),
+	[scriptname="${with_scriptname}"],
+	[scriptname="squeak"])
+
 # Compiling a Cogit VM or not?  If so, need a cogit$o, cointerp, etc.
 
 AC_ARG_ENABLE(cogit,
@@ -121,6 +126,7 @@ AC_SUBST(vmmdir)
 AC_SUBST(vmpdir)
 AC_SUBST(vmmcfg)
 AC_SUBST(blddir)
+AC_SUBST(scriptname)
 
 SQ_VERSION=${SQ_MAJOR}.${SQ_MINOR}-${SQ_UPDATE}
 
@@ -201,6 +207,70 @@ AC_ARG_WITH(gnu-as,
 	AS_HELP_STRING([ --with-gnu-as], [assume that as is the GNU assembler (default=no)]),
 	[GAS="$withval"],
 	[GAS="unknown"])
+
+########################
+
+# This section is used by the 'generic' linux32 & linux64 mvm configs which in turn are used for Debian package building on 'other' platforms which can only support stack VMs
+AC_MSG_CHECKING([TARGET_ARCH & CFLAGS])
+if [[ "$VM_CFLAGS" != "" ]]
+then
+	AC_MSG_RESULT([autoconfigure])
+	# dpkg-architecture when available on Debian (and derivatives) with fallback to uname
+	# using DEB_HOST_GNU_CPU rather than DEB_HOST_ARCH_CPU for consistency with uname
+	AC_CHECK_PROG(getbuildarch,
+		[dpkg-architecture],
+		[dpkg-architecture --query DEB_HOST_GNU_CPU],
+		[uname -m])
+	AC_MSG_CHECKING([autoconfigure arch])
+	build_arch=`$getbuildarch`
+	AC_MSG_RESULT([$build_arch])
+	case $build_arch in
+		i686) TARGET_ARCH="-m32"
+			CFLAGS="-g -O2 -msse2"
+		;;
+
+		x86_64) TARGET_ARCH="-m64"
+			CFLAGS="-g -O1 -msse2"
+		;;
+
+	        # Omitting -DNO_VM_PROFILE=1 for now
+		armhf) TARGET_ARCH="-march=armv6 -mfpu=vfp -mfloat-abi=hard"
+			CFLAGS="-g -O3"
+		;;
+
+		# Omitting -DMUSL -DUSEEVDEV for now
+		aarch64) TARGET_ARCH="-march=armv8-a"
+			CFLAGS="-g -O2 -D__ARM_ARCH_ISA_A64 -DARM64 -D__arm__ -D__arm64__ -D__aarch64__"
+		;;
+
+		*)
+			if [[ "$VM_WORD_SIZE" == "32" ]]
+			then
+				TARGET_ARCH="-m32"
+			else
+				TARGET_ARCH="-m64"
+			fi
+			CFLAGS="-g -O2"
+		;;
+	esac
+	AC_SUBST([TARGET_ARCH])
+	AC_SUBST([CFLAGS])
+	AC_MSG_NOTICE([TARGET_ARCH=$TARGET_ARCH])
+	AC_MSG_NOTICE([CFLAGS=$CFLAGS])
+else
+	AC_MSG_RESULT([mvm])
+fi
+
+########################
+
+case $target in
+	i686*) # workaround for 32-bit x86 builds on Ubuntu/Debian
+		PKG_CONFIG=/usr/bin/i686-linux-gnu-pkg-config
+		;;
+	*)
+		PKG_CONFIG=/usr/bin/pkg-config
+		;;
+esac
 
 ########################
 

@@ -145,11 +145,13 @@ $(VMPLIST): $(OSXDIR)/$(SYSTEM)-Info.plist getversion
 		s!$$(VERSION)!$(shell ./getversion VERSION_TAG)!g;\
 		s!$$(VERSION_NUMBER)!$(shell ./getversion VERSION_REVISION_DATE_TIME)!g;\
 		s!$$(VERSION_TAG)!$(shell ./getversion VERSION_TAG)!g;\
+		s!$$(VERSION_TAG_NO_BITS)!$(shell ./getversion VERSION_TAG_NO_BITS)!g;\
 		s!$$(VIRTUAL_MACHINE_NICKNAME)!$(shell ./getversion VIRTUAL_MACHINE_NICKNAME)!g;\
 		s!$$(VM_NICKNAME)!$(shell ./getversion VM_NICKNAME)!g;\
 		s!$$(VM_MAJOR)!$(shell ./getversion VM_MAJOR)!g;\
 		s!$$(VM_MINOR)!$(shell ./getversion VM_MINOR)!g;\
 		s!$$(VM_IDENTIFIER)!$(VM_IDENTIFIER)!g;\
+		s!$$(APP_IDENTIFIER)!$(APP_IDENTIFIER)!g;\
 	' $@
 
 $(VMLOCALIZATION): $(OSXCOMMONDIR)/English.lproj/$(SYSTEM)-Localizable.strings

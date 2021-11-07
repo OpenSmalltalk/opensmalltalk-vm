@@ -168,10 +168,18 @@
 #	define STACK_SP_ALIGNMENT 0
 #endif
 #if !defined(assertCStackWellAligned)
-# define assertCStackWellAligned() do {								\
+# if defined(cFramePointerInUse)
+#	define assertCStackWellAligned() do {							\
+	if (cFramePointerInUse)											\
+		assert((getfp() & STACK_ALIGN_MASK) == STACK_FP_ALIGNMENT);	\
+	assert((getsp() & STACK_ALIGN_MASK) == STACK_SP_ALIGNMENT);		\
+} while (0)
+# else
+#	define assertCStackWellAligned() do {							\
 	extern sqInt cFramePointerInUse;								\
 	if (cFramePointerInUse)											\
 		assert((getfp() & STACK_ALIGN_MASK) == STACK_FP_ALIGNMENT);	\
 	assert((getsp() & STACK_ALIGN_MASK) == STACK_SP_ALIGNMENT);		\
 } while (0)
+# endif
 #endif

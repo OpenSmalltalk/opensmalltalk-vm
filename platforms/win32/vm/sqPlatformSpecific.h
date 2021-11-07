@@ -18,8 +18,11 @@
 
 
 #ifdef _MSC_VER
-#include <Windows.h>
-#define HAVE_BOOLEAN 1 /* for jpegReaderWriter plugin compatibility */
+# include <Windows.h>
+# define HAVE_BOOLEAN 1 /* for jpegReaderWriter plugin compatibility */
+# if __clang__
+#	define fileno(stream) _fileno(stream)
+# endif
 #endif
 
 #if defined(__MINGW32__) || defined(__MINGW64__)

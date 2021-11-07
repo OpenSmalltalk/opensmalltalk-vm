@@ -23,8 +23,9 @@ test -f config.h || ../../../../platforms/unix/config/configure \
 		--with-vmversion=5.0 \
 		--without-libtls \
 		--disable-dynamicopenssl \
-	--with-src=src/spur64.stack --disable-cogit \
-	--without-vm-display-fbdev --without-npsqueak \
+		--with-src=src/spur64.stack --disable-cogit \
+		--without-vm-display-fbdev --without-npsqueak \
+		--with-scriptname=spur64 \
 	TARGET_ARCH="-m64" \
 	LIBS="$LIBS" \
 	CFLAGS="$OPT"

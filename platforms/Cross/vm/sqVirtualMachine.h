@@ -30,31 +30,8 @@
 #include "sqMemoryAccess.h"
 
 #if VM_PROXY_MINOR > 8
+// Primitive error codes; see interp.h
 # define PrimNoErr 0
-# define PrimErrGenericFailure 1
-# define PrimErrBadReceiver 2
-# define PrimErrBadArgument 3
-# define PrimErrBadIndex 4
-# define PrimErrBadNumArgs 5
-# define PrimErrInappropriate 6
-# define PrimErrUnsupported 7
-# define PrimErrNoModification 8
-# define PrimErrNoMemory 9
-# define PrimErrNoCMemory 10
-# define PrimErrNotFound 11
-# define PrimErrBadMethod 12
-# define PrimErrNamedInternal 13
-# define PrimErrObjectMayMove 14
-# define PrimErrLimitExceeded 15
-# define PrimErrObjectIsPinned 16
-# define PrimErrWritePastObject 17
-# define PrimErrObjectMoved 18
-# define PrimErrObjectNotPinned 19
-# define PrimErrCallbackError 20
-# define PrimErrOSError 21
-# define PrimErrFFIException 22
-# define PrimErrNeedCompaction 23
-# define PrimErrOperationFailed 24
 
 /* VMCallbackContext opaque type avoids all including setjmp.h & vmCallback.h */
 typedef struct _VMCallbackContext *vmccp;
@@ -276,11 +253,19 @@ typedef struct VirtualMachine {
      Returns: True if successful, false otherwise */
   sqInt (*callbackEnter)(sqInt *callbackID);
 
+#if OLD_FOR_REFERENCE
+  /* N.B. callbackLeave is only ever called from the interpreter.  Further, it
+   * and callbackEnter are obsoleted by Alien/FFI callbacks that are simpler
+   * and faster.
+   */
   /* callbackLeave: Leave the interpreter from a previous callback
      Arguments:
        callbackID: The ID of the callback received from callbackEnter()
      Returns: True if succcessful, false otherwise. */
   sqInt (*callbackLeave)(sqInt  callbackID);
+#else
+  sqInt  (*primitiveFailForwithSecondary)(sqInt failCode, sqLong secondaryCode);
+#endif
 
   /* addGCRoot: Add a variable location to the garbage collector.
      The contents of the variable location will be updated accordingly.
@@ -603,6 +588,7 @@ sqInt identityHashOf(sqInt);
 sqInt isWordsOrShorts(sqInt);
 sqInt bytesPerElement(sqInt);
 sqInt fileTimesInUTC(void);
+sqInt primitiveFailForwithSecondary(sqInt reasonCode,sqLong extraErrorCode);
 #endif
 
 void *ioLoadFunctionFrom(char *fnName, char *modName);

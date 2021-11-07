@@ -12,6 +12,7 @@
 *       with Unicode support.
 *****************************************************************************/
 #include <Windows.h>
+#include <process.h> // for _cexit
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,6 +21,17 @@
 #include <fcntl.h> /* _O_BINARY */
 #include <float.h>
 #include <ole2.h>
+/* N.B. As of cygwin 1.5.25 fopen("crash.dmp","a") DOES NOT WORK!  crash.dmp
+ * contains garbled output as if the file pointer gets set to the start of the
+ * file, not the end.  So we synthesize our own append mode.
+ */
+#if __MINGW32__
+# include <io.h>
+#endif
+#if defined(DIR_RELATIVE_LOG_LOCATION)
+# include <ShlObj.h>
+#endif
+
 #include "sq.h"
 #include "sqImageFileAccess.h"
 #include "sqWin32Prefs.h"
@@ -98,7 +110,7 @@ sqInt getCurrentBytecode(void);
 extern void printPhaseTime(int);
 
 /* Import from sqWin32Alloc.c */
-LONG CALLBACK sqExceptionFilter(LPEXCEPTION_POINTERS exp);
+LONG CALLBACK sqExceptionFilter(PEXCEPTION_POINTERS exp);
 
 /* Import from sqWin32Window.c */
 char * GetAttributeString(sqInt id);
@@ -112,7 +124,7 @@ void ioReleaseTime(void);
 sqInt ioInitSecurity(void);
 
 /* forwarded declaration */
-static void printCrashDebugInformation(LPEXCEPTION_POINTERS exp);
+static void printCrashDebugInformation(PEXCEPTION_POINTERS exp);
 
 /*** Variables -- command line */
 static char *initialCmdLine;
@@ -155,6 +167,15 @@ static int imageSize = 0;
 
 void SetSystemTrayIcon(BOOL on);
 
+/****************************************************************************/
+/*                     Exception handling                                   */
+/****************************************************************************/
+/* The following installs us a global exception filter for *all* exceptions */
+/* in Squeak. This is necessary since the C support of Mingw32 for SEH is   */
+/* not as sophisticated as MSVC's support. However, with this new handling  */
+/* scheme the entire thing becomes actually a lot simpler...                */
+/****************************************************************************/
+
 /* default fpu control word:
    _RC_NEAR: round to nearest
    _PC_53 :  double precision arithmetic (instead of extended)
@@ -164,70 +185,151 @@ void SetSystemTrayIcon(BOOL on);
 # if defined(_M_IX86) || defined(X86) || defined(_M_I386) || defined(_X86_) \
   || defined(i386) || defined(i486) || defined(i586) || defined(i686) \
   || defined(__i386__) || defined(__386__) || defined(I386)
-#define FPU_DEFAULT (_RC_NEAR + _PC_53 + _EM_INVALID + _EM_ZERODIVIDE + _EM_OVERFLOW + _EM_UNDERFLOW + _EM_INEXACT + _EM_DENORMAL)
-#define FPU_MASK    (_MCW_EM | _MCW_RC | _MCW_PC | _MCW_IC)
+# define FPU_DEFAULT (_RC_NEAR + _PC_53 + _EM_INVALID + _EM_ZERODIVIDE \
+					+ _EM_OVERFLOW + _EM_UNDERFLOW + _EM_INEXACT + _EM_DENORMAL)
+# define FPU_MASK    (_MCW_EM | _MCW_RC | _MCW_PC | _MCW_IC)
 #else
-#define FPU_DEFAULT (_RC_NEAR + _EM_INVALID + _EM_ZERODIVIDE + _EM_OVERFLOW + _EM_UNDERFLOW + _EM_INEXACT + _EM_DENORMAL)
-#define FPU_MASK    (_MCW_EM | _MCW_RC)
+# define FPU_DEFAULT (_RC_NEAR + _EM_INVALID + _EM_ZERODIVIDE \
+					+ _EM_OVERFLOW + _EM_UNDERFLOW + _EM_INEXACT + _EM_DENORMAL)
+# define FPU_MASK    (_MCW_EM | _MCW_RC)
 #endif
 
-/****************************************************************************/
-/*                     Exception handling                                   */
-/****************************************************************************/
-/* The following installs us a global exception filter for *all* exceptions */
-/* in Squeak. This is necessary since the C support of Mingw32 for SEH is   */
-/* not as sophisticated as MSVC's support. However, with this new handling  */
-/* scheme the entire thing becomes actually a lot simpler...                */
-/****************************************************************************/
+static void UninstallExceptionHandler(void);
+
+#if _WIN64
+static PVECTORED_EXCEPTION_HANDLER ourVEHHandle = NULL;
+static BOOL inFatalException = false;
+#endif
 static LPTOP_LEVEL_EXCEPTION_FILTER TopLevelFilter = NULL;
+static BOOL debugBreakOnException = false;
+
+// Until we can implement a reliable first-chance exception handler on WIN64
+// we cannot support primitiveFailForFFIExceptionat there-on.
+sqInt
+ioCanCatchFFIExceptions() { return 1; }
+
+extern sqInt primitiveFailForFFIExceptionat(usqLong exceptionCode, usqInt pc);
+
+#if _WIN64
+static LONG NTAPI
+squeakVectoredExceptionHandler(PEXCEPTION_POINTERS exp)
+{
+	DWORD code = exp->ExceptionRecord->ExceptionCode;
+
+	if (inFatalException)
+		return EXCEPTION_CONTINUE_SEARCH;
+
+  // #1: Try to handle any FP problems
+	if (code >= EXCEPTION_FLT_DENORMAL_OPERAND
+	 && code <= EXCEPTION_FLT_UNDERFLOW) {
+		/* turn on the default masking of exceptions in the FPU and proceed */
+		_controlfp(FPU_DEFAULT, FPU_MASK);
+		return EXCEPTION_CONTINUE_EXECUTION;
+	}
+
+	// codes defined in Include/{SDK Version}/um/winnt.h
+ 	if (code == STATUS_ACCESS_VIOLATION          /* 0xC0000005 */
+	 || code == STATUS_ILLEGAL_INSTRUCTION       /* 0xC000001D */
+	 || code == STATUS_NONCONTINUABLE_EXCEPTION  /* 0xC0000025 */
+	 || code == STATUS_INTEGER_DIVIDE_BY_ZERO    /* 0xC0000094 */
+	 || code == STATUS_INTEGER_OVERFLOW          /* 0xC0000095 */
+	 || code == STATUS_PRIVILEGED_INSTRUCTION    /* 0xC0000096 */
+	 || code == STATUS_STACK_OVERFLOW            /* 0xC00000FD */) {
+  // #2: Allow the VM to fail an FFI call in which an exception occurred.
+		if (debugBreakOnException) {
+			while (!IsDebuggerPresent())
+				Sleep(250);
+			DebugBreak();
+		}
+		primitiveFailForFFIExceptionat(exp->ExceptionRecord->ExceptionCode,
+										exp->ContextRecord->CONTEXT_PC);
+
+		inFatalException = true; // avoid looping exception handling
+
+  // #3: If that didn't work print crash debug information and exit
+		UninstallExceptionHandler();
+
+		printCrashDebugInformation(exp);
+		DestroyWindow(stWindow);
+		ioExit();
+	}
+	return EXCEPTION_CONTINUE_SEARCH;
+}
+#endif // _WIN64
 
 static LONG CALLBACK
-squeakExceptionHandler(LPEXCEPTION_POINTERS exp)
+squeakExceptionHandler(PEXCEPTION_POINTERS exp)
 {
-extern sqInt primitiveFailForFFIExceptionat(usqLong exceptionCode, usqInt pc);
-  DWORD result;
-
-  /* #1: Try to handle exception in the regular (memory access)
-     exception filter */
-  result = sqExceptionFilter(exp);
-
-  /* #2: If that didn't work, try to handle any FP problems */
-  if (result != EXCEPTION_CONTINUE_EXECUTION) {
-    DWORD code = exp->ExceptionRecord->ExceptionCode;
-    if ((code >= EXCEPTION_FLT_DENORMAL_OPERAND) && (code <= EXCEPTION_FLT_UNDERFLOW)) {
-      /* turn on the default masking of exceptions in the FPU and proceed */
-      _controlfp(FPU_DEFAULT, FPU_MASK);
-      result = EXCEPTION_CONTINUE_EXECUTION;
-    }
-  }
-
-  /* #3: If that didn't work either try passing it on to the old
-     top-level filter */
-  if (result != EXCEPTION_CONTINUE_EXECUTION) {
-    if (TopLevelFilter) {
-      result = TopLevelFilter(exp);
-    }
-  }
-  if (result != EXCEPTION_CONTINUE_EXECUTION) {
-	  /* #4: Allow the VM to fail an FFI call in which an exception occurred. */
-	  primitiveFailForFFIExceptionat(exp->ExceptionRecord->ExceptionCode,
-									 exp->ContextRecord->CONTEXT_PC);
-#ifdef NDEBUG
-	/* #5: If that didn't work either give up and print a crash debug information */
-    printCrashDebugInformation(exp);
-    result = EXCEPTION_EXECUTE_HANDLER;
+#if defined(NDEBUG)
+// in release mode, execute exception handler notifying user what happened
+	DWORD result = EXCEPTION_EXECUTE_HANDLER;
+#else
+// in debug mode, let the system crash so that we can see where it happened
+	DWORD result = EXCEPTION_CONTINUE_SEARCH;
 #endif
-  }
-  return result;
+
+#if _WIN64
+	if (inFatalException)
+		return EXCEPTION_CONTINUE_SEARCH;
+#endif
+
+  // #1: Try to handle any FP problems
+	DWORD code = exp->ExceptionRecord->ExceptionCode;
+	if (code >= EXCEPTION_FLT_DENORMAL_OPERAND
+	 && code <= EXCEPTION_FLT_UNDERFLOW) {
+		/* turn on the default masking of exceptions in the FPU and proceed */
+		_controlfp(FPU_DEFAULT, FPU_MASK);
+		return EXCEPTION_CONTINUE_EXECUTION;
+	}
+
+  // #2: If that didn't work try passing it on to the old top-level filter
+	if (result != EXCEPTION_CONTINUE_EXECUTION
+	 && TopLevelFilter)
+		result = TopLevelFilter(exp);
+
+	if (result != EXCEPTION_CONTINUE_EXECUTION) {
+		// #3: Allow the VM to fail an FFI call in which an exception occurred.
+		if (debugBreakOnException) {
+			while (!IsDebuggerPresent())
+				Sleep(250);
+			DebugBreak();
+		}
+		primitiveFailForFFIExceptionat(exp->ExceptionRecord->ExceptionCode,
+										exp->ContextRecord->CONTEXT_PC);
+		/* #4: If that didn't work either give up and print crash debug information */
+		UninstallExceptionHandler();
+
+		printCrashDebugInformation(exp);
+		result = EXCEPTION_EXECUTE_HANDLER;
+	}
+	return result;
 }
 
-void InstallExceptionHandler(void)
+/* Structured exception handling is implemented completely differently in 64-bit
+ * Windows to 32-bit Windows (David Simmons, private communication, Sept 2021).
+ * To be able to write a stack trace in crash.dmp we need to be informed of
+ * exceptions before stack unwind.  On 64-bit Windows one must use vectored
+ * exception handling to be so informed.
+ */
+static void
+InstallExceptionHandler(void)
 {
+#if _WIN64
+# define CallFirst 1
+# define CallLast 0
+  ourVEHHandle = AddVectoredExceptionHandler(CallLast,
+											 squeakVectoredExceptionHandler);
+#endif
   TopLevelFilter = SetUnhandledExceptionFilter(squeakExceptionHandler);
 }
 
-void UninstallExceptionHandler(void)
+static void
+UninstallExceptionHandler(void)
 {
+#if _WIN64
+  RemoveVectoredExceptionHandler(ourVEHHandle);
+  ourVEHHandle = NULL;
+#endif
   SetUnhandledExceptionFilter(TopLevelFilter);
   TopLevelFilter = NULL;
 }
@@ -237,7 +339,6 @@ void UninstallExceptionHandler(void)
  * file, not the end.  So we synthesize our own append mode.
  */
 #if __MINGW32__
-# include <io.h>
 static FILE *
 fopen_for_append(WCHAR *filename)
 {
@@ -251,6 +352,25 @@ fopen_for_append(WCHAR *filename)
 #else
 # define fopen_for_append(filename) _wfopen(filename,L"a+t")
 #endif
+
+static FILE *
+crashDumpFile( /* OUT */ WCHAR fileName[])
+{
+#if NewspeakVM									// dump to current directory
+	wcscpy(fileName,L"crash.dmp");
+#else
+# if defined(DIR_RELATIVE_LOG_LOCATION)	// dump to CSIDL_XXX dir
+	if (SHGetFolderPathW(0, LOGDIR_LOCATION, 0, 0, fileName) == S_OK) {
+		wcscat(fileName, L"\\" DIR_RELATIVE_LOG_LOCATION);
+		wcscat(fileName, L"\\crash.dmp");
+	}
+	else
+	// fall through to dump to vmLogDir
+# endif
+	wsprintf(fileName,L"%s%s",vmLogDirW,L"crash.dmp");
+#endif
+	return fopen_for_append(fileName);
+}
 
 /****************************************************************************/
 /*                      Console Window functions                            */
@@ -394,20 +514,8 @@ int ServiceMessageHook(void * hwnd, unsigned int message, unsigned int wParam, l
 /* SetSystemTrayIcon(): Set the icon in the system tray */
 void SetSystemTrayIcon(BOOL on)
 {
-  BOOL (WINAPI *ShellNotifyIcon)(DWORD,NOTIFYICONDATA*);
-  static HMODULE hShell = NULL;
   NOTIFYICONDATA nid;
 
-  /* NOTE: There is explicitly no unload of the shell32.dll in here.
-           Win95 has _serious_ problems with the module counter and
-           may just unload the shell32.dll even if it is referenced
-           by other processes */
-  if (!hShell) hShell = LoadLibrary(TEXT("shell32.dll"));
-  if (!hShell) return; /* should not happen */
-  /* On WinNT 3.* the following will just return NULL */
-  ShellNotifyIcon = (FARPROC)GetProcAddress(hShell, "Shell_NotifyIconA");
-
-  if (!ShellNotifyIcon) return;  /* ok, we don't have it */
   nid.cbSize = sizeof(nid);
   nid.hWnd   = stWindow;
   nid.uID    = (usqIntptr_t)hInstance;
@@ -415,10 +523,7 @@ void SetSystemTrayIcon(BOOL on)
   nid.uCallbackMessage = WM_USER+42;
   nid.hIcon  = LoadIcon(hInstance, MAKEINTRESOURCE(1));
   _tcscpy(nid.szTip, TEXT(VM_NAME) TEXT("!"));
-  if (on)
-    (*ShellNotifyIcon)(NIM_ADD, &nid);
-  else
-    (*ShellNotifyIcon)(NIM_DELETE, &nid);
+  Shell_NotifyIcon( on ? NIM_ADD : NIM_DELETE, &nid);
 }
 
 
@@ -883,7 +988,7 @@ getVersionInfo(int verbose)
  * terminating process (MinGW bug?). So instead call the shutdown sequence via
  * _cexit() and then terminate explicitly.
  */
-#define exit(ec) do { _cexit(ec); ExitProcess(ec); } while (0)
+#define exit(ec) do { _cexit(); ExitProcess(ec); } while (0)
 
  /*
  * Allow to test if the standard input/output files are from a console or not
@@ -896,10 +1001,11 @@ getVersionInfo(int verbose)
  * 3 - file
  * 4 - cygwin terminal (windows only)
  */
-sqInt  fileHandleType(HANDLE fdHandle) {
-	if (fdHandle == INVALID_HANDLE_VALUE) {
+sqInt
+fileHandleType(HANDLE fdHandle)
+{
+	if (fdHandle == INVALID_HANDLE_VALUE)
 		return -1;
-	}
 
 	/* In case of Windows Shell case */
 	DWORD fileType = GetFileType(fdHandle);
@@ -914,14 +1020,11 @@ sqInt  fileHandleType(HANDLE fdHandle) {
 	if (fileType != FILE_TYPE_PIPE) {
 		if (fileType == FILE_TYPE_DISK)
 			return 3; //We have a file here
-		if (fileType == FILE_TYPE_UNKNOWN && GetLastError() == ERROR_INVALID_HANDLE)
-			return  0; //No stdio allocated
+		if (fileType == FILE_TYPE_UNKNOWN
+		 && GetLastError() == ERROR_INVALID_HANDLE)
+			return 0; //No stdio allocated
 		return  -1;
 	}
-
-	int size = sizeof(FILE_NAME_INFO) + sizeof(WCHAR) * MAX_PATH;
-	FILE_NAME_INFO *nameinfo;
-	WCHAR *p = NULL;
 
 	typedef BOOL(WINAPI *pfnGetFileInformationByHandleEx)(
 		HANDLE                    hFile,
@@ -937,26 +1040,22 @@ sqInt  fileHandleType(HANDLE fdHandle) {
 			return -1;
 	}
 
-	nameinfo = malloc(size);
-	if (nameinfo == NULL) {
+	int size = sizeof(FILE_NAME_INFO) + sizeof(WCHAR) * MAX_PATH;
+	FILE_NAME_INFO *nameinfo;
+	if (!(nameinfo = alloca(size)))
 		return -1;
-	}
-	/* Check the name of the pipe: '\{cygwin,msys}-XXXXXXXXXXXXXXXX-ptyN-{from,to}-master' */
+
+	// Check the name of the pipe: '\{cygwin,msys}-XXXXXXXXXXXXXXXX-ptyN-{from,to}-master'
 	if (pGetFileInformationByHandleEx(fdHandle, FileNameInfo, nameinfo, size)) {
 		nameinfo->FileName[nameinfo->FileNameLength / sizeof(WCHAR)] = L'\0';
-		p = nameinfo->FileName;
+		WCHAR *p = nameinfo->FileName;
 		//Check that the pipe name contains msys or cygwin
-		if ((((wcsstr(p, L"msys-") || wcsstr(p, L"cygwin-"))) &&
-			(wcsstr(p, L"-pty") && wcsstr(p, L"-master")))) {
-			//The openned pipe is a msys xor cygwin pipe to pty
-			free(nameinfo);
-			return 4;
-		}
-		else
-			free(nameinfo);
-			return 2; //else it is just a standard pipe
+		if ((wcsstr(p, L"msys-") || wcsstr(p, L"cygwin-"))
+		 && (wcsstr(p, L"-pty")
+		 && wcsstr(p, L"-master")))
+			return 4;	// The openned pipe is a msys or cygwin pipe to pty
+		return 2;		// else it is just a standard pipe
 	}
-	free(nameinfo);
 	return -1;
 }
 
@@ -1028,50 +1127,30 @@ void SetupStderr()
 /****************************************************************************/
 
 static void
-dumpStackIfInMainThread(FILE *optionalFile)
+dumpSmalltalkStackIfInMainThread(FILE *file)
 {
-	extern void printCallStack(void);
+	extern sqInt nilObject(void);
 
-	if (!optionalFile) {
-		if (ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
-			printf("\n\nSmalltalk stack dump:\n");
-			printCallStack();
-		}
-		else
-			printf("\nCan't dump Smalltalk stack. Not in VM thread\n");
+	if (!nilObject()) // If no nilObject the image hasn't been loaded yet...
 		return;
-	}
+
 	if (ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
-		FILE tmpStdout = *stdout;
-		fprintf(optionalFile, "\n\nSmalltalk stack dump:\n");
-		*stdout = *optionalFile;
-		printCallStack();
-		*optionalFile = *stdout;
-		*stdout = tmpStdout;
-		fprintf(optionalFile,"\n");
+		fprintf(file, "\n\nSmalltalk stack dump:\n");
+		printCallStackOn(file);
+		fprintf(file,"\n");
 	}
 	else
-		fprintf(optionalFile,"\nCan't dump Smalltalk stack. Not in VM thread\n");
+		fprintf(file,"\nCan't dump Smalltalk stack. Not in VM thread\n");
+	fflush(file);
 }
 
 #if STACKVM
 static void
-dumpPrimTrace(FILE *optionalFile)
+dumpPrimTrace(FILE *file)
 {
-	extern void dumpPrimTraceLog(void);
-
-	if (optionalFile) {
-		FILE tmpStdout = *stdout;
-		*stdout = *optionalFile;
-		dumpPrimTrace(0);
-		*optionalFile = *stdout;
-		*stdout = tmpStdout;
-	}
-	else {
-		printf("\nPrimitive trace:\n");
-		dumpPrimTraceLog();
-		printf("\n");
-	}
+	fprintf(file,"\nPrimitive trace:\n");
+	dumpPrimTraceLogOn(file);
+	fprintf(file,"\n");
 }
 #else
 # define dumpPrimTrace(f) 0
@@ -1101,21 +1180,19 @@ extern char *__cogitBuildInfo;
     fprintf(f,"Source Version: %s\n", sourceVersionString('\n'));
     fflush(f);
     fprintf(f,"\n"
-	    "Current byte code: %d\n"
-	    "Primitive index: %" PRIdSQINT "\n",
-	    getCurrentBytecode(),
-	    methodPrimitiveIndex());
+			"Current byte code: %" PRIdSQINT "\n"
+			"Primitive index: %" PRIdSQINT "\n",
+			getCurrentBytecode(),
+			methodPrimitiveIndex());
     fflush(f);
     /* print loaded plugins */
     fprintf(f,"\nLoaded plugins:\n");
-    {
-      int index = 1;
-      char *pluginName;
-      while ( (pluginName = ioListLoadedModule(index)) != NULL) {
-	fprintf(f,"\t%s\n", pluginName);
-	fflush(f);
-	index++;
-      }
+    int index = 0;
+    char *pluginName;
+    while ((pluginName = ioListLoadedModule(++index))) {
+		fprintf(f,"\t%s\n", pluginName);
+		fflush(f);
+		index++;
     }
 
     printModuleInfo(f);
@@ -1135,6 +1212,7 @@ error(const char *msg) {
   WCHAR crashInfo[1024];
   void *callstack[MAXFRAMES];
   symbolic_pc symbolic_pcs[MAXFRAMES];
+  WCHAR crashdumpname[MAX_PATH];
   int nframes;
   int inVMThread = ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread());
   int len;
@@ -1156,29 +1234,24 @@ error(const char *msg) {
     msgW = alloca(4 * sizeof(WCHAR));
     wcscpy(msgW, L"???");
   }
+  f = crashDumpFile(crashdumpname);
   _snwprintf(crashInfo,1024,
-      L"Sorry but the VM has crashed.\n\n"
+      L"Sorry but the " VM_NAME " VM has crashed.\n\n"
       L"Reason: %s\n\n"
       L"Current byte code: %d\n"
       L"Primitive index: %" _UNICODE_TEXT(PRIdSQINT) L"\n\n"
       L"This information will be stored in the file\n"
-      L"%s\\%s\n"
+      L"%s\n"
       L"with a complete stack dump",
       msgW,
       getCurrentBytecode(),
       methodPrimitiveIndex(),
-      vmLogDirW,
-      L"crash.dmp");
+	  crashdumpname);
   if (!fHeadlessImage)
-    MessageBoxW(stWindow,crashInfo,L"Fatal VM error",
+    MessageBoxW(stWindow,crashInfo,L"Fatal " VM_NAME " VM error",
                  MB_OK | MB_APPLMODAL | MB_ICONSTOP);
 
-#if !NewspeakVM
-  SetCurrentDirectoryW(vmLogDirW);
-#endif
-  /* print the above information */
-  f = fopen_for_append(L"crash.dmp");
-  if (f){
+  if (f) {
     time_t crashTime = time(NULL);
     fprintf(f,"---------------------------------------------------------------------\n");
     fprintf(f,"%s %s\n\n", ctime(&crashTime), GetAttributeString(0));
@@ -1192,17 +1265,17 @@ error(const char *msg) {
 	fflush(f);
 	print_backtrace(f, nframes, MAXFRAMES, callstack, symbolic_pcs);
 	fflush(f);
-	dumpStackIfInMainThread(f);
+	dumpSmalltalkStackIfInMainThread(f);
 	fflush(f);
 	fclose(f);
   }
   printf("Error in %s thread\nReason: %s\n\n",
 		  inVMThread ? "the VM" : "some other",
 		  msg);
-  dumpPrimTrace(0);
+  dumpPrimTrace(stdout);
   print_backtrace(stdout, nframes, MAXFRAMES, callstack, symbolic_pcs);
   /* /Don't/ print the caller's stack to stdout here; Cleanup will do so. */
-  /* dumpStackIfInMainThread(0); */
+  /* dumpSmalltalkStackIfInMainThread(stdout); */
   exit(EXIT_FAILURE);
 }
 
@@ -1227,16 +1300,15 @@ extern sqInt reportStackHeadroom;
 #pragma auto_inline(on)
 
 static void
-printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
+printCrashDebugInformation(PEXCEPTION_POINTERS exp)
 {
   void *callstack[MAXFRAMES];
   symbolic_pc symbolic_pcs[MAXFRAMES];
+  WCHAR crashdumpname[MAX_PATH];
   int nframes, inVMThread;
   WCHAR crashInfo[1024];
   FILE *f;
   int byteCode = -2;
-
-  UninstallExceptionHandler();
 
   if ((inVMThread = ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())))
     /* Retrieve current byte code.
@@ -1259,8 +1331,9 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
 							callstack+1,
 							MAXFRAMES-1);
   symbolic_backtrace(++nframes, callstack, symbolic_pcs);
+  f = crashDumpFile(crashdumpname);
   _snwprintf(crashInfo,1024,
-	   L"Sorry but the VM has crashed.\n\n"
+	   L"Sorry but the " VM_NAME " VM has crashed.\n\n"
 	   L"Exception code:    %08x\n"
 #ifdef _WIN64
 	   L"Exception address: %016" _UNICODE_TEXT(PRIxSQPTR) L"\n"
@@ -1271,25 +1344,19 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
 	   L"Primitive index:   %" _UNICODE_TEXT(PRIdSQINT) L"\n\n"
 	   L"Crashed in %s thread\n\n"
 	   L"This information will be stored in the file\n"
-	   L"%s\\%s\n"
+	   L"%s\n"
 	   L"with a complete stack dump",
 	   exp->ExceptionRecord->ExceptionCode,
 	   (sqIntptr_t) (exp->ExceptionRecord->ExceptionAddress),
 	   byteCode,
 	   methodPrimitiveIndex(),
 	   inVMThread ? L"the VM" : L"some other",
-	   vmLogDirW,
-	   L"crash.dmp");
+	   crashdumpname);
   if (!fHeadlessImage)
-    MessageBoxW(stWindow,crashInfo,L"Fatal VM error",
+    MessageBoxW(stWindow,crashInfo,L"Fatal " VM_NAME " VM error",
                  MB_OK | MB_APPLMODAL | MB_ICONSTOP);
 
-#if !NewspeakVM
-  SetCurrentDirectoryW(vmLogDirW);
-#endif
-  /* print the above information */
-  f = fopen_for_append(L"crash.dmp");
-  if (f){
+  if (f) {
     time_t crashTime = time(NULL);
     fprintf(f,"---------------------------------------------------------------------\n");
     fprintf(f,"%s\n", ctime(&crashTime));
@@ -1324,35 +1391,40 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
 	    exp->ContextRecord->FloatSave.StatusWord,
 	    exp->ContextRecord->FloatSave.TagWord);
 #elif defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
-    fprintf(f,"RAX:%016" PRIxSQPTR "\tRBX:%016" PRIxSQPTR "\tRCX:%016" PRIxSQPTR "\tRDX:%016" PRIxSQPTR "\n",
-	    exp->ContextRecord->Rax,
-	    exp->ContextRecord->Rbx,
-	    exp->ContextRecord->Rcx,
-	    exp->ContextRecord->Rdx);
-    fprintf(f,"RSI:%016" PRIxSQPTR "\tRDI:%016" PRIxSQPTR "\tRBP:%016" PRIxSQPTR "\tRSP:%016" PRIxSQPTR "\n",
-	    exp->ContextRecord->Rsi,
-	    exp->ContextRecord->Rdi,
-	    exp->ContextRecord->Rbp,
-	    exp->ContextRecord->Rsp);
-    fprintf(f,"R8 :%016" PRIxSQPTR "\tR9 :%016" PRIxSQPTR "\tR10:%016" PRIxSQPTR "\tR11:%016" PRIxSQPTR "\n",
-	    exp->ContextRecord->R8,
-	    exp->ContextRecord->R9,
-	    exp->ContextRecord->R10,
-	    exp->ContextRecord->R11);
-    fprintf(f,"R12:%016" PRIxSQPTR "\tR13:%016" PRIxSQPTR "\tR14:%016" PRIxSQPTR "\tR15:%016" PRIxSQPTR "\n",
-	    exp->ContextRecord->R12,
-	    exp->ContextRecord->R13,
-	    exp->ContextRecord->R14,
-	    exp->ContextRecord->R15);
-    fprintf(f,"RIP:%016" PRIxSQPTR "\tEFL:%08lx\n",
-	    exp->ContextRecord->Rip,
-	    exp->ContextRecord->EFlags);
-    fprintf(f,"FP Control: %08x\nFP Status:  %08x\nFP Tag:     %08x\n",
-	    exp->ContextRecord->FltSave.ControlWord,
-	    exp->ContextRecord->FltSave.StatusWord,
-	    exp->ContextRecord->FltSave.TagWord);
+# define FMT PRIxSQPTR
+    fprintf(f,
+			"RAX:%016" FMT "\tRBX:%016" FMT "\tRCX:%016" FMT "\n",
+			exp->ContextRecord->Rax,
+			exp->ContextRecord->Rbx,
+			exp->ContextRecord->Rcx);
+    fprintf(f,
+			"RDX:%016" FMT "\tRSI:%016" FMT "\tRDI:%016" FMT "\n",
+			exp->ContextRecord->Rdx,
+			exp->ContextRecord->Rsi,
+			exp->ContextRecord->Rdi);
+    fprintf(f,
+			"RBP:%016" FMT "\tRSP:%016" FMT "\tR8 :%016" FMT "\n",
+			exp->ContextRecord->Rbp,
+			exp->ContextRecord->Rsp,
+			exp->ContextRecord->R8);
+    fprintf(f,"R9 :%016" FMT "\tR10:%016" FMT "\tR11:%016" FMT "\n",
+			exp->ContextRecord->R9,
+			exp->ContextRecord->R10,
+			exp->ContextRecord->R11);
+    fprintf(f,"R12:%016" FMT "\tR13:%016" FMT "\tR14:%016" FMT "\n",
+			exp->ContextRecord->R12,
+			exp->ContextRecord->R13,
+			exp->ContextRecord->R14);
+    fprintf(f,"R15:%016" FMT "\tRIP:%016" FMT " EFL:%08lx\n",
+			exp->ContextRecord->R15,
+			exp->ContextRecord->Rip,
+			exp->ContextRecord->EFlags);
+    fprintf(f,"FP Control: %08x\tFP Status:  %08x\tFP Tag:     %08x\n",
+			exp->ContextRecord->FltSave.ControlWord,
+			exp->ContextRecord->FltSave.StatusWord,
+			exp->ContextRecord->FltSave.TagWord);
 #else
-#error "unknown architecture, cannot pick dump registers"
+# error "unknown architecture, cannot pick dump registers"
 #endif
 
 	fprintf(f, "\n\nCrashed in %s thread\n\n",
@@ -1361,18 +1433,21 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
 	printCommonCrashDumpInfo(f);
 	dumpPrimTrace(f);
 	print_backtrace(f, nframes, MAXFRAMES, callstack, symbolic_pcs);
-	dumpStackIfInMainThread(f);
+	dumpSmalltalkStackIfInMainThread(f);
+#if COGVM
+	reportMinimumUnusedHeadroomOn(f);
+#endif
     fclose(f);
   }
 
   /* print recently called prims to stdout */
-  dumpPrimTrace(0);
+  dumpPrimTrace(stdout);
   /* print C stack to stdout */
   print_backtrace(stdout, nframes, MAXFRAMES, callstack, symbolic_pcs);
   /* print the caller's stack to stdout */
-  dumpStackIfInMainThread(0);
+  dumpSmalltalkStackIfInMainThread(stdout);
 #if COGVM
-  reportMinimumUnusedHeadroom();
+  reportMinimumUnusedHeadroomOn(stdout);
 #endif
 
   } EXCEPT(EXCEPTION_EXECUTE_HANDLER) {
@@ -1388,9 +1463,9 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
 void __cdecl Cleanup(void)
 { /* not all of these are essential, but they're polite... */
 
-  if (!inCleanExit) {
-    dumpStackIfInMainThread(0);
-  }
+  if (!inCleanExit)
+    dumpSmalltalkStackIfInMainThread(stdout);
+
   ioShutdownAllModules();
   ioReleaseTime();
   /* tricky ... we have no systray icon when running
@@ -1400,16 +1475,14 @@ void __cdecl Cleanup(void)
   if (palette) DeleteObject(palette);
   PROFILE_SHOW(ticksForReversal);
   PROFILE_SHOW(ticksForBlitting);
-  if (*stderrName)
-    {
+  if (*stderrName) {
       fclose(stderr);
       _wremove(stderrName);
-    }
-  if (*stdoutName)
-    {
+  }
+  if (*stdoutName) {
       fclose(stdout);
       _wremove(stdoutName);
-    }
+  }
   OleUninitialize();
 }
 
@@ -1571,7 +1644,6 @@ sqMain(int argc, char *argv[])
   fRunService = 0;
 #endif
 
-
   /* set time zone accordingly */
   _tzset();
 
@@ -1639,11 +1711,10 @@ sqMain(int argc, char *argv[])
   virtualMemory = imageSize + 0x00400000;
 
 #if !NO_FIRST_LEVEL_EXCEPTION_HANDLER
-# ifndef _MSC_VER
   /* Install our top-level exception handler */
   InstallExceptionHandler();
-# else
-  __try {
+# ifdef _MSC_VER
+  __try { // belt and braces...
 # endif
 #endif /* !NO_FIRST_LEVEL_EXCEPTION_HANDLER */
 
@@ -1666,7 +1737,7 @@ sqMain(int argc, char *argv[])
 
     /* if headless running is requested, try to to create an icon
        in the Win95/NT system tray */
-    if (fHeadlessImage && (!fRunService))
+    if(fHeadlessImage && !fRunService)
       SetSystemTrayIcon(1);
 
     /* read the image file */
@@ -1691,10 +1762,9 @@ sqMain(int argc, char *argv[])
   } __except(squeakExceptionHandler(GetExceptionInformation())) {
     /* Do nothing */
   }
-# else
+# endif
   /* remove the top-level exception handler */
   UninstallExceptionHandler();
-# endif
 #endif /* !NO_FIRST_LEVEL_EXCEPTION_HANDLER */
   return 1;
 }
@@ -1984,7 +2054,7 @@ parseVMArgument(int argc, char *argv[])
 		return 1; }
 	else if (!strcmp(argv[0], VMOPTION("warnpid"))) {
 		extern sqInt warnpid;
-		warnpid = getpid();
+		warnpid = GetCurrentProcessId();
 		return 1; }
 	else if (!strcmp(argv[0], VMOPTION("failonffiexception"))) {
 		extern sqInt ffiExceptionResponse;
@@ -1993,6 +2063,9 @@ parseVMArgument(int argc, char *argv[])
 	else if (!strcmp(argv[0], VMOPTION("nofailonffiexception"))) {
 		extern sqInt ffiExceptionResponse;
 		ffiExceptionResponse = -1;
+		return 1; }
+	else if (!strcmp(argv[0], VMOPTION("debugfailonffiexception"))) {
+		debugBreakOnException = true;
 		return 1; }
 #endif /* STACKVM */
 #if COGVM
@@ -2090,7 +2163,6 @@ static int
 IsImage(char *name)
 {
 	int magic;
-	extern sqInt byteSwapped(sqInt);
 	sqImageFile fp;
 
 	fp = sqImageFileOpen(name,"rb");
@@ -2195,7 +2267,7 @@ parseGenericArgs(int argc, char *argv[])
 			/* It is OK to run the console VM provided an image has been
 			 * provided by the ini file.
 			 */
-			return imageName != 0;
+			return imageName[0] != 0;
 		}
 
 	/* Always allow the command-line to override an implicit image name. */

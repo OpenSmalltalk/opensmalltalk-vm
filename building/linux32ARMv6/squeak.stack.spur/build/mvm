@@ -20,6 +20,7 @@ test -f plugins.ext || (test -f ../plugins.ext && cp -p ../plugins.ext . || cp -
 test -f config.h || ../../../../platforms/unix/config/configure \
     --with-vmversion=5.0 --with-src=src/spur32.stack --disable-cogit \
 	--without-npsqueak --enable-fast-bitblt \
+	--with-scriptname=spur32 \
 	TARGET_ARCH="-march=armv6 -mfpu=vfp -mfloat-abi=hard" \
 	CFLAGS="$OPT"
 rm -f vm/sqUnixMain.o # nuke version info

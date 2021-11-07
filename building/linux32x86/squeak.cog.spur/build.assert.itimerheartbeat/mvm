@@ -27,6 +27,7 @@ test -f plugins.ext || (test -f ../plugins.ext && cp -p ../plugins.ext . || cp -
 test -f config.h || ../../../../platforms/unix/config/configure --without-npsqueak \
 		--with-vmversion=5.0 \
 		--with-src=src/spur32.cog \
+		--with-scriptname=spur32 \
 	TARGET_ARCH="-m32" \
 	CFLAGS="$OPT -msse2 -DCOGMTVM=0 -DITIMER_HEARTBEAT=1"
 rm -f vm/sqUnixMain.o # nuke version info

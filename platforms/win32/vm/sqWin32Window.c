@@ -46,6 +46,7 @@
 #endif /* defined(__MINGW32_VERSION) && (__MINGW32_MAJOR_VERSION < 3) */
 
 #include "sq.h"
+#include "sqAssert.h" // for error
 #include "sqWin32Prefs.h"
 #include "sqSCCSVersion.h"
 
@@ -128,9 +129,9 @@ BOOL fHasFocus = 0;        /* if Squeak has the input focus */
 BOOL fDeferredUpdate = 1; /* I prefer the deferred update*/
 BOOL fShowConsole = 0;    /* do we show the console window?*/
 BOOL fDynamicConsole = 1; /* Should we show the console if any errors occur? */
+#if !SPURVM
 BOOL fShowAllocations = 0; /* Show allocation activity */
-BOOL fReduceCPUUsage = 1; /* Should we reduce CPU usage? */
-BOOL fReduceCPUInBackground = 0; /* Should we reduce CPU usage when not active? */
+#endif
 BOOL fUseDirectSound = 1; /* Do we use DirectSound?! */
 BOOL fRunSingleApp = 0;   /* Do we allow only one instance of this VM? */
 
@@ -177,19 +178,19 @@ static int printerSetup = FALSE;
 
 /* misc forward declarations */
 int recordMouseEvent(MSG *msg, UINT nrClicks);
-int recordMouseWheelEvent(MSG *msg, int dx, int dy);
 int recordKeyboardEvent(MSG *msg);
-int recordWindowEvent(int action, RECT *r);
+static int recordMouseWheelEvent(MSG *msg, int dx, int dy);
+static int recordWindowEvent(int action, RECT *r);
 #if NewspeakVM
 int ioDrainEventQueue(void);
 #endif
 
 extern sqInt byteSwapped(sqInt);
 extern int convertToSqueakTime(SYSTEMTIME);
-int recordMouseDown(WPARAM, LPARAM);
-int recordModifierButtons();
-int recordKeystroke(UINT,WPARAM,LPARAM);
-int recordVirtualKey(UINT,WPARAM,LPARAM);
+static int recordMouseDown(WPARAM, LPARAM);
+static int recordModifierButtons();
+static int recordKeystroke(UINT,WPARAM,LPARAM);
+static int recordVirtualKey(UINT,WPARAM,LPARAM);
 void SetSystemTrayIcon(BOOL on);
 void HideSplashScreen(void);
 
@@ -202,20 +203,20 @@ int sqLaunchDrop(void);
  */
 static void (*ioCheckForEventsHooks)(void);
 
-EXPORT(void) setIoProcessEventsHandler(void * handler) {
+EXPORT(void)
+setIoProcessEventsHandler(void * handler) {
     ioCheckForEventsHooks = (void (*)())handler;
 }
 #endif
 
-extern int sqAskSecurityYesNoQuestion(const char *question)
+int
+sqAskSecurityYesNoQuestion(const char *question)
 {
     return MessageBoxA(stWindow, question, "Squeak Security Alert", MB_YESNO | MB_ICONSTOP) == IDYES;
 }
 
-extern const char *sqGetCurrentImagePath(void)
-{
-    return imagePathA;
-}
+const char *
+sqGetCurrentImagePath(void) { return imagePathA; }
 
 /****************************************************************************/
 /*                      Synchronization functions                           */
@@ -226,7 +227,8 @@ extern const char *sqGetCurrentImagePath(void)
          we will signal the interpreter several semaphores. 
  	 (Predates the internal synchronization of signalSemaphoreWithIndex ()) */
 
-int synchronizedSignalSemaphoreWithIndex(int semaIndex)
+int
+synchronizedSignalSemaphoreWithIndex(int semaIndex)
 { 
   int result;
 
@@ -257,11 +259,9 @@ messageHook firstMessageHook = 0;
 messageHook preMessageHook = 0;
 
 /* main window procedure(s) */
-LRESULT CALLBACK MainWndProcA(HWND hwnd,
-                              UINT message,
-                              WPARAM wParam,
-                              LPARAM lParam) {
-
+LRESULT CALLBACK
+MainWndProcA(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
   return DefWindowProc(hwnd, message, wParam, lParam);
 }
 
@@ -630,6 +630,11 @@ MainWndProcW(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
   case WM_KILLFOCUS:
     fHasFocus = 0;
     return DefWindowProcW(hwnd,message,wParam,lParam);
+
+  case WM_TIMECHANGE:
+    resyncSystemTime();
+    return DefWindowProcW(hwnd,message,wParam,lParam);
+
   default:
     /* Unprocessed messages may be processed outside the current
        module. If firstMessageHook is non-NULL and returns a non
@@ -648,7 +653,8 @@ MainWndProcW(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 // 18 June 2008 - jdm renamed from SetDefaultPrinter() which conflicts with Windows func
 // No one seemed to be calling this func, anyway...
-void SetTheDefaultPrinter()
+void
+SetTheDefaultPrinter()
 {
 #ifndef NO_PRINTER
   if (!printerSetup) SetupPrinter();
@@ -657,7 +663,8 @@ void SetTheDefaultPrinter()
 #endif /* NO_PRINTER */
 }
 
-void SetupPrinter()
+void
+SetupPrinter()
 {
 #ifndef NO_PRINTER
   ZeroMemory(&printValues, sizeof(printValues));
@@ -681,7 +688,8 @@ void SetupPrinter()
 /*                   Color and Bitmap setup                                 */
 /****************************************************************************/
 #ifndef NO_STANDARD_COLORS
-static void SetColorEntry(int index, int red, int green, int blue)
+static void
+SetColorEntry(int index, int red, int green, int blue)
 {
   logPal->palPalEntry[index].peRed = red / 256;
   logPal->palPalEntry[index].peGreen = green / 256;
@@ -690,7 +698,8 @@ static void SetColorEntry(int index, int red, int green, int blue)
 }
 
 /* Generic color maps and bitmap info headers 1,4,8,16,32 bits per pixel */
-void SetupPixmaps(void)
+void
+SetupPixmaps(void)
 { int i;
 
   logPal = malloc(sizeof(LOGPALETTE) + 255 * sizeof(PALETTEENTRY));
@@ -765,7 +774,7 @@ void SetupPixmaps(void)
 	for (b= 0; b < 6; b++)
 	  {
 	    int i= 40 + ((36 * r) + (6 * b) + g);
-	    if (i > 255) error("index out of range in color table compuation");
+	    if (i > 255) error("index out of range in color table computation");
 	    SetColorEntry(i, (r * 65535) / 5, (g * 65535) / 5, (b * 65535) / 5);
 	  }
   }
@@ -780,7 +789,7 @@ void SetupPixmaps(void)
   bmi1->bmiHeader.biPlanes = 1;
   bmi1->bmiHeader.biBitCount = 1;
   bmi1->bmiHeader.biCompression = BI_RGB;
-  for(i=0;i<2;i++)
+  for (i=0;i<2;i++)
     {
       bmi1->bmiColors[i].rgbRed = logPal->palPalEntry[i].peRed;
       bmi1->bmiColors[i].rgbGreen = logPal->palPalEntry[i].peGreen;
@@ -792,7 +801,7 @@ void SetupPixmaps(void)
   bmi4->bmiHeader.biPlanes = 1;
   bmi4->bmiHeader.biBitCount = 4;
   bmi4->bmiHeader.biCompression = BI_RGB;
-  for(i=0;i<16;i++)
+  for (i=0;i<16;i++)
     {
       bmi4->bmiColors[i].rgbRed = logPal->palPalEntry[i].peRed;
       bmi4->bmiColors[i].rgbGreen = logPal->palPalEntry[i].peGreen;
@@ -804,7 +813,7 @@ void SetupPixmaps(void)
   bmi8->bmiHeader.biPlanes = 1;
   bmi8->bmiHeader.biBitCount = 8;
   bmi8->bmiHeader.biCompression = BI_RGB;
-  for(i=0;i<256;i++)
+  for (i=0;i<256;i++)
     {
       bmi8->bmiColors[i].rgbRed = logPal->palPalEntry[i].peRed;
       bmi8->bmiColors[i].rgbGreen = logPal->palPalEntry[i].peGreen;
@@ -839,7 +848,9 @@ void SetupPixmaps(void)
 /****************************************************************************/
 
 /* SetWindowTitle(): Set the main window title */
-void SetWindowTitle() {
+void
+SetWindowTitle()
+{
   char titleString[MAX_PATH+20];
   WCHAR wideTitle[MAX_PATH+20];
 
@@ -851,11 +862,12 @@ void SetWindowTitle() {
   SetWindowTextW(stWindow, wideTitle);
 }
 
-char *ioGetWindowLabel(void) {
-  return windowTitle;
-}
+char *
+ioGetWindowLabel(void) { return windowTitle; }
 
-sqInt ioSetWindowLabelOfSize(void* lblIndex, sqInt sz) {
+sqInt
+ioSetWindowLabelOfSize(void* lblIndex, sqInt sz)
+{
   if (sz > MAX_PATH) sz = MAX_PATH;
   memcpy(windowTitle, (void*)lblIndex, sz);
   windowTitle[sz] = 0;
@@ -863,7 +875,9 @@ sqInt ioSetWindowLabelOfSize(void* lblIndex, sqInt sz) {
   return 1;
 }
 
-sqInt ioGetWindowWidth(void) {
+sqInt
+ioGetWindowWidth(void)
+{
   RECT r;
   if (!IsWindow(stWindow)) return -1;
   r.left = r.right = r.top = r.bottom = 0;
@@ -871,7 +885,9 @@ sqInt ioGetWindowWidth(void) {
   return r.right - r.left;
 }
 
-sqInt ioGetWindowHeight(void) {
+sqInt
+ioGetWindowHeight(void)
+{
   RECT r;
   if (!IsWindow(stWindow)) return -1;
   r.left = r.right = r.top = r.bottom = 0;
@@ -879,7 +895,9 @@ sqInt ioGetWindowHeight(void) {
   return r.bottom - r.top;
 }
 
-sqInt ioSetWindowWidthHeight(sqInt w, sqInt h) {
+sqInt
+ioSetWindowWidthHeight(sqInt w, sqInt h)
+{
   RECT workArea, workArea2, old, shifted;
   HMONITOR hMonitor;
   MONITORINFO mi;
@@ -940,12 +958,11 @@ sqInt ioSetWindowWidthHeight(sqInt w, sqInt h) {
 
 }
 
-void* ioGetWindowHandle(void)
-{
-	return stWindow;
-}
+void* ioGetWindowHandle(void) { return stWindow; }
 
-sqInt ioIsWindowObscured(void) {
+sqInt
+ioIsWindowObscured(void)
+{
   HWND hwnd;
   RECT baseRect, hwndRect;
 
@@ -1057,7 +1074,9 @@ SetupWindows()
 }
 
 
-void SetWindowSize(void) {
+void
+SetWindowSize(void)
+{
   RECT r, workArea;
   int width, height, maxWidth, maxHeight, actualWidth, actualHeight;
   int deltaWidth, deltaHeight;
@@ -1111,7 +1130,8 @@ void SetWindowSize(void) {
 /****************************************************************************/
 
 /* Map a virtual key into some encoding shared by all platforms and known at image side */
-static int mapVirtualKey(int virtKey)
+static int
+mapVirtualKey(int virtKey)
 {
   switch (virtKey) {
     case VK_DELETE: return 127;
@@ -1149,12 +1169,13 @@ static sqInputEvent eventBuffer[MAX_EVENT_BUFFER];
 static int eventBufferGet = 0;
 static int eventBufferPut = 0;
 
-sqInputEvent *sqNextEventPut(void) {
+sqInputEvent *
+sqNextEventPut(void)
+{
   sqInputEvent *evt;
   evt = eventBuffer + eventBufferPut;
 
-  if (inputSemaphoreIndex)
-  {
+  if (inputSemaphoreIndex) {
     eventBufferPut = (eventBufferPut + 1) % MAX_EVENT_BUFFER;
     if (eventBufferGet == eventBufferPut) {
       /* buffer overflow; drop the last event */
@@ -1168,7 +1189,9 @@ sqInputEvent *sqNextEventPut(void) {
 }
 
 
-int recordMouseEvent(MSG *msg, UINT nrClicks) {
+int
+recordMouseEvent(MSG *msg, UINT nrClicks)
+{
 #ifndef NO_DIRECTINPUT
   static DWORD firstEventTime = 0;
 #endif
@@ -1227,7 +1250,9 @@ int recordMouseEvent(MSG *msg, UINT nrClicks) {
   return 1;
 }
 
-int recordMouseWheelEvent(MSG *msg,int dx,int dy) {
+static int
+recordMouseWheelEvent(MSG *msg,int dx,int dy)
+{
 #ifndef NO_DIRECTINPUT
   static DWORD firstEventTime = 0;
 #endif
@@ -1281,7 +1306,8 @@ int recordMouseWheelEvent(MSG *msg,int dx,int dy) {
   return 1;
 }
 
-int recordDragDropEvent(HWND wnd, int dragType, int x, int y, int numFiles)
+int
+recordDragDropEvent(HWND wnd, int dragType, int x, int y, int numFiles)
 {
   sqDragDropFilesEvent *evt;
   int alt, shift, ctrl, modifiers;
@@ -1312,7 +1338,9 @@ int recordDragDropEvent(HWND wnd, int dragType, int x, int y, int numFiles)
   return 1;
 }
 
-int recordKeyboardEvent(MSG *msg) {
+int
+recordKeyboardEvent(MSG *msg)
+{
   sqKeyboardEvent *evt;
   int alt, shift, ctrl;
   int keyCode, virtCode, pressCode;
@@ -1426,7 +1454,9 @@ int recordKeyboardEvent(MSG *msg) {
   return 1;
 }
 
-int recordWindowEvent(int action, RECT *r) {
+static int
+recordWindowEvent(int action, RECT *r)
+{
   sqWindowEvent *evt;
   evt = (sqWindowEvent*)sqNextEventPut();
   evt->type = EventTypeWindow;
@@ -1444,15 +1474,18 @@ int recordWindowEvent(int action, RECT *r) {
   return 1;
 }
 
-sqInt ioSetInputSemaphore(sqInt semaIndex) {
+sqInt
+ioSetInputSemaphore(sqInt semaIndex)
+{
   inputSemaphoreIndex = semaIndex;
   return 1;
 }
 
-sqInt ioGetNextEvent(sqInputEvent *evt) {
-  if (eventBufferGet == eventBufferPut) {
+sqInt
+ioGetNextEvent(sqInputEvent *evt)
+{
+  if (eventBufferGet == eventBufferPut)
     ioProcessEvents();
-  }
   if (eventBufferGet == eventBufferPut)
     return 1;
 
@@ -1465,7 +1498,8 @@ sqInt ioGetNextEvent(sqInputEvent *evt) {
 /*              State based primitive set                                   */
 /****************************************************************************/
 
-void recordKey(int keystate)
+static void
+recordKey(int keystate)
 {
   keyBuf[keyBufPut]= keystate;
   keyBufPut= (keyBufPut + 1) % KEYBUF_SIZE;
@@ -1476,7 +1510,8 @@ void recordKey(int keystate)
   }
 }
 
-int recordVirtualKey(UINT message, WPARAM wParam, LPARAM lParam)
+static int
+recordVirtualKey(UINT message, WPARAM wParam, LPARAM lParam)
 {
   int keystate = 0;
 
@@ -1495,7 +1530,8 @@ int recordVirtualKey(UINT message, WPARAM wParam, LPARAM lParam)
   return 1;
 }
 
-int recordKeystroke(UINT msg, WPARAM wParam, LPARAM lParam)
+static int
+recordKeystroke(UINT msg, WPARAM wParam, LPARAM lParam)
 {
   int keystate=0;
 
@@ -1518,7 +1554,8 @@ int recordKeystroke(UINT msg, WPARAM wParam, LPARAM lParam)
 }
 
 /* record mouse events */
-int recordMouseDown(WPARAM wParam, LPARAM lParam)
+static int
+recordMouseDown(WPARAM wParam, LPARAM lParam)
 {
   int stButtons= 0;
 
@@ -1537,7 +1574,8 @@ int recordMouseDown(WPARAM wParam, LPARAM lParam)
 }
 
 /* record the modifier buttons */
-int recordModifierButtons()
+static int
+recordModifierButtons()
 { int modifiers=0;
 
   /* map both shift and caps lock to squeak shift bit */
@@ -1578,18 +1616,21 @@ int recordModifierButtons()
 /****************************************************************************/
 /*              Misc support primitves                                      */
 /****************************************************************************/
-sqInt ioBeep(void)
+sqInt
+ioBeep(void)
 {
   MessageBeep(0);
   return 1;
 }
 
-void  ioNoteDisplayChangedwidthheightdepth(void *b, int w, int h, int d) {}
+void
+ioNoteDisplayChangedwidthheightdepth(void *b, int w, int h, int d) {}
 
 /*
  * In the Cog VMs time management is in platforms/win32/vm/sqin32Heartbeat.c.
  */
-sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
+sqInt
+ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 {
 	/* wake us up if something happens */
 	ResetEvent(vmWakeUpEvent);
@@ -1599,10 +1640,11 @@ sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 		addIdleUsecs(microSeconds);
 	ioProcessEvents(); /* keep up with mouse moves etc. */
 	return microSeconds;
-	}
+}
 
 
-sqInt ioProcessEvents(void)
+sqInt
+ioProcessEvents(void)
 {	static MSG msg;
 	int result;
 	extern sqInt inIOProcessEvents;
@@ -1714,13 +1756,12 @@ ioDrainEventQueue(void)
 }
 #endif /* NewspeakVM */
 
-double ioScreenScaleFactor(void)
-{
-    return 1.0;
-}
+double
+ioScreenScaleFactor(void) { return 1.0; }
 
 /* returns the size of the Squeak window */
-sqInt ioScreenSize(void)
+sqInt
+ioScreenSize(void)
 {
   static RECT r;
 
@@ -1733,7 +1774,9 @@ sqInt ioScreenSize(void)
 }
 
 /* returns the depth of the OS display */
-sqInt ioScreenDepth(void) {
+sqInt
+ioScreenDepth(void)
+{
   int depth;
   HDC dc = GetDC(stWindow);
   if (!dc) return 0; /* fail */
@@ -1743,7 +1786,8 @@ sqInt ioScreenDepth(void) {
 }
 
 
-sqInt ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt offsetX, sqInt offsetY)
+sqInt
+ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt offsetX, sqInt offsetY)
 {
   static unsigned char *andMask=0,*xorMask=0;
   static int cx=0,cy=0,cursorSize=0;
@@ -1807,11 +1851,15 @@ sqInt ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt of
   return 1;
 }
 
-sqInt ioSetCursor(sqInt cursorBitsIndex, sqInt offsetX, sqInt offsetY) {
+sqInt
+ioSetCursor(sqInt cursorBitsIndex, sqInt offsetX, sqInt offsetY)
+{
   return ioSetCursorWithMask(cursorBitsIndex, 0, offsetX, offsetY);
 }
 
-sqInt ioSetCursorARGB(sqInt bitsIndex, sqInt w, sqInt h, sqInt x, sqInt y) {
+sqInt
+ioSetCursorARGB(sqInt bitsIndex, sqInt w, sqInt h, sqInt x, sqInt y)
+{
   ICONINFO info;
   HBITMAP hbmMask = NULL;
   HBITMAP hbmColor = NULL;
@@ -1848,7 +1896,9 @@ sqInt ioSetCursorARGB(sqInt bitsIndex, sqInt w, sqInt h, sqInt x, sqInt y) {
   return 1;
 }
 
-sqInt ioSetFullScreen(sqInt fullScreen) {
+sqInt
+ioSetFullScreen(sqInt fullScreen)
+{
   if (!IsWindow(stWindow)) return 1;
   if (wasFullScreen == fullScreen) return 1;
   /* NOTE: No modifications if the window is not currently
@@ -1904,7 +1954,8 @@ sqInt ioSetFullScreen(sqInt fullScreen) {
 # define DST_PIX_REG
 #endif
 
-int reverse_image_bytes(unsigned int* dst, unsigned int *src,
+int
+reverse_image_bytes(unsigned int* dst, unsigned int *src,
 			int depth, int width, RECT *rect)
 {
   int pitch, first, last, nWords, delta, yy;
@@ -1926,7 +1977,7 @@ int reverse_image_bytes(unsigned int* dst, unsigned int *src,
     srcPixPtr = ((DWORD*)src) + (rect->top * pitch) + first;
     dstPixPtr = ((DWORD*)dst) + (rect->top * pitch) + first;
     if (reverseBits) {
-      for(yy = rect->top; yy < rect->bottom;
+      for (yy = rect->top; yy < rect->bottom;
 	  yy++, srcPixPtr += delta, dstPixPtr += delta) {
 	int i = nWords;
 	do {
@@ -1936,7 +1987,7 @@ int reverse_image_bytes(unsigned int* dst, unsigned int *src,
 	} while (--i);
       }
     } else { /* !reverseBits */
-      for(yy = rect->top; yy < rect->bottom;
+      for (yy = rect->top; yy < rect->bottom;
 	  yy++, srcPixPtr += delta, dstPixPtr += delta) {
 	int i = nWords;
 	do {
@@ -1950,7 +2001,8 @@ int reverse_image_bytes(unsigned int* dst, unsigned int *src,
   return 1;
 }
 
-int reverse_image_words(unsigned int *dst, unsigned int *src,
+int
+reverse_image_words(unsigned int *dst, unsigned int *src,
 			int depth, int width, RECT *rect)
 {
   int pitch, first, last, nWords, delta, yy;
@@ -1968,7 +2020,7 @@ int reverse_image_words(unsigned int *dst, unsigned int *src,
     register DWORD* dstPixPtr DST_PIX_REG;
     srcPixPtr = ((DWORD*)src) + (rect->top * pitch) + first;
     dstPixPtr = ((DWORD*)dst) + (rect->top * pitch) + first;
-    for(yy = rect->top; yy < rect->bottom;
+    for (yy = rect->top; yy < rect->bottom;
 	yy++, srcPixPtr += delta, dstPixPtr += delta) {
       int i = nWords;
       do {
@@ -1981,7 +2033,8 @@ int reverse_image_words(unsigned int *dst, unsigned int *src,
   return 1;
 }
 
-int copy_image_words(unsigned int *dst, unsigned int *src,
+int
+copy_image_words(unsigned int *dst, unsigned int *src,
 		     int depth, int width, RECT *rect)
 {
   int pitch, first, last, nWords, delta, yy;
@@ -1999,7 +2052,7 @@ int copy_image_words(unsigned int *dst, unsigned int *src,
     DWORD* dstPixPtr;
     srcPixPtr = ((DWORD*)src) + (rect->top * pitch) + first;
     dstPixPtr = ((DWORD*)dst) + (rect->top * pitch) + first;
-    for(yy = rect->top; yy < rect->bottom;
+    for (yy = rect->top; yy < rect->bottom;
 	yy++, srcPixPtr += pitch, dstPixPtr += pitch) {
       memcpy(dstPixPtr, srcPixPtr, nWords*4);
     }
@@ -2016,7 +2069,8 @@ int copy_image_words(unsigned int *dst, unsigned int *src,
 /*              Display and printing                                        */
 /****************************************************************************/
 
-BITMAPINFO *BmiForDepth(int depth)
+BITMAPINFO *
+BmiForDepth(int depth)
 { BITMAPINFO *bmi = NULL;
   switch (depth) {
     case 1: bmi = bmi1; break;
@@ -2028,7 +2082,9 @@ BITMAPINFO *BmiForDepth(int depth)
   return bmi;
 }
 
-sqInt ioHasDisplayDepth(sqInt depth) {
+sqInt
+ioHasDisplayDepth(sqInt depth)
+{
   /* MSB variants */
   if (depth == 1 || depth == 4 || depth == 8 || depth == 16 || depth == 32)
     return 1;
@@ -2039,7 +2095,8 @@ sqInt ioHasDisplayDepth(sqInt depth) {
 }
 
 
-sqInt ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenFlag)
+sqInt
+ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenFlag)
 {
   RECT r;
 #ifdef USE_DIRECT_X
@@ -2081,7 +2138,9 @@ sqInt ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenF
 }
 
 /* force an update of the squeak window if using deferred updates */
-sqInt ioForceDisplayUpdate(void) {
+sqInt
+ioForceDisplayUpdate(void)
+{
 	/* With Newspeak and the native GUI we do not want the main window to appear
 	 * unless explicitly asked for.
 	 */
@@ -2105,7 +2164,8 @@ sqInt ioForceDisplayUpdate(void) {
   return 1;
 }
 
-sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth, double hDPI, double vDPI, sqInt landscapeFlag)
+sqInt
+ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth, double hDPI, double vDPI, sqInt landscapeFlag)
 	/* print a form with the given bitmap, width, height, and depth at
 	   the given horizontal and vertical scales in the given orientation */
 {
@@ -2224,7 +2284,8 @@ sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth, double
 }
 
 
-sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
+sqInt
+ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
 		  sqInt affectedL, sqInt affectedR, sqInt affectedT, sqInt affectedB)
 { HDC dc;
   BITMAPINFO *bmi;
@@ -2367,7 +2428,7 @@ sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
     bmi->bmiHeader.biHeight = 1;
     bmi->bmiHeader.biSizeImage = 0;
     bitsPtr = dispBits + start + (updateRect.top * pitch);
-    for(line = updateRect.top; line < updateRect.bottom; line++) {
+    for (line = updateRect.top; line < updateRect.bottom; line++) {
       lines = SetDIBitsToDevice(dc, left, line, nPix, 1, 0, 0, 0, 1,
 				(void*) bitsPtr, bmi, DIB_RGB_COLORS);
       bitsPtr += pitch;
@@ -2404,16 +2465,16 @@ sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
 /*                      Clipboard                                           */
 /****************************************************************************/
 
-sqInt clipboardSize(void) { 
+sqInt
+clipboardSize(void)
+{ 
   HANDLE h;
   WCHAR *src;
   int i, count, bytesNeeded;
 
   /* Do we have text in the clipboard? */
-  if (!IsClipboardFormatAvailable(CF_UNICODETEXT))
-    return 0;
-
-  if (!OpenClipboard(stWindow))
+  if (!IsClipboardFormatAvailable(CF_UNICODETEXT)
+   || !OpenClipboard(stWindow))
     return 0;
 
   /* Get it in unicode format. */
@@ -2421,19 +2482,17 @@ sqInt clipboardSize(void) {
   src = GlobalLock(h);
 
   /* How many bytes do we need to store those unicode chars in UTF8 format? */
-  bytesNeeded = WideCharToMultiByte(CP_UTF8, 0, src, -1,
-				    NULL, 0, NULL, NULL );
+  bytesNeeded = WideCharToMultiByte(CP_UTF8, 0, src, -1, NULL, 0, NULL, NULL);
   if (bytesNeeded > 0) {
-    unsigned char *tmp = malloc(bytesNeeded+1);
+    char *tmp = malloc(bytesNeeded+1);
 
     /* Convert Unicode text to UTF8. */
-    WideCharToMultiByte(CP_UTF8, 0, src, -1, tmp, bytesNeeded , NULL, NULL);
+    WideCharToMultiByte(CP_UTF8, 0, src, -1, tmp, bytesNeeded, NULL, NULL);
 
     /* Count CrLfs for which we remove the extra Lf */
     count = bytesNeeded; /* ex. terminating zero */
-    for(i=0; i<count; i++) {
-      if ((tmp[i] == 13) && (tmp[i+1] == 10)) bytesNeeded--;
-    }
+    for (i=0; i<count; i++)
+      if (tmp[i] == 13 && tmp[i+1] == 10) bytesNeeded--;
     bytesNeeded--; /* discount terminating zero */
     free(tmp); /* no longer needed */
   }
@@ -2445,9 +2504,11 @@ sqInt clipboardSize(void) {
 }
 
 /* send the given string to the clipboard */
-sqInt clipboardWriteFromAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex) {
+sqInt
+clipboardWriteFromAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex)
+{
   HANDLE h;
-  unsigned char *src, *tmp, *cvt;
+  char *src, *tmp, *cvt;
   int i, wcharsNeeded, utf8Count;
   WCHAR *out;
 
@@ -2455,22 +2516,17 @@ sqInt clipboardWriteFromAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex) 
     return 0;
 
   /* Get the pointer to the byte array. */
-  src = (unsigned char *)byteArrayIndex + startIndex;
+  src = (char *)byteArrayIndex + startIndex;
 
   /* Count lone CRs for which we want to add an extra Lf */
-  for(i=0, utf8Count=count; i<count; i++) {
-    if ((src[i] == 13) && (src[i+1] != 10)) utf8Count++;
-  }
+  for (i=0, utf8Count=count; i<count; i++)
+    if (src[i] == 13 && src[i+1] != 10) utf8Count++;
 
   /* allocate temporary storage and copy string (inserting Lfs) */
   cvt = tmp = malloc(utf8Count+1);
-  for(i=0;i<count;i++,tmp++,src++) {
-    *tmp = *src;
-    if (src[0] == 13 && src[1] != 10) {
-      tmp++;
-      *tmp = 10;
-    }
-  }
+  for (i=0;i<count;i++,tmp++,src++)
+    if ((*tmp = *src) == 13 && src[1] != 10)
+		*++tmp = 10;
   *tmp = 0; /* terminating zero */
 
   /* Note: At this point we have a valid UTF-8, CrLf-containing,
@@ -2500,18 +2556,17 @@ sqInt clipboardWriteFromAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex) 
 
 
 /* transfer the clipboard data into the given byte array */
-sqInt clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex) {
+sqInt
+clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex)
+{
   HANDLE h;
-  unsigned char *dst, *cvt, *tmp;
+  char *dst, *cvt, *tmp;
   WCHAR *src;
   int i, bytesNeeded;
 
-
   /* Check if we have Unicode text available */
-  if (!IsClipboardFormatAvailable(CF_UNICODETEXT))
-    return 0;
-
-  if (!OpenClipboard(stWindow))
+  if (!IsClipboardFormatAvailable(CF_UNICODETEXT)
+   || !OpenClipboard(stWindow))
     return 0;
 
   /* Get clipboard data in Unicode format */
@@ -2519,19 +2574,16 @@ sqInt clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex) {
   src = GlobalLock(h);
 
   /* How many bytes do we need to store the UTF8 representation? */
-  bytesNeeded = WideCharToMultiByte(CP_UTF8, 0, src, -1,
-				    NULL, 0, NULL, NULL );
+  bytesNeeded = WideCharToMultiByte(CP_UTF8, 0, src, -1, NULL, 0, NULL, NULL);
 
   /* Convert Unicode text to UTF8. */
   cvt = tmp = malloc(bytesNeeded);
   WideCharToMultiByte(CP_UTF8, 0, src, -1, tmp, bytesNeeded, NULL, NULL);
 
   /* Copy data, skipping Lfs as needed */
-  dst = (unsigned char *)byteArrayIndex + startIndex;
-  for(i=0;i<count;i++,dst++,tmp++) {
-    *dst = *tmp;
-    if (((tmp[0] == 13) && (tmp[1] == 10))) tmp++;
-  }  
+  dst = (char *)byteArrayIndex + startIndex;
+  for (i=0;i<count;i++,dst++,tmp++)
+    if ((*dst = *tmp) == 13 && tmp[1] == 10) tmp++;
   free(cvt);
 
   GlobalUnlock(h);
@@ -2724,15 +2776,13 @@ getAttributeIntoLength(sqInt id, sqInt byteArrayIndex, sqInt length)
   srcPtr = GetAttributeString(id);
   if (!srcPtr) return 0;
   charsToMove = strlen(srcPtr);
-  if (charsToMove > length) {
+  if (charsToMove > length)
     charsToMove = length;
-  }
 
   dstPtr = (char *) byteArrayIndex;
   end = srcPtr + charsToMove;
-  while (srcPtr < end) {
+  while (srcPtr < end)
     *dstPtr++ = *srcPtr++;
-  }
   return charsToMove;
 }
 
@@ -2786,9 +2836,10 @@ sqLaunchDrop(void)
 int
 isLocalFileName(TCHAR *fileName)
 {
-  int i;
-  for(i=0; i<lstrlen(imagePath); i++)
-    if (imagePath[i] != fileName[i]) return 0;
+  int i, l;
+  for (i = 0, l = lstrlen(imagePath); i < l; i++)
+    if (imagePath[i] != fileName[i])
+      return 0;
   return 1;
 }
 
@@ -2934,7 +2985,8 @@ static LRESULT CALLBACK
 SplashWndProcA(HWND hwnd,
 				UINT message,
 				WPARAM wParam,
-				LPARAM lParam) {
+				LPARAM lParam)
+{
   PAINTSTRUCT ps;
   HDC mdc;
   HANDLE hOld;

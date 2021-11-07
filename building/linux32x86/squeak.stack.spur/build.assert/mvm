@@ -26,8 +26,9 @@ test -f plugins.int || (test -f ../plugins.int && cp -p ../plugins.int . || cp -
 test -f plugins.ext || (test -f ../plugins.ext && cp -p ../plugins.ext . || cp -p ../../plugins.ext .)
 test -f config.h || ../../../../platforms/unix/config/configure \
 		--with-vmversion=5.0 \
-	--with-src=src/spur32.stack --disable-cogit \
-	--without-vm-display-fbdev --without-npsqueak \
+		--with-src=src/spur32.stack --disable-cogit \
+		--without-vm-display-fbdev --without-npsqueak \
+		--with-scriptname=spur32 \
 	TARGET_ARCH="-m32" \
 	CFLAGS="$OPT -msse2"
 rm -f vm/sqUnixMain.o # nuke version info
