@@ -594,6 +594,11 @@ MainWndProcW(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
     } else if (fPriorityBoost) {
       SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL);
     }
+    if (wParam == WA_INACTIVE) {
+      recordWindowEvent(WindowEventDeactivated, NULL);
+    } else {
+      recordWindowEvent(WindowEventActivated, NULL);
+    }
     break;
 
     /* cursor redraw */

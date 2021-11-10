@@ -511,6 +511,8 @@ typedef struct sqWindowEvent {
 									 * do not rely on it in image */
 #define WindowEventChangeScreen	6	/* window moved to new screen.
 									 * rect args are dimensions of new screen */
+#define WindowEventDeactivated	7	/* window made inactive - the opposite of 
+									 * WindowEventActivated */
 
 typedef struct sqComplexEvent {
   sqIntptr_t type;			/* type of event;  EventTypeComplex */
