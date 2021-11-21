@@ -1,5 +1,5 @@
 #!/bin/sh
 # List any files with an un-checked-in package version comment "* VMMaker-..."
 
-find ${@-src/v3.cog src/v3.stack src/spur32.cog src/spur32.stack src/spur64.stack src/spur64.cog src/spur32.cog.newspeak src/spur32.stack.newspeak src/spur64.cog.newspeak src/spur64.stack.newspeak src/spur32.cog.lowcode src/spur32.stack.lowcode src/spur64.cog.lowcode src/spur64.stack.lowcode src/spur32.sista src/spur64.sista} -type f -a -name '*.[ch]' \
+find ${@-src/plugins/* src/v3* src/spur*} -type f -a -name '*.[ch]' \
 		-exec egrep -l '\* VMMaker|\* VMConstruction|\* Freetype-Plugin|\* Cog-' {} \;
