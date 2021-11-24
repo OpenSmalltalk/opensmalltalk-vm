@@ -711,7 +711,7 @@ static int fb_open(_self, struct kb *kb, char *fbDev)
     self->fd= open(self->fbName= fbDev, O_RDWR);
   else
     {
-      char *fbs[]= { "/dev/fb", "/dev/fb0", "/dev/fb0current", 0 };
+      char *fbs[]= { "/dev/fb0", "/dev/fb", "/dev/fb0current", 0 };
       int i;
       for (i= 0;  fbs[i];  ++i)
 	if ((self->fd= open(self->fbName= fbs[i], O_RDWR)) >= 0)
