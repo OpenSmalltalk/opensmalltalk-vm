@@ -124,12 +124,12 @@ static struct kb *kb= 0;
 static struct fb *fb= 0;
 
 #include "sqUnixFBDevUtil.c"
-#ifdef USEEVDEV
-#include "sqUnixEvdevKeycodeMap.c"
-#include "sqUnixEvdevKeyMouse.c"
-#else
+#ifdef NOEVDEV
 #include "sqUnixFBDevMouse.c"
 #include "sqUnixFBDevKeyboard.c"
+#else
+#include "sqUnixEvdevKeycodeMap.c"
+#include "sqUnixEvdevKeyMouse.c"
 #endif
 #include "sqUnixFBDevFramebuffer.c"
 
@@ -173,7 +173,7 @@ static void openKeyboard(void)
 {
   kb= kb_new();
   kb_open(kb, vtSwitch, vtLock);
-#ifndef USEEVDEV
+#ifdef NOEVDEV
   kb_setCallback(kb, enqueueKeyboardEvent);
 #endif
 }
@@ -182,11 +182,11 @@ static void closeKeyboard(void)
 {
   if (kb)
     {
-#ifndef USEEVDEV
+#ifdef NOEVDEV
       kb_setCallback(kb, 0);
 #endif
       kb_close(kb);
-#ifndef USEEVDEV
+#ifdef NOEVDEV
       kb_delete(kb);
 #endif
       kb= 0;
@@ -209,7 +209,7 @@ static void openMouse(void)
 {
   ms= ms_new();
   ms_open(ms, msDev, msProto);
-#ifndef USEEVDEV
+#ifdef NOEVDEV
   ms_setCallback(ms, enqueueMouseEvent);
 #endif
 }
@@ -218,11 +218,11 @@ static void closeMouse(void)
 {
   if (ms)
     {
-#ifndef USEEVDEV
+#ifdef NOEVDEV
       ms_setCallback(ms, 0);
 #endif
       ms_close(ms);
-#ifndef USEEVDEV
+#ifdef NOEVDEV
       ms_delete(ms);
 #endif
       ms= 0;
@@ -246,12 +246,12 @@ static sqInt display_ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 
 static sqInt display_ioProcessEvents(void)
 {
-#ifdef USEEVDEV
+#ifdef NOEVDEV
+  aioPoll(0);
+#else
   processLibEvdevMouseEvents();
   processLibEvdevKeyEvents(); /* sets modifier bits */
   processLibEvdevMouseEvents();
-#else
-  aioPoll(0);
 #endif
   return 0;
 }
@@ -314,7 +314,7 @@ static void openDisplay(void)
   openFramebuffer();
   // init mouse after setting graf mode on tty avoids packets being
   // snarfed by gpm
-#ifndef USEEVDEV
+#ifdef NOEVDEV
   ms->init(ms);
 #endif
 }
@@ -340,7 +340,7 @@ static void display_winInit(void)
 #if defined(AT_EXIT)
   AT_EXIT(closeDisplay);
 #else
-# warning: cannot release /dev/fb on exit!
+# warning: cannot release /dev/fb0 on exit!
 # endif
 
   (void)recordMouseEvent;
@@ -365,7 +365,7 @@ static void failPermissions(const char *who)
   fprintf(stderr, "     (you might be able to load one with 'modprobe'; look in\n");
   fprintf(stderr, "     /lib/modules for something called '<your-card>fb.o'\n");
   fprintf(stderr, "  -  you don't have write permission on some of the following\n");
-  fprintf(stderr, "       /dev/tty*, /dev/fb*, /dev/psaux, /dev/input/mice\n");
+  fprintf(stderr, "       /dev/tty*, /dev/fb*, /dev/input/event?, /dev/input/mouse0\n");
   fprintf(stderr, "  -  you need to run Squeak as root on your machine\n");
   exit(1);
 }
@@ -374,12 +374,13 @@ static void failPermissions(const char *who)
 static void display_printUsage(void)
 {
   printf("\nFBDev <option>s:\n");
-  printf("  -fbdev <dev>          use framebuffer device <dev> (default: /dev/fb)\n");
-  printf("  -kbmap <file>         load keymap from <file> (default: use kernel keymap)\n");
-  printf("  -msdev <dev>          use mouse device <dev> (default: /dev/psaux)\n");
-  printf("  -msproto <protocol>   use the given <protocol> for the mouse (default: ps2)\n");
-  printf("  -vtlock               disallow all vt switching (for any reason)\n");
-  printf("  -vtswitch             enable keyboard vt switching (Alt+FNx)\n");
+  printf("  -fbdev <dev>          use framebuffer device <dev> (default: /dev/fb0)\n");
+  printf("  -kbmap <file>         load keymap from <file> \n");
+  printf("   [Make file by: 'dumpkeys -f -n --keys-only > squeak-kb.map' ]\n");
+  printf("  -msdev <dev>          use mouse device <dev> (default: /dev/input/event1)\n");
+  printf("  -kbdev <dev>          use keyboard device <dev> (default: /dev/input/event0)\n");
+  /*  printf("  -vtlock               disallow all vt switching (for any reason)\n");
+      printf("  -vtswitch             enable keyboard vt switching (Alt+FNx)\n"); */
 }
 
 
@@ -395,6 +396,7 @@ static void display_parseEnvironment(void)
   if ((ev= getenv("SQUEAK_FBDEV")))	fbDev=    strdup(ev);
   if ((ev= getenv("SQUEAK_KBMAP")))	kmPath=   strdup(ev);
   if ((ev= getenv("SQUEAK_MSDEV")))	msDev=    strdup(ev);
+  if ((ev= getenv("SQUEAK_KBDEV")))	kbDev.kbName=    strdup(ev);
   if ((ev= getenv("SQUEAK_MSPROTO")))	msProto=  strdup(ev);
   if ((ev= getenv("SQUEAK_VTLOCK")))	vtLock=   1;
   if ((ev= getenv("SQUEAK_VTSWITCH")))	vtSwitch= 1;
@@ -414,6 +416,7 @@ static int display_parseArgument(int argc, char **argv)
       if      (!strcmp(arg, "-fbdev"))	 fbDev=   argv[1];
       else if (!strcmp(arg, "-kbmap"))	 kmPath=  argv[1];
       else if (!strcmp(arg, "-msdev"))	 msDev=   argv[1];
+      else if (!strcmp(arg, "-kbdev"))	 kbDev.kbName=   argv[1]; 
       else if (!strcmp(arg, "-msproto")) msProto= argv[1];
       else
 	n= 0;	/* not recognised */
