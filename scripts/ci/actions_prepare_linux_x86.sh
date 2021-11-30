@@ -15,6 +15,7 @@ if [[ "${ARCH}" = "linux64x64" ]]; then
             libc6-dev \
             libssl-dev \
             libfreetype6-dev \
+            libevdev-dev \
             libx11-dev \
             libxext-dev \
             libxrender-dev \
@@ -42,6 +43,7 @@ elif [[ "${ARCH}" = "linux32x86" ]]; then
             libssl-dev:i386 \
             libpng-dev:i386 \
             libfreetype6-dev:i386 \
+            libevdev-dev:i386 \
             libx11-dev:i386 \
             libsm-dev:i386 \
             libice-dev:i386 \

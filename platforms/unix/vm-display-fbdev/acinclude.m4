@@ -8,4 +8,5 @@ if test "$with_vm_display_fbdev" = "no"; then
 	AC_PLUGIN_DISABLE_PLUGIN(vm-display-fbdev);
 else
 	AC_CHECK_HEADERS(linux/fb.h,,AC_PLUGIN_DISABLE)
+	AC_CHECK_HEADERS(libevdev-1.0/libevdev/libevdev.h,,AC_PLUGIN_DISABLE)
 fi

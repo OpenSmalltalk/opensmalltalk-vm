@@ -136,6 +136,10 @@
 /* Define if libdlloader will be built on this platform */
 #undef HAVE_LIBDLLOADER
 
+/* Define to 1 if you have the <libevdev-1.0/libevdev/libevdev.h> header file.
+   */
+#undef HAVE_LIBEVDEV_1_0_LIBEVDEV_LIBEVDEV_H
+
 /* Define to 1 if you have the <libutil.h> header file. */
 #undef HAVE_LIBUTIL_H
 

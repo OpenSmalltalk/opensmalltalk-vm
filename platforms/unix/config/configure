@@ -17639,6 +17639,24 @@ fi
 
 done
 
+	for ac_header in libevdev-1.0/libevdev/libevdev.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "libevdev-1.0/libevdev/libevdev.h" "ac_cv_header_libevdev_1_0_libevdev_libevdev_h" "$ac_includes_default"
+if test "x$ac_cv_header_libevdev_1_0_libevdev_libevdev_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBEVDEV_1_0_LIBEVDEV_LIBEVDEV_H 1
+_ACEOF
+
+else
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: ******** disabling ${plugin}" >&5
+$as_echo "******** disabling ${plugin}" >&6; }
+  disabled_plugins="${disabled_plugins} ${plugin}"
+fi
+
+done
+
 fi
 if test "${plibs}"; then
   llibs="${LIBS}"
