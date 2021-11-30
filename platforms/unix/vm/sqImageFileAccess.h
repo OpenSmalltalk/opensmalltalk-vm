@@ -18,6 +18,7 @@
 // On Unix we use the native file interface.
 
 #define sqImageFile	int
+#define invalidSqImageFile(sif) ((sif) < 0)
 #define squeakFileOffsetType off_t
 
 // Save/restore.

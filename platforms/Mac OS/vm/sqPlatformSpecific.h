@@ -61,6 +61,7 @@
 #define sqFTruncate(f,o) ftruncate(fileno(f), o)
 
 typedef FILE *sqImageFile;
+#define invalidSqImageFile(sif) (!(sif))
 
 #undef sqFilenameFromStringOpen
 #undef sqFilenameFromString

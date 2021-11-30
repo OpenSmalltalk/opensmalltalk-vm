@@ -16,6 +16,7 @@
 #include <stdio.h>
 
 #define sqImageFile								FILE *
+#define invalidSqImageFile(sif)					(!(sif))
 #define sqImageFileClose(f)						fclose(f)
 #define sqImageFileOpen(fileName, mode)			fopen(fileName, mode)
 #define sqImageFilePosition(f)					ftello(f)

@@ -14,6 +14,7 @@
 #else
 # define sqImageFile unsigned __int32
 #endif
+#define invalidSqImageFile(sif) (!(sif))
 #define squeakFileOffsetType unsigned __int64
 
 // Save/restore.
