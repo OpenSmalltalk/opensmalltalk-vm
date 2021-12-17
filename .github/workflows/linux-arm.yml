@@ -9,7 +9,9 @@ on:
       - 'scripts/ci/*build.sh'
       - 'deploy/**'
       # Relevant sources for this platform
-      - 'building/linux*/**' # Makefile-based build scripts
+      - 'building/linux*ARM*/**' # Makefile-based build scripts
+      - 'building/linux32/**' # Makefile-based build scripts
+      - 'building/linux64/**' # Makefile-based build scripts
       - '*src/**' # Generated VMMaker sources (incl. plugins)
       - 'platforms/Cross/**'
       - 'platforms/unix/**'
@@ -26,7 +28,9 @@ on:
       - 'scripts/ci/*build.sh'
       - 'deploy/**'
       # Relevant sources for this platform
-      - 'building/linux*/**' # Makefile-based build scripts
+      - 'building/linux*ARM*/**' # Makefile-based build scripts
+      - 'building/linux32/**' # Makefile-based build scripts
+      - 'building/linux64/**' # Makefile-based build scripts
       - '*src/**' # Generated VMMaker sources (incl. plugins)
       - 'platforms/Cross/**'
       - 'platforms/unix/**'
@@ -57,7 +61,7 @@ jobs:
           - debug
           - assert
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest # we setup QEMU to produce binaries anyway
     name: ${{ matrix.flavor }} for ${{ matrix.arch }}${{ matrix.mode == 'debug' && ' (DEBUG)' || matrix.mode == 'assert' && ' (ASSERT)' || '' }}
     env:
       ARCH: ${{ matrix.arch }}

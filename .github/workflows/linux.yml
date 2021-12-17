@@ -9,7 +9,9 @@ on:
       - 'scripts/ci/*build.sh'
       - 'deploy/**'
       # Relevant sources for this platform
-      - 'building/linux*/**' # Makefile-based build scripts
+      - 'building/linux*x*/**' # Makefile-based build scripts
+      - 'building/linux32/**' # Makefile-based build scripts
+      - 'building/linux64/**' # Makefile-based build scripts
       - '*src/**' # Generated VMMaker sources (incl. plugins)
       - 'platforms/Cross/**'
       - 'platforms/unix/**'
@@ -26,7 +28,9 @@ on:
       - 'scripts/ci/*build.sh'
       - 'deploy/**'
       # Relevant sources for this platform
-      - 'building/linux*/**' # Makefile-based build scripts
+      - 'building/linux*x*/**' # Makefile-based build scripts
+      - 'building/linux32/**' # Makefile-based build scripts
+      - 'building/linux64/**' # Makefile-based build scripts
       - '*src/**' # Generated VMMaker sources (incl. plugins)
       - 'platforms/Cross/**'
       - 'platforms/unix/**'
@@ -79,7 +83,7 @@ jobs:
             heartbeat: threaded
             mode: fast
 
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-18.04 # better backwards compatibility than ubuntu-20.04
     name: ${{ matrix.flavor }}${{ matrix.heartbeat == 'itimer' && ' (itimer)' || '' }} for ${{ matrix.arch }}${{ matrix.mode == 'debug' && ' (DEBUG)' || matrix.mode == 'assert' && ' (ASSERT)' || '' }}
     env:
       ARCH: ${{ matrix.arch }}
