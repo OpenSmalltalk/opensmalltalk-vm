@@ -37,7 +37,7 @@ jobs:
           # - arch: linux32ARMv8
           #   flavor: squeak.cogmt.spur
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest # we setup QEMU to produce binaries anyway
     name: ${{ matrix.flavor }} for ${{ matrix.arch }}
     env:
       ARCH: ${{ matrix.arch }}

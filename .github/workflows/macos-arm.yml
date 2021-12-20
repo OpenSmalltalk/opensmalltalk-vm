@@ -1,20 +1,17 @@
-name: Build for Linux (x86)
+name: Build for macOS (ARM)
 
 on:
   push: # All branches, but appropriate paths only.
     paths:
       # This workflow spec and its support scripts
-      - '.github/workflows/linux.yml'
-      - 'scripts/ci/*linux_x86.sh'
+      - '.github/workflows/macos.yml' 
       - 'scripts/ci/*build.sh'
       - 'deploy/**'
       # Relevant sources for this platform
-      - 'building/linux*x*/**' # Makefile-based build scripts
-      - 'building/linux32/**' # Makefile-based build scripts
-      - 'building/linux64/**' # Makefile-based build scripts
+      - 'building/macos*ARM*/**' # Makefile-based build scripts
       - '*src/**' # Generated VMMaker sources (incl. plugins)
       - 'platforms/Cross/**'
-      - 'platforms/unix/**'
+      - 'platforms/iOS/**' # Note that 'platforms/Mac OS' is deprecated
       # Skip changes in documentation artifacts
       - '!**.md'
       - '!**HowToBuild'
@@ -23,17 +20,14 @@ on:
       - Cog
     paths:
       # This workflow spec and its support scripts
-      - '.github/workflows/linux.yml'
-      - 'scripts/ci/*linux_x86.sh'
+      - '.github/workflows/macos.yml' 
       - 'scripts/ci/*build.sh'
       - 'deploy/**'
       # Relevant sources for this platform
-      - 'building/linux*x*/**' # Makefile-based build scripts
-      - 'building/linux32/**' # Makefile-based build scripts
-      - 'building/linux64/**' # Makefile-based build scripts
+      - 'building/macos*ARM*/**' # Makefile-based build scripts
       - '*src/**' # Generated VMMaker sources (incl. plugins)
       - 'platforms/Cross/**'
-      - 'platforms/unix/**'
+      - 'platforms/iOS/**' # Note that 'platforms/Mac OS' is deprecated
       # Skip changes in documentation artifacts
       - '!**.md'
       - '!**HowToBuild'
@@ -49,42 +43,22 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        arch:
-          - linux64x64
-          - linux32x86
+        arch: 
+          - macos64ARMv8
         flavor:
           - squeak.cog.spur
-          - pharo.cog.spur
-          # - pharo.stack.spur # build not prepared
-        heartbeat:
-          - threaded
-          - itimer
+          # - squeak.sista.spur # -Werror bc. decl. missing
+          - squeak.stack.spur
+          # - pharo.cog.spur
+          # - pharo.sista.spur # -Werror bc. decl. missing
+          # - pharo.stack.spur
         mode:
           - fast
           - debug
           - assert
-        include:
-          # sista build not fully prepared for linux64x64, so only choose selected configurations for linux32x86
-          - arch: linux32x86
-            flavor: squeak.sista.spur
-            heartbeat: threaded
-            mode: fast
-          - arch: linux32x86
-            flavor: pharo.sista.spur
-            heartbeat: threaded
-            mode: fast
-          # squeak.stack.spur builds are not prepared for itimer
-          - arch: linux64x64
-            flavor: squeak.stack.spur
-            heartbeat: threaded
-            mode: fast
-          - arch: linux32x86
-            flavor: squeak.stack.spur
-            heartbeat: threaded
-            mode: fast
 
-    runs-on: ubuntu-18.04 # better backwards compatibility than ubuntu-20.04
-    name: ${{ matrix.flavor }}${{ matrix.heartbeat == 'itimer' && ' (itimer)' || '' }} for ${{ matrix.arch }}${{ matrix.mode == 'debug' && ' (DEBUG)' || matrix.mode == 'assert' && ' (ASSERT)' || '' }}
+    runs-on: macos-10.15 # macos-11 macos-latest
+    name: ${{ matrix.flavor }} for ${{ matrix.arch }}${{ matrix.mode == 'debug' && ' (DEBUG)' || matrix.mode == 'assert' && ' (ASSERT)' || '' }}
     env:
       ARCH: ${{ matrix.arch }}
       FLAVOR: ${{ matrix.flavor }}
@@ -104,19 +78,24 @@ jobs:
         uses: actions/cache@v2
         with:
           path: .thirdparty-cache
-          key: thirdparty-cache-linux
-
-      - name: Prepare environment
-        run: ./scripts/ci/actions_prepare_linux_x86.sh
+          key: thirdparty-cache-macos
 
       - name: Build VM
         run: ./scripts/ci/actions_build.sh
-        env:
-          HEARTBEAT: ${{ matrix.heartbeat }}
 
-      - name: Sign VM (not implemented)
-        if: false
+      - name: Sign VM
+        continue-on-error: true # Save unsigned build artifacts
         run: ./deploy/sign-vm.sh
+        env:
+          SQUEAK_SIGN_PASSWORD: ${{ secrets.SQUEAK_SIGN_PASSWORD }}
+          SQUEAK_CERT_PASSWORD: ${{ secrets.SQUEAK_CERT_PASSWORD }}
+          SQUEAK_SIGN_IDENTITY: ${{ secrets.SQUEAK_SIGN_IDENTITY }}
+          PHARO_SIGN_PASSWORD: ${{ secrets.PHARO_SIGN_PASSWORD }}
+          PHARO_CERT_PASSWORD: ${{ secrets.PHARO_CERT_PASSWORD }}
+          PHARO_SIGN_IDENTITY: ${{ secrets.PHARO_SIGN_IDENTITY }}
+          NEWSPEAK_SIGN_PASSWORD: ${{ secrets.NEWSPEAK_SIGN_PASSWORD }}
+          NEWSPEAK_CERT_PASSWORD: ${{ secrets.NEWSPEAK_CERT_PASSWORD }}
+          NEWSPEAK_SIGN_IDENTITY: ${{ secrets.NEWSPEAK_SIGN_IDENTITY }}
 
       - name: Pack VM
         run: ./deploy/pack-vm.sh
@@ -125,7 +104,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: ${{ env.ASSET_NAME }}_${{ env.ASSET_REVISION }}
-          path: ${{ env.PRODUCTS_PATH }}/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
+          path: products/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
 
       - name: Update artifact in latest-build
         uses: ncipollo/release-action@v1.8.6
@@ -134,7 +113,7 @@ jobs:
           prerelease: true
           allowUpdates: true
           replacesArtifacts: true
-          artifacts: ${{ env.PRODUCTS_PATH }}/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
+          artifacts: products/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
           token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ matrix.mode == 'debug' && 'latest-debug-build' || matrix.mode == 'assert' && 'latest-assert-build' || 'latest-build' }}
           body: ${{ github.event.head_commit.message }}
@@ -146,7 +125,7 @@ jobs:
           prerelease: true # release candidate
           allowUpdates: true
           replacesArtifacts: true
-          artifacts: ${{ env.PRODUCTS_PATH }}/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
+          artifacts: products/${{ env.ASSET_NAME }}.${{ env.ASSET_EXTENSION }}
           token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ github.event.inputs.tag }}
           body: ${{ github.event.head_commit.message }}
