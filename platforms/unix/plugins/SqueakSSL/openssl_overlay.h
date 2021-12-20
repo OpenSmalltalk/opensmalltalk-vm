@@ -418,6 +418,13 @@ void SQO_DESTRUCTOR fini(void)
 #include <glob.h>
 #include <libgen.h>
 
+/* There's no need to single out older GLIBC, so lets say we are OK
+ * with an ancient one for glob.
+ */
+#if defined(__GNUC__) && defined(__linux__)
+asm (".symver glob,glob@GLIBC_2.2.5");
+#endif
+
 #define _SQO_MAX_LIBS 32
 static char* _sqo_dynamic_lib_dirs[_SQO_MAX_LIBS] = { NULL };
 static size_t _sqo_dynamic_lib_dir_count = 0;
