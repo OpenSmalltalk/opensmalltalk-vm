@@ -430,10 +430,10 @@ asm (".symver glob,glob@GLIBC_2.16" ); /* x32 */
 #    else
 asm (".symver glob,glob@GLIBC_2.2.5" ); /* x86_64 amd64 */
 #    endif
-#  elif defined(__arm__) || defined(_arm32__)
-asm (".symver glob,glob@GLIBC_2.4" ); /* arm32 */
 #  elif defined(__arm64__) || defined(__aarch64__) || defined(ARM64)
 asm (".symver glob,glob@GLIBC_2.17" ); /* arm64 */
+#  elif defined(__arm__) || defined(_arm32__)
+asm (".symver glob,glob@GLIBC_2.4" ); /* arm32 */
 #  endif
 #endif
 
