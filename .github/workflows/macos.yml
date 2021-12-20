@@ -4,7 +4,7 @@ on:
   push: # All branches, but appropriate paths only.
     paths:
       # This workflow spec and its support scripts
-      - '.github/workflows/macos.yml' 
+      - '.github/workflows/macos-arm.yml' 
       - 'scripts/ci/*build.sh'
       - 'deploy/**'
       # Relevant sources for this platform
@@ -20,7 +20,7 @@ on:
       - Cog
     paths:
       # This workflow spec and its support scripts
-      - '.github/workflows/macos.yml' 
+      - '.github/workflows/macos-arm.yml' 
       - 'scripts/ci/*build.sh'
       - 'deploy/**'
       # Relevant sources for this platform
