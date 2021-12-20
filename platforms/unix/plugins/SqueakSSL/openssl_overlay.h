@@ -422,7 +422,19 @@ void SQO_DESTRUCTOR fini(void)
  * with an ancient one for glob.
  */
 #if defined(__GNUC__) && defined(__linux__)
-asm (".symver glob,glob@GLIBC_2.2.5");
+#  if defined(__i386__)
+asm (".symver glob,glob@GLIBC_2.0" ); /* x86 i386 */
+#  elif defined(__x86_64__)
+#    if defined(__ILP32__)
+asm (".symver glob,glob@GLIBC_2.16" ); /* x32 */
+#    else
+asm (".symver glob,glob@GLIBC_2.2.5" ); /* x86_64 amd64 */
+#    endif
+#  elif defined(__arm__) || defined(_arm32__)
+asm (".symver glob,glob@GLIBC_2.4" ); /* arm32 */
+#  elif defined(__arm64__) || defined(__aarch64__) || defined(ARM64)
+asm (".symver glob,glob@GLIBC_2.17" ); /* arm64 */
+#  endif
 #endif
 
 #define _SQO_MAX_LIBS 32
