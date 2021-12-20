@@ -418,25 +418,6 @@ void SQO_DESTRUCTOR fini(void)
 #include <glob.h>
 #include <libgen.h>
 
-/* There's no need to single out older GLIBC, so lets say we are OK
- * with an ancient one for glob.
- */
-#if defined(__GNUC__) && defined(__linux__)
-#  if defined(__i386__)
-asm (".symver glob,glob@GLIBC_2.0" ); /* x86 i386 */
-#  elif defined(__x86_64__)
-#    if defined(__ILP32__)
-asm (".symver glob,glob@GLIBC_2.16" ); /* x32 */
-#    else
-asm (".symver glob,glob@GLIBC_2.2.5" ); /* x86_64 amd64 */
-#    endif
-#  elif defined(__arm64__) || defined(__aarch64__) || defined(ARM64)
-asm (".symver glob,glob@GLIBC_2.17" ); /* arm64 */
-#  elif defined(__arm__) || defined(_arm32__)
-asm (".symver glob,glob@GLIBC_2.4" ); /* arm32 */
-#  endif
-#endif
-
 #define _SQO_MAX_LIBS 32
 static char* _sqo_dynamic_lib_dirs[_SQO_MAX_LIBS] = { NULL };
 static size_t _sqo_dynamic_lib_dir_count = 0;
