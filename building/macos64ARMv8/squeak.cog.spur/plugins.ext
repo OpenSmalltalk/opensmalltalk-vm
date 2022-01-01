@@ -3,6 +3,8 @@ EXTERNAL_PLUGINS = \
 B3DAcceleratorPlugin \
 BochsIA32Plugin \
 BochsX64Plugin \
+CameraPlugin \
+ClipboardExtendedPlugin \
 CroquetPlugin \
 GdbARMPlugin \
 GdbARMv8Plugin \
@@ -16,7 +18,6 @@ MD5Plugin \
 SHA2Plugin \
 VectorEnginePlugin \
 # Not working because of deprecated functionality \
-# CameraPlugin \
 # Not working because no 64-bit QuickTime \
 # MIDIPlugin \
 # not working (because of Cocoa vs Carbon): \

@@ -1,6 +1,8 @@
 # Copied, perhaps edited, from ../../src/examplePlugins.ext
 EXTERNAL_PLUGINS = \
 B3DAcceleratorPlugin \
+CameraPlugin \
+ClipboardExtendedPlugin \
 CroquetPlugin \
 Mpeg3Plugin \
 SqueakFFIPrims \

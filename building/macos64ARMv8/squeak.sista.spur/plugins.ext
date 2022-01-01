@@ -4,6 +4,8 @@ BochsIA32Plugin \
 BochsX64Plugin \
 GdbARMPlugin \
 B3DAcceleratorPlugin \
+CameraPlugin \
+ClipboardExtendedPlugin \
 CroquetPlugin \
 Mpeg3Plugin \
 SqueakFFIPrims \
