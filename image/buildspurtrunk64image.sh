@@ -8,5 +8,5 @@ test -f SpurVMMaker.image || ./buildspurtrunkvmmakerimage.sh
 
 ./updatevmmakerimage.sh
 
-echo $VM SpurVMMaker.image BuildSpurTrunk64Image.st
-$VM SpurVMMaker.image BuildSpurTrunk64Image.st
+echo $VM SpurVMMaker.image -- BuildSpurTrunk64Image.st
+$VM SpurVMMaker.image -- BuildSpurTrunk64Image.st

@@ -19,9 +19,9 @@ fi
 
 if [ ! -f $BASE.image ]; then
 	. ./getlatesttrunkimage.sh
-	echo $VM $BASE.image NukePreferenceWizardMorph.st
-	$VM $BASE.image NukePreferenceWizardMorph.st
+	echo $VM $BASE.image -- NukePreferenceWizardMorph.st
+	$VM $BASE.image -- NukePreferenceWizardMorph.st
 fi
 
-echo $VM $BASE.image UpdateSqueakTrunkImage.st
-$VM $BASE.image UpdateSqueakTrunkImage.st
+echo $VM $BASE.image -- UpdateSqueakTrunkImage.st
+$VM $BASE.image -- UpdateSqueakTrunkImage.st
