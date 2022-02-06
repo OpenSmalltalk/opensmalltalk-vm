@@ -1020,9 +1020,11 @@ getVersionInfo(int verbose)
 # define INTERP_BUILD interpreterVersion
 #endif
   extern char vmBuildString[];
+  char processor[32];
   CFStringRef versionString;
-  char *info= (char *)malloc(4096);
-  info[0]= '\0';
+  char *info = (char *)malloc(4096);
+  info[0] = '\0';
+  getAttributeIntoLength(1003,processor,sizeof(processor));
 
 #if SPURVM
 # if BytesPerOop == 8

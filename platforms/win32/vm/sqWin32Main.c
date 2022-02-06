@@ -949,8 +949,10 @@ getVersionInfo(int verbose)
 #else
 # define INTERP_BUILD interpreterVersion
 #endif
-  char *info= (char *)malloc(4096);
-  info[0]= '\0';
+  char processor[32];
+  char *info = (char *)malloc(4096);
+  info[0] = '\0';
+  getAttributeIntoLength(1003,processor,sizeof(processor));
 
 #if SPURVM
 # if BytesPerOop == 8
@@ -969,7 +971,7 @@ getVersionInfo(int verbose)
 # define BuildVariant "Assert" ObjectMemory
 #endif
 
-  sprintf(info+strlen(info), "%s [" BuildVariant " VM]\n", vmBuildString);
+  sprintf(info+strlen(info), "%s [" BuildVariant " %s VM]\n", vmBuildString, processor);
   if (verbose)
     sprintf(info+strlen(info), "Built from: ");
   sprintf(info+strlen(info), "%s\n", INTERP_BUILD);

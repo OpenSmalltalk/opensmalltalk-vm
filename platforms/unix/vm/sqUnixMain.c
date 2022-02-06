@@ -1838,8 +1838,10 @@ char *getVersionInfo(int verbose)
 #endif
   extern char *revisionAsString();
   extern char *vm_date, *cc_version, *ux_version;
-  char *info= (char *)malloc(4096);
-  info[0]= '\0';
+  char processor[32];
+  char *info = (char *)malloc(4096);
+  info[0] = '\0';
+  getAttributeIntoLength(1003,processor,sizeof(processor));
 
 #if SPURVM
 # if BytesPerOop == 8
@@ -1870,7 +1872,7 @@ char *getVersionInfo(int verbose)
 #if defined(USE_XSHM)
   sprintf(info+strlen(info), " XShm");
 #endif
-  sprintf(info+strlen(info), " %s %s [" BuildVariant HBID " VM]\n", vm_date, cc_version);
+  sprintf(info+strlen(info), " %s %s [" BuildVariant HBID " %s VM]\n", vm_date, cc_version, processor);
   if (verbose)
     sprintf(info+strlen(info), "Built from: ");
   sprintf(info+strlen(info), "%s\n", INTERP_BUILD);

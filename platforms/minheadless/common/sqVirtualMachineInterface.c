@@ -293,8 +293,10 @@ char *getVersionInfo(int verbose)
 # define INTERP_BUILD interpreterVersion
 #endif
   extern char *revisionAsString();
-  char *info= (char *)malloc(4096);
-  info[0]= '\0';
+  char processor[32];
+  char *info = (char *)malloc(4096);
+  info[0] = '\0';
+  getAttributeIntoLength(1003,processor,sizeof(processor));
 
 #if SPURVM
 # if BytesPerOop == 8
@@ -325,7 +327,7 @@ char *getVersionInfo(int verbose)
 #if defined(USE_XSHM)
   sprintf(info+strlen(info), " XShm");
 #endif
-  sprintf(info+strlen(info), " [" BuildVariant HBID " VM]\n");
+  sprintf(info+strlen(info), " [" BuildVariant HBID " %s VM]\n", processor);
   if (verbose)
     sprintf(info+strlen(info), "Built from: ");
   sprintf(info+strlen(info), "%s\n", INTERP_BUILD);
