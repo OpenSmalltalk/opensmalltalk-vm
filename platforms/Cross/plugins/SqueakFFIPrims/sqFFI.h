@@ -106,6 +106,12 @@ typedef struct SUfdUdSi2 {union Ufd a; union UdSi2 b;} ffiTestSUfdUdSi2;
 
 char *ffiPrintString(char *string);
 char  ffiTestIndirection(char *p);
+int ffiTest4IntSum(int c1, int c2, int c3, int c4);
+int ffiTest8IntSum(int c1, int c2, int c3, int c4, int c5, int c6, int c7, int c8);
+long ffiTest4LongSum(long c1, long c2, long c3, long c4);
+long ffiTest8longSum(long c1, long c2, long c3, long c4, long c5, long c6, long c7, long c8);
+long long ffiTest4LongLongSum(long long c1, long long c2, long long c3, long long c4);
+long long ffiTest8LongLongSum(long long c1, long long c2, long long c3, long long c4, long long c5, long long c6, long long c7, long long c8);
 ffiTestSd2  ffiTestInitSd2  (double    a,double    b);
 ffiTestSf2  ffiTestInitSf2  (float     a,float     b);
 ffiTestSl2  ffiTestInitSl2  (long long a,long long b);
@@ -195,10 +201,12 @@ int ffiTestMixedIntAndStruct2(int i1, ffiTestPoint4 pt2);
 int ffiTestMixedIntAndStruct3(int i1, ffiSmallStruct1 pt2);
 sqLong ffiTestLongLong(sqLong i1, sqLong i2);
 sqLong ffiTestLongLong8(char c1, char c2, char c3, char c4, char c5, char c6, char c7, char c8, sqLong i1, sqLong i2);
+long long ffiTestLongLongs8(long long c1, long long c2, long long c3, long long c4, long long c5, long long c6, long long c7, long long c8);
 sqLong ffiTestLongLong8a1(char c1, char c2, char c3, char c4, char c5, char c6, char c7, char c8, char c9, sqLong i1, sqLong i2);
 sqLong ffiTestLongLong8a2(char c1, char c2, char c3, char c4, char c5, char c6, char c7, char c8, char c9,  char c10, sqLong i1, sqLong i2);
 sqLong ffiTestLongLonga1(char c1, sqLong i1, sqLong i2);
 sqLong ffiTestLongLonga2(char c1, char c2, sqLong i1, sqLong i2);
 sqLong ffiTestLongLonga3(char c1, sqLong i1, char c2);
+double ffiTestMixedDoublesAndLongs(double d1, long l1, double d2, long l2, double d3, long l3, double d4, long l4, double d5, long l5, double d6, long l6, double d7, long l7, double d8, long l8, double d9, long l9, double dA, long lA);
 # endif // NO_FFI_TEST
 #endif // SQ_FFI_H
