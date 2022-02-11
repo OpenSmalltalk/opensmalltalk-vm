@@ -15,6 +15,7 @@ DSAPrims \
 FFTPlugin \
 FileCopyPlugin \
 FilePlugin \
+FileDialogPlugin \
 Float64ArrayPlugin \
 FloatArrayPlugin \
 #FloatMathPlugin \

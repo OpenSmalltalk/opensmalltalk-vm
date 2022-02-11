@@ -11,6 +11,7 @@ DropPlugin \
 DSAPrims \
 FFTPlugin \
 FilePlugin \
+FileDialogPlugin \
 FloatArrayPlugin \
 FloatMathPlugin \
 HostWindowPlugin \

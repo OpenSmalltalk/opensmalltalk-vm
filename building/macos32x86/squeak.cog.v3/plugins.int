@@ -12,6 +12,7 @@ DSAPrims \
 FFTPlugin \
 FilePlugin \
 FileAttributesPlugin \
+FileDialogPlugin \
 FloatArrayPlugin \
 FloatMathPlugin \
 HostWindowPlugin \
