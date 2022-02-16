@@ -57,7 +57,8 @@ struct VirtualMachine* interpreterProxy;
 /*
  * Call a foreign function to set x8 structure result address return register
  */
-extern void callAndReturnWithStructAddr(sqLong structAddr, sqLong procAddr, sqLong regValuesArrayAddr)
+void
+callAndReturnWithStructAddr(sqLong structAddr, sqLong procAddr, sqLong regValuesArrayAddr)
 { /* Any float regs already loaded
      Place alloca'd struct address in x8 for results.
      Spread int args into int registers.
@@ -76,20 +77,11 @@ extern void callAndReturnWithStructAddr(sqLong structAddr, sqLong procAddr, sqLo
 }
 
 /*
- * Call a foreign function to get structure value from X1 
- * (x0's value already returned as result of ffi call)
- */
-extern sqLong returnX1value()
-{
-  asm volatile ("mov x0, x1");
-}
-
-
-/*
  * Call a foreign function that answers an integral result in r0 according to
  * ARM EABI rules.
  */
-sqLong callIA32IntegralReturn(SIGNATURE) {
+sqLong
+callIA32IntegralReturn(SIGNATURE) {
   sqInt (*f)(long r0, long r1, long r2, long r3,
              long r4, long r5, long r6, long r7,
              double d0, double d1, double d2, double d3,
@@ -102,7 +94,8 @@ sqLong callIA32IntegralReturn(SIGNATURE) {
  * Call a foreign function that answers a single-precision floating-point
  * result in VFP's s0 according to ARM EABI rules.
  */
-sqLong callIA32FloatReturn(SIGNATURE) {
+sqLong
+callIA32FloatReturn(SIGNATURE) {
   float (*f)(long r0, long r1, long r2, long r3,
              long r4, long r5, long r6, long r7,
              double d0, double d1, double d2, double d3,
@@ -213,9 +206,7 @@ thunkEntry(long x0, long x1, long x2, long x3,
   case retword64:
     return *(long *)&vmcc.rvs.valword;
   case retdouble:
-/*    memcpy(d0, vmcc.rvs.valflt64, sizeof(double)); */
-    d0 = vmcc.rvs.valflt64;
-    return d0;
+    return vmcc.rvs.valflt64;
   case retstruct: /*@@ FIXME:: x8 @@*/
     memcpy((void *)x0, vmcc.rvs.valstruct.addr, vmcc.rvs.valstruct.size);
     return x0;

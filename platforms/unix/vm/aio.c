@@ -115,7 +115,7 @@ long	aioDebugLogging = 0;
 #if HAVE_CONFIG_H && HAVE_EPOLL
 static int epollFd= -1;
 static struct epoll_event** epollEventsByFileDescriptor;
-static size_t epollEventsByFileDescriptorSize;
+static size_t epollEventsDescriptorCount;
 
 struct epollEventData {
 	int fd;
@@ -137,7 +137,7 @@ const static int epollFlagsForAIOFlags[] = {
 	EPOLLIN | EPOLLOUT | EPOLLPRI // AIO_RWX
 };
 
-#else
+#else // HAVE_CONFIG_H && HAVE_EPOLL
 
 # define _DO_FLAG_TYPE()	do { _DO(AIO_R, rd) _DO(AIO_W, wr) _DO(AIO_X, ex) } while (0)
 
@@ -153,7 +153,7 @@ static fd_set rdMask;		/* handle read		 */
 static fd_set wrMask;		/* handle write		 */
 static fd_set exMask;		/* handle exception	 */
 static fd_set xdMask;		/* external descriptor	 */
-#endif
+#endif // HAVE_CONFIG_H && HAVE_EPOLL
 
 static void
 undefinedHandler(int fd, void *clientData, int flags)
@@ -218,17 +218,17 @@ static int stderrIsAFile = 0; // for pollpip to avoid cluttering logs
 
 #if HAVE_CONFIG_H && HAVE_EPOLL
 static void
-growEpollEventsByFileDescriptorTo(size_t newSize) {
-	FPRINTF((stderr, "growEpollEventsByFileDescriptorTo(%lu)\n", newSize));
-	if (newSize <= epollEventsByFileDescriptorSize) return;
-	struct epoll_event** newEpollEventsByFileDescriptor = (struct epoll_event**)realloc(epollEventsByFileDescriptor, newSize * sizeof(*epollEventsByFileDescriptor));
+growEpollEventsDescriptorCountTo(size_t newCount) {
+	FPRINTF((stderr, "growEpollEventsDescriptorCountTo(%lu)\n", newCount));
+	if (newCount <= epollEventsDescriptorCount) return;
+	struct epoll_event** newEpollEventsByFileDescriptor = (struct epoll_event**)realloc(epollEventsByFileDescriptor, newCount * sizeof(*epollEventsByFileDescriptor));
 	if (!newEpollEventsByFileDescriptor) {
-		perror("growEpollEventsByFileDescriptorTo realloc");
+		perror("growEpollEventsDescriptorCountTo realloc");
 		exit(1); // Cannot recover from here
 	}
 	epollEventsByFileDescriptor = newEpollEventsByFileDescriptor;
-	memset(epollEventsByFileDescriptor + epollEventsByFileDescriptorSize, 0, (newSize - epollEventsByFileDescriptorSize) * sizeof(*epollEventsByFileDescriptor));
-	epollEventsByFileDescriptorSize = newSize;
+	memset(epollEventsByFileDescriptor + epollEventsDescriptorCount, 0, (newCount - epollEventsDescriptorCount) * sizeof(*epollEventsByFileDescriptor));
+	epollEventsDescriptorCount = newCount;
 }
 
 static void
@@ -241,10 +241,10 @@ epollInit(void)
 		perror("epoll_create1 failed");
 		exit(1);
 	}
-	epollEventsByFileDescriptorSize = 0;
+	epollEventsDescriptorCount = 0;
 	epollEventsByFileDescriptor = NULL;
 }
-#endif
+#endif // HAVE_CONFIG_H && HAVE_EPOLL
 
 
 void
@@ -303,7 +303,7 @@ void
 aioFini(void)
 {
 #if HAVE_CONFIG_H && HAVE_EPOLL
-	for (int index = 0; index < epollEventsByFileDescriptorSize; ++index) {
+	for (int index = 0; index < epollEventsDescriptorCount; ++index) {
 		struct epoll_event* event = epollEventsByFileDescriptor[index];
 		if (event) {
 			struct epollEventData* data = event->data.ptr;
@@ -370,34 +370,27 @@ aioPoll(long microSeconds)
 {
 #if HAVE_CONFIG_H && HAVE_EPOLL
 
-# if AIO_DEBUG
-	struct  sigaction current_sigio_action;
-	extern void forceInterruptCheck(int);	/* not really, but hey */
-# endif
-
 	DO_TICK(SHOULD_TICK());
 
 # if defined(AIO_DEBUG)
 #  if AIO_DEBUG >= 2
 	FPRINTF((stderr, "aioPoll(%ld)\n", microSeconds));
 #  endif
+  { extern void forceInterruptCheck(int);
+	struct  sigaction current_sigio_action;
 	// check that our signal handler is in place.
 	// If it isn't, things aren't right.
 	sigaction(SIGIO, NULL, &current_sigio_action);
 	assert(current_sigio_action.sa_handler == forceInterruptCheck);
+  }
 # endif
 	/*
 	 * get out early if there is no pending i/o and no need to relinquish
 	 * cpu
 	 */
 
-# ifdef TARGET_OS_IS_IPHONE
-	if (epollEventsByFileDescriptorSize == 0)
+	if (epollEventsDescriptorCount == 0 && microSeconds == 0)
 		return 0;
-# else
-	if (epollEventsByFileDescriptorSize == 0 && microSeconds == 0)
-		return 0;
-# endif
 
 	do {
 		const unsigned long long start = ioUTCMicroseconds();
@@ -446,7 +439,9 @@ aioPoll(long microSeconds)
 		microSeconds -= max(ioUTCMicroseconds() - start, 1);
 	} while(microSeconds > 0);
 	return 0;
-#else
+
+#else // HAVE_CONFIG_H && HAVE_EPOLL
+
 	int	fd;
 	fd_set	rd, wr, ex;
 	unsigned long long us;
@@ -523,7 +518,7 @@ aioPoll(long microSeconds)
 		_DO_FLAG_TYPE();
 	}
 	return 1;
-#endif
+#endif // HAVE_CONFIG_H && HAVE_EPOLL
 }
 
 
@@ -611,10 +606,11 @@ aioEnable(int fd, void *data, int flags)
 		return;
 	}
 #if HAVE_CONFIG_H && HAVE_EPOLL
-	if (fd >= epollEventsByFileDescriptorSize) {
+	if (fd >= epollEventsDescriptorCount) {
 		FPRINTF((stderr, "aioEnable(%d): fd too large\n", fd));
-		growEpollEventsByFileDescriptorTo(max(epollEventsByFileDescriptorSize * 2, (size_t)fd + 1));
-	} else if (epollEventsByFileDescriptor[fd]) {
+		growEpollEventsDescriptorCountTo(max(epollEventsDescriptorCount * 2, (size_t)fd + 1));
+	}
+	else if (epollEventsByFileDescriptor[fd]) {
 		FPRINTF((stderr, "aioEnable: descriptor %d already enabled\n", fd));
 		return;
 	}
@@ -643,7 +639,8 @@ aioEnable(int fd, void *data, int flags)
 	if (flags & AIO_EXT) {
 		/* we should not set NBIO ourselves on external descriptors! */
 		FPRINTF((stderr, "aioEnable(%d, %p, %d): external\n", fd, data, flags));
-	} else {
+	}
+	else {
 		FPRINTF((stderr, "aioEnable(%d, %p, %d): enable non-blocking io and sigio\n", fd, data, flags));
 		/*
 		 * enable non-blocking asynchronous i/o and delivery of SIGIO
@@ -651,7 +648,7 @@ aioEnable(int fd, void *data, int flags)
 		 */
 		makeFileDescriptorNonBlockingAndSetupSigio(fd);
 	}
-#else
+#else // HAVE_CONFIG_H && HAVE_EPOLL
 	if (fd >= FD_SETSIZE) {
 		FPRINTF((stderr, "aioEnable(%d): fd too large\n", fd));
 		return;
@@ -682,7 +679,7 @@ aioEnable(int fd, void *data, int flags)
 		FD_CLR(fd, &xdMask);
 		makeFileDescriptorNonBlockingAndSetupSigio(fd);
 	}
-#endif
+#endif // HAVE_CONFIG_H && HAVE_EPOLL
 }
 
 #if defined(AIO_DEBUG)
@@ -731,7 +728,7 @@ aioHandle(int fd, aioHandler handlerFn, int mask)
 		return;
 	}
 #if HAVE_CONFIG_H && HAVE_EPOLL
-	if (fd >= epollEventsByFileDescriptorSize || !epollEventsByFileDescriptor[fd]) {
+	if (fd >= epollEventsDescriptorCount || !epollEventsByFileDescriptor[fd]) {
 		FPRINTF((stderr, "aioHandle(%d): NOT ENABLED\n", fd));
 		return;
 	}
@@ -750,7 +747,8 @@ aioHandle(int fd, aioHandler handlerFn, int mask)
 	if (epoll_ctl(epollFd, epoll_operation, fd, event) == -1) {
 		perror("epoll_ctl");
 		FPRINTF((stderr, "aioHandle(%d, %p, %d): epoll_ctl(%d, %d, %d, %p) failed\n", fd, handlerFn, mask, epollFd, epoll_operation, fd, event));
-	} else {
+	}
+	else {
 		FPRINTF((stderr, "aioHandle(%d, %p, %d): epoll_ctl(%d, %d, %d, %p) succeeded\n", fd, handlerFn, mask, epollFd, epoll_operation, fd, event));
 	}
 #else
@@ -775,7 +773,7 @@ aioSuspend(int fd, int mask)
 	}
 	FPRINTF((stderr, "aioSuspend(%d)\n", fd));
 #if HAVE_CONFIG_H && HAVE_EPOLL
-	if (fd >= epollEventsByFileDescriptorSize || !epollEventsByFileDescriptor[fd]) {
+	if (fd >= epollEventsDescriptorCount || !epollEventsByFileDescriptor[fd]) {
 		FPRINTF((stderr, "aioSuspend(%d): NOT ENABLED\n", fd));
 		return;
 	}
@@ -788,7 +786,8 @@ aioSuspend(int fd, int mask)
 			perror("epoll_ctl");
 		}
 		FPRINTF((stderr, "aioSuspend(%d, %d): SUSPENDED\n", fd, mask));
-	} else {
+	}
+	else {
 		FPRINTF((stderr, "aioSuspend(%d, %d): NOTHING TO SUSPEND\n", fd, mask));
 	}
 #else
@@ -814,7 +813,7 @@ aioDisable(int fd)
 	}
 	FPRINTF((stderr, "aioDisable(%d)\n", fd));
 #if HAVE_CONFIG_H && HAVE_EPOLL
-	if (fd >= epollEventsByFileDescriptorSize || !epollEventsByFileDescriptor[fd]) {
+	if (fd >= epollEventsDescriptorCount || !epollEventsByFileDescriptor[fd]) {
 		FPRINTF((stderr, "aioDisable(%d): NOT ENABLED\n", fd));
 		return;
 	}

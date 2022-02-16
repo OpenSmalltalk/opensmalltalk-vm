@@ -20,14 +20,16 @@
  *
  * This is a shell that only implements fileDialogGetLocation
  */
+
+#include "sq.h"
+#include "sqVirtualMachine.h"
+#include "FileDialogPlugin.h"
+#include "sqUnixCharConv.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/stat.h>
 
-#include "sqVirtualMachine.h"
-#include "sqConfig.h"
-#include "sqPlatformSpecific.h"
-#include "FileDialogPlugin.h"
 
 extern struct VirtualMachine *interpreterProxy; /* signalSemaphoreWithIndex */
 
@@ -184,7 +186,7 @@ char *fileDialogGetLocation(char *location){
 				return path;
 		}
 	}
-#if 0
+#if 0 // this is for reference, listing the full set of names
 	if (strcmp("preferences", location) == 0) {
 		err = FSFindFolder(kUserDomain, kPreferencesFolderType, 1, &fsRef);
 	}
