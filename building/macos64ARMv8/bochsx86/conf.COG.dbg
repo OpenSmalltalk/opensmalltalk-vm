@@ -1,22 +1,22 @@
-#!/bin/sh
+#!/bin/bash
 
 # Bochs x86 simulator for the BochsIA32Alien plugin.
 # this sets up the x86 compile for Cog on Mac OS X.  Disable as much inessential
 # stuff as possible leaving only the cpu/fpu & memory interface
 
 # build cpu/libcpu.a disasm/libdisasm.a fpu/libfpu.a using
-# $ ./conf.COG
+# $ ./conf.COG.dbg
 # $ ../../../processors/IA32/bochs/makeem
 
 set echo
-CFLAGS="--target=aarch64 -mcpu=apple-a12 $CFLAGS"
-# CFLAGS="-pipe -O3 -fomit-frame-pointer -finline-functions -falign-loops=16 -falign-jumps=16 -falign-functions=16 -falign-labels=16 -falign-loops-max-skip=15 -falign-jumps-max-skip=15 -fprefetch-loop-arrays $CFLAGS"
 CFLAGS="-Dlongjmp=_longjmp -Dsetjmp=_setjmp $CFLAGS"
 CFLAGS="-pipe -O0 $CFLAGS"
 CFLAGS="-g3 $CFLAGS"
 CPPFLAGS=""
 CXXFLAGS="$CFLAGS"
+CC=clang
 
+export CC
 export CFLAGS
 export CPATH
 export CPPFLAGS
