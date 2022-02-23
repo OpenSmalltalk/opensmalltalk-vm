@@ -111,7 +111,7 @@ AC_ARG_WITH(scriptname,
 # Compiling a Cogit VM or not?  If so, need a cogit$o, cointerp, etc.
 
 AC_ARG_ENABLE(cogit,
-	AS_HELP_STRING([ --disable-cogit], [compile a cogit VM (default=enabled)]),
+	AS_HELP_STRING([--disable-cogit], [compile a cogit VM (default=enabled)]),
 	[cogit="$enableval"],
 	[cogit="yes"])
 AC_SUBST(cogit)
@@ -417,8 +417,15 @@ LT_LIB_DLLOAD
 AC_CHECK_FUNCS([snprintf __snprintf],[break])
 AC_CHECK_FUNCS_ONCE([mmap nanosleep])
 AC_FUNC_ALLOCA
-AX_HAVE_EPOLL([AC_DEFINE(HAVE_EPOLL, [1], [epoll(7) is supported])])
-AX_HAVE_EPOLL_PWAIT([AC_DEFINE(HAVE_EPOLL_PWAIT, [1], [epoll_pwait(7) is supported])])
+
+AC_ARG_ENABLE(epoll,
+	AS_HELP_STRING([--disable-epoll], [Do not use epoll even if supported (default: try to use)]),
+	[try_epoll="$enableval"],
+	[try_epoll="yes"])
+if test "$try_epoll" = yes; then
+  AX_HAVE_EPOLL([AC_DEFINE(HAVE_EPOLL, [1], [epoll(7) is supported])])
+  AX_HAVE_EPOLL_PWAIT([AC_DEFINE(HAVE_EPOLL_PWAIT, [1], [epoll_pwait(7) is supported])])
+fi
 
 # Checks for platform characteristics.
 
