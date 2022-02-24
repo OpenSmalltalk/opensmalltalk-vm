@@ -17,8 +17,8 @@ jobs:
       fail-fast: false # let them finish bc. different platforms
       matrix:
         arch: 
-          - { name: win64x64, os: windows-latest }
-          - { name: win32x86, os: windows-latest }
+          - { name: win64x64, os: windows-2019 }
+          - { name: win32x86, os: windows-2019 }
           - { name: linux64x64, os: ubuntu-18.04 }
           - { name: linux32x86, os: ubuntu-18.04 }
           - { name: macos64x64, os: macos-10.15 }
@@ -30,13 +30,13 @@ jobs:
           - newspeak.stack.spur
 
         include:
-          - arch: { name: win32x86, os: windows-latest }
+          - arch: { name: win32x86, os: windows-2019 }
             flavor: squeak.cog.v3
-          - arch: { name: win32x86, os: windows-latest }
+          - arch: { name: win32x86, os: windows-2019 }
             flavor: squeak.stack.v3
-          - arch: { name: win32x86, os: windows-latest }
+          - arch: { name: win32x86, os: windows-2019 }
             flavor: squeak.cog.spur.lowcode
-          # - arch: { name: win32x86, os: windows-latest }
+          # - arch: { name: win32x86, os: windows-2019 }
           #   flavor: pharo.cog.spur.lowcode
 
           - arch: { name: linux32x86, os: ubuntu-18.04 }

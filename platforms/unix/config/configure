@@ -818,6 +818,7 @@ with_gnu_awk
 with_gnu_as
 with_rfb
 enable_largefile
+enable_epoll
 with_npsqueak
 with_quartz
 with_x
@@ -1486,8 +1487,10 @@ Optional Features:
   --enable-fast-install[=PKGS]
                           optimize for fast installation [default=yes]
   --disable-libtool-lock  avoid locking (might break parallel builds)
-   --disable-cogit        compile a cogit VM (default=enabled)
+  --disable-cogit         compile a cogit VM (default=enabled)
   --disable-largefile     omit support for large files
+  --disable-epoll         Do not use epoll even if supported (default: try to
+                          use)
   --enable-fast-bitblt    enable fast BitBlt optimizations (default=no)
   --disable-iconv disable iconv support (default=enabled)
 
@@ -6060,11 +6063,8 @@ _LT_EOF
   test $ac_status = 0; }; then
     # Now try to grab the symbols.
     nlist=conftest.nm
-    if { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$NM conftest.$ac_objext \| "$lt_cv_sys_global_symbol_pipe" \> $nlist\""; } >&5
-  (eval $NM conftest.$ac_objext \| "$lt_cv_sys_global_symbol_pipe" \> $nlist) 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; } && test -s "$nlist"; then
+    $ECHO "$as_me:$LINENO: $NM conftest.$ac_objext | $lt_cv_sys_global_symbol_pipe > $nlist" >&5
+    if eval "$NM" conftest.$ac_objext \| "$lt_cv_sys_global_symbol_pipe" \> $nlist 2>&5 && test -s "$nlist"; then
       # Try sorting and uniquifying the output.
       if sort "$nlist" | uniq > "$nlist"T; then
 	mv -f "$nlist"T "$nlist"
@@ -15897,7 +15897,16 @@ _ACEOF
 
 fi
 
-  ax_have_epoll_cppflags="${CPPFLAGS}"
+
+# Check whether --enable-epoll was given.
+if test "${enable_epoll+set}" = set; then :
+  enableval=$enable_epoll; try_epoll="$enableval"
+else
+  try_epoll="yes"
+fi
+
+if test "$try_epoll" = yes; then
+    ax_have_epoll_cppflags="${CPPFLAGS}"
   ac_fn_c_check_header_mongrel "$LINENO" "linux/version.h" "ac_cv_header_linux_version_h" "$ac_includes_default"
 if test "x$ac_cv_header_linux_version_h" = xyes; then :
   CPPFLAGS="${CPPFLAGS} -DHAVE_LINUX_VERSION_H"
@@ -15952,7 +15961,7 @@ $as_echo "no" >&6; }
 
 fi
 
-  ax_have_epoll_cppflags="${CPPFLAGS}"
+    ax_have_epoll_cppflags="${CPPFLAGS}"
   ac_fn_c_check_header_mongrel "$LINENO" "linux/version.h" "ac_cv_header_linux_version_h" "$ac_includes_default"
 if test "x$ac_cv_header_linux_version_h" = xyes; then :
   CPPFLAGS="${CPPFLAGS} -DHAVE_LINUX_VERSION_H"
@@ -16009,6 +16018,7 @@ $as_echo "no" >&6; }
 
 fi
 
+fi
 
 # Checks for platform characteristics.
 

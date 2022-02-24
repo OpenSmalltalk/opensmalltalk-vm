@@ -67,7 +67,7 @@ jobs:
           #   flavor: pharo.sista.spur
           #   mode: fast
 
-    runs-on: windows-latest
+    runs-on: windows-2019
     name: ${{ matrix.flavor }} for ${{ matrix.arch }}${{ matrix.mode == 'debug' && ' (DEBUG)' || matrix.mode == 'assert' && ' (ASSERT)' || '' }}
     env:
       ARCH: ${{ matrix.arch }}
