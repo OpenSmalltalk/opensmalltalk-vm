@@ -2331,7 +2331,7 @@ getRedzoneSize()
 
 	do kill(getpid(),SIGPROF); while (!p);
 	(void)sigaction(SIGPROF, &old, 0);
-	return (char *)min(&old,&handler_action) - sizeof(struct sigaction) - p;
+	return (char *)min(&old,&handler_action) - p;
 }
 
 sqInt reportStackHeadroom;
