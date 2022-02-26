@@ -245,9 +245,9 @@ AtomicGet(__int64 *target)
 #elif defined(_MSC_VER)
 #	define sqAtomicAddConst(var,n) do {\
 	if (sizeof(var) == sizeof(int)) \
-		InterlockedAdd(&var,n); \
+		InterlockedAdd((volatile void *)&var,n); \
 	else if (sizeof(var) == 8) \
-		InterlockedAdd64(&var,n); \
+		InterlockedAdd64((volatile void *)&var,n); \
 	else \
 		error("no interlocked add for this variable size"); \
 	} while (0)
@@ -312,8 +312,14 @@ AtomicGet(__int64 *target)
 		: OSAtomicCompareAndSwap32(old, new, &var))
 
 #elif defined(_MSC_VER)
-#	define sqCompareAndSwap(var,old,new) \
-	InterlockedCompareExchange(&(var), new, old)
+#	define sqCompareAndSwap(var,old,new) do { \
+	if (sizeof(var) == sizeof(int)) \
+		InterlockedCompareExchange((volatile void *)&(var), new, old); \
+	else if (sizeof(var) == 8) \
+		InterlockedCompareExchange64((volatile void *)&(var), new, old); \
+	else \
+		error("no interlocked compare-exchange for this variable size"); \
+	} while (0)
 
 #elif defined(__GNUC__) || defined(__clang__) || defined(__SUNPRO_C)
 # if GCC_HAS_BUILTIN_SYNC || defined(__clang__)

@@ -484,13 +484,21 @@ static int stackPageHeadroom;
  * be lazy.  The reportheadroom switch can be used to check empirically that
  * there is sufficient headroom.  At least on Mac OS X we see no large stack
  * usage that would indicate e.g. dynamic linking in signal handlers.
- * So answer only the redzone size and likely get small (2048 byte) pages.
+ * So answer only the redzone size and likely get small pages (2048 byte on 32
+ * bit, 4096 bytes on 64-bits).
+ *
+ * eem, february 2022: recent experience with Virtend on M1X shows that more
+ * headroom is needed.
  */
 int
 osCogStackPageHeadroom()
 {
 	if (!stackPageHeadroom)
+#if __ARM_ARCH_ISA_A64 || __aarch64__ || __arm64__
+		stackPageHeadroom = getRedzoneSize() + 1024;
+#else
 		stackPageHeadroom = getRedzoneSize();
+#endif
 	return stackPageHeadroom;
 }
 
