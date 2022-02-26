@@ -1,23 +1,23 @@
 /* sqUnixDragDrop.c -- support for drag and drop, for those UIs that have it
- * 
+ *
  * Author: Ian Piumarta <ian.piumarta@inria.fr>
- * 
+ *
  *   Copyright (C) 1996-2004 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
  *   All rights reserved.
- *   
+ *
  *   This file is part of Unix Squeak.
- * 
+ *
  *   Permission is hereby granted, free of charge, to any person obtaining a
  *   copy of this software and associated documentation files (the "Software"),
  *   to deal in the Software without restriction, including without limitation
  *   the rights to use, copy, modify, merge, publish, distribute, sublicense,
  *   and/or sell copies of the Software, and to permit persons to whom the
  *   Software is furnished to do so, subject to the following conditions:
- * 
+ *
  *   The above copyright notice and this permission notice shall be included in
  *   all copies or substantial portions of the Software.
- * 
+ *
  *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -52,7 +52,7 @@ extern SQFile * fileValueOf(sqInt objectPointer);
 #else
 /*	Return a pointer to the first byte of of the SQFile data structure file
 	record within anSQFileRecord, which is expected to be a ByteArray of size
-	self>>fileRecordSize. 
+	self>>fileRecordSize.
  */
 
 	/* OSProcessPlugin>>#fileValueOf: */
@@ -94,9 +94,9 @@ dropRequestFileName(sqInt dropIndex)	// in st coordinates
 	while (*fileURIPrefix && *fileURIPrefix++ == *dropFileName++)
 		++prefixLength;
 
-	// file:///path & file:/path => path; anything else answered verbatim
+	// file:///path & file:/path => /path; anything else answered verbatim
 	return prefixLength == 8 || prefixLength == 6
-		? uxDropFileNames[dropIndex - 1] + prefixLength
+		? uxDropFileNames[dropIndex - 1] + prefixLength - 1
 		: uxDropFileNames[dropIndex - 1];
 }
 
@@ -120,6 +120,6 @@ dropRequestFileHandle(sqInt dropIndex)
 		sqInt handle = instantiateClassindexableSize(classByteArray(), fileRecordSize());
 		sqFileOpen(fileValueOf(handle), path, strlen(path), 0);
 		return handle;
-	}  
+	}
 	return interpreterProxy->nilObject();
 }
