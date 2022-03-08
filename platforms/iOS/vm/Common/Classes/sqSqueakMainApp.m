@@ -487,14 +487,14 @@ static int stackPageHeadroom;
  * So answer only the redzone size and likely get small pages (2048 byte on 32
  * bit, 4096 bytes on 64-bits).
  *
- * eem, february 2022: recent experience with Virtend on M1X shows that more
- * headroom is needed.
+ * eem, february/march 2022: recent experience with Virtend shows that more
+ * headroom is needed on current versions of MacOS. So 8k pages on 64-bits.
  */
 int
 osCogStackPageHeadroom()
 {
 	if (!stackPageHeadroom)
-#if __ARM_ARCH_ISA_A64 || __aarch64__ || __arm64__
+#if SQ_HOST64 // was __ARM_ARCH_ISA_A64 || __aarch64__ || __arm64__
 		stackPageHeadroom = getRedzoneSize() + 1024;
 #else
 		stackPageHeadroom = getRedzoneSize();

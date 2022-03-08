@@ -162,7 +162,7 @@ extern sqInt interpret(void);  //This is a VM Callback
 }
 
 - (void) runSqueak {
-    @autoreleasepool {
+  @autoreleasepool {
 	extern BOOL gQuitNowRightNow;
 	gQuitNowRightNow=false;
 
@@ -172,9 +172,8 @@ extern sqInt interpret(void);  //This is a VM Callback
 
 	fileDirectoryLogic = [self newFileDirectoryInterfaceInstance];
 	[self setVMPathFromApplicationDirectory];
-	if (![self.fileDirectoryLogic setWorkingDirectory]) {
+	if (![self.fileDirectoryLogic setWorkingDirectory])
 		return;
-	}
 
 	[self parseUnixArgs];
 
@@ -183,22 +182,19 @@ extern sqInt interpret(void);  //This is a VM Callback
 
 	[self doMemorySetup];
 
-	if ([self ImageNameIsEmpty]) {
+	if ([self ImageNameIsEmpty])
 		[self findImageViaBundleOrPreferences];
-	}
 
-	if ([self ImageNameIsEmpty]) {
+	if ([self ImageNameIsEmpty])
 		return;
-	}
 
 	[self setupTimers];
 
-	if (![self readImageIntoMemory]) {
+	if (![self readImageIntoMemory])
 		return;
-	}
 
-    // The headless setup is now after the image setup on purpose. This is in order to be
-    // able to select an image with the popup even when running headless
+    // The headless setup is now after the image setup on purpose. This is to
+    // be able to select an image with the popup even when running headless
 	[self doHeadlessSetup];
 
     [self setupMenus];
@@ -208,7 +204,7 @@ extern sqInt interpret(void);  //This is a VM Callback
 	[gDelegateApp makeMainWindow];
 
 	interpret();
-    }
+  }
 }
 
 
@@ -221,6 +217,11 @@ extern sqInt interpret(void);  //This is a VM Callback
 }
 
 - (void) ioExitWithErrorCode: (int) ec {
+#if COGVM
+extern sqInt reportStackHeadroom;
+	if (reportStackHeadroom)
+		reportMinimumUnusedHeadroom();
+#endif
 	ioShutdownAllModules();
 	[self MenuBarRestore];
 	exit(ec);  //Will not return
