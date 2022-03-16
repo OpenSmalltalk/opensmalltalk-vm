@@ -43,6 +43,7 @@
 #import "sqSqueakOSXInfoPlistInterface.h"
 #import "SqueakOSXAppDelegate.h"
 #import "sq.h"
+#import "sqAssert.h"
 
 extern SqueakOSXAppDelegate *gDelegateApp;
 #define thePListInterface ((sqSqueakOSXInfoPlistInterface *)gDelegateApp.squeakApplication.infoPlistInterfaceLogic)
@@ -98,14 +99,18 @@ tryLoadingInternals(NSString *libNameString)
 		dprintf((stderr, "ignoring directory: %s\n", libName));
 	else {
 		const char *why;
-	    dprintf((stderr, "tryLoading %s\n", libName));
+		dprintf((stderr, "tryLoading %s\n", libName));
 		if ((handle = dlopen(libName, RTLD_NOW | RTLD_GLOBAL)))
 			return handle;
 		why = dlerror();
+#if PRINT_DL_ERRORS // In practice these reasons are too important to hide
+		fprintf(stderr, "ioLoadModule(%s):\t%s\n", libName, why);
+#else
 		if (thePListInterface.SqueakDebug)
 			fprintf(stderr, "ioLoadModule(%s):\n  %s\n", libName, why);
 		else if (strstr(why,"undefined symbol"))
 			fprintf(stderr, "tryLoadingInternals: dlopen: %s\n", why);
+#endif
 	}
 	return NULL;
 }
@@ -169,12 +174,11 @@ tryLoadingVariations(NSString *dirNameString, char *moduleName)
 		return NULL;
 	}
 	for (prefix= prefixes;  *prefix;  ++prefix)
-		for (suffix= suffixes;  *suffix;  ++suffix)		{
+		for (suffix= suffixes;  *suffix;  ++suffix)	{
 			libName = [dirNameString stringByAppendingPathComponent: @(*prefix)];
-			if (**prefix)
-				libName = [libName stringByAppendingString: @(moduleName)];
-			else
-				libName = [libName stringByAppendingPathComponent: @(moduleName)];
+			libName = **prefix
+					? [libName stringByAppendingString: @(moduleName)]
+					: [libName stringByAppendingPathComponent: @(moduleName)];
 			if (**suffix)
 				libName = [libName stringByAppendingPathExtension: @(*suffix)];
 
@@ -187,27 +191,53 @@ tryLoadingVariations(NSString *dirNameString, char *moduleName)
 static void *
 tryLoadingLinked(char *libName)
 {
-    void *handle;
+	struct stat buf;
+	void        *handle;
 
 #if !PharoVM
 	if (thePListInterface.SqueakPluginsBuiltInOrLocalOnly)
 		return NULL;
 #endif
 
+#if 0 // This seems like the right thing to do but it breaks ioLoadModule
+	  // ioLoadModule for system dylibs found along the system path(2).
+	  // Instead, filter-out noise errors below
+	if (stat(libName, &buf)) {
+		dprintf((stderr, "tryLoadingLinked(%s) does not exist\n", libName));
+		return 0;
+	}
+	else if (S_ISDIR(buf.st_mode)) {
+		dprintf((stderr, "tryLoadingLinked(%s) is a directory\n", libName));
+		return 0;
+	}
+#endif
+
 	handle = dlopen(libName, RTLD_NOW | RTLD_GLOBAL);
-    DPRINTF((stderr, __FILE__ " %d tryLoadingLinked dlopen(%s) = %p\n", __LINE__, libName, handle));
 #if DEBUG
-    if(handle != 0)
-        printf("%s: loaded plugin `%s'\n", exeName, libName);
+	if (handle)
+		printf("%s: loaded plugin `%s'\n", exeName, libName);
 #endif
 	if (!handle) {
 		const char *why = dlerror();
+		// filter out failures due to non-existent libraries
+		if (stat(libName, &buf)) {
+			dprintf((stderr, "tryLoadingLinked(%s) does not exist\n", libName));
+			return 0;
+		}
+		else if (S_ISDIR(buf.st_mode)) {
+			dprintf((stderr, "tryLoadingLinked(%s) is a directory\n", libName));
+			return 0;
+		}
+#if PRINT_DL_ERRORS // In practice these reasons are too important to hide
+		fprintf(stderr, "tryLoadingLinked(%s):\t%s\n", libName, why);
+#else
 		if (thePListInterface.SqueakDebug)
 			fprintf(stderr, "tryLoadingLinked(%s):\n  %s\n", libName, why);
 		else if (strstr(why,"undefined symbol"))
 			fprintf(stderr, "tryLoadingLinked: dlopen: %s\n", why);
+#endif
 	}
-    return handle;
+	return handle;
 }
 
 /*  Find and load the named module.  Answer 0 if not found (do NOT fail
@@ -229,12 +259,16 @@ ioLoadModuleRaw(char *pluginName)
 		handle = dlopen(0, RTLD_NOW | RTLD_GLOBAL);
 		if (!handle) {
 			char * why = dlerror();
+#if PRINT_DL_ERRORS // In practice these reasons are too important to hide
+			fprintf(stderr, "ioLoadModule(<intrinsic>): %s\n", why);
+#else
 			dprintf((stderr, "ioLoadModule(<intrinsic>): %s\n", why));
+#endif
 			return NULL;
 		}
 		dprintf((stderr, "loaded: <intrinsic>\n"));
 		return handle;
-    }
+	}
 
 #if PharoVM
 	/* first, look in the "<Squeak VM directory>Plugins" directory for the library */
@@ -246,19 +280,19 @@ ioLoadModuleRaw(char *pluginName)
 	if (thePListInterface.SqueakPluginsBuiltInOrLocalOnly) {
 	  if ((   handle= tryLoadingLinked(                     pluginName))
 		  || (handle= tryLoadingBundle( vmDirPath,			pluginName))
-          || (handle= tryLoadingVariations( frameworksDirPath,	pluginName))
+		  || (handle= tryLoadingVariations( frameworksDirPath,	pluginName))
 #if PharoVM
-          || (handle= tryLoadingVariations( pluginDirPath,	pluginName))
+		  || (handle= tryLoadingVariations( pluginDirPath,	pluginName))
 #endif
 		  )
 		return handle;
 	}
-    else {
+	else {
 	  if ((   handle= tryLoadingLinked(                     pluginName))
 		  || (handle= tryLoadingBundle( vmDirPath,			pluginName))
-          || (handle= tryLoadingVariations( frameworksDirPath,	pluginName))
+		  || (handle= tryLoadingVariations( frameworksDirPath,	pluginName))
 #if PharoVM
-          || (handle= tryLoadingVariations( pluginDirPath,	pluginName))
+		  || (handle= tryLoadingVariations( pluginDirPath,	pluginName))
 #endif
 		  || (handle= tryLoadingVariations( @"./",			pluginName))
 		  || (handle= tryLoadingVariations( @"",			pluginName))
@@ -289,7 +323,7 @@ ioLoadModuleRaw(char *pluginName)
 			OSErr err = FSFindFolder(kSystemDomain, kFrameworksFolderType, false, &frameworksFolderRef);
 #pragma unused(err)
 			NSURL *myURLRef = (NSURL *) CFBridgingRelease(CFURLCreateFromFSRef(kCFAllocatorDefault, &frameworksFolderRef));
-			RETAINOBJ(myURLRef.path);
+			RETAINVALUE(myURLRef.path);
 			systemFolder = myURLRef.path;
 		}
 
@@ -299,7 +333,7 @@ ioLoadModuleRaw(char *pluginName)
 		if (pluginNameLength > LENGTHOFDOTFRAMEWORK) {
 			strncpy(workingData,pluginName+pluginNameLength-LODF,LODF);
 			workingData[LODF] = 0x00;
-			if (strcmp(workingData,".framework") == 0) {
+			if (!strcmp(workingData,".framework")) {
 				strncpy(workingData,pluginName,pluginNameLength-LODF);
 				workingData[pluginNameLength-LODF] = 0x00;
 				path = [vmDirPath stringByAppendingPathComponent: @(pluginName)];
@@ -307,10 +341,9 @@ ioLoadModuleRaw(char *pluginName)
 					path2 = [path stringByAppendingPathComponent: @(workingData)];
 					if ((handle = tryLoadingInternals(path2)))
 						return handle;
-				} else {
-					if ((handle= tryLoadingVariations(path, workingData)))
-						return handle;
 				}
+				else if ((handle= tryLoadingVariations(path, workingData)))
+					return handle;
 
 #if PharoVM
 				path = [pluginDirPath stringByAppendingPathComponent: @(pluginName)];
@@ -319,10 +352,9 @@ ioLoadModuleRaw(char *pluginName)
 					path2 = [path stringByAppendingPathComponent: @(workingData)];
 					if ((handle = tryLoadingInternals(path2)))
 						return handle;
-				} else {
-					if ((handle= tryLoadingVariations(path, workingData)))
-						return handle;
 				}
+				else if ((handle= tryLoadingVariations(path, workingData)))
+					return handle;
 #endif
 
 				path = [systemFolder stringByAppendingPathComponent: @(pluginName)];
@@ -330,10 +362,9 @@ ioLoadModuleRaw(char *pluginName)
 					path2 = [path stringByAppendingPathComponent: @(workingData)];
 					if ((handle = tryLoadingInternals(path2)))
 						return handle;
-				} else {
-					if ((handle= tryLoadingVariations(path, workingData)))
-						return handle;
 				}
+				else if ((handle= tryLoadingVariations(path, workingData)))
+					return handle;
 			}
 		}
 
@@ -354,7 +385,6 @@ ioLoadModuleRaw(char *pluginName)
 				return handle;
 		}
 	}
-
 	return NULL;
 }
 
@@ -364,40 +394,40 @@ ioLoadModuleRaw(char *pluginName)
  */
 #if SPURVM
 void *
-ioFindExternalFunctionInAccessorDepthInto(char *lookupName, void *moduleHandle,
-											sqInt *accessorDepthPtr)
+ioFindExternalFunctionInMetadataInto(char *lookupName, void *moduleHandle,
+											sqInt *metadataPtr)
 #else
 void *
 ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
 #endif
 {
-  char buf[NAME_MAX+1];
+  void *fn = dlsym(moduleHandle, lookupName);
 
-  snprintf(buf, sizeof(buf), "%s", lookupName); 
-  void *fn = dlsym(moduleHandle, buf);
+  dprintf((stderr, "ioFindExternalFunctionIn(%s, %p)\n",lookupName, moduleHandle));
 
-  dprintf((stderr, "ioFindExternalFunctionIn(%s, %ld)\n",lookupName, (long) moduleHandle));
-
-  if ((fn == NULL) && (thePListInterface.SqueakDebug)
-      && strcmp(lookupName, "initialiseModule")
-      && strcmp(lookupName, "shutdownModule")
-      && strcmp(lookupName, "setInterpreter")
-      && strcmp(lookupName, "getModuleName")) {
-	char *why = dlerror();
-    fprintf(stderr, "ioFindExternalFunctionIn(%s, %p):\n  %s\n",lookupName, moduleHandle, why);
-	}
+  if (!fn
+	&& thePListInterface.SqueakDebug
+	&& strcmp(lookupName, "initialiseModule")
+	&& strcmp(lookupName, "shutdownModule")
+	&& strcmp(lookupName, "setInterpreter")
+	&& strcmp(lookupName, "getModuleName"))
+	fprintf(stderr, "ioFindExternalFunctionIn(%s, %p):\n  %s\n",
+			lookupName, moduleHandle, dlerror());
 
 #if SPURVM
-  if (fn && accessorDepthPtr) {
-	signed char *accessorDepthVarPtr;
-	snprintf(buf+strlen(buf), sizeof(buf), "AccessorDepth");
-	accessorDepthVarPtr = dlsym(moduleHandle, buf);
+  if (fn && metadataPtr) {
+	char buf[NAME_MAX+1];
+	SpurPrimitiveMetadataType *metadataVarPtr;
+
+	snprintf(buf, sizeof(buf), "%sMetadata", lookupName); 
+	metadataVarPtr = dlsym(moduleHandle, buf);
 	/* The Slang machinery assumes accessor depth defaults to -1, which
-	 * means "no accessor depth".  It saves space not outputting -1 depths.
+	 * means "no accessor depth".  It saves space not outputting null metadata.
 	 */
-	*accessorDepthPtr = accessorDepthVarPtr
-							? *accessorDepthVarPtr
-							: -1;
+	*metadataPtr = metadataVarPtr
+							? *metadataVarPtr
+							: NullSpurMetadata;
+	assert(validSpurPrimitiveMetadata(*metadataPtr));
   }
 #endif /* SPURVM */
 
@@ -409,12 +439,14 @@ ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
 */
 sqInt ioFreeModule(void *moduleHandle)
 {
-  int results = dlclose(moduleHandle);
+	if (!dlclose(moduleHandle))
+		return 1;
 
-  if (results) {
-	  char* why = dlerror();
-      dprintf((stderr, "ioFreeModule(%ld): %s\n", (long) moduleHandle, why));
-      return 0;
-    }
-  return 1;
+	char *why = dlerror();
+#if PRINT_DL_ERRORS // In practice these reasons are too important to hide
+	fprintf(stderr, "ioFreeModule(%ld): %s\n", (long) moduleHandle, why);
+#else
+	dprintf((stderr, "ioFreeModule(%ld): %s\n", (long) moduleHandle, why));
+#endif
+	return 0;
 }

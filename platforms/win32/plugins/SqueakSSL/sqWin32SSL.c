@@ -11,7 +11,7 @@
 *               Hasso Plattner Institute, Postdam, Germany
 *****************************************************************************/
 
-#include <windows.h>
+#include <Windows.h>
 #include <errno.h>
 #include <malloc.h>
 
@@ -293,7 +293,12 @@ static int sqExtractPeerName(sqSSL *ssl) {
 #endif
 	}
 
-	if(ssl->loglevel) printf("sqExtractPeerName: Peer name is %s\n", ssl->peerName);
+	if (ssl->loglevel)
+#if _UNICODE
+		wprintf("sqExtractPeerName: Peer name is %s\n", ssl->peerName);
+#else
+		printf("sqExtractPeerName: Peer name is %s\n", ssl->peerName);
+#endif
 
 	CertFreeCertificateContext(certHandle);
 

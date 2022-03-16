@@ -177,10 +177,6 @@
 
 #define	DARWIN 1
 
-#ifdef NEED_SUNOS_H
-# include "sunos.h"
-#endif
-
 /* other configured variables */
 
 #define VM_MODULE_PREFIX ""
@@ -190,10 +186,6 @@
 /* avoid dependencies on glibc2.3 */
 
 /* #undef HAVE_FEATURES_H */
-
-#if defined(HAVE_FEATURES_H)
-# include "glibc.h"
-#endif
 
 /* picked up in 2020 */
 #define HAVE_DLERROR 1

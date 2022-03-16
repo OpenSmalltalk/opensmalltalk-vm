@@ -108,8 +108,8 @@
 #define ft_fclose   fclose
 #define ft_fopen    fopen
 #define ft_fread    fread
-#define ft_fseek    fseek
-#define ft_ftell    ftell
+#define ft_fseek    _fseeki64
+#define ft_ftell    _ftelli64
 #define ft_sprintf  sprintf
 
 

@@ -9,6 +9,7 @@
 
 extern struct VirtualMachine * interpreterProxy;
 int	vmSessionId = 0;
+sqInt nilOop, falseOop, trueOop;
 
 
 /*
@@ -20,10 +21,16 @@ int	vmSessionId = 0;
  */
 sqInt faInitialiseModule()
 {
+#if 0
 	if (vmSessionId == 0)
-		return interpreterProxy->falseObject();
+		return 0;
+#endif
 	vmSessionId = interpreterProxy->getThisSessionID();
-	return interpreterProxy->trueObject();
+	/* Since these three never move it's cheaper to cache them */
+	nilOop = interpreterProxy->nilObject();
+	falseOop = interpreterProxy->falseObject();
+	trueOop = interpreterProxy->trueObject();
+	return 1;
 }
 
 

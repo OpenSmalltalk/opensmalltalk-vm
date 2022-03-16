@@ -42,13 +42,13 @@ osCogStackPageHeadroom(void)
     return 1024;
 }
 
-long
+unsigned int
 ioMSecs(void)
 {
     return 0;
 }
 
-long
+unsigned int
 ioMicroMSecs(void)
 {
     return 0;

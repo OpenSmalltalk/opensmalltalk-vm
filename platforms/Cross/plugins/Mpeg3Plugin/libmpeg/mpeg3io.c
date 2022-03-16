@@ -37,7 +37,7 @@
 	 
 	Changed Jan 20th 2006 by John M McIntosh to support reading mpeg file from a buffer
 	setvbuf(remember,0, _IOFBF, 64*1024);  //JMM Feb 26th, 2006 for CD reader performance
-
+	Changed Oct 27th 2020 by eem fseek => fseeko
 	
  */
 #include "mpeg3io.h"
@@ -106,9 +106,9 @@ long mpeg3io_get_total_bytes(mpeg3_fs_t *fs)
 		return 0;
 	}
 
-	fseek(fs->fd, 0, SEEK_END);
+	fseeko(fs->fd, 0, SEEK_END);
 	fs->total_bytes = ftell(fs->fd) - fs->id3v2_offset;
-	fseek(fs->fd, fs->id3v2_offset, SEEK_SET);
+	fseeko(fs->fd, fs->id3v2_offset, SEEK_SET);
 
 	return fs->total_bytes;
 }
@@ -121,7 +121,7 @@ int mpeg3io_get_id3v2_size(mpeg3_fs_t *fs)
 	fs->mpeg_is_in_buffer_file_position = 6;
   } else {
 	if (! fs->fd) return 0;
-	fseek(fs->fd, 6, SEEK_SET);
+	fseeko(fs->fd, 6, SEEK_SET);
   }
 
   synchsafe_size = mpeg3io_read_int32(fs);
@@ -257,7 +257,7 @@ int mpeg3io_seek(mpeg3_fs_t *fs, long byte)
 		return -1;
 	} else {
 		if (fs->fd) {
-			return fseek(fs->fd, (byte + fs->id3v2_offset), SEEK_SET);
+			return fseeko(fs->fd, (byte + fs->id3v2_offset), SEEK_SET);
 		}
 		fprintf(stderr, "MP2: seek no fd\n");
 		return -1;
@@ -286,7 +286,7 @@ int mpeg3io_seek_relative(mpeg3_fs_t *fs, long bytes)
 	}
 
 	if (fs->fd) {
-		return fseek(fs->fd, fs->current_byte + fs->id3v2_offset, SEEK_SET);
+		return fseeko(fs->fd, fs->current_byte + fs->id3v2_offset, SEEK_SET);
 	} 
 	fprintf(stderr, "MP2: rel seek no fd\n");
 	return -1;

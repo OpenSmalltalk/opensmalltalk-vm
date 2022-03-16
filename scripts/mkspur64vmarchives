@@ -86,15 +86,15 @@ if [ -n "$CM" ]; then
 	set -- CocoaFast.app CocoaAssert.app CocoaDebug.app
 	for app in CogSpur64.app assert/CogSpur64.app debug/CogSpur64.app; do
 		test -d $app || mkdir $app
-		if [ -d ../build.macos64x64/$SQB/$1 ]; then
+		if [ -d ../building/macos64x64/$SQB/$1 ]; then
 			rm -rf $app/* $app-$TAG.tgz
-			echo build.macos64x64/$SQB/$1 '=>' $app '=>' $app-$TAG.tgz
-			(cd ../build.macos64x64/$SQB/$1 >/dev/null;tar cf - *) \
+			echo building/macos64x64/$SQB/$1 '=>' $app '=>' $app-$TAG.tgz
+			(cd ../building/macos64x64/$SQB/$1 >/dev/null;tar cf - *) \
 			| (cd $app;tar xf -)
 			tar czf $app-$TAG.tgz $app
 			EXES="$EXES	$app/Contents/MacOS/Squeak"
 		else
-			echo build.macos64x64/$SQB/$1 is missing
+			echo building/macos64x64/$SQB/$1 is missing
 		fi
 		shift
 	done
@@ -105,15 +105,15 @@ if [ -n "$NM" ]; then
 				assert/Newspeak\ Spur\ 64-bit\ Virtual\ Machine.app\
 				debug/Newspeak\ Spur\ 64-bit\ Virtual\ Machine.app; do
 		test -d $app || mkdir $app
-		if [ -d ../build.macos64x64/$NSB/$1 ]; then
+		if [ -d ../building/macos64x64/$NSB/$1 ]; then
 			rm -rf $app/* $app-$TAG.tgz
-			echo build.macos64x64/$NSB/$1 '=>' $app '=>' $app-$TAG.tgz
-			(cd ../build.macos64x64/$NSB/$1 >/dev/null;tar cf - *) \
+			echo building/macos64x64/$NSB/$1 '=>' $app '=>' $app-$TAG.tgz
+			(cd ../building/macos64x64/$NSB/$1 >/dev/null;tar cf - *) \
 			| (cd $app;tar xf -)
 			tar czf $app-$TAG.tgz $app
 			EXES="$EXES	$app/Contents/MacOS/Newspeak Virtual Machine"
 		else
-			echo build.macos64x64/$NSB/$1 is missing
+			echo building/macos64x64/$NSB/$1 is missing
 		fi
 		shift
 	done
@@ -122,15 +122,15 @@ if [ -n "$PM" ]; then
 	set -- CocoaFast.app CocoaAssert.app CocoaDebug.app
 	for app in CogPharoSpur64.app assert/CogPharoSpur64.app debug/CogPharoSpur64.app; do
 		test -d $app || mkdir $app
-		if [ -d ../build.macos64x64/$PHB/$1 ]; then
+		if [ -d ../building/macos64x64/$PHB/$1 ]; then
 			rm -rf $app/* $app-$TAG.tgz
-			echo build.macos64x64/$PHB/$1 '=>' $app '=>' $app-$TAG.tgz
-			(cd ../build.macos64x64/$PHB/$1 >/dev/null;tar cf - *) \
+			echo building/macos64x64/$PHB/$1 '=>' $app '=>' $app-$TAG.tgz
+			(cd ../building/macos64x64/$PHB/$1 >/dev/null;tar cf - *) \
 			| (cd $app;tar xf -)
 			tar czf $app-$TAG.tgz $app
 			EXES="$EXES	$app/Contents/MacOS/Pharo"
 		else
-			echo build.macos64x64/$PHB/$1 is missing
+			echo building/macos64x64/$PHB/$1 is missing
 		fi
 		shift
 	done
@@ -139,10 +139,10 @@ if [ -n "$CW" ]; then
 	set -- build/vm buildast/vm builddbg/vm
 	for dir in cogspur64win assert/cogspur64win debug/cogspur64win; do
 		test -d $dir || mkdir $dir
-		if [ -d ../build.win64x64/$SQB/$1 ]; then
+		if [ -d ../building/win64x64/$SQB/$1 ]; then
 			rm -rf $dir/* $dir-$TAG.zip
-			echo build.win64x64/$SQB/$1 '=>' $dir '=>' $dir-$TAG.zip
-			(cd ../build.win64x64/$SQB/$1 >/dev/null; \
+			echo building/win64x64/$SQB/$1 '=>' $dir '=>' $dir-$TAG.zip
+			(cd ../building/win64x64/$SQB/$1 >/dev/null; \
 			 tar cf - Squeak.exe Squeak.map Squeak.exe.manifest \
 				SqueakConsole.exe SqueakConsole.map SqueakConsole.exe.manifest \
 				*.dll) \
@@ -150,7 +150,7 @@ if [ -n "$CW" ]; then
 			zip -qr $dir-$TAG.zip $dir
 			EXES="$EXES	$dir/Squeak.exe	$dir/SqueakConsole.exe"
 		else
-			echo build.win64x64/$SQB/$1 is missing
+			echo building/win64x64/$SQB/$1 is missing
 		fi
 		shift
 	done
@@ -159,16 +159,16 @@ if [ -n "$NW" ]; then
 	set -- build/vm buildast/vm builddbg/vm
 	for dir in nsvmspur64win assert/nsvmspur64win debug/nsvmspur64win; do
 		test -d $dir || mkdir $dir
-		if [ -d ../build.win64x64/$NSB/$1 ]; then
+		if [ -d ../building/win64x64/$NSB/$1 ]; then
 			rm -rf $dir/* $dir-$TAG.zip
-			echo build.win64x64/$NSB/$1 '=>' $dir '=>' $dir-$TAG.zip
-			(cd ../build.win64x64/$NSB/$1 >/dev/null; \
+			echo building/win64x64/$NSB/$1 '=>' $dir '=>' $dir-$TAG.zip
+			(cd ../building/win64x64/$NSB/$1 >/dev/null; \
 			 tar cf - nsvm*.exe nsvm*.map nsvm*.exe.manifest ) \
 			| (cd $dir;tar xf -)
 			zip -qr $dir-$TAG.zip $dir
 			EXES="$EXES	$dir/nsvm.exe	$dir/nsvmConsole.exe"
 		else
-			echo build.win64x64/$NSB/$1 is missing
+			echo building/win64x64/$NSB/$1 is missing
 		fi
 		shift
 	done

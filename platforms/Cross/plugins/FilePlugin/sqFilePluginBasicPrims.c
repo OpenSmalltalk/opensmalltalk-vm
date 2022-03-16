@@ -20,6 +20,8 @@
 				ftruncate & fileno
 				macro-ise use of sqFTruncate to avoid non-ansi
 *	1/22/2002  JMM Use squeakFileOffsetType versus off_t
+*	2020/10/27 EEM put back fseeko & ftello; these are defined to platform
+*                  approriate functions in sqPlatformSpecific.h as required.
 *
 *****************************************************************************/
 
@@ -32,6 +34,9 @@
 #include "sq.h"
 
 #include <errno.h>
+#if !_MSC_VER
+# include <unistd.h> // required on BigSur
+#endif
 
 #ifndef NO_STD_FILE_SUPPORT
 
@@ -40,10 +45,10 @@
 #include <limits.h>
 #include <stdio.h>
 
-#ifdef _MSC_VER
-#ifndef S_ISFIFO
-#define S_ISFIFO(x) 0
-#endif
+#if _MSC_VER
+# ifndef S_ISFIFO
+#	define S_ISFIFO(x) 0
+# endif
 #endif
 
 #include "sqMemoryAccess.h"
@@ -99,16 +104,16 @@ extern struct VirtualMachine * interpreterProxy;
  * may need to use memcpy to avoid alignment faults.
  */
 #if OBJECTS_32BIT_ALIGNED
-static FILE *getFile(SQFile *f)
-{
+static FILE *
+getFile(SQFile *f) {
   FILE *file;
   void *in= (void *)&f->file;
   void *out= (void *)&file;
   memcpy(out, in, sizeof(FILE *));
   return file;
 }
-static void setFile(SQFile *f, FILE *file)
-{
+static void
+setFile(SQFile *f, FILE *file) {
   void *in= (void *)&file;
   void *out= (void *)&f->file;
   memcpy(out, in, sizeof(FILE *));
@@ -118,19 +123,19 @@ static void setFile(SQFile *f, FILE *file)
 # define setFile(f,fileptr) ((f)->file = (fileptr))
 #endif /* OBJECTS_32BIT_ALIGNED */
 
-static squeakFileOffsetType getSize(SQFile *f)
-{
+static squeakFileOffsetType
+getSize(SQFile *f) {
   FILE *file = getFile(f);
-  squeakFileOffsetType currentPosition = ftell(file);
-  fseek(file, 0, SEEK_END);
-  squeakFileOffsetType size = ftell(file);
-  fseek(file, currentPosition, SEEK_SET);
+  squeakFileOffsetType currentPosition = ftello(file);
+  fseeko(file, 0, SEEK_END);
+  squeakFileOffsetType size = ftello(file);
+  fseeko(file, currentPosition, SEEK_SET);
   return size;
 }
 
 #if 0
-# define pentry(func) do { int fn = fileno(getFile(f)); if (f->isStdioStream) printf("\n"#func "(%s) %lld %d\n", fn == 0 ? "in" : fn == 1 ? "out" : "err", (long long)ftell(getFile(f)), f->lastChar); } while (0)
-# define pexit(expr) (f->isStdioStream && printf("\n\t^"#expr " %lld %d\n", (long long)(sqFileValid(f) ? ftell(getFile(f)) : -1), f->lastChar)), expr
+# define pentry(func) do { int fn = fileno(getFile(f)); if (f->isStdioStream) printf("\n"#func "(%s) %lld %d\n", fn == 0 ? "in" : fn == 1 ? "out" : "err", (long long)ftello(getFile(f)), f->lastChar); } while (0)
+# define pexit(expr) (f->isStdioStream && printf("\n\t^"#expr " %lld %d\n", (long long)(sqFileValid(f) ? ftello(getFile(f)) : -1), f->lastChar)), expr
 # define pfail() printf("\tFAIL\n");
 #else
 # define pentry(func) 0
@@ -241,7 +246,7 @@ sqFileGetPosition(SQFile *f) {
 	if (f->isStdioStream
 	 && !f->writable)
 		return pexit(f->lastChar == EOF ? 0 : 1);
-	position = ftell(getFile(f));
+	position = ftello(getFile(f));
 	if (position == -1)
 		return interpreterProxy->success(false);
 	return position;
@@ -266,28 +271,29 @@ sqFileShutdown(void) { return 1; }
    creation and truncation, for example to only create a file if it doesn't
    already exist or to open a file for just writing but not truncation.
 */
-static int openFileWithFlags(const char *path, int flags)
+static int
+openFileWithFlags(const char *path, int flags)
 {
 	int fd;
 
-	do {
-		fd = open(path, flags);
-	} while (fd < 0 && errno == EINTR);
+	do fd = open(path, flags);
+	while (fd < 0 && errno == EINTR);
 
 	return fd;
 }
-static int openFileWithFlagsInMode(const char *path, int flags, mode_t mode)
+static int
+openFileWithFlagsInMode(const char *path, int flags, mode_t mode)
 {
 	int fd;
 
-	do {
-		fd = open(path, flags, mode);
-	} while (fd < 0 && errno == EINTR);
+	do fd = open(path, flags, mode);
+	while (fd < 0 && errno == EINTR);
 
 	return fd;
 }
 
-static FILE *openFileDescriptor(int fd, const char *mode)
+static FILE *
+openFileDescriptor(int fd, const char *mode)
 {
 	/* This must be implemented separately from openFileWithFlags()
 	   and openFileWithFlagsInMode() so error checking can be done
@@ -295,14 +301,14 @@ static FILE *openFileDescriptor(int fd, const char *mode)
 	 */
 	FILE *file;
 
-	do {
-		file = fdopen(fd, mode);
-	} while (file == NULL && errno == EINTR);
+	do file = fdopen(fd, mode);
+	while (file == NULL && errno == EINTR);
 
 	return file;
 }
 
-static void setNewFileMacTypeAndCreator(char *sqFileName, sqInt sqFileNameSize)
+static void
+setNewFileMacTypeAndCreator(char *sqFileName, sqInt sqFileNameSize)
 {
 	char type[4], creator[4];
 
@@ -349,7 +355,8 @@ sqFileOpen(SQFile *f, char *sqFileName, sqInt sqFileNameSize, sqInt writeFlag) {
 					 */
 					mode = "wb";
 					fd = openFileWithFlags(cFileName, O_WRONLY);
-				} else if (errno == ENOENT) {
+				}
+				else if (errno == ENOENT) {
 					mode = "r+b";
 					fd = openFileWithFlagsInMode(
 						cFileName,
@@ -358,7 +365,7 @@ sqFileOpen(SQFile *f, char *sqFileName, sqInt sqFileNameSize, sqInt writeFlag) {
 						   will likely be rw-r--r-- after being modified
 						   by the process's umask
 						 */
-#ifdef _MSC_VER
+#if _MSC_VER
 						_S_IREAD | _S_IWRITE);
 #else
 						S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
@@ -376,7 +383,7 @@ sqFileOpen(SQFile *f, char *sqFileName, sqInt sqFileNameSize, sqInt writeFlag) {
 							   will likely be -w------- after being
 							   modified by the process's umask
 							 */
-#ifdef _MSC_VER
+#if _MSC_VER
 							_S_IWRITE);
 #else
 							S_IWUSR|S_IWGRP|S_IWOTH);
@@ -393,7 +400,8 @@ sqFileOpen(SQFile *f, char *sqFileName, sqInt sqFileNameSize, sqInt writeFlag) {
 		   read an existing file but before we could create it.
 		 */
 		} while (fd < 0 && errno == EEXIST && ++retried <= 1);
-	} else {
+	}
+	else {
 		mode = "rb";
 		fd = openFileWithFlags(cFileName, O_RDONLY);
 	}
@@ -455,7 +463,7 @@ sqFileOpenNew(SQFile *f, char *sqFileName, sqInt sqFileNameSize, sqInt *exists) 
 		/* the mode fopen() uses when creating files; will likely
 		   be rw-r--r-- after being modified by the process's umask
 		 */
-#ifdef _MSC_VER
+#if _MSC_VER
 		_S_IREAD | _S_IWRITE);
 #else
 		S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
@@ -469,7 +477,7 @@ sqFileOpenNew(SQFile *f, char *sqFileName, sqInt sqFileNameSize, sqInt *exists) 
 			/* write-only version of the above mode; will likely
 			   be -w------- after being modified by the process's umask
 			 */
-#ifdef _MSC_VER
+#if _MSC_VER
 			_S_IWRITE);
 #else
 			S_IWUSR|S_IWGRP|S_IWOTH);
@@ -493,9 +501,9 @@ sqFileOpenNew(SQFile *f, char *sqFileName, sqInt sqFileNameSize, sqInt *exists) 
 		   NEVER reattempt close() if it fails, even on EINTR
 		 */
 		close(fd);
-	} else if (errno == EEXIST) {
-		*exists = true;
 	}
+	else if (errno == EEXIST)
+		*exists = true;
 
 	f->sessionID = 0;
 	f->writable = false;
@@ -592,25 +600,31 @@ sqFileStdioHandlesInto(SQFile files[])
 * 3 - file
 * 4 - cygwin terminal (windows only)
 */
-sqInt sqFileDescriptorType(int fdNum) {
-        int status;
-        struct stat statBuf;
+sqInt
+sqFileDescriptorType(int fdNum)
+{
+	int status;
+	struct stat statBuf;
 
-        /* Is this a terminal? */
-        if (isatty(fdNum)) return 1;
+	/* Is this a terminal? */
+	if (isatty(fdNum))
+		return 1;
 
-        /* Is this a pipe? */
-        status = fstat(fdNum, &statBuf);
-        if (status) return -1;
-        if (S_ISFIFO(statBuf.st_mode)) return 2;
+	/* Is this a pipe? */
+	status = fstat(fdNum, &statBuf);
+	if (status)
+		return -1;
+	if (S_ISFIFO(statBuf.st_mode))
+		return 2;
 
-        /* Must be a normal file */
-        return 3;
+	/* Must be a normal file */
+	return 3;
 }
 
 
 size_t
-sqFileReadIntoAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startIndex) {
+sqFileReadIntoAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startIndex)
+{
 	/* Read count bytes from the given file into byteArray starting at
 	   startIndex. byteArray is the address of the first byte of a
 	   Squeak bytes object (e.g. String or ByteArray). startIndex
@@ -621,13 +635,6 @@ sqFileReadIntoAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startInde
 	char *dst;
 	size_t bytesRead;
 	FILE *file;
-#if COGMTVM
-	sqInt myThreadIndex;
-#endif
-#if COGMTVM && SPURVM
-	int wasPinned;
-	sqInt bufferOop = (sqInt)byteArrayIndex - BaseHeaderSize;
-#endif
 
 	if (!sqFileValid(f))
 		return interpreterProxy->success(false);
@@ -637,29 +644,10 @@ sqFileReadIntoAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startInde
 		if (f->isStdioStream)
 			return interpreterProxy->success(false);
 		if (f->lastOp == WRITE_OP)
-			fseek(file, 0, SEEK_CUR);  /* seek between writing and reading */
+			fseeko(file, 0, SEEK_CUR);  /* seek between writing and reading */
 	}
 	dst = byteArrayIndex + startIndex;
 	if (f->isStdioStream) {
-#if COGMTVM
-# if SPURVM
-		if (!(wasPinned = interpreterProxy->isPinned(bufferOop))) {
-			if (!(bufferOop = interpreterProxy->pinObject(bufferOop)))
-				return 0;
-			dst = bufferOop + BaseHeaderSize + startIndex;
-		}
-		myThreadIndex = interpreterProxy->disownVM(0);
-# else
-		if (interpreterProxy->isInMemory((sqInt)f)
-		 && interpreterProxy->isYoung((sqInt)f)
-		 || interpreterProxy->isInMemory((sqInt)dst)
-		 && interpreterProxy->isYoung((sqInt)dst)) {
-			interpreterProxy->primitiveFailFor(PrimErrObjectMayMove);
-			return 0;
-		}
-		myThreadIndex = interpreterProxy->disownVM(DisownVMLockOutFullGC);
-# endif
-#endif /* COGMTVM */
 		/* Line buffering in fread can't be relied upon, at least on Mac OS X
 		 * and mingw win32.  So do it the hard way.
 		 */
@@ -670,13 +658,6 @@ sqFileReadIntoAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startInde
 				bytesRead += 1;
 		}
 		while (bytesRead <= 0 && ferror(file) && errno == EINTR);
-#if COGMTVM
-		interpreterProxy->ownVM(myThreadIndex);
-# if SPURVM
-		if (!wasPinned)
-			interpreterProxy->unpinObject(bufferOop);
-# endif
-#endif /* COGMTVM */
 	}
 	else
 		do {
@@ -734,7 +715,7 @@ sqFileSetPosition(SQFile *f, squeakFileOffsetType position) {
 		pfail();
 		return interpreterProxy->success(false);
 	}
-	fseek(getFile(f), position, SEEK_SET);
+	fseeko(getFile(f), position, SEEK_SET);
 	f->lastOp = UNCOMMITTED;
 	return 1;
 }
@@ -746,7 +727,7 @@ sqFileSize(SQFile *f) {
 	if (!sqFileValid(f))
 		return interpreterProxy->success(false);
 	if (f->isStdioStream)
-		return interpreterProxy->success(false);
+		return 0;
 	return getSize(f);
 }
 
@@ -814,13 +795,13 @@ sqFileWriteFromAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startInd
 		return interpreterProxy->success(false);
 	pentry(sqFileWriteFromAt);
 	file = getFile(f);
-	if (f->lastOp == READ_OP) fseek(file, 0, SEEK_CUR);  /* seek between reading and writing */
+	if (f->lastOp == READ_OP)
+		fseeko(file, 0, SEEK_CUR);  /* seek between reading and writing */
 	src = byteArrayIndex + startIndex;
 	bytesWritten = fwrite(src, 1, count, file);
 
-	if (bytesWritten != count) {
+	if (bytesWritten != count)
 		interpreterProxy->success(false);
-	}
 	f->lastOp = WRITE_OP;
 	return pexit(bytesWritten);
 }

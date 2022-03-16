@@ -1,0 +1,54 @@
+#############################################################################
+# Common Makefile for Win32 VM using MSVC, e.g. 2017 Community, and gnu make
+# Copyright (c) 2020 3D Immersive Collaboration Consulting, LLC
+#
+# Compilation rules for Microsoft Visual C++ Toolchain using Clang 10
+#
+# See http://make.mad-scientist.net/papers/advanced-auto-dependency-generation
+# for an explanation of the dependency management scheme.
+#############################################################################
+
+.SUFFIXES:	.c .cpp .o .s .rc .res .dep
+
+$(info OBJDIR is $(OBJDIR))
+
+#############################################################################
+# Rules for automated builds
+#
+
+# Not interested in recording system header dependencies.
+ifeq ($(findstring /vm,$(OBJDIR)),/vm)
+DEPFLAGS:= -MMD -MT '$$(BUILD)/vm/$(*F).o' -MF deps/$(*F).d
+else
+DEPFLAGS:= -MMD -MT '$$(BUILD)/$(LIBNAME)/$(*F).o' -MF deps/$(*F).d
+endif
+ALLCFLAGS = $(DEPFLAGS) $(CFLAGS) $(INCLUDES) $(DEFS)
+ALLCXXFLAGS = $(DEPFLAGS) $(CXXFLAGS) $(INCLUDES) $(DEFS)
+
+.c.o:
+	$(CC) -o $(OBJDIR)/$@ $(ALLFLAGS) -c $<
+
+$(OBJDIR)/%.o: %.c
+	$(CC) -o $@ $(ALLFLAGS) -c $<
+
+.cpp.o:
+	$(CC) -o $(OBJDIR)/$@ -fcxx-exceptions $(ALLFLAGS) -c $<
+
+# This is causing the plugin directory to be repeated in the -F
+#$(OBJDIR)/%.o: %.cpp
+#	$(CC) -o $(OBJDIR)/$@ $(ALLFLAGS) -c $<
+
+$(OBJDIR)/%.o: %.cpp
+	$(CC) -o $@ $(ALLFLAGS) -c $<
+
+.rc.res:
+	$(RC) $(RCFLAGS) /fo $@ $<
+
+.c.dep:
+	$(CC) -M -o $(notdir $@) $(ALLFLAGS) -c $<
+
+deps/%.d: ;
+
+.PRECIOUS: deps/%.d $(OBJDIR)/%.air $(OBJDIR)/%.metallib
+
+-include $(patsubst %,deps/%.d,$(notdir $(basename $(VMSRC) $(LIBSRC))))

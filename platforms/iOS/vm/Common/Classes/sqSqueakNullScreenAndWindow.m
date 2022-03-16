@@ -81,11 +81,14 @@
         	depth == -2 || depth ==  -4 || depth == -8 || depth == -16 || depth == -32);
 }
 
+- (char *) ioGetTitle { return null; }
+
+- (void)   ioSetTitle: (void *)title length: (int)len { }
+
 - (void) ioForceDisplayUpdate {
 }
 
 - (void) ioForceDisplayUpdateFlush: (NSTimer*)theTimer {
-
 }
 
 - (int)   ioShowDisplayOnWindow: (unsigned char*) dispBitsIndex

@@ -1,0 +1,3 @@
+#!/bin/bash
+# echo added files to stdout
+git status --porcelain | grep "^A" | sed 's/^A //'

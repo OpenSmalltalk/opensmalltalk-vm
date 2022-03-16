@@ -37,8 +37,8 @@
 #endif // __RPCNDR_H_VERSION__
 
 #ifndef COM_NO_WINDOWS_H
-#include "Windows.h"
-#include "ole2.h"
+# include <Windows.h>
+# include <ole2.h>
 #endif /*COM_NO_WINDOWS_H*/
 
 #ifndef __qedit_h__

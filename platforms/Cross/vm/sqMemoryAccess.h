@@ -5,6 +5,11 @@
  * Last edited: 2013-10-14 12:23:39 by eliot on McStalker
  */
 
+/* This file defines the core types for the VM, sqInt, usqInt et al, and
+ * the memory asccess API for the Smalltalk heap.  Consequently this file
+ * is the minimum required prerequisite for Smalltalk-related code.
+ */
+
 /* Systematic use of the macros defined in this file within the Interpreter,
  * ObjectMemory and plugins will permit all four combinations of 32/64-bit
  * image and 32/64-bit host to compile and run correctly.  (Code that uses
@@ -373,4 +378,97 @@ extern void clearHeapMap(void);
 extern int  heapMapAtWord(void *wordPointer);
 extern void heapMapAtWordPut(void *wordPointer, int bit);
 
+/* Platform-dependent API to allocate/manage object memory. */
+
+#if SPURVM
+/* Spur is an improved object representation/garbage collector/heap manager that
+ * replaces the original BttF "V3" Memory Manager (so called because Spur came
+ * after Squeak V3).  Spur offers considerable performance improvements but is
+ * not backwards-compatible with V3, and requires different internal plumbing.
+ * Unlike the V3 memory manager, Spur manages old space heap memory in segments,
+ * and is able to release memory back to the OS when the heap shrinks.
+ */
+
+/* Allocate a region of memory of al least sz bytes, at or above minAddr.
+ * If the attempt fails, answer null.  If the attempt succeeds, answer the
+ * start of the region and assign its size through asp.
+ */
+extern void *sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt sz, void *minAddr, sqInt *asp);
+extern void sqDeallocateMemorySegmentAtOfSize(void *addr, sqInt sz);
+
+#else /* SPURVM */
+
+/* Note: The grow/shrink macros assume that the object memory can be extended
+   continuously at its prior end. The garbage collector cannot deal with
+   'holes' in the object memory so the support code needs to reserve the
+   virtual maximum of pages that can be allocated beforehand. The amount of
+   'extra' memory should describe the amount of memory that can be allocated
+   from the OS (including swap space if the flag is set to true) and must not
+   exceed the prior reserved memory.
+   In other words: don't you dare to report more free space then you can
+   actually allocate.
+   The default implementation assumes a fixed size memory allocated at startup.
+*/
+# define sqAllocateMemory(minHeapSize, desiredHeapSize)  malloc(desiredHeapSize)
+# define sqGrowMemoryBy(oldLimit, delta)			oldLimit
+# define sqShrinkMemoryBy(oldLimit, delta)		oldLimit
+# define sqMemoryExtraBytesLeft(includingSwap)	0
+#endif /* SPURVM */
+
+#if COGVM
+/* Cog is a JIT extension for the VM. It still relies on the Interpreter (called
+ * the CoInterpreter because it sits alongside the "Cogit") for primitives,
+ * for executing methods the first time, and to fall back on in exceptional
+ * circumstances.  COGVM implies STACKVM.  See STACKVM below.
+ */
+extern void sqMakeMemoryExecutableFromToCodeToDataDelta(usqInt, usqInt, sqInt*);
+extern void *allocateJITMemory(usqInt *desiredSize);
+#endif
+
+/* Platform-dependent memory size adjustment macro. */
+
+/* Note: This macro can be redefined to allows platforms with a
+   fixed application memory partition (notably, the Macintosh)
+   to reserve extra C heap memory for special applications that need
+   it (e.g., for a 3D graphics library). Since most platforms can
+   extend their application memory partition at run time if needed,
+   this macro is defined as a noop here and redefined if necessary
+   in sqPlatformSpecific.h.
+*/
+
+#define reserveExtraCHeapBytes(origHeapSize, bytesToReserve) origHeapSize
+
+/* Pluggable primitives macros. */
+
+/* Note: All pluggable primitives are defined as
+	EXPORT(int) somePrimitive(void)
+   All non-static variables in the VM and plugins are declared as
+	VM_EXPORT type var
+   If the platform requires special declaration modifiers, the EXPORT and
+   VM_EXPORT macros can be redefined.
+*/
+#if !defined(EXPORT)
+# define EXPORT(returnType) returnType
+#endif
+#if !defined(VM_EXPORT)
+# define VM_EXPORT
+#endif
+#if !defined(VM_FUNCTION_EXPORT)
+# define VM_FUNCTION_EXPORT(returnType) returnType
+#endif
+
+/* sqPlatformSpecific.h serves a couple of contradictory purposes. One is to
+ * define platforms-specific implementations of facilities such as the EXPORT
+ * macros.  Another is to define platform-specific implementations of support
+ * functions, such as allocating memory, opening files, etc. This file needs
+ * the EXPORT macros, but defines the types needed to define the support APIs.
+ * So there is a circular dependency.  To solve ths sqPlatformSpecific.h only
+ * defines the support APIs if __sqMemoryAccess_h is defined, and this file
+ * arranges to include sqPlatformSpecific.h a second time to allow it to
+ * declare the support funciton API.
+ */
+#if defined(_SQ_PLATFORM_SPECIFIC_H)
+# undef _SQ_PLATFORM_SPECIFIC_H
+# include "sqPlatformSpecific.h"
+#endif
 #endif /* __sqMemoryAccess_h */

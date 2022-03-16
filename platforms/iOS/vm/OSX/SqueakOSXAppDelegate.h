@@ -50,6 +50,8 @@
 	BOOL checkForFileNameOnFirstParm;
 	NSString *possibleImageNameAtLaunchTime;
     sqSqueakOSXScreenAndWindow *windowHandler;
+    
+	NSMutableArray*  dragItems;
 }
 
 @property (nonatomic,weak) IBOutlet NSWindow *window;
@@ -57,5 +59,9 @@
 @property (nonatomic,strong) NSString *possibleImageNameAtLaunchTime;
 @property (nonatomic,assign) BOOL checkForFileNameOnFirstParm;
 @property (nonatomic, strong) sqSqueakNullScreenAndWindow *windowHandler;
+@property (nonatomic, strong) NSMutableArray *dragItems;
+
+- (BOOL)isImageFile:(NSString *)filePath;
+- (NSURL*) dragURIAtIndex:(sqInt) index;
 
 @end

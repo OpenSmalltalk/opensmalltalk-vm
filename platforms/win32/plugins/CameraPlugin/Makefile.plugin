@@ -1,0 +1,12 @@
+# CameraPlugin build assumes it's external.
+# Further it must be built using the MSVC++ toolchain because of lack of COM
+# support in the mingw toolchain.  Hence this Makefile.plugin exists only to
+# exclude CameraPlugin on the cygwin/mingw build (sadly).
+
+EXTRALIBS:=strmbase.lib strmiids.lib
+
+PREREQUISITES:=$(WIN32MISCDIR)/atlbase.h # no atlbase.h for cygwin
+
+include ../common/Makefile.plugin
+
+INCLUDES:=-I$(WIN32MISCDIR) $(INCLUDES)

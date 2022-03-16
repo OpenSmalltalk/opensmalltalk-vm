@@ -181,30 +181,6 @@ ioGetNextEvent(sqInputEvent *evt)
 }
 
 sqInt
-ioGetButtonState(void)
-{
-    return currentWindowSystem->getButtonState();
-}
-
-sqInt
-ioGetKeystroke(void)
-{
-    return currentWindowSystem->getKeystroke();
-}
-
-sqInt
-ioMousePoint(void)
-{
-    return currentWindowSystem->mousePoint();
-}
-
-sqInt
-ioPeekKeystroke(void)
-{
-    return currentWindowSystem->peekKeystroke();
-}
-
-sqInt
 ioProcessEvents(void)
 {
     if(ioProcessEventsHandler)
@@ -267,6 +243,12 @@ dropRequestFileName(sqInt dropIndex)
 {
     return currentWindowSystem->dropRequestFileName(dropIndex);
 }
+
+/* *** TODO ***
+ * provide support for URI */
+char *
+dropRequestURI(sqInt dropIndex)
+{ return NULL; }
 
 sqInt
 dropRequestFileHandle(sqInt dropIndex)

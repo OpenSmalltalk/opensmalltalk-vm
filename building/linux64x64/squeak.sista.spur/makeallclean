@@ -1,0 +1,15 @@
+#!/bin/sh -e
+trap 'exit 2' HUP INT PIPE TERM
+if [ "$1" = -fork ]; then
+	shift
+	for d in `dirname $0`/build*; do
+		(cd ./$d
+		 echo y | ./mvm "$@") &
+	done
+	wait
+else
+	for d in `dirname $0`/build*; do
+		(cd ./$d
+		 echo y | ./mvm "$@")
+	done
+fi

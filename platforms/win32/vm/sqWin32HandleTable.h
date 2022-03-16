@@ -34,18 +34,18 @@ static int FindHandleInTable(HandleTable *table, HANDLE item) {
   int start, index;
   HANDLE element, *data = table->data;
 
-  if(0 == table->size) return -1; /* so we don't explode below */
+  if (0 == table->size) return -1; /* so we don't explode below */
   /* Compute initial index */
   start  = ((usqIntptr_t)item) % table->size;
   /* search from (hash mod size) to end */
   for(index = start; index < table->size; index++) {
     element = data[index];
-    if(NULL == element || item == element) return index;
+    if (NULL == element || item == element) return index;
   }
   /* search from 0 to where we started */
   for(index = 0; index < start; index++) {
     element = data[index];
-    if(NULL == element || item == element) return index;
+    if (NULL == element || item == element) return index;
   }
   return -1; /* no match and no empty slot */
 }
@@ -65,7 +65,7 @@ static void GrowTableToSize(HandleTable *table, int newSize) {
     table->data[index] = element;
   }
   /* free old data */
-  if(oldData) free(oldData);
+  if (oldData) free(oldData);
 }
 
 /* Private. Fix a collision chain after removing an element */
@@ -73,12 +73,12 @@ static void FixCollisionsInTable(HandleTable *table, int index) {
   HANDLE element, *data = table->data;
   int newIndex, oldIndex = index;
   int length = table->size;
-  while(1) {
-    if(++oldIndex == length) oldIndex = 0;
+  while (1) {
+    if (++oldIndex == length) oldIndex = 0;
     element = data[oldIndex];
-    if(NULL == element) break; /* we're done here */
+    if (NULL == element) break; /* we're done here */
     newIndex = FindHandleInTable(table, element);
-    if(newIndex != oldIndex) {
+    if (newIndex != oldIndex) {
       HANDLE tmp = data[oldIndex];
       data[oldIndex] = data[newIndex];
       data[newIndex] = tmp;
@@ -90,9 +90,9 @@ static void FixCollisionsInTable(HandleTable *table, int index) {
 static void AddHandleToTable(HandleTable *table, HANDLE item) {
   int index;
 
-  if(NULL == item) return; /* silently ignore NULL handles */
+  if (NULL == item) return; /* silently ignore NULL handles */
   index = FindHandleInTable(table, item);
-  if(index == -1) { /* grow and retry */
+  if (index == -1) { /* grow and retry */
     GrowTableToSize(table, table->size > 1 ? table->size*2-1 : 5);
     index = FindHandleInTable(table, item);
   }
@@ -103,15 +103,15 @@ static void AddHandleToTable(HandleTable *table, HANDLE item) {
 /* Public. Remove a handle from some table */
 static void RemoveHandleFromTable(HandleTable *table, HANDLE item) {
   int index;
-  if(NULL == item) return; /* silently ignore NULL handles */
+  if (NULL == item) return; /* silently ignore NULL handles */
   index = FindHandleInTable(table, item);
-  if(index == -1) return; /* not in table */
-  if(NULL == table->data[index]) return; /* not in table */
+  if (index == -1) return; /* not in table */
+  if (NULL == table->data[index]) return; /* not in table */
   table->data[index] = NULL; /* clear entry */
   table->count--;
   FixCollisionsInTable(table, index); /* fix collision chain */
   /* Shrink table by half if 75% free but allow no less than 5 entries*/
-  if(table->size > 5 && table->count*4 < table->size ) {
+  if (table->size > 5 && table->count*4 < table->size ) {
     GrowTableToSize(table, (table->size + 1) / 2);
   }
 }
@@ -119,9 +119,9 @@ static void RemoveHandleFromTable(HandleTable *table, HANDLE item) {
 /* Public. Test if a handle is in this table */
 static int  IsHandleInTable(HandleTable *table, HANDLE item) {
   int index;
-  if(NULL == item) return 0; /* silently ignore NULL handles */
+  if (NULL == item) return 0; /* silently ignore NULL handles */
   index = FindHandleInTable(table, item);
-  if(index == -1) return 0;
+  if (index == -1) return 0;
   return table->data[index] == item;
 }
 # else /* !NO_HANDLE_TABLES */

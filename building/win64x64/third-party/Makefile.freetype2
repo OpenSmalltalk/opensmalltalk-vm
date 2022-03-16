@@ -1,0 +1,39 @@
+ifndef THIRDPARTYDIR
+	include ../common/Makefile.lib.extra
+endif
+include ../../../third-party/freetype2.spec
+
+# plugin definitions
+FREETYPE2URL:=$(freetype2_spec_download_url)
+FREETYPE2LIBNAME:=$(freetype2_spec_product_name_windows)
+FREETYPE2DIR:=$(THIRDPARTYDIR)/$(freetype2_spec_unpack_dir_name)
+FREETYPE2ARCHIVE:=$(THIRDPARTYCACHEDIR)/$(freetype2_spec_archive_name)
+FREETYPE2LIB:=$(THIRDPARTYINSTALLDIR)/$(FREETYPE2LIBNAME)
+
+# ensure third-party library is built and recognised by plugins
+INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR) $(THIRDPARTYINCLUDEDIR)/freetype2
+EXTRALIBS:=$(EXTRALIBS) $(FREETYPE2LIB)
+PLUGINREQS:=$(PLUGINREQS) $(THIRDPARTYLIBS)
+	
+$(FREETYPE2ARCHIVE): 
+	$(WGET) -O $(FREETYPE2ARCHIVE) $(FREETYPE2URL) 
+	
+$(THIRDPARTYLIBDIR)/$(FREETYPE2LIBNAME): $(FREETYPE2ARCHIVE)
+	tar x -f $(FREETYPE2ARCHIVE) -C $(THIRDPARTYDIR)
+	cp ../../third-party/Toolchain-cross-mingw32-cygwin.cmake $(FREETYPE2DIR)
+	test -d $(FREETYPE2DIR)/build || mkdir $(FREETYPE2DIR)/build
+	cd $(FREETYPE2DIR)/build \
+		&& cmake ..\
+			-DCMAKE_TOOLCHAIN_FILE=../Toolchain-cross-mingw32-cygwin.cmake \
+			-DCMAKE_INSTALL_PREFIX=$(THIRDPARTYOUTDIR) \
+			-DWITH_PNG=OFF \
+			-DBUILD_SHARED_LIBS=ON \
+			-DCMAKE_C_FLAGS="$(THIRDPARTY_CFLAGS)" \
+		&& make \
+		&& make install \
+		&& cp libfreetype.dll $(THIRDPARTYLIBDIR)/$(FREETYPE2LIBNAME)
+
+$(FREETYPE2LIB): pkgconfig libpng $(THIRDPARTYLIBDIR)/$(FREETYPE2LIBNAME)
+	cp -f $(THIRDPARTYLIBDIR)/$(FREETYPE2LIBNAME) $(THIRDPARTYINSTALLDIR)
+	
+freetype2: $(FREETYPE2LIB)

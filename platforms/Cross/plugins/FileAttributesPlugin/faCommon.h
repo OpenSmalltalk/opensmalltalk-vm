@@ -4,8 +4,12 @@
  * Declerations for FileAttributes platform independent functions.
  */
 
+#ifndef _FACOMMON__H_
+#define _FACOMMON__H_
 #include "faConstants.h"
 #include "faSupport.h"
+
+extern sqInt nilOop, falseOop, trueOop;
 
 /*
  * FAPathPtr
@@ -29,4 +33,4 @@ sqInt faInvalidateSessionId(int *sessionId);
 sqInt faSetStDirOop(fapath *aFaPath, sqInt pathNameOop);
 sqInt faSetStPathOop(fapath *aFaPath, sqInt pathNameOop);
 sqInt faCharToByteArray(const char *cBuf, sqInt *byteArrayOop);
-
+#endif // _FACOMMON__H_

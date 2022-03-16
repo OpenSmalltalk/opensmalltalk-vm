@@ -939,32 +939,6 @@ sqSDL2_getNextSDL2Event(void *buffer, size_t bufferSize)
 }
 
 static sqInt
-sqSDL2_getButtonState(void)
-{
-    ioProcessEvents();
-    return buttonState | (modifiersState << 3);
-}
-
-static sqInt
-sqSDL2_getKeystroke(void)
-{
-    return 0;
-}
-
-static sqInt
-sqSDL2_mousePoint(void)
-{
-    ioProcessEvents();
-    return (mousePositionX<<16) | mousePositionY;
-}
-
-static sqInt
-sqSDL2_peekKeystroke(void)
-{
-    return 0;
-}
-
-static sqInt
 sqSDL2_processEvents(void)
 {
     handleEvents();
@@ -1135,13 +1109,13 @@ primitiveSetVMSDL2Input()
 }
 
 #define XFN(export) {"", #export, (void*)export},
-#define XFND(export,depth) {"", #export "\000" depth, (void*)export},
+#define XFNDF(export,depth,flags) {"", #export "\000" depth flags, (void*)export},
 
 static void *sdl2_exports[][3]=
 {
-    XFND(primitiveIsVMDisplayUsingSDL2, "\001")
-    XFND(primitivePollVMSDL2Event, "\001")
-    XFND(primitiveSetVMSDL2Input, "\001")
+    XFNDF(primitiveIsVMDisplayUsingSDL2, "\001","\000")
+    XFNDF(primitivePollVMSDL2Event, "\001","\000")
+    XFNDF(primitiveSetVMSDL2Input, "\001","\000")
     { 0, 0, 0 }
 };
 
@@ -1168,10 +1142,6 @@ sqWindowSystem sqSDL2WindowSystem = {
     .setWindowWidthHeight = sqSDL2_setWindowWidthHeight,
     .isWindowObscured = sqSDL2_isWindowObscured,
     .getNextEvent = sqSDL2_getNextEvent,
-    .getButtonState = sqSDL2_getButtonState,
-    .getKeystroke = sqSDL2_getKeystroke,
-    .mousePoint = sqSDL2_mousePoint,
-    .peekKeystroke = sqSDL2_peekKeystroke,
     .processEvents = sqSDL2_processEvents,
     .screenScaleFactor = sqSDL2_screenScaleFactor,
     .screenSize = sqSDL2_screenSize,

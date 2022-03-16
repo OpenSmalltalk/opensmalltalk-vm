@@ -8,10 +8,17 @@
 *   EMAIL:   andreas.raab@gmx.de, bernd.eckardt@impara.de
 *****************************************************************************/
 
-#include <windows.h>
+#include <Windows.h>
 
+#if !defined(SQUEAK_BUILTIN_PLUGIN)
+# error "HostWindowPlugin can only be compiled as an internal plugin"
+#endif
+
+#include "sqVirtualMachine.h"
 #include "sq.h"
 #include "HostWindowPlugin.h"
+
+extern struct VirtualMachine *interpreterProxy;
 
 /* Import from sqWin32Window.c */
 extern int recordMouseEvent(MSG *msg, UINT nrClicks);
@@ -139,12 +146,14 @@ static LRESULT CALLBACK HostWndProcW (HWND hwnd,
  return DefWindowProcW(hwnd,message,wParam,lParam);
 }
 
+#define handleForIndex(winIndex) ((winIndex) == 1 ? stWindow : (HWND)(winIndex))
+
 /* closeWindow: arg is int windowIndex. Fail (return 0) if anything goes wrong
  * - typically the windowIndex invalid or similar */
 sqInt
 closeWindow(sqIntptr_t windowIndex)
 {
-  HWND hwnd = windowIndex == 1 ? stWindow : (HWND)windowIndex;
+  HWND hwnd = handleForIndex(windowIndex);
   if (!IsWindow(hwnd))
 	return 0;
   DestroyWindow(hwnd);
@@ -208,7 +217,7 @@ ioShowDisplayOnWindow(unsigned char* dispBits, sqInt width,
 			    sqInt affectedR, sqInt affectedT, sqInt affectedB, 
 			    sqIntptr_t windowIndex)
 {
-  HWND hwnd = windowIndex == 1 ? stWindow : (HWND)windowIndex;
+  HWND hwnd = handleForIndex(windowIndex);
   HDC dc;
   BITMAPINFO *bmi;
   int lines;
@@ -266,7 +275,6 @@ ioShowDisplayOnWindow(unsigned char* dispBits, sqInt width,
   }
 
 
-
   lines = SetDIBitsToDevice(dc,
   	    0, /* dst_x */
   	    0, /* dst_y */
@@ -313,7 +321,7 @@ ioShowDisplayOnWindow(unsigned char* dispBits, sqInt width,
 
   if (lines == 0) {
     printLastError(TEXT("SetDIBitsToDevice failed"));
-#if UNICODE
+#if _UNICODE
     warnPrintfW(TEXT("width=%" PRIdSQINT ",height=%" PRIdSQINT ",bits=%" PRIXSQPTR ",dc=%" PRIXSQPTR "\n"),
 #else
     warnPrintf(TEXT("width=%" PRIdSQINT ",height=%" PRIdSQINT ",bits=%" PRIXSQPTR ",dc=%" PRIXSQPTR "\n"),
@@ -334,7 +342,6 @@ ioShowDisplayOnWindow(unsigned char* dispBits, sqInt width,
 }
 
 
-
 /* ioSizeOfWindow: arg is int windowIndex. Return the size of the specified
  * window in (width<<16 | height) format like ioScreenSize.
  * Return -1 for failure - typically invalid windowIndex
@@ -343,7 +350,7 @@ ioShowDisplayOnWindow(unsigned char* dispBits, sqInt width,
 sqInt
 ioSizeOfWindow(sqIntptr_t windowIndex)
 {
-  HWND hwnd = windowIndex == 1 ? stWindow : (HWND)windowIndex;
+  HWND hwnd = handleForIndex(windowIndex);
   RECT boundingRect;
   int wsize;
 
@@ -391,7 +398,7 @@ ioSizeOfNativeDisplay(usqIntptr_t windowHandle)
 sqInt
 ioSizeOfWindowSetxy(sqIntptr_t windowIndex, sqInt w, sqInt h)
 {
-  HWND hwnd = windowIndex == 1 ? stWindow : (HWND)windowIndex;
+  HWND hwnd = handleForIndex(windowIndex);
   RECT boundingRect;
  
   if (!GetWindowRect(hwnd, &boundingRect)
@@ -409,7 +416,7 @@ ioSizeOfWindowSetxy(sqIntptr_t windowIndex, sqInt w, sqInt h)
 sqInt
 ioPositionOfWindow(sqIntptr_t windowIndex)
 {
-  HWND hwnd = windowIndex == 1 ? stWindow : (HWND)windowIndex;
+  HWND hwnd = handleForIndex(windowIndex);
   RECT boundingRect;
 
 	return GetWindowRect(hwnd, &boundingRect)
@@ -467,7 +474,7 @@ ioPositionOfNativeDisplay(usqIntptr_t windowHandle)
 sqInt
 ioPositionOfWindowSetxy(sqIntptr_t windowIndex, sqInt x, sqInt y)
 {
-  HWND hwnd = windowIndex == 1 ? stWindow : (HWND)windowIndex;
+  HWND hwnd = handleForIndex(windowIndex);
   RECT boundingRect;
 
   if (!GetWindowRect(hwnd, &boundingRect)
@@ -484,7 +491,7 @@ ioPositionOfWindowSetxy(sqIntptr_t windowIndex, sqInt x, sqInt y)
 sqInt
 ioSetTitleOfWindow(sqIntptr_t windowIndex, char * newTitle, sqInt sizeOfTitle)
 {
-  HWND hwnd = windowIndex == 1 ? stWindow : (HWND)windowIndex;
+  HWND hwnd = handleForIndex(windowIndex);
   char titleString[1024];
   WCHAR wideTitle[1024];
 
@@ -504,7 +511,7 @@ sqInt
 ioSetIconOfWindow(sqIntptr_t windowIndex, char * iconPath, sqInt sizeOfPath)
 {
 	WCHAR iconPathW[MAX_PATH + 1];
-	HWND hwnd = windowIndex == 1 ? stWindow : (HWND)windowIndex;
+	HWND hwnd = handleForIndex(windowIndex);
 	int len;
 	if (!IsWindow(hwnd)) return 0;
 	len = MultiByteToWideChar(CP_UTF8, 0, iconPath, sizeOfPath, iconPathW, MAX_PATH);
@@ -529,7 +536,6 @@ ioSetIconOfWindow(sqIntptr_t windowIndex, char * iconPath, sqInt sizeOfPath)
 sqInt
 ioCloseAllWindows(void){ return 0; }
 
-#if TerfVM
 sqInt
 ioSetCursorPositionXY(long x, long y)
 {
@@ -538,6 +544,7 @@ ioSetCursorPositionXY(long x, long y)
 		: -1;
 }
 
+#if TerfVM
 /* Return the pixel origin (topleft) of the platform-defined working area
    for the screen containing the given window. */
 sqInt
@@ -566,5 +573,34 @@ ioSizeOfScreenWorkArea (sqIntptr_t windowIndex)
 	GetMonitorInfo(hMonitor, &mi);
 	workArea = mi.rcWork;
 	return ((workArea.right - workArea.left) << 16) | ((workArea.bottom - workArea.top) & 0xFFFF);
+}
+
+static sqInt result, monitorIdx;
+static BOOL
+enumMonitor(HMONITOR monitor, HDC dc, LPRECT rect, LPARAM store)
+{
+	if (store) {
+		storeIntegerofObjectwithValue
+			(monitorIdx, result, packedXY(rect->left,rect->top));
+		storeIntegerofObjectwithValue
+			(monitorIdx+1, result, packedXY(rect->right - rect->left,rect->bottom - rect->top));
+	}
+	monitorIdx = monitorIdx + 2;
+	return 1;
+}
+
+/* Answer an Array of screen coordinates as pairs of packed points, origin,
+ * extent for each screen. So if there is one monitor the array has two entries.
+ */
+sqInt
+ioScreenRectangles(void)
+{
+	monitorIdx = 0;
+	EnumDisplayMonitors(0,0,enumMonitor,0);
+	if ((result = instantiateClassindexableSize(classArray(),monitorIdx))) {
+		monitorIdx = 0;
+		EnumDisplayMonitors(0,0,enumMonitor,1);
+	}
+	return result;
 }
 #endif /* TerfVM */

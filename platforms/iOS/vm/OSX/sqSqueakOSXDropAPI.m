@@ -39,8 +39,9 @@
 #include "sqMacHostWindow.h"
 #include "sq.h"
 #import "sqSqueakOSXView.h"
+#import "SqueakOSXAppDelegate.h"
 
-extern wHandleType windowHandleFromIndex(sqIntptr_t windowIndex);
+extern SqueakOSXAppDelegate *gDelegateApp;
 extern struct VirtualMachine* interpreterProxy;
 
 sqInt dropInit(void) {
@@ -51,11 +52,20 @@ sqInt dropShutdown(void) {
 	return 1;
 };
 
-char* dropRequestFileName(sqInt dropIndex) {
-	/* return name of file or NULL if error */
-	NSView <sqSqueakOSXView> *view = [((sqSqueakOSXScreenAndWindow*)((__bridge NSWindow *)windowHandleFromIndex(1)).delegate) getMainViewOnWindow];
-	NSString *fileNameString = [view dragFileNameStringAtIndex: dropIndex];
-	return (char *) [fileNameString UTF8String];
+char *dropRequestFileName(sqInt dropIndex) {
+	NSURL *dragURIAtIndex = [gDelegateApp dragURIAtIndex: dropIndex];
+	if (!dragURIAtIndex || !dragURIAtIndex.fileURL)
+		return NULL;
+	
+	return (char *) [dragURIAtIndex.path UTF8String];
+}
+
+char *dropRequestURI(sqInt dropIndex) {
+	NSURL *dragURIAtIndex = [gDelegateApp dragURIAtIndex: dropIndex];
+	if (!dragURIAtIndex)
+		return NULL;
+	
+	return (char *) [dragURIAtIndex.absoluteString UTF8String];
 }
 
 /* note: dropRequestFileHandle needs to bypass plugin security checks when implemented */
@@ -65,18 +75,14 @@ sqInt dropRequestFileHandle(sqInt dropIndex) {
 
 	char *fileName = dropRequestFileName(dropIndex);
 	if (!fileName)
-		return 0;
+		return interpreterProxy->nilObject();
 
 	void *fn = interpreterProxy->ioLoadFunctionFrom("fileOpenNamesizewritesecure", "FilePlugin");
-	if (fn == NULL) {
+	if (!fn) {
 		/* begin primitiveFail */
         interpreterProxy->success(false);
 		return 0;
 	}
 	sqInt result = ((sqInt (*) (char * nameIndex, sqInt nameSize, sqInt writeFlag, sqInt secureFlag)) fn)(fileName,(sqInt) strlen(fileName), 0,0);
 	return result;
-}
-
-sqInt sqSecFileAccessCallback(void *ptr) { 
-	return 0; 
 }

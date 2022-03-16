@@ -46,7 +46,7 @@
 
 extern SqueakOSXAppDelegate *gDelegateApp;
 
-static void dispatchWindowChangedHook(void);
+static void dispatchWindowChangedHook(char *, NSWindow *, int);
 
 @interface sqSqueakOSXScreenAndWindow()
     @property (nonatomic,strong) NSView <sqSqueakOSXView> * mainViewOnWindow;
@@ -81,24 +81,18 @@ static void dispatchWindowChangedHook(void);
 	return NO;
 }
 
-#if DEBUG_WINDOW_CHANGED_HOOK
-# define windowResizeMethod(msg) - (void)msg (NSNotification *)notification { \
-	printf( #msg "\n"); \
+#define windowResizeMethod(msg,type) - (void)msg (NSNotification *)notice { \
+	dispatchWindowChangedHook(#msg,(NSWindow *)(notice.object),type); \
 }
-#else
-# define windowResizeMethod(msg) - (void)msg (NSNotification *)notification { \
-	dispatchWindowChangedHook(); \
-}
-#endif
 
-windowResizeMethod(windowDidResize:)
-windowResizeMethod(windowDidMiniaturize:)
-windowResizeMethod(windowDidDeminiaturize:)
+windowResizeMethod(windowDidResize:,WindowEventMetricChange)
+windowResizeMethod(windowDidMiniaturize:,WindowEventMetricChange)
+windowResizeMethod(windowDidDeminiaturize:,WindowEventMetricChange)
 //These two not needed since windowDidResize: is also dispatched
-//windowResizeMethod(windowDidEnterFullScreen:)
-//windowResizeMethod(windowDidExitFullScreen:)
+//windowResizeMethod(windowDidEnterFullScreen:,WindowEventMetricChange)
+//windowResizeMethod(windowDidExitFullScreen:,WindowEventMetricChange)
 //This one is dispatched when entering/exiting true full screen mode
-windowResizeMethod(windowDidChangeScreen:)
+windowResizeMethod(windowDidChangeScreen:,WindowEventChangeScreen)
 
 @end
 
@@ -120,8 +114,11 @@ getSTWindow(void)
 static windowChangedHook hookLine = 0;
 
 static void
-dispatchWindowChangedHook()
-{	if (hookLine) hookLine(); }
+dispatchWindowChangedHook(char *selector, NSWindow *window, int eventType)
+{
+	[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordWindowEvent: eventType window: window];
+	if (hookLine) hookLine();
+}
 
 windowChangedHook
 getWindowChangedHook() { return hookLine; }

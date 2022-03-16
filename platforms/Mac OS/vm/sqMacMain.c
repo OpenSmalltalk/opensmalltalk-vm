@@ -78,6 +78,7 @@
 
 #include "sq.h"
 #include "sqAssert.h"
+#include "sqImageFileAccess.h"
 #include "sqMacUIConstants.h"
 #include "sqMacMain.h"
 #include "sqMacUIMenuBar.h"
@@ -148,9 +149,6 @@ int    argCnt= 0;
 char **argVec= 0;
 char **envVec= 0;
 
-void printAllStacks(void);
-void printCallStack(void);
-extern void dumpPrimTraceLog(void);
 extern BOOL NSApplicationLoad(void);
 char *getVersionInfo(int verbose);
 
@@ -1022,9 +1020,11 @@ getVersionInfo(int verbose)
 # define INTERP_BUILD interpreterVersion
 #endif
   extern char vmBuildString[];
+  char processor[32];
   CFStringRef versionString;
-  char *info= (char *)malloc(4096);
-  info[0]= '\0';
+  char *info = (char *)malloc(4096);
+  info[0] = '\0';
+  getAttributeIntoLength(1003,processor,sizeof(processor));
 
 #if SPURVM
 # if BytesPerOop == 8
@@ -1112,7 +1112,7 @@ getRedzoneSize()
 
 	do kill(getpid(),SIGPROF); while (!p);
 	(void)sigaction(SIGPROF, &old, 0);
-	return (char *)min(&old,&handler_action) - sizeof(struct sigaction) - p;
+	return (char *)min(&old,&handler_action) - p;
 }
 
 sqInt reportStackHeadroom;

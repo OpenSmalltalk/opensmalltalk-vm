@@ -11,8 +11,10 @@
 *     1) Only buttons 1-4 are supported
 *     2) No z,r,u,v-Values are supported
 *****************************************************************************/
-#include <windows.h>
+#include <Windows.h>
 #include "sq.h"
+/* direct use of interpreter API */
+#include "sqVirtualMachine.h"
 #include <mmsystem.h>
 
 #ifndef NO_JOYSTICK
@@ -20,11 +22,6 @@
 int numJoySticks=0;
 JOYCAPS *joySticks = NULL;
 
-/* direct use of interpreter API */
-int methodArgumentCount(void);
-int stackIntegerValue(int);
-int failed(void);
-	
 int joystickRead(int index)
 {
 	JOYINFO joyInfo;

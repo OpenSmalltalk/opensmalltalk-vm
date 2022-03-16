@@ -11,7 +11,7 @@
 #include <Windows.h>
 #include "sq.h"
 
-#if !defined(NO_VIRTUAL_MEMORY) && !SPURVM /* Spur uses sqWin32SpurAlloc.c */
+#if !SPURVM /* Spur uses sqWin32SpurAlloc.c */
 
 /* For Qwaq Forums: Disallow memory shrinking to avoid crashes
    due to GC/OpenGL relocation problems within glDrawElements.
@@ -30,19 +30,22 @@ static LPSTR  pageLimit;    /* upper limit of commited pages */
 static DWORD  maxReserved;  /* maximum reserved virtual memory */
 static DWORD  usedMemory;   /* amount of memory currently in use */
 
-#ifndef NDEBUG
-/* in debug mode, let the system crash so that we can see where it happened */
-#define EXCEPTION_WRONG_ACCESS EXCEPTION_CONTINUE_SEARCH
-#else
-/* in release mode, execute the exception handler notifying the user what happened */
-#define EXCEPTION_WRONG_ACCESS EXCEPTION_EXECUTE_HANDLER
-#endif
+# define roundDownToPage(v) ((sqIntptr_t)(v)&pageMask)
+# define roundUpToPage(v) (((sqIntptr_t)(v)+pageSize-1)&pageMask)
 
-LONG CALLBACK sqExceptionFilter(LPEXCEPTION_POINTERS exp)
+static void
+initPageSize()
 {
-  /* always wrong access - we handle memory differently now */
-  return EXCEPTION_WRONG_ACCESS;
+  SYSTEM_INFO sysInfo;
+
+  /* determine page boundaries & available address space */
+  if (!pageSize) {
+    GetSystemInfo(&sysInfo);
+    pageSize = sysInfo.dwPageSize;
+    pageMask = ~(pageSize - 1);
+  }
 }
+
 
 /************************************************************************/
 /* sqAllocateMemory: Initialize virtual memory                          */
@@ -52,29 +55,27 @@ void *sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
   DWORD initialCommit, commit;
 
   /* determine page boundaries */
-  GetSystemInfo(&sysInfo);
-  pageSize = sysInfo.dwPageSize;
-  pageMask = ~(pageSize - 1);
+  initPageSize();
 
   /* round the requested size up to the next page boundary */
-  nowReserved = (desiredHeapSize + pageSize) & pageMask;
+  nowReserved = roundUpToPage(desiredHeapSize);
 
   /* round the initial commited size up to the next page boundary */
-  initialCommit = (minHeapSize + pageSize) & pageMask;
+  initialCommit = roundUpToPage(minHeapSize);
 
   /* Here, we only reserve the maximum memory to be used
      It will later be committed during actual access */
   maxReserved = MAX_VIRTUAL_MEMORY;
   do {
     pageBase = VirtualAlloc(NULL,maxReserved,MEM_RESERVE, PAGE_NOACCESS);
-    if(!pageBase) {
-      if(maxReserved == nowReserved) break;
+    if (!pageBase) {
+      if (maxReserved == nowReserved) break;
       /* make it smaller in steps of 128MB */
       maxReserved -= 128*1024*1024;
-      if(maxReserved < nowReserved) maxReserved = nowReserved;
+      if (maxReserved < nowReserved) maxReserved = nowReserved;
     }
-  } while(!pageBase);
-  if(!pageBase) {
+  } while (!pageBase);
+  if (!pageBase) {
     sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Error:"),
 		 TEXT("Unable to allocate memory (%d bytes requested)"),
 		 maxReserved);
@@ -82,7 +83,7 @@ void *sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
   }
   /* commit initial memory as requested */
   commit = nowReserved;
-  if(!VirtualAlloc(pageBase, commit, MEM_COMMIT, PAGE_READWRITE)) {
+  if (!VirtualAlloc(pageBase, commit, MEM_COMMIT, PAGE_READWRITE)) {
     sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Error:"),
 		 TEXT("Unable to commit memory (%d bytes requested)"),
 		 commit);
@@ -98,19 +99,19 @@ void *sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
 /************************************************************************/
 int sqGrowMemoryBy(int oldLimit, int delta) {
   /* round delta UP to page size */
-  if(fShowAllocations) {
+  if (fShowAllocations) {
     warnPrintf("Growing memory by %d...", delta);
   }
   delta = (delta + pageSize) & pageMask;
-  if(!VirtualAlloc(pageLimit, delta, MEM_COMMIT, PAGE_READWRITE)) {
-    if(fShowAllocations) {
+  if (!VirtualAlloc(pageLimit, delta, MEM_COMMIT, PAGE_READWRITE)) {
+    if (fShowAllocations) {
       warnPrintf("failed\n");
     }
     /* failed to grow */
     return oldLimit;
   }
   /* otherwise, expand pageLimit and return new top limit */
-  if(fShowAllocations) {
+  if (fShowAllocations) {
     warnPrintf("okay\n");
   }
   pageLimit += delta;
@@ -123,26 +124,26 @@ int sqGrowMemoryBy(int oldLimit, int delta) {
 /************************************************************************/
 int sqShrinkMemoryBy(int oldLimit, int delta) {
   /* round delta DOWN to page size */
-  if(fShowAllocations) {
+  if (fShowAllocations) {
     warnPrintf("Shrinking by %d...",delta);
   }
 #ifdef DO_NOT_SHRINK
   {
     /* Experimental - do not unmap memory and avoid OGL crashes */
-    if(fShowAllocations) warnPrintf(" - ignored\n");
+    if (fShowAllocations) warnPrintf(" - ignored\n");
     return oldLimit;
   }
 #endif
   delta &= pageMask;
-  if(!VirtualFree(pageLimit-delta, delta, MEM_DECOMMIT)) {
-    if(fShowAllocations) {
+  if (!VirtualFree(pageLimit-delta, delta, MEM_DECOMMIT)) {
+    if (fShowAllocations) {
       warnPrintf("failed\n");
     }
     /* failed to shrink */
     return oldLimit;
   }
   /* otherwise, shrink pageLimit and return new top limit */
-  if(fShowAllocations) {
+  if (fShowAllocations) {
     warnPrintf("okay\n");
   }
   pageLimit -= delta;
@@ -161,18 +162,15 @@ int sqMemoryExtraBytesLeft(int includingSwap) {
   mStat.dwLength = sizeof(mStat);
   GlobalMemoryStatus(&mStat);
   bytesLeft = mStat.dwAvailPhys;
-  if(includingSwap) {
+  if (includingSwap) {
     bytesLeft += mStat.dwAvailPageFile;
   };
   /* max bytes is also limited by maxReserved page size */
-  if(bytesLeft > (maxReserved - usedMemory)) {
+  if (bytesLeft > (maxReserved - usedMemory)) {
     bytesLeft = maxReserved - usedMemory;
   }
   return bytesLeft;
 }
-
-#define roundDownToPage(v) ((v)&pageMask)
-#define roundUpToPage(v) (((v)+pageSize-1)&pageMask)
 
 # if COGVM
 void
@@ -181,9 +179,11 @@ sqMakeMemoryExecutableFromToCodeToDataDelta(usqInt startAddr,
 											sqInt *codeToDataDelta)
 {
 	DWORD previous;
+  SIZE_T size;
 
+  size = endAddr - startAddr;
 	if (!VirtualProtect((void *)startAddr,
-						endAddr - startAddr + 1,
+						size,
 						PAGE_EXECUTE_READWRITE,
 						&previous))
 		perror("VirtualProtect(x,y,PAGE_EXECUTE_READWRITE)");
@@ -191,16 +191,23 @@ sqMakeMemoryExecutableFromToCodeToDataDelta(usqInt startAddr,
 		*codeToDataDelta = 0;
 }
 
-void
-sqMakeMemoryNotExecutableFromTo(usqInt startAddr, usqInt endAddr)
+void *
+allocateJITMemory(usqInt *desiredSize)
 {
-	DWORD previous;
+	initPageSize();
 
-	if (!VirtualProtect((void *)startAddr,
-						endAddr - startAddr + 1,
-						PAGE_READWRITE,
-						&previous))
-		perror("VirtualProtect(x,y,PAGE_EXECUTE_READWRITE)");
+  sqInt allocBytes = roundUpToPage(*desiredSize);
+
+  /* Allocate extra memory for the JIT. No need to make it executable (i.e., PAGE_EXECUTE_READWRITE) right away because there will be an extra call to sqMakeMemoryExecutableFromToCodeToDataDelta(..) anyway. */
+	char *alloc = VirtualAlloc(NULL,allocBytes,MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE);
+  
+	if (!alloc) {
+		perror("Could not allocate JIT memory");
+		exit(1);
+	}
+
+  *desiredSize = allocBytes;
+	return alloc;
 }
 # endif /* COGVM */
-#endif /* !defined(NO_VIRTUAL_MEMORY) && !SPURVM */
+#endif /* !SPURVM */

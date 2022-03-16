@@ -178,8 +178,4 @@
 
 /* #undef HAVE_FEATURES_H */
 
-#if defined(HAVE_FEATURES_H)
-# include "glibc.h"
-#endif
-
 #endif /* __sq_config_h */

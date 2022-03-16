@@ -36,6 +36,7 @@
 #include "sq.h"
 #include "sqAssert.h"
 #include "sqMemoryAccess.h"
+#include "sqImageFileAccess.h"
 #include "sqaio.h"
 #include "sqUnixCharConv.h"
 #include "sqSCCSVersion.h"
@@ -206,7 +207,8 @@ ioInitTime(void)
 }
 
 
-long ioMSecs(void)
+unsigned int
+ioMSecs(void)
 {
   struct timeval now;
   gettimeofday(&now, 0);
@@ -219,7 +221,8 @@ long ioMSecs(void)
   return lowResMSecs= (now.tv_usec / 1000 + now.tv_sec * 1000);
 }
 
-long ioMicroMSecs(void)
+unsigned int
+ioMicroMSecs(void)
 {
   /* return the highest available resolution of the millisecond clock */
   return ioMSecs();	/* this already to the nearest millisecond */
@@ -796,11 +799,7 @@ void clipboardWriteWithType(char *data, size_t nData, char *typeName, size_t nTy
   dpy->clipboardWriteWithType(data, nData, typeName, nTypeNames, isDnd, isClaiming);
 }
 
-sqInt ioGetButtonState(void)		{ return dpy->ioGetButtonState(); }
-sqInt ioPeekKeystroke(void)		{ return dpy->ioPeekKeystroke(); }
-sqInt ioGetKeystroke(void)		{ return dpy->ioGetKeystroke(); }
 sqInt ioGetNextEvent(sqInputEvent *evt)	{ return dpy->ioGetNextEvent(evt); }
-sqInt ioMousePoint(void)		{ return dpy->ioMousePoint(); }
 
 /*** Window labeling ***/
 char* ioGetWindowLabel(void) {return "";}
@@ -869,18 +868,16 @@ sqInt  primitivePluginRequestState(void)	{ return dpy->primitivePluginRequestSta
 
 static void outOfMemory(void)
 {
-  /* pushing stderr outputs the error report on stderr instead of stdout */
-  pushOutputFile((char *)STDERR_FILENO);
   error("out of memory\n");
 }
 
 /* Print an error message, possibly a stack trace, do /not/ exit.
  * Allows e.g. writing to a log file and stderr.
  */
-static void *printRegisterState(ucontext_t *uap);
+static void *printRegisterState(FILE *file, ucontext_t *uap);
 
 static void
-reportStackState(const char *msg, char *date, int printAll, ucontext_t *uap)
+reportStackState(FILE *file,const char *msg, char *date, int printAll, ucontext_t *uap)
 {
 #if !defined(NOEXECINFO) && defined(HAVE_EXECINFO_H)
 	void *addrs[BACKTRACE_DEPTH];
@@ -895,8 +892,8 @@ reportStackState(const char *msg, char *date, int printAll, ucontext_t *uap)
 	extern usqInt stackLimitAddress(void);
 #endif
 
-	printf("\n%s%s%s\n\n", msg, date ? " " : "", date ? date : "");
-	printf("%s\n%s\n\n", GetAttributeString(0), getVersionInfo(1));
+	fprintf(file,"\n%s%s%s\n\n", msg, date ? " " : "", date ? date : "");
+	fprintf(file,"%s\n%s\n\n", GetAttributeString(0), getVersionInfo(1));
 
 #if COGVM
 	/* Do not attempt to report the stack until the VM is initialized!! */
@@ -905,16 +902,16 @@ reportStackState(const char *msg, char *date, int printAll, ucontext_t *uap)
 #endif
 
 #if !defined(NOEXECINFO) && defined(HAVE_EXECINFO_H)
-	printf("C stack backtrace & registers:\n");
+	fprintf(file,"C stack backtrace & registers:\n");
 	if (uap) {
-		addrs[0] = printRegisterState(uap);
+		addrs[0] = printRegisterState(file,uap);
 		depth = 1 + backtrace(addrs + 1, BACKTRACE_DEPTH);
 	}
 	else
 		depth = backtrace(addrs, BACKTRACE_DEPTH);
-	putchar('*'); /* indicate where pc is */
-	fflush(stdout); /* backtrace_symbols_fd uses unbuffered i/o */
-	backtrace_symbols_fd(addrs, depth + 1, fileno(stdout));
+	fputc('*',file); /* indicate where pc is */
+	fflush(file); /* backtrace_symbols_fd uses unbuffered i/o */
+	backtrace_symbols_fd(addrs, depth + 1, fileno(file));
 #endif
 
 	if (ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
@@ -933,12 +930,12 @@ reportStackState(const char *msg, char *date, int printAll, ucontext_t *uap)
 
 			printingStack = true;
 			if (printAll) {
-				printf("\n\nAll Smalltalk process stacks (active first):\n");
-				printAllStacks();
+				fprintf(file,"\n\nAll Smalltalk process stacks (active first):\n");
+				printAllStacksOn(file);
 			}
 			else {
-				printf("\n\nSmalltalk stack dump:\n");
-				printCallStack();
+				fprintf(file,"\n\nSmalltalk stack dump:\n");
+				printCallStackOn(file);
 			}
 			printingStack = false;
 #if COGVM
@@ -948,76 +945,84 @@ reportStackState(const char *msg, char *date, int printAll, ucontext_t *uap)
 		}
 	}
 	else
-		printf("\nCan't dump Smalltalk stack(s). Not in VM thread\n");
+		fprintf(file,"\nCan't dump Smalltalk stack(s). Not in VM thread\n");
 #if STACKVM
-	printf("\nMost recent primitives\n");
-	dumpPrimTraceLog();
+	fprintf(file,"\nMost recent primitives\n");
+	dumpPrimTraceLogOn(file);
 # if COGVM
-	printf("\n");
+	fprintf(file,"\n");
 	reportMinimumUnusedHeadroom();
 # endif
 #endif
-	printf("\n\t(%s)\n", msg);
-	fflush(stdout);
+	fprintf(file,"\n\t(%s)\n", msg);
+	fflush(file);
 }
 
-/* Attempt to dump the registers to stdout.  Only do so if we know how. */
+/* Attempt to dump the registers to stdout.  Only do so if we know how.
+ * Answer the pc (or 0).
+ */
 static void *
-printRegisterState(ucontext_t *uap)
+printRegisterState(FILE *file,ucontext_t *uap)
 {
+#define v(v) ((void *)(v))
 #if __linux__ && __i386__
 	greg_t *regs = (greg_t *)&uap->uc_mcontext.gregs;
-	printf(	"\teax 0x%08x ebx 0x%08x ecx 0x%08x edx 0x%08x\n"
+	fprintf(file,
+			"\teax 0x%08x ebx 0x%08x ecx 0x%08x edx 0x%08x\n"
 			"\tedi 0x%08x esi 0x%08x ebp 0x%08x esp 0x%08x\n"
 			"\teip 0x%08x\n",
 			regs[REG_EAX], regs[REG_EBX], regs[REG_ECX], regs[REG_EDX],
 			regs[REG_EDI], regs[REG_EDI], regs[REG_EBP], regs[REG_ESP],
 			regs[REG_EIP]);
-	return (void *)regs[REG_EIP];
+	return v(regs[REG_EIP]);
 #elif __FreeBSD__ && __i386__
 	struct mcontext *regs = &uap->uc_mcontext;
-	printf(	"\teax 0x%08x ebx 0x%08x ecx 0x%08x edx 0x%08x\n"
+	fprintf(file,
+			"\teax 0x%08x ebx 0x%08x ecx 0x%08x edx 0x%08x\n"
 			"\tedi 0x%08x esi 0x%08x ebp 0x%08x esp 0x%08x\n"
 			"\teip 0x%08x\n",
 			regs->mc_eax, regs->mc_ebx, regs->mc_ecx, regs->mc_edx,
 			regs->mc_edi, regs->mc_edi, regs->mc_ebp, regs->mc_esp,
 			regs->mc_eip);
-	return regs->mc_eip;
+	return v(regs->mc_eip);
 #elif __linux__ && __x86_64__
 	greg_t *regs = (greg_t *)&uap->uc_mcontext.gregs;
-	printf(	"\trax 0x%08lx rbx 0x%08lx rcx 0x%08lx rdx 0x%08lx\n"
-			"\trdi 0x%08lx rsi 0x%08lx rbp 0x%08lx rsp 0x%08lx\n"
-			"\tr8  0x%08lx r9  0x%08lx r10 0x%08lx r11 0x%08lx\n"
-			"\tr12 0x%08lx r13 0x%08lx r14 0x%08lx r15 0x%08lx\n"
-			"\trip 0x%08lx\n",
-			regs[REG_RAX], regs[REG_RBX], regs[REG_RCX], regs[REG_RDX],
-			regs[REG_RDI], regs[REG_RSI], regs[REG_RBP], regs[REG_RSP],
-			regs[REG_R8 ], regs[REG_R9 ], regs[REG_R10], regs[REG_R11],
-			regs[REG_R12], regs[REG_R13], regs[REG_R14], regs[REG_R15],
-			regs[REG_RIP]);
-	return (void *)regs[REG_RIP];
+	fprintf(file,
+			"    rax %14p rbx %14p rcx %14p rdx %14p\n"
+			"    rdi %14p rsi %14p rbp %14p rsp %14p\n"
+			"    r8  %14p r9  %14p r10 %14p r11 %14p\n"
+			"    r12 %14p r13 %14p r14 %14p r15 %14p\n"
+			"    rip %14p\n",
+			v(regs[REG_RAX]),v(regs[REG_RBX]),v(regs[REG_RCX]),v(regs[REG_RDX]),
+			v(regs[REG_RDI]),v(regs[REG_RSI]),v(regs[REG_RBP]),v(regs[REG_RSP]),
+			v(regs[REG_R8 ]),v(regs[REG_R9 ]),v(regs[REG_R10]),v(regs[REG_R11]),
+			v(regs[REG_R12]),v(regs[REG_R13]),v(regs[REG_R14]),v(regs[REG_R15]),
+			v(regs[REG_RIP]));
+	return v(regs[REG_RIP]);
 # elif __OpenBSD__ && __x86_64__
-	printf(	"\trax 0x%08lx rbx 0x%08lx rcx 0x%08lx rdx 0x%08lx\n"
-			"\trdi 0x%08lx rsi 0x%08lx rbp 0x%08lx rsp 0x%08lx\n"
-			"\tr8  0x%08lx r9  0x%08lx r10 0x%08lx r11 0x%08lx\n"
-			"\tr12 0x%08lx r13 0x%08lx r14 0x%08lx r15 0x%08lx\n"
-			"\trip 0x%08lx\n",
-			uap->sc_rax, uap->sc_rbx, uap->sc_rcx, uap->sc_rdx,
-			uap->sc_rdi, uap->sc_rsi, uap->sc_rbp, uap->sc_rsp,
-			uap->sc_r8, uap->sc_r9, uap->sc_r10, uap->sc_r11,
-			uap->sc_r12, uap->sc_r13, uap->sc_r14, uap->sc_r15,
-			uap->sc_rip);
-	return (void*)uap->sc_rip;
+	fprintf(file,
+			"    rax %14p rbx %14p rcx %14p rdx %14p\n"
+			"    rdi %14p rsi %14p rbp %14p rsp %14p\n"
+			"    r8  %14p r9  %14p r10 %14p r11 %14p\n"
+			"    r12 %14p r13 %14p r14 %14p r15 %14p\n"
+			"    rip %14p\n",
+			v(uap->sc_rax),v(uap->sc_rbx),v(uap->sc_rcx),v(uap->sc_rdx),
+			v(uap->sc_rdi),v(uap->sc_rsi),v(uap->sc_rbp),v(uap->sc_rsp),
+			v(uap->sc_r8),v(uap->sc_r9),v(uap->sc_r10),v(uap->sc_r11),
+			v(uap->sc_r12),v(uap->sc_r13),v(uap->sc_r14),v(uap->sc_r15),
+			v(uap->sc_rip));
+	return v(uap->sc_rip);
 # elif __linux__ && (defined(__arm64__) || defined(__aarch64__))
 	void **regs = (void **)&uap->uc_mcontext.regs[0];
-	printf(	"\tx0 %p x1 %p x2 %p x3 %p\n"
-			"\tx4 %p x5 %p x6 %p x7 %p\n"
-			"\tx8 %p x9 %p x10 %p x11 %p\n"
-			"\tx12 %p x13 %p x14 %p x15 %p\n"
-			"\tx16 %p x17 %p x18 %p x19 %p\n"
-			"\tx20 %p x21 %p x22 %p x23 %p\n"
-			"\tx24 %p x25 %p x26 %p x27 %p\n"
-			"\tx29 %p  fp %p  lr %p  sp %p\n",
+	fprintf(file,
+			"     x0 %14p  x1 %14p  x2 %14p  x3 %14p\n"
+			"     x4 %14p  x5 %14p  x6 %14p  x7 %14p\n"
+			"     x8 %14p  x9 %14p x10 %14p x11 %14p\n"
+			"    x12 %14p x13 %14p x14 %14p x15 %14p\n"
+			"    x16 %14p x17 %14p x18 %14p x19 %14p\n"
+			"    x20 %14p x21 %14p x22 %14p x23 %14p\n"
+			"    x24 %14p x25 %14p x26 %14p x27 %14p\n"
+			"    x29 %14p  fp %14p  lr %14p  sp %14p\n",
 			regs[0], regs[1], regs[2], regs[3],
 			regs[4], regs[5], regs[6], regs[7],
 			regs[8], regs[9], regs[10], regs[11],
@@ -1026,10 +1031,11 @@ printRegisterState(ucontext_t *uap)
 			regs[20], regs[21], regs[22], regs[23],
 			regs[24], regs[25], regs[26], regs[27],
 			regs[28], regs[29], regs[30], (void *)(uap->uc_mcontext.sp));
-	return uap->uc_mcontext.pc;
+	return v(uap->uc_mcontext.pc);
 # elif __linux__ && (defined(__arm__) || defined(__arm32__) || defined(ARM32))
 	struct sigcontext *regs = &uap->uc_mcontext;
-	printf(	"\t r0 0x%08x r1 0x%08x r2 0x%08x r3 0x%08x\n"
+	fprintf(file,
+			"\t r0 0x%08x r1 0x%08x r2 0x%08x r3 0x%08x\n"
 	        "\t r4 0x%08x r5 0x%08x r6 0x%08x r7 0x%08x\n"
 	        "\t r8 0x%08x r9 0x%08x r10 0x%08x fp 0x%08x\n"
 	        "\t ip 0x%08x sp 0x%08x lr 0x%08x pc 0x%08x\n",
@@ -1037,9 +1043,10 @@ printRegisterState(ucontext_t *uap)
 	        regs->arm_r4,regs->arm_r5,regs->arm_r6,regs->arm_r7,
 	        regs->arm_r8,regs->arm_r9,regs->arm_r10,regs->arm_fp,
 	        regs->arm_ip, regs->arm_sp, regs->arm_lr, regs->arm_pc);
+	return v(uap->uc_mcontext.arm_pc);
 #else
-	printf("don't know how to derive register state from a ucontext_t on this platform\n");
-	return 0;
+	fprintf(file,"don't know how to derive register state from a ucontext_t on this platform\n");
+	return v(0);
 #endif
 }
 
@@ -1066,18 +1073,20 @@ block()
 void
 error(const char *msg)
 {
-	reportStackState(msg,0,0,0);
+	reportStackState(stderr,msg,0,0,0);
 	if (blockOnError) block();
 	abort();
 }
 #pragma auto_inline(on)
 
-static void
-getCrashDumpFilenameInto(char *buf)
+static FILE *
+crashDumpFile()
 {
-	strcpy(buf,vmLogDirA);
-	vmLogDirA[0] && strcat(buf, "/");
-	strcat(buf, "crash.dmp");
+	char namebuf[MAXPATHLEN+1];
+	strcpy(namebuf,vmLogDirA);
+	vmLogDirA[0] && strcat(namebuf, "/");
+	strcat(namebuf, "crash.dmp");
+	return fopen(namebuf,"a+");
 }
 
 static void
@@ -1086,7 +1095,7 @@ sigusr1(int sig, siginfo_t *info, ucontext_t *uap)
 	int saved_errno = errno;
 	time_t now = time(NULL);
 	char ctimebuf[32];
-	char crashdump[MAXPATHLEN+1];
+	FILE *crashdump;
 
 	if (!ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
 		pthread_kill(getVMOSThread(),sig);
@@ -1094,24 +1103,26 @@ sigusr1(int sig, siginfo_t *info, ucontext_t *uap)
 		return;
 	}
 
-	getCrashDumpFilenameInto(crashdump);
+	crashdump = crashDumpFile();
 	ctime_r(&now,ctimebuf);
-	pushOutputFile(crashdump);
-	reportStackState("SIGUSR1", ctimebuf, 1, uap);
-	popOutputFile();
-	reportStackState("SIGUSR1", ctimebuf, 1, uap);
+	reportStackState(crashdump, "SIGUSR1", ctimebuf, 1, uap);
+	reportStackState(stdout, "SIGUSR1", ctimebuf, 1, uap);
+	fclose(crashdump);
 
 	errno = saved_errno;
 }
 
 static int inFault = 0;
 
+sqInt
+ioCanCatchFFIExceptions() { return 1; }
+
 static void
 sigsegv(int sig, siginfo_t *info, ucontext_t *uap)
 {
 	time_t now = time(NULL);
 	char ctimebuf[32];
-	char crashdump[MAXPATHLEN+1];
+	FILE *crashdump;
 	const char *fault = sig == SIGSEGV
 						? "Segmentation fault"
 						: (sig == SIGBUS
@@ -1124,12 +1135,11 @@ sigsegv(int sig, siginfo_t *info, ucontext_t *uap)
 		extern sqInt primitiveFailForFFIExceptionat(usqLong exceptionCode, usqInt pc);
 		primitiveFailForFFIExceptionat(sig, uap->_PC_IN_UCONTEXT);
 		inFault = 1;
-		getCrashDumpFilenameInto(crashdump);
+		crashdump = crashDumpFile();
 		ctime_r(&now,ctimebuf);
-		pushOutputFile(crashdump);
-		reportStackState(fault, ctimebuf, 0, uap);
-		popOutputFile();
-		reportStackState(fault, ctimebuf, 0, uap);
+		reportStackState(crashdump, fault, ctimebuf, 0, uap);
+		reportStackState(stdout, fault, ctimebuf, 0, uap);
+		fclose(crashdump);
 	}
 	if (blockOnError) block();
 	abort();
@@ -1355,13 +1365,11 @@ static void loadModules(void)
 	    ;
   }
 
-  if (!displayModule)
-    {
+  if (!displayModule) {
       fprintf(stderr, "%s: could not find any display driver\n", exeName);
       abort();
     }
-  if (!soundModule)
-    {
+  if (!soundModule) {
       fprintf(stderr, "%s: could not find any sound driver\n", exeName);
       abort();
     }
@@ -1377,16 +1385,29 @@ static long
 strtobkm(const char *str)
 {
   char *suffix;
-  long value= strtol(str, &suffix, 10);
-  switch (*suffix)
-    {
+  long value = strtol(str, &suffix, 10);
+  switch (*suffix) {
     case 'k': case 'K':
-      value*= 1024;
-      break;
+      return value * 1024;
     case 'm': case 'M':
-      value*= 1024*1024;
-      break;
-    }
+      return value * 1024*1024;
+  }
+  return value;
+}
+
+static unsigned long
+strtobkmg(const char *str)
+{
+  char *suffix;
+  long value = strtol(str, &suffix, 10);
+  switch (*suffix) {
+    case 'k': case 'K':
+      return value * 1024UL;
+    case 'm': case 'M':
+      return value * 1024UL*1024UL;
+    case 'g': case 'G':
+      return value * 1024UL*1024UL*1024UL;
+  }
   return value;
 }
 
@@ -1424,7 +1445,9 @@ static void vm_parseEnvironment(void)
     strcpy(shortImageName, DEFAULT_IMAGE_NAME);
 
   if ((ev= getenv("SQUEAK_MEMORY")))	extraMemory= strtobkm(ev);
+#if !SPURVM
   if ((ev= getenv("SQUEAK_MMAP")))	useMmap= strtobkm(ev);
+#endif
   if ((ev= getenv("SQUEAK_PLUGINS")))	squeakPlugins= strdup(ev);
   if ((ev= getenv("SQUEAK_NOEVENTS")))	noEvents= 1;
   if ((ev= getenv("SQUEAK_NOTIMER")))	useItimer= 0;
@@ -1539,17 +1562,22 @@ static int vm_parseArgument(int argc, char **argv)
   else if (!strcmp(argv[0], VMOPTION("nojit")))     { useJit  = 0; return 1; }
   else if (!strcmp(argv[0], VMOPTION("spy")))       { withSpy = 1; return 1; }
 #endif /* !STACKVM && !COGVM */
+#if defined(AIO_DEBUG)
+  else if (!strcmp(argv[0], VMOPTION("aiolog")))	{ aioDebugLogging = 1; return 1; }
+#endif
 #if (STACKVM || NewspeakVM) && !COGVM
-  else if (!strcmp(argv[0], VMOPTION("sendtrace"))) { extern sqInt sendTrace; sendTrace = 1; return 1; }
+  else if (!strcmp(argv[0], VMOPTION("sendtrace"))) { extern volatile int sendTrace; sendTrace = 1; return 1; }
 #endif
   else if (!strcmp(argv[0], VMOPTION("single")))    { runAsSingleInstance=1; return 1; }
   /* option requires an argument */
-  else if (argc > 1 && !strcmp(argv[0], VMOPTION("memory")))   { extraMemory  = strtobkm(argv[1]); return 2; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("memory")))   { extraMemory  = strtobkmg(argv[1]); return 2; }
 #if !STACKVM && !COGVM
   else if (argc > 1 && !strcmp(argv[0], VMOPTION("procs")))    { jitProcs     = atoi(argv[1]);     return 2; }
   else if (argc > 1 && !strcmp(argv[0], VMOPTION("maxpic")))   { jitMaxPIC    = atoi(argv[1]);     return 2; }
 #endif /* !STACKVM && !COGVM */
-  else if (argc > 1 && !strcmp(argv[0], VMOPTION("mmap")))     { useMmap      = strtobkm(argv[1]); return 2; }
+#if !SPURVM
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("mmap")))     { useMmap      = strtobkmg(argv[1]); return 2; }
+#endif
   else if (argc > 1 && !strcmp(argv[0], VMOPTION("plugins")))  { squeakPlugins= strdup(argv[1]);   return 2; }
   else if (argc > 1 && !strcmp(argv[0], VMOPTION("encoding"))) { setEncoding(&sqTextEncoding, argv[1]); return 2; }
   else if (argc > 1 && !strcmp(argv[0], VMOPTION("pathenc")))  { setEncoding(&uxPathEncoding, argv[1]); return 2; }
@@ -1566,7 +1594,7 @@ static int vm_parseArgument(int argc, char **argv)
     return 2; }
   else if (argc > 1 && !strcmp(argv[0], VMOPTION("eden"))) {
     extern sqInt desiredEdenBytes;
-    desiredEdenBytes = strtobkm(argv[1]);
+    desiredEdenBytes = strtobkmg(argv[1]);
     return 2; }
   else if (argc > 1 && !strcmp(argv[0], VMOPTION("leakcheck"))) { 
     extern sqInt checkForLeaks;
@@ -1605,6 +1633,10 @@ static int vm_parseArgument(int argc, char **argv)
     extern sqInt desiredCogCodeSize;
     desiredCogCodeSize = strtobkm(argv[1]);	 
     return 2; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("logplugin"))) { 
+	extern char *primTracePluginName;
+	primTracePluginName = argv[1];
+    return 2; }
 # define TLSLEN (sizeof(VMOPTION("trace"))-1)
   else if (!strncmp(argv[0], VMOPTION("trace"), TLSLEN)) { 
     extern int traceFlags;
@@ -1641,7 +1673,7 @@ static int vm_parseArgument(int argc, char **argv)
 #if SPURVM
   else if (argc > 1 && !strcmp(argv[0], VMOPTION("maxoldspace"))) { 
     extern unsigned long maxOldSpaceSize;
-    maxOldSpaceSize = (unsigned long)strtobkm(argv[1]);	 
+    maxOldSpaceSize = (unsigned long)strtobkmg(argv[1]);	 
     return 2; }
   else if (!strcmp(argv[0], VMOPTION("logscavenge"))) {
     extern void openScavengeLog(void);
@@ -1671,8 +1703,10 @@ static void vm_printUsage(void)
   printf("\nCommon <option>s:\n");
   printf("  "VMOPTION("encoding")" <enc>       set the internal character encoding (default: MacRoman)\n");
   printf("  "VMOPTION("help")"                 print this help message, then exit\n");
-  printf("  "VMOPTION("memory")" <size>[mk]    use fixed heap size (added to image size)\n");
-  printf("  "VMOPTION("mmap")" <size>[mk]      limit dynamic heap size (default: %dm)\n", DefaultMmapSize);
+  printf("  "VMOPTION("memory")" <size>[kmg]   use fixed heap size (added to image size)\n");
+#if !SPURVM
+  printf("  "VMOPTION("mmap")" <size>[kmg]     limit dynamic heap size (default: %dm)\n", DefaultMmapSize);
+#endif
   printf("  "VMOPTION("timephases")"           print start load and run times\n");
 #if STACKVM || NewspeakVM
   printf("  "VMOPTION("breaksel")" selector    set breakpoint on send of selector\n");
@@ -1680,21 +1714,22 @@ static void vm_printUsage(void)
 #if STACKVM
   printf("  "VMOPTION("failonffiexception")"   when in an FFI callout primitive catch exceptions and fail the primitive\n");
   printf("  "VMOPTION("breakmnu")" selector    set breakpoint on MNU of selector\n");
-  printf("  "VMOPTION("eden")" <size>[mk]      use given eden size\n");
+  printf("  "VMOPTION("eden")" <size>[kmg]     use given eden size\n");
   printf("  "VMOPTION("leakcheck")" num        check for leaks in the heap\n");
   printf("  "VMOPTION("stackpages")" <num>     use given number of stack pages\n");
 #endif
   printf("  "VMOPTION("noevents")"             disable event-driven input support\n");
   printf("  "VMOPTION("nohandlers")"           disable sigsegv & sigusr1 handlers\n");
-  printf("  "VMOPTION("pollpip")" (0|1)        output on each poll for input\n");
-  printf("  "VMOPTION("checkpluginwrites")"    check for writes past end of object in plugins\n");
-  printf("  "VMOPTION("pathenc")" <enc>        set encoding for pathnames (default: UTF-8)\n");
+#if defined(AIO_DEBUG)
+  printf("  "VMOPTION("aiolog")"               output async io logging info\n");
+#endif
   printf("  "VMOPTION("plugins")" <path>       specify alternative plugin location (see manpage)\n");
   printf("  "VMOPTION("textenc")" <enc>        set encoding for external text (default: UTF-8)\n");
   printf("  "VMOPTION("version")"              print version information, then exit\n");
   printf("  -vm-<sys>-<dev>       use the <dev> driver for <sys> (see below)\n");
 #if STACKVM || NewspeakVM
 # if COGVM
+  printf("  "VMOPTION("logplugin")" name       only log primitives in plugin\n");
   printf("  "VMOPTION("trace")"[=num]          enable tracing (optionally to a specific value)\n");
 # else
   printf("  "VMOPTION("sendtrace")"            enable send tracing\n");
@@ -1709,7 +1744,7 @@ static void vm_printUsage(void)
   printf("  "VMOPTION("reportheadroom")"       report unused stack headroom on exit\n");
 #endif
 #if SPURVM
-  printf("  "VMOPTION("maxoldspace")" <size>[mk]    set max size of old space memory to bytes\n");
+  printf("  "VMOPTION("maxoldspace")" <size>[kmg] set max size of old space memory to bytes\n");
   printf("  "VMOPTION("logscavenge")"          log scavenging to scavenge.log\n");
 #endif
   printf("  "VMOPTION("blockonerror")"         on error or segv block, not exit.  useful for attaching gdb\n");
@@ -1803,8 +1838,10 @@ char *getVersionInfo(int verbose)
 #endif
   extern char *revisionAsString();
   extern char *vm_date, *cc_version, *ux_version;
-  char *info= (char *)malloc(4096);
-  info[0]= '\0';
+  char processor[32];
+  char *info = (char *)malloc(4096);
+  info[0] = '\0';
+  getAttributeIntoLength(1003,processor,sizeof(processor));
 
 #if SPURVM
 # if BytesPerOop == 8
@@ -1835,7 +1872,7 @@ char *getVersionInfo(int verbose)
 #if defined(USE_XSHM)
   sprintf(info+strlen(info), " XShm");
 #endif
-  sprintf(info+strlen(info), " %s %s [" BuildVariant HBID " VM]\n", vm_date, cc_version);
+  sprintf(info+strlen(info), " %s %s [" BuildVariant HBID " %s VM]\n", vm_date, cc_version, processor);
   if (verbose)
     sprintf(info+strlen(info), "Built from: ");
   sprintf(info+strlen(info), "%s\n", INTERP_BUILD);
@@ -1939,47 +1976,37 @@ imageNotFound(char *imageName)
 }
 
 
-void imgInit(void)
+void
+imgInit(void)
 {
-  /* read the image file and allocate memory for Squeak heap */
-  for (;;)
-    {
-      FILE *f= 0;
-      struct stat sb;
-      char imageName[MAXPATHLEN];
-      sq2uxPath(shortImageName, strlen(shortImageName), imageName, 1000, 1);
-      if ((  (-1 == stat(imageName, &sb)))
-	  || ( 0 == (f= fopen(imageName, "r"))))
-	{
-	  if (dpy->winImageFind(shortImageName, sizeof(shortImageName)))
-	    continue;
-	  dpy->winImageNotFound();
-	  imageNotFound(shortImageName);
-	}
-      {
-	int fd= open(imageName, O_RDONLY);
-	if (fd < 0) abort();
-#      ifdef DEBUG_IMAGE
-	printf("fstat(%d) => %d\n", fd, fstat(fd, &sb));
-#      endif
-      }
-      recordFullPathForImageName(shortImageName); /* full image path */
-      if (extraMemory)
-	useMmap= 0;
-      else
-	extraMemory= DefaultHeapSize * 1024 * 1024;
-#    ifdef DEBUG_IMAGE
-      printf("image size %ld + heap size %ld (useMmap = %d)\n", (long)sb.st_size, extraMemory, useMmap);
-#    endif
-#if SPURVM
-	  readImageFromFileHeapSizeStartingAt(f, 0, 0);
-#else
-      extraMemory += (long)sb.st_size;
-      readImageFromFileHeapSizeStartingAt(f, extraMemory, 0);
-#endif
-      sqImageFileClose(f);
-      break;
+    /* read the image file and allocate memory for Squeak heap */
+    int fd;
+    struct stat sb;
+    char imagePath[MAXPATHLEN];
+    sq2uxPath(shortImageName, strlen(shortImageName), imagePath, MAXPATHLEN - 1, 1);
+    if (-1 == stat(imagePath, &sb) || (!S_ISREG(sb.st_mode) && !S_ISLNK(sb.st_mode))) {
+        imageNotFound(imagePath); // imageNotFound will exit
     }
+    fd = sqImageFileOpen(imagePath, "rb"); // sqImageFileOpen handles the errors. fd is valid here
+#ifdef DEBUG_IMAGE
+    printf("fstat(%d) => %d\n", fd, fstat(fd, &sb));
+#endif
+
+    recordFullPathForImageName(shortImageName); /* full image path */
+    if (extraMemory)
+        useMmap= 0;
+    else
+        extraMemory= DefaultHeapSize * 1024 * 1024;
+#ifdef DEBUG_IMAGE
+    printf("image size %ld + heap size %ld (useMmap = %d)\n", (long)sb.st_size, extraMemory, useMmap);
+#endif
+#if SPURVM
+    readImageFromFileHeapSizeStartingAt(fd, 0, 0);
+#else
+    extraMemory += (long)sb.st_size;
+    readImageFromFileHeapSizeStartingAt(fd, extraMemory, 0);
+#endif
+    sqImageFileClose(fd);
 }
 
 #if defined(__GNUC__) && ( defined(i386) || defined(__i386) || defined(__i386__)  \
@@ -2170,6 +2197,7 @@ extern sqInt reportStackHeadroom;
 #endif
   printPhaseTime(3);
   dpy->winExit();
+  ioShutdownAllModules();
   exit(ec);
   return ec;
 }
@@ -2303,7 +2331,7 @@ getRedzoneSize()
 
 	do kill(getpid(),SIGPROF); while (!p);
 	(void)sigaction(SIGPROF, &old, 0);
-	return (char *)min(&old,&handler_action) - sizeof(struct sigaction) - p;
+	return (char *)min(&old,&handler_action) - p;
 }
 
 sqInt reportStackHeadroom;

@@ -47,7 +47,27 @@
 extern struct	VirtualMachine* interpreterProxy;
 extern SqueakOSXAppDelegate *gDelegateApp;
 
-static int buttonState=0;
+static int buttonState = 0;
+
+static int firstScreenHeight = 0;
+
+#define MouseButtonMask 0x7
+#define MouseButtonShift 3
+
+/*
+ * Answer (cache) the height of the main display, needed for transforming
+ * mac screen coordinates to Squeak screen coordinates.
+ */
+int
+yZero()
+{
+	if (!firstScreenHeight) {
+		NSScreen *originScreen = [NSScreen screens][0];
+		NSRect origin  = [originScreen frame];
+		firstScreenHeight = origin.size.height;
+	}
+	return firstScreenHeight;
+}
 
 @interface sqSqueakOSXApplication (eventsPrivate)
 
@@ -67,6 +87,20 @@ static int buttonState=0;
 
 @implementation sqSqueakOSXApplication (events)
 
+// This method filters the event that should not be processed by the Squeak Application.
+// This events are related to windows that are launched from a third party library (as SDL)
+// Check pumpRunLoopEventSendAndSignal:(BOOL)signal for more details.
+
+// The events processed by the VM are the ones in the main window or in the about window.
+- (BOOL) shouldFilterEvent: (NSEvent*)event {
+    
+    sqSqueakOSXApplication * sqApplication = (sqSqueakOSXApplication*)gDelegateApp.squeakApplication;
+    
+    return event.window
+        && event.window != gDelegateApp.window
+        && event.window != [sqApplication aboutWindow];
+}
+
 - (void) pumpRunLoopEventSendAndSignal:(BOOL)signal {
 
 #ifdef PharoVM
@@ -84,7 +118,7 @@ static int buttonState=0;
                              dequeue:YES])) {
          // If the event is not a system event or an event of *this* window, queue the event
          // Otherwise treat the event normally and send it to the app
-         if (event.window && event.window != gDelegateApp.window){
+         if ([self shouldFilterEvent: event]){
            [alienEventQueue addObject: event];
          }else{
            [NSApp sendEvent: event];
@@ -157,51 +191,51 @@ static int buttonState=0;
 
 - (void) recordCharEvent:(NSString *) unicodeString fromView: (NSView <sqSqueakOSXView> *) mainView {
 	sqKeyboardEvent evt;
-	unichar unicode;
-	unsigned char isoCharacter;
 	NSInteger	i;
 	NSRange picker;
 	NSUInteger totaLength;
 
 	evt.type = EventTypeKeyboard;
-	evt.timeStamp =  ioMSecs();
+	evt.timeStamp = ioMSecs();
+	evt.reserved1 = 0;
+	evt.windowIndex = mainView.windowLogic.windowIndex;
 	picker.location = 0;
 	picker.length = 1;
 	totaLength = [unicodeString length];
 
 	for (i=0;i < totaLength;i++) {
-
-		unicode = [unicodeString characterAtIndex: i];
+		unsigned char isoCharacter;
+		unichar unicode = [unicodeString characterAtIndex: i];
 
 		if (mainView.lastSeenKeyBoardStrokeDetails) {
-			evt.modifiers = [self translateCocoaModifiersToSqueakModifiers: mainView.lastSeenKeyBoardStrokeDetails.modifierFlags];
+			evt.modifiers = [self translateCocoaModifiersToSqueak: mainView.lastSeenKeyBoardStrokeDetails.modifierFlags];
 			evt.charCode = mainView.lastSeenKeyBoardStrokeDetails.keyCode;
 		} else {
 			evt.modifiers = 0;
 			evt.charCode = 0;
 		}
 
-		if ((evt.modifiers & CommandKeyBit) && (evt.modifiers & ShiftKeyBit)) {  /* command and shift */
-			if ((unicode >= 97) && (unicode <= 122)) {
-				/* convert ascii code of command-shift-letter to upper case */
-				unicode = unicode - 32;
-			}
-		}
+		// convert ascii code of command-shift-letter to upper case
+		if ((evt.modifiers & CommandKeyBit) && (evt.modifiers & ShiftKeyBit)
+		 && (unicode >= 97) && (unicode <= 122))
+			unicode = unicode - 32;
 
 		NSString *lookupString = AUTORELEASEOBJ([[NSString alloc] initWithCharacters: &unicode length: 1]);
 		[lookupString getBytes: &isoCharacter maxLength: 1 usedLength: NULL encoding: NSISOLatin1StringEncoding
 					   options: 0 range: picker remainingRange: NULL];
 
 		evt.pressCode = EventKeyDown;
-		unsigned short keyCodeRemembered = evt.charCode;
+#if INCLUDE_UTF_IN_ALL_KEYBOARD_EVENTS || IUIAKE
+		evt.utf32Code = unicode;
+#else
 		evt.utf32Code = 0;
-		evt.reserved1 = 0;
-		evt.windowIndex =   mainView.windowLogic.windowIndex;
+#endif
 		[self pushEventToQueue: (sqInputEvent *)&evt];
 
-		evt.charCode =	isoCharacter;
+		sqIntptr_t keyCodeRemembered = evt.charCode;
+		evt.charCode  = isoCharacter;
 		evt.pressCode = EventKeyChar;
-		evt.modifiers = evt.modifiers;		
+		evt.modifiers = evt.modifiers;
 		evt.utf32Code = unicode;
 
 		[self pushEventToQueue: (sqInputEvent *) &evt];
@@ -209,13 +243,16 @@ static int buttonState=0;
 		if (i > 1 || !mainView.lastSeenKeyBoardStrokeDetails) {
 			evt.pressCode = EventKeyUp;
 			evt.charCode = keyCodeRemembered;
+#if INCLUDE_UTF_IN_ALL_KEYBOARD_EVENTS || IUIAKE
+			evt.utf32Code = unicode;
+#else
 			evt.utf32Code = 0;
+#endif
 			[self pushEventToQueue: (sqInputEvent *) &evt];
 		}
 	}
 	
 	interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
-
 }
 
 - (void) recordKeyDownEvent:(NSEvent *)theEvent fromView: (NSView <sqSqueakOSXView> *) aView {
@@ -225,7 +262,7 @@ static int buttonState=0;
 	evt.timeStamp =  ioMSecs();
 	evt.charCode =	[theEvent keyCode];
 	evt.pressCode = EventKeyDown;
-	evt.modifiers = [self translateCocoaModifiersToSqueakModifiers: [theEvent modifierFlags]];
+	evt.modifiers = [self translateCocoaModifiersToSqueak: [theEvent modifierFlags]];
 	evt.utf32Code = 0;
 	evt.reserved1 = 0;
 	evt.windowIndex = [[aView windowLogic] windowIndex];
@@ -241,7 +278,7 @@ static int buttonState=0;
 	evt.timeStamp =  ioMSecs();
 	evt.charCode =	[theEvent keyCode];
 	evt.pressCode = EventKeyUp;
-	evt.modifiers = [self translateCocoaModifiersToSqueakModifiers: [theEvent modifierFlags]];
+	evt.modifiers = [self translateCocoaModifiersToSqueak: [theEvent modifierFlags]];
 	evt.utf32Code = 0;
 	evt.reserved1 = 0;
 	evt.windowIndex =  aView.windowLogic.windowIndex;
@@ -262,12 +299,38 @@ static int buttonState=0;
 	evt.y =  lrintf((float)local_point.y);
 
 	int buttonAndModifiers = [self mapMouseAndModifierStateToSqueakBits: theEvent];
-	evt.buttons = buttonAndModifiers & 0x07;
-	evt.modifiers = buttonAndModifiers >> 3;
+	evt.buttons = buttonAndModifiers & MouseButtonMask;
+	evt.modifiers = buttonAndModifiers >> MouseButtonShift;
 #if COGVM | STACKVM
 	evt.nrClicks = 0;
 #else
 	evt.reserved1 = 0;
+#endif 
+	evt.windowIndex =  aView.windowLogic.windowIndex;
+
+	[self pushEventToQueue:(sqInputEvent *) &evt];
+    //NSLog(@"mouse hit x %i y %i buttons %i mods %i",evt.x,evt.y,evt.buttons,evt.modifiers);
+	interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
+}
+
+- (void) recordMouseButtonEvent:(NSEvent *)theEvent fromView: (NSView <sqSqueakOSXView> *) aView{
+	sqMouseEvent evt;
+
+	evt.type = EventTypeMouse;
+	evt.timeStamp = ioMSecs();
+
+	NSPoint local_point = [aView convertPoint: [theEvent locationInWindow] fromView:nil];
+
+	evt.x =  lrintf((float)local_point.x);
+	evt.y =  lrintf((float)local_point.y);
+
+	int buttonAndModifiers = [self mapMouseAndModifierStateToSqueakBits: theEvent];
+	evt.buttons = buttonAndModifiers & MouseButtonMask;
+	evt.modifiers = buttonAndModifiers >> MouseButtonShift;
+#if COGVM | STACKVM
+	evt.nrClicks = theEvent.clickCount;
+#else
+	evt.reserved1 = theEvent.clickCount;
 #endif 
 	evt.windowIndex =  aView.windowLogic.windowIndex;
 
@@ -335,8 +398,8 @@ static int buttonState=0;
 		prevYDelta = 0;
 
 		int buttonAndModifiers = [self mapMouseAndModifierStateToSqueakBits: theEvent];
-		evt.buttons = buttonAndModifiers & 7;
-		evt.modifiers = buttonAndModifiers >> 3;
+		evt.buttons = buttonAndModifiers & MouseButtonMask;
+		evt.modifiers = buttonAndModifiers >> MouseButtonShift;
 		evt.windowIndex =  aView.windowLogic.windowIndex;
 		[self pushEventToQueue:(sqInputEvent *) &evt];
 	}
@@ -414,13 +477,12 @@ static int buttonState=0;
  *
  * While we could just shift and mask, let's be clean an just check.
  */
-- (int) translateCocoaModifiersToSqueakModifiers: (NSUInteger) modifiers {
+- (int) translateCocoaModifiersToSqueak: (NSUInteger) modifiers {
     return
         (modifiers & NSEventModifierFlagShift   ? ShiftKeyBit   : 0) |
         (modifiers & NSEventModifierFlagControl ? CtrlKeyBit    : 0) |
         (modifiers & NSEventModifierFlagOption  ? OptionKeyBit  : 0) |
         (modifiers & NSEventModifierFlagCommand ? CommandKeyBit : 0);
-
 }
 
 
@@ -483,7 +545,8 @@ static int buttonState=0;
     }
 
 	// button state: low three bits are mouse buttons; next 8 bits are modifier bits
-    buttonState = ([self translateCocoaModifiersToSqueakModifiers: flags] << 3) | (stButtons & 0x7);
+    buttonState = ([self translateCocoaModifiersToSqueak: flags] << MouseButtonShift)
+				| (stButtons & MouseButtonMask);
 	return buttonState;
 }
 
@@ -498,7 +561,7 @@ static int buttonState=0;
 	evt.dragType= dragType;
 	evt.x = lrintf(local_point.x);
 	evt.y = lrintf(local_point.y);
-	evt.modifiers= (buttonState >> 3);
+	evt.modifiers= buttonState >> MouseButtonShift;
 	evt.numFiles= numFiles;
 	evt.windowIndex =  windowIndex;
 	[self pushEventToQueue: (sqInputEvent *) &evt];
@@ -506,16 +569,93 @@ static int buttonState=0;
 	interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
 }
 
-- (void) recordWindowEvent: (int) windowType window: (NSWIndow *) window {
+- (void) recordURLEvent:(int)dragType numberOfFiles:(int)numFiles
+{
+	sqDragDropFilesEvent evt;
+
+	evt.type= EventTypeDragDropFiles;
+	evt.timeStamp= ioMSecs();
+	evt.dragType= dragType;
+	evt.x = 0;
+	evt.y = 0;
+	evt.modifiers= 0;
+	evt.numFiles= numFiles;
+	evt.windowIndex =  0;
+	[self pushEventToQueue: (sqInputEvent *) &evt];
+
+	// interpreterProxy is nil when injecting events before startup.
+	if(interpreterProxy)
+		interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
+}
+
+- (void) recordWindowEvent: (int) windowEventType window: (NSWindow *) window {
 	sqWindowEvent evt;
 
-	evt.type= EventTypeWindow;
-	evt.timeStamp=  ioMSecs();
-	evt.action= windowType;
-	evt.value1 =  0;
-	evt.value2 =  0;
-	evt.value3 =  0;
-	evt.value4 =  0;
+	evt.type		= EventTypeWindow;
+	evt.timeStamp	= ioMSecs();
+	evt.action		= windowEventType;
+
+	/* The Mac origin is bottom left, always 0@0. The Smalltalk origin
+	 * is top left (0@first screen height in Mac coordinates).
+	 * Secondary screens can be at negative offsets.
+	 */
+#define left(r)   ((r).origin.x)
+#define top(r)    (yZero() - ((r).origin.y + (r).size.height))
+#define right(r)  ((r).origin.x + (r).size.width)
+#define bottom(r) (yZero() - (r).origin.y)
+
+	switch (windowEventType) {
+	case WindowEventMetricChange: {
+		NSRect frame   = [window frame];
+		NSRect view    = [[window contentView] frame];
+		int windowMBH  = frame.size.height - view.size.height;
+
+		evt.value1 = left(frame);
+		evt.value2 = top(frame) + windowMBH;
+		evt.value3 = right(frame);
+		evt.value4 = bottom(frame) + windowMBH;
+#if DEBUG_WINDOW_CHANGED_HOOK
+# define i(v) (int)v
+		NSRect screen  = [[window screen] frame];
+		NSRect visible = [[window screen] visibleFrame];
+		int screenMBH  = screen.size.height - visible.size.height;
+
+		printf( "WindowEventMetricChange\n"
+				"\tscreen %d %d %d %d (mbh %d)\n"
+				"\twin %d %d %d %d (mbh %d)\n"
+				"\t\t%d@%d corner: %d@%d\n",
+				i(screen.origin.x), i(screen.origin.y),
+					i(screen.size.width), i(screen.size.height), screenMBH,
+				i(frame.origin.x), i(frame.origin.y),
+					i(frame.size.width), i(frame.size.height), windowMBH,
+				i(evt.value1), i(evt.value2), i(evt.value3), i(evt.value4));
+#endif
+		break;
+	}
+	case WindowEventChangeScreen: {
+		NSRect screen = [[window screen] frame];
+
+		evt.value1 = left(screen);
+		evt.value2 = top(screen);
+		evt.value3 = right(screen);
+		evt.value4 = bottom(screen);
+#if DEBUG_WINDOW_CHANGED_HOOK
+		printf( "WindowEventChangeScreen %d@%d corner: %d@%d\n",
+				i(evt.value1), i(evt.value2), i(evt.value3), i(evt.value4));
+# undef i
+#endif
+		break;
+	}
+#undef bottom
+#undef right
+#undef top
+#undef left
+	default:
+		evt.value1 = 0;
+		evt.value2 = 0;
+		evt.value3 = 0;
+		evt.value4 = 0;
+	}
 	evt.windowIndex = windowIndexFromHandle((__bridge wHandleType)window);
 	[self pushEventToQueue: (sqInputEvent *) &evt];
 

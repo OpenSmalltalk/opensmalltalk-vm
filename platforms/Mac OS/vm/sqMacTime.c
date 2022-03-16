@@ -70,7 +70,7 @@ SetUpTimers(void)
     PrimeTime((QElemPtr)&gTMTask.qLink,LOW_RES_TICK_MSECS);
 }
 
-int
+unsigned int
 ioMicroMSecs(void)
 {
   struct timeval now;
@@ -122,7 +122,7 @@ sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds) {
 #undef ioMSecs
 //Issue with unix aio.c sept 2003
 
-long ioMSecs() { return ioMicroMSecs(); }
+unsigned int ioMSecs() { return ioMicroMSecs(); }
 
 #define SecondsFrom1901To1970      2177452800ULL
 #define MicrosecondsFrom1901To1970 2177452800000000ULL

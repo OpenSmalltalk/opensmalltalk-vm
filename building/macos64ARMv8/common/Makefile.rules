@@ -1,0 +1,41 @@
+#############################################################################
+# Compilation rules for Mac OS X
+#
+# See http://make.mad-scientist.net/papers/advanced-auto-dependency-generation
+# for an explanation of the dependency management scheme.
+
+# /usr/bin/clang, a.k.a. /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang
+CC := clang
+CXX := clang++
+LD := clang
+LDCXX := clang++ # For linking c++ bundles
+ifeq ($(CXXVERFLAGS),)
+CXXVERFLAGS:=-std=c++14 -stdlib=libc++
+endif
+
+include ../common/Makefile.flags
+
+ifeq ($(findstring /vm,$(OBJDIR)),/vm)
+DEPFLAGS = -MMD -MT '$$(BUILD)/vm/$(*F).o' -MF deps/$(*F).d
+else
+DEPFLAGS = -MMD -MT '$$(BUILD)/$(LIBNAME)/$(*F).o' -MF deps/$(*F).d
+endif
+ALLFLAGS = $(DEPFLAGS) $(WARNINGS) $(CFLAGS)
+
+$(OBJDIR)/%.o: %.c $(MAKEFILE)
+	$(CC) -x c $(ALLFLAGS) $(INCLUDES) -c $< -o $@
+
+$(OBJDIR)/%.o: %.m $(MAKEFILE)
+	$(CC) -x objective-c $(OBJC_CODE_MODEL) $(ALLFLAGS) $(INCLUDES) -c $< -o $@
+
+$(OBJDIR)/%.o: %.cpp $(MAKEFILE)
+	$(CXX) $(CXXVERFLAGS) $(ALLFLAGS) $(INCLUDES) -c $< -o $@
+
+$(OBJDIR)/%.o: %.mm $(MAKEFILE)
+	$(CXX) $(CXXVERFLAGS) $(OBJC_CODE_MODEL) $(ALLFLAGS) $(INCLUDES) -c $< -o $@
+
+deps/%.d: ;
+
+.PRECIOUS: deps/%.d $(OBJDIR)/%.air $(OBJDIR)/%.metallib
+
+-include $(patsubst %,deps/%.d,$(notdir $(basename $(VMSRC) $(LIBSRC))))

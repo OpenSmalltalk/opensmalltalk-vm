@@ -1065,7 +1065,6 @@ int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag) {
 	
 #ifndef IHAVENOHEAD
 
-
 	Gestalt(gestaltDisplayMgrAttr,&value);
 	displayMgrPresent=value&(1<<gestaltDisplayMgrPresent);
     if (!displayMgrPresent) {
@@ -1092,7 +1091,6 @@ int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag) {
 			if (noErr == DMNewDisplayModeList(theDisplayID, 0, 0, &theDisplayModeCount, &theDisplayModeList) ) {
 				GetRequestTheDM2Way (&request, dominantGDevice, myModeIteratorProc, theDisplayModeCount, &theDisplayModeList);
 				DMDisposeList(theDisplayModeList);	
-			} else {
 			}
 		}
 	}
@@ -1109,6 +1107,8 @@ int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag) {
 	ioSetFullScreen(fullscreenFlag);
 	
     return 1;
+#else
+    return 0;
 #endif
 }
 

@@ -14,8 +14,8 @@
 
 #include <Windows.h>
 #include <stdio.h>
-#include <assert.h>
 #include "sq.h"
+#include "sqAssert.h"
 
 static HANDLE
 tryLoading(TCHAR *prefix, TCHAR *baseName, TCHAR *postfix)
@@ -45,7 +45,7 @@ ioLoadModule(char *pluginName)
 	int nameLen = pluginName ? (int)strlen(pluginName) : 0;
 	int endsInDLL = nameLen > 4 && !strcmp(pluginName + nameLen - 4, ".dll");
 			
-#ifdef UNICODE
+#if _UNICODE
 	int len = MultiByteToWideChar(CP_UTF8, 0, pluginName, -1, NULL, 0);
 	if (len <= 0)
 		return 0; /* invalid UTF8 ? */
@@ -77,23 +77,24 @@ ioLoadModule(char *pluginName)
 
 #if SPURVM
 void *
-ioFindExternalFunctionInAccessorDepthInto(char *lookupName, void *moduleHandle,
-											sqInt *accessorDepthPtr)
+ioFindExternalFunctionInMetadataInto(char *lookupName, void *moduleHandle,
+											sqInt *metadataPtr)
 {
 	void *f;
 	char buffer[256];
 
 	f = GetProcAddress(moduleHandle, lookupName);
-	if (f && accessorDepthPtr) {
-		void *accessorDepthVarPtr;
-		snprintf(buffer,256,"%sAccessorDepth",lookupName);
-		accessorDepthVarPtr = GetProcAddress(moduleHandle, buffer);
+	if (f && metadataPtr) {
+		void *metadataVarPtr;
+		snprintf(buffer,256,"%sMetadata",lookupName);
+		metadataVarPtr = GetProcAddress(moduleHandle, buffer);
 		/* The Slang machinery assumes accessor depth defaults to -1, which
-		 * means "no accessor depth".  It saves space not outputting -1 depths.
+		 * means "no accessor depth".  It saves space not outputting null metadata.
 		 */
-		*accessorDepthPtr = accessorDepthVarPtr
-								? *(signed char *)accessorDepthVarPtr
-								: -1;
+		*metadataPtr = metadataVarPtr
+								? *(SpurPrimitiveMetadataType *)metadataVarPtr
+								: NullSpurMetadata;
+		assert(validSpurPrimitiveMetadata(*metadataPtr));
 	}
 	return f;
 }

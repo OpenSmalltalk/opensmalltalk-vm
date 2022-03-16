@@ -25,11 +25,6 @@ void *ioFindExternalFunctionIn(char *lookupName, void *moduleHandle) {return 0;}
 void *ioLoadModule(char *pluginName) {return 0;}
 sqInt ioFreeModule(void *moduleHandle){return 0;}
 
-sqInt ioGetButtonState() {return 0;}
-sqInt ioGetKeystroke() {return -1;}
-sqInt ioMousePoint() {return 0;}
-sqInt ioPeekKeystroke() {return 0;}
-
 sqInt ioSetCursor( sqInt cursorBitsIndex, sqInt offsetX, sqInt offsetY) {return 0;}
 sqInt ioSetCursorWithMask( sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt offsetX, sqInt offsetY) {return 0;}
 sqInt ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt extentY, sqInt offsetX, sqInt offsetY);
@@ -38,15 +33,9 @@ sqInt ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt extentY, sqInt
 
 sqInt ioSetDisplayMode( sqInt width, sqInt height, sqInt depth, sqInt fullscreenFlag) {return 0;}
 
-//int plugInTimeToReturn(void) {
-//    return false;
-//}
-
 int clearProfile(void){return 0;}														
 int dumpProfile(void){return 0;}														
 int startProfiling(void){return 0;}													
 int stopProfiling(void)	{return 0;}			
 
-int plugInNotifyUser(char *msg);
 int plugInNotifyUser(char *msg) { return 0; }
-

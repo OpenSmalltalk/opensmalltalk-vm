@@ -1,13 +1,13 @@
-set(OpenSSL_Spec_URL "https://www.openssl.org/source/openssl-1.0.2q.tar.gz")
-set(OpenSSL_Spec_ArchiveName openssl-1.0.2q.tar.gz)
-set(OpenSSL_Spec_ArchiveSha256 5744cfcbcec2b1b48629f7354203bc1e5e9b5466998bbccc5b5fcde3b18eb684)
+set(OpenSSL_Spec_URL "https://www.openssl.org/source/openssl-1.1.1i.tar.gz")
+set(OpenSSL_Spec_ArchiveName openssl-1.1.1i.tar.gz)
+set(OpenSSL_Spec_ArchiveSha256 e8be6a35fe41d10603c3cc635e93289ed00bf34b79671a3a4de64fcee00d5242)
 
-set(OpenSSL_Spec_MacLibraries libssl.1.0.0.dylib libcrypto.1.0.0.dylib)
+set(OpenSSL_Spec_MacLibraries libssl.1.1.dylib libcrypto.1.1.dylib)
 set(OpenSSL_Spec_MacLibrariesSymlinks libssl*.dylib libcrypto*.dylib)
-set(OpenSSL_Spec_LinuxLibraries libssl.so.1.0.0 libcrypto.so.1.0.0)
+set(OpenSSL_Spec_LinuxLibraries libssl.so.1.1 libcrypto.so.1.1)
 set(OpenSSL_Spec_LinuxLibrariesSymlinks libssl.so* libcrypto.so*)
-set(OpenSSL_Spec_WindowsDLLs ssleay32.dll libeay32.dll)
-set(OpenSSL_Spec_WindowsLibraries libssl.dll.a libcrypto.dll.a)
+set(OpenSSL_Spec_WindowsDLLs libssl-1_1*.dll libcrypto-1_1*.dll)
+set(OpenSSL_Spec_WindowsLibraries libssl-1_1.dll.a libcrypto-1_1.dll.a)
 
 #-------------------------------------------------------------------------------
 # OpenSSL dependency building
@@ -49,6 +49,9 @@ else()
             "${CMAKE_CURRENT_BINARY_DIR}/thirdparty/OpenSSL.mac-install.sh" @ONLY)
         set(OpenSSL_InstallCommand "${CMAKE_CURRENT_BINARY_DIR}/thirdparty/OpenSSL.mac-install.sh")
     elseif(WIN32)
+# NOTE: on win32, the build must be ran with sufficient privilege to write in c:\Progam Files\Common Files\SSL
+# See https://github.com/openssl/openssl/issues/6072
+# the alternative is to provide a --openssldir parameter at configure step
         set(OpenSSL_ConfigureCommand env
             CC=${THIRDPARTY_C_COMPILER}
             #AR=x86_64-w64-mingw32-ar
@@ -61,10 +64,12 @@ else()
         if(SQUEAK_PLATFORM_X86_64)
             set(OpenSSL_ConfigureCommand ${OpenSSL_ConfigureCommand}
                 "./Configure" mingw64
+                "--openssldir=${ThirdPartyCacheInstall}/SSL"
                 "--prefix=${ThirdPartyCacheInstall}" shared)
         elseif(SQUEAK_PLATFORM_X86_32)
                 set(OpenSSL_ConfigureCommand ${OpenSSL_ConfigureCommand}
                 "./Configure" mingw
+                "--openssldir=${ThirdPartyCacheInstall}/SSL"
                 "--prefix=${ThirdPartyCacheInstall}" shared)
         endif()
         set(OpenSSL_BuildCommand make)

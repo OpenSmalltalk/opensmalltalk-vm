@@ -18,10 +18,6 @@
 	The following are essential for display and user interaction:
 		ioScreenSize()
 		ioShowDisplay()
-		ioGetButtonState()
-		ioGetKeystroke()
-		ioMousePoint()
-		ioPeekKeystroke()
 
 	The following can be made no-ops:
 		ioProcessEvents() 	-- poll for input events on some platforms
@@ -431,29 +427,7 @@ int ioForceDisplayUpdate(void) {
 	/* does nothing on a Mac */
 }
 
-int ioGetButtonState(void) {
-	/* return the state of the mouse and modifier buttons */
-	ioProcessEvents();  /* process all pending events */
-	return buttonState;
-}
-
-int ioGetKeystroke(void) {
-	/* return the next keystroke from the buffer or -1 if the buffer is empty */
-	int keystate;
-
-	ioProcessEvents();  /* process all pending events */
-	if (keyBufGet == keyBufPut) {
-		return -1;  /* keystroke buffer is empty */
-	} else {
-		keystate = keyBuf[keyBufGet];
-		keyBufGet = (keyBufGet + 1) % KEYBUF_SIZE;
-		/* set modifer bits in buttonState to reflect the last keystroke fetched */
-		buttonState = ((keystate >> 5) & 0xF8) | (buttonState & 0x7);
-	}
-	return keystate;
-}
-
-int ioMicroMSecs(void) {
+unsigned int ioMicroMSecs(void) {
 	/* millisecond clock based on microsecond timer (about 60 times slower than clock()!!) */
 	/* Note: This function and ioMSecs() both return a time in milliseconds. The difference
 	   is that ioMicroMSecs() is called only when precise millisecond resolution is essential,
@@ -468,7 +442,7 @@ int ioMicroMSecs(void) {
 	return (microTicks.lo / 1000) + (microTicks.hi * 4294967);
 }
 
-sqInt ioMSecs(void) {
+unsigned int ioMSecs(void) {
 	/* return a time in milliseconds for use in Delays and Time millisecondClockValue */
 	/* Note: This was once a macro based on clock(); it now uses the microsecond clock for
 	   greater resolution. See the comment in ioMicroMSecs(). */

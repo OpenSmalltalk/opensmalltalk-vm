@@ -16,10 +16,10 @@
  copies of the Software, and to permit persons to whom the
  Software is furnished to do so, subject to the following
  conditions:
- 
+
  The above copyright notice and this permission notice shall be
  included in all copies or substantial portions of the Software.
- 
+
  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -28,7 +28,7 @@
  WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  OTHER DEALINGS IN THE SOFTWARE.
- 
+
  The end-user documentation included with the redistribution, if any, must include the following acknowledgment: 
  "This product includes software developed by Corporate Smalltalk Consulting Ltd (http://www.smalltalkconsulting.com) 
  and its contributors", in the same place and form as other third-party acknowledgments. 
@@ -53,6 +53,8 @@
 
 extern BOOL gSqueakHeadless;
 extern sqSqueakAppDelegate *gDelegateApp;
+char *fullExeName;
+char *exeName;
 
 @implementation sqSqueakMainApplication;
 @synthesize vmPathStringURL;
@@ -81,7 +83,11 @@ extern sqInt interpret(void);  //This is a VM Callback
 }
 
 - (void) setupErrorRecovery {
+#if STACKVM
+	attachToSignals();
+#else
 	signal(SIGSEGV, sigsegv);
+#endif
 }
 
 - (void) setInfoPlistInterfaceLogic:(sqSqueakInfoPlistInterface *)anObject {
@@ -92,7 +98,7 @@ extern sqInt interpret(void);  //This is a VM Callback
     if (!infoPlistInterfaceLogic) {
         [self fetchPreferences];
     }
-    
+
     return infoPlistInterfaceLogic;
 }
 
@@ -116,6 +122,11 @@ extern sqInt interpret(void);  //This is a VM Callback
 }
 
 - (void) parseUnixArgs {
+	fullExeName = [[[[NSBundle mainBundle] executablePath]
+					precomposedStringWithCanonicalMapping] UTF8String];
+	exeName = strrchr(fullExeName,'/')
+				? strrchr(fullExeName,'/') + 1
+				: fullExeName;
 }
 
 - (void) setupMenus {
@@ -151,80 +162,78 @@ extern sqInt interpret(void);  //This is a VM Callback
 }
 
 - (void) runSqueak {
-    @autoreleasepool {
+  @autoreleasepool {
 	extern BOOL gQuitNowRightNow;
 	gQuitNowRightNow=false;
 
 	[self setupFloat];  //JMM We have code for intel and powerpc float, but arm? 
 	[self setupErrorRecovery];
 	[self fetchPreferences];
-	
+
 	fileDirectoryLogic = [self newFileDirectoryInterfaceInstance];
 	[self setVMPathFromApplicationDirectory];
-	if (![self.fileDirectoryLogic setWorkingDirectory]) {
+	if (![self.fileDirectoryLogic setWorkingDirectory])
 		return;
-	}
-	
+
 	[self parseUnixArgs];
-	attachToSignals();
-    
+
 	//JMM here we parse the unixArgs
 	//JMM now we wait for the open document apple events (normally)
-	   
-	[self doMemorySetup];
-	
-	if ([self ImageNameIsEmpty]) {
-		[self findImageViaBundleOrPreferences];
-	}
 
-	if ([self ImageNameIsEmpty]) {
+	[self doMemorySetup];
+
+	if ([self ImageNameIsEmpty])
+		[self findImageViaBundleOrPreferences];
+
+	if ([self ImageNameIsEmpty])
 		return;
-	}
-	
+
 	[self setupTimers];
 
-	if (![self readImageIntoMemory]) {
+	if (![self readImageIntoMemory])
 		return;
-	}
-	
-    // The headless setup is now after the image setup on purpose. This is in order to be
-    // able to select an image with the popup even when running headless
+
+    // The headless setup is now after the image setup on purpose. This is to
+    // be able to select an image with the popup even when running headless
 	[self doHeadlessSetup];
 
-    
     [self setupMenus];
 	[self setupAIO];
 	[self setupBrowserLogic];
 	[self setupSoundLogic];
 	[gDelegateApp makeMainWindow];
-	
+
 	interpret();
-    }
+  }
 }
 
 
 - (void) MenuBarRestore {
     //    nothing to do so far since the menu is setup in the MainMenu.nib file
-    
 }
-
-#ifndef SPURVM
-#if COGVM
-    void sqMacMemoryFree();
-#else
-    void sqMacMemoryFree(void);
-#endif
-#endif
 
 - (void) ioExit {
 	[self ioExitWithErrorCode: 0];
 }
 
 - (void) ioExitWithErrorCode: (int) ec {
+#if COGVM
+extern sqInt reportStackHeadroom;
+	if (reportStackHeadroom)
+		reportMinimumUnusedHeadroom();
+#endif
 	ioShutdownAllModules();
 	[self MenuBarRestore];
 	exit(ec);  //Will not return
 }
+
+#ifndef SPURVM
+# if COGVM
+    void sqMacMemoryFree();
+# else
+    void sqMacMemoryFree(void);
+# endif
+#endif
 
 - (void)dealloc {
 	sqMacMemoryFree();
@@ -236,7 +245,7 @@ extern sqInt interpret(void);  //This is a VM Callback
 int
 plugInTimeToReturn(void) {
 	extern BOOL	gQuitNowRightNow;
-	
+
 	if (gQuitNowRightNow)
 		return true;
 	return false;
@@ -246,17 +255,14 @@ plugInTimeToReturn(void) {
 sqInt
 convertToSqueakTime(NSDate *givenDate)
 {
-	
 	time_t unixTime = [givenDate timeIntervalSince1970];
-	
-#ifdef HAVE_TM_GMTOFF
+
+#if defined(HAVE_TM_GMTOFF)
 	unixTime+= localtime(&unixTime)->tm_gmtoff;
-#else
-# ifdef HAVE_TIMEZONE
+#elif defined(HAVE_TIMEZONE)
 	unixTime+= ((daylight) * 60*60) - timezone;
-# else
+#else
 #  error: cannot determine timezone correction
-# endif
 #endif
 	/* Squeak epoch is Jan 1, 1901.  Unix epoch is Jan 1, 1970: 17 leap years
      and 52 non-leap years later than Squeak. */

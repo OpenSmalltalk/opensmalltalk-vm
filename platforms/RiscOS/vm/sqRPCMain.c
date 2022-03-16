@@ -361,7 +361,8 @@ unsigned int microsecondsvalue(void) {
 	return 1000 * millisecondTimerValue();
 }
 
-sqInt ioMicroMSecs(void) {
+unsigned int
+ioMicroMSecs(void) {
 /* The
    function ioMicroMSecs() is used only to collect timing statistics
    for the garbage collector and other VM facilities. (The function

@@ -28,7 +28,7 @@
 # 
 # Author: Ian.Piumarta@SqueakLand.org
 # 
-# Last edited: Wed Nov 13 17:15:30 PST 2013 by eliot
+# Last edited: Mon Aug 30 21:50:00 EST 2021 by phil
 
 AC_PREREQ([2.69])
 
@@ -80,8 +80,8 @@ AC_ARG_WITH(plugins,
 vmpdir="${vmpsrc}"
 
 if test ! -d "${topdir}/${vmmsrc}"; then
-  if test -d "${topdir}/platforms/unix/${vmmsrc}/vm"; then
-    vmmdir="${topdir}/platforms/unix/${vmmsrc}/vm"
+  if test -d "${topdir}/platforms/unix/${vmmsrc}"; then
+    vmmdir="${topdir}/platforms/unix/${vmmsrc}"
     AC_MSG_RESULT([using built-in src directory])
   fi
 fi
@@ -89,7 +89,7 @@ fi
 if test ! -d "${topdir}/${vmpsrc}"; then
   if test -d "${topdir}/platforms/unix/${vmpsrc}"; then
     vmpdir="${topdir}/platforms/unix/${vmpsrc}"
-    AC_MSG_RESULT([using built-in pligins directory])
+    AC_MSG_RESULT([using built-in plugins directory])
   fi
 fi
 
@@ -103,10 +103,15 @@ AC_ARG_WITH(vmmcfg,
 	[vmmcfg="${with-vmmcfg}"],
 	[vmmcfg="${blddir}"])
 
+AC_ARG_WITH(scriptname,
+	AS_HELP_STRING([ --with-scriptname=SCRIPT], [run script name installed in SCRIPT (default=squeak)]),
+	[scriptname="${with_scriptname}"],
+	[scriptname="squeak"])
+
 # Compiling a Cogit VM or not?  If so, need a cogit$o, cointerp, etc.
 
 AC_ARG_ENABLE(cogit,
-	AS_HELP_STRING([ --disable-cogit], [compile a cogit VM (default=enabled)]),
+	AS_HELP_STRING([--disable-cogit], [compile a cogit VM (default=enabled)]),
 	[cogit="$enableval"],
 	[cogit="yes"])
 AC_SUBST(cogit)
@@ -121,6 +126,7 @@ AC_SUBST(vmmdir)
 AC_SUBST(vmpdir)
 AC_SUBST(vmmcfg)
 AC_SUBST(blddir)
+AC_SUBST(scriptname)
 
 SQ_VERSION=${SQ_MAJOR}.${SQ_MINOR}-${SQ_UPDATE}
 
@@ -204,6 +210,70 @@ AC_ARG_WITH(gnu-as,
 
 ########################
 
+# This section is used by the 'generic' linux32 & linux64 mvm configs which in turn are used for Debian package building on 'other' platforms which can only support stack VMs
+AC_MSG_CHECKING([TARGET_ARCH & CFLAGS])
+if [[ "$VM_CFLAGS" != "" ]]
+then
+	AC_MSG_RESULT([autoconfigure])
+	# dpkg-architecture when available on Debian (and derivatives) with fallback to uname
+	# using DEB_HOST_GNU_CPU rather than DEB_HOST_ARCH_CPU for consistency with uname
+	AC_CHECK_PROG(getbuildarch,
+		[dpkg-architecture],
+		[dpkg-architecture --query DEB_HOST_GNU_CPU],
+		[uname -m])
+	AC_MSG_CHECKING([autoconfigure arch])
+	build_arch=`$getbuildarch`
+	AC_MSG_RESULT([$build_arch])
+	case $build_arch in
+		i686) TARGET_ARCH="-m32"
+			CFLAGS="-g -O2 -msse2"
+		;;
+
+		x86_64) TARGET_ARCH="-m64"
+			CFLAGS="-g -O1 -msse2"
+		;;
+
+	        # Omitting -DNO_VM_PROFILE=1 for now
+		armhf) TARGET_ARCH="-march=armv6 -mfpu=vfp -mfloat-abi=hard"
+			CFLAGS="-g -O3"
+		;;
+
+		# Omitting -DMUSL -DUSEEVDEV for now
+		aarch64) TARGET_ARCH="-march=armv8-a"
+			CFLAGS="-g -O2 -D__ARM_ARCH_ISA_A64 -DARM64 -D__arm__ -D__arm64__ -D__aarch64__"
+		;;
+
+		*)
+			if [[ "$VM_WORD_SIZE" == "32" ]]
+			then
+				TARGET_ARCH="-m32"
+			else
+				TARGET_ARCH="-m64"
+			fi
+			CFLAGS="-g -O2"
+		;;
+	esac
+	AC_SUBST([TARGET_ARCH])
+	AC_SUBST([CFLAGS])
+	AC_MSG_NOTICE([TARGET_ARCH=$TARGET_ARCH])
+	AC_MSG_NOTICE([CFLAGS=$CFLAGS])
+else
+	AC_MSG_RESULT([mvm])
+fi
+
+########################
+
+case $target in
+	i686*) # workaround for 32-bit x86 builds on Ubuntu/Debian
+		PKG_CONFIG=/usr/bin/i686-linux-gnu-pkg-config
+		;;
+	*)
+		PKG_CONFIG=/usr/bin/pkg-config
+		;;
+esac
+
+########################
+
 TARGET_ARCH="$TARGET_ARCH"
 
 # tpr - try to keep msse out of it for Pi CFLAGS="$CFLAGS_32 $CFLAGS -msse"
@@ -256,7 +326,7 @@ AC_PROG_LIBTOOL
 
 # Configured headers (pretty much everybody needs blddir and vm)
 
-INCLUDES="-I${blddir} -I${vmmcfg} -I${topdir}/platforms/unix/vm -I${topdir}/platforms/Cross/vm -I${vmmdir}/vm"
+INCLUDES="-I${blddir} -I${vmmcfg} -I${topdir}/platforms/unix/vm -I${topdir}/platforms/Cross/vm -I${vmmdir}"
 
 # these are not always added
 case $host_os in
@@ -292,11 +362,12 @@ AC_HEADER_STDC
 AC_CHECK_HEADERS_ONCE([unistd.h string.h fcntl.h sys/file.h sys/param.h])
 AC_CHECK_HEADERS_ONCE([sys/time.h sys/filio.h sys/select.h])
 AC_CHECK_HEADERS_ONCE([features.h])
+AC_CHECK_HEADERS_ONCE([ifaddrs.h]) # sqUnixSocket.c
 AC_CHECK_HEADERS_ONCE([alloca.h]) # SunOS5
 AC_HEADER_TIME
 AC_HEADER_DIRENT
 
-if test -f "${vmmdir}/vm/interp.h"; then
+if test -f "${vmmdir}/interp.h"; then
   AC_DEFINE([HAVE_INTERP_H], [1], [Interpreter header file present])
 fi
 AC_SUBST(HAVE_INTERP_H)
@@ -346,8 +417,15 @@ LT_LIB_DLLOAD
 AC_CHECK_FUNCS([snprintf __snprintf],[break])
 AC_CHECK_FUNCS_ONCE([mmap nanosleep])
 AC_FUNC_ALLOCA
-AX_HAVE_EPOLL([AC_DEFINE(HAVE_EPOLL, [1], [epoll(7) is supported])])
-AX_HAVE_EPOLL_PWAIT([AC_DEFINE(HAVE_EPOLL_PWAIT, [1], [epoll_pwait(7) is supported])])
+
+AC_ARG_ENABLE(epoll,
+	AS_HELP_STRING([--disable-epoll], [Do not use epoll even if supported (default: try to use)]),
+	[try_epoll="$enableval"],
+	[try_epoll="yes"])
+if test "$try_epoll" = yes; then
+  AX_HAVE_EPOLL([AC_DEFINE(HAVE_EPOLL, [1], [epoll(7) is supported])])
+  AX_HAVE_EPOLL_PWAIT([AC_DEFINE(HAVE_EPOLL_PWAIT, [1], [epoll_pwait(7) is supported])])
+fi
 
 # Checks for platform characteristics.
 
@@ -489,6 +567,10 @@ AH_TOP([/* config.h.in -- template for config.h			-*- C -*-
 
 #ifndef __sq_config_h
 #define __sq_config_h
+
+#ifdef _FEATURES_H
+#error This file was included too late. Please make sure it is included earlier
+#endif
 ])
 
 AH_TEMPLATE([VM_DLSYM_PREFIX],[Once used to specify mangled names on Mac OS, left for documentation purposes])

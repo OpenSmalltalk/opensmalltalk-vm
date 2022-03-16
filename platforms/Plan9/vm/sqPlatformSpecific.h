@@ -1,6 +1,9 @@
 /*
- * Plan9-specific changes to sq.h
+ * Plan9-specific support for sq.h
  */
+
+#ifndef _SQ_PLATFORM_SPECIFIC_H
+#define _SQ_PLATFORM_SPECIFIC_H
 
 #include <stdio.h>
 
@@ -20,3 +23,4 @@ int rename(const char*, const char*);
 					} \
 				} while (0)
 
+#endif /* _SQ_PLATFORM_SPECIFIC_H */

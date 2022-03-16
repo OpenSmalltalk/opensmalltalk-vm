@@ -43,10 +43,9 @@ such third-party acknowledgments.
 #import "sqSqueakScreenAndWindow.h"
 
 #ifdef BUILD_FOR_OSX
-#include "sqMacHostWindow.h"
-extern wHandleType windowHandleFromIndex(sqIntptr_t windowIndex);
+# import "sqMacHostWindow.h"
 #else
-#include "SqueakNoOGLIPhoneAppDelegate.h"
+# include "SqueakNoOGLIPhoneAppDelegate.h"
 extern SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 #endif
 
@@ -126,9 +125,16 @@ ioShowDisplayOnWindow(unsigned char* dispBitsIndex, sqInt width,
 }
 
 
-char *ioGetWindowLabel(void) { return nil; }
+char *ioGetWindowLabel(void)
+{
+    return [getMainWindowDelegate() ioGetTitle];
+}
 
-sqInt ioSetWindowLabelOfSize(void *lblIndex, sqInt sz) { return 0; }
+sqInt ioSetWindowLabelOfSize(void *lblIndex, sqInt sz)
+{
+    [getMainWindowDelegate() ioSetTitle: lblIndex length: sz];
+	return 1;
+}
 
 sqInt ioGetWindowWidth(void) { return 0; }
 

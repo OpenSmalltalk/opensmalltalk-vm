@@ -28,6 +28,9 @@
    Define plugin for Netscape Plugin building, needed for CodeWarrior
 */
 
+#ifndef _SQ_PLATFORM_SPECIFIC_H
+#define _SQ_PLATFORM_SPECIFIC_H
+
 #ifdef macintoshSqueak
 #if defined(TARGET_API_MAC_CARBON)
 # include <Types.h>
@@ -56,13 +59,14 @@
 #undef sqFTruncate
 /* sqFTruncate should return 0 on success, ftruncate does also */
 #define sqFTruncate(f,o) ftruncate(fileno(f), o)
-#define ftell ftello
-#define fseek fseeko
 
 typedef FILE *sqImageFile;
+#define invalidSqImageFile(sif) (!(sif))
 
 #undef sqFilenameFromStringOpen
 #undef sqFilenameFromString
+
+#if defined(__sqMemoryAccess_h) // Only define support API if we have sqInt etc
 void		sqFilenameFromStringOpen(char *buffer,sqInt fileIndex, long fileLength);
 void		sqFilenameFromString(char *buffer,sqInt fileIndex, long fileLength);
 void        sqImageFileClose(sqImageFile f);
@@ -143,6 +147,8 @@ void CopyCStringToPascal(const char* src, Str255 dst);
 sqInt sqGrowMemoryBy(sqInt memoryLimit, sqInt delta);
 sqInt sqShrinkMemoryBy(sqInt memoryLimit, sqInt delta);
 sqInt sqMemoryExtraBytesLeft(int flag);
+#endif // defined(__sqMemoryAccess_h)
+
 #if COGVM
 extern int osCogStackPageHeadroom(void);
 extern void reportMinimumUnusedHeadroom(void);
@@ -207,8 +213,10 @@ extern const pthread_key_t tltiIndex;
 # endif
 #endif
 
-#if !defined(VM_LABEL) || COGVM
+#if !defined(VM_LABEL) || COGVM || STACKVM
 # undef VM_LABEL
 # define VM_LABEL(foo) ((void)0)
 #endif
 #endif /* macintoshSqueak */
+
+#endif /* _SQ_PLATFORM_SPECIFIC_H */

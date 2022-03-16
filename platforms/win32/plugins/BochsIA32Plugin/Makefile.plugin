@@ -13,7 +13,7 @@ EXTRALIBS:= -L$(BOX)/cpu -L$(BOX)/fpu -L$(BOX)/disasm \
 include ../common/Makefile.plugin
 
 INCLUDES+=-I$(BOX) \
-         -I../../processors/IA32/bochs \
-		 -I../../processors/IA32/bochs/instrument/stubs
+         -I../../../processors/IA32/bochs \
+		 -I../../../processors/IA32/bochs/instrument/stubs
 
 # CFLAGS:= -m32 -msse2 -ggdb2 -mno-rtd -mms-bitfields

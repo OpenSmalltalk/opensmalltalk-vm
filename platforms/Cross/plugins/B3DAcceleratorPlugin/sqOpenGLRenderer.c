@@ -12,6 +12,9 @@
 *
 *
 *****************************************************************************/
+#ifdef HAVE_CONFIG_H
+#include "config.h" /* this must happen before including std libraries */
+#endif
 #ifdef _WIN32
 # include <windows.h>
 # include <winerror.h>
@@ -85,7 +88,7 @@ closelog(void)
 #endif
 
 #if defined(SQUEAK_BUILTIN_PLUGIN)
-extern char *getImageName(void);
+IMPORT(char *) getImageName(void);
 #endif
 
 int

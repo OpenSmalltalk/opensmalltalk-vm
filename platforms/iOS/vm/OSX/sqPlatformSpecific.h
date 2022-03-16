@@ -19,6 +19,10 @@
    
    Define plugin for Netscape Plugin building, needed for CodeWarrior
 */
+
+#ifndef _SQ_PLATFORM_SPECIFIC_H
+#define _SQ_PLATFORM_SPECIFIC_H
+
 /*
  Copyright (c) 2000-2008 Corporate Smalltalk Consulting Ltd. All rights reserved.
  MIT License
@@ -62,18 +66,15 @@
 #undef dispatchFunctionPointer
 #undef dispatchFunctionPointerOnin
 
-#undef squeakFileOffsetType
 #define squeakFileOffsetType off_t
-#include <unistd.h>
+//#include <unistd.h>
 
-#undef sqFTruncate
 #define sqFTruncate(f,o) ftruncate(fileno(f), o)
-#define ftell ftello
-#define fseek fseeko
-//int	 ftruncate(int, off_t);
 
 #undef sqFilenameFromStringOpen
 #undef sqFilenameFromString
+
+#if defined(__sqMemoryAccess_h) // Only define support API if we have sqInt etc
 void		sqFilenameFromStringOpen(char *buffer,sqInt fileIndex, long fileLength);
 void		sqFilenameFromString(char *buffer,sqInt fileIndex, long fileLength);
 #undef allocateMemoryMinimumImageFileHeaderSize
@@ -84,13 +85,14 @@ extern usqInt sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize);
 sqAllocateMemory(minimumMemory, heapSize)
 # define sqMacMemoryFree() 
 #else
-usqInt sqAllocateMemoryMac(usqInt desiredHeapSize,sqInt minHeapSize, FILE * f,usqInt headersize);
-#define allocateMemoryMinimumImageFileHeaderSize(heapSize, minimumMemory, fileStream, headerSize) \
+usqInt sqAllocateMemoryMac(usqInt,sqInt, void *,usqInt);
+# define allocateMemoryMinimumImageFileHeaderSize(heapSize, minimumMemory, fileStream, headerSize) \
 sqAllocateMemoryMac(heapSize, minimumMemory, fileStream, headerSize)
 #endif
 
 #ifdef BUILD_FOR_OSX
-size_t sqImageFileReadEntireImage(void *ptr, size_t elementSize, size_t count, FILE * f);
+# include <sys/types.h>
+size_t sqImageFileReadEntireImage(void *, size_t, size_t, void *);
 #define sqImageFileReadEntireImage(memoryAddress, elementSize,  length, fileStream) \
 sqImageFileReadEntireImage(memoryAddress, elementSize, length, fileStream)
 #else
@@ -113,18 +115,19 @@ sqInt sqGrowMemoryBy(sqInt memoryLimit, sqInt delta);
 sqInt sqShrinkMemoryBy(sqInt memoryLimit, sqInt delta);
 sqInt sqMemoryExtraBytesLeft(sqInt includingSwap);
 
-    #undef insufficientMemorySpecifiedError
-    #undef insufficientMemoryAvailableError
-    #undef unableToReadImageError
+#undef insufficientMemorySpecifiedError
+#undef insufficientMemoryAvailableError
+#undef unableToReadImageError
 int plugInNotifyUser(char *msg);
-    #define insufficientMemorySpecifiedError() plugInNotifyUser("The amount of memory specified by the Setting Slider is not enough for the installed Squeak image file.")
-    #define insufficientMemoryAvailableError() plugInNotifyUser("There is not enough memory to give Squeak the amount specified by the Setting Slider")
-    #define unableToReadImageError() plugInNotifyUser("Read failed or premature end of image file")
-	#undef browserPluginReturnIfNeeded
-	int plugInTimeToReturn(void);
-	#define browserPluginReturnIfNeeded() if (plugInTimeToReturn()) {ReturnFromInterpret();}
+#define insufficientMemorySpecifiedError() plugInNotifyUser("The amount of memory specified by the Setting Slider is not enough for the installed Squeak image file.")
+#define insufficientMemoryAvailableError() plugInNotifyUser("There is not enough memory to give Squeak the amount specified by the Setting Slider")
+#define unableToReadImageError() plugInNotifyUser("Read failed or premature end of image file")
+#undef browserPluginReturnIfNeeded
+int plugInTimeToReturn(void);
+#define browserPluginReturnIfNeeded() if (plugInTimeToReturn()) {ReturnFromInterpret();}
 
 sqInt ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt extentY, sqInt offsetX, sqInt offsetY);
+#endif // defined(__sqMemoryAccess_h)
 
 #if COGVM
 extern int osCogStackPageHeadroom(void);
@@ -170,15 +173,19 @@ extern const pthread_key_t tltiIndex;
 # undef EXPORT
 # define EXPORT(returnType) __attribute__((visibility("default"))) returnType
 # if !defined(VM_LABEL)
-#	define VM_LABEL(foo) asm("\n.globl L" #foo "\nL" #foo ":")
+#	if __clang__
+#	  define VM_LABEL(foo) asm("\n.globl _L" #foo "\n_L" #foo ":")
+#	else
+#	  define VM_LABEL(foo) asm("\n.globl L" #foo "\nL" #foo ":")
+#	endif
 # endif
 #endif
 
-#if !defined(VM_LABEL) || COGVM
+#if !defined(VM_LABEL) || COGVM || STACKVM
 # undef VM_LABEL
 # define VM_LABEL(foo) ((void)0)
 #endif
 
 #endif /* macintoshSqueak */
 
-
+#endif /* _SQ_PLATFORM_SPECIFIC_H */

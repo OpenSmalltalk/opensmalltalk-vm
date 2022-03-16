@@ -137,6 +137,16 @@ char *
 getSoundRecorderDeviceName(sqInt i)
 { return [gDelegateApp.squeakApplication.soundInterfaceLogic getSoundRecorderDeviceName: i]; }
 
+#if TerfVM
+char *
+getSoundPlayerDeviceUID(sqInt i)
+{ return [gDelegateApp.squeakApplication.soundInterfaceLogic getSoundPlayerDeviceUID: i]; }
+
+char *
+getSoundRecorderDeviceUID(sqInt i)
+{ return [gDelegateApp.squeakApplication.soundInterfaceLogic getSoundRecorderDeviceUID: i]; }
+#endif
+
 void
 setDefaultSoundPlayer(char *deviceName)
 { return [gDelegateApp.squeakApplication.soundInterfaceLogic setDefaultSoundPlayer: deviceName]; }

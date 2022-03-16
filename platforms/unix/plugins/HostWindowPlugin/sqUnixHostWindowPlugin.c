@@ -197,3 +197,10 @@ ioPositionOfNativeDisplay(usqIntptr_t windowHandle)
 		return -1;
 	return dpy->ioPositionOfNativeDisplay((void *)windowHandle);
 }
+sqInt
+ioSetCursorPositionXY(long x, long y)
+{
+	if (noDisplay)
+		return -1;
+	return dpy->ioSetCursorPositionXY(x,y);
+}

@@ -19,6 +19,10 @@
    
    Define plugin for Netscape Plugin building, needed for CodeWarrior
 */
+
+#ifndef _SQ_PLATFORM_SPECIFIC_H
+#define _SQ_PLATFORM_SPECIFIC_H
+
 /*
  Copyright (c) 2000-2008 Corporate Smalltalk Consulting Ltd. All rights reserved.
  MIT License
@@ -67,14 +71,13 @@
 
 #undef sqFTruncate
 #define sqFTruncate(f,o) ftruncate(fileno(f), o)
-#define ftell ftello
-#define fseek fseeko
-//int	 ftruncate(int, off_t);
 
 #undef sqFilenameFromStringOpen
 #undef sqFilenameFromString
-void		sqFilenameFromStringOpen(char *buffer,sqInt fileIndex, long fileLength);
-void		sqFilenameFromString(char *buffer,sqInt fileIndex, long fileLength);
+
+#if defined(__sqMemoryAccess_h) // Only define support API if we have sqInt etc
+void sqFilenameFromStringOpen(char *buffer,sqInt fileIndex, long fileLength);
+void sqFilenameFromString(char *buffer,sqInt fileIndex, long fileLength);
 #undef allocateMemoryMinimumImageFileHeaderSize
 #undef sqImageFileReadEntireImage
 #if SPURVM
@@ -83,13 +86,13 @@ extern usqInt sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize);
 sqAllocateMemory(minimumMemory, heapSize)
 # define sqMacMemoryFree() 
 #else
-usqInt sqAllocateMemoryMac(usqInt desiredHeapSize,sqInt minHeapSize, FILE * f,usqInt headersize);
-#define allocateMemoryMinimumImageFileHeaderSize(heapSize, minimumMemory, fileStream, headerSize) \
+usqInt sqAllocateMemoryMac(usqInt,sqInt,void *,usqInt);
+# define allocateMemoryMinimumImageFileHeaderSize(heapSize, minimumMemory, fileStream, headerSize) \
 sqAllocateMemoryMac(heapSize, minimumMemory, fileStream, headerSize)
 #endif
 
 #ifdef BUILD_FOR_OSX
-size_t sqImageFileReadEntireImage(void *ptr, size_t elementSize, size_t count, FILE * f);
+size_t sqImageFileReadEntireImage(void *, size_t, size_t, void *);
 #define sqImageFileReadEntireImage(memoryAddress, elementSize,  length, fileStream) \
 sqImageFileReadEntireImage(memoryAddress, elementSize, length, fileStream)
 #else
@@ -124,6 +127,7 @@ int plugInNotifyUser(char *msg);
 	#define browserPluginReturnIfNeeded() if (plugInTimeToReturn()) {ReturnFromInterpret();}
 
 sqInt ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt extentY, sqInt offsetX, sqInt offsetY);
+#endif // defined(__sqMemoryAccess_h)
 
 #if COGVM
 extern int osCogStackPageHeadroom(void);
@@ -172,11 +176,11 @@ extern const pthread_key_t tltiIndex;
 // # define VM_LABEL(foo)
 #endif
 
-#if !defined(VM_LABEL) || COGVM
+#if !defined(VM_LABEL) || COGVM || STACKVM
 # undef VM_LABEL
 # define VM_LABEL(foo) ((void)0)
 #endif
 
 #endif /* macintoshSqueak */
 
-
+#endif /* _SQ_PLATFORM_SPECIFIC_H */

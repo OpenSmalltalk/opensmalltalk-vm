@@ -4,6 +4,7 @@
 #ifndef SQ_WIN_32_H
 #define SQ_WIN_32_H
 
+#include "sqPlatformSpecific.h" // to get IMPORT, EXPORT et al
 
 /*************************************************************/
 /* NOTE: For a list of possible definitions see file README. */
@@ -71,7 +72,6 @@
   /* The hardcoded defs:
    * No virtual memory support; no service support; no preferences; no printing
    */
-#	define NO_VIRTUAL_MEMORY
 #	define NO_SERVICE
 #	define NO_PREFERENCES
 #	define NO_PRINTER
@@ -82,8 +82,6 @@
 #	define NO_JOYSTICK
 #	define NO_MIDI
 #	define NO_ASYNC_FILES
-  /* Do not rely on stdio functions but rather pure Win32 stuff */
-#	define WIN32_FILE_SUPPORT
   /* Take out the static strings */
 #	define NO_WARNINGS
 #endif /* MINIMAL */
@@ -124,6 +122,8 @@ char *GetVMOption(int id);
 /********************************************************/
 void SetWindowSize(void);
 int printUsage(int level);
+int __cdecl DPRINTF(const char *fmt, ...);
+void resyncSystemTime();
 
 /********************************************************/
 /* Service Stuff                                        */
@@ -193,7 +193,7 @@ extern TCHAR windowClassName[];  /* class name for the window */
 extern char  squeakIniNameA[];   /* full path to ini file - UTF8 */
 extern WCHAR squeakIniNameW[];   /* full path to ini file - UTF16 */
 
-#ifdef UNICODE
+#if _UNICODE
 # define imageNameT imageNameW /* define the generic TCHAR* version */
 # define imagePath  imagePathW
 # define vmName vmNameW
@@ -222,11 +222,16 @@ extern HMENU vmPrefsMenu;         /* preferences menu */
 #endif
 
 extern HWND  consoleWindow;       /* console */
+#if defined(SQUEAK_EXTERNAL_PLUGIN)
+extern IMPORT(int) deviceChangeCount; // Counter tracking WM_DEVICECHANGE msgs
+#else
+extern EXPORT(int) deviceChangeCount;
+#endif
 
 
-extern HWND stWindow;	     	         /*	the squeak window */
+extern HWND stWindow;	     	 /*	the squeak window */
 extern HINSTANCE hInstance;	     /*	the instance of squeak running */
-extern HCURSOR currentCursor;	     /*	current cursor displayed by squeak */
+extern HCURSOR currentCursor;	 /*	current cursor displayed by squeak */
 extern HPALETTE palette;	     /*	the palette (might be unused) */
 extern LOGPALETTE *logPal;	     /*	the logical palette definition */
 extern BITMAPINFO *bmi1;	     /*	1 bit depth bitmap info */
@@ -242,11 +247,11 @@ extern BOOL  fRunService;    /* Do we run as NT service? */
 extern DWORD dwMemorySize;   /* How much memory do we use? */
 extern BOOL  fUseDirectSound;/* Do we use DirectSound?! */
 extern BOOL  fUseOpenGL;     /* Do we use OpenGL?! */
-extern BOOL fReduceCPUUsage; /* Should we reduce CPU usage? */
-extern BOOL fReduceCPUInBackground; /* reduce CPU usage when not active? */
 extern BOOL  f1ButtonMouse;  /* Should we use a 1 button mouse mapping? */
 extern BOOL  f3ButtonMouse;  /* Should we use a 3 button mouse mapping? */
+#if !SPURVM
 extern BOOL  fShowAllocations; /* Show memory allocations */
+#endif
 extern BOOL  fPriorityBoost; /* thread priority boost */
 extern BOOL  fEnableAltF4Quit; /* can we quit using Alt-F4? */
 extern BOOL  fEnableF2Menu;    /* can we get prefs menu via F2? */
@@ -266,7 +271,6 @@ extern BOOL updateRightNow;	     /*	update flag */
 extern BOOL fDeferredUpdate; /* I prefer the deferred update*/
 extern BOOL fShowConsole;    /* do we show the console window?*/
 extern BOOL fDynamicConsole; /* Should we show the console if any errors occur? */
-extern BOOL fReduceCPUUsage; /* Should we reduce CPU usage? */
 extern BOOL f3ButtonMouse;   /* Should we use a real 3 button mouse mapping? */
 extern BOOL fBufferMouse;    /* Should we buffer mouse input? */
 
@@ -286,7 +290,7 @@ int __cdecl warnPrintf(char *fmt, ...);
 int __cdecl warnPrintfW(WCHAR *fmt, ...);
 #endif
 
-#ifdef UNICODE
+#if _UNICODE
 #define warnPrintfT warnPrintfW
 #else
 #define warnPrintfT warnPrintf
@@ -311,6 +315,8 @@ void vprintLastError(TCHAR *fmt, ...);
 DWORD SqueakImageLength(WCHAR *fileName);
 int isLocalFileName(TCHAR *fileName);
 
+int recordMouseEvent(MSG *msg, UINT nrClicks);
+int recordKeyboardEvent(MSG *msg);
 #ifndef NO_DROP
 int recordDragDropEvent(HWND wnd, int dragType, int x, int y, int numFiles);
 #endif
@@ -351,11 +357,6 @@ typedef struct _NOTIFYICONDATAA {
 
 #endif /* WINVER < 0x0400 */
 
-/* WM_MOUSEWHEEL since Win98/NT4 */
-#ifndef WM_MOUSEWHEEL
-#define WM_MOUSEWHEEL 0x020A
-#endif
-
 /******************************************************/
 /* Profiling support                                  */
 /******************************************************/
@@ -365,9 +366,9 @@ typedef struct _NOTIFYICONDATAA {
 #endif
 
 #if defined(PROFILE) && 0
-#define PROFILE_BEGIN(condition) if(condition) { DWORD __profileTicks = GetTickCount();
+#define PROFILE_BEGIN(condition) if (condition) { DWORD __profileTicks = GetTickCount();
 #define PROFILE_END(variable) variable += GetTickCount() - __profileTicks; }
-#define PROFILE_SHOW(variable) if(variable) {char s[20]; MessageBox(0,itoa(variable, s, 10), "Milliseconds for " #variable, MB_OK); }
+#define PROFILE_SHOW(variable) if (variable) {char s[20]; MessageBox(0,itoa(variable, s, 10), "Milliseconds for " #variable, MB_OK); }
 #else
 #define PROFILE_BEGIN(condition)
 #define PROFILE_END(variable)

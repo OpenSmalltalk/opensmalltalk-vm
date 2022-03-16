@@ -8,7 +8,7 @@
 *   EMAIL:   Andreas.Raab@gmx.de
 *
 *****************************************************************************/
-#include <windows.h>
+#include <Windows.h>
 #include <ole2.h>
 #include "sq.h"
 

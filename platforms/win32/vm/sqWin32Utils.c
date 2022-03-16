@@ -19,19 +19,24 @@
 /*   printf() format string and arguments                                   */
 /****************************************************************************/
 #ifndef sqMessageBox
-int __cdecl sqMessageBox(DWORD dwFlags, const TCHAR *titleString, const TCHAR* fmt, ...)
-{ TCHAR *buf;
-  va_list args;
-  DWORD result;
+int __cdecl
+sqMessageBox(DWORD dwFlags, const TCHAR *titleString, const TCHAR *fmt, ...)
+{	TCHAR *buf;
+	va_list args;
+	DWORD result;
 
-  buf = (TCHAR*) calloc(sizeof(TCHAR), 4096);
-  va_start(args, fmt);
-  _vsntprintf(buf, 4096-1, fmt, args);
-  va_end(args);
+	buf = (TCHAR*) calloc(sizeof(TCHAR), 4096);
+	va_start(args, fmt);
+#if _UNICODE
+	_vsnwprintf(buf, 4096-1, fmt, args);
+#else
+	_vsntprintf(buf, 4096-1, fmt, args);
+#endif
+	va_end(args);
 
-  result = MessageBox(stWindow,buf,titleString,dwFlags|MB_SETFOREGROUND);
-  free(buf);
-  return result;
+	result = MessageBox(stWindow,buf,titleString,dwFlags|MB_SETFOREGROUND);
+	free(buf);
+	return result;
 }
 #endif
 
@@ -134,8 +139,9 @@ void printLastError(TCHAR *prefix)
 #endif
 #ifndef vprintLastError
 void vprintLastError(TCHAR *fmt, ...)
-{ LPVOID lpMsgBuf;
-  DWORD lastError;
+{ LPTSTR lpMsgBuf;
+  DWORD lastError = GetLastError();
+  int len;
   TCHAR *buf;
   va_list args;
 
@@ -144,12 +150,18 @@ void vprintLastError(TCHAR *fmt, ...)
   wvsprintf(buf, fmt, args);
   va_end(args);
 
-  lastError = GetLastError();
-  FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER |  FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+  FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
                 NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                (LPTSTR) &lpMsgBuf, 0, NULL );
-  warnPrintfT(TEXT("%s (%ld: %s)\n"), buf, lastError, (LPTSTR)lpMsgBuf);
-  LocalFree( lpMsgBuf );
+                (LPTSTR)&lpMsgBuf, 0, NULL );
+  len = (int)_tcslen(lpMsgBuf);
+  // nuke any cr-lf or lf at the end of the string...
+  if (lpMsgBuf[len-1] == '\n') {
+	lpMsgBuf[len-1] = 0;
+	if (lpMsgBuf[len-2] == '\r')
+	  lpMsgBuf[len-2] = 0;
+  }
+  warnPrintfT(TEXT("%s (%ld: %s)\n"), buf, lastError, lpMsgBuf);
+  LocalFree(lpMsgBuf);
   free(buf);
 }
 #endif

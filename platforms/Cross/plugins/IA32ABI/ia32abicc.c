@@ -11,7 +11,7 @@
 #if defined(_M_I386) || defined(_M_IX86) || defined(_X86_) || defined(i386) || defined(i486) || defined(i586) || defined(i686) || defined(__i386__) || defined(__386__) || defined(X86) || defined(I386)
 
 #if defined(_MSC_VER) || defined(__MINGW32__)
-# include "windows.h" /* for GetSystemInfo & VirtualAlloc */
+# include <Windows.h> /* for GetSystemInfo & VirtualAlloc */
 #elif __APPLE__ && __MACH__
 # include <sys/mman.h> /* for mprotect */
 # if OBJC_DEBUG /* define this to get debug info for struct objc_class et al */
@@ -36,10 +36,9 @@ void *getbaz() { return baz; }
 #include <setjmp.h>
 #include <stdio.h> /* for fprintf(stderr,...) */
 
-#include "sqMemoryAccess.h"
+#include "objAccess.h"
 #include "vmCallback.h"
 #include "sqAssert.h"
-#include "sqVirtualMachine.h"
 #include "ia32abi.h"
 
 #if !defined(min)
@@ -76,29 +75,6 @@ struct VirtualMachine* interpreterProxy;
 
 #define moduloPOT(m,v) (((v)+(m)-1) & ~((m)-1))
 #define alignModuloPOT(m,v) ((void *)moduloPOT(m,(unsigned long)(v)))
-
-#define objIsAlien(anOop) (interpreterProxy->includesBehaviorThatOf(interpreterProxy->fetchClassOf(anOop), interpreterProxy->classAlien()))
-#define objIsUnsafeAlien(anOop) (interpreterProxy->includesBehaviorThatOf(interpreterProxy->fetchClassOf(anOop), interpreterProxy->classUnsafeAlien()))
-
-#define sizeField(alien) (*(long *)pointerForOop((sqInt)(alien) + BaseHeaderSize))
-#define dataPtr(alien) pointerForOop((sqInt)(alien) + BaseHeaderSize + BytesPerOop)
-#if 0 /* obsolete after adding pointer Aliens with size field == 0 */
-# define isIndirectOrPointer(alien) (sizeField(alien) <= 0)
-# define startOfData(alien) (isIndirectOrPointer(alien)		\
-								? *(void **)dataPtr(alien)	\
-								:  (void  *)dataPtr(alien))
-#endif
-#define isIndirect(alien) (sizeField(alien) < 0)
-#define startOfParameterData(alien) (isIndirect(alien)	\
-									? *(void **)dataPtr(alien)	\
-									:  (void  *)dataPtr(alien))
-#define isIndirectSize(size) ((size) < 0)
-#define startOfDataWithSize(alien,size) (isIndirectSize(size)	\
-								? *(void **)dataPtr(alien)		\
-								:  (void  *)dataPtr(alien))
-
-#define isSmallInt(oop) ((oop)&1)
-#define intVal(oop) (((long)(oop))>>1)
 
 /*
  * Call a foreign function that answers an integral result in %eax (and
@@ -185,7 +161,6 @@ __attribute__((optimize("O0")))
 thunkEntry(void *thunkp, sqIntptr_t *stackp)
 {
 	VMCallbackContext vmcc;
-	VMCallbackContext *previousCallbackContext;
 	int flags, returnType;
 
 #if STACK_ALIGN_HACK
@@ -211,7 +186,7 @@ thunkEntry(void *thunkp, sqIntptr_t *stackp)
 	}
 
 	if (!(returnType = setjmp(vmcc.trampoline))) {
-		previousCallbackContext = getMRCC();
+		vmcc.savedMostRecentCallbackContext = getMRCC();
 		setMRCC(&vmcc);
 		vmcc.thunkp = thunkp;
 		vmcc.stackp = stackp + 2; /* skip address of retpc & retpc (thunk) */
@@ -219,11 +194,11 @@ thunkEntry(void *thunkp, sqIntptr_t *stackp)
 		vmcc.floatregargsp = 0;
 		interpreterProxy->sendInvokeCallbackContext(&vmcc);
 		fprintf(stderr,"Warning; callback failed to invoke\n");
-		setMRCC(previousCallbackContext);
+		setMRCC(vmcc.savedMostRecentCallbackContext);
 		interpreterProxy->disownVM(flags);
 		return -1;
 	}
-	setMRCC(previousCallbackContext);
+	setMRCC(vmcc.savedMostRecentCallbackContext);
 	interpreterProxy->disownVM(flags);
 
 	switch (returnType) {

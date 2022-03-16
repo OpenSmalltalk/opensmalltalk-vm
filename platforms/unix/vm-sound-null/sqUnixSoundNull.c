@@ -46,8 +46,8 @@
 
 /* output */
 static sqInt  sound_AvailableSpace(void)									FAIL(8192)
-static sqInt  sound_InsertSamplesFromLeadTime(sqInt frameCount, sqInt srcBufPtr, sqInt samplesOfLeadTime)	FAIL(frameCount)
-static sqInt  sound_PlaySamplesFromAtLength(sqInt frameCount, sqInt arrayIndex, sqInt startIndex)		FAIL(8192)
+static sqInt  sound_InsertSamplesFromLeadTime(sqInt frameCount, void * srcBufPtr, sqInt samplesOfLeadTime)	FAIL(frameCount)
+static sqInt  sound_PlaySamplesFromAtLength(sqInt frameCount, void * arrayIndex, sqInt startIndex)		FAIL(8192)
 static sqInt  sound_PlaySilence(void)										FAIL(8192)
 static sqInt  sound_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sqInt semaIndex)			FAIL(1)
 static sqInt  sound_Stop(void)											FAIL(0)
@@ -55,7 +55,7 @@ static sqInt  sound_Stop(void)											FAIL(0)
 static sqInt  sound_StartRecording(sqInt desiredSamplesPerSec, sqInt stereo, sqInt semaIndex)			FAIL(0)
 static sqInt  sound_StopRecording(void)										FAIL(0)
 static double sound_GetRecordingSampleRate(void)								FAIL(0)
-static sqInt  sound_RecordSamplesIntoAtLength(sqInt buf, sqInt startSliceIndex, sqInt bufferSizeInBytes)	FAIL(0)
+static sqInt  sound_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex, sqInt bufferSizeInBytes)	FAIL(0)
 /* mixer */
 static void   sound_Volume(double *left, double *right)								{ return; }
 static void   sound_SetVolume(double left, double right)							{ return; }
@@ -84,6 +84,10 @@ static char* sound_GetSoundRecorderDeviceName(int n) { return 0; }
 static void sound_SetDefaultSoundPlayer(char *deviceName) {}
 
 static void sound_SetDefaultSoundRecorder(char *deviceName) {}
+
+#if SqSoundVersionMajor > 1 || SqSoundVersionMinor >= 2
+static sqInt  sound_SetRecordBufferFrameCount(sqInt frameCount) { return 0; }
+#endif
 
 #if SqSoundVersionMajor > 1 || SqSoundVersionMinor >= 3
 /* Acoustic echo-cancellation (AEC) is not supported on Linux yet. */

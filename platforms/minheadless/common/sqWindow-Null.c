@@ -138,30 +138,6 @@ sqNull_getNextEvent(sqInputEvent *evt)
 }
 
 static sqInt
-sqNull_getButtonState(void)
-{
-    return 0;
-}
-
-static sqInt
-sqNull_getKeystroke(void)
-{
-    return 0;
-}
-
-static sqInt
-sqNull_mousePoint(void)
-{
-    return 0;
-}
-
-static sqInt
-sqNull_peekKeystroke(void)
-{
-    return 0;
-}
-
-static sqInt
 sqNull_processEvents(void)
 {
     return 0;
@@ -225,6 +201,10 @@ sqNull_dropRequestFileName(sqInt dropIndex)
     return 0;
 }
 
+static char *
+sqNull_dropRequestURI(sqInt dropIndex)
+{ return NULL; }
+
 static sqInt
 sqNull_dropRequestFileHandle(sqInt dropIndex)
 {
@@ -253,10 +233,6 @@ sqWindowSystem sqNullWindowSystem = {
     .setWindowWidthHeight = sqNull_setWindowWidthHeight,
     .isWindowObscured = sqNull_isWindowObscured,
     .getNextEvent = sqNull_getNextEvent,
-    .getButtonState = sqNull_getButtonState,
-    .getKeystroke = sqNull_getKeystroke,
-    .mousePoint = sqNull_mousePoint,
-    .peekKeystroke = sqNull_peekKeystroke,
     .processEvents = sqNull_processEvents,
     .screenScaleFactor = sqNull_screenScaleFactor,
     .screenSize = sqNull_screenSize,
@@ -267,5 +243,6 @@ sqWindowSystem sqNullWindowSystem = {
     .dropInit = sqNull_dropInit,
     .dropShutdown = sqNull_dropShutdown,
     .dropRequestFileName = sqNull_dropRequestFileName,
+    .dropRequestURI = sqNull_dropRequestURI,
     .dropRequestFileHandle = sqNull_dropRequestFileHandle,
 };

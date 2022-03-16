@@ -1,0 +1,14 @@
+# Copied, perhaps edited, from ../../../src/examplePlugins.ext
+EXTERNAL_PLUGINS = \
+B3DAcceleratorPlugin \
+CameraPlugin \
+FileAttributesPlugin \
+Squeak3D \
+SqueakFFIPrims \
+SqueakSSL \
+UUIDPlugin \
+Win32OSProcessPlugin \
+DESPlugin \
+MD5Plugin \
+SHA2Plugin \
+VectorEnginePlugin \

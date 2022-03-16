@@ -63,9 +63,14 @@ typedef struct windowDescriptorBlock {
 } windowDescriptorBlock;
 
 windowDescriptorBlock *windowBlockFromHandle(wHandleType windowHandle);
-wIndexType windowIndexFromBlock( windowDescriptorBlock * thisWindow);
+wIndexType windowIndexFromBlock(windowDescriptorBlock * thisWindow);
 wIndexType windowIndexFromHandle(wHandleType windowHandle);
 wHandleType windowHandleFromIndex(wIndexType windowIndex);
 windowDescriptorBlock *AddWindowBlock(void);
 windowDescriptorBlock *windowBlockFromIndex(wIndexType windowIndex);
 sqInt getCurrentIndexInUse(void);
+/*
+ * Answer (cache) the height of the main display, needed for transforming
+ * mac screen coordinates to Squeak screen coordinates.
+ */
+extern int yZero(void);

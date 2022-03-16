@@ -58,7 +58,7 @@ static NSString *stringWithCharacter(unichar character) {
 
 @implementation sqSqueakOSXCGView
 @synthesize squeakTrackingRectForCursor,lastSeenKeyBoardStrokeDetails,
-lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,savedScreenBoundsAtTimeOfFullScreen;
+lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreenBoundsAtTimeOfFullScreen;
 
 #pragma mark Initialization / Release
 
@@ -83,7 +83,6 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
     [self registerForDraggedTypes: [NSArray arrayWithObjects: NSFilenamesPboardType, nil]];
 	dragInProgress = NO;
 	dragCount = 0;
-	dragItems = NULL;
 	clippyIsEmpty = YES;
 	colorspace = CGColorSpaceCreateDeviceRGB();
 }
@@ -314,26 +313,26 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 }
 
 - (void)mouseUp:(NSEvent *)theEvent {
-	[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordMouseEvent: theEvent fromView: self];
+	[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordMouseButtonEvent: theEvent fromView: self];
 }
 
 - (void)rightMouseUp:(NSEvent *)theEvent {
-	[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordMouseEvent: theEvent fromView: self];
+	[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordMouseButtonEvent: theEvent fromView: self];
 }
 
 - (void)otherMouseUp:(NSEvent *)theEvent {
-	[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordMouseEvent: theEvent fromView: self];
+	[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordMouseButtonEvent: theEvent fromView: self];
 }
 
 - (void)mouseDown:(NSEvent *)theEvent {
-	[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordMouseEvent: theEvent fromView: self];
+	[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordMouseButtonEvent: theEvent fromView: self];
 }
 
 - (void)rightMouseDown:(NSEvent *)theEvent {
-	[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordMouseEvent: theEvent fromView: self];
+	[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordMouseButtonEvent: theEvent fromView: self];
 }
 - (void)otherMouseDown:(NSEvent *)theEvent {
-	[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordMouseEvent: theEvent fromView: self];
+	[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordMouseButtonEvent: theEvent fromView: self];
 }
 
 #pragma mark Events - Keyboard
@@ -606,8 +605,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	return results;
 }
 
-
-- (NSMutableArray *) filterOutSqueakImageFilesFromDraggedFiles: (id<NSDraggingInfo>)info {
+- (NSMutableArray *) filterOutSqueakImageFilesFromDraggedURIs: (id<NSDraggingInfo>)info {
 	NSPasteboard *pboard= [info draggingPasteboard];
 	NSMutableArray *results = [NSMutableArray arrayWithCapacity: 10];
 	if ([[pboard types] containsObject: NSFilenamesPboardType]) {
@@ -615,14 +613,17 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 		NSString *fileName;
 		for (fileName in files) {
 			if ([((sqSqueakOSXApplication*) gDelegateApp.squeakApplication) isImageFile: fileName] == NO)
-				[results addObject: fileName];
+			{
+				[results addObject: [NSURL fileURLWithPath: fileName]];
+			}
 		}
 	}
+
 	return results;
 }
 
 - (NSUInteger) countNumberOfNoneSqueakImageFilesInDraggedFiles: (id<NSDraggingInfo>)info {
-	NSArray *files = [self filterOutSqueakImageFilesFromDraggedFiles: info];
+	NSArray *files = [self filterOutSqueakImageFilesFromDraggedURIs: info];
 	return [files count];
 }
 
@@ -651,12 +652,12 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: SQDragLeave numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex  view: self];
 	self.dragCount = 0;
 	self.dragInProgress = NO;
-	self.dragItems = NULL;
+	gDelegateApp.dragItems = NULL;
 }
 
 - (BOOL) performDragOperation: (id<NSDraggingInfo>)info {
 	if (self.dragCount) {
-		self.dragItems = [self filterOutSqueakImageFilesFromDraggedFiles: info];
+		gDelegateApp.dragItems = [self filterOutSqueakImageFilesFromDraggedURIs: info];
 		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: SQDragDrop numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex  view: self];
 	}
 	
@@ -681,16 +682,6 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	dragInProgress = NO;
 	return YES;
 }
-
-- (NSString*) dragFileNameStringAtIndex: (sqInt) index {
-	if (!self.dragItems)
-		return NULL;
-	if (index < 1 || index > [self.dragItems count])
-		return NULL;
-	NSString *filePath = [self.dragItems objectAtIndex: (NSUInteger) index - 1];
-	return filePath;
-}
-
 
 - (BOOL)ignoreModifierKeysWhileDragging {
 	return YES;

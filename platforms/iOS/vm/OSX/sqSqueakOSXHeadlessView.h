@@ -55,7 +55,6 @@
 	int		dragCount;
 	BOOL	firstDrawCompleted;
 	BOOL	syncNeeded;
-	NSMutableArray*  dragItems;
 	CGDisplayFadeReservationToken    fadeToken;
 	NSRect	savedScreenBoundsAtTimeOfFullScreen;
 	CGColorSpaceRef colorspace;	

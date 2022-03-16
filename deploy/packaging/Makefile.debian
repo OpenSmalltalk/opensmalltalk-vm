@@ -11,10 +11,10 @@ version_from_travis:
 build_srcpackage:
 	@echo "Generating source package"
 
-	cp -a $(BASE_DIR)/spursrc $(BASE_DIR)/spur64src $(BASE_DIR)/platforms $(BASE_DIR)/LICENSE $(BASE_DIR)/mkNamedPrims.sh $(BASE_DIR)/src pharo7-vm-core/
-	mkdir -p pharo7-vm-core/build.linux32x86/
-	cp -a $(BASE_DIR)/build.linux32x86/pharo.cog.spur pharo7-vm-core/build.linux32x86/
-	cp -a editpharoinstall.sh pharo7-vm-core/build.linux32x86/
+	cp -a $(BASE_DIR)/src/spur32.cog $(BASE_DIR)/src/spur64.cog $(BASE_DIR)/platforms $(BASE_DIR)/LICENSE $(BASE_DIR)/mkNamedPrims.sh $(BASE_DIR)/src pharo7-vm-core/
+	mkdir -p pharo7-vm-core/building/linux32x86/
+	cp -a $(BASE_DIR)/building/linux32x86/pharo.cog.spur pharo7-vm-core/building/linux32x86/
+	cp -a editpharoinstall.sh pharo7-vm-core/building/linux32x86/
 
 	cd $(BASE_DIR) && ./scripts/updateSCCSVersions
 	cd pharo7-vm-core/platforms/unix/config && make configure

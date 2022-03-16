@@ -15,7 +15,7 @@
 static char buf[10];
 
 char *
-munge(char *s)
+munge(const char *s)
 {
 	int i, d;
 	for (i = 0, d = 0; i + d < strlen(s); i++)
@@ -63,6 +63,7 @@ printf(CLASS " methodsFor: 'accessing' stamp: 'eem %d/%d/%d %d:%02d'!\r"\
 	print(stop_reason,stop_reason,Byte);
 	print(save_eip,save_eip,Long);
 	print(save_esp,save_esp,Long);
+	print(prev_rip,prev_rip,LongLong);
 
 	return 0;
 }

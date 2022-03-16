@@ -1,0 +1,6 @@
+#!/bin/sh -e
+test -d bfd || ./conf.COG
+for d in bfd libiberty opcodes; do
+	(cd ./$d; make SUBDIRS="" COG=1)
+done
+(cd ./sim/arm; make version.c; test -f version.c-tmp && mv version.c-tmp version.c; make COG=1 libsim.a)

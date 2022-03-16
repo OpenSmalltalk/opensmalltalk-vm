@@ -17,6 +17,7 @@ SmalltalkCISpec {
         #LocaleTest,
         #MVCToolBuilderTests,
         #PackageDependencyTest,
+        #RenderBugz,
         #SocketTest,
         #SqueakSSLTest,
         #StandardSystemFontsTest,

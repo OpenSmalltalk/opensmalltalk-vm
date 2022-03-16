@@ -3,6 +3,9 @@
 
 
 #include <stdio.h>
+#if _MSC_VER
+# define fseeko(a,b,c) _fseeki64(a,b,c)
+#endif
 #include "mpeg3css.h"
 #include "mpeg3private.inc"
 

@@ -27,6 +27,8 @@
 #define BITBLTINTERNAL_H_
 
 #include "BitBltDispatch.h"
+#include <stdint.h>
+#include <stdlib.h>
 
 #define IGNORE(x) (void)(x)
 #define CACHELINE_LEN (32)
@@ -62,21 +64,22 @@ enum {
 	FAST_PATH_DEST_LITTLE_ENDIAN = 1u<<16,
 
 	FAST_PATH_NO_COLOR_MAP       = 1u<<17,
-	FAST_PATH_9BIT_COLOR_MAP     = 1u<<18,
-	FAST_PATH_12BIT_COLOR_MAP    = 1u<<19,
-	FAST_PATH_15BIT_COLOR_MAP    = 1u<<20,
+	FAST_PATH_1BIT_COLOR_MAP     = 1u<<18,
+	FAST_PATH_9BIT_COLOR_MAP     = 1u<<19,
+	FAST_PATH_12BIT_COLOR_MAP    = 1u<<20,
+	FAST_PATH_15BIT_COLOR_MAP    = 1u<<21,
 	FAST_PATH_DIRECT_COLOR_MAP   = FAST_PATH_15BIT_COLOR_MAP, /* for use with <16bpp */
 
-	FAST_PATH_NO_HALFTONE        = 1u<<21,
-	FAST_PATH_SCALAR_HALFTONE    = 1u<<22,
-	FAST_PATH_VECTOR_HALFTONE    = 1u<<23,
+	FAST_PATH_NO_HALFTONE        = 1u<<22,
+	FAST_PATH_SCALAR_HALFTONE    = 1u<<23,
+	FAST_PATH_VECTOR_HALFTONE    = 1u<<24,
 
-	FAST_PATH_CA_NO_GAMMA        = 1u<<24,
-	FAST_PATH_CA_HAS_GAMMA       = 1u<<25,
+	FAST_PATH_CA_NO_GAMMA        = 1u<<25,
+	FAST_PATH_CA_HAS_GAMMA       = 1u<<26,
 
-	FAST_PATH_NO_OVERLAP         = 1u<<26,
-	FAST_PATH_H_OVERLAP          = 1u<<27,
-	FAST_PATH_V_OVERLAP          = 1u<<28,
+	FAST_PATH_NO_OVERLAP         = 1u<<27,
+	FAST_PATH_H_OVERLAP          = 1u<<28,
+	FAST_PATH_V_OVERLAP          = 1u<<29,
 };
 
 /* These are the derived macros for use in specifying fast paths. */
@@ -102,10 +105,11 @@ enum {
 #define ONLY_DEST_BIG_ENDIAN    (FAST_PATH_DEST_LITTLE_ENDIAN)
 #define ONLY_DEST_LITTLE_ENDIAN (FAST_PATH_DEST_LITTLE_ENDIAN)
 
-#define ONLY_NO_COLOR_MAP       (FAST_PATH_9BIT_COLOR_MAP | FAST_PATH_12BIT_COLOR_MAP | FAST_PATH_15BIT_COLOR_MAP)
-#define ONLY_9BIT_COLOR_MAP     (FAST_PATH_NO_COLOR_MAP   | FAST_PATH_12BIT_COLOR_MAP | FAST_PATH_15BIT_COLOR_MAP)
-#define ONLY_12BIT_COLOR_MAP    (FAST_PATH_NO_COLOR_MAP   | FAST_PATH_9BIT_COLOR_MAP  | FAST_PATH_15BIT_COLOR_MAP)
-#define ONLY_15BIT_COLOR_MAP    (FAST_PATH_NO_COLOR_MAP   | FAST_PATH_9BIT_COLOR_MAP  | FAST_PATH_12BIT_COLOR_MAP)
+#define ONLY_NO_COLOR_MAP       (FAST_PATH_1BIT_COLOR_MAP | FAST_PATH_9BIT_COLOR_MAP | FAST_PATH_12BIT_COLOR_MAP | FAST_PATH_15BIT_COLOR_MAP)
+#define ONLY_1BIT_COLOR_MAP     (FAST_PATH_NO_COLOR_MAP   | FAST_PATH_9BIT_COLOR_MAP | FAST_PATH_12BIT_COLOR_MAP | FAST_PATH_15BIT_COLOR_MAP)
+#define ONLY_9BIT_COLOR_MAP     (FAST_PATH_NO_COLOR_MAP   | FAST_PATH_1BIT_COLOR_MAP | FAST_PATH_12BIT_COLOR_MAP | FAST_PATH_15BIT_COLOR_MAP)
+#define ONLY_12BIT_COLOR_MAP    (FAST_PATH_NO_COLOR_MAP   | FAST_PATH_1BIT_COLOR_MAP | FAST_PATH_9BIT_COLOR_MAP  | FAST_PATH_15BIT_COLOR_MAP)
+#define ONLY_15BIT_COLOR_MAP    (FAST_PATH_NO_COLOR_MAP   | FAST_PATH_1BIT_COLOR_MAP | FAST_PATH_9BIT_COLOR_MAP  | FAST_PATH_12BIT_COLOR_MAP)
 #define ONLY_DIRECT_COLOR_MAP   ONLY_15BIT_COLOR_MAP /* for use with <16bpp */
 
 #define ONLY_NO_HALFTONE        (FAST_PATH_SCALAR_HALFTONE | FAST_PATH_VECTOR_HALFTONE)
@@ -130,13 +134,13 @@ enum {
 	bool               noSource         = op->noSource;                        \
 	src_type          *srcBits          = op->src.bits;                        \
 	uint32_t           srcDepth         = op->src.depth;                       \
-	uint32_t           srcPitch         = op->src.pitch / sizeof (src_type);   \
+	usqInt             srcPitch         = op->src.pitch / sizeof (src_type);   \
 	bool               srcMSB           = op->src.msb;                         \
 	uint32_t           srcX             = op->src.x;                           \
 	uint32_t           srcY             = op->src.y;                           \
 	dest_type         *destBits         = op->dest.bits;                       \
 	uint32_t           destDepth        = op->dest.depth;                      \
-	uint32_t           destPitch        = op->dest.pitch / sizeof (dest_type); \
+	usqInt             destPitch        = op->dest.pitch / sizeof (dest_type); \
 	bool               destMSB          = op->dest.msb;                        \
 	uint32_t           destX            = op->dest.x;                          \
 	uint32_t           destY            = op->dest.y;                          \
@@ -180,13 +184,13 @@ enum {
     bool               tally            = op->tally;                           \
     srcA_type         *srcABits         = op->srcA.bits;                       \
     uint32_t           srcADepth        = op->srcA.depth;                      \
-    uint32_t           srcAPitch        = op->srcA.pitch / sizeof (srcA_type); \
+    usqInt             srcAPitch        = op->srcA.pitch / sizeof (srcA_type); \
     bool               srcAMSB          = op->srcA.msb;                        \
     uint32_t           srcAX            = op->srcA.x;                          \
     uint32_t           srcAY            = op->srcA.y;                          \
     srcB_type         *srcBBits         = op->srcB.bits;                       \
     uint32_t           srcBDepth        = op->srcB.depth;                      \
-    uint32_t           srcBPitch        = op->srcB.pitch / sizeof (srcB_type); \
+    usqInt             srcBPitch        = op->srcB.pitch / sizeof (srcB_type); \
     bool               srcBMSB          = op->srcB.msb;                        \
     uint32_t           srcBX            = op->srcB.x;                          \
     uint32_t           srcBY            = op->srcB.y;                          \

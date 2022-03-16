@@ -46,6 +46,9 @@
 #import "sqSqueakOSXApplication+imageReadWrite.h"
 #import "sqSqueakOSXApplication+attributes.h"
 #import "sqSqueakOSXViewFactory.h"
+#import "SqueakOSXAppDelegate.h"
+
+extern SqueakOSXAppDelegate *gDelegateApp;
 
 #if !defined(IMAGE_DIALECT_NAME)
 # if NewspeakVM
@@ -104,6 +107,7 @@ static char *getVersionInfo(int verbose);
 
 @implementation sqSqueakOSXApplication 
 @synthesize squeakCursor;
+@synthesize aboutWindow;
 
 - (void) setupFloat {
 	fldcw(0x12bf);	/* signed infinity, round to nearest, REAL8, disable intrs, disable signals */
@@ -155,6 +159,7 @@ static char *getVersionInfo(int verbose);
 }
 
 - (void) parseUnixArgs {
+	[super parseUnixArgs];
 	NSProcessInfo *p = [NSProcessInfo processInfo];
 	[self parseArgs: [p arguments]];
 	[self parseEnv: [p environment]];
@@ -246,7 +251,26 @@ static char *getVersionInfo(int verbose);
 	}
 #endif
 
+#if defined(AIO_DEBUG)
+	if ([argData isEqualToString: VMOPTIONOBJ("aiolog")]) {
+		extern long aioDebugLogging;
+		aioDebugLogging = 1;
+		return 1;
+	}
+#endif
+#if (STACKVM || NewspeakVM) && !COGVM
+	if ([argData isEqualToString: VMOPTIONOBJ("sendtrace")]) {
+		extern volatile int sendTrace;
+		sendTrace = 1;
+		return 1;
+	}
+#endif
 #if COGVM
+	if ([argData isEqualToString: VMOPTIONOBJ("logplugin")]) {
+		extern char *primTracePluginName;
+		primTracePluginName = peek;
+		return 2;
+	}
 	if ([argData compare: VMOPTIONOBJ("trace") options: NSLiteralSearch range: NSMakeRange(0,VMOPTIONLEN(6))] == NSOrderedSame) {
 		extern int traceFlags;
 
@@ -299,7 +323,7 @@ static char *getVersionInfo(int verbose);
 		return 0;
 
 	if ([argData isEqualToString: VMOPTIONOBJ("memory")]) {
-		gMaxHeapSize = (usqInt) [self strtobkm: peek];
+		gMaxHeapSize = (usqInt) [self strtobkmg: peek];
 		return 2;
 	}
 
@@ -322,7 +346,7 @@ static char *getVersionInfo(int verbose);
 	}
 	if ([argData isEqualToString: VMOPTIONOBJ("eden")]) {
 		extern sqInt desiredEdenBytes;
-		desiredEdenBytes = [self strtobkm: peek]; 
+		desiredEdenBytes = [self strtobkmg: peek]; 
 		return 2;
 	}
 	if ([argData isEqualToString: VMOPTIONOBJ("leakcheck")]) {
@@ -354,6 +378,17 @@ static char *getVersionInfo(int verbose);
 		ffiExceptionResponse = -1;
 		return 1;
 	}
+	if ([argData isEqualToString: VMOPTIONOBJ("debugfailonffiexception")]) {
+		extern sqInt wait_for_debugger_to_attach_on_ffi_exception;
+		wait_for_debugger_to_attach_on_ffi_exception = 1;
+		printf("pid %d\n", getpid());
+		return 1;
+	}
+	if ([argData isEqualToString: VMOPTIONOBJ("eventtrace")]) {
+		extern sqInt eventTraceMask;
+		eventTraceMask = atoi(peek);		 
+		return 2;
+	}
 #endif /* STACKVM */
 #if COGVM
 	if ([argData isEqualToString: VMOPTIONOBJ("codesize")]) {
@@ -374,8 +409,8 @@ static char *getVersionInfo(int verbose);
 #endif /* COGVM */
 #if SPURVM
 	if ([argData isEqualToString: VMOPTIONOBJ("maxoldspace")]) {
-		extern unsigned long maxOldSpaceSize;
-		maxOldSpaceSize = (unsigned long)[self strtobkm: peek];		 
+		extern usqInt maxOldSpaceSize;
+		maxOldSpaceSize = (usqInt)[self strtobkmg: peek];		 
 		return 2;
 	}
 #endif
@@ -447,15 +482,26 @@ static char *getVersionInfo(int verbose);
 
 - (long long) strtobkm: (const char *) str {
 	char *suffix;
-	long long value= strtoll(str, &suffix, 10);
-	switch (*suffix)
-    {
+	long long value = strtoll(str, &suffix, 10);
+	switch (*suffix) {
 		case 'k': case 'K':
-			value*= 1024LL;
-			break;
+		return value * 1024LL;
 		case 'm': case 'M':
-			value*= 1024LL*1024LL;
-			break;
+		return value * 1024LL*1024LL;
+    }
+	return value;
+}
+
+- (usqLong) strtobkmg: (const char *) str {
+	char *suffix;
+	usqLong value = strtoull(str, &suffix, 10);
+	switch (*suffix) {
+		case 'k': case 'K':
+		return value * 1024ULL;
+		case 'm': case 'M':
+		return value * 1024ULL*1024ULL;
+		case 'g': case 'G':
+		return value * 1024ULL*1024ULL*1024ULL;
     }
 	return value;
 }
@@ -467,7 +513,7 @@ static char *getVersionInfo(int verbose);
 	}
 	NSString *memoryString = env[@"SQUEAK_MEMORY"];
 	if (memoryString) {
-		gMaxHeapSize = (usqInt) [self strtobkm: [memoryString UTF8String]];
+		gMaxHeapSize = (usqInt) [self strtobkmg: [memoryString UTF8String]];
 	}
 }
 
@@ -486,7 +532,7 @@ static char *getVersionInfo(int verbose);
 - (void) printUsage {
 	printf("\nCommon <option>s:\n");
 	printf("  "VMOPTION("help")"                 print this help message, then exit\n");
-	printf("  "VMOPTION("memory")" <size>[mk]    use fixed heap size (added to image size)\n");
+	printf("  "VMOPTION("memory")" <size>[kmg]  use fixed heap size (added to image size)\n");
     printf("  "VMOPTION("nohandlers")"           disable sigsegv & sigusr1 handlers\n");
 	printf("  "VMOPTION("timephases")"           print start load and run times\n");
 #if STACKVM || NewspeakVM
@@ -495,15 +541,17 @@ static char *getVersionInfo(int verbose);
 #if STACKVM
 	printf("  "VMOPTION("failonffiexception")"   when in an FFI callout primitive catch exceptions and fail the primitive\n");
 	printf("  "VMOPTION("breakmnu")" selector    set breakpoint on MNU of selector\n");
-	printf("  "VMOPTION("eden")" <size>[mk]      set eden memory to bytes\n");
+	printf("  "VMOPTION("eden")" <size>[kmg]     set eden memory to bytes\n");
 	printf("  "VMOPTION("leakcheck")" num        check for leaks in the heap\n");
 	printf("  "VMOPTION("stackpages")" num       use n stack pages\n");
 	printf("  "VMOPTION("numextsems")" num       make the external semaphore table num in size\n");
 	printf("  "VMOPTION("noheartbeat")"          disable the heartbeat for VM debugging. disables input\n");
 	printf("  "VMOPTION("pollpip")" (0|1)        output on each poll for input\n");
+	printf("  "VMOPTION("eventtrace")" mask      print input events with types in mask to stderr\n");
 #endif
 #if STACKVM || NewspeakVM
 # if COGVM
+	printf("  "VMOPTION("logplugin")" name       only log primitives in plugin\n");
 	printf("  "VMOPTION("trace")"[=num]          enable tracing (optionally to a specific value)\n");
 # else
 	printf("  "VMOPTION("sendtrace")"            enable send tracing\n");
@@ -518,7 +566,7 @@ static char *getVersionInfo(int verbose);
 	printf("  "VMOPTION("reportheadroom")"       report unused stack headroom on exit\n");
 #endif
 #if SPURVM
-	printf("  "VMOPTION("maxoldspace")" <size>[mk]      set max size of old space memory to bytes\n");
+	printf("  "VMOPTION("maxoldspace")" <size>[kmg]  set max size of old space memory to bytes\n");
 	printf("  "VMOPTION("logscavenge")"          log scavenging to scavenge.log\n");
 #endif
 #if 0 /* Not sure if encoding is an issue with the Cocoa VM. eem 2015-11-30 */
@@ -543,6 +591,9 @@ static char *getVersionInfo(int verbose);
 	printf("  "VMOPTION("blockonerror")"         on error or segv block, not exit.  useful for attaching gdb\n");
 	printf("  "VMOPTION("blockonwarn")"          on warning block, don't warn.  useful for attaching gdb\n");
 	printf("  "VMOPTION("exitonwarn")"           treat warnings as errors, exiting on warn\n");
+#if defined(AIO_DEBUG)
+	printf("  "VMOPTION("aiolog")"               print async io logging info\n");
+#endif
 }
 
 - (void) printUsageNotes
@@ -559,23 +610,7 @@ static char *getVersionInfo(int verbose);
 
 - (BOOL) isImageFile: (NSString *) filePath
 {
- 	NSFileManager *dfm = [NSFileManager defaultManager];
-	BOOL isDirectory;
-
-	[dfm fileExistsAtPath: filePath isDirectory: &isDirectory];
-
-	if (isDirectory) 
-		return NO;
-
-	BOOL fileIsReadable = [[NSFileManager defaultManager] isReadableFileAtPath: filePath];
-
-	if (fileIsReadable == NO)
-		return NO;
-
-	if ([[[filePath lastPathComponent] pathExtension] compare: @"image" options: NSCaseInsensitiveSearch] ==   NSOrderedSame)
-		return YES;
-
-	return NO;
+	return [gDelegateApp isImageFile: filePath];
 }
 
 @end
@@ -594,8 +629,10 @@ getVersionInfo(int verbose)
 #endif
   extern char vmBuildString[];
   CFStringRef versionString;
-  char *info= (char *)malloc(4096);
-  info[0]= '\0';
+  char processor[32];
+  char *info = (char *)malloc(4096);
+  info[0] = '\0';
+  getAttributeIntoLength(1003,processor,sizeof(processor));
 
 #if SPURVM
 # if BytesPerOop == 8
@@ -625,7 +662,7 @@ getVersionInfo(int verbose)
 #else
     CFStringGetCString(versionString, info+strlen(info), 4095-strlen(info), kCFStringEncodingUTF8);
 #endif
-  sprintf(info+strlen(info), " %s [" BuildVariant " VM]\n", vmBuildString);
+  sprintf(info+strlen(info), " %s [" BuildVariant " %s VM]\n", vmBuildString, processor);
   if (verbose)
     sprintf(info+strlen(info), "Built from: ");
   sprintf(info+strlen(info), "%s\n", INTERP_BUILD);

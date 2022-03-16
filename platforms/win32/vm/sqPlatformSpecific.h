@@ -8,7 +8,8 @@
 
 */
 
-
+#ifndef _SQ_PLATFORM_SPECIFIC_H
+#define _SQ_PLATFORM_SPECIFIC_H
 
 #if _WIN32 || _WIN64
 /* Override necessary definitions */
@@ -17,55 +18,49 @@
 
 
 #ifdef _MSC_VER
-#include <Windows.h>
-#define HAVE_BOOLEAN 1 /* for jpegReaderWriter plugin compatibility */
+# include <Windows.h>
+# define HAVE_BOOLEAN 1 /* for jpegReaderWriter plugin compatibility */
+# if __clang__
+#	define fileno(stream) _fileno(stream)
+# endif
 #endif
 
-
-#ifdef _MSC_VER
-#define squeakFileOffsetType __int64
-#else
-#define squeakFileOffsetType unsigned long long
+#if defined(__MINGW32__) || defined(__MINGW64__)
+// vcruntime.h defines size_t for MSVC builds, but not for mingw builds.
+# include <string.h> // for size_t
 #endif
 
-#ifdef WIN32_FILE_SUPPORT
+/* File positions in the FilePlugin & other plugins */
+typedef unsigned __int64 squeakFileOffsetType;
+/* File support; we don't use the FilePlugin's default stdio implementation */
+#define NO_STD_FILE_SUPPORT
+/* The unix sources use fseeko and ftello for 64-bit use of fseek, ftell.
+ * The MSVC version of these is, as of this writing, _fseeki64 & _ftelli64.
+ * Some cross-platform plugins use fseeko/ftello, hence this patch...
+ */
+#include <stdio.h> /* note: stdio.h must be included before defining ftello/fseeko */
+#define fseeko(a,b,c) _fseeki64(a,b,c)
+#define ftello(f) _ftelli64(f)
 
-#define NO_STD_FILE_SUPPORT /* STD_FILE or WIN32_FILE are mutually exclusive options */
-#undef sqImageFile
-#undef sqImageFileClose
-#undef sqImageFileOpen
-#undef sqImageFilePosition
-#undef sqImageFileRead
-#undef sqImageFileSeek
-#undef sqImageFileSeekEnd
-#undef sqImageFileWrite
-
-#define sqImageFile usqIntptr_t
-sqInt sqImageFileClose(sqImageFile h);
-sqImageFile sqImageFileOpen(const char *fileName, const char *mode);
-squeakFileOffsetType sqImageFilePosition(sqImageFile h);
-size_t sqImageFileRead(void *ptr, size_t sz, size_t count, sqImageFile h);
-squeakFileOffsetType sqImageFileSeek(sqImageFile h, squeakFileOffsetType pos);
-squeakFileOffsetType sqImageFileSeekEnd(sqImageFile h, squeakFileOffsetType pos);
-size_t sqImageFileWrite(const void *ptr, size_t sz, size_t count, sqImageFile h);
-#else /* when no WIN32_FILE_SUPPORT, add necessary stub for using regular Cross/plugins/FilePlugin functions */
-#include <stdlib.h>
-#include <io.h> /* _get_osfhandle */
-#define PATH_MAX _MAX_PATH
-#define fsync(filenumber) FlushFileBuffers((HANDLE)_get_osfhandle(filenumber))
-#endif /* WIN32_FILE_SUPPORT */
+/* File positions in the FilePlugin */
+typedef unsigned __int64 squeakFileOffsetType;
+#if !defined(PATH_MAX)
+# define PATH_MAX _MAX_PATH
+#endif
 
 /* pluggable primitive support */
 #if defined(_MSC_VER) || defined(__MINGW32__)
 #  undef EXPORT
-#  define EXPORT(returnType) __declspec( dllexport ) returnType
+#  define EXPORT(returnType) __declspec(dllexport) returnType
+#  undef IMPORT
+#  define IMPORT(returnType) __declspec(dllimport) returnType
 #  undef VM_EXPORT
-#  define VM_EXPORT __declspec( dllexport ) 
+#  define VM_EXPORT __declspec(dllexport) 
 #endif 
 
 
 /* missing functions */
-#ifdef _MSC_VER
+#if _MSC_VER
 /* see on msdn the list of functions available
  *  CRT Alphabetical Function Reference
  *  https://msdn.microsoft.com/en-US/library/634ca0c2.aspx */
@@ -100,8 +95,6 @@ size_t sqImageFileWrite(const void *ptr, size_t sz, size_t count, sqImageFile h)
 #else 
 error "Not Win32 or Win64!"
 #endif /* _WIN32 || _WIN64 */
-
-sqInt ioSetCursorARGB(sqInt bitsIndex, sqInt w, sqInt h, sqInt x, sqInt y);
 
 /* poll and profile thread priorities.  The stack vm uses a thread to cause the
  * VM to poll for I/O, check for delay expiry et al at regular intervals.  Both
@@ -151,7 +144,7 @@ extern const unsigned long tltiIndex;
 #	define VM_LABEL(foo) asm("\n.globl L" #foo "\nL" #foo ":")
 # endif
 #endif
-#if !defined(VM_LABEL) || COGVM
+#if !defined(VM_LABEL) || COGVM || STACKVM
 # undef VM_LABEL
 # define VM_LABEL(foo) ((void)0)
 #endif
@@ -170,3 +163,5 @@ extern const unsigned long tltiIndex;
 #else
 # error "unknown architecture, program counter field undefined"
 #endif
+
+#endif /* _SQ_PLATFORM_SPECIFIC_H */

@@ -104,6 +104,18 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 				: InitializationError;
 	}
 
+static inline void
+resetSegmentRegisters(uintptr_t byteSize, uintptr_t minWriteMaxExecAddr)
+{
+	bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.limit_scaled
+		= minWriteMaxExecAddr > 0 ? minWriteMaxExecAddr - 1 : 0;
+	bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.limit = minWriteMaxExecAddr >> 16;
+	bx_cpu.sregs[BX_SEG_REG_DS].cache.u.segment.limit_scaled =
+	bx_cpu.sregs[BX_SEG_REG_SS].cache.u.segment.limit_scaled = byteSize;
+	bx_cpu.sregs[BX_SEG_REG_DS].cache.u.segment.limit =
+	bx_cpu.sregs[BX_SEG_REG_SS].cache.u.segment.limit = byteSize >> 16;
+}
+
 #define initEipFetchPtr(cpup) ((cpup)->eipFetchPtr = theMemory)
 #define resetInstructionFetch(cpup) do { \
 		(cpup)->eipPageBias = (bx_address)0; \
@@ -111,8 +123,8 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 
 	long
 	singleStepCPUInSizeMinAddressReadWrite(void *cpu,
-									void *memory, ulong byteSize,
-									ulong minAddr, ulong minWriteMaxExecAddr)
+									void *memory, uintptr_t byteSize,
+									uintptr_t minAddr, uintptr_t minWriteMaxExecAddr)
 	{
 		BX_CPU_C *anx64 = (BX_CPU_C *)cpu;
 
@@ -128,25 +140,20 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 		}
 
 		blidx = 0;
-		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.limit_scaled
-			= minWriteMaxExecAddr > 0 ? minWriteMaxExecAddr - 1 : 0;
-		bx_cpu.sregs[BX_SEG_REG_DS].cache.u.segment.limit_scaled =
-		bx_cpu.sregs[BX_SEG_REG_SS].cache.u.segment.limit_scaled = byteSize;
-		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.limit = minWriteMaxExecAddr >> 16;
-		bx_cpu.sregs[BX_SEG_REG_DS].cache.u.segment.limit =
-		bx_cpu.sregs[BX_SEG_REG_SS].cache.u.segment.limit = byteSize >> 16;
 
+		resetSegmentRegisters(byteSize, minWriteMaxExecAddr);
 		initEipFetchPtr(anx64);
 		resetInstructionFetch(anx64);
 
 		anx64->cpu_single_step();
+		anx64->force_flags();
 
 		return blidx == 0 ? 0 : SomethingLoggedError;
 	}
 
 	long
-	runCPUInSizeMinAddressReadWrite(void *cpu, void *memory, ulong byteSize,
-									ulong minAddr, ulong minWriteMaxExecAddr)
+	runCPUInSizeMinAddressReadWrite(void *cpu, void *memory, uintptr_t byteSize,
+									uintptr_t minAddr, uintptr_t minWriteMaxExecAddr)
 	{
 		BX_CPU_C *anx64 = (BX_CPU_C *)cpu;
 
@@ -158,18 +165,13 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 		minWriteAddress = minWriteMaxExecAddr;
 
 		blidx = 0;
-		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.limit_scaled
-			= minWriteMaxExecAddr > 0 ? minWriteMaxExecAddr - 1 : 0;
-		bx_cpu.sregs[BX_SEG_REG_DS].cache.u.segment.limit_scaled =
-		bx_cpu.sregs[BX_SEG_REG_SS].cache.u.segment.limit_scaled = byteSize;
-		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.limit = minWriteMaxExecAddr >> 16;
-		bx_cpu.sregs[BX_SEG_REG_DS].cache.u.segment.limit =
-		bx_cpu.sregs[BX_SEG_REG_SS].cache.u.segment.limit = byteSize >> 16;
+		resetSegmentRegisters(byteSize, minWriteMaxExecAddr);
 		initEipFetchPtr(anx64);
 		resetInstructionFetch(anx64);
 
 		bx_pc_system.kill_bochs_request = 0;
 		anx64->cpu_loop(0 /* = "run forever" until exception or interupt */);
+		anx64->force_flags();
 		if (anx64->stop_reason != STOP_NO_REASON) {
 			anx64->gen_reg[BX_64BIT_REG_RIP].rrx = anx64->prev_rip;
 			if (theErrorAcorn == NoError)
@@ -183,7 +185,7 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 	 * Currently a dummy for Bochs.
 	 */
 	void
-	flushICacheFromTo(void *cpu, ulong saddr, ulong eaddr)
+	flushICacheFromTo(void *cpu, uintptr_t saddr, uintptr_t eaddr)
 	{
 #if BX_SUPPORT_ICACHE
 # error not yet implemented
@@ -191,8 +193,8 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 	}
 
 	long
-	disassembleForAtInSize(void *cpu, ulong laddr,
-							void *memory, ulong byteSize)
+	disassembleForAtInSize(void *cpu, uintptr_t laddr,
+							void *memory, uintptr_t byteSize)
 	{
 		BX_CPU_C *anx64 = (BX_CPU_C *)cpu;
 
@@ -251,7 +253,7 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 		return bochs_log;
 	}
 	void
-	storeIntegerRegisterStateOfinto(void *cpu, long long *registerState)
+	storeIntegerRegisterStateOfinto(void *cpu, WordType *registerState)
 	{
 		/* N.B. RAX=0,RCX=1,RDX=2,RBX=3,RSP=4,RBP=5,RSI=6,RDI=7 */
 		registerState[0]  = bx_cpu.gen_reg[BX_64BIT_REG_RAX].rrx;
@@ -260,8 +262,8 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 		registerState[3]  = bx_cpu.gen_reg[BX_64BIT_REG_RDX].rrx;
 		registerState[4]  = bx_cpu.gen_reg[BX_64BIT_REG_RSP].rrx;
 		registerState[5]  = bx_cpu.gen_reg[BX_64BIT_REG_RBP].rrx;
-		registerState[6]  = bx_cpu.gen_reg[BX_64BIT_REG_RDI].rrx;
-		registerState[7]  = bx_cpu.gen_reg[BX_64BIT_REG_RSI].rrx;
+		registerState[6]  = bx_cpu.gen_reg[BX_64BIT_REG_RSI].rrx;
+		registerState[7]  = bx_cpu.gen_reg[BX_64BIT_REG_RDI].rrx;
 		registerState[8]  = bx_cpu.gen_reg[BX_64BIT_REG_R8 ].rrx;
 		registerState[9]  = bx_cpu.gen_reg[BX_64BIT_REG_R9 ].rrx;
 		registerState[10] = bx_cpu.gen_reg[BX_64BIT_REG_R10].rrx;

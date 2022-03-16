@@ -47,6 +47,7 @@
 
 #include "sq.h" 
 #if !SPURVM
+#include "sqImageFileAccess.h"
 #include "sqMacV2Memory.h"
 #include <sys/mman.h>
 #include <errno.h>
@@ -80,8 +81,10 @@ usqInt	sqGetAvailableMemory() {
  
 static size_t pageSize, pageMask;
 
+// N.B. we declare f as void * not FILE * so that sqPlatformSpecific.h
+// does not need to include stdio.h
 usqInt 
-sqAllocateMemoryMac(usqInt desiredHeapSize, sqInt minHeapSize, FILE * f,usqInt headersize) {
+sqAllocateMemoryMac(usqInt desiredHeapSize, sqInt minHeapSize, void *f, usqInt headersize) {
 	 void  *possibleLocation,*startOfAnonymousMemory;
 	 off_t fileSize;
 	 struct stat sb;
@@ -176,8 +179,10 @@ sqMacMemoryFree() {
 }
 
 #ifdef BUILD_FOR_OSX
+// N.B. we declare f as void * not FILE * so that sqPlatformSpecific.h
+// does not need to include stdio.h
 size_t 
-sqImageFileReadEntireImage(void *ptr, size_t elementSize, size_t count, sqImageFile f) {
+sqImageFileReadEntireImage(void *ptr, size_t elementSize, size_t count, void *f) {
 	if (gSqueakUseFileMappedMMAP) 
 		return count;
 	return sqImageFileRead(ptr, elementSize, count, f); 

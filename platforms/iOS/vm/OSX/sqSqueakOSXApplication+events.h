@@ -39,18 +39,20 @@
 #import "sqSqueakMainApplication+events.h"
 #import "sqSqueakOSXView.h"
 
-@class NSWIndow;
+@class NSWindow;
 @interface sqSqueakOSXApplication (events) 
 
 - (void) recordCharEvent:(NSString *) unicodeString fromView: (NSView <sqSqueakOSXView>*) mainView;
 - (void) recordKeyDownEvent:(NSEvent *)theEvent fromView: (NSView <sqSqueakOSXView> *) aView ;
 - (void) recordKeyUpEvent:(NSEvent *)theEvent fromView: (NSView <sqSqueakOSXView> *) aView ;
 - (void) recordMouseEvent: (NSEvent*) theEvent fromView: (NSView <sqSqueakOSXView> *) aView;
+- (void) recordMouseButtonEvent: (NSEvent*) theEvent fromView: (NSView <sqSqueakOSXView> *) aView;
 - (void) recordWheelEvent: (NSEvent*) theEvent  fromView: (NSView <sqSqueakOSXView> *) aView;
 - (void) pushEventToQueue: (sqInputEvent *) evt;
 - (void) fakeMouseWheelKeyboardEventsKeyCode: (int) keyCode ascii: (int) ascii windowIndex: (int) windowIndex;
 - (int) mapMouseAndModifierStateToSqueakBits: (NSEvent *) event;
-- (int) translateCocoaModifiersToSqueakModifiers: (NSUInteger) modifiers;
+- (int) translateCocoaModifiersToSqueak: (NSUInteger) modifiers;
 - (void) recordDragEvent: (int) dragType numberOfFiles: (int) numFiles where: (NSPoint) local_point windowIndex: (sqInt) windowIndex view:(NSView *)aView;
-- (void) recordWindowEvent: (int) type window: (NSWIndow *) window;
+- (void) recordURLEvent: (int) dragType numberOfFiles: (int) numFiles;
+- (void) recordWindowEvent: (int) type window: (NSWindow *) window;
 @end

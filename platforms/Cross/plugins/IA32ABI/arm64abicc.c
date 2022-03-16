@@ -3,7 +3,8 @@
  *
  * Support for Call-outs and Call-backs from the Plugin on ARM.
  *  Written by Eliot Miranda & Ryan Macnak, 07/15.
- *  Updated for aarch64 by Ken Dickey
+ *  Updated for aarch64 by Ken Dickey 02/19
+ *  Updated for Apple Silicon 07/21
  */
 
 /* null if compiled on other than arm64/aarch64, to get around gnu make bugs or
@@ -11,18 +12,23 @@
  */
 #if defined(__ARM_ARCH_ISA_A64) || defined(__arm64__) || defined(__aarch64__) || defined(ARM64)
 
-#include <unistd.h> /* for getpagesize/sysconf */
-#include <stdlib.h> /* for valloc */
-#include <sys/mman.h> /* for mprotect */
+#include <unistd.h> // for getpagesize/sysconf
+#include <stdlib.h> // for valloc
+#include <sys/mman.h> // for mprotect
+#if __APPLE__ && __MACH__ /* Mac OS X */
+#  if defined(MAP_JIT) // for pthread_jit_write_protect_np
+#	include <pthread.h>
+#  endif
+#  include <libkern/OSCacheControl.h>
+#endif
 
-#include <string.h> /* for memcpy et al */
+#include <string.h> // for memcpy et al
 #include <setjmp.h>
-#include <stdio.h> /* for fprintf(stderr,...) */
+#include <stdio.h> // for fprintf(stderr,...)
 
-#include "sqMemoryAccess.h"
+#include "objAccess.h"
 #include "vmCallback.h"
 #include "sqAssert.h"
-#include "sqVirtualMachine.h"
 #include "ia32abi.h"
 
 #if !defined(min)
@@ -42,53 +48,17 @@ struct VirtualMachine* interpreterProxy;
 # define alloca _alloca
 #endif
 
-#define RoundUpPowerOfTwo(value, modulus)                                      \
+#define RoundUpPowerOfTwo(value, modulus) \
   (((value) + (modulus) - 1) & ~((modulus) - 1))
 
-#define IsAlignedPowerOfTwo(value, modulus)                                    \
+#define IsAlignedPowerOfTwo(value, modulus) \
   (((value) & ((modulus) - 1)) == 0)
-
-#define objIsAlien(anOop)                                                      \
-    (interpreterProxy->includesBehaviorThatOf(                                 \
-      interpreterProxy->fetchClassOf(anOop),                                   \
-      interpreterProxy->classAlien()))
-
-#define objIsUnsafeAlien(anOop)                                                \
-    (interpreterProxy->includesBehaviorThatOf(                                 \
-      interpreterProxy->fetchClassOf(anOop),                                   \
-      interpreterProxy->classUnsafeAlien()))
-
-#define sizeField(alien)                                                       \
-    (*(long*)pointerForOop((sqLong)(alien) + BaseHeaderSize))
-
-#define dataPtr(alien)                                                         \
-    pointerForOop((sqLong)(alien) + BaseHeaderSize + BytesPerOop)
-
-#define isIndirect(alien)                                                      \
-    (sizeField(alien) < 0)
-
-#define startOfParameterData(alien)                                            \
-    (isIndirect(alien)  ? *(void **)dataPtr(alien)                             \
-                        :  (void  *)dataPtr(alien))
-
-#define isIndirectSize(size)                                                   \
-    ((size) < 0)
-
-#define startOfDataWithSize(alien, size)                                       \
-    (isIndirectSize(size) ? *(void **)dataPtr(alien)	                       \
-                          :  (void  *)dataPtr(alien))
-
-#define isSmallInt(oop)                                                        \
-    ((oop)&1)
-
-#define intVal(oop)                                                            \
-    (((long)(oop))>>1)
-
 
 /*
  * Call a foreign function to set x8 structure result address return register
  */
-extern void callAndReturnWithStructAddr(sqLong structAddr, sqLong procAddr, sqLong regValuesArrayAddr)
+void
+callAndReturnWithStructAddr(sqLong structAddr, sqLong procAddr, sqLong regValuesArrayAddr)
 { /* Any float regs already loaded
      Place alloca'd struct address in x8 for results.
      Spread int args into int registers.
@@ -107,24 +77,16 @@ extern void callAndReturnWithStructAddr(sqLong structAddr, sqLong procAddr, sqLo
 }
 
 /*
- * Call a foreign function to get structure value from X1 
- * (x0's value already returned as result of ffi call)
- */
-extern sqLong returnX1value()
-{
-  asm volatile ("mov x0, x1");
-}
-
-
-/*
  * Call a foreign function that answers an integral result in r0 according to
  * ARM EABI rules.
  */
-sqLong callIA32IntegralReturn(SIGNATURE) {
-  long (*f)(long r0, long r1, long r2, long r3,
-            double d0, double d1, double d2, double d3,
-            double d4, double d5, double d6, double d7);
-  long r;
+sqLong
+callIA32IntegralReturn(SIGNATURE) {
+  sqInt (*f)(long r0, long r1, long r2, long r3,
+             long r4, long r5, long r6, long r7,
+             double d0, double d1, double d2, double d3,
+             double d4, double d5, double d6, double d7);
+  sqInt r;
 #include "dabusinessARM.h"
 }
 
@@ -132,8 +94,10 @@ sqLong callIA32IntegralReturn(SIGNATURE) {
  * Call a foreign function that answers a single-precision floating-point
  * result in VFP's s0 according to ARM EABI rules.
  */
-sqLong callIA32FloatReturn(SIGNATURE) {
+sqLong
+callIA32FloatReturn(SIGNATURE) {
   float (*f)(long r0, long r1, long r2, long r3,
+             long r4, long r5, long r6, long r7,
              double d0, double d1, double d2, double d3,
              double d4, double d5, double d6, double d7);
   float r;
@@ -147,6 +111,7 @@ sqLong callIA32FloatReturn(SIGNATURE) {
 sqInt
 callIA32DoubleReturn(SIGNATURE) {
   double (*f)(long r0, long r1, long r2, long r3,
+              long r4, long r5, long r6, long r7,
               double d0, double d1, double d2, double d3,
               double d4, double d5, double d6, double d7);
   double r;
@@ -164,8 +129,8 @@ static VMCallbackContext *mostRecentCallbackContext = 0;
 VMCallbackContext *
 getMostRecentCallbackContext() { return mostRecentCallbackContext; }
 
-#define getRMCC(t) mostRecentCallbackContext
-#define setRMCC(t) (mostRecentCallbackContext = (void *)(t))
+#define getMRCC(t) mostRecentCallbackContext
+#define setMRCC(t) (mostRecentCallbackContext = (void *)(t))
 
 /*
  * Entry-point for call-back thunks.  Args are register args, thunk address
@@ -191,10 +156,8 @@ thunkEntry(long x0, long x1, long x2, long x3,
 	   void *thunkpPlus16, sqIntptr_t *stackp)
 {
   VMCallbackContext vmcc;  /* See, e.g. spurstack64src/vm/vmCallback.h */
-  VMCallbackContext *previousCallbackContext;
-  int flags;
-  int returnType;
-  long   regArgs[ NUM_REG_ARGS];
+  int flags, returnType;
+  sqIntptr_t regArgs[NUM_REG_ARGS];
   double dregArgs[NUM_DREG_ARGS];
 
   regArgs[0] = x0;
@@ -221,20 +184,20 @@ thunkEntry(long x0, long x1, long x2, long x3,
   }
 
   if ((returnType = setjmp(vmcc.trampoline)) == 0) {
-    previousCallbackContext = getRMCC();
-    setRMCC(&vmcc);
+    vmcc.savedMostRecentCallbackContext = getMRCC();
+    setMRCC(&vmcc);
     vmcc.thunkp = (void *)((char *)thunkpPlus16 - 16);
     vmcc.stackp = stackp;
     vmcc.intregargsp = regArgs;
     vmcc.floatregargsp = dregArgs;
     interpreterProxy->sendInvokeCallbackContext(&vmcc);
     fprintf(stderr,"Warning; callback failed to invoke\n");
-    setRMCC(previousCallbackContext);
+    setMRCC(vmcc.savedMostRecentCallbackContext);
     interpreterProxy->disownVM(flags);
     return -1;
   }
 
-  setRMCC(previousCallbackContext);
+  setMRCC(vmcc.savedMostRecentCallbackContext);
   interpreterProxy->disownVM(flags);
 
   switch (returnType) {
@@ -243,9 +206,7 @@ thunkEntry(long x0, long x1, long x2, long x3,
   case retword64:
     return *(long *)&vmcc.rvs.valword;
   case retdouble:
-/*    memcpy(d0, vmcc.rvs.valflt64, sizeof(double)); */
-    d0 = vmcc.rvs.valflt64;
-    return d0;
+    return vmcc.rvs.valflt64;
   case retstruct: /*@@ FIXME:: x8 @@*/
     memcpy((void *)x0, vmcc.rvs.valstruct.addr, vmcc.rvs.valstruct.size);
     return x0;
@@ -256,7 +217,7 @@ thunkEntry(long x0, long x1, long x2, long x3,
 }
 
 /*
- * Thunk allocation support.  Since thunks must be exectuable and some OSs
+ * Thunk allocation support.  Since thunks must be executable and some OSs
  * may not provide default execute permission on memory returned by malloc
  * we must provide memory that is guaranteed to be executable.  The abstraction
  * is to answer an Alien that references an executable piece of memory that
@@ -266,8 +227,11 @@ thunkEntry(long x0, long x1, long x2, long x3,
  * page amongst thunks so there is no need to free these pages, since the image
  * will recycle parts of the page for reclaimed thunks.
  */
-#if defined(_MSC_VER) || defined(__MINGW32__)
-static unsigned long pagesize = 0;
+static usqInt pagesize = 0;
+
+#if defined(MAP_JIT)
+void **allocatedPages = 0;
+int allocatedPagesSize = 0;
 #endif
 
 void *
@@ -276,9 +240,9 @@ allocateExecutablePage(sqIntptr_t *size)
 	void *mem;
 
 #if defined(_MSC_VER) || defined(__MINGW32__)
-#if !defined(MEM_TOP_DOWN)
-# define MEM_TOP_DOWN 0x100000
-#endif
+# if !defined(MEM_TOP_DOWN)
+#	define MEM_TOP_DOWN 0x100000
+# endif
 	if (!pagesize) {
 		SYSTEM_INFO	sysinf;
 
@@ -293,11 +257,52 @@ allocateExecutablePage(sqIntptr_t *size)
 						PAGE_EXECUTE_READWRITE);
 	if (mem)
 		*size = pagesize;
-#else
-# if !defined(_POSIX_C_SOURCE) || _POSIX_C_SOURCE < 200112L
-	long pagesize = getpagesize();
+	return mem;
+
+#elif defined(MAP_JIT)
+# if __OpenBSD__
+#	define MAP_FLAGS	(MAP_ANON | MAP_PRIVATE | MAP_STACK)
 # else
-	long pagesize = sysconf(_SC_PAGESIZE);
+#	define MAP_FLAGS	(MAP_ANON | MAP_PRIVATE)
+# endif
+
+	void **newAllocatedPages;
+	if (!pagesize)
+# if !defined(_POSIX_C_SOURCE) || _POSIX_C_SOURCE < 200112L
+		pagesize = getpagesize();
+# else
+		pagesize = sysconf(_SC_PAGESIZE);
+# endif
+
+	mem = mmap(	0, pagesize,
+				PROT_READ | PROT_WRITE | PROT_EXEC,
+				MAP_FLAGS | MAP_JIT, -1, 0);
+	if (mem == MAP_FAILED) {
+		perror("Could not allocateExecutablePage");
+		return 0;
+	}
+	*size = pagesize;
+
+# if defined(MAP_JIT)
+	newAllocatedPages = realloc(allocatedPages,
+								 ++allocatedPagesSize * sizeof(void *));
+	if (!newAllocatedPages) {
+		--allocatedPagesSize;
+		munmap(mem, pagesize);
+		perror("Could not realloc allocatedPages");
+		return 0;
+	}
+	allocatedPages = newAllocatedPages;
+	newAllocatedPages[allocatedPagesSize - 1] = mem;
+# endif
+	return mem;
+#else
+
+	if (!pagesize)
+# if !defined(_POSIX_C_SOURCE) || _POSIX_C_SOURCE < 200112L
+		pagesize = getpagesize();
+# else
+		pagesize = sysconf(_SC_PAGESIZE);
 # endif
 
 	if (!(mem = valloc(pagesize)))
@@ -309,7 +314,36 @@ allocateExecutablePage(sqIntptr_t *size)
 		return 0;
 	}
 	*size = pagesize;
-#endif
 	return mem;
+#endif
 }
+
+#if defined(MAP_JIT)
+sqInt
+ifIsWithinExecutablePageMakePageWritable(char *address)
+{
+	void *page = (void *)((uintptr_t)address & ~(pagesize - 1));
+	int i;
+
+	if (!pagesize)
+		return 0;
+
+	for (i = 0; i < allocatedPagesSize; i++)
+		if (allocatedPages[i] == page) {
+			pthread_jit_write_protect_np(0);
+			return 1;
+		}
+	return 0;
+}
+
+void
+makePageExecutableAgain(char *address)
+{
+	pthread_jit_write_protect_np(1);
+#if __APPLE__ && __MACH__ /* Mac OS X */
+	sys_dcache_flush(address, 64);
+	sys_icache_invalidate(address, 64);
+#endif
+}
+#endif // defined(MAP_JIT)
 #endif /* defined(__ARM_ARCH_ISA_A64) || defined(__arm64__) || ... */

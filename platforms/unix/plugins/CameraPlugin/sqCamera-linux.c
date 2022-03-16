@@ -1,22 +1,22 @@
 /* sqCamera-linux.c -- plugin for hardware camera on Linux
  *
  * Author: Derek O'Connell <doc@doconnel.f9.co.uk>
- * 
+ *
  *   Copyright (C) 2010 by Derek O'Connel
  *   All rights reserved.
- *   
+ *
  *   This file is part of Unix Squeak.
- * 
+ *
  *   Permission is hereby granted, free of charge, to any person obtaining a
  *   copy of this software and associated documentation files (the "Software"),
  *   to deal in the Software without restriction, including without limitation
  *   the rights to use, copy, modify, merge, publish, distribute, sublicense,
  *   and/or sell copies of the Software, and to permit persons to whom the
  *   Software is furnished to do so, subject to the following conditions:
- * 
+ *
  *   The above copyright notice and this permission notice shall be included in
  *   all copies or substantial portions of the Software.
- * 
+ *
  *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
@@ -29,6 +29,7 @@
  */
 
 #include "sqVirtualMachine.h"
+#include "sqaio.h"
 #include "CameraPlugin.h"
 
 #include <stdio.h>
@@ -37,10 +38,11 @@
 #include <string.h>
 #include <assert.h>
 
-#include <getopt.h> 
+#include <getopt.h>
 
 #include <fcntl.h>
 #include <unistd.h>
+#include <poll.h>
 #include <errno.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -51,46 +53,34 @@
 
 #include <asm/types.h>	  /* for videodev2.h */
 
+/* See for example
+ * https://www.kernel.org/doc/html/v5.4/media/uapi/v4l/video.html
+ */
 #include <linux/videodev2.h>
 
 
 #define true 1
 #define false 0
 
+extern struct VirtualMachine *interpreterProxy;
 
-/* >>>>> USE_TEST_PATTERN >>>>
-/  
-/ Helps check Squeak is capturing and displaying the 
-/ latest frame. See CameraGetFrame() which will
-/ return single colour frames in the sequence RGB.
-/ 
-/ Remove the "x" to enable...
-*/
-
-#define USE_TEST_PATTERNx
-
-#ifdef USE_TEST_PATTERN
-  static int tstColourIdx = 0;
-#endif
-
-
-/* >>>>> LIBV4L2 USAGE >>>>> 
-/ 
+/* >>>>> LIBV4L2 USAGE >>>>>
+/
 / Attempting to get best-of-all-worlds so
 / explicitly loading libv4l2 if available
 / to avoid build-time dependency.
-/ 
+/
 */
 
-void *hLibv4l2 = NULL;
+static void *hLibv4l2 = NULL;
 
-int (*vd_open)(const char *, int, ...);
-int (*vd_close)(int);
-int (*vd_dup)(int);
-int (*vd_ioctl)(int, unsigned long int, ...);
-ssize_t (*vd_read)(int, void *, size_t);
-void * (*vd_mmap)(void *, size_t, int, int, int, int64_t);
-int (*vd_munmap)(void *, size_t);
+static int (*vd_open)(const char *, int, ...);
+static int (*vd_close)(int);
+static int (*vd_dup)(int);
+static int (*vd_ioctl)(int, unsigned long int, ...);
+static ssize_t (*vd_read)(int, void *, size_t);
+static void * (*vd_mmap)(void *, size_t, int, int, int, int64_t);
+static int (*vd_munmap)(void *, size_t);
 
 
 /* >>>>>>> MULTI-CAMERA SUPPORT >>>>> */
@@ -108,31 +98,30 @@ struct buffer {
 	size_t  length;
 };
 
+#define CAMERA_COUNT 4
+
 struct camInfo_t {
-	unsigned int isOpen;
-	unsigned int devNum;
-	int	fileDesc;
-	unsigned int bmWidth, bmHeight;
-	
+	int	fileDesc, pixelformat, semaphoreIndex;
+	unsigned int isOpen, devNum, bmWidth, bmHeight, nBuffers;
+
 	io_method ioMethod;
-	int pixelformat;
 	struct buffer *buffers;
-	unsigned int nBuffers;
 
 	struct v4l2_buffer vBuf;
 	void *inBuffer;
 	unsigned long inBufferSize;
-	
+
 	void *sqBuffer;
 	unsigned long sqBufferBytes;
 	unsigned long sqPixels;
 
 	unsigned long frameCount;
-} camInfo[10];
+	struct v4l2_capability cap;
+} camInfo[CAMERA_COUNT];
 
 typedef struct camInfo_t *camPtr;
 
-static char * videoDevName0 = "/dev/video0";
+static char *videoDevName0 = "/dev/video0";
 
 struct v4l2_buffer tmpVBuf;
 
@@ -150,11 +139,20 @@ void __attribute__ ((destructor)) libDes(void);
 
 /* >>>>>>>>>>> UTILITY */
 
-static inline int   camIsOpen(camPtr cam) { return ( cam->isOpen); }
-static inline int camIsClosed(camPtr cam) { return (!cam->isOpen); }
+static camPtr
+camera(int camNum)
+{
+	return
+		camNum >= 1 && camNum <= CAMERA_COUNT
+		? camInfo + camNum - 1
+		: 0;
+}
+
+static inline int   camIsOpen(camPtr cam) { return cam && cam->isOpen; }
+static inline int camIsClosed(camPtr cam) { return !cam || !cam->isOpen; }
 
 
-static void 
+static void
 vBufReset(struct v4l2_buffer *buf)
 {
 	CLEAR (*buf);
@@ -165,7 +163,7 @@ vBufReset(struct v4l2_buffer *buf)
 
 /* >>>>>>>>>>> LIB CONSTRUCTOR/DESTRUCTOR */
 
-void __attribute__ ((constructor)) 
+void __attribute__ ((constructor))
 libCon(void)
 {
 	int devNum;
@@ -180,7 +178,7 @@ libCon(void)
 	vd_munmap = munmap;
 
 	/* Use libv4l2: use if available... */
-	
+
 	hLibv4l2 = dlopen("libv4l2.so.0", RTLD_LAZY);
 	if (hLibv4l2) {
 		vd_open = dlsym(hLibv4l2, "v4l2_open");
@@ -190,11 +188,11 @@ libCon(void)
 		vd_read = dlsym(hLibv4l2, "v4l2_read");
 		vd_mmap = dlsym(hLibv4l2, "v4l2_mmap");
 		vd_munmap = dlsym(hLibv4l2, "v4l2_munmap");
-	} 
+	}
 
 	/* Init camInfo array... */
-	
-	for (devNum = 0; devNum < 10; ++devNum) {
+
+	for (devNum = 0; devNum < CAMERA_COUNT; ++devNum) {
 	  cam = &camInfo[devNum];
 
 	  CLEAR(*cam);
@@ -204,6 +202,7 @@ libCon(void)
 	  cam->ioMethod = IO_METHOD_MMAP;
 	  cam->nBuffers = 2;
 	  cam->frameCount = 0;
+	  cam->semaphoreIndex = -1;
 	  vBufReset(&(cam->vBuf));
 	  /* Pixel format auto selected for ease/speed of conversion */
 
@@ -224,19 +223,19 @@ libCon(void)
 }
 
 
-void __attribute__ ((destructor)) 
+void __attribute__ ((destructor))
 libDes(void)
 {
-  int camNum;
-  for (camNum = 1; camNum < 11; ++camNum)
+  sqInt camNum;
+  for (camNum = 1; camNum < CAMERA_COUNT; ++camNum)
 	if (camIsOpen(&camInfo[camNum-1]))
-	  CameraClose((sqInt)camNum);
-  
-/* 
+	  CameraClose(camNum);
+
+/*
 / Closing libv4l2 causes a crash, so it must
 / already be closed by this point.
 */
-/*  
+/*
   if (hLibv4l2) dlclose(hLibv4l2);
 */
 }
@@ -251,7 +250,7 @@ libDes(void)
 /
 */
 
-static inline uint8_t 
+static inline uint8_t
 clipPixel(const int pixel) {
     int result;
     result = ((pixel < 0) ? 0 : pixel);
@@ -259,7 +258,7 @@ clipPixel(const int pixel) {
 }
 
 
-static inline void 
+static inline void
 convertPixelYUV444toARGB32(
 			   const uint8_t y,
                const uint8_t u,
@@ -278,94 +277,86 @@ convertPixelYUV444toARGB32(
 }
 
 
-static inline void 
+static inline void
 convertImageYUYVToARGB32 (camPtr cam)
 {
 	size_t i;
-
-	const uint8_t* src = cam->inBuffer;
-	uint8_t* dst = cam->sqBuffer;
-	uint32_t *pdst;
+	const uint8_t *src = cam->inBuffer;
+	uint8_t *dst = cam->sqBuffer;
 	uint32_t pixelCount = cam->sqPixels;
 
-	uint8_t u, y1, v, y2;
-
 	for (i = 0; i < pixelCount; i += 2) {
-		y1 = *src++;
-		u  = *src++;
-		y2 = *src++;
-		v  = *src++;
+		uint8_t y1 = src[0];
+		uint8_t u  = src[1];
+		uint8_t y2 = src[2];
+		uint8_t v  = src[3];
+
+		src += 4;
 
 		convertPixelYUV444toARGB32(y1, u, v, dst);
-		pdst = (unsigned long *)dst;
 		dst += 4;
 
 		if (y2 == y1)
-		  *(unsigned long *)dst = *pdst;
+		  *dst = *(uint32_t *)(dst - 4);
 		else
 		  convertPixelYUV444toARGB32(y2, u, v, dst);
-		
+
 		dst += 4;
 	}
 }
 /* <<<<<<<<< YUV CONVERSION <<<<<<<< */
 
 
-static void 
+static void
 convertImageRGB24toARGB32 (camPtr cam)
 {
-	uint8_t 	  *src = cam->inBuffer;
+	uint8_t  *src = cam->inBuffer;
 	uint32_t *dst = cam->sqBuffer;
 	uint32_t pixelCount = cam->sqPixels;
-	uint32_t pixel;
-	size_t i;
 
-	if (0 == dst) return;
+	if (!dst)
+		return;
 
-	for ( i = 0; i < pixelCount; i++) {
-		pixel = 0xFF000000 | (*src++ << 16);
-		pixel = pixel | (*src++ << 8);
-		*dst++  = pixel | *src++;
+	while (--pixelCount >= 0) {
+		*dst++ = 0xFF000000 | (src[0] << 16) | (src[1] << 8) | src[2];
+		src += 3;
 	}
 }
 
 
-static void 
+static void
 convertImageRGB444toARGB32 (camPtr cam)
 {
-	uint8_t 	  *src = cam->inBuffer;
+	uint8_t  *src = cam->inBuffer;
 	uint32_t *dst = cam->sqBuffer;
 	uint32_t pixelCount = cam->sqPixels;
-	uint32_t r,g,b,pixel;
-	size_t i;
+	uint32_t r,g,b;
 
-	if (0 == dst) return;
+	if (!dst)
+		return;
 
 	/* Byte0: (g)ggg(b)bbb, Byte1: xxxx(r)rrr */
 
-	for ( i = 0; i < pixelCount; i++) {
+	while (--pixelCount >= 0) {
 	  r = *src << 4;
 	  g = *src++ & 0xF0;
 	  b = (*src++ & 0x0F) << 4;
-	  pixel = 0xFF000000;
-	  pixel |= (r << 16);
-	  pixel |= (g <<  8);
-	  pixel |= b;
-	  *dst++ = pixel;
+	  *dst++ = 0xFF000000 | (r << 16) | (g <<  8) | b;
 	}
 }
 
 
-static void 
+static void
 convertImageRGB565toARGB32 (camPtr cam)
 {
-	uint8_t 	  *src = cam->inBuffer;
+	uint8_t  *src = cam->inBuffer;
 	uint32_t *dst = cam->sqBuffer;
 	uint32_t pixelCount = cam->sqPixels;
 	uint32_t r,g,b,pixel;
 	size_t i;
 
-	if (0 == dst) return;
+	if (!dst)
+		return;
 
 	/* Byte0: ggg(r)rrrr, Byte1: (b)bbbb(g)gg */
 
@@ -383,11 +374,11 @@ convertImageRGB565toARGB32 (camPtr cam)
 }
 
 
-void
+static inline void
 convertImage (camPtr cam)
 {
 	/* func pts to be used at later date */
-  
+
 	if (cam->pixelformat == V4L2_PIX_FMT_YUYV) {
 		convertImageYUYVToARGB32 (cam);
 		return;
@@ -397,12 +388,12 @@ convertImage (camPtr cam)
 		convertImageRGB565toARGB32 (cam);
 		return;
 	}
-	
+
 	if (cam->pixelformat == V4L2_PIX_FMT_RGB444) {
 		convertImageRGB444toARGB32 (cam);
 		return;
 	}
-	
+
 	if (cam->pixelformat == V4L2_PIX_FMT_RGB24) {
 		convertImageRGB24toARGB32 (cam);
 		return;
@@ -412,13 +403,13 @@ convertImage (camPtr cam)
 
 /* >>>>>>>>>>> V4L ACCESS */
 
-static int 
-xioctl (camPtr cam, int request, void * arg) 
+static int
+xioctl (camPtr cam, int request, void * arg)
 {
 	int r;
 	do r = vd_ioctl (cam->fileDesc, request, arg);
 	  while (-1 == r && EINTR == errno);
-	return (0 == r);
+	return 0 == r;
 }
 
 
@@ -436,40 +427,52 @@ dequeueBuffer(camPtr cam, struct v4l2_buffer *bufPtr)
 }
 
 
-static inline int 
-read_frame (camPtr cam) 
+/* See for example
+ * https://www.kernel.org/doc/html/v5.4/media/uapi/v4l/io.html
+ */
+static inline int
+read_frame (camPtr cam)
 {
 	struct v4l2_buffer *bufPtr = &(cam->vBuf);
-	
+
 	cam->frameCount += 1;
-	
+
 	vBufReset(bufPtr);
-	
+
+	FPRINTF((stderr, "read_frame %p\n", cam));
 	if (!dequeueBuffer(cam, bufPtr)) {
-		switch (errno) {
-			case EAGAIN:
-			case EIO:
-				return false;
-			default:
-				return false;
-		}
+		FPRINTF((stderr, "dequeueBuffer %p %p FAILED!!\n", cam, bufPtr));
+		return false;
 	}
-/* Not convinced this check is needed...
-	if (bufPtr->index < cam->nBuffers)
-*/
+
 	/* Quickly copy incoming frame and requeue immediately */
 	memcpy(cam->inBuffer, cam->buffers[bufPtr->index].start, cam->inBufferSize);
 	queueBuffer(cam, bufPtr);
+	FPRINTF((stderr, "read_frame %p done!\n", cam));
 	/* Conversion not triggered here, see comment on CameraGetFrame() */
-
 	return true;
 }
 
 
-static 
-int 
-getFrame(camPtr cam) 
+#define USE_POLL 1
+static int
+cameraReadable(camPtr cam)
 {
+#if USE_POLL
+	struct pollfd fd;
+
+	fd.fd = cam->fileDesc;
+	fd.events = POLLIN;
+	fd.revents = 0;
+
+# ifdef AIO_DEBUG
+	if (poll(&fd, 1, 0) < 0)
+		perror("camera readable: poll(&fd, 1, 0)");
+# else
+	poll(&fd, 1, 0);
+# endif
+	return fd.revents & POLLIN;
+#else
 	int fd = cam->fileDesc;
 	unsigned int retry;
 	fd_set fds;
@@ -486,44 +489,46 @@ getFrame(camPtr cam)
 		tv.tv_usec = 20000;
 
 		errno = 0;
-		if (-1 == (r = select (fd + 1, &fds, NULL, NULL, &tv))) {
+		if (-1 == (r = select(fd + 1, &fds, NULL, NULL, &tv))) {
 			/* try again on EINTR */
 			if ((EINTR == errno) | (EAGAIN == errno))
 				continue;
 			return false;
 		}
 
-		if (0 == r)
-		  return false;
-		
-		if (FD_ISSET(fd, &fds))
-		  return read_frame (cam);
-
-		return false;
+		return r && FD_ISSET(fd, &fds);
 	}
-	
+#endif
 	return false;
 }
 
+static inline int
+getFrame(camPtr cam)
+{
+	return cameraReadable(cam)
+		? read_frame (cam)
+		: false;
+}
 
-static int 
-stream_off (camPtr cam) 
+
+static int
+stream_off (camPtr cam)
 {
 	enum v4l2_buf_type streamType = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	return xioctl (cam, VIDIOC_STREAMOFF, &streamType);
 }
 
 
-static int 
-stream_on (camPtr cam) 
+static int
+stream_on (camPtr cam)
 {
 	enum v4l2_buf_type streamType = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	return xioctl (cam, VIDIOC_STREAMON, &streamType);
 }
 
 
-static int 
-uninit_device (camPtr cam) 
+static int
+uninit_device (camPtr cam)
 {
 	size_t i;
 
@@ -534,35 +539,37 @@ uninit_device (camPtr cam)
 
 	free (cam->buffers);
 	free (cam->inBuffer);
-	
+
 	return true;
 }
 
 
-static int 
-queueAllBuffers (camPtr cam) 
+static int
+queueAllBuffers (camPtr cam)
 {
 	struct v4l2_buffer *bufPtr = &(cam->vBuf);
-	
+
 	vBufReset(bufPtr);
 	for (bufPtr->index = 0; bufPtr->index < cam->nBuffers; (bufPtr->index)++)
-		if (!queueBuffer(cam, bufPtr)) return false;
+		if (!queueBuffer(cam, bufPtr))
+			return false;
 	return true;
 }
 
 
-static int 
-init_mmap (camPtr cam) 
+static int
+init_mmap (camPtr cam)
 {
 	struct v4l2_buffer *bufPtr = &tmpVBuf;
 	struct v4l2_requestbuffers req;
-	
+
 	CLEAR (req);
 	req.count	= cam->nBuffers;
 	req.type	= V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	req.memory	= V4L2_MEMORY_MMAP;
 
-	if (!xioctl(cam, VIDIOC_REQBUFS, &req)) return false;
+	if (!xioctl(cam, VIDIOC_REQBUFS, &req))
+		return false;
 /* Left in for debugging >>>
 	{
 		if (EINVAL == errno) {
@@ -573,8 +580,9 @@ init_mmap (camPtr cam)
 	}
 <<< */
 /* what? this is set above..
-	if (req.count < cam->nBuffers) return false;
-	if (cam->nBuffers < req.count) 
+	if (req.count < cam->nBuffers)
+		return false;
+	if (cam->nBuffers < req.count)
 		printf("Excess Buffers: %i\n", req.count);
 */
 	if (!(cam->buffers = calloc (req.count, sizeof (struct buffer))))
@@ -582,12 +590,13 @@ init_mmap (camPtr cam)
 
     /* we have at least as many buffers as requested; save that actual number for uninit_map later */
     cam->nBuffers = req.count;
-    
+
 	vBufReset(bufPtr);
 	for (bufPtr->index = 0; bufPtr->index < /* req.count */ cam->nBuffers; bufPtr->index++) {
 
-		if (!xioctl(cam, VIDIOC_QUERYBUF, bufPtr)) return false;
-		
+		if (!xioctl(cam, VIDIOC_QUERYBUF, bufPtr))
+			return false;
+
 		cam->buffers[bufPtr->index].length = bufPtr->length;
 		cam->buffers[bufPtr->index].start  = vd_mmap (
 						  NULL /* start anywhere */,
@@ -597,13 +606,17 @@ init_mmap (camPtr cam)
 						  cam->fileDesc,
 						  bufPtr->m.offset);
 
-		if (MAP_FAILED == cam->buffers[bufPtr->index].start) return false;
+		if (MAP_FAILED == cam->buffers[bufPtr->index].start)
+			return false;
 	}
 
 	return true;
 }
 
 
+/* See for example
+ * https://www.kernel.org/doc/html/v5.4/media/uapi/v4l/format.html
+ */
 static int
 set_format (camPtr cam, struct v4l2_format *fmt, int pixelformat, int w, int h)
 {
@@ -612,42 +625,35 @@ set_format (camPtr cam, struct v4l2_format *fmt, int pixelformat, int w, int h)
 	fmt->fmt.pix.height	= h;
 	fmt->fmt.pix.pixelformat = pixelformat;
 	fmt->fmt.pix.field	= V4L2_FIELD_NONE;
-	if (!xioctl (cam, VIDIOC_S_FMT, fmt)) return false;
+	if (!xioctl (cam, VIDIOC_S_FMT, fmt))
+		return false;
 
 	/* Note VIDIOC_S_FMT may change width and height. */
-	if ((w != fmt->fmt.pix.width) | (h != fmt->fmt.pix.height)
-			| (fmt->fmt.pix.pixelformat != pixelformat))
+	if (w != fmt->fmt.pix.width
+	 || h != fmt->fmt.pix.height
+	 || fmt->fmt.pix.pixelformat != pixelformat)
 		return false;
 
 	cam->pixelformat = pixelformat;
-	
+
 	return true;
 }
 
 
-static int 
-init_device (camPtr cam, int w, int h) 
+static int
+init_device (camPtr cam, int w, int h)
 {
-	struct v4l2_capability cap;
 	struct v4l2_cropcap cropcap;
-	struct v4l2_crop crop;
 	struct v4l2_format fmt;
 	int bpp;
 	unsigned int min;
 
-	if (!xioctl (cam, VIDIOC_QUERYCAP, &cap)) return false;
-/* left in for debugging >>>
-	{
-		if (EINVAL == errno) {
-			return -1;
-		} else {
-			return -1;
-		}
-	}
-<<< */
+	if (!xioctl (cam, VIDIOC_QUERYCAP, &cam->cap))
+		return false;
 
-	if (!(cap.capabilities & V4L2_CAP_VIDEO_CAPTURE)) return false;
-	if (!(cap.capabilities & V4L2_CAP_STREAMING)) return false;
+	if (!(cam->cap.capabilities & V4L2_CAP_VIDEO_CAPTURE)
+	 || !(cam->cap.capabilities & V4L2_CAP_STREAMING))
+		return false;
 
 	/* Select video input, video standard and tune here. */
 
@@ -655,17 +661,11 @@ init_device (camPtr cam, int w, int h)
 	cropcap.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
 	if (xioctl (cam, VIDIOC_CROPCAP, &cropcap)) {
+		struct v4l2_crop crop;
 		crop.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 		crop.c = cropcap.defrect; /* reset to default */
-		if (!xioctl (cam, VIDIOC_S_CROP, &crop)) {
-			if (EINVAL == errno) {
-				/* Cropping not supported (ignored) */
-			} else {
-				/* Errors ignored. */
-			}
-		}
-	} else {
-		/* Errors ignored. */
+		/* If cropping is not supported , the lack is ignored. */
+		(void)xioctl (cam, VIDIOC_S_CROP, &crop);
 	}
 
 	CLEAR (fmt);
@@ -675,42 +675,45 @@ init_device (camPtr cam, int w, int h)
 		if (!set_format(cam, &fmt, V4L2_PIX_FMT_RGB565, w, h))
 		  if (!set_format(cam, &fmt, V4L2_PIX_FMT_RGB444, w, h))
 			return false;
-		
+
 	/* For reference:
 		V4L2_PIX_FMT_RGB24 : 3 bytes == 1 dst pixel
 		V4L2_PIX_FMT_RGB565: 2 bytes == 1 dst pixel
 		V4L2_PIX_FMT_RGB444: 2 bytes == 1 dst pixel
 		V4L2_PIX_FMT_YUYV  : 4 bytes == 2 dst pixels
 	*/
-	
+
 	switch (fmt.fmt.pix.pixelformat) {
 	  case V4L2_PIX_FMT_RGB24: /* printf("V4L2_PIX_FMT_RGB24\n"); */
-		bpp = 3; 
+		bpp = 3;
 		break;
 	  case V4L2_PIX_FMT_RGB565: /* printf("V4L2_PIX_FMT_RGB565\n"); */
-		bpp = 2; 
+		bpp = 2;
 		break;
 	  case V4L2_PIX_FMT_RGB444: /* printf("V4L2_PIX_FMT_RGB444\n"); */
 		bpp = 2;
 		break;
 	  case V4L2_PIX_FMT_YUYV: /* printf("V4L2_PIX_FMT_YUYV\n"); */
-		bpp = 4; 
+		bpp = 4;
 		break;
 	}
-	
-	/* Buggy driver paranoia >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */	
+
+	/* Buggy driver paranoia >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
 	min = fmt.fmt.pix.width * bpp;
 	if (fmt.fmt.pix.bytesperline < min) fmt.fmt.pix.bytesperline = min;
 	min = fmt.fmt.pix.bytesperline * fmt.fmt.pix.height;
 	if (fmt.fmt.pix.sizeimage < min) fmt.fmt.pix.sizeimage = min;
 	/* <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< */
-	
-	if (!(cam->inBuffer = calloc (min, 1))) return false;
-	cam->inBufferSize = min;
-	
-	if (!init_mmap(cam)) return false;
 
-	if (!queueAllBuffers(cam)) return false;
+	if (!(cam->inBuffer = calloc (min, 1)))
+		return false;
+	cam->inBufferSize = min;
+
+	if (!init_mmap(cam))
+		return false;
+
+	if (!queueAllBuffers(cam))
+		return false;
 
 	/* cache returned dims */
 	cam->bmWidth = fmt.fmt.pix.width;
@@ -722,8 +725,8 @@ init_device (camPtr cam, int w, int h)
 }
 
 
-static int 
-close_device (camPtr cam) 
+static int
+close_device (camPtr cam)
 {
 	vd_close (cam->fileDesc);
 	cam->fileDesc = 0;
@@ -731,8 +734,8 @@ close_device (camPtr cam)
 }
 
 
-static int 
-open_device (camPtr cam) 
+static int
+open_device (camPtr cam)
 {
 	char deviceName[12];
 	struct stat st;
@@ -740,17 +743,20 @@ open_device (camPtr cam)
 	strcpy(deviceName, videoDevName0);
 	deviceName[10] = cam->devNum + '0';
 
-	if (stat (deviceName, &st)) return false;
-	if (!S_ISCHR (st.st_mode)) return false;
+	if (stat (deviceName, &st))
+		return false;
+	if (!S_ISCHR (st.st_mode))
+		return false;
 
 	return (-1 != (cam->fileDesc = vd_open (deviceName, O_RDWR /* required */ | O_NONBLOCK, 0)));
 }
 
 
-int 
-initCamera(camPtr cam, int w, int h) 
+int
+initCamera(camPtr cam, int w, int h)
 {
-    if (!open_device(cam)) return false;
+    if (!open_device(cam))
+		return false;
 
 	if (!init_device(cam, w, h)) {
         close_device(cam);
@@ -767,113 +773,117 @@ initCamera(camPtr cam, int w, int h)
 }
 
 
-/* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
-/* >>>>>>>>>>>>>>>>> SCRATCH I/F >>>>>>>>>>>>>>>>> */
-/* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
-
-sqInt 
-CameraGetParam(sqInt camNum, sqInt paramNum) 
+sqInt
+CameraGetParam(sqInt camNum, sqInt paramNum)
 {
-	camPtr cam = &camInfo[camNum-1];
-	return false;
+	camPtr cam = camera(camNum);
+
+	if (!cam) return -1;
+	if (paramNum == 1)
+		return cam->frameCount
+			? cam->frameCount
+			: (cameraReadable(cam) ? 1 : 0);
+	if (paramNum == 2)
+		return cam->bmWidth * cam->bmHeight * 4;
+
+	return -2;
 }
 
 
 /*
 / Spec from Scratch protocol...
 /
-/	  "Copy a camera frame into the given Bitmap. The Bitmap should be for a Form 
-/	  of depth 32 that is the same width and height as the current camera frame. 
-/	  Fail if the camera is not open or if the bitmap is not the right size. If 
-/	  successful, answer the number of frames received from the camera since the 
+/	  "Copy a camera frame into the given Bitmap. The Bitmap should be for a Form
+/	  of depth 32 that is the same width and height as the current camera frame.
+/	  Fail if the camera is not open or if the bitmap is not the right size. If
+/	  successful, answer the number of frames received from the camera since the
 /	  last call. If this is zero, then there has been no change."
-/	
-/  This version: 
+/
+/  This version:
 /	- designed to fail silently
 /	- coded so that a future version can skip frames and do so *without* incurring
 /	  delays due to conversion.
 */
-sqInt 
-CameraGetFrame(sqInt camNum, unsigned char* buf, sqInt pixelCount) 
+sqInt
+CameraGetFrame(sqInt camNum, unsigned char* buf, sqInt pixelCount)
 {
-#ifdef USE_TEST_PATTERN
-	unsigned long f,i;
-	unsigned long *d;
-#endif
+	int ourCount;
+	camPtr cam = camera(camNum);
 
-	camPtr cam = &camInfo[camNum-1];
-	
-	if (camIsClosed(cam)) return -1;
-	if (pixelCount != cam->sqPixels) return -1;
-	
+	FPRINTF((stderr, "CameraGetFrame %ld %s %ld=%ld (%d,%ld)\n",
+			camNum, camIsClosed(cam) ? "closed" : "open",
+			pixelCount, cam->sqPixels, cam->semaphoreIndex, cam->frameCount));
+	if (camIsClosed(cam))
+		return -1;
+	if (pixelCount != cam->sqPixels)
+		return -1;
+
 	cam->sqBuffer = (void *)buf;
 
-#ifdef USE_TEST_PATTERN
-printf("%i\n", tstColourIdx);
-	switch (tstColourIdx) {
-	  case 0:
-		f = 0xFFFF0000;
-		break;
-	  case 1:
-		f = 0xFF00FF00;
-		break;
-	  case 2:
-		f = 0xFF0000FF;
-		break;
+	if (cam->semaphoreIndex > 0) {
+		ourCount = cam->frameCount;
+		cam->frameCount = 0;
+		convertImage (cam);
+		FPRINTF((stderr, "CameraGetFrame v0 done %d\n", ourCount));
+		return ourCount;
 	}
-	d = (unsigned long *)buf;
-	for (i = 0; i < pixelCount; i++)
-	  *d++ = f;
-	tstColourIdx = (tstColourIdx == 2 ? 0: tstColourIdx + 1);
-	return 1;
-#endif
-
-/* OPTION 1: ALL FRAMES, SKIP IMAGE-SIDE, INCUR CONVERSION COST... */
-
+#if 0 /* OPTION 1: ALL FRAMES, SKIP IMAGE-SIDE, INCUR CONVERSION COST... */
 	if (getFrame(cam)) {
-	  int ourCount = cam->frameCount;
-	  cam->frameCount = 0;
-	  convertImage (cam);
-	  return ourCount;
+		ourCount = cam->frameCount;
+		cam->frameCount = 0;
+		convertImage (cam);
+		FPRINTF((stderr, "CameraGetFrame v1 done %d\n", ourCount));
+		return ourCount;
 	}
 	return 0;
-
-	
-/* OPTION 2: ONLY LATEST FRAME, AVOIDS CONVERSION OF SKIPPED FRAMES... */
-
-	/* getFrame() buffers & eventually fails leaving the latest/last frame */
-/*
+#else /* OPTION 2: ONLY LATEST FRAME, AVOIDS CONVERSION OF SKIPPED FRAMES... */
 	while (getFrame(cam));
+	ourCount = cam->frameCount;
+	cam->frameCount = 0;
 	convertImage (cam);
-	return 1;
-*/
-
+	FPRINTF((stderr, "CameraGetFrame v2 done %d\n", ourCount));
+	return ourCount;
+#endif
 }
 
 
-sqInt 
-CameraExtent(sqInt camNum) 
+sqInt
+CameraExtent(sqInt camNum)
 {
-	camPtr cam = &camInfo[camNum-1];
-	if (camIsClosed(cam)) return false;
-	return (cam->bmWidth << 16) + cam->bmHeight;
+	camPtr cam = camera(camNum);
+
+	return camIsOpen(cam)
+		? (cam->bmWidth << 16) + cam->bmHeight
+		: 0;
 }
 
 
-char* 
-CameraName(sqInt camNum) 
+char*
+CameraName(sqInt camNum)
 {
-	camPtr cam = &camInfo[camNum-1];
-	if (camIsClosed(cam)) return "camera not open";
-	return "default camera";
+	camPtr cam = camera(camNum);
+	return camIsOpen(cam)
+		? (char *)&cam->cap.card[0]
+		: 0;
+}
+
+char *
+CameraUID(sqInt camNum)
+{
+	camPtr cam = camera(camNum);
+	return camIsOpen(cam)
+		? (char *)&cam->cap.bus_info[0]
+		: 0;
 }
 
 
-void 
-CameraClose(sqInt camNum) 
+void
+CameraClose(sqInt camNum)
 {
-	camPtr cam = &camInfo[camNum-1];
-	if (camIsClosed(cam)) return;
+	camPtr cam = camera(camNum);
+	if (camIsClosed(cam))
+		return;
+	aioDisable(cam->fileDesc);
 	stream_off(cam);
 	uninit_device(cam);
 	close_device(cam);
@@ -881,20 +891,109 @@ CameraClose(sqInt camNum)
 }
 
 
-sqInt 
-CameraOpen(sqInt camNum, sqInt frameWidth, sqInt frameHeight) 
+sqInt
+CameraOpen(sqInt camNum, sqInt frameWidth, sqInt frameHeight)
 {
-	camPtr cam = &camInfo[camNum-1];
+	camPtr cam = camera(camNum);
 
-	if (camIsOpen(cam)) return false;
-	if (!initCamera(cam, frameWidth, frameHeight)) return false;
+	CameraClose(camNum);
+	if (!initCamera(cam, frameWidth, frameHeight))
+		return false;
 	cam->isOpen = true;
-	
-	while (!getFrame(cam));
 
-#ifdef USE_TEST_PATTERN
-	tstColourIdx = 0;
-#endif
 	return true;
 }
 
+static void
+cameraHandler(int fd, camPtr cam, int flags)
+{
+	FPRINTF((stderr, "cameraHandler %d %p %x (%d)\n",
+			fd, cam, flags, cam->semaphoreIndex));
+	if ((flags & AIO_R)
+	 && cam->semaphoreIndex > 0) {
+		read_frame(cam);
+		interpreterProxy->signalSemaphoreWithIndex(cam->semaphoreIndex);
+	}
+}
+
+
+sqInt
+CameraGetSemaphore(sqInt camNum)
+{
+	camPtr cam = camera(camNum);
+
+	return cam && cam->semaphoreIndex > 0
+		? cam->semaphoreIndex
+		: 0;
+}
+
+// primSetCameraBuffers ensures buffers are pinned non-pointer objs if non-null
+sqInt
+CameraSetFrameBuffers(sqInt cameraNum, sqInt bufferA, sqInt bufferB)
+{
+	// For now
+	return PrimErrUnsupported;
+}
+
+/* Alas, see for example
+ * https://www.kernel.org/doc/html/v5.4/media/uapi/v4l/async.html
+ * "3.5. Asynchronous I/O	This method is not defined yet."
+ * So to support CameraSetSemaphore without V4L2_CAP_ASYNCIO
+ * we would have to spawn a thread to do blocking reads.
+ *
+ * But change is on its way.  This is from the 5.9 documentation:
+ * https://www.kernel.org/doc/html/v5.9/driver-api/media/v4l2-async.html
+ * 1.22. V4L2 async kAPI
+ */
+sqInt
+CameraSetSemaphore(sqInt camNum, sqInt semaphoreIndex)
+{
+	camPtr cam = camera(camNum);
+
+	if (!camIsOpen(cam))
+		return PrimErrBadIndex;
+	if (!(cam->cap.capabilities & V4L2_CAP_ASYNCIO))
+		return PrimErrUnsupported;
+	aioEnable(cam->fileDesc, cam, 0);
+	aioHandle(cam->fileDesc, (void (*)(int,void *,int))cameraHandler, AIO_RX);
+	cam->semaphoreIndex = semaphoreIndex;
+	return 0;
+}
+
+#ifdef AIO_DEBUG
+static char *(*oldHandlerChain)(aioHandler h);
+static char *
+cameraHandleName(aioHandler h)
+{
+	if (h == (void (*)(int,void *,int))cameraHandler)
+		return "cameraHandler";
+	if (oldHandlerChain)
+		return oldHandlerChain(h);
+	return 0;
+}
+#endif
+
+
+/*** module initialisation/shutdown ***/
+
+
+sqInt
+cameraInit(void)
+{
+#ifdef AIO_DEBUG
+	oldHandlerChain = handlerNameChain;
+	handlerNameChain = cameraHandleName;
+#endif
+  return 1;
+}
+
+sqInt
+cameraShutdown(void)
+{
+#ifdef AIO_DEBUG
+	if (handlerNameChain == cameraHandleName)
+		handlerNameChain = oldHandlerChain;
+#endif
+	libDes();
+	return 1;
+}

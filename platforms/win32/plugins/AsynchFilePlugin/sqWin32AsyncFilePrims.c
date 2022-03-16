@@ -44,7 +44,7 @@
   Note: These primitives are experimental! They need not be implemented on
   every platform, and they may be withdrawn or replaced in a future release.
 */
-#include <windows.h>
+#include <Windows.h>
 #include "sq.h"
 #include "AsynchFilePlugin.h"
 

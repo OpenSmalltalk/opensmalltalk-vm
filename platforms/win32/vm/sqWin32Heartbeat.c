@@ -76,19 +76,42 @@ sqLong ioHighResClock(void) {
   return value;
 }
 
+#if (_WIN32_WINNT >= _WIN32_WINNT_WIN8)
+
+/* Compute the current VM time basis, the number of microseconds from 1901.
+ *
+ * As of Windows 8 there is a FILETIME wall clock interface which is high
+ * precision and so does not have to be combined with the millisecond clock.
+ */
+# define currentUTCMicroseconds(a,b,c) currentUTCMicrosecondsImplementation()
+static inline unsigned __int64
+currentUTCMicrosecondsImplementation(void)
+{
+	union { // got to love little-endian architectures...
+		FILETIME         utcNowFiletime;
+		unsigned __int64 utcNow;
+	} un;
+
+	// cannot fail...
+	GetSystemTimePreciseAsFileTime(&un.utcNowFiletime);
+	return un.utcNow / TocksPerMicrosecond - MicrosecondsFrom1601To1901;
+}
+#else // _WIN32_WINNT >= _WIN32_WINNT_WIN8
+
 /* Compute the current VM time basis, the number of microseconds from 1901.
  *
  * Alas Windows' system time functions GetSystemTime et al have low resolution;
- * 15 ms.  So we use timeGetTime for higher resolution and use it as an offset to
- * the system time, resetting when timeGetTime wraps.  Since timeGetTime wraps we
- * need some basis information which is passed in as pointers to provide us with
- * both the heartbeat clock and an instantaneous clock for the VM thread.
+ * 15 ms.  So we use timeGetTime for higher resolution and use it as an offset
+ * to the system time, resetting when timeGetTime wraps. Since timeGetTime wraps
+ * we need some basis information which is passed in as pointers to provide us
+ * with both the heartbeat clock and an instantaneous clock for the VM thread.
  */
 
+# define currentUTCMicroseconds(a,b,c) currentUTCUSecsImplementation(a,b,c)
 static unsigned __int64
-currentUTCMicroseconds(unsigned __int64 *utcTickBaseUsecsp, DWORD *lastTickp, DWORD *baseTickp)
+currentUTCUSecsImplementation(unsigned __int64 *utcTickBaseUsecsp,
+							  DWORD *lastTickp, DWORD *baseTickp)
 {
-	FILETIME utcNow;
 	DWORD currentTick = timeGetTime();
 	DWORD prevTick = *lastTickp;
 
@@ -98,6 +121,7 @@ currentUTCMicroseconds(unsigned __int64 *utcTickBaseUsecsp, DWORD *lastTickp, DW
 	 * resync to the system time.  
 	 */
 	if (currentTick < prevTick) {
+		FILETIME utcNow;
 		unsigned __int64 now;
 		*baseTickp = currentTick;
 		GetSystemTimeAsFileTime(&utcNow);
@@ -111,6 +135,16 @@ currentUTCMicroseconds(unsigned __int64 *utcTickBaseUsecsp, DWORD *lastTickp, DW
 		  + (currentTick - *baseTickp) * MicrosecondsPerMillisecond;
 }
 
+/* The bases that relate timeGetTime's 32-bit wrapping millisecond clock to the
+ * non-wrapping 64-bit microsecond clocks.
+ */
+static unsigned __int64 utcTickBaseMicroseconds;
+static DWORD lastTick = (DWORD)-1;
+static DWORD baseTick;
+static unsigned __int64 vmThreadUtcTickBaseMicroseconds;
+static DWORD vmThreadLastTick = (DWORD)-1;
+static DWORD vmThreadBaseTick;
+#endif // (_WIN32_WINNT >= _WIN32_WINNT_WIN8)
 
 /* The 64-bit clocks.  utcMicrosecondClock is utc microseconds from 1901.
  * localMicrosecondClock is local microseconds from 1901.  The 32-bit clock
@@ -123,15 +157,6 @@ static unsigned volatile long millisecondClock; /* for the ioMSecs clock. */
 static unsigned __int64 utcStartMicroseconds;
 static   signed __int64 vmGMTOffset = 0;
 
-/* The bases that relate timeGetTime's 32-bit wrapping millisecond clock to the
- * non-wrapping 64-bit microsecond clocks.
- */
-static unsigned __int64 utcTickBaseMicroseconds;
-static DWORD lastTick = (DWORD)-1;
-static DWORD baseTick;
-static unsigned __int64 vmThreadUtcTickBaseMicroseconds;
-static DWORD vmThreadLastTick = (DWORD)-1;
-static DWORD vmThreadBaseTick;
 
 #define microToMilliseconds(usecs) ((((usecs) - utcStartMicroseconds) \
 									/ MicrosecondsPerMillisecond) \
@@ -155,7 +180,7 @@ static unsigned int mlogidx = (unsigned int)-1;
 void
 ioGetClockLogSizeUsecsIdxMsecsIdx(sqInt *runInNOutp, void **usecsp, sqInt *uip, void **msecsp, sqInt *mip)
 {
-	logClock = *runInNOutp;
+	logClock = (int)*runInNOutp;
 	sqLowLevelMFence();
 	*runInNOutp = LOGSIZE;
 	*usecsp = useclog;
@@ -235,6 +260,17 @@ ioInitTime(void)
 	utcStartMicroseconds = utcMicrosecondClock;
 }
 
+void resyncSystemTime() {
+  #if (_WIN32_WINNT >= _WIN32_WINNT_WIN8)
+  // Nothing to be done, time will be resynced upon every heartbeat tick
+  #else // (_WIN32_WINNT >= _WIN32_WINNT_WIN8)
+  // By setting these values to maximum, currentUTCMicroseconds() will resync to the system time.
+  lastTick = (DWORD)-1;
+  vmThreadLastTick = (DWORD)-1;
+  #endif
+  ioUpdateVMTimezone();
+}
+
 unsigned long long
 ioUTCMicroseconds() { return get64(utcMicrosecondClock); }
 
@@ -262,11 +298,12 @@ unsigned long long
 ioLocalMicrosecondsNow() { return ioUTCMicrosecondsNow() + vmGMTOffset; };
 
 /* ioMSecs answers the millisecondClock as of the last tick. */
-long
+unsigned int
 ioMSecs() { return millisecondClock; }
 
 /* ioMicroMSecs answers the millisecondClock right now */
-long ioMicroMSecs(void) { return microToMilliseconds(ioUTCMicrosecondsNow());}
+unsigned int
+ioMicroMSecs(void) { return microToMilliseconds(ioUTCMicrosecondsNow());}
 
 /* returns the local wall clock time */
 sqInt
@@ -414,7 +451,7 @@ ioSetHeartbeatMilliseconds(int ms)
 
 		ioReleaseTime();
 		dwTimerPeriod = 0;
-		if(timeGetDevCaps(&tCaps,sizeof(tCaps)) != 0)
+		if (timeGetDevCaps(&tCaps,sizeof(tCaps)) != 0)
 			return;
 		dwTimerPeriod = max(tCaps.wPeriodMin,beatMilliseconds);
 		if (timeBeginPeriod(dwTimerPeriod) != 0)

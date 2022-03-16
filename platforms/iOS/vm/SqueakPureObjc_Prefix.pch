@@ -15,12 +15,14 @@
 #if __has_feature(objc_arc)
 # define RELEASEOBJ(o) (void)o
 # define RETAINOBJ(o) o
+# define RETAINVALUE(v) // for expressions without side-effects
 # define AUTORELEASEOBJ(o) o
 # define SUPERDEALLOC
 # define DEALLOCOBJ(o) o
 #else
 # define RELEASEOBJ(o) [o release]
 # define RETAINOBJ(o) [o retain]
+# define RETAINVALUE(v) [v retain]
 # define AUTORELEASEOBJ(o) [o autorelease]
 # define SUPERDEALLOC [super dealloc];
 # define DEALLOCOBJ(o) [o dealloc]

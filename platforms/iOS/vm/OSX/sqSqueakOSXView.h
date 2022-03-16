@@ -53,10 +53,8 @@
 - (void) ioSetFullScreen: (sqInt) fullScreen;
 
 - (NSUInteger) countNumberOfNoneSqueakImageFilesInDraggedFiles: (id<NSDraggingInfo>)info;
-- (NSMutableArray *) filterOutSqueakImageFilesFromDraggedFiles: (id<NSDraggingInfo>)info;
+- (NSMutableArray *) filterOutSqueakImageFilesFromDraggedURIs: (id<NSDraggingInfo>)info;
 - (NSMutableArray *) filterSqueakImageFilesFromDraggedFiles: (id<NSDraggingInfo>)info;
-- (NSString*) dragFileNameStringAtIndex:(sqInt) index;
-
 - (void) drawThelayers;
 - (void) preDrawThelayers;
 - (void) drawImageUsingClip: (CGRect) clip;

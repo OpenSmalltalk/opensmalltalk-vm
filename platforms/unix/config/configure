@@ -638,8 +638,15 @@ ac_subst_vars='LTLIBOBJS
 LIBOBJS
 ext_plugins
 int_plugins
+UNICODE_PLUGIN_LIBS
+UNICODE_PLUGIN_CFLAGS
 IA32ABI_OBJS
 LIBM_CFLAGS
+FT2_PLUGIN_LIBS
+FT2_PLUGIN_CFLAGS
+PKG_CONFIG_LIBDIR
+PKG_CONFIG_PATH
+PKG_CONFIG
 ARM_ARCH
 BITBLT_FLAGS
 BITBLT_OBJS
@@ -681,6 +688,8 @@ INSTALL_SCRIPT
 INSTALL_PROGRAM
 AS
 SET_MAKE
+TARGET_ARCH
+getbuildarch
 target_os
 target_vendor
 target_cpu
@@ -692,6 +701,7 @@ SQ_VERSION
 SQ_UPDATE
 SQ_MINOR
 SQ_MAJOR
+scriptname
 blddir
 vmmcfg
 vmpdir
@@ -802,11 +812,13 @@ with_sqversion
 with_src
 with_plugins
 with_vmmcfg
+with_scriptname
 enable_cogit
 with_gnu_awk
 with_gnu_as
 with_rfb
 enable_largefile
+enable_epoll
 with_npsqueak
 with_quartz
 with_x
@@ -832,7 +844,14 @@ LIBS
 CPPFLAGS
 CPP
 LT_SYS_LIBRARY_PATH
-XMKMF'
+XMKMF
+PKG_CONFIG
+PKG_CONFIG_PATH
+PKG_CONFIG_LIBDIR
+FT2_PLUGIN_CFLAGS
+FT2_PLUGIN_LIBS
+UNICODE_PLUGIN_CFLAGS
+UNICODE_PLUGIN_LIBS'
 
 
 # Initialize some variables set by options.
@@ -1468,8 +1487,10 @@ Optional Features:
   --enable-fast-install[=PKGS]
                           optimize for fast installation [default=yes]
   --disable-libtool-lock  avoid locking (might break parallel builds)
-   --disable-cogit        compile a cogit VM (default=enabled)
+  --disable-cogit         compile a cogit VM (default=enabled)
   --disable-largefile     omit support for large files
+  --disable-epoll         Do not use epoll even if supported (default: try to
+                          use)
   --enable-fast-bitblt    enable fast BitBlt optimizations (default=no)
   --disable-iconv disable iconv support (default=enabled)
 
@@ -1497,6 +1518,8 @@ Optional Packages:
                           (default=${topdir}/src/plugins)
    --with-vmmcfg=dir      vm configuration directory containing plugins.int
                           and plugins.ext (default=.)
+   --with-scriptname=SCRIPT
+                          run script name installed in SCRIPT (default=squeak)
    --with-gnu-awk         assume that awk is GNU gawk (default=no)
    --with-gnu-as          assume that as is the GNU assembler (default=no)
    --without-rfb          disable Remote FrameBuffer support (default=enabled)
@@ -1524,6 +1547,19 @@ Some influential environment variables:
   LT_SYS_LIBRARY_PATH
               User-defined run-time library search path.
   XMKMF       Path to xmkmf, Makefile generator for X Window System
+  PKG_CONFIG  path to pkg-config utility
+  PKG_CONFIG_PATH
+              directories to add to pkg-config's search path
+  PKG_CONFIG_LIBDIR
+              path overriding pkg-config's built-in search path
+  FT2_PLUGIN_CFLAGS
+              C compiler flags for FT2_PLUGIN, overriding pkg-config
+  FT2_PLUGIN_LIBS
+              linker flags for FT2_PLUGIN, overriding pkg-config
+  UNICODE_PLUGIN_CFLAGS
+              C compiler flags for UNICODE_PLUGIN, overriding pkg-config
+  UNICODE_PLUGIN_LIBS
+              linker flags for UNICODE_PLUGIN, overriding pkg-config
 
 Use these variables to override the choices made by `configure' or to help
 it to find libraries and programs with nonstandard names/locations.
@@ -2590,6 +2626,7 @@ as_fn_append ac_header_list " sys/time.h"
 as_fn_append ac_header_list " sys/filio.h"
 as_fn_append ac_header_list " sys/select.h"
 as_fn_append ac_header_list " features.h"
+as_fn_append ac_header_list " ifaddrs.h"
 as_fn_append ac_header_list " alloca.h"
 as_fn_append ac_header_list " execinfo.h"
 as_fn_append ac_func_list " mmap"
@@ -11724,8 +11761,8 @@ fi
 vmpdir="${vmpsrc}"
 
 if test ! -d "${topdir}/${vmmsrc}"; then
-  if test -d "${topdir}/platforms/unix/${vmmsrc}/vm"; then
-    vmmdir="${topdir}/platforms/unix/${vmmsrc}/vm"
+  if test -d "${topdir}/platforms/unix/${vmmsrc}"; then
+    vmmdir="${topdir}/platforms/unix/${vmmsrc}"
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: using built-in src directory" >&5
 $as_echo "using built-in src directory" >&6; }
   fi
@@ -11734,8 +11771,8 @@ fi
 if test ! -d "${topdir}/${vmpsrc}"; then
   if test -d "${topdir}/platforms/unix/${vmpsrc}"; then
     vmpdir="${topdir}/platforms/unix/${vmpsrc}"
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: using built-in pligins directory" >&5
-$as_echo "using built-in pligins directory" >&6; }
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: using built-in plugins directory" >&5
+$as_echo "using built-in plugins directory" >&6; }
   fi
 fi
 
@@ -11752,6 +11789,15 @@ if test "${with_vmmcfg+set}" = set; then :
   withval=$with_vmmcfg; vmmcfg="${with-vmmcfg}"
 else
   vmmcfg="${blddir}"
+fi
+
+
+
+# Check whether --with-scriptname was given.
+if test "${with_scriptname+set}" = set; then :
+  withval=$with_scriptname; scriptname="${with_scriptname}"
+else
+  scriptname="squeak"
 fi
 
 
@@ -11784,22 +11830,23 @@ $as_echo "bad" >&6; }
   vmmcheck file -f ${vmmcfg}/plugins.ext
   vmmcheck dir  -d ${vmmdir}
   vmmcheck dir  -d ${vmpdir}
-  vmmcheck dir  -d ${vmmdir}/vm
-  vmmcheck file -f ${vmmdir}/vm/interp.h
-  vmmcheck file -f ${vmmdir}/vm/vmCallback.h
+  vmmcheck dir  -d ${vmmdir}
+  vmmcheck file -f ${vmmdir}/interp.h
+  vmmcheck file -f ${vmmdir}/vmCallback.h
   if test "$cogit" = yes ; then
-	  vmmcheck file -f ${vmmdir}/vm/cogit.c
-	  vmmcheck file -f ${vmmdir}/vm/cogit.h
-	  vmmcheck file -f ${vmmdir}/vm/cogmethod.h
-	  vmmcheck file -f ${vmmdir}/vm/cointerp.c
-	  vmmcheck file -f ${vmmdir}/vm/cointerp.h
-	  vmmcheck file -f ${vmmdir}/vm/gcc3x-cointerp.c
+	  vmmcheck file -f ${vmmdir}/cogit.c
+	  vmmcheck file -f ${vmmdir}/cogit.h
+	  vmmcheck file -f ${vmmdir}/cogmethod.h
+	  vmmcheck file -f ${vmmdir}/cointerp.c
+	  vmmcheck file -f ${vmmdir}/cointerp.h
+	  vmmcheck file -f ${vmmdir}/gcc3x-cointerp.c
   else
-	  vmmcheck file -f ${vmmdir}/vm/interp.c
-	  vmmcheck file -f ${vmmdir}/vm/gcc3x-interp.c
+	  vmmcheck file -f ${vmmdir}/interp.c
+	  vmmcheck file -f ${vmmdir}/gcc3x-interp.c
   fi
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: okay" >&5
 $as_echo "okay" >&6; }
+
 
 
 
@@ -11971,6 +12018,111 @@ else
   GAS="unknown"
 fi
 
+
+########################
+
+# This section is used by the 'generic' linux32 & linux64 mvm configs which in turn are used for Debian package building on 'other' platforms which can only support stack VMs
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking TARGET_ARCH & CFLAGS" >&5
+$as_echo_n "checking TARGET_ARCH & CFLAGS... " >&6; }
+if [ "$VM_CFLAGS" != "" ]
+then
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: autoconfigure" >&5
+$as_echo "autoconfigure" >&6; }
+	# dpkg-architecture when available on Debian (and derivatives) with fallback to uname
+	# using DEB_HOST_GNU_CPU rather than DEB_HOST_ARCH_CPU for consistency with uname
+	# Extract the first word of "dpkg-architecture", so it can be a program name with args.
+set dummy dpkg-architecture; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_prog_getbuildarch+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test -n "$getbuildarch"; then
+  ac_cv_prog_getbuildarch="$getbuildarch" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_prog_getbuildarch="dpkg-architecture --query DEB_HOST_GNU_CPU"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  test -z "$ac_cv_prog_getbuildarch" && ac_cv_prog_getbuildarch="uname -m"
+fi
+fi
+getbuildarch=$ac_cv_prog_getbuildarch
+if test -n "$getbuildarch"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $getbuildarch" >&5
+$as_echo "$getbuildarch" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking autoconfigure arch" >&5
+$as_echo_n "checking autoconfigure arch... " >&6; }
+	build_arch=`$getbuildarch`
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $build_arch" >&5
+$as_echo "$build_arch" >&6; }
+	case $build_arch in
+		i686) TARGET_ARCH="-m32"
+			CFLAGS="-g -O2 -msse2"
+		;;
+
+		x86_64) TARGET_ARCH="-m64"
+			CFLAGS="-g -O1 -msse2"
+		;;
+
+	        # Omitting -DNO_VM_PROFILE=1 for now
+		armhf) TARGET_ARCH="-march=armv6 -mfpu=vfp -mfloat-abi=hard"
+			CFLAGS="-g -O3"
+		;;
+
+		# Omitting -DMUSL -DUSEEVDEV for now
+		aarch64) TARGET_ARCH="-march=armv8-a"
+			CFLAGS="-g -O2 -D__ARM_ARCH_ISA_A64 -DARM64 -D__arm__ -D__arm64__ -D__aarch64__"
+		;;
+
+		*)
+			if [ "$VM_WORD_SIZE" == "32" ]
+			then
+				TARGET_ARCH="-m32"
+			else
+				TARGET_ARCH="-m64"
+			fi
+			CFLAGS="-g -O2"
+		;;
+	esac
+
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: TARGET_ARCH=$TARGET_ARCH" >&5
+$as_echo "$as_me: TARGET_ARCH=$TARGET_ARCH" >&6;}
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: CFLAGS=$CFLAGS" >&5
+$as_echo "$as_me: CFLAGS=$CFLAGS" >&6;}
+else
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: mvm" >&5
+$as_echo "mvm" >&6; }
+fi
+
+########################
+
+case $target in
+	i686*) # workaround for 32-bit x86 builds on Ubuntu/Debian
+		PKG_CONFIG=/usr/bin/i686-linux-gnu-pkg-config
+		;;
+	*)
+		PKG_CONFIG=/usr/bin/pkg-config
+		;;
+esac
 
 ########################
 
@@ -13362,7 +13514,7 @@ fi
 
 # Configured headers (pretty much everybody needs blddir and vm)
 
-INCLUDES="-I${blddir} -I${vmmcfg} -I${topdir}/platforms/unix/vm -I${topdir}/platforms/Cross/vm -I${vmmdir}/vm"
+INCLUDES="-I${blddir} -I${vmmcfg} -I${topdir}/platforms/unix/vm -I${topdir}/platforms/Cross/vm -I${vmmdir}"
 
 # these are not always added
 case $host_os in
@@ -13548,6 +13700,9 @@ done
 
 
 
+
+
+ # sqUnixSocket.c
 
 
  # SunOS5
@@ -13745,7 +13900,7 @@ fi
 fi
 
 
-if test -f "${vmmdir}/vm/interp.h"; then
+if test -f "${vmmdir}/interp.h"; then
 
 $as_echo "#define HAVE_INTERP_H 1" >>confdefs.h
 
@@ -15742,7 +15897,16 @@ _ACEOF
 
 fi
 
-  ax_have_epoll_cppflags="${CPPFLAGS}"
+
+# Check whether --enable-epoll was given.
+if test "${enable_epoll+set}" = set; then :
+  enableval=$enable_epoll; try_epoll="$enableval"
+else
+  try_epoll="yes"
+fi
+
+if test "$try_epoll" = yes; then
+    ax_have_epoll_cppflags="${CPPFLAGS}"
   ac_fn_c_check_header_mongrel "$LINENO" "linux/version.h" "ac_cv_header_linux_version_h" "$ac_includes_default"
 if test "x$ac_cv_header_linux_version_h" = xyes; then :
   CPPFLAGS="${CPPFLAGS} -DHAVE_LINUX_VERSION_H"
@@ -15797,7 +15961,7 @@ $as_echo "no" >&6; }
 
 fi
 
-  ax_have_epoll_cppflags="${CPPFLAGS}"
+    ax_have_epoll_cppflags="${CPPFLAGS}"
   ac_fn_c_check_header_mongrel "$LINENO" "linux/version.h" "ac_cv_header_linux_version_h" "$ac_includes_default"
 if test "x$ac_cv_header_linux_version_h" = xyes; then :
   CPPFLAGS="${CPPFLAGS} -DHAVE_LINUX_VERSION_H"
@@ -15854,6 +16018,7 @@ $as_echo "no" >&6; }
 
 fi
 
+fi
 
 # Checks for platform characteristics.
 
@@ -17207,11 +17372,15 @@ ac_res=$ac_cv_search_XShmAttach
 if test "$ac_res" != no; then :
   test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
 
+
+$as_echo "#define HAVE_LIBXEXT 1" >>confdefs.h
+
+
 fi
 
     if test "$have_gl" = ""; then have_gl="no"; fi
     if test "$have_gl" = "yes"; then
-        for ac_header in GL/gl.h gl/gl.h gl.h
+      for ac_header in GL/gl.h gl/gl.h gl.h
 do :
   as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
 ac_fn_c_check_header_mongrel "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
@@ -17220,11 +17389,7 @@ if eval test \"x\$"$as_ac_Header"\" = x"yes"; then :
 #define `$as_echo "HAVE_$ac_header" | $as_tr_cpp` 1
 _ACEOF
 
-          have_gl=yes
-
-$as_echo "#define USE_X11_GLX 1" >>confdefs.h
-
-          { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing glIsEnabled" >&5
+        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing glIsEnabled" >&5
 $as_echo_n "checking for library containing glIsEnabled... " >&6; }
 if ${ac_cv_search_glIsEnabled+:} false; then :
   $as_echo_n "(cached) " >&6
@@ -17278,9 +17443,15 @@ ac_res=$ac_cv_search_glIsEnabled
 if test "$ac_res" != no; then :
   test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
 
-fi
+          have_gl=yes
+
+$as_echo "#define USE_X11_GLX 1" >>confdefs.h
 
           break
+
+fi
+
+        break
 
 fi
 
@@ -17294,10 +17465,7 @@ $as_echo "#define USE_X11_GLX 0" >>confdefs.h
     ac_fn_c_check_header_mongrel "$LINENO" "X11/extensions/Xrender.h" "ac_cv_header_X11_extensions_Xrender_h" "$ac_includes_default"
 if test "x$ac_cv_header_X11_extensions_Xrender_h" = xyes; then :
 
-
-$as_echo "#define HAVE_LIBXRENDER 1" >>confdefs.h
-
-          { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing XRenderCreateCursor" >&5
+      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing XRenderCreateCursor" >&5
 $as_echo_n "checking for library containing XRenderCreateCursor... " >&6; }
 if ${ac_cv_search_XRenderCreateCursor+:} false; then :
   $as_echo_n "(cached) " >&6
@@ -17351,9 +17519,14 @@ ac_res=$ac_cv_search_XRenderCreateCursor
 if test "$ac_res" != no; then :
   test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
 
+
+$as_echo "#define HAVE_LIBXRENDER 1" >>confdefs.h
+
+        break
+
 fi
 
-          break
+      break
 
 fi
 
@@ -17464,6 +17637,24 @@ do :
 if test "x$ac_cv_header_linux_fb_h" = xyes; then :
   cat >>confdefs.h <<_ACEOF
 #define HAVE_LINUX_FB_H 1
+_ACEOF
+
+else
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: ******** disabling ${plugin}" >&5
+$as_echo "******** disabling ${plugin}" >&6; }
+  disabled_plugins="${disabled_plugins} ${plugin}"
+fi
+
+done
+
+	for ac_header in libevdev-1.0/libevdev/libevdev.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "libevdev-1.0/libevdev/libevdev.h" "ac_cv_header_libevdev_1_0_libevdev_libevdev_h" "$ac_includes_default"
+if test "x$ac_cv_header_libevdev_1_0_libevdev_libevdev_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBEVDEV_1_0_LIBEVDEV_LIBEVDEV_H 1
 _ACEOF
 
 else
@@ -18384,6 +18575,18 @@ if test "${enable_fast_bitblt+set}" = set; then :
 fi
 
 ;;
+aarch64)
+# Check whether --enable-fast-bitblt was given.
+if test "${enable_fast_bitblt+set}" = set; then :
+  enableval=$enable_fast_bitblt;  if   test "x$enableval" = "xyes" ; then
+      bitblt_objs="BitBltPlugin.o BitBltArm64.o BitBltDispatch.o BitBltGeneric.o"
+      bitblt_flags="-DENABLE_FAST_BLT"
+   fi
+
+fi
+
+;;
+
 esac
 
 BITBLT_OBJS=$bitblt_objs
@@ -18438,6 +18641,219 @@ else
 $as_echo "******** disabling ${plugin}" >&6; }
   disabled_plugins="${disabled_plugins} ${plugin}"
 fi
+if test "${plibs}"; then
+  llibs="${LIBS}"
+  for l in ${plibs}; do
+  llibs="${llibs} -l${l}"
+  done
+  echo ${llibs} > ${plugin}.lib
+fi
+plugin="FT2Plugin"
+plibs=""
+rm -f FT2Plugin.sub FT2Plugin.lib
+# -*- sh -*-
+
+
+
+
+
+
+
+if test "x$ac_cv_env_PKG_CONFIG_set" != "xset"; then
+	if test -n "$ac_tool_prefix"; then
+  # Extract the first word of "${ac_tool_prefix}pkg-config", so it can be a program name with args.
+set dummy ${ac_tool_prefix}pkg-config; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_PKG_CONFIG+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $PKG_CONFIG in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_PKG_CONFIG="$PKG_CONFIG" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_PKG_CONFIG="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+PKG_CONFIG=$ac_cv_path_PKG_CONFIG
+if test -n "$PKG_CONFIG"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PKG_CONFIG" >&5
+$as_echo "$PKG_CONFIG" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+fi
+if test -z "$ac_cv_path_PKG_CONFIG"; then
+  ac_pt_PKG_CONFIG=$PKG_CONFIG
+  # Extract the first word of "pkg-config", so it can be a program name with args.
+set dummy pkg-config; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_ac_pt_PKG_CONFIG+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $ac_pt_PKG_CONFIG in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_ac_pt_PKG_CONFIG="$ac_pt_PKG_CONFIG" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_ac_pt_PKG_CONFIG="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+ac_pt_PKG_CONFIG=$ac_cv_path_ac_pt_PKG_CONFIG
+if test -n "$ac_pt_PKG_CONFIG"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_pt_PKG_CONFIG" >&5
+$as_echo "$ac_pt_PKG_CONFIG" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+  if test "x$ac_pt_PKG_CONFIG" = x; then
+    PKG_CONFIG=""
+  else
+    case $cross_compiling:$ac_tool_warned in
+yes:)
+{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
+$as_echo "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
+ac_tool_warned=yes ;;
+esac
+    PKG_CONFIG=$ac_pt_PKG_CONFIG
+  fi
+else
+  PKG_CONFIG="$ac_cv_path_PKG_CONFIG"
+fi
+
+fi
+if test -n "$PKG_CONFIG"; then
+	_pkg_min_version=0.9.0
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking pkg-config is at least version $_pkg_min_version" >&5
+$as_echo_n "checking pkg-config is at least version $_pkg_min_version... " >&6; }
+	if $PKG_CONFIG --atleast-pkgconfig-version $_pkg_min_version; then
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+	else
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+		PKG_CONFIG=""
+	fi
+fi
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for FT2_PLUGIN" >&5
+$as_echo_n "checking for FT2_PLUGIN... " >&6; }
+
+if test -n "$FT2_PLUGIN_CFLAGS"; then
+    pkg_cv_FT2_PLUGIN_CFLAGS="$FT2_PLUGIN_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"freetype2\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "freetype2") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_FT2_PLUGIN_CFLAGS=`$PKG_CONFIG --cflags "freetype2" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$FT2_PLUGIN_LIBS"; then
+    pkg_cv_FT2_PLUGIN_LIBS="$FT2_PLUGIN_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"freetype2\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "freetype2") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_FT2_PLUGIN_LIBS=`$PKG_CONFIG --libs "freetype2" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        FT2_PLUGIN_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "freetype2" 2>&1`
+        else
+	        FT2_PLUGIN_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "freetype2" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$FT2_PLUGIN_PKG_ERRORS" >&5
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: ******** disabling ${plugin}" >&5
+$as_echo "******** disabling ${plugin}" >&6; }
+  disabled_plugins="${disabled_plugins} ${plugin}"
+elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: ******** disabling ${plugin}" >&5
+$as_echo "******** disabling ${plugin}" >&6; }
+  disabled_plugins="${disabled_plugins} ${plugin}"
+else
+	FT2_PLUGIN_CFLAGS=$pkg_cv_FT2_PLUGIN_CFLAGS
+	FT2_PLUGIN_LIBS=$pkg_cv_FT2_PLUGIN_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+fi
+
+
+
 if test "${plibs}"; then
   llibs="${LIBS}"
   for l in ${plibs}; do
@@ -19206,39 +19622,88 @@ plibs=""
 rm -f UnicodePlugin.sub UnicodePlugin.lib
 # -*- sh -*-
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for PangoCairo libraries" >&5
-$as_echo_n "checking for PangoCairo libraries... " >&6; }
-save_CPPFLAGS="$CPPFLAGS"
-CPPFLAGS="-I/usr/include/cairo -I/usr/include/pango-1.0 -I/usr/include/glib-2.0 -I/usr/lib/glib-2.0/include -I/usr/lib/arm-linux-gnueabihf/glib-2.0/include -I/usr/lib/i386-linux-gnu/glib-2.0/include"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <pango/pangocairo.h>
-int
-main ()
-{
-{}
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for UNICODE_PLUGIN" >&5
+$as_echo_n "checking for UNICODE_PLUGIN... " >&6; }
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-
+if test -n "$UNICODE_PLUGIN_CFLAGS"; then
+    pkg_cv_UNICODE_PLUGIN_CFLAGS="$UNICODE_PLUGIN_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"glib-2.0 pangocairo\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "glib-2.0 pangocairo") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_UNICODE_PLUGIN_CFLAGS=`$PKG_CONFIG --cflags "glib-2.0 pangocairo" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
 else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$UNICODE_PLUGIN_LIBS"; then
+    pkg_cv_UNICODE_PLUGIN_LIBS="$UNICODE_PLUGIN_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"glib-2.0 pangocairo\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "glib-2.0 pangocairo") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_UNICODE_PLUGIN_LIBS=`$PKG_CONFIG --libs "glib-2.0 pangocairo" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+
+
+if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        UNICODE_PLUGIN_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "glib-2.0 pangocairo" 2>&1`
+        else
+	        UNICODE_PLUGIN_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "glib-2.0 pangocairo" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$UNICODE_PLUGIN_PKG_ERRORS" >&5
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: ******** disabling ${plugin}" >&5
+$as_echo "******** disabling ${plugin}" >&6; }
+  disabled_plugins="${disabled_plugins} ${plugin}"
+elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
 
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: ******** disabling ${plugin}" >&5
 $as_echo "******** disabling ${plugin}" >&6; }
   disabled_plugins="${disabled_plugins} ${plugin}"
+else
+	UNICODE_PLUGIN_CFLAGS=$pkg_cv_UNICODE_PLUGIN_CFLAGS
+	UNICODE_PLUGIN_LIBS=$pkg_cv_UNICODE_PLUGIN_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-CPPFLAGS="$save_CPPFLAGS"
+
+
+
+
 if test "${plibs}"; then
   llibs="${LIBS}"
   for l in ${plibs}; do

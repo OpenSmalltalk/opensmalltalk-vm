@@ -121,11 +121,7 @@ static void  display_dndOutSend (char *bytes, int nbytes)	{ return  ; }
 static sqInt display_dndOutAcceptedType(char *buf, int nbuf)	{ return 0; }
 static sqInt display_dndReceived(char *fileName)	{ return 0; }
 
-static sqInt display_ioGetButtonState(void)		{ return 0; }
-static sqInt display_ioPeekKeystroke(void)		{ return 0; }
-static sqInt display_ioGetKeystroke(void)		{ return 0; }
 static sqInt display_ioGetNextEvent(sqInputEvent *evt)	{ return 0; }
-static sqInt display_ioMousePoint(void)			{ return 0; }
 
 static void  *display_ioGetDisplay(void)									{ return 0; }
 static void  *display_ioGetWindow(void)										{ return 0; }

@@ -35,6 +35,10 @@ char *getDefaultSoundPlayer(void);
 char *getDefaultSoundRecorder(void);
 char *getSoundPlayerDeviceName(sqInt i);
 char *getSoundRecorderDeviceName(sqInt i);
+#if TerfVM
+char *getSoundPlayerDeviceUID(sqInt i);
+char *getSoundRecorderDeviceUID(sqInt i);
+#endif
 void setDefaultSoundPlayer(char *deviceName);
 void setDefaultSoundRecorder(char *deviceName);
 

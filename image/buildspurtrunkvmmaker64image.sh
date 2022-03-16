@@ -9,5 +9,5 @@ cp -p $BASE64.changes Spur64VMMaker.changes
 
 . ./getGoodSpur64VM.sh
 
-echo $VM Spur64VMMaker.image BuildSqueakSpurTrunkVMMakerImage.st
-$VM Spur64VMMaker.image BuildSqueakSpurTrunkVMMakerImage.st
+echo $VM Spur64VMMaker.image -- BuildSqueakSpurTrunkVMMakerImage.st
+$VM Spur64VMMaker.image -- BuildSqueakSpurTrunkVMMakerImage.st

@@ -10,5 +10,5 @@ fi
 
 . ./getGoodSpurVM.sh
 
-echo $VM SpurVMMaker.image UpdateSqueakTrunkImage.st
-$VM SpurVMMaker.image UpdateSqueakTrunkImage.st
+echo $VM SpurVMMaker.image -- UpdateSqueakTrunkImage.st
+$VM SpurVMMaker.image -- UpdateSqueakTrunkImage.st

@@ -1,7 +1,7 @@
 Building the GdbARMPlugin
 ------------------------------
 
-In the build dirctory for the platform (e.g. build.macos64x64 for 64-bit macos)
+In the build dirctory for the platform (e.g. building/macos64x64 for 64-bit macos)
 locate the gdbarm32 directory.  In that directory use the makeem script, which
 invokes conf.COG, to configure and build the gdb-derived simulator for ARMv6/
 ARM32.  Then build a VM that has GdbARMPlugin in its plugins.ext.

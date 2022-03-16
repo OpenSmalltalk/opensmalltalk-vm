@@ -1,2 +1,2 @@
 #!/bin/sh
-fgrep -l '* VMMaker' *src*/vm/*
+fgrep -l '* VMMaker' src/plugins/*/* src/v3*/* src/spur*/*

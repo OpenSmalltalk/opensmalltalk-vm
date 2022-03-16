@@ -49,18 +49,42 @@ int ioSeconds(void)
   return convertToSqueakTime(sysTime);
 }
 
-int ioMSecs()
+unsigned int
+ioMSecs()
 {
   /* Make sure the value fits into Squeak SmallIntegers */
   return timeGetTime() & MillisecondClockMask;
 }
 
 /* Note: ioMicroMSecs returns *milli*seconds */
-int ioMicroMSecs(void)
+unsigned int
+ioMicroMSecs(void)
 {
   /* Make sure the value fits into Squeak SmallIntegers */
   return timeGetTime() & MillisecondClockMask;
 }
+
+#if (_WIN32_WINNT >= _WIN32_WINNT_WIN8)
+
+/* Compute the current VM time basis, the number of microseconds from 1901.
+ *
+ * As of Windows 8 there is a FILETIME wall clock interface which is high
+ * precision and so does not have to be combined with the millisecond clock.
+ */
+# define currentUTCMicroseconds(a,b,c) currentUTCMicrosecondsImplementation()
+static inline unsigned __int64
+currentUTCMicrosecondsImplementation(void)
+{
+	union { // got to love little-endian architectures...
+		FILETIME         utcNowFiletime;
+		unsigned __int64 utcNow;
+	} un;
+
+	// cannot fail...
+	GetSystemTimePreciseAsFileTime(&un.utcNowFiletime);
+	return un.utcNow / TocksPerMicrosecond - MicrosecondsFrom1601To1901;
+}
+#else // _WIN32_WINNT >= _WIN32_WINNT_WIN8
 
 /* Compute the current VM time basis, the number of microseconds from 1901.
  *
@@ -105,6 +129,7 @@ currentUTCMicroseconds(unsigned __int64 *utcTickBaseUsecsp, DWORD *lastTickp, DW
 	return *utcTickBaseUsecsp
 		  + (currentTick - *baseTickp) * MicrosecondsPerMillisecond;
 }
+#endif // (_WIN32_WINNT >= _WIN32_WINNT_WIN8)
 
 unsigned long long
 ioUTCMicroseconds() { return currentUTCMicroseconds(&utcTickBaseMicroseconds, &lastTick, &baseTick); }
@@ -123,7 +148,7 @@ ioInitTime()
 	TIMECAPS tCaps;
 
 	dwTimerPeriod = 0;
-	if(timeGetDevCaps(&tCaps,sizeof(tCaps)) != 0)
+	if (timeGetDevCaps(&tCaps,sizeof(tCaps)) != 0)
 		return;
 	dwTimerPeriod = tCaps.wPeriodMin;
 	if (timeBeginPeriod(dwTimerPeriod) != 0)

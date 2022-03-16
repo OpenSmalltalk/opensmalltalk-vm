@@ -49,18 +49,16 @@ int ioSeconds(void)
   return convertToSqueakTime(sysTime);
 }
 
-int ioMSecs()
+unsigned int
+ioMSecs()
 {
   /* Make sure the value fits into Squeak SmallIntegers */
-#ifndef _WIN32_WCE
   return timeGetTime() & MillisecondClockMask;
-#else
-  return GetTickCount() & MillisecondClockMask;
-#endif
 }
 
 /* Note: ioMicroMSecs returns *milli*seconds */
-int ioMicroMSecs(void)
+unsigned int
+ioMicroMSecs(void)
 {
   /* Make sure the value fits into Squeak SmallIntegers */
   return timeGetTime() & MillisecondClockMask;
@@ -124,7 +122,6 @@ static DWORD dwTimerPeriod;
 void
 ioInitTime()
 {
-# if !defined(_WIN32_WCE)
 	TIMECAPS tCaps;
 
 	dwTimerPeriod = 0;
@@ -133,15 +130,12 @@ ioInitTime()
 	dwTimerPeriod = tCaps.wPeriodMin;
 	if (timeBeginPeriod(dwTimerPeriod) != 0)
 		return;
-# endif
 }
 
 void
 ioReleaseTime(void)
 {
-# if !defined(_WIN32_WCE)
 	if (dwTimerPeriod)
 		timeEndPeriod(dwTimerPeriod);
-# endif /* !defined(_WIN32_WCE) */
 }
 #endif /* STACKVM */

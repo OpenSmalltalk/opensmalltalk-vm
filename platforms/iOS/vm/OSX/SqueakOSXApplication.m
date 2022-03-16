@@ -38,8 +38,12 @@
 
 #import "SqueakOSXApplication.h"
 #import "sqSqueakOSXScreenAndWindow.h"
+#import "SqueakOSXAppDelegate.h"
+#import "sqSqueakOSXApplication.h"
 
-@implementation SqueakOSXApplication 
+@implementation SqueakOSXApplication
+
+extern SqueakOSXAppDelegate *gDelegateApp;
 
 -(void)sendEvent:(NSEvent*)anEvent
 {
@@ -49,5 +53,29 @@
     } else {
        [super sendEvent:anEvent];
    }
-}   
+}
+#ifdef PharoVM
+- (void)showHelp:(id)sender;
+{
+    NSBundle *mainBundle = [NSBundle mainBundle];
+    NSDictionary *infoDictionary = [mainBundle infoDictionary];
+
+    id urlString = infoDictionary[@"PharoHelpURL"];
+    
+    if(urlString == Nil){
+        urlString = @"https://www.pharo.org";
+    }
+    
+    NSURL *url = [NSURL URLWithString: urlString];
+    [[NSWorkspace sharedWorkspace] openURL: url];
+}
+
+# if 0 // Disabled because no implementatioon of setAboutWindow: yet exists
+- (void)orderFrontStandardAboutPanel:(id)sender;
+{
+    [super orderFrontStandardAboutPanel: sender];
+    [gDelegateApp.squeakApplication setAboutWindow: [self keyWindow]];
+}
+# endif
+#endif
 @end

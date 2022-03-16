@@ -24,10 +24,9 @@
 #include <setjmp.h>
 #include <stdio.h> /* for fprintf(stderr,...) */
 
-#include "sqMemoryAccess.h"
+#include "objAccess.h"
 #include "vmCallback.h"
 #include "sqAssert.h"
-#include "sqVirtualMachine.h"
 #include "ia32abi.h"
 
 #if !defined(min)
@@ -47,47 +46,11 @@ struct VirtualMachine* interpreterProxy;
 # define alloca _alloca
 #endif
 
-#define RoundUpPowerOfTwo(value, modulus)                                      \
+#define RoundUpPowerOfTwo(value, modulus) \
   (((value) + (modulus) - 1) & ~((modulus) - 1))
 
-#define IsAlignedPowerOfTwo(value, modulus)                                    \
+#define IsAlignedPowerOfTwo(value, modulus) \
   (((value) & ((modulus) - 1)) == 0)
-
-#define objIsAlien(anOop)                                                      \
-    (interpreterProxy->includesBehaviorThatOf(                                 \
-      interpreterProxy->fetchClassOf(anOop),                                   \
-      interpreterProxy->classAlien()))
-
-#define objIsUnsafeAlien(anOop)                                                \
-    (interpreterProxy->includesBehaviorThatOf(                                 \
-      interpreterProxy->fetchClassOf(anOop),                                   \
-      interpreterProxy->classUnsafeAlien()))
-
-#define sizeField(alien)                                                       \
-    (*(long*)pointerForOop((sqInt)(alien) + BaseHeaderSize))
-
-#define dataPtr(alien)                                                         \
-    pointerForOop((sqInt)(alien) + BaseHeaderSize + BytesPerOop)
-
-#define isIndirect(alien)                                                      \
-    (sizeField(alien) < 0)
-
-#define startOfParameterData(alien)                                            \
-    (isIndirect(alien)  ? *(void **)dataPtr(alien)                             \
-                        :  (void  *)dataPtr(alien))
-
-#define isIndirectSize(size)                                                   \
-    ((size) < 0)
-
-#define startOfDataWithSize(alien, size)                                       \
-    (isIndirectSize(size) ? *(void **)dataPtr(alien)	                       \
-                          :  (void  *)dataPtr(alien))
-
-#define isSmallInt(oop)                                                        \
-    ((oop)&1)
-
-#define intVal(oop)                                                            \
-    (((long)(oop))>>1)
 
 /*
  * Call a foreign function that answers an integral result in r0 according to
@@ -159,7 +122,6 @@ thunkEntry(long r0, long r1, long r2, long r3,
 			void *thunkpPlus16, sqIntptr_t *stackp)
 {
   VMCallbackContext vmcc;
-  VMCallbackContext *previousCallbackContext;
   int flags;
   int returnType;
   long regArgs[NUM_REG_ARGS];
@@ -186,7 +148,7 @@ thunkEntry(long r0, long r1, long r2, long r3,
   }
 
   if ((returnType = setjmp(vmcc.trampoline)) == 0) {
-    previousCallbackContext = getMRCC();
+    vmcc.savedMostRecentCallbackContext = getMRCC();
     setMRCC(&vmcc);
     vmcc.thunkp = (void *)((char *)thunkpPlus16 - 16);
     vmcc.stackp = stackp;
@@ -194,12 +156,12 @@ thunkEntry(long r0, long r1, long r2, long r3,
     vmcc.floatregargsp = dregArgs;
     interpreterProxy->sendInvokeCallbackContext(&vmcc);
     fprintf(stderr,"Warning; callback failed to invoke\n");
-    setMRCC(previousCallbackContext);
+    setMRCC(vmcc.savedMostRecentCallbackContext);
     interpreterProxy->disownVM(flags);
     return -1;
   }
 
-  setMRCC(previousCallbackContext);
+  setMRCC(vmcc.savedMostRecentCallbackContext);
   interpreterProxy->disownVM(flags);
 
   switch (returnType) {
@@ -218,7 +180,7 @@ thunkEntry(long r0, long r1, long r2, long r3,
 }
 
 /*
- * Thunk allocation support.  Since thunks must be exectuable and some OSs
+ * Thunk allocation support.  Since thunks must be executable and some OSs
  * may not provide default execute permission on memory returned by malloc
  * we must provide memory that is guaranteed to be executable.  The abstraction
  * is to answer an Alien that references an executable piece of memory that

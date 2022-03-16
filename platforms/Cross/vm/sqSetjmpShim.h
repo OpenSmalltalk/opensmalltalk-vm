@@ -42,4 +42,6 @@
 int __attribute__((__nothrow__,__returns_twice__)) _setjmp0(jmp_buf);
 # undef _setjmp
 # define _setjmp(b) _setjmp0(b)
+# undef longjmp
+# define longjmp _longjmp
 #endif

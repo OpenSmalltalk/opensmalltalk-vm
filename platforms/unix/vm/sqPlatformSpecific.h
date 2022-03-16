@@ -28,13 +28,18 @@
  * 
  */
 
+#ifndef _SQ_PLATFORM_SPECIFIC_H
+#define _SQ_PLATFORM_SPECIFIC_H
+
+#include <stdio.h>
+#include "sqMemoryAccess.h"
+
 #undef sqAllocateMemory
 #undef sqGrowMemoryBy
 #undef sqShrinkMemoryBy
 #undef sqMemoryExtraBytesLeft
 
-#include "sqMemoryAccess.h"
-
+#if defined(__sqMemoryAccess_h) // Only define support API if we have sqInt etc
 extern usqInt sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize);
 #define allocateMemoryMinimumImageFileHeaderSize(heapSize, minimumMemory, fileStream, headerSize) \
 sqAllocateMemory(minimumMemory, heapSize)
@@ -54,10 +59,7 @@ extern void reportMinimumUnusedHeadroom(void);
 /* Thread support for thread-safe signalSemaphoreWithIndex and/or the COGMTVM */
 #if STACKVM || NewspeakVM
 # define sqLowLevelYield() sched_yield()
-/* linux's sched.h defines clone that conflicts with the interpreter's */
-# define clone NameSpacePollutant
 # include <pthread.h>
-# undef clone
 # define sqOSThread pthread_t
 /* these are used both in the STACKVM & the COGMTVM */
 # define ioOSThreadsEqual(a,b) pthread_equal(a,b)
@@ -92,6 +94,7 @@ typedef off_t squeakFileOffsetType;
 #define sqFilenameFromStringOpen sqFilenameFromString
 
 extern void sqFilenameFromString(char *uxName, sqInt stNameIndex, int sqNameLength);
+#endif // defined(__sqMemoryAccess_h)
 
 #undef dispatchFunctionPointer
 #undef dispatchFunctionPointerOnin
@@ -102,8 +105,6 @@ extern void sqFilenameFromString(char *uxName, sqInt stNameIndex, int sqNameLeng
 #undef	sqFTruncate
 /* sqFTruncate should return 0 on success, ftruncate does also */
 #define	sqFTruncate(f,o) ftruncate(fileno(f), o)
-#define ftell ftello
-#define fseek fseeko
 
 #if defined(__GNUC__)
 # if !defined(VM_LABEL)
@@ -123,7 +124,27 @@ extern void sqFilenameFromString(char *uxName, sqInt stNameIndex, int sqNameLeng
 # endif
 #endif
 
-#if !defined(VM_LABEL) || COGVM
+#if !defined(VM_LABEL) || COGVM || STACKVM
 # undef VM_LABEL
 # define VM_LABEL(foo) ((void)0)
 #endif
+
+/*
+ * platforms/Cross/vm/sq.h defines getReturnAddress if not defined
+ *
+ * following code posted by Eliot Miranda
+ * http://forum.world.st/builtin-extract-return-addr-td5122085.html
+ *
+ */
+
+# if COGVM && defined(__SUNPRO_C)
+# if defined(_X86_) || defined(i386) || defined(__i386) || defined(__i386__)
+#   define getReturnAddress() ({ register usqIntptr_t retpc; asm volatile ("movl 4(%%ebp),%0" : "=r"(retpc) : ); retpc; })
+# elif defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
+#   define getReturnAddress() ({ register usqIntptr_t retpc; asm volatile ("movq 8(%%rbp),%0" : "=r"(retpc) : ); retpc; })
+# else
+#       error "Cog requires getReturnAddress defining for the current platform."
+# endif /* defined(i386) */
+# endif /* COGVM && defined(__SUNPRO_C) */
+
+#endif /* _SQ_PLATFORM_SPECIFIC_H */

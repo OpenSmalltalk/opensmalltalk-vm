@@ -659,7 +659,7 @@ DWORD		lastError;
 	switch (attributeNumber) {
 
 		case 1: /* fileName, not supported for a single attribute */
-			resultOop = interpreterProxy->nilObject();
+			resultOop = nilOop;
 			break;
 
 		case 2: /* Mode */
@@ -697,7 +697,9 @@ DWORD		lastError;
 			break;
 
 		case 9: /* access time */
-			if (!FileTimeToLocalFileTime(&winAttrs.ftLastAccessTime, &fileTime))
+			if (interpreterProxy->fileTimesInUTC())
+				fileTime = winAttrs.ftLastAccessTime;
+			else if (!FileTimeToLocalFileTime(&winAttrs.ftLastAccessTime, &fileTime))
  				return interpreterProxy->primitiveFailForOSError(FA_TIME_CONVERSION_FAILED);
 			if (!FileTimeToSystemTime(&fileTime, &sysTime))
  				return interpreterProxy->primitiveFailForOSError(FA_TIME_CONVERSION_FAILED);
@@ -706,7 +708,9 @@ DWORD		lastError;
 			break;
 
 		case 10: /* modified time */
-			if (!FileTimeToLocalFileTime(&winAttrs.ftLastWriteTime, &fileTime))
+			if (interpreterProxy->fileTimesInUTC())
+				fileTime = winAttrs.ftLastWriteTime;
+			else if (!FileTimeToLocalFileTime(&winAttrs.ftLastWriteTime, &fileTime))
  				return interpreterProxy->primitiveFailForOSError(FA_TIME_CONVERSION_FAILED);
 			if (!FileTimeToSystemTime(&fileTime, &sysTime))
  				return interpreterProxy->primitiveFailForOSError(FA_TIME_CONVERSION_FAILED);
@@ -715,11 +719,13 @@ DWORD		lastError;
 			break;
 
 		case 11: /* change time */
-			resultOop = interpreterProxy->nilObject();
+			resultOop = nilOop;
 			break;
 
 		case 12: /* creation time */
-			if (!FileTimeToLocalFileTime(&winAttrs.ftCreationTime, &fileTime))
+			if (interpreterProxy->fileTimesInUTC())
+				fileTime = winAttrs.ftCreationTime;
+			else if (!FileTimeToLocalFileTime(&winAttrs.ftCreationTime, &fileTime))
  				return interpreterProxy->primitiveFailForOSError(FA_TIME_CONVERSION_FAILED);
 			if (!FileTimeToSystemTime(&fileTime, &sysTime))
  				return interpreterProxy->primitiveFailForOSError(FA_TIME_CONVERSION_FAILED);
@@ -729,30 +735,30 @@ DWORD		lastError;
 
 		case 13:
 			if (st_mode & S_IRUSR)
-				resultOop = interpreterProxy->trueObject();
+				resultOop = trueOop;
 			else
-				resultOop = interpreterProxy->falseObject();
+				resultOop = falseOop;
 			break;
 
 		case 14:
 			if (st_mode & S_IWUSR)
-				resultOop = interpreterProxy->trueObject();
+				resultOop = trueOop;
 			else
-				resultOop = interpreterProxy->falseObject();
+				resultOop = falseOop;
 			break;
 
 		case 15:
 			if (st_mode & S_IXUSR)
-				resultOop = interpreterProxy->trueObject();
+				resultOop = trueOop;
 			else
-				resultOop = interpreterProxy->falseObject();
+				resultOop = falseOop;
 			break;
 
 		case 16:
 			if ((st_mode & S_IFLNK) == S_IFLNK)
-				resultOop = interpreterProxy->trueObject();
+				resultOop = trueOop;
 			else
-				resultOop = interpreterProxy->falseObject();
+				resultOop = falseOop;
 			break;
 	}
 
@@ -789,9 +795,7 @@ sqLong		fileSize;
 		return FA_CANT_STAT_PATH; }
 	faSetStMode(aFaPath, &st_mode, winAttrs.dwFileAttributes);
 
-	interpreterProxy->storePointerofObjectwithValue(
-		0, attributeArray,
-		interpreterProxy->nilObject());
+	interpreterProxy->storePointerofObjectwithValue(0, attributeArray, nilOop);
 
 	interpreterProxy->storePointerofObjectwithValue(
 		1, attributeArray,
@@ -807,9 +811,7 @@ sqLong		fileSize;
 		interpreterProxy->positive32BitIntegerFor(faWinDevId(aFaPath)));
 
 	/* nlinks - Not Yet Supported */
-	interpreterProxy->storePointerofObjectwithValue(
-		4, attributeArray,
-		interpreterProxy->nilObject());
+	interpreterProxy->storePointerofObjectwithValue(4, attributeArray, nilOop);
 
 	/* uid */
 	interpreterProxy->storePointerofObjectwithValue(
@@ -829,7 +831,9 @@ sqLong		fileSize;
 			interpreterProxy->positive64BitIntegerFor(fileSize) :
 			interpreterProxy->positive32BitIntegerFor(0));
 
-	if (!FileTimeToLocalFileTime(&winAttrs.ftLastAccessTime, &fileTime)) {
+	if (interpreterProxy->fileTimesInUTC())
+		fileTime = winAttrs.ftLastAccessTime;
+	else if (!FileTimeToLocalFileTime(&winAttrs.ftLastAccessTime, &fileTime)) {
  		interpreterProxy->primitiveFailForOSError(FA_TIME_CONVERSION_FAILED);
 		return FA_TIME_CONVERSION_FAILED; }
 	if (!FileTimeToSystemTime(&fileTime, &sysTime)) {
@@ -840,7 +844,9 @@ sqLong		fileSize;
 		8, attributeArray,
 		interpreterProxy->signed64BitIntegerFor(attributeDate));
 
-	if (!FileTimeToLocalFileTime(&winAttrs.ftLastWriteTime, &fileTime)) {
+	if (interpreterProxy->fileTimesInUTC())
+		fileTime = winAttrs.ftLastWriteTime;
+	else if (!FileTimeToLocalFileTime(&winAttrs.ftLastWriteTime, &fileTime)) {
  		interpreterProxy->primitiveFailForOSError(FA_TIME_CONVERSION_FAILED);
 		return FA_TIME_CONVERSION_FAILED; }
 	if (!FileTimeToSystemTime(&fileTime, &sysTime)) {
@@ -851,11 +857,11 @@ sqLong		fileSize;
 		9, attributeArray,
 		interpreterProxy->signed64BitIntegerFor(attributeDate));
 
-	interpreterProxy->storePointerofObjectwithValue(
-		10, attributeArray,
-		interpreterProxy->nilObject());
+	interpreterProxy->storePointerofObjectwithValue(10, attributeArray, nilOop);
 
-	if (!FileTimeToLocalFileTime(&winAttrs.ftCreationTime, &fileTime)) {
+	if (interpreterProxy->fileTimesInUTC())
+		fileTime = winAttrs.ftCreationTime;
+	else if (!FileTimeToLocalFileTime(&winAttrs.ftCreationTime, &fileTime)) {
 		interpreterProxy->primitiveFailForOSError(FA_TIME_CONVERSION_FAILED);
 		return FA_TIME_CONVERSION_FAILED; }
 	if (!FileTimeToSystemTime(&fileTime, &sysTime)) {
@@ -904,8 +910,6 @@ sqInt faAccessAttributes(fapath *aFaPath, sqInt attributeArray, sqInt offset)
 int	status;
 unsigned int	st_mode;
 sqInt	index;
-sqInt	trueOop;
-sqInt	falseOop;
 sqInt	accessOop;
 WIN32_FILE_ATTRIBUTE_DATA winAttrs;
 
@@ -916,8 +920,6 @@ WIN32_FILE_ATTRIBUTE_DATA winAttrs;
 	faSetStMode(aFaPath, &st_mode, winAttrs.dwFileAttributes);
 
 	index = offset;
-	trueOop = interpreterProxy->trueObject();
-	falseOop = interpreterProxy->falseObject();
 
 	accessOop = (st_mode & S_IRUSR) ? trueOop : falseOop;
 	interpreterProxy->storePointerofObjectwithValue(index++, attributeArray, accessOop);

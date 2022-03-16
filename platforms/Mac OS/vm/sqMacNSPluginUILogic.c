@@ -68,7 +68,6 @@ extern char		pluginArgValue[];
 extern int windowActive;
 extern int buttonState;
 extern char modifierMap[];
-extern int cachedButtonState;
 extern int keyBuf[];	/* circular buffer */
 extern int keyBufGet;			/* index of next item of keyBuf to read */
 extern int keyBufPut;			/* index of next item of keyBuf to write */
@@ -843,7 +842,6 @@ void recordMouseDown(EventRecord *theEvent) {
 
 	/* button state: low three bits are mouse buttons; next 4 bits are modifier bits */
 	buttonState = MouseModifierState(theEvent);
-	cachedButtonState = cachedButtonState | buttonState;
 }
 
 int recordKeyboardEvent(EventRecord *theEvent, int keyType) {

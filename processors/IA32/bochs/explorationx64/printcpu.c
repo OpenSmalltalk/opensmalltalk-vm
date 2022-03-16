@@ -15,7 +15,7 @@
 static char buf[10];
 
 char *
-lower(char *s)
+lower(const char *s)
 {
 	int i;
 	for (i = 0; i < strlen(s); i++)
@@ -61,7 +61,7 @@ printf(CLASS " methodsFor: 'accessing' stamp: 'eem %d/%d/%d %d:%02d'!\r"\
 	"dataSize\r\t^%ld! !\r", m,d,y,h,i, sizeof(BX_CPU_C));
 
 	printf(CLASS " methodsFor: 'accessing' stamp: 'eem %d/%d/%d %d:%02d'!\r"
-			"rflags\r\t^self unsignedLongLongAt: %ld! !\r", m,d,y,h,i,
+			"rflags\r\t^self unsignedLongAt: %ld! !\r", m,d,y,h,i,
 			stoffsetof(BX_CPU_C,eflags));
 
 	print(RAX,BX_64BIT_REG_RAX,al);

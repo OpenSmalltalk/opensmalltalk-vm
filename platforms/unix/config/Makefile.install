@@ -20,7 +20,7 @@ install-squeak : $(squeak) $(squeaksh) $(binsqueaksh) getversion
 	$(MKINSTALLDIRS) $(ROOT)$(bindir)
 	$(INSTALL_PROG) $(squeak) $(ROOT)$(plgdir)
 	$(INSTALL_SCRIPT) $(squeaksh) $(ROOT)$(exec_prefix)/$(squeak)
-	$(INSTALL_SCRIPT) $(binsqueaksh) $(ROOT)$(bindir)/$(squeak)
+	$(INSTALL_SCRIPT) $(binsqueaksh) $(ROOT)$(bindir)/$(scriptname)
 	if test -n "$(VM_APP_ICONS)"; then \
 	  $(INSTALL_DATA) $(ICONS) $(ROOT)$(VM_APP_ICONS); \
 	fi
@@ -30,7 +30,7 @@ uninstall-squeak : getversion .force
 	  $(UNINSTALL) $(ROOT)$(VM_APP_ICONS); \
 	fi
 	@$(UNINSTALL) $(ROOT)$(plgdir) $(squeak)
-	@$(UNINSTALL) $(ROOT)$(bindir) $(squeak)
+	@$(UNINSTALL) $(ROOT)$(bindir) $(scriptname)
 
 # plugins
 

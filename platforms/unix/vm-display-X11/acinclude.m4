@@ -48,23 +48,29 @@ if test "$have_x" = "yes"; then
   AC_SEARCH_LIBS([XOpenDisplay],[X11], [
     AC_DEFINE([USE_X11], [1], [Use X11])
     AC_DEFINE_UNQUOTED([VM_X11DIR], "${x_libraries}", [X11 libraries])
-    AC_SEARCH_LIBS([XShmAttach],[Xext])
+    AC_SEARCH_LIBS([XShmAttach],[Xext], [
+      AC_DEFINE([HAVE_LIBXEXT], [1], [Have Xext library])
+    ])
     if test "$have_gl" = ""; then have_gl="no"; fi
     if test "$have_gl" = "yes"; then
-        AC_CHECK_HEADERS([GL/gl.h gl/gl.h gl.h], [
-          have_gl=yes
+      AC_CHECK_HEADERS([GL/gl.h gl/gl.h gl.h], [
+        AC_SEARCH_LIBS([glIsEnabled],[GL], [
+          have_gl=yes 
           AC_DEFINE([USE_X11_GLX], [1], [Use X11 GLX])
-          AC_SEARCH_LIBS([glIsEnabled],[GL])
           break
         ])
+        break
+      ])
     else
-        AC_DEFINE([USE_X11_GLX], [0], [Use X11 GLX])
+      AC_DEFINE([USE_X11_GLX], [0], [Use X11 GLX])
     fi
     AC_CHECK_HEADER([X11/extensions/Xrender.h], [
-          AC_DEFINE([HAVE_LIBXRENDER], [1], [Have Xrender library])
-          AC_SEARCH_LIBS([XRenderCreateCursor],[Xrender])
-          break
-        ])
+      AC_SEARCH_LIBS([XRenderCreateCursor],[Xrender], [
+        AC_DEFINE([HAVE_LIBXRENDER], [1], [Have Xrender library])
+        break
+      ])
+      break
+    ])
   ],[
     AC_PLUGIN_DISABLE
   ])

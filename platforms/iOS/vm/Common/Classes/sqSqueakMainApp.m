@@ -1,6 +1,6 @@
 /*
  *  sqSqueakMainApp.m
- *  
+ *
  *
  *  Created by John M McIntosh on 5/15/08.
  *
@@ -8,7 +8,7 @@
 /*
  Some of this code was funded via a grant from the European Smalltalk User Group (ESUG)
  Copyright (c) 2008 Corporate Smalltalk Consulting Ltd. All rights reserved.
- *   Small parts of this code is 
+ *   Small parts of this code is
  *   Copyright (C) 1996-2007 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
  *   All rights reserved.
@@ -34,10 +34,10 @@
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 
-The end-user documentation included with the redistribution, if any, must include the following acknowledgment: 
-"This product includes software developed by Corporate Smalltalk Consulting Ltd (http://www.smalltalkconsulting.com) 
-and its contributors", in the same place and form as other third-party acknowledgments. 
-Alternately, this acknowledgment may appear in the software itself, in the same form and location as other 
+The end-user documentation included with the redistribution, if any, must include the following acknowledgment:
+"This product includes software developed by Corporate Smalltalk Consulting Ltd (http://www.smalltalkconsulting.com)
+and its contributors", in the same place and form as other third-party acknowledgments.
+Alternately, this acknowledgment may appear in the software itself, in the same form and location as other
 such third-party acknowledgments.
 */
 //
@@ -78,16 +78,11 @@ char            gSqueakUntrustedDirectoryName[PATH_MAX];
 char            gSqueakTrustedDirectoryName[PATH_MAX];
 int				blockOnError=0;
 
-extern void printAllStacks(void);
-extern void printCallStack(void);
-extern void dumpPrimTraceLog(void);
 extern BOOL NSApplicationLoad(void);
-extern void pushOutputFile(char *);
-extern void popOutputFile(void);
 
-static void reportStackState(const char *, char *, int, ucontext_t *);
+static void reportStackState(FILE *,const char *, char *, int, ucontext_t *);
 static void block();
-static void *printRegisterState(ucontext_t *);
+static void *printRegisterState(FILE *,ucontext_t *);
 
 /* Print an error message, possibly a stack trace, and exit. */
 /* Disable Intel compiler inlining of error which is used for breakpoints */
@@ -96,7 +91,7 @@ static void *printRegisterState(ucontext_t *);
 void
 error(const char *msg)
 {
-	reportStackState(msg,0,0,0);
+	reportStackState(stderr,msg,0,0,0);
 	if (blockOnError) block();
 	abort();
 }
@@ -120,7 +115,7 @@ block()
  * Allows e.g. writing to a log file and stderr.
  */
 static void
-reportStackState(const char *msg, char *date, int printAll, ucontext_t *uap)
+reportStackState(FILE *file, const char *msg, char *date, int printAll, ucontext_t *uap)
 {
 # if !defined(NOEXECINFO)
 	void *addrs[BACKTRACE_DEPTH];
@@ -134,9 +129,9 @@ reportStackState(const char *msg, char *date, int printAll, ucontext_t *uap)
 	extern usqInt stackLimitAddress(void);
 # endif
 
-	printf("\n%s%s%s\n\n", msg, date ? " " : "", date ? date : "");
+	fprintf(file,"\n%s%s%s\n\n", msg, date ? " " : "", date ? date : "");
 # if STACKVM
-    printf("%s\n\n", sourceVersionString('\n'));
+    fprintf(file,"%s\n\n", sourceVersionString('\n'));
 
 #	if COGVM
 	/* Do not attempt to report the stack until the VM is initialized!! */
@@ -146,24 +141,15 @@ reportStackState(const char *msg, char *date, int printAll, ucontext_t *uap)
 # endif
 
 # if !defined(NOEXECINFO)
-	printf("C stack backtrace & registers:\n");
+	fprintf(file,"C stack backtrace & registers:\n");
 	if (uap) {
-		addrs[0] = printRegisterState(uap);
+		addrs[0] = printRegisterState(file,uap);
 		depth = 1 + backtrace(addrs + 1, BACKTRACE_DEPTH);
 	}
 	else
 		depth = backtrace(addrs, BACKTRACE_DEPTH);
-#	if 1 /* Mac OS's backtrace_symbols_fd prints NULL byte droppings each line */
-	fflush(stdout); /* backtrace_symbols_fd uses unbuffered i/o */
-	backtrace_symbols_fd(addrs, depth, fileno(stdout));
-#	else
-	{ int i; char **strings;
-	  strings = backtrace_symbols(addrs, depth);
-	  printf("(%s)\n", strings[0]);
-	  for (i = 1; i < depth; i++)
-		printf("%s\n", strings[i]);
-	}
-#	endif
+	fflush(file); /* backtrace_symbols_fd uses unbuffered i/o */
+	backtrace_symbols_fd(addrs, depth, fileno(file));
 # endif
 
 	if (ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
@@ -183,12 +169,12 @@ reportStackState(const char *msg, char *date, int printAll, ucontext_t *uap)
 
 			printingStack = true;
 			if (printAll) {
-				printf("\n\nAll Smalltalk process stacks (active first):\n");
-				printAllStacks();
+				fprintf(file,"\n\nAll Smalltalk process stacks (active first):\n");
+				printAllStacksOn(file);
 			}
 			else {
-				printf("\n\nSmalltalk stack dump:\n");
-				printCallStack();
+				fprintf(file,"\n\nSmalltalk stack dump:\n");
+				printCallStackOn(file);
 			}
 			printingStack = false;
 # if COGVM
@@ -198,57 +184,87 @@ reportStackState(const char *msg, char *date, int printAll, ucontext_t *uap)
 		}
 	}
 	else
-		printf("\nCan't dump Smalltalk stack(s). Not in VM thread\n");
+		fprintf(file,"\nCan't dump Smalltalk stack(s). Not in VM thread\n");
 # if STACKVM
-	printf("\nMost recent primitives\n");
-	dumpPrimTraceLog();
+	fprintf(file,"\nMost recent primitives\n");
+	dumpPrimTraceLogOn(file);
 #	if COGVM
-	printf("\n");
-	reportMinimumUnusedHeadroom();
+	fprintf(file,"\n");
+	reportMinimumUnusedHeadroomOn(file);
 #	endif
 # endif
-	printf("\n\t(%s)\n", msg);
-	fflush(stdout);
+	fprintf(file,"\n\t(%s)\n", msg);
+	fflush(file);
 }
 
-/* Attempt to dump the registers to stdout.  Only do so if we know how. */
+/* Attempt to dump the registers to stdout.  Only do so if we know how. 
+ * Answer the pc (or 0).
+ */
 static void *
-printRegisterState(ucontext_t *uap)
+printRegisterState(FILE *file,ucontext_t *uap)
 {
+#define v(v) ((void *)(v))
 #if __DARWIN_UNIX03 && __i386__
 	_STRUCT_X86_THREAD_STATE32 *regs = &uap->uc_mcontext->__ss;
-	printf(	"\teax 0x%08x ebx 0x%08x ecx 0x%08x edx 0x%08x\n"
+	fprintf(file,
+			"\teax 0x%08x ebx 0x%08x ecx 0x%08x edx 0x%08x\n"
 			"\tedi 0x%08x esi 0x%08x ebp 0x%08x esp 0x%08x\n"
 			"\teip 0x%08x\n",
 			regs->__eax, regs->__ebx, regs->__ecx, regs->__edx,
 			regs->__edi, regs->__edi, regs->__ebp, regs->__esp,
 			regs->__eip);
-	return (void *)(regs->__eip);
+	return v(regs->__eip);
 #elif __i386__
 	_STRUCT_X86_THREAD_STATE32 *regs = &uap->uc_mcontext->ss;
-	printf(	"\teax 0x%08x ebx 0x%08x ecx 0x%08x edx 0x%08x\n"
+	fprintf(file,
+			"\teax 0x%08x ebx 0x%08x ecx 0x%08x edx 0x%08x\n"
 			"\tedi 0x%08x esi 0x%08x ebp 0x%08x esp 0x%08x\n"
 			"\teip 0x%08x\n",
 			regs->eax, regs->ebx, regs->ecx, regs->edx,
 			regs->edi, regs->edi, regs->ebp, regs->esp,
 			regs->eip);
-	return (void *)(regs->eip);
+	return v(regs->eip);
 #elif __x86_64__
 	_STRUCT_X86_THREAD_STATE64 *regs = &uap->uc_mcontext->__ss;
-	printf(	"\trax 0x%016llx rbx 0x%016llx rcx 0x%016llx rdx 0x%016llx\n"
-			"\trdi 0x%016llx rsi 0x%016llx rbp 0x%016llx rsp 0x%016llx\n"
-			"\tr8  0x%016llx r9  0x%016llx r10 0x%016llx r11 0x%016llx\n"
-			"\tr12 0x%016llx r13 0x%016llx r14 0x%016llx r15 0x%016llx\n"
-			"\trip 0x%016llx\n",
-			regs->__rax, regs->__rbx, regs->__rcx, regs->__rdx,
-			regs->__rdi, regs->__rsi, regs->__rbp, regs->__rsp,
-			regs->__r8 , regs->__r9 , regs->__r10, regs->__r11,
-			regs->__r12, regs->__r13, regs->__r14, regs->__r15,
-			regs->__rip);
-	return (void *)(regs->__rip);
-# elif defined(__arm__) || defined(__arm32__)
+	fprintf(file,
+			"    rax %14p rbx %14p rcx %14p rdx %14p\n"
+			"    rdi %14p rsi %14p rbp %14p rsp %14p\n"
+			"    r8  %14p r9  %14p r10 %14p r11 %14p\n"
+			"    r12 %14p r13 %14p r14 %14p r15 %14p\n"
+			"    rip %14p\n",
+			v(regs->__rax), v(regs->__rbx), v(regs->__rcx), v(regs->__rdx),
+			v(regs->__rdi), v(regs->__rsi), v(regs->__rbp), v(regs->__rsp),
+			v(regs->__r8 ), v(regs->__r9 ), v(regs->__r10), v(regs->__r11),
+			v(regs->__r12), v(regs->__r13), v(regs->__r14), v(regs->__r15),
+			v(regs->__rip));
+	return v(regs->__rip);
+# elif defined(__arm64__) || defined(__aarch64__)
+	_STRUCT_ARM_THREAD_STATE64 *regs = &uap->uc_mcontext->__ss;
+#   define vr(r) v(regs->r)
+	fprintf(file,
+			"     x0 %14p  x1 %14p  x2 %14p  x3 %14p\n"
+			"     x4 %14p  x5 %14p  x6 %14p  x7 %14p\n"
+			"     x8 %14p  x9 %14p x10 %14p x11 %14p\n"
+			"    x12 %14p x13 %14p x14 %14p x15 %14p\n"
+			"    x16 %14p x17 %14p x18 %14p x19 %14p\n"
+			"    x20 %14p x21 %14p x22 %14p x23 %14p\n"
+			"    x24 %14p x25 %14p x26 %14p x27 %14p\n"
+			"    x29 %14p  fp %14p  lr %14p  sp %14p\n",
+			"    cpsr 0x%08x\n",
+			vr( __x[0]), vr( __x[1]), vr( __x[2]), vr( __x[3]),
+			vr( __x[4]), vr( __x[5]), vr( __x[6]), vr( __x[7]),
+			vr( __x[8]), vr( __x[9]), vr(__x[10]), vr(__x[11]),
+			vr(__x[12]), vr(__x[13]), vr(__x[14]), vr(__x[15]),
+			vr(__x[16]), vr(__x[17]), vr(__x[18]), vr(__x[19]),
+			vr(__x[20]), vr(__x[21]), vr(__x[22]), vr(__x[23]),
+			vr(__x[24]), vr(__x[25]), vr(__x[26]), vr(__x[27]),
+			vr(__x[28]), vr(__fp),    vr(__lr),    vr(__sp),
+			vr(__pc), regs->__cpsr);
+	return vr(__pc);
+#elif defined(__arm__) || defined(__arm32__)
 	_STRUCT_ARM_THREAD_STATE *regs = &uap->uc_mcontext->ss;
-	printf(	"\t r0 0x%08x r1 0x%08x r2 0x%08x r3 0x%08x\n"
+	fprintf(file,
+	        "\t r0 0x%08x r1 0x%08x r2 0x%08x r3 0x%08x\n"
 	        "\t r4 0x%08x r5 0x%08x r6 0x%08x r7 0x%08x\n"
 	        "\t r8 0x%08x r9 0x%08x r10 0x%08x fp 0x%08x\n"
 	        "\t ip 0x%08x sp 0x%08x lr 0x%08x pc 0x%08x\n"
@@ -257,20 +273,29 @@ printRegisterState(ucontext_t *uap)
 	        regs->r[4],regs->r[5],regs->r[6],regs->r[7],
 	        regs->r[8],regs->r[9],regs->r[10],regs->r[11],
 	        regs->r[12], regs->sp, regs->lr, regs->pc, regs->cpsr);
-	return (void *)(regs->pc);
+	return v(regs->pc);
 #else
-	printf("don't know how to derive register state from a ucontext_t on this platform\n");
-	return 0;
+	fprintf(file,"don't know how to derive register state from a ucontext_t on this platform\n");
+	return v(0);
 #endif
 }
-static void
-getCrashDumpFilenameInto(char *buf)
-{
-    char *slash;
 
-    strcpy(buf,imageName);
-    slash = strrchr(buf,'/');
-    strcpy(slash ? slash + 1 : buf, "crash.dmp");
+static FILE *
+crashDumpFile()
+{
+	char namebuf[PATH_MAX+1];
+#if defined(PREFERENCES_RELATIVE_LOG_LOCATION)
+	FSRef fsRef;
+	if (!FSFindFolder(kUserDomain, kPreferencesFolderType, 1, &fsRef)
+	 && !FSRefMakePath(&fsRef, (unsigned char *)namebuf, PATH_MAX)) {
+		strncat(namebuf,"/" PREFERENCES_RELATIVE_LOG_LOCATION "/crash.dmp",PATH_MAX+1);
+		return fopen(namebuf,"a+");
+	}
+#endif
+    strcpy(namebuf,imageName);
+    char *slash = strrchr(namebuf,'/');
+    strcpy(slash ? slash + 1 : namebuf, "crash.dmp");
+	return fopen(namebuf,"a+");
 }
 
 /*
@@ -284,7 +309,6 @@ sigusr1(int sig, siginfo_t *info, void *uap)
 	int saved_errno = errno;
 	time_t now = time(NULL);
 	char ctimebuf[32];
-	char crashdump[PATH_MAX+1];
 
 	if (!ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
 		pthread_kill(getVMOSThread(),sig);
@@ -292,24 +316,28 @@ sigusr1(int sig, siginfo_t *info, void *uap)
 		return;
 	}
 
-	getCrashDumpFilenameInto(crashdump);
+	FILE *crashdump = crashDumpFile();
 	ctime_r(&now,ctimebuf);
-	pushOutputFile(crashdump);
-	reportStackState("SIGUSR1", ctimebuf, 1, uap);
-	popOutputFile();
-	reportStackState("SIGUSR1", ctimebuf, 1, uap);
+	reportStackState(crashdump,"SIGUSR1", ctimebuf, 1, uap);
+	reportStackState(stdout,"SIGUSR1", ctimebuf, 1, uap);
+	fclose(crashdump);
 
 	errno = saved_errno;
 }
 
 static int inFault = 0;
 
+sqInt
+ioCanCatchFFIExceptions() { return 1; }
+
+extern sqInt wait_for_debugger_to_attach_on_ffi_exception;
+sqInt wait_for_debugger_to_attach_on_ffi_exception = 0;
+
 void
 sigsegv(int sig, siginfo_t *info, void *uap)
 {
 	time_t now = time(NULL);
 	char ctimebuf[32];
-	char crashdump[PATH_MAX+1];
 	const char *fault = sig == SIGSEGV
 						? "Segmentation fault"
 						: (sig == SIGBUS
@@ -320,14 +348,15 @@ sigsegv(int sig, siginfo_t *info, void *uap)
 
 	if (!inFault) {
 		extern sqInt primitiveFailForFFIExceptionat(usqLong exceptionCode, usqInt pc);
+		while (wait_for_debugger_to_attach_on_ffi_exception)
+			usleep(100000);  // sleep for 0.1 seconds
 		primitiveFailForFFIExceptionat(sig, ((ucontext_t *)uap)->_PC_IN_UCONTEXT);
 		inFault = 1;
-		getCrashDumpFilenameInto(crashdump);
+		FILE *crashdump = crashDumpFile();
 		ctime_r(&now,ctimebuf);
-		pushOutputFile(crashdump);
-		reportStackState(fault, ctimebuf, 0, uap);
-		popOutputFile();
-		reportStackState(fault, ctimebuf, 0, uap);
+		reportStackState(crashdump,fault, ctimebuf, 0, uap);
+		reportStackState(stderr,fault, ctimebuf, 0, uap);
+		fclose(crashdump);
 	}
 	if (blockOnError) block();
 	abort();
@@ -353,26 +382,27 @@ sigsegv(int sig, siginfo_t *info, void *uap)
  *
  */
 
-void
-attachToSignals() {
 #if STACKVM
+void
+attachToSignals()
+{
 	struct sigaction sigusr1_handler_action, sigsegv_handler_action;
 
 	if (gNoSignalHandlers) return;
 
-    sigsegv_handler_action.sa_sigaction = sigsegv;
-    sigsegv_handler_action.sa_flags = SA_NODEFER | SA_SIGINFO;
-    sigemptyset(&sigsegv_handler_action.sa_mask);
-    (void)sigaction(SIGBUS, &sigsegv_handler_action, 0);
-    (void)sigaction(SIGILL, &sigsegv_handler_action, 0);
-    (void)sigaction(SIGSEGV, &sigsegv_handler_action, 0);
+	sigsegv_handler_action.sa_sigaction = sigsegv;
+	sigsegv_handler_action.sa_flags = SA_NODEFER | SA_SIGINFO;
+	sigemptyset(&sigsegv_handler_action.sa_mask);
+	(void)sigaction(SIGBUS, &sigsegv_handler_action, 0);
+	(void)sigaction(SIGILL, &sigsegv_handler_action, 0);
+	(void)sigaction(SIGSEGV, &sigsegv_handler_action, 0);
 
-    sigusr1_handler_action.sa_sigaction = sigusr1;
-    sigusr1_handler_action.sa_flags = SA_NODEFER | SA_SIGINFO;
-    sigemptyset(&sigusr1_handler_action.sa_mask);
-    (void)sigaction(SIGUSR1, &sigusr1_handler_action, 0);
-#endif
+	sigusr1_handler_action.sa_sigaction = sigusr1;
+	sigusr1_handler_action.sa_flags = SA_NODEFER | SA_SIGINFO;
+	sigemptyset(&sigusr1_handler_action.sa_mask);
+	(void)sigaction(SIGUSR1, &sigusr1_handler_action, 0);
 }
+#endif // STACKVM
 
 sqInt
 ioExit(void) {
@@ -392,7 +422,7 @@ sqInt
 ioDisablePowerManager(sqInt disableIfNonZero) {
 	//API Documented
 	return 0;
-}	
+}
 
 #if STACKVM
 sqInt reportStackHeadroom;
@@ -443,7 +473,7 @@ getRedzoneSize()
 
 	do kill(getpid(),SIGPROF); while (!p);
 	(void)sigaction(SIGPROF, &old, 0);
-	return (char *)min(&old,&handler_action) - sizeof(struct sigaction) - p;
+	return (char *)min(&old,&handler_action) - p;
 }
 
 static int stackPageHeadroom;
@@ -454,13 +484,21 @@ static int stackPageHeadroom;
  * be lazy.  The reportheadroom switch can be used to check empirically that
  * there is sufficient headroom.  At least on Mac OS X we see no large stack
  * usage that would indicate e.g. dynamic linking in signal handlers.
- * So answer only the redzone size and likely get small (2048 byte) pages.
+ * So answer only the redzone size and likely get small pages (2048 byte on 32
+ * bit, 4096 bytes on 64-bits).
+ *
+ * eem, february/march 2022: recent experience with Virtend shows that more
+ * headroom is needed on current versions of MacOS. So 8k pages on 64-bits.
  */
 int
 osCogStackPageHeadroom()
 {
 	if (!stackPageHeadroom)
+#if SQ_HOST64 // was __ARM_ARCH_ISA_A64 || __aarch64__ || __arm64__
+		stackPageHeadroom = getRedzoneSize() + 1024;
+#else
 		stackPageHeadroom = getRedzoneSize();
+#endif
 	return stackPageHeadroom;
 }
 
