@@ -319,7 +319,7 @@ yZero()
 	evt.type = EventTypeMouse;
 	evt.timeStamp = ioMSecs();
 
-	NSPoint local_point = [aView convertPoint: [theEvent locationInWindow] fromView:nil];
+	NSPoint local_point = [aView sqMousePosition: theEvent];
 
 	evt.x =  lrintf((float)local_point.x);
 	evt.y =  lrintf((float)local_point.y);
