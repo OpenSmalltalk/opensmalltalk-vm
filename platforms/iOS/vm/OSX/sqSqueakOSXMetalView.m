@@ -200,6 +200,20 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 	return YES;
 }
 
+- (NSRect) sqScreenSize {
+  return [self convertRectToBacking: [self bounds]];
+}
+
+
+- (NSPoint) sqMousePosition: (NSEvent*)theEvent {
+	/* Our client expects the mouse coordinates in Squeak's coordinates,
+	 * but theEvent's location is in "user" coords. so we have to convert. */
+	NSPoint local_pt = [self convertPoint: [theEvent locationInWindow] fromView:nil];
+	NSPoint converted = [self convertPointToBacking: local_pt];
+	// Squeak is upside down
+	return NSMakePoint(converted.x, -converted.y);
+}
+
 #pragma mark Drawing
 
 - (void) setupFullScreendispBitsIndex {
@@ -362,7 +376,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 }
 
 - (CGSize) screenSizeForTexture {
-	CGRect screenRect = [self bounds];
+	CGRect screenRect = [self sqScreenSize];
 	CGSize screenSize;
 	screenSize.width = (sqInt)screenRect.size.width;
 	screenSize.height = (sqInt)screenRect.size.height;

@@ -59,4 +59,7 @@
 - (void) preDrawThelayers;
 - (void) drawImageUsingClip: (CGRect) clip;
 
+- (NSRect) sqScreenSize;
+- (NSPoint) sqMousePosition: (NSEvent*)theEvent;
+
 @end

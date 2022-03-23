@@ -5,8 +5,8 @@
 
 XCODE:=$(shell /usr/bin/xcode-select -p)
 XCUB:=$(XCODE)/usr/bin
-#SDKsDIR:=$(XCODE)/Platforms/MacOSX.platform/Developer/SDKs
-SDKsDIR:=$(XCODE)/SDKs
+SDKsDIR:=$(XCODE)/Platforms/MacOSX.platform/Developer/SDKs
+#SDKsDIR:=$(XCODE)/SDKs
 #Build oldest installed SDK
 SDKs:=MacOSX.sdk
 ifeq ($(SDK),)

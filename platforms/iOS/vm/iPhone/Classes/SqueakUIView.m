@@ -73,6 +73,14 @@ SInt32 undoCounter=1, oldValue=0;  // jdr undo support
 - (void) drawImageUsingClip: (CGRect) clip {
 }
 
+- (CGRect) sqScreenSize {
+	return [self bounds];
+}
+
+- (NSPoint) sqMousePosition: (NSEvent*)theEvent {
+	return [self convertPoint: [theEvent locationInWindow] fromView:nil];
+}
+
 // Handles the start of a touch
 - (void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event
 {
