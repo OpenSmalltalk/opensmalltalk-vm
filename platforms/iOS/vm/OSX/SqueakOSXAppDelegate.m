@@ -163,16 +163,17 @@ SqueakOSXAppDelegate *gDelegateApp;
 	width  = ((unsigned) getSavedWindowSize()) >> 16;
 	height = getSavedWindowSize() & 0xFFFF;
 	width = (sqInt) ((width*4)/32.0f+0.5)*8.0;  //JMM OPEN/GL THOUGHTS FOR PERFORMANCE
-	NSSize sizeOfWindowContent;
-	sizeOfWindowContent.width = width;
-	sizeOfWindowContent.height = height;
 	
-	[gDelegateApp.window setContentSize: sizeOfWindowContent];
 	NSRect resetFrame;
 	resetFrame.origin.x = 0.0f;
 	resetFrame.origin.y	= 0.0f;
 	resetFrame.size.width = width;
 	resetFrame.size.height = height;
+	resetFrame = [[self mainView] convertRectFromBacking: resetFrame];
+
+	NSSize sizeOfWindowContent = resetFrame.size;
+	[gDelegateApp.window setContentSize: sizeOfWindowContent];
+
     [self.window setAcceptsMouseMovedEvents: YES];
 #if MAC_OS_X_VERSION_MIN_REQUIRED <= MAC_OS_X_VERSION_10_9
 	[self.window useOptimizedDrawing: YES];
