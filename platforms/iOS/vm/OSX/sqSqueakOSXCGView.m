@@ -113,6 +113,20 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreen
 	return YES;
 }
 
+- (NSRect) sqScreenSize {
+  return [self convertRectToBacking: [self bounds]];
+}
+
+
+- (NSPoint) sqMousePosition: (NSEvent*)theEvent {
+	/* Our client expects the mouse coordinates in Squeak's coordinates,
+	 * but theEvent's location is in "user" coords. so we have to convert. */
+	NSPoint local_pt = [self convertPoint: [theEvent locationInWindow] fromView:nil];
+	NSPoint converted = [self convertPointToBacking: local_pt];
+	// Squeak is upside down
+	return NSMakePoint(converted.x, -converted.y);
+}
+
 #pragma mark Updating callbacks
 
 - (void)viewDidMoveToWindow {
@@ -191,53 +205,79 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreen
 
 - (void) performDraw: (CGRect)rect {
 
-    CGContextRef context = (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
-    CGContextSaveGState(context);
-
+	CGContextRef context;
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 1010 && defined(NSFoundationVersionNumber10_10)
+	if (floor(NSFoundationVersionNumber) >= NSFoundationVersionNumber10_10) {
+		context = [[NSGraphicsContext currentContext] CGContext];
+	} else { // Deprecated in OSX 10.10
+		context = (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
+	}
+#else
+	context = (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
+#endif
+	CGContextSaveGState(context);
+    CGAffineTransform  deviceTransform = CGContextGetUserSpaceToDeviceSpaceTransform(context);
     int bitSize = interpreterProxy->byteSizeOf(displayBits - BaseHeaderSize);
     int bytePerRow = displayWidth * displayDepth / 8;
 
-    CGRect r = NSRectToCGRect([self frame]);
-    int y2 = MAX(r.size.height - (rect.origin.y), 0);
-    int y1 = MAX(y2 - rect.size.height, 0);
+	CGFloat frameHeight = [self frame].size.height * deviceTransform.d;
+	CGFloat y2 = MAX(frameHeight - rect.origin.y, 0);
+	CGFloat y1 = MAX(y2 - rect.size.height, 0);
 
-    CGRect swapRect = CGRectIntersection(
-							CGRectMake(0, 0, displayWidth, displayHeight),
-							CGRectMake(rect.origin.x, y1, rect.size.width, y2));
-    if (swapRect.origin.x == INFINITY || swapRect.origin.y == INFINITY) {
-        return;
-    }
-    [self swapColors: displayBits imageWidth: displayWidth clipRect: swapRect];
+	CGRect swapRect = CGRectIntersection(CGRectMake(0, 0, displayWidth, displayHeight),
+                                         CGRectMake(rect.origin.x, y1, rect.size.width, y2));
+	if (!CGRectIsNull(swapRect)) {
+        [self swapColors: displayBits imageWidth: displayWidth clipRect: swapRect];
 
-    CGDataProviderRef pRef = CGDataProviderCreateWithData (NULL, displayBits, bitSize, NULL);
-    CGContextTranslateCTM(context, 0, displayHeight);
-    CGContextScaleCTM(context, 1, -1);
-    CGImageRef image = CGImageCreate(displayWidth,
-                                     displayHeight,
-                                     8,
-                                     32,
-                                     bytePerRow,
-                                     colorspace,
-                                     kCGBitmapByteOrder32Big | kCGImageAlphaLast,
-                                     pRef,
-                                     NULL,
-                                     NO,
-                                     kCGRenderingIntentDefault);
+		CGDataProviderRef pRef = CGDataProviderCreateWithData(NULL, displayBits, bitSize, NULL);
+		CGImageRef image = CGImageCreate(displayWidth,
+										 displayHeight,
+										 8,
+										 32,
+										 bytePerRow,
+										 colorspace,
+										 kCGBitmapByteOrder32Big | kCGImageAlphaLast,
+										 pRef,
+										 NULL,
+										 NO,
+										 kCGRenderingIntentDefault);
 
-    CGContextClipToRect(context,rect);
-    CGContextDrawImage(context, CGRectMake(0, 0, displayWidth, displayHeight), image);
+		CGRect userClipRect = CGRectMake(rect.origin.x / deviceTransform.a,
+										 rect.origin.y / deviceTransform.d,
+										 rect.size.width / deviceTransform.a,
+										 rect.size.height / deviceTransform.d);
 
-    [self swapColors: displayBits imageWidth: displayWidth clipRect: swapRect];
 
-    CGImageRelease(image);
-    CGDataProviderRelease(pRef);
+		CGContextTranslateCTM(context, 0, displayHeight / deviceTransform.d);
+		CGContextScaleCTM(context, 1 , -1);
 
-    CGContextRestoreGState(context);
+		CGContextClipToRect(context, userClipRect);
+
+		CGRect imageBounds = CGContextConvertRectToUserSpace(context, CGRectMake(deviceTransform.tx,
+                                                                                 deviceTransform.ty,
+                                                                                 displayWidth,
+                                                                                 displayHeight));
+
+		CGContextDrawImage(context, imageBounds, image);
+
+		[self swapColors:displayBits imageWidth:displayWidth clipRect: swapRect];
+
+		CGImageRelease(image);
+		CGDataProviderRelease(pRef);
+	}
+	CGContextRestoreGState(context);
 }
 
 -(void)drawRect:(NSRect)rect
 {
-    [self performDraw:(clippyIsEmpty? NSRectToCGRect(rect):clippy)];
+	CGRect rectToDraw;
+	if (clippyIsEmpty) {
+		NSSize backingSize = [self convertRectToBacking:rect].size;
+		rectToDraw = CGRectMake(0, 0, backingSize.width, backingSize.height);
+	} else {
+		rectToDraw = clippy;
+	}
+	[self performDraw: rectToDraw];
     clippyIsEmpty = YES;
     syncNeeded = NO;
 }
@@ -660,6 +700,8 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreen
 	if ([self isInFullScreenMode] == NO && (fullScreen == 1)) {
 		self.savedScreenBoundsAtTimeOfFullScreen = (NSRect) [self bounds];
 		NSDictionary* options = [NSDictionary dictionaryWithObjectsAndKeys:
+			[NSNumber numberWithBool:NO],
+			NSFullScreenModeAllScreens,
 			[NSNumber numberWithInt:
 				NSApplicationPresentationHideDock |
 				NSApplicationPresentationHideMenuBar ],

@@ -140,9 +140,13 @@ static NSString *stringWithCharacter(unichar character) {
 }
 
 @interface sqSqueakOSXOpenGLView ()
+
+-(void)drawRect:(NSRect)rect flush:(BOOL)flush;
+
 @property (nonatomic,assign) NSRect lastFrameSize;
 @property (nonatomic,assign) BOOL fullScreenInProgress;
 @property (nonatomic,assign) void* fullScreendispBitsIndex;
+
 @end
 
 @implementation sqSqueakOSXOpenGLView
@@ -178,6 +182,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 }
 
 - (void)initialize {
+	[self setWantsBestResolutionOpenGLSurface:YES];
        [self setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
        [self setAutoresizesSubviews:YES];
 
@@ -213,6 +218,9 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 - (void) initializeVariables {
 }
 
+- (void) preDrawThelayers {
+}
+
 - (void) dealloc {
 	free(colorMap32);
 	CGColorSpaceRelease(colorspace);
@@ -234,19 +242,33 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 	return YES;
 }
 
+- (NSRect) sqScreenSize {
+  return [self convertRectToBacking: [self bounds]];
+}
+
+
+- (NSPoint) sqMousePosition: (NSEvent*)theEvent {
+	/* Our client expects the mouse coordinates in Squeak's coordinates,
+	 * but theEvent's location is in "user" coords. so we have to convert. */
+	NSPoint local_pt = [self convertPoint: [theEvent locationInWindow] fromView:nil];
+	NSPoint converted = [self convertPointToBacking: local_pt];
+	// Squeak is upside down
+	return NSMakePoint(converted.x, -converted.y);
+}
+
 #pragma mark Updating callbacks
 
 - (void)viewDidMoveToWindow {
 	if (self.squeakTrackingRectForCursor)
 		[self removeTrackingRect: self.squeakTrackingRectForCursor];
-
-	self.squeakTrackingRectForCursor = [self addTrackingRect: [self bounds] owner: self userData:NULL assumeInside: NO];
+	
+	self.squeakTrackingRectForCursor = [self addTrackingRect: [self sqScreenSize] owner: self userData:NULL assumeInside: NO];
 }
 
 - (void) updateTrackingAreas {
 	[super updateTrackingAreas];
 	[self removeTrackingRect: self.squeakTrackingRectForCursor];
-	self.squeakTrackingRectForCursor = [self addTrackingRect: [self bounds] owner: self userData:NULL assumeInside: NO];
+	self.squeakTrackingRectForCursor = [self addTrackingRect: [self sqScreenSize] owner: self userData:NULL assumeInside: NO];
 }
 
 - (void) viewWillStartLiveResize {
@@ -347,8 +369,8 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 	glDisable(GL_FOG);
 	glDisable(GL_TEXTURE_2D);
 	glDisable(GL_DEPTH_TEST);
-	glDisable (GL_SCISSOR_TEST);
-    glDisable (GL_CULL_FACE);
+	glDisable(GL_SCISSOR_TEST);
+    glDisable(GL_CULL_FACE);
 	glStencilMask(0);
 	glPixelZoom(1.0,1.0);
 
@@ -360,7 +382,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 	glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glPixelStorei( GL_UNPACK_ROW_LENGTH, self.frame.size.width );
+	glPixelStorei( GL_UNPACK_ROW_LENGTH, r.size.width );
 	GLuint dt = 1;
 	glDeleteTextures(1, &dt);
 	glBindTexture(GL_TEXTURE_RECTANGLE_ARB, 1);
@@ -473,7 +495,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 }
 
 -(void) updateDisplayTextureStorage {
-	NSRect rectangle = self.frame;
+    NSRect rectangle = [self convertRectToBacking: [self frame]];
 	displayTextureWidth = rectangle.size.width;
 	displayTextureHeight = rectangle.size.height;
 
@@ -510,7 +532,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 
 - (void)loadTexturesFrom: (void*) displayStorage subRectangle: (NSRect) subRect {
 //	CGL_MACRO_DECLARE_VARIABLES();
-    NSRect r = self.frame;
+    NSRect r = [self convertRectToBacking: [self frame]];
     if (!NSEqualRects(lastFrameSize,r) || !displayTexture ||
 		currentDisplayStorage != displayStorage) {
 		//NSLog(@"old %f %f %f %f new %f %f %f %f",lastFrameSize.origin.x,lastFrameSize.origin.y,lastFrameSize.size.width,lastFrameSize.size.height,self.frame.origin.x,r.origin.y,r.size.width,r.size.height);
@@ -617,7 +639,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 	glBindTexture(GL_TEXTURE_2D, layer->texture);
 	glUseProgram(textureProgram);
 	
-	NSRect screenRect = self.frame;
+    NSRect screenRect = [self convertRectToBacking: [self frame]];
 	float scaleX = (float)layer->w / screenRect.size.width;
 	float scaleY = (float)layer->h / screenRect.size.height;
  	float offsetX = (2.0f*layer->x + layer->w) / screenRect.size.width - 1.0f;
@@ -1094,7 +1116,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 	glDisable( GL_SCISSOR_TEST);
 	glClear( GL_COLOR_BUFFER_BIT);
 	
-	[self drawScreenRect: self.frame];
+	[self drawScreenRect: [self convertRectToBacking: [self frame]]];
     glFlush();
 	[self.openGLContext flushBuffer];
     if (oldContext != nil) {
@@ -1109,9 +1131,6 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 		self.fullScreenInProgress = YES;
         [self.window toggleFullScreen: nil];
 	}
-}
-
-- (void) preDrawThelayers {
 }
 
 @end

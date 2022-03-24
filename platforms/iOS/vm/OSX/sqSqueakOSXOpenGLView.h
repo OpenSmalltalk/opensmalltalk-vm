@@ -85,7 +85,7 @@
 
 - (void) setupOpenGL;
 - (void) preDrawThelayers;
--(void)drawRect:(NSRect)rect flush:(BOOL)flush;
-
+- (NSRect) sqScreenSize;
+- (NSPoint) sqMousePosition: (NSEvent*)theEvent;
 @end
 #endif //USE_OPENGL
