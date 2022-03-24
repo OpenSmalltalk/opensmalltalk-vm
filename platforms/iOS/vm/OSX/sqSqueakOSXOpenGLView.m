@@ -559,6 +559,14 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 
 -(void)drawRect:(NSRect)rect
 {
+	// TODO: Figure out who calls this to convert rect there.
+	// It is rather dangerous to have such different semantics
+	// between drawRect: and drawRect:flush:. We assume that
+	// only the OS calls this, not any image primitive.
+	NSPoint priorOrigin = rect.origin;
+	rect = [self convertRectToBacking: rect];
+	rect.origin = priorOrigin;
+
 	// Called by Cocoa. We need to flush.
 	[self drawRect: rect flush: YES];
 }
