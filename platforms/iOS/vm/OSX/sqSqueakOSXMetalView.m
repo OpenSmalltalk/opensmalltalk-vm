@@ -214,6 +214,14 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 	return NSMakePoint(converted.x, -converted.y);
 }
 
+- (NSPoint) sqDragPosition: (NSPoint)draggingLocation {
+	// TODO: Reuse conversion from sqMousePosition:.
+	NSPoint local_pt = [self convertPoint: draggingLocation fromView: nil];
+	NSPoint converted = [self convertPointToBacking: local_pt];
+	return NSMakePoint(converted.x, -converted.y);
+}
+
+
 #pragma mark Drawing
 
 - (void) setupFullScreendispBitsIndex {
@@ -822,6 +830,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 	if (self.dragInProgress)
 		return NSDragOperationNone;
 	dragInProgress = YES;
+	gDelegateApp.dragItems = [self filterOutSqueakImageFilesFromDraggedURIs: info];
 	self.dragCount = (int) [self countNumberOfNoneSqueakImageFilesInDraggedFiles: info];
 
 	if (self.dragCount)
@@ -851,7 +860,6 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 - (BOOL) performDragOperation: (id<NSDraggingInfo>)info {
 //    NSLog(@"performDragOperation %@",info);
 	if (self.dragCount) {
-		gDelegateApp.dragItems = [self filterOutSqueakImageFilesFromDraggedURIs: info];
 		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: SQDragDrop numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex view: self];
 	}
 

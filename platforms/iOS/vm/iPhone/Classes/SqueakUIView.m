@@ -81,6 +81,10 @@ SInt32 undoCounter=1, oldValue=0;  // jdr undo support
 	return [self convertPoint: [theEvent locationInWindow] fromView:nil];
 }
 
+- (NSPoint) sqDragPosition: (NSPoint)draggingLocation {
+	return [aView convertPoint: draggingLocation fromView:nil];
+}
+
 // Handles the start of a touch
 - (void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event
 {

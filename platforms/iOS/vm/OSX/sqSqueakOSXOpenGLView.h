@@ -87,5 +87,6 @@
 - (void) preDrawThelayers;
 - (NSRect) sqScreenSize;
 - (NSPoint) sqMousePosition: (NSEvent*)theEvent;
+- (NSPoint) sqDragPosition: (NSPoint)draggingLocation;
 @end
 #endif //USE_OPENGL

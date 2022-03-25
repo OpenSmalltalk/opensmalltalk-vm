@@ -54,5 +54,6 @@ Some of this code was funded via a grant from the European Smalltalk User Group 
 	- (void) drawImageUsingClip: (CGRect) clip;
 	- (CGRect) sqScreenSize;
 	- (NSPoint) sqMousePosition: (NSEvent*)theEvent;
+    - (NSPoint) sqDragPosition: (NSPoint)draggingLocation;
     @property (nonatomic,strong) NSArray *arrowsNames;  // jdr
 @end
