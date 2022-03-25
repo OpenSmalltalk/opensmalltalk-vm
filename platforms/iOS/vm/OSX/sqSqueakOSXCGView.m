@@ -85,6 +85,12 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreen
 	dragCount = 0;
 	clippyIsEmpty = YES;
 	colorspace = CGColorSpaceCreateDeviceRGB();
+
+    // macOS 10.5 introduced NSTrackingArea for mouse tracking
+    NSTrackingArea *trackingArea = [[NSTrackingArea alloc] initWithRect: [self frame]
+    	options: (NSTrackingMouseEnteredAndExited | NSTrackingMouseMoved | NSTrackingActiveAlways | NSTrackingInVisibleRect)
+    	owner: self userInfo: nil];
+    [self addTrackingArea: trackingArea];
 }
 
 - (void) initializeVariables {

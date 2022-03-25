@@ -207,6 +207,12 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 	colorspace = CGColorSpaceCreateDeviceRGB();
 	[self initializeSqueakColorMap];
     [[NSNotificationCenter defaultCenter] addObserver:self selector: @selector(didEnterFullScreen:) name:@"NSWindowDidEnterFullScreenNotification" object:nil];
+
+    // macOS 10.5 introduced NSTrackingArea for mouse tracking
+    NSTrackingArea *trackingArea = [[NSTrackingArea alloc] initWithRect: [self frame]
+    	options: (NSTrackingMouseEnteredAndExited | NSTrackingMouseMoved | NSTrackingActiveAlways | NSTrackingInVisibleRect)
+    	owner: self userInfo: nil];
+    [self addTrackingArea: trackingArea];
 }
 
 - (void) didEnterFullScreen: (NSNotification*) aNotification {
