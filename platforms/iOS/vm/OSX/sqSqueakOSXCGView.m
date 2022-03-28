@@ -57,7 +57,7 @@ static NSString *stringWithCharacter(unichar character) {
 }
 
 @implementation sqSqueakOSXCGView
-@synthesize squeakTrackingRectForCursor,lastSeenKeyBoardStrokeDetails,
+@synthesize lastSeenKeyBoardStrokeDetails,
 lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreenBoundsAtTimeOfFullScreen;
 
 #pragma mark Initialization / Release
@@ -142,19 +142,6 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreen
 
 
 #pragma mark Updating callbacks
-
-- (void)viewDidMoveToWindow {
-	if (self.squeakTrackingRectForCursor)
-		[self removeTrackingRect: self.squeakTrackingRectForCursor];
-	
-	self.squeakTrackingRectForCursor = [self addTrackingRect: [self bounds] owner: self userData:NULL assumeInside: NO];
-}
-
-- (void) updateTrackingAreas {
-	[super updateTrackingAreas];
-	[self removeTrackingRect: self.squeakTrackingRectForCursor];
-	self.squeakTrackingRectForCursor = [self addTrackingRect: [self bounds] owner: self userData:NULL assumeInside: NO];
-}
 
 - (void) viewWillStartLiveResize {
 	[[NSCursor arrowCursor] set];

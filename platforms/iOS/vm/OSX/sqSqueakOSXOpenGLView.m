@@ -150,7 +150,7 @@ static NSString *stringWithCharacter(unichar character) {
 @end
 
 @implementation sqSqueakOSXOpenGLView
-@synthesize squeakTrackingRectForCursor,lastSeenKeyBoardStrokeDetails,
+@synthesize lastSeenKeyBoardStrokeDetails,
 lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSize,fullScreenInProgress,fullScreendispBitsIndex;
 
 + (NSOpenGLPixelFormat *)defaultPixelFormat {
@@ -271,19 +271,6 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 
 
 #pragma mark Updating callbacks
-
-- (void)viewDidMoveToWindow {
-	if (self.squeakTrackingRectForCursor)
-		[self removeTrackingRect: self.squeakTrackingRectForCursor];
-	
-	self.squeakTrackingRectForCursor = [self addTrackingRect: [self sqScreenSize] owner: self userData:NULL assumeInside: NO];
-}
-
-- (void) updateTrackingAreas {
-	[super updateTrackingAreas];
-	[self removeTrackingRect: self.squeakTrackingRectForCursor];
-	self.squeakTrackingRectForCursor = [self addTrackingRect: [self sqScreenSize] owner: self userData:NULL assumeInside: NO];
-}
 
 - (void) viewWillStartLiveResize {
     //NSLog(@"viewWillStartLiveResize");

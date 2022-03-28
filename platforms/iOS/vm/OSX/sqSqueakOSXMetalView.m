@@ -105,7 +105,7 @@ static NSString *stringWithCharacter(unichar character) {
 @end
 
 @implementation sqSqueakOSXMetalView
-@synthesize squeakTrackingRectForCursor,lastSeenKeyBoardStrokeDetails,
+@synthesize lastSeenKeyBoardStrokeDetails,
 lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSize,fullScreenInProgress,fullScreendispBitsIndex,graphicsCommandQueue;
 
 + (BOOL) isMetalViewSupported {

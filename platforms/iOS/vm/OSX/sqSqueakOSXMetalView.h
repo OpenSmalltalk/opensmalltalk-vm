@@ -48,7 +48,6 @@
 
 @interface sqSqueakOSXMetalView : MTKView <sqSqueakOSXView, sqViewClut, NSTextInputClient> {
 	sqSqueakOSXScreenAndWindow *__weak windowLogic;
-	NSTrackingRectTag squeakTrackingRectForCursor;
 	NSRange inputMark;
 	NSRange inputSelection;
 	keyBoardStrokeDetails* lastSeenKeyBoardStrokeDetails;
