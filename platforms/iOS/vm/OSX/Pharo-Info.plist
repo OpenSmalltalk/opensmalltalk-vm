@@ -380,7 +380,7 @@
 	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>NSHighResolutionMagnifyAllowed</key>
-	<true>
+	<true/>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>

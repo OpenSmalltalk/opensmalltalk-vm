@@ -129,7 +129,7 @@
 	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>NSHighResolutionMagnifyAllowed</key>
-	<true>
+	<true/>
 	<key>SqueakBrowserMouseCmdButton1</key>
 	<integer>3</integer>
 	<key>SqueakBrowserMouseCmdButton2</key>
