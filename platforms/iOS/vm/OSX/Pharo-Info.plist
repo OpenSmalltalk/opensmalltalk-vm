@@ -379,6 +379,8 @@
 	<string>SqueakOSXApplication</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
+	<key>NSHighResolutionMagnifyAllowed</key>
+	<true>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>
