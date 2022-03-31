@@ -146,7 +146,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 	mainMetalView = self;
 	
 	self.paused = YES;
-	self.enableSetNeedsDisplay = NO;
+	self.enableSetNeedsDisplay = YES;
 	
 	NSMutableArray *drawingLayers = [NSMutableArray arrayWithCapacity: MAX_NUMBER_OF_EXTRA_LAYERS];
 	for(int i = 0; i < MAX_NUMBER_OF_EXTRA_LAYERS; ++i) {
@@ -242,7 +242,14 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 	} else {
 		clippy = CGRectUnion(clippy, clip);
 	}
-	syncNeeded = YES;
+
+	/* We do not record the actual clipping rectangles (clippy) because we
+	 * just want to let the Metal framework invoke drawRect: without vsync.
+	 */
+	if(!syncNeeded) {
+		syncNeeded = YES;
+		[self setNeedsDisplayInRect: [self frame]];
+	}
 }
 
 - (void) drawThelayers {
@@ -252,9 +259,10 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
         return;
     }
 	
-    if (syncNeeded) {
-		[self draw];
-	}
+	/* The drawing loop will call drawRect: automatically due to our use of
+     * setNeedsDisplayInRect above. We don't have to do it.
+     */
+ // if (syncNeeded) { [self draw]; }
 	
 	if (!firstDrawCompleted) {
 		firstDrawCompleted = YES;
@@ -351,13 +359,14 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 	[self setupMetal];
     [self setupFullScreendispBitsIndex];
 
+    if ( !fullScreendispBitsIndex ) { return; }
+    if ( clippyIsEmpty ) { return; }
+    
 	// Always try to fill the texture with the pixels.
-	if ( fullScreendispBitsIndex ) {
-		[self loadTexturesFrom: fullScreendispBitsIndex subRectangle: (clippyIsEmpty ? rect : NSRectFromCGRect(clippy))];
-		//[self loadTexturesFrom: fullScreendispBitsIndex subRectangle: rect];
-		clippyIsEmpty = YES;
-	    syncNeeded = NO;
-	}
+	[self loadTexturesFrom: fullScreendispBitsIndex subRectangle: NSRectFromCGRect(clippy)];
+	// [self loadTexturesFrom: fullScreendispBitsIndex subRectangle: rect];
+	clippyIsEmpty = YES;
+	syncNeeded = NO;
 	
 	MTLRenderPassDescriptor *renderPassDescriptor = self.currentRenderPassDescriptor;
 	if(renderPassDescriptor != nil && self.currentDrawable)
@@ -390,11 +399,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 }
 
 - (CGSize) screenSizeForTexture {
-	CGRect screenRect = [self sqScreenSize];
-	CGSize screenSize;
-	screenSize.width = (sqInt)screenRect.size.width;
-	screenSize.height = (sqInt)screenRect.size.height;
-	return screenSize;
+	return CGSizeMake(displayWidth, displayHeight);
 }
  
 - (void)loadTexturesFrom: (void*) displayStorage subRectangle: (NSRect) subRect {
