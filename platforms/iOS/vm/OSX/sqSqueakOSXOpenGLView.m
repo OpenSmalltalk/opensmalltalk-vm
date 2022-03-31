@@ -361,8 +361,8 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 	
 	glClearColor(1, 1, 1, 1);
 
-//	GLint newSwapInterval = 1;
-//	CGLSetParameter(cgl_ctx, kCGLCPSwapInterval, &newSwapInterval);
+	GLint newSwapInterval = 0; // vsync on (1) or off (0)
+	CGLSetParameter(ctx, kCGLCPSwapInterval, &newSwapInterval);
 	/*glDisable(GL_DITHER);
 	glDisable(GL_ALPHA_TEST);
 	glDisable(GL_BLEND);
