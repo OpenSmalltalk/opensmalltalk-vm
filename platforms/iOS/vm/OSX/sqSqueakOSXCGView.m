@@ -64,12 +64,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreen
 
 - (id)initWithFrame:(NSRect)frameRect {
     self = [super initWithFrame:frameRect];
-
-    [self setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
-    [self setAutoresizesSubviews:YES];
-
     [self initialize];
-
     return self;
 }
 
@@ -78,6 +73,12 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreen
 }
 
 - (void)initialize {
+
+    // NSLog(@"initialize %@", NSStringFromRect([self frame]));
+
+	[self setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+    [self setAutoresizesSubviews:YES];
+
 	inputMark = NSMakeRange(NSNotFound, 0);
 	inputSelection = NSMakeRange(0, 0);
     [self registerForDraggedTypes: [NSArray arrayWithObjects: NSFilenamesPboardType, nil]];
@@ -112,7 +113,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreen
 }
 
 - (BOOL)isFlipped {
-	return  YES;
+	return YES; // (0,0) is in top-left corner; y axis grows downward
 }
 
 - (BOOL)isOpaque {
@@ -155,14 +156,30 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreen
 
 
 - (void) drawImageUsingClip: (CGRect) clip {
-	
-	if (clippyIsEmpty){
-		clippy = clip;
-		clippyIsEmpty = NO;
-	} else {
-		clippy = CGRectUnion(clippy, clip);
+
+	/* The argument clip is in window coordinates (i.e., bottom-left is (0,0))
+	 * but still in backing scale. Unfortunately, convertRectFromBacking expects
+	 * view coordinates (i.e., top-left is (0,0)) so we have to adjust the
+	 * origin manually after conversion. We also cannot use convertRectangle:fromView:
+	 * because that expects user scale and not backing scale. Hmpf.
+	 */
+	// CGRect user_clip = [self convertRectFromBacking: clip];
+	// user_clip.origin.y = -user_clip.origin.y - user_clip.size.height;
+	// CGRect local_clip = [self convertRect: user_clip fromView: nil];
+	// NSLog(@"recordRect: %@ -> %@", NSStringFromRect(clip), NSStringFromRect(local_clip));
+	// [self setNeedsDisplayInRect: local_clip];
+
+	/* We do not record the actual clipping rectangles (clippy) because the current
+	 * drawing loop will only issue a full redraw these days. See drawRect: below.
+	 */
+	if(!syncNeeded) {
+		syncNeeded = YES;
+		[self setNeedsDisplayInRect: [self frame]];
 	}
-	syncNeeded = YES;
+
+	/* Note that after this, drawThelayers will be called directly.
+	 * See primitiveShowDisplayRect, which will directly call ioForceDisplayUpdate.
+	 */
 }
 
 - (void) drawThelayers {
@@ -171,9 +188,12 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreen
         firstDrawCompleted = YES;
         return;
     }
-	if (syncNeeded) {
-		[self display];
-    }
+
+    /* The drawing loop will call display automatically due to our use of
+     * setNeedsDisplayInRect above. We don't have to do it.
+     */
+	// if (syncNeeded) { [self display]; }
+
 	if (!firstDrawCompleted) {
 		firstDrawCompleted = YES;
         extern sqInt getFullScreenFlag(void);
@@ -183,28 +203,23 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreen
 	}
 }
 
-- (void)swapColors:(void *)bits imageWidth:(int)width clipRect:(CGRect)rect {
-    int *bitsAsWord = (int *)bits;
-
-    for (int i = rect.origin.y; i < (rect.origin.y + rect.size.height); i++) {
-        for (int j = rect.origin.x; j < (rect.origin.x + rect.size.width); j++) {
-            int pos = (i * width) + j;
-            int swap = bitsAsWord[pos];
-            int swapBlue = (swap & 0xff) << 16;
-            int swapRed = (swap & 0xff0000) >> 16;
-            bitsAsWord[pos] = (swap & 0xff00ff00) | swapBlue | swapRed ;
-        }
-    }
-}
-
 /* Now the displayBits is known and likely pinned, couldn't we cache the bitmap
  * that this method creates?  Yes its contents need to be updated, but it
  * doesn't need to be created all the time does it?  Or is the object created
  * by CGImageCreate merely a wrapper around the bits?
  * eem 2017/05/12
+ *
+ * Yes, the displayBits are directly accessed when shown on screen. Also, we
+ * assume that we always refresh the full view. No sub-rectangles anymore.
+ * See commentary in drawRect:.
+ * mt 2022/03/30
  */
 
-- (void) performDraw: (CGRect)rect {
+- (void) performDraw: (CGRect)fullFrameRect {
+	if(!displayBits) {
+		// Init guard for fullscreen mode
+		return;
+	}
 
 	CGContextRef context;
 #if __MAC_OS_X_VERSION_MAX_ALLOWED >= 1010 && defined(NSFoundationVersionNumber10_10)
@@ -217,69 +232,48 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreen
 	context = (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
 #endif
 	CGContextSaveGState(context);
-    CGAffineTransform  deviceTransform = CGContextGetUserSpaceToDeviceSpaceTransform(context);
+
     int bitSize = interpreterProxy->byteSizeOf(displayBits - BaseHeaderSize);
     int bytePerRow = displayWidth * displayDepth / 8;
 
-	CGFloat frameHeight = [self frame].size.height * deviceTransform.d;
-	CGFloat y2 = MAX(frameHeight - rect.origin.y, 0);
-	CGFloat y1 = MAX(y2 - rect.size.height, 0);
+	CGDataProviderRef pRef = CGDataProviderCreateWithData(NULL, displayBits, bitSize, NULL);
+	CGImageRef image = CGImageCreate(displayWidth,
+									 displayHeight,
+									 8,
+									 32,
+									 bytePerRow,
+									 colorspace,
+			/* BGRA */				 kCGBitmapByteOrder32Little | kCGImageAlphaPremultipliedFirst,
+									 pRef,
+									 NULL,
+									 NO,
+									 kCGRenderingIntentDefault);
 
-	CGRect swapRect = CGRectIntersection(CGRectMake(0, 0, displayWidth, displayHeight),
-                                         CGRectMake(rect.origin.x, y1, rect.size.width, y2));
-	if (!CGRectIsNull(swapRect)) {
-        [self swapColors: displayBits imageWidth: displayWidth clipRect: swapRect];
+	// displayBits are upside down, match isFlipped for this view
+	CGContextTranslateCTM(context, 0, fullFrameRect.size.height);
+	CGContextScaleCTM(context, 1 , -1);
 
-		CGDataProviderRef pRef = CGDataProviderCreateWithData(NULL, displayBits, bitSize, NULL);
-		CGImageRef image = CGImageCreate(displayWidth,
-										 displayHeight,
-										 8,
-										 32,
-										 bytePerRow,
-										 colorspace,
-										 kCGBitmapByteOrder32Big | kCGImageAlphaLast,
-										 pRef,
-										 NULL,
-										 NO,
-										 kCGRenderingIntentDefault);
+	CGContextDrawImage(context, fullFrameRect, image);
 
-		CGRect userClipRect = CGRectMake(rect.origin.x / deviceTransform.a,
-										 rect.origin.y / deviceTransform.d,
-										 rect.size.width / deviceTransform.a,
-										 rect.size.height / deviceTransform.d);
+	CGImageRelease(image);
+	CGDataProviderRelease(pRef);
 
-
-		CGContextTranslateCTM(context, 0, displayHeight / deviceTransform.d);
-		CGContextScaleCTM(context, 1 , -1);
-
-		CGContextClipToRect(context, userClipRect);
-
-		CGRect imageBounds = CGContextConvertRectToUserSpace(context, CGRectMake(deviceTransform.tx,
-                                                                                 deviceTransform.ty,
-                                                                                 displayWidth,
-                                                                                 displayHeight));
-
-		CGContextDrawImage(context, imageBounds, image);
-
-		[self swapColors:displayBits imageWidth:displayWidth clipRect: swapRect];
-
-		CGImageRelease(image);
-		CGDataProviderRelease(pRef);
-	}
 	CGContextRestoreGState(context);
 }
 
 -(void)drawRect:(NSRect)rect
 {
-	CGRect rectToDraw;
-	if (clippyIsEmpty) {
-		NSSize backingSize = [self convertRectToBacking:rect].size;
-		rectToDraw = CGRectMake(0, 0, backingSize.width, backingSize.height);
-	} else {
-		rectToDraw = clippy;
-	}
-	[self performDraw: rectToDraw];
-    clippyIsEmpty = YES;
+	// NSRect converted = [self convertRectToBacking: rect];
+	// converted.origin.y = -converted.origin.y - converted.size.height;
+	// NSRect local_rect = [self convertRect: converted toView: self];
+	// [self performDraw: local_rect];
+
+	/* We assume that only a full redraw will be issued these days. Even
+	 * if we record sub-rectangles. Tested on macOS 10.15 and 11.6. Enforce
+	 * via drawImageUsingClip: above. Use NSLog to double-check.
+	 */
+	// NSLog(@"drawRect: %@", NSStringFromRect(rect));
+	[self performDraw: rect];
     syncNeeded = NO;
 }
 
