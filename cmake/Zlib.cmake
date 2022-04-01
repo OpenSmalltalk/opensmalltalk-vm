@@ -1,6 +1,6 @@
-set(Zlib_Spec_URL "http://zlib.net/zlib-1.2.11.tar.gz")
-set(Zlib_Spec_ArchiveName zlib-1.2.11.tar.gz)
-set(Zlib_Spec_ArchiveSha256 c3e5e9fdd5004dcb542feda5ee4f0ff0744628baf8ed2dd5d66f8ca1197cb1a1)
+set(Zlib_Spec_URL "http://zlib.net/zlib-1.2.12.tar.gz")
+set(Zlib_Spec_ArchiveName zlib-1.2.12.tar.gz)
+set(Zlib_Spec_ArchiveSha256 91844808532e5ce316b3c010929493c0244f3d37593afd6de04f71821d5136d9)
 set(Zlib_Spec_WindowsDLLs zlib1.dll)
 
 #-------------------------------------------------------------------------------
