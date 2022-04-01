@@ -1394,7 +1394,7 @@ os_error *e;
 }
 
 double ioScreenScaleFactor(void) {
-	return 1.0;
+	return nan("MISS");
 }
 
 sqInt ioScreenSize(void) {

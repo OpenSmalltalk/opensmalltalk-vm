@@ -84,7 +84,7 @@ void MyProviderReleaseData (
 }
 
 - (double) ioScreenScaleFactor {
-	return 1.0;
+	return nan("MISS");
 }
 
 - (sqInt) ioScreenSize {
