@@ -86,6 +86,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreen
 	dragCount = 0;
 	clippyIsEmpty = YES;
 	colorspace = CGColorSpaceCreateDeviceRGB();
+	[self initializeSqueakColorMap];
 
     // macOS 10.5 introduced NSTrackingArea for mouse tracking
     NSTrackingArea *trackingArea = [[NSTrackingArea alloc] initWithRect: [self frame]
