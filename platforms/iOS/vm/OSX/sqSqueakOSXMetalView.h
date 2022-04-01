@@ -63,9 +63,6 @@
 	BOOL clippyIsEmpty;
 	CGRect clippy;
     CGSize lastFrameSize;
-	
-    BOOL fullScreenInProgress;
-    void* fullScreendispBitsIndex;
 	void* currentDisplayStorage;
 	
 	BOOL metalInitialized;

@@ -95,7 +95,7 @@ extern void setIoProcessEventsHandler(void * handler) {
 sqInt ioProcessEvents(void) {
     aioPoll(0);
 
-#if !defined(USE_METAL)
+#if defined(PharoVM) && !defined(USE_METAL)
 	// We need to restore the opengl context to whatever the image was
 	// already using. This is required by SDL2 in Pharo.
 	NSOpenGLContext *oldContext = [NSOpenGLContext currentContext];
@@ -107,7 +107,7 @@ sqInt ioProcessEvents(void) {
     if(ioProcessEventsHandler && ioProcessEventsHandler != vmIOProcessEvents)
         ioProcessEventsHandler();
 
-#if !defined(USE_METAL)
+#if defined(PharoVM) && !defined(USE_METAL)
 	NSOpenGLContext *newContext = [NSOpenGLContext currentContext];
 	if(oldContext != newContext) {
 		if (oldContext != nil) {
