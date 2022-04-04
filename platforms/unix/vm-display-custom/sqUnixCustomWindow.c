@@ -81,7 +81,7 @@ static sqInt display_ioProcessEvents(void)
 static double display_ioScreenScaleFactor(void)
 {
   trace();
-  return 1.0;
+  return nan("MISS");
 }
 
 static sqInt display_ioScreenDepth(void)
