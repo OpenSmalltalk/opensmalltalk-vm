@@ -26,6 +26,7 @@
 #include <shellapi.h>
 #include <commdlg.h>
 #include <excpt.h>
+#include <VersionHelpers.h>
 #include <float.h>
 
 /* WM_MOUSEWHEEL since Win98/NT4 */
@@ -1759,32 +1760,6 @@ ioDrainEventQueue(void)
 
 
 /////////////////////////////////
-
-/*
- * The "correct" way to identify a windows-version, apparently
- */
-static BOOL IsWindowsVersionOrGreater(WORD wMajorVersion, WORD wMinorVersion, WORD wServicePackMajor)
-{
-  OSVERSIONINFOEXW osvi = { 0 };
-  DWORDLONG  dwlConditionMask = 0;
-  const int op = VER_GREATER_EQUAL;
-  osvi.dwOSVersionInfoSize = sizeof(osvi);
-  osvi.dwMajorVersion = wMajorVersion;
-  osvi.dwMinorVersion = wMinorVersion;
-  osvi.wServicePackMajor = wServicePackMajor;
-  VER_SET_CONDITION( dwlConditionMask, VER_MAJORVERSION, op );
-  VER_SET_CONDITION( dwlConditionMask, VER_MINORVERSION, op );
-  VER_SET_CONDITION( dwlConditionMask, VER_SERVICEPACKMAJOR, op );
-  VER_SET_CONDITION( dwlConditionMask, VER_SERVICEPACKMINOR, op );
-  return VerifyVersionInfoW(&osvi, VER_MAJORVERSION | VER_MINORVERSION | VER_SERVICEPACKMAJOR, dwlConditionMask) != FALSE;
-}
-
-inline BOOL IsWindows_8_1(void)
-{
-  return IsWindowsVersionOrGreater(HIBYTE(_WIN32_WINNT_WINBLUE), LOBYTE(_WIN32_WINNT_WINBLUE), 0);
-}
-
-
 /*
  * Load-time determined available dpi-getter
  */
@@ -1836,7 +1811,7 @@ static double getDpiMonitor(void)
 getDpi_t determineGetDpiFunction(void)
 {
   HMODULE shcore = NULL;
-  if (IsWindows_8_1()) {
+  if (IsWindows8Point1OrGreater()) {
     if (thisGetDpiForMonitor) {
       return getDpiMonitor;
     } else {
