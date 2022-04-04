@@ -267,7 +267,7 @@ static sqInt display_ioScreenDepth(void)
 
 static double display_ioScreenScaleFactor(void)
 {
-  return 1.0;
+  return nan("MISS");
 }
 
 static sqInt display_ioScreenSize(void)

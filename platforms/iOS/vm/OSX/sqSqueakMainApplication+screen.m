@@ -45,7 +45,7 @@ extern BOOL gSqueakHeadless;
 @implementation sqSqueakMainApplication (screen) 
 
 - (double) ioScreenScaleFactor {
-	return 1.0;
+	return nan("MISS");
 }
 
 - (sqInt) ioScreenSize {

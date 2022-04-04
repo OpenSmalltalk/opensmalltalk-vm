@@ -497,7 +497,7 @@ int ioProcessEvents(void) {
 }
 
 double ioScreenScaleFactor(void) {
-	return 1.0;
+	return nan("MISS");
 }
 
 int ioScreenSize(void) {
