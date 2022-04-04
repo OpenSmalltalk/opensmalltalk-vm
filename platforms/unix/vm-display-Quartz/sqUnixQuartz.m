@@ -651,7 +651,7 @@ static int displayChanged= 0;
 
 static double display_ioScreenScaleFactor(void)
 {
-  return 1.0;
+  return nan("MISS");
 }
 
 static sqInt display_ioScreenSize(void)
