@@ -57,19 +57,14 @@ static NSString *stringWithCharacter(unichar character) {
 }
 
 @implementation sqSqueakOSXCGView
-@synthesize squeakTrackingRectForCursor,lastSeenKeyBoardStrokeDetails,
+@synthesize lastSeenKeyBoardStrokeDetails,
 lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreenBoundsAtTimeOfFullScreen;
 
 #pragma mark Initialization / Release
 
 - (id)initWithFrame:(NSRect)frameRect {
     self = [super initWithFrame:frameRect];
-
-    [self setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
-    [self setAutoresizesSubviews:YES];
-
     [self initialize];
-
     return self;
 }
 
@@ -78,6 +73,12 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreen
 }
 
 - (void)initialize {
+
+    // NSLog(@"initialize %@", NSStringFromRect([self frame]));
+
+	[self setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+    [self setAutoresizesSubviews:YES];
+
 	inputMark = NSMakeRange(NSNotFound, 0);
 	inputSelection = NSMakeRange(0, 0);
     [self registerForDraggedTypes: [NSArray arrayWithObjects: NSFilenamesPboardType, nil]];
@@ -85,6 +86,13 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreen
 	dragCount = 0;
 	clippyIsEmpty = YES;
 	colorspace = CGColorSpaceCreateDeviceRGB();
+	[self initializeSqueakColorMap];
+
+    // macOS 10.5 introduced NSTrackingArea for mouse tracking
+    NSTrackingArea *trackingArea = [[NSTrackingArea alloc] initWithRect: [self frame]
+    	options: (NSTrackingMouseEnteredAndExited | NSTrackingMouseMoved | NSTrackingActiveAlways | NSTrackingInVisibleRect)
+    	owner: self userInfo: nil];
+    [self addTrackingArea: trackingArea];
 }
 
 - (void) initializeVariables {
@@ -106,27 +114,36 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreen
 }
 
 - (BOOL)isFlipped {
-	return  YES;
+	return YES; // (0,0) is in top-left corner; y axis grows downward
 }
 
 - (BOOL)isOpaque {
 	return YES;
 }
 
+- (NSRect) sqScreenSize {
+  return [self convertRectToBacking: [self bounds]];
+}
+
+
+- (NSPoint) sqMousePosition: (NSEvent*)theEvent {
+	/* Our client expects the mouse coordinates in Squeak's coordinates,
+	 * but theEvent's location is in "user" coords. so we have to convert. */
+	NSPoint local_pt = [self convertPoint: [theEvent locationInWindow] fromView:nil];
+	NSPoint converted = [self convertPointToBacking: local_pt];
+	// Squeak is upside down
+	return NSMakePoint(converted.x, -converted.y);
+}
+
+- (NSPoint) sqDragPosition: (NSPoint)draggingLocation {
+	// TODO: Reuse conversion from sqMousePosition:.
+	NSPoint local_pt = [self convertPoint: draggingLocation fromView: nil];
+	NSPoint converted = [self convertPointToBacking: local_pt];
+	return NSMakePoint(converted.x, -converted.y);
+}
+
+
 #pragma mark Updating callbacks
-
-- (void)viewDidMoveToWindow {
-	if (self.squeakTrackingRectForCursor)
-		[self removeTrackingRect: self.squeakTrackingRectForCursor];
-	
-	self.squeakTrackingRectForCursor = [self addTrackingRect: [self bounds] owner: self userData:NULL assumeInside: NO];
-}
-
-- (void) updateTrackingAreas {
-	[super updateTrackingAreas];
-	[self removeTrackingRect: self.squeakTrackingRectForCursor];
-	self.squeakTrackingRectForCursor = [self addTrackingRect: [self bounds] owner: self userData:NULL assumeInside: NO];
-}
 
 - (void) viewWillStartLiveResize {
 	[[NSCursor arrowCursor] set];
@@ -140,14 +157,30 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreen
 
 
 - (void) drawImageUsingClip: (CGRect) clip {
-	
-	if (clippyIsEmpty){
-		clippy = clip;
-		clippyIsEmpty = NO;
-	} else {
-		clippy = CGRectUnion(clippy, clip);
+
+	/* The argument clip is in window coordinates (i.e., bottom-left is (0,0))
+	 * but still in backing scale. Unfortunately, convertRectFromBacking expects
+	 * view coordinates (i.e., top-left is (0,0)) so we have to adjust the
+	 * origin manually after conversion. We also cannot use convertRectangle:fromView:
+	 * because that expects user scale and not backing scale. Hmpf.
+	 */
+	// CGRect user_clip = [self convertRectFromBacking: clip];
+	// user_clip.origin.y = -user_clip.origin.y - user_clip.size.height;
+	// CGRect local_clip = [self convertRect: user_clip fromView: nil];
+	// NSLog(@"recordRect: %@ -> %@", NSStringFromRect(clip), NSStringFromRect(local_clip));
+	// [self setNeedsDisplayInRect: local_clip];
+
+	/* We do not record the actual clipping rectangles (clippy) because the current
+	 * drawing loop will only issue a full redraw these days. See drawRect: below.
+	 */
+	if(!syncNeeded) {
+		syncNeeded = YES;
+		[self setNeedsDisplayInRect: [self frame]];
 	}
-	syncNeeded = YES;
+
+	/* Note that after this, drawThelayers will be called directly.
+	 * See primitiveShowDisplayRect, which will directly call ioForceDisplayUpdate.
+	 */
 }
 
 - (void) drawThelayers {
@@ -156,9 +189,12 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreen
         firstDrawCompleted = YES;
         return;
     }
-	if (syncNeeded) {
-		[self display];
-    }
+
+    /* The drawing loop will call display automatically due to our use of
+     * setNeedsDisplayInRect above. We don't have to do it.
+     */
+	// if (syncNeeded) { [self display]; }
+
 	if (!firstDrawCompleted) {
 		firstDrawCompleted = YES;
         extern sqInt getFullScreenFlag(void);
@@ -168,77 +204,77 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreen
 	}
 }
 
-- (void)swapColors:(void *)bits imageWidth:(int)width clipRect:(CGRect)rect {
-    int *bitsAsWord = (int *)bits;
-
-    for (int i = rect.origin.y; i < (rect.origin.y + rect.size.height); i++) {
-        for (int j = rect.origin.x; j < (rect.origin.x + rect.size.width); j++) {
-            int pos = (i * width) + j;
-            int swap = bitsAsWord[pos];
-            int swapBlue = (swap & 0xff) << 16;
-            int swapRed = (swap & 0xff0000) >> 16;
-            bitsAsWord[pos] = (swap & 0xff00ff00) | swapBlue | swapRed ;
-        }
-    }
-}
-
 /* Now the displayBits is known and likely pinned, couldn't we cache the bitmap
  * that this method creates?  Yes its contents need to be updated, but it
  * doesn't need to be created all the time does it?  Or is the object created
  * by CGImageCreate merely a wrapper around the bits?
  * eem 2017/05/12
+ *
+ * Yes, the displayBits are directly accessed when shown on screen. Also, we
+ * assume that we always refresh the full view. No sub-rectangles anymore.
+ * See commentary in drawRect:.
+ * mt 2022/03/30
  */
 
-- (void) performDraw: (CGRect)rect {
+- (void) performDraw: (CGRect)fullFrameRect {
+	if(!displayBits) {
+		// Init guard for fullscreen mode
+		return;
+	}
 
-    CGContextRef context = (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
-    CGContextSaveGState(context);
+	CGContextRef context;
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 1010 && defined(NSFoundationVersionNumber10_10)
+	if (floor(NSFoundationVersionNumber) >= NSFoundationVersionNumber10_10) {
+		context = [[NSGraphicsContext currentContext] CGContext];
+	} else { // Deprecated in OSX 10.10
+		context = (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
+	}
+#else
+	context = (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
+#endif
+	CGContextSaveGState(context);
 
     int bitSize = interpreterProxy->byteSizeOf(displayBits - BaseHeaderSize);
     int bytePerRow = displayWidth * displayDepth / 8;
 
-    CGRect r = NSRectToCGRect([self frame]);
-    int y2 = MAX(r.size.height - (rect.origin.y), 0);
-    int y1 = MAX(y2 - rect.size.height, 0);
+	CGDataProviderRef pRef = CGDataProviderCreateWithData(NULL, displayBits, bitSize, NULL);
+	CGImageRef image = CGImageCreate(displayWidth,
+									 displayHeight,
+									 8,
+									 32,
+									 bytePerRow,
+									 colorspace,
+			/* BGRA */				 kCGBitmapByteOrder32Little | kCGImageAlphaPremultipliedFirst,
+									 pRef,
+									 NULL,
+									 NO,
+									 kCGRenderingIntentDefault);
 
-    CGRect swapRect = CGRectIntersection(
-							CGRectMake(0, 0, displayWidth, displayHeight),
-							CGRectMake(rect.origin.x, y1, rect.size.width, y2));
-    if (swapRect.origin.x == INFINITY || swapRect.origin.y == INFINITY) {
-        return;
-    }
-    [self swapColors: displayBits imageWidth: displayWidth clipRect: swapRect];
+	// displayBits are upside down, match isFlipped for this view
+	CGContextTranslateCTM(context, 0, fullFrameRect.size.height);
+	CGContextScaleCTM(context, 1 , -1);
 
-    CGDataProviderRef pRef = CGDataProviderCreateWithData (NULL, displayBits, bitSize, NULL);
-    CGContextTranslateCTM(context, 0, displayHeight);
-    CGContextScaleCTM(context, 1, -1);
-    CGImageRef image = CGImageCreate(displayWidth,
-                                     displayHeight,
-                                     8,
-                                     32,
-                                     bytePerRow,
-                                     colorspace,
-                                     kCGBitmapByteOrder32Big | kCGImageAlphaLast,
-                                     pRef,
-                                     NULL,
-                                     NO,
-                                     kCGRenderingIntentDefault);
+	CGContextDrawImage(context, fullFrameRect, image);
 
-    CGContextClipToRect(context,rect);
-    CGContextDrawImage(context, CGRectMake(0, 0, displayWidth, displayHeight), image);
+	CGImageRelease(image);
+	CGDataProviderRelease(pRef);
 
-    [self swapColors: displayBits imageWidth: displayWidth clipRect: swapRect];
-
-    CGImageRelease(image);
-    CGDataProviderRelease(pRef);
-
-    CGContextRestoreGState(context);
+	CGContextRestoreGState(context);
 }
 
 -(void)drawRect:(NSRect)rect
 {
-    [self performDraw:(clippyIsEmpty? NSRectToCGRect(rect):clippy)];
-    clippyIsEmpty = YES;
+	// NSRect converted = [self convertRectToBacking: rect];
+	// converted.origin.y = -converted.origin.y - converted.size.height;
+	// NSRect local_rect = [self convertRect: converted toView: self];
+	// [self performDraw: local_rect];
+
+	/* We assume that only a full redraw will be issued these days. Even
+	 * if we record sub-rectangles. Tested on macOS 10.15 and 11.6. Enforce
+	 * via drawImageUsingClip: above. Use NSLog to double-check.
+	 */
+	// NSLog(@"drawRect: %@", NSStringFromRect(rect));
+	[self performDraw: rect];
     syncNeeded = NO;
 }
 
@@ -591,6 +627,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreen
 	if (self.dragInProgress)
 		return NSDragOperationNone;
 	dragInProgress = YES;
+	gDelegateApp.dragItems = [self filterOutSqueakImageFilesFromDraggedURIs: info];
 	self.dragCount = (int) [self countNumberOfNoneSqueakImageFilesInDraggedFiles: info];
 	
 	if (self.dragCount)
@@ -617,7 +654,6 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreen
 
 - (BOOL) performDragOperation: (id<NSDraggingInfo>)info {
 	if (self.dragCount) {
-		gDelegateApp.dragItems = [self filterOutSqueakImageFilesFromDraggedURIs: info];
 		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: SQDragDrop numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex  view: self];
 	}
 	
@@ -660,6 +696,8 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreen
 	if ([self isInFullScreenMode] == NO && (fullScreen == 1)) {
 		self.savedScreenBoundsAtTimeOfFullScreen = (NSRect) [self bounds];
 		NSDictionary* options = [NSDictionary dictionaryWithObjectsAndKeys:
+			[NSNumber numberWithBool:NO],
+			NSFullScreenModeAllScreens,
 			[NSNumber numberWithInt:
 				NSApplicationPresentationHideDock |
 				NSApplicationPresentationHideMenuBar ],

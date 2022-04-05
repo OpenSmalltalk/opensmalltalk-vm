@@ -292,8 +292,8 @@ yZero()
 
 	evt.type = EventTypeMouse;
 	evt.timeStamp = ioMSecs();
-
-	NSPoint local_point = [aView convertPoint: [theEvent locationInWindow] fromView:nil];
+	
+	NSPoint local_point = [aView sqMousePosition: theEvent];
 
 	evt.x =  lrintf((float)local_point.x);
 	evt.y =  lrintf((float)local_point.y);
@@ -319,7 +319,7 @@ yZero()
 	evt.type = EventTypeMouse;
 	evt.timeStamp = ioMSecs();
 
-	NSPoint local_point = [aView convertPoint: [theEvent locationInWindow] fromView:nil];
+	NSPoint local_point = [aView sqMousePosition: theEvent];
 
 	evt.x =  lrintf((float)local_point.x);
 	evt.y =  lrintf((float)local_point.y);
@@ -550,11 +550,11 @@ yZero()
 	return buttonState;
 }
 
-- (void) recordDragEvent:(int)dragType numberOfFiles:(int)numFiles where:(NSPoint)point windowIndex:(sqInt)windowIndex view:(NSView *)aView
+- (void) recordDragEvent:(int)dragType numberOfFiles:(int)numFiles where:(NSPoint)point windowIndex:(sqInt)windowIndex view:(NSView <sqSqueakOSXView> *)aView
 {
 	sqDragDropFilesEvent evt;
 
-    NSPoint local_point = [aView convertPoint:point fromView:nil];
+    NSPoint local_point = [aView sqDragPosition: point];
 
 	evt.type= EventTypeDragDropFiles;
 	evt.timeStamp= ioMSecs();

@@ -126,6 +126,10 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>SqueakOSXApplication</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>NSHighResolutionMagnifyAllowed</key>
+	<true/>
 	<key>SqueakBrowserMouseCmdButton1</key>
 	<integer>3</integer>
 	<key>SqueakBrowserMouseCmdButton2</key>

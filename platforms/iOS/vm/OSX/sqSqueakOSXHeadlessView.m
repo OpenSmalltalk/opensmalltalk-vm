@@ -50,7 +50,7 @@ static NSString *stringWithCharacter(unichar character) {
 }
 
 @implementation sqSqueakOSXHeadlessView
-@synthesize squeakTrackingRectForCursor,lastSeenKeyBoardStrokeDetails,
+@synthesize lastSeenKeyBoardStrokeDetails,
 lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreenBoundsAtTimeOfFullScreen;
 
 #pragma mark Initialization / Release
@@ -107,12 +107,6 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreen
 }
 
 #pragma mark Updating callbacks
-
-- (void)viewDidMoveToWindow {
-}
-
-- (void) updateTrackingAreas {
-}
 
 - (void) viewWillStartLiveResize {
 }

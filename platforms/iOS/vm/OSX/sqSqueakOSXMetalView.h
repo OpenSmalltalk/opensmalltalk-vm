@@ -48,7 +48,6 @@
 
 @interface sqSqueakOSXMetalView : MTKView <sqSqueakOSXView, sqViewClut, NSTextInputClient> {
 	sqSqueakOSXScreenAndWindow *__weak windowLogic;
-	NSTrackingRectTag squeakTrackingRectForCursor;
 	NSRange inputMark;
 	NSRange inputSelection;
 	keyBoardStrokeDetails* lastSeenKeyBoardStrokeDetails;
@@ -64,9 +63,6 @@
 	BOOL clippyIsEmpty;
 	CGRect clippy;
     CGSize lastFrameSize;
-	
-    BOOL fullScreenInProgress;
-    void* fullScreendispBitsIndex;
 	void* currentDisplayStorage;
 	
 	BOOL metalInitialized;

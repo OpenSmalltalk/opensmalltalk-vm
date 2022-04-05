@@ -49,7 +49,6 @@
 
 @interface sqSqueakOSXOpenGLView : NSOpenGLView <sqSqueakOSXView, sqViewClut, NSTextInputClient> {
 	sqSqueakOSXScreenAndWindow *__weak windowLogic;
-	NSTrackingRectTag squeakTrackingRectForCursor;
 	NSRange inputMark;
 	NSRange inputSelection;
 	keyBoardStrokeDetails* lastSeenKeyBoardStrokeDetails;
@@ -85,7 +84,8 @@
 
 - (void) setupOpenGL;
 - (void) preDrawThelayers;
--(void)drawRect:(NSRect)rect flush:(BOOL)flush;
-
+- (NSRect) sqScreenSize;
+- (NSPoint) sqMousePosition: (NSEvent*)theEvent;
+- (NSPoint) sqDragPosition: (NSPoint)draggingLocation;
 @end
 #endif //USE_OPENGL

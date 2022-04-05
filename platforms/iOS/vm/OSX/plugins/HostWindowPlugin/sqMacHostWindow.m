@@ -93,10 +93,10 @@ sqInt ioPositionOfNativeDisplay(unsigned long windowHandle)
 sqInt ioSizeOfWindowSetxy(wIndexType windowIndex, sqInt x, sqInt y)
 {
     NSWindow *window = [[NSApplication sharedApplication] mainWindow];
-    NSRect rect = [window frame];
+    NSRect rect = [window convertRectToBacking: [window frame]];
     rect.size.width = x;
     rect.size.height = y;
-    [window setFrame:rect display:YES];    
+    [window setFrame: [window convertRectFromBacking: rect] display:YES];
 	return (0);  /* w is high 16 bits; h is low 16 bits */
 }
 

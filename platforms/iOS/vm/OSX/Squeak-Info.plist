@@ -377,6 +377,10 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>SqueakOSXApplication</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>NSHighResolutionMagnifyAllowed</key>
+	<true/>
     <key>NSCameraUsageDescription</key>
     <string>This app requires camera access to use the CameraPlugin.</string>
     <key>NSMicrophoneUsageDescription</key>
