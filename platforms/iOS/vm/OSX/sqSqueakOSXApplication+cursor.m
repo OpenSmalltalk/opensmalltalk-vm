@@ -37,14 +37,11 @@
  such third-party acknowledgments.
  */
 //
-#import "SqueakOSXAppDelegate.h"
 #import "sqSqueakOSXApplication.h"
 #import "sqSqueakOSXApplication+cursor.h"
 extern BOOL gSqueakHeadless;
-extern SqueakOSXAppDelegate *gDelegateApp;
 extern BOOL browserActiveAndDrawingContextOk(void);
 BOOL browserActiveAndDrawingContextOkAndInFullScreenMode(void);
-
 
 
 @implementation sqSqueakOSXApplication (cursor)
@@ -69,7 +66,7 @@ BOOL browserActiveAndDrawingContextOkAndInFullScreenMode(void);
 			 initWithBitmapDataPlanes:  NULL pixelsWide: 16 pixelsHigh: 16
 			 bitsPerSample: 1 samplesPerPixel: 2
 			 hasAlpha: YES isPlanar: YES
-			 colorSpaceName: NSCalibratedWhiteColorSpace
+			 colorSpaceName: NSCalibratedBlackColorSpace
 			 bytesPerRow: 2
 			 bitsPerPixel: 0]);
 
@@ -78,13 +75,14 @@ BOOL browserActiveAndDrawingContextOkAndInFullScreenMode(void);
 
 	unsigned char*      data;
     unsigned char*      mask;
+	NSInteger i;
 	data=planes[0];
 	mask=planes[1];
 
-	for (int i= 0; i < 16; ++i) {
+	for (i= 0; i < 16; ++i) {
 		unsigned int word= ((unsigned int *)pointerForOop(cursorBitsIndex))[i];
-		data[i*2 + 0]= 0xFF ^ ((word >> 24) & 0xFF);
-		data[i*2 + 1]= 0xFF ^ ((word >> 16) & 0xFF);
+		data[i*2 + 0]= (word >> 24) & 0xFF;
+		data[i*2 + 1]= (word >> 16) & 0xFF;
 		
 		if (cursorMaskIndex)
 			word= ((unsigned int *)pointerForOop(cursorMaskIndex))[i];
@@ -97,10 +95,7 @@ BOOL browserActiveAndDrawingContextOkAndInFullScreenMode(void);
 
 	NSImage *image = AUTORELEASEOBJ([[NSImage alloc] init]);
 	[image addRepresentation: bitmap];
-	NSSize cursorSize = { .width = 16, .height = 16 };
-	@synchronized(gDelegateApp.mainView) {
-		[bitmap setSize:[gDelegateApp.mainView convertSizeFromBacking: cursorSize]];
-	}
+	
 	
 	NSPoint hotSpot= { -offsetX, -offsetY };
 	self.squeakCursor = AUTORELEASEOBJ([[NSCursor alloc] initWithImage: image hotSpot: hotSpot]);
@@ -153,10 +148,6 @@ BOOL browserActiveAndDrawingContextOkAndInFullScreenMode(void);
 	}
 	NSImage  *image= AUTORELEASEOBJ([[NSImage alloc] init]);
 	[image addRepresentation: bitmap];
-	NSSize cursorSize = { .width = extentX, .height = extentY };
-	@synchronized(gDelegateApp.mainView) {
-		[bitmap setSize:[gDelegateApp.mainView convertSizeFromBacking: cursorSize]];
-	}
 	NSPoint hotSpot= { -offsetX, -offsetY };
 	self.squeakCursor = AUTORELEASEOBJ([[NSCursor alloc] initWithImage: image hotSpot: hotSpot]);
     if ([NSThread isMainThread]) {
