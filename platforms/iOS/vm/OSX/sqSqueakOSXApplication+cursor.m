@@ -66,7 +66,7 @@ BOOL browserActiveAndDrawingContextOkAndInFullScreenMode(void);
 			 initWithBitmapDataPlanes:  NULL pixelsWide: 16 pixelsHigh: 16
 			 bitsPerSample: 1 samplesPerPixel: 2
 			 hasAlpha: YES isPlanar: YES
-			 colorSpaceName: NSCalibratedBlackColorSpace
+			 colorSpaceName: NSCalibratedWhiteColorSpace
 			 bytesPerRow: 2
 			 bitsPerPixel: 0]);
 
@@ -75,14 +75,13 @@ BOOL browserActiveAndDrawingContextOkAndInFullScreenMode(void);
 
 	unsigned char*      data;
     unsigned char*      mask;
-	NSInteger i;
 	data=planes[0];
 	mask=planes[1];
 
-	for (i= 0; i < 16; ++i) {
+	for (int i= 0; i < 16; ++i) {
 		unsigned int word= ((unsigned int *)pointerForOop(cursorBitsIndex))[i];
-		data[i*2 + 0]= (word >> 24) & 0xFF;
-		data[i*2 + 1]= (word >> 16) & 0xFF;
+		data[i*2 + 0]= 0xFF ^ ((word >> 24) & 0xFF);
+		data[i*2 + 1]= 0xFF ^ ((word >> 16) & 0xFF);
 		
 		if (cursorMaskIndex)
 			word= ((unsigned int *)pointerForOop(cursorMaskIndex))[i];
