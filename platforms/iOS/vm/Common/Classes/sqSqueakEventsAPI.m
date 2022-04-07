@@ -69,17 +69,16 @@ void vmIOProcessEvents(void) {
 		[getMainWindowDelegate() ioForceDisplayUpdate];
 	}
 
-	/* THIS SHOULD BE COMMENTED TO EXPLAIN WHAT ARE THE TWO CONTEXTS IN WHICH
-	 * THIS IS INVOKED.  THIS SEEMS SUPER DANGEROUS BECAUSE WHETHER THERE IS
-	 * A PRIMITIVE INDEX OR NOT DEPENDS ON WHETHER THIS IS INVOKED WITHIN A
-	 * PRIMITIVE OR NOT.  IF INVOKED IN PARALLEL TO THE VM IT IS ARBITRARY.
-	 * SO PLEASE, WHOEVER UNDERATANDS WHAT'S GOING ON, REPLACE MY CAPS WITH
-	 * A COGENT EXPLANATION ASAP.
+	/* If this is NOT invoked from within a PRIMITIVE, we assume a PUSH
+	 * rather than a PULL model for managing user-input events in the
+	 * image. In that case, we must SIGNAL the input semaphore. Otherwise,
+	 * just pump all the events and assume that the image will ask for them
+	 * in a while-loop directly after returning from here.
 	 */
 	if (interpreterProxy->methodPrimitiveIndex() == 0) {
 		[gDelegateApp.squeakApplication pumpRunLoopEventSendAndSignal:YES];
     } else {
-		[gDelegateApp.squeakApplication pumpRunLoop];
+		[gDelegateApp.squeakApplication pumpRunLoopEventSendAndSignal:NO];
 	}
 
 	if (gQuitNowRightNow) {
@@ -96,7 +95,7 @@ extern void setIoProcessEventsHandler(void * handler) {
 sqInt ioProcessEvents(void) {
     aioPoll(0);
 
-#if !defined(USE_METAL)
+#if defined(PharoVM) && !defined(USE_METAL)
 	// We need to restore the opengl context to whatever the image was
 	// already using. This is required by SDL2 in Pharo.
 	NSOpenGLContext *oldContext = [NSOpenGLContext currentContext];
@@ -108,7 +107,7 @@ sqInt ioProcessEvents(void) {
     if(ioProcessEventsHandler && ioProcessEventsHandler != vmIOProcessEvents)
         ioProcessEventsHandler();
 
-#if !defined(USE_METAL)
+#if defined(PharoVM) && !defined(USE_METAL)
 	NSOpenGLContext *newContext = [NSOpenGLContext currentContext];
 	if(oldContext != newContext) {
 		if (oldContext != nil) {

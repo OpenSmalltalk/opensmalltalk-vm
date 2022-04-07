@@ -30,6 +30,7 @@ platforms/unix/config/autom4te.cache/
 # except do track these files
 !/building/**/common*/*
 !/building/**/**/Makefile
+!/building/**/**/Makefile.*
 !/building/**/**/NotYetImplemented
 !/building/**/**/mvm
 !/building/**/**/plugins.*

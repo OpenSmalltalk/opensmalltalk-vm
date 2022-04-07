@@ -99,14 +99,12 @@ static NSString *stringWithCharacter(unichar character) {
 
 @interface sqSqueakOSXMetalView ()
 @property (nonatomic,assign) CGSize lastFrameSize;
-@property (nonatomic,assign) BOOL fullScreenInProgress;
-@property (nonatomic,assign) void* fullScreendispBitsIndex;
 @property (nonatomic,strong) id<MTLCommandQueue> graphicsCommandQueue;
 @end
 
 @implementation sqSqueakOSXMetalView
-@synthesize squeakTrackingRectForCursor,lastSeenKeyBoardStrokeDetails,
-lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSize,fullScreenInProgress,fullScreendispBitsIndex,graphicsCommandQueue;
+@synthesize lastSeenKeyBoardStrokeDetails,
+lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSize,graphicsCommandQueue;
 
 + (BOOL) isMetalViewSupported {
 	// Try to create the MTL system device.
@@ -146,7 +144,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 	mainMetalView = self;
 	
 	self.paused = YES;
-	self.enableSetNeedsDisplay = NO;
+	self.enableSetNeedsDisplay = YES;
 	
 	NSMutableArray *drawingLayers = [NSMutableArray arrayWithCapacity: MAX_NUMBER_OF_EXTRA_LAYERS];
 	for(int i = 0; i < MAX_NUMBER_OF_EXTRA_LAYERS; ++i) {
@@ -168,12 +166,16 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 	colorspace = CGColorSpaceCreateDeviceRGB();
 	[self initializeSqueakColorMap];
     [[NSNotificationCenter defaultCenter] addObserver:self selector: @selector(didEnterFullScreen:) name:@"NSWindowDidEnterFullScreenNotification" object:nil];
+
+    // macOS 10.5 introduced NSTrackingArea for mouse tracking
+    NSTrackingArea *trackingArea = [[NSTrackingArea alloc] initWithRect: [self frame]
+    	options: (NSTrackingMouseEnteredAndExited | NSTrackingMouseMoved | NSTrackingActiveAlways | NSTrackingInVisibleRect)
+    	owner: self userInfo: nil];
+    [self addTrackingArea: trackingArea];
 }
 
 - (void) didEnterFullScreen: (NSNotification*) aNotification {
     //NSLog(@"Notification didEnterFullScreen");
-    [self setupFullScreendispBitsIndex];
-    self.fullScreenInProgress = NO;
 }
 
 - (void) initializeVariables {
@@ -214,11 +216,15 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 	return NSMakePoint(converted.x, -converted.y);
 }
 
-#pragma mark Drawing
-
-- (void) setupFullScreendispBitsIndex {
-    self.fullScreendispBitsIndex = displayBits;
+- (NSPoint) sqDragPosition: (NSPoint)draggingLocation {
+	// TODO: Reuse conversion from sqMousePosition:.
+	NSPoint local_pt = [self convertPoint: draggingLocation fromView: nil];
+	NSPoint converted = [self convertPointToBacking: local_pt];
+	return NSMakePoint(converted.x, -converted.y);
 }
+
+
+#pragma mark Drawing
 
 - (void) drawImageUsingClip: (CGRect) clip {
 
@@ -228,20 +234,42 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 	} else {
 		clippy = CGRectUnion(clippy, clip);
 	}
-	syncNeeded = YES;
+
+	/* After updating clippy, tell the application to issue a display event.
+	 * We do this via setNeedsDisplayInRect: for the entire frame but only
+	 * once to avoid unnecessary updates. See initialize() where we pause
+	 * the Metal loop and enableSetNeedsDisplay.
+	 *
+	 * Note that we do not have to communicate clippy in some way because
+	 * drawRect: will always be called with the entire frame during event
+	 * processing, whether we tell it to do so or not.
+	 */
+	if(!syncNeeded) {
+		syncNeeded = YES;
+		[self setNeedsDisplayInRect: [self frame]];
+	}
 }
 
-- (void) drawThelayers {
+- (void) drawThelayers /* via ioForceDisplayUpdate() */{
     extern BOOL gSqueakHeadless;
 	if (gSqueakHeadless) {
         firstDrawCompleted = YES;
         return;
     }
 	
-    if (syncNeeded) {
-		[self draw];
-	}
-	
+	/* Documentation only. DO NOT draw here but rely the application's event
+	 * loop such as through image-side pumping. See ioProcessEvents().
+	 *
+	 * Note that we MUST NOT check deferDisplayUpdates because its semantics
+	 * expect an extra display buffer which we do not have. We just record
+	 * clippy without preserving the particular bits from displayBits. That
+	 * is, relying on the application's event loop to "defer" display updates
+	 * is not the same. Instead, it is about who manages the extra buffer if
+	 * needed.
+     */
+	// NO: if (syncNeeded) { [self draw]; }
+    // NO: if (!deferDisplayUpdates && syncNeeded) { [self draw]; }
+
 	if (!firstDrawCompleted) {
 		firstDrawCompleted = YES;
 		extern sqInt getFullScreenFlag(void);
@@ -335,15 +363,21 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 -(void)drawRect:(NSRect)rect
 {
 	[self setupMetal];
-    [self setupFullScreendispBitsIndex];
 
+    /* Only draw if we have valid access to displayBits and if we have
+     * something new communicated via clippy. During window resizing, we can
+     * just ignore this as the framework will stretch the current contents as
+     * preview. We might want to avoid this and show blank contents instead.
+     * Just check clippyIsEmpty to decide whether to update rect, typically
+     * the full frame, with something else or not.
+     */
+    if ( !displayBits ) { return; }
+    if ( clippyIsEmpty ) { return; }
+    
 	// Always try to fill the texture with the pixels.
-	if ( fullScreendispBitsIndex ) {
-		[self loadTexturesFrom: fullScreendispBitsIndex subRectangle: (clippyIsEmpty ? rect : NSRectFromCGRect(clippy))];
-		//[self loadTexturesFrom: fullScreendispBitsIndex subRectangle: rect];
-		clippyIsEmpty = YES;
-	    syncNeeded = NO;
-	}
+	[self loadTexturesSubRectangle: NSRectFromCGRect(clippy)];
+	clippyIsEmpty = YES;
+	syncNeeded = NO;
 	
 	MTLRenderPassDescriptor *renderPassDescriptor = self.currentRenderPassDescriptor;
 	if(renderPassDescriptor != nil && self.currentDrawable)
@@ -352,8 +386,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 		currentRenderEncoder = [currentCommandBuffer renderCommandEncoderWithDescriptor: renderPassDescriptor];
 		
 		// Set the viewport.
-		CGSize drawableSize = self.drawableSize;
-		[currentRenderEncoder setViewport: (MTLViewport){0.0, 0.0, drawableSize.width, drawableSize.height}];
+		[currentRenderEncoder setViewport: (MTLViewport){0.0, 0.0, self.drawableSize.width, self.drawableSize.height}];
 
 		// Draw the screen rectangle.
 		[self drawScreenRect: rect];
@@ -383,14 +416,17 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 	return screenSize;
 }
  
-- (void)loadTexturesFrom: (void*) displayStorage subRectangle: (NSRect) subRect {
+- (void)loadTexturesSubRectangle: (NSRect) subRect {
+	void  *displayStorage = displayBits;
 	CGSize drawableSize = [self screenSizeForTexture];
-    if (!CGSizeEqualToSize(lastFrameSize,drawableSize) || !displayTexture ||
-		currentDisplayStorage != displayStorage) {
-		//NSLog(@"old %f %f %f %f new %f %f %f %f",lastFrameSize.origin.x,lastFrameSize.origin.y,lastFrameSize.size.width,lastFrameSize.size.height,self.frame.origin.x,r.origin.y,r.size.width,r.size.height);
+    
+    if ( !CGSizeEqualToSize(lastFrameSize,drawableSize)
+    	|| !displayTexture
+    	|| currentDisplayStorage != displayStorage) {
+		NSLog(@"old %f %f new %f %f", lastFrameSize.width,lastFrameSize.height,drawableSize.width,drawableSize.height);
         lastFrameSize = drawableSize;
 		currentDisplayStorage = displayStorage;
-		[self updateDisplayTextureStorage];
+		[self updateDisplayTextureStorage: drawableSize];
     }
 	
 	// Clip the subrect against the texture bounds, to avoid an edge condition
@@ -404,18 +440,17 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 	
 	MTLRegion region = MTLRegionMake2D(subRect.origin.x, displayTextureHeight - subRect.origin.y - subRect.size.height, subRect.size.width, subRect.size.height);
 	
-	unsigned int sourcePitch = displayTextureWidth*4;
+	unsigned int sourcePitch = displayTextureWidth * 4;
 
 	//char *source = ((char*)displayStorage) + (unsigned int)(subRect.origin.x + subRect.origin.y*displayTextureWidth)*4;
 	char *source = ((char*)displayStorage) + (unsigned int)(subRect.origin.x + (displayTextureHeight-subRect.origin.y-subRect.size.height)*displayTextureWidth)*4;
 	[displayTexture replaceRegion: region mipmapLevel: 0 withBytes: source bytesPerRow: sourcePitch];
 }
 
--(void) updateDisplayTextureStorage {
-	CGSize drawableSize = [self screenSizeForTexture];
+-(void) updateDisplayTextureStorage: (CGSize) drawableSize {
 	displayTextureWidth = drawableSize.width;
 	displayTextureHeight = drawableSize.height;
-	displayTexturePitch = displayTextureWidth*4;
+	displayTexturePitch = displayTextureWidth * 4;
 
 	if(displayTexture)
 	{
@@ -822,6 +857,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 	if (self.dragInProgress)
 		return NSDragOperationNone;
 	dragInProgress = YES;
+	gDelegateApp.dragItems = [self filterOutSqueakImageFilesFromDraggedURIs: info];
 	self.dragCount = (int) [self countNumberOfNoneSqueakImageFilesInDraggedFiles: info];
 
 	if (self.dragCount)
@@ -851,7 +887,6 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 - (BOOL) performDragOperation: (id<NSDraggingInfo>)info {
 //    NSLog(@"performDragOperation %@",info);
 	if (self.dragCount) {
-		gDelegateApp.dragItems = [self filterOutSqueakImageFilesFromDraggedURIs: info];
 		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: SQDragDrop numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex view: self];
 	}
 
@@ -883,7 +918,6 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 
 - (void) ioSetFullScreen: (sqInt) fullScreen {
 	if ((self.window.styleMask & NSFullScreenWindowMask) != (fullScreen == 1)) {
-		self.fullScreenInProgress = YES;
         [self.window toggleFullScreen: nil];
 	}
 }

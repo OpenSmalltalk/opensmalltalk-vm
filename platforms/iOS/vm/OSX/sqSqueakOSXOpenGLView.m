@@ -150,7 +150,7 @@ static NSString *stringWithCharacter(unichar character) {
 @end
 
 @implementation sqSqueakOSXOpenGLView
-@synthesize squeakTrackingRectForCursor,lastSeenKeyBoardStrokeDetails,
+@synthesize lastSeenKeyBoardStrokeDetails,
 lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSize,fullScreenInProgress,fullScreendispBitsIndex;
 
 + (NSOpenGLPixelFormat *)defaultPixelFormat {
@@ -207,6 +207,12 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 	colorspace = CGColorSpaceCreateDeviceRGB();
 	[self initializeSqueakColorMap];
     [[NSNotificationCenter defaultCenter] addObserver:self selector: @selector(didEnterFullScreen:) name:@"NSWindowDidEnterFullScreenNotification" object:nil];
+
+    // macOS 10.5 introduced NSTrackingArea for mouse tracking
+    NSTrackingArea *trackingArea = [[NSTrackingArea alloc] initWithRect: [self frame]
+    	options: (NSTrackingMouseEnteredAndExited | NSTrackingMouseMoved | NSTrackingActiveAlways | NSTrackingInVisibleRect)
+    	owner: self userInfo: nil];
+    [self addTrackingArea: trackingArea];
 }
 
 - (void) didEnterFullScreen: (NSNotification*) aNotification {
@@ -256,20 +262,15 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 	return NSMakePoint(converted.x, -converted.y);
 }
 
+- (NSPoint) sqDragPosition: (NSPoint)draggingLocation {
+	// TODO: Reuse conversion from sqMousePosition:.
+	NSPoint local_pt = [self convertPoint: draggingLocation fromView: nil];
+	NSPoint converted = [self convertPointToBacking: local_pt];
+	return NSMakePoint(converted.x, -converted.y);
+}
+
+
 #pragma mark Updating callbacks
-
-- (void)viewDidMoveToWindow {
-	if (self.squeakTrackingRectForCursor)
-		[self removeTrackingRect: self.squeakTrackingRectForCursor];
-	
-	self.squeakTrackingRectForCursor = [self addTrackingRect: [self sqScreenSize] owner: self userData:NULL assumeInside: NO];
-}
-
-- (void) updateTrackingAreas {
-	[super updateTrackingAreas];
-	[self removeTrackingRect: self.squeakTrackingRectForCursor];
-	self.squeakTrackingRectForCursor = [self addTrackingRect: [self sqScreenSize] owner: self userData:NULL assumeInside: NO];
-}
 
 - (void) viewWillStartLiveResize {
     //NSLog(@"viewWillStartLiveResize");
@@ -360,8 +361,8 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 	
 	glClearColor(1, 1, 1, 1);
 
-//	GLint newSwapInterval = 1;
-//	CGLSetParameter(cgl_ctx, kCGLCPSwapInterval, &newSwapInterval);
+	GLint newSwapInterval = 0; // vsync on (1) or off (0)
+	CGLSetParameter(ctx, kCGLCPSwapInterval, &newSwapInterval);
 	/*glDisable(GL_DITHER);
 	glDisable(GL_ALPHA_TEST);
 	glDisable(GL_BLEND);
@@ -559,6 +560,14 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 
 -(void)drawRect:(NSRect)rect
 {
+	// TODO: Figure out who calls this to convert rect there.
+	// It is rather dangerous to have such different semantics
+	// between drawRect: and drawRect:flush:. We assume that
+	// only the OS calls this, not any image primitive.
+	NSPoint priorOrigin = rect.origin;
+	rect = [self convertRectToBacking: rect];
+	rect.origin = priorOrigin;
+
 	// Called by Cocoa. We need to flush.
 	[self drawRect: rect flush: YES];
 }
@@ -1047,6 +1056,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 	if (self.dragInProgress)
 		return NSDragOperationNone;
 	dragInProgress = YES;
+	gDelegateApp.dragItems = [self filterOutSqueakImageFilesFromDraggedURIs: info];
 	self.dragCount = (int) [self countNumberOfNoneSqueakImageFilesInDraggedFiles: info];
 
 	if (self.dragCount)
@@ -1076,7 +1086,6 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 - (BOOL) performDragOperation: (id<NSDraggingInfo>)info {
 //    NSLog(@"performDragOperation %@",info);
 	if (self.dragCount) {
-		gDelegateApp.dragItems = [self filterOutSqueakImageFilesFromDraggedURIs: info];
 		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: SQDragDrop numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex view: self];
 	}
 

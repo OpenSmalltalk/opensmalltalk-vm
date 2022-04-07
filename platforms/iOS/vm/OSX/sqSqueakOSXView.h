@@ -41,7 +41,6 @@
 
 @protocol sqSqueakOSXView <NSObject>
 
-@property (nonatomic,assign) NSTrackingRectTag squeakTrackingRectForCursor;
 @property (nonatomic,strong) keyBoardStrokeDetails* lastSeenKeyBoardStrokeDetails;
 @property (nonatomic,strong) keyBoardStrokeDetails* lastSeenKeyBoardModifierDetails;
 @property (nonatomic,assign) BOOL dragInProgress;
@@ -61,5 +60,6 @@
 
 - (NSRect) sqScreenSize;
 - (NSPoint) sqMousePosition: (NSEvent*)theEvent;
+- (NSPoint) sqDragPosition: (NSPoint)draggingLocation;
 
 @end
