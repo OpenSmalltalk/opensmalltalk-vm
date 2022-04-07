@@ -408,22 +408,14 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 	}
 }
 
-- (CGSize) screenSizeForTexture {
-	CGRect screenRect = [self sqScreenSize];
-	CGSize screenSize;
-	screenSize.width = (sqInt)screenRect.size.width;
-	screenSize.height = (sqInt)screenRect.size.height;
-	return screenSize;
-}
- 
 - (void)loadTexturesSubRectangle: (NSRect) subRect {
 	void  *displayStorage = displayBits;
-	CGSize drawableSize = [self screenSizeForTexture];
+	CGSize drawableSize = CGSizeMake(displayWidth, displayHeight);
     
     if ( !CGSizeEqualToSize(lastFrameSize,drawableSize)
     	|| !displayTexture
     	|| currentDisplayStorage != displayStorage) {
-		NSLog(@"old %f %f new %f %f", lastFrameSize.width,lastFrameSize.height,drawableSize.width,drawableSize.height);
+		// NSLog(@"old %f %f new %f %f", lastFrameSize.width,lastFrameSize.height,drawableSize.width,drawableSize.height);
         lastFrameSize = drawableSize;
 		currentDisplayStorage = displayStorage;
 		[self updateDisplayTextureStorage: drawableSize];

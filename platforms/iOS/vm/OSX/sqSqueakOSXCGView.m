@@ -254,11 +254,11 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreen
     CGImageRelease(image);
     CGDataProviderRelease(pRef);
     CGContextRestoreGState(context);
-    CGContextSaveGState(context);
-    CGContextSetFillColorWithColor(context, CGColorGetConstantColor(kCGColorClear));
-    CGContextSetRGBStrokeColor(context, 1.0, 0.0, 0.0, 1.0);
-    CGContextStrokeRect(context, rect);
-    CGContextRestoreGState(context);
+    // CGContextSaveGState(context);
+    // CGContextSetFillColorWithColor(context, CGColorGetConstantColor(kCGColorClear));
+    // CGContextSetRGBStrokeColor(context, 1.0, 0.0, 0.0, 1.0);
+    // CGContextStrokeRect(context, rect);
+    // CGContextRestoreGState(context);
 
 }
 
