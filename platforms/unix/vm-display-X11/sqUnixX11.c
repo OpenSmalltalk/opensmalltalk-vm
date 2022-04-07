@@ -4897,24 +4897,24 @@ display_ioScreenScaleFactor(void)
   double scale = sqDefaultScale();
   /* respect users' choice */
   if (sqUseEnvironmentScale()) {
-#ifdef DEBUG
+#if defined(DEBUG) && DEBUG > 1
     fprintf(stderr, "Using environment-provided scale factor\n");
 #endif
     scale = sqEnvironmentScale();
   } else {
     if (scale_Xftdpi_usable()) {
-#ifdef DEBUG
+#if defined(DEBUG) && DEBUG > 1
       fprintf(stderr, "Using Xft.dpi\n");
 #endif    
       scale = scale_Xftdpi();
     } else if (scale_xrandr_usable()) {
-#ifdef DEBUG
+#if defined(DEBUG) && DEBUG > 1
       fprintf(stderr, "Using xrandr\n");
 #endif    
       scale = scale_xrandr();
     }
   }
-#ifdef DEBUG
+#if defined(DEBUG) && DEBUG > 1
   fprintf(stderr, "Scale factor: %f\n", scale);
 #endif    
   return scale;
