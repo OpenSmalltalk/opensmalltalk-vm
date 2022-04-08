@@ -222,7 +222,7 @@ int sqMIDIClosePort(int portNum)
 */
 int sqMIDIGetClock(void)
 {
-  DPRINTF("sqMIDIGetClock\n");
+  DPRINTF(("sqMIDIGetClock\n"));
   success(false);
   return 0;
 }
@@ -234,7 +234,7 @@ int sqMIDIGetClock(void)
 */
 int sqMIDIGetPortCount(void)
 {
-  DPRINTF("sqMIDIGetPortCount\n");
+  DPRINTF(("sqMIDIGetPortCount\n"));
   snd_seq_client_info_t *cinfo;
   snd_seq_port_info_t *pinfo;
   
