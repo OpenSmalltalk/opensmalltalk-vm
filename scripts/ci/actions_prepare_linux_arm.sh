@@ -11,7 +11,7 @@ set -e
 # let the configure script pass.
 
 apt-get update -y
-apt-get install -yq --no-install-suggests --no-install-recommends   build-essential git devscripts   uuid-dev libcairo2-dev libpango1.0-dev libgl1-mesa-dev libgl1-mesa-glx libssl-dev libevdev-dev m4 libpulse-dev   libasound2-dev libfreetype6-dev libx11-dev libxrender-dev   libtool automake autoconf libltdl-dev
+apt-get install -yq --no-install-suggests --no-install-recommends   build-essential git devscripts   uuid-dev libcairo2-dev libpango1.0-dev libgl1-mesa-dev libgl1-mesa-glx libssl-dev libevdev-dev m4 libpulse-dev   libasound2-dev libfreetype6-dev libx11-dev libxrender-dev libxrandr-dev  libtool automake autoconf libltdl-dev
 
 # Other packages found in older build scripts, ignored for now:
 #   uuid-runtime libsm-dev libice-dev cmake

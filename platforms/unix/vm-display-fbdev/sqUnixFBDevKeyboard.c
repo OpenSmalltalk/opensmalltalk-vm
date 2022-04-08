@@ -291,7 +291,7 @@ void kb_open(_self, int vtSwitch, int vtLock)
 	perror(cons[i]);
   }
   if (self->fd < 0)
-    if ((self->fd= open(self->kbName= ttyname(0), O_RDWR | O_NDELAY)) < 0)
+    if ((self->fd= open(self->kbName= ttyname(fileno(stdin)), O_RDWR | O_NDELAY)) < 0)
       perror(self->kbName);
   if (self->fd < 0)
     failPermissions("console");

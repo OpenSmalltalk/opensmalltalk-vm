@@ -26,6 +26,8 @@
 #include <shellapi.h>
 #include <commdlg.h>
 #include <excpt.h>
+#include <VersionHelpers.h>
+#include <float.h>
 
 /* WM_MOUSEWHEEL since Win98/NT4 */
 #ifndef WM_MOUSEWHEEL
@@ -1756,8 +1758,89 @@ ioDrainEventQueue(void)
 }
 #endif /* NewspeakVM */
 
-double
-ioScreenScaleFactor(void) { return nan("MISS"); }
+
+/////////////////////////////////
+/*
+ * Load-time determined available dpi-getter
+ */
+typedef double (*getDpi_t)(void);
+
+
+/*
+ * Lazy-loaded GetDpiForMonitor, which is not on Windows7 and Windows8
+ */
+// enum duplicated from ShellScalingApi.
+typedef enum this_MONITOR_DPI_TYPE {
+  thisMDT_EFFECTIVE_DPI  = 0,
+  thisMDT_ANGULAR_DPI    = 1,
+  thisMDT_RAW_DPI        = 2,
+  thisMDT_DEFAULT        = thisMDT_EFFECTIVE_DPI
+} thisMONITOR_DPI_TYPE;
+
+typedef HRESULT __stdcall (*thisGetDpiForMonitor_t)(HMONITOR,thisMONITOR_DPI_TYPE,UINT *,UINT *);
+static thisGetDpiForMonitor_t thisGetDpiForMonitor = NULL;
+
+/*
+ * Per-system DPI (for Windows < 8.1)
+ */
+static double getDpiSystem(void)
+{
+  return (double) GetDeviceCaps(GetWindowDC(stWindow), LOGPIXELSY);
+}
+
+
+static double getDpiMonitor(void)
+{
+  UINT hdpi = 0, vdpi = 0;
+  HMONITOR hMonitor = NULL;
+
+  if (!thisGetDpiForMonitor) { return 0.0; }
+
+  if ((hMonitor = MonitorFromWindow(stWindow, MONITOR_DEFAULTTONULL))) {
+    if (thisGetDpiForMonitor(hMonitor, thisMDT_EFFECTIVE_DPI, &hdpi, &vdpi) == S_OK && hdpi > 0 && vdpi > 0) {
+      return (double) vdpi;
+    }
+  }
+  return 0.0;
+}
+
+/*
+ * Expected to be called only once.
+ * But I'm just a function, not a cop.
+ */
+getDpi_t determineGetDpiFunction(void)
+{
+  HMODULE shcore = NULL;
+  if (IsWindows8Point1OrGreater()) {
+    if (thisGetDpiForMonitor) {
+      return getDpiMonitor;
+    } else {
+      // Ensure GetDpiForMonitor (And shcore.dll) is there, else use fallback.
+      if ((shcore = LoadLibrary("Shcore.dll"))) {
+        if ((thisGetDpiForMonitor = (thisGetDpiForMonitor_t)GetProcAddress(shcore, "GetDpiForMonitor"))) {
+          return getDpiMonitor;
+        }
+      }
+    }
+  }
+  return getDpiSystem;
+}
+
+const double BASE_DPI = 96.0;
+
+double ioScreenScaleFactor(void)
+{
+  static getDpi_t getDpi = NULL;
+  double physicalDpi = 0.0;
+
+  if (!getDpi) { getDpi = determineGetDpiFunction(); }
+
+  physicalDpi = getDpi();
+  if (fabs(BASE_DPI - physicalDpi) > DBL_EPSILON) {
+    return physicalDpi / BASE_DPI;
+  }
+  return 1.0 ;
+}
 
 /* returns the size of the Squeak window */
 sqInt

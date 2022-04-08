@@ -239,7 +239,7 @@ yZero()
 		evt.utf32Code = unicode;
 
 		[self pushEventToQueue: (sqInputEvent *) &evt];
-
+		
 		if (i > 1 || !mainView.lastSeenKeyBoardStrokeDetails) {
 			evt.pressCode = EventKeyUp;
 			evt.charCode = keyCodeRemembered;
@@ -251,7 +251,7 @@ yZero()
 			[self pushEventToQueue: (sqInputEvent *) &evt];
 		}
 	}
-
+	
 	interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
 }
 
@@ -340,7 +340,7 @@ yZero()
 }
 
 - (void) recordWheelEvent:(NSEvent *) theEvent fromView: (NSView <sqSqueakOSXView> *) aView{
-
+		
 	[self recordMouseEvent: theEvent fromView: aView];
 	static float prevXDelta = 0;
 	static float prevYDelta = 0;

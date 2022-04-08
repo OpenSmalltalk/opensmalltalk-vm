@@ -159,24 +159,18 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreen
 - (void) drawImageUsingClip: (CGRect) clip {
 
 	/* The argument clip is in window coordinates (i.e., bottom-left is (0,0))
-	 * but still in backing scale. Unfortunately, convertRectFromBacking expects
-	 * view coordinates (i.e., top-left is (0,0)) so we have to adjust the
-	 * origin manually after conversion. We also cannot use convertRectangle:fromView:
-	 * because that expects user scale and not backing scale. Hmpf.
-	 */
-	// CGRect user_clip = [self convertRectFromBacking: clip];
-	// user_clip.origin.y = -user_clip.origin.y - user_clip.size.height;
-	// CGRect local_clip = [self convertRect: user_clip fromView: nil];
-	// NSLog(@"recordRect: %@ -> %@", NSStringFromRect(clip), NSStringFromRect(local_clip));
-	// [self setNeedsDisplayInRect: local_clip];
-
-	/* We do not record the actual clipping rectangles (clippy) because the current
-	 * drawing loop will only issue a full redraw these days. See drawRect: below.
-	 */
-	if(!syncNeeded) {
-		syncNeeded = YES;
-		[self setNeedsDisplayInRect: [self frame]];
-	}
+	 * but still in backing scale. Thus, flip the y-axis and convert to user
+     * coordinates.
+     */
+    float d = [self window] ? [self window].backingScaleFactor : 1.0;
+    CGRect userClip = CGRectMake(clip.origin.x / d,
+                                 [self frame].size.height - (clip.origin.y + clip.size.height) / d,
+                                 clip.size.width / d,
+                                 clip.size.height / d);
+//    if(!syncNeeded) {
+//        syncNeeded = YES;
+		[self setNeedsDisplayInRect: userClip];
+//    }
 
 	/* Note that after this, drawThelayers will be called directly.
 	 * See primitiveShowDisplayRect, which will directly call ioForceDisplayUpdate.
@@ -210,13 +204,10 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreen
  * by CGImageCreate merely a wrapper around the bits?
  * eem 2017/05/12
  *
- * Yes, the displayBits are directly accessed when shown on screen. Also, we
- * assume that we always refresh the full view. No sub-rectangles anymore.
- * See commentary in drawRect:.
+ * Yes, the displayBits are directly accessed when shown on screen.
  * mt 2022/03/30
  */
-
-- (void) performDraw: (CGRect)fullFrameRect {
+- (void) performDraw: (CGRect)rect {
 	if(!displayBits) {
 		// Init guard for fullscreen mode
 		return;
@@ -232,48 +223,50 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreen
 #else
 	context = (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
 #endif
-	CGContextSaveGState(context);
-
+    CGContextSaveGState(context);
+    CGAffineTransform  deviceTransform = CGContextGetUserSpaceToDeviceSpaceTransform(context);
     int bitSize = interpreterProxy->byteSizeOf(displayBits - BaseHeaderSize);
     int bytePerRow = displayWidth * displayDepth / 8;
 
-	CGDataProviderRef pRef = CGDataProviderCreateWithData(NULL, displayBits, bitSize, NULL);
-	CGImageRef image = CGImageCreate(displayWidth,
-									 displayHeight,
-									 8,
-									 32,
-									 bytePerRow,
-									 colorspace,
-			/* BGRA */				 kCGBitmapByteOrder32Little | kCGImageAlphaPremultipliedFirst,
-									 pRef,
-									 NULL,
-									 NO,
-									 kCGRenderingIntentDefault);
+    CGDataProviderRef pRef = CGDataProviderCreateWithData(NULL, displayBits, bitSize, NULL);
+    CGImageRef image = CGImageCreate(displayWidth,
+                                     displayHeight,
+                                     8,
+                                     32,
+                                     bytePerRow,
+                                     colorspace,
+            /* BGRA */				 kCGBitmapByteOrder32Little | kCGImageAlphaPremultipliedFirst,
+                                     pRef,
+                                     NULL,
+                                     NO,
+                                     kCGRenderingIntentDefault);
+    CGContextClipToRect(context, rect);
 
-	// displayBits are upside down, match isFlipped for this view
-	CGContextTranslateCTM(context, 0, fullFrameRect.size.height);
-	CGContextScaleCTM(context, 1 , -1);
+    // displayBits are upside down, match isFlipped for this view
+    CGContextTranslateCTM(context, 0, displayHeight / deviceTransform.d);
+    CGContextScaleCTM(context, 1 , -1);
+//    CGContextSetFillColorWithColor(context, CGColorGetConstantColor(kCGColorClear));
+    CGContextSetRGBFillColor(context, 0.0, 0.0, 0.0, 1.0);
+    CGContextFillRect(context, [self frame]);
+//    CGContextSetAlpha(context, 1.0);
+    CGContextDrawImage(context, [self frame], image);
 
-	CGContextDrawImage(context, fullFrameRect, image);
+    CGImageRelease(image);
+    CGDataProviderRelease(pRef);
+    CGContextRestoreGState(context);
+    // CGContextSaveGState(context);
+    // CGContextSetFillColorWithColor(context, CGColorGetConstantColor(kCGColorClear));
+    // CGContextSetRGBStrokeColor(context, 1.0, 0.0, 0.0, 1.0);
+    // CGContextStrokeRect(context, rect);
+    // CGContextRestoreGState(context);
 
-	CGImageRelease(image);
-	CGDataProviderRelease(pRef);
-
-	CGContextRestoreGState(context);
 }
 
 -(void)drawRect:(NSRect)rect
 {
-	// NSRect converted = [self convertRectToBacking: rect];
-	// converted.origin.y = -converted.origin.y - converted.size.height;
-	// NSRect local_rect = [self convertRect: converted toView: self];
-	// [self performDraw: local_rect];
-
-	/* We assume that only a full redraw will be issued these days. Even
-	 * if we record sub-rectangles. Tested on macOS 10.15 and 11.6. Enforce
-	 * via drawImageUsingClip: above. Use NSLog to double-check.
+    /* We recorded damage in drawImageUsingClip:. Cocoa possibly accumulated
+     * and now we can draw the rect the system wants us to.
 	 */
-	// NSLog(@"drawRect: %@", NSStringFromRect(rect));
 	[self performDraw: rect];
     syncNeeded = NO;
 }

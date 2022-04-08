@@ -82,7 +82,7 @@ SInt32 undoCounter=1, oldValue=0;  // jdr undo support
 }
 
 - (NSPoint) sqDragPosition: (NSPoint)draggingLocation {
-	return [aView convertPoint: draggingLocation fromView:nil];
+	return [self convertPoint: draggingLocation fromView:nil];
 }
 
 // Handles the start of a touch

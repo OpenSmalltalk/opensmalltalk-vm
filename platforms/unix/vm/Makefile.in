@@ -45,13 +45,15 @@ COBJS		= $(INTERP)$o cogit$o sqNamedPrims$o sqVirtualMachine$o sqHeapMap$o\
 			sqExternalSemaphores$o sqTicker$o aio$o debug$o osExports$o \
 			sqUnixExternalPrims$o sqUnixMemory$o sqUnixSpurMemory$o \
 			sqUnixCharConv$o sqUnixMain$o \
-			sqUnixVMProfile$o sqUnixHeartbeat$o sqUnixThreads$o
+			sqUnixVMProfile$o sqUnixHeartbeat$o sqUnixThreads$o \
+			sqUnixDisplayHelpers$o
 
 IOBJS		= $(INTERP)$o sqNamedPrims$o sqVirtualMachine$o sqHeapMap$o\
 			sqExternalSemaphores$o sqTicker$o aio$o debug$o osExports$o \
 			sqUnixExternalPrims$o sqUnixMemory$o sqUnixSpurMemory$o \
 			sqUnixCharConv$o sqUnixMain$o \
-			sqUnixVMProfile$o sqUnixHeartbeat$o sqUnixThreads$o
+			sqUnixVMProfile$o sqUnixHeartbeat$o sqUnixThreads$o \
+			sqUnixDisplayHelpers$o
 
 OBJS		= [COBJS_OR_IOBJS] # see mkmf
 
@@ -80,6 +82,8 @@ sqUnixHeartbeat$o : $(topdir)/platforms/Cross/vm/sqSCCSVersion.h
 # rebuild sqExtPrims sqUnixMain if config.h changes
 
 sqUnixExternalPrims$o sqUnixMain$o : ../config.h $(topdir)/platforms/unix/vm/dlfcn-dyld.c
+
+sqUnixDisplayHelpers$o: ../config.h
 
 sqUnixMemory$o : $(topdir)/platforms/unix/vm/sqUnixSpurMemory.c
 

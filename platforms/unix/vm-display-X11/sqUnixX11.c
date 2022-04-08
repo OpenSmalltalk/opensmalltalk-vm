@@ -59,6 +59,7 @@
 #include "sqUnixMain.h"
 #include "sqUnixGlobals.h"
 #include "sqUnixCharConv.h"
+#include "sqUnixDisplayHelpers.h"
 #include "sqaio.h"
 
 #undef HAVE_OPENGL_GL_H		/* don't include Quartz OpenGL if configured */
@@ -4888,11 +4889,35 @@ display_ioScreenDepth(void)
   return d;
 }
 
+#include "sqUnixX11Scale.c"
 
 static double
 display_ioScreenScaleFactor(void)
 {
-  return nan("MISS");
+  double scale = sqDefaultScale();
+  /* respect users' choice */
+  if (sqUseEnvironmentScale()) {
+#if defined(DEBUG) && DEBUG > 1
+    fprintf(stderr, "Using environment-provided scale factor\n");
+#endif
+    scale = sqEnvironmentScale();
+  } else {
+    if (scale_Xftdpi_usable()) {
+#if defined(DEBUG) && DEBUG > 1
+      fprintf(stderr, "Using Xft.dpi\n");
+#endif    
+      scale = scale_Xftdpi();
+    } else if (scale_xrandr_usable()) {
+#if defined(DEBUG) && DEBUG > 1
+      fprintf(stderr, "Using xrandr\n");
+#endif    
+      scale = scale_xrandr();
+    }
+  }
+#if defined(DEBUG) && DEBUG > 1
+  fprintf(stderr, "Scale factor: %f\n", scale);
+#endif    
+  return scale;
 }
 
 /* returns the size of the Squeak window */

@@ -19,6 +19,7 @@ if [[ "${ARCH}" = "linux64x64" ]]; then
             libx11-dev \
             libxext-dev \
             libxrender-dev \
+            libxrandr-dev \
             libpango1.0-dev \
             libpulse-dev \
             libaudio-dev \
@@ -51,6 +52,7 @@ elif [[ "${ARCH}" = "linux32x86" ]]; then
             libgl1-mesa-dev:i386 \
             libxext-dev:i386 \
             libxrender-dev:i386 \
+            libxrandr-dev:i386 \
             libglapi-mesa:i386 \
             libcairo2-dev:i386 \
             libpango1.0-dev:i386 \

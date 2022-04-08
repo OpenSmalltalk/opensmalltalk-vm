@@ -62,22 +62,78 @@
 #include <fcntl.h>
 #include <sys/select.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <assert.h>
 
 #if !defined(DEBUG)
 # define DEBUG	0
 #endif
 
-
+#if (DEBUG)
+static bool DPRINTF_redirecting = false;
+typedef struct _debugmsg debugmsg;
+struct _debugmsg {
+  char* msg;
+  debugmsg* next;
+};
+static debugmsg* DPRINTF_debugmsg = NULL;
+static debugmsg* DPRINTF_debugmsg_new(void)
+{
+  debugmsg* msg = calloc(1, sizeof(debugmsg));
+  if (!msg) {
+    perror("no mem for redirect");
+    exit(1);
+  }
+  if (!DPRINTF_debugmsg) {
+    DPRINTF_debugmsg = msg;
+  } else {
+    debugmsg* cur = DPRINTF_debugmsg;
+    while (cur->next != NULL) {
+      cur = cur->next;
+    }
+    cur->next = msg;
+  }
+  return msg;
+}
 static void DPRINTF(const char *fmt, ...)
 {
-#if (DEBUG)
   va_list ap;
   va_start(ap, fmt);
-  vprintf(fmt, ap);
+  if (DPRINTF_redirecting) {
+    debugmsg* new = DPRINTF_debugmsg_new();
+    vasprintf(&(new->msg), fmt, ap);
+  } else {
+    vprintf(fmt, ap);
+  }
   va_end(ap);
-#endif
 }
+static void DPRINTF_REDIRECT(bool flag)
+{
+  if (flag) {
+    printf("DEBUG: saving incoming debug messages\n");
+    fflush(stdout);
+    fflush(stderr);
+    DPRINTF_redirecting = true;
+  } else {
+    DPRINTF_redirecting = false;
+    fflush(stdout);
+    fflush(stderr);
+    printf("DEBUG: replaying saved debug messages\n");
+    debugmsg* cur = DPRINTF_debugmsg;
+    while (cur != NULL) {
+      printf("%s", cur->msg);
+      debugmsg* next = cur->next;
+      free(cur);
+      cur=next;
+    }
+    fflush(stdout);
+    fflush(stderr);
+  }
+}
+#else
+#define DPRINTF(fmt, ...)
+#define DPRINTF_REDIRECT(b)
+#endif
 
 static void fatalError(const char *who)
 {
@@ -265,9 +321,10 @@ static sqInt display_ioScreenDepth(void)
   return fb_depth(fb);
 }
 
+
 static double display_ioScreenScaleFactor(void)
 {
-  return nan("MISS");
+  return fb_scale(fb);
 }
 
 static sqInt display_ioScreenSize(void)
@@ -309,6 +366,7 @@ static sqInt display_ioHasDisplayDepth(sqInt i)
 static void openDisplay(void)
 {
   DPRINTF("openDisplay\n");
+  DPRINTF_REDIRECT(true);
   openMouse();
   openKeyboard();
   openFramebuffer();
@@ -324,6 +382,7 @@ static void closeDisplay(void)
 {
   DPRINTF("closeDisplay\n");
   closeFramebuffer();
+  DPRINTF_REDIRECT(false);
   closeKeyboard();
   closeMouse();
 }

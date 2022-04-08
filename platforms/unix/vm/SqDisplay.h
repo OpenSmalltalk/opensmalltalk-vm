@@ -108,7 +108,7 @@ static struct SqDisplay display_##NAME##_itf= {	\
   display_ioBeep,				\
   display_ioRelinquishProcessorForMicroseconds,	\
   display_ioProcessEvents,			\
-  display_ioScreenScaleFactor,		\
+  display_ioScreenScaleFactor,                  \
   display_ioScreenDepth,			\
   display_ioScreenSize,				\
   display_ioSetCursorWithMask,			\

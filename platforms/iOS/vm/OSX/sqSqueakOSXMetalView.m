@@ -408,18 +408,17 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 	}
 }
 
- 
 - (void)loadTexturesSubRectangle: (NSRect) subRect {
 	void  *displayStorage = displayBits;
-	CGSize displaySize = CGSizeMake(displayWidth, displayHeight);
+	CGSize drawableSize = CGSizeMake(displayWidth, displayHeight);
     
-    if ( !CGSizeEqualToSize(lastFrameSize,displaySize)
+    if ( !CGSizeEqualToSize(lastFrameSize,drawableSize)
     	|| !displayTexture
     	|| currentDisplayStorage != displayStorage) {
-		//NSLog(@"old %f %f %f %f new %f %f %f %f",lastFrameSize.origin.x,lastFrameSize.origin.y,lastFrameSize.size.width,lastFrameSize.size.height,self.frame.origin.x,r.origin.y,r.size.width,r.size.height);
-        lastFrameSize = displaySize;
+		// NSLog(@"old %f %f new %f %f", lastFrameSize.width,lastFrameSize.height,drawableSize.width,drawableSize.height);
+        lastFrameSize = drawableSize;
 		currentDisplayStorage = displayStorage;
-		[self updateDisplayTextureStorage: displaySize];
+		[self updateDisplayTextureStorage: drawableSize];
     }
 	
 	// Clip the subrect against the texture bounds, to avoid an edge condition
@@ -433,17 +432,17 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 	
 	MTLRegion region = MTLRegionMake2D(subRect.origin.x, displayTextureHeight - subRect.origin.y - subRect.size.height, subRect.size.width, subRect.size.height);
 	
-	unsigned int sourcePitch = displayTextureWidth*4;
+	unsigned int sourcePitch = displayTextureWidth * 4;
 
 	//char *source = ((char*)displayStorage) + (unsigned int)(subRect.origin.x + subRect.origin.y*displayTextureWidth)*4;
 	char *source = ((char*)displayStorage) + (unsigned int)(subRect.origin.x + (displayTextureHeight-subRect.origin.y-subRect.size.height)*displayTextureWidth)*4;
 	[displayTexture replaceRegion: region mipmapLevel: 0 withBytes: source bytesPerRow: sourcePitch];
 }
 
--(void) updateDisplayTextureStorage: (CGSize) newTextureSize {
-	displayTextureWidth = newTextureSize.width;
-	displayTextureHeight = newTextureSize.height;
-	displayTexturePitch = displayTextureWidth*4;
+-(void) updateDisplayTextureStorage: (CGSize) drawableSize {
+	displayTextureWidth = drawableSize.width;
+	displayTextureHeight = drawableSize.height;
+	displayTexturePitch = displayTextureWidth * 4;
 
 	if(displayTexture)
 	{
