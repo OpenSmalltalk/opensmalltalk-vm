@@ -147,16 +147,14 @@ getMostRecentCallbackContext() { return mostRecentCallbackContext; }
  * args would get copied into a struct on the stack. A pointer to the struct
  * is then passed as an element of the VMCallbackContext.
  *
- * N.B. On gcc 7.4.x thunkEntry fails if optimized, for as yet not fully
+ * N.B. On gcc, thunkEntry fails if optimized, for as yet not fully
  * diagnosed reasons.  See
  *     https://github.com/OpenSmalltalk/opensmalltalk-vm/pull/353
- * Hence the pragma below.
+ * Hence the pragma below. Works fine for clang.
  */
 long
-#ifdef __GNUC__
-#  if __GNUC__ == 7 && __GNUC_MINOR__ >= 4
+#if defined(__GNUC__) && !defined(__clang__)
 __attribute__((optimize("O0")))
-#  endif
 #endif
 thunkEntry(void *thunkp, sqIntptr_t *stackp)
 {

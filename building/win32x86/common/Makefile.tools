@@ -9,7 +9,7 @@ export TOOLPREFIX
 # C compiler settings (gcc 4.x)
 #
 ifeq ($(COMPILER_TO_USE),)
-COMPILER_TO_USE:=gcc
+COMPILER_TO_USE:=clang
 endif
 
 ifeq ($(COMPILER_TO_USE),clang)
