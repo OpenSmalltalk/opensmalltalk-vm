@@ -62,8 +62,8 @@
 - (void)  ioSetFullScreen: (sqInt) fullScreen {
 }
 
-- (double) ioSceenScaleFactor {
-    return 1.0;
+- (double) ioScreenScaleFactor {
+    return nan("MISS");
 }
 
 - (sqInt) ioScreenSize {
