@@ -258,7 +258,11 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->setInterruptCheckChain = setInterruptCheckChain;
 	VM->classAlien          = classAlien;
 	VM->classUnsafeAlien    = classUnsafeAlien;
+# if OLD_FOR_REFERENCE /* slot repurposed for storeLong32ofObjectwithValue */
 	VM->sendInvokeCallbackStackRegistersJmpbuf = sendInvokeCallbackStackRegistersJmpbuf;
+# else
+	VM->storeLong32ofObjectwithValue = storeLong32ofObjectwithValue;
+# endif
 	VM->reestablishContextPriorToCallback = reestablishContextPriorToCallback;
 	VM->getStackPointer     = (sqInt *(*)(void))getStackPointer;
 	VM->isOopImmutable = isOopImmutable;

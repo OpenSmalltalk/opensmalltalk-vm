@@ -288,7 +288,11 @@ typedef struct VirtualMachine {
 	void  *(*setInterruptCheckChain)(void (*aFunction)(void));
 	sqInt  (*classAlien)(void);
 	sqInt  (*classUnsafeAlien)(void);
+# if OLD_FOR_REFERENCE /* slot repurposed for storeLong32ofObjectwithValue */
 	sqInt  (*sendInvokeCallbackStackRegistersJmpbuf)(sqInt thunkPtrAsInt, sqInt stackPtrAsInt, sqInt regsPtrAsInt, sqInt jmpBufPtrAsInt);
+# else
+	usqInt  (*storeLong32ofObjectwithValue)(sqInt index, sqInt oop, usqInt); 
+# endif
 	sqInt  (*reestablishContextPriorToCallback)(sqInt callbackContext);
 	sqInt *(*getStackPointer)(void);
 	sqInt  (*isOopImmutable)(sqInt oop);
@@ -548,7 +552,11 @@ usqInt sizeOfAlienData(sqInt);
 sqInt signalNoResume(sqInt);
 #if VM_PROXY_MINOR > 8
 sqInt *getStackPointer(void);  /* Alien FFI */
+# if OLD_FOR_REFERENCE /* slot repurposed for storeLong32ofObjectwithValue */
 sqInt sendInvokeCallbackStackRegistersJmpbuf(sqInt thunkPtrAsInt, sqInt stackPtrAsInt, sqInt regsPtrAsInt, sqInt jmpBufPtrAsInt); /* Alien FFI */
+# else
+usqInt  storeLong32ofObjectwithValue(sqInt index, sqInt oop, usqInt); 
+# endif
 sqInt reestablishContextPriorToCallback(sqInt callbackContext); /* Alien FFI */
 sqInt sendInvokeCallbackContext(vmccp);
 sqInt returnAsThroughCallbackContext(sqInt, vmccp, sqInt);

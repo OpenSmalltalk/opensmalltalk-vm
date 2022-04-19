@@ -17,10 +17,10 @@
  copies of the Software, and to permit persons to whom the
  Software is furnished to do so, subject to the following
  conditions:
- 
+
  The above copyright notice and this permission notice shall be
  included in all copies or substantial portions of the Software.
- 
+
  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -50,37 +50,35 @@ such third-party acknowledgments.
 }
 
 - (void) makeMainWindow {
-	
+
 	/*Beware creating a main window must be done on main thread it will not work from this interpreter squeak thread */
-	
+
 	sqInt width,height;
 	windowDescriptorBlock *windowBlock;
-	
+
 	NSObject * createdWindow = [self createPossibleWindow];
-	
+
 	extern sqInt getSavedWindowSize(void); //This is VM Callback
 	extern sqInt setSavedWindowSize(sqInt value); //This is VM Callback
-	
+
 	/* get old window size */
 	width  = ((unsigned) getSavedWindowSize()) >> 16;
 	height = getSavedWindowSize() & 0xFFFF;
-    
+
     extern sqInt getFullScreenFlag(void);
-    if (!getFullScreenFlag()) {
+    if (!getFullScreenFlag())
         [self placeMainWindowOnLargerScreenGivenWidth: width height: height];
-    }
-    
+
 	windowBlock = AddWindowBlock();
 	windowBlock->handle =   (__bridge void*) createdWindow;
 	windowBlock->context = nil;
 	windowBlock->updateArea = CGRectZero;
-	
-	setSavedWindowSize( (width << 16) |(height & 0xFFFF));
+
+	setSavedWindowSize((width << 16) | (height & 0xFFFF));
 	windowBlock->width = width;
 	windowBlock->height = height; 	
 
 	ioSetFullScreen(getFullScreenFlag());
-
 }
 
 - (sqSqueakMainApplication *) makeApplicationInstance {
@@ -105,14 +103,14 @@ such third-party acknowledgments.
 #if COGVM
 	[squeakThread setStackSize: [squeakThread stackSize]*4];
 #endif
-	
+
 	[squeakThread start];
 }
 
 - (void) singleThreadStart {
 	/* This the carbon logic model 
 	 described by http://developer.apple.com/qa/qa2001/qa1061.html */
-	
+
 	[[NSRunLoop mainRunLoop] performSelector: @selector(runSqueak) 
 									  target: self.squeakApplication
 									argument: nil 
