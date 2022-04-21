@@ -180,7 +180,7 @@ ifeq ($(realpath $(PREREQUISITES)),$(abspath $(PREREQUISITES)))
 
 $(PLUGINLIB): $(PLUGINREQS) $(VMDIR) $(OBJDIR) $(LIBOBJ) $(PLUGINFWKS)
 	-rm $(PLUGINLIB)
-	ar -rc $(PLUGINLIB) $(LIBOBJ)
+	ar -rcs $(PLUGINLIB) $(LIBOBJ)
 
 # Either link with normal compiler/linker or with CXX compiler/linker.  If
 # LINK_WITH_CXX is set, use e.g. clang++
