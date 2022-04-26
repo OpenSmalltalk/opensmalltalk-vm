@@ -99,6 +99,9 @@ bool scale_Xftdpi_usable(void)
   /*
    * Xft.dpi is per se not physical and also not per-monitor.
    */
+  if (!stDisplay) {
+	return false; // running headless
+  }
   if (sqPreferPhysicalScale() || sqPerMonitorScale()) {
     return false;
   }
@@ -232,6 +235,10 @@ should_use_for_scale(px_pos wx, px_pos wy, px_len ww, px_len wh,
 
 bool scale_xrandr_usable(void)
 {
+  if (!stDisplay) {
+	return false;
+  }
+
   LOADING_SYM(Xrandr, XRRScreenResources *, XRRGetScreenResources, Display *dpy, Window window);
   LOADING_SYM(Xrandr, void, XRRFreeScreenResources, XRRScreenResources *resources);
   LOADING_SYM(Xrandr, XRROutputInfo * , XRRGetOutputInfo, Display *dpy, XRRScreenResources *resources, RROutput output);
