@@ -4894,6 +4894,8 @@ display_ioScreenDepth(void)
 static double
 display_ioScreenScaleFactor(void)
 {
+  if (headless || !isConnectedToXServer)
+    return nan("MISS");
   double scale = sqDefaultScale();
   /* respect users' choice */
   if (sqUseEnvironmentScale()) {
@@ -4988,7 +4990,7 @@ display_ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt 
   Cursor cursor;
   Pixmap dataPixmap, maskPixmap;
 
-  if (!isConnectedToXServer)
+  if (headless || !isConnectedToXServer)
     return 0;
 
   if (fakeBigCursor())
@@ -5049,7 +5051,7 @@ display_ioSetCursorWithMaskBig(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqI
   Cursor cursor;
   Pixmap dataPixmap, maskPixmap;
 
-  if (!isConnectedToXServer)
+  if (headless || !isConnectedToXServer)
     return 0;
 
   if (cursorMaskIndex == null)
@@ -5111,6 +5113,9 @@ display_ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt extentY, sqI
   XRenderPictFormat *pictformat;
   Picture picture;
   Cursor cursor;
+
+  if (headless || !isConnectedToXServer)
+    return 0;
 
   if (fakeBigCursor())
     return 0;
