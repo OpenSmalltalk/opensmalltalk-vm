@@ -50,6 +50,7 @@ extern SqueakOSXAppDelegate *gDelegateApp;
 extern struct VirtualMachine* interpreterProxy;
 
 static sqSqueakOSXMetalView *mainMetalView;
+extern sqInt cannotDeferDisplayUpdates;
 
 #define STRINGIFY_SHADER(src) #src
 static const char *squeakMainShadersSrc =
@@ -145,6 +146,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,lastFrameSi
 	
 	self.paused = YES;
 	self.enableSetNeedsDisplay = YES;
+	cannotDeferDisplayUpdates = 1;
 	
 	NSMutableArray *drawingLayers = [NSMutableArray arrayWithCapacity: MAX_NUMBER_OF_EXTRA_LAYERS];
 	for(int i = 0; i < MAX_NUMBER_OF_EXTRA_LAYERS; ++i) {
