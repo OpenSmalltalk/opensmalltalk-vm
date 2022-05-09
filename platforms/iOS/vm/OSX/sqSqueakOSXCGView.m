@@ -51,6 +51,7 @@
 
 extern SqueakOSXAppDelegate *gDelegateApp;
 extern struct	VirtualMachine* interpreterProxy;
+extern sqInt cannotDeferDisplayUpdates;
 
 static NSString *stringWithCharacter(unichar character) {
 	return [NSString stringWithCharacters: &character length: 1];
@@ -75,7 +76,9 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreen
 - (void)initialize {
 
     // NSLog(@"initialize %@", NSStringFromRect([self frame]));
-
+	
+	cannotDeferDisplayUpdates = 1;
+	
 	[self setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
     [self setAutoresizesSubviews:YES];
 
