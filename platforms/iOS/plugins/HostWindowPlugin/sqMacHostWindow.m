@@ -138,10 +138,18 @@ ioSizeOfWindowSetxy(wIndexType windowIndex, sqInt x, sqInt y)
 		return 0;
 
 	NSWindow *window = nsWindowFromIndex(windowIndex);
+#if 1
     NSRect frame = [window frame];
+#else
+    NSRect frame = [window convertRectToBacking: [window frame]];
+#endif
     frame.size.width = x;
     frame.size.height = y;
-    [window setFrame: frame display: YES];    
+#if 1
+    [window setFrame: frame display:YES];  
+#else
+    [window setFrame: [window convertRectFromBacking: frame] display:YES];  
+#endif
 
 	return 0;
 }
