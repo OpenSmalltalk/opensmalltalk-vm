@@ -68,7 +68,7 @@ jobs:
           #SEE: https://github.com/uraimo/run-on-arch-action/issues/54
           install: |
             apt update -y
-            apt install -yq --no-install-suggests --no-install-recommends   build-essential git devscripts   uuid-dev libcairo2-dev libpango1.0-dev libgl1-mesa-dev libgl1-mesa-glx libssl-dev libevdev-dev m4 libpulse-dev   libasound2-dev libfreetype6-dev libx11-dev libxrender-dev   libtool automake autoconf libltdl-dev
+            apt install -yq --no-install-suggests --no-install-recommends   build-essential git devscripts   uuid-dev libcairo2-dev libpango1.0-dev libgl1-mesa-dev libgl1-mesa-glx libssl-dev libevdev-dev m4 libpulse-dev   libasound2-dev libfreetype6-dev libx11-dev libxrender-dev libxrandr-dev libtool automake autoconf libltdl-dev
 
           env: | # Copy the entire environment for the docker container
             ARCH: ${{ env.ARCH }}
