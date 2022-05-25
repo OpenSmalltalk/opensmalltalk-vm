@@ -72,6 +72,32 @@ sqInt sqCopyBioSSL(sqSSL *ssl, BIO *bio, char *dstBuf, sqInt dstLen) {
 }
 
 
+/* sqGetPeerCertificate: Tiny wrapper to find out which get_peer_cert to use */
+static X509* sqGetPeerCertificate(const SSL* s)
+{
+#define DEBUG_FUNC(f) \
+  DEBUG_PRINT("sqGetPeerCertificate: Using %s as get_cert func\n", #f)
+
+  static bool initialized = false;
+  static X509* (*_get_peer_certificate)(const SSL* s) = NULL;
+  if (!initialized) {
+    initialized = true;
+    if (sqo_SSL_get1_peer_certificate) {
+      DEBUG_FUNC(sqo_SSL_get1_peer_certificate);
+      _get_peer_certificate = sqo_SSL_get1_peer_certificate;
+    } else if (sqo_SSL_get_peer_certificate) {
+      DEBUG_FUNC(sqo_SSL_get_peer_certificate);
+      _get_peer_certificate = sqo_SSL_get_peer_certificate;
+    }
+  }
+  if (_get_peer_certificate) {
+    return _get_peer_certificate(s);
+  } else {
+    return NULL;
+  }
+#undef DEBUG_FUNC
+}
+
 enum sqMatchResult sqVerifyIP(sqSSL* ssl, X509* cert, const char* serverName, const size_t serverNameLength);
 enum sqMatchResult sqVerifyDNS(sqSSL* ssl, X509* cert, const char* serverName, const size_t serverNameLength);
 enum sqMatchResult sqVerifyNameInner(sqSSL* ssl, X509* cert, const void* serverName, const size_t serverNameLength, const int matchType);
@@ -414,7 +440,7 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 	ssl->state = SQSSL_CONNECTED;
 
 	if(ssl->loglevel) printf("sqConnectSSL: SSL_get_peer_certificate\n");
-	cert = sqo_SSL_get_peer_certificate(ssl->ssl);
+	cert = sqGetPeerCertificate(ssl->ssl);
 	if(ssl->loglevel) printf("sqConnectSSL: cert = %p\n", cert);
 	/* Fail if no cert received. */
 	if(cert) {
@@ -553,7 +579,7 @@ sqInt sqAcceptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt 
 	ssl->state = SQSSL_CONNECTED;
 
 	if(ssl->loglevel) printf("sqAcceptSSL: SSL_get_peer_certificate\n");
-	cert = sqo_SSL_get_peer_certificate(ssl->ssl);
+	cert = sqGetPeerCertificate(ssl->ssl);
 	if(ssl->loglevel) printf("sqAcceptSSL: cert = %p\n", cert);
 
 	if(cert) {

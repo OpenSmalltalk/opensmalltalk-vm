@@ -78,7 +78,13 @@
 #define sqo_SSL_free SSL_free
 #define sqo_SSL_ctrl SSL_ctrl
 #define sqo_SSL_get_error SSL_get_error
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+#define sqo_SSL_get_peer_certificate SSL_get1_peer_certificate
+#define sqo_SSL_get1_peer_certificate SSL_get1_peer_certificate
+#else
 #define sqo_SSL_get_peer_certificate SSL_get_peer_certificate
+#define sqo_SSL_get1_peer_certificate NULL_FUNC
+#endif
 #define sqo_SSL_get_verify_result SSL_get_verify_result
 #define sqo_SSL_new SSL_new
 #define sqo_SSL_read SSL_read
@@ -253,7 +259,8 @@ OPENSSL_INIT_SETTINGS;
   SQO_DECL___(void, SSL_free, SSL *ssl)                                 \
   SQO_DECL___(long, SSL_ctrl, SSL *ssl, int cmd, long larg, void *parg) \
   SQO_DECL___(int, SSL_get_error, const SSL *s, int ret_code)           \
-  SQO_DECL___(X509 *, SSL_get_peer_certificate, const SSL *s)           \
+  SQO_DECL_IF(X509 *, SSL_get_peer_certificate, const SSL *s)           \
+  SQO_DECL_IF(X509 *, SSL_get1_peer_certificate, const SSL *s)          \
   SQO_DECL___(long, SSL_get_verify_result, const SSL *ssl)              \
   SQO_DECL___(SSL *, SSL_new, SSL_CTX *ctx)                             \
   SQO_DECL___(int, SSL_read, SSL *ssl, void *buf, int num)              \
