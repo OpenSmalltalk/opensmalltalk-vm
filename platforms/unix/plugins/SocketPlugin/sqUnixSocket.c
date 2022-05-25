@@ -103,10 +103,21 @@
 
 #endif /* !ACORN */
 
-/* Solaris sometimes fails to define this in netdb.h */
-#ifndef  MAXHOSTNAMELEN
-# define MAXHOSTNAMELEN	256
-#endif
+
+/*
+   As per DNS, a full DNS name cannot contain more than 255
+   characters. Due to the way this is encoded, we end up with
+   practically 253 usable bytes for any DNS FQDN out there; ther
+   cannot be a longer one.
+
+   Note: this used ot be MAXHOSTNAMELEN. Under POSIX this might be
+   aliased to HOST_NAME_MAX (or not) and/or max out to 64 characters
+   (or not). However, that would be the max length of a DNS _Label_,
+   that is, a part of a DNS name not containing any dots. This is too
+   limiting. Therefore, we define FQDN_LEN ourselves now.
+*/
+#define FQDN_LEN 253
+
 
 #ifdef HAVE_SD_DAEMON
 # include <systemd/sd-daemon.h>
@@ -146,7 +157,9 @@
 
 static int thisNetSession= 0;
 
-static char   localHostName[MAXHOSTNAMELEN];
+/* this ought to be <= 64, but we might never know whether someone
+   gives us an FQDN here; so lets play safe */
+static char   localHostName[FQDN_LEN + 1];
 static uint32_t localHostAddress;	/* GROSS IPv4 ASSUMPTION! */
 
 union sockaddr_any
@@ -209,7 +222,7 @@ typedef struct privateSocketStruct
 
 /*** Resolver state ***/
 
-static char lastName[MAXHOSTNAMELEN+1];
+static char lastName[FQDN_LEN+1];
 static int  lastAddr= 0;
 static int  lastError= 0;
 static int  resolverSema= 0;
@@ -557,7 +570,7 @@ sqNetworkInit(sqInt resolverSemaIndex)
 {
   if (0 != thisNetSession)
 	return 0;  /* already initialised */
-  gethostname(localHostName, MAXHOSTNAMELEN);
+  gethostname(localHostName, FQDN_LEN);
   localHostAddress= nameToAddr(localHostName);
   thisNetSession= clock() + time(0);
   if (0 == thisNetSession)
@@ -1614,7 +1627,7 @@ sqResolverStartAddrLookup(sqInt address)
 {
   const char *res;
   res= addrToName(address);
-  strncpy(lastName, res, MAXHOSTNAMELEN);
+  strncpy(lastName, res, FQDN_LEN);
   FPRINTF((stderr, "startAddrLookup %s\n", lastName));
 }
 
@@ -1703,7 +1716,7 @@ sqResolverAddrLookupResult(char *nameForAddress, sqInt nameSize)
 void
 sqResolverStartNameLookup(char *hostName, sqInt nameSize)
 {
-  int len= (nameSize < MAXHOSTNAMELEN) ? nameSize : MAXHOSTNAMELEN;
+  int len= (nameSize < FQDN_LEN) ? nameSize : FQDN_LEN;
   memcpy(lastName, hostName, len);
   lastName[len]= lastError= 0;
   FPRINTF((stderr, "name lookup %s\n", lastName));
@@ -1725,7 +1738,7 @@ sqResolverGetAddressInfoHostSizeServiceSizeFlagsFamilyTypeProtocol
 	(char *hostName, sqInt hostSize, char *servName, sqInt servSize,
 	 sqInt flags, sqInt family, sqInt type, sqInt protocol)
 {
-  char host[MAXHOSTNAMELEN+1], serv[MAXHOSTNAMELEN+1];
+  char host[FQDN_LEN+1], serv[FQDN_LEN+1];
   struct addrinfo request;
   int gaiError= 0;
 
@@ -1745,8 +1758,8 @@ sqResolverGetAddressInfoHostSizeServiceSizeFlagsFamilyTypeProtocol
 	}
 
   if (!thisNetSession
-   || hostSize < 0 || hostSize > MAXHOSTNAMELEN
-   || servSize < 0 || servSize > MAXHOSTNAMELEN)
+   || hostSize < 0 || hostSize > FQDN_LEN
+   || servSize < 0 || servSize > FQDN_LEN)
 	goto fail;
 
   if (hostSize)
@@ -2006,8 +2019,8 @@ sqSocketAddressSizeSetPort(char *addr, sqInt addrSize, sqInt port)
 /* ---- host name lookup ---- */
 
 
-static char hostNameInfo[MAXHOSTNAMELEN+1];
-static char servNameInfo[MAXHOSTNAMELEN+1];
+static char hostNameInfo[FQDN_LEN+1];
+static char servNameInfo[FQDN_LEN+1];
 
 static int nameInfoValid= 0;
 
@@ -2119,7 +2132,7 @@ sqResolverGetNameInfoServiceResultSize(char *name, sqInt nameSize)
 sqInt
 sqResolverHostNameSize(void)
 {
-  char buf[MAXHOSTNAMELEN+1];
+  char buf[FQDN_LEN+1];
   if (gethostname(buf, sizeof(buf)))
 	{
 	  success(false);
@@ -2132,7 +2145,7 @@ sqResolverHostNameSize(void)
 void
 sqResolverHostNameResultSize(char *name, sqInt nameSize)
 {
-  char buf[MAXHOSTNAMELEN+1];
+  char buf[FQDN_LEN+1];
   int len;
   if (gethostname(buf, sizeof(buf)) || (nameSize < (len= strlen(buf))))
 	{
