@@ -105,16 +105,16 @@
 
 
 /*
-   As per DNS, a full DNS name cannot contain more than 255
-   characters. Due to the way this is encoded, we end up with
-   practically 253 usable bytes for any DNS FQDN out there; ther
-   cannot be a longer one.
+   As per DNS, a full DNS name cannot contain more than 255 characters. Due to
+   the way this is encoded, we end up with practically 253 usable bytes for any
+   DNS FQDN (Fully Qualified Domain Name) out there; ther cannot be a longer
+   one.
 
-   Note: this used ot be MAXHOSTNAMELEN. Under POSIX this might be
-   aliased to HOST_NAME_MAX (or not) and/or max out to 64 characters
-   (or not). However, that would be the max length of a DNS _Label_,
-   that is, a part of a DNS name not containing any dots. This is too
-   limiting. Therefore, we define FQDN_LEN ourselves now.
+   Note: this used ot be MAXHOSTNAMELEN. Under POSIX this might be aliased to
+   HOST_NAME_MAX (or not) and/or max out to 64 characters (or not). However,
+   that would be the max length of a DNS _Label_, that is, a part of a DNS name
+   not containing any dots. This is too limiting. Therefore, we define FQDN_LEN
+   ourselves now.
 */
 #define FQDN_LEN 253
 
