@@ -26,7 +26,7 @@
  */
 
 /* Author: Ian.Piumarta@INRIA.Fr
-/* Author: davidf@afeka.ac.il
+ * Author: davidf@afeka.ac.il
  */
 
 #include <assert.h>
@@ -42,8 +42,24 @@
 #include <dirent.h>
 #include <errno.h>
 #include <poll.h>
-#include <linux/input-event-codes.h>
 #include <linux/input.h>
+/*
+ * For compatibility with olden linuxen <=3.10*
+ */
+#if !defined(BTN_NORTH) && defined(BTN_X)
+#define BTN_NORTH BTN_X
+#endif
+#if !defined(BTN_EAST) && defined(BTN_B)
+#define BTN_EAST BTN_B
+#endif
+#if !defined(BTN_SOUTH) && defined(BTN_A)
+#define BTN_SOUTH BTN_A
+#endif
+#if !defined(BTN_WEST) && defined(BTN_Y)
+#define BTN_WEST BTN_Y
+#endif
+
+
 #include "JoystickTabletPlugin.h"
 
 #define DEVICE_DIR 	"/dev/input/by-id/"
@@ -329,6 +345,8 @@ joystickShutdown(void)
 	}
 
 	joystick_count = 0;
+
+	return 1;
 }
 
 
