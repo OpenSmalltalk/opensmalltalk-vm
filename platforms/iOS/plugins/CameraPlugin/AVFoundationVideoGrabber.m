@@ -34,7 +34,8 @@ static unsigned char askedToAccessCamera = false;
 static void
 askToAccessCamera()
 {
-	askedToAccessCamera = true;
+  askedToAccessCamera = true;
+  if (@available(macOS 10.14, *)) {
 	// Request permission to access the camera.
 	// This API is only available in the 10.14 SDK and subsequent.
 	switch ([AVCaptureDevice authorizationStatusForMediaType: AVMediaTypeVideo]) {
@@ -65,6 +66,9 @@ askToAccessCamera()
 			// The user can't grant access due to restrictions.
 			canAccessCamera = false;
 	}
+  }
+  else
+	canAccessCamera = true;
 }
 #endif
 
