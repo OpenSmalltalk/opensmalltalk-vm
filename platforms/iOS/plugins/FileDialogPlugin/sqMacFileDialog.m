@@ -308,8 +308,9 @@ fileDialogShow(int dlgHandle, int fSaveAs)
 		if ((dlg->panelResponse = (int)response) == NSModalResponseOK) {
 			if (dlg->multiSelect) {
 				dlg->results = malloc((dlg->nResults = [panel.URLs count]) * sizeof(void *));
-				for (int i = [panel.URLs count]; --i >= 0; )
-					dlg->results[i] = strdup([panel.URLs[i].path UTF8String]);
+				int i = 0;
+				for (NSURL *fileURL in [panel URLs])
+					dlg->results[i++] = strdup([fileURL.path UTF8String]);
 			}
 			else {
 				dlg->nResults = 1;
