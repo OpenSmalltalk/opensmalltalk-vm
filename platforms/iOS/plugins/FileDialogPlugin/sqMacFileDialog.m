@@ -304,6 +304,8 @@ fileDialogShow(int dlgHandle, int fSaveAs)
 		}
 		[panel setAllowedFileTypes: fileTypes];
 	}
+	if (dlg->multiSelect && !fSaveAs)
+		[panel setAllowsMultipleSelection: true];
 	[panel beginWithCompletionHandler: ^(NSInteger response) {
 		if ((dlg->panelResponse = (int)response) == NSModalResponseOK) {
 			if (dlg->multiSelect) {
@@ -336,6 +338,32 @@ fileDialogDone(int dlgHandle)
 	return dlg && dlg->panelResponse >= 0;
 }
 
+/* fileDialogGetResults: Get the results of a "multiSelect" file dialog invocation.
+   Arguments:
+     dlgHandle: Dialog handle.
+   Return value: File path or NULL if canceled or not multiSelect.
+*/
+sqInt
+fileDialogGetResults(int dlgHandle)
+{
+	sqMacFileDialog *dlg = dlgFromHandle(dlgHandle);
+	if (!dlg
+	 || dlg->panelResponse == NSModalResponseCancel
+	 || !dlg->multiSelect
+	 || dlg->nResults == 1)
+		return 0;
+
+	sqInt result = interpreterProxy->instantiateClassindexableSize
+							(interpreterProxy->classArray(),
+							 dlg->nResults);
+	for (int i = dlg->nResults; --i >= 0; )
+		interpreterProxy->storePointerofObjectwithValue
+							(i,
+							 result,
+							 interpreterProxy->stringForCString(dlg->results[i]));
+	return result;
+}
+
 /* fileDialogGetResult: Get the result of a file dialog invocation.
    Arguments:
      dlgHandle: Dialog handle.
@@ -348,25 +376,9 @@ char *
 fileDialogGetResult(int dlgHandle)
 {
 	sqMacFileDialog *dlg = dlgFromHandle(dlgHandle);
-	if (!dlg
-	 || dlg->panelResponse == NSModalResponseCancel)
-		return 0;
-	if (dlg->multiSelect) {
-#if 1 // for now
-		return dlg->results[0];
-#else
-		sqInt result = interpreterProxy->instantiateClassindexableSize
-								(interpreterProxy->classArray(),
-								 dlg->nResults);
-		for (int i = dlg->nresults; --i >= 0; )
-			interpreterProxy->storePointerofObjectwithValue
-								(i,
-								 result,
-								 interpreterProxy->stringForCString(dlg->results[i]));
-		return result;
-#endif
-	}
-	return dlg->result;
+	return (!dlg || dlg->panelResponse == NSModalResponseCancel)
+		? 0
+		: (dlg->multiSelect ? dlg->results[0] : dlg->result);
 }
 
 /* fileDialogDestroy: Destroy the given file dialog.

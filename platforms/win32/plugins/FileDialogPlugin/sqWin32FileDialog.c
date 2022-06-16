@@ -382,6 +382,14 @@ fileDialogDone(int dlgHandle)
   return 1;
 }
 
+/* fileDialogGetResults: Get the results of a "multiSelect" file dialog invocation.
+   Arguments:
+     dlgHandle: Dialog handle.
+   Return value: File path or NULL if canceled or not multiSelect.
+*/
+sqInt
+fileDialogGetResults(int dlgHandle) { return 0; }
+
 /* fileDialogGetResult: Get the result of a file dialog invokation.
    Arguments:
      dlgHandle: Dialog handle.

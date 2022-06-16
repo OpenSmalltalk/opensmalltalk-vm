@@ -114,10 +114,17 @@ int fileDialogShow(int dlgHandle, int fSaveAs);
 */
 int fileDialogDone(int dlgHandle);
 
-/* fileDialogGetResult: Get the result of a file dialog invokation.
+/* fileDialogGetResults: Get the results of a "multiSelect" file dialog invocation.
    Arguments:
      dlgHandle: Dialog handle.
-   Return value: File path or NULL if canceled.
+   Return value: File path or NULL if canceled or not multiSelect.
+*/
+sqInt fileDialogGetResults(int dlgHandle);
+
+/* fileDialogGetResult: Get the result of a file dialog invocation.
+   Arguments:
+     dlgHandle: Dialog handle.
+   Return value: File paths or NULL if canceled, or not "multiSelect".
 */
 char *fileDialogGetResult(int dlgHandle);
 
