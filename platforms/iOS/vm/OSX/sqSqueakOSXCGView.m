@@ -63,6 +63,18 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreen
 
 #pragma mark Initialization / Release
 
+// There is some confusion in Apple's 32-bit code which ends up making CGRect
+// incompatible with NSRect, even though they're structurally the same.
+// So provide a hack conversion for 32-bits, implemented as a noop for 64-bits.
+
+#if __LP64__ || TARGET_OS_EMBEDDED || TARGET_OS_IPHONE || TARGET_OS_WIN32 || NS_BUILD_32_LIKE_64
+# define asNSRect(aCGRect) aCGRect
+# define asCGRect(aNSRect) aNSRect
+#else
+# define asNSRect(aCGRect) NSRectFromCGRect(aCGRect)
+# define asCGRect(aNSRect) NSRectToCGRect(aNSRect)
+#endif
+
 - (id)initWithFrame:(NSRect)frameRect {
     self = [super initWithFrame:frameRect];
     [self initialize];
@@ -172,7 +184,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreen
                                  clip.size.height / d);
 //    if(!syncNeeded) {
 //        syncNeeded = YES;
-		[self setNeedsDisplayInRect: userClip];
+		[self setNeedsDisplayInRect: asNSRect(userClip)];
 //    }
 
 	/* Note that after this, drawThelayers will be called directly.
@@ -250,9 +262,9 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreen
     CGContextScaleCTM(context, 1 , -1);
 //    CGContextSetFillColorWithColor(context, CGColorGetConstantColor(kCGColorClear));
     CGContextSetRGBFillColor(context, 0.0, 0.0, 0.0, 1.0);
-    CGContextFillRect(context, [self frame]);
+    CGContextFillRect(context, asCGRect([self frame]));
 //    CGContextSetAlpha(context, 1.0);
-    CGContextDrawImage(context, [self frame], image);
+    CGContextDrawImage(context, asCGRect([self frame]), image);
 
     CGImageRelease(image);
     CGDataProviderRelease(pRef);
@@ -270,7 +282,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,windowLogic,savedScreen
     /* We recorded damage in drawImageUsingClip:. Cocoa possibly accumulated
      * and now we can draw the rect the system wants us to.
 	 */
-	[self performDraw: rect];
+	[self performDraw: asCGRect(rect)];
     syncNeeded = NO;
 }
 
