@@ -4,7 +4,7 @@ PREREQUISITES:= ../gdbarm32/bfd/libbfd.a \
 				../gdbarm32/opcodes/libopcodes.a \
 				../gdbarm32/sim/arm/libsim.a
 
-INCFIRST:=$(GDB)/include $(GDB)/sim/arm $(GDB)/bfd ../gdbarm32/bfd $(GDB)
+INCFIRST:=$(GDB)/include $(GDB)/sim/arm $(GDB)/bfd ../gdbarm32/bfd $(GDB) ../gdbarm32
 
 # assert uses warning, which is in the VM, so -undefined dynamic_lookup needed
 ifeq ($(CONFIGURATION),assert)

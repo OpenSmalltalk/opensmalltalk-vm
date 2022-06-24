@@ -3,7 +3,7 @@ set -e
 trap 'exit 2' HUP INT PIPE TERM
 for d in squeak.*; do
 	if test -d "$d"; then
-		(cd ./$d;./makealldirty "$@")
+		(cd ./$d;./makedirty "$@")
 	else
 		echo no $d directory found
 	fi

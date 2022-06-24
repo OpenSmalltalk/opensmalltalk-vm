@@ -1,12 +1,18 @@
+// If this doesn't come first then e.g. Manjaro linux on Raspberry Pi
+// complains that config.h has been included too late.
+#include "config.h" 
+
 #define COG 1
 #define FOR_COG_PLUGIN 1
 
 #include "sqAssert.h"
 #include "GdbARMPlugin.h"
+
 //disassembler
-#if __APPLE__ && __MACH__
-# include "config.h"
-#endif
+// bfd.h expects bfd/config.h to be included. But bfd/config.h expects
+// __CONFIG_H__ to have been defined. Placate it.
+#define __CONFIG_H__ 1
+#include "bfd/config.h" // expected to be in [../]../gdbarm32/bfd/config.h
 #include <bfd.h>
 #include <dis-asm.h>
 #include <opcodes/disassemble.h>

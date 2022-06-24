@@ -1029,7 +1029,7 @@ static sqInt sound_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex, s
 
 	bufferBytes = MAX(0, bufferSizeInBytes - (startSliceIndex * 2));
 	if (0 == bufferBytes) {
-		printf("***(%d) sound_RecordSamplesIntoAtLength(): No space in Squeak buffer!\n", startSliceIndex);
+		printf("***(%ld) sound_RecordSamplesIntoAtLength(): No space in Squeak buffer!\n", startSliceIndex);
 		return 0;
 	}
 	
