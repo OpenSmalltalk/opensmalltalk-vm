@@ -111,6 +111,7 @@ bool scale_Xftdpi_usable(void)
       if (XrmGetResource(db, "Xft.dpi", "Xft.Dpi", &type, &value)) {
         if (type && strcmp(type, "String") == 0) {
           DPRINTF(("Displayscale: present Xft.dpi\n"));
+          XrmDestroyDatabase(db);
           return true;
         }
       }
