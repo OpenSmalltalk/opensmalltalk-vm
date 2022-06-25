@@ -23,6 +23,10 @@
 #include "config.h"
 #include "interp.h"
 
+#define true	1
+#define false	0
+#define null	0  /* using "null" because nil is predefined in Think C */
+
 #ifndef SIZEOF_LONG
 #  if LLP64
 #    define SIZEOF_LONG 4

@@ -41,10 +41,6 @@
 #include "sqMemoryAccess.h"
 #include "sqVirtualMachine.h"
 
-#define true	1
-#define false	0
-#define null	0  /* using "null" because nil is predefined in Think C */
-
 #if !defined(IMAGE_DIALECT_NAME)
 # if NewspeakVM
 #	define IMAGE_DIALECT_NAME "Newspeak"
