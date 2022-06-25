@@ -213,8 +213,8 @@ print-objects:
 ignore := $(addsuffix .%, $(basename $(wildcard $(BUILD)/vm/*.ignore)))
 
 mkNamedPrims.exe: $(WIN32UTILDIR)/mkNamedPrims.c
-	$(CC) -c $< -o mkNamedPrims.obj
-	$(LD) /out:$@ mkNamedPrims.obj /subsystem:console /defaultlib:libcmt
+	$(HOSTCC) -c $< -o mkNamedPrims.obj
+	$(HOSTLD) /out:$@ mkNamedPrims.obj /subsystem:console /defaultlib:libcmt
 
 $(BTOBJ):	$(WIN32MISCDIR)/btext.c
 	$(CC) -c $< -Oy -Os $(DASH_O)$@

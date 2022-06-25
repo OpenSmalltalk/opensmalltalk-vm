@@ -71,6 +71,7 @@ DEFS:=	$(COGDEFS) $(MEMACCESS) $(WINVER) \
 # Linker settings
 #
 LD:=	LINK /nologo /MACHINE:$(MACHINE) /INCREMENTAL:NO
+HOSTLD:=LINK /nologo /INCREMENTAL:NO
 LDCXX:=	LINK /nologo /MACHINE:$(MACHINE) /INCREMENTAL:NO
 LIBRARIAN:=LIB /nologo
 # dlltool is used to create import libraries.  The alternatives are

@@ -39,12 +39,14 @@ $(info VCINSTALLDIRSH=$(VCINSTALLDIRSH))
 #$(info wildcard VCINSTALLDIR $(wildcard $(VCINSTALLDIR)/.*))
 $(info wildcard  C:/Program\ Files/LLVM/bin/.* $(wildcard C:/Program\ Files/LLVM/bin/.*))
 
-override TOOLPREFIX:="$(VCToolsInstallDir)bin/HostX64/x86/"
-export TOOLPREFIX
+override TOOLPREFIX:="$(VCToolsInstallDir)bin/Hostx64/x86/"
+override HOSTTOOLPREFIX:="$(VCToolsInstallDir)bin/Hostx64/x64/"
+export TOOLPREFIX HOSTTOOLPREFIX
 MSVC:=MSVC
 undefine Clang
 undefine ClangC2
 CC:=$(TOOLPREFIX)cl.exe -nologo
+HOSTCC:=$(HOSTTOOLPREFIX)cl.exe -nologo
 
 $(info CC=$(CC))
 
