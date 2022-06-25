@@ -3248,7 +3248,7 @@ printUsage(int level)
 #if STACKVM || NewspeakVM
 # if COGVM
                    TEXT("\n\t") TVMOPTION("logplugin") TEXT(" name\t\tonly log primitives in plugin")
-                   TEXT("\n\t") TVMOPTION("trace") TEXT("[=num]\t\tenable tracing (optionally to a specific value)%s")
+                   TEXT("\n\t") TVMOPTION("trace") TEXT("[=flags]\t\tenable tracing (optionally to a specific value)%s")
 # else
                    TEXT("\n\t") TVMOPTION("sendtrace") TEXT(" \t\t(trace sends to stdout for debug)")
 # endif

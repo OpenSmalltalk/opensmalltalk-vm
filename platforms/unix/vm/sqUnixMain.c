@@ -1730,7 +1730,13 @@ static void vm_printUsage(void)
 #if STACKVM || NewspeakVM
 # if COGVM
   printf("  "VMOPTION("logplugin")" name       only log primitives in plugin\n");
-  printf("  "VMOPTION("trace")"[=num]          enable tracing (optionally to a specific value)\n");
+  printf("  "VMOPTION("trace")"[=flags]        enable tracing (optionally to a specific value)\n");
+  {
+	extern const char *traceFlagsMeanings[];
+	int i = 0;
+	while (traceFlagsMeanings[i])
+		printf("    %s\n", traceFlagsMeanings[i++]);
+  }
 # else
   printf("  "VMOPTION("sendtrace")"            enable send tracing\n");
 # endif
