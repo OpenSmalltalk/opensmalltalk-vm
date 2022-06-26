@@ -190,6 +190,11 @@ $(PLUGINLIB): $(PLUGINREQS) $(VMDIR) $(OBJDIR) $(LIBOBJ) $(PLUGINFWKS)
 # Either link with normal compiler/linker or with CXX compiler/linker.  If
 # LINK_WITH_CXX is set, use e.g. clang++
 $(PLUGINBUNDLE): $(PLUGINREQS) $(PLUGINEXE) $(PLUGINICONS) $(PLUGINPLIST) $(PLUGINFWKS)
+ifeq ($(SIGNING_IDENTITY),)
+	echo "No signing identity found (SIGNING_IDENTITY unset). Not signing bundle."
+else
+	codesign --force --deep -s "$(SIGNING_IDENTITY)" $(PLUGINBUNDLE)
+endif
 
 $(PLUGINEXE): $(PLUGINREQS) $(VMDIR) $(OBJDIR) $(LIBOBJ) $(PLUGINFWKS)
 	mkdir -p $(PLUGINBUNDLE)/Contents/MacOS
