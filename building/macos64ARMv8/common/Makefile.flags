@@ -78,7 +78,7 @@ WARNINGS:= -Wno-missing-field-initializers -Wno-missing-prototypes \
 	-Wno-trigraphs -Wdeprecated-declarations -Wimplicit-function-declaration
 
 # N.B. No QuickTime framework; that is 32-bit only.
-FRAMEWORKS:=-fobjc-link-runtime \
+FRAMEWORKS?=-fobjc-link-runtime \
 			-framework Foundation -framework OpenGL -framework Cocoa \
 			-framework AudioToolbox -framework CoreAudio -framework AVFoundation \
 			-framework SystemConfiguration \
