@@ -48,6 +48,10 @@ else # default CONFIGURATION=product => $(APPNAMEDEF).app
 endif
 export APP
 
+# Allow default entitlements to be overridden by placing one in the make dir
+ENTITLEMENTS_FILE:=$(firstword $(wildcard entitlements.plist ../common/entitlements.plist))
+export ENTITLEMENTS_FILE
+
 default:	$(APP)
 
 include ../common/Makefile.vm
@@ -207,7 +211,7 @@ signapp:
 	xattr -cr $(APP)
 	codesign --force --deep -s "$(SIGNING_IDENTITY)" \
 			--timestamp --options=runtime \
-			--entitlements ../common/entitlements.plist \
+			--entitlements $(ENTITLEMENTS_FILE) \
 			$(APP)
 endif
 

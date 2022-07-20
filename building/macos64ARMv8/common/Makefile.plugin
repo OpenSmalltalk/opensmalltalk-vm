@@ -190,7 +190,7 @@ ifeq ($(SIGNING_IDENTITY),)
 else
 	codesign --force --deep -s "$(SIGNING_IDENTITY)" \
 			--timestamp --options=runtime \
-			--entitlements ../common/entitlements.plist \
+			--entitlements $(ENTITLEMENTS_FILE) \
 			$(PLUGINBUNDLE)
 endif
 

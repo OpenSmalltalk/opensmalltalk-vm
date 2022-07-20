@@ -50,6 +50,14 @@ extern SqueakOSXAppDelegate *gDelegateApp;
 
 #define dprintf(ARGS) do { if (thePListInterface.SqueakDebug) fprintf ARGS; } while (0)
 
+// In practice these reasons are too important to hide. So if VM compiled with
+// -DPRINT_DL_ERRORS=1 always print dlopen errors
+#if PRINT_DL_ERRORS
+# define defprintf(ARGS) fprintf ARGS
+#else
+# define defprintf(ARGS) dprintf(ARGS)
+#endif
+
 #if defined(HAVE_LIBDL)	/* non-starter without this! */
 
 #include <dlfcn.h> 
@@ -221,11 +229,11 @@ tryLoadingLinked(char *libName)
 		const char *why = dlerror();
 		// filter out failures due to non-existent libraries
 		if (stat(libName, &buf)) {
-			dprintf((stderr, "tryLoadingLinked(%s) does not exist\n", libName));
+			defprintf((stderr, "tryLoadingLinked(%s) does not exist\n", libName));
 			return 0;
 		}
 		else if (S_ISDIR(buf.st_mode)) {
-			dprintf((stderr, "tryLoadingLinked(%s) is a directory\n", libName));
+			defprintf((stderr, "tryLoadingLinked(%s) is a directory\n", libName));
 			return 0;
 		}
 #if PRINT_DL_ERRORS // In practice these reasons are too important to hide
@@ -259,11 +267,7 @@ ioLoadModuleRaw(char *pluginName)
 		handle = dlopen(0, RTLD_NOW | RTLD_GLOBAL);
 		if (!handle) {
 			char * why = dlerror();
-#if PRINT_DL_ERRORS // In practice these reasons are too important to hide
-			fprintf(stderr, "ioLoadModule(<intrinsic>): %s\n", why);
-#else
-			dprintf((stderr, "ioLoadModule(<intrinsic>): %s\n", why));
-#endif
+			defprintf((stderr, "ioLoadModule(<intrinsic>): %s\n", why));
 			return NULL;
 		}
 		dprintf((stderr, "loaded: <intrinsic>\n"));
@@ -437,16 +441,13 @@ ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
 /*  Free the module with the associated handle.  Answer 0 on error (do
  *  NOT fail the primitive!).
 */
-sqInt ioFreeModule(void *moduleHandle)
+sqInt
+ioFreeModule(void *moduleHandle)
 {
 	if (!dlclose(moduleHandle))
 		return 1;
 
 	char *why = dlerror();
-#if PRINT_DL_ERRORS // In practice these reasons are too important to hide
-	fprintf(stderr, "ioFreeModule(%ld): %s\n", (long) moduleHandle, why);
-#else
-	dprintf((stderr, "ioFreeModule(%ld): %s\n", (long) moduleHandle, why));
-#endif
+	defprintf((stderr, "ioFreeModule(%ld): %s\n", (long) moduleHandle, why));
 	return 0;
 }
