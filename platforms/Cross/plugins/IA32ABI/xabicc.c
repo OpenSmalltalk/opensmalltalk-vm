@@ -24,6 +24,8 @@
 # include "arm64abicc.c"
 #elif defined(__ARM_ARCH__) || defined(__arm__) || defined(__arm32__) || defined(ARM32) || defined(_M_ARM)
 # include "arm32abicc.c"
+#elif defined(__riscv64__)
+# include "riscv64abicc.c"
 #else
 #error "Unsupported architecture"
 #endif

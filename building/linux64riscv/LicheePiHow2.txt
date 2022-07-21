@@ -1,0 +1,152 @@
+How I got up Sipeed Lichee Doc HW up.
+
+Got HV via AliExpress: ~$25
+
+https://www.aliexpress.com/item/3256803616861785.html?spm=a2g0o.order_detail.0.0.3f7cf19c8tuzNx&gatewayAdapt=4itemAdapt
+
+WORKING IMAGE
+
+Not having access to Windows/Intel, I found a Debiamn image referenced on the INet at page:
+
+  https://popolon.org/gblog3/?p=2261&lang=en
+
+
+Used Raspian Linux on RasPi4 to flash 32GB SD card via:
+
+ sudo dd if=20211230_LicheeRV_debian_d1_hdmi_8723ds.ddimg  of=/dev/sda bs=4M status=progress conv=sync
+
+Used same power/HDMI/usb-keyboard+mouse.
+
+Booted fine.
+
+* Login: sipeed
+* Password: licheepi
+
+Right-click to change desktop setting to add menus.
+
+No networking (locked up ap from menu: Settings->Connman).
+
+GETTING NETWORKING UP
+
+I needed a text editor.  So got mg and ncurses.  
+  https://github.com/troglobit/mg
+  https://invisible-mirror.net/archives/ncurses/
+
+tar'ed sw on RasPi4/Raspian; mounted SD card for Riscv64; copied to card; reinsert into LicheeRV; reboot.
+Then built on rv64/debian.
+
+With text editor, edited /etc/wifi/wpa_supplicant.config for router wifi name & wpa-psk password.
+Also edited /etc/network/interfaces as per popolon's web page.
++reboot
+Now Connman from menu->settings and set up Wifi; use "gear" to auto-htpd.
++reboot
+
+Now use 
+  sudo ifconfig
+to get IP and can
+  ssh sipeed@<IP>
+for remote terminal 
+
+(AdaFruit USB Console also works with same pin positions
+  https://learn.adafruit.com/adafruits-raspberry-pi-lesson-5-using-a-console-cable/connect-the-lead )
+
+MORE SPACE on SD Card
+
+I used a 128 GB SD, so plenty of space; let's use it!
+
+In another computer, use fdisk to delete partition 8 and then make a new parition 8.
+sudo mkfs.ext4 /dev/sda8 "Or wherever"
+
+As much software is in stalled in /usr, I copied contents of /usr (sudo cp -rup ..) onto new parition.
+
+When next reboot, can add partition to fstab
+  /dev/mmcblk0p8 /usr ext4 rw,defaults 0 2
+
+Now, mounting /usr, we have much space there.  I created a /usr/build and chowned it for user (e.g. sipeed).
+
+
+GIT/APT et al
+
+Edited /etc/apt/sources.list as per example in wiki.debian.org/RISC-V/
+Needed to install keys from Debian
+  dpkg -i debian-ports-archive-keyring_2022.02.15_all.deb
+
+so
+  sudo apt-get update
+  sudo apt-get install git
+  sudo apt-get install dillo
+..
+
+
+SWAP -- needed to build the VM on LicheeRV with only 512M RAM
+
+Make 1 GB swap file
+
+sudo dd if=/dev/zero of=/usr/swap bs=1M count=1024 status=progress
+sudo mkswap /usr/swap
+
+Add swap to fstab
+  /usr/swap none swap defaults 0 0
+
+sudo swapon -a
+
+BUILD IT
+
+cd /usr/build
+git clone --depth 1 https://github.com/KenDickey/opensmalltalk-vm-rv64
+cd opensmalltalk-vm-rv64/building/linux64riscv/squeak.stack.spur/build
+./mvm
+
+
+That is the basics..
+
+NOTE: There appears to be a race condition 
+while booting and mounting filesystems.
+
+If your SD card fails to boot, plug it 
+into another computer, mount it, then
+edit (sudo root) <wherever>/rootfs/etc/fstab
+
+Comment out the two lines you added (for /usr and /usr/swap).
+
+This should allow you to boot.
+
+Then dynamically mount the files (+ swapon -a).
+
+
+FRAME BUFFER Support
+
+You should
+  sudo apt-get install evtest libevdev
+
+Then standard mvm should build the vm-display-fbdev plugin
+.. If the ./mvm build breaks, just 
+ cd vm-display-fbdev
+ make
+ cd ..
+ ./mvm
+ n
+Be sure to answer "n" to clean? to continue, else you will loop..
+
+Using evtest program I was able to determine Lichee device mapping
+ /dev/input/event0 -> menu-keys
+    event1 -> audio jack
+    event2 -> track pad
+    event3 -> mouse
+    event4 -> keyboard (raw keystrokes)
+    event5 -> system control (e.g. sleep)
+    event6 -> keyboard events (keycodes)
+
+For Lichee RV Dock, added to .bashrc
+
+##FrameBuffer wants:
+export SQUEAK_KBDEV=/dev/input/event6
+export SQUEAK_VM=display-fbdev
+export SQUEAK_FBDEV=/dev/fb0
+export SQUEAK_MSDEV=/dev/input/event3
+
+Reset to boot into console (no X11) and invoke image as typical.
+
+Thats it!  :)
+
+-KenD

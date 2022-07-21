@@ -60,6 +60,9 @@
  */
 # define STACK_ALIGN_BYTES 8
 # define STACK_FP_ALIGNMENT 4
+#elif defined(__riscv64__) || defined(__rv64g__) || defined(__rv64gc__)
+#	define STACK_ALIGN_BYTES 16
+#	define STACK_FP_ALIGNMENT 0
 #endif
 
 #if defined(x86_64) || defined(__amd64) || defined(__x86_64) || defined(__amd64__) || defined(__x86_64__) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
@@ -139,6 +142,13 @@
 					  asm volatile ("movq %%rsp,%0" : "=r"(sp) : );	\
 					  sp; })
 #  else /* MSVC for example: use ceGetFP ceGetSP */
+#  endif
+#elif defined(__riscv64__) || defined(__rv64g__) || defined(__rv64gc__)
+#  if __GNUC__ || __clang__
+#	define setsp(spval) asm volatile ("addi sp, %0, 0 " : : "r"(spval) : )
+#	define setfp(fpval) asm volatile ("addi fp, %0, 0 " : : "r"(fpval) : )
+#	define getsp() asm volatile ("addi a0, sp, 0 " )
+#	define getfp() asm volatile ("addi a0, fp, 0 " )
 #  endif
 # else /* !(__i386__ || __arm__ || __x86_64__) */
 #  error define code for your processor here
