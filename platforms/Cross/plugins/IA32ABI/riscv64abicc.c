@@ -95,7 +95,7 @@ extern void callAndReturnWithStructAddr(sqLong structAddr, sqLong procAddr, sqLo
 extern sqLong returnX1value()
 {
   sqLong value = 0;
-  asm volatile ("ADDI %0, a1, 0" : "=r"(value) ) ;
+  asm volatile ("ADDI a0, a1, 0" : "=r"(value) ) ;
   return (value) ;
 }
 
@@ -167,8 +167,8 @@ getMostRecentCallbackContext() { return mostRecentCallbackContext; }
  * STACK_ALIGN_HACK), and to return any of the various values from the callback.
  *
  * Nota Bene:
- *	double result in FA0, NOT A0
- *	large struct address returns in A0 (UNlike arm's x8)
+ *	double result in d0, NOT x0
+ *	large struct address returns in x0 (UNlike arm's x8)
  */
 long long
 thunkEntry(long x0, long x1, long x2, long x3,
@@ -370,4 +370,4 @@ makePageExecutableAgain(char *address)
 #endif
 }
 #endif // defined(MAP_JIT)
-#endif /* defined(__riscv64__) */
+#endif /* defined(__ARM_ARCH_ISA_A64) || defined(__arm64__) || ... */
