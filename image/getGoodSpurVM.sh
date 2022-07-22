@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+echo NOT YET IMPLEMENTED
+echo USE getGoodSpur64VM.sh AS YOUR GUIDE
+exit 1
 set -e
 set +v
 

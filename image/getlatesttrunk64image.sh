@@ -1,10 +1,10 @@
 #!/bin/bash
 . ./envvars.sh
-# curl clags -s silent -o output to
-URL=http://files.squeak.org/5.3/
-LATEST=`curl -s $URL | tr "=" "\\012" | grep Squeak5.3.*64bit | tail -1 | sed 's/"\(.*\)\/">.*$/\1/'`
-echo curl -o $LATEST.zip $URL/$LATEST/$LATEST.zip
-curl -o $LATEST.zip $URL/$LATEST/$LATEST.zip
-unzip $LATEST.zip
-mv $LATEST.image $BASE-64.image
-mv $LATEST.changes $BASE-64.changes
+# curl flags -s silent -L follow redirects -o output
+URL=http://files.squeak.org/6.0
+LATEST=`curl -s -L $URL | tr "=" "\\012" | grep 'Squeak.*-64bit' | tail -1 | sed 's/"\(.*\)\/">.*$/\1/'`
+echo curl -L -o $LATEST.zip $URL/$LATEST/$LATEST.zip
+curl -L -o $LATEST.zip $URL/$LATEST/$LATEST.zip
+unzip -n $LATEST.zip # i.e. don't overwrite SqueakV60.sources if included
+mv $LATEST.image $BASE64.image
+mv $LATEST.changes $BASE64.changes
