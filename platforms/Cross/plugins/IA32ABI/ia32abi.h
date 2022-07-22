@@ -96,7 +96,12 @@ extern void makePageExecutableAgain(char *address);
 # define thunkEntryType long long
 # define INT_REG_ARGS long,long,long,long,
 # define DBL_REG_ARGS double,double,double,double,double,double,double,double,
-#endif
+#elif defined(__riscv64__)
+# undef thunkEntryType
+# define thunkEntryType long long
+# define INT_REG_ARGS long,long,long,long,long,long,long,long,
+# define DBL_REG_ARGS double,double,double,double,double,double,double,double,
+# endif
 extern thunkEntryType  thunkEntry (INT_REG_ARGS DBL_REG_ARGS void *,sqIntptr_t *);
 extern void *allocateExecutablePage(sqIntptr_t *pagesize);
 extern VMCallbackContext *getMostRecentCallbackContext(void);
