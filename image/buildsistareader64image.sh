@@ -9,11 +9,11 @@ set -e
 cp -p $BASESISTA64.image trunksista64reader.image
 cp -p $BASESISTA64.changes trunksista64reader.changes
 
-echo $VM trunksista64reader.image -- LoadFFI.st
-$VM trunksista64reader.image -- LoadFFI.st
+echo $VM trunksista64reader.image LoadFFI.st
+$VM trunksista64reader.image LoadFFI.st
 
-echo $VM trunksista64reader.image -- LoadReader.st
-$VM trunksista64reader.image -- LoadReader.st
+echo $VM trunksista64reader.image LoadReader.st
+$VM trunksista64reader.image LoadReader.st
 
-echo $VM trunksista64reader.image -- StartReader.st
-$VM trunksista64reader.image -- StartReader.st
+echo $VM trunksista64reader.image StartReader.st
+$VM trunksista64reader.image StartReader.st

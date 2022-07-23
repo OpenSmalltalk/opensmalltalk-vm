@@ -4,6 +4,8 @@ set +v
 
 . ./envvars.sh
 
+for foo in once; do # allow break to jump to end of script
+
 if [ "$1" = -vm -a -n "$2" -a -x "`which "$2"`" ]; then
 	VM="$2"
 	shift;shift
@@ -41,7 +43,7 @@ else
 	if [ -f $LATESTFILE -a "`cat $LATESTFILE`" = $RELEASE -a -x $VM ]; then
 		echo latest 64-bit VM on $OS for $CPU is $VM
 		test "$1" = "-verbose" && $VM -version
-		exit 0
+		break
 	fi
 	URL="`curl -s -L "https://github.com/OpenSmalltalk/opensmalltalk-vm/releases/latest" | grep "href=.*$LATESTVM" | sed -e 's|^[^"]*"|https://github.com/|' -e 's|".*$||'`"
 	echo $URL
@@ -85,3 +87,4 @@ if [ "$1" = -vmargs ]; then
 	VM="$VM $2"
 	shift;shift
 fi
+done

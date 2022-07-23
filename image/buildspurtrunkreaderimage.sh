@@ -14,12 +14,12 @@ cp -p ${BASE}.image spurreader.image
 cp -p ${BASE}.changes spurreader.changes
 
 if [ "$1" = FFI ]; then
-	echo $VM spurreader.image -- LoadFFI.st
-	$VM spurreader.image -- LoadFFI.st
+	echo $VM spurreader.image LoadFFI.st
+	$VM spurreader.image LoadFFI.st
 fi
 
-echo $VM spurreader.image -- LoadReader.st
-$VM spurreader.image -- LoadReader.st
+echo $VM spurreader.image LoadReader.st
+$VM spurreader.image LoadReader.st
 
-echo $VM spurreader.image -- StartReader.st
-$VM spurreader.image -- StartReader.st
+echo $VM spurreader.image StartReader.st
+$VM spurreader.image StartReader.st

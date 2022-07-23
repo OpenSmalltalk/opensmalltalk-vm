@@ -17,11 +17,11 @@ else
 . ./getGoodSpurVM.sh
 fi
 
-echo $VM sistareader.image -- LoadSistaSupport.st
-$VM sistareader.image -- LoadSistaSupport.st
+echo $VM sistareader.image LoadSistaSupport.st
+$VM sistareader.image LoadSistaSupport.st
 
-echo $VM sistareader.image -- LoadReader.st
-$VM sistareader.image -- LoadReader.st
+echo $VM sistareader.image LoadReader.st
+$VM sistareader.image LoadReader.st
 
-echo $VM sistareader.image -- StartReader.st
-$VM sistareader.image -- StartReader.st
+echo $VM sistareader.image StartReader.st
+$VM sistareader.image StartReader.st
