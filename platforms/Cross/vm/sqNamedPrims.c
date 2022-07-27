@@ -16,7 +16,7 @@
 
 typedef struct {
   char *pluginName;
-  char *primitiveName; /* N.B. On Spur metadata including the accessorDepth is hidden after this */
+  char *primitiveName; /* N.B. On Spur metadata including the accessorDepth is hidden after the name's terminating null byte */
   void *primitiveAddress;
 } sqExport;
 
@@ -25,10 +25,18 @@ typedef struct {
 #undef DEBUG
 
 #undef DPRINTF
-#ifdef DEBUG
+// In practice these reasons are too important to hide. So if VM compiled with
+// -DPRINT_DL_ERRORS=1 always print dlopen errors
+#if defined(DEBUG)
 # define DPRINTF(what) printf what
+# define DERRPRINTF(what) printf what
 #else
 # define DPRINTF(what)
+# if PRINT_DL_ERRORS
+#	define DERRPRINTF(what) printf what
+# else
+#	define DERRPRINTF(what)
+# endif
 #endif
 
 typedef struct ModuleEntry {
@@ -226,11 +234,11 @@ callInitializersIn(ModuleEntry *module)
 		/* Check the compiled name of the module */
 		moduleName = ((char* (*) (void))init0)();
 		if (!moduleName) {
-			DPRINTF(("ERROR: getModuleName() returned NULL\n"));
+			DERRPRINTF(("ERROR: getModuleName() returned NULL\n"));
 			return 0;
 		}
 		if (strncmp(moduleName, module->name, strlen(module->name)) != 0) {
-			DPRINTF(("ERROR: getModuleName returned %s (expected: %s)\n", moduleName, module->name));
+			DERRPRINTF(("ERROR: getModuleName returned %s (expected: %s)\n", moduleName, module->name));
 			return 0;
 		}
 	}
@@ -239,19 +247,19 @@ callInitializersIn(ModuleEntry *module)
 		DPRINTF(("WARNING: getModuleName() not found in %s\n", module->name));
 	}
 	if (!init1) { 
-		DPRINTF(("ERROR: setInterpreter() not found\n"));
+		DERRPRINTF(("ERROR: setInterpreter() not found\n"));
 		return 0;
 	}
 	/* call setInterpreter */
 	okay = ((sqInt (*) (struct VirtualMachine*))init1)(sqGetInterpreterProxy());
 	if (!okay) {
-		DPRINTF(("ERROR: setInterpreter() returned false\n"));
+		DERRPRINTF(("ERROR: setInterpreter() returned false\n"));
 		return 0;
 	}
 	if (init2) {
 		okay = ((sqInt (*) (void)) init2)();
 		if (!okay) {
-			DPRINTF(("ERROR: initialiseModule() returned false\n"));
+			DERRPRINTF(("ERROR: initialiseModule() returned false\n"));
 			return 0;
 		}
 	}
@@ -360,7 +368,7 @@ ioLoadFunctionFrom(char *functionName, char *pluginName)
 	ModuleEntry *module = findOrLoadModule(pluginName, 0);
 	if (!module) {
 		/* no module */
-		DPRINTF(("Failed to find %s (module %s was not loaded)\n", functionName, pluginName));
+		DERRPRINTF(("Failed to find %s (module %s was not loaded)\n", functionName, pluginName));
 		return 0;
 	}
 	if (!functionName)
@@ -408,7 +416,7 @@ ioLoadFunctionFromMetadataInto(char *functionName, char *pluginName,
 	module = findOrLoadModule(pluginName, 0);
 	if (!module) {
 		/* no module */
-		DPRINTF(("Failed to find %s (module %s was not loaded)\n", functionName, pluginName));
+		DERRPRINTF(("Failed to find %s (module %s was not loaded)\n", functionName, pluginName));
 		return 0;
 	}
 	if (!functionName)
