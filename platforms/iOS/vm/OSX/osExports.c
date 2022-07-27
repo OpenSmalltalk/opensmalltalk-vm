@@ -17,10 +17,12 @@
 #include "sqSqueakOSXScreenAndWindow.h"
 #include "sqSqueakVmAndImagePathAPI.h"
 
+extern const char * GetAttributeString(sqInt id);
 #define XFN(export) {"", #export, (void*)export},
 #define XFN2(plugin, export) {#plugin, #export, (void*)plugin##_##export}
 
 void *os_exports[][3] = {
+	XFN(GetAttributeString) // Used by e.g. UnixOSProcessPlugin
 	XFN(getSTWindow)
 	XFN(getImageName)
 	XFN(getWindowChangedHook)

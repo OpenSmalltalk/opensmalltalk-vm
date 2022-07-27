@@ -61,3 +61,10 @@ sqInt getAttributeIntoLength(sqInt indexNumber, sqInt byteArrayIndex, sqInt leng
 	[gDelegateApp.squeakApplication getAttribute: indexNumber into: pointerForOop((usqInt) byteArrayIndex) length: length];
 	return 0;
 }
+
+// This is for UnixOSProcessPlugin which looks for GetAttributeString
+const char *
+GetAttributeString(sqInt id)
+{
+    return [gDelegateApp.squeakApplication getAttribute: id];
+}
