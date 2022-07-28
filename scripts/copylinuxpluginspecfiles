@@ -1,0 +1,13 @@
+#!/bin/sh
+# Copy the nearest plugin spec files (plugins.int * plugins.ext) into the
+# current directory, if they're missing. This is complicated because we want to
+# copy via cp -p (to preserve permission) but nfs mounts may make cp -p fail.
+for pluginspec in plugins.int plugins.ext; do
+	if [ ! -f $pluginspec ]; then
+		if [ -f ../$pluginspec ]; then
+			cp -p ../$pluginspec . || cp ../$pluginspec .
+		else
+			cp -p ../../$pluginspec . || cp ../../$pluginspec .
+		fi
+	fi
+done

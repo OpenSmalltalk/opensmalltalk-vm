@@ -31,8 +31,7 @@ n|no|N|NO)	echo "ok but this isn't safe!!";;
 #		../../third-party/mvm ${lib} clean
 #	done
 esac
-test -f plugins.int || (test -f ../plugins.int && cp -p ../plugins.int . || cp -p ../../plugins.int .)
-test -f plugins.ext || (test -f ../plugins.ext && cp -p ../plugins.ext . || cp -p ../../plugins.ext .)
+../../../../scripts/copylinuxpluginspecfiles
 
 for lib in ${THIRDPARTYLIBS}; do
 	../../third-party/mvm ${lib}

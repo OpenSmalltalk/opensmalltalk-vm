@@ -74,6 +74,7 @@ platforms/unix/config/autom4te.cache/
 /history/README.*
 
 # /image/
+/image/.LATEST*
 /image/*.sum
 /image/*.tgz
 /image/*.cs
