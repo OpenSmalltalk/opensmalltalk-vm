@@ -28,7 +28,10 @@
 # include <sys/sysctl.h>		/* for ioNumProcesors */
 #endif
 #include <errno.h>
+#include <string.h>
 #include <pthread.h>
+
+#define pthreadperror(s,e) fprintf(stderr,"%s: %s\n", s, strerror(e))
 
 int
 ioNewOSThread(void (*func)(void *), void *arg)
@@ -41,7 +44,7 @@ ioNewOSThread(void (*func)(void *), void *arg)
 				0,						/* const pthread_attr_t *attr */
 				(void *(*)(void *))func,/* void * (*thread_execp)(void *) */
 				(void *)arg				/* void *arg */))) {
-		perror("pthread_create");
+		pthreadperror("pthread_create",err);
 		return err;
 	}
 	return 0;
@@ -66,6 +69,20 @@ ioNewOSSemaphore(sqOSSemaphore *sem)
 		? err
 		: 0;
 }
+
+#if !defined(ioDestroyOSSemaphore)
+void
+ioDestroyOSSemaphore(sqOSSemaphore *sem)
+{
+	int err;
+
+	sem->count = 0;
+	if ((err = pthread_cond_destroy(&sem->cond)))
+		pthreadperror("pthread_cond_destroy",err);
+	if ((err = pthread_mutex_destroy(&sem->mutex)))
+		pthreadperror("pthread_mutex_destroy",err);
+}
+#endif
 
 #define DEBUG 1
 #if DEBUG
