@@ -68,12 +68,14 @@ extern void reportMinimumUnusedHeadroom(void);
 /* Please read the comment for CogThreadManager in the VMMaker package for
  * documentation of this API.
  */
+#  if !defined(_SQ_OSSEMAPHORE)
+#  define _SQ_OSSEMAPHORE
 typedef struct {
 		pthread_cond_t	cond;
 		pthread_mutex_t mutex;
 		int				count;
 	} sqOSSemaphore;
-#  define ioDestroyOSSemaphore(ptr) 0
+#  endif
 #  if !ForCOGMTVMImplementation /* this is a read-only export */
 extern const pthread_key_t tltiIndex;
 #  endif

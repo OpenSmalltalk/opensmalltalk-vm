@@ -73,23 +73,18 @@ int AEC_ENABLED = 1;
 /***************************************************************************/
 /***************************************************************************/
 /* The new DirectSound based implementation of the sound primitives */
+
 #define _LPCWAVEFORMATEX_DEFINED
 #include <dsound.h>
 
 #define mmFAILED(mm) ((mm) != MMSYSERR_NOERROR)
 
-// Global vars shared with sqWin32AEC.c
-HANDLE hPlayEvent = NULL;
-HANDLE hPlayThread = NULL;
-HANDLE hRecEvent = NULL;
-HANDLE hRecThread = NULL;
-int recTerminate = 0;
-int recSemaphore = -1;
-DWORD recSampleRate;
-int recIsStereo;
-
 static HWND *theSTWindow = NULL; /* a reference to Squeak's main window */
 
+static HANDLE hPlayEvent = NULL;
+static HANDLE hPlayThread = NULL;
+static HANDLE hRecEvent = NULL;
+static HANDLE hRecThread = NULL;
 static LPDIRECTSOUND lpdSound = NULL;
 static LPDIRECTSOUNDBUFFER lpdPrimaryBuffer = NULL;
 static LPDIRECTSOUNDBUFFER lpdPlayBuffer = NULL;
@@ -104,6 +99,9 @@ static int playSemaphore = -1;
 static LPDIRECTSOUNDCAPTURE lpdCapture = NULL;
 static LPDIRECTSOUNDCAPTUREBUFFER lpdRecBuffer = NULL;
 static int isRecording = 0;
+static DWORD recSampleRate;
+static int recIsStereo;
+
 static WAVEFORMATEX waveInFormat;
 static int recBufferFrameCount = 640;
 /* For 16kHz 16-bit mono sound,this is 1280msecs */
@@ -112,6 +110,8 @@ static int recBufferSize = 0;
 static int recBufferReadPosition = 0;
 static int recBufferWritePosition = 0;
 static int recBufferAvailable = 0;
+static int recTerminate = 0;
+static int recSemaphore = -1;
 
 /*******************************************************************************/
 /* Default devices: Windows does not provide an API for this. 11/10/08 HRS ... */
@@ -147,7 +147,7 @@ setDeviceName(DeviceInfo* device, LPCTSTR lpszDesc)
 	/* Support setting the string to NULL. */
 	if (sizeof(lpszDesc[0]) == 1) {
 		if (lpszDesc) {
-			device->name = _strdup(lpszDesc);
+			device->name = _strdup((char *)lpszDesc);
 			if (!device->name)
 				DPRINTF(("ERROR: setDeviceName() cannot allocate space for name\n"));
 		}
@@ -184,7 +184,7 @@ duplicateDeviceName(DeviceInfo* device, char *lpszDesc)
 	if (lpszDesc) {
 		device->name = _strdup(lpszDesc);
 		if (!device->name)
-			DPRINTF(("ERROR: setDeviceName() cannot allocate space for name\n"));
+			DPRINTF(("ERROR: duplicateDeviceName() cannot allocate space for name\n"));
 	}
 }
 
@@ -926,15 +926,13 @@ dx_snd_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sqInt semaInde
   LPDIRECTSOUNDNOTIFY lpdNotify = NULL;
   HRESULT hRes;
   DWORD threadID;
-  int bytesPerFrame;
-  int bufferSize;
+  /* round up the size of the play buffers to multiple of 16 bytes */
+  const int bytesPerFrame = stereo ? 2 * sizeof(short) : sizeof(short);
+  const int bufferSize = ((bytesPerFrame * frameCount + 15) / 16) * 16;
 
-  /* round up the size of the play buffers to multiple of 16 bytes*/
-  bytesPerFrame = stereo ? 4 : 2;
-  bufferSize = ((bytesPerFrame * frameCount + 15) / 16) * 16;
-  if ((bufferSize != playBufferSize) || 
-     (samplesPerSec != waveOutFormat.nSamplesPerSec) || 
-     ((stereo == 0) != (waveOutFormat.nChannels == 1))) {
+  if (bufferSize != playBufferSize
+   || samplesPerSec != waveOutFormat.nSamplesPerSec
+   || (stereo == 0) != (waveOutFormat.nChannels == 1)) {
     /* format change */
     DSPRINTF(("DXSound format change (%d, %d, %s)\n", frameCount, samplesPerSec, (stereo ? "stereo" : "mono")));
     dx_snd_StopPlaying();
@@ -994,8 +992,7 @@ dx_snd_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sqInt semaInde
   playBufferIndex = 1; 
 
   /* round up the size of the play buffers to multiple of 16 bytes*/
-  bytesPerFrame = stereo ? 4 : 2;
-  playBufferSize = ((bytesPerFrame * frameCount + 15) / 16) * 16;
+  playBufferSize = bufferSize;
 
   /* create the secondary sound buffer */
   dsbd.dwSize = sizeof(dsbd);
@@ -1125,7 +1122,7 @@ dx_snd_StartRecording(sqInt samplesPerSec, sqInt stereo, sqInt semaIndex)
 	recBufferReadPosition = recBufferWritePosition = recBufferAvailable = 0;
 
 	/* round up the size of the record buffers to multiple of 16 bytes*/
-	bytesPerFrame = stereo ? 4 : 2;
+	bytesPerFrame = stereo ? 2 * sizeof(short) : sizeof(short);
 	recBufferSize = ((bytesPerFrame * recBufferFrameCount + 15) / 16) * 16;
 
 	/* This computation assumes that totalRecBufferSize is 20480 bytes. */
@@ -1175,9 +1172,9 @@ dx_snd_StartRecording(sqInt samplesPerSec, sqInt stereo, sqInt semaIndex)
 		snd_StopRecording();
 		return 0;
 	}
-	for (i=1; i <= numNotificationPoints; i++) {
-		posNotify[i-1].dwOffset = i * recBufferSize - 1;
-		posNotify[i-1].hEventNotify = hRecEvent;
+	for (i = 0; i < numNotificationPoints; i++) {
+		posNotify[i].dwOffset = (i + 1) * recBufferSize - 1;
+		posNotify[i].hEventNotify = hRecEvent;
 	}
 	hRes = IDirectSoundNotify_SetNotificationPositions(lpdNotify, numNotificationPoints, posNotify);
 	IDirectSoundNotify_Release(lpdNotify);
@@ -1339,7 +1336,7 @@ dx_snd_SetVolume(double left, double right)
   volume = (int)(left * 0xFFFF);
   if (right < 0.0) right = 0.0;
   if (right > 1.0) right = 1.0;
-  volume |= ((int)(right * 0xFFFF)) << 16;
+  volume |= (int)(right * 0xFFFF) << 16;
 
   waveOutSetVolume((HWAVEOUT) 0, volume);
 }

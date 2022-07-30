@@ -18,7 +18,7 @@ void *ioGetWindow(void);
 
 void *os_exports[][3]=
 {
-  XFN(GetAttributeString)
+  XFN(GetAttributeString) // Used by e.g. UnixOSProcessPlugin
 #if !defined(HEADLESS)
 	XFNDF(primitivePluginBrowserReady,"\377","\000")
 	XFNDF(primitivePluginRequestURLStream,"\001","\000")

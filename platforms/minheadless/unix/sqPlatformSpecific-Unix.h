@@ -63,7 +63,6 @@ typedef struct {
 		pthread_mutex_t mutex;
 		int				count;
 	} sqOSSemaphore;
-#  define ioDestroyOSSemaphore(ptr) 0
 #  if !ForCOGMTVMImplementation /* this is a read-only export */
 extern const pthread_key_t tltiIndex;
 #  endif
