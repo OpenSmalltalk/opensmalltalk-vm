@@ -1044,6 +1044,18 @@ printRegisterState(FILE *file,ucontext_t *uap)
 	        regs->arm_r8,regs->arm_r9,regs->arm_r10,regs->arm_fp,
 	        regs->arm_ip, regs->arm_sp, regs->arm_lr, regs->arm_pc);
 	return v(uap->uc_mcontext.arm_pc);
+# elif __linux__ && (defined(__riscv64__) )
+	struct sigcontext *regs = &uap->uc_mcontext.__gregs;
+	fprintf(file,
+		"\t pc 0x%08x sp 0x%08x ra 0x%08x \n"
+		"\t a0 0x%08x a1 0x%08x a2 0x%08x a3 0x%08x\n"
+	        "\t a4 0x%08x a5 0x%08x a6 0x%08x a7 0x%08x\n"
+	        "\t t0 0x%08x t1 0x%08x s0/fp 0x%08x s1 0x%08x\n",
+		regs[0],regs[2],regs[1],
+	        regs[10],regs[11],regs[12],regs[13],
+	        regs[14],regs[15],regs[16],regs[17],
+	        regs[5],regs[6],regs[8],regs[9]);
+	return v(uap->uc_mcontext.__gregs[0]);
 #else
 	fprintf(file,"don't know how to derive register state from a ucontext_t on this platform\n");
 	return v(0);
