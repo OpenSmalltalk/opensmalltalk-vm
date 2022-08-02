@@ -19,9 +19,10 @@
   Conceptually, args as fields of C struct with pointer alignment;
     more args than # arg regs passed on stack with SP pointing
     to 1st arg not passed in a register.
+    Excess float args may be passed in otherwise unused int regs.
   Values returned in A0/A1 or FA0/FA1
   Larger return values are placed in space alloc'ed by caller,
-    with pointer passed as implicit 1st parameter.
+    with pointer passed as implicit 1st parameter (A0).
 
   Note reuse of "dabusinessARM.h" call mechanics code.
 */
@@ -167,17 +168,17 @@ getMostRecentCallbackContext() { return mostRecentCallbackContext; }
  * STACK_ALIGN_HACK), and to return any of the various values from the callback.
  *
  * Nota Bene:
- *	double result in d0, NOT x0
- *	large struct address returns in x0 (UNlike arm's x8)
+ *	double result in fa0, NOT a0
+ *	large struct address returns in a0 (UNlike arm's x8)
  */
 long long
 thunkEntry(long x0, long x1, long x2, long x3,
 	   long x4, long x5, long x6, long x7,
 	   double d0, double d1, double d2, double d3,
 	   double d4, double d5, double d6, double d7,
-	   void *thunkpPlus16, sqIntptr_t *stackp)
+	   void *thunkp, sqIntptr_t *stackp)
 {
-  VMCallbackContext vmcc;  /* See, e.g. spurstack64src/vm/vmCallback.h */
+  VMCallbackContext vmcc;  /* See  src/spur64.stack/vmCallback.h */
   int flags, returnType;
   sqIntptr_t regArgs[NUM_REG_ARGS];
   double dregArgs[NUM_DREG_ARGS];
@@ -208,9 +209,9 @@ thunkEntry(long x0, long x1, long x2, long x3,
   if ((returnType = setjmp(vmcc.trampoline)) == 0) {
     vmcc.savedMostRecentCallbackContext = getMRCC();
     setMRCC(&vmcc);
-    vmcc.thunkp = (void *)((char *)thunkpPlus16 - 16);
+    vmcc.thunkp = thunkp;
     vmcc.stackp = stackp;
-    vmcc.intregargsp = regArgs;
+    vmcc.intregargsp   = regArgs;
     vmcc.floatregargsp = dregArgs;
     interpreterProxy->sendInvokeCallbackContext(&vmcc);
     fprintf(stderr,"Warning; callback failed to invoke\n");
