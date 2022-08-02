@@ -3667,7 +3667,7 @@ msg(char *s)
 static sqInt
 nonRegisterStructReturnIsViaImplicitFirstArgument(void)
 {
-	return 1;
+	return 0;
 }
 
 

@@ -1,3 +1,4 @@
+
 /* sqUnixMain.c -- support for Unix.
  * 
  *   Copyright (C) 1996-2007 by Ian Piumarta and other authors/contributors
@@ -1044,6 +1045,18 @@ printRegisterState(FILE *file,ucontext_t *uap)
 	        regs->arm_r8,regs->arm_r9,regs->arm_r10,regs->arm_fp,
 	        regs->arm_ip, regs->arm_sp, regs->arm_lr, regs->arm_pc);
 	return v(uap->uc_mcontext.arm_pc);
+# elif __linux__ && __riscv64__
+	struct sigcontext *regs = &uap->uc_mcontext.__gregs;
+	fprintf(file,
+		"\t pc = %14p sp = %14p ra = %14p \n"
+		"\t a0 = %14p a1 = %14p a2 = %14p a3 = %14p\n"
+	        "\t a4 = %14p a5 = %14p a6 = %14p a7 = %14p\n"
+	        "\t t0 = %14p t1 = %14p s0/fp = %14p s1 = %14p\n",
+		regs[0],regs[2],regs[1],
+	        regs[10],regs[11],regs[12],regs[13],
+	        regs[14],regs[15],regs[16],regs[17],
+	        regs[5],regs[6],regs[8],regs[9]);
+	return v(uap->uc_mcontext.__gregs[0]);
 #else
 	fprintf(file,"don't know how to derive register state from a ucontext_t on this platform\n");
 	return v(0);
