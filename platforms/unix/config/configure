@@ -12093,7 +12093,7 @@ $as_echo "$build_arch" >&6; }
 		;;
 
 		riscv64) TARGET_ARCH="-march=rv64gcv -mabi=lp64d"
-			CFLAGS="-g -O2 -D__linux__ -D__riscv64__"
+			CFLAGS="-g -O2 -D__riscv64__"
 		;;
 
 		*)
