@@ -81,6 +81,7 @@ objects are represented, how values are found and
 translated should get you through this.
 For details see
  * http://www.mirandabanda.org/cogblog/on-line-papers-and-presentations/
+ * https://clementbera.wordpress.com/2014/01/16/spurs-new-object-format/
 
 Most of the value translation mechanics (e.g.
 a float represented in Smalltalk vs a machine float,
