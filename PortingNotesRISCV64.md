@@ -317,6 +317,6 @@ Also, being a part of a community means you don't have to do everything yourself
 Alien-Core
 	CallbackForRiscV64
 	* FFICallbackThunk class>>initializerForPlatform
-	FFICallbackThunk>>initializeRiscV64st
+	FFICallbackThunk>>initializeRiscV64
 ```	
 #
