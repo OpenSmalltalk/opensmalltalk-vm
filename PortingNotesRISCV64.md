@@ -285,7 +285,7 @@ Also, being a part of a community means you don't have to do everything yourself
  CallbackForRiscV64
  ThreadedFFICalloutStateForRiscV64
  ThreadedRiscV64FFIPlugin
-* ThreadedFFIPluginClass-preambleCCode
+* ThreadedFFIPlugin class>>preambleCCode
 ```
 #### opensmalltalk-vm
 ```
