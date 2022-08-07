@@ -19,11 +19,10 @@ test -f config.h || ../../../../platforms/unix/config/configure \
 	--with-vmversion=5.0 \
 	--with-src=src/spur64.stack --disable-cogit \
 	--without-npsqueak \
-	TARGET_ARCH=-march=rv64gcv -mabi=lp64d \
 	CC=gcc \
 	VM_WORD_SIZE="64" \
-	VM_CFLAGS="$OPT -D__linux__ -D__riscv64__"
-	CFLAGS="$OPT  -D__linux__ -D__riscv64__"
+	VM_CFLAGS="$OPT"
+	CFLAGS="$OPT"
 ## --without-vm-display-fbdev
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../../products/$INSTALLDIR

@@ -243,6 +243,10 @@ then
 			CFLAGS="-g -O2 -D__ARM_ARCH_ISA_A64 -DARM64 -D__arm__ -D__arm64__ -D__aarch64__"
 		;;
 
+		riscv64) TARGET_ARCH="-march=rv64gcv -mabi=lp64d"
+			CFLAGS="-g -O2 -D__riscv64__"
+		;;
+
 		*)
 			if [[ "$VM_WORD_SIZE" == "32" ]]
 			then
