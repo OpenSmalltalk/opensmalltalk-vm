@@ -1,4 +1,4 @@
-# Porting to a new CPU, the RISCV RV64G Experience
+# Porting to a new CPU, the RISCV 64 Experience
 
 This file describes the overall "nuts and bolts" of porting
 the opensmalltalk-vm to RISCV 64.
@@ -216,7 +216,7 @@ Then open the SUnit Test Runner and run FFIPluginTests.
 If you started Cuis in a terminal, there will be some disgnostic output.
 If you need more, you can add to `sqFFITestFuncs.c`.
 
-This should let you update the VMMaker code to get the right results with value passing on calls.
+This should let you update the VMMaker code to check results with value passing on calls.
 
 ### Alien
 
@@ -227,7 +227,7 @@ For this we use the Monticello Browser on HTTP Repository `www.squeaksource.com/
 open it and select and load the latest Alien-Core-eem.<whatever>.  You may have to use the
 VM downloaded for the VMMaker build on the Squeak image to get a proper SSL connection.
 
-You should be able browse the Alien-Core category and look at class `CallBack`.
+You should be able browse the Alien-Core category and look at class `Callback`.
 You will need to subclass this.  For RV64 we have `CallbackForRiscV64` which has
 class methods to return the ABI string ('RiscV64') and test method `isForCurrentPlatform`
 which checks that the image is running on your CPU.
@@ -272,7 +272,7 @@ pixel-for-pixel.  The very definition of portability!
 
 Also, being a part of a community means you don't have to do everything yourself.
 
-`http://lists.squeakfoundation.org/mailman/listinfo/vm-dev`
+* http://lists.squeakfoundation.org/mailman/listinfo/vm-dev
 
 
 ### Files
