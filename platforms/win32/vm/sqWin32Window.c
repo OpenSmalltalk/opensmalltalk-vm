@@ -28,6 +28,7 @@
 #include <excpt.h>
 #include <VersionHelpers.h>
 #include <float.h>
+#include <strings.h>  /* for bzero */
 
 /* WM_MOUSEWHEEL since Win98/NT4 */
 #ifndef WM_MOUSEWHEEL
