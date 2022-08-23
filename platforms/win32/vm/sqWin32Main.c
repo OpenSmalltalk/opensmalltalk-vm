@@ -367,7 +367,7 @@ crashDumpFile( /* OUT */ WCHAR fileName[])
 	else
 	// fall through to dump to vmLogDir
 # endif
-	wsprintf(fileName,L"%s%s",vmLogDirW,L"crash.dmp");
+	wsprintfW(fileName,L"%s%s",vmLogDirW,L"crash.dmp");
 #endif
 	return fopen_for_append(fileName);
 }
