@@ -1755,7 +1755,7 @@ sqInt sqSocketGetOptionsoptionNameStartoptionNameSizereturnedValue
   int optval;
   socklen_t len;
   socketOption *opt= findOption(optionName, (size_t)optionNameSize);
-  if (!opt == 0
+  if (opt == 0
 	|| !SocketValid(s))
 	goto barf;
   if (opt->optType == 1) {
