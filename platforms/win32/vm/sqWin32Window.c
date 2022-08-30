@@ -28,7 +28,13 @@
 #include <excpt.h>
 #include <VersionHelpers.h>
 #include <float.h>
-#include <strings.h>  /* for bzero */
+#if _WIN32
+# if !defined(bzero)
+#	define bzero(p,s) memset(p,0,s)
+# endif
+#else
+# include <strings.h>  /* for bzero */
+#endif
 
 /* WM_MOUSEWHEEL since Win98/NT4 */
 #ifndef WM_MOUSEWHEEL
