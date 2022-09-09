@@ -51,7 +51,7 @@ other people, do it on a feature branch and open a pull request.
 ### Regarding /src and alike directories
 
 Versioning the generated source code is of critical importance for debugging the
-VM, since it is not posssible to guarantee that source files will not differ 
+VM, since it is not possible to guarantee that source files will not differ 
 from another set of source files generated in the same environment. For this
 same reason, counting with a clean, versioned set of source files makes it 
 easier to check the newly generated source for bugs in parts of the system such 
@@ -63,10 +63,10 @@ contributors. Unless source files
 needed
 * have been carefully checked for bugs that may have been introduced by
 modifications in parts of the system involved in the generation process
-* are generated from versioned imput (i.e. none of the packages to be translated
+* are generated from versioned input (i.e. none of the packages to be translated
 or involved in the generation process are dirty)
 
-it's preferrable that no changes to them are submitted.
+it's preferable that no changes to them are submitted.
 
 # Integration of GIT with the source tree organization
 
@@ -77,7 +77,7 @@ contributors this can mostly be ignored, as we can easily split any changes in
 those directories and cross-merge them across branches. The split is mostly just
 historical right now, since most development takes place on the Cog branch.
 
-Also a historical artifact is that we use source tree substitutions. 
+Also, a historical artifact is that we use source tree substitutions. 
 Specifically, any sq*SCCSVersion.h files anywhere in the tree are 
 processed to replace `$Rev$`, `$Date$`, `$URL$` and `$CommitHash$` with 
 the current revision (defined as the timestamp %Y%m%d%H%M of the latest 
@@ -93,7 +93,7 @@ This will install filters, post-commit, and post-merge hooks to update the
 sq*SCCSVersion.h files anytime you commit or merge. If you know your way around
 Git, you will know when to manually run this file again. If you do not know your
 way around, please refrain from copy and pasting random snippets you found on
-StackOverflow to "fix" an issue you have. Stick with the well known `add,
+StackOverflow to "fix" an issue you have. Stick with the well-known `add,
 commit, push, pull, checkout, revert` tools in your workflow.
 
 ### Using GUI clients
@@ -145,7 +145,7 @@ Then whenever you want to commit your changes run:
 
 This will go over all the changes in tracked files and you can quickly decide to
 stage them or leave them out of this commit, then you commit them, and then
-you'll get a status info. Repeat `git go` until all modifications you want to
+you'll get status info. Repeat `git go` until all modifications you want to
 keep are committed.
 
 For new files, you'll have to add them with `git add`.
@@ -199,7 +199,7 @@ rebasing, unless your history looks like this:
 
 (However, if you're unsure what rebasing is, just forget about it and push the
 history as-is. Seriously, skipping bad commits a bisect is easier than fixing
-someones git tree once they have lost commits to the depths of
+someone's git tree once they have lost commits to the depths of
 reflog. Especially if their recovery attempts have already triggered a Git GC.)
 
 If you were working on Cog and the change isn't too large, just do:
@@ -237,8 +237,8 @@ name at the beginning of the line.
 
 ## Tab stops are 4 spaces
 
-In this case the first rule is to keep the existing formatting within a 
-file - we don't want to polute the code history with space changes.
+In this case, the first rule is to keep the existing formatting within a 
+file - we don't want to pollute the code history with space changes.
 
 The goal is to use tabs set to 4 spaces.
 
