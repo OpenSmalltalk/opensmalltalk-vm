@@ -291,6 +291,7 @@ and then retry.
 
 Ubuntu
 	sudo apt-get install uuid-dev libcairo2-dev libpango1.0-dev libgl1-mesa-dev libgl1-mesa-glx libssl-dev
+	(gcc-multilib libgl1-mesa-glx:i386 on 64-bit installations)
 
 More advice and examples for other distros gratefully received.
 
