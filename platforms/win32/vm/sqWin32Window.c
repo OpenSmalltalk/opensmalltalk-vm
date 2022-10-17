@@ -967,7 +967,8 @@ ioSetWindowWidthHeight(sqInt w, sqInt h)
 
 }
 
-void* ioGetWindowHandle(void) { return stWindow; }
+void *ioGetWindowHandle(void) { return stWindow; }
+__declspec(dllexport) void *getSTWindowHandle(void) { return stWindow; }
 
 sqInt
 ioIsWindowObscured(void)
