@@ -26,6 +26,15 @@
 #include <shellapi.h>
 #include <commdlg.h>
 #include <excpt.h>
+#include <VersionHelpers.h>
+#include <float.h>
+#if _WIN32
+# if !defined(bzero)
+#	define bzero(p,s) memset(p,0,s)
+# endif
+#else
+# include <strings.h>  /* for bzero */
+#endif
 
 /* WM_MOUSEWHEEL since Win98/NT4 */
 #ifndef WM_MOUSEWHEEL
@@ -958,7 +967,8 @@ ioSetWindowWidthHeight(sqInt w, sqInt h)
 
 }
 
-void* ioGetWindowHandle(void) { return stWindow; }
+void *ioGetWindowHandle(void) { return stWindow; }
+__declspec(dllexport) void *getSTWindowHandle(void) { return stWindow; }
 
 sqInt
 ioIsWindowObscured(void)
@@ -1759,6 +1769,7 @@ ioDrainEventQueue(void)
 double
 ioScreenScaleFactor(void) { return 1.0; }
 
+
 /* returns the size of the Squeak window */
 sqInt
 ioScreenSize(void)
@@ -2441,7 +2452,7 @@ ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
   ReleaseDC(stWindow,dc);
 
   if (lines == 0) {
-    printLastError(TEXT("SetDIBitsToDevice failed"));
+    printLastError(TEXT("ioShowDisplay SetDIBitsToDevice failed"));
     warnPrintf("width=%" PRIdSQINT ",height=%" PRIdSQINT ",bits=%" PRIXSQINT ",dc=%" PRIXSQPTR "\n",
 	       width, height, dispBits,(usqIntptr_t)dc);
   }
@@ -3107,6 +3118,21 @@ HideSplashScreen(void)
 
 # define VMOPTION(arg) "-"arg
 # define TVMOPTION(arg) TEXT("-") TEXT(arg)
+# if _UNICODE
+static TCHAR *
+asTCharString(char *charString)
+{
+	int len = MultiByteToWideChar(CP_UTF8, 0, charString, -1, NULL, 0);
+	if (len <= 0)
+		return 0; /* invalid UTF8 ? */
+	LPWSTR tcharString = malloc(len*sizeof(WCHAR));
+	if (MultiByteToWideChar(CP_UTF8, 0, charString, -1, tcharString, len) == 0)
+		return 0;
+	return tcharString;
+}
+# else
+#	define asTCharString(charString) charString
+# endif
 
 /* print usage with different output levels */
 int
@@ -3116,9 +3142,19 @@ printUsage(int level)
     case 0: /* No command line given */
       abortMessage(TEXT("Usage: ") TEXT(VM_NAME) TEXT(" [options] <imageFile>\n"));
       break;
-    case 1: /* full usage */
-      abortMessage(TEXT("%s\n"),
-                   TEXT("Usage: ") TEXT(VM_NAME) TEXT(" [vmOptions] imageFile [imageOptions]\n\n")
+    case 1: { // full usage
+#if COGVM
+	  char traceFlags[1024];
+	  extern const char *traceFlagsMeanings[];
+	  bzero(traceFlags,1024);
+	  int i = 0;
+	  while (traceFlagsMeanings[i]) {
+		strcat(traceFlags, "\n\t\t");
+		strcat(traceFlags, traceFlagsMeanings[i]);
+		++i;
+	  }
+#endif
+      abortMessage(TEXT("Usage: ") TEXT(VM_NAME) TEXT(" [vmOptions] imageFile [imageOptions]\n\n")
                    TEXT("vmOptions:")
                    TEXT("\n\t") TVMOPTION("service:") TEXT(" ServiceName \t(install VM as NT service)")
                    TEXT("\n\t") TVMOPTION("headless") TEXT(" \t\t(force VM to run headless)")
@@ -3139,8 +3175,8 @@ printUsage(int level)
 #endif /* STACKVM */
 #if STACKVM || NewspeakVM
 # if COGVM
-                   TEXT("\n\t") TVMOPTION("logplugin") TEXT(" name\t\tonly log primitives in plugin\n")
-                   TEXT("\n\t") TVMOPTION("trace") TEXT("[=num]\t\tenable tracing (optionally to a specific value)")
+                   TEXT("\n\t") TVMOPTION("logplugin") TEXT(" name\t\tonly log primitives in plugin")
+                   TEXT("\n\t") TVMOPTION("trace") TEXT("[=flags]\t\tenable tracing (optionally to a specific value)%s")
 # else
                    TEXT("\n\t") TVMOPTION("sendtrace") TEXT(" \t\t(trace sends to stdout for debug)")
 # endif
@@ -3160,7 +3196,11 @@ printUsage(int level)
 #endif
                    TEXT("\n") TEXT("Options begin with single -, but -- prefix is silently accepted")
                    TEXT("\n") TEXT("Options with arguments -opt:n are also accepted with separators -opt n")
+#if COGVM
+					, asTCharString(traceFlags)
+#endif
                    );
+	  }
       break;
     case 2: /* No image found */
     default:
