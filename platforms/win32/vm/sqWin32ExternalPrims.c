@@ -14,6 +14,8 @@
 
 #include <Windows.h>
 #include <stdio.h>
+#include <string.h>
+#include <tchar.h>
 #include "sq.h"
 #include "sqAssert.h"
 
@@ -44,13 +46,13 @@ ioLoadModule(char *pluginName)
 	TCHAR *name;
 	int nameLen = pluginName ? (int)strlen(pluginName) : 0;
 	int endsInDLL = nameLen > 4 && !strcmp(pluginName + nameLen - 4, ".dll");
-			
+
 #if _UNICODE
-	int len = MultiByteToWideChar(CP_UTF8, 0, pluginName, -1, NULL, 0);
+	int len = MultiByteToWideChar(CP_UTF8, 0, pluginName, nameLen + 1, NULL, 0);
 	if (len <= 0)
 		return 0; /* invalid UTF8 ? */
-	name = alloca(len*sizeof(WCHAR));
-	if (MultiByteToWideChar(CP_UTF8, 0, pluginName, -1, name, len) == 0)
+	name = alloca(len * sizeof(WCHAR));
+	if (!MultiByteToWideChar(CP_UTF8, 0, pluginName, nameLen + 1, name, len))
 		return 0;
 #else
 	name = pluginName;
@@ -64,6 +66,23 @@ ioLoadModule(char *pluginName)
 		if ((handle = tryLoading(TEXT(""),name,TEXT("32.dll"))))
 			return handle;
 	}
+#if 0
+	// According to the WIN32 documentation the first directory searched for
+	// dlls is "The directory from which the application loaded.". This is a
+	// little ambiguous but is indeed the vmPath. So there is no need to search
+	// explicitly the vmPath directory. The preceding call has done this. Hence
+	// the following is redundant and ifdefed out, commented for reference.
+	if ((handle = tryLoading(vmPath,name,TEXT(""))))
+		return handle;
+	if (!endsInDLL) {
+		if ((handle = tryLoading(vmPath,name,TEXT(".dll"))))
+			return handle;
+		if ((handle = tryLoading(vmPath,name,TEXT("32.dll"))))
+			return handle;
+	}
+	if (!_tcscmp(imagePath,vmPath))
+		return 0;
+#endif
 	if ((handle = tryLoading(imagePath,name,TEXT(""))))
 		return handle;
 	if (!endsInDLL) {
